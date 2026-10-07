@@ -1,5 +1,7 @@
 // Touch controls for phones and tablets (docs/23 phase 2): the helm stick and the sea under the finger. Everything
-// else on a phone's sea is the sea HUD's (ui/seahud.ts: «Огонь», «Действие», «Особое», the menu).
+// else on a phone's sea is the sea HUD's (ui/seahud.ts: «Огонь», «Действие», «Особое», the menu). The same painted
+// helm stands on a desk too (owner, 2026-10-07: «ты удалил… штурвал»): it shows her heading, sail and speed there,
+// its keys on chips round it, and a mouse may drag it as a finger would.
 //   the stick   pull the way she should go (she turns to that course and holds it); the farther from the middle,
 //               the more sail (1–4 steps); let go and she keeps both. Hold the middle still to take all sail in;
 //               a double tap is the dash (every hand on the braces).
@@ -75,7 +77,7 @@ export class TouchControls {
   /** Keep the wheel turned to the ship's heading, the course mark where the helm points, the sail ring lit to her
    *  sail, the dash's readiness (1 just used – 0 ready) on its chip and her speed under the wheel (knots, as words). */
   frame(heading: number | null, sail: number, dashLeft: number, speed = ''): void {
-    if (!this.enabled) return;
+    if (!this.enabled && !document.body.classList.contains('simple')) return;
     const sp = document.getElementById('tc-speed');
     if (sp && sp.dataset.v !== `${speed}|${sail}`) {
       sp.dataset.v = `${speed}|${sail}`;

@@ -516,6 +516,7 @@ export class TacticalPanel {
     c.addEventListener('pointercancel', () => this.cancelPress());
     c.addEventListener('pointerleave', () => {
       this.hover = null;
+      delete c.dataset.cur;
       this.cancelPress();
     });
     c.addEventListener('pointermove', (e) => this.move(e));
@@ -1471,7 +1472,18 @@ export class TacticalPanel {
   }
 
   private move(e: PointerEvent): void {
-    if (e.pointerType === 'mouse') this.hover = this.hexAt(e);
+    if (e.pointerType === 'mouse') {
+      this.hover = this.hexAt(e);
+      // The attack cursor (owner, 2026-10-07: «при абордаже… при наведении на цель показывать иконку атаки»): over a
+      // stack hers may strike, the sabres; one it may shoot, the gun (ui/cursor.ts, seahud.css).
+      const v = this.view, s = this.hover !== null ? this.stackAt(this.hover) : undefined;
+      const cur = v?.mine && !v.over && s ? (v.melee.includes(s.id) ? 'attack' : v.shoot.includes(s.id) ? 'guns' : '') : '';
+      const c = e.currentTarget as HTMLElement;
+      if ((c.dataset.cur ?? '') !== cur) {
+        if (cur) c.dataset.cur = cur;
+        else delete c.dataset.cur;
+      }
+    }
     if (this.press && Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y) > 12) this.cancelPress();
   }
 

@@ -1,27 +1,38 @@
 /* ======================================================================================================================
-   The simple sea HUD for every input (owner, 2026-10-07): «перегруз интерфейса, иконки обрезаются, очень большие
+   The sea HUD for every input (owner, 2026-10-07): first «перегруз интерфейса, иконки обрезаются, очень большие
    плашки… выходя из порта нужно скрывать часть ui, давать только штурвал и всё необходимое»; «справа сверху карта,
    слева сверху аватарка и очень удобные красивые уровни жизней, людей; снизу слева штурвал и скорость, справа кнопки
    атаки, переключения, захват цели, причём атака должна быть большой; на планшете такое же управление; на пк чисто
-   через wasd и другие клавиши».
+   через wasd и другие клавиши». Then, of the rebuild that put the desk's controls away for a line of words: «ты
+   испортил всё… возвращай иконки, обводки графические… штурвал на мобилах, классные иконки должны быть и вокруг них
+   обводки красивые графичные… сделать круче».
+   So every control is a painted icon in a painted rim, from the game's own art (ui/skin.ts → --ui-*):
+     round controls  the brass porthole ring (ui.ring) over a dark lacquered disc, the picture in its open middle
+     the helm        the wheel (ui.helm) on its compass rose (ui.stick_base), the sail a gold ring round it
+     the deck        the desk's shots and abilities in iron slots (ui.slot), their keys on chips on the rims
+     the captain     her face in the porthole ring, the bars in their brass sheaths (ui.bar)
+     the chart       the compass ring (ui.minimap_ring)
    body.simple is on unless «Подробный интерфейс» (settings: expertHud) brings the older full HUD back; body.touch is a
-   touch screen (a phone or a tablet: the same controls), its absence a desk played by its keys.
-     top left     the captain: her face in a round frame, her level on its rim, three slim bars, silver as a chip
-     top right    the minimap; the menu and the counter of goals and news left of it
-     top middle   one column: her mark's line, a world boss's slim line, the lesson, the sea's name; the toasts under it
-     bottom left  (touch) the helm stick, her speed beside it            (desk) a small line of keys, the first minutes
+   touch screen (a phone or a tablet: the same controls), its absence a desk played by its keys — the same helm and the
+   gun deck drawn, the keys on chips (no line of words: the chips are the keys' help, kept as long as the controls).
+     top left     the captain                                     top right   the minimap; the menu and the counter
+     top middle   her mark's line, a world boss's slim line, the lesson, the sea's name; the toasts under it
+     bottom left  the helm, its sail ring and her speed (a desk: its keys round it — W S the sails, A D the rudder,
+                  Shift the dash)
      bottom right (touch) in a fight: «Огонь» big, «Снаряд», «Цель», «Особое»; «Действие» left of them
+                  (desk) «Огонь» big, «Цель» over it, the gun deck beside it: the abilities Z X C V over the shots 1–5
      bottom       (desk) the context row: what is to do here, each with its key
-   Everything else of the older HUD — the bar of shots and abilities, the gauges, the column of round buttons, the
-   compass, the ship's plate, the chart's lines, the fold, the chat's button — is put away. Sizes come from the kit's
-   tokens (kit.css): 44 px for anything a thumb takes, 52 px for the lesser fight buttons on a tablet, «Огонь» 80/92.
-   Pictures in round frames keep inside the frame's circle (tools/mobile/ux/crop.js): a picture is a rounded square
-   (14 % corners) no wider than 0.7 of the circle, the ring a thin brass line outside it, a badge on the rim.
+   Pictures in round frames keep inside the frame's open circle (tools/mobile/ux/crop.js): under the porthole ring
+   (inset −11 %, its clear middle 0.625 of its half) the open circle is 0.76 of the button; a picture is a rounded
+   square (14 % corners) of 0.56, a badge on the rim.
    ==================================================================================================================== */
 
-body.simple { --sea-pad: 10px; --sea-fire: 80px; --sea-btn: 48px; --sea-gap: 8px; --cs-face: 48px; --cs-bar: 112px; --mm: 86px; }
-@media (min-width: 700px) and (min-height: 521px) { body.simple { --sea-pad: 16px; --sea-fire: 92px; --sea-btn: 52px; --sea-gap: 10px; --cs-face: 56px; --cs-bar: 140px; --mm: 132px; } }
-@media (min-width: 1100px) and (min-height: 600px) { body.simple { --cs-face: 60px; --cs-bar: 150px; --mm: 148px; } }
+body.simple { --sea-pad: 10px; --sea-fire: 80px; --sea-btn: 48px; --sea-gap: 14px; --cs-face: 44px; --cs-bar: 100px; --mm: 86px; }
+@media (min-width: 700px) and (min-height: 521px) { body.simple { --sea-pad: 16px; --sea-fire: 92px; --sea-btn: 52px; --sea-gap: 16px; --cs-face: 50px; --cs-bar: 132px; --mm: 132px; } }
+@media (min-width: 1100px) and (min-height: 600px) { body.simple { --cs-face: 54px; --cs-bar: 146px; --mm: 148px; } }
+/* a desk's gun deck: «Огонь», the slots, the helm */
+body.simple:not(.touch) { --dk-pad: 20px; --dk-fire: 92px; --dk-slot: 46px; --dk-gap: 8px; --dk-lock: 48px; --stick: 118px; }
+@media (max-height: 640px) { body.simple:not(.touch) { --dk-pad: 16px; --dk-fire: 84px; --dk-slot: 42px; --dk-gap: 7px; --dk-lock: 44px; --stick: 104px; } }
 
 /* ---------- what the simple HUD does without */
 body.simple #hud-combat, body.simple #hud-nav, body.simple #hud-menu, body.simple #hud-region, body.simple #hud-fold,
@@ -32,60 +43,81 @@ body.simple #touch { display: block; }
 body.simple #hud-captain.tut-hidden { display: block !important; }
 body.simple #hud-map.tut-hidden { display: block !important; }
 
-/* ---------- top left: the captain */
-body.simple #hud-captain { top: calc(var(--sa-t) + 8px); left: calc(var(--sa-l) + 8px); width: auto; display: block; gap: 0; cursor: pointer; pointer-events: auto; }
-body.simple.touch #hud-captain { pointer-events: none; cursor: default; }
-.cs { display: flex; align-items: center; gap: 10px; }
-.cs-frame { position: relative; flex: none; width: var(--cs-face); height: var(--cs-face); }
-/* the face: the head and shoulders of her portrait (kit/faces.ts), a thin brass rim outside the picture */
-.cs-face { position: absolute; inset: 0; border-radius: 50%; background-color: #15120e; background-repeat: no-repeat;
-  box-shadow: 0 0 0 2px var(--k-brass-dim), 0 0 0 3px rgba(5, 6, 7, 0.85), 0 3px 10px rgba(0, 0, 0, 0.75); }
-.cs-face::after { content: ''; position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.55); pointer-events: none; }
-/* her level on the rim, low on the left: a small coin of brass, never over the face */
-.cs-lv { position: absolute; left: -7px; bottom: -7px; z-index: 1; min-width: 20px; height: 20px; padding: 0 4px; box-sizing: border-box; border-radius: var(--k-r-round);
-  background: radial-gradient(circle at 50% 35%, #2e2418, #120e0a); box-shadow: 0 0 0 1.5px var(--k-brass), 0 1px 3px #000;
-  color: var(--k-gold); font: 700 11px/20px var(--k-font-sans); text-align: center; font-variant-numeric: tabular-nums; }
-/* a talent point waiting: a gold bead on the rim, high on the right */
-.cs-pts { position: absolute; right: -3px; top: -3px; width: 10px; height: 10px; border-radius: 50%; background: var(--k-gold); box-shadow: 0 0 0 1.5px #120e0a, 0 0 8px rgba(224, 184, 98, 0.8); }
-.cs-body { display: grid; grid-template-columns: auto; gap: 3px; min-width: 0; }
-.cs-row { display: flex; align-items: center; gap: 5px; height: 12px; }
-.cs-ico { flex: none; width: 13px; height: 13px; object-fit: contain; margin: 0; filter: drop-shadow(0 1px 1px #000); }
-.cs-bar { position: relative; flex: none; width: var(--cs-bar); height: 7px; border-radius: var(--k-r-round); overflow: hidden;
-  background: linear-gradient(180deg, #0a0b0d, #16181b); box-shadow: inset 0 0 0 1px rgba(5, 6, 7, 0.95), 0 0 0 1px rgba(111, 90, 56, 0.35), 0 1px 3px rgba(0, 0, 0, 0.6); }
-.cs-bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; transition: width var(--k-dur-3) var(--k-ease-out); }
-.cs-hull .cs-bar > i { background: linear-gradient(180deg, #c06a52, #7a2c22 60%, #5e2219); }
-.cs-crew .cs-bar > i { background: linear-gradient(180deg, #8fb0c4, #3f5d70 60%, #2f4452); }
-.cs-sails .cs-bar > i { background: linear-gradient(180deg, #d6cfb8, #8a8471 60%, #5f5a4c); }
-.cs-v { min-width: 34px; font: 600 10.5px/1 var(--k-font-sans); color: var(--k-bone); text-shadow: 0 1px 2px #000, 0 0 4px #000; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.cs-silver { justify-self: start; display: inline-flex; align-items: center; gap: 4px; margin-top: 1px; padding: 1px 7px 1px 3px; border-radius: var(--k-r-round);
-  background: rgba(10, 11, 13, 0.72); box-shadow: inset 0 0 0 1px rgba(111, 90, 56, 0.45); color: var(--k-gold); font: 600 11px/16px var(--k-font-sans); font-variant-numeric: tabular-nums; }
-.cs-coin { width: 13px; height: 13px; object-fit: contain; margin: 0; }
-@media (hover: hover) and (pointer: fine) { body.simple:not(.touch) #hud-captain:hover .cs-face { box-shadow: 0 0 0 2px var(--k-brass), 0 0 0 3px rgba(5, 6, 7, 0.85), 0 0 12px rgba(224, 184, 98, 0.35); } }
-body.simple:not(.touch) #hud-captain:active .cs-face { transform: scale(0.97); }
-@media (max-height: 420px) { body.simple .cs-row { height: 11px; } body.simple .cs-body { gap: 2px; } body.simple .cs-silver { line-height: 14px; } }
-@media (max-width: 680px) { body.simple { --cs-bar: 92px; } }
-
-/* ---------- top right: the minimap, the menu and the counter */
-body.simple #hud-map { top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + 8px); width: var(--mm); height: var(--mm); }
-body.simple #touch > #tc-menu { position: absolute; top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + var(--mm) + 16px); left: auto; pointer-events: auto; }
-body.simple #touch > #tc-news { position: absolute; top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + var(--mm) + 16px + 44px + 8px); left: auto; pointer-events: auto; }
-@media (hover: hover) and (pointer: fine) and (min-height: 521px) {
-  body.simple:not(.touch) #touch > #tc-news { right: calc(var(--sa-r) + var(--mm) + 16px + 44px + 8px); }
+/* ---------- the painted round controls: the porthole ring (ui.ring) over a lacquered disc, the picture in its middle */
+body.simple .sea-round, body.simple #touch > .tc-big { border: 0; border-radius: 50%; overflow: visible; color: var(--k-gold);
+  background: radial-gradient(circle at 50% 36%, #3b3125 0, #1c1711 44%, #0d0b08 66%); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.75); }
+body.simple .sea-round::after, body.simple #touch > .tc-big::after { content: ''; position: absolute; inset: -11%; z-index: 1; border-radius: 50%; pointer-events: none;
+  background: var(--ui-ring) center / contain no-repeat; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)); transition: filter var(--k-dur-2) var(--k-ease-out); }
+/* (before the art is in: a brass line in the ring's place) */
+body.simple:not(.skinned) .sea-round::after, body.simple:not(.skinned) #touch > .tc-big::after { inset: 0; box-shadow: inset 0 0 0 3px var(--k-brass-dim), 0 0 0 1px rgba(5, 6, 7, 0.9); }
+body.simple .sea-round .k-btn-ico { position: absolute; inset: 22%; z-index: 0; width: 56%; height: 56%; border-radius: 14%; object-fit: contain; margin: 0; }
+body.simple .sea-round .k-btn-ico.glyph { border-radius: 50%; font-size: 18px; color: var(--k-gold); }
+body.simple .sea-round .k-badge { top: -7px; right: -7px; z-index: 2; }
+@media (hover: hover) and (pointer: fine) {
+  body.simple .sea-round:hover:not(:disabled)::after, body.simple #touch > .tc-big:hover::after { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)) brightness(1.25) drop-shadow(0 0 6px rgba(224, 184, 98, 0.45)); }
 }
+body.simple .sea-round:active:not(:disabled), body.simple #touch > .tc-big:active { transform: scale(0.94); filter: brightness(1.25); }
+body.simple .sea-round:focus-visible, body.simple #touch > .tc-big:focus-visible { outline: 2px solid var(--k-gold); outline-offset: 7px; }
+
+/* ---------- the keys on the rims (a desk): small enamel chips with a brass edge — the keys' help, no line of words */
+.kc { display: none; }
+body.simple:not(.touch) .kc { position: absolute; z-index: 3; display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box;
+  border-radius: 4px; background: linear-gradient(180deg, #33291d, #120e0a); box-shadow: inset 0 0 0 1px rgba(196, 160, 102, 0.9), inset 0 1px 0 rgba(255, 228, 170, 0.18), 0 2px 4px rgba(0, 0, 0, 0.85);
+  color: #efe6d2; font: 700 10.5px/1 var(--k-font-sans); letter-spacing: 0.02em; text-shadow: 0 1px 1px #000; white-space: nowrap; pointer-events: none; font-variant-numeric: tabular-nums; }
+body.simple:not(.touch) .kc.hidden { display: none; }
+.kc-b { left: 50%; bottom: -10px; transform: translateX(-50%); }
+.kc-tl { left: -6px; top: -6px; }
+
+/* ---------- top left: the captain — her face in the porthole ring, her level on its rim, the bars in brass sheaths */
+body.simple #hud-captain { top: calc(var(--sa-t) + 6px); left: calc(var(--sa-l) + 6px); width: auto; display: block; gap: 0; cursor: pointer; pointer-events: auto; }
+body.simple.touch #hud-captain { pointer-events: none; cursor: default; }
+.cs { display: flex; align-items: center; gap: 8px; }
+.cs-frame { position: relative; flex: none; width: var(--cs-face); height: var(--cs-face); margin: calc(var(--cs-face) * 0.27); }
+/* the ring outside the face: its clear middle (0.625 of its half) as wide as the face, never over it */
+.cs-frame::after { content: ''; position: absolute; inset: calc(var(--cs-face) * -0.32); z-index: 1; pointer-events: none; background: var(--ui-ring) center / contain no-repeat; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.85)); }
+body:not(.skinned) .cs-frame::after { inset: -3px; border-radius: 50%; box-shadow: 0 0 0 2px var(--k-brass-dim); }
+/* the face: the head and shoulders of her portrait (kit/faces.ts) */
+.cs-face { position: absolute; inset: 0; border-radius: 50%; background-color: #15120e; background-repeat: no-repeat; box-shadow: 0 0 0 1px rgba(5, 6, 7, 0.9); }
+.cs-face::after { content: ''; position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 9px rgba(0, 0, 0, 0.6); pointer-events: none; }
+/* her level on the rim, low on the left: a coin of brass, never over the face */
+.cs-lv { position: absolute; left: calc(var(--cs-face) * -0.3); bottom: calc(var(--cs-face) * -0.3); z-index: 2; min-width: 22px; height: 22px; padding: 0 4px; box-sizing: border-box; border-radius: var(--k-r-round);
+  background: radial-gradient(circle at 50% 30%, #4a3a24, #1a130c 70%); box-shadow: 0 0 0 1.5px #d2ab64, 0 0 0 3px rgba(10, 8, 6, 0.9), 0 2px 4px #000;
+  color: #f2d48a; font: 700 11.5px/22px var(--k-font-sans); text-align: center; text-shadow: 0 1px 1px #000; font-variant-numeric: tabular-nums; }
+/* a talent point waiting: a gold bead on the rim, high on the right */
+.cs-pts { position: absolute; right: calc(var(--cs-face) * -0.24); top: calc(var(--cs-face) * -0.24); z-index: 2; width: 11px; height: 11px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff1c4, var(--k-gold) 55%, #8a6a2c); box-shadow: 0 0 0 1.5px #120e0a, 0 0 9px rgba(224, 184, 98, 0.9); }
+.cs-body { display: grid; grid-template-columns: auto; gap: 3px; min-width: 0; padding: 4px 10px 4px 2px; background: radial-gradient(ellipse 80% 70% at 35% 50%, rgba(5, 6, 8, 0.5), transparent 78%); }
+.cs-row { display: flex; align-items: center; gap: 5px; height: 14px; }
+.cs-ico { flex: none; width: 16px; height: 16px; object-fit: contain; margin: 0; filter: drop-shadow(0 1px 1px #000); }
+/* the bar in its brass sheath (ui.bar): the fill inside the sheath's middle */
+.cs-bar { position: relative; flex: none; width: var(--cs-bar); height: 13px; box-sizing: border-box; border-radius: 0; overflow: hidden;
+  border: solid transparent; border-width: 3px 8px; border-image: var(--ui-bar) 24 40 fill / 3px 8px stretch; background: linear-gradient(180deg, #08090b, #15171a); background-clip: padding-box; }
+body:not(.skinned) .cs-bar { border: 1px solid rgba(111, 90, 56, 0.6); border-radius: var(--k-r-round); }
+.cs-bar > i { position: absolute; left: 0; top: 0; bottom: 0; transition: width var(--k-dur-3) var(--k-ease-out); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22); }
+.cs-hull .cs-bar > i { background: linear-gradient(180deg, #d27a5f, #8e3326 55%, #5e2219); }
+.cs-crew .cs-bar > i { background: linear-gradient(180deg, #9cc0d4, #46677c 55%, #2f4452); }
+.cs-sails .cs-bar > i { background: linear-gradient(180deg, #e6dfc6, #988f78 55%, #5f5a4c); }
+.cs-v { min-width: 34px; font: 600 11px/1 var(--k-font-sans); color: var(--k-bone); text-shadow: 0 1px 2px #000, 0 0 4px #000; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cs-silver { justify-self: start; display: inline-flex; align-items: center; gap: 4px; margin: 1px 0 0 21px; padding: 1px 8px 1px 3px; border-radius: var(--k-r-round);
+  background: linear-gradient(180deg, rgba(30, 24, 17, 0.88), rgba(10, 9, 7, 0.88)); box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.6), 0 1px 3px rgba(0, 0, 0, 0.7); color: var(--k-gold); font: 600 11px/16px var(--k-font-sans); font-variant-numeric: tabular-nums; }
+.cs-coin { width: 14px; height: 14px; object-fit: contain; margin: 0; }
+@media (hover: hover) and (pointer: fine) { body.simple:not(.touch) #hud-captain:hover .cs-frame::after { filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.85)) brightness(1.22) drop-shadow(0 0 6px rgba(224, 184, 98, 0.45)); } }
+body.simple:not(.touch) #hud-captain:active .cs-frame { transform: scale(0.97); }
+@media (max-height: 420px) { body.simple .cs-row { height: 12px; } body.simple .cs-bar { height: 12px; } body.simple .cs-body { gap: 2px; } body.simple .cs-silver { line-height: 14px; } }
+@media (max-width: 680px) { body.simple { --cs-bar: 84px; } }
+
+/* ---------- top right: the minimap in its compass ring; the menu and the counter left of it */
+body.simple #hud-map { top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + 8px); width: var(--mm); height: var(--mm); }
+body.simple #touch > #tc-menu { position: absolute; top: calc(var(--sa-t) + 12px); right: calc(var(--sa-r) + var(--mm) + 20px); left: auto; pointer-events: auto; }
+body.simple #touch > #tc-news { position: absolute; top: calc(var(--sa-t) + 12px); right: calc(var(--sa-r) + var(--mm) + 20px + 44px + 16px); left: auto; pointer-events: auto; }
+@media (hover: hover) and (pointer: fine) and (min-height: 521px) {
+  body.simple:not(.touch) #touch > #tc-news { right: calc(var(--sa-r) + var(--mm) + 20px + 44px + 16px); }
+}
+/* the chart's key on its rim, low on the left */
+#hud-map > .kc-map { left: 15%; bottom: 9%; }
 /* The First Watch's lesson is the news now: the counter waits (seven things to touch at most with its two skips). */
 body.simple:has(#hud-watch:not(.hidden):not(.tut-hidden)) #touch > #tc-news { display: none !important; }
 /* A fight on a touch screen: the chart and the counter step aside (seven things to touch at most). */
 body.simple.touch.sea-fight #hud-map, body.simple.touch.sea-fight #touch > #tc-news { display: none !important; }
-
-/* The round buttons of the sea: a disc of pitch, a thin brass rim, the picture inside its circle. */
-body.simple .sea-round { border: 0; background: radial-gradient(circle at 50% 38%, #2b241b, #120f0b 72%); color: var(--k-gold);
-  box-shadow: inset 0 0 0 1.5px var(--k-brass-dim), inset 0 0 10px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.7); }
-body.simple .sea-round::after { content: none; }
-body.simple .sea-round .k-btn-ico { position: absolute; inset: 16%; width: 68%; height: 68%; border-radius: 14%; object-fit: contain; margin: 0; }
-body.simple .sea-round .k-btn-ico.glyph { border-radius: 50%; }
-body.simple .sea-round .k-badge { top: -8px; right: -8px; }
-@media (hover: hover) and (pointer: fine) { body.simple .sea-round:hover:not(:disabled) { box-shadow: inset 0 0 0 1.5px var(--k-brass), inset 0 0 10px rgba(0, 0, 0, 0.6), 0 0 12px rgba(224, 184, 98, 0.25); } }
-body.simple .sea-round:active:not(:disabled) { transform: scale(0.93); filter: brightness(1.3); }
 
 /* ---------- top middle: one column — her mark, a boss's line, the lesson, the sea's name — and the toasts under it */
 body.simple #hud-stack, body.simple #hud #hud-stack, body.simple.touch #hud-stack, body.simple.touch #hud #hud-stack, body.simple.touch.sea-target #hud #hud-stack {
@@ -131,71 +163,175 @@ body.simple.tac-ph #toasts { top: calc(var(--sa-t) + 8px) !important; left: 50% 
 body.simple.tac:not(.tac-ph) #toasts { top: auto !important; bottom: calc(var(--sa-b) + 10px) !important; left: 50% !important; transform: translateX(-50%) !important; width: min(40vw, 420px) !important; }
 body.simple.tac:not(.tac-ph) #toasts > .toast:nth-child(n+2) { display: none; }
 
-/* ---------- touch: the helm and its speed, bottom left */
-body.simple #tc-speed { position: absolute; left: calc(var(--sa-l) + 10px + var(--stick) / 2); transform: translateX(-50%); bottom: calc(var(--sa-b) + 1px); padding: 0 7px; border-radius: var(--k-r-round);
-  background: rgba(10, 11, 13, 0.82); box-shadow: inset 0 0 0 1px rgba(111, 90, 56, 0.5); color: var(--k-bone); font: 600 10.5px/15px var(--k-font-sans); font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; z-index: 1; }
+/* ---------- bottom left: the helm — the wheel (ui.helm) on its compass rose (ui.stick_base), every state at sea, every
+   screen: a finger steers it; on a desk it shows her heading, sail and speed, its keys round it, and a mouse may drag it */
+body.simple #touch > #tc-stick { display: block; }
+body.simple #tc-stick { filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.7)); }
+body.simple:not(.skinned) #tc-knob { background: radial-gradient(circle, #8c6b3a 0 18%, #2a2118 20% 60%, #6f5a38 62% 66%, transparent 68%); }
+/* the dash's chip: its painted picture in a little porthole ring, a dark sweep while the braces are hauled */
+body.simple #tc-dashchip { top: -6px; right: -6px; width: 30px; height: 30px; overflow: visible; background: radial-gradient(circle at 50% 38%, #3b3125, #0d0b08 70%); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.8); }
+body.simple #tc-dashchip::before { content: ''; position: absolute; inset: -11%; z-index: 2; border-radius: 50%; background: var(--ui-ring) center / contain no-repeat; color: transparent; }
+body.simple:not(.skinned) #tc-dashchip::before { inset: 0; box-shadow: inset 0 0 0 2px var(--k-brass-dim); }
+body.simple #tc-dashchip::after { z-index: 1; inset: 18%; }
+body.simple #tc-dashchip .tc-dash-ico { position: absolute; inset: 22%; width: 56%; height: 56%; border-radius: 14%; object-fit: cover; margin: 0; }
+body.simple #tc-stick.cooling #tc-dashchip .tc-dash-ico { filter: grayscale(0.7) brightness(0.6); }
+/* her speed under the wheel */
+body.simple #tc-speed { position: absolute; left: calc(var(--sa-l) + 10px + var(--stick) / 2); transform: translateX(-50%); bottom: calc(var(--sa-b) + 1px); padding: 0 8px; border-radius: var(--k-r-round);
+  background: linear-gradient(180deg, rgba(30, 24, 17, 0.92), rgba(10, 9, 7, 0.92)); box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.65), 0 2px 4px rgba(0, 0, 0, 0.7); color: var(--k-bone);
+  font: 600 10.5px/16px var(--k-font-sans); font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; z-index: 1; }
 body.simple #tc-speed:empty { display: none; }
 #tc-speed { display: none; }
-body.simple.touch #tc-speed { display: block; }
-body.simple.touch.sea-docked #tc-speed { display: none; }
+body.simple #tc-speed { display: block; }
+body.simple.sea-docked #tc-speed { display: none; }
+/* a desk: the wheel a little in from the corner, its keys round it (the sails over and under, the rudder either side,
+   the dash by its chip), her speed beside it */
+body.simple:not(.touch) #tc-stick { left: calc(var(--sa-l) + 30px); bottom: calc(var(--sa-b) + 30px); cursor: grab; }
+body.simple:not(.touch) #tc-stick.held { cursor: grabbing; }
+body.simple:not(.touch) #tc-speed { left: calc(var(--sa-l) + 30px + var(--stick) + 14px); bottom: calc(var(--sa-b) + 26px); transform: none; }
+body.simple:not(.touch) #tc-stick > .kc-up { left: 50%; top: -24px; transform: translateX(-50%); }
+body.simple:not(.touch) #tc-stick > .kc-down { left: 50%; bottom: -24px; transform: translateX(-50%); }
+body.simple:not(.touch) #tc-stick > .kc-left { left: -25px; top: 50%; transform: translateY(-50%); }
+body.simple:not(.touch) #tc-stick > .kc-right { right: -25px; top: 50%; transform: translateY(-50%); }
+body.simple:not(.touch) #tc-stick > .kc-dash { right: -36px; top: 2px; }
 
-/* ---------- touch: the fight's buttons, bottom right — out only in a fight («Огонь» big in the corner, «Снаряд»
-   left of it, «Цель» over it, «Особое» over «Снаряд»; «Действие» left of them) */
+/* ---------- bottom right on a touch screen: the fight's buttons — out only in a fight («Огонь» big in the corner,
+   «Снаряд» left of it, «Цель» over it, «Особое» over «Снаряд»; «Действие» left of them) */
 body.simple #touch > #tc-fire, body.simple #touch > #tc-ammo, body.simple #touch > #tc-lock, body.simple #touch > #tc-special { display: none; }
 body.simple.touch.sea-fight #touch > #tc-fire { display: flex; }
 body.simple.touch.sea-fight #touch > #tc-ammo, body.simple.touch.sea-fight #touch > #tc-lock { display: inline-flex; }
 body.simple.touch.sea-fight #touch > #tc-special:not(.hidden) { display: inline-flex; }
 body.simple #touch > :is(#tc-fire, #tc-ammo, #tc-lock, #tc-special).tut-hidden { display: none !important; }
-body.simple #touch > #tc-fire { right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad)); width: var(--sea-fire); height: var(--sea-fire); }
+body.simple #touch > #tc-fire { right: calc(var(--sa-r) + var(--sea-pad) + 4px); bottom: calc(var(--sa-b) + var(--sea-pad) + 4px); width: var(--sea-fire); height: var(--sea-fire); }
 body.simple #touch > :is(#tc-ammo, #tc-lock, #tc-special) { position: absolute; width: var(--sea-btn); height: var(--sea-btn); min-width: 0; min-height: 0; padding: 0; pointer-events: auto; }
-body.simple #touch > #tc-ammo { right: calc(var(--sa-r) + var(--sea-pad) + var(--sea-fire) + var(--sea-gap)); bottom: calc(var(--sa-b) + var(--sea-pad) + (var(--sea-fire) - var(--sea-btn)) / 2); }
-body.simple #touch > #tc-lock { right: calc(var(--sa-r) + var(--sea-pad) + (var(--sea-fire) - var(--sea-btn)) / 2); bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + var(--sea-gap)); }
-body.simple #touch > #tc-special { right: calc(var(--sa-r) + var(--sea-pad) + var(--sea-fire) + var(--sea-gap)); bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + var(--sea-gap)); box-shadow: inset 0 0 0 1.5px var(--k-gold), 0 0 12px rgba(224, 184, 98, 0.45); }
-/* «Огонь»: the big round button; its rim fills as the guns load; no shot on its corner (that is «Снаряд») */
-body.simple #touch > .tc-big { flex-direction: column; justify-content: center; }
-body.simple #touch > .tc-big .tc-big-pic { position: relative; display: flex; width: 50%; height: 44%; align-items: center; justify-content: center; }
-body.simple #touch > .tc-big .tc-big-ico { position: static; width: 100%; height: 100%; object-fit: contain; border-radius: 0; margin: 0; }
-body.simple #touch > .tc-big .tc-big-l { margin-top: 3px; }
+body.simple #touch > #tc-ammo { right: calc(var(--sa-r) + var(--sea-pad) + 4px + var(--sea-fire) + var(--sea-gap)); bottom: calc(var(--sa-b) + var(--sea-pad) + 4px + (var(--sea-fire) - var(--sea-btn)) / 2); }
+body.simple #touch > #tc-lock { right: calc(var(--sa-r) + var(--sea-pad) + 4px + (var(--sea-fire) - var(--sea-btn)) / 2); bottom: calc(var(--sa-b) + var(--sea-pad) + 4px + var(--sea-fire) + var(--sea-gap)); }
+body.simple #touch > #tc-special { right: calc(var(--sa-r) + var(--sea-pad) + 4px + var(--sea-fire) + var(--sea-gap)); bottom: calc(var(--sa-b) + var(--sea-pad) + 4px + var(--sea-fire) + var(--sea-gap)); }
+/* «Особое»: the ring lit gold (the captain's stroke ready) */
+body.simple #touch > #tc-special { box-shadow: 0 0 14px rgba(224, 184, 98, 0.55), 0 4px 12px rgba(0, 0, 0, 0.75); }
+body.simple #touch > #tc-special::after { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)) sepia(0.3) brightness(1.25) drop-shadow(0 0 5px rgba(224, 184, 98, 0.7)); }
+
+/* «Огонь»: the big round button — the porthole ring over red lacquer, the gun in the middle, its word under it; the
+   reload a gold ring round the brass (it fills as the guns load), the brass warm when they are ready */
+body.simple #touch > .tc-big { flex-direction: column; justify-content: center; gap: 0; padding: 0; }
+body.simple #touch > #tc-fire { background: radial-gradient(circle at 50% 38%, #7a281d 0, #461610 38%, #1e0a07 62%); }
+body.simple #touch > .tc-big .tc-big-pic { position: relative; z-index: 0; display: flex; width: 52%; height: 42%; align-items: center; justify-content: center; }
+body.simple #touch > .tc-big .tc-big-ico { position: static; width: 100%; height: 100%; object-fit: contain; border-radius: 0; margin: 0; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.8)); }
+body.simple #touch > .tc-big .tc-big-l { position: relative; z-index: 0; margin-top: 1px; font: 700 11px/1 var(--k-font-serif); letter-spacing: 0.08em; text-transform: uppercase; color: #f3cf7a; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.9); }
+body.simple #touch > .tc-big .tc-ring { position: absolute; inset: -14%; z-index: 0; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(#f0c870 calc(var(--rl, 1) * 360deg), rgba(10, 11, 13, 0.72) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));
+  filter: drop-shadow(0 0 2px rgba(240, 200, 112, 0.6)); }
+body.simple #touch > #tc-fire:not(.loaded) .tc-big-pic { filter: brightness(0.62) saturate(0.7); }
+body.simple #touch > #tc-fire.loaded::after { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)) brightness(1.18) drop-shadow(0 0 7px rgba(255, 150, 70, 0.6)); }
+body.simple #touch > #tc-fire.loaded .tc-ring { filter: drop-shadow(0 0 5px rgba(255, 190, 90, 0.85)); }
 /* «Снаряд»: the shot loaded, its count on a pill under the rim */
 body.simple #touch > #tc-ammo .tc-ammo-pic { position: absolute; inset: 0; }
-body.simple #touch > #tc-ammo .tc-ammo-n { position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); min-width: 22px; height: 16px; padding: 0 5px; box-sizing: border-box; border-radius: var(--k-r-round);
-  background: rgba(10, 11, 13, 0.94); box-shadow: 0 0 0 1px var(--k-brass-dim); color: var(--k-bone); font: 700 10px/16px var(--k-font-sans); text-align: center; font-variant-numeric: tabular-nums; pointer-events: none; }
-/* «Цель»: a crosshair drawn in code; gold while a mark is held */
-body.simple #touch > #tc-lock .tc-lock-x { position: absolute; inset: 27%; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--k-haze); }
-body.simple #touch > #tc-lock .tc-lock-x::before, body.simple #touch > #tc-lock .tc-lock-x::after { content: ''; position: absolute; left: 50%; top: 50%; background: var(--k-haze); transform: translate(-50%, -50%); }
-body.simple #touch > #tc-lock .tc-lock-x::before { width: 150%; height: 2px; }
-body.simple #touch > #tc-lock .tc-lock-x::after { width: 2px; height: 150%; }
-body.simple #touch > #tc-lock.on { box-shadow: inset 0 0 0 1.5px var(--k-gold), inset 0 0 10px rgba(0, 0, 0, 0.6), 0 0 10px rgba(224, 184, 98, 0.4); }
-body.simple #touch > #tc-lock.on .tc-lock-x { box-shadow: inset 0 0 0 2px var(--k-gold); }
-body.simple #touch > #tc-lock.on .tc-lock-x::before, body.simple #touch > #tc-lock.on .tc-lock-x::after { background: var(--k-gold); }
+body.simple #touch > #tc-ammo .tc-ammo-n { position: absolute; z-index: 2; left: 50%; bottom: -11px; transform: translateX(-50%); min-width: 22px; height: 16px; padding: 0 5px; box-sizing: border-box; border-radius: var(--k-r-round);
+  background: linear-gradient(180deg, #2c241a, #0e0b08); box-shadow: inset 0 0 0 1px rgba(196, 160, 102, 0.8), 0 1px 3px #000; color: var(--k-bone); font: 700 10px/16px var(--k-font-sans); text-align: center; font-variant-numeric: tabular-nums; pointer-events: none; }
+/* «Цель»: the spyglass; the ring lit gold while a mark is held */
+body.simple #touch > #tc-lock.on::after { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)) sepia(0.25) brightness(1.3) drop-shadow(0 0 5px rgba(224, 184, 98, 0.75)); }
 /* «Действие»: bottom right when nothing else is there, left of the fight's buttons in a fight */
 body.simple #touch > .tc-act { right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad)); max-width: min(230px, 34vw); transition: right var(--k-dur-2) var(--k-ease-out); }
-body.simple.touch.sea-fight #touch > .tc-act { right: calc(var(--sa-r) + var(--sea-pad) + var(--sea-fire) + var(--sea-gap) + var(--sea-btn) + 12px); bottom: calc(var(--sa-b) + var(--sea-pad) + (var(--sea-fire) - var(--sea-act-h)) / 2); }
-body.simple.touch.sea-docked #touch > .tc-act { right: calc(var(--sa-r) + var(--sea-pad) + var(--sea-fire) + 12px); bottom: calc(var(--sa-b) + var(--sea-pad) + (var(--sea-fire) - var(--sea-act-h)) / 2); }
-/* in port: the big round «В море», no helm */
+body.simple.touch.sea-fight #touch > .tc-act { right: calc(var(--sa-r) + var(--sea-pad) + 4px + var(--sea-fire) + var(--sea-gap) + var(--sea-btn) + 14px); bottom: calc(var(--sa-b) + var(--sea-pad) + 4px + (var(--sea-fire) - var(--sea-act-h)) / 2); }
+body.simple.touch.sea-docked #touch > .tc-act { right: calc(var(--sa-r) + var(--sea-pad) + var(--sea-fire) + 18px); bottom: calc(var(--sa-b) + var(--sea-pad) + 4px + (var(--sea-fire) - var(--sea-act-h)) / 2); }
+/* in port: the big round «В море» (the sail in the porthole ring), no helm */
 body.simple #touch > #tc-cast { display: none; }
-body.simple.touch.sea-docked #touch > #tc-cast:not(.hidden) { display: flex; right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad)); width: var(--sea-fire); height: var(--sea-fire); }
-body.simple.sea-docked #touch > :is(#tc-stick, #tc-fire, #tc-ammo, #tc-lock, #tc-special) { display: none !important; }
-body.simple.touch.sea-docked #touch > #tc-stick { display: none; }
+body.simple.sea-docked #touch > #tc-cast:not(.hidden) { display: flex; right: calc(var(--sa-r) + var(--sea-pad) + 4px); bottom: calc(var(--sa-b) + var(--sea-pad) + 4px); width: var(--sea-fire); height: var(--sea-fire); }
+body.simple #touch > #tc-cast { background: radial-gradient(circle at 50% 38%, #4a3c28 0, #2a2117 40%, #110d09 64%); }
+body.simple.sea-docked #touch > :is(#tc-stick, #tc-fire, #tc-ammo, #tc-lock, #tc-special, #tc-deck) { display: none !important; }
 
-/* ---------- a desk: no stick and no fight buttons — the keys do it all */
-body.simple:not(.touch) #touch > :is(#tc-stick, #tc-fire, #tc-ammo, #tc-lock, #tc-special, #tc-act, #tc-cast, #tc-speed) { display: none !important; }
-/* the context row over the bottom edge: what is to do here, each with its key; the line of what stops her above it */
-body.simple:not(.touch) #hud-bottom { bottom: calc(var(--sa-b) + 10px); }
-body.simple:not(.touch) #hud-prompt .act-row { gap: 6px; }
+/* ---------- bottom right on a desk: the gun deck — «Огонь» big in the corner, «Цель» over it, and beside it the
+   abilities (Z X C V) over the shots (1–5) in iron slots; every key on a chip on its rim; out at sea in every state
+   (owner: «возвращай управление»), «В море» in its place in port */
+body.simple:not(.touch) #touch > :is(#tc-ammo, #tc-special, #tc-act) { display: none !important; }
+body.simple:not(.touch):not(.sea-docked) #touch > #tc-fire { display: flex; right: calc(var(--sa-r) + var(--dk-pad)); bottom: calc(var(--sa-b) + var(--dk-pad)); width: var(--dk-fire); height: var(--dk-fire); }
+body.simple:not(.touch):not(.sea-docked) #touch > #tc-lock { display: inline-flex; width: var(--dk-lock); height: var(--dk-lock); right: calc(var(--sa-r) + var(--dk-pad) + (var(--dk-fire) - var(--dk-lock)) / 2); bottom: calc(var(--sa-b) + var(--dk-pad) + var(--dk-fire) + 22px); }
+body.simple:not(.touch).sea-docked #touch > #tc-cast:not(.hidden) { right: calc(var(--sa-r) + var(--dk-pad)); bottom: calc(var(--sa-b) + var(--dk-pad)); width: var(--dk-fire); height: var(--dk-fire); }
+body.simple:not(.touch) #touch > .tc-big .tc-big-l { font-size: 12px; }
+#tc-deck { display: none; }
+body.simple:not(.touch):not(.sea-docked) #touch > #tc-deck:not(.hidden) { position: absolute; display: flex; flex-direction: column; align-items: flex-end; gap: calc(var(--dk-gap) + 4px);
+  right: calc(var(--sa-r) + var(--dk-pad) + var(--dk-fire) + 26px); bottom: calc(var(--sa-b) + var(--dk-pad) - 4px); pointer-events: auto; }
+.dk-row { display: flex; gap: var(--dk-gap); }
+.dk-row:empty { display: none; }
+/* (the First Watch: the shots come with the guns, the abilities with the abilities) */
+body:has(#tc-fire.tut-hidden) #tc-deck .dk-shots, body:has(#tc-special.tut-hidden) #tc-deck .dk-abil { display: none; }
+/* a slot: the art under its iron frame (ui.slot), the frame's edge over the art's edge */
+.dk-slot { position: relative; flex: none; width: var(--dk-slot); height: var(--dk-slot); padding: 0; border: 0; border-radius: 3px; cursor: pointer; color: var(--k-bone);
+  background: radial-gradient(circle at 50% 40%, #2a241d, #0c0b09 75%); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.75);
+  transition: transform var(--k-dur-1) var(--k-ease-out), filter var(--k-dur-1) var(--k-ease-out); -webkit-tap-highlight-color: transparent; }
+.dk-slot::after { content: ''; position: absolute; inset: -6%; z-index: 2; pointer-events: none; background: var(--ui-slot) center / 100% 100% no-repeat; }
+body:not(.skinned) .dk-slot::after { inset: 0; box-shadow: inset 0 0 0 2px var(--k-brass-dim); }
+.dk-ico { position: absolute; inset: 9%; width: 82%; height: 82%; margin: 0; object-fit: cover; border-radius: 2px; }
+.dk-shot .dk-ico { object-fit: contain; inset: 12%; width: 76%; height: 76%; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.8)); }
+.dk-ico.glyph { display: flex; align-items: center; justify-content: center; font: 700 16px/1 var(--k-font-sans); color: var(--k-gold); }
+@media (hover: hover) and (pointer: fine) { .dk-slot:hover { filter: brightness(1.22); transform: translateY(-1px); } }
+.dk-slot:active { transform: scale(0.94); filter: brightness(1.3); }
+.dk-slot:focus { outline: none; }
+.dk-slot:focus-visible { outline: 2px solid var(--k-gold); outline-offset: 4px; }
+/* the shot loaded: its frame gilded and lit, the slot raised; the best for her mark: a slow gold breath */
+.dk-shot.sel { transform: translateY(-3px); box-shadow: 0 0 14px rgba(224, 184, 98, 0.55), 0 5px 10px rgba(0, 0, 0, 0.8); }
+.dk-shot.sel::after { filter: sepia(0.45) saturate(1.6) brightness(1.35) drop-shadow(0 0 4px rgba(240, 200, 112, 0.85)); }
+.dk-shot.best:not(.sel)::before { content: ''; position: absolute; inset: 6%; z-index: 1; border-radius: 3px; pointer-events: none; box-shadow: inset 0 0 10px rgba(240, 200, 112, 0.65); animation: dk-best 2.4s ease-in-out infinite; }
+@keyframes dk-best { 50% { opacity: 0.35; } }
+body.reduce-motion .dk-shot.best::before { animation: none; }
+.dk-slot.dim .dk-ico { filter: grayscale(0.85) brightness(0.55); }
+.dk-shot.dim .dk-n { color: var(--k-bad); }
+/* a shot's count on the rim, low on the right */
+.dk-n { position: absolute; right: -5px; bottom: -6px; z-index: 3; min-width: 18px; height: 15px; padding: 0 4px; box-sizing: border-box; border-radius: var(--k-r-round);
+  background: linear-gradient(180deg, #241d15, #0b0907); box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.7), 0 1px 3px #000; color: var(--k-bone); font: 700 9.5px/15px var(--k-font-sans); text-align: center; font-variant-numeric: tabular-nums; pointer-events: none; }
+/* an ability's cooldown: a dark sweep over the art (from noon round), its seconds in the middle */
+.dk-cd { position: absolute; inset: 9%; z-index: 1; border-radius: 2px; pointer-events: none; background: conic-gradient(rgba(4, 5, 7, 0.78) calc(var(--cd, 0) * 360deg), transparent 0); }
+.dk-cdt { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; color: #f4ecd8; font: 700 15px/1 var(--k-font-sans); text-shadow: 0 1px 2px #000, 0 0 6px #000; pointer-events: none; font-variant-numeric: tabular-nums; }
+.dk-slot.locked .dk-cdt { align-items: flex-end; padding-bottom: 14%; font-size: 9.5px; letter-spacing: 0.02em; color: var(--k-haze); }
+.dk-abil:not(.cooling):not(.dim) .dk-ico { filter: saturate(1.08); }
+/* an ultimate: the frame touched with the sea-green of the deep; its resolve a thin bar along the bottom */
+.dk-slot.ult::after { filter: hue-rotate(110deg) saturate(0.7) brightness(1.1); }
+.dk-charge { position: absolute; left: 12%; right: 12%; bottom: 10%; z-index: 3; height: 3px; border-radius: 2px; background: rgba(5, 6, 7, 0.85); overflow: hidden; pointer-events: none; }
+.dk-charge > i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--k-turq); box-shadow: 0 0 4px var(--k-turq); }
+/* the context row keeps between the helm and the deck */
+body.simple:not(.touch) #hud-bottom { bottom: calc(var(--sa-b) + 12px); max-width: calc(100vw - 2 * (var(--dk-pad) + var(--dk-fire) + 26px + 5 * var(--dk-slot) + 4 * var(--dk-gap) + 16px)); }
+body.simple:not(.touch) #hud-prompt .act-row { gap: 6px; flex-wrap: wrap; justify-content: center; }
 body.simple:not(.touch) #hud-prompt .act-btn { --h: 34px; text-align: left; } /* (as wide as its words: nothing to centre) */
-/* the line of keys: small, low on the left, for the first minutes at sea (main.ts keyHint) */
-#key-hint { position: absolute; left: calc(var(--sa-l) + 10px); bottom: calc(var(--sa-b) + 10px); max-width: min(620px, calc(50vw - 230px)); display: flex; flex-wrap: wrap; gap: 4px 12px;
-  padding: 5px 10px; border-radius: var(--k-r-2); background: rgba(10, 11, 13, 0.62); box-shadow: inset 0 0 0 1px rgba(111, 90, 56, 0.3);
-  color: var(--k-haze); font: 500 11px/18px var(--k-font-sans); pointer-events: none; transition: opacity 6s linear; }
-#key-hint.hidden, body:not(.simple) #key-hint, body.touch #key-hint { display: none; }
-#key-hint.fade { opacity: 0; }
-#key-hint span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-#key-hint em { font-style: normal; }
-#key-hint i { font-style: normal; color: var(--k-haze); }
-#key-hint kbd { display: inline-block; min-width: 18px; padding: 0 4px; border-radius: 3px; box-sizing: border-box; background: rgba(216, 210, 196, 0.08); box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.55), 0 1px 0 rgba(0, 0, 0, 0.6);
-  color: var(--k-bone); font: 600 10.5px/16px var(--k-font-sans); text-align: center; }
-body.tac #key-hint { display: none; }
+
+/* ---------- the attack cursor (ui/cursor.ts: the tattoo set's sabres, hook and gun, their skin cleared) over what she
+   may fight; on a touch screen the same mark over the target she marked */
+#world[data-cur='attack'] { cursor: var(--cur-attack, crosshair), crosshair; }
+#world[data-cur='board'] { cursor: var(--cur-board, crosshair), crosshair; }
+#world[data-cur='guns'] { cursor: var(--cur-guns, crosshair), crosshair; }
+#board-tac canvas[data-cur='attack'] { cursor: var(--cur-attack, crosshair), crosshair; }
+#board-tac canvas[data-cur='guns'] { cursor: var(--cur-guns, crosshair), crosshair; }
+#atk-mark { position: fixed; left: 0; top: 0; z-index: 11; width: 40px; height: 40px; background: center / contain no-repeat; pointer-events: none; will-change: transform; animation: atk-bob 1.6s ease-in-out infinite; }
+#atk-mark.hidden { display: none; }
+@keyframes atk-bob { 50% { margin-top: -4px; } }
+body.reduce-motion #atk-mark { animation: none; }
+
+/* ---------- the target's choices beside her (owner, 2026-10-07: «надо предлагать захват цели и преследование и бой»;
+   ui/targetmenu.ts): three painted round choices on an arc on her free side, each in the porthole ring with its word on
+   a small plate; never over her, never in the way of the HUD's corners */
+.tm { position: fixed; left: 0; top: 0; z-index: 12; width: 0; height: 0; pointer-events: none; }
+.tm.hidden { display: none; }
+.tm-item { position: absolute; left: 0; top: 0; display: block; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--k-bone); cursor: pointer; pointer-events: auto;
+  opacity: 0; transition: opacity var(--k-dur-2) var(--k-ease-out) calc(var(--tm-i, 0) * 45ms); -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.tm.tm-open .tm-item { opacity: 1; }
+.tm-pic { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 50% 36%, #3b3125 0, #1c1711 44%, #0d0b08 66%); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.8); transition: transform var(--k-dur-1) var(--k-ease-out); }
+.tm-pic::after { content: ''; position: absolute; inset: -11%; border-radius: 50%; background: var(--ui-ring) center / contain no-repeat; pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)); transition: filter var(--k-dur-2) var(--k-ease-out); }
+body:not(.skinned) .tm-pic::after { inset: 0; box-shadow: inset 0 0 0 3px var(--k-brass-dim); }
+.tm-ico { position: absolute; inset: 22%; width: 56%; height: 56%; margin: 0; border-radius: 14%; object-fit: cover; }
+.tm-l { position: absolute; top: 50%; left: calc(100% + 9px); transform: translateY(-50%); padding: 2px 8px; border-radius: 4px; white-space: nowrap; pointer-events: none;
+  background: linear-gradient(180deg, rgba(32, 26, 18, 0.94), rgba(10, 9, 7, 0.94)); box-shadow: inset 0 0 0 1px rgba(196, 160, 102, 0.7), 0 2px 6px rgba(0, 0, 0, 0.75);
+  font: 600 12px/16px var(--k-font-sans); letter-spacing: 0.01em; color: var(--k-bone); text-shadow: 0 1px 1px #000; }
+.tm[data-side='left'] .tm-l { left: auto; right: calc(100% + 9px); }
+@media (hover: hover) and (pointer: fine) {
+  .tm-item:hover .tm-pic::after { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)) brightness(1.28) drop-shadow(0 0 6px rgba(224, 184, 98, 0.65)); }
+  .tm-item:hover .tm-l { color: var(--k-gold); box-shadow: inset 0 0 0 1px rgba(224, 184, 98, 0.95), 0 2px 6px rgba(0, 0, 0, 0.75); }
+}
+.tm-item:focus { outline: none; }
+.tm-item:focus-visible .tm-pic { outline: 2px solid var(--k-gold); outline-offset: 6px; }
+.tm-item:active .tm-pic { transform: scale(0.93); }
+.tm-item.on .tm-pic::after { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)) sepia(0.3) brightness(1.3) drop-shadow(0 0 5px rgba(224, 184, 98, 0.8)); }
+.tm-item.on .tm-l { color: var(--k-gold); }
+body.touch .tm-item { width: 48px; height: 48px; }
+body.touch .tm-l { font-size: 12.5px; line-height: 18px; }
 
 /* ---------- pictures in round frames elsewhere (the crop check): inside the frame's circle, the badge on the rim */
 .k-wheel-ico { width: 26px; height: 26px; border-radius: 14%; }
@@ -211,7 +347,8 @@ body.tac #key-hint { display: none; }
 
 /* ---------- the detailed interface on a touch screen (expertHud): the phase-2 HUD as it was, «В море» its own button */
 .tc-big-pic { display: contents; }
-body:not(.simple) #touch > :is(#tc-ammo, #tc-lock) { display: none; }
+body:not(.simple) #touch > :is(#tc-ammo, #tc-lock, #tc-deck) { display: none; }
+body:not(.simple) .kc { display: none !important; }
 body.touch.sea-docked #touch > #tc-fire { display: none; }
 
 /* ======================================================================================================================

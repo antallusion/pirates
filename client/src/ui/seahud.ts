@@ -1,22 +1,29 @@
 // The sea HUD (docs/23 phase 2; owner, 2026-10-07: «перегруз интерфейса… выходя из порта нужно скрывать часть ui,
-// давать только штурвал и всё необходимое»): one simple HUD for every input, built from the interface kit.
-//   top left      the captain: her face and the bars of hull, men and sails (hud.ts), silver as a chip
-//   top right     the minimap, the menu (a sheet of eight big tiles) and the counter of goals and news
+// давать только штурвал и всё необходимое»; then «ты удалил всё, что было, и штурвал и вообще всё… возвращай иконки,
+// обводки графические… штурвал на мобилах… сделать круче»): one HUD for every input, every control a painted icon in
+// its painted rim (the brass porthole ring, ui.ring; the iron slot, ui.slot; the helm on its compass, ui.helm and
+// ui.stick_base), built from the interface kit.
+//   top left      the captain: her face in the porthole ring, her level on its rim, the bars of hull, men and sails in
+//                 their brass sheaths (hud.ts), silver as a chip
+//   top right     the minimap in its compass ring, the menu (a sheet of eight big tiles) and the counter of goals and news
 //   top middle    her mark's line when she has one, a world boss's slim line, the sea's name a moment on entering
+//   bottom left   the helm on its compass rose, the sail as a gold ring round it, her speed under it
 // On a touch screen (a phone, a tablet — the same controls on both):
-//   bottom left   the helm stick and her speed under it (the ring round the wheel is the sail)
 //   bottom right  in a fight only: «Огонь», big (a tap fires, a long press opens the wheel of shots, abilities,
 //                 talents, the mount); beside it «Снаряд» (a tap loads the next shot), «Цель» (a tap takes the next ship
 //                 as the mark, a long press opens her card) and «Особое» (the captain's best ready ability); «Действие»
 //                 left of them whenever there is something to do (Атаковать, Абордаж, В порт, Высадка, Сеть…)
 //   in port       the big round «В море» and «Действие» («Гавань»)
-// Out of a fight the guns step aside: leaving port the screen holds the helm, the chart, the menu and what is to do.
-// On a desk (owner: «на пк чисто через wasd и другие клавиши») there is no stick and no buttons for the fight: the keys
-// do it all (WASD, Space «Огонь», Tab the next mark, 1–5 the shots, Z X C V the abilities), a small line of keys says
-// so for the first minutes at sea, and the context row over the bottom edge keeps its key on each thing to do.
+// On a desk (owner: «на пк чисто через wasd и другие клавиши» — played by its keys, the controls still drawn): the
+// same helm, its keys on chips round the wheel (W S the sails, A D the rudder, Shift the dash); bottom right the gun
+// deck — «Огонь» big with its reload ring, «Цель» over it, and beside it two rows of painted slots, the captain's
+// abilities (Z X C V, their cooldowns sweeping) over the shots (1–5, the loaded one lit, her count on each) — every
+// key on a chip on its rim. A click works too; the keys do it all. The context row over the bottom edge keeps its key
+// on each thing to do.
 // Petty refusals (reloading, not on the beam) flash the button and buzz instead of a toast.
 // «Подробный интерфейс» (settings: expertHud) brings the older full HUD back in its place.
 
+import { assetUrl } from '../assets.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/seahud.ts';
 import { esc, icon } from './dom.ts';
@@ -86,10 +93,57 @@ export interface SeaAct {
   more: number;
 }
 
+/** A painted slot of the desk's gun deck: a shot (1–5) or one of the captain's abilities (Z X C V). */
+export interface DeckSlot {
+  kind: 'shot' | 'abil';
+  id: string;
+  /** Art id for icon() (`ammo_round`, `ab_double_shot`). */
+  art: string;
+  /** The key on its rim ('1', 'Z'); '' for none. */
+  key: string;
+  name: string;
+  /** Its tooltip (the name and what it does). */
+  title: string;
+  /** A shot's count aboard. */
+  n?: number;
+  /** The shot loaded now. */
+  sel?: boolean;
+  /** The best shot for her mark (docs/23 item 39). */
+  best?: boolean;
+  ult?: boolean;
+  /** The words on a locked one (an ultimate before level 6). */
+  locked?: string;
+  /** Not to be used now (no resolve, no Dread, none aboard). */
+  dim?: boolean;
+  /** An ultimate's resolve, 0–1, while it gathers. */
+  charge?: number | null;
+  /** The cooldown left, 0–1, and in seconds. */
+  cd?: number;
+  left?: number;
+}
+
+/** The desk's keys as they read on the chips (the captain's own keymap); '' or '—' for a key bound to nothing. */
+export interface SeaKeys {
+  fire: string;
+  target: string;
+  menu: string;
+  map: string;
+  up: string;
+  down: string;
+  left: string;
+  right: string;
+  dash: string;
+  cast: string;
+}
+
 export interface SeaView {
   docked: boolean;
   /** A touch screen (the stick and the fight's buttons); a desk plays by its keys. */
   touch?: boolean;
+  /** The desk's gun deck: the abilities, then the shots (none on a touch screen: the wheel under «Огонь» has them). */
+  deck?: DeckSlot[] | null;
+  /** The desk's keys for the chips on the controls' rims. */
+  keys?: SeaKeys | null;
   /** A fight is on or near (a mark, her guns busy, a foe close by): the guns' buttons come out. */
   fight?: boolean;
   act: SeaAct | null;
@@ -110,9 +164,11 @@ export function inFight(v: SeaView): boolean {
   return !v.docked && (v.fight ?? !!v.target);
 }
 
-/** The things to touch the sea HUD shows for a view (seven at most: docs/23 item 32, owner 2026-10-07). The stick
- *  counts as one; the target's line on a touch screen is words, not a button (its card is «Цель»'s long press). A desk
- *  has no stick and no fight buttons: the captain's frame, her mark's line, the menu, the chart and the counter. */
+/** The things to touch the sea HUD shows for a view (seven at most on a touch screen: docs/23 item 32, owner
+ *  2026-10-07). The stick counts as one; the target's line on a touch screen is words, not a button (its card is
+ *  «Цель»'s long press). A desk is played by its keys and shows what they drive (owner, 2026-10-07: «возвращай
+ *  управление… штурвал»): the captain's frame, the menu, her mark's line, the chart and the counter, and at sea the
+ *  helm, «Огонь», «Цель» and the gun deck (one group of key-driven slots) — nine at most; in port «В море». */
 export function seaTargets(v: SeaView): string[] {
   const out: string[] = [];
   const fight = inFight(v);
@@ -121,6 +177,8 @@ export function seaTargets(v: SeaView): string[] {
     if (v.target && !v.docked) out.push('target');
     out.push('minimap');
     if (v.news > 0) out.push('news');
+    if (v.docked) out.push('cast');
+    else out.push('stick', 'fire', 'lock', 'deck');
     return out;
   }
   // In port the big round button is «В море» (docs/23 phase 6: casting off without opening the harbour).
@@ -153,6 +211,9 @@ export interface SeaHooks {
   ammoNext(): void;
   /** «Цель»: the next ship as her mark. */
   nextTarget(): void;
+  /** The desk's gun deck: a shot loaded, an ability used (at her mark). */
+  ammo(id: string): void;
+  ability(id: string): void;
   menu(id: MenuItem | 'more'): void;
   target(): void;
   /** The blocks that fold into the news sheet, by id (hud.ts FOLDED). */
@@ -202,6 +263,29 @@ function tapOrHold(el: HTMLElement, tap: () => void, hold: () => void): void {
   });
 }
 
+/** The art of the controls that are not a shot or an ability (their glyphs stand in while it loads). */
+export const SEA_ART = { fire: 'fire', cast: 'stat_sails', lock: 'item_ranging_glass', menu: 'menu_cabin', news: 'goal', dash: 'dash', dashAlt: 'ab_hard_over' } as const;
+
+/** A key's words fit for a chip: none for a key bound to nothing. */
+export const chipKey = (k: string | undefined): string => (!k || k === '—' ? '' : k);
+
+/** A control's tooltip with its key (a desk). */
+const withKey = (words: string, k: string): string => (k ? `${words} [${k}]` : words);
+
+/** A painted slot of the desk's gun deck: the art in its iron frame (ui.slot), the key on the rim's top left, a
+ *  shot's count on its bottom right, an ability's cooldown sweeping over it with its seconds. */
+export function deckSlotHtml(s: DeckSlot): string {
+  const cls = ['dk-slot', `dk-${s.kind}`, s.sel ? 'sel' : '', s.best ? 'best' : '', s.ult ? 'ult' : '', s.locked ? 'locked' : '', s.dim ? 'dim' : ''].filter(Boolean).join(' ');
+  const data = s.kind === 'shot' ? `data-shot="${esc(s.id)}"` : `data-ab="${esc(s.id)}"`;
+  const label = withKey(s.kind === 'shot' && s.n !== undefined ? `${s.name}: ${s.n}` : s.name, s.key);
+  return `<button type="button" class="${cls}" ${data} aria-label="${esc(label)}" title="${esc(withKey(s.title, s.key))}"${s.sel ? ' aria-pressed="true"' : ''}>`
+    + `${icon(s.art, s.key || '•', 'dk-ico')}`
+    + (s.kind === 'abil' ? `<i class="dk-cd" aria-hidden="true"></i><span class="dk-cdt" aria-hidden="true">${s.locked ? esc(s.locked) : ''}</span>${s.charge !== null && s.charge !== undefined ? '<i class="dk-charge" aria-hidden="true"><i></i></i>' : ''}` : '')
+    + (s.key ? `<kbd class="kc kc-tl" aria-hidden="true">${esc(s.key)}</kbd>` : '')
+    + (s.kind === 'shot' && s.n !== undefined ? `<b class="dk-n" aria-hidden="true">${s.n > 999 ? '999+' : s.n}</b>` : '')
+    + '</button>';
+}
+
 export class SeaHud {
   private hooks: SeaHooks;
   readonly fireEl: HTMLButtonElement;
@@ -212,11 +296,15 @@ export class SeaHud {
   readonly lockEl: HTMLButtonElement;
   readonly menuEl: HTMLButtonElement;
   readonly newsEl: HTMLButtonElement;
+  /** The desk's gun deck: two rows of painted slots, the abilities over the shots. */
+  readonly deckEl: HTMLElement;
   private target: TargetLine;
   private keys = new Map<string, string>();
   private menuSheet: SheetHandle | null = null;
   private newsSheet: SheetHandle | null = null;
   private view: SeaView | null = null;
+  /** The deck's ability slots by id, their sweep, seconds and resolve kept to move in place every frame. */
+  private cdEls = new Map<string, { slot: HTMLElement; cd: HTMLElement; cdt: HTMLElement; charge: HTMLElement | null }>();
 
   constructor(root: HTMLElement, hooks: SeaHooks) {
     this.hooks = hooks;
@@ -227,8 +315,8 @@ export class SeaHud {
       root.append(el);
       return el;
     };
-    this.newsEl = make(buttonHtml({ kind: 'icon', id: 'tc-news', icon: 'goal', glyph: '!', aria: L('news'), cls: 'tc-news k-count sea-round hidden' })) as HTMLButtonElement;
-    this.menuEl = make(buttonHtml({ kind: 'icon', id: 'tc-menu', icon: 'menu_cabin', glyph: '☰', aria: L('menu'), cls: 'sea-round' })) as HTMLButtonElement;
+    this.newsEl = make(buttonHtml({ kind: 'icon', id: 'tc-news', icon: SEA_ART.news, glyph: '!', aria: L('news'), cls: 'tc-news k-count sea-round hidden' })) as HTMLButtonElement;
+    this.menuEl = make(buttonHtml({ kind: 'icon', id: 'tc-menu', icon: SEA_ART.menu, glyph: '☰', aria: L('menu'), cls: 'sea-round' })) as HTMLButtonElement;
     // Her mark's line heads the top band (in the top stack, so a boss's line, the lesson and the toasts stand under it).
     const host = make('<div id="tc-target" class="hidden"></div>');
     document.getElementById('hud-stack')?.prepend(host);
@@ -237,9 +325,10 @@ export class SeaHud {
     this.actEl = make(`<button type="button" id="tc-act" class="k-btn k-btn--primary k-btn--lg tc-act hidden" aria-label="${esc(L('act'))}"><span class="tc-act-ico"></span><span class="k-btn-l"></span><b class="tc-act-more hidden" aria-hidden="true"></b></button>`) as HTMLButtonElement;
     this.specialEl = make(`<button type="button" id="tc-special" class="k-btn k-btn--icon k-btn--lg tc-special sea-round hidden" aria-label=""></button>`) as HTMLButtonElement;
     this.ammoEl = make(`<button type="button" id="tc-ammo" class="k-btn k-btn--icon k-btn--lg tc-ammo sea-round" aria-label="${esc(L('ammoNone'))}"><span class="tc-ammo-pic"></span><b class="tc-ammo-n" aria-hidden="true"></b></button>`) as HTMLButtonElement;
-    this.lockEl = make(`<button type="button" id="tc-lock" class="k-btn k-btn--icon k-btn--lg tc-lock sea-round" aria-label="${esc(L('lockNone'))}" title="${esc(L('lockNone'))}"><i class="tc-lock-x" aria-hidden="true"></i></button>`) as HTMLButtonElement;
-    this.fireEl = make(`<button type="button" id="tc-fire" class="k-btn k-btn--icon tc-big" aria-label="${esc(L('fireAria'))}" title="${esc(L('fireAria'))}"><i class="tc-ring" aria-hidden="true"></i><span class="tc-big-pic">${icon('fire', '✸', 'tc-big-ico')}</span><span class="tc-big-l">${esc(L('fire'))}</span></button>`) as HTMLButtonElement;
-    this.castEl = make(`<button type="button" id="tc-cast" class="k-btn k-btn--icon tc-big tc-sail hidden" aria-label="${esc(L('sailAria'))}" title="${esc(L('sailAria'))}"><span class="tc-big-pic">${icon('stat_sails', '⛵', 'tc-big-ico')}</span><span class="tc-big-l">${esc(L('sail'))}</span></button>`) as HTMLButtonElement;
+    this.lockEl = make(`<button type="button" id="tc-lock" class="k-btn k-btn--icon k-btn--lg tc-lock sea-round" aria-label="${esc(L('lockNone'))}" title="${esc(L('lockNone'))}">${icon(SEA_ART.lock, '◎', 'k-btn-ico')}<kbd class="kc kc-b" aria-hidden="true"></kbd></button>`) as HTMLButtonElement;
+    this.fireEl = make(`<button type="button" id="tc-fire" class="k-btn k-btn--icon tc-big" aria-label="${esc(L('fireAria'))}" title="${esc(L('fireAria'))}"><i class="tc-ring" aria-hidden="true"></i><span class="tc-big-pic">${icon(SEA_ART.fire, '✸', 'tc-big-ico')}</span><span class="tc-big-l">${esc(L('fire'))}</span><kbd class="kc kc-b" aria-hidden="true"></kbd></button>`) as HTMLButtonElement;
+    this.castEl = make(`<button type="button" id="tc-cast" class="k-btn k-btn--icon tc-big tc-sail hidden" aria-label="${esc(L('sailAria'))}" title="${esc(L('sailAria'))}"><span class="tc-big-pic">${icon(SEA_ART.cast, '⛵', 'tc-big-ico')}</span><span class="tc-big-l">${esc(L('sail'))}</span><kbd class="kc kc-b" aria-hidden="true"></kbd></button>`) as HTMLButtonElement;
+    this.deckEl = make(`<div id="tc-deck" class="sea-deck hidden" role="toolbar" aria-label="${esc(L('deck'))}"><div class="dk-row dk-abil"></div><div class="dk-row dk-shots"></div></div>`);
     attachWheel(this.fireEl, { options: () => hooks.fireOptions(), onPick: (o) => hooks.firePick(o.id), onTap: () => hooks.fire(), title: L('wheelFire') });
     attachWheel(this.ammoEl, { options: () => hooks.fireOptions(), onPick: (o) => hooks.firePick(o.id), onTap: () => hooks.ammoNext(), title: L('wheelFire') });
     attachWheel(this.actEl, { options: () => hooks.actOptions(), onPick: (o) => hooks.actPick(o.id), onTap: () => hooks.act(), title: L('wheelAct') });
@@ -248,26 +337,57 @@ export class SeaHud {
     this.specialEl.addEventListener('click', () => hooks.special());
     this.menuEl.addEventListener('click', () => this.openMenu());
     this.newsEl.addEventListener('click', () => this.openNews());
+    this.deckEl.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('.dk-slot');
+      if (!b) return;
+      if (b.dataset.shot) hooks.ammo(b.dataset.shot);
+      else if (b.dataset.ab) hooks.ability(b.dataset.ab);
+    });
+    // The keys' chips on the helm (the sails over and under it, the rudder either side, the dash by its chip) and on
+    // the chart (the world's map).
+    const stick = document.getElementById('tc-stick');
+    if (stick) for (const k of ['up', 'down', 'left', 'right', 'dash']) stick.insertAdjacentHTML('beforeend', `<kbd class="kc kc-helm kc-${k}" aria-hidden="true"></kbd>`);
+    document.getElementById('hud-map')?.insertAdjacentHTML('beforeend', '<kbd class="kc kc-map" aria-hidden="true"></kbd>');
+    this.menuEl.insertAdjacentHTML('beforeend', '<kbd class="kc kc-b" aria-hidden="true"></kbd>');
   }
 
   /** Redraw what changed. */
   frame(v: SeaView): void {
     this.view = v;
     const lg = lang();
-    if (this.keys.get('lang') !== lg) {
-      // Another language: every word again.
+    const k = v.touch === false && v.keys ? v.keys : null;
+    const key = (x: keyof SeaKeys) => chipKey(k?.[x]);
+    const words = `${lg}|${k ? JSON.stringify(k) : ''}`;
+    if (this.keys.get('lang') !== words) {
+      // Another language or another key: every word again.
       this.keys.clear();
-      this.keys.set('lang', lg);
-      this.fireEl.setAttribute('aria-label', L('fireAria'));
-      this.fireEl.title = L('fireAria');
+      this.keys.set('lang', words);
+      this.fireEl.setAttribute('aria-label', withKey(L('fireAria'), key('fire')));
+      this.fireEl.title = withKey(L('fireAria'), key('fire'));
       this.fireEl.querySelector('.tc-big-l')!.textContent = L('fire');
-      this.castEl.setAttribute('aria-label', L('sailAria'));
-      this.castEl.title = L('sailAria');
+      this.castEl.setAttribute('aria-label', withKey(L('sailAria'), key('cast')));
+      this.castEl.title = withKey(L('sailAria'), key('cast'));
       this.castEl.querySelector('.tc-big-l')!.textContent = L('sail');
-      for (const [el, k] of [[this.menuEl, 'menu'], [this.newsEl, 'news']] as const) {
-        el.setAttribute('aria-label', L(k));
-        el.title = L(k);
+      for (const [el, w, x] of [[this.menuEl, 'menu', 'menu'], [this.newsEl, 'news', '']] as const) {
+        el.setAttribute('aria-label', withKey(L(w), x ? key(x) : ''));
+        el.title = withKey(L(w), x ? key(x) : '');
       }
+      this.deckEl.setAttribute('aria-label', L('deck'));
+      // the chips: the key's own words, none where the key is bound to nothing
+      const chip = (el: Element | null, x: keyof SeaKeys) => {
+        if (!el) return;
+        el.textContent = key(x);
+        el.classList.toggle('hidden', !key(x));
+        el.classList.toggle('kc-long', key(x).length > 2);
+      };
+      chip(this.fireEl.querySelector('.kc'), 'fire');
+      chip(this.castEl.querySelector('.kc'), 'cast');
+      chip(this.lockEl.querySelector('.kc'), 'target');
+      chip(this.menuEl.querySelector('.kc'), 'menu');
+      chip(document.querySelector('#hud-map > .kc-map'), 'map');
+      for (const x of ['up', 'down', 'left', 'right', 'dash'] as const) chip(document.querySelector(`#tc-stick > .kc-${x}`), x);
+      const stick = document.getElementById('tc-stick');
+      if (stick) stick.title = k ? L('helmDesk', { up: key('up'), down: key('down'), left: key('left'), right: key('right'), dash: key('dash') }) : '';
     }
     const body = document.body;
     const fight = inFight(v);
@@ -299,8 +419,8 @@ export class SeaHud {
       this.specialEl.title = L('special', { name: sp.name });
     });
     this.target.set(v.docked ? null : v.target);
-    this.once('lock', `${v.target ? v.target.name : ''}|${lg}`, () => {
-      const t = v.target ? L('lock', { name: v.target.name }) : L('lockNone');
+    this.once('lock', `${v.target ? v.target.name : ''}|${lg}|${key('target')}`, () => {
+      const t = withKey(v.target ? L('lock', { name: v.target.name }) : L('lockNone'), key('target'));
       this.lockEl.classList.toggle('on', !!v.target);
       this.lockEl.setAttribute('aria-label', t);
       this.lockEl.title = t;
@@ -322,6 +442,40 @@ export class SeaHud {
       this.newsEl.classList.toggle('hidden', v.news <= 0);
     });
     this.once('unread', String(v.unread), () => setBadge(this.menuEl, v.unread));
+    this.drawDeck(v.touch === false && !v.docked ? v.deck ?? null : null);
+  }
+
+  /** The desk's gun deck: rebuilt when what it holds changes (a shot taken, a count, a lock), its cooldowns moved in
+   *  place every frame. */
+  private drawDeck(deck: DeckSlot[] | null): void {
+    const list = deck ?? [];
+    this.once('deck', JSON.stringify(list.map((s) => [s.id, s.key, s.n, s.sel, s.best, s.locked, s.dim, s.charge === null || s.charge === undefined ? 0 : 1, s.title, s.art])), () => {
+      const row = (kind: DeckSlot['kind']) => list.filter((s) => s.kind === kind).map(deckSlotHtml).join('');
+      this.deckEl.querySelector('.dk-abil')!.innerHTML = row('abil');
+      this.deckEl.querySelector('.dk-shots')!.innerHTML = row('shot');
+      this.deckEl.classList.toggle('hidden', !list.length);
+      this.cdEls = new Map([...this.deckEl.querySelectorAll<HTMLElement>('[data-ab]')].map((el) => [el.dataset.ab!, {
+        slot: el, cd: el.querySelector<HTMLElement>('.dk-cd')!, cdt: el.querySelector<HTMLElement>('.dk-cdt')!, charge: el.querySelector<HTMLElement>('.dk-charge > i'),
+      }]));
+    });
+    for (const s of list) {
+      if (s.kind !== 'abil') continue;
+      const e = this.cdEls.get(s.id);
+      if (!e) continue;
+      const f = (Math.round(Math.max(0, Math.min(1, s.cd ?? 0)) * 120) / 120).toFixed(3);
+      if (e.slot.style.getPropertyValue('--cd') !== f) {
+        e.slot.style.setProperty('--cd', f);
+        e.slot.classList.toggle('cooling', Number(f) > 0);
+      }
+      if (!s.locked) {
+        const t = (s.left ?? 0) > 0 && (s.cd ?? 0) > 0 ? String(Math.ceil(s.left!)) : '';
+        if (e.cdt.textContent !== t) e.cdt.textContent = t;
+      }
+      if (e.charge) {
+        const w = `${Math.round(Math.max(0, Math.min(1, s.charge ?? 0)) * 100)}%`;
+        if (e.charge.style.width !== w) e.charge.style.width = w;
+      }
+    }
   }
 
   /** The art has loaded: the pictures in place of the glyphs, and everything drawn again on the next frame. */
@@ -333,10 +487,14 @@ export class SeaHud {
       const neu = t.content.firstElementChild;
       if (old && neu) old.replaceWith(neu);
     };
-    swap(this.fireEl, '.tc-big-ico', 'fire', '✸', 'tc-big-ico');
-    swap(this.castEl, '.tc-big-ico', 'stat_sails', '⛵', 'tc-big-ico');
-    swap(this.menuEl, '.k-btn-ico', 'menu_cabin', '☰', 'k-btn-ico');
-    swap(this.newsEl, '.k-btn-ico', 'goal', '!', 'k-btn-ico');
+    swap(this.fireEl, '.tc-big-ico', SEA_ART.fire, '✸', 'tc-big-ico');
+    swap(this.castEl, '.tc-big-ico', SEA_ART.cast, '⛵', 'tc-big-ico');
+    swap(this.menuEl, '.k-btn-ico', SEA_ART.menu, '☰', 'k-btn-ico');
+    swap(this.newsEl, '.k-btn-ico', SEA_ART.news, '!', 'k-btn-ico');
+    swap(this.lockEl, '.k-btn-ico', SEA_ART.lock, '◎', 'k-btn-ico');
+    // the dash's chip on the helm: its painted picture (a ship at full stretch), not a «»» set in letters
+    const dash = document.getElementById('tc-dashchip');
+    if (dash) dash.innerHTML = icon(assetUrl(`icon.${SEA_ART.dash}`) ? SEA_ART.dash : SEA_ART.dashAlt, '', 'tc-dash-ico');
     this.keys.clear();
   }
 
@@ -412,18 +570,6 @@ export class SeaHud {
       onClose: () => { for (const x of lent) x.mark.replaceWith(x.el); },
     });
   }
-}
-
-/** The desk's line of keys (owner, 2026-10-07: «на пк чисто через wasd и другие клавиши»): what moves her, fires and
- *  picks a mark, from the captain's own keymap; in port, how to cast off. `key` names an action's first key. */
-export function keyHintHtml(docked: boolean, key: (a: string) => string): string {
-  const k = (...a: string[]) => a.map((x) => key(x)).filter((x) => x && x !== '—').map((x) => `<kbd>${esc(x)}</kbd>`).join('');
-  const part = (keys: string, word: keyof typeof EN) => (keys ? `<span>${keys}<em>${esc(L(word))}</em></span>` : '');
-  if (docked) return [part(k('dock'), 'k.cast'), part(k('harbour'), 'k.harbour'), part(k('map'), 'k.map')].join('');
-  return [
-    part(k('sailUp', 'sailDown'), 'k.sail'), part(k('rudderLeft', 'rudderRight'), 'k.helm'), part(k('fire'), 'k.fire'), part(k('target'), 'k.target'),
-    part(`${k('ammo1')}${key('ammo1') && key('ammo5') ? '<i>–</i>' : ''}${k('ammo5')}`, 'k.ammo'), part(k('abilityZ', 'abilityX', 'abilityC', 'abilityV'), 'k.abil'), part('<kbd>Esc</kbd>', 'k.menu'),
-  ].join('');
 }
 
 /** The hold of the stick in the middle that takes all sail in (ms), and the double tap's window. */

@@ -49,17 +49,20 @@ test('«Особое»: the ultimate when it is ready, else the strongest stroke
   assert.equal(bestSpecial([a('z', false, 30), a('v', false, 150, 'ultimate')]), null);
 });
 
-test('seven things to touch at most on the sea, in every state of the HUD, on a touch screen and on a desk', () => {
+test('seven things to touch at most on a touch screen\'s sea, in every state of the HUD; a desk\'s drawn controls nine at most', () => {
   const tg = { name: 'Covenant', level: 1, hull: 1, crew: 0.7, chance: 0.6 };
   for (const touch of [true, false, undefined]) for (const docked of [false, true]) for (const fight of [false, true, undefined]) for (const act of [null, { id: 'attack', icon: 'x', label: 'Атаковать', more: 3 }]) for (const special of [null, { id: 'v', icon: 'ab_v', name: 'V' }]) for (const target of [null, tg]) for (const news of [0, 5]) {
     const v: SeaView = { docked, touch, fight: fight === undefined ? undefined : fight || !!target, act, special, target, ammo: 'round', ammoN: 60, reload: 1, news, unread: 2 };
     const t = seaTargets(v);
-    assert.ok(t.length <= 7, `${JSON.stringify(v)} → ${t.join(',')}`);
     if (touch === false) {
-      // the desk plays by its keys (owner, 2026-10-07): no stick, no fight buttons
-      assert.ok(!t.includes('stick') && !t.includes('fire') && !t.includes('ammo') && !t.includes('lock'), t.join(','));
+      // the desk plays by its keys and shows what they drive (owner, 2026-10-07: «возвращай управление… штурвал»): the
+      // helm, «Огонь», «Цель» and the gun deck at sea in every state, «В море» in port — nine things at most
+      assert.ok(t.length <= 9, `${JSON.stringify(v)} → ${t.join(',')}`);
+      if (docked) assert.ok(t.includes('cast') && !t.includes('stick') && !t.includes('fire'), t.join(','));
+      else assert.ok(t.includes('stick') && t.includes('fire') && t.includes('lock') && t.includes('deck') && !t.includes('ammo'), t.join(','));
       continue;
     }
+    assert.ok(t.length <= 7, `${JSON.stringify(v)} → ${t.join(',')}`);
     const inFight = !docked && (v.fight ?? !!target);
     if (inFight) {
       assert.ok(!t.includes('minimap') && !t.includes('news'), 'a fight puts the minimap and the counter away');

@@ -1,7 +1,9 @@
 // The sea HUD's rebuild (owner, 2026-10-07: «перегруз интерфейса, иконки обрезаются, очень большие плашки, аватарки
 // обрезаются у всех… выходя из порта у меня нет ничего вообще, никакого управления»): one simple HUD for every input
-// unless «Подробный интерфейс»; the desk by its keys (Space «Огонь», Tab the next mark, a tap of Shift the dash) and a
-// line of them; the captains' faces whole in their circles; the pictures of round buttons inside their rings.
+// unless «Подробный интерфейс»; the desk by its keys (Space «Огонь», Tab the next mark, a tap of Shift the dash); the
+// captains' faces whole in their circles; the pictures of round buttons inside their rings. Then (owner, the same day:
+// «ты удалил всё… возвращай иконки, обводки графические… штурвал») the desk's controls drawn again, painted, its keys
+// on chips on their rims instead of a line of words.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { FACES, FACE_DEFAULT, HEAD_SHARE, faceCrop } from '../client/src/ui/kit/faces.ts';
 import { actionFor, conflicts, defaults, keyLabel, PRESETS, sanitize } from '../client/src/settings.ts';
 import type { Keymap } from '../client/src/settings.ts';
-import { inFight, keyHintHtml, seaTargets } from '../client/src/ui/seahud.ts';
+import { chipKey, deckSlotHtml, inFight, seaTargets } from '../client/src/ui/seahud.ts';
 import type { SeaView } from '../client/src/ui/seahud.ts';
 import { EN as SEN, RU as SRU } from '../client/src/lang/ui/seahud.ts';
 import { EN } from '../client/src/lang/en.ts';
@@ -33,11 +35,14 @@ test('a captain\'s face: the head whole inside the circle, a little above its mi
   }
 });
 
-test('a picture in a round frame: a rounded square of 0.68 with 14% corners stands inside a thin-ringed circle; 0.52 inside a painted ring', () => {
+test('a picture in a round frame: a rounded square of 0.56 with 14% corners stands inside the porthole ring\'s open circle; 0.52 inside the kit\'s', () => {
   // the farthest point of a rounded square of side s (corners r = k·s) from its middle
   const far = (s: number, k: number) => Math.SQRT2 * (s / 2 - k * s) + k * s;
-  // the sea's round buttons: a 44 px disc, its rim 1.5 px inside, the picture 68% of it
-  assert.ok(far(44 * 0.68, 0.14) <= 44 / 2 - 1.5, 'the sea\'s round buttons');
+  // the porthole ring (ui.ring) round the sea's controls: inset −11 %, its clear middle 0.617 of its half at the least
+  const open = (d: number) => 0.617 * (d * 1.22) / 2;
+  for (const d of [44, 48, 52, 80, 92]) assert.ok(far(d * 0.56, 0.14) <= open(d) + 0.5, `a ${d} px sea control`);
+  // the captain's face: the ring outside it (inset −0.32 of the face): its clear middle as wide as the face
+  for (const f of [44, 50, 54]) assert.ok(0.617 * (f * 1.64) / 2 >= f / 2 - 0.75, `a ${f} px face`);
   // a kit icon button under the painted ring (inset −3 px, its clear middle 0.617 of its half): the picture 52%
   for (const d of [36, 44, 52]) assert.ok(far(d * 0.52, 0.14) <= 0.617 * (d / 2 + 3) + 0.5, `a ${d} px kit icon button`);
   // the battle's round buttons (48 and 56 px, the same ring): 52%
@@ -46,7 +51,9 @@ test('a picture in a round frame: a rounded square of 0.68 with 14% corners stan
   assert.ok(far(40 * 0.52, 0.14) <= 0.617 * 23 + 0.5);
   // the stylesheet says so
   const css = readFileSync('client/seahud.css', 'utf8');
-  assert.match(css, /body\.simple \.sea-round \.k-btn-ico \{[^}]*width: 68%; height: 68%; border-radius: 14%; object-fit: contain/);
+  assert.match(css, /body\.simple \.sea-round \.k-btn-ico \{[^}]*inset: 22%;[^}]*width: 56%; height: 56%; border-radius: 14%; object-fit: contain/);
+  assert.match(css, /body\.simple \.sea-round::after, body\.simple #touch > \.tc-big::after \{ content: ''; position: absolute; inset: -11%;[^}]*background: var\(--ui-ring\)/);
+  assert.match(css, /\.cs-frame::after \{ content: ''; position: absolute; inset: calc\(var\(--cs-face\) \* -0\.32\);[^}]*var\(--ui-ring\)/);
   assert.match(css, /\.k-btn--icon \.k-btn-ico \{ inset: 24%; width: 52%; height: 52%; border-radius: 14%; \}/);
   assert.match(css, /\.tb-rb > \.ico \{ inset: 24%; width: 52%; height: 52%; object-fit: contain; border-radius: 14%; \}/);
 });
@@ -87,16 +94,23 @@ test('a key map saved before Space was «Огонь» moves to the new keys; a k
   assert.deepEqual(sanitize({ keys: defaults().keys }).keys, defaults().keys);
 });
 
-test('the line of keys names what moves her, fires and picks a mark; in port how to cast off', () => {
-  const k = (a: string) => keyLabel(defaults().keys[a as keyof Keymap][0]);
-  const sea = keyHintHtml(false, k);
-  for (const x of ['W', 'S', 'A', 'D', 'Tab', '1', '5', 'Z', 'V', 'Esc']) assert.ok(sea.includes(`<kbd>${x}</kbd>`), `${x} in ${sea}`);
-  assert.ok(sea.includes('<kbd>Space</kbd>') || sea.includes('<kbd>Пробел</kbd>'));
-  const port = keyHintHtml(true, k);
-  assert.ok(port.includes('<kbd>F</kbd>') && port.includes('<kbd>P</kbd>'), port);
-  // a key bound to nothing is left out, not shown as «—»
-  const none = keyHintHtml(false, (a) => (a === 'target' ? '—' : k(a)));
-  assert.ok(!none.includes('—<') && !none.includes('<kbd>—</kbd>'));
+test('the desk\'s keys on the controls\' rims: a chip on each slot, none for a key bound to nothing; the slot says its shot, count and key', () => {
+  assert.equal(chipKey('—'), '');
+  assert.equal(chipKey(undefined), '');
+  assert.equal(chipKey('Tab'), 'Tab');
+  const shot = deckSlotHtml({ kind: 'shot', id: 'round', art: 'ammo_round', key: '1', name: 'Round shot', title: 'Round shot — the hull', n: 60, sel: true });
+  assert.match(shot, /data-shot="round"/);
+  assert.match(shot, /<kbd class="kc kc-tl" aria-hidden="true">1<\/kbd>/);
+  assert.match(shot, /<b class="dk-n" aria-hidden="true">60<\/b>/);
+  assert.match(shot, /aria-pressed="true"/);
+  assert.match(shot, /aria-label="Round shot: 60 \[1\]"/);
+  const ab = deckSlotHtml({ kind: 'abil', id: 'last_volley', art: 'ab_last_volley', key: 'V', name: 'Last Volley', title: 'Last Volley — …', ult: true, locked: 'Ур. 6', dim: true, charge: null, cd: 0 });
+  assert.match(ab, /data-ab="last_volley"/);
+  assert.match(ab, /class="dk-slot dk-abil ult locked dim"/);
+  assert.match(ab, /<i class="dk-cd" aria-hidden="true"><\/i><span class="dk-cdt" aria-hidden="true">Ур\. 6<\/span>/);
+  assert.match(ab, /<kbd class="kc kc-tl" aria-hidden="true">V<\/kbd>/);
+  const none = deckSlotHtml({ kind: 'shot', id: 'star', art: 'ammo_star', key: '', name: 'Star shot', title: 'Star shot', n: 3 });
+  assert.ok(!none.includes('<kbd'), 'no key, no chip');
 });
 
 test('a fight brings the guns out; leaving port, the helm alone', () => {
@@ -107,17 +121,30 @@ test('a fight brings the guns out; leaving port, the helm alone', () => {
   assert.equal(inFight({ ...base, docked: true, fight: true }), false);
   assert.deepEqual(seaTargets({ ...base, fight: true }), ['stick', 'fire', 'ammo', 'lock', 'menu']);
   assert.deepEqual(seaTargets({ ...base, docked: true }), ['cast', 'menu', 'minimap']);
-  assert.deepEqual(seaTargets({ ...base, touch: false, fight: true, target: { name: 'x' } }), ['captain', 'menu', 'target', 'minimap']);
+  // a desk: the helm, «Огонь», «Цель» and the gun deck at sea in every state (owner, 2026-10-07: «возвращай управление»)
+  assert.deepEqual(seaTargets({ ...base, touch: false, fight: true, target: { name: 'x' } }), ['captain', 'menu', 'target', 'minimap', 'stick', 'fire', 'lock', 'deck']);
+  assert.deepEqual(seaTargets({ ...base, touch: false }), ['captain', 'menu', 'minimap', 'stick', 'fire', 'lock', 'deck']);
+  assert.deepEqual(seaTargets({ ...base, touch: false, docked: true }), ['captain', 'menu', 'minimap', 'cast']);
 });
 
-test('the page: the simple HUD\'s stylesheet last, its speed, its keys and the sea\'s name; the old HUD put away under body.simple', () => {
+test('the page: the simple HUD\'s stylesheet last, its speed, the attack mark and the sea\'s name; no line of keys; the old HUD put away under body.simple', () => {
   const html = readFileSync('client/index.html', 'utf8');
   assert.ok(html.indexOf('/seahud.css') > html.indexOf('/feel.css'), 'seahud.css after feel.css');
-  for (const id of ['tc-speed', 'key-hint', 'sea-herald', 'tc-stick']) assert.ok(html.includes(`id="${id}"`), id);
+  for (const id of ['tc-speed', 'atk-mark', 'sea-herald', 'tc-stick']) assert.ok(html.includes(`id="${id}"`), id);
+  assert.ok(!html.includes('id="key-hint"'), 'the line of keys is gone (the keys are chips on the controls)');
   const css = readFileSync('client/seahud.css', 'utf8');
   for (const id of ['hud-combat', 'hud-nav', 'hud-menu', 'hud-region', 'hud-fold', 'hud-ship', 'chat-toggle', 'unread']) assert.ok(css.includes(`body.simple #${id}`), id);
-  // a desk shows no stick and no fight buttons
-  assert.match(css, /body\.simple:not\(\.touch\) #touch > :is\(#tc-stick, #tc-fire, #tc-ammo, #tc-lock, #tc-special, #tc-act, #tc-cast, #tc-speed\) \{ display: none !important; \}/);
+  assert.ok(!css.includes('#key-hint'), 'no line of keys');
+  // a desk shows the painted helm, «Огонь», «Цель» and the gun deck, the keys on chips; a touch screen no chips
+  assert.match(css, /body\.simple #touch > #tc-stick \{ display: block; \}/);
+  assert.match(css, /body\.simple:not\(\.touch\):not\(\.sea-docked\) #touch > #tc-fire \{ display: flex;/);
+  assert.match(css, /body\.simple:not\(\.touch\):not\(\.sea-docked\) #touch > #tc-lock \{ display: inline-flex;/);
+  assert.match(css, /body\.simple:not\(\.touch\):not\(\.sea-docked\) #touch > #tc-deck:not\(\.hidden\) \{/);
+  assert.match(css, /\.dk-slot::after \{[^}]*background: var\(--ui-slot\)/);
+  assert.match(css, /\.kc \{ display: none; \}/);
+  assert.match(css, /body\.simple:not\(\.touch\) \.kc \{ position: absolute;/);
+  // no round control of the sea without its painted ring
+  assert.ok(!/\.sea-round::after \{ content: none/.test(css), 'the ring is never taken off');
   // the battle's captains in one band at the top, the phone's in the top corners
   assert.match(css, /grid-template-areas: "you mid foe" "you queue foe" "you feed foe" "spells stage acts"/);
   assert.match(css, /\.tb-chip\.you \{ left:/);
@@ -126,7 +153,7 @@ test('the page: the simple HUD\'s stylesheet last, its speed, its keys and the s
 
 test('the new words in both languages, the Russian without Latin', () => {
   assert.deepEqual(Object.keys(SRU).sort(), Object.keys(SEN).sort());
-  for (const k of ['ammo', 'lock', 'lockNone', 'speed', 'k.fire', 'k.target', 'k.cast']) assert.ok(k in SEN && k in SRU, k);
+  for (const k of ['ammo', 'lock', 'lockNone', 'speed', 'helmDesk', 'deck', 'tm.lock', 'tm.pursue', 'tm.fight']) assert.ok(k in SEN && k in SRU, k);
   const ru = RU as Record<string, string>, en = EN as Record<string, string>;
   for (const k of ['opt.expertHud', 'act.fire']) {
     assert.ok(en[k] && ru[k], k);

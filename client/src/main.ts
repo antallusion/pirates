@@ -24,7 +24,7 @@ import { inspectDialog } from './ui/inspect.ts';
 import { BoardFightPanel } from './ui/boardfight.ts';
 import { TacticalPanel } from './ui/tactical.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
-import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, MOUNTS, SHIP_CLASSES, isZoneBossClass } from '../../shared/src/data/ships.ts';
+import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, KEYED_AMMO, MOUNTS, SHIP_CLASSES, isZoneBossClass } from '../../shared/src/data/ships.ts';
 import { PORT_DOCK_RADIUS, isNight, timeOfDay } from '../../shared/src/constants.ts';
 import { angleDiff, clamp, dist, toShipLocal } from '../../shared/src/math.ts';
 import type { Aggression, SeaMarkData, ServerMsg, ShipInfo } from '../../shared/src/protocol.ts';
@@ -68,7 +68,12 @@ import { LOG_PAGES } from './ui/logbook.ts';
 import { BaseWindow } from './ui/base.ts';
 import { $, decorateSums, esc, fmt, icon, keepInputs, knots } from './ui/dom.ts';
 import { Hud, TOUCH_FOLDED, releaseModalToasts } from './ui/hud.ts';
-import { SeaHud, bestSpecial, keyHintHtml } from './ui/seahud.ts'; // docs/23 phase 2: the sea and five buttons
+import { SeaHud, bestSpecial, seaWord } from './ui/seahud.ts'; // docs/23 phase 2: the sea and five buttons
+import type { DeckSlot, SeaKeys } from './ui/seahud.ts';
+import { attackKind, buildCursors, cursorUrl } from './ui/cursor.ts'; // the attack cursor (owner, 2026-10-07)
+import type { AttackKind } from './ui/cursor.ts';
+import { TargetMenu } from './ui/targetmenu.ts'; // «Захват цели», «Преследовать», «Бой» beside a target
+import type { TmChoice, TmId } from './ui/targetmenu.ts';
 import type { TargetInfo } from './ui/kit/targetline.ts';
 import type { WheelOption } from './ui/kit/radial.ts';
 import { WHEEL_MAX } from './ui/kit/radial.ts';
@@ -430,8 +435,11 @@ const touch = new TouchControls({
   aim: (px, py) => {
     renderer.mouseX = px;
     renderer.mouseY = py;
-    // A tap on a ship makes her the target; on a creature stack, the stack (docs/19 D7).
-    if (markAt(px, py)) markTapAt = performance.now();
+    // A tap on a ship makes her the target; on a creature stack, the stack (docs/19 D7) — and opens the choices about
+    // her beside her («Захват цели», «Преследовать», «Бой»: owner, 2026-10-07); a tap on the open sea puts them away.
+    const k = markAt(px, py);
+    if (k) markTapAt = performance.now();
+    openTargetMenu(k === 'ship' && targetId !== null ? `ship:${targetId}` : k === 'roam' && state.roamMark !== null ? `roam:${state.roamMark}` : '');
   },
   zoom: (f) => {
     renderer.userZoomed = true;
@@ -460,6 +468,12 @@ const seaHud = new SeaHud($('touch'), {
     departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' }));
   },
   ammoNext: () => cycleAmmo(1),
+  // The desk's gun deck: a shot loaded by its slot, an ability used at her mark (the mouse is on the slot, not the sea).
+  ammo: (id) => net.send({ t: 'ammo', ammo: id as 'round' }),
+  ability: (id) => {
+    aimAtMark();
+    sendAbility(id);
+  },
   // «Цель» (owner, 2026-10-07: «захват цели»): the next ship out from her as the mark; none near, a flash.
   nextTarget: () => {
     const was = targetId;
@@ -586,6 +600,7 @@ loadAssets(null).then(() => {
   buildMicroMenu();
   hud.artEpoch++;
   seaHud.dress();
+  buildCursors(); // the attack cursor from the tattoo set's sabres, hook and gun
   hud.chatPanel.art();
   hud.chatPanel.tabs();
   const url = assetUrl('art.keyart');
@@ -1910,6 +1925,11 @@ const canvas = $('world');
 canvas.addEventListener('mousemove', (e) => {
   renderer.mouseX = e.clientX;
   renderer.mouseY = e.clientY;
+  if (!fromFinger(e)) hoverCursor(e.clientX, e.clientY, true);
+});
+canvas.addEventListener('mouseleave', () => {
+  delete canvas.dataset.cur;
+  hoverTargetMenu('');
 });
 canvas.addEventListener('wheel', (e) => {
   renderer.userZoomed = true;
@@ -2602,6 +2622,8 @@ function seaFrame(): void {
   seaHud.frame({
     docked: !!self.dockedAt,
     touch: touch.enabled,
+    deck: touch.enabled ? null : deckView(),
+    keys: touch.enabled ? null : deskKeys(),
     fight,
     act: a ? { id: a.id, icon: a.icon, label: a.label, ...(a.sub ? { sub: a.sub } : {}), more: curActs.length - 1 } : null,
     special: specialNow(),
@@ -2619,32 +2641,252 @@ function simpleHud(): boolean {
   return document.body.classList.contains('simple');
 }
 
-/** The desk's line of keys (owner, 2026-10-07: «на пк чисто через wasd и другие клавиши»; «a small, unobtrusive key hint,
- *  fading after the first minutes»): shown on a desk with the simple HUD for the first five minutes at sea (counted
- *  across visits), all through the First Watch, and in port; it fades, then stays away. */
-const KEY_HINT_SEC = 300;
-let keyHintKey = '', keyHintSeen = Number(localStorage.getItem('gravetide.keyHint') ?? 0) || 0, keyHintAt = 0;
-function keyHint(t: number): void {
-  const el = $('key-hint');
-  const self = state.self;
-  const docked = !!self?.dockedAt;
-  const watch = !!state.onboarding?.stage;
-  const at = t - keyHintAt;
-  keyHintAt = t;
-  const on = !!self && simpleHud() && !touch.enabled && !state.boardTac && !state.boardFight && modal === null;
-  if (on && !docked && at > 0 && at < 1000) {
-    const was = Math.floor(keyHintSeen);
-    keyHintSeen += at / 1000;
-    if (Math.floor(keyHintSeen) !== was && Math.floor(keyHintSeen) % 5 === 0) try { localStorage.setItem('gravetide.keyHint', String(Math.floor(keyHintSeen))); } catch { /* private mode */ }
+/** The desk's keys as the chips on the controls read them (owner, 2026-10-07: «на пк чисто через wasd и другие
+ *  клавиши» — and the controls drawn, the keys on their rims instead of a line of words). */
+function deskKeys(): SeaKeys {
+  return {
+    fire: keyOfAction('fire'), target: keyOfAction('target'), menu: 'Esc', map: keyOfAction('map'),
+    up: keyOfAction('sailUp'), down: keyOfAction('sailDown'), left: keyOfAction('rudderLeft'), right: keyOfAction('rudderRight'),
+    dash: keyOfAction('dash'), cast: keyOfAction('dock'),
+  };
+}
+
+/** The desk's gun deck (owner, 2026-10-07: «возвращай иконки, обводки графические»): the captain's four abilities
+ *  (their cooldowns, an ultimate's lock and resolve) over the shots of the number keys (and the loaded one if it is a
+ *  rarer kind), each with its key. */
+function deckView(): DeckSlot[] | null {
+  const self = state.self, you = state.you;
+  if (!self || !you || self.dockedAt) return null;
+  const now = state.estServerTime();
+  const out: DeckSlot[] = [];
+  for (const a of CAPTAINS[self.captain].abilities) {
+    const locked = a.kind === 'ultimate' && self.level < 6;
+    const charging = a.kind === 'ultimate' && !locked && you.resolve < 100;
+    const starved = (a.dreadCost ?? 0) > you.dread || (!!a.goldCost && self.gold < a.goldCost);
+    const left = Math.max(0, (self.cooldowns[a.id] ?? 0) - now);
+    out.push({
+      kind: 'abil', id: a.id, art: `ab_${a.id}`, key: keyOfAction(`ability${a.key}` as Action), name: a.name, title: `${a.name} — ${a.description}`,
+      ult: a.kind === 'ultimate', ...(locked ? { locked: seaWord('lv6') } : {}), dim: locked || charging || starved,
+      charge: charging ? you.resolve / 100 : null, cd: left > 0 ? Math.min(1, left / Math.max(1, a.cooldown)) : 0, left,
+    });
   }
-  const show = on && (docked || watch || keyHintSeen < KEY_HINT_SEC);
-  const fade = show && !docked && !watch && keyHintSeen > KEY_HINT_SEC - 8;
-  const key = show ? `${docked}|${fade}|${lang()}|${JSON.stringify(settings().keys)}` : '';
-  if (key === keyHintKey) return;
-  keyHintKey = key;
-  el.classList.toggle('hidden', !show);
-  el.classList.toggle('fade', fade);
-  if (show) el.innerHTML = keyHintHtml(docked, (a) => keyOfAction(a as Action));
+  AMMO_IDS.forEach((a, i) => {
+    if (i >= KEYED_AMMO && you.ammoSel !== a) return;
+    const key = i < KEYED_AMMO ? keyOfAction(`ammo${i + 1}` as Action) : a === 'cursed' ? keyOfAction('cursedShot') : '';
+    const role = a === 'round' || a === 'chain' || a === 'grape' ? ` (${LSF(`ammo.${a}`)})` : '';
+    out.push({
+      kind: 'shot', id: a, art: `ammo_${a}`, key, name: AMMO[a].name, n: you.ammo[a] ?? 0, sel: you.ammoSel === a, best: hud.bestAmmo === a, dim: (you.ammo[a] ?? 0) <= 0,
+      title: `${AMMO[a].name}${role}${hud.bestAmmo === a ? ` · ${LSF('ammo.best')}` : ''} — ${AMMO[a].description}`,
+    });
+  });
+  return out;
+}
+
+/** A ship as the attack cursor needs her: may she be fought, may a grapple take her, is she in the grapples' reach. */
+function shipFight(id: number): { attackable: boolean; boardable: boolean; inReach: boolean } | null {
+  const s = state.ships.get(id), own = state.ownDisplay, st = state.ownStats;
+  if (!s?.info) return null;
+  const cls = SHIP_CLASSES[s.info.classId];
+  const inReach = !!own && !!st && dist(own.x, own.y, s.cur.x, s.cur.y) <= st.boardingRange + (st.beam + cls.beam) / 2;
+  return { attackable: attackable(id) && !(s.cur.flags & SF.SURRENDERED), boardable: !unboardableMark(id) && !grabbed(), inReach };
+}
+
+/** The attack cursor (owner, 2026-10-07: «при наведении на цель показывать иконку атаки»): what she may fight under the
+ *  mouse — a ship (the grapples' reach: the hook; no grapple takes her: the gun; else the sabres), a creature stack, a
+ *  lair or a pirate fort — the mark of how the fight would go (ui/cursor.ts, seahud.css). */
+function attackUnder(px: number, py: number): AttackKind | null {
+  const id = shipAtScreen(px, py);
+  if (id !== null) {
+    const ship = shipFight(id);
+    return ship ? attackKind({ ship }) : null;
+  }
+  const rm = roamAtScreen(px, py);
+  if (rm !== null) return attackKind({ stack: state.roams.find((v) => v.id === rm)?.fight !== 'other' });
+  // a lair of the land's creatures, standing and not hers; a pirate fort (its battery still firing: the guns)
+  for (const m of state.lairs?.list ?? []) {
+    if (m.down || m.flag === 'own' || m.turtle !== undefined) continue;
+    const R = Math.max(9, Math.min(26, (m.role === 'guardian' ? 34 : m.role === 'grotto' ? 28 : 24) * renderer.zoom));
+    if (Math.hypot(renderer.sx(m.x) - px, renderer.sy(m.y) - py) <= R * 1.3 + 4) return attackKind({ lair: { battery: false } });
+  }
+  for (const l of state.wanted?.lairs ?? []) {
+    if (Math.hypot(renderer.sx(l.x) - px, renderer.sy(l.y) - py) <= Math.max(18, 62 * renderer.zoom)) return attackKind({ lair: { battery: l.hp > 0 && !l.open } });
+  }
+  return null;
+}
+
+/** The target's choices beside her (owner, 2026-10-07: «наводя на кого-то пальцем или на десктопе мышкой, надо
+ *  предлагать захват цели и преследование и бой»): ui/targetmenu.ts. Only what the server would take now is offered. */
+const targetMenu = new TargetMenu();
+targetMenu.onPick = (id, about) => pickTargetChoice(id, about);
+/** The mouse resting this long on a target opens its choices (a desk). */
+const TM_DWELL = 220;
+/** A finger's choices go by themselves after this long untouched (a phone). */
+const TM_IDLE = 6000;
+
+/** The grapples may take her now: in their reach, a ship a grapple takes, one «На абордаж» offers (gatherActs). */
+function canBoardNow(id: number): boolean {
+  const s = state.ships.get(id), own = state.ownDisplay, st = state.ownStats, you = state.you;
+  if (!s?.info || !own || !st || !you || grabbed() || you.flags & SF.BOARDING) return false;
+  const c = s.cur;
+  if (c.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED | SF.SURRENDERED) || unboardableMark(id)) return false;
+  if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(c.flags & SF.HOSTILE) && !fairCaptain(c.flags, s.info)) return false;
+  return dist(own.x, own.y, c.x, c.y) <= st.boardingRange + (st.beam + SHIP_CLASSES[s.info.classId].beam) / 2;
+}
+
+/** The choices about a target (`ship:id`, `roam:id`) and where she stands on the screen, or null: nothing to offer. */
+function targetChoices(about: string): { choices: TmChoice[]; name: string; x: number; y: number; r: number } | null {
+  const [kind, sid] = about.split(':');
+  const id = Number(sid);
+  const own = state.ownDisplay, you = state.you, self = state.self;
+  if (!own || !you || !self || self.dockedAt || !Number.isFinite(id)) return null;
+  if (kind === 'ship') {
+    const s = state.ships.get(id), f = shipFight(id);
+    if (!s?.info || !f?.attackable) return null;
+    const board = canBoardNow(id);
+    const beast = beastOfClass(s.info.classId);
+    return {
+      name: beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : s.info.isPlayer ? s.info.captainName : placeName(s.info.name),
+      x: renderer.sx(s.cur.x), y: renderer.sy(s.cur.y), r: Math.max(18, SHIP_CLASSES[s.info.classId].length * 0.5 * renderer.zoom),
+      choices: [
+        { id: 'lock', art: 'item_ranging_glass', label: seaWord('tm.lock'), title: seaWord('tm.lockT'), on: targetPinned && targetId === id },
+        { id: 'pursue', art: 'talent_nav_wake_rider', label: seaWord('tm.pursue'), title: seaWord(f.boardable ? 'tm.pursueT' : 'tm.pursueGuns'), on: state.pursuit?.target === id },
+        { id: 'fight', art: board ? 'ab_red_hook_boarding' : 'talent_gun_rolling_broadside', label: seaWord('tm.fight'), title: seaWord(board ? 'tm.fightBoard' : 'tm.fightGuns') },
+      ],
+    };
+  }
+  if (kind === 'roam') {
+    const v = state.roams.find((x) => x.id === id);
+    if (!v || v.fight === 'other') return null;
+    const p = roamNow(state, v);
+    const d = dist(p.x, p.y, own.x, own.y);
+    if (d > ROAM_SEE) return null;
+    const choices: TmChoice[] = [{ id: 'lock', art: 'item_ranging_glass', label: seaWord('tm.lock'), title: seaWord('tm.lockT'), on: state.roamMark === id && !targetPinned }];
+    // sailing to them: the helmsman's course (no pursuit of a stack but the fight's own run)
+    if (d > ROAM_REACH && worldMap.onAutosail) choices.push({ id: 'pursue', art: 'talent_nav_wake_rider', label: seaWord('tm.pursue'), title: seaWord('tm.pursueStack') });
+    // the boats go (or the helmsman runs her in first): not under fire, nor with too few hands, nor while another
+    // fight holds her (roamers.ts fightWhy — the server's «Не под огнём» never answers a choice offered here)
+    if (!v.fight && !you.combat && you.crew >= 3 && !(you.flags & SF.BOARDING) && !self.landing) choices.push({ id: 'fight', art: 'bt_charge', label: seaWord('tm.fight'), title: seaWord('tm.fightStack') });
+    return { name: roamName(v.kind), x: renderer.sx(p.x), y: renderer.sy(p.y), r: Math.max(14, Math.min(22, 19 * renderer.zoom)) * 1.3, choices };
+  }
+  return null;
+}
+
+/** A choice taken: the mark, the pursuit, the fight — by the messages the action button sends. */
+function pickTargetChoice(id: TmId, about: string): void {
+  const [kind, sid] = about.split(':');
+  const n = Number(sid);
+  if (kind === 'ship') {
+    pinTarget(n); // the pursuit and the fight are about her: she is the mark too
+    if (id === 'pursue') net.send({ t: 'attack', target: n, mode: unboardableMark(n) ? 'guns' : 'board' });
+    else if (id === 'fight') {
+      if (canBoardNow(n)) net.send({ t: 'board', target: n, aggression: 'standard' });
+      else net.send({ t: 'attack', target: n, mode: 'guns' });
+    }
+    return;
+  }
+  state.roamMark = n;
+  targetPinned = false;
+  if (id === 'fight') net.send({ t: 'attack', roam: n });
+  else if (id === 'pursue') {
+    const v = state.roams.find((x) => x.id === n);
+    const p = v ? roamNow(state, v) : null;
+    if (p && worldMap.onAutosail) {
+      const wp = { x: Math.round(p.x), y: Math.round(p.y) };
+      setMark(wp);
+      worldMap.onAutosail(wp);
+    }
+  }
+}
+
+/** What lies under a point as the choices' subject: `ship:id`, `roam:id` or ''. */
+function aboutAt(px: number, py: number): string {
+  const ship = shipAtScreen(px, py);
+  if (ship !== null) return `ship:${ship}`;
+  const rm = roamAtScreen(px, py);
+  return rm !== null ? `roam:${rm}` : '';
+}
+
+/** Open the choices about a target if there is anything to offer; else put them away. */
+function openTargetMenu(about: string): void {
+  const t = about ? targetChoices(about) : null;
+  if (!t) return targetMenu.hide();
+  targetMenu.show(about, t.choices, t.name);
+  targetMenu.place(t.x, t.y, t.r);
+}
+
+let hoverAbout = '', hoverSince = 0;
+/** A desk: the mouse resting on a target opens its choices; off it (and off them) they go a moment later. */
+function hoverTargetMenu(about: string): void {
+  if (touch.enabled) return;
+  const now = performance.now();
+  if (about !== hoverAbout) {
+    hoverAbout = about;
+    hoverSince = now;
+  }
+  if (!about) return targetMenu.leave();
+  if (targetMenu.isOpen && targetMenu.about === about) return targetMenu.keep();
+  if (now - hoverSince >= TM_DWELL) openTargetMenu(about);
+}
+
+/** Every frame: the choices follow their target, change as she comes in reach, and go with her (sunk, gone, a window
+ *  over the sea, the hex battle, port; a finger's after a while untouched). */
+function targetMenuFrame(): void {
+  if (!targetMenu.isOpen) return;
+  const ok = inGame && !state.boardTac && !state.boardFight && !state.self?.dockedAt && modal === null && !seaHud.menuOpen && !(touch.enabled && targetMenu.age > TM_IDLE && !targetMenu.hovered);
+  const t = ok ? targetChoices(targetMenu.about) : null;
+  if (!t) return targetMenu.hide();
+  targetMenu.show(targetMenu.about, t.choices, t.name);
+  targetMenu.place(t.x, t.y, t.r);
+}
+
+let hoverAt = 0;
+/** The mouse's mark over the sea, measured again as the pointer moves and a few times a second as the sea moves under
+ *  it; none on a touch screen, in port, in the hex battle (its own: tactical.ts) or under a window. */
+function hoverCursor(px: number, py: number, force = false): void {
+  const now = performance.now();
+  if (!force && now - hoverAt < 120) return;
+  hoverAt = now;
+  const live = inGame && !touch.enabled && !state.boardTac && !state.self?.dockedAt && modal === null;
+  const kind = live ? attackUnder(px, py) : null;
+  hoverTargetMenu(live && kind ? aboutAt(px, py) : '');
+  if ((canvas.dataset.cur ?? '') === (kind ?? '')) return;
+  if (kind) canvas.dataset.cur = kind;
+  else delete canvas.dataset.cur;
+}
+
+/** A touch screen has no hover: the same mark stands over the target she marked (a ship or a creature stack), above it
+ *  so the ship and her ring stay seen. */
+function touchAttackMark(): void {
+  const el = document.getElementById('atk-mark');
+  if (!el) return;
+  // (a ship's name and bars are drawn over her: the mark stands under her hull; a stack's word over it and its name
+  // under it: the mark stands at its left)
+  let kind: AttackKind | null = null, x = 0, y = 0, shift = '';
+  if (touch.enabled && !state.boardTac && !state.self?.dockedAt && modal === null) {
+    const rf = !targetPinned && !state.pursuit ? roamFocus() : null;
+    const id = state.pursuit?.target ?? (targetPinned ? targetId : null);
+    const s = id !== null ? state.ships.get(id) : undefined;
+    if (rf?.marked) {
+      const p = roamNow(state, rf.v);
+      kind = attackKind({ stack: rf.v.fight !== 'other' });
+      const r = Math.max(9, Math.min(22, 19 * renderer.zoom)) * 1.2;
+      [x, y, shift] = [renderer.sx(p.x) - r - 4, renderer.sy(p.y), 'translate(-100%, -50%)'];
+    } else if (s?.info && id !== null) {
+      const ship = shipFight(id);
+      kind = ship ? attackKind({ ship }) : null;
+      const r = Math.max(14, SHIP_CLASSES[s.info.classId].length * 0.42 * renderer.zoom);
+      [x, y, shift] = [renderer.sx(s.cur.x), renderer.sy(s.cur.y) + r + 2, 'translate(-50%, 0)'];
+    }
+  }
+  const url = kind ? cursorUrl(kind) : null;
+  const on = !!url && x > 20 && y > 0 && x < innerWidth && y < innerHeight - 30;
+  el.classList.toggle('hidden', !on);
+  if (!on) return;
+  if (el.dataset.kind !== kind) {
+    el.dataset.kind = kind!;
+    el.style.backgroundImage = `url('${url}')`;
+  }
+  el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) ${shift}`;
 }
 
 /** The captain's gunnery settings to the server (auto-fire, auto-battle against the weak, the expert's hand). */
@@ -3215,7 +3457,9 @@ function step(t: number): void {
       seaFrame();
       autoMount();
     }
-    keyHint(t);
+    hoverCursor(renderer.mouseX, renderer.mouseY);
+    touchAttackMark();
+    targetMenuFrame();
     divePanel.render(state.dive);
     boardFight.render(state.boardFight);
     tactical.render(state.boardTac);
