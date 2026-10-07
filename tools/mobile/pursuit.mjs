@@ -134,10 +134,9 @@ async function fight(ph) {
   const tA = Date.now();
   await attack(ph);
   await ph.step('attack');
-  // «Бортами»: the guns' fight (the action button's second word once she pursues, or «Огонь» on a phone, which lays
-  // her broadside when the mark does not bear).
+  // «Бортами»: the guns' fight (the action button's word once she pursues: «Атаковать» itself runs in for the grapples).
   if (MODE === 'guns') {
-    if (TOUCH) await ph.tap('#tc-fire:not(.tc-sail)', '«Огонь»', 5000);
+    if (TOUCH) await ph.tap('#tc-act[data-act="attack_mode"]', '«Бортами»', 5000);
     else await ph.tap('#hud-prompt .act-attack_mode', '«Бортами»', 5000);
   }
   const samples = [];
