@@ -1,4 +1,4 @@
-// Words of the sea HUD on a phone (docs/23 phase 2: the sea and five buttons; client/src/ui/seahud.ts).
+// Words of the sea HUD (docs/23 phase 2, the rebuild of 2026-10-07: one simple HUD for every input; client/src/ui/seahud.ts).
 
 export const EN = {
   'fire': 'Fire',
@@ -19,6 +19,23 @@ export const EN = {
   'target': 'Target',
   'sail': 'To sea',
   'sailAria': 'To sea: cast off (what is short for the voyage is asked first)',
+  'ammo': 'Shot: {n} aboard. Tap: the next shot; hold: shots, abilities, talents',
+  'ammoNone': 'Shot: tap for the next one',
+  'lock': 'Target: {name}. Tap: the next ship; hold: her card',
+  'lockNone': 'Target: tap to take the nearest ship',
+  'speed': '{n} kn',
+  'speedAria': 'Speed: {n} knots, sail {s} of 4',
+  'k.sail': 'sails',
+  'k.helm': 'helm',
+  'k.fire': 'fire',
+  'k.target': 'target',
+  'k.ammo': 'shots',
+  'k.abil': 'abilities',
+  'k.menu': 'menu',
+  'k.cast': 'cast off',
+  'k.harbour': 'harbour',
+  'k.map': 'chart',
+  'keysAria': 'Keys',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -40,4 +57,21 @@ export const RU: Record<keyof typeof EN, string> = {
   'target': 'Цель',
   'sail': 'В море',
   'sailAria': 'В море: отдать швартовы (чего не хватает в плавание — спросим перед выходом)',
+  'ammo': 'Снаряд: на борту {n}. Нажать — следующий; удерживать — снаряды, умения, таланты',
+  'ammoNone': 'Снаряд: нажать — следующий',
+  'lock': 'Цель: {name}. Нажать — следующий корабль; удерживать — её карточка',
+  'lockNone': 'Цель: нажать — ближайший корабль',
+  'speed': '{n} уз',
+  'speedAria': 'Ход: {n} узлов, паруса {s} из 4',
+  'k.sail': 'паруса',
+  'k.helm': 'руль',
+  'k.fire': 'огонь',
+  'k.target': 'цель',
+  'k.ammo': 'снаряды',
+  'k.abil': 'умения',
+  'k.menu': 'меню',
+  'k.cast': 'в море',
+  'k.harbour': 'гавань',
+  'k.map': 'карта',
+  'keysAria': 'Клавиши',
 };

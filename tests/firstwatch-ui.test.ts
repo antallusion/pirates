@@ -14,7 +14,7 @@ const css = readFileSync(new URL('../client/feel.css', import.meta.url), 'utf8')
 
 test('the finger points at the one button each step wants (docs/23 items 79–80)', () => {
   const base = { touch: true, docked: false, battle: false };
-  assert.deepEqual(pointerTargets({ ...base, stage: 'sail', docked: true }).slice(0, 2), ['#modal-panel [data-ptab="sea"]', '#tc-fire.tc-sail'], 'in port: the harbour’s gold «В море», else the HUD’s');
+  assert.deepEqual(pointerTargets({ ...base, stage: 'sail', docked: true }).slice(0, 2), ['#modal-panel [data-ptab="sea"]', '#tc-cast'], 'in port: the harbour’s gold «В море», else the HUD’s own round «В море»');
   assert.deepEqual(pointerTargets({ ...base, stage: 'sail' }), ['#tc-stick'], 'at sea: the wheel');
   assert.deepEqual(pointerTargets({ ...base, stage: 'sail', touch: false }), [], 'a desk steers by keys');
   assert.equal(pointerTargets({ ...base, stage: 'attack' })[0], '#tc-act[data-act="attack"]');

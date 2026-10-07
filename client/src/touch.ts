@@ -73,9 +73,15 @@ export class TouchControls {
   }
 
   /** Keep the wheel turned to the ship's heading, the course mark where the helm points, the sail ring lit to her
-   *  sail and the dash's readiness (1 just used – 0 ready) on its chip. */
-  frame(heading: number | null, sail: number, dashLeft: number): void {
+   *  sail, the dash's readiness (1 just used – 0 ready) on its chip and her speed under the wheel (knots, as words). */
+  frame(heading: number | null, sail: number, dashLeft: number, speed = ''): void {
     if (!this.enabled) return;
+    const sp = document.getElementById('tc-speed');
+    if (sp && sp.dataset.v !== `${speed}|${sail}`) {
+      sp.dataset.v = `${speed}|${sail}`;
+      sp.textContent = speed ? seaWord('speed', { n: speed }) : '';
+      sp.setAttribute('aria-label', seaWord('speedAria', { n: speed, s: sail }));
+    }
     if (this.stickId === null && heading !== null) this.knob.style.transform = `translate(-50%, -50%) rotate(${heading}rad)`;
     const mark = $('tc-course');
     mark.classList.toggle('hidden', this.course === null);

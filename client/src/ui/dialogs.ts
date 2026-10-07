@@ -216,10 +216,16 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
 
 export function renderHelp(root: HTMLElement, onboarding: OnboardingView | null = null): void {
   const range = (a: Action, b: Action) => `${kb(a)} – ${kb(b)}`;
+  // The simple HUD on a desk plays by its keys (owner, 2026-10-07): «Огонь» on its own key, the next mark, the dash; a
+  // click only picks a mark there (the detailed HUD's click still fires the side the cursor lies off).
+  const simple = document.body.classList.contains('simple');
   const keys: [string, string, string][] = [
     ['stat_sails', `${kb('sailUp')} / ${kb('sailDown')}`, L('help.sail')],
     ['menu_ship', `${kb('rudderLeft')} / ${kb('rudderRight')}`, L('help.rudder')],
-    ['fire', `${kb('firePort')} / ${kb('fireStarboard')}, ${L('key.lmb')}`, L('help.fire')],
+    ['fire', kb('fire'), L('help.volley')],
+    ['ab_mark_target', kb('target'), L('help.target')],
+    ['dash', kb('dash'), L('help.dash')],
+    ['fire', simple ? `${kb('firePort')} / ${kb('fireStarboard')}` : `${kb('firePort')} / ${kb('fireStarboard')}, ${L('key.lmb')}`, L(simple ? 'help.fireKeys' : 'help.fire')],
     ['ammo_round', range('ammo1', 'ammo5'), L('help.ammo')],
     ['ammo_cursed', kb('cursedShot'), L('help.cursed')],
     ['mount_mortar', L('key.rmb'), L('help.mount')],
@@ -259,7 +265,7 @@ export function renderHelp(root: HTMLElement, onboarding: OnboardingView | null 
   const isTouch = document.body.classList.contains('touch');
   const rows = isTouch
     ? touch.map(([pic, d]) => `<div class="help-row">${icon(pic, '', 'item-ico')}<span>${esc(d)}</span></div>`).join('')
-    : keys.map(([pic, k, d]) => `<div class="help-row">${icon(pic, '', 'item-ico')}<span><kbd>${esc(k)}</kbd> ${esc(d)}</span></div>`).join('');
+    : keys.filter(([, k]) => k && k !== '—').map(([pic, k, d]) => `<div class="help-row">${icon(pic, '', 'item-ico')}<span><kbd>${esc(k)}</kbd> ${esc(d)}</span></div>`).join('');
   root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('help.title'))}</h2><div class="sub">${esc(L('help.sub'))}</div></div>${isTouch ? '' : `<div class="muted">${esc(L('help.close', { key: kb('help') }))}</div>`}</div>
     <div class="modal-body"><div class="cols"><div class="help-list">${rows}</div>
     <div><div class="card"><h4 class="card-h">${icon('good_provisions', '', 'ico-md')}${esc(L('help.firstVoyage'))}</h4><p>${esc(L('help.firstVoyageText', { start: portName('saltmarrow'), second: portName('blackwater'), coast: REGIONS.black_coast.name.replace(/^The /, 'the '), capital: portName('gravesend') }))}</p></div>

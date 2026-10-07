@@ -49,14 +49,25 @@ test('«Особое»: the ultimate when it is ready, else the strongest stroke
   assert.equal(bestSpecial([a('z', false, 30), a('v', false, 150, 'ultimate')]), null);
 });
 
-test('seven things to touch at most on the sea, in every state of the HUD', () => {
+test('seven things to touch at most on the sea, in every state of the HUD, on a touch screen and on a desk', () => {
   const tg = { name: 'Covenant', level: 1, hull: 1, crew: 0.7, chance: 0.6 };
-  for (const docked of [false, true]) for (const act of [null, { id: 'attack', icon: 'x', label: 'Атаковать', more: 3 }]) for (const special of [null, { id: 'v', icon: 'ab_v', name: 'V' }]) for (const target of [null, tg]) for (const news of [0, 5]) {
-    const v: SeaView = { docked, act, special, target, ammo: 'round', ammoN: 60, reload: 1, news, unread: 2 };
+  for (const touch of [true, false, undefined]) for (const docked of [false, true]) for (const fight of [false, true, undefined]) for (const act of [null, { id: 'attack', icon: 'x', label: 'Атаковать', more: 3 }]) for (const special of [null, { id: 'v', icon: 'ab_v', name: 'V' }]) for (const target of [null, tg]) for (const news of [0, 5]) {
+    const v: SeaView = { docked, touch, fight: fight === undefined ? undefined : fight || !!target, act, special, target, ammo: 'round', ammoN: 60, reload: 1, news, unread: 2 };
     const t = seaTargets(v);
     assert.ok(t.length <= 7, `${JSON.stringify(v)} → ${t.join(',')}`);
-    if (target && !docked) assert.ok(!t.includes('minimap') && !t.includes('news'), 'a fight puts the minimap and the counter away');
-    if (!docked) assert.ok(t.includes('fire') && t.includes('stick'));
+    if (touch === false) {
+      // the desk plays by its keys (owner, 2026-10-07): no stick, no fight buttons
+      assert.ok(!t.includes('stick') && !t.includes('fire') && !t.includes('ammo') && !t.includes('lock'), t.join(','));
+      continue;
+    }
+    const inFight = !docked && (v.fight ?? !!target);
+    if (inFight) {
+      assert.ok(!t.includes('minimap') && !t.includes('news'), 'a fight puts the minimap and the counter away');
+      assert.ok(t.includes('fire') && t.includes('stick') && t.includes('ammo') && t.includes('lock'), 'a fight: «Огонь», «Снаряд», «Цель» and the helm');
+    } else if (!docked) {
+      // leaving port (owner, 2026-10-07: «давать только штурвал и всё необходимое»): the helm, no guns
+      assert.ok(t.includes('stick') && !t.includes('fire') && !t.includes('special'), t.join(','));
+    } else assert.ok(t.includes('cast') && !t.includes('stick'), 'in port: «В море», no helm');
   }
 });
 

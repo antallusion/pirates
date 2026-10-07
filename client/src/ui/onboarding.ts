@@ -17,8 +17,13 @@ const BLOCKS: Record<string, HudBlock[]> = {
   'hud-captain': ['captain', 'wanted'],
   'hud-map': ['minimap', 'map'],
   'hud-combat': ['guns', 'abilities'],
-  // the phone's sea HUD (docs/23 phase 2): «Огонь» comes with the guns, «Особое» with the abilities
+  // the sea HUD (docs/23 phase 2): «Огонь» and «Снаряд» come with the guns, «Цель» with the mark, «Особое» with the
+  // abilities. In port the big round button is «В море» (#tc-cast), never hidden: the watch's first step asks for it
+  // (it was «Огонь» in port and hidden with the guns — the lesson said «Отдайте швартовы» and nothing to press). The
+  // simple HUD keeps the captain and the chart from the first step (styles: seahud.css).
   'tc-fire': ['guns'],
+  'tc-ammo': ['guns'],
+  'tc-lock': ['target'],
   'tc-special': ['abilities'],
 };
 

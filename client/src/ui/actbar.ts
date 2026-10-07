@@ -158,7 +158,8 @@ export function landKeyAct(acts: Act[]): Act | null {
 export const ACT_SHOW = 3;
 
 /** The bar's HTML: the info line, the buttons (`keyOf` names an action's key; null on touch), the toggle. */
-export function actBarHtml(acts: Act[], info: string[], keyOf: ((a: Action) => string) | null, open: boolean): string {
+export function actBarHtml(acts: Act[], info: string[], keyOf: ((a: Action) => string) | null, open: boolean, show = ACT_SHOW): string {
+  const ACT_SHOW = Math.max(2, show); // (the simple HUD on a desk shows two: the first and «⋯ N more»)
   const btn = (a: Act, i: number) => {
     const k = keyOf && a.key ? keyOf(a.key) : '';
     return `<button type="button" class="act-btn act-${a.id}${i === 0 ? ' primary' : ''}" data-act="${i}" title="${esc(a.title)}" aria-label="${esc(a.sub ? `${a.label}: ${a.sub}` : a.label)}">${icon(a.icon, '•', 'act-ico')}<span class="act-l">${esc(a.label)}</span>${a.sub ? `<span class="act-s">${esc(a.sub)}</span>` : ''}${k ? `<kbd class="act-k">${esc(k)}</kbd>` : ''}</button>`;

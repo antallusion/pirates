@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="/src/ui/kit/kit.css" />
   <link rel="stylesheet" href="/src/ui/kit/window.css" />
   <link rel="stylesheet" href="/feel.css" />
+  <link rel="stylesheet" href="/seahud.css" />
 </head>
 <body>
   <canvas id="world"></canvas>
@@ -111,6 +112,7 @@
       <div id="hud-goals" class="hidden"></div>
       <div id="hud-feed" class="hud-block hidden"></div>
       <div id="hud-dive" class="hud-block hidden"></div>
+      <div id="sea-herald" class="hidden" role="status"></div>
     </div>
     <div id="hud-ship" class="hud-block ship-panel"></div>
     <div id="hud-nav" class="hud-block"></div>
@@ -121,11 +123,15 @@
     </div>
     <div id="board-fight" class="hidden"></div>
     <div id="captions"></div>
-    <!-- docs/23 phase 2: the helm stick (touch.ts); «Огонь», «Действие», «Особое», the menu and the news counter are
-         put in by ui/seahud.ts. -->
+    <!-- docs/23 phase 2 and the rebuild of 2026-10-07: the helm stick and her speed (touch.ts); «Огонь», «Снаряд»,
+         «Цель», «Особое», «Действие», «В море», the menu and the news counter are put in by ui/seahud.ts. -->
     <div id="touch">
       <div id="tc-stick"><i id="tc-sailring" aria-hidden="true"></i><i id="tc-course" class="hidden"></i><i id="tc-knob"></i><i id="tc-dashchip" aria-hidden="true"></i></div>
+      <span id="tc-speed" role="status"></span>
     </div>
+    <!-- The desk's keys (owner, 2026-10-07: «на пк чисто через wasd и другие клавиши»): a small line for the first
+         minutes at sea (main.ts). The sea's name for a moment on entering it is #sea-herald in the top stack (hud.ts). -->
+    <div id="key-hint" class="hidden" aria-hidden="true"></div>
   </section>
 
   <!-- In the HUD's frame but over the windows: the server's word is seen in port too; the chat rises while open. -->
