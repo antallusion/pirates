@@ -69,11 +69,11 @@ export const BEASTS: Record<BeastId, BeastDef> = {
   humpback: {
     id: 'humpback', cls: 'humpback', name: ['Humpback Whale', 'Горбатый кит'], many: ['humpbacks', 'горбатые киты'], group: 'whale', temper: 'shy', predator: false,
     regions: WARM, level: [4, 6], pack: [1, 2], bite: 60, every: 10, stamina: 70, pull: 0.7, spookRange: 700,
-    yields: { whale_oil: [6, 9], baleen: [3, 5] }, flense: 45, xp: 140, weight: 5,
+    yields: { whale_oil: [4, 5], baleen: [2, 3] }, flense: 45, xp: 140, weight: 5,
   },
   sperm_whale: {
     id: 'sperm_whale', cls: 'sperm_whale', name: ['Sperm Whale', 'Кашалот'], many: ['sperm whales', 'кашалоты'], group: 'whale', temper: 'ram', predator: false,
-    regions: OPEN, level: [6, 9], pack: [1, 1], bite: 220, every: 30, stamina: 100, pull: 0.95, spookRange: 600,
+    regions: OPEN, level: [6, 9], pack: [1, 1], bite: 220, every: 15, stamina: 100, pull: 0.95, spookRange: 600,
     yields: { whale_oil: [10, 14], whalebone: [3, 5], orca_tooth: [1, 2] }, rare: { good: 'ambergris', chance: 0.08 }, flense: 60, xp: 260, weight: 3,
   },
   narwhal: {
@@ -83,8 +83,8 @@ export const BEASTS: Record<BeastId, BeastDef> = {
   },
   shark: {
     id: 'shark', cls: 'shark', name: ['Shark', 'Акула'], many: ['sharks', 'акулы'], group: 'shark', temper: 'blood', predator: true,
-    regions: [...WARM, 'dead_mans_expanse', 'drowned_crown'], level: [2, 6], pack: [1, 3], bite: 14, every: 3, stamina: 15, pull: 0.3, spookRange: 0,
-    yields: { shark_skin: [1, 2], orca_tooth: [0, 1] }, flense: 20, xp: 40, weight: 5,
+    regions: [...WARM, 'dead_mans_expanse', 'drowned_crown'], level: [1, 6], pack: [1, 3], bite: 12, every: 3, stamina: 15, pull: 0.3, spookRange: 0,
+    yields: { shark_skin: [1, 2], orca_tooth: [0, 1] }, flense: 20, xp: 31, weight: 5,
   },
   young_serpent: {
     id: 'young_serpent', cls: 'young_serpent', name: ['Young Sea Serpent', 'Морской змей-подросток'], many: ['a young serpent', 'молодой змей'], group: 'any', temper: 'coil', predator: true,

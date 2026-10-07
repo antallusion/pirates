@@ -745,7 +745,7 @@ export const DATA_RU_CORE: Record<string, string> = {
   "ships.SHIP_CLASSES.narwhal.passive.name": "Чудовище",
   "ships.SHIP_CLASSES.narwhal.passive.description": "Бивень пробивает обшивку.",
   "ships.SHIP_CLASSES.shark.name": "Акула",
-  "ships.SHIP_CLASSES.shark.role": "Приходит на кровь. Хватает людей из воды.",
+  "ships.SHIP_CLASSES.shark.role": "Приходит на кровь. Кусает корпус и руль.",
   "ships.SHIP_CLASSES.shark.passive.name": "Чудовище",
   "ships.SHIP_CLASSES.shark.passive.description": "Кровь в воде приводит новых.",
   "ships.SHIP_CLASSES.young_serpent.name": "Морской змей-подросток",

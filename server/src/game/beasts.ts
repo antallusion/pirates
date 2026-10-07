@@ -28,6 +28,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { depthAt, isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { applyDamage } from './combat.ts';
+import type { DamagePacket } from './combat.ts';
 import { giveGoods } from './director.ts';
 import type { Game } from './Game.ts';
 import { takeItem } from './gear.ts';
@@ -37,6 +38,7 @@ import { changeRep } from './player.ts';
 import { hasLicence } from './ports.ts';
 import { questEvent } from './quests.ts';
 import type { ShipEntity } from './ship.ts';
+import { pursuitOf } from './pursuit.ts';
 import { SPEED_SCALE, TURN_SCALE } from '../../../shared/src/constants.ts';
 
 type Mode = 'roam' | 'hunt' | 'flee' | 'line' | 'spent';
@@ -63,6 +65,14 @@ interface Brain {
   /** Drawn by blood to a carcass. */
   blood: number | null;
   spentSince: number;
+  /** When its present flight began, and whether it has turned at bay on the ship that keeps after it (owner,
+   *  2026-10-07: a beast fights inside her guns' reach, it does not run off for ever). */
+  fleeSince: number;
+  bay: boolean;
+  /** The White Orca: dived under the keel this run at her prey (once a run, then she rams). */
+  dived: boolean;
+  /** The last time it told a ship its bite went into her rudder (a toast a fight, not a toast a bite). */
+  toldAt: number;
 }
 
 interface Pack {
@@ -170,6 +180,7 @@ export function spawnBeast(game: Game, id: BeastId, x: number, y: number, level:
   S.brains.set(ship.id, {
     beast: id, pack, mode: 'roam', target: null, home: { x, y }, nextBite: now + def.every, fleeUntil: 0, nextDive: now + S.rng.range(30, 90),
     surgeUntil: 0, nextSurge: now + 4, ironed: false, coil: null, nextCoil: now + 5, called: false, prey: null, spooked: new Set(), blood: null, spentSince: 0,
+    fleeSince: -1e9, bay: false, dived: false, toldAt: -1e9,
   });
   if (pack) S.packs.get(pack)?.members.push(ship.id);
   game.grid.upsert(ship.id, x, y);
@@ -216,7 +227,10 @@ function orcaMigrationIn(game: Game, region: RegionId): boolean {
   return game.worldEvents.active(game).some((e) => e.kind === 'orca_migration' && e.region === region);
 }
 
-function pickKind(game: Game, region: RegionId, level: number): BeastId | null {
+/** The kinds of the waters (`level` the square's) for a captain whose ship fights at `mine`: none whose least level is
+ *  above hers — every beast that rises about a captain is of her level or below it (owner, 2026-10-07: a new captain's
+ *  sea had no shark of her level, and the ladder made her guns three and five times as slow on one above her). */
+function pickKind(game: Game, region: RegionId, level: number, mine = Infinity): BeastId | null {
   const S = bs(game);
   const migrating = orcaMigrationIn(game, region);
   const pool: [BeastId, number][] = [];
@@ -225,6 +239,7 @@ function pickKind(game: Game, region: RegionId, level: number): BeastId | null {
     if (!d.weight || !d.regions.includes(region)) continue;
     // Not a beast wildly above or below the captain: the sea fits its beasts to who sails there.
     if (level < d.level[0] - 2 || level > d.level[1] + 3) continue;
+    if (d.level[0] > mine) continue;
     pool.push([id, d.weight * (id === 'orca' && migrating ? 3 : 1)]);
   }
   if (!pool.length) return null;
@@ -261,12 +276,12 @@ function spawnAbout(game: Game): void {
     if (near >= (migrating ? 10 : 6)) continue;
     if (!S.rng.chance(migrating ? 0.25 : 0.12)) continue;
     const lvl = sectorAt(game.world, ship.state.x, ship.state.y).level; // the beasts of the square (docs/16 P2)
-    const kind = pickKind(game, ship.region, lvl);
+    const kind = pickKind(game, ship.region, lvl, ship.combatLevel);
     if (!kind) continue;
     const pt = openPoint(game, ship.state.x, ship.state.y, SPAWN_R[0], SPAWN_R[1], ship.region);
     if (!pt) continue;
     const d = BEASTS[kind];
-    const level = clamp(lvl + S.rng.int(-1, 1), d.level[0], d.level[1]);
+    const level = clamp(Math.min(lvl + S.rng.int(-1, 1), ship.combatLevel), d.level[0], d.level[1]);
     const group = spawnGroup(game, kind, pt[0], pt[1], level);
     // A pod of orcas now and then has a whale of its own in its jaws.
     if (kind === 'orca' && group.length && S.rng.chance(0.25)) {
@@ -288,12 +303,12 @@ export function beastsPass(game: Game, ship: ShipEntity): boolean {
   const S = bs(game);
   if (S.brains.size >= WORLD_CAP) return false;
   const lvl = sectorAt(game.world, ship.state.x, ship.state.y).level; // the beasts of the square (docs/16 P2)
-  const kind = pickKind(game, ship.region, lvl);
+  const kind = pickKind(game, ship.region, lvl, ship.combatLevel);
   if (!kind) return false;
   const pt = openPoint(game, ship.state.x, ship.state.y, 1200, 2000, ship.region);
   if (!pt) return false;
   const d = BEASTS[kind];
-  return spawnGroup(game, kind, pt[0], pt[1], clamp(lvl + S.rng.int(-1, 1), d.level[0], d.level[1])).length > 0;
+  return spawnGroup(game, kind, pt[0], pt[1], clamp(Math.min(lvl + S.rng.int(-1, 1), ship.combatLevel), d.level[0], d.level[1])).length > 0;
 }
 
 // ------------------------------------------------------------------------------------------------ movement
@@ -380,18 +395,53 @@ export function stepBeasts(game: Game, dt: number): void {
   stepLines(game, dt);
 }
 
+/** A beast struck within this many seconds is in a fight: it does not dive, and its flight is short. */
+export const STRUCK_SEC = 30;
+/** A beast in a fight runs no longer than this from the ship that keeps after it, then turns at bay and fights inside
+ *  her guns' reach (owner, 2026-10-07: «я вот уже сражаюсь с акулой минуты 2» — whales bolted and sounded for minutes,
+ *  out of reach and under the water where no ball finds them; as the sea's ships give up a chase in forty seconds). */
+export const BEAST_FLEE_SEC = 8;
+/** She keeps after it: her «Атаковать» on it, or her shot in it within this many seconds, and within this reach. */
+const KEEPS_HIT = 10;
+const KEEPS_R = 900;
+
+/** Away: the beast runs (from `now`, for `sec`), its flight's clock kept if it was already running. */
+function fleeFor(br: Brain, now: number, sec: number): void {
+  if (br.mode !== 'flee') br.fleeSince = now;
+  br.mode = 'flee';
+  br.fleeUntil = Math.max(br.fleeUntil, now + sec);
+}
+
+/** A captain's ship within reach with her «Атаковать» on it (her helmsman closing, her guns about to speak). */
+function pursuer(game: Game, b: ShipEntity): ShipEntity | null {
+  let best: ShipEntity | null = null;
+  game.forShipsNear(b.state.x, b.state.y, KEEPS_R, (o) => {
+    if (best || !o.isPlayer || !o.alive || o.docked) return;
+    const run = pursuitOf(o);
+    if (run && run.target === b.id) best = o;
+  });
+  return best;
+}
+
+/** Does the ship that struck it keep after it (her «Атаковать» on it, or her shot fresh in it, and close)? */
+function keepsAfter(game: Game, foe: ShipEntity, b: ShipEntity, now: number): boolean {
+  if (dist(foe.state.x, foe.state.y, b.state.x, b.state.y) > KEEPS_R) return false;
+  if ((b.attackers.get(foe.id) ?? -Infinity) > now - KEEPS_HIT) return true;
+  const run = pursuitOf(foe);
+  return !!run && run.target === b.id;
+}
+
 function think(game: Game, b: ShipEntity, br: Brain, dt: number, now: number): void {
   const S = bs(game);
   const def = BEASTS[br.beast];
   const lined = [...S.lines.values()].find((l) => l.beast === b.id);
   if (lined) br.mode = br.mode === 'spent' ? 'spent' : 'line';
-  else if (br.mode === 'line') br.mode = 'flee';
+  else if (br.mode === 'line') fleeFor(br, now, 30);
   if (br.mode === 'spent') {
     b.state.speed = 0.3;
     // Left alone, a spent beast gets its wind back.
     if (!lined && now - br.spentSince > 30) {
-      br.mode = 'flee';
-      br.fleeUntil = now + 30;
+      fleeFor(br, now, 30);
       b.effects = b.effects.filter((e) => e.id !== 'spent');
       b.recompute(now);
     }
@@ -406,19 +456,29 @@ function think(game: Game, b: ShipEntity, br: Brain, dt: number, now: number): v
     lineSwim(game, b, br, lined!, dt, now);
     return;
   }
-  // Whales dive now and then; the surfacing shows a spout.
-  if (def.temper !== 'pack' && def.temper !== 'blood' && def.temper !== 'coil' && br.mode !== 'hunt' && now >= br.nextDive) {
+  // In a fight: whoever struck it within the half-minute. A ship that keeps after it brings it to bay — a shy whale
+  // bolts first, BEAST_FLEE_SEC, and any beast on the run turns once it has run that long with her still on it.
+  const foe = recentAttacker(game, b, now, STRUCK_SEC) ?? pursuer(game, b);
+  const hunted = !!foe && keepsAfter(game, foe, b, now);
+  if (!hunted) br.bay = false;
+  else if (!br.bay) {
+    if (br.mode === 'flee') br.bay = now - br.fleeSince >= BEAST_FLEE_SEC;
+    else if (def.temper === 'shy') fleeFor(br, now, BEAST_FLEE_SEC);
+    else br.bay = true;
+  }
+  // Whales dive now and then; the surfacing shows a spout. Not one with her shot in it: it stays up, to run or to fight.
+  if (def.temper !== 'pack' && def.temper !== 'blood' && def.temper !== 'coil' && br.mode !== 'hunt' && !foe && now >= br.nextDive) {
     br.nextDive = now + S.rng.range(60, 100);
     b.addEffect({ id: 'submerged', until: now + S.rng.range(12, 22) }, now);
   }
   if (b.hasEffect('submerged') && S.rng.chance(dt * 0.02)) game.emit({ k: 'fx', fx: 'spout', x: Math.round(b.state.x), y: Math.round(b.state.y) }, b.state.x, b.state.y);
-  if (br.mode === 'flee') {
+  if (br.mode === 'flee' && !br.bay) {
     if (now > br.fleeUntil) br.mode = 'roam';
     const threat = nearestShip(game, b, 1500);
     away(game, b, threat ? threat.state : br.home, speedOf(b, br, 1), dt);
     return;
   }
-  const target = chooseTarget(game, b, br, now);
+  const target = br.bay && hunted ? foe : chooseTarget(game, b, br, now);
   if (target) {
     br.mode = 'hunt';
     br.target = target.id;
@@ -436,8 +496,9 @@ function think(game: Game, b: ShipEntity, br: Brain, dt: number, now: number): v
   }
   const t = now * 0.03 + b.id * 1.7;
   swim(game, b, br.home.x + Math.sin(t) * 600, br.home.y - Math.cos(t * 0.8) * 600, speedOf(b, br, 0.3), dt, 0.6);
-  // A shy beast takes fright at a loud ship.
-  if (def.spookRange > 0) spook(game, b, br, now);
+  // A shy beast takes fright at a loud ship (one struck and left behind just runs: no sounding with shot in it).
+  if (foe) fleeFor(br, now, 40);
+  else if (def.spookRange > 0) spook(game, b, br, now);
 }
 
 function nearestShip(game: Game, b: ShipEntity, r: number): ShipEntity | null {
@@ -461,8 +522,7 @@ function spook(game: Game, b: ShipEntity, br: Brain, now: number): void {
     if (dist(o.state.x, o.state.y, b.state.x, b.state.y) > def.spookRange * quiet) return;
     const n = hullNoise(o.state.speed, o.stats.maxSpeed, now - o.lastCombat);
     if (n <= SPOOK_NOISE) return;
-    br.mode = 'flee';
-    br.fleeUntil = now + 40;
+    fleeFor(br, now, 40);
     b.addEffect({ id: 'submerged', until: now + 10 }, now);
     if (!br.spooked.has(o.id)) {
       br.spooked.add(o.id);
@@ -487,7 +547,7 @@ function chooseTarget(game: Game, b: ShipEntity, br: Brain, now: number): ShipEn
   }
   // Whoever struck it — or a packmate lying wounded.
   const own = recentAttacker(game, b, now, 60);
-  if (own && (def.predator || def.temper === 'ram' || def.temper === 'tusk')) return own;
+  if (own && (def.predator || def.temper === 'ram' || def.temper === 'tusk' || br.bay)) return own;
   if (br.pack) {
     const pack = S.packs.get(br.pack);
     for (const m of pack?.members ?? []) {
@@ -537,32 +597,60 @@ function flensingNear(game: Game, o: ShipEntity): boolean {
   return false;
 }
 
-/** The blow of a beast at its prey. */
+/** A toast of the fight's at most once in this many seconds from one beast (a toast a fight, not a toast a bite). */
+const TELL_EVERY = 20;
+/** A sperm whale between its rams stands off this far (it stood off 200 m: the edge of a light gun's close band). */
+const RAM_STAND = 130;
+
+/** The blow of a beast at its prey: into her hull — now and then her rudder (an orca's, a shark's), a leak (a narwhal's
+ *  tusk), her rigging (the serpent's coils) — and never into her men (owner, 2026-10-07: «акулы всякие они не должны
+ *  убивать моих людей, как они команду могут убить?»; a shark's bite took a man every bite and fifteen of a sloop's
+ *  twenty-eight in a fight). It lands where she sees it: her hull's number over her, as a ball's. */
 function bite(game: Game, b: ShipEntity, br: Brain, t: ShipEntity, mul = 1): void {
   const S = bs(game);
   const dmg = biteAt(br.beast, b.shipLevel) * mul * S.rng.range(0.85, 1.15);
   const def = BEASTS[br.beast];
-  const packet: { hull: number; rudder?: number; crew?: number } = { hull: dmg };
-  if (def.temper === 'pack' && br.beast === 'orca' && S.rng.chance(0.3)) {
+  const now = game.now;
+  const packet: DamagePacket = { hull: dmg };
+  let crit: string | undefined, tell: string | undefined;
+  if (br.beast === 'orca' && S.rng.chance(0.3)) {
     packet.rudder = 0.06;
-    if (t.isPlayer) game.toastShip(t, 'The orcas go for your rudder!', 'bad');
+    crit = 'rudder';
+    tell = 'The orcas go for your rudder!';
+  } else if (br.beast === 'shark' && S.rng.chance(0.2)) {
+    packet.rudder = 0.04;
+    crit = 'rudder';
+    tell = 'A shark worries at your rudder!';
+  } else if (def.temper === 'coil') {
+    packet.sails = t.stats.sailHpMax * 0.03;
   }
-  if (def.temper === 'blood') packet.crew = 1;
   if (t.npcRole === 'beast') {
     // One beast on another (a pod on its whale): no ladder, no law.
     t.hull = Math.max(0, t.hull - dmg);
     if (t.hull <= 0) game.beginSinking(t);
     return;
   }
+  const before = t.hull;
   applyDamage(game, t, packet, b);
+  const took = Math.max(0, before - Math.max(0, t.hull));
+  if (took > 0) {
+    // Between her and the beast, on her side: the number the client floats over a hit.
+    const k = Math.min(1, (t.stats.beam * 0.6) / Math.max(1, dist(b.state.x, b.state.y, t.state.x, t.state.y)));
+    const hx = t.state.x + (b.state.x - t.state.x) * k, hy = t.state.y + (b.state.y - t.state.y) * k;
+    game.emit({ k: 'hit', x: Math.round(hx), y: Math.round(hy), ship: t.id, dmg: Math.round(took), ammo: 'round', ...(crit ? { crit } : {}) }, hx, hy);
+  }
   // A beast alongside is in reach of the rail: muskets, swivels, boathooks and axes on the coils answer every bite.
-  if ((def.temper === 'pack' || def.temper === 'blood' || def.temper === 'tusk' || def.temper === 'coil') && t.crew > 0) {
+  if ((def.temper === 'pack' || def.temper === 'blood' || def.temper === 'tusk' || def.temper === 'coil' || def.temper === 'shy') && t.crew > 0) {
     const hands = Math.min(1, t.crew / Math.max(1, t.stats.crewMax));
     applyDamage(game, b, { hull: t.stats.hullMax * 0.02 * hands }, t);
   }
   if (def.temper === 'tusk') {
     t.leaks = Math.min(6, t.leaks + 1);
-    game.toastShip(t, 'A narwhal’s tusk goes through the planking: a leak!', 'bad');
+    tell = 'A narwhal’s tusk goes through the planking: a leak!';
+  }
+  if (tell && t.isPlayer && now - br.toldAt >= TELL_EVERY) {
+    br.toldAt = now;
+    game.toastShip(t, tell, 'bad');
   }
 }
 
@@ -571,11 +659,36 @@ function attack(game: Game, b: ShipEntity, br: Brain, t: ShipEntity, dt: number,
   const def = BEASTS[br.beast];
   const d = dist(b.state.x, b.state.y, t.state.x, t.state.y);
   const reach = t.stats.length / 2 + b.stats.length / 2 + 12;
+  // Under the water it follows, and strikes nothing until it is up (the White Orca's dive under the keel is her own).
+  if (b.hasEffect('submerged') && br.beast !== 'white_orca') {
+    swim(game, b, t.state.x, t.state.y, speedOf(b, br, 0.6), dt, 1.2);
+    return;
+  }
   switch (def.temper) {
+    case 'shy': {
+      // A great whale at bay: too slow to run rings round a ship, it lies off her side and heaves in to strike with
+      // its flukes, as her helmsman lays her broadside on to it (circling, it only ever trailed in her wake, where no
+      // broadside bears: a humpback took her two minutes).
+      if (now < br.nextBite - 1.5) {
+        const a = Math.atan2(b.state.x - t.state.x, -(b.state.y - t.state.y));
+        const v = headingVec(a);
+        swim(game, b, t.state.x + v.x * (reach + 40), t.state.y + v.y * (reach + 40), speedOf(b, br, 0.35), dt, 1.2);
+        return;
+      }
+      swim(game, b, t.state.x, t.state.y, speedOf(b, br, 1.2), dt, 1.6);
+      if (d < reach + 8) {
+        br.nextBite = now + def.every * S.rng.range(0.8, 1.2);
+        bite(game, b, br, t);
+      }
+      return;
+    }
     case 'pack':
-    case 'blood': {
+    case 'blood':
+    case 'tusk': {
       if (br.beast === 'white_orca') return whiteOrca(game, b, br, t, dt, now);
-      // Circle the prey, each in its own place round it, darting in to bite.
+      // Circle the prey, each in its own place round it, darting in to bite — a narwhal's tusk as an orca's teeth: a
+      // stone's throw off her side between blows, where her guns bear (it swam on top of her before, and no broadside
+      // reaches a beast under her own keel).
       const pack = br.pack ? S.packs.get(br.pack) : undefined;
       const idx = pack ? Math.max(0, pack.members.indexOf(b.id)) : 0;
       const n = pack ? Math.max(1, pack.members.length) : 1;
@@ -591,11 +704,11 @@ function attack(game: Game, b: ShipEntity, br: Brain, t: ShipEntity, dt: number,
       return;
     }
     case 'ram': {
-      // The sperm whale charges whoever struck it and rams, then stands off to come again.
+      // The sperm whale charges whoever struck it and rams, then stands off to come again — inside her guns' close band.
       if (now < br.nextBite) {
         const a = Math.atan2(b.state.x - t.state.x, -(b.state.y - t.state.y)) + 0.2;
         const v = headingVec(a);
-        swim(game, b, t.state.x + v.x * 200, t.state.y + v.y * 200, speedOf(b, br, 0.4), dt, 1.1);
+        swim(game, b, t.state.x + v.x * RAM_STAND, t.state.y + v.y * RAM_STAND, speedOf(b, br, 0.4), dt, 1.1);
         return;
       }
       swim(game, b, t.state.x, t.state.y, speedOf(b, br, 1.3), dt, 1.1);
@@ -603,30 +716,41 @@ function attack(game: Game, b: ShipEntity, br: Brain, t: ShipEntity, dt: number,
         br.nextBite = now + def.every;
         bite(game, b, br, t);
         game.emit({ k: 'fx', fx: 'ram', x: Math.round(t.state.x), y: Math.round(t.state.y) }, t.state.x, t.state.y);
-        if (t.isPlayer) game.toastShip(t, 'The sperm whale turns on you and rams!', 'bad');
-      }
-      return;
-    }
-    case 'tusk':
-    case 'shy': {
-      swim(game, b, t.state.x, t.state.y, speedOf(b, br, 0.9), dt, 1.6);
-      if (now >= br.nextBite && d < reach) {
-        br.nextBite = now + def.every;
-        bite(game, b, br, t);
+        if (t.isPlayer && now - br.toldAt >= TELL_EVERY) {
+          br.toldAt = now;
+          game.toastShip(t, 'The sperm whale turns on you and rams!', 'bad');
+        }
       }
       return;
     }
     case 'coil': {
+      // Between its holds it rides off her side, a cable's length of coils in the water where her guns bear, and closes
+      // when it means to coil again (it lay on her middle the eighteen seconds between, out of every ball's way).
+      if (now < br.nextCoil - 1.5) {
+        const a = Math.atan2(b.state.x - t.state.x, -(b.state.y - t.state.y)) + 0.4 * dt;
+        const v = headingVec(a);
+        swim(game, b, t.state.x + v.x * (reach + 30), t.state.y + v.y * (reach + 30), speedOf(b, br, 0.8), dt, 1.5);
+        return;
+      }
       swim(game, b, t.state.x, t.state.y, speedOf(b, br, 1), dt, 1.5);
       if (now >= br.nextCoil && d < reach + 10) {
         br.coil = { target: t.id, until: now + 8, next: now + 0.5 };
         t.addEffect({ id: 'coiled', until: now + 8, mods: { maxSpeed: -0.85, turnRate: -0.8 }, source: b.id }, now);
         game.emit({ k: 'fx', fx: 'coil', x: Math.round(t.state.x), y: Math.round(t.state.y) }, t.state.x, t.state.y);
-        if (t.isPlayer) game.toastShip(t, 'The serpent’s coils close round your hull!', 'bad');
+        if (t.isPlayer && now - br.toldAt >= TELL_EVERY) {
+          br.toldAt = now;
+          game.toastShip(t, 'The serpent’s coils close round your hull!', 'bad');
+        }
       }
       return;
     }
   }
+}
+
+/** Which side of her a beast lies: +1 starboard, −1 port. */
+function toShipSide(t: ShipEntity, b: ShipEntity): number {
+  const r = headingVec(t.state.heading + Math.PI / 2);
+  return (b.state.x - t.state.x) * r.x + (b.state.y - t.state.y) * r.y >= 0 ? 1 : -1;
 }
 
 function stepCoil(game: Game, b: ShipEntity, br: Brain, now: number): void {
@@ -635,8 +759,7 @@ function stepCoil(game: Game, b: ShipEntity, br: Brain, now: number): void {
   if (!t?.alive || t.docked || now > c.until) {
     br.coil = null;
     br.nextCoil = now + 18;
-    br.fleeUntil = now + 6;
-    br.mode = 'flee';
+    fleeFor(br, now, 6);
     if (t) {
       t.effects = t.effects.filter((e) => e.id !== 'coiled');
       t.recompute(now);
@@ -644,9 +767,14 @@ function stepCoil(game: Game, b: ShipEntity, br: Brain, now: number): void {
     }
     return;
   }
-  b.state.x = t.state.x;
-  b.state.y = t.state.y;
-  b.state.heading = wrapAngle(b.state.heading + 0.05);
+  // Wound round her along one side, its body by her planking (it lay on her middle before, under her own guns' muzzles
+  // where no ball of hers could find it): the side it came from, her broadside's point-blank target while it holds her.
+  const side = toShipSide(t, b);
+  const off = t.stats.beam / 2 + b.stats.beam / 2 + 2;
+  const r = headingVec(t.state.heading + side * (Math.PI / 2));
+  b.state.x = t.state.x + r.x * off;
+  b.state.y = t.state.y + r.y * off;
+  b.state.heading = t.state.heading;
   game.grid.upsert(b.id, b.state.x, b.state.y);
   if (now >= c.next) {
     c.next = now + BEASTS[br.beast].every;
@@ -673,14 +801,19 @@ function whiteOrca(game: Game, b: ShipEntity, br: Brain, t: ShipEntity, dt: numb
     return;
   }
   const ready = now >= br.nextBite;
-  if (ready && d < 90 && S.rng.chance(dt * 0.5)) {
+  // Once a run (she dived again and again while her ram was due: three seconds at a time out of every ball's reach).
+  if (ready && !br.dived && d < 90 && S.rng.chance(dt * 0.5)) {
+    br.dived = true;
     b.addEffect({ id: 'submerged', until: now + 3 }, now);
     const a = Math.atan2(b.state.x - t.state.x, -(b.state.y - t.state.y)) + Math.PI;
     const v = headingVec(a);
     b.state.x = t.state.x + v.x * 40;
     b.state.y = t.state.y + v.y * 40;
     game.grid.upsert(b.id, b.state.x, b.state.y);
-    game.toastShip(t, 'The White Orca dives under your keel!', 'bad');
+    if (now - br.toldAt >= TELL_EVERY) {
+      br.toldAt = now;
+      game.toastShip(t, 'The White Orca dives under your keel!', 'bad');
+    }
     return;
   }
   const a = now * 0.35;
@@ -688,6 +821,7 @@ function whiteOrca(game: Game, b: ShipEntity, br: Brain, t: ShipEntity, dt: numb
   swim(game, b, t.state.x + Math.cos(a) * r, t.state.y + Math.sin(a) * r, speedOf(b, br, ready ? 1.3 : 0.9), dt, 1.8);
   if (ready && d < reach) {
     br.nextBite = now + BEASTS.white_orca.every;
+    br.dived = false;
     bite(game, b, br, t);
     game.emit({ k: 'fx', fx: 'ram', x: Math.round(t.state.x), y: Math.round(t.state.y) }, t.state.x, t.state.y);
   }
@@ -790,14 +924,12 @@ function stepLines(game: Game, dt: number): void {
     l.slack = !spent && l.tension < LINE.SLACK ? l.slack + dt : 0;
     if (l.over > LINE.SNAP_HOLD) {
       br.ironed = true;
-      br.mode = 'flee';
-      br.fleeUntil = now + 60;
+      fleeFor(br, now, 60);
       endLine(game, key, `The line parts! ${def.name[0]} is away with your iron in her.`);
       continue;
     }
     if (l.slack > LINE.SLACK_HOLD) {
-      br.mode = 'flee';
-      br.fleeUntil = now + 40;
+      fleeFor(br, now, 40);
       endLine(game, key, `The iron works loose and ${def.name[0]} is free.`);
       continue;
     }
@@ -936,8 +1068,7 @@ function packLoss(game: Game, pack: Pack, dead: number, now: number, killer: Shi
   for (const m of pack.members) {
     const mb = S.brains.get(m);
     if (!mb) continue;
-    mb.mode = 'flee';
-    mb.fleeUntil = now + 60;
+    fleeFor(mb, now, 60);
     mb.prey = null;
     mb.target = null;
   }
@@ -957,10 +1088,7 @@ function packLoss(game: Game, pack: Pack, dead: number, now: number, killer: Shi
   }
   if (whale?.alive) {
     const wb = S.brains.get(whale.id);
-    if (wb) {
-      wb.mode = 'flee';
-      wb.fleeUntil = now + 40;
-    }
+    if (wb) fleeFor(wb, now, 40);
   }
   pack.prey = null;
 }

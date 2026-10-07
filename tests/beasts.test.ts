@@ -230,8 +230,9 @@ test('flensing alongside: hove to it fills the hold; under way it stops; the blo
     sharks = Math.max(sharks, beastsAlive(game).filter((b) => b.loadout.classId === 'shark').length);
   });
   assert.equal(carcassesOf(game).length, 0, 'flensed');
-  assert.ok((ship.cargo.whale_oil ?? 0) >= 6, `whale oil: ${ship.cargo.whale_oil}`);
-  assert.ok((ship.cargo.baleen ?? 0) >= 3);
+  // (A humpback's carcass is 4–5 oil and 2–3 baleen since it dies in half a minute, not three: docs/23 beasts.)
+  assert.ok((ship.cargo.whale_oil ?? 0) >= 4, `whale oil: ${ship.cargo.whale_oil}`);
+  assert.ok((ship.cargo.baleen ?? 0) >= 2);
   assert.ok(c.all('toast').some((t) => t.msg === 'Flensed: Humpback Whale.'));
   // The blood: sharks came (or were sure to, over longer).
   if (!sharks) {

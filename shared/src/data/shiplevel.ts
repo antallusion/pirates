@@ -54,8 +54,9 @@ export const LEVEL_RANGE: Partial<Record<ShipClassId, [number, number]>> = {
   // The zone bosses (docs/21): each at her sea's one level, never refitted.
   zb_black_coast: [3, 3], zb_gravewater: [5, 5], zb_whispering: [5, 5], zb_leviathan_reach: [6, 6], zb_ashen_isles: [7, 7],
   zb_dead_mans_expanse: [8, 8], zb_drowned_crown: [9, 9], zb_the_abyss: [10, 10],
-  // The beasts (docs/12 P4): levels like ships', the ladder between them and a captain as between ships.
-  shark: [2, 6],
+  // The beasts (docs/12 P4): levels like ships', the ladder between them and a captain as between ships. The sharks from
+  // ⚓1 (owner, 2026-10-07): a new captain's sea had none of her level, every shark in it a level and more above her.
+  shark: [1, 6],
   orca: [3, 8],
   humpback: [4, 6],
   narwhal: [5, 7],
