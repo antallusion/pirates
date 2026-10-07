@@ -164,7 +164,7 @@ function stepRoamRun(game: Game, s: PlayerSession, ship: ShipEntity, run: Pursui
   const id = run.roam!;
   const why = roamRunWhy(game, s, id);
   if (why) {
-    stopPursuit(game, s, 'lost');
+    stopPursuit(game, s, 'off'); // (quietly: the refusal says why, once)
     game.refuse(s, why);
     return;
   }
