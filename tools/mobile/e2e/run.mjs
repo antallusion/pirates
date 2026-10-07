@@ -52,9 +52,11 @@ async function openSea(ph) {
 
 /** «Атаковать» on the nearest ship of a role: tapped on the sea as the mark if it is not marked yet. */
 async function attack(ph, role = 'pirate') {
-  // Off the screen: the wheel pulled her way, as a player would, until she is in sight.
+  // Off the screen: the wheel pulled her way, as a player would, until she is in sight. (Come for her, the foe may
+  // throw her grapples first: then the battle is begun already.)
   let pulled = 0;
   await ph.until(async () => {
+    if ((await ph.state()).tac) return true;
     const f = await foeOnScreen(ph.p, role);
     if (f?.on) return true;
     if (f && pulled < 4) {
@@ -64,6 +66,7 @@ async function attack(ph, role = 'pirate') {
     }
     return false;
   }, 25000, `the ${role} on the screen`);
+  if ((await ph.state()).tac) return;
   if (!(await ph.visible('#tc-act[data-act="attack"]'))) {
     const f = await foeOnScreen(ph.p, role);
     await ph.tapAt(f.x, f.y);
@@ -197,11 +200,14 @@ const J = {
     ph.expect(!!end, 'the battle\'s end screen');
     // An equal's boarding is about an even fight (CLAUDE.md §5): won, the prize; lost, the reckoning and the quay.
     if (end.winner === end.you) {
-      await ph.until(() => ph.visible('[data-fate]'), 15000, 'the prize window');
+      // (the boarding's film first, if it plays: a tap ends it.) The prize window — or, beaten on her deck, she strikes
+      // her colours: the «спускает флаг» card in the bottom band.
+      const FATE = '[data-fate="ransom"], [data-fate="prize"], [data-fate="release"], #surrender:not(.hidden) [data-sur="ransom"]:not([disabled]), #surrender:not(.hidden) [data-sur="cargo"]:not([disabled])';
+      await ph.until(async () => { await ph.skipFilm(); return ph.visible(FATE); }, 20000, 'the prize window or her colours struck');
       await ph.step('prize');
       const silver0 = (await ph.state()).silver;
-      await ph.tap('[data-fate="ransom"], [data-fate="prize"], [data-fate="release"]', 'the prize\'s choice');
-      await ph.until(async () => !(await ph.visible('[data-fate]')), 10000, 'the prize window gone');
+      await ph.tap(FATE, 'the prize\'s choice');
+      await ph.until(async () => !(await ph.visible(FATE)), 10000, 'the prize settled');
       await ph.step('settled', { silver: (await ph.state()).silver - silver0, taps: ph.taps - t0 });
     } else {
       await L.sleep(2500);
@@ -238,14 +244,14 @@ const J = {
       // (she may have sailed off once the window shut)
       const t1 = Date.now();
       let marked = false;
+      // (gone off out of the grapples' reach: the scene brings another frigate alongside — not the player's tap; an
+      // «Атаковать» would make her a foe, and a foe grapples first)
       await ph.until(async () => {
-        if ((await inBattle()) || (await ph.visible('#tc-act[data-act="board"]')) || (await ph.visible('#tc-act[data-act="attack"]'))) return true;
-        // (gone off on her way: the scene brings another frigate alongside — not the player's tap)
+        if ((await inBattle()) || (await ph.visible('#tc-act[data-act="board"]'))) return true;
         if (!marked && Date.now() - t1 > 2500) { marked = true; await ph.admin('/foe pirate frigate 60', 2000); }
         return false;
-      }, 12000, '«На абордаж» or «Атаковать» again');
-      if (!(await inBattle()) && (await ph.visible('#tc-act[data-act="attack"]'))) { await ph.tap('#tc-act[data-act="attack"]', '«Атаковать»'); await closeIn(ph, 'pirate', 30000); }
-      if (!(await inBattle()) && !(await ph.visible('[data-risk="go"]')) && (await ph.visible('#tc-act[data-act="board"]'))) await ph.tap('#tc-act[data-act="board"]', '«На абордаж»');
+      }, 15000, '«На абордаж» again');
+      if (!(await inBattle()) && !(await ph.visible('[data-risk="go"]'))) await ph.tap('#tc-act[data-act="board"]', '«На абордаж»');
       await ph.until(async () => (await inBattle()) || (await ph.visible('[data-risk="go"]')), 10000, 'the risk window again');
       if (await ph.visible('[data-risk="go"]')) await ph.tap('[data-risk="go"]', '«Рискнуть»');
     }
