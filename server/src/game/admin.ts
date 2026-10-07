@@ -1,3 +1,7 @@
+import { FACTIONS } from '../../../shared/src/data/factions.ts';
+import { cityOf, syncColours } from './colours.ts';
+import { isColours } from '../../../shared/src/data/colours.ts';
+import type { Colours } from '../../../shared/src/data/colours.ts';
 import { islesAdmin } from './isles.ts';
 import { isle18Admin } from './isles18.ts';
 import { heroAdmin } from './hero.ts';
@@ -139,7 +143,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] [grapple|hunt] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level|go] · /prim [atk|def|pow|will N|reset] · /skill id [0-3]|offer [n]|clear · /order id|all|clear · /art [id|set regalia|hook|storm|list] · /will [N|full] · /guard [go|beat|weak|board|reset] [kind] [level] · /obj [kind] [go|reset] · /obelisk [n|all|go] · /grail [go|found|reset] · /isle level|type kind|atoll|ridge|small|hidden [reveal]|danger [deadly] · /zone [go] · /turtle [go|up|down|off] · /sandbar · /supply [claim|link|week] · /path [learn page|forget] · /stam [N|full] · /scroll [page|random|clear] [n] · /pathfoe [path] [class] [grapple] · /lair [kind] [go|fight|beat|weak|reset|chain|grotto|guardian|dwell|turtle|sandbar] · /creature [kind] [n] · /egg [kind|hatch|grow] · /landres [n] · /drift [kind|legend|whale|kraken] [go|save|fail|fight|clear] · /tame [kind] [wins N|rank R|hunger S|pen N|slip] · /feed [N|starve] · /tamer [go] · /landecon [fit id rank|cap] · /bestiary [all|clear|kind] · /seamark [drift|wreck|buoy|lantern|bones|floe] [go|done|reset] · /glory [n|xp N|reset] · /mastery [node|branch|all|reset] · /trial [skill] [go|win|lose|reset] · /find [bottle|flyfish|calm|gulls|boat|chest] [go|done|reset] · /haul [reset] · /stack [kind] [go|fight|beat|reset] · /doubloons [N|-N|sample [on|off]] · /zboss [region] [rise|here|leave|kill|announce|reset]';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] [grapple|hunt] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level|go] · /prim [atk|def|pow|will N|reset] · /skill id [0-3]|offer [n]|clear · /order id|all|clear · /art [id|set regalia|hook|storm|list] · /will [N|full] · /guard [go|beat|weak|board|reset] [kind] [level] · /obj [kind] [go|reset] · /obelisk [n|all|go] · /grail [go|found|reset] · /isle level|type kind|atoll|ridge|small|hidden [reveal]|danger [deadly] · /zone [go] · /turtle [go|up|down|off] · /sandbar · /supply [claim|link|week] · /path [learn page|forget] · /stam [N|full] · /scroll [page|random|clear] [n] · /pathfoe [path] [class] [grapple] · /lair [kind] [go|fight|beat|weak|reset|chain|grotto|guardian|dwell|turtle|sandbar] · /creature [kind] [n] · /egg [kind|hatch|grow] · /landres [n] · /drift [kind|legend|whale|kraken] [go|save|fail|fight|clear] · /tame [kind] [wins N|rank R|hunger S|pen N|slip] · /feed [N|starve] · /tamer [go] · /landecon [fit id rank|cap] · /bestiary [all|clear|kind] · /seamark [drift|wreck|buoy|lantern|bones|floe] [go|done|reset] · /glory [n|xp N|reset] · /mastery [node|branch|all|reset] · /trial [skill] [go|win|lose|reset] · /find [bottle|flyfish|calm|gulls|boat|chest] [go|done|reset] · /haul [reset] · /stack [kind] [go|fight|beat|reset] · /doubloons [N|-N|sample [on|off]] · /zboss [region] [rise|here|leave|kill|announce|reset] · /flag [neutral|faction|pirate] [city] · /noboard on|off';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -152,6 +156,30 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
   switch (cmd.toLowerCase()) {
     case 'help':
       return HELP;
+    // docs/24 C1, D1: the colours and «Абордаж: выкл» at once, wherever she is (the tester's: the port's wait skipped).
+    case 'flag': {
+      const f = args[0];
+      const CN: Record<Colours, string> = { neutral: 'neutral colours', faction: 'the city flag', pirate: 'the pirate flag' };
+      if (!f) return `Colours: ${CN[p.pvp.flag]} of ${FACTIONS[cityOf(game, p)].name}; ${p.pvp.next ? `ordered ${CN[p.pvp.next]}` : 'nothing ordered'}; ${p.noBoard ? 'boarding off' : 'boarding on'}.`;
+      const city = args[1] as FactionId | undefined;
+      if (!isColours(f) || (city !== undefined && !(city in FACTIONS))) return 'Usage: /flag [neutral|faction|pirate] [city]';
+      p.pvp.flag = f;
+      p.pvp.next = null;
+      p.pvp.nextCity = null;
+      p.pvp.nextAt = 0;
+      if (city) p.pvp.city = city;
+      else if (f === 'faction' && ship.docked) p.pvp.city = game.portById(ship.docked)?.faction ?? p.pvp.city;
+      syncColours(game, s);
+      game.pushSelf(s, true);
+      return `Colours: ${CN[f]} of ${FACTIONS[cityOf(game, p)].name}.`;
+    }
+    case 'noboard': {
+      const on = args[0] === 'on' ? true : args[0] === 'off' ? false : null;
+      if (on === null) return 'Usage: /noboard on|off';
+      p.noBoard = on;
+      game.pushSelf(s, true);
+      return on ? 'Boarding off: guns only.' : 'Boarding on.';
+    }
     // The premium shop (owner, 2026-10-03): doubloons as a payment will credit them, the tester's sample catalogue.
     case 'doubloons':
       return adminDoubloons(game, s, args);

@@ -1,6 +1,6 @@
 // The ship's army (docs/17 H1, «Heroes of Might and Magic III, only pirate»): a crew as up to seven stacks of seven
 // tiers with their upgrades; the head count always the stacks' sum; saves from before the stacks migrated by level;
-// cannon fire killing men out of the stacks by exposure, grape the killer and the hull the wall, on both sides and
+// cannon fire killing men out of the stacks (the fewest hit points a man first, docs/24 B3), grape the killer and the hull the wall, on both sides and
 // between the sea's own ships; boarding at once; the sea's ships carrying armies by the level of their waters, seen
 // from afar in HoMM3's words.
 
@@ -211,10 +211,11 @@ test('the hull is the wall: a sound hull shelters the stacks, a shattered one ex
   assert.ok(killFactor(s) < k0 * 0.5, 'an army of guards loses far fewer men to the same shot');
   s.setArmy([{ u: 'deckhand', n: s.crew }]);
   assert.ok(killFactor(s) > k0, 'green hands more');
-  // Men killed by a packet are taken off by exposure, and the old reckoning of a packet's men stands.
+  // Men killed by a packet fall the fewest hit points a man first (docs/24 B3): a packet worth ten of her men as she
+  // stands weighs their hit points (the old reckoning by exposure), and it all falls on the deckhands — twelve of them.
   s.setArmy([{ u: 'guard', n: 10 }, { u: 'deckhand', n: 40 }]);
   applyDamage(game, s, { crew: 10 }, null);
-  assert.equal(s.crew, 40);
+  assert.equal(s.crew, 38);
   assert.equal(s.army.find((x) => x.u === 'guard')?.n ?? 0, 10, 'the guard stands; the deckhands fall');
 });
 

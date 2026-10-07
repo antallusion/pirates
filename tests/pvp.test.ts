@@ -7,6 +7,7 @@ import { applyDamage, damageBlocked } from '../server/src/game/combat.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { bountyOn, grantBubble, lootMul, onPlayerKill, pvpFlags, stepPvp } from '../server/src/game/pvp.ts';
+import { coloursSecond } from '../server/src/game/colours.ts';
 import type { RegionId } from '../shared/src/world/regions.ts';
 import { join, makeGame, onHull } from './helpers.ts';
 import type { FakeConn } from './helpers.ts';
@@ -34,43 +35,78 @@ function three(game: Game): { a: FakeConn; b: FakeConn; c: FakeConn; A: PlayerSe
   return { a, b, c, A: sess(game, 'Anne Brine'), B: sess(game, 'Bram Brine'), C: sess(game, 'Cora Brine') };
 }
 
-test('the Black Flag: fair game in contested water, not in the Crown’s; struck only in port or after 15 min', () => {
+test('the pirate flag (the old Black Flag): ordered in port, up a minute later; anyone may come for her, and no crime to', () => {
   const { game } = makeGame();
   const { a, b, A, B, C } = three(game);
-  sea(A, 30_000, 30_000, 'black_coast');
-  a.push({ t: 'pvp', action: 'black_flag', on: true });
-  assert.match(a.last('toast')!.msg, /hang you/);
-  assert.equal(A.profile!.pvp.blackFlag, false);
+  assert.equal(A.profile!.pvp.flag, 'faction', 'a new captain flies her city’s colours');
   sea(A, 30_000, 30_000, 'gravewater');
-  sea(B, 30_200, 30_000, 'gravewater');
+  a.push({ t: 'pvp', action: 'black_flag', on: true });
+  assert.match(a.last('toast')!.msg, /only in port/);
+  assert.equal(A.profile!.pvp.flag, 'faction');
+  // In port the order is taken; the flag goes up a minute later.
+  assert.ok(B.ship!.docked);
   b.push({ t: 'pvp', action: 'black_flag', on: true });
-  assert.equal(B.profile!.pvp.blackFlag, true);
+  assert.match(b.last('toast')!.msg, /goes up in 1 min/);
+  coloursSecond(game, B);
+  assert.equal(B.profile!.pvp.flag, 'faction', 'not yet');
+  const t0 = Date.now();
+  game.wallNow = () => t0 + 61_000;
+  coloursSecond(game, B);
+  assert.equal(B.profile!.pvp.flag, 'pirate');
   assert.ok(pvpFlags(game, B.ship!) & SF.BLACK_FLAG);
-  // Attacking a flagged captain is no crime; an unflagged one is.
+  A.profile!.pvp.flag = 'faction';
+  sea(B, 30_200, 30_000, 'gravewater');
+  // Attacking her is no crime; she fires back as freely.
+  const bHull = B.ship!.hull;
   applyDamage(game, B.ship!, { hull: 5 }, A.ship!);
+  assert.ok(B.ship!.hull < bHull);
   assert.equal(A.profile!.infamy, 0);
   applyDamage(game, A.ship!, { hull: 5 }, B.ship!);
-  assert.equal(B.profile!.infamy, 0, 'firing back is self-defence');
+  assert.equal(B.profile!.infamy, 0, 'firing back');
+  // On a neutral captain her shot does not land at all; on a city's captain who is no fair game it is a crime.
   sea(C, 30_400, 30_000, 'gravewater');
+  C.profile!.pvp.flag = 'neutral';
+  const cHull = C.ship!.hull;
   applyDamage(game, C.ship!, { hull: 5 }, B.ship!);
-  assert.ok(B.profile!.infamy > 0, 'Cora was not flying it');
-  // Fresh from a fight: the flag stays up.
-  b.push({ t: 'pvp', action: 'black_flag', on: false });
-  assert.match(b.last('toast')!.msg, /more minutes/);
-  assert.equal(B.profile!.pvp.blackFlag, true);
-  game.now += 901;
-  b.push({ t: 'pvp', action: 'black_flag', on: false });
-  assert.equal(B.profile!.pvp.blackFlag, false);
+  assert.equal(C.ship!.hull, cHull, 'Cora sails under neutral colours');
+  C.profile!.pvp.flag = 'faction';
+  applyDamage(game, C.ship!, { hull: 5 }, B.ship!);
+  assert.ok(C.ship!.hull < cHull && B.profile!.infamy > 0, 'Cora was no fair game');
   // Plunder: NPCs +15% and captains ×1.2 under the flag.
-  A.profile!.pvp.blackFlag = true;
+  A.profile!.pvp.flag = 'pirate';
   assert.ok(Math.abs(lootMul(game, A.ship!, B.ship!) - 1.2) < 1e-9);
 });
 
-test('the Green Pennant shields a young captain in contested water until they attack someone', () => {
+test('neutral colours: no captain fires on her anywhere, at any level; she fires on none', () => {
   const { game } = makeGame();
   const { A, B } = three(game);
   sea(A, 30_000, 30_000, 'gravewater', 30);
   sea(B, 30_200, 30_000, 'gravewater', 4);
+  A.profile!.pvp.flag = 'pirate';
+  B.profile!.pvp.flag = 'neutral';
+  assert.match(String(damageBlocked(game, A.ship!, B.ship!)), /She sails under neutral colours/);
+  assert.ok(pvpFlags(game, B.ship!) & SF.NEUTRAL);
+  const hull = B.ship!.hull;
+  applyDamage(game, B.ship!, { hull: 50 }, A.ship!);
+  assert.equal(B.ship!.hull, hull, 'no damage gets through by any road');
+  // In lawless water too (the pennant was not), and past level 15 and twenty hours at sea.
+  B.ship!.region = 'dead_mans_expanse';
+  B.profile!.level = 60;
+  B.profile!.pvp.played = 40 * 3600;
+  assert.match(String(damageBlocked(game, A.ship!, B.ship!)), /She sails under neutral colours/);
+  // She fires on no captain.
+  assert.match(String(damageBlocked(game, B.ship!, A.ship!)), /You sail under neutral colours/);
+  const aHull = A.ship!.hull;
+  applyDamage(game, A.ship!, { hull: 50 }, B.ship!);
+  assert.equal(A.ship!.hull, aHull);
+});
+
+test('the Green Pennant shields a young captain under her city’s flag in contested water until she attacks someone', () => {
+  const { game } = makeGame();
+  const { A, B } = three(game);
+  sea(A, 30_000, 30_000, 'gravewater', 30);
+  sea(B, 30_200, 30_000, 'gravewater', 4);
+  A.profile!.pvp.flag = 'pirate'; // (she may come for anyone but the pennant)
   assert.match(String(damageBlocked(game, A.ship!, B.ship!)), /Green Pennant/);
   assert.ok(pvpFlags(game, B.ship!) & SF.GREEN_PENNANT);
   const hull = B.ship!.hull;
@@ -208,6 +244,8 @@ test('the bubble after a sinking: ten minutes untouchable, burst by casks or law
   assert.ok(A.ship!.protectedUntil > game.now + 590);
   sea(B, A.ship!.state.x + 100, A.ship!.state.y, 'gravewater');
   A.ship!.region = 'gravewater';
+  A.profile!.pvp.flag = 'pirate'; // (fair game by her colours: only the bubble stands between them)
+  B.profile!.pvp.flag = 'faction';
   assert.equal(damageBlocked(game, B.ship!, A.ship!), 'protected');
   A.ship!.region = 'dead_mans_expanse';
   game.now = Math.ceil(game.now / 5) * 5;

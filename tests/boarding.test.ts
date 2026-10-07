@@ -113,6 +113,7 @@ test('cutting grapples: Iron Grip holds them, then the defender may cut loose', 
   b.state.x = a.state.x + 18;
   b.hull = b.stats.hullMax * 0.4;
   game.grid.upsert(b.id, b.state.x, b.state.y);
+  game.profileOf(a)!.pvp.flag = 'pirate'; // docs/24: under the pirate flag she may board any captain
   // Contested waters so players may fight.
   for (const sh of [a, b]) {
     sh.state.x += 26000;

@@ -7,6 +7,7 @@
 import { ZB_NO_BOARD, zbBoardBlocked } from './zonebosses.ts';
 import { ladderBetween } from './ladder.ts';
 import { inDuel } from './pvp.ts';
+import { NO_BOARD_HER, NO_BOARD_OWN, boardingOff, markPvp } from './colours.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { clamp, dist } from '../../../shared/src/math.ts';
 import type { Aggression, BoardFightView, BoardingResult, BoardSideView } from '../../../shared/src/protocol.ts';
@@ -56,6 +57,9 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   if (inDuel(game, a) || inDuel(game, b)) return 'No boarding in a duel';
   if (a.ghost || b.ghost) return 'She is across the line of these waters — close in first';
   if (a.npcRole === 'beast' || b.npcRole === 'beast') return 'There are no decks to board on a creature of the deep';
+  // «Абордаж: выкл» (docs/24 C1): she boards nobody and nobody boards her — captains and the sea's own alike.
+  if (boardingOff(game, a)) return NO_BOARD_OWN;
+  if (boardingOff(game, b)) return NO_BOARD_HER;
   const zb = zbBoardBlocked(b) ?? zbBoardBlocked(a); // a zone boss: guns only (docs/21)
   if (zb) return zb;
   // A boarding just lost (owner, 2026-10-05: «бесконечный абордаж при проигрыше»): her decks are let be a while.
@@ -123,6 +127,7 @@ export function startBoarding(game: Game, a: ShipEntity, b: ShipEntity, aggressi
   drownedBoardersRise(game, b);
   game.emit({ k: 'board_start', a: a.id, b: b.id }, a.state.x, a.state.y);
   game.registerBoardingCrime(a, b);
+  markPvp(game, a, b); // a fight between captains: the colours wait in port (docs/24 D2)
   // Turn by turn on the hexes (docs/16 P4) when a captain is aboard; the round-by-round fight otherwise.
   if (wantsTactical(game, a, b)) startTactical(game, a, b);
   else openRound(game, a, b);

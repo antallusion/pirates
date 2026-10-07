@@ -11,7 +11,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import type { AmmoId, ChaserEnd } from '../../../shared/src/data/ships.ts';
 import { emptyAmmo } from '../../../shared/src/data/ships.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
-import { armyAdd, armyFit, armyMen, armyRemove, armySlots, armyTidy } from '../../../shared/src/data/army.ts';
+import { armyAdd, armyFit, armyMen, armyRemove, armyShot, armySlots, armyTidy } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { rosterKind } from '../../../shared/src/data/factionunits.ts';
 import { rosterOf } from './army.ts';
@@ -133,6 +133,8 @@ export class ShipEntity {
   /** The fighting men aboard as stacks (docs/17 H1); `crew`, the head count the rest of the game reads, is their sum. */
   private _army: ArmyStack[] = [];
   private _men = 0;
+  /** The next man's wounds from the guns (docs/24 B3): the hit points of a shot that did not kill him, carried. */
+  shotWound = 0;
   /** A fire's toll on the men, carried from second to second until a whole man falls. */
   burnMen = 0;
   morale = 80;
@@ -179,6 +181,8 @@ export class ShipEntity {
   ownerId: number | null = null; // escort owner entity id
   wantedCache = 0;
   guildTag: string | null = null;
+  /** A captain under the city flag (docs/24 D1): the city whose colours she flies (colours.ts syncColours). */
+  city: FactionId | null = null;
   /** A read-only mirror of a ship another zone simulates (zones/zone.ts). */
   ghost = false;
   ghostZone = '';
@@ -329,6 +333,7 @@ export class ShipEntity {
     this._army = armyTidy(a);
     armyFit(this._army, this.armySlots);
     this._men = armyMen(this._army);
+    this.shotWound = 0;
   }
 
   /** Men of a kind signed on (into their stack, or the lowest one when the slots are full). */
@@ -342,6 +347,15 @@ export class ShipEntity {
     const lost = armyRemove(this._army, Math.min(n, this._men));
     this._men = armyMen(this._army);
     return lost;
+  }
+
+  /** The guns' dead (docs/24 B3, owner 2026-10-07): a hit worth `k` men of her as she stands falls on the stack with the
+   *  fewest hit points a man, then the next, and up (HoMM3's rolling damage), no more than `cap` men; what each lost. */
+  shotMen(k: number, cap = Infinity): ArmyStack[] {
+    const r = armyShot(this._army, k, this.shotWound, Math.min(cap, this._men));
+    this.shotWound = r.wound;
+    this._men = armyMen(this._army);
+    return r.lost;
   }
 
   /** `n` men fall from one stack (the boarding battle knows whose); what could not come off it is not taken. */
@@ -478,7 +492,7 @@ export class ShipEntity {
     return {
       id: this.id, kind: 'ship', name: this.name, classId: this.loadout.classId, faction: this.faction,
       captainName: this.captainName, captainId: this.isPlayer ? this.captain : undefined, npcRole: this.npcRole ?? undefined,
-      isPlayer: this.isPlayer, level: this.level, wanted: this.wantedCache, guild: this.guildTag ?? undefined, shipLevel: this.onLadder ? this.shipLevel : undefined, elite: this.elite || undefined, named: this.named ?? this.namedMate,
+      isPlayer: this.isPlayer, level: this.level, wanted: this.wantedCache, guild: this.guildTag ?? undefined, city: this.city ?? undefined, shipLevel: this.onLadder ? this.shipLevel : undefined, elite: this.elite || undefined, named: this.named ?? this.namedMate,
       title: this.title ?? undefined, pennant: this.pennant ?? undefined, look: this.look ?? undefined, lfg: this.lfg ?? undefined,
       ...(this.cls.monster || this.npcRole === 'beast' ? {} : { crewMax: this.guardOf ? Math.max(this.stats.crewMax, this._men) : this.stats.crewMax, units: this._army.map((s) => s.u) }),
     };

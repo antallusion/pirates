@@ -31,6 +31,7 @@ import { changeRep } from './player.ts';
 import { grantDeed } from './progression.ts';
 import { newsHint } from './onboarding.ts';
 import { spawnCargoAmbush, spawnPackLeader } from './npc.ts';
+import { neutralSpared } from './colours.ts';
 import { ensureElite, eliteSunk, eliteWord, todaysElite } from './elite.ts';
 import { eliteById } from '../../../shared/src/data/elite.ts';
 import { titlesDue } from '../../../shared/src/data/questtitles.ts';
@@ -100,6 +101,7 @@ function cargoAmbush(game: Game, s: PlayerSession): void {
     }
     if (game.now < qs.ambushAt) continue;
     qs.ambushed = true;
+    if (neutralSpared(game, ship)) return; // neutral colours (docs/24 D1): the word of her cargo finds no taker, nine times in ten
     if (spawnCargoAmbush(game, ship, s.accountId, p.level >= 15 ? 2 : 1) > 0) game.sendTo(s, { t: 'toast', msg: 'Sails on the horizon, closing fast — someone has word of your cargo.', kind: 'bad' });
     return; // one band at a time
   }

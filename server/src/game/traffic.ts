@@ -8,6 +8,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { dist, headingVec } from '../../../shared/src/math.ts';
 import { onboardingProtected } from './onboarding.ts';
 import { spawnPirate, spawnTraffic } from './npc.ts';
+import { neutralSpared, pirateSworn } from './colours.ts';
 import { quietSea } from './director.ts';
 import { stirWars } from './npcwars.ts';
 import type { Game } from './Game.ts';
@@ -59,8 +60,11 @@ function hunt(game: Game, s: import('./player.ts').PlayerSession): void {
   // One rover at a time is enough.
   for (const b of game.npcs.values()) if (b.chase?.id === ship.id && game.ships.get(b.id)?.alive) return;
   due.set(s.accountId, game.now + game.rng.range(HUNT_EVERY[0], HUNT_EVERY[1]));
+  // Neutral colours (docs/24 D1): the rovers let her be nine times in ten.
+  if (neutralSpared(game, ship)) return;
   const p = spawnPirate(game, ship);
   if (!p) return;
+  pirateSworn(game, game.npcs.get(p.id), ship);
   localTraffic(game).add(p.id);
   game.grid.upsert(p.id, p.state.x, p.state.y);
   const a = Math.atan2(p.state.x - ship.state.x, -(p.state.y - ship.state.y));

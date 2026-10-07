@@ -20,6 +20,7 @@ import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
 import { dec1, dec2, esc, fmt, icon, money, xpBadge } from './dom.ts';
+import { bindColours, coloursCard } from './flags.ts'; // docs/24 C1, D1
 import { trophyCard } from './surrender.ts';
 import { giftLine } from './premium.ts'; // a premium hull's gift (docs/02 §1.A.9)
 import { TREE, isResearched, researchParents, researchQuote } from '../../../shared/src/data/research.ts';
@@ -201,11 +202,12 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
         <div class="forge-grid"><button class="btn btn-small" data-craft="round">${icon('ammo_round', '', 'ico-sm')}${esc(L('ship.forgeRound'))}</button><button class="btn btn-small" data-craft="chain">${icon('ammo_chain', '', 'ico-sm')}${esc(L('ship.forgeChain'))}</button><button class="btn btn-small" data-craft="grape">${icon('ammo_grape', '', 'ico-sm')}${esc(L('ship.forgeGrape'))}</button><button class="btn btn-small" data-craft="planks">${icon('good_planks', '', 'ico-sm')}${esc(L('ship.forgePlanks'))}</button></div></div>` : ''}
     </div><div>
       <h3 class="title-sm" style="font-size:20px">${esc(L('ship.contracts'))}</h3>${self.contracts.map((c) => `<div class="card quest-card small">${icon(c.kind === 'bounty' ? 'wanted' : c.kind === 'delivery' && c.good ? `good_${c.good}` : 'map_contract', '', 'quest-ico')}<div class="quest-body"><b>${esc(serverText(c.title))}</b><div class="reward">${money(c.reward)}${xpBadge(c.xp)}</div></div></div>`).join('') || `<p class="muted">${esc(L('ship.noContracts'))}</p>`}
-      ${researchCard(state)}${self.loadout.trophy ? trophyCard(self.loadout.trophy) : ''}${companionCard(state)}${petsCard(state)}${chestCard(state)}${bottleCard(!self.dockedAt)}
+      ${coloursCard(state)}${researchCard(state)}${self.loadout.trophy ? trophyCard(self.loadout.trophy) : ''}${companionCard(state)}${petsCard(state)}${chestCard(state)}${bottleCard(!self.dockedAt)}
     </div></div></div>`;
   root.querySelector<HTMLElement>('[data-open-gear]')?.addEventListener('click', () => openGear?.());
   root.querySelector<HTMLElement>('[data-open-look]')?.addEventListener('click', () => openLook?.());
   if (send) bindCompanion(root, send);
+  if (send) bindColours(root, send); // docs/24: the colours and «Абордаж: выкл» (live in port)
   root.querySelectorAll<HTMLElement>('[data-craft]').forEach((el) => (el.onclick = () => send?.({ t: 'craft', recipe: el.dataset.craft as 'round', n: 10 })));
   root.querySelectorAll<HTMLElement>('[data-dump]').forEach((el) => (el.onclick = () => {
     const g = el.dataset.dump as GoodId;

@@ -170,7 +170,8 @@ test('guilds, allies and pacts hold their fire; a war makes enemies fair game an
   C.c.push({ t: 'guild', action: 'treasury', amount: 5_000 });
   for (const [s, x] of [[A.s, 0], [B.s, 200], [C.s, 400], [D.s, 600]] as const) atSea(s, 40_000 + x, 40_000, 'gravewater');
   assert.equal(damageBlocked(game, A.s.ship!, B.s.ship!), 'friendly', 'same guild');
-  assert.equal(damageBlocked(game, A.s.ship!, C.s.ship!), null);
+  // One city's colours, no war (docs/24 D1): they hold their fire too.
+  assert.match(String(damageBlocked(game, A.s.ship!, C.s.ship!)), /at peace with yours/);
   assert.ok(!legalTarget(game, A.s.ship!, C.s.ship!));
   // A pact.
   A.c.push({ t: 'guild', action: 'pact', tag: 'TWO' });
@@ -185,6 +186,8 @@ test('guilds, allies and pacts hold their fire; a war makes enemies fair game an
   assert.ok(!legalTarget(game, A.s.ship!, C.s.ship!), 'not yet');
   advance(DAY + 1);
   assert.ok(legalTarget(game, A.s.ship!, C.s.ship!), 'war');
+  assert.equal(damageBlocked(game, A.s.ship!, C.s.ship!), null, 'at war: fair game under the guilds’ colours');
+  assert.match(String(damageBlocked(game, A.s.ship!, D.s.ship!)), /at peace with yours/, 'not a bystander');
   assert.ok(!legalTarget(game, A.s.ship!, D.s.ship!), 'not a bystander');
   const w = game.guilds.store(game).wars[0];
   C.s.ship!.attackers.set(A.s.ship!.id, game.now);

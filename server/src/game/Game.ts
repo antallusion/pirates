@@ -111,6 +111,8 @@ import { havenSecond } from './havens.ts';
 import { firstFightsSecond } from './firstfights.ts';
 import { fresh, FRESH_REFUSAL, onboardingAction, onboardingFire, onboardingProtected, onboardingRescue, onboardingSecond, onboardingSeen, onboardingStart, onboardingView } from './onboarding.ts';
 import { PvpHub, bubbleOnLoot, bubbleOnUndock, challengeDuel, answerDuel, duelIntercept, forfeitDuel, grantBubble, lootMul, onPlayerKill, postBounty, pvpFlags, pvpView, sendBounties, setBlackFlag, stepPvp } from './pvp.ts';
+import { coloursOnUndock, coloursOnWanted, coloursSecond, setColours, setNoBoard } from './colours.ts';
+import { isColours } from '../../../shared/src/data/colours.ts';
 import { HoldingsHub, build, demolish, holdingsFor, islandService, islandYard, rentIsland, setAutoRenew, setWindow, stepHoldings, storeMove, treasuryMove } from './holdings.ts';
 import type { Holding } from './holdings.ts';
 import { GuildHub, allied, answerInvite, answerRequest, applyTo, motdOnLogin, setMotd, setRecruit, borrowShip, breakTreaty, declareWar, disbandGuild, dropContract, foundGuild, giveShip, guildNotify, guildOfShip, invite as guildInvite, kick as guildKick, leaveGuild, offerTreaty, onShipSunk, onWarKill, openOffice, postContract, proposePeace, pushGuild, raiseBase, returnShip, setFlagship, setRank, setTax, setToll, stepGuilds, storeMove as guildStore, treasury as guildTreasury } from './guilds.ts';
@@ -1025,6 +1027,7 @@ export class Game {
       if (this.tick % 200 < 20) tendCaravans(this, s, (c, from) => planMerchantVoyage(this, c, this.npcs.get(c.id)!, from));
       checkDeeds(this, s, 1);
       heroSecond(this, s); // the hero's will by the day and in port (docs/17 H2)
+      coloursSecond(this, s); // the colours ordered in port go up (docs/24 D2)
       onboardingSecond(this, s);
       firstFightsSecond(this, s); // docs/23 item 81
       abyssSecond(this, s);
@@ -1738,6 +1741,7 @@ export class Game {
     p.infamy = Math.min(900, p.infamy + amount);
     const after = wantedLevel(p.infamy);
     ship.wantedCache = after;
+    if (after > before) coloursOnWanted(this, ship, p); // the law wants her: neutral colours come down (docs/24 D1)
     if (after > before) this.toastShip(ship, `Wanted ${after}: ${WANTED_TITLES[after]} (${reason}).`, 'bad');
   }
 
@@ -3618,6 +3622,10 @@ export class Game {
         switch (msg.action) {
           case 'black_flag':
             return err(setBlackFlag(this, s, !!msg.on));
+          case 'colours': // docs/24 D1–D2: in port, a minute after the order
+            return err(isColours(msg.flag) ? setColours(this, s, msg.flag) : 'No such colours');
+          case 'no_board': // docs/24 C1: in port
+            return err(setNoBoard(this, s, !!msg.on));
           case 'duel':
             return err(challengeDuel(this, s, msg.name, !!msg.fleet));
           case 'duel_answer':
@@ -4133,6 +4141,7 @@ export class Game {
     ship.input = { rudder: 0, sailTarget: 0.5 };
     ship.protectedUntil = this.now + 20;
     bubbleOnUndock(this, s);
+    coloursOnUndock(this, s); // she sailed before her new colours went up (docs/24 D2)
     onUndockEvents(this, s, port);
     this.grid.upsert(ship.id, ship.state.x, ship.state.y);
     launchFleet(this, s);

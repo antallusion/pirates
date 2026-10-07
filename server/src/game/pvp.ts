@@ -1,9 +1,12 @@
 // PvP rules 2.0 (docs/02 §10, docs/01 §11): colours, protection, duels, the price of cruelty and the price
 // on a head.
-//  - The Black Flag: in contested water anyone may attack you without a crime; NPC plunder +15%, plunder
-//    from captains ×1.2. Hoisted anywhere but safe water; struck only in port or after 15 min out of a fight.
-//  - The Green Pennant: under level 15 and 20 hours at sea, nobody may attack you in contested water — until
-//    you attack a captain yourself (30 min) or hoist the Black Flag. Pennant captains take no goods in barter.
+//  - The colours (docs/24 D1–D3, owner 2026-10-07; colours.ts): neutral (no captain fires on her, she on none), her
+//    city's or guild's (pirates and the captains of a city at enmity or a guild at war may come for her), or the pirate
+//    flag — the old Black Flag: anyone may come for her and she for anyone, no crime either way; NPC plunder +15%,
+//    plunder from captains ×1.2. Changed only in port, a minute after the order and ten after a fight with a captain.
+//  - The Green Pennant (colours.ts hasPennant): under level 15 and 20 hours at sea, a captain under her city's flag is
+//    neutral to other captains in contested water — until she attacks a captain herself (30 min) or hoists other
+//    colours. Pennant and neutral captains take no goods from other captains at sea.
 //  - The bubble: 10 min after a sinking, nobody attacks you and you attack nobody; firing, entering lawless
 //    water or taking someone else's casks ends it.
 //  - Repeat kills: the same victim within 2 h yields plunder ×1 → ×0.5 → ×0.25 → ×0 and costs infamy
@@ -19,6 +22,8 @@
 //  - Right of revenge: for 24 h the sunk captain sees who sank them within 3 km.
 
 import { onLadder } from '../../../shared/src/data/shiplevel.ts';
+import type { Colours } from '../../../shared/src/data/colours.ts';
+import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { WANTED_THRESHOLDS, wantedLevel } from '../../../shared/src/data/factions.ts';
 import { SF } from '../../../shared/src/protocol.ts';
@@ -26,8 +31,10 @@ import type { BountyView, DuelView, PvpView } from '../../../shared/src/protocol
 import { dist } from '../../../shared/src/math.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Game } from './Game.ts';
-import { groupOfAccount, sameGroupAccounts } from './party.ts';
-import { atWar } from './guilds.ts';
+import { groupOfAccount, sameGroup, sameGroupAccounts } from './party.ts';
+import { atWar, guildFriends } from './guilds.ts';
+import { cityOf, coloursBlocked, coloursOf, enemies, hasPennant, neutralRefused, setColours } from './colours.ts';
+import { PENNANT_SECONDS } from '../../../shared/src/data/colours.ts';
 import { ignores } from './friends.ts';
 import { changeRep } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
@@ -35,8 +42,8 @@ import { deliver } from './post.ts';
 import type { ShipEntity } from './ship.ts';
 
 const H = 3_600_000;
-export const PENNANT_LEVEL = 15;
-export const PENNANT_SECONDS = 20 * 3600;
+export { PENNANT_LEVEL, PENNANT_SECONDS } from '../../../shared/src/data/colours.ts';
+export { hasPennant } from './colours.ts';
 export const BUBBLE_MS = 10 * 60_000;
 export const FLAG_COOLDOWN_SEC = 900;
 export const DUEL_RING = 1200;
@@ -47,8 +54,17 @@ const REPEAT_INFAMY = [1, 1.5, 2, 3];
 const HUNTER_REP = 15; // Crown standing "Familiar": a hunter's licence
 
 export interface PvpState {
-  played: number; // seconds online, for the Green Pennant
-  blackFlag: boolean;
+  played: number; // seconds online
+  /** Her colours (docs/24 D1): a new captain flies her city's (the Green Pennant over them while she is young). */
+  flag: Colours;
+  /** The city whose colours she flies under the city flag (the port's she hoisted them in); null until first known. */
+  city: FactionId | null;
+  /** Colours ordered in port, the city of a city flag ordered, and when they go up (wall ms). */
+  next: Colours | null;
+  nextCity: FactionId | null;
+  nextAt: number;
+  /** Wall ms: her last fight with a captain, either way (the colours' wait in port). */
+  pvpAt: number;
   aggressedAt: number; // wall ms: last attack on a captain
   kills: { v: number; t: number }[];
   shameUntil: number;
@@ -62,7 +78,7 @@ export interface PvpState {
 }
 
 export function newPvp(): PvpState {
-  return { played: 0, blackFlag: false, aggressedAt: 0, kills: [], shameUntil: 0, sunkBy: [], bubbleUntil: 0, rating: 1000, duels: 0, duelWins: 0, ties: {}, crownWeek: { week: 0, paid: 0 } };
+  return { played: 0, flag: 'faction', city: null, next: null, nextCity: null, nextAt: 0, pvpAt: 0, aggressedAt: 0, kills: [], shameUntil: 0, sunkBy: [], bubbleUntil: 0, rating: 1000, duels: 0, duelWins: 0, ties: {}, crownWeek: { week: 0, paid: 0 } };
 }
 
 interface Snapshot {
@@ -155,12 +171,14 @@ export function captainShip(game: Game, ship: ShipEntity | null): ShipEntity | n
   return null;
 }
 
-export function hasPennant(game: Game, p: Profile): boolean {
-  return p.level < PENNANT_LEVEL && p.pvp.played < PENNANT_SECONDS && !p.pvp.blackFlag && game.wallNow() - p.pvp.aggressedAt > 30 * 60_000;
+/** Under neutral colours (docs/24 D1). */
+export function neutral(p: Profile | null | undefined): boolean {
+  return coloursOf(p) === 'neutral';
 }
 
+/** Under the pirate flag (the old Black Flag). */
 export function flying(p: Profile | null): boolean {
-  return !!p?.pvp.blackFlag;
+  return coloursOf(p) === 'pirate';
 }
 
 export function shamed(game: Game, p: Profile | null): boolean {
@@ -192,11 +210,13 @@ export function bountyOn(game: Game, account: number | null): number {
   return game.pvp.board(game)[account]?.total ?? 0;
 }
 
-/** Attacking this captain is no crime: the Black Flag in contested water, Wanted ≥ 2, or a price on the head for a licensed hunter. */
+/** Attacking this captain is no crime: the pirate flag, a city at enmity or a guild at war (docs/24 D1), Wanted ≥ 2,
+ *  or a price on the head for a licensed hunter. */
 export function legalTarget(game: Game, a: ShipEntity, b: ShipEntity): boolean {
   const pa = prof(game, a), pb = prof(game, b);
   if (!pb) return false;
-  if (flying(pb) && REGIONS[b.region].safety === 'contested') return true;
+  if (flying(pb)) return true;
+  if (pa && coloursOf(pa) === 'faction' && coloursOf(pb) === 'faction' && enemies(game, a, b)) return true; // cities at enmity
   if (atWar(game, a, b)) return true; // guild war
   if (wantedLevel(pb.infamy) >= 2) return true;
   if (pa && hunterLicence(pa) && bountyOn(game, b.accountId) > 0) return true;
@@ -239,8 +259,11 @@ export function pvpFlags(game: Game, ship: ShipEntity): number {
   const p = prof(game, ship);
   let f = 0;
   if (p) {
-    if (p.pvp.blackFlag) f |= SF.BLACK_FLAG;
-    if (hasPennant(game, p) && REGIONS[ship.region].safety !== 'lawless') f |= SF.GREEN_PENNANT;
+    const c = coloursOf(p);
+    if (c === 'pirate') f |= SF.BLACK_FLAG;
+    else if (c === 'neutral') f |= SF.NEUTRAL;
+    else if (hasPennant(game, p) && REGIONS[ship.region].safety === 'contested') f |= SF.GREEN_PENNANT;
+    if (p.noBoard) f |= SF.NO_BOARD; // «Абордаж: выкл» (docs/24 C1)
     if (shamed(game, p)) f |= SF.SHAME;
     if (bountyOn(game, ship.accountId) > 0 || wantedLevel(p.infamy) >= 2) f |= SF.BOUNTY;
   }
@@ -250,21 +273,9 @@ export function pvpFlags(game: Game, ship: ShipEntity): number {
 
 // ------------------------------------------------------------------------------------------ the Black Flag
 
+/** The old Black Flag's order: the pirate flag up, or her city's colours instead — the colours' own road (in port). */
 export function setBlackFlag(game: Game, s: PlayerSession, on: boolean): string | null {
-  const p = s.profile!;
-  const ship = s.ship!;
-  if (on === p.pvp.blackFlag) return null;
-  if (on) {
-    if (!ship.docked && REGIONS[ship.region].safety === 'safe') return 'Not in the Crown’s own waters — they would hang you from the yardarm';
-    p.pvp.blackFlag = true;
-    game.sendTo(s, { t: 'toast', msg: 'The Black Flag goes up. In contested water any captain may come for you — and the plunder is richer.', kind: 'bad' });
-  } else {
-    if (!ship.docked && game.now - ship.lastCombat < FLAG_COOLDOWN_SEC) return `You may strike the Black Flag in port, or after ${Math.ceil((FLAG_COOLDOWN_SEC - (game.now - ship.lastCombat)) / 60)} more minutes out of a fight`;
-    p.pvp.blackFlag = false;
-    game.sendTo(s, { t: 'toast', msg: 'The Black Flag comes down.', kind: 'info' });
-  }
-  game.pushSelf(s, true);
-  return null;
+  return setColours(game, s, on ? 'pirate' : 'faction');
 }
 
 // ------------------------------------------------------------------------------------------ protection
@@ -283,11 +294,13 @@ export function pvpBlocked(game: Game, a: ShipEntity, b: ShipEntity): string | n
     if (da!.sides[sa].includes(b.accountId!)) return 'friendly';
     return 'duel_ok';
   }
-  if (!ca || !cb || !a.isPlayer || !b.isPlayer) return null;
-  const pb = prof(game, b);
-  const safety = REGIONS[b.region].safety;
-  if (pb && safety === 'contested' && hasPennant(game, pb)) return 'Green Pennant: a young captain sails under protection here.';
-  return null;
+  if (!ca || !cb || ca.accountId === cb.accountId) return null;
+  // A group and a guild (its allies, its pacts) never fire on their own: their own rule (combat.ts damageBlocked).
+  if (sameGroup(game, ca, cb) || guildFriends(game, ca, cb)) return null;
+  // The Crown's safe water: no fighting between captains at all, whatever the colours (damageBlocked says so).
+  if (REGIONS[b.region].safety === 'safe' && a.isPlayer && b.isPlayer) return null;
+  // The colours (docs/24 D1): neutral, the city's or the guild's, the pirate flag — captains and their escorts alike.
+  return coloursBlocked(game, ca, cb);
 }
 
 export function inDuel(game: Game, ship: ShipEntity): Duel | null {
@@ -622,7 +635,14 @@ export function pvpView(game: Game, s: PlayerSession): PvpView {
   const p = s.profile!;
   const now = game.wallNow();
   return {
-    blackFlag: p.pvp.blackFlag,
+    flag: coloursOf(p),
+    blackFlag: flying(p),
+    city: cityOf(game, p),
+    guild: s.ship?.guildTag ?? null,
+    next: p.pvp.next,
+    nextAt: p.pvp.next ? p.pvp.nextAt : 0,
+    noNeutral: neutralRefused(p),
+    noBoard: !!p.noBoard,
     pennant: hasPennant(game, p),
     pennantHoursLeft: Math.max(0, Math.round((PENNANT_SECONDS - p.pvp.played) / 360) / 10),
     shameUntil: p.pvp.shameUntil,

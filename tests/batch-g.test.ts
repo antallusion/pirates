@@ -31,7 +31,8 @@ import type { FakeConn } from './helpers.ts';
 function cap(game: Game, name: string): { c: FakeConn; s: PlayerSession } {
   const c = join(game, name);
   const s = game.sessionByName(name)!;
-  s.profile!.level = 20; // past the Green Pennant
+  s.profile!.level = 20;
+  s.profile!.pvp.flag = 'faction'; // her city's colours (docs/24): a neutral captain takes no goods from others at sea
   return { c, s };
 }
 
@@ -351,12 +352,11 @@ test('trade is checked again as it changes hands: gear gone, silver spent or a f
     assert.equal(b.s.profile!.stash.length, STASH_SIZE);
     assert.equal(a.c.last('barter')!.view!.me.ready, false);
   }
-  // A captain under the Green Pennant takes no gear from others.
+  // A captain under neutral colours (the Green Pennant's heir, docs/24) takes no gear from others at sea.
   {
     const { game } = makeGame();
     const { a, b } = table(game);
-    b.s.profile!.level = 3;
-    b.s.profile!.pvp.played = 0;
+    b.s.profile!.pvp.flag = 'neutral';
     a.s.profile!.stash = [item(41)];
     a.c.push({ t: 'barter', action: 'offer', gold: 0, cargo: {}, items: [41] });
     a.c.push({ t: 'barter', action: 'lock' });
@@ -364,7 +364,7 @@ test('trade is checked again as it changes hands: gear gone, silver spent or a f
     a.c.push({ t: 'barter', action: 'ready' });
     b.c.push({ t: 'barter', action: 'ready' });
     steps(game, 20 * 12);
-    assert.match(toasts(a.c), /Green Pennant/);
+    assert.match(toasts(a.c), /neutral colours/);
     assert.equal(a.s.profile!.stash.length, 1);
   }
 });

@@ -43,6 +43,7 @@ import { askCard, guildYardCard, lfgCard, renderTrade, wireGuildYard, wireLfg } 
 import { LOG_PAGES, logFrame, logTabOf } from './logbook.ts';
 import type { LogTab } from './logbook.ts';
 import type { WinTab } from './kit/window.ts';
+import { bindColours, coloursCard } from './flags.ts';
 
 const L = dict(EN, RU);
 /** A name or sentence the server built, in the player's language. */
@@ -644,11 +645,10 @@ export class CompanyScreen {
     const now = Date.now();
     const d = state.duel;
     const mins = (ms: number) => Math.max(1, Math.ceil((ms - now) / 60_000));
+    // The colours and «Абордаж: выкл» (docs/24): the port's own card, live in port, a word of where at sea.
     body.innerHTML = `<div class="cols"><div>
-      <div class="card"><h4 class="card-h">${icon('tab_law', '', 'ico-md')}${L('law_colours')}</h4>
-        <p>${v.blackFlag ? L('law_black_on') : L('law_plain')}</p>
-        <button class="btn ${v.blackFlag ? '' : 'btn-danger'}" id="bf">${v.blackFlag ? L('law_strike') : L('law_hoist')}</button>
-        ${v.pennant ? `<p class="good">${L('law_pennant', { n: v.pennantHoursLeft })}</p>` : ''}
+      ${coloursCard(state)}
+      <div class="card"><h4 class="card-h">${icon('wanted', '', 'ico-md')}${L('law_colours')}</h4>
         ${v.bubbleUntil > now ? `<p class="good">${L('law_bubble', { n: mins(v.bubbleUntil) })}</p>` : ''}
         ${v.shameUntil > now ? `<p class="bad">${L('law_shame', { n: mins(v.shameUntil) })}</p>` : ''}
         ${v.bounty ? `<p class="bad">${L('law_bounty', { n: fmt(v.bounty) })}</p>` : ''}
@@ -666,7 +666,7 @@ export class CompanyScreen {
           <span><input type="number" min="1000" step="500" value="1000" style="width:90px" data-bamt="${esc(k.name)}"><button class="btn btn-small" data-bounty="${esc(k.name)}" ${state.self?.dockedAt ? '' : `disabled title="${L('bnt_at_office')}"`}>${L('bnt_price')}</button></span></div>`).join('')}
         <p class="muted">${L('bnt_see')}</p></div>` : ''}
     </div></div>`;
-    body.querySelector<HTMLElement>('#bf')!.onclick = () => this.send({ t: 'pvp', action: 'black_flag', on: !v.blackFlag });
+    bindColours(body, this.send);
     body.querySelector<HTMLElement>('#yield')?.addEventListener('click', () => this.send({ t: 'pvp', action: 'forfeit' }));
     body.querySelector<HTMLElement>('#duel')?.addEventListener('click', () => {
       const name = body.querySelector<HTMLInputElement>('#duel-name')!.value.trim();

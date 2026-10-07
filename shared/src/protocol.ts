@@ -38,6 +38,7 @@ import type { TacKind, TacOrderId, TacSpellId } from './data/tactical.ts';
 import type { LairLoot } from './lairproto.ts';
 import type { ArmyStack, UnitId, UnitSpecial } from './data/army.ts';
 import type { FactionId } from './data/factions.ts';
+import type { Colours } from './data/colours.ts';
 import type { GoodId } from './data/goods.ts';
 import type { AmmoId, ChaserEnd, GunId, ModuleId, MountId, ShipClassId } from './data/ships.ts';
 import type { TalentRanks } from './data/talents.ts';
@@ -347,6 +348,9 @@ export type ClientMsg =
   | { t: 'market'; action: 'bid'; id: number; price: number }
   | { t: 'market'; action: 'cancel'; id: number }
   | { t: 'pvp'; action: 'black_flag'; on: boolean }
+  /** docs/24 D1–D2: the colours ordered in port (they go up a while after), and «Абордаж: выкл» (C1, in port). */
+  | { t: 'pvp'; action: 'colours'; flag: Colours }
+  | { t: 'pvp'; action: 'no_board'; on: boolean }
   | { t: 'pvp'; action: 'duel'; name: string; fleet: boolean }
   | { t: 'pvp'; action: 'duel_answer'; id: number; accept: boolean }
   | { t: 'pvp'; action: 'forfeit' }
@@ -891,6 +895,8 @@ export interface ShipInfo {
   level?: number;
   wanted?: number;
   guild?: string; // tag
+  /** Under the city flag (docs/24 D1): the city whose colours she flies. */
+  city?: FactionId;
   title?: string; // a captain's title (seasons, the Pantheon)
   pennant?: string; // a season pennant colour
   /** Looking for company (docs/16 #31): "goal:lo-hi". */
@@ -939,8 +945,8 @@ export const SF = {
   CURSE_LOW: 8192, // curse stage bit 0
   CURSE_HIGH: 16384, // curse stage bit 1  (stage = LOW + 2·HIGH)
   TETHERED: 32768,
-  BLACK_FLAG: 1 << 16, // flying the Black Flag: fair game in contested water
-  GREEN_PENNANT: 1 << 17, // a young captain under the Green Pennant
+  BLACK_FLAG: 1 << 16, // the pirate flag (docs/24 D1): any captain may come for her, and she for any
+  NEUTRAL: 1 << 17, // neutral colours (docs/24 D1): no captain may fire on her or board her, she on none (was the pennant's bit)
   SHAME: 1 << 18, // hunted a minnow: marked for an hour
   DUEL: 1 << 19, // in a duel (with the receiving player, or watched)
   BOUNTY: 1 << 20, // a price on this captain's head
@@ -948,6 +954,8 @@ export const SF = {
   GRABBED: 1 << 22, // held by a Kraken's arm
   SWALLOWED: 1 << 23, // inside the Lantern Maw
   GUARDED: 1 << 24, // a merchant under a friend's guns (docs/12 P6)
+  NO_BOARD: 1 << 25, // «Абордаж: выкл» (docs/24 C1): she boards nobody and is boarded by nobody, guns only
+  GREEN_PENNANT: 1 << 26, // a young captain under the Green Pennant: neutral to captains in contested water (docs/24)
 } as const;
 
 /**
@@ -2831,8 +2839,21 @@ export interface IslandOffer {
 // ------------------------------------------------------------------ PvP 2.0
 
 export interface PvpView {
+  /** Her colours (docs/24 D1): `blackFlag` is the pirate flag's, kept for the old screens. */
+  flag: Colours;
   blackFlag: boolean;
-  pennant: boolean; // under the Green Pennant
+  /** The city whose colours she flies under the city flag (the port's she hoisted them in), and her guild's tag. */
+  city: FactionId;
+  guild: string | null;
+  /** Colours ordered in port and when they go up (epoch ms); null when none are ordered. */
+  next: Colours | null;
+  nextAt: number;
+  /** Why neutral colours are refused her now (wanted), or null. */
+  noNeutral: string | null;
+  /** «Абордаж: выкл» (docs/24 C1). */
+  noBoard: boolean;
+  /** Under the Green Pennant (a young captain under her city's flag), and its hours at sea left. */
+  pennant: boolean;
   pennantHoursLeft: number;
   shameUntil: number; // epoch ms
   bubbleUntil: number; // epoch ms
