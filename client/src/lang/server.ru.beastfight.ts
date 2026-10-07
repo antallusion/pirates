@@ -7,6 +7,7 @@ export const SERVER_RU_BEASTFIGHT: Record<string, string> = {
   'A shark worries at your rudder!': 'Акула треплет руль!',
   // An order refused only for the shot flying waits for it to stop (an «info», not a refusal).
   'Done as soon as the firing stops.': 'Исполним, как только стихнет пальба.',
+  'Heaving to: done as soon as she lies still.': 'Ложимся в дрейф: исполним, как только корабль встанет.',
   // The carpenters at sea: plain words of what they lack; the yard in port; the quartermaster's stores.
   'No planks aboard: the carpenters mend the hull with planks, one plank for 40 points of it. Buy planks in port, or have the yard mend her.': 'В трюме нет досок: плотники чинят корпус досками, одна доска — 40 единиц корпуса. Купите доски в порту или почините корабль на верфи.',
   'No sailcloth aboard: the carpenters mend the sails with sailcloth, one bolt for 20 points of them. Buy sailcloth in port, or have the yard mend her.': 'В трюме нет парусины: паруса чинят парусиной, один рулон — 20 единиц парусов. Купите парусину в порту или почините корабль на верфи.',

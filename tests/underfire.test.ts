@@ -17,7 +17,9 @@ import type { PlayerSession } from '../server/src/game/player.ts';
 import { pursuitOf, startPursuit } from '../server/src/game/pursuit.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import { UNDER_FIRE_SEC } from '../server/src/game/ship.ts';
-import { HELD_UNDER_FIRE, UNDER_FIRE_WORDS, WAY_WORDS } from '../server/src/game/underfire.ts';
+import { HELD_FOR_WAY, HELD_UNDER_FIRE, UNDER_FIRE_WORDS, WAY_WORDS } from '../server/src/game/underfire.ts';
+import { setLang } from '../client/src/i18n.ts';
+import { serverText } from '../client/src/lang/server.ts';
 import { isLand } from '../shared/src/world/worldgen.ts';
 import type { FakeConn } from './helpers.ts';
 import { join, makeGame, steps } from './helpers.ts';
@@ -185,4 +187,10 @@ test('no order of hers is refused for the fight on anything but another ship\'s 
     });
   }
   assert.deepEqual(bad, []);
+});
+
+test('what she is told of an order that waits reads in Russian', () => {
+  setLang('ru');
+  for (const m of [HELD_UNDER_FIRE, HELD_FOR_WAY, 'A shark worries at your rudder!']) assert.match(serverText(m), /[а-яё]/i, m);
+  setLang('en');
 });
