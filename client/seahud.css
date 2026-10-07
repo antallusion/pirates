@@ -307,3 +307,14 @@ img.beast-face.fig { object-fit: contain; object-position: 50% 50%; }
 .hx-xpv { color: var(--k-haze); }
 .hx-recl { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 12px; }
 .hx-law, .hx-pts, .hx-silver { display: inline-flex; align-items: center; gap: 4px; }
+
+/* ---------- a ship striking her colours on a short screen (the popup budget: the card alone was 15% of 640×360, its
+   choices four lines high): thinner painted frames on its choices, the words a size smaller and closer */
+@media (max-height: 520px) {
+  body.touch #surrender .sur-choice { padding: 0 1px; }
+  body.touch.skinned #surrender .sur-choice { border-width: 4px 5px; border-image-width: 4px 5px; }
+  body.touch #surrender .sur-choice b { font-size: 10.5px; line-height: 1.05; letter-spacing: -0.01em; hyphens: auto; }
+  body.touch #surrender .enc-card { padding: 4px 6px 5px; row-gap: 3px; }
+  /* the words of the sea wait while she answers (a toast over the card's band counted twice) */
+  body.simple.touch:has(#surrender:not(.hidden)) #toasts { display: none !important; }
+}

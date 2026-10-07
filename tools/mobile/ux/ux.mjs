@@ -86,6 +86,7 @@ const look = () => p.evaluate(async () => {
 
 async function check(screen) {
   await L.sleep(900);
+  if (screen !== 'menu') await later(); // a new level's choice come up by itself is not the screen measured
   await kit();
   const m = await look();
   await p.screenshot({ path: `${OUT}/${tag}_${name}_${screen}.png` });
@@ -115,11 +116,13 @@ try {
   await p.fill('#login-name', `Ux${tag.slice(0, 1)}${tail()}`);
   await p.evaluate(() => document.querySelector('#login-form button[type="submit"]').click());
   await p.waitForSelector('#screen-captain:not(.hidden)', { timeout: 60000 });
-  await p.evaluate(() => { document.querySelector('.captain-card[data-id="corsair"]').click(); const k = document.querySelector('#know-sea'); if (k && !k.checked) k.click(); document.querySelector('#pick-captain').click(); });
+  await p.evaluate(() => { document.querySelector('.captain-card[data-id="corsair"]').click(); const k = document.querySelector('#know-sea'); if (k) k.checked = true; document.querySelector('#pick-captain').click(); });
   for (let i = 0; i < 60 && !(await p.$('#hud:not(.hidden)')); i++) { await p.evaluate(() => document.querySelectorAll('.film, #prologue').forEach((f) => f.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })))); await L.sleep(700); }
   await L.sleep(2000);
   await p.evaluate(() => document.querySelector('#modal-panel .help-list') && globalThis.gravetide.open(null));
 }
+// (a finger that met «Take command» instead of «I know the sea» left the First Watch on: every run without it)
+if (await p.evaluate(() => !!globalThis.gravetide.state.onboarding?.stage)) { await L.send(p, { t: 'onboarding', action: 'skip_all' }); await L.sleep(800); }
 await p.evaluate(() => document.body.classList.add('reduce-motion'));
 for (const x of ['/level 3', '/silver 1300', '/god on']) await ph.admin(x, 700);
 await later();

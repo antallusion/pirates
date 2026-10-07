@@ -2185,12 +2185,15 @@ function landTagText(l: NonNullable<NonNullable<typeof state.self>['landable']>)
 function computePrompt(): string {
   const { acts, info } = gatherActs();
   curActs = acts;
-  if (acts.length <= ACT_SHOW) actsMore = false;
+  // The simple HUD on a desk keeps the context row to the first thing to do and «⋯ N more» (seven things on the
+  // screen at most: a boss, a roaming stack and a gull's flock made three buttons there).
+  const show = simpleHud() && !touch.enabled ? 2 : ACT_SHOW;
+  if (acts.length <= show) actsMore = false;
   if (acts.length && !actTipOffered) {
     actTipOffered = true;
     firstTips.offer('actions', true);
   }
-  return actBarHtml(acts, info, touch.enabled ? null : keyOfAction, actsMore);
+  return actBarHtml(acts, info, touch.enabled ? null : keyOfAction, actsMore, show);
 }
 
 /** A button of the bar (or its key, or the pad's A) does its thing. */
