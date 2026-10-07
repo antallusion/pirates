@@ -9,7 +9,7 @@
 
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { sprite } from '../assets.ts';
-import { foam, piece } from './seaart.ts';
+import { foam, piece, spray } from './seaart.ts';
 
 type G = CanvasRenderingContext2D;
 
@@ -595,15 +595,16 @@ export function surfaceWater(g: G, y: number, len: number, a: number, t: number,
     g.restore();
   }
   if (moving > 0.05) {
-    const sp = piece('splash');
-    if (!sp) return;
+    const a0 = g.globalAlpha;
     for (let i = 1; i <= 4; i++) {
+      const sp = spray(i + seed);
+      if (!sp) break;
       const u = i / 4, d = len * 0.07 * i * (0.8 + moving * 0.4);
       const s = len * (0.07 + 0.035 * i);
-      g.globalAlpha = 0.32 * a * moving * (1 - u * 0.75);
+      g.globalAlpha = a0 * 0.32 * a * moving * (1 - u * 0.75);
       for (const side of [-1, 1]) g.drawImage(sp, side * d - s / 2, y + len * 0.13 * i - s / 2, s, s);
     }
-    g.globalAlpha = 1;
+    g.globalAlpha = a0;
   }
 }
 

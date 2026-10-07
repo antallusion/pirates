@@ -451,16 +451,30 @@ export function icePlate(g: G, cx: number, cy: number, rr: number, n: number, ro
 
 /** White water about anything afloat: the painted spray, faint and turning slowly, instead of a drawn ring. */
 export function foam(g: G, x: number, y: number, R: number, t: number, seed: number, a = 0.2): void {
-  const c = piece('splash');
+  const c = spray(seed);
   if (!c) return;
   const s = R * 2.7 * (1 + 0.04 * Math.sin(t * 1.3 + seed));
-  g.save();
-  g.globalAlpha = a * (0.85 + 0.15 * Math.sin(t * 1.1 + seed));
-  g.translate(x, y);
-  g.rotate(seed * 0.7 + t * 0.04);
-  g.scale(1, 0.86);
-  g.drawImage(c, -s / 2, -s / 2, s, s);
-  g.restore();
+  const a0 = g.globalAlpha;
+  g.globalAlpha = a0 * a * (0.85 + 0.15 * Math.sin(t * 1.1 + seed));
+  g.drawImage(c, x - s / 2, y - s * 0.43, s, s * 0.86);
+  g.globalAlpha = a0;
+}
+
+/** The painted spray turned four ways (made once), so a line of it never repeats one blot and needs no turn a frame. */
+const sprays: (HTMLCanvasElement | null)[] = [];
+export function spray(i: number): HTMLCanvasElement | null {
+  const k = ((Math.round(i) % 4) + 4) % 4;
+  if (sprays[k]) return sprays[k];
+  const sp = piece('splash');
+  if (!sp) return null;
+  const c = canvas(sp.width, sp.height);
+  if (!c) return null;
+  const x = c.getContext('2d')!;
+  x.translate(c.width / 2, c.height / 2);
+  x.rotate(k * 1.31 + 0.4);
+  x.drawImage(sp, -sp.width / 2, -sp.height / 2);
+  sprays[k] = c;
+  return c;
 }
 
 /** Creatures circling a thing (gulls overhead, fins in the water): `n` of the painted kind, nose along the circle. */
@@ -506,17 +520,13 @@ export function inHot(x: number, y: number, pad = 0): boolean {
  *  shader's. */
 export function shipWater(g: G, len: number, beam: number, k: number, t: number, seed: number): void {
   if (k < 0.08) return;
-  const sp = piece('splash');
-  if (!sp) return;
+  if (!spray(0)) return;
   const a0 = g.globalAlpha;
   const kk = Math.min(1, k);
+  // A blot of the spray, one of its four turns (no transform a blot: the phone's frames).
   const blot = (x: number, y: number, s: number, a: number, turn: number): void => {
     g.globalAlpha = a0 * Math.min(1, a);
-    g.save();
-    g.translate(x, y);
-    g.rotate(turn);
-    g.drawImage(sp, -s / 2, -s / 2, s, s);
-    g.restore();
+    g.drawImage(spray(turn)!, x - s / 2, y - s / 2, s, s);
   };
   // The bow wave: a line of white water from her stem, flaring out and aft along each side, flickering as the swell
   // runs — many small blots of the painted spray, so it reads as a curling line of foam, not as puffs.
@@ -526,16 +536,16 @@ export function shipWater(g: G, len: number, beam: number, k: number, t: number,
     const off = beam * (0.08 + 0.5 * Math.sqrt(u)) * (0.85 + 0.3 * kk);
     const s = beam * (0.26 + 0.2 * u) * (0.8 + 0.4 * kk);
     const flick = 0.75 + 0.25 * Math.sin(t * 7 + i * 1.9 + seed);
-    for (const side of [-1, 1]) blot(side * off, y, s, kk * (0.7 - u * 0.45) * flick, i * 1.3 + side + t * 0.8);
+    for (const side of [-1, 1]) blot(side * off, y, s, kk * (0.7 - u * 0.45) * flick, i + (side > 0 ? 2 : 0) + Math.floor(t * 3));
   }
   // Spray at the cutwater, thrown up as she drives into the swell.
   const sz = beam * (0.4 + 0.45 * kk);
-  blot(0, -len * 0.5 - sz * 0.2, sz, kk * kk * (0.55 + 0.25 * Math.sin(t * 9 + seed)), t * 2 + seed);
+  blot(0, -len * 0.5 - sz * 0.2, sz, kk * kk * (0.55 + 0.25 * Math.sin(t * 9 + seed)), Math.floor(t * 4));
   // The quarter wave astern, spreading into her wake.
   for (let i = 0; i < 6; i++) {
     const u = i / 5;
     const s = beam * (0.32 + 0.25 * u) * (0.8 + 0.4 * kk);
-    for (const side of [-1, 1]) blot(side * beam * (0.28 + 0.42 * u), len * (0.4 + 0.2 * u), s, kk * (0.55 - u * 0.4), i * 2.1 - side + t * 0.5);
+    for (const side of [-1, 1]) blot(side * beam * (0.28 + 0.42 * u), len * (0.4 + 0.2 * u), s, kk * (0.55 - u * 0.4), i + (side > 0 ? 1 : 3) + Math.floor(t * 2));
   }
   g.globalAlpha = a0;
 }
