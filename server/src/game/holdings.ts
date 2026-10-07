@@ -199,7 +199,7 @@ export function islandNear(game: Game, ship: ShipEntity): Island | null {
 }
 
 function moored(game: Game, ship: ShipEntity, isl: Island): boolean {
-  return !ship.docked && ship.alive && Math.abs(ship.state.speed) < 1.2 && !ship.inCombat(game.now) && dist(isl.x, isl.y, ship.state.x, ship.state.y) - isl.radius < MOOR;
+  return !ship.docked && ship.alive && Math.abs(ship.state.speed) < 1.2 && !ship.underFire(game.now) && dist(isl.x, isl.y, ship.state.x, ship.state.y) - isl.radius < MOOR;
 }
 
 /** Where a captain may deal with this island: at it, or at a harbour office in its region. */

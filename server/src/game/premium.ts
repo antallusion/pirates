@@ -114,7 +114,7 @@ function shipWhy(game: Game, s: PlayerSession, c: ShipClassId, price: number, ba
  *  tier only from the ship level that signs it on (docs/18 VII: worth the money, not an auto-win). */
 function unitWhy(game: Game, s: PlayerSession, u: UnitId, o: PremiumUnit, balance: number): PremiumWhy | null {
   const ship = s.ship!;
-  if (!ship.alive || ship.boarding || ship.inCombat(game.now) || landFighting(game, s)) return 'fight';
+  if (!ship.alive || ship.boarding || ship.underFire(game.now) || landFighting(game, s)) return 'fight';
   if (peopleOf(u) === 'deep' && !keepsDeep(s) && s.profile!.captain !== 'drowned') return 'deep';
   if (ship.shipLevel < premiumFrom(UNITS[u].tier)) return 'tier';
   if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return 'slot';

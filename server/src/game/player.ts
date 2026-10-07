@@ -39,7 +39,7 @@ import type { TalentRanks } from '../../../shared/src/data/talents.ts';
 import { totalPointsSpent } from '../../../shared/src/data/talents.ts';
 import { MAX_LEVEL, talentPointsForLevel, xpForLevel } from '../../../shared/src/constants.ts';
 import { MAX_COUNTED_DEEDS } from '../../../shared/src/data/deeds.ts';
-import type { BoardingResult, Contract, PrivateState, ResourceSiteView, TradeRunView } from '../../../shared/src/protocol.ts';
+import type { BoardingResult, ClientMsg, Contract, PrivateState, ResourceSiteView, TradeRunView } from '../../../shared/src/protocol.ts';
 import type { AmmoStock, Cargo, ShipLoadout } from '../../../shared/src/sim/shipstats.ts';
 import type { GameConn } from '../net/conn.ts';
 import type { ShipEntity } from './ship.ts';
@@ -405,6 +405,13 @@ export class PlayerSession {
   msgCount = 0;
   /** The last refusal told her and when (game seconds): the same words are not told again at once (Game.refuse). */
   lastRefusal: { msg: string; at: number } | null = null;
+  /** An order that waits for the shot to stop or for her to lie still (Game.holdOrder): given again the moment she is
+   *  clear (no ship's fire on her, and no more way on her than `way`), until `until`. */
+  whenClear: { msg: ClientMsg; until: number; way?: number } | null = null;
+  /** The helm's sail step she last sent, and the one she held when an order took in sail for her: while the helm keeps
+   *  sending that step she stays hove to; her own hand on the sheets (another step) takes them back. */
+  lastSail = -1;
+  sailHold: number | null = null;
   pendingBoarding: { result: BoardingResult; targetId: number } | null = null;
   /** A job offered and not yet answered, open for a while (docs/11 P6): by an island's people on the beach, or
    *  shared by a groupmate. */

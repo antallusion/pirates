@@ -92,7 +92,7 @@ function whyNot(game: Game, s: PlayerSession, m: SeaMark | undefined): string | 
   if (!m || !isMarkKind(m.kind)) return 'Nothing there to work.';
   if (ship.docked || !ship.alive || ship.ghost) return 'Out at sea, alongside a mark.';
   if (!markInReach(m, ship.state.x, ship.state.y)) return 'Come within a cable of it first.';
-  if (ship.inCombat(game.now)) return 'Not under fire.';
+  if (ship.underFire(game.now)) return 'Not under fire.';
   if (markAgain(game, s.profile!, m.id) > 0) return 'Your boats worked this one today already.';
   if (ship.state.speed > MARK_SLOW) return 'Shorten sail first: the boats cannot work it at speed.';
   return null;
@@ -133,7 +133,7 @@ export function stepSeaMarks(game: Game): void {
       if (ship.docked || !ship.alive) cancelMark(game, s);
       else if (ship.state.speed > MARK_SLOW_BREAK) cancelMark(game, s, 'The boats are called back: she made way.');
       else if (Math.hypot(m.x - ship.state.x, m.y - ship.state.y) - m.r > 220) cancelMark(game, s, 'The boats are called back: she drifted off.');
-      else if (ship.inCombat(game.now)) cancelMark(game, s, 'The boats are called back: under fire.');
+      else if (ship.underFire(game.now)) cancelMark(game, s, 'The boats are called back: under fire.');
       else if (game.now >= b.until) {
         S.busy.delete(s);
         workMark(game, s, m);

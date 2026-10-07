@@ -298,7 +298,7 @@ function fightWhy(game: Game, s: PlayerSession, sp: RoamSpot | undefined, reach 
   const d = dist(p.x, p.y, ship.state.x, ship.state.y);
   if (reach && d > ROAM_REACH + 30) return 'Come within a cable of them first.';
   if (!reach && d > ROAM_SEE) return 'They are gone';
-  if (ship.inCombat(game.now)) return 'Not while under fire';
+  if (ship.underFire(game.now)) return 'Not while under fire';
   if (ship.boarding || ship.grappled || ship.landing) return 'Not now';
   if (landFighting(game, s)) return 'Your party is ashore already.';
   if (ship.crew < 3) return 'Too few hands to spare a landing party';

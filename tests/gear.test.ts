@@ -14,7 +14,7 @@ import { computeShipStats } from '../shared/src/sim/shipstats.ts';
 import { BOARDED_SLOTS, SUNK_SLOTS, chandlerWares, rollDrop } from '../server/src/game/gear.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
-import { join, makeGame, onHull } from './helpers.ts';
+import { join, makeGame, onHull, steps } from './helpers.ts';
 
 const bad = (c: ReturnType<typeof join>) => c.all('toast').filter((t) => t.kind === 'bad').map((t) => t.msg);
 const item = (base: string, ilvl = 1, extra: Partial<Item> = {}): Item => ({ uid: 0, base, ilvl, rarity: 0, affixes: [], dur: 100, ...extra });
@@ -94,11 +94,18 @@ test('putting gear on: the ship’s level and slots, the captain’s band; an it
   while (p.stash.length < STASH_SIZE) p.stash.push({ ...item('tricorne', 1), uid: 1000 + p.stash.length });
   c.push({ t: 'gear', action: 'unequip', slot: 'hat' });
   assert.equal(bad(c).at(-1), 'Your locker is full');
-  // Not in a fight.
+  // Not under another ship's fire: held, not refused, and done when the shot stops (owner, 2026-10-07); her own fight
+  // is no fire.
   p.stash.pop();
   ship.lastCombat = game.now;
+  ship.docked = null;
+  ship.lastHitAt = game.now;
+  const n0 = bad(c).length;
   c.push({ t: 'gear', action: 'unequip', slot: 'hat' });
-  assert.equal(bad(c).at(-1), 'Not in the middle of a fight');
+  assert.equal(bad(c).length, n0, 'no refusal');
+  assert.equal(p.captainGear.hat?.uid, 903, 'still on, while the shot flies');
+  steps(game, 20 * 8);
+  assert.equal(p.captainGear.hat, undefined, 'off once it stopped');
 });
 
 test('what the sea leaves: sunk ships drop gear now and then, an elite always; picked up into the locker', () => {

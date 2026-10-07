@@ -236,7 +236,7 @@ function fightWhy(game: Game, s: PlayerSession, r: Rising, force: boolean): stri
   if (game.wallNow() >= r.until) return 'It has gone back into the sea.';
   if (r.beaten.includes(s.accountId) && !force) return `You have beaten ${nameOf(r.kind)} already: it waits for others now.`;
   if (force) return null;
-  if (ship.inCombat(game.now)) return 'Not while under fire';
+  if (ship.underFire(game.now)) return 'Not while under fire';
   if (ship.state.speed > 2.5) return 'Heave to first — the boats cannot be lowered at speed';
   if (ship.crew < 3) return 'Too few hands to spare a landing party';
   return null;

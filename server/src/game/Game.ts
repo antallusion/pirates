@@ -56,7 +56,7 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, CHASER_RELOAD, SHIP_CLASSES, defaultGunFor, emptyAmmo } from '../../../shared/src/data/ships.ts';
 import { SEA_RELOAD } from '../../../shared/src/data/gunnery.ts';
-import { aimedVolley, pursuitInput, startPursuit, startRoamRun, stepAutoFire, stepPursuit, stopPursuit } from './pursuit.ts';
+import { aimedVolley, pursuitInput, pursuitOf, startPursuit, startRoamRun, stepAutoFire, stepPursuit, stopPursuit } from './pursuit.ts';
 import { boardOdds, boardRisk, isRisky } from './boardodds.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { TALENTS_BY_ID, canLearn } from '../../../shared/src/data/talents.ts';
@@ -215,6 +215,7 @@ import {
 } from './ports.ts';
 import { ShipEntity } from './ship.ts';
 import type { NpcRole } from './ship.ts';
+import { HELD_FOR_WAY, HELD_UNDER_FIRE, HOLD_UNDER_FIRE, UNDER_FIRE_WORDS, WAY_WORDS, workOrder } from './underfire.ts';
 import { SpatialGrid } from './spatial.ts';
 import { WEATHER_FOG, WEATHER_WIND, frontOnCourse, initWeather, seaStateSpread, stepFronts, stepWeather, weatherAtPoint } from './weather.ts';
 import type { Front, RegionWeather } from './weather.ts';
@@ -222,8 +223,8 @@ import { captiveLoyalty, claimSkippers, sanitizeCaptive, turnCaptive, turnCost }
 import { chooseBoon, descentLandable, leaveDescent, startDescent, stepDescent, stepDescentSea } from './descent.ts';
 import { holidayGhostSunk, stepHolidays } from './holidays.ts';
 import { addGood, addItem, buyAtStall, claimBazaar, closeStall, openStall, removeLine, sendBazaarShadows, stepBazaar } from './bazaar.ts';
-import { HULL_PER_PLANK, SAILS_PER_CLOTH, SEA_HULL_PER_MIN, SEA_RUDDER_PER_MIN, SEA_SAILS_PER_MIN } from '../../../shared/src/data/dealings.ts';
-import { seaCrewShare } from './searepair.ts';
+import { HULL_PER_PLANK, SAILS_PER_CLOTH, SEA_FIRE_PACE, SEA_HULL_PER_MIN, SEA_RUDDER_PER_MIN, SEA_SAILS_PER_MIN } from '../../../shared/src/data/dealings.ts';
+import { repairLack, repairOrder, seaCrewShare, takeOnStores } from './searepair.ts';
 import { hearOfPorts } from './demand.ts';
 import { abandonRun, acceptRun, expireRuns, settleRuns } from './traderuns.ts';
 import { bid as auctionBid, claimAuction, putUp, stepAuction } from './auction.ts';
@@ -985,6 +986,15 @@ export class Game {
         return;
       }
       if (!s.ship || !s.profile) return;
+      // An order that waited for the shot to stop: given again now she is clear.
+      if (s.whenClear) {
+        if (now > s.whenClear.until) s.whenClear = null;
+        else if (!s.ship.underFire(now) && (s.whenClear.way === undefined || Math.abs(s.ship.state.speed) <= s.whenClear.way)) {
+          const m = s.whenClear.msg;
+          s.whenClear = null;
+          this.handle(s, m);
+        }
+      }
       this.streamChunks(s);
       this.discover(s);
       this.recordSightings(s);
@@ -1012,7 +1022,7 @@ export class Game {
       const bound = mutinyCourse(this, s.ship, s.profile.company);
       if (bound && !s.ship.docked) {
         s.ship.seizedHelm = { until: now + 2, x: bound.x, y: bound.y };
-        if (dist(bound.x, bound.y, s.ship.state.x, s.ship.state.y) < 700 && !s.ship.inCombat(now)) this.dockShip(s, bound);
+        if (dist(bound.x, bound.y, s.ship.state.x, s.ship.state.y) < 700 && !s.ship.underFire(now)) this.dockShip(s, bound);
       }
       syncKeel(this, s);
       this.stepDump(s);
@@ -1167,17 +1177,18 @@ export class Game {
         } else ship.spoilAcc[g] = acc;
       }
     }
-    // Repairs: carpenters consume planks and sailcloth.
+    // Repairs: carpenters consume planks and sailcloth — a third of the hull in half a minute out of the fight (owner,
+    // 2026-10-07). Under fire (another ship's shot striking her) they wait, the order standing, and go back to it by
+    // themselves when it stops; Battle Repair, Spare Rigging and a sailmaker keep them at it at the old pace.
     if (ship.repairing) {
-      const inCombat = ship.inCombat(now);
-      const rate = inCombat ? (canMend(this, ship) ? st.battleRepairRate : 0) : 1;
+      const inCombat = ship.underFire(now);
+      const rate = inCombat ? (canMend(this, ship) ? st.battleRepairRate * SEA_FIRE_PACE : 0) : 1;
       // Spare Rigging: the sails can be mended under fire even when the hull cannot.
-      const sailRate = inCombat ? Math.max(rate, ship.hasFlag('spare_rigging') ? 0.3 : 0, ship.hasFlag('sailmaker') ? 0.3 : 0) * (ship.hasFlag('sailmaker') ? 2 : 1) : 1;
+      const sailRate = inCombat ? Math.max(rate, ship.hasFlag('spare_rigging') ? 0.3 * SEA_FIRE_PACE : 0, ship.hasFlag('sailmaker') ? 0.3 * SEA_FIRE_PACE : 0) * (ship.hasFlag('sailmaker') ? 2 : 1) : 1;
       if (rate <= 0 && sailRate <= 0) {
-        ship.repairing = false;
-        this.toastShip(ship, 'Carpenters cannot work under fire.', 'bad');
+        // (waiting for the shot to stop)
       } else {
-        // Slow at sea (docs/16 #15): a few hundredths a minute from planks and sailcloth; the yard does it at once for silver.
+        // At sea: planks and sailcloth from the hold; the yard does it at once for silver.
         const crewF = seaCrewShare(ship);
         const hullGain = Math.min(st.hullMax - ship.hull, st.hullMax * (SEA_HULL_PER_MIN / 60) * st.repairRate * crewF * rate);
         const use = Math.max(0.3, 1 + tval(st, 'materialUse')); // Spare Timber
@@ -1189,16 +1200,19 @@ export class Game {
         const oldSalt = ship.hasFlag('old_salt'); // makes do with what the sea gives, at half speed
         const planks = cove ? 1e9 : ship.cargo.planks ?? 0, cloth = cove ? 1e9 : ship.cargo.sailcloth ?? 0;
         let did = false;
-        if (hullGain > 0.05 && (planks >= planksNeeded || oldSalt)) {
+        // What is left of a plank (a bolt) is used up first: a part of one mends its part.
+        if (hullGain > 0.05 && (planks > 0.01 || oldSalt)) {
           const stocked = planks >= planksNeeded;
-          ship.hull += stocked ? hullGain : hullGain * 0.5;
-          if (!cove && stocked) ship.cargo.planks = Math.round((planks - planksNeeded) * 100) / 100;
+          const k = stocked ? 1 : oldSalt ? 0.5 : planks / planksNeeded;
+          ship.hull += hullGain * k;
+          if (!cove) ship.cargo.planks = Math.round(Math.max(0, planks - planksNeeded * (stocked ? 1 : planks / planksNeeded)) * 100) / 100;
           did = true;
         }
-        if (sailGain > 0.02 && (cloth >= clothNeeded || oldSalt)) {
+        if (sailGain > 0.02 && (cloth > 0.01 || oldSalt)) {
           const stocked = cloth >= clothNeeded;
-          ship.sails += stocked ? sailGain : sailGain * 0.5;
-          if (!cove && stocked) ship.cargo.sailcloth = Math.round((cloth - clothNeeded) * 100) / 100;
+          const k = stocked ? 1 : oldSalt ? 0.5 : cloth / clothNeeded;
+          ship.sails += sailGain * k;
+          if (!cove) ship.cargo.sailcloth = Math.round(Math.max(0, cloth - clothNeeded * (stocked ? 1 : cloth / clothNeeded)) * 100) / 100;
           did = true;
         }
         if (ship.rudderHp < 1 && (planks > 0.2 || oldSalt)) {
@@ -1210,7 +1224,8 @@ export class Game {
         if (!did) {
           ship.repairing = false;
           const full = ship.hull >= st.hullMax - 0.5 && ship.sails >= st.sailHpMax - 0.5;
-          this.toastShip(ship, full ? 'Repairs complete.' : 'Out of planks or sailcloth for repairs.', full ? 'good' : 'bad');
+          // Out of what they mend with: what is wanted, in plain words.
+          this.toastShip(ship, full ? 'Repairs complete.' : repairLack(ship, cove) ?? 'Repairs complete.', full ? 'good' : 'info');
         }
       }
     }
@@ -2702,6 +2717,12 @@ export class Game {
 
   sendTo(s: PlayerSession, msg: ServerMsg): void {
     if (s.conn.closed || s.disconnectedAt !== null) return;
+    // Her own order refused for the shot flying or her way: held, not refused (holdOrder).
+    if (msg.t === 'toast' && msg.kind === 'bad' && this.handling?.s === s) {
+      if (UNDER_FIRE_WORDS.has(msg.msg)) return this.holdOrder(s, this.handling.msg);
+      const way = WAY_WORDS.get(msg.msg);
+      if (way !== undefined) return this.holdOrder(s, this.handling.msg, way);
+    }
     this.sendText(s, JSON.stringify(msg));
   }
 
@@ -2788,7 +2809,47 @@ export class Game {
     if (!foe) ship.lastCombat = before;
   }
 
+  /** The order being handled, and whose (an order refused only because shot is flying waits for it to stop). */
+  private handling: { s: PlayerSession; msg: ClientMsg } | null = null;
+
   private handle(s: PlayerSession, msg: ClientMsg): void {
+    const prev = this.handling;
+    this.handling = { s, msg };
+    // The same order pressed again supersedes the one held (no second purchase, no second landing when the first comes).
+    if (s.whenClear && s.whenClear.msg !== msg && s.whenClear.msg.t === msg.t) s.whenClear = null;
+    try {
+      // Her boats or her hands sent to a place end her «Атаковать» (unless shot is flying at her: then the order waits).
+      const work = !!s.ship && workOrder(msg as { t: string; action?: string });
+      if (work && pursuitOf(s.ship) && !s.ship!.underFire(this.now)) {
+        stopPursuit(this, s, 'off');
+        // The helmsman had the sheets: the helm's sail is not her hand (she lies to for her boats).
+        s.ship!.input = { rudder: 0, sailTarget: 0 };
+        s.sailHold = s.lastSail;
+      }
+      this.handleMsg(s, msg);
+    } finally {
+      this.handling = prev;
+    }
+  }
+
+  /** An order refused only because shot is flying, or for her way through the water (owner, 2026-10-07: «я должен со
+   *  всем взаимодействовать, ошибок типа "не под огнём" или ещё что-то быть не должно абсолютно»): no refusal — it
+   *  stands, and is given again the moment she is clear (sessionSecond), within HOLD_UNDER_FIRE seconds; for her way
+   *  she takes in sail and heaves to. She is told once that it waits. */
+  private holdOrder(s: PlayerSession, msg: ClientMsg, way?: number): void {
+    const fresh = !s.whenClear || s.whenClear.msg.t !== msg.t;
+    s.whenClear = { msg, until: this.now + HOLD_UNDER_FIRE, ...(way !== undefined ? { way } : {}) };
+    const ship = s.ship;
+    if (way !== undefined && ship) {
+      if (pursuitOf(ship)) stopPursuit(this, s, 'off');
+      ship.input = { rudder: 0, sailTarget: 0 };
+      s.sailHold = s.lastSail;
+      this.pushSelf(s, true);
+    }
+    if (fresh) this.sendTo(s, { t: 'toast', msg: way !== undefined ? HELD_FOR_WAY : HELD_UNDER_FIRE, kind: 'info' });
+  }
+
+  private handleMsg(s: PlayerSession, msg: ClientMsg): void {
     if (msg.t === 'ping') return this.sendTo(s, { t: 'pong', c: msg.c, s: this.now });
     if (msg.t === 'hello') return this.onHello(s, msg);
     if (!s.authed) return this.sendTo(s, { t: 'err', msg: 'Not authenticated' });
@@ -2838,7 +2899,11 @@ export class Game {
           if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
           return; // the helmsman has the wheel (docs/16 #36)
         }
-        ship.input = { rudder: clamp(msg.rudder, -1, 1), sailTarget: SAIL_STEPS[clamp(Math.round(msg.sail), 0, SAIL_STEPS.length - 1)] };
+        const step = clamp(Math.round(msg.sail), 0, SAIL_STEPS.length - 1);
+        s.lastSail = step;
+        // Hove to by an order of hers (holdOrder): the helm's old sail is not her hand; a new one is.
+        if (s.sailHold !== null && step !== s.sailHold) s.sailHold = null;
+        ship.input = { rudder: clamp(msg.rudder, -1, 1), sailTarget: s.sailHold !== null ? 0 : SAIL_STEPS[step] };
         if (ship.hasFlag('unsinkable') && ship.captain !== 'drowned') ship.input.sailTarget = Math.min(ship.input.sailTarget, 0.9);
         if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
         return;
@@ -3022,8 +3087,10 @@ export class Game {
         this.pushSelf(s, true);
         return;
       case 'repair':
-        if (msg.on && ship.inCombat(this.now) && !ship.hasFlag('battle_repair')) return err('Carpenters cannot work under fire (needs Battle Repair).');
-        ship.repairing = !!msg.on;
+        // In port the yard mends her whole for silver; at sea the carpenters, or plain words of what they lack (searepair.ts).
+        if (ship.docked && msg.on) return portAction((pt) => (pt.shipyardTier > 0 ? shipyardRepair(this, s) : 'No shipyard here'));
+        repairOrder(this, s, !!msg.on, ship.hasFlag('cove_knowledge') && coveAt(this, ship) !== null);
+        this.pushSelf(s, true);
         return;
       case 'dock':
         return err(this.tryDock(s, !!msg.bribe));
@@ -3507,7 +3574,7 @@ export class Game {
       case 'learn_talent': {
         const why = canLearn(p.talents, String(msg.id), this.talentPoints(p), learnContext(p));
         if (why) return err(why);
-        if (ship.inCombat(this.now)) return err('Not in the heat of battle');
+        if (ship.underFire(this.now)) return err('Not in the heat of battle');
         p.talents[msg.id] = (p.talents[msg.id] ?? 0) + 1;
         ship.talents = p.talents;
         ship.recompute(this.now);
@@ -3517,7 +3584,7 @@ export class Game {
       }
       case 'respec':
         return portAction(() => {
-          if (ship.inCombat(this.now)) return 'Not in the heat of battle';
+          if (ship.underFire(this.now)) return 'Not in the heat of battle';
           const mode: RespecMode = msg.mode === 'forget' || msg.mode === 'token' ? msg.mode : 'full';
           return respec(this, s, mode, msg.id);
         });
@@ -4016,7 +4083,7 @@ export class Game {
     const p = s.profile!;
     if (ship.docked) return 'Already in port';
     if (!ship.alive || ship.boarding) return 'Not now';
-    if (ship.inCombat(this.now)) return 'The harbour chain stays up while you are in a fight';
+    if (ship.underFire(this.now)) return 'The harbour chain stays up while you are in a fight';
     const port = this.nearestPort(ship.state.x, ship.state.y);
     if (!port || dist(port.x, port.y, ship.state.x, ship.state.y) > PORT_DOCK_RADIUS) return 'No harbour close enough';
     if (ship.state.speed > 7) return 'Take in sail before entering harbour';
@@ -4113,6 +4180,9 @@ export class Game {
     const refitting = refitHolds(this, s.profile!);
     if (refitting) return refitting;
     const port = this.portById(ship.docked)!;
+    // Leaving hurt: the carpenters' stores taken on for it (owner, 2026-10-07: repairs at sea that did nothing).
+    const stores = takeOnStores(this, s, port);
+    if (stores) this.sendTo(s, { t: 'toast', msg: `The quartermaster takes on ${stores.planks} planks and ${stores.cloth} sailcloth for the carpenters (${stores.silver} silver).`, kind: 'info' });
     const is = this.world.islands[port.islandId];
     // Leave harbour on the best point of sail within 90° of straight out to sea.
     const out = Math.atan2(port.x - is.x, -(port.y - is.y));

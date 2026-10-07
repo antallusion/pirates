@@ -40,7 +40,7 @@ export function havenSecond(game: Game, s: PlayerSession): void {
   }
   // The secret harbour.
   const cove = coveAt(game, ship);
-  if (!cove || !p.smuggle.coves.includes(cove.id) || ship.state.speed > 1 || ship.inCombat(game.now)) {
+  if (!cove || !p.smuggle.coves.includes(cove.id) || ship.state.speed > 1 || ship.underFire(game.now)) {
     if (ship.havenOf !== null) ship.havenOf = null;
     return;
   }

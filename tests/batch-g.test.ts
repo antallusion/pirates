@@ -398,7 +398,7 @@ test('trade is called off when the ships part, a fight starts or a captain goes 
   }
   {
     const { game, a, b } = setup();
-    a.s.ship!.lastCombat = game.now;
+    a.s.ship!.lastHitAt = game.now; // another ship's fire on her (her own fight is no fire: owner, 2026-10-07)
     steps(game, 21);
     assert.match(toasts(b.c), /Trade called off: Not in the middle of a fight/);
     untouched(game, a, b);

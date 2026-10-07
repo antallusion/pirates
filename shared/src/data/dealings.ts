@@ -90,11 +90,19 @@ export const HEARSAY_SLOTS = 3;
 
 // ------------------------------------------------------------------ 15. repairs at sea
 
-/** Carpenters at sea mend this share of the hull and of the sails a minute (by the ship's repair rate and hands). */
-export const SEA_HULL_PER_MIN = 0.06;
-export const SEA_SAILS_PER_MIN = 0.1;
+/** Carpenters at sea mend this share of the hull and of the sails a minute (by the ship's repair rate and hands): a
+ *  third of the hull in half a minute out of the fight, the bar seen filling (owner, 2026-10-07: «нажимая на ремонт
+ *  ничего не происходит вообще абсолютно» — at six hundredths a minute a sloop gained a point of hull a second). */
+export const SEA_HULL_PER_MIN = 0.6;
+export const SEA_SAILS_PER_MIN = 1.0;
 /** And the rudder: this much of it a minute. */
-export const SEA_RUDDER_PER_MIN = 0.1;
+export const SEA_RUDDER_PER_MIN = 0.6;
+/** Under fire (Battle Repair, Spare Rigging, a sailmaker) they keep the old pace, a tenth of it: the sea fights of
+ *  docs/23 are weighed on it. */
+export const SEA_FIRE_PACE = 0.1;
+/** Leaving port hurt, her quartermaster takes on the planks and the sailcloth her carpenters need for it — spending no
+ *  more than this share of her silver. */
+export const STORES_SILVER_SHARE = 0.25;
 /** What they use: a plank for this many points of hull, a bolt of sailcloth for this many of sail. */
 export const HULL_PER_PLANK = 40;
 export const SAILS_PER_CLOTH = 20;

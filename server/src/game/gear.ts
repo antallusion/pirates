@@ -56,7 +56,7 @@ export function equip(game: Game, s: PlayerSession, uid: number): string | null 
   const ship = s.ship!;
   const i = p.stash.findIndex((x) => x.uid === uid);
   if (i < 0) return 'No such item in your locker';
-  if (ship.inCombat(game.now)) return 'Not in the middle of a fight';
+  if (ship.underFire(game.now)) return 'Not in the middle of a fight';
   const it = p.stash[i];
   const slot = itemSlot(it);
   if (isShipSlot(slot)) {
@@ -83,7 +83,7 @@ export function equip(game: Game, s: PlayerSession, uid: number): string | null 
 /** Takes an item off into the locker. */
 export function unequip(game: Game, s: PlayerSession, slot: Slot): string | null {
   const p = s.profile!;
-  if (s.ship!.inCombat(game.now)) return 'Not in the middle of a fight';
+  if (s.ship!.underFire(game.now)) return 'Not in the middle of a fight';
   p.loadout.gear ??= {};
   const it = isShipSlot(slot) ? p.loadout.gear[slot] : p.captainGear[slot];
   if (!it) return 'Nothing worn there';

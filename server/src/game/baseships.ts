@@ -395,7 +395,7 @@ export function shipLaunch(game: Game, s: PlayerSession, id: string): string | n
 
 function recallWhy(game: Game, s: PlayerSession, x: OwnShip): string | null {
   if (x.state !== 'sea') return 'She is not at sea.';
-  if (s.ship?.inCombat(game.now) && entityOf(game, s, x.id)) return 'Not with shot flying';
+  if (s.ship?.underFire(game.now) && entityOf(game, s, x.id)) return 'Not with shot flying';
   return null;
 }
 

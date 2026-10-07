@@ -181,7 +181,7 @@ function busy(game: Game, s: PlayerSession): string | null {
   const ship = s.ship!;
   if (!ship.alive) return 'Not now';
   if (ship.boarding || ship.grappled) return 'Not in the middle of a boarding';
-  if (!ship.docked && ship.inCombat(game.now)) return 'Not while under fire';
+  if (!ship.docked && ship.underFire(game.now)) return 'Not while under fire';
   if (s.profile!.company.mutiny) return 'The crew holds the ship: nobody signs on now';
   return null;
 }
