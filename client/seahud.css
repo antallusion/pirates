@@ -177,7 +177,7 @@ body.simple:not(.touch) #hud-bottom { bottom: calc(var(--sa-b) + 10px); }
 body.simple:not(.touch) #hud-prompt .act-row { gap: 6px; }
 body.simple:not(.touch) #hud-prompt .act-btn { --h: 34px; }
 /* the line of keys: small, low on the left, for the first minutes at sea (main.ts keyHint) */
-#key-hint { position: absolute; left: calc(var(--sa-l) + 10px); bottom: calc(var(--sa-b) + 10px); max-width: min(820px, calc(100vw - 2 * 260px)); display: flex; flex-wrap: wrap; gap: 4px 12px;
+#key-hint { position: absolute; left: calc(var(--sa-l) + 10px); bottom: calc(var(--sa-b) + 10px); max-width: min(620px, calc(50vw - 230px)); display: flex; flex-wrap: wrap; gap: 4px 12px;
   padding: 5px 10px; border-radius: var(--k-r-2); background: rgba(10, 11, 13, 0.62); box-shadow: inset 0 0 0 1px rgba(111, 90, 56, 0.3);
   color: var(--k-haze); font: 500 11px/18px var(--k-font-sans); pointer-events: none; transition: opacity 6s linear; }
 #key-hint.hidden, body:not(.simple) #key-hint, body.touch #key-hint { display: none; }
