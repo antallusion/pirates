@@ -61,11 +61,20 @@ test('the target\'s choices stand beside her on an arc: never over her, a finger
         else assert.ok(d >= item / 2, `${vw}×${vh} at the edge: off her middle`);
       }
       for (let i = 1; i < g.items.length; i++) assert.ok(Math.hypot(g.items[i].x - g.items[i - 1].x, g.items[i].y - g.items[i - 1].y) >= item, 'a finger apart');
+      // each word on the arc's outer side (beside, or under one come round under her)
+      for (const p of g.items) assert.ok(['r', 'l', 'b', 't'].includes(p.lp));
       // never above her: her name and bars are drawn there
       if (fy > 0.2 && fy < 0.75) for (const p of g.items) assert.ok(p.y >= y - item * 0.6, 'not over her name');
     }
   }
   assert.ok(TM_ARM_MS >= 250, 'the tap that opened them cannot pick one');
+  // the words never across another choice: an arc round her right with its words, nothing else in the way
+  const w = menuLayout(3, 400, 180, 26, 812, 375, 48, [], [88, 104, 40]);
+  const box = (p: { x: number; y: number; lp: string }, lw: number) => p.lp === 'r' ? [p.x + 33, p.y - 10, p.x + 33 + lw, p.y + 10] : p.lp === 'l' ? [p.x - 33 - lw, p.y - 10, p.x - 33, p.y + 10] : p.lp === 'b' ? [p.x - lw / 2, p.y + 29, p.x + lw / 2, p.y + 49] : [p.x - lw / 2, p.y - 49, p.x + lw / 2, p.y - 29];
+  w.items.forEach((p, i) => {
+    const [l, t, r, b] = box(p, [88, 104, 40][i]);
+    for (const [j, q] of w.items.entries()) if (j !== i) assert.ok(r <= q.x - 24 || l >= q.x + 24 || b <= q.y - 24 || t >= q.y + 24, `word ${i} over choice ${j}`);
+  });
 });
 
 test('every control\'s art is the game\'s own: the sea HUD\'s pictures, the target\'s choices, the rims', () => {

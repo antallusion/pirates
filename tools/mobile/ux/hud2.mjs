@@ -108,12 +108,19 @@ const showCursor = (x, y) => p.evaluate(([x, y]) => {
 }, [x, y]);
 const hideCursor = () => p.evaluate(() => document.getElementById('qa-cursor')?.remove());
 
-async function check(screen) {
-  await L.sleep(700);
-  if (screen !== 'menu') await later();
+async function check(screen, beforeShot = null) {
+  if (!beforeShot) {
+    await L.sleep(700);
+    if (screen !== 'menu') await later();
+  }
   await kit();
+  // (a sailing target: the mouse on her and the picture at once, the measures after — they take a while)
+  if (beforeShot) {
+    await beforeShot();
+    await p.screenshot({ path: `${OUT}/${tag}_${name}_${screen}.png` });
+  }
   const m = await look();
-  await p.screenshot({ path: `${OUT}/${tag}_${name}_${screen}.png` });
+  if (!beforeShot) await p.screenshot({ path: `${OUT}/${tag}_${name}_${screen}.png` });
   const row = { screen, ...m, errors: p.errors.splice(0) };
   rows.push(row);
   L.log(`${tag} ${name} ${screen.padEnd(7)} controls ${String(m.controls).padStart(2)} (small ${m.small}) · audit ${m.audit.length} · center ${m.center.length} · crop ${m.crop.length}/${m.cropChecked} · pop ${m.pop}%${m.centre.length ? ` CENTRE ${m.centre.length}` : ''}${m.tm ? ` · menu ${m.menu}%` : ''}${m.cur ? ` · cursor ${m.cur}` : ''}${m.overlap.length ? ` · overlap ${m.overlap.join(', ')}` : ''}${m.glyphs.length ? ` · GLYPHS ${m.glyphs.join(' ')}` : ''}${row.errors.length ? ` · ERRORS ${row.errors.length}` : ''}`);
@@ -169,21 +176,44 @@ if (only.includes('target') && foe) {
 }
 // the mouse on her (the cursor and her choices) / a finger on her (the choices and the mark over her)
 if (only.includes('hover') && foe) {
-  const f = await foeOnScreen(p);
+  // (her, in the open sea: a pirate that lies under the HUD's bottom row cannot be pointed at)
+  const inOpen = () => p.evaluate(([W, H]) => {
+    const g = globalThis.gravetide, s = g.state;
+    for (const x of s.ships.values()) {
+      if (x.info?.npcRole !== 'pirate' || x.id === s.entityId) continue;
+      const sx = g.renderer.sx(x.cur.x), sy = g.renderer.sy(x.cur.y);
+      if (sx > W * 0.2 && sx < W * 0.75 && sy > H * 0.22 && sy < H * 0.66 && document.elementFromPoint(sx, sy)?.id === 'world') return { id: x.id, x: sx, y: sy, on: true };
+    }
+    return null;
+  }, [W, H]);
+  let f = await inOpen();
+  for (let i = 0; i < 5 && !f; i++) {
+    await ph.admin(`/foe pirate sloop ${100 + i * 15}`, 1500);
+    for (let k = 0; k < 12 && !f; k++) { await L.sleep(400); f = await inOpen(); }
+  }
+  if (f) await p.evaluate((id) => globalThis.gravetide.target(id), f.id);
+  const foe2 = f?.id;
+  const where = () => p.evaluate((id) => { const g = globalThis.gravetide, x = g.state.ships.get(id); return x ? { x: g.renderer.sx(x.cur.x), y: g.renderer.sy(x.cur.y), on: true } : null; }, foe2);
   if (f?.on) {
     if (touch) await p.touchscreen.tap(f.x, f.y);
     else {
       await p.mouse.move(f.x - 30, f.y + 20);
       await p.mouse.move(f.x, f.y, { steps: 4 });
       await L.sleep(500);
-      const g = await foeOnScreen(p);
+      const g = await where();
       if (g) await p.mouse.move(g.x, g.y);
       await L.sleep(400);
-      const g2 = await foeOnScreen(p);
-      if (g2) await showCursor(g2.x, g2.y);
+      const g2 = await where();
+      if (g2) { await p.mouse.move(g2.x, g2.y); await showCursor(g2.x, g2.y); }
     }
-    await L.sleep(500);
-    await check('hover');
+    if (touch) await L.sleep(500);
+    // (she sails on: the mouse kept on her up to the picture)
+    await check('hover', touch ? null : async () => {
+      // the mouse kept on her a moment (her choices open after a short rest), then the picture
+      for (let k = 0; k < 6; k++) { const g = await where(); if (g) await p.mouse.move(g.x, g.y); await L.sleep(90); }
+      const h = await where();
+      if (h) { await p.mouse.move(h.x, h.y); await L.sleep(60); await showCursor(h.x, h.y); }
+    });
     await hideCursor();
     // a choice taken: «Преследовать» (the pursuit), as the next screen's fight
     const picked = await p.evaluate(() => { const b = document.querySelector('#tmenu:not(.hidden) [data-tm="pursue"]'); if (!b) return false; b.click(); return true; });

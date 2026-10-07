@@ -97,6 +97,10 @@ test('a drowned maze: every room reachable from the entry, one vault, one key, o
 
 test('a sunken city: anchored over the buoy, the bell goes down, the key opens the vault, and the haul comes up at the entry', () => {
   const { game } = makeGame();
+  // The maze is new every hour (expeditions.ts: the wall clock's hour in its seed): one fixed hour, so the test does not
+  // hang on the real clock (CLAUDE.md §5; on 2026-10-07 at 20:00 the walk to the vault failed whatever the code).
+  const wall = Date.UTC(2026, 9, 7, 12, 30);
+  game.wallNow = () => wall;
   const site = game.expeditions.sites.find((s) => s.kind === 'city')!;
   const { c, s } = captainAt(game, 'Dora Diver', site.x + 40, site.y, 'brig');
   steps(game, SEC + 1);

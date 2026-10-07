@@ -73,7 +73,7 @@ import type { DeckSlot, SeaKeys } from './ui/seahud.ts';
 import { attackKind, buildCursors, cursorUrl } from './ui/cursor.ts'; // the attack cursor (owner, 2026-10-07)
 import type { AttackKind } from './ui/cursor.ts';
 import { TargetMenu } from './ui/targetmenu.ts'; // «Захват цели», «Преследовать», «Бой» beside a target
-import type { TmChoice, TmId } from './ui/targetmenu.ts';
+import type { TmChoice, TmId, TmRect } from './ui/targetmenu.ts';
 import type { TargetInfo } from './ui/kit/targetline.ts';
 import type { WheelOption } from './ui/kit/radial.ts';
 import { WHEEL_MAX } from './ui/kit/radial.ts';
@@ -2719,7 +2719,7 @@ function attackUnder(px: number, py: number): AttackKind | null {
 const targetMenu = new TargetMenu();
 targetMenu.onPick = (id, about) => pickTargetChoice(id, about);
 /** The mouse resting this long on a target opens its choices (a desk). */
-const TM_DWELL = 220;
+const TM_DWELL = 140;
 /** A finger's choices go by themselves after this long untouched (a phone). */
 const TM_IDLE = 6000;
 
@@ -2806,15 +2806,36 @@ function aboutAt(px: number, py: number): string {
   return rm !== null ? `roam:${rm}` : '';
 }
 
-/** Open the choices about a target if there is anything to offer; else put them away. */
+/** The HUD's own controls on the screen now, that the choices keep off (measured a few times a second). */
+let hudBoxes: TmRect[] = [], hudBoxesAt = 0;
+function hudKeepOut(): TmRect[] {
+  const now = performance.now();
+  if (now - hudBoxesAt < 250) return hudBoxes;
+  hudBoxesAt = now;
+  hudBoxes = [];
+  for (const el of document.querySelectorAll<HTMLElement>('#hud-captain .cs, #hud-map, #tc-menu, #tc-news, #tc-target, #hud-boss, #hud-watch, #tc-stick, #tc-speed, #tc-fire, #tc-cast, #tc-ammo, #tc-lock, #tc-special, #tc-act, #tc-deck, #hud-bottom > *, #toasts > .toast')) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 2 && r.height > 2 && el.getClientRects().length) hudBoxes.push({ left: r.left - 6, top: r.top - 6, right: r.right + 6, bottom: r.bottom + 6 });
+  }
+  return hudBoxes;
+}
+
+/** Open the choices about a target if there is anything to offer; else put them away. A target under the HUD's own
+ *  controls (the mouse cannot be on her there) offers none. */
 function openTargetMenu(about: string): void {
   const t = about ? targetChoices(about) : null;
-  if (!t) return targetMenu.hide();
+  if (!t || hudKeepOut().some((b) => t.x > b.left && t.x < b.right && t.y > b.top && t.y < b.bottom)) return targetMenu.hide();
   targetMenu.show(about, t.choices, t.name);
-  targetMenu.place(t.x, t.y, t.r);
+  targetMenu.place(t.x, t.y, t.r, hudKeepOut());
 }
 
 let hoverAbout = '', hoverSince = 0;
+/** Where the mouse is on the page (over the sea or over the HUD). */
+const mouseAt = { x: -1, y: -1 };
+addEventListener('mousemove', (e) => {
+  mouseAt.x = e.clientX;
+  mouseAt.y = e.clientY;
+}, { capture: true, passive: true });
 /** A desk: the mouse resting on a target opens its choices; off it (and off them) they go a moment later. */
 function hoverTargetMenu(about: string): void {
   if (touch.enabled) return;
@@ -2835,8 +2856,11 @@ function targetMenuFrame(): void {
   const ok = inGame && !state.boardTac && !state.boardFight && !state.self?.dockedAt && modal === null && !seaHud.menuOpen && !(touch.enabled && targetMenu.age > TM_IDLE && !targetMenu.hovered);
   const t = ok ? targetChoices(targetMenu.about) : null;
   if (!t) return targetMenu.hide();
+  // A desk: the mouse near her (a sailing ship slips from under a still mouse: a little room round her) or on the
+  // choices keeps them; on the choices they stand still for the click instead of following her.
+  if (!touch.enabled) targetMenu.hoverAt(mouseAt.x, mouseAt.y, Math.hypot(mouseAt.x - t.x, mouseAt.y - t.y) <= t.r + 34);
   targetMenu.show(targetMenu.about, t.choices, t.name);
-  targetMenu.place(t.x, t.y, t.r);
+  if (!targetMenu.hovered) targetMenu.place(t.x, t.y, t.r, hudKeepOut());
 }
 
 let hoverAt = 0;
@@ -3479,4 +3503,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; } };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; } };

@@ -32,28 +32,79 @@ export interface TmChoice {
 /** A tap that opened the choices cannot pick one this soon (the same finger lifting). */
 export const TM_ARM_MS = 350;
 
+/** Where a choice's word stands: right of it, left of it, below it, above it. */
+export type TmLabelAt = 'r' | 'l' | 'b' | 't';
+
+/** A box on the screen the choices keep off (the HUD's own controls). */
+export interface TmRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
 /** Where the choices stand beside a target at (x, y) whose picture reaches `r` px from its middle: on an arc of radius
- *  r + gap round her, on the right unless she is in the screen's right third (then the left), from level with her down
- *  and round under her (her name and bars are drawn over her: the arc keeps off them) — up round her when she is low on
- *  the screen — kept on the screen. Pure. */
-export function menuLayout(n: number, x: number, y: number, r: number, vw: number, vh: number, item: number): { side: 'right' | 'left'; items: { x: number; y: number }[] } {
-  const side: 'right' | 'left' = x > vw * 0.66 ? 'left' : 'right';
+ *  r + gap round her, from level with her down and round under her (her name and bars are drawn over her: the arc keeps
+ *  off them), on her right — or, of the four ways (right or left, down or up), the one that keeps the choices and their
+ *  words on the screen and off the HUD's controls (`avoid`) best, the right and down first, the left first when she is
+ *  in the screen's right third. `label` is each word's width (it stands on the arc's outer side). `crowded`: even the
+ *  best way lies over the HUD's controls (she is in among them: the choices are not offered there). Pure. */
+export function menuLayout(n: number, x: number, y: number, r: number, vw: number, vh: number, item: number, avoid: readonly TmRect[] = [], label: readonly number[] = []): { side: 'right' | 'left'; items: { x: number; y: number; lp: TmLabelAt }[]; crowded: boolean } {
   const R = Math.max(r, 16) + item / 2 + 16;
-  const step = (47 * Math.PI) / 180, from = (-10 * Math.PI) / 180;
+  const step = (46 * Math.PI) / 180, from = (6 * Math.PI) / 180;
   const m = item / 2 + 6;
-  // low on the screen the arc turns up round her instead (her name over her is the lesser loss than a choice off-screen)
-  const up = y + R + m > vh ? -1 : 1;
-  const items = Array.from({ length: n }, (_, i) => {
-    const a = from + i * step;
-    const dx = Math.cos(a) * R * (side === 'right' ? 1 : -1);
-    return { x: x + dx, y: y + Math.sin(a) * R * up };
-  });
-  // on the screen: the arc moved up or down (and in from the side) as a whole
-  const top = Math.min(...items.map((p) => p.y)), bottom = Math.max(...items.map((p) => p.y));
-  const dy = top < m ? m - top : bottom > vh - m ? vh - m - bottom : 0;
-  for (const p of items) p.y += dy;
-  for (const p of items) p.x = Math.max(m, Math.min(vw - m, p.x));
-  return { side, items };
+  const h = item / 2;
+  /** A word's box for a choice at p, its word at `lp`. */
+  const wordBox = (p: { x: number; y: number }, lw: number, lp: TmLabelAt): TmRect =>
+    lp === 'r' ? { left: p.x + h + 9, top: p.y - 10, right: p.x + h + 9 + lw, bottom: p.y + 10 }
+      : lp === 'l' ? { left: p.x - h - 9 - lw, top: p.y - 10, right: p.x - h - 9, bottom: p.y + 10 }
+        : lp === 'b' ? { left: p.x - lw / 2, top: p.y + h + 5, right: p.x + lw / 2, bottom: p.y + h + 25 }
+          : { left: p.x - lw / 2, top: p.y - h - 25, right: p.x + lw / 2, bottom: p.y - h - 5 };
+  const lay = (side: 'right' | 'left', up: 1 | -1) => {
+    const items = Array.from({ length: n }, (_, i) => {
+      const a = from + i * step;
+      // each word on the arc's outer side: beside a choice at her side, under (over) one that has come round under
+      // (over) her — never across the next choice
+      const lp: TmLabelAt = a > (66 * Math.PI) / 180 ? (up === 1 ? 'b' : 't') : side === 'right' ? 'r' : 'l';
+      return { x: x + Math.cos(a) * R * (side === 'right' ? 1 : -1), y: y + Math.sin(a) * R * up, lp };
+    });
+    // on the screen: the arc moved up or down and in from the side as a whole (a finger apart still)
+    const top = Math.min(...items.map((p) => p.y)), bottom = Math.max(...items.map((p) => p.y));
+    const left = Math.min(...items.map((p) => p.x)), right = Math.max(...items.map((p) => p.x));
+    const dy = top < m ? m - top : bottom > vh - m ? vh - m - bottom : 0;
+    const dx = left < m ? m - left : right > vw - m ? vw - m - right : 0;
+    for (const p of items) {
+      p.y += dy;
+      p.x += dx;
+    }
+    // what it costs: a word off the screen, a choice or a word over the HUD or over another choice, a choice pressed
+    // onto her
+    let cost = 0;
+    const own = items.map((p) => ({ left: p.x - h, top: p.y - h, right: p.x + h, bottom: p.y + h }));
+    items.forEach((p, i) => {
+      const lw = label[i] ?? 0;
+      const boxes: TmRect[] = [own[i]];
+      if (lw) {
+        const w = wordBox(p, lw, p.lp);
+        boxes.push(w);
+        for (const [j, o] of own.entries()) if (j !== i) cost += Math.max(0, Math.min(o.right, w.right) - Math.max(o.left, w.left)) * Math.max(0, Math.min(o.bottom, w.bottom) - Math.max(o.top, w.top)) * 4;
+      }
+      for (const bx of boxes) {
+        cost += (Math.max(0, -bx.left) + Math.max(0, bx.right - vw) + Math.max(0, -bx.top) + Math.max(0, bx.bottom - vh)) * 20;
+        for (const av of avoid) cost += Math.max(0, Math.min(av.right, bx.right) - Math.max(av.left, bx.left)) * Math.max(0, Math.min(av.bottom, bx.bottom) - Math.max(av.top, bx.top));
+      }
+      cost += Math.max(0, r + h - Math.hypot(p.x - x, p.y - y)) * 400;
+    });
+    return { side, items, cost };
+  };
+  const first: 'right' | 'left' = x > vw * 0.66 ? 'left' : 'right';
+  const other: 'right' | 'left' = first === 'right' ? 'left' : 'right';
+  const low = y + R + m > vh;
+  const tries = [lay(first, low ? -1 : 1), lay(first, low ? 1 : -1), lay(other, low ? -1 : 1), lay(other, low ? 1 : -1)];
+  // the preferred way unless another is clearly better
+  let best = tries[0];
+  for (const t of tries.slice(1)) if (t.cost < best.cost * 0.6 - 1) best = t;
+  return { side: best.side, items: best.items, crowded: best.cost > item * item * 0.35 };
 }
 
 export class TargetMenu {
@@ -82,14 +133,6 @@ export class TargetMenu {
       this.hide();
       this.onPick(b.dataset.tm as TmId, about);
     });
-    this.el.addEventListener('pointerenter', () => {
-      this.hoverIn = true;
-      this.keep();
-    });
-    this.el.addEventListener('pointerleave', (e) => {
-      this.hoverIn = false;
-      if (e.pointerType === 'mouse') this.leave();
-    });
   }
 
   get isOpen(): boolean {
@@ -106,13 +149,26 @@ export class TargetMenu {
     return this.hoverIn;
   }
 
+  /** A desk, every frame: is the mouse (at x, y) on a choice or its word? On them or on the target they stay; off both
+   *  they go a moment later. Measured, not left to the pointer's enter and leave: the choices follow a sailing target,
+   *  and a choice that slides from under a still mouse says nothing. */
+  hoverAt(x: number, y: number, onTarget: boolean): void {
+    if (!this.isOpen) return;
+    const near = (r: DOMRect) => x >= r.left - 4 && x <= r.right + 4 && y >= r.top - 4 && y <= r.bottom + 4;
+    this.hoverIn = [...this.el.querySelectorAll<HTMLElement>('.tm-pic, .tm-l')].some((e) => near(e.getBoundingClientRect()));
+    if (this.hoverIn || onTarget) this.keep();
+    else this.leave();
+  }
+
   /** Open (or redraw) the choices about a target. */
   show(about: string, choices: TmChoice[], name: string): void {
     if (!choices.length) return this.hide();
     const key = `${about}|${choices.map((c) => `${c.id}:${c.art}:${c.label}:${c.on ? 1 : 0}`).join(',')}`;
-    if (!this.isOpen || this.about !== about) this.openedAt = performance.now();
+    if (!this.isOpen || this.about !== about) {
+      this.openedAt = performance.now();
+      this.keep();
+    }
     this.about = about;
-    this.keep();
     if (key !== this.choicesKey || !this.isOpen) {
       this.choicesKey = key;
       this.el.setAttribute('aria-label', L('tm.aria', { name }));
@@ -125,16 +181,19 @@ export class TargetMenu {
     }
   }
 
-  /** Stand beside the target where she is now (screen px, her picture's reach). */
-  place(x: number, y: number, r: number): void {
+  /** Stand beside the target where she is now (screen px, her picture's reach), off the HUD's controls (`avoid`). */
+  place(x: number, y: number, r: number, avoid: readonly TmRect[] = []): void {
     if (!this.isOpen) return;
     const items = [...this.el.querySelectorAll<HTMLElement>('.tm-item')];
     if (!items.length) return;
     const size = items[0].offsetWidth || 44;
-    const g = menuLayout(items.length, x, y, r, innerWidth, innerHeight, size);
+    const g = menuLayout(items.length, x, y, r, innerWidth, innerHeight, size, avoid, items.map((b) => b.querySelector<HTMLElement>('.tm-l')?.offsetWidth ?? 0));
+    // in among the HUD's own controls the choices would lie over them: none there (the action button has her)
+    if (g.crowded) return this.hide();
     this.el.dataset.side = g.side;
     items.forEach((b, i) => {
       b.style.transform = `translate(${Math.round(g.items[i].x - size / 2)}px, ${Math.round(g.items[i].y - size / 2)}px)`;
+      if (b.dataset.lp !== g.items[i].lp) b.dataset.lp = g.items[i].lp;
     });
   }
 
