@@ -19,7 +19,8 @@ import type { Side } from '../../../shared/src/protocol.ts';
 import { gunCrewFactor, tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
-import { crueltyMul, inDuel, legalTarget, onPlayerAttack, pvpBlocked } from './pvp.ts';
+import { crueltyMul, inDuel, legalTarget, neutral, onPlayerAttack, pvpBlocked } from './pvp.ts';
+import { markPvp } from './colours.ts';
 import { sameGroup } from './party.ts';
 import { siegeImpact } from './siege.ts';
 import { guildFriends } from './guilds.ts';
@@ -467,6 +468,8 @@ export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): 
   if (a.isPlayer && (b.isPlayer || b.caravanId)) {
     const safety = REGIONS[b.region].safety;
     if (safety === 'safe') return 'Safe waters: no PvP here.';
+    // Neutral colours (docs/24 D1) fire on no captain, nor on a captain's caravan.
+    if (b.caravanId && neutral(game.profileOf(a))) return 'You sail under neutral colours: you fire on no captain and board none. Change them in port.';
   }
   if (a.isPlayer && a.hasFlag('honest_merchant') && b.npcRole !== 'beast' && !game.isHostile(b, a) && !b.attackers.has(a.id)) {
     return 'Honest Merchant: you do not fire on peaceful ships.';
@@ -772,6 +775,8 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   if (source) {
     registerAggression(game, source, target);
     source.lastCombat = now;
+    // A fight between captains (not a duel by consent): the colours wait in port ten minutes after it (docs/24 D2).
+    if (source !== target && !inDuel(game, source)) markPvp(game, source, target);
   }
   target.lastCombat = now;
   target.protectedUntil = 0;
@@ -802,12 +807,13 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   if (d.crew) {
     let killed = Math.floor(d.crew);
     if (game.rng.float() < d.crew - killed) killed++;
-    killed = Math.min(killed, target.crew);
-    if (lad?.floorCrew) killed = Math.min(killed, Math.max(0, target.crew - Math.ceil(lad.floorCrew * target.stats.crewMax)));
-    // The First Watch's raider: the lesson's guns thin her men, but leave enough for the hex battle to be a real one.
+    // How many may fall at most: the ladder's floor of her men (a junior's guns), the First Watch's raider's (the lesson's
+    // guns thin her men, but leave enough for the hex battle to be a real one).
+    let cap = target.crew;
+    if (lad?.floorCrew) cap = Math.min(cap, Math.max(0, target.crew - Math.ceil(lad.floorCrew * target.stats.crewMax)));
     const floor = target.npcRole ? game.npcs.get(target.id)?.practiceFloor : undefined;
-    if (floor !== undefined) killed = Math.min(killed, Math.max(0, target.crew - floor));
-    fell = killMen(game, target, killed, source);
+    if (floor !== undefined) cap = Math.min(cap, Math.max(0, target.crew - floor));
+    fell = killMen(game, target, Math.min(killed, target.crew), source, cap);
   }
   if (d.morale) target.morale -= d.morale * moraleLossMul(target);
   // Terror: crews under 30% break twice as fast.
@@ -845,13 +851,17 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   return fell;
 }
 
-/** `killed` men fall from her stacks (by their exposure): the wounded among them, the crew's nerve, the Drowned's
- *  rising dead. No dice: every roll was made before. Returns the men actually lost. */
-export function killMen(game: Game, target: ShipEntity, killed: number, source: ShipEntity | null): number {
+/** A hit worth `killed` men of her as she stands (the old reckoning by exposure, so a shot weighs what it weighed)
+ *  falls on her stacks the fewest hit points a man first, then up (docs/24 B3, owner 2026-10-07: «убиваются сперва
+ *  существа с маленьким HP и потом по возрастанию»), no more than `cap` men: the wounded among them, the crew's
+ *  nerve, the Drowned's rising dead. No dice: every roll was made before. Returns the men actually lost. */
+export function killMen(game: Game, target: ShipEntity, killed: number, source: ShipEntity | null, cap = Infinity): number {
   killed = Math.max(0, Math.min(Math.floor(killed), target.crew));
-  if (!killed) return 0;
+  if (!killed || cap < 1) return 0;
   const before = target.crew;
-  target.loseMen(killed);
+  target.shotMen(killed, cap);
+  killed = before - target.crew;
+  if (!killed) return 0;
   target.wounded += woundedOf(game, target, killed);
   onCrewKilled(game, target, killed, source);
   onOwnCrewKilled(target, killed, game.now);

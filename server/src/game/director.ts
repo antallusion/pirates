@@ -30,6 +30,7 @@ import { mapChance } from './explorefx.ts';
 import type { Game } from './Game.ts';
 import { takeItem } from './gear.ts';
 import { levelNear, newBrain, spawnPirate } from './npc.ts';
+import { pirateSworn } from './colours.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { groupOfAccount } from './party.ts';
@@ -434,6 +435,7 @@ function sendPirates(game: Game, s: PlayerSession, n: number): void {
     if (p) {
       const b = game.npcs.get(p.id);
       if (b) b.chase = { id: s.ship!.id, until: game.now + 300 };
+      pirateSworn(game, b, s.ship!); // the encounter's own pirates: they come, neutral colours or not (docs/24 D1)
     }
   }
 }

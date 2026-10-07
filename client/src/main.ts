@@ -27,7 +27,7 @@ import { CAPTAINS } from '../../shared/src/data/captains.ts';
 import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, MOUNTS, SHIP_CLASSES, isZoneBossClass } from '../../shared/src/data/ships.ts';
 import { PORT_DOCK_RADIUS, isNight, timeOfDay } from '../../shared/src/constants.ts';
 import { angleDiff, clamp, dist, toShipLocal } from '../../shared/src/math.ts';
-import type { Aggression, SeaMarkData, ServerMsg } from '../../shared/src/protocol.ts';
+import type { Aggression, SeaMarkData, ServerMsg, ShipInfo } from '../../shared/src/protocol.ts';
 import { SF, STATIONS } from '../../shared/src/protocol.ts';
 import { REGIONS } from '../../shared/src/world/regions.ts';
 import { assetUrl, loadAssets } from './assets.ts';
@@ -117,6 +117,9 @@ import { ResearchWindow } from './ui/research.ts'; // the yard's tree of hulls (
 import { AdvCard } from './ui/advcard.ts'; // docs/17 H4
 import { PuzzleWindow } from './ui/puzzle.ts';
 import { crewSayParts, renderLog } from './ui/crewlife.ts';
+import { flagLine, flagsCss, shipColours } from './ui/flags.ts'; // docs/24 C1, D1–D3
+import { EN as FLAGS_EN, RU as FLAGS_RU } from './lang/ui/flags.ts';
+import { citiesHostile } from '../../shared/src/data/colours.ts';
 
 const L = dict(MAIN_EN, MAIN_RU);
 /** The captain last aboard on this device (docs/23 item 88: «Продолжить: …» on the title screen). */
@@ -171,6 +174,8 @@ const seenSights = new Set<number>();
 let lastInputSent = 0;
 let lastInputKey = '';
 let boardTarget: number | null = null;
+/** Why no ship in the grapples' reach may be boarded: boarding off on hers or yours (docs/24 C1). */
+let noBoardWhy: string | null = null;
 let aimSide: 'port' | 'starboard' | null = null;
 /** The target frame's ship (canon D12): chosen by a tap, a click on her or the target key; else the nearest hostile. */
 let targetId: number | null = null;
@@ -486,6 +491,7 @@ const LI = dict(ISLES_EN, ISLES_RU);
 const LLAIR = dict(LAIRS_EN, LAIRS_RU); // docs/18 II
 const L18 = dict(I18_EN, I18_RU); // docs/18 III
 const LROAM = dict(ROAM_EN, ROAM_RU); // docs/19 D7
+const LFL = dict(FLAGS_EN, FLAGS_RU); // docs/24 C1, D1
 
 /** docs/18 #28: the land key on an island two levels or more above her ship asks first (once an island). */
 let landOk = '';
@@ -540,6 +546,7 @@ onSettings((s) => {
 });
 document.documentElement.lang = lang();
 applyDataLocale(lang());
+flagsCss(); // the colours' stylesheet (docs/24; index.html is the sea HUD's)
 translateDom();
 markLang();
 onLang(() => {
@@ -1813,7 +1820,7 @@ addEventListener('keydown', (e) => {
       if (boardTarget !== null) {
         const aggression: Aggression = e.shiftKey ? 'careful' : e.ctrlKey ? 'brutal' : 'standard';
         net.send({ t: 'board', target: boardTarget, aggression });
-      } else hud.toast(L('noCrippled'), 'bad');
+      } else hud.toast(noBoardWhy ?? L('noCrippled'), 'bad');
       break;
     case 'land': {
       // With nothing ashore to land at, the same key cuts the mast wreckage, casts the net into a shoal (owner,
@@ -2146,6 +2153,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const self = state.self;
   const you = state.you;
   boardTarget = null;
+  noBoardWhy = null;
   if (!own || !self || !you) return { acts: [], info: [] };
   if (self.dockedAt) return { acts: buildActs({ grabbed: grabbed(), docked: true, harbourOpen: modal === 'port' }), info: [] };
   const st = state.ownStats!;
@@ -2161,6 +2169,11 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     // Nor on a great one's body or limbs (the server refuses them); held by one, she has «Axes!» on the same key and
     // no second button for it (QA, 2026-10-04).
     if (held || state.bosses.some((b) => b.noBoard?.includes(s.id))) continue;
+    // Boarding off on her ship or on yours (docs/24 C1): guns only, no «На абордаж» (the key says why, once a press).
+    if ((c.flags | (you.flags ?? 0)) & SF.NO_BOARD) {
+      noBoardWhy = LFL(you.flags & SF.NO_BOARD ? 'fl.offYou' : 'fl.offHer');
+      continue;
+    }
     const d = dist(own.x, own.y, c.x, c.y);
     const range = st.boardingRange + (st.beam + cls.beam) / 2;
     if (d > range) continue;
@@ -2298,7 +2311,7 @@ function runAct(a: Act): void {
     case 'harbour':
       return openModal('port');
     case 'board':
-      return void (boardTarget !== null ? net.send({ t: 'board', target: boardTarget, aggression: 'standard' }) : hud.toast(L('noCrippled'), 'bad'));
+      return void (boardTarget !== null ? net.send({ t: 'board', target: boardTarget, aggression: 'standard' }) : hud.toast(noBoardWhy ?? L('noCrippled'), 'bad'));
     case 'dock':
       return requestDock(false);
     case 'homeport':
@@ -2361,8 +2374,18 @@ function attackable(id: number | null): boolean {
   const own = state.ownDisplay;
   if (!s?.info || !own || state.self?.dockedAt || s.cur.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED)) return false;
   if (dist(own.x, own.y, s.cur.x, s.cur.y) > 2500) return false;
-  if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(s.cur.flags & SF.HOSTILE)) return false;
+  if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(s.cur.flags & SF.HOSTILE) && !fairCaptain(s.cur.flags, s.info)) return false;
   return true;
+}
+
+/** A captain her colours let her come for before a shot is fired (docs/24 D1): the pirate flag either side, or two
+ *  cities at enmity; never under neutral colours. The server's rule (colours.ts) has the last word. */
+function fairCaptain(flags: number, info: ShipInfo): boolean {
+  const me = state.self?.pvp;
+  const them = shipColours(flags, info);
+  if (!me || !them || me.flag === 'neutral' || them.kind === 'neutral' || them.pennant) return false;
+  if (me.flag === 'pirate' || them.kind === 'pirate') return true;
+  return !!them.city && citiesHostile(me.city, them.city);
 }
 
 /** A ship no grapple takes (a beast of the sea, a monster, a zone boss, a great one's body or limb): «Атаковать» on her
@@ -2370,7 +2393,9 @@ function attackable(id: number | null): boolean {
 function unboardableMark(id: number): boolean {
   const info = state.ships.get(id)?.info;
   if (!info) return false;
-  return info.npcRole === 'beast' || !!beastOfClass(info.classId) || !!SHIP_CLASSES[info.classId]?.monster || isZoneBossClass(info.classId) || state.bosses.some((b) => b.noBoard?.includes(id));
+  // …nor one with boarding off, or from hers (docs/24 C1).
+  const nb = ((state.ships.get(id)?.cur.flags ?? 0) | (state.you?.flags ?? 0)) & SF.NO_BOARD;
+  return !!nb || info.npcRole === 'beast' || !!beastOfClass(info.classId) || !!SHIP_CLASSES[info.classId]?.monster || isZoneBossClass(info.classId) || state.bosses.some((b) => b.noBoard?.includes(id));
 }
 
 /** docs/19 D7: a stack's card («Осмотреть»): its «Атаковать» is the same run as the action button's, «Отпустить» the
@@ -2549,8 +2574,10 @@ function seaTarget(): TargetInfo | null {
   const odds = od && performance.now() / 1000 - od.at < 15 ? od : null;
   const beast = beastOfClass(s.info.classId);
   const name = beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : s.info.isPlayer ? s.info.captainName : placeName(s.info.name);
+  const colours = flagLine(shipColours(s.cur.flags, s.info)); // docs/24 D2: her flag on the line
   return {
     name, hull: s.cur.hull,
+    ...(colours ? { colours } : {}),
     ...(beast ? {} : { crew: s.cur.crew }),
     ...(s.info.shipLevel ? { level: s.info.shipLevel, threat: threatTo(s.info.shipLevel, s.info.classId) } : {}),
     ...(odds ? { chance: odds.chance } : {}),

@@ -22,7 +22,7 @@ import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { dist } from '../../../shared/src/math.ts';
 import type { Game } from './Game.ts';
 import { ignores } from './friends.ts';
-import { hasPennant, tie } from './pvp.ts';
+import { hasPennant, neutral, tie } from './pvp.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
@@ -670,7 +670,10 @@ function settleBarter(game: Game, b: Barter): string | null {
     if (why) return cancelBarter(game, b, why);
   }
   for (const [s, give, take] of [[A, oa, ob], [B, ob, oa]] as const) {
+    // Shielded captains are no mules: no captain may fire on them, so they take nothing from another captain — under the
+    // Green Pennant anywhere, under neutral colours (docs/24 D1) at sea (across a quay she may: no hiding place there).
     if ((Object.keys(take.cargo).length || take.items.length) && hasPennant(game, s.profile!)) return cancelBarter(game, b, `${s.name} sails under the Green Pennant and may take no goods from other captains`);
+    if ((Object.keys(take.cargo).length || take.items.length) && neutral(s.profile) && !s.ship?.docked) return cancelBarter(game, b, `${s.name} sails under neutral colours and may take no goods from other captains`);
     const st = s.ship!.stats;
     const after: Cargo = { ...s.ship!.cargo };
     for (const [g, n] of Object.entries(give.cargo)) after[g as GoodId] = (after[g as GoodId] ?? 0) - (n ?? 0);

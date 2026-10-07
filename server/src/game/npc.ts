@@ -25,6 +25,7 @@ import { depthAt, isLand, regionAt } from '../../../shared/src/world/worldgen.ts
 import { sectorAt } from '../../../shared/src/world/sectors.ts';
 import { canBoard, startBoarding } from './boarding.ts';
 import { npcWouldBoard } from './army.ts';
+import { boardingOff, coloursOf, pirateDares, pirateSworn } from './colours.ts';
 import { avoidPort } from './events.ts';
 import { convoyArrived } from './empires.ts';
 import { applyDamage, dash, effectiveRange, fireBroadside, fireChaser, igniteShip, sideHeading } from './combat.ts';
@@ -98,6 +99,9 @@ export interface NpcBrain {
   fireship?: number;
   /** Her captain's craft when it is not her level's (the balance sims' scripted captains, docs/12 §3.6). */
   skill?: NpcSkill;
+  /** A pirate's mind about the neutral captains he has seen (docs/24 D1, colours.ts pirateDares): ship id → until when
+   *  (world s), positive when he dares, negative when he lets her be. */
+  dares?: Map<number, number>;
 }
 
 const SHIP_NAMES = [
@@ -239,6 +243,8 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
     switch (role) {
       case 'patrol':
         if (other.hasEffect('bribe_signal') && npc.faction !== 'harpoon') return false;
+        // The pirate flag (docs/24 D1: «на вас напасть могут все»): the Crown's and the League's patrols come for her.
+        if (coloursOf(p) === 'pirate' && (npc.faction === 'crown' || npc.faction === 'league')) return true;
         return wanted >= 2 && (npc.faction === 'crown' || (npc.faction === 'league' && wanted >= 3) || (npc.faction === 'harpoon' && wanted >= 4));
       case 'hunter':
         return wanted >= 3;
@@ -254,6 +260,8 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
         // Gold Fever: a hoard in the hold draws pirates even into safe water.
         if (safety === 'safe' && !p?.explore.hoardAboard) return false;
         if (p && (p.reputation.confederacy ?? 0) >= 30) return false;
+        // Neutral colours (docs/24 D1): «на нейтральный флаг только пираты NPC могут нападать иногда, очень редко».
+        if (p && coloursOf(p) === 'neutral' && !pirateDares(game, game.npcs.get(npc.id), other)) return false;
         return !other.surrendered;
       case 'ghost':
         if (other.hasFlag('tattoo_dutchman') || other.hasFlag('fh_dutchman')) return false; // the Flying Dutchman's mark (docs/12 P9)
@@ -659,8 +667,9 @@ function chooseAmmo(ship: ShipEntity, target: ShipEntity, d: number, wantsBoard:
 }
 
 export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: ShipEntity, d: number): void {
-  // Pirates want the cargo, so they cripple and board; everyone else fights to sink.
-  const wantsBoard = brain.role === 'pirate';
+  // Pirates want the cargo, so they cripple and board; everyone else fights to sink. A ship with boarding off (docs/24
+  // C1) is fought with the guns to the end.
+  const wantsBoard = brain.role === 'pirate' && !boardingOff(game, target);
   ship.ammoSel = chooseAmmo(ship, target, d, wantsBoard);
   // The First Watch's raider is a lesson, not a massacre: she closes as a pirate does (the pupil's grapples must reach
   // her) but never throws her own (she boarded, won and robbed a novice every 90 s, the lesson's gunnery never done).
@@ -905,6 +914,7 @@ export function rallyPack(game: Game, ship: ShipEntity, prey: ShipEntity): numbe
     b.flank = sides[n];
     b.flankUntil = now + FLANK_SEC;
     b.ambushing = false;
+    pirateSworn(game, b, prey); // a pack called on a neutral captain comes with its leader (docs/24 D1)
     n++;
   });
   if (n > 0) game.toastShip(prey, 'A pirate pack closes in — sails on both quarters!', 'bad');

@@ -26,6 +26,7 @@ import { angleDiff, DEG, headingOf } from '../../../shared/src/math.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { stopAutosail, autosailOf } from './autosail.ts';
 import { boardingRangeBetween } from './boarding.ts';
+import { NO_BOARD_HER, NO_BOARD_OWN, boardingOff } from './colours.ts';
 import { applyDamage, damageBlocked, effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
 import type { Game } from './Game.ts';
 import { engageHelm, helmTo, newBrain } from './npc.ts';
@@ -124,6 +125,11 @@ export function startPursuit(game: Game, s: PlayerSession, id: number, mode: Pur
   if (why) return why;
   if (autosailOf(ship)) stopAutosail(game, s, 'manual');
   if (mode === 'board' && unboardable(target!)) mode = 'guns';
+  // «Абордаж: выкл» on either ship (docs/24 C1): the guns' fight, and why, once (at the order, not every tick).
+  if (mode === 'board' && (boardingOff(game, ship) || boardingOff(game, target!))) {
+    mode = 'guns';
+    game.sendTo(s, { t: 'toast', msg: boardingOff(game, ship) ? NO_BOARD_OWN : NO_BOARD_HER, kind: 'info' });
+  }
   const prev = runs.get(ship);
   const run: Pursuit = prev && prev.target === id && prev.roam === undefined
     ? { ...prev, mode }

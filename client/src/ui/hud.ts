@@ -41,6 +41,7 @@ import type { SectorData } from '../../../shared/src/protocol.ts';
 import { assetUrl, sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import { $, bar, dec1, decorateSums, esc, fmt, icon, knots, pct } from './dom.ts';
+import { flagChip, shipColours } from './flags.ts'; // docs/24 D2: her colours on the target card
 import { compassKey, objective, questPointer, trackedQuest, waypoint, waypointHooks } from './track.ts';
 import { DAILY_DEFS } from '../../../shared/src/data/dailies.ts';
 import { EN, RU } from '../lang/ui/hud.ts';
@@ -1666,7 +1667,7 @@ export class Hud {
     // Her boarding chance (docs/23 item 49): the battle played out on the server, asked every few seconds.
     const od = id !== null ? state.boardOdds.get(id) : undefined;
     const odds = od && performance.now() / 1000 - od.at < 15 ? od : null;
-    const key = `${odds ? `${odds.chance}|${odds.risky}` : ''}|${lang()}|${id}|${info.shipLevel}|${threat}|${Math.round(c.hull * 50)}|${Math.round(c.crew * 50)}|${Math.round(c.sails * 50)}|${fx.join(',')}|${dist}|${info.title ?? ''}|${ap ? `${ap.value}|${ap.fill}|${ap.escorts}|${ap.dest}` : ''}|${struck}`;
+    const key = `${odds ? `${odds.chance}|${odds.risky}` : ''}|${lang()}|${id}|${info.shipLevel}|${threat}|${Math.round(c.hull * 50)}|${Math.round(c.crew * 50)}|${Math.round(c.sails * 50)}|${fx.join(',')}|${dist}|${info.title ?? ''}|${ap ? `${ap.value}|${ap.fill}|${ap.escorts}|${ap.dest}` : ''}|${struck}|${c.flags & (SF.BLACK_FLAG | SF.NEUTRAL | SF.NO_BOARD)}:${info.city ?? ''}`;
     if (key === this.lastTargetKey) return;
     this.lastTargetKey = key;
     el.classList.remove('hidden');
@@ -1693,6 +1694,7 @@ export class Hud {
     el.className = `hud-block tg${info.elite ? ' tg-elite' : ''}${threat ? ` tg-${threat}` : ''}`;
     el.innerHTML = `<div class="tg-head">${info.shipLevel ? levelChip(info.shipLevel, info.classId) : ''}<b class="tg-name">${esc(name)}</b><span class="tg-dist">${esc(dist)}</span></div>
       <div class="tg-sub muted">${info.isPlayer && info.title ? `<span class="tg-title">${esc(sv(info.title))}</span> · ` : ''}${named ? `<span class="tg-wanted">${esc(named.tag)}</span> · ` : ''}${esc([guard || sameWords(cls?.name ?? info.classId, name) ? '' : cls?.name ?? info.classId, role].filter(Boolean).join(' · '))}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
+      ${info.isPlayer ? `<div class="tg-colours">${flagChip(shipColours(c.flags, info))}</div>` : ''}
       ${bar('hull', c.hull)}${bar('crew', c.crew)}${bar('sails', c.sails)}
       ${isZoneBossClass(info.classId) ? `<div class="tg-glass">${esc(L('tg.zboss'))}</div>` : info.crewMax ? armyGlance(Math.round(c.crew * info.crewMax), info.units ?? []) : ''}
       ${ap && !isZoneBossClass(info.classId) ? `<div class="tg-glass">${esc(L(ap.exact ? 'tg.glassExact' : 'tg.glass', { v: ap.value.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB'), fill: Math.round(ap.fill * 100), esc: ap.escorts, crew: ap.crew }))}${ap.dest ? ` · ${esc(L('tg.glassDest', { port: placeName(ap.dest) }))}` : ''}</div>` : ''}

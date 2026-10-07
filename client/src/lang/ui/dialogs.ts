@@ -143,14 +143,14 @@ export const EN = {
   'help.screens': 'World chart · talents · ship & hold · crew and officers (orders, the Codex share).',
   'help.zoom': 'Zoom.',
   'help.mute': 'Sound on / off.',
-  'help.company': 'Company & Letters: your group and the convoy signal, trading with another captain, your colours (the Black Flag), duels and the bounty board, letters by packet boat, the market board in port ({auction}: the trophy auction).',
+  'help.company': 'Company & Letters: your group and the convoy signal, trading with another captain, your colours (neutral, your city’s or guild’s, the pirate flag — changed in port), duels and the bounty board, letters by packet boat, the market board in port ({auction}: the trophy auction).',
   'help.chat': 'Chat. Start with /g to speak to your group only, /w Name to whisper to one captain, /r to answer the last whisper, /ignore Name to stop hearing a captain.',
   'help.firstVoyage': 'First voyage',
   'help.firstVoyageText': '{start} sells cheap provisions and salt. {second}, east along {coast}, pays for salt and sells sugar and rum. {capital} buys sugar. Every sale earns experience.',
   'help.law': 'The law',
   'help.lawText': 'Attacking lawful ships raises your Wanted level. Crown ports close at Wanted 2, League at 3. Pirate havens ({a}, {b}) never close. Pardons are sold in free and broker ports.',
   'help.risk': 'Risk',
-  'help.riskText': 'Safe waters ({safe}) forbid PvP but for duels by consent. Contested and lawless waters do not — though young captains sail under the Green Pennant in contested water, and a sunk captain is protected for ten minutes. When sunk you keep your ship, level and talents — but cargo, some crew, a repair fee and a tenth of the silver aboard are lost. The League bank keeps the rest safe.',
+  'help.riskText': 'Safe waters ({safe}) forbid fights between captains but for duels by consent. Elsewhere the colours decide: neutral — no captain attacks you, and you none; your city’s or guild’s — pirates and enemies of your city or guild may; the pirate flag — anyone. Young captains sail under the Green Pennant in contested water, and a sunk captain is protected for ten minutes. When sunk you keep your ship, level and talents — but cargo, some crew, a repair fee and a tenth of the silver aboard are lost. The League bank keeps the rest safe.',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -292,12 +292,12 @@ export const RU: Record<keyof typeof EN, string> = {
   'help.screens': 'Карта мира · таланты · корабль и трюм · команда и офицеры (приказы, доля по Кодексу).',
   'help.zoom': 'Масштаб.',
   'help.mute': 'Звук вкл. / выкл.',
-  'help.company': 'Компания и письма: ваш отряд и сигнал конвоя, торг с другим капитаном, ваши цвета (Чёрный флаг), дуэли и доска наград за головы, письма с пакетботом, рыночная доска в порту ({auction}: аукцион трофеев).',
+  'help.company': 'Компания и письма: ваш отряд и сигнал конвоя, торг с другим капитаном, ваш флаг (нейтральный, города или гильдии, пиратский — меняется в порту), дуэли и доска наград за головы, письма с пакетботом, рыночная доска в порту ({auction}: аукцион трофеев).',
   'help.chat': 'Разговор. Начните с /g, чтобы говорить только со своим отрядом, с /ш Имя — чтобы шепнуть одному капитану, с /о — чтобы ответить на последний шёпот, /игнор Имя — чтобы не слышать капитана.',
   'help.firstVoyage': 'Первое плавание',
   'help.firstVoyageText': '{start}: здесь дёшевы провиант и соль. Восточнее, там же ({coast}), лежит {second} — там платят за соль и продают сахар и ром. {capital} покупает сахар. Всякая продажа приносит опыт.',
   'help.law': 'Закон',
   'help.lawText': 'Нападение на мирные суда повышает степень розыска. Порты Короны закрываются при розыске 2, Лиги — при 3. Пиратские гавани ({a}, {b}) не закрываются никогда. Помилования продаются в вольных портах и портах маклеров.',
   'help.risk': 'Опасность',
-  'help.riskText': 'В безопасных водах ({safe}) капитаны не нападают друг на друга, кроме дуэлей по согласию. В спорных и беззаконных водах — нет, хотя молодые капитаны ходят в спорных водах под Зелёным вымпелом, а потопленный капитан десять минут под защитой. Пойдя ко дну, вы сохраняете корабль, уровень и таланты — но теряете груз, часть команды, плату за починку и десятую долю серебра на борту. Банк Лиги сбережёт остальное.',
+  'help.riskText': 'В безопасных водах ({safe}) капитаны не нападают друг на друга, кроме дуэлей по согласию. В остальных решает флаг: нейтральный — на вас не нападают, и вы ни на кого; флаг города или гильдии — могут пираты и враги вашего города или гильдии; пиратский — кто угодно. Молодые капитаны ходят в спорных водах под Зелёным вымпелом, а потопленный капитан десять минут под защитой. Пойдя ко дну, вы сохраняете корабль, уровень и таланты — но теряете груз, часть команды, плату за починку и десятую долю серебра на борту. Банк Лиги сбережёт остальное.',
 };

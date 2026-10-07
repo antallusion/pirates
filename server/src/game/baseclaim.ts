@@ -33,7 +33,7 @@ import { spawnPirate } from './npc.ts';
 import { changeRep } from './player.ts';
 import type { PlayerSession } from './player.ts';
 import { deliver } from './post.ts';
-import { flying, hasPennant } from './pvp.ts';
+import { flying, hasPennant, neutral } from './pvp.ts';
 import { lairIsland } from './wanted.ts';
 
 const DAY = 86_400_000;
@@ -426,6 +426,7 @@ function robWhy(game: Game, s: PlayerSession, h: Holding, isl: Island): string |
   if (!flying(p)) return 'Hoist the black flag to rob a captain’s island.';
   const owner = game.sessionByAccount(h.owner.id);
   if (owner?.profile && hasPennant(game, owner.profile)) return 'Its captain sails under the Green Pennant.';
+  if (owner?.profile && neutral(owner.profile)) return 'Its captain sails under neutral colours.'; // docs/24 D1
   const ship = s.ship!;
   if (islandNear(game, ship)?.id !== isl.id || ship.state.speed > 1.5) return 'Heave to off the island first.';
   const c = claimOf(game, h);

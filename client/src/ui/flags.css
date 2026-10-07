@@ -1,0 +1,94 @@
+/* A captain's colours and «Абордаж: выкл» (docs/24 C1, D1–D3; client/src/ui/flags.ts). Put in by flags.ts (index.html
+   belongs to the sea HUD's layout). Pirate Gothic of docs/06: dark wood, tarnished brass, gold only on what flies now;
+   the flags are a cloth on a pole drawn here (no art of their own, no skulls). Every target 44 px high and up. */
+
+/* ---------- The cloth: --fl-c the field, --fl-s the stripe (the pirate flag's red bar, a city's lantern) */
+.fl-mark {
+  position: relative; display: inline-block; flex: none; width: 22px; height: 18px; vertical-align: middle;
+}
+.fl-mark::before { /* the pole */
+  content: ''; position: absolute; left: 1px; top: 0; bottom: 0; width: 2px; border-radius: 1px; background: #8a7a5c;
+}
+.fl-mark::after { /* the cloth, a little swallow-tailed */
+  content: ''; position: absolute; left: 3px; top: 1px; width: 18px; height: 11px;
+  background: linear-gradient(180deg, transparent 0 62%, var(--fl-s) 62% 80%, transparent 80%), var(--fl-c);
+  clip-path: polygon(0 0, 100% 0, 84% 50%, 100% 100%, 0 100%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.fl-mark.fl-pirate::after { background: linear-gradient(135deg, transparent 0 40%, var(--fl-s) 40% 58%, transparent 58%), var(--fl-c); box-shadow: inset 0 0 0 1px #8d8676; }
+.fl-mark.fl-neutral::after { background: var(--fl-c); box-shadow: inset 0 0 0 1px var(--fl-s); }
+
+/* ---------- The card: three big options one under another (a cloth, the name, the line, what flies), the boarding switch */
+.fl-card .fl-opts { display: grid; grid-template-columns: 1fr; gap: 4px; margin: 0 0 2px; }
+.fl-opt, .fl-board {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; width: 100%; box-sizing: border-box;
+  padding: 4px 10px; text-align: left; cursor: pointer; color: var(--k-bone, #d8d2c4);
+  border: 1px solid var(--k-brass-dim, #6f5a38); border-radius: 2px; background: linear-gradient(180deg, #221d18, #14110d);
+  font: inherit; line-height: 1.25;
+}
+.fl-opt .fl-mark { transform: scale(1.25); transform-origin: left center; margin-right: 4px; }
+.fl-opt:hover:not(:disabled), .fl-board:hover:not(:disabled) { border-color: var(--k-brass, #b08d57); }
+.fl-opt:focus-visible, .fl-board:focus-visible { outline: 2px solid var(--k-gold, #e0b862); outline-offset: 2px; }
+.fl-opt.on { border-color: var(--k-gold, #e0b862); box-shadow: inset 0 0 0 1px rgba(224, 184, 98, 0.35); }
+.fl-opt.soon { border-style: dashed; border-color: var(--k-brass, #b08d57); }
+.fl-opt:disabled, .fl-board:disabled { cursor: default; opacity: 0.62; }
+.fl-opt.on:disabled { opacity: 1; }
+/* The option's words in a grid: the name (and its city) on the left, the line in the middle, what flies on the right. */
+.fl-opt .fl-t { flex: 1; display: grid; grid-template-columns: minmax(118px, 170px) 1fr auto; grid-template-areas: 'name line state' 'whose line state'; column-gap: 12px; align-items: center; min-width: 0; }
+.fl-opt .fl-t b { grid-area: name; }
+.fl-opt .fl-whose { grid-area: whose; }
+.fl-opt .fl-t small { grid-area: line; }
+.fl-opt .fl-on, .fl-opt .fl-soon { grid-area: state; text-align: right; max-width: 150px; }
+.fl-t { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.fl-t b { font-family: var(--k-font-serif, Georgia, serif); font-size: 17px; font-weight: 700; line-height: 1.15; }
+.fl-t small { font-size: 12px; line-height: 1.3; color: #b4ad9e; overflow-wrap: anywhere; }
+.fl-whose { font-size: 12px; color: var(--k-brass, #b08d57); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fl-pen { /* the Green Pennant over a young captain's city flag */
+  display: inline-block; width: 12px; height: 7px; margin-left: 5px; vertical-align: 1px; background: #3f7d4a;
+  clip-path: polygon(0 0, 100% 50%, 0 100%); box-shadow: inset 0 0 0 1px #c8d6b8;
+}
+.fl-on, .fl-soon { font-style: normal; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.2; }
+.fl-on { color: var(--k-gold, #e0b862); }
+.fl-soon { color: var(--k-warn, #e6a04a); }
+.fl-line { margin: 2px 0 4px !important; font-size: 12px !important; line-height: 1.3; }
+.fl-line .good { color: var(--k-good, #7fb58a); }
+.fl-board .fl-t { flex: 1; display: grid; grid-template-columns: minmax(118px, 170px) 1fr; column-gap: 12px; align-items: center; }
+.fl-nb-ico { /* a grapnel's hook, crossed when boarding is off */
+  position: relative; flex: none; width: 22px; height: 22px; box-sizing: border-box; border: 2px solid #8a7a5c; border-top-color: transparent; border-radius: 50%;
+}
+.fl-board.off .fl-nb-ico::after {
+  content: ''; position: absolute; left: -3px; top: 8px; width: 24px; height: 2px; background: var(--k-bad, #d06a5e); transform: rotate(-40deg);
+}
+.fl-sw { /* the switch */
+  position: relative; flex: none; width: 40px; height: 22px; box-sizing: border-box; border-radius: 999px; background: #3e4b57; border: 1px solid #6f5a38;
+}
+.fl-sw::after {
+  content: ''; position: absolute; top: 2px; left: 20px; width: 16px; height: 16px; border-radius: 50%; background: var(--k-good, #7fb58a);
+  transition: left var(--k-dur-2, 200ms) var(--k-ease-out, ease-out);
+}
+.fl-board.off .fl-sw::after { left: 2px; background: var(--k-bad, #d06a5e); }
+
+/* ---------- On the target card and line */
+.fl-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #cfc6b2; white-space: nowrap; }
+.fl-chip .fl-mark { width: 18px; height: 14px; }
+.fl-chip .fl-mark::after { width: 14px; height: 9px; }
+.fl-chip--pirate span { color: #e0958a; }
+.fl-chip--neutral span { color: #e6e0d0; }
+.fl-nb { font-style: normal; color: var(--k-warn, #e6a04a); }
+.fl-nb::before { content: '· '; color: #8a99a5; }
+.tg-colours { margin: 2px 0 0; }
+.k-target-flag { position: relative; display: inline-block; flex: none; width: 12px; height: 11px; margin-right: 1px; }
+.k-target-flag::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: #8a7a5c; }
+.k-target-flag::after {
+  content: ''; position: absolute; left: 2px; top: 1px; width: 10px; height: 7px; background: var(--fl-c);
+  clip-path: polygon(0 0, 100% 0, 84% 50%, 100% 100%, 0 100%); box-shadow: inset 0 0 0 1px var(--fl-s);
+}
+.k-target-flag[data-nb]::before { box-shadow: 0 0 0 1px var(--k-warn, #e6a04a); }
+
+/* ---------- A narrow card (a phone held sideways, the ship window's column): the line under the name */
+.fl-card { container-type: inline-size; }
+@container (max-width: 560px) {
+  .fl-opt .fl-t { grid-template-columns: 1fr auto; grid-template-areas: 'name state' 'whose state' 'line line'; }
+  .fl-board .fl-t { grid-template-columns: 1fr; }
+  .fl-t b { font-size: 16px; }
+}

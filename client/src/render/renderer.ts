@@ -61,6 +61,9 @@ import type { Palette } from './terrain.ts';
 import { dict, lang } from '../i18n.ts';
 import { personName } from '../lang/names.ts';
 import { dec1 } from '../ui/dom.ts';
+import { shipCloth, shipColours } from '../ui/flags.ts'; // docs/24 D1–D2
+import type { ShipColours } from '../ui/flags.ts';
+import { EN as FL_EN, RU as FL_RU } from '../lang/ui/flags.ts';
 import { objective } from '../ui/track.ts';
 import { AIM_CHARGE, AIM_PERFECT, AIM_TAP, AIM_WAVER, aimFocus, windDrift } from '../../../shared/src/data/gunnery.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
@@ -69,6 +72,7 @@ import type { LifeSite } from '../../../shared/src/world/islandlife.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
 
 const L = dict(REN, RRU);
+const LF = dict(FL_EN, FL_RU); // docs/24: a captain's colours
 const hasRole = (r: string): r is 'merchant' => `role.${r}` in REN;
 import { cbColor, settings } from '../settings.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
@@ -2235,12 +2239,13 @@ export class Renderer {
 
   private drawPennant(s: DrawShip, len: number, beam: number, state: ClientState): void {
     const g = this.g;
-    // A captain's colours: the Black Flag, the Green Pennant, or plain slate.
+    // A captain's colours (docs/24 D1): the pirate flag black, neutral colours white, the Green Pennant green, her city's
+    // in its colours (or her own flag, docs/12 P10 #12, over them; a season's pennant before them).
     const player = s.own || s.info?.isPlayer;
     const season = s.own ? state.self?.pennant : s.info?.pennant;
     // Her own flag (docs/12 P10 #12), unless she flies the Black Flag or the Green Pennant.
     const lookKey = s.own ? state.self?.look : s.info?.look;
-    const look = player && !(s.flags & SF.BLACK_FLAG) && !(s.flags & SF.GREEN_PENNANT) ? decodeLook(lookKey) : null;
+    const look = player && !(s.flags & (SF.BLACK_FLAG | SF.NEUTRAL | SF.GREEN_PENNANT)) ? decodeLook(lookKey) : null;
     if (look && lookKey && (look.field || look.emblem || look.c1 || look.c2 !== 1 || look.c3 !== 2)) {
       const flow = state.wind[0] - s.h - Math.PI / 2;
       const w = beam * 0.62, h = w * 0.66; // a small flag at the masthead, not a sail
@@ -2255,7 +2260,8 @@ export class Renderer {
       g.restore();
       return;
     }
-    const color = player ? (s.flags & SF.BLACK_FLAG ? '#0b0b0b' : s.flags & SF.GREEN_PENNANT ? '#3f7d4a' : season ?? '#3b4652') : s.info && s.info.faction !== 'player' ? FACTIONS[s.info.faction].flag : '#444';
+    const city = s.own ? (state.self?.pvp.flag === 'faction' ? state.self.pvp.city : null) : s.info?.city;
+    const color = player ? (s.flags & SF.BLACK_FLAG ? '#0b0b0b' : s.flags & SF.NEUTRAL ? '#e6e0d0' : s.flags & SF.GREEN_PENNANT ? '#3f7d4a' : season ?? (city ? FACTIONS[city].flag : '#3b4652')) : s.info && s.info.faction !== 'player' ? FACTIONS[s.info.faction].flag : '#444';
     const trim = s.own || s.info?.isPlayer ? '#d8d2c4' : 'rgba(0,0,0,0.6)';
     const wave = Math.sin(this.time * 6 + s.id) * beam * 0.12;
     const y0 = -len * 0.18;
@@ -3814,6 +3820,45 @@ export class Renderer {
     }
   }
 
+  /** A captain's colours after her name (docs/24 D1): a little cloth on a pole, 15×11 from (x, y) at its top-left —
+   *  white for neutral, black with a red bar for the pirate flag, her city's colours — and, with boarding off (C1), a
+   *  grapnel's ring struck through beside it. */
+  private colourFlag(c: ShipColours, x: number, y: number): void {
+    const g = this.g;
+    const { c: cloth, s: stripe } = shipCloth(c);
+    g.save();
+    g.fillStyle = 'rgba(0,0,0,0.65)';
+    g.fillRect(x - 1, y - 1, 15, 13);
+    g.fillStyle = '#8a7a5c';
+    g.fillRect(x, y, 2, 12);
+    g.beginPath();
+    g.moveTo(x + 2, y);
+    g.lineTo(x + 13, y);
+    g.lineTo(x + 11, y + 4);
+    g.lineTo(x + 13, y + 8);
+    g.lineTo(x + 2, y + 8);
+    g.closePath();
+    g.fillStyle = cloth;
+    g.fill();
+    g.strokeStyle = c.kind === 'neutral' ? stripe : c.kind === 'pirate' ? '#8d8676' : 'rgba(0,0,0,0.5)';
+    g.lineWidth = 1;
+    g.stroke();
+    g.fillStyle = stripe;
+    if (c.kind === 'pirate') g.fillRect(x + 6, y + 1, 2, 7);
+    else if (c.kind === 'faction') g.fillRect(x + 2, y + 5, 10, 2);
+    if (c.noBoard) {
+      const bx = x + 20, by = y + 5;
+      g.strokeStyle = '#e6a04a';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.arc(bx, by, 4.5, 0, Math.PI * 2);
+      g.moveTo(bx - 3.2, by + 3.2);
+      g.lineTo(bx + 3.2, by - 3.2);
+      g.stroke();
+    }
+    g.restore();
+  }
+
   /** «в дальности» / «далеко» under her mark's ring (owner, 2026-10-07: she must see when her guns reach). */
   private rangeWord(x: number, y: number): void {
     if (!this.markRange) return;
@@ -3883,7 +3928,10 @@ export class Renderer {
     const badgeW = badge ? pillW + 4 : 0;
     g.font = '600 11px Inter, sans-serif';
     // Both lines keep inside the screen: the name and, under it, the (often longer) class line.
-    const nameW = g.measureText(label).width + badgeW;
+    // Her colours (docs/24 D1): a little flag after a captain's name, its words on the line under it.
+    const col = info.isPlayer ? shipColours(s.flags, info) : null;
+    const flagW = col ? (col.noBoard ? 29 : 17) : 0;
+    const nameW = g.measureText(label).width + badgeW + flagW;
     g.font = '10px Inter, sans-serif';
     const lfText = info.isPlayer ? lfgLabel(info.lfg) : null;
     const lfW = lfText ? g.measureText(lfText).width + 16 : 0; // her pennant for company (docs/16 #31)
@@ -3899,7 +3947,7 @@ export class Renderer {
       y = hit.t - tall - 3;
     }
     this.labelBoxes.push({ l: x - half, r: x + half, t: y - 12 - over, b: y + tall });
-    const lx = x + badgeW / 2;
+    const lx = x + (badgeW - flagW) / 2;
     if (badge) {
       const px = x - nameW / 2, py = y - 10, ph = 13;
       const col = THREAT_COLOR[threat!];
@@ -3918,6 +3966,7 @@ export class Renderer {
     g.fillText(label, lx + 1, y + 1);
     g.fillStyle = cbColor(cb, hostile ? '#e0776b' : info.isPlayer ? '#cfe0f2' : faction ? faction.lantern : '#ccc');
     g.fillText(label, lx, y);
+    if (col) this.colourFlag(col, lx + g.measureText(label).width / 2 + 5, y - 10);
     // Looking for company (docs/16 #31): her pennant over the name, with the goal and the levels asked.
     const lf = info.isPlayer ? parseLfgTag(info.lfg) : null;
     if (lf) {
@@ -3938,7 +3987,7 @@ export class Renderer {
     g.font = '10px Inter, sans-serif';
     g.fillStyle = 'rgba(180,180,180,0.8)';
     const marks = info.isPlayer
-      ? `${s.flags & SF.BLACK_FLAG ? L('blackFlag') : ''}${s.flags & SF.GREEN_PENNANT ? L('greenPennant') : ''}${s.flags & SF.SHAME ? L('shame') : ''}${s.flags & SF.BOUNTY ? L('bounty') : ''}${s.flags & SF.DUEL ? L('duel') : ''}${s.flags & SF.GUARDED ? L('guarded') : ''}`
+      ? `${col?.label ? ` · ${col.label}` : ''}${col?.noBoard ? ` · ${LF('mark.noBoard')}` : ''}${s.flags & SF.SHAME ? L('shame') : ''}${s.flags & SF.BOUNTY ? L('bounty') : ''}${s.flags & SF.DUEL ? L('duel') : ''}${s.flags & SF.GUARDED ? L('guarded') : ''}`
       : '';
     if (s.flags & SF.SHAME) g.fillStyle = 'rgba(224,119,107,0.9)';
     g.fillText(tag + marks + (s.flags & SF.SURRENDERED ? L('struck') : ''), x, y + 11);

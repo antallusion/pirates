@@ -22,6 +22,8 @@ import { newTutorial, sanitizeTutorial } from './onboarding.ts';
 import type { Tutorial } from './onboarding.ts';
 import type { SeasonStat } from '../../../shared/src/data/seasons.ts';
 import { newPvp } from './pvp.ts';
+import { isColours } from '../../../shared/src/data/colours.ts';
+import type { Colours } from '../../../shared/src/data/colours.ts';
 import type { PvpState } from './pvp.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
@@ -121,6 +123,8 @@ export interface Profile {
   paths: CaptainId[]; // Paths this captain may take up at a Captain's House
   pathSwitchAt: number;
   oath: Oath | null; // the Code or a letter of marque
+  /** «Абордаж: выкл» (docs/24 C1): her ship boards nobody and is boarded by nobody; set in port. */
+  noBoard?: boolean;
   builds: BuildOrder[];
   plans: Plan[];
   berths: Berth[];
@@ -513,7 +517,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     accountId: s.accountId,
     name: s.name,
     title: p.title,
-    pvp: world.pvp ?? { blackFlag: p.pvp.blackFlag, pennant: false, pennantHoursLeft: 0, shameUntil: p.pvp.shameUntil, bubbleUntil: p.pvp.bubbleUntil, rating: p.pvp.rating, duels: p.pvp.duels, duelWins: p.pvp.duelWins, bounty: 0, hunter: false, sunkBy: [], challenges: [] },
+    pvp: world.pvp ?? { flag: p.pvp.flag, blackFlag: p.pvp.flag === 'pirate', city: p.pvp.city ?? 'free', guild: null, next: p.pvp.next, nextAt: p.pvp.nextAt, noNeutral: null, noBoard: !!p.noBoard, pennant: false, pennantHoursLeft: 0, shameUntil: p.pvp.shameUntil, bubbleUntil: p.pvp.bubbleUntil, rating: p.pvp.rating, duels: p.pvp.duels, duelWins: p.pvp.duelWins, bounty: 0, hunter: false, sunkBy: [], challenges: [] },
     captain: p.captain,
     level: p.level,
     // docs/19 E1: past the cap the bar is her glory's.
@@ -661,7 +665,14 @@ export function sanitizeProfile(raw: Profile): Profile {
   // Defensive load: fill fields added in later versions and clamp obviously broken values.
   const p = raw;
   p.talents ??= {};
-  p.pvp = { ...newPvp(), ...(p.pvp ?? {}) };
+  // The colours (docs/24): a save from before them flies her city's (her faction's; a young one under the Green Pennant
+  // as before), the Black Flag the pirate flag; boarding on.
+  const old = (p.pvp ?? {}) as Partial<PvpState> & { blackFlag?: boolean };
+  const flag: Colours = isColours(old.flag) ? old.flag : old.blackFlag ? 'pirate' : 'faction';
+  p.pvp = { ...newPvp(), ...old, flag };
+  delete (p.pvp as { blackFlag?: boolean }).blackFlag;
+  if (!isColours(p.pvp.next)) p.pvp.next = null;
+  p.noBoard = !!p.noBoard;
   p.reputation ??= {};
   p.contracts ??= [];
   p.discovered ??= [];

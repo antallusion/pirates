@@ -249,6 +249,52 @@ export function armyRemove(army: ArmyStack[], k: number): ArmyStack[] {
   return [...out].map(([u, n]) => ({ u, n }));
 }
 
+/** One man's hit points against shot and splinters: his health with his defence as HoMM3 reckons it, 5% a point (a
+ *  deckhand's 5.5). `exposure` is a deckhand's over his. */
+export function shotHp(u: UnitId): number {
+  const d = UNITS[u];
+  return d.hp * (1 + 0.05 * d.def);
+}
+
+/** The order the cannon's dead fall in (docs/24 B3, owner 2026-10-07: «убиваются сперва существа с маленьким HP и
+ *  потом по возрастанию»): the fewest hit points a man first, then the less armoured, the lower tier, the plain kind. */
+export function shotOrder(army: readonly ArmyStack[]): ArmyStack[] {
+  return [...army].sort((a, b) => UNITS[a.u].hp - UNITS[b.u].hp || UNITS[a.u].def - UNITS[b.u].def || UNITS[a.u].tier - UNITS[b.u].tier || Number(UNITS[a.u].up) - Number(UNITS[b.u].up));
+}
+
+/** The cannon's dead (docs/24 B3), in place: a hit worth `k` men of the army as she stands (the hit points the old
+ *  reckoning by exposure took with them — `k` times her men's harmonic mean of `shotHp`, so a shot weighs what it
+ *  weighed) falls on the stack with the fewest hit points a man until it is gone, then on the next, and up, as
+ *  HoMM3's damage rolls over its stacks. What is left of it wounds the next man (`wound` in, the new wound out, in
+ *  hit points). No more than `cap` men fall (a floor the ladder keeps). Returns what each stack lost. */
+export function armyShot(army: ArmyStack[], k: number, wound = 0, cap = Infinity): { lost: ArmyStack[]; wound: number } {
+  const lost: ArmyStack[] = [];
+  let inv = 0;
+  for (const s of army) if (s.n > 0) inv += s.n / shotHp(s.u);
+  if (inv <= 0) return { lost, wound: 0 };
+  let left = Math.max(0, k) * (armyMen(army) / inv) + Math.max(0, wound);
+  let out = 0;
+  let room = Math.max(0, Math.floor(cap));
+  for (const s of shotOrder(army)) {
+    if (s.n <= 0) continue;
+    const per = shotHp(s.u);
+    const kill = Math.min(s.n, room, Math.floor((left + 1e-9) / per));
+    if (kill > 0) {
+      s.n -= kill;
+      room -= kill;
+      left -= kill * per;
+      lost.push({ u: s.u, n: kill });
+    }
+    if (room <= 0) break;
+    if (s.n > 0) {
+      out = Math.max(0, Math.min(per, left));
+      break;
+    }
+  }
+  for (let i = army.length - 1; i >= 0; i--) if (army[i].n <= 0) army.splice(i, 1);
+  return { lost, wound: army.length ? out : 0 };
+}
+
 /** Put `n` men of a kind aboard (in place): into their own stack, a new slot, or — the slots full — the lowest stack. */
 export function armyAdd(army: ArmyStack[], n: number, slots: number, u: UnitId = 'deckhand'): void {
   n = Math.floor(n);

@@ -59,6 +59,7 @@ import type { QuickBtn, WinTab } from './kit/window.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
 import { auctionCard, bindDealings, dealingsAct, hearsayCard, repairCompare, runsCard } from './dealings.ts';
 import { dwellCard, tamerCard } from './recruit.ts';
+import { FLAGS_TAB, bindColours, coloursCard } from './flags.ts';
 
 /** A generated job's picture by its kind (docs/11 P4). */
 const JOB_ICON: Record<string, string> = {
@@ -74,7 +75,7 @@ function licenceLeft(n: number): string {
   return L('licence.left', { n, minutes: plural(n, L('licence.min1'), L('licence.min2'), L('licence.min5')) });
 }
 
-type Tab = 'market' | 'shipyard' | 'tavern' | 'quests' | 'harbour' | 'holdings' | 'exchange' | 'auction' | 'dice' | 'rumours' | 'charts' | 'army' | 'pets';
+type Tab = 'market' | 'shipyard' | 'tavern' | 'quests' | 'harbour' | 'colours' | 'holdings' | 'exchange' | 'auction' | 'dice' | 'rumours' | 'charts' | 'army' | 'pets';
 
 /** The harbour's places by their icons. */
 const TAB_ICON = {
@@ -188,6 +189,8 @@ export class PortScreen {
     const tv = view.tavern;
     const second: WinTab[] = [
       { id: 'harbour', icon: TAB_ICON.harbour, label: W('port.harbour'), hint: W('port.harbourHint') },
+      // docs/24 C1, D1–D2: the colours and «Абордаж: выкл», hoisted only in port.
+      { id: 'colours', icon: 'tab_law', glyph: '⚑', label: FLAGS_TAB.label(), hint: FLAGS_TAB.hint() },
       { id: 'holdings', icon: TAB_ICON.holdings, label: W('port.holdings'), hint: W('port.holdingsHint') },
       { id: 'exchange', icon: TAB_ICON.exchange, label: W('port.exchange'), hint: W('port.exchangeHint') },
       { id: 'auction', icon: 'coin', label: W('port.auction'), hint: W('port.auctionHint') },
@@ -226,6 +229,7 @@ export class PortScreen {
       root.querySelector<HTMLElement>('.port-body')?.scrollTo({ top: 0 });
     }));
     root.querySelectorAll<HTMLElement>('[data-act]').forEach((el) => (el.onclick = () => this.act(el.dataset, root, state)));
+    bindColours(root, this.send);
     bindBazaar(root);
     bindDealings(root);
     root.querySelector<HTMLElement>('[data-dwell]')?.addEventListener('click', () => this.openDwell?.());
@@ -487,6 +491,8 @@ export class PortScreen {
         return this.quests(view, state);
       case 'harbour':
         return this.harbour(view, state);
+      case 'colours':
+        return coloursCard(state, { head: false });
       case 'holdings':
         return this.holdings(view, state);
       case 'exchange':

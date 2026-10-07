@@ -465,12 +465,7 @@ export const EN = {
   g_confirm_give: 'Give this hull to the guild?',
 
   // colours & law
-  law_colours: 'Your colours',
-  law_black_on: '<b>The Black Flag flies.</b> In contested water any captain may attack you without a crime; plunder from NPCs +15%, from captains ×1.2. Struck in port, or after 15 minutes out of a fight.',
-  law_plain: 'Plain colours. Attacking a captain who is not fair game is a crime outside lawless water.',
-  law_strike: 'Strike the Black Flag',
-  law_hoist: 'Hoist the Black Flag',
-  law_pennant: 'Green Pennant: nobody may attack you in contested water ({n} h at sea left, or until level 15). Attacking a captain lowers it for half an hour; you take no goods from other captains.',
+  law_colours: 'The law and you',
   law_bubble: "Protected after your sinking for {n} more minutes — until you fire, sail into lawless water or take someone's casks.",
   law_shame: 'SHAME for {n} more minutes: you hunted a minnow. Your crimes count double in contested water.',
   law_bounty: 'A purse of {n} silver hangs on your head.',
@@ -1043,12 +1038,7 @@ export const RU: Record<keyof typeof EN, string> = {
   g_confirm_kick: 'Списать на берег?',
   g_confirm_give: 'Отдать этот корабль гильдии?',
 
-  law_colours: 'Ваш флаг',
-  law_black_on: '<b>Реет Чёрный флаг.</b> В спорных водах любой капитан может атаковать вас без преступления; добыча с НПС +15%, с капитанов ×1,2. Спускается в порту или через 15 минут вне боя.',
-  law_plain: 'Обычный флаг. Нападение на капитана, не объявленного законной добычей, — преступление вне беззаконных вод.',
-  law_strike: 'Спустить Чёрный флаг',
-  law_hoist: 'Поднять Чёрный флаг',
-  law_pennant: 'Зелёный вымпел: в спорных водах никто не может вас атаковать (осталось {n} ч в море или до 15-го уровня). Нападение на капитана спускает его на полчаса; вы не берёте товаров у других капитанов.',
+  law_colours: 'Закон и вы',
   law_bubble: 'После потопления вы под защитой ещё {n} мин. — пока не выстрелите, не войдёте в беззаконные воды или не возьмёте чужие бочки.',
   law_shame: 'ПОЗОР ещё {n} мин.: вы охотились на мелюзгу. Ваши преступления в спорных водах считаются вдвойне.',
   law_bounty: 'За вашу голову назначено {n} серебра.',

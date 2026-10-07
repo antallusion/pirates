@@ -369,9 +369,12 @@ test('a robber in lawless water: under the black flag, five minutes ashore, a qu
   const { s: rob, ship: rs } = captain(game, 'Island Robber');
   offShore(game, rs, isl);
   assert.equal(robIsland(game, rob, isl.id), 'Hoist the black flag to rob a captain’s island.');
-  rob.profile!.pvp.blackFlag = true;
+  rob.profile!.pvp.flag = 'pirate';
   assert.equal(robIsland(game, rob, isl.id), 'Its captain sails under the Green Pennant.', 'a new captain is left alone');
   s.profile!.level = 60;
+  s.profile!.pvp.flag = 'neutral';
+  assert.equal(robIsland(game, rob, isl.id), 'Its captain sails under neutral colours.', 'and one under neutral colours (docs/24)');
+  s.profile!.pvp.flag = 'faction';
   assert.equal(robIsland(game, rob, isl.id), null);
   assert.ok(c.all('toast').some((t) => t.msg === `${rob.name} has landed on ${isl.name} to rob it!`), 'the owner warned');
   assert.ok((game.holdings.aggressors.get(isl.id)?.get(rs.id) ?? 0) > game.now, 'the island’s guns on him');

@@ -231,6 +231,7 @@ test('two captains: the round resolves the moment both have given their orders',
   const { c: cb, ship: b } = atSea(game, 'Boarder B');
   b.state.x = a.state.x + 18;
   b.hull = b.stats.hullMax * 0.4;
+  game.profileOf(a)!.pvp.flag = 'pirate'; // docs/24: under the pirate flag she may board any captain
   // Contested waters so players may fight.
   for (const sh of [a, b]) {
     sh.state.x += 26000;
