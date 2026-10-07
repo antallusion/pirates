@@ -93,8 +93,10 @@ body.simple #hud-stack, body.simple #hud #hud-stack, body.simple.touch #hud-stac
 body.simple #hud-stack > * { max-width: 100% !important; }
 body.simple #hud-stack > :is(.hud-block, #hud-watch) { align-self: stretch; }
 /* her mark: words on a touch screen (her card is «Цель»'s long press), a button on a desk (a click opens it) */
-body.simple #hud-stack > #tc-target { order: -50; align-self: center; width: min(320px, 100%) !important; pointer-events: none; }
-body.simple #tc-target .k-target { width: 100%; height: 36px; background: rgba(11, 13, 16, 0.78); }
+body.simple #hud-stack > #tc-target { order: -50; align-self: center; width: auto !important; max-width: min(340px, 100%) !important; pointer-events: none; }
+body.simple #tc-target .k-target { width: auto; max-width: 100%; height: 36px; gap: 10px; padding: 0 10px; background: rgba(11, 13, 16, 0.78); }
+body.simple #tc-target .k-target-name { flex: 0 1 auto; }
+body.simple #tc-target .k-target-bars { flex: 0 0 56px; }
 body.simple:not(.touch) #tc-target .k-target { pointer-events: auto; }
 body.simple.touch #tc-target .k-target { pointer-events: none; }
 /* a world boss: one slim line — its name and its strength (the rest in its card on the chart) */
@@ -285,3 +287,17 @@ body.touch.sea-docked #touch > #tc-fire { display: none; }
 .tb-pr > .tb-fast { position: relative; right: auto; top: auto; }
 /* the round's sheet opens beside her face */
 body.tac-ph .tb-sheet { left: calc(env(safe-area-inset-left, 0px) + 64px); }
+/* the figures and faces elsewhere in round frames: whole inside the circle (the crop check), on the painted dark */
+.tb-card-h .ico-md, .tb-card-h .ico-md.fig { object-fit: contain; object-position: 50% 50%; border-radius: 14%; padding: 3px; box-sizing: border-box; }
+.army-face-sm { object-fit: contain; border-radius: 14%; padding: 2px; box-sizing: border-box; background: radial-gradient(circle at 50% 40%, #2a2620, #110e0b); }
+img.beast-face.fig { object-fit: contain; object-position: 50% 50%; }
+#advcard .ac-art.fig { object-fit: contain; object-position: 50% 50%; border-radius: 14%; }
+
+/* ---------- the captain's sheet: her record (what left the HUD's plate: the law, the experience, the points) */
+.hx-record { display: grid; gap: 4px; margin: 0 0 var(--k-sp-2); padding: 6px 10px; border-radius: var(--k-r-2); background: rgba(10, 11, 13, 0.5); box-shadow: inset 0 0 0 1px rgba(111, 90, 56, 0.35); }
+.hx-xp { display: grid; grid-template-columns: auto minmax(60px, 1fr) auto; align-items: center; gap: 8px; font-size: 12px; }
+.hx-xp .fbar.xp { height: 7px; margin: 0; border-radius: var(--k-r-round); overflow: hidden; }
+.hx-xpl, .hx-xpv { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hx-xpv { color: var(--k-haze); }
+.hx-recl { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 12px; }
+.hx-law, .hx-pts, .hx-silver { display: inline-flex; align-items: center; gap: 4px; }

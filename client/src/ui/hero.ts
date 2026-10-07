@@ -27,6 +27,7 @@ import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
 import { chipRow, railTabs, winHead } from './kit/window.ts';
 import type { WinTab } from './kit/window.ts';
 import { gearChips, gearTab, renderGear, setGearTab } from './gear.ts';
+import { captainRecord } from './hud.ts'; // the law and the experience, out of the HUD's plate (2026-10-07)
 import type { GearTab } from './gear.ts';
 import { openSheet } from './kit/sheet.ts';
 import type { SheetHandle } from './kit/sheet.ts';
@@ -107,7 +108,7 @@ export class HeroWindow {
       chips = chipRow(pages, this.page, 'cchip');
     } else chips = chipRow(gearChips(state), gearTab(), 'cchip');
     let body = '';
-    if (this.tab === 'hero') body = this.heroTab(h, self.level, url, !!self.glory?.open);
+    if (this.tab === 'hero') body = captainRecord(state) + this.heroTab(h, self.level, url, !!self.glory?.open);
     else if (this.tab === 'book') body = this.page === 'path' ? pathTab(h, self.captain, self.level, self.talents ?? {}) : this.page === 'guild' ? this.portTab(h, self.gold) : this.bookTab(h, docked, state.estServerTime());
     root.innerHTML = `${winHead(W('cap.title'), { crest: 'bt_captain', sub: L('sub', { name: self.name, n: self.level, path: cap.archetype }), chips })}
       <div class="w-frame">${railTabs(main, this.tab, 'ctab')}<div class="w-pane"><div class="modal-body w-body cap-body${this.tab === 'gear' ? ' gear cap-gear' : ' hero-win'}">${body}</div></div></div>`;

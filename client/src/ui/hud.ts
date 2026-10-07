@@ -77,6 +77,22 @@ export function simpleHud(): boolean {
   return !!globalThis.document?.body?.classList.contains('simple');
 }
 
+/** The captain's record for her sheet (owner, 2026-10-07: «Unknown to the law», the experience and the rest left the
+ *  HUD's plate for the captain's sheet): her experience to the next level (and the rested stretch), where she stands
+ *  with the law, a talent point waiting, the Throne's glory. */
+export function captainRecord(state: ClientState): string {
+  const self = state.self;
+  if (!self) return '';
+  const f = self.xp / Math.max(1, self.xpNext);
+  const rest = self.rested > 0 ? `<b class="xp-rest" style="left:${pct(f)};width:${pct(Math.min(self.rested, Math.max(0, self.xpNext - self.xp)) / Math.max(1, self.xpNext))}"></b>` : '';
+  const law = self.wanted ? `<span class="hx-law bad">${icon('wanted', '☠', 'ico-sm')}${esc(wantedTitle(self.wanted))}</span>` : `<span class="hx-law muted">${esc(L('unknownToLaw'))}</span>`;
+  const pts = self.talentPoints > 0 ? `<span class="hx-pts gold">${icon('xp', '', 'ico-sm')}${esc(keyless(L('talentPts', { n: self.talentPoints })))}</span>` : '';
+  return `<div class="hx-record">
+    <div class="hx-xp"${self.rested > 0 ? ` title="${esc(L('rested', { n: fmt(self.rested) }))}"` : ''}><span class="hx-xpl">${icon('xp', '', 'ico-sm')}${esc(L('lv', { n: self.level }))}</span><div class="fbar xp"><i style="width:${pct(f)}"></i>${rest}</div><span class="hx-xpv">${fmt(self.xp)} / ${fmt(self.xpNext)}</span></div>
+    <div class="hx-recl">${law}${pts}${gloryChip(self.glory)}<span class="gold hx-silver">${icon('coin', '⛁', 'ico-sm')}${fmt(self.gold)}</span></div>
+  </div>`;
+}
+
 /** A window is open over the sea (the toasts keep to its strip then). */
 function modalOpen(): boolean {
   return !$('modal').classList.contains('hidden');
