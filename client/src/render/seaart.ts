@@ -518,8 +518,8 @@ export function inHot(x: number, y: number, pad = 0): boolean {
  *  cutwater, and the white water of her quarter wave astern — the painted spray laid along the lines the water takes,
  *  stronger the faster she goes (`k` her speed as a share of her best, 0…1). The churned wake behind her is the sea's
  *  shader's. */
-export function shipWater(g: G, len: number, beam: number, k: number, t: number, seed: number): void {
-  if (k < 0.08) return;
+export function shipWater(g: G, len: number, beam: number, k: number, t: number, seed: number, lod = 0): void {
+  if (k < 0.08 || len < 14) return;
   if (!spray(0)) return;
   const a0 = g.globalAlpha;
   const kk = Math.min(1, k);
@@ -530,11 +530,13 @@ export function shipWater(g: G, len: number, beam: number, k: number, t: number,
   };
   // The bow wave: a line of white water from her stem, flaring out and aft along each side, flickering as the swell
   // runs — many small blots of the painted spray, so it reads as a curling line of foam, not as puffs.
-  for (let i = 0; i < 9; i++) {
-    const u = i / 8;
+  // Fewer, larger blots when the frames run slow (the particles' level of detail) or she is small on the screen.
+  const nb = lod >= 2 || len < 40 ? 4 : lod === 1 ? 5 : 7;
+  for (let i = 0; i < nb; i++) {
+    const u = i / (nb - 1);
     const y = -len * 0.49 + u * len * 0.46;
     const off = beam * (0.08 + 0.5 * Math.sqrt(u)) * (0.85 + 0.3 * kk);
-    const s = beam * (0.26 + 0.2 * u) * (0.8 + 0.4 * kk);
+    const s = beam * (0.26 + 0.2 * u) * (0.8 + 0.4 * kk) * (9 / (nb + 2));
     const flick = 0.75 + 0.25 * Math.sin(t * 7 + i * 1.9 + seed);
     for (const side of [-1, 1]) blot(side * off, y, s, kk * (0.7 - u * 0.45) * flick, i + (side > 0 ? 2 : 0) + Math.floor(t * 3));
   }
@@ -542,9 +544,10 @@ export function shipWater(g: G, len: number, beam: number, k: number, t: number,
   const sz = beam * (0.4 + 0.45 * kk);
   blot(0, -len * 0.5 - sz * 0.2, sz, kk * kk * (0.55 + 0.25 * Math.sin(t * 9 + seed)), Math.floor(t * 4));
   // The quarter wave astern, spreading into her wake.
-  for (let i = 0; i < 6; i++) {
-    const u = i / 5;
-    const s = beam * (0.32 + 0.25 * u) * (0.8 + 0.4 * kk);
+  const nq = nb > 5 ? 4 : 3;
+  for (let i = 0; i < nq; i++) {
+    const u = i / (nq - 1);
+    const s = beam * (0.32 + 0.25 * u) * (0.8 + 0.4 * kk) * (6 / (nq + 2));
     for (const side of [-1, 1]) blot(side * beam * (0.28 + 0.42 * u), len * (0.4 + 0.2 * u), s, kk * (0.55 - u * 0.4), i + (side > 0 ? 1 : 3) + Math.floor(t * 2));
   }
   g.globalAlpha = a0;

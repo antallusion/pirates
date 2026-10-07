@@ -2061,7 +2061,7 @@ export class Renderer {
     if (!sinking && !hidden && s.spd > 0.6) {
       g.save();
       g.rotate(s.h);
-      shipWater(g, len, beam, s.spd / Math.max(1, cls.maxSpeed), settings().reduceMotion ? 0 : this.time, s.id);
+      shipWater(g, len, beam, s.spd / Math.max(1, cls.maxSpeed), settings().reduceMotion ? 0 : this.time, s.id, this.fx.lod);
       g.restore();
     }
 
