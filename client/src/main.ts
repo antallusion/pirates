@@ -213,6 +213,8 @@ function roamAtScreen(px: number, py: number): number | null {
   return best;
 }
 
+/** When a finger last marked a ship or a stack (the page's clock). */
+let markTapAt = -1e9;
 /** A tap or a click on the sea marks what lies under it: a ship (the target frame's), else a creature stack — whose
  *  «Атаковать» then leads the action button (owner, 2026-10-07: a stack could not be marked; the button attacked the
  *  nearest ship instead, and a click on the stack fired a broadside into it). */
@@ -423,7 +425,8 @@ const touch = new TouchControls({
   aim: (px, py) => {
     renderer.mouseX = px;
     renderer.mouseY = py;
-    markAt(px, py); // a tap on a ship makes her the target; on a creature stack, the stack (docs/19 D7)
+    // A tap on a ship makes her the target; on a creature stack, the stack (docs/19 D7).
+    if (markAt(px, py)) markTapAt = performance.now();
   },
   zoom: (f) => {
     renderer.userZoomed = true;
@@ -453,6 +456,9 @@ const seaHud = new SeaHud($('touch'), {
   },
   menu: (id) => (id === 'more' ? openModal('menu') : openMenuItem(id)),
   target: () => {
+    // The finger that marked her is still coming up (the line came under it as she was marked: its click opened her
+    // card over the action button — «Атаковать» could not be pressed, QA 2026-10-07).
+    if (performance.now() - markTapAt < 700) return;
     // The line shows a marked creature stack: its card (docs/19 D7); else the ship's frame.
     const rf = !targetPinned && !state.pursuit ? roamFocus() : null;
     if (rf?.marked) return openRoamLook(rf.v);
@@ -1021,6 +1027,8 @@ function onMessage(m: ServerMsg): void {
       // the filter on 'err' alone let «Too far for the glass ×5» through at every broadside).
       if (GLASS_QUIET.has(m.msg)) break;
       // The harbour turned her away for her speed: take in sail and try again when she slows.
+      // Any other refusal of the harbour (a fight, the law): the request is not sent again every 1.5 s for 25 s.
+      if (pendingDock && m.kind === 'bad' && m.msg !== 'Take in sail before entering harbour' && performance.now() - dockSentAt < 1500) pendingDock = null;
       if (m.msg === 'Take in sail before entering harbour') {
         requestDock(pendingDock?.bribe ?? false, true);
         break;
@@ -2471,6 +2479,8 @@ function pickFireWheel(id: string): void {
  *  (the mounts that lie where she is — smoke, kegs — and those that burn the hold's oil or deepen a curse stay the
  *  wheel's). */
 const MOUNT_SHOT: Partial<Record<string, 'round' | 'chain' | 'grape'>> = { long_tom: 'round', chain_gun: 'chain', swivel_gun: 'grape' };
+/** …and how many of it a blast takes (mounts.ts): with fewer aboard the mount was refused every two seconds. */
+const MOUNT_SHOTS: Partial<Record<string, number>> = { long_tom: 1, chain_gun: 3, swivel_gun: 2 };
 const MOUNT_AUTO = new Set(['mortar', 'harpoon', 'chain_gun', 'swivel_gun', 'long_tom', 'rocket_frame', 'net_thrower']);
 let mountAt = 0;
 function autoMount(): void {
@@ -2479,7 +2489,7 @@ function autoMount(): void {
   if (!m || !self || !you || !own || self.dockedAt || !MOUNT_AUTO.has(m) || settings().expertGuns || !settings().autoFire) return;
   if (you.reload.mount < 1 || performance.now() - mountAt < 2000 || !you.combat) return;
   const shot = MOUNT_SHOT[m];
-  if (shot && you.ammo[shot] <= 0) return;
+  if (shot && you.ammo[shot] < (MOUNT_SHOTS[m] ?? 1)) return;
   const id = state.pursuit?.target ?? targetId;
   const s = id !== null ? state.ships.get(id) : undefined;
   if (!s || !(s.cur.flags & SF.HOSTILE || state.pursuit) || s.cur.flags & (SF.SINKING | SF.SURRENDERED)) return;
@@ -2706,6 +2716,8 @@ function mastWreck(): boolean {
 /** Docking at speed: the crew takes in sail and she enters harbour as soon as she has slowed (the server wants
  * her under 7 m/s), instead of a refusal the captain must puzzle out. */
 let pendingDock: { bribe: boolean; until: number; next: number } | null = null;
+/** When the renewed request last went (a refusal right after it is the harbour's answer). */
+let dockSentAt = -1e9;
 function requestDock(bribe: boolean, refused = false): void {
   const own = state.ownDisplay;
   if (refused || (own && own.speed > 6)) {
@@ -2746,6 +2758,7 @@ function stepPendingDock(): void {
   if (own && own.speed <= 6 && performance.now() >= pendingDock.next) {
     // Keep the request until the harbour answers: a refusal (still too fast) renews it.
     pendingDock.next = performance.now() + 1500;
+    dockSentAt = performance.now();
     net.send({ t: 'dock', bribe: pendingDock.bribe });
   }
 }
