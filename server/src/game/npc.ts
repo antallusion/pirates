@@ -706,8 +706,10 @@ export const FIGHT_HOLD = 0.92;
 export const FIGHT_NEAR = 0.7;
 
 /** The fighting helm (the sea's ships, and a captain's under «Атаковать», docs/23 item 33): steers, and says where her
- *  foe will be when a ball arrives (`lead`: the share of the true lead her gunners allow). */
-export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target: ShipEntity, d: number, mode: HelmMode, lead: number): { px: number; py: number; leadD: number; leadBearing: number } {
+ *  foe will be when a ball arrives (`lead`: the share of the true lead her gunners allow). `hold`: a captain's close
+ *  fight (pursuit.ts, owner 2026-10-07) — the band she closes to and lies broadside on in, instead of the sea's own
+ *  70–92% of her reach (the ladder of levels is tuned on that, tests/balance/). */
+export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target: ShipEntity, d: number, mode: HelmMode, lead: number, hold?: { best: number; near: number; far: number }): { px: number; py: number; leadD: number; leadBearing: number } {
   const rangeOf = (side: 'port' | 'starboard') => effectiveRange(ship, side, ship.ammoSel);
   const maxRange = Math.max(rangeOf('port'), rangeOf('starboard'));
   const bearing = headingOf(target.state.x - ship.state.x, target.state.y - ship.state.y);
@@ -733,7 +735,9 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
       return out;
     }
   }
-  if (d > maxRange * 1.5) {
+  // (The close fight runs straight at a mark past half as far again as the band's far edge: one running from her gained
+  // on her all the way out to 1.5 × her reach, her bow 50° off it.)
+  if (d > (hold ? hold.far * 1.5 : maxRange * 1.5)) {
     steer(game, ship, brain, bearing, 1);
   } else if (mode === 'close') {
     steer(game, ship, brain, leadBearing, d < 250 ? 0.75 : 1); // close for the grapple
@@ -744,9 +748,16 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
     // The course that presents a side, turned in or out to hold her distance.
     const course = (side: 'port' | 'starboard'): number => {
       const inward = side === 'port' ? -1 : 1; // rotation that turns the bow toward the target
+      const h = side === 'port' ? hPort : hStar;
+      if (hold) {
+        // The close fight: in at 29° off her beam (inside the gun captains' 36°: a broadside on her mark while she
+        // closes) down to a little past the band's best, square on it there, out below its inside edge.
+        if (d > hold.best * 1.15) return wrapAngle(h + inward * 0.5);
+        if (d < hold.near) return wrapAngle(h - inward * 0.35);
+        return h;
+      }
       // Boarders fight at chain-shot range to strip the rigging; others at their gun's comfortable range.
       const range = mode === 'rig' ? Math.min(rangeOf(side), effectiveRange(ship, side, 'chain')) : rangeOf(side);
-      const h = side === 'port' ? hPort : hStar;
       if (d > range * FIGHT_HOLD) return wrapAngle(h + inward * 0.85);
       if (d > range * FIGHT_NEAR) return wrapAngle(h + inward * 0.4);
       if (d < range * 0.35 && mode === 'guns') return wrapAngle(h - inward * 0.35);
@@ -762,6 +773,12 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
     steer(game, ship, brain, course(side), 1, true);
   }
   return out;
+}
+
+/** The helm to a point (a captain's run on a creature stack, docs/19 D7: tacking to windward and clear of islands, as
+ *  the sea's own ships steer). */
+export function helmTo(game: Game, ship: ShipEntity, brain: NpcBrain, x: number, y: number, sail = 1): void {
+  steer(game, ship, brain, headingOf(x - ship.state.x, y - ship.state.y), sail);
 }
 
 /** The best angle off the wind to beat at (degrees from where it blows), by rig, no-go edge and wind: the heading that

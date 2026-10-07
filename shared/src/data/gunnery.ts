@@ -104,3 +104,28 @@ export function suggestAmmo(o: { board: boolean; d: number; grapeRange: number; 
 /** No endless chases (docs/23 item 44): this long after her prey with no hit either way and a bot gives it up (or, the
  *  prey of a captain's «Атаковать», strikes or slips away). */
 export const CHASE_GIVE_UP = 40;
+
+// ---------------------------------------------------------------------------------------------------------------
+// The close fight (owner, 2026-10-07: «авто преследование работает не так как положено, я должен быть рядом с целью
+// очень близко, чтобы попадать, а плаваю я очень далеко»). Under «Атаковать» with the guns her helmsman held 70–92% of
+// her guns' reach — 320–420 m for a long 9-pounder: past the edge of the screen (the default view spans 260 m across its
+// short side, ±130 m about her on a 1500×600 window and on a phone held sideways), where her laid balls strike a ship
+// under way one time in two (tools/mobile/hit-range.ts) and a turning one less, and where a ship running from her gained
+// on her before she steered straight for it (past 1.5 × her reach). Now she closes to under a third of her reach (140 m
+// at most: on the screen, nine balls in ten and better) and lies broadside on there; her gun captains let a side go
+// inside her effective reach only — the distance where three balls in four and more strike («в дальности»).
+
+/** The share of her guns' reach she fights at, and its bounds in metres. */
+export const CLOSE_SHARE = 0.3;
+export const CLOSE_MIN = 90;
+export const CLOSE_MAX = 140;
+/** Her effective reach, as a share of her guns' whole: three balls in four and more strike inside it, a ship's under way
+ *  (tools/mobile/hit-range.ts: 285 m of a long 9-pounder's 460 — 78–90% by her level). */
+export const EFFECTIVE_SHARE = 0.62;
+
+/** The close fight's band for guns of `reach` metres: `best` the distance her helmsman holds, `near` the inside edge (she
+ *  opens out below it), `far` her effective reach — «в дальности» inside it, and her gun captains' fire waits for it. */
+export function closeRange(reach: number): { best: number; near: number; far: number } {
+  const best = Math.min(reach * 0.8, Math.max(CLOSE_MIN, Math.min(CLOSE_MAX, reach * CLOSE_SHARE)));
+  return { best, near: best * 0.65, far: Math.min(reach, Math.max(best * 1.35, reach * EFFECTIVE_SHARE)) };
+}

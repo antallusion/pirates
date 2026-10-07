@@ -15,6 +15,9 @@ export const EN = {
   duel: ' · duelling',
   struck: ' · STRUCK',
   eye: 'hull {hull}% · crew {crew} · morale {morale} · P{port} S{stbd}',
+  /** Under her mark's ring (owner, 2026-10-07): inside the close fight's band, where her gun captains fire, or not yet. */
+  'range.in': 'in range',
+  'range.far': 'too far',
   'role.merchant': 'merchant',
   'role.patrol': 'patrol',
   'role.pirate': 'pirate',
@@ -65,6 +68,8 @@ export const RU: Record<keyof typeof EN, string> = {
   duel: ' · дуэль',
   struck: ' · СПУСТИЛ ФЛАГ',
   eye: 'корпус {hull}% · экипаж {crew} · дух {morale} · Л{port} П{stbd}',
+  'range.in': 'в дальности',
+  'range.far': 'далеко',
   'role.merchant': 'торговец',
   'role.patrol': 'патруль',
   'role.pirate': 'пират',

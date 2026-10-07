@@ -21,6 +21,8 @@ export interface TargetInfo {
   icon?: string;
   /** Her kind of danger for the line's edge colour: from the ladder's threat (shared/src/data/shiplevel.ts). */
   threat?: 'trivial' | 'easy' | 'even' | 'hard' | 'deadly' | 'skull';
+  /** The close fight (owner, 2026-10-07): inside the band her gun captains fire in («в дальности»), or too far. */
+  range?: 'in' | 'far';
 }
 
 /** The chance's band: good from 60%, even from 35%, bad below (the risk window opens below 35%: docs/23 item 51). */
@@ -37,13 +39,14 @@ export function targetSpeech(t: TargetInfo): string {
   if (t.hull !== undefined) parts.push(L('target.hull', { n: pct100(t.hull) }));
   if (t.crew !== undefined) parts.push(L('target.crew', { n: pct100(t.crew) }));
   if (t.chance !== undefined) parts.push(L('target.chance', { n: pct100(t.chance) }));
+  if (t.range) parts.push(L(t.range === 'in' ? 'target.in' : 'target.far'));
   return parts.join(', ');
 }
 
 export function targetLineHtml(t: TargetInfo, attrs = ''): string {
   const band = t.chance === undefined ? '' : chanceBand(t.chance);
   return `<button type="button" class="k-target${t.threat ? ` k-threat-${t.threat}` : ''}" aria-label="${esc(targetSpeech(t))}" title="${esc(L('target.open'))}" ${attrs}>
-    ${t.icon ? icon(t.icon, '', 'k-target-ico') : ''}<span class="k-target-name">${esc(t.name)}</span>${t.level !== undefined ? `<span class="k-target-lv">⚓\uFE0E${t.level}</span>` : ''}${t.hull !== undefined || t.crew !== undefined ? `<span class="k-target-bars" aria-hidden="true">${t.hull !== undefined ? `<span class="k-target-hull"><i style="width:${pct100(t.hull)}%"></i></span>` : ''}${t.crew !== undefined ? `<span class="k-target-crew"><i style="width:${pct100(t.crew)}%"></i></span>` : ''}</span>` : ''}${band ? `<span class="k-chip k-chip--${band}" aria-hidden="true">${pct100(t.chance!)}%</span>` : ''}</button>`;
+    ${t.icon ? icon(t.icon, '', 'k-target-ico') : ''}<span class="k-target-name">${esc(t.name)}</span>${t.level !== undefined ? `<span class="k-target-lv">⚓\uFE0E${t.level}</span>` : ''}${t.hull !== undefined || t.crew !== undefined ? `<span class="k-target-bars" aria-hidden="true">${t.hull !== undefined ? `<span class="k-target-hull"><i style="width:${pct100(t.hull)}%"></i></span>` : ''}${t.crew !== undefined ? `<span class="k-target-crew"><i style="width:${pct100(t.crew)}%"></i></span>` : ''}</span>` : ''}${band ? `<span class="k-chip k-chip--${band}" aria-hidden="true">${pct100(t.chance!)}%</span>` : ''}${t.range ? `<span class="k-target-range" data-range="${t.range}" aria-hidden="true">${esc(L(t.range === 'in' ? 'target.in' : 'target.far'))}</span>` : ''}</button>`;
 }
 
 /** A line that keeps its element and is redrawn only when what it shows has changed. */
@@ -56,7 +59,7 @@ export class TargetLine {
     host.addEventListener('click', (e) => (e.target as HTMLElement).closest('.k-target') && this.onOpen());
   }
   set(t: TargetInfo | null): void {
-    const key = t ? JSON.stringify([t.name, t.level, t.hull === undefined ? null : pct100(t.hull), t.crew === undefined ? null : pct100(t.crew), t.chance === undefined ? null : pct100(t.chance), t.icon, t.threat]) : '';
+    const key = t ? JSON.stringify([t.name, t.level, t.hull === undefined ? null : pct100(t.hull), t.crew === undefined ? null : pct100(t.crew), t.chance === undefined ? null : pct100(t.chance), t.icon, t.threat, t.range]) : '';
     if (key === this.key) return;
     this.key = key;
     this.el.innerHTML = t ? targetLineHtml(t) : '';

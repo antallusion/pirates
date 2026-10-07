@@ -36,7 +36,7 @@ import { AutosailPill, FirstTips, autosailRequest, autosailStopText, tipForMsg, 
 import { ACT_SHOW, actBarHtml, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
 import { FIND_REACH, FIND_SLOW } from '../../shared/src/data/seafinds.ts';
 import type { FindView } from '../../shared/src/findproto.ts';
-import { ROAMS, ROAM_REACH } from '../../shared/src/data/roamers.ts'; // docs/19 D7
+import { ROAMS, ROAM_REACH, ROAM_SEE } from '../../shared/src/data/roamers.ts'; // docs/19 D7
 import { BOSSES } from '../../shared/src/data/bosses.ts';
 import type { BossId } from '../../shared/src/data/bosses.ts';
 import { isShoreBoss } from '../../shared/src/data/shorebosses.ts'; // the great ones ashore (2026-10-03)
@@ -50,7 +50,7 @@ import type { Act, ActFacts } from './ui/actbar.ts';
 import { riskConfirm } from './ui/kit/risk.ts';
 import { wireSheetSwipe } from './ui/kit/sheet.ts';
 import { wireHints } from './ui/kit/hint.ts';
-import { DASH_COOLDOWN, LAY_ARC_DEG, suggestAmmo } from '../../shared/src/data/gunnery.ts';
+import { DASH_COOLDOWN, LAY_ARC_DEG, closeRange, suggestAmmo } from '../../shared/src/data/gunnery.ts';
 import { EN as SEAF_EN, RU as SEAF_RU } from './lang/ui/seafight.ts';
 import type { BoardRisk } from '../../shared/src/protocol.ts';
 import { MARK_SLOW, markInReach } from '../../shared/src/data/seamarks.ts';
@@ -197,6 +197,36 @@ function pinTarget(id: number | null): void {
   if (id === null) return;
   targetId = id;
   targetPinned = true;
+  state.roamMark = null;
+}
+
+/** docs/19 D7: the creature stack under a point on screen (its token, or a finger's width around it). */
+function roamAtScreen(px: number, py: number): number | null {
+  if (state.self?.dockedAt) return null;
+  const reach = Math.max(30, Math.max(11, Math.min(22, 19 * renderer.zoom)) * 1.7);
+  let best: number | null = null, bd = reach;
+  for (const v of state.roams) {
+    const p = roamNow(state, v);
+    const d = Math.hypot(renderer.sx(p.x) - px, renderer.sy(p.y) - py);
+    if (d <= bd) [best, bd] = [v.id, d];
+  }
+  return best;
+}
+
+/** A tap or a click on the sea marks what lies under it: a ship (the target frame's), else a creature stack — whose
+ *  «Атаковать» then leads the action button (owner, 2026-10-07: a stack could not be marked; the button attacked the
+ *  nearest ship instead, and a click on the stack fired a broadside into it). */
+function markAt(px: number, py: number): 'ship' | 'roam' | null {
+  const ship = shipAtScreen(px, py);
+  if (ship !== null) {
+    pinTarget(ship);
+    return 'ship';
+  }
+  const rm = roamAtScreen(px, py);
+  if (rm === null) return null;
+  state.roamMark = rm;
+  targetPinned = false;
+  return 'roam';
 }
 
 /** The target key: the next ship out from you, round and round. */
@@ -226,7 +256,7 @@ function askGlass(id: number | null): void {
   if (id === glassId && now - glassAt < 4000) return;
   glassId = id;
   glassAt = now;
-  net.send({ t: 'appraise', id });
+  net.send({ t: 'appraise', id, quiet: true }); // (its «too far for the glass» every four seconds is no news)
 }
 
 /** The frame's ship this frame: the pinned one while she is in sight, else the nearest hostile within a mile. */
@@ -393,7 +423,7 @@ const touch = new TouchControls({
   aim: (px, py) => {
     renderer.mouseX = px;
     renderer.mouseY = py;
-    pinTarget(shipAtScreen(px, py)); // a tap on a ship makes her the target
+    markAt(px, py); // a tap on a ship makes her the target; on a creature stack, the stack (docs/19 D7)
   },
   zoom: (f) => {
     renderer.userZoomed = true;
@@ -422,7 +452,12 @@ const seaHud = new SeaHud($('touch'), {
     departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' }));
   },
   menu: (id) => (id === 'more' ? openModal('menu') : openMenuItem(id)),
-  target: () => seaHud.lend(['hud-target'], 'target'),
+  target: () => {
+    // The line shows a marked creature stack: its card (docs/19 D7); else the ship's frame.
+    const rf = !targetPinned && !state.pursuit ? roamFocus() : null;
+    if (rf?.marked) return openRoamLook(rf.v);
+    seaHud.lend(['hud-target'], 'target');
+  },
 });
 const onboarding = new OnboardingUi(state);
 /** The First Watch's finger over the button its step wants (docs/23 item 80). */
@@ -588,6 +623,20 @@ function runTestBattle(): void {
     ? [...army, isShoreBoss(kind) ? `/shoreboss ${kind} fight` : `/lair ${kind} fight`]
     : ['/level 30', '/tp gravewater', '/ship frigate', ...army.slice(1), '/army ancient_turtle 3', '/army young_kraken 1', '/army white_whale 1', '/foe patrol frigate', '/board'];
   orders.forEach((text, i) => setTimeout(() => net.send({ t: 'chat', text }), 800 + i * 700));
+}
+/** When each refusal was last told (the page's clock), and her last press or key (main.ts refusalAgain). */
+const refusedAt = new Map<string, number>();
+let pressAt = -1e9;
+addEventListener('pointerdown', () => (pressAt = performance.now()), { capture: true, passive: true });
+addEventListener('keydown', () => (pressAt = performance.now()), { capture: true, passive: true });
+/** The same refusal within REFUSAL_QUIET_MS of the last, with no press of hers in the moment before it: not news. */
+const REFUSAL_QUIET_MS = 8000;
+function refusalAgain(msg: string): boolean {
+  const now = performance.now();
+  const at = refusedAt.get(msg);
+  refusedAt.set(msg, now);
+  if (refusedAt.size > 64) refusedAt.delete(refusedAt.keys().next().value!);
+  return at !== undefined && now - at < REFUSAL_QUIET_MS && now - pressAt > 900;
 }
 /** The sea's news held through a boarding battle (case 'toast'), told once the deck is clear. */
 const heldToasts: { msg: string; kind: string }[] = [];
@@ -979,6 +1028,9 @@ function onMessage(m: ServerMsg): void {
       // A phone's small refusals (reloading, not on the beam) flash the button and buzz instead (docs/23 item 29): the
       // server's refusals come as toasts of kind 'bad' (Game.ts err()), so the check on 'err' alone never saw them.
       if (m.kind === 'bad' && touch.enabled && seaHud.petty(m.msg)) break;
+      // A refusal is told once (owner, 2026-10-07: «идут ошибки вечные»): the same words again soon after, not asked for by
+      // a press of hers just now, are not shown again (the band counted them up ×N for as long as they came).
+      if (m.kind === 'bad' && refusalAgain(m.msg)) break;
       // World news goes to the feed (owner, 2026-09-29: the sea's news in a corner), the rest to the toasts.
       if (m.msg.startsWith('WORLD: ')) hud.feed(serverText(m.msg));
       // While her men fight on a deck the sea's news (a fever, a tip) waits for the deck to clear. A refusal and a win
@@ -1818,15 +1870,26 @@ canvas.addEventListener('wheel', (e) => {
   renderer.userZoomed = true;
   renderer.targetZoom = clamp(renderer.targetZoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12), 0.35, 4);
 });
+/** A finger's tap brings the browser's mouse events after it: on a phone every tap on the sea came down here too and
+ *  fired the broadside under the finger — at a ship it marked, at a creature stack, at the open sea — and her own volley
+ *  left her «under fire» for 20 s, so the stack, the lair, the drift said «Не под огнём» at every tap (owner,
+ *  2026-10-07: «не работает никакие кнопки, идут ошибки вечные»). The click-to-fire is the mouse's only. */
+let fingerAt = -1e9;
+addEventListener('touchstart', () => (fingerAt = performance.now()), { capture: true, passive: true });
+addEventListener('touchend', () => (fingerAt = performance.now()), { capture: true, passive: true });
+function fromFinger(e: MouseEvent): boolean {
+  return !!(e as MouseEvent & { sourceCapabilities?: { firesTouchEvents?: boolean } }).sourceCapabilities?.firesTouchEvents || performance.now() - fingerAt < 1000;
+}
 canvas.addEventListener('mousedown', (e) => {
-  if (!inGame || e.button !== 0) return;
-  pinTarget(shipAtScreen(e.clientX, e.clientY)); // a click on a ship makes her the target (and fires at her)
+  if (!inGame || e.button !== 0 || fromFinger(e)) return;
+  // A click on a ship makes her the target (and fires at her); on a creature stack, marks the stack and fires nothing.
+  if (markAt(e.clientX, e.clientY) === 'roam') return;
   const side = sideUnderCursor();
   if (side) fire(side);
 });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('mousedown', (e) => {
-  if (!inGame || e.button !== 2 || state.self?.dockedAt) return;
+  if (!inGame || e.button !== 2 || state.self?.dockedAt || fromFinger(e)) return;
   const m = mouseWorld();
   net.send({ t: 'mount', x: Math.round(m.x), y: Math.round(m.y) });
 });
@@ -1940,8 +2003,9 @@ function sendInput(now: number): void {
   const steering = touch.held() || (!typing() && (rudder !== 0 || padRudder !== 0));
   if (steering) helmAt = now;
   const hand = steering || now - helmAt < 400;
-  if (state.pursuit && !touch.held() && touch.course !== null) touch.course = null;
-  state.helm = !!state.pursuit && hand;
+  const run = !!state.pursuit || state.roamRun !== null;
+  if (run && !touch.held() && touch.course !== null) touch.course = null;
+  state.helm = run && hand;
   const key = `${state.input.rudder}|${state.input.sail}|${hand ? 1 : 0}`;
   if (key !== lastInputKey || now - lastInputSent > 250) {
     lastInputKey = key;
@@ -1996,6 +2060,24 @@ function roamAtHand(): RoamView | null {
     if (d <= bd) [best, bd] = [v, d];
   }
   return best;
+}
+
+/** docs/19 D7: the stack «Атаковать» is about — the one she marked (in sight, standing, nobody else's fight), else the
+ *  one within a cable of her; `marked` when she chose it. */
+function roamFocus(): { v: RoamView; marked: boolean; far: boolean } | null {
+  const own = state.ownDisplay;
+  if (!own || state.self?.dockedAt) {
+    state.roamMark = null;
+    return null;
+  }
+  if (state.roamMark !== null) {
+    const v = state.roams.find((x) => x.id === state.roamMark);
+    const p = v ? roamNow(state, v) : null;
+    if (v && p && v.fight !== 'other' && dist(p.x, p.y, own.x, own.y) <= ROAM_SEE) return { v, marked: true, far: dist(p.x, p.y, own.x, own.y) > ROAM_REACH };
+    state.roamMark = null;
+  }
+  const v = roamAtHand();
+  return v ? { v, marked: false, far: false } : null;
 }
 
 /** The nearest of the dense sea's marks within the boats' reach of her. */
@@ -2109,17 +2191,21 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     if (busy) info.push(esc(findInfo(fd.kind, busy.until - state.estServerTime())));
     else if (pendingFind?.id === fd.id) info.push(esc(slowWord()));
   }
-  const rm = roamAtHand();
+  const focus = roamFocus();
+  const rm = focus?.v;
+  // A stack in focus (marked, or a cable off) with no ship of her own choosing: its «Атаковать» leads, and the nearest
+  // hostile ship the target frame picked by itself is not offered (one «Атаковать», the stack's — owner, 2026-10-07).
+  const roamLead = !!focus && !targetPinned && !state.pursuit;
   if (rm) {
     const name = roamName(rm.kind);
-    facts.roam = { id: rm.id, icon: ROAM_UNITS[ROAMS[rm.kind].u as keyof typeof ROAM_UNITS].art, name, word: roamWord(rm.n).word, lv: rm.level, ...(rm.fight ? { fight: rm.fight } : {}), ...(rm.offer ? { offer: rm.offer } : {}), ...(rm.joinN ? { joinN: rm.joinN } : {}) };
+    facts.roam = { id: rm.id, icon: ROAM_UNITS[ROAMS[rm.kind].u as keyof typeof ROAM_UNITS].art, name, word: roamWord(rm.n).word, lv: rm.level, ...(rm.fight ? { fight: rm.fight } : {}), ...(rm.offer ? { offer: rm.offer } : {}), ...(rm.joinN ? { joinN: rm.joinN } : {}), ...(roamLead ? { lead: true } : {}), ...(focus.far ? { far: true } : {}), ...(state.roamRun === rm.id ? { running: true } : {}) };
     if (rm.fight) info.push(esc(LROAM(rm.fight === 'mate' ? 'i.mate' : 'i.fight', { what: name })));
     else if (rm.offer === 'flee' && rm.ratio !== undefined) info.push(esc(LROAM('i.flee', { r: rm.ratio })));
   }
   // «Атаковать» (docs/23 item 33): the target frame's ship, or the pursuit under way.
-  attackMark = attackable(targetId) ? targetId : null;
+  attackMark = attackable(targetId) && !roamLead ? targetId : null;
   const pursued = state.pursuit ? state.ships.get(state.pursuit.target) : undefined;
-  if (state.pursuit) facts.attack = { name: placeName(pursued?.info?.name ?? L('her')), pursuing: true, mode: state.pursuit.mode };
+  if (state.pursuit) facts.attack = { name: placeName(pursued?.info?.name ?? L('her')), pursuing: true, mode: state.pursuit.mode, ...(unboardableMark(state.pursuit.target) ? { gunsOnly: true } : {}) };
   else if (attackMark !== null) facts.attack = { name: placeName(state.ships.get(attackMark)?.info?.name ?? L('her')), pursuing: false, mode: 'board' };
   // The First Watch's last step (docs/23 item 79): «В порт» far from any harbour sails her to the nearest.
   homeport = null;
@@ -2191,20 +2277,24 @@ function runAct(a: Act): void {
     case 'find':
       return workFind(Number(a.arg));
     case 'roam':
-      return void net.send({ t: 'roam', action: 'attack', id: Number(a.arg) });
+      // «Атаковать» on a stack (docs/19 D7): a cable off the boats go at once, farther the helmsman sails her in first.
+      return void net.send({ t: 'attack', roam: Number(a.arg) });
     case 'roam_join':
       return void net.send({ t: 'roam', action: 'join', id: Number(a.arg) });
     case 'roam_look': {
       const v = state.roams.find((x) => x.id === Number(a.arg));
-      if (v) void openRoamCard(state, v, (action, id) => net.send({ t: 'roam', action, id }));
+      if (v) openRoamLook(v);
       return;
     }
     case 'look':
       return a.arg === 'struck' ? surrenderCard.reopen() : advCard.reopen();
     case 'repair':
       return void net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) });
-    case 'attack':
-      return void (attackMark !== null && net.send({ t: 'attack', target: attackMark, mode: 'board' }));
+    case 'attack': {
+      if (attackMark === null) return;
+      // A beast, a monster, a zone boss: no grapple takes her — the guns' fight (the server says the same).
+      return void net.send({ t: 'attack', target: attackMark, mode: unboardableMark(attackMark) ? 'guns' : 'board' });
+    }
     case 'attack_mode':
       return void (state.pursuit && net.send({ t: 'attack', target: state.pursuit.target, mode: state.pursuit.mode === 'board' ? 'guns' : 'board' }));
     case 'attack_stop':
@@ -2227,6 +2317,31 @@ function attackable(id: number | null): boolean {
   if (dist(own.x, own.y, s.cur.x, s.cur.y) > 2500) return false;
   if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(s.cur.flags & SF.HOSTILE)) return false;
   return true;
+}
+
+/** A ship no grapple takes (a beast of the sea, a monster, a zone boss, a great one's body or limb): «Атаковать» on her
+ *  is the guns' fight, and «Сблизиться» is not offered (the server makes it so: pursuit.ts unboardable). */
+function unboardableMark(id: number): boolean {
+  const info = state.ships.get(id)?.info;
+  if (!info) return false;
+  return info.npcRole === 'beast' || !!beastOfClass(info.classId) || !!SHIP_CLASSES[info.classId]?.monster || isZoneBossClass(info.classId) || state.bosses.some((b) => b.noBoard?.includes(id));
+}
+
+/** docs/19 D7: a stack's card («Осмотреть»): its «Атаковать» is the same run as the action button's, «Отпустить» the
+ *  HoMM3 flight. */
+function openRoamLook(v: RoamView): void {
+  void openRoamCard(state, v, (action, id) => net.send(action === 'attack' ? { t: 'attack', roam: id } : { t: 'roam', action, id }));
+}
+
+/** The close fight's «в дальности» (owner, 2026-10-07): her mark within the band her gun captains fire in
+ *  (gunnery.ts closeRange — the server's own rule), or «далеко»; null with no ship marked. */
+function markRange(): 'in' | 'far' | null {
+  const id = state.pursuit?.target ?? targetId;
+  const s = id !== null ? state.ships.get(id) : undefined, own = state.ownDisplay, self = state.self, you = state.you;
+  if (!s?.info || !own || !self || !you || self.dockedAt || s.cur.flags & (SF.SINKING | SF.DOCKED)) return null;
+  if (!(s.cur.flags & SF.HOSTILE) && !state.pursuit) return null;
+  const reach = Math.max(GUNS[self.loadout.guns.port].range, GUNS[self.loadout.guns.starboard].range) * (state.ownStats?.rangeMul ?? 1) * (AMMO[you.ammoSel]?.rangeMul ?? 1);
+  return dist(own.x, own.y, s.cur.x, s.cur.y) <= closeRange(reach).far ? 'in' : 'far';
 }
 
 /** The best shot for her mark now (docs/23 item 39): grape to board a full deck, chain for one running faster, round
@@ -2273,6 +2388,9 @@ function seaFire(): void {
     if (s && own) side = angleDiff(Math.atan2(s.cur.x - own.x, -(s.cur.y - own.y)), own.heading) < 0 ? 'port' : 'starboard';
     return touchFire(side);
   }
+  // A creature stack marked (docs/19 D7): «Огонь» is the volley at whatever ship is in reach, not a pursuit of the ship
+  // the target frame picked by itself.
+  if (state.roamMark !== null && !targetPinned && !state.pursuit) return fireVolley();
   if (id !== null && attackable(id) && !targetBears(id)) {
     if (state.pursuit?.target !== id || state.pursuit.mode !== 'guns') net.send({ t: 'attack', target: id, mode: 'guns' });
     seaHud.flashFire(false);
@@ -2373,6 +2491,9 @@ function autoMount(): void {
 
 /** Her mark on one line (docs/23 items 28, 31): name, level, hull and crew, the boarding chance. */
 function seaTarget(): TargetInfo | null {
+  // A creature stack marked (docs/19 D7): its name and level on the line (a tap opens its card).
+  const rf = !targetPinned && !state.pursuit ? roamFocus() : null;
+  if (rf?.marked) return { name: roamName(rf.v.kind), level: rf.v.level, icon: ROAM_UNITS[ROAMS[rf.v.kind].u as keyof typeof ROAM_UNITS].art };
   const id = state.pursuit?.target ?? targetId;
   const s = id !== null ? state.ships.get(id) : undefined;
   if (!s?.info || id === null) return null;
@@ -2385,6 +2506,7 @@ function seaTarget(): TargetInfo | null {
     ...(beast ? {} : { crew: s.cur.crew }),
     ...(s.info.shipLevel ? { level: s.info.shipLevel, threat: threatTo(s.info.shipLevel, s.info.classId) } : {}),
     ...(odds ? { chance: odds.chance } : {}),
+    ...(markRange() ? { range: markRange()! } : {}),
   };
 }
 
@@ -2418,6 +2540,8 @@ function sendGunnery(): void {
   document.body.classList.toggle('expert-guns', o.expertGuns);
 }
 
+/** The boarding chance is asked for a mark this near her at most (metres). */
+const ODDS_REACH = 1500;
 /** The target frame's boarding chance, asked every few seconds (docs/23 item 49). */
 let oddsId: number | null = null, oddsAt = 0;
 function askOdds(id: number | null): void {
@@ -2426,6 +2550,9 @@ function askOdds(id: number | null): void {
   const s = state.ships.get(id)!;
   if (s.info!.npcRole === 'beast' || SHIP_CLASSES[s.info!.classId]?.monster || isZoneBossClass(s.info!.classId)) return;
   if (id === oddsId && now - oddsAt < 4000) return;
+  // Only within reach of a fight (the server plays the battle out every time it is asked: not for a sail 2.5 km off).
+  const own = state.ownDisplay;
+  if (!own || dist(own.x, own.y, s.cur.x, s.cur.y) > ODDS_REACH) return;
   oddsId = id;
   oddsAt = now;
   net.send({ t: 'board_odds', id });
@@ -2930,7 +3057,12 @@ function step(t: number): void {
     if (held && touch.enabled) touchAim(held.side);
     aimSide = held ? held.side : touch.enabled ? null : sideUnderCursor();
     const prompt = computePrompt();
-    renderer.render(state, own, dt, { side: aimSide, dist: aimDistance(), boardTarget, chaser: touch.enabled || held ? null : chaserEndUnderCursor(), charge: held, target: targetId });
+    const range = markRange();
+    renderer.render(state, own, dt, { side: aimSide, dist: aimDistance(), boardTarget, chaser: touch.enabled || held ? null : chaserEndUnderCursor(), charge: held, target: state.pursuit?.target ?? targetId, range });
+    if (($('hud-target').dataset.range ?? '') !== (range ?? '')) {
+      if (range) $('hud-target').dataset.range = range;
+      else delete $('hud-target').dataset.range;
+    }
     if (own) audio.listener = { x: own.x, y: own.y };
     audio.ambience(state.wind[1], state.weather, dt);
     if (own) {
@@ -2983,4 +3115,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; } };

@@ -222,6 +222,17 @@ export function drawRoamsWorld(g: G, state: ClientState, c: RoamCtx): void {
     }
     token(g, x, y, R, v, col, c.time);
     if (c.zoom >= 0.2) water(g, x, y, R, v, c.time, c.zoom >= 0.8);
+    if (state.roamMark === v.id) {
+      // Marked by a tap or a click (owner, 2026-10-07): a ring in its ladder colour, as a ship's target ring.
+      g.strokeStyle = col;
+      g.lineWidth = 2;
+      g.setLineDash([6, 5]);
+      g.lineDashOffset = -c.time * 8;
+      g.beginPath();
+      g.arc(x, y, R * 1.55, 0, Math.PI * 2);
+      g.stroke();
+      g.setLineDash([]);
+    }
     if (v.fight) {
       // «в бою» under it (her ship's own name rides over the fight), the kind beside it.
       label(g, c.zoom > 0.5 ? `${L('fight')} · ${roamName(v.kind)}` : L('fight'), x, y + R + 12, '#f0a890', c.zoom > 0.45 ? 12 : 11);

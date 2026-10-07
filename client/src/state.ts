@@ -248,6 +248,11 @@ export class ClientState {
   /** docs/23 item 33: «Атаковать» — the helmsman pursues this mark (the prediction follows his rudder unless the
    *  captain's own hand is on the helm, `helm`). */
   pursuit: { target: number; mode: 'guns' | 'board' } | null = null;
+  /** docs/19 D7: «Атаковать» on a creature stack — the helmsman sails her in to this stack (its id), the boats go a cable
+   *  off it. A ship's pursuit and this are never both on. */
+  roamRun: number | null = null;
+  /** The creature stack she has marked by a tap or a click on it (main.ts): its «Атаковать» leads the action button. */
+  roamMark: number | null = null;
   helm = false;
   /** docs/23 item 49: the boarding chance of a ship, as the server last reckoned it. */
   boardOdds = new Map<number, { chance: number; risky: boolean; at: number }>();
@@ -393,7 +398,8 @@ export class ClientState {
         if (m.on && m.sail !== undefined) this.input.sail = m.sail;
         break;
       case 'pursuit':
-        this.pursuit = m.on && m.target !== undefined ? { target: m.target, mode: m.mode === 'guns' ? 'guns' : 'board' } : null;
+        this.pursuit = m.on && m.target !== undefined && m.roam === undefined ? { target: m.target, mode: m.mode === 'guns' ? 'guns' : 'board' } : null;
+        this.roamRun = m.on && m.roam !== undefined ? m.roam : null;
         break;
       case 'board_odds':
         this.boardOdds.set(m.id, { chance: m.chance, risky: m.risky, at: now });
@@ -730,8 +736,9 @@ export class ClientState {
     const sail = st.flags.has('regatta_equal') ? regattaSail(params) : params;
     const wind = { dir: this.wind[0], strength: this.wind[1] };
     const cur = currentAt(this.currents, s.x, s.y, this.estServerTime(), this.whirlpools);
-    const helmsman = !!this.autosail || (!!this.pursuit && !this.helm);
-    const input = { rudder: helmsman ? you.rud : this.input.rudder, sailTarget: this.pursuit && !this.helm ? you.sail : sailSteps[this.input.sail] };
+    const run = (!!this.pursuit || this.roamRun !== null) && !this.helm;
+    const helmsman = !!this.autosail || run;
+    const input = { rudder: helmsman ? you.rud : this.input.rudder, sailTarget: run ? you.sail : sailSteps[this.input.sail] };
     let t = elapsed;
     while (t > 0) {
       const dt = Math.min(0.05, t);

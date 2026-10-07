@@ -276,14 +276,28 @@ export function roamAtHand(game: Game, s: PlayerSession, slack = 30): RoamSpot |
   return best;
 }
 
-function fightWhy(game: Game, s: PlayerSession, sp: RoamSpot | undefined): string | null {
+/** Where a stack (by its id) is now; undefined for no such stack. */
+export function roamWhereId(game: Game, id: number): { x: number; y: number } | undefined {
+  const sp = R(game).idx.byId.get(id);
+  return sp ? roamWhere(game, sp) : undefined;
+}
+
+/** Why «Атаковать» on a stack cannot be given now from wherever she lies in sight of it — the helmsman sails her in
+ *  (pursuit.ts startRoamRun, owner 2026-10-07) — or null: what the fight itself asks but the cable's reach. */
+export function roamRunWhy(game: Game, s: PlayerSession, id: number): string | null {
+  return fightWhy(game, s, R(game).idx.byId.get(id), false);
+}
+
+function fightWhy(game: Game, s: PlayerSession, sp: RoamSpot | undefined, reach = true): string | null {
   const ship = s.ship;
   if (!ship || ship.docked || !ship.alive || ship.ghost) return 'Put to sea first.';
   if (!sp || !roamUp(game, sp.id)) return 'They are gone';
   const f = roamFighter(game, sp.id);
   if (f !== null) return f === s.accountId ? 'Your party is at them already.' : sameGroup(game, f, s.accountId) ? 'Your group mate is fighting them: the spoils will be shared.' : 'Another captain is fighting them.';
   const p = roamWhere(game, sp);
-  if (dist(p.x, p.y, ship.state.x, ship.state.y) > ROAM_REACH + 30) return 'Come within a cable of them first.';
+  const d = dist(p.x, p.y, ship.state.x, ship.state.y);
+  if (reach && d > ROAM_REACH + 30) return 'Come within a cable of them first.';
+  if (!reach && d > ROAM_SEE) return 'They are gone';
   if (ship.inCombat(game.now)) return 'Not while under fire';
   if (ship.boarding || ship.grappled || ship.landing) return 'Not now';
   if (landFighting(game, s)) return 'Your party is ashore already.';
@@ -442,7 +456,7 @@ export function roamMessage(game: Game, s: PlayerSession, msg: RoamClientMsg): v
   if (!s.ship || !s.profile) return;
   const id = Math.trunc(Number(msg.id));
   const e = msg.action === 'attack' ? attackRoam(game, s, id) : msg.action === 'join' || msg.action === 'flee' ? roamChoice(game, s, id, msg.action) : null;
-  if (e) game.sendTo(s, { t: 'toast', msg: e, kind: 'bad' });
+  if (e) game.refuse(s, e);
 }
 
 // ------------------------------------------------------------------------------------------------ the tester's console

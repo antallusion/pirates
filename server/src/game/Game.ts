@@ -56,7 +56,7 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, CHASER_RELOAD, SHIP_CLASSES, defaultGunFor, emptyAmmo } from '../../../shared/src/data/ships.ts';
 import { SEA_RELOAD } from '../../../shared/src/data/gunnery.ts';
-import { aimedVolley, pursuitInput, startPursuit, stepAutoFire, stepPursuit, stopPursuit } from './pursuit.ts';
+import { aimedVolley, pursuitInput, startPursuit, startRoamRun, stepAutoFire, stepPursuit, stopPursuit } from './pursuit.ts';
 import { boardOdds, boardRisk, isRisky } from './boardodds.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { TALENTS_BY_ID, canLearn } from '../../../shared/src/data/talents.ts';
@@ -132,6 +132,8 @@ export const FAR_LOD_R = SNAP_MID + 200;
 export const FAR_EVERY = 4;
 /** docs/19 D6: within this of a captain an NPC steps every tick (her snapshots carry it every one, 10 Hz, to SNAP_NEAR). */
 export const MID_LOD_R = SNAP_NEAR + 300;
+/** The same refusal to the same captain is told once in this many seconds (Game.refuse). */
+export const REFUSAL_QUIET = 2.5;
 export const XP_SUNK = 40;
 export const XP_BOARDED = 90;
 /** A captain's boarding lost (owner, 2026-10-05): the share of her chest the victors take (as a ship taken gives up,
@@ -2759,6 +2761,29 @@ export class Game {
     }
   }
 
+  /** A refusal to her order, in her toasts' band — once: the same words again within REFUSAL_QUIET seconds of the last
+   *  are not sent (owner, 2026-10-07: «идут ошибки вечные» — an order repeated by itself, or a button pressed over and over,
+   *  stacked the same refusal ×N in the band for as long as it went on). */
+  refuse(s: PlayerSession, m: string, order = ''): void {
+    const now = this.now;
+    // (the same refusal to another order is news: a whisper and an invitation both refused for the same reason)
+    const key = `${order}|${m}`;
+    const again = !!s.lastRefusal && s.lastRefusal.msg === key && now - s.lastRefusal.at < REFUSAL_QUIET;
+    s.lastRefusal = { msg: key, at: now }; // (the quiet runs on while it keeps coming: an order repeated by itself is told once)
+    if (!again) this.sendTo(s, { t: 'toast', msg: m, kind: 'bad' });
+  }
+
+  /** Her own shot into an empty sea — no ship within `reach` she could strike — is no fight: a tap or a click on the
+   *  sea (a phone's tap fired the broadside under it) left her «under fire» for 20 s, and every creature stack, lair,
+   *  drift, sea mark and landing refused her the while, renewed at every tap (owner, 2026-10-07). */
+  idleShot(ship: ShipEntity, before: number, reach: number): void {
+    let foe = false;
+    this.forShipsNear(ship.state.x, ship.state.y, reach, (o) => {
+      if (!foe && o.id !== ship.id && o.alive && !o.docked && !o.sinkingUntil && !damageBlocked(this, ship, o)) foe = true;
+    });
+    if (!foe) ship.lastCombat = before;
+  }
+
   private handle(s: PlayerSession, msg: ClientMsg): void {
     if (msg.t === 'ping') return this.sendTo(s, { t: 'pong', c: msg.c, s: this.now });
     if (msg.t === 'hello') return this.onHello(s, msg);
@@ -2768,7 +2793,7 @@ export class Game {
     const p = s.profile;
     if (!ship || !p) return this.sendTo(s, { t: 'err', msg: 'No captain' });
     const err = (m: string | null) => {
-      if (m) this.sendTo(s, { t: 'toast', msg: m, kind: 'bad' });
+      if (m) this.refuse(s, m, msg.t);
     };
     const port = ship.docked ? this.portById(ship.docked)! : null;
     const portAction = (fn: (port: Port) => string | null) => {
@@ -2817,16 +2842,20 @@ export class Game {
       case 'fire':
         if (msg.side !== 'port' && msg.side !== 'starboard') return;
         {
+          const before = ship.lastCombat;
           const why = fireBroadside(this, ship, msg.side, Number(msg.dist), Number.isFinite(msg.x) && Number.isFinite(msg.y) ? { x: Number(msg.x), y: Number(msg.y) } : undefined);
           if (!why) {
             lineOfBattle(this, ship, msg.side, Number.isFinite(Number(msg.dist)) ? Number(msg.dist) : 300);
             onboardingFire(s);
+            this.idleShot(ship, before, 700);
           }
           return err(why);
         }
       case 'attack': {
         // «Атаковать» (docs/23 item 33): the helmsman pursues the mark; `stop` gives the wheel back.
         if (msg.stop) return stopPursuit(this, s, 'manual');
+        // …or a creature stack's (docs/19 D7): the helmsman sails her in, the boats go a cable off.
+        if (msg.roam !== undefined) return err(startRoamRun(this, s, Math.trunc(Number(msg.roam))));
         const why = startPursuit(this, s, Math.trunc(Number(msg.target)), msg.mode === 'guns' ? 'guns' : 'board');
         // «Огонь» on a mark that does not bear lays the guns on her (the phone's «Бортами»): her hand on the guns.
         if (!why && msg.mode === 'guns') onboardingFire(s);
@@ -2852,8 +2881,12 @@ export class Game {
       }
       case 'craft':
         return err(craft(this, s, msg.recipe, Math.trunc(Number(msg.n))));
-      case 'mount':
-        return err(fireMount(this, ship, Number(msg.x), Number(msg.y)));
+      case 'mount': {
+        const before = ship.lastCombat;
+        const why = fireMount(this, ship, Number(msg.x), Number(msg.y));
+        if (!why) this.idleShot(ship, before, 900);
+        return err(why);
+      }
       case 'aim':
         if (msg.side === 'port' || msg.side === 'starboard') holdAim(this, ship, msg.side);
         return;
@@ -2866,9 +2899,13 @@ export class Game {
         if (!why) this.pushSelf(s);
         return err(why);
       }
-      case 'chase':
+      case 'chase': {
         if (msg.end !== 'bow' && msg.end !== 'stern') return;
-        return err(fireChaser(this, ship, msg.end, Number(msg.x), Number(msg.y)));
+        const before = ship.lastCombat;
+        const why = fireChaser(this, ship, msg.end, Number(msg.x), Number(msg.y));
+        if (!why) this.idleShot(ship, before, 800);
+        return err(why);
+      }
       case 'ammo':
         if (AMMO_IDS.includes(msg.ammo) && msg.ammo !== ship.ammoSel) {
           // Drawing the loaded charge costs part of a reload; Quick Swap trims it.
@@ -3206,7 +3243,9 @@ export class Game {
       }
       case 'appraise': {
         const v = appraise(this, s, Number(msg.id));
-        if (typeof v === 'string') return err(v);
+        // The target frame's own asking (every few seconds): its «too far for the glass» is no news (it came as a toast
+        // every four seconds of every fight, and only the client's filter kept it off the screen).
+        if (typeof v === 'string') return msg.quiet ? undefined : err(v);
         this.sendTo(s, { t: 'appraisal', view: v });
         return;
       }
