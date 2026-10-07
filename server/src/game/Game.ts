@@ -988,7 +988,8 @@ export class Game {
       if (!s.ship || !s.profile) return;
       // An order that waited for the shot to stop: given again now she is clear.
       if (s.whenClear) {
-        if (now > s.whenClear.until) s.whenClear = null;
+        // Its moment gone: the time out, or she boarded, grappled, sunk or in port since (a boarding is its own fight).
+        if (now > s.whenClear.until || s.ship.boarding || !s.ship.alive || (s.ship.docked && s.whenClear.msg.t !== 'repair')) s.whenClear = null;
         else if (!s.ship.underFire(now) && (s.whenClear.way === undefined || Math.abs(s.ship.state.speed) <= s.whenClear.way)) {
           const m = s.whenClear.msg;
           s.whenClear = null;
@@ -4385,7 +4386,7 @@ export class Game {
           stern: me.cls.sternChasers ? 1 - me.chaserReload.stern / (CHASER_RELOAD * SEA_RELOAD) : 0,
           mount: me.loadout.mount ? 1 - me.mountReload / mountReloadTime(me) : 0,
         },
-        ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now) | (frame.tethered.has(me.id) ? SF.TETHERED : 0) | pvpFlags(this, me), combat: me.inCombat(this.now),
+        ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now) | (frame.tethered.has(me.id) ? SF.TETHERED : 0) | pvpFlags(this, me), combat: me.inCombat(this.now), underFire: me.underFire(this.now),
         water: Math.min(1, me.water / floodCapacity(me)), leaks: me.leaks, station: me.station,
         resolve: me.resolve, dread: me.dread, sanity: me.sanity,
       };

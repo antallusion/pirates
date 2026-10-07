@@ -31,6 +31,8 @@ async function instrument(p) {
     const W = (globalThis.__bt = { toasts: [], volleys: 0, t0: performance.now() });
     const now = () => Math.round(performance.now() - W.t0) / 1000;
     g.net.on((m) => {
+      if (m.t === 'pursuit') W.toasts.push({ t: now(), kind: 'pursuit', msg: `${m.on ? 'on' : 'off'} ${m.why ?? ''} ${m.target ?? ''}` });
+      if (m.t === 'sunk_self') W.toasts.push({ t: now(), kind: 'sunk', msg: JSON.stringify(m).slice(0, 200) });
       if (m.t === 'toast' || m.t === 'err') W.toasts.push({ t: now(), kind: m.kind ?? 'err', msg: m.msg });
       else if (m.t === 'ev') for (const e of m.list) if (e.k === 'volley' && e.ship === g.state.entityId && (e.side === 'port' || e.side === 'starboard')) { W.volleys++; W.first ??= now(); }
     });
@@ -74,12 +76,19 @@ async function run(ph) {
   for (const x of ['/weather clear', '/heal', '/ammo', '/heading 90']) await ph.admin(x, 700);
   await instrument(p);
   const before = await me(p);
-  await ph.admin(`/beast ${BEAST} ${BLEVEL} 1`, 1500);
-  const b0 = await ph.until(() => beast(p), 10000, 'the beast');
+  // A beast rises only in deep water: another spot if this one was too shoal for it.
+  let b0 = null;
+  for (let k = 0; k < 6 && !b0; k++) {
+    if (k) await ph.admin(`/tp ${15000 + Math.floor(Math.random() * 18) * 1000} ${63000 + Math.floor(Math.random() * 14) * 1000}`, 2500);
+    await ph.admin(`/beast ${BEAST} ${BLEVEL} 1`, 1500);
+    b0 = await beast(p);
+  }
+  if (!b0) throw new StepError('no beast would rise');
   await ph.step('beast', { beast: b0, me: before });
   // Her mark: the beast (a click on its frame), then the bar's «Атаковать» with the mouse (the action button on a phone).
   await p.evaluate((id) => globalThis.gravetide.target(id), b0.id);
   await L.sleep(400);
+  await L.closeAll(p, 1);
   const tA = Date.now();
   const sel = TOUCH ? '#tc-act[data-act="attack"]' : '#hud-prompt .act-attack';
   await ph.tap(sel, '«Атаковать»', 8000);
@@ -105,7 +114,7 @@ async function run(ph) {
   return {
     beast: BEAST, blevel: BLEVEL, level: LEVEL, cls: CLS, size: SIZE, why, end, firstVolley: B.first ?? null, fight: B.first != null && end != null ? +(end - (B.first - B.tA)).toFixed(1) : null, firstAfter: B.first != null ? +(B.first - B.tA).toFixed(1) : null,
     volleys: B.volleys, menLost: (before.crew ?? 0) - (after.crew ?? 0), hullLost: before.hullMax ? +(((before.hull - after.hull) / before.hullMax) * 100).toFixed(1) : null,
-    refusals: B.toasts.filter((x) => x.kind === 'bad' || x.kind === 'err'), toasts: B.toasts.slice(-30), errors: p.errors, samples: samples.join(' '),
+    refusals: B.toasts.filter((x) => x.kind === 'bad' || x.kind === 'err'), toasts: B.toasts.slice(-40), errors: p.errors, samples: samples.join(' '),
   };
 }
 

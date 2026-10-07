@@ -65,7 +65,7 @@ export function encodeSnap(m: Snap): Uint8Array {
     d.setUint8(o, AMMO_IDS.indexOf(y.ammoSel)); o += 1;
     for (const a of AMMO_IDS) { d.setUint16(o, u16(y.ammo[a]), true); o += 2; }
     d.setUint32(o, y.flags >>> 0, true); o += 4;
-    d.setUint8(o, y.combat ? 1 : 0); o += 1;
+    d.setUint8(o, (y.combat ? 1 : 0) | (y.underFire ? 2 : 0)); o += 1; // (bit 2: another ship's fire on her, 2026-10-07)
     d.setUint8(o, q8(y.water)); o += 1;
     d.setUint8(o, Math.min(255, y.leaks)); o += 1;
     d.setUint8(o, STATIONS.indexOf(y.station)); o += 1;
@@ -138,14 +138,15 @@ export function decodeSnap(input: ArrayBuffer | Uint8Array): Snap {
     const ammo = emptyAmmo();
     for (const a of AMMO_IDS) { ammo[a] = d.getUint16(o, true); o += 2; }
     const flags = d.getUint32(o, true); o += 4;
-    const combat = d.getUint8(o) === 1; o += 1;
+    const fightByte = d.getUint8(o); o += 1;
+    const combat = (fightByte & 1) === 1, underFire = (fightByte & 2) === 2;
     const water = d.getUint8(o) / 250; o += 1;
     const leaks = d.getUint8(o); o += 1;
     const station = STATIONS[d.getUint8(o)] ?? 'balanced'; o += 1;
     const resolve = d.getUint8(o); o += 1;
     const dread = d.getUint8(o); o += 1;
     const sanity = d.getUint8(o); o += 1;
-    you = { x, y, h, spd, sail, rud, sailT, hull, hullMax, sails, sailsMax, rudderHp, crew, crewMax, morale, reload: { port, starboard, bow, stern, mount }, ammoSel, ammo, flags, combat, water, leaks, station, resolve, dread, sanity };
+    you = { x, y, h, spd, sail, rud, sailT, hull, hullMax, sails, sailsMax, rudderHp, crew, crewMax, morale, reload: { port, starboard, bow, stern, mount }, ammoSel, ammo, flags, combat, underFire, water, leaks, station, resolve, dread, sanity };
   }
   const nShips = d.getUint16(o, true); o += 2;
   const ships: ShipRow[] = [];
