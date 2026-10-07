@@ -98,10 +98,12 @@ async function check(screen) {
 const closeSheets = () => p.evaluate(() => { document.querySelectorAll('.k-sheet-root.k-open').forEach((s) => s.querySelector('.k-scrim')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))); globalThis.gravetide.seaHud?.closeSheets?.(); });
 /** A new level's choice over the sea: «Позже». */
 const later = async () => {
-  for (let i = 0; i < 4; i++) {
-    const ok = await p.evaluate(() => { const b = [...document.querySelectorAll('.k-sheet-root.k-open button')].find((x) => /Позже|Later/.test(x.innerText)); b?.click(); return !!b; });
-    if (!ok) break;
-    await L.sleep(700);
+  // (the choices come one after another: «Позже» until none has come for a while)
+  for (let i = 0, quiet = 0; i < 10 && quiet < 2; i++) {
+    // a choice taken (a «Позже» brings it back a little later, over the screen being measured)
+    const ok = await p.evaluate(() => { const b = document.querySelector('.k-sheet-root.k-open .lu-pick') ?? [...document.querySelectorAll('.k-sheet-root.k-open button')].find((x) => /Позже|Later/.test(x.innerText)); b?.click(); return !!b; });
+    quiet = ok ? 0 : quiet + 1;
+    await L.sleep(ok ? 800 : 400);
   }
 };
 

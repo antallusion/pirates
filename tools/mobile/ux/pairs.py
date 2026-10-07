@@ -24,16 +24,18 @@ def rows(tag, name):
         return {}
     return {r['screen']: r for r in json.load(open(p, encoding='utf8'))['rows']}
 
+BAND = 34
+
 def label(img, text, sub, color):
-    d = ImageDraw.Draw(img)
-    f1, f2 = font(max(14, img.width // 48)), font(max(11, img.width // 70))
-    pad = 6
-    w = max(d.textlength(text, font=f1), d.textlength(sub, font=f2)) + pad * 2
-    h = f1.size + f2.size + pad * 3
-    d.rectangle([0, 0, w, h], fill=(8, 9, 11))
-    d.rectangle([0, h - 3, w, h], fill=color)
-    d.text((pad, pad), text, font=f1, fill=(232, 220, 196))
-    d.text((pad, pad * 2 + f1.size), sub, font=f2, fill=(170, 176, 182))
+    # a band over the picture (not on it: the captain's frame stands in its top left corner)
+    out = Image.new('RGB', (img.width, img.height + BAND), (8, 9, 11))
+    out.paste(img, (0, BAND))
+    d = ImageDraw.Draw(out)
+    f1, f2 = font(18), font(13)
+    d.rectangle([0, BAND - 3, img.width, BAND], fill=color)
+    d.text((8, 6), text, font=f1, fill=(232, 220, 196))
+    d.text((8 + d.textlength(text, font=f1) + 14, 10), sub, font=f2, fill=(170, 176, 182))
+    return out
 
 made = []
 names = sorted({f[len('after_'):-len('.json')] for f in os.listdir(RUN) if f.startswith('after_') and f.endswith('.json')})
@@ -49,8 +51,8 @@ for name in names:
                 return ''
             return f"{r['controls']} controls · {len(r['crop'])} cut · popups {r['pop']}%"
         ru = name.endswith('_ru')
-        label(ib, 'ДО' if ru else 'BEFORE', nums(b.get(screen)), (150, 60, 50))
-        label(ia, 'ПОСЛЕ' if ru else 'AFTER', nums(a.get(screen)), (120, 160, 90))
+        ib = label(ib, 'ДО' if ru else 'BEFORE', nums(b.get(screen)), (150, 60, 50))
+        ia = label(ia, 'ПОСЛЕ' if ru else 'AFTER', nums(a.get(screen)), (120, 160, 90))
         gap = 8
         pair = Image.new('RGB', (ib.width + ia.width + gap, max(ib.height, ia.height)), (20, 18, 15))
         pair.paste(ib, (0, 0))
