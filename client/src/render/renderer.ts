@@ -10,7 +10,7 @@ import { flagCanvas } from './flag.ts';
 import { namedLabel } from '../ui/hud.ts';
 import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
-import { drawBeast, drawCarcass, drawDolphin } from './beasts.ts';
+import { drawBeastInSea, drawCarcass, drawDolphinSea } from './beasts.ts';
 import { drawLair, drawMuzzles } from './lairs.ts';
 import type { LairView } from '../../../shared/src/protocol.ts';
 import { EN as SEN, RU as SRU } from '../lang/ui/livesea.ts';
@@ -48,7 +48,7 @@ import { drawLairsWorld } from './beastlairs.ts'; // docs/18 II
 import { drawDriftsWorld } from './drifts.ts'; // docs/18 IV
 import { drawFindsWorld } from './seafinds.ts'; // docs/19 D5
 import { drawRoamsWorld } from './roamers.ts'; // docs/19 D7
-import { addHot, brassRing, drawArt, drawPiece, foam, hot, icePlate, inHot, markRing } from './seaart.ts'; // the tokens on the screen: the hover aim keeps off them (owner, 2026-10-07)
+import { addHot, brassRing, drawArt, drawPiece, foam, hot, icePlate, inHot, markRing, shipWater } from './seaart.ts'; // the tokens on the screen: the hover aim keeps off them (owner, 2026-10-07)
 import { drawIsleHalo, drawIsleLevel, drawIsleOver, drawMist, drawTurtles } from './isletype.ts'; // docs/18 III
 import type { IsleTypeCtx } from './isletype.ts';
 import { EN as I18_EN, RU as I18_RU } from '../lang/ui/isles18.ts';
@@ -2057,6 +2057,13 @@ export class Renderer {
     g.ellipse(beam * (0.35 + heel * 0.5), beam * 0.45, beam * (0.62 + Math.abs(heel) * 0.35), len * 0.5, 0, 0, Math.PI * 2);
     g.fill();
     g.restore();
+    // Her own white water under way: the bow wave, the spray at her cutwater, the quarter wave (owner, 2026-10-07).
+    if (!sinking && !hidden && s.spd > 0.6) {
+      g.save();
+      g.rotate(s.h);
+      shipWater(g, len, beam, s.spd / Math.max(1, cls.maxSpeed), settings().reduceMotion ? 0 : this.time, s.id);
+      g.restore();
+    }
 
     g.rotate(s.h + (sinking ? sinkF * 0.35 : 0));
     const scale = 1 - sinkF * 0.25;
@@ -3588,72 +3595,32 @@ export class Renderer {
       g.translate(x, y);
       g.rotate(s.h);
       if (pod === 'dolphins') {
-        // Five of them riding the bow wave and along her sides, each leaping in its turn.
-        // Drawn larger than life (as the pets are) so they read at sea: each leaps in its turn, white water where it
-        // breaks the surface and falls back.
+        // Five of them riding the bow wave and along her sides, each leaping in its turn: under the water between
+        // leaps (sunk, faint, a V of foam over them), out of it whole with their shadows falling away, the splash
+        // where they break the surface and go back in (drawn larger than life, as the pets are, to read at sea).
         const spots: [number, number][] = [[-1.5, -0.62], [1.5, -0.55], [-2.3, -0.18], [2.4, -0.05], [0.25, -0.86]];
         const base = Math.max(15, 6.5 * this.zoom);
         spots.forEach(([bx, by], i) => {
           const ph = t * 1.6 + i * 1.3;
-          const leap = Math.max(0, Math.sin(ph));
-          const len = base * (1 + leap * 0.3);
           const px = bx * B * 0.6 + Math.sin(t * 0.8 + i) * B * 0.12, py = by * L - Math.cos(ph) * L * 0.05;
           g.save();
           g.translate(px, py);
-          // The wake it cuts: two short white strokes behind it.
-          g.strokeStyle = `rgba(225,235,240,${0.25 + 0.35 * leap})`;
-          g.lineWidth = Math.max(1, base * 0.08);
-          g.beginPath();
-          g.moveTo(-base * 0.12, base * 0.45);
-          g.lineTo(-base * 0.3, base * 1.2);
-          g.moveTo(base * 0.12, base * 0.45);
-          g.lineTo(base * 0.3, base * 1.2);
-          g.stroke();
-          if (leap < 0.25 || (leap > 0.9 && Math.cos(ph) < 0)) {
-            g.fillStyle = `rgba(235,244,248,${0.55 - leap * 0.4})`;
-            g.beginPath();
-            g.ellipse(0, len * 0.1, len * 0.42, len * 0.28, 0, 0, Math.PI * 2);
-            g.fill();
-          }
-          g.globalAlpha = 0.55 + 0.45 * Math.min(1, leap * 2);
-          if (leap > 0.3) {
-            g.fillStyle = 'rgba(0,0,0,0.25)';
-            g.beginPath();
-            g.ellipse(len * 0.12, len * 0.18, len * 0.14, len * 0.42, 0, 0, Math.PI * 2);
-            g.fill();
-          }
-          drawDolphin(g, len, t, s.id + i);
+          drawDolphinSea(g, base, t, (s.id % 97) * 0.37 + i * 2.3);
           g.restore();
         });
       } else if (pod === 'humpback') {
-        const len = Math.max(46, 17 * this.zoom), dive = 0.55 + 0.45 * Math.sin(t * 0.45 + s.id);
+        // A humpback abeam, under the water but for her back as she rolls, and her blow (no pad under her).
+        const len = Math.max(46, 17 * this.zoom);
         g.translate(B * 0.5 + len * 0.35 + 6 * this.zoom, -L * 0.05 + Math.sin(t * 0.3) * L * 0.05);
-        // The white water about her back as she rolls, and her spout when she breathes.
-        g.fillStyle = `rgba(222,234,240,${0.12 + 0.2 * dive})`;
-        g.beginPath();
-        g.ellipse(0, 0, len * 0.3, len * 0.6, 0, 0, Math.PI * 2);
-        g.fill();
-        g.globalAlpha = 0.45 + 0.55 * dive;
-        drawBeast(g, 'humpback', len, len * 0.28, t, s.id);
-        const breath = (t * 0.45 + s.id) % (Math.PI * 2);
-        if (breath > 1.2 && breath < 2.2) {
-          const k = 1 - Math.abs(breath - 1.7) / 0.5;
-          g.globalAlpha = 0.7 * k;
-          g.fillStyle = '#eef4f7';
-          for (let i = 0; i < 5; i++) {
-            g.beginPath();
-            g.arc(Math.sin(i * 2.1) * len * 0.05, -len * (0.3 + i * 0.05 * k), len * (0.04 + 0.02 * i) * (0.6 + k), 0, Math.PI * 2);
-            g.fill();
-          }
-        }
+        drawBeastInSea(g, 'humpback', len, len * 0.28, t, s.id, false, 0.7);
       } else {
-        // Three orcas in her wake, weaving.
+        // Three orcas in her wake, weaving, rolling up to breathe one after another.
         for (let i = 0; i < 3; i++) {
-          const len = Math.max(18, 8 * this.zoom), dive = 0.55 + 0.45 * Math.sin(t * 0.8 + i * 2 + s.id);
+          const len = Math.max(18, 8 * this.zoom);
           g.save();
           g.translate((i - 1) * B * 0.9 + Math.sin(t * 0.9 + i) * B * 0.2, L * (0.62 + i * 0.12));
-          g.globalAlpha = 0.35 + 0.65 * dive;
-          drawBeast(g, 'orca', len, len * 0.3, t, s.id + i);
+          g.rotate(Math.sin(t * 0.9 + i) * 0.15);
+          drawBeastInSea(g, 'orca', len, len * 0.3, t, s.id + i * 2.1, false, 0.8);
           g.restore();
         }
       }
@@ -3672,16 +3639,14 @@ export class Renderer {
       if (x < -200 || y < -200 || x > this.w + 200 || y > this.h + 200) continue;
       const clen = calfLength(pet.orca) * this.zoom;
       const t = settings().reduceMotion ? 0 : this.time;
-      // It rises and dives in a slow rhythm, weaving a little on the ship's quarter.
-      const dive = 0.55 + 0.45 * Math.sin(t * 0.7 + s.id);
+      // It rises and dives in its own rhythm (drawBeastInSea), weaving a little on the ship's quarter.
       const weave = Math.sin(t * 0.9 + s.id * 1.7) * cls.beam * 0.25 * this.zoom;
       g.save();
       g.translate(x, y);
       g.rotate(s.h);
       g.translate(cls.beam * 0.5 * this.zoom + clen * 0.45 + 3 * this.zoom + weave, cls.length * 0.12 * this.zoom);
       g.rotate(Math.sin(t * 0.9 + s.id * 1.7) * 0.12);
-      g.globalAlpha = 0.35 + 0.65 * dive;
-      drawBeast(g, 'white_orca', clen, clen * 0.3, t, s.id);
+      drawBeastInSea(g, 'white_orca', clen, clen * 0.3, t, s.id, false, 0.8);
       g.restore();
     }
   }

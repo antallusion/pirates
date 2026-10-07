@@ -18,6 +18,8 @@ interface Piece {
   clip?: 'circle' | [number, number][];
   dye?: string;
   dyeA?: number;
+  /** A tone screened over it (lifts the darks: the orca's black made a dolphin's slate). */
+  lift?: string;
   /** The longest side of the cached canvas (px): enough for the biggest it is drawn. */
   px?: number;
 }
@@ -47,6 +49,8 @@ export const PIECES = {
   smoke: { id: 'part.smoke', px: 160 },
   /** White water: spray about anything that breaks the swell. */
   splash: { id: 'part.splash', px: 200 },
+  /** A dolphin from above: the orca's painting, its black lifted to a dolphin's slate grey, its white flanks kept. */
+  dolphin: { id: 'monster.orca', lift: '#46535d', px: 200 },
   /** A pennant (dyed on use). */
   pennant: { id: 'part.pennant', px: 256 },
 } satisfies Record<string, Piece>;
@@ -88,6 +92,16 @@ export function piece(name: PieceName, dye?: string, dyeA = 0.6): HTMLCanvasElem
   }
   x.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
   x.setTransform(1, 0, 0, 1, 0, 0);
+  if (p.lift) {
+    x.globalCompositeOperation = 'screen';
+    x.fillStyle = p.lift;
+    x.fillRect(0, 0, c.width, c.height);
+    x.globalCompositeOperation = 'destination-in';
+    x.scale(k, k); // (the outline's clip still holds)
+    x.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+    x.setTransform(1, 0, 0, 1, 0, 0);
+    x.globalCompositeOperation = 'source-over';
+  }
   if (tone) {
     // The 'color' blend takes the dye's hue and keeps the paint's light; then the cut-out's own outline again.
     const shade = canvas(c.width, c.height)!;
@@ -481,4 +495,47 @@ export function addHot(x: number, y: number, r: number): void {
 export function inHot(x: number, y: number, pad = 0): boolean {
   for (const h of hot) if ((x - h.x) ** 2 + (y - h.y) ** 2 < (h.r + pad) ** 2) return true;
   return false;
+}
+
+// ------------------------------------------------------------------------------------------------ a ship's white water
+
+/** A ship's own white water under way (ship-local, her bow toward −y; owner, 2026-10-07: «надо работать над
+ *  рассеканием воды»): the bow wave curling off her stem and running aft along both sides, the spray thrown up at her
+ *  cutwater, and the white water of her quarter wave astern — the painted spray laid along the lines the water takes,
+ *  stronger the faster she goes (`k` her speed as a share of her best, 0…1). The churned wake behind her is the sea's
+ *  shader's. */
+export function shipWater(g: G, len: number, beam: number, k: number, t: number, seed: number): void {
+  if (k < 0.08) return;
+  const sp = piece('splash');
+  if (!sp) return;
+  const a0 = g.globalAlpha;
+  const kk = Math.min(1, k);
+  const blot = (x: number, y: number, s: number, a: number, turn: number): void => {
+    g.globalAlpha = a0 * Math.min(1, a);
+    g.save();
+    g.translate(x, y);
+    g.rotate(turn);
+    g.drawImage(sp, -s / 2, -s / 2, s, s);
+    g.restore();
+  };
+  // The bow wave: a line of white water from her stem, flaring out and aft along each side, flickering as the swell
+  // runs — many small blots of the painted spray, so it reads as a curling line of foam, not as puffs.
+  for (let i = 0; i < 9; i++) {
+    const u = i / 8;
+    const y = -len * 0.49 + u * len * 0.46;
+    const off = beam * (0.08 + 0.5 * Math.sqrt(u)) * (0.85 + 0.3 * kk);
+    const s = beam * (0.26 + 0.2 * u) * (0.8 + 0.4 * kk);
+    const flick = 0.75 + 0.25 * Math.sin(t * 7 + i * 1.9 + seed);
+    for (const side of [-1, 1]) blot(side * off, y, s, kk * (0.7 - u * 0.45) * flick, i * 1.3 + side + t * 0.8);
+  }
+  // Spray at the cutwater, thrown up as she drives into the swell.
+  const sz = beam * (0.4 + 0.45 * kk);
+  blot(0, -len * 0.5 - sz * 0.2, sz, kk * kk * (0.55 + 0.25 * Math.sin(t * 9 + seed)), t * 2 + seed);
+  // The quarter wave astern, spreading into her wake.
+  for (let i = 0; i < 6; i++) {
+    const u = i / 5;
+    const s = beam * (0.32 + 0.25 * u) * (0.8 + 0.4 * kk);
+    for (const side of [-1, 1]) blot(side * beam * (0.28 + 0.42 * u), len * (0.4 + 0.2 * u), s, kk * (0.55 - u * 0.4), i * 2.1 - side + t * 0.5);
+  }
+  g.globalAlpha = a0;
 }
