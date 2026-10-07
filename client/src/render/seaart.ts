@@ -6,7 +6,7 @@
 // small canvas and stamped after (the phone's frames); where the art has not loaded the caller draws its old hand-made
 // shape. Strictly from above, at their own proportions: nothing is stretched (CLAUDE.md §3).
 
-import { sprite } from '../assets.ts';
+import { pattern, sprite } from '../assets.ts';
 
 type G = CanvasRenderingContext2D;
 
@@ -322,7 +322,7 @@ export function levelTag(g: G, word: string, level: number | string | null, col:
     g.font = fBadge;
     pill = level === null ? 0 : Math.ceil(g.measureText(String(level)).width) + 8;
     g.font = fWord;
-    w = pill + (pill ? 4 : 0) + Math.ceil(g.measureText(word).width) + 6;
+    w = word ? pill + (pill ? 4 : 0) + Math.ceil(g.measureText(word).width) + 6 : pill + 2;
     g.restore();
     if (tagW.size > 600) tagW.clear();
     tagW.set(key, w);
@@ -390,6 +390,50 @@ export function word(g: G, text: string, x: number, y: number, col: string, size
 }
 
 // ------------------------------------------------------------------------------------------------ the water
+
+/** A plate of ice from above, cut from the painted shore ice (tex.shore_ice, its grain riding with the plate): a ragged
+ *  edge, rounded here and broken there, its shadow in the water, snow over its middle, a wet rim. `rnd` shapes it. */
+export function icePlate(g: G, cx: number, cy: number, rr: number, n: number, rot: number, rnd: () => number, alpha = 1): void {
+  const pts: [number, number][] = [];
+  for (let k = 0; k < n; k++) {
+    const a = (k / n) * Math.PI * 2 + rot, r = rr * (0.72 + rnd() * 0.28);
+    pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.82]);
+  }
+  const path = (ox: number, oy: number): void => {
+    g.beginPath();
+    g.moveTo((pts[0][0] + pts[1][0]) / 2 + ox, (pts[0][1] + pts[1][1]) / 2 + oy);
+    for (let k = 1; k <= n; k++) {
+      const p = pts[k % n], q = pts[(k + 1) % n];
+      if (k % 3 === 0) g.lineTo(p[0] + ox, p[1] + oy); // now and then a sharp break
+      g.quadraticCurveTo(p[0] + ox, p[1] + oy, (p[0] + q[0]) / 2 + ox, (p[1] + q[1]) / 2 + oy);
+    }
+    g.closePath();
+  };
+  g.save();
+  g.globalAlpha *= alpha;
+  path(rr * 0.07, rr * 0.11);
+  g.fillStyle = 'rgba(0,0,0,0.32)';
+  g.fill();
+  path(0, 0);
+  const ice = pattern(g, 'tex.shore_ice');
+  const spr = sprite('tex.shore_ice');
+  if (ice && spr) ice.setTransform(new DOMMatrix().translate(cx - rr * 1.3, cy - rr * 1.3).rotate((rot * 180) / Math.PI).scale((rr * 2.4) / spr.img.naturalWidth));
+  g.fillStyle = ice ?? '#c9d6de';
+  g.fill();
+  g.save();
+  g.clip();
+  const sn = g.createRadialGradient(cx - rr * 0.2, cy - rr * 0.25, 0, cx, cy, rr);
+  sn.addColorStop(0, 'rgba(228,238,242,0.45)');
+  sn.addColorStop(0.7, 'rgba(228,238,242,0.12)');
+  sn.addColorStop(1, 'rgba(120,150,165,0.2)');
+  g.fillStyle = sn;
+  g.fillRect(cx - rr, cy - rr, rr * 2, rr * 2);
+  g.restore();
+  g.strokeStyle = 'rgba(220,234,240,0.55)';
+  g.lineWidth = Math.max(1, rr * 0.03);
+  g.stroke();
+  g.restore();
+}
 
 /** White water about anything afloat: the painted spray, faint and turning slowly, instead of a drawn ring. */
 export function foam(g: G, x: number, y: number, R: number, t: number, seed: number, a = 0.2): void {

@@ -1,13 +1,15 @@
-// The adventure map on the water (docs/17 H4), strictly from above: each thing on its own skerry — a ring of wet rock
-// and foam with the painted prop on it (the chest, the altar, the well, the bell tower, the mill with its sails
-// turning, the warehouse's crates, the sea fort of the prison) or the obelisk, a black stone drawn by hand with its
-// rune glowing; a gold ring on what she may visit now, a dimmer one when she has. The guards stand as what they are: a
-// pirate hold-out's camp on a rock beside its ship at anchor, a rotting hulk, the wreck of the drowned in a sick light,
-// a pack of the deep circling in the water — and HoMM3's word for their number over them.
+// The adventure map on the water (docs/17 H4), strictly from above: each thing on its own skerry — a ring of the painted
+// rock, wet and dark toward the water, the swell breaking white about it — with the painted prop on it (the chest, the
+// altar, the well, the bell tower, the mill with its sails turning, the warehouse's crates, the sea fort of the prison)
+// or the obelisk, a black stone drawn by hand with its rune glowing; the engraved gold ring of a mark on what she may
+// visit now, a faint one when she has. The guards stand as what they are: a pirate hold-out's camp on a rock beside its
+// ship at anchor under the painted black pennant, a rotting hulk among the painted flotsam, the wreck of the drowned in
+// a sick light, a pack of the deep circling in the water — and HoMM3's word for their number over them.
 
 import { OBJS } from '../../../shared/src/data/advmap.ts';
 import type { GuardMark, ObjMark } from '../../../shared/src/h4proto.ts';
-import { sprite } from '../assets.ts';
+import { pattern, sprite } from '../assets.ts';
+import { drawArt, drawPiece, foam, markRing } from './seaart.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/h4.ts';
 import type { ClientState } from '../state.ts';
@@ -40,7 +42,8 @@ function seeded(seed: string): () => number {
   };
 }
 
-/** A skerry: a ragged ring of dark wet rock with foam about it. */
+/** A skerry: a ragged ring of the painted rock (tex.rock, its grain riding with it), dark and wet toward the water,
+ *  the white water of the swell breaking about it (the painted spray, not a drawn ring). */
 function skerry(g: G, x: number, y: number, r: number, id: string, t: number): void {
   const rnd = seeded(id);
   const n = 11;
@@ -52,28 +55,30 @@ function skerry(g: G, x: number, y: number, r: number, id: string, t: number): v
   }
   const path = (s: number) => {
     g.beginPath();
-    pts.forEach(([px, py], i) => {
-      const qx = x + (px - x) * s, qy = y + (py - y) * s;
-      if (i === 0) g.moveTo(qx, qy);
-      else g.lineTo(qx, qy);
-    });
+    for (let i = 0; i <= n; i++) {
+      const p = pts[i % n], q = pts[(i + 1) % n];
+      const mx = x + ((p[0] + q[0]) / 2 - x) * s, my = y + ((p[1] + q[1]) / 2 - y) * s;
+      if (i === 0) g.moveTo(mx, my);
+      else g.quadraticCurveTo(x + (p[0] - x) * s, y + (p[1] - y) * s, mx, my);
+    }
     g.closePath();
   };
-  path(1.25 + 0.04 * Math.sin(t * 1.3 + r));
-  g.fillStyle = 'rgba(220,232,230,0.18)';
+  foam(g, x, y, r * 1.05, t, rnd() * 100, 0.22);
+  path(1.04);
+  g.fillStyle = 'rgba(0,0,0,0.35)';
   g.fill();
-  g.strokeStyle = 'rgba(235,242,240,0.45)';
-  g.lineWidth = Math.max(1, r * 0.06);
-  g.stroke();
   path(1);
-  const grd = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
-  grd.addColorStop(0, '#6f6a5f');
-  grd.addColorStop(1, '#34322d');
+  const rock = pattern(g, 'tex.rock'), spr = sprite('tex.rock');
+  if (rock && spr) rock.setTransform(new DOMMatrix().translate(x - r, y - r).scale((r * 2.6) / spr.img.naturalWidth));
+  g.fillStyle = rock ?? '#4f4b44';
+  g.fill();
+  // Wet and dark toward the water, the light on its crown.
+  const grd = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r * 1.05);
+  grd.addColorStop(0, 'rgba(200,196,180,0.12)');
+  grd.addColorStop(0.65, 'rgba(10,14,16,0.1)');
+  grd.addColorStop(1, 'rgba(6,10,12,0.6)');
   g.fillStyle = grd;
   g.fill();
-  g.strokeStyle = 'rgba(15,15,12,0.7)';
-  g.lineWidth = Math.max(1, r * 0.05);
-  g.stroke();
 }
 
 /** The obelisk from above: a black needle of stone, its long shadow, its rune alight. */
@@ -174,13 +179,11 @@ function drawObj(g: G, o: ObjMark, c: AdvCtx): void {
     if (o.kind === 'mill') vanes(g, x + s * 0.05, y - s * 0.05, s * 0.9, c.time);
   }
   g.globalAlpha = 1;
-  // A gold ring on what she may visit now (a red one while a guard stands before it), a faint one when she has.
+  // The engraved ring of a mark: gold on what she may visit now (red while a guard stands before it), faint once she has.
   const pulse = 0.5 + 0.5 * Math.sin(c.time * 2 + o.x);
-  g.strokeStyle = o.guarded ? `rgba(208,80,60,${0.45 + 0.3 * pulse})` : o.ready ? `rgba(232,196,106,${0.45 + 0.35 * pulse})` : 'rgba(200,200,190,0.25)';
-  g.lineWidth = o.ready ? 2 : 1;
-  g.beginPath();
-  g.arc(x, y, s * 0.85, 0, Math.PI * 2);
-  g.stroke();
+  if (o.guarded) markRing(g, x, y, s * 0.85, '#d0503c', false, 0.75 + 0.25 * pulse);
+  else if (o.ready) markRing(g, x, y, s * 0.85, '#e8c46a', true, 0.7 + 0.3 * pulse);
+  else markRing(g, x, y, s * 0.85, '#c8c8be', false, 0.45);
   if (c.zoom > 0.55) label(g, OBJS[o.kind].name[ru()], x, y + s * 0.85 + 13, o.ready ? '#f0d58f' : '#b9c2a8');
   g.restore();
 }
@@ -208,14 +211,16 @@ export function drawGuardShip(g: G, state: ClientState, s: { id: number; x: numb
       g.moveTo(ox + L0 * 0.3, oy);
       g.lineTo(ox + L0 * 0.3, oy - L0 * 0.45);
       g.stroke();
-      const flap = Math.sin(c.time * 5 + s.id) * L0 * 0.04;
-      g.fillStyle = '#111';
-      g.beginPath();
-      g.moveTo(ox + L0 * 0.3, oy - L0 * 0.45);
-      g.lineTo(ox + L0 * 0.58 + flap, oy - L0 * 0.4);
-      g.lineTo(ox + L0 * 0.3, oy - L0 * 0.32);
-      g.closePath();
-      g.fill();
+      // The black flag: the painted pennant, dyed black.
+      if (!drawPiece(g, 'pennant', ox + L0 * 0.5, oy - L0 * 0.42, L0 * 0.42, Math.sin(c.time * 3 + s.id) * 0.06, 1, '#121212')) {
+        g.fillStyle = '#111';
+        g.beginPath();
+        g.moveTo(ox + L0 * 0.3, oy - L0 * 0.45);
+        g.lineTo(ox + L0 * 0.58, oy - L0 * 0.4);
+        g.lineTo(ox + L0 * 0.3, oy - L0 * 0.32);
+        g.closePath();
+        g.fill();
+      }
       return false;
     }
     case 'hulk':
@@ -231,7 +236,7 @@ export function drawGuardShip(g: G, state: ClientState, s: { id: number; x: numb
         g.filter = 'none';
       }
       g.restore();
-      // Rot-light about the wreck of the drowned, and the pale heads of her crew in the water.
+      // Rot-light about the wreck of the drowned, and the swell breaking white on her.
       if (m.kind === 'wreck') {
         const a = 0.25 + 0.15 * Math.sin(c.time * 1.7 + s.id);
         const glow = g.createRadialGradient(x, y, 0, x, y, L0 * 0.9);
@@ -241,21 +246,13 @@ export function drawGuardShip(g: G, state: ClientState, s: { id: number; x: numb
         g.beginPath();
         g.arc(x, y, L0 * 0.9, 0, Math.PI * 2);
         g.fill();
-        const rnd = seeded(m.id);
-        for (let k = 0; k < 6; k++) {
-          const ang = rnd() * Math.PI * 2 + c.time * 0.1, r = L0 * (0.55 + rnd() * 0.4);
-          g.fillStyle = 'rgba(200,235,220,0.55)';
-          g.beginPath();
-          g.arc(x + Math.cos(ang) * r, y + Math.sin(ang) * r, Math.max(1.2, L0 * 0.035), 0, Math.PI * 2);
-          g.fill();
-        }
+        foam(g, x, y, L0 * 0.45, c.time, s.id, 0.16);
       } else {
-        // Flotsam about the hulk.
+        // Flotsam about the hulk: the painted casks and planks.
         const rnd = seeded(m.id);
-        g.fillStyle = 'rgba(70,52,32,0.85)';
-        for (let k = 0; k < 7; k++) {
+        for (let k = 0; k < 5; k++) {
           const ang = rnd() * Math.PI * 2, r = L0 * (0.6 + rnd() * 0.5);
-          g.fillRect(x + Math.cos(ang) * r, y + Math.sin(ang) * r, L0 * 0.08, L0 * 0.025);
+          drawArt(g, 'prop.flotsam', x + Math.cos(ang) * r, y + Math.sin(ang) * r, L0 * (0.12 + rnd() * 0.08), rnd() * 6.28, 0.85);
         }
       }
       return true;

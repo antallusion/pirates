@@ -48,7 +48,7 @@ import { drawLairsWorld } from './beastlairs.ts'; // docs/18 II
 import { drawDriftsWorld } from './drifts.ts'; // docs/18 IV
 import { drawFindsWorld } from './seafinds.ts'; // docs/19 D5
 import { drawRoamsWorld } from './roamers.ts'; // docs/19 D7
-import { addHot, brassRing, drawPiece, foam, hot, inHot, markRing } from './seaart.ts'; // the tokens on the screen: the hover aim keeps off them (owner, 2026-10-07)
+import { addHot, brassRing, drawArt, drawPiece, foam, hot, icePlate, inHot, markRing } from './seaart.ts'; // the tokens on the screen: the hover aim keeps off them (owner, 2026-10-07)
 import { drawIsleHalo, drawIsleLevel, drawIsleOver, drawMist, drawTurtles } from './isletype.ts'; // docs/18 III
 import type { IsleTypeCtx } from './isletype.ts';
 import { EN as I18_EN, RU as I18_RU } from '../lang/ui/isles18.ts';
@@ -877,54 +877,13 @@ export class Renderer {
           }
           break;
         case 'floe': {
-          // A ragged plate of ice from above, cut from the painted shore ice (its edge rounded, broken here and there),
-          // its shadow in the water, snow over its middle, a wet rim; a few small cakes of it broken off about it.
-          const plate = (cx: number, cy: number, rr: number, n: number, rot: number, shade: boolean): void => {
-            const pts: [number, number][] = [];
-            for (let k = 0; k < n; k++) {
-              const a = (k / n) * Math.PI * 2 + rot, r = rr * (0.72 + rnd() * 0.28);
-              pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.82]);
-            }
-            const path = (ox: number, oy: number): void => {
-              g.beginPath();
-              g.moveTo((pts[0][0] + pts[1][0]) / 2 + ox, (pts[0][1] + pts[1][1]) / 2 + oy);
-              for (let k = 1; k <= n; k++) {
-                const p = pts[k % n], q = pts[(k + 1) % n];
-                // Now a rounded edge, now a sharp break.
-                if (k % 3 === 0) g.lineTo(p[0] + ox, p[1] + oy);
-                g.quadraticCurveTo(p[0] + ox, p[1] + oy, (p[0] + q[0]) / 2 + ox, (p[1] + q[1]) / 2 + oy);
-              }
-              g.closePath();
-            };
-            if (shade) {
-              path(rr * 0.07, rr * 0.11);
-              g.fillStyle = 'rgba(0,0,0,0.32)';
-              g.fill();
-            }
-            path(0, 0);
-            g.save();
-            g.globalAlpha = dim;
-            const ice = this.tiled('tex.shore_ice', 70, m.id % 97);
-            g.fillStyle = ice ?? '#c9d6de';
-            g.fill();
-            g.clip();
-            const sn = g.createRadialGradient(cx - rr * 0.2, cy - rr * 0.25, 0, cx, cy, rr);
-            sn.addColorStop(0, 'rgba(228,238,242,0.45)');
-            sn.addColorStop(0.7, 'rgba(228,238,242,0.12)');
-            sn.addColorStop(1, 'rgba(120,150,165,0.2)');
-            g.fillStyle = sn;
-            g.fillRect(cx - rr, cy - rr, rr * 2, rr * 2);
-            g.restore();
-            g.strokeStyle = 'rgba(220,234,240,0.55)';
-            g.lineWidth = Math.max(1, 1.1 * z);
-            g.stroke();
-          };
+          // A ragged plate of ice from above, cut from the painted shore ice, and a few small cakes broken off it.
           foam(g, x, y, m.r * z * 0.85, t, m.id, 0.1 * dim);
           for (let k = 0; k < 3; k++) {
             const a = rnd() * Math.PI * 2, d = m.r * z * (1.05 + rnd() * 0.3);
-            plate(x + Math.cos(a) * d, y + Math.sin(a) * d * 0.82, m.r * z * (0.12 + rnd() * 0.1), 7, rnd() * 6, true);
+            icePlate(g, x + Math.cos(a) * d, y + Math.sin(a) * d * 0.82, m.r * z * (0.12 + rnd() * 0.1), 7, rnd() * 6, rnd, dim);
           }
-          plate(x, y, m.r * z, 16, m.rot, true);
+          icePlate(g, x, y, m.r * z, 16, m.rot, rnd, dim);
           break;
         }
         case 'buoy':
@@ -2828,6 +2787,40 @@ export class Renderer {
     return !this.hudRects.some((q) => x > q.left - m && x < q.right + m && y > q.top - m && y < q.bottom + m);
   }
 
+  /** A small brass medallion (the UI's ring) on the dark: a picture inside it (an icon) or nothing, a thin enamel line
+   *  in `col` inside the brass. */
+  private medallion(x: number, y: number, r: number, icon: string | null, col: string): void {
+    const g = this.g;
+    g.save();
+    g.fillStyle = 'rgba(8,10,14,0.85)';
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fill();
+    if (icon) {
+      g.save();
+      g.beginPath();
+      g.arc(x, y, r * 0.9, 0, Math.PI * 2);
+      g.clip();
+      drawArt(g, icon, x, y, r * 1.75);
+      g.restore();
+    }
+    g.strokeStyle = col;
+    g.globalAlpha = 0.85;
+    g.lineWidth = 1.3;
+    g.beginPath();
+    g.arc(x, y, r * 0.93, 0, Math.PI * 2);
+    g.stroke();
+    g.globalAlpha = 1;
+    if (!brassRing(g, x, y, r)) {
+      g.strokeStyle = col;
+      g.lineWidth = 2;
+      g.beginPath();
+      g.arc(x, y, r, 0, Math.PI * 2);
+      g.stroke();
+    }
+    g.restore();
+  }
+
   /** Hostile ships and bosses beyond the edge of the screen: a mark on the rim pointing at each, with the range,
    * so a phone's close view never hides who is coming. */
   private drawThreatMarks(ships: DrawShip[], own: SailState): void {
@@ -2861,15 +2854,10 @@ export class Renderer {
       const [x, y] = this.rimSpot(a, g.measureText(text).width, 26);
       const boss = s.info?.npcRole === 'boss';
       const col = boss ? '#2ee6c8' : '#e0503c';
+      // A brass medallion on the rim (the UI's ring), its enamel in the threat's colour, the arrow inside it.
+      this.medallion(x, y, 14, null, col);
       g.translate(x, y);
       g.rotate(a);
-      g.fillStyle = 'rgba(8,10,14,0.75)';
-      g.beginPath();
-      g.arc(0, 0, 15, 0, Math.PI * 2);
-      g.fill();
-      g.strokeStyle = col;
-      g.lineWidth = 2;
-      g.stroke();
       g.fillStyle = col;
       g.beginPath();
       g.moveTo(11, 0);
@@ -2902,21 +2890,17 @@ export class Renderer {
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     if (px > 40 && px < this.w - 40 && py > 40 && py < this.h - 40) {
-      // In sight: a slow gold ring round the place.
+      // In sight: the HUD's own mark (the spyglass on the chart, icon.goal) in a small brass medallion afloat, a soft
+      // gold light breathing on the water under it (owner, 2026-10-07: no drawn signs).
       const pulse = 0.5 + 0.5 * Math.sin(this.time * 2.4);
-      g.strokeStyle = `rgba(217,178,90,${0.55 + 0.35 * pulse})`;
-      g.lineWidth = 2;
+      const halo = g.createRadialGradient(px, py, 6, px, py, 30);
+      halo.addColorStop(0, `rgba(230,190,100,${0.18 + 0.16 * pulse})`);
+      halo.addColorStop(1, 'rgba(230,190,100,0)');
+      g.fillStyle = halo;
       g.beginPath();
-      g.arc(px, py, 16 + 4 * pulse, 0, Math.PI * 2);
-      g.stroke();
-      g.fillStyle = gold;
-      g.beginPath();
-      g.moveTo(px, py - 6);
-      g.lineTo(px + 5, py);
-      g.lineTo(px, py + 6);
-      g.lineTo(px - 5, py);
-      g.closePath();
+      g.arc(px, py, 30, 0, Math.PI * 2);
       g.fill();
+      this.medallion(px, py, 12, 'icon.goal', gold);
       g.restore();
       return;
     }
@@ -2924,28 +2908,15 @@ export class Renderer {
     this.hudBand();
     const a = Math.atan2(py - this.h / 2, px - this.w / 2);
     const [x, y] = this.rimSpot(a, g.measureText(label).width, 27);
+    // On the rim: the same brass medallion with the HUD's mark, the arrow's tip toward the goal.
+    this.medallion(x, y, 13, 'icon.goal', gold);
     g.translate(x, y);
-    g.fillStyle = 'rgba(8,10,14,0.8)';
-    g.beginPath();
-    g.arc(0, 0, 15, 0, Math.PI * 2);
-    g.fill();
-    g.strokeStyle = gold;
-    g.lineWidth = 2;
-    g.stroke();
-    // A gold diamond inside, the arrow's tip toward the goal.
     g.fillStyle = gold;
-    g.beginPath();
-    g.moveTo(0, -5);
-    g.lineTo(4, 0);
-    g.lineTo(0, 5);
-    g.lineTo(-4, 0);
-    g.closePath();
-    g.fill();
     g.rotate(a);
     g.beginPath();
-    g.moveTo(21, 0);
-    g.lineTo(15, -5);
-    g.lineTo(15, 5);
+    g.moveTo(27, 0);
+    g.lineTo(21, -5);
+    g.lineTo(21, 5);
     g.closePath();
     g.fill();
     g.rotate(-a);
@@ -3011,14 +2982,8 @@ export class Renderer {
     const x = this.sx(own.x), y = this.sy(own.y);
     const r = Math.max(16, cls.length * this.zoom * 0.62);
     g.save();
-    g.strokeStyle = `rgba(217,178,90,${0.28 + 0.2 * this.nightNow})`;
-    g.lineWidth = 1.5;
-    g.setLineDash([3, 5]);
-    g.lineDashOffset = -this.time * 4;
-    g.beginPath();
-    g.arc(x, y, r, 0, Math.PI * 2);
-    g.stroke();
-    g.setLineDash([]);
+    // The engraved brass ring of a mark, faint (never a dashed circle: owner, 2026-10-07).
+    markRing(g, x, y, r, '#d9b25a', false, 0.5 + 0.35 * this.nightNow);
     const w = state.self!.wanted ?? 0;
     if (w > 0) {
       g.font = '600 12px Inter, sans-serif';
@@ -3195,14 +3160,17 @@ export class Renderer {
       const len = Math.max(14, SHIP_CLASSES[s.classId].length * 0.55) * this.zoom;
       const x = this.sx(s.x), y = this.sy(s.y);
       g.save();
-      g.strokeStyle = 'rgba(224,80,60,0.9)';
-      g.lineWidth = 2;
-      g.setLineDash([6, 4]);
+      // Her keel struck through in red over a dark groove, an arrowhead each end: the balls running her length.
+      g.lineCap = 'round';
+      g.strokeStyle = 'rgba(5,8,10,0.55)';
+      g.lineWidth = 4.5;
       g.beginPath();
       g.moveTo(x - keel.x * len, y - keel.y * len);
       g.lineTo(x + keel.x * len, y + keel.y * len);
       g.stroke();
-      g.setLineDash([]);
+      g.strokeStyle = 'rgba(224,80,60,0.9)';
+      g.lineWidth = 2;
+      g.stroke();
       g.font = '600 11px Inter, system-ui, sans-serif';
       g.textAlign = 'center';
       g.fillStyle = 'rgba(0,0,0,0.6)';
@@ -3562,22 +3530,19 @@ export class Renderer {
         if (next) this.edgeArrow(x, y, '#ffe08a');
         return;
       }
-      if (next) {
-        const k = (t * 0.8) % 1;
-        g.strokeStyle = `rgba(255,224,138,${0.8 * (1 - k)})`;
-        g.lineWidth = 2;
-        g.beginPath(); g.arc(x, y, r * (1.4 + k * 2.2), 0, Math.PI * 2); g.stroke();
-      }
+      // The one she sails for: the engraved gold ring of a mark, breathing.
+      if (next) markRing(g, x, y, r * 2.4, '#ffe08a', true, 0.7 + 0.3 * Math.sin(t * 3));
       const bob = Math.sin(t * 1.6 + i) * r * 0.08;
       g.fillStyle = 'rgba(0,0,0,0.35)';
       g.beginPath(); g.ellipse(x + r * 0.25, y + r * 0.3, r, r * 0.7, 0, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#b3261e';
-      g.beginPath(); g.arc(x, y + bob, r, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#efe6d0';
-      g.beginPath(); g.arc(x, y + bob, r, -Math.PI * 0.25, Math.PI * 0.25); g.lineTo(x, y + bob); g.fill();
-      g.beginPath(); g.arc(x, y + bob, r, Math.PI * 0.75, Math.PI * 1.25); g.lineTo(x, y + bob); g.fill();
-      g.strokeStyle = '#2a1a10'; g.lineWidth = 1.2;
-      g.beginPath(); g.arc(x, y + bob, r, 0, Math.PI * 2); g.stroke();
+      foam(g, x, y, r * 1.2, t, i, 0.2);
+      // The regatta's buoy: the iron ball painted dull red, its pennant downwind (docs/06: no bright red).
+      const down = state.wind[0] - Math.PI / 2;
+      drawPiece(g, 'pennant', x + Math.cos(down) * r * 1.35, y + bob + Math.sin(down) * r * 1.35, r * 3, down + Math.sin(t * 3 + i) * 0.08, 0.9, '#d8cfb8');
+      if (!drawPiece(g, 'redBuoy', x, y + bob, r * 2.2, i)) {
+        g.fillStyle = '#b3261e';
+        g.beginPath(); g.arc(x, y + bob, r, 0, Math.PI * 2); g.fill();
+      }
       g.font = `700 ${Math.round(Math.max(11, r * 1.1))}px sans-serif`;
       g.textAlign = 'center'; g.textBaseline = 'bottom';
       g.fillStyle = next ? '#ffe08a' : '#f0e6cc';
@@ -3839,14 +3804,9 @@ export class Renderer {
     g.fillStyle = '#b23a3a';
     g.fillRect(x - w / 2, y + 6, w * clamp(s.hull, 0, 1), 3);
     if (isTarget) {
+      // The engraved ring of her mark (as a ship's): bright and whole within the guns' band, fainter while too far.
       const r = Math.max(cls.length, 10) * this.zoom * 0.62;
-      g.strokeStyle = hexA(col, 0.85);
-      g.lineWidth = this.markRange === 'in' ? 2 : 1.5;
-      g.setLineDash(this.markRange === 'in' ? [] : [6, 5]);
-      g.beginPath();
-      g.ellipse(this.sx(s.x), this.sy(s.y), r, r, 0, 0, Math.PI * 2);
-      g.stroke();
-      g.setLineDash([]);
+      markRing(g, this.sx(s.x), this.sy(s.y), r, col, this.markRange === 'in', 0.95);
       this.rangeWord(this.sx(s.x), this.sy(s.y) + r);
     }
   }
@@ -4040,18 +4000,13 @@ export class Renderer {
       g.fillStyle = '#d9c9a0';
       g.fillText(line, x, y + 33);
     }
-    // The target (canon D12): a thin ring under her in the colour of the danger she is to you.
+    // The target (canon D12): the engraved ring of her mark in the colour of the danger she is to you — bright and
+    // whole in the close fight's band (her gun captains fire), fainter while she is too far (never dashed: owner,
+    // 2026-10-07), the word under it saying which.
     if (isTarget && !boardTarget) {
       const t = info.shipLevel ? levelThreat(state, info.classId, info.shipLevel) : 'even';
       const r = cls.length * this.zoom * 0.62;
-      g.strokeStyle = hexA(THREAT_COLOR[t], 0.85);
-      // In the close fight's band the ring is drawn whole (her gun captains fire), dashed while she is too far.
-      g.lineWidth = this.markRange === 'in' ? 2 : 1.5;
-      g.setLineDash(this.markRange === 'in' ? [] : [6, 5]);
-      g.beginPath();
-      g.ellipse(this.sx(s.x), this.sy(s.y), r, r, 0, 0, Math.PI * 2);
-      g.stroke();
-      g.setLineDash([]);
+      markRing(g, this.sx(s.x), this.sy(s.y), r, THREAT_COLOR[t], this.markRange === 'in', 0.95);
       this.rangeWord(this.sx(s.x), this.sy(s.y) + r);
     }
     if (boardTarget || s.flags & SF.MARKED) {

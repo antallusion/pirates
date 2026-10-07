@@ -1,9 +1,11 @@
-// The drifting creatures on the sea (docs/18 #34, #40), strictly from above and drawn by hand: the raft of broken
-// spars under a wounded serpent, a cracked floe with its rookery, a boat of the drowned in its green glow, a net with
-// its floats and the sharks' fins circling it, a raft of weed, a floating mast white with gulls, a lost chain and its
-// buoy in a cloud of ink; the creature's token on it (its own picture, or a tinted, framed token of one); the ring of
-// its clock; and over it its name and the square's level. A legend wears gold rings and leaves a trail (blood for
-// the whale, ink for the kraken). On the minimap: a mark with its clock; the tooltip names it.
+// The drifting creatures on the sea (docs/18 #34, #40), strictly from above and from the art (owner, 2026-10-07: no
+// drawn signs): the painted wreckage under a wounded serpent, a plate of the shore ice with its rookery, the islands'
+// boat in the green glow of the drowned, the fisherman's net with its weights and the sharks circling it under the
+// water, a mat of weed, the floating mast with its torn sail white with the painted gulls, a length of chain and its
+// iron buoy in a cloud of ink; the creature's token in the UI's brass ring (its own picture, or a tinted one that
+// stands in); over it its name and level with a small brass clock of its time. A legend wears gold and its golden light
+// on the water, and leaves the white water of its wake (the whale; the kraken its ink). On the minimap: a mark with its
+// clock; the tooltip names it.
 
 import { beastFace, drawFace } from './beastface.ts';
 import { DRIFTS } from '../../../shared/src/data/drifts.ts';
@@ -15,6 +17,8 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/drifts.ts';
 import type { ClientState } from '../state.ts';
 import { esc } from '../ui/dom.ts';
+import { TOKEN_IN, addHot, bezel, circlers, clockBadge, drawArt, drawPiece, foam, icePlate, levelTag, put, tokenStamp, word } from './seaart.ts';
+import { gulls } from './sights.ts';
 
 type G = CanvasRenderingContext2D;
 const L = dict(EN, RU);
@@ -48,142 +52,50 @@ function rnd(seed: number): () => number {
   };
 }
 
-/** What it drifts on, by its kind, at a radius `R` (the token's). */
+/** What it drifts on, by its kind, at a radius `R` (the token's) — from the art: the painted wreckage, a plate of the
+ *  shore ice, the islands' boat in the green glow of the drowned, the fisherman's net with its weights, a mat of the
+ *  mossy isles' weed, the floating mast with its torn sail, a length of chain and its iron buoy in a cloud of ink. */
 function raft(g: G, k: DriftKind, x: number, y: number, R: number, t: number, id: number): void {
   const r = rnd(id + 7);
   g.save();
-  // A ripple ring the swell makes round anything afloat.
-  const sw = 0.5 + 0.5 * Math.sin(t * 1.3 + id);
-  g.strokeStyle = `rgba(200,225,235,${0.18 + 0.12 * sw})`;
-  g.lineWidth = Math.max(1, R * 0.06);
-  g.beginPath();
-  g.ellipse(x, y, R * (2.1 + sw * 0.25), R * (1.8 + sw * 0.2), 0.2, 0, Math.PI * 2);
-  g.stroke();
+  // The white water the swell makes about anything afloat (the painted spray, not a drawn ring).
+  foam(g, x, y, R * 1.7, t, id, 0.16);
   switch (k) {
     case 'serpent_wreck':
+      drawArt(g, 'prop.wreckage', x, y, R * 4.4, id * 0.9, 0.9) || planks(g, x, y, R, r);
+      break;
     case 'white_whale': {
-      // Broken spars and planks, crossed.
-      if (k === 'white_whale') {
-        // A blood trail astern of the whale.
-        const grd = g.createLinearGradient(x, y, x - R * 4, y + R * 2);
-        grd.addColorStop(0, 'rgba(150,20,20,0.45)');
-        grd.addColorStop(1, 'rgba(150,20,20,0)');
-        g.fillStyle = grd;
-        g.beginPath();
-        g.ellipse(x - R * 2, y + R, R * 2.6, R * 0.9, -0.45, 0, Math.PI * 2);
-        g.fill();
-        g.strokeStyle = 'rgba(210,200,170,0.75)';
-        g.lineWidth = Math.max(1, R * 0.05);
-        g.beginPath();
-        g.moveTo(x - R * 0.6, y + R * 0.4);
-        g.bezierCurveTo(x - R * 2, y + R * 1.6, x - R * 3, y + R * 0.4, x - R * 4.2, y + R * 1.4);
-        g.stroke();
-        break;
-      }
-      for (let i = 0; i < 6; i++) {
-        const a = r() * Math.PI, len = R * (1.4 + r() * 1.2), w = R * (0.14 + r() * 0.12);
-        const ox = (r() - 0.5) * R * 1.4, oy = (r() - 0.5) * R * 1.2;
-        g.save();
-        g.translate(x + ox, y + oy);
-        g.rotate(a);
-        g.fillStyle = i % 2 ? '#6b4a2c' : '#82603a';
-        g.fillRect(-len / 2, -w / 2, len, w);
-        g.strokeStyle = 'rgba(30,20,10,0.7)';
-        g.lineWidth = 1;
-        g.strokeRect(-len / 2, -w / 2, len, w);
-        g.restore();
+      // The white water of her wake astern (no blood: CLAUDE.md §2), fading.
+      for (let i = 1; i <= 5; i++) {
+        const u = i / 5;
+        foam(g, x - R * (0.9 + u * 3.2), y + R * (0.4 + Math.sin(u * 3 + t * 0.4) * 0.5), R * (0.75 - u * 0.35), t, id + i, 0.2 * (1 - u * 0.7));
       }
       break;
     }
-    case 'seal_floe': {
-      g.fillStyle = 'rgba(228,240,246,0.95)';
-      g.strokeStyle = 'rgba(150,185,205,0.9)';
-      g.lineWidth = Math.max(1, R * 0.06);
-      g.beginPath();
-      const n = 9;
-      for (let i = 0; i < n; i++) {
-        const a = (i / n) * Math.PI * 2;
-        const d = R * (1.55 + r() * 0.6);
-        const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d * 0.85;
-        if (i) g.lineTo(px, py);
-        else g.moveTo(px, py);
-      }
-      g.closePath();
-      g.fill();
-      g.stroke();
-      // Cracks.
-      g.strokeStyle = 'rgba(120,160,185,0.8)';
-      g.lineWidth = 1;
-      for (let i = 0; i < 3; i++) {
-        const a = r() * Math.PI * 2;
-        g.beginPath();
-        g.moveTo(x + Math.cos(a) * R * 0.6, y + Math.sin(a) * R * 0.5);
-        g.lineTo(x + Math.cos(a + 0.3) * R * 1.3, y + Math.sin(a + 0.3) * R * 1.1);
-        g.lineTo(x + Math.cos(a - 0.1) * R * 1.8, y + Math.sin(a - 0.1) * R * 1.5);
-        g.stroke();
-      }
+    case 'seal_floe':
+      icePlate(g, x, y, R * 2.1, 14, id * 0.37, r, 1);
       break;
-    }
     case 'drowned_boat': {
-      // A ship's boat from above (pointed at the bow), its thwarts, the green glow of the drowned.
+      // The green glow of the drowned about her (light, not a shape), the boat dark and low.
       const grd = g.createRadialGradient(x, y, R * 0.2, x, y, R * 2.4);
-      grd.addColorStop(0, 'rgba(90,200,150,0.35)');
+      grd.addColorStop(0, 'rgba(90,200,150,0.3)');
       grd.addColorStop(1, 'rgba(90,200,150,0)');
       g.fillStyle = grd;
       g.beginPath();
       g.arc(x, y, R * 2.4, 0, Math.PI * 2);
       g.fill();
-      g.save();
-      g.translate(x, y);
-      g.rotate(0.5);
-      g.fillStyle = '#4d3a26';
-      g.strokeStyle = '#1f150c';
-      g.lineWidth = Math.max(1, R * 0.07);
-      g.beginPath();
-      g.moveTo(0, -R * 1.9);
-      g.quadraticCurveTo(R * 0.95, -R * 0.6, R * 0.8, R * 1.5);
-      g.lineTo(-R * 0.8, R * 1.5);
-      g.quadraticCurveTo(-R * 0.95, -R * 0.6, 0, -R * 1.9);
-      g.fill();
-      g.stroke();
-      g.strokeStyle = '#7b6040';
-      for (const ty of [-0.5, 0.4, 1.1]) {
-        g.beginPath();
-        g.moveTo(-R * 0.75, R * ty);
-        g.lineTo(R * 0.75, R * ty);
-        g.stroke();
-      }
-      // Oars raised.
-      g.strokeStyle = '#a58a5c';
-      g.lineWidth = Math.max(1, R * 0.06);
-      for (const s of [-1, 1]) {
-        g.beginPath();
-        g.moveTo(s * R * 0.7, R * 0.2);
-        g.lineTo(s * R * 1.9, -R * 0.5);
-        g.stroke();
-      }
-      g.restore();
+      drawPiece(g, 'drownedBoat', x, y, R * 4, 0.5, 0.92);
       break;
     }
     case 'mermaid_net':
     case 'turtle_weed':
     case 'young_kraken': {
       if (k === 'turtle_weed') {
-        // Strands of weed in a raft.
-        g.strokeStyle = 'rgba(96,110,40,0.85)';
-        g.lineWidth = Math.max(1.2, R * 0.12);
-        for (let i = 0; i < 14; i++) {
-          const a = r() * Math.PI * 2, d = R * (0.4 + r() * 1.6);
-          const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d * 0.8;
-          g.beginPath();
-          g.moveTo(px, py);
-          g.quadraticCurveTo(px + (r() - 0.5) * R, py + (r() - 0.5) * R, px + (r() - 0.5) * R * 1.4, py + (r() - 0.5) * R * 1.4);
-          g.stroke();
-        }
+        drawPiece(g, 'weed', x, y, R * 4.4, id * 0.6, 0.95);
         break;
       }
       if (k === 'young_kraken') {
-        // A cloud of ink and a wreck's rigging under the water.
+        // A cloud of ink, and the net of a wreck's rigging dark under it.
         const grd = g.createRadialGradient(x, y, R * 0.3, x, y, R * 3.2);
         grd.addColorStop(0, 'rgba(20,10,30,0.7)');
         grd.addColorStop(1, 'rgba(20,10,30,0)');
@@ -192,43 +104,12 @@ function raft(g: G, k: DriftKind, x: number, y: number, R: number, t: number, id
         g.arc(x, y, R * 3.2, 0, Math.PI * 2);
         g.fill();
       }
-      // A net: a disc of mesh and its cork floats.
-      g.strokeStyle = k === 'young_kraken' ? 'rgba(150,140,110,0.6)' : 'rgba(215,205,170,0.8)';
-      g.lineWidth = 1;
-      const nr = R * 1.9;
-      for (let i = -4; i <= 4; i++) {
-        const o = (i / 4) * nr, c = Math.sqrt(Math.max(0, nr * nr - o * o));
-        g.beginPath();
-        g.moveTo(x + o, y - c);
-        g.lineTo(x + o, y + c);
-        g.stroke();
-        g.beginPath();
-        g.moveTo(x - c, y + o);
-        g.lineTo(x + c, y + o);
-        g.stroke();
-      }
-      g.fillStyle = '#c99a4a';
-      for (let i = 0; i < 8; i++) {
-        const a = (i / 8) * Math.PI * 2;
-        g.beginPath();
-        g.arc(x + Math.cos(a) * nr, y + Math.sin(a) * nr, Math.max(1.5, R * 0.12), 0, Math.PI * 2);
-        g.fill();
-      }
+      drawPiece(g, 'net', x, y, R * 3.9, id * 0.8, k === 'young_kraken' ? 0.55 : 0.9);
       break;
     }
-    case 'gull_mast': {
-      g.save();
-      g.translate(x, y);
-      g.rotate(-0.6);
-      g.fillStyle = '#7a5a36';
-      g.fillRect(-R * 2.6, -R * 0.16, R * 5.2, R * 0.32);
-      g.fillRect(-R * 0.12, -R * 1.2, R * 0.24, R * 2.4);
-      g.strokeStyle = 'rgba(30,20,10,0.8)';
-      g.lineWidth = 1;
-      g.strokeRect(-R * 2.6, -R * 0.16, R * 5.2, R * 0.32);
-      g.restore();
+    case 'gull_mast':
+      drawArt(g, 'prop.wreckage', x, y, R * 4.6, -0.6 + id * 0.3, 0.95) || planks(g, x, y, R, r);
       break;
-    }
     case 'tentacle_chain': {
       const grd = g.createRadialGradient(x, y, R * 0.2, x, y, R * 2.4);
       grd.addColorStop(0, 'rgba(40,20,60,0.55)');
@@ -237,101 +118,61 @@ function raft(g: G, k: DriftKind, x: number, y: number, R: number, t: number, id
       g.beginPath();
       g.arc(x, y, R * 2.4, 0, Math.PI * 2);
       g.fill();
-      g.strokeStyle = '#8c8c8c';
-      g.lineWidth = Math.max(1, R * 0.08);
-      for (let i = 0; i < 12; i++) {
-        const a = (i / 12) * Math.PI * 2;
-        g.beginPath();
-        g.ellipse(x + Math.cos(a) * R * 1.6, y + Math.sin(a) * R * 1.6, R * 0.22, R * 0.12, a, 0, Math.PI * 2);
-        g.stroke();
+      // The chain in a loose ring about it, and its iron buoy.
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 + id;
+        drawPiece(g, 'chain', x + Math.cos(a) * R * 1.55, y + Math.sin(a) * R * 1.4, R * 1.5, a + Math.PI / 2, 0.9);
       }
-      // The buoy.
-      g.fillStyle = '#c4473a';
-      g.beginPath();
-      g.arc(x + R * 1.6, y - R * 0.2, Math.max(2, R * 0.3), 0, Math.PI * 2);
-      g.fill();
+      drawPiece(g, 'redBuoy', x + R * 1.75, y - R * 0.3, R * 0.8, id);
       break;
     }
   }
   g.restore();
 }
 
-/** Sharks' fins circling (the mermaid's net, the seals' floe). */
-function fins(g: G, x: number, y: number, R: number, t: number, id: number): void {
-  for (let i = 0; i < 3; i++) {
-    const a = t * (0.5 + i * 0.07) + id + (i * Math.PI * 2) / 3;
-    const d = R * (2.6 + 0.3 * Math.sin(t + i));
-    const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d * 0.85;
-    const dir = a + Math.PI / 2;
+/** Broken spars, crossed: the stand-in while the wreckage loads. */
+function planks(g: G, x: number, y: number, R: number, r: () => number): boolean {
+  for (let i = 0; i < 6; i++) {
+    const a = r() * Math.PI, len = R * (1.4 + r() * 1.2), w = R * (0.14 + r() * 0.12);
     g.save();
-    g.translate(px, py);
-    g.rotate(dir);
-    g.fillStyle = '#39454c';
-    g.beginPath();
-    g.moveTo(0, -R * 0.35);
-    g.lineTo(R * 0.14, R * 0.2);
-    g.lineTo(-R * 0.14, R * 0.2);
-    g.closePath();
-    g.fill();
-    g.strokeStyle = 'rgba(220,235,240,0.5)';
-    g.lineWidth = 1;
-    g.beginPath();
-    g.moveTo(-R * 0.3, R * 0.35);
-    g.lineTo(R * 0.3, R * 0.35);
-    g.stroke();
+    g.translate(x + (r() - 0.5) * R * 1.4, y + (r() - 0.5) * R * 1.2);
+    g.rotate(a);
+    g.fillStyle = i % 2 ? '#6b4a2c' : '#82603a';
+    g.fillRect(-len / 2, -w / 2, len, w);
     g.restore();
   }
+  return true;
 }
 
-/** Gulls wheeling over the mast (little bent strokes). */
-function gulls(g: G, x: number, y: number, R: number, t: number): void {
-  g.strokeStyle = 'rgba(245,245,240,0.9)';
-  g.lineWidth = Math.max(1, R * 0.07);
-  for (let i = 0; i < 5; i++) {
-    const a = t * 0.9 + i * 1.3;
-    const px = x + Math.cos(a) * R * (1.6 + (i % 2) * 0.5), py = y + Math.sin(a) * R * 1.3;
-    const fl = Math.sin(t * 6 + i) * R * 0.08;
-    g.beginPath();
-    g.moveTo(px - R * 0.25, py + fl);
-    g.quadraticCurveTo(px - R * 0.1, py - R * 0.12, px, py);
-    g.quadraticCurveTo(px + R * 0.1, py - R * 0.12, px + R * 0.25, py + fl);
-    g.stroke();
-  }
-}
-
-/** The creature's token: its picture in a dark disc, tinted and brass-rimmed where it stands in for one. */
-function token(g: G, x: number, y: number, R: number, m: DriftMark): void {
-  const u = DRIFTS[m.kind].u;
-  const face = beastFace(u);
-  const sp = sprite(face.id);
-  g.fillStyle = 'rgba(0,0,0,0.35)';
-  g.beginPath();
-  g.ellipse(x + R * 0.12, y + R * 0.22, R * 1.02, R * 0.86, 0, 0, Math.PI * 2);
-  g.fill();
-  g.fillStyle = '#10161a';
-  g.beginPath();
-  g.arc(x, y, R, 0, Math.PI * 2);
-  g.fill();
-  if (sp) {
-    g.save();
-    g.beginPath();
-    g.arc(x, y, R - 1, 0, Math.PI * 2);
-    g.clip();
-    if (face.tint) g.filter = face.tint;
-    drawFace(g, sp.img, x, y, R, face.fig);
+/** The creature's picture in the token: its own figure from the head down, or the tinted picture that stands in. */
+function face(u: string): (g: G, cx: number, cy: number, r: number) => boolean {
+  return (g, cx, cy, r) => {
+    const f = beastFace(u);
+    const sp = sprite(f.id);
+    if (!sp) return false;
+    if (f.tint) g.filter = f.tint;
+    drawFace(g, sp.img, cx, cy, r, f.fig);
     g.filter = 'none';
-    g.restore();
-  }
-  if (face.tint) {
-    g.strokeStyle = '#a8894e';
-    g.lineWidth = Math.max(1.5, R * 0.12);
-    g.beginPath();
-    g.arc(x, y, R - R * 0.06, 0, Math.PI * 2);
-    g.stroke();
-  }
+    return true;
+  };
 }
 
-/** The ring of its clock: how much of its time is left (teal; gold for a legend). */
+/** The creature's token: its picture in the UI's brass ring (stamped), the enamel bezel in the ladder's colour — gold
+ *  for a legend. */
+function token(g: G, x: number, y: number, R: number, m: DriftMark, col: string, t: number): void {
+  const u = DRIFTS[m.kind].u;
+  const c = tokenStamp(`drift|${u}`, R, face(u), false);
+  if (c) put(g, c, x, y);
+  else {
+    g.fillStyle = '#10161a';
+    g.beginPath();
+    g.arc(x, y, R * TOKEN_IN, 0, Math.PI * 2);
+    g.fill();
+  }
+  bezel(g, x, y, R, col, 0.7 + 0.3 * Math.sin(t * 2 + m.id));
+}
+
+/** The ring of its clock (the minimap's): how much of its time is left (teal; gold for a legend). */
 function clock(g: G, x: number, y: number, r: number, share: number, legend: boolean, w: number): void {
   g.save();
   g.strokeStyle = 'rgba(0,0,0,0.55)';
@@ -347,18 +188,9 @@ function clock(g: G, x: number, y: number, r: number, share: number, legend: boo
   g.restore();
 }
 
-function label(g: G, text: string, x: number, y: number, col: string, size = 11): void {
-  g.font = `700 ${size}px Inter, sans-serif`;
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  g.lineWidth = 3;
-  g.strokeStyle = 'rgba(0,0,0,0.75)';
-  g.strokeText(text, x, y);
-  g.fillStyle = col;
-  g.fillText(text, x, y);
-}
-
-/** Every drift in sight on the sea. */
+/** Every drift in sight on the sea: what it drifts on, the creatures about it (fins under the water, gulls over the
+ *  mast), its token, and over it its name and level with a small brass clock of its time; a legend in gold, its
+ *  golden light about it. */
 export function drawDriftsWorld(g: G, state: ClientState, c: DriftCtx): void {
   const list = state.drifts;
   if (!list.length || c.zoom < 0.06) return;
@@ -368,24 +200,32 @@ export function drawDriftsWorld(g: G, state: ClientState, c: DriftCtx): void {
     const R = Math.max(9, Math.min(m.legend ? 34 : 24, (m.legend ? 40 : 22) * c.zoom));
     if (x < -R * 5 || y < -R * 5 || x > c.w + R * 5 || y > c.h + R * 5) continue;
     const bob = Math.sin(c.time * 1.6 + m.id) * R * 0.05;
-    g.save();
-    raft(g, m.kind, x, y + bob, R, c.time, m.id);
-    if (m.kind === 'mermaid_net' || m.kind === 'seal_floe') fins(g, x, y, R, c.time, m.id);
-    token(g, x, y + bob, R, m);
-    if (m.kind === 'gull_mast') gulls(g, x, y, R, c.time);
-    const left = driftLeft(state, m);
-    clock(g, x, y + bob, R + Math.max(3, R * 0.18), m.ttl > 0 ? left / m.ttl : 0, !!m.legend, Math.max(2, R * 0.12));
-    if (m.legend) {
-      const pulse = 0.5 + 0.5 * Math.sin(c.time * 2);
-      g.strokeStyle = `rgba(240,200,100,${0.35 + 0.4 * pulse})`;
-      g.lineWidth = 1.5;
-      g.beginPath();
-      g.arc(x, y + bob, R * 1.7 + pulse * 3, 0, Math.PI * 2);
-      g.stroke();
-    }
     const col = m.legend ? '#f0c864' : THREAT_COLOR[threatOf(mine, m.level)];
-    label(g, `${driftTitle(m.kind)} · ⚓${m.level}`, x, y - R - Math.max(10, R * 0.5), col, c.zoom > 0.45 ? 12 : 11);
-    if (m.taken) label(g, L('taken'), x, y + R + 12, '#d8c8a0', 10);
+    g.save();
+    if (m.legend) {
+      // A legend's light on the water about it, breathing.
+      const pulse = 0.5 + 0.5 * Math.sin(c.time * 2);
+      const glow = g.createRadialGradient(x, y, R * 0.8, x, y, R * 2.6);
+      glow.addColorStop(0, `rgba(240,200,100,${0.16 + 0.1 * pulse})`);
+      glow.addColorStop(1, 'rgba(240,200,100,0)');
+      g.fillStyle = glow;
+      g.beginPath();
+      g.arc(x, y, R * 2.6, 0, Math.PI * 2);
+      g.fill();
+    }
+    raft(g, m.kind, x, y + bob, R, c.time, m.id);
+    if (m.kind === 'mermaid_net' || m.kind === 'seal_floe') circlers(g, 'monster.shark', x, y, R * 2.7, R * 1.3, 3, c.time, m.id, 0.5, 0.5);
+    addHot(x, y + bob, R * 1.25);
+    token(g, x, y + bob, R, m, col, c.time);
+    if (m.kind === 'gull_mast') {
+      g.translate(x, y);
+      gulls(g, 5, Math.max(0.7, R / 24), c.time + m.id, R * 1.8);
+      g.translate(-x, -y);
+    }
+    const ly = y - R * 1.2 - Math.max(9, R * 0.35);
+    const half = levelTag(g, driftTitle(m.kind), m.level, col, x + 9, ly, c.zoom > 0.45 ? 12 : 11, m.legend ? '#f4dc96' : '#e9dfc6');
+    clockBadge(g, x + 9 - half - 7, ly, 7, m.ttl > 0 ? driftLeft(state, m) / m.ttl : 0, m.legend ? 'rgba(240,200,100,0.95)' : 'rgba(110,215,205,0.95)');
+    if (m.taken) word(g, L('taken'), x, y + R * 1.2 + 9, '#d8c8a0', 10);
     g.restore();
   }
 }

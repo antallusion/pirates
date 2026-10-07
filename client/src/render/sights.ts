@@ -6,6 +6,7 @@ import type { ShoalView, SightView } from '../../../shared/src/protocol.ts';
 import { FISH } from '../../../shared/src/data/fishing.ts';
 import { lang } from '../i18n.ts';
 import { sprite } from '../assets.ts';
+import { drawPiece } from './seaart.ts';
 
 type G = CanvasRenderingContext2D;
 
@@ -581,18 +582,15 @@ export function drawShoals(g: G, list: ShoalView[], traps: { x: number; y: numbe
     const x = sx(tr.x), y = sy(tr.y);
     if (x < -20 || y < -20 || x > w + 20 || y > h + 20) continue;
     const bob = Math.sin(t * 2 + tr.x) * 2;
-    g.fillStyle = '#c23d33';
-    g.strokeStyle = 'rgba(0,0,0,0.7)';
-    g.lineWidth = 1.5;
-    g.beginPath();
-    g.arc(x, y + bob, 4.5 * Math.max(0.7, zoom), 0, Math.PI * 2);
-    g.fill();
-    g.stroke();
-    g.strokeStyle = '#e8e2d0';
-    g.beginPath();
-    g.moveTo(x, y + bob - 4 * Math.max(0.7, zoom));
-    g.lineTo(x, y + bob - 12 * Math.max(0.7, zoom));
-    g.stroke();
+    // Her pot's buoy: the iron ball painted dull red, its little pennant (the art, owner 2026-10-07).
+    const k = Math.max(0.7, zoom);
+    drawPiece(g, 'pennant', x + 6 * k, y + bob - 5 * k, 10 * k, -0.2 + Math.sin(t * 3 + tr.x) * 0.08, 0.9, '#d8cfb8');
+    if (!drawPiece(g, 'redBuoy', x, y + bob, 10 * k, tr.x)) {
+      g.fillStyle = '#c23d33';
+      g.beginPath();
+      g.arc(x, y + bob, 4.5 * k, 0, Math.PI * 2);
+      g.fill();
+    }
   }
 }
 
