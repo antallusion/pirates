@@ -946,7 +946,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
         brain.active = true;
         // Her waters about the captain: without them she had no leg to sail and was struck off the sea the same second
         // wherever she would not go for the captain (a safe sea — the Black Coast, where the QA runs start).
-        brain.area ??= { x: o.state.x, y: o.state.y, r: 3000 };
+        brain.area ??= { x: o.state.x, y: o.state.y, r: 500 }; // and close by: she is the captain's to try
       }
       o.input = { rudder: 0, sailTarget: 0 };
       o.state.speed = ship.state.speed = 0;

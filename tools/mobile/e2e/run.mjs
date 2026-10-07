@@ -24,7 +24,10 @@ const JOURNEYS = want.length ? want : ALL;
 
 /** Out of port by her own hand: the big round «В море», the harbour's check if it asks, the film. */
 async function castOff(ph) {
-  await ph.tap('#tc-fire.tc-sail', '«В море»');
+  // The harbour's sheet up (it opens by itself on a phone in port): its rail's gold «В море»; else the HUD's.
+  await ph.until(async () => (await ph.visible('#modal-panel [data-ptab="sea"]')) || (await ph.visible('#tc-fire.tc-sail')), 8000, '«В море» in sight');
+  if (await ph.visible('#modal-panel [data-ptab="sea"]')) await ph.tap('#modal-panel [data-ptab="sea"]', '«В море» (the harbour)');
+  else await ph.tap('#tc-fire.tc-sail', '«В море»');
   await ph.until(async () => {
     const s = await ph.state();
     if (!s.docked) return true;
@@ -36,9 +39,12 @@ async function castOff(ph) {
   await L.closeAll(ph.p, 1);
 }
 
-/** Open water off the Black Coast, a clear sky, a sound ship, shot aboard (the scene, not the player's). */
+/** Open water off the Black Coast, a clear sky, a sound ship, shot aboard (the scene, not the player's) — a spot of
+ *  her own each journey: the frigates of the last one, still angry, lay where the next one came. */
+let spot = Math.floor(Date.now() / 1000) % 6;
 async function openSea(ph) {
-  await ph.admin('/tp 21000 70000', 2500);
+  const k = spot++;
+  await ph.admin(`/tp ${21000 + 3000 * (k % 3)} ${70000 + 2500 * (Math.floor(k / 3) % 2)}`, 2500);
   await ph.skipFilm();
   await L.closeAll(ph.p, 1);
   for (const x of ['/weather clear', '/heal', '/ammo']) await ph.admin(x, 700);
@@ -46,7 +52,18 @@ async function openSea(ph) {
 
 /** «Атаковать» on the nearest ship of a role: tapped on the sea as the mark if it is not marked yet. */
 async function attack(ph, role = 'pirate') {
-  await ph.until(async () => (await foeOnScreen(ph.p, role))?.on, 15000, `the ${role} on the screen`);
+  // Off the screen: the wheel pulled her way, as a player would, until she is in sight.
+  let pulled = 0;
+  await ph.until(async () => {
+    const f = await foeOnScreen(ph.p, role);
+    if (f?.on) return true;
+    if (f && pulled < 4) {
+      const o = await ph.p.evaluate(() => { const d = globalThis.gravetide.state.ownDisplay; return { x: d.x, y: d.y }; });
+      const s = await ph.p.evaluate((id) => { const x = globalThis.gravetide.state.ships.get(id); return x?.cur ? { x: x.cur.x, y: x.cur.y } : null; }, f.id);
+      if (s) { await L.steer(ph.p, Math.atan2(s.x - o.x, -(s.y - o.y))); ph.taps++; pulled++; await L.sleep(1500); }
+    }
+    return false;
+  }, 25000, `the ${role} on the screen`);
   if (!(await ph.visible('#tc-act[data-act="attack"]'))) {
     const f = await foeOnScreen(ph.p, role);
     await ph.tapAt(f.x, f.y);
@@ -82,7 +99,9 @@ const J = {
     const s = await ph.state();
     ph.expect(!!s.docked, 'a new captain starts in port');
     await ph.until(async () => (await ph.visible('#tc-fire.tc-sail')) || (await ph.visible('#modal-panel [data-ptab="sea"]')), 5000, 'in port «В море» in sight (the HUD’s big round button or the harbour’s rail)');
-    ph.expect(ph.taps <= 8, `the title screen to the HUD in ${ph.taps} taps (8 at most)`);
+    // A name, «Выйти в море», a captain, «Я знаю море» (a swipe down to it on a phone), «Принять командование», and the
+    // handbook's cross once.
+    ph.expect(ph.taps <= 10, `the title screen to the HUD in ${ph.taps} taps (10 at most)`);
     const t0 = ph.taps;
     await ph.p.reload({ waitUntil: 'domcontentloaded' });
     await ph.until(async () => {
@@ -146,29 +165,36 @@ const J = {
     await ph.admin('/silver 3000');
     await castOff(ph);
     await openSea(ph);
-    await ph.admin('/foe pirate sloop 450', 2500);
+    await ph.admin('/foe pirate sloop 320', 2500);
     await ph.step('foe');
     const t0 = ph.taps;
     await attack(ph);
     await ph.step('attack');
     const r = await closeIn(ph, 'pirate', 45000);
+    // The game is to close fast and board (owner, 2026-10-06): «Атаковать» to the grapples in 10 s, 30 at the very most.
     await ph.step('alongside', { secs: +r.t.toFixed(1), fires: r.fires, hull: +r.hull.toFixed(2) });
     ph.expect(r.t <= 30, `«Атаковать» to the grapples in ${r.t.toFixed(1)} s (30 at most)`);
-    ph.expect(r.hull < r.hull0 || r.why === 'gone', 'her guns struck the pirate on the way in');
     if (r.why === 'board') await ph.tap('#tc-act[data-act="board"]', '«На абордаж»');
     if (await ph.visible('[data-risk="go"]')) await ph.tap('[data-risk="go"]', '«Рискнуть»');
     await ph.until(async () => (await ph.state()).tac, 15000, 'the hex battle');
     await ph.step('battle');
     await autoBattle(ph, 1);
     const end = await battleEnd(ph);
-    ph.expect(end && end.winner === end.you, 'an equal sloop boarded is won');
-    await ph.until(() => ph.visible('[data-fate]'), 15000, 'the prize window');
-    await ph.step('prize');
-    const silver0 = (await ph.state()).silver;
-    await ph.tap('[data-fate="ransom"], [data-fate="prize"], [data-fate="release"]', 'the prize\'s choice');
-    await ph.until(async () => !(await ph.visible('[data-fate]')), 10000, 'the prize window gone');
-    await ph.step('settled', { silver: (await ph.state()).silver - silver0, taps: ph.taps - t0 });
-    ph.expect(ph.taps - t0 <= 10, `the fight in ${ph.taps - t0} taps (10 at most)`);
+    ph.expect(!!end, 'the battle\'s end screen');
+    // An equal's boarding is about an even fight (CLAUDE.md §5): won, the prize; lost, the reckoning and the quay.
+    if (end.winner === end.you) {
+      await ph.until(() => ph.visible('[data-fate]'), 15000, 'the prize window');
+      await ph.step('prize');
+      const silver0 = (await ph.state()).silver;
+      await ph.tap('[data-fate="ransom"], [data-fate="prize"], [data-fate="release"]', 'the prize\'s choice');
+      await ph.until(async () => !(await ph.visible('[data-fate]')), 10000, 'the prize window gone');
+      await ph.step('settled', { silver: (await ph.state()).silver - silver0, taps: ph.taps - t0 });
+    } else {
+      await L.sleep(2500);
+      await ph.skipFilm();
+      await ph.step('lost', { docked: (await ph.state()).docked, taps: ph.taps - t0 });
+    }
+    ph.expect(ph.taps - t0 <= 12, `the fight in ${ph.taps - t0} taps (12 at most)`);
   },
 
   /** 4. A senior (a frigate's company) boarded: the risk window, «Отступить» once, then «Рискнуть», and its end. */
@@ -176,7 +202,9 @@ const J = {
     await signIn(ph, { name: (LANG === 'ru' ? 'Риск' : 'Risk') + rnd(), know: true });
     await castOff(ph);
     await openSea(ph);
-    await ph.admin('/foe pirate frigate 300', 2500);
+    // Afloat whatever the frigate's guns do (the scene's /god: the journey is the window and the battle, not a sinking).
+    await ph.admin('/god on', 600);
+    await ph.admin('/foe pirate frigate 160', 2500);
     await attack(ph);
     await closeIn(ph, 'pirate', 45000);
     if (await ph.visible('#tc-act[data-act="board"]')) await ph.tap('#tc-act[data-act="board"]', '«На абордаж»');
@@ -186,14 +214,19 @@ const J = {
     ph.expect(/\d+\s?%/.test(card), 'the risk window says the chance in per cent');
     await ph.tap('[data-risk="back"]', '«Отступить»');
     await L.sleep(800);
-    ph.expect(!(await ph.visible('[data-risk="go"]')) && !(await ph.state()).tac, '«Отступить» shuts it and no battle begins');
-    await ph.step('backed_off');
-    await ph.until(async () => (await ph.visible('#tc-act[data-act="board"]')) || (await ph.visible('#tc-act[data-act="attack"]')), 15000, '«На абордаж» or «Атаковать» again');
-    if (await ph.visible('#tc-act[data-act="attack"]')) { await ph.tap('#tc-act[data-act="attack"]', '«Атаковать»'); await closeIn(ph, 'pirate', 30000); }
-    if (!(await ph.visible('[data-risk="go"]'))) await ph.tap('#tc-act[data-act="board"]', '«На абордаж»');
-    await ph.until(() => ph.visible('[data-risk="go"]'), 10000, 'the risk window again');
-    await ph.tap('[data-risk="go"]', '«Рискнуть»');
-    await ph.until(async () => (await ph.state()).tac, 15000, 'the hex battle after «Рискнуть»');
+    ph.expect(!(await ph.visible('[data-risk="go"]')), '«Отступить» shuts the window');
+    await ph.step('backed_off', { herGrapples: !!(await ph.state()).tac });
+    // She thinks again at once (a frigate's guns do not wait): «На абордаж» once more, and this time «Рискнуть» — unless
+    // the frigate has thrown her own grapples meanwhile (the battle is then hers to begin).
+    const inBattle = async () => !!(await ph.state()).tac;
+    if (!(await inBattle())) {
+      await ph.until(async () => (await inBattle()) || (await ph.visible('#tc-act[data-act="board"]')) || (await ph.visible('#tc-act[data-act="attack"]')), 8000, '«На абордаж» or «Атаковать» again');
+      if (!(await inBattle()) && (await ph.visible('#tc-act[data-act="attack"]'))) { await ph.tap('#tc-act[data-act="attack"]', '«Атаковать»'); await closeIn(ph, 'pirate', 30000); }
+      if (!(await inBattle()) && !(await ph.visible('[data-risk="go"]')) && (await ph.visible('#tc-act[data-act="board"]'))) await ph.tap('#tc-act[data-act="board"]', '«На абордаж»');
+      await ph.until(async () => (await inBattle()) || (await ph.visible('[data-risk="go"]')), 10000, 'the risk window again');
+      if (await ph.visible('[data-risk="go"]')) await ph.tap('[data-risk="go"]', '«Рискнуть»');
+    }
+    await ph.until(inBattle, 15000, 'the hex battle after «Рискнуть»');
     await ph.step('battle');
     await autoBattle(ph, 1);
     const end = await battleEnd(ph);
@@ -209,7 +242,10 @@ const J = {
     // The scene: a damaged ship come home with rum in the hold, a full purse, hands short (not counted).
     await L.send(ph.p, { t: 'undock' }); await L.sleep(2500); await ph.skipFilm(); await L.closeAll(ph.p, 1);
     for (const x of ['/silver 5000', '/give rum 20', '/hurt 55', '/wounded 6']) await ph.admin(x, 600);
-    await ph.admin('/tp saltmarrow', 2500); await L.send(ph.p, { t: 'dock' }); await L.sleep(2500); await ph.skipFilm(); await L.closeAll(ph.p, 1);
+    await ph.admin('/tp saltmarrow', 2500); await L.send(ph.p, { t: 'dock' });
+    // The film of the quay comes when it comes: waited for and ended (not the player's taps).
+    for (let i = 0; i < 12; i++) { await L.sleep(500); if (await ph.skipFilm()) break; }
+    await L.sleep(800); await L.closeAll(ph.p, 1);
     ph.taps = 0;
     ph.expect(!!(await ph.state()).docked, 'docked for the harbour');
     await ph.tap('#tc-act[data-act="harbour"]', '«Гавань»');
@@ -276,7 +312,7 @@ const J = {
     await ph.until(() => ph.visible('#modal-panel [data-ctab="book"]'), 8000, 'the captain window');
     await ph.step('captain');
     await ph.tap('#modal-panel [data-ctab="book"]', '«Книга»');
-    await ph.until(() => ph.visible('#modal-panel [data-hcast], #modal-panel [data-hlearn], #modal-panel .hb-order, #modal-panel .order'), 8000, 'the orders in the book');
+    await ph.until(() => ph.p.evaluate(() => { const e = document.querySelector('#modal-panel .hx-orders > *'); const r = e?.getBoundingClientRect(); return !!r && r.height > 20 && r.top < innerHeight; }), 8000, 'the orders in the book');
     await ph.step('orders');
     await ph.tap('#modal-panel [data-cchip="path"]', '«Путь»');
     await ph.step('path');

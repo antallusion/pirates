@@ -53,6 +53,16 @@ export class Phone {
 
   async visible(sel) { return (await this.where(sel)).st === 'ok'; }
 
+  /** A new level's «выберите один из двух» comes up by itself over the sea: a player takes one (counted). */
+  async levelUp() {
+    const w = await this.where('.lu-sheet .lu-pick');
+    if (w.st !== 'ok') return false;
+    await this.p.touchscreen.tap(w.x, w.y);
+    this.taps++;
+    await L.sleep(700);
+    return true;
+  }
+
   /** A finger on it, once it can be reached (within `ms`); throws with what stood in the way. */
   async tap(sel, what = sel, ms = 8000) {
     const t = Date.now();
@@ -60,6 +70,7 @@ export class Phone {
     for (;;) {
       w = await this.where(sel);
       if (w.st === 'ok') break;
+      if (/covered by k-scrim/.test(w.st) && (await this.levelUp())) continue;
       // Below the fold of a list that scrolls: a finger drags it there (a swipe a screenful, counted).
       if (w.st === 'offscreen') {
         const swipes = await this.p.evaluate((q) => {
@@ -175,8 +186,13 @@ export async function signIn(ph, { name, know = true, captain = 'corsair' }) {
 export async function autoBattle(ph, choice = 0) {
   await ph.until(() => ph.visible('.tb-pad [data-autow]'), 20000, 'the hex battle\'s «Авто»');
   await ph.tap('.tb-pad [data-autow]', '«Авто»');
-  await ph.until(() => ph.visible(`.k-wheel:not(.hidden) .k-wheel-item[data-i="${choice}"]`), 5000, 'the «Авто» wheel');
-  await ph.tap(`.k-wheel:not(.hidden) .k-wheel-item[data-i="${choice}"]`, choice ? '«Быстрый бой»' : '«Авто до конца»');
+  // The wheel's choices take no pointer of their own (the wheel reads the finger from the window): a tap on the spot.
+  const at = await ph.until(() => ph.p.evaluate((i) => {
+    const e = document.querySelector(`.k-wheel:not(.hidden) .k-wheel-item[data-i="${i}"]`);
+    const r = e?.getBoundingClientRect();
+    return r && r.width ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null;
+  }, choice), 5000, 'the «Авто» wheel');
+  await ph.tapAt(at.x, at.y);
 }
 
 /** The end of a hex battle: its one screen and its one button. */
