@@ -146,6 +146,7 @@ function bringFoe(game: Game, s: PlayerSession): void {
     const brain = game.npcs.get(foe.id);
     if (brain) {
       brain.expiresAt = game.now + FOE_BROUGHT_LIFE;
+      brain.huntFor = ship.id;
       brain.area = { x: ship.state.x, y: ship.state.y, r: 3000 };
       brain.chase = { id: ship.id, until: game.now + 120 };
       brain.target = ship.id;

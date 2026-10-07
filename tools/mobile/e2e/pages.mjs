@@ -191,7 +191,9 @@ export async function signIn(ph, { name, know = true, captain = 'corsair' }) {
 
 /** Rounds of the hex battle by the round buttons: «Авто» and its wheel's choice (0 to the end, 1 a quick fight). */
 export async function autoBattle(ph, choice = 0) {
-  await ph.until(() => ph.visible('.tb-pad [data-autow]'), 20000, 'the hex battle\'s «Авто»');
+  // (a battle may be over before its first turn: a frigate's 165 men against a sloop's 25)
+  await ph.until(async () => (await ph.visible('.tb-pad [data-autow]')) || !(await ph.state())?.tac || !!(await ph.state())?.tac?.over, 20000, 'the hex battle\'s «Авто»');
+  if (!(await ph.visible('.tb-pad [data-autow]'))) return;
   await ph.tap('.tb-pad [data-autow]', '«Авто»');
   // The wheel's choices take no pointer of their own (the wheel reads the finger from the window): a tap on the spot.
   const at = await ph.until(() => ph.p.evaluate((i) => {

@@ -121,6 +121,8 @@ test('a pirate brought to an idle novice leaves the sea in time (item 96)', () =
   assert.ok(brought, 'a pirate brought');
   const brain = game.npcs.get(brought.id)!;
   assert.ok(brain.expiresAt > game.now && brain.expiresAt <= game.now + FOE_BROUGHT_LIFE + 1e-6, `expires ${brain.expiresAt} at ${game.now}`);
+  // …and she comes for that captain, in safe water too (she lay by, never a mark, item 98).
+  assert.ok(game.isHostile(brought, s.ship!), 'hostile to the captain she was brought to');
 });
 
 test('the boarding run is the helmsman\'s: off as soon as the captain takes the wheel herself (item 94)', () => {

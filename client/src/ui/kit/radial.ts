@@ -180,7 +180,7 @@ export interface WheelBinding {
 export function attachWheel(el: HTMLElement, b: WheelBinding): () => void {
   const hold = b.holdMs ?? 350;
   let timer: ReturnType<typeof setTimeout> | null = null;
-  let id: number | null = null, x0 = 0, y0 = 0, opened = false, swallow = 0;
+  let id: number | null = null, x0 = 0, y0 = 0, t0 = 0, opened = false, swallow = 0;
   const openAt = (x: number, y: number) => {
     opened = true;
     wheel.open(x, y, b.options(), b.title);
@@ -201,6 +201,7 @@ export function attachWheel(el: HTMLElement, b: WheelBinding): () => void {
     id = e.pointerId;
     x0 = e.clientX;
     y0 = e.clientY;
+    t0 = e.timeStamp;
     opened = false;
     timer = setTimeout(() => {
       timer = null;
@@ -226,7 +227,14 @@ export function attachWheel(el: HTMLElement, b: WheelBinding): () => void {
   const up = (e: PointerEvent) => {
     if (id !== e.pointerId) return;
     id = null;
-    if (opened) {
+    // A quick tap whose release came in late (a busy frame: the hold's timer ran first and opened the wheel) is still a
+    // tap — judged by the events' own times, not by which callback the page got to first (docs/23 item 93: «В гавань»
+    // tapped on a loaded phone opened and shut an empty wheel, and the harbour never came).
+    if (opened && e.timeStamp - t0 < hold && Math.hypot(e.clientX - x0, e.clientY - y0) <= 12) {
+      e.preventDefault();
+      finish(false);
+      b.onTap?.();
+    } else if (opened) {
       e.preventDefault();
       finish(true);
     } else if (timer) {

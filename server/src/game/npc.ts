@@ -74,6 +74,10 @@ export interface NpcBrain {
   stuckCheck: { x: number; y: number; t: number };
   /** The First Watch's practice raider: she comes for this one novice even in safe water. */
   practice?: number;
+  /** A pirate brought to an idle captain in her first quarter of an hour (firstfights.ts): she comes for that captain,
+   *  safe water or not (docs/23 item 98: in the Black Coast she sailed up and lay by, never hostile, never a mark —
+   *  nothing on the screen for the newcomer to press). */
+  huntFor?: number;
   /** docs/23 item 44: when she took her present prey, for the chase that never lands a hit. */
   preySince?: { id: number; t: number; best: number; closer: number };
   /** The practice raider's men the guns never cut below, so the turn-by-turn lesson after the boarding is a fight of a
@@ -225,6 +229,7 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
     return !!owner && (game.isHostile(other, owner) || owner.attackers.has(other.id) || other.attackers.has(owner.id));
   }
   if (game.npcs.get(npc.id)?.practice === other.id) return true;
+  if (other.isPlayer && game.npcs.get(npc.id)?.huntFor === other.id) return true;
   if (other.attackers.has(npc.id) && game.now - (npc.attackers.get(other.id) ?? -999) < 120) return true;
   if ((npc.attackers.get(other.id) ?? -999) > game.now - 120) return true;
   const safety = REGIONS[other.region].safety;

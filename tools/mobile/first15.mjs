@@ -71,7 +71,7 @@ const look = () => p.evaluate(() => {
   const act = document.querySelector('#tc-act:not(.hidden)');
   let hostile = null;
   if (own) for (const x of s.ships.values()) {
-    if (!(x.cur.flags & 1) || !x.info) continue; // SF.HOSTILE = 1
+    if (!(x.cur.flags & 64) || !x.info) continue; // SF.HOSTILE = 64 (it read SINKING, 1: the bot steered for the sinking)
     const d = Math.hypot(x.cur.x - own.x, x.cur.y - own.y);
     if (d < 4000 && (!hostile || d < hostile.d)) hostile = { d, c: Math.atan2(x.cur.x - own.x, -(x.cur.y - own.y)) };
   }
@@ -174,7 +174,9 @@ while (Date.now() - t0 < MIN * 60_000) {
       await tapAt(v.finger.x, v.finger.y, 'finger');
       did = `finger:${v.finger.id}`;
     }
-  } else if (v.sheet && (await tapSel('.k-sheet-root.k-open [data-dp="sail"], .k-sheet-root.k-open .k-btn--primary', 'sheet'))) {
+  } else if (v.sheet && (await tapSel('.k-sheet-root.k-open .lu-pick, .k-sheet-root.k-open [data-dp="sail"], .k-sheet-root.k-open .k-btn--primary', 'sheet'))) {
+    // (a new level's «выберите один из двух»: she takes the first of the two big cards — the phase 9 run stood 11 min
+    // before it, the bot knowing no card that was not a gold button)
     // A sheet (the risk, a question): its gold button; the harbour's check: «sail anyway» (a buy she cannot pay for
     // left the newcomer tapping «Купить» 195 times).
     did = 'sheet';

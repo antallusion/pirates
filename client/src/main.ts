@@ -298,7 +298,9 @@ setInterval(() => {
   const h = state.self?.hero;
   if (!h || !inGame) return;
   if (heroSeen < 0 || h.pending < heroSeen) heroSeen = h.pending;
-  if (h.pending > heroSeen && h.offer.length && !modal && !state.boardTac && !state.boardFight && !document.body.classList.contains('sea-target') && !levelUpOpen()) {
+  // Not in the First Watch either: at its last step «Новый уровень» covered «В порт», the step's finger stepped aside and
+  // the pupil stood (e2e, docs/23 item 90); the choice waits for the watch's end.
+  if (h.pending > heroSeen && h.offer.length && !modal && !state.boardTac && !state.boardFight && !state.onboarding?.stage && !document.body.classList.contains('sea-target') && !levelUpOpen()) {
     heroSeen = h.pending;
     levelUpSheet(state, (m) => net.send(m));
   }
@@ -2039,6 +2041,16 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     if (d > range) continue;
     // Boarding at once (docs/17 H1): any ship in the grapples' reach, whole or wrecked; the server says why not.
     if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(c.flags & SF.HOSTILE)) continue;
+    // Her mark first (the pursuit's, or the one she tapped), whatever lies nearer: «На абордаж» took the nearest ship
+    // in reach — a Crown cutter beside the pirate she was running down (docs/23 item 93).
+    const mark = state.pursuit?.target ?? targetId;
+    if (s.id === mark) {
+      bd = -1;
+      best = s.id;
+      continue;
+    }
+    // With a mark of hers, another ship is offered only if it is at her throat (not a lawful one alongside by chance).
+    if (mark !== null && !(c.flags & SF.HOSTILE)) continue;
     if (d < bd) {
       bd = d;
       best = s.id;
