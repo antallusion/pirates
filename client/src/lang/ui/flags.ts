@@ -14,8 +14,8 @@ export const EN = {
   'fl.city': 'Flag of {city}',
   'fl.guild': 'Guild [{tag}] · {city}',
   'fl.flying': 'Flying',
-  'fl.next': 'Goes up in {n} min — stay in port',
-  'fl.rule': 'Changed only in port: a minute after the order, ten after a fight with a captain.',
+  'fl.next': 'Up in {n} min',
+  'fl.rule': 'Only in port: up a minute after the order, ten after a fight with a captain.',
   'fl.atSea': 'Change your colours and boarding in port.',
   'fl.noNeutral': 'The law wants you: neutral colours are refused.',
   'fl.board': 'Boarding',
@@ -31,7 +31,7 @@ export const EN = {
   'mark.guild': '[{tag}] · {city}',
   'mark.noBoard': 'no boarding',
   'mark.pennant': 'green pennant',
-  'fl.pennant': 'Green Pennant: in contested water no captain may attack you ({n} h at sea left, or until level 15). Attacking a captain lowers it for half an hour.',
+  'fl.pennant': 'Green pennant: captains leave you be in contested water ({n} h at sea, or to level 15).',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -47,8 +47,8 @@ export const RU: Record<keyof typeof EN, string> = {
   'fl.city': 'Флаг: {city}',
   'fl.guild': 'Гильдия [{tag}] · {city}',
   'fl.flying': 'Поднят',
-  'fl.next': 'Поднимут через {n} мин — оставайтесь в порту',
-  'fl.rule': 'Меняется только в порту: через минуту после заказа, через десять после боя с капитаном.',
+  'fl.next': 'Через {n} мин',
+  'fl.rule': 'Только в порту: через минуту после заказа, через 10 мин после боя с капитаном.',
   'fl.atSea': 'Флаг и абордаж меняются в порту.',
   'fl.noNeutral': 'Вас ищет закон: нейтральный флаг не дают.',
   'fl.board': 'Абордаж',
@@ -63,5 +63,5 @@ export const RU: Record<keyof typeof EN, string> = {
   'mark.guild': '[{tag}] · {city}',
   'mark.noBoard': 'без абордажа',
   'mark.pennant': 'зелёный вымпел',
-  'fl.pennant': 'Зелёный вымпел: в спорных водах капитаны не могут на вас напасть (осталось {n} ч в море или до 15-го уровня). Нападение на капитана спускает его на полчаса.',
+  'fl.pennant': 'Зелёный вымпел: в спорных водах капитаны вас не трогают ({n} ч в море или до 15-го уровня).',
 };

@@ -3840,7 +3840,7 @@ export class Renderer {
     g.closePath();
     g.fillStyle = cloth;
     g.fill();
-    g.strokeStyle = c.kind === 'neutral' ? stripe : 'rgba(0,0,0,0.5)';
+    g.strokeStyle = c.kind === 'neutral' ? stripe : c.kind === 'pirate' ? '#8d8676' : 'rgba(0,0,0,0.5)';
     g.lineWidth = 1;
     g.stroke();
     g.fillStyle = stripe;

@@ -492,7 +492,7 @@ export class PortScreen {
       case 'harbour':
         return this.harbour(view, state);
       case 'colours':
-        return coloursCard(state);
+        return coloursCard(state, { head: false });
       case 'holdings':
         return this.holdings(view, state);
       case 'exchange':

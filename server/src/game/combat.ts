@@ -775,7 +775,8 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   if (source) {
     registerAggression(game, source, target);
     source.lastCombat = now;
-    if (source !== target) markPvp(game, source, target); // a fight between captains: the colours wait in port (docs/24 D2)
+    // A fight between captains (not a duel by consent): the colours wait in port ten minutes after it (docs/24 D2).
+    if (source !== target && !inDuel(game, source)) markPvp(game, source, target);
   }
   target.lastCombat = now;
   target.protectedUntil = 0;

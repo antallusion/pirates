@@ -84,7 +84,7 @@ export function flagLine(c: ShipColours | null): { kind: Colours; color: string;
 
 /** The card: three big options (each with its line), what flies now and what is ordered, and the boarding switch.
  *  Live only in port; at sea it says where they are changed. */
-export function coloursCard(state: ClientState): string {
+export function coloursCard(state: ClientState, opts: { head?: boolean } = {}): string {
   const self = state.self;
   const v = self?.pvp;
   if (!self || !v) return '';
@@ -99,16 +99,20 @@ export function coloursCard(state: ClientState): string {
     const no = !docked || (k === 'neutral' && !!v.noNeutral);
     const title = k === 'neutral' ? L('fl.neutral') : k === 'pirate' ? L('fl.pirate') : L('fl.faction');
     const sub = k === 'neutral' ? L('fl.neutralSub') : k === 'pirate' ? L('fl.pirateSub') : L('fl.factionSub');
+    // The Green Pennant rides over a young captain's city flag (docs/24): said on that option, in a word.
     const whose = k === 'faction' ? (v.guild ? L('fl.guild', { tag: v.guild, city: FACTIONS[here].short }) : L('fl.city', { city: FACTIONS[here].short })) : '';
+    const pen = k === 'faction' && v.pennant ? `<i class="fl-pen" title="${esc(L('mark.pennant'))}" aria-label="${esc(L('mark.pennant'))}"></i>` : '';
     const state_ = on ? `<em class="fl-on">${esc(L('fl.flying'))}</em>` : soon ? `<em class="fl-soon">${esc(L('fl.next', { n: mins }))}</em>` : '';
     return `<button type="button" class="fl-opt fl-opt--${k}${on ? ' on' : ''}${soon ? ' soon' : ''}" role="radio" aria-checked="${on}" data-colours="${k}"${no ? ' disabled' : ''}>
-      ${flagMark(k, k === 'faction' ? here : null)}<span class="fl-t"><b>${esc(title)}</b>${whose ? `<span class="fl-whose">${esc(whose)}</span>` : ''}<small>${esc(sub)}</small>${state_}</span></button>`;
+      ${flagMark(k, k === 'faction' ? here : null)}<span class="fl-t"><b>${esc(title)}</b>${whose ? `<span class="fl-whose">${esc(whose)}${pen}</span>` : ''}<small>${esc(sub)}</small>${state_}</span></button>`;
   };
   const line = !docked ? L('fl.atSea') : v.noNeutral && v.flag !== 'neutral' ? L('fl.noNeutral') : L('fl.rule');
-  const pennant = v.pennant ? `<p class="fl-line good">${esc(L('fl.pennant', { n: v.pennantHoursLeft }))}</p>` : '';
-  return `<div class="card fl-card"><h4 class="card-h">${icon('tab_law', '', 'ico-md')}${esc(L('fl.title'))}</h4>
+  // (In the port the option says «зелёный вымпел» already; the ship window and «Флаг и закон» say what it is.)
+  const pennant = v.pennant && opts.head !== false ? ` ${L('fl.pennant', { n: v.pennantHoursLeft })}` : '';
+  // (The port's own place is named «Флаг» already: no heading over it there, the room is the boarding switch's.)
+  return `<div class="card fl-card">${opts.head === false ? '' : `<h4 class="card-h">${icon('tab_law', '', 'ico-md')}${esc(L('fl.title'))}</h4>`}
     <div class="fl-opts" role="radiogroup" aria-label="${esc(L('fl.title'))}">${COLOURS.map(opt).join('')}</div>
-    <p class="fl-line muted">${esc(line)}</p>${pennant}
+    <p class="fl-line muted">${esc(line)}${pennant ? `<span class="good">${esc(pennant)}</span>` : ''}</p>
     <button type="button" class="fl-board${v.noBoard ? ' off' : ''}" role="switch" aria-checked="${!v.noBoard}" data-noboard="${v.noBoard ? '0' : '1'}"${docked ? '' : ' disabled'}>
       <i class="fl-nb-ico" aria-hidden="true"></i><span class="fl-t"><b>${esc(v.noBoard ? L('fl.boardOff') : L('fl.boardOn'))}</b><small>${esc(L('fl.boardSub'))}</small></span><i class="fl-sw" aria-hidden="true"></i></button></div>`;
 }

@@ -66,7 +66,7 @@ export const EN = {
   'goal.g_profit': 'Make 1,000 silver trading',
   // The edge of safe waters
   'edge.title': 'You are leaving safe waters',
-  'edge.pvp': 'Contested waters: other captains may attack you — and you them.',
+  'edge.pvp': 'Contested waters: captains fight by their colours — neutral ones are left be, the pirate flag is fair game. Yours are changed in port.',
   'edge.wanted': 'Attacking lawful ships raises your Wanted level. Crown ports close to you at Wanted 2, the League’s at 3.',
   'edge.insure': 'The Gilded Ledger insures hull and cargo in League ports. Without it, a sinking costs cargo, crew and a repair fee.',
   'edge.once': 'This screen shows once. From here on, the region banner tells you whose waters you sail.',

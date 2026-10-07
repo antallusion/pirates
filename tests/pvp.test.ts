@@ -175,6 +175,7 @@ test('a duel: by consent, in the ring, nobody sinks, outsiders stand clear, all 
   B.ship!.ammo.round -= 10;
   applyDamage(game, B.ship!, { hull: 30, crew: 3 }, A.ship!);
   assert.equal(A.profile!.infamy, 0, 'a duel is no crime');
+  assert.equal(A.profile!.pvp.pvpAt, 0, 'nor a fight that makes new colours wait (docs/24 D2)');
   applyDamage(game, B.ship!, { hull: 99_999 }, A.ship!);
   assert.equal(B.ship!.sinkingUntil, 0, 'she struck instead of sinking');
   assert.equal(a.last('duel')!.view, null, 'over');
