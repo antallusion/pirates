@@ -1,0 +1,73 @@
+/* docs/23 phases 7–8: the first quarter of an hour and the feel on a phone held sideways — the First Watch's finger,
+   the optional things kept shut, the sea's news out of a fight's field, and the screen's notches and gesture bar.
+   Its own sheet beside styles.css (the windows' sheets are phase 6's). */
+
+/* ---- the finger (client/src/ui/pointer.ts, docs/23 item 80): a hand drawn in code over the button the step wants */
+#tut-finger { position: fixed; left: 0; top: 0; width: 44px; height: 44px; z-index: 2147483000; pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.75)); will-change: transform; }
+#tut-finger.hidden { display: none; }
+#tut-finger .tf-hand { display: block; width: 100%; height: 100%; rotate: 180deg; animation: tf-bob 900ms cubic-bezier(0.45, 0, 0.55, 1) infinite alternate; }
+#tut-finger.up .tf-hand { rotate: 0deg; animation-name: tf-bob-up; }
+#tut-finger.right .tf-hand { rotate: 90deg; animation-name: tf-bob-right; }
+@keyframes tf-bob { from { translate: 0 -6px; } to { translate: 0 1px; } }
+@keyframes tf-bob-up { from { translate: 0 6px; } to { translate: 0 -1px; } }
+@keyframes tf-bob-right { from { translate: -6px 0; } to { translate: 1px 0; } }
+/* The button itself ringed in gold (an outline: it follows the round buttons and moves nothing). */
+.tut-target { outline: 2px solid var(--gold, #e0b862); outline-offset: 3px; animation: tut-ring 1400ms ease-in-out infinite; }
+@keyframes tut-ring { 50% { outline-color: rgba(224, 184, 98, 0.3); outline-offset: 6px; } }
+body.reduce-motion #tut-finger .tf-hand, body.reduce-motion .tut-target { animation: none; }
+@media (prefers-reduced-motion: reduce) { #tut-finger .tf-hand, .tut-target { animation: none; } }
+
+/* ---- the step: its title and one short line (docs/23 item 79) — on a short screen one low row as wide as its words
+   (it was a 600 px plate across the top band, a tenth of the screen): «3/5 Огонь! Нажмите «Огонь».» and the skips. */
+#hud-watch .w-body { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud-watch .w-t { font-style: normal; }
+#hud-watch .w-short { display: none; }
+@media (max-height: 520px) {
+  #hud-watch:not(.hidden) { flex-wrap: nowrap; justify-self: start; align-self: flex-start; padding: 3px 4px 3px 8px; }
+  /* (the stack's children are all stretched to its width with !important, styles.css #hud #hud-stack > *) */
+  #hud #hud-stack > #hud-watch:not(.hidden) { width: max-content !important; max-width: 100% !important; }
+  #hud-watch .w-head { flex: none; margin-bottom: 0; }
+  #hud-watch .w-head span { letter-spacing: 0.06em; }
+  #hud-watch .w-body { flex: 0 1 auto; order: 0; min-width: 0; color: var(--fog, #b9b2a2); }
+  #hud-watch .w-act { margin: 0 0 0 4px; gap: 4px; }
+  #hud-watch .w-act .btn { height: 22px; padding: 0 6px; font-size: 10.5px; }
+  #hud-watch .w-t, #hud-watch .w-long { display: none; }
+  #hud-watch .w-short { display: inline; }
+}
+
+/* In the First Watch the counter of news and goals keeps away: the lesson's row stood under it (the counter at 172 px
+   from the left, the row from 55 px while the captain's plate is not yet in, QA 2026-10-07), and the watch is the news. */
+body.touch:has(#hud-watch:not(.hidden)) #touch > .tc-news { display: none !important; }
+
+/* The lesson steps aside while the decks fight: the hexes are the step («На абордаж… и победите»), and the battle's own
+   top band and its end band are the screen's (with it the end stood at 21.7 % of a 812×375 screen). */
+body.tac #hud-watch, body.boarding #hud-watch { display: none !important; }
+
+/* ---- the first quarter of an hour (docs/23 item 83): tattoos, dice, the auction, the guilds open after it */
+body.lock-tattoos .tt-chair, body.lock-tattoos [data-tattoos],
+body.lock-dice .dice-card,
+body.lock-auction .au-card, body.lock-auction #k-kind option[value="auction"],
+body.lock-guilds .tab[data-tab="guild"],
+/* The phase 6 windows (docs/23 items 65, 74): the harbour's second row and the Journal's rail. */
+body.lock-tattoos [data-ptab="tattoo"], body.lock-dice [data-ptab="dice"], body.lock-auction [data-ptab="auction"],
+body.lock-guilds [data-jtab="guild"] { display: none !important; }
+
+/* ---- a fight on the screen (QA of phase 5): what the battle says stands in its top band, never over the field —
+   at 640×360 the desk's band beside the round (50% + 136 px, as wide as 50% − 398 px) had no width left. */
+@media (max-width: 1099px), (max-height: 520px) {
+  body.tac #toasts { top: calc(var(--sa-t) + 8px); bottom: auto; left: 50%; right: auto; transform: translateX(-50%);
+    width: min(56vw, 340px); height: 44px; flex-flow: column wrap; }
+}
+
+/* ---- the fast start (docs/23 item 88): «Продолжить: <имя>» over the guest's form — one tap, no name to type */
+.login-panel #login-continue { display: block; width: 100%; min-height: 48px; margin: 0 0 14px; font-size: 16px; }
+.login-panel #login-continue.hidden { display: none; }
+
+/* ---- the screen's notch and gesture bar (docs/23 item 89): a window on a phone fills the safe part of the screen and
+   leaves the notch's side, the camera's side and the gesture bar to the dark behind it (its buttons stood 16–33 px into
+   the 47 px of a notch, tools/mobile/safearea.mjs). The window's own layout is untouched. */
+@media (max-width: 699px), (max-height: 520px) {
+  #modal { padding: var(--sa-t) var(--sa-r) var(--sa-b) var(--sa-l); box-sizing: border-box; }
+  #modal-panel { width: calc(100vw - var(--sa-l) - var(--sa-r)); height: calc(100dvh - var(--sa-t) - var(--sa-b)); }
+}

@@ -199,6 +199,8 @@ export class ShipEntity {
   ramTarget = 0;
   sinkAt = 0; // No Quarter: the taken ship goes down
   prize = false; // a captured NPC sailing under a prize crew for her captor
+  /** docs/23 item 81: one of a novice's first three fights, with this captain's ship (entity id): softened. */
+  softFor?: number;
   caravanOf: number | null = null; // Counting House: the account this merchant trades for
   caravanFrom: string | null = null;
   pendingDump: { good: GoodId; qty: number; at: number } | null = null; // cargo going over the side

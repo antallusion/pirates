@@ -86,6 +86,14 @@ export function releaseModalToasts(): void {
 const SHORT = '(max-width: 699px), (max-height: 520px)';
 
 /** The top stack's blocks that fold behind its button (the rest is what is happening now). */
+/** A fight on the screen whose field the sea's news must not cover: the hexes (body.tac) or the deck fight. */
+export function fightOnScreen(): boolean {
+  const b = globalThis.document?.body?.classList;
+  return !!b && (b.contains('tac') || b.contains('boarding'));
+}
+/** At most this many of the sea's toasts wait out a fight (the newest kept). */
+export const HELD_MAX = 4;
+
 export const FOLDED = ['hud-tip', 'hud-fish', 'hud-order', 'hud-holiday', 'hud-world', 'hud-goals', 'hud-feed'];
 
 /** The transient blocks of the top stack (a hint, the sea's news, a boss's card), styles.css puts them at its head. */
@@ -383,6 +391,7 @@ export class Hud {
   }
 
   update(state: ClientState, prompt: string): void {
+    this.releaseHeld();
     const self = state.self, you = state.you;
     if (!self || !you) return;
     this.drawBoss(state);
@@ -1425,8 +1434,26 @@ export class Hud {
     },
   });
 
+  /** The sea's news while the decks fight (a battle on the hexes, the round-by-round deck fight): held, and told when
+   *  the fight is over — a world toast («Нанесено на карту…») stood over the field (docs/23, QA of phase 5). What the
+   *  battle itself says (a refusal, a win) is told at once, in the battle's top band. */
+  private held: { key: string; show: () => void }[] = [];
+  private hold(key: string, show: () => void): boolean {
+    if (!fightOnScreen()) return false;
+    this.held = [...this.held.filter((x) => x.key !== key), { key, show }].slice(-HELD_MAX);
+    return true;
+  }
+  /** The fight over: the held news, oldest first (the queue shows two and keeps the rest waiting). */
+  releaseHeld(): void {
+    if (!this.held.length || fightOnScreen()) return;
+    const h = this.held;
+    this.held = [];
+    for (const x of h) x.show();
+  }
+
   /** A line said aboard (docs/16 #16–17): the speaker's face and name over his words, in the toasts' band. */
   talk(face: string, who: string, line: string, kind: string): void {
+    if (this.hold(`talk|${who}|${line}`, () => this.talk(face, who, line, kind))) return;
     this.toastQ.push(`talk|${who}|${line}`, 'talk', () => {
       const el = document.createElement('div');
       el.className = `toast talk ${kind}`;
@@ -1438,6 +1465,7 @@ export class Hud {
   }
 
   toast(msg: string, kind: string): void {
+    if (kind !== 'bad' && kind !== 'good' && this.hold(`${kind}|${msg}`, () => this.toast(msg, kind))) return;
     this.toastQ.push(msg, kind, () => {
       const el = document.createElement('div');
       el.dataset.msg = msg;

@@ -20,6 +20,7 @@ import type { Path } from './nav.ts';
 import { beatAngle } from './npc.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { onboardingProtected } from './onboarding.ts';
 
 const DEG = Math.PI / 180;
 
@@ -69,7 +70,9 @@ export function autosailDanger(game: Game, s: PlayerSession, ship: ShipEntity, s
   if (ship.docked) return 'port';
   if (s.profile?.company.mutiny || ship.seizedHelm) return 'helm';
   if (ship.grappled || ship.boarding || ship.landing) return 'attack';
-  if (ship.hull < ship.stats.hullMax * AUTOSAIL_LOW_HULL) return 'hull';
+  // (In the First Watch nothing can be lost, and «В порт» after the lesson's battle is the low hull's very cure: the
+  // helmsman gave the wheel back at once and the pupil sat a mile off the quay, QA 2026-10-07.)
+  if (ship.hull < ship.stats.hullMax * AUTOSAIL_LOW_HULL && !onboardingProtected(s)) return 'hull';
   // Her keel on a reef or a shoal already (a bank the tide bared, a reef the chart did not show).
   if (ship.cls.passive.id !== 'shallow_runner' && depthAt(game.world, ship.state.x, ship.state.y) < draftOf(ship)) return 'reef';
   // A shot at her, or her own guns, since he took the wheel (or in the last seconds before).

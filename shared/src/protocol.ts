@@ -1607,7 +1607,7 @@ export type ServerMsg =
   | { t: 'away'; view: AwayView }
   | { t: 'onboarding'; view: OnboardingView }
   /** A moment of the First Watch: a step done or skipped, a contextual hint, a goal met, the edge of safe waters. */
-  | { t: 'onb'; kind: 'stage' | 'skip' | 'hint' | 'goal' | 'edge'; id: string }
+  | { t: 'onb'; kind: 'stage' | 'skip' | 'hint' | 'goal' | 'edge' | 'unlock'; id: string }
   | { t: 'empire'; view: EmpireView }
   | { t: 'pve_sites'; list: PveSiteView[] }
   | { t: 'dive'; view: DiveView | null }
@@ -2880,6 +2880,9 @@ export interface OnboardingView {
   goals: string[] | null; // the three goals under way, or null (hidden, or still in the watch)
   goalsDone: number;
   hints: string[]; // hints seen, for the logbook
+  /** docs/23 item 83: the optional things still shut in her first quarter of an hour ('tattoos', 'dice', 'auction',
+   *  'guilds'); empty (or absent, from an older server) when all are open. */
+  locked?: string[];
 }
 
 // ------------------------------------------------------------------ batch E of docs/16: islands and the shore

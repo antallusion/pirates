@@ -6,7 +6,8 @@ import { tributeBroken } from './raiding.ts';
 import { lairImpact } from './wanted.ts';
 import { ladderBetween } from './ladder.ts';
 import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, LAY_ARC_DEG, LAY_OVER, SEA_DAMAGE, SEA_RELOAD, aimFocus, seaLevelPace, windDriftAngle } from '../../../shared/src/data/gunnery.ts';
-import { onboardingVolley } from './onboarding.ts';
+import { onboardingVolley, PRACTICE_HULL } from './onboarding.ts';
+import { softDealt, softenFoe } from './firstfights.ts';
 import { AMMO, ARMOR_PIERCE, CHASER_CONE, CHASER_GUN, CHASER_RELOAD, GUNS } from '../../../shared/src/data/ships.ts';
 import type { ChaserEnd, GunId } from '../../../shared/src/data/ships.ts';
 import type { AmmoId } from '../../../shared/src/data/ships.ts';
@@ -778,10 +779,19 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   // below her floor of hull and crew.
   const lad = source && source !== target ? ladderBetween(game, source, target) : null;
   if (lad && lad.dealt !== 1 && !d.laddered) d = { ...d, hull: (d.hull ?? 0) * lad.dealt, sails: (d.sails ?? 0) * lad.dealt, crew: (d.crew ?? 0) * lad.dealt, morale: (d.morale ?? 0) * lad.dealt };
+  // A novice's first three fights (docs/23 item 81): the first ball either way softens the sea's ship; hers hurt less.
+  if (source && source !== target && (source.isPlayer !== target.isPlayer)) {
+    softenFoe(game, source, target);
+    const k = softDealt(game, source, target);
+    if (k !== 1) d = { ...d, hull: (d.hull ?? 0) * k, sails: (d.sails ?? 0) * k, crew: (d.crew ?? 0) * k, morale: (d.morale ?? 0) * k };
+  }
   survivalOnHit(game, target, d);
   if (d.hull) {
     let hull = screenFlagship(game, target, d.hull);
     if (lad?.floorHull) hull = Math.min(hull, Math.max(0, target.hull - lad.floorHull * target.stats.hullMax));
+    // The First Watch's raider is there to be boarded (docs/23 item 79): her pupil's guns leave her a third of her hull
+    // (alongside, the gun crews and the bump of the run-in sank her in five seconds, before «На абордаж»).
+    if (target.npcRole && game.npcs.get(target.id)?.practice === source?.id && source) hull = Math.min(hull, Math.max(0, target.hull - PRACTICE_HULL * target.stats.hullMax));
     if (target.zoneBoss) zbCredit(game, target, source, Math.min(Math.max(0, target.hull), hull)); // each captain's part of her (docs/21)
     target.hull -= hull;
     onHullDamage(game, target, hull, source);

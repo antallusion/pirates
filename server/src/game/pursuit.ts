@@ -20,6 +20,7 @@ import { engageHelm, newBrain } from './npc.ts';
 import type { NpcBrain } from './npc.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { softenFoe } from './firstfights.ts';
 import { canStrike, struck } from './struck.ts';
 
 /** The helmsman has the wheel back this long after the captain lets go of it. */
@@ -92,6 +93,7 @@ export function startPursuit(game: Game, s: PlayerSession, id: number, mode: Pur
   if (!run.auto && s.autoWeak && weakMark(ship, target!)) run.auto = { left: 3, next: game.now + AUTO_WEAK_SEC / 3 };
   runs.set(ship, run);
   send(game, s, run);
+  softenFoe(game, ship, target!); // one of her first three fights (docs/23 item 81)
   return null;
 }
 
@@ -177,7 +179,8 @@ export function stepPursuit(game: Game): void {
     if (run.auto && autoBattle(game, ship, t, run)) continue;
     // No endless chases (docs/23 item 44): forty seconds and not a hit either way.
     const lastHit = Math.max(run.since, t.attackers.get(ship.id) ?? -Infinity, ship.attackers.get(t.id) ?? -Infinity);
-    if (now - lastHit > CHASE_GIVE_UP && !t.isPlayer) {
+    // (The First Watch's raider never slips away from her pupil nor strikes to her: she is the lesson, QA 2026-10-07.)
+    if (now - lastHit > CHASE_GIVE_UP && !t.isPlayer && game.npcs.get(t.id)?.practice !== ship.id) {
       const brain = game.npcs.get(t.id);
       if (brain && !t.surrendered && (canStrike(t) || t.npcRole === 'merchant' || t.npcRole === 'fisher') && !brain.struck) {
         brain.struck = true;

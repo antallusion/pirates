@@ -22,7 +22,7 @@ const LF = dict(FEN, FRU);
 const LR = dict(REN, RRU);
 const LS = dict(SEN, SRU);
 
-export type ActId = 'attack' | 'attack_stop' | 'attack_mode' | 'axes' | 'harbour' | 'board' | 'dock' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'roam' | 'roam_join' | 'roam_look' | 'look' | 'repair';
+export type ActId = 'attack' | 'attack_stop' | 'attack_mode' | 'axes' | 'harbour' | 'board' | 'dock' | 'homeport' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'roam' | 'roam_join' | 'roam_look' | 'look' | 'repair';
 export type LandAction = 'land' | 'dig' | 'raise' | 'expedition' | 'descent' | 'keeper' | 'escort' | 'dive' | 'lair';
 export type LookKind = 'obj' | 'guard' | 'lair' | 'drift' | 'struck';
 
@@ -34,6 +34,8 @@ export interface ActFacts {
   harbourOpen?: boolean;
   board?: { name: string } | null;
   port?: { name: string } | null;
+  /** docs/23 item 79: the First Watch's «В порт» far from any harbour — the helmsman sails her to the nearest one. */
+  homeport?: { name: string } | null;
   landable?: { action: LandAction; feature: string; island: string; blocked?: boolean; title?: string } | null;
   mastWreck?: boolean;
   cast?: 'net' | 'lamp' | null;
@@ -96,6 +98,7 @@ export function buildActs(f: ActFacts): Act[] {
     out.push({ id: 'attack_stop', icon: 'item_ship_wheel', label: LS('a.stop'), title: LS('a.stopTitle') });
   }
   if (f.port) out.push({ id: 'dock', icon: 'map_port', label: L('a.dock'), sub: f.port.name, title: `${L('a.dock')}: ${f.port.name}`, key: 'dock' });
+  else if (f.homeport) out.push({ id: 'homeport', icon: 'map_port', label: L('a.dock'), sub: f.homeport.name, title: `${L('a.dock')}: ${f.homeport.name}` });
   const l = f.landable;
   if (l && !l.blocked) {
     const sub = l.action === 'raise' || l.action === 'dive' || l.action === 'lair' ? l.feature : l.action === 'descent' ? '' : l.island;

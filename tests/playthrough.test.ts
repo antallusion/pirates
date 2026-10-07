@@ -47,7 +47,7 @@ test('playthrough: the First Watch\'s raider never boards her pupil, even broken
   ship.state.speed = 4;
   ship.state.sail = 0.6;
   steps(game, 21);
-  assert.equal(c.last('onboarding')!.view.stage, 'gunnery');
+  assert.equal(c.last('onboarding')!.view.stage, 'attack');
   const raider = [...game.ships.values()].find((x) => x.name === 'Red Novice')!;
   assert.ok(raider);
   // Two idle pirates near: no pack may come.
@@ -197,10 +197,9 @@ test('playthrough: the cabin\'s twelve doors on a phone on its side, two rows of
   assert.match(css, /#modal-panel\[data-modal="menu"\] \.menu-grid \{ grid-template-columns: repeat\(6, minmax\(0, 1fr\)\);/);
   const { RU } = await import('../client/src/lang/ru.ts');
   const { EN } = await import('../client/src/lang/en.ts');
-  assert.match(RU['stage.recruit.touch'], /«В порт»/);
-  assert.match(RU['stage.recruit.touch'], /«Нанять армию»/);
-  assert.match(EN['stage.recruit.touch'], /«Recruit an army»/);
-  assert.match(RU['stage.cast_off.touch'], /«Поднять паруса»/);
+  assert.match(RU['stage.port.touch'], /«В порт»/);
+  assert.match(EN['stage.port.touch'], /«Enter port»/);
+  assert.match(RU['stage.attack.touch'], /«Атаковать»/);
 });
 
 test('playthrough: a drift\'s card leads a lair\'s, and on a short screen its ways and «Fight» stand two by two in the top band', async () => {

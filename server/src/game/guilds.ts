@@ -33,6 +33,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { deliver } from './post.ts';
 import type { ShipEntity } from './ship.ts';
+import { fresh } from './onboarding.ts';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -296,7 +297,8 @@ export function invite(game: Game, s: PlayerSession, name: string): string | nul
   g.invites = g.invites.filter((i) => i.until > now && i.account !== t.accountId);
   g.invites.push({ account: t.accountId, by: s.name, until: now + DAY });
   game.guilds.touch();
-  game.sendTo(t, { t: 'toast', msg: `${s.name} invites you into ${g.name} [${g.tag}]. Answer in the Guild tab [Y].`, kind: 'info' });
+  // A captain in her first quarter of an hour keeps the invitation for later, unannounced (docs/23 item 83).
+  if (!fresh(t.profile)) game.sendTo(t, { t: 'toast', msg: `${s.name} invites you into ${g.name} [${g.tag}]. Answer in the Guild tab [Y].`, kind: 'info' });
   pushGuild(game, t);
   return null;
 }

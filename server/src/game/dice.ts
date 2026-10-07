@@ -15,6 +15,7 @@ import type { Game } from './Game.ts';
 import { takeItem } from './gear.ts';
 import type { PlayerSession } from './player.ts';
 import { deliver } from './post.ts';
+import { fresh } from './onboarding.ts';
 
 interface Seat {
   name: string;
@@ -400,7 +401,7 @@ function weekTurn(game: Game): void {
   if (w.week === now) return;
   const top = weekBoard(game)[0];
   if (top) {
-    for (const o of game.sessions) game.sendTo(o, { t: 'toast', msg: `The week’s dice tournament is won by ${top.name}: ${top.wins} wins.`, kind: 'gold' });
+    for (const o of game.sessions) if (!fresh(o.profile)) game.sendTo(o, { t: 'toast', msg: `The week’s dice tournament is won by ${top.name}: ${top.wins} wins.`, kind: 'gold' });
     const acc = game.db.accountByName(top.name)?.id;
     const s = [...game.sessions].find((x) => x.name === top.name);
     if (s?.profile) {

@@ -88,6 +88,8 @@ import { Journal } from './ui/journal.ts';
 import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
+import { TutorPointer } from './ui/pointer.ts';
+import { buzz, guardVibrate } from './haptics.ts';
 import { filmDue, filmExists, loadFilms, playFilm, setFilmGate } from './ui/cutscene.ts';
 import { OptionsScreen } from './ui/options.ts';
 import { actionFor, applyToDocument, keyLabel, keyOf, onSettings, settings, update } from './settings.ts';
@@ -117,6 +119,8 @@ import { PuzzleWindow } from './ui/puzzle.ts';
 import { crewSayParts, renderLog } from './ui/crewlife.ts';
 
 const L = dict(MAIN_EN, MAIN_RU);
+/** The captain last aboard on this device (docs/23 item 88: «Продолжить: …» on the title screen). */
+const CAPTAIN_KEY = 'gravetide.captain';
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
@@ -413,6 +417,9 @@ const seaHud = new SeaHud($('touch'), {
   target: () => seaHud.lend(['hud-target'], 'target'),
 });
 const onboarding = new OnboardingUi(state);
+/** The First Watch's finger over the button its step wants (docs/23 item 80). */
+const tutorPointer = new TutorPointer();
+guardVibrate(); // «Вибрация» off stills every pulse (docs/23 item 84)
 const encounterCard = new EncounterCard((m) => net.send(m));
 const surrenderCard = new SurrenderCard((m) => net.send(m));
 const lairChest = new LairChestCard();
@@ -696,6 +703,24 @@ function titleFilm(ka: HTMLElement, poster: string | null): void {
   if (location.hash) history.replaceState(null, '', location.pathname);
 }
 
+// docs/23 item 88: a captain who has been here before goes back to sea in two taps from this screen — «Продолжить»
+// with her name (her token is kept: no name to type), then «Поднять паруса» in the harbour (or none, if she was left
+// at sea). The page connects by itself as it opens; the button is there while it does, and after the session was taken
+// over elsewhere (no reconnecting by itself then).
+{
+  const btn = $('login-continue') as HTMLButtonElement;
+  const name = localStorage.getItem(CAPTAIN_KEY);
+  if (net.token && name) {
+    btn.textContent = L('continueAs', { name });
+    btn.classList.remove('hidden');
+  }
+  btn.onclick = () => {
+    audio.unlock();
+    btn.disabled = true;
+    setTimeout(() => (btn.disabled = false), 4000);
+    net.connect();
+  };
+}
 if (net.token) net.connect();
 else $('login-name').focus();
 
@@ -782,7 +807,18 @@ function onMessage(m: ServerMsg): void {
     case 'err':
       if (m.msg === 'auth_required') {
         net.forget();
+        $('login-continue').classList.add('hidden'); // her token is gone: the name is typed again
         $('screen-login').classList.remove('hidden');
+      } else if (m.msg === 'Logged in elsewhere.') {
+        // Taken over by another tab or phone: the page does not reconnect by itself, so the title screen comes back
+        // with «Продолжить» — one tap takes the captain back here (docs/23 item 88; before, a «connection lost» band).
+        $('screen-login').classList.remove('hidden');
+        $('login-error').textContent = serverText(m.msg);
+        const btn = $('login-continue') as HTMLButtonElement;
+        if (net.token && localStorage.getItem(CAPTAIN_KEY)) {
+          btn.textContent = L('continueAs', { name: localStorage.getItem(CAPTAIN_KEY)! });
+          btn.classList.remove('hidden');
+        }
       } else if (!inGame) $('login-error').textContent = serverText(m.msg);
       // The glass asks by itself every few seconds (askGlass): its «too far» is no refusal of hers to tell.
       else if (GLASS_QUIET.has(m.msg)) break;
@@ -792,6 +828,8 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'welcome':
       $('screen-login').classList.add('hidden');
+      try { localStorage.setItem(CAPTAIN_KEY, m.name); } catch { /* no storage */ }
+      $('login-error').textContent = '';
       if (!m.hasCaptain) showCaptainSelect((captain, shipName, tutorial) => {
         prologuePending = tutorial;
         net.send({ t: 'create_captain', captain, shipName, tutorial });
@@ -1108,6 +1146,11 @@ function onMessage(m: ServerMsg): void {
         renderer.fx.onEvent(e, state.entityId);
         // Rumble: a hit on our hull a short knock in both motors; something under the keel a long low hum.
         if (e.k === 'hit' && e.ship === state.entityId && e.dmg > 0) rumble(activePad(), 0.5, 0.5, 120);
+        // The phone in the hand (docs/23 item 84): her broadside, a ball on her mark, one on her hull, the grapples.
+        if (e.k === 'volley' && e.ship === state.entityId) buzz('fire');
+        else if (e.k === 'hit' && e.dmg > 0 && e.ship === state.entityId) buzz('hurt');
+        else if (e.k === 'hit' && e.dmg > 0 && (e.ship === state.pursuit?.target || e.ship === targetId)) buzz('hit');
+        else if (e.k === 'board_start' && (e.a === state.entityId || e.b === state.entityId)) buzz('board');
         else if (e.k === 'fx' && (e.fx === 'deep_call' || e.fx === 'rise' || e.fx === 'maw') && state.ownDisplay && dist(e.x, e.y, state.ownDisplay.x, state.ownDisplay.y) < 600) rumble(activePad(), 0.7, 0, 1200);
         audio.onEvent(e);
         if (e.k === 'region') {
@@ -1986,7 +2029,9 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const facts: ActFacts = { grabbed: grabbed() };
   if (best !== null) facts.board = { name: placeName(state.ships.get(best)?.info?.name ?? L('her')) };
   const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
-  if (port) facts.port = { name: sv(port.name) };
+  // Just out of the harbour, «В порт» is not the gold button for half a minute (unless she is hurt): the 2026-10-06
+  // newcomer's run cast off, saw «В порт» as the one thing to press and put straight back in — 190 times in 15 minutes.
+  if (port && !(performance.now() - castOffAt < CAST_OFF_QUIET && you.hull >= you.hullMax * 0.5)) facts.port = { name: sv(port.name) };
   const ab = self.abyss;
   facts.ritual = !!ab && ab.shards >= 3 && dist(own.x, own.y, ab.eye.x, ab.eye.y) < 1500;
   const l = self.landable;
@@ -2043,6 +2088,12 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const pursued = state.pursuit ? state.ships.get(state.pursuit.target) : undefined;
   if (state.pursuit) facts.attack = { name: placeName(pursued?.info?.name ?? L('her')), pursuing: true, mode: state.pursuit.mode };
   else if (attackMark !== null) facts.attack = { name: placeName(state.ships.get(attackMark)?.info?.name ?? L('her')), pursuing: false, mode: 'board' };
+  // The First Watch's last step (docs/23 item 79): «В порт» far from any harbour sails her to the nearest.
+  homeport = null;
+  if (!port && !state.pursuit && state.onboarding?.stage === 'port') {
+    homeport = state.ports.reduce<(typeof state.ports)[number] | null>((b, p) => (!b || dist(p.x, p.y, own.x, own.y) < dist(b.x, b.y, own.x, own.y) ? p : b), null);
+    if (homeport) facts.homeport = { name: sv(homeport.name) };
+  }
   facts.looks = advCard.closedLooks();
   // A struck ship's terms put off by «Later»: her card back with «Look…».
   const struck = surrenderCard.laterName();
@@ -2085,6 +2136,11 @@ function runAct(a: Act): void {
       return void (boardTarget !== null ? net.send({ t: 'board', target: boardTarget, aggression: 'standard' }) : hud.toast(L('noCrippled'), 'bad'));
     case 'dock':
       return requestDock(false);
+    case 'homeport':
+      if (!homeport) return;
+      homeRun = homeport.id;
+      homeRunAt = performance.now();
+      return void net.send({ t: 'autosail', x: homeport.x, y: homeport.y });
     case 'land':
       return sendLand();
     case 'cut_mast':
@@ -2500,7 +2556,24 @@ function requestDock(bribe: boolean, refused = false): void {
   }
   net.send({ t: 'dock', bribe });
 }
+/** The nearest harbour «В порт» would sail to (the First Watch's last step), and the one the helmsman is sailing to:
+ *  in the harbour's reach she puts in by herself — one tap from the open sea to the quay. */
+let homeport: ClientState['ports'][number] | null = null;
+/** When she last cast off (the page's clock), and how long «В порт» keeps quiet after it (ms). */
+let castOffAt = -1e9, wasDocked = false;
+const CAST_OFF_QUIET = 30_000;
+let homeRun: string | null = null, homeRunAt = 0;
 function stepPendingDock(): void {
+  if (homeRun) {
+    const own = state.ownDisplay, p = state.ports.find((x) => x.id === homeRun);
+    // In the harbour's reach she puts in (the helmsman's «arrived» comes at the open water off the quay); the helmsman
+    // gave the wheel back short of it (a sail in sight, a shot): the run is off, and «В порт» shows again.
+    if (state.self?.dockedAt || !p || !own) homeRun = null;
+    else if (dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS) {
+      homeRun = null;
+      requestDock(false);
+    } else if (!state.autosail && performance.now() - homeRunAt > 2500) homeRun = null;
+  }
   if (!pendingDock) return;
   const own = state.ownDisplay;
   if (state.self?.dockedAt || performance.now() > pendingDock.until || state.input.sail > 0) {
@@ -2807,6 +2880,9 @@ function step(t: number): void {
   if (inGame) {
     pollPad(raw);
     sendInput(t);
+    const docked = !!state.self?.dockedAt;
+    if (wasDocked && !docked) castOffAt = performance.now();
+    wasDocked = docked;
     stepPendingDock();
     stepPendingMark();
     stepPendingFind();
@@ -2855,6 +2931,8 @@ function step(t: number): void {
     boardFight.render(state.boardFight);
     tactical.render(state.boardTac);
     filmMoments();
+    tutorPointer.set({ stage: state.onboarding?.stage ?? null, touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null });
+    tutorPointer.frame();
     encounterCard.frame();
     surrenderCard.frame(state);
     fishFight.frame();

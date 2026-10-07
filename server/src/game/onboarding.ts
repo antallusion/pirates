@@ -1,15 +1,14 @@
-// Onboarding (docs/07 §13, rewritten for docs/17 H5): the First Watch — seven steps that teach by doing the Heroes'
-// loop (cast off; the guns thin her men; board; the turn-by-turn battle; recruit at a tavern; a level's skill; a
-// thing on the map), the HUD
-// revealed a block at a time, a ship that cannot be lost in chapter one (the Crown tows her home), contextual
-// hints that come back on mistakes, the Captain's Goals afterwards, and the funnel metrics of §13.3.
+// Onboarding (docs/07 §13, rewritten for the phone by docs/23 item 79): the First Watch — five steps, one action each,
+// the game's own loop (sail; «Атаковать»; «Огонь»; «На абордаж» and the hex battle; «В порт»), the HUD revealed a block
+// at a time, a ship that cannot be lost in it (the Crown tows her home), contextual hints that come back on mistakes,
+// the Captain's Goals afterwards, the funnel metrics of §13.3 — and the first quarter of an hour kept plain (docs/23
+// item 83: tattoos, dice, the auction and the guilds open after it).
 // Every text lives on the client under the ids sent from here, so the words can be localized.
 
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { xpForLevel } from '../../../shared/src/constants.ts';
 import { closestOnPolygon, dist } from '../../../shared/src/math.ts';
 import type { HudBlock, OnboardingView } from '../../../shared/src/protocol.ts';
 import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
@@ -18,14 +17,11 @@ import { islandsNear } from '../../../shared/src/world/worldgen.ts';
 import { midPrice } from './economy.ts';
 import { armyForLevel, armyMen } from '../../../shared/src/data/army.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
-import { advMap, advOf, revealAdv } from './advmap.ts';
-import { heroOf, pendingChoices } from './hero.ts';
 import type { Game } from './Game.ts';
 import { addXp } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
-import { lairsOf, revealNearestLair } from './beastlairs.ts';
-import { driftOf, tutorialDrift } from './drifts.ts';
+import { pursuitOf, startPursuit } from './pursuit.ts';
 
 export interface Tutorial {
   on: boolean; // walking the First Watch
@@ -39,10 +35,16 @@ export interface Tutorial {
   tip: { good: GoodId; port: string; hours: number } | null;
   edgeSeen: boolean;
   goals: { active: string[]; done: string[]; base: Record<string, number>; hidden: boolean };
+  /** The watch's version (WATCH_V). */
+  v?: number;
+  /** docs/23 item 81: how many of the first fights are behind her (the first FIRST_FIGHTS are short and winnable). */
+  easy?: number;
+  /** docs/23 item 83: seconds aboard so far, up to FRESH_SECS (the optional things open after it). */
+  played?: number;
 }
 
 export function newTutorial(on: boolean, now: number): Tutorial {
-  return { on, stage: on ? 0 : STAGES.length, at: now, skipped: !on, base: 0, hits: 0, hints: {}, hintAt: {}, tip: null, edgeSeen: false, goals: { active: [], done: [], base: {}, hidden: false } };
+  return { on, stage: on ? 0 : STAGES.length, at: now, skipped: !on, base: 0, hits: 0, hints: {}, hintAt: {}, tip: null, edgeSeen: false, goals: { active: [], done: [], base: {}, hidden: false }, v: WATCH_V, easy: on ? 0 : FIRST_FIGHTS, played: on ? 0 : FRESH_SECS };
 }
 
 /** An old profile, made before the First Watch: an old hand, all the HUD, goals only if still young. */
@@ -54,7 +56,35 @@ export function sanitizeTutorial(p: Profile): void {
   t.hintAt ??= {};
   t.goals ??= { active: [], done: [], base: {}, hidden: false };
   t.goals.base ??= {};
+  // Saved before the first quarter of an hour was counted: an old hand, everything open and no easy fights.
+  t.played ??= FRESH_SECS;
+  t.easy ??= FIRST_FIGHTS;
+  if (t.v !== WATCH_V) {
+    // The nine steps of before (cast_off, gunnery, board, battle, recruit, skill, visit, lair, rescue) onto the five.
+    if (t.on) t.stage = [0, 1, 3, 3, 4, 4, 4, 4, 4][t.stage] ?? STAGES.length;
+    t.v = WATCH_V;
+  }
+  if (t.stage > STAGES.length) t.stage = STAGES.length;
 }
+
+/** docs/23 item 81: this many of a captain's first fights are short and winnable (firstfights.ts). */
+export const FIRST_FIGHTS = 3;
+/** docs/23 item 83: the first quarter of an hour aboard, kept to the loop; the optional things open after it. */
+export const FRESH_SECS = 900;
+export type Optional = 'tattoos' | 'dice' | 'auction' | 'guilds';
+export const OPTIONAL: Optional[] = ['tattoos', 'dice', 'auction', 'guilds'];
+
+/** Still in the first quarter of an hour: the optional things are shut (the First Watch, then 15 minutes aboard). A
+ *  level was no measure of it: the newcomer's run was at level 4 in a minute and forty seconds. */
+export function fresh(p: Profile | null | undefined): boolean {
+  if (!p?.tutorial) return false;
+  const t = p.tutorial;
+  if (t.on && t.stage < STAGES.length) return true;
+  return (t.played ?? FRESH_SECS) < FRESH_SECS;
+}
+
+/** The server's word when a fresh captain reaches for one of them anyway (a stale button, a typed command). */
+export const FRESH_REFUSAL = 'Opens after your first quarter of an hour at sea';
 
 // ------------------------------------------------------------------ the First Watch
 
@@ -74,121 +104,107 @@ interface Stage {
 const START_BLOCKS: HudBlock[] = ['ship', 'nav'];
 export const ALL_BLOCKS: HudBlock[] = ['ship', 'nav', 'cargo', 'feed', 'target', 'guns', 'abilities', 'map', 'talents', 'wanted', 'captain', 'minimap'];
 
+/** The watch's version: 2 is the phone's five steps (docs/23 item 79); a profile saved in the old nine is moved over. */
+export const WATCH_V = 2;
+
+// docs/23 item 79 (owner 2026-10-06: «mobile first… всё должно быть идеально просто»): five steps, one action each, the
+// very loop of the game — sail, «Атаковать», «Огонь», «На абордаж» (and the hex battle), «В порт». A finger over the
+// button says what to press; the words are a title of two or three.
 export const STAGES: Stage[] = [
   {
-    // Rudder, sail levels, the wind relative to the ship.
-    id: 'cast_off',
+    // The stick: off the quay and under way.
+    id: 'sail',
     reveal: [],
     done: (_g, _s, ship) => !ship.docked && ship.state.speed > 2.5 && ship.state.sail > 0.2,
   },
-  // docs/17 H5: the core loop of the Heroes on the sea — the guns thin her men, you board, the battle is HoMM3's, the
-  // tavern refills the stacks, a level brings a skill to choose, the sea is full of things to visit.
   {
-    // Broadside, range, lead: every ball that lands kills men of hers («−N men» over her).
-    id: 'gunnery',
-    reveal: ['feed', 'target', 'guns', 'abilities', 'minimap'],
-    mark: (p) => p.tutorial.hits,
-    done: (_g, _s, _ship, p) => p.tutorial.hits > p.tutorial.base + 1,
+    // «Атаковать»: a raider comes; one tap and the helmsman closes on her.
+    id: 'attack',
+    reveal: ['target', 'feed', 'minimap'],
+    // (Boarded already — alongside before «Атаковать», the grapples thrown — the steps up to the battle are done: the
+    // newcomer's run did just that, and the watch then waited for an «Атаковать» that would never come.)
+    done: (game, s, ship) => {
+      const run = pursuitOf(ship);
+      return (!!run && !!game.ships.get(run.target)?.npcRole) || !!ship.boarding || !!watchOf(s).fought;
+    },
     begin: (game, s, ship) => practiceRaider(game, s, ship),
     keep: (game, s, ship) => keepRaider(game, s, ship),
   },
   {
-    // Alongside her and the grapples: the boarding battle opens at once.
-    id: 'board',
-    reveal: [],
-    done: (_g, _s, ship) => !!ship.boarding,
+    // «Огонь»: one broadside by her own hand (a tap that lays the guns on her counts: the volley follows as she bears);
+    // the grapples thrown first end it too — no step may hold a captain who already did the next thing.
+    id: 'fire',
+    reveal: ['guns'],
+    mark: (p) => p.tutorial.hits,
+    done: (_g, s, ship, p) => (watchOf(s).fired && p.tutorial.hits > p.tutorial.base) || p.tutorial.hits > p.tutorial.base + 2 || !!ship.boarding || !!watchOf(s).fought,
+    begin: (game, s, ship) => {
+      watchOf(s).fired = false;
+      // The helmsman lays her broadside on the raider for the lesson (closing nose-on, no gun of hers bore: a desk's Q
+      // and E answered «not on your beam» and the step waited, QA 2026-10-07); «На абордаж» turns him in again.
+      const run = pursuitOf(ship);
+      if (run && run.mode === 'board') startPursuit(game, s, run.target, 'guns');
+    },
     keep: (game, s, ship) => keepRaider(game, s, ship),
   },
   {
-    // The battle, turn by turn: move, attack, wait or defend, one captain's order a round.
-    id: 'battle',
+    // «На абордаж», and the battle on the hexes fought to its end.
+    id: 'board',
     reveal: [],
     done: (_g, s, ship) => {
       const w = watchOf(s);
       if (ship.boarding) w.fought = true;
       return !!w.fought && !ship.boarding;
     },
-    begin: (_g, s, ship) => {
-      watchOf(s).fought = !!ship.boarding;
-    },
-    keep: (game, s, ship) => {
-      if (!ship.boarding && !watchOf(s).fought) keepRaider(game, s, ship);
-    },
-  },
-  {
-    // Into port: the tavern's Recruit refills the stacks she lost.
-    id: 'recruit',
-    reveal: ['cargo', 'captain', 'map'],
-    mark: (p) => p.stats.recruited ?? 0,
-    done: (_g, _s, _ship, p) => (p.stats.recruited ?? 0) > p.tutorial.base,
-  },
-  {
-    // A level: one of two skills to choose in the captain's window.
-    id: 'skill',
-    reveal: ['talents'],
-    mark: (p) => heroOf(p).picked,
-    done: (_g, _s, _ship, p) => heroOf(p).picked > p.tutorial.base,
-    begin: (game, s) => {
-      // The lesson needs a choice waiting: the next level, if none is.
-      const p = s.profile!;
-      if (pendingChoices(p) <= 0) game.grantXp(s, Math.ceil(Math.max(1, xpForLevel(p.level) - p.xp) * 1.05), null);
-      p.tutorial.base = heroOf(p).picked;
-    },
-  },
-  {
-    // A thing on the map: a chest, a well, an altar… one is put on her chart.
-    id: 'visit',
-    reveal: ['wanted'],
-    mark: (p) => visitsOf(p),
-    done: (_g, _s, _ship, p) => visitsOf(p) > p.tutorial.base,
     begin: (game, s, ship) => {
-      const o = nearestObj(game, ship);
-      if (o) revealAdv(game, s, o.x, o.y, 300);
-    },
-  },
-  // docs/18 #49: the islands' creatures and the drifting ones.
-  {
-    // Land at a lair: the nearest she can take is put on her chart; the battle ashore fought to its end.
-    id: 'lair',
-    reveal: [],
-    mark: (p) => lairsOf(p).landed ?? 0,
-    done: (_g, _s, _ship, p) => (lairsOf(p).landed ?? 0) > p.tutorial.base,
-    begin: (game, s) => {
-      revealNearestLair(game, s);
-    },
-  },
-  {
-    // A drifting creature off her bow: saved (or, failing that, fought) — they join her army or give a gift.
-    id: 'rescue',
-    reveal: [],
-    mark: (p) => driftOf(p).saved + driftOf(p).beaten,
-    done: (_g, _s, _ship, p) => driftOf(p).saved + driftOf(p).beaten > p.tutorial.base,
-    begin: (game, s) => {
-      tutorialDrift(game, s);
+      const w = watchOf(s);
+      w.fought = !!w.fought || !!ship.boarding; // a battle fought in an earlier step counts
+      // «Огонь» laid her broadside on (the pursuit «Бортами»): the helmsman closes in again for the grapples, so the
+      // step is the one tap of «На абордаж» and not «Сблизиться» first.
+      const run = pursuitOf(ship);
+      if (run && run.mode === 'guns') startPursuit(game, s, run.target, 'board');
     },
     keep: (game, s, ship) => {
-      // Lost to the sea or sunk out of reach: another, a while later.
       const w = watchOf(s);
-      if (ship.docked || ship.boarding || game.now < w.raiderAt) return;
-      w.raiderAt = game.now + 30;
-      tutorialDrift(game, s);
+      if (ship.boarding || w.fought) return;
+      keepRaider(game, s, ship);
+      // Nothing is lost in the First Watch: men lost to a stray boarding come back before the lesson's (the newcomer's
+      // run boarded with a third of her men and had a 0 % chance).
+      if (w.army && ship.crew < armyMen(w.army) * 0.6) ship.setArmy(w.army);
+    },
+  },
+  {
+    // «В порт»: home, the prize sold and the men to be signed on.
+    id: 'port',
+    reveal: ['cargo', 'captain', 'map'],
+    done: (_g, _s, ship) => !!ship.docked,
+    begin: (game, s, ship) => {
+      // The lesson's raider, ransomed or let go, sails off and leaves her be: she no longer struck her colours to the
+      // pupil on the way home (a second card of choices over the last step, QA 2026-10-07).
+      const id = raiders.get(s);
+      const b = id !== undefined ? game.npcs.get(id) : undefined;
+      if (b) {
+        b.practice = undefined;
+        b.practiceFloor = undefined;
+        b.chase = null;
+        b.target = null;
+        b.struck = true;
+        b.spared.set(ship.id, game.now + 900);
+      }
+      watchOf(s).raiderAt = game.now;
+    },
+    keep: (game, s, ship) => {
+      // …and once her reckoning is settled she is gone into the haze: a hostile sail beside her stopped the helmsman
+      // taking her home («В порт» by autosail, QA 2026-10-07: three minutes and not home).
+      const id = raiders.get(s);
+      const r = id !== undefined ? game.ships.get(id) : undefined;
+      if (!r || !r.alive || r.prize || s.pendingBoarding) return;
+      if (Math.hypot(r.state.x - ship.state.x, r.state.y - ship.state.y) > 400 || game.now - watchOf(s).raiderAt > 12) {
+        game.removeShip(r.id);
+        raiders.delete(s);
+      }
     },
   },
 ];
-
-/** The things on the map she has visited (a beaten guard's chest apart). */
-const visitsOf = (p: Profile) => Object.keys(advOf(p).v).filter((k) => !k.startsWith('g:')).length;
-
-/** The nearest thing on the map in reach of a novice: no guard before it, no obelisk. */
-function nearestObj(game: Game, ship: ShipEntity) {
-  let best: ReturnType<typeof advMap>['objs'][number] | null = null, bd = Infinity;
-  for (const o of advMap(game).objs) {
-    if (o.guard || o.kind === 'obelisk' || o.kind === 'prison') continue;
-    const d = dist(o.x, o.y, ship.state.x, ship.state.y);
-    if (d < bd) [best, bd] = [o, d];
-  }
-  return best;
-}
 
 /** The practice raider is gone (sunk by another hand, lost in a restart, left far behind): another comes. */
 function keepRaider(game: Game, s: PlayerSession, ship: ShipEntity): void {
@@ -245,6 +261,8 @@ export function tradeTip(game: Game, s: PlayerSession): Tutorial['tip'] {
 /** A lone Confederacy sloop that comes for the novice in safe water — where the Crown's patrols are near. */
 /** The share of the practice raider's men the lesson's guns leave her. */
 export const PRACTICE_FLOOR = 0.7;
+/** …and the share of her hull they leave her: she is there to be boarded, not sunk (docs/23 item 79). */
+export const PRACTICE_HULL = 0.3;
 /** Each novice's practice raider (entity id). */
 const raiders = new WeakMap<PlayerSession, number>();
 
@@ -267,6 +285,7 @@ function practiceRaider(game: Game, s: PlayerSession, ship: ShipEntity): void {
     brain.chase = { id: ship.id, until: game.now + 300 };
     brain.target = ship.id;
     brain.practice = ship.id;
+    brain.struck = true; // she fights the lesson out: no colours struck, no card of terms over it
     // The guns take at most three tenths of her: ten of fourteen are left for «the battle, turn by turn» — three or
     // four rounds a side (a pupil's 24 deckhands win it every time), not the one blow it was.
     brain.practiceFloor = Math.ceil(r.crew * PRACTICE_FLOOR);
@@ -356,16 +375,21 @@ function stepGoals(game: Game, s: PlayerSession, p: Profile): boolean {
 // ------------------------------------------------------------------ the step, once a second
 
 /** Seconds in irons, missed volleys in a row, seconds of neglected damage — per session, never saved. */
-const watch = new WeakMap<PlayerSession, { irons: number; misses: number; hurt: number; view: string; raiderAt: number; fought?: boolean; army?: ArmyStack[] | null }>();
+const watch = new WeakMap<PlayerSession, { irons: number; misses: number; hurt: number; view: string; raiderAt: number; fought?: boolean; fired?: boolean; army?: ArmyStack[] | null }>();
 
 export function onboardingSecond(game: Game, s: PlayerSession): void {
   const p = s.profile, ship = s.ship;
   if (!p || !ship) return;
   const t = p.tutorial;
   let changed = false;
+  // The first quarter of an hour (docs/23 item 83): when it is over, the optional things open, told once.
+  const wasFresh = fresh(p);
+  if ((t.played ?? FRESH_SECS) < FRESH_SECS) t.played = (t.played ?? 0) + 1;
   if (t.on && t.stage < STAGES.length) {
     // Her men as they stood in port: a tow home gives back those the lesson's guns took (see onboardingRescue).
     if (ship.docked) watchOf(s).army = ship.army.map((x) => ({ ...x }));
+    // A battle on the hexes in any step before «На абордаж» is that step's battle (the grapples thrown early).
+    if (ship.boarding && STAGES[t.stage]?.id !== 'port') watchOf(s).fought = true;
     const st = STAGES[t.stage];
     if (st.done(game, s, ship, p)) {
       advance(game, s, 'done');
@@ -378,6 +402,10 @@ export function onboardingSecond(game: Game, s: PlayerSession): void {
     game.sendTo(s, { t: 'onb', kind: 'edge', id: ship.region });
   }
   contextHints(game, s, ship, p);
+  if (wasFresh && !fresh(p)) {
+    game.sendTo(s, { t: 'onb', kind: 'unlock', id: OPTIONAL.join(',') });
+    changed = true;
+  }
   const view = JSON.stringify(onboardingView(p));
   const w = watchOf(s);
   if (changed || view !== w.view) {
@@ -453,6 +481,7 @@ export function onboardingView(p: Profile): OnboardingView {
     goals: !on && !t.goals.hidden ? t.goals.active : null,
     goalsDone: t.goals.done.length,
     hints: Object.keys(t.hints),
+    locked: fresh(p) ? [...OPTIONAL] : [],
   };
 }
 
@@ -509,6 +538,12 @@ function contextHints(game: Game, s: PlayerSession, ship: ShipEntity, p: Profile
     const port = game.nearestPort(ship.state.x, ship.state.y);
     if (port && dist(port.x, port.y, ship.state.x, ship.state.y) < 450 && ship.state.speed < 1.2) hint(game, s, 'docking');
   }
+}
+
+/** The captain's own hand on the guns (a broadside by key, «Огонь», or «Огонь» laying the guns on a mark that does not
+ *  bear yet): the First Watch's «Огонь» step waits for it. */
+export function onboardingFire(s: PlayerSession | null | undefined): void {
+  if (s?.profile?.tutorial.on) watchOf(s).fired = true;
 }
 
 /** A broadside has come down: three in a row into the sea — the lead. */

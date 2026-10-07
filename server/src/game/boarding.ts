@@ -25,6 +25,7 @@ import { bloodAndSalt, drownedBoardersRise, drownedTakeLosses } from './bridgefx
 import { closeTac, sendTac, startTactical, stepTactical, wantsTactical } from './tactical.ts';
 import { guardBeaten } from './advmap.ts';
 import { trialOver } from './throne.ts'; // docs/19 E3
+import { softenFoe } from './firstfights.ts';
 
 const AGG = {
   careful: { tempo: 0.75, cargo: 0.55, ownLoss: 0.9 },
@@ -101,6 +102,7 @@ export function startBoarding(game: Game, a: ShipEntity, b: ShipEntity, aggressi
     game.toastShip(a, ZB_NO_BOARD, 'bad');
     return;
   }
+  softenFoe(game, a, b); // a novice's first three fights (docs/23 item 81): before the men are counted
   const now = game.now;
   a.boardShieldUntil = 0; // she grapples another: her own respite is over
   const fight = newFight(now);

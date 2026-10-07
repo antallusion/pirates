@@ -140,6 +140,8 @@ export interface Settings {
   lanternMarks: boolean; // faction glyphs by the lanterns at battle zoom
   reduceFlashes: boolean; // lightning and muzzle flashes become a gentle brightening
   screenShake: boolean;
+  /** docs/23 item 84: short pulses on her broadside, a hit and the grapples (a phone with a motor). */
+  vibrate: boolean;
   lanternFlicker: boolean;
   reduceMotion: boolean; // UI transitions and animations
   effects: 'auto' | 'low';
@@ -174,7 +176,7 @@ function coarse(): boolean {
 export function defaults(): Settings {
   return {
     uiScale: 1, density: 'normal', firstHints: true, shipVoices: true, textScale: 1, hudAlpha: 0.65, colorblind: 'off', highContrast: false, plainFont: false, lanternMarks: false,
-    reduceFlashes: false, screenShake: true, lanternFlicker: true, reduceMotion: false, effects: 'auto', webgl: true,
+    reduceFlashes: false, screenShake: true, vibrate: true, lanternFlicker: true, reduceMotion: false, effects: 'auto', webgl: true,
     plainTerms: false, classicBoarding: false, autoFire: coarse(), autoWeak: true, expertGuns: false, tacConfirm: false, tacFast: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
     keys: structuredClone(CLASSIC),
   };
@@ -194,6 +196,7 @@ export function sanitize(raw: Partial<Settings> | null): Settings {
   if (!DENSITIES.includes(s.density)) s.density = 'normal';
   s.firstHints = s.firstHints !== false;
   s.shipVoices = s.shipVoices !== false;
+  s.vibrate = s.vibrate !== false;
   for (const k of ['master', 'sea', 'combat', 'ui', 'music'] as const) s.volume[k] = Math.min(1, Math.max(0, Number(s.volume[k]) || 0));
   return s;
 }
