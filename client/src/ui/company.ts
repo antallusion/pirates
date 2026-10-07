@@ -256,7 +256,8 @@ export class CompanyScreen {
     wireLfg(body, this.send);
     body.querySelectorAll<HTMLElement>('[data-letter]').forEach((el) => (el.onclick = () => {
       this.mailTo = el.dataset.letter!;
-      body.closest('#modal-panel')?.querySelector<HTMLElement>('[data-tab="letters"]')?.click();
+      // The Journal's «Письма» (docs/23 item 74: data-jtab; the old window's data-tab was gone, the jump did nothing).
+      body.closest('#modal-panel')?.querySelector<HTMLElement>('[data-jtab="letters"], [data-tab="letters"]')?.click();
     }));
     body.querySelectorAll<HTMLElement>('[data-inspect]').forEach((el) => (el.onclick = () => this.send({ t: 'inspect', name: el.dataset.inspect! })));
     const who = () => this.send({ t: 'who', q: val('#who-q'), here: !!body.querySelector<HTMLInputElement>('#who-here')?.checked, fresh: !!body.querySelector<HTMLInputElement>('#who-fresh')?.checked });

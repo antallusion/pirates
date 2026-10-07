@@ -4,7 +4,6 @@
 
 export const EN = {
   'more': 'More',
-  'less': 'Less',
   // The port (item 65): five places, the second row, the band's figures.
   'port.market': 'Market',
   'port.marketHint': 'Goods, provisions and shot',
@@ -71,7 +70,6 @@ export const EN = {
   'yd.buyShip': 'Buy',
   'yd.buyShipHint': 'Your ship is traded in: you pay the difference',
   'yd.fit': 'Fit',
-  'yd.module': 'Level {a} → {b}',
   'yd.hull': 'Hull',
   'yd.speed': 'Speed',
   'yd.guns': 'Guns',
@@ -83,7 +81,6 @@ export const EN = {
   'yd.moreShips': 'All ships',
   'yd.moreBuild': 'Build to order',
   // The tavern (item 68).
-  'tv.hire': 'Hire',
   'tv.hireN': 'Hire {n}',
   'tv.men': 'Hands',
   'tv.full': 'The crew is full',
@@ -139,7 +136,6 @@ export const EN = {
   'map.layersHint': 'What the chart shows',
   'map.sail': 'Sail there',
   'map.sailHint': 'The helmsman takes her to this point',
-  'map.close': 'Close',
   // The journal (item 74).
   'jr.title': 'Journal',
   'jr.quests': 'Quests',
@@ -171,7 +167,6 @@ export const EN = {
 
 export const RU: Record<keyof typeof EN, string> = {
   'more': 'Подробнее',
-  'less': 'Свернуть',
   'port.market': 'Рынок',
   'port.marketHint': 'Товары, провизия и снаряды',
   'port.yard': 'Верфь',
@@ -235,7 +230,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'yd.buyShip': 'Купить',
   'yd.buyShipHint': 'Ваш корабль идёт в зачёт: платите разницу',
   'yd.fit': 'Поставить',
-  'yd.module': 'Уровень {a} → {b}',
   'yd.hull': 'Корпус',
   'yd.speed': 'Ход',
   'yd.guns': 'Пушки',
@@ -246,7 +240,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'yd.moreGuns': 'Пушки и оснастка',
   'yd.moreShips': 'Все корабли',
   'yd.moreBuild': 'Постройка на заказ',
-  'tv.hire': 'Нанять',
   'tv.hireN': 'Нанять {n}',
   'tv.men': 'Матросы',
   'tv.full': 'Экипаж полон',
@@ -298,7 +291,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'map.layersHint': 'Что показывать на карте',
   'map.sail': 'Плыть туда',
   'map.sailHint': 'Рулевой сам поведёт корабль к этой точке',
-  'map.close': 'Закрыть',
   'jr.title': 'Журнал',
   'jr.quests': 'Задания',
   'jr.questsHint': 'Задания в работе, поручения дня, сага',

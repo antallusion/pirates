@@ -1246,7 +1246,10 @@ function closeModal(): void {
 /** Where every scrolled box of a window stands, so a refresh from the server does not throw the reader back
  * to the top (the same window and tab only: a new tab starts at its top). */
 function scrollMarks(root: HTMLElement): { view: string; at: Map<string, [number, number]> } {
-  const view = `${modal}|${root.querySelector<HTMLElement>('.tab.active')?.dataset.tab ?? ''}|${root.querySelector<HTMLElement>('.tree-tab.active, .rose-node.active')?.dataset.view ?? ''}`;
+  // The phase 6 windows mark their place on a rail tab or a chip (data-ptab, -jtab, -ctab, -cchip…), not `.tab.active`:
+  // with only that, every place of a window shared one key and a new place opened at the last one's scroll.
+  const tabs = [...root.querySelectorAll<HTMLElement>('.tab.active, .w-tab.on, .w-chip.on')].map((e) => Object.entries(e.dataset).find(([k]) => k !== 'hint')?.join('=') ?? '').join(',');
+  const view = `${modal}|${tabs}|${root.querySelector<HTMLElement>('.rose-node.active')?.dataset.view ?? ''}`;
   const at = new Map<string, [number, number]>();
   root.querySelectorAll<HTMLElement>('*').forEach((el) => {
     if (el.scrollTop || el.scrollLeft) at.set(pathOf(root, el), [el.scrollTop, el.scrollLeft]);
@@ -2810,7 +2813,7 @@ function lockTarget(rx: number, ry: number): number | null {
 function padMenus(evs: PadEvent[], lx: number, ly: number, ry: number, dt: number): void {
   const cur = (padCursor ??= { x: innerWidth / 2, y: innerHeight / 2 });
   const under = document.elementFromPoint(cur.x, cur.y) as HTMLElement | null;
-  const sticky = under?.closest('button, a, input, select, .captain-card, [data-tab], [data-id]') ? 0.45 : 1;
+  const sticky = under?.closest('button, a, input, select, .captain-card, [data-tab], [data-id], [role="tab"]') ? 0.45 : 1;
   cur.x = clamp(cur.x + lx * 900 * dt * sticky, 0, innerWidth - 1);
   cur.y = clamp(cur.y + ly * 900 * dt * sticky, 0, innerHeight - 1);
   const el = $('pad-cursor');
@@ -2828,8 +2831,9 @@ function padMenus(evs: PadEvent[], lx: number, ly: number, ry: number, dt: numbe
       if (modal !== 'boarding' && modal !== 'sunk') closeModal();
     } else if (e.b === BTN.VIEW && modal === 'map') closeModal();
     else if (e.b === BTN.LB || e.b === BTN.RB) {
-      const tabs = [...$('modal-panel').querySelectorAll<HTMLElement>('.tab, [data-tab]')];
-      const i = tabs.findIndex((x) => x.classList.contains('active'));
+      // The phase 6 windows' rail tabs (.w-tab, marked .on) as well as the older windows' tabs.
+      const tabs = [...$('modal-panel').querySelectorAll<HTMLElement>('.w-tab:not(.w-tab--go), .tab, [data-tab]')];
+      const i = tabs.findIndex((x) => x.classList.contains('active') || x.classList.contains('on'));
       const next = tabs[(i + (e.b === BTN.RB ? 1 : -1) + tabs.length) % tabs.length];
       next?.click();
     }

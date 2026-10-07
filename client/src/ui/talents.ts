@@ -35,7 +35,6 @@ export class TalentScreen {
     const counted = Math.min(self.deeds.length, MAX_COUNTED_DEEDS);
     const lo = self.loadouts;
     const now = state.estServerTime();
-    const nav = [...ROSE_ORDER, 'bridges', 'deeds'] as View[];
     const sel = this.view;
     const selTree = sel !== 'bridges' && sel !== 'deeds' ? sel : null;
     const selPts = selTree ? pointsInTree(self.talents, selTree) : sel === 'bridges' ? TALENTS.filter((x) => x.tree === 'bridge' && (self.talents[x.id] ?? 0) > 0).length : self.deeds.length;

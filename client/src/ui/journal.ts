@@ -28,7 +28,7 @@ import { serverText } from '../lang/server.ts';
 import type { ClientState } from '../state.ts';
 import { ask } from './confirm.ts';
 import { commonLog, dailyLog } from './daily.ts';
-import { esc, fishIcon, icon, money, portraitUrl, xpBadge } from './dom.ts';
+import { esc, fishIcon, icon, portraitUrl, xpBadge } from './dom.ts';
 import { logFrame } from './logbook.ts';
 import type { LogTab } from './logbook.ts';
 import { paidHtml } from './giver.ts';

@@ -5,13 +5,6 @@ export const EN = {
   // Header and tabs
   'head.blockade': ' — imports ×2.8, local goods ×0.6',
   'head.epidemic': ' — medicine ×2',
-  'tab.market': 'Market',
-  'tab.shipyard': 'Shipyard',
-  'tab.tavern': 'Tavern',
-  'tab.contracts': 'Contracts',
-  'tab.harbour': 'Harbour Master',
-  'tab.holdings': 'Sites & Warehouse',
-  'tab.exchange': 'Exchange & Bank',
 
   // Confirmations and alerts
   'confirm.questAbandon': 'Set this quest aside? Progress is lost.',
@@ -382,13 +375,6 @@ export const EN = {
 export const RU: Record<keyof typeof EN, string> = {
   'head.blockade': ' — привозное ×2,8, местные товары ×0,6',
   'head.epidemic': ' — лекарства ×2',
-  'tab.market': 'Рынок',
-  'tab.shipyard': 'Верфь',
-  'tab.tavern': 'Таверна',
-  'tab.contracts': 'Контракты',
-  'tab.harbour': 'Начальник порта',
-  'tab.holdings': 'Промыслы и склад',
-  'tab.exchange': 'Биржа и банк',
 
   'confirm.questAbandon': 'Оставить это поручение? Всё достигнутое будет утрачено.',
   'confirm.path': 'Ступить на этот Путь?',

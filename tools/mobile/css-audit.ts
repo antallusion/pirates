@@ -2,26 +2,32 @@
 // styles are made of — how many different colours, font sizes, radii, spacings, durations, shadows, breakpoints and
 // !important — and how much of it goes through the tokens (var(--…)) rather than a literal. Numbers, not taste.
 //
-//   node --disable-warning=ExperimentalWarning tools/mobile/css-audit.ts [--json out.json]
+//   node --disable-warning=ExperimentalWarning tools/mobile/css-audit.ts [--json out.json] [--rev <commit>]
+// --rev: the same audit of the files as they were at a commit (phase 0's «before»: b195283, the commit before docs/23).
 
+import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const arg = (k: string) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : ''; };
+const rev = arg('rev');
+const git = (...a: string[]) => execFileSync('git', a, { cwd: root, encoding: 'utf8', maxBuffer: 64 << 20 });
+const read = (f: string): string => (rev ? git('show', `${rev}:${f}`) : readFileSync(join(root, f), 'utf8'));
+const list = (dir: string): string[] => (rev ? git('ls-tree', '--name-only', `${rev}:${dir}`).split(/\r?\n/).filter(Boolean) : readdirSync(join(root, dir)));
 
 const css: Record<string, string> = {};
-for (const f of ['client/styles.css', 'client/minigame.css', 'client/src/ui/kit/kit.css']) {
-  try { css[f] = readFileSync(join(root, f), 'utf8'); } catch { /* not there yet */ }
+for (const f of ['client/styles.css', 'client/minigame.css', 'client/feel.css', 'client/src/ui/kit/kit.css', 'client/src/ui/kit/window.css']) {
+  try { css[f] = read(f); } catch { /* not there yet */ }
 }
 // Inline style="…" and .style.x = in the screens' code.
 let inline = '';
 let inlineCount = 0;
 for (const dir of ['client/src/ui', 'client/src']) {
-  for (const f of readdirSync(join(root, dir))) {
+  for (const f of list(dir)) {
     if (!f.endsWith('.ts')) continue;
-    const s = readFileSync(join(root, dir, f), 'utf8');
+    const s = read(`${dir}/${f}`);
     for (const m of s.matchAll(/style="([^"]*)"/g)) { inline += m[1] + ';'; inlineCount++; }
   }
 }

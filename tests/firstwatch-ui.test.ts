@@ -71,7 +71,8 @@ test('vibration: short pulses, spaced, and off with its option (docs/23 item 84)
 });
 
 test('the first quarter of an hour shuts tattoos, dice, the auction and the guilds by body classes (docs/23 item 83)', () => {
-  for (const sel of ['body.lock-tattoos .tt-chair', 'body.lock-tattoos [data-tattoos]', 'body.lock-dice .dice-card', 'body.lock-auction .au-card', 'body.lock-guilds .tab[data-tab="guild"]', 'body.lock-tattoos [data-ptab="tattoo"]', 'body.lock-dice [data-ptab="dice"]', 'body.lock-auction [data-ptab="auction"]', 'body.lock-guilds [data-jtab="guild"]']) assert.ok(css.includes(sel), sel);
+  // (the old windows' tattoo chair, its button and the guild's tab are gone: docs/23 item 95)
+  for (const sel of ['body.lock-dice .dice-card', 'body.lock-auction .au-card', 'body.lock-tattoos [data-jchip="tattoos"]', 'body.lock-tattoos [data-ptab="tattoo"]', 'body.lock-dice [data-ptab="dice"]', 'body.lock-auction [data-ptab="auction"]', 'body.lock-guilds [data-jtab="guild"]']) assert.ok(css.includes(sel), sel);
   const ui = readFileSync(new URL('../client/src/ui/onboarding.ts', import.meta.url), 'utf8');
   assert.match(ui, /document\.body\.classList\.toggle\(`lock-\$\{x\}`, locked\.has\(x\)\)/);
 });

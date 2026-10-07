@@ -228,7 +228,6 @@ export class PortScreen {
     root.querySelectorAll<HTMLElement>('[data-act]').forEach((el) => (el.onclick = () => this.act(el.dataset, root, state)));
     bindBazaar(root);
     bindDealings(root);
-    root.querySelector<HTMLElement>('[data-tattoos]')?.addEventListener('click', () => this.openTattoos?.());
     root.querySelector<HTMLElement>('[data-dwell]')?.addEventListener('click', () => this.openDwell?.());
     root.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-build]').forEach((el) => (el.onchange = () => {
       const k = el.dataset.build!;
@@ -925,11 +924,6 @@ ${orders}${berths}</div>` : ''}`;
       </div></div>`;
   }
 
-}
-
-/** A small number as the reader writes it: 0.5 in English, 0,5 in Russian. */
-function num(n: number): string {
-  return lang() === 'ru' ? String(n).replace('.', ',') : String(n);
 }
 
 /** A good and how much of it, the way a ledger reads: the picture, the name, × 30. */

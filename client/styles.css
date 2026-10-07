@@ -392,15 +392,9 @@ table.grid tr:hover td { background: #15171a; }
 
 #connection { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 50; background: var(--burgundy); padding: 6px 14px; border: 1px solid var(--blood); }
 kbd { font-family: var(--sans); border: 1px solid var(--brass-dim); padding: 0 5px; border-radius: 2px; color: var(--gold); font-size: 11px; }
-.help-grid { display: grid; grid-template-columns: 110px 1fr; gap: 4px 12px; font-size: 13px; }
 
-.tree-nav { display: flex; flex-direction: column; gap: 2px; }
-.tree-tab { padding: 4px 8px; cursor: pointer; border: 1px solid transparent; font-size: 13px; }
-.tree-tab.active { border-color: var(--gold); background: #15181d; }
-.tree-tab:hover { background: #15181d; }
 .tier-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 6px; }
 .talent .forget { float: right; margin-right: 8px; color: var(--bad); cursor: pointer; font-weight: bold; }
-.ab.talent { border-color: var(--gold); }
 
 .login-account { margin-top: 10px; text-align: left; }
 .login-account summary { cursor: pointer; color: var(--fog); font-size: 13px; }
@@ -431,7 +425,6 @@ kbd { font-family: var(--sans); border: 1px solid var(--brass-dim); padding: 0 5
 #hud-watch .w-head span { text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; color: var(--brass); }
 #hud-watch .w-head b { font-family: var(--serif); font-size: 17px; font-weight: 600; }
 #hud-watch .w-body { line-height: 1.4; }
-#hud-watch .w-tip { margin-top: 6px; font-family: var(--serif); font-style: italic; color: var(--gold); }
 #hud-watch .w-act { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
 #hud-goals { position: absolute; right: 12px; top: 292px; max-width: 260px; font-family: var(--sans); font-size: 12px; color: var(--bone); background: rgba(10, 11, 13, 0.86); padding: 5px 8px 6px; border-left: 2px solid var(--brass); pointer-events: auto; }
 #hud-goals .g-lbl { color: var(--brass); text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; margin-right: 4px; }
@@ -570,18 +563,6 @@ span.ico.glyph { display: inline-block; text-align: center; width: auto; }
 .ico-md { width: 40px; height: 40px; object-fit: contain; flex: none; }
 .with-ico { display: flex; gap: 10px; align-items: center; }
 table.grid td .ico { width: 1.9em; height: 1.9em; vertical-align: middle; margin-right: 6px; }
-@media (max-width: 979px) {
-  table.grid.market, table.grid.market tbody { display: block; }
-  table.grid.market tr:first-child { display: none; }
-  table.grid.market tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 8px; padding: 8px; margin-bottom: 8px; border: 1px solid rgba(140, 107, 58, 0.35); background: rgba(6, 6, 7, 0.55); }
-  table.grid.market tr:hover td { background: none; }
-  table.grid.market td { border: 0; padding: 2px 0; }
-  table.grid.market td:first-child { grid-column: 1 / -1; font-size: 15px; }
-  table.grid.market td:last-child { grid-column: 1 / -1; display: flex; gap: 6px; }
-  table.grid.market td:last-child .btn { flex: 1; min-height: 38px; }
-  table.grid.market td[data-l]::before { content: attr(data-l); display: block; font-size: 10px; color: var(--fog); text-transform: uppercase; letter-spacing: 0.05em; }
-  table.grid.market td:first-child::before { display: none; }
-}
 
 /* Painted headers and screen backgrounds (Higgsfield `bg.*`), under a dark wash so text stays readable. */
 .ico-crest { width: 1.35em; height: 1.35em; object-fit: contain; vertical-align: -0.28em; margin-right: 8px; filter: drop-shadow(0 2px 3px #000); }
@@ -593,7 +574,7 @@ table.grid td .ico { width: 1.9em; height: 1.9em; vertical-align: middle; margin
 #screen-captain { background: linear-gradient(rgba(5, 6, 8, 0.45), rgba(5, 6, 8, 0.8)), var(--bg-captain, none) center / cover no-repeat; }
 #prologue { background: radial-gradient(ellipse at 50% 55%, rgba(10, 16, 22, 0.35), rgba(3, 5, 8, 0.92)), var(--bg-prologue, none) center / cover no-repeat, #05070a; }
 #prologue p { text-shadow: 0 2px 8px #000, 0 0 20px #000; }
-.tab .ico, .tree-tab .ico { width: 22px; height: 22px; vertical-align: -6px; margin-right: 6px; border-radius: 3px; }
+.tab .ico { width: 22px; height: 22px; vertical-align: -6px; margin-right: 6px; border-radius: 3px; }
 .ability .ab-ico { float: left; width: 46px; height: 46px; margin: 2px 10px 2px 0; border: 1px solid var(--brass-dim); object-fit: cover; }
 .ability { overflow: hidden; }
 .card h4 .ico-md { float: left; margin: -2px 10px 4px 0; }
@@ -700,16 +681,8 @@ body.touch { --touch-h: calc(var(--stick) + 20px); }
 .money { color: var(--gold); }
 .xpv { color: var(--xp); }
 .reward { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; font-weight: 600; }
-.head-silver { font-size: 18px; }
-.head-silver .ico-sm { width: 20px; height: 20px; }
-/* Chandlery: icon | text | buttons, every row the same columns. */
 
-.shop-ico { width: 48px; height: 48px; object-fit: contain; }
-.shop-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.shop-text b { font-family: var(--serif); font-size: 16px; }
-.shop-text .muted { font-size: 12px; line-height: 1.3; }
 
-@media (max-width: 380px) { .shop-ico { width: 40px; height: 40px; } }
 /* Contracts: the kind's picture in a column, then the text; the reward row keeps its button to the right. */
 .quest-card { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; align-items: start; }
 .quest-ico { width: 48px; height: 48px; object-fit: contain; filter: drop-shadow(0 2px 3px #000); }
@@ -799,8 +772,6 @@ body.touch { --touch-h: calc(var(--stick) + 20px); }
 .prof-n { text-align: right; font: 600 18px var(--sans); color: var(--bone); font-variant-numeric: tabular-nums; }
 .card-h { display: flex; align-items: center; gap: 8px; }
 .card-h .ico-md, .card h4.card-h .ico-md { float: none; margin: 0; width: 32px; height: 32px; flex: none; }
-/* A quest giver's face on the notice board: the portrait's head, not its middle. */
-.card-h .ico-md.q-face, .card h4.card-h .ico-md.q-face { width: 40px; height: 40px; object-position: 50% 18%; }
 input[type=range] { accent-color: var(--gold); }
 .officer-card { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: start; }
 .officer-ico { width: 56px; height: 56px; object-fit: contain; }
@@ -1152,11 +1123,6 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
   border: 1px solid rgba(201, 162, 90, 0.55); border-radius: 13px; background: rgba(12, 9, 6, 0.8); font: 700 14px/1 var(--sans); color: var(--gold); }
 /* The tavern's other orders sit in the hiring grid, two cells wide each. */
 
-/* A tablet's market: the phone's cards, two to a row (a seven-column ledger does not fit 768px). */
-@media (min-width: 700px) and (max-width: 979px) {
-  table.grid.market tbody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  table.grid.market tr { margin-bottom: 0; }
-}
 
 /* The button art carries a clear margin (19 of its 40px corners): its painted rim is drawn out to the box's
    edge, so a button's visible frame lines up with the fields, cards and chips around it and a row of buttons
@@ -1252,8 +1218,6 @@ body.ship-open .ship-panel { top: calc(var(--uf-bottom, 104px) + 6px); backgroun
 /* A good's marks (contraband, perishable, dangerous, deal of the day): small caps pills that wrap as whole
    words beside the name, not loose coloured words. */
 .tag { display: inline-block; vertical-align: 2px; margin: 0 0 0 4px; padding: 1px 6px; border: 1px solid rgba(154, 166, 178, 0.35); border-radius: 9px; font: 600 9px/1.4 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--fog); white-space: nowrap; }
-.tag-contra { color: #c9a6ff; border-color: rgba(180, 140, 255, 0.45); }
-.tag-bad { color: #ff8a7a; border-color: rgba(255, 120, 100, 0.45); }
 .tag-gold { color: var(--gold); border-color: rgba(224, 184, 98, 0.5); }
 /* A tablet's windows read in one column: two half-width columns squeezed the ledgers (a forwards table ran 187px
    past its card), the tradesmen's names and the yard's notes. */
@@ -1587,9 +1551,6 @@ body.touch #hud-region .rg-extra { display: none; }
 .mq-row.task { border-color: rgba(232, 140, 64, 0.45); }
 .mq-row.task.done { opacity: 0.6; border-color: rgba(111, 90, 56, 0.35); }
 .mq-row:not(.off):hover { border-color: var(--brass); }
-/* A quest card's head: its name, and under it who gives it (they were side by side and crowded a phone). */
-.card-h .q-title { display: grid; gap: 2px; min-width: 0; }
-.card-h .q-title .muted { font-size: 0.72em; font-style: italic; }
 /* The quest the captain follows: a gold edge in the chart's log. */
 .mq-row.tracked { border-color: var(--gold); background: rgba(217, 178, 90, 0.08); }
 /* A quest shared with the group: the button sits on the row's right, the row's words keep clear of it. */
@@ -1704,8 +1665,6 @@ body.touch #hud-region .rg-extra { display: none; }
 }
 /* A job the port's news asks for (an epidemic, a blockade): a small red seal on the notice. */
 .q-urgent { margin-left: 6px; padding: 0 5px; border: 1px solid rgba(178, 58, 58, 0.7); color: #e08a7a; font: 600 10px/16px var(--sans); letter-spacing: 0.06em; text-transform: uppercase; font-style: normal; }
-/* A group contract (docs/11 P6): a brass chip on the board, a warning line in the giver's window. */
-.q-group { margin-left: 6px; padding: 0 5px; border: 1px solid rgba(176, 138, 72, 0.8); color: var(--brass); font: 600 10px/16px var(--sans); letter-spacing: 0.06em; text-transform: uppercase; font-style: normal; white-space: nowrap; }
 .giver-group { margin: 0 0 10px; padding: 6px 10px; border-left: 3px solid var(--brass); background: rgba(176, 138, 72, 0.08); font-size: 14px; color: var(--bone); }
 .jr-fast { color: var(--gold); font-size: 13px; }
 .cm-leaders { font-size: 12px; margin-top: 3px; }
@@ -1779,12 +1738,9 @@ body.touch #hud-region .rg-extra { display: none; }
 
 .gear-main { display: flex; flex-direction: column; gap: 10px; }
 @media (min-width: 900px) { .gear-main { flex-direction: row; align-items: flex-start; } .gear-main .gear-body { flex: 1 1 60%; min-width: 0; } .gear-main .gear-detail { flex: 0 0 340px; position: sticky; top: 0; } }
-.gear-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
-.gear-grid .gs, .gear-list .gr { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 5px 8px; text-align: left; background: rgba(10, 12, 16, 0.72); border: 1px solid rgba(232, 196, 106, 0.18); border-radius: 4px; color: var(--bone, #ddd); cursor: pointer; min-width: 0; }
-.gear-grid .gs.on, .gear-list .gr.on { box-shadow: 0 0 0 2px rgba(232, 196, 106, 0.55) inset; }
-.gear-grid .gs.locked { opacity: 0.45; cursor: default; }
-.gear-grid .gs .gs-t, .gear-list .gr .gs-t { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
-.gear-grid .gs-slot { font-size: 11px; color: var(--fog, #9aa); text-transform: uppercase; letter-spacing: 0.04em; }
+.gear-list .gr { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 5px 8px; text-align: left; background: rgba(10, 12, 16, 0.72); border: 1px solid rgba(232, 196, 106, 0.18); border-radius: 4px; color: var(--bone, #ddd); cursor: pointer; min-width: 0; }
+.gear-list .gr.on { box-shadow: 0 0 0 2px rgba(232, 196, 106, 0.55) inset; }
+.gear-list .gr .gs-t { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
 .gs-t .gi-name, .gs-t .gs-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gs-t .gs-sub { font-size: 12px; }
 .gear-list { display: flex; flex-direction: column; gap: 5px; }
@@ -2510,7 +2466,6 @@ body.touch .base-board .bplot .bground, body.touch .base-board .bhit { pointer-e
 .bspeed .btn { display: inline-flex; align-items: center; gap: 3px; }
 .bactions { margin-top: 6px; }
 .bfoot { margin-top: 12px; font-size: 11px; line-height: 1.4; }
-.prompt-btn { pointer-events: auto; margin-left: 6px; }
 /* Portrait tablets: the board above, the sheet below. */
 @media (max-aspect-ratio: 1/1) {
   #modal-panel[data-modal="base"] { --base-h: min(340px, 36vh); }
@@ -2655,7 +2610,6 @@ body.touch .base-board .bplot .bground, body.touch .base-board .bhit { pointer-e
   .base-sheet .base-def, .base-sheet .base-raid, .yard-body .base-def, .yard-body .base-raid { padding: 3px 4px; font-size: 12px; }
   .base-sheet .base-raid .muted, .yard-body .base-raid .muted { display: inline; }
   .base-sheet .base-raid, .yard-body .base-raid { margin: 2px 0 4px; border: 1px solid rgba(170, 60, 50, 0.6); }
-  .base-sheet .bhint { font-size: 14px; margin-top: 6px; }
 }
 
 /* ---------- My Island on a tablet held upright (docs/15 item 8): the window takes most of the screen, a tall board. */
@@ -2920,7 +2874,6 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
 .tb-stats span { font-size: 10px; color: var(--fog); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tb-stats b { font-size: 13px; color: var(--bone); }
 .tb-card p { margin: 6px 0 0; font-size: 11.5px; line-height: 1.3; }
-.tb-card .tb-def { color: var(--gold); }
 .tb-banner { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 12px 26px; text-align: center; background: rgba(10, 9, 8, 0.86); border: 1px solid var(--brass); border-radius: 8px; box-shadow: 0 0 40px rgba(0, 0, 0, 0.8); z-index: 3; pointer-events: none; max-width: calc(100% - 24px); box-sizing: border-box; }
 .tb-banner b { display: block; font-family: var(--display); font-weight: 400; font-size: 34px; letter-spacing: 0.06em; }
 .tb-banner.won b { color: var(--gold); text-shadow: 0 0 18px rgba(224, 184, 98, 0.5); }
@@ -3220,8 +3173,8 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 #hud-world .wp-lbl { flex: none; color: var(--brass); text-transform: uppercase; letter-spacing: 0.08em; font-size: 9.5px; font-weight: 600; }
 #hud-world .wp-t { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #hud-world .wp-n { flex: none; color: var(--gold); font-variant-numeric: tabular-nums; }
-#hud-world .fbar.wp-bar, .wg-row .fbar.wg-bar, .gy-card .fbar { display: block; position: relative; height: 4px; margin: 0; border: 1px solid #000; border-image: none; background: #0a0c0e; }
-#hud-world .fbar.wp-bar > i, .wg-row .fbar.wg-bar > i, .gy-card .fbar > i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #8a6a2a, #e8c46a); }
+#hud-world .fbar.wp-bar, .gy-card .fbar { display: block; position: relative; height: 4px; margin: 0; border: 1px solid #000; border-image: none; background: #0a0c0e; }
+#hud-world .fbar.wp-bar > i, .gy-card .fbar > i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #8a6a2a, #e8c46a); }
 .wg-row { display: flex; gap: 6px; align-items: flex-start; padding: 3px 0; }
 .wg-row .ico-sm { flex: none; margin-top: 1px; }
 .wg-row .wg-body { display: grid; gap: 2px; min-width: 0; flex: 1; font-size: 12px; }
@@ -3324,13 +3277,10 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 .army-face-xs { width: 100%; height: 100%; margin: 0; object-fit: cover; display: block; }
 /* The battle's reckoning on the end banner. */
 .tb-banner.tb-result { pointer-events: auto; min-width: min(320px, calc(100% - 24px)); }
-.tb-res { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; text-align: left; }
-.tb-res small { color: var(--fog); font-size: 11px; }
 .tb-rs-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
 .tb-rs { position: relative; display: inline-block; width: 30px; height: 30px; }
 .tb-rs-ico { width: 30px; height: 30px; margin: 0; border-radius: 50%; object-fit: cover; border: 1px solid #5c4a33; }
 .tb-rs i { position: absolute; right: -4px; bottom: -3px; font-style: normal; font-size: 10px; line-height: 13px; padding: 0 2px; border-radius: 3px; background: #2a0f0c; color: #f3d7a0; border: 1px solid #7a3a2a; }
-.tb-xp { color: var(--gold); font-size: 12.5px; }
 .tb-sps, .tb-sts { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
 .tb-sts .tb-st { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; }
 .tb-sts .tb-st.good { color: var(--gold); }
@@ -3456,7 +3406,7 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 .tw-id b { font-family: var(--serif); font-size: 15px; color: var(--bone); overflow-wrap: anywhere; }
 .tw-text { margin: 0; font-size: 11.5px; line-height: 1.3; }
 .tw-pool { margin: 0; color: var(--good); font-size: 12px; }
-.tw-note, .tw-why, .tw-max { margin: 0; font-size: 11.5px; }
+.tw-why, .tw-max { margin: 0; font-size: 11.5px; }
 .tw-orders { display: flex; flex-direction: column; gap: 5px; margin: 2px 0; }
 .tw-floor { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .tw-fl { font-size: 11px; flex-basis: 100%; }
@@ -3523,7 +3473,6 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 .hx-set.on { border-color: #ff8000; box-shadow: 0 0 10px rgba(255, 128, 0, 0.3); }
 .hx-set small { color: var(--fog); }
 .hx-schools { padding: 0; flex-wrap: wrap; }
-.hx-schools .tab { display: inline-flex; align-items: center; gap: 4px; }
 .hx-note { margin: 0; font-size: 12px; }
 .hx-orders { display: flex; flex-direction: column; gap: 5px; }
 .hx-order, .hx-ware { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid rgba(176, 141, 87, 0.3); border-radius: 6px; background: rgba(20, 16, 10, 0.45); opacity: 0.72; }
@@ -3583,10 +3532,6 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 .tb-bookbtn small { font-size: 10px; color: var(--fog); }
 .tb-book { position: absolute; inset: 4% 6% auto; max-height: 92%; z-index: 6; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--gold); border-radius: 8px; background: rgba(18, 13, 8, 0.96); box-shadow: 0 0 24px #000; overflow: auto; }
 .tb-book.hidden { display: none; }
-.tb-book-head { display: flex; align-items: center; justify-content: space-between; font-family: var(--display); font-size: 18px; color: var(--gold); }
-.tb-book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
-.tb-book-grid .tb-spell { min-height: 44px; }
-.tb-book-grid .tb-spell small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tb-will { grid-column: 1 / -1; min-height: 22px; }
 @media (max-height: 520px) and (orientation: landscape) {
   .tb-will { min-height: 18px; font-size: 11px; }
@@ -3597,7 +3542,6 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
   .tb-book .tb-spell { justify-content: flex-start; gap: 4px; padding: 2px 4px; }
   .tb-book .tb-spell span { display: flex; }
   .tb-book .tb-spell small { display: none; }
-  .tb-book-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px; }
 }
 /* The order book as HoMM3's (2026-10-03): an open book over the field, two facing pages of orders, a bookmark for
    each school down its right edge, the corners to turn; painted (bg.spellbook) or parchment until then. Its size is
@@ -3730,7 +3674,6 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
 /* docs/18 III: the minimap's tooltip, an island's level on the land key's prompt, «where is my level», the supply tab. */
 .mm-tip { position: fixed; z-index: 60; pointer-events: none; max-width: 280px; padding: 5px 9px; border-radius: 6px; background: rgba(10, 12, 14, 0.92); border: 1px solid rgba(176, 141, 87, 0.55); color: #e8dcc0; font: 600 12px/1.35 Inter, sans-serif; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5); }
 .mm-tip.hidden { display: none; }
-.isle-lv { font-weight: 700; white-space: nowrap; }
 /* The words keep at least a line's room; in a narrow column (the chart's logs beside it) the button goes under them
    rather than cut them to a letter a line (QA, 2026-10-04). */
 .zone-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 2px; font-size: 13px; }
@@ -3848,7 +3791,7 @@ img.beast-tok { outline: 2px solid #a8894e; outline-offset: -2px; }
 .tw-egg .ico-sm { border-radius: 50%; }
 /* docs/18 II: the reckoning with the spoils fits the stage on a phone (it scrolls rather than run off it). */
 .tb-banner.tb-result { max-height: calc(100% - 8px); overflow-y: auto; overscroll-behavior: contain; }
-@media (max-width: 699px), (max-height: 520px) { .tb-banner.tb-result b { font-size: 22px; } .tb-loot { margin-top: 4px; gap: 3px; } .tb-res { gap: 3px; margin-top: 4px; } }
+@media (max-width: 699px), (max-height: 520px) { .tb-banner.tb-result b { font-size: 22px; } .tb-loot { margin-top: 4px; gap: 3px; } }
 
 /* docs/18 IV: the drift's card and its mini-game, the beaten who follow, the creatures' window. */
 #advcard .ac-dcard { border-color: rgba(110, 215, 205, 0.45); }
@@ -4248,7 +4191,7 @@ body.tac-ph .tb-hero, body.tac-ph .tb-mid, body.tac-ph .tb-queue, body.tac-ph .t
 body.tac-ph .tb-stage { position: absolute; inset: 0; width: auto; height: auto; }
 body.tac-ph .tb-pad { display: block; position: absolute; inset: 0; z-index: 4; pointer-events: none; }
 /* Put away (but keeping their room, so the board does not jump) while the book is open and once the fight is over. */
-.tb-pad.bk-open > *, .tb-pad.over > * { visibility: hidden; }
+.tb-pad.over > * { visibility: hidden; }
 /* A round button: its painted icon in the brass ring, a thumb wide (48px; the book 56px). */
 .tb-rb { position: relative; flex: none; display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border-radius: 50%; border: 2px solid var(--brass-dim);
   background: radial-gradient(circle, #2a2118 0 52%, #120e0a 74%); color: var(--gold); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.75); pointer-events: auto; cursor: pointer;
@@ -4690,7 +4633,7 @@ body.tq-side #toasts .toast.herald small { font-size: 11px; line-height: 14px; w
 /* docs/22 B: the feel of every control — pressed, hovered, disabled, focused; a finger's target on touch; calm
    window openings; the reduced-motion wish kept everywhere. Zero-specificity (:where) so no screen's own rule is
    overridden. */
-:where(.btn, .tab, .act-btn, .tree-tab, .menu-tile, .slot, .icon-btn):active:not(:disabled):not([aria-disabled="true"]) { translate: 0 1px; filter: brightness(0.86); }
+:where(.btn, .tab, .act-btn, .menu-tile, .slot):active:not(:disabled):not([aria-disabled="true"]) { translate: 0 1px; filter: brightness(0.86); }
 :where(.btn, .tab, .act-btn):disabled, :where(.btn, .act-btn)[aria-disabled="true"] { cursor: not-allowed; filter: grayscale(0.55); }
 :where(.tab):not(.active):hover { color: var(--bone); }
 /* A keyboard's place: a brass ring on whatever holds the focus (never on a click's). */

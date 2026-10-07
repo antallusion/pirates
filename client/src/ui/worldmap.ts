@@ -28,7 +28,6 @@ import { EN as DEN, RU as DRU } from '../lang/ui/dealings.ts';
 import { EN as SEN, RU as SRU } from '../lang/ui/livesea.ts';
 import { EN as IEN, RU as IRU } from '../lang/ui/isles.ts';
 import { SEASON_NAMES, TIDAL_NAMES } from '../../../shared/src/data/isles.ts';
-import { keyLabel, settings } from '../settings.ts';
 import { mapCard, placeName } from './maps.ts';
 import { esc } from './dom.ts';
 import { serverText } from '../lang/server.ts';

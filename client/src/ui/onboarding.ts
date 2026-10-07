@@ -9,7 +9,6 @@ import type { Key } from '../i18n.ts';
 import type { ClientState } from '../state.ts';
 import { $, esc, icon } from './dom.ts';
 import { glossaryHtml } from './terms.ts';
-import { placeName } from './maps.ts';
 
 /** Which DOM block shows which part of the HUD. */
 const BLOCKS: Record<string, HudBlock[]> = {
@@ -127,10 +126,6 @@ export class OnboardingUi {
   hint(id: string, toast: (msg: string, kind: string) => void): void {
     const k = hintKey(id);
     if (has(k)) toast(`${t('hint.title')}: ${t(k)}`, 'advice');
-  }
-
-  private portName(id: string): string {
-    return placeName(this.state.ports.find((p) => p.id === id)?.name ?? id);
   }
 }
 

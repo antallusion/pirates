@@ -144,8 +144,8 @@ export function log(...a) { console.log(new Date().toISOString().slice(11, 19), 
 export async function tour(p, modal, tag, { shots = true, lang = 'ru' } = {}) {
   await qa(p);
   if (modal) { await p.evaluate((m) => { globalThis.gravetide.open(null); globalThis.gravetide.open(m); }, modal); await sleep(800); }
-  const SEL = '#modal-panel .tab, #modal-panel .rose-node[data-view], #modal-panel .tree-tab[data-view], #modal-panel button[data-view]';
-  const names = await p.evaluate((s) => [...document.querySelectorAll(s)].map((t) => t.dataset.tab || t.dataset.view || t.title || t.textContent.trim()), SEL);
+  const SEL = '#modal-panel .w-tab:not(.w-tab--go), #modal-panel .tab, #modal-panel .rose-node[data-view], #modal-panel button[data-view]';
+  const names = await p.evaluate((s) => [...document.querySelectorAll(s)].map((t) => t.dataset.tab || t.dataset.ptab || t.dataset.jtab || t.dataset.ctab || t.dataset.view || t.title || t.textContent.trim()), SEL);
   const res = {};
   const n = Math.max(1, names.length);
   for (let i = 0; i < n; i++) {

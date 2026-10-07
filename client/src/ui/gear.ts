@@ -19,7 +19,6 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/gear.ts';
 import type { ClientState } from '../state.ts';
 import { esc, icon, money } from './dom.ts';
-import { ownLevelChip } from './levels.ts';
 import { placeName } from './maps.ts';
 import { bindStormForge, stormForgeCard } from './storms.ts';
 import { LOWER_BETTER, compareRows } from './gearcmp.ts';

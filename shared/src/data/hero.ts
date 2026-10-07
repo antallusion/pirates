@@ -34,7 +34,7 @@ import {
   BOOK_PAGES, BOOK_PAGE_IDS, FOREIGN_COST, HOME_COST, HOME_MUL, PATH_PAGES, PATH_PAGE_IDS, PATH_SCHOOL, SCHOOL_KIND, STAM_ROUND, ULT_LEVEL, isBookPage, isPathPage, pathPagesAt, pathPatterns,
   stamMaxOf, talentBook,
 } from './paths.ts';
-import type { PathPageId, School } from './paths.ts';
+import type { School } from './paths.ts';
 export type { School } from './paths.ts';
 
 // ------------------------------------------------------------------ 6. primary skills

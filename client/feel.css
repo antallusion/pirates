@@ -45,10 +45,8 @@ body.touch:has(#hud-watch:not(.hidden)) #touch > .tc-news { display: none !impor
 body.tac #hud-watch, body.boarding #hud-watch { display: none !important; }
 
 /* ---- the first quarter of an hour (docs/23 item 83): tattoos, dice, the auction, the guilds open after it */
-body.lock-tattoos .tt-chair, body.lock-tattoos [data-tattoos],
 body.lock-dice .dice-card,
 body.lock-auction .au-card, body.lock-auction #k-kind option[value="auction"],
-body.lock-guilds .tab[data-tab="guild"],
 /* The phase 6 windows (docs/23 items 65, 74): the harbour's second row and the Journal's rail. */
 body.lock-tattoos [data-ptab="tattoo"], body.lock-dice [data-ptab="dice"], body.lock-auction [data-ptab="auction"],
 body.lock-guilds [data-jtab="guild"],

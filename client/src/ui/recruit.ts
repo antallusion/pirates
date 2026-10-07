@@ -19,7 +19,7 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/h3.ts';
 import { serverText } from '../lang/server.ts';
 import type { ClientState } from '../state.ts';
-import { armyRow, unitArt, unitIcon, unitName, unitNote } from './army.ts';
+import { armyRow, unitIcon, unitName, unitNote } from './army.ts';
 import { dec1, esc, fmt, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
 

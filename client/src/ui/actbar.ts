@@ -160,7 +160,6 @@ export function markInfo(kind: MarkKind, state: 'done' | 'busy', secs = 0): stri
   return state === 'done' ? L('mi.done', { what: cap }) : L('mi.busy', { what: cap, s: Math.max(0, Math.ceil(secs)) });
 }
 
-export const lookName = (k: LookKind): string => L(`look.${k}`);
 export const slowWord = (): string => L('mi.slow');
 
 /** docs/19 D5: the muted line while the boats are at one of the sea's small things. */

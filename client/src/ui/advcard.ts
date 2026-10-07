@@ -20,14 +20,13 @@ import { LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
 import { beastFace } from '../render/beastface.ts';
 import type { LandRes } from '../../../shared/src/data/bestiary.ts';
 import { EN as VEN, RU as VRU } from '../lang/ui/heroes18v.ts';
-import { UNITS } from '../../../shared/src/data/army.ts';
 import type { LairCard } from '../../../shared/src/lairproto.ts';
 import type { DriftCard } from '../../../shared/src/driftproto.ts';
 import { DRIFTS, MINI_BAND, MINI_HIT, MINI_MISS, MINI_TAPS, needleAt } from '../../../shared/src/data/drifts.ts';
 import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
 import { personName } from '../lang/names.ts';
 import { serverText } from '../lang/server.ts';
-import { strengthWord, unitArt, unitIcon, unitName } from './army.ts';
+import { strengthWord, unitIcon, unitName } from './army.ts';
 import { esc, fmt, icon, money, portraitUrl, xpBadge } from './dom.ts';
 import { placeName } from './maps.ts';
 

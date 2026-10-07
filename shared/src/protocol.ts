@@ -36,7 +36,7 @@ import type { CaptainId } from './data/captains.ts';
 import type { BoardTactic } from './data/boarding.ts';
 import type { TacKind, TacOrderId, TacSpellId } from './data/tactical.ts';
 import type { LairLoot } from './lairproto.ts';
-import type { ArmyStack, ArmyWord, UnitId, UnitSpecial } from './data/army.ts';
+import type { ArmyStack, UnitId, UnitSpecial } from './data/army.ts';
 import type { FactionId } from './data/factions.ts';
 import type { GoodId } from './data/goods.ts';
 import type { AmmoId, ChaserEnd, GunId, ModuleId, MountId, ShipClassId } from './data/ships.ts';

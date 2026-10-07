@@ -4,8 +4,6 @@
 export const EN = {
   'close': 'Close',
   'sheet.grip': 'Drag down to close',
-  'wheel.hint': 'Hold for more',
-  'wheel.cancel': 'Release in the middle to cancel',
   'target.level': 'level {n}',
   'target.hull': 'hull {n}%',
   'target.crew': 'crew {n}%',
@@ -28,7 +26,6 @@ export const EN = {
   'risk.go': 'Risk it',
   'risk.back': 'Fall back',
   'counter.label': '{label}: {n}',
-  'toast.more': '×{n}',
   'demo.title': 'Interface kit',
   'demo.lead': 'Every component of the mobile-first rework at 812×375, styled from the tokens.',
   'demo.buttons': 'Buttons',
@@ -72,8 +69,6 @@ export const EN = {
 export const RU: Record<keyof typeof EN, string> = {
   'close': 'Закрыть',
   'sheet.grip': 'Потяните вниз, чтобы закрыть',
-  'wheel.hint': 'Удержите — будет больше',
-  'wheel.cancel': 'Отпустите в центре — отмена',
   'target.level': 'уровень {n}',
   'target.hull': 'корпус {n}%',
   'target.crew': 'экипаж {n}%',
@@ -96,7 +91,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'risk.go': 'Рискнуть',
   'risk.back': 'Отступить',
   'counter.label': '{label}: {n}',
-  'toast.more': '×{n}',
   'demo.title': 'Набор интерфейса',
   'demo.lead': 'Все компоненты переделки под телефон на 812×375, по токенам.',
   'demo.buttons': 'Кнопки',

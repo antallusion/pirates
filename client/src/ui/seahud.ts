@@ -130,7 +130,6 @@ export interface SeaHooks {
 
 export class SeaHud {
   private hooks: SeaHooks;
-  private root: HTMLElement;
   readonly fireEl: HTMLButtonElement;
   readonly actEl: HTMLButtonElement;
   readonly specialEl: HTMLButtonElement;
@@ -143,7 +142,6 @@ export class SeaHud {
   private view: SeaView | null = null;
 
   constructor(root: HTMLElement, hooks: SeaHooks) {
-    this.root = root;
     this.hooks = hooks;
     const make = (html: string) => {
       const tpl = document.createElement('template');
