@@ -170,3 +170,27 @@ test('the QA\'s /foe holds her waters in a safe sea instead of leaving the sea t
   steps(game, 200);
   assert.ok(game.ships.get(foe.id)?.alive, 'still at sea ten seconds on');
 });
+
+test('phone layout fixes of phase 9 (items 92, 97): the striking ship\'s terms in the bottom band, the board a picture, sea orders folded, the handbook of the new HUD, no native submit', () => {
+  const feel = src('client/feel.css');
+  assert.ok(feel.includes('body.touch #surrender { top: auto; bottom: calc(var(--sa-b) + 8px);'), 'the terms in the bottom band on a phone');
+  assert.ok(feel.includes('body.touch #surrender .sur-choice { grid-row: 2; min-height: 44px;'), 'its choices a finger high');
+  const css = src('client/styles.css');
+  assert.ok(css.includes('body.touch .base-board .bplot .bground, body.touch .base-board .bhit { pointer-events: none; }'));
+  assert.ok(css.includes('body.touch .center-card .btn { min-height: 44px;'));
+  assert.ok(css.includes('body.touch.sea-target #hud-stack, body.touch.sea-target #hud #hud-stack { left: calc(var(--sa-l) + 172px); right: calc(var(--sa-r) + var(--mm) + 76px); }'), 'the stack clear of the menu in a fight');
+  assert.ok(src('client/src/ui/base.ts').includes("touchBoard() ? '[data-plot]:not(.bplot)' : '[data-plot]'"), 'the board takes no finger on a phone');
+  assert.ok(src('client/src/ui/hud.ts').includes("export const TOUCH_FOLDED = [...FOLDED, 'hud-orders', 'hud-signals'];"));
+  const html = src('client/index.html');
+  for (const f of ['login-form', 'email-form']) assert.ok(html.includes(`<form id="${f}" onsubmit="return false">`), f);
+});
+
+test('the handbook on a phone tells of the new HUD, not the broadside buttons and the sail ± (item 95)', async () => {
+  const { EN, RU } = await import('../client/src/lang/ui/dialogs.ts');
+  const en = EN as Record<string, string>, ru = RU as Record<string, string>;
+  for (const k of ['help.t.sail', 'help.t.chasers', 'help.t.mount']) assert.equal(en[k], undefined, k);
+  assert.match(ru['help.t.stick'], /двойное касание — рывок/);
+  assert.match(ru['help.t.fire'], /Огонь/);
+  assert.match(en['help.t.context'], /Attack/);
+  assert.equal(Object.keys(EN).length, Object.keys(RU).length);
+});

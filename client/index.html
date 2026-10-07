@@ -44,13 +44,13 @@
         <p class="subtitle" data-i18n="login.subtitle">The ocean is the world. The ship is the character. The captain is the build.</p>
       </div>
       <button id="login-continue" class="btn btn-primary hidden" type="button"></button>
-      <form id="login-form">
+      <form id="login-form" onsubmit="return false">
         <label><span data-i18n="login.name">Captain's name</span><input id="login-name" maxlength="20" autocomplete="off" placeholder="e.g. Anne Blackwood" data-i18n-ph="login.namePh" /></label>
         <button class="btn btn-primary" type="submit" data-i18n="login.guest">Set sail as a guest</button>
       </form>
       <details id="login-account" class="login-account">
         <summary data-i18n="login.account">Sign in with an account</summary>
-        <form id="email-form">
+        <form id="email-form" onsubmit="return false">
           <label><span data-i18n="login.email">E-mail</span><input id="login-email" type="email" autocomplete="email" /></label>
           <label><span data-i18n="login.password">Password</span><input id="login-password" type="password" autocomplete="current-password" minlength="8" /></label>
           <label id="register-name-wrap" class="hidden"><span data-i18n="login.name">Captain's name</span><input id="register-name" maxlength="20" autocomplete="off" /></label>
@@ -62,7 +62,7 @@
         </form>
         <div id="oauth-buttons" class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"></div>
       </details>
-      <form id="reset-form" class="hidden">
+      <form id="reset-form" class="hidden" onsubmit="return false">
         <label><span data-i18n="login.newPassword">New password</span><input id="reset-password" type="password" autocomplete="new-password" minlength="8" /></label>
         <button class="btn btn-primary" type="submit" data-i18n="login.setPassword">Set the new password</button>
       </form>

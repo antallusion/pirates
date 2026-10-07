@@ -161,6 +161,8 @@ export async function signIn(ph, { name, know = true, captain = 'corsair' }) {
   const p = ph.p;
   await p.goto(`http://localhost:${ph.port}`, { waitUntil: 'domcontentloaded', timeout: 90000 });
   await p.waitForSelector('#login-name', { state: 'visible', timeout: 90000 });
+  // The game's scripts in (a slow machine draws the title before they come; a tap then went nowhere).
+  await p.waitForFunction(() => !!globalThis.gravetide, null, { timeout: 90000 });
   await ph.step('title');
   await ph.tap('#login-name', 'the name field');
   await p.keyboard.type(name);
