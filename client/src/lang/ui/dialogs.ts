@@ -4,7 +4,7 @@ export const EN = {
   // Boarding: the prize.
   'board.title': 'Prize: {name}',
   'board.sub': '{cls} taken. Your losses: {ours} crew. Theirs: {theirs} crew.',
-  'board.cargo': 'Cargo that survived',
+  'board.cargo': 'Cargo saved',
   'board.bestPrice': 'Best price you know',
   'board.perUnit': '{price}/u',
   'board.empty': 'Her hold is empty.',

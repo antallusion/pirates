@@ -24,7 +24,7 @@ const [W, H] = L.SIZES[size];
 const touch = W < 1000;
 const b = await L.browser();
 const p = await L.page(b, [W, H], { lang, films: true, touch });
-const ph = new Phone(p, { out: OUT, tag: `${size}_${lang}`, port: APORT });
+const ph = new Phone(p, { out: OUT, tag: `${size}_${lang}`, port: APORT, touch });
 const rows = [];
 
 /** The page's own checks for this moment. */
@@ -107,7 +107,8 @@ async function check(name) {
 const open = async (m, tab) => { await p.evaluate(([x, t]) => { const g = globalThis.gravetide; g.open(null); if (x === 'hero' && t) g.hero(t); else g.open(x); }, [m, tab]); await L.sleep(900); };
 const closeAll = () => L.closeAll(p, 2);
 
-await signIn(ph, { name: (lang === 'ru' ? 'Ревизор' : 'Probe') + Math.random().toString(36).slice(2, 5), know: true });
+const tail = () => [...Array(3)].map(() => (lang === 'ru' ? 'абвгдежзик' : 'abcdefghik')[Math.floor(Math.random() * 10)]).join('');
+await signIn(ph, { name: (lang === 'ru' ? 'Ревизор' : 'Probe') + tail(), know: true });
 await p.evaluate(() => document.body.classList.add('reduce-motion'));
 for (const x of ['/level 12', '/silver 20000', '/give rum 30']) await ph.admin(x, 700);
 // The harbour: its places and the chips that matter.
@@ -120,7 +121,9 @@ await closeAll();
 await check('port_quay');
 // The sea.
 await L.send(p, { t: 'undock' }); await L.sleep(2500); await ph.skipFilm(); await closeAll();
-for (const x of ['/tp 21000 70000', '/weather clear', '/heal', '/ammo']) await ph.admin(x, x.startsWith('/tp') ? 2500 : 600);
+// A spot of its own each run (the ships of the last run's scenes lie about the one before).
+const k = (Object.keys(L.SIZES).indexOf(size) * 2 + (lang === 'ru' ? 0 : 1) + Math.floor(Date.now() / 60000)) % 6;
+for (const x of [`/tp ${21000 + 3000 * (k % 3)} ${70000 + 2500 * (Math.floor(k / 3) % 2)}`, '/weather clear', '/heal', '/ammo']) await ph.admin(x, x.startsWith('/tp') ? 2500 : 600);
 await ph.skipFilm(); await closeAll();
 await check('sea');
 await p.evaluate(() => globalThis.gravetide.seaHud?.openMenu?.()); await L.sleep(700);
@@ -136,11 +139,17 @@ await L.sleep(6000);
 await check('sea_attack');
 await L.send(p, { t: 'attack', stop: true });
 // The risk window: a frigate's company.
+await ph.admin('/god on', 500); // afloat whatever the frigate does: the window is what is checked
 await ph.admin('/foe pirate frigate 120', 2500);
 const fr = await p.evaluate(() => [...globalThis.gravetide.state.ships.values()].filter((x) => x.info?.npcRole === 'pirate').map((x) => ({ id: x.id, c: x.info?.cls ?? x.info?.classId })).pop()?.id);
-await L.send(p, { t: 'board', target: fr, aggression: 'standard' });
-await L.sleep(2500);
+// «Атаковать» on her, and «На абордаж» when the grapples reach: the risk window comes up (a frigate's company).
+await L.send(p, { t: 'attack', target: fr, mode: 'board' });
+for (let i = 0; i < 30 && !(await p.$('[data-risk="go"]')); i++) {
+  await p.evaluate(() => document.querySelector('#tc-act[data-act="board"]:not(.hidden), .act-btn.act-board')?.click());
+  await L.sleep(500);
+}
 if (await p.$('[data-risk="go"]')) await check('risk');
+else L.log('no risk window came');
 await p.evaluate(() => document.querySelector('[data-risk="back"]')?.click()); await L.sleep(500);
 // A ship strikes her colours (the «спускает флаг» card).
 await ph.admin('/strike pirate brig', 2500);

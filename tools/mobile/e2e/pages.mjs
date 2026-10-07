@@ -8,8 +8,10 @@ export class StepError extends Error {}
 
 /** One phone, one captain: the finger, the waits and the frames of a journey. */
 export class Phone {
-  constructor(p, { out, tag, port }) {
+  constructor(p, { out, tag, port, touch = true }) {
     this.p = p;
+    /** A finger (a phone) or a mouse (a desk). */
+    this.touch = touch;
     this.out = out;
     this.tag = tag;
     this.port = port;
@@ -54,10 +56,13 @@ export class Phone {
   async visible(sel) { return (await this.where(sel)).st === 'ok'; }
 
   /** A new level's «выберите один из двух» comes up by itself over the sea: a player takes one (counted). */
+  /** A touch on a point: a finger on a phone, a click on a desk. */
+  press(x, y) { return this.touch ? this.p.touchscreen.tap(x, y) : this.p.mouse.click(x, y); }
+
   async levelUp() {
     const w = await this.where('.lu-sheet .lu-pick');
     if (w.st !== 'ok') return false;
-    await this.p.touchscreen.tap(w.x, w.y);
+    await this.press(w.x, w.y);
     this.taps++;
     await L.sleep(700);
     return true;
@@ -92,7 +97,7 @@ export class Phone {
       if (Date.now() - t > ms) throw new StepError(`cannot tap ${what}: ${w.st}`);
       await L.sleep(250);
     }
-    await this.p.touchscreen.tap(w.x, w.y);
+    await this.press(w.x, w.y);
     this.taps++;
     await L.sleep(450);
     return w;
@@ -106,7 +111,7 @@ export class Phone {
   }
 
   async tapAt(x, y) {
-    await this.p.touchscreen.tap(x, y);
+    await this.press(x, y);
     this.taps++;
     await L.sleep(450);
   }
@@ -170,7 +175,7 @@ export async function signIn(ph, { name, know = true, captain = 'corsair' }) {
   await ph.until(async () => {
     if (await p.$('#hud:not(.hidden)')) return true;
     if (await p.$('.film')) await ph.skipFilm();
-    else if (await p.evaluate(() => !!document.querySelector('.prologue:not(.hidden), #prologue:not(.hidden), .pro-card'))) { await p.touchscreen.tap(400, 300); ph.taps++; await L.sleep(600); }
+    else if (await p.evaluate(() => !!document.querySelector('.prologue:not(.hidden), #prologue:not(.hidden), .pro-card'))) { await ph.press(400, 300); ph.taps++; await L.sleep(600); }
     return false;
   }, 90000, 'the HUD after the prologue');
   await L.sleep(1500);

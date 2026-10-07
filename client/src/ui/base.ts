@@ -404,7 +404,7 @@ export class BaseWindow {
         el.click();
       }
     }));
-    root.querySelectorAll<HTMLElement>('[data-plot]').forEach((el) => (el.onclick = () => {
+    root.querySelectorAll<HTMLElement>(touchBoard() ? '[data-plot]:not(.bplot)' : '[data-plot]').forEach((el) => (el.onclick = () => {
       const k = Number(el.dataset.plot);
       if (this.moving !== null) {
         if (!v.cells[k]?.what && k !== this.moving) this.send({ t: 'base', action: 'move', plot: this.moving, to: k });
