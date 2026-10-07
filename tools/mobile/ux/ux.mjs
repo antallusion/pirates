@@ -105,7 +105,21 @@ const later = async () => {
 };
 
 const tail = () => [...Array(4)].map(() => 'abcdefghik'[Math.floor(Math.random() * 10)]).join('');
-await signIn(ph, { name: `Ux${tag.slice(0, 1)}${tail()}`, know: true });
+try {
+  await signIn(ph, { name: `Ux${tag.slice(0, 1)}${tail()}`, know: true });
+} catch (e) {
+  // (a finger that missed «Я знаю море» behind the captain's button: the page's own check, as a mouse would)
+  L.log(`sign-in by finger failed (${e.message}); by the page`);
+  await p.goto(`http://localhost:${port}`, { waitUntil: 'domcontentloaded', timeout: 90000 });
+  await p.waitForFunction(() => !!globalThis.gravetide, null, { timeout: 90000 });
+  await p.fill('#login-name', `Ux${tag.slice(0, 1)}${tail()}`);
+  await p.evaluate(() => document.querySelector('#login-form button[type="submit"]').click());
+  await p.waitForSelector('#screen-captain:not(.hidden)', { timeout: 60000 });
+  await p.evaluate(() => { document.querySelector('.captain-card[data-id="corsair"]').click(); const k = document.querySelector('#know-sea'); if (k && !k.checked) k.click(); document.querySelector('#pick-captain').click(); });
+  for (let i = 0; i < 60 && !(await p.$('#hud:not(.hidden)')); i++) { await p.evaluate(() => document.querySelectorAll('.film, #prologue').forEach((f) => f.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })))); await L.sleep(700); }
+  await L.sleep(2000);
+  await p.evaluate(() => document.querySelector('#modal-panel .help-list') && globalThis.gravetide.open(null));
+}
 await p.evaluate(() => document.body.classList.add('reduce-motion'));
 for (const x of ['/level 3', '/silver 1300', '/god on']) await ph.admin(x, 700);
 await later();

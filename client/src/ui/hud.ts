@@ -378,26 +378,31 @@ export class Hud {
   private placeTopStrip(z: number): void {
     const body = document.body;
     body.classList.remove('tq-side');
+    const W = innerWidth;
+    // The free row at the top between the captain and the menu with the chart: in the middle when there is room on
+    // both sides, else as wide as the room is (640×360: a column forced to the middle cut her mark's name to «R…»).
+    let left = 8 * z, right = W - 8 * z;
+    for (const el of document.querySelectorAll('#hud-captain .cs, #hud-map, #tc-menu, #tc-news')) {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height || r.top > 80 * z) continue;
+      if (r.right < W / 2) left = Math.max(left, r.right + 10 * z);
+      else right = Math.min(right, r.left - 10 * z);
+    }
+    const half = Math.min(W / 2 - left, right - W / 2, 230 * z);
+    const mid = half * 2 >= 280 * z;
+    const sx = mid ? W / 2 - half : left, sw = Math.max(150 * z, mid ? half * 2 : right - left);
+    const set = (k: string, v: number) => body.style.setProperty(k, `${Math.round(v / z)}px`);
+    set('--sk-left', sx);
+    set('--sk-w', sw);
+    // the toasts under what the column shows now (the lesson, a boss's line, her mark, the sea's name)
     let top = 8 * z;
-    for (const el of document.querySelectorAll('#hud-stack > :not(.hidden), #sea-herald:not(.hidden), #tc-target:not(.hidden)')) {
+    for (const el of document.querySelectorAll('#hud-stack > :not(.hidden)')) {
       const r = el.getBoundingClientRect();
       if (r.width > 2 && r.height > 2 && r.top < innerHeight * 0.3) top = Math.max(top, r.bottom + 6 * z);
     }
-    let left = 0, right = innerWidth;
-    for (const el of document.querySelectorAll('#hud-captain .cs, #hud-map, #tc-menu, #tc-news')) {
-      const r = el.getBoundingClientRect();
-      if (!r.width || r.top > top + 50 * z) continue;
-      if (r.right < innerWidth / 2) left = Math.max(left, r.right + 8 * z);
-      else right = Math.min(right, r.left - 8 * z);
-    }
-    // In the middle when there is room for it on both sides; on a narrow screen (640×360) the room between the captain
-    // and the menu, as wide as it is (a band forced to the middle ran under the captain's bars).
-    const half = Math.min(innerWidth / 2 - left, right - innerWidth / 2, 230 * z);
-    const mid = half * 2 >= 260 * z;
-    const set = (k: string, v: number) => body.style.setProperty(k, `${Math.round(v / z)}px`);
     set('--st-top', top);
-    set('--st-left', mid ? innerWidth / 2 - half : left);
-    set('--st-w', mid ? half * 2 : Math.max(150 * z, right - left));
+    set('--st-left', sx);
+    set('--st-w', sw);
   }
 
   /** A taller screen: the toasts' band stands over the bottom block, under 30% of the height — unless the block is too
@@ -646,6 +651,7 @@ export class Hud {
     </div>`;
     el.setAttribute('aria-label', `${self.name}: ${L('lv', { n: self.level })}`);
     el.title = self.name;
+    requestAnimationFrame(() => this.placeStrip()); // the top column keeps clear of her frame
     // On a desk the frame opens her sheet: a button for the keyboard too (Enter or Space on it).
     const desk = !document.body.classList.contains('touch');
     el.setAttribute('role', desk ? 'button' : 'group');

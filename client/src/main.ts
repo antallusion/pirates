@@ -1176,9 +1176,10 @@ function onMessage(m: ServerMsg): void {
         audio.onEvent(e);
         if (e.k === 'region') {
           const r = REGIONS[e.region];
+          const waters = L(r.safety === 'safe' ? 'safeWaters' : r.safety === 'contested' ? 'contestedWaters' : 'lawlessWaters');
           // The sea's name (owner, 2026-10-07: «перегруз сверху графический не нужен»): a slim line in the top band that
           // fades on its own; the older HUD keeps its herald in the toasts' band.
-          hud.seaName(r.name, L(r.safety === 'safe' ? 'safeWaters' : r.safety === 'contested' ? 'contestedWaters' : 'lawlessWaters'), `${L(r.safety === 'safe' ? 'safeWaters' : r.safety === 'contested' ? 'contestedWaters' : 'lawlessWaters')} — ${r.mood}`);
+          hud.seaName(r.name, waters, `${waters} — ${r.mood}`);
         } else if (e.k === 'discover' && !e.quiet) hud.toast(L('charted', { name: sv(e.name) }), 'xp');
         else if (e.k === 'board_start' && (e.a === state.entityId || e.b === state.entityId)) hud.toast(L('grapples'), 'info');
       }
@@ -1673,7 +1674,7 @@ addEventListener('keydown', (e) => {
   // A key bound alone to a modifier (Shift: the dash) acts on its own tap, when it goes up with nothing pressed while it
   // was down — Shift+B and Shift+F are the careful boarding and the bribe, not a dash.
   if (MODS.has(k) && e.isTrusted) {
-    modTap = { k, at: performance.now() };
+    if (!e.repeat) modTap = { k, at: performance.now() };
     return;
   }
   if (e.isTrusted) modTap = null;
@@ -1849,8 +1850,9 @@ canvas.addEventListener('wheel', (e) => {
 });
 canvas.addEventListener('mousedown', (e) => {
   if (!inGame || e.button !== 0) return;
-  pinTarget(shipAtScreen(e.clientX, e.clientY)); // a click on a ship makes her the target (and fires at her)
-  // The simple HUD fires by its keys (Space, Q, E): a click only picks the mark (it fired a broadside at every click).
+  pinTarget(shipAtScreen(e.clientX, e.clientY)); // a click on a ship makes her the target
+  // The simple HUD fires by its keys (Space, Q, E): a click only picks the mark. The detailed one fires the side the
+  // cursor lies off, as it always did.
   if (simpleHud()) return;
   const side = sideUnderCursor();
   if (side) fire(side);
