@@ -521,34 +521,58 @@ export function inHot(x: number, y: number, pad = 0): boolean {
 export function shipWater(g: G, len: number, beam: number, k: number, t: number, seed: number, lod = 0): void {
   if (k < 0.08 || len < 14) return;
   if (!spray(0)) return;
-  const a0 = g.globalAlpha;
-  const kk = Math.min(1, k);
-  // A blot of the spray, one of its four turns (no transform a blot: the phone's frames).
+  // Drawn once into a small canvas per size, speed and one of four beats of its flicker, and stamped after: one image
+  // a ship a frame (the phone's frames).
+  const L = Math.max(16, Math.round(len / 6) * 6), B = Math.max(4, Math.round(beam / 3) * 3);
+  const kb = Math.max(1, Math.min(4, Math.round(Math.min(1, k) * 4)));
+  const nb = lod >= 2 || L < 40 ? 4 : lod === 1 ? 5 : 7;
+  const beat = (Math.floor(t * 6) + (seed & 3)) & 3;
+  const W = B * 3.2, H = L * 1.25 + B * 2, oy = L * 0.56 + B;
+  const key = `${L}|${B}|${kb}|${nb}|${beat}`;
+  let c = wakeStamps.get(key);
+  if (!c) {
+    const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
+    const cv = canvas(W * dpr, H * dpr);
+    if (!cv) return;
+    const x = cv.getContext('2d')!;
+    x.scale(dpr, dpr);
+    x.translate(W / 2, oy);
+    paintWater(x, L, B, kb / 4, beat, nb);
+    if (wakeStamps.size > 96) wakeStamps.clear();
+    wakeStamps.set(key, (c = cv));
+  }
+  g.drawImage(c, -W / 2 * (len / L), -oy * (len / L), W * (len / L), H * (len / L));
+}
+
+const wakeStamps = new Map<string, HTMLCanvasElement>();
+
+/** The white water itself (ship-local, bow toward −y): `kk` her speed's share, `beat` which of four flickers. */
+function paintWater(g: G, len: number, beam: number, kk: number, beat: number, nb: number): void {
   const blot = (x: number, y: number, s: number, a: number, turn: number): void => {
-    g.globalAlpha = a0 * Math.min(1, a);
+    g.globalAlpha = Math.max(0, Math.min(1, a));
     g.drawImage(spray(turn)!, x - s / 2, y - s / 2, s, s);
   };
+  const t = beat / 6;
   // The bow wave: a line of white water from her stem, flaring out and aft along each side, flickering as the swell
-  // runs — many small blots of the painted spray, so it reads as a curling line of foam, not as puffs.
-  // Fewer, larger blots when the frames run slow (the particles' level of detail) or she is small on the screen.
-  const nb = lod >= 2 || len < 40 ? 4 : lod === 1 ? 5 : 7;
+  // runs — many small blots of the painted spray, so it reads as a curling line of foam, not as puffs; fewer, larger
+  // ones when the frames run slow (the particles' level of detail) or she is small on the screen.
   for (let i = 0; i < nb; i++) {
     const u = i / (nb - 1);
     const y = -len * 0.49 + u * len * 0.46;
     const off = beam * (0.08 + 0.5 * Math.sqrt(u)) * (0.85 + 0.3 * kk);
     const s = beam * (0.26 + 0.2 * u) * (0.8 + 0.4 * kk) * (9 / (nb + 2));
-    const flick = 0.75 + 0.25 * Math.sin(t * 7 + i * 1.9 + seed);
-    for (const side of [-1, 1]) blot(side * off, y, s, kk * (0.7 - u * 0.45) * flick, i + (side > 0 ? 2 : 0) + Math.floor(t * 3));
+    const flick = 0.75 + 0.25 * Math.sin(t * 7 * 6 + i * 1.9);
+    for (const side of [-1, 1]) blot(side * off, y, s, kk * (0.7 - u * 0.45) * flick, i + (side > 0 ? 2 : 0) + beat);
   }
   // Spray at the cutwater, thrown up as she drives into the swell.
   const sz = beam * (0.4 + 0.45 * kk);
-  blot(0, -len * 0.5 - sz * 0.2, sz, kk * kk * (0.55 + 0.25 * Math.sin(t * 9 + seed)), Math.floor(t * 4));
+  blot(0, -len * 0.5 - sz * 0.2, sz, kk * kk * (0.55 + 0.25 * Math.sin(beat * 1.7)), beat);
   // The quarter wave astern, spreading into her wake.
   const nq = nb > 5 ? 4 : 3;
   for (let i = 0; i < nq; i++) {
     const u = i / (nq - 1);
     const s = beam * (0.32 + 0.25 * u) * (0.8 + 0.4 * kk) * (6 / (nq + 2));
-    for (const side of [-1, 1]) blot(side * beam * (0.28 + 0.42 * u), len * (0.4 + 0.2 * u), s, kk * (0.55 - u * 0.4), i + (side > 0 ? 1 : 3) + Math.floor(t * 2));
+    for (const side of [-1, 1]) blot(side * beam * (0.28 + 0.42 * u), len * (0.4 + 0.2 * u), s, kk * (0.55 - u * 0.4), i + (side > 0 ? 1 : 3) + (beat >> 1));
   }
-  g.globalAlpha = a0;
+  g.globalAlpha = 1;
 }
