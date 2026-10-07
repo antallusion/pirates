@@ -1,16 +1,21 @@
-// The sea HUD on a phone held sideways (docs/23 phase 2, owner 2026-10-06: «очень много кнопок… всё должно быть
-// идеально просто на мобиле»): the sea and at most seven things to touch, built from the interface kit.
-//   left        the helm stick (touch.ts): pull to steer, farther for more sail, double tap to dash
-//   right       «Огонь», big: a tap fires, a long press opens the wheel of shots, abilities, talents, the mount
-//               «Действие» over it: the action bar's first thing (Атаковать, Абордаж, В порт, Высадка, Сеть…), a
-//               long press opens the wheel of the rest; «Особое» beside it: the captain's best ready ability
-//   top left    a mini portrait with hull and crew (information, not a button)
-//   top         one counter of goals, news, hints, holidays and quests: a tap opens them in a sheet
-//   top right   the menu (a sheet of eight big tiles) and the minimap (a tap: the chart; a long press: a mark and
-//               the helmsman takes her there)
-// With a target (a fight), the counter and the minimap step aside and her line stands over «Огонь»: hull, crew,
-// level, the boarding chance; a tap opens her card. Petty refusals (reloading, not on the beam) flash the button and
-// buzz instead of a toast. The desktop keeps its bar and keys; this layer shows only on touch (body.touch).
+// The sea HUD (docs/23 phase 2; owner, 2026-10-07: «перегруз интерфейса… выходя из порта нужно скрывать часть ui,
+// давать только штурвал и всё необходимое»): one simple HUD for every input, built from the interface kit.
+//   top left      the captain: her face and the bars of hull, men and sails (hud.ts), silver as a chip
+//   top right     the minimap, the menu (a sheet of eight big tiles) and the counter of goals and news
+//   top middle    her mark's line when she has one, a world boss's slim line, the sea's name a moment on entering
+// On a touch screen (a phone, a tablet — the same controls on both):
+//   bottom left   the helm stick and her speed under it (the ring round the wheel is the sail)
+//   bottom right  in a fight only: «Огонь», big (a tap fires, a long press opens the wheel of shots, abilities,
+//                 talents, the mount); beside it «Снаряд» (a tap loads the next shot), «Цель» (a tap takes the next ship
+//                 as the mark, a long press opens her card) and «Особое» (the captain's best ready ability); «Действие»
+//                 left of them whenever there is something to do (Атаковать, Абордаж, В порт, Высадка, Сеть…)
+//   in port       the big round «В море» and «Действие» («Гавань»)
+// Out of a fight the guns step aside: leaving port the screen holds the helm, the chart, the menu and what is to do.
+// On a desk (owner: «на пк чисто через wasd и другие клавиши») there is no stick and no buttons for the fight: the keys
+// do it all (WASD, Space «Огонь», Tab the next mark, 1–5 the shots, Z X C V the abilities), a small line of keys says
+// so for the first minutes at sea, and the context row over the bottom edge keeps its key on each thing to do.
+// Petty refusals (reloading, not on the beam) flash the button and buzz instead of a toast.
+// «Подробный интерфейс» (settings: expertHud) brings the older full HUD back in its place.
 
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/seahud.ts';
@@ -83,6 +88,10 @@ export interface SeaAct {
 
 export interface SeaView {
   docked: boolean;
+  /** A touch screen (the stick and the fight's buttons); a desk plays by its keys. */
+  touch?: boolean;
+  /** A fight is on or near (a mark, her guns busy, a foe close by): the guns' buttons come out. */
+  fight?: boolean;
   act: SeaAct | null;
   special: { id: string; icon: string; name: string } | null;
   target: TargetInfo | null;
@@ -96,16 +105,34 @@ export interface SeaView {
   unread: number;
 }
 
-/** The tap targets the sea HUD shows for a view (docs/23 item 32: seven at most). The stick counts as one. */
+/** A fight on the sea's screen: her mark, or the fight itself (old views without the field: a mark is one). */
+export function inFight(v: SeaView): boolean {
+  return !v.docked && (v.fight ?? !!v.target);
+}
+
+/** The things to touch the sea HUD shows for a view (seven at most: docs/23 item 32, owner 2026-10-07). The stick
+ *  counts as one; the target's line on a touch screen is words, not a button (its card is «Цель»'s long press). A desk
+ *  has no stick and no fight buttons: the captain's frame, her mark's line, the menu, the chart and the counter. */
 export function seaTargets(v: SeaView): string[] {
   const out: string[] = [];
+  const fight = inFight(v);
+  if (v.touch === false) {
+    out.push('captain', 'menu');
+    if (v.target && !v.docked) out.push('target');
+    out.push('minimap');
+    if (v.news > 0) out.push('news');
+    return out;
+  }
   // In port the big round button is «В море» (docs/23 phase 6: casting off without opening the harbour).
-  out.push(...(v.docked ? ['sail'] : ['stick', 'fire']));
-  if (v.act) out.push('act');
-  if (v.special && !v.docked) out.push('special');
-  out.push('menu');
-  if (v.target && !v.docked) out.push('target');
+  if (v.docked) out.push('cast');
   else {
+    out.push('stick');
+    if (fight) out.push('fire', 'ammo', 'lock');
+  }
+  if (v.act) out.push('act');
+  if (v.special && fight) out.push('special');
+  out.push('menu');
+  if (!fight) {
     out.push('minimap');
     if (v.news > 0) out.push('news');
   }
@@ -122,17 +149,67 @@ export interface SeaHooks {
   special(): void;
   /** In port: cast off. */
   sail(): void;
+  /** «Снаряд»: the next shot she carries. */
+  ammoNext(): void;
+  /** «Цель»: the next ship as her mark. */
+  nextTarget(): void;
   menu(id: MenuItem | 'more'): void;
   target(): void;
   /** The blocks that fold into the news sheet, by id (hud.ts FOLDED). */
   folded: readonly string[];
 }
 
+/** A press held this long is a long press (the card behind «Цель»). */
+export const HOLD_MS = 450;
+
+/** A tap and a long press on one button (a finger or a mouse; Enter and Space are a tap, Shift+Enter the hold). */
+function tapOrHold(el: HTMLElement, tap: () => void, hold: () => void): void {
+  let timer: ReturnType<typeof setTimeout> | null = null, held = false, x0 = 0, y0 = 0;
+  const stop = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+  };
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    held = false;
+    x0 = e.clientX;
+    y0 = e.clientY;
+    stop();
+    timer = setTimeout(() => {
+      timer = null;
+      held = true;
+      hold();
+    }, HOLD_MS);
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (timer && Math.hypot(e.clientX - x0, e.clientY - y0) > 12) stop();
+  });
+  el.addEventListener('pointercancel', stop);
+  el.addEventListener('pointerleave', stop);
+  el.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (!held) hold();
+    held = true;
+  });
+  el.addEventListener('click', (e) => {
+    stop();
+    if (held) {
+      held = false;
+      return;
+    }
+    if (e.shiftKey && e.detail === 0) return hold();
+    tap();
+  });
+}
+
 export class SeaHud {
   private hooks: SeaHooks;
   readonly fireEl: HTMLButtonElement;
+  readonly castEl: HTMLButtonElement;
   readonly actEl: HTMLButtonElement;
   readonly specialEl: HTMLButtonElement;
+  readonly ammoEl: HTMLButtonElement;
+  readonly lockEl: HTMLButtonElement;
   readonly menuEl: HTMLButtonElement;
   readonly newsEl: HTMLButtonElement;
   private target: TargetLine;
@@ -150,16 +227,24 @@ export class SeaHud {
       root.append(el);
       return el;
     };
-    this.newsEl = make(buttonHtml({ kind: 'icon', id: 'tc-news', icon: 'goal', glyph: '!', aria: L('news'), cls: 'tc-news k-count hidden' })) as HTMLButtonElement;
-    this.menuEl = make(buttonHtml({ kind: 'icon', id: 'tc-menu', icon: 'menu_cabin', glyph: '☰', aria: L('menu') })) as HTMLButtonElement;
+    this.newsEl = make(buttonHtml({ kind: 'icon', id: 'tc-news', icon: 'goal', glyph: '!', aria: L('news'), cls: 'tc-news k-count sea-round hidden' })) as HTMLButtonElement;
+    this.menuEl = make(buttonHtml({ kind: 'icon', id: 'tc-menu', icon: 'menu_cabin', glyph: '☰', aria: L('menu'), cls: 'sea-round' })) as HTMLButtonElement;
+    // Her mark's line heads the top band (in the top stack, so a boss's line, the lesson and the toasts stand under it).
     const host = make('<div id="tc-target" class="hidden"></div>');
+    document.getElementById('hud-stack')?.prepend(host);
     this.target = new TargetLine(host);
     this.target.onOpen = () => hooks.target();
     this.actEl = make(`<button type="button" id="tc-act" class="k-btn k-btn--primary k-btn--lg tc-act hidden" aria-label="${esc(L('act'))}"><span class="tc-act-ico"></span><span class="k-btn-l"></span><b class="tc-act-more hidden" aria-hidden="true"></b></button>`) as HTMLButtonElement;
-    this.specialEl = make(`<button type="button" id="tc-special" class="k-btn k-btn--icon k-btn--lg tc-special hidden" aria-label=""></button>`) as HTMLButtonElement;
-    this.fireEl = make(`<button type="button" id="tc-fire" class="k-btn k-btn--icon tc-big" aria-label="${esc(L('fireAria'))}" title="${esc(L('fireAria'))}"><i class="tc-ring" aria-hidden="true"></i>${icon('fire', '✸', 'tc-big-ico')}<span class="tc-big-l">${esc(L('fire'))}</span><span class="tc-ammo" aria-hidden="true"></span></button>`) as HTMLButtonElement;
-    attachWheel(this.fireEl, { options: () => (this.view?.docked ? [] : hooks.fireOptions()), onPick: (o) => hooks.firePick(o.id), onTap: () => (this.view?.docked ? hooks.sail() : hooks.fire()), title: L('wheelFire') });
+    this.specialEl = make(`<button type="button" id="tc-special" class="k-btn k-btn--icon k-btn--lg tc-special sea-round hidden" aria-label=""></button>`) as HTMLButtonElement;
+    this.ammoEl = make(`<button type="button" id="tc-ammo" class="k-btn k-btn--icon k-btn--lg tc-ammo sea-round" aria-label="${esc(L('ammoNone'))}"><span class="tc-ammo-pic"></span><b class="tc-ammo-n" aria-hidden="true"></b></button>`) as HTMLButtonElement;
+    this.lockEl = make(`<button type="button" id="tc-lock" class="k-btn k-btn--icon k-btn--lg tc-lock sea-round" aria-label="${esc(L('lockNone'))}" title="${esc(L('lockNone'))}"><i class="tc-lock-x" aria-hidden="true"></i></button>`) as HTMLButtonElement;
+    this.fireEl = make(`<button type="button" id="tc-fire" class="k-btn k-btn--icon tc-big" aria-label="${esc(L('fireAria'))}" title="${esc(L('fireAria'))}"><i class="tc-ring" aria-hidden="true"></i><span class="tc-big-pic">${icon('fire', '✸', 'tc-big-ico')}</span><span class="tc-big-l">${esc(L('fire'))}</span></button>`) as HTMLButtonElement;
+    this.castEl = make(`<button type="button" id="tc-cast" class="k-btn k-btn--icon tc-big tc-sail hidden" aria-label="${esc(L('sailAria'))}" title="${esc(L('sailAria'))}"><span class="tc-big-pic">${icon('stat_sails', '⛵', 'tc-big-ico')}</span><span class="tc-big-l">${esc(L('sail'))}</span></button>`) as HTMLButtonElement;
+    attachWheel(this.fireEl, { options: () => hooks.fireOptions(), onPick: (o) => hooks.firePick(o.id), onTap: () => hooks.fire(), title: L('wheelFire') });
+    attachWheel(this.ammoEl, { options: () => hooks.fireOptions(), onPick: (o) => hooks.firePick(o.id), onTap: () => hooks.ammoNext(), title: L('wheelFire') });
     attachWheel(this.actEl, { options: () => hooks.actOptions(), onPick: (o) => hooks.actPick(o.id), onTap: () => hooks.act(), title: L('wheelAct') });
+    tapOrHold(this.lockEl, () => hooks.nextTarget(), () => this.view?.target && hooks.target());
+    this.castEl.addEventListener('click', () => hooks.sail());
     this.specialEl.addEventListener('click', () => hooks.special());
     this.menuEl.addEventListener('click', () => this.openMenu());
     this.newsEl.addEventListener('click', () => this.openNews());
@@ -176,26 +261,20 @@ export class SeaHud {
       this.fireEl.setAttribute('aria-label', L('fireAria'));
       this.fireEl.title = L('fireAria');
       this.fireEl.querySelector('.tc-big-l')!.textContent = L('fire');
+      this.castEl.setAttribute('aria-label', L('sailAria'));
+      this.castEl.title = L('sailAria');
+      this.castEl.querySelector('.tc-big-l')!.textContent = L('sail');
       for (const [el, k] of [[this.menuEl, 'menu'], [this.newsEl, 'news']] as const) {
         el.setAttribute('aria-label', L(k));
         el.title = L(k);
       }
     }
     const body = document.body;
+    const fight = inFight(v);
     body.classList.toggle('sea-target', !!v.target && !v.docked);
+    body.classList.toggle('sea-fight', fight);
     body.classList.toggle('sea-docked', v.docked);
-    // The big round button: «Огонь» at sea, «В море» in port.
-    this.once('big', `${v.docked}|${lg}`, () => {
-      const t = v.docked ? L('sailAria') : L('fireAria');
-      this.fireEl.classList.toggle('tc-sail', v.docked);
-      this.fireEl.setAttribute('aria-label', t);
-      this.fireEl.title = t;
-      this.fireEl.querySelector('.tc-big-l')!.textContent = v.docked ? L('sail') : L('fire');
-      const ico = this.fireEl.querySelector('.tc-big-ico');
-      const tpl = document.createElement('template');
-      tpl.innerHTML = v.docked ? icon('stat_sails', '⛵', 'tc-big-ico') : icon('fire', '✸', 'tc-big-ico');
-      if (ico && tpl.content.firstElementChild) ico.replaceWith(tpl.content.firstElementChild);
-    });
+    this.castEl.classList.toggle('hidden', !v.docked);
     const a = v.act;
     this.once('act', a ? JSON.stringify([a.id, a.icon, a.label, a.sub, a.more]) : '', () => {
       this.actEl.classList.toggle('hidden', !a);
@@ -220,8 +299,18 @@ export class SeaHud {
       this.specialEl.title = L('special', { name: sp.name });
     });
     this.target.set(v.docked ? null : v.target);
-    this.once('ammo', `${v.ammo}|${v.ammoN}`, () => {
-      this.fireEl.querySelector('.tc-ammo')!.innerHTML = `${icon(`ammo_${v.ammo}`, '•', 'tc-ammo-ico')}<b>${v.ammoN > 999 ? '999+' : v.ammoN}</b>`;
+    this.once('lock', `${v.target ? v.target.name : ''}|${lg}`, () => {
+      const t = v.target ? L('lock', { name: v.target.name }) : L('lockNone');
+      this.lockEl.classList.toggle('on', !!v.target);
+      this.lockEl.setAttribute('aria-label', t);
+      this.lockEl.title = t;
+    });
+    this.once('ammo', `${v.ammo}|${v.ammoN}|${lg}`, () => {
+      this.ammoEl.querySelector('.tc-ammo-pic')!.innerHTML = icon(`ammo_${v.ammo}`, '•', 'k-btn-ico');
+      this.ammoEl.querySelector('.tc-ammo-n')!.textContent = v.ammoN > 999 ? '999+' : String(v.ammoN);
+      const t = L('ammo', { n: v.ammoN });
+      this.ammoEl.setAttribute('aria-label', t);
+      this.ammoEl.title = t;
     });
     const rl = (Math.round(Math.max(0, Math.min(1, v.reload)) * 40) / 40).toFixed(3);
     this.once('reload', rl, () => {
@@ -244,7 +333,8 @@ export class SeaHud {
       const neu = t.content.firstElementChild;
       if (old && neu) old.replaceWith(neu);
     };
-    swap(this.fireEl, '.tc-big-ico', this.view?.docked ? 'stat_sails' : 'fire', this.view?.docked ? '⛵' : '✸', 'tc-big-ico');
+    swap(this.fireEl, '.tc-big-ico', 'fire', '✸', 'tc-big-ico');
+    swap(this.castEl, '.tc-big-ico', 'stat_sails', '⛵', 'tc-big-ico');
     swap(this.menuEl, '.k-btn-ico', 'menu_cabin', '☰', 'k-btn-ico');
     swap(this.newsEl, '.k-btn-ico', 'goal', '!', 'k-btn-ico');
     this.keys.clear();
@@ -262,6 +352,11 @@ export class SeaHud {
 
   flashFire(buzz = true): void {
     flash(this.fireEl, buzz);
+  }
+
+  /** «Цель» with no ship to take: a flash. */
+  flashLock(): void {
+    flash(this.lockEl, true);
   }
 
   get menuOpen(): boolean {
@@ -283,7 +378,7 @@ export class SeaHud {
   openMenu(): void {
     if (this.menuSheet?.open) return;
     const unread = this.view?.unread ?? 0;
-    const tiles = SEA_TILES.map((x) => `<button type="button" class="k-btn k-btn--secondary k-tile" data-tile="${x.id}">${icon(x.art, x.glyph, 'k-tile-ico')}<span class="k-btn-l">${esc(x.id === 'more' ? L('more') : menuLabel(x.id))}</span>${x.id === 'chat' && unread > 0 ? `<b class="k-badge" aria-hidden="true">${unread > 9 ? '9+' : unread}</b>` : ''}</button>`).join('');
+    const tiles = SEA_TILES.map((x) => `<button type="button" class="k-btn k-btn--secondary k-tile" data-tile="${x.id}"><span class="k-tile-pic">${icon(x.art, x.glyph, 'k-tile-ico')}${x.id === 'chat' && unread > 0 ? `<b class="k-badge" aria-hidden="true">${unread > 9 ? '9+' : unread}</b>` : ''}</span><span class="k-btn-l">${esc(x.id === 'more' ? L('more') : menuLabel(x.id))}</span></button>`).join('');
     this.menuSheet = openSheet({ title: L('menu'), body: `<div class="k-tiles">${tiles}</div>`, height: 'auto', cls: 'sea-menu' });
     this.menuSheet.body.querySelectorAll<HTMLElement>('[data-tile]').forEach((b) => b.addEventListener('click', () => {
       this.menuSheet?.close('button');
@@ -317,6 +412,18 @@ export class SeaHud {
       onClose: () => { for (const x of lent) x.mark.replaceWith(x.el); },
     });
   }
+}
+
+/** The desk's line of keys (owner, 2026-10-07: «на пк чисто через wasd и другие клавиши»): what moves her, fires and
+ *  picks a mark, from the captain's own keymap; in port, how to cast off. `key` names an action's first key. */
+export function keyHintHtml(docked: boolean, key: (a: string) => string): string {
+  const k = (...a: string[]) => a.map((x) => key(x)).filter((x) => x && x !== '—').map((x) => `<kbd>${esc(x)}</kbd>`).join('');
+  const part = (keys: string, word: keyof typeof EN) => (keys ? `<span>${keys}<em>${esc(L(word))}</em></span>` : '');
+  if (docked) return [part(k('dock'), 'k.cast'), part(k('harbour'), 'k.harbour'), part(k('map'), 'k.map')].join('');
+  return [
+    part(k('sailUp', 'sailDown'), 'k.sail'), part(k('rudderLeft', 'rudderRight'), 'k.helm'), part(k('fire'), 'k.fire'), part(k('target'), 'k.target'),
+    part(`${k('ammo1')}${key('ammo1') && key('ammo5') ? '<i>–</i>' : ''}${k('ammo5')}`, 'k.ammo'), part(k('abilityZ', 'abilityX', 'abilityC', 'abilityV'), 'k.abil'), part('<kbd>Esc</kbd>', 'k.menu'),
+  ].join('');
 }
 
 /** The hold of the stick in the middle that takes all sail in (ms), and the double tap's window. */

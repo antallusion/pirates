@@ -4,7 +4,7 @@
 import { lang } from './i18n.ts';
 
 export type Action =
-  | 'sailUp' | 'sailDown' | 'rudderLeft' | 'rudderRight' | 'firePort' | 'fireStarboard' | 'chasers' | 'dash' | 'target'
+  | 'sailUp' | 'sailDown' | 'rudderLeft' | 'rudderRight' | 'fire' | 'firePort' | 'fireStarboard' | 'chasers' | 'dash' | 'target'
   | 'ammo1' | 'ammo2' | 'ammo3' | 'ammo4' | 'ammo5' | 'cursedShot'
   | 'talent1' | 'talent2' | 'talent3' | 'talent4' | 'talent5'
   | 'abilityZ' | 'abilityX' | 'abilityC' | 'abilityV' | 'fireMode'
@@ -12,7 +12,7 @@ export type Action =
   | 'map' | 'talents' | 'ship' | 'crew' | 'company' | 'journal' | 'help' | 'mute' | 'readAloud';
 
 export const ACTIONS: Action[] = [
-  'sailUp', 'sailDown', 'rudderLeft', 'rudderRight', 'firePort', 'fireStarboard', 'chasers', 'dash', 'target',
+  'sailUp', 'sailDown', 'rudderLeft', 'rudderRight', 'fire', 'firePort', 'fireStarboard', 'chasers', 'dash', 'target',
   'ammo1', 'ammo2', 'ammo3', 'ammo4', 'ammo5', 'cursedShot', 'talent1', 'talent2', 'talent3', 'talent4', 'talent5',
   'abilityZ', 'abilityX', 'abilityC', 'abilityV', 'fireMode', 'board', 'land', 'orders', 'repair', 'dock', 'formation', 'harbour',
   'map', 'talents', 'ship', 'crew', 'company', 'journal', 'help', 'mute', 'readAloud',
@@ -21,9 +21,12 @@ export const ACTIONS: Action[] = [
 /** Two bindings per action (the second may be empty). Keys are `KeyboardEvent.key`, lower-cased. */
 export type Keymap = Record<Action, [string, string]>;
 
+// The desk plays by keys alone (owner, 2026-10-07: «на пк чисто через wasd и другие клавиши»): WASD the helm and the
+// sails, Space «Огонь» (the volley at her mark, the broadside laid on her first), Tab the next mark, a tap of Shift the
+// dash, Q and E a side's broadside by hand; the chasers fire by themselves (an expert binds them in the options).
 const CLASSIC: Keymap = {
   sailUp: ['w', 'arrowup'], sailDown: ['s', 'arrowdown'], rudderLeft: ['a', 'arrowleft'], rudderRight: ['d', 'arrowright'],
-  firePort: ['q', ''], fireStarboard: ['e', ''], chasers: [' ', ''], dash: ['tab', ''], target: ['`', ''],
+  fire: [' ', ''], firePort: ['q', ''], fireStarboard: ['e', ''], chasers: ['', ''], dash: ['shift', ''], target: ['tab', '`'],
   ammo1: ['1', ''], ammo2: ['2', ''], ammo3: ['3', ''], ammo4: ['4', ''], ammo5: ['5', ''], cursedShot: ['u', ''],
   talent1: ['6', ''], talent2: ['7', ''], talent3: ['8', ''], talent4: ['9', ''], talent5: ['0', ''],
   abilityZ: ['z', ''], abilityX: ['x', ''], abilityC: ['c', ''], abilityV: ['v', ''], fireMode: ['k', ''],
@@ -38,13 +41,13 @@ export const PRESETS: Record<'classic' | 'arrows' | 'lefthand' | 'onehand', Keym
   arrows: {
     ...CLASSIC,
     sailUp: ['arrowup', ''], sailDown: ['arrowdown', ''], rudderLeft: ['arrowleft', ''], rudderRight: ['arrowright', ''],
-    firePort: [',', 'q'], fireStarboard: ['.', 'e'], chasers: ['/', ' '],
+    fire: [' ', '/'], firePort: [',', 'q'], fireStarboard: ['.', 'e'], chasers: ['', ''],
   },
   // The left hand on ESDF, everything it needs within reach.
   lefthand: {
     ...CLASSIC,
     sailUp: ['e', ''], sailDown: ['d', ''], rudderLeft: ['s', ''], rudderRight: ['f', ''],
-    firePort: ['w', ''], fireStarboard: ['r', ''], chasers: [' ', ''],
+    fire: [' ', ''], firePort: ['w', ''], fireStarboard: ['r', ''], chasers: ['', ''],
     repair: ['t', ''], dock: ['g', ''], orders: ['v', ''], abilityV: ['b', ''], board: ['c', ''], talents: ['y', ''], company: ['u', ''], cursedShot: ['', ''],
     abilityZ: ['z', ''], abilityX: ['x', ''], abilityC: ['q', ''], land: ['a', ''], formation: ['', ''], fireMode: ['', ''],
   },
@@ -90,6 +93,7 @@ export function keyLabel(k: string): string {
   if (!k) return '—';
   if (k === ' ') return lang() === 'ru' ? 'Пробел' : 'Space';
   if (k === 'tab') return 'Tab';
+  if (k === 'shift') return 'Shift';
   if (k.startsWith('arrow')) return { arrowup: '↑', arrowdown: '↓', arrowleft: '←', arrowright: '→' }[k] ?? k;
   return k.length === 1 ? k.toUpperCase() : k[0].toUpperCase() + k.slice(1);
 }
@@ -154,6 +158,10 @@ export interface Settings {
   autoWeak: boolean;
   /** docs/23 item 42: the expert's hand — held broadsides, the fire order and the chasers by hand. */
   expertGuns: boolean;
+  /** «Подробный интерфейс» (owner, 2026-10-07): the older full HUD — the bar of shots and abilities, the gauges, the
+   *  column of round buttons, the compass, the ship's plate, the chart's lines. Off: one simple sea HUD for every input
+   *  (body.simple). */
+  expertHud: boolean;
   /** The hex battle (docs/23 item 57): a step or a blow asks a second tap on the same hex to be sure (off: one tap). */
   tacConfirm: boolean;
   /** The hex battle at twice the pace (docs/23 item 60), kept from one battle to the next. */
@@ -177,7 +185,7 @@ export function defaults(): Settings {
   return {
     uiScale: 1, density: 'normal', firstHints: true, shipVoices: true, textScale: 1, hudAlpha: 0.65, colorblind: 'off', highContrast: false, plainFont: false, lanternMarks: false,
     reduceFlashes: false, screenShake: true, vibrate: true, lanternFlicker: true, reduceMotion: false, effects: 'auto', webgl: true,
-    plainTerms: false, classicBoarding: false, autoFire: coarse(), autoWeak: true, expertGuns: false, tacConfirm: false, tacFast: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
+    plainTerms: false, classicBoarding: false, autoFire: coarse(), autoWeak: true, expertGuns: false, expertHud: false, tacConfirm: false, tacFast: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
     keys: structuredClone(CLASSIC),
   };
 }
@@ -188,6 +196,18 @@ export function sanitize(raw: Partial<Settings> | null): Settings {
   const s = { ...d, ...(raw ?? {}) } as Settings;
   s.volume = { ...d.volume, ...(raw?.volume ?? {}) };
   s.keys = { ...d.keys, ...(raw?.keys ?? {}) };
+  // A map saved before Space was «Огонь» (2026-10-07): the old defaults move to the new ones (Space fired the chasers,
+  // Tab dashed, ` took the next mark); a key the captain bound himself stays his.
+  const old = raw?.keys as Partial<Keymap> | undefined;
+  if (old && !old.fire) {
+    const was = (a: Action, k: string) => !!old[a] && old[a]![0] === k && !old[a]![1];
+    s.keys.fire = Object.values(old).some((v) => Array.isArray(v) && v.includes(' ')) && !was('chasers', ' ') ? ['', ''] : [' ', ''];
+    if (was('chasers', ' ')) s.keys.chasers = ['', ''];
+    if (was('dash', 'tab') && was('target', '`')) {
+      s.keys.dash = ['shift', ''];
+      s.keys.target = ['tab', '`'];
+    }
+  }
   for (const a of ACTIONS) if (!Array.isArray(s.keys[a]) || s.keys[a].length !== 2) s.keys[a] = d.keys[a];
   s.uiScale = Math.min(2, Math.max(0.7, Number(s.uiScale) || 1));
   s.textScale = Math.min(1.5, Math.max(0.9, Number(s.textScale) || 1));
@@ -246,6 +266,8 @@ export function applyToDocument(s: Settings): void {
   root.style.setProperty('--text-scale', String(s.textScale));
   root.style.setProperty('--hud-a', String(s.hudAlpha));
   const b = document.body.classList;
+  b.toggle('simple', !s.expertHud);
+  b.toggle('expert-hud', s.expertHud);
   b.toggle('hi-contrast', s.highContrast);
   b.toggle('plain-font', s.plainFont);
   b.toggle('reduce-motion', s.reduceMotion);

@@ -1,0 +1,286 @@
+/* ======================================================================================================================
+   The simple sea HUD for every input (owner, 2026-10-07): «перегруз интерфейса, иконки обрезаются, очень большие
+   плашки… выходя из порта нужно скрывать часть ui, давать только штурвал и всё необходимое»; «справа сверху карта,
+   слева сверху аватарка и очень удобные красивые уровни жизней, людей; снизу слева штурвал и скорость, справа кнопки
+   атаки, переключения, захват цели, причём атака должна быть большой; на планшете такое же управление; на пк чисто
+   через wasd и другие клавиши».
+   body.simple is on unless «Подробный интерфейс» (settings: expertHud) brings the older full HUD back; body.touch is a
+   touch screen (a phone or a tablet: the same controls), its absence a desk played by its keys.
+     top left     the captain: her face in a round frame, her level on its rim, three slim bars, silver as a chip
+     top right    the minimap; the menu and the counter of goals and news left of it
+     top middle   one column: her mark's line, a world boss's slim line, the lesson, the sea's name; the toasts under it
+     bottom left  (touch) the helm stick, her speed beside it            (desk) a small line of keys, the first minutes
+     bottom right (touch) in a fight: «Огонь» big, «Снаряд», «Цель», «Особое»; «Действие» left of them
+     bottom       (desk) the context row: what is to do here, each with its key
+   Everything else of the older HUD — the bar of shots and abilities, the gauges, the column of round buttons, the
+   compass, the ship's plate, the chart's lines, the fold, the chat's button — is put away. Sizes come from the kit's
+   tokens (kit.css): 44 px for anything a thumb takes, 52 px for the lesser fight buttons on a tablet, «Огонь» 80/92.
+   Pictures in round frames keep inside the frame's circle (tools/mobile/ux/crop.js): a picture is a rounded square
+   (14 % corners) no wider than 0.7 of the circle, the ring a thin brass line outside it, a badge on the rim.
+   ==================================================================================================================== */
+
+body.simple { --sea-pad: 10px; --sea-fire: 80px; --sea-btn: 48px; --sea-gap: 8px; --cs-face: 48px; --cs-bar: 112px; --mm: 86px; }
+@media (min-width: 700px) and (min-height: 521px) { body.simple { --sea-pad: 16px; --sea-fire: 92px; --sea-btn: 52px; --sea-gap: 10px; --cs-face: 56px; --cs-bar: 140px; --mm: 132px; } }
+@media (min-width: 1100px) and (min-height: 600px) { body.simple { --cs-face: 60px; --cs-bar: 150px; --mm: 148px; } }
+
+/* ---------- what the simple HUD does without */
+body.simple #hud-combat, body.simple #hud-nav, body.simple #hud-menu, body.simple #hud-region, body.simple #hud-fold,
+body.simple #hud-ship, body.simple #chat-toggle, body.simple #unread,
+body.simple #hud-stack > :is(#hud-tip, #hud-fish, #hud-order, #hud-holiday, #hud-world, #hud-goals, #hud-feed, #hud-target, #hud-signals, #hud-orders) { display: none !important; }
+body.simple #touch { display: block; }
+/* (the First Watch reveals the fight's buttons step by step, never the captain or the chart: they are the HUD itself) */
+body.simple #hud-captain.tut-hidden { display: block !important; }
+body.simple #hud-map.tut-hidden { display: block !important; }
+
+/* ---------- top left: the captain */
+body.simple #hud-captain { top: calc(var(--sa-t) + 8px); left: calc(var(--sa-l) + 8px); width: auto; display: block; gap: 0; cursor: pointer; pointer-events: auto; }
+body.simple.touch #hud-captain { pointer-events: none; cursor: default; }
+.cs { display: flex; align-items: center; gap: 10px; }
+.cs-frame { position: relative; flex: none; width: var(--cs-face); height: var(--cs-face); }
+/* the face: the head and shoulders of her portrait (kit/faces.ts), a thin brass rim outside the picture */
+.cs-face { position: absolute; inset: 0; border-radius: 50%; background-color: #15120e; background-repeat: no-repeat;
+  box-shadow: 0 0 0 2px var(--k-brass-dim), 0 0 0 3px rgba(5, 6, 7, 0.85), 0 3px 10px rgba(0, 0, 0, 0.75); }
+.cs-face::after { content: ''; position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.55); pointer-events: none; }
+/* her level on the rim, low on the left: a small coin of brass, never over the face */
+.cs-lv { position: absolute; left: -7px; bottom: -7px; z-index: 1; min-width: 20px; height: 20px; padding: 0 4px; box-sizing: border-box; border-radius: var(--k-r-round);
+  background: radial-gradient(circle at 50% 35%, #2e2418, #120e0a); box-shadow: 0 0 0 1.5px var(--k-brass), 0 1px 3px #000;
+  color: var(--k-gold); font: 700 11px/20px var(--k-font-sans); text-align: center; font-variant-numeric: tabular-nums; }
+/* a talent point waiting: a gold bead on the rim, high on the right */
+.cs-pts { position: absolute; right: -3px; top: -3px; width: 10px; height: 10px; border-radius: 50%; background: var(--k-gold); box-shadow: 0 0 0 1.5px #120e0a, 0 0 8px rgba(224, 184, 98, 0.8); }
+.cs-body { display: grid; grid-template-columns: auto; gap: 3px; min-width: 0; }
+.cs-row { display: flex; align-items: center; gap: 5px; height: 12px; }
+.cs-ico { flex: none; width: 13px; height: 13px; object-fit: contain; margin: 0; filter: drop-shadow(0 1px 1px #000); }
+.cs-bar { position: relative; flex: none; width: var(--cs-bar); height: 7px; border-radius: var(--k-r-round); overflow: hidden;
+  background: linear-gradient(180deg, #0a0b0d, #16181b); box-shadow: inset 0 0 0 1px rgba(5, 6, 7, 0.95), 0 0 0 1px rgba(111, 90, 56, 0.35), 0 1px 3px rgba(0, 0, 0, 0.6); }
+.cs-bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; transition: width var(--k-dur-3) var(--k-ease-out); }
+.cs-hull .cs-bar > i { background: linear-gradient(180deg, #c06a52, #7a2c22 60%, #5e2219); }
+.cs-crew .cs-bar > i { background: linear-gradient(180deg, #8fb0c4, #3f5d70 60%, #2f4452); }
+.cs-sails .cs-bar > i { background: linear-gradient(180deg, #d6cfb8, #8a8471 60%, #5f5a4c); }
+.cs-v { min-width: 34px; font: 600 10.5px/1 var(--k-font-sans); color: var(--k-bone); text-shadow: 0 1px 2px #000, 0 0 4px #000; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cs-silver { justify-self: start; display: inline-flex; align-items: center; gap: 4px; margin-top: 1px; padding: 1px 7px 1px 3px; border-radius: var(--k-r-round);
+  background: rgba(10, 11, 13, 0.72); box-shadow: inset 0 0 0 1px rgba(111, 90, 56, 0.45); color: var(--k-gold); font: 600 11px/16px var(--k-font-sans); font-variant-numeric: tabular-nums; }
+.cs-coin { width: 13px; height: 13px; object-fit: contain; margin: 0; }
+@media (hover: hover) and (pointer: fine) { body.simple:not(.touch) #hud-captain:hover .cs-face { box-shadow: 0 0 0 2px var(--k-brass), 0 0 0 3px rgba(5, 6, 7, 0.85), 0 0 12px rgba(224, 184, 98, 0.35); } }
+body.simple:not(.touch) #hud-captain:active .cs-face { transform: scale(0.97); }
+@media (max-height: 420px) { body.simple .cs-row { height: 11px; } body.simple .cs-body { gap: 2px; } body.simple .cs-silver { line-height: 14px; } }
+@media (max-width: 680px) { body.simple { --cs-bar: 92px; } }
+
+/* ---------- top right: the minimap, the menu and the counter */
+body.simple #hud-map { top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + 8px); width: var(--mm); height: var(--mm); }
+body.simple #touch > #tc-menu { position: absolute; top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + var(--mm) + 16px); left: auto; pointer-events: auto; }
+body.simple #touch > #tc-news { position: absolute; top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + var(--mm) + 16px + 44px + 8px); left: auto; pointer-events: auto; }
+@media (hover: hover) and (pointer: fine) and (min-height: 521px) {
+  body.simple:not(.touch) #touch > #tc-news { right: calc(var(--sa-r) + var(--mm) + 16px + 44px + 8px); }
+}
+/* A fight on a touch screen: the chart and the counter step aside (seven things to touch at most). */
+body.simple.touch.sea-fight #hud-map, body.simple.touch.sea-fight #touch > #tc-news { display: none !important; }
+
+/* The round buttons of the sea: a disc of pitch, a thin brass rim, the picture inside its circle. */
+body.simple .sea-round { border: 0; background: radial-gradient(circle at 50% 38%, #2b241b, #120f0b 72%); color: var(--k-gold);
+  box-shadow: inset 0 0 0 1.5px var(--k-brass-dim), inset 0 0 10px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.7); }
+body.simple .sea-round::after { content: none; }
+body.simple .sea-round .k-btn-ico { position: absolute; inset: 16%; width: 68%; height: 68%; border-radius: 14%; object-fit: contain; margin: 0; }
+body.simple .sea-round .k-btn-ico.glyph { border-radius: 50%; }
+body.simple .sea-round .k-badge { top: -8px; right: -8px; }
+@media (hover: hover) and (pointer: fine) { body.simple .sea-round:hover:not(:disabled) { box-shadow: inset 0 0 0 1.5px var(--k-brass), inset 0 0 10px rgba(0, 0, 0, 0.6), 0 0 12px rgba(224, 184, 98, 0.25); } }
+body.simple .sea-round:active:not(:disabled) { transform: scale(0.93); filter: brightness(1.3); }
+
+/* ---------- top middle: one column — her mark, a boss's line, the lesson, the sea's name — and the toasts under it */
+body.simple #hud-stack, body.simple #hud #hud-stack, body.simple.touch #hud-stack, body.simple.touch #hud #hud-stack, body.simple.touch.sea-target #hud #hud-stack {
+  top: calc(var(--sa-t) + 8px) !important; left: 50% !important; right: auto !important; transform: translateX(-50%) !important;
+  width: min(440px, calc(100vw - 2 * max(var(--cs-face) + var(--cs-bar) + 80px, var(--mm) + 120px) - 16px)) !important; min-width: 0 !important; max-width: none !important;
+  display: flex !important; align-items: center !important; gap: 6px; }
+body.simple #hud-stack > * { max-width: 100% !important; }
+body.simple #hud-stack > :is(.hud-block, #hud-watch) { align-self: stretch; }
+/* her mark: words on a touch screen (her card is «Цель»'s long press), a button on a desk (a click opens it) */
+body.simple #hud-stack > #tc-target { order: -50; align-self: center; width: min(320px, 100%) !important; pointer-events: none; }
+body.simple #tc-target .k-target { width: 100%; height: 36px; background: rgba(11, 13, 16, 0.78); }
+body.simple:not(.touch) #tc-target .k-target { pointer-events: auto; }
+body.simple.touch #tc-target .k-target { pointer-events: none; }
+/* a world boss: one slim line — its name and its strength (the rest in its card on the chart) */
+body.simple #hud-stack > #hud-boss { order: -40; align-self: center; width: min(360px, 100%) !important; display: grid; grid-template-columns: auto minmax(60px, 1fr); align-items: center; column-gap: 10px;
+  padding: 4px 10px; border-radius: var(--k-r-2); background: linear-gradient(90deg, rgba(8, 8, 9, 0.85), rgba(8, 8, 9, 0.6)); border: 0; box-shadow: inset 0 0 0 1px rgba(178, 58, 58, 0.45); text-align: left; }
+body.simple #hud-boss .bname { font: 400 13px/1.2 var(--k-font-display); letter-spacing: 0.05em; color: var(--k-bone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.simple #hud-boss .bbar { height: 5px; margin: 0; border: 0; border-radius: var(--k-r-round); overflow: hidden; background: #1b1512; box-shadow: inset 0 0 0 1px rgba(5, 6, 7, 0.9); }
+body.simple #hud-boss :is(.bphase, .bparts, .bhint, .byou) { display: none !important; }
+body.simple #hud-boss .balert { grid-column: 1 / -1; margin: 2px 0 0; font-size: 11.5px; }
+/* the boss is her mark: its line is her mark's line (unless it holds her: then the alert is the line) */
+body.simple.sea-boss-target #hud-stack > #hud-boss:not(:has(.balert)) { display: none !important; }
+/* the sea's name a moment on entering it: a slim line that fades by itself */
+body.simple #hud-stack > #sea-herald { order: -30; align-self: center; display: flex; align-items: baseline; gap: 8px; padding: 2px 12px; pointer-events: none;
+  color: var(--k-bone); text-shadow: 0 1px 2px #000, 0 0 8px #000; white-space: nowrap; }
+body.simple #sea-herald.hidden { display: none !important; }
+#sea-herald b { font: 400 15px/1.2 var(--k-font-display); letter-spacing: 0.08em; }
+#sea-herald small { font: 500 11px/1.2 var(--k-font-sans); color: var(--k-haze); }
+#sea-herald.go { animation: sea-herald 4.2s var(--k-ease-out) forwards; }
+@keyframes sea-herald { 0% { opacity: 0; transform: translateY(-4px); } 10%, 72% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+body.reduce-motion #sea-herald.go { animation: none; }
+/* the toasts: one band under the column, two at most, in the middle and clear of the captain and the chart (hud.ts) */
+body.simple #toasts, body.simple.tq-side #toasts, body.simple.touch #toasts {
+  top: var(--st-top, calc(var(--sa-t) + 8px)) !important; bottom: auto !important; left: 50% !important; right: auto !important; transform: translateX(-50%) !important;
+  width: var(--st-w, min(420px, 46vw)) !important; height: auto !important; max-height: 30vh; flex-flow: column nowrap !important; overflow: hidden; }
+body.simple #toasts > .toast:nth-child(n+3) { display: none; }
+body.simple.tac #toasts { display: none; }
+body.simple.tac #toasts:has(> .toast.bad, > .toast.good, > .toast.xp) { display: flex; top: calc(var(--sa-t) + 64px) !important; }
+
+/* ---------- touch: the helm and its speed, bottom left */
+body.simple #tc-speed { position: absolute; left: calc(var(--sa-l) + 10px + var(--stick) + 2px); bottom: calc(var(--sa-b) + 12px); padding: 1px 7px; border-radius: var(--k-r-round);
+  background: rgba(10, 11, 13, 0.7); box-shadow: inset 0 0 0 1px rgba(111, 90, 56, 0.4); color: var(--k-bone); font: 600 11px/16px var(--k-font-sans); font-variant-numeric: tabular-nums; pointer-events: none; }
+body.simple #tc-speed:empty { display: none; }
+#tc-speed { display: none; }
+body.simple.touch #tc-speed { display: block; }
+body.simple.touch.sea-docked #tc-speed { display: none; }
+
+/* ---------- touch: the fight's buttons, bottom right — out only in a fight («Огонь» big in the corner, «Снаряд»
+   left of it, «Цель» over it, «Особое» over «Снаряд»; «Действие» left of them) */
+body.simple #touch > #tc-fire, body.simple #touch > #tc-ammo, body.simple #touch > #tc-lock, body.simple #touch > #tc-special { display: none; }
+body.simple.touch.sea-fight #touch > #tc-fire { display: flex; }
+body.simple.touch.sea-fight #touch > #tc-ammo, body.simple.touch.sea-fight #touch > #tc-lock { display: inline-flex; }
+body.simple.touch.sea-fight #touch > #tc-special:not(.hidden) { display: inline-flex; }
+body.simple #touch > :is(#tc-fire, #tc-ammo, #tc-lock, #tc-special).tut-hidden { display: none !important; }
+body.simple #touch > #tc-fire { right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad)); width: var(--sea-fire); height: var(--sea-fire); }
+body.simple #touch > :is(#tc-ammo, #tc-lock, #tc-special) { position: absolute; width: var(--sea-btn); height: var(--sea-btn); min-width: 0; min-height: 0; padding: 0; pointer-events: auto; }
+body.simple #touch > #tc-ammo { right: calc(var(--sa-r) + var(--sea-pad) + var(--sea-fire) + var(--sea-gap)); bottom: calc(var(--sa-b) + var(--sea-pad) + (var(--sea-fire) - var(--sea-btn)) / 2); }
+body.simple #touch > #tc-lock { right: calc(var(--sa-r) + var(--sea-pad) + (var(--sea-fire) - var(--sea-btn)) / 2); bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + var(--sea-gap)); }
+body.simple #touch > #tc-special { right: calc(var(--sa-r) + var(--sea-pad) + var(--sea-fire) + var(--sea-gap)); bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + var(--sea-gap)); box-shadow: inset 0 0 0 1.5px var(--k-gold), 0 0 12px rgba(224, 184, 98, 0.45); }
+/* «Огонь»: the big round button; its rim fills as the guns load; no shot on its corner (that is «Снаряд») */
+body.simple #touch > .tc-big { flex-direction: column; justify-content: center; }
+body.simple #touch > .tc-big .tc-big-pic { position: relative; display: flex; width: 50%; height: 44%; align-items: center; justify-content: center; }
+body.simple #touch > .tc-big .tc-big-ico { position: static; width: 100%; height: 100%; object-fit: contain; border-radius: 0; margin: 0; }
+body.simple #touch > .tc-big .tc-big-l { margin-top: 3px; }
+/* «Снаряд»: the shot loaded, its count on a pill under the rim */
+body.simple #touch > #tc-ammo .tc-ammo-pic { position: absolute; inset: 0; }
+body.simple #touch > #tc-ammo .tc-ammo-n { position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); min-width: 22px; height: 16px; padding: 0 5px; box-sizing: border-box; border-radius: var(--k-r-round);
+  background: rgba(10, 11, 13, 0.94); box-shadow: 0 0 0 1px var(--k-brass-dim); color: var(--k-bone); font: 700 10px/16px var(--k-font-sans); text-align: center; font-variant-numeric: tabular-nums; pointer-events: none; }
+/* «Цель»: a crosshair drawn in code; gold while a mark is held */
+body.simple #touch > #tc-lock .tc-lock-x { position: absolute; inset: 27%; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--k-haze); }
+body.simple #touch > #tc-lock .tc-lock-x::before, body.simple #touch > #tc-lock .tc-lock-x::after { content: ''; position: absolute; left: 50%; top: 50%; background: var(--k-haze); transform: translate(-50%, -50%); }
+body.simple #touch > #tc-lock .tc-lock-x::before { width: 150%; height: 2px; }
+body.simple #touch > #tc-lock .tc-lock-x::after { width: 2px; height: 150%; }
+body.simple #touch > #tc-lock.on { box-shadow: inset 0 0 0 1.5px var(--k-gold), inset 0 0 10px rgba(0, 0, 0, 0.6), 0 0 10px rgba(224, 184, 98, 0.4); }
+body.simple #touch > #tc-lock.on .tc-lock-x { box-shadow: inset 0 0 0 2px var(--k-gold); }
+body.simple #touch > #tc-lock.on .tc-lock-x::before, body.simple #touch > #tc-lock.on .tc-lock-x::after { background: var(--k-gold); }
+/* «Действие»: bottom right when nothing else is there, left of the fight's buttons in a fight */
+body.simple #touch > .tc-act { right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad)); max-width: min(230px, 34vw); transition: right var(--k-dur-2) var(--k-ease-out); }
+body.simple.touch.sea-fight #touch > .tc-act { right: calc(var(--sa-r) + var(--sea-pad) + var(--sea-fire) + var(--sea-gap) + var(--sea-btn) + 12px); bottom: calc(var(--sa-b) + var(--sea-pad) + (var(--sea-fire) - var(--sea-act-h)) / 2); }
+body.simple.touch.sea-docked #touch > .tc-act { right: calc(var(--sa-r) + var(--sea-pad) + var(--sea-fire) + 12px); bottom: calc(var(--sa-b) + var(--sea-pad) + (var(--sea-fire) - var(--sea-act-h)) / 2); }
+/* in port: the big round «В море», no helm */
+body.simple #touch > #tc-cast { display: none; }
+body.simple.touch.sea-docked #touch > #tc-cast:not(.hidden) { display: flex; right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad)); width: var(--sea-fire); height: var(--sea-fire); }
+body.simple.sea-docked #touch > :is(#tc-stick, #tc-fire, #tc-ammo, #tc-lock, #tc-special) { display: none !important; }
+body.simple.touch.sea-docked #touch > #tc-stick { display: none; }
+
+/* ---------- a desk: no stick and no fight buttons — the keys do it all */
+body.simple:not(.touch) #touch > :is(#tc-stick, #tc-fire, #tc-ammo, #tc-lock, #tc-special, #tc-act, #tc-cast, #tc-speed) { display: none !important; }
+/* the context row over the bottom edge: what is to do here, each with its key; the line of what stops her above it */
+body.simple:not(.touch) #hud-bottom { bottom: calc(var(--sa-b) + 10px); }
+body.simple:not(.touch) #hud-prompt .act-row { gap: 6px; }
+body.simple:not(.touch) #hud-prompt .act-btn { --h: 34px; }
+/* the line of keys: small, low on the left, for the first minutes at sea (main.ts keyHint) */
+#key-hint { position: absolute; left: calc(var(--sa-l) + 10px); bottom: calc(var(--sa-b) + 10px); max-width: min(820px, calc(100vw - 2 * 260px)); display: flex; flex-wrap: wrap; gap: 4px 12px;
+  padding: 5px 10px; border-radius: var(--k-r-2); background: rgba(10, 11, 13, 0.62); box-shadow: inset 0 0 0 1px rgba(111, 90, 56, 0.3);
+  color: var(--k-haze); font: 500 11px/18px var(--k-font-sans); pointer-events: none; transition: opacity 6s linear; }
+#key-hint.hidden, body:not(.simple) #key-hint, body.touch #key-hint { display: none; }
+#key-hint.fade { opacity: 0; }
+#key-hint span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+#key-hint em { font-style: normal; }
+#key-hint i { font-style: normal; color: var(--k-haze); }
+#key-hint kbd { display: inline-block; min-width: 18px; padding: 0 4px; border-radius: 3px; box-sizing: border-box; background: rgba(216, 210, 196, 0.08); box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.55), 0 1px 0 rgba(0, 0, 0, 0.6);
+  color: var(--k-bone); font: 600 10.5px/16px var(--k-font-sans); text-align: center; }
+body.tac #key-hint { display: none; }
+
+/* ---------- pictures in round frames elsewhere (the crop check): inside the frame's circle, the badge on the rim */
+.k-wheel-ico { width: 26px; height: 26px; border-radius: 14%; }
+.k-wheel--many .k-wheel-ico { width: 22px; height: 22px; }
+.k-wheel-n { top: -8px; right: -9px; }
+.k-tile .k-tile-pic { position: relative; display: inline-flex; }
+.k-tile .k-tile-pic .k-badge { top: -6px; right: -12px; }
+.micro-menu button img, .micro-menu button .glyph { inset: 24%; width: 52%; height: 52%; border-radius: 14%; }
+.hud-fold img { inset: 24%; width: 52%; height: 52%; border-radius: 14%; }
+.hud-fold b { right: -9px; top: -9px; }
+.k-btn--icon .k-btn-ico { inset: 24%; width: 52%; height: 52%; border-radius: 14%; }
+
+/* ---------- the detailed interface on a touch screen (expertHud): the phase-2 HUD as it was, «В море» its own button */
+.tc-big-pic { display: contents; }
+body:not(.simple) #touch > :is(#tc-ammo, #tc-lock) { display: none; }
+body.touch.sea-docked #touch > #tc-fire { display: none; }
+
+/* ======================================================================================================================
+   The hex battle (owner, 2026-10-07: «аватарки сверху очень странно выглядят, они отцентрованы по вертикали (которые
+   по бокам), а надо чтобы они были рядом сверху»): the two captains in one band at the top — hers on the left, the
+   foe's on the right, each her face, name, ship, stats, men, morale and luck, compact and top-aligned — with the round
+   and the turn between them, the order of the round and the last of the feed (two lines) under it; the field below as
+   large as the room allows; the orders and the book in the bottom corners. A phone keeps the field over the whole
+   screen: the two captains are faces in its top corners (the turn's clock round the one whose move it is), the round
+   buttons and the book in its bottom corners, the feed in the round's sheet only.
+   ==================================================================================================================== */
+/* the faces: the head and shoulders of a captain's portrait (kit/faces.ts), a creature's picture whole; the side's
+   colour as a ring outside the picture */
+.tb-face, .tb-shf, .tb-chip-face { position: relative; display: block; flex: none; box-sizing: border-box; border: 0 !important; border-radius: 50%; overflow: hidden;
+  background-color: #15120e; background-repeat: no-repeat; box-shadow: 0 0 0 2px #7fb0d0, 0 2px 8px rgba(0, 0, 0, 0.6); }
+.tb-hero.foe .tb-face, .tb-shh.foe .tb-shf, .tb-chip.foe .tb-chip-face { box-shadow: 0 0 0 2px #d2473a, 0 2px 8px rgba(0, 0, 0, 0.6); }
+.tb-face.art, .tb-shf.art, .tb-chip-face.art { background: radial-gradient(circle at 50% 40%, #2a2620, #110e0b); }
+.tb-face-img { position: absolute; inset: 15%; width: 70%; height: 70%; margin: 0; object-fit: contain; border-radius: 14%; }
+.tb-shf { width: 26px; height: 26px; }
+
+/* the desk and the tablet: one band at the top */
+.tb-hero { align-items: flex-start; align-self: start; gap: 8px; }
+.tb-hero .tb-face { width: 44px; height: 44px; margin: 2px; }
+.tb-who { gap: 1px; }
+.tb-who b { font-size: 16px; line-height: 1.1; }
+.tb-who small { font-size: 11px; }
+.tb-prims, .tb-moves { font-size: 11px; }
+.tb-moves i { display: none; }
+.tb-pips { margin-top: 1px; }
+.tb-mid { display: grid; grid-template-columns: auto auto; justify-content: center; align-items: baseline; column-gap: 10px; row-gap: 3px; align-self: start; }
+.tb-mid .tb-timer { grid-column: 1 / -1; justify-self: center; width: min(320px, 100%); }
+.tb-queue { justify-content: center; }
+.tb-feed { justify-content: flex-start; text-align: center; min-height: 0; }
+.tb-feed .tb-lines > :not(:nth-last-child(-n+2)) { display: none; }
+.tb-spells, .tb-acts { align-content: end; align-self: end; }
+@media (min-width: 900px) and (min-height: 521px) and (min-aspect-ratio: 7/5) {
+  .tb-root { grid-template-columns: clamp(190px, 17vw, 250px) minmax(0, 1fr) clamp(190px, 17vw, 250px); grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-areas: "you mid foe" "you queue foe" "you feed foe" "spells stage acts"; row-gap: 4px; padding: 8px 14px 10px; }
+  .tb-hero .tb-face { width: 50px; height: 50px; }
+  .tb-who b { font-size: 18px; }
+  .tb-queue { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding: 4px 2px 6px; }
+  .tb-q { width: 34px; height: 34px; }
+  .tb-feed { font-size: 12px; line-height: 1.3; max-height: calc(2 * 1.3em + 2px); }
+  .tb-feed .tb-hint:not(:empty) + .tb-lines > :not(:last-child) { display: none; }
+  .tb-round { font-size: 18px; }
+  .tb-spells { overflow-y: auto; max-height: 100%; }
+}
+/* a short window on a desk (the owner's 18.png: 1384×743 at 150 %): the same band, smaller */
+@media (max-height: 520px) and (orientation: landscape) {
+  body:not(.tac-ph) .tb-root { grid-template-columns: clamp(150px, 19vw, 210px) minmax(0, 1fr) clamp(150px, 19vw, 210px); grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas: "you mid foe" "you queue foe" "spells stage acts"; row-gap: 2px; padding: 4px 8px 6px; }
+  body:not(.tac-ph) .tb-stage { width: auto; }
+  body:not(.tac-ph) .tb-feed { display: none; }
+  body:not(.tac-ph) .tb-hero .tb-face { width: 36px; height: 36px; }
+  body:not(.tac-ph) .tb-who b { font-size: 14px; }
+  body:not(.tac-ph) .tb-mid { justify-content: center; }
+  body:not(.tac-ph) .tb-q { width: 26px; height: 26px; }
+}
+/* the order's faces and the round buttons: their pictures inside the circle, the count on the rim */
+.tb-q { overflow: visible; }
+.tb-q .ico, .tb-q .ico.fig { position: absolute; inset: 15%; width: 70%; height: 70%; margin: 0; object-fit: contain; object-position: 50% 50%; border-radius: 14%; }
+.tb-q b { right: -7px; bottom: -7px; }
+.tb-rb > .ico { inset: 24%; width: 52%; height: 52%; object-fit: contain; border-radius: 14%; }
+.tb-card-h .ico-md { object-fit: contain; border-radius: 14%; background: radial-gradient(circle at 50% 40%, #2a2620, #110e0b); }
+
+/* the phone: the two captains in the field's top corners, «×2» over the book */
+.tb-chip { --ring: #7fb0d0; --tl: 1; position: absolute; top: calc(env(safe-area-inset-top, 0px) + 8px); width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.75); pointer-events: auto; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.tb-chip.you { left: calc(env(safe-area-inset-left, 0px) + 8px); }
+.tb-chip.foe { right: calc(env(safe-area-inset-right, 0px) + 8px); --ring: #d2473a; }
+.tb-chip.turn { background: conic-gradient(var(--ring) calc(var(--tl) * 360deg), rgba(255, 255, 255, 0.14) 0); }
+.tb-chip.turn.mine { --ring: #e8c46a; }
+.tb-chip.on { box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(224, 184, 98, 0.8); }
+.tb-chip:active { transform: scale(0.95); }
+.tb-chip .tb-chip-face { position: absolute; inset: 4px; box-shadow: 0 0 0 1px rgba(5, 6, 7, 0.9); }
+.tb-chip.foe .tb-chip-face { box-shadow: 0 0 0 1px rgba(5, 6, 7, 0.9); }
+.tb-chip-men { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); min-width: 22px; height: 15px; padding: 0 4px; box-sizing: border-box; border-radius: var(--k-r-round);
+  background: rgba(12, 10, 8, 0.94); box-shadow: 0 0 0 1px var(--brass-dim); color: var(--bone); font: 700 10px/15px var(--k-font-sans); text-align: center; font-variant-numeric: tabular-nums; pointer-events: none; }
+.tb-pr > .tb-fast { position: relative; right: auto; top: auto; }
+/* the round's sheet opens beside her face */
+body.tac-ph .tb-sheet { left: calc(env(safe-area-inset-left, 0px) + 64px); }

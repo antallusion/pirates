@@ -53,6 +53,7 @@ import { ask } from './confirm.ts';
 import { openSheet } from './kit/sheet.ts';
 import type { SheetHandle } from './kit/sheet.ts';
 import { attachWheel, wheel } from './kit/radial.ts';
+import { faceAttrs } from './kit/faces.ts'; // the captains' faces in their circles (2026-10-07)
 import type { WheelOption } from './kit/radial.ts';
 
 const L = dict(EN, RU);
@@ -722,6 +723,19 @@ export class TacticalPanel {
     return fid ? (fid.includes('.') && !fid.startsWith('portrait.') ? assetUrl(fid) : portraitUrl(fid.replace(/^portrait\./, ''))) ?? url : url;
   }
 
+  /** A side's face in a round frame (owner, 2026-10-07: «аватарки обрезаются у всех»): a captain's portrait as her head
+   *  and shoulders (kit/faces.ts), a creature's or a lair's picture whole inside the circle; the frame's ring outside. */
+  private faceHtml(v: TacView, x: 0 | 1, cls: string): string {
+    const h = v.heroes[x];
+    const url = this.heroFace(v, x);
+    if (!url) return `<span class="${cls}"></span>`;
+    if (/\/portraits\//.test(url)) {
+      const id = h.captain && assetUrl(CAPTAINS[h.captain].portrait) === url ? CAPTAINS[h.captain].portrait : url.replace(/^.*\/portraits\/|\.\w+(\?.*)?$/g, '');
+      return `<span class="${cls}" ${faceAttrs(id, url)}></span>`;
+    }
+    return `<span class="${cls} art"><img class="tb-face-img" src="${esc(url)}" alt="" draggable="false" /></span>`;
+  }
+
   /** The order of the round as a row of faces (each opens its stack's card), then the next round's first few. */
   private queue(v: TacView): string {
     const chip = (id: number, next: boolean) => {
@@ -770,29 +784,39 @@ export class TacticalPanel {
     // The turn's face, and the round behind it.
     const whose = v.over ? '' : v.mine ? L('yourTurn') : act && act.side === v.you ? L('autoTurn') : L('theirTurn');
     const face = act ? (figureArt(act) ? icon(figureArt(act)!, '', 'ico fig') : icon(stackArt(act), '', 'ico')) : '';
-    const turn = `<button class="tb-turnb${act ? (act.side === v.you ? ' you' : ' foe') : ''}${v.mine ? ' mine' : ''}${this.sheetOpen ? ' on' : ''}" data-sheet title="${esc(`${L('round', { n: v.round })} · ${whose}`)}" aria-label="${esc(L('order.label'))}" aria-expanded="${this.sheetOpen}">${face}</button>`;
+    void face;
+    // The two captains side by side at the top (owner, 2026-10-07: «аватарки… надо чтобы они были рядом сверху»): hers
+    // in the top left corner, the foe's in the top right, each her face and her men; the side whose turn it is wears
+    // the turn's clock as its ring (gold while it is hers). A tap on either opens the round.
+    const chip = (x: 0 | 1) => {
+      const h = v.heroes[x], mine = x === v.you, theirs = !v.over && !!act && act.side === x;
+      const who = this.heroName(v, x);
+      return `<button class="tb-chip ${mine ? 'you' : 'foe'}${theirs ? ' turn' : ''}${theirs && v.mine ? ' mine' : ''}${this.sheetOpen ? ' on' : ''}" data-sheet title="${esc(`${who} · ${L('men', { n: h.men ?? 0, m: h.menStart ?? 0 })}${theirs ? ` · ${L('round', { n: v.round })} · ${whose}` : ''}`)}" aria-label="${esc(`${who}: ${L('order.label')}`)}" aria-expanded="${this.sheetOpen}">${this.faceHtml(v, x, 'tb-chip-face')}<b class="tb-chip-men">${h.men ?? 0}</b></button>`;
+    };
+    const turn = chip(v.you) + chip((1 - v.you) as 0 | 1);
     const fast = settings().tacFast;
     const x2 = `<button class="tb-rb tb-fast${fast ? ' on' : ''}" data-fast aria-pressed="${fast}" title="${esc(fast ? L('fastOff') : L('fast'))}" aria-label="${esc(L('fast'))}"><i class="tb-x2" aria-hidden="true">×2</i></button>`;
     const pip = (n: number, up: string, down: string, k: K) => `<span class="tb-shp${n > 0 ? ' up' : n < 0 ? ' down' : ''}" title="${esc(L(k))}">${btIcon(n < 0 ? down : up, '', 'ico-xs')}${n > 0 ? `+${n}` : n}</span>`;
     const captain = (x: 0 | 1) => {
       const h = v.heroes[x], f = this.heroFace(v, x);
-      return `<div class="tb-shh ${x === v.you ? 'you' : 'foe'}"><i class="tb-shf" style="background-image:${f ? `url('${f}')` : 'none'}"></i><b>${esc(this.heroName(v, x))}</b><span class="tb-shp" title="${esc(L('men', { n: h.men, m: h.menStart }))}">${icon('icon.stat_crew', '', 'ico-xs')}${h.men}/${h.menStart}</span>${pip(h.morale, 'st_morale_up', 'st_morale_down', 'morale')}${pip(h.luck, 'st_luck_up', 'st_luck_down', 'luck')}</div>`;
+      void f;
+      return `<div class="tb-shh ${x === v.you ? 'you' : 'foe'}">${this.faceHtml(v, x, 'tb-shf')}<b>${esc(this.heroName(v, x))}</b><span class="tb-shp" title="${esc(L('men', { n: h.men, m: h.menStart }))}">${icon('icon.stat_crew', '', 'ico-xs')}${h.men}/${h.menStart}</span>${pip(h.morale, 'st_morale_up', 'st_morale_down', 'morale')}${pip(h.luck, 'st_luck_up', 'st_luck_down', 'luck')}</div>`;
     };
     const words = v.log.filter((e) => e.k !== 'move').slice(-3).map((e) => this.words(e, v)).filter(Boolean);
     const sheet = this.sheetOpen && !v.over
       ? `<div class="tb-sheet" role="dialog" aria-label="${esc(L('order.label'))}"><div class="tb-sh-r"><b>${esc(L('round', { n: v.round }))}</b><em>${esc(whose)}</em></div>${captain(v.you)}${captain((1 - v.you) as 0 | 1)}<div class="tb-sh-q">${this.queue(v)}</div>${words.length ? `<div class="tb-sh-feed">${words.map((w) => `<div>${esc(w)}</div>`).join('')}</div>` : ''}</div>`
       : '';
     pad.className = `tb-pad${v.over ? ' over' : ''}`;
-    pad.innerHTML = `${turn}${x2}${sheet}<div class="tb-pl">${left}</div><div class="tb-pr">${book}</div>`;
+    pad.innerHTML = `${turn}${sheet}<div class="tb-pl">${left}</div><div class="tb-pr">${book}${x2}</div>`;
     const again = () => {
       this.key = '';
       if (this.view) this.dom(this.view);
     };
-    pad.querySelector<HTMLElement>('[data-sheet]')!.onclick = () => {
+    pad.querySelectorAll<HTMLElement>('[data-sheet]').forEach((b) => (b.onclick = () => {
       this.sheetOpen = !this.sheetOpen;
       if (this.sheetOpen) this.showInfo(null);
       again();
-    };
+    }));
     pad.querySelector<HTMLElement>('[data-fast]')!.onclick = () => this.setFast(!settings().tacFast);
     const cancel = pad.querySelector<HTMLElement>('[data-cancel]');
     if (cancel) cancel.onclick = () => {
@@ -918,8 +942,7 @@ export class TacticalPanel {
       const prim = h.prim ? `<span class="tb-prims">${PRIMS.map((p) => `<span class="tb-prim" title="${esc(PRIM_NAMES[p][lang() === 'ru' ? 1 : 0])}">${icon(PRIM_ICON[p], '', 'ico-xs')}${p === 'will' ? `${h.mana ?? 0}/${h.manaMax ?? 0}` : h.prim![p]}</span>`).join('')}${h.stam !== undefined ? `<span class="tb-prim tb-stamv" title="${esc(L('stam'))}">${icon('tree_survival', '', 'ico-xs')}${h.stam}/${h.stamMax ?? 0}</span>` : ''}</span>` : '';
       // docs/18: her path, and her innate move and ultimate (spent or not) — on her side of the field too.
       const moves = h.path && h.innate ? `<span class="tb-moves">${icon(INNATE[h.path].icon, '', `ico-xs tb-mv${h.innate === 'used' ? ' off' : ''}`)}${h.ult !== 'locked' ? icon(ULTIMATE[h.path].icon, '', `ico-xs tb-mv ult${h.ult === 'used' ? ' off' : ''}`) : ''}<i>${esc(CAPTAINS[h.path].archetype)}</i></span>` : '';
-      const face = this.heroFace(v, x);
-      return `<div class="tb-face" style="background-image:${face ? `url('${face}')` : 'none'}"></div>
+      return `${this.faceHtml(v, x, 'tb-face')}
         <div class="tb-who"><b>${esc(this.heroName(v, x))}</b><small>${esc(v.land && !mine && (isDriftKind(v.land.lair) || v.land.lair === 'find_chest' || roamOf(v.land.lair)) ? '' : placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
     };
     el.querySelector('.tb-hero.you')!.innerHTML = hero(v.you);
@@ -1708,7 +1731,7 @@ export class TacticalPanel {
     if (!this.phone || !this.el) return out;
     const s = stage.getBoundingClientRect();
     const side = s.width > s.height;
-    for (const e of this.el.querySelectorAll<HTMLElement>('.tb-pad > .tb-pl, .tb-pad > .tb-pr, .tb-pad > .tb-turnb, .tb-pad > .tb-fast')) {
+    for (const e of this.el.querySelectorAll<HTMLElement>('.tb-pad > .tb-pl, .tb-pad > .tb-pr, .tb-pad > .tb-chip')) {
       const r = e.getBoundingClientRect();
       if (r.width < 1 || r.height < 1) continue;
       if (side) {
@@ -2317,7 +2340,7 @@ export class TacticalPanel {
     const secs = el.querySelector<HTMLElement>('.tb-secs');
     if (secs) secs.textContent = v.mine && !v.over ? L('secs', { n: Math.ceil(left) }) : '';
     // A phone's clock: the ring round the turn's face, running down (no number on it).
-    const face = el.querySelector<HTMLElement>('.tb-turnb');
+    const face = el.querySelector<HTMLElement>('.tb-chip.turn');
     if (face) {
       const k = (v.over ? 0 : Math.min(1, left / 30)).toFixed(3);
       if (face.style.getPropertyValue('--tl') !== k) face.style.setProperty('--tl', k);

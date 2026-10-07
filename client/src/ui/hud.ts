@@ -61,6 +61,7 @@ import { drawRoamsMini } from '../render/roamers.ts'; // docs/19 D7
 import { armyGlance } from './army.ts';
 import { gloryChip } from './throne.ts'; // docs/19 E1
 import { Toasts } from './kit/toast.ts'; // docs/23 phase 1
+import { faceAttrs } from './kit/faces.ts'; // the rebuild of 2026-10-07
 
 const L = dict(EN, RU);
 const LSF = dict(SEAF_EN, SEAF_RU); // the quick sea fight (docs/23 phases 3–4)
@@ -70,6 +71,11 @@ const RL = dict(REN, RRU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 const wantedTitle = (n: number): string => L(`wanted.${Math.max(0, Math.min(5, n))}` as keyof typeof EN & string);
+
+/** One simple sea HUD for every input (owner, 2026-10-07), unless «Подробный интерфейс» is on (settings: expertHud). */
+export function simpleHud(): boolean {
+  return !!globalThis.document?.body?.classList.contains('simple');
+}
 
 /** A window is open over the sea (the toasts keep to its strip then). */
 function modalOpen(): boolean {
@@ -188,6 +194,8 @@ export class Hud {
   private lastCaptainKey = '';
   /** The glory chip on the plate opens the Throne (docs/19 E1). */
   onThrone: () => void = () => {};
+  /** The simple HUD's captain on a desk: a click opens her sheet (main.ts). */
+  onCaptain: () => void = () => {};
   private lastShipKey = '';
   private lastCombatKey = '';
   private lastBossKey = '';
@@ -241,6 +249,7 @@ export class Hud {
     // The unit frame opens the ship's full condition on screens too small to keep it out.
     // It drops open under the frame's lowest edge (portrait, bars and the line under them), measured as it opens.
     $('hud-captain').onclick = () => {
+      if (simpleHud()) return this.onCaptain();
       if (document.body.classList.toggle('ship-open')) placeShipPanel();
     };
     // A tap on the open panel folds it away again.
@@ -273,6 +282,7 @@ export class Hud {
     // first thing on its right (the chart, the menu button), as tall as the button (the popup budget, styles.css).
     const fold = $('hud-fold'), stack = $('hud-stack');
     this.placeStrip = () => {
+      if (simpleHud()) return this.placeTopStrip(zoom());
       if (!matchMedia(SHORT).matches) return this.placeDeskStrip(zoom());
       document.body.classList.remove('tq-side');
       const z = zoom(), f = fold.getBoundingClientRect(), st = stack.getBoundingClientRect();
@@ -339,6 +349,29 @@ export class Hud {
     new ResizeObserver(clip).observe(this.toastsEl);
     addEventListener('resize', clip);
     this.wireFold();
+  }
+
+  /** The simple HUD's toasts (owner, 2026-10-07: «перегруз сверху»): one band at the top, in the middle, under what
+   *  the top band shows now (the lesson, a boss's line, her mark, the sea's name), clear of the captain and the chart. */
+  private placeTopStrip(z: number): void {
+    const body = document.body;
+    body.classList.remove('tq-side');
+    let top = 8 * z;
+    for (const el of document.querySelectorAll('#hud-stack > :not(.hidden), #sea-herald:not(.hidden), #tc-target:not(.hidden)')) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 2 && r.height > 2 && r.top < innerHeight * 0.3) top = Math.max(top, r.bottom + 6 * z);
+    }
+    let left = 0, right = innerWidth;
+    for (const el of document.querySelectorAll('#hud-captain .cs, #hud-map, #tc-menu, #tc-news')) {
+      const r = el.getBoundingClientRect();
+      if (!r.width || r.top > top + 50 * z) continue;
+      if (r.right < innerWidth / 2) left = Math.max(left, r.right + 8 * z);
+      else right = Math.min(right, r.left - 8 * z);
+    }
+    const half = Math.max(120 * z, Math.min(innerWidth / 2 - left, right - innerWidth / 2, 230 * z));
+    const set = (k: string, v: number) => body.style.setProperty(k, `${Math.round(v / z)}px`);
+    set('--st-top', top);
+    set('--st-w', half * 2);
   }
 
   /** A taller screen: the toasts' band stands over the bottom block, under 30% of the height — unless the block is too
@@ -414,6 +447,8 @@ export class Hud {
     const url = assetUrl(cap.portrait);
     const streak = self.streak && self.streak.n >= 2 ? self.streak : null;
     const pod = podEffect(self.effects, state.estServerTime());
+    if (simpleHud()) this.drawStatus(state);
+    else {
     const ckey = `${lang()}|${streak ? `${streak.n}:${streak.mul}` : ''}|${pod ? `${pod.kind}:${Math.ceil(pod.left / 10)}` : ''}|${self.level}|${Math.round((self.xp / Math.max(1, self.xpNext)) * 200)}|${Math.round((self.rested / Math.max(1, self.xpNext)) * 200)}|${self.gold}|${self.wanted}|${self.talentPoints}|${you.hull}|${you.hullMax}|${you.sails}|${you.sailsMax}|${you.crew}|${you.crewMax}|${url ? 1 : 0}|${self.company.mood ?? ''}:${self.company.shantyUntil ?? 0}|${self.title ?? ''}|${self.glory ? `${self.glory.open}:${self.glory.rank}:${self.glory.pending}:${self.glory.points - self.glory.spent}` : ''}`;
     if (ckey !== this.lastCaptainKey) {
       this.lastCaptainKey = ckey;
@@ -429,6 +464,7 @@ export class Hud {
         e.stopPropagation();
         this.onThrone();
       });
+    }
     }
 
     // Ship condition.
@@ -496,7 +532,7 @@ export class Hud {
     const key = [lang(), this.bestAmmo, document.body.classList.contains('touch'), you.ammoSel, shots.map((a) => `${a}${you.ammo[a]}`).join(','), gauges.map((g) => g.id).join(','),
       abil.map((x) => `${x.a.id}${x.dim ? 1 : 0}${x.locked ? 1 : 0}`).join(','), tals.map((x) => x.t.id).join(','), heat, mode, this.artEpoch].join('|');
     // A phone has no bar: its shots, abilities and talents are the wheel under «Огонь» (docs/23 items 19–21).
-    if (key !== this.lastCombatKey && !document.body.classList.contains('touch')) {
+    if (key !== this.lastCombatKey && !document.body.classList.contains('touch') && !simpleHud()) {
       this.lastCombatKey = key;
       const ammo = shots.map((a) => slot({
         // docs/23 item 39: each shot by its role in a word (round the hull, chain the sails, grape the men), and the best
@@ -562,6 +598,48 @@ export class Hud {
       this.updateRegion(state, now);
     }
   }
+
+  /** The simple HUD's captain (owner, 2026-10-07: «рядом с аватаркой плашка некрасивая прямоугольник и он большой»;
+   *  «слева сверху аватарка и очень удобные красивые уровни жизней, людей»): her face in a round frame, her level on
+   *  its rim, three slim bars — hull, men, sails — with their numbers, and the silver as a chip. Nothing else: the law,
+   *  the experience, the streak and the rest are in her sheet (a click on a desk; the menu's «Капитан» on a phone). */
+  private drawStatus(state: ClientState): void {
+    const self = state.self!, you = state.you!;
+    const cap = CAPTAINS[self.captain];
+    const url = assetUrl(cap.portrait);
+    const key = `simple|${lang()}|${url ? 1 : 0}|${self.level}|${self.gold}|${you.hull}|${you.hullMax}|${you.crew}|${you.crewMax}|${you.sails}|${you.sailsMax}|${self.talentPoints > 0}`;
+    if (key === this.lastCaptainKey) return;
+    this.lastCaptainKey = key;
+    const el = $('hud-captain');
+    const row = (k: 'hull' | 'crew' | 'sails', v: number, max: number, art: string, val: string) =>
+      `<div class="cs-row cs-${k}" title="${esc(`${L(k)}: ${fmt(v)} / ${fmt(max)}`)}">${icon(art, '', 'cs-ico')}<span class="cs-bar"><i style="width:${pct(clamp(v / Math.max(1, max), 0, 1))}"></i></span><span class="cs-v">${esc(val)}</span></div>`;
+    el.innerHTML = `<div class="cs">
+      <div class="cs-frame"><div class="cs-face" ${faceAttrs(cap.portrait, url)}></div><b class="cs-lv" title="${esc(L('lv', { n: self.level }))}">${self.level}</b>${self.talentPoints > 0 ? `<i class="cs-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}"></i>` : ''}</div>
+      <div class="cs-body">${row('hull', you.hull, you.hullMax, 'stat_hull', fmt(you.hull))}${row('crew', you.crew, you.crewMax, 'stat_crew', `${you.crew}/${you.crewMax}`)}${row('sails', you.sails, you.sailsMax, 'stat_sails', fmt(you.sails))}
+        <span class="cs-silver">${icon('coin', '⛁', 'cs-coin')}${fmt(self.gold)}</span></div>
+    </div>`;
+    el.setAttribute('aria-label', `${self.name}: ${L('lv', { n: self.level })}`);
+    el.title = self.name;
+  }
+
+  /** The sea's name a moment, as the ship comes into new waters: a slim line in the top band that fades on its own
+   *  (owner, 2026-10-07: «SALTMARROW» printed large under the boss's plate). The detailed HUD keeps its herald. */
+  seaName(name: string, short: string, long: string): void {
+    if (!simpleHud()) return this.banner(name, long);
+    if (modalOpen()) return;
+    const el = $('sea-herald');
+    el.innerHTML = `<b>${esc(name.charAt(0).toUpperCase() + name.slice(1))}</b><small>${esc(short)}</small>`;
+    el.classList.remove('hidden', 'go');
+    void el.offsetWidth;
+    el.classList.add('go');
+    clearTimeout(this.heraldTimer);
+    this.heraldTimer = setTimeout(() => {
+      el.classList.add('hidden');
+      this.placeStrip();
+    }, 4200);
+    this.placeStrip();
+  }
+  private heraldTimer: ReturnType<typeof setTimeout> | undefined;
 
   /** The world boss panel: name, phase, strength, parts, what to do, and your part in it. */
   private drawBoss(state: ClientState): void {

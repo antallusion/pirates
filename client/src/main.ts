@@ -66,9 +66,9 @@ import { CompanyScreen, renderBarter } from './ui/company.ts';
 import type { CompanyTab } from './ui/company.ts';
 import { LOG_PAGES } from './ui/logbook.ts';
 import { BaseWindow } from './ui/base.ts';
-import { $, decorateSums, esc, fmt, icon, keepInputs } from './ui/dom.ts';
+import { $, decorateSums, esc, fmt, icon, keepInputs, knots } from './ui/dom.ts';
 import { Hud, TOUCH_FOLDED, releaseModalToasts } from './ui/hud.ts';
-import { SeaHud, bestSpecial } from './ui/seahud.ts'; // docs/23 phase 2: the sea and five buttons
+import { SeaHud, bestSpecial, keyHintHtml } from './ui/seahud.ts'; // docs/23 phase 2: the sea and five buttons
 import type { TargetInfo } from './ui/kit/targetline.ts';
 import type { WheelOption } from './ui/kit/radial.ts';
 import { WHEEL_MAX } from './ui/kit/radial.ts';
@@ -420,6 +420,13 @@ const seaHud = new SeaHud($('touch'), {
   sail: () => {
     if (!state.self?.dockedAt || modal) return;
     departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' }));
+  },
+  ammoNext: () => cycleAmmo(1),
+  // «Цель» (owner, 2026-10-07: «захват цели»): the next ship out from her as the mark; none near, a flash.
+  nextTarget: () => {
+    const was = targetId;
+    cycleTarget();
+    if (targetId === was && !state.ships.get(targetId ?? -1)) seaHud.flashLock();
   },
   menu: (id) => (id === 'more' ? openModal('menu') : openMenuItem(id)),
   target: () => seaHud.lend(['hud-target'], 'target'),
@@ -1169,7 +1176,9 @@ function onMessage(m: ServerMsg): void {
         audio.onEvent(e);
         if (e.k === 'region') {
           const r = REGIONS[e.region];
-          hud.banner(r.name, `${L(r.safety === 'safe' ? 'safeWaters' : r.safety === 'contested' ? 'contestedWaters' : 'lawlessWaters')} — ${r.mood}`);
+          // The sea's name (owner, 2026-10-07: «перегруз сверху графический не нужен»): a slim line in the top band that
+          // fades on its own; the older HUD keeps its herald in the toasts' band.
+          hud.seaName(r.name, L(r.safety === 'safe' ? 'safeWaters' : r.safety === 'contested' ? 'contestedWaters' : 'lawlessWaters'), `${L(r.safety === 'safe' ? 'safeWaters' : r.safety === 'contested' ? 'contestedWaters' : 'lawlessWaters')} — ${r.mood}`);
         } else if (e.k === 'discover' && !e.quiet) hud.toast(L('charted', { name: sv(e.name) }), 'xp');
         else if (e.k === 'board_start' && (e.a === state.entityId || e.b === state.entityId)) hud.toast(L('grapples'), 'info');
       }
@@ -1661,6 +1670,13 @@ addEventListener('keydown', (e) => {
     e.preventDefault();
     return;
   }
+  // A key bound alone to a modifier (Shift: the dash) acts on its own tap, when it goes up with nothing pressed while it
+  // was down — Shift+B and Shift+F are the careful boarding and the bribe, not a dash.
+  if (MODS.has(k) && e.isTrusted) {
+    modTap = { k, at: performance.now() };
+    return;
+  }
+  if (e.isTrusted) modTap = null;
   const act = actionFor(settings().keys, k);
   if (!act) return;
   // Arrows and Space must not scroll the page.
@@ -1674,6 +1690,10 @@ addEventListener('keydown', (e) => {
       break;
     case 'sailDown':
       state.input.sail = clamp(state.input.sail - 1, 0, 4);
+      break;
+    case 'fire':
+      // «Огонь» by its key (Space): the volley at her mark, or the broadside laid on her first (seaFire).
+      seaFire();
       break;
     case 'firePort':
       holdFire('port');
@@ -1799,6 +1819,11 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => {
   const k = keyOf(e);
   keys.delete(k);
+  if (modTap?.k === k && performance.now() - modTap.at < 400 && !typing()) {
+    dispatchEvent(new KeyboardEvent('keydown', { key: e.key, code: e.code }));
+    keys.delete(k);
+  }
+  modTap = null;
   // A held broadside fires when its key comes up.
   const act = actionFor(settings().keys, k);
   if (act === 'firePort') releaseFire('port');
@@ -1808,6 +1833,10 @@ addEventListener('blur', () => {
   keys.clear();
   charge = null;
 });
+
+/** The modifiers a key map may bind alone, and the one pressed down with nothing after it yet. */
+const MODS = new Set(['shift', 'control', 'alt']);
+let modTap: { k: string; at: number } | null = null;
 
 const canvas = $('world');
 canvas.addEventListener('mousemove', (e) => {
@@ -1821,6 +1850,8 @@ canvas.addEventListener('wheel', (e) => {
 canvas.addEventListener('mousedown', (e) => {
   if (!inGame || e.button !== 0) return;
   pinTarget(shipAtScreen(e.clientX, e.clientY)); // a click on a ship makes her the target (and fires at her)
+  // The simple HUD fires by its keys (Space, Q, E): a click only picks the mark (it fired a broadside at every click).
+  if (simpleHud()) return;
   const side = sideUnderCursor();
   if (side) fire(side);
 });
@@ -1915,6 +1946,8 @@ function sendAbility(id: string): void {
 }
 
 hud.onAbility = (id) => sendAbility(id);
+// The captain's frame on a desk opens her sheet (the law, the experience and the rest live there now).
+hud.onCaptain = () => (modal === 'hero' ? closeModal() : openHero());
 hud.onAmmo = (id) => net.send({ t: 'ammo', ammo: id as 'round' });
 hud.onTalent = (id) => sendTalent(id);
 hud.onAmmoCycle = () => cycleAmmo(1);
@@ -2398,8 +2431,14 @@ function seaFrame(): void {
     return !!e && !e.classList.contains('hidden');
   }).length;
   const unread = (Number($('chat-unread').textContent) || 0) + (Number(($('unread').textContent ?? '').replace(/\D/g, '')) || 0);
+  // A fight on or near: her mark (picked, or the nearest foe within a mile), her guns busy, the helmsman after one.
+  const fight = !self.dockedAt && (targetId !== null || !!state.pursuit || !!you.combat);
+  // A world boss as her mark: its slim line steps aside for her mark's (owner, 2026-10-07: «OLD MOORINGS» twice).
+  document.body.classList.toggle('sea-boss-target', targetId !== null && (state.bosses.some((b) => b.id === targetId) || state.ships.get(targetId)?.info?.npcRole === 'boss'));
   seaHud.frame({
     docked: !!self.dockedAt,
+    touch: touch.enabled,
+    fight,
     act: a ? { id: a.id, icon: a.icon, label: a.label, ...(a.sub ? { sub: a.sub } : {}), more: curActs.length - 1 } : null,
     special: specialNow(),
     target: self.dockedAt ? null : seaTarget(),
@@ -2409,6 +2448,39 @@ function seaFrame(): void {
     news,
     unread,
   });
+}
+
+/** One simple sea HUD for every input (owner, 2026-10-07), unless the detailed interface is asked for. */
+function simpleHud(): boolean {
+  return document.body.classList.contains('simple');
+}
+
+/** The desk's line of keys (owner, 2026-10-07: «на пк чисто через wasd и другие клавиши»; «a small, unobtrusive key hint,
+ *  fading after the first minutes»): shown on a desk with the simple HUD for the first five minutes at sea (counted
+ *  across visits), all through the First Watch, and in port; it fades, then stays away. */
+const KEY_HINT_SEC = 300;
+let keyHintKey = '', keyHintSeen = Number(localStorage.getItem('gravetide.keyHint') ?? 0) || 0, keyHintAt = 0;
+function keyHint(t: number): void {
+  const el = $('key-hint');
+  const self = state.self;
+  const docked = !!self?.dockedAt;
+  const watch = !!state.onboarding?.stage;
+  const at = t - keyHintAt;
+  keyHintAt = t;
+  const on = !!self && simpleHud() && !touch.enabled && !state.boardTac && !state.boardFight && modal === null;
+  if (on && !docked && at > 0 && at < 1000) {
+    const was = Math.floor(keyHintSeen);
+    keyHintSeen += at / 1000;
+    if (Math.floor(keyHintSeen) !== was && Math.floor(keyHintSeen) % 5 === 0) try { localStorage.setItem('gravetide.keyHint', String(Math.floor(keyHintSeen))); } catch { /* private mode */ }
+  }
+  const show = on && (docked || watch || keyHintSeen < KEY_HINT_SEC);
+  const fade = show && !docked && !watch && keyHintSeen > KEY_HINT_SEC - 8;
+  const key = show ? `${docked}|${fade}|${lang()}|${JSON.stringify(settings().keys)}` : '';
+  if (key === keyHintKey) return;
+  keyHintKey = key;
+  el.classList.toggle('hidden', !show);
+  el.classList.toggle('fade', fade);
+  if (show) el.innerHTML = keyHintHtml(docked, (a) => keyOfAction(a as Action));
 }
 
 /** The captain's gunnery settings to the server (auto-fire, auto-battle against the weak, the expert's hand). */
@@ -2958,12 +3030,15 @@ function step(t: number): void {
     if (!state.boardTac) askOdds(targetId); // the boarding chance on the target line (docs/23 item 49)
     hud.bestAmmo = bestShot(); // docs/23 item 39
     hud.drawTarget(state, targetId);
-    if (touch.enabled && state.self) {
+    // The sea HUD (docs/23 phase 2): on a touch screen, and on a desk unless the detailed interface is asked for
+    // (owner, 2026-10-07: one simple interface everywhere — the desk had only the old bar, and in the First Watch nothing).
+    if ((touch.enabled || simpleHud()) && state.self) {
       const dashLeft = Math.max(0, (state.self.dashReadyAt ?? 0) - state.estServerTime());
-      touch.frame(own?.heading ?? null, state.input.sail, dashLeft / DASH_COOLDOWN);
+      touch.frame(own?.heading ?? null, state.input.sail, dashLeft / DASH_COOLDOWN, state.you && !state.self.dockedAt ? knots(state.you.spd) : '');
       seaFrame();
       autoMount();
     }
+    keyHint(t);
     divePanel.render(state.dive);
     boardFight.render(state.boardFight);
     tactical.render(state.boardTac);
