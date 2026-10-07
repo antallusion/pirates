@@ -125,6 +125,8 @@ export class Phone {
   async until(fn, ms, label) {
     const t = Date.now();
     for (;;) {
+      // A new level's choice comes up by itself over whatever she was about to press: she takes it, as a player would.
+      await this.levelUp();
       const v = await fn();
       if (v) return v;
       if (Date.now() - t > ms) throw new StepError(`timed out (${Math.round(ms / 1000)} s): ${label}`);

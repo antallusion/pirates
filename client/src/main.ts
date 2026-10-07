@@ -2049,8 +2049,9 @@ function gatherActs(): { acts: Act[]; info: string[] } {
       best = s.id;
       continue;
     }
-    // With a mark of hers, another ship is offered only if it is at her throat (not a lawful one alongside by chance).
-    if (mark !== null && !(c.flags & SF.HOSTILE)) continue;
+    // With a mark of hers, the law alongside by chance is not offered (a Crown cutter beside the pirate she ran down) —
+    // unless it is at her throat.
+    if (mark !== null && s.info.npcRole === 'patrol' && !(c.flags & SF.HOSTILE)) continue;
     if (d < bd) {
       bd = d;
       best = s.id;
