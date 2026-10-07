@@ -463,7 +463,7 @@ function gullShadow(): HTMLCanvasElement | null {
 }
 
 /** Gulls wheeling round the origin (the painted top-down gull, beating its wings), their shadows on the water. */
-function gulls(g: G, n: number, k: number, t: number, radius: number): boolean {
+export function gulls(g: G, n: number, k: number, t: number, radius: number): boolean {
   const spr = sprite('creature.gull');
   if (!spr) return false;
   const shadow = gullShadow();
