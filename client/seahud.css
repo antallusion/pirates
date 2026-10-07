@@ -72,6 +72,8 @@ body.simple #touch > #tc-news { position: absolute; top: calc(var(--sa-t) + 8px)
 @media (hover: hover) and (pointer: fine) and (min-height: 521px) {
   body.simple:not(.touch) #touch > #tc-news { right: calc(var(--sa-r) + var(--mm) + 16px + 44px + 8px); }
 }
+/* The First Watch's lesson is the news now: the counter waits (seven things to touch at most with its two skips). */
+body.simple:has(#hud-watch:not(.hidden):not(.tut-hidden)) #touch > #tc-news { display: none !important; }
 /* A fight on a touch screen: the chart and the counter step aside (seven things to touch at most). */
 body.simple.touch.sea-fight #hud-map, body.simple.touch.sea-fight #touch > #tc-news { display: none !important; }
 
@@ -119,9 +121,10 @@ body.simple #sea-herald.hidden { display: none !important; }
 body.reduce-motion #sea-herald.go { animation: none; }
 /* the toasts: one band under the column, two at most, in the middle and clear of the captain and the chart (hud.ts) */
 body.simple #toasts, body.simple.tq-side #toasts, body.simple.touch #toasts {
-  top: var(--st-top, calc(var(--sa-t) + 8px)) !important; bottom: auto !important; left: 50% !important; right: auto !important; transform: translateX(-50%) !important;
+  top: var(--st-top, calc(var(--sa-t) + 8px)) !important; bottom: auto !important; left: var(--st-left, 27vw) !important; right: auto !important; transform: none !important;
   width: var(--st-w, min(420px, 46vw)) !important; height: auto !important; max-height: 30vh; flex-flow: column nowrap !important; overflow: hidden; }
 body.simple #toasts > .toast:nth-child(n+3) { display: none; }
+@media (max-height: 420px) { body.simple #toasts > .toast:nth-child(n+2) { display: none; } }
 body.simple.tac #toasts { display: none; }
 body.simple.tac #toasts:has(> .toast.bad, > .toast.good, > .toast.xp) { display: flex; top: calc(var(--sa-t) + 64px) !important; }
 

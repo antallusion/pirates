@@ -390,10 +390,14 @@ export class Hud {
       if (r.right < innerWidth / 2) left = Math.max(left, r.right + 8 * z);
       else right = Math.min(right, r.left - 8 * z);
     }
-    const half = Math.max(120 * z, Math.min(innerWidth / 2 - left, right - innerWidth / 2, 230 * z));
+    // In the middle when there is room for it on both sides; on a narrow screen (640×360) the room between the captain
+    // and the menu, as wide as it is (a band forced to the middle ran under the captain's bars).
+    const half = Math.min(innerWidth / 2 - left, right - innerWidth / 2, 230 * z);
+    const mid = half * 2 >= 260 * z;
     const set = (k: string, v: number) => body.style.setProperty(k, `${Math.round(v / z)}px`);
     set('--st-top', top);
-    set('--st-w', half * 2);
+    set('--st-left', mid ? innerWidth / 2 - half : left);
+    set('--st-w', mid ? half * 2 : Math.max(150 * z, right - left));
   }
 
   /** A taller screen: the toasts' band stands over the bottom block, under 30% of the height — unless the block is too
