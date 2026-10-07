@@ -38,7 +38,17 @@ const look = () => p.evaluate((isTouch) => {
   const vis = (e) => { if (!e) return false; for (let q = e; q; q = q.parentElement) { const c = getComputedStyle(q); if (c.display === 'none' || c.visibility === 'hidden' || +c.opacity < 0.05) return false; } return true; };
   // The popup budget: the kit's list, and the new interface's own transient parts.
   const pop = globalThis.__popAudit();
-  let extra = 0; const centre = [...pop.centre]; const items = [...pop.items];
+  // What a window or a film lies over is not on the screen (the battle's end band under the prize window was counted).
+  const covered = (l, t, r, b) => { const e = document.elementFromPoint((l + r) / 2, (t + b) / 2); return !!e && !!e.closest('#modal-panel, .film, .k-sheet-root.k-open') && !e.closest('#modal-toasts'); };
+  let hiddenArea = 0;
+  const items = [];
+  for (const it of pop.items) {
+    const m = /(-?\d+),(-?\d+),(-?\d+),(-?\d+)$/.exec(it);
+    if (m && !/modal-toasts/.test(it) && covered(+m[1], +m[2], +m[3], +m[4])) { hiddenArea += (m[3] - m[1]) * (m[4] - m[2]); continue; }
+    items.push(it);
+  }
+  pop.pct = +(pop.pct - (100 * hiddenArea) / (W * H)).toFixed(1);
+  let extra = 0; const centre = pop.centre.filter((c) => items.some((i) => i.startsWith(c.split(' ')[0])));
   const modalUp = !document.querySelector('#modal')?.classList.contains('hidden');
   for (const sel of ['.k-hint', '#hud-watch', '#tut-finger', '#hud-feed', '#hud-tip']) {
     for (const e of document.querySelectorAll(sel)) {
@@ -96,7 +106,8 @@ async function check(name) {
   await L.sleep(700);
   await KIT();
   const m = await look();
-  const words = (lang === 'ru' ? await L.latin(p) : await L.cyr(p)).filter((w) => !/^(Ревизор|Probe|Qa\w*|QA\w*|Iron|Verdict|Grey|Gray|Widow|Saltmarrow)\b/.test(w) && !/@(.*name|.*-who|tb-who|w-sub|hud-captain|uf-)/.test(w));
+  // (other captains' names in a list — the test captains of the e2e and QA runs, «Риск…», «Probe…» — are not words)
+  const words = (lang === 'ru' ? await L.latin(p) : await L.cyr(p)).filter((w) => !/^(Ревизор|Probe|Qa\w*|QA\w*|Iron|Verdict|Grey|Gray|Widow|Saltmarrow|Риск|Бой|Порт|Остров|Книга|Урок|Вход|Замер|Экран|Нов|Дбг|Гав|Login|Fight|Risk|Port|Isle|Book|Lesson)/.test(w) && !/@(.*name|.*-who|tb-who|w-sub|hud-captain|uf-)/.test(w));
   const shot = await ph.shot(name);
   const row = { screen: name, ...m, words: words.slice(0, 6), errors: p.errors.splice(0) };
   rows.push(row);
