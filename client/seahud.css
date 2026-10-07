@@ -193,7 +193,8 @@ body.tac #key-hint { display: none; }
 .k-wheel-ico { width: 26px; height: 26px; border-radius: 14%; }
 .k-wheel--many .k-wheel-ico { width: 22px; height: 22px; }
 .k-wheel-n { top: -8px; right: -9px; }
-.k-tile .k-tile-pic { position: relative; display: inline-flex; }
+.k-tile .k-tile-pic { position: relative; display: inline-flex; flex: none; width: 36px; height: 36px; }
+.k-tile .k-tile-pic .k-tile-ico { width: 100%; height: 100%; object-fit: contain; }
 .k-tile .k-tile-pic .k-badge { top: -6px; right: -12px; }
 .micro-menu button img, .micro-menu button .glyph { inset: 24%; width: 52%; height: 52%; border-radius: 14%; }
 .hud-fold img { inset: 24%; width: 52%; height: 52%; border-radius: 14%; }
