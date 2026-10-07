@@ -179,7 +179,8 @@ export function stepPursuit(game: Game): void {
     if (run.auto && autoBattle(game, ship, t, run)) continue;
     // No endless chases (docs/23 item 44): forty seconds and not a hit either way.
     const lastHit = Math.max(run.since, t.attackers.get(ship.id) ?? -Infinity, ship.attackers.get(t.id) ?? -Infinity);
-    if (now - lastHit > CHASE_GIVE_UP && !t.isPlayer) {
+    // (The First Watch's raider never slips away from her pupil nor strikes to her: she is the lesson, QA 2026-10-07.)
+    if (now - lastHit > CHASE_GIVE_UP && !t.isPlayer && game.npcs.get(t.id)?.practice !== ship.id) {
       const brain = game.npcs.get(t.id);
       if (brain && !t.surrendered && (canStrike(t) || t.npcRole === 'merchant' || t.npcRole === 'fisher') && !brain.struck) {
         brain.struck = true;

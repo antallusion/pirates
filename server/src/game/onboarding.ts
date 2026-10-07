@@ -285,6 +285,7 @@ function practiceRaider(game: Game, s: PlayerSession, ship: ShipEntity): void {
     brain.chase = { id: ship.id, until: game.now + 300 };
     brain.target = ship.id;
     brain.practice = ship.id;
+    brain.struck = true; // she fights the lesson out: no colours struck, no card of terms over it
     // The guns take at most three tenths of her: ten of fourteen are left for «the battle, turn by turn» — three or
     // four rounds a side (a pupil's 24 deckhands win it every time), not the one blow it was.
     brain.practiceFloor = Math.ceil(r.crew * PRACTICE_FLOOR);

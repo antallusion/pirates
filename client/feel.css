@@ -36,6 +36,10 @@ body.reduce-motion #tut-finger .tf-hand, body.reduce-motion .tut-target { animat
   #hud-watch .w-short { display: inline; }
 }
 
+/* In the First Watch the counter of news and goals keeps away: the lesson's row stood under it (the counter at 172 px
+   from the left, the row from 55 px while the captain's plate is not yet in, QA 2026-10-07), and the watch is the news. */
+body.touch:has(#hud-watch:not(.hidden)) #touch > .tc-news { display: none !important; }
+
 /* The lesson steps aside while the decks fight: the hexes are the step («На абордаж… и победите»), and the battle's own
    top band and its end band are the screen's (with it the end stood at 21.7 % of a 812×375 screen). */
 body.tac #hud-watch, body.boarding #hud-watch { display: none !important; }
