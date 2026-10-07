@@ -403,7 +403,6 @@ export class TacticalPanel {
   private phone = false;
   /** …held upright (its book one tall page). */
   private tall = false;
-  private phoneMq: MediaQueryList | null = typeof matchMedia === 'function' ? matchMedia('(max-width: 520px), (max-height: 520px)') : null;
   /** On a phone: the «…» of the fight's own orders opened, and the round (its order, the captains, the feed) opened
    *  behind the face of the stack whose turn it is. */
   private moreOpen = false;
@@ -434,10 +433,11 @@ export class TacticalPanel {
     return settings().tacFast ? 2 : 1;
   }
 
-  /** A touch screen with a phone's short side (375×812 upright, 812×375 or 932×430 on its side); a tablet and a desk
-   *  keep the captains' panels beside the field. */
+  /** A touch screen: a phone (375×812 upright, 812×375 or 932×430 on its side) and a tablet alike (owner, 2026-10-07: «на
+   *  планшете такое же управление надо сделать»): the field over the screen, the round buttons and the book in its
+   *  corners, the two captains in its top corners. A desk keeps the captains in one band at the top over the field. */
   private isPhone(): boolean {
-    return document.body.classList.contains('touch') && !!this.phoneMq?.matches;
+    return document.body.classList.contains('touch');
   }
 
   get open(): boolean {

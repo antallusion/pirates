@@ -268,6 +268,12 @@ export class Hud {
       if (simpleHud()) return this.onCaptain();
       if (document.body.classList.toggle('ship-open')) placeShipPanel();
     };
+    $('hud-captain').addEventListener('keydown', (e) => {
+      if (!simpleHud() || (e.key !== 'Enter' && e.key !== ' ')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.onCaptain();
+    });
     // A tap on the open panel folds it away again.
     $('hud-ship').onclick = () => document.body.classList.contains('touch') && document.body.classList.remove('ship-open');
     // The toast column stands on top of the bottom block, whatever its height (a prompt, a two-row action bar).
@@ -636,6 +642,10 @@ export class Hud {
     </div>`;
     el.setAttribute('aria-label', `${self.name}: ${L('lv', { n: self.level })}`);
     el.title = self.name;
+    // On a desk the frame opens her sheet: a button for the keyboard too (Enter or Space on it).
+    const desk = !document.body.classList.contains('touch');
+    el.setAttribute('role', desk ? 'button' : 'group');
+    el.tabIndex = desk ? 0 : -1;
   }
 
   /** The sea's name a moment, as the ship comes into new waters: a slim line in the top band that fades on its own

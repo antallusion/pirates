@@ -126,8 +126,8 @@ body.simple.tac #toasts { display: none; }
 body.simple.tac #toasts:has(> .toast.bad, > .toast.good, > .toast.xp) { display: flex; top: calc(var(--sa-t) + 64px) !important; }
 
 /* ---------- touch: the helm and its speed, bottom left */
-body.simple #tc-speed { position: absolute; left: calc(var(--sa-l) + 10px + var(--stick) + 2px); bottom: calc(var(--sa-b) + 12px); padding: 1px 7px; border-radius: var(--k-r-round);
-  background: rgba(10, 11, 13, 0.7); box-shadow: inset 0 0 0 1px rgba(111, 90, 56, 0.4); color: var(--k-bone); font: 600 11px/16px var(--k-font-sans); font-variant-numeric: tabular-nums; pointer-events: none; }
+body.simple #tc-speed { position: absolute; left: calc(var(--sa-l) + 10px + var(--stick) / 2); transform: translateX(-50%); bottom: calc(var(--sa-b) + 1px); padding: 0 7px; border-radius: var(--k-r-round);
+  background: rgba(10, 11, 13, 0.82); box-shadow: inset 0 0 0 1px rgba(111, 90, 56, 0.5); color: var(--k-bone); font: 600 10.5px/15px var(--k-font-sans); font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; z-index: 1; }
 body.simple #tc-speed:empty { display: none; }
 #tc-speed { display: none; }
 body.simple.touch #tc-speed { display: block; }
