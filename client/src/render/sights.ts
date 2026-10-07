@@ -1,12 +1,26 @@
-// Signs on the horizon (docs/12 P2), drawn by hand on the canvas: smoke, birds over a shoal, a spout, a glint, a raft,
-// a fire, fins, a squall line, lights in the dark — each a small moving thing that makes a captain turn to look, and
-// a gold "?" over it while it is still far off.
+// Signs on the horizon (docs/12 P2): smoke, birds over a shoal, a spout, a glint, a raft, a fire, fins, a squall line,
+// lights in the dark — each a small moving thing that makes a captain turn to look, made from the art (owner,
+// 2026-10-07: the painted smoke and flame, flotsam, the boat, the wreck, an iron ball, the sharks, the tentacle, the
+// gulls, a plate of ice); a gold "?" in a brass medallion over it while it is still far off.
 
 import type { ShoalView, SightView } from '../../../shared/src/protocol.ts';
 import { FISH } from '../../../shared/src/data/fishing.ts';
 import { lang } from '../i18n.ts';
 import { sprite } from '../assets.ts';
-import { drawPiece } from './seaart.ts';
+import { brassRing, circlers, drawArt, drawPiece, foam, icePlate, piece } from './seaart.ts';
+
+/** A small deterministic generator (a sign's ice keeps its shape). */
+function rnd(seed: number): () => number {
+  let x = (seed * 2654435761) >>> 0 || 1;
+  return () => {
+    x ^= x << 13;
+    x >>>= 0;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    x >>>= 0;
+    return x / 4294967296;
+  };
+}
 
 type G = CanvasRenderingContext2D;
 
@@ -26,13 +40,7 @@ export function drawSights(g: G, list: SightView[], sx: (x: number) => number, s
     const d = own ? Math.hypot(s.x - own.x, s.y - own.y) : 0;
     if (d > 420) {
       const bob = Math.sin(t * 2 + s.id) * 3;
-      g.font = `700 ${Math.round(15 + 4 * Math.min(1, zoom))}px Inter, sans-serif`;
-      g.textAlign = 'center';
-      g.lineWidth = 3;
-      g.strokeStyle = 'rgba(0,0,0,0.75)';
-      g.strokeText('?', x, y - 34 * k + bob);
-      g.fillStyle = '#e8c46a';
-      g.fillText('?', x, y - 34 * k + bob);
+      askMedallion(g, x, y - 34 * k + bob, 9 + 2 * Math.min(1, zoom));
     }
   }
 }
@@ -45,71 +53,135 @@ function edgeMark(g: G, x: number, y: number, w: number, h: number, t: number): 
   const k = Math.min((w / 2 - pad) / Math.max(1e-6, Math.abs(Math.cos(a))), (h / 2 - pad) / Math.max(1e-6, Math.abs(Math.sin(a))));
   const ex = cx + Math.cos(a) * k, ey = cy + Math.sin(a) * k;
   const pulse = 0.75 + 0.25 * Math.sin(t * 3);
+  askMedallion(g, ex, ey, 11);
   g.save();
   g.translate(ex, ey);
-  g.fillStyle = `rgba(232,196,106,${0.85 * pulse})`;
-  g.strokeStyle = 'rgba(0,0,0,0.75)';
-  g.lineWidth = 2;
-  g.beginPath();
-  g.arc(0, 0, 11, 0, Math.PI * 2);
-  g.fill();
-  g.stroke();
-  // The arrowhead toward it.
+  // The arrowhead toward it, outside the brass.
+  g.fillStyle = `rgba(232,196,106,${0.9 * pulse})`;
   g.rotate(a);
   g.beginPath();
-  g.moveTo(17, 0);
-  g.lineTo(11, -5);
-  g.lineTo(11, 5);
+  g.moveTo(23, 0);
+  g.lineTo(17, -5);
+  g.lineTo(17, 5);
   g.closePath();
   g.fill();
-  g.rotate(-a);
-  g.fillStyle = '#1a1206';
-  g.font = '700 14px Inter, sans-serif';
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  g.fillText('?', 0, 1);
   g.restore();
 }
 
+/** A gold «?» in a small brass medallion (the UI's ring): a sign not yet made out. */
+function askMedallion(g: G, x: number, y: number, r: number): void {
+  g.save();
+  g.fillStyle = 'rgba(8,10,14,0.85)';
+  g.beginPath();
+  g.arc(x, y, r, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#e8c46a';
+  g.font = `700 ${Math.round(r * 1.3)}px Inter, sans-serif`;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText('?', x, y + 1);
+  g.restore();
+  if (!brassRing(g, x, y, r)) {
+    g.strokeStyle = '#8c6b3a';
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.stroke();
+  }
+}
+
 function puff(g: G, x: number, y: number, r: number, a: number, color = '120,120,125'): void {
+  // The painted smoke, tinted (CLAUDE.md §2: from the art); a soft disc only while it loads.
+  const sm = piece('smoke');
+  if (sm) {
+    g.save();
+    g.globalAlpha *= Math.min(1, a * 1.25);
+    g.drawImage(tinted(sm, color), x - r * 1.25, y - r * 1.25, r * 2.5, r * 2.5);
+    g.restore();
+    return;
+  }
   g.fillStyle = `rgba(${color},${a})`;
   g.beginPath();
   g.arc(x, y, r, 0, Math.PI * 2);
   g.fill();
 }
 
+/** The painted smoke dyed to a tone ('r,g,b'), made once a tone. */
+const tones = new Map<string, HTMLCanvasElement>();
+function tinted(sm: HTMLCanvasElement, rgb: string): HTMLCanvasElement {
+  const hit = tones.get(rgb);
+  if (hit) return hit;
+  const c = document.createElement('canvas');
+  c.width = sm.width;
+  c.height = sm.height;
+  const x = c.getContext('2d')!;
+  x.drawImage(sm, 0, 0);
+  x.globalCompositeOperation = 'multiply';
+  x.fillStyle = `rgb(${rgb})`;
+  x.fillRect(0, 0, c.width, c.height);
+  x.globalCompositeOperation = 'destination-in';
+  x.drawImage(sm, 0, 0);
+  tones.set(rgb, c);
+  return c;
+}
+
+/** One sign at the origin, `k` its scale — every one from the art (owner, 2026-10-07): the painted smoke and flame,
+ *  the flotsam, the boat, the wreck, the iron ball of a mine, the sharks and the tentacle, the gulls, the ice. */
 function drawOne(g: G, kind: string, k: number, t: number): void {
   switch (kind) {
     case 'smoke':
     case 'beacon':
     case 'fire': {
       if (kind === 'fire') {
+        // A burning raft: the flotsam alight, the painted flame over it, its glow on the water.
         const f = 0.6 + 0.4 * Math.sin(t * 9);
         const glow = g.createRadialGradient(0, 0, 0, 0, 0, 30 * k);
-        glow.addColorStop(0, `rgba(255,170,60,${0.8 * f})`);
+        glow.addColorStop(0, `rgba(255,170,60,${0.6 * f})`);
         glow.addColorStop(1, 'rgba(255,90,20,0)');
         g.fillStyle = glow;
         g.beginPath();
         g.arc(0, 0, 30 * k, 0, Math.PI * 2);
         g.fill();
-        g.fillStyle = '#2a1e14';
-        g.fillRect(-12 * k, -3 * k, 24 * k, 6 * k);
+        if (!drawArt(g, 'prop.flotsam', 0, 0, 26 * k, t * 0.05)) {
+          g.fillStyle = '#2a1e14';
+          g.fillRect(-12 * k, -3 * k, 24 * k, 6 * k);
+        }
+        g.save();
+        g.globalCompositeOperation = 'lighter';
+        drawArt(g, 'part.fire', 0, -6 * k, (14 + 3 * f) * k, Math.sin(t * 5) * 0.1, 0.8);
+        g.restore();
       }
       for (let i = 0; i < 5; i++) {
         const life = (t * 0.35 + i / 5) % 1;
         puff(g, Math.sin(t * 0.7 + i) * 4 * k + life * 10 * k, -life * 60 * k, (4 + life * 10) * k, 0.45 * (1 - life), kind === 'fire' ? '60,55,55' : '150,150,155');
       }
-      if (kind === 'beacon') puff(g, 0, 0, 4 * k, 0.9, '255,150,60');
+      if (kind === 'beacon') {
+        const gr = g.createRadialGradient(0, 0, 0, 0, 0, 8 * k);
+        gr.addColorStop(0, 'rgba(255,170,80,0.95)');
+        gr.addColorStop(1, 'rgba(255,150,60,0)');
+        g.fillStyle = gr;
+        g.beginPath();
+        g.arc(0, 0, 8 * k, 0, Math.PI * 2);
+        g.fill();
+      }
       break;
     }
     case 'flare': {
+      // A distress flare climbing from a ship's boat.
       const life = (t * 0.4) % 1;
-      puff(g, 0, -life * 70 * k, 5 * k, 1 - life, '255,70,60');
-      puff(g, 0, -life * 70 * k, 14 * k, 0.25 * (1 - life), '255,70,60');
-      g.fillStyle = '#5a4630';
+      const gr = g.createRadialGradient(0, -life * 70 * k, 0, 0, -life * 70 * k, 14 * k);
+      gr.addColorStop(0, `rgba(255,90,70,${1 - life})`);
+      gr.addColorStop(1, 'rgba(255,70,60,0)');
+      g.fillStyle = gr;
       g.beginPath();
-      g.ellipse(0, 0, 14 * k, 5 * k, 0.3, 0, Math.PI * 2);
+      g.arc(0, -life * 70 * k, 14 * k, 0, Math.PI * 2);
       g.fill();
+      if (!drawPiece(g, 'boat', 0, 0, 22 * k, 1.3)) {
+        g.fillStyle = '#5a4630';
+        g.beginPath();
+        g.ellipse(0, 0, 14 * k, 5 * k, 0.3, 0, Math.PI * 2);
+        g.fill();
+      }
       break;
     }
     case 'birds': {
@@ -132,33 +204,21 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
     }
     case 'raft':
     case 'boat': {
+      // Castaways: a raft of flotsam or a ship's boat, a rag waving on an oar (the painted pennant, bleached).
       const bob = Math.sin(t * 1.6) * 0.12;
-      g.rotate(bob);
-      g.fillStyle = kind === 'raft' ? '#6b5436' : '#5a4630';
-      if (kind === 'raft') g.fillRect(-10 * k, -7 * k, 20 * k, 14 * k);
-      else {
-        g.beginPath();
-        g.ellipse(0, 0, 14 * k, 5 * k, 0, 0, Math.PI * 2);
-        g.fill();
+      foam(g, 0, 0, 12 * k, t, 3, 0.2);
+      const drawn = kind === 'raft' ? drawArt(g, 'prop.flotsam', 0, 0, 26 * k, bob) : drawPiece(g, 'boat', 0, 0, 26 * k, 1.4 + bob);
+      if (!drawn) {
+        g.fillStyle = kind === 'raft' ? '#6b5436' : '#5a4630';
+        g.fillRect(-10 * k, -7 * k, 20 * k, 14 * k);
       }
-      g.fillStyle = '#1c1612';
-      g.beginPath();
-      g.arc(-3 * k, 0, 2.2 * k, 0, Math.PI * 2);
-      g.arc(4 * k, 1 * k, 2.2 * k, 0, Math.PI * 2);
-      g.fill();
-      // A rag on an oar, waving.
       g.strokeStyle = '#3a2e22';
       g.lineWidth = 1.5;
       g.beginPath();
       g.moveTo(6 * k, 0);
-      g.lineTo(6 * k, -18 * k);
+      g.lineTo(6 * k, -16 * k);
       g.stroke();
-      g.fillStyle = 'rgba(230,225,210,0.9)';
-      g.beginPath();
-      g.moveTo(6 * k, -18 * k);
-      g.lineTo((13 + Math.sin(t * 6) * 2) * k, -15 * k);
-      g.lineTo(6 * k, -12 * k);
-      g.fill();
+      drawPiece(g, 'pennant', 11 * k, -15 * k, 11 * k, Math.sin(t * 6) * 0.15, 1, '#d8d0bc');
       break;
     }
     case 'lantern':
@@ -174,60 +234,60 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
       g.beginPath();
       g.arc(0, 0, r, 0, Math.PI * 2);
       g.fill();
+      if (kind === 'lantern') drawPiece(g, 'lantern', 0, 0, 12 * k, 0.4);
       break;
     }
     case 'glint': {
+      // Something bright in the water: the light off it, and the spray as the swell turns it.
       const f = Math.max(0, Math.sin(t * 3));
-      g.strokeStyle = `rgba(255,236,170,${0.4 + 0.6 * f})`;
-      g.lineWidth = 1.5;
-      const r = (4 + 5 * f) * k;
+      const gr = g.createRadialGradient(0, 0, 0, 0, 0, (5 + 6 * f) * k);
+      gr.addColorStop(0, `rgba(255,240,190,${0.5 + 0.5 * f})`);
+      gr.addColorStop(1, 'rgba(255,236,170,0)');
+      g.fillStyle = gr;
       g.beginPath();
-      g.moveTo(-r, 0);
-      g.lineTo(r, 0);
-      g.moveTo(0, -r);
-      g.lineTo(0, r);
-      g.stroke();
-      puff(g, 0, 0, 3 * k, 0.8, '120,190,120');
+      g.arc(0, 0, (5 + 6 * f) * k, 0, Math.PI * 2);
+      g.fill();
+      foam(g, 0, 0, 6 * k, t, 5, 0.25);
       break;
     }
     case 'wreck': {
-      g.rotate(0.5 + Math.sin(t * 0.5) * 0.05);
+      if (drawArt(g, 'prop.shipwreck', 0, 0, 46 * k, 0.5 + Math.sin(t * 0.5) * 0.05, 0.9)) break;
+      g.rotate(0.5);
       g.fillStyle = 'rgba(40,34,30,0.9)';
       g.beginPath();
       g.ellipse(0, 0, 22 * k, 7 * k, 0, 0, Math.PI * 2);
       g.fill();
-      g.strokeStyle = 'rgba(200,200,190,0.5)';
-      g.beginPath();
-      g.moveTo(0, 0);
-      g.lineTo(0, -26 * k);
-      g.stroke();
       break;
     }
     case 'debris': {
+      if (drawArt(g, 'prop.wreckage', 0, 0, 44 * k, Math.sin(t * 0.3) * 0.1, 0.9)) break;
       g.fillStyle = '#6b5436';
       for (let i = 0; i < 7; i++) {
         g.save();
         g.translate(Math.sin(i * 2.3) * 22 * k, Math.cos(i * 1.7) * 14 * k);
-        g.rotate(i + Math.sin(t + i) * 0.2);
+        g.rotate(i);
         g.fillRect(-5 * k, -1.5 * k, 10 * k, 3 * k);
         g.restore();
       }
       break;
     }
     case 'mine': {
+      // A mine adrift: the painted iron ball, blackened, its horns.
       const bob = Math.sin(t * 1.3) * 2 * k;
-      g.fillStyle = '#141414';
-      g.beginPath();
-      g.arc(0, bob, 7 * k, 0, Math.PI * 2);
-      g.fill();
       g.strokeStyle = '#141414';
       g.lineWidth = 1.5;
       for (let i = 0; i < 6; i++) {
         const a = (i * Math.PI) / 3;
         g.beginPath();
-        g.moveTo(Math.cos(a) * 7 * k, bob + Math.sin(a) * 7 * k);
-        g.lineTo(Math.cos(a) * 11 * k, bob + Math.sin(a) * 11 * k);
+        g.moveTo(Math.cos(a) * 6 * k, bob + Math.sin(a) * 6 * k);
+        g.lineTo(Math.cos(a) * 10 * k, bob + Math.sin(a) * 10 * k);
         g.stroke();
+      }
+      if (!drawPiece(g, 'buoy', 0, bob, 15 * k, t * 0.2, 1, '#1a1a1a')) {
+        g.fillStyle = '#141414';
+        g.beginPath();
+        g.arc(0, bob, 7 * k, 0, Math.PI * 2);
+        g.fill();
       }
       break;
     }
@@ -243,6 +303,11 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
       break;
     }
     case 'fins': {
+      // Sharks circling, just under the surface.
+      if (circlers(g, 'monster.shark', 0, 0, 18 * k, 22 * k, 3, t, 0, 0.8, 0.6)) {
+        foam(g, 0, 0, 10 * k, t, 9, 0.12);
+        break;
+      }
       g.fillStyle = '#2e3438';
       for (let i = 0; i < 3; i++) {
         const a = t * 0.8 + (i * Math.PI * 2) / 3;
@@ -258,30 +323,24 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
     case 'spout':
     case 'twister': {
       if (kind === 'twister') {
-        g.strokeStyle = 'rgba(160,170,180,0.55)';
-        g.lineWidth = 2;
-        for (let i = 0; i < 6; i++) {
-          const y0 = -i * 12 * k;
-          g.beginPath();
-          g.ellipse(Math.sin(t * 3 + i) * 3 * k, y0, (5 + i * 3) * k, 2.5 * k, 0, 0, Math.PI * 2);
-          g.stroke();
-        }
+        // A waterspout: a column of the painted mist turning, the spray at its foot.
+        foam(g, 0, 0, 14 * k, t, 11, 0.3);
+        for (let i = 0; i < 6; i++) puff(g, Math.sin(t * 3 + i) * 3 * k, -i * 12 * k, (5 + i * 2.5) * k, 0.4, '160,170,180');
       } else {
+        // A whale blows: the mist rising from the water, the dark of its back under it.
         const life = (t * 0.5) % 1;
         const hgt = Math.sin(life * Math.PI) * 30 * k;
-        for (let i = 0; i < 8; i++) puff(g, Math.sin(i * 1.3) * 5 * k, -hgt * (i / 8), (2 + i * 0.6) * k, 0.55 * (1 - i / 10), '235,240,245');
-        g.fillStyle = 'rgba(30,40,50,0.8)';
+        g.fillStyle = 'rgba(30,40,50,0.5)';
         g.beginPath();
         g.ellipse(0, 3 * k, 16 * k, 4 * k, 0, 0, Math.PI * 2);
         g.fill();
+        for (let i = 0; i < 5; i++) puff(g, Math.sin(i * 1.3) * 5 * k, -hgt * (i / 5), (3 + i) * k, 0.5 * (1 - i / 8), '235,240,245');
       }
       break;
     }
     case 'squall': {
-      g.fillStyle = 'rgba(15,18,24,0.45)';
-      g.beginPath();
-      g.ellipse(0, 0, 70 * k, 18 * k, 0.2, 0, Math.PI * 2);
-      g.fill();
+      // A squall line: dark cloud from the painted smoke, its rain.
+      for (let i = 0; i < 5; i++) puff(g, (i - 2) * 26 * k, Math.sin(i * 1.7) * 6 * k, 22 * k, 0.4, '40,46,56');
       g.strokeStyle = 'rgba(170,185,200,0.35)';
       g.lineWidth = 1;
       for (let i = 0; i < 10; i++) {
@@ -293,20 +352,9 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
       }
       break;
     }
-    case 'ice': {
-      g.fillStyle = 'rgba(225,240,250,0.95)';
-      g.strokeStyle = 'rgba(140,180,210,0.9)';
-      g.beginPath();
-      g.moveTo(-18 * k, 6 * k);
-      g.lineTo(-8 * k, -14 * k);
-      g.lineTo(6 * k, -8 * k);
-      g.lineTo(18 * k, 4 * k);
-      g.lineTo(4 * k, 10 * k);
-      g.closePath();
-      g.fill();
-      g.stroke();
+    case 'ice':
+      icePlate(g, 0, 0, 16 * k, 9, 0.6, rnd(7), 1);
       break;
-    }
     case 'turtle': {
       g.rotate(Math.sin(t * 0.3) * 0.1);
       // The painted turtle (docs/12 P11), head toward the bow of its drift (+x); the drawn one is its stand-in.
@@ -322,15 +370,12 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
       g.beginPath();
       g.ellipse(0, 0, 26 * k, 18 * k, 0, 0, Math.PI * 2);
       g.fill();
-      g.fillStyle = '#2f5a2a';
-      for (let i = 0; i < 4; i++) puff(g, Math.sin(i * 2) * 10 * k, Math.cos(i * 2) * 7 * k, 5 * k, 0.95, '47,90,42');
-      g.fillStyle = '#4a5a34';
-      g.beginPath();
-      g.ellipse(28 * k, 0, 7 * k, 5 * k, 0, 0, Math.PI * 2);
-      g.fill();
       break;
     }
     case 'tentacle': {
+      // A tentacle breaking the surface: the kraken's own, the white water about it.
+      foam(g, 0, 4 * k, 10 * k, t, 13, 0.3);
+      if (drawArt(g, 'monster.kraken_tentacle', 0, -8 * k, 34 * k, Math.sin(t * 1.5) * 0.25)) break;
       g.strokeStyle = 'rgba(120,70,120,0.95)';
       g.lineWidth = 5 * k;
       g.lineCap = 'round';
@@ -341,14 +386,14 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
       break;
     }
     case 'calm': {
-      g.strokeStyle = 'rgba(200,220,235,0.25)';
-      g.lineWidth = 1;
-      for (let i = 0; i < 3; i++) {
-        const r = ((t * 10 + i * 20) % 60) * k;
-        g.beginPath();
-        g.arc(0, 0, r, 0, Math.PI * 2);
-        g.stroke();
-      }
+      // Dead calm: a sheet of glassy water, paler, breathing.
+      const gr = g.createRadialGradient(0, 0, 0, 0, 0, 60 * k);
+      gr.addColorStop(0, `rgba(170,190,200,${0.16 + 0.06 * Math.sin(t)})`);
+      gr.addColorStop(1, 'rgba(170,190,200,0)');
+      g.fillStyle = gr;
+      g.beginPath();
+      g.arc(0, 0, 60 * k, 0, Math.PI * 2);
+      g.fill();
       break;
     }
     case 'albatross': {
@@ -356,17 +401,17 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
       if (gulls(g, 1, Math.min(1.4, k) * 1.5, t * 0.6, 22 * k)) break;
       const a = t * 0.6;
       const bx = Math.cos(a) * 20 * k, by = Math.sin(a) * 10 * k - 14 * k;
-      const flap = Math.sin(t * 4) * 3 * k;
       g.strokeStyle = 'rgba(250,250,245,0.95)';
       g.lineWidth = 2;
       g.beginPath();
-      g.moveTo(bx - 10 * k, by - flap);
-      g.quadraticCurveTo(bx - 4 * k, by - 3 * k, bx, by);
-      g.quadraticCurveTo(bx + 4 * k, by - 3 * k, bx + 10 * k, by - flap);
+      g.moveTo(bx - 10 * k, by);
+      g.quadraticCurveTo(bx, by - 3 * k, bx + 10 * k, by);
       g.stroke();
       break;
     }
     case 'sails': {
+      // Sails on the horizon: a ship's painting far off, faint in the haze.
+      if (drawArt(g, 'ship.sloop', 0, 0, 30 * k, 0.4, 0.55) || drawArt(g, 'ship.brig', 0, 0, 30 * k, 0.4, 0.55)) break;
       g.fillStyle = 'rgba(235,230,215,0.9)';
       for (let i = 0; i < 2; i++) {
         g.beginPath();
@@ -378,17 +423,8 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
       break;
     }
     case 'song': {
-      g.strokeStyle = 'rgba(210,190,240,0.6)';
-      g.lineWidth = 1.2;
-      for (let i = 0; i < 3; i++) {
-        g.beginPath();
-        for (let x = -24; x <= 24; x += 3) {
-          const yy = Math.sin(x * 0.3 + t * 3 + i) * 3 - i * 8;
-          if (x === -24) g.moveTo(x * k, yy * k);
-          else g.lineTo(x * k, yy * k);
-        }
-        g.stroke();
-      }
+      // The song over the water: a violet mist drifting in slow coils.
+      for (let i = 0; i < 4; i++) puff(g, Math.sin(t * 0.8 + i * 1.6) * 18 * k, -i * 7 * k + Math.cos(t + i) * 3 * k, 10 * k, 0.35, '150,120,190');
       break;
     }
     case 'wisps': {
