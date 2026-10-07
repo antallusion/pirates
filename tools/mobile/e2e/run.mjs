@@ -166,7 +166,7 @@ const J = {
     await ph.admin('/silver 3000');
     await castOff(ph);
     await openSea(ph);
-    await ph.admin('/foe pirate sloop 320', 2500);
+    await ph.admin('/foe pirate sloop 320 hunt', 2500); // she comes for her (a fight of equals, not a chase)
     await ph.step('foe');
     const t0 = ph.taps;
     await attack(ph);
@@ -210,10 +210,11 @@ const J = {
     await openSea(ph);
     // Afloat whatever the frigate's guns do (the scene's /god: the journey is the window and the battle, not a sinking).
     await ph.admin('/god on', 600);
-    await ph.admin('/foe pirate frigate 110', 2500);
-    await attack(ph);
-    await closeIn(ph, 'pirate', 45000);
-    if (await ph.visible('#tc-act[data-act="board"]')) await ph.tap('#tc-act[data-act="board"]', '«На абордаж»');
+    // A frigate's company lying alongside, not yet a foe (attacked, she would grapple first and the battle be hers):
+    // «На абордаж» is there at once, and the risk window before it.
+    await ph.admin('/foe pirate frigate 60', 2500);
+    await ph.until(async () => (await ph.visible('#tc-act[data-act="board"]')) || (await ph.visible('[data-risk="go"]')), 15000, '«На абордаж» beside the frigate');
+    if (!(await ph.visible('[data-risk="go"]'))) await ph.tap('#tc-act[data-act="board"]', '«На абордаж»');
     await ph.until(() => ph.visible('[data-risk="go"]'), 10000, 'the risk window');
     const card = await ph.p.evaluate(() => document.querySelector('[data-risk="go"]')?.closest('.k-sheet, .k-risk, [role="dialog"], [role="alertdialog"]')?.innerText.replace(/\s+/g, ' ').slice(0, 300) ?? '');
     await ph.step('risk', { card: card.slice(0, 120) });

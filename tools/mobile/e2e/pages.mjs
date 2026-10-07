@@ -106,7 +106,12 @@ export class Phone {
   /** A tap if it is there now; false if not. */
   async tapIf(sel, what = sel) {
     if (!(await this.visible(sel))) return false;
-    await this.tap(sel, what, 1000);
+    try {
+      await this.tap(sel, what, 1000);
+    } catch (e) {
+      if (e instanceof StepError) return false; // gone before the finger came down (the page moved on by itself)
+      throw e;
+    }
     return true;
   }
 
