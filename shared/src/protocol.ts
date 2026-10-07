@@ -82,8 +82,9 @@ export type ClientMsg =
   | { t: 'input'; seq: number; rudder: number; sail: number; helm?: boolean }
   | { t: 'fire'; side: Side; dist: number; x?: number; y?: number } // x, y: aim point (Improved Carriages)
   /** «Атаковать» (docs/23 item 33): the ship pursues `target` — `guns` holds her best range broadside-on, `board` runs in
-   *  for the grapples; `stop` gives the wheel back. */
-  | { t: 'attack'; target?: number; mode?: PursuitMode; stop?: boolean }
+   *  for the grapples; `stop` gives the wheel back. `roam` (docs/19 D7): «Атаковать» on a creature stack instead — the
+   *  helmsman sails her in and her boats go a cable off it (the hex battle). */
+  | { t: 'attack'; target?: number; mode?: PursuitMode; stop?: boolean; roam?: number }
   /** «Огонь» (docs/23 item 35): a broadside out of turn, laid tighter, from the side that bears best. */
   | { t: 'volley' }
   /** The captain's gunnery settings (docs/23 items 35, 42, 46): auto-fire, auto-battle against the weak, the expert's
@@ -176,7 +177,8 @@ export type ClientMsg =
   /** The wanted (docs/12 P5): a tavern informant's word on a named pirate. */
   | { t: 'wanted'; action: 'informant'; id: string }
   /** The raider's trade (docs/12 P6): the glass on a ship, tribute from a merchant who has struck, the tavern's tips and clerk. */
-  | { t: 'appraise'; id: number }
+  /** `quiet`: the target frame's own asking every few seconds — a refusal («too far for the glass») is not told. */
+  | { t: 'appraise'; id: number; quiet?: boolean }
   | { t: 'tribute'; id: number }
   | { t: 'tip'; action: 'buy'; id: string }
   | { t: 'tip'; action: 'clerk' }
@@ -1647,7 +1649,7 @@ export type ServerMsg =
   /** docs/16 #36: the helmsman has the wheel for a mark, or has given it back and why. */
   | { t: 'autosail'; on: boolean; x?: number; y?: number; sail?: number; why?: AutosailStop }
   /** «Атаковать» (docs/23 item 33): the helmsman pursues her mark, or has given the wheel back and why. */
-  | { t: 'pursuit'; on: boolean; target?: number; mode?: PursuitMode; why?: PursuitStop }
+  | { t: 'pursuit'; on: boolean; target?: number; mode?: PursuitMode; why?: PursuitStop; roam?: number }
   /** The odds of a boarding asked before the grapples fly (docs/23 item 49): the window «Скорее всего, вы проиграете». */
   | { t: 'board_risk'; risk: BoardRisk }
   /** The chance for the target line (docs/23 item 49). */

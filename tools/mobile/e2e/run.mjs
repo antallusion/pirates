@@ -18,7 +18,7 @@ const APORT = Number(process.env.APORT ?? 58821), GPORT = Number(process.env.GPO
 const OUT = process.env.OUT ?? 'assets/raw/audit/m9/e2e';
 mkdirSync(OUT, { recursive: true });
 const rnd = () => Math.random().toString(36).slice(2, 6);
-const ALL = ['login', 'tutorial', 'fight', 'senior', 'port', 'island', 'book'];
+const ALL = ['login', 'tutorial', 'fight', 'senior', 'port', 'island', 'book', 'stack', 'close'];
 const want = process.argv.slice(2).filter((x, i, a) => !x.startsWith('--') && !(a[i - 1] ?? '').startsWith('--'));
 const JOURNEYS = want.length ? want : ALL;
 
@@ -355,6 +355,118 @@ const J = {
     ph.expect(ph.taps <= 6, `the book in ${ph.taps} taps`);
   },
 };
+
+/** Every refusal the server sends her from now on, and every toast of kind 'bad' she sees (the owner, 2026-10-07: «идут
+ *  ошибки вечные»). */
+async function watchRefusals(p) {
+  await p.evaluate(() => {
+    const g = globalThis.gravetide;
+    globalThis.__refused = [];
+    g.net.on((m) => { if ((m.t === 'toast' && m.kind === 'bad') || m.t === 'err') globalThis.__refused.push(m.msg); });
+  });
+}
+const refused = (p) => p.evaluate(() => globalThis.__refused ?? []);
+
+/** The creature stack nearest her: where the renderer draws it, and whether a finger there lands on the sea. */
+const stackOnScreen = (p) => p.evaluate(() => {
+  const g = globalThis.gravetide, s = g.state, o = s.ownDisplay;
+  let best = null, bd = 1e9;
+  for (const v of s.roams) {
+    const q = g.roamNow(v.id) ?? v;
+    const d = Math.hypot(q.x - o.x, q.y - o.y);
+    if (d < bd) [best, bd] = [{ id: v.id, x: g.renderer.sx(q.x), y: g.renderer.sy(q.y), wx: q.x, wy: q.y }, d];
+  }
+  if (!best) return null;
+  return { ...best, d: Math.round(bd), on: best.x > 0 && best.y > 0 && best.x < innerWidth && best.y < innerHeight && document.elementFromPoint(best.x, best.y)?.id === 'world' };
+});
+
+Object.assign(J, {
+  /** 8. A creature stack (docs/19 D7; owner, 2026-10-07: «нападать нельзя… не работает никакие кнопки, идут ошибки
+   *  вечные»): a tap on it marks it, «Атаковать» on the action button opens the hex battle — from beside it, and from
+   *  afar (the helmsman sails her in) — with not one refusal on the way. */
+  async stack(ph) {
+    await signIn(ph, { name: (LANG === 'ru' ? 'Стая' : 'Stack') + rnd(), know: true });
+    await castOff(ph);
+    await openSea(ph);
+    await watchRefusals(ph.p);
+    await ph.admin('/stack go', 2500);
+    await L.closeAll(ph.p, 1);
+    const t0 = ph.taps;
+    await ph.until(async () => (await stackOnScreen(ph.p))?.on, 10000, 'the stack on the sea');
+    const sk = await stackOnScreen(ph.p);
+    await ph.tapAt(sk.x, sk.y);
+    await ph.until(() => ph.p.evaluate(() => globalThis.gravetide.state.roamMark !== null), 3000, 'the stack marked by the tap');
+    await ph.until(() => ph.visible('#tc-act[data-act="roam"]'), 5000, "the action button: the stack's «Атаковать»");
+    await ph.step('marked');
+    await ph.tap('#tc-act[data-act="roam"]', '«Атаковать» (the stack)');
+    await ph.until(async () => !!(await ph.state()).tac, 10000, 'the hex battle');
+    await ph.step('battle', { taps: ph.taps - t0 });
+    ph.expect(ph.taps - t0 <= 2, `the stack's battle in ${ph.taps - t0} taps (2: the stack, «Атаковать»)`);
+    await autoBattle(ph, 1);
+    await battleEnd(ph);
+    // From afar: 450 m off (the view pinched out to see it), a tap and «Атаковать»: the helmsman sails her in.
+    await ph.admin('/stack reset', 800);
+    await ph.admin('/stack go', 2500);
+    await L.closeAll(ph.p, 1);
+    const near = await stackOnScreen(ph.p);
+    await ph.admin(`/tp ${Math.round(near.wx - 450)} ${Math.round(near.wy)}`, 2500);
+    await L.closeAll(ph.p, 1);
+    await ph.p.evaluate(() => { const r = globalThis.gravetide.renderer; r.userZoomed = true; r.targetZoom = 0.7; });
+    await L.sleep(1200);
+    await ph.until(async () => (await stackOnScreen(ph.p))?.on, 10000, 'the far stack on the sea');
+    const far = await stackOnScreen(ph.p);
+    await ph.tapAt(far.x, far.y);
+    await ph.until(() => ph.visible('#tc-act[data-act="roam"]'), 5000, "the far stack's «Атаковать»");
+    await ph.step('far_marked', { d: far.d });
+    const t1 = Date.now();
+    await ph.tap('#tc-act[data-act="roam"]', '«Атаковать» (the far stack)');
+    await ph.until(async () => !!(await ph.state()).tac, 40000, 'the hex battle after the run');
+    await ph.step('far_battle', { secs: Math.round((Date.now() - t1) / 100) / 10 });
+    await ph.p.evaluate(() => { globalThis.gravetide.renderer.userZoomed = false; });
+    await autoBattle(ph, 1);
+    await battleEnd(ph);
+    const r = await refused(ph.p);
+    ph.expect(r.length === 0, `no refusal at all (${r.join(' | ')})`);
+  },
+
+  /** 9. The close fight (owner, 2026-10-07: «я должен быть рядом с целью очень близко, чтобы попадать, а плаваю я очень
+   *  далеко»): «Атаковать» and «Огонь» on a ship that fights with the guns; she lies close (on the screen) and the fight
+   *  is over in 30 s. */
+  async close(ph) {
+    await signIn(ph, { name: (LANG === 'ru' ? 'Борт' : 'Close') + rnd(), know: true });
+    await ph.admin('/silver 3000');
+    await castOff(ph);
+    await openSea(ph);
+    for (const x of ['/ship brig', '/heal', '/ammo', '/heading 0']) await ph.admin(x, 900);
+    // The scene's own ship (a patrol of the Black Coast may sail by): the new one after /foe.
+    const before = await ph.p.evaluate(() => [...globalThis.gravetide.state.ships.keys()]);
+    await ph.admin('/foe patrol brig 150', 2500);
+    const id = await ph.p.evaluate((old) => { const s = globalThis.gravetide.state; for (const x of s.ships.values()) if (!old.includes(x.id) && x.info?.npcRole === 'patrol') return x.id; return null; }, before);
+    ph.expect(id !== null, 'the patrol alongside');
+    const where = () => ph.p.evaluate((i) => { const g = globalThis.gravetide, x = g.state.ships.get(i), o = g.state.ownDisplay; if (!x?.cur || !o) return null; const sx = g.renderer.sx(x.cur.x), sy = g.renderer.sy(x.cur.y); return { d: Math.round(Math.hypot(x.cur.x - o.x, x.cur.y - o.y)), x: sx, y: sy, on: sx > 0 && sy > 0 && sx < innerWidth && sy < innerHeight, free: document.elementFromPoint(sx, sy)?.id === 'world', gone: !!(x.cur.flags & 17) }; }, id);
+    await watchRefusals(ph.p);
+    const w0 = await where();
+    if (w0?.free) await ph.tapAt(w0.x, w0.y);
+    else await ph.p.evaluate((i) => globalThis.gravetide.target(i), id); // (under the HUD: the target key's pin)
+    await ph.tap('#tc-act[data-act="attack"]', '«Атаковать»', 8000);
+    // The guns' fight: «Бортами» on the action button (the run in for the grapples is «Атаковать»'s own).
+    await ph.tap('#tc-act[data-act="attack_mode"]', '«Бортами»', 5000);
+    const t0 = Date.now(), seen = [];
+    let end = null;
+    while (Date.now() - t0 < 40000) {
+      const f = await where();
+      if (!f || f.gone) { end = (Date.now() - t0) / 1000; break; }
+      seen.push({ d: f.d, on: f.on, range: await ph.p.evaluate(() => document.querySelector('#hud-target')?.dataset.range ?? null) });
+      if (seen.length === 16) await ph.step('closing', { refused: await refused(ph.p), d: f.d, pursuit: await ph.p.evaluate(() => globalThis.gravetide.state.pursuit), you: await ph.p.evaluate(() => { const y = globalThis.gravetide.state.you; return y && { reload: y.reload, ammo: y.ammoSel, n: y.ammo?.round, combat: y.combat }; }) });
+      await L.sleep(500);
+    }
+    const ds = seen.slice(Math.floor(seen.length / 3)).map((x) => x.d).sort((a, b) => a - b);
+    const med = ds[Math.floor(ds.length / 2)] ?? 0;
+    await ph.step('fought', { secs: end, median: med, onScreen: seen.filter((x) => x.on).length + '/' + seen.length, inRange: seen.filter((x) => x.range === 'in').length });
+    ph.expect(end !== null && end <= 30, `the fight over in ${end} s (30 at most)`);
+    ph.expect(med <= 200, `she lay at ${med} m (200 at most)`);
+  },
+});
 
 const results = [];
 const b = await L.browser();

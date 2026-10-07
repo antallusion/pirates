@@ -147,7 +147,7 @@ export const STAGES: Stage[] = [
       // The helmsman lays her broadside on the raider for the lesson (closing nose-on, no gun of hers bore: a desk's Q
       // and E answered «not on your beam» and the step waited, QA 2026-10-07); «На абордаж» turns him in again.
       const run = pursuitOf(ship);
-      if (run && run.mode === 'board') startPursuit(game, s, run.target, 'guns');
+      if (run && run.roam === undefined && run.mode === 'board') startPursuit(game, s, run.target, 'guns');
     },
     keep: (game, s, ship) => keepRaider(game, s, ship),
   },
@@ -166,7 +166,7 @@ export const STAGES: Stage[] = [
       // «Огонь» laid her broadside on (the pursuit «Бортами»): the helmsman closes in again for the grapples, so the
       // step is the one tap of «На абордаж» and not «Сблизиться» first.
       const run = pursuitOf(ship);
-      if (run && run.mode === 'guns') startPursuit(game, s, run.target, 'board');
+      if (run && run.roam === undefined && run.mode === 'guns') startPursuit(game, s, run.target, 'board');
     },
     keep: (game, s, ship) => {
       const w = watchOf(s);

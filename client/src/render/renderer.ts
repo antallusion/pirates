@@ -292,6 +292,8 @@ export class Renderer {
   targetZoom = 2.6;
   /** Once the captain zooms, the screen size no longer picks the zoom. */
   userZoomed = false;
+  /** Her mark within the close fight's band (her gun captains fire) or not yet: the word under its ring (main.ts). */
+  markRange: 'in' | 'far' | null = null;
   time = 0;
   mouseX = 0;
   mouseY = 0;
@@ -389,8 +391,9 @@ export class Renderer {
   /** Main frame. */
   private frameNo = 0;
 
-  render(state: ClientState, own: SailState | null, dt: number, aim: { side: 'port' | 'starboard' | null; dist: number; boardTarget: number | null; chaser: 'bow' | 'stern' | null; charge?: { side: 'port' | 'starboard'; held: number } | null; target?: number | null }): void {
+  render(state: ClientState, own: SailState | null, dt: number, aim: { side: 'port' | 'starboard' | null; dist: number; boardTarget: number | null; chaser: 'bow' | 'stern' | null; charge?: { side: 'port' | 'starboard'; held: number } | null; target?: number | null; range?: 'in' | 'far' | null }): void {
     this.time += dt;
+    this.markRange = aim.range ?? null;
     this.frameNo++;
     this.zoom += (this.targetZoom - this.zoom) * Math.min(1, dt * 8);
     const g = this.g;
@@ -3799,14 +3802,32 @@ export class Renderer {
     g.fillStyle = '#b23a3a';
     g.fillRect(x - w / 2, y + 6, w * clamp(s.hull, 0, 1), 3);
     if (isTarget) {
+      const r = Math.max(cls.length, 10) * this.zoom * 0.62;
       g.strokeStyle = hexA(col, 0.85);
-      g.lineWidth = 1.5;
-      g.setLineDash([6, 5]);
+      g.lineWidth = this.markRange === 'in' ? 2 : 1.5;
+      g.setLineDash(this.markRange === 'in' ? [] : [6, 5]);
       g.beginPath();
-      g.ellipse(this.sx(s.x), this.sy(s.y), Math.max(cls.length, 10) * this.zoom * 0.62, Math.max(cls.length, 10) * this.zoom * 0.62, 0, 0, Math.PI * 2);
+      g.ellipse(this.sx(s.x), this.sy(s.y), r, r, 0, 0, Math.PI * 2);
       g.stroke();
       g.setLineDash([]);
+      this.rangeWord(this.sx(s.x), this.sy(s.y) + r);
     }
+  }
+
+  /** «в дальности» / «далеко» under her mark's ring (owner, 2026-10-07: she must see when her guns reach). */
+  private rangeWord(x: number, y: number): void {
+    if (!this.markRange) return;
+    const g = this.g;
+    const word = L(this.markRange === 'in' ? 'range.in' : 'range.far');
+    g.save();
+    g.font = '600 11px Inter, sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'top';
+    g.fillStyle = 'rgba(0,0,0,0.75)';
+    g.fillText(word, x + 1, y + 5);
+    g.fillStyle = this.markRange === 'in' ? '#c9e3a0' : '#d9b48a';
+    g.fillText(word, x, y + 4);
+    g.restore();
   }
 
   private drawLabel(s: DrawShip, state: ClientState, boardTarget: boolean, isTarget = false): void {
@@ -3942,13 +3963,16 @@ export class Renderer {
     // The target (canon D12): a thin ring under her in the colour of the danger she is to you.
     if (isTarget && !boardTarget) {
       const t = info.shipLevel ? levelThreat(state, info.classId, info.shipLevel) : 'even';
+      const r = cls.length * this.zoom * 0.62;
       g.strokeStyle = hexA(THREAT_COLOR[t], 0.85);
-      g.lineWidth = 1.5;
-      g.setLineDash([6, 5]);
+      // In the close fight's band the ring is drawn whole (her gun captains fire), dashed while she is too far.
+      g.lineWidth = this.markRange === 'in' ? 2 : 1.5;
+      g.setLineDash(this.markRange === 'in' ? [] : [6, 5]);
       g.beginPath();
-      g.ellipse(this.sx(s.x), this.sy(s.y), cls.length * this.zoom * 0.62, cls.length * this.zoom * 0.62, 0, 0, Math.PI * 2);
+      g.ellipse(this.sx(s.x), this.sy(s.y), r, r, 0, 0, Math.PI * 2);
       g.stroke();
       g.setLineDash([]);
+      this.rangeWord(this.sx(s.x), this.sy(s.y) + r);
     }
     if (boardTarget || s.flags & SF.MARKED) {
       // A target ring: four brackets round her, not a dotted circle.

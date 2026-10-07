@@ -75,7 +75,7 @@ export class Phone {
     for (;;) {
       w = await this.where(sel);
       if (w.st === 'ok') break;
-      if (/covered by k-scrim/.test(w.st) && (await this.levelUp())) continue;
+      if (/covered by (k-scrim|.*lu-sheet)/.test(w.st) && (await this.levelUp())) continue;
       // Below the fold of a list that scrolls: a finger drags it there (a swipe a screenful, counted).
       if (w.st === 'offscreen') {
         const swipes = await this.p.evaluate((q) => {

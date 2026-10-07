@@ -49,8 +49,9 @@ test('«Атаковать» to the grapples in 10 s or less from 700 m; a green
     assert.ok(t.every((x) => x > 0), `⚓${L}: always alongside (${t.join(' ')})`);
     const { med, p90 } = pct(t);
     assert.ok(med <= 10 && p90 <= 10, `⚓${L}: to the grapples median ${med} s, p90 ${p90} s`);
+    // (Six fights: in the close fight of 2026-10-07 three were over in 16 balls.)
     let balls = 0, hits = 0;
-    for (let k = 0; k < 3; k++) {
+    for (let k = 0; k < 6; k++) {
       const r = captainRun(game, LEVEL_HULL[L], L, 900 + k, 'guns', 60);
       balls += r.balls;
       hits += r.hits;
@@ -108,6 +109,7 @@ test('no endless chase: forty seconds with no hit either way and the pursued mer
   const at = openWater(game, 5);
   const s = seaCaptain(game, 'schooner', 3, at.x, at.y, 0);
   s.autoFire = false;
+  s.expert = true; // (no hit of hers: «Атаковать» fires whatever the auto-fire switch, but for the expert's own hand)
   const m = game.spawnNpcShip('merchant', 'fluyt', 'league', at.x + 900, at.y, Math.PI / 2);
   game.npcs.get(m.id)!.active = true;
   game.setNpcLevel(m, 3);

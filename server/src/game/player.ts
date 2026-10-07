@@ -399,6 +399,8 @@ export class PlayerSession {
   discovered = new Set<number>();
   msgWindowStart = 0;
   msgCount = 0;
+  /** The last refusal told her and when (game seconds): the same words are not told again at once (Game.refuse). */
+  lastRefusal: { msg: string; at: number } | null = null;
   pendingBoarding: { result: BoardingResult; targetId: number } | null = null;
   /** A job offered and not yet answered, open for a while (docs/11 P6): by an island's people on the beach, or
    *  shared by a groupmate. */
