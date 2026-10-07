@@ -492,6 +492,9 @@ export class SeaHud {
     swap(this.menuEl, '.k-btn-ico', SEA_ART.menu, '☰', 'k-btn-ico');
     swap(this.newsEl, '.k-btn-ico', SEA_ART.news, '!', 'k-btn-ico');
     swap(this.lockEl, '.k-btn-ico', SEA_ART.lock, '◎', 'k-btn-ico');
+    // the target line's «в дальности» on a narrow screen: the gun's picture (seahud.css)
+    const gun = assetUrl(`icon.${SEA_ART.fire}`);
+    if (gun) document.documentElement.style.setProperty('--ico-range', `url('${gun}')`);
     // the dash's chip on the helm: its painted picture (a ship at full stretch), not a «»» set in letters
     const dash = document.getElementById('tc-dashchip');
     if (dash) dash.innerHTML = icon(assetUrl(`icon.${SEA_ART.dash}`) ? SEA_ART.dash : SEA_ART.dashAlt, '', 'tc-dash-ico');

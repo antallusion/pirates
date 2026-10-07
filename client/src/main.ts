@@ -2883,9 +2883,9 @@ function hoverCursor(px: number, py: number, force = false): void {
 function touchAttackMark(): void {
   const el = document.getElementById('atk-mark');
   if (!el) return;
-  // (a ship's name and bars are drawn over her: the mark stands under her hull; a stack's word over it and its name
-  // under it: the mark stands at its left)
-  let kind: AttackKind | null = null, x = 0, y = 0, shift = '';
+  // (a ship's name and bars are drawn over her: the mark stands under her hull — over her name when the HUD's own
+  // controls lie under her, a ship behind «Атаковать»; a stack's word over it and its name under it: at its left)
+  let kind: AttackKind | null = null, box: TmRect | null = null, alt: TmRect | null = null;
   if (touch.enabled && !state.boardTac && !state.self?.dockedAt && modal === null) {
     const rf = !targetPinned && !state.pursuit ? roamFocus() : null;
     const id = state.pursuit?.target ?? (targetPinned ? targetId : null);
@@ -2893,24 +2893,26 @@ function touchAttackMark(): void {
     if (rf?.marked) {
       const p = roamNow(state, rf.v);
       kind = attackKind({ stack: rf.v.fight !== 'other' });
-      const r = Math.max(9, Math.min(22, 19 * renderer.zoom)) * 1.2;
-      [x, y, shift] = [renderer.sx(p.x) - r - 4, renderer.sy(p.y), 'translate(-100%, -50%)'];
+      const r = Math.max(9, Math.min(22, 19 * renderer.zoom)) * 1.2, x = renderer.sx(p.x) - r - 4, y = renderer.sy(p.y);
+      box = { left: x - 40, top: y - 20, right: x, bottom: y + 20 };
     } else if (s?.info && id !== null) {
       const ship = shipFight(id);
       kind = ship ? attackKind({ ship }) : null;
-      const r = Math.max(14, SHIP_CLASSES[s.info.classId].length * 0.42 * renderer.zoom);
-      [x, y, shift] = [renderer.sx(s.cur.x), renderer.sy(s.cur.y) + r + 2, 'translate(-50%, 0)'];
+      const r = Math.max(14, SHIP_CLASSES[s.info.classId].length * 0.42 * renderer.zoom), x = renderer.sx(s.cur.x), y = renderer.sy(s.cur.y);
+      box = { left: x - 20, top: y + r + 2, right: x + 20, bottom: y + r + 42 };
+      alt = { left: x - 20, top: y - r - 84, right: x + 20, bottom: y - r - 44 };
     }
   }
-  const url = kind ? cursorUrl(kind) : null;
-  const on = !!url && x > 20 && y > 0 && x < innerWidth && y < innerHeight - 30;
-  el.classList.toggle('hidden', !on);
-  if (!on) return;
+  const hits = (b: TmRect) => b.left < 2 || b.top < 2 || b.right > innerWidth - 2 || b.bottom > innerHeight - 2 || hudKeepOut().some((h) => b.left < h.right && b.right > h.left && b.top < h.bottom && b.bottom > h.top);
+  if (box && hits(box)) box = alt && !hits(alt) ? alt : null;
+  const url = kind && box ? cursorUrl(kind) : null;
+  el.classList.toggle('hidden', !url);
+  if (!url || !box) return;
   if (el.dataset.kind !== kind) {
     el.dataset.kind = kind!;
     el.style.backgroundImage = `url('${url}')`;
   }
-  el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) ${shift}`;
+  el.style.transform = `translate(${Math.round(box.left)}px, ${Math.round(box.top)}px)`;
 }
 
 /** The captain's gunnery settings to the server (auto-fire, auto-battle against the weak, the expert's hand). */

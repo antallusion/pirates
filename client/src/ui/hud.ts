@@ -390,7 +390,9 @@ export class Hud {
       else right = Math.min(right, r.left - 10 * z);
     }
     const half = Math.min(W / 2 - left, right - W / 2, 230 * z);
-    const mid = half * 2 >= 280 * z;
+    // (in the middle when it is wide enough for a long name with her bars and chips — a phone's middle was 300 px and
+    // cut «Фонарная неве…»; else the whole free row)
+    const mid = half * 2 >= 380 * z || half * 2 >= right - left - 2 * z;
     const sx = mid ? W / 2 - half : left, sw = Math.max(150 * z, mid ? half * 2 : right - left);
     const set = (k: string, v: number) => body.style.setProperty(k, `${Math.round(v / z)}px`);
     set('--sk-left', sx);

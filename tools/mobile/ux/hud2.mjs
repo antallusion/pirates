@@ -165,6 +165,12 @@ await later();
 await p.evaluate(() => document.querySelectorAll('.film').forEach((f) => f.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))));
 await L.sleep(2000);
 if (!touch) await p.mouse.move(W * 0.3, H * 0.75); // the mouse resting on the open sea
+// the attack cursor's three marks as the page drew them (ui/cursor.ts), saved beside the screens
+{
+  const marks = await p.evaluate(() => Object.fromEntries(['attack', 'board', 'guns'].map((k) => [k, (/url\(['"]?([^'")]+)/.exec(getComputedStyle(document.documentElement).getPropertyValue(`--cur-${k}`)) ?? [])[1] ?? null])));
+  for (const [k, u] of Object.entries(marks)) if (u) writeFileSync(`${OUT}/cursor_${k}.png`, Buffer.from(u.split(',')[1], 'base64'));
+  L.log(`cursors: ${Object.entries(marks).map(([k, u]) => `${k} ${u ? 'drawn' : 'MISSING'}`).join(', ')}`);
+}
 if (only.includes('sea')) await check('sea');
 // a pirate, marked
 await ph.admin(`/foe pirate sloop ${touch ? 160 : 130}`, 2500);

@@ -104,7 +104,7 @@ export function menuLayout(n: number, x: number, y: number, r: number, vw: numbe
   // the preferred way unless another is clearly better
   let best = tries[0];
   for (const t of tries.slice(1)) if (t.cost < best.cost * 0.6 - 1) best = t;
-  return { side: best.side, items: best.items, crowded: best.cost > item * item * 0.35 };
+  return { side: best.side, items: best.items, crowded: best.cost > item * item * 0.25 };
 }
 
 export class TargetMenu {
