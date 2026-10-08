@@ -4,6 +4,7 @@
 // captains; the lairs on the islands — a battery to silence from the sea, then a landing for the chest and the
 // prisoners; and the trail of a wanted captain for a licensed hunter.
 
+import { targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { claimLair } from './isles18.ts';
 import { legacyIslands } from '../../../shared/src/world/worldgen.ts';
 import { hullsFor } from '../../../shared/src/data/shiplevel.ts';
@@ -323,7 +324,7 @@ export function lairLanding(game: Game, s: PlayerSession, island: Island): boole
   game.sendTo(s, { t: 'toast', msg: `The lair of ${np.name[0]} is stormed: ${chest} silver from its chest, ${prisoners} prisoners freed.`, kind: 'gold' });
   if (room > 0) game.sendTo(s, { t: 'toast', msg: 'The freed prisoners join your crew.', kind: 'good' });
   game.sendTo(s, { t: 'lairchest', view: { island: lair.name, captain: np.name[0], silver: chest, prisoners, item: kept ? { name: itemName(it), rarity: it.rarity, base: it.base } : null, map: mapped ? m.name : null } });
-  game.grantXp(s, 300 + 60 * np.level, `The lair of ${np.name[0]}`);
+  game.grantXp(s, targetXp(s.profile!.level, np.level, 5), `The lair of ${np.name[0]}`);
   maybeArtifact(game, s, 'guard', 0.5); // docs/17 H2: the garrison guarded an artifact
   maybeScroll(game, s, 'lair'); // docs/18 item 10: a scroll of a page in the lair
   sendWanted(game, s, true);
@@ -705,7 +706,7 @@ export function wantedKill(game: Game, s: PlayerSession, victim: ShipEntity): vo
       questEvent(game, s, { k: 'named' });
       addPoints(game, s, HUNTER_POINTS.captain);
     }
-    game.grantXp(s, 120 * np.level, `Sank ${np.name[0]}`, true);
+    game.grantXp(s, targetXp(s.profile!.level, np.level, 3), `Sank ${np.name[0]}`, true);
     S.dirty = true;
     sendWanted(game, s, true);
     return;

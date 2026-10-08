@@ -208,9 +208,10 @@ test('D7: a group shares a stack beaten — her mate near has his share of the l
   assert.ok(ROAM_MATE_XP > 0 && ROAM_MATE_XP < 1);
 });
 
-test('D7: a grey stack (three levels below her ship) teaches nothing; HoMM3\'s offer at ×3 — some sign on', () => {
+test('D7: a grey stack (far below her level, docs/26) teaches nothing; HoMM3\'s offer at ×3 — some sign on', () => {
   const game = sea();
   const s = captain(game, 'Grey Ship', 6, 'frigate');
+  s.profile!.level = 26; // the captain of her ⚓6: a stack of ⚓3 and below is grey to her
   runAdmin(game, s, '/stack gull go');
   const sp = roamAtHand(game, s)!;
   assert.ok(sp.level <= 3);

@@ -3,7 +3,7 @@
 // going down. A ship far below her (grey: no experience) does not count, nor the deep's creatures, nor a ship counted
 // once already (boarded, then scuttled).
 
-import { xpForGap } from '../../../shared/src/data/shiplevel.ts';
+import { xpGap } from '../../../shared/src/data/xpcurve.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -31,8 +31,8 @@ function captainOf(game: Game, ship: ShipEntity | null): PlayerSession | null {
 export function streakCounts(game: Game, killer: ShipEntity, victim: ShipEntity): boolean {
   if (counted.has(victim) || victim.cls.monster || victim.npcRole === 'beast' || victim.npcRole === 'boss' || victim.bossOf) return false;
   const cap = killer.ownerId !== null ? game.ships.get(killer.ownerId) ?? killer : killer;
-  const gap = victim.onLadder && cap.onLadder ? victim.combatLevel - cap.combatLevel : 0;
-  return xpForGap(gap) > 0;
+  const level = game.sessionOf(cap)?.profile?.level ?? 1;
+  return xpGap(level, victim.onLadder ? victim.combatLevel : null) > 0; // grey by her level (docs/26)
 }
 
 /** The bonus the kill of `victim` brings to her captain (before it is counted): the next in the streak, or the

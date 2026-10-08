@@ -5,6 +5,7 @@
 // answer, and pays through the game's own helpers. The shores tire of a captain who plays too often: past six games
 // in half an hour the purses and stakes shrink.
 
+import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { MINIGAMES, MINIGAME_IDS, islandHaunt } from '../../../shared/src/data/minigames.ts';
 import type { HauntId, MinigameDef, MinigameId, Outcome } from '../../../shared/src/data/minigames.ts';
 import { makeItem } from '../../../shared/src/data/items.ts';
@@ -423,7 +424,7 @@ function payOut(game: Game, s: PlayerSession, live: MiniLive, o: Outcome, extra:
     if (takeItem(game, s, it)) vars.item = it;
   }
   if (pay.xp) {
-    const xp = Math.round(pay.xp * gain * (1 + 0.15 * (ship.shipLevel - 1)));
+    const xp = pointsXp(s.profile!.level, pay.xp * gain);
     if (xp > 0) {
       game.grantXp(s, xp, null);
       vars.xp = xp;

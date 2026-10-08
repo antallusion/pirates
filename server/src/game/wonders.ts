@@ -2,6 +2,7 @@
 // experience); the first on the server to find one names it for everyone (and a purse of silver). Every ten found:
 // a pennant colour; the first ten, the Compass Rose tattoo. The wonders near her ship are sent to be drawn.
 
+import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { unlockDeed } from './looks.ts';
 import { legacyIslands } from '../../../shared/src/world/worldgen.ts';
 import { WONDER_NAME_RE, WONDER_PENNANTS, WONDER_R, placeWonders } from '../../../shared/src/data/wonders.ts';
@@ -44,13 +45,13 @@ function discover(game: Game, s: PlayerSession, w: WonderDef): void {
   const recs = records(game);
   game.sendTo(s, { t: 'toast', msg: `A wonder of the sea: ${wonderName(game, w)}.`, kind: 'gold' });
   sagaNote(game, s, 'wonder', [wonderName(game, w)]);
-  game.grantXp(s, 250, null);
+  game.grantXp(s, pointsXp(s.profile!.level, 250), null);
   if (!recs[w.id]) {
     recs[w.id] = { first: s.name, account: s.accountId, named: null, at: game.wallNow() };
     game.db.setKv('wonders', recs);
     p.gold += 500;
     game.db.ledger(s.accountId, 'wonder_first', 500, w.id);
-    game.grantXp(s, 500, null);
+    game.grantXp(s, pointsXp(s.profile!.level, 500), null);
     game.sendTo(s, { t: 'toast', msg: 'You are the first to find it! Name it in the journal’s atlas.', kind: 'gold' });
   }
   if (p.wonders.length % 10 === 0) {

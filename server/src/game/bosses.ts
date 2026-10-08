@@ -4,6 +4,7 @@
 // taverns of the region; the spoils are personal, by contribution (damage, control, support), with a weekly
 // lockout on rare drops.
 
+import { bossXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { tattooCount } from './tattoos.ts';
 import { grantDeed } from './progression.ts';
 import { chronicle } from './renown.ts';
@@ -1490,7 +1491,7 @@ export function reward(game: Game, f: Fight, x: number, y: number): void {
       if (share >= 0.05 || def.id === 'abyss_eye') giveShard(game, s, `From ${def.name}`);
       chapter(game, s, def.id === 'abyss_eye' ? 'eye' : 'ancient');
     }
-    game.grantXp(s, def.xp * (0.3 + 0.7 * k), `${def.name} slain`);
+    game.grantXp(s, bossXp(p.level, def.xp * (0.3 + 0.7 * k)), `${def.name} slain`);
     if (share >= 0.1) artifactFind(game, s, 'boss'); // docs/17 H2: a boss keeps an artifact
     if (share >= 0.1) maybeScroll(game, s, 'boss'); // docs/18 item 10: and a scroll of a page
     const pct = Math.round(share * 100);

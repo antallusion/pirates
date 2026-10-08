@@ -47,9 +47,38 @@ export const COMBAT_TAG_SEC = 20;
 export const MAX_LEVEL = 60;
 export const SAIL_STEPS = [0, 0.25, 0.5, 0.75, 1] as const;
 
+// The curve of experience (docs/26, owner 2026-10-08: «чем больше уровень, тем больше кораблей потопить, абордажей
+// сделать и квестов выполнить»). Everything is reckoned in one unit: what a ship of her own level sunk teaches a captain
+// (XP_UNIT). A level asks a number of such ships that grows with the level — five at the first, about thirty at the
+// tenth, seventy at the thirtieth, two hundred and more past the fiftieth — so the time to a level grows smoothly from
+// minutes to hours, as in WoW. Every source of experience is a number of these units (shared/src/data/xpcurve.ts).
+
+/** What one ship of her own level sunk teaches a captain of this level. */
+export function xpUnit(level: number): number {
+  return 40 + 10 * Math.max(1, Math.min(MAX_LEVEL, level));
+}
+
+/** Ships of her own level sunk from `level` to the next (docs/26): K(L) = 6·L^0.7 — five at the first, thirty at the
+ *  tenth, eighty at the thirtieth — and past the thirtieth a climb of 6.5% more a level, eased in over a few levels
+ *  (a softplus about the 32nd: the slope of ln K grows smoothly, no step) — about 150 at the fortieth, 300 at the
+ *  fiftieth, 600 at the last. */
+export function killsPerLevel(level: number): number {
+  const L = Math.max(1, Math.min(MAX_LEVEL, level));
+  const soft = (x: number): number => Math.log1p(Math.exp(x));
+  return KPL_BASE * Math.pow(L, KPL_POW) * Math.exp(KPL_CLIMB * KPL_EASE * (soft((L - KPL_FROM) / KPL_EASE) - soft((1 - KPL_FROM) / KPL_EASE)));
+}
+export const KPL_BASE = 5.9;
+export const KPL_POW = 0.7;
+export const KPL_CLIMB = 0.065;
+export const KPL_FROM = 32;
+export const KPL_EASE = 6;
+
+/** XP required to go from `level` to `level + 1`: her own level's ships to the next level × what each teaches, rounded
+ *  to two or three figures (the captain reads it on her sheet). */
 export function xpForLevel(level: number): number {
-  // XP required to go from `level` to `level + 1`.
-  return Math.round(120 * Math.pow(level, 1.55));
+  const x = killsPerLevel(level) * xpUnit(level);
+  const step = x < 1000 ? 10 : x < 10000 ? 50 : x < 100000 ? 100 : 1000;
+  return Math.round(x / step) * step;
 }
 
 export function talentPointsForLevel(level: number): number {

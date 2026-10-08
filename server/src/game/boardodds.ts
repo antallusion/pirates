@@ -6,7 +6,7 @@
 // battle she then fights. Below RISK_CHANCE, or with her mark RISK_GAP levels and more above her, the window shows
 // what a loss costs (as Game.boardingLost takes it) and what a win over a senior brings.
 
-import { xpForGap } from '../../../shared/src/data/shiplevel.ts';
+import { xpGap } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import type { BoardRisk } from '../../../shared/src/protocol.ts';
 import { hash2, Rng } from '../../../shared/src/rng.ts';
 import { cargoValue } from '../../../shared/src/sim/shipstats.ts';
@@ -77,10 +77,9 @@ export function isRisky(a: ShipEntity, b: ShipEntity, chance: number): boolean {
 export function boardRisk(game: Game, a: ShipEntity, b: ShipEntity): BoardRisk {
   const odds = boardOdds(game, a, b);
   const p = game.sessionOf(a)?.profile;
-  const gap = b.combatLevel - a.combatLevel;
   return {
     target: b.id, name: b.name, chance: odds.chance, sims: odds.sims, myLevel: a.combatLevel, theirLevel: b.combatLevel,
     cargo: Math.round(cargoValue(a.cargo)), silver: p ? Math.floor(p.gold * BOARD_LOSS_PURSE) : 0, men: Math.min(Math.max(0, a.crew - Math.max(2, Math.round(a.crew * 0.1))), odds.men), // (some always live to strike, tactical.ts sync)
-    xpMul: xpForGap(gap), risky: isRisky(a, b, odds.chance),
+    xpMul: xpGap(p?.level ?? 1, b.onLadder ? b.combatLevel : null), risky: isRisky(a, b, odds.chance), // her lesson by her level (docs/26)
   };
 }

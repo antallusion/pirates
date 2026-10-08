@@ -3,6 +3,7 @@
 // Every silver that enters or leaves here is written to the ledger, so the economy report
 // (see economy report in Game) can tell faucets from sinks.
 
+import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { wantedLevel } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -125,7 +126,7 @@ export function settleForwards(game: Game, s: PlayerSession, port: Port): void {
       p.reputation.league = Math.min(100, (p.reputation.league ?? 0) + 2);
       game.db.ledger(s.accountId, 'forward_collateral', f.collateral, f.id);
       game.sendTo(s, { t: 'toast', msg: `Forward filled at ${port.name}: ${pay} silver, collateral of ${f.collateral} returned.`, kind: 'gold' });
-      game.grantXp(s, 30 + f.qty, 'Forward delivered');
+      game.grantXp(s, pointsXp(p.level, 30 + f.qty), 'Forward delivered');
     } else {
       game.sendTo(s, { t: 'toast', msg: `Delivered ${n} ${GOODS[f.good].name.toLowerCase()} toward the forward (${f.delivered}/${f.qty}): ${pay} silver.`, kind: 'gold' });
     }

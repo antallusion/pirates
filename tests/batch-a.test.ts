@@ -326,8 +326,10 @@ test('a grey ship far below her does not count toward a streak; the streak swell
   const s = [...game.sessions].find((x) => x.name === 'Greyhunter')!;
   const v = foe(game, ship, 'patrol', 300, 1).npc;
   onHull(game, ship, 'frigate', 10);
+  s.profile!.level = 56; // a captain of her ship's level: the colours go by her level (docs/26)
   game.setNpcLevel(v, 1);
   assert.equal(streakCounts(game, ship, v), false, 'grey');
+  s.profile!.level = 1;
   s.profile!.streak = 4;
   const m = foe(game, ship, 'merchant', 200, 0.3);
   m.npc.purse = 1000;

@@ -2,6 +2,7 @@
 // Each pays silver and experience; all three open a chest, and days in a row add to what the chest holds.
 
 import { Rng, hashString } from '../rng.ts';
+import { XP_UNITS, lumpXp } from './xpcurve.ts';
 
 export type DailyKind = 'sink' | 'sink_pirates' | 'board' | 'prize' | 'land' | 'chart' | 'ports' | 'contraband' | 'fleet' | 'dive' | 'fish' | 'beast';
 
@@ -76,13 +77,17 @@ export function rollDailies(accountId: string, day: number, level: number): Dail
 /** An order's pay at a level. */
 export function dailyReward(kind: DailyKind, level: number): { silver: number; xp: number } {
   const d = DAILY_DEFS[kind], k = 1 + level / 10;
-  return { silver: Math.round(d.silver * k), xp: Math.round(d.xp * k) };
+  return { silver: Math.round(d.silver * k), xp: lumpXp(level, d.xp / DAILY_XP_POINT) };
 }
+
+/** An order's experience: its weight (`xp`, written for the first level) over this, in units of her own level's ship
+ *  sunk (docs/26: a sinking order of three to six ships teaches as three more). */
+export const DAILY_XP_POINT = 40;
 
 /** The chest for all three: twice an order's silver, with the streak's share on top. */
 export function chestReward(level: number, streak: number): { silver: number; xp: number } {
-  const k = (1 + level / 10) * (1 + STREAK_STEP * Math.min(STREAK_MAX, streak));
-  return { silver: Math.round(250 * k), xp: Math.round(300 * k) };
+  const s = 1 + STREAK_STEP * Math.min(STREAK_MAX, streak);
+  return { silver: Math.round(250 * (1 + level / 10) * s), xp: lumpXp(level, XP_UNITS.dailyChest * s) };
 }
 
 export function dailyText(kind: DailyKind, need: number, lang: 0 | 1): string {

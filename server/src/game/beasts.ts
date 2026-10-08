@@ -10,6 +10,7 @@
 // it lies on the water to be finished. Its carcass floats for five minutes to be flensed alongside, hove to, and the
 // blood in the water brings the sharks — and in the cold seas the orcas.
 
+import { legacyPrizeUnits, targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { worldGoalBeast } from './worldgoals.ts';
 import { sectorAt } from '../../../shared/src/world/sectors.ts';
 import { omenCarcassMul } from './omens.ts';
@@ -20,7 +21,7 @@ import { BEASTS, BEAST_IDS, LINE, SACRED_WATERS, SPOOK_NOISE, beastOfClass, bite
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { makeItem } from '../../../shared/src/data/items.ts';
-import { clampLevel, xpForGap } from '../../../shared/src/data/shiplevel.ts';
+import { clampLevel } from '../../../shared/src/data/shiplevel.ts';
 import { clamp, dist, headingVec, wrapAngle } from '../../../shared/src/math.ts';
 import type { CarcassView, HuntView } from '../../../shared/src/protocol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
@@ -1015,8 +1016,7 @@ export function beastSlain(game: Game, b: ShipEntity): boolean {
   for (const [acc, k] of shares) {
     const s = game.sessionByAccount(acc);
     if (!s?.profile || !s.ship) continue;
-    const gap = s.ship.onLadder ? c.level - s.ship.combatLevel : 0;
-    const xp = def.xp * Math.pow(1.3, c.level - def.level[0]) * xpForGap(gap) * k;
+    const xp = targetXp(s.profile.level, c.level, legacyPrizeUnits(def.xp, def.level[0]) * k); // docs/26: by her level
     game.grantXp(s, xp, `Took ${def.name[0]}`, true);
     if (k === 1) game.sendTo(s, { t: 'toast', msg: `${def.name[0]} is dead. Heave to alongside to flense her.`, kind: 'good' });
     const p = s.profile;

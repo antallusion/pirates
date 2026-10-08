@@ -6,6 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Rng } from '../shared/src/rng.ts';
+import { xpForLevel } from '../shared/src/constants.ts';
 import { armyForLevel } from '../shared/src/data/army.ts';
 import type { ArmyStack } from '../shared/src/data/army.ts';
 import type { CaptainId } from '../shared/src/data/captains.ts';
@@ -76,7 +77,6 @@ test('a captain from before the heroes is grown from her level, deterministicall
   assert.equal(h.mana, heroView(p).willMax, 'a full store to start');
   const sum = (x: Prims) => x.atk + x.def + x.pow + x.will;
   const before = sum(h.prim);
-  const { xpForLevel } = { xpForLevel: (l: number) => Math.round(120 * Math.pow(l, 1.55)) };
   game.grantXp(s, xpForLevel(25) - p.xp + 1, null);
   assert.equal(p.level, 26);
   assert.equal(sum(heroOf(p).prim), before + 1);

@@ -8,6 +8,7 @@ import type { FactionId } from './factions.ts';
 import type { GoodId } from './goods.ts';
 import type { RegionId } from '../world/regions.ts';
 import type { TreeId } from './talents.ts';
+import { legacyQuestSize, questXp } from './xpcurve.ts';
 
 export type QuestStep =
   | { type: 'visit'; port: string; text: string }
@@ -78,7 +79,7 @@ export const QUESTS: QuestDef[] = [
       { type: 'dive', count: 2, text: 'Send divers down to two sunken wrecks.' },
       { type: 'visit', port: 'wrecktide', text: 'Bring your log to Tobias Wren at Wrecktide.' },
     ],
-    reward: { xp: 6000, silver: 3000 },
+    reward: { xp: questXp(45, legacyQuestSize(6000, 45)), silver: 3000 },
   },
   // ---------------------------------------------------------------- base Paths
   {
@@ -91,7 +92,7 @@ export const QUESTS: QuestDef[] = [
       { type: 'sink', count: 1, minTier: 2, text: 'Sink a ship of the second rate or larger.' },
       { type: 'visit', port: 'gravesend', text: 'Report to Edric Vane at Gravesend.' },
     ],
-    reward: { xp: 2500, silver: 1500, path: 'corsair' },
+    reward: { xp: questXp(5, legacyQuestSize(2500, 5)), silver: 1500, path: 'corsair' },
   },
   {
     id: 'q_path_smuggler', kind: 'path', name: 'The Fog Ledger', mentor: 'Mara Quill', port: 'fogmouth',
@@ -103,7 +104,7 @@ export const QUESTS: QuestDef[] = [
       { type: 'deliver', port: 'wrecktide', good: 'dreamleaf', qty: 10, text: 'Carry 10 bales of dreamleaf to Wrecktide.' },
       { type: 'visit', port: 'fogmouth', text: 'Settle the ledger with Mara Quill in Fogmouth.' },
     ],
-    reward: { xp: 2500, silver: 1500, path: 'smuggler' },
+    reward: { xp: questXp(5, legacyQuestSize(2500, 5)), silver: 1500, path: 'smuggler' },
   },
   {
     id: 'q_path_reaver', kind: 'path', name: 'Red Hook', mentor: 'Hask Morrow', port: 'cinderhold',
@@ -115,7 +116,7 @@ export const QUESTS: QuestDef[] = [
       { type: 'sink', count: 2, role: 'patrol', text: 'Sink two Crown or League patrols.' },
       { type: 'visit', port: 'cinderhold', text: 'Drink with Hask Morrow in Cinderhold.' },
     ],
-    reward: { xp: 2500, silver: 1500, path: 'reaver' },
+    reward: { xp: questXp(5, legacyQuestSize(2500, 5)), silver: 1500, path: 'reaver' },
   },
   {
     id: 'q_path_navigator', kind: 'path', name: 'The Stargazer', mentor: 'Tobias Wren', port: 'wrecktide',
@@ -127,7 +128,7 @@ export const QUESTS: QuestDef[] = [
       { type: 'reach', region: 'dead_mans_expanse', text: 'Sail into Dead Man\'s Expanse.' },
       { type: 'visit', port: 'wrecktide', text: 'Show your log to Tobias Wren at Wrecktide.' },
     ],
-    reward: { xp: 2500, silver: 1500, path: 'navigator' },
+    reward: { xp: questXp(5, legacyQuestSize(2500, 5)), silver: 1500, path: 'navigator' },
   },
   // ---------------------------------------------------------------- premium Paths: Legend quests
   {
@@ -141,7 +142,7 @@ export const QUESTS: QuestDef[] = [
       { type: 'die_in', region: 'drowned_crown', text: 'Go down with your ship in the Drowned Crown.' },
       { type: 'visit', port: 'saint_maw', text: 'Return to Ilse Harrow at Saint Maw, dripping.' },
     ],
-    reward: { xp: 12000, silver: 5000, path: 'drowned', deed: 'deed_legend_quest' },
+    reward: { xp: questXp(25, legacyQuestSize(12000, 25)), silver: 5000, path: 'drowned', deed: 'deed_legend_quest' },
   },
   {
     id: 'q_legend_admiral', kind: 'legend', name: "The Admiralty's Verdict", mentor: 'Cassius Dray', port: 'gravesend',
@@ -153,7 +154,7 @@ export const QUESTS: QuestDef[] = [
       { type: 'deliver', port: 'cinderhold', good: 'weapons', qty: 20, text: 'Deliver 20 crates of arms to Cinderhold — the Admiral keeps his debts.' },
       { type: 'visit', port: 'gravesend', text: 'Hear the Verdict at Gravesend.' },
     ],
-    reward: { xp: 12000, silver: 5000, path: 'admiral', deed: 'deed_legend_quest' },
+    reward: { xp: questXp(25, legacyQuestSize(12000, 25)), silver: 5000, path: 'admiral', deed: 'deed_legend_quest' },
   },
   // ---------------------------------------------------------------- the Abyss
   {
@@ -166,7 +167,7 @@ export const QUESTS: QuestDef[] = [
       { type: 'time_in', region: 'the_abyss', seconds: 120, text: 'Spend two minutes at sea in the Abyss.' },
       { type: 'visit', port: 'saint_maw', text: 'Return to Saint Maw.' },
     ],
-    reward: { xp: 5000, silver: 2000, deed: 'deed_first_descent' },
+    reward: { xp: questXp(20, legacyQuestSize(5000, 20)), silver: 2000, deed: 'deed_first_descent' },
   },
 ];
 

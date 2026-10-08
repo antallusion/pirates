@@ -153,7 +153,8 @@ test('a bot strikes her colours sooner: below three tenths of her men', () => {
 });
 
 test('boarding a senior: allowed, the window first («Рискнуть» boards, nothing without it); an easy prize at once', () => {
-  const { game, me, foe, c } = pair(1, 3, 40);
+  const { game, me, foe, c, s } = pair(1, 3, 40);
+  s.profile!.level = 1; // a captain of her sloop's level: her lesson goes by her level (docs/26)
   foe.state.speed = me.state.speed = 0;
   assert.equal(canBoard(game, me, foe), null, 'the ladder no longer bars the grapples');
   c.push({ t: 'board', target: foe.id, aggression: 'standard' });

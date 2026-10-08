@@ -46,7 +46,8 @@ import { claimLair, turtleUpNow, warnLanding } from './isles18.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { questEvent } from './quests.ts';
 import { chronicle } from './renown.ts';
-import { TAC_XP_PER_HP, sideOf } from './tactical.ts';
+import { sideOf } from './tactical.ts';
+import { XP_UNITS, battleXp, xpAt } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { haulTake } from './seahaul.ts';
 import { act, killedHp, lossesOf, newBattle, quickFinish, stepBattle, viewOf } from './tacbattle.ts';
 import type { TacArmyEntry, TacBattle, TacSideInput } from './tacbattle.ts';
@@ -391,7 +392,7 @@ function card(game: Game, s: PlayerSession, l: Lair): LairCard {
   return {
     id: l.id, kind: l.kind, role: l.role, size: l.size, level: l.level, island: islandName(game, l), men: armyMen(men), stacks: men.map((x) => ({ u: x.u, n: x.n })),
     ratio: Math.round(lairRatio(game, s, l) * 10) / 10, party: armyMen(partyOf(game, s)), offer, joinN: offer === 'join' ? armyMen(lairJoiners(game, s, l)) : 0,
-    reach: inReach(game, s, l), why: up ? fightWhy(game, s, l) : null, pay: { silver: pay.silver, xp: pay.xp }, ...(lairWeek(game, l) ? { week: true } : {}),
+    reach: inReach(game, s, l), why: up ? fightWhy(game, s, l) : null, pay: { silver: pay.silver, xp: xpAt(s.profile!.level, l.level, pay.xp) }, ...(lairWeek(game, l) ? { week: true } : {}),
     ...(p.v[l.id] === week1(game) ? { looted: true } : {}),
     ...(!up && st?.down !== undefined ? { down: Math.max(0, Math.round(st.down + LAIR_RESPAWN[l.role] - game.now)) } : {}),
     ...(chainSteps ? { chain: { step: l.chain!, done: chainSteps } } : {}),
@@ -703,7 +704,7 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
   if (f.ext) {
     // docs/18 IV: another system's fight — its own end.
     if (won) {
-      const xp = Math.round(killedHp(bt, 0) * TAC_XP_PER_HP * (f.ext.xpMul ?? 1));
+      const xp = battleXp(s.profile!.level, f.ext.level, killedHp(bt, 0), startHp(bt, 1), XP_UNITS.creatures * (f.ext.xpMul ?? 1));
       f.xp = xp;
       if (xp > 0) game.grantXp(s, xp, `Won the fight with the ${f.ext.place}`, true);
       ship.morale = Math.min(100, ship.morale + 5);
@@ -733,7 +734,7 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
     return;
   }
   lairGone(game, l);
-  const xp = Math.round(killedHp(bt, 0) * TAC_XP_PER_HP);
+  const xp = battleXp(s.profile!.level, l.level, killedHp(bt, 0), startHp(bt, 1), XP_UNITS.creatures);
   f.xp = xp;
   if (xp > 0) game.grantXp(s, xp, `Won the fight ashore with the ${lairName(l)}`, true);
   f.loot = lootLair(game, s, l);
@@ -743,6 +744,11 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
   ship.morale = Math.min(100, ship.morale + 8);
   ship.companyKey = '';
   game.pushSelf(s, true);
+}
+
+/** Hit points a side came to the battle with (the share cut down is the battle's lesson, docs/26). */
+function startHp(bt: TacBattle, side: 0 | 1): number {
+  return bt.stacks.reduce((n, x) => n + (x.side === side ? x.start * x.hpMax : 0), 0);
 }
 
 /** What a beaten lair leaves her (once a week of the calendar), the island's chest for the chain, the island hers. */
@@ -782,8 +788,8 @@ function lootLair(game: Game, s: PlayerSession, l: Lair): LairLoot {
         if (got > 0) loot.res[r] = got;
       }
     }
-    loot.xp = pay.xp;
-    game.grantXp(s, pay.xp, `Cleared the ${lairName(l)}`, true);
+    loot.xp = xpAt(p.level, l.level, pay.xp);
+    game.grantXp(s, loot.xp, `Cleared the ${lairName(l)}`, true);
     // An artifact now and then (H2's finds); an egg of its own kind from the rarer lairs.
     if (S.rng.chance(LAIR_ART[l.size] * (l.role === 'guardian' ? 1.5 : 1))) {
       const it = artifactFind(game, s, 'guard');
@@ -801,6 +807,7 @@ function lootLair(game: Game, s: PlayerSession, l: Lair): LairLoot {
     if (l.chain === 2 && lp.v[`l${l.island}s`] === w && lp.v[`l${l.island}g`] === w && lp.chest[l.island] !== w) {
       lp.chest[l.island] = w;
       const c = chainChest(l.level);
+      c.xp = xpAt(p.level, l.level, c.xp);
       p.gold += c.silver;
       game.db.ledger(s.accountId, 'lair_chest', c.silver, String(l.island));
       game.grantXp(s, c.xp, `Cleared the chain of ${islandName(game, l)}`, true);

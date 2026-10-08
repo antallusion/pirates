@@ -2,6 +2,8 @@
 // kept stocked with pirates while it lasts. Every captain's pirate sunk within the nest's reach counts on their own
 // tally (a groupmate's kill too, through the quest events); a full tally is paid once.
 
+import { questXpFor } from '../../../shared/src/data/xpcurve.ts'; // docs/26
+import { captainBand, sectorAt } from '../../../shared/src/world/sectors.ts';
 import { hullsFor, shipLevelForCaptain } from '../../../shared/src/data/shiplevel.ts';
 import { TASKS_AT_ONCE, TASK_KINDS, TASK_NEED, TASK_RADIUS, TASK_SEC, taskLevel, taskName, taskNeed, taskReward } from '../../../shared/src/data/worldtasks.ts';
 import type { TaskKind, TaskView } from '../../../shared/src/data/worldtasks.ts';
@@ -165,6 +167,8 @@ function tallyUp(game: Game, s: PlayerSession, t: WorldTask): void {
   if (n >= need) {
     t.done.add(s.accountId);
     const r = taskReward(t.level);
+    // docs/26: at her own level within the waters of the task's square, green above them.
+    r.xp = questXpFor(s.profile!.level, r.xp, t.level, captainBand(sectorAt(game.world, t.x, t.y).band)[1]);
     s.profile!.gold += r.silver;
     game.db.ledger(s.accountId, 'task', r.silver, `${t.kind} ${t.island}`);
     game.grantXp(s, r.xp, null);

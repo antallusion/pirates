@@ -19,6 +19,7 @@
 // half its strength, the Abbess's at two fifths); when the great one falls its kin scatter and the fight is won.
 // `direct` is pure but for the dice it is handed, so the tests and the balance play the same fight (`simulateShore`).
 
+import { xpAt } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { isNight } from '../../../shared/src/constants.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import type { LandRes } from '../../../shared/src/data/bestiary.ts';
@@ -308,8 +309,8 @@ function shoreEnd(game: Game, s: PlayerSession, r: Rising, won: boolean, bt: Tac
       if (got > 0) loot.res[res] = got;
     }
   }
-  loot.xp = pay.xp;
-  game.grantXp(s, pay.xp, `${name} beaten`, true);
+  loot.xp = xpAt(p.level, r.level, pay.xp);
+  game.grantXp(s, loot.xp, `${name} beaten`, true);
   const trophy = def.trophy[0];
   if (!p.trophies.includes(trophy)) {
     p.trophies.push(trophy);

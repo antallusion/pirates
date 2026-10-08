@@ -5,6 +5,7 @@
 // season's raid on the Eye (bosses.ts); abyssal metal, ritual shards and the Raising Ritual of the ghost ship;
 // and the chapters of the story of who moved the stars.
 
+import { bossXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { dist } from '../../../shared/src/math.ts';
 import type { AbyssView } from '../../../shared/src/protocol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
@@ -283,7 +284,7 @@ export function raisingRitual(game: Game, s: PlayerSession): string | null {
   p.berths.push({ port: 'saint_maw', loadout: { classId: 'ghost_ship', name: `${s.name.split(' ')[0]}'s Return`, guns: { port: 'medium_12', starboard: 'medium_12' }, modules: {} }, hull: 1 });
   ship.sanity = Math.max(0, ship.sanity - 30);
   game.emit({ k: 'fx', fx: 'rise', x: Math.round(eye.x), y: Math.round(eye.y), r: 200 }, eye.x, eye.y);
-  game.grantXp(s, 5000, 'The Raising Ritual');
+  game.grantXp(s, bossXp(s.profile!.level, 5000), 'The Raising Ritual');
   game.sendTo(s, { t: 'toast', msg: 'The Eye gives something back. A ghost ship rises, dripping, and sails for Saint Maw — she waits in your berth there.', kind: 'gold' });
   game.addRumor(eye.x, eye.y, `${s.name} spoke the Raising Ritual at the Eye. A ghost ship answered.`);
   return null;

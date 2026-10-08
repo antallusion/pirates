@@ -5,6 +5,7 @@
 // item 83: tattoos, dice, the auction and the guilds open after it).
 // Every text lives on the client under the ids sent from here, so the words can be localized.
 
+import { XP_UNITS, lumpXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -367,7 +368,7 @@ function stepGoals(game: Game, s: PlayerSession, p: Profile): boolean {
     if (!def || def.metric(p) <= (g.base[id] ?? 0)) continue;
     g.active = g.active.filter((x) => x !== id);
     g.done.push(id);
-    const lv = addXp(p, 120);
+    const lv = addXp(p, lumpXp(p.level, XP_UNITS.tutorialGoal));
     s.ship && (s.ship.level = p.level);
     game.sendTo(s, { t: 'onb', kind: 'goal', id });
     if (lv) game.sendTo(s, { t: 'toast', msg: `Level ${p.level}!`, kind: 'xp' });
@@ -434,7 +435,7 @@ function advance(game: Game, s: PlayerSession, how: 'done' | 'skip'): void {
   m.stageDone[t.stage] = (m.stageDone[t.stage] ?? 0) + 1;
   if (how === 'skip') m.stageSkipped[t.stage] = (m.stageSkipped[t.stage] ?? 0) + 1;
   if (how === 'done') {
-    const lv = addXp(p, 40 + t.stage * 15);
+    const lv = addXp(p, lumpXp(p.level, XP_UNITS.tutorialStage * (1 + 0.25 * t.stage)));
     ship.level = p.level;
     p.gold += 50;
     game.db.ledger(s.accountId, 'tutorial', 50, STAGES[t.stage].id);

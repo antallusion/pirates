@@ -3,6 +3,7 @@
 // name his island; there he rises for the captain who has them; the first to sink him this week wins his figurehead
 // and a title; after that, his echo pays silver.
 
+import { bossXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { unlockDeed } from './looks.ts';
 import { BATTLE_R, DAY_MS, DUTCHMAN_TITLE, PAGES, PAGE_R, RIDDLES, SHARE_R, WEEK_MS } from '../../../shared/src/data/dutchman.ts';
 import type { DutchmanView } from '../../../shared/src/protocol.ts';
@@ -176,12 +177,12 @@ export function dutchmanSunk(game: Game, victim: ShipEntity, killer: ShipEntity 
       if (!p.titles.includes(DUTCHMAN_TITLE)) p.titles.push(DUTCHMAN_TITLE);
       sagaNote(game, m, 'dutchman');
       game.sendTo(m, { t: 'toast', msg: 'The Dutchman’s figurehead is yours.', kind: 'gold' });
-      game.grantXp(m, 5000, 'The Flying Dutchman', true);
+      game.grantXp(m, bossXp(m.profile!.level, 5000), 'The Flying Dutchman', true);
     } else {
       p.gold += 3000;
       game.db.ledger(m.accountId, 'dutchman_echo', 3000, '');
       game.sendTo(m, { t: 'toast', msg: 'The Dutchman has gone down this week already; his echo pays you in silver.', kind: 'gold' });
-      game.grantXp(m, 1500, 'The Dutchman’s echo', true);
+      game.grantXp(m, bossXp(m.profile!.level, 1500), 'The Dutchman’s echo', true);
     }
     game.pushSelf(m, true);
   }

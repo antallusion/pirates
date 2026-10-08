@@ -13,7 +13,7 @@ import type { RoamKind, RoamSize } from '../../shared/src/data/roamers.ts';
 import { Rng } from '../../shared/src/rng.ts';
 import { killedHp, lossesOf, newBattle, quickFinish } from '../../server/src/game/tacbattle.ts';
 import type { TacSideInput } from '../../server/src/game/tacbattle.ts';
-import { TAC_XP_PER_HP } from '../../server/src/game/tactical.ts';
+import { XP_UNITS, refLevel, xpUnit } from '../../shared/src/data/xpcurve.ts';
 import { refParty } from './lairs.ts';
 
 const side = (army: ArmyStack[], beasts: boolean): TacSideInput => ({
@@ -27,7 +27,8 @@ export interface RoamFight {
   loss: number;
   /** Silver her lost men were worth, over the won fights. */
   refill: number;
-  /** The battle's own lesson (hit points cut down × TAC_XP_PER_HP), over the won fights; and its rounds. */
+  /** The share of the stack's hit points cut down, over the won fights (the battle's own lesson is XP_UNITS.creatures
+   *  of it, docs/26: battleLesson); and its rounds. */
   battleXp: number;
   rounds: number;
 }
@@ -47,7 +48,7 @@ export function roamFight(me: ArmyStack[], stack: ArmyStack[], kind: RoamKind, n
       win++;
       loss += armyMen(lost) / men;
       refill += lost.reduce((a, x) => a + x.n * UNITS[x.u].cost, 0);
-      xp += killedHp(bt, 0) * TAC_XP_PER_HP;
+      xp += killedHp(bt, 0) / Math.max(1, bt.stacks.reduce((a, x) => a + (x.side === 1 ? x.start * x.hpMax : 0), 0));
     } else loss += 1;
   }
   return { win: win / n, loss: loss / n, refill: win ? refill / win : 0, battleXp: win ? xp / win : 0, rounds: rounds / n };
@@ -143,6 +144,9 @@ function mixOf(L: number, fightsEach: number): Mix[] {
   return out;
 }
 
+/** The battle's whole lesson at ⚓L for its even captain (docs/26: XP_UNITS.creatures of her level's ship sunk). */
+export const battleLesson = (L: number): number => XP_UNITS.creatures * xpUnit(refLevel(L));
+
 /** An hour of steady fighting at ⚓L against the stacks of its waters (their kinds and sizes as the sea mixes them). */
 export function xpHour(L: number, gap = ROAM_GAP, fightsEach = 12, pace: FightPace = 'steady'): XpHour {
   const me = refParty(L);
@@ -150,7 +154,7 @@ export function xpHour(L: number, gap = ROAM_GAP, fightsEach = 12, pace: FightPa
   for (const m of mixOf(L, fightsEach)) {
     const pay = roamPay(L, m.size);
     secs += m.w * (fightSecs(m.f.rounds, me.length, m.st, pace) + sailSecs(gap));
-    xp += m.w * m.f.win * (m.f.battleXp * ROAM_BATTLE_XP + pay.xp);
+    xp += m.w * m.f.win * (m.f.battleXp * battleLesson(L) * ROAM_BATTLE_XP + pay.xp);
     silver += m.w * m.f.win * (pay.silver + resWorth(roamRes(m.kind, m.n)));
     refill += m.w * m.f.refill * m.f.win * (1 - ROAM_RAISE);
     wsum += m.w;
@@ -166,7 +170,7 @@ export function lessonFor(L: number, target: number): { battle: number; need: nu
   const h = xpHour(L);
   let wsum = 0, battle = 0, sizeMul = 0;
   for (const m of mixOf(L, 12)) {
-    battle += m.w * m.f.win * m.f.battleXp * ROAM_BATTLE_XP;
+    battle += m.w * m.f.win * m.f.battleXp * battleLesson(L) * ROAM_BATTLE_XP;
     sizeMul += m.w * m.f.win * ROAM_XP_SIZE[m.size];
     wsum += m.w;
   }

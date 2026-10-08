@@ -2,6 +2,7 @@
 // divers, wake trails, soundings, weather forecasts, the gold trail, and the edge of the map.
 // The base treasure system lives here; Phase 8 adds multi-part maps, riddles and map theft on top.
 
+import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { mapReveals } from './isles18.ts';
 import { DEG, dist, headingVec } from '../../../shared/src/math.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -224,7 +225,7 @@ export function resolveDig(game: Game, s: PlayerSession, mapId: string, share: n
   hoard(game, s, m.tier + (ship.hasFlag('gold_fever') ? 1 : 0), share);
   maybeArtifact(game, s, 'chest', 0.15 + 0.15 * m.tier); // docs/17 H2: an artifact in the hoard
   if (m.tier >= 3) grantDeed(game, s, 'deed_legendary_hoard');
-  game.grantXp(s, 150 * m.tier, `Dug up the ${m.name}`);
+  game.grantXp(s, pointsXp(s.profile!.level, 150 * m.tier), `Dug up the ${m.name}`);
 }
 
 /** The contents of a hoard by grade (4 = Gold Fever on a legendary map). */
@@ -364,7 +365,7 @@ export function resolveDive(game: Game, s: PlayerSession, wreckId: number, share
   }
   fragmentChance(game, s, 0.04 * w.tier);
   game.toastShip(ship, `The divers come up from the ${w.name}: ${fit} ${GOODS[g].name.toLowerCase()} and ${silver} silver.`, 'gold');
-  game.grantXp(s, 60 * w.tier, null);
+  game.grantXp(s, pointsXp(s.profile!.level, 60 * w.tier), null);
 }
 
 export function canDive(game: Game, s: PlayerSession, w: SunkenWreck): string | null {

@@ -12,6 +12,7 @@ import type { OfficerRole } from '../../../shared/src/data/crew.ts';
 import { armyCost, hasSpecial, UNITS } from '../../../shared/src/data/army.ts';
 import { kindOfUnit } from '../../../shared/src/data/tactical.ts';
 import type { TacAction } from '../../../shared/src/protocol.ts';
+import { XP_UNITS, battleXp, targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import type { Game } from './Game.ts';
@@ -41,8 +42,9 @@ const NPC_MIX: Record<NpcRole, { skill: number; officer: OfficerRole | null }> =
   beast: { skill: 1, officer: null },
 };
 
-/** Experience a victor's captain learns for every hit point of the men his side cut down (HoMM3's reckoning). */
-export const TAC_XP_PER_HP = 0.2;
+/** The victor's lesson from the battle itself (HoMM3's: the men cut down), in units of her own level's ship sunk by the
+ *  share of the other side's hit points cut down — a small bonus on the prize, never a second prize (docs/26). */
+export const TAC_XP_SHARE = XP_UNITS.battle;
 /** A ransom is this share of the silver the boarders' living army is worth. */
 export const TAC_RANSOM_SHARE = 0.5;
 
@@ -238,7 +240,8 @@ function settle(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle, seq: nu
     const wSide = bt.over.winner;
     creaturesWon(game, winner, bt.stacks.filter((x) => x.side === wSide).map((x) => x.src)); // docs/18 #39
     const ws = game.sessionOf(winner);
-    const xp = Math.round(killedHp(bt, wSide) * TAC_XP_PER_HP);
+    const lost = winner === a ? b : a;
+    const xp = ws?.profile ? battleXp(ws.profile.level, lost.onLadder ? lost.combatLevel : null, killedHp(bt, wSide), bt.stacks.reduce((n, x) => n + (x.side !== wSide ? x.start * x.hpMax : 0), 0), TAC_XP_SHARE) : 0;
     fight.tacXp = [wSide === 0 ? xp : 0, wSide === 1 ? xp : 0];
     if (ws?.profile && xp > 0) game.grantXp(ws, xp, `Won the boarding battle with ${(winner === a ? b : a).name}`, true);
     // Boarders thrown back: the defenders' fight won (the victor's is counted with the prize).
@@ -246,7 +249,7 @@ function settle(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle, seq: nu
       const s = game.sessionOf(b);
       if (s?.profile) {
         onFightWon(game, s);
-        game.grantXp(s, Math.round(40 * Math.max(1, a.cls.tier) * (1 + a.level / 12)), `Threw back the boarders of ${a.name}`, true);
+        game.grantXp(s, targetXp(s.profile.level, a.onLadder ? a.combatLevel : null, XP_UNITS.repelled), `Threw back the boarders of ${a.name}`, true);
       }
     }
   }

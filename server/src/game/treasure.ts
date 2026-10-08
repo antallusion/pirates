@@ -3,6 +3,7 @@
 // captains, the noise of digging, guardians and cave-ins, cursed maps and the season's legendary chart in
 // fragments whose holders hear each other. The base system (circles, digs, hoards) is in explorefx.ts.
 
+import { bossXp, pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { digPlayerChest } from './chests.ts';
 import { isNight } from '../../../shared/src/constants.ts';
 import { DEG, dist } from '../../../shared/src/math.ts';
@@ -159,7 +160,7 @@ export function digOutcome(game: Game, s: PlayerSession, m: TreasureMap, share: 
     grantPlan(game, s, 'legendary');
     if (!p.trophies.includes(lc.name)) p.trophies.push(lc.name);
     grantDeed(game, s, 'deed_legendary_hoard');
-    game.grantXp(s, 3000, `Found ${lc.name}`);
+    game.grantXp(s, bossXp(s.profile!.level, 3000), `Found ${lc.name}`);
     const text = `${s.name} has dug up ${lc.name}! The other pieces are only paper now.`;
     for (const port of game.world.ports) game.addRumor(port.x, port.y, text);
     for (const o of game.sessions) {
@@ -173,7 +174,7 @@ export function digOutcome(game: Game, s: PlayerSession, m: TreasureMap, share: 
     hoard(game, s, 4, share);
     ship.curse = Math.min(100, ship.curse + 25);
     ship.sanity = Math.max(0, ship.sanity - 40);
-    game.grantXp(s, 700, 'A cursed hoard');
+    game.grantXp(s, pointsXp(s.profile!.level, 700), 'A cursed hoard');
     game.toastShip(ship, 'The chest is full — and cold. The crew will not look at it. (Curse +25, sanity −40: a chapel or Saint Maw can lift it.)', 'bad');
     return true;
   }

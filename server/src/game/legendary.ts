@@ -4,6 +4,7 @@
 // fought over her — until her captain raises her; if her captain is gone 30 days, she returns to the Legendary
 // Reserve and the contest begins again.
 
+import { bossXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { LEGENDARY, LEGENDARY_IDS } from '../../../shared/src/data/legendary.ts';
@@ -221,7 +222,7 @@ export function raiseLegend(game: Game, s: PlayerSession): string | null | undef
     save(game, st);
     s.profile!.berths = s.profile!.berths.filter((b) => b.loadout.legendary !== id);
     s.profile!.berths.push({ port: 'wrecktide', loadout: loadoutOf(id), hull: 0.3 });
-    game.grantXp(s, 1500, `Raised the ${LEGENDARY[id].name}`);
+    game.grantXp(s, bossXp(s.profile!.level, 1500), `Raised the ${LEGENDARY[id].name}`);
     game.sendTo(s, { t: 'toast', msg: `Chains and prayers: the ${LEGENDARY[id].name} comes up. She is towed to Wrecktide, where she waits in a berth.`, kind: 'gold' });
     for (const p of game.world.ports) game.addRumor(p.x, p.y, `The ${LEGENDARY[id].name} has been raised by ${s.name}.`);
     for (const o of game.sessions) sendEvents(game, o);

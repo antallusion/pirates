@@ -11,6 +11,7 @@
 // Not saved: a stack is down for minutes, and a stack's state is the sea's for that long. Every roll here is on this
 // system's own Rng.
 
+import { xpAt } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { UNITS, armyMen, armyPower } from '../../../shared/src/data/army.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import { LAND_RES } from '../../../shared/src/data/bestiary.ts';
@@ -322,9 +323,8 @@ export function attackRoam(game: Game, s: PlayerSession, id: number): string | n
   if (why) return why;
   const ship = s.ship;
   const n = roamMen(game, sp!);
-  const gap = roamGap(ship.shipLevel, sp!.level);
   const e = startCreatureFight(game, s, {
-    type: ROAMS[sp!.kind].field, kind: `roam_${sp!.kind}`, place: ROAM_NAME[sp!.kind], level: sp!.level, xpMul: ROAM_BATTLE_XP * gap,
+    type: ROAMS[sp!.kind].field, kind: `roam_${sp!.kind}`, place: ROAM_NAME[sp!.kind], level: sp!.level, xpMul: ROAM_BATTLE_XP,
     onEnd: (g, ss, won, bt) => roamEnd(g, ss, sp!, won, bt.stacks.filter((x) => x.side === 1 && x.count > 0).reduce((a, x) => a + x.count, 0), bt),
   }, ROAM_NAME[sp!.kind], roamStacks(sp!.kind, n), UNITS[ROAMS[sp!.kind].u as ArmyStack['u']].art, sp!.level);
   if (e) return e;
@@ -403,13 +403,13 @@ function roamEnd(game: Game, s: PlayerSession, sp: RoamSpot, won: boolean, left:
   const pay = roamPay(sp.level, sp.size);
   const res = roamRes(sp.kind, roamMen(game, sp));
   roamGone(game, sp);
-  const gap = roamGap(ship.shipLevel, sp.level);
-  const xp = Math.round(pay.xp * gap);
+  const gap = roamGap(s.profile!.level, sp.level);
+  const xp = xpAt(s.profile!.level, sp.level, pay.xp);
   if (xp > 0) game.grantXp(s, xp, `Roaming stack beaten: ${ROAM_NAME[sp.kind]}`, true);
   const share = 1 / (1 + mates.length);
   const mine = giveSpoils(game, s, pay.silver, res, share);
   for (const m of mates) {
-    const mx = Math.round(pay.xp * ROAM_MATE_XP * roamGap(m.ship!.shipLevel, sp.level));
+    const mx = Math.round(xpAt(m.profile!.level, sp.level, pay.xp) * ROAM_MATE_XP);
     if (mx > 0) game.grantXp(m, mx, `${s.name} beat a roaming stack: ${ROAM_NAME[sp.kind]}`, true);
     const got = giveSpoils(game, m, pay.silver, res, share);
     game.toastShip(m.ship!, `Your share of the ${ROAM_NAME[sp.kind]}: ${got.silver} silver.`, 'gold');

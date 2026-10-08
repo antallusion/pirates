@@ -3,6 +3,7 @@
 // port; and hidden quests that begin with something a captain does rather than someone who asks.
 
 import type { QuestDef, QuestStep } from './quests.ts';
+import { legacyQuestSize, questXp } from './xpcurve.ts';
 import type { Flag, StatMods } from './stats.ts';
 
 export type Tr = [string, string];
@@ -176,7 +177,7 @@ function build(s: SideSpec, kind: 'side' | 'hidden'): QuestDef {
     id: s.id, kind: 'story', name: s.name[0], mentor: s.giver[0], port: s.port, summary: s.summary[0],
     requires: { level: s.level, ...(s.after ? { done: [s.after] } : {}) },
     steps: s.steps.map(([st, text]) => ({ ...(st as object), text: text[0] }) as QuestStep),
-    reward: { xp: s.xp, silver: s.silver, ...(s.tattoo ? { tattoo: s.tattoo } : {}), ...(s.choice ? { choice: true } : {}) },
+    reward: { xp: questXp(s.level, legacyQuestSize(s.xp, s.level)), silver: s.silver, ...(s.tattoo ? { tattoo: s.tattoo } : {}), ...(s.choice ? { choice: true } : {}) },
     category: kind, portrait: s.portrait, template: s.chain,
     ...(kind === 'hidden' ? { hidden: true } : {}),
   };

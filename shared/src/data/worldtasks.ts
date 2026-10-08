@@ -3,6 +3,7 @@
 // the drowned sail again. No one takes them:
 // every captain moves on their own count (a groupmate's kill counts too), and each is paid once when theirs is full.
 
+import { XP_UNITS, lumpXp } from './xpcurve.ts'; // docs/26
 import type { RegionId } from '../world/regions.ts';
 
 export type TaskKind = 'nest' | 'wreck' | 'haunt';
@@ -24,7 +25,7 @@ export function taskLevel(safety: string): number {
   return LEVEL[safety] ?? 4;
 }
 export function taskReward(level: number): { silver: number; xp: number } {
-  return { silver: Math.round(260 * (1 + level / 10)), xp: Math.round(360 * (1 + level / 10)) };
+  return { silver: Math.round(260 * (1 + level / 10)), xp: lumpXp(level, XP_UNITS.task) };
 }
 
 export interface TaskView {

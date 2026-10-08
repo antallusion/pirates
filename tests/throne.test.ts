@@ -53,7 +53,7 @@ function capCaptain(game: Game, name: string): PlayerSession {
 const toasts = (game: Game, s: PlayerSession): string[] => ((s.conn as unknown as { inbox: { t: string; msg?: string }[] }).inbox.filter((m) => m.t === 'toast').map((m) => m.msg ?? ''));
 
 test('E1: glory past the cap — a gentle curve, experience turned to ranks, the bar on the plate is glory', () => {
-  assert.equal(GLORY_BASE, xpForLevel(MAX_LEVEL));
+  assert.equal(GLORY_BASE, Math.round((xpForLevel(MAX_LEVEL) * 0.45) / 1000) * 1000, 'docs/26: about half the last level'); // (the cap's step itself before docs/26)
   assert.equal(gloryXp(0), GLORY_BASE);
   assert.ok(gloryXp(100) === Math.round(GLORY_BASE * 2), 'rank 100 asks twice the first');
   for (let r = 0; r < 300; r++) assert.ok(gloryXp(r + 1) >= gloryXp(r), 'never cheaper');

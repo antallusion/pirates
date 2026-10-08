@@ -6,6 +6,7 @@
 // piece; experience and silver by the part. A slain slot is kept (kv `zboss:<region>`) so a restart cannot raise her
 // twice. The model is bosses.ts (BossHub), called beside it in Game.everySecond.
 
+import { ZONE_BOSS_UNITS, targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { ZB_GRUDGE, ZB_LIFE, ZB_MIN_SHARE, ZB_REACH, ZB_ROAM, ZB_WARN, ZONE_BOSSES, zbSlot, zbSlotStart } from '../../../shared/src/data/zonebosses.ts';
 import type { ZoneBossDef } from '../../../shared/src/data/zonebosses.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
@@ -442,6 +443,7 @@ function spoils(game: Game, live: ZbLive, ship: ShipEntity): void {
       const id = game.allocId();
       game.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo: {}, gold: 0, expires: game.now + 900, ownerOnly: sh.account, items: [it] });
     }
+    sh.xp = targetXp(p.level, def.level, ZONE_BOSS_UNITS * sh.share); // docs/26: her part of the boss's lesson, at her level
     game.grantXp(s, sh.xp, null); // (told in the one line below: the toasts of a sinking are many already)
     const pct = Math.max(1, Math.round(sh.share * 100));
     // The silver comes by letter, a draft on the League (any port pays it).

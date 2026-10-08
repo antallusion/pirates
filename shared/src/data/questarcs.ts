@@ -13,6 +13,7 @@ import type { GoodId } from './goods.ts';
 import { GOODS } from './goods.ts';
 import type { QuestDef, QuestStep } from './quests.ts';
 import { SITE_NAMES, STEP_TEXT, fill, giverPortrait, numberedPattern } from './questgen.ts';
+import { legacyQuestSize, questXp } from './xpcurve.ts';
 import type { Profession, StepKind } from './questgen.ts';
 
 type T = [string, string];
@@ -291,7 +292,7 @@ export function generateArcs(world: World, seed: number): QuestDef[] {
       out.push({
         id, kind: 'story', name: fill(ch.name[0], v), mentor: `${arc.giver}, ${PROF_EN[arc.profession]}`, port: home.id, summary: fill(ch.summary[0], v),
         requires: { level: lvl, ...(prev ? { done: [prev] } : {}) }, steps: qs,
-        reward: { xp: Math.round((500 + i * 350) * (1 + lvl / 12)), silver: Math.round((500 + i * 400) * (1 + lvl / 12)) }, category: 'arc', template: `${arc.id}.${i + 1}`,
+        reward: { xp: questXp(lvl, legacyQuestSize((500 + i * 350) * (1 + lvl / 12), lvl)), silver: Math.round((500 + i * 400) * (1 + lvl / 12)) }, category: 'arc', template: `${arc.id}.${i + 1}`,
         portrait: giverPortrait(arc.profession, arc.giver),
       });
       prev = id;

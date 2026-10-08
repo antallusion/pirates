@@ -4,6 +4,7 @@
 // one let go; the heat of a sea's lanes — escorts, League cutters and dearer goods where the raids are; the
 // Brethren's fame and ranks; and the mark of a merchant under a friend's guns.
 
+import { targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { questEvent } from './quests.ts';
 import { BRETHREN_RANKS, CODE_RANK, CONVOY_EVERY, CONVOY_INFAMY, CONVOY_MAX, CONVOY_SPOT_R, DEED_CONVOYS, ESCORT_KEEP_R, ESCORT_SIGN_R, convoyStrongbox, escortPay, FAME, HEAT, MORALE_RANK, TERROR_TITLE, TIP_WINDOW, TITLE_RANK, TRIBUTE, brethrenRank, clerkCost, heatPrices, tipCost } from '../../../shared/src/data/raiding.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -508,7 +509,7 @@ function deliverConvoy(game: Game, c: Convoy, standing: number): void {
     s.profile.gold += n;
     game.db.ledger(acc, 'convoy_escort', n, c.to);
     changeRep(s.profile, 'league', 4);
-    game.grantXp(s, 80 + 20 * c.level, 'Escorted a League convoy');
+    game.grantXp(s, targetXp(s.profile!.level, c.level, 2), 'Escorted a League convoy');
     game.sendTo(s, { t: 'toast', msg: `The League convoy is in at ${name}: ${n} silver for the escort (${standing} of ${c.size} hulls brought in).`, kind: 'gold' });
   }
 }

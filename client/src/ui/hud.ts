@@ -17,6 +17,8 @@ import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
 import { placeName } from './maps.ts';
 import { THREAT_COLOR } from '../../../shared/src/data/shiplevel.ts';
+import { levelPct } from '../../../shared/src/data/xpcurve.ts';
+import { MAX_LEVEL } from '../../../shared/src/constants.ts';
 import { levelChip, threatTo } from './levels.ts';
 import { shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import { DASH_COOLDOWN } from '../../../shared/src/data/gunnery.ts';
@@ -85,13 +87,21 @@ export function captainRecord(state: ClientState): string {
   const self = state.self;
   if (!self) return '';
   const f = self.xp / Math.max(1, self.xpNext);
+  const next = xpLine(self);
   const rest = self.rested > 0 ? `<b class="xp-rest" style="left:${pct(f)};width:${pct(Math.min(self.rested, Math.max(0, self.xpNext - self.xp)) / Math.max(1, self.xpNext))}"></b>` : '';
   const law = self.wanted ? `<span class="hx-law bad">${icon('wanted', '☠', 'ico-sm')}${esc(wantedTitle(self.wanted))}</span>` : `<span class="hx-law muted">${esc(L('unknownToLaw'))}</span>`;
   const pts = self.talentPoints > 0 ? `<span class="hx-pts gold">${icon('xp', '', 'ico-sm')}${esc(keyless(L('talentPts', { n: self.talentPoints })))}</span>` : '';
   return `<div class="hx-record">
-    <div class="hx-xp"${self.rested > 0 ? ` title="${esc(L('rested', { n: fmt(self.rested) }))}"` : ''}><span class="hx-xpl">${icon('xp', '', 'ico-sm')}${esc(L('lv', { n: self.level }))}</span><div class="fbar xp"><i style="width:${pct(f)}"></i>${rest}</div><span class="hx-xpv">${fmt(self.xp)} / ${fmt(self.xpNext)}</span></div>
+    <div class="hx-xp"${self.rested > 0 ? ` title="${esc(L('rested', { n: fmt(self.rested) }))}"` : ''}><span class="hx-xpl">${icon('xp', '', 'ico-sm')}${esc(L('lv', { n: self.level }))}</span><div class="fbar xp"><i style="width:${pct(f)}"></i>${rest}</div><span class="hx-xpv" title="${esc(L('xpOf', { xp: fmt(self.xp), next: fmt(self.xpNext) }))}">${esc(next)}</span></div>
     <div class="hx-recl">${law}${pts}${gloryChip(self.glory)}<span class="gold hx-silver">${icon('coin', '⛁', 'ico-sm')}${fmt(self.gold)}</span></div>
   </div>`;
+}
+
+/** «N% to the next level» (docs/26): what a captain reads off her experience; at the cap the bar is glory's (docs/19 E1),
+ *  «N% to the next rank of glory». */
+function xpLine(self: { level: number; xp: number; xpNext: number; glory?: { rank: number } }): string {
+  if (self.level >= MAX_LEVEL) return L('xpToGlory', { n: levelPct(self.xp, self.xpNext), m: (self.glory?.rank ?? 0) + 1 });
+  return L('xpToNext', { n: levelPct(self.xp, self.xpNext), m: self.level + 1 });
 }
 
 /** A window is open over the sea (the toasts keep to its strip then). */
@@ -491,7 +501,7 @@ export class Hud {
         <div class="uf-body">
           <div class="uf-top"><span class="uf-name">${esc(self.name)}${self.title ? `<small class="uf-title">${esc(sv(self.title))}</small>` : ''}</span><span class="gold val uf-silver">${icon('coin', '⛁', 'ico-sm')}${fmt(self.gold)}</span></div>
           ${fbar('hull', you.hull, you.hullMax, L('hull'), 'stat_hull')}${fbar('sails', you.sails, you.sailsMax, L('sails'), 'stat_sails')}${fbar('crew', you.crew, you.crewMax, L('crew'), 'stat_crew')}
-          <div class="fbar xp"${self.rested > 0 ? ` title="${esc(L('rested', { n: fmt(self.rested) }))}"` : ''}><i style="width:${pct(self.xp / Math.max(1, self.xpNext))}"></i>${self.rested > 0 ? `<b class="xp-rest" style="left:${pct(self.xp / Math.max(1, self.xpNext))};width:${pct(Math.min(self.rested, Math.max(0, self.xpNext - self.xp)) / Math.max(1, self.xpNext))}"></b>` : ''}</div>
+          <div class="fbar xp" title="${esc(self.rested > 0 ? `${xpLine(self)} · ${L('rested', { n: fmt(self.rested) })}` : xpLine(self))}"><i style="width:${pct(self.xp / Math.max(1, self.xpNext))}"></i>${self.rested > 0 ? `<b class="xp-rest" style="left:${pct(self.xp / Math.max(1, self.xpNext))};width:${pct(Math.min(self.rested, Math.max(0, self.xpNext - self.xp)) / Math.max(1, self.xpNext))}"></b>` : ''}</div>
           <div class="uf-sub"><span class="wanted" title="${esc(wantedTitle(self.wanted))}">${self.wanted ? icon('wanted', '☠', 'ico-sm') + '☠'.repeat(self.wanted) + ' ' + esc(wantedTitle(self.wanted)) : `<span class="muted">${esc(L('unknownToLaw'))}</span>`}</span>${self.talentPoints > 0 ? `<span class="gold uf-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}">${keyChip('talents')}${icon('xp', '', 'ico-sm')}${self.talentPoints}</span>` : ''}${gloryChip(self.glory)}</div>
         </div>`;
       $('hud-captain').querySelector<HTMLElement>('[data-throne]')?.addEventListener('click', (e) => {
@@ -641,18 +651,19 @@ export class Hud {
     const self = state.self!, you = state.you!;
     const cap = CAPTAINS[self.captain];
     const url = assetUrl(cap.portrait);
-    const key = `simple|${lang()}|${url ? 1 : 0}|${self.level}|${self.gold}|${you.hull}|${you.hullMax}|${you.crew}|${you.crewMax}|${you.sails}|${you.sailsMax}|${self.talentPoints > 0}`;
+    const xpPct = levelPct(self.xp, self.xpNext);
+    const key = `simple|${lang()}|${url ? 1 : 0}|${self.level}|${xpPct}|${self.gold}|${you.hull}|${you.hullMax}|${you.crew}|${you.crewMax}|${you.sails}|${you.sailsMax}|${self.talentPoints > 0}`;
     if (key === this.lastCaptainKey) return;
     this.lastCaptainKey = key;
     const el = $('hud-captain');
     const row = (k: 'hull' | 'crew' | 'sails', v: number, max: number, art: string, val: string) =>
       `<div class="cs-row cs-${k}" title="${esc(`${L(k)}: ${fmt(v)} / ${fmt(max)}`)}">${icon(art, '', 'cs-ico')}<span class="cs-bar"><i style="width:${pct(clamp(v / Math.max(1, max), 0, 1))}"></i></span><span class="cs-v">${esc(val)}</span></div>`;
     el.innerHTML = `<div class="cs">
-      <div class="cs-frame"><div class="cs-face" ${faceAttrs(cap.portrait, url)}></div><b class="cs-lv" title="${esc(L('lv', { n: self.level }))}">${self.level}</b>${self.talentPoints > 0 ? `<i class="cs-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}"></i>` : ''}</div>
+      <div class="cs-frame"><div class="cs-face" ${faceAttrs(cap.portrait, url)}></div><b class="cs-lv" style="--xp:${xpPct}%" title="${esc(`${L('lv', { n: self.level })} · ${xpLine(self)}`)}">${self.level}</b>${self.talentPoints > 0 ? `<i class="cs-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}"></i>` : ''}</div>
       <div class="cs-body">${row('hull', you.hull, you.hullMax, 'stat_hull', fmt(you.hull))}${row('crew', you.crew, you.crewMax, 'stat_crew', `${you.crew}/${you.crewMax}`)}${row('sails', you.sails, you.sailsMax, 'stat_sails', fmt(you.sails))}
         <span class="cs-silver">${icon('coin', '⛁', 'cs-coin')}${fmt(self.gold)}</span></div>
     </div>`;
-    el.setAttribute('aria-label', `${self.name}: ${L('lv', { n: self.level })}`);
+    el.setAttribute('aria-label', `${self.name}: ${L('lv', { n: self.level })}, ${xpLine(self)}`);
     el.title = self.name;
     requestAnimationFrame(() => this.placeStrip()); // the top column keeps clear of her frame
     // On a desk the frame opens her sheet: a button for the keyboard too (Enter or Space on it).

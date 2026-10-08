@@ -26,9 +26,11 @@ const T = (en: string, ru: string): [string, string] => [en, ru];
 
 // ------------------------------------------------------------------ E1. glory
 
-/** Experience from one rank of glory to the next: the last level's step, a hundredth dearer each rank (rank 100 asks
- *  twice the first; ranks 1–100 are about six and a half times the road from level 1 to the cap). */
-export const GLORY_BASE = xpForLevel(MAX_LEVEL);
+/** Experience from one rank of glory to the next: GLORY_SHARE of the cap's own step (docs/26: the curve's last levels
+ *  ask some ten hours each; a rank of glory about five at first, ten by the hundredth), a hundredth dearer each rank
+ *  (rank 100 asks twice the first; ranks 1–100 are about six and a half times the road from level 1 to the cap). */
+export const GLORY_SHARE = 0.45;
+export const GLORY_BASE = Math.round((xpForLevel(MAX_LEVEL) * GLORY_SHARE) / 1000) * 1000;
 export const GLORY_RISE = 0.01;
 export function gloryXp(rank: number): number {
   return Math.round(GLORY_BASE * (1 + Math.max(0, rank) * GLORY_RISE));

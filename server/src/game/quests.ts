@@ -37,6 +37,8 @@ import { eliteById } from '../../../shared/src/data/elite.ts';
 import { titlesDue } from '../../../shared/src/data/questtitles.ts';
 import { nearTask, taskEvent } from './worldtasks.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
+import { captainBand, sectorAt } from '../../../shared/src/world/sectors.ts';
+import { questXpFor } from '../../../shared/src/data/xpcurve.ts';
 import { dailyEvent } from './dailies.ts';
 import { commonEvent } from './commongoal.ts';
 import { guildGoalEvent } from './guildgoal.ts';
@@ -304,13 +306,28 @@ export function islandJobOffer(game: Game, s: PlayerSession, islandId: number): 
   }
   // The giver speaks, and the captain decides (the offer stands while the boats are on the beach).
   s.questOffer = { id: q.id, island: islandId, until: game.now + 180 };
-  game.sendTo(s, { t: 'quest_offer', island: islandId, offer: offerView(game, q) });
+  game.sendTo(s, { t: 'quest_offer', island: islandId, offer: offerView(game, q, p) });
 }
 
-function offerView(game: Game, q: QuestDef) {
+function offerView(game: Game, q: QuestDef, p: Profile) {
   const pays = payOptions(game, q);
   const ship = shipLevelOfQuest(q);
-  return { id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked: null, silver: q.reward.silver, xp: q.reward.xp, category: q.category, portrait: q.portrait, ...(pays ? { pays } : {}), ...(q.group ? { group: q.group } : {}), ...(ship ? { ship } : {}) };
+  return { id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked: null, silver: q.reward.silver, xp: questXpOf(game, p, q), category: q.category, portrait: q.portrait, ...(pays ? { pays } : {}), ...(q.group ? { group: q.group } : {}), ...(ship ? { ship } : {}) };
+}
+
+/** The top captain level of the waters a quest is given in — the square of its port or island (docs/16 P2): a quest
+ *  pays at her own level up to it, as a zone of today's WoW scales to the player (docs/26). */
+export function questWatersTop(game: Game, q: QuestDef): number {
+  const is = q.island !== undefined ? game.world.islands[q.island] : undefined;
+  const at = is ?? game.portById(q.port);
+  if (!at) return q.requires.level ?? 1;
+  return captainBand(sectorAt(game.world, at.x, at.y).band)[1];
+}
+
+/** What a quest pays a captain of her level (docs/26): its reward at its own level, at hers within its waters, green
+ *  above them. */
+export function questXpOf(game: Game, p: Profile, q: QuestDef): number {
+  return questXpFor(p.level, q.reward.xp, q.requires.level ?? 1, questWatersTop(game, q));
 }
 
 /** The ship level a quest's fight asks for (canon D12), or null. */
@@ -338,7 +355,7 @@ export function shareQuest(game: Game, s: PlayerSession, id: string): string | n
       continue;
     }
     m.questOffer = { id, until: game.now + 180, from: s.name };
-    game.sendTo(m, { t: 'quest_offer', from: s.name, offer: offerView(game, q) });
+    game.sendTo(m, { t: 'quest_offer', from: s.name, offer: offerView(game, q, mp) });
     offered++;
   }
   return offered ? null : 'Nobody in your group can take it on';
@@ -441,6 +458,10 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
       game.sendTo(s, { t: 'toast', msg: `Too late: ${QUESTS_BY_ID[qs.id].name} is lost.`, kind: 'bad' });
     }
   }
+  // A ship sunk or taken counts on one quest only, the first taken that wants her (docs/26: five hunts that each want two
+  // pirates are not done by two pirates).
+  const kill = ev.k === 'sink' || ev.k === 'board';
+  let spent = false;
   for (const qs of [...p.quests.active]) {
     const q = QUESTS_BY_ID[qs.id];
     if (!q) continue;
@@ -448,9 +469,11 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
     for (let guard = 0; guard < 4; guard++) {
       const st = q.steps[qs.step];
       if (!st) break;
+      if (kill && spent && (st.type === 'sink' || st.type === 'board' || st.type === 'prize')) break;
       // The band's leader sunk: the hunt is won at a stroke.
       const gained = st.type === 'sink' && ev.k === 'sink' && qs.leader !== undefined && ev.victim.id === qs.leader ? Math.max(1, stepCount(st) - qs.progress) : stepGain(game, s, st, ev);
       if (gained <= 0) break;
+      if (kill) spent = true;
       qs.progress += gained;
       if (qs.progress + 1e-9 < stepCount(st)) break;
       qs.step++;
@@ -617,7 +640,7 @@ function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   const mentors = mentorsNear(game, s);
   // A job pays a veteran more (docs/16 P2); a story pays what it pays.
   const vet = q.kind === 'job' ? veteranPay(p.level, q.requires.level ?? 1) : 1;
-  const silver = Math.round(pay.silver * vet * k * (fast ? 1 + FAST_BONUS : 1)), xp = Math.round(q.reward.xp * k * (mentors.length ? 1 + MENTOR_XP : 1));
+  const silver = Math.round(pay.silver * vet * k * (fast ? 1 + FAST_BONUS : 1)), xp = Math.round(questXpOf(game, p, q) * k * (mentors.length ? 1 + MENTOR_XP : 1));
   p.gold += silver;
   game.db.ledger(s.accountId, 'quest', silver, q.id);
   game.grantXp(s, xp, null);

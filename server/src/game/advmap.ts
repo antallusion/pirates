@@ -18,6 +18,7 @@
 import { obeliskReveals } from './isles18.ts';
 import { ALTAR_POINTS, altarPrim, GUARDS, openWater, GUARD_RESPAWN_SEC, JOIN_RATIO, JOIN_SHARE, MILL_DAYS, MILL_GOODS, OBJS, STORE_DAYS, TOWER_R, WELL_MORALE, WELL_SANITY, altarXp, buildAdv, chestPay, guardArmy, guardPay, millLoad } from '../../../shared/src/data/advmap.ts';
 import type { AdvGuard, AdvMap, AdvObj, ObjKind } from '../../../shared/src/data/advmap.ts';
+import { pointsXp, xpAt } from '../../../shared/src/data/xpcurve.ts';
 import { UNITS, armyMen, armyPower } from '../../../shared/src/data/army.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import { FIRST_NAMES, LAST_NAMES, OFFICER_DEFS, OFFICER_ROLES, TRAITS } from '../../../shared/src/data/crew.ts';
@@ -316,7 +317,7 @@ function guardCard(game: Game, s: PlayerSession, g: AdvGuard): GuardCard {
   return {
     id: g.id, kind: g.kind, size: g.size, level: g.level, men: armyMen(men), units: men.map((x) => x.u), at: guardWhat(game, g),
     ratio: Math.round(guardRatio(game, s, g) * 10) / 10, offer, joinN: offer === 'join' ? armyMen(joinersOf(game, s, g)) : 0,
-    alongside: !!gs && !canBoard(game, ship, gs), pay: guardPay(g.level, g.size), ...(gs ? { e: gs.id } : {}), ...(guardLooted(game, s.profile!, g) ? { looted: true } : {}),
+    alongside: !!gs && !canBoard(game, ship, gs), pay: guardPayFor(s.profile!.level, g), ...(gs ? { e: gs.id } : {}), ...(guardLooted(game, s.profile!, g) ? { looted: true } : {}),
   };
 }
 
@@ -360,7 +361,7 @@ export function guardBeaten(game: Game, winner: ShipEntity, loser: ShipEntity): 
   if (guardLooted(game, s.profile, g)) {
     game.toastShip(winner, `The ${guardName(g)} is beaten. You emptied its chest this week already.${openLine(game, g)}`, 'good');
   } else {
-    const pay = guardPay(g.level, g.size);
+    const pay = guardPayFor(s.profile.level, g);
     advOf(s.profile).v[`g:${g.id}`] = thisWeek(game) + 1;
     s.profile.gold += pay.silver;
     game.db.ledger(s.accountId, 'guard', pay.silver, g.id);
@@ -511,10 +512,21 @@ export function prisoner(o: AdvObj): { role: OfficerRole; level: number; traits:
  *  slips into deep waters takes their silver, not a dozen levels at once). */
 const xpLevel = (s: PlayerSession, o: AdvObj): number => Math.max(1, Math.min(o.level, s.ship?.shipLevel ?? 1));
 
-/** A chest's two choices for her: its waters' silver, or experience at her level. */
-function chestOf(s: PlayerSession, o: AdvObj): { silver: number; xp: number } {
-  return { silver: chestPay(o.level, !!o.guard).silver, xp: chestPay(xpLevel(s, o), !!o.guard).xp };
+/** A guard's chest and lesson for a captain of this level (docs/26: the lesson at her level, by its colour). */
+function guardPayFor(level: number, g: AdvGuard): { silver: number; xp: number } {
+  const pay = guardPay(g.level, g.size);
+  return { silver: pay.silver, xp: xpAt(level, g.level, pay.xp) };
 }
+
+/** A chest's two choices for her: its waters' silver, or experience at her level (no more than her ship's waters
+ *  teach, docs/26: by its colour). */
+function chestOf(s: PlayerSession, o: AdvObj): { silver: number; xp: number } {
+  const lv = xpLevel(s, o);
+  return { silver: chestPay(o.level, !!o.guard).silver, xp: xpAt(s.profile!.level, lv, chestPay(lv, !!o.guard).xp) };
+}
+
+/** An altar's lesson for her, once its points are spent. */
+const altarFor = (s: PlayerSession, o: AdvObj): number => xpAt(s.profile!.level, xpLevel(s, o), altarXp(xpLevel(s, o)));
 
 /** Why a visit would not go through now (null: it would). */
 function visitWhy(game: Game, s: PlayerSession, o: AdvObj): string | null {
@@ -554,7 +566,7 @@ function objCard(game: Game, s: PlayerSession, o: AdvObj): ObjCard {
       break;
     }
     case 'altar':
-      card.altar = { point: (advOf(p).pts ?? 0) < ALTAR_POINTS, xp: altarXp(xpLevel(s, o)), ...(advHooks.altar && (advOf(p).prims ?? 0) < ALTAR_PRIMS ? { prim: altarPrim(o.id) } : {}) };
+      card.altar = { point: (advOf(p).pts ?? 0) < ALTAR_POINTS, xp: altarFor(s, o), ...(advHooks.altar && (advOf(p).prims ?? 0) < ALTAR_PRIMS ? { prim: altarPrim(o.id) } : {}) };
       break;
     case 'prison': {
       const who = prisoner(o);
@@ -618,7 +630,7 @@ export function visit(game: Game, s: PlayerSession, id: string, choice?: string)
         a.pts = (a.pts ?? 0) + 1;
         line = 'The bell’s note stays with you: a talent point to spend.';
       } else {
-        const xp = altarXp(xpLevel(s, o));
+        const xp = altarFor(s, o);
         game.grantXp(s, xp, null);
         line = `The bell’s note teaches you ${xp} experience.`;
       }
@@ -633,7 +645,7 @@ export function visit(game: Game, s: PlayerSession, id: string, choice?: string)
     }
     case 'tower': {
       const n = revealAdv(game, s, o.x, o.y, TOWER_R, true);
-      game.grantXp(s, 40, null);
+      game.grantXp(s, pointsXp(p.level, 40), null);
       line = `From the tower the sea lies open for ${Math.round(TOWER_R / 1000)} km: ${n} islands newly on your chart.`;
       break;
     }

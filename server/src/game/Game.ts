@@ -36,7 +36,8 @@ import { callClosed, onNpcHit, raiderSunk } from './npcwars.ts';
 import { buyWare, equip, mendGear, reforgeItem, rollDrop, salvageItem, sellItem, takeItem, temperItem, unequip, wearOnSinking } from './gear.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import { orderRefit, refitHolds, stepRefit } from './refit.ts';
-import { ELITE_MODS, clampLevel, levelRange, npcSkill, xpForGap } from '../../../shared/src/data/shiplevel.ts';
+import { ELITE_MODS, clampLevel, levelRange, npcSkill } from '../../../shared/src/data/shiplevel.ts';
+import { XP_UNITS, contractPay, pointsXp, prizeXp, xpGap } from '../../../shared/src/data/xpcurve.ts';
 import { generateIslandJobs, generateQuests } from '../../../shared/src/data/questgen.ts';
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
 import { generateLairJobs } from '../../../shared/src/data/lairquests.ts';
@@ -136,15 +137,16 @@ export const FAR_EVERY = 4;
 export const MID_LOD_R = SNAP_NEAR + 300;
 /** The same refusal to the same captain is told once in this many seconds (Game.refuse). */
 export const REFUSAL_QUIET = 2.5;
-export const XP_SUNK = 40;
-export const XP_BOARDED = 90;
+/** A prize's experience in units of her own level's ship sunk (docs/26): sunk 1, taken by boarding 2. */
+export const XP_SUNK = XP_UNITS.sunk;
+export const XP_BOARDED = XP_UNITS.boarded;
 /** A captain's boarding lost (owner, 2026-10-05): the share of her chest the victors take (as a ship taken gives up,
  *  claimPrize) and the seconds no grapples bite her again. */
 export const BOARD_LOSS_PURSE = 0.08;
 export const BOARD_LOSS_SHIELD = 180;
 import { stepBridges } from './bridgefx.ts';
 import { MAX_BERTHS, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
-import { abandonQuest, acceptQuest, answerOffer, questEvent, shareQuest, swearOath, switchPath } from './quests.ts';
+import { abandonQuest, acceptQuest, answerOffer, questEvent, questXpOf, shareQuest, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import { commonCollect, commonView, stepCommon } from './commongoal.ts';
 import { guildGoalCollect } from './guildgoal.ts';
@@ -1100,7 +1102,7 @@ export class Game {
       // A storm is an event, not only a danger (owner, 2026-09-29): told the stakes as it breaks, paid for riding it out.
       if (wPrev && wPrev !== wNow && wNow === 'storm' && !s.ship.docked) this.sendTo(s, { t: 'toast', msg: 'Ride out the storm at sea: the sea pays back those who stay.', kind: 'info' });
       if (wPrev === 'storm' && wNow !== 'storm' && !s.ship.docked && s.ship.alive) {
-        this.grantXp(s, 120 + s.ship.cls.tier * 40, 'Rode out the storm');
+        this.grantXp(s, pointsXp(s.profile.level, 120 + s.ship.cls.tier * 40), 'Rode out the storm');
         const v = headingVec(this.rng.float() * Math.PI * 2);
         const good = this.rng.pick(['sailcloth', 'planks', 'spices', 'rum', 'pearls'] as GoodId[]);
         this.dropPrivateLoot(s.accountId, s.ship.state.x + v.x * 220, s.ship.state.y + v.y * 220, { [good]: good === 'pearls' ? this.rng.int(1, 3) : this.rng.int(3, 8) }, 300);
@@ -1115,7 +1117,7 @@ export class Game {
         this.sendTo(s, { t: 'ev', list: [{ k: 'region', region, safety: r.safety }] });
         if (!s.profile.regionsSeen.includes(region)) {
           s.profile.regionsSeen.push(region);
-          if (s.profile.regionsSeen.length > 1) this.grantXp(s, 150 + r.strangeness * 600, `Discovered ${r.name}`);
+          if (s.profile.regionsSeen.length > 1) this.grantXp(s, pointsXp(s.profile.level, 150 + r.strangeness * 600), `Discovered ${r.name}`);
         }
       }
       if (s.ship.distanceLog > 0) {
@@ -1592,6 +1594,7 @@ export class Game {
       claimIsle: claimPrompt(this, s),
       questTargets: this.questTargets(p),
       questMates: this.questMates(s),
+      questXp: Object.fromEntries(p.quests.active.map((a) => [a.id, QUESTS_BY_ID[a.id] ? questXpOf(this, p, QUESTS_BY_ID[a.id]) : 0])),
       common: commonView(this, s.accountId),
       service: serviceView(this, p),
       captives: p.captives.map((c) => ({ name: c.name, role: sanitizeCaptive(c).role, level: c.level, traits: c.traits, skills: c.skills, loyalty: captiveLoyalty(this, p, c), turnCost: turnCost(c), tried: c.tried === Math.floor(this.now / DAY_LENGTH_SEC) })),
@@ -1937,12 +1940,12 @@ export class Game {
     if (!s || !s.profile) return;
     ownShipsKill(this, s, victim); // her own ships near share in it (docs/15 item 4)
     const p = s.profile;
-    const tier = victim.cls.monster ? 1 : victim.cls.tier; // a rotten hulk is no ship of the line
-    // The colour of the prize (canon D12): nothing for a grey one, more for one above you.
-    const gap = victim.onLadder && killer.onLadder ? victim.combatLevel - killer.combatLevel : 0;
+    // The colour of the prize (canon D12 as WoW's, docs/26): the captain's level against the ship's fighting level —
+    // nothing for a grey one, less for a green, more for one above her. A monster, a hulk, a boss's part: off the ladder.
+    const vLevel = victim.onLadder ? victim.combatLevel : null;
     // A streak of ships without making port swells it (docs/16 #4).
     const streak = onStreakKill(this, s, killer, victim);
-    const xp = (how === 'sunk' ? XP_SUNK : XP_BOARDED) * tier * (1 + victim.level / 12) * xpForGap(gap);
+    const xp = prizeXp(p.level, vLevel, how);
     if (how === 'sunk') p.stats.sunk++;
     else p.stats.boarded++;
     this.shared?.bump(how === 'sunk' ? 'sunk' : 'boarded', s.accountId, s.name, 1);
@@ -1996,7 +1999,7 @@ export class Game {
     }
     checkStatDeeds(this, s);
     this.grantXp(s, xp * streak, `${how === 'sunk' ? 'Sank' : 'Took'} ${victim.name}`, true);
-    for (const ms of mates) this.grantXp(ms, xp * 0.4, `${s.name} ${how === 'sunk' ? 'sank' : 'took'} ${victim.name}`, true);
+    for (const ms of mates) this.grantXp(ms, prizeXp(ms.profile!.level, vLevel, how) * XP_UNITS.mate, `${s.name} ${how === 'sunk' ? 'sank' : 'took'} ${victim.name}`, true);
     // Law and reputation (monsters and hulks answer to nobody).
     if (victim.faction !== 'player' && !victim.cls.monster) {
       const f = FACTIONS[victim.faction];
@@ -2018,12 +2021,11 @@ export class Game {
       onPlayerKill(this, killer, victim, how);
       onWarKill(this, killer, victim, how);
     }
-    // Contracts.
-    for (const c of p.contracts) {
-      if (c.kind === 'bounty' && victim.faction === c.targetFaction) {
-        c.progress = (c.progress ?? 0) + 1;
-        if ((c.progress ?? 0) >= (c.kills ?? 1)) this.completeContract(s, c.id);
-      }
+    // Contracts: a ship counts on one bounty only, and a grey one on none (docs/26: no prize paid twice).
+    const bounty = xpGap(p.level, vLevel) > 0 ? p.contracts.find((c) => c.kind === 'bounty' && victim.faction === c.targetFaction && (c.progress ?? 0) < (c.kills ?? 1)) : undefined;
+    if (bounty) {
+      bounty.progress = (bounty.progress ?? 0) + 1;
+      if ((bounty.progress ?? 0) >= (bounty.kills ?? 1)) this.completeContract(s, bounty.id);
     }
   }
 
@@ -2579,7 +2581,7 @@ export class Game {
     const xp = 12 + Math.min(40, is.radius / 40) + strange * 60 + (is.features.includes('ruins') ? 25 : 0);
     this.sendTo(s, { t: 'ev', list: [{ k: 'discover', islandId: is.id, name: is.name, region: is.region }] });
     const ship = s.ship;
-    this.grantXp(s, xp * (1 + (ship ? tval(ship.stats, 'cartography') : 0)), null);
+    this.grantXp(s, pointsXp(s.profile!.level, xp * (1 + (ship ? tval(ship.stats, 'cartography') : 0))), null);
     // Pathfinder: a new landfall lifts the crew.
     const pf = ship ? tval(ship.stats, 'pathfinder') : 0;
     if (ship && pf > 0) {
@@ -2702,7 +2704,7 @@ export class Game {
     const issuer = this.portById(c.fromPort);
     if (issuer) changeRep(p, issuer.faction, 5);
     this.sendTo(s, { t: 'toast', msg: `Contract complete: ${c.title}. +${c.reward} silver.`, kind: 'gold' });
-    this.grantXp(s, c.xp, null);
+    this.grantXp(s, contractPay(p.level, c), null);
     this.db.ledger(s.accountId, 'contract', c.reward, c.title);
   }
 
@@ -4161,7 +4163,7 @@ export class Game {
     const visitedKey = `visited:${port.id}`;
     if (!p.regionsSeen.includes(visitedKey)) {
       p.regionsSeen.push(visitedKey);
-      this.grantXp(s, 60 + port.size * 40, `First visit to ${port.name}`);
+      this.grantXp(s, pointsXp(p.level, 60 + port.size * 40), `First visit to ${port.name}`);
       logNote(this, s, 'port', [port.name]); // the captain's log (docs/16 #20)
     }
     questEvent(this, s, { k: 'dock', port });

@@ -5,6 +5,7 @@
 // cabin by his rank, a fine or better piece, and his head among her trophies. Another captain sinking him ends
 // nothing: the Brethren's captains come back.
 
+import { targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { unlockDeed } from './looks.ts';
 import { EPITHETS, NEMESIS_LETTERS, NEMESIS_LEVEL_BONUS, NEMESIS_MAX, NEMESIS_MAX_RANK, NEMESIS_RANKS, nemesisName, surnameOf, epithetOf } from '../../../shared/src/data/nemesis.ts';
 import type { NemesisCause } from '../../../shared/src/data/nemesis.ts';
@@ -131,7 +132,7 @@ export function nemesisRevenge(game: Game, s: PlayerSession, np: NamedPirate): b
   const head = `The head of ${sur} ${ep}, your nemesis`;
   if (!p.trophies.includes(head)) p.trophies.push(head);
   for (const o of game.sessions) if (o !== s && o.ship?.region === np.region) game.sendTo(o, { t: 'toast', msg: `WORLD: ${s.name} took revenge on ${sur} ${ep}.`, kind: 'gold' });
-  game.grantXp(s, 150 * np.level * rec.rank, `Revenge on ${np.name[0]}`, true);
+  game.grantXp(s, targetXp(s.profile!.level, np.level, 2 * rec.rank), `Revenge on ${np.name[0]}`, true);
   return true;
 }
 

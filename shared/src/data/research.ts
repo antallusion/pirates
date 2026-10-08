@@ -15,7 +15,7 @@ import type { FleetList, ShipClassId } from './ships.ts';
 /** The experience a hull of each tier costs to research (tier 1: known from the start). About two fifths of what a
  *  captain earns between the levels that open the tier below and this one, so the tree is a road of its own beside
  *  the captain's levels, not a wall in front of them (tools: tests/research.test.ts). */
-export const RESEARCH_COST: Record<number, number> = { 1: 0, 2: 3000, 3: 28000, 4: 100000, 5: 240000 };
+export const RESEARCH_COST: Record<number, number> = { 1: 0, 2: 3000, 3: 28000, 4: 100000, 5: 370000 }; // (tier 5 by docs/26's curve)
 
 /** The share of a hull's experience that also goes into the free pool. */
 export const FREE_XP_SHARE = 0.05;

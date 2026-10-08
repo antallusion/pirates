@@ -1,6 +1,7 @@
 // Captain progression (docs/03_TALENT_TREES.md §2): talent points from levels and Legend Deeds, respec
 // (free under level 20, Forget a Lesson, Clean Slate, Clean Logbook tokens) and talent loadouts.
 
+import { XP_UNITS, lumpXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { questEvent } from './quests.ts';
 import { DEEDS_BY_ID, MAX_COUNTED_DEEDS } from '../../../shared/src/data/deeds.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -43,7 +44,7 @@ export function grantDeed(game: Game, s: PlayerSession, id: string): boolean {
   p.deeds.push(id);
   const counts = p.deeds.length <= MAX_COUNTED_DEEDS;
   game.sendTo(s, { t: 'toast', msg: `LEGEND DEED — ${def.name}. ${counts ? 'A talent point is yours.' : 'Your legend grows (16 deeds already count).'}`, kind: 'gold' });
-  game.grantXp(s, 400, null);
+  game.grantXp(s, lumpXp(p.level, XP_UNITS.deed), null);
   return true;
 }
 

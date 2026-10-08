@@ -2,6 +2,7 @@
 // shared goals of the week (#32), trade alongside at sea (#33), the guild's shipyard on the leader's island (#34)
 // and the signal flags a group hoists to its own (#35). The numbers and the words; the server and client read them.
 
+import { XP_UNITS, lumpXp } from './xpcurve.ts'; // docs/26
 import type { GoodId } from './goods.ts';
 import { Rng } from '../rng.ts';
 
@@ -79,8 +80,8 @@ export function worldGoalsFor(week: number, ports: readonly string[]): { kind: W
 
 /** A hand's pay when the goal is met: by level, and more for a bigger share (up to double). */
 export function worldGoalReward(level: number, mine: number, target: number): { silver: number; xp: number } {
-  const k = (1 + level / 10) * (1 + Math.min(1, (mine / Math.max(1, target)) * 20));
-  return { silver: Math.round(600 * k), xp: Math.round(900 * k) };
+  const more = 1 + Math.min(1, (mine / Math.max(1, target)) * 20), k = (1 + level / 10) * more;
+  return { silver: Math.round(600 * k), xp: lumpXp(level, 2 * XP_UNITS.goal * more) };
 }
 
 export function worldGoalText(kind: WorldGoalKind, target: number, port: string, lang: 0 | 1): string {

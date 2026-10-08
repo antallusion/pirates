@@ -5,6 +5,7 @@
 // bring them down), a keel limit, a current, ambushes from the wrecks, and the Graveyard Captain at its heart.
 // Each week's Tide changes them: Fog, Blood Moon, Calm.
 
+import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { dist } from '../../../shared/src/math.ts';
@@ -418,7 +419,7 @@ function finishDive(game: Game, run: DiveRun, ok: boolean, why = ''): void {
     if (Object.keys(cargo).length) game.dropPrivateLoot(m.accountId, m.ship!.state.x + 30, m.ship!.state.y + 30, cargo, 900);
     if (run.plan && (m.accountId === run.leader || game.rng.chance(0.5))) grantPlan(game, m, 'masterwork');
     if (run.plan && m.accountId === run.leader) legendFragment(game, m, 0.3, `Sealed in the vault of ${site.name}`);
-    game.grantXp(m, 400 + run.seen.size * 25, `Dived ${site.name}`);
+    game.grantXp(m, pointsXp(m.profile!.level, 400 + run.seen.size * 25), `Dived ${site.name}`);
     game.sendTo(m, { t: 'toast', msg: `The bell comes up from ${site.name}: ${silver} silver${Object.keys(cargo).length ? ', and a haul floating by your side' : ''}.`, kind: 'gold' });
     game.sendTo(m, { t: 'dive', view: null });
     game.saveSession(m);
@@ -697,7 +698,7 @@ export function onYardCaptainSunk(game: Game, ship: ShipEntity): void {
         lines.push('an old master\'s ship plan');
       }
     }
-    game.grantXp(s, 900 * blood, `The Graveyard Captain of ${site.name}`);
+    game.grantXp(s, pointsXp(s.profile!.level, 900 * blood), `The Graveyard Captain of ${site.name}`);
     legendFragment(game, s, 0.25, 'In the Graveyard Captain\'s coat');
     game.sendTo(s, { t: 'toast', msg: `The Graveyard Captain goes down. His chest floats up for you${lines.length ? `, with ${lines.join(', ')}` : ''}.`, kind: 'gold' });
   }

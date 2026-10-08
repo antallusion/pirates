@@ -14,6 +14,7 @@ import { legacyWorld } from '../world/worldgen.ts';
 import { islandLife } from '../world/islandlife.ts';
 import type { QuestDef, QuestStep } from './quests.ts';
 import { SPEED_SCALE } from '../constants.ts';
+import { legacyQuestSize, questXp } from './xpcurve.ts';
 
 // ------------------------------------------------------------------ the people who give the jobs
 
@@ -602,6 +603,12 @@ export const PLOTS: Plot[] = [
 
 const PER_PORT = 85;
 
+/** A plot's size against a quest of the usual size at its level (docs/26): its old reward over the old usual one of its
+ *  level (150 + 40 a level) — a letter carried is half a quest, a named pirate trailed and sunk a quest and a half. */
+export function plotSize(plot: Plot): number {
+  return legacyQuestSize(plot.xp, plot.level);
+}
+
 export interface GenParams {
   giver: string;
   profession: Profession;
@@ -754,11 +761,11 @@ function build(id: string, plot: Plot, flavor: Flavor, p: GenParams, levelBase: 
   };
   const steps: QuestStep[] = plot.steps.map((k) => stepOf(k, p, fill(STEP_TEXT[k][0], v)));
   const level = Math.max(1, plot.level + levelBase);
-  const scale = 1 + level / 10;
+  const scale = 1 + level / 10; // (the silver's; the experience is the curve's, docs/26)
   return {
     id, kind: 'job', name: fill(flavor.name[0], v), mentor: `${p.giver}, ${PROFESSIONS[p.profession][0]}`, port: p.port.id,
     summary: fill(flavor.summary[0], v), requires: { level },
-    steps, reward: { xp: Math.round(plot.xp * scale), silver: Math.round(plot.pay * scale) },
+    steps, reward: { xp: questXp(level, plotSize(plot)), silver: Math.round(plot.pay * scale) },
     category: plot.category, template: `${plot.id}.${plot.flavors.indexOf(flavor)}`, portrait: giverPortrait(p.profession, p.giver),
   };
 }

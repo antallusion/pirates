@@ -10,7 +10,8 @@
 // one is a hard fight for a ship of its level. What they guard pays in parts of the hour at sea of those waters
 // (advHour, the same reckoning as seaHour of tests/balance/island.ts), and in parts of a captain's level of experience.
 
-import { DAY_LENGTH_SEC, xpForLevel } from '../constants.ts';
+import { DAY_LENGTH_SEC } from '../constants.ts';
+import { advXp, hourSilver } from './xpcurve.ts';
 import { armyFit, armyForLevel, armyPower, armyTidy, upgradedShare } from './army.ts';
 import type { ArmyMix, ArmyStack, UnitId } from './army.ts';
 import type { Tr } from './estate.ts';
@@ -30,12 +31,14 @@ import type { Island, World } from '../world/worldgen.ts';
 
 /** Silver an hour at sea earns a captain of ship level ⚓L (the reference of tests/balance/island.ts seaHour). */
 export function advHour(level: number): number {
-  return Math.round(6 * 320 * 1.3 ** (Math.max(1, Math.min(10, level)) - 1));
+  return hourSilver(level);
 }
 
-/** Experience of one captain's level at the level that commands ⚓L. */
+/** A level's worth of experience as the map's shares are written (a guard's 0.04 of it, an altar's 0.25…), at ⚓L: since
+ *  docs/26 ADV_UNITS of the ship of its even captain's own level, so a share is a number of fights, the same at every
+ *  level. Quoted for that captain; a captain of another level is paid at hers by the colour (xpAt). */
 export function advLevelXp(level: number): number {
-  return xpForLevel(captainLevelFor(Math.max(1, Math.min(10, level))));
+  return advXp(level);
 }
 
 // ------------------------------------------------------------------------------------------------ 14. the guards

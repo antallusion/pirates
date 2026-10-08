@@ -18,6 +18,7 @@ import { chandlerWares, takeGearBack, wornItems } from './gear.ts';
 import { mendCost } from '../../../shared/src/data/items.ts';
 import { refitHolds, refitView } from './refit.ts';
 import { captainLevelFor, levelRange } from '../../../shared/src/data/shiplevel.ts';
+import { CONTRACT_LEG, contractFor, contractXp, lumpXp, silverXp, xpUnit } from '../../../shared/src/data/xpcurve.ts';
 import { onEventSale } from './events.ts';
 import { levyFor, noteSale, payLevy, saleMul } from './empires.ts';
 import { seasonStat, shanty } from './seasons.ts';
@@ -43,7 +44,7 @@ import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
 import { hireTrade, recruitCost, tavernOf } from './crew.ts';
 import { ESCORT_OFFERS } from './fleet.ts';
-import { eventFavor, payOptions, questOffers, shipLevelOfQuest } from './quests.ts';
+import { eventFavor, payOptions, questOffers, questXpOf, shipLevelOfQuest } from './quests.ts';
 import { todaysElite } from './elite.ts';
 import { MAX_BERTHS, woodAvailable } from './shipbuilding.ts';
 import { PLAN_REP, WOODS, YARD_FACTIONS_WITH_PLANS, carvedAt } from '../../../shared/src/data/shipbuild.ts';
@@ -171,7 +172,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     crewAvailable: Math.floor(game.tavernCrew.get(port.id) ?? 0),
     crewHireCost: crewCost(port, p),
     tavern: tavernView(game, port, p, ship, s),
-    questOffers: questOffers(p, port, game.now, favor, todaysElite(game, port)).map(({ q, blocked }) => ({ id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked, silver: Math.round(q.reward.silver * (q.kind === 'job' ? veteranPay(p.level, q.requires.level ?? 1) : 1)), xp: q.reward.xp, path: q.reward.path, category: q.category, portrait: q.portrait, ...(q.category === 'arc' ? { chapter: Number(q.id.split('_').pop()) } : {}), ...(favor && q.kind === 'job' && favor(q) ? { urgent: true } : {}), ...((pays) => (pays ? { pays } : {}))(payOptions(game, q)), ...(q.group ? { group: q.group } : {}), ...((ship) => (ship ? { ship } : {}))(shipLevelOfQuest(q)) })),
+    questOffers: questOffers(p, port, game.now, favor, todaysElite(game, port)).map(({ q, blocked }) => ({ id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked, silver: Math.round(q.reward.silver * (q.kind === 'job' ? veteranPay(p.level, q.requires.level ?? 1) : 1)), xp: questXpOf(game, p, q), path: q.reward.path, category: q.category, portrait: q.portrait, ...(q.category === 'arc' ? { chapter: Number(q.id.split('_').pop()) } : {}), ...(favor && q.kind === 'job' && favor(q) ? { urgent: true } : {}), ...((pays) => (pays ? { pays } : {}))(payOptions(game, q)), ...(q.group ? { group: q.group } : {}), ...((ship) => (ship ? { ship } : {}))(shipLevelOfQuest(q)) })),
     captainsHouse: CAPTAINS_HOUSES.includes(port.id),
     fishRecords: Object.entries(fishRecords(game)).map(([fish, r]) => ({ fish: fish as FishId, name: r.name, kg: r.kg })),
     wanted: wantedBoard(game, p, port),
@@ -207,7 +208,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
       wares: chandlerWares(game, port),
       mendCost: wornItems(p).reduce((a, it) => a + mendCost(it), 0),
     },
-    contracts: [...hotRun(game, s, port), ...game.contractsAt(port.id)],
+    contracts: [...hotRun(game, s, port), ...game.contractsAt(port.id)].map((c) => contractFor(p.level, c)),
     rumors: [poiRumor(game, s, port), ...game.rumorsNear(port.x, port.y, 3)].filter((r): r is string => !!r),
     charts: chartView(game, s, port),
     sites: sitesNearPort(game, port).map((x) => siteView(game, s, x)),
@@ -334,7 +335,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   applyTrade(market, good, n);
   const profit = price - basis * n;
   p.stats.tradeProfit += Math.max(0, profit);
-  if (profit > 0) game.grantXp(s, profit / 5, null);
+  if (profit > 0) game.grantXp(s, silverXp(p.level, profit, s.ship?.shipLevel ?? 1), null); // docs/26: a trader's lesson by her waters' hour
   // Trade builds standing with the port's faction.
   game.adjustRepProfile(s, port.faction, Math.min(3, price / 1500) * (1 + tx(ship.stats, 'tradeRep')));
   game.db.ledger(s.accountId, 'sell', price, `${n} ${good} @ ${port.id}`);
@@ -580,7 +581,7 @@ function hotRun(game: Game, s: PlayerSession, port: Port): Contract[] {
   const d = dist(dest.x, dest.y, port.x, port.y);
   p.smuggle.hotRun = {
     id: `hot${game.allocId()}`, kind: 'delivery', title: `Hot run: ${qty} ${GOODS[good].name} to ${dest.name}`, fromPort: port.id, toPort: dest.id, good, qty,
-    reward: Math.round(qty * GOODS[good].basePrice * (0.6 + d / 25000)), xp: Math.round(qty * 10 + d / 80), expiresAt: game.now + 1800 + d / 5,
+    reward: Math.round(qty * GOODS[good].basePrice * (0.6 + d / 25000)), ...contractUnits('delivery', 1.2 * d / CONTRACT_LEG), expiresAt: game.now + 1800 + d / 5,
     description: 'The Brokers want this moved quietly. No questions, no receipts, a fat purse.',
   };
   return [p.smuggle.hotRun];
@@ -620,6 +621,13 @@ export function pardon(game: Game, s: PlayerSession, port: Port): string | null 
 
 let contractSeq = 1;
 
+/** A contract's worth (docs/26): its units of her own level's ship sunk — letters and deliveries by their legs of the
+ *  usual length, a bounty by its ships, an urgent one twice — and the experience a captain of the first level sees. */
+function contractUnits(kind: 'courier' | 'delivery' | 'bounty', n: number): { xp: number; units: number } {
+  const units = Math.round((contractXp(1, kind, n) / xpUnit(1)) * 100) / 100;
+  return { xp: lumpXp(1, units), units };
+}
+
 export function generateContracts(game: Game, port: Port): Contract[] {
   const out: Contract[] = [];
   const rng = game.rng;
@@ -632,7 +640,7 @@ export function generateContracts(game: Game, port: Port): Contract[] {
       const kills = rng.int(1, 3);
       out.push({
         id: `c${contractSeq++}`, kind, title: `Bounty: ${kills} pirate ship${kills > 1 ? 's' : ''}`, fromPort: port.id, targetFaction: 'confederacy', kills, progress: 0,
-        reward: Math.round((320 * kills + rng.int(0, 150)) * game.econRewardMul), xp: 180 * kills, expiresAt: now + 3600,
+        reward: Math.round((320 * kills + rng.int(0, 150)) * game.econRewardMul), ...contractUnits('bounty', kills), expiresAt: now + 3600,
         description: `The ${FACTIONS[port.faction].short} pays for every Red Tide hull sunk or taken. Bring proof — or don't come back.`,
       });
       continue;
@@ -643,7 +651,7 @@ export function generateContracts(game: Game, port: Port): Contract[] {
     if (kind === 'courier') {
       out.push({
         id: `c${contractSeq++}`, kind, title: `Sealed letters to ${dest.name}`, fromPort: port.id, toPort: dest.id,
-        reward: Math.round((120 + d / 55) * game.econRewardMul), xp: Math.round(60 + d / 120), expiresAt: now + 1800 + d / 8,
+        reward: Math.round((120 + d / 55) * game.econRewardMul), ...contractUnits('courier', d / CONTRACT_LEG), expiresAt: now + 1800 + d / 8,
         description: `Wax-sealed dispatches for ${dest.name}. No questions, no delays.`,
       });
       continue;
@@ -654,7 +662,7 @@ export function generateContracts(game: Game, port: Port): Contract[] {
     const qty = rng.int(6, 18);
     out.push({
       id: `c${contractSeq++}`, kind: 'delivery', title: `Deliver ${qty} ${GOODS[good].name} to ${dest.name}`, fromPort: port.id, toPort: dest.id, good, qty,
-      reward: Math.round(qty * GOODS[good].basePrice * (0.35 + d / 30000) * game.econRewardMul), xp: Math.round(qty * 6 + d / 100), expiresAt: now + 2400 + d / 6,
+      reward: Math.round(qty * GOODS[good].basePrice * (0.35 + d / 30000) * game.econRewardMul), ...contractUnits('delivery', d / CONTRACT_LEG), expiresAt: now + 2400 + d / 6,
       description: `${dest.name} is short of ${GOODS[good].name.toLowerCase()}. Buy it anywhere — the buyer pays on delivery, on top of market price.`,
     });
   }
@@ -666,14 +674,14 @@ export function generateContracts(game: Game, port: Port): Contract[] {
     const d = dist(dest.x, dest.y, port.x, port.y);
     out.push({
       id: `c${contractSeq++}`, kind: 'courier', title: `Urgent: sealed letters to ${dest.name}`, fromPort: port.id, toPort: dest.id,
-      reward: Math.round((240 + d / 25) * game.econRewardMul), xp: Math.round(120 + d / 60), expiresAt: now + 600,
+      reward: Math.round((240 + d / 25) * game.econRewardMul), ...contractUnits('courier', 2 * d / CONTRACT_LEG), expiresAt: now + 600,
       description: 'Ten minutes, and the dispatch is worth nothing. The quickest captain in port is paid double.',
     });
   }
   if (REGIONS[port.region].safety !== 'safe') {
     out.push({
       id: `c${contractSeq++}`, kind: 'bounty', title: 'Urgent bounty: 1 pirate ship', fromPort: port.id, targetFaction: 'confederacy', kills: 1, progress: 0,
-      reward: Math.round((520 + rng.int(0, 120)) * game.econRewardMul), xp: 300, expiresAt: now + 600,
+      reward: Math.round((520 + rng.int(0, 120)) * game.econRewardMul), ...contractUnits('bounty', 2), expiresAt: now + 600,
       description: 'A rover was sighted off the harbour mouth. Sink or take her within ten minutes.',
     });
   }
@@ -749,7 +757,7 @@ export function sellCharts(game: Game, s: PlayerSession, port: Port): string | n
   const p = s.profile!;
   (p.chartSales[port.id] ??= []).push(...list.map((is) => is.id));
   p.gold += value;
-  game.grantXp(s, value / 6, null);
+  game.grantXp(s, silverXp(p.level, value, s.ship!.shipLevel), null);
   game.db.ledger(s.accountId, 'charts_sold', value, `${list.length} islands @ ${port.id}`);
   game.sendTo(s, { t: 'toast', msg: `The cartographer copies ${list.length} of your charts: +${value} silver.`, kind: 'gold' });
   return null;

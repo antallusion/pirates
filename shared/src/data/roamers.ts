@@ -17,7 +17,8 @@ import type { ArmyStack, UnitId } from './army.ts';
 import { advHour, advLevelXp, buildAdv, guardBaseMight } from './advmap.ts';
 import { BEAST_RES, LAND_RES_DEF } from './bestiary.ts';
 import type { CreatureId, LandRes } from './bestiary.ts';
-import { hullsFor, xpForGap } from './shiplevel.ts';
+import { hullsFor } from './shiplevel.ts';
+import { HUNT_HOUR_UNITS, refLevel, xpGap, xpUnit } from './xpcurve.ts';
 import { SHIP_CLASSES } from './ships.ts';
 import type { IsleType } from '../world/archipelago.ts';
 import { WORLD_SIZE } from '../constants.ts';
@@ -385,14 +386,11 @@ export function roamRange(kind: RoamKind, level: number): [number, number] {
 
 // ------------------------------------------------------------------------------------------------ what they leave
 
-/** Experience an hour of the game's usual play at sea teaches a captain of ⚓L: six prizes of her waters an hour (the
- *  hour tests/balance/island.ts reckons, KILLS_HOUR), each the mean of a ship sunk and one boarded (40 and 90) × the
- *  hull's tier × (1 + her captain's level/12), as Game.creditKill pays a prize (an NPC's captain is three a tier). */
+/** Experience an hour of the game's usual play at sea teaches the even captain of ⚓L (docs/26): a captain who hunts
+ *  the ships of her level (the model tests/balance/xp.ts), HUNT_HOUR_UNITS of her own level's ship sunk. */
 export function seaHourXp(level: number): number {
   const L = Math.max(1, Math.min(10, Math.round(level)));
-  const hs = hullsFor('pirate', L);
-  const tier = hs.reduce((a, c) => a + SHIP_CLASSES[c].tier, 0) / hs.length;
-  return 6 * 65 * tier * (1 + (tier * 3) / 12);
+  return HUNT_HOUR_UNITS * xpUnit(refLevel(L));
 }
 
 /** The stacks' lesson is held to this share of seaHourXp an hour of steady fighting (the owner's 0.6–0.8). */
@@ -404,7 +402,7 @@ export const ROAM_BATTLE_XP = 0.7;
 export const ROAM_XP_SIZE: Record<RoamSize, number> = { weak: 0.6, avg: 1, strong: 1.7 };
 /** An average stack's own lesson at ⚓L, a share of a captain's level of its waters (calibrated: tests/balance/roamers.ts
  *  holds the hour's whole lesson to 0.6–0.8 of seaHourXp). Index: level 0–10. */
-export const ROAM_XP_SHARE = [0, 0.079, 0.0106, 0.0069, 0.0046, 0.0026, 0.0021, 0.0012, 0.0006, 0.0014, 0.0004];
+export const ROAM_XP_SHARE = [0, 0.023, 0.024, 0.0275, 0.0303, 0.0303, 0.0275, 0.0303, 0.0275, 0.0303, 0.0303];
 /** Its silver, a share of an hour at sea of its waters for an average stack (by size as the lesson): a small purse that
  *  with the creatures' spoils about pays for the men a steady hour of them costs and leaves a little over (calibrated:
  *  tests/balance/roamers.ts holds the hour's net to +0.1…+0.35 of an hour at sea). Index: level 0–10. */
@@ -423,8 +421,9 @@ export function roamPay(level: number, size: RoamSize): { silver: number; xp: nu
   };
 }
 
-/** Her lesson's share for a stack of ⚓`theirs` to a ship of ⚓`mine` (D12: nothing for a grey one). */
-export const roamGap = (mine: number, theirs: number): number => xpForGap(theirs - mine);
+/** Her lesson's share for a stack of ⚓`theirs` to a captain of level `level` (D12's colours by her level, docs/26:
+ *  nothing for a grey one). */
+export const roamGap = (level: number, theirs: number): number => xpGap(level, theirs);
 
 /** The resources of the creatures beaten (BEAST_RES of the land's kinds; the mermaids leave pearls, the turtles shell). */
 export function roamRes(kind: RoamKind, beaten: number): Partial<Record<LandRes | 'pearls', number>> {

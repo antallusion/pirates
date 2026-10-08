@@ -2,6 +2,7 @@
 // grove, mine, pearl bank, shrine). It takes time, leaves the ship anchored and exposed, and can cost lives.
 // Features restock after a while, so islands stay worth revisiting. Rumours in taverns point to them.
 
+import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { fatesOnLand } from './fates.ts';
 import { petsOnLand } from './pets.ts';
 import { lairIsland, lairLanding } from './wanted.ts';
@@ -300,7 +301,7 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
     // docs/16 #21: the party meets what waits at the haunt (its game), then walks on across the island.
     if (!startTrek(game, s, island, share)) {
       game.toastShip(ship, `The party finds the ${featureName(island, feature)} on ${island.name} deserted.`, 'info');
-      game.grantXp(s, 10 * share, null);
+      game.grantXp(s, pointsXp(s.profile!.level, 10 * share), null);
     }
     petsOnLand(game, s, island, feature);
     fatesOnLand(game, s, island.id);
@@ -484,7 +485,7 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
   }
   if (lost) ship.crew = Math.max(1, ship.crew - lost);
   ship.morale = Math.max(0, Math.min(100, ship.morale + morale + (got.length ? 4 : 0)));
-  game.grantXp(s, xp * share, null);
+  game.grantXp(s, pointsXp(s.profile!.level, xp * share), null);
   const what = got.length ? got.join(', ') : 'nothing but sand and bones';
   game.toastShip(ship, `The party returns from the ${FEATURE_NAMES[feature]} on ${island.name}: ${what}.${lost ? ` ${lost} lost ashore.` : ''}`, got.length ? 'gold' : 'info');
   questEvent(game, s, { k: 'land', island: island.id, feature });

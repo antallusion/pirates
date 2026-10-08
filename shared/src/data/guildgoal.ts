@@ -1,5 +1,6 @@
 // The guild's order of the week (docs/11 P6): every guild has one goal a week (UTC), sized by its members; their
 // deeds fill it, and when it is done the treasury gains and every member who put a hand to it is paid.
+import { XP_UNITS, lumpXp } from './xpcurve.ts'; // docs/26
 
 export type GuildGoalKind = 'pirates' | 'charts' | 'landings' | 'prizes' | 'boardings' | 'quests';
 
@@ -31,8 +32,8 @@ export function guildTreasuryReward(target: number): number {
 
 /** A member's share: by level, more for more deeds (up to double). */
 export function guildMemberReward(level: number, mine: number): { silver: number; xp: number } {
-  const k = (1 + level / 10) * (1 + Math.min(1, mine / 8));
-  return { silver: Math.round(200 * k), xp: Math.round(300 * k) };
+  const more = 1 + Math.min(1, mine / 8), k = (1 + level / 10) * more;
+  return { silver: Math.round(200 * k), xp: lumpXp(level, 0.75 * XP_UNITS.goal * more) };
 }
 
 export function guildGoalText(kind: GuildGoalKind, target: number, lang: 0 | 1): string {

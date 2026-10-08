@@ -9,6 +9,7 @@
 //      a season, land to strike while they are up, and rare things on them for a landing party once each rise.
 // Also what the captain's chart and HUD are told of all of this (a small 'isles' message every two seconds).
 
+import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { isNight, nightFactor } from '../../../shared/src/constants.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { makeItem } from '../../../shared/src/data/items.ts';
@@ -114,7 +115,7 @@ export function payKeeper(game: Game, s: PlayerSession): string | null {
   p.gold -= price;
   game.db.ledger(s.accountId, 'keeper', -price, is.name);
   st(game).paid.set(is.id, game.now + LIGHT_PAID_SEC);
-  game.grantXp(s, 20, null);
+  game.grantXp(s, pointsXp(s.profile!.level, 20), null);
   game.toastShip(s.ship!, `The keeper of ${is.name} takes ${price} silver and lights the lamp. The shoals within 3.5 km show in its light.`, 'good');
   sendIsles(game, s, true);
   return null;
@@ -172,7 +173,7 @@ export function climbLookout(game: Game, s: PlayerSession, is: Island, share: nu
   const { reefs, marks } = sendSea(game, s, is.x, is.y, r);
   revealAdv(game, s, is.x, is.y, r); // the guards and the things on the map in its sight (docs/17 H4)
   const wrecks = marks.filter((m) => m.kind === 'wreck').length;
-  game.grantXp(s, Math.round(60 * share), null);
+  game.grantXp(s, pointsXp(s.profile!.level, 60 * share), null);
   game.toastShip(ship, `From the lookout on ${is.name} the sea lies open for ${Math.round(r / 1000)} km: ${isl} islands, ${reefs.length} reefs and ${wrecks} wrecks newly on your chart.`, 'good');
   sendIsles(game, s, true);
 }
@@ -276,7 +277,7 @@ export function combBank(game: Game, s: PlayerSession, b: TidalIsle, share: numb
   // Gear and a map say so themselves (the locker's and the map chest's own words).
   if (rng.chance(TIDAL_ITEM * share)) takeItem(game, s, makeItem(rng, 0, { ilvl: ship.shipLevel, rarity: rng.chance(0.3) ? 3 : 2 }));
   mapChance(game, s, TIDAL_MAP * share, 2, 'On the bared bank');
-  game.grantXp(s, Math.round(90 * share * (1 + 0.15 * (ship.shipLevel - 1))), null);
+  game.grantXp(s, pointsXp(s.profile!.level, 90 * share), null);
   ship.morale = Math.min(100, ship.morale + 4);
   game.toastShip(ship, n > 0 ? `The party combs ${name} while the sea is out: ${silver} silver and ${n} ${GOODS[good].name}.` : `The party combs ${name} while the sea is out: ${silver} silver.`, 'gold');
   sendIsles(game, s, true);

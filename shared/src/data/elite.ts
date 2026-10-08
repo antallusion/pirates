@@ -7,6 +7,7 @@ import type { RegionId } from '../world/regions.ts';
 import { hashString } from '../rng.ts';
 import { QUESTS_BY_ID } from './quests.ts';
 import type { QuestDef } from './quests.ts';
+import { legacyQuestSize, questXp } from './xpcurve.ts';
 
 /** The company a contract is made for. */
 export const ELITE_GROUP = 3;
@@ -69,7 +70,7 @@ export function eliteContractFor(portId: string, day: number): QuestDef | null {
       { type: 'sink', count: 1, role: 'elite', region: port.region, text: fill(STEP_SINK[0], region) },
       { type: 'visit', port: port.id, text: fill(STEP_HOME[0], port.name) },
     ],
-    reward: { xp: Math.round(1000 * scale), silver: Math.round(1400 * scale) },
+    reward: { xp: questXp(Math.max(1, level - 4), legacyQuestSize(1000 * scale, Math.max(1, level - 4))), silver: Math.round(1400 * scale) },
     category: 'elite', group: ELITE_GROUP, portrait: 'giver_harbour_master_m',
   };
   QUESTS_BY_ID[id] = q;

@@ -4,6 +4,7 @@
 // hers to work once a day. The marks are the world's (shared/src/world/worldgen.ts); what she has worked is kept on
 // her profile. Every roll here is on its own Rng (the sea's stream is the fights' and the landings').
 
+import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
@@ -223,7 +224,7 @@ export function workMark(game: Game, s: PlayerSession, m: SeaMark): string {
       }
       if (near) {
         game.chartIsland(s, near);
-        game.grantXp(s, Math.round(worth / 4), null);
+        game.grantXp(s, pointsXp(s.profile!.level, worth / 4), null);
         line = `The lane mark charts ${near.name}, ${Math.max(100, Math.round(Math.max(0, nd) / 100) * 100)} m to the ${compass(m.x, m.y, near.x, near.y)}.`;
         kind = 'gold';
       } else {

@@ -1,5 +1,6 @@
 // The common cause (docs/11 P6): one goal a day for the whole sea — every captain's deed counts toward it, a bar all
 // can see fills, and when it is reached everyone who put a hand to it is paid; the more they did, the more.
+import { XP_UNITS, lumpXp } from './xpcurve.ts'; // docs/26
 
 export type CommonKind = 'pirates' | 'charts' | 'landings' | 'prizes' | 'boardings';
 
@@ -27,8 +28,8 @@ export function commonGoalFor(day: number, captains: number): { kind: CommonKind
 
 /** What a hand in the common cause earns: by level, and a little more for every deed of one's own (up to double). */
 export function commonReward(level: number, mine: number): { silver: number; xp: number } {
-  const k = (1 + level / 10) * (1 + Math.min(1, mine / 10));
-  return { silver: Math.round(300 * k), xp: Math.round(400 * k) };
+  const more = 1 + Math.min(1, mine / 10), k = (1 + level / 10) * more;
+  return { silver: Math.round(300 * k), xp: lumpXp(level, XP_UNITS.goal * more) };
 }
 
 export function commonText(kind: CommonKind, target: number, lang: 0 | 1): string {

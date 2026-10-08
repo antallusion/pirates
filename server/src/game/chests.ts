@@ -3,6 +3,7 @@
 // on a port's map board at her price. Whoever digs the chest up takes it; its author gains a cartographer's fame (and
 // a title at five). A chest someone has dug is gone for every copy of its map.
 
+import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import type { CacheView, MapBoardView, MapOfferView } from '../../../shared/src/protocol.ts';
@@ -135,7 +136,7 @@ export function digPlayerChest(game: Game, s: PlayerSession, m: TreasureMap): bo
       if (ap.cartoFame >= FAME_TITLE_AT && !ap.titles.includes('Riddle-Maker')) ap.titles.push('Riddle-Maker');
     }
     deliver(game, c.author, { from: 'The sea', subject: 'Your chest was found', body: `Your chest on ${game.world.islands[c.island]?.name ?? '?'} was dug up by ${s.name}. Your fame as a cartographer grows.`, gold: 0, goods: null });
-    game.grantXp(s, 300, `Dug up ${c.authorName}'s chest`, true);
+    game.grantXp(s, pointsXp(s.profile!.level, 300), `Dug up ${c.authorName}'s chest`, true);
   }
   game.pushSelf(s, true);
   return true;

@@ -13,6 +13,7 @@ import type { Profession } from './questgen.ts';
 import type { QuestDef } from './quests.ts';
 import { captainLevelFor } from './shiplevel.ts';
 import { Rng, hashString } from '../rng.ts';
+import { questXp } from './xpcurve.ts';
 import { REGIONS } from '../world/regions.ts';
 import type { World } from '../world/worldgen.ts';
 
@@ -44,6 +45,10 @@ export const LAIR_PLOTS: Plot[] = [
     steps: [['Beat lairs of the land\'s creatures: {n}.', 'Разбейте логова существ суши: {n}.'], ['Return to {port}: {giver} is waiting.', 'Вернитесь в порт {port}: вас ждёт {giver}.']],
   },
 ];
+
+/** A creature job's size against a quest of the usual size (docs/26): an island cleared and the way back, each lair of a
+ *  cull, the resources brought (the lairs' own fights teach beside it). */
+export const LAIR_JOB_SIZE: Record<Plot['id'], number> = { clear: 1, cull: 0.5, bring: 0.8 };
 
 /** What each land resource is called in a job's line (the client words it). */
 const RES_NAME: Record<LandRes, string> = { shell: 'Shell', bone: 'Bone', venom: 'Venom' };
@@ -86,7 +91,7 @@ export function generateLairJobs(world: World, seed: number): QuestDef[] {
         const worth = plot.id === 'bring' ? n * LAND_RES_DEF[res].value * 1.6 : plot.id === 'cull' ? hour * 0.25 * n : hour * 0.3;
         out.push({
           id: `lj_${port.id}_${plot.id}${tag}`, kind: 'job', name: fill(plot.name[0], v), mentor: `${giver}, ${PROFESSIONS[profession][0]}`, port: port.id, summary: fill(plot.summary[0], v),
-          requires: { level: Math.max(1, captainLevelFor(Math.max(1, level - 1))) }, steps, reward: { xp: Math.round(hour * 0.12), silver: Math.round(worth / 10) * 10 },
+          requires: { level: Math.max(1, captainLevelFor(Math.max(1, level - 1))) }, steps, reward: { xp: questXp(Math.max(1, captainLevelFor(Math.max(1, level - 1))), LAIR_JOB_SIZE[plot.id] * (plot.id === 'cull' ? n : 1)), silver: Math.round(worth / 10) * 10 },
           category: 'hunt', template: `lair.${plot.id}`, portrait: giverPortrait(profession, giver),
         });
       }

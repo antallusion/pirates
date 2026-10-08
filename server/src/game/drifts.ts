@@ -11,6 +11,7 @@
 //
 // The drifts are the sea's for a few minutes, not saved; the legend's season is. Every roll here is on its own Rng.
 
+import { xpAt } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { UNITS, armyPower } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { BEAST_PLURAL } from '../../../shared/src/data/bestiary.ts';
@@ -413,7 +414,7 @@ export function resolveMini(game: Game, d: Drift, force?: boolean): string | nul
     return null;
   }
   const w = driftWorth(d.kind, d.level);
-  game.grantXp(s, w.xp, `Saved the ${driftName(d.kind)}`, false);
+  game.grantXp(s, xpAt(s.profile.level, d.level, w.xp), `Saved the ${driftName(d.kind)}`, false);
   driftOf(s.profile).saved++;
   let joined = 0, home = 0;
   if (serves(s, d)) {
@@ -500,6 +501,7 @@ function fightEnd(game: Game, s: PlayerSession, d: Drift, won: boolean, bt: TacB
   }
   S.list.delete(d.id);
   const pay = driftFightPay(d.kind, d.level);
+  pay.xp = xpAt(s.profile!.level, d.level, pay.xp);
   s.profile!.gold += pay.silver;
   game.db.ledger(s.accountId, 'drift', pay.silver, `fight:${d.kind}`);
   game.grantXp(s, pay.xp, `Beat the ${driftName(d.kind)}`, true);

@@ -6,6 +6,7 @@
 // rolls on its own dice; what each gives is modest, and past her day's count of them half (seahaul.ts). Not saved:
 // they are the sea's for a few minutes. Every second this module also counts her time at sea for the day's caps.
 
+import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { advHour } from '../../../shared/src/data/advmap.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -290,7 +291,7 @@ export function resolveFind(game: Game, s: PlayerSession, f: Find): string {
         const is = unchartedNear(game, s, f.x, f.y, 9000);
         if (is) {
           game.chartIsland(s, is);
-          game.grantXp(s, Math.round(40 + 10 * ship.shipLevel), null);
+          game.grantXp(s, pointsXp(s.profile!.level, 50), null);
           line = `A message in a bottle: a castaway's directions to ${is.name}, ${Math.max(1, Math.round(dist(is.x, is.y, f.x, f.y) / 1000))} km to the ${compass(f.x, f.y, is.x, is.y)}. It is on your chart.`;
           kind = 'gold';
         } else {
@@ -327,7 +328,7 @@ export function resolveFind(game: Game, s: PlayerSession, f: Find): string {
     }
     case 'gulls': {
       const marked = shoalNear(game, f.x, f.y, regionAt(game.world, f.x, f.y));
-      game.grantXp(s, Math.round(20 + 8 * ship.shipLevel), null);
+      game.grantXp(s, pointsXp(s.profile!.level, 28), null);
       line = marked ? 'The gulls are over a shoal: the fishing is marked on your chart. Cast a net there.' : 'The gulls scatter: the shoal has gone deep.';
       kind = marked ? 'good' : 'info';
       break;

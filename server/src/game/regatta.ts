@@ -3,6 +3,7 @@
 // lent the same handling and none may fire; round the buoys in order and back to the first. The course keeps its five
 // best times; the first three win silver, the first two a pennant colour, the winner a title.
 
+import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { unlockDeed } from './looks.ts';
 import { BUOY_R, PRIZES, REGATTA_BUOYS, REGATTA_EVERY_MS, REGATTA_LIMIT_S, REGATTA_PORTS, REGATTA_SIGNUP_MS, REGATTA_START_R } from '../../../shared/src/data/regatta.ts';
 import type { RegattaView } from '../../../shared/src/protocol.ts';
@@ -213,7 +214,7 @@ function finish(game: Game, s: PlayerSession, r: Race, e: Entrant, place: number
     if (prize.title && !p.titles.includes(prize.title)) p.titles.push(prize.title);
     if (place === 1) sagaNote(game, s, 'regatta', [game.portById(r.port)?.name ?? r.port]);
   }
-  game.grantXp(s, 400 - Math.min(300, (place - 1) * 50), 'Regatta', true);
+  game.grantXp(s, pointsXp(s.profile!.level, 400 - Math.min(300, (place - 1) * 50)), 'Regatta', true);
   if (place <= 3) unlockDeed(game, s, 'regatta'); // the regatta's sails and colours (docs/12 P10 #12)
   // The course's records.
   const recs = game.db.getKv<Record<string, { name: string; sec: number }[]>>('regatta_records') ?? {};

@@ -18,6 +18,8 @@ import { startBoarding } from '../server/src/game/boarding.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import { join, makeGame, steps } from './helpers.ts';
+import { battleXp } from '../shared/src/data/xpcurve.ts';
+import { TAC_XP_SHARE } from '../server/src/game/tactical.ts';
 
 const side = (army: ArmyStack[], o: Partial<TacSideInput> = {}): TacSideInput => ({
   name: 'Captain', ship: 'Wake', captain: 'corsair', hands: 0, marines: 0, gunners: 0, army,
@@ -304,7 +306,9 @@ test('on the ships: her army as it stands, the fallen off their own stacks, the 
   assert.equal(ship.crew, armyMen(ship.army));
   assert.equal(bt.over!.winner, 0, 'a full brig carries forty pirates');
   const r = c.last('board_tac')!.view!.result!;
-  assert.ok(r && r.killed.length > 0 && r.xp === Math.round(killedHp(bt, 0) * 0.2) && r.xp > 0, 'the reckoning: her losses and your experience');
+  // docs/26: the battle's own lesson, a small bonus by the share of them cut down (her level against the brig's)
+  const theirs = bt.stacks.reduce((n, x) => n + (x.side === 1 ? x.start * x.hpMax : 0), 0);
+  assert.ok(r && r.killed.length > 0 && r.xp === battleXp([...game.sessions][0].profile!.level, npc.combatLevel, killedHp(bt, 0), theirs, TAC_XP_SHARE) && r.xp > 0, 'the reckoning: her losses and your experience');
   const p = [...game.sessions][0].profile!;
   assert.ok(p.level > lvl0 || p.xp > xp0, 'the captain learnt from it');
   steps(game, 60);

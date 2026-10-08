@@ -582,7 +582,10 @@ export interface Contract {
   kills?: number;
   progress?: number;
   reward: number;
+  /** Experience for the captain who sees it (at her level), and what it is worth in units of her own level's ship
+   *  sunk (docs/26: a contract pays by the captain's level, not by the port's). */
   xp: number;
+  units?: number;
   expiresAt: number; // world time sec
   description: string;
 }
@@ -1320,7 +1323,7 @@ export interface BoardRisk {
   silver: number;
   /** Men she would lose, on average over the battles lost. */
   men: number;
-  /** Experience for the prize, × (the ladder's xpForGap: more for a senior). */
+  /** Experience for the prize, × (docs/26 xpGap, by her captain's level: nothing for a grey one, more for a senior). */
   xpMul: number;
   /** The window shows (below the threshold of chance, or a mark two levels up). */
   risky: boolean;

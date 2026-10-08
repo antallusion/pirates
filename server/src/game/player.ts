@@ -56,6 +56,7 @@ import type { Profession } from '../../../shared/src/data/crew.ts';
 import { escortUpkeep, newFleet } from './fleet.ts';
 import type { Fleet } from './fleet.ts';
 import { newQuestLog, sanitizeQuests, shipLevelOfQuest, stepProgress } from './quests.ts';
+import { contractFor } from '../../../shared/src/data/xpcurve.ts';
 import { dailyView, newDaily, sanitizeDaily } from './dailies.ts';
 import type { DailyState } from '../../../shared/src/data/dailies.ts';
 import { sanitizeShipbuilding } from './shipbuilding.ts';
@@ -511,6 +512,8 @@ export interface WorldView {
   common?: PrivateState['common'];
   /** Groupmates on the same quests: quest id → their names and steps (docs/11 P6). */
   questMates?: Record<string, { name: string; step: number }[]>;
+  /** What each active quest pays her at her level now (docs/26). */
+  questXp?: Record<string, number>;
   /** Her letter of marque (docs/12 P10 #15). */
   service?: PrivateState['service'];
   /** What each captive would make if turned, and his loyalty now (docs/12 P10 #16). */
@@ -574,7 +577,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
       return {
         id: q.id, name: def.name, kind: def.kind, mentor: def.mentor, step: q.step + 1, steps: def.steps.length, text: st?.text ?? '', progress: st?.progress ?? 0, need: st?.need ?? 1, ...(target ? { target } : {}),
         // For the journal (docs/11 P6): the giver's words, every step, the pay and the face.
-        summary: def.summary, stepTexts: def.steps.map((x) => x.text), silver: Math.round(def.reward.silver * vet), xp: def.reward.xp, ...(q.fastUntil && q.fastUntil > now ? { fastIn: Math.round(q.fastUntil - now) } : {}), ...(def.portrait ? { portrait: def.portrait } : {}), ...(def.category ? { category: def.category } : {}),
+        summary: def.summary, stepTexts: def.steps.map((x) => x.text), silver: Math.round(def.reward.silver * vet), xp: world.questXp?.[q.id] ?? def.reward.xp, ...(q.fastUntil && q.fastUntil > now ? { fastIn: Math.round(q.fastUntil - now) } : {}), ...(def.portrait ? { portrait: def.portrait } : {}), ...(def.category ? { category: def.category } : {}),
         ...(q.pay && paid ? { pay: q.pay, paid: { ...paid, silver: Math.round(paid.silver * vet) } } : {}),
         ...(world.questMates?.[q.id] ? { mates: world.questMates[q.id] } : {}),
         ...((lv) => (lv ? { ship: lv } : {}))(shipLevelOfQuest(def)),
@@ -629,7 +632,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     gunsDisabled: ship ? { ...ship.gunsDisabled } : p.gunsDisabled,
     dockedAt: ship ? ship.docked : p.docked,
     lastPort: p.lastPort,
-    contracts: p.contracts,
+    contracts: p.contracts.map((c) => contractFor(p.level, c)),
     cooldowns: p.cooldowns,
     repairing: ship?.repairing ?? false,
     curse: Math.round(ship ? ship.curse : p.curse),

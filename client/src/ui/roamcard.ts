@@ -6,7 +6,7 @@
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { ROAMS, roamGap, roamPay, roamRange } from '../../../shared/src/data/roamers.ts';
-import { shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
+import { xpAt } from '../../../shared/src/data/xpcurve.ts';
 import type { RoamView } from '../../../shared/src/roamproto.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/roamers.ts';
@@ -26,13 +26,14 @@ export function roamCardHtml(state: ClientState, v: RoamView): string {
   const d = UNITS[u];
   const [a, b] = roamRange(v.kind, v.level);
   const w = strengthWord(v.n);
-  const mine = state.self ? shipLevelOf(state.self.loadout) : 1;
+  // docs/26: the lesson by her captain's level against the stack's (grey: nothing to learn).
+  const mine = state.self?.level ?? 1;
   const gap = roamGap(mine, v.level);
   const pay = roamPay(v.level, v.size);
   const lines = [
     `<div class="rc-head">${unitIcon(u, 'army-face')}<div><b>${esc(L('c.title', { what: roamName(v.kind), lv: v.level }))}</b><div class="muted">${esc(L('c.count', { word: w.word, a, b, n: v.n }))}</div></div></div>`,
     `<div class="muted">${esc(d.specials.length ? L('c.specials', { list: d.specials.map(specialName).join(', ') }) : L('c.none'))}</div>`,
-    `<div>${esc(gap > 0 ? L('c.pay', { x: fmt(Math.round(pay.xp * gap)), s: fmt(pay.silver) }) : L('c.grey'))}</div>`,
+    `<div>${esc(gap > 0 ? L('c.pay', { x: fmt(xpAt(mine, v.level, pay.xp)), s: fmt(pay.silver) }) : L('c.grey'))}</div>`,
   ];
   if (v.ratio !== undefined) lines.push(`<div class="muted">${esc(L('c.ratio', { r: ratioText(v.ratio) }))}</div>`);
   if (v.offer === 'join' && v.joinN) lines.push(`<div class="ac-offer">${esc(L('c.join', { n: v.joinN }))}</div>`);

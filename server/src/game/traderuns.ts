@@ -4,6 +4,7 @@
 // the deadline). Delivered, the house offers the next leg from that port — the bonus larger with every leg, five legs
 // and the chain is closed with a present.
 
+import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { RUN_CHAIN_STEP, RUN_HOUSES, RUN_LEGS, RUN_NEXT_TTL, RUN_SLOTS, earlyShare, runWindow, RUN_EARLY_SHARE } from '../../../shared/src/data/dealings.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -137,7 +138,7 @@ export function settleRuns(game: Game, s: PlayerSession, port: Port): void {
     d.runs = d.runs.filter((x) => x !== r);
     game.db.ledger(s.accountId, 'trade_run', paid, `${r.good}:${r.from}>${r.to}:${r.leg}`);
     game.adjustRepProfile(s, port.faction, 2);
-    game.grantXp(s, 40 + r.qty * 3 + r.leg * 20, null);
+    game.grantXp(s, pointsXp(p.level, 40 + r.qty * 3 + r.leg * 20), null);
     const house = RUN_HOUSES[r.house][0];
     game.sendTo(s, { t: 'toast', msg: `${house} pays ${paid} silver for the ${GOODS[r.good].name} (speed bonus ${bonus}).`, kind: 'gold' });
     if (closed) {

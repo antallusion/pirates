@@ -4,6 +4,7 @@
 // the sandbars are among them), and the supply routes from a claimed lair island to one's own island, delivered at the
 // first dawn of every week of the sea's calendar.
 
+import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { makeItem } from '../../../shared/src/data/items.ts';
@@ -239,7 +240,7 @@ export function combTurtle(game: Game, s: PlayerSession, d: TurtleDef, share: nu
   const n = giveGoods(ship, good, Math.max(1, Math.round(rng.int(2, 5) * share)));
   if (rng.chance(0.25 * share)) takeItem(game, s, makeItem(rng, p.itemSeq++, { ilvl: ship.shipLevel, rarity: rng.chance(0.3) ? 3 : 2 }));
   mapChance(game, s, 0.2 * share, 2, 'On the turtle’s back');
-  game.grantXp(s, Math.round(140 * share * (1 + 0.15 * (ship.shipLevel - 1))), null);
+  game.grantXp(s, pointsXp(s.profile!.level, 140 * share), null);
   ship.morale = Math.min(100, ship.morale + 6);
   game.toastShip(ship, n > 0 ? `The party combs the back of ${name} while she basks: ${silver} silver and ${n} ${GOODS[good].name}.` : `The party combs the back of ${name} while she basks: ${silver} silver.`, 'gold');
   sendTurtles(game, s, true);

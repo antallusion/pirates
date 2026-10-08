@@ -4,6 +4,7 @@
 // slow calendar), lasts wall-clock hours or days, touches at least three systems (markets, NPC traffic,
 // law and reputation, weather), and never more than two major events share a region.
 
+import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { HAPPENING_KINDS } from '../../../shared/src/data/happenings.ts';
 import type { HappeningKind } from '../../../shared/src/data/happenings.ts';
 import { festivalDock, happeningFinish, happeningStillOn, happeningTriggers, lostFleet, tickHappening } from './happenings.ts';
@@ -554,7 +555,7 @@ function nameIsland(game: Game, e: WorldEvent, s: PlayerSession): void {
     }
   for (const site of game.sites) if (site.islandId === is.id) site.name = name;
   game.chartIsland(s, is);
-  game.grantXp(s, 800, `First ashore on ${name}`);
+  game.grantXp(s, pointsXp(s.profile!.level, 800), `First ashore on ${name}`);
   for (const o of game.sessions) {
     for (const k of islandChunkKeys(is)) o.knownChunks.delete(k);
     game.sendTo(o, { t: 'toast', msg: `WORLD: ${s.name} is first ashore on the new island and names her ${name}.`, kind: 'info' });
@@ -597,7 +598,7 @@ export function onDockEvents(game: Game, s: PlayerSession, port: Port): void {
     b.runners ??= [];
     if (cargo >= 10 && !b.runners.includes(s.accountId)) {
       b.runners.push(s.accountId);
-      game.grantXp(s, 300 + port.size * 100, `Ran the blockade of ${port.name}`);
+      game.grantXp(s, pointsXp(s.profile!.level, 300 + port.size * 100), `Ran the blockade of ${port.name}`);
       game.adjustRepProfile(s, port.faction, 6);
       if (b.kind === 'armada') game.adjustRepProfile(s, 'crown', -4);
       game.sendTo(s, { t: 'toast', msg: `You ran the blockade of ${port.name}! The quay cheers; your cargo sells at blockade prices.`, kind: 'good' });
@@ -630,7 +631,7 @@ export function onEventSale(game: Game, s: PlayerSession, port: Port, good: Good
   const ep = game.worldEvents.at(game, port.id, 'epidemic');
   if (!ep) return;
   game.adjustRepProfile(s, port.faction, Math.min(15, n * 0.5));
-  game.grantXp(s, n * 12, `${GOODS.medicine.name} for fevered ${port.name}`);
+  game.grantXp(s, pointsXp(s.profile!.level, n * 12), `${GOODS.medicine.name} for fevered ${port.name}`);
 }
 
 /** A merchant plans no voyage into a closed port. */

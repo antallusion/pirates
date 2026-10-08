@@ -81,8 +81,13 @@ body:not(.skinned) .cs-frame::after { inset: -3px; border-radius: 50%; box-shado
 .cs-face::after { content: ''; position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 9px rgba(0, 0, 0, 0.6); pointer-events: none; }
 /* her level on the rim, low on the left: a coin of brass, never over the face */
 .cs-lv { position: absolute; left: calc(var(--cs-face) * -0.3); bottom: calc(var(--cs-face) * -0.3); z-index: 2; min-width: 22px; height: 22px; padding: 0 4px; box-sizing: border-box; border-radius: var(--k-r-round);
-  background: radial-gradient(circle at 50% 30%, #4a3a24, #1a130c 70%); box-shadow: 0 0 0 1.5px #d2ab64, 0 0 0 3px rgba(10, 8, 6, 0.9), 0 2px 4px #000;
+  background: radial-gradient(circle at 50% 30%, #4a3a24, #1a130c 70%); box-shadow: 0 0 0 2px #17110b, 0 0 0 3px rgba(10, 8, 6, 0.9), 0 2px 4px #000;
   color: #f2d48a; font: 700 11.5px/22px var(--k-font-sans); text-align: center; text-shadow: 0 1px 1px #000; font-variant-numeric: tabular-nums; }
+/* docs/26: the rim of her level fills as the next level nears (--xp, «N% to the next level» in its title) */
+.cs-lv::before { content: ''; position: absolute; inset: -2px; padding: 2px; border-radius: inherit; pointer-events: none;
+  background: conic-gradient(#f2c66a var(--xp, 0%), rgba(242, 198, 106, 0.16) 0);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
 /* a talent point waiting: a gold bead on the rim, high on the right */
 .cs-pts { position: absolute; right: calc(var(--cs-face) * -0.24); top: calc(var(--cs-face) * -0.24); z-index: 2; width: 11px; height: 11px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff1c4, var(--k-gold) 55%, #8a6a2c); box-shadow: 0 0 0 1.5px #120e0a, 0 0 9px rgba(224, 184, 98, 0.9); }
 .cs-body { display: grid; grid-template-columns: auto; gap: 3px; min-width: 0; padding: 4px 10px 4px 2px; background: radial-gradient(ellipse 80% 70% at 35% 50%, rgba(5, 6, 8, 0.5), transparent 78%); }

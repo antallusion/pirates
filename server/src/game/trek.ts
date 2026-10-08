@@ -4,6 +4,7 @@
 // and then another of the island games — and at the far side a cache, richer for every risk taken and survived. One
 // short card; the server rolls every chance on its own generator (the shared game.rng is left to the sea).
 
+import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { MINI_LIFE_SEC } from './minigames.ts';
 import { openMinigame, startMinigame } from './minigames.ts';
 import type { MiniLive } from './minigames.ts';
@@ -265,7 +266,7 @@ function pay(game: Game, s: PlayerSession, t: TrekLive, o: TrekOutcome): TrekVar
     if (p.explore.maps.length > before) v.map = true;
   }
   if (P.xp) {
-    const xp = Math.round(P.xp * t.share * (1 + 0.15 * (ship.shipLevel - 1)));
+    const xp = pointsXp(s.profile!.level, P.xp * t.share);
     if (xp > 0) {
       game.grantXp(s, xp, null);
       v.xp = xp;
@@ -295,7 +296,7 @@ function finish(game: Game, s: PlayerSession, t: TrekLive, far: boolean): void {
     s.profile.gold += silver;
     game.db.ledger(s.accountId, 'trek', silver, 'far side');
     const end: TrekVars = { silver };
-    const xp = Math.round((TREK_END.pay.xp ?? 0) * t.share * (1 + 0.15 * (s.ship.shipLevel - 1)));
+    const xp = pointsXp(s.profile.level, (TREK_END.pay.xp ?? 0) * t.share);
     game.grantXp(s, xp, null);
     end.xp = xp;
     if (rng.chance(Math.min(0.6, TREK_END_ITEM + TREK_END_ITEM_PER_NERVE * t.nerve) * t.share)) {
