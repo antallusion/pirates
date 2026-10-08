@@ -194,7 +194,7 @@ export class PortScreen {
       { id: 'holdings', icon: TAB_ICON.holdings, label: W('port.holdings'), hint: W('port.holdingsHint') },
       { id: 'exchange', icon: TAB_ICON.exchange, label: W('port.exchange'), hint: W('port.exchangeHint') },
       { id: 'auction', icon: 'coin', label: W('port.auction'), hint: W('port.auctionHint') },
-      ...(tv.dice ? [{ id: 'dice', icon: 'tab_dice', glyph: '⚂', label: W('port.dice'), hint: W('port.diceHint') }] : []),
+      ...(tv.dice ? [{ id: 'dice', icon: 'st_luck_up', glyph: '⚂', label: W('port.dice'), hint: W('port.diceHint') }] : []),
       { id: 'rumours', icon: 'tab_letters', label: W('port.rumours'), hint: W('port.rumoursHint') },
       { id: 'charts', icon: 'map_treasure', label: W('port.charts'), hint: W('port.chartsHint') },
       ...(dwellCard(port) || tamerCard(port) ? [{ id: 'army', icon: 'build_barracks', glyph: '⚔', label: W('port.army'), hint: W('port.armyHint') }] : []),

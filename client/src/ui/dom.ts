@@ -118,8 +118,13 @@ export function portraitUrl(id: string): string | null {
   return assetUrl(`portrait.${id}`) ?? (PORTRAIT_STAND_IN[id] ? assetUrl(`portrait.${PORTRAIT_STAND_IN[id]}`) : null);
 }
 
+/** Pictures kept off the screen by the owner's rule (no blood, skeletons, bones or skulls): «danger» was a painted skull
+ *  lantern with red eyes, on every refusal toast and the chart's lairs — the red sky at morning (the sailor's own warning) stands in. */
+export const NO_SKULL: Record<string, string> = { danger: 'omen_red_sky' };
+
 export function icon(id: string, glyph = '', cls = 'ico'): string {
-  const url = (id.startsWith('portrait.') ? portraitUrl(id.slice(9)) : assetUrl(id.includes('.') ? id : `icon.${id}`)) ?? (STAND_IN[id] ? assetUrl(`icon.${STAND_IN[id]}`) : null) ?? (id.startsWith('good_') ? assetUrl('icon.good_provisions') : null);
+  id = NO_SKULL[id] ?? id;
+  const url =(id.startsWith('portrait.') ? portraitUrl(id.slice(9)) : assetUrl(id.includes('.') ? id : `icon.${id}`)) ?? (STAND_IN[id] ? assetUrl(`icon.${STAND_IN[id]}`) : null) ?? (id.startsWith('good_') ? assetUrl('icon.good_provisions') : null);
   return url ? `<img class="${cls}" src="${url}" alt="" draggable="false" />` : glyph ? `<span class="${cls} glyph">${esc(glyph)}</span>` : '';
 }
 
