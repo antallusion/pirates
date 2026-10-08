@@ -4,6 +4,7 @@
 // over a hidden island not yet found, the island's level ⚓ by her when close, and the turtle islands — the painted
 // giant turtle with sand, palms and a cache on her back, or the rings where she sounded.
 
+import { levelTag } from './seaart.ts';
 import type { IslandData } from '../../../shared/src/protocol.ts';
 import type { TurtleView } from '../../../shared/src/isleproto.ts';
 import { THREAT_COLOR, threatOf } from '../../../shared/src/data/shiplevel.ts';
@@ -207,28 +208,16 @@ export function drawMist(g: G, is: IslandData, c: IsleTypeCtx): void {
   g.restore();
 }
 
-/** Her level by her, when she is close: ⚓N in the ladder's colour against hers; three or more above, Darkness. */
+/** Her level by her, when she is close: the level in its frame in the ladder's colour against hers, as a ship's name
+ *  and a creature stack wear theirs (no anchor glyph: owner, 2026-10-07); three or more above, «Тьма» beside it. */
 export function drawIsleLevel(g: G, is: IslandData, c: IsleTypeCtx, mine: number, deadly: string): void {
   if (!is.lv || is.minor || is.raft || is.portId) return;
   const x = c.sx(is.x), y = c.sy(is.y + is.r * 0.82) + 14;
   if (x < -40 || y < -20 || x > c.w + 40 || y > c.h + 20) return;
   const d = isleDanger(mine, is.lv);
-  const text = `${is.secret ? '✦ ' : ''}${d === 'deadly' ? `☠ ⚓${is.lv} ${deadly}` : `⚓${is.lv}`}`; // ✦ a hidden island she has found
-  g.save();
-  g.font = '700 11px Inter, sans-serif';
-  const w = g.measureText(text).width + 10;
-  g.fillStyle = 'rgba(8,10,12,0.72)';
-  g.strokeStyle = THREAT_COLOR[threatOf(mine, is.lv)];
-  g.lineWidth = d ? 1.6 : 1;
-  g.beginPath();
-  g.roundRect(x - w / 2, y - 9, w, 16, 4);
-  g.fill();
-  g.stroke();
-  g.fillStyle = THREAT_COLOR[threatOf(mine, is.lv)];
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  g.fillText(text, x, y);
-  g.restore();
+  const col = THREAT_COLOR[threatOf(mine, is.lv)];
+  const text = `${is.secret ? '✦ ' : ''}${d === 'deadly' ? deadly : ''}`.trim(); // ✦ a hidden island she has found
+  levelTag(g, text, is.lv, col, x, y, 11, d === 'deadly' ? col : '#e9dfc6');
 }
 
 /** A turtle's loop as the shared drift functions take it. */

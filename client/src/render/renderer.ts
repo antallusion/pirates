@@ -10,7 +10,7 @@ import { flagCanvas } from './flag.ts';
 import { namedLabel } from '../ui/hud.ts';
 import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
-import { drawBeast, drawCarcass, drawDolphin } from './beasts.ts';
+import { drawBeastInSea, drawCarcass, drawDolphinSea } from './beasts.ts';
 import { drawLair, drawMuzzles } from './lairs.ts';
 import type { LairView } from '../../../shared/src/protocol.ts';
 import { EN as SEN, RU as SRU } from '../lang/ui/livesea.ts';
@@ -48,6 +48,7 @@ import { drawLairsWorld } from './beastlairs.ts'; // docs/18 II
 import { drawDriftsWorld } from './drifts.ts'; // docs/18 IV
 import { drawFindsWorld } from './seafinds.ts'; // docs/19 D5
 import { drawRoamsWorld } from './roamers.ts'; // docs/19 D7
+import { addHot, brassRing, drawArt, drawPiece, foam, hot, icePlate, inHot, markRing, piece, shipWater } from './seaart.ts'; // the tokens on the screen: the hover aim keeps off them (owner, 2026-10-07)
 import { drawIsleHalo, drawIsleLevel, drawIsleOver, drawMist, drawTurtles } from './isletype.ts'; // docs/18 III
 import type { IsleTypeCtx } from './isletype.ts';
 import { EN as I18_EN, RU as I18_RU } from '../lang/ui/isles18.ts';
@@ -437,6 +438,7 @@ export class Renderer {
     this.drawWhirlpools(state);
     const ictx = this.islesCtx(state, night);
     this.drawReefs(state, ictx);
+    hot.length = 0;
     this.drawSeaMarks(state);
     drawBanks(g, state, ictx); // banks the tide or a season has bared (docs/16 #25)
     for (const is of islands) this.drawShallows(is);
@@ -510,6 +512,7 @@ export class Renderer {
     if (own && state.self) this.drawOwnMark(state, own);
     // Names from the lowest on the screen up, each stepping above any it would lie on.
     this.labelBoxes = [];
+    this.hudBand(); // the HUD's blocks, measured: the names keep out of them
     for (const s of [...ships].filter((x) => !x.own).sort((a, b) => b.y - a.y)) this.drawLabel(s, state, aim.boardTarget === s.id, aim.target === s.id);
     if (own) this.drawThreatMarks(ships, own);
     if (own) this.drawQuestMark(state, own);
@@ -799,18 +802,22 @@ export class Renderer {
   }
 
   /** The dense sea's marks (docs/16 P3): wreck fields half awash, lane buoys, lantern floats, driftwood, floating
-   *  bones and ice floes — from the painted wrecks and flotsam where they are, drawn by hand where they are not. */
+   *  bones and ice floes — all from the art (owner, 2026-10-07: «всё должно быть из ассетов»): the painted wreck and
+   *  flotsam with the white water breaking on them, the buoy an iron ball rusted copper with a pennant downwind, the
+   *  lantern the cache's own ship's lantern on a raft of flotsam, the floe cut from the painted shore ice. The old
+   *  hand-drawn shapes stay only for art that has not loaded. A mark she has worked today is dimmed. */
   private drawSeaMarks(state: ClientState): void {
     if (!state.seaMarks.size) return;
     const g = this.g;
     const z = this.zoom;
     const hw = this.w / 2 / z + 150, hh = this.h / 2 / z + 150;
     const t = settings().reduceMotion ? 0 : this.time;
+    let dim = 1;
     const spriteAt = (id: string, px: number, py: number, sz: number, rot: number, alpha: number): boolean => {
       const spr = sprite(id);
       if (!spr) return false;
       g.save();
-      g.globalAlpha = alpha;
+      g.globalAlpha = alpha * dim;
       g.translate(px, py);
       g.rotate(rot);
       g.drawImage(spr.img, -sz / 2, -sz / 2, sz, sz);
@@ -821,13 +828,16 @@ export class Renderer {
       if (Math.abs(m.x - this.camX) - m.r > hw || Math.abs(m.y - this.camY) - m.r > hh) continue;
       const x = this.sx(m.x), y = this.sy(m.y), size = m.r * 2 * z;
       const rnd = seeded(m.seed);
+      dim = state.markDone.has(m.id) ? 0.62 : 1;
       switch (m.kind) {
         case 'wreck': {
-          // Dark water over the sunken part, the broken hull awash, planks and casks about it.
+          // Dark water over the sunken part, the broken hull awash, planks and casks about it, the swell breaking white
+          // on the timbers.
           g.fillStyle = 'rgba(4,10,14,0.28)';
           g.beginPath();
           g.ellipse(x, y, size * 0.55, size * 0.4, m.rot, 0, Math.PI * 2);
           g.fill();
+          foam(g, x, y, size * 0.36, t, m.id, 0.12 * dim);
           if (!spriteAt('prop.shipwreck', x, y, size, m.rot, 0.82)) {
             g.fillStyle = '#2b2119';
             g.beginPath();
@@ -838,17 +848,10 @@ export class Renderer {
             const a = rnd() * Math.PI * 2, d = (0.45 + rnd() * 0.35) * size;
             spriteAt('prop.flotsam', x + Math.cos(a) * d, y + Math.sin(a) * d, size * (0.22 + rnd() * 0.14), rnd() * 6.28, 0.8);
           }
-          // Foam where the swell breaks on the timbers.
-          g.strokeStyle = `rgba(215,225,228,${0.14 + 0.08 * Math.sin(t * 1.5 + m.id)})`;
-          g.lineWidth = Math.max(1, 1.5 * z);
-          g.setLineDash([2 * z, 6 * z]);
-          g.beginPath();
-          g.ellipse(x, y, size * 0.5, size * 0.3, m.rot, 0, Math.PI * 2);
-          g.stroke();
-          g.setLineDash([]);
           break;
         }
         case 'drift':
+          foam(g, x, y, size * 0.3, t, m.id, 0.1 * dim);
           for (let k = 0; k < 3; k++) {
             const a = rnd() * Math.PI * 2, d = rnd() * size * 0.45;
             const px = x + Math.cos(a) * d + Math.sin(t * 0.3 + k) * 2 * z, py = y + Math.sin(a) * d;
@@ -875,80 +878,70 @@ export class Renderer {
           }
           break;
         case 'floe': {
-          const n = 9;
-          g.beginPath();
-          for (let k = 0; k < n; k++) {
-            const a = (k / n) * Math.PI * 2 + m.rot, r = m.r * z * (0.7 + rnd() * 0.3);
-            const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r * 0.8;
-            if (k) g.lineTo(px, py);
-            else g.moveTo(px, py);
+          // A ragged plate of ice from above, cut from the painted shore ice, and a few small cakes broken off it.
+          foam(g, x, y, m.r * z * 0.85, t, m.id, 0.1 * dim);
+          for (let k = 0; k < 3; k++) {
+            const a = rnd() * Math.PI * 2, d = m.r * z * (1.05 + rnd() * 0.3);
+            icePlate(g, x + Math.cos(a) * d, y + Math.sin(a) * d * 0.82, m.r * z * (0.12 + rnd() * 0.1), 7, rnd() * 6, rnd, dim);
           }
-          g.closePath();
-          g.save();
-          g.translate(4 * z, 6 * z);
-          g.fillStyle = 'rgba(0,0,0,0.25)';
-          g.fill();
-          g.restore();
-          g.fillStyle = '#c9d6de';
-          g.fill();
-          g.strokeStyle = 'rgba(240,248,252,0.8)';
-          g.lineWidth = Math.max(1, 1.5 * z);
-          g.stroke();
+          icePlate(g, x, y, m.r * z, 16, m.rot, rnd, dim);
           break;
         }
         case 'buoy':
         case 'lantern': {
           const r = Math.max(3, m.r * z);
           const by = y - Math.sin(t * 1.3 + m.id) * r * 0.3;
+          addHot(x, y, r * 1.6);
           g.fillStyle = 'rgba(0,0,0,0.35)';
           g.beginPath();
           g.ellipse(x + r * 0.3, y + r * 0.4, r * 1.1, r * 0.7, 0, 0, Math.PI * 2);
           g.fill();
-          // A ring of ripples about her.
-          g.strokeStyle = 'rgba(210,222,228,0.18)';
-          g.lineWidth = 1;
-          g.beginPath();
-          g.arc(x, y, r * (1.8 + 0.3 * Math.sin(t * 1.3 + m.id)), 0, Math.PI * 2);
-          g.stroke();
+          // The swell breaking white about her, not a drawn ring.
+          foam(g, x, y, r * 1.15, t, m.id, 0.22 * dim);
+          const g0 = g.globalAlpha;
           if (m.kind === 'buoy') {
-            g.fillStyle = '#9e2a22';
-            g.beginPath();
-            g.arc(x, by, r, 0, Math.PI * 2);
-            g.fill();
-            g.fillStyle = '#e6dcc4';
-            g.beginPath();
-            g.arc(x, by, r, -Math.PI * 0.2, Math.PI * 0.2);
-            g.lineTo(x, by);
-            g.fill();
-            g.beginPath();
-            g.arc(x, by, r, Math.PI * 0.8, Math.PI * 1.2);
-            g.lineTo(x, by);
-            g.fill();
-            g.strokeStyle = '#1b120b';
-            g.lineWidth = 1;
-            g.beginPath();
-            g.arc(x, by, r, 0, Math.PI * 2);
-            g.stroke();
-            if (this.nightNow > 0.3) this.fx.light(m.x, m.y, 70, 'rgba(255,90,70,1)', 0.5 * this.nightNow * (0.6 + 0.4 * Math.sin(t * 2 + m.id)), 0.05);
+            // The lane's iron buoy, rusted copper (docs/06 §4.3: the trade lanes' buoys), its pennant downwind.
+            const down = state.wind[0] - Math.PI / 2;
+            g.globalAlpha = g0 * dim;
+            drawPiece(g, 'pennant', x + Math.cos(down) * r * 1.35, by + Math.sin(down) * r * 1.35, r * 3, down + Math.sin(t * 3 + m.id) * 0.08, 0.9, '#4a1a16');
+            const ball = drawPiece(g, 'buoy', x, by, r * 2.2, m.id);
+            g.globalAlpha = g0;
+            if (!ball) {
+              g.fillStyle = '#6e4126';
+              g.beginPath();
+              g.arc(x, by, r, 0, Math.PI * 2);
+              g.fill();
+              g.strokeStyle = '#1b120b';
+              g.lineWidth = 1;
+              g.stroke();
+            }
+            if (this.nightNow > 0.3) this.fx.light(m.x, m.y, 70, 'rgba(255,150,80,1)', 0.45 * this.nightNow * (0.6 + 0.4 * Math.sin(t * 2 + m.id)), 0.05);
           } else {
-            // A lantern on a little raft of planks: the candles set out for the drowned.
-            g.fillStyle = '#3b2c1e';
-            g.fillRect(x - r * 1.2, by - r * 0.7, r * 2.4, r * 1.4);
-            g.fillStyle = '#f2c46a';
-            g.beginPath();
-            g.arc(x, by, r * 0.5, 0, Math.PI * 2);
-            g.fill();
+            // A ship's lantern on a little raft of flotsam: the candles set out for the drowned.
+            spriteAt('prop.flotsam', x, by, r * 3.4, m.id * 0.7, 0.92);
+            g.globalAlpha = g0 * dim;
+            const lit = drawPiece(g, 'lantern', x, by - r * 0.1, r * 2.5, 0.35 + Math.sin(t * 1.1 + m.id) * 0.05);
+            g.globalAlpha = g0;
+            if (!lit) {
+              g.fillStyle = '#3b2c1e';
+              g.fillRect(x - r * 1.2, by - r * 0.7, r * 2.4, r * 1.4);
+              g.fillStyle = '#f2c46a';
+              g.beginPath();
+              g.arc(x, by, r * 0.5, 0, Math.PI * 2);
+              g.fill();
+            }
             this.fx.light(m.x, m.y, 110, 'rgba(255,190,110,1)', (0.25 + 0.5 * this.nightNow) * (0.8 + 0.2 * Math.sin(t * 5 + m.id)), 0.05);
           }
           break;
         }
       }
+      dim = 1;
       this.drawMarkState(state, m, x, y, t);
     }
   }
 
-  /** A sea mark's state for her: worked today (a faint ring and a tick), within reach (a gold ring that breathes),
-   *  her boats at it (the ring filling as they work). */
+  /** A sea mark's state for her: worked today (dimmed, and a brass seal with a tick), within reach (the engraved gold
+   *  ring of a mark, breathing), her boats at it (the ring filling as they work). */
   private drawMarkState(state: ClientState, m: SeaMarkData, x: number, y: number, t: number): void {
     const g = this.g, z = this.zoom;
     const own = state.ownDisplay;
@@ -967,39 +960,28 @@ export class Renderer {
       g.stroke();
       g.strokeStyle = '#e8c36a';
       g.lineWidth = Math.max(2, 3 * z);
+      g.lineCap = 'round';
       g.beginPath();
       g.arc(x, y, R, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
       g.stroke();
     } else if (done) {
-      g.strokeStyle = 'rgba(200,205,200,0.35)';
-      g.lineWidth = Math.max(1, 1.2 * z);
-      g.setLineDash([3 * z, 5 * z]);
+      // The seal of a mark searched: a small brass ring with a tick in it, at the mark's shoulder.
+      const s = Math.max(7, 5 * z), cx = x + R * 0.72, cy = y - R * 0.72;
+      g.fillStyle = 'rgba(10,14,16,0.85)';
       g.beginPath();
-      g.arc(x, y, R, 0, Math.PI * 2);
-      g.stroke();
-      g.setLineDash([]);
-      // The tick of a mark searched.
-      const s = Math.max(5, 6 * z), cx = x + R * 0.72, cy = y - R * 0.72;
-      g.fillStyle = 'rgba(12,16,18,0.75)';
-      g.beginPath();
-      g.arc(cx, cy, s * 1.15, 0, Math.PI * 2);
+      g.arc(cx, cy, s, 0, Math.PI * 2);
       g.fill();
-      g.strokeStyle = '#b9c7a4';
-      g.lineWidth = Math.max(1.5, 1.6 * z);
+      g.strokeStyle = '#c9c0a8';
+      g.lineWidth = Math.max(1.5, s * 0.2);
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
       g.beginPath();
-      g.moveTo(cx - s * 0.55, cy);
-      g.lineTo(cx - s * 0.1, cy + s * 0.45);
-      g.lineTo(cx + s * 0.6, cy - s * 0.45);
+      g.moveTo(cx - s * 0.42, cy + s * 0.02);
+      g.lineTo(cx - s * 0.08, cy + s * 0.36);
+      g.lineTo(cx + s * 0.46, cy - s * 0.34);
       g.stroke();
-    } else {
-      g.strokeStyle = `rgba(232,195,106,${0.35 + 0.25 * Math.sin(t * 2.4 + m.id)})`;
-      g.lineWidth = Math.max(1.5, 2 * z);
-      g.setLineDash([6 * z, 5 * z]);
-      g.beginPath();
-      g.arc(x, y, R, 0, Math.PI * 2);
-      g.stroke();
-      g.setLineDash([]);
-    }
+      brassRing(g, cx, cy, s * 0.95);
+    } else markRing(g, x, y, R, '#e8c36a', false, 0.75 + 0.25 * Math.sin(t * 2.4 + m.id));
     g.restore();
   }
 
@@ -2076,6 +2058,13 @@ export class Renderer {
     g.ellipse(beam * (0.35 + heel * 0.5), beam * 0.45, beam * (0.62 + Math.abs(heel) * 0.35), len * 0.5, 0, 0, Math.PI * 2);
     g.fill();
     g.restore();
+    // Her own white water under way: the bow wave, the spray at her cutwater, the quarter wave (owner, 2026-10-07).
+    if (!sinking && !hidden && s.spd > 0.6) {
+      g.save();
+      g.rotate(s.h);
+      shipWater(g, len, beam, s.spd / Math.max(1, cls.maxSpeed), settings().reduceMotion ? 0 : this.time, s.id, this.fx.lod);
+      g.restore();
+    }
 
     g.rotate(s.h + (sinking ? sinkF * 0.35 : 0));
     const scale = 1 - sinkF * 0.25;
@@ -2337,13 +2326,7 @@ export class Renderer {
     const d = state.duel;
     if (!d) return;
     const g = this.g;
-    g.save();
-    g.strokeStyle = d.startsIn > 0 ? 'rgba(224,184,98,0.7)' : 'rgba(208,90,80,0.75)';
-    g.lineWidth = 2;
-    g.beginPath();
-    g.arc(this.sx(d.cx), this.sy(d.cy), d.r * this.zoom, 0, Math.PI * 2);
-    g.stroke();
-    g.restore();
+    markRing(g, this.sx(d.cx), this.sy(d.cy), d.r * this.zoom, d.startsIn > 0 ? '#e0b862' : '#d05a50', true, 0.8);
   }
 
   private drawTethers(state: ClientState, ships: DrawShip[]): void {
@@ -2806,6 +2789,40 @@ export class Renderer {
     return !this.hudRects.some((q) => x > q.left - m && x < q.right + m && y > q.top - m && y < q.bottom + m);
   }
 
+  /** A small brass medallion (the UI's ring) on the dark: a picture inside it (an icon) or nothing, a thin enamel line
+   *  in `col` inside the brass. */
+  private medallion(x: number, y: number, r: number, icon: string | null, col: string): void {
+    const g = this.g;
+    g.save();
+    g.fillStyle = 'rgba(8,10,14,0.85)';
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fill();
+    if (icon) {
+      g.save();
+      g.beginPath();
+      g.arc(x, y, r * 0.9, 0, Math.PI * 2);
+      g.clip();
+      drawArt(g, icon, x, y, r * 1.75);
+      g.restore();
+    }
+    g.strokeStyle = col;
+    g.globalAlpha = 0.85;
+    g.lineWidth = 1.3;
+    g.beginPath();
+    g.arc(x, y, r * 0.93, 0, Math.PI * 2);
+    g.stroke();
+    g.globalAlpha = 1;
+    if (!brassRing(g, x, y, r)) {
+      g.strokeStyle = col;
+      g.lineWidth = 2;
+      g.beginPath();
+      g.arc(x, y, r, 0, Math.PI * 2);
+      g.stroke();
+    }
+    g.restore();
+  }
+
   /** Hostile ships and bosses beyond the edge of the screen: a mark on the rim pointing at each, with the range,
    * so a phone's close view never hides who is coming. */
   private drawThreatMarks(ships: DrawShip[], own: SailState): void {
@@ -2839,15 +2856,10 @@ export class Renderer {
       const [x, y] = this.rimSpot(a, g.measureText(text).width, 26);
       const boss = s.info?.npcRole === 'boss';
       const col = boss ? '#2ee6c8' : '#e0503c';
+      // A brass medallion on the rim (the UI's ring), its enamel in the threat's colour, the arrow inside it.
+      this.medallion(x, y, 14, null, col);
       g.translate(x, y);
       g.rotate(a);
-      g.fillStyle = 'rgba(8,10,14,0.75)';
-      g.beginPath();
-      g.arc(0, 0, 15, 0, Math.PI * 2);
-      g.fill();
-      g.strokeStyle = col;
-      g.lineWidth = 2;
-      g.stroke();
       g.fillStyle = col;
       g.beginPath();
       g.moveTo(11, 0);
@@ -2880,21 +2892,17 @@ export class Renderer {
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     if (px > 40 && px < this.w - 40 && py > 40 && py < this.h - 40) {
-      // In sight: a slow gold ring round the place.
+      // In sight: the HUD's own mark (the spyglass on the chart, icon.goal) in a small brass medallion afloat, a soft
+      // gold light breathing on the water under it (owner, 2026-10-07: no drawn signs).
       const pulse = 0.5 + 0.5 * Math.sin(this.time * 2.4);
-      g.strokeStyle = `rgba(217,178,90,${0.55 + 0.35 * pulse})`;
-      g.lineWidth = 2;
+      const halo = g.createRadialGradient(px, py, 6, px, py, 30);
+      halo.addColorStop(0, `rgba(230,190,100,${0.18 + 0.16 * pulse})`);
+      halo.addColorStop(1, 'rgba(230,190,100,0)');
+      g.fillStyle = halo;
       g.beginPath();
-      g.arc(px, py, 16 + 4 * pulse, 0, Math.PI * 2);
-      g.stroke();
-      g.fillStyle = gold;
-      g.beginPath();
-      g.moveTo(px, py - 6);
-      g.lineTo(px + 5, py);
-      g.lineTo(px, py + 6);
-      g.lineTo(px - 5, py);
-      g.closePath();
+      g.arc(px, py, 30, 0, Math.PI * 2);
       g.fill();
+      this.medallion(px, py, 12, 'icon.goal', gold);
       g.restore();
       return;
     }
@@ -2902,28 +2910,15 @@ export class Renderer {
     this.hudBand();
     const a = Math.atan2(py - this.h / 2, px - this.w / 2);
     const [x, y] = this.rimSpot(a, g.measureText(label).width, 27);
+    // On the rim: the same brass medallion with the HUD's mark, the arrow's tip toward the goal.
+    this.medallion(x, y, 13, 'icon.goal', gold);
     g.translate(x, y);
-    g.fillStyle = 'rgba(8,10,14,0.8)';
-    g.beginPath();
-    g.arc(0, 0, 15, 0, Math.PI * 2);
-    g.fill();
-    g.strokeStyle = gold;
-    g.lineWidth = 2;
-    g.stroke();
-    // A gold diamond inside, the arrow's tip toward the goal.
     g.fillStyle = gold;
-    g.beginPath();
-    g.moveTo(0, -5);
-    g.lineTo(4, 0);
-    g.lineTo(0, 5);
-    g.lineTo(-4, 0);
-    g.closePath();
-    g.fill();
     g.rotate(a);
     g.beginPath();
-    g.moveTo(21, 0);
-    g.lineTo(15, -5);
-    g.lineTo(15, 5);
+    g.moveTo(27, 0);
+    g.lineTo(21, -5);
+    g.lineTo(21, 5);
     g.closePath();
     g.fill();
     g.rotate(-a);
@@ -2939,6 +2934,10 @@ export class Renderer {
     const x = this.sx(own.x), y = this.sy(own.y);
     // The guns stand at her side: the marks start there, not in her middle.
     const hull = cls.beam * this.zoom * 0.6;
+    // The cursor resting on a token (a creature stack, a drift, a find, a lair, a sea mark) points at it: a click there
+    // marks it and fires nothing, so no gunner's mark is drawn across it (owner, 2026-10-07: the dotted lines over the
+    // seals' token). A broadside held is aimed wherever the cursor is.
+    if (!aim.charge && inHot(this.mouseX, this.mouseY, 4)) aim = { ...aim, side: null, chaser: null };
     if (aim.chaser) {
       const has = aim.chaser === 'bow' ? cls.bowChasers : cls.sternChasers;
       if (has) {
@@ -2985,14 +2984,8 @@ export class Renderer {
     const x = this.sx(own.x), y = this.sy(own.y);
     const r = Math.max(16, cls.length * this.zoom * 0.62);
     g.save();
-    g.strokeStyle = `rgba(217,178,90,${0.28 + 0.2 * this.nightNow})`;
-    g.lineWidth = 1.5;
-    g.setLineDash([3, 5]);
-    g.lineDashOffset = -this.time * 4;
-    g.beginPath();
-    g.arc(x, y, r, 0, Math.PI * 2);
-    g.stroke();
-    g.setLineDash([]);
+    // The engraved brass ring of a mark, faint (never a dashed circle: owner, 2026-10-07).
+    markRing(g, x, y, r, '#d9b25a', false, 0.5 + 0.35 * this.nightNow);
     const w = state.self!.wanted ?? 0;
     if (w > 0) {
       g.font = '600 12px Inter, sans-serif';
@@ -3012,8 +3005,8 @@ export class Renderer {
     return windDrift(state.wind[0], state.wind[1], h, dist, speed);
   }
 
-  /** A gunner's mark on the water instead of a lit wedge: where the shot will fall (a feathered band at the aim range,
-   * as wide as the spread there, soft at its ends), the line of flight to it in dots, the reach as a faint row of dots.
+  /** A gunner's mark on the water instead of a lit wedge: where the shot will fall (a row of dots at the aim range, as
+   * wide as the spread there, soft at its ends, a tick at its heart) and the reach as a faint row of dots.
    * `drift` (metres, + to the right): the cross wind carries the fall downwind of the line she lays — the band stands
    * where the balls will land, a hollow ring where she laid them, and a short hook from one to the other. */
   private drawFall(x: number, y: number, a0: number, spread: number, r0: number, reach: number, d: number, tone: [number, number, number], k: number, drift = 0): void {
@@ -3063,56 +3056,61 @@ export class Renderer {
         g.fillText(label, tx, ty);
       }
     }
-    // The fall: where the shot will land, as dotted arcs across the spread (no fill: a filled band reads as a blot on
-    // the water) — the middle arc bright, two faint ones before and beyond it for the scatter in range.
-    const depth = Math.max(8, reach * 0.05);
-    const inner = Math.max(r0, d - depth);
+    // The fall: where the shot will land, one row of dots across the spread (no fill: a filled band reads as a blot on
+    // the water), brightest in the middle, and a short bright tick at its heart. The line of flight and the faint arcs
+    // before and beyond it are gone (owner, 2026-10-07: the dotted lines read as noise); no dot lies on a token.
     const arcDots = (r: number, gap: number, size: number, alpha: number) => {
       const step = gap / Math.max(1, r);
       for (let t = a - spread; t <= a + spread + 1e-6; t += step) {
         const f = Math.sin(((t - (a - spread)) / (spread * 2)) * Math.PI);
         if (f < 0.08) continue;
+        const px = x + Math.cos(t) * r, py = y + Math.sin(t) * r;
+        if (inHot(px, py, 3)) continue;
         g.fillStyle = col(alpha * (0.35 + 0.65 * f));
         g.beginPath();
-        g.arc(x + Math.cos(t) * r, y + Math.sin(t) * r, size, 0, Math.PI * 2);
+        g.arc(px, py, size, 0, Math.PI * 2);
         g.fill();
       }
     };
-    arcDots(d, 8, 1.7, 0.8);
-    if (d - depth > r0 + 4) arcDots(d - depth, 11, 1.2, 0.35);
-    arcDots(d + depth, 11, 1.2, 0.35);
+    arcDots(d, 8, 1.6, 0.8);
     // Where the middle of the fall lies: a short bright tick across the band.
-    g.strokeStyle = col(0.85);
-    g.lineWidth = 2;
-    g.lineCap = 'round';
     const span = Math.min(spread * 0.55, 18 / Math.max(1, d));
-    g.beginPath();
-    g.arc(x, y, d, a - span, a + span);
-    g.stroke();
+    if (!inHot(x + Math.cos(a) * d, y + Math.sin(a) * d, 4)) {
+      g.strokeStyle = col(0.85);
+      g.lineWidth = 2;
+      g.lineCap = 'round';
+      g.beginPath();
+      g.arc(x, y, d, a - span, a + span);
+      g.stroke();
+    }
     g.restore();
-    // The line of flight, and the reach.
-    this.dots(x, y, a, r0 + 8, Math.max(r0 + 8, inner - 6), 12, tone, 0.45 * k);
+    // The reach: a faint row of dots at the guns' longest range.
     const step = 16 / Math.max(1, reach);
     g.fillStyle = col(0.3);
     for (let t = a - spread; t <= a + spread; t += step) {
       const f = Math.sin(((t - (a - spread)) / (spread * 2)) * Math.PI);
+      const px = x + Math.cos(t) * reach, py = y + Math.sin(t) * reach;
+      if (inHot(px, py, 3)) continue;
       g.globalAlpha = f;
       g.beginPath();
-      g.arc(x + Math.cos(t) * reach, y + Math.sin(t) * reach, 1.3, 0, Math.PI * 2);
+      g.arc(px, py, 1.3, 0, Math.PI * 2);
       g.fill();
     }
     g.globalAlpha = 1;
+    void r0;
   }
 
-  /** A row of small dots from r0 to r1 along an angle, fading in toward the far end. */
+  /** A row of small dots from r0 to r1 along an angle, fading in toward the far end (none on a token). */
   private dots(x: number, y: number, a: number, r0: number, r1: number, gap: number, tone: [number, number, number], alpha: number): void {
     const g = this.g;
     const cx = Math.cos(a), cy = Math.sin(a);
     for (let r = r0; r <= r1; r += gap) {
+      const px = x + cx * r, py = y + cy * r;
+      if (inHot(px, py, 3)) continue;
       const f = r1 > r0 ? 0.35 + 0.65 * ((r - r0) / (r1 - r0)) : 1;
       g.fillStyle = `rgba(${tone[0]},${tone[1]},${tone[2]},${(alpha * f).toFixed(3)})`;
       g.beginPath();
-      g.arc(x + cx * r, y + cy * r, 1.4, 0, Math.PI * 2);
+      g.arc(px, py, 1.4, 0, Math.PI * 2);
       g.fill();
     }
   }
@@ -3164,14 +3162,17 @@ export class Renderer {
       const len = Math.max(14, SHIP_CLASSES[s.classId].length * 0.55) * this.zoom;
       const x = this.sx(s.x), y = this.sy(s.y);
       g.save();
-      g.strokeStyle = 'rgba(224,80,60,0.9)';
-      g.lineWidth = 2;
-      g.setLineDash([6, 4]);
+      // Her keel struck through in red over a dark groove, an arrowhead each end: the balls running her length.
+      g.lineCap = 'round';
+      g.strokeStyle = 'rgba(5,8,10,0.55)';
+      g.lineWidth = 4.5;
       g.beginPath();
       g.moveTo(x - keel.x * len, y - keel.y * len);
       g.lineTo(x + keel.x * len, y + keel.y * len);
       g.stroke();
-      g.setLineDash([]);
+      g.strokeStyle = 'rgba(224,80,60,0.9)';
+      g.lineWidth = 2;
+      g.stroke();
       g.font = '600 11px Inter, system-ui, sans-serif';
       g.textAlign = 'center';
       g.fillStyle = 'rgba(0,0,0,0.6)';
@@ -3200,10 +3201,13 @@ export class Renderer {
       gr.addColorStop(1, 'rgba(140,255,170,0)');
       g.fillStyle = gr;
       g.beginPath(); g.arc(x, y, 90 * this.zoom + 20, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#1b2a20';
-      g.fillRect(x - 3, y - 7, 6, 10);
-      g.fillStyle = `rgba(200,255,210,${a})`;
-      g.fillRect(x - 2, y - 5, 4, 6);
+      // The cache's ship's lantern, its light gone green, afloat.
+      if (!drawPiece(g, 'lantern', x, y, 18 + 4 * this.zoom, 0.3, 0.95, '#3c8a5a')) {
+        g.fillStyle = '#1b2a20';
+        g.fillRect(x - 3, y - 7, 6, 10);
+        g.fillStyle = `rgba(200,255,210,${a})`;
+        g.fillRect(x - 2, y - 5, 4, 6);
+      }
     }
   }
 
@@ -3223,16 +3227,15 @@ export class Renderer {
       const x = this.sx(mx), y = this.sy(my);
       if (x < -60 || y < -60 || x > this.w + 60 || y > this.h + 60) continue;
       if (mx === near[0] && my === near[1]) arrow = false;
-      const k = (t * 0.7) % 1;
-      g.strokeStyle = `rgba(240,213,138,${0.7 * (1 - k)})`;
-      g.lineWidth = 2;
-      g.beginPath(); g.arc(x, y, r * (1.5 + k * 2.5), 0, Math.PI * 2); g.stroke();
-      g.strokeStyle = '#2a1a10'; g.lineWidth = 2;
-      g.beginPath(); g.moveTo(x, y + r); g.lineTo(x, y - r * 2.2); g.stroke();
-      g.fillStyle = '#c9a25a';
-      g.beginPath(); g.moveTo(x, y - r * 2.2); g.lineTo(x + r * 1.6, y - r * 1.7); g.lineTo(x, y - r * 1.2); g.closePath(); g.fill();
-      g.fillStyle = '#1b2a3a';
-      g.beginPath(); g.arc(x, y + r * 0.4, r * 0.7, 0, Math.PI * 2); g.fill();
+      // The patrol's mark: the iron buoy with a gold pennant, the engraved ring of a mark about it, breathing.
+      markRing(g, x, y, r * 2.6, '#f0d58a', true, 0.6 + 0.4 * Math.sin(t * 2.2));
+      foam(g, x, y, r * 1.1, t, mx, 0.2);
+      const down = state.wind[0] - Math.PI / 2;
+      drawPiece(g, 'pennant', x + Math.cos(down) * r * 1.3, y + Math.sin(down) * r * 1.3, r * 2.8, down + Math.sin(t * 3 + mx) * 0.08, 0.95, '#b8923e');
+      if (!drawPiece(g, 'buoy', x, y, r * 2, mx)) {
+        g.fillStyle = '#1b2a3a';
+        g.beginPath(); g.arc(x, y + r * 0.4, r * 0.7, 0, Math.PI * 2); g.fill();
+      }
     }
     if (!o.marks?.length) {
       const x = this.sx(near[0]), y = this.sy(near[1]);
@@ -3253,10 +3256,7 @@ export class Renderer {
       if (x < -30 || y < -30 || x > this.w + 30 || y > this.h + 30) return;
       const bob = Math.sin(t * 1.7 + i * 1.3) * r * 0.12;
       // A thin red ring pulsing about it: a target to aim at.
-      const k = (t * 0.6 + i * 0.3) % 1;
-      g.strokeStyle = `rgba(224,110,80,${0.65 * (1 - k)})`;
-      g.lineWidth = 1.5;
-      g.beginPath(); g.arc(x, y, r * (2 + k * 2.2), 0, Math.PI * 2); g.stroke();
+      markRing(g, x, y, r * 2.6, '#e06e50', false, 0.7 + 0.3 * Math.sin(t * 2.5 + i));
       g.save();
       g.translate(x, y + bob);
       g.rotate(Math.sin(t * 0.6 + i) * 0.3 + i);
@@ -3322,11 +3322,7 @@ export class Renderer {
     }
     // The arena's edge while she is going down.
     if (run) {
-      g.strokeStyle = 'rgba(143,227,208,0.35)';
-      g.lineWidth = Math.max(1.5, 2 * z);
-      g.setLineDash([14, 10]);
-      g.beginPath(); g.arc(x, y, A, 0, Math.PI * 2); g.stroke();
-      g.setLineDash([]);
+      markRing(g, x, y, A, '#8fe3d0', false, 0.6);
     }
     g.restore();
   }
@@ -3364,11 +3360,7 @@ export class Renderer {
     const t = settings().reduceMotion ? 0 : this.time;
     g.save();
     // The lightning's reach.
-    g.strokeStyle = 'rgba(160,200,255,0.22)';
-    g.lineWidth = 1.5;
-    g.setLineDash([10, 8]);
-    g.beginPath(); g.arc(x, y, O, 0, Math.PI * 2); g.stroke();
-    g.setLineDash([]);
+    markRing(g, x, y, O, '#a0c8ff', false, 0.45);
     // The eye: dark, turning.
     const gr = g.createRadialGradient(x, y, 0, x, y, R * 1.4);
     gr.addColorStop(0, 'rgba(6,10,20,0.55)');
@@ -3436,24 +3428,40 @@ export class Renderer {
           break;
         }
         case 'bones': {
+          // The painted bones of a great beast, half awash (the sea marks' own).
+          foam(g, 0, 0, 60 * z, t, seed, 0.12);
+          if (drawArt(g, 'prop.bones', 0, 0, 150 * z, seed, 0.85)) break;
           g.strokeStyle = 'rgba(226,214,186,0.85)';
           g.lineWidth = Math.max(1.5, 3 * z);
           g.rotate(seed);
           for (let i = -4; i <= 4; i++) {
             g.beginPath(); g.arc(i * 14 * z, 0, 22 * z, Math.PI * 1.1, Math.PI * 1.9); g.stroke();
           }
-          g.beginPath(); g.moveTo(-70 * z, 0); g.lineTo(70 * z, 0); g.stroke();
           break;
         }
         case 'arch': {
+          // A sea arch of the painted rock, the swell breaking white at its feet.
           g.rotate(seed);
-          g.fillStyle = '#3b3a38';
-          g.strokeStyle = '#1b1a18';
-          g.lineWidth = 2;
-          g.beginPath(); g.arc(0, 0, 36 * z, Math.PI, 0); g.arc(0, 0, 22 * z, 0, Math.PI, true); g.closePath(); g.fill(); g.stroke();
+          foam(g, -29 * z, 4 * z, 12 * z, t, seed, 0.25);
+          foam(g, 29 * z, 4 * z, 12 * z, t, seed + 1, 0.25);
+          const rock = pattern(g, 'tex.rock'), rs = sprite('tex.rock');
+          if (rock && rs) rock.setTransform(new DOMMatrix().scale((90 * z) / rs.img.naturalWidth));
+          g.beginPath(); g.arc(0, 0, 36 * z, Math.PI, 0); g.arc(0, 0, 22 * z, 0, Math.PI, true); g.closePath();
+          g.fillStyle = 'rgba(0,0,0,0.35)';
+          g.save(); g.translate(4 * z, 5 * z); g.fill(); g.restore();
+          g.fillStyle = rock ?? '#3b3a38';
+          g.fill();
+          g.strokeStyle = 'rgba(10,12,12,0.6)';
+          g.lineWidth = 1.5;
+          g.stroke();
           break;
         }
         case 'cathedral': {
+          // The drowned city's spires under the water (its painting, sunk and faint), the swell over them.
+          if (drawArt(g, 'prop.drowned_city', 0, 0, 190 * z, seed, 0.45)) {
+            foam(g, 0, 0, 50 * z, t, seed, 0.1);
+            break;
+          }
           g.fillStyle = 'rgba(20,34,40,0.55)';
           for (let i = -2; i <= 2; i++) {
             g.beginPath(); g.moveTo(i * 26 * z - 9 * z, 30 * z); g.lineTo(i * 26 * z, -(40 + (2 - Math.abs(i)) * 18) * z); g.lineTo(i * 26 * z + 9 * z, 30 * z); g.fill();
@@ -3470,38 +3478,61 @@ export class Renderer {
           gr.addColorStop(1, 'rgba(255,140,60,0)');
           g.fillStyle = gr;
           g.beginPath(); g.arc(0, 0, 70 * z, 0, Math.PI * 2); g.fill();
+          // Its steam: the painted mist climbing and thinning, the water boiling white under it.
+          foam(g, 0, 0, 26 * z, t, seed, 0.3);
+          const mist = piece('smoke');
           for (let i = 0; i < 6; i++) {
             const k = ((t * 0.25 + i / 6) % 1);
+            const r = (10 + k * 26) * z;
+            if (mist) {
+              g.globalAlpha = 0.4 * (1 - k);
+              g.drawImage(mist, Math.sin(i * 2.1 + seed) * 20 * z - r, -k * 90 * z - r, r * 2, r * 2);
+              g.globalAlpha = 1;
+              continue;
+            }
             g.fillStyle = `rgba(235,235,235,${0.35 * (1 - k)})`;
-            g.beginPath(); g.arc(Math.sin(i * 2.1 + seed) * 20 * z, -k * 90 * z, (10 + k * 26) * z, 0, Math.PI * 2); g.fill();
+            g.beginPath(); g.arc(Math.sin(i * 2.1 + seed) * 20 * z, -k * 90 * z, r, 0, Math.PI * 2); g.fill();
           }
           break;
         }
         case 'ice': {
-          g.fillStyle = 'rgba(200,230,245,0.9)';
-          g.strokeStyle = 'rgba(90,140,170,0.9)';
-          g.lineWidth = 1.2;
+          // A cluster of floes cut from the painted shore ice.
+          const r0 = seeded(seed * 7919);
           for (let i = 0; i < 5; i++) {
             const a = (i / 5) * Math.PI * 2 + seed, r = 26 * z;
-            const px = Math.cos(a) * r, py = Math.sin(a) * r, h = (22 + (i % 3) * 10) * z;
-            g.beginPath(); g.moveTo(px - 8 * z, py); g.lineTo(px, py - h); g.lineTo(px + 8 * z, py); g.closePath(); g.fill(); g.stroke();
+            icePlate(g, Math.cos(a) * r, Math.sin(a) * r, (12 + (i % 3) * 5) * z, 9, a, r0, 1);
           }
+          icePlate(g, 0, 0, 18 * z, 11, seed, r0, 1);
           break;
         }
         case 'coral': {
-          const cols = ['#e0605a', '#f0a050', '#c070d0', '#50c0b0', '#f0e070'];
-          for (let i = 0; i < 26; i++) {
-            const a = i * 2.39996 + seed, r = Math.sqrt(i / 26) * 90 * z;
-            g.fillStyle = cols[i % cols.length] + '99';
-            g.beginPath(); g.arc(Math.cos(a) * r, Math.sin(a) * r, (4 + (i % 3) * 2) * z, 0, Math.PI * 2); g.fill();
+          // A coral garden under the clear water: the reef's painted bed and the painted coral clumps.
+          const bed = pattern(g, 'tex.reef'), bs = sprite('tex.reef');
+          if (bed && bs) {
+            bed.setTransform(new DOMMatrix().scale((160 * z) / bs.img.naturalWidth));
+            g.globalAlpha = 0.5;
+            g.fillStyle = bed;
+            g.beginPath(); g.ellipse(0, 0, 95 * z, 75 * z, seed, 0, Math.PI * 2); g.fill();
+            g.globalAlpha = 1;
+          }
+          for (let i = 0; i < 9; i++) {
+            const a = i * 2.39996 + seed, r = Math.sqrt(i / 9) * 70 * z;
+            if (!drawArt(g, 'prop.bt_coral', Math.cos(a) * r, Math.sin(a) * r, (18 + (i % 3) * 7) * z, a, 0.7)) {
+              g.fillStyle = 'rgba(200,120,100,0.5)';
+              g.beginPath(); g.arc(Math.cos(a) * r, Math.sin(a) * r, 5 * z, 0, Math.PI * 2); g.fill();
+            }
           }
           break;
         }
         case 'singing': {
-          g.fillStyle = '#4a4a48';
+          // The singing rocks: the painted boulders awash, the swell white about them.
           for (let i = 0; i < 4; i++) {
             const a = i * 1.7 + seed;
-            g.beginPath(); g.ellipse(Math.cos(a) * 24 * z, Math.sin(a) * 24 * z, 10 * z, 7 * z, a, 0, Math.PI * 2); g.fill();
+            const px = Math.cos(a) * 24 * z, py = Math.sin(a) * 24 * z;
+            foam(g, px, py, 9 * z, t, seed + i, 0.22);
+            if (drawArt(g, 'prop.bt_boulder', px, py, 24 * z, a, 0.95)) continue;
+            g.fillStyle = '#4a4a48';
+            g.beginPath(); g.ellipse(px, py, 10 * z, 7 * z, a, 0, Math.PI * 2); g.fill();
           }
           for (let i = 0; i < 3; i++) {
             const k = ((t * 0.35 + i / 3) % 1);
@@ -3531,22 +3562,19 @@ export class Renderer {
         if (next) this.edgeArrow(x, y, '#ffe08a');
         return;
       }
-      if (next) {
-        const k = (t * 0.8) % 1;
-        g.strokeStyle = `rgba(255,224,138,${0.8 * (1 - k)})`;
-        g.lineWidth = 2;
-        g.beginPath(); g.arc(x, y, r * (1.4 + k * 2.2), 0, Math.PI * 2); g.stroke();
-      }
+      // The one she sails for: the engraved gold ring of a mark, breathing.
+      if (next) markRing(g, x, y, r * 2.4, '#ffe08a', true, 0.7 + 0.3 * Math.sin(t * 3));
       const bob = Math.sin(t * 1.6 + i) * r * 0.08;
       g.fillStyle = 'rgba(0,0,0,0.35)';
       g.beginPath(); g.ellipse(x + r * 0.25, y + r * 0.3, r, r * 0.7, 0, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#b3261e';
-      g.beginPath(); g.arc(x, y + bob, r, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#efe6d0';
-      g.beginPath(); g.arc(x, y + bob, r, -Math.PI * 0.25, Math.PI * 0.25); g.lineTo(x, y + bob); g.fill();
-      g.beginPath(); g.arc(x, y + bob, r, Math.PI * 0.75, Math.PI * 1.25); g.lineTo(x, y + bob); g.fill();
-      g.strokeStyle = '#2a1a10'; g.lineWidth = 1.2;
-      g.beginPath(); g.arc(x, y + bob, r, 0, Math.PI * 2); g.stroke();
+      foam(g, x, y, r * 1.2, t, i, 0.2);
+      // The regatta's buoy: the iron ball painted dull red, its pennant downwind (docs/06: no bright red).
+      const down = state.wind[0] - Math.PI / 2;
+      drawPiece(g, 'pennant', x + Math.cos(down) * r * 1.35, y + bob + Math.sin(down) * r * 1.35, r * 3, down + Math.sin(t * 3 + i) * 0.08, 0.9, '#d8cfb8');
+      if (!drawPiece(g, 'redBuoy', x, y + bob, r * 2.2, i)) {
+        g.fillStyle = '#b3261e';
+        g.beginPath(); g.arc(x, y + bob, r, 0, Math.PI * 2); g.fill();
+      }
       g.font = `700 ${Math.round(Math.max(11, r * 1.1))}px sans-serif`;
       g.textAlign = 'center'; g.textBaseline = 'bottom';
       g.fillStyle = next ? '#ffe08a' : '#f0e6cc';
@@ -3592,72 +3620,32 @@ export class Renderer {
       g.translate(x, y);
       g.rotate(s.h);
       if (pod === 'dolphins') {
-        // Five of them riding the bow wave and along her sides, each leaping in its turn.
-        // Drawn larger than life (as the pets are) so they read at sea: each leaps in its turn, white water where it
-        // breaks the surface and falls back.
+        // Five of them riding the bow wave and along her sides, each leaping in its turn: under the water between
+        // leaps (sunk, faint, a V of foam over them), out of it whole with their shadows falling away, the splash
+        // where they break the surface and go back in (drawn larger than life, as the pets are, to read at sea).
         const spots: [number, number][] = [[-1.5, -0.62], [1.5, -0.55], [-2.3, -0.18], [2.4, -0.05], [0.25, -0.86]];
         const base = Math.max(15, 6.5 * this.zoom);
         spots.forEach(([bx, by], i) => {
           const ph = t * 1.6 + i * 1.3;
-          const leap = Math.max(0, Math.sin(ph));
-          const len = base * (1 + leap * 0.3);
           const px = bx * B * 0.6 + Math.sin(t * 0.8 + i) * B * 0.12, py = by * L - Math.cos(ph) * L * 0.05;
           g.save();
           g.translate(px, py);
-          // The wake it cuts: two short white strokes behind it.
-          g.strokeStyle = `rgba(225,235,240,${0.25 + 0.35 * leap})`;
-          g.lineWidth = Math.max(1, base * 0.08);
-          g.beginPath();
-          g.moveTo(-base * 0.12, base * 0.45);
-          g.lineTo(-base * 0.3, base * 1.2);
-          g.moveTo(base * 0.12, base * 0.45);
-          g.lineTo(base * 0.3, base * 1.2);
-          g.stroke();
-          if (leap < 0.25 || (leap > 0.9 && Math.cos(ph) < 0)) {
-            g.fillStyle = `rgba(235,244,248,${0.55 - leap * 0.4})`;
-            g.beginPath();
-            g.ellipse(0, len * 0.1, len * 0.42, len * 0.28, 0, 0, Math.PI * 2);
-            g.fill();
-          }
-          g.globalAlpha = 0.55 + 0.45 * Math.min(1, leap * 2);
-          if (leap > 0.3) {
-            g.fillStyle = 'rgba(0,0,0,0.25)';
-            g.beginPath();
-            g.ellipse(len * 0.12, len * 0.18, len * 0.14, len * 0.42, 0, 0, Math.PI * 2);
-            g.fill();
-          }
-          drawDolphin(g, len, t, s.id + i);
+          drawDolphinSea(g, base, t, (s.id % 97) * 0.37 + i * 2.3);
           g.restore();
         });
       } else if (pod === 'humpback') {
-        const len = Math.max(46, 17 * this.zoom), dive = 0.55 + 0.45 * Math.sin(t * 0.45 + s.id);
+        // A humpback abeam, under the water but for her back as she rolls, and her blow (no pad under her).
+        const len = Math.max(46, 17 * this.zoom);
         g.translate(B * 0.5 + len * 0.35 + 6 * this.zoom, -L * 0.05 + Math.sin(t * 0.3) * L * 0.05);
-        // The white water about her back as she rolls, and her spout when she breathes.
-        g.fillStyle = `rgba(222,234,240,${0.12 + 0.2 * dive})`;
-        g.beginPath();
-        g.ellipse(0, 0, len * 0.3, len * 0.6, 0, 0, Math.PI * 2);
-        g.fill();
-        g.globalAlpha = 0.45 + 0.55 * dive;
-        drawBeast(g, 'humpback', len, len * 0.28, t, s.id);
-        const breath = (t * 0.45 + s.id) % (Math.PI * 2);
-        if (breath > 1.2 && breath < 2.2) {
-          const k = 1 - Math.abs(breath - 1.7) / 0.5;
-          g.globalAlpha = 0.7 * k;
-          g.fillStyle = '#eef4f7';
-          for (let i = 0; i < 5; i++) {
-            g.beginPath();
-            g.arc(Math.sin(i * 2.1) * len * 0.05, -len * (0.3 + i * 0.05 * k), len * (0.04 + 0.02 * i) * (0.6 + k), 0, Math.PI * 2);
-            g.fill();
-          }
-        }
+        drawBeastInSea(g, 'humpback', len, len * 0.28, t, s.id, false, 0.7);
       } else {
-        // Three orcas in her wake, weaving.
+        // Three orcas in her wake, weaving, rolling up to breathe one after another.
         for (let i = 0; i < 3; i++) {
-          const len = Math.max(18, 8 * this.zoom), dive = 0.55 + 0.45 * Math.sin(t * 0.8 + i * 2 + s.id);
+          const len = Math.max(18, 8 * this.zoom);
           g.save();
           g.translate((i - 1) * B * 0.9 + Math.sin(t * 0.9 + i) * B * 0.2, L * (0.62 + i * 0.12));
-          g.globalAlpha = 0.35 + 0.65 * dive;
-          drawBeast(g, 'orca', len, len * 0.3, t, s.id + i);
+          g.rotate(Math.sin(t * 0.9 + i) * 0.15);
+          drawBeastInSea(g, 'orca', len, len * 0.3, t, s.id + i * 2.1, false, 0.8);
           g.restore();
         }
       }
@@ -3676,16 +3664,14 @@ export class Renderer {
       if (x < -200 || y < -200 || x > this.w + 200 || y > this.h + 200) continue;
       const clen = calfLength(pet.orca) * this.zoom;
       const t = settings().reduceMotion ? 0 : this.time;
-      // It rises and dives in a slow rhythm, weaving a little on the ship's quarter.
-      const dive = 0.55 + 0.45 * Math.sin(t * 0.7 + s.id);
+      // It rises and dives in its own rhythm (drawBeastInSea), weaving a little on the ship's quarter.
       const weave = Math.sin(t * 0.9 + s.id * 1.7) * cls.beam * 0.25 * this.zoom;
       g.save();
       g.translate(x, y);
       g.rotate(s.h);
       g.translate(cls.beam * 0.5 * this.zoom + clen * 0.45 + 3 * this.zoom + weave, cls.length * 0.12 * this.zoom);
       g.rotate(Math.sin(t * 0.9 + s.id * 1.7) * 0.12);
-      g.globalAlpha = 0.35 + 0.65 * dive;
-      drawBeast(g, 'white_orca', clen, clen * 0.3, t, s.id);
+      drawBeastInSea(g, 'white_orca', clen, clen * 0.3, t, s.id, false, 0.8);
       g.restore();
     }
   }
@@ -3785,6 +3771,20 @@ export class Renderer {
     const nameW = g.measureText(name).width;
     const total = pillW + 4 + nameW;
     const px = clamp(x - total / 2, 2, Math.max(2, this.w - total - 2));
+    // Under a HUD control (a phone's corners): no name over the button; its ring is still drawn.
+    const hidden = !this.clearOfHudBox(px, px + total, y - 11, y + 11);
+    if (!hidden) this.beastName(s, x, y, px, pillW, badge, name, col, !!def.predator);
+    if (isTarget) {
+      // The engraved ring of her mark (as a ship's): bright and whole within the guns' band, fainter while too far.
+      const r = Math.max(cls.length, 10) * this.zoom * 0.62;
+      markRing(g, this.sx(s.x), this.sy(s.y), r, col, this.markRange === 'in', 0.95);
+      this.rangeWord(this.sx(s.x), this.sy(s.y) + r);
+    }
+  }
+
+  /** A beast's level in its frame, its name and the bar of its strength. */
+  private beastName(s: DrawShip, x: number, y: number, px: number, pillW: number, badge: string, name: string, col: string, predator: boolean): void {
+    const g = this.g;
     g.fillStyle = 'rgba(8,10,14,0.78)';
     roundRect(g, px, y - 10, pillW, 13, 3);
     g.fill();
@@ -3799,7 +3799,7 @@ export class Renderer {
     g.font = '600 11px Inter, sans-serif';
     g.fillStyle = '#000';
     g.fillText(name, px + pillW + 5, y + 1);
-    g.fillStyle = def.predator ? '#e0a08a' : '#bcd3dc';
+    g.fillStyle = predator ? '#e0a08a' : '#bcd3dc';
     g.fillText(name, px + pillW + 4, y);
     g.textAlign = 'center';
     const w = 40;
@@ -3807,17 +3807,6 @@ export class Renderer {
     g.fillRect(x - w / 2 - 1, y + 5, w + 2, 5);
     g.fillStyle = '#b23a3a';
     g.fillRect(x - w / 2, y + 6, w * clamp(s.hull, 0, 1), 3);
-    if (isTarget) {
-      const r = Math.max(cls.length, 10) * this.zoom * 0.62;
-      g.strokeStyle = hexA(col, 0.85);
-      g.lineWidth = this.markRange === 'in' ? 2 : 1.5;
-      g.setLineDash(this.markRange === 'in' ? [] : [6, 5]);
-      g.beginPath();
-      g.ellipse(this.sx(s.x), this.sy(s.y), r, r, 0, 0, Math.PI * 2);
-      g.stroke();
-      g.setLineDash([]);
-      this.rangeWord(this.sx(s.x), this.sy(s.y) + r);
-    }
   }
 
   /** A captain's colours after her name (docs/24 D1): a little cloth on a pole, 15×11 from (x, y) at its top-left —
@@ -3946,6 +3935,17 @@ export class Renderer {
       if (!hit) break;
       y = hit.t - tall - 3;
     }
+    // Under a HUD control: under her hull instead, and if that is no better, no name at all (the target line names a
+    // ship she has marked) — her rings are still drawn.
+    if (!this.clearOfHudBox(x - half, x + half, y - 12 - over, y + tall)) {
+      const below = this.sy(s.y) + (cls.length * this.zoom) / 2 + 16 + over;
+      const free = this.clearOfHudBox(x - half, x + half, below - 12 - over, below + tall) && !this.labelBoxes.some((b) => x - half < b.r && x + half > b.l && below - 12 - over < b.b && below + tall > b.t);
+      if (!free) {
+        this.targetRings(s, state, boardTarget, isTarget);
+        return;
+      }
+      y = below;
+    }
     this.labelBoxes.push({ l: x - half, r: x + half, t: y - 12 - over, b: y + tall });
     const lx = x + (badgeW - flagW) / 2;
     if (badge) {
@@ -4009,18 +4009,33 @@ export class Renderer {
       g.fillStyle = '#d9c9a0';
       g.fillText(line, x, y + 33);
     }
-    // The target (canon D12): a thin ring under her in the colour of the danger she is to you.
+    this.targetRings(s, state, boardTarget, isTarget);
+  }
+
+  /** Whether a world label's box (screen px) lies clear of the HUD: its measured blocks, and — on a phone — the corners
+   *  where its round controls stand (the captain top left, the menu and the map top right), so no name is drawn under
+   *  a button (the HUD helper, 2026-10-08: the names lay over the top-right menu at 812×375). */
+  private clearOfHudBox(l: number, r: number, t: number, b: number): boolean {
+    const m = 4;
+    if (this.hudRects.some((q) => r > q.left - m && l < q.right + m && b > q.top - m && t < q.bottom + m)) return false;
+    if (this.w < 1000) {
+      const cw = Math.min(200, this.w * 0.25), ch = Math.min(120, this.h * 0.32);
+      if (t < ch && (r > this.w - cw || l < Math.min(190, this.w * 0.24))) return false;
+    }
+    return true;
+  }
+
+  /** The target (canon D12): the engraved ring of her mark in the colour of the danger she is to you — bright and whole in
+   *  the close fight's band (her gun captains fire), fainter while she is too far (never dashed: owner, 2026-10-07), the
+   *  word under it saying which; four brackets for her a boarding or a mark is on. */
+  private targetRings(s: DrawShip, state: ClientState, boardTarget: boolean, isTarget: boolean): void {
+    const g = this.g;
+    const info = s.info!;
+    const cls = SHIP_CLASSES[s.classId];
     if (isTarget && !boardTarget) {
       const t = info.shipLevel ? levelThreat(state, info.classId, info.shipLevel) : 'even';
       const r = cls.length * this.zoom * 0.62;
-      g.strokeStyle = hexA(THREAT_COLOR[t], 0.85);
-      // In the close fight's band the ring is drawn whole (her gun captains fire), dashed while she is too far.
-      g.lineWidth = this.markRange === 'in' ? 2 : 1.5;
-      g.setLineDash(this.markRange === 'in' ? [] : [6, 5]);
-      g.beginPath();
-      g.ellipse(this.sx(s.x), this.sy(s.y), r, r, 0, 0, Math.PI * 2);
-      g.stroke();
-      g.setLineDash([]);
+      markRing(g, this.sx(s.x), this.sy(s.y), r, THREAT_COLOR[t], this.markRange === 'in', 0.95);
       this.rangeWord(this.sx(s.x), this.sy(s.y) + r);
     }
     if (boardTarget || s.flags & SF.MARKED) {

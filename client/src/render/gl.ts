@@ -81,18 +81,25 @@ void main() {
   float spark = smoothstep(0.5, 0.72, rip) * smoothstep(0.35, 0.95, diff) * smoothstep(0.8, 2.2, zoom);
   col += vec3(0.6, 0.66, 0.74) * spark * (0.1 + 0.12 * (1.0 - night));
   // Wakes (positions from the camera): white water by day, the glow of the deep's small lights by night.
+  // Each point of a wake spreads as a ring as it ages: together they draw the two arms of the wake running out from
+  // her quarters (a Kelvin wake), with the churned water close astern of her — not a pale haze over her (owner,
+  // 2026-10-07: «надо работать над рассеканием воды»).
   float glow = 0.0;
   for (int i = 0; i < ${MAX_WAKES}; i++) {
     if (i >= nwakes) break;
     vec4 k = wakes[i];
     vec2 dv = l - k.xy;
     float r = max(2.0, k.w);
-    glow += exp(-dot(dv, dv) / (r * r)) * clamp(1.0 - k.z / 7.0, 0.0, 1.0);
+    float d = length(dv);
+    float fade = clamp(1.0 - k.z / 7.0, 0.0, 1.0);
+    float arm = (d - r * 0.62) / (r * 0.16 + 0.8);
+    float core = exp(-dot(dv, dv) / (r * r * 0.1)) * clamp(1.0 - k.z / 2.5, 0.0, 1.0);
+    glow += (exp(-arm * arm) * 0.85 + core * 0.8) * fade;
   }
   glow = clamp(glow, 0.0, 1.2);
-  // Churned water: the painting's own foam, broken up, where the wake runs; the deep's small lights by night.
-  float churn = hasTex > 0.5 ? smoothstep(0.08, 0.45, texture2D(tex, l / 36.0 + t3).r) : 0.6;
-  col = mix(col, vec3(0.62, 0.68, 0.72), clamp(glow * (0.22 + 0.7 * churn), 0.0, 0.75) * (1.0 - night * 0.5));
+  // Churned water: the painting's own foam, broken into streaks, where the wake runs; the deep's small lights by night.
+  float churn = hasTex > 0.5 ? smoothstep(0.2, 0.55, texture2D(tex, l / 30.0 + t3).r) : 0.6;
+  col = mix(col, vec3(0.68, 0.74, 0.78), clamp(glow * (0.15 + 0.95 * churn), 0.0, 0.7) * (1.0 - night * 0.5));
   col += vec3(0.18, 0.9, 0.78) * glow * churn * 0.22 * night;
   gl_FragColor = vec4(col, 1.0);
 }`;

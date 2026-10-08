@@ -9,6 +9,7 @@
 
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { sprite } from '../assets.ts';
+import { foam, piece, spray } from './seaart.ts';
 
 type G = CanvasRenderingContext2D;
 
@@ -443,4 +444,281 @@ export function drawDolphin(g: G, len: number, t: number, seed: number): void {
   g.lineTo(-beam * 0.06, len * 0.1);
   g.closePath();
   g.fill();
+}
+// ------------------------------------------------------------------------------------------------ in the water
+// Owner, 2026-10-07: «кит на какой-то подложке, он наоборот под водой должен быть еле-еле», the dolphins «очень плохо
+// нарисованы, нету рассекания воды». The beasts swim under the surface: their own painting sunk in the water — blurred,
+// its colours drowned in the sea's, faint — bending as it swims (the segments of `warp` turning one after another, the
+// tail beating slowly), rising and diving by its own clock. Only the back breaks the surface when it rises (the painting
+// itself, crisp, feathered out along the spine), with the white water about it, rings spreading on the surface, a V of
+// foam astern when it moves, and — for the whales, the orcas, the narwhals — the blow. A shark shows its fin cutting
+// the surface with its wake. All from the paintings and the painted spray and mist.
+
+/** A painting's box: the image, where it lies in it, and where the beast lies in that box (its extent and middle). */
+interface Src {
+  img: CanvasImageSource;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  extentY: number;
+  cx: number;
+  cy: number;
+}
+
+const sea = new Map<string, Src>();
+
+function blank(w: number, h: number): HTMLCanvasElement | null {
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.ceil(w));
+  c.height = Math.max(1, Math.ceil(h));
+  return c;
+}
+
+/** The painting of a sprite or a cut piece as a box. */
+function boxOf(id: string): Src | null {
+  if (id.startsWith('piece:')) {
+    const c = piece(id.slice(6) as 'dolphin');
+    return c ? { img: c, x: 0, y: 0, w: c.width, h: c.height, extentY: 0.97, cx: 0.5, cy: 0.5 } : null;
+  }
+  const spr = sprite(id);
+  if (!spr) return null;
+  return { img: spr.img, x: 0, y: 0, w: spr.img.naturalWidth, h: spr.img.naturalHeight, extentY: spr.extentY, cx: spr.cx, cy: spr.cy };
+}
+
+/** The painting sunk in the water: small, blurred, its colours drowned in the sea's (made once a kind). */
+function sunk(id: string): Src | null {
+  const hit = sea.get(`sunk|${id}`);
+  if (hit) return hit;
+  const b = boxOf(id);
+  if (!b) return null;
+  const k = Math.min(1, 150 / Math.max(b.w, b.h));
+  const pad = 8;
+  const c = blank(b.w * k + pad * 2, b.h * k + pad * 2);
+  if (!c) return null;
+  const x = c.getContext('2d')!;
+  x.filter = 'blur(3px)';
+  x.drawImage(b.img, b.x, b.y, b.w, b.h, pad, pad, b.w * k, b.h * k);
+  x.filter = 'none';
+  x.globalCompositeOperation = 'source-atop';
+  x.fillStyle = 'rgba(10,34,44,0.45)';
+  x.fillRect(0, 0, c.width, c.height);
+  const out: Src = { img: c, x: pad, y: pad, w: b.w * k, h: b.h * k, extentY: b.extentY, cx: b.cx, cy: b.cy };
+  sea.set(`sunk|${id}`, out);
+  return out;
+}
+
+/** The back that breaks the surface: the painting itself, feathered out along the spine about `at` (share of its
+ *  length from the head), `half` its length and `wide` its breadth either way (made once a kind). */
+function backOf(id: string, at: number, half: number, wide: number): Src | null {
+  const key = `back|${id}|${at}|${half}|${wide}`;
+  const hit = sea.get(key);
+  if (hit) return hit;
+  const b = boxOf(id);
+  if (!b) return null;
+  const k = Math.min(1, 260 / Math.max(b.w, b.h));
+  const c = blank(b.w * k, b.h * k);
+  if (!c) return null;
+  const x = c.getContext('2d')!;
+  x.drawImage(b.img, b.x, b.y, b.w, b.h, 0, 0, c.width, c.height);
+  // The feathered spine: an elliptical gradient (a circle's, squeezed) keeps the middle and lets the edges go.
+  const head = (b.cy - b.extentY / 2) * c.height;
+  const my = head + b.extentY * c.height * at, ry = b.extentY * c.height * half, rx = c.width * wide;
+  x.globalCompositeOperation = 'destination-in';
+  x.translate(c.width * b.cx, my);
+  x.scale(rx / ry, 1);
+  const grd = x.createRadialGradient(0, 0, ry * 0.35, 0, 0, ry);
+  grd.addColorStop(0, 'rgba(0,0,0,1)');
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = grd;
+  x.fillRect(-ry, -ry, ry * 2, ry * 2);
+  const out: Src = { img: c, x: 0, y: 0, w: c.width, h: c.height, extentY: b.extentY, cx: b.cx, cy: b.cy };
+  sea.set(key, out);
+  return out;
+}
+
+/** A painting `len` from snout to tail at the origin, head toward −y, cut across in `pieces` segments behind its still
+ *  fore part (`fore`), each turned a little more than the one before it: the wave runs down to the tail. */
+function warp(g: G, b: Src, len: number, ph: number, amp: number, pieces: number, fore: number): void {
+  const h = len / b.extentY, w = h * (b.w / b.h);
+  const top = -h * b.cy, left = -w * b.cx;
+  const head = b.cy - b.extentY / 2;
+  const cut = [0];
+  for (let k = 0; k < pieces - 1; k++) cut.push(head + b.extentY * (fore + ((1 - fore) * k) / (pieces - 1)));
+  cut.push(1);
+  const ov = 4 / b.h;
+  g.save();
+  g.drawImage(b.img, b.x, b.y, b.w, cut[1] * b.h, left, top, w, cut[1] * h);
+  g.translate(0, top + cut[1] * h);
+  for (let k = 1; k < cut.length - 1; k++) {
+    g.rotate(amp * Math.sin(ph - k * 0.9));
+    const s0 = Math.max(0, cut[k] - ov), s1 = cut[k + 1];
+    g.drawImage(b.img, b.x, b.y + s0 * b.h, b.w, (s1 - s0) * b.h, left, (s0 - cut[k]) * h, w, (s1 - s0) * h);
+    g.translate(0, (cut[k + 1] - cut[k]) * h);
+  }
+  g.restore();
+}
+
+/** How each beast swims and shows itself: its clock (radians a second), the blow (0 none … 1 a whale's), its back
+ *  (where along it, how long and how wide the part breaking the surface is), the fin of a shark, its wave. */
+const SWIM: Record<BeastId, { rate: number; blow: number; back: [number, number, number]; fin?: boolean; amp: number; beat: number }> = {
+  humpback: { rate: 0.3, blow: 1, back: [0.42, 0.3, 0.3], amp: 0.06, beat: 0.9 },
+  sperm_whale: { rate: 0.28, blow: 1, back: [0.33, 0.32, 0.36], amp: 0.06, beat: 0.8 },
+  orca: { rate: 0.55, blow: 0.5, back: [0.4, 0.22, 0.26], amp: 0.08, beat: 1.4 },
+  white_orca: { rate: 0.55, blow: 0.5, back: [0.4, 0.22, 0.26], amp: 0.08, beat: 1.4 },
+  narwhal: { rate: 0.5, blow: 0.4, back: [0.52, 0.24, 0.3], amp: 0.08, beat: 1.3 },
+  shark: { rate: 0.7, blow: 0, back: [0.37, 0.14, 0.16], fin: true, amp: 0.11, beat: 2.2 },
+  young_serpent: { rate: 0.6, blow: 0, back: [0.5, 0.42, 0.42], amp: 0.2, beat: 1.5 },
+};
+
+const smooth = (v: number): number => {
+  const x = Math.max(0, Math.min(1, v));
+  return x * x * (3 - 2 * x);
+};
+
+/** The water where something breaks the surface at (0, y): the white water about it, rings spreading, and — moving —
+ *  a V of foam astern. `a` how much of it is up (0…1). */
+export function surfaceWater(g: G, y: number, len: number, a: number, t: number, seed: number, moving: number): void {
+  if (a <= 0.02) return;
+  foam(g, 0, y, len * (0.16 + 0.08 * a), t, seed, 0.3 * a);
+  // The slick it leaves as it rolls: a ring of smooth water spreading and fading (a big beast's only — on a small one
+  // it reads as a drawn ring).
+  if (len > 40) {
+    const life = (t * 0.35 + seed * 0.13) % 1;
+    g.save();
+    g.lineWidth = Math.max(1, len * 0.012);
+    g.strokeStyle = `rgba(200,220,228,${(0.12 * a * (1 - life)).toFixed(3)})`;
+    g.beginPath();
+    g.ellipse(0, y, len * (0.2 + life * 0.3), len * (0.3 + life * 0.38), 0, 0, Math.PI * 2);
+    g.stroke();
+    g.restore();
+  }
+  if (moving > 0.05) {
+    const a0 = g.globalAlpha;
+    for (let i = 1; i <= 4; i++) {
+      const sp = spray(i + seed);
+      if (!sp) break;
+      const u = i / 4, d = len * 0.07 * i * (0.8 + moving * 0.4);
+      const s = len * (0.07 + 0.035 * i);
+      g.globalAlpha = a0 * 0.32 * a * moving * (1 - u * 0.75);
+      for (const side of [-1, 1]) g.drawImage(sp, side * d - s / 2, y + len * 0.13 * i - s / 2, s, s);
+    }
+    g.globalAlpha = a0;
+  }
+}
+
+/** The blow: white mist from the blowhole at (0, y), climbing and drifting astern as it thins (`k` 0…1 through it). */
+function blow(g: G, y: number, len: number, k: number, size: number): void {
+  const mist = piece('smoke');
+  if (!mist) return;
+  for (let i = 0; i < 3; i++) {
+    const u = Math.min(1, k * 1.2 + i * 0.15);
+    const s = len * size * (0.12 + u * 0.22) * (1 + i * 0.25);
+    g.globalAlpha = 0.55 * Math.sin(Math.min(1, k) * Math.PI) * (1 - i * 0.25);
+    g.drawImage(mist, -s / 2 + Math.sin(i * 2.1) * len * 0.02, y + len * (0.02 + u * 0.1 * (i + 1)) - s / 2, s, s);
+  }
+  g.globalAlpha = 1;
+}
+
+/** A beast in the sea at the origin, head toward −y: its body sunk and swimming, its back breaking the surface by its
+ *  own clock (never while `submerged`), the water about it, the blow. `moving` 0…1 how fast it goes. */
+export function drawBeastInSea(g: G, id: BeastId, len: number, beam: number, t: number, seed: number, submerged: boolean, moving = 0.6): void {
+  const sw = SWIM[id];
+  const body = sunk(`monster.${id}`);
+  if (!body) {
+    // The hand-drawn beast while the painting loads, dimmed under the water.
+    g.save();
+    g.globalAlpha *= submerged ? 0.25 : 0.6;
+    drawBeast(g, id, len, beam, t, seed);
+    g.restore();
+    return;
+  }
+  const ph = t * sw.rate + seed * 1.37;
+  const rise = 0.5 + 0.5 * Math.sin(ph);
+  const up = submerged ? 0 : smooth((rise - 0.42) / 0.4);
+  const swim = t * sw.beat + seed * 0.61;
+  const pieces = id === 'young_serpent' ? 5 : 4;
+  const fore = id === 'young_serpent' ? 0.3 : id === 'humpback' ? 0.6 : id === 'sperm_whale' ? 0.5 : 0.46;
+  const a0 = g.globalAlpha;
+  // The body under the water: fainter the deeper it is.
+  g.globalAlpha = a0 * (submerged ? 0.3 : 0.5 + 0.3 * rise);
+  warp(g, body, len, swim, sw.amp, pieces, fore);
+  g.globalAlpha = a0;
+  if (up <= 0.02) return;
+  const [at, half, wide] = sw.back;
+  const backY = -len / 2 + len * at;
+  surfaceWater(g, backY, len, up, t, seed, moving);
+  const back = backOf(`monster.${id}`, at, half, wide);
+  if (back) {
+    g.globalAlpha = a0 * up * (sw.fin ? 1 : 0.92);
+    warp(g, back, len, swim, sw.amp, pieces, fore);
+    g.globalAlpha = a0;
+  }
+  // The blow, once each time it rises, at the top of its roll.
+  if (sw.blow > 0) {
+    const k = (((ph % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI * 2); // 0 at the roll's middle, rising
+    if (k > 0.05 && k < 0.3) blow(g, -len / 2 + len * 0.1, len, (k - 0.05) / 0.25, sw.blow);
+  }
+}
+
+/** A dolphin riding a ship's bow wave at the origin, head toward −y, `len` px long: under the water between its leaps
+ *  (sunk and faint, its V of foam at the surface), then out of it — the painted dolphin whole, its shadow on the water
+ *  falling away from it — and the splash where it breaks the surface and goes back in, the foam ring after. */
+export function drawDolphinSea(g: G, len: number, t: number, seed: number): void {
+  const ph = t * 1.6 + seed * 1.3;
+  const s = Math.sin(ph);
+  const leap = Math.max(0, s);
+  const deep = sunk('piece:dolphin');
+  const art = piece('dolphin');
+  if (!deep || !art) {
+    drawDolphin(g, len, t, seed);
+    return;
+  }
+  const a0 = g.globalAlpha;
+  const swim = t * 4 + seed;
+  if (s < 0.12) {
+    // Under the water, near the surface: the sunk shape and the V of its wake over it.
+    g.globalAlpha = a0 * (0.32 + 0.25 * Math.max(0, s + 0.4));
+    warp(g, deep, len, swim, 0.12, 3, 0.45);
+    g.globalAlpha = a0;
+    surfaceWater(g, -len * 0.25, len, 0.5, t, seed, 1);
+  }
+  // Breaking the surface and going back in: the splash.
+  const edge = 1 - Math.min(1, Math.abs(s) / 0.3);
+  if (edge > 0) foam(g, 0, -len * 0.05, len * 0.3, t, seed + 7, 0.5 * edge);
+  if (leap > 0.05) {
+    const k = 1 + 0.22 * leap;
+    const off = len * 0.3 * leap;
+    // Its shadow on the water, falling away as it climbs.
+    g.save();
+    g.globalAlpha = a0 * 0.28 * leap;
+    g.translate(off * 0.5, off);
+    g.filter = 'none';
+    g.drawImage(shadowOf(art), (-art.width / art.height) * len * 0.5, -len / 2, (art.width / art.height) * len, len);
+    g.restore();
+    g.save();
+    g.globalAlpha = a0 * Math.min(1, leap * 3);
+    g.scale(k, k);
+    g.rotate(Math.sin(ph * 0.5) * 0.08);
+    g.drawImage(art, (-art.width / art.height) * len * 0.5, -len / 2, (art.width / art.height) * len, len);
+    g.restore();
+  }
+}
+
+/** A cut piece made a flat dark shadow (made once). */
+const shadows = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
+function shadowOf(c: HTMLCanvasElement): HTMLCanvasElement {
+  const hit = shadows.get(c);
+  if (hit) return hit;
+  const s = blank(c.width, c.height) ?? c;
+  if (s !== c) {
+    const x = s.getContext('2d')!;
+    x.drawImage(c, 0, 0);
+    x.globalCompositeOperation = 'source-in';
+    x.fillStyle = '#02080c';
+    x.fillRect(0, 0, s.width, s.height);
+  }
+  shadows.set(c, s);
+  return s;
 }

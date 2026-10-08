@@ -68,9 +68,9 @@ export function drawRelation(g: CanvasRenderingContext2D, rel: Relation, x: numb
 export const FACTION_SIGN: Record<FactionId, string> = {
   crown: '♛',
   league: '⊖',
-  confederacy: '⚔',
+  confederacy: '⚔\uFE0E', // text, not the emoji (owner, 2026-10-07: the blue anchor read as a sticker)
   brokers: 'Ω',
   harpoon: '↟',
   choir: '@',
-  free: '⚓',
+  free: '⚓\uFE0E',
 };

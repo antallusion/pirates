@@ -1,8 +1,8 @@
-// The lairs of the land's creatures on the islands (docs/18 II #13), strictly from above: the trampled ground of the
-// lair (sand scraped bare, a ring of stones, bones, a nest), the creature's token on it — its own picture, or a
-// tinted, framed token of one where it has none — red-ringed while it stands, grey once beaten; a dwelling's flag over
-// it (gold hers, red another's); the chain's step; and over it HoMM3's word for their number and the lair's level,
-// read from the sea («Стая · ⚓4»).
+// The lairs of the land's creatures on the islands (docs/18 II #13), strictly from above and from the art (owner,
+// 2026-10-07: no drawn signs): the earth trampled bare about the lair with a ring of the battle sheet's boulders, the
+// creature's token in the UI's brass ring — its own picture, or a tinted one that stands in for it — with a red enamel
+// bezel while it stands, grey once beaten; a dwelling's painted pennant over it (gold hers, red another's); and over
+// it the lair's level in its frame and HoMM3's word for their number, read from the sea («[4] Стая»).
 
 import { beastFace, drawFace } from './beastface.ts';
 import { LAIRS } from '../../../shared/src/data/lairs.ts';
@@ -15,6 +15,7 @@ import { EN, RU } from '../lang/ui/lairs.ts';
 import type { ClientState } from '../state.ts';
 import { strengthWord } from '../ui/army.ts';
 import { turtleDef } from './isletype.ts';
+import { TOKEN_IN, addHot, bezel, drawArt, drawPiece, levelTag, markRing, put, tokenStamp, word } from './seaart.ts';
 
 type G = CanvasRenderingContext2D;
 
@@ -40,7 +41,8 @@ function seeded(seed: string): () => number {
   };
 }
 
-/** The lair's ground: sand scraped bare, a ring of stones, bones or a nest by its kind. */
+/** The lair's ground: the earth trampled bare about it (a soft shading, no drawn ring) and a ring of the battle
+ *  sheet's boulders — a cult's circle, a grotto's mouth, the stones a beast has dragged about its nest. */
 function ground(g: G, x: number, y: number, r: number, m: LairMark): void {
   const rnd = seeded(m.id);
   const grd = g.createRadialGradient(x, y, r * 0.15, x, y, r);
@@ -51,107 +53,73 @@ function ground(g: G, x: number, y: number, r: number, m: LairMark): void {
   g.beginPath();
   g.ellipse(x, y, r, r * 0.85, 0.3, 0, Math.PI * 2);
   g.fill();
-  // Stones (a cult's ring, a grotto's mouth) or bones and shells about it.
-  const n = m.role === 'guardian' ? 10 : 7;
+  const n = m.role === 'guardian' ? 9 : 6;
   for (let k = 0; k < n; k++) {
     const a = (k / n) * Math.PI * 2 + rnd() * 0.4;
-    const d = r * (0.62 + rnd() * 0.25);
+    const d = r * (0.66 + rnd() * 0.22);
     const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d * 0.85;
-    if (m.kind === 'choir_circle' || m.role === 'grotto') {
+    if (!drawArt(g, 'prop.bt_boulder', px, py, r * (0.13 + rnd() * 0.07), rnd() * 6.28, m.role === 'grotto' ? 0.8 : 0.95)) {
       g.fillStyle = m.role === 'grotto' ? '#2a2620' : '#5b6670';
       g.beginPath();
       g.arc(px, py, Math.max(1.2, r * 0.07), 0, Math.PI * 2);
       g.fill();
-    } else {
-      g.strokeStyle = 'rgba(225,215,190,0.75)';
-      g.lineWidth = Math.max(1, r * 0.025);
-      g.beginPath();
-      g.moveTo(px - r * 0.05, py);
-      g.lineTo(px + r * 0.05, py + r * 0.02);
-      g.stroke();
     }
   }
 }
 
-/** A creature's token from above: its picture in a dark disc, tinted where it is a stand-in, ringed. */
-function token(g: G, x: number, y: number, R: number, m: LairMark, t: number): void {
-  const u = LAIRS[m.kind].mix[0][0];
-  const face = beastFace(u);
-  const sp = sprite(face.id);
-  g.fillStyle = 'rgba(0,0,0,0.4)';
-  g.beginPath();
-  g.ellipse(x + R * 0.12, y + R * 0.25, R * 1.02, R * 0.85, 0, 0, Math.PI * 2);
-  g.fill();
-  g.fillStyle = '#15110d';
-  g.beginPath();
-  g.arc(x, y, R, 0, Math.PI * 2);
-  g.fill();
-  if (sp) {
-    g.save();
-    g.beginPath();
-    g.arc(x, y, R - 1, 0, Math.PI * 2);
-    g.clip();
-    const tint = face.tint;
-    if (tint) g.filter = tint;
-    if (m.down) g.filter = `${tint ?? ''} grayscale(1) brightness(0.6)`.trim();
-    drawFace(g, sp.img, x, y, R, face.fig);
+/** The creature's picture in the token: its own figure from the head down, or the tinted picture that stands in;
+ *  grey once beaten. */
+function face(u: string, down: boolean): (g: G, cx: number, cy: number, r: number) => boolean {
+  return (g, cx, cy, r) => {
+    const f = beastFace(u);
+    const sp = sprite(f.id);
+    if (!sp) return false;
+    g.filter = down ? `${f.tint ?? ''} grayscale(1) brightness(0.6)`.trim() : f.tint ?? 'none';
+    drawFace(g, sp.img, cx, cy, r, f.fig);
     g.filter = 'none';
-    g.restore();
-  }
-  // A stand-in's frame (a brass rim), the lair's ring (red while it stands, pulsing; grey once beaten).
-  if (face.tint) {
-    g.strokeStyle = '#a8894e';
-    g.lineWidth = Math.max(1.5, R * 0.12);
-    g.beginPath();
-    g.arc(x, y, R - R * 0.06, 0, Math.PI * 2);
-    g.stroke();
-  }
-  const pulse = 0.5 + 0.5 * Math.sin(t * 2.2 + x * 0.01);
-  g.strokeStyle = m.down ? 'rgba(170,170,160,0.55)' : `rgba(208,70,52,${0.6 + 0.35 * pulse})`;
-  g.lineWidth = Math.max(1.5, R * 0.14);
-  g.beginPath();
-  g.arc(x, y, R, 0, Math.PI * 2);
-  g.stroke();
-  if (m.role === 'guardian') {
-    g.strokeStyle = m.down ? 'rgba(170,170,160,0.4)' : 'rgba(232,196,106,0.85)';
-    g.lineWidth = 1.2;
-    g.beginPath();
-    g.arc(x, y, R + 4, 0, Math.PI * 2);
-    g.stroke();
-  }
+    return true;
+  };
 }
 
-/** A dwelling's pennant on a staff by the token: gold hers, red another captain's. */
+/** A creature's token from above: its picture in the UI's brass ring (stamped), the enamel bezel red while the lair
+ *  stands (breathing), grey once beaten; a guardian's engraved gold ring about it. */
+function token(g: G, x: number, y: number, R: number, m: LairMark, t: number): void {
+  const u = LAIRS[m.kind].mix[0][0];
+  const c = tokenStamp(`lair|${u}|${m.down ? 1 : 0}`, R, face(u, !!m.down), false);
+  if (c) put(g, c, x, y);
+  else {
+    g.fillStyle = '#15110d';
+    g.beginPath();
+    g.arc(x, y, R * TOKEN_IN, 0, Math.PI * 2);
+    g.fill();
+  }
+  const pulse = 0.5 + 0.5 * Math.sin(t * 2.2 + x * 0.01);
+  bezel(g, x, y, R, m.down ? 'rgba(170,170,160,0.9)' : '#d04634', m.down ? 0.55 : 0.6 + 0.35 * pulse);
+  if (m.role === 'guardian') markRing(g, x, y, R * 1.45, m.down ? '#aaaaa0' : '#e8c46a', false, m.down ? 0.6 : 0.95);
+}
+
+/** A dwelling's pennant on a staff by the token (the painted pennant, dyed): gold hers, red another captain's. */
 function pennant(g: G, x: number, y: number, R: number, own: boolean, t: number): void {
-  const bx = x + R * 0.9, by = y - R * 0.6;
+  const bx = x + R * 0.95, by = y - R * 0.65;
   g.strokeStyle = '#2a1e14';
   g.lineWidth = Math.max(1, R * 0.08);
   g.beginPath();
   g.moveTo(bx, by + R * 0.9);
   g.lineTo(bx, by - R * 0.5);
   g.stroke();
-  const flap = Math.sin(t * 5 + x) * R * 0.08;
-  g.fillStyle = own ? '#e8c46a' : '#c4473a';
-  g.beginPath();
-  g.moveTo(bx, by - R * 0.5);
-  g.lineTo(bx + R * 0.75 + flap, by - R * 0.32);
-  g.lineTo(bx, by - R * 0.12);
-  g.closePath();
-  g.fill();
+  const L0 = R * 1.25;
+  if (!drawPiece(g, 'pennant', bx + L0 * 0.5, by - R * 0.42, L0, Math.sin(t * 3 + x) * 0.06, 1, own ? '#c9a24a' : '#8e2a24')) {
+    g.fillStyle = own ? '#e8c46a' : '#c4473a';
+    g.beginPath();
+    g.moveTo(bx, by - R * 0.5);
+    g.lineTo(bx + R * 0.75, by - R * 0.32);
+    g.lineTo(bx, by - R * 0.12);
+    g.closePath();
+    g.fill();
+  }
 }
 
-function label(g: G, text: string, x: number, y: number, col: string, size = 11): void {
-  g.font = `700 ${size}px Inter, sans-serif`;
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  g.lineWidth = 3;
-  g.strokeStyle = 'rgba(0,0,0,0.75)';
-  g.strokeText(text, x, y);
-  g.fillStyle = col;
-  g.fillText(text, x, y);
-}
-
-/** Every lair she has seen, on its island: the ground, the token, the flag, and its word and level read from the sea. */
+/** Every lair she has seen, on its island: the ground, the token, the flag, and its level and word read from the sea. */
 export function drawLairsWorld(g: G, state: ClientState, c: LairCtx): void {
   const list = state.lairs?.list;
   if (!list?.length || c.zoom < 0.08) return;
@@ -173,13 +141,14 @@ export function drawLairsWorld(g: G, state: ClientState, c: LairCtx): void {
     if (x < -R * 4 || y < -R * 4 || x > c.w + R * 4 || y > c.h + R * 4) continue;
     g.save();
     if (c.zoom >= 0.25) ground(g, x, y, R * 2.1, m);
+    addHot(x, y, R * 1.25);
     token(g, x, y, R, m, c.time);
     if (m.flag) pennant(g, x, y, R, m.flag === 'own', c.time);
-    // HoMM3's word and the level over it, in the ladder's colour against her ship; «разбито» once beaten.
-    const w = strengthWord(m.men);
+    // The level in its frame in the ladder's colour against her ship, HoMM3's word beside it; «разбито» once beaten.
     const col = THREAT_COLOR[threatOf(mine, m.level)];
-    label(g, m.down ? `${W['tag.down']} · ⚓${m.level}` : `${w.word} · ⚓${m.level}`, x, y - R - 9, m.down ? '#b9c2a8' : col, c.zoom > 0.45 ? 12 : 11);
-    if (c.zoom > 0.55) label(g, LAIRS[m.kind].name[ru ? 1 : 0], x, y + R + 11, '#f0d58f', 10.5);
+    const big = c.zoom > 0.45 ? 12 : 11;
+    levelTag(g, m.down ? W['tag.down'] : strengthWord(m.men).word, m.level, m.down ? '#9a9f94' : col, x, y - R * 1.2 - 8, big, m.down ? '#b9c2a8' : '#e9dfc6');
+    if (c.zoom > 0.55) word(g, LAIRS[m.kind].name[ru ? 1 : 0], x, y + R * 1.2 + 8, '#f0d58f', 10.5);
     g.restore();
   }
 }

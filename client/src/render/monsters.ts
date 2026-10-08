@@ -7,7 +7,7 @@ import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { BossView, PveSiteView } from '../../../shared/src/protocol.ts';
 import { SF } from '../../../shared/src/protocol.ts';
 import { sprite } from '../assets.ts';
-import { drawBeast } from './beasts.ts';
+import { drawBeastInSea } from './beasts.ts';
 import { beastOfClass } from '../../../shared/src/data/beasts.ts';
 import { BOSS_STAND_IN, isBossClass } from '../../../shared/src/data/bossmonsters.ts';
 
@@ -38,19 +38,19 @@ export function drawMonster(g: CanvasRenderingContext2D, m: MonsterDraw, zoom: n
   g.save();
   g.translate(m.x, m.y);
   g.rotate(m.h);
-  g.globalAlpha = (submerged ? 0.28 : 1) * (1 - sinkF * 0.85);
+  const beast = beastOfClass(m.classId);
+  // A beast of the sea keeps under the water by itself (drawBeastInSea): only its sinking fades it here.
+  g.globalAlpha = (submerged && !beast ? 0.28 : 1) * (1 - sinkF * 0.85);
   const own = sprite(m.art ?? cls.sprite);
   // The six of 2026-10-03 (bossmonsters.ts): until its own painting is registered, a monster of a like shape stands in,
   // tinted, at its own length; `monster.<id>` in the manifest takes over by itself.
   const stand = !own && isBossClass(m.classId) ? BOSS_STAND_IN[m.classId] : null;
   const spr = own ?? (stand ? sprite(SHIP_CLASSES[stand.cls].sprite) : null);
   const shape = stand?.cls ?? m.classId;
-  const beast = beastOfClass(m.classId);
   if (beast) {
-    // A beast under the surface: its dark shadow. Painted or drawn, drawBeast chooses.
-    if (submerged) g.filter = 'brightness(0.22) blur(3px)';
-    drawBeast(g, beast, len, beam, t, m.id);
-    g.filter = 'none';
+    // A beast in the sea (owner, 2026-10-07): its painting sunk under the surface, swimming, only its back breaking the
+    // surface as it rolls up (never while it is down), the white water and its blow.
+    drawBeastInSea(g, beast, len, beam, t, m.id, submerged, 0.7);
   } else if (spr) {
     const imgH = len / spr.extentY;
     const imgW = imgH * (spr.img.naturalWidth / spr.img.naturalHeight);
