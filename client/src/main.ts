@@ -2224,7 +2224,9 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
   // Just out of the harbour, «В порт» is not the gold button for half a minute (unless she is hurt): the 2026-10-06
   // newcomer's run cast off, saw «В порт» as the one thing to press and put straight back in — 190 times in 15 minutes.
-  if (port && !(performance.now() - castOffAt < CAST_OFF_QUIET && you.hull >= you.hullMax * 0.5)) facts.port = { name: sv(port.name) };
+  const watchHome = state.onboarding?.stage === 'port';
+  if (port && (watchHome || !(performance.now() - castOffAt < CAST_OFF_QUIET && you.hull >= you.hullMax * 0.5))) facts.port = { name: sv(port.name) };
+  if (watchHome) facts.watchHome = true;
   const ab = self.abyss;
   facts.ritual = !!ab && ab.shards >= 3 && dist(own.x, own.y, ab.eye.x, ab.eye.y) < 1500;
   const l = self.landable;
