@@ -323,6 +323,10 @@ export function adminTown(game: Game, s: PlayerSession, level?: number): string 
   for (let tier = 1; tier <= 7; tier++) t.pool[tier] = poolCap(game, y, tier);
   reckonBase(game, h);
   game.holdings.touch();
-  return `Town raised: ${TOWN_IDS.filter((id) => id !== 'grail').map((id) => `${id} ${t.b[id]}`).join(', ')}; the dwellings full (${TIER_UNIT.slice(1).map((u, i) => `${u} ${Math.floor(t.pool[i + 1])}`).join(', ')}).`;
+  // (in figures: the buildings' and the creatures' ids came out in English on a Russian screen, QA 2026-10-09)
+  const raised = TOWN_IDS.filter((id) => id !== 'grail');
+  const levels = raised.reduce((a, id) => a + t.b[id], 0);
+  const pooled = TIER_UNIT.slice(1).reduce((a, _u, i) => a + Math.floor(t.pool[i + 1]), 0);
+  return `Town raised: ${raised.length} buildings, ${levels} levels in all; the dwellings full: ${pooled} creatures.`;
 }
 
