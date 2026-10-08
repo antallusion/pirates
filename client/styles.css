@@ -1060,6 +1060,13 @@ body.touch #hud-dive .dhint { display: none; }
   #modal-panel[data-modal="boarding"] .choice-grid.one { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
   #modal-panel[data-modal="boarding"] .btn.choice { min-height: 52px; padding: 6px 12px; font-size: 13.5px; line-height: 1.2; }
 }
+/* A boarded ship's fates in a word on a narrow phone (dialogs.ts): at 640×360 the prize's line ran to five rows and the
+   fifth fate stood under the window's foot (332–392 px of a window ending at 342), QA 2026-10-09. */
+.choice .ch-short { display: none; }
+@media (max-width: 699px) {
+  #modal-panel[data-modal="boarding"] .choice .ch-long { display: none; }
+  #modal-panel[data-modal="boarding"] .choice .ch-short { display: inline; }
+}
 /* Scrollbars in the game's own hand: a thin brass rail on a dark groove, everywhere. */
 /* Firefox takes the standard properties; Chromium keeps its own (setting both would disable the brass thumb). */
 @supports not selector(::-webkit-scrollbar) { * { scrollbar-width: thin; scrollbar-color: #8c6b3a rgba(8, 8, 10, 0.55); } }

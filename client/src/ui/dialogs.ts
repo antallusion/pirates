@@ -61,6 +61,10 @@ function kb(a: Action): string {
 const talentName = (id: string) => TALENTS_BY_ID[id]?.name ?? id;
 const portName = (id: string) => placeName(KEY_PORTS.find((p) => p.id === id)?.name ?? id);
 
+/** A fate's words, whole and in a word: a narrow phone shows the word (styles.css; 640×360 had the fifth fate under the
+ *  window's foot, the prize's line in five rows). */
+const two = (long: string, short: string) => `<span class="ch-long">${esc(long)}</span><span class="ch-short">${esc(short)}</span>`;
+
 export function renderBoarding(root: HTMLElement, r: BoardingResult, state: ClientState, send: (m: ClientMsg) => void, close: () => void): void {
   const take: Cargo = {};
   let recruit = r.recruits;
@@ -94,11 +98,11 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
           ${r.noQuarter ? `<p class="bad">${esc(L('board.noQuarter', { talent: talentName('brd_no_quarter') }))}</p><div class="choice-grid one"><button class="btn btn-danger choice" data-fate="sink">${icon('fire', '', 'choice-ico')}<span>${esc(L('board.burn'))}</span></button></div>` : `
           <p>${esc(L('board.fateText'))}${r.npc ? esc(L('board.ransomOffer', { sum: fmt(r.ransom) })) : ''}${r.captive ? esc(L('board.captive')) : ''}</p>
           <div class="choice-grid one">
-          <button class="btn btn-danger choice" data-fate="sink">${icon('fire', '', 'choice-ico')}<span>${esc(L('board.scuttle'))}</span></button>
-          <button class="btn choice" data-fate="release">${icon('anchor', '', 'choice-ico')}<span>${esc(L('board.release'))}</span></button>
-          ${r.npc ? `<button class="btn btn-primary choice" data-fate="ransom">${icon('coin', '', 'choice-ico')}<span>${esc(L('board.ransom', { sum: fmt(r.ransom) }))}</span></button>` : ''}
-          ${r.prize ? `<button class="btn btn-primary choice" data-fate="prize" title="${esc(L('board.prizeTip'))}">${icon('menu_ship', '', 'choice-ico')}<span>${esc(L('board.prize', { crew: r.prize.crew, value: fmt(r.prize.value) }))}</span></button>` : ''}
-          ${r.prize && r.trophy ? `<button class="btn choice" data-fate="trophy" title="${esc(LC('board.trophyTip'))}">${icon('build_trophy_hall', '', 'choice-ico')}<span>${esc(LC('board.trophy', { crew: r.prize.crew }))}</span></button>` : ''}
+          <button class="btn btn-danger choice" data-fate="sink" title="${esc(L('board.scuttle'))}">${icon('fire', '', 'choice-ico')}${two(L('board.scuttle'), L('board.scuttleShort'))}</button>
+          <button class="btn choice" data-fate="release" title="${esc(L('board.release'))}">${icon('anchor', '', 'choice-ico')}${two(L('board.release'), L('board.releaseShort'))}</button>
+          ${r.npc ? `<button class="btn btn-primary choice" data-fate="ransom" title="${esc(L('board.ransom', { sum: fmt(r.ransom) }))}">${icon('coin', '', 'choice-ico')}${two(L('board.ransom', { sum: fmt(r.ransom) }), L('board.ransomShort', { sum: fmt(r.ransom) }))}</button>` : ''}
+          ${r.prize ? `<button class="btn btn-primary choice" data-fate="prize" title="${esc(L('board.prizeTip'))}">${icon('menu_ship', '', 'choice-ico')}${two(L('board.prize', { crew: r.prize.crew, value: fmt(r.prize.value) }), L('board.prizeShort', { value: fmt(r.prize.value) }))}</button>` : ''}
+          ${r.prize && r.trophy ? `<button class="btn choice" data-fate="trophy" title="${esc(LC('board.trophyTip'))}">${icon('build_trophy_hall', '', 'choice-ico')}${two(LC('board.trophy', { crew: r.prize.crew }), L('board.trophyShort'))}</button>` : ''}
           </div>`}
         </div></div></div></div>`;
     root.querySelectorAll<HTMLInputElement>('input[type=range][data-g]').forEach((el) => (el.oninput = () => {

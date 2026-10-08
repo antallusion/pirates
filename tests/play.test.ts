@@ -113,3 +113,15 @@ test('the ship\'s name offered on the captain screen is in the reader\'s languag
   }
   assert.ok(!read('client/src/ui/captain.ts').includes("'Iron Verdict'"));
 });
+
+test('a boarded ship\'s fates in a word on a narrow phone, whole on a wider screen', async () => {
+  const { EN, RU } = await import('../client/src/lang/ui/dialogs.ts');
+  for (const k of ['board.scuttleShort', 'board.releaseShort', 'board.ransomShort', 'board.prizeShort', 'board.trophyShort'] as const) {
+    assert.ok(EN[k] && RU[k], k);
+    assert.ok(RU[k].replace(/\{\w+\}/g, '').trim().split(/\s+/).length <= 2, `${k}: a word (and its sum)`);
+  }
+  const src = read('client/src/ui/dialogs.ts');
+  assert.equal((src.match(/\$\{two\(/g) ?? []).length, 5, 'every fate has its word');
+  const css = read('client/styles.css');
+  assert.match(css, /\.choice \.ch-short \{ display: none; \}\r?\n@media \(max-width: 699px\) \{\r?\n  #modal-panel\[data-modal="boarding"\] \.choice \.ch-long \{ display: none; \}/);
+});
