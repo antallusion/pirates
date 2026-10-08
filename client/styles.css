@@ -418,8 +418,11 @@ kbd { font-family: var(--sans); border: 1px solid var(--brass-dim); padding: 0 5
 
 /* The First Watch (docs/07 §13) */
 .tut-hidden { display: none !important; }
-.tut-reveal { animation: tut-draw 900ms ease-out both; }
-@keyframes tut-draw { from { opacity: 0; clip-path: inset(0 100% 0 0); filter: brightness(1.6); } to { opacity: 1; clip-path: inset(0 0 0 0); filter: none; } }
+/* (backwards, not both: a fill that held the last frame kept clip-path: inset(0) on the block for good — the key chips
+   under «Огонь» and «Цель» hung half cut off below the frame, and its own filter and opacity were overridden; QA
+   2026-10-09. The wipe reaches 40 px past the frame, so the rings and chips come in with it.) */
+.tut-reveal { animation: tut-draw 900ms ease-out backwards; }
+@keyframes tut-draw { from { opacity: 0; clip-path: inset(-40px 100% -40px -40px); filter: brightness(1.6); } to { opacity: 1; clip-path: inset(-40px -40px -40px -40px); filter: brightness(1); } }
 #hud-watch { left: 50%; top: 12px; transform: translateX(-50%); width: min(520px, 60vw); font-family: var(--sans); font-size: 13px; color: var(--bone); }
 #hud-watch .w-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 4px; }
 #hud-watch .w-head span { text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; color: var(--brass); }
