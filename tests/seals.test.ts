@@ -149,15 +149,18 @@ test('a mythic depth: entered off its lair through the Throne, fought out, the s
   const game = world();
   const s = capped(game);
   runAdmin(game, s, '/seal lv 3');
-  assert.match(runAdmin(game, s, '/seal go') ?? '', /^Off the /);
+  assert.match(runAdmin(game, s, '/seal go') ?? '', /^Off /);
   steps(game, 25);
   const v = sealView(game, s)!;
   assert.ok(v.reach && !v.why, `in reach: ${v.why}`);
-  const card = connOf(s).last('lair_card')?.card as { seal?: { lv: number; why: string | null } } | undefined;
-  assert.deepEqual(card?.seal, { lv: 3, why: null }, 'the card offers the depth');
   const kind = v.kind;
-  throneMessage(game, s, { t: 'throne', action: 'seal' });
-  assert.ok(landFighting(game, s), 'ashore in the depth');
+  steps(game, 2);
+  assert.match(s.landable?.feature ?? '', /^Seal 3, mythic depth: /, 'the land key offers the depth');
+  const card = connOf(s).last('lair_card')?.card as { seal?: { lv: number; kind: string; why: string | null } } | undefined;
+  assert.deepEqual(card?.seal, { lv: 3, kind, why: null }, 'the card offers the depth (whichever lair of the island it shows)');
+  // The land key opens it (as the Throne's «Enter the depth» does).
+  (s as unknown as { conn: { push: (m: unknown) => void } }).conn.push({ t: 'land' });
+  assert.ok(landFighting(game, s), 'ashore in the depth by the land key');
   landTac(game, s, { a: 'quick' });
   steps(game, 2);
   const tac = connOf(s).last('board_tac')?.view as { over: { winner: number }; land: { lair: string } };
@@ -181,16 +184,33 @@ test('a mythic depth: entered off its lair through the Throne, fought out, the s
   assert.equal(sealOf(game, s.profile!)!.lv, SEAL_MIN, 'never below 2');
 });
 
+test('the Throne’s «Enter the depth» out of the boats’ reach says why, and lands nobody', () => {
+  const game = world();
+  const s = capped(game);
+  const inbox = (s as unknown as { conn: { inbox: { t: string; msg?: string }[] } }).conn.inbox;
+  const said = (from: number) => inbox.slice(from).filter((m) => m.t === 'toast').map((m) => m.msg ?? '');
+  let n = inbox.length;
+  throneMessage(game, s, { t: 'throne', action: 'seal' });
+  assert.ok(said(n).includes('Put to sea first.'), 'in port');
+  game.undock(s);
+  steps(game, 2);
+  n = inbox.length;
+  throneMessage(game, s, { t: 'throne', action: 'seal' });
+  assert.ok(!landFighting(game, s));
+  assert.ok(said(n).some((m) => m.startsWith('Come in to the shore of a lair of your seal')), said(n).join(' | '));
+});
+
 test('the seals’ words read in Russian', () => {
   setLang('ru');
   try {
     for (const line of [
-      'Seal 4: the mythic depth of the Hydra Pool opens — 8 rounds.',
+      'Seal 4 opens the mythic depth: Hydra Pool, 8 rounds.',
       'The mythic depth throws your party back into the surf. The seal falls to 3.',
       'The depth is won, but late: 9 rounds of 8. The seal holds at 4.',
-      'Seal 4 won in 5 rounds: the seal rises to 5 and turns to the Wyrm’s Gallery.',
+      'Seal 4 won in 5 rounds: the seal rises to 5 and now opens The Ancient Turtle.',
       'Come in to the shore of a lair of your seal: within the boats’ reach.',
       'Seal 4: Hydra Pool, 8 rounds.',
+      'Seal 4, mythic depth: Hydra Pool',
     ]) {
       const ru = serverText(line);
       assert.ok(!/[A-Za-z]{3,}/.test(ru), `${line} → ${ru}`);

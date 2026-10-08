@@ -55,7 +55,7 @@ export const EN = {
   'pen.full': 'The pen is full ({n} nests).',
   'res.title': 'The land’s spoils',
   // docs/19 E9: her seal opens this lair's mythic depth
-  seal: 'Mythic depth · seal {n}',
+  seal: 'Seal {n}, mythic depth: {lair}',
   sealTip: 'The lair at ⚓10, stronger by the seal, with the week’s afflictions and a round limit',
 };
 
@@ -112,6 +112,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'pen.lay': 'Положить в загон',
   'pen.full': 'Загон полон (гнёзд: {n}).',
   'res.title': 'Трофеи суши',
-  seal: 'Мифическая глубина · печать {n}',
+  seal: 'Печать {n}, мифическая глубина: «{lair}»',
   sealTip: 'Логово ⚓10, сильнее на уровень печати, с недельными напастями и лимитом раундов',
 };

@@ -69,8 +69,8 @@ export const SERVER_RU_ADMIN: Record<string, string> = {
   'The seals open at level {0} (/level {1}).': 'Печати открываются на {0}-м уровне (/level {1}).',
   'Usage: /seal lv {0}-{1}': 'Использование: /seal lv {0}-{1}',
   'Usage: /seal [lv N|kind K|go|win [rounds]|lose|reset|board]': 'Использование: /seal [lv N|kind K|go|win [раунды]|lose|reset|board]',
-  'Off the {0} on {1}.': 'У логова «{0}» на острове {1}.',
-  'No {0} on the sea.': 'В море нет логова «{0}».',
+  'Off {0} on {1}.': 'У логова «{0}» на острове {1}.',
+  '{0}: none on the sea.': '«{0}»: в море нет.',
   'The table is empty this week.': 'На этой неделе таблица пуста.',
   // The weather a /weather reply names (as the HUD names it: ui/hud.ts weather.*).
   calm: 'штиль',

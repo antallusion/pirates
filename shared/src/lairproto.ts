@@ -65,8 +65,9 @@ export interface LairCard {
   };
   /** docs/18 #45: this week is named for its kind (a quarter more of them, and of its loot). */
   week?: boolean;
-  /** docs/19 E9: her seal opens this kind's mythic depth — its level, and why not now (null: it may be entered). */
-  seal?: { lv: number; why: string | null };
+  /** docs/19 E9: her seal's mythic depth — its level, its lair's kind (in her boats' reach, whichever lair is carded),
+   *  and why not now (null: it may be entered). */
+  seal?: { lv: number; kind: LairKind; why: string | null };
 }
 
 /** What a lair left her (the battle's reckoning ashore). */

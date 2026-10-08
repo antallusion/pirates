@@ -47,11 +47,12 @@ export const SERVER_RU_THRONE: Record<string, string> = {
   'The legend of {0} waits {1} h.': 'Легенда навыка «{0}» ждёт {1} ч.',
   'The trial of {0}: {1} alongside.': 'Испытание навыка «{0}»: {1} борт о борт.',
   // the seals of the deep (docs/19 E9)
-  'Seal {0}: the mythic depth of the {1} opens — {2} rounds.': 'Печать {0}: открывается мифическая глубина логова «{1}» — раундов: {2}.',
+  'Seal {0} opens the mythic depth: {1}, {2} rounds.': 'Печать {0} открывает мифическую глубину: «{1}», раундов: {2}.',
   'The mythic depth throws your party back into the surf. The seal falls to {0}.': 'Мифическая глубина отбрасывает ваш отряд в прибой. Печать падает до {0}.',
   'The depth is won, but late: {0} rounds of {1}. The seal holds at {2}.': 'Глубина взята, но поздно: раундов {0} из {1}. Печать остаётся на {2}.',
-  'Seal {0} won in {1} rounds: the seal rises to {2} and turns to the {3}.': 'Печать {0} взята за {1} р.: печать растёт до {2} и указывает на логово «{3}».',
+  'Seal {0} won in {1} rounds: the seal rises to {2} and now opens {3}.': 'Печать {0} взята за {1} р.: печать растёт до {2} и теперь открывает «{3}».',
   '{0} carries a seal of the deep to {1}.': '{0} поднимает печать глубин до {1}.',
   'The seals open at level {0}.': 'Печати открываются на {0}-м уровне.',
+  'Seal {0}, mythic depth: {1}': 'Печать {0}, мифическая глубина: «{1}»',
   'Come in to the shore of a lair of your seal: within the boats’ reach.': 'Подойдите к берегу логова вашей печати, на расстояние шлюпок.',
 };

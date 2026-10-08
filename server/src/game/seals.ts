@@ -248,7 +248,7 @@ export function enterDepth(game: Game, s: PlayerSession): string | null {
     onEnd: (g, ss, won, bt) => endDepth(g, ss, l, lv, won, bt),
   }, lairName(l), base, `unit.${LAIRS[l.kind].mix[0][0]}`, SEAL_LAIR_LEVEL);
   if (e) return e;
-  game.toastShip(s.ship!, `Seal ${lv}: the mythic depth of the ${lairName(l)} opens — ${sealRounds(lv)} rounds.`, 'info');
+  game.toastShip(s.ship!, `Seal ${lv} opens the mythic depth: ${lairName(l)}, ${sealRounds(lv)} rounds.`, 'info');
   return null;
 }
 
@@ -286,7 +286,7 @@ function endDepth(game: Game, s: PlayerSession, l: Lair, lv: number, won: boolea
     const it = artifactFind(game, s, 'boss');
     if (it?.art) loot.artifact = it.art;
   }
-  game.toastShip(ship, `Seal ${lv} won in ${rounds} rounds: the seal rises to ${seal.lv} and turns to the ${lairName(seal.kind)}.`, 'good');
+  game.toastShip(ship, `Seal ${lv} won in ${rounds} rounds: the seal rises to ${seal.lv} and now opens ${lairName(seal.kind)}.`, 'good');
   if (before < 10 && seal.lv >= 10) chronicle(game, `${s.name} carries a seal of the deep to ${seal.lv}.`);
   return loot;
 }
@@ -351,12 +351,21 @@ export function sealView(game: Game, s: PlayerSession): SealView | undefined {
 
 /** A lair's card: the seal's depth when she holds a seal of its kind (installed by Game, as the lairs' own hooks). */
 export function installSealHooks(): void {
+  lairCardHooks.sealOf = (game, s) => {
+    const p = s.profile;
+    const seal = p && p.level >= MAX_LEVEL ? sealOf(game, p) : null;
+    return seal ? { kind: seal.kind, lv: seal.lv } : null;
+  };
+  lairCardHooks.enter = enterDepth;
   lairCardHooks.seal = (game, s, l) => {
     const p = s.profile;
-    if (!p || p.level < MAX_LEVEL || !KINDS.has(l.kind)) return undefined;
+    if (!p || p.level < MAX_LEVEL) return undefined;
     const seal = sealOf(game, p);
-    if (!seal || seal.kind !== l.kind) return undefined;
-    return { lv: seal.lv, why: whyNot(game, s, lairInReachOf(game, s, new Set([seal.kind]))) };
+    if (!seal) return undefined;
+    // On whichever lair's card she sees while her boats reach her seal's (an island's chain shows its nearest step).
+    const at = lairInReachOf(game, s, new Set([seal.kind]));
+    if (!at && seal.kind !== l.kind) return undefined;
+    return { lv: seal.lv, kind: seal.kind, why: whyNot(game, s, at) };
   };
 }
 
@@ -393,9 +402,9 @@ export function adminSeal(game: Game, s: PlayerSession, args: string[]): string 
           best = l;
         }
       }
-      if (!best) return `No ${lairName(seal.kind)} on the sea.`;
+      if (!best) return `${lairName(seal.kind)}: none on the sea.`;
       goToLair(game, s, best);
-      return `Off the ${lairName(seal.kind)} on ${lairIsland(game, best)}.`;
+      return `Off ${lairName(seal.kind)} on ${lairIsland(game, best)}.`;
     }
     case 'win':
     case 'lose': {

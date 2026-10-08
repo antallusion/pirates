@@ -103,7 +103,7 @@ function lairBlock(c: LairCard, x: boolean): string {
   }
   // docs/19 E9: her seal opens this kind's mythic depth (whether the lair stands or not).
   const seal = c.seal
-    ? `<div class="ac-acts ac-seal"><button class="btn btn-small btn-primary" data-aseal title="${esc(LL('sealTip'))}"${c.seal.why ? ' disabled' : ''}>${icon('ab_deep_call', '', 'ico-sm')}${esc(LL('seal', { n: c.seal.lv }))}</button>${c.seal.why && c.reach ? `<span class="muted ac-gl">${esc(serverText(c.seal.why))}</span>` : ''}</div>`
+    ? `<div class="ac-acts ac-seal"><button class="btn btn-small btn-primary" data-aseal title="${esc(LL('sealTip'))}"${c.seal.why ? ' disabled' : ''}>${icon('ab_deep_call', '', 'ico-sm')}${esc(LL('seal', { n: c.seal.lv, lair: LAIRS[c.seal.kind].name[ru()] }))}</button>${c.seal.why && c.reach ? `<span class="muted ac-gl">${esc(serverText(c.seal.why))}</span>` : ''}</div>`
     : '';
   const fight = up
     ? `<div class="ac-guard">

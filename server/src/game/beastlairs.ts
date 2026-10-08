@@ -295,8 +295,26 @@ export function lairsOfKind(game: Game, kind: LairKind): Lair[] {
 /** The island a lair stands on, by name. */
 export const lairIsland = (game: Game, l: Lair): string => islandName(game, l);
 
-/** docs/19 E9: what another system adds to a lair's card (the seal's mythic depth), set by that system. */
-export const lairCardHooks: { seal?: (game: Game, s: PlayerSession, l: Lair) => LairCard['seal'] } = {};
+/** docs/19 E9: what the seals add to the lairs (their mythic depth on a card, under the land key), set by seals.ts. */
+export const lairCardHooks: {
+  seal?: (game: Game, s: PlayerSession, l: Lair) => LairCard['seal'];
+  /** Her seal (its lair's kind and level) when she holds one. */
+  sealOf?: (game: Game, s: PlayerSession) => { kind: LairKind; lv: number } | null;
+  /** Her seal's depth entered at the lair her boats reach (null: entered; else why not). */
+  enter?: (game: Game, s: PlayerSession) => string | null;
+} = {};
+
+/** docs/19 E9: the land key opens her seal's depth when its lair is in reach and no free fight of a lair is there
+ *  instead (the carded lair of its kind, down, or behind its chain's earlier step). */
+function sealHere(game: Game, s: PlayerSession): { at: Lair; lv: number } | null {
+  const seal = lairCardHooks.sealOf?.(game, s);
+  if (!seal) return null;
+  const at = lairInReachOf(game, s, new Set([seal.kind]));
+  if (!at) return null;
+  const l = cardLair(game, s);
+  const free = !!l && l.kind !== seal.kind && lairUp(game, l) && inReach(game, s, l) && !chainWhy(game, s, l);
+  return free ? null : { at, lv: seal.lv };
+}
 
 /** The boats can reach the lair's shore from where she lies. */
 function inReach(game: Game, s: PlayerSession, l: Lair): boolean {
@@ -456,6 +474,8 @@ export function sendLairCard(game: Game, s: PlayerSession, force: boolean): void
 
 /** The land key's prompt off a lair (null: none in reach). */
 export function lairPrompt(game: Game, s: PlayerSession): { island: string; feature: string; action: 'lair'; lv: number; danger?: 'warn' | 'deadly'; blocked?: string } | null {
+  const sh = sealHere(game, s);
+  if (sh) return { island: islandName(game, sh.at), feature: `Seal ${sh.lv}, mythic depth: ${lairName(sh.at)}`, action: 'lair', lv: sh.at.level };
   const l = cardLair(game, s);
   if (!l || !lairUp(game, l) || !inReach(game, s, l)) return null;
   const d = l.level - (s.ship?.shipLevel ?? 1);
@@ -466,6 +486,7 @@ export function lairPrompt(game: Game, s: PlayerSession): { island: string; feat
 /** The land key off a lair: the boats go ashore against it (undefined: no lair here, the landing goes on as ever). */
 export function lairLanding(game: Game, s: PlayerSession): string | null | undefined {
   if (quiet(game)) return undefined;
+  if (sealHere(game, s) && lairCardHooks.enter) return lairCardHooks.enter(game, s);
   const l = cardLair(game, s);
   if (!l || !lairUp(game, l) || !inReach(game, s, l)) return undefined;
   return startFight(game, s, l.id);

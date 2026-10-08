@@ -147,19 +147,19 @@ function sealsTab(g: GloryView, state: ClientState): string {
         <div>${esc(L('seal.lair', { lair }))}</div>
         <div class="th-chips"><span class="th-chip">${esc(L('seal.rounds', { n: v.rounds }))}</span><span class="th-chip">${esc(L('seal.fast', { n: v.fast }))}</span></div></div>
     </div>
-    <p class="muted hx-note">${esc(L('seal.rule', { r: v.rounds, f: v.fast }))}</p>
-    <h4 class="card-h">${esc(L('seal.affixes'))}</h4>
-    <div class="th-affixes">${affixes}</div>
-    <p class="th-pay">${esc(L('seal.pay', { silver: fmt(v.pay.silver), pearls: v.pay.pearls, art: Math.round(v.pay.art * 100) }))}</p>
     <div class="th-seal-go">
       <span class="muted">${esc(near)}</span>
       ${v.near ? `<button class="btn btn-small" data-thcourse="${v.near.x},${v.near.y}">${esc(L('seal.course'))}</button>` : ''}
       <button class="btn btn-small btn-primary" data-thseal ${v.why ? 'disabled' : ''} title="${esc(why)}">${esc(L('seal.enter'))}</button>
     </div>
     ${why ? `<p class="muted th-why">${esc(why)}</p>` : ''}
+    <h4 class="card-h">${esc(L('seal.affixes'))}</h4>
+    <div class="th-affixes">${affixes}</div>
+    <p class="th-pay">${esc(L('seal.pay', { silver: fmt(v.pay.silver), pearls: v.pay.pearls, art: Math.round(v.pay.art * 100) }))}</p>
     <p class="muted">${esc(v.best ? L('seal.best', { lv: v.best.lv, r: v.best.rounds }) : L('seal.bestNone'))} · ${esc(L('seal.runs', { n: v.runs, t: v.timed }))}</p>
     <h4 class="card-h">${esc(L('seal.board'))}</h4>
-    ${board}`;
+    ${board}
+    <p class="muted hx-note">${esc(L('seal.rule', { r: v.rounds, f: v.fast }))}</p>`;
 }
 
 /** The tabs of the Throne, in order (later parts of docs/19 add theirs here). */

@@ -4031,6 +4031,7 @@ body.touch .act-btn { --h: 38px; }
 .th-pay { margin: 8px 0; font-size: 13px; color: var(--gold); }
 .th-seal-go { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .th-seal-go .muted { flex: 1 1 180px; }
+.th-seal-go .btn { flex: none; white-space: nowrap; }
 .th-why { margin: 4px 0 0; font-size: 12px; }
 .th-board { margin: 0; padding: 0; list-style: none; counter-reset: th-row; display: flex; flex-direction: column; gap: 2px; }
 .th-board li { counter-increment: th-row; display: flex; gap: 8px; align-items: baseline; padding: 3px 8px; border-radius: 4px; background: rgba(20, 16, 10, 0.4); font-size: 13px; }
