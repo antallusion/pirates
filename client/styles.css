@@ -4358,6 +4358,36 @@ body.tac-ph .tb-pl .tb-rb { width: 52px; height: 52px; }
   .tb-end.land .tb-rs, .tb-end.land .tb-rs-ico { width: 26px; height: 26px; }
   .tb-end .tb-cap .btn { min-height: 36px; }
 }
+/* The beaten who came over (owner, 2026-10-08): «К вам примкнули: 6 матросов» — the words kept even in the band at sea. */
+.tb-rs i.up { background: #10260f; color: #c4e6a6; border-color: #3f6a35; }
+.tb-er.tb-joined > small { color: var(--gold); }
+.tb-end.sea .tb-er.tb-joined > small { display: inline; padding-top: 0; align-self: center; white-space: nowrap; }
+.tb-er.tb-joined .tb-js { display: none; }
+/* the short band (a phone on its side): the short words alone, so the band keeps its button */
+@media (max-height: 520px) {
+  .tb-end.sea .tb-er.tb-joined .tb-rs-row, .tb-end.sea .tb-er.tb-joined .tb-jl { display: none; }
+  .tb-end.sea .tb-er.tb-joined .tb-js { display: inline; }
+}
+/* The preview under the sword (owner, 2026-10-08): what her blow or shot would do, beside the foe (over it on a phone,
+   clear of the finger). Laid by tactical.ts tipDom; never takes a pointer. */
+.tb-pv { position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none; min-width: 112px; max-width: 210px; box-sizing: border-box; padding: 6px 10px 7px;
+  border: 1px solid #7d6238; border-radius: 6px; background: linear-gradient(180deg, rgba(30, 22, 15, 0.96), rgba(15, 11, 8, 0.96));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(201, 164, 90, 0.16); color: #ece1c8; font: 600 12.5px/1.35 Inter, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums; white-space: nowrap; will-change: transform; }
+.tb-pv.hidden { display: none; }
+.tb-pv.flank { border-color: #b98236; }
+.tb-pv-h { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-bottom: 1px; }
+.tb-pv-r, .tb-pv-ret { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; }
+.tb-pv-r span, .tb-pv-ret span { color: #c4b38f; font-weight: 500; }
+.tb-pv-r b { color: #fff1d2; font-size: 13.5px; }
+.tb-pv-r i { font-style: normal; color: #f0c674; margin-left: -8px; }
+.tb-pv-fl { color: #f2a94a; font-weight: 700; }
+.tb-pv-ret { margin-top: 3px; padding-top: 3px; border-top: 1px solid rgba(201, 164, 90, 0.22); }
+.tb-pv-ret b { color: #ec9a86; }
+.tb-pv-ret.none { display: block; color: #a9c99a; font-weight: 500; }
+.tb-pv-n { color: #ad9f82; font-weight: 500; font-size: 11px; }
+body.tac-ph .tb-pv { min-width: 96px; padding: 4px 8px 5px; font-size: 11.5px; }
+body.tac-ph .tb-pv-r b { font-size: 12.5px; }
 /* ---------- end of docs/23 phase 5 ---------- */
 /* The sea waits while the decks fight on a phone: no chat, no sea's card over the field; the battle's own word (a
    refusal) in a line at the top, clear of the corners' buttons. */

@@ -1,14 +1,15 @@
-// The hex battle on a phone (docs/23 phase 5): the sea's turn is quick — its breath and a stack's walk within 1.2 s —
-// and «Ускорить ×2» halves the breath for both sides' auto-played turns; the order is the captain's own, it touches no
-// die; the view carries it back to her screen; and her battle settings keep one tap as the default.
+// The hex battle on a phone (docs/23 phase 5): the sea's turn waits a short breath once what came before it has been
+// played (owner, 2026-10-08: the pace slowed to be read), and «Ускорить ×2» halves both for both sides' auto-played
+// turns; the order is the captain's own, it touches no die; the view carries it back to her screen; and her battle
+// settings keep one tap as the default.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Rng } from '../shared/src/rng.ts';
-import { TAC_AI_DELAY, TAC_FAST } from '../shared/src/data/tactical.ts';
+import { TAC_AI_DELAY, TAC_FAST, TAC_PACE } from '../shared/src/data/tactical.ts';
 import { act, aiDelay, newBattle, stepBattle } from '../server/src/game/tacbattle.ts';
 import type { TacSideInput } from '../server/src/game/tacbattle.ts';
-import { WALK_MAX } from '../client/src/ui/tacwalk.ts';
+import { STEP_MS } from '../client/src/ui/tacwalk.ts';
 import { defaults } from '../client/src/settings.ts';
 
 const side = (human: boolean): TacSideInput => ({
@@ -16,8 +17,9 @@ const side = (human: boolean): TacSideInput => ({
   officers: [], skill: 3, morale: 70, dealt: 1, power: 1, melee: 1, extraShots: 0, firstRush: 1, nets: 0, blooded: 0, castle: false, struck: false, human,
 });
 
-test('a foe\'s turn on the field takes at most 1.2 s: the sea\'s breath and the longest walk; ×2 halves the breath', () => {
-  assert.ok(TAC_AI_DELAY + WALK_MAX / 1000 <= 1.2, `${TAC_AI_DELAY} s + ${WALK_MAX} ms`);
+test('a foe\'s turn waits a breath of 0.6–0.8 s once what came before is played, a walk 0.35–0.5 s a hex; ×2 halves the breath', () => {
+  assert.ok(TAC_AI_DELAY >= 0.6 && TAC_AI_DELAY <= 0.8, `${TAC_AI_DELAY} s`);
+  assert.ok(STEP_MS >= 350 && STEP_MS <= 500 && STEP_MS === TAC_PACE.hex * 1000, `${STEP_MS} ms a hex`);
   const bt = newBattle(side(true), side(false), 3, 0, new Rng(3));
   assert.equal(aiDelay(bt), TAC_AI_DELAY);
   assert.equal(act(bt, 0, { a: 'pace', fast: true }, 0, new Rng(1)), null);

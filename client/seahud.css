@@ -408,7 +408,8 @@ body.touch.sea-docked #touch > #tc-fire { display: none; }
   .tb-who b { font-size: 18px; }
   .tb-queue { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding: 4px 2px 6px; }
   .tb-q { width: 34px; height: 34px; }
-  .tb-feed { font-size: 12px; line-height: 1.3; max-height: calc(2 * 1.3em + 2px); }
+  /* two lines always (owner, 2026-10-08: the camera does not jump — a feed of one line, then two, moved the field) */
+  .tb-feed { font-size: 12px; line-height: 1.3; height: calc(2 * 1.3em + 2px); max-height: calc(2 * 1.3em + 2px); }
   .tb-feed .tb-hint:not(:empty) + .tb-lines > :not(:last-child) { display: none; }
   .tb-round { font-size: 18px; }
   .tb-spells { overflow-y: auto; max-height: 100%; }

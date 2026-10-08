@@ -2,19 +2,20 @@
 // как ход»): the hexes it steps through, found as the server finds its reach (around the masts, the guns, the holes
 // and the other stacks), and the point along them at a moment of the walk. Pure, so the tests can walk it too.
 
-import { TAC_BLOCKING, hexNeighbors } from '../../../shared/src/data/tactical.ts';
+import { TAC_BLOCKING, TAC_PACE, hexNeighbors, walkSecs } from '../../../shared/src/data/tactical.ts';
 import type { TacCell } from '../../../shared/src/data/tactical.ts';
 
-/** A step's time on the field, and the walk's bounds (ms): a short step is still seen, a long march never drags
- *  (docs/23 item 60: a stack's move in 0.25 s at most; it was 0.3–0.6 s). */
-export const STEP_MS = 50;
-export const WALK_MIN = 150;
-export const WALK_MAX = 250;
-/** A flier's glide (or a stack set down by a move of the deep: no walk to it), straight over. */
-export const GLIDE_MS = 250;
+/** A step's time on the field (ms): owner, 2026-10-08 — «там как-то слишком быстро всё перемещается, непонятно даже»
+ *  — a stack walks hex by hex at a readable pace (docs/23 item 60 had a whole walk in 0.15–0.25 s). The server waits
+ *  as long (shared/src/data/tactical.ts TAC_PACE). */
+export const STEP_MS = TAC_PACE.hex * 1000;
+/** A flier's glide over the field (or a stack set down by a move of the deep), a hex of it (ms). */
+export const GLIDE_MS = TAC_PACE.glide * 1000;
 
-/** How long a walk of `steps` hexes takes; `speed` 2 under «Ускорить ×2». */
-export const walkMs = (steps: number, speed = 1): number => Math.max(WALK_MIN, Math.min(WALK_MAX, steps * STEP_MS)) / speed;
+/** How long a walk of `steps` hexes takes (ms); `speed` 2 under «Ускорить ×2». */
+export const walkMs = (steps: number, speed = 1): number => walkSecs(steps, false, speed) * 1000;
+/** How long a glide over `steps` hexes takes (ms). */
+export const glideMs = (steps: number, speed = 1): number => walkSecs(steps, true, speed) * 1000;
 
 /** The shortest walk from `from` to `to` over the field as it stood, the hexes in order (both ends with them); null
  *  when no walk joins them (a dive through the surf, a stack set down elsewhere). */
@@ -45,6 +46,17 @@ export function walkPath(cells: ArrayLike<string>, stacks: readonly { id: number
 
 /** Eased in and out: the stack sets off and comes to rest. */
 export const easeWalk = (k: number): number => (k <= 0 ? 0 : k >= 1 ? 1 : k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2);
+
+/** A walk's share of its line at `k` of its time, eased hex by hex (owner, 2026-10-08: each step sets off and
+ *  settles, so a march reads as steps, not a slide); it never runs back. */
+export function stepEase(k: number, steps: number): number {
+  if (k <= 0) return 0;
+  if (k >= 1) return 1;
+  const n = Math.max(1, steps);
+  const i = Math.min(n - 1, Math.floor(k * n));
+  const f = k * n - i;
+  return (i + 0.3 * f + 0.7 * easeWalk(f)) / n;
+}
 
 /** The point `k` (0..1) of the way along a line of points, by its length. */
 export function along(pts: readonly { x: number; y: number }[], k: number): { x: number; y: number } {

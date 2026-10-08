@@ -7,18 +7,18 @@
 import { findTitle } from '../render/seafinds.ts'; // docs/19 D5: the chest among the sharks
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { OFFICER_DEFS } from '../../../shared/src/data/crew.ts';
-import { TAC_BLOCKING, TAC_H, TAC_SPELLS, TAC_W, hexIndex, hexNeighbors, hexX, hexY } from '../../../shared/src/data/tactical.ts';
+import { TAC_BLOCKING, TAC_END_WINDOW, TAC_H, TAC_PLAY_WINDOW, TAC_SPELLS, TAC_TURN, TAC_W, hexDist, hexIndex, hexNeighbors, hexX, hexY, tacSchedule } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacSpellId } from '../../../shared/src/data/tactical.ts';
-import type { ClientMsg, TacAction, TacEvent, TacStackView, TacView } from '../../../shared/src/protocol.ts';
+import type { ClientMsg, TacAction, TacEvent, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
 import { assetUrl, sprite } from '../assets.ts';
-import { dict, lang } from '../i18n.ts';
+import { dict, lang, plural } from '../i18n.ts';
 import { ORDERS, PRIMS, PRIM_ICON, PRIM_NAMES, SCHOOLS, SCHOOL_ICON, SCHOOL_NAMES } from '../../../shared/src/data/hero.ts';
 import type { School } from '../../../shared/src/data/hero.ts';
 import { INNATE, ULTIMATE, ULT_ROUND } from '../../../shared/src/data/paths.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { personName } from '../lang/names.ts';
 import { EN, RU } from '../lang/ui/tactical.ts';
-import { GLIDE_MS, along, easeWalk, walkMs, walkPath } from './tacwalk.ts';
+import { along, glideMs, stepEase, walkPath } from './tacwalk.ts';
 import { EN as LEN, RU as LRU } from '../lang/ui/lairs.ts';
 import type { LairLoot } from '../../../shared/src/lairproto.ts';
 import { LAIRS } from '../../../shared/src/data/lairs.ts';
@@ -140,6 +140,7 @@ const spText = (id: TacSpellId) => (ORDERS[id]?.text ?? [id, id])[lang() === 'ru
 type K = keyof typeof EN;
 
 const SQ3 = Math.sqrt(3);
+const easeOut = (k: number): number => (k <= 0 ? 0 : k >= 1 ? 1 : 1 - (1 - k) ** 3);
 const YOU = '#7fb0d0';
 const FOE = '#d2473a';
 
@@ -150,6 +151,8 @@ interface Float {
   t0: number;
   color: string;
   big?: boolean;
+  /** Its type's size against a blow's number (owner, 2026-10-08: the harm, the fallen, a flank told apart). */
+  size?: number;
   /** Where it was meant to stand before it was lifted clear of the others over the same spot. */
   base?: number;
 }
@@ -168,8 +171,20 @@ interface Missile {
   x1: number;
   y1: number;
   t0: number;
+  /** Its flight (ms): it lands as the shot's beat does. */
+  dur: number;
   arc: number;
 }
+/** A figure's blow, shot or flinch being played: since when, the moment the blow lands, toward where. */
+interface Act {
+  k: 'atk' | 'shot' | 'hurt';
+  t0: number;
+  hit: number;
+  dx: number;
+  dy: number;
+}
+/** How long a figure's act plays past its start (a lunge: to its blow and the step back after). */
+const actEnd = (a: Act): number => (a.k === 'atk' ? a.hit + 300 : a.k === 'shot' ? a.t0 + 420 : a.t0 + 480);
 /** The painted four-frame effects (owner, 2026-10-02), added onto the field as light, in place of the old single bursts. */
 const FX_OF: Record<string, string> = { 'part.explosion': 'fx.bt_blast', 'part.muzzle': 'fx.bt_muzzle', 'part.splash': 'fx.bt_splash' };
 /** What a kind fires or throws; muskets by default. Thrown things fly in an arc. */
@@ -187,7 +202,6 @@ const MISSILE_OF: Record<string, string> = {
   ghost_bomber: 'part.ms_grenade',
 };
 const THROWN = new Set(['part.ms_grenade', 'part.ms_stone', 'part.ms_spear', 'part.ms_flask', 'part.ms_net', 'part.ms_smokebomb', 'part.ms_cannonball']);
-const MISSILE_MS = 300;
 
 /** A path's move drawn over the field (docs/18 items 1, 5): the innate small, the ultimate over the whole board. */
 interface PathFx {
@@ -384,16 +398,17 @@ export class TacticalPanel {
   private pos = new Map<number, { hex: number; path: number[]; t0: number; dur: number; fly: boolean }>();
   /** The ghost's own layer, laid over the field at its dimness (a figure's own alphas would show through otherwise). */
   private ghostLayer: HTMLCanvasElement | null = null;
-  /** A figure's extra height this frame (a flier's glide). */
+  /** A figure's extra height this frame (a flier's glide), and the way it walks (screen x; 0 standing). */
   private liftNow = 0;
+  private walkDx = 0;
   /** What the last frame drew (QA: one figure a stack, the ghost apart). */
   private drawn = { figures: new Map<number, number>(), ghosts: 0, path: 0, walking: [] as number[] };
   private calmMq: MediaQueryList | null = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
   /** A figure's blow, shot or flinch being played: since when, and toward where. */
   /** The plates of the figures being drawn, laid over them all at the end of the frame. */
   private plates: (() => void)[] | null = null;
-  private act = new Map<number, { k: 'atk' | 'shot' | 'hurt'; t0: number; dx: number; dy: number }>();
-  private press: { x: number; y: number; t: number; timer: number } | null = null;
+  private act = new Map<number, Act[]>();
+  private press: { x: number; y: number; t: number; timer: number; foe?: boolean } | null = null;
   private planks: [HTMLCanvasElement, HTMLCanvasElement] | null = null;
   /** Every stack's name as last seen (the fallen are named in the feed too). */
   private names = new Map<number, string>();
@@ -418,6 +433,24 @@ export class TacticalPanel {
   private foeArmed: number | null = null;
   /** The end put away by its button (a battle at sea closes itself a moment later). */
   private endHidden = false;
+  /** The screen's clock (owner, 2026-10-08: «сам бой должен быть плавнее по игре, там как-то слишком быстро всё
+   *  перемещается»): what came in is played beat by beat (shared TAC_PACE, the server waits as long) — a view coming
+   *  in meanwhile waits for it, and the field takes no order till it is played. */
+  private busyUntil = 0;
+  /** The counts shown while blows are being played: from each moment on, the count a stack had (a blow's fallen leave
+   *  its count as the blow lands, not before). */
+  private counts = new Map<number, { at: number; n: number }[]>();
+  /** Stacks felled in what is being played: drawn till the blow that fells them lands, then fading out. */
+  private fallen = new Map<number, { s: TacStackView; at: number }>();
+  /** The foe under the mouse or the finger and the hex she would strike it from (owner, 2026-10-08: «при наведении…
+   *  сколько я убью и какой урон нанесу»), the preview over it. */
+  private aimFoe: { t: number; from?: number } | null = null;
+  /** When each event's beat begins on this screen (the feed tells a blow as it is played, not before). */
+  private eventAt = new Map<number, number>();
+  /** The battle's end stays on the field till its last blows are played and a moment more, though the sea closes it. */
+  private endUntil = 0;
+  private ptr: { x: number; y: number } | null = null;
+  private tipKey = '';
 
   /** Her purse (main.ts): a ransom she cannot pay is shown, and why, but not offered (docs/23 item 93: the wheel
    *  offered «Откуп 340» to an empty purse, the confirm sheet, then nothing). */
@@ -428,9 +461,15 @@ export class TacticalPanel {
     this.now = now;
   }
 
-  /** The battle's pace on this screen: 2 under «Ускорить ×2» (docs/23 item 60). */
-  private speed(): number {
-    return settings().tacFast ? 2 : 1;
+  /** The battle's pace on this screen: 2 under «Ускорить ×2» (docs/23 item 60) — hers, or the other captain's (the
+   *  server plays the sea's turns at the quicker one asked, and this screen keeps to the server's clock). */
+  private speed(v: TacView | null = this.view): number {
+    return settings().tacFast || !!v?.heroes.some((h) => h.fast) ? 2 : 1;
+  }
+
+  /** What came in is still being played on the field. */
+  private busy(): boolean {
+    return performance.now() < this.busyUntil;
   }
 
   /** A touch screen: a phone (375×812 upright, 812×375 or 932×430 on its side) and a tablet alike (owner, 2026-10-07: «на
@@ -444,8 +483,32 @@ export class TacticalPanel {
     return this.view !== null;
   }
 
+  /** The battle's end shown on the field with its last blows played (main.ts plays the victory's or the defeat's film
+   *  then, not over the blows still being played): the view, else null. */
+  endShown(): TacView | null {
+    return this.view?.over && !this.busy() ? this.view : null;
+  }
+
   render(v: TacView | null): void {
     const root = $('board-tac');
+    // A view with more of the battle in it waits while the last is still being played (owner, 2026-10-08: every turn
+    // of hers seen whole — who moved, who struck whom, how many fell); one with nothing new comes in at once.
+    if (v && this.view && v !== this.view && this.el && this.busy() && v.log.some((e) => e.i > this.seen)) {
+      this.tick();
+      this.draw();
+      return;
+    }
+    // The battle's end closed by the sea while it is still being played (or just shown, or under the victory's film):
+    // it stays till then and a moment more, so the reckoning is seen.
+    if (!v && this.view?.over && this.el && !this.endHidden) {
+      const film = !!document.querySelector('.film');
+      if (film) this.endUntil = Math.max(this.endUntil, performance.now() + 2200);
+      if (film || performance.now() < Math.max(this.busyUntil, this.endUntil)) {
+        this.tick();
+        this.draw();
+        return;
+      }
+    }
     const was = this.view;
     this.view = v;
     document.body.classList.toggle('tac', !!v);
@@ -473,6 +536,12 @@ export class TacticalPanel {
         this.bgKey = '';
         this.pos.clear();
         this.act.clear();
+        this.counts.clear();
+        this.fallen.clear();
+        this.eventAt.clear();
+        this.busyUntil = this.endUntil = 0;
+        this.aimFoe = this.ptr = null;
+        this.tipKey = '';
         this.floats = [];
         this.bursts = [];
         this.missiles = [];
@@ -500,7 +569,7 @@ export class TacticalPanel {
     root.innerHTML = `<div class="tb-root">
       <div class="tb-hero you"></div><div class="tb-mid"></div><div class="tb-hero foe"></div>
       <div class="tb-queue" aria-label="${esc(L('order.label'))}"></div>
-      <div class="tb-stage"><canvas class="tb-board"></canvas><div class="tb-card hidden"></div><div class="tb-banner hidden"></div><div class="tb-book hidden"></div></div>
+      <div class="tb-stage"><canvas class="tb-board"></canvas><div class="tb-pv hidden" role="status"></div><div class="tb-card hidden"></div><div class="tb-banner hidden"></div><div class="tb-book hidden"></div></div>
       <div class="tb-feed"><div class="tb-hint"></div><div class="tb-lines"></div></div>
       <div class="tb-spells"></div>
       <div class="tb-acts"></div>
@@ -516,6 +585,7 @@ export class TacticalPanel {
     c.addEventListener('pointercancel', () => this.cancelPress());
     c.addEventListener('pointerleave', () => {
       this.hover = null;
+      if (this.foeArmed === null) this.aimFoe = null;
       delete c.dataset.cur;
       this.cancelPress();
     });
@@ -546,49 +616,132 @@ export class TacticalPanel {
   // ------------------------------------------------------------------ a new view from the server
 
   private onView(v: TacView, was: TacView | null): void {
-    // Stacks that moved walk to their new hex, hex by hex round what stood on the field (a flier glides straight
-    // over); a move of the deep that set one down elsewhere slides it there. Done before the blows are marked: a stack
-    // that walks up to strike strikes once it is there.
+    // What happened since the last view is played beat by beat (owner, 2026-10-08: «сам бой должен быть плавнее… там
+    // как-то слишком быстро всё перемещается, непонятно даже»; shared TAC_PACE, the server waits as long): each walk hex
+    // by hex round what stood on the field (a flier glides over), then each blow — the lunge, the struck stack's flash
+    // and its numbers as it lands, the answer a beat of its own after a breath — so a foe's turn reads whole: who moved,
+    // who struck whom, how many fell. Less motion asked: the same clock, no walks or lunges.
     const t = performance.now();
     const calm = this.calm();
+    // The battle's end shows its last blows only (a quick combat's whole fight is not played again), as the server holds it.
+    const fresh = (was ? v.log.filter((e) => e.i > this.seen) : []).slice(v.over ? -TAC_END_WINDOW : -TAC_PLAY_WINDOW);
+    const { beats, total } = tacSchedule(fresh, this.speed(v));
+    const ms = (sec: number) => t + sec * 1000;
+    // Where each stack stands and how many it has as the play goes on.
+    const at = new Map((was ?? v).stacks.map((s) => [s.id, s.hex]));
+    const cnt = new Map((was ?? v).stacks.map((s) => [s.id, s.count]));
+    const known = new Map([...(was?.stacks ?? []), ...v.stacks].map((s) => [s.id, s]));
+    const drops = new Map<number, { at: number; n: number }[]>();
+    const died = new Map<number, number>();
+    let lastSpell = 0;
+    fresh.forEach((e, i) => {
+      const b = beats[i];
+      if (e.k === 'move' && e.s !== undefined && e.hex !== undefined) {
+        const from = at.get(e.s) ?? this.pos.get(e.s)?.hex ?? e.hex;
+        const s = known.get(e.s);
+        const fly = e.id === 'fly' || !!s?.sp.includes('flying');
+        const stand = [...at].map(([id, hex]) => ({ id, hex, count: cnt.get(id) ?? 0 }));
+        const path = fly || calm ? null : walkPath(v.cells, stand, e.s, from, e.hex, !!s?.sp.includes('diving'));
+        this.pos.set(e.s, { hex: e.hex, path: path ?? [from, e.hex], t0: ms(b.at), dur: calm ? 0 : b.dur * 1000, fly: fly && !calm });
+        at.set(e.s, e.hex);
+      }
+      // A blow's fallen leave its count as it lands.
+      const struck = e.k === 'hit' || e.k === 'shot' || e.k === 'ret' || (e.k === 'order' && e.t !== undefined) ? e.t : e.k === 'burn' || e.k === 'poison' ? e.s : undefined;
+      if (struck !== undefined && e.kills) {
+        const n = Math.max(0, (cnt.get(struck) ?? 0) - e.kills);
+        cnt.set(struck, n);
+        const list = drops.get(struck) ?? [];
+        list.push({ at: ms(b.impact), n });
+        drops.set(struck, list);
+      }
+      if (e.k === 'die' && e.s !== undefined) died.set(e.s, ms(b.impact));
+      if (e.k === 'spell' || e.k === 'innate' || e.k === 'ult' || e.k === 'boss') lastSpell = ms(b.impact);
+      this.eventAt.set(e.i, ms(e.k === 'hit' || e.k === 'shot' || e.k === 'ret' ? b.impact : b.at));
+      if (was) this.mark(e, v, was, ms(b.at), ms(b.impact));
+    });
+    // The counts shown till the play is over: as it stood, then after each blow as it lands; a move of the captains'
+    // that felled or raised men tells its count as it lands, the rest as the play ends.
+    const end = ms(total);
+    for (const s of v.stacks) {
+      const list = drops.get(s.id) ?? [];
+      if (cnt.has(s.id) && cnt.get(s.id) !== s.count) list.push({ at: lastSpell || end, n: s.count });
+      if (list.length && was) this.counts.set(s.id, [{ at: 0, n: was.stacks.find((x) => x.id === s.id)?.count ?? s.count }, ...list]);
+    }
+    // The fallen stay on the field till the blow that fells them lands, then fade.
+    for (const s of was?.stacks ?? []) {
+      if (v.stacks.some((x) => x.id === s.id)) continue;
+      const when = died.get(s.id) ?? (lastSpell || t);
+      this.fallen.set(s.id, { s: { ...s, hex: at.get(s.id) ?? s.hex }, at: when });
+      const list = drops.get(s.id);
+      if (list?.length) this.counts.set(s.id, [{ at: 0, n: s.count }, ...list]);
+    }
+    // A stack set down elsewhere with no walk told (a move of the deep): it glides there.
     for (const s of v.stacks) {
       const p = this.pos.get(s.id);
-      if (!p) {
-        this.pos.set(s.id, { hex: s.hex, path: [s.hex], t0: 0, dur: 0, fly: false });
-        continue;
-      }
-      if (p.hex === s.hex) continue;
-      const fly = s.sp.includes('flying');
-      const path = fly || calm ? null : walkPath((was ?? v).cells, (was ?? v).stacks, s.id, p.hex, s.hex, s.sp.includes('diving'));
-      this.pos.set(s.id, { hex: s.hex, path: path ?? [p.hex, s.hex], t0: t, dur: calm ? 0 : path ? walkMs(path.length - 1, this.speed()) : GLIDE_MS / this.speed(), fly: fly && !calm });
+      if (!p) this.pos.set(s.id, { hex: s.hex, path: [s.hex], t0: 0, dur: 0, fly: false });
+      else if (p.hex !== s.hex) this.pos.set(s.id, { hex: s.hex, path: [p.hex, s.hex], t0: t, dur: calm ? 0 : glideMs(hexDist(p.hex, s.hex), this.speed(v)), fly: !calm });
     }
-    let lag = 0;
-    for (const p of this.pos.values()) lag = Math.max(lag, p.t0 + p.dur - t);
-    // What happened since the last view: numbers over the stacks, bursts of powder and smoke.
-    const fresh = v.log.filter((e) => e.i > this.seen);
+    this.busyUntil = Math.max(this.busyUntil, end);
+    if (v.over && !was?.over) this.endUntil = this.busyUntil + 3500;
+    if (this.eventAt.size > 80) for (const k of [...this.eventAt.keys()].slice(0, this.eventAt.size - 60)) this.eventAt.delete(k);
     if (!was) {
       this.heroFx = [0, 1].map((side) => ({ side, t0: performance.now() + 400 + side * 250, dur: 1900 }));
       this.endHidden = false;
       // «Ускорить ×2» is kept from the last battle (docs/23 item 60).
       if (settings().tacFast && !v.heroes[v.you].fast && !v.over) this.order({ a: 'pace', fast: true });
+      this.seen = v.log.length ? v.log[v.log.length - 1].i : 0;
     }
-    if (!was) this.seen = v.log.length ? v.log[v.log.length - 1].i : 0;
-    else for (const e of fresh) this.mark(e, v, was, lag);
-    if (fresh.length) this.seen = Math.max(this.seen, ...fresh.map((e) => e.i));
+    if (was && v.log.length) this.seen = Math.max(this.seen, v.log[v.log.length - 1].i);
     for (const s of v.stacks) this.names.set(s.id, `${stackName(s)} (${L(s.side === v.you ? 'ours' : 'theirs')})`);
     if (!v.mine || v.active !== was?.active) {
       this.preview = null;
+      this.aimFoe = null;
       if (!v.mine) this.targeting = null;
     }
     if (this.preview !== null && !v.reach.includes(this.preview)) this.preview = null;
     this.dom(v);
   }
 
+  /** The count a stack shows now: while its blows are being played, the count it had before each lands. */
+  private countNow(s: TacStackView, t: number): number {
+    const list = this.counts.get(s.id);
+    if (!list) return s.count;
+    if (t >= list[list.length - 1].at + 50) {
+      this.counts.delete(s.id);
+      return s.count;
+    }
+    let n = list[0].n;
+    for (const x of list) if (x.at <= t) n = x.n;
+    return n;
+  }
+
+  /** A figure's act to play (a stack struck, then answering, plays both in turn). */
+  private addAct(id: number, a: Act): void {
+    const list = this.act.get(id) ?? [];
+    list.push(a);
+    this.act.set(id, list);
+  }
+
+  /** The act a figure plays now (the latest begun that is not over), the spent ones let go. */
+  private actNow(id: number, t: number): Act | undefined {
+    const list = this.act.get(id);
+    if (!list) return undefined;
+    const live = list.filter((a) => actEnd(a) > t);
+    if (!live.length) {
+      this.act.delete(id);
+      return undefined;
+    }
+    if (live.length !== list.length) this.act.set(id, live);
+    let now: Act | undefined;
+    for (const a of live) if (a.t0 <= t && (!now || a.t0 >= now.t0)) now = a;
+    return now;
+  }
+
   /** A number or a name over a spot: lifted a line clear of those still floating over the same spot, so two moves on
    *  one stack («Гранаты» and «Зов глубин») read one over the other, not on top of each other. */
   private addFloat(f: Float): void {
     const w = this.size.w || 30;
-    const line = f.big ? Math.max(18, w * 0.62) : Math.max(13, w * 0.42);
+    const line = (f.big ? Math.max(18, w * 0.62) : Math.max(13, w * 0.42)) * Math.max(1, f.size ?? 1);
     const base = f.y;
     const busy = this.floats.filter((o) => !!o.big === !!f.big && Math.abs(o.x - f.x) < w * 1.1 && Math.abs((o.base ?? o.y) - base) < line * 0.8 && Math.abs(o.t0 - f.t0) < (f.big ? 1500 : 1000));
     let k = 0;
@@ -596,32 +749,42 @@ export class TacticalPanel {
     this.floats.push({ ...f, base, y: base - k * line });
   }
 
-  private mark(e: TacEvent, v: TacView, was: TacView, lag = 0): void {
-    const t = performance.now() + lag;
+  /** One thing that happened, played on the field from `t` (its blow landing at `hit`, performance time): the figures'
+   *  lunge and flinch, the struck stack's flash, the numbers over it, the shots in flight, the bursts. */
+  private mark(e: TacEvent, v: TacView, was: TacView, t: number, hit = t): void {
     const hexOf = (id?: number) => (id === undefined ? undefined : (v.stacks.find((s) => s.id === id) ?? was.stacks.find((s) => s.id === id))?.hex);
     const at = (hex?: number) => (hex === undefined ? null : this.center(hex));
     const w = this.size.w || 30;
     if (e.k === 'hit' || e.k === 'shot' || e.k === 'ret') {
       const c = at(e.hex ?? hexOf(e.t));
-      // The figures: the striker lunges at the struck (a shooter's piece kicks back), the struck flinches.
+      // The figures: the striker winds up and lunges, at full stretch as the blow lands (a shooter's piece kicks back
+      // as it fires); the struck flashes and flinches as it lands.
       const from = at(hexOf(e.s));
-      if (from && c && e.s !== undefined) {
+      const spill = e.id === 'breath' || e.id === 'chain' || e.id === 'blast';
+      if (from && c && e.s !== undefined && !spill) {
         const len = Math.hypot(c.x - from.x, c.y - from.y) || 1;
-        this.act.set(e.s, { k: e.k === 'shot' ? 'shot' : 'atk', t0: t, dx: (c.x - from.x) / len, dy: (c.y - from.y) / len });
+        this.addAct(e.s, { k: e.k === 'shot' ? 'shot' : 'atk', t0: t, hit, dx: (c.x - from.x) / len, dy: (c.y - from.y) / len });
       }
-      if (e.t !== undefined) this.act.set(e.t, { k: 'hurt', t0: t + (e.k === 'shot' ? 120 : 180), dx: from && c ? Math.sign(c.x - from.x) || 1 : 1, dy: 0 });
-      if (c) this.addFloat({ text: `−${e.dmg}${e.kills ? ` †${e.kills}` : ''}`, x: c.x, y: c.y - w * 0.2, t0: t, color: '#f3d7a0' });
+      if (e.t !== undefined) this.addAct(e.t, { k: 'hurt', t0: hit, hit, dx: from && c ? Math.sign(c.x - from.x) || 1 : 1, dy: 0 });
+      if (c) {
+        // The numbers as it lands: the harm, the fallen under it in red, and a blow into her side or from behind told
+        // over it (owner, 2026-10-08) — on a phone by its share alone (the field carries no words there).
+        const y0 = c.y - w * 0.15;
+        if (e.kills) this.addFloat({ text: `†${e.kills}`, x: c.x, y: y0, t0: hit, color: '#ff8a6a', size: 1.15 });
+        this.addFloat({ text: `−${e.dmg}`, x: c.x, y: y0, t0: hit, color: '#f3d7a0', size: 1.25 });
+        if (e.fl) this.addFloat({ text: this.phone ? L(e.fl === 2 ? 'fl.rearX' : 'fl.sideX') : L(e.fl === 2 ? 'fl.rear' : 'fl.side'), x: c.x, y: y0, t0: hit, color: '#ffb54a', size: 0.95 });
+      }
       if (e.k === 'shot' && e.id === 'blast') {
-        if (c) this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: t, size: w * 1.4 });
+        if (c) this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: hit, size: w * 1.4 });
       } else if (e.k === 'shot') {
         const s = at(hexOf(e.s));
         const shooter = (v.stacks.find((x) => x.id === e.s) ?? was.stacks.find((x) => x.id === e.s))?.unit ?? '';
         const ms = MISSILE_OF[shooter] ?? (isShipBeast(shooter) ? SHIP_BEAST_DEFS[shooter].missile : undefined) ?? 'part.ms_ball';
-        const fly = s && c && sprite(ms) ? MISSILE_MS : 0;
-        if (fly) this.missiles.push({ id: ms, x0: s!.x, y0: s!.y - w * 0.55, x1: c!.x, y1: c!.y - w * 0.4, t0: t + 80, arc: THROWN.has(ms) ? Math.hypot(c!.x - s!.x, c!.y - s!.y) * 0.25 : 0 });
-        if (s) this.bursts.push({ id: 'part.muzzle', x: s.x + (c && c.x < s.x ? -w * 0.45 : w * 0.45), y: s.y - w * 0.55, t0: t, size: w * 0.9 });
-        if (c) this.bursts.push({ id: THROWN.has(ms) && fly ? 'part.explosion' : 'part.smoke', x: c.x, y: c.y - w * 0.3, t0: t + fly, size: w * (THROWN.has(ms) ? 1.1 : 0.8) });
-      } else if (c) this.bursts.push({ id: 'part.splinters', x: c.x, y: c.y, t0: t, size: w * 0.8 });
+        const fly = s && c && sprite(ms) ? Math.max(120, hit - t - 80) : 0;
+        if (fly) this.missiles.push({ id: ms, x0: s!.x, y0: s!.y - w * 0.55, x1: c!.x, y1: c!.y - w * 0.4, t0: t + 80, dur: fly, arc: THROWN.has(ms) ? Math.hypot(c!.x - s!.x, c!.y - s!.y) * 0.25 : 0 });
+        if (s) this.bursts.push({ id: 'part.muzzle', x: s.x + (c && c.x < s.x ? -w * 0.45 : w * 0.45), y: s.y - w * 0.55, t0: t + 40, size: w * 0.9 });
+        if (c) this.bursts.push({ id: THROWN.has(ms) && fly ? 'part.explosion' : 'part.smoke', x: c.x, y: c.y - w * 0.3, t0: hit, size: w * (THROWN.has(ms) ? 1.1 : 0.8) });
+      } else if (c) this.bursts.push({ id: 'part.splinters', x: c.x, y: c.y, t0: hit, size: w * 0.8 });
     } else if (e.k === 'luck' || e.k === 'morale' || e.k === 'fear') {
       const c = at(hexOf(e.s));
       // On a phone the field carries no words but the spells' (owner, 2026-10-03): a morale or luck roll shows by its light.
@@ -953,9 +1116,8 @@ export class TacticalPanel {
     // The order of the round, then the next round's first few.
     el.querySelector('.tb-queue')!.innerHTML = this.queue(v);
     el.querySelectorAll<HTMLElement>('.tb-q').forEach((b) => (b.onclick = () => this.showInfo(Number(b.dataset.info))));
-    // The feed: the last three things, in words.
-    const words = v.log.filter((e) => e.k !== 'move').slice(-3).map((e) => this.words(e, v)).filter(Boolean);
-    el.querySelector('.tb-lines')!.innerHTML = words.map((w, i) => `<div class="${i === words.length - 1 ? 'new' : ''}">${esc(w)}</div>`).join('');
+    // The feed: the last three things, in words — each as it is played on the field (owner, 2026-10-08).
+    this.feedDom(v);
     // The captain's orders.
     const me = v.heroes[v.you];
     // The book's pages (docs/17 H2): each order's will beside it; the will left on the book's spine.
@@ -1118,8 +1280,13 @@ export class TacticalPanel {
         ...(loot?.chips ?? []),
         ...(loot?.lines ?? []).map((x) => `<span class="tb-lc tb-lw">${x}</span>`),
       ];
+      // The beaten who came over (owner, 2026-10-08): «К вам примкнули: 6 матросов», and their faces.
+      const came = r?.joined?.reduce((a, x) => a + x.n, 0) ?? 0;
+      const joined = came > 0
+        ? `<div class="tb-er tb-joined"><small><span class="tb-jl">${esc(L('res.joined', { n: `${came} ${plural(came, L('res.men1'), L('res.men2'), L('res.men5'))}` }))}</span><span class="tb-js">${esc(L('res.joinedShort', { n: came }))}</span></small><div class="tb-rs-row">${r!.joined!.map((x) => `<span class="tb-rs" title="${esc(unitName(x.u))}">${unitIcon(x.u, 'tb-rs-ico')}<i class="up">+${x.n}</i></span>`).join('')}</div></div>`
+        : '';
       const rows = r
-        ? `<div class="tb-end-rows"><div class="tb-er"><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div class="tb-er"><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div><div class="tb-er"><small>${esc(L('res.loot'))}</small><div class="tb-lchips">${spoils.length ? spoils.join('') : none}</div></div></div>`
+        ? `<div class="tb-end-rows"><div class="tb-er"><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div class="tb-er"><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${joined}<div class="tb-er"><small>${esc(L('res.loot'))}</small><div class="tb-lchips">${spoils.length ? spoils.join('') : none}</div></div></div>`
         : '';
       banner.className = `tb-banner tb-end ${won ? 'won' : 'lost'}${v.land ? ' land' : ' sea'}${r ? ' tb-result' : ''}`;
       banner.innerHTML = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span class="tb-why">${esc(whyText)}</span>${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${rows}</div><button class="k-btn k-btn--primary k-btn--lg tb-endbtn" data-endbtn>${esc(v.land ? LL('close') : L('next'))}</button>`;
@@ -1140,6 +1307,20 @@ export class TacticalPanel {
     }
     this.hint(v);
     if (this.info !== null) this.showInfo(this.info);
+  }
+
+  /** The feed's last three things that have been played on the field by now (tick keeps it up with the play). */
+  private feedKey = '';
+  private feedDom(v: TacView): void {
+    const lines = this.el?.querySelector('.tb-lines');
+    if (!lines) return;
+    const now = performance.now();
+    const played = v.log.filter((e) => e.k !== 'move' && (this.eventAt.get(e.i) ?? 0) <= now).slice(-3);
+    const key = `${played.map((e) => e.i).join(',')}${lang()}`;
+    if (key === this.feedKey) return;
+    this.feedKey = key;
+    const words = played.map((e) => this.words(e, v)).filter(Boolean);
+    lines.innerHTML = words.map((w, i) => `<div class="${i === words.length - 1 ? 'new' : ''}">${esc(w)}</div>`).join('');
   }
 
   private words(e: TacEvent, v: TacView): string {
@@ -1446,9 +1627,27 @@ export class TacticalPanel {
     return this.view?.stacks.find((s) => s.hex === hex);
   }
 
+  /** A pointer's place on the stage (CSS px). */
+  private onStage(e: { clientX: number; clientY: number }): { x: number; y: number } {
+    const r = this.canvas!.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
   private down(e: PointerEvent): void {
     this.cancelPress();
     const x = e.clientX, y = e.clientY;
+    // A finger on a foe she may strike shows what the blow would do while it is down (owner, 2026-10-08), the side of
+    // the foe it comes from chosen by where the finger lies on it (it may slide round the foe to choose); let go, and
+    // she strikes. Held long, the stack's card instead.
+    let foe = false;
+    if (e.pointerType !== 'mouse' && this.view?.mine && !this.busy()) {
+      const h = this.hexAt(e);
+      const p = this.onStage(e);
+      const keep = this.foeArmed;
+      this.aimAt(h, p.x, p.y);
+      foe = !!this.aimFoe;
+      if (!foe && keep !== null) this.aimFoe = null;
+    }
     const timer = window.setTimeout(() => {
       // A long press: the stack's card, whatever a tap on it would do (a foe in reach is struck by a tap).
       const h = this.hexAt({ clientX: x, clientY: y });
@@ -1462,8 +1661,9 @@ export class TacticalPanel {
         this.showInfo(s.id);
       }
       this.press = null;
-    }, 450);
-    this.press = { x, y, t: performance.now(), timer };
+      if (foe && this.foeArmed === null) this.aimFoe = null;
+    }, foe ? 800 : 450);
+    this.press = { x, y, t: performance.now(), timer, foe };
   }
 
   private cancelPress(): void {
@@ -1474,6 +1674,12 @@ export class TacticalPanel {
   private move(e: PointerEvent): void {
     if (e.pointerType === 'mouse') {
       this.hover = this.hexAt(e);
+      // The preview under the sword (owner, 2026-10-08): the foe under the mouse, the side it is struck from by where
+      // the mouse lies on it.
+      if (!this.busy()) {
+        const p = this.onStage(e);
+        this.aimAt(this.hover, p.x, p.y);
+      }
       // The attack cursor (owner, 2026-10-07: «при абордаже… при наведении на цель показывать иконку атаки»): over a
       // stack hers may strike, the sabres; one it may shoot, the gun (ui/cursor.ts, seahud.css).
       const v = this.view, s = this.hover !== null ? this.stackAt(this.hover) : undefined;
@@ -1484,14 +1690,33 @@ export class TacticalPanel {
         else delete c.dataset.cur;
       }
     }
+    // A finger on a foe may slide round it to choose the side it strikes from; off it, the blow is let go.
+    if (this.press?.foe && this.aimFoe) {
+      const s = this.view?.stacks.find((x) => x.id === this.aimFoe!.t);
+      const p = this.onStage(e);
+      const c = s ? this.center(s.hex) : null;
+      if (s && c && Math.hypot(p.x - c.x, p.y - c.y) <= this.size.w * 1.25) {
+        this.aimFoe = { t: s.id, from: this.view!.shoot.includes(s.id) ? undefined : this.strikeFor(this.view!, s, p.x, p.y) };
+        if (Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y) > 12) {
+          clearTimeout(this.press.timer); // sliding to choose: no card
+          this.press.timer = 0;
+        }
+      } else {
+        this.cancelPress();
+        if (this.foeArmed === null) this.aimFoe = null;
+      }
+      return;
+    }
     if (this.press && Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y) > 12) this.cancelPress();
   }
 
   private up(e: PointerEvent): void {
     if (!this.press) return;
+    const foe = this.press.foe && this.aimFoe ? this.view?.stacks.find((x) => x.id === this.aimFoe!.t)?.hex ?? null : null;
     this.cancelPress();
     if (e.button === 2) return;
-    this.tap(this.hexAt(e));
+    // A finger let go on a foe it slid round: the foe it aimed at, from the side it chose.
+    this.tap(foe ?? this.hexAt(e));
   }
 
   private tap(h: number | null): void {
@@ -1509,10 +1734,12 @@ export class TacticalPanel {
     if (this.info !== null) this.showInfo(null);
     if (h === null) {
       this.preview = this.foeArmed = null;
+      this.aimFoe = null;
       return this.refresh();
     }
     const s = this.stackAt(h);
-    if (!v.mine || v.over) {
+    // The field takes no order while the last turn is still being played (owner, 2026-10-08): a card it may open.
+    if (!v.mine || v.over || this.busy()) {
       if (s) this.showInfo(s.id);
       return;
     }
@@ -1531,6 +1758,9 @@ export class TacticalPanel {
         this.order(t === 'innate' || t === 'ult' ? { a: t, target: s.id } : { a: 'spell', id: t, target: s.id });
         this.targeting = null;
       } else if (v.shoot.includes(s.id) || v.melee.includes(s.id)) {
+        // The side she strikes from: as aimed (the mouse or the finger on the foe, owner 2026-10-08), else the hex
+        // tapped once before, else the hardest blow the preview shows.
+        if (this.aimFoe?.t !== s.id) this.aimAt(s.hex, null, null);
         if (sure && this.foeArmed !== s.id) {
           this.foeArmed = s.id;
           this.key = '';
@@ -1539,9 +1769,10 @@ export class TacticalPanel {
         }
         if (v.shoot.includes(s.id)) this.order({ a: 'shoot', target: s.id });
         else {
-          const from = this.preview !== null && hexNeighbors(s.hex).includes(this.preview) ? this.preview : undefined;
+          const from = this.aimFoe?.t === s.id && this.aimFoe.from !== undefined ? this.aimFoe.from : this.preview !== null && hexNeighbors(s.hex).includes(this.preview) ? this.preview : undefined;
           this.order(from !== undefined ? { a: 'attack', target: s.id, from } : { a: 'attack', target: s.id });
         }
+        this.aimFoe = null;
       } else this.showInfo(s.id);
       this.preview = this.foeArmed = null;
       return this.refresh();
@@ -1564,6 +1795,112 @@ export class TacticalPanel {
   }
   private refresh(): void {
     if (this.view) this.hint(this.view);
+  }
+
+  // ------------------------------------------------------------------ the preview under the sword (owner, 2026-10-08)
+
+  /** The preview of the foe aimed at now (under the mouse, under the finger, or tapped once to be sure). */
+  private pvOf(v: TacView): TacPreview | null {
+    const a = this.aimFoe;
+    if (!a || !v.pv) return null;
+    return v.pv.find((p) => p.t === a.t && (p.shot || p.from === a.from)) ?? null;
+  }
+
+  /** The hex she would strike foe `t` from with the pointer at (px, py) on the stage (HoMM3: the side of the foe the
+   *  sword comes from) — the one beside it nearest the pointer's way from its middle; with the pointer on its middle,
+   *  the hardest blow (from behind, then a flank), the nearer hex on a tie. None for a shot. */
+  private strikeFor(v: TacView, t: TacStackView, px: number | null, py: number | null): number | undefined {
+    const opts = (v.pv ?? []).filter((p) => p.t === t.id && !p.shot && p.from !== undefined);
+    if (!opts.length) return undefined;
+    const c = this.center(t.hex);
+    const w = this.size.w || 30;
+    if (px !== null && py !== null && Math.hypot(px - c.x, py - c.y) > w * 0.2) {
+      const ang = Math.atan2(py - c.y, px - c.x);
+      let best = opts[0], bd = Infinity;
+      for (const o of opts) {
+        const q = this.center(o.from!);
+        let d = Math.abs(Math.atan2(q.y - c.y, q.x - c.x) - ang);
+        if (d > Math.PI) d = 2 * Math.PI - d;
+        if (d < bd) {
+          bd = d;
+          best = o;
+        }
+      }
+      return best.from;
+    }
+    const act = v.stacks.find((s) => s.id === v.active);
+    const steps = (h: number) => (act ? hexDist(act.hex, h) : 0);
+    return [...opts].sort((a, b) => b.fl - a.fl || steps(a.from!) - steps(b.from!) || b.dmg[1] - a.dmg[1])[0].from;
+  }
+
+  /** Aim at the stack under the pointer (stage px), if it is a foe she may strike or shoot now; else let go. */
+  private aimAt(h: number | null, px: number | null, py: number | null): void {
+    const v = this.view;
+    const s = h !== null ? this.stackAt(h) : undefined;
+    if (!v || !s || !v.mine || v.over || this.targeting || s.side === v.you || !(v.melee.includes(s.id) || v.shoot.includes(s.id))) {
+      this.aimFoe = null;
+      return;
+    }
+    this.aimFoe = { t: s.id, from: v.shoot.includes(s.id) ? undefined : this.strikeFor(v, s, px, py) };
+  }
+
+  /** The preview's words: the harm and the fallen as ranges, a blow into the side or from behind, the answer. */
+  private tipHtml(p: TacPreview): string {
+    const r = (x: [number, number]) => (x[0] === x[1] ? `${x[0]}` : `${x[0]}–${x[1]}`);
+    const rows = [
+      p.shot ? `<div class="tb-pv-h">${esc(L('pv.shot'))}</div>` : '',
+      `<div class="tb-pv-r"><span>${esc(L('pv.dmg'))}</span><b>${r(p.dmg)}</b>${p.twice ? `<i>×2</i>` : ''}</div>`,
+      `<div class="tb-pv-r"><span>${esc(L('pv.kills'))}</span><b>${r(p.kills)}</b></div>`,
+      p.fl ? `<div class="tb-pv-fl">${esc(L(p.fl === 2 ? 'fl.rear' : 'fl.side'))}</div>` : '',
+      p.far ? `<div class="tb-pv-n">${esc(L('pv.far'))}</div>` : '',
+      p.sweep ? `<div class="tb-pv-n">${esc(L('pv.sweep'))}</div>` : '',
+      p.shot || p.sweep ? '' : p.ret ? `<div class="tb-pv-ret"><span>${esc(L('pv.ret'))}:</span><b>${p.ret[0] > 0 ? '−' : ''}${r(p.ret)}</b></div>` : `<div class="tb-pv-ret none">${esc(L('pv.noRet'))}</div>`,
+      p.luck && !this.phone ? `<div class="tb-pv-n">${esc(L('pv.luck', { n: p.luck }))}</div>` : '',
+    ];
+    return rows.join('');
+  }
+
+  /** The preview beside the foe aimed at (owner, 2026-10-08): on a desk beside it, on a phone over it (clear of the
+   *  finger); kept on the stage. */
+  private tipDom(v: TacView): void {
+    const el = this.el?.querySelector<HTMLElement>('.tb-pv');
+    if (!el) return;
+    const p = v.mine && !v.over && !this.busy() && !this.targeting && !this.bookOpen && this.info === null ? this.pvOf(v) : null;
+    const t = p ? v.stacks.find((s) => s.id === p.t) : undefined;
+    if (!p || !t) {
+      if (!el.classList.contains('hidden')) el.classList.add('hidden');
+      this.tipKey = '';
+      return;
+    }
+    const key = `${JSON.stringify(p)}${lang()}${this.phone}`;
+    if (key !== this.tipKey) {
+      this.tipKey = key;
+      el.innerHTML = this.tipHtml(p);
+      el.setAttribute('aria-label', L('pv.label'));
+      el.classList.toggle('flank', !!p.fl);
+      el.classList.remove('hidden');
+    }
+    const { w, cw, ch } = this.size;
+    const c = this.center(t.hex);
+    const bw = el.offsetWidth, bh = el.offsetHeight;
+    let x: number, y: number;
+    if (this.phone) {
+      x = c.x - bw / 2;
+      y = c.y - w * 1.45 - bh;
+      if (y < 4) y = c.y + w * 0.75;
+    } else {
+      // Beside the foe, on the side away from the hex she strikes it from (the blade's line stays in sight).
+      const from = p.from !== undefined ? this.center(p.from) : null;
+      const left = from ? from.x > c.x + 1 : false;
+      x = left ? c.x - w * 0.62 - bw : c.x + w * 0.62;
+      y = c.y - w * 0.75 - bh / 2;
+      if (x + bw > cw - 4) x = c.x - w * 0.62 - bw;
+      if (x < 4) x = c.x + w * 0.62;
+    }
+    x = Math.round(Math.max(4, Math.min(cw - bw - 4, x)));
+    y = Math.round(Math.max(4, Math.min(ch - bh - 4, y)));
+    const tr = `translate(${x}px, ${y}px)`;
+    if (el.style.transform !== tr) el.style.transform = tr;
   }
 
   // ------------------------------------------------------------------ drawing
@@ -1602,21 +1939,42 @@ export class TacticalPanel {
     return !!this.calmMq?.matches;
   }
 
-  /** Where a stack stands this frame: along its walk while it walks (a step's bob, a flier's rise and fall), its
-   *  hex otherwise. */
-  private standAt(s: TacStackView, t: number): { x: number; y: number; lift: number; walking: boolean } {
+  /** Where a stack stands this frame: along its walk while it walks, hex by hex (a step's bob, a flier's rise and
+   *  fall), waiting at its first hex till its walk's beat comes; its hex otherwise. `dx`: the way it walks (screen). */
+  private standAt(s: TacStackView, t: number): { x: number; y: number; lift: number; walking: boolean; dx: number } {
     const p = this.pos.get(s.id);
-    if (!p || p.hex !== s.hex || p.dur <= 0 || t >= p.t0 + p.dur || p.path.length < 2) return { ...this.center(s.hex), lift: 0, walking: false };
+    if (!p || p.hex !== s.hex || p.dur <= 0 || t >= p.t0 + p.dur || p.path.length < 2) return { ...this.center(s.hex), lift: 0, walking: false, dx: 0 };
     const k = Math.max(0, (t - p.t0) / p.dur);
-    const q = along(p.path.map((h) => this.center(h)), easeWalk(k));
+    const steps = p.fly ? 1 : p.path.length - 1;
+    const pts = p.path.map((h) => this.center(h));
+    const share = stepEase(k, steps);
+    const q = along(pts, share), ahead = along(pts, Math.min(1, share + 0.03));
     const w = this.size.w || 30;
-    const lift = p.fly ? Math.sin(Math.PI * k) * w * 0.45 : Math.abs(Math.sin(Math.PI * k * (p.path.length - 1))) * w * 0.06;
-    return { x: q.x, y: q.y, lift, walking: true };
+    const lift = p.fly ? Math.sin(Math.PI * k) * w * 0.45 : Math.abs(Math.sin(Math.PI * k * steps)) * w * 0.07;
+    const dx = t < p.t0 ? 0 : ahead.x - q.x || pts[pts.length - 1].x - pts[0].x;
+    return { x: q.x, y: q.y, lift, walking: true, dx };
+  }
+
+  /** The way a stack faces on the screen (a unit vector): the way it faces on the board, turned with the board. */
+  private faceVec(s: TacStackView): { x: number; y: number } {
+    const a = ((Number.isFinite(s.face) ? s.face : s.side ? 3 : 0) * Math.PI) / 3;
+    const [A, B, C, D] = this.xf();
+    return { x: A * Math.cos(a) + C * Math.sin(a), y: B * Math.cos(a) + D * Math.sin(a) };
+  }
+
+  /** It faces left on the screen (straight up or down the screen, as its side came aboard). */
+  private facesLeft(s: TacStackView): boolean {
+    const f = this.faceVec(s);
+    return Math.abs(f.x) < 0.2 ? s.side === 1 : f.x < 0;
   }
 
   /** The hex a walk is shown to: the one tapped once (the second tap marches), else the one under the mouse. */
   private aim(v: TacView): number | null {
-    if (!v.mine || v.over || this.targeting) return null;
+    if (!v.mine || v.over || this.targeting || this.busy()) return null;
+    // A foe aimed at from a hex she must walk to: the walk to it (owner, 2026-10-08: where she would stand to strike).
+    const act = v.stacks.find((s) => s.id === v.active);
+    if (this.aimFoe?.from !== undefined && act && this.aimFoe.from !== act.hex) return this.aimFoe.from;
+    if (this.aimFoe) return null;
     if (this.preview !== null && v.reach.includes(this.preview)) return this.preview;
     return this.hover !== null && v.reach.includes(this.hover) && !this.stackAt(this.hover) ? this.hover : null;
   }
@@ -1676,7 +2034,7 @@ export class TacticalPanel {
 
   /** The stack's ghost at a hex: drawn whole on a layer of its own, then laid over the field at `alpha` (a figure
    *  sets its own alphas as it draws, so it cannot be dimmed in place), without its number or its turn's ring. */
-  private ghost(g: CanvasRenderingContext2D, s: TacStackView, hex: number, v: TacView, alpha: number): void {
+  private ghost(g: CanvasRenderingContext2D, s: TacStackView, hex: number, v: TacView, alpha: number, filter = 'saturate(0.6) brightness(1.3)'): void {
     const c = this.canvas;
     if (!c) return;
     const layer = (this.ghostLayer ??= document.createElement('canvas'));
@@ -1698,7 +2056,7 @@ export class TacticalPanel {
     g.save();
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalAlpha = alpha;
-    g.filter = 'saturate(0.6) brightness(1.3)';
+    g.filter = filter;
     g.drawImage(layer, 0, 0);
     g.restore();
     this.drawn.ghosts++;
@@ -2346,7 +2704,8 @@ export class TacticalPanel {
     const v = this.view;
     const el = this.el;
     if (!v || !el) return;
-    const left = Math.max(0, v.ends - this.now());
+    // Her clock starts once what came before her turn is played (the server's `ends` counts it in): it shows 30 s till then.
+    const left = Math.min(TAC_TURN, Math.max(0, v.ends - this.now()));
     const bar = el.querySelector<HTMLElement>('.tb-timer > i');
     if (bar) bar.style.width = `${v.over ? 0 : Math.min(1, left / 30) * 100}%`;
     const secs = el.querySelector<HTMLElement>('.tb-secs');
@@ -2357,6 +2716,7 @@ export class TacticalPanel {
       const k = (v.over ? 0 : Math.min(1, left / 30)).toFixed(3);
       if (face.style.getPropertyValue('--tl') !== k) face.style.setProperty('--tl', k);
     }
+    this.feedDom(v);
     if ((this.strikeArmed && this.strikeArmed < performance.now()) || (this.ransomArmed && this.ransomArmed < performance.now())) {
       this.strikeArmed = 0;
       this.ransomArmed = 0;
@@ -2400,7 +2760,9 @@ export class TacticalPanel {
     // The reach of the stack whose turn it is (docs/23 item 58: big and plain): a veil and a bright rim on every hex
     // it may step to — on a phone thicker and lighter, so a thumb sees it at arm's length.
     const big = this.phone;
-    if (v.mine) {
+    // Her turn's marks once what came before it is played (owner, 2026-10-08).
+    const live = v.mine && !v.over && !this.busy();
+    if (live) {
       for (const h of v.reach) {
         const p = this.lc(h);
         this.hexPath(g, p.x, p.y, r - 1.5);
@@ -2423,7 +2785,7 @@ export class TacticalPanel {
     // Whom the active stack may strike or fire on: the hex washed red and ringed, the crosshair for a shot; a foe
     // that will strike back (it has its answer left this round) wears an orange curl at its corner; the foe tapped once
     // (with «a second tap to be sure») a bright ring.
-    if (v.mine) {
+    if (live) {
       const aimOwn = this.targetKind() === 'own';
       for (const s of v.stacks) {
         const shoot = v.shoot.includes(s.id), melee = v.melee.includes(s.id);
@@ -2452,14 +2814,93 @@ export class TacticalPanel {
         if (melee && !shoot && !this.targeting && s.ret) this.retMark(g, p.x + w * 0.36, p.y - r * 0.62, Math.max(5, w * 0.16), pulse);
       }
     }
+    // A walk being played (owner, 2026-10-08: who moved, seen): its way ahead traced in the walker's colour, hex by hex,
+    // to the hex it is bound for.
+    for (const [id, p] of this.pos) {
+      if (p.dur <= 0 || t >= p.t0 + p.dur || p.path.length < 2) continue;
+      const s = v.stacks.find((x) => x.id === id) ?? this.fallen.get(id)?.s;
+      if (!s) continue;
+      const k = Math.max(0, Math.min(1, (t - p.t0) / p.dur));
+      const pts = p.path.map((h) => this.lc(h));
+      const from = Math.min(pts.length - 1, Math.floor(stepEase(k, p.fly ? 1 : p.path.length - 1) * (pts.length - 1)));
+      const rgb = s.side === v.you ? '127,176,208' : '210,71,58';
+      g.save();
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+      g.strokeStyle = `rgba(${rgb},0.55)`;
+      g.lineWidth = Math.max(2, w * 0.05);
+      g.setLineDash([w * 0.12, w * 0.1]);
+      g.beginPath();
+      g.moveTo(pts[from].x, pts[from].y);
+      for (const q of pts.slice(from + 1)) g.lineTo(q.x, q.y);
+      g.stroke();
+      g.setLineDash([]);
+      g.fillStyle = `rgba(${rgb},0.6)`;
+      for (const q of pts.slice(from + 1, -1)) {
+        g.beginPath();
+        g.arc(q.x, q.y, Math.max(2, w * 0.07), 0, Math.PI * 2);
+        g.fill();
+      }
+      const z = pts[pts.length - 1];
+      this.hexPath(g, z.x, z.y, r - 2);
+      g.strokeStyle = `rgba(${rgb},0.85)`;
+      g.lineWidth = 2;
+      g.stroke();
+      g.restore();
+    }
     // The walk it would take, hex by hex (a flier's glide, an arc over the field), on the deck under the figures.
     {
       const aim = this.aim(v);
       if (aim !== null && active && !this.walkingAt(v, t)) this.walkMark(g, v, active, aim, r, pulse);
     }
+    // The foe under the pointer (owner, 2026-10-08): the hex she would strike it from, ringed — amber when the blow
+    // comes into its side or from behind — and a blade's line from there into it.
+    const pvNow = live ? this.pvOf(v) : null;
+    if (pvNow && !pvNow.shot && pvNow.from !== undefined) {
+      const tgt = v.stacks.find((x) => x.id === pvNow.t);
+      const p = this.lc(pvNow.from);
+      const col = pvNow.fl ? `rgba(255,181,74,${0.75 + 0.25 * pulse})` : `rgba(240,255,248,${0.6 + 0.3 * pulse})`;
+      this.hexPath(g, p.x, p.y, r - 2.5);
+      g.fillStyle = pvNow.fl ? 'rgba(255,170,60,0.22)' : 'rgba(240,255,248,0.14)';
+      g.fill();
+      g.strokeStyle = col;
+      g.lineWidth = big ? 3.5 : 2.5;
+      g.stroke();
+      if (tgt) {
+        const q = this.lc(tgt.hex);
+        const ux = q.x - p.x, uy = q.y - p.y, len = Math.hypot(ux, uy) || 1;
+        const ax = p.x + (ux / len) * w * 0.3, ay = p.y + (uy / len) * w * 0.3, bx = q.x - (ux / len) * w * 0.28, by = q.y - (uy / len) * w * 0.28;
+        g.strokeStyle = col;
+        g.lineWidth = Math.max(2, w * 0.06);
+        g.beginPath();
+        g.moveTo(ax, ay);
+        g.lineTo(bx, by);
+        g.stroke();
+        const hw = w * 0.13;
+        g.fillStyle = col;
+        g.beginPath();
+        g.moveTo(bx + (ux / len) * hw, by + (uy / len) * hw);
+        g.lineTo(bx - (uy / len) * hw * 0.8, by + (ux / len) * hw * 0.8);
+        g.lineTo(bx + (uy / len) * hw * 0.8, by - (ux / len) * hw * 0.8);
+        g.closePath();
+        g.fill();
+      }
+    }
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     // The stacks, the active one ringed in gold; the figures back to front, so the nearer stands before the farther.
-    const placed: { s?: TacStackView; prop?: string; i?: number; p: { x: number; y: number; lift?: number; walking?: boolean } }[] = v.stacks.map((s) => ({ s, p: this.standAt(s, t) }));
+    // While blows are being played each shows the count it had till they land; the fallen stand till then (owner,
+    // 2026-10-08: how many died, seen as it happens).
+    const shown: TacStackView[] = v.stacks.map((s) => {
+      const n = this.countNow(s, t);
+      return n === s.count ? s : { ...s, count: n };
+    });
+    const fading: { s: TacStackView; k: number }[] = [];
+    for (const [id, f] of this.fallen) {
+      if (t > f.at + 520) this.fallen.delete(id);
+      else if (t >= f.at) fading.push({ s: f.s, k: 1 - (t - f.at) / 520 });
+      else shown.push({ ...f.s, count: Math.max(1, this.countNow(f.s, t)) });
+    }
+    const placed: { s?: TacStackView; prop?: string; i?: number; p: { x: number; y: number; lift?: number; walking?: boolean; dx?: number } }[] = shown.map((s) => ({ s, p: this.standAt(s, t) }));
     const walking = placed.some((x) => x.p.walking);
     for (let i = 0; i < v.cells.length; i++) {
       const prop = propArt(v.cells[i], v.land?.type ?? '');
@@ -2472,14 +2913,18 @@ export class TacticalPanel {
     for (const x of placed) {
       if (x.s) {
         this.liftNow = x.p.lift ?? 0;
-        this.token(g, x.s, x.p.x, x.p.y, w, x.s.id === v.active && !x.p.walking, pulse, v);
+        this.walkDx = x.p.walking ? x.p.dx ?? 0 : 0;
+        this.token(g, x.s, x.p.x, x.p.y, w, x.s.id === v.active && !x.p.walking && live, pulse, v);
         this.liftNow = 0;
+        this.walkDx = 0;
         this.drawn.figures.set(x.s.id, (this.drawn.figures.get(x.s.id) ?? 0) + 1);
         if (x.p.walking) this.drawn.walking.push(x.s.id);
       } else this.prop(g, x.prop!, x.p.x, x.p.y, w, hexX(x.i!) > 5);
     }
     for (const f of this.plates) f();
     this.plates = null;
+    // The fallen fading where they fell.
+    for (const f of fading) this.ghost(g, f.s, f.s.hex, v, Math.max(0, f.k) * 0.9, 'grayscale(0.6) brightness(0.8)');
     // A ghost of the stack where it would step (owner, 2026-10-05: «фигурка не имеет прозрачности … она как бы
     // задваивается»): dim and whole, drawn on its own layer, without its number; none while a stack walks.
     const aim = this.aim(v);
@@ -2488,9 +2933,9 @@ export class TacticalPanel {
     this.pathFx = this.pathFx.filter((f) => t - f.t0 < (f.ult ? PATH_FX_MS.ult : PATH_FX_MS.innate));
     for (const f of this.pathFx) this.drawPathFx(g, f, t, w);
     // Shots and throws in flight, turned along their path.
-    this.missiles = this.missiles.filter((m) => t - m.t0 < MISSILE_MS);
+    this.missiles = this.missiles.filter((m) => t - m.t0 < m.dur);
     for (const m of this.missiles) {
-      const k = (t - m.t0) / MISSILE_MS;
+      const k = (t - m.t0) / m.dur;
       if (k < 0) continue;
       const img = sprite(m.id)!.img;
       const x = m.x0 + (m.x1 - m.x0) * k, y = m.y0 + (m.y1 - m.y0) * k - m.arc * 4 * k * (1 - k);
@@ -2542,7 +2987,7 @@ export class TacticalPanel {
       const k = (t - f.t0) / (f.big ? 1600 : 1200);
       if (k < 0) continue; // a blow's number waits for the walk that brings it
       g.globalAlpha = Math.max(0, 1 - k * k);
-      g.font = `700 ${Math.round(f.big ? Math.max(15, w * 0.55) : Math.max(11, w * 0.36))}px ${f.big ? 'Cormorant Garamond, Georgia, serif' : 'Inter, system-ui, sans-serif'}`;
+      g.font = `700 ${Math.round((f.big ? Math.max(15, w * 0.55) : Math.max(11, w * 0.36)) * (f.size ?? 1))}px ${f.big ? 'Cormorant Garamond, Georgia, serif' : 'Inter, system-ui, sans-serif'}`;
       g.lineWidth = 3;
       g.strokeStyle = 'rgba(0,0,0,0.85)';
       const y = f.y - k * w * 0.6;
@@ -2556,6 +3001,8 @@ export class TacticalPanel {
     }
     void cw;
     void ch;
+    // The preview beside the foe aimed at (owner, 2026-10-08).
+    this.tipDom(v);
   }
 
   /** A path's move drawn over the field (docs/18 items 1 and 5), procedurally: its colour washing over the decks, and
@@ -2761,24 +3208,34 @@ export class TacticalPanel {
     let frame = id;
     const breath = (t + s.id * 977) % 3200;
     if (breath > 2500 && sprite(`${id}_b`)) frame = `${id}_b`;
-    const a = this.act.get(s.id);
+    const a = this.actNow(s.id, t);
+    const calm = this.calm();
     if (a) {
-      const dur = a.k === 'hurt' ? 360 : a.k === 'shot' ? 420 : 420;
-      const k = (t - a.t0) / dur;
-      if (k >= 1) this.act.delete(s.id);
-      else if (k > 0) {
-        if (a.k === 'hurt' ? sprite(`${id}_hit`) : sprite(`${id}_atk`)) frame = `${id}${a.k === 'hurt' ? '_hit' : '_atk'}`;
-        const bell = this.calm() ? 0 : Math.sin(Math.PI * k);
-        if (a.k === 'atk') {
-          ox = a.dx * w * 0.32 * bell;
-          oy = a.dy * w * 0.32 * bell;
-        } else if (a.k === 'shot') {
-          ox = -a.dx * w * 0.08 * bell;
-          oy = -a.dy * w * 0.08 * bell;
-        } else {
-          ox = a.dx * w * 0.07 * Math.sin(k * Math.PI * 5) * (1 - k);
-          flash = k < 0.35 ? 1 - k / 0.35 : 0;
+      if (a.k === 'atk') {
+        // The lunge (owner, 2026-10-08: a clear blow): a wind-up drawn back, the strike at full stretch as the blow
+        // lands, then the step back to its hex.
+        let f: number;
+        if (t < a.hit) {
+          const k = (t - a.t0) / Math.max(1, a.hit - a.t0);
+          f = k < 0.4 ? -0.16 * Math.sin((k / 0.4) * (Math.PI / 2)) : -0.16 + 1.16 * (1 - (1 - (k - 0.4) / 0.6) ** 3);
+        } else f = 1 - easeOut((t - a.hit) / 300);
+        if (t >= a.t0 + (a.hit - a.t0) * 0.4 && sprite(`${id}_atk`)) frame = `${id}_atk`;
+        if (!calm) {
+          ox = a.dx * w * 0.4 * f;
+          oy = a.dy * w * 0.4 * f;
         }
+      } else if (a.k === 'shot') {
+        const k = (t - a.t0) / 420;
+        if (sprite(`${id}_atk`)) frame = `${id}_atk`;
+        const bell = calm || k < 0.1 ? 0 : Math.sin(Math.PI * Math.min(1, (k - 0.1) / 0.6));
+        ox = -a.dx * w * 0.09 * bell;
+        oy = -a.dy * w * 0.09 * bell;
+      } else {
+        // Struck: a flash as it lands, and a flinch.
+        const k = (t - a.t0) / 480;
+        if (sprite(`${id}_hit`)) frame = `${id}_hit`;
+        if (!calm) ox = a.dx * w * 0.08 * Math.sin(k * Math.PI * 5) * (1 - k);
+        flash = k < 0.45 ? 1 - k / 0.45 : 0;
       }
     }
     // The ground under it: a shadow, the side's ring, the gold of the one whose turn it is.
@@ -2798,6 +3255,24 @@ export class TacticalPanel {
       g.lineWidth = Math.max(2.5, w * 0.07);
       g.beginPath();
       g.ellipse(x, fy, rx + 4, ry + 2.5, 0, 0, Math.PI * 2);
+      g.stroke();
+    }
+    // The way it faces (owner, 2026-10-08: blows into its side or from behind land harder): a point of its side's
+    // colour on the ring, toward its front.
+    if (!this.walkDx) {
+      const f = this.faceVec(s);
+      const ex = x + f.x * rx, ey = fy + f.y * ry;
+      const nx = f.x * ry, ny = f.y * rx, nl = Math.hypot(nx, ny) || 1;
+      const ux = nx / nl, uy = ny / nl, len = Math.max(5, w * 0.14), half = Math.max(3.5, w * 0.1);
+      g.fillStyle = col;
+      g.strokeStyle = 'rgba(0,0,0,0.7)';
+      g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(ex + ux * len, ey + uy * len);
+      g.lineTo(ex - uy * half, ey + ux * half);
+      g.lineTo(ex + uy * half, ey - ux * half);
+      g.closePath();
+      g.fill();
       g.stroke();
     }
     if (s.again) {
@@ -2823,7 +3298,8 @@ export class TacticalPanel {
     const img = sprite(frame)?.img ?? base;
     const breathe = frame === id ? 1 + 0.012 * Math.sin(t / 620 + s.id * 1.7) : 1;
     const H = img.naturalHeight * k * breathe, W = img.naturalWidth * k;
-    const flip = s.side === 1;
+    // It faces the way it last went (owner, 2026-10-08), walking the way it walks; the painting faces right.
+    const flip = this.walkDx ? this.walkDx < 0 : this.facesLeft(s);
     const fx = footX(frame, img);
     const lift = (s.sp.includes('flying') ? w * 0.28 * (1 + 0.15 * Math.sin(t / 300 + s.id)) : 0) + this.liftNow;
     g.save();
@@ -2831,10 +3307,22 @@ export class TacticalPanel {
     if (flip) g.scale(-1, 1);
     const tint = standTint(s, id);
     if (s.blind) g.filter = 'grayscale(0.7) brightness(0.8)';
-    else if (flash) g.filter = `${tint ?? ''} brightness(${(1 + flash * 1.2).toFixed(2)}) sepia(${(flash * 0.6).toFixed(2)}) hue-rotate(-30deg)`.trim();
+    else if (flash) g.filter = `${tint ?? ''} brightness(${(1 + flash * 1.6).toFixed(2)}) sepia(${(flash * 0.7).toFixed(2)}) saturate(${(1 + flash * 2).toFixed(2)}) hue-rotate(-25deg)`.trim();
     else if (tint) g.filter = tint;
     g.drawImage(img, -W * fx, -H, W, H);
     g.filter = 'none';
+    // The struck stack's flash (owner, 2026-10-08): a burst of light over it as the blow lands.
+    if (flash > 0) {
+      const cy = -H * 0.5;
+      const glow = g.createRadialGradient(0, cy, 0, 0, cy, Math.max(W, H) * 0.62);
+      glow.addColorStop(0, `rgba(255,240,215,${(0.75 * flash).toFixed(3)})`);
+      glow.addColorStop(0.45, `rgba(240,90,50,${(0.45 * flash).toFixed(3)})`);
+      glow.addColorStop(1, 'rgba(200,40,20,0)');
+      g.globalCompositeOperation = 'lighter';
+      g.fillStyle = glow;
+      g.fillRect(-W, cy - H * 0.7, W * 2, H * 1.4);
+      g.globalCompositeOperation = 'source-over';
+    }
     if (s.wet) {
       // Under the surf: the water over its lower half.
       g.fillStyle = 'rgba(30,100,120,0.45)';

@@ -17,11 +17,186 @@ export const TAC_H = 9;
 export const TAC_GAP = 5;
 /** Seconds a captain has for each of his stacks' turns; then the stack defends. */
 export const TAC_TURN = 30;
-/** Seconds the sea's captains take over a stack's turn, so a player sees what they did (docs/23 item 60: a foe's turn
- *  in 1.2 s at most, its walk 0.25 s; it was 0.7). */
-export const TAC_AI_DELAY = 0.45;
-/** «Ускорить ×2» (docs/23 item 60): the sea's breath over a turn, × while a captain on the field has asked for it. */
+/** Seconds the sea's captains wait before a stack's turn, once what was done before it has been played on the screen
+ *  (owner, 2026-10-08: «там как-то слишком быстро всё перемещается, непонятно даже» — docs/23 item 60 had it 0.45 s
+ *  and the walks 0.25 s, too quick to follow). */
+export const TAC_AI_DELAY = 0.7;
+/** «Ускорить ×2» (docs/23 item 60): the sea's breath and the field's pace, × while a captain on the field has asked
+ *  for it. */
 export const TAC_FAST = 0.5;
+
+/** The field's pace (owner, 2026-10-08), seconds at ×1: a stack walks hex by hex, eased in and out; a blow is a lunge
+ *  that lands, the struck stack's flash and its numbers rising, and the answer is a beat of its own after a breath; a
+ *  shot is the muzzle and the ball's flight, then the same. The server waits as long before the sea's next turn (and
+ *  her own clock starts after it), so every foe's turn is seen whole: who moved, who struck whom, how many fell. */
+export const TAC_PACE = {
+  /** A step of a walk. */
+  hex: 0.42,
+  /** A flier's glide over the field, a hex of it; and its bounds. */
+  glide: 0.3,
+  glideMin: 0.5,
+  glideMax: 1.4,
+  /** The wind-up and the blow landing (the struck stack's flash at its end). */
+  lunge: 0.34,
+  /** The struck stack's flash and its numbers rising, before anything else moves. */
+  hit: 0.55,
+  /** The breath before the answer. */
+  answer: 0.3,
+  /** The muzzle and the ball in flight (the struck stack's flash at its end). */
+  shot: 0.38,
+  /** A captain's order, a path's innate move and her ultimate; an officer's word; the poison, the fire, a creature
+   *  growing back; a stack frozen in fear; a morale or luck mark; a stack waiting or defending; a round opening; a great
+   *  one ashore. */
+  spell: 0.9,
+  innate: 1.2,
+  ult: 2.2,
+  order: 0.7,
+  mark: 0.45,
+  fear: 0.6,
+  morale: 0.45,
+  idle: 0.25,
+  round: 0.35,
+  boss: 1,
+} as const;
+
+/** The most of a turn's events the screens play (the view carries the last dozen of the log); and of the battle's last
+ *  (a quick combat's end is shown by its last blows, not the whole fight again). */
+export const TAC_PLAY_WINDOW = 12;
+export const TAC_END_WINDOW = 6;
+
+/** What the schedule reads of an event (shared/src/protocol.ts TacEvent). */
+export interface TacBeatEvent {
+  k: string;
+  id?: string;
+  n?: number;
+}
+/** One event's place on the screen's clock: from when, how long, and the moment its blow lands. Seconds from the first. */
+export interface TacBeat {
+  at: number;
+  dur: number;
+  impact: number;
+}
+
+/** A walk's (or a glide's) length on the screen: `steps` hexes, `fly` over the field. */
+export function walkSecs(steps: number, fly = false, speed = 1): number {
+  const n = Math.max(1, steps);
+  return (fly ? Math.max(TAC_PACE.glideMin, Math.min(TAC_PACE.glideMax, n * TAC_PACE.glide)) : n * TAC_PACE.hex) / Math.max(1, speed);
+}
+
+/** The screen's clock over a run of events (one turn's, or whatever came in one view): each event's start, length and
+ *  the moment it lands, and the whole. The client plays them so; the server waits as long before the sea's next turn.
+ *  A blow that spills on to one more (a breath, a chain, a swivel's burst) lands with the blow it came from; a
+ *  volley's shots overlap. `speed` 2 under «×2». */
+export function tacSchedule(events: readonly TacBeatEvent[], speed = 1): { beats: TacBeat[]; total: number } {
+  const P = TAC_PACE;
+  const k = 1 / Math.max(1, speed);
+  const beats: TacBeat[] = [];
+  let at = 0, last: TacBeat | null = null, volley = false;
+  const held: number[] = [];
+  const put = (start: number, dur: number, impact = start): TacBeat => {
+    const b = { at: start, dur, impact };
+    beats.push(b);
+    at = Math.max(at, start + dur);
+    for (const i of held.splice(0)) beats[i] = { at: impact, dur: 0, impact };
+    return b;
+  };
+  for (const e of events) {
+    const rides = (e.k === 'hit' || e.k === 'shot') && (e.id === 'breath' || e.id === 'chain' || e.id === 'blast');
+    if (rides && last) {
+      const impact = last.impact + 0.12 * k;
+      for (const i of held.splice(0)) beats[i] = { at: impact, dur: 0, impact };
+      beats.push({ at: last.at, dur: 0, impact });
+      continue;
+    }
+    const wasVolley = volley;
+    volley = e.k === 'shot' && e.id === 'volley';
+    switch (e.k) {
+      case 'move':
+        last = put(at, walkSecs(e.n ?? 1, e.id === 'fly', speed));
+        break;
+      case 'hit':
+        last = put(at, (P.lunge + P.hit) * k, at + P.lunge * k);
+        break;
+      case 'ret':
+        last = put(at, (P.answer + P.lunge + P.hit) * k, at + (P.answer + P.lunge) * k);
+        break;
+      case 'shot': {
+        // A volley's muskets fire one after another, a quarter second apart, not each its own whole beat.
+        const start = volley && wasVolley && last ? last.at + 0.25 * k : at;
+        last = put(start, (P.shot + P.hit) * k, start + P.shot * k);
+        break;
+      }
+      case 'die':
+      case 'luck':
+        // The fallen go when the blow that felled them lands, luck is told with the blow it doubles: both are told
+        // before that blow (the battle's log), so they wait for it.
+        held.push(beats.length);
+        beats.push({ at, dur: 0, impact: at });
+        break;
+      case 'spell':
+        last = put(at, P.spell * k, at + P.spell * 0.35 * k);
+        break;
+      case 'innate':
+      case 'ult':
+        last = put(at, P[e.k] * k, at + P[e.k] * 0.3 * k);
+        break;
+      case 'order':
+        last = put(at, P.order * k, at + P.order * 0.4 * k);
+        break;
+      case 'poison':
+      case 'burn':
+      case 'regen':
+        last = put(at, P.mark * k, at);
+        break;
+      case 'fear':
+        last = put(at, P.fear * k, at);
+        break;
+      case 'morale':
+      case 'again':
+        last = put(at, P.morale * k, at);
+        break;
+      case 'round':
+        last = put(at, P.round * k, at);
+        break;
+      case 'boss':
+        last = put(at, P.boss * k, at + P.boss * 0.4 * k);
+        break;
+      default:
+        // A wait, a defence, the clock run out.
+        last = put(at, P.idle * k, at);
+    }
+  }
+  for (const i of held) beats[i] = { at: last?.impact ?? at, dur: 0, impact: last?.impact ?? at };
+  return { beats, total: at };
+}
+
+/** The six ways a hex looks, as the board lies (y down): 0 east, 1 south-east, 2 south-west, 3 west, 4 north-west, 5
+ *  north-east. */
+export type HexDir = 0 | 1 | 2 | 3 | 4 | 5;
+
+/** Which of the six ways `to` lies from `from` (the nearest of them for a hex further off); −1 for the hex itself. */
+export function hexDir(from: number, to: number): number {
+  const fy = hexY(from), ty = hexY(to);
+  const dq = hexX(to) - (ty - (ty & 1)) / 2 - (hexX(from) - (fy - (fy & 1)) / 2), dr = ty - fy;
+  const x = Math.sqrt(3) * (dq + dr / 2), y = 1.5 * dr;
+  if (!x && !y) return -1;
+  return ((Math.round(Math.atan2(y, x) / (Math.PI / 3)) % 6) + 6) % 6;
+}
+
+/** Blows into a stack's side and from behind (owner, 2026-10-08: «удары сзади должны наносить больше урона»): the
+ *  front three hexes of the way it faces strike as ever, its two sides a sixth and a half more, the one behind it 30%
+ *  more. Its answer is the same from anywhere. */
+export const TAC_FLANK = [1, 1.15, 1.3] as const;
+
+/** How a blow from the hex `from` comes in at a stack on `at` facing `face`: 0 from its front, 1 into its side, 2
+ *  from behind. */
+export function flankOf(face: number, at: number, from: number): 0 | 1 | 2 {
+  const d = hexDir(at, from);
+  if (d < 0 || face < 0) return 0;
+  const k = Math.abs(d - face) % 6;
+  const off = Math.min(k, 6 - k);
+  return off >= 3 ? 2 : off === 2 ? 1 : 0;
+}
 /** A battle not decided in this many rounds goes to the side with the more of its strength left. */
 export const TAC_MAX_ROUNDS = 20;
 /** Shots at more than this many hexes do half damage. */

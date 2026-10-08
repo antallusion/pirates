@@ -300,8 +300,10 @@ test('on the ships: her army as it stands, the fallen off their own stacks, the 
   // What each kind lost in the battle came off that kind aboard.
   const lost = lossesOf(bt, 0);
   const floor = Math.max(2, Math.round(bt.heroes[0].startMen * 0.1));
+  // (the beaten who came over as it ended stand in her stacks too: owner 2026-10-08, crew.ts beatenJoin)
+  const came = new Map((ship.boarding?.fight.tacJoined?.[0] ?? []).map((x) => [x.u, x.n]));
   if (bt.dead[0] <= bt.heroes[0].startMen - floor) {
-    for (const x of lost) assert.equal((before.get(x.u) ?? 0) - (ship.army.find((s) => s.u === x.u)?.n ?? 0), x.n, `${x.u}: ${x.n} fallen`);
+    for (const x of lost) assert.equal((before.get(x.u) ?? 0) + (came.get(x.u) ?? 0) - (ship.army.find((s) => s.u === x.u)?.n ?? 0), x.n, `${x.u}: ${x.n} fallen`);
   }
   assert.equal(ship.crew, armyMen(ship.army));
   assert.equal(bt.over!.winner, 0, 'a full brig carries forty pirates');
@@ -311,7 +313,7 @@ test('on the ships: her army as it stands, the fallen off their own stacks, the 
   assert.ok(r && r.killed.length > 0 && r.xp === battleXp([...game.sessions][0].profile!.level, npc.combatLevel, killedHp(bt, 0), theirs, TAC_XP_SHARE) && r.xp > 0, 'the reckoning: her losses and your experience');
   const p = [...game.sessions][0].profile!;
   assert.ok(p.level > lvl0 || p.xp > xp0, 'the captain learnt from it');
-  steps(game, 60);
+  steps(game, 200); // its last blows played (owner, 2026-10-08), then a moment more
   assert.equal(ship.boarding, null);
   assert.equal(npc.lootLockedFor, ship.id, 'she is his to plunder');
 });

@@ -21,11 +21,12 @@ import type { Game } from './Game.ts';
 import type { BoardFight, BoardingState, ShipEntity } from './ship.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { onCrewKilled, onGrapple } from './mind.ts';
-import { moraleLossMul } from './crew.ts';
+import { beatenJoin, joinsFrom, moraleLossMul } from './crew.ts';
 import { bloodAndSalt, drownedBoardersRise, drownedTakeLosses } from './bridgefx.ts';
 import { closeTac, sendTac, startTactical, stepTactical, wantsTactical } from './tactical.ts';
 import { guardBeaten } from './advmap.ts';
-import { trialOver } from './throne.ts'; // docs/19 E3
+import { isTrialShip, trialOver } from './throne.ts'; // docs/19 E3
+import type { UnitId } from '../../../shared/src/data/army.ts';
 import { softenFoe } from './firstfights.ts';
 
 const AGG = {
@@ -689,11 +690,15 @@ function finishBoarding(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: 
   // take it to nothing.
   const lossFrac = clamp(a.stats.boardingCargoLoss * agg.cargo * (b.surrendered ? 0.5 : 1) + bs.rounds * 0.012 + fight.fires * 0.015, 0, 0.45);
   const duel = fight.duel?.winner != null ? (fight.duel.winner === a.id ? 'won' : 'lost') : null;
-  claimPrize(game, a, b, lossFrac, bs.lost, bs.killed, bs.aggression, { rounds: fight.round, won: bs.won, lost: bs.lostRounds, duel, moves: bs.moves, ...(fight.tac ? { tac: true } : {}) });
+  // The beaten who came over (owner, 2026-10-08): the hex battle reckoned them as it ended; the old deck fight here —
+  // her survivors by kind, and her fallen (whose kinds that fight does not keep) as deckhands.
+  let joined = fight.tacJoined?.[0] ?? [];
+  if (!fight.tac && joinsFrom(b) && !isTrialShip(b)) joined = beatenJoin(game, a, [...b.army.map((x) => ({ u: x.u, n: x.n })), { u: 'deckhand' as const, n: bs.killed }], b);
+  claimPrize(game, a, b, lossFrac, bs.lost, bs.killed, bs.aggression, { rounds: fight.round, won: bs.won, lost: bs.lostRounds, duel, moves: bs.moves, ...(fight.tac ? { tac: true } : {}) }, joined);
 }
 
 /** A ship that struck (boarded, or surrendered on terms) hands her hold to the victor. */
-export function claimPrize(game: Game, a: ShipEntity, b: ShipEntity, lossFrac: number, lost: number, killed: number, aggression: Aggression = 'standard', report?: BoardingResult['report']): void {
+export function claimPrize(game: Game, a: ShipEntity, b: ShipEntity, lossFrac: number, lost: number, killed: number, aggression: Aggression = 'standard', report?: BoardingResult['report'], joined: { u: UnitId; n: number }[] = []): void {
   const agg = AGG[aggression];
   const destroyed: Cargo = {};
   const cargo: Cargo = {};
@@ -742,6 +747,7 @@ export function claimPrize(game: Game, a: ShipEntity, b: ShipEntity, lossFrac: n
     recruits: 0,
     noQuarter: a.hasFlag('no_quarter'),
     ...(report ? { report } : {}),
+    ...(joined.length ? { joined } : {}),
   };
   game.onBoardingWon(a, b, result);
 }

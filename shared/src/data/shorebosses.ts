@@ -143,7 +143,7 @@ export const SHORE_MOVES: Record<ShoreMove, Tr> = {
 export const SHORE_CAL: Record<ShoreBossId, number[]> = {
   mire_mother: [0, 0, 0, 0, 0, 0.41, 0.53, 0.96, 1.25, 1.82, 0],
   cinder_salamander: [0, 0, 0, 0, 0, 0, 0.56, 1.01, 1.38, 1.85, 3.19],
-  drowned_abbess: [0, 0, 0, 0, 0, 0, 0, 1.74, 2.6, 3.9, 6.17],
+  drowned_abbess: [0, 0, 0, 0, 0, 0, 0, 1.85, 2.54, 3.93, 6.17],
   walrus_tyrant: [0, 0, 0, 0, 0, 0.31, 0.45, 0.66, 1.25, 1.77, 0],
 };
 /** The share of her landed men a great one costs the reference captain of its level, on average. */
