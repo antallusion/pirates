@@ -4542,6 +4542,13 @@ body:has(#modal:not(.hidden)) #encounter, body:has(#modal:not(.hidden)) #surrend
 #surrender .sur-choice small { display: none; }
 #surrender .sur-choice b { font-size: 12px; line-height: 1.15; }
 #surrender .sur-choice .choice-ico { width: 20px; height: 20px; }
+/* A desk's wide screen: the terms a little wider, so a choice keeps to two lines («Keep her as a trophy» ran four and the
+   card 216 px down into the middle of a 1500×600 sea), and the toasts wait while they are up — a toast stood under the
+   card, its words showing through the ship's line (QA 2026-10-09; on touch they wait already, seahud.css). */
+@media (min-width: 1100px) and (min-height: 521px) {
+  #surrender { width: min(640px, calc(100vw - 600px)); }
+  body.simple:not(.touch):has(#surrender:not(.hidden)) #toasts { display: none !important; }
+}
 @media (max-width: 699px), (max-height: 520px) {
   #surrender, #lairchest { top: calc(var(--sa-t, 0px) + 6px); left: calc(var(--sa-l, 0px) + 8px); transform: none; width: min(440px, calc(var(--ts-left, 360px) - var(--sa-l, 0px) - 16px)); min-width: 0; }
   body:has(#surrender:not(.hidden)) #hud-captain, body:has(#lairchest:not(.hidden)) #hud-captain { visibility: hidden; }
