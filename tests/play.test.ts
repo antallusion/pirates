@@ -141,3 +141,14 @@ test('a struck ship\'s terms on a desk: wide enough for two-line choices, no toa
   assert.match(block, /#surrender \{ width: min\(640px, calc\(100vw - 600px\)\); \}/);
   assert.match(block, /body\.simple:not\(\.touch\):has\(#surrender:not\(\.hidden\)\) #toasts \{ display: none !important; \}/);
 });
+
+test('a tap on «Отчалить гостем» before the game\'s script is in is kept and answered', () => {
+  const html = read('client/index.html');
+  assert.ok(html.includes('<form id="login-form" onsubmit="return false">'), 'still no native submit');
+  assert.match(html, /if \(e\.target && e\.target\.id === 'login-form' && !window\.__gtReady\) window\.__earlySubmit = 'login';/);
+  const main = read('client/src/main.ts');
+  const at = main.indexOf("($('login-form') as HTMLFormElement).onsubmit");
+  const replay = main.indexOf("early.__earlySubmit === 'login' && !net.live");
+  assert.ok(at > 0 && replay > at, 'answered once the handler is in');
+  assert.ok(main.includes("($('login-form') as HTMLFormElement).requestSubmit();"));
+});

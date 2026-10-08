@@ -874,6 +874,16 @@ fetch('/auth/providers').then((r) => r.json()).then((d: { providers: { id: strin
   net.forget();
   net.connect(name);
 };
+// A tap on «Отчалить гостем» while this script was still on its way (index.html kept it): answered now (QA 2026-10-09:
+// the first tap on a fresh page, 0.8 s in, did nothing — the script came in seconds later).
+{
+  const early = globalThis as { __gtReady?: boolean; __earlySubmit?: string };
+  early.__gtReady = true;
+  if (early.__earlySubmit === 'login' && !net.live) {
+    delete early.__earlySubmit;
+    ($('login-form') as HTMLFormElement).requestSubmit();
+  }
+}
 
 net.onStatus = (ok) => $('connection').classList.toggle('hidden', ok || !inGame);
 net.on(onMessage);
