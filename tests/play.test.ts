@@ -125,3 +125,10 @@ test('a boarded ship\'s fates in a word on a narrow phone, whole on a wider scre
   const css = read('client/styles.css');
   assert.match(css, /\.choice \.ch-short \{ display: none; \}\r?\n@media \(max-width: 699px\) \{\r?\n  #modal-panel\[data-modal="boarding"\] \.choice \.ch-long \{ display: none; \}/);
 });
+
+test('the battle\'s end band at sea: a label and its «нет» on one line; with the labels hidden no lone «нет»', () => {
+  const css = read('client/styles.css');
+  assert.ok(css.includes('.tb-end.sea .tb-er { align-items: center; }'));
+  assert.ok(css.includes('.tb-end.sea .tb-er > small { padding-top: 0; }'));
+  assert.ok(css.includes('.tb-end.sea .tb-er:has(> div > em.muted:only-child) { display: none; }'));
+});

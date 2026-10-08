@@ -4379,11 +4379,17 @@ body.tac-ph .tb-pl .tb-rb { width: 52px; height: 52px; }
 .tb-end.sea .tb-why { display: none; }
 .tb-end.sea .tb-end-rows { flex-direction: row; flex-wrap: wrap; margin: 0; gap: 4px 16px; }
 .tb-end.sea .tb-er { grid-template-columns: auto auto; column-gap: 6px; }
+/* (in the band a label and its «нет» on one line: the label's 8 px drop left «нет» riding above it, QA 2026-10-09) */
+.tb-end.sea .tb-er { align-items: center; }
+.tb-end.sea .tb-er > small { padding-top: 0; }
 .tb-end.sea .tb-endbtn { min-width: 0; }
 @media (max-height: 520px) {
   .tb-banner.tb-end.sea { top: 4px; bottom: auto; max-height: 64px; padding: 4px 10px; }
   .tb-end.sea .tb-bsc > b { font-size: 20px; }
   .tb-end.sea .tb-er > small { display: none; }
+  /* …and with the labels gone a lone «нет» said nothing (640×360: «Примкнули: 1 нет Дальше»): a row with nothing in it
+     stays out of the band. */
+  .tb-end.sea .tb-er:has(> div > em.muted:only-child) { display: none; }
   .tb-end.sea .tb-rs, .tb-end.sea .tb-rs-ico { width: 24px; height: 24px; }
   .tb-end.sea .tb-endbtn { min-height: 44px; padding: 0 14px; }
   .tb-end.land { padding: 8px 16px 10px; gap: 6px; }
