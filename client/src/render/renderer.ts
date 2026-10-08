@@ -160,7 +160,7 @@ const FEATURE_ART: Record<string, { id: string; size: number; salt: number; inse
   cache: { id: 'prop.cache', size: 34, salt: 8, inset: 0.25 },
   fort: { id: 'prop.fort', size: 120, salt: 9, inset: 0.2 },
   volcano: { id: 'prop.volcano', size: 150, salt: 10, inset: 0.55 },
-  bones: { id: 'prop.bones', size: 110, salt: 11, inset: 0.05 },
+  bones: { id: 'prop.wreckage', size: 110, salt: 11, inset: 0.05 },
   bell: { id: 'prop.bell_tower', size: 70, salt: 12, inset: -0.12 },
   hermit: { id: 'prop.hermit', size: 60, salt: 13, inset: 0.25 },
   spring: { id: 'prop.spring', size: 60, salt: 14, inset: 0.4 },
@@ -866,7 +866,7 @@ export class Renderer {
           g.beginPath();
           g.ellipse(x, y, size * 0.5, size * 0.35, m.rot, 0, Math.PI * 2);
           g.fill();
-          if (!spriteAt('prop.bones', x, y, size, m.rot, 0.8)) {
+          if (!spriteAt('prop.wreckage', x, y, size, m.rot, 0.8)) {
             g.strokeStyle = '#cfc6b0';
             g.lineWidth = 3 * z;
             for (let k = 0; k < 6; k++) {
@@ -3428,9 +3428,9 @@ export class Renderer {
           break;
         }
         case 'bones': {
-          // The painted bones of a great beast, half awash (the sea marks' own).
+          // Floating wreckage, half awash (no bones or skeletons on screen: CLAUDE.md §2).
           foam(g, 0, 0, 60 * z, t, seed, 0.12);
-          if (drawArt(g, 'prop.bones', 0, 0, 150 * z, seed, 0.85)) break;
+          if (drawArt(g, 'prop.wreckage', 0, 0, 150 * z, seed, 0.85)) break;
           g.strokeStyle = 'rgba(226,214,186,0.85)';
           g.lineWidth = Math.max(1.5, 3 * z);
           g.rotate(seed);
