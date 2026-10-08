@@ -49,7 +49,9 @@ import { drawDriftsWorld } from './drifts.ts'; // docs/18 IV
 import { drawFindsWorld } from './seafinds.ts'; // docs/19 D5
 import { drawRoamsWorld } from './roamers.ts'; // docs/19 D7
 import { addHot, brassRing, drawArt, drawPiece, foam, hot, icePlate, inHot, markRing, piece, shipWater } from './seaart.ts'; // the tokens on the screen: the hover aim keeps off them (owner, 2026-10-07)
-import { drawIsleHalo, drawIsleLevel, drawIsleOver, drawMist, drawTurtles } from './isletype.ts'; // docs/18 III
+import { drawIsleLevel, drawIsleOver, drawMist, drawTurtles } from './isletype.ts'; // docs/18 III
+import { drawSurfOver, drawSurfUnder, shoreRocks } from './surf.ts'; // the surf on every coast (owner, 2026-10-08)
+import type { SurfCtx } from './surf.ts';
 import type { IsleTypeCtx } from './isletype.ts';
 import { EN as I18_EN, RU as I18_RU } from '../lang/ui/isles18.ts';
 import { TURTLE_NAMES } from '../../../shared/src/world/drift.ts';
@@ -441,9 +443,10 @@ export class Renderer {
     hot.length = 0;
     this.drawSeaMarks(state);
     drawBanks(g, state, ictx); // banks the tide or a season has bared (docs/16 #25)
-    for (const is of islands) this.drawShallows(is);
     const tctx = (this.tctx = this.isleTypeCtx(night)); // docs/18 III: each kind's water, the mist, the levels, the turtle islands
-    for (const is of islands) drawIsleHalo(g, is, tctx);
+    // The surf (owner, 2026-10-08): the shallows' tint and the breakers rolling in, under every island (surf.ts).
+    const sctx = (this.sctx = this.surfCtx(night));
+    for (const is of islands) drawSurfUnder(g, is, sctx, this.frameNo);
     for (const is of islands) this.drawIsland(is, state);
     this.drawPorts(state);
     drawLookouts(g, state, ictx, state.wind[0]); // lookouts on the headlands (docs/16 #24)
@@ -785,21 +788,6 @@ export class Renderer {
     }
   }
 
-  private drawShallows(is: IslandData): void {
-    if (is.mist) return; // a hidden island's mist hides her shallows too (docs/18 #30)
-    const g = this.g;
-    g.save();
-    g.lineJoin = 'round';
-    this.path(is.poly);
-    const strange = REGIONS[is.region].strangeness;
-    const base = strange > 0.4 ? '20,70,72' : '40,70,80';
-    for (const [w, a] of [[110, 0.05], [60, 0.07], [28, 0.1]] as const) {
-      g.lineWidth = w * this.zoom;
-      g.strokeStyle = `rgba(${base},${a})`;
-      g.stroke();
-    }
-    g.restore();
-  }
 
   /** The dense sea's marks (docs/16 P3): wreck fields half awash, lane buoys, lantern floats, driftwood, floating
    *  bones and ice floes — all from the art (owner, 2026-10-07: «всё должно быть из ассетов»): the painted wreck and
@@ -1094,6 +1082,12 @@ export class Renderer {
     return { sx: (x) => this.sx(x), sy: (y) => this.sy(y), zoom: this.zoom, time: settings().reduceMotion ? 0 : this.time, night, w: this.w, h: this.h, path: (p, k, cx, cy) => this.path(p, k, cx, cy) };
   }
 
+  private sctx: SurfCtx | null = null;
+  /** The surf's frame (surf.ts). */
+  private surfCtx(night: number): SurfCtx {
+    return { sx: (x) => this.sx(x), sy: (y) => this.sy(y), zoom: this.zoom, time: settings().reduceMotion ? 0 : this.time, night, w: this.w, h: this.h, fx: this.fx };
+  }
+
   /** docs/18 III: the turtle islands, and each island's level by her when she is close. */
   private drawIsles18(state: ClientState, own: SailState | null, islands: IslandData[], c: IsleTypeCtx): void {
     const L18 = lang() === 'ru' ? I18_RU : I18_EN;
@@ -1223,19 +1217,8 @@ export class Renderer {
       }
     }
     this.drawShoreRocks(is);
-    // Surf: two soft broken lines of foam working along the coast.
-    this.path(is.poly);
-    g.setLineDash([3 * this.zoom, 9 * this.zoom]);
-    g.lineDashOffset = this.time * 4 * this.zoom;
-    g.strokeStyle = 'rgba(210,220,225,0.2)';
-    g.lineWidth = Math.max(1, 2.2 * this.zoom);
-    g.stroke();
-    this.path(is.poly, 1.035, is.x, is.y);
-    g.setLineDash([2 * this.zoom, 13 * this.zoom]);
-    g.lineDashOffset = -this.time * 3 * this.zoom;
-    g.strokeStyle = 'rgba(200,212,220,0.1)';
-    g.stroke();
-    g.setLineDash([]);
+    // The surf over the shore band: the foam lace at the waterline, the swash up the band, the spray on the rocks.
+    drawSurfOver(g, is, this.sctx ?? this.surfCtx(this.nightNow));
     // Name label when zoomed out enough to matter or discovered.
     const known = state.discovered.has(is.id);
     // A village's island goes by the village's name, and the port writes it already.
@@ -1250,36 +1233,31 @@ export class Renderer {
     this.drawLife(is);
   }
 
-  /** Rocky coasts: stones just off the shore, and white water breaking on a few of them. */
+  /** Rocky coasts: stones just off the shore, at the band's outer edge (inside her clearance: no hull lies on one);
+   *  the waves throw their spray on them (surf.ts). */
   private drawShoreRocks(is: IslandData): void {
-    const b = is.biome;
-    if (this.zoom < 0.3 || !(b === 'volcanic' || b === 'crystal' || b === 'ice' || b === 'blacksand' || b === 'ruins' || b === 'barren' || b === 'temperate')) return;
+    if (this.zoom < 0.3) return;
+    const rocks = shoreRocks(is);
+    if (!rocks.length) return;
     const g = this.g;
-    const rnd = seeded(is.id * 613 + 29);
-    const n = is.poly.length / 2;
+    const b = is.biome;
     const stone = b === 'ice' ? '#9aa6b0' : b === 'crystal' ? '#6c7ca0' : b === 'volcanic' || b === 'blacksand' ? '#1c1817' : '#4a4640';
-    const count = Math.min(14, Math.round(n / 3));
-    for (let k = 0; k < count; k++) {
-      const v = Math.floor(rnd() * n);
-      const px = is.poly[v * 2], py = is.poly[v * 2 + 1];
-      const dx = px - is.x, dy = py - is.y, l = Math.hypot(dx, dy) || 1;
-      const off = 8 + rnd() * 22;
-      const x = this.sx(px + (dx / l) * off), y = this.sy(py + (dy / l) * off);
-      const r = (3 + rnd() * 6) * this.zoom;
+    for (const rk of rocks) {
+      const x = this.sx(rk.x), y = this.sy(rk.y);
+      const r = rk.r * this.zoom;
       if (x < -20 || y < -20 || x > this.w + 20 || y > this.h + 20) continue;
+      g.fillStyle = 'rgba(0,0,0,0.3)';
+      g.beginPath();
+      g.ellipse(x + r * 0.35, y + r * 0.45, r * 1.3, r, rk.rot, 0, Math.PI * 2);
+      g.fill();
       g.fillStyle = stone;
       g.beginPath();
-      g.ellipse(x, y, r * 1.3, r, rnd() * Math.PI, 0, Math.PI * 2);
+      g.ellipse(x, y, r * 1.3, r, rk.rot, 0, Math.PI * 2);
       g.fill();
-      // Every third stone has the sea breaking on it.
-      if (k % 3 === 0) {
-        const a = 0.25 + 0.2 * Math.sin(this.time * 1.7 + k * 1.3);
-        g.strokeStyle = `rgba(226,234,238,${Math.max(0, a)})`;
-        g.lineWidth = Math.max(1, 1.6 * this.zoom);
-        g.beginPath();
-        g.arc(x, y, r * (1.6 + 0.4 * Math.sin(this.time * 1.7 + k)), 0, Math.PI * 2);
-        g.stroke();
-      }
+      g.fillStyle = 'rgba(255,255,255,0.08)';
+      g.beginPath();
+      g.ellipse(x - r * 0.3, y - r * 0.3, r * 0.6, r * 0.42, rk.rot, 0, Math.PI * 2);
+      g.fill();
     }
   }
 
