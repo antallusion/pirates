@@ -39,6 +39,9 @@
 /* The second row in the band (a window with few places of its own). */
 .w-head--chips .w-chips { flex: 1 1 auto; min-width: 0; padding: 2px 0; border: 0; }
 .w-head--chips .w-sub { flex: 0 1 auto; max-width: 30%; }
+/* …in two lines where one does not hold it (the chart's «Нанесено на карту: 2 острова · щелчок по морю ставит отметку ·
+   тащите — сдвиг, колесо — масштаб» showed its first 297 of 566 px at 1500×600, QA 2026-10-09). */
+.w-head--chips .w-sub { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; font-size: 12.5px; line-height: 1.25; }
 @media (max-height: 520px), (max-width: 699px) { .w-head--chips .w-sub { display: none; } }
 
 /* ---------- The frame under the band: the rail of big tabs, and the pane (the chips, the page) */
