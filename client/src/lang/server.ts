@@ -229,7 +229,9 @@ export function serverText(s: string): string {
   if (lang() !== 'ru' || !s) return s;
   // Dates the server writes in English ("04 Oct 2026 00:36 UTC") keep their numbers, lose their English.
   // Thousands the server writes with commas (1,020 silver) take the Russian space that does not break.
-  return typeset(feminineRu(s, translateLine(s))).replace(/(\d),(?=\d{3}(?!\d))/g, '$1\u00a0').replace(/\b(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4})\b/g, (_, d: string, m: string, y: string) => `${d} ${MONTHS_RU[m]} ${y}`);
+  // A name quoted in its own Russian («Фитиль и сало») inside a line that quotes it again keeps one pair of guillemets
+  // («нападение на ««Фитиль и сало»»», QA 2026-10-09).
+  return typeset(feminineRu(s, translateLine(s))).replace(/««([^«»]*)»»/g, '«$1»').replace(/(\d),(?=\d{3}(?!\d))/g, '$1\u00a0').replace(/\b(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4})\b/g, (_, d: string, m: string, y: string) => `${d} ${MONTHS_RU[m]} ${y}`);
 }
 
 /** For tests: how many patterns are known. */
