@@ -8,6 +8,7 @@ import { REGION_IDS } from '../world/regions.ts';
 import type { RegionId } from '../world/regions.ts';
 import type { ZoneBossClassId } from './ships.ts';
 import { levelPower } from './shiplevel.ts';
+import { ZONE_BOSS_UNITS, refLevel, xpUnit } from './xpcurve.ts';
 
 /** Every sea's boss rises once in this long (ms). */
 export const ZB_PERIOD = 12 * 3_600_000;
@@ -36,7 +37,8 @@ export interface ZoneBossDef {
   /** The hull a round of her broadsides takes off, all told — spread evenly over every ship under her guns that has
    *  fired on her (docs/21 §4: a crowd lives, one alone does not). Before the target's armour. */
   volley: number;
-  /** Experience and silver for her whole death, shared out by each captain's part of it. */
+  /** Experience and silver for her whole death, shared out by each captain's part of it (the experience quoted for the
+   *  even captain of her sea, ZONE_BOSS_UNITS of her level's ship; each paid at her own level, docs/26). */
   xp: number;
   silver: number;
 }
@@ -46,7 +48,7 @@ export interface ZoneBossDef {
 // quarter of an hour.
 const def = (region: RegionId, level: number, volley: number): ZoneBossDef => ({
   region, classId: `zb_${region}` as ZoneBossClassId, level, every: 8, volley,
-  xp: Math.round(9000 * levelPower(level)), silver: Math.round(5000 * levelPower(level)),
+  xp: ZONE_BOSS_UNITS * xpUnit(refLevel(level)), silver: Math.round(5000 * levelPower(level)),
 });
 
 export const ZONE_BOSSES: Record<RegionId, ZoneBossDef> = {
