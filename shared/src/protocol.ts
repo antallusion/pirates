@@ -1238,6 +1238,9 @@ export interface SelfRow {
   ammo: AmmoStock;
   flags: number;
   combat: boolean;
+  /** Another ship's fire on her within a few seconds (ShipEntity.underFire): the only fight her orders wait on — her own
+   *  shots and a beast's bites are none (owner, 2026-10-07). `combat` is her fight as before (20 s after any shot). */
+  underFire?: boolean;
   water: number; // 0..1 of flood capacity
   leaks: number;
   station: Station;

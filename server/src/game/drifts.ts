@@ -297,7 +297,7 @@ function busyWhy(game: Game, s: PlayerSession, d: Drift): string | null {
   if (ship.boarding || ship.grappled || ship.landing) return 'Not now';
   if (landFighting(game, s)) return 'Your party is ashore already.';
   if (d.taken !== undefined && d.taken !== s.accountId) return 'Another captain is at it already.';
-  if (ship.inCombat(game.now)) return 'Not while under fire';
+  if (ship.underFire(game.now)) return 'Not while under fire';
   if (dist(d.x, d.y, ship.state.x, ship.state.y) > DRIFT_REACH) return 'Come alongside: within the boats’ reach.';
   if (ship.state.speed > 2.5) return 'Heave to first — the boats cannot be lowered at speed';
   return null;

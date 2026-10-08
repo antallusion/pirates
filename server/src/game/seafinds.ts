@@ -172,7 +172,7 @@ export function stepSeaFinds(game: Game): void {
       if (!f || ship.docked) cancelFind(game, s);
       else if (ship.state.speed > FIND_SLOW[f.kind] + 1.5) cancelFind(game, s, 'The boats are called back: she made way.');
       else if (dist(f.x, f.y, ship.state.x, ship.state.y) > FIND_REACH[f.kind] + 80) cancelFind(game, s, 'The boats are called back: she drifted off.');
-      else if (ship.inCombat(game.now)) cancelFind(game, s, 'The boats are called back: under fire.');
+      else if (ship.underFire(game.now)) cancelFind(game, s, 'The boats are called back: under fire.');
       else if (game.now >= b.until) {
         S.busy.delete(s);
         resolveFind(game, s, f);
@@ -209,7 +209,7 @@ function whyNot(game: Game, s: PlayerSession, f: Find | undefined): string | nul
   if (!f || f.owner !== s.accountId) return 'It is gone.';
   if (ship.docked || !ship.alive || ship.ghost) return 'Out at sea, alongside it.';
   if (f.kind !== 'flyfish' && dist(f.x, f.y, ship.state.x, ship.state.y) > FIND_REACH[f.kind]) return 'Come within a cable of it first.';
-  if (ship.inCombat(game.now)) return 'Not under fire.';
+  if (ship.underFire(game.now)) return 'Not under fire.';
   if (ship.boarding || ship.grappled || ship.landing || landFighting(game, s)) return 'Not now';
   if (ship.state.speed > FIND_SLOW[f.kind]) return 'Shorten sail first: the boats cannot be lowered at speed.';
   return null;

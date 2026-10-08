@@ -24,7 +24,7 @@ export function craft(game: Game, s: PlayerSession, recipe: CraftRecipe, n: numb
   if (!ship.hasFlag('field_forge')) return 'You need the Field Forge talent';
   const r = RECIPES[recipe];
   if (!r || !Number.isInteger(n) || n < 1 || n > 50) return 'Bad order';
-  if (ship.inCombat(game.now)) return 'The forge is cold while the guns speak';
+  if (ship.underFire(game.now)) return 'The forge is cold while the guns speak';
   let batches = n;
   for (const g in r.needs) batches = Math.min(batches, Math.floor((ship.cargo[g as GoodId] ?? 0) / (r.needs[g as GoodId] ?? 1)));
   if (batches <= 0) return `Needs ${Object.entries(r.needs).map(([g, q]) => `${q} ${GOODS[g as GoodId].name.toLowerCase()}`).join(' and ')} per batch`;

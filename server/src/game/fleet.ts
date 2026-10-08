@@ -351,7 +351,7 @@ export function commandActive(game: Game, s: PlayerSession, id: string, x?: numb
       ship.recompute(now);
       return null;
     case 'cmd_sea_shanty': {
-      if (ship.inCombat(now)) return 'Not with shot flying';
+      if (ship.underFire(now)) return 'Not with shot flying';
       const r = ship.rank('cmd_sea_shanty');
       ship.sanity = Math.min(100, ship.sanity + 15);
       ship.morale = Math.min(100, ship.morale + 5 * r);

@@ -462,7 +462,7 @@ function alongside(game: Game, a: PlayerSession, b: PlayerSession): { ok: boolea
     return { ok: false, atSea: false, port: null, why: 'Trade across the quay in the same port, or come alongside at sea' };
   }
   if (dist(sa.state.x, sa.state.y, sb.state.x, sb.state.y) > BARTER_RANGE) return { ok: false, atSea: true, port: null, why: `Come within ${BARTER_RANGE} m to pass goods across` };
-  if (sa.inCombat(game.now) || sb.inCombat(game.now)) return { ok: false, atSea: true, port: null, why: 'Not in the middle of a fight' };
+  if (sa.underFire(game.now) || sb.underFire(game.now)) return { ok: false, atSea: true, port: null, why: 'Not in the middle of a fight' };
   return { ok: true, atSea: true, port: null };
 }
 

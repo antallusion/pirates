@@ -195,10 +195,11 @@ test('orders: Rally, Sea Shanty (not under fire), Cat-o\'-Nine-Tails, Concentrat
   ship.morale = 30;
   c.push({ t: 'talent_active', id: 'cmd_rally' });
   assert.equal(ship.morale, 50);
-  ship.lastCombat = game.now;
+  ship.lastHitAt = game.now; // under another ship's fire: the song waits for the shot to stop
   c.push({ t: 'talent_active', id: 'cmd_sea_shanty' });
   assert.ok(!p.talentCooldowns.cmd_sea_shanty, 'not under fire');
-  ship.lastCombat = -999;
+  assert.ok(s.whenClear, 'held, not refused');
+  ship.lastHitAt = -999;
   ship.sanity = 50;
   c.push({ t: 'talent_active', id: 'cmd_sea_shanty' });
   assert.equal(ship.sanity, 65);

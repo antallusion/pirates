@@ -2296,8 +2296,8 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   if (you.flags & SF.PROTECTED) info.push(esc(L('protected')));
   // Mending at sea (docs/16 #15): the carpenters' pace and what it takes, or what they lack.
   const repairing = !!(you.flags & SF.REPAIRING);
-  const rep = repairState(self, you, repairing);
-  facts.repair = rep ? { repairing, combat: !!you.combat, hurt: rep.hurt, short: rep.short } : repairing ? { repairing, combat: !!you.combat, hurt: true } : null;
+  const rep = repairState(self, { ...you, combat: !!you.underFire }, repairing);
+  facts.repair = rep ? { repairing, combat: !!you.underFire, hurt: rep.hurt, short: rep.short } : repairing ? { repairing, combat: !!you.underFire, hurt: true } : null;
   if (rep?.line) info.push(rep.line);
   if (you.combat && !repairing && you.hull < you.hullMax * 0.5 && !touch.enabled) info.push(esc(L('repairLull', { key: '\u0000' })).replace('\u0000', `<kbd>${esc(keyOfAction('repair'))}</kbd>`));
   return { acts: buildActs(facts), info };

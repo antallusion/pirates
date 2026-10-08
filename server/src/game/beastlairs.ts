@@ -354,7 +354,7 @@ function fightWhy(game: Game, s: PlayerSession, l: Lair, force = false): string 
   if (ship.boarding || ship.landing) return 'Not now';
   if (L(game).fights.has(s.accountId)) return 'Your party is ashore already.';
   if (!lairUp(game, l)) return 'They are gone';
-  if (ship.inCombat(game.now) && !force) return 'Not while under fire';
+  if (ship.underFire(game.now) && !force) return 'Not while under fire';
   if (!inReach(game, s, l)) return 'Come in to the shore: within the boats’ reach.';
   if (ship.state.speed > 2.5) return 'Heave to first — the boats cannot be lowered at speed';
   if (ship.crew < 3) return 'Too few hands to spare a landing party';
@@ -999,7 +999,7 @@ export function lairDwellView(game: Game, s: PlayerSession): DwellView | null {
 function busyWhy(game: Game, s: PlayerSession): string | null {
   const ship = s.ship!;
   if (ship.boarding || ship.grappled) return 'Not in the middle of a boarding';
-  if (ship.inCombat(game.now)) return 'Not while under fire';
+  if (ship.underFire(game.now)) return 'Not while under fire';
   if (L(game).fights.has(s.accountId)) return 'Your party is ashore already.';
   return null;
 }

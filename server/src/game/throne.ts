@@ -261,7 +261,7 @@ export function trialWhy(game: Game, s: PlayerSession, skill: string, force = fa
   if (!force && next > game.now) return `The legend will fight you again in ${Math.ceil((next - game.now) / 60)} min`;
   if (ship.docked) return 'Put to sea first';
   if (ship.boarding || ship.grappled) return 'Not in the middle of a boarding';
-  if (!force && ship.inCombat(game.now)) return 'Not while under fire';
+  if (!force && ship.underFire(game.now)) return 'Not while under fire';
   if (p.company.mutiny) return 'The crew holds the ship';
   if (fightingNow.has(s.accountId)) return 'A trial is under way';
   return null;

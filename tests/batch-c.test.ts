@@ -362,7 +362,9 @@ test('the reliability prices the whisper; a false one is found out on the spot; 
 
 // ------------------------------------------------------------------ 15. repairs at sea
 
-test('carpenters at sea mend a few hundredths a minute from planks and sailcloth, none under fire; the yard does it at once', () => {
+test('carpenters at sea mend a third of the hull in half a minute from planks and sailcloth, waiting out the shot; the yard does it at once', () => {
+  // (docs/16 #15 had six hundredths a minute — a point of a sloop's hull a second, unseen: owner, 2026-10-07, «нажимая на
+  // ремонт ничего не происходит вообще абсолютно».)
   const { game } = makeGame();
   const { c, s } = captain(game, 'Carpenter');
   const ship = s.ship!;
@@ -373,21 +375,32 @@ test('carpenters at sea mend a few hundredths a minute from planks and sailcloth
   ship.cargo.planks = 100;
   ship.cargo.sailcloth = 50;
   const v = seaRepairView(ship);
-  assert.ok(v.hullPerMin >= 3 && v.hullPerMin <= 12, `a few percent a minute (${v.hullPerMin})`);
-  assert.ok(v.minutes >= 4, `half the hull takes minutes (${v.minutes})`);
+  assert.ok(v.hullPerMin >= 40 && v.hullPerMin <= 120, `most of the hull a minute (${v.hullPerMin}%)`);
+  assert.ok(v.minutes >= 1 && v.minutes <= 2, `half the hull in a minute or so (${v.minutes})`);
   assert.ok(v.planks > 0 && v.planks <= 100);
   c.push({ t: 'repair', on: true });
+  assert.equal(ship.repairing, true);
   const h0 = ship.hull, planks0 = ship.cargo.planks;
-  steps(game, 20 * 60); // a minute
+  steps(game, 20 * 30); // half a minute
   const gained = (ship.hull - h0) / ship.stats.hullMax;
-  assert.ok(gained > SEA_HULL_PER_MIN * 0.5 && gained < SEA_HULL_PER_MIN * 2, `about ${SEA_HULL_PER_MIN * 100}% a minute (${(gained * 100).toFixed(1)}%)`);
+  assert.ok(gained > SEA_HULL_PER_MIN * 0.5 * 0.5 && gained < SEA_HULL_PER_MIN * 0.5 * 2, `about ${SEA_HULL_PER_MIN * 50}% in half a minute (${(gained * 100).toFixed(1)}%)`);
+  assert.ok(gained >= 0.2, 'the bar is seen filling');
   assert.ok((ship.cargo.planks ?? 0) < planks0, 'planks used');
-  // Under fire they down tools.
+  // Under fire (another ship's shot striking her) they wait, and the order stands; her own guns are no fire.
+  ship.hull = ship.stats.hullMax * 0.5;
   ship.lastCombat = game.now;
   steps(game, 25);
-  assert.equal(ship.repairing, false);
+  assert.ok(ship.hull > ship.stats.hullMax * 0.5, 'her own fight is no fire: they work on');
+  ship.hull = ship.stats.hullMax * 0.5;
+  for (let i = 0; i < 20 * 4; i++) {
+    ship.lastHitAt = game.now;
+    game.step();
+  }
+  assert.equal(ship.repairing, true, 'the order stands');
+  assert.ok(ship.hull <= ship.stats.hullMax * 0.5 + 1, 'not under fire');
+  steps(game, 20 * 20); // six seconds of the shot's echo, then their work again
+  assert.ok(ship.hull > ship.stats.hullMax * 0.55, 'back to it when the shot stops');
   // In port the yard does all of it at once for silver.
-  ship.lastCombat = -1e9;
   dock(game, s, game.portById(p.lastPort ?? game.world.ports[0].id) ?? game.world.ports[0]);
   const cost = repairCost(ship);
   assert.ok(cost > 0);

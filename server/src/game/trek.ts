@@ -336,10 +336,10 @@ export function stepTreks(game: Game): void {
     }
     const is = game.world.islands[t.islandId];
     const away = dist(s.ship.state.x, s.ship.state.y, is.x, is.y) - is.radius > TREK_LEASH;
-    if (game.now > t.until || away || s.ship.inCombat(game.now) || s.ship.docked) {
+    if (game.now > t.until || away || s.ship.underFire(game.now) || s.ship.docked) {
       if (t.game !== null) continue; // the game has its own clock
       finish(game, s, t, false);
-      if (away || s.ship.inCombat(game.now)) game.toastShip(s.ship, 'The landing party hurries back to the boats.', 'info');
+      if (away || s.ship.underFire(game.now)) game.toastShip(s.ship, 'The landing party hurries back to the boats.', 'info');
       send(game, s, t);
     }
   }

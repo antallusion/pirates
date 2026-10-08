@@ -162,12 +162,12 @@ test('a kind for doubloons joins the army as a tamer\'s do — or is refused wit
     assert.match(conn.last('toast')!.msg, /No hammocks aboard for 6 more/);
     // Under fire.
     ship.setArmy([{ u: 'deckhand', n: 20 }]);
-    ship.lastCombat = game.now;
+    ship.lastHitAt = game.now; // under another ship's fire (her own fight is no fire: owner, 2026-10-07)
     assert.equal(why(), 'fight');
     buy();
     assert.equal(has(), 0);
     assert.equal(db.doubloons(s.accountId), 1000, 'every refusal cost nothing');
-    ship.lastCombat = -999;
+    ship.lastHitAt = -999;
     buy();
     assert.equal(has(), 6, 'the whole stack aboard');
     assert.equal(db.doubloons(s.accountId), 750);

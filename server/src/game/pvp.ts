@@ -354,7 +354,7 @@ function duelReady(game: Game, list: PlayerSession[]): string | null {
     const sh = x.ship;
     if (!sh || !sh.alive || sh.docked) return `${x.name} must be at sea`;
     if (game.pvp.duelOf.has(x.accountId)) return `${x.name} is already fighting a duel`;
-    if (sh.inCombat(game.now)) return `${x.name} is in a fight`;
+    if (sh.underFire(game.now)) return `${x.name} is in a fight`;
     if (sh.boarding) return `${x.name} is locked in a boarding action`;
   }
   return null;

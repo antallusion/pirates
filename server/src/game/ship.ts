@@ -108,6 +108,9 @@ export interface BoardDuel {
 
 export type NpcRole = 'merchant' | 'patrol' | 'pirate' | 'hunter' | 'fisher' | 'ghost' | 'escort' | 'boss' | 'beast';
 
+/** A ship is under fire this many seconds after another ship's fire last struck her. */
+export const UNDER_FIRE_SEC = 6;
+
 export class ShipEntity {
   readonly id: number;
   name: string;
@@ -156,6 +159,9 @@ export class ShipEntity {
   surrendered = false;
   boarding: BoardingState | null = null;
   lastCombat = -999;
+  /** The last time another ship's fire (not a beast's, not her own, not the sea's) struck her (owner, 2026-10-07: «я
+   *  должен со всем взаимодействовать, ошибок типа "не под огнём" быть не должно абсолютно»). */
+  lastHitAt = -999;
   attackers = new Map<number, number>(); // entity id -> last hit time
   repairing = false;
   landing: Landing | null = null;
@@ -455,6 +461,13 @@ export class ShipEntity {
 
   inCombat(now: number): boolean {
     return now - this.lastCombat < 20;
+  }
+
+  /** Under fire: struck by another ship's fire within UNDER_FIRE_SEC — never by her own shots, nor a beast she has marked
+   *  or that bites her, nor a storm (the captain's every order to the land, the lairs, the marks and the harbour waits
+   *  on this, and on nothing else of the fight). */
+  underFire(now: number): boolean {
+    return now - this.lastHitAt < UNDER_FIRE_SEC;
   }
 
   flagsFor(viewerId: number | null, hostile: boolean, now: number): number {

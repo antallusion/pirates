@@ -779,6 +779,8 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     if (source !== target && !inDuel(game, source)) markPvp(game, source, target);
   }
   target.lastCombat = now;
+  // Under fire (owner, 2026-10-07): another ship's blow that lands — not her own, not a beast's, not the sea's.
+  if (source && source !== target && source.npcRole !== 'beast' && ((d.hull ?? 0) > 0 || (d.crew ?? 0) > 0 || (d.sails ?? 0) > 0)) target.lastHitAt = now;
   target.protectedUntil = 0;
   // The ladder of strength (canon D12): the gap of levels cuts or swells the blow; a junior cannot bring a senior
   // below her floor of hull and crew.
