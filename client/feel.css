@@ -23,6 +23,16 @@ body.reduce-motion #tut-finger .tf-hand, body.reduce-motion .tut-target { animat
 #hud-watch .w-body { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #hud-watch .w-t { font-style: normal; }
 #hud-watch .w-short { display: none; }
+/* A desk's lesson in two rows: the count and the step's name, then its line beside the two short skips (three rows took
+   95 px of the top band and pushed the toasts under it 25 px into the middle of a 1500×600 sea, QA 2026-10-09). */
+@media (min-height: 521px) {
+  #hud-watch:not(.hidden) { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; }
+  #hud-watch .w-head { flex: 1 1 100%; }
+  #hud-watch .w-body { flex: 1 1 0; min-width: 0; }
+  #hud-watch .w-act { flex: none; margin-top: 0; }
+  #hud-watch .w-long { display: none; }
+  #hud-watch .w-short { display: inline; }
+}
 @media (max-height: 520px) {
   #hud-watch:not(.hidden) { flex-wrap: nowrap; justify-self: start; align-self: flex-start; padding: 3px 4px 3px 8px; }
   /* (the stack's children are all stretched to its width with !important, styles.css #hud #hud-stack > *) */

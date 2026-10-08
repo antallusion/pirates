@@ -152,3 +152,13 @@ test('a tap on «Отчалить гостем» before the game\'s script is in
   assert.ok(at > 0 && replay > at, 'answered once the handler is in');
   assert.ok(main.includes("($('login-form') as HTMLFormElement).requestSubmit();"));
 });
+
+test('the First Watch on a desk: two rows (the step, then its line beside the short skips)', () => {
+  const css = read('client/feel.css').replace(/\r\n/g, '\n');
+  const at = css.indexOf("/* A desk's lesson in two rows");
+  assert.ok(at > 0);
+  const block = css.slice(at, css.indexOf('\n}\n', at));
+  assert.match(block, /@media \(min-height: 521px\) \{/);
+  assert.match(block, /#hud-watch \.w-head \{ flex: 1 1 100%; \}/);
+  assert.match(block, /#hud-watch \.w-short \{ display: inline; \}/);
+});
