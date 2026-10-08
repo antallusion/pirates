@@ -162,3 +162,10 @@ test('the First Watch on a desk: two rows (the step, then its line beside the sh
   assert.match(block, /#hud-watch \.w-head \{ flex: 1 1 100%; \}/);
   assert.match(block, /#hud-watch \.w-short \{ display: inline; \}/);
 });
+
+test('the ship window on a phone: its two buttons in a row under the name, no keyboard hint, the gift line whole', () => {
+  const css = read('client/styles.css');
+  assert.ok(css.includes('.ship-head > .ship-head-r { grid-column: 2; flex-direction: row;'));
+  assert.ok(css.includes('.ship-head-r > .muted { display: none; }'));
+  assert.ok(css.includes('.ship-head .sub.ship-passive { white-space: normal; text-overflow: clip; }'));
+});

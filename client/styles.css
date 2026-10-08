@@ -755,6 +755,11 @@ body.touch { --touch-h: calc(var(--stick) + 20px); }
 @media (max-width: 699px), (max-height: 520px) {
   .ship-head { grid-template-columns: 52px minmax(0, 1fr); }
   .ship-head > .muted { display: none; }
+  /* «Снаряжение» and «Облик» in a row under the name, not a column under the 52 px picture that pushed the figures
+     down to y 225 of 375; the key's «[I] закрыть» is a keyboard's (QA 2026-10-09). */
+  .ship-head > .ship-head-r { grid-column: 2; flex-direction: row; align-items: center; justify-content: flex-start; flex-wrap: wrap; margin-left: 0; }
+  .ship-head-r > .muted { display: none; }
+  .ship-head .sub.ship-passive { white-space: normal; text-overflow: clip; } /* (640×360 cut «…у кораблей кр» 28 px short) */
   .ship-hero { width: 52px; height: 52px; }
   .ship-hero img { height: 48px; }
   .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
