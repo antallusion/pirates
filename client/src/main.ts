@@ -682,7 +682,9 @@ function filmMoments(): void {
   // boss's first rising by the server). Nothing at a window or a tab, nothing at a battle's start, so none ever holds
   // the battle's clock. Each plays once (ui/cutscene.ts) and any tap skips it.
   if (heldToasts.length && !state.boardTac) for (const x of heldToasts.splice(0)) hud.toast(x.msg, x.kind);
-  const tac = state.boardTac;
+  // The fight's end as the field shows it, its last blows played (owner, 2026-10-08: the battle plays at a pace to be
+  // read — the film waits for the end to be seen, and the end waits under it).
+  const tac = tactical.endShown();
   // The end of a fight, won or lost; a great one ashore brought down has its own (the fourteenth reel), the first time.
   if (tac?.over && !filmWas.over) {
     const won = tac.over.winner === tac.you;

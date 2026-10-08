@@ -198,8 +198,12 @@ export const EN = {
   // A blow into a stack's side or from behind (owner, 2026-10-08).
   'fl.side': 'flank +15%',
   'fl.rear': 'from behind +30%',
+  // …and on a phone's field, which carries no words: the blow's multiple.
+  'fl.sideX': '×1.15',
+  'fl.rearX': '×1.3',
   // The beaten who came over (owner, 2026-10-08).
   'res.joined': 'Joined you: {n}',
+  'res.joinedShort': 'Joined: {n}',
   'res.men1': 'hand',
   'res.men2': 'hands',
   'res.men5': 'hands',
@@ -390,7 +394,10 @@ export const RU: Record<keyof typeof EN, string> = {
   'pv.luck': 'удача {n}%: вдвое',
   'fl.side': 'с фланга +15%',
   'fl.rear': 'с тыла +30%',
+  'fl.sideX': '×1,15',
+  'fl.rearX': '×1,3',
   'res.joined': 'К вам примкнули: {n}',
+  'res.joinedShort': 'Примкнули: {n}',
   'res.men1': 'матрос',
   'res.men2': 'матроса',
   'res.men5': 'матросов',

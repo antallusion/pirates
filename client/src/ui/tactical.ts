@@ -7,7 +7,7 @@
 import { findTitle } from '../render/seafinds.ts'; // docs/19 D5: the chest among the sharks
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { OFFICER_DEFS } from '../../../shared/src/data/crew.ts';
-import { TAC_BLOCKING, TAC_END_WINDOW, TAC_H, TAC_PLAY_WINDOW, TAC_SPELLS, TAC_W, hexDist, hexIndex, hexNeighbors, hexX, hexY, tacSchedule } from '../../../shared/src/data/tactical.ts';
+import { TAC_BLOCKING, TAC_END_WINDOW, TAC_H, TAC_PLAY_WINDOW, TAC_SPELLS, TAC_TURN, TAC_W, hexDist, hexIndex, hexNeighbors, hexX, hexY, tacSchedule } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import type { ClientMsg, TacAction, TacEvent, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
 import { assetUrl, sprite } from '../assets.ts';
@@ -445,6 +445,10 @@ export class TacticalPanel {
   /** The foe under the mouse or the finger and the hex she would strike it from (owner, 2026-10-08: «при наведении…
    *  сколько я убью и какой урон нанесу»), the preview over it. */
   private aimFoe: { t: number; from?: number } | null = null;
+  /** When each event's beat begins on this screen (the feed tells a blow as it is played, not before). */
+  private eventAt = new Map<number, number>();
+  /** The battle's end stays on the field till its last blows are played and a moment more, though the sea closes it. */
+  private endUntil = 0;
   private ptr: { x: number; y: number } | null = null;
   private tipKey = '';
 
@@ -479,6 +483,12 @@ export class TacticalPanel {
     return this.view !== null;
   }
 
+  /** The battle's end shown on the field with its last blows played (main.ts plays the victory's or the defeat's film
+   *  then, not over the blows still being played): the view, else null. */
+  endShown(): TacView | null {
+    return this.view?.over && !this.busy() ? this.view : null;
+  }
+
   render(v: TacView | null): void {
     const root = $('board-tac');
     // A view with more of the battle in it waits while the last is still being played (owner, 2026-10-08: every turn
@@ -487,6 +497,17 @@ export class TacticalPanel {
       this.tick();
       this.draw();
       return;
+    }
+    // The battle's end closed by the sea while it is still being played (or just shown, or under the victory's film):
+    // it stays till then and a moment more, so the reckoning is seen.
+    if (!v && this.view?.over && this.el && !this.endHidden) {
+      const film = !!document.querySelector('.film');
+      if (film) this.endUntil = Math.max(this.endUntil, performance.now() + 2200);
+      if (film || performance.now() < Math.max(this.busyUntil, this.endUntil)) {
+        this.tick();
+        this.draw();
+        return;
+      }
     }
     const was = this.view;
     this.view = v;
@@ -517,7 +538,8 @@ export class TacticalPanel {
         this.act.clear();
         this.counts.clear();
         this.fallen.clear();
-        this.busyUntil = 0;
+        this.eventAt.clear();
+        this.busyUntil = this.endUntil = 0;
         this.aimFoe = this.ptr = null;
         this.tipKey = '';
         this.floats = [];
@@ -634,6 +656,7 @@ export class TacticalPanel {
       }
       if (e.k === 'die' && e.s !== undefined) died.set(e.s, ms(b.impact));
       if (e.k === 'spell' || e.k === 'innate' || e.k === 'ult' || e.k === 'boss') lastSpell = ms(b.impact);
+      this.eventAt.set(e.i, ms(e.k === 'hit' || e.k === 'shot' || e.k === 'ret' ? b.impact : b.at));
       if (was) this.mark(e, v, was, ms(b.at), ms(b.impact));
     });
     // The counts shown till the play is over: as it stood, then after each blow as it lands; a move of the captains'
@@ -659,6 +682,8 @@ export class TacticalPanel {
       else if (p.hex !== s.hex) this.pos.set(s.id, { hex: s.hex, path: [p.hex, s.hex], t0: t, dur: calm ? 0 : glideMs(hexDist(p.hex, s.hex), this.speed(v)), fly: !calm });
     }
     this.busyUntil = Math.max(this.busyUntil, end);
+    if (v.over && !was?.over) this.endUntil = this.busyUntil + 3500;
+    if (this.eventAt.size > 80) for (const k of [...this.eventAt.keys()].slice(0, this.eventAt.size - 60)) this.eventAt.delete(k);
     if (!was) {
       this.heroFx = [0, 1].map((side) => ({ side, t0: performance.now() + 400 + side * 250, dur: 1900 }));
       this.endHidden = false;
@@ -747,7 +772,7 @@ export class TacticalPanel {
         const y0 = c.y - w * 0.15;
         if (e.kills) this.addFloat({ text: `†${e.kills}`, x: c.x, y: y0, t0: hit, color: '#ff8a6a', size: 1.15 });
         this.addFloat({ text: `−${e.dmg}`, x: c.x, y: y0, t0: hit, color: '#f3d7a0', size: 1.25 });
-        if (e.fl) this.addFloat({ text: this.phone ? `+${e.fl === 2 ? 30 : 15}%` : L(e.fl === 2 ? 'fl.rear' : 'fl.side'), x: c.x, y: y0, t0: hit, color: '#ffb54a', size: 0.95 });
+        if (e.fl) this.addFloat({ text: this.phone ? L(e.fl === 2 ? 'fl.rearX' : 'fl.sideX') : L(e.fl === 2 ? 'fl.rear' : 'fl.side'), x: c.x, y: y0, t0: hit, color: '#ffb54a', size: 0.95 });
       }
       if (e.k === 'shot' && e.id === 'blast') {
         if (c) this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: hit, size: w * 1.4 });
@@ -1091,9 +1116,8 @@ export class TacticalPanel {
     // The order of the round, then the next round's first few.
     el.querySelector('.tb-queue')!.innerHTML = this.queue(v);
     el.querySelectorAll<HTMLElement>('.tb-q').forEach((b) => (b.onclick = () => this.showInfo(Number(b.dataset.info))));
-    // The feed: the last three things, in words.
-    const words = v.log.filter((e) => e.k !== 'move').slice(-3).map((e) => this.words(e, v)).filter(Boolean);
-    el.querySelector('.tb-lines')!.innerHTML = words.map((w, i) => `<div class="${i === words.length - 1 ? 'new' : ''}">${esc(w)}</div>`).join('');
+    // The feed: the last three things, in words — each as it is played on the field (owner, 2026-10-08).
+    this.feedDom(v);
     // The captain's orders.
     const me = v.heroes[v.you];
     // The book's pages (docs/17 H2): each order's will beside it; the will left on the book's spine.
@@ -1259,7 +1283,7 @@ export class TacticalPanel {
       // The beaten who came over (owner, 2026-10-08): «К вам примкнули: 6 матросов», and their faces.
       const came = r?.joined?.reduce((a, x) => a + x.n, 0) ?? 0;
       const joined = came > 0
-        ? `<div class="tb-er tb-joined"><small>${esc(L('res.joined', { n: `${came} ${plural(came, L('res.men1'), L('res.men2'), L('res.men5'))}` }))}</small><div class="tb-rs-row">${r!.joined!.map((x) => `<span class="tb-rs" title="${esc(unitName(x.u))}">${unitIcon(x.u, 'tb-rs-ico')}<i class="up">+${x.n}</i></span>`).join('')}</div></div>`
+        ? `<div class="tb-er tb-joined"><small><span class="tb-jl">${esc(L('res.joined', { n: `${came} ${plural(came, L('res.men1'), L('res.men2'), L('res.men5'))}` }))}</span><span class="tb-js">${esc(L('res.joinedShort', { n: came }))}</span></small><div class="tb-rs-row">${r!.joined!.map((x) => `<span class="tb-rs" title="${esc(unitName(x.u))}">${unitIcon(x.u, 'tb-rs-ico')}<i class="up">+${x.n}</i></span>`).join('')}</div></div>`
         : '';
       const rows = r
         ? `<div class="tb-end-rows"><div class="tb-er"><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div class="tb-er"><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${joined}<div class="tb-er"><small>${esc(L('res.loot'))}</small><div class="tb-lchips">${spoils.length ? spoils.join('') : none}</div></div></div>`
@@ -1283,6 +1307,20 @@ export class TacticalPanel {
     }
     this.hint(v);
     if (this.info !== null) this.showInfo(this.info);
+  }
+
+  /** The feed's last three things that have been played on the field by now (tick keeps it up with the play). */
+  private feedKey = '';
+  private feedDom(v: TacView): void {
+    const lines = this.el?.querySelector('.tb-lines');
+    if (!lines) return;
+    const now = performance.now();
+    const played = v.log.filter((e) => e.k !== 'move' && (this.eventAt.get(e.i) ?? 0) <= now).slice(-3);
+    const key = `${played.map((e) => e.i).join(',')}${lang()}`;
+    if (key === this.feedKey) return;
+    this.feedKey = key;
+    const words = played.map((e) => this.words(e, v)).filter(Boolean);
+    lines.innerHTML = words.map((w, i) => `<div class="${i === words.length - 1 ? 'new' : ''}">${esc(w)}</div>`).join('');
   }
 
   private words(e: TacEvent, v: TacView): string {
@@ -1816,7 +1854,7 @@ export class TacticalPanel {
       p.fl ? `<div class="tb-pv-fl">${esc(L(p.fl === 2 ? 'fl.rear' : 'fl.side'))}</div>` : '',
       p.far ? `<div class="tb-pv-n">${esc(L('pv.far'))}</div>` : '',
       p.sweep ? `<div class="tb-pv-n">${esc(L('pv.sweep'))}</div>` : '',
-      p.shot || p.sweep ? '' : p.ret ? `<div class="tb-pv-ret"><span>${esc(L('pv.ret'))}:</span><b>−${r(p.ret)}</b></div>` : `<div class="tb-pv-ret none">${esc(L('pv.noRet'))}</div>`,
+      p.shot || p.sweep ? '' : p.ret ? `<div class="tb-pv-ret"><span>${esc(L('pv.ret'))}:</span><b>${p.ret[0] > 0 ? '−' : ''}${r(p.ret)}</b></div>` : `<div class="tb-pv-ret none">${esc(L('pv.noRet'))}</div>`,
       p.luck && !this.phone ? `<div class="tb-pv-n">${esc(L('pv.luck', { n: p.luck }))}</div>` : '',
     ];
     return rows.join('');
@@ -1851,9 +1889,13 @@ export class TacticalPanel {
       y = c.y - w * 1.45 - bh;
       if (y < 4) y = c.y + w * 0.75;
     } else {
-      x = c.x + w * 0.62;
+      // Beside the foe, on the side away from the hex she strikes it from (the blade's line stays in sight).
+      const from = p.from !== undefined ? this.center(p.from) : null;
+      const left = from ? from.x > c.x + 1 : false;
+      x = left ? c.x - w * 0.62 - bw : c.x + w * 0.62;
       y = c.y - w * 0.75 - bh / 2;
       if (x + bw > cw - 4) x = c.x - w * 0.62 - bw;
+      if (x < 4) x = c.x + w * 0.62;
     }
     x = Math.round(Math.max(4, Math.min(cw - bw - 4, x)));
     y = Math.round(Math.max(4, Math.min(ch - bh - 4, y)));
@@ -2662,7 +2704,8 @@ export class TacticalPanel {
     const v = this.view;
     const el = this.el;
     if (!v || !el) return;
-    const left = Math.max(0, v.ends - this.now());
+    // Her clock starts once what came before her turn is played (the server's `ends` counts it in): it shows 30 s till then.
+    const left = Math.min(TAC_TURN, Math.max(0, v.ends - this.now()));
     const bar = el.querySelector<HTMLElement>('.tb-timer > i');
     if (bar) bar.style.width = `${v.over ? 0 : Math.min(1, left / 30) * 100}%`;
     const secs = el.querySelector<HTMLElement>('.tb-secs');
@@ -2673,6 +2716,7 @@ export class TacticalPanel {
       const k = (v.over ? 0 : Math.min(1, left / 30)).toFixed(3);
       if (face.style.getPropertyValue('--tl') !== k) face.style.setProperty('--tl', k);
     }
+    this.feedDom(v);
     if ((this.strikeArmed && this.strikeArmed < performance.now()) || (this.ransomArmed && this.ransomArmed < performance.now())) {
       this.strikeArmed = 0;
       this.ransomArmed = 0;
@@ -2769,6 +2813,40 @@ export class TacticalPanel {
         }
         if (melee && !shoot && !this.targeting && s.ret) this.retMark(g, p.x + w * 0.36, p.y - r * 0.62, Math.max(5, w * 0.16), pulse);
       }
+    }
+    // A walk being played (owner, 2026-10-08: who moved, seen): its way ahead traced in the walker's colour, hex by hex,
+    // to the hex it is bound for.
+    for (const [id, p] of this.pos) {
+      if (p.dur <= 0 || t >= p.t0 + p.dur || p.path.length < 2) continue;
+      const s = v.stacks.find((x) => x.id === id) ?? this.fallen.get(id)?.s;
+      if (!s) continue;
+      const k = Math.max(0, Math.min(1, (t - p.t0) / p.dur));
+      const pts = p.path.map((h) => this.lc(h));
+      const from = Math.min(pts.length - 1, Math.floor(stepEase(k, p.fly ? 1 : p.path.length - 1) * (pts.length - 1)));
+      const rgb = s.side === v.you ? '127,176,208' : '210,71,58';
+      g.save();
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+      g.strokeStyle = `rgba(${rgb},0.55)`;
+      g.lineWidth = Math.max(2, w * 0.05);
+      g.setLineDash([w * 0.12, w * 0.1]);
+      g.beginPath();
+      g.moveTo(pts[from].x, pts[from].y);
+      for (const q of pts.slice(from + 1)) g.lineTo(q.x, q.y);
+      g.stroke();
+      g.setLineDash([]);
+      g.fillStyle = `rgba(${rgb},0.6)`;
+      for (const q of pts.slice(from + 1, -1)) {
+        g.beginPath();
+        g.arc(q.x, q.y, Math.max(2, w * 0.07), 0, Math.PI * 2);
+        g.fill();
+      }
+      const z = pts[pts.length - 1];
+      this.hexPath(g, z.x, z.y, r - 2);
+      g.strokeStyle = `rgba(${rgb},0.85)`;
+      g.lineWidth = 2;
+      g.stroke();
+      g.restore();
     }
     // The walk it would take, hex by hex (a flier's glide, an arc over the field), on the deck under the figures.
     {

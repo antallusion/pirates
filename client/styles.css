@@ -4362,6 +4362,12 @@ body.tac-ph .tb-pl .tb-rb { width: 52px; height: 52px; }
 .tb-rs i.up { background: #10260f; color: #c4e6a6; border-color: #3f6a35; }
 .tb-er.tb-joined > small { color: var(--gold); }
 .tb-end.sea .tb-er.tb-joined > small { display: inline; padding-top: 0; align-self: center; white-space: nowrap; }
+.tb-er.tb-joined .tb-js { display: none; }
+/* the short band (a phone on its side): the short words alone, so the band keeps its button */
+@media (max-height: 520px) {
+  .tb-end.sea .tb-er.tb-joined .tb-rs-row, .tb-end.sea .tb-er.tb-joined .tb-jl { display: none; }
+  .tb-end.sea .tb-er.tb-joined .tb-js { display: inline; }
+}
 /* The preview under the sword (owner, 2026-10-08): what her blow or shot would do, beside the foe (over it on a phone,
    clear of the finger). Laid by tactical.ts tipDom; never takes a pointer. */
 .tb-pv { position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none; min-width: 112px; max-width: 210px; box-sizing: border-box; padding: 6px 10px 7px;
