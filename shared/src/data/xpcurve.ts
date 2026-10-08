@@ -3,12 +3,12 @@
 // квестов выполнить»).
 //
 // One unit: what a ship of her own level sunk teaches a captain (xpUnit, shared/src/constants.ts). A level asks
-// killsPerLevel of them — 5 at the first, ~29 at the tenth, ~69 at the thirtieth, 200 and more past the fiftieth. Every
+// killsPerLevel of them — 6 at the first, ~30 at the tenth, ~79 at the thirtieth, 300 and more past the fiftieth. Every
 // source pays a number of units at the captain's own level, so a source keeps its worth in time at every level:
 //
 //  - a ship sunk 1, taken by boarding 2; the boarding battle's own lesson is a small bonus on top (≤ 0.2), never a second
 //    prize (no double count);
-//  - a quest of her level 6 (by its size), the main steady source of a captain who plays as the game asks;
+//  - a quest of her level 5 (by its size), the main steady source of a captain who plays as the game asks;
 //  - the creatures, the guards, the finds, the trade — each its share, held by tests/xpcurve.test.ts and the sim
 //    tests/balance/xp.ts (node tools/balance-xp.ts).
 //
