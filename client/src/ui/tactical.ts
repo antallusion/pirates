@@ -1135,7 +1135,9 @@ export class TacticalPanel {
       const cost = sp.scroll ? ` <em class="tb-cost scroll">${esc(L('scroll', { n: sp.scroll }))}</em>` : sp.cost !== undefined ? ` <em class="tb-cost${sp.res === 'stam' ? ' stam' : ''}">${sp.cost}</em>` : '';
       return `<button class="btn tb-spell${this.targeting === sp.id ? ' on' : ''}${poor ? ' poor' : ''}${sp.scroll ? ' scroll' : ''}" data-spell="${sp.id}" ${off ? 'disabled' : ''} title="${esc(spText(sp.id))}">${spIcon(sp.id)}<span><b>${esc(spName(sp.id))}${cost}</b><small>${wait > 0 ? esc(L('ready.in', { n: wait })) : poor ? esc(L(sp.res === 'stam' ? 'noStam' : 'noWill')) : esc(spText(sp.id))}</small></span></button>`;
     };
-    // docs/18: her path's innate move and ultimate, each once a battle and free, beside the round's order.
+    // docs/18: her path's innate move and ultimate, each once a battle and free, beside the round's order. The move's own
+    // name on the plate, «Сила пути» / «Высший приём» in the small line under it (a desk's 236 px column cut
+    // «Сила пути: Последний залп» to «…Последни…», 29 and 74 px short, QA 2026-10-09).
     const move = (kind: 'innate' | 'ult') => {
       const st = kind === 'innate' ? me.innate : me.ult;
       if (!me.path || !st) return '';
@@ -1143,7 +1145,7 @@ export class TacticalPanel {
       const early = kind === 'ult' && v.round < ULT_ROUND;
       const off = !v.mine || st !== 'ready' || early;
       const note = st === 'locked' ? L('ultLocked') : st === 'used' ? L('used') : early ? L('ultRound') : L('free');
-      return `<button class="btn tb-spell tb-move ${kind}${this.targeting === kind ? ' on' : ''}${st !== 'ready' ? ' spent' : ''}" data-move="${kind}" ${off ? 'disabled' : ''} title="${esc(moveText(me.path, kind === 'ult'))}">${icon(`icon.${mv.icon}`, '', 'ico')}<span><b>${esc(L(kind))}: ${esc(moveName(me.path, kind === 'ult'))}</b><small>${esc(note)}</small></span></button>`;
+      return `<button class="btn tb-spell tb-move ${kind}${this.targeting === kind ? ' on' : ''}${st !== 'ready' ? ' spent' : ''}" data-move="${kind}" ${off ? 'disabled' : ''} title="${esc(moveText(me.path, kind === 'ult'))}">${icon(`icon.${mv.icon}`, '', 'ico')}<span><b>${esc(moveName(me.path, kind === 'ult'))}</b><small>${esc(L(kind))} · ${esc(note)}</small></span></button>`;
     };
     // Four pages on the panel (keys 1–4); the rest in the book, opened over the field as in HoMM3. A phone has no panel:
     // every page is in the book, opened by its round button.
