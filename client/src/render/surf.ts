@@ -160,7 +160,9 @@ const TEXEL = 0.22;
 const TILE = 256;
 let foamTile: HTMLCanvasElement | null | undefined;
 
-/** A tile of foam: tileable value noise in four octaves, cut into blotches and lace, white on clear. */
+/** A tile of foam: tileable value noise in four octaves, cut into blotches and lace, white on clear. The lattice is
+ *  bent by a slow field of its own before it is read (owner's QA list, 2026-10-08: unbent, the blotches came out
+ *  square to the lattice — the white water read as blocks lined up with the screen). */
 function makeFoamTile(): HTMLCanvasElement | null {
   if (typeof document === 'undefined') return null;
   const cv = document.createElement('canvas');
@@ -180,27 +182,31 @@ function makeFoamTile(): HTMLCanvasElement | null {
     }
     return t;
   };
+  const wrapI = (i: number, p: number) => ((i % p) + p) % p;
   const noise = (x: number, y: number, p: number, salt: number) => {
     const t = table(p, salt);
     const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
     const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
-    const x0 = xi % p, y0 = yi % p, x1 = (xi + 1) % p, y1 = (yi + 1) % p;
+    const x0 = wrapI(xi, p), y0 = wrapI(yi, p), x1 = wrapI(xi + 1, p), y1 = wrapI(yi + 1, p);
     const a = t[y0 * p + x0], b = t[y0 * p + x1], c = t[y1 * p + x0], d = t[y1 * p + x1];
     return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
   };
   for (let y = 0; y < TILE; y++) {
     for (let x = 0; x < TILE; x++) {
+      // The bend: two slow fields (themselves tileable) push where the lattice is read, up to a tenth of the tile.
+      const bu = x / TILE + (noise((x / TILE) * 4, (y / TILE) * 4, 4, 555) - 0.5) * 0.2;
+      const bv = y / TILE + (noise((x / TILE) * 4, (y / TILE) * 4, 4, 556) - 0.5) * 0.2;
       let n = 0, amp = 0.5, tot = 0;
       for (let o = 0; o < 4; o++) {
         const p = 8 << o;
-        n += noise((x / TILE) * p, (y / TILE) * p, p, o * 1013) * amp;
+        n += noise(bu * p, bv * p, p, o * 1013) * amp;
         tot += amp;
         amp *= 0.5;
       }
       n /= tot;
       // The fine bubbles (a high octave of its own) and the holes between them, kept where the foam is.
-      const fine = noise((x / TILE) * 64, (y / TILE) * 64, 64, 7777);
-      const holes = noise((x / TILE) * 32, (y / TILE) * 32, 32, 4242);
+      const fine = noise(bu * 64, bv * 64, 64, 7777);
+      const holes = noise(bu * 32, bv * 32, 32, 4242);
       const body = smooth(0.36, 0.7, n);
       const a = Math.min(1, body * (0.45 + 0.55 * fine) * (0.55 + 0.45 * smooth(0.25, 0.6, holes)));
       const k = (y * TILE + x) * 4;
@@ -290,7 +296,18 @@ function inView(s: Surf, x: SurfCtx, pad: number): boolean {
 
 /** The swell at coast point `j` for crest `k` (its whole part the wave's count, its fraction 0 far out, 1 at the band). */
 function phase(s: Surf, j: number, k: number, crests: number, t: number): number {
-  return t / PERIOD + (s.dir * s.c.along[j]) / s.lam + s.jit[j] * 0.05 + k / Math.max(1, crests);
+  return phaseAt(s, s.c.along[j], s.jit[j], k, crests, t);
+}
+
+/** The same anywhere along the coast (`along` metres, `jit` its jitter): between two coast points too. */
+function phaseAt(s: Surf, along: number, jit: number, k: number, crests: number, t: number): number {
+  return t / PERIOD + (s.dir * along) / s.lam + jit * 0.05 + k / Math.max(1, crests);
+}
+
+/** The foam tile's metres a texel at a zoom: some 0.7 px a texel on the screen (at the old fixed 0.14 m its finest
+ *  bubbles fell under a pixel at 1500×600 and broke into a square grain). */
+function foamTexel(z: number): number {
+  return Math.max(0.12, Math.min(0.6, 0.7 / Math.max(0.01, z)));
 }
 
 // ------------------------------------------------------------------ under the land: the tint and the breakers
@@ -327,7 +344,7 @@ export function drawSurfUnder(g: G, is: IslandData, x: SurfCtx, frame: number): 
   const [fr, fg, fb] = look.foam;
   const m = (s.reach + 30) * z;
   const t = x.time;
-  const pat = textured ? foamPattern(g, x, 0.09) : null;
+  const pat = textured ? foamPattern(g, x, foamTexel(z) * 0.7) : null;
   g.save();
   g.lineJoin = 'round';
   for (let k = 0; k < crests; k++) {
@@ -336,8 +353,11 @@ export function drawSurfUnder(g: G, is: IslandData, x: SurfCtx, frame: number): 
     const trough = textured ? new Path2D() : null;
     let lastBin = -1, lastOk = false, lastTr = false;
     let px = 0, py = 0;
-    for (let i = 0; i <= c.n; i++) {
-      const j = i === c.n ? 0 : i;
+    // Each coast step cut in two up close, so a crest bends with its wobble (straight between the coast's points it read
+    // as a ruled dash).
+    const SUB = full ? 2 : 1;
+    for (let i = 0; i <= c.n * SUB; i++) {
+      const j = Math.floor(i / SUB) % c.n, j1 = (j + 1) % c.n, f = (i % SUB) / SUB;
       // Off the screen by more than the breakers' reach: nothing to reckon here.
       const bsx = x.sx(c.pts[j * 2]), bsy = x.sy(c.pts[j * 2 + 1]);
       if (bsx < -m || bsy < -m || bsx > x.w + m || bsy > x.h + m) {
@@ -346,15 +366,20 @@ export function drawSurfUnder(g: G, is: IslandData, x: SurfCtx, frame: number): 
         lastBin = -1;
         continue;
       }
-      const s0 = c.along[j];
-      const th = phase(s, j, k, crests, t);
+      const ax = c.pts[j * 2], ay = c.pts[j * 2 + 1];
+      const bx = ax + (c.pts[j1 * 2] - ax) * f, by = ay + (c.pts[j1 * 2 + 1] - ay) * f;
+      const s0 = c.along[j] + f * Math.hypot(c.pts[j1 * 2] - ax, c.pts[j1 * 2 + 1] - ay);
+      const th = phaseAt(s, s0, s.jit[j] + (s.jit[j1] - s.jit[j]) * f, k, crests, t);
       const ph = th - Math.floor(th);
       const cyc = Math.floor(th);
       // In from her reach to the waterline, faster as it shoals; never ruler-straight.
       const wob = Math.sin(s0 / 37 + t * 0.7 + k * 2.1) * 2.2 + Math.sin(s0 / 11 + t * 1.3 + k) * 0.7;
       const d = BAND + 2 + s.reach * Math.pow(1 - ph, 1.25) + wob;
-      const nx = c.nrm[j * 2], ny = c.nrm[j * 2 + 1];
-      const sx = x.sx(c.pts[j * 2] + nx * d), sy = x.sy(c.pts[j * 2 + 1] + ny * d);
+      let nx = c.nrm[j * 2] + (c.nrm[j1 * 2] - c.nrm[j * 2]) * f, ny = c.nrm[j * 2 + 1] + (c.nrm[j1 * 2 + 1] - c.nrm[j * 2 + 1]) * f;
+      const nl = Math.hypot(nx, ny) || 1;
+      nx /= nl;
+      ny /= nl;
+      const sx = x.sx(bx + nx * d), sy = x.sy(by + ny * d);
       const on = sx > -m && sy > -m && sx < x.w + m && sy < x.h + m;
       // Broken into lengths that change with every wave (the white water less broken than the lines far out).
       const bin = ph < 0.25 ? 0 : ph < 0.62 ? 1 : ph < 0.88 ? 2 : 3;
@@ -384,30 +409,35 @@ export function drawSurfUnder(g: G, is: IslandData, x: SurfCtx, frame: number): 
     }
     if (trough) {
       g.lineCap = 'round';
-      g.strokeStyle = `rgba(2,8,12,${(0.16 * amp).toFixed(3)})`;
-      g.lineWidth = Math.max(1, 3.4 * z);
+      g.strokeStyle = `rgba(2,8,12,${(0.22 * amp).toFixed(3)})`;
+      g.lineWidth = Math.max(1, 3.8 * z);
       g.stroke(trough);
     }
-    // The swell lines: a faint rise of the water far out (its trough behind it), a little brighter running in.
+    // The swell lines: a rise of the water far out (its trough behind it), brighter running in (owner's QA list,
+    // 2026-10-08: they were too faint to see — a hair at 9% white).
     g.lineCap = 'round';
-    g.strokeStyle = `rgba(${fr},${fg},${fb},${(0.09 * amp).toFixed(3)})`;
+    g.strokeStyle = `rgba(${fr},${fg},${fb},${(0.12 * amp).toFixed(3)})`;
     g.lineWidth = Math.max(0.7, 0.9 * z);
     g.stroke(bins[0]);
-    g.strokeStyle = `rgba(${fr},${fg},${fb},${((pat ? 0.14 : 0.2) * amp).toFixed(3)})`;
-    g.lineWidth = Math.max(0.8, 1.1 * z);
+    g.strokeStyle = `rgba(${fr},${fg},${fb},${((pat ? 0.2 : 0.24) * amp).toFixed(3)})`;
+    g.lineWidth = Math.max(0.9, 1.2 * z);
     g.stroke(bins[1]);
     // The breaking crest: a ragged band of foam (the tile along it) and its bright lip; the spent white water wider.
-    g.lineCap = 'butt';
+    // (round ends and a soft fringe: square-ended lengths of it read as blocks laid along the shore)
+    g.lineCap = 'round';
     if (pat) {
       g.strokeStyle = pat;
+      g.globalAlpha = 0.45 * amp;
+      g.lineWidth = 7 * z;
+      g.stroke(bins[2]);
       g.globalAlpha = amp;
-      g.lineWidth = 4 * z;
+      g.lineWidth = 3.5 * z;
       g.stroke(bins[2]);
-      g.globalAlpha = 0.5 * amp;
-      g.lineWidth = 7 * z;
-      g.stroke(bins[2]);
-      g.globalAlpha = 0.75 * amp;
-      g.lineWidth = 7 * z;
+      g.globalAlpha = 0.3 * amp;
+      g.lineWidth = 9 * z;
+      g.stroke(bins[3]);
+      g.globalAlpha = 0.6 * amp;
+      g.lineWidth = 5 * z;
       g.stroke(bins[3]);
       g.globalAlpha = 1;
     } else {
@@ -458,18 +488,23 @@ export function drawSurfOver(g: G, is: IslandData, x: SurfCtx): void {
   const [fr, fg, fb] = look.foam;
   const t = x.time;
   const m = 40 * z;
-  // Six strengths by how near a wave is (fine steps, so no seam shows where one gives way to the next): it brightens
-  // as each arrives, lingers a moment after, settles.
-  const NB = 6;
+  // Twelve strengths by how near a wave is, each coast step cut in three (owner's QA list, 2026-10-08: the white water
+  // read as a row of blocks — six strengths changed from one coast step to the next with square ends, a hard seam at
+  // each): it brightens as each wave arrives, lingers a moment after, settles, and spreads out as it comes.
+  const NB = 6, SUB = 2;
   const white = Array.from({ length: NB }, () => new Path2D());
   const edge = Array.from({ length: NB }, () => new Path2D());
   const swash = full ? [new Path2D(), new Path2D()] : null;
   let lastL = -1, lastOn = false, lastSb = -1, lastSw = false;
   let px = 0, py = 0, ex = 0, ey = 0, qx = 0, qy = 0;
-  for (let i = 0; i <= c.n; i++) {
-    const j = i === c.n ? 0 : i;
-    const nx = c.nrm[j * 2], ny = c.nrm[j * 2 + 1];
-    const bx = c.pts[j * 2], by = c.pts[j * 2 + 1];
+  for (let i = 0; i <= c.n * SUB; i++) {
+    const j0 = Math.floor(i / SUB) % c.n, j1 = (j0 + 1) % c.n, f = (i % SUB) / SUB;
+    const ax = c.pts[j0 * 2], ay = c.pts[j0 * 2 + 1];
+    const bx = ax + (c.pts[j1 * 2] - ax) * f, by = ay + (c.pts[j1 * 2 + 1] - ay) * f;
+    let nx = c.nrm[j0 * 2] + (c.nrm[j1 * 2] - c.nrm[j0 * 2]) * f, ny = c.nrm[j0 * 2 + 1] + (c.nrm[j1 * 2 + 1] - c.nrm[j0 * 2 + 1]) * f;
+    const nl = Math.hypot(nx, ny) || 1;
+    nx /= nl;
+    ny /= nl;
     const lx = x.sx(bx + nx * (BAND + 0.5)), ly = x.sy(by + ny * (BAND + 0.5));
     const on = lx > -m && ly > -m && lx < x.w + m && ly < x.h + m;
     if (!on) {
@@ -477,16 +512,20 @@ export function drawSurfOver(g: G, is: IslandData, x: SurfCtx): void {
       lastSw = false;
       continue;
     }
-    const wx = x.sx(bx + nx * (BAND + 4.5)), wy = x.sy(by + ny * (BAND + 4.5));
+    const along = c.along[j0] + f * Math.hypot(c.pts[j1 * 2] - ax, c.pts[j1 * 2 + 1] - ay);
+    const jit = s.jit[j0] + (s.jit[j1] - s.jit[j0]) * f;
     let pulse = 0, sw = -1;
     for (let k = 0; k < crests; k++) {
-      const th = phase(s, j, k, crests, t);
+      const th = phaseAt(s, along, jit, k, crests, t);
       const ph = th - Math.floor(th);
       pulse = Math.max(pulse, smooth(0.78, 0.98, ph), 1 - smooth(0, 0.2, ph));
       if (ph >= 0.88) sw = Math.max(sw, (ph - 0.88) / 0.12);
     }
     // Some stretches of a coast catch more of the swell than others (a slow drift along it).
-    pulse *= 0.55 + 0.45 * vnoise(c.along[j] / 60 + t * 0.03 + is.id);
+    pulse *= 0.55 + 0.45 * vnoise(along / 60 + t * 0.03 + is.id);
+    // The white water's middle: out from the waterline as the wave spreads it, back as it settles.
+    const wd = BAND + 3 + 3 * pulse;
+    const wx = x.sx(bx + nx * wd), wy = x.sy(by + ny * wd);
     const lb = Math.min(NB - 1, Math.floor(pulse * NB));
     if (on) {
       if (lastOn && lb === lastL) {
@@ -527,19 +566,21 @@ export function drawSurfOver(g: G, is: IslandData, x: SurfCtx): void {
   }
   g.save();
   g.lineJoin = 'round';
-  g.lineCap = 'butt';
-  const pat = textured ? foamPattern(g, x, 0.14) : null;
-  // The white water: its strength by the wave's arrival, a fainter fringe beyond it so it has no edge to speak of.
+  // (round ends: where one strength gives way to the next the two overlap softly instead of meeting square)
+  g.lineCap = 'round';
+  const pat = textured ? foamPattern(g, x, foamTexel(z)) : null;
+  // The white water: its strength by the wave's arrival — wider as it comes — and a fainter fringe beyond it so it has
+  // no edge to speak of.
   for (let b = 0; b < NB; b++) {
     const q = (b + 0.5) / NB;
-    const wa = 0.22 + 0.76 * q, ea = 0.12 + 0.46 * q;
+    const wa = 0.16 + 0.82 * q, ea = 0.04 + 0.4 * q;
     if (pat) {
       g.strokeStyle = pat;
-      g.globalAlpha = wa * 0.38 * amp;
-      g.lineWidth = 14 * z;
+      g.globalAlpha = wa * 0.3 * amp;
+      g.lineWidth = (10 + 8 * q) * z;
       g.stroke(white[b]);
       g.globalAlpha = wa * amp;
-      g.lineWidth = 8.5 * z;
+      g.lineWidth = (5 + 6 * q) * z;
     } else {
       g.strokeStyle = `rgba(${fr},${fg},${fb},${(wa * 0.32 * amp).toFixed(3)})`;
       g.lineWidth = Math.max(1, 5 * z);
