@@ -1270,7 +1270,9 @@ export type GameEvent =
   | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram' | 'hot_barrels' | 'broken_mast' | 'crossfire' | 'breach' | 'between_worlds' | 'maw_warn' | 'undertow' | 'drowned_hands'
     | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes' | 'dig' | 'plankton' | 'spout' | 'rocket' | 'firework' | 'struck'
     /** A lair's gun fires (docs/16 #7): from x,y toward dir, the ball falling r metres off — a hit when `hit`. */
-    | 'lair_gun'; x: number; y: number; r?: number; dir?: number; hit?: boolean }
+    | 'lair_gun'
+    /** A hull strikes a coast, a rock or a solid thing (owner, 2026-10-08): `r` her knots into it, `ship` hers. */
+    | 'strike'; x: number; y: number; r?: number; dir?: number; hit?: boolean; ship?: number }
   | { k: 'discover'; islandId: number; name: string; region: RegionId; quiet?: boolean }
   | { k: 'region'; region: RegionId; safety: string };
 

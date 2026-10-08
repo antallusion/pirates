@@ -13,6 +13,7 @@ import { angleDiff, clamp, headingOf, headingVec, pointInPolygon, wrapAngle } fr
 import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { depthAt, isLand, navBlocked } from '../../../shared/src/world/worldgen.ts';
+import { clearPath } from '../../../shared/src/world/solids.ts';
 import type { Game } from './Game.ts';
 import { banksUp } from './isles.ts';
 import { findPath, lineFree, nearestFree } from './nav.ts';
@@ -211,10 +212,13 @@ export function autosailHeading(game: Game, ship: ShipEntity, run: AutoSail): nu
   }
   // Feeling ahead: the lead line at half and full look; round whatever is there, the nearer turn first. A beat
   // that runs her at foul water comes about onto the other tack before anything else.
+  // (And her hull's clearance, 2026-10-08: the shore band, a wreck, a skerry, a pier — what the keel would strike.)
   const look = 160 + ship.state.speed * 8;
+  const wide = ship.stats.beam * 0.5 + 6, bow = ship.stats.length * 0.5;
   const foul = (h: number) => {
     const v = headingVec(h);
-    return foulWater(game, ship, x + v.x * look, y + v.y * look) || foulWater(game, ship, x + v.x * look * 0.5, y + v.y * look * 0.5);
+    const x1 = x + v.x * look, y1 = y + v.y * look, x2 = x + v.x * look * 0.5, y2 = y + v.y * look * 0.5;
+    return foulWater(game, ship, x1, y1) || foulWater(game, ship, x2, y2) || !clearPath(game.world, x + v.x * bow, y + v.y * bow, x1, y1, wide);
   };
   if (!foul(desired)) return desired;
   if (beat > 0 && rel < beat && now - run.tackAt > 8) {

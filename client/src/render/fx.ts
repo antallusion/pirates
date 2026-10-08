@@ -425,6 +425,16 @@ export class Fx {
             this.splash(e.x, e.y, true);
             this.shake = 0.6;
             break;
+          case 'strike': {
+            // A hull on the rocks (owner, 2026-10-08): her planks splintering, the white water thrown up where she struck,
+            // a short shake when she is the captain's own — harder the more knots she carried into it.
+            const kn = e.r ?? 4;
+            this.splinters(e.x, e.y, Math.round(10 + Math.min(26, kn * 2)));
+            this.splash(e.x, e.y, kn > 5);
+            this.add({ kind: 'ring', x: e.x, y: e.y, life: 0.7, size: 4, grow: 40 + kn * 4, color: '#dfe8ee' });
+            if (e.ship === ownId) this.shake = Math.max(this.shake, Math.min(0.8, 0.25 + kn * 0.04));
+            break;
+          }
           case 'hot_barrels':
             // Red-hot guns: a dull orange glow along the gun deck, readable to the enemy.
             this.add({ kind: 'glow', x: e.x, y: e.y, life: 1.2, size: 26, grow: 4, color: '#ff7a2a' });

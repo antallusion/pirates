@@ -164,7 +164,8 @@ export function turtleUpNow(game: Game, d: TurtleDef): boolean {
 /** A turtle island that is up strikes like land (her shell a circle): the ship is put back off it. */
 /** The turtle islands up now and where they are, once a tick (every ship's step asks: docs/19 D6). */
 const upNow = new WeakMap<Game, { t: number; list: { d: TurtleDef; p: { x: number; y: number } }[] }>();
-function turtlesNow(game: Game): { d: TurtleDef; p: { x: number; y: number } }[] {
+/** The turtle islands up now and where (the hull's blockers: strike.ts). */
+export function turtlesNow(game: Game): { d: TurtleDef; p: { x: number; y: number } }[] {
   const k = upNow.get(game);
   if (k && k.t === game.now) return k.list;
   const list = turtles(game.world).filter((d) => turtleUpNow(game, d)).map((d) => ({ d, p: turtlePos(d, game.now) }));

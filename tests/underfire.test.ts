@@ -21,6 +21,7 @@ import { HELD_FOR_WAY, HELD_UNDER_FIRE, UNDER_FIRE_WORDS, WAY_WORDS } from '../s
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { isLand } from '../shared/src/world/worldgen.ts';
+import { blockersNear } from '../shared/src/world/solids.ts';
 import type { FakeConn } from './helpers.ts';
 import { join, makeGame, steps } from './helpers.ts';
 
@@ -102,7 +103,8 @@ test('every order with a beast marked nearby is answered — a sea mark, a find,
       for (let k = 0; k < 64; k++) {
         const a = (k / 64) * Math.PI * 2;
         const x = is.x + Math.sin(a) * (is.radius + 120), y = is.y - Math.cos(a) * (is.radius + 120);
-        if (isLand(game.world, x, y)) continue;
+        // (clear of the sea's solid things too: a skerry there is struck now, 2026-10-08, and throws her off her spot)
+        if (isLand(game.world, x, y) || blockersNear(game.world, x, y, 250, []).some((b) => b.shape !== 'coast')) continue;
         ship.state = { ...ship.state, x, y, speed: 0, sail: 0 };
         break;
       }

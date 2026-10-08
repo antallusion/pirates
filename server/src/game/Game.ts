@@ -60,7 +60,7 @@ import { aimedVolley, pursuitInput, pursuitOf, startPursuit, startRoamRun, stepA
 import { boardOdds, boardRisk, isRisky } from './boardodds.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { TALENTS_BY_ID, canLearn } from '../../../shared/src/data/talents.ts';
-import { angleDiff, clamp, closestOnPolygon, dist, headingOf, headingVec, pointInPolygon } from '../../../shared/src/math.ts';
+import { angleDiff, clamp, dist, headingOf, headingVec } from '../../../shared/src/math.ts';
 import type {
   BoardingResult, SurrenderFate, ClientMsg, EntityInfo, GameEvent, IslandData, LootRow, PortPublic, SelfRow, ServerMsg, ShipRow, Side,
   PrivateState,
@@ -91,7 +91,8 @@ import type { WindSample } from '../../../shared/src/sim/wind.ts';
 import { REGIONS, WORLD_EDGE_MARGIN } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { sectorGrid } from '../../../shared/src/world/sectors.ts';
-import { chunkKey, chunkOf, currentAt, depthAt, whirlpoolAt, generateWorld, islandsNear, raiseIsland, regionAt } from '../../../shared/src/world/worldgen.ts';
+import { chunkKey, chunkOf, currentAt, depthAt, reefDepthAt, whirlpoolAt, generateWorld, raiseIsland, regionAt } from '../../../shared/src/world/worldgen.ts';
+import { hullStep } from './strike.ts';
 import type { Island, Port, RaisedIsland, World } from '../../../shared/src/world/worldgen.ts';
 import type { AuthService } from '../auth.ts';
 import { sanitizeName } from '../auth.ts';
@@ -157,7 +158,7 @@ import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { featureName, findLandable, startLanding, stepLanding } from './exploration.ts';
 import { playMinigame, stepMinigames } from './minigames.ts';
 import { playTrek, stepTreks } from './trek.ts';
-import { bankCollide, islesPrompt, islesSecond, payKeeper, recallLookouts, sendIsles } from './isles.ts';
+import { islesPrompt, islesSecond, payKeeper, recallLookouts, sendIsles } from './isles.ts';
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, claimPrize, cutGrapples, resendBoarding, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
 import { tacAction } from './tactical.ts';
@@ -245,7 +246,7 @@ import { premiumMessage, sendBalance } from './premium.ts'; // the premium shop 
 import { creaturesAboard, feedCreatures, stepTame } from './tame.ts'; // docs/18 IV
 import { musterInPort, stepGifts } from './shipgifts.ts'; // the premium hulls' gifts (docs/02 §1.A.9)
 import { silverKin } from '../../../shared/src/data/fleet.ts';
-import { isle18Message, isle18Second, islandFor, isleExtras, landDanger, onHiddenCharted, turtleCollide, turtlePrompt } from './isles18.ts'; // docs/18 III
+import { isle18Message, isle18Second, islandFor, isleExtras, landDanger, onHiddenCharted, turtlePrompt } from './isles18.ts'; // docs/18 III
 import { installHeroHooks } from './h5.ts'; // docs/17 H5
 import { mineLandable } from './mines.ts';
 import { crewOnKill, stepCrewLife } from './crewlife.ts';
@@ -721,7 +722,10 @@ export class Game {
     if (ship.region === 'the_abyss' && ship.hasFlag('tide_whisperer') && ship.state.sail > 0.1) ship.state.speed = Math.max(ship.state.speed, ship.stats.maxSpeed * 0.6 * ship.state.sail);
     stepPivot(this, ship, dt);
 
-    // Islands: test bow, stern and centre against nearby coastlines.
+    // Islands, rocks, wrecks, piers: her hull as drawn kept off the coast as drawn and off the sea's solid things, slid
+    // along them, and the blow by her way into them (strike.ts; owner, 2026-10-08: the old test was three points of
+    // her keel against the raw polygon — her bow came to rest on the drawn shore stones, her sides over them).
+    hullStep(this, ship, dt);
     const fwd = headingVec(ship.state.heading);
     const half = ship.stats.length * 0.45;
     const probes: [number, number][] = [
@@ -729,34 +733,13 @@ export class Game {
       [ship.state.x, ship.state.y],
       [ship.state.x - fwd.x * half, ship.state.y - fwd.y * half],
     ];
-    for (const [px, py] of probes) {
-      for (const id of islandsNear(this.world, px, py)) {
-        const is = this.world.islands[id];
-        if (Math.abs(is.x - px) > is.radius || Math.abs(is.y - py) > is.radius) continue;
-        if (!pointInPolygon(px, py, is.poly)) continue;
-        const c = closestOnPolygon(px, py, is.poly);
-        const nx = c.x - px, ny = c.y - py;
-        const len = Math.hypot(nx, ny) || 1;
-        ship.state.x += nx + (nx / len) * 3;
-        ship.state.y += ny + (ny / len) * 3;
-        if (ship.state.speed > 3.5) {
-          const dmg = ship.state.speed * ship.state.speed * 1.4 * (0.6 + ship.cls.tier * 0.2);
-          applyDamage(this, ship, { hull: dmg, sails: 2, morale: 3 }, null);
-          this.toastShip(ship, 'Ran aground! The keel groans.', 'bad');
-        }
-        ship.state.speed *= 0.25;
-      }
-    }
-    // A bank the ebb or the season has bared strikes like land (docs/16 #25).
-    const way = ship.state.speed;
-    if ((bankCollide(this, ship, probes) || turtleCollide(this, ship, probes)) && way > 3.5) { // and a turtle island's shell (docs/18 #31)
-      applyDamage(this, ship, { hull: way * way * 1.4 * (0.6 + ship.cls.tier * 0.2), sails: 2, morale: 3 }, null);
-      this.toastShip(ship, 'Ran aground on a bank the tide has bared!', 'bad');
-    }
-    // Shoals and reefs: a keel deeper than the water drags and splinters (Shallow Runners skate over).
+    // (A bank the ebb or the season has bared, docs/16 #25, and a turtle island's shell, docs/18 #31, strike like land:
+    // they are among the hull's blockers, strike.ts.)
+    // Reefs and sandbars: a keel deeper than the water drags and splinters (Shallow Runners skate over). The coasts' own
+    // shallows no longer drain her: she is kept off the coast itself, and slides along it (2026-10-08).
     const draft = ship.cls.draft * Math.max(0.5, 1 + tval(ship.stats, 'draftMul'));
     if (ship.cls.passive.id !== 'shallow_runner' && ship.state.speed > 0.4) {
-      const depth = depthAt(this.world, probes[0][0], probes[0][1]);
+      const depth = reefDepthAt(this.world, probes[0][0], probes[0][1]);
       if (depth < draft) {
         const over = draft - depth;
         if (ship.state.speed > 1) {

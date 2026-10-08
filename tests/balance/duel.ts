@@ -7,6 +7,7 @@ import { AUTO_ARC_DEG } from '../../shared/src/data/gunnery.ts';
 import type { NpcSkill } from '../../shared/src/data/shiplevel.ts';
 import type { ShipClassId } from '../../shared/src/data/ships.ts';
 import { buildNavGrid, depthAt, isLand } from '../../shared/src/world/worldgen.ts';
+import { clearSolids } from '../../shared/src/world/solids.ts';
 import { tidalIsles } from '../../shared/src/world/tidal.ts';
 import type { Game } from '../../server/src/game/Game.ts';
 import { engage, newBrain } from '../../server/src/game/npc.ts';
@@ -55,6 +56,9 @@ export function duelSea(): Game {
   for (const [k, list] of w.chunks) w.chunks.set(k, list.filter((id) => id < w.minorFrom));
   for (const [k, list] of w.reefChunks) w.reefChunks.set(k, list.filter((id) => id < w.reefsFrom));
   w.navGrid = buildNavGrid(w, false, w.minorFrom, w.reefsFrom);
+  // …nor the sea's solid things a keel now strikes (2026-10-08: the marks' hulks, the skerries, the wonders' rock, the
+  // piers), which the sims never knew.
+  clearSolids(w);
   for (const id of [...game.npcs.keys()]) game.removeShip(id);
   (game as unknown as { quota: () => number }).quota = () => 0;
   (game as unknown as { patrolsSpawnedAt: number }).patrolsSpawnedAt = 1e15;
