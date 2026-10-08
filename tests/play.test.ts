@@ -190,3 +190,9 @@ test('the First Watch raider never sinks her pupil: her guns leave a quarter of 
   applyDamage(game, ship, { hull: ship.stats.hullMax }, rover);
   assert.ok(ship.hull <= 0 || !!ship.sinkingUntil || !ship.alive);
 });
+
+test('«В порт» while the helmsman already sails her home sends nothing again', () => {
+  const main = read('client/src/main.ts');
+  const at = main.indexOf("    case 'homeport':");
+  assert.ok(main.slice(at, at + 400).includes('if (homeRun === homeport.id && state.autosail) return;'));
+});

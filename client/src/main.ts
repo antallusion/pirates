@@ -2350,6 +2350,9 @@ function runAct(a: Act): void {
       return requestDock(false);
     case 'homeport':
       if (!homeport) return;
+      // Already on her way there: a second tap sends nothing (each one said «Автоплавание: штурвал у рулевого…» again,
+      // ×37 under a finger that kept tapping the gold button, QA 2026-10-09).
+      if (homeRun === homeport.id && state.autosail) return;
       homeRun = homeport.id;
       homeRunAt = performance.now();
       return void net.send({ t: 'autosail', x: homeport.x, y: homeport.y });
