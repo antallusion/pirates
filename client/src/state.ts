@@ -26,6 +26,9 @@ import type { TaskView } from '../../shared/src/data/worldtasks.ts';
 import { SIGNAL_TTL } from '../../shared/src/data/social.ts';
 import type { SignalKind } from '../../shared/src/data/social.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
+import { hullResponse, newHit, resolveHull } from '../../shared/src/sim/hull.ts';
+import type { Blocker } from '../../shared/src/sim/hull.ts';
+import { clientBlockers } from './collide.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
 import { computeShipStats, crewFactor, loadFactor, sailTalents } from '../../shared/src/sim/shipstats.ts';
 import type { ShipStats } from '../../shared/src/sim/shipstats.ts';
@@ -63,6 +66,10 @@ export interface RemoteShip {
 
 // Remote ships are drawn this far in the past; it grows when snapshots come slower (a crowded harbour).
 const INTERP_MIN = 0.12, INTERP_MAX = 0.4;
+
+/** The prediction's scratch: the blockers about her and a hit (nothing allocated a frame). */
+const NEAR: Blocker[] = [];
+const HIT = newHit();
 
 export class ClientState {
   self: PrivateState | null = null;
@@ -739,10 +746,15 @@ export class ClientState {
     const run = (!!this.pursuit || this.roamRun !== null) && !this.helm;
     const helmsman = !!this.autosail || run;
     const input = { rudder: helmsman ? you.rud : this.input.rudder, sailTarget: run ? you.sail : sailSteps[this.input.sail] };
+    // Her hull kept off the coasts and the solid things as the server keeps it (owner, 2026-10-08): she is reckoned up to
+    // the shore and slid along it, not on into the land and snapped back by the next snapshot.
+    const len = st.length, beam = st.beam;
+    const near = clientBlockers(this, s.x, s.y, len * 0.5 + beam + 20 + Math.abs(s.speed) * SPEED_SCALE * elapsed, NEAR, this.estServerTime());
     let t = elapsed;
     while (t > 0) {
       const dt = Math.min(0.05, t);
       s = stepSailing(s, input, sail, wind, cur, dt);
+      if (near.length && resolveHull(s, len, beam, near, HIT)) hullResponse(s, HIT, dt);
       t -= dt;
     }
     // Shown where she is going, the snapshots' small corrections eased out over a fifth of a second. A third of the way
@@ -759,6 +771,8 @@ export class ClientState {
       const ay = d.y + (-Math.cos(s.heading) * s.speed * SPEED_SCALE + cur.y * (1 + sail.currentMul)) * k;
       const ease = 1 - Math.exp(-dt / 0.2);
       this.ownDisplay = { ...s, x: lerp(ax, s.x, ease), y: lerp(ay, s.y, ease), heading: lerpAngle(d.heading, s.heading, 1 - Math.exp(-dt / 0.1)) };
+      // The eased picture of her keeps off the shore too (its reckoning runs a hair ahead of her).
+      if (near.length) resolveHull(this.ownDisplay, len, beam, near, HIT);
     }
     return this.ownDisplay;
   }

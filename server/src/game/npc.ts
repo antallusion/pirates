@@ -22,6 +22,7 @@ import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { depthAt, isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
+import { clearAt, clearPath } from '../../../shared/src/world/solids.ts';
 import { sectorAt } from '../../../shared/src/world/sectors.ts';
 import { canBoard, startBoarding } from './boarding.ts';
 import { npcWouldBoard } from './army.ts';
@@ -180,11 +181,16 @@ export function setPath(brain: NpcBrain, path: Path): void {
   brain.wp = 1;
 }
 
+/** Open water for a ship to be put in or sent to: not land, and clear of every coast's shore band and every solid
+ *  thing by a hull's length (2026-10-08: one put out 30 m off a coast, her head to it, struck it in her first second). */
+export const openSea = (game: Game, x: number, y: number): boolean => !isLand(game.world, x, y) && clearAt(game.world, x, y, 60);
+
 function randomPointIn(game: Game, area: { x: number; y: number; r: number }): [number, number] | null {
   for (let i = 0; i < 12; i++) {
     const a = game.rng.float() * Math.PI * 2, r = Math.sqrt(game.rng.float()) * area.r;
     const x = area.x + Math.sin(a) * r, y = area.y - Math.cos(a) * r;
     if (x < 3000 || y < 3000 || x > 93000 || y > 93000) continue;
+    // (Not land; near a coast is fine — she is there within 260 m of it, npc.ts followPath, her lead line keeps her off.)
     if (!isLand(game.world, x, y)) return [x, y];
   }
   return null;
@@ -855,13 +861,18 @@ function steer(game: Game, ship: ShipEntity, brain: NpcBrain, desired: number, s
   }
   // Island avoidance probes.
   const look = 180 + ship.state.speed * 7;
+  // (And the keel's own clearance, 2026-10-08: the shore band and the sea's solid things — a wreck, a skerry, a pier —
+  // that a shallow keel's sounding never finds.)
+  // (From her middle, as wide as she is and a margin: a turn toward a thing beside her bow sees it too.)
+  const wide = ship.stats.beam * 0.5 + 8;
   const probe = (h: number) => {
     const v = headingVec(h);
     const x1 = ship.state.x + v.x * look, y1 = ship.state.y + v.y * look;
     const x2 = ship.state.x + v.x * look * 0.5, y2 = ship.state.y + v.y * look * 0.5;
-    if (ship.cls.passive.id === 'shallow_runner') return !!isLand(game.world, x1, y1) || !!isLand(game.world, x2, y2);
+    const clear = () => clearPath(game.world, ship.state.x, ship.state.y, x1, y1, wide);
+    if (ship.cls.passive.id === 'shallow_runner') return !!isLand(game.world, x1, y1) || !!isLand(game.world, x2, y2) || !clear();
     const draft = ship.cls.draft;
-    return depthAt(game.world, x1, y1) < draft || depthAt(game.world, x2, y2) < draft;
+    return depthAt(game.world, x1, y1) < draft || depthAt(game.world, x2, y2) < draft || !clear();
   };
   if (probe(desired)) {
     for (const off of [0.5, -0.5, 1.0, -1.0, 1.6, -1.6, 2.4, -2.4]) {
@@ -870,6 +881,21 @@ function steer(game: Game, ship: ShipEntity, brain: NpcBrain, desired: number, s
         break;
       }
     }
+  }
+  // The turn itself (2026-10-08): the headings she swings through on the way, a short look each, so her hull does not
+  // sweep a buoy or a rock beside her bow on the way round — the other way round when that way is clear.
+  const swing = angleDiff(ship.state.heading, desired);
+  if (Math.abs(swing) > 0.3) {
+    const reach = 50 + ship.state.speed * 5;
+    const sweep = (sign: number) => {
+      for (let a = 0.3; a < Math.abs(swing) + 0.01; a += 0.3) {
+        const v = headingVec(ship.state.heading + sign * a);
+        if (!clearPath(game.world, ship.state.x, ship.state.y, ship.state.x + v.x * reach, ship.state.y + v.y * reach, wide)) return false;
+      }
+      return true;
+    };
+    const sign = Math.sign(swing);
+    if (!sweep(sign) && sweep(-sign)) desired = wrapAngle(ship.state.heading - sign * 0.8);
   }
   // Stuck detection: if we barely moved in 20 s, reverse a bit and replan.
   if (now - brain.stuckCheck.t > 20) {
@@ -1059,7 +1085,7 @@ export function spawnPirate(game: Game, near?: ShipEntity): ShipEntity | null {
     x += game.rng.range(-9000, 9000);
     y += game.rng.range(-9000, 9000);
   }
-  if (REGIONS[region].safety === 'safe' || isLand(game.world, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500 || !game.inZone(x, y)) return null;
+  if (REGIONS[region].safety === 'safe' || !openSea(game, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500 || !game.inZone(x, y)) return null;
   // Her level (canon D12): an ambusher is sized to her prey within the square's band; a rover to the square's band.
   const level = near ? levelNear(game, near, region, x, y) : sectorLevel(game, x, y);
   const cls: ShipClassId = game.rng.pick(hullsFor('pirate', level));
@@ -1134,7 +1160,7 @@ const TRAFFIC_GOODS: GoodId[] = ['provisions', 'rum', 'sugar', 'tobacco', 'timbe
  * on its beat, a rover looking for prey. Null when the spot is land or the role has no place here.
  */
 export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' | 'pirate' | 'hunter', x: number, y: number, past: { x: number; y: number }): ShipEntity | null {
-  if (isLand(game.world, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500 || !game.inZone(x, y)) return null;
+  if (!openSea(game, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500 || !game.inZone(x, y)) return null;
   const region = regionAt(game.world, x, y);
   const safety = REGIONS[region].safety;
   const port = game.nearestPort(x, y);
@@ -1233,7 +1259,7 @@ export function spawnGhost(game: Game, everywhere = false): void {
   const region = game.rng.pick(regions);
   const [cx, cy] = REGIONS[region].center;
   const x = cx + game.rng.range(-6000, 6000), y = cy + game.rng.range(-6000, 6000);
-  if (isLand(game.world, x, y)) return;
+  if (!openSea(game, x, y)) return;
   const ship = game.spawnNpcShip('ghost', 'ghost_ship', 'choir', x, y, game.rng.range(0, 6.28), { ship: 'The Hollow Psalm', captain: 'Something Wearing a Captain' });
   game.setNpcLevel(ship, sectorLevel(game, x, y));
   ship.cargo = { cursed_relics: game.rng.int(3, 8), pearls: game.rng.int(2, 6), abyssal_ore: game.rng.int(1, 4) };
@@ -1246,7 +1272,7 @@ export function spawnGhost(game: Game, everywhere = false): void {
 export function spawnHunter(game: Game, prey: ShipEntity, accountId: number): void {
   const a = game.rng.float() * Math.PI * 2;
   const x = prey.state.x + Math.sin(a) * 3600, y = prey.state.y - Math.cos(a) * 3600;
-  if (isLand(game.world, x, y)) return;
+  if (!openSea(game, x, y)) return;
   // A bounty hunter sails one level above her quarry (canon D12).
   const level = Math.min(10, prey.combatLevel + 1);
   const ship = game.spawnNpcShip('hunter', game.rng.pick(hullsFor('hunter', level)), 'crown', x, y, headingOf(prey.state.x - x, prey.state.y - y), {
@@ -1269,7 +1295,7 @@ export function spawnCargoAmbush(game: Game, prey: ShipEntity, accountId: number
   for (let i = 0; i < n; i++) {
     const a = game.rng.float() * Math.PI * 2;
     const x = prey.state.x + Math.sin(a) * 2400, y = prey.state.y - Math.cos(a) * 2400;
-    if (isLand(game.world, x, y)) continue;
+    if (!openSea(game, x, y)) continue;
     const level = levelNear(game, prey, game.regionAt(x, y), x, y);
     const ship = game.spawnNpcShip('pirate', game.rng.pick(hullsFor('pirate', level)), 'confederacy', x, y, headingOf(prey.state.x - x, prey.state.y - y));
     game.setNpcLevel(ship, level);
@@ -1290,7 +1316,7 @@ export function spawnPackLeader(game: Game, region: RegionId, level: number): Sh
   for (let k = 0; k < 20; k++) {
     const a = game.rng.float() * Math.PI * 2, r = 1500 + game.rng.float() * 6000;
     const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
-    if (isLand(game.world, x, y) || regionAt(game.world, x, y) !== region || !game.inZone(x, y)) continue;
+    if (!openSea(game, x, y) || regionAt(game.world, x, y) !== region || !game.inZone(x, y)) continue;
     // The leader sails a level above the captains the hunt is written for (canon D12).
     const lv = Math.min(10, shipLevelForCaptain(level) + 1);
     const ship = game.spawnNpcShip('pirate', game.rng.pick(hullsFor('pirate', lv)), 'confederacy', x, y, game.rng.float() * Math.PI * 2);
@@ -1312,7 +1338,7 @@ export function spawnElite(game: Game, region: RegionId, level: number): ShipEnt
   for (let k = 0; k < 30; k++) {
     const a = game.rng.float() * Math.PI * 2, r = 2500 + game.rng.float() * 6000;
     const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
-    if (isLand(game.world, x, y) || regionAt(game.world, x, y) !== region || !game.inZone(x, y)) continue;
+    if (!openSea(game, x, y) || regionAt(game.world, x, y) !== region || !game.inZone(x, y)) continue;
     const h = game.rng.float() * Math.PI * 2;
     // An elite near the top of the waters' band, built for a company; her escorts a level below (canon D12).
     const lv = eliteShipLevel(REGIONS[region].safety);
@@ -1326,7 +1352,7 @@ export function spawnElite(game: Game, region: RegionId, level: number): ShipEnt
     planWander(game, flag, brain);
     for (const side of [-1, 1]) {
       const ex = x + Math.cos(h + side * 2.2) * 220, ey = y + Math.sin(h + side * 2.2) * 220;
-      if (isLand(game.world, ex, ey)) continue;
+      if (!openSea(game, ex, ey)) continue;
       const esc = game.spawnNpcShip('pirate', game.rng.pick(hullsFor('pirate', Math.max(1, lv - 1))), 'confederacy', ex, ey, h);
       game.setNpcLevel(esc, lv - 1);
       const eb = game.npcs.get(esc.id)!;

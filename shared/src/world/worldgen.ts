@@ -1000,6 +1000,19 @@ export function depthAt(world: World, x: number, y: number): number {
   return depth;
 }
 
+/** The water over the reefs and sandbars alone (the coasts' own shallows left out): what a keel drags and splinters on
+ *  at sea. A coast is kept off by the hull itself now (shared/src/sim/hull.ts, owner 2026-10-08), and her way along it
+ *  is not drained by its shallows. */
+export function reefDepthAt(world: World, x: number, y: number): number {
+  let depth = DEEP_WATER;
+  for (const id of world.reefChunks.get(chunkKey(...chunkOf(x, y))) ?? []) {
+    const rf = world.reefs[id];
+    if (Math.abs(rf.x - x) > rf.radius || Math.abs(rf.y - y) > rf.radius) continue;
+    if (pointInPolygon(x, y, rf.poly)) depth = Math.min(depth, rf.depth);
+  }
+  return depth;
+}
+
 /** An island the sea threw up after the world was made (a world event: an eruption). */
 export interface RaisedIsland {
   x: number;

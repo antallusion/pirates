@@ -11,6 +11,8 @@ import { THREAT_COLOR, threatOf } from '../../../shared/src/data/shiplevel.ts';
 import { isleDanger } from '../../../shared/src/world/archipelago.ts';
 import type { IsleType } from '../../../shared/src/world/archipelago.ts';
 import { turtlePos } from '../../../shared/src/world/drift.ts';
+import { graveHulks } from '../../../shared/src/world/solids.ts';
+import { coastPath } from './surf.ts';
 import type { TurtleDef } from '../../../shared/src/world/drift.ts';
 import { sprite } from '../assets.ts';
 
@@ -37,29 +39,6 @@ function rnd(seed: number): () => number {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-const HALO: Record<IsleType, string> = {
-  tropical: 'rgba(120,150,132,0.24)',
-  rocky: 'rgba(214,224,230,0.10)',
-  volcanic: 'rgba(22,12,10,0.5)',
-  swamp: 'rgba(70,92,40,0.42)',
-  graveyard: 'rgba(96,78,54,0.36)',
-  dead: 'rgba(110,200,196,0.11)',
-};
-
-/** The water about her coast, by her kind (under the island): one wide stroke of her coast, the cheapest mark there is. */
-export function drawIsleHalo(g: G, is: IslandData, c: IsleTypeCtx): void {
-  if (!is.ty || is.mist || is.raft || c.zoom < 0.08) return;
-  c.path(is.poly);
-  let style = HALO[is.ty];
-  // The Choir's pale light under the water breathes, brighter by night; a fire mountain's sea glows by night.
-  if (is.ty === 'dead') style = `rgba(110,210,200,${(0.1 + 0.04 * Math.sin(c.time * 0.8 + is.id) + 0.08 * c.night).toFixed(3)})`;
-  else if (is.ty === 'volcanic' && c.night > 0.3) style = `rgba(${Math.round(22 + 90 * c.night)},${Math.round(12 + 20 * c.night)},10,0.5)`;
-  g.strokeStyle = style;
-  g.lineJoin = 'round';
-  g.lineWidth = (is.ty === 'tropical' ? 90 : is.ty === 'rocky' ? 40 : is.ty === 'dead' ? 80 : 60) * c.zoom;
-  g.stroke();
 }
 
 /** Her kind on her land (over the painting, under what grows and stands on it): fills and strokes inside her coast,
@@ -97,16 +76,17 @@ export function drawIsleOver(g: G, is: IslandData, c: IsleTypeCtx): void {
   }
   switch (is.ty) {
     case 'tropical':
-      // Bright sand along the waterline (just inside it).
-      c.path(is.poly, 0.97, is.x, is.y);
-      g.strokeStyle = 'rgba(244,226,168,0.36)';
-      g.lineWidth = 9 * z;
+      // Bright sand along the waterline, just inside the shore band (at the coast's own offset, not a radial scale that
+      // wandered inland on a great island and read as a road).
+      coastPath(g, is, c, -13);
+      g.strokeStyle = 'rgba(232,214,160,0.3)';
+      g.lineWidth = 7 * z;
       g.stroke();
       break;
     case 'rocky':
-      c.path(is.poly, 0.97, is.x, is.y);
-      g.strokeStyle = 'rgba(34,34,36,0.5)';
-      g.lineWidth = 6 * z;
+      coastPath(g, is, c, -12);
+      g.strokeStyle = 'rgba(34,34,36,0.45)';
+      g.lineWidth = 5 * z;
       g.stroke();
       break;
     case 'volcanic': {
@@ -164,21 +144,16 @@ export function drawIsleOver(g: G, is: IslandData, c: IsleTypeCtx): void {
       break;
   }
   g.restore();
-  // The hulks of a graveyard, run up on her shore and rotting in her shallows (the painted wrecks), and flotsam.
-  if (is.ty === 'graveyard' && z > 0.15) {
-    const art = [sprite('prop.shipwreck'), sprite('prop.wreckage'), sprite('prop.flotsam')];
-    const n = is.poly.length / 2;
-    const k = Math.min(7, 3 + Math.floor(is.r / 150));
-    for (let i = 0; i < k; i++) {
-      const v = Math.floor(((i + r() * 0.6) / k) * n) % n;
-      const px = is.poly[v * 2], py = is.poly[v * 2 + 1];
-      const spr = art[i % 3];
+  // The hulks of a graveyard, run up on her shore and rotting in her shallows (the painted wrecks), and flotsam — where
+  // the keel strikes them too (shared/src/world/solids.ts graveHulks).
+  if (is.ty === 'graveyard' && z > 0.15 && !is.raft) {
+    for (const h of graveHulks(is)) {
+      const spr = sprite(h.art);
       if (!spr) continue;
-      const size = (i % 3 === 2 ? 40 : 80 + r() * 50) * z;
-      const out = i % 3 === 2 ? -0.18 : -0.02;
+      const size = h.size * z;
       g.save();
-      g.translate(c.sx(px + (is.x - px) * out), c.sy(py + (is.y - py) * out));
-      g.rotate(Math.atan2(px - is.x, -(py - is.y)) + (r() - 0.5) * 1.2);
+      g.translate(c.sx(h.x), c.sy(h.y));
+      g.rotate(h.rot);
       g.globalAlpha = 0.95;
       g.drawImage(spr.img, -size / 2, -size / 2, size, size);
       g.restore();
