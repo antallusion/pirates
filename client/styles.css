@@ -1164,9 +1164,17 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
 .login-panel .title { font-size: clamp(30px, 11vw, 54px); letter-spacing: 0.06em; margin-right: -0.06em; white-space: nowrap; }
 
 /* The captain's order stays in reach: pinned to the foot of the scrolling description, full width on a phone. */
-.captain-detail .pick-bar { position: sticky; bottom: 0; z-index: 2; margin-top: 12px; padding: 10px 0 2px; background: linear-gradient(180deg, rgba(10, 9, 8, 0), rgba(10, 9, 8, 0.92) 30%); }
+.captain-detail .pick-bar { position: sticky; bottom: 0; z-index: 2; margin-top: 12px; padding: 10px 0 2px; background: linear-gradient(180deg, rgba(10, 9, 8, 0), rgba(10, 9, 8, 0.97) 12px); display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+/* «I know the sea» rides in the pinned bar beside the order (it lay under the scrolled story, below the screen). */
+.captain-detail .pick-bar label.know-sea { margin: 0; flex: 1 1 150px; min-height: 44px; gap: 10px; }
+.captain-detail .pick-bar label.know-sea input { width: 20px; height: 20px; accent-color: var(--brass); }
+.captain-detail .pick-bar label.know-sea span { display: flex; flex-direction: column; line-height: 1.25; }
+.captain-detail .pick-bar label.know-sea b { color: var(--bone); font-weight: 600; font-size: 14px; }
+.captain-detail .pick-bar label.know-sea small { color: var(--fog); font-size: 12px; }
+.captain-detail .pick-bar .btn { flex: 0 0 auto; white-space: nowrap; }
 @media (max-width: 699px), (max-height: 520px) {
-  .captain-detail .pick-bar .btn { width: 100%; min-height: 44px; font-size: 15px; }
+  .captain-detail .pick-bar .btn { flex: 1 1 auto; min-height: 44px; font-size: 14px; padding-inline: 12px; max-width: 100%; }
+  .captain-detail .pick-bar label.know-sea { flex-basis: 120px; }
 }
 /* A phone on its side: the captains in a column on the left, the chosen one's story on the right with a small
    portrait beside it — the stacked phone layout left the story 70px of height. */
@@ -1818,6 +1826,12 @@ body:has(#surrender:not(.hidden)) #hud-stack { visibility: hidden; }
 #surrender .sur-choice b { font-size: 13px; line-height: 1.2; }
 #surrender .sur-choice small { font-size: 11px; line-height: 1.25; opacity: 0.8; font-weight: 400; }
 #surrender .sur-choice .choice-ico { width: 26px; height: 26px; flex: none; }
+/* One word per choice on a phone narrower than 700 px (the whole words broke in two in a 56 px button). */
+#surrender .sur-choice .sur-short { display: none; font-style: normal; }
+@media (max-width: 699px) {
+  body.touch #surrender .sur-choice b { display: none; }
+  body.touch #surrender .sur-choice .sur-short { display: block; font-size: 12px; font-weight: 600; line-height: 1.15; }
+}
 #surrender .sur-choice:disabled { opacity: 0.45; }
 #surrender .sur-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; flex-wrap: wrap; }
 #surrender .sur-dist { flex: 1 1 auto; min-width: 0; }

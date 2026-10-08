@@ -64,6 +64,14 @@ export const SERVER_RU_ADMIN: Record<string, string> = {
   '{0} × {1} ⚓{2} 450 m ahead.': '{0} × {1} ⚓{2} в 450 м впереди.',
   '{0}: due within ten seconds{1}.': '{0}: начнётся в течение десяти секунд{1}.',
   '{0}: {1} for ten minutes.': '{0}: {1} на десять минут.',
+  // The weather a /weather reply names (as the HUD names it: ui/hud.ts weather.*).
+  calm: 'штиль',
+  breeze: 'бриз',
+  wind: 'свежий ветер',
+  fog: 'туман',
+  rain: 'дождь',
+  storm: 'шторм',
+  black_storm: 'чёрный шторм',
   '{0}: {1} m off.': '{0}: в {1} м.',
   // The lists a command prints when it is called without its argument.
   'Classes: {0}': 'Классы: {0}',

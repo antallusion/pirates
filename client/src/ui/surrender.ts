@@ -130,7 +130,7 @@ export class SurrenderCard {
     const cls = SHIP_CLASSES[o.classId];
     const art = assetUrl(cls.sprite);
     const choice = (fate: SurrenderFate, ico: string, title: string, sub: string, off = false, primary = false) =>
-      `<button class="btn choice sur-choice${primary ? ' btn-primary' : ''}" data-sur="${fate}" data-off="${off ? 1 : 0}" title="${esc(`${title}: ${sub}`)}"${!near || off ? ' disabled' : ''}>${icon(ico, '', 'choice-ico')}<span><b>${esc(title)}</b><small>${esc(sub)}</small></span></button>`;
+      `<button class="btn choice sur-choice${primary ? ' btn-primary' : ''}" data-sur="${fate}" data-off="${off ? 1 : 0}" title="${esc(`${title}: ${sub}`)}"${!near || off ? ' disabled' : ''}>${icon(ico, '', 'choice-ico')}<span><b>${esc(title)}</b><i class="sur-short">${esc(L(`sur.${fate}Short` as 'sur.ransomShort'))}</i><small>${esc(sub)}</small></span></button>`;
     this.el.innerHTML = `<div class="enc-card sur-card">
       <div class="sur-head">${art ? `<img class="sur-ship" src="${art}" alt="" draggable="false" />` : ''}<div><div class="enc-h">${icon('talent_brd_surrender_terms', '', 'ico-md')}${esc(L('sur.title', { name: shipName(o.name) }))}</div>
       <div class="sur-sub muted">${esc(L('sur.sub', { cls: cls.name, faction: o.faction === 'player' ? '' : factionName(o.faction), role: roleName(o.role), captain: captainName(o.captain) }))}</div></div></div>

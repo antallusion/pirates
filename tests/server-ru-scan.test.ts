@@ -39,3 +39,14 @@ test('every refusal and toast of the server reads in Russian', () => {
     setLang('en');
   }
 });
+
+// The owner's QA list, 2026-10-08: the admin's /weather reply named the weather in English («…: breeze на десять минут»).
+test('the /weather reply names the weather in Russian', () => {
+  setLang('ru');
+  try {
+    assert.equal(serverText('Tortuga Shoals: breeze for ten minutes.').endsWith(': бриз на десять минут.'), true);
+    assert.equal(serverText('Tortuga Shoals: black_storm for ten minutes.').endsWith(': чёрный шторм на десять минут.'), true);
+  } finally {
+    setLang('en');
+  }
+});

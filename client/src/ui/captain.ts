@@ -44,8 +44,7 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
         ${c.abilities.map((a) => `<div class="ability ${a.kind === 'ultimate' ? 'ult' : ''}">${icon(`ab_${a.id}`, '', 'ab-ico')}<span class="key">${a.key}</span><b>${esc(a.name)}</b> <span class="muted">· ${esc(L('cooldown', { n: a.cooldown }))}</span><small>${esc(a.description)}</small></div>`).join('')}
         <p class="muted" style="font-size:13px;font-family:var(--sans)">${esc(L('starts', { ship: ship.name, gun: GUNS[c.start.gun].name, crew: c.start.crew, gold: c.start.gold }))}</p>
         <label class="lbl">${esc(L('shipName'))}<input id="ship-name" class="field" maxlength="20" value="${esc(defaultShipName(current))}" /></label>
-        <label class="check"><input type="checkbox" id="know-sea" /> ${esc(t('captain.knowSea'))}</label>
-        <div class="pick-bar"><button id="pick-captain" class="btn btn-primary">${esc(L('takeCommand'))}</button></div>
+        <div class="pick-bar">${knowSea()}<button id="pick-captain" class="btn btn-primary">${esc(L('takeCommand'))}</button></div>
       </div>`;
     if (ship0 !== null) ($('ship-name') as HTMLInputElement).value = ship0;
     ($('know-sea') as HTMLInputElement).checked = know0;
@@ -65,6 +64,13 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
     ship0 = null;
     know0 = false;
   });
+}
+
+/** «I know the sea» beside the order in the pinned bar (owner's QA, 2026-10-08: at 1500×600 it lay 230px below the
+ *  screen's foot, under the scrolled story): the words in bold, what they do under them in small. */
+function knowSea(): string {
+  const [say, does] = t('captain.knowSea').split(/\s—\s/); // (the Russian dash comes after a space that does not break)
+  return `<label class="check know-sea"><input type="checkbox" id="know-sea" /><span><b>${esc(say)}</b>${does ? `<small>${esc(does)}</small>` : ''}</span></label>`;
 }
 
 function defaultShipName(id: CaptainId): string {

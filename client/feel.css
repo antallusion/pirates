@@ -80,8 +80,11 @@ body.lock-tattoos [data-jchip="tattoos"] { display: none !important; }
    the title and how near she lies in one line, the four choices and «Позже» in one row of finger-high buttons. The
    top stack and the captain's plate stay where they are. */
 @media (max-width: 1099px), (max-height: 520px) {
-  body.touch #surrender { top: auto; bottom: calc(var(--sa-b) + 8px); left: calc(var(--sa-l) + var(--stick) + 22px); right: auto; transform: none;
-    width: min(460px, calc(100vw - var(--sa-l) - var(--sa-r) - var(--stick) - 182px)); min-width: 0; }
+  /* (owner's QA list, 2026-10-08: 3 px from the helm's speed arc at 812×375, and laid over «Атаковать» — now 15 px
+     clear of the arc, and the attack button waits while her terms are up: the terms are the act, «Позже» brings it back) */
+  body.touch #surrender { top: auto; bottom: calc(var(--sa-b) + 8px); left: calc(var(--sa-l) + var(--stick) + 34px); right: auto; transform: none;
+    width: min(460px, calc(100vw - var(--sa-l) - var(--sa-r) - var(--stick) - 206px)); min-width: 0; }
+  body.touch:has(#surrender:not(.hidden)) #tc-act { visibility: hidden; }
   body.touch:has(#surrender:not(.hidden)) #hud-captain, body.touch:has(#surrender:not(.hidden)) #hud-stack { visibility: visible; }
   body.touch #surrender .enc-card { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 4px; padding: 5px 6px 6px; align-items: stretch; }
   body.touch #surrender .sur-head { grid-column: 1 / 4; grid-row: 1; min-width: 0; }
