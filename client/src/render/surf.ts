@@ -358,7 +358,7 @@ export function drawSurfUnder(g: G, is: IslandData, x: SurfCtx, frame: number): 
       const on = sx > -m && sy > -m && sx < x.w + m && sy < x.h + m;
       // Broken into lengths that change with every wave (the white water less broken than the lines far out).
       const bin = ph < 0.25 ? 0 : ph < 0.62 ? 1 : ph < 0.88 ? 2 : 3;
-      const whole = vnoise(s0 / 29 + cyc * 3.71 + k * 17.3 + is.id * 0.13) > (bin >= 2 ? 0.3 : 0.45);
+      const whole = bin >= 2 ? vnoise(s0 / 29 + cyc * 3.71 + k * 17.3 + is.id * 0.13) > 0.3 : vnoise(s0 / 17 + cyc * 2.93 + k * 11.1 + is.id * 0.17) > 0.52;
       const ok = on && whole && (full || bin === 2);
       // (Where the swell wraps — a crest done at the band, the next forming far out — no line is carried across.)
       const wrap = (lastBin === 3 && bin === 0) || (lastBin === 0 && bin === 3);
@@ -388,16 +388,13 @@ export function drawSurfUnder(g: G, is: IslandData, x: SurfCtx, frame: number): 
       g.lineWidth = Math.max(1, 3.4 * z);
       g.stroke(trough);
     }
-    // The swell lines: a soft rise of the water far out, a little brighter running in.
+    // The swell lines: a faint rise of the water far out (its trough behind it), a little brighter running in.
     g.lineCap = 'round';
-    g.strokeStyle = `rgba(${fr},${fg},${fb},${(0.05 * amp).toFixed(3)})`;
-    g.lineWidth = Math.max(1, 3 * z);
+    g.strokeStyle = `rgba(${fr},${fg},${fb},${(0.09 * amp).toFixed(3)})`;
+    g.lineWidth = Math.max(0.7, 0.9 * z);
     g.stroke(bins[0]);
-    g.strokeStyle = `rgba(${fr},${fg},${fb},${(0.08 * amp).toFixed(3)})`;
-    g.lineWidth = Math.max(1.2, 3.6 * z);
-    g.stroke(bins[1]);
-    g.strokeStyle = `rgba(${fr},${fg},${fb},${((pat ? 0.1 : 0.2) * amp).toFixed(3)})`;
-    g.lineWidth = Math.max(0.8, 1 * z);
+    g.strokeStyle = `rgba(${fr},${fg},${fb},${((pat ? 0.14 : 0.2) * amp).toFixed(3)})`;
+    g.lineWidth = Math.max(0.8, 1.1 * z);
     g.stroke(bins[1]);
     // The breaking crest: a ragged band of foam (the tile along it) and its bright lip; the spent white water wider.
     g.lineCap = 'butt';
@@ -461,9 +458,11 @@ export function drawSurfOver(g: G, is: IslandData, x: SurfCtx): void {
   const [fr, fg, fb] = look.foam;
   const t = x.time;
   const m = 40 * z;
-  // Three strengths by how near a wave is: it brightens as each arrives, lingers a moment after, settles.
-  const white = [new Path2D(), new Path2D(), new Path2D()];
-  const edge = [new Path2D(), new Path2D(), new Path2D()];
+  // Six strengths by how near a wave is (fine steps, so no seam shows where one gives way to the next): it brightens
+  // as each arrives, lingers a moment after, settles.
+  const NB = 6;
+  const white = Array.from({ length: NB }, () => new Path2D());
+  const edge = Array.from({ length: NB }, () => new Path2D());
   const swash = full ? [new Path2D(), new Path2D()] : null;
   let lastL = -1, lastOn = false, lastSb = -1, lastSw = false;
   let px = 0, py = 0, ex = 0, ey = 0, qx = 0, qy = 0;
@@ -488,7 +487,7 @@ export function drawSurfOver(g: G, is: IslandData, x: SurfCtx): void {
     }
     // Some stretches of a coast catch more of the swell than others (a slow drift along it).
     pulse *= 0.55 + 0.45 * vnoise(c.along[j] / 60 + t * 0.03 + is.id);
-    const lb = pulse < 0.3 ? 0 : pulse < 0.6 ? 1 : 2;
+    const lb = Math.min(NB - 1, Math.floor(pulse * NB));
     if (on) {
       if (lastOn && lb === lastL) {
         white[lb].lineTo(wx, wy);
@@ -530,23 +529,24 @@ export function drawSurfOver(g: G, is: IslandData, x: SurfCtx): void {
   g.lineJoin = 'round';
   g.lineCap = 'butt';
   const pat = textured ? foamPattern(g, x, 0.14) : null;
-  // The white water widens as each wave arrives (5 → 11 m), a fainter fringe beyond it so it has no edge to speak of.
-  const WA = [0.3, 0.62, 0.95], WW = [4, 7.5, 11], EA = [0.16, 0.32, 0.55];
-  for (let b = 0; b < 3; b++) {
+  // The white water: its strength by the wave's arrival, a fainter fringe beyond it so it has no edge to speak of.
+  for (let b = 0; b < NB; b++) {
+    const q = (b + 0.5) / NB;
+    const wa = 0.22 + 0.76 * q, ea = 0.12 + 0.46 * q;
     if (pat) {
       g.strokeStyle = pat;
-      g.globalAlpha = WA[b] * 0.4 * amp;
-      g.lineWidth = WW[b] * 1.6 * z;
+      g.globalAlpha = wa * 0.38 * amp;
+      g.lineWidth = 14 * z;
       g.stroke(white[b]);
-      g.globalAlpha = WA[b] * amp;
-      g.lineWidth = WW[b] * z;
+      g.globalAlpha = wa * amp;
+      g.lineWidth = 8.5 * z;
     } else {
-      g.strokeStyle = `rgba(${fr},${fg},${fb},${(WA[b] * 0.32 * amp).toFixed(3)})`;
+      g.strokeStyle = `rgba(${fr},${fg},${fb},${(wa * 0.32 * amp).toFixed(3)})`;
       g.lineWidth = Math.max(1, 5 * z);
     }
     g.stroke(white[b]);
     g.globalAlpha = 1;
-    g.strokeStyle = `rgba(${fr},${fg},${fb},${(EA[b] * amp).toFixed(3)})`;
+    g.strokeStyle = `rgba(${fr},${fg},${fb},${(ea * amp).toFixed(3)})`;
     g.lineWidth = Math.max(0.8, 1.3 * z);
     g.stroke(edge[b]);
   }
