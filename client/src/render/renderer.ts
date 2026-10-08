@@ -2542,7 +2542,7 @@ export class Renderer {
       if (s.own) hole(s.x, s.y, 90, 0.22); // her own deck just readable, no halo
       // A captain's lanterns burn the colour of her look (docs/12 P10 #12).
       const lamp = decodeLook(s.own ? state.self?.look : s.info?.look)?.lamp ?? 0;
-      const fac = s.own || s.info?.isPlayer ? LAMPS[lamp].color : s.info && s.info.faction !== 'player' ? cbColor(opt.colorblind, FACTIONS[s.info.faction].lantern) : '#f2b35a';
+      const fac = s.own || s.info?.isPlayer ? LAMPS[lamp].color : s.info && s.info.faction !== 'player' ? cbColor(opt.colorblind, FACTIONS[s.info.faction]?.lantern ?? '#f2b35a') : '#f2b35a'; // (a flag the table does not know — an admin /spawn's — threw every frame)
       // Lanterns flicker a little (unless the options still them).
       const flick = opt.lanternFlicker ? 0.88 + 0.12 * Math.sin(this.time * 9 + s.id * 1.7) * Math.sin(this.time * 3.1 + s.id) : 1;
       // A lantern is a point of warm light on the water, not a cloud about the hull.
