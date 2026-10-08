@@ -8,6 +8,8 @@ import type { PlayerSession } from '../server/src/game/player.ts';
 import type { WsConnection } from '../server/src/net/websocket.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import { npcHostileTo } from '../server/src/game/npc.ts';
+import { applyDamage } from '../server/src/game/combat.ts';
+import { PUPIL_HULL } from '../server/src/game/onboarding.ts';
 import { FakeConn, makeGame, steps } from './helpers.ts';
 import { buildActs } from '../client/src/ui/actbar.ts';
 import { setLang } from '../client/src/i18n.ts';
@@ -168,4 +170,23 @@ test('the ship window on a phone: its two buttons in a row under the name, no ke
   assert.ok(css.includes('.ship-head > .ship-head-r { grid-column: 2; flex-direction: row;'));
   assert.ok(css.includes('.ship-head-r > .muted { display: none; }'));
   assert.ok(css.includes('.ship-head .sub.ship-passive { white-space: normal; text-overflow: clip; }'));
+});
+
+test('the First Watch raider never sinks her pupil: her guns leave a quarter of the hull', () => {
+  const { game } = makeGame();
+  const { c, s } = pupil(game, 'Slow Reader');
+  const ship = s.ship!;
+  c.push({ t: 'undock' });
+  ship.state.speed = 4;
+  ship.state.sail = 0.6;
+  steps(game, 21);
+  const raider = [...game.ships.values()].find((x) => x.name === 'Red Novice')!;
+  assert.ok(raider);
+  for (let i = 0; i < 12; i++) applyDamage(game, ship, { hull: ship.stats.hullMax * 0.3 }, raider);
+  assert.ok(ship.hull >= ship.stats.hullMax * PUPIL_HULL - 1e-6, `hull ${ship.hull}`);
+  assert.ok(ship.alive && !ship.sinkingUntil);
+  // Another ship's guns are not held back.
+  const rover = game.spawnNpcShip('pirate', 'sloop', 'confederacy', ship.state.x + 300, ship.state.y, 0);
+  applyDamage(game, ship, { hull: ship.stats.hullMax }, rover);
+  assert.ok(ship.hull <= 0 || !!ship.sinkingUntil || !ship.alive);
 });
