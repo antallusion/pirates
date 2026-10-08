@@ -184,6 +184,25 @@ export const EN = {
   'book.officer': 'Officer’s word',
   'book.path': 'Your path',
   'book.cost': 'costs {n}',
+  // The preview under the sword (owner, 2026-10-08): what her blow or shot would do.
+  'pv.label': 'What this blow would do',
+  'pv.dmg': 'Damage',
+  'pv.kills': 'Kills',
+  'pv.ret': 'Answer',
+  'pv.noRet': 'No answer',
+  'pv.shot': 'Shot',
+  'pv.far': 'long shot: half',
+  'pv.twice': 'strikes twice',
+  'pv.sweep': 'hits all around',
+  'pv.luck': 'luck {n}%: double',
+  // A blow into a stack's side or from behind (owner, 2026-10-08).
+  'fl.side': 'flank +15%',
+  'fl.rear': 'from behind +30%',
+  // The beaten who came over (owner, 2026-10-08).
+  'res.joined': 'Joined you: {n}',
+  'res.men1': 'hand',
+  'res.men2': 'hands',
+  'res.men5': 'hands',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -359,4 +378,20 @@ export const RU: Record<keyof typeof EN, string> = {
   'book.officer': 'Слово офицера',
   'book.path': 'Ваш путь',
   'book.cost': 'цена {n}',
+  'pv.label': 'Что сделает этот удар',
+  'pv.dmg': 'Урон',
+  'pv.kills': 'Убьёт',
+  'pv.ret': 'Ответ',
+  'pv.noRet': 'Без ответа',
+  'pv.shot': 'Выстрел',
+  'pv.far': 'далеко: половина',
+  'pv.twice': 'бьёт дважды',
+  'pv.sweep': 'бьёт всех вокруг',
+  'pv.luck': 'удача {n}%: вдвое',
+  'fl.side': 'с фланга +15%',
+  'fl.rear': 'с тыла +30%',
+  'res.joined': 'К вам примкнули: {n}',
+  'res.men1': 'матрос',
+  'res.men2': 'матроса',
+  'res.men5': 'матросов',
 };

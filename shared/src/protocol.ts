@@ -1461,6 +1461,29 @@ export interface TacStackView {
    *  the Fog Madness (she strikes her own). */
   still?: boolean;
   mad?: boolean;
+  /** The way she faces (owner, 2026-10-08; shared/src/data/tactical.ts hexDir): 0 east … 3 west. A blow into her side
+   *  or from behind lands harder. */
+  face: number;
+}
+
+/** What a blow or a shot of the captain's active stack would do (owner, 2026-10-08, as HoMM3 shows it under the
+ *  sword): on foe `t`, struck from the hex `from` (or shot), the harm with the dice at their lowest and highest, the
+ *  men it would fell, the men of hers the answer would fell (none: no answer), and how it comes in — 1 into a side,
+ *  2 from behind. Luck aside: `luck` the chance in percent that it does twice. */
+export interface TacPreview {
+  t: number;
+  from?: number;
+  shot?: boolean;
+  fl: 0 | 1 | 2;
+  dmg: [number, number];
+  kills: [number, number];
+  ret?: [number, number];
+  luck?: number;
+  /** She strikes twice (the second after the answer); she sweeps every foe about her (none answers); a shot past the
+   *  long range (half its harm, as shown). */
+  twice?: boolean;
+  sweep?: boolean;
+  far?: boolean;
 }
 
 /** A captain on the side panel. */
@@ -1521,6 +1544,8 @@ export interface TacEvent {
   /** docs/18: the page was read from a scroll; the stacks a move laid itself on (for the marks over them). */
   via?: 'scroll';
   on?: number[];
+  /** A blow into her side (1) or from behind (2), owner 2026-10-08. */
+  fl?: 1 | 2;
 }
 
 /** The whole battle as one captain sees it. Side 0 is the boarder, on the left deck. */
@@ -1541,6 +1566,8 @@ export interface TacView {
   reach: number[];
   melee: number[];
   shoot: number[];
+  /** For my active stack: what each blow or shot would do (owner, 2026-10-08). */
+  pv?: TacPreview[];
   heroes: [TacHeroView, TacHeroView];
   log: TacEvent[];
   seq: number;
@@ -1551,7 +1578,9 @@ export interface TacView {
   ransom?: number | null;
   /** The reckoning once it is over: the men each side lost by kind, what the captain learnt, the silver paid; ashore
    *  (docs/18 II), what the lair left. */
-  result?: { lost: { u: UnitId; n: number }[]; killed: { u: UnitId; n: number }[]; xp: number; paid?: number; loot?: LairLoot };
+  result?: { lost: { u: UnitId; n: number }[]; killed: { u: UnitId; n: number }[]; xp: number; paid?: number; loot?: LairLoot;
+    /** The beaten who came over to her after a boarding won (owner, 2026-10-08): by the kind they serve as. */
+    joined?: { u: UnitId; n: number }[] };
   /** docs/18 II: the battle is fought ashore at a lair of the land's creatures (the kind of island it is drawn as). */
   land?: { type: string; lair: string; island: string; level: number };
   /** The hexes a great one ashore will fall on as the next round opens (shorebosses.ts): step off them. */

@@ -11,11 +11,11 @@ import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import {
-  TAC_AI_DELAY, TAC_BLOCKING, TAC_FAST, TAC_BURN, TAC_CHANCE_PER_POINT, TAC_COVER, TAC_FEAR, TAC_GAP, TAC_H, TAC_LONG_SHOT, TAC_MAX_ROUNDS, TAC_ORDER_OF, TAC_SPELLS, TAC_TURN, TAC_UNITS, TAC_W,
-  captainSpells, hexDist, hexIndex, hexMirror, hexNeighbors, hexX, hexY, kindOfUnit,
+  TAC_AI_DELAY, TAC_BLOCKING, TAC_FAST, TAC_BURN, TAC_CHANCE_PER_POINT, TAC_COVER, TAC_FEAR, TAC_FLANK, TAC_GAP, TAC_H, TAC_LONG_SHOT, TAC_MAX_ROUNDS, TAC_ORDER_OF, TAC_SPELLS, TAC_TURN, TAC_UNITS, TAC_W,
+  captainSpells, flankOf, hexDir, hexDist, hexIndex, hexMirror, hexNeighbors, hexX, hexY, kindOfUnit, tacSchedule,
 } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacKind, TacOrderId, TacSpellId } from '../../../shared/src/data/tactical.ts';
-import type { TacAction, TacEvent, TacHeroView, TacStackView, TacView } from '../../../shared/src/protocol.ts';
+import type { TacAction, TacEvent, TacHeroView, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
 import { ORDERS, TACTICS_DEPLOY, homeMul, orderRes } from '../../../shared/src/data/hero.ts';
 import type { HeroBattle, OrderRes } from '../../../shared/src/data/hero.ts';
 import { BOOK_PAGES, CHAIN_FALL, HOME_MUL, INNATE, PATH_PAGES, PATH_SCHOOL, SICK_TURNS, ULTIMATE, ULT_ROUND, isBookPage, isPathPage, powered } from '../../../shared/src/data/paths.ts';
@@ -122,6 +122,9 @@ export interface TacStack {
   /** docs/18 II: a creature's poison in her — the harm it does as her next turns come, how many more, and whose (`sick`:
    *  the Foul Water's sickness, a common page after docs/18). */
   poison?: { dmg: number; left: number; by: 0 | 1; sick?: boolean };
+  /** The way she faces (owner, 2026-10-08; shared/src/data/tactical.ts hexDir): toward the other deck as she comes
+   *  aboard, then the way of her last move, blow or shot. A blow into her side or from behind lands harder. */
+  face: number;
   officer?: { id: string; role: OfficerRole; name: string; unique?: string; order: TacOrderId; used: boolean };
 }
 
@@ -190,6 +193,9 @@ export interface TacBattle {
   land?: string;
   /** The hexes a great one ashore will fall on as the next round opens (shorebosses.ts), shown to the captain. */
   warn?: number[];
+  /** The last event before the turn now running: what came after it is played on the screens before the next turn
+   *  (owner, 2026-10-08: the field's pace, TAC_PACE). */
+  beatFrom?: number;
 }
 
 const sp = (s: TacStack, x: UnitSpecial): boolean => s.sp.includes(x);
@@ -327,7 +333,7 @@ export function buildStacks(input: TacSideInput, side: 0 | 1, cells: TacCell[], 
       out.push({
         id: id++, side, kind: kindOfUnit(e.u), unit: e.u, sp: [...d.specials], src: e.src ?? e.u, count: Math.floor(e.n), start: Math.floor(e.n), hpTop: Math.round(d.hp * rk), hpMax: Math.round(d.hp * rk), hex: -1,
         atk: r1(d.atk * rk * fk), def: r1(d.def * rk * fk), dmin: d.dmin, dmax: d.dmax, speed: d.speed, init: d.init, shots, shotsMax: shots, dmgMul: blast ? 1 - 0.5 * gunsOut : 1,
-        ret: true, defending: false, waited: false, surged: false, again: 0,
+        ret: true, defending: false, waited: false, surged: false, again: 0, face: side ? 3 : 0,
       });
     }
     // Each officer leads one of the melee stacks, the strongest first: his word once a fight, his craft in its blows.
@@ -350,7 +356,7 @@ export function buildStacks(input: TacSideInput, side: 0 | 1, cells: TacCell[], 
       out.push({
         id: id++, side, kind, unit, sp: kind === 'gunners' ? ['shooter'] : [], src: kind === 'officer' ? 'sailor' : unit, count: n, start: n, hpTop: u.hp, hpMax: u.hp, hex: -1,
         atk: r1(u.atk), def: r1(u.def), dmin: u.dmin, dmax: u.dmax, speed: u.speed, init: u.init,
-        shots, shotsMax: shots, dmgMul: 1, ret: true, defending: false, waited: false, surged: false, again: 0, ...extra,
+        shots, shotsMax: shots, dmgMul: 1, ret: true, defending: false, waited: false, surged: false, again: 0, face: side ? 3 : 0, ...extra,
       });
     };
     // Each officer takes a twentieth of the men (at least two) as his party.
@@ -647,8 +653,18 @@ export function desperation(bt: TacBattle, side: 0 | 1): number {
   return 1 + Math.min(TAC_DESPERATION_MAX, TAC_DESPERATION * (1 - mine / foe));
 }
 
-/** Damage `s` does to `t` (rng null: the expected blow, for the sea's mind). */
-export function blow(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'shot' | 'ret', rng: Rng | null, from = s.hex): { dmg: number; lucky: boolean } {
+/** What a blow (or a shot, or an answer) of `s` on `t` is made of before the dice: her attack against the other's
+ *  defence (`mod`), every multiplier laid on it (`mul`), the luck that may double it (points), and whether it comes
+ *  into the other's side or from behind (`flank`). The blow itself and the captain's preview of it (previewBlow) are
+ *  both reckoned from it, so the two cannot part. */
+export interface BlowParts {
+  mod: number;
+  mul: number;
+  luck: number;
+  flank: 0 | 1 | 2;
+}
+
+export function blowParts(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'shot' | 'ret', from = s.hex): BlowParts {
   const h = bt.heroes[s.side], e = bt.heroes[t.side];
   const r = bt.round;
   const defMul = (t.defending ? 1.3 : 1) * (e.input.castle && t.side === 1 ? 1.25 : 1) * (has(e, 'iron_discipline', r) ? 1.4 : 1) * (has(e, 'shield_wall', r) ? 1.3 : 1);
@@ -683,15 +699,30 @@ export function blow(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'sh
   } else if (isShooter(s) && !sp(s, 'no_penalty')) mul *= 0.5; // a musket is a poor club
   // docs/18 II: a swarm's foes answer it half as hard.
   if (how === 'ret' && sp(t, 'swarm')) mul *= 0.5;
-  // Flanking: a foe already engaged by another of ours on her other side.
-  // Turn the Flank: the navigator reads the deck, every blow of his men lands as from the flank.
-  if (how === 'melee' && (has(h, 'turn_the_flank', r) || sp(t, 'swarm') || alive(bt).some((o) => o.side === s.side && o !== s && hexNeighbors(t.hex).includes(o.hex)))) mul *= 1.2;
+  // Flanking (owner, 2026-10-08: «удары сзади должны наносить больше урона»): the way she faces leaves her sides and
+  // her back open — a blow into a side lands TAC_FLANK[1] harder, from behind TAC_FLANK[2]. (It took the place of the
+  // old pincer, a fifth more on any foe another of ours stood beside: a stack hemmed in is struck from its sides and
+  // back now, and the player sees which.) Turn the Flank (the navigator reads the deck) and a swarm (struck from every
+  // side at once) keep the old fifth at the least. Her answer is the same from anywhere.
+  const flank = how === 'melee' ? flankOf(t.face, t.hex, from) : 0;
+  mul *= Math.max(TAC_FLANK[flank], how === 'melee' && (has(h, 'turn_the_flank', r) || sp(t, 'swarm')) ? TAC_PINCER : 1);
   // Backs to the rail (docs/17 H5): the side with less of her strength left on deck strikes harder by the shortfall —
   // a tenth fewer men is a hard fight, not a lost one.
   mul *= desperation(bt, s.side);
-  const lucky = !!rng && rng.chance(Math.max(-3, Math.min(3, luckOf(bt, s.side) + ma.luck)) * TAC_CHANCE_PER_POINT);
+  return { mod, mul, luck: Math.max(-3, Math.min(3, luckOf(bt, s.side) + ma.luck)), flank };
+}
+
+/** Turn the Flank's and a swarm's blows: at least this much harder (the old pincer's fifth). */
+export const TAC_PINCER = 1.2;
+
+/** Damage `s` does to `t` (rng null: the expected blow, for the sea's mind); whether luck doubled it, and whether it
+ *  came into her side or from behind. */
+export function blow(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'shot' | 'ret', rng: Rng | null, from = s.hex): { dmg: number; lucky: boolean; flank: 0 | 1 | 2 } {
+  const p = blowParts(bt, s, t, how, from);
+  let mul = p.mul;
+  const lucky = !!rng && rng.chance(p.luck * TAC_CHANCE_PER_POINT);
   if (lucky) mul *= 2;
-  return { dmg: Math.max(1, Math.round(rollBase(s, rng) * mod * mul)), lucky };
+  return { dmg: Math.max(1, Math.round(rollBase(s, rng) * p.mod * mul)), lucky, flank: p.flank };
 }
 
 /** Lay `dmg` on a stack: its foremost man's hit points, then whole men. Returns the fallen. */
@@ -738,13 +769,28 @@ function push(bt: TacBattle, e: Omit<TacEvent, 'i'>): void {
   bt.seq++;
 }
 
-function oneBlow(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng, k: 'hit' | 'ret'): void {
-  const { dmg, lucky } = blow(bt, s, t, k === 'ret' ? 'ret' : 'melee', rng);
+/** She turns to face `hex` from `from` (owner, 2026-10-08): the way she walked, struck or fired last. */
+function turnTo(s: TacStack, hex: number, from = s.hex): void {
+  const d = hexDir(from, hex);
+  if (d >= 0) s.face = d;
+}
+
+/** A stack walks (or a flier glides) to `to`, `steps` hexes: she turns the way she went; the event tells the screens
+ *  how long a walk to play (TAC_PACE). */
+function walkTo(bt: TacBattle, s: TacStack, to: number, steps: number): void {
+  turnTo(s, to);
+  s.hex = to;
+  push(bt, { k: 'move', side: s.side, s: s.id, hex: to, n: Math.max(1, steps), ...(sp(s, 'flying') ? { id: 'fly' } : {}) });
+}
+
+/** One blow and what it leaves. `force`: the harm it does, given (previewBlow tries the answers to each). */
+function oneBlow(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng, k: 'hit' | 'ret', force?: number): void {
+  const { dmg, lucky, flank } = force !== undefined ? { dmg: force, lucky: false, flank: 0 as const } : blow(bt, s, t, k === 'ret' ? 'ret' : 'melee', rng);
   if (lucky) push(bt, { k: 'luck', side: s.side, s: s.id });
   const had = hpOf(t);
   const kills = hurt(bt, t, dmg, s.side);
   if (wake(bt, t) && k === 'hit') t.ret = false; // caught asleep: no answer to the blow that wakes her
-  push(bt, { k, side: s.side, s: s.id, t: t.id, dmg, kills, hex: t.hex });
+  push(bt, { k, side: s.side, s: s.id, t: t.id, dmg, kills, hex: t.hex, ...(flank ? { fl: flank } : {}) });
   // docs/18 II: a poisonous bite stays in the living — a third of it again as each of her next two turns comes.
   if (sp(s, 'poison') && t.count > 0 && !sp(t, 'undead')) t.poison = { dmg: Math.max(1, Math.round(dmg * 0.3)), left: 2, by: s.side };
   afterHit(bt, s, t, had - hpOf(t), rng);
@@ -805,18 +851,23 @@ function retaliate(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng): void {
     return;
   }
   if (!sp(t, 'retaliate_all')) t.ret = false;
+  // She turns on whom she answers, as a HoMM3 stack does: her back is to the others now (draw her answer with one
+  // stack, and the next may take her from behind).
+  turnTo(t, s.hex, t.hex);
   oneBlow(bt, t, s, rng, 'ret');
 }
 
-function strike(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng): void {
+/** A blow in melee: hers, what spills from it, the answer, her second. `answer` the dice of the answer (the preview's
+ *  own; the battle's are one), `force` the harm of her first blow, given. */
+function strike(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng, answer: Rng = rng, force?: number): void {
   // The deep's spawn sweeps every foe about it, and none of them answers.
   if (sp(s, 'sweep')) {
-    for (const o of [t, ...enemiesAdjacent(bt, s).filter((o) => o !== t)]) if (o.count > 0) oneBlow(bt, s, o, rng, 'hit');
+    for (const o of [t, ...enemiesAdjacent(bt, s).filter((o) => o !== t)]) if (o.count > 0) oneBlow(bt, s, o, rng, 'hit', o === t ? force : undefined);
     return;
   }
-  oneBlow(bt, s, t, rng, 'hit');
+  oneBlow(bt, s, t, rng, 'hit', force);
   spill(bt, s, t, 'melee');
-  retaliate(bt, s, t, rng);
+  retaliate(bt, s, t, answer);
   // Double strike: the second blow after her answer, if both still stand.
   if (sp(s, 'double_strike') && s.count > 0 && t.count > 0) oneBlow(bt, s, t, rng, 'hit');
 }
@@ -824,6 +875,7 @@ function strike(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng): void {
 function shoot(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng): void {
   const { dmg, lucky } = blow(bt, s, t, 'shot', rng);
   s.shots--;
+  turnTo(s, t.hex);
   if (lucky) push(bt, { k: 'luck', side: s.side, s: s.id });
   const ring = sp(s, 'blast') ? alive(bt).filter((o) => o.side !== s.side && o !== t && hexNeighbors(t.hex).includes(o.hex)) : [];
   const had = hpOf(t);
@@ -1349,11 +1401,23 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
       continue;
     }
     bt.active = s.id;
-    bt.turnEnds = now + TAC_TURN;
-    bt.aiAt = now + aiDelay(bt);
+    giveTurn(bt, now);
     bt.seq++;
     return;
   }
+}
+
+/** Seconds the screens take to play what happened since the turn before began (TAC_PACE): the next turn waits for it. */
+export function playSince(bt: TacBattle, from = bt.beatFrom ?? 0): number {
+  return tacSchedule(bt.log.filter((e) => e.i > from), bt.heroes.some((h) => h.fast) ? 2 : 1).total;
+}
+
+/** A turn given: her clock (or the sea's breath) runs from the moment what came before it has been played. */
+function giveTurn(bt: TacBattle, now: number): void {
+  const play = playSince(bt);
+  bt.beatFrom = bt.events;
+  bt.turnEnds = now + play + TAC_TURN;
+  bt.aiAt = now + play + aiDelay(bt);
 }
 
 /** Fog Madness (a common page after docs/18): as her turn comes she falls on the nearest of her own — a shot if she
@@ -1362,7 +1426,7 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
 function madBlow(bt: TacBattle, s: TacStack, rng: Rng): void {
   const by = (1 - s.side) as 0 | 1;
   const mine = alive(bt).filter((o) => o.side === s.side && o !== s).sort((a, b) => hexDist(s.hex, a.hex) - hexDist(s.hex, b.hex) || threat(bt, b) - threat(bt, a));
-  let t: TacStack | undefined, from = s.hex;
+  let t: TacStack | undefined, from = s.hex, steps = 0;
   if (isShooter(s) && s.shots > 0) t = mine[0];
   else {
     const reach = reachOf(bt, s);
@@ -1374,16 +1438,15 @@ function madBlow(bt: TacBattle, s: TacStack, rng: Rng): void {
         bd = d;
         t = o;
         from = at;
+        steps = d;
       }
     }
   }
   if (!t) return void push(bt, { k: 'fear', side: s.side, s: s.id, id: 'mad' });
   const how = isShooter(s) && s.shots > 0 ? 'shot' : 'melee';
   if (how === 'shot') s.shots--;
-  else if (from !== s.hex) {
-    s.hex = from;
-    push(bt, { k: 'move', side: s.side, s: s.id, hex: from });
-  }
+  else if (from !== s.hex) walkTo(bt, s, from, steps);
+  turnTo(s, t.hex);
   const { dmg } = blow(bt, s, t, how, rng, from);
   const kills = hurt(bt, t, dmg, by);
   wake(bt, t);
@@ -1402,16 +1465,14 @@ function endTurn(bt: TacBattle, s: TacStack, now: number, rng: Rng, surgeOk: boo
   if (s.count > 0 && s.again > 0) {
     s.again--;
     push(bt, { k: 'again', side: s.side, s: s.id });
-    bt.turnEnds = now + TAC_TURN;
-    bt.aiAt = now + aiDelay(bt);
+    giveTurn(bt, now);
     return;
   }
   const m = stackMorale(bt, s);
   if (surgeOk && s.count > 0 && !s.surged && m > 0 && rng.chance(m * TAC_CHANCE_PER_POINT)) {
     s.surged = true;
     push(bt, { k: 'morale', side: s.side, s: s.id });
-    bt.turnEnds = now + TAC_TURN;
-    bt.aiAt = now + aiDelay(bt);
+    giveTurn(bt, now);
     return;
   }
   nextTurn(bt, now, rng);
@@ -1454,8 +1515,11 @@ export function act(bt: TacBattle, side: 0 | 1, a: TacAction, now: number, rng: 
     return null;
   }
   if (a.a === 'pace') {
+    const was = bt.heroes.some((h) => h.fast);
     bt.heroes[side].fast = !!a.fast;
-    bt.aiAt = Math.min(bt.aiAt, now + aiDelay(bt));
+    // Asked mid-turn: what is left of the sea's wait goes at the new pace.
+    const k = bt.heroes.some((h) => h.fast) === was ? 1 : was ? 1 / TAC_FAST : TAC_FAST;
+    if (bt.aiAt > now) bt.aiAt = now + (bt.aiAt - now) * k;
     bt.seq++;
     return null;
   }
@@ -1510,8 +1574,7 @@ export function act(bt: TacBattle, side: 0 | 1, a: TacAction, now: number, rng: 
   const reach = reachOf(bt, s);
   if (a.a === 'move') {
     if (!reach.has(a.to)) return 'Out of reach';
-    s.hex = a.to;
-    push(bt, { k: 'move', side, s: s.id, hex: a.to });
+    walkTo(bt, s, a.to, reach.get(a.to)!);
     endTurn(bt, s, now, rng, true);
     return null;
   }
@@ -1525,13 +1588,139 @@ export function act(bt: TacBattle, side: 0 | 1, a: TacAction, now: number, rng: 
   }
   const from = strikeFrom(bt, s, t, reach, a.from);
   if (from === null) return 'Out of reach';
-  if (from !== s.hex) {
-    s.hex = from;
-    push(bt, { k: 'move', side, s: s.id, hex: from });
-  }
+  if (from !== s.hex) walkTo(bt, s, from, reach.get(from) ?? 1);
+  // She squares up to whom she strikes; the blow is reckoned on the way the other faces.
+  turnTo(s, t.hex);
   strike(bt, s, t, rng);
   endTurn(bt, s, now, rng, true);
   return null;
+}
+
+// ------------------------------------------------------------------ the captain's preview (owner, 2026-10-08)
+
+/** The dice of a preview: every roll its lowest (or its highest: the best the battle's own dice can throw), no luck,
+ *  nothing left to chance. */
+class EdgeDice extends Rng {
+  hi: boolean;
+  constructor(hi: boolean) {
+    super(1);
+    this.hi = hi;
+  }
+  override float(): number {
+    return this.hi ? 4294967295 / 4294967296 : 0;
+  }
+  override int(lo: number, hi: number): number {
+    return this.hi ? hi : lo;
+  }
+  override chance(): boolean {
+    return false;
+  }
+}
+const LOW_DICE = new EdgeDice(false), HIGH_DICE = new EdgeDice(true);
+
+/** A copy of the battle to try a blow on: its stacks, captains and tallies its own, the field and the inputs shared. */
+function trial(bt: TacBattle): TacBattle {
+  return {
+    ...bt,
+    stacks: bt.stacks.map((x) => ({ ...x, ...(x.poison ? { poison: { ...x.poison } } : {}), ...(x.officer ? { officer: { ...x.officer } } : {}) })),
+    heroes: bt.heroes.map((h) => ({ ...h, fx: h.fx.map((f) => ({ ...f })) })) as [TacHero, TacHero],
+    queue: [...bt.queue], log: [], dead: [bt.dead[0], bt.dead[1]], broken: [bt.broken[0], bt.broken[1]], hurt: [...bt.hurt],
+  };
+}
+
+/** Men of `t` left standing after `dmg` (as hurt() lays it). */
+function countAfter(t: TacStack, dmg: number): number {
+  const left = hpOf(t) - dmg;
+  return left <= 0 ? 0 : Math.ceil(left / t.hpMax);
+}
+
+/** Her stack on the copy, stepped up to `from` and squared up to `t` as act() does it. */
+function trialPair(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'shot', from: number): { c: TacBattle; cs: TacStack; ct: TacStack } {
+  const c = trial(bt);
+  const cs = c.stacks.find((x) => x.id === s.id)!, ct = c.stacks.find((x) => x.id === t.id)!;
+  if (how === 'melee' && from !== cs.hex) {
+    turnTo(cs, from);
+    cs.hex = from;
+  }
+  turnTo(cs, ct.hex);
+  return { c, cs, ct };
+}
+
+/** Her men the answer would fell after a first blow of `dmg` (−1: no answer), the answer's dice at their lowest or
+ *  highest. */
+function answerAt(bt: TacBattle, s: TacStack, t: TacStack, from: number, dmg: number, high: boolean, cache: Map<string, number>): number {
+  const key = `${t.id}:${dmg}:${high ? 1 : 0}:${sp(s, 'breath') || sp(s, 'chain') ? from : ''}`;
+  const had = cache.get(key);
+  if (had !== undefined) return had;
+  const { c, cs, ct } = trialPair(bt, s, t, 'melee', from);
+  strike(c, cs, ct, LOW_DICE, high ? HIGH_DICE : LOW_DICE, dmg);
+  const r = c.log.find((e) => e.k === 'ret' && e.s === t.id);
+  const out = r ? r.kills ?? 0 : -1;
+  cache.set(key, out);
+  return out;
+}
+
+/** The men of hers the answer would fell, over every first blow from `a` to `b`: within the harms that leave her the
+ *  same count the answer only grows with the harm (her side's shortfall, backs to the rail), so it is tried at both
+ *  ends of each count; null when no answer comes at all. */
+function answerRange(bt: TacBattle, s: TacStack, t: TacStack, from: number, a: number, b: number, cache: Map<string, number>): [number, number] | null {
+  const hp = hpOf(t), H = t.hpMax;
+  let counts: number[] = [];
+  for (let m = countAfter(t, b); m <= countAfter(t, a); m++) counts.push(m);
+  // A blow on a great stack: two dozen counts of it, its ends among them.
+  if (counts.length > 24) counts = Array.from({ length: 24 }, (_, i) => counts[Math.round((i * (counts.length - 1)) / 23)]);
+  let lo = Infinity, hi = -1, answered = false;
+  for (const m of counts) {
+    if (m <= 0) {
+      lo = 0; // she falls to the last man: no answer
+      continue;
+    }
+    const left = Math.max(a, hp - m * H), right = Math.min(b, hp - (m - 1) * H - 1);
+    if (left > right) continue;
+    const rl = answerAt(bt, s, t, from, left, false, cache), rh = answerAt(bt, s, t, from, right, true, cache);
+    if (rl >= 0 || rh >= 0) answered = true;
+    lo = Math.min(lo, Math.max(0, rl));
+    hi = Math.max(hi, rh, rl);
+  }
+  return answered ? [lo === Infinity ? 0 : lo, Math.max(0, hi)] : null;
+}
+
+/** What her stack `s` would do to `t` (owner, 2026-10-08: «при наведении во время хода … сколько я убью и какой урон
+ *  нанесу»), as HoMM3 shows it: the harm of her blow from `from` (or her shot) with the dice at their lowest and their
+ *  highest, the men it would fell, and the men of hers the answer would fell — reckoned by the battle's own hand
+ *  (blowParts, strike) on a copy of it, so the preview and the blow cannot part. Luck aside: a lucky blow does twice
+ *  (`luck` its chance in percent). `answers` keeps the answers tried for one target across the hexes she may strike
+ *  it from. */
+export function previewBlow(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'shot', from = s.hex, answers = new Map<string, number>()): TacPreview {
+  const { c, cs, ct } = trialPair(bt, s, t, how, from);
+  const at = how === 'melee' ? from : cs.hex;
+  const lo = blow(c, cs, ct, how, LOW_DICE, at), hi = blow(c, cs, ct, how, HIGH_DICE, at);
+  const luck = blowParts(c, cs, ct, how, at).luck;
+  const out: TacPreview = { t: t.id, ...(how === 'melee' ? { from } : { shot: true }), fl: lo.flank, dmg: [lo.dmg, hi.dmg], kills: [t.count - countAfter(t, lo.dmg), t.count - countAfter(t, hi.dmg)] };
+  if (luck > 0) out.luck = Math.round(luck * TAC_CHANCE_PER_POINT * 100);
+  if (how === 'melee' && sp(s, 'double_strike')) out.twice = true;
+  if (how === 'melee' && sp(s, 'sweep')) out.sweep = true;
+  if (how === 'shot' && hexDist(at, t.hex) > TAC_LONG_SHOT && !sp(s, 'no_penalty')) out.far = true;
+  if (how === 'melee') {
+    const r = answerRange(bt, s, t, from, lo.dmg, hi.dmg, answers);
+    if (r) out.ret = r;
+  }
+  return out;
+}
+
+/** Every preview her active stack offers this turn: each foe she may shoot, or each she may reach from every hex
+ *  beside it she may strike from. */
+export function previewsOf(bt: TacBattle, s: TacStack, reach = reachOf(bt, s)): TacPreview[] {
+  const out: TacPreview[] = [];
+  if (canShoot(bt, s)) {
+    for (const t of alive(bt)) if (t.side !== s.side) out.push(previewBlow(bt, s, t, 'shot'));
+    return out;
+  }
+  for (const t of meleeTargets(bt, s, reach)) {
+    const answers = new Map<string, number>();
+    for (const h of hexNeighbors(t.hex)) if (h === s.hex || reach.has(h)) out.push(previewBlow(bt, s, t, 'melee', h, answers));
+  }
+  return out;
 }
 
 // ------------------------------------------------------------------ the sea's mind
@@ -1899,7 +2088,7 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
   const reach = mine && act0 ? reachOf(bt, act0) : new Map<number, number>();
   const stacks: TacStackView[] = bt.stacks.filter((s) => s.count > 0).map((s) => ({
     id: s.id, side: s.side, kind: s.kind, unit: s.unit, sp: s.sp, count: s.count, start: s.start, hp: s.hpTop, hpMax: s.hpMax, hex: s.hex, atk: s.atk, def: s.def, dmg: [s.dmin, s.dmax],
-    speed: speedOf(bt, s), init: initOf(bt, s), shots: s.shots, shotsMax: s.shotsMax, ret: s.ret, defending: s.defending, waited: s.waited,
+    speed: speedOf(bt, s), init: initOf(bt, s), shots: s.shots, shotsMax: s.shotsMax, ret: s.ret, defending: s.defending, waited: s.waited, face: s.face,
     ...(s.officer ? { officer: { role: s.officer.role, name: s.officer.name, ...(s.officer.unique ? { unique: s.officer.unique } : {}), order: s.officer.order, ready: !s.officer.used } } : {}),
     ...(bt.heroes[s.side].fx.some((f) => f.id === 'mark_target' && f.on === s.id && f.until >= bt.round) || bt.heroes[1 - s.side].fx.some((f) => f.id === 'mark_target' && f.on === s.id && f.until >= bt.round) ? { marked: true } : {}),
     ...flagsOf(bt, s),
@@ -1922,6 +2111,7 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
     you: side, round: bt.round, maxRounds: TAC_MAX_ROUNDS, cells: bt.cells.join(''), stacks,
     order: [...(bt.active !== null ? [bt.active] : []), ...bt.queue.filter((id) => stackById(bt, id))], next, active: bt.active, mine, ends: bt.turnEnds,
     reach: [...reach.keys()], melee: mine && act0 ? meleeTargets(bt, act0, reach).map((t) => t.id) : [], shoot: mine && act0 && canShoot(bt, act0) ? alive(bt).filter((t) => t.side !== side).map((t) => t.id) : [],
+    ...(mine && act0 ? { pv: previewsOf(bt, act0, reach) } : {}),
     heroes: [hero(0), hero(1)], log: bt.log.slice(-12), seq: bt.seq, over: bt.over, canCut, canStrike: side === 1, ...(bt.warn?.length && !bt.over ? { warn: [...bt.warn] } : {}), ...extra,
   };
 }

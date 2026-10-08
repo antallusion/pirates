@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { headingVec } from '../shared/src/math.ts';
 import { Rng } from '../shared/src/rng.ts';
-import { TAC_BLOCKING, TAC_CHANCE_PER_POINT, TAC_GAP, TAC_H, TAC_TURN, TAC_W, hexDist, hexIndex, hexMirror, hexNeighbors } from '../shared/src/data/tactical.ts';
+import { TAC_BLOCKING, TAC_CHANCE_PER_POINT, TAC_GAP, TAC_H, TAC_TURN, TAC_W, flankOf, hexDir, hexDist, hexIndex, hexMirror, hexNeighbors } from '../shared/src/data/tactical.ts';
 import { act, aiChoice, blow, buildStacks, canShoot, makeField, meleeTargets, moralePoints, newBattle, quickFinish, reachOf, stackById, stepBattle } from '../server/src/game/tacbattle.ts';
 import type { TacBattle, TacSideInput, TacStack } from '../server/src/game/tacbattle.ts';
 import { sideOf } from '../server/src/game/tactical.ts';
@@ -115,7 +115,7 @@ function faceToFace(): { bt: TacBattle; rng: Rng; x: TacStack; y: TacStack } {
   return { bt, rng, x, y };
 }
 
-test('a blow is struck back once a round, by the survivors; flanking and defending tell', () => {
+test('a blow is struck back once a round, by the survivors; a blow from behind and defending tell', () => {
   const { bt, rng, x, y } = faceToFace();
   const hp0 = x.count * x.hpMax;
   const plain = blow(bt, x, y, 'melee', null).dmg;
@@ -126,16 +126,19 @@ test('a blow is struck back once a round, by the survivors; flanking and defendi
   assert.equal(y.ret, false, 'her retaliation is spent');
   assert.ok((x.count - 1) * x.hpMax + x.hpTop < hp0, 'the survivors struck back');
   assert.ok(bt.log.some((e) => e.k === 'ret' && e.s === y.id));
-  // Another of ours beside her: a flanking blow, and no second retaliation this round.
+  // She turned on whom she answered (owner, 2026-10-08): another of ours from her side or behind strikes harder than
+  // from her front, and no second retaliation this round.
+  assert.equal(y.face, hexDir(y.hex, x.hex), 'she faces whom she answered');
   const x2 = bt.stacks.find((s) => s.side === 0 && s !== x && s.count > 0)!;
-  x2.hex = freeBeside(bt, y.hex);
+  const free = hexNeighbors(y.hex).filter((h) => !TAC_BLOCKING.has(bt.cells[h]) && !bt.stacks.some((o) => o.count > 0 && o !== x2 && o.hex === h));
+  const by = (k: number) => free.find((h) => flankOf(y.face, y.hex, h) === k);
+  const open = by(2) ?? by(1)!, front = by(0) ?? free.find((h) => flankOf(y.face, y.hex, h) < flankOf(y.face, y.hex, open))!;
   bt.active = x2.id;
+  x2.hex = front;
+  const ahead = blow(bt, x2, y, 'melee', null).dmg;
+  x2.hex = open;
   const flank = blow(bt, x2, y, 'melee', null).dmg;
-  const saved = x.hex;
-  x.hex = hexIndex(0, 0);
-  const alone = blow(bt, x2, y, 'melee', null).dmg;
-  x.hex = saved;
-  assert.ok(flank > alone, `flanking (${alone} → ${flank})`);
+  assert.ok(flank > ahead, `into her side or back (${ahead} → ${flank})`);
   const before = bt.log.filter((e) => e.k === 'ret').length;
   if (y.count > 0) act(bt, 0, { a: 'attack', target: y.id }, 0, rng);
   assert.equal(bt.log.filter((e) => e.k === 'ret').length, before, 'no second retaliation');

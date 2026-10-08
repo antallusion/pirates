@@ -25,6 +25,15 @@ import { grantDeed } from './progression.ts';
 import { onboardingProtected } from './onboarding.ts';
 import { PRACTICE_PER_LEVEL, practiceLevel } from '../../../shared/src/data/crewtalk.ts';
 import { logNote } from './captainlog.ts';
+import { UNITS, isPremiumUnit } from '../../../shared/src/data/army.ts';
+import type { UnitId } from '../../../shared/src/data/army.ts';
+import { FACTION_KINDS } from '../../../shared/src/data/factionunits.ts';
+import type { FactionKindId } from '../../../shared/src/data/factionunits.ts';
+import { isBossUnit } from '../../../shared/src/data/bossunits.ts';
+import { rankOf } from '../../../shared/src/data/hero.ts';
+import { mightRoom } from '../../../shared/src/data/town.ts';
+import { heroOf } from './hero.ts';
+import { keepsDeep } from './town.ts';
 
 export type Pools = Record<Profession, number>;
 
@@ -997,6 +1006,105 @@ export function recruitPrisoners(game: Game, s: PlayerSession, target: ShipEntit
   for (const x of target.loseMen(n)) ship.addMen(x.u, x.n);
   c.pools.sailor += n;
   return n;
+}
+
+// ------------------------------------------------------------------------------------------------ the beaten who come over
+
+/** The beaten who come over after a boarding won (owner, 2026-10-08: «при успешном абордаже я должен забирать часть
+ *  команды убитого корабля к себе, небольшую, чтобы поддерживать состав как-то и чтобы не посещать острова»): of the men
+ *  she beat — the fallen who were only wounded, and the survivors who struck — a share signs on, JOIN_SHARE and
+ *  JOIN_LEAD more for each rank of her Leadership. Steady boarding of ships of her level about makes good her losses
+ *  (tools/balance-join.ts), and her hammocks bound it: never more than they hold. */
+export const JOIN_SHARE = 0.13;
+export const JOIN_LEAD = 0.025;
+/** Turncoats' heart: below a tavern's hire (50), above a pressed man's (10) or a prisoner's (20). */
+export const JOIN_LOYALTY = 35;
+
+/** The share of the beaten who come over to a captain of this Leadership rank (0 to a grandmaster's 4). */
+export function joinShare(leadership: number): number {
+  return JOIN_SHARE + JOIN_LEAD * Math.max(0, Math.min(4, leadership));
+}
+
+/** How many of `pool` beaten men come over, her Leadership's share, as far as `room` hammocks go. */
+export function joinCount(pool: number, leadership: number, room: number): number {
+  return Math.max(0, Math.min(Math.floor(room), Math.round(Math.max(0, pool) * joinShare(leadership))));
+}
+
+/** The kind a beaten man serves her as: a faction's man as the pirate kind whose place he took; none for a creature
+ *  (those follow her by tame.ts's offer), a great one or the shop's; the deep's dead only to a crew that keeps them. */
+export function joinAs(u: UnitId, deepOk: boolean): UnitId | null {
+  const base = (FACTION_KINDS[u as FactionKindId]?.as ?? u) as UnitId;
+  const d = UNITS[base];
+  if (!d || d.beast || d.legend || isPremiumUnit(base) || isBossUnit(base)) return null;
+  if ((base === 'drowned' || base === 'deep_spawn') && !deepOk) return null;
+  return base;
+}
+
+/** `n` men spread over the beaten kinds that may come over, by their numbers (the largest remainders). */
+export function joinKinds(beaten: readonly { u: UnitId; n: number }[], n: number, deepOk: boolean): { u: UnitId; n: number }[] {
+  const by = new Map<UnitId, number>();
+  for (const x of beaten) {
+    const u = joinAs(x.u, deepOk);
+    if (u && x.n > 0) by.set(u, (by.get(u) ?? 0) + x.n);
+  }
+  const all = [...by.values()].reduce((a, b) => a + b, 0);
+  if (n <= 0 || all <= 0) return [];
+  const want = [...by].map(([u, k]) => ({ u, x: (k / all) * Math.min(n, all) }));
+  const out = want.map((w) => ({ u: w.u, n: Math.floor(w.x), r: w.x - Math.floor(w.x) }));
+  let rest = Math.min(n, all) - out.reduce((a, b) => a + b.n, 0);
+  for (const o of [...out].sort((a, b) => b.r - a.r || UNITS[a.u].tier - UNITS[b.u].tier)) {
+    if (rest <= 0) break;
+    o.n++;
+    rest--;
+  }
+  return out.filter((o) => o.n > 0).sort((a, b) => b.n - a.n).map(({ u, n: k }) => ({ u, n: k }));
+}
+
+/** The beaten come over to her after a boarding won (`beaten`: the men she beat, by kind — the fallen and, if the
+ *  ship is hers to take, the survivors). As the men they were where her army has their stack or a slot free (picked
+ *  men under her might cap, as the dwellings hold her), as deckhands otherwise; never past her hammocks; none to a
+ *  cruel officer's ship (her prisoners do not sign on either) or one that gives no quarter. The survivors among them
+ *  come off the beaten ship's books (`from`, a ship of the sea), so the prisoners she is offered after are not the same
+ *  men twice. What came over, by the kind each serves as. */
+export function beatenJoin(game: Game, ship: ShipEntity, beaten: readonly { u: UnitId; n: number }[], from?: ShipEntity): { u: UnitId; n: number }[] {
+  const s = game.sessionOf(ship);
+  const p = s?.profile;
+  if (!s || !p || !ship.alive) return [];
+  const c = p.company;
+  if (c.officers.some((o) => o.traits.includes('cruel')) || ship.hasFlag('no_quarter')) return [];
+  const pool = beaten.reduce((a, x) => a + Math.max(0, x.n), 0);
+  const n = joinCount(pool, rankOf(heroOf(p).skills, 'leadership'), ship.stats.crewMax - ship.crew);
+  const kinds = joinKinds(beaten, n, keepsDeep(s) || p.captain === 'drowned');
+  if (!kinds.length) return [];
+  reconcile(game, c, ship.crew);
+  const before = ship.crew;
+  const got = new Map<UnitId, number>();
+  const seat = (u: UnitId, k: number) => {
+    if (k <= 0) return;
+    ship.addMen(u, k);
+    got.set(u, (got.get(u) ?? 0) + k);
+  };
+  const room = (u: UnitId) => ship.army.some((x) => x.u === u) || ship.army.length < ship.armySlots;
+  for (const x of kinds) {
+    let left = x.n;
+    if (room(x.u)) {
+      const k = UNITS[x.u].tier > 1 ? Math.min(left, mightRoom(ship.army, x.u, ship.shipLevel, ship.stats.crewMax, ship.armySlots)) : left;
+      seat(x.u, k);
+      left -= k;
+    }
+    if (left <= 0) continue;
+    // No slot for their kind, or past her might: they serve as deckhands (or in her lowest stack when no slot is left).
+    const low = [...ship.army].sort((a, b) => UNITS[a.u].tier - UNITS[b.u].tier)[0]?.u ?? 'deckhand';
+    seat(room('deckhand') ? 'deckhand' : low, left);
+  }
+  const added = ship.crew - before;
+  if (added <= 0) return [];
+  c.loyalty = (c.loyalty * before + JOIN_LOYALTY * added) / Math.max(1, ship.crew);
+  c.pools.sailor += added;
+  ship.companyKey = '';
+  // The survivors' part of them (her books keep only the survivors) comes off the beaten ship of the sea.
+  if (from && !from.isPlayer && from.crew > 0) from.loseMen(Math.min(from.crew, Math.round((added * from.crew) / Math.max(1, pool))));
+  return [...got].map(([u, k]) => ({ u, n: k }));
 }
 
 export function maxRecruits(ship: ShipEntity, target: ShipEntity, c: Company): number {

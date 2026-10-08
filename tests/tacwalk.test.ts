@@ -8,7 +8,7 @@ import { Rng } from '../shared/src/rng.ts';
 import { TAC_BLOCKING, hexNeighbors } from '../shared/src/data/tactical.ts';
 import { newBattle, reachOf } from '../server/src/game/tacbattle.ts';
 import type { TacSideInput } from '../server/src/game/tacbattle.ts';
-import { GLIDE_MS, WALK_MAX, WALK_MIN, along, easeWalk, walkMs, walkPath } from '../client/src/ui/tacwalk.ts';
+import { GLIDE_MS, STEP_MS, along, easeWalk, glideMs, stepEase, walkMs, walkPath } from '../client/src/ui/tacwalk.ts';
 
 const side = (o: Partial<TacSideInput> = {}): TacSideInput => ({
   name: 'Captain', ship: 'Wake', captain: 'corsair', hands: 60, marines: 10, gunners: 20, army: [{ u: 'marine', n: 20 }, { u: 'deckhand', n: 40 }, { u: 'musketeer', n: 12 }],
@@ -37,11 +37,20 @@ test('the walk to every hex in reach is a chain of free neighbours, no longer th
   }
 });
 
-test('a walk takes 0.15–0.25 s (docs/23 item 60), half that at ×2, a glide a quarter second; its point runs the line end to end', () => {
-  assert.equal(walkMs(1), WALK_MIN);
-  assert.equal(walkMs(20), WALK_MAX);
-  assert.equal(walkMs(20, 2), WALK_MAX / 2);
-  assert.ok(WALK_MIN >= 120 && WALK_MAX <= 250 && GLIDE_MS >= 120 && GLIDE_MS <= 250);
+test('a walk takes 0.35–0.5 s a hex (owner, 2026-10-08), half that at ×2, a glide its own bounded time; each step eased, never back; its point runs the line end to end', () => {
+  assert.ok(STEP_MS >= 350 && STEP_MS <= 500);
+  assert.equal(walkMs(1), STEP_MS);
+  assert.equal(walkMs(4), 4 * STEP_MS);
+  assert.equal(walkMs(4, 2), 2 * STEP_MS);
+  assert.ok(glideMs(1) >= GLIDE_MS && glideMs(1) <= 600 && glideMs(30) <= 1400 && glideMs(30, 2) <= 700);
+  let last = 0;
+  for (let k = 0; k <= 1.0001; k += 0.01) {
+    const x = stepEase(Math.min(1, k), 4);
+    assert.ok(x >= last - 1e-12, 'never runs back');
+    last = x;
+  }
+  assert.equal(stepEase(0.25, 4), 0.25, 'a hex a quarter of a four-hex walk');
+  assert.equal(stepEase(1, 4), 1);
   assert.equal(easeWalk(0), 0);
   assert.equal(easeWalk(1), 1);
   assert.ok(easeWalk(0.25) < 0.25 && easeWalk(0.75) > 0.75, 'sets off and comes to rest');
