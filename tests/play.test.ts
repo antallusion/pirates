@@ -134,10 +134,10 @@ test('the battle\'s end band at sea: a label and its «нет» on one line; wit
 });
 
 test('a struck ship\'s terms on a desk: wide enough for two-line choices, no toast under the card', () => {
-  const css = read('client/styles.css');
-  const at = css.indexOf('@media (min-width: 1100px) and (min-height: 521px) {\r\n  #surrender') >= 0 ? css.indexOf('@media (min-width: 1100px) and (min-height: 521px) {\r\n  #surrender') : css.indexOf('@media (min-width: 1100px) and (min-height: 521px) {\n  #surrender');
+  const css = read('client/styles.css').replace(/\r\n/g, '\n');
+  const at = css.indexOf('@media (min-width: 1100px) and (min-height: 521px) {\n  #surrender');
   assert.ok(at > 0);
-  const block = css.slice(at, css.indexOf('}\n', css.indexOf('#toasts', at)) + 1);
+  const block = css.slice(at, at + 300);
   assert.match(block, /#surrender \{ width: min\(640px, calc\(100vw - 600px\)\); \}/);
   assert.match(block, /body\.simple:not\(\.touch\):has\(#surrender:not\(\.hidden\)\) #toasts \{ display: none !important; \}/);
 });
