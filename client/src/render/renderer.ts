@@ -512,6 +512,7 @@ export class Renderer {
     if (own && state.self) this.drawOwnMark(state, own);
     // Names from the lowest on the screen up, each stepping above any it would lie on.
     this.labelBoxes = [];
+    this.hudBand(); // the HUD's blocks, measured: the names keep out of them
     for (const s of [...ships].filter((x) => !x.own).sort((a, b) => b.y - a.y)) this.drawLabel(s, state, aim.boardTarget === s.id, aim.target === s.id);
     if (own) this.drawThreatMarks(ships, own);
     if (own) this.drawQuestMark(state, own);
@@ -3770,6 +3771,20 @@ export class Renderer {
     const nameW = g.measureText(name).width;
     const total = pillW + 4 + nameW;
     const px = clamp(x - total / 2, 2, Math.max(2, this.w - total - 2));
+    // Under a HUD control (a phone's corners): no name over the button; its ring is still drawn.
+    const hidden = !this.clearOfHudBox(px, px + total, y - 11, y + 11);
+    if (!hidden) this.beastName(s, x, y, px, pillW, badge, name, col, !!def.predator);
+    if (isTarget) {
+      // The engraved ring of her mark (as a ship's): bright and whole within the guns' band, fainter while too far.
+      const r = Math.max(cls.length, 10) * this.zoom * 0.62;
+      markRing(g, this.sx(s.x), this.sy(s.y), r, col, this.markRange === 'in', 0.95);
+      this.rangeWord(this.sx(s.x), this.sy(s.y) + r);
+    }
+  }
+
+  /** A beast's level in its frame, its name and the bar of its strength. */
+  private beastName(s: DrawShip, x: number, y: number, px: number, pillW: number, badge: string, name: string, col: string, predator: boolean): void {
+    const g = this.g;
     g.fillStyle = 'rgba(8,10,14,0.78)';
     roundRect(g, px, y - 10, pillW, 13, 3);
     g.fill();
@@ -3784,7 +3799,7 @@ export class Renderer {
     g.font = '600 11px Inter, sans-serif';
     g.fillStyle = '#000';
     g.fillText(name, px + pillW + 5, y + 1);
-    g.fillStyle = def.predator ? '#e0a08a' : '#bcd3dc';
+    g.fillStyle = predator ? '#e0a08a' : '#bcd3dc';
     g.fillText(name, px + pillW + 4, y);
     g.textAlign = 'center';
     const w = 40;
@@ -3792,12 +3807,6 @@ export class Renderer {
     g.fillRect(x - w / 2 - 1, y + 5, w + 2, 5);
     g.fillStyle = '#b23a3a';
     g.fillRect(x - w / 2, y + 6, w * clamp(s.hull, 0, 1), 3);
-    if (isTarget) {
-      // The engraved ring of her mark (as a ship's): bright and whole within the guns' band, fainter while too far.
-      const r = Math.max(cls.length, 10) * this.zoom * 0.62;
-      markRing(g, this.sx(s.x), this.sy(s.y), r, col, this.markRange === 'in', 0.95);
-      this.rangeWord(this.sx(s.x), this.sy(s.y) + r);
-    }
   }
 
   /** A captain's colours after her name (docs/24 D1): a little cloth on a pole, 15×11 from (x, y) at its top-left —
@@ -3926,6 +3935,17 @@ export class Renderer {
       if (!hit) break;
       y = hit.t - tall - 3;
     }
+    // Under a HUD control: under her hull instead, and if that is no better, no name at all (the target line names a
+    // ship she has marked) — her rings are still drawn.
+    if (!this.clearOfHudBox(x - half, x + half, y - 12 - over, y + tall)) {
+      const below = this.sy(s.y) + (cls.length * this.zoom) / 2 + 16 + over;
+      const free = this.clearOfHudBox(x - half, x + half, below - 12 - over, below + tall) && !this.labelBoxes.some((b) => x - half < b.r && x + half > b.l && below - 12 - over < b.b && below + tall > b.t);
+      if (!free) {
+        this.targetRings(s, state, boardTarget, isTarget);
+        return;
+      }
+      y = below;
+    }
     this.labelBoxes.push({ l: x - half, r: x + half, t: y - 12 - over, b: y + tall });
     const lx = x + (badgeW - flagW) / 2;
     if (badge) {
@@ -3989,9 +4009,29 @@ export class Renderer {
       g.fillStyle = '#d9c9a0';
       g.fillText(line, x, y + 33);
     }
-    // The target (canon D12): the engraved ring of her mark in the colour of the danger she is to you — bright and
-    // whole in the close fight's band (her gun captains fire), fainter while she is too far (never dashed: owner,
-    // 2026-10-07), the word under it saying which.
+    this.targetRings(s, state, boardTarget, isTarget);
+  }
+
+  /** Whether a world label's box (screen px) lies clear of the HUD: its measured blocks, and — on a phone — the corners
+   *  where its round controls stand (the captain top left, the menu and the map top right), so no name is drawn under
+   *  a button (the HUD helper, 2026-10-08: the names lay over the top-right menu at 812×375). */
+  private clearOfHudBox(l: number, r: number, t: number, b: number): boolean {
+    const m = 4;
+    if (this.hudRects.some((q) => r > q.left - m && l < q.right + m && b > q.top - m && t < q.bottom + m)) return false;
+    if (this.w < 1000) {
+      const cw = Math.min(200, this.w * 0.25), ch = Math.min(120, this.h * 0.32);
+      if (t < ch && (r > this.w - cw || l < Math.min(190, this.w * 0.24))) return false;
+    }
+    return true;
+  }
+
+  /** The target (canon D12): the engraved ring of her mark in the colour of the danger she is to you — bright and whole in
+   *  the close fight's band (her gun captains fire), fainter while she is too far (never dashed: owner, 2026-10-07), the
+   *  word under it saying which; four brackets for her a boarding or a mark is on. */
+  private targetRings(s: DrawShip, state: ClientState, boardTarget: boolean, isTarget: boolean): void {
+    const g = this.g;
+    const info = s.info!;
+    const cls = SHIP_CLASSES[s.classId];
     if (isTarget && !boardTarget) {
       const t = info.shipLevel ? levelThreat(state, info.classId, info.shipLevel) : 'even';
       const r = cls.length * this.zoom * 0.62;
