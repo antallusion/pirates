@@ -1343,6 +1343,8 @@ export interface BoardingResult {
   captive: boolean; // Ransom: her captain can be taken prisoner
   /** Prisoners who would sign on (up to 30% of her surviving crew). */
   recruits: number;
+  /** The beaten who came over to her already as the fight ended (owner, 2026-10-08), by the kind they serve as. */
+  joined?: { u: UnitId; n: number }[];
   noQuarter: boolean; // No Quarter: she sinks within the minute whatever you choose
   /** She struck her colours (docs/16 #3) rather than being carried by boarding. */
   struck?: boolean;

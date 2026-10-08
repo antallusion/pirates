@@ -312,16 +312,19 @@ test("on the ships: a captain's boarding opens the battle, the server checks eve
   const crew0 = ship.crew, foe0 = npc.crew;
   c.push({ t: 'tac', act: { a: 'quick' } });
   assert.ok(bt.over, 'quick combat decided it');
-  assert.equal(ship.crew, crew0 - Math.min(bt.dead[0], crew0 - Math.max(2, Math.round(crew0 * 0.1))), 'the fallen came off the crew');
+  // (the beaten who came over to her as it ended joined it: owner, 2026-10-08, crew.ts beatenJoin)
+  const came = (ship.boarding?.fight.tacJoined?.[0] ?? []).reduce((n, x) => n + x.n, 0);
+  assert.equal(ship.crew, crew0 - Math.min(bt.dead[0], crew0 - Math.max(2, Math.round(crew0 * 0.1))) + came, 'the fallen came off the crew');
   assert.ok(npc.crew < foe0, 'and off hers');
   assert.equal(c.last('board_tac')!.view!.over!.winner, bt.over!.winner);
-  steps(game, 60);
+  // Held while its last blows are played (owner, 2026-10-08), then a moment more.
+  steps(game, 200);
   assert.equal(ship.boarding, null, 'the grapples come off');
   assert.equal(c.last('board_tac')!.view, null, 'the battle screen closes');
   assert.equal(bt.over!.winner, 0, 'a full brig carries thirty pirates');
   const r = c.last('boarding')?.result;
   assert.ok(r && r.report?.tac, "the plunder card, with the battle's report");
-  assert.equal(r.crewLost, crew0 - ship.crew);
+  assert.equal(r.crewLost, crew0 - ship.crew + came);
   assert.equal(npc.lootLockedFor, ship.id, 'she is his to plunder');
 });
 

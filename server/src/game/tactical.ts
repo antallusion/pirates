@@ -10,7 +10,7 @@ import { deckGift } from './shipgifts.ts'; // the premium hulls' gifts (docs/02 
 import { FIRST_NAMES, LAST_NAMES } from '../../../shared/src/data/crew.ts';
 import type { OfficerRole } from '../../../shared/src/data/crew.ts';
 import { armyCost, hasSpecial, UNITS } from '../../../shared/src/data/army.ts';
-import { kindOfUnit } from '../../../shared/src/data/tactical.ts';
+import { TAC_END_WINDOW, kindOfUnit } from '../../../shared/src/data/tactical.ts';
 import type { TacAction } from '../../../shared/src/protocol.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { Rng } from '../../../shared/src/rng.ts';
@@ -18,13 +18,13 @@ import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
 import type { NpcRole } from './ship.ts';
 import { ladderBetween } from './ladder.ts';
-import { officerFactor, onFightWon, woundOfficer } from './crew.ts';
+import { beatenJoin, joinsFrom, officerFactor, onFightWon, woundOfficer } from './crew.ts';
 import { onCrewKilled } from './mind.ts';
 import { bloodAndSalt, drownedTakeLosses } from './bridgefx.ts';
 import { afterBattle, heroFace, heroInput, maybeArtifact } from './hero.ts';
 import { npcPathOf } from './pathbook.ts';
 import { isTrialShip } from './throne.ts'; // docs/19 E3
-import { act, endByRansom, killedHp, lossesOf, newBattle, stepBattle, viewOf } from './tacbattle.ts';
+import { act, endByRansom, killedHp, lossesOf, newBattle, playSince, stepBattle, viewOf } from './tacbattle.ts';
 import type { TacArmyEntry, TacBattle, TacSideInput } from './tacbattle.ts';
 
 /** The sea's crews by role: their veterancy in stars and the officer who leads them. A merchant's hands are no
@@ -203,6 +203,12 @@ export function stepTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
   settle(game, a, b, bt, seq);
 }
 
+/** Seconds the screens still play of the battle's last blows (TAC_PACE), so its end is held as long before the
+ *  boarding closes (owner, 2026-10-08: the pace slowed to be read). */
+function playLeft(bt: TacBattle): number {
+  return playSince(bt, bt.beatFrom ?? 0, TAC_END_WINDOW);
+}
+
 /** After the battle moved: the crews, the screens, and the end held a moment so both captains see it. */
 function settle(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle, seq: number): void {
   const fight = a.boarding?.fight;
@@ -210,7 +216,8 @@ function settle(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle, seq: nu
   sync(game, a, b, bt);
   if (bt.over && fight.endsAt === null) {
     const winner = bt.over.winner === 0 ? a : b;
-    fight.endsAt = game.now + (bt.over.why === 'ransom' ? 1.5 : 2.5);
+    // Held a moment so both captains see it — once its last blows are played (owner, 2026-10-08).
+    fight.endsAt = game.now + playLeft(bt) + (bt.over.why === 'ransom' ? 1.5 : 2.5);
     fight.winner = winner.id;
     fight.round = bt.round;
     a.boarding!.rounds = b.boarding!.rounds = bt.round;
@@ -236,6 +243,19 @@ function settle(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle, seq: nu
     }
     // The victor's captain learns from the men his side cut down (HoMM3: the experience of a battle won).
     const wSide = bt.over.winner;
+    // The beaten who come over (owner, 2026-10-08): to a captain who won the boarding against a ship's crew — every man
+    // of a ship of the sea she took (the fallen who were only wounded and those who struck), the fallen of any other.
+    const loser = winner === a ? b : a;
+    if (bt.over.why !== 'ransom' && !isTrialShip(loser) && joinsFrom(loser)) {
+      const lSide = (1 - wSide) as 0 | 1;
+      const all = wSide === 0 && !loser.isPlayer;
+      const beaten = bt.stacks.filter((x) => x.side === lSide).map((x) => ({ u: x.src, n: all ? x.start : x.start - x.count }));
+      const came = beatenJoin(game, winner, beaten, all ? loser : undefined);
+      if (came.length) {
+        fight.tacJoined = [[], []];
+        fight.tacJoined[wSide] = came;
+      }
+    }
     creaturesWon(game, winner, bt.stacks.filter((x) => x.side === wSide).map((x) => x.src)); // docs/18 #39
     const ws = game.sessionOf(winner);
     const xp = Math.round(killedHp(bt, wSide) * TAC_XP_PER_HP);
@@ -322,7 +342,8 @@ export function sendTac(game: Game, a: ShipEntity, b: ShipEntity | null): void {
     if (!ses) continue;
     const side = st.attacker ? 0 : 1;
     const f = st.fight;
-    const result = bt.over ? { lost: lossesOf(bt, side), killed: lossesOf(bt, (1 - side) as 0 | 1), xp: f.tacXp?.[side] ?? 0, ...(f.tacPaid && side === 1 ? { paid: f.tacPaid } : {}) } : undefined;
+    const joined = f.tacJoined?.[side];
+    const result = bt.over ? { lost: lossesOf(bt, side), killed: lossesOf(bt, (1 - side) as 0 | 1), xp: f.tacXp?.[side] ?? 0, ...(f.tacPaid && side === 1 ? { paid: f.tacPaid } : {}), ...(joined?.length ? { joined } : {}) } : undefined;
     game.sendTo(ses, { t: 'board_tac', view: viewOf(bt, side, game.now, st.attacker ? !s.hasFlag('no_quarter') : true, { ransom: ransomCost(game, s), ...(result ? { result } : {}) }) });
   }
 }

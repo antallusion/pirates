@@ -1016,7 +1016,7 @@ export function recruitPrisoners(game: Game, s: PlayerSession, target: ShipEntit
  *  JOIN_LEAD more for each rank of her Leadership. Steady boarding of ships of her level about makes good her losses
  *  (tools/balance-join.ts), and her hammocks bound it: never more than they hold. */
 export const JOIN_SHARE = 0.13;
-export const JOIN_LEAD = 0.025;
+export const JOIN_LEAD = 0.02;
 /** Turncoats' heart: below a tavern's hire (50), above a pressed man's (10) or a prisoner's (20). */
 export const JOIN_LOYALTY = 35;
 
@@ -1058,6 +1058,13 @@ export function joinKinds(beaten: readonly { u: UnitId; n: number }[], n: number
     rest--;
   }
   return out.filter((o) => o.n > 0).sort((a, b) => b.n - a.n).map(({ u, n: k }) => ({ u, n: k }));
+}
+
+/** Whether the men of `loser` may come over after a boarding: a ship's crew — not a guard of the map (its own offer,
+ *  docs/17 H4), a trial's, a great one's or a beast's, nor the Dutchman's dead. */
+export function joinsFrom(loser: ShipEntity): boolean {
+  if (loser.guardOf || loser.bossOf || loser.bossPart || loser.cls.monster) return false;
+  return loser.npcRole !== 'boss' && loser.npcRole !== 'beast' && loser.npcRole !== 'ghost';
 }
 
 /** The beaten come over to her after a boarding won (`beaten`: the men she beat, by kind — the fallen and, if the

@@ -7,7 +7,7 @@
 import { findTitle } from '../render/seafinds.ts'; // docs/19 D5: the chest among the sharks
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { OFFICER_DEFS } from '../../../shared/src/data/crew.ts';
-import { TAC_BLOCKING, TAC_H, TAC_PACE, TAC_SPELLS, TAC_W, hexDist, hexIndex, hexNeighbors, hexX, hexY, tacSchedule } from '../../../shared/src/data/tactical.ts';
+import { TAC_BLOCKING, TAC_END_WINDOW, TAC_H, TAC_PLAY_WINDOW, TAC_SPELLS, TAC_W, hexDist, hexIndex, hexNeighbors, hexX, hexY, tacSchedule } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import type { ClientMsg, TacAction, TacEvent, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
 import { assetUrl, sprite } from '../assets.ts';
@@ -601,7 +601,8 @@ export class TacticalPanel {
     // who struck whom, how many fell. Less motion asked: the same clock, no walks or lunges.
     const t = performance.now();
     const calm = this.calm();
-    const fresh = was ? v.log.filter((e) => e.i > this.seen) : [];
+    // The battle's end shows its last blows only (a quick combat's whole fight is not played again), as the server holds it.
+    const fresh = (was ? v.log.filter((e) => e.i > this.seen) : []).slice(v.over ? -TAC_END_WINDOW : -TAC_PLAY_WINDOW);
     const { beats, total } = tacSchedule(fresh, this.speed(v));
     const ms = (sec: number) => t + sec * 1000;
     // Where each stack stands and how many it has as the play goes on.
@@ -665,7 +666,7 @@ export class TacticalPanel {
       if (settings().tacFast && !v.heroes[v.you].fast && !v.over) this.order({ a: 'pace', fast: true });
       this.seen = v.log.length ? v.log[v.log.length - 1].i : 0;
     }
-    if (fresh.length) this.seen = Math.max(this.seen, ...fresh.map((e) => e.i));
+    if (was && v.log.length) this.seen = Math.max(this.seen, v.log[v.log.length - 1].i);
     for (const s of v.stacks) this.names.set(s.id, `${stackName(s)} (${L(s.side === v.you ? 'ours' : 'theirs')})`);
     if (!v.mine || v.active !== was?.active) {
       this.preview = null;
@@ -1255,8 +1256,13 @@ export class TacticalPanel {
         ...(loot?.chips ?? []),
         ...(loot?.lines ?? []).map((x) => `<span class="tb-lc tb-lw">${x}</span>`),
       ];
+      // The beaten who came over (owner, 2026-10-08): «К вам примкнули: 6 матросов», and their faces.
+      const came = r?.joined?.reduce((a, x) => a + x.n, 0) ?? 0;
+      const joined = came > 0
+        ? `<div class="tb-er tb-joined"><small>${esc(L('res.joined', { n: `${came} ${plural(came, L('res.men1'), L('res.men2'), L('res.men5'))}` }))}</small><div class="tb-rs-row">${r!.joined!.map((x) => `<span class="tb-rs" title="${esc(unitName(x.u))}">${unitIcon(x.u, 'tb-rs-ico')}<i class="up">+${x.n}</i></span>`).join('')}</div></div>`
+        : '';
       const rows = r
-        ? `<div class="tb-end-rows"><div class="tb-er"><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div class="tb-er"><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div><div class="tb-er"><small>${esc(L('res.loot'))}</small><div class="tb-lchips">${spoils.length ? spoils.join('') : none}</div></div></div>`
+        ? `<div class="tb-end-rows"><div class="tb-er"><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div class="tb-er"><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${joined}<div class="tb-er"><small>${esc(L('res.loot'))}</small><div class="tb-lchips">${spoils.length ? spoils.join('') : none}</div></div></div>`
         : '';
       banner.className = `tb-banner tb-end ${won ? 'won' : 'lost'}${v.land ? ' land' : ' sea'}${r ? ' tb-result' : ''}`;
       banner.innerHTML = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span class="tb-why">${esc(whyText)}</span>${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${rows}</div><button class="k-btn k-btn--primary k-btn--lg tb-endbtn" data-endbtn>${esc(v.land ? LL('close') : L('next'))}</button>`;

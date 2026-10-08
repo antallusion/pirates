@@ -12,7 +12,7 @@ import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import {
   TAC_AI_DELAY, TAC_BLOCKING, TAC_FAST, TAC_BURN, TAC_CHANCE_PER_POINT, TAC_COVER, TAC_FEAR, TAC_FLANK, TAC_GAP, TAC_H, TAC_LONG_SHOT, TAC_MAX_ROUNDS, TAC_ORDER_OF, TAC_SPELLS, TAC_TURN, TAC_UNITS, TAC_W,
-  captainSpells, flankOf, hexDir, hexDist, hexIndex, hexMirror, hexNeighbors, hexX, hexY, kindOfUnit, tacSchedule,
+  TAC_PLAY_WINDOW, captainSpells, flankOf, hexDir, hexDist, hexIndex, hexMirror, hexNeighbors, hexX, hexY, kindOfUnit, tacSchedule,
 } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacKind, TacOrderId, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import type { TacAction, TacEvent, TacHeroView, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
@@ -1407,9 +1407,11 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
   }
 }
 
-/** Seconds the screens take to play what happened since the turn before began (TAC_PACE): the next turn waits for it. */
-export function playSince(bt: TacBattle, from = bt.beatFrom ?? 0): number {
-  return tacSchedule(bt.log.filter((e) => e.i > from), bt.heroes.some((h) => h.fast) ? 2 : 1).total;
+/** Seconds the screens take to play what happened since the turn before began (TAC_PACE): the next turn waits for it.
+ *  `window`: the most of the last events they play (TAC_PLAY_WINDOW; the end, TAC_END_WINDOW). */
+export function playSince(bt: TacBattle, from = bt.beatFrom ?? 0, window = TAC_PLAY_WINDOW): number {
+  const after = Math.max(from, bt.events - window);
+  return tacSchedule(bt.log.filter((e) => e.i > after), bt.heroes.some((h) => h.fast) ? 2 : 1).total;
 }
 
 /** A turn given: her clock (or the sea's breath) runs from the moment what came before it has been played. */

@@ -59,6 +59,11 @@ export const TAC_PACE = {
   boss: 1,
 } as const;
 
+/** The most of a turn's events the screens play (the view carries the last dozen of the log); and of the battle's last
+ *  (a quick combat's end is shown by its last blows, not the whole fight again). */
+export const TAC_PLAY_WINDOW = 12;
+export const TAC_END_WINDOW = 6;
+
 /** What the schedule reads of an event (shared/src/protocol.ts TacEvent). */
 export interface TacBeatEvent {
   k: string;

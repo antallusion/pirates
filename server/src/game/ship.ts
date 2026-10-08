@@ -89,6 +89,8 @@ export interface BoardFight {
   tacSeen?: Map<number, number>;
   tacXp?: [number, number];
   tacPaid?: number;
+  /** The beaten who came over to each side's captain after the battle (owner, 2026-10-08; crew.ts beatenJoin). */
+  tacJoined?: [{ u: UnitId; n: number }[], { u: UnitId; n: number }[]];
 }
 
 export interface BoardDuel {
