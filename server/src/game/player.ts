@@ -83,6 +83,7 @@ import type { DriftProfile } from './drifts.ts';
 import { addGlory, gloryView } from './throne.ts';
 import { gloryXp } from '../../../shared/src/data/throne.ts';
 import type { ThroneRec } from './throne.ts';
+import type { SealRec, SealView } from '../../../shared/src/data/seals.ts';
 import { hullXp, researchView } from './research.ts';
 import type { ResearchView } from '../../../shared/src/data/research.ts';
 
@@ -298,6 +299,8 @@ export interface Profile {
   seaMarks?: Record<string, number>;
   /** docs/19 E1–E3: her glory past the cap, her mastery tree, her trials of mastery (throne.ts). */
   throne?: ThroneRec;
+  /** docs/19 E9: her seal of the deep (seals.ts). */
+  seal?: SealRec;
   /** docs/19 D1–D5: her day's finds at their full worth by source, and her seconds at sea that day (seahaul.ts). */
   seaHaul?: { day: number; sec: number; n: Partial<Record<string, number>>; told?: Partial<Record<string, number>> };
   /** docs/19 D5: the small things of the sea she has had, by kind (for her log and the tests). */
@@ -493,6 +496,8 @@ export function pardonCost(p: Profile): number {
 }
 
 export interface WorldView {
+  /** docs/19 E9: her seal of the deep, for the Throne's tab (seals.ts sealView). */
+  seal?: SealView;
   /** One's own island (docs/15). */
   homeIsle?: number | null;
   /** Raiders at her island (docs/15 item 7), and a wild island off the bow she may claim (item 6). */
@@ -533,7 +538,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     // docs/19 E1: past the cap the bar is her glory's.
     xp: p.level >= MAX_LEVEL ? Math.floor(p.throne?.xp ?? 0) : p.xp,
     xpNext: p.level >= MAX_LEVEL ? gloryXp(p.throne?.rank ?? 0) : xpForLevel(p.level),
-    glory: gloryView(now, s),
+    glory: gloryView(now, s, world.seal),
     rested: Math.round(p.rested ?? 0),
     talentPoints: talentPointsAvailable(p),
     deeds: p.deeds,

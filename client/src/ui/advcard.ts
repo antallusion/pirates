@@ -101,6 +101,10 @@ function lairBlock(c: LairCard, x: boolean): string {
       : `${d.owner ? `<span class="muted">${esc(LL('dwell.other', { name: personName(d.owner) }))}</span>` : `<span class="muted">${esc(LL('dwell.can'))}</span>`}${d.can ? `<button class="btn btn-small" data-al="flag" data-id="${c.id}">${esc(LL('dwell.flag'))}</button>` : d.why ? `<span class="muted">${esc(serverText(d.why))}</span>` : ''}`;
     dwell = `<div class="ac-dwell">${body}</div>`;
   }
+  // docs/19 E9: her seal opens this kind's mythic depth (whether the lair stands or not).
+  const seal = c.seal
+    ? `<div class="ac-acts ac-seal"><button class="btn btn-small btn-primary" data-aseal title="${esc(LL('sealTip'))}"${c.seal.why ? ' disabled' : ''}>${icon('ab_deep_call', '', 'ico-sm')}${esc(LL('seal', { n: c.seal.lv }))}</button>${c.seal.why && c.reach ? `<span class="muted ac-gl">${esc(serverText(c.seal.why))}</span>` : ''}</div>`
+    : '';
   const fight = up
     ? `<div class="ac-guard">
       <div class="ac-gw"><b class="ac-word">${esc(w.word)}</b> <span class="muted">${esc(w.range)}</span><span class="tg-army-faces">${faces}</span></div>
@@ -121,6 +125,7 @@ function lairBlock(c: LairCard, x: boolean): string {
     <p class="ac-text muted">${esc(def.text[ru()])}</p>
     ${chain}
     ${fight}
+    ${seal}
     ${dwell}
   </div>`;
 }
@@ -425,6 +430,7 @@ export class AdvCard {
     this.el.querySelectorAll<HTMLButtonElement>('[data-ag]').forEach((b) => (b.onclick = () => this.send({ t: 'h4', action: 'guard', id: b.dataset.id!, choice: b.dataset.ag as 'fight' })));
     this.el.querySelectorAll<HTMLButtonElement>('[data-apz]').forEach((b) => (b.onclick = () => this.onPuzzle()));
     this.el.querySelectorAll<HTMLButtonElement>('[data-al]').forEach((b) => (b.onclick = () => this.send({ t: 'lair', action: b.dataset.al as 'fight', id: b.dataset.id! })));
+    this.el.querySelectorAll<HTMLButtonElement>('[data-aseal]').forEach((b) => (b.onclick = () => this.send({ t: 'throne', action: 'seal' })));
     this.el.querySelectorAll<HTMLButtonElement>('[data-ahire]').forEach((b) => (b.onclick = () => this.onHire()));
     // docs/18 IV: the drift's ways, the mini-game's taps, the fight.
     this.el.querySelectorAll<HTMLButtonElement>('[data-dway]').forEach((b) => (b.onclick = () => this.send({ t: 'drift', action: 'way', id: Number(b.dataset.id), way: b.dataset.dway as 'cut' })));

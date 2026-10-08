@@ -15,6 +15,11 @@ import type { Branch, GloryView, MasteryNode, TrialView } from '../../../shared/
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/throne.ts';
+import { LAIRS } from '../../../shared/src/data/lairs.ts';
+import { SEAL_AFFIX_NAMES, SEAL_AFFIX_TEXT } from '../../../shared/src/data/seals.ts';
+import type { SealAffix } from '../../../shared/src/data/seals.ts';
+import { serverText } from '../lang/server.ts';
+import { placeName } from './maps.ts';
 import type { ClientState } from '../state.ts';
 import { esc, fmt, icon, money } from './dom.ts';
 
@@ -120,6 +125,43 @@ function trialsTab(g: GloryView, state: ClientState): string {
     <div class="th-trials">${list.map((v) => trialRow(v, docked, !!g.fighting)).join('')}</div>`;
 }
 
+// ------------------------------------------------------------------ seals (docs/19 E9)
+
+/** Each affliction's mark (the painted icons it is nearest to). */
+const AFFIX_ICON: Record<SealAffix, string> = { tide: 'boon_black_water', fury: 'boon_salt_fury', shields: 'boon_iron_skin', reinforce: 'ab_call_escort' };
+
+function sealsTab(g: GloryView, state: ClientState): string {
+  const v = g.seal;
+  if (!g.open || !v) return `<p class="muted th-locked">${esc(L('locked', { n: MAX_LEVEL, m: state.self?.level ?? 0 }))}</p>`;
+  const lair = T(LAIRS[v.kind].name);
+  const affixes = v.affixes.map((a) => `<div class="th-affix">${icon(AFFIX_ICON[a], '', 'ico-md')}<span><b>${esc(T(SEAL_AFFIX_NAMES[a]))}</b><small>${esc(T(SEAL_AFFIX_TEXT[a]))}</small></span></div>`).join('');
+  const near = v.near ? L('seal.near', { island: placeName(v.near.island), km: (v.near.d / 1000).toFixed(1).replace('.', lang() === 'ru' ? ',' : '.') }) : L('seal.nearNone');
+  const why = v.why ? serverText(v.why) : '';
+  const board = v.board.length
+    ? `<ol class="th-board">${v.board.map((r) => `<li class="${r.you ? 'you' : ''}"><b>${esc(r.name)}</b><span>${esc(L('seal.row', { lv: r.lv, r: r.rounds }))}</span></li>`).join('')}</ol>`
+    : `<p class="muted hx-none">${esc(L('seal.boardNone'))}</p>`;
+  return `${v.fighting ? `<div class="th-fight card">${icon('bt_charge', '', 'ico-md')}${esc(L('seal.fighting'))}</div>` : ''}
+    <div class="th-head">
+      <div class="th-medal th-seal" title="${esc(L('seal.h', { n: v.lv }))}"><span>${icon('ab_deep_call', '◈', 'ico-sm')}</span><b>${v.lv}</b></div>
+      <div class="th-hside"><div class="gi-h">${esc(L('seal.h', { n: v.lv }))}</div>
+        <div>${esc(L('seal.lair', { lair }))}</div>
+        <div class="th-chips"><span class="th-chip">${esc(L('seal.rounds', { n: v.rounds }))}</span><span class="th-chip">${esc(L('seal.fast', { n: v.fast }))}</span></div></div>
+    </div>
+    <p class="muted hx-note">${esc(L('seal.rule', { r: v.rounds, f: v.fast }))}</p>
+    <h4 class="card-h">${esc(L('seal.affixes'))}</h4>
+    <div class="th-affixes">${affixes}</div>
+    <p class="th-pay">${esc(L('seal.pay', { silver: fmt(v.pay.silver), pearls: v.pay.pearls, art: Math.round(v.pay.art * 100) }))}</p>
+    <div class="th-seal-go">
+      <span class="muted">${esc(near)}</span>
+      ${v.near ? `<button class="btn btn-small" data-thcourse="${v.near.x},${v.near.y}">${esc(L('seal.course'))}</button>` : ''}
+      <button class="btn btn-small btn-primary" data-thseal ${v.why ? 'disabled' : ''} title="${esc(why)}">${esc(L('seal.enter'))}</button>
+    </div>
+    ${why ? `<p class="muted th-why">${esc(why)}</p>` : ''}
+    <p class="muted">${esc(v.best ? L('seal.best', { lv: v.best.lv, r: v.best.rounds }) : L('seal.bestNone'))} · ${esc(L('seal.runs', { n: v.runs, t: v.timed }))}</p>
+    <h4 class="card-h">${esc(L('seal.board'))}</h4>
+    ${board}`;
+}
+
 /** The tabs of the Throne, in order (later parts of docs/19 add theirs here). */
 export const THRONE_TABS: ThroneTab[] = [
   {
@@ -139,6 +181,21 @@ export const THRONE_TABS: ThroneTab[] = [
       send({ t: 'throne', action: 'trial', id: b.dataset.thtrial });
       close();
     })),
+  },
+  {
+    // docs/19 E9: her seal of the deep — a mark on the tab when her boats reach its lair.
+    id: 'seals', label: () => L('tab.seals'), icon: 'ab_deep_call', badge: (g) => (g.seal && !g.seal.why ? 1 : 0), render: sealsTab,
+    bind: (root, send, close) => {
+      root.querySelectorAll<HTMLElement>('[data-thseal]').forEach((b) => (b.onclick = () => {
+        send({ t: 'throne', action: 'seal' });
+        close();
+      }));
+      root.querySelectorAll<HTMLElement>('[data-thcourse]').forEach((b) => (b.onclick = () => {
+        const [x, y] = (b.dataset.thcourse ?? '').split(',').map(Number);
+        if (Number.isFinite(x) && Number.isFinite(y)) send({ t: 'autosail', x, y });
+        close();
+      }));
+    },
   },
 ];
 

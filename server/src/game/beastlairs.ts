@@ -277,6 +277,27 @@ function lairsAbout(S: L18, x: number, y: number): Lair[] {
   return out;
 }
 
+/** docs/19 E9: a lair of these kinds her boats reach now (the seals' mythic depths open at any of them, up or down). */
+export function lairInReachOf(game: Game, s: PlayerSession, kinds: ReadonlySet<LairKind>): Lair | null {
+  const ship = s.ship;
+  if (!ship) return null;
+  for (const l of lairsAbout(L(game), ship.state.x, ship.state.y)) {
+    if (kinds.has(l.kind) && l.turtle === undefined && l.bank === undefined && inReach(game, s, l)) return l;
+  }
+  return null;
+}
+
+/** docs/19 E9: every lair of a kind on the sea (a seal's course to the nearest). */
+export function lairsOfKind(game: Game, kind: LairKind): Lair[] {
+  return L(game).lairs.filter((l) => l.kind === kind && l.turtle === undefined && l.bank === undefined);
+}
+
+/** The island a lair stands on, by name. */
+export const lairIsland = (game: Game, l: Lair): string => islandName(game, l);
+
+/** docs/19 E9: what another system adds to a lair's card (the seal's mythic depth), set by that system. */
+export const lairCardHooks: { seal?: (game: Game, s: PlayerSession, l: Lair) => LairCard['seal'] } = {};
+
 /** The boats can reach the lair's shore from where she lies. */
 function inReach(game: Game, s: PlayerSession, l: Lair): boolean {
   const ship = s.ship!;
@@ -389,7 +410,9 @@ function card(game: Game, s: PlayerSession, l: Lair): LairCard {
   const st = L(game).store.st[l.id];
   const chainSteps = l.chain !== undefined ? [`l${l.island}s`, `l${l.island}g`, `l${l.island}G`].map((id) => p.v[id] === week1(game)) : undefined;
   const dw = dwellOf(game, s, l);
+  const seal = lairCardHooks.seal?.(game, s, l);
   return {
+    ...(seal ? { seal } : {}),
     id: l.id, kind: l.kind, role: l.role, size: l.size, level: l.level, island: islandName(game, l), men: armyMen(men), stacks: men.map((x) => ({ u: x.u, n: x.n })),
     ratio: Math.round(lairRatio(game, s, l) * 10) / 10, party: armyMen(partyOf(game, s)), offer, joinN: offer === 'join' ? armyMen(lairJoiners(game, s, l)) : 0,
     reach: inReach(game, s, l), why: up ? fightWhy(game, s, l) : null, pay: { silver: pay.silver, xp: xpAt(s.profile!.level, l.level, pay.xp) }, ...(lairWeek(game, l) ? { week: true } : {}),
@@ -1228,6 +1251,9 @@ function nearestOf(game: Game, list: Lair[], x: number, y: number): Lair | undef
 /** Set her down off the lair's shore, within the boats' reach. */
 /** Her ship off a lair's shore, within the boats' reach (the admin's and the tests'). */
 export const lairGoTo = (game: Game, s: PlayerSession, l: Lair): void => goTo(game, s, l);
+
+/** docs/19 E9: the tester's way to a seal's lair (seals.ts `/seal go`). */
+export const goToLair = (game: Game, s: PlayerSession, l: Lair): void => goTo(game, s, l);
 
 function goTo(game: Game, s: PlayerSession, l: Lair): void {
   const ship = s.ship!;

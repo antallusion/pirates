@@ -15,6 +15,8 @@ import {
   resetCost, throneLift,
 } from '../../../shared/src/data/throne.ts';
 import type { GloryView, MasteryRanks, ThroneLift, TrialView } from '../../../shared/src/data/throne.ts';
+import type { SealView } from '../../../shared/src/data/seals.ts';
+import { enterDepth } from './seals.ts';
 import type { StatMods } from '../../../shared/src/data/stats.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import { headingVec } from '../../../shared/src/math.ts';
@@ -376,7 +378,7 @@ export function trialViews(now: number, p: Profile): TrialView[] {
   });
 }
 
-export function gloryView(now: number, s: PlayerSession): GloryView | undefined {
+export function gloryView(now: number, s: PlayerSession, seal?: SealView): GloryView | undefined {
   const p = s.profile;
   if (!p) return undefined;
   if (p.level < MAX_LEVEL - 5 && !p.throne) return undefined;
@@ -387,6 +389,7 @@ export function gloryView(now: number, s: PlayerSession): GloryView | undefined 
   return {
     open: p.level >= MAX_LEVEL, rank: t.rank, xp: Math.floor(t.xp), need: gloryXp(t.rank), picks, pending: gloryPending(t.rank, t.picks), points: masteryPoints(t.rank), spent, nodes: { ...t.nodes },
     trials: trialViews(now, p), reset: resetCost(spent), lift: liftOf(p), ...(fight && trials.get(fight) ? { fighting: trials.get(fight)!.skill } : {}),
+    ...(seal ? { seal } : {}),
   };
 }
 
@@ -405,6 +408,10 @@ export function throneMessage(game: Game, s: PlayerSession, msg: ThroneClientMsg
       break;
     case 'trial':
       why = startTrial(game, s, String(msg.id ?? ''));
+      break;
+    case 'seal':
+      // docs/19 E9: her seal's mythic depth at the lair her boats reach.
+      why = enterDepth(game, s);
       break;
     case 'view':
       break;

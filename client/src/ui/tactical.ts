@@ -4,6 +4,7 @@
 // the captains on the side panel with their orders; the feed; the end. The server decides everything: a tap sends
 // the order (a second tap on a lit hex moves there; a tap on a foe strikes or fires), a long press shows a stack.
 
+import { SEAL_MOVES } from '../../../shared/src/data/seals.ts';
 import { findTitle } from '../render/seafinds.ts'; // docs/19 D5: the chest among the sharks
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { OFFICER_DEFS } from '../../../shared/src/data/crew.ts';
@@ -63,7 +64,7 @@ const FL = dict(FEN, FRU);
 const RL = dict(REN, RRU);
 const BL = dict(BEN, BRU);
 /** A great one's move, in the player's language. */
-const shoreMove = (id: string | undefined): string => SHORE_MOVES[id as ShoreMove]?.[lang() === 'ru' ? 1 : 0] ?? '';
+const shoreMove = (id: string | undefined): string => (SHORE_MOVES[id as ShoreMove] ?? SEAL_MOVES[id ?? ''])?.[lang() === 'ru' ? 1 : 0] ?? ''; // (and a seal's doings, docs/19 E9)
 /** docs/19 D7: a roaming stack's fight is named 'roam_<kind>'. */
 const roamOf = (lair: string | undefined): RoamKind | null => { const k = lair?.startsWith('roam_') ? lair.slice(5) : ''; return isRoamKind(k) ? k : null; };
 

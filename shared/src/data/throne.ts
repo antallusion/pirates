@@ -17,6 +17,7 @@
 // skills at grandmaster wins at most 65% against a fresh captain of the cap (tools/balance-glory.ts,
 // tests/throne.test.ts); the endgame's battle lift is held under ENDGAME_CAP whatever is stacked.
 
+import type { SealView } from './seals.ts';
 import { MAX_LEVEL, xpForLevel } from '../constants.ts';
 import type { CaptainId } from './captains.ts';
 import type { PrimId, Prims, SkillId } from './hero.ts';
@@ -301,6 +302,8 @@ export interface GloryView {
   lift: ThroneLift;
   /** A trial under way (its skill). */
   fighting?: SkillId;
+  /** docs/19 E9: her seal of the deep. */
+  seal?: SealView;
 }
 
 /** Silver to forget the mastery tree in a port: a thousand a point spent. */
