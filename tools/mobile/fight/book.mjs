@@ -175,6 +175,11 @@ if (!touch) {
     m = await measure();
     L.log(tag, 'hover'.padEnd(10), m.tip ? `tip ${m.tip.w}×${m.tip.h} @${m.tip.l},${m.tip.t} off ${m.tip.off} cut ${m.tip.cut} «${m.tip.text}»` : `no tip ${JSON.stringify(await p.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); const w = document.querySelector('.tb-words'); return { at: e?.className, hov: [...document.querySelectorAll(':hover')].map((h) => h.className).slice(-3), words: w ? w.className : null }; }, [pg.x, pg.y]))}`);
     if (SHOTS) await p.screenshot({ path: `${OUT}/${tag}_hover.png` });
+    // the mouse resting on the page while a turn goes by (the panel drawn anew under it): the words stay
+    await L.send(p, { t: 'tac', act: { a: 'defend' } });
+    await sleep(2500);
+    m = await measure();
+    L.log(tag, 'hover+turn'.padEnd(10), m.tip ? `tip stays «${m.tip.text.slice(0, 40)}»` : 'tip gone');
     await p.mouse.move(W / 2, 10);
     await sleep(300);
   }

@@ -449,6 +449,8 @@ export class TacticalPanel {
   private wordsEl: HTMLElement | null = null;
   private wordsFor: HTMLElement | null = null;
   private wordsTimer = 0;
+  /** Where the mouse rests over the battle (a page drawn anew under it is not «:hover» till the mouse moves). */
+  private ptrAt = { x: -1, y: -1 };
   /** A finger's long press showed them: the click the browser makes of it does not give the order. */
   private wordsHeld = false;
   /** The screen's clock (owner, 2026-10-08: «сам бой должен быть плавнее по игре, там как-то слишком быстро всё
@@ -601,6 +603,9 @@ export class TacticalPanel {
     // An order's whole words: the mouse resting on a page of the panel or the book, or a key's focus on it.
     const PAGE = '.tb-spells [data-spell], .tb-spells [data-move], .tb-book [data-spell]';
     const el = this.el!;
+    el.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'mouse') this.ptrAt = { x: e.clientX, y: e.clientY };
+    });
     el.addEventListener('pointerover', (e) => {
       if (e.pointerType !== 'mouse') return;
       const b = (e.target as HTMLElement).closest<HTMLElement>(PAGE);
@@ -1665,7 +1670,7 @@ export class TacticalPanel {
   /** The words a moment after the mouse comes to rest on a page (not while it only crosses the panel). */
   private wordsSoon(b: HTMLElement): void {
     clearTimeout(this.wordsTimer);
-    this.wordsTimer = window.setTimeout(() => b.isConnected && b.matches(':hover') && this.showWords(b), 160);
+    this.wordsTimer = window.setTimeout(() => b.isConnected && this.under(b) && this.showWords(b), 160);
   }
 
   /** The words beside the page (the panel's: over the field's edge, never over the next page), or over the card a
@@ -1703,6 +1708,12 @@ export class TacticalPanel {
     w.style.top = `${Math.round(Math.max(m, Math.min(innerHeight - m - wh, y)))}px`;
   }
 
+  /** The mouse over this page now (by where it rests, not «:hover»: a page drawn anew under a still mouse has none). */
+  private under(b: HTMLElement): boolean {
+    const at = document.elementFromPoint(this.ptrAt.x, this.ptrAt.y);
+    return !!at && (at === b || b.contains(at));
+  }
+
   private hideWords(): void {
     clearTimeout(this.wordsTimer);
     this.wordsFor?.removeAttribute('aria-describedby');
@@ -1719,7 +1730,7 @@ export class TacticalPanel {
     const sel = d.spell ? `[data-spell="${d.spell}"]` : d.move ? `[data-move="${d.move}"]` : d.bkspell ? `[data-bkspell="${d.bkspell}"]` : d.bkmove ? `[data-bkmove="${d.bkmove}"]` : d.bk ? `[data-bk="${d.bk}"]` : '';
     const scope = was.classList.contains('tb-bc') ? this.sheetH?.body : was.classList.contains('bk-sp') ? this.el?.querySelector('.tb-book') : this.el?.querySelector('.tb-spells');
     const now = sel && scope ? scope.querySelector<HTMLElement>(sel) : null;
-    if (now && (this.wordsHeld || now.classList.contains('tb-bc') || now.matches(':hover, :focus-visible'))) this.showWords(now, now.classList.contains('tb-bc'));
+    if (now && (this.wordsHeld || now.classList.contains('tb-bc') || this.under(now) || now.matches(':focus-visible'))) this.showWords(now, now.classList.contains('tb-bc'));
     else this.hideWords();
   }
 
