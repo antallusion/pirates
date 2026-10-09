@@ -18,6 +18,9 @@ export const RAID_TIERS = 7;
 export const RAID_GROUP = 5;
 /** Within this of the Stair's gate a tier's legend comes alongside. */
 export const RAID_GATE_R = 900;
+/** A tier's legend orders as a captain of ⚓10 does, her crew's strength times this (the castellans' and the
+ *  Admiralty's legends' rule: counted from the whole of a tier's army, the first Musket Storm swept a deck). */
+export const RAID_SPELL: readonly number[] = [1, 1.05, 1.1, 1.15, 1.2, 1.3, 1.45];
 
 export interface RaidTier {
   n: number;

@@ -83,6 +83,8 @@ test('a tier at the gate: the legend alongside and grappled; held, nothing is lo
   const legend = game.ships.get(ship.boarding!.with)!;
   assert.ok(isTrialShip(legend), 'no artifact on her, none of hers joins');
   assert.equal(bt.heroes[1].input.name, RAID[0].name[0]);
+  // Her orders as a captain's of ⚓10, not her whole army's (a deck swept by the first Musket Storm).
+  assert.ok(bt.heroes[1].input.spellHp! > 0 && bt.heroes[1].input.spellHp! < bt.heroes[1].startHp, `${bt.heroes[1].input.spellHp} of ${bt.heroes[1].startHp}`);
   assert.equal(raidView(game, s)!.fighting, 'Maw Diver');
   act(bt, 0, { a: 'surrender' }, game.now, new Rng(1));
   steps(game, 80);

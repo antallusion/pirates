@@ -27,6 +27,7 @@ import { npcPathOf } from './pathbook.ts';
 import { isTrialShip } from './throne.ts'; // docs/19 E3
 import { isCastellan, siegeSetup } from './citadels.ts'; // docs/19 E5
 import { contractSpellHp } from './admiralty.ts'; // docs/19 E15
+import { raidSpellHp } from './abyssraid.ts'; // docs/19 E11
 import { act, endByRansom, killedHp, lossesOf, newBattle, playSince, stepBattle, viewOf } from './tacbattle.ts';
 import type { TacArmyEntry, TacBattle, TacSideInput } from './tacbattle.ts';
 
@@ -144,7 +145,7 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
     bIn.army = so.army.map((x) => ({ u: x.u, n: x.n, src: x.u }));
     bIn.spellHp = so.spellHp;
   }
-  bIn.spellHp ??= contractSpellHp(b); // docs/19 E15: the Admiralty's legend orders as a captain, not as her army
+  bIn.spellHp ??= contractSpellHp(b) ?? raidSpellHp(b); // docs/19 E15, E11: a legend of the Admiralty or of the Abyss orders as a captain, not as her army
   fight.tac = newBattle(sideOf(game, a, b, true), bIn, seed, game.now, rng, so ? { siege: so.siege } : {});
   fight.tacSync = [0, 0];
   fight.tacSeen = new Map(fight.tac.stacks.map((s) => [s.id, s.count]));

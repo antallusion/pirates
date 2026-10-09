@@ -14,7 +14,8 @@ import { MAX_LEVEL } from '../../../shared/src/constants.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import { ARTIFACTS, abyssPartChance } from '../../../shared/src/data/artifacts.ts';
-import { RAID, RAID_GATE_R, RAID_GROUP, RAID_TIERS, raidArmy, raidPay } from '../../../shared/src/data/abyssraid.ts';
+import { RAID, RAID_GATE_R, RAID_GROUP, RAID_SPELL, RAID_TIERS, raidArmy, raidPay } from '../../../shared/src/data/abyssraid.ts';
+import { citSpellHp } from '../../../shared/src/data/citadels.ts';
 import type { RaidView } from '../../../shared/src/data/abyssraid.ts';
 import { ORDER_IDS, SKILL_IDS, heroBattle, manaMaxOf, startingOrders } from '../../../shared/src/data/hero.ts';
 import type { HeroBattle, OrderId, SkillSlot } from '../../../shared/src/data/hero.ts';
@@ -110,6 +111,13 @@ export function raidHero(tier: number): HeroBattle {
   const book: OrderId[] = [...own, ...ORDER_IDS.filter((id) => !own.includes(id))].slice(0, Math.max(own.length, Math.ceil(ORDER_IDS.length * t.book)));
   return heroBattle(prim, skills, null, book, manaMaxOf(prim.will) * 2, { path: t.path, level: MAX_LEVEL });
 }
+
+/** A raid legend's orders as a captain's (tactical.ts sets it on her side): the ⚓10 crew's strength times her tier's
+ *  RAID_SPELL — not her whole army's, which swept a deck with the first Musket Storm. */
+export const raidSpellHp = (ship: ShipEntity): number | undefined => {
+  const L = legends.get(ship);
+  return L ? Math.round(citSpellHp(10) * (RAID_SPELL[L.tier - 1] ?? 1)) : undefined;
+};
 
 /** A legend of the raid alongside (throne.ts isTrialShip: no artifact on her, none of hers joins). */
 export const isRaidLegend = (ship: ShipEntity): boolean => legends.has(ship);
