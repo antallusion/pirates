@@ -598,6 +598,8 @@ export interface PrivateState {
   glory?: GloryView;
   /** docs/19 E4–E8: the citadels and the Throne war, for the Throne's tabs (from five levels short of the cap). */
   cit?: import('./data/citadels.ts').CitView;
+  /** docs/19 E15: the Admiralty's contracts of the week, for the Throne's tab and the boards (from five levels short of the cap). */
+  adm?: import('./data/admiralty.ts').AdmView;
   accountId: number;
   name: string;
   /** The title she flies with the ship's name (docs/16 #29). */

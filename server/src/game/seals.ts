@@ -26,6 +26,7 @@ import { weekOf } from './empires.ts';
 import type { Game } from './Game.ts';
 import { artifactFind } from './hero.ts';
 import { relicPartDrop } from './relics.ts'; // docs/19 E12
+import { contractSeal } from './admiralty.ts'; // docs/19 E15
 import { sealPartChance } from '../../../shared/src/data/artifacts.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { chronicle } from './renown.ts';
@@ -268,6 +269,7 @@ function endDepth(game: Game, s: PlayerSession, l: Lair, lv: number, won: boolea
   seal.lv = clampSeal(seal.lv + step);
   if (step > 0) seal.kind = pickKind(game, seal.kind);
   if (timed) noteBest(game, s, seal, lv, rounds);
+  if (timed) contractSeal(game, s, lv); // docs/19 E15: the Admiralty's seal contract
   if (!won) {
     game.toastShip(ship, `The mythic depth throws your party back into the surf. The seal falls to ${seal.lv}.`, 'bad');
     return undefined;

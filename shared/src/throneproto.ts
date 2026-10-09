@@ -6,11 +6,12 @@ export interface ThroneClientMsg {
   /** glory: a boon (id = primary); node: a rank of a mastery node (id); reset: the tree forgotten in port; trial: the
    *  legend of a skill (id) alongside; view: nothing but her state again; seal: her seal's mythic depth at the lair her
    *  boats reach (docs/19 E9); raid: her raid's legend alongside at the Stair (docs/19 E11). */
-  action: 'glory' | 'node' | 'reset' | 'trial' | 'view' | 'seal' | 'raid' | 'cit';
+  action: 'glory' | 'node' | 'reset' | 'trial' | 'view' | 'seal' | 'raid' | 'cit' | 'contract';
   id?: string;
   /** docs/19 E5–E7, `cit`: what she does at a citadel (`op`: declare a siege, assault it, leave `n` of her men of kind
-   *  `u` in its garrison, hire its titan of kind `u`), and which (`cit`, 0–11). */
-  op?: 'declare' | 'assault' | 'leave' | 'titan';
+   *  `u` in its garrison, hire its titan of kind `u`), and which (`cit`, 0–11). docs/19 E15, `contract`: a contract of the
+   *  week taken at an Admiralty board (`op` take) or its legend boarded (`op` board), by its id (`id`). */
+  op?: 'declare' | 'assault' | 'leave' | 'titan' | 'take' | 'board';
   cit?: number;
   u?: string;
   n?: number;

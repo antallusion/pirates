@@ -61,6 +61,7 @@ import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
 import { auctionCard, bindDealings, dealingsAct, hearsayCard, repairCompare, runsCard } from './dealings.ts';
 import { dwellCard, tamerCard } from './recruit.ts';
 import { FLAGS_TAB, bindColours, coloursCard } from './flags.ts';
+import { admiraltyBoard, bindContracts } from './contracts.ts'; // docs/19 E15
 
 /** A generated job's picture by its kind (docs/11 P4). */
 const JOB_ICON: Record<string, string> = {
@@ -231,6 +232,7 @@ export class PortScreen {
     }));
     root.querySelectorAll<HTMLElement>('[data-act]').forEach((el) => (el.onclick = () => this.act(el.dataset, root, state)));
     bindColours(root, this.send);
+    bindContracts(root, this.send, () => {}); // docs/19 E15: the Admiralty's board
     bindBazaar(root);
     bindDealings(root);
     root.querySelector<HTMLElement>('[data-dwell]')?.addEventListener('click', () => this.openDwell?.());
@@ -784,7 +786,8 @@ ${orders}${berths}</div>` : ''}`;
       ...self.contracts.map((c) => `<div class="w-row" data-hint="${esc(serverText(c.description))}">${icon(contractArt(c), '', 'w-row-ico')}<span class="w-row-t"><b>${esc(serverText(c.title))}</b><small>${esc(c.kind === 'bounty' ? `${c.progress ?? 0}/${c.kills}` : W('q.to', { port: portName(c.toPort) }))}</small></span><span class="w-row-n">${money(c.reward)}</span><span class="w-row-b"><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="contract" data-mode="abandon" data-id="${c.id}">${esc(L('btn.abandon'))}</button></span></div>`),
       ...self.quests.map((q) => `<div class="w-row">${icon('goal', '', 'w-row-ico')}<span class="w-row-t"><b>${esc(serverText(q.name))}</b><small>${q.step}/${q.steps}: ${esc(serverText(q.text))}${q.need > 1 ? ` (${q.progress}/${q.need})` : ''}</small></span><span class="w-row-b"><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="quest_abandon" data-id="${q.id}">${esc(L('quest.setAside'))}</button></span></div>`),
     ].join('');
-    return `${sec(W('q.best'))}${top.length ? `<div class="q-best">${top.map(card).join('')}</div>` : `<p class="muted">${esc(W('q.none'))}</p>`}
+    // docs/19 E15: a great harbour's Admiralty board heads the quests for a captain of the cap.
+    return `${admiraltyBoard(state, view.portId)}${sec(W('q.best'))}${top.length ? `<div class="q-best">${top.map(card).join('')}</div>` : `<p class="muted">${esc(W('q.none'))}</p>`}
       ${rest.length ? `${sec(W('q.rest'))}<div class="mk-list">${rest.map(row).join('')}</div>` : ''}
       ${mine ? `${sec(W('q.mine'), `${self.contracts.length}/${3 + ((self.talents.trd_contract_broker ?? 0) > 0 ? 1 : 0)}`)}<div class="mk-list">${mine}</div>` : ''}
       ${more(W('more'), `${runsCard(view, state)}${dailyCard(self.daily)}${commonCard(self.common)}${invasionCard(self.invasion)}`, 'q-more')}`;

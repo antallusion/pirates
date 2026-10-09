@@ -46,6 +46,8 @@ import { CONVOY_RANGE, groupOfAccount } from './party.ts';
 import { seasonStat } from './seasons.ts';
 import { grantMap, makeMap } from './explorefx.ts';
 import type { ShipEntity } from './ship.ts';
+import { admiraltyById, isAdmId } from '../../../shared/src/data/admiralty.ts'; // docs/19 E15
+import { contractDone } from './admiralty.ts';
 
 export const MAX_ACTIVE_QUESTS = 5;
 /** A port's board shows this many of its generated jobs at a time, a new set every few hours (docs/19 D4: ten, twice
@@ -69,7 +71,13 @@ export interface QuestState {
   leader?: number;
   /** The pay chosen on taking it, when not all silver (docs/11 P6). */
   pay?: QuestPay;
+  /** docs/19 E15: an Admiralty's citadel contract — her watches of the week as she took it (those after it count). */
+  base?: number;
 }
+
+/** The quests that count against MAX_ACTIVE_QUESTS: the Admiralty's contracts of the week stand beside them (docs/19
+ *  E15 — three at the most, and the week's own). */
+export const questsUnderWay = (p: Profile): number => p.quests.active.filter((a) => !isAdmId(a.id)).length;
 
 /** The pay a job offers to choose from (docs/11 P6): jobs and arcs of some worth; favour where there is a port. */
 export function payOptions(game: Game, q: QuestDef): QuestPayView | undefined {
@@ -197,7 +205,11 @@ export type QuestEvent =
   | { k: 'dock'; port: Port }
   | { k: 'land'; island: number; feature: string }
   /** docs/18 #23: a lair of the land's creatures beaten. */
-  | { k: 'lair'; island: number; kind: string };
+  | { k: 'lair'; island: number; kind: string }
+  /** docs/19 E15: the Admiralty's legend made to strike; a seal's mythic depth won in time; watches on the citadels' walls. */
+  | { k: 'legend' }
+  | { k: 'seal'; lv: number }
+  | { k: 'citadel'; n: number };
 
 export function newQuestLog(): QuestLog {
   return { active: [], done: [] };
@@ -282,7 +294,7 @@ export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string
   if (q.category === 'elite' ? q.id !== todaysElite(game, port)?.id : q.kind === 'job' && !boardJobs(p, port, game.now, eventFavor(game, port)).includes(q)) return 'That job is no longer on the board';
   const why = questBlocked(p, q);
   if (why) return why;
-  if (p.quests.active.length >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
+  if (questsUnderWay(p) >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
   startQuest(game, p, q, s, pay);
   game.sendTo(s, { t: 'toast', msg: `${q.mentor}: “${q.summary}” — ${q.steps[0].text}`, kind: 'info' });
   newsHint(game, s, 'journal');
@@ -300,7 +312,7 @@ export function islandJobOffer(game: Game, s: PlayerSession, islandId: number): 
     game.sendTo(s, { t: 'toast', msg: `${q.mentor} has work, but for a captain with more years at sea (level ${q.requires.level}).`, kind: 'info' });
     return;
   }
-  if (p.quests.active.length >= MAX_ACTIVE_QUESTS) {
+  if (questsUnderWay(p) >= MAX_ACTIVE_QUESTS) {
     game.sendTo(s, { t: 'toast', msg: `${q.mentor} has work for you once you have room for it (${MAX_ACTIVE_QUESTS} quests at most).`, kind: 'info' });
     return;
   }
@@ -341,6 +353,7 @@ export function shareQuest(game: Game, s: PlayerSession, id: string): string | n
   const q = QUESTS_BY_ID[id];
   if (!q || !s.profile!.quests.active.some((a) => a.id === id)) return 'You are not on that quest';
   if (q.kind === 'path' || q.kind === 'legend') return 'A Path or a Legend is walked alone';
+  if (isAdmId(id)) return 'The Admiralty gives its contracts at its own boards'; // docs/19 E15
   const g = groupOfAccount(game, s.accountId);
   if (!g) return 'You sail in no group';
   let offered = 0;
@@ -350,7 +363,7 @@ export function shareQuest(game: Game, s: PlayerSession, id: string): string | n
     const mp = m?.profile;
     if (!m || !mp) continue;
     if (mp.quests.active.some((a) => a.id === id) || mp.quests.done.includes(id)) continue;
-    if (questBlocked(mp, q) || mp.quests.active.length >= MAX_ACTIVE_QUESTS) {
+    if (questBlocked(mp, q) || questsUnderWay(mp) >= MAX_ACTIVE_QUESTS) {
       game.sendTo(s, { t: 'toast', msg: `${m.name} cannot take it on yet.`, kind: 'info' });
       continue;
     }
@@ -370,7 +383,7 @@ export function answerOffer(game: Game, s: PlayerSession, id: string, take: bool
   const p = s.profile!;
   const q = QUESTS_BY_ID[id];
   if (!q || p.quests.active.some((a) => a.id === id) || p.quests.done.includes(id)) return null;
-  if (p.quests.active.length >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
+  if (questsUnderWay(p) >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
   startQuest(game, p, q, s, pay);
   game.sendTo(s, { t: 'toast', msg: `${q.mentor}: “${q.summary}” — ${q.steps[0].text}`, kind: 'info' });
   return null;
@@ -408,6 +421,9 @@ function stepCount(st: QuestStep): number {
     case 'letters':
     case 'rescue':
     case 'lair':
+    case 'legend':
+    case 'seal':
+    case 'citadel':
       return st.count;
     case 'sell_contraband':
       return st.qty;
@@ -561,6 +577,13 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
       return ev.k === 'die' && ev.region === st.region ? 1 : 0;
     case 'lair':
       return ev.k === 'lair' && (st.island === undefined || st.island === ev.island) && (!st.kind || st.kind === ev.kind) ? 1 : 0;
+    // docs/19 E15: the Admiralty's contracts.
+    case 'legend':
+      return ev.k === 'legend' ? 1 : 0;
+    case 'seal':
+      return ev.k === 'seal' && ev.lv >= st.minLv ? 1 : 0;
+    case 'citadel':
+      return ev.k === 'citadel' ? ev.n : 0;
     case 'landres': {
       if (ev.k !== 'dock' || ev.port.id !== st.port) return 0;
       const store = s.profile!.lairs?.res;
@@ -627,8 +650,15 @@ function mentorsNear(game: Game, s: PlayerSession): PlayerSession[] {
   return out.sort((a, b) => b.profile!.level - a.profile!.level).slice(0, 2);
 }
 
-function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
+export function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   const p = s.profile!;
+  // docs/19 E15: an Admiralty's contract pays as the Admiralty pays (silver, glory and a relic's part).
+  if (q.category === 'admiralty') {
+    p.quests.active = p.quests.active.filter((a) => a.id !== q.id);
+    p.quests.done.push(q.id);
+    contractDone(game, s, q);
+    return;
+  }
   const st = p.quests.active.find((a) => a.id === q.id);
   const fast = !!st?.fastUntil && game.now <= st.fastUntil;
   p.quests.active = p.quests.active.filter((a) => a.id !== q.id);
@@ -751,7 +781,10 @@ export function sanitizeQuests(p: Profile): void {
   p.quests.active ??= [];
   p.quests.done ??= [];
   // A group contract of a past day (after a restart) is found again by its id.
-  for (const q of p.quests.active) if (!QUESTS_BY_ID[q.id]) eliteById(q.id);
+  for (const q of p.quests.active) if (!QUESTS_BY_ID[q.id]) {
+    if (isAdmId(q.id)) admiraltyById(q.id); // docs/19 E15: the Admiralty's contract of its week
+    else eliteById(q.id);
+  }
   p.quests.active = p.quests.active.filter((q) => QUESTS_BY_ID[q.id]);
   p.paths ??= [p.captain];
   if (!p.paths.includes(p.captain)) p.paths.push(p.captain);

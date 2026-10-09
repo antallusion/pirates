@@ -243,6 +243,8 @@ import { raidView, stepAbyssRaid } from './abyssraid.ts'; // docs/19 E11
 import { relicCheck } from './relics.ts'; // docs/19 E12
 import { InvasionHub, invasionKill, invasionView, stepInvasions } from './invasions.ts'; // docs/19 E16
 import { citView, stepCitadels } from './citadels.ts'; // docs/19 E4–E8
+import { admView, contractPointer, stepContracts } from './admiralty.ts'; // docs/19 E15
+import { registerAdmiralty } from '../../../shared/src/data/admiralty.ts';
 import { shoreBossPrompt, stepShoreBosses } from './shorebosses.ts'; // the great ones ashore (owner, 2026-10-03)
 import { installLandHooks } from './landecon.ts'; // docs/18 V
 import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
@@ -443,6 +445,7 @@ export class Game {
     registerArcs(generateArcs(this.world, seed)); // five written arcs a region, three chapters each
     registerIslandJobs(generateIslandJobs(this.world, seed)); // the islands' people
     registerElitePorts(this.world.ports); // the ports' group contracts, one a day each
+    registerAdmiralty(this.world); // docs/19 E15: the Admiralty's contracts of the week
     this.rng = new Rng(seed ^ 0x5eed);
     this.routes = new RouteCache(this.world);
     this.expeditions = new ExpeditionHub(this.world);
@@ -1016,6 +1019,7 @@ export class Game {
       stepBridges(this, s);
       stepBuiltShip(this, s);
       questEvent(this, s, { k: 'tick', dt: 1 });
+      stepContracts(this, s); // docs/19 E15: the Admiralty's contracts — lapsed, watches counted, raiders after the cargo
       dailyRollover(this, s);
       // After a mutiny they sail her to port themselves.
       const bound = mutinyCourse(this, s.ship, s.profile.company);
@@ -1571,6 +1575,13 @@ export class Game {
         const l = this.ships.get(qs.leader)!;
         at = { x: l.state.x, y: l.state.y };
         r = 250;
+      } else if (st.type === 'legend') {
+        // docs/19 E15: the Admiralty's rogue legend — her mark.
+        const m = contractPointer(this, qs.id);
+        if (m) {
+          at = m;
+          r = m.r;
+        }
       } else if (st.type === 'reach' || st.type === 'time_in' || st.type === 'die_in' || (st.type === 'sink' && st.region)) {
         const [x, y] = REGIONS[st.region!].center;
         at = { x, y };
@@ -1584,10 +1595,12 @@ export class Game {
   private worldView(s: PlayerSession): WorldView {
     const ship = s.ship;
     const p = s.profile!;
+    const seal = sealView(this, s), cit = citView(this, s);
     return {
-      seal: sealView(this, s),
+      seal,
       raid: raidView(this, s),
-      cit: citView(this, s),
+      cit,
+      adm: admView(this, s, cit, seal), // docs/19 E15
       homeIsle: ownIsland(this, s.accountId)?.island ?? null,
       isleRaid: raidPointer(this, s),
       claimIsle: claimPrompt(this, s),
