@@ -110,7 +110,7 @@ export function roles(levels = BAND_LEVELS): void {
  *  own figures — a pistol's 1.2, a butcher's 2.6 — then sit about it), and for her moves the move that strikes or
  *  raises. The Drowned's raising grows with her level towards her caps (docs/25 item 57). */
 export const FIT = { page: { ref: 1.6, aim: 0.11, heal: 0.1, healAim: 0.13 }, move: { corsair: { ref: 1.2, aim: 0.16 }, admiral: { ref: 0.7, aim: 0.14 } } } as const;
-export const DROWNED_RAISE: [number, number][] = [[1, 0.16], [20, 0.24], [60, 0.46]];
+export const DROWNED_RAISE: [number, number][] = [[1, 0.2], [20, 0.3], [60, 0.48]];
 
 /** docs/25 items 54 and 70: each path's edge over the fitted figures, so the six stand even under the boarding's rules
  *  (`--balance` searches it): her pages' power at the middle levels (POWER_AT's 25 and 40) and at the top (60), her
@@ -118,12 +118,12 @@ export const DROWNED_RAISE: [number, number][] = [[1, 0.16], [20, 0.24], [60, 0.
  *  moves stay 8–25% in their role (tests/balance/boarding.test.ts). */
 export interface Edge { page: [number, number]; buff: number; move: [number, number]; mbuff: number; mmend: number }
 export const EDGE: Record<CaptainId, Edge> = {
-  corsair: { page: [0.87, 1.15], buff: 1, move: [0.87, 0.66], mbuff: 1, mmend: 1 },
-  smuggler: { page: [1, 1.15], buff: 1, move: [1, 1], mbuff: 1, mmend: 1 },
-  reaver: { page: [1.15, 0.87], buff: 0.76, move: [1, 1], mbuff: 1, mmend: 1 },
-  navigator: { page: [1.3, 0.87], buff: 0.87, move: [1, 1], mbuff: 0.76, mmend: 1 },
-  drowned: { page: [1, 1.15], buff: 1, move: [1.15, 1], mbuff: 0.87, mmend: 1 },
-  admiral: { page: [0.76, 0.87], buff: 1, move: [1.32, 0.76], mbuff: 0.76, mmend: 1 },
+  corsair: { page: [0.87, 1.15], buff: 1, move: [1.15, 0.66], mbuff: 1, mmend: 1 },
+  smuggler: { page: [1.15, 1], buff: 0.87, move: [1, 1], mbuff: 0.87, mmend: 1 },
+  reaver: { page: [1.15, 0.87], buff: 0.87, move: [1, 1], mbuff: 1, mmend: 1 },
+  navigator: { page: [1.3, 0.87], buff: 0.87, move: [1, 1], mbuff: 0.87, mmend: 1 },
+  drowned: { page: [1, 1], buff: 1, move: [1.52, 1], mbuff: 0.87, mmend: 1 },
+  admiral: { page: [0.76, 0.87], buff: 0.87, move: [0.8, 0.76], mbuff: 0.76, mmend: 1 },
 };
 const EDGE_BOUNDS: Record<keyof Edge, [number, number]> = { page: [0.75, 1.3], buff: [0.7, 1], move: [0.5, 1.6], mbuff: [0.5, 1.4], mmend: [0.6, 1.4] };
 /** The edge at each of POWER_AT's levels (none below the middle). */
