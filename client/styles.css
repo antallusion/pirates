@@ -3405,6 +3405,7 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 .rc-big { width: 64px; height: 64px; flex: none; margin: 0; border-radius: 6px; object-fit: cover; border: 2px solid #8a6a44; }
 .rc-slide { display: flex; align-items: center; gap: 8px; }
 .rc-slide input[type="range"] { flex: 1; min-width: 0; accent-color: var(--gold); min-height: 28px; }
+body.touch .rc-slide input[type="range"] { min-height: 44px; } /* (a titan's or any stack's count by a finger: 28 px was under a finger's 44 — docs/19 E19) */
 .rc-count { min-width: 34px; text-align: center; font-size: 16px; color: var(--gold); }
 .rc-cost { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font-size: 13px; }
 .rc-why { margin: 0; font-size: 12px; }
@@ -3987,6 +3988,10 @@ body.touch .act-btn { --h: 38px; }
 /* (as tall as the plate's last line: 18 px made the plate 3 px taller and laid it over the ship panel at 1280×720) */
 .uf-glory { margin-left: 6px; padding: 0 6px; border: 1px solid var(--brass-dim); border-radius: 9px; background: rgba(30, 22, 12, 0.75); color: var(--gold); font: inherit; font-size: 10px; line-height: 13px; height: 15px; box-sizing: border-box; align-self: center; cursor: pointer; pointer-events: auto; white-space: nowrap; }
 .uf-glory.wait { border-color: var(--gold); box-shadow: 0 0 8px rgba(224, 184, 98, 0.55); }
+/* docs/19 E19: the chip opens the Throne from the captain's window — on touch a finger's reach round its 15 px (33×15 →
+   45×45), not a pixel of the line moved. */
+:where(body.touch) .uf-glory { position: relative; }
+:where(body.touch) .uf-glory::after { content: ''; position: absolute; inset: -15px -6px; }
 .hx-gm { margin-left: 2px; color: var(--gold); font-size: 11px; line-height: 7px; text-shadow: 0 0 6px rgba(224, 184, 98, 0.7); }
 .hx-slot.gm { border-color: var(--gold); box-shadow: inset 0 0 12px rgba(224, 184, 98, 0.18); }
 .hx-throne { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
