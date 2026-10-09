@@ -100,7 +100,7 @@ test(`the kit's window parts: big tabs and chips say a word or two, the sentence
   assert.equal(quickBar([]), '');
   // Every button word of the windows: one or two words (the hints may be sentences).
   for (const [k, v] of Object.entries(WRU)) {
-    if (/Hint$/.test(k) || /^(port\.(event|hold|crew|purse)|mk\.(have|stock|priceHint|sellNone|suppliesOk|extra)|yd\.(state|gunsDown|top|module|more\w*)|tv\.(room|full|none|poor|more)|q\.(none|to|level|best|rest|mine)|cap\.(pick|levelUp)|isle\.collectNone|opt\.(back|title|autobattle))$/.test(k)) continue;
+    if (/Hint$/.test(k) || /^(port\.(event|hold|crew|purse)|mk\.(have|stock|priceHint|sellNone|suppliesOk|extra)|yd\.(state|gunsDown|top|module|more\w*)|tv\.(room|full|none|poor|more)|q\.(none|to|level|best|rest|mine)|cap\.(pick|levelUp)|isle\.collectNone|opt\.(back|title|autobattle|mmTarget))$/.test(k)) continue; // (opt.mmTarget: the owner's own words, 2026-10-09 — «Мини-карта при цели»)
     assert.ok(v.replace(/\{\w+\}/g, 'N').split(/\s+/).length <= 2, `${k}: «${v}» is more than two words`);
   }
 });

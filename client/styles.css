@@ -4273,10 +4273,10 @@ body.touch .act-btn { --h: 38px; }
    them) — one row, nothing cut; the words stay for the screen reader and the tooltip. */
 @media (max-width: 699px) and (max-height: 520px) {
   .throne-win .tabs:has(.tab:nth-child(9)) { flex-wrap: nowrap; gap: 2px; padding: 0 2px; }
-  .throne-win .tabs .tab .ico-sm { display: inline-block; width: 22px; height: 22px; margin: 0; flex: none; }
-  .throne-win .tabs .tab { min-width: 50px; justify-content: center; padding: 6px 7px; flex: 0 0 auto; }
-  .throne-win .tabs .tab:not(.active) .ico-sm { filter: brightness(1.25) drop-shadow(0 1px 1px #000); }
-  .throne-win .tabs .tab.active { padding: 7px 9px; }
+  .throne-win .tabs:has(.tab:nth-child(9)) .tab .ico-sm { display: inline-block; width: 22px; height: 22px; margin: 0; flex: none; }
+  .throne-win .tabs:has(.tab:nth-child(9)) .tab { min-width: 50px; justify-content: center; padding: 6px 7px; gap: 3px; flex: 0 0 auto; }
+  .throne-win .tabs:has(.tab:nth-child(9)) .tab:not(.active) .ico-sm { filter: brightness(1.25) drop-shadow(0 1px 1px #000); }
+  .throne-win .tabs:has(.tab:nth-child(9)) .tab.active { padding: 6px 9px; }
   .throne-win .tabs .tab:not(.active) .th-tw { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
   .throne-win .tabs .tab:not(.active) .hx-dot { margin-left: 0; }
 }
