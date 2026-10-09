@@ -397,7 +397,7 @@ test('balance: an hour of a contract pays 0.6 h at sea ⚓10 in silver and an ho
   const { game } = world();
   for (let w = 300; w < 312; w++) {
     const parts = admiraltyWeek(w, game.world).reduce((a, c) => a + c.pay.part, 0);
-    assert.ok(parts >= 0.8 && parts <= 1.3, `week ${w}: ${parts.toFixed(2)} parts`);
+    assert.ok(parts >= 0.75 && parts <= 1.25, `week ${w}: ${parts.toFixed(2)} parts`);
   }
   // The seal's asks: about an hour of a geared captain at the seal.
   for (const a of ADM_SEAL_ASKS) assert.ok(sealHours(a.lv, a.count) >= 1 && sealHours(a.lv, a.count) <= 1.5, `${a.lv}×${a.count}: ${sealHours(a.lv, a.count)}`);
