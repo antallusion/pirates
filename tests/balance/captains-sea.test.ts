@@ -38,14 +38,15 @@ test('the role (§1.1): a kit used well takes 15–25% off a sea fight (the Cors
   for (const a of [1, 5, 10]) {
     const band = rows.filter((r) => r.anchor === a);
     for (const r of band) {
-      const shorter = 1 - r.on / r.plain, longer = r.def / r.plain - 1;
+      const { shorter, longer } = r;
       out.push(`⚓${a} L${r.level} ${r.captain}: ${Math.round(shorter * 100)}% shorter, ${Math.round(longer * 100)}% longer fired upon`);
       // The low band has the first ranks and no ultimate (from the 6th): a little under the band's floor is its due.
       const lo = a === 1 ? 0.08 : 0.13, hi = r.captain === 'corsair' ? 0.31 : 0.27;
       if (shorter < lo || shorter > hi) bad.push(`⚓${a} ${r.captain}: ${Math.round(shorter * 100)}% shorter (${lo * 100}–${hi * 100}%)`);
       if ((r.captain === 'smuggler' || r.captain === 'drowned') && (longer < (a === 1 ? 0.1 : 0.13) || longer > 0.28)) bad.push(`⚓${a} ${r.captain}'s defence: ${Math.round(longer * 100)}% longer (15–25%)`);
     }
-    const times = band.map((r) => r.on);
+    // Each kit's fight against the same plain one: the slowest of the six against the quickest.
+    const times = band.map((r) => 1 - r.shorter);
     const spread = Math.max(...times) / Math.min(...times);
     out.push(`⚓${a}: the slowest kit ${Math.round((spread - 1) * 100)}% behind the quickest`);
     if (spread > 1.15) bad.push(`⚓${a}: a captain ${Math.round((spread - 1) * 100)}% ahead of another`);

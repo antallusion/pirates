@@ -205,10 +205,10 @@ function abilities(): never {
   o.push('| ⚓ (L) | gear | captain | plain s | kit on s | shorter | fired upon, kit on s | longer | casts a fight |');
   o.push('|---|---|---|---|---|---|---|---|---|');
   const rows = kitRows(g, anchors, gears, seeds, caps, lvl);
-  for (const r of rows) o.push(`| ${r.anchor} (L${r.level}) | ${r.gear} | ${r.captain} | ${f1(r.plain)} | ${f1(r.on)} | ${pc(1 - r.on / r.plain)} | ${f1(r.def)} | ${pc(r.def / r.plain - 1)} | ${Object.entries(r.casts).map(([k, v]) => `${k} ${v}`).join(', ')} |`);
+  for (const r of rows) o.push(`| ${r.anchor} (L${r.level}) | ${r.gear} | ${r.captain} | ${f1(r.plain)} | ${f1(r.on)} | ${pc(r.shorter)} | ${f1(r.def)} | ${pc(r.longer)} | ${Object.entries(r.casts).map(([k, v]) => `${k} ${v}`).join(', ')} |`);
   o.push('');
   for (const a of anchors) for (const gear of gears) {
-    const t = rows.filter((r) => r.anchor === a && r.gear === gear).map((r) => r.on);
+    const t = rows.filter((r) => r.anchor === a && r.gear === gear).map((r) => 1 - r.shorter);
     o.push(`⚓${a} ${gear}: the slowest kit ${pc(Math.max(...t) / Math.min(...t) - 1)} behind the quickest.`);
   }
   if (process.argv.includes('--per')) {

@@ -276,7 +276,8 @@ export function stepSeaSkills(game: Game, ship: ShipEntity): void {
       const tick = (ship.talentReady.dreadBite ?? 0) <= now;
       if (tick && bite > 0) ship.talentReady.dreadBite = now + 15;
       foes(400, (o) => {
-        if (tick && bite > 0) o.morale = Math.max(0, o.morale - bite);
+        // (her dread shakes them to 25 at most: the rout below it is the guns' and the boarders' work)
+        if (tick && bite > 0 && o.morale > 25) o.morale = Math.max(25, o.morale - bite);
         if (o.morale < 30) o.addEffect({ id: 'dread_shaken', until: now + 1.6, mods: { skillReload: p.n.shake }, source: ship.id }, now);
       });
       break;

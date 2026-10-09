@@ -54,6 +54,7 @@ export const RAM_AGAIN = 45;
 /** One fight: `a` fires on `b` till `b` sinks or strikes. Either side's kit as asked; the sea's dice by `seed`. */
 export function kitFight(game: Game, a: KitSide, b: KitSide, seed = 1, maxSec = 900): KitFight {
   clearSea(game);
+  steady(game);
   Object.assign(game.rng, new Rng(seed * 7919 + 13));
   // Lawless water (the Ashen Isles): two captains fight there as they please, and the Admiral's escort with them (a duel
   // bars every escort). Her mark lies downwind of her, beam on (the weather gauge is the Navigator's to hold).
@@ -107,6 +108,9 @@ export function kitFight(game: Game, a: KitSide, b: KitSide, seed = 1, maxSec = 
     if (a.kit) castKit(game, A, B, a, casts, memo, 'attack');
     if (b.kit) castKit(game, B, A, b, casts, memo, 'defend');
     if (A.reload.starboard <= 0) {
+      // The broadside's own dice (each ball's lay and fall): the same for her n-th broadside of this seed, whatever else
+      // of the sea drew from the dice since (the weather's fronts, the clock's tick).
+      Object.assign(game.rng, new Rng(seed * 104_729 + volleys * 7919 + 1));
       const why = fireBroadside(game, A, 'starboard', Math.hypot(B.state.x - A.state.x, B.state.y - A.state.y), { x: B.state.x, y: B.state.y }, 1, {});
       if (!why) {
         volleys++;
@@ -125,6 +129,9 @@ export function kitFight(game: Game, a: KitSide, b: KitSide, seed = 1, maxSec = 
       c!.unrest = { phase: 0, t: 0 };
     }
     game.step();
+    // The sea's own comers (a pirate pack's ambush, the ghosts the Drowned's Dread calls, a lair's garrison) are struck
+    // off the bench: the fight is the two of them and her hired escort alone.
+    for (const o of game.ships.values()) if (o !== A && o !== B && o.ownerId !== A.id && o.ownerId !== B.id) game.removeShip(o.id);
   }
   return { sec: Math.round(fractional(fires, game.now, down(B), first >= 0 ? first : t0) * 10) / 10, raw: Math.round((game.now - (first >= 0 ? first : t0)) * 10) / 10, volleys, sunk: down(B), casts };
 }
@@ -140,6 +147,16 @@ function fractional(fires: [number, number][], end: number, sunk: boolean, first
   const mean = (fires[0][1] - fires[k][1]) / k;
   const f = mean > 0 ? Math.max(0, Math.min(1, fires[k][1] / mean)) : 1;
   return fires[k - 1][0] - first + f * (fires[k][0] - fires[k - 1][0]) + load;
+}
+
+/** The bench's weather held: a steady breeze from one quarter (the sea's veering wind and its fronts made one fight of
+ *  equals five per cent longer than the same fight a few minutes of the world's clock later — the swell's spread). */
+const steadied = new WeakSet<Game>();
+function steady(game: Game): void {
+  if (steadied.has(game)) return;
+  steadied.add(game);
+  game.windFor = () => ({ dir: 1.1, strength: 0.55 });
+  game.weatherAt = () => 'breeze';
 }
 
 /** Open water of the Ashen Isles, clear of land and shoals for a mile (lawless: any captain fires on any). */
@@ -300,10 +317,14 @@ export interface KitRow {
   level: number;
   gear: Gear;
   captain: CaptainId;
-  /** The plain fight (no kit either side), her kit on, fired upon with her kit on (seconds, medians). */
+  /** The plain fight (no kit either side, fought just before hers: the world's clock moves on between them), her kit
+   *  on, fired upon with her kit on (seconds, means). */
   plain: number;
   on: number;
   def: number;
+  /** Her kit's share of the fight: shorter as the one firing, longer as the one fired upon. */
+  shorter: number;
+  longer: number;
   casts: Record<string, number>;
 }
 
@@ -313,11 +334,11 @@ export function kitRows(game: Game, anchors: number[], gears: Gear[], seeds: num
   for (const a of anchors) for (const gear of gears) {
     const level = levelOf(a);
     const side = (captain: CaptainId, kit: boolean): KitSide => ({ anchor: a, gear, captain, level, kit });
-    const plain = kitMedian(game, side('navigator', false), side('navigator', false), seeds).sec;
     for (const c of captains) {
+      const plain = kitMedian(game, side(c, false), side('navigator', false), seeds).sec;
       const on = kitMedian(game, side(c, true), side('navigator', false), seeds);
       const def = kitMedian(game, side('navigator', false), side(c, true), seeds);
-      rows.push({ anchor: a, level, gear, captain: c, plain, on: on.sec, def: def.sec, casts: on.casts });
+      rows.push({ anchor: a, level, gear, captain: c, plain, on: on.sec, def: def.sec, shorter: 1 - on.sec / plain, longer: def.sec / plain - 1, casts: on.casts });
     }
   }
   return rows;

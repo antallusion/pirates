@@ -240,10 +240,10 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
       break;
     }
     case 'maw_of_the_deep': {
-      // On a ship the hands hold (the combo, item 41): a quarter more.
+      // On a ship the hands hold (the combo, item 41): 15% more.
       const held = game.zones.some((z) => z.kind === 'hands' && z.owner === ship.id && z.until >= now && dist(z.x, z.y, x, y) <= z.r + 30);
       if (held) comboCue(game, ship, 'deep_call');
-      game.strikes.push({ at: now + 3, x, y, radius: n.r ?? 45, hull: 0, rudder: 0, owner: ship.id, slow: 0, shells: 1, fx: 'maw', share: (n.hull ?? 0.2) * power * (held ? 1.25 : 1), self: ship.stats.hullMax, skill: def.id });
+      game.strikes.push({ at: now + 3, x, y, radius: n.r ?? 45, hull: 0, rudder: 0, owner: ship.id, slow: 0, shells: 1, fx: 'maw', share: (n.hull ?? 0.2) * power * (held ? 1.15 : 1), self: ship.stats.hullMax, skill: def.id });
       game.emit({ k: 'fx', fx: 'maw_warn', x: Math.round(x), y: Math.round(y), r: n.r ?? 45 }, x, y);
       break;
     }
