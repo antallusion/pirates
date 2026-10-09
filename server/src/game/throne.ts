@@ -535,7 +535,12 @@ export function throneAdmin(game: Game, s: PlayerSession, cmd: string, args: str
         const why = startTrial(game, s, id, true);
         return why ?? `The trial of ${SKILLS[id].name[0]}: ${LEGENDS[id].name[0]} alongside.`;
       }
-      return trialViews(game.now, p).map((v) => `${v.skill} ${v.state}${v.wait ? ` ${Math.ceil(v.wait / 60)}m` : ''}`).join(' · ');
+      // (the skills by their ids, as the command takes them; the words around them in a sentence the Russian table
+      // reads — docs/19 E19: the list was «navigation locked · luck won …» in English)
+      const vs = trialViews(game.now, p);
+      const of = (st: string) => vs.filter((v) => v.state === st);
+      const ids = (st: string) => of(st).map((v) => (st === 'wait' ? `${v.skill} ${Math.ceil((v.wait ?? 0) / 60)}′` : v.skill)).join(', ') || '—';
+      return `Trials — ready: ${ids('ready')}; won: ${ids('won')}; waiting: ${ids('wait')}; shut: ${of('locked').length}.`;
     }
   }
   return 'Unknown command.';

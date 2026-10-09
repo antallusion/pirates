@@ -68,4 +68,5 @@ export const SERVER_RU_CIT: Record<string, string> = {
   'A citadel of the Throne war stands on that island.': 'На этом острове стоит цитадель Войны за Престол.',
   // the tester's list
   'Citadels: {0}': 'Цитадели: {0}',
+  'Usage: /cit [go|guild|window|siege|win|own|lose|free|points N|season|reset] [n]': 'Формат: /cit [go|guild|window|siege|win|own|lose|free|points N|season|reset] [n]', // (docs/19 E19)
 };

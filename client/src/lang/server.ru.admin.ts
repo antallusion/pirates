@@ -100,6 +100,9 @@ export const SERVER_RU_ADMIN: Record<string, string> = {
   'The raid begins again.': 'Рейд начинается заново.',
   'The Master of the Abyss is down.': 'Хозяин Бездны повержен.',
   'Tier {0}: {1}, {2}% of its army.': 'Ярус {0}: «{1}», осталось {2}% армии.',
+  // (docs/19 E19: the console's usage lines were left in English)
+  'Usage: /maw tier 1-{0}': 'Формат: /maw tier 1-{0}',
+  'Usage: /maw [tier N|win|lose|go|reset|board]': 'Формат: /maw [tier N|win|lose|go|reset|board]',
   'Titans: {0}': 'Титаны: {0}',
   'The {0} joins your army.': '{0} вступает в вашу армию.',
   // The weather a /weather reply names (as the HUD names it: ui/hud.ts weather.*).

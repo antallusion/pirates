@@ -269,7 +269,7 @@ test('the tester\'s commands and the words in Russian', () => {
   assert.match(runAdmin(game, s, '/mastery reset')!, /none/);
   assert.match(runAdmin(game, s, '/trial luck win')!, /Grandmaster of Luck/);
   assert.equal(heroOf(s.profile!).skills.find((x) => x.id === 'luck')?.r, GM_RANK);
-  assert.match(runAdmin(game, s, '/trial')!, /luck won/);
+  assert.match(runAdmin(game, s, '/trial')!, /won: luck/);
   assert.match(runAdmin(game, s, '/trial tactics lose')!, /waits 3 h/);
   assert.match(runAdmin(game, s, '/help')!, /\/glory \[n\|xp N\|reset\] · \/mastery \[node\|branch\|all\|reset\] · \/trial \[skill\] \[go\|win\|lose\|reset\]/);
   // The Russian help: command for command.

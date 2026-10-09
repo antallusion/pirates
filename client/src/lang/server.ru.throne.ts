@@ -59,6 +59,8 @@ export const SERVER_RU_THRONE: Record<string, string> = {
   'Mastery: {0} ({1}/{2}).': 'Мастерство: {0} ({1}/{2}).',
   'Usage: /mastery [node|branch|all|reset] · {0}': 'Формат: /mastery [узел|ветка|all|reset] · {0}',
   'Trials: none tried.': 'Испытания: ни одного.',
+  // (docs/19 E19: the list was its ids and states in English — «navigation locked · luck won …»)
+  'Trials — ready: {0}; won: {1}; waiting: {2}; shut: {3}.': 'Испытания — готовы: {0}; пройдены: {1}; ждут: {2}; закрыты: {3}.',
   'Grandmaster of {0}.': 'Грандмастер навыка «{0}».',
   'The legend of {0} waits {1} h.': 'Легенда навыка «{0}» ждёт {1} ч.',
   'The trial of {0}: {1} alongside.': 'Испытание навыка «{0}»: {1} борт о борт.',

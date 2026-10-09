@@ -12,6 +12,7 @@ export const SERVER_RU_RELICS: Record<string, string> = {
   'Relic parts: {0} worn, {1} in the locker, {2} dropped; relics assembled: {3}.': 'Части реликвий: надето {0}, в рундуке {1}, выпало {2}; собрано реликвий: {3}.',
   'Parts dropped: {0} of {1}.': 'Выпало частей: {0} из {1}.',
   'Every relic part is gone.': 'Все части реликвий убраны.',
+  'Usage: /relic [{0}|parts id|all|drop [N]|clear]': 'Формат: /relic [{0}|parts реликвия|all|drop [N]|clear]', // (docs/19 E19)
   'The {0}: its parts are in the locker.': 'Реликвия «{0}»: части в рундуке.',
   'The {0} is worn.': 'Реликвия «{0}» надета.',
   // E13: the workshop's anvil.
