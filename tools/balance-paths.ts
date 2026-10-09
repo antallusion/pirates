@@ -119,10 +119,10 @@ export interface Edge { page: number[]; buff: number; move: number[]; mbuff: num
 export const EDGE: Record<CaptainId, Edge> = {
   corsair: { page: [1, 1, 1, 0.87, 0.87, 1.15], buff: 1, move: [1, 1, 1, 1.15, 1.15, 0.66], mbuff: 1, mmend: 1 },
   smuggler: { page: [1, 1, 1, 1.15, 1.15, 1], buff: 0.87, move: [1, 1, 1, 1, 1, 1], mbuff: 0.87, mmend: 1 },
-  reaver: { page: [1, 1, 1, 1.15, 1.15, 0.87], buff: 0.87, move: [1, 1, 1, 1, 1, 1], mbuff: 1, mmend: 1 },
-  navigator: { page: [1, 1, 1, 1.3, 1.3, 0.87], buff: 0.87, move: [1, 1, 1, 1, 1, 1], mbuff: 0.87, mmend: 1 },
-  drowned: { page: [1, 1, 1, 1, 1, 1], buff: 1, move: [1, 1, 1, 1.52, 1.52, 1], mbuff: 0.87, mmend: 1 },
-  admiral: { page: [1, 1, 1, 0.76, 0.76, 0.87], buff: 0.87, move: [1, 1, 1, 0.8, 0.8, 0.76], mbuff: 0.76, mmend: 1 },
+  reaver: { page: [1, 1, 0.87, 1.15, 1, 0.87], buff: 0.87, move: [1, 1, 1, 1, 1, 1], mbuff: 1, mmend: 1 },
+  navigator: { page: [1, 1, 1, 1.3, 1.1, 0.87], buff: 0.87, move: [1, 1, 1, 1, 1, 1], mbuff: 0.87, mmend: 1 },
+  drowned: { page: [1, 1, 1.15, 1, 1.3, 1], buff: 1, move: [1, 1, 1, 1.52, 2, 1], mbuff: 0.87, mmend: 1.35 },
+  admiral: { page: [1, 1, 1.15, 0.76, 0.9, 0.87], buff: 0.87, move: [1, 1, 1, 0.66, 0.8, 0.76], mbuff: 0.66, mmend: 1 },
 };
 const EDGE_BOUNDS: Record<keyof Edge, [number, number]> = { page: [0.75, 1.3], buff: [0.7, 1], move: [0.5, 1.6], mbuff: [0.5, 1.4], mmend: [0.6, 1.4] };
 /** The edge at each of POWER_AT's levels. */

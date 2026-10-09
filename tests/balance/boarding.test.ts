@@ -63,11 +63,12 @@ test('docs/25 item 44: round 1 takes ~35% of an equal army at levels 1–10 and 
 // Under the boarding's rules the six paths stood at 29–71% against all at levels 30 and 60 after block Г (2026-10-09:
 // the paths' books faded with the level, docs/25 §0). Block Д (items 53–61) gave each path's moves their own knobs on
 // real builds and evened them (tools/balance-paths.ts --balance): 35–65% now (the final ±15% between any two is item
-// 70's). 48 fights a path a level: one standard error is ~7 points.
+// 70's). 144 fights a path a level (24 a pairing): one standard error is ~4 points, so a path at 50% stays inside by
+// more than three of them.
 test('docs/25 items 54 and 69: under the boarding\'s rules every path wins 35–65% of her fights against all at levels 30 and 60', () => {
   for (const L of [30, 60]) {
     const w: Record<string, [number, number]> = {};
-    for (const p of PATHS) for (const q of PATHS) for (let i = 0; i < 8; i++) {
+    for (const p of PATHS) for (const q of PATHS) for (let i = 0; i < 24; i++) {
       const flip = i % 2 === 1;
       const [a, b] = sidesAt(L, true, flip ? q : p, flip ? p : q, i * 13 + PATHS.indexOf(p) * 7 + PATHS.indexOf(q));
       const won = (playBoard(a, b, i * 31 + PATHS.indexOf(p) * 5 + PATHS.indexOf(q) + L).winner === 0) !== flip;

@@ -174,10 +174,10 @@ export const POWER_AT = [1, 5, 15, 25, 40, 60] as const;
 export const PATH_KNOBS: Record<CaptainId, PathKnobs> = {
   corsair: { power: [0.89, 0.73, 0.5, 0.23, 0.36, 0.56], mend: [1.18, 0.97, 0.67, 0.29, 0.27, 0.3], buff: 1, pts: 1 },
   smuggler: { power: [0.82, 0.68, 0.48, 0.35, 0.53, 0.53], mend: [1.09, 0.9, 0.64, 0.43, 0.4, 0.28], buff: 0.87, pts: 1 },
-  reaver: { power: [0.89, 0.83, 0.57, 0.31, 0.47, 0.45], mend: [1.18, 1.1, 0.76, 0.38, 0.36, 0.23], buff: 0.87, pts: 1 },
-  navigator: { power: [0.82, 0.68, 0.48, 0.33, 0.51, 0.39], mend: [1.09, 0.9, 0.64, 0.4, 0.39, 0.21], buff: 0.87, pts: 1 },
-  drowned: { power: [0.77, 0.65, 0.42, 0.19, 0.29, 0.36], mend: [1.02, 0.86, 0.55, 0.23, 0.22, 0.19], buff: 1, pts: 1 },
-  admiral: { power: [0.89, 0.73, 0.5, 0.2, 0.31, 0.44], mend: [1.18, 0.97, 0.67, 0.25, 0.24, 0.23], buff: 0.87, pts: 1 },
+  reaver: { power: [0.89, 0.83, 0.5, 0.31, 0.41, 0.45], mend: [1.18, 1.1, 0.66, 0.38, 0.31, 0.23], buff: 0.87, pts: 1 },
+  navigator: { power: [0.82, 0.68, 0.48, 0.33, 0.43, 0.39], mend: [1.09, 0.9, 0.64, 0.4, 0.33, 0.21], buff: 0.87, pts: 1 },
+  drowned: { power: [0.77, 0.65, 0.48, 0.19, 0.38, 0.36], mend: [1.02, 0.86, 0.63, 0.23, 0.29, 0.19], buff: 1, pts: 1 },
+  admiral: { power: [0.89, 0.73, 0.57, 0.2, 0.37, 0.44], mend: [1.18, 0.97, 0.77, 0.25, 0.28, 0.23], buff: 0.87, pts: 1 },
 };
 /** The innate move and the ultimate. */
 export const MOVE_KNOBS: Record<CaptainId, PathKnobs> = {
@@ -185,8 +185,8 @@ export const MOVE_KNOBS: Record<CaptainId, PathKnobs> = {
   smuggler: { power: [1, 1, 1, 1, 1, 1], mend: [1, 1, 1, 1, 1, 1], buff: 0.87, pts: 1 },
   reaver: { power: [1, 1, 1, 1, 1, 1], mend: [1, 1, 1, 1, 1, 1], buff: 1, pts: 1 },
   navigator: { power: [1, 1, 1, 1, 1, 1], mend: [1, 1, 1, 1, 1, 1], buff: 0.87, pts: 1 },
-  drowned: { power: [0.77, 0.65, 0.42, 0.29, 0.44, 0.36], mend: [0.83, 0.83, 0.65, 0.26, 0.3, 0.32], buff: 0.87, pts: 1 },
-  admiral: { power: [2.43, 1.87, 1.25, 0.58, 0.9, 1.05], mend: [1, 1, 1, 1, 1, 1], buff: 0.76, pts: 1 },
+  drowned: { power: [0.77, 0.65, 0.42, 0.29, 0.58, 0.36], mend: [1.12, 1.12, 0.88, 0.35, 0.41, 0.43], buff: 0.87, pts: 1 },
+  admiral: { power: [2.43, 1.87, 1.25, 0.48, 0.9, 1.05], mend: [1, 1, 1, 1, 1, 1], buff: 0.66, pts: 1 },
 };
 export const pathKnobs = (path: CaptainId, kind: 'page' | 'move' = 'page'): PathKnobs => (kind === 'move' ? MOVE_KNOBS : PATH_KNOBS)[path];
 /** The `power` knob at a hero level (`mend`: the `mend` knob). */
