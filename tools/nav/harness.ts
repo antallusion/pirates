@@ -177,8 +177,10 @@ export function chaseScenes(world: World, per = 7): ChaseScene[] {
   const ports = world.ports.filter((p) => !p.raft && world.islands[p.islandId]);
   take('pier', ports, (p, k) => {
     const is = world.islands[p.islandId];
-    const q = quayBlockers(p, rounded(is))[0];
-    if (!q) return null;
+    if (!quayBlockers(p, rounded(is)).length) return null;
+    // The painting's foot as a whole (its quays, whatever their piers: the same scene for the one box of old):
+    const lay0 = portLayout(p, rounded(is));
+    const q = { x: lay0.x - Math.sin(lay0.ang) * lay0.size * 0.355, y: lay0.y + Math.cos(lay0.ang) * lay0.size * 0.355, hw: lay0.size * 0.32, hh: lay0.size * 0.115 };
     // The pier between them: the target beyond it along the shore, fleeing on along it (or out to sea), the pursuer
     // on its other side, both off the shore in the pier's own depth — her line to the target across the pier.
     const lay = portLayout(p, rounded(is));
@@ -241,6 +243,21 @@ export interface ChaseResult {
 }
 
 let names = 0;
+
+/** Each scene's own steady wind (a direction from its name, a working strength): the same for the scene whatever ran
+ *  before it, so a run is measured against the same sea before and after a change (the sea's wind veers with the
+ *  clock, and a run that ends sooner hands the next one another wind). Restored by the returned function. */
+export function sceneWind(game: Game, of: string): () => void {
+  let h = 7;
+  for (let i = 0; i < of.length; i++) h = (h * 31 + of.charCodeAt(i)) >>> 0;
+  const wind = { dir: ((h % 3600) / 3600) * Math.PI * 2, strength: 0.75 };
+  const was = game.windFor;
+  game.windFor = () => wind;
+  return () => {
+    game.windFor = was;
+  };
+}
+
 /** Clears the sea about a scene of the sea's own ships (they would join in) and steadies the weather. */
 function quietAround(game: Game, x: number, y: number): void {
   for (const o of [...game.ships.values()]) if (!o.isPlayer && Math.hypot(o.state.x - x, o.state.y - y) < 6000) game.removeShip(o.id);
@@ -290,6 +307,7 @@ export type Who = 'captain' | 'guns' | 'npc';
  *  when she lies within the close band, her mark abeam), or a sea pirate's run on the fleeing one (`npc`). */
 export function chaseRun(game: Game, sc: ChaseScene, who: Who, mcls: ShipClassId = 'brig', maxSec = 60, trace?: (t: number, me: ShipEntity, T: ShipEntity, d: number) => void): ChaseResult {
   quietAround(game, sc.me.x, sc.me.y);
+  const calm = sceneWind(game, sc.of + sc.kind);
   const [tx0, ty0] = sc.route[0];
   const T = game.spawnNpcShip('pirate', sc.tcls, 'confederacy', tx0, ty0, sc.route.length > 1 ? headingOf(sc.route[1][0] - tx0, sc.route[1][1] - ty0) : headingOf(tx0 - sc.me.x, ty0 - sc.me.y));
   game.npcs.delete(T.id); // (steered here)
@@ -390,6 +408,7 @@ export function chaseRun(game: Game, sc: ChaseScene, who: Who, mcls: ShipClassId
     retire(game, cap.s, cap.c);
   } else game.removeShip(me.id);
   game.removeShip(T.id);
+  calm();
   return res;
 }
 
@@ -521,6 +540,7 @@ export interface SailResult {
 export function sailRun(game: Game, sc: SailScene, cls: ShipClassId = 'brig', maxSec = 300): SailResult {
   quietAround(game, sc.from.x, sc.from.y);
   quietAround(game, sc.to.x, sc.to.y);
+  const calm = sceneWind(game, sc.of + sc.kind);
   const { s, c, ship } = seaCaptainAt(game, cls, sc.from.x, sc.from.y, headingOf(sc.to.x - sc.from.x, sc.to.y - sc.from.y));
   ship.state.speed = 0;
   const tal0 = touches.get(ship) ?? { touch: 0, blow: 0 };
@@ -555,6 +575,7 @@ export function sailRun(game: Game, sc: SailScene, cls: ShipClassId = 'brig', ma
   void near;
   if (autosailOf(ship)) c.push({ t: 'autosail', stop: true });
   retire(game, s, c);
+  calm();
   return res;
 }
 

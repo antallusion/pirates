@@ -13,6 +13,14 @@
 // more), whatever the auto-fire switch — the order «Атаковать» is the order to fire (its own words: «пушки бьют, как
 // только она в секторе»); only the expert's hand fires her guns herself.
 //
+// The way to her (2026-10-09, after the island collision): the helm's lead line rounds what lies ahead (npc.ts steer,
+// seaway.ts: the coast's band and the solid things her hull would strike, and the reefs her keel drags on, along the
+// whole of its look — the guns' fight circled its broadside's course over a reef and sank on it). Held fast (under a
+// knot for four seconds, her mark beyond a cable) the helmsman plans her a way from where she lies (nav.ts, made good for
+// her hull and keel) and sails it a while; held fast again and again — or no way at all — the mark is lost to her
+// (`lost`: the wheel back, said once), never ground on for ever. (Sailing the planner's route whenever land lay across
+// the line to her was tried: its wide berth off the coast lost more than it won, tools/nav/measure.ts.)
+//
 // And the creatures' stacks (docs/19 D7; the owner, the same day: «на нейтральных существ нападать нельзя… не работает
 // никакие кнопки, идут ошибки вечные»): «Атаковать» on a stack is a run of its own (`roam`) — the helmsman sails her in
 // and, a cable off, her boats go (roamers.ts attackRoam): the hex battle opens. No ship's order goes to a stack: a run
@@ -30,6 +38,10 @@ import { NO_BOARD_HER, NO_BOARD_OWN, boardingOff } from './colours.ts';
 import { applyDamage, damageBlocked, effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
 import type { Game } from './Game.ts';
 import { engageHelm, helmTo, newBrain } from './npc.ts';
+import { findPath, lineFree } from './nav.ts';
+import type { Path } from './nav.ts';
+import { hullWater, laneFoul } from './seaway.ts';
+import { KNOTS_PER_SPEED } from '../../../shared/src/sim/hull.ts';
 import type { NpcBrain } from './npc.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -63,6 +75,17 @@ export const CLOSE_TURN = 1.3;
 const SELF_DEFENCE = 30;
 /** A run on a creature stack (docs/19 D7) is given up after this long without reaching it (an island in the way). */
 export const ROAM_RUN_MAX = 120;
+/** Held fast, the planner's route is sailed for ROUND_HOLD seconds (re-planned every ROUND_EVERY seconds as the mark
+ *  moves); nearer her mark than ROUND_FROM the helm has her again. */
+export const ROUND_FROM = 300;
+export const ROUND_HOLD = 15;
+export const ROUND_EVERY = 3;
+/** Held fast: under a knot this long with her mark beyond a cable; this many times running, the mark is lost. A spell
+ *  under way (STUCK_CLEAR seconds) wipes the count; no way round at all for NO_WAY_SEC, the mark is lost too. */
+export const STUCK_SEC = 4;
+export const STUCK_GIVE_UP = 3;
+export const STUCK_CLEAR = 15;
+export const NO_WAY_SEC = 6;
 
 export interface Pursuit {
   /** Her mark's ship; −1 on a run on a creature stack (`roam`). */
@@ -79,6 +102,15 @@ export interface Pursuit {
   auto?: { left: number; next: number };
   /** The guns' fight: running in bow on to the close band (true), or lying broadside on in it. */
   closing?: boolean;
+  /** Held fast: the planner's route to her mark, its next point, when planned and to where. */
+  way?: { path: Path; i: number; at: number; tx: number; ty: number } | null;
+  /** Held fast: since when (under a knot), how many times running, when last under way; sailed round by the route
+   *  until when (after a hold-fast, whatever the line); since when there has been no way round at all. */
+  slowSince?: number;
+  stucks?: number;
+  movingSince?: number;
+  wayUntil?: number;
+  noWaySince?: number;
 }
 
 const runs = new WeakMap<ShipEntity, Pursuit>();
@@ -299,6 +331,7 @@ export function stepPursuit(game: Game): void {
       continue;
     }
     const d = Math.hypot(t.state.x - ship.state.x, t.state.y - ship.state.y);
+    if (wayRound(game, s, ship, run, t, d)) continue;
     if (run.mode === 'guns') {
       // The close fight (owner, 2026-10-07): in bow on to the band, then broadside on in it.
       const hold = pursuitHold(ship);
@@ -321,6 +354,64 @@ export function stepPursuit(game: Game): void {
       } else ship.input.sailTarget = 1;
     }
   }
+}
+
+/** Held fast (2026-10-09): under a knot for STUCK_SEC with her mark beyond a cable (a bay's pocket, a pier's slip, a
+ *  reef's horns) — the planner's route from where she lies, sailed a while; held fast STUCK_GIVE_UP times running, or
+ *  no way at all, the mark is lost. True when the route has the helm this tick (or the mark is lost). */
+function wayRound(game: Game, s: PlayerSession, ship: ShipEntity, run: Pursuit, t: ShipEntity, d: number): boolean {
+  const now = game.now;
+  const { x, y } = ship.state;
+  if (ship.state.speed * KNOTS_PER_SPEED < 1 && d > 200) {
+    run.slowSince ??= now;
+    if (now - run.slowSince > STUCK_SEC) {
+      run.slowSince = now;
+      run.stucks = (run.stucks ?? 0) + 1;
+      if (run.stucks >= STUCK_GIVE_UP) {
+        stopPursuit(game, s, 'lost');
+        return true;
+      }
+      run.way = null;
+      run.wayUntil = now + ROUND_HOLD;
+    }
+    run.movingSince = undefined;
+  } else {
+    run.slowSince = undefined;
+    run.movingSince ??= now;
+    if (now - run.movingSince > STUCK_CLEAR) run.stucks = 0;
+  }
+  if ((run.wayUntil ?? -Infinity) <= now || d < ROUND_FROM) {
+    run.way = null;
+    run.noWaySince = undefined;
+    return false;
+  }
+  let way = run.way;
+  if (!way || way.i >= way.path.length || (now - way.at > ROUND_EVERY && Math.hypot(way.tx - t.state.x, way.ty - t.state.y) > 250)) {
+    const path = findPath(game.world, x, y, t.state.x, t.state.y, 20_000, hullWater(ship));
+    if (!path || path.length < 2) {
+      run.way = null;
+      run.noWaySince ??= now;
+      if (now - run.noWaySince > NO_WAY_SEC) {
+        stopPursuit(game, s, 'lost');
+        return true;
+      }
+      return false;
+    }
+    run.noWaySince = undefined;
+    run.way = way = { path, i: 1, at: now, tx: t.state.x, ty: t.state.y };
+  }
+  // On to the farthest point of it she sees in clear water (a point behind her is not sailed back to).
+  const wide = ship.stats.beam * 0.5 + 8;
+  while (way.i < way.path.length - 1) {
+    const [px, py] = way.path[way.i], [nx, ny] = way.path[way.i + 1];
+    if (Math.hypot(px - x, py - y) < 160 || (lineFree(game.world, x, y, nx, ny) && !laneFoul(game, ship, x, y, nx, ny, wide))) way.i++;
+    else break;
+  }
+  const [wx, wy] = way.path[way.i];
+  // (The boarding run's hands on the braces as she closes, as on the straight run in.)
+  boardRun(game, s, ship, d < BOARD_RUN_FROM && (run.mode === 'board' || !!run.closing));
+  helmTo(game, ship, run.brain, wx, wy, 1);
+  return true;
 }
 
 /** The boarding run on or off (pushed to her captain, whose helm reckons her way with it). */
