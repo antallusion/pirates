@@ -27,6 +27,7 @@ import { closeTac, sendTac, startTactical, stepTactical, wantsTactical } from '.
 import { guardBeaten } from './advmap.ts';
 import { isTrialShip, trialOver } from './throne.ts'; // docs/19 E3
 import { raidOver } from './abyssraid.ts'; // docs/19 E11
+import { assaultOver } from './citadels.ts'; // docs/19 E5
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { softenFoe } from './firstfights.ts';
 
@@ -671,6 +672,7 @@ function finishBoarding(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: 
   game.emit({ k: 'board_end', a: a.id, b: b.id, winner: attackerWins ? a.id : b.id }, a.state.x, a.state.y);
   if (trialOver(game, a, b, attackerWins)) return; // a trial of mastery: no prize, no repulse (docs/19 E3)
   if (raidOver(game, a, b, attackerWins)) return; // a tier of the Abyss: what was cut stays cut (docs/19 E11)
+  if (assaultOver(game, a, b, attackerWins, fight.tac)) return; // a citadel's assault: what was cut stays cut (docs/19 E5)
   if (!attackerWins) {
     a.morale = Math.max(0, a.morale - 15);
     b.morale = Math.min(100, b.morale + 15);

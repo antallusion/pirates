@@ -11,6 +11,7 @@ import { islandChunkKeys } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { applyThroneTitles, throneHall } from './citadels.ts'; // docs/19 E8: the Masters of the Throne
 
 const DAY = 24 * 3600_000;
 const SEASON_MS = SEASON_DAYS * DAY;
@@ -185,6 +186,7 @@ export function applyPantheon(game: Game, s: PlayerSession): void {
     p.nameRights++;
     game.sendTo(s, { t: 'toast', msg: `You enter the Pantheon: ${HALLS[m.hall].name}. A statue, a title, and the right to name an island of the sea.`, kind: 'gold' });
   }
+  applyThroneTitles(game, s); // docs/19 E8: a captain of the season's Masters of the Throne
 }
 
 // ================================================================== names, titles, pennants
@@ -266,6 +268,7 @@ export function seasonView(game: Game, s: PlayerSession): SeasonView {
   const tables = (Object.keys(STAT_NAMES) as SeasonStat[]).map((stat) => ({ stat: STAT_NAMES[stat], rows: tops(board, stat, 5).map(({ name, value }) => ({ name, value })) }));
   const pantheon = game.db.getKv<PantheonMember[]>('pantheon') ?? [];
   const halls = (Object.keys(HALLS) as HallId[]).map((h) => ({ hall: HALLS[h].name, members: pantheon.filter((m) => m.hall === h).map((m) => ({ name: m.name, season: m.season + 1 })) }));
+  halls.push({ hall: 'The Hall of the Throne', members: throneHall(game) }); // docs/19 E8: the Masters of the Throne
   let next: { level: number; reward: string } | null = null;
   for (let l = se.level + 1; l <= TRACK_LEVELS; l++) {
     const r = trackReward(l, theme);

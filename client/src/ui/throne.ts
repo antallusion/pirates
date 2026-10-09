@@ -22,6 +22,7 @@ import { serverText } from '../lang/server.ts';
 import { placeName } from './maps.ts';
 import { RAID, RAID_TIERS, raidPay } from '../../../shared/src/data/abyssraid.ts';
 import { unitIcon, unitName } from './army.ts';
+import { CIT_TABS } from './citadels.ts'; // docs/19 E4–E8
 import type { ClientState } from '../state.ts';
 import { esc, fmt, icon, money } from './dom.ts';
 
@@ -34,8 +35,8 @@ export interface ThroneTab {
   id: string;
   label: () => string;
   icon: string;
-  /** A count on the tab (a boon waiting, a point to spend). */
-  badge?: (g: GloryView) => number;
+  /** A count on the tab (a boon waiting, a point to spend; docs/19 E4: an assault to make, her citadel besieged). */
+  badge?: (g: GloryView, state: ClientState) => number;
   render: (g: GloryView, state: ClientState) => string;
   /** Its buttons: `close` shuts the window (a trial's battle opens over the sea). */
   bind?: (root: HTMLElement, send: (m: ClientMsg) => void, close: () => void) => void;
@@ -259,6 +260,8 @@ export const THRONE_TABS: ThroneTab[] = [
       }));
     },
   },
+  // docs/19 E4–E8: the citadels and the Throne war.
+  ...CIT_TABS,
 ];
 
 export class ThroneWindow {
@@ -285,7 +288,7 @@ export class ThroneWindow {
     } else {
       const tab = THRONE_TABS.find((t) => t.id === this.tab) ?? THRONE_TABS[0];
       root.innerHTML = `${head}<div class="modal-body throne-win"><div class="tabs">${THRONE_TABS.map((t) => {
-        const n = t.badge?.(g) ?? 0;
+        const n = t.badge?.(g, state) ?? 0;
         return `<button class="tab${t === tab ? ' active' : ''}" data-thtab="${t.id}">${icon(t.icon, '', 'ico-sm')}${esc(t.label())}${n ? ` <span class="hx-dot">${n}</span>` : ''}</button>`;
       }).join('')}</div>${tab.render(g, state)}</div>`;
       tab.bind?.(root, this.send, () => this.onClose());

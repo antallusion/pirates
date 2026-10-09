@@ -6,6 +6,18 @@ export interface ThroneClientMsg {
   /** glory: a boon (id = primary); node: a rank of a mastery node (id); reset: the tree forgotten in port; trial: the
    *  legend of a skill (id) alongside; view: nothing but her state again; seal: her seal's mythic depth at the lair her
    *  boats reach (docs/19 E9); raid: her raid's legend alongside at the Stair (docs/19 E11). */
-  action: 'glory' | 'node' | 'reset' | 'trial' | 'view' | 'seal' | 'raid';
+  action: 'glory' | 'node' | 'reset' | 'trial' | 'view' | 'seal' | 'raid' | 'cit';
   id?: string;
+  /** docs/19 E5–E7, `cit`: what she does at a citadel (`op`: declare a siege, assault it, leave `n` of her men of kind
+   *  `u` in its garrison, hire its titan of kind `u`), and which (`cit`, 0–11). */
+  op?: 'declare' | 'assault' | 'leave' | 'titan';
+  cit?: number;
+  u?: string;
+  n?: number;
+}
+
+/** docs/19 E4: the citadels on every chart (shared/src/data/citadels.ts CitMark), sent when they change. */
+export interface CitServerMsg {
+  t: 'citadels';
+  list: import('./data/citadels.ts').CitMark[];
 }

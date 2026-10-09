@@ -7,6 +7,7 @@ import type { LairCard, LairsView } from '../../shared/src/lairproto.ts';
 import type { DriftCard, DriftMark, TameView } from '../../shared/src/driftproto.ts';
 import type { FindView } from '../../shared/src/findproto.ts';
 import type { RoamView } from '../../shared/src/roamproto.ts';
+import type { CitMark } from '../../shared/src/data/citadels.ts';
 import { skillSeaMods } from '../../shared/src/data/hero.ts';
 import type { OmenId } from '../../shared/src/data/omens.ts';
 import { regattaSail } from '../../shared/src/data/regatta.ts';
@@ -155,6 +156,8 @@ export class ClientState {
   week: WeekView | null = null;
   weekAt = 0;
   mines: MineView[] = [];
+  /** docs/19 E4: the twelve citadels on the charts and the sea (their holders, an open window, a siege). */
+  citadels: CitMark[] = [];
   /** docs/17 H4: the guards and the things on the map she has seen, the card over the sea, the Grail's chart. */
   adv: AdvView | null = null;
   /** docs/18 III: the zones of one level, the turtle islands, the supply routes. */
@@ -456,6 +459,9 @@ export class ClientState {
         break;
       case 'mines':
         this.mines = m.list;
+        break;
+      case 'citadels':
+        this.citadels = m.list;
         break;
       case 'adv':
         this.adv = m.view;

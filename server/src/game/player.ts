@@ -507,6 +507,8 @@ export interface WorldView {
   seal?: SealView;
   /** docs/19 E11: her raid of the Abyss, for the Throne's tab (abyssraid.ts raidView). */
   raid?: RaidView;
+  /** docs/19 E4–E8: the citadels and the Throne war, for the Throne's tabs (citadels.ts citView). */
+  cit?: import('../../../shared/src/data/citadels.ts').CitView;
   /** One's own island (docs/15). */
   homeIsle?: number | null;
   /** Raiders at her island (docs/15 item 7), and a wild island off the bow she may claim (item 6). */
@@ -550,6 +552,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     xp: p.level >= MAX_LEVEL ? Math.floor(p.throne?.xp ?? 0) : p.xp,
     xpNext: p.level >= MAX_LEVEL ? gloryXp(p.throne?.rank ?? 0) : xpForLevel(p.level),
     glory: gloryView(now, s, world.seal, world.raid),
+    ...(world.cit ? { cit: world.cit } : {}),
     rested: Math.round(p.rested ?? 0),
     talentPoints: talentPointsAvailable(p),
     deeds: p.deeds,

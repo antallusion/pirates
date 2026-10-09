@@ -45,6 +45,7 @@ import type { CritPart } from './fx.ts';
 import { drawBossZones, drawMonster, drawPveSites } from './monsters.ts';
 import { drawAdvWorld, drawGuardShip, guardTag } from './advmap.ts'; // docs/17 H4
 import { drawLairsWorld } from './beastlairs.ts'; // docs/18 II
+import { drawCitadelsWorld } from './citadels.ts'; // docs/19 E4
 import { drawDriftsWorld } from './drifts.ts'; // docs/18 IV
 import { drawFindsWorld } from './seafinds.ts'; // docs/19 D5
 import { drawRoamsWorld } from './roamers.ts'; // docs/19 D7
@@ -453,6 +454,7 @@ export class Renderer {
     this.drawIsles18(state, own, islands, tctx);
     drawAdvWorld(g, state, this.advCtx()); // the adventure map's things on their skerries (docs/17 H4)
     drawLairsWorld(g, state, this.advCtx()); // the lairs of the land's creatures on their islands (docs/18 II)
+    drawCitadelsWorld(g, state, this.advCtx()); // the citadels of the Throne war on their islands (docs/19 E4)
     drawDriftsWorld(g, state, this.advCtx()); // drifting creatures and the season's legend (docs/18 IV)
     drawFindsWorld(g, state, this.advCtx()); // the sea's small things (docs/19 D5)
     drawRoamsWorld(g, state, this.advCtx()); // the creatures roaming the sea (docs/19 D7)

@@ -53,7 +53,7 @@ import type { H4ClientMsg, H4ServerMsg } from './h4proto.ts';
 import type { IsleClientMsg, IsleServerMsg } from './isleproto.ts';
 import type { LairClientMsg, LairServerMsg } from './lairproto.ts';
 import type { DriftClientMsg, DriftServerMsg } from './driftproto.ts';
-import type { ThroneClientMsg } from './throneproto.ts'; // docs/19 E1–E3
+import type { CitServerMsg, ThroneClientMsg } from './throneproto.ts'; // docs/19 E1–E3; E4: the citadels on the charts
 import type { GloryView } from './data/throne.ts';
 import type { FindClientMsg, FindServerMsg } from './findproto.ts';
 import type { RoamClientMsg, RoamServerMsg } from './roamproto.ts'; // docs/19 D7
@@ -596,6 +596,8 @@ export interface PrivateState {
   hero?: HeroView;
   /** Her glory past the cap, mastery and trials (docs/19 E1–E3): from five levels short of the cap. */
   glory?: GloryView;
+  /** docs/19 E4–E8: the citadels and the Throne war, for the Throne's tabs (from five levels short of the cap). */
+  cit?: import('./data/citadels.ts').CitView;
   accountId: number;
   name: string;
   /** The title she flies with the ship's name (docs/16 #29). */
@@ -1546,7 +1548,11 @@ export interface TacEvent {
     /** docs/18 II: the poison in a stack bites again; a creature grows back. */
     | 'poison' | 'regen'
     /** A great one ashore does its own (shorebosses.ts, 2026-10-03): `id` the move, `s` the great one, `on` whom it fell on. */
-    | 'boss';
+    | 'boss'
+    /** docs/19 E5, a citadel's siege: `id` 'gun' (the ship's broadside before the assault) or 'catapult' — a stone on
+     *  the wall line's `hex`, `dmg` 1 if it found it, `n` what it has left; 'tower' — the tower on `n` shoots her stack
+     *  `t` (on `hex`). */
+    | 'siege';
   side: 0 | 1;
   s?: number;
   t?: number;
@@ -1599,6 +1605,9 @@ export interface TacView {
   land?: { type: string; lair: string; island: string; level: number };
   /** The hexes a great one ashore will fall on as the next round opens (shorebosses.ts): step off them. */
   warn?: number[];
+  /** docs/19 E5: a citadel's siege — the ground it stands on (as `land.type`), each row's wall, gate or tower: stones
+   *  left of how many, the catapult's stones a round, the citadel's name. */
+  siege?: { type: string; hp: number[]; max: number[]; cat: number; name?: string };
 }
 
 export type ServerMsg =
@@ -1722,6 +1731,7 @@ export type ServerMsg =
   | { t: 'err'; msg: string }
   /** docs/17 H3: the week, the dwellings, the mines. */
   | H3ServerMsg
+  | CitServerMsg
   /** docs/17 H4: the adventure map, its card, the Grail's puzzle. */
   | H4ServerMsg
   /** docs/18 III: the zones of one level, the turtle islands, the supply routes. */

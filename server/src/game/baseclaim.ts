@@ -7,6 +7,7 @@
 // island for the owner to fight, then reckoned against the island's batteries, fort and her own ships lying there.
 // A raid lost takes a share of the yard and store (capped a day) and weathers a building; one beaten pays.
 
+import { buildCitadels } from '../../../shared/src/data/citadels.ts'; // docs/19 E4
 import {
   ABANDON_COOLDOWN_H, ABANDON_REFUND, AWAY_H, AWAY_MUL, ISLE_RAID_MIN, LOSS_DAY_CAP, RAID_COOLDOWN_H, RAID_LOSS, RAID_WEATHER, ROB_ISLE_COOLDOWN_H, ROB_ISLE_SEC,
   ROB_ISLE_SHARE, TAX_DAYS, TAX_WEATHER, WATERS, claimPrice, fatMark, isleDefence, isleTax, raidOdds, raidPrize, raidStrength,
@@ -117,6 +118,7 @@ export function claimBlock(game: Game, isl: Island, account: number): string | n
   if (cur?.owned) return 'Your island is at its greatest.';
   if (Object.values(outposts(game)).some((o) => o.island === isl.id)) return 'Someone already works this island.';
   if (lairIsland(game, isl.id)) return 'A pirate captain keeps his lair on that island.';
+  if (buildCitadels(game.world).some((c) => c.island === isl.id)) return 'A citadel of the Throne war stands on that island.'; // docs/19 E4
   return null;
 }
 

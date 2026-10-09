@@ -25,6 +25,7 @@ import { bloodAndSalt, drownedTakeLosses } from './bridgefx.ts';
 import { afterBattle, heroFace, heroInput, maybeArtifact } from './hero.ts';
 import { npcPathOf } from './pathbook.ts';
 import { isTrialShip } from './throne.ts'; // docs/19 E3
+import { isCastellan, siegeSetup } from './citadels.ts'; // docs/19 E5
 import { act, endByRansom, killedHp, lossesOf, newBattle, playSince, stepBattle, viewOf } from './tacbattle.ts';
 import type { TacArmyEntry, TacBattle, TacSideInput } from './tacbattle.ts';
 
@@ -52,6 +53,7 @@ export const TAC_RANSOM_SHARE = 0.5;
  *  alongside (a jolly-boat raid keeps the old fight), and the setting on. */
 export function wantsTactical(game: Game, a: ShipEntity, b: ShipEntity): boolean {
   if (!game.tacticalBoarding || a.boarding?.remote) return false;
+  if (isCastellan(b)) return true; // docs/19 E5: a citadel's siege is fought on the hexes, whatever she asked
   const sa = game.sessionOf(a), sb = game.sessionOf(b);
   if (!sa && !sb) return false;
   return !(sa?.classicBoarding || sb?.classicBoarding);
@@ -134,7 +136,14 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
   const seed = game.rng.int(1, 1e9);
   const rng = new Rng(seed ^ 0x7ac7);
   fight.tacRng = rng;
-  fight.tac = newBattle(sideOf(game, a, b, true), sideOf(game, b, a, false), seed, game.now, rng);
+  // docs/19 E5: a castellan alongside — the siege before her citadel's walls, its garrison in its own seven stacks.
+  const so = siegeSetup(game, a, b);
+  const bIn = sideOf(game, b, a, false);
+  if (so) {
+    bIn.army = so.army.map((x) => ({ u: x.u, n: x.n, src: x.u }));
+    bIn.spellHp = so.spellHp;
+  }
+  fight.tac = newBattle(sideOf(game, a, b, true), bIn, seed, game.now, rng, so ? { siege: so.siege } : {});
   fight.tacSync = [0, 0];
   fight.tacSeen = new Map(fight.tac.stacks.map((s) => [s.id, s.count]));
   sendTac(game, a, b);
