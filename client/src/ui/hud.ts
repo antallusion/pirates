@@ -127,6 +127,8 @@ export function fightOnScreen(): boolean {
 }
 /** At most this many of the sea's toasts wait out a fight (the newest kept). */
 export const HELD_MAX = 4;
+/** How long the lawless waters' notice stays in the top band (ms): a few seconds to be read whole. */
+export const LAWLESS_NOTE_MS = 6500;
 
 export const FOLDED = ['hud-tip', 'hud-fish', 'hud-order', 'hud-holiday', 'hud-world', 'hud-goals', 'hud-feed'];
 /** On a phone the captain's sea orders and a group's signal flags fold away too, into the same sheet (docs/23 item 97:
@@ -702,6 +704,25 @@ export class Hud {
     this.placeStrip();
   }
   private heraldTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /** Lawless waters entered (owner, 2026-10-09: «в беззаконных водах правил вообще нет, и при входе в них игроку должно
+   *  быть сказано об этом»): a line in the top band for LAWLESS_NOTE_MS, the danger's red on its edge — no rules here,
+   *  anyone may attack anyone, the flag does not protect. The older HUD says it in a toast. */
+  lawless(title: string, line: string): void {
+    if (!simpleHud()) return this.toast(`${title}: ${line.charAt(0).toLowerCase()}${line.slice(1)}`, 'bad');
+    const el = $('lawless-note');
+    el.innerHTML = `${icon('danger', '', 'ln-ico')}<span><b>${esc(title)}</b> ${esc(line)}</span>`;
+    el.classList.remove('hidden', 'go');
+    void el.offsetWidth;
+    el.classList.add('go');
+    clearTimeout(this.lawlessTimer);
+    this.lawlessTimer = setTimeout(() => {
+      el.classList.add('hidden');
+      this.placeStrip();
+    }, LAWLESS_NOTE_MS);
+    this.placeStrip();
+  }
+  private lawlessTimer: ReturnType<typeof setTimeout> | undefined;
 
   /** The world boss panel: name, phase, strength, parts, what to do, and your part in it. */
   private drawBoss(state: ClientState): void {

@@ -32,6 +32,11 @@ export const EN = {
   'mark.noBoard': 'no boarding',
   'mark.pennant': 'green pennant',
   'fl.pennant': 'Green pennant: captains leave you be in contested water ({n} h at sea, or to level 15).',
+  // Lawless waters (owner, 2026-10-09: «в беззаконных водах правил вообще нет, и при входе в них игроку должно быть
+  // сказано об этом»): the notice on entering them, and the colours card there.
+  'fl.lawTitle': 'Lawless waters',
+  'fl.lawNote': 'No rules here — anyone may attack anyone; your flag does not protect you.',
+  'fl.lawCard': 'Lawless waters: your flag does not protect you here — anyone may attack and board anyone; “Boarding: off” does not hold either.',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -64,4 +69,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'mark.noBoard': 'без абордажа',
   'mark.pennant': 'зелёный вымпел',
   'fl.pennant': 'Зелёный вымпел: в спорных водах капитаны вас не трогают ({n} ч в море или до 15-го уровня).',
+  'fl.lawTitle': 'Беззаконные воды',
+  'fl.lawNote': 'Здесь нет правил — любой может напасть на любого, флаг не защищает.',
+  'fl.lawCard': 'Беззаконные воды: здесь флаг не защищает — любой может напасть на любого и взять на абордаж; «Абордаж: выкл.» тоже не действует.',
 };

@@ -93,6 +93,8 @@ async function toPort() {
   await sleep(3000);
   await skip();
 }
+/** A level's «выберите один из двух» card put off («Позже»). */
+const dismissUp = async () => { for (let i = 0; i < 3; i++) { await p.evaluate(() => [...document.querySelectorAll('button')].find((b) => /^(Позже|Later)$/.test(b.textContent.trim()) && b.getClientRects().length)?.click()); await sleep(300); } };
 async function atSea(where = 'gravewater') {
   if (await state(() => !!globalThis.gravetide.state.self?.dockedAt)) { await L.send(p, { t: 'undock' }); await sleep(2500); await skip(); }
   if (where) await admin(`/tp ${where}`, 2500);
@@ -207,20 +209,25 @@ const flows = {
   },
   async lawless() {
     await atSea('gravewater');
+    // (a new sea's discovery raises a young captain a level: its card would stand over the notice's first seconds)
+    await admin('/level 30');
+    await dismissUp();
     await clearToasts();
     await admin('/tp dead_mans_expanse', 900);
     await sleep(600);
+    await dismissUp();
     const n1 = await p.evaluate(() => { const e = document.querySelector('#lawless-note, .lawless-note'); return e && e.getClientRects().length ? e.textContent.trim() : null; });
     await measure('lawless_enter', { extra: { note: n1, herald: await p.evaluate(() => document.querySelector('#sea-herald')?.textContent?.trim() ?? null) } });
     await sleep(3500);
     const n2 = await p.evaluate(() => { const e = document.querySelector('#lawless-note, .lawless-note'); return e && e.getClientRects().length && getComputedStyle(e).opacity > 0.1 ? e.textContent.trim() : null; });
     L.log(tag, 'lawless after 4 s', JSON.stringify(n2));
     // The colours card at sea (the ship window): what it says here.
+    await dismissUp();
     await L.open(p, 'ship');
     await sleep(1000);
     await p.evaluate(() => document.querySelector('#modal-panel .fl-card')?.scrollIntoView({ block: 'center', behavior: 'instant' }));
     await sleep(300);
-    const fl = await p.evaluate(() => document.querySelector('#modal-panel .fl-line')?.textContent?.trim() ?? null);
+    const fl = await p.evaluate(() => [...document.querySelectorAll('#modal-panel .fl-law, #modal-panel .fl-line')].map((e) => e.textContent.trim()).join(' | ') || null);
     await measure('lawless_colours', { extra: { fl } });
     await close();
     // Logging in inside them: the page reloaded.

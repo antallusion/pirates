@@ -30,6 +30,9 @@ import { serverTable, serverText } from '../client/src/lang/server.ts';
 import { SERVER_RU_ADMIN } from '../client/src/lang/server.ru.admin.ts';
 import { SERVER_RU_FLAGS } from '../client/src/lang/server.ru.flags.ts';
 import { EN as FL_EN, RU as FL_RU } from '../client/src/lang/ui/flags.ts';
+import { coloursCard, lawlessHere, lawlessWords } from '../client/src/ui/flags.ts';
+import type { ClientState } from '../client/src/state.ts';
+import { readFileSync } from 'node:fs';
 import { applyDataLocale } from '../client/src/lang/data.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { join, makeGame, onHull } from './helpers.ts';
@@ -495,4 +498,35 @@ test('the tester’s /flag and /noboard, in HELP command for command; every new 
   // The interface's words: twins, no Latin left in the Russian.
   assert.deepEqual(Object.keys(FL_RU).sort(), Object.keys(FL_EN).sort());
   for (const [k, v] of Object.entries(FL_RU)) assert.ok(!/[A-Za-z]{2,}/.test(v.replace(/\{\w+\}/g, '')), `${k}: ${v}`);
+});
+
+test('lawless water on her screen (owner, 2026-10-09: «при входе в них игроку должно быть сказано об этом»): the notice in both tongues, the colours card says the flag shields nobody there', () => {
+  const st = (region: RegionId, docked: string | null = null) => ({
+    region, ports: [],
+    self: { dockedAt: docked, pvp: { flag: 'neutral', blackFlag: false, city: 'crown', guild: null, next: null, nextAt: 0, noNeutral: null, noBoard: true, pennant: false, pennantHoursLeft: 0 } },
+  }) as unknown as ClientState;
+  assert.equal(lawlessHere(st('dead_mans_expanse')), true);
+  assert.equal(lawlessHere(st('gravewater')), false);
+  assert.equal(lawlessHere(st('black_coast')), false);
+  assert.ok(coloursCard(st('dead_mans_expanse')).includes('class="fl-law"'), 'at sea in lawless water');
+  assert.ok(coloursCard(st('ashen_isles', 'p1')).includes('class="fl-law"'), 'in a lawless port');
+  assert.ok(!coloursCard(st('gravewater')).includes('fl-law'));
+  setLang('ru');
+  try {
+    const w = lawlessWords();
+    assert.equal(w.title, 'Беззаконные воды');
+    assert.match(w.line, /нет правил\s—\sлюбой может напасть на любого, флаг не защищает/);
+    assert.match(coloursCard(st('dead_mans_expanse')), /здесь флаг не защищает/);
+  } finally {
+    setLang('en');
+  }
+  assert.match(lawlessWords().line, /anyone may attack anyone; your flag does not protect you/);
+  // The notice on entering lawless water from other water and on logging in there, once she is at sea with nothing over
+  // it; the «Атаковать» on any captain there but her own group and guild (main.ts).
+  const main = readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8');
+  assert.ok(main.includes("if (r.safety === 'lawless' && lastSafety !== 'lawless') lawlessDue = true;"));
+  assert.ok(main.includes('hud.lawless(w.title, w.line);'));
+  assert.ok(main.includes('if (lawlessHere(state)) return !state.party?.members.some((m) => m.name === info.name)'));
+  const css = readFileSync(new URL('../client/seahud.css', import.meta.url), 'utf8');
+  assert.match(css, /#lawless-note\.go \{ animation: lawless-note 6\.5s/);
 });

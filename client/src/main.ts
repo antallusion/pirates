@@ -123,7 +123,7 @@ import { ResearchWindow } from './ui/research.ts'; // the yard's tree of hulls (
 import { AdvCard } from './ui/advcard.ts'; // docs/17 H4
 import { PuzzleWindow } from './ui/puzzle.ts';
 import { crewSayParts, renderLog } from './ui/crewlife.ts';
-import { flagLine, flagsCss, shipColours } from './ui/flags.ts'; // docs/24 C1, D1–D3
+import { flagLine, flagsCss, lawlessHere, lawlessWords, shipColours } from './ui/flags.ts'; // docs/24 C1, D1–D3
 import { EN as FLAGS_EN, RU as FLAGS_RU } from './lang/ui/flags.ts';
 import { citiesHostile } from '../../shared/src/data/colours.ts';
 
@@ -671,6 +671,19 @@ function refusalAgain(msg: string): boolean {
   refusedAt.set(msg, now);
   if (refusedAt.size > 64) refusedAt.delete(refusedAt.keys().next().value!);
   return at !== undefined && now - at < REFUSAL_QUIET_MS && now - pressAt > 900;
+}
+/** The safety of the water she was last told of (null: none yet this page), and a lawless waters' notice waiting. */
+let lastSafety: string | null = null;
+let lawlessDue = false;
+/** The lawless waters' notice (owner, 2026-10-09), once she is at sea with no window, no film and no deck fight over it. */
+function lawlessFrame(): void {
+  if (!lawlessDue || !state.self || state.self.dockedAt || modal || state.boardTac || document.querySelector('.film') || levelUpOpen()) return;
+  // (nor under a question put to her: the risk of a boarding, a surrender's card — it waits for her, as a film does)
+  if ([...document.querySelectorAll('[role="alertdialog"][aria-modal="true"]')].some((e) => e.getClientRects().length > 0)) return;
+  lawlessDue = false;
+  if (!lawlessHere(state)) return;
+  const w = lawlessWords();
+  hud.lawless(w.title, w.line);
 }
 /** The sea's news held through a boarding battle (case 'toast'), told once the deck is clear. */
 const heldToasts: { msg: string; kind: string }[] = [];
@@ -1275,6 +1288,10 @@ function onMessage(m: ServerMsg): void {
           // The sea's name (owner, 2026-10-07: «перегруз сверху графический не нужен»): a slim line in the top band that
           // fades on its own; the older HUD keeps its herald in the toasts' band.
           hud.seaName(r.name, waters, `${waters} — ${r.mood}`);
+          // Into lawless water from other water, or in the game there (owner, 2026-10-09: «при входе в них игроку должно
+          // быть сказано об этом»): the notice, once she is at sea with no window over it (lawlessFrame).
+          if (r.safety === 'lawless' && lastSafety !== 'lawless') lawlessDue = true;
+          lastSafety = r.safety;
         } else if (e.k === 'discover' && !e.quiet) hud.toast(L('charted', { name: sv(e.name) }), 'xp');
         else if (e.k === 'board_start' && (e.a === state.entityId || e.b === state.entityId)) hud.toast(L('grapples'), 'info');
       }
@@ -2438,8 +2455,12 @@ function attackable(id: number | null): boolean {
  *  cities at enmity; never under neutral colours. The server's rule (colours.ts) has the last word. */
 function fairCaptain(flags: number, info: ShipInfo): boolean {
   const me = state.self?.pvp;
+  if (!me) return false;
+  // Lawless water (owner, 2026-10-09: «правил вообще нет»): any captain or her escort, whatever either flies — but her
+  // own group and guild (a crew, not a rule).
+  if (lawlessHere(state)) return !state.party?.members.some((m) => m.name === info.name) && !(me.guild && info.guild === me.guild);
   const them = shipColours(flags, info);
-  if (!me || !them || me.flag === 'neutral' || them.kind === 'neutral' || them.pennant) return false;
+  if (!them || me.flag === 'neutral' || them.kind === 'neutral' || them.pennant) return false;
   if (me.flag === 'pirate' || them.kind === 'pirate') return true;
   return !!them.city && citiesHostile(me.city, them.city);
 }
@@ -3523,6 +3544,7 @@ function step(t: number): void {
       autoMount();
     }
     hoverCursor(renderer.mouseX, renderer.mouseY);
+    lawlessFrame();
     touchAttackMark();
     targetMenuFrame();
     divePanel.render(state.dive);

@@ -51,6 +51,11 @@
 .fl-on { color: var(--k-gold, #e0b862); }
 .fl-soon { color: var(--k-warn, #e6a04a); }
 .fl-line { margin: 2px 0 4px !important; font-size: 12px !important; line-height: 1.3; }
+/* lawless water (owner, 2026-10-09): no flag shields anyone there — said first, in the danger's red */
+.fl-law { display: flex; align-items: flex-start; gap: 6px; margin: 0 0 6px !important; padding: 4px 8px; border-left: 3px solid #b23a3a; border-radius: 3px;
+  background: rgba(120, 30, 26, 0.22); color: #e6b3a8; font-size: 12.5px !important; line-height: 1.3; text-align: left; }
+.fl-law .ico-sm { flex: none; width: 16px; height: 16px; margin: 1px 0 0; }
+.fl-card--lawless .fl-opts { opacity: 0.86; }
 .fl-line .good { color: var(--k-good, #7fb58a); }
 .fl-board .fl-t { flex: 1; display: grid; grid-template-columns: minmax(118px, 170px) 1fr; column-gap: 12px; align-items: center; }
 .fl-nb-ico { /* a grapnel's hook, crossed when boarding is off */
