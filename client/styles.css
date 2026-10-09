@@ -5278,3 +5278,30 @@ body.touch.sea-docked #touch > :is(#tc-stick, .tc-special, #tc-target) { display
   background: radial-gradient(ellipse at 50% 50%, rgba(2, 12, 16, 0) 38%, rgba(2, 14, 18, 0.5) 100%), rgba(4, 22, 26, 0.18); }
 #black-tide.on { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { #black-tide { transition: none; } }
+
+/* ---------- docs/25 items 48, 49, 52: the chess clocks, the quick fight offered at once, the quarterdeck's flag ----------
+   On a desk the two clocks sit under the turn's timer in the top band; on a phone they stand between the two captains'
+   faces at the top, with the flag's count, the quick fight's button and one line (the flag lost or held, the clock
+   spent) — the top band, never the field's middle. */
+.tb-clocks { display: flex; justify-content: center; gap: 6px; margin-top: 2px; }
+.tb-clock { display: inline-flex; align-items: center; gap: 3px; padding: 0 6px 0 3px; height: 18px; border-radius: 9px; background: rgba(12, 10, 8, 0.85);
+  box-shadow: 0 0 0 1px rgba(127, 176, 208, 0.55); color: var(--bone); font: 700 11px/18px var(--k-font-sans, sans-serif); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tb-clock.foe { box-shadow: 0 0 0 1px rgba(210, 71, 58, 0.6); }
+.tb-clock .ico-xs { width: 13px; height: 13px; margin: 0; border-radius: 3px; }
+.tb-clock.run { box-shadow: 0 0 0 2px var(--gold); color: #fff1c8; }
+.tb-clock.low b { color: #ff9b86; }
+.tb-acts .btn.tb-quicknow { box-shadow: 0 0 0 2px var(--gold), 0 0 12px rgba(224, 184, 98, 0.6); }
+.tb-top { display: none; }
+body.tac-ph .tb-top { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 6px); left: calc(env(safe-area-inset-left, 0px) + 64px); right: calc(env(safe-area-inset-right, 0px) + 64px);
+  display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none; }
+.tb-trow { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: nowrap; }
+.tb-trow .tb-clocks { margin: 0; }
+.tb-flagp { display: inline-flex; align-items: center; gap: 3px; padding: 0 6px 0 3px; height: 18px; border-radius: 9px; background: rgba(12, 10, 8, 0.85);
+  box-shadow: 0 0 0 1px rgba(232, 196, 106, 0.6); color: #ffe39a; font: 700 11px/18px var(--k-font-sans, sans-serif); font-variant-numeric: tabular-nums; pointer-events: auto; }
+.tb-flagp .ico-xs { width: 13px; height: 13px; margin: 0; }
+.tb-qn { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 12px 0 6px; border-radius: 15px; border: 1px solid var(--brass-dim);
+  background: linear-gradient(180deg, #3a2c18, #1c150d); color: var(--gold); font: 700 13px/1 var(--k-font-sans, sans-serif); white-space: nowrap; pointer-events: auto;
+  cursor: pointer; touch-action: manipulation; box-shadow: 0 0 0 2px rgba(224, 184, 98, 0.5), 0 2px 8px rgba(0, 0, 0, 0.7); }
+.tb-qn .ico-xs { width: 18px; height: 18px; margin: 0; }
+.tb-tline { max-width: 100%; padding: 2px 8px; border-radius: 6px; background: rgba(12, 10, 8, 0.82); color: var(--bone); font: 600 11px/1.3 var(--k-font-sans, sans-serif);
+  text-align: center; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }

@@ -1055,7 +1055,8 @@ export class TacticalPanel {
       ? `<div class="tb-sheet" role="dialog" aria-label="${esc(L('order.label'))}"><div class="tb-sh-r"><b>${esc(L('round', { n: v.round }))}</b><em>${esc(whose)}</em></div>${captain(v.you)}${captain((1 - v.you) as 0 | 1)}<div class="tb-sh-q">${this.queue(v)}</div>${words.length ? `<div class="tb-sh-feed">${words.map((w) => `<div>${esc(w)}</div>`).join('')}</div>` : ''}</div>`
       : '';
     pad.className = `tb-pad${v.over ? ' over' : ''}`;
-    pad.innerHTML = `${turn}${sheet}<div class="tb-pl">${left}</div><div class="tb-pr">${book}${x2}</div>`;
+    pad.innerHTML = `${turn}${this.topHtml(v)}${sheet}<div class="tb-pl">${left}</div><div class="tb-pr">${book}${x2}</div>`;
+    pad.querySelector<HTMLElement>('[data-quicknow]')?.addEventListener('click', () => this.order({ a: 'quick' }));
     const again = () => {
       this.key = '';
       if (this.view) this.dom(this.view);
@@ -1500,6 +1501,23 @@ export class TacticalPanel {
     if (v.over || !act || act.side !== side || v.heroes[side].auto) return b;
     const from = v.ends - Math.min(v.turn ?? TAC_TURN, b);
     return Math.max(0, b - Math.max(0, this.now() - from));
+  }
+
+  /** docs/25 items 48, 49, 52 on a phone: between the two captains at the top, the two chess clocks, the flag's count,
+   *  the quick fight offered at once, and the one line that matters (the flag lost or held, the clock spent) — the top
+   *  band, never the field's middle. */
+  private topHtml(v: TacView): string {
+    if (v.over) return '';
+    const f = v.flag;
+    const flag = f
+      ? `<span class="tb-flagp" title="${esc(L('flag.tip', { m: f.need }))}" aria-label="${esc(L('flag.tip', { m: f.need }))}">${icon('icon.bt_colours', '', 'ico-xs')}<b>${f.held[v.you]}/${f.need}</b></span>`
+      : '';
+    const quick = v.quickNow ? `<button class="tb-qn" data-quicknow title="${esc(L('quickNow'))}" aria-label="${esc(L('quickNow'))}">${btIcon('bt_quick', 'icon.bt_charge', 'ico-xs')}<span>${esc(L('quick'))}</span></button>` : '';
+    const lead = this.leadHint(v);
+    const line = lead && lead !== L('quickNow') && (!f || lead !== L('hint.flag', { m: f.need }) || v.round <= 1) ? `<div class="tb-tline">${esc(lead)}</div>` : '';
+    const row = `${this.clocksHtml(v)}${flag}`;
+    if (!row && !quick && !line) return '';
+    return `<div class="tb-top">${row ? `<div class="tb-trow">${row}</div>` : ''}${quick}${line}</div>`;
   }
 
   /** Seconds as m:ss. */
@@ -2952,6 +2970,56 @@ export class TacticalPanel {
   }
 
   /** A fire on deck, flickering (drawn each frame). */
+  /** docs/25 item 52: a quarterdeck's flag, drawn: a dark pole at the hex's back with a brass knob, a pennant in its
+   *  side's colour that stirs in the wind, and — while the other side holds it — the whole rounds held of those it takes. */
+  private flagPole(g: CanvasRenderingContext2D, x: number, y: number, w: number, ours: boolean, held: number, need: number, t: number): void {
+    const bx = x - w * 0.3, by = y + w * 0.12, top = by - w * 0.92;
+    g.save();
+    g.strokeStyle = '#2a1d12';
+    g.lineWidth = Math.max(2, w * 0.05);
+    g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(bx, by);
+    g.lineTo(bx, top);
+    g.stroke();
+    g.fillStyle = '#c9a24a';
+    g.beginPath();
+    g.arc(bx, top, Math.max(1.5, w * 0.035), 0, Math.PI * 2);
+    g.fill();
+    const wave = this.calm() ? 0 : Math.sin(t / 320 + x * 0.01);
+    const len = w * 0.46, h = w * 0.26;
+    g.fillStyle = ours ? '#3f6f92' : '#9e2f25';
+    g.strokeStyle = 'rgba(10,8,6,0.85)';
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(bx, top + w * 0.03);
+    g.quadraticCurveTo(bx + len * 0.5, top + w * 0.03 + wave * h * 0.18, bx + len, top + h * 0.5 + wave * h * 0.12);
+    g.quadraticCurveTo(bx + len * 0.5, top + h + wave * h * 0.18, bx, top + h);
+    g.closePath();
+    g.fill();
+    g.stroke();
+    // A pale band across the pennant: the colours of a quarterdeck, not a stack's.
+    g.strokeStyle = 'rgba(236,224,196,0.7)';
+    g.lineWidth = Math.max(1, w * 0.025);
+    g.beginPath();
+    g.moveTo(bx + len * 0.12, top + h * 0.5);
+    g.lineTo(bx + len * 0.7, top + h * 0.5 + wave * h * 0.1);
+    g.stroke();
+    if (held > 0) {
+      const tx = bx + len * 0.5, ty = top - w * 0.12;
+      g.font = `700 ${Math.max(10, Math.round(w * 0.22))}px sans-serif`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.lineWidth = 3;
+      g.strokeStyle = 'rgba(8,6,4,0.9)';
+      const txt = `${held}/${need}`;
+      g.strokeText(txt, tx, ty);
+      g.fillStyle = ours ? '#ff9b86' : '#ffe39a';
+      g.fillText(txt, tx, ty);
+    }
+    g.restore();
+  }
+
   private flames(g: CanvasRenderingContext2D, x: number, y: number, w: number, t: number, seed: number): void {
     const glow = g.createRadialGradient(x, y, w * 0.05, x, y, w * 0.55);
     glow.addColorStop(0, 'rgba(255,170,60,0.55)');
@@ -3061,6 +3129,20 @@ export class TacticalPanel {
       g.strokeStyle = `rgba(245,150,90,${0.45 + 0.45 * pulse})`;
       g.lineWidth = 2;
       g.stroke();
+    }
+    // docs/25 item 52: the quarterdeck's flags — each side's hex at her stern, hers washed in her colour, the one to take
+    // in gold and pulsing; a dashed rim, so a stack on it still reads.
+    if (v.flag) for (const x of [0, 1] as const) {
+      const p = this.lc(v.flag.hex[x]);
+      const ours = x === v.you;
+      this.hexPath(g, p.x, p.y, r - 2);
+      g.fillStyle = ours ? `rgba(127,176,208,${0.1 + 0.05 * pulse})` : `rgba(232,196,106,${0.14 + 0.12 * pulse})`;
+      g.fill();
+      g.setLineDash([w * 0.12, w * 0.08]);
+      g.strokeStyle = ours ? 'rgba(127,176,208,0.75)' : `rgba(240,206,120,${0.6 + 0.35 * pulse})`;
+      g.lineWidth = this.phone ? 2.5 : 2;
+      g.stroke();
+      g.setLineDash([]);
     }
     // The reach of the stack whose turn it is (docs/23 item 58: big and plain): a veil and a bright rim on every hex
     // it may step to — on a phone thicker and lighter, so a thumb sees it at arm's length.
@@ -3205,7 +3287,8 @@ export class TacticalPanel {
       else if (t >= f.at) fading.push({ s: f.s, k: 1 - (t - f.at) / 520 });
       else shown.push({ ...f.s, count: Math.max(1, this.countNow(f.s, t)) });
     }
-    const placed: { s?: TacStackView; prop?: string; i?: number; p: { x: number; y: number; lift?: number; walking?: boolean; dx?: number } }[] = shown.map((s) => ({ s, p: this.standAt(s, t) }));
+    const placed: { s?: TacStackView; prop?: string; i?: number; flag?: 0 | 1; p: { x: number; y: number; lift?: number; walking?: boolean; dx?: number } }[] = shown.map((s) => ({ s, p: this.standAt(s, t) }));
+    if (v.flag) for (const x of [0, 1] as const) placed.push({ flag: x, p: this.center(v.flag.hex[x]) });
     const walking = placed.some((x) => x.p.walking);
     for (let i = 0; i < v.cells.length; i++) {
       const prop = propArt(v.cells[i], v.land?.type ?? v.siege?.type ?? (v.arena ? 'arena' : ''));
@@ -3224,7 +3307,8 @@ export class TacticalPanel {
         this.walkDx = 0;
         this.drawn.figures.set(x.s.id, (this.drawn.figures.get(x.s.id) ?? 0) + 1);
         if (x.p.walking) this.drawn.walking.push(x.s.id);
-      } else this.prop(g, x.prop!, x.p.x, x.p.y, w, hexX(x.i!) > 5);
+      } else if (x.flag !== undefined) this.flagPole(g, x.p.x, x.p.y, w, x.flag === v.you, v.flag!.held[1 - x.flag], v.flag!.need, t);
+      else this.prop(g, x.prop!, x.p.x, x.p.y, w, hexX(x.i!) > 5);
     }
     for (const f of this.plates) f();
     this.plates = null;
