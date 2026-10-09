@@ -23,6 +23,7 @@ import type { SailTalents } from './sailing.ts';
 import { DEG } from '../math.ts';
 import { levelScale, shipLevelOf } from '../data/shiplevel.ts';
 import { giftSource } from '../data/shipgifts.ts';
+import { ARMOR_WEIGHT, defRaw, gearDefence, gearOffence, gearReload } from '../data/seabalance.ts';
 
 export interface ShipLoadout {
   classId: ShipClassId;
@@ -154,10 +155,28 @@ export function computeShipStats(
   const lvl = shipLevelOf(loadout);
   const shipGear = SHIP_SLOTS.filter((sl) => loadout.gear?.[sl] && lvl >= SLOT_OPENS[sl]).map((sl) => loadout.gear![sl]!);
   const gear = gearSource([...shipGear, ...worn]);
+  // Her gear's broadside and hull lines are weighed apart (docs/25 items 5–6): toward ×(1.1 + 0.11·⚓) of her broadside
+  // and ×(1 + 0.025·⚓) of her hull in full gear, each line a little less than the one before — no longer summed with
+  // the talents into one cap that the gear filled by her 26th level (every line past it was worth nothing).
+  const gm: StatMods = { ...gear.mods };
+  const seaOff = gearOffence(gm.gunDamageMul ?? 0, lvl);
+  const dRaw = defRaw(gm);
+  const seaDef = gearDefence(dRaw, lvl);
+  const seaReload = gearReload(gm.reloadMul ?? 0, lvl);
+  // …her defence shared out among the lines that made it (her hull, her armour, «less damage»), so each reads as it adds.
+  const share = (v: number) => (Math.abs(dRaw) > 1e-9 ? v / dRaw : 0);
+  const defHull = Math.pow(seaDef, share(gm.hullMax ?? 0));
+  const defArmor = Math.pow(seaDef, share(ARMOR_WEIGHT * (gm.armor ?? 0)));
+  const defInc = Math.pow(seaDef, share(-(gm.incomingDamageMul ?? 0)));
+  delete gm.gunDamageMul;
+  delete gm.reloadMul;
+  delete gm.hullMax;
+  delete gm.armor;
+  delete gm.incomingDamageMul;
   // Permanent sources (captain passive, talents, gear) are capped per 03 §3.3; temporary effects stack on top. The
   // hull's own trait and a premium hull's gift (docs/02 §1.A.9) are permanent as the captain's passive is.
   const gift = giftSource(cls.id);
-  const { mods, flags } = sumMods([{ mods: cap.passive.mods, flags: cap.passive.flags }, { mods: cls.passive.mods, flags: cls.passive.flags }, ...(gift ? [gift] : []), ...talentModifiers(talents), { mods: gear.mods, flags: gear.flags }, ...(hero ? [hero] : [])]);
+  const { mods, flags } = sumMods([{ mods: cap.passive.mods, flags: cap.passive.flags }, { mods: cls.passive.mods, flags: cls.passive.flags }, ...(gift ? [gift] : []), ...talentModifiers(talents), { mods: gm, flags: gear.flags }, ...(hero ? [hero] : [])]);
   // An item in a slot takes the place of the yard's old fitting there.
   const replaced = new Set<string>(shipGear.map((it) => MODULE_OF_SLOT[ITEM_BASES[it.base].slot as ShipSlot]).filter((m): m is ModuleId => !!m));
   const m0 = (x: Record<StatKey, number>, k: StatKey) => mod(x, k);
@@ -223,8 +242,8 @@ export function computeShipStats(
     sailChangeRate: 0.45 * (1 + m('sailChangeRate') + e('sailChangeRate') + (passive === 'raider_rig' ? 0.2 : 0)),
     currentMul: m('currentMul') + e('currentMul'),
     nightSpeed: m('nightSpeed') + e('nightSpeed'),
-    hullMax: Math.round(cls.hull * lv.hull * Math.max(0.3, 1 + hullMul + m('hullMax') + e('hullMax'))),
-    armor: Math.min(0.75, (cls.armor + armorAdd) * (1 + Math.min(armorCap, m('armorPct'))) + m('armor') + e('armor')),
+    hullMax: Math.round(cls.hull * lv.hull * Math.max(0.3, 1 + hullMul + m('hullMax') + e('hullMax')) * defHull),
+    armor: Math.min(0.75, 1 - (1 - Math.min(0.75, (cls.armor + armorAdd) * (1 + Math.min(armorCap, m('armorPct'))) + m('armor') + e('armor'))) / defArmor),
     sailHpMax: Math.round(cls.sailHp * lv.hull * (1 + sailHpMul + m('sailHpMax') + e('sailHpMax'))),
     repairRate: cls.repairRate * (1 + m('repairRate') + e('repairRate')),
     battleRepairRate: m('battleRepairRate') + e('battleRepairRate'),
@@ -235,9 +254,9 @@ export function computeShipStats(
     detection: cls.detection * (1 + Math.min(detectCap, m('detection') + (passive === 'hunter' ? 0.15 : 0)) + e('detection')),
     gunsPerSide: cls.gunPortsPerSide + (flags.has('overgunned') ? 2 : 0),
     bowChasers: cls.bowChasers + (flags.has('overgunned') ? 1 : 0),
-    reloadMul: Math.max(0.2, 1 + Math.max(reloadFloor, m('reloadMul')) + e('reloadMul')),
+    reloadMul: Math.max(0.2, (1 + Math.max(reloadFloor, m('reloadMul')) + e('reloadMul')) * seaReload),
     spreadMul: Math.max(0.2, 1 + m('spreadMul') + e('spreadMul')),
-    gunDamageMul: lv.guns * Math.max(0.1, 1 + Math.min(dmgCap, m('gunDamageMul')) + e('gunDamageMul')),
+    gunDamageMul: lv.guns * Math.max(0.1, 1 + Math.min(dmgCap, m('gunDamageMul')) + e('gunDamageMul')) * seaOff,
     rangeMul: 1 + m('rangeMul') + e('rangeMul'),
     doubleShotChance: m('doubleShotChance') + e('doubleShotChance'),
     crewKillMul: 1 + m('crewKillMul') + e('crewKillMul'),
@@ -254,7 +273,7 @@ export function computeShipStats(
     materialVolumeMul: Math.max(0.4, 1 + m('materialVolume')),
     provisionVolumeMul: Math.max(0.4, 1 + m('storesVolume')),
     cursedVolumeMul: Math.max(0.4, 1 - 0.25 * m('cursedCargo')),
-    incomingDamageMul: Math.max(0.2, 1 + m('incomingDamageMul') + e('incomingDamageMul')),
+    incomingDamageMul: Math.max(0.2, (1 + m('incomingDamageMul') + e('incomingDamageMul')) / defInc),
     moraleRegen: 0.4 + m('moraleRegen') + e('moraleRegen'),
     cooldownMul: Math.max(0.6, 1 + m('cooldownMul') + e('cooldownMul')),
     x: extra,

@@ -2727,7 +2727,7 @@ function deckView(): DeckSlot[] | null {
     out.push({
       kind: 'abil', id: a.id, art: `ab_${a.id}`, key: keyOfAction(`ability${a.key}` as Action), name: a.name, title: `${a.name} — ${a.description}`,
       ult: a.kind === 'ultimate', ...(locked ? { locked: seaWord('lv6') } : {}), dim: locked || charging || starved,
-      charge: charging ? you.resolve / 100 : null, cd: left > 0 ? Math.min(1, left / Math.max(1, a.cooldown)) : 0, left,
+      charge: charging ? you.resolve / 100 : null, cd: left > 0 ? Math.min(1, left / Math.max(1, a.cooldown * (state.ownStats?.cooldownMul ?? 1))) : 0, left,
     });
   }
   AMMO_IDS.forEach((a, i) => {

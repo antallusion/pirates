@@ -335,7 +335,8 @@ export function npcSkill(level: number): NpcSkill {
 }
 
 /** An elite ⚔ (group contracts, barons): built for a company — hull ×2.5, guns ×1.5. */
-export const ELITE_MODS = { hullMax: 1.5, gunDamageMul: 0.5 };
+// (Her hull and guns are the broadside table's now, docs/25 item 7: as a captain in full gear of her ⚓ —
+// shared/src/data/seabalance.ts ELITE_SEA; they were hull ×2.5, guns ×1.5.)
 
 /** The ship level a captain of this level is likely to sail (for quests and tasks written by captain level). */
 export function shipLevelForCaptain(captainLevel: number): number {

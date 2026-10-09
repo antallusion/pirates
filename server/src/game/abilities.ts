@@ -142,7 +142,8 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
   } else if (def.duration > 0) {
     ship.addEffect({ id: def.id, until: now + def.duration }, now);
   }
-  profile.cooldowns[def.id] = now + def.cooldown;
+  // Faster cooldowns (the Signal Hoist banner and the like) count on Z/X/C/V as on the talents (docs/25 item 10).
+  profile.cooldowns[def.id] = now + def.cooldown * ship.stats.cooldownMul;
   game.emit({ k: 'ability', ship: ship.id, id: def.id, x: Math.round(x), y: Math.round(y) }, ship.state.x, ship.state.y);
   return null;
 }

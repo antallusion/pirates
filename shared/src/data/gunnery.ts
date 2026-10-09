@@ -52,14 +52,11 @@ export function windDriftAngle(windDir: number, strength: number, heading: numbe
 
 /** Every broadside's (and chaser's) reload, × (the guns' own times in ships.ts stay their relative weights). */
 export const SEA_RELOAD = 0.3;
-/** Every ball's damage (hull, canvas and men), × — fewer balls than the old fights threw, each one seen. */
+/** Every ball's damage into a zone boss, and into a canvas, × — fewer balls than the old fights threw, each one seen.
+ *  (Into the hull and the men of a ship of the ladder it strikes by her ⚓ now, the broadside table of docs/25 §1.1:
+ *  shared/src/data/seabalance.ts seaHullPace and seaCrewPace. The owner, 2026-10-09: «2 минуты корабль пинать на
+ *  высоком уровне это норма и надо быстрее выходить на абордаж, а на низком это извращение».) */
 export const SEA_DAMAGE = 5;
-/** …and by the level of the ship struck (docs/23 item 47, measured by tools/mobile/fight-time.ts): the great hulls of
- *  ⚓7 and up grow tougher a level than their guns grow, so a ball into one strikes a little harder and her fight with
- *  an equal keeps to the same 30 s. */
-export function seaLevelPace(level: number): number {
-  return level >= 7 ? 1.3 : 1;
-}
 
 /** The grapples fly this much farther than they did (docs/23 item 36: «сближение быстрое, крючья летят дальше»). */
 export const GRAPPLE_REACH = 1.8;

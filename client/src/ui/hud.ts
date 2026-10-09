@@ -635,7 +635,7 @@ export class Hud {
       }
     };
     for (const x of abil) {
-      setCd(x.a.id, x.left, x.a.cooldown, x.locked);
+      setCd(x.a.id, x.left, x.a.cooldown * (state.ownStats?.cooldownMul ?? 1), x.locked);
       const ch = this.cdEls.get(x.a.id)?.charge;
       if (ch) ch.style.width = `${Math.round(you.resolve)}%`;
     }

@@ -36,7 +36,8 @@ import { callClosed, onNpcHit, raiderSunk } from './npcwars.ts';
 import { buyWare, equip, mendGear, reforgeItem, rollDrop, salvageItem, sellItem, takeItem, temperItem, unequip, wearOnSinking } from './gear.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import { orderRefit, refitHolds, stepRefit } from './refit.ts';
-import { ELITE_MODS, clampLevel, levelRange, npcSkill } from '../../../shared/src/data/shiplevel.ts';
+import { clampLevel, levelRange, npcSkill } from '../../../shared/src/data/shiplevel.ts';
+import { npcSeaScale } from '../../../shared/src/data/seabalance.ts';
 import { XP_UNITS, contractPay, pointsXp, prizeXp, xpGap } from '../../../shared/src/data/xpcurve.ts';
 import { generateIslandJobs, generateQuests } from '../../../shared/src/data/questgen.ts';
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
@@ -1455,9 +1456,12 @@ export class Game {
     const crewFrac = ship.crew / Math.max(1, ship.stats.crewMax);
     ship.loadout.level = clampLevel(ship.loadout.classId, level);
     const sk = npcSkill(ship.shipLevel);
-    ship.effects = ship.effects.filter((e) => e.id !== 'npc_craft');
+    ship.effects = ship.effects.filter((e) => e.id !== 'npc_craft' && e.id !== 'elite');
     if (sk.spread > 0) ship.effects.push({ id: 'npc_craft', until: 1e12, mods: { spreadMul: sk.spread } });
-    if (ship.elite) ship.effects.push({ id: 'elite', until: 1e12, mods: { ...ELITE_MODS } });
+    // To the broadside table (docs/25 item 7): a common ship of the sea as a captain in half gear of her ⚓, sinking in 30%
+    // fewer broadsides; an elite as a captain in full gear (was hull ×2.5, guns ×1.5). Monsters, beasts and the zone
+    // bosses keep their own scales.
+    ship.seaScale = ship.onLadder && ship.npcRole !== 'beast' && !ship.zoneBoss && !ship.cls.monster ? npcSeaScale(ship.shipLevel, !!ship.elite) : null;
     ship.recompute(this.now);
     ship.hull = ship.stats.hullMax;
     ship.sails = ship.stats.sailHpMax;
