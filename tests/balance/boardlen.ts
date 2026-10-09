@@ -13,10 +13,9 @@ import { Rng } from '../../shared/src/rng.ts';
 import type { CaptainId } from '../../shared/src/data/captains.ts';
 import { armyForLevel } from '../../shared/src/data/army.ts';
 import type { ArmyStack } from '../../shared/src/data/army.ts';
-import { heroBattle, npcHeroBattle, npcHeroLevel, primsAtLevel, startingOrders } from '../../shared/src/data/hero.ts';
-import type { HeroBattle, SkillSlot } from '../../shared/src/data/hero.ts';
-import { ART_SETS, artTotals, makeArtifact } from '../../shared/src/data/artifacts.ts';
-import { captainIlvl } from '../../shared/src/data/items.ts';
+import { heroBattle, npcHeroBattle, npcHeroLevel, npcKit, npcSkills, primsAtLevel, startingOrders } from '../../shared/src/data/hero.ts';
+import type { HeroBattle } from '../../shared/src/data/hero.ts';
+import { artTotals, makeArtifact } from '../../shared/src/data/artifacts.ts';
 import { TAC_AI_DELAY, boardSlots, npcBoardSlots, tacSchedule } from '../../shared/src/data/tactical.ts';
 import { aiAct, battleLevel, newBattle, tacHp } from '../../server/src/game/tacbattle.ts';
 import type { TacBattle, TacSideInput } from '../../server/src/game/tacbattle.ts';
@@ -41,28 +40,11 @@ export const BANDS: Band[] = [
   { lo: 51, hi: 60, pvp: [5, 10], npc: [2.5, 4], rounds: [5, 7], stacks: [7, 7], r1: [0.15, 0.18] },
 ];
 
-/** The eight battle skills the balance tools give a captain (tools/balance-glory.ts BUILD): a pick a level, rank by rank. */
-const BUILD: SkillSlot['id'][] = ['boarding', 'armor', 'artillery', 'leadership', 'tactics', 'luck', 'first_aid', 'mysticism'];
-export function skillsAt(L: number): SkillSlot[] {
-  const r = BUILD.map(() => 0);
-  for (let i = 0; i < L - 1; i++) {
-    const k = i % 8;
-    if (r[k] < 3) r[k]++;
-    else {
-      const j = r.findIndex((x) => x < 3);
-      if (j >= 0) r[j]++;
-    }
-  }
-  return BUILD.map((id, i) => ({ id, r: r[i] as SkillSlot['r'] })).filter((x) => x.r > 0);
-}
-/** The artifacts of her level (captainIlvl's bands: the treasures, the minors, then the three sets and the Medal). */
-export function lvlKit(L: number): string[] {
-  const band = captainIlvl(L);
-  if (L <= 1) return [];
-  if (band <= 1) return ['first_mate_cutlass', 'mail_lined_coat', 'duellist_pistols'];
-  if (band <= 3) return ['bandana_of_fury', 'dress_uniform', 'cartridge_bandolier', 'tide_boots', 'quartermaster_rapier', 'duellist_pistols', 'watch_glass', 'lodestone_compass', 'orca_talisman'];
-  return [...Object.values(ART_SETS).flatMap((s) => s.pieces), 'mercy_medal'];
-}
+/** The eight battle skills the balance tools give a captain (tools/balance-glory.ts BUILD): a pick a level, rank by
+ *  rank; and the artifacts of her level (captainIlvl's bands: the treasures, the minors, then the three sets and the
+ *  Medal). A captain of the sea has the same since docs/25 item 63 (shared/src/data/hero.ts). */
+export const skillsAt = npcSkills;
+export const lvlKit = npcKit;
 /** A captain of `path` at level `L` in her level's kit (`bare`: no skills, no artifacts). */
 export function captainAt(path: CaptainId, L: number, seed: number, bare = false): HeroBattle {
   const prim = primsAtLevel(path, seed, L);

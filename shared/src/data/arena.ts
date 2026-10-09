@@ -246,9 +246,14 @@ export const ARENA_SKILLS: SkillId[] = ['boarding', 'armor', 'artillery', 'leade
  *  bouts with the means even). The smuggler and the navigator, of the same standard primaries, stand on the same.
  *  docs/25 block Г (2026-10-09): re-set under the boarding's reckoning of Attack and Defense, guards and orders (items
  *  45–47: +100% and −50% at most, the common orders to ×3) by `balance-arena.ts 60 --paths 6` and a step on the test's
- *  own table: the pairs at 45–59%, the means 48–55%. */
+ *  own table: the pairs at 45–59%, the means 48–55%.
+ *  docs/25 block Д (2026-10-09): re-set again for the paths' own knobs (items 53–61: a page's share no longer fades by
+ *  60, a path's blows land her level's boarding share on the sand too, the Reaver evened out, the dead pages alive) by
+ *  `balance-arena.ts 200 --paths 6` and a point of Attack and Defence to the corsair after `--pairs` at 400 bouts a cell:
+ *  the means 48–52%, the pairs 41.5–57% (the smuggler against the reaver the lowest) — before it
+ *  the corsair stood at 20% and against the admiral at 8%. */
 export const ARENA_PATH: Partial<Record<CaptainId, Partial<Prims>>> = {
-  corsair: { atk: -5, def: -5 }, smuggler: { atk: 3, def: 3 }, reaver: { atk: 1, def: 1 }, navigator: { atk: 2, def: 3 }, drowned: { atk: 0, def: -2 }, admiral: { atk: 5, def: -1 },
+  corsair: { atk: 1, def: 0 }, smuggler: { atk: 2, def: 1 }, reaver: { atk: 0, def: -1 }, navigator: { atk: 2, def: 2 }, drowned: { atk: 3, def: 1 }, admiral: { atk: 3, def: -4 },
 };
 
 /** A path's standard primaries at the cap: its start and its odds over the level-ups, whole points by the largest

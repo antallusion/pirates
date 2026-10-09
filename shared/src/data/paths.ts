@@ -149,67 +149,131 @@ export type PathPageId =
   | 'dr_drowning_grip' | 'dr_brine_kiss' | 'dr_anchor_chain' | 'dr_undertow' | 'dr_barnacles' | 'dr_abyss'
   | 'ad_volley_order' | 'ad_signal_flags' | 'ad_square' | 'ad_fog_of_war' | 'ad_bayonets' | 'ad_admiralty';
 
-/** How hard each path's pages land (docs/18 item 11, `node tools/balance-paths.ts --search`): every share a page
- *  deals, heals, drags down or lays on stacks is multiplied by its path's figure here at the caster's hero level (the
- *  points of speed, initiative, morale and luck go as far as whole points go; the yes-or-no holds stay). The battle is
- *  steep — a tenth fewer men loses seven fights in ten (docs/17 H5) — so the book's lift is kept to an edge. */
-export const PATH_POWER: Record<CaptainId, [number, number, number]> = {
-  corsair: [0.42, 0.16, 0.42], smuggler: [1.47, 0.32, 0.25], reaver: [0.59, 0.24, 0.12], navigator: [0.85, 0.3, 0.22], drowned: [0.98, 0.53, 0.37], admiral: [1.84, 0.34, 0.17],
+/** docs/25 item 53 (owner, 2026-10-09: «Абордаж должен быть интересный, чтобы капитанские навыки, группа и умения
+ *  решали»): a path's moves by four separate knobs, tuned on real builds — her level's skills and artifacts
+ *  (`node tools/balance-paths.ts --roles`; before, one figure scaled them all and fell with the level, tuned on
+ *  skill-less, gear-less heroes, so the holds faded to nothing and lost their rounds by levels 16–46):
+ *  - `power`: what her blows and drags lay, at each of POWER_AT's hero levels (the line between them; beyond, the
+ *    last). Her school's lift grows with her Power, skills and artifacts and a boarding's blows slow with its level
+ *    (docs/25 item 44), so this is what keeps a page's harm a like share of an army at every level;
+ *  - `mend`: what her heals and raises stand up again, the same way (a heal is a share of a stack: the boarding's
+ *    slower blows do not slow it, so it has its own figures);
+ *  - `buff`: the shares a hold lays (blows harder, harm taken less …) — the same at every level;
+ *  - `pts`: points of speed, initiative, morale and luck, and blows that draw no answer — never under one;
+ *  - the hold: as long as written (`rounds`), and her Power a round more at most (PATH_HOLD_MAX) — never shorter.
+ *  Each page lays 8–25% in its role at every level band (tests/balance/boarding.test.ts). */
+export interface PathKnobs {
+  power: readonly number[];
+  mend: readonly number[];
+  buff: number;
+  pts: number;
+}
+/** The hero levels `power` and `mend` stand at. */
+export const POWER_AT = [1, 5, 15, 25, 40, 60] as const;
+/** The path books' pages. */
+export const PATH_KNOBS: Record<CaptainId, PathKnobs> = {
+  corsair: { power: [0.89, 0.73, 0.5, 0.23, 0.36, 0.56], mend: [1.18, 0.97, 0.67, 0.29, 0.27, 0.3], buff: 1, pts: 1 },
+  smuggler: { power: [0.82, 0.68, 0.48, 0.35, 0.53, 0.53], mend: [1.09, 0.9, 0.64, 0.43, 0.4, 0.28], buff: 0.87, pts: 1 },
+  reaver: { power: [0.89, 0.83, 0.5, 0.31, 0.41, 0.45], mend: [1.18, 1.1, 0.66, 0.38, 0.31, 0.23], buff: 0.87, pts: 1 },
+  navigator: { power: [0.82, 0.68, 0.48, 0.33, 0.43, 0.39], mend: [1.09, 0.9, 0.64, 0.4, 0.33, 0.21], buff: 0.87, pts: 1 },
+  drowned: { power: [0.77, 0.65, 0.48, 0.19, 0.38, 0.36], mend: [1.02, 0.86, 0.63, 0.23, 0.29, 0.19], buff: 1, pts: 1 },
+  admiral: { power: [0.89, 0.73, 0.57, 0.2, 0.37, 0.44], mend: [1.18, 0.97, 0.77, 0.25, 0.28, 0.23], buff: 0.87, pts: 1 },
 };
-/** The same for the innate move and the ultimate. */
-export const MOVE_POWER: Record<CaptainId, [number, number, number]> = {
-  corsair: [0.9, 0.52, 0.36], smuggler: [0.63, 0.63, 0.98], reaver: [0.31, 0.32, 1.85], navigator: [0.62, 0.92, 0.72], drowned: [0.48, 0.55, 1.21], admiral: [1.42, 0.66, 0.92],
+/** The innate move and the ultimate. */
+export const MOVE_KNOBS: Record<CaptainId, PathKnobs> = {
+  corsair: { power: [1.62, 1.24, 0.83, 0.55, 0.86, 0.59], mend: [1, 1, 1, 1, 1, 1], buff: 1, pts: 1 },
+  smuggler: { power: [1, 1, 1, 1, 1, 1], mend: [1, 1, 1, 1, 1, 1], buff: 0.87, pts: 1 },
+  reaver: { power: [1, 1, 1, 1, 1, 1], mend: [1, 1, 1, 1, 1, 1], buff: 1, pts: 1 },
+  navigator: { power: [1, 1, 1, 1, 1, 1], mend: [1, 1, 1, 1, 1, 1], buff: 0.87, pts: 1 },
+  drowned: { power: [0.77, 0.65, 0.42, 0.29, 0.58, 0.36], mend: [1.12, 1.12, 0.88, 0.35, 0.41, 0.43], buff: 0.87, pts: 1 },
+  admiral: { power: [2.43, 1.87, 1.25, 0.48, 0.9, 1.05], mend: [1, 1, 1, 1, 1, 1], buff: 0.66, pts: 1 },
 };
-/** The hero levels the figures stand at (between them, the line between; beyond, the last). */
-export const PATH_POWER_AT = [10, 30, 55] as const;
-export function pathPower(path: CaptainId, level: number, kind: 'page' | 'move' = 'page'): number {
-  const k = (kind === 'move' ? MOVE_POWER : PATH_POWER)[path] ?? [1, 1, 1];
-  const [a, b, c] = PATH_POWER_AT;
-  if (level <= a) return k[0];
-  if (level <= b) return k[0] + ((k[1] - k[0]) * (level - a)) / (b - a);
-  if (level <= c) return k[1] + ((k[2] - k[1]) * (level - b)) / (c - b);
-  return k[2];
+export const pathKnobs = (path: CaptainId, kind: 'page' | 'move' = 'page'): PathKnobs => (kind === 'move' ? MOVE_KNOBS : PATH_KNOBS)[path];
+/** The `power` knob at a hero level (`mend`: the `mend` knob). */
+export function pathPower(path: CaptainId, level: number, kind: 'page' | 'move' = 'page', knob: 'power' | 'mend' = 'power'): number {
+  const k = pathKnobs(path, kind)?.[knob] ?? [1];
+  const at = POWER_AT;
+  if (level <= at[0]) return k[0];
+  for (let i = 1; i < at.length; i++) if (level <= at[i]) return k[i - 1] + ((k[i] - k[i - 1]) * (level - at[i - 1])) / (at[i] - at[i - 1]);
+  return k[k.length - 1];
+}
+
+/** Rounds an order's effect holds past its own by the giver's Power (HoMM3's duration by power: 10+ one, 20+ two). */
+export function powHold(pow: number): number {
+  return pow >= 20 ? 2 : pow >= 10 ? 1 : 0;
+}
+/** docs/25 item 60: a path's move holds as written and her Power a round more at most — two or three rounds at any
+ *  level for a page written for two (it was one round from the levels the old single figure fell under 0.6). */
+export const PATH_HOLD_MAX = 1;
+/** The rounds past the one it is given in that a path's move holds (0: this round only). */
+export function pathHoldExtra(fx: PageFx, pow: number): number {
+  const r = fx.rounds ?? 0;
+  return r + (r > 0 && !fx.one?.still && !fx.one?.mad ? Math.min(PATH_HOLD_MAX, powHold(pow)) : 0);
+}
+
+/** docs/25 item 57: the fallen a move stands up again (a share of each stack) and the men the deep drags under (a
+ *  share of each of hers), at most — the Drowned's own grow from level 20 to 50% and 18% at 60. */
+export const RAISE_CAP = 0.35;
+export const DRAIN_CAP = 0.12;
+export const DROWNED_CAPS = { from: 20, to: 60, raise: 0.5, drain: 0.18 };
+function drownedRamp(path: CaptainId | null | undefined, level: number): number {
+  if (path !== 'drowned') return 0;
+  return Math.max(0, Math.min(1, (level - DROWNED_CAPS.from) / (DROWNED_CAPS.to - DROWNED_CAPS.from)));
+}
+export function raiseCap(path: CaptainId | null | undefined, level: number): number {
+  return RAISE_CAP + (DROWNED_CAPS.raise - RAISE_CAP) * drownedRamp(path, level);
+}
+export function drainCap(path: CaptainId | null | undefined, level: number): number {
+  return DRAIN_CAP + (DROWNED_CAPS.drain - DRAIN_CAP) * drownedRamp(path, level);
 }
 
 const SHARE_KEYS = ['melee', 'shot', 'taken', 'shotTaken'] as const;
 const POINT_KEYS = ['speed', 'init', 'morale', 'luck'] as const;
-const FX_KEYS = ['dmg', 'ring', 'all', 'shooters', 'drain', 'heal', 'raise', 'row', 'sicken', 'mend'] as const;
-const scaled = new Map<PageFx, Map<number, PageFx>>();
-/** A move's fx with its path's power at the caster's hero level on it. */
+const FX_KEYS = ['dmg', 'ring', 'all', 'shooters', 'drain', 'row', 'sicken'] as const;
+const MEND_KEYS = ['heal', 'raise', 'mend'] as const;
+const scaled = new Map<PageFx, Map<string, PageFx>>();
+/** A move's fx with its path's knobs at the caster's hero level on it (item 53): blows and drags by `power`, heals
+ *  and raises by `mend`, the shares by `buff`, the points by `pts` (never under one), the rounds as written. */
 export function powered(fx: PageFx, path: CaptainId, level: number, kind: 'page' | 'move' = 'page'): PageFx {
+  const kn = pathKnobs(path, kind);
   const k = Math.round(pathPower(path, level, kind) * 1000) / 1000;
+  const km = Math.round(pathPower(path, level, kind, 'mend') * 1000) / 1000;
+  const key = `${k}:${km}:${kn.buff}:${kn.pts}`;
   let byK = scaled.get(fx);
   if (!byK) scaled.set(fx, (byK = new Map()));
-  const c = byK.get(k);
+  const c = byK.get(key);
   if (c) return c;
   const out: PageFx = { ...fx };
-  for (const key of FX_KEYS) if (out[key] !== undefined) out[key] = out[key]! * k;
-  // Points of speed, initiative, morale and luck go as far as whole points go; a weak hand holds a round less; the
-  // stacks that act again are her strongest share.
+  for (const x of FX_KEYS) if (out[x] !== undefined) out[x] = out[x]! * k;
+  for (const x of MEND_KEYS) if (out[x] !== undefined) out[x] = out[x]! * km;
+  const pt = (v: number) => Math.sign(v) * Math.max(1, Math.round(Math.abs(v) * kn.pts));
   for (const m of ['self', 'foe', 'one'] as const) {
     const src = fx[m];
     if (!src) continue;
     const mm: BtMods = { ...src };
-    for (const key of SHARE_KEYS) if (mm[key] !== undefined) mm[key] = mm[key]! * k;
-    for (const key of POINT_KEYS) if (mm[key] !== undefined) mm[key] = Math.sign(mm[key]!) * Math.round(Math.abs(mm[key]!) * Math.min(1.5, k));
+    for (const x of SHARE_KEYS) if (mm[x] !== undefined) mm[x] = mm[x]! * kn.buff;
+    for (const x of POINT_KEYS) if (mm[x]) mm[x] = pt(mm[x]!);
     out[m] = mm;
   }
-  if (out.rounds && k < 0.6) out.rounds = Math.max(0, out.rounds - 1);
-  if (out.allAgain) out.allShare = Math.min(1, k);
-  if (out.free) out.free = Math.max(1, Math.round(out.free * Math.min(1.5, k)));
-  byK.set(k, out);
+  // The stacks that act again are her strongest share (a share, as the holds' are).
+  if (out.allAgain) out.allShare = Math.min(1, (fx.allShare ?? 1) * kn.buff);
+  if (out.free) out.free = pt(out.free);
+  byK.set(key, out);
   return out;
 }
-/** Forget the powered fx (the tuner changes PATH_POWER as it goes). */
+/** Forget the powered fx (the tuner changes the knobs as it goes). */
 export function clearPowered(): void {
   scaled.clear();
 }
 
 /** The hero level each page level opens at. */
 export const PAGE_UNLOCK: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 1, 2: 8, 3: 15, 4: 25, 5: 35 };
-/** The ultimate opens at this hero level, and is given from this round of a battle (once the decks have closed). */
+/** The ultimate opens at this hero level, and is given from this round of a battle (docs/25 item 55: the second, once
+ *  the decks have closed; it was the third, and a captain gave it in a third of her battles) — from the first when the
+ *  other side came aboard ULT_EARLY times her strength or more. */
 export const ULT_LEVEL = 20;
-export const ULT_ROUND = 3;
+export const ULT_ROUND = 2;
+export const ULT_EARLY = 1.5;
 
 const P = (id: PathPageId, path: CaptainId, school: School, level: PathPage['level'], cost: number, cd: number, icon: string, name: [string, string], text: [string, string], fx: PageFx): PathPage =>
   ({ id, path, school, level, cost, cd, icon, name, text, fx });
@@ -217,82 +281,82 @@ const P = (id: PathPageId, path: CaptainId, school: School, level: PathPage['lev
 export const PATH_PAGES: Record<PathPageId, PathPage> = Object.fromEntries([
   // The corsair: fire and powder at home; a gunner's eye and an officer's discipline.
   P('cs_chain_shot', 'corsair', 'fire', 1, 4, 3, 'ab_double_shot', ['Chain shot', 'Книппель'], ['Two balls on a chain into one stack of hers: a hard blow, and she is slower.', 'Два ядра на цепи в один её отряд: тяжёлый удар, и он медленнее.'],
-    { target: 'enemy', dmg: 1.1, one: { speed: -1 }, rounds: 1 }),
+    { target: 'enemy', dmg: 1.3, one: { speed: -1 }, rounds: 1 }),
   P('cs_spotter', 'corsair', 'wind', 1, 4, 3, 'ab_spotters_eye', ["Spotter's call", 'Корректировщик'], ['A spotter in the tops: your shots harder and your luck up.', 'Корректировщик на марсе: ваши выстрелы сильнее, удача выше.'],
-    { target: 'none', self: { shot: 0.3, luck: 1 }, rounds: 1 }),
+    { target: 'none', self: { shot: 0.25, luck: 2 }, rounds: 1 }),
   P('cs_pistol_line', 'corsair', 'steel', 2, 6, 3, 'bt_volley', ['Pistol line', 'Пистолетная шеренга'], ['A line of pistols: every blow and shot of yours harder.', 'Шеренга пистолетов: каждый ваш удар и выстрел сильнее.'],
     { target: 'none', self: { melee: 0.2, shot: 0.2 }, rounds: 1 }),
   P('cs_gunsmoke', 'corsair', 'fog', 3, 8, 4, 'ab_smoke_pots', ['Gunsmoke', 'Пороховой дым'], ['A bank of powder smoke over her deck: her shots fly wide.', 'Пелена порохового дыма над её палубой: её выстрелы уходят мимо.'],
-    { target: 'none', foe: { shot: -0.4, melee: -0.25 }, rounds: 1 }),
+    { target: 'none', foe: { shot: -0.35, melee: -0.15 }, rounds: 1 }),
   P('cs_grape', 'corsair', 'fire', 4, 12, 4, 'ab_grapeshot_frenzy', ['Grape at the rail', 'Картечь в упор'], ['A swivel gun of grape into her: a terrible blow on one stack, and a heavy one on those beside it.', 'Фальконет с картечью в упор: страшный удар по одному отряду и тяжёлый — по соседним.'],
-    { target: 'enemy', dmg: 1.8, ring: 0.9 }),
+    { target: 'enemy', dmg: 1.7, ring: 0.8 }),
   P('cs_iron_tide', 'corsair', 'water', 5, 15, 5, 'ab_brine_mend', ['Iron tide', 'Железный прилив'], ['The brine and the drill: every stack of yours heals and takes less.', 'Солёная вода и выучка: каждый ваш отряд лечится и получает меньше урона.'],
-    { target: 'none', heal: 0.2, self: { taken: -0.2 }, rounds: 1 }),
+    { target: 'none', heal: 0.1, self: { taken: -0.2 }, rounds: 1 }),
   // The smuggler: fog and shadow at home; knives in the dark.
   P('sm_knives', 'smuggler', 'board', 1, 4, 3, 'item_quill_cutlass', ['Knives in the dark', 'Ножи в темноте'], ['Thrown knives into one stack of hers; it cannot answer a blow this round.', 'Метательные ножи в один её отряд; в этом раунде он не может ответить на удар.'],
-    { target: 'enemy', dmg: 1.0, one: { noAnswer: true }, rounds: 0 }),
-  P('sm_fog_veil', 'smuggler', 'fog', 1, 4, 3, 'ab_vanish_into_fog', ['Fog veil', 'Туманная вуаль'], ['A veil of fog: your stacks take less from her shots.', 'Туманная вуаль: ваши отряды получают меньше от её выстрелов.'],
-    { target: 'none', self: { shotTaken: -0.33 }, rounds: 1 }),
+    { target: 'enemy', dmg: 1.3, one: { noAnswer: true }, rounds: 0 }),
+  P('sm_fog_veil', 'smuggler', 'fog', 1, 4, 3, 'ab_vanish_into_fog', ['Fog veil', 'Туманная вуаль'], ['A veil of fog: your stacks take less from her shots, and a little less from her blows.', 'Туманная вуаль: ваши отряды получают меньше от её выстрелов и немного меньше от её ударов.'],
+    { target: 'none', self: { shotTaken: -0.33, taken: -0.1 }, rounds: 1 }),
   P('sm_caltrops', 'smuggler', 'steel', 2, 6, 3, 'item_iron_belt', ['Caltrops', 'Чеснок'], ['Iron caltrops on her deck: her men slower and their blows lighter.', 'Железный чеснок на её палубе: её люди медленнее, удары слабее.'],
     { target: 'none', foe: { speed: -1, melee: -0.15 }, rounds: 1 }),
   P('sm_false_colours', 'smuggler', 'fog', 3, 8, 4, 'item_black_flag', ['False colours', 'Чужой флаг'], ['A false flag and a false word: her morale and her luck fall.', 'Чужой флаг и ложное слово: её дух и удача падают.'],
     { target: 'none', foe: { morale: -2, luck: -1 }, rounds: 1, dread: 5 }),
   P('sm_powder_trail', 'smuggler', 'fire', 4, 12, 4, 'ab_admiralty_barrage', ['Powder trail', 'Пороховая дорожка'], ['A trail of powder under her feet, lit: a terrible blow on one stack and a lesser on those beside it.', 'Подожжённая дорожка пороха у неё под ногами: страшный удар по отряду и слабее — по соседним.'],
-    { target: 'enemy', dmg: 1.9, ring: 0.7 }),
-  P('sm_blind_fog', 'smuggler', 'fog', 5, 15, 5, 'ab_dark_running', ['Blinding fog', 'Слепой туман'], ['Her shooters see nothing to fire on, and her blows are lighter.', 'Её стрелкам не во что целиться, а её удары слабее.'],
-    { target: 'none', foe: { blind: true, melee: -0.2 }, rounds: 1 }),
+    { target: 'enemy', dmg: 1.6, ring: 0.6 }),
+  P('sm_blind_fog', 'smuggler', 'fog', 5, 15, 5, 'ab_dark_running', ['Blinding fog', 'Слепой туман'], ['Her shooters can hardly see to aim — their shots half as hard — and her blows are lighter.', 'Её стрелки почти ничего не видят — их выстрелы вдвое слабее, — а её удары слабее.'],
+    { target: 'none', foe: { shot: -0.5, melee: -0.1 }, rounds: 1 }),
   // The Reaver: the hook and the boarding at home; blood and nerve.
   P('rv_hook', 'reaver', 'board', 1, 4, 3, 'item_boarding_axe', ['The hook', 'Крюк'], ['The hook in one stack of hers: a hard blow, and it cannot answer this round.', 'Крюк в её отряд: тяжёлый удар, и в этом раунде он не может ответить.'],
-    { target: 'enemy', dmg: 1.2, one: { noAnswer: true }, rounds: 0 }),
+    { target: 'enemy', dmg: 1.4, one: { noAnswer: true }, rounds: 0 }),
   P('rv_blood_scent', 'reaver', 'water', 1, 4, 3, 'ab_war_cry', ['Blood in the water', 'Кровь в воде'], ['Blood in the water: your blows harder and your morale up.', 'Кровь в воде: ваши удары сильнее, дух выше.'],
     { target: 'none', self: { melee: 0.15, morale: 1 }, rounds: 1 }),
   P('rv_berserk', 'reaver', 'board', 2, 5, 3, 'tree_boarding', ['Berserk', 'Берсерк'], ['One stack of yours goes berserk: it strikes far harder and takes more.', 'Один ваш отряд впадает в раж: бьёт много сильнее, но и получает больше.'],
-    { target: 'own', one: { melee: 0.5, taken: 0.2 }, rounds: 1 }),
-  P('rv_howl', 'reaver', 'fog', 3, 8, 4, 'ab_deep_call', ['The howl', 'Вой'], ['A howl over the decks: her morale falls.', 'Вой над палубами: её дух падает.'],
-    { target: 'none', foe: { morale: -2 }, rounds: 1, dread: 8 }),
+    { target: 'own', one: { melee: 0.8, taken: 0.2 }, rounds: 1 }),
+  P('rv_howl', 'reaver', 'fog', 3, 8, 4, 'ab_deep_call', ['The howl', 'Вой'], ['A howl over the decks: her morale and her luck fall.', 'Вой над палубами: её дух и удача падают.'],
+    { target: 'none', foe: { morale: -2, luck: -1 }, rounds: 1, dread: 8 }),
   P('rv_butcher', 'reaver', 'steel', 4, 12, 4, 'bt_charge', ['Butcher\'s cut', 'Мясницкий удар'], ['Cleavers into one stack of hers: the heaviest blow a hand can give.', 'Тесаки в один её отряд: самый тяжёлый удар, на какой способна рука.'],
     { target: 'enemy', dmg: 2.6 }),
   P('rv_red_mist', 'reaver', 'water', 5, 15, 5, 'ab_red_hook_boarding', ['Red mist', 'Красный туман'], ['Red mist: every stack of yours heals and strikes harder.', 'Красный туман: каждый ваш отряд лечится и бьёт сильнее.'],
-    { target: 'none', heal: 0.14, self: { melee: 0.3 }, rounds: 1 }),
+    { target: 'none', heal: 0.08, self: { melee: 0.3 }, rounds: 1 }),
   // The navigator: the wind at home; speed and the lie of the deck.
   P('nv_marlinspike', 'navigator', 'steel', 1, 4, 3, 'prof_helmsman', ['Marlinspike', 'Свайка'], ['A spike where it hurts: a blow on one stack of hers.', 'Свайка туда, где больно: удар по одному её отряду.'],
-    { target: 'enemy', dmg: 1.0 }),
+    { target: 'enemy', dmg: 1.45 }),
   P('nv_tailwind', 'navigator', 'wind', 1, 4, 3, 'ab_trim_sails', ['Tailwind', 'Ветер в корму'], ['The wind at your back: your men faster and quicker to act.', 'Ветер в корму: ваши люди быстрее и раньше в очереди.'],
-    { target: 'none', self: { speed: 1, init: 3 }, rounds: 1 }),
+    { target: 'none', self: { speed: 1, init: 2 }, rounds: 1 }),
   P('nv_flank_drill', 'navigator', 'board', 2, 6, 3, 'bt_officers', ['Flank drill', 'Удар во фланг'], ['The flank drill: every blow of yours harder.', 'Удар во фланг: каждый ваш удар сильнее.'],
     { target: 'none', self: { melee: 0.2 }, rounds: 1 }),
   P('nv_squall', 'navigator', 'wind', 3, 9, 4, 'ab_storm_chaser', ['Squall', 'Шквал'], ['A squall across her deck: every stack of hers is hurt, and she is later to act.', 'Шквал по её палубе: ранен каждый её отряд, и она позже в очереди.'],
-    { target: 'none', all: 0.2, foe: { init: -2 }, rounds: 1 }),
+    { target: 'none', all: 0.3, foe: { init: -1 }, rounds: 1 }),
   P('nv_harpoon_line', 'navigator', 'fire', 4, 12, 4, 'role_harpooner', ['Harpoon line', 'Гарпун на линь'], ['A harpoon gun into one stack of hers: a terrible blow, and it is much slower.', 'Гарпунная пушка по её отряду: страшный удар, и он намного медленнее.'],
     { target: 'enemy', dmg: 2.0, one: { speed: -2 }, rounds: 1 }),
   P('nv_eye_of_storm', 'navigator', 'wind', 5, 15, 5, 'ab_current_rider', ['The quiet in the storm', 'Тишина в буре'], ['The quiet in the storm: your men faster, quicker to act and luckier.', 'Тишина в буре: ваши люди быстрее, раньше в очереди и удачливее.'],
-    { target: 'none', self: { speed: 2, init: 4, luck: 2 }, rounds: 1 }),
+    { target: 'none', self: { speed: 1, init: 1, luck: 2 }, rounds: 1 }),
   // The Drowned: water and the deep at home; the grip of the drowned.
   P('dr_drowning_grip', 'drowned', 'board', 1, 4, 3, 'ab_undertow', ['Drowning grip', 'Хватка утопленника'], ['Cold hands on one stack of hers: a blow, and it is much slower.', 'Холодные руки на её отряде: удар, и он намного медленнее.'],
-    { target: 'enemy', dmg: 0.9, one: { speed: -2 }, rounds: 1 }),
+    { target: 'enemy', dmg: 1.6, one: { speed: -2 }, rounds: 1 }),
   P('dr_brine_kiss', 'drowned', 'water', 1, 4, 3, 'ab_brine_mend', ['Brine kiss', 'Поцелуй соли'], ['A share of every stack of yours stands again — the drowned too.', 'Часть каждого вашего отряда снова на ногах — и утопленники тоже.'],
-    { target: 'none', raise: 0.1 }),
+    { target: 'none', raise: 0.08 }),
   P('dr_anchor_chain', 'drowned', 'steel', 2, 6, 3, 'item_iron_rigging', ['Anchor chain', 'Якорная цепь'], ['An anchor chain swung through one stack of hers: a heavy blow.', 'Якорная цепь проходит сквозь её отряд: тяжёлый удар.'],
-    { target: 'enemy', dmg: 1.4 }),
+    { target: 'enemy', dmg: 1.6 }),
   P('dr_undertow', 'drowned', 'water', 3, 9, 4, 'ab_maw_of_the_deep', ['Undertow', 'Отбойное течение'], ['The undertow drags a share of every stack of hers under; she is later to act.', 'Течение утаскивает часть каждого её отряда; она позже в очереди.'],
-    { target: 'none', drain: 0.0625, foe: { init: -2 }, rounds: 1 }),
+    { target: 'none', drain: 0.09, foe: { init: -2 }, rounds: 1 }),
   P('dr_barnacles', 'drowned', 'steel', 4, 12, 4, 'mod_serpent_scale', ['Barnacle hide', 'Шкура из ракушек'], ['A hide of barnacles: every stack of yours takes less.', 'Шкура из ракушек: каждый ваш отряд получает меньше.'],
     { target: 'none', self: { taken: -0.25 }, rounds: 1 }),
   P('dr_abyss', 'drowned', 'water', 5, 15, 5, 'ab_deep_call', ['The abyss looks back', 'Бездна смотрит'], ['The abyss looks back: every stack of hers is hurt, and her morale falls.', 'Бездна смотрит: ранен каждый её отряд, её дух падает.'],
     { target: 'none', all: 0.3, foe: { morale: -1 }, rounds: 1 }),
   // The Black Admiral: steel and men at home; the line, the signal, the square.
-  P('ad_volley_order', 'admiral', 'fire', 1, 4, 3, 'bt_volley', ['Volley by order', 'Залп по команде'], ['A volley on her shooters, and your shots harder after it.', 'Залп по её стрелкам, и ваши выстрелы потом сильнее.'],
-    { target: 'none', shooters: 0.5, self: { shot: 0.25 }, rounds: 1 }),
+  P('ad_volley_order', 'admiral', 'fire', 1, 4, 3, 'bt_volley', ['Volley by order', 'Залп по команде'], ['A volley on one stack of hers and on all her shooters, and your shots harder after it.', 'Залп по её отряду и по всем её стрелкам, и ваши выстрелы потом сильнее.'],
+    { target: 'enemy', dmg: 1.4, shooters: 0.4, self: { shot: 0.25 }, rounds: 1 }),
   P('ad_signal_flags', 'admiral', 'wind', 1, 4, 3, 'ab_form_line', ['Signal flags', 'Сигнальные флаги'], ['Signal flags: your men quicker to act and your morale up.', 'Сигнальные флаги: ваши люди раньше в очереди, дух выше.'],
-    { target: 'none', self: { init: 2, morale: 1 }, rounds: 1 }),
+    { target: 'none', self: { init: 1, morale: 2 }, rounds: 1 }),
   P('ad_square', 'admiral', 'steel', 2, 6, 3, 'mod_hull_plating', ['Form square', 'В каре'], ['Form square: every stack of yours takes less.', 'В каре: каждый ваш отряд получает меньше.'],
     { target: 'none', self: { taken: -0.2 }, rounds: 1 }),
   P('ad_fog_of_war', 'admiral', 'fog', 3, 8, 4, 'ab_smoke_pots', ['Fog of war', 'Туман войны'], ['The fog of war: her shots fly wide and she is later to act.', 'Туман войны: её выстрелы мимо, и она позже в очереди.'],
-    { target: 'none', foe: { shot: -0.3, init: -2 }, rounds: 1 }),
+    { target: 'none', foe: { shot: -0.35, init: -1 }, rounds: 1 }),
   P('ad_bayonets', 'admiral', 'steel', 4, 12, 4, 'item_cutlass', ['Bayonet charge', 'Штыковая'], ['A bayonet charge into one stack of hers: a heavy blow, and your blows harder after it.', 'Штыковая на её отряд: тяжёлый удар, и ваши удары потом сильнее.'],
     { target: 'enemy', dmg: 1.6, self: { melee: 0.2 }, rounds: 1 }),
   P('ad_admiralty', 'admiral', 'water', 5, 15, 5, 'item_admiral_hat', ['The Admiralty\'s surgeons', 'Лекари адмиралтейства'], ["The Admiralty's surgeons: a share of every stack of yours stands again.", 'Лекари адмиралтейства: часть каждого вашего отряда снова на ногах.'],
-    { target: 'none', heal: 0.25 }),
+    { target: 'none', heal: 0.11 }),
 ].map((p) => [p.id, p])) as Record<PathPageId, PathPage>;
 
 export const PATH_PAGE_IDS = Object.keys(PATH_PAGES) as PathPageId[];
@@ -391,9 +455,9 @@ export interface PathMove {
 export const INNATE: Record<CaptainId, PathMove> = {
   corsair: { path: 'corsair', icon: 'ab_last_volley', name: ['Last Volley', 'Последний залп'], text: ['Once a battle, free: every gun and pistol aboard at one stack of hers — a great blow, no answer.', 'Раз за бой, даром: все пушки и пистолеты разом по одному её отряду — страшный удар, без ответа.'],
     fx: { target: 'enemy', dmg: 1.2 } },
-  smuggler: { path: 'smuggler', icon: 'ab_smoke_pots', name: ['Smoke Screen', 'Дымовая завеса'], text: ['Once a battle, free: tar pots over her deck — her shooters are blind.', 'Раз за бой, даром: смоляные горшки на её палубу — её стрелки слепнут.'],
-    fx: { target: 'none', foe: { blind: true }, rounds: 1 } },
-  reaver: { path: 'reaver', icon: 'ab_red_hook_boarding', name: ['Blood Harvest', 'Кровавая жатва'], text: ['Once a battle, free: the first blows of your men this round draw no answer, and land harder.', 'Раз за бой, даром: первые удары ваших людей в этом раунде остаются без ответа и бьют сильнее.'],
+  smuggler: { path: 'smuggler', icon: 'ab_smoke_pots', name: ['Smoke Screen', 'Дымовая завеса'], text: ['Once a battle, free: tar pots over her deck — her shooters are blind, and her blows lighter.', 'Раз за бой, даром: смоляные горшки на её палубу — её стрелки слепнут, а удары слабее.'],
+    fx: { target: 'none', foe: { blind: true, melee: -0.1 }, rounds: 1 } },
+  reaver: { path: 'reaver', icon: 'ab_red_hook_boarding', name: ['Blood Harvest', 'Кровавая жатва'], text: ['Once a battle, free: the first two blows of your men this round draw no answer, and land harder.', 'Раз за бой, даром: два первых удара ваших людей в этом раунде остаются без ответа и бьют сильнее.'],
     fx: { target: 'none', free: 2, self: { melee: 0.1 }, rounds: 0 } },
   navigator: { path: 'navigator', icon: 'ab_storm_chaser', name: ['Following Squall', 'Попутный шквал'], text: ['Once a battle, free: one stack of yours acts twice this round, and is faster.', 'Раз за бой, даром: один ваш отряд ходит в этом раунде дважды и становится быстрее.'],
     fx: { target: 'own', again: true, one: { speed: 1 }, rounds: 1 } },
@@ -408,15 +472,42 @@ export const ULTIMATE: Record<CaptainId, PathMove> = {
     fx: { target: 'none', all: 0.15 } },
   smuggler: { path: 'smuggler', icon: 'ab_vanish_into_fog', name: ['Killing Fog', 'Туман-убийца'], text: ['From level 20, once a battle: she is blind, her blows lighter, and she takes more.', 'С 20-го уровня, раз за бой: она слепа, её удары слабее, а получает она больше.'],
     fx: { target: 'none', foe: { blind: true, melee: -0.2, taken: 0.1 }, rounds: 1 } },
-  reaver: { path: 'reaver', icon: 'ab_grapeshot_frenzy', name: ['Red Tide', 'Красный прилив'], text: ['From level 20, once a battle: your men strike unanswered, again and again, and harder.', 'С 20-го уровня, раз за бой: ваши люди бьют без ответа, раз за разом, и сильнее.'],
-    fx: { target: 'none', free: 5, self: { melee: 0.2 }, rounds: 1 } },
+  reaver: { path: 'reaver', icon: 'ab_grapeshot_frenzy', name: ['Red Tide', 'Красный прилив'], text: ['From level 20, once a battle: the next three blows of your men draw no answer, and your blows are harder.', 'С 20-го уровня, раз за бой: три следующих удара ваших людей остаются без ответа, а ваши удары сильнее.'],
+    fx: { target: 'none', free: 3, self: { melee: 0.12 }, rounds: 1 } },
   navigator: { path: 'navigator', icon: 'ab_current_rider', name: ['Eye of the Storm', 'Глаз бури'], text: ['From level 20, once a battle: your strongest stacks act once more this round.', 'С 20-го уровня, раз за бой: ваши сильнейшие отряды ходят в этом раунде ещё раз.'],
-    fx: { target: 'none', allAgain: true } },
+    fx: { target: 'none', allAgain: true, allShare: 0.75 } },
   drowned: { path: 'drowned', icon: 'ab_maw_of_the_deep', name: ['Tide of the Dead', 'Прилив мертвецов'], text: ['From level 20, once a battle: a share of every stack of yours rises again, and the deep drags some of hers under.', 'С 20-го уровня, раз за бой: часть каждого вашего отряда встаёт снова, а глубина утаскивает часть её людей.'],
     fx: { target: 'none', raise: 0.18, drain: 0.03 } },
   admiral: { path: 'admiral', icon: 'item_admiral_hat', name: ['Line of Battle', 'Линия баталии'], text: ['From level 20, once a battle: a broadside along her deck, then morale up, blows harder, less taken.', 'С 20-го уровня, раз за бой: бортовой залп вдоль её палубы, затем дух выше, удары сильнее, урона меньше.'],
-    fx: { target: 'none', all: 0.1, self: { morale: 2, melee: 0.12, taken: -0.1 }, rounds: 2, heart: 8 } },
+    fx: { target: 'none', all: 0.1, self: { morale: 2, melee: 0.12, taken: -0.1 }, rounds: 1, heart: 8 } },
 };
+
+/** docs/25 item 57: a facet an ultimate gains at a hero level — laid beside what it does. */
+export interface MoveFacet {
+  level: number;
+  text: [string, string];
+  fx: PageFx;
+}
+export const ULT_FACET: Partial<Record<CaptainId, MoveFacet>> = {
+  // The Tide of the Dead from level 40: the risen feel neither fear nor pain.
+  drowned: { level: 40, text: ['From level 40: the risen feel neither fear nor pain — your stacks take less and never freeze in fear.', 'С 40-го уровня: поднятые не знают ни страха, ни боли — ваши отряды получают меньше и не цепенеют от страха.'],
+    fx: { target: 'none', self: { taken: -0.15, steady: true }, rounds: 1 } },
+};
+const faceted = new Map<PageFx, PageFx>();
+/** A path's move as it stands at her hero level: its own fx and the facet it has gained. */
+export function moveFx(path: CaptainId, kind: 'innate' | 'ult', level: number): PageFx {
+  const mv = (kind === 'innate' ? INNATE : ULTIMATE)[path];
+  const fc = kind === 'ult' ? ULT_FACET[path] : undefined;
+  if (!fc || level < fc.level) return mv.fx;
+  let c = faceted.get(mv.fx);
+  if (!c) {
+    const a = mv.fx, b = fc.fx;
+    c = { ...a, ...b, target: a.target, rounds: Math.max(a.rounds ?? 0, b.rounds ?? 0) };
+    for (const m of ['self', 'foe', 'one'] as const) if (a[m] || b[m]) c[m] = { ...a[m], ...b[m] };
+    faceted.set(mv.fx, c);
+  }
+  return c;
+}
 
 // ------------------------------------------------------------------ 4. stamina
 

@@ -1,0 +1,123 @@
+{
+ "tag": "after_corsair_L12_812x375_en",
+ "book": {
+  "nums": [
+   {
+    "name": "Path move: Last Volley",
+    "num": "blow ≈37",
+    "facet": null,
+    "l": 108,
+    "t": 246,
+    "r": 446,
+    "b": 350
+   },
+   {
+    "name": "Ultimate: Hell's Broadside",
+    "num": "every stack of hers ≈5",
+    "facet": null,
+    "l": 454,
+    "t": 246,
+    "r": 792,
+    "b": 350
+   },
+   {
+    "name": "Chain shot",
+    "num": "blow ≈24 · the stack: speed −1 · 2 rounds",
+    "facet": null,
+    "l": 108,
+    "t": 496,
+    "r": 447,
+    "b": 613
+   },
+   {
+    "name": "Spotter's call",
+    "num": "yours: shots +25%, luck +2 · 2 rounds",
+    "facet": null,
+    "l": 453,
+    "t": 496,
+    "r": 792,
+    "b": 613
+   },
+   {
+    "name": "Pistol line",
+    "num": "yours: blows +20%, shots +20% · 2 rounds",
+    "facet": null,
+    "l": 108,
+    "t": 619,
+    "r": 447,
+    "b": 735
+   },
+   {
+    "name": "Gunsmoke",
+    "num": "hers: blows −15%, shots −35% · 2 rounds",
+    "facet": null,
+    "l": 453,
+    "t": 619,
+    "r": 792,
+    "b": 735
+   },
+   {
+    "name": "Grape at the rail",
+    "num": "blow ≈31 · beside it ≈15",
+    "facet": null,
+    "l": 108,
+    "t": 741,
+    "r": 447,
+    "b": 879
+   },
+   {
+    "name": "Iron tide",
+    "num": "heals 10% · yours: taken −20% · 2 rounds",
+    "facet": null,
+    "l": 453,
+    "t": 741,
+    "r": 792,
+    "b": 879
+   }
+  ],
+  "cut": [],
+  "free": [
+   "Opens at level 20."
+  ]
+ },
+ "r1": {
+  "view": {
+   "round": 1,
+   "over": false,
+   "mine": true,
+   "ult": "locked",
+   "ultFrom": 1,
+   "level": 23
+  },
+  "ult": {
+   "off": true,
+   "note": "Ultimate · from level 20",
+   "l": 0,
+   "t": 0,
+   "r": 0,
+   "b": 0
+  },
+  "covered": []
+ },
+ "r2": {
+  "view": {
+   "round": 2,
+   "over": true,
+   "mine": false,
+   "ult": "locked",
+   "ultFrom": 1,
+   "level": 23
+  },
+  "ult": {
+   "off": true,
+   "note": "Ultimate · from level 20",
+   "l": 0,
+   "t": 0,
+   "r": 0,
+   "b": 0
+  },
+  "covered": []
+ },
+ "card": null,
+ "errors": []
+}

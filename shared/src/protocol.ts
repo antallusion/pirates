@@ -1487,6 +1487,8 @@ export interface TacStackView {
   /** The way she faces (owner, 2026-10-08; shared/src/data/tactical.ts hexDir): 0 east … 3 west. A blow into her side
    *  or from behind lands harder. */
   face: number;
+  /** docs/25 item 56: the share of the captains' orders she shrugs off (a legend, a titan, a great one). */
+  resist?: number;
 }
 
 /** What a blow or a shot of the captain's active stack would do (owner, 2026-10-08, as HoMM3 shows it under the
@@ -1507,6 +1509,8 @@ export interface TacPreview {
   twice?: boolean;
   sweep?: boolean;
   far?: boolean;
+  /** docs/25 item 62: the mast, a barrel, crates or a gun stand between (the shot's harm as shown, cut). */
+  cov?: boolean;
 }
 
 /** A captain on the side panel. */
@@ -1532,6 +1536,8 @@ export interface TacHeroView {
   stamMax?: number;
   innate?: 'ready' | 'used';
   ult?: 'ready' | 'used' | 'locked';
+  /** docs/25 item 55: the round her ultimate may be given from (2; 1 against an army half as large again). */
+  ultFrom?: number;
   face?: string;
   /** Has given an order this round (or cannot: `hush`). */
   cast: boolean;
@@ -1575,6 +1581,8 @@ export interface TacEvent {
   on?: number[];
   /** A blow into her side (1) or from behind (2), owner 2026-10-08. */
   fl?: 1 | 2;
+  /** docs/25 item 56: the stacks that shrugged off what a move would lay on them. */
+  res?: number[];
 }
 
 /** The whole battle as one captain sees it. Side 0 is the boarder, on the left deck. */
