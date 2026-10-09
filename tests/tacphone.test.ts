@@ -17,8 +17,10 @@ const side = (human: boolean): TacSideInput => ({
   officers: [], skill: 3, morale: 70, dealt: 1, power: 1, melee: 1, extraShots: 0, firstRush: 1, nets: 0, blooded: 0, castle: false, struck: false, human,
 });
 
-test('a foe\'s turn waits a breath of 0.6–0.8 s once what came before is played, a walk 0.35–0.5 s a hex; ×2 halves the breath', () => {
-  assert.ok(TAC_AI_DELAY >= 0.6 && TAC_AI_DELAY <= 0.8, `${TAC_AI_DELAY} s`);
+// docs/25 item 50 (owner, 2026-10-09: «с нпс можно быстрее сражаться»): the breath 0.7 → 0.35 s; the walks and blows keep
+// their own pace (TAC_PACE), so a foe's turn is still seen whole.
+test('a foe\'s turn waits a breath of 0.3–0.4 s once what came before is played, a walk 0.35–0.5 s a hex; ×2 halves the breath', () => {
+  assert.ok(TAC_AI_DELAY >= 0.3 && TAC_AI_DELAY <= 0.4, `${TAC_AI_DELAY} s`);
   assert.ok(STEP_MS >= 350 && STEP_MS <= 500 && STEP_MS === TAC_PACE.hex * 1000, `${STEP_MS} ms a hex`);
   const bt = newBattle(side(true), side(false), 3, 0, new Rng(3));
   assert.equal(aiDelay(bt), TAC_AI_DELAY);

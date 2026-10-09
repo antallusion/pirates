@@ -149,7 +149,8 @@ test('the stacks face the other deck as they come aboard, then the way they last
 
 test('the field\'s pace: a walk 0.35–0.5 s a hex, a blow lunges, lands and its answer is a beat of its own; ×2 halves it; the sea waits for it', () => {
   assert.ok(TAC_PACE.hex >= 0.35 && TAC_PACE.hex <= 0.5);
-  assert.ok(TAC_AI_DELAY >= 0.6 && TAC_AI_DELAY <= 0.8);
+  // docs/25 item 50: the sea's breath 0.35 s (it was 0.7); the field's pace is the same.
+  assert.ok(TAC_AI_DELAY >= 0.3 && TAC_AI_DELAY <= 0.4);
   assert.equal(walkSecs(3), 3 * TAC_PACE.hex);
   assert.equal(walkSecs(3, false, 2), 1.5 * TAC_PACE.hex);
   const ev = [{ k: 'move', n: 2 }, { k: 'luck' }, { k: 'hit' }, { k: 'ret' }];
