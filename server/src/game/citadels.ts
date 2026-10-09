@@ -506,6 +506,14 @@ export function stepCitadels(game: Game): void {
   const week = citWeek(now);
   defs(game).forEach((c) => {
     const rec = S.cits[c.id];
+    // A guild that is no more holds nothing: its castellan's men take the walls back.
+    if (rec.owner !== null && !guildOf(game, rec.owner)) {
+      rec.owner = null;
+      rec.garrison = citGarrison(c.level);
+      rec.left = {};
+      mend(game, rec);
+      dirty = true;
+    }
     if (rec.grown < week && !siegeNow(game, c.id)) {
       // The week's growth: a neutral garrison whole again, an owned one's own guard filled; the walls mended.
       const own = citGarrison(c.level, rec.owner === null ? 1 : CIT_OWN);
