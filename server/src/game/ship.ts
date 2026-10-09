@@ -290,8 +290,8 @@ export class ShipEntity {
   /** The captain as a hero (docs/17 H2): her skills' sea lines (server/src/game/hero.ts). */
   hero: ModifierSource | null = null;
   /** The sea's own ship to the broadside table (docs/25 item 7, shared/src/data/seabalance.ts npcSeaScale): her hull
-   *  and her guns × over her class at her level — a common one as a captain in half gear sinking in 30% fewer
-   *  broadsides, an elite as a captain in full gear. Null for a captain's ship. */
+   *  and her guns (into the hull of a ship of the table) × over her class at her level — a common one as a captain in
+   *  half gear sinking in 30% fewer broadsides, an elite as a captain in full gear. Null for a captain's ship. */
   seaScale: { hull: number; guns: number } | null = null;
   /** A trading house's convoy merchantman (empires.ts): whose, and bound where. */
   convoyOf: { guild: number; to: string } | null = null;
@@ -420,10 +420,9 @@ export class ShipEntity {
   recompute(now: number): void {
     this.effects = this.effects.filter((e) => e.until > now);
     this.stats = computeShipStats(this.loadout, this.captain, this.talents, this.effects, this.worn, this.hero);
-    if (this.seaScale) {
-      this.stats.hullMax = Math.round(this.stats.hullMax * this.seaScale.hull);
-      this.stats.gunDamageMul *= this.seaScale.guns;
-    }
+    // (Her guns' share strikes the hull of a ship of the table only: combat.ts resolveHit. Her canvas shot, her chasers'
+    // weight and her strength as others reckon it stay her class's.)
+    if (this.seaScale) this.stats.hullMax = Math.round(this.stats.hullMax * this.seaScale.hull);
     if (this.hull > this.stats.hullMax) this.hull = this.stats.hullMax;
     if (this.sails > this.stats.sailHpMax) this.sails = this.stats.sailHpMax;
     if (this.crew > this.stats.crewMax) this.crew = this.stats.crewMax;

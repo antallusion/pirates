@@ -21,6 +21,7 @@ import { refLevel } from '../../shared/src/data/xpcurve.ts';
 import { Rng } from '../../shared/src/rng.ts';
 import { runAdmin } from '../../server/src/game/admin.ts';
 import { effectiveRange, fireBroadside, reloadTime, stepProjectiles } from '../../server/src/game/combat.ts';
+import type { VolleyRec } from '../../server/src/game/combat.ts';
 import type { Game } from '../../server/src/game/Game.ts';
 import { newBrain, engage } from '../../server/src/game/npc.ts';
 import type { NpcBrain } from '../../server/src/game/npc.ts';
@@ -290,7 +291,17 @@ export function spot(game: Game): { x: number; y: number } {
 
 // ------------------------------------------------------------------------------------------------ under way
 
-export interface Underway { sec: number; sunk: boolean; volleysA: number; volleysB: number; winner: 'a' | 'b' | 'draw' }
+export interface Underway {
+  /** Seconds from the start, 900 m apart; and from the first broadside either way (the fight itself). */
+  sec: number;
+  fight: number;
+  sunk: boolean;
+  volleysA: number;
+  volleysB: number;
+  winner: 'a' | 'b' | 'draw';
+  /** The winner's canvas left at the end, as a share. */
+  sails: number;
+}
 
 /** Two ships under way, 900 m apart at a cruise, each fought by the sea's fighting mind (`engage`) with an average
  *  captain's craft (a captain's ship) or her own (a bot), broadsides only, until one is sunk or `maxSec` runs out. The
@@ -326,6 +337,12 @@ export function underway(game: Game, A: ShipEntity, B: ShipEntity, k: number, ma
   // Landed broadsides: a broadside's record settles with its hits (combat.ts VolleyRec).
   const landed = new Map<number, number>();
   const vol = game.volleys;
+  let first = -1;
+  const set = vol.set.bind(vol);
+  vol.set = (key: number, rec: VolleyRec) => {
+    if (first < 0 && (rec.owner === A.id || rec.owner === B.id)) first = game.now;
+    return set(key, rec);
+  };
   const del = vol.delete.bind(vol);
   vol.delete = (key: number) => {
     const rec = vol.get(key);
@@ -362,5 +379,7 @@ export function underway(game: Game, A: ShipEntity, B: ShipEntity, k: number, ma
   }
   vol.delete = del;
   const aDown = down(A), bDown = down(B);
-  return { sec: Math.round(game.now - t0), sunk: aDown || bDown, volleysA: landed.get(A.id) ?? 0, volleysB: landed.get(B.id) ?? 0, winner: bDown && !aDown ? 'a' : aDown && !bDown ? 'b' : 'draw' };
+  vol.set = set;
+  const win = bDown && !aDown ? A : aDown && !bDown ? B : null;
+  return { sec: Math.round(game.now - t0), fight: Math.round(game.now - (first >= 0 ? first : t0)), sails: win ? win.sails / win.stats.sailHpMax : NaN, sunk: aDown || bDown, volleysA: landed.get(A.id) ?? 0, volleysB: landed.get(B.id) ?? 0, winner: bDown && !aDown ? 'a' : aDown && !bDown ? 'b' : 'draw' };
 }

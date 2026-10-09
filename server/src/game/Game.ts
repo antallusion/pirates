@@ -57,7 +57,6 @@ import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, CHASER_RELOAD, SHIP_CLASSES, defaultGunFor, emptyAmmo } from '../../../shared/src/data/ships.ts';
-import { SEA_RELOAD } from '../../../shared/src/data/gunnery.ts';
 import { aimedVolley, pursuitInput, pursuitOf, startPursuit, startRoamRun, stepAutoFire, stepPursuit, stopPursuit } from './pursuit.ts';
 import { boardOdds, boardRisk, isRisky } from './boardodds.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
@@ -186,7 +185,7 @@ import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onU
 import { adminEnabled, mend, runAdmin } from './admin.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
 import { ZoneBossHub, stepZoneBosses, zoneBossSinking } from './zonebosses.ts';
-import { applyDamage, cutMastWreck, damageBlocked, killMen, dash, fireBroadside, fireChaser, holdAim, reloadTime, stepProjectiles } from './combat.ts';
+import { applyDamage, cutMastWreck, damageBlocked, killMen, dash, fireBroadside, fireChaser, holdAim, reloadTime, seaReload, stepProjectiles } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
 import { captiveAction, losePrizes, prizeCrewNeeded, prizeValue, sellPrizes, stepBoats, surrenderTerms, seizeCaptain, takeCaptive, takePrize } from './prizes.ts';
@@ -4414,8 +4413,8 @@ export class Game {
         reload: {
           port: me.reload.port <= 0 ? 1 : 1 - me.reload.port / Math.max(0.1, reloadEstimate(me, 'port')),
           starboard: me.reload.starboard <= 0 ? 1 : 1 - me.reload.starboard / Math.max(0.1, reloadEstimate(me, 'starboard')),
-          bow: me.cls.bowChasers ? 1 - me.chaserReload.bow / (CHASER_RELOAD * SEA_RELOAD) : 0,
-          stern: me.cls.sternChasers ? 1 - me.chaserReload.stern / (CHASER_RELOAD * SEA_RELOAD) : 0,
+          bow: me.cls.bowChasers ? 1 - me.chaserReload.bow / (CHASER_RELOAD * seaReload(me)) : 0,
+          stern: me.cls.sternChasers ? 1 - me.chaserReload.stern / (CHASER_RELOAD * seaReload(me)) : 0,
           mount: me.loadout.mount ? 1 - me.mountReload / mountReloadTime(me) : 0,
         },
         ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now) | (frame.tethered.has(me.id) ? SF.TETHERED : 0) | pvpFlags(this, me), combat: me.inCombat(this.now), underFire: me.underFire(this.now),

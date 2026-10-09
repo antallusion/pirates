@@ -40,6 +40,9 @@ export function seaDr(x: number): number {
 
 /** Armour against the hull's lines: a point of armour (0.01) weighs as 1.5% of hull. */
 export const ARMOR_WEIGHT = 1.5;
+/** The share of her armour a heavy ball meets (the demi-cannon's pierce, Iron Rain's): her gear's armour is raised so
+ *  that it holds its share of her defence through it (shipstats.ts gearArmor). */
+export const ARMOR_SEEN = 0.7;
 /** The gear's lines for her hull against broadsides, in shares of hull: hull, armour and «less damage». */
 export function defRaw(mods: StatMods): number {
   return (mods.hullMax ?? 0) + ARMOR_WEIGHT * (mods.armor ?? 0) - (mods.incomingDamageMul ?? 0);
@@ -146,7 +149,7 @@ export const ALPHA_OFF_LADDER = 0.3;
 /** A ball into the hull of a ship of the ladder, × by her (fighting) ⚓: the bare warship of each ⚓ sinks in base(⚓)
  *  bare broadsides of her equal (was SEA_DAMAGE 5, ×1.3 from ⚓7: every equal in 4 broadsides, the 30% cap's). Measured
  *  by tools/balance-sea.ts --calibrate, index = ⚓ (0 unused). */
-export const SEA_HULL_PACE = [5, 5, 5, 5, 5, 5, 5, 6.5, 6.5, 6.5, 6.5];
+export const SEA_HULL_PACE = [5, 1.382, 1.029, 0.592, 0.397, 0.274, 0.185, 0.154, 0.16, 0.147, 0.135];
 export function seaHullPace(anchor: number): number {
   return SEA_HULL_PACE[clampA(anchor)];
 }
@@ -154,12 +157,16 @@ export function seaHullPace(anchor: number): number {
 /** Her men a round-shot broadside of a bare equal takes (item 8: «каждый лёгший залп — 2–4% её абордажной армии,
  *  картечь — вдвое»): 2% while her side is sound, 4% through a shattered one (army.ts wallsOf), by her ⚓. Was the hull's
  *  ×5 — 15–24% of her men a broadside. Index = ⚓, measured by tools/balance-sea.ts --calibrate. */
-export const SEA_CREW_PACE = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+export const SEA_CREW_PACE = [5, 0.567, 0.542, 0.554, 0.634, 0.23, 0.209, 0.244, 0.214, 0.314, 0.334];
 export function seaCrewPace(anchor: number): number {
   return SEA_CREW_PACE[clampA(anchor)];
 }
-/** Grape against a ship of the table: twice a round shot's men a broadside (its share of the open deck), × on top. */
-export const GRAPE_CREW = 1;
+/** …and a broadside of grape: 6% of her men (twice round's on the mean side: grape sweeps the open deck whatever her
+ *  side), by her ⚓. */
+export const SEA_GRAPE_PACE = [5, 0.247, 0.24, 0.24, 0.229, 0.244, 0.232, 0.278, 0.264, 0.391, 0.389];
+export function seaGrapePace(anchor: number): number {
+  return SEA_GRAPE_PACE[clampA(anchor)];
+}
 /** Her parts struck (rudder, a gun dismounted, a leak, a fire, a breach, the powder room): the chance a ball keeps the
  *  same count over a fight as in the fights of four broadsides it was weighed in (more broadsides, each less likely). */
 export function seaCritPace(anchor: number): number {
@@ -168,9 +175,19 @@ export function seaCritPace(anchor: number): number {
 /** Iron Rain (item 9): the share of any armour her balls go through. */
 export const IRON_RAIN_PIERCE = 0.1;
 
+/** Her guns' reload by her own ⚓, × the quick fight's (gunnery.ts SEA_RELOAD): a fight of the table's broadsides under way
+ *  takes 25–35 s at ⚓1 and about two minutes at ⚓10 in full gear (§1.1). Measured under way, bot against bot, by
+ *  tools/balance-sea.ts --moving --calibrate. Index = ⚓. */
+export const SEA_RELOAD_BY = [1, 2.9, 3, 2.8, 2.6, 2.6, 2.7, 2.8, 2.9, 2.6, 2.6];
+export function seaReloadBy(anchor: number): number {
+  return SEA_RELOAD_BY[clampA(anchor)];
+}
+
 /** The sea's own ships of each ⚓ against the table (index = ⚓): hull × and guns × over her class at her level. */
-export const NPC_SEA: { hull: number; guns: number }[] = Array.from({ length: SEA_ANCHOR_MAX + 1 }, () => ({ hull: 1, guns: 1 }));
-export const ELITE_SEA: { hull: number; guns: number }[] = Array.from({ length: SEA_ANCHOR_MAX + 1 }, () => ({ hull: 2.5, guns: 1.5 }));
+export const NPC_SEA_TABLE: [number, number][] = [[1, 1], [0.709, 1.149], [0.74, 1.279], [0.773, 2.037], [0.788, 2.576], [0.845, 2.434], [0.87, 3.333], [0.824, 3.478], [1.018, 3.597], [1.012, 6.241], [1.025, 6.452]];
+export const ELITE_SEA_TABLE: [number, number][] = [[2.5, 1.5], [1.026, 1.285], [1.083, 1.425], [1.144, 2.398], [1.22, 3.124], [1.278, 3.032], [1.273, 4.251], [1.309, 4.532], [1.524, 4.78], [1.604, 8.443], [1.61, 8.871]];
+export const NPC_SEA = NPC_SEA_TABLE.map(([hull, guns]) => ({ hull, guns }));
+export const ELITE_SEA = ELITE_SEA_TABLE.map(([hull, guns]) => ({ hull, guns }));
 export function npcSeaScale(anchor: number, elite: boolean): { hull: number; guns: number } {
   return (elite ? ELITE_SEA : NPC_SEA)[clampA(anchor)];
 }

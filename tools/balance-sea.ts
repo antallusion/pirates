@@ -11,7 +11,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { gearSource } from '../shared/src/data/items.ts';
-import { ELITE_SEA, NPC_SEA, SEA_HULL_PACE, defRaw, gearDefence, gearOffCeil, gearDefCeil, gearOffence, halfGearDef, halfGearOff, NPC_VOLLEYS, seaBase } from '../shared/src/data/seabalance.ts';
+import { ELITE_SEA, NPC_SEA, SEA_CREW_PACE, SEA_GRAPE_PACE, SEA_HULL_PACE, SEA_RELOAD_BY, defRaw, gearDefence, gearOffCeil, gearDefCeil, gearOffence, halfGearDef, halfGearOff, NPC_VOLLEYS, seaBase } from '../shared/src/data/seabalance.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import { ANCHORS, bench, captainShip, clearSea, fightDistance, measure, npcShip, spot, tallyHits, underway } from '../tests/balance/seakit.ts';
 import type { Gear } from '../tests/balance/seakit.ts';
@@ -40,15 +40,18 @@ function factors(ship: ShipEntity, anchor: number): { off: number; def: number }
 
 interface Cell { a: number; row: string; got: number; want: number; sec: number; men: number }
 const cells: Cell[] = [];
-const cal: { pace: number[]; npc: { hull: number; guns: number }[]; elite: { hull: number; guns: number }[] } = { pace: [...SEA_HULL_PACE], npc: NPC_SEA.map((x) => ({ ...x })), elite: ELITE_SEA.map((x) => ({ ...x })) };
+const cal: { pace: number[]; crew: number[]; grape: number[]; npc: { hull: number; guns: number }[]; elite: { hull: number; guns: number }[] } = { pace: [...SEA_HULL_PACE], crew: [...SEA_CREW_PACE], grape: [...SEA_GRAPE_PACE], npc: NPC_SEA.map((x) => ({ ...x })), elite: ELITE_SEA.map((x) => ({ ...x })) };
+/** Her men a broadside of a bare equal (docs/25 item 8): round shot 2% on a sound side (4% through a shattered one),
+ *  grape 6% (twice round on the mean side). */
+const MEN_ROUND = 0.02, MEN_GRAPE = 0.06;
 
-function shot(a: number, row: string, shooter: ShipEntity, target: ShipEntity, want: number): Cell {
+function shot(a: number, row: string, shooter: ShipEntity, target: ShipEntity, want: number, ammo: 'round' | 'grape' = 'round', n = N): Cell {
   const d = fightDistance(shooter);
   shooter.state.x = X; shooter.state.y = Y; shooter.state.heading = 0;
   target.state.x = X + d; target.state.y = Y; target.state.heading = 0;
   game.grid.upsert(shooter.id, X, Y);
   game.grid.upsert(target.id, X + d, Y);
-  const m = measure(game, shooter, target, N);
+  const m = measure(game, shooter, target, n, ammo);
   // Out of the way of the next pair.
   shooter.state.x = X - 5000; target.state.x = X - 5600;
   game.grid.upsert(shooter.id, shooter.state.x, Y);
@@ -75,6 +78,9 @@ for (const a of LIST) {
   };
   // Captain against captain.
   const bb = shot(a, 'bare → bare', bare, bare2, B * fB.def / fB.off);
+  // Her men a broadside (item 8): many broadsides, a man is a whole one.
+  const br = shot(a, 'bare → bare, round (men)', bare, bare2, NaN, 'round', Math.max(N, 48));
+  const bg = shot(a, 'bare → bare, grape (men)', bare, bare2, NaN, 'grape', Math.max(N, 48));
   avg(lvl.map((s, i) => shot(a, 'level → level', s, lvl2[i], B * fL[i].def / fL[i].off)), 'level → level');
   shot(a, 'full → full', full, full2, B * fF.def / fF.off);
   shot(a, 'full → bare', full, bare2, B * fB.def / fF.off);
@@ -93,6 +99,8 @@ for (const a of LIST) {
   // Re-weighing: a ball's pace by her ⚓ from bare against bare; the sea's hulls from a bare captain's broadsides on
   // them, their guns from theirs on a bare captain.
   cal.pace[a] = SEA_HULL_PACE[a] * (bb.got / bb.want);
+  cal.crew[a] = SEA_CREW_PACE[a] * (MEN_ROUND / Math.max(1e-4, br.men));
+  cal.grape[a] = SEA_GRAPE_PACE[a] * (MEN_GRAPE / Math.max(1e-4, bg.men));
   cal.npc[a] = { hull: NPC_SEA[a].hull * (nb.want / nb.got), guns: NPC_SEA[a].guns * (nB.got / nB.want) };
   cal.elite[a] = { hull: ELITE_SEA[a].hull * (eb.want / eb.got), guns: ELITE_SEA[a].guns * (eB.got / eB.want) };
   process.stderr.write(`⚓${a} done (${((Date.now() - t00) / 1000).toFixed(0)} s)\n`);
@@ -103,21 +111,27 @@ out.push(`## Broadsides to sink (lying still, beam on, the close fight's distanc
 out.push('');
 out.push('| ⚓ | fight | broadsides | table | off | seconds (one battery) | her men a broadside |');
 out.push('|---|---|---|---|---|---|---|');
-for (const c of cells) out.push(`| ${c.a} | ${c.row} | ${r1(c.got)} | ${r1(c.want)} | ${c.got - c.want >= 0 ? '+' : ''}${r1(c.got - c.want)} | ${r1(c.sec)} | ${r1(c.men * 100)}% |`);
+for (const c of cells) {
+  const off = Number.isFinite(c.want) ? `${c.got - c.want >= 0 ? '+' : ''}${r1(c.got - c.want)}` : '–';
+  out.push(`| ${c.a} | ${c.row} | ${Number.isFinite(c.want) ? r1(c.got) : '–'} | ${Number.isFinite(c.want) ? r1(c.want) : '–'} | ${off} | ${Number.isFinite(c.want) ? r1(c.sec) : '–'} | ${r1(c.men * 100)}% |`);
+}
 out.push('');
 out.push(`Balls that struck: ${hits.hits}; reported at 0 (drawn as a splash): ${hits.zero}; past the alpha limit (grey): ${hits.capped}.`);
 
+/** The table's seconds of a fight in full gear under way, by ⚓ (§1.1: 25–35 s at ⚓1 … about two minutes at ⚓10). */
+const TIME_FULL = [0, 30, 40, 52, 60, 66, 78, 90, 102, 114, 120];
+const reloadBy = [...SEA_RELOAD_BY];
 if (MOVING) {
   out.push('');
-  out.push(`## Under way (bot against bot, 900 m apart at a cruise, ${DUELS} duels a row): seconds to a sinking, broadsides landed`);
+  out.push(`## Under way (bot against bot, 900 m apart at a cruise, ${DUELS} duels a row): the fight from the first broadside to a sinking`);
   out.push('');
-  out.push('| ⚓ | fight | sunk | median s | p90 s | landed by the winner (median) |');
-  out.push('|---|---|---|---|---|---|');
+  out.push('| ⚓ | fight | sunk | median s | p90 s | from 900 m, median s | broadsides landed by the winner (median) | winner canvas left | table s (full) |');
+  out.push('|---|---|---|---|---|---|---|---|---|');
   const med = (xs: number[]) => { const s = [...xs].sort((p, q) => p - q); return s.length ? s[Math.floor(s.length / 2)] : NaN; };
   const p90 = (xs: number[]) => { const s = [...xs].sort((p, q) => p - q); return s.length ? s[Math.min(s.length - 1, Math.ceil(0.9 * s.length) - 1)] : NaN; };
   for (const a of LIST) {
     for (const kind of ['full', 'bare', 'npc'] as const) {
-      const secs: number[] = [], landed: number[] = [];
+      const secs: number[] = [], fights: number[] = [], landed: number[] = [], sails: number[] = [];
       let sunk = 0;
       for (let k = 0; k < DUELS; k++) {
         clearSea(game);
@@ -127,22 +141,35 @@ if (MOVING) {
         if (r.sunk) {
           sunk++;
           secs.push(r.sec);
+          fights.push(r.fight);
+          if (Number.isFinite(r.sails)) sails.push(r.sails);
           landed.push(r.winner === 'a' ? r.volleysA : r.volleysB);
         }
       }
-      out.push(`| ${a} | ${kind} vs ${kind} | ${sunk}/${DUELS} | ${med(secs)} | ${p90(secs)} | ${med(landed)} |`);
+      out.push(`| ${a} | ${kind} vs ${kind} | ${sunk}/${DUELS} | ${med(fights)} | ${p90(fights)} | ${med(secs)} | ${med(landed)} | ${Math.round(med(sails) * 100)}% | ${kind === 'full' ? TIME_FULL[a] : '–'} |`);
+      if (kind === 'full' && fights.length) reloadBy[a] = SEA_RELOAD_BY[a] * (TIME_FULL[a] / med(fights));
       process.stderr.write(out.at(-1) + '\n');
     }
   }
+}
+
+if (MOVING && process.argv.includes('--calibrate-reload')) {
+  out.push('');
+  out.push('```ts');
+  out.push(`export const SEA_RELOAD_BY = [${reloadBy.map((v) => Math.round(v * 1000) / 1000).join(', ')}];`);
+  out.push('```');
 }
 
 if (CAL) {
   out.push('');
   out.push('Re-weighed (paste into shared/src/data/seabalance.ts):');
   out.push('```ts');
-  out.push(`export const SEA_HULL_PACE = [${cal.pace.map((v) => r2(v * 1000) / 1000).join(', ')}];`);
-  out.push(`const NPC_SEA_TABLE = [${cal.npc.map((v) => `[${r2(v.hull * 100) / 100}, ${r2(v.guns * 100) / 100}]`).join(', ')}];`);
-  out.push(`const ELITE_SEA_TABLE = [${cal.elite.map((v) => `[${r2(v.hull * 100) / 100}, ${r2(v.guns * 100) / 100}]`).join(', ')}];`);
+  out.push(`export const SEA_HULL_PACE = [${cal.pace.map((v) => Math.round(v * 1000) / 1000).join(', ')}];`);
+  out.push(`export const SEA_CREW_PACE = [${cal.crew.map((v) => Math.round(v * 1000) / 1000).join(', ')}];`);
+  out.push(`export const SEA_GRAPE_PACE = [${cal.grape.map((v) => Math.round(v * 1000) / 1000).join(', ')}];`);
+  const r3 = (v: number) => Math.round(v * 1000) / 1000;
+  out.push(`export const NPC_SEA_TABLE: [number, number][] = [${cal.npc.map((v) => `[${r3(v.hull)}, ${r3(v.guns)}]`).join(', ')}];`);
+  out.push(`export const ELITE_SEA_TABLE: [number, number][] = [${cal.elite.map((v) => `[${r3(v.hull)}, ${r3(v.guns)}]`).join(', ')}];`);
   out.push('```');
 }
 const text = out.join('\n');

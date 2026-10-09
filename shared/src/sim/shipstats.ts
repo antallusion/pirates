@@ -23,7 +23,7 @@ import type { SailTalents } from './sailing.ts';
 import { DEG } from '../math.ts';
 import { levelScale, shipLevelOf } from '../data/shiplevel.ts';
 import { giftSource } from '../data/shipgifts.ts';
-import { ARMOR_WEIGHT, defRaw, gearDefence, gearOffence, gearReload } from '../data/seabalance.ts';
+import { ARMOR_SEEN, ARMOR_WEIGHT, defRaw, gearDefence, gearOffence, gearReload } from '../data/seabalance.ts';
 
 export interface ShipLoadout {
   classId: ShipClassId;
@@ -243,7 +243,7 @@ export function computeShipStats(
     currentMul: m('currentMul') + e('currentMul'),
     nightSpeed: m('nightSpeed') + e('nightSpeed'),
     hullMax: Math.round(cls.hull * lv.hull * Math.max(0.3, 1 + hullMul + m('hullMax') + e('hullMax')) * defHull),
-    armor: Math.min(0.75, 1 - (1 - Math.min(0.75, (cls.armor + armorAdd) * (1 + Math.min(armorCap, m('armorPct'))) + m('armor') + e('armor'))) / defArmor),
+    armor: gearArmor(Math.min(0.75, (cls.armor + armorAdd) * (1 + Math.min(armorCap, m('armorPct'))) + m('armor') + e('armor')), defArmor),
     sailHpMax: Math.round(cls.sailHp * lv.hull * (1 + sailHpMul + m('sailHpMax') + e('sailHpMax'))),
     repairRate: cls.repairRate * (1 + m('repairRate') + e('repairRate')),
     battleRepairRate: m('battleRepairRate') + e('battleRepairRate'),
@@ -279,6 +279,14 @@ export function computeShipStats(
     x: extra,
     flags,
   };
+}
+
+/** Her armour with her gear's share of her defence (docs/25 item 6): raised so that a ball through the usual piercing
+ *  of the heavy guns (ARMOR_SEEN of it) is cut by `f` more than before — the share her armour lines made of it. */
+export function gearArmor(a0: number, f: number): number {
+  if (f === 1) return a0;
+  const seen = 1 - (1 - a0 * ARMOR_SEEN) / f;
+  return Math.max(0, Math.min(0.75, seen / ARMOR_SEEN));
 }
 
 /** A situational talent number (sum of ranks × value from talents and effects), 0 when absent. */
