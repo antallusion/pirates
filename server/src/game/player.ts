@@ -509,6 +509,8 @@ export interface WorldView {
   raid?: RaidView;
   /** docs/19 E4–E8: the citadels and the Throne war, for the Throne's tabs (citadels.ts citView). */
   cit?: import('../../../shared/src/data/citadels.ts').CitView;
+  /** docs/19 E15: the Admiralty's contracts of the week (admiralty.ts admView). */
+  adm?: import('../../../shared/src/data/admiralty.ts').AdmView;
   /** One's own island (docs/15). */
   homeIsle?: number | null;
   /** Raiders at her island (docs/15 item 7), and a wild island off the bow she may claim (item 6). */
@@ -553,6 +555,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     xpNext: p.level >= MAX_LEVEL ? gloryXp(p.throne?.rank ?? 0) : xpForLevel(p.level),
     glory: gloryView(now, s, world.seal, world.raid),
     ...(world.cit ? { cit: world.cit } : {}),
+    ...(world.adm ? { adm: world.adm } : {}), // docs/19 E15
     rested: Math.round(p.rested ?? 0),
     talentPoints: talentPointsAvailable(p),
     deeds: p.deeds,

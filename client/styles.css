@@ -4147,6 +4147,44 @@ body.touch .act-btn { --h: 38px; }
 @media (max-width: 1099px), (max-height: 520px) {
   body.touch .cit-act .btn, body.touch .cit-stack .btn, body.touch .cit-titan { min-height: 40px; }
 }
+/* docs/19 E15: the Admiralty's contracts — the Throne's «Contracts» tab and the board in a great harbour. */
+.adm-list { display: flex; flex-direction: column; gap: 8px; }
+.adm-card { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid rgba(176, 141, 87, 0.35); border-radius: 6px; background: rgba(20, 16, 10, 0.55); }
+.adm-card.adm-taken { border-color: rgba(224, 184, 98, 0.75); box-shadow: 0 0 10px rgba(224, 184, 98, 0.15); }
+.adm-card.adm-done { opacity: 0.75; }
+.adm-top { display: flex; align-items: center; gap: 10px; }
+.adm-face { flex: none; }
+.adm-tt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.adm-tt b { font-family: var(--display); font-weight: 400; font-size: 17px; color: var(--bone); overflow-wrap: anywhere; }
+.adm-tt small { font-size: 12px; overflow-wrap: anywhere; }
+.adm-st { align-self: flex-start; padding: 1px 8px; border-radius: 999px; border: 1px solid rgba(176, 141, 87, 0.45); font-size: 11px; color: var(--fog); }
+.adm-st-taken { color: var(--gold); border-color: rgba(224, 184, 98, 0.7); }
+.adm-st-done { color: #a9c98e; border-color: rgba(140, 180, 110, 0.6); }
+.adm-say { margin: 0; font-size: 12px; line-height: 1.35; color: var(--fog); font-style: italic; overflow-wrap: anywhere; }
+.adm-steps { margin: 0; }
+.adm-legend { display: flex; gap: 10px; align-items: flex-start; padding: 6px 8px; border-radius: 6px; border: 1px solid rgba(176, 71, 58, 0.4); background: rgba(40, 16, 12, 0.4); }
+.adm-lg-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.adm-lg-t b { font-size: 13px; font-weight: 600; color: var(--bone); overflow-wrap: anywhere; }
+.adm-lg-t small { font-size: 11px; overflow-wrap: anywhere; }
+.adm-lg-t .th-bar { display: block; height: 6px; margin: 2px 0 0; }
+.adm-lg-t .th-bar i { background: linear-gradient(90deg, #7a3a2a, #c9714e); }
+.adm-army { margin: 2px 0 0; }
+.adm-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.adm-pay { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 13px; min-width: 0; }
+.adm-glory { color: var(--xp); white-space: nowrap; }
+.adm-part { display: inline-flex; align-items: center; gap: 3px; color: var(--gold); white-space: nowrap; }
+.adm-acts { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; }
+.adm-acts .btn { white-space: nowrap; }
+.adm-medal span { line-height: 1; }
+.adm-medal b { font-size: 24px; }
+.adm-board { margin: 0 0 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; border-color: rgba(224, 184, 98, 0.55); }
+.adm-board .card-h { display: flex; align-items: center; gap: 8px; margin: 0; }
+.adm-board .card-h > span { display: flex; flex-direction: column; min-width: 0; font-family: var(--display); font-weight: 400; font-size: 18px; }
+.adm-board .card-h small { font-family: var(--sans); font-size: 11px; overflow-wrap: anywhere; }
+@media (max-width: 1099px), (max-height: 520px) {
+  body.touch .adm-acts .btn { min-height: 40px; }
+  .adm-tt b { font-size: 15px; }
+}
 /* The Throne's seven tabs on a phone: one row (docs/19 E4–E8 brought it to seven). */
 @media (max-width: 1099px), (max-height: 520px) {
   .throne-win .tabs .tab { padding: 9px 6px; font-size: 11px; letter-spacing: 0.01em; gap: 3px; }

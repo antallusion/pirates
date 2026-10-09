@@ -35,6 +35,7 @@ import { startBoarding } from './boarding.ts';
 import { logNote } from './captainlog.ts';
 import type { Game } from './Game.ts';
 import { relicPartDrop } from './relics.ts';
+import { contractCitadel, contractGarrison } from './admiralty.ts'; // docs/19 E15
 import { foundGuild, guildNotify, log as guildLog, member, rankAtLeast } from './guilds.ts';
 import type { Guild } from './guilds.ts';
 import { heroOf } from './hero.ts';
@@ -385,6 +386,7 @@ export function assaultOver(game: Game, a: ShipEntity, b: ShipEntity, attackerWi
   rec.garrison = left;
   const walls = bt ? siegeLeft(bt) : null;
   if (walls) rec.hp = walls;
+  contractCitadel(game, L.acc, 'assault'); // docs/19 E15: a watch on the walls for the Admiralty
   if (sg) {
     if (sg.fighting === L.acc) sg.fighting = undefined;
     sg.cut[L.acc] = (sg.cut[L.acc] ?? 0) + cut;
@@ -428,6 +430,7 @@ function capture(game: Game, id: number, gid: number): void {
   const g = guildOf(game, gid);
   if (g) guildLog(game, g, `Your guild takes the ${nameOf(c)}.`);
   for (const acc of besiegers) {
+    contractCitadel(game, acc, 'take'); // docs/19 E15
     const bs = game.sessionByAccount(acc);
     if (!bs) continue;
     game.sendTo(bs, { t: 'toast', msg: `The ${nameOf(c)} is your guild’s: your assault was one of those that broke it.`, kind: 'gold' });
@@ -554,6 +557,7 @@ export function stepCitadels(game: Game): void {
       tellGuild(game, sg.gid, `The siege of the ${nameOf(c)} is lifted: its garrison held.`);
       // docs/19 E12: its defenders — the captains who left men in it — a part of a relic each, a chance in seven.
       for (const acc of Object.keys(rec.left)) {
+        contractCitadel(game, Number(acc), 'hold'); // docs/19 E15
         const ds = game.sessionByAccount(Number(acc));
         if (ds) relicPartDrop(game, ds, 'citadel', 0.15);
       }
@@ -574,6 +578,7 @@ export function stepCitadels(game: Game): void {
       g.treasury += citTax(c.level) * n;
       S.points[g.id] = (S.points[g.id] ?? 0) + CIT_POINTS.hour[c.level] * n;
       tagOf(game, g.id);
+      contractGarrison(game, rec.left, n); // docs/19 E15: the hours of her men in the garrison
     }
     game.guilds.touch();
     dirty = true;

@@ -19,6 +19,7 @@ import type { SealView } from '../../../shared/src/data/seals.ts';
 import { enterDepth } from './seals.ts';
 import { boardRaid, isRaidLegend } from './abyssraid.ts';
 import { citMessage, isCastellan } from './citadels.ts'; // docs/19 E4–E8
+import { contractMessage, isContractLegend } from './admiralty.ts'; // docs/19 E15
 import type { RaidView } from '../../../shared/src/data/abyssraid.ts';
 import type { StatMods } from '../../../shared/src/data/stats.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
@@ -232,7 +233,7 @@ export function trialFace(ship: ShipEntity): string | undefined {
   return t ? CAPTAINS[LEGENDS[t.skill].path].portrait.replace(/^portrait\./, '') : undefined;
 }
 /** A legend of the trials — or of the Abyss's raid (docs/19 E11): no artifact found on her, none of hers ever joins. */
-export const isTrialShip = (ship: ShipEntity): boolean => trials.has(ship) || isRaidLegend(ship) || isCastellan(ship);
+export const isTrialShip = (ship: ShipEntity): boolean => trials.has(ship) || isRaidLegend(ship) || isCastellan(ship) || isContractLegend(ship);
 
 /** The legend of a skill as a hero, against a challenger with these primaries and skills (the sims use it too): her
  *  skills as the challenger's (none above expert), the trial's at grandmaster, and her own two at expert in what slots
@@ -425,6 +426,10 @@ export function throneMessage(game: Game, s: PlayerSession, msg: ThroneClientMsg
     case 'cit':
       // docs/19 E5–E7: a siege declared, an assault, men left in her guild's garrison, its titan hired.
       why = citMessage(game, s, msg.op, Math.floor(Number(msg.cit)), msg.u, msg.n);
+      break;
+    case 'contract':
+      // docs/19 E15: a contract of the week taken at an Admiralty board, its legend boarded.
+      why = contractMessage(game, s, msg.op, String(msg.id ?? ''));
       break;
     case 'view':
       break;

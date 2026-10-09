@@ -41,7 +41,13 @@ export type QuestStep =
   /** docs/18 #23: lairs of the land's creatures beaten (on an island, of a kind, or any), and the land's resources
    *  brought to a port. */
   | { type: 'lair'; count: number; island?: number; kind?: string; text: string }
-  | { type: 'landres'; port: string; res: 'shell' | 'bone' | 'venom'; qty: number; text: string };
+  | { type: 'landres'; port: string; res: 'shell' | 'bone' | 'venom'; qty: number; text: string }
+  /** docs/19 E15, the Admiralty's contracts (shared/src/data/admiralty.ts): the week's rogue legend made to strike; mythic
+   *  depths of a seal of `minLv` or higher won within their rounds; watches on the citadels' walls (an hour of her men
+   *  in her guild's garrison, an assault, a citadel taken or held). */
+  | { type: 'legend'; count: number; text: string }
+  | { type: 'seal'; count: number; minLv: number; text: string }
+  | { type: 'citadel'; count: number; text: string };
 
 export interface QuestDef {
   id: string;
