@@ -75,7 +75,7 @@ function moveCard(h: HeroView, path: CaptainId, mv: PathMove, ult: boolean, leve
   const locked = ult && level < ULT_LEVEL;
   // docs/25 item 57: a facet the ultimate gains at a level — its words, with its level while it is still to come.
   const fc = ult ? ULT_FACET[path] : undefined;
-  const facet = fc ? `<small class="${level >= fc.level ? '' : 'muted'}">${esc(L('facetAt', { n: fc.level }))} ${esc(T(fc.text))}</small>` : '';
+  const facet = fc ? `<small class="${level >= fc.level ? '' : 'muted'}">${esc(T(fc.text))}</small>` : '';
   return `<div class="pb-move${ult ? ' ult' : ''}${locked ? ' locked' : ''}">${icon(mv.icon, '✦', 'ico-lg')}<span><b>${esc(L(ult ? 'ult' : 'innate'))}: ${esc(T(mv.name))}</b><small>${esc(T(mv.text))}</small>${facet}<small class="pb-num">${esc(fxLine(powered(moveFx(path, ult ? 'ult' : 'innate', level), path, level, 'move'), h.blast ?? 0, (h.mul?.[PATH_SCHOOL[path]] ?? 1) * HOME_MUL * (h.innateMul ?? 1), { path, level, pow: powOf(h) }))}</small><small class="muted">${esc(locked ? L('ultAt', { n: ULT_LEVEL }) : L(ult ? 'freeUlt' : 'free'))}</small></span></div>`;
 }
 

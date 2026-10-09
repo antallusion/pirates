@@ -118,12 +118,12 @@ export const DROWNED_RAISE: [number, number][] = [[1, 0.16], [20, 0.24], [60, 0.
  *  moves stay 8–25% in their role (tests/balance/boarding.test.ts). */
 export interface Edge { page: [number, number]; buff: number; move: [number, number]; mbuff: number; mmend: number }
 export const EDGE: Record<CaptainId, Edge> = {
-  corsair: { page: [0.87, 1.15], buff: 1, move: [1, 0.66], mbuff: 1, mmend: 1 },
-  smuggler: { page: [1, 1.15], buff: 1, move: [1, 1], mbuff: 0.87, mmend: 1 },
-  reaver: { page: [1, 1], buff: 0.87, move: [1, 1], mbuff: 1, mmend: 1 },
-  navigator: { page: [1.3, 0.87], buff: 1, move: [1, 1], mbuff: 0.87, mmend: 1 },
-  drowned: { page: [1, 1], buff: 1, move: [1.15, 1], mbuff: 1, mmend: 1 },
-  admiral: { page: [1, 1], buff: 1, move: [1.15, 0.76], mbuff: 0.87, mmend: 1 },
+  corsair: { page: [0.87, 1.15], buff: 1, move: [0.87, 0.66], mbuff: 1, mmend: 1 },
+  smuggler: { page: [1, 1.15], buff: 1, move: [1, 1], mbuff: 1, mmend: 1 },
+  reaver: { page: [1.15, 0.87], buff: 0.76, move: [1, 1], mbuff: 1, mmend: 1 },
+  navigator: { page: [1.3, 0.87], buff: 0.87, move: [1, 1], mbuff: 0.76, mmend: 1 },
+  drowned: { page: [1, 1.15], buff: 1, move: [1.15, 1], mbuff: 0.87, mmend: 1 },
+  admiral: { page: [0.76, 0.87], buff: 1, move: [1.32, 0.76], mbuff: 0.76, mmend: 1 },
 };
 const EDGE_BOUNDS: Record<keyof Edge, [number, number]> = { page: [0.75, 1.3], buff: [0.7, 1], move: [0.5, 1.6], mbuff: [0.5, 1.4], mmend: [0.6, 1.4] };
 /** The edge at each of POWER_AT's levels (none below the middle). */

@@ -883,17 +883,19 @@ function initOf(bt: TacBattle, s: TacStack): number {
 /** A hex a stack may stand on: no obstacle (the surf only for a creature that dives, docs/18 II) and nobody there. */
 const passable = (bt: TacBattle, i: number, self: TacStack | null) => (!TAC_BLOCKING.has(bt.cells[i]) || (bt.cells[i] === 'W' && !!self && sp(self, 'diving'))
   || (isGateCell(bt.cells[i]) && !!self && self.side === 1)) && !(bt.cells[i] === 'F' && onDeck(bt)) && !bt.stacks.some((s) => s.count > 0 && s !== self && s.hex === i); // docs/19 E5: the gate opens for the garrison
-/** docs/25 item 62: a ship's deck (not the sand ashore, a siege's ground or the Colosseum's): its fires split it (no
- *  way through the flames; a stack caught in one walks out of it), its mast, barrels, crates and guns cover from shots,
- *  its planks are a narrow pass. */
-export const onDeck = (bt: TacBattle): boolean => !bt.land && !bt.siege && !bt.arena;
+/** docs/25 item 62: a ship's deck in a boarding (not the sand ashore, a siege's ground or the Colosseum's; and not a
+ *  battle of no length — the tests' bare armies and the land's reckoning, calibrated on the old deck): its fires split
+ *  it (no way through the flames; a stack caught in one walks out of it), its mast, barrels, crates and guns cover from
+ *  shots, its planks are a narrow pass. */
+export const onDeck = (bt: TacBattle): boolean => bt.len !== undefined && !bt.land && !bt.siege && !bt.arena;
 /** docs/25 item 62: the cover a stack on `hex` has on a deck from a shot out of `from` (−1: none). */
 export function coverAt(bt: TacBattle, hex: number, from: number): number {
   return onDeck(bt) ? deckCover(bt.cells, hex, from) : -1;
 }
-/** docs/25 item 56: the share of the captains' orders and path pages a stack shrugs off. */
+/** docs/25 item 56: the share of the captains' orders and path pages a stack shrugs off — in a boarding (a ship's, a
+ *  legend's, the raid's, a siege's); the land's fights keep the reckoning their great ones are calibrated on. */
 export function resistOf(bt: TacBattle, s: TacStack): number {
-  return Math.max(unitResist(s.unit), bt.heroes[s.side].input.resist ?? 0);
+  return boardRules(bt) ? Math.max(unitResist(s.unit), bt.heroes[s.side].input.resist ?? 0) : 0;
 }
 
 /** Steps to every hex the stack can reach this turn (by the path around obstacles and stacks). A creature that flies
@@ -1311,6 +1313,14 @@ function blastOn(bt: TacBattle, t: TacStack, P: number, share: number, common = 
   return Math.max(1, Math.round(p * share * (pierce ? 1 : 1 - resistOf(bt, t))));
 }
 
+/** docs/25 item 53: a path's blows are set for a boarding of her level (its blows slow with the level, docs/25 item
+ *  44, and her path's `power` stands against it: tools/balance-paths.ts --fit); in a battle that keeps no such tempo
+ *  (the long ones, the Colosseum's sand, the land) they land the same share of an army — her level's boarding scale. */
+function pathScale(bt: TacBattle, side: 0 | 1, pathMove: boolean): number {
+  if (!pathMove || bt.len === 'board') return 1;
+  return Math.min(TAC_LEN.blastMax, tacTempo(bt.heroes[side].input.hero?.level ?? 1));
+}
+
 /** The fallen of a side stand up again: a share of each stack's strength as it came aboard (`dead`: the drowned
  *  too, docs/18's Call of the Depths). */
 function heal(bt: TacBattle, side: 0 | 1, share: number, dead = false, only?: TacStack): void {
@@ -1396,7 +1406,7 @@ function applyFx(bt: TacBattle, side: 0 | 1, id: string, fx: PageFx, k: number, 
   const pathMove = exempt || isPathPage(id);
   const resistMul = (o: TacStack, pierce: boolean) => (pierce ? 1 : 1 - resistOf(bt, o));
   const t = target !== undefined ? stackById(bt, target) : undefined;
-  const P = spellPower(bt, side) * (0.85 + rng.float() * 0.3) * k;
+  const P = spellPower(bt, side) * (0.85 + rng.float() * 0.3) * k * pathScale(bt, side, pathMove);
   // docs/25 item 46: a common page's blast is reckoned from the stack it falls on too.
   const on1 = (o: TacStack, share: number) => blastOn(bt, o, P, share, common, exempt);
   const foes = () => alive(bt).filter((o) => o.side !== side);
@@ -2240,7 +2250,7 @@ export function fxValue(bt: TacBattle, side: 0 | 1, fx: PageFx, k: number, t?: T
   const e = bt.heroes[1 - side];
   const foes = alive(bt).filter((o) => o.side !== side);
   const own = alive(bt).filter((o) => o.side === side);
-  const P = spellPower(bt, side) * k;
+  const P = spellPower(bt, side) * k * pathScale(bt, side, !common);
   // docs/25 item 46: a common page's blast on one stack as it would land.
   const on1 = (o: TacStack, share: number) => (common && boardRules(bt) ? Math.min(P, TAC_BLAST_STACK * o.start * o.hpMax * blastScale(bt)) : P) * share;
   const sum = (xs: TacStack[], f: (x: TacStack) => boolean = () => true) => xs.reduce((n, x) => n + (f(x) ? threat(bt, x) : 0), 0);
@@ -2457,6 +2467,9 @@ function aiMove(bt: TacBattle, side: 0 | 1, rng: Rng): { kind: 'innate' | 'ult';
  *  strike (and as much again a round she has held it); stepping on to hers is worth `take` of her whole side's threat. */
 export const TAC_FLAG_AI = { defend: 1, take: 0.12 };
 
+/** docs/25 item 62: the steps of the way a hex in cover from her shooters is worth to the sea's mind as it closes. */
+export const TAC_COVER_STEP = 1.2;
+
 /** What the sea's mind has the active stack do. */
 export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
   const s = stackById(bt, bt.active ?? -1)!;
@@ -2526,16 +2539,20 @@ export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
   // line they were calibrated on.
   const way = boardRules(bt) ? siegeDist(bt, s) : null;
   const line = (h: number) => Math.min(...foes.map((t) => hexDist(h, t.hex)));
-  const far = (h: number) => (way ? way.get(h) ?? 50 + line(h) : line(h)) + (bt.cells[h] === 'F' ? 1.5 : 0) - (guns.length && covered(h) ? 0.6 : 0);
-  let to: number | null = null, td = Infinity;
+  const far = (h: number) => (way ? way.get(h) ?? 50 + line(h) : line(h)) + (bt.cells[h] === 'F' ? 1.5 : 0);
+  // docs/25 item 62: of the hexes that bring her nearer, one in cover from her shooters is worth a step of the way.
+  const here = far(s.hex);
+  let to: number | null = null, td = Infinity, score = Infinity;
   for (const [h] of reach) {
     const d = far(h);
-    if (d < td) {
+    if (d >= here) continue;
+    const v = d - (guns.length && covered(h) ? TAC_COVER_STEP : 0);
+    if (v < score) {
+      score = v;
       td = d;
       to = h;
     }
   }
-  const here = far(s.hex);
   if (to === null || td >= here) {
     // Nowhere nearer: out of her shooters' sight behind the mast or a barrel, if a step takes her there.
     if (guns.length && !covered(s.hex)) for (const [h] of reach) if (covered(h) && line(h) <= line(s.hex)) return { a: 'move', to: h };

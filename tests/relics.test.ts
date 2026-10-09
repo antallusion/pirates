@@ -82,7 +82,9 @@ test('balance at the cap: a pair of relics over the old best kit some 60%, the t
   const n = 40;
   const uc = kitShare('union_crown', 'sets', n), oc = kitShare('orb_compass', 'sets', n), pair = kitShare('union_crown', 'orb_compass', n), forged = kitShare('forged', 'sets', n);
   assert.ok(uc >= 0.52 && uc <= 0.68, `Union + Crown vs the sets: ${uc}`);
-  assert.ok(oc >= 0.5 && oc <= 0.66, `Orb + Compass vs the sets: ${oc}`);
+  // docs/25 block Д (2026-10-09): a path's book lays its full share at 60 now (it faded to a tenth), so the pair that
+  // lifts her orders gains on the sets as Union + Crown does (0.667 against a ceiling of 0.66): the same ceiling as theirs.
+  assert.ok(oc >= 0.5 && oc <= 0.68, `Orb + Compass vs the sets: ${oc}`);
   assert.ok(pair >= 0.4 && pair <= 0.62, `the two pairs: ${pair}`);
   assert.ok(forged >= 0.48 && forged <= 0.62, `every piece forged at its top vs the sets: ${forged}`);
 });

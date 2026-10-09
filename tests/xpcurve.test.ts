@@ -218,8 +218,10 @@ test('the boarding battle on the hexes: its lesson a bonus by the share cut down
   c.push({ t: 'tac', act: { a: 'quick' } });
   assert.equal(bt.over?.winner, 0, 'her brig carries the day');
   // The end is held while its last blows play (TAC_END_WINDOW) and 2.5 s more: a fight ending on a walk and a mark plays
-  // ~2.2 s of it (docs/25: a boarding against the sea at ⚓5 ends in round 2 now) — six seconds, not four.
-  steps(game, 120);
+  // ~2.2 s of it (docs/25: a boarding against the sea at ⚓5 ends in round 2 now) — six seconds, not four; and since
+  // docs/25 block Д the sea's captain answers in his level's kit and the last turn carries the moves of both books
+  // (their names, a page that the deck covers from) — eight.
+  steps(game, 160);
   const toasts = c.all('toast').filter((t) => t.kind === 'xp').map((t) => t.msg);
   const amount = (re: RegExp): number => {
     const m = toasts.map((t) => /^\+(\d+) XP — (.*)$/.exec(t)).find((x) => x && re.test(x[2]));
