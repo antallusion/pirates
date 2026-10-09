@@ -543,14 +543,17 @@ export function sendLairs(game: Game, s: PlayerSession, force: boolean): void {
   game.sendTo(s, { t: 'lairs', view: v });
 }
 
-/** Every second: what each captain at sea has newly seen, her marks (every other second) and her card. */
+/** Every second: what each captain at sea has newly seen, her marks (every other second, by her parity) and her card. */
 export function stepLairs(game: Game): void {
   if (quiet(game)) return;
   const S = L(game);
-  const even = Math.floor(game.now) % 2 === 0;
+  const sec = Math.floor(game.now);
   for (const s of game.sessions) {
     if (!s.profile || !s.ship) continue;
     const ship = s.ship;
+    // (her marks every other second — half the captains on the even seconds, half on the odd, so no one second
+    // carries them all: docs/19 E19's tick spikes, 2026-10-09)
+    const even = (s.accountId + sec) % 2 === 0;
     if (!ship.docked) {
       const seen = seenOf(game, s);
       let more = false;
