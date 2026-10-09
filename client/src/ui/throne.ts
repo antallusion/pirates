@@ -297,7 +297,9 @@ export class ThroneWindow {
       const drafting = tab.id === 'arena' && !!g.arena?.draft && g.arena.draft.stage !== 'fight';
       root.innerHTML = `${head}<div class="modal-body throne-win${drafting ? ' th-drafting' : ''}"><div class="tabs">${THRONE_TABS.map((t) => {
         const n = t.badge?.(g, state) ?? 0;
-        return `<button class="tab${t === tab ? ' active' : ''}" data-thtab="${t.id}">${icon(t.icon, '', 'ico-sm')}${esc(t.label())}${n ? ` <span class="hx-dot">${n}</span>` : ''}</button>`;
+        // (the word in its own span: at 640×360 the tabs not open show their picture alone, their word kept for the screen
+        // reader and the tooltip — nine words wrapped into two rows there, docs/19 E19)
+        return `<button class="tab${t === tab ? ' active' : ''}" data-thtab="${t.id}" title="${esc(t.label())}">${icon(t.icon, '', 'ico-sm')}<span class="th-tw">${esc(t.label())}</span>${n ? ` <span class="hx-dot">${n}</span>` : ''}</button>`;
       }).join('')}</div>${tab.render(g, state)}</div>`;
       tab.bind?.(root, this.send, () => this.onClose());
     }

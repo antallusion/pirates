@@ -264,6 +264,13 @@ const flows = {
     await sleep(1500);
     const go = await rect('#modal-panel [data-rcgo]'), body = await rect('#modal-panel .modal-body');
     await measure('recruit', { extra: { go, body, below: go && body ? go.b - body.b : null } });
+    // The worst case: a word of why not over the button (the hammocks full).
+    const room = await state(() => { const d = globalThis.gravetide.state.dwell; return d ? d.crewMax - d.crew : 0; });
+    if (room > 0) await admin(`/army deckhand ${room}`);
+    await p.evaluate(() => document.querySelector('#modal-panel [data-rcu]')?.click());
+    await sleep(1200);
+    const go2 = await rect('#modal-panel [data-rcgo]'), body2 = await rect('#modal-panel .modal-body');
+    await measure('recruit_why', { extra: { why: await p.evaluate(() => document.querySelector('#modal-panel .rc-why')?.textContent ?? null), go: go2, below: go2 && body2 ? go2.b - body2.b : null } });
     await close();
   },
   async throne() {

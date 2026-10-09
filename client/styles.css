@@ -3432,6 +3432,7 @@ body.touch .rc-slide input[type="range"] { min-height: 44px; } /* (a titan's or 
 .rc-cost { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font-size: 13px; }
 .rc-why { margin: 0; font-size: 12px; }
 .rc-go { align-self: stretch; min-height: 36px; }
+.rc-buy { display: flex; flex-direction: column; gap: 6px; }
 .rc-train { padding: 6px 8px; background: rgba(6, 6, 7, 0.45); border: 1px solid rgba(140, 107, 58, 0.3); border-radius: 3px; }
 .rc-train > p { font-size: 11.5px; margin: 0 0 4px; }
 .rc-up { display: flex; align-items: center; gap: 4px; padding: 4px 0; border-top: 1px solid rgba(111, 90, 56, 0.22); min-width: 0; }
@@ -3454,7 +3455,14 @@ body.touch .rc-slide input[type="range"] { min-height: 44px; } /* (a titan's or 
   .rc-head .sub { font-size: 11px; }
   .rc-chips .ph-chip { font-size: 12px; }
   .rc-go { min-height: 32px; }
+  /* «Нанять» beside its cost, the men waiting left to the dwelling's own card: the button in the first screen at
+     640×360 and 812×375 (it was 6–15 px under the fold) */
+  .rc-ph .rc-avail { display: none; }
+  .rc-buy { flex-direction: row; align-items: center; gap: 8px; }
+  .rc-buy .rc-cost { flex: 1 1 auto; min-width: 0; }
+  .rc-buy .rc-go { flex: 0 0 auto; align-self: center; min-width: 108px; }
 }
+body.touch .rc-go { min-height: 44px; }
 /* The island's town: HoMM3's town hall screen as a grid of its buildings' cards. */
 .town { display: flex; flex-direction: column; gap: 8px; }
 .tw-head > p { margin: 0 0 4px; font-size: 12px; }
@@ -4259,6 +4267,18 @@ body.touch .act-btn { --h: 38px; }
 @media (max-height: 520px) {
   .throne-win .tabs .tab .ico-sm { display: none; }
   .throne-win .tabs .tab { padding: 7px 6px; }
+}
+/* docs/19 E19's leftover: at 640×360 the nine words wrapped into two rows. A phone narrower than 700 px held sideways:
+   the tab that is open keeps its picture and its word, the others their picture alone (a finger wide, their marks on
+   them) — one row, nothing cut; the words stay for the screen reader and the tooltip. */
+@media (max-width: 699px) and (max-height: 520px) {
+  .throne-win .tabs:has(.tab:nth-child(9)) { flex-wrap: nowrap; gap: 2px; padding: 0 2px; }
+  .throne-win .tabs .tab .ico-sm { display: inline-block; width: 22px; height: 22px; margin: 0; flex: none; }
+  .throne-win .tabs .tab { min-width: 50px; justify-content: center; padding: 6px 7px; flex: 0 0 auto; }
+  .throne-win .tabs .tab:not(.active) .ico-sm { filter: brightness(1.25) drop-shadow(0 1px 1px #000); }
+  .throne-win .tabs .tab.active { padding: 7px 9px; }
+  .throne-win .tabs .tab:not(.active) .th-tw { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+  .throne-win .tabs .tab:not(.active) .hx-dot { margin-left: 0; }
 }
 /* docs/19 E19: nine tabs with a mouse (1500×600, 1440×900) — the row was 1196 px in a window of 1060, the body scrolled
    sideways and «Колизей» stood past the window's edge (96–134 px), a contract's «Курс» 23 px under it. Narrower sides
