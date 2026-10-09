@@ -249,10 +249,11 @@ export const ARENA_SKILLS: SkillId[] = ['boarding', 'armor', 'artillery', 'leade
  *  own table: the pairs at 45–59%, the means 48–55%.
  *  docs/25 block Д (2026-10-09): re-set again for the paths' own knobs (items 53–61: a page's share no longer fades by
  *  60, a path's blows land her level's boarding share on the sand too, the Reaver evened out, the dead pages alive) by
- *  `balance-arena.ts 200 --paths 6`: the means 44–54%, the worst pair 39% (the corsair against the Drowned) — before it
+ *  `balance-arena.ts 200 --paths 6` and a point of Attack and Defence to the corsair after `--pairs` at 400 bouts a cell:
+ *  the means 48–52%, the pairs 41.5–57% (the smuggler against the reaver the lowest) — before it
  *  the corsair stood at 20% and against the admiral at 8%. */
 export const ARENA_PATH: Partial<Record<CaptainId, Partial<Prims>>> = {
-  corsair: { atk: 0, def: -1 }, smuggler: { atk: 2, def: 1 }, reaver: { atk: 0, def: -1 }, navigator: { atk: 2, def: 2 }, drowned: { atk: 3, def: 1 }, admiral: { atk: 3, def: -4 },
+  corsair: { atk: 1, def: 0 }, smuggler: { atk: 2, def: 1 }, reaver: { atk: 0, def: -1 }, navigator: { atk: 2, def: 2 }, drowned: { atk: 3, def: 1 }, admiral: { atk: 3, def: -4 },
 };
 
 /** A path's standard primaries at the cap: its start and its odds over the level-ups, whole points by the largest

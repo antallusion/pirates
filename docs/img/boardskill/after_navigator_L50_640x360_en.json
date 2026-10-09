@@ -1,0 +1,135 @@
+{
+ "tag": "after_navigator_L50_640x360_en",
+ "book": {
+  "nums": [
+   {
+    "name": "Path move: Following Squall",
+    "num": "the stack: speed +1 · acts again · 3 rounds",
+    "facet": null,
+    "l": 108,
+    "t": 245,
+    "r": 360,
+    "b": 392
+   },
+   {
+    "name": "Ultimate: Eye of the Storm",
+    "num": "your strongest 65% act again",
+    "facet": null,
+    "l": 368,
+    "t": 245,
+    "r": 620,
+    "b": 392
+   },
+   {
+    "name": "Marlinspike",
+    "num": "blow ≈48",
+    "facet": null,
+    "l": 108,
+    "t": 670,
+    "r": 361,
+    "b": 822
+   },
+   {
+    "name": "Tailwind",
+    "num": "yours: speed +1, initiative +2 · 3 rounds",
+    "facet": null,
+    "l": 367,
+    "t": 670,
+    "r": 620,
+    "b": 822
+   },
+   {
+    "name": "Flank drill",
+    "num": "yours: blows +17% · 3 rounds",
+    "facet": null,
+    "l": 108,
+    "t": 828,
+    "r": 361,
+    "b": 994
+   },
+   {
+    "name": "Squall",
+    "num": "every stack of hers ≈11 · hers: initiative −1 · 3 rounds",
+    "facet": null,
+    "l": 367,
+    "t": 828,
+    "r": 620,
+    "b": 994
+   },
+   {
+    "name": "Harpoon line",
+    "num": "blow ≈67 · the stack: speed −2 · 3 rounds",
+    "facet": null,
+    "l": 108,
+    "t": 1000,
+    "r": 361,
+    "b": 1167
+   },
+   {
+    "name": "The quiet in the storm",
+    "num": "yours: speed +1, initiative +1, luck +2 · 3 rounds",
+    "facet": null,
+    "l": 367,
+    "t": 1000,
+    "r": 620,
+    "b": 1167
+   }
+  ],
+  "cut": [],
+  "free": [
+   "Free, once a battle, from the second round (from the first against an army half as large again as yours), beside the round's order."
+  ]
+ },
+ "r1": {
+  "view": {
+   "round": 1,
+   "over": false,
+   "mine": true,
+   "ult": "ready",
+   "ultFrom": 2,
+   "level": 42
+  },
+  "ult": {
+   "off": true,
+   "note": "Ultimate · from round 2",
+   "l": 0,
+   "t": 0,
+   "r": 0,
+   "b": 0
+  },
+  "covered": [
+   4,
+   9
+  ]
+ },
+ "r2": {
+  "view": {
+   "round": 2,
+   "over": false,
+   "mine": true,
+   "ult": "ready",
+   "ultFrom": 2,
+   "level": 42
+  },
+  "ult": {
+   "off": false,
+   "note": "Ultimate · free, once a battle",
+   "l": 0,
+   "t": 0,
+   "r": 0,
+   "b": 0
+  },
+  "covered": [
+   4,
+   8,
+   9,
+   10,
+   11
+  ]
+ },
+ "card": [
+  "Defending",
+  "In cover from shots"
+ ],
+ "errors": []
+}

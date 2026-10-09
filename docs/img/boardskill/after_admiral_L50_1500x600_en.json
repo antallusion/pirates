@@ -1,0 +1,134 @@
+{
+ "tag": "after_admiral_L50_1500x600_en",
+ "book": {
+  "nums": [
+   {
+    "name": "Path move: The Line",
+    "num": "yours: morale +2 · 2 rounds",
+    "facet": null,
+    "l": 336,
+    "t": 325,
+    "r": 798,
+    "b": 429
+   },
+   {
+    "name": "Ultimate: Line of Battle",
+    "num": "every stack of hers ≈6 · yours: blows +8%, taken −7%, morale +2 · 2 rounds",
+    "facet": null,
+    "l": 806,
+    "t": 325,
+    "r": 1268,
+    "b": 429
+   },
+   {
+    "name": "Volley by order",
+    "num": "blow ≈33 · her shooters ≈10 · yours: shots +22% · 2 rounds",
+    "facet": null,
+    "l": 336,
+    "t": 655,
+    "r": 643,
+    "b": 786
+   },
+   {
+    "name": "Signal flags",
+    "num": "yours: initiative +1, morale +2 · 2 rounds",
+    "facet": null,
+    "l": 649,
+    "t": 655,
+    "r": 955,
+    "b": 786
+   },
+   {
+    "name": "Form square",
+    "num": "yours: taken −17% · 2 rounds",
+    "facet": null,
+    "l": 961,
+    "t": 655,
+    "r": 1268,
+    "b": 786
+   },
+   {
+    "name": "Fog of war",
+    "num": "hers: shots −30%, initiative −1 · 2 rounds",
+    "facet": null,
+    "l": 336,
+    "t": 792,
+    "r": 643,
+    "b": 930
+   },
+   {
+    "name": "Bayonet charge",
+    "num": "blow ≈42 · yours: blows +17% · 2 rounds",
+    "facet": null,
+    "l": 649,
+    "t": 792,
+    "r": 955,
+    "b": 930
+   },
+   {
+    "name": "The Admiralty's surgeons",
+    "num": "heals 5%",
+    "facet": null,
+    "l": 961,
+    "t": 792,
+    "r": 1268,
+    "b": 930
+   }
+  ],
+  "cut": [],
+  "free": [
+   "Free, once a battle, from the second round (from the first against an army half as large again as yours), beside the round's order."
+  ]
+ },
+ "r1": {
+  "view": {
+   "round": 1,
+   "over": false,
+   "mine": true,
+   "ult": "ready",
+   "ultFrom": 2,
+   "level": 42
+  },
+  "ult": {
+   "off": true,
+   "note": "Ultimate · from round 2",
+   "l": 14,
+   "t": 228,
+   "r": 264,
+   "b": 285
+  },
+  "covered": [
+   5,
+   10,
+   11
+  ]
+ },
+ "r2": {
+  "view": {
+   "round": 2,
+   "over": false,
+   "mine": true,
+   "ult": "ready",
+   "ultFrom": 2,
+   "level": 42
+  },
+  "ult": {
+   "off": false,
+   "note": "Ultimate · free, once a battle",
+   "l": 14,
+   "t": 228,
+   "r": 264,
+   "b": 285
+  },
+  "covered": [
+   5,
+   10,
+   11
+  ]
+ },
+ "card": [
+  "Defending",
+  "In cover from shots"
+ ],
+ "errors": []
+}

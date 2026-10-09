@@ -1,0 +1,135 @@
+{
+ "tag": "after_drowned_L50_812x375_en",
+ "book": {
+  "nums": [
+   {
+    "name": "Path move: Call of the Depths",
+    "num": "raises 15% (the dead too)",
+    "facet": null,
+    "l": 108,
+    "t": 246,
+    "r": 446,
+    "b": 420
+   },
+   {
+    "name": "Ultimate: Tide of the Dead",
+    "num": "drags 4% of each stack under · raises 23% (the dead too) · yours: taken −13% · 3 rounds",
+    "facet": "From level 40: the risen feel neither fear nor pain — your stacks take less and never freeze in fear.",
+    "l": 454,
+    "t": 246,
+    "r": 792,
+    "b": 420
+   },
+   {
+    "name": "Drowning grip",
+    "num": "blow ≈59 · the stack: speed −2 · 3 rounds",
+    "facet": null,
+    "l": 108,
+    "t": 610,
+    "r": 447,
+    "b": 727
+   },
+   {
+    "name": "Brine kiss",
+    "num": "raises 6% (the dead too)",
+    "facet": null,
+    "l": 453,
+    "t": 610,
+    "r": 792,
+    "b": 727
+   },
+   {
+    "name": "Anchor chain",
+    "num": "blow ≈59",
+    "facet": null,
+    "l": 108,
+    "t": 733,
+    "r": 447,
+    "b": 864
+   },
+   {
+    "name": "Undertow",
+    "num": "drags 10% of each stack under · hers: initiative −2 · 3 rounds",
+    "facet": null,
+    "l": 453,
+    "t": 733,
+    "r": 792,
+    "b": 864
+   },
+   {
+    "name": "Barnacle hide",
+    "num": "yours: taken −25% · 3 rounds",
+    "facet": null,
+    "l": 108,
+    "t": 870,
+    "r": 447,
+    "b": 986
+   },
+   {
+    "name": "The abyss looks back",
+    "num": "every stack of hers ≈12 · hers: morale −1 · 3 rounds",
+    "facet": null,
+    "l": 453,
+    "t": 870,
+    "r": 792,
+    "b": 986
+   }
+  ],
+  "cut": [],
+  "free": [
+   "Free, once a battle, from the second round (from the first against an army half as large again as yours), beside the round's order."
+  ]
+ },
+ "r1": {
+  "view": {
+   "round": 1,
+   "over": false,
+   "mine": true,
+   "ult": "ready",
+   "ultFrom": 2,
+   "level": 42
+  },
+  "ult": {
+   "off": true,
+   "note": "Ultimate · from round 2",
+   "l": 0,
+   "t": 0,
+   "r": 0,
+   "b": 0
+  },
+  "covered": [
+   4,
+   9,
+   10,
+   11
+  ]
+ },
+ "r2": {
+  "view": {
+   "round": 2,
+   "over": false,
+   "mine": true,
+   "ult": "ready",
+   "ultFrom": 2,
+   "level": 42
+  },
+  "ult": {
+   "off": false,
+   "note": "Ultimate · free, once a battle",
+   "l": 0,
+   "t": 0,
+   "r": 0,
+   "b": 0
+  },
+  "covered": [
+   4,
+   9,
+   10
+  ]
+ },
+ "card": [
+  "Defending",
+  "In cover from shots"
+ ],
+ "errors": []
+}
