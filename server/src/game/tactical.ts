@@ -139,7 +139,10 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
   // docs/19 E5: a castellan alongside — the siege before her citadel's walls, its garrison in its own seven stacks.
   const so = siegeSetup(game, a, b);
   const bIn = sideOf(game, b, a, false);
-  if (so) bIn.army = so.army.map((x) => ({ u: x.u, n: x.n, src: x.u }));
+  if (so) {
+    bIn.army = so.army.map((x) => ({ u: x.u, n: x.n, src: x.u }));
+    bIn.spellHp = so.spellHp;
+  }
   fight.tac = newBattle(sideOf(game, a, b, true), bIn, seed, game.now, rng, so ? { siege: so.siege } : {});
   fight.tacSync = [0, 0];
   fight.tacSeen = new Map(fight.tac.stacks.map((s) => [s.id, s.count]));

@@ -4095,6 +4095,64 @@ body.touch .act-btn { --h: 38px; }
 @media (max-width: 520px) { .th-branches { grid-template-columns: minmax(0, 1fr); } }
 .hx-slot.gm .hx-rank { flex-wrap: wrap; max-width: 100%; }
 
+/* docs/19 E4–E8: the citadels and the Throne war in the Throne's window. */
+.cit-list { display: flex; flex-direction: column; gap: 6px; }
+.cit-row { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; grid-template-areas: 'f m a' 'x x x'; gap: 4px 10px; align-items: center; padding: 6px 8px; border: 1px solid rgba(176, 141, 87, 0.3); border-radius: 6px; background: rgba(20, 16, 10, 0.5); cursor: pointer; }
+.cit-row.mine { border-color: rgba(224, 184, 98, 0.75); }
+.cit-row.sieged { box-shadow: inset 3px 0 0 #b0473a; }
+.cit-row.open { background: rgba(32, 24, 14, 0.72); }
+.cit-face { grid-area: f; position: relative; width: 56px; height: 56px; }
+.cit-face .ico-lg { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.7)); }
+.cit-lv { position: absolute; left: -2px; bottom: -2px; padding: 0 4px; border-radius: 4px; background: #1a140c; box-shadow: 0 0 0 1px var(--brass-dim); font-size: 11px; font-weight: 600; color: var(--gold); }
+.cit-flag { position: absolute; right: -2px; top: -2px; width: 16px; height: 12px; border-radius: 2px 6px 6px 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7); font-size: 9px; line-height: 12px; text-align: center; color: #1a120a; }
+.cit-flag.crown { box-shadow: 0 0 0 1px var(--gold), 0 0 6px rgba(224, 184, 98, 0.7); }
+.cit-flag.sm { position: static; display: inline-block; width: 12px; height: 9px; margin-right: 6px; vertical-align: middle; }
+.cit-main { grid-area: m; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cit-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
+.cit-name b { font-family: var(--display); font-weight: 400; font-size: 16px; color: var(--bone); overflow-wrap: anywhere; }
+.cit-name small { font-size: 11px; }
+.cit-holder { font-size: 12px; color: var(--fog); overflow-wrap: anywhere; }
+.cit-holder.gold { color: var(--gold); }
+.cit-stat { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12px; color: var(--bone); }
+.cit-gar { display: inline-flex; align-items: center; gap: 6px; }
+.cit-gar .th-bar { display: inline-block; width: 70px; height: 6px; margin: 0; }
+.cit-gar .th-bar i { background: linear-gradient(90deg, #7a3a2a, #c9714e); }
+.cit-walls { display: inline-flex; align-items: center; gap: 2px; padding: 2px 4px; border-radius: 3px; background: rgba(0, 0, 0, 0.35); }
+.cit-walls i { display: block; width: 7px; height: 9px; border-radius: 1px; background: #8d8676; }
+.cit-walls i.cw-tower { width: 9px; height: 9px; border-radius: 50%; }
+.cit-walls i.cw-gate { background: #7a5a36; }
+.cit-walls i.cw-cracked { background: #5f594d; box-shadow: inset 0 0 0 1px #b0473a; }
+.cit-walls i.cw-gate.cw-cracked { background: #4e3a24; }
+.cit-walls i.cw-down { background: transparent; box-shadow: inset 0 0 0 1px #b0473a; opacity: 0.8; }
+.cit-win { font-size: 11px; color: var(--fog); }
+.cit-win.open { color: #e7a35a; }
+.cit-sg { font-size: 11px; color: #e07a5e; overflow-wrap: anywhere; }
+.cit-sg.mine { color: var(--gold); }
+.cit-why { font-size: 11px; line-height: 1.3; overflow-wrap: anywhere; }
+.cit-act { grid-area: a; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.cit-act .btn { white-space: nowrap; }
+.cit-more { grid-area: x; display: flex; flex-direction: column; gap: 6px; padding-top: 4px; border-top: 1px solid rgba(176, 141, 87, 0.2); cursor: default; }
+.cit-more .card-h { margin: 2px 0 0; font-size: 13px; }
+.cit-army { margin: 0; }
+.cit-inc { font-size: 11px; color: var(--fog); }
+.cit-inc.gold { color: var(--gold); }
+.cit-leave { display: flex; flex-wrap: wrap; gap: 6px; }
+.cit-stack { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px; border-radius: 6px; background: rgba(0, 0, 0, 0.3); }
+.cit-stack b { font-size: 12px; min-width: 2.2em; font-variant-numeric: tabular-nums; }
+.cit-stack .army-face-xs { width: 30px; height: 30px; }
+.cit-titans { display: flex; flex-wrap: wrap; gap: 6px; }
+.cit-titan { display: inline-flex; align-items: center; gap: 4px; }
+.cit-titan .army-face-xs { width: 26px; height: 26px; }
+.cit-war li b { white-space: normal; }
+@media (max-width: 1099px), (max-height: 520px) {
+  body.touch .cit-act .btn, body.touch .cit-stack .btn, body.touch .cit-titan { min-height: 40px; }
+}
+@media (max-width: 520px) {
+  .cit-row { grid-template-columns: 44px minmax(0, 1fr); grid-template-areas: 'f m' 'a a' 'x x'; }
+  .cit-face, .cit-face .ico-lg { width: 44px; height: 44px; }
+  .cit-act { flex-direction: row; justify-content: flex-end; }
+}
+
 /* docs/19 D7: a roaming stack's card («Осмотреть»). */
 .roam-panel { max-width: min(380px, 92vw); }
 .roam-card { display: flex; flex-direction: column; gap: 6px; text-align: left; font-size: 13px; padding-bottom: 12px; }

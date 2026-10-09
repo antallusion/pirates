@@ -6,7 +6,7 @@
 // and keeps it with what its captains leave in the garrison. It is besieged only in its two windows a week, announced.
 // Everything here is a function of the world and the clock, the same for the server, the client and the balance tools.
 
-import { armyWeight } from './army.ts';
+import { UNITS, armyForLevel, armyWeight } from './army.ts';
 import type { ArmyStack, UnitId } from './army.ts';
 import { RAID_REF } from './abyssraid.ts';
 import { buildAdv, offshore } from './advmap.ts';
@@ -49,6 +49,9 @@ export interface CitadelDef {
 }
 
 const cache = new WeakMap<World, CitadelDef[]>();
+/** The islands a citadel stands on (nobody rents, claims or builds on them). */
+const citIslands = new WeakSet<Island>();
+export const isCitadelIsland = (isl: Island): boolean => citIslands.has(isl);
 
 /** The twelve citadels of a world (the same for every call). */
 export function buildCitadels(world: World): CitadelDef[] {
@@ -76,6 +79,7 @@ export function buildCitadels(world: World): CitadelDef[] {
     }
     out.push(...picked);
   }
+  for (const c of out) for (const w of [world, base]) if (w.islands[c.island]) citIslands.add(w.islands[c.island]);
   cache.set(world, out);
   return out;
 }
@@ -108,7 +112,7 @@ export const CIT_STACKS: { u: UnitId; share: number }[] = [
 ];
 /** balance: tests/balance/citadels.ts — a lone geared captain of the cap never takes a full garrison in her one assault;
  *  three of them now and then, five most times. */
-export const CIT_WEIGHT = 3.2;
+export const CIT_WEIGHT = 4.2;
 export const CIT_LEVEL_MUL: Record<9 | 10, number> = { 9: 0.8, 10: 1 };
 /** An owned citadel's own guard (the castellan's men, filled again each week): this share of a neutral one's. */
 export const CIT_OWN = 0.4;
@@ -135,18 +139,42 @@ export function citGarrison(level: 9 | 10, mul = 1): ArmyStack[] {
   return g.map((x) => ({ u: x.u, n: Math.max(1, Math.round(x.n * mul)) }));
 }
 
-/** A garrison's men gathered into at most seven stacks (two of a kind stand apart as they were laid, a new kind takes a
- *  free slot, or joins the stack of its kind). */
+/** Two stacks of a kind gathered into one (in place): a garrison held by a guild keeps a stack a kind, so its
+ *  captains' men have room beside the castellan's. */
+export function gatherGarrison(g: ArmyStack[]): ArmyStack[] {
+  const out: ArmyStack[] = [];
+  for (const x of g) {
+    const same = out.find((y) => y.u === x.u);
+    if (same) same.n += x.n;
+    else if (x.n > 0) out.push({ ...x });
+  }
+  g.splice(0, g.length, ...out);
+  return g;
+}
+
+/** Men into a garrison of at most seven stacks: into the stack of their kind, or a free slot (two stacks of a kind
+ *  gathered to make one); false when seven kinds stand there already. */
 export function addToGarrison(g: ArmyStack[], u: UnitId, n: number): boolean {
   if (!(n > 0)) return false;
   const same = g.find((x) => x.u === u);
   if (same) same.n += n;
-  else if (g.length < 7) g.push({ u, n });
-  else return false;
+  else {
+    if (g.length >= 7) gatherGarrison(g);
+    if (g.length >= 7) return false;
+    g.push({ u, n });
+  }
   return true;
 }
 
 // ------------------------------------------------------------------ the castellan
+
+let crewHp = 0;
+/** The hit points a castellan's orders are reckoned from (tacbattle.ts spellPower): the ladder's crew of her level —
+ *  she commands a garrison many times a captain's, but her orders are a captain's. */
+export function citSpellHp(level: 9 | 10): number {
+  crewHp ||= armyForLevel(10, 600, 7, 'player').reduce((a, x) => a + x.n * UNITS[x.u].hp, 0);
+  return Math.round(crewHp * CIT_LEVEL_MUL[level]);
+}
 
 export interface CastellanDef {
   path: CaptainId;
@@ -167,14 +195,14 @@ export const CASTELLAN_NAMES: Tr[] = [
  *  skills and the share of the book she carries. */
 export function castellanOf(id: number, level: 9 | 10): CastellanDef {
   const paths: CaptainId[] = ['admiral', 'corsair', 'drowned', 'navigator', 'reaver', 'smuggler'];
-  return { path: paths[id % paths.length], name: CASTELLAN_NAMES[id % CASTELLAN_NAMES.length], prim: level === 10 ? 8 : 6, rank: level === 10 ? 3 : 2, book: level === 10 ? 0.6 : 0.45 };
+  return { path: paths[id % paths.length], name: CASTELLAN_NAMES[id % CASTELLAN_NAMES.length], prim: level === 10 ? 4 : 2, rank: 2, book: level === 10 ? 0.4 : 0.3 };
 }
 
 // ------------------------------------------------------------------ the siege
 
 /** A tower's shot in hit points, before her stack's defence: a share of the ladder's ⚓10 crew's (balance: the siege of a
  *  garrison as strong as the attacker goes to the attacker 35–45% of the time, docs/19 E17). */
-export const CIT_TOWER = 40;
+export const CIT_TOWER = 75;
 /** Under the Masters of the Throne (the last season's winner): a stone more in every part of the wall line, the
  *  towers this much harder. */
 export const CIT_WARD = { hp: 1, tower: 1.3 } as const;

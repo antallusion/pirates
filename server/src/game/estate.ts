@@ -9,6 +9,7 @@
 // little; guests may look round it.
 
 import { welcome } from './guests.ts';
+import { isCitadelIsland } from '../../../shared/src/data/citadels.ts'; // docs/19 E4
 import {
   CLAIM_DAYS, GUARDS, HANDS_BONUS, HANDS_WAGE, HOME_COOLDOWN, ISLE_LEVELS, ISLE_MAX, OUTPOSTS, OUTPOST_BUILD, OUTPOST_KINDS, OUTPOST_MAX_LEVEL,
   PROFESSIONS, PROFESSION_DEFS, RAID_DAY, RAID_MIN, RESIDENT_BONUS, RESIDENT_HIRE, ROB_SEC, TROPHY_MAX, TROPHY_STEP, claimCost, outpostCap, outpostFits, outpostGood,
@@ -387,6 +388,7 @@ export function foundOutpost(game: Game, s: PlayerSession, kind: OutpostKind): s
   const isl = islandNear(game, ship);
   if (!isl || isl.portId || game.holdings.get(game, isl.id)) return 'An outpost stands on a wild island, not a port’s or another’s.';
   if (Object.values(outposts(game)).some((o) => o.island === isl.id)) return 'Someone already works this island.';
+  if (isCitadelIsland(isl)) return 'A citadel of the Throne war stands on that island.'; // docs/19 E4
   if (!outpostFits(kind, isl)) return `This island does not suit a ${def.name[0]}.`;
   const limit = outpostLimit(game, s.accountId);
   if (!limit) return 'You have no island of your own.';

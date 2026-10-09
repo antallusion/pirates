@@ -20,8 +20,8 @@ import { MAX_LEVEL } from '../../../shared/src/constants.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import {
-  CITADELS, CIT_NOTICE_MS, CIT_OWN, CIT_POINTS, CIT_RANGE, CIT_TOWER, CIT_WARD, CIT_WINDOW_MS, THRONE_PENNANT, THRONE_TITLE, addToGarrison, buildCitadels,
-  castellanOf, citBombard, citGarrison, citName, citNextWindow, citTax, citWeek, citWindowAt,
+  CITADELS, CIT_NOTICE_MS, CIT_OWN, CIT_POINTS, CIT_RANGE, CIT_TOWER, CIT_WARD, CIT_WINDOW_MS, THRONE_PENNANT, THRONE_TITLE, addToGarrison, buildCitadels, gatherGarrison,
+  castellanOf, citBombard, citGarrison, citName, citNextWindow, citSpellHp, citTax, citWeek, citWindowAt,
 } from '../../../shared/src/data/citadels.ts';
 import type { CitMark, CitRow, CitView, CitadelDef } from '../../../shared/src/data/citadels.ts';
 import { ORDER_IDS, SKILL_IDS, heroBattle, manaMaxOf, startingOrders } from '../../../shared/src/data/hero.ts';
@@ -94,9 +94,13 @@ interface Store {
   pantheon: { gid: number; tag: string; name: string; season: number; points: number; members: number[] }[];
   /** The last whole hour of holding paid (wall ms). */
   hourAt: number;
-  /** Windows opened by the tester's word. */
+  /** Windows opened by the tester's word; seasons the tester has closed ahead of the calendar. */
   open: { cit: number; start: number; end: number }[];
+  shift?: number;
 }
+
+/** The Throne war's season: the calendar's (seasons.ts), and as many more as the tester has closed. */
+const warSeason = (game: Game): number => seasonId(game) + (stores.get(game)?.shift ?? 0);
 
 const rngs = new WeakMap<Game, Rng>();
 function cr(game: Game): Rng {
@@ -171,15 +175,20 @@ const hhmm = (ms: number): string => {
 
 // ------------------------------------------------------------------ the castellan
 
-/** The castellan of a citadel as a hero: her path's book and more by the citadel's level, primaries over the cap's,
- *  the sea's skills at her rank. */
+/** The orders of a wall's keeper: her path's own, then those that hold a wall — the shields, the steel, the mending, the
+ *  dread from the battlements, the wind against the besiegers — none that rains on a whole field. */
+const KEEPER: OrderId[] = ['shield_wall', 'mark_target', 'brine_mend', 'dread', 'head_wind', 'war_cry', 'tide_returns', 'iron_discipline', 'fury'];
+
+/** The castellan of a citadel as a hero: her path's book and a keeper's orders by the citadel's level, primaries over
+ *  the cap's, the sea's skills at her rank. */
 export function castellanHero(id: number, level: 9 | 10): HeroBattle {
   const c = castellanOf(id, level);
   const p = 8 + c.prim;
   const prim = { atk: p, def: p, pow: p, will: p };
-  const skills: SkillSlot[] = SKILL_IDS.filter((x) => x !== 'trading' && x !== 'navigation').slice(0, level === 10 ? 6 : 5).map((x) => ({ id: x, r: c.rank }));
+  const skills: SkillSlot[] = SKILL_IDS.filter((x) => x !== 'trading' && x !== 'navigation').slice(0, level === 10 ? 4 : 3).map((x) => ({ id: x, r: c.rank }));
   const own = startingOrders(c.path);
-  const book: OrderId[] = [...own, ...ORDER_IDS.filter((x) => !own.includes(x))].slice(0, Math.max(own.length, Math.ceil(ORDER_IDS.length * c.book)));
+  const keep = KEEPER.filter((x) => ORDER_IDS.includes(x) && !own.includes(x));
+  const book: OrderId[] = [...own, ...keep.slice(0, Math.ceil(keep.length * c.book * 2))];
   return heroBattle(prim, skills, null, book, manaMaxOf(prim.will) * 2, { path: c.path, level: MAX_LEVEL });
 }
 
@@ -196,7 +205,7 @@ export const castellanFaceOf = (ship: ShipEntity): string | undefined => heroes.
 /** The siege's own field for a boarding of a castellan's ship (tactical.ts startTactical): the walls as the siege left
  *  them, her ship's broadside, her catapult (a second stone with Artillery advanced), the towers; and the garrison in
  *  its own seven stacks. Null for any other boarding. */
-export function siegeSetup(game: Game, a: ShipEntity, b: ShipEntity): { siege: SiegeInput; army: ArmyStack[] } | null {
+export function siegeSetup(game: Game, a: ShipEntity, b: ShipEntity): { siege: SiegeInput; army: ArmyStack[]; spellHp: number } | null {
   const L = castellans.get(b);
   if (!L) return null;
   const c = defs(game)[L.cit];
@@ -211,6 +220,7 @@ export function siegeSetup(game: Game, a: ShipEntity, b: ShipEntity): { siege: S
       catapult: art >= 2 ? 2 : 1, tower: CIT_TOWER * (warded(game, rec) ? CIT_WARD.tower : 1), name: nameOf(c),
     },
     army: L.before.map((x) => ({ ...x })),
+    spellHp: citSpellHp(c.level),
   };
 }
 
@@ -404,7 +414,7 @@ function capture(game: Game, id: number, gid: number): void {
   const t = tagOf(game, gid);
   rec.owner = gid;
   rec.since = game.wallNow();
-  rec.garrison = citGarrison(c.level, CIT_OWN);
+  rec.garrison = gatherGarrison(citGarrison(c.level, CIT_OWN));
   mend(game, rec);
   rec.left = {};
   rec.titanWeek = -1;
@@ -482,7 +492,7 @@ export function stepCitadels(game: Game): void {
   const S = store(game);
   const now = game.wallNow();
   let dirty = false;
-  if (S.season !== seasonId(game)) {
+  if (S.season !== warSeason(game)) {
     closeWar(game);
     dirty = true;
   }
@@ -584,7 +594,7 @@ function closeWar(game: Game): void {
     }
   }
   S.points = {};
-  S.season = seasonId(game);
+  S.season = warSeason(game);
   save(game);
   touch(game);
 }
@@ -753,7 +763,7 @@ export function adminCit(game: Game, s: PlayerSession, args: string[]): string {
     case 'list':
       return `Citadels: ${defs(game).map((x) => `${x.id + 1} ⚓${x.level}${S.cits[x.id].owner !== null ? ` [${tagOf(game, S.cits[x.id].owner!).tag}]` : ''}`).join(' · ')}`;
     case 'go':
-      parkNear(game, s, c.x, c.y, 260);
+      parkNear(game, s, c.x, c.y, 90, Math.atan2(c.x - c.fx, -(c.y - c.fy)));
       return `At the anchorage of the ${nameOf(c)}.`;
     case 'guild':
       return testGuild(game, s) ?? `Your guild: [${game.guilds.of(game, s.accountId)!.tag}].`;
@@ -773,7 +783,7 @@ export function adminCit(game: Game, s: PlayerSession, args: string[]): string {
         if (d) return d;
       }
       S.sieges[c.id].assaults = S.sieges[c.id].assaults.filter((a) => a !== s.accountId);
-      parkNear(game, s, c.x, c.y, 260);
+      parkNear(game, s, c.x, c.y, 90, Math.atan2(c.x - c.fx, -(c.y - c.fy)));
       game.tacticalBoarding = true;
       return assaultCitadel(game, s, c.id) ?? `The assault on the ${nameOf(c)} begins.`;
     }
@@ -806,6 +816,8 @@ export function adminCit(game: Game, s: PlayerSession, args: string[]): string {
       return `Your guild has ${S.points[g.id]} points of the Throne war.`;
     }
     case 'season':
+      // The season closed ahead of the calendar: the next one begins now.
+      S.shift = (S.shift ?? 0) + 1;
       closeWar(game);
       return S.champion ? `The season is closed: [${S.champion.tag}] are the Masters of the Throne.` : 'The season is closed: nobody held a citadel.';
     case 'reset':

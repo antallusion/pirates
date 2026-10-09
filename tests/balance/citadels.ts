@@ -7,7 +7,7 @@
 
 import { armyForLevel } from '../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../shared/src/data/army.ts';
-import { CIT_TOWER, citGarrison } from '../../shared/src/data/citadels.ts';
+import { CIT_TOWER, citGarrison, citSpellHp } from '../../shared/src/data/citadels.ts';
 import { Rng } from '../../shared/src/rng.ts';
 import { newBattle, quickFinish, siegeLeft } from '../../server/src/game/tacbattle.ts';
 import type { SiegeInput, TacSideInput } from '../../server/src/game/tacbattle.ts';
@@ -31,7 +31,7 @@ export interface SiegeOpts {
 export function assault(me: ArmyStack[], garrison: ArmyStack[], hp: number[] | undefined, seed: number, o: SiegeOpts = {}): { won: boolean; left: ArmyStack[]; hp: number[]; rounds: number } {
   const rng = new Rng(seed);
   const siege: SiegeInput = { type: o.type ?? 'rocky', ...(hp ? { hp } : {}), bombard: o.bombard ?? 2, catapult: o.catapult ?? 1, tower: o.tower ?? CIT_TOWER };
-  const bt = newBattle(side(me, 'corsair'), side(garrison, 'admiral'), seed, 0, rng, { siege });
+  const bt = newBattle(side(me, 'corsair'), { ...side(garrison, 'admiral'), spellHp: citSpellHp(10) }, seed, 0, rng, { siege });
   quickFinish(bt, 0, rng);
   const left = bt.stacks.filter((s) => s.side === 1 && s.count > 0).map((s) => ({ u: s.unit as UnitId, n: s.count }));
   return { won: bt.over!.winner === 0, left, hp: siegeLeft(bt)!, rounds: bt.round };
@@ -78,7 +78,7 @@ function openWins(me: ArmyStack[], g: ArmyStack[], runs: number): number {
   let won = 0;
   for (let run = 0; run < runs; run++) {
     const rng = new Rng(9000 + run * 37);
-    const bt = newBattle(side(me, 'corsair'), side(g, 'admiral'), 9000 + run * 37, 0, rng, { land: 'rocky' });
+    const bt = newBattle(side(me, 'corsair'), { ...side(g, 'admiral'), spellHp: citSpellHp(10) }, 9000 + run * 37, 0, rng, { land: 'rocky' });
     quickFinish(bt, 0, rng);
     if (bt.over!.winner === 0) won++;
   }

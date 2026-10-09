@@ -20,6 +20,9 @@ import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { personName } from '../lang/names.ts';
 import { EN, RU } from '../lang/ui/tactical.ts';
 import { along, glideMs, stepEase, walkPath } from './tacwalk.ts';
+import { catapultAt, drawCatapult, drawSiegeField } from './tacsiege.ts'; // docs/19 E5
+import { serverText } from '../lang/server.ts';
+import { EN as CEN, RU as CRU } from '../lang/ui/citadels.ts'; // docs/19 E5
 import { EN as LEN, RU as LRU } from '../lang/ui/lairs.ts';
 import type { LairLoot } from '../../../shared/src/lairproto.ts';
 import { LAIRS } from '../../../shared/src/data/lairs.ts';
@@ -61,6 +64,7 @@ import { faceAttrs } from './kit/faces.ts'; // the captains' faces in their circ
 import type { WheelOption } from './kit/radial.ts';
 
 const L = dict(EN, RU);
+const CL = dict(CEN, CRU); // docs/19 E5: the siege's words
 const LL = dict(LEN, LRU);
 const DL = dict(DEN, DRU);
 const FL = dict(FEN, FRU);
@@ -629,7 +633,8 @@ export class TacticalPanel {
     const t = performance.now();
     const calm = this.calm();
     // The battle's end shows its last blows only (a quick combat's whole fight is not played again), as the server holds it.
-    const fresh = (was ? v.log.filter((e) => e.i > this.seen) : []).slice(v.over ? -TAC_END_WINDOW : -TAC_PLAY_WINDOW);
+    // docs/19 E5: a siege opens with the ship's broadside and the round's first stones and shots, played as it opens.
+    const fresh = (was ? v.log.filter((e) => e.i > this.seen) : v.siege ? v.log.filter((e) => e.k === 'siege') : []).slice(v.over ? -TAC_END_WINDOW : -TAC_PLAY_WINDOW);
     const { beats, total } = tacSchedule(fresh, this.speed(v));
     const ms = (sec: number) => t + sec * 1000;
     // Where each stack stands and how many it has as the play goes on.
@@ -646,12 +651,12 @@ export class TacticalPanel {
         const s = known.get(e.s);
         const fly = e.id === 'fly' || !!s?.sp.includes('flying');
         const stand = [...at].map(([id, hex]) => ({ id, hex, count: cnt.get(id) ?? 0 }));
-        const path = fly || calm ? null : walkPath(v.cells, stand, e.s, from, e.hex, !!s?.sp.includes('diving'));
+        const path = fly || calm ? null : walkPath(v.cells, stand, e.s, from, e.hex, !!s?.sp.includes('diving'), s?.side === 1);
         this.pos.set(e.s, { hex: e.hex, path: path ?? [from, e.hex], t0: ms(b.at), dur: calm ? 0 : b.dur * 1000, fly: fly && !calm });
         at.set(e.s, e.hex);
       }
       // A blow's fallen leave its count as it lands.
-      const struck = e.k === 'hit' || e.k === 'shot' || e.k === 'ret' || (e.k === 'order' && e.t !== undefined) ? e.t : e.k === 'burn' || e.k === 'poison' ? e.s : undefined;
+      const struck = e.k === 'hit' || e.k === 'shot' || e.k === 'ret' || (e.k === 'order' && e.t !== undefined) || (e.k === 'siege' && e.t !== undefined) ? e.t : e.k === 'burn' || e.k === 'poison' ? e.s : undefined;
       if (struck !== undefined && e.kills) {
         const n = Math.max(0, (cnt.get(struck) ?? 0) - e.kills);
         cnt.set(struck, n);
@@ -661,8 +666,9 @@ export class TacticalPanel {
       }
       if (e.k === 'die' && e.s !== undefined) died.set(e.s, ms(b.impact));
       if (e.k === 'spell' || e.k === 'innate' || e.k === 'ult' || e.k === 'boss') lastSpell = ms(b.impact);
-      this.eventAt.set(e.i, ms(e.k === 'hit' || e.k === 'shot' || e.k === 'ret' ? b.impact : b.at));
+      this.eventAt.set(e.i, ms(e.k === 'hit' || e.k === 'shot' || e.k === 'ret' || e.k === 'siege' ? b.impact : b.at));
       if (was) this.mark(e, v, was, ms(b.at), ms(b.impact));
+      else if (e.k === 'siege') this.siegeMark(e, v, ms(b.at), ms(b.impact));
     });
     // The counts shown till the play is over: as it stood, then after each blow as it lands; a move of the captains'
     // that felled or raised men tells its count as it lands, the rest as the play ends.
@@ -868,6 +874,40 @@ export class TacticalPanel {
     } else if (e.k === 'die') {
       const c = at(e.hex);
       if (c) this.bursts.push({ id: 'part.smoke', x: c.x, y: c.y, t0: t, size: w * 1.2 });
+    } else if (e.k === 'siege') this.siegeMark(e, v, t, hit);
+  }
+
+  /** docs/19 E5: a stone of the catapult or a ball of the ship's broadside flying in from beyond the field's left edge
+   *  onto the wall line (the dust, a crack, the breach told), a tower's shot onto her stack (its numbers as a shot's). */
+  private siegeMark(e: TacEvent, v: TacView, t: number, hit: number): void {
+    const w = this.size.w || 30;
+    const c = e.hex !== undefined ? this.center(e.hex) : null;
+    if (!c) return;
+    if (e.id === 'tower') {
+      const s = e.n !== undefined ? this.center(e.n) : null;
+      if (e.t !== undefined) this.addAct(e.t, { k: 'hurt', t0: hit, hit, dx: s ? Math.sign(c.x - s.x) || 1 : 1, dy: 0 });
+      const fly = s && sprite('part.ms_arrow') ? Math.max(120, hit - t - 60) : 0;
+      if (fly && s) this.missiles.push({ id: 'part.ms_arrow', x0: s.x, y0: s.y - w * 0.4, x1: c.x, y1: c.y - w * 0.4, t0: t + 60, dur: fly, arc: Math.hypot(c.x - s.x, c.y - s.y) * 0.12 });
+      const y0 = c.y - w * 0.15;
+      if (e.kills) this.addFloat({ text: `†${e.kills}`, x: c.x, y: y0, t0: hit, color: '#ff8a6a', size: 1.15 });
+      this.addFloat({ text: `−${e.dmg}`, x: c.x, y: y0, t0: hit, color: '#f3d7a0', size: 1.25 });
+      this.bursts.push({ id: 'part.splinters', x: c.x, y: c.y - w * 0.2, t0: hit, size: w * 0.8 });
+      return;
+    }
+    // From beyond the field's left edge (the board's, turned onto the screen), over against the row it falls on.
+    const b0 = this.lc(hexIndex(0, hexY(e.hex!)));
+    const [ka, kb, kc, kd, ke, kf] = this.xf();
+    const bx = b0.x - w * 1.4, by = b0.y;
+    const s = { x: ka * bx + kc * by + ke, y: kb * bx + kd * by + kf - w * 0.3 };
+    const ms = e.id === 'gun' ? 'part.ms_cannonball' : 'part.ms_stone';
+    const fly = sprite(ms) ? Math.max(160, hit - t - 40) : 0;
+    if (fly) this.missiles.push({ id: ms, x0: s.x, y0: s.y, x1: c.x, y1: c.y - w * 0.1, t0: t + 40, dur: fly, arc: Math.hypot(c.x - s.x, c.y - s.y) * (e.id === 'gun' ? 0.08 : 0.35) });
+    if (e.id === 'gun') this.bursts.push({ id: 'part.muzzle', x: s.x, y: s.y, t0: t + 20, size: w * 1.2 });
+    this.bursts.push({ id: e.dmg ? 'part.explosion' : 'part.smoke', x: c.x, y: c.y, t0: hit, size: w * (e.dmg ? 1.4 : 0.9) });
+    if (e.dmg && (e.n ?? 1) <= 0) {
+      const part = v.cells[e.hex!];
+      const word = part === 'V' ? 'siege.towerDown' : hexY(e.hex!) === 4 ? 'siege.gateDown' : 'siege.breach';
+      this.addFloat({ text: CL(word), x: c.x, y: c.y - w * 0.5, t0: hit, color: '#ffb54a', size: 1.1 });
     }
   }
 
@@ -877,6 +917,7 @@ export class TacticalPanel {
    *  II, IV; docs/19), a captain by her name. */
   private heroName(v: TacView, x: 0 | 1): string {
     const h = v.heroes[x];
+    if (v.siege && x !== v.you) return serverText(h.name); // docs/19 E5: the citadel's castellan
     if (!v.land || x === v.you) return personName(h.name);
     const ru = lang() === 'ru' ? 1 : 0;
     const lair = v.land.lair;
@@ -1354,6 +1395,14 @@ export class TacticalPanel {
         return e.id === 'harpoon' && e.t !== undefined ? L('log.harpoon', { a: name(e.s), b: name(e.t), dmg: e.dmg ?? 0, kills: e.kills ?? 0 }) : L('log.order', { a: name(e.s), name: L(`o.${e.id}` as K) });
       case 'round':
         return L('log.round', { n: e.n ?? 0 });
+      case 'siege': {
+        // docs/19 E5: the catapult, the ship's broadside, a tower.
+        if (e.id === 'tower') return CL('siege.tower', { t: name(e.t), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
+        const y = e.hex !== undefined ? hexY(e.hex) : 0;
+        const part = CL(y === 4 ? 'siege.part.gate' : y === 1 || y === 7 ? 'siege.part.tower' : 'siege.part.wall');
+        const res = CL(!e.dmg ? 'siege.res.miss' : (e.n ?? 1) <= 0 ? 'siege.res.down' : 'siege.res.hit');
+        return CL(e.id === 'gun' ? 'siege.gun' : 'siege.cat', { part, res });
+      }
       case 'burn':
         return L('log.burn', { a: name(e.s), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
       case 'fear':
@@ -2175,7 +2224,7 @@ export class TacticalPanel {
   }
 
   private background(v: TacView): HTMLCanvasElement {
-    const key = `${v.cells}|${this.size.cw}|${this.size.ch}|${this.size.dpr}|${v.you}|${this.size.rot}|${v.land?.type ?? ''}|${v.heroes[0].hull}|${v.heroes[1].hull}|${sprite('bg.battle_sea') ? 1 : 0}`;
+    const key = `${v.cells}|${this.size.cw}|${this.size.ch}|${this.size.dpr}|${v.you}|${this.size.rot}|${v.land?.type ?? v.siege?.type ?? ''}|${v.heroes[0].hull}|${v.heroes[1].hull}|${sprite('bg.battle_sea') ? 1 : 0}`;
     if (this.bg && key === this.bgKey) return this.bg;
     this.bgKey = key;
     const { cw, ch, dpr, w } = this.size;
@@ -2186,8 +2235,15 @@ export class TacticalPanel {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, c.width, c.height);
     this.turned(g);
-    if (v.land) {
+    if (v.land || v.siege) {
       this.landField(g, v);
+      // docs/19 E5: a citadel's siege — the courtyard, the moat, the causeway, the wall line, the catapult.
+      if (v.siege) {
+        this.planks ??= [plankTexture(false), plankTexture(true)];
+        const d = { cells: v.cells, lc: (i: number) => this.lc(i), w: this.size.w, r: this.size.w / SQ3, hexPath: (gg: CanvasRenderingContext2D, x: number, y: number, rr: number) => this.hexPath(gg, x, y, rr), across: (i: number, e: number) => this.across(i, e), planks: this.planks[0] };
+        drawSiegeField(g, d);
+        drawCatapult(g, catapultAt(d.lc, d.w), d.w, this.planks[0]);
+      }
       return c;
     }
     this.planks ??= [plankTexture(false), plankTexture(true)];
@@ -2367,7 +2423,7 @@ export class TacticalPanel {
     const { w } = this.size;
     const r = w / SQ3;
     const cells = v.cells;
-    const type = v.land!.type;
+    const type = v.land?.type ?? v.siege?.type ?? 'rocky';
     const GROUND: Record<string, [string, string, string]> = {
       tropical: ['#d2b37a', '#c4a46a', '#e3c88f'], rocky: ['#8e877a', '#7d776b', '#a39c8d'], volcanic: ['#3e3532', '#332b29', '#54463f'],
       swamp: ['#5f5b3c', '#4f4c31', '#6f6a47'], graveyard: ['#86735a', '#76644d', '#9a8566'], dead: ['#59616a', '#4c535b', '#6e767e'],
@@ -2910,7 +2966,7 @@ export class TacticalPanel {
     const placed: { s?: TacStackView; prop?: string; i?: number; p: { x: number; y: number; lift?: number; walking?: boolean; dx?: number } }[] = shown.map((s) => ({ s, p: this.standAt(s, t) }));
     const walking = placed.some((x) => x.p.walking);
     for (let i = 0; i < v.cells.length; i++) {
-      const prop = propArt(v.cells[i], v.land?.type ?? '');
+      const prop = propArt(v.cells[i], v.land?.type ?? v.siege?.type ?? '');
       if (prop) placed.push({ prop, i, p: this.center(i) });
     }
     // In one row the bigger first: a giant stands no nearer than the man beside it, so it must not cover him.

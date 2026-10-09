@@ -89,6 +89,9 @@ export interface TacSideInput {
   /** A premium hull's deck gift (docs/02 §1.A.9): laid on her side's stacks (`mine`) and the other side's (`theirs`) for
    *  the first `rounds` rounds, as an order is — a clearing page lifts it as it lifts any. */
   gift?: { rounds: number; mine?: BtMods; theirs?: BtMods };
+  /** docs/19 E5: the hit points her orders are reckoned from (absent: her side's own as it came aboard) — a citadel's
+   *  castellan commands a garrison many times a captain's crew, but her orders are a captain's. */
+  spellHp?: number;
 }
 
 /** docs/19 E5: a citadel's siege as it is laid out — the ground it stands on, the wall line as an assault before left
@@ -1116,7 +1119,7 @@ function shoot(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng): void {
 /** The captain's blast: a share of his own side's strength at the start, cut by the ladder. */
 function spellPower(bt: TacBattle, side: 0 | 1): number {
   const h = bt.heroes[side];
-  return h.startHp * 0.07 * h.input.dealt * h.input.power * (h.input.struck ? 0.1 : 1);
+  return (h.input.spellHp ?? h.startHp) * 0.07 * h.input.dealt * h.input.power * (h.input.struck ? 0.1 : 1);
 }
 
 /** The fallen of a side stand up again: a share of each stack's strength as it came aboard (`dead`: the drowned

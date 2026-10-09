@@ -64,6 +64,7 @@ export const SERVER_RU_CIT: Record<string, string> = {
   // the season (E8)
   '[{0}] {1} are the Masters of the Throne of season {2}.': '[{0}] {1} — Хозяева Престола {2}-го сезона.',
   'Your guild are the Masters of the Throne: the Pantheon, a title and the Throne’s pennant are yours.': 'Ваша гильдия — Хозяева Престола: Пантеон, титул и вымпел Престола ваши.',
+  'A citadel of the Throne war stands on that island.': 'На этом острове стоит цитадель Войны за Престол.',
   // the tester's list
   'Citadels: {0}': 'Цитадели: {0}',
 };

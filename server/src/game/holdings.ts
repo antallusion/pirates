@@ -32,6 +32,7 @@ import { siegesFor } from './siege.ts';
 import type { Siege } from './siege.ts';
 import { hireTrade } from './crew.ts';
 import { baseUpkeepPerDay, guildCanLease, guildPay } from './guilds.ts';
+import { isCitadelIsland } from '../../../shared/src/data/citadels.ts';
 import type { Game } from './Game.ts';
 import { changeRep } from './player.ts';
 import type { PlayerSession } from './player.ts';
@@ -173,6 +174,7 @@ export function mayUse(game: Game, h: Holding, accountId: number): boolean {
 
 export function rentable(isl: Island): string | null {
   if (isl.portId) return 'Port islands are not for rent';
+  if (isCitadelIsland(isl)) return 'A citadel of the Throne war stands on that island.'; // docs/19 E4
   const mul = rentZoneMul(isl.region);
   if (mul === null) return 'Nobody rents out land in the Abyss';
   if (isl.region === 'black_coast' && islandSize(isl.radius) === 'large') return 'The Crown leases only small and middling islands on its coast';
