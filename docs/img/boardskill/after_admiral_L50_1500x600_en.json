@@ -4,7 +4,7 @@
   "nums": [
    {
     "name": "Path move: The Line",
-    "num": "yours: morale +2 · 2 rounds",
+    "num": "yours: morale +2 · 3 rounds",
     "facet": null,
     "l": 336,
     "t": 325,
@@ -13,7 +13,7 @@
    },
    {
     "name": "Ultimate: Line of Battle",
-    "num": "every stack of hers ≈6 · yours: blows +8%, taken −7%, morale +2 · 2 rounds",
+    "num": "every stack of hers ≈8 · yours: blows +8%, taken −7%, morale +2 · 3 rounds",
     "facet": null,
     "l": 806,
     "t": 325,
@@ -22,7 +22,7 @@
    },
    {
     "name": "Volley by order",
-    "num": "blow ≈33 · her shooters ≈10 · yours: shots +22% · 2 rounds",
+    "num": "blow ≈40 · her shooters ≈12 · yours: shots +22% · 3 rounds",
     "facet": null,
     "l": 336,
     "t": 655,
@@ -31,7 +31,7 @@
    },
    {
     "name": "Signal flags",
-    "num": "yours: initiative +1, morale +2 · 2 rounds",
+    "num": "yours: initiative +1, morale +2 · 3 rounds",
     "facet": null,
     "l": 649,
     "t": 655,
@@ -40,7 +40,7 @@
    },
    {
     "name": "Form square",
-    "num": "yours: taken −17% · 2 rounds",
+    "num": "yours: taken −17% · 3 rounds",
     "facet": null,
     "l": 961,
     "t": 655,
@@ -49,7 +49,7 @@
    },
    {
     "name": "Fog of war",
-    "num": "hers: shots −30%, initiative −1 · 2 rounds",
+    "num": "hers: shots −30%, initiative −1 · 3 rounds",
     "facet": null,
     "l": 336,
     "t": 792,
@@ -58,7 +58,7 @@
    },
    {
     "name": "Bayonet charge",
-    "num": "blow ≈42 · yours: blows +17% · 2 rounds",
+    "num": "blow ≈51 · yours: blows +17% · 3 rounds",
     "facet": null,
     "l": 649,
     "t": 792,
@@ -67,7 +67,7 @@
    },
    {
     "name": "The Admiralty's surgeons",
-    "num": "heals 5%",
+    "num": "heals 6%",
     "facet": null,
     "l": 961,
     "t": 792,
@@ -99,8 +99,7 @@
   },
   "covered": [
    5,
-   10,
-   11
+   9
   ]
  },
  "r2": {
@@ -122,6 +121,7 @@
   },
   "covered": [
    5,
+   9,
    10,
    11
   ]

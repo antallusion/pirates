@@ -3851,7 +3851,7 @@ export class TacticalPanel {
     const by = shooters.map((o) => deckCover(v.cells, s.hex, o.hex)).find((j) => j >= 0);
     const c = by !== undefined ? this.center(by) : { x: x - w, y };
     const dx = c.x - x, dy = c.y - y, d = Math.hypot(dx, dy) || 1;
-    const r = Math.max(6, w * 0.15);
+    const r = Math.max(7, w * 0.18);
     const sx = x + (dx / d) * w * 0.38, sy = y - w * 0.2 + (dy / d) * w * 0.12;
     g.save();
     g.beginPath();

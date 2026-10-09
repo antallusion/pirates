@@ -22,7 +22,7 @@
    },
    {
     "name": "Marlinspike",
-    "num": "blow ≈48",
+    "num": "blow ≈56",
     "facet": null,
     "l": 108,
     "t": 670,
@@ -49,7 +49,7 @@
    },
    {
     "name": "Squall",
-    "num": "every stack of hers ≈11 · hers: initiative −1 · 3 rounds",
+    "num": "every stack of hers ≈13 · hers: initiative −1 · 3 rounds",
     "facet": null,
     "l": 367,
     "t": 828,
@@ -58,7 +58,7 @@
    },
    {
     "name": "Harpoon line",
-    "num": "blow ≈67 · the stack: speed −2 · 3 rounds",
+    "num": "blow ≈77 · the stack: speed −2 · 3 rounds",
     "facet": null,
     "l": 108,
     "t": 1000,
@@ -99,7 +99,8 @@
   },
   "covered": [
    4,
-   9
+   9,
+   10
   ]
  },
  "r2": {

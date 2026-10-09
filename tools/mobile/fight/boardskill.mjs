@@ -86,6 +86,8 @@ await waitFor(async () => {
 await waitFor(async () => { await skip(); const v = await view(); return v && (v.mine || v.over); }, 30000);
 await sleep(1500);
 await skip();
+// The screen plays the round's last blows before it shows round 2 (the field's pace): wait for its ultimate's plate.
+if (LEVEL >= 20 && !touch) await waitFor(async () => { const u = await ultBtn(); return u && u.off === false ? u : null; }, 20000, 500);
 // A phone's pages are in the book (its round button): open it to see the ultimate's card.
 if (touch) {
   await p.evaluate(() => document.querySelector('.tb-pad [data-book]')?.click());

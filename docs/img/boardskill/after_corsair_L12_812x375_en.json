@@ -4,7 +4,7 @@
   "nums": [
    {
     "name": "Path move: Last Volley",
-    "num": "blow ≈33",
+    "num": "blow ≈37",
     "facet": null,
     "l": 108,
     "t": 246,
@@ -13,7 +13,7 @@
    },
    {
     "name": "Ultimate: Hell's Broadside",
-    "num": "every stack of hers ≈4",
+    "num": "every stack of hers ≈5",
     "facet": null,
     "l": 454,
     "t": 246,
@@ -22,7 +22,7 @@
    },
    {
     "name": "Chain shot",
-    "num": "blow ≈21 · the stack: speed −1 · 2 rounds",
+    "num": "blow ≈24 · the stack: speed −1 · 2 rounds",
     "facet": null,
     "l": 108,
     "t": 496,
@@ -58,7 +58,7 @@
    },
    {
     "name": "Grape at the rail",
-    "num": "blow ≈28 · beside it ≈13",
+    "num": "blow ≈31 · beside it ≈15",
     "facet": null,
     "l": 108,
     "t": 741,
@@ -67,7 +67,7 @@
    },
    {
     "name": "Iron tide",
-    "num": "heals 9% · yours: taken −20% · 2 rounds",
+    "num": "heals 10% · yours: taken −20% · 2 rounds",
     "facet": null,
     "l": 453,
     "t": 741,
@@ -97,9 +97,7 @@
    "r": 0,
    "b": 0
   },
-  "covered": [
-   3
-  ]
+  "covered": []
  },
  "r2": {
   "view": {
@@ -120,6 +118,6 @@
   },
   "covered": []
  },
- "card": [],
+ "card": null,
  "errors": []
 }
