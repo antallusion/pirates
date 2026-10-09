@@ -1,0 +1,82 @@
+{
+ "tag": "afterquick_L50_1500x600_en",
+ "view": {
+  "round": 1,
+  "over": null,
+  "mine": true,
+  "level": 27,
+  "turn": 20,
+  "bank": [
+   180,
+   -1
+  ],
+  "quickNow": true,
+  "noQuick": false
+ },
+ "measure": {
+  "screen": [
+   1500,
+   600
+  ],
+  "clocks": [
+   {
+    "l": 665,
+    "t": 43,
+    "r": 714,
+    "b": 61,
+    "w": 49,
+    "h": 18,
+    "text": "2:58",
+    "cut": false
+   }
+  ],
+  "flag": [],
+  "quick": [
+   {
+    "l": 1364,
+    "t": 494,
+    "r": 1486,
+    "b": 545,
+    "w": 123,
+    "h": 51,
+    "text": "Quick combat",
+    "cut": false
+   }
+  ],
+  "tline": [],
+  "hint": [
+   {
+    "l": 274,
+    "t": 113,
+    "r": 1226,
+    "b": 128,
+    "w": 952,
+    "h": 15,
+    "text": "She is clearly weaker: «Quick combat» settles it now, fairly",
+    "cut": false
+   }
+  ],
+  "chips": [],
+  "top": [],
+  "mid": [
+   {
+    "l": 274,
+    "t": 8,
+    "r": 1226,
+    "b": 61,
+    "w": 952,
+    "h": 53
+   }
+  ],
+  "outside": 0,
+  "onFaces": 0,
+  "inMiddle": 0,
+  "topShare": 0,
+  "cut": []
+ },
+ "quickEnd": {
+  "winner": 0,
+  "why": "rout"
+ },
+ "errors": []
+}

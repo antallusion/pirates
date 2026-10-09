@@ -1,0 +1,74 @@
+{
+ "tag": "after_L8_812x375_ru",
+ "view": {
+  "round": 1,
+  "over": null,
+  "mine": true,
+  "level": 18,
+  "turn": 20,
+  "bank": [
+   120,
+   -1
+  ],
+  "quickNow": false,
+  "noQuick": false
+ },
+ "measure": {
+  "screen": [
+   812,
+   375
+  ],
+  "clocks": [
+   {
+    "l": 381,
+    "t": 6,
+    "r": 431,
+    "b": 24,
+    "w": 49,
+    "h": 18,
+    "text": "2:00",
+    "cut": false
+   }
+  ],
+  "flag": [],
+  "quick": [],
+  "tline": [],
+  "hint": [],
+  "chips": [
+   {
+    "l": 8,
+    "t": 8,
+    "r": 56,
+    "b": 56,
+    "w": 48,
+    "h": 48
+   },
+   {
+    "l": 756,
+    "t": 8,
+    "r": 804,
+    "b": 56,
+    "w": 48,
+    "h": 48
+   }
+  ],
+  "top": [
+   {
+    "l": 64,
+    "t": 6,
+    "r": 748,
+    "b": 24,
+    "w": 684,
+    "h": 18
+   }
+  ],
+  "mid": [],
+  "outside": 0,
+  "onFaces": 0,
+  "inMiddle": 0,
+  "topShare": 4,
+  "cut": []
+ },
+ "quickEnd": null,
+ "errors": []
+}

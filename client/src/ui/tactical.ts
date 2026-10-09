@@ -2973,24 +2973,38 @@ export class TacticalPanel {
   /** docs/25 item 52: a quarterdeck's flag, drawn: a dark pole at the hex's back with a brass knob, a pennant in its
    *  side's colour that stirs in the wind, and — while the other side holds it — the whole rounds held of those it takes. */
   private flagPole(g: CanvasRenderingContext2D, x: number, y: number, w: number, ours: boolean, held: number, need: number, t: number): void {
-    const bx = x - w * 0.3, by = y + w * 0.12, top = by - w * 0.92;
+    const bx = x - w * 0.26, by = y + w * 0.14, top = by - w * 1.15;
     g.save();
-    g.strokeStyle = '#2a1d12';
-    g.lineWidth = Math.max(2, w * 0.05);
     g.lineCap = 'round';
+    // The pole: dark wood with a light edge, so it reads on the deck's planks and on the water alike.
+    g.strokeStyle = 'rgba(8,6,4,0.9)';
+    g.lineWidth = Math.max(3.5, w * 0.08);
     g.beginPath();
     g.moveTo(bx, by);
     g.lineTo(bx, top);
     g.stroke();
+    g.strokeStyle = '#a07a44';
+    g.lineWidth = Math.max(2, w * 0.045);
+    g.beginPath();
+    g.moveTo(bx, by);
+    g.lineTo(bx, top);
+    g.stroke();
+    // Her flag to take glows gold at its foot.
+    if (!ours) {
+      g.fillStyle = 'rgba(240,206,120,0.35)';
+      g.beginPath();
+      g.ellipse(bx, by, w * 0.2, w * 0.08, 0, 0, Math.PI * 2);
+      g.fill();
+    }
     g.fillStyle = '#c9a24a';
     g.beginPath();
     g.arc(bx, top, Math.max(1.5, w * 0.035), 0, Math.PI * 2);
     g.fill();
     const wave = this.calm() ? 0 : Math.sin(t / 320 + x * 0.01);
-    const len = w * 0.46, h = w * 0.26;
-    g.fillStyle = ours ? '#3f6f92' : '#9e2f25';
-    g.strokeStyle = 'rgba(10,8,6,0.85)';
-    g.lineWidth = 1;
+    const len = w * 0.62, h = w * 0.36;
+    g.fillStyle = ours ? '#4a86b4' : '#b8382b';
+    g.strokeStyle = 'rgba(10,8,6,0.9)';
+    g.lineWidth = 1.5;
     g.beginPath();
     g.moveTo(bx, top + w * 0.03);
     g.quadraticCurveTo(bx + len * 0.5, top + w * 0.03 + wave * h * 0.18, bx + len, top + h * 0.5 + wave * h * 0.12);

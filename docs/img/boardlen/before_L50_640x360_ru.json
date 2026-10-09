@@ -1,0 +1,48 @@
+{
+ "tag": "before_L50_640x360_ru",
+ "view": {
+  "round": 1,
+  "over": null,
+  "mine": true,
+  "quickNow": false,
+  "noQuick": false
+ },
+ "measure": {
+  "screen": [
+   640,
+   360
+  ],
+  "clocks": [],
+  "flag": [],
+  "quick": [],
+  "tline": [],
+  "hint": [],
+  "chips": [
+   {
+    "l": 8,
+    "t": 8,
+    "r": 56,
+    "b": 56,
+    "w": 48,
+    "h": 48
+   },
+   {
+    "l": 584,
+    "t": 8,
+    "r": 632,
+    "b": 56,
+    "w": 48,
+    "h": 48
+   }
+  ],
+  "top": [],
+  "mid": [],
+  "outside": 0,
+  "onFaces": 0,
+  "inMiddle": 0,
+  "topShare": 0,
+  "cut": []
+ },
+ "quickEnd": null,
+ "errors": []
+}

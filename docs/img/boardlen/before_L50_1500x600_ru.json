@@ -1,0 +1,62 @@
+{
+ "tag": "before_L50_1500x600_ru",
+ "view": {
+  "round": 1,
+  "over": null,
+  "mine": true,
+  "quickNow": false,
+  "noQuick": false
+ },
+ "measure": {
+  "screen": [
+   1500,
+   600
+  ],
+  "clocks": [],
+  "flag": [],
+  "quick": [
+   {
+    "l": 1364,
+    "t": 494,
+    "r": 1486,
+    "b": 545,
+    "w": 123,
+    "h": 51,
+    "text": "Быстрый бой",
+    "cut": false
+   }
+  ],
+  "tline": [],
+  "hint": [
+   {
+    "l": 274,
+    "t": 91,
+    "r": 1226,
+    "b": 106,
+    "w": 952,
+    "h": 15,
+    "text": "Нажмите на подсвеченный гекс — идти, на врага — бить",
+    "cut": false
+   }
+  ],
+  "chips": [],
+  "top": [],
+  "mid": [
+   {
+    "l": 274,
+    "t": 8,
+    "r": 1226,
+    "b": 39,
+    "w": 952,
+    "h": 31
+   }
+  ],
+  "outside": 0,
+  "onFaces": 0,
+  "inMiddle": 0,
+  "topShare": 0,
+  "cut": []
+ },
+ "quickEnd": null,
+ "errors": []
+}

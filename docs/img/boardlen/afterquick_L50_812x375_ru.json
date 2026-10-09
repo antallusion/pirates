@@ -1,0 +1,88 @@
+{
+ "tag": "afterquick_L50_812x375_ru",
+ "view": {
+  "round": 1,
+  "over": null,
+  "mine": true,
+  "level": 27,
+  "turn": 20,
+  "bank": [
+   180,
+   -1
+  ],
+  "quickNow": true,
+  "noQuick": false
+ },
+ "measure": {
+  "screen": [
+   812,
+   375
+  ],
+  "clocks": [
+   {
+    "l": 381,
+    "t": 6,
+    "r": 431,
+    "b": 24,
+    "w": 49,
+    "h": 18,
+    "text": "2:56",
+    "cut": false
+   }
+  ],
+  "flag": [],
+  "quick": [
+   {
+    "l": 342,
+    "t": 28,
+    "r": 471,
+    "b": 58,
+    "w": 129,
+    "h": 30,
+    "text": "Быстрый бой",
+    "cut": false
+   }
+  ],
+  "tline": [],
+  "hint": [],
+  "chips": [
+   {
+    "l": 8,
+    "t": 8,
+    "r": 56,
+    "b": 56,
+    "w": 48,
+    "h": 48
+   },
+   {
+    "l": 756,
+    "t": 8,
+    "r": 804,
+    "b": 56,
+    "w": 48,
+    "h": 48
+   }
+  ],
+  "top": [
+   {
+    "l": 64,
+    "t": 6,
+    "r": 748,
+    "b": 58,
+    "w": 684,
+    "h": 52
+   }
+  ],
+  "mid": [],
+  "outside": 0,
+  "onFaces": 0,
+  "inMiddle": 0,
+  "topShare": 11.7,
+  "cut": []
+ },
+ "quickEnd": {
+  "winner": 0,
+  "why": "rout"
+ },
+ "errors": []
+}

@@ -1,0 +1,48 @@
+{
+ "tag": "before_L8_812x375_ru",
+ "view": {
+  "round": 1,
+  "over": null,
+  "mine": true,
+  "quickNow": false,
+  "noQuick": false
+ },
+ "measure": {
+  "screen": [
+   812,
+   375
+  ],
+  "clocks": [],
+  "flag": [],
+  "quick": [],
+  "tline": [],
+  "hint": [],
+  "chips": [
+   {
+    "l": 8,
+    "t": 8,
+    "r": 56,
+    "b": 56,
+    "w": 48,
+    "h": 48
+   },
+   {
+    "l": 756,
+    "t": 8,
+    "r": 804,
+    "b": 56,
+    "w": 48,
+    "h": 48
+   }
+  ],
+  "top": [],
+  "mid": [],
+  "outside": 0,
+  "onFaces": 0,
+  "inMiddle": 0,
+  "topShare": 0,
+  "cut": []
+ },
+ "quickEnd": null,
+ "errors": []
+}
