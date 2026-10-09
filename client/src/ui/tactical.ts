@@ -10,7 +10,7 @@ import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { OFFICER_DEFS } from '../../../shared/src/data/crew.ts';
 import { TAC_BLOCKING, TAC_END_WINDOW, TAC_H, TAC_PLAY_WINDOW, TAC_SPELLS, TAC_TURN, TAC_W, deckCover, hexDist, hexIndex, hexNeighbors, hexX, hexY, tacSchedule } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacSpellId } from '../../../shared/src/data/tactical.ts';
-import type { ClientMsg, TacAction, TacEvent, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
+import type { ClientMsg, TacAction, TacAllyView, TacEvent, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
 import { assetUrl, sprite } from '../assets.ts';
 import { dict, lang, plural } from '../i18n.ts';
 import { ORDERS, PRIMS, PRIM_ICON, PRIM_NAMES, SCHOOLS, SCHOOL_ICON, SCHOOL_NAMES } from '../../../shared/src/data/hero.ts';
@@ -242,6 +242,12 @@ const MAST_RGB = ['74,134,180', '184,56,43'] as const;
 /** A move's name (a path's innate or ultimate). */
 const moveName = (path: string, ult: boolean) => ((ult ? ULTIMATE : INNATE)[path as CaptainId]?.name ?? [path, path])[lang() === 'ru' ? 1 : 0];
 const moveText = (path: string, ult: boolean) => ((ult ? ULTIMATE : INNATE)[path as CaptainId]?.text ?? [path, path])[lang() === 'ru' ? 1 : 0];
+/** docs/25 item 64: each captain's colour in a group's boarding — her ring at her stacks' feet, her chips in the round's
+ *  order, her face's rim (your side: the side's blue, then mint and lime; hers: the side's red, then violet and orange). */
+const CAP_COL: [readonly string[], readonly string[]] = [['#7fb0d0', '#5fd6b8', '#a6d65a'], ['#d2473a', '#b061d6', '#e07b2a']];
+const capCol = (v: TacView, side: 0 | 1, slot: number): string => CAP_COL[side === v.you ? 0 : 1][Math.max(0, Math.min(2, slot))];
+/** Her captain's portrait asset (a named captain's own face, else her path's). */
+const capPortrait = (a: TacAllyView): string => (a.face && a.face.startsWith('portrait.') ? a.face : CAPTAINS[(a.path ?? a.captain ?? 'corsair') as CaptainId]?.portrait ?? 'portrait.corsair');
 
 /** The stack's painted face (docs/17 H1): its kind of man's portrait; an officer's own party his face or post. */
 function stackArt(s: TacStackView): string {
@@ -412,7 +418,7 @@ export class TacticalPanel {
   private floats: Float[] = [];
   /** The captains stepping in at their corners of the field (HoMM3's heroes): as the fight opens, and as each gives
    *  an order or her path's move. */
-  private heroFx: { side: number; t0: number; dur: number }[] = [];
+  private heroFx: { side: number; t0: number; dur: number; path?: string }[] = [];
   private bursts: Burst[] = [];
   private missiles: Missile[] = [];
   /** Each stack's walk (ui/tacwalk.ts): the hex it is bound for, the hexes it steps through, since when, how long, and
@@ -536,6 +542,100 @@ export class TacticalPanel {
   /** Her purse (main.ts): a ransom she cannot pay is shown, and why, but not offered (docs/23 item 93: the wheel
    *  offered «Откуп 340» to an empty purse, the confirm sheet, then nothing). */
   purse: () => number = () => Infinity;
+  /** docs/25 item 64: the captains' faces drawn on the field (her portrait on her stacks' plates). */
+  private capImgs = new Map<string, HTMLImageElement>();
+
+  /** docs/25 item 64: the captains of a side in a group's boarding (her own at slot 0, then her allies). */
+  private caps(v: TacView, x: 0 | 1): TacAllyView[] {
+    return (v.allies ?? []).filter((a) => a.side === x).sort((p, q) => p.slot - q.slot);
+  }
+  /** The captain whose stack she is (in a group's boarding). */
+  private capOf(v: TacView, s: TacStackView): TacAllyView | undefined {
+    return v.allies?.find((a) => a.side === s.side && a.slot === (s.own ?? 0));
+  }
+  /** Your slot on your side (0: you are its own captain; -1: you come aboard as the next round opens). */
+  private mySlot(v: TacView): number {
+    return v.slot ?? 0;
+  }
+  /** A side that fights as a group (her stacks wear their captains' colours and faces). */
+  private grouped(v: TacView, x: 0 | 1): boolean {
+    return (v.allies ?? []).some((a) => a.side === x && a.slot > 0);
+  }
+  /** Whose turn it is, in words: yours, an ally's (by name), the auto-battle's, or hers. */
+  private turnWord(v: TacView): string {
+    const act = v.stacks.find((s) => s.id === v.active);
+    if (v.over) return '';
+    if (v.mine) return L('yourTurn');
+    if (!act || act.side !== v.you) return L('theirTurn');
+    const c = this.capOf(v, act);
+    if (c && (act.own ?? 0) !== this.mySlot(v)) return c.auto ? `${L('autoTurn')} · ${personName(c.name)}` : L('allyTurn', { name: personName(c.name) });
+    return L('autoTurn');
+  }
+  /** A captain's face as an image for the field (loaded once). */
+  private capImg(a: TacAllyView): HTMLImageElement | null {
+    const id = capPortrait(a);
+    let img = this.capImgs.get(id);
+    if (!img) {
+      const url = portraitUrl(id.replace(/^portrait\./, '')) ?? assetUrl(id);
+      if (!url) return null;
+      img = new Image();
+      img.src = url;
+      this.capImgs.set(id, img);
+    }
+    return img.complete && img.naturalWidth ? img : null;
+  }
+  /** A captain's face in a round frame (the DOM's; her colour, --cap, is her holder's). */
+  private capFaceHtml(a: TacAllyView, cls: string): string {
+    const id = capPortrait(a);
+    const url = portraitUrl(id.replace(/^portrait\./, '')) ?? assetUrl(id);
+    return `<span class="${cls}" ${url ? faceAttrs(id, url) : ''}></span>`;
+  }
+  /** docs/25 item 64: the other captains of a side beside the one shown for it (yours: you; hers: her own) — each her
+   *  face in her colour, her men, her clock in her title; gold round the one whose stack is on its turn. `names`: a
+   *  desk's panel writes her name beside her face (a phone's field carries no words). */
+  private capsRow(v: TacView, x: 0 | 1, cls: string, names: boolean): string {
+    if (!this.grouped(v, x)) return '';
+    const shown = x === v.you ? Math.max(0, this.mySlot(v)) : 0;
+    const act = v.stacks.find((s) => s.id === v.active);
+    const list = this.caps(v, x).filter((a) => a.slot !== shown);
+    const items = list.map((a) => {
+      const turn = !v.over && !!act && act.side === x && (act.own ?? 0) === a.slot;
+      const b = this.bankNow(v, x, a.slot);
+      const men = L('men', { n: a.men, m: a.menStart });
+      const who = personName(a.name);
+      const tip = b >= 0 ? L('cap.tip', { name: who, men, t: this.mmss(b) }) : L('cap.tipNo', { name: who, men });
+      const face = `<span class="tb-cap${turn ? ' turn' : ''}${a.auto ? ' auto' : ''}" style="--cap:${capCol(v, x, a.slot)}" title="${esc(tip)}" aria-label="${esc(tip)}">${this.capFaceHtml(a, 'tb-capf')}<b>${a.men}</b></span>`;
+      return names ? `<span class="tb-capn">${face}<i>${esc(who)}</i></span>` : face;
+    });
+    const coming = names ? (v.coming ?? []).filter((c) => c.side === x).map((c) => personName(c.name)) : [];
+    if (!items.length && !coming.length) return '';
+    return `<div class="${cls} ${x === v.you ? 'you' : 'foe'}">${items.join('')}${coming.length ? `<em class="tb-coming">${esc(L('coming', { list: coming.join(', ') }))}</em>` : ''}</div>`;
+  }
+  /** docs/25 item 64: her portrait in a disc of her colour (her stacks' plates). */
+  private capDisc(g: CanvasRenderingContext2D, v: TacView, a: TacAllyView, cx: number, cy: number, r: number): void {
+    g.save();
+    g.fillStyle = '#15110d';
+    g.beginPath();
+    g.arc(cx, cy, r, 0, Math.PI * 2);
+    g.fill();
+    const img = this.capImg(a);
+    if (img) {
+      g.save();
+      g.beginPath();
+      g.arc(cx, cy, r - 1, 0, Math.PI * 2);
+      g.clip();
+      // Head and shoulders: the top of the portrait.
+      const s = Math.min(img.naturalWidth, img.naturalHeight * 0.8);
+      g.drawImage(img, (img.naturalWidth - s) / 2, img.naturalHeight * 0.04, s, s, cx - r, cy - r, r * 2, r * 2);
+      g.restore();
+    }
+    g.strokeStyle = capCol(v, a.side, a.slot);
+    g.lineWidth = Math.max(1.5, r * 0.22);
+    g.beginPath();
+    g.arc(cx, cy, r, 0, Math.PI * 2);
+    g.stroke();
+    g.restore();
+  }
 
   constructor(send: (m: ClientMsg) => void, now: () => number) {
     this.send = send;
@@ -977,7 +1077,8 @@ export class TacticalPanel {
         this.bursts.push({ id: e.k === 'poison' ? (sprite('fx.bt_poison_0') ? 'fx.bt_poison' : 'part.smoke') : sprite('fx.bt_heal_0') ? 'fx.bt_heal' : 'part.splash', x: c.x, y: c.y, t0: t, size: w * 0.9 });
       }
     } else if (e.k === 'spell') {
-      this.heroStep(e.side, t);
+      // docs/25 item 64: an ally's order — her own figure steps out.
+      this.heroStep(e.side, t, e.who ? v.allies?.find((a) => a.side === e.side && a.slot === e.who)?.path : undefined);
       // docs/25 item 13: her captain gathers herself 0.3 s, then the order lands in its school's look.
       const school = ORDERS[e.id as TacSpellId]?.school as School | undefined;
       const rgb = SCHOOL_RGB[school ?? 'steel'];
@@ -1028,7 +1129,7 @@ export class TacticalPanel {
     } else if (e.k === 'innate' || e.k === 'ult') {
       // docs/18: the path's move — its light over the stacks it fell on, its name over the field and each of them.
       const ult = e.k === 'ult';
-      this.heroStep(e.side, t);
+      this.heroStep(e.side, t, e.who ? e.id : undefined);
       const on = (e.on ?? []).map((id) => at(hexOf(id))).filter((c): c is { x: number; y: number } => !!c);
       this.pathFx.push({ path: e.id as CaptainId, ult, mine: e.side === v.you, t0: t, at: on });
       // docs/25 item 12: an ultimate is a film's frame — its name on the band with her face (drawn with the frame), its
@@ -1311,7 +1412,10 @@ export class TacticalPanel {
     const chip = (id: number, next: boolean) => {
       const s = v.stacks.find((x) => x.id === id);
       if (!s) return '';
-      return `<button class="tb-q ${s.side === v.you ? 'you' : 'foe'}${id === v.active && !next ? ' on' : ''}${next ? ' next' : ''}" data-info="${s.id}" title="${esc(stackName(s))}" aria-label="${esc(stackName(s))}">${figureArt(s) ? icon(figureArt(s)!, '', 'ico fig') : icon(stackArt(s), '', 'ico')}<b>${s.count}</b></button>`;
+      // docs/25 item 64: in a group's boarding each chip wears her captain's colour and face, and says whose she is.
+      const cap = this.grouped(v, s.side) ? this.capOf(v, s) : undefined;
+      const whose = cap ? ` · ${personName(cap.name)}` : '';
+      return `<button class="tb-q ${s.side === v.you ? 'you' : 'foe'}${cap ? ' cap' : ''}${id === v.active && !next ? ' on' : ''}${next ? ' next' : ''}" data-info="${s.id}"${cap ? ` style="--cap:${capCol(v, s.side, cap.slot)}"` : ''} title="${esc(stackName(s) + whose)}" aria-label="${esc(stackName(s) + whose)}">${figureArt(s) ? icon(figureArt(s)!, '', 'ico fig') : icon(stackArt(s), '', 'ico')}<b>${s.count}</b>${cap ? this.capFaceHtml(cap, 'tb-qcap') : ''}</button>`;
     };
     return `${v.order.map((id) => chip(id, false)).join('')}<span class="tb-qsep"></span>${v.next.map((id) => chip(id, true)).join('')}`;
   }
@@ -1352,7 +1456,7 @@ export class TacticalPanel {
       ? rb('data-cancel', `${L('cancel')}: ${t === 'innate' || t === 'ult' ? (me.path ? moveName(me.path, t === 'ult') : '') : spName(t)}`, `${aimed}<i class="tb-x"></i>`, ' book aim')
       : hasBook ? rb('data-book', L('book'), `${btIcon('bt_book', 'icon.bt_captain', 'ico')}${bead}`, ` book${this.sheetKind === 'book' ? ' on' : ''}`) : '';
     // The turn's face, and the round behind it.
-    const whose = v.over ? '' : v.mine ? L('yourTurn') : act && act.side === v.you ? L('autoTurn') : L('theirTurn');
+    const whose = this.turnWord(v);
     const face = act ? (figureArt(act) ? icon(figureArt(act)!, '', 'ico fig') : icon(stackArt(act), '', 'ico')) : '';
     void face;
     // The two captains side by side at the top (owner, 2026-10-07: «аватарки… надо чтобы они были рядом сверху»): hers
@@ -1363,7 +1467,7 @@ export class TacticalPanel {
       const who = this.heroName(v, x);
       return `<button class="tb-chip ${mine ? 'you' : 'foe'}${theirs ? ' turn' : ''}${theirs && v.mine ? ' mine' : ''}${this.sheetOpen ? ' on' : ''}" data-sheet title="${esc(`${who} · ${L('men', { n: h.men ?? 0, m: h.menStart ?? 0 })}${theirs ? ` · ${L('round', { n: v.round })} · ${whose}` : ''}`)}" aria-label="${esc(`${who}: ${L('order.label')}`)}" aria-expanded="${this.sheetOpen}">${this.faceHtml(v, x, 'tb-chip-face')}<b class="tb-chip-men">${h.men ?? 0}</b></button>`;
     };
-    const turn = chip(v.you) + chip((1 - v.you) as 0 | 1);
+    const turn = chip(v.you) + chip((1 - v.you) as 0 | 1) + this.capsRow(v, v.you, 'tb-capr', false) + this.capsRow(v, (1 - v.you) as 0 | 1, 'tb-capr', false);
     const fast = settings().tacFast;
     const x2 = `<button class="tb-rb tb-fast${fast ? ' on' : ''}" data-fast aria-pressed="${fast}" title="${esc(fast ? L('fastOff') : L('fast'))}" aria-label="${esc(L('fast'))}"><i class="tb-x2" aria-hidden="true">×2</i></button>`;
     const pip = (n: number, up: string, down: string, k: K) => `<span class="tb-shp${n > 0 ? ' up' : n < 0 ? ' down' : ''}" title="${esc(L(k))}">${btIcon(n < 0 ? down : up, '', 'ico-xs')}${n > 0 ? `+${n}` : n}</span>`;
@@ -1502,7 +1606,7 @@ export class TacticalPanel {
     // The fight over, the book is put away (it stood over the reckoning on a desk).
     if (v.over) this.bookOpen = false;
     const act = v.stacks.find((s) => s.id === v.active);
-    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.bookTab, this.bookPage, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result, v.flag, v.quickNow, v.noQuick, !!v.bank, this.phone, this.tall, this.moreOpen, this.sheetOpen, this.sheetKind, settings().tacFast, this.endHidden, this.foeArmed]);
+    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.allies, v.coming, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.bookTab, this.bookPage, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result, v.flag, v.quickNow, v.noQuick, !!v.bank, this.phone, this.tall, this.moreOpen, this.sheetOpen, this.sheetKind, settings().tacFast, this.endHidden, this.foeArmed]);
     if (key === this.key) return;
     this.key = key;
     const hero = (x: 0 | 1) => {
@@ -1514,11 +1618,13 @@ export class TacticalPanel {
       // docs/18: her path, and her innate move and ultimate (spent or not) — on her side of the field too.
       const moves = h.path && h.innate ? `<span class="tb-moves">${icon(INNATE[h.path].icon, '', `ico-xs tb-mv${h.innate === 'used' ? ' off' : ''}`)}${h.ult !== 'locked' ? icon(ULTIMATE[h.path].icon, '', `ico-xs tb-mv ult${h.ult === 'used' ? ' off' : ''}`) : ''}<i>${esc(CAPTAINS[h.path].archetype)}</i></span>` : '';
       return `${this.faceHtml(v, x, 'tb-face')}
-        <div class="tb-who"><b>${esc(this.heroName(v, x))}</b><small>${esc(v.land && !mine && (isDriftKind(v.land.lair) || v.land.lair === 'find_chest' || roamOf(v.land.lair)) ? '' : placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
+        <div class="tb-who"><b>${esc(this.heroName(v, x))}</b><small>${esc(v.land && !mine && (isDriftKind(v.land.lair) || v.land.lair === 'find_chest' || roamOf(v.land.lair)) ? '' : placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span>${this.capsRow(v, x, 'tb-caps', true)}</div>`;
     };
+    // docs/25 item 64: a group's boarding (the top band makes room for the captains beside the faces on a phone).
+    el.classList.toggle('tb-grouped', this.grouped(v, 0) || this.grouped(v, 1));
     el.querySelector('.tb-hero.you')!.innerHTML = hero(v.you);
     el.querySelector('.tb-hero.foe')!.innerHTML = hero((1 - v.you) as 0 | 1);
-    const turn = v.over ? '' : v.mine ? L('yourTurn') : act && act.side === v.you ? L('autoTurn') : L('theirTurn');
+    const turn = this.turnWord(v);
     el.querySelector('.tb-mid')!.innerHTML = `<div class="tb-round">${esc(L('round', { n: v.round }))}</div><div class="tb-turn${v.mine ? ' mine' : ''}">${act ? `<span class="tb-dot ${act.side === v.you ? 'you' : 'foe'}"></span>` : ''}${esc(turn)} <em class="tb-secs"></em></div><div class="tb-timer"><i></i></div>${this.clocksHtml(v)}`;
     // The order of the round, then the next round's first few.
     el.querySelector('.tb-queue')!.innerHTML = this.queue(v);
@@ -1694,8 +1800,13 @@ export class TacticalPanel {
       const joined = came > 0
         ? `<div class="tb-er tb-joined"><small><span class="tb-jl">${esc(L('res.joined', { n: `${came} ${plural(came, L('res.men1'), L('res.men2'), L('res.men5'))}` }))}</span><span class="tb-js">${esc(L('res.joinedShort', { n: came }))}</span></small><div class="tb-rs-row">${r!.joined!.map((x) => `<span class="tb-rs" title="${esc(unitName(x.u))}">${unitIcon(x.u, 'tb-rs-ico')}<i class="up">+${x.n}</i></span>`).join('')}</div></div>`
         : '';
+      // docs/25 item 67: a group's boarding — every captain's share of her side's cut, and what it paid her.
+      const sh = (r?.shares ?? []).filter((x) => x.side === v.you);
+      const shares = sh.length > 1
+        ? `<div class="tb-er tb-shares"><small>${esc(L('res.shares'))}</small><div class="tb-lchips">${sh.map((x) => `<span class="tb-lc tb-share${x.you ? ' you' : ''}" style="--cap:${capCol(v, x.side, x.slot)}" title="${esc(L('res.share', { name: personName(x.name), n: Math.round(x.share * 100) }))}">${(() => { const c = v.allies?.find((a) => a.side === x.side && a.slot === x.slot); return c ? this.capFaceHtml(c, 'tb-shf') : ''; })()}<b>${Math.round(x.share * 100)}%</b>${x.silver ? `<i>${icon('icon.coin', '', 'ico-xs')}${x.silver}</i>` : ''}</span>`).join('')}</div></div>`
+        : '';
       const rows = r
-        ? `<div class="tb-end-rows"><div class="tb-er"><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div class="tb-er"><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${joined}${r.arena ? '' : `<div class="tb-er"><small>${esc(L('res.loot'))}</small><div class="tb-lchips">${spoils.length ? spoils.join('') : none}</div></div>`}</div>`
+        ? `<div class="tb-end-rows"><div class="tb-er"><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div class="tb-er"><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${joined}${shares}${r.arena ? '' : `<div class="tb-er"><small>${esc(L('res.loot'))}</small><div class="tb-lchips">${spoils.length ? spoils.join('') : none}</div></div>`}</div>`
         : '';
       banner.className = `tb-banner tb-end ${won ? 'won' : 'lost'}${v.land ? ' land' : ' sea'}${r ? ' tb-result' : ''}`;
       // docs/19 E14: a bout of the Colosseum — its rating under the why.
@@ -1746,10 +1857,19 @@ export class TacticalPanel {
       case 'die':
         return L('log.die', { a: name(e.s) });
       case 'spell':
-        return L(e.via === 'scroll' ? 'log.scroll' : 'log.spell', { side: L(e.side === v.you ? 'side.you' : 'side.foe'), name: spName(e.id as TacSpellId), kills: e.kills ?? 0 });
       case 'innate':
-      case 'ult':
-        return L(e.k === 'ult' ? 'log.ult' : 'log.innate', { side: L(e.side === v.you ? 'side.you' : 'side.foe'), name: moveName(e.id ?? '', e.k === 'ult'), kills: e.kills ?? 0 });
+      case 'ult': {
+        // docs/25 item 64: in a group's boarding, the captain who gave it by name.
+        const by = this.grouped(v, e.side) ? v.allies?.find((a) => a.side === e.side && a.slot === (e.who ?? 0)) : undefined;
+        const what = e.k === 'spell' ? spName(e.id as TacSpellId) : moveName(e.id ?? '', e.k === 'ult');
+        if (by && e.via !== 'scroll') return L(e.k === 'spell' ? 'log.spellBy' : e.k === 'ult' ? 'log.ultBy' : 'log.innateBy', { who: personName(by.name), name: what, kills: e.kills ?? 0 });
+        if (e.k === 'spell') return L(e.via === 'scroll' ? 'log.scroll' : 'log.spell', { side: L(e.side === v.you ? 'side.you' : 'side.foe'), name: what, kills: e.kills ?? 0 });
+        return L(e.k === 'ult' ? 'log.ult' : 'log.innate', { side: L(e.side === v.you ? 'side.you' : 'side.foe'), name: what, kills: e.kills ?? 0 });
+      }
+      case 'join': {
+        const by = v.allies?.find((a) => a.side === e.side && a.slot === (e.n ?? 0));
+        return L('log.join', { name: personName(by?.name ?? '…'), n: e.on?.length ?? 0 });
+      }
       case 'again':
         return L('log.again', { a: name(e.s) });
       case 'boss': {
@@ -1776,7 +1896,7 @@ export class TacticalPanel {
         return L(e.id === 'terror' ? 'log.terror' : e.id === 'dread' ? 'log.dread' : e.id === 'still' ? 'log.still' : e.id === 'mad' ? 'log.lost' : 'log.fear', { a: name(e.s) });
       case 'poison':
       case 'regen':
-        return L(e.k === 'poison' && e.id === 'sick' ? 'log.sick' : e.k === 'regen' && (e.id === 'mend' || e.id === 'drain') ? `log.${e.id}` : `log.${e.k}`, { a: name(e.s), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
+        return L(e.k === 'poison' && e.id === 'sick' ? 'log.sick' : e.k === 'regen' && (e.id === 'mend' || e.id === 'drain' || e.id === 'role') ? `log.${e.id}` : `log.${e.k}`, { a: name(e.s), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
       case 'wait':
       case 'defend':
       case 'morale':
@@ -1793,7 +1913,9 @@ export class TacticalPanel {
     const act = v.stacks.find((s) => s.id === v.active);
     const own = this.targetKind() === 'own';
     const lead = this.leadHint(v);
-    const text = v.over ? '' : lead && !this.targeting && this.preview === null ? lead : !v.mine ? (act && act.side !== v.you ? L('hint.wait') : '') : this.targeting ? L(own ? 'hint.own' : 'hint.target') : this.preview !== null ? L('hint.again') : v.warn?.length ? BL('hint.warn') : v.shoot.length ? L('hint.shoot') : L('hint.move');
+    // docs/25 item 64: an ally's stack on its turn (her name), or you come aboard as the next round opens.
+    const ally = !v.mine && act && act.side === v.you && (act.own ?? 0) !== Math.max(0, this.mySlot(v)) ? this.capOf(v, act) : undefined;
+    const text = v.over ? '' : lead && !this.targeting && this.preview === null ? lead : this.mySlot(v) < 0 ? L('hint.coming') : !v.mine ? (act && act.side !== v.you ? L('hint.wait') : ally && !ally.auto ? L('hint.ally', { name: personName(ally.name) }) : '') : this.targeting ? L(own ? 'hint.own' : 'hint.target') : this.preview !== null ? L('hint.again') : v.warn?.length ? BL('hint.warn') : v.shoot.length ? L('hint.shoot') : L('hint.move');
     h.textContent = text;
     h.classList.toggle('hidden', !text);
   }
@@ -1808,7 +1930,7 @@ export class TacticalPanel {
       if (on(foe, f.hex[me])) return L('hint.flagLost', { n: f.held[foe], m: f.need });
       if (on(me, f.hex[foe])) return L('hint.flagHeld', { n: f.held[me], m: f.need });
     }
-    if (v.mine && v.bank && v.bank[me] === 0) return L('clock.out');
+    if (v.mine && this.bankNow(v, me, Math.max(0, this.mySlot(v))) === 0) return L('clock.out');
     if (v.quickNow) return L('quickNow');
     if (f && (!v.mine || v.round <= 1)) return L('hint.flag', { m: f.need });
     return null;
@@ -1816,11 +1938,19 @@ export class TacticalPanel {
 
   /** docs/25 item 48: a captain's chess clock left now — the side whose turn runs on it loses its seconds as they go
    *  (her clock started once what came before her turn was played: `ends` less the turn's seconds, or what was left). */
-  private bankNow(v: TacView, side: 0 | 1): number {
-    const b = v.bank?.[side] ?? -1;
+  /** docs/25 item 64: whether a captain of the field plays by herself (the auto-battle). */
+  private capAuto(v: TacView, side: 0 | 1, slot: number): boolean {
+    const c = v.allies?.find((a) => a.side === side && a.slot === slot);
+    if (c) return c.auto;
+    return slot === 0 ? v.heroes[side].auto : false;
+  }
+  private bankNow(v: TacView, side: 0 | 1, slot = 0): number {
+    // docs/25 item 64: each captain of a group keeps her own clock (her slot's).
+    const ally = slot > 0 ? v.allies?.find((a) => a.side === side && a.slot === slot) : undefined;
+    const b = slot > 0 ? ally?.bank ?? -1 : v.bank?.[side] ?? -1;
     if (b < 0) return -1;
     const act = v.stacks.find((s) => s.id === v.active);
-    if (v.over || !act || act.side !== side || v.heroes[side].auto) return b;
+    if (v.over || !act || act.side !== side || (act.own ?? 0) !== slot || this.capAuto(v, side, slot)) return b;
     const from = v.ends - Math.min(v.turn ?? TAC_TURN, b);
     return Math.max(0, b - Math.max(0, this.now() - from));
   }
@@ -1850,15 +1980,22 @@ export class TacticalPanel {
 
   /** The two chess clocks (hers first), each in its side's colour; none in a fight that keeps none. */
   private clocksHtml(v: TacView): string {
-    if (!v.bank) return '';
-    const one = (x: 0 | 1) => {
-      const mine = x === v.you;
-      const b = v.bank![x];
+    if (!v.bank && !v.allies?.some((a) => a.bank !== undefined)) return '';
+    // docs/25 item 64: the chess clock is each captain's own — yours first, then the one whose stack is on its turn (an
+    // ally's in her colour, or hers); between two captains alone, the two sides' as before.
+    const act = v.stacks.find((s) => s.id === v.active);
+    const me = Math.max(0, this.mySlot(v));
+    const one = (x: 0 | 1, slot: number) => {
+      const mine = x === v.you && slot === me;
+      const b = this.bankNow(v, x, slot);
       if (b < 0) return '';
-      const tip = mine ? `${L('clock.you', { t: this.mmss(b) })}. ${L('clock.tip')}` : L('clock.foe', { t: this.mmss(b) });
-      return `<span class="tb-clock ${mine ? 'you' : 'foe'}" data-clock="${x}" title="${esc(tip)}" aria-label="${esc(tip)}">${icon('icon.bt_hold', '', 'ico-xs')}<b>${this.mmss(b)}</b></span>`;
+      const c = slot > 0 || this.grouped(v, x) ? v.allies?.find((a) => a.side === x && a.slot === slot) : undefined;
+      const tip = mine ? `${L('clock.you', { t: this.mmss(b) })}. ${L('clock.tip')}` : c ? L('clock.of', { name: personName(c.name), t: this.mmss(b) }) : L('clock.foe', { t: this.mmss(b) });
+      const cls = mine ? 'you' : x === v.you ? 'ally' : 'foe';
+      return `<span class="tb-clock ${cls}" data-clock="${x}:${slot}"${c ? ` style="--cap:${capCol(v, x, slot)}"` : ''} title="${esc(tip)}" aria-label="${esc(tip)}">${icon('icon.bt_hold', '', 'ico-xs')}<b>${this.mmss(b)}</b></span>`;
     };
-    return `<div class="tb-clocks">${one(v.you)}${one((1 - v.you) as 0 | 1)}</div>`;
+    const other: [0 | 1, number] = act && !(act.side === v.you && (act.own ?? 0) === me) ? [act.side, act.own ?? 0] : [(1 - v.you) as 0 | 1, 0];
+    return `<div class="tb-clocks">${one(v.you, me)}${one(other[0], other[1])}</div>`;
   }
 
   /** Once a frame: the clocks' numbers, the one that runs going down. */
@@ -1866,12 +2003,13 @@ export class TacticalPanel {
     if (!v.bank || !this.el) return;
     const act = v.stacks.find((s) => s.id === v.active);
     this.el.querySelectorAll<HTMLElement>('[data-clock]').forEach((c) => {
-      const x = Number(c.dataset.clock) as 0 | 1;
-      const n = this.bankNow(v, x);
+      const [xs, ss] = (c.dataset.clock ?? '0:0').split(':');
+      const x = Number(xs) as 0 | 1, slot = Number(ss) || 0;
+      const n = this.bankNow(v, x, slot);
       const txt = this.mmss(n);
       const b = c.querySelector('b');
       if (b && b.textContent !== txt) b.textContent = txt;
-      c.classList.toggle('run', !v.over && !!act && act.side === x && !v.heroes[x].auto);
+      c.classList.toggle('run', !v.over && !!act && act.side === x && (act.own ?? 0) === slot && !this.capAuto(v, x, slot));
       c.classList.toggle('low', n >= 0 && n < 15);
     });
   }
@@ -3909,7 +4047,8 @@ export class TacticalPanel {
     } else if (f.path === 'smuggler') fogBanks(g, this.sk, t * 4, cw, ch, 2, 0.85 * fade);
     const side = f.mine ? v.you : 1 - v.you;
     const h = v.heroes[side];
-    const face = sprite(CAPTAINS[(h?.captain ?? f.path) as CaptainId]?.portrait ?? '')?.img ?? null;
+    // docs/25 item 64: in a group's boarding the ultimate's path tells whose face (an ally's is her own).
+    const face = sprite(CAPTAINS[(this.grouped(v, side as 0 | 1) ? f.path : h?.captain ?? f.path) as CaptainId]?.portrait ?? '')?.img ?? null;
     ultFrame(g, k, cw, ch, face, moveName(f.path, true), PATH_RGB[f.path], f.mine, w);
   }
 
@@ -4510,17 +4649,17 @@ export class TacticalPanel {
   }
 
   /** A captain steps in at her corner as she gives an order (one at a time a side: a second order restarts her). */
-  private heroStep(side: number | undefined, t: number): void {
+  private heroStep(side: number | undefined, t: number, path?: string): void {
     if (side === undefined) return;
     this.heroFx = this.heroFx.filter((h) => h.side !== side);
-    this.heroFx.push({ side, t0: t, dur: 1400 });
+    this.heroFx.push({ side, t0: t, dur: 1400, ...(path ? { path } : {}) });
   }
 
   /** Her captain's figure (unit.hero_<path>, four poses like the stacks'): slid in from her edge of the field at its
    *  foot, the order given in the blow's pose, then gone; the right side's mirrored to face the left. */
-  private drawHero(g: CanvasRenderingContext2D, v: TacView, h: { side: number; t0: number; dur: number }, t: number, w: number, cw: number, ch: number): void {
+  private drawHero(g: CanvasRenderingContext2D, v: TacView, h: { side: number; t0: number; dur: number; path?: string }, t: number, w: number, cw: number, ch: number): void {
     const hv = v.heroes[h.side];
-    const id = `unit.hero_${hv?.captain ?? hv?.path ?? ''}`;
+    const id = `unit.hero_${h.path ?? hv?.captain ?? hv?.path ?? ''}`;
     const base = sprite(id)?.img;
     if (!base || t < h.t0) return;
     const k = (t - h.t0) / h.dur;
@@ -4659,6 +4798,14 @@ export class TacticalPanel {
     g.ellipse(x, fy, rx, ry, 0, 0, Math.PI * 2);
     g.stroke();
     g.globalAlpha = 1;
+    // docs/25 item 64: a group's stack wears her captain's colour round the side's ring.
+    if (this.grouped(v, s.side)) {
+      g.strokeStyle = capCol(v, s.side, s.own ?? 0);
+      g.lineWidth = Math.max(2, w * 0.06);
+      g.beginPath();
+      g.ellipse(x, fy, rx + 3, ry + 2, 0, 0, Math.PI * 2);
+      g.stroke();
+    }
     if (on) {
       g.strokeStyle = `rgba(240,200,110,${0.55 + 0.45 * pulse})`;
       g.lineWidth = Math.max(2.5, w * 0.07);
@@ -4817,6 +4964,12 @@ export class TacticalPanel {
       g.fillRect(px - 1, py + th + 1, tw + 2, bh + 2);
       g.fillStyle = frac > 0.5 ? '#6fb46a' : frac > 0.25 ? '#d8a640' : '#d0503e';
       g.fillRect(px, py + th + 2, tw * frac, bh);
+      // docs/25 item 64: in a group's boarding, her captain's face at the plate's inner end.
+      const cap = this.grouped(v, s.side) ? this.capOf(v, s) : undefined;
+      if (cap) {
+        const cr = th * 0.62;
+        this.capDisc(g, v, cap, flip ? px + tw + cr * 0.6 : px - cr * 0.6, py + th / 2, cr);
+      }
       // Defending: a small shield beside the plate; muskets: the shots left over it.
       if (s.defending) {
         const ss = Math.max(7, w * 0.2), sx = flip ? px + tw + 3 : px - ss - 3, sy = py - 1;
@@ -4954,6 +5107,16 @@ export class TacticalPanel {
     g.beginPath();
     g.arc(x, y, R, 0, Math.PI * 2);
     g.stroke();
+    // docs/25 item 64: a group's stack wears her captain's colour round the side's.
+    if (this.grouped(v, s.side)) {
+      g.strokeStyle = capCol(v, s.side, s.own ?? 0);
+      g.lineWidth = Math.max(2, w * 0.06);
+      g.beginPath();
+      g.arc(x, y, R + 3, 0, Math.PI * 2);
+      g.stroke();
+      const cap = this.capOf(v, s);
+      if (cap) this.capDisc(g, v, cap, x - R * 0.8, y + R * 0.55, Math.max(5, w * 0.14));
+    }
     // An upgraded kind: a thin gold ring inside the side's colour; its tier in pips over the head.
     const d = s.unit ? UNITS[s.unit] : null;
     if (d?.up) {

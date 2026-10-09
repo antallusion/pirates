@@ -3025,12 +3025,14 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
     ...(bt.flag ? { flag: { hex: [...bt.flag.hex] as [number, number], held: [...bt.flag.held] as [number, number], need: TAC_LEN.flag.rounds } } : {}),
     // docs/25 item 64: the allied captains on the field (and who comes aboard as the next round opens), her own slot.
     ...(slot ? { slot } : {}),
-    ...(bt.allies?.length ? { allies: bt.allies.map((x): TacAllyView => {
+    ...(bt.allies?.length ? { allies: [...([0, 1] as const).map((x) => ({ side: x, slot: 0, hero: bt.heroes[x], joined: 1 })), ...bt.allies].map((x): TacAllyView => {
       const hb = x.hero.input.hero;
+      // The side's own captain's men as she came, without her allies' (her side's count carries theirs).
+      const start = x.slot ? x.hero.startMen : x.hero.startMen - (bt.allies ?? []).filter((y) => y.side === x.side).reduce((n, y) => n + y.hero.startMen, 0);
       return {
         side: x.side, slot: x.slot, name: x.hero.input.name, ship: x.hero.input.ship, captain: x.hero.input.captain, ...(hb?.path ? { path: hb.path } : {}), ...(hb?.level ? { level: hb.level } : {}),
         ...(x.hero.input.face ? { face: x.hero.input.face } : {}), ...(x.hero.bank >= 0 ? { bank: Math.round(x.hero.bank * 10) / 10 } : {}), auto: x.hero.auto, cast: x.hero.cast >= bt.round,
-        men: alive(bt).filter((s) => s.side === x.side && s.own === x.slot).reduce((n, s) => n + s.count, 0), menStart: x.hero.startMen, joined: x.joined, ...(x.side === side && x.slot === slot ? { you: true } : {}),
+        men: alive(bt).filter((s) => s.side === x.side && (s.own ?? 0) === x.slot).reduce((n, s) => n + s.count, 0), menStart: Math.max(0, start), joined: x.joined, ...(x.side === side && x.slot === Math.max(0, slot) ? { you: true } : {}),
       };
     }) } : {}),
     ...(bt.joinQ?.length ? { coming: bt.joinQ.map((q) => ({ side: q.side, name: q.input.name, ...(q.input.hero?.path ? { path: q.input.hero.path } : {}) })) } : {}),

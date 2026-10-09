@@ -1596,9 +1596,10 @@ export interface TacEvent {
   who?: number;
 }
 
-/** docs/25 item 64: an allied captain on the field — her side and slot (her stacks carry it as `own`), her name, ship,
- *  path, level and face, her chess clock (seconds as the turn now running began), whether she plays by herself and has
- *  given her order this round, her men on deck and as she came aboard, the round she came, and whether she is you. */
+/** docs/25 item 64: a captain on the field of a group's boarding — each side's own at slot 0, her allies 1–2 — her side
+ *  and slot (an ally's stacks carry it as `own`), her name, ship, path, level and face, her chess clock (seconds as the
+ *  turn now running began), whether she plays by herself and has given her order this round, her men on deck and as
+ *  she came aboard, the round she came, and whether she is you. */
 /** docs/25 item 64: a mate of her group fights a boarding within reach — the ship that grappled (`with`, what she answers
  *  with), her side, who of the group is in it and against whom, the round it is in and the last she may come aboard at,
  *  the stacks of her army (her picks marked) and how many she may bring, and whether she comes at once next time. */

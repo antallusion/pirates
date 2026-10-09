@@ -507,3 +507,54 @@ img.beast-face.fig { object-fit: contain; object-position: 50% 50%; }
   /* the words of the sea wait while she answers (a toast over the card's band counted twice) */
   body.simple.touch:has(#surrender:not(.hidden)) #toasts { display: none !important; }
 }
+
+/* ---------- docs/25 block Е: a group's boarding ----------
+   Each captain her colour (--cap): her ring at her stacks' feet and her face on their plates (drawn on the field), her chip
+   in the round's order, her face beside her side's captain (a phone: small circles by the top corners' faces, the top
+   band narrowed for them; a desk: a row under the hero's lines), her clock. */
+.tb-q.cap { border-color: var(--cap); }
+.tb-q .tb-qcap { position: absolute; left: -6px; top: -6px; width: 15px; height: 15px; border-radius: 50%; background-color: #15110d; box-shadow: 0 0 0 1.5px var(--cap), 0 1px 3px rgba(0, 0, 0, 0.8); pointer-events: none; }
+.tb-cap { position: relative; flex: none; width: 26px; height: 26px; border-radius: 50%; background: #15110d; box-shadow: 0 0 0 2px var(--cap), 0 2px 6px rgba(0, 0, 0, 0.75); }
+.tb-cap .tb-capf { position: absolute; inset: 1px; border-radius: 50%; }
+.tb-cap b { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); min-width: 16px; padding: 0 3px; box-sizing: border-box; border-radius: 6px; background: rgba(12, 10, 8, 0.94);
+  box-shadow: 0 0 0 1px var(--brass-dim); color: var(--bone); font: 700 9px/12px var(--k-font-sans, sans-serif); text-align: center; font-variant-numeric: tabular-nums; }
+.tb-cap.turn { box-shadow: 0 0 0 2px var(--cap), 0 0 0 4px var(--gold), 0 0 10px rgba(224, 184, 98, 0.7); }
+.tb-cap.auto .tb-capf { filter: saturate(0.5); }
+.tb-capr { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 19px); display: flex; gap: 6px; pointer-events: none; }
+.tb-capr.you { left: calc(env(safe-area-inset-left, 0px) + 64px); }
+.tb-capr.foe { right: calc(env(safe-area-inset-right, 0px) + 64px); flex-direction: row-reverse; }
+body.tac-ph .tb-grouped .tb-top { left: calc(env(safe-area-inset-left, 0px) + 128px); right: calc(env(safe-area-inset-right, 0px) + 128px); }
+.tb-caps { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 5px; }
+.tb-caps .tb-cap { width: 22px; height: 22px; }
+.tb-capn { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+.tb-capn i { font-style: normal; font-size: 11px; color: var(--bone); max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-coming { font-size: 11px; color: var(--k-haze, #b9b2a2); }
+.tb-clock.ally { box-shadow: 0 0 0 1px var(--cap, #5fd6b8); }
+.tb-clock.foe[style*="--cap"] { box-shadow: 0 0 0 1px var(--cap); }
+.tb-clock.run { box-shadow: 0 0 0 2px var(--gold); }
+.tb-share { gap: 4px; box-shadow: inset 0 0 0 1px var(--cap); }
+.tb-share.you { box-shadow: inset 0 0 0 2px var(--cap); }
+.tb-share .tb-shf { display: inline-block; width: 18px; height: 18px; border-radius: 50%; box-shadow: 0 0 0 1px var(--cap); }
+.tb-share i { display: inline-flex; align-items: center; gap: 2px; font-style: normal; }
+
+/* the card on the sea: a group mate's boarding within reach (the top band, never the middle) */
+#board-offer { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 56px); transform: translateX(-50%); width: min(430px, calc(100vw - 150px)); z-index: 40; pointer-events: auto; }
+#board-offer.hidden { display: none; }
+.bo-card { background: rgba(10, 12, 16, 0.94); border: 1px solid rgba(201, 164, 90, 0.7); border-radius: 6px; padding: 6px 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6); color: var(--bone); }
+.bo-h { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 1.2; }
+.bo-h b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bo-x { flex: none; width: 24px; height: 24px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.08); color: var(--bone); cursor: pointer; }
+.bo-sub { margin: 2px 0 4px; font-size: 11px; color: var(--k-haze, #b9b2a2); line-height: 1.25; }
+.bo-row { display: flex; align-items: center; gap: 6px; }
+.bo-sts { display: flex; gap: 4px; flex: 1; min-width: 0; overflow-x: auto; }
+.bo-st { position: relative; flex: none; width: 32px; height: 32px; padding: 0; border-radius: 6px; border: 1px solid rgba(240, 234, 220, 0.25); background: #15110d; opacity: 0.55; cursor: pointer; }
+.bo-st.on { opacity: 1; border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+.bo-st .bo-ico { position: absolute; inset: 2px; width: calc(100% - 4px); height: calc(100% - 4px); object-fit: contain; }
+.bo-st b { position: absolute; right: -3px; bottom: -3px; padding: 0 2px; font-size: 9px; line-height: 12px; border-radius: 3px; background: #111; color: var(--bone); }
+.bo-auto { display: inline-flex; align-items: center; gap: 3px; flex: none; font-size: 10px; color: var(--k-haze, #b9b2a2); max-width: 92px; line-height: 1.1; }
+.bo-go { flex: none; }
+@media (max-height: 420px) {
+  #board-offer { top: calc(env(safe-area-inset-top, 0px) + 6px); width: min(400px, calc(100vw - 200px)); }
+  .bo-sub { display: none; }
+  .bo-auto span { display: none; }
+}

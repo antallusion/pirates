@@ -256,7 +256,7 @@ export function settleGroup(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBat
     if (!ms?.profile || e.side !== w) continue;
     const xp = battleXp(ms.profile.level, foeLv, killed * e.share, total, TAC_XP_SHARE);
     e.xp = xp;
-    if (xp > 0) game.grantXp(ms, xp, `Won the boarding with ${game.sessionOf(w ? b : a)?.name ?? ''} against the ${loser.name}`, true);
+    if (xp > 0) game.grantXp(ms, xp, `Won the boarding battle with ${loser.name}`, true);
   }
   // The spoils of a prize (a ship of the sea taken, or a captain's): the purse and the hold by the shares — each ally's
   // part in silver, the rest the boarder's prize as before.
@@ -307,7 +307,7 @@ export function settleGroup(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBat
     const ms = game.sessionByAccount(e.acc);
     if (!ms?.ship) continue;
     const pc = Math.round((e.share ?? 0) * 100);
-    if (e.side === w) game.toastShip(ms.ship, `Your share of the boarding: ${pc}% of what was cut down${e.silver ? `, ${e.silver} silver` : ''}${e.xp ? `, ${e.xp} experience` : ''}.`, 'gold');
+    if (e.side === w) game.toastShip(ms.ship, `Your share of the boarding: ${pc}% of what was cut down — ${e.silver ?? 0} silver, ${e.xp ?? 0} experience.`, 'gold');
   }
   return mainXp(sh.get(0) ?? 1);
 }

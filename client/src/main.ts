@@ -13,6 +13,7 @@ import { NetHaulPanel } from './ui/nethaul.ts';
 import { departOrAsk } from './ui/depart.ts';
 import { EncounterCard } from './ui/encounter.ts';
 import { SurrenderCard } from './ui/surrender.ts';
+import { BoardOfferCard } from './ui/boardoffer.ts'; // docs/25 item 64: a group mate's boarding within reach
 import { LairChestCard } from './ui/lairchest.ts';
 import { MinigameWindow } from './ui/minigame.ts';
 import { TrekWindow } from './ui/trek.ts';
@@ -498,6 +499,7 @@ const tutorPointer = new TutorPointer();
 guardVibrate(); // «Вибрация» off stills every pulse (docs/23 item 84)
 const encounterCard = new EncounterCard((m) => net.send(m));
 const surrenderCard = new SurrenderCard((m) => net.send(m));
+const boardOffer = new BoardOfferCard((m) => net.send(m));
 const lairChest = new LairChestCard();
 const minigameWindow = new MinigameWindow((m) => net.send(m));
 // The walk across an island (docs/16 #21): its card waits behind an island game's window.
@@ -1029,6 +1031,10 @@ function onMessage(m: ServerMsg): void {
     case 'surrender_offer':
       // A ship strikes her colours to you (docs/16 #3): the choice card over the sea.
       surrenderCard.open(m.offer);
+      break;
+    case 'board_offer':
+      // docs/25 item 64: a mate of her group boards within reach — she may come aboard.
+      boardOffer.open(m.offer);
       break;
     case 'boarding':
       if (m.result) openModal('boarding');

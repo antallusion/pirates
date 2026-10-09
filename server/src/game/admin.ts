@@ -49,7 +49,7 @@ import { applyTattoos, earnTattoo, offerChoice, sanitizeTattoos, sendTattoos } f
 import { TATTOOS, TATTOO_BY_ID } from '../../../shared/src/data/sidequests.ts';
 import { ownIsland } from './estate.ts';
 import { capOf, grantSpeedups, plotCount, yardOf } from './base.ts';
-import { lfgPost } from './party.ts';
+import { groupAnswer, groupInvite, groupOfAccount, lfgPost } from './party.ts';
 import { worldGoalsAdd } from './worldgoals.ts';
 import { gyardFill, gyardStart } from './guildyard.ts';
 import { sendSignal } from './signals.ts';
@@ -160,7 +160,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] [grapple|hunt] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level|go] · /prim [atk|def|pow|will N|reset] · /skill id [0-3]|offer [n]|clear · /order id|all|clear · /art [id|set regalia|hook|storm|list] · /will [N|full] · /guard [go|beat|weak|board|reset] [kind] [level] · /obj [kind] [go|reset] · /obelisk [n|all|go] · /grail [go|found|reset] · /isle level|type kind|atoll|ridge|small|hidden [reveal]|danger [deadly] · /zone [go] · /turtle [go|up|down|off] · /sandbar · /supply [claim|link|week] · /path [learn page|forget] · /stam [N|full] · /scroll [page|random|clear] [n] · /pathfoe [path] [class] [grapple] · /lair [kind] [go|fight|beat|weak|reset|chain|grotto|guardian|dwell|turtle|sandbar] · /creature [kind] [n] · /egg [kind|hatch|grow] · /landres [n] · /drift [kind|legend|whale|kraken] [go|save|fail|fight|clear] · /tame [kind] [wins N|rank R|hunger S|pen N|slip] · /feed [N|starve] · /tamer [go] · /landecon [fit id rank|cap] · /bestiary [all|clear|kind] · /seamark [drift|wreck|buoy|lantern|bones|floe] [go|done|reset] · /glory [n|xp N|reset] · /mastery [node|branch|all|reset] · /trial [skill] [go|win|lose|reset] · /find [bottle|flyfish|calm|gulls|boat|chest] [go|done|reset] · /haul [reset] · /stack [kind] [go|fight|beat|reset] · /doubloons [N|-N|sample [on|off]] · /zboss [region] [rise|here|leave|kill|announce|reset] · /flag [neutral|faction|pirate] [city] · /noboard on|off · /seal [lv N|kind K|go|win|lose|reset|board] · /titan [kind|grail|reset] · /maw [tier N|win|lose|go|reset|board] · /relic [id|parts id|all|drop [N]|clear] · /invasion [region|start|wave|win|fail|clear] · /cit [go|guild|window|siege|win|own|lose|free|points N|season|reset] [n] · /contract [list|take N|done N|week|reset|go N] · /arena [queue|bot|win|lose|rating N|season|reset]';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] [grapple|hunt] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level|go] · /prim [atk|def|pow|will N|reset] · /skill id [0-3]|offer [n]|clear · /order id|all|clear · /art [id|set regalia|hook|storm|list] · /will [N|full] · /guard [go|beat|weak|board|reset] [kind] [level] · /obj [kind] [go|reset] · /obelisk [n|all|go] · /grail [go|found|reset] · /isle level|type kind|atoll|ridge|small|hidden [reveal]|danger [deadly] · /zone [go] · /turtle [go|up|down|off] · /sandbar · /supply [claim|link|week] · /path [learn page|forget] · /stam [N|full] · /scroll [page|random|clear] [n] · /pathfoe [path] [class] [grapple] · /lair [kind] [go|fight|beat|weak|reset|chain|grotto|guardian|dwell|turtle|sandbar] · /creature [kind] [n] · /egg [kind|hatch|grow] · /landres [n] · /drift [kind|legend|whale|kraken] [go|save|fail|fight|clear] · /tame [kind] [wins N|rank R|hunger S|pen N|slip] · /feed [N|starve] · /tamer [go] · /landecon [fit id rank|cap] · /bestiary [all|clear|kind] · /seamark [drift|wreck|buoy|lantern|bones|floe] [go|done|reset] · /glory [n|xp N|reset] · /mastery [node|branch|all|reset] · /trial [skill] [go|win|lose|reset] · /find [bottle|flyfish|calm|gulls|boat|chest] [go|done|reset] · /haul [reset] · /stack [kind] [go|fight|beat|reset] · /doubloons [N|-N|sample [on|off]] · /zboss [region] [rise|here|leave|kill|announce|reset] · /flag [neutral|faction|pirate] [city] · /noboard on|off · /seal [lv N|kind K|go|win|lose|reset|board] · /titan [kind|grail|reset] · /maw [tier N|win|lose|go|reset|board] · /relic [id|parts id|all|drop [N]|clear] · /invasion [region|start|wave|win|fail|clear] · /cit [go|guild|window|siege|win|own|lose|free|points N|season|reset] [n] · /contract [list|take N|done N|week|reset|go N] · /arena [queue|bot|win|lose|rating N|season|reset] · /mates name [name]';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -1194,6 +1194,37 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       if (!LFG_GOALS.includes(goal)) return `Usage: /lfg ${LFG_GOALS.join('|')} [lo hi]`;
       const e = lfgPost(game, s, 'QA', goal, args[1] !== undefined ? num(1) : undefined, args[2] !== undefined ? num(2) : undefined);
       return e ?? 'Posted: looking for company.';
+    }
+    case 'mates': {
+      // docs/25 block Е (QA): /mates name [name] — the named captains at sea join her group and lie to within reach of
+      // her (120 m and 240 m off her beam), so a boarding of hers takes them aboard.
+      if (!args.length) return 'Usage: /mates name [name]';
+      if (ship.docked) return 'Put to sea first.';
+      const done: string[] = [];
+      for (const [k, name] of args.slice(0, 2).entries()) {
+        const t = game.sessionByName(name);
+        if (!t?.ship || t === s || !t.profile) return `No captain named ${name} is at sea.`;
+        const g0 = groupOfAccount(game, s.accountId);
+        if (!g0 || !g0.members.includes(t.accountId)) {
+          if (groupOfAccount(game, t.accountId)) return `${t.name} sails in another group.`;
+          const why = groupInvite(game, s, t.name);
+          if (why) return why;
+          const inv = [...game.social.invites.values()].find((x) => x.to === t.accountId && x.from === s.accountId && !x.ask);
+          const err = inv ? groupAnswer(game, t, inv.id, true) : 'No invitation';
+          if (err) return err;
+        }
+        t.ship.docked = null;
+        t.profile.docked = null;
+        t.ship.state.x = ship.state.x + 120 * (k + 1);
+        t.ship.state.y = ship.state.y;
+        t.ship.state.speed = 0;
+        t.ship.input = { rudder: 0, sailTarget: 0 };
+        t.ship.region = ship.region;
+        game.grid.upsert(t.ship.id, t.ship.state.x, t.ship.state.y);
+        game.pushSelf(t, true);
+        done.push(t.name);
+      }
+      return `Your group within reach: ${done.join(', ')}.`;
     }
     case 'near': {
       // Alongside another captain at sea (docs/16 #33 QA): /near name — 150 m off her beam.
