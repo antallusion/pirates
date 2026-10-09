@@ -15,12 +15,95 @@ export const TAC_W = 11;
 export const TAC_H = 9;
 /** The water between the hulls; the planks cross it on a few rows. */
 export const TAC_GAP = 5;
-/** Seconds a captain has for each of his stacks' turns; then the stack defends. */
+/** Seconds a captain has for each of his stacks' turns at the top (from level 31); then the stack defends. */
 export const TAC_TURN = 30;
+/** docs/25 item 48 (owner, 2026-10-09: «на низких 1 минуты норма»): a stack's turn by the battle's level — 15 s at
+ *  levels 1–10, 20 s at 11–30, 30 s from 31. A battle of no level (a test's bare armies) keeps the 30 s. */
+export function tacTurnSecs(level: number): number {
+  return level <= 0 ? TAC_TURN : level <= 10 ? 15 : level <= 30 ? 20 : TAC_TURN;
+}
+/** docs/25 item 48: each captain's chess clock over a whole boarding — a minute at levels 1–10, a minute more every ten
+ *  levels, six at 51–60. A turn's seconds come off it; once it is spent her stacks' turns go to defence. With it no
+ *  fight between two captains runs past ~10–12 minutes (the legends, the Abyss raid and the citadels keep none). */
+export function tacBankSecs(level: number): number {
+  return 60 * Math.max(1, Math.min(6, Math.ceil(Math.max(1, level) / 10)));
+}
 /** Seconds the sea's captains wait before a stack's turn, once what was done before it has been played on the screen
  *  (owner, 2026-10-08: «там как-то слишком быстро всё перемещается, непонятно даже» — docs/23 item 60 had it 0.45 s
- *  and the walks 0.25 s, too quick to follow). */
-export const TAC_AI_DELAY = 0.7;
+ *  and the walks 0.25 s, too quick to follow). docs/25 item 50 (owner, 2026-10-09: «с нпс можно быстрее сражаться»):
+ *  0.7 → 0.35 s — the walks and blows keep their own pace (TAC_PACE), only the breath before her turn is shorter. */
+export const TAC_AI_DELAY = 0.35;
+
+/** docs/25 block Г (owner, 2026-10-09: «абордаж на высоких уровнях должен быть такой, чтобы люди играли по 5-10 минут…
+ *  На низких 1 минуты норма»): how long a boarding runs by its level.
+ *  Each table is by level, straight between its points (tacLevel).
+ *  - `tempo`: every blow and shot of a boarding of level L lands ×tempo(L) — the army's strength grows with the level
+ *    faster than a blow does (item 44): a fight of level 1 is two or three rounds, one of level 60 five to seven.
+ *  - `blastMax`: the captains' orders slow with the tempo but speed up no more than this — a low level's orders
+ *    already land hard (her path's power is at its highest there); its quick fights come from the men's blows.
+ *  - `open`: round 1's blows and orders land ×open(L) (item 44: the share of an equal army cut in round 1 goes from
+ *    ~35% at levels 1–10 to 15–18% at 51–60) — the crews cross the rail and feel each other out; the big fights are
+ *    decided in the rounds after, by the captains' moves and the stacks' places, not by the first volley.
+ *  - `npc`: a boarding against the sea's mind lands this much harder on both sides than one between two captains of its
+ *    level (item 50, owner: «с нпс можно быстрее сражаться»): the odds stay, the fight is shorter.
+ *  - `npcFewer`: the stacks fewer a ship of the sea brings than a captain of her level (item 50).
+ *  - `fatigue`: from round `from` every blow lands `step` harder a round, both sides (item 51) — nobody holds out.
+ *  - `flag`: from level `level` the quarterdeck's flag stands on each deck's stern; a stack of hers on the other's for
+ *    `rounds` whole rounds takes the ship (item 52).
+ *  - `quick`: a quick fight is offered at once when her side is this many times the other's strength (item 49). */
+export const TAC_LEN = {
+  tempo: [[1, 3.2], [10, 2.4], [20, 1.15], [30, 0.74], [40, 0.57], [50, 0.47], [60, 0.4]] as [number, number][],
+  blastMax: 1,
+  open: [[1, 1], [10, 0.85], [20, 0.7], [30, 0.65], [40, 0.6], [50, 0.58], [60, 0.58]] as [number, number][],
+  npc: [[1, 3.5], [30, 2], [60, 1.15]] as [number, number][],
+  npcFewer: 2,
+  fatigue: { from: 8, step: 0.15 },
+  flag: { level: 40, rounds: 2 },
+  quick: 1.5,
+};
+/** A TAC_LEN table at `level`: straight between its points, flat past its ends. */
+export function tacLevel(pts: readonly (readonly [number, number])[], level: number): number {
+  const L = Math.max(pts[0][0], Math.min(pts[pts.length - 1][0], level));
+  for (let i = 1; i < pts.length; i++) {
+    const [l1, t1] = pts[i - 1], [l2, t2] = pts[i];
+    if (L <= l2) return t1 + ((t2 - t1) * (L - l1)) / Math.max(1, l2 - l1);
+  }
+  return pts[pts.length - 1][1];
+}
+/** docs/25 §1.2: the stacks a captain brings to a boarding by her level (her hull's slots, as the ships open by level:
+ *  3–4 at 1–10, 4–5 at 11–20, 5–6 at 21–30, 6–7 at 31–40, 7 and her officers from 41) — the most of them. */
+export function boardSlots(level: number): number {
+  return level <= 10 ? 4 : level <= 20 ? 5 : level <= 30 ? 6 : 7;
+}
+/** docs/25 item 50: a ship of the sea fights with one stack fewer than a captain of her level (two from level 31) —
+ *  the same men in fewer, fuller stacks, so the fight with her is quicker and as hard. */
+export function npcBoardSlots(level: number): number {
+  return Math.max(2, boardSlots(level) - TAC_LEN.npcFewer);
+}
+
+/** item 44: the blows' scale in a boarding of `level` (1 for a battle of no level). */
+export function tacTempo(level: number): number {
+  return level <= 0 ? 1 : tacLevel(TAC_LEN.tempo, level);
+}
+/** item 44: round 1's scale in a boarding of `level`. */
+export function tacOpen(level: number): number {
+  return level <= 0 ? 1 : tacLevel(TAC_LEN.open, level);
+}
+/** item 50: a boarding against the sea's mind, its blows' and orders' lift at `level`. */
+export function tacNpc(level: number): number {
+  return level <= 0 ? 1 : tacLevel(TAC_LEN.npc, level);
+}
+/** item 51: the blows' lift in round `round` (1 before TAC_LEN.fatigue.from). */
+export function tacFatigue(round: number): number {
+  const f = TAC_LEN.fatigue;
+  return round >= f.from ? 1 + f.step * (round - f.from + 1) : 1;
+}
+/** item 52: the quarterdeck's flag of side `side`: on her own deck, at her stern (the bottom rail), a hex in from the
+ *  edge — side 0's on the left deck, side 1's its mirror. The other side takes it. */
+export function tacFlagHex(side: 0 | 1): number {
+  const own = hexIndex(1, TAC_H - 1);
+  return side ? hexMirror(own) : own;
+}
 /** «Ускорить ×2» (docs/23 item 60): the sea's breath and the field's pace, × while a captain on the field has asked
  *  for it. */
 export const TAC_FAST = 0.5;

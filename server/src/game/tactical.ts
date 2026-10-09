@@ -10,7 +10,8 @@ import { deckGift } from './shipgifts.ts'; // the premium hulls' gifts (docs/02 
 import { FIRST_NAMES, LAST_NAMES } from '../../../shared/src/data/crew.ts';
 import type { OfficerRole } from '../../../shared/src/data/crew.ts';
 import { armyCost, hasSpecial, UNITS } from '../../../shared/src/data/army.ts';
-import { TAC_END_WINDOW, kindOfUnit } from '../../../shared/src/data/tactical.ts';
+import { TAC_END_WINDOW, TAC_LEN, kindOfUnit, npcBoardSlots } from '../../../shared/src/data/tactical.ts';
+import { npcHeroLevel } from '../../../shared/src/data/hero.ts';
 import type { TacAction } from '../../../shared/src/protocol.ts';
 import { XP_UNITS, battleXp, targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { tx } from '../../../shared/src/sim/shipstats.ts';
@@ -29,7 +30,7 @@ import { isCastellan, siegeSetup } from './citadels.ts'; // docs/19 E5
 import { contractSpellHp } from './admiralty.ts'; // docs/19 E15
 import { raidSpellHp } from './abyssraid.ts'; // docs/19 E11
 import { arenaResultOf, arenaSettle, arenaSetup, arenaTag, isArenaFight } from './arena.ts'; // docs/19 E14
-import { act, endByRansom, killedHp, lossesOf, newBattle, playSince, stepBattle, viewOf } from './tacbattle.ts';
+import { act, endByRansom, killedHp, lossesOf, newBattle, playSince, sideStrength, stepBattle, viewOf } from './tacbattle.ts';
 import type { TacArmyEntry, TacBattle, TacSideInput } from './tacbattle.ts';
 
 /** The sea's crews by role: their veterancy in stars and the officer who leads them. A merchant's hands are no
@@ -74,6 +75,40 @@ export function deckState(ship: ShipEntity): { holes: number; gunsOut: number; f
   };
 }
 
+/** docs/25 block Г: a legend of the Admiralty or of the Abyss, a raid's ship, a castellan, a trial, a zone's great one —
+ *  long by design (owner, docs/25 §1.2): no tempo, no fatigue, no flag, no chess clock, no quick fight. */
+export function longFoe(ship: ShipEntity): boolean {
+  return isTrialShip(ship) || raidSpellHp(ship) !== undefined || ship.npcRole === 'boss';
+}
+
+/** A man's worth in a boarding (HoMM3's square law: his blows by his hit points, each behind his Attack and Defense). */
+function manWorth(u: TacArmyEntry['u']): number {
+  const d = UNITS[u];
+  const k = 1 + (0.05 * (d.atk + d.def)) / 2;
+  return Math.sqrt(d.hp * ((d.dmin + d.dmax) / 2)) * k * (d.shots ? 1.15 : 1) * (d.specials.includes('double_strike') ? 1.2 : 1);
+}
+
+/** docs/25 item 50: the sea's army in `slots` stacks for the battle only (her ship keeps hers): the smallest stack
+ *  stands in with the nearest kind of hers (a shooter with a shooter), its men counted over by their worth — the same
+ *  strength in fewer, fuller stacks. */
+export function battleFit(army: TacArmyEntry[], slots: number): TacArmyEntry[] {
+  const out = army.map((x) => ({ ...x }));
+  const worth = (x: TacArmyEntry) => x.n * manWorth(x.u);
+  while (out.length > Math.max(1, slots)) {
+    let small = 0;
+    for (let i = 1; i < out.length; i++) if (worth(out[i]) < worth(out[small])) small = i;
+    const [s] = out.splice(small, 1);
+    const shoots = hasSpecial(s.u, 'shooter');
+    const pool = out.filter((x) => hasSpecial(x.u, 'shooter') === shoots);
+    const into = (pool.length ? pool : out).reduce((b, x) => {
+      const dt = Math.abs(UNITS[x.u].tier - UNITS[s.u].tier), db = Math.abs(UNITS[b.u].tier - UNITS[s.u].tier);
+      return dt < db || (dt === db && x.n > b.n) ? x : b;
+    });
+    into.n += Math.max(1, Math.round((s.n * manWorth(s.u)) / manWorth(into.u)));
+  }
+  return out;
+}
+
 /** What a ship and her army bring to the battle. */
 export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker: boolean): TacSideInput {
   const s = game.sessionOf(ship);
@@ -108,10 +143,13 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
   }
   const count = (f: (x: TacArmyEntry) => boolean) => army.filter(f).reduce((n, x) => n + x.n, 0);
   const deck = deckState(ship);
+  const hero = heroInput(game, ship); // docs/17 H2
+  // docs/25 item 50: a ship of the sea brings a stack or two fewer than a captain of her level (not a legend's).
+  const fielded = s || longFoe(ship) ? army : battleFit(army, npcBoardSlots(hero?.level ?? npcHeroLevel(ship.shipLevel)));
   return {
     name: s?.name ?? ship.captainName, ship: ship.name, hull: ship.loadout.classId, captain: (s ? null : npcPathOf(ship)) ?? ship.captain ?? null,
     hands: count((x) => UNITS[x.u].tier === 1), marines: count((x) => kindOfUnit(x.u) === 'marines'), gunners: count((x) => hasSpecial(x.u, 'shooter')),
-    army, officers, skill, morale: ship.morale,
+    army: fielded, officers, skill, morale: ship.morale,
     dealt: ladderBetween(game, ship, enemy).dealt || 0.1,
     power: Math.max(0.3, ship.stats.boardingPower) * (ship.captain === 'reaver' && enemy.crew < enemy.stats.crewMax * 0.5 ? 1.2 : 1),
     melee: 1 + tx(ship.stats, 'meleeDamage'),
@@ -125,7 +163,7 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
     holes: deck.holes,
     gunsOut: deck.gunsOut,
     fire: deck.fire,
-    hero: heroInput(game, ship), // docs/17 H2
+    hero, // docs/17 H2
     mixed: mixedOf(s?.profile, ship.army), // docs/18 #38: the peoples of a mixed army
     ...(deckGift(ship) ? { gift: deckGift(ship) } : {}), // a premium hull's deck gift (docs/02 §1.A.9)
     ...(heroFace(game, ship) ? { face: heroFace(game, ship) } : {}), // docs/18 item 8: a named captain's own face
@@ -141,7 +179,8 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
   const seed = arena ? arena.seed : game.rng.int(1, 1e9);
   const rng = new Rng(seed ^ 0x7ac7);
   fight.tacRng = rng;
-  if (arena) fight.tac = newBattle(arena.sides[0], arena.sides[1], seed, game.now, rng, { arena: true });
+  // docs/25 block Г: a boarding's length by its level; the legends, the raid, the citadels and the trials long by design.
+  if (arena) fight.tac = newBattle(arena.sides[0], arena.sides[1], seed, game.now, rng, { arena: true, len: 'board' });
   else {
     // docs/19 E5: a castellan alongside — the siege before her citadel's walls, its garrison in its own seven stacks.
     const so = siegeSetup(game, a, b);
@@ -151,7 +190,14 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
       bIn.spellHp = so.spellHp;
     }
     bIn.spellHp ??= contractSpellHp(b) ?? raidSpellHp(b); // docs/19 E15, E11: a legend of the Admiralty or of the Abyss orders as a captain, not as her army
-    fight.tac = newBattle(sideOf(game, a, b, true), bIn, seed, game.now, rng, so ? { siege: so.siege } : {});
+    const len = so || longFoe(a) || longFoe(b) ? 'long' : 'board';
+    const bt = newBattle(sideOf(game, a, b, true), bIn, seed, game.now, rng, { ...(so ? { siege: so.siege } : {}), len });
+    fight.tac = bt;
+    // docs/25 item 49: a captain against a clearly weaker ship of the sea is offered the quick fight at once.
+    if (len === 'board') {
+      const st = [sideStrength(bt, 0), sideStrength(bt, 1)];
+      bt.quick = [0, 1].map((x) => bt.heroes[x].input.human && !bt.heroes[1 - x].input.human && st[x] >= TAC_LEN.quick * st[1 - x]) as [boolean, boolean];
+    }
   }
   fight.tacSync = [0, 0];
   fight.tacSeen = new Map(fight.tac.stacks.map((s) => [s.id, s.count]));
@@ -352,12 +398,19 @@ export function tacAction(game: Game, ship: ShipEntity, action: TacAction): stri
     if (why) sendTac(game, a, b);
     return why;
   }
+  // docs/25 item 49: no quick fight with a legend, the Abyss raid, a citadel, the Colosseum or a trial.
+  if (action.a === 'quick' && noQuick(st.fight, bt)) return 'No quick fight here: this one is fought to the end';
   // Quick combat against the sea; against a captain it hands your side to auto-battle.
   if (action.a === 'quick' && (game.sessionOf(other) || other.isPlayer)) action = { a: 'auto', on: true };
   const why = act(bt, side, action, game.now, rngOf(game, a));
   settle(game, a, b, bt, seq);
   if (why) sendTac(game, a, b);
   return why;
+}
+
+/** docs/25 item 49: a fight with no quick fight — long by design (a legend, the raid, a citadel, a trial) or a bout. */
+function noQuick(fight: Parameters<typeof isArenaFight>[0], bt: TacBattle): boolean {
+  return bt.len === 'long' || !!bt.siege || isArenaFight(fight);
 }
 
 /** One captain's view (`b` null: only `a`). */
@@ -375,7 +428,10 @@ export function sendTac(game: Game, a: ShipEntity, b: ShipEntity | null): void {
     const arena = arenaTag(f);
     const ar = arena ? arenaResultOf(f, side) : undefined;
     const result = bt.over ? { lost: lossesOf(bt, side), killed: lossesOf(bt, (1 - side) as 0 | 1), xp: f.tacXp?.[side] ?? 0, ...(f.tacPaid && side === 1 ? { paid: f.tacPaid } : {}), ...(joined?.length ? { joined } : {}), ...(ar ? { arena: ar } : {}) } : undefined;
-    game.sendTo(ses, { t: 'board_tac', view: viewOf(bt, side, game.now, arena ? false : st.attacker ? !s.hasFlag('no_quarter') : true, { ransom: ransomCost(game, s), ...(result ? { result } : {}), ...(arena ? { canStrike: true, arena } : {}) }) });
+    // docs/25 item 49: the quick fight offered at once (in the first round) against a clearly weaker ship of the sea;
+    // none at all against a legend, the raid, a citadel, on the sand or in a trial.
+    const quick = noQuick(f, bt) ? { noQuick: true } : bt.quick?.[side] && bt.round <= 1 && !bt.over ? { quickNow: true } : {};
+    game.sendTo(ses, { t: 'board_tac', view: viewOf(bt, side, game.now, arena ? false : st.attacker ? !s.hasFlag('no_quarter') : true, { ransom: ransomCost(game, s), ...(result ? { result } : {}), ...(arena ? { canStrike: true, arena } : {}), ...quick }) });
   }
 }
 

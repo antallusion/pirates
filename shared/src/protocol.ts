@@ -1554,7 +1554,9 @@ export interface TacEvent {
     /** docs/19 E5, a citadel's siege: `id` 'gun' (the ship's broadside before the assault) or 'catapult' — a stone on
      *  the wall line's `hex`, `dmg` 1 if it found it, `n` what it has left; 'tower' — the tower on `n` shoots her stack
      *  `t` (on `hex`). */
-    | 'siege';
+    | 'siege'
+    /** docs/25 item 52: `side` held the other's quarterdeck flag (on `hex`) the rounds it takes, and took the ship. */
+    | 'flag';
   side: 0 | 1;
   s?: number;
   t?: number;
@@ -1593,8 +1595,20 @@ export interface TacView {
   heroes: [TacHeroView, TacHeroView];
   log: TacEvent[];
   seq: number;
-  over: null | { winner: 0 | 1; why: 'rout' | 'struck' | 'rounds' | 'ransom' };
+  over: null | { winner: 0 | 1; why: 'rout' | 'struck' | 'rounds' | 'ransom' | 'flag' };
   canCut: boolean;
+  /** docs/25 block Г: the battle's level (0: none); a stack's turn in seconds at it (the timer's whole); each side's
+   *  chess clock in seconds as the turn now running began (-1: none; `ends` tells when this turn runs out). */
+  level?: number;
+  turn?: number;
+  bank?: [number, number];
+  /** docs/25 item 52: the quarterdeck's flags from level 40 — each side's own hex (the other side takes it), the whole
+   *  rounds each side has held the other's, and how many it takes. */
+  flag?: { hex: [number, number]; held: [number, number]; need: number };
+  /** docs/25 item 49: a quick fight offered at once (the foe is clearly the weaker); none at all (a legend, the Abyss
+   *  raid, a citadel, the Colosseum, a trial). */
+  quickNow?: boolean;
+  noQuick?: boolean;
   canStrike: boolean;
   /** Silver it would cost this captain to pay the other side off (null: not offered). */
   ransom?: number | null;
