@@ -29,6 +29,31 @@ export function tacTurnSecs(level: number): number {
 export function tacBankSecs(level: number): number {
   return 60 * Math.max(1, Math.min(6, Math.ceil(Math.max(1, level) / 10)));
 }
+
+/** docs/25 block Е (owner, 2026-10-09: «Абордаж должен быть интересный, чтобы капитанские навыки, группа и умения
+ *  решали … делай все пункты»): a boarding fought by a group.
+ *  - `range`: a mate of her group within this many metres of the grapple, at sea and in no other fight, may join (64);
+ *  - `side`: captains a side at most, the one who grappled (or was grappled) among them;
+ *  - `bring`: stacks of her own army an ally brings (her choice, else her strongest);
+ *  - `late`: the last round an ally arriving mid-battle comes aboard at (as a round opens);
+ *  - `foe`: item 66 — a ship of the sea, a legend, the raid's tier or a citadel's garrison against a group grows by the
+ *    strength her allies brought (the square law, sideStrength) and `order` more for each ally's book and path;
+ *  - `pace`: a group's blows and orders land harder by `pace(level)` an ally on the field (both sides counted), so its
+ *    rounds are fewer than one captain's and its many stacks keep §1.2's length (shorter at the low levels);
+ *  - `echo`: item 65 — a page or path move another captain of her side already laid holds once (the later one renews
+ *    it, it does not stack), so three of one path weigh less than a mixed group. */
+export const TAC_GROUP = {
+  range: 600,
+  side: 3,
+  bring: 2,
+  late: 3,
+  foe: { order: 0.1 },
+  pace: [[1, 0.3], [30, 0.2], [60, 0.12]] as [number, number][],
+};
+/** docs/25 block Е: the lift on a boarding's blows and orders with `allies` allied captains on the field (both sides). */
+export function tacGroupPace(level: number, allies: number): number {
+  return allies <= 0 ? 1 : 1 + Math.max(0, allies) * tacLevel(TAC_GROUP.pace, Math.max(1, level));
+}
 /** Seconds the sea's captains wait before a stack's turn, once what was done before it has been played on the screen
  *  (owner, 2026-10-08: «там как-то слишком быстро всё перемещается, непонятно даже» — docs/23 item 60 had it 0.45 s
  *  and the walks 0.25 s, too quick to follow). docs/25 item 50 (owner, 2026-10-09: «с нпс можно быстрее сражаться»):

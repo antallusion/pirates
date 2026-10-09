@@ -1489,6 +1489,8 @@ export interface TacStackView {
   face: number;
   /** docs/25 item 56: the share of the captains' orders she shrugs off (a legend, a titan, a great one). */
   resist?: number;
+  /** docs/25 item 64: the allied captain whose stack she is (TacView.allies' slot); absent: her side's own captain's. */
+  own?: number;
 }
 
 /** What a blow or a shot of the captain's active stack would do (owner, 2026-10-08, as HoMM3 shows it under the
@@ -1567,7 +1569,9 @@ export interface TacEvent {
      *  `t` (on `hex`). */
     | 'siege'
     /** docs/25 item 52: `side` held the other's quarterdeck flag (on `hex`) the rounds it takes, and took the ship. */
-    | 'flag';
+    | 'flag'
+    /** docs/25 item 64: an allied captain (`n` her slot) came aboard side `side` with her stacks `on`. */
+    | 'join';
   side: 0 | 1;
   s?: number;
   t?: number;
@@ -1583,6 +1587,29 @@ export interface TacEvent {
   fl?: 1 | 2;
   /** docs/25 item 56: the stacks that shrugged off what a move would lay on them. */
   res?: number[];
+  /** docs/25 item 64: the allied captain (her slot) who gave the order or path move. */
+  who?: number;
+}
+
+/** docs/25 item 64: an allied captain on the field — her side and slot (her stacks carry it as `own`), her name, ship,
+ *  path, level and face, her chess clock (seconds as the turn now running began), whether she plays by herself and has
+ *  given her order this round, her men on deck and as she came aboard, the round she came, and whether she is you. */
+export interface TacAllyView {
+  side: 0 | 1;
+  slot: number;
+  name: string;
+  ship: string;
+  captain: CaptainId | null;
+  path?: CaptainId;
+  level?: number;
+  face?: string;
+  bank?: number;
+  auto: boolean;
+  cast: boolean;
+  men: number;
+  menStart: number;
+  joined: number;
+  you?: boolean;
 }
 
 /** The whole battle as one captain sees it. Side 0 is the boarder, on the left deck. */
@@ -1641,6 +1668,11 @@ export interface TacView {
   siege?: { type: string; hp: number[]; max: number[]; cat: number; name?: string };
   /** docs/19 E14: a bout of the Colosseum on its sand (a practice bout against a legend of the sea, or rated). */
   arena?: { practice: boolean; rated: boolean };
+  /** docs/25 item 64: you are an allied captain on your side (your slot: your stacks carry it as `own`; `heroes[you]`
+   *  is your own captain); the allied captains on the field; those who come aboard as the next round opens. */
+  slot?: number;
+  allies?: TacAllyView[];
+  coming?: { side: 0 | 1; name: string; path?: CaptainId }[];
 }
 
 export type ServerMsg =
