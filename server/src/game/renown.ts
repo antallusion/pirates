@@ -431,9 +431,14 @@ export function sendRenown(game: Game, s: PlayerSession, force = false): void {
 const flushAt = new WeakMap<Game, number>();
 
 /** Every five seconds: the omens sailed under, ranks, feats, sets; the tables written; the week turned by the lead. */
-export function stepRenown(game: Game): void {
+export function stepRenown(game: Game, bucketed = false): void {
+  // The game calls it every second, bucketed: each captain is looked at once in five, a fifth of them a second (all at
+  // once on the same second made a spike of the tick: docs/19 E19's open item), the sea's own part every five. Called
+  // as it stands (the tests, the tester), every captain and the sea's part at once.
+  const sec = Math.floor(game.now);
   for (const s of game.sessions) {
     if (!s.profile || s.disconnectedAt !== null) continue;
+    if (bucketed && (s.accountId + sec) % 5 !== 0) continue;
     noteOmen(game, s);
     checkCareers(game, s);
     checkFeats(game, s);
@@ -441,6 +446,7 @@ export function stepRenown(game: Game): void {
     applyWeekly(game, s);
     sendRenown(game, s);
   }
+  if (bucketed && sec % 5 !== 0) return;
   if ((flushAt.get(game) ?? 0) <= game.now) {
     flushAt.set(game, game.now + 30);
     flushWeek(game);

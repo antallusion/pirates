@@ -853,7 +853,10 @@ export class Game {
     stepCommon(this);
     stepTasks(this);
     stepEmpires(this);
-    if (Math.floor(now) % 60 === 0) legendaryCalendar(this);
+    // (the seldom steps each keep their period but take a second of their own in it — stacked on the same second
+    // they made the tick's spikes: docs/19 E19's open item, 2026-10-09)
+    const sec = Math.floor(now);
+    if (sec % 60 === 0) legendaryCalendar(this);
     // Nearest player distance for NPC LOD.
     const players: ShipEntity[] = [];
     for (const s of this.sessions) if (s.ship && !s.ship.docked) players.push(s.ship);
@@ -880,7 +883,7 @@ export class Game {
     beastSecond(this); // the beasts rise and go, the carcasses bleed and are flensed (docs/12 P4)
     stepWanted(this); // the named pirates, their trail, their lairs; the hunters (docs/12 P5)
     stepRaiding(this); // convoys, rockets, tips, the lanes' heat, the guarded (docs/12 P6)
-    if (Math.floor(this.now) % 10 === 0) stepEstate(this); // outposts at work, raided and robbed (docs/12 P7)
+    if (sec % 10 === 0) stepEstate(this); // outposts at work, raided and robbed (docs/12 P7)
     stepCaravans(this); // one's own caravans at sea (docs/12 P8)
     stepCompanions(this); // the orca calves in their captains' wakes (docs/12 P10 #2)
     stepPets(this); // the parrots' watch (docs/12 P10 #3)
@@ -889,19 +892,19 @@ export class Game {
     stepStorms(this); // the heart of the Storm of the Century (docs/12 P10 #14)
     if (Math.floor(this.now) % 2 === 0) stepService(this); // letters of marque: orders, sunsets, the law's eye (docs/12 P10 #15)
     stepDescent(this); // the Descent into the Abyss (docs/12 P10 #17)
-    if (Math.floor(this.now) % 5 === 0) stepHolidays(this); // the sea's holidays (docs/12 P10 #18)
-    if (Math.floor(this.now) % 60 === 0) stepBazaar(this); // the Floating Bazaar's takings and old stalls (docs/12 P10 #19)
+    if (sec % 5 === 0) stepHolidays(this); // the sea's holidays (docs/12 P10 #18)
+    if (sec % 60 === 30) stepBazaar(this); // the Floating Bazaar's takings and old stalls (docs/12 P10 #19)
     stepAuction(this); // the trophy auction of the free ports (docs/16 #13)
-    if (Math.floor(this.now) % 10 === 0) for (const s of this.sessions) sendBazaarShadows(this, s);
-    if (Math.floor(this.now) % 10 === 0) stepBottles(this); // bottles adrift (docs/12 P10 #6)
-    if (Math.floor(this.now) % 5 === 0) stepWonders(this); // the wonders of the sea (docs/12 P10 #8)
-    if (Math.floor(this.now) % 5 === 0) stepOmens(this); // the omen of the day (docs/12 P10 #9)
-    if (Math.floor(this.now) % 5 === 0) stepDutchman(this); // the Flying Dutchman's week (docs/12 P10 #10)
-    if (Math.floor(this.now) % 30 === 0) stepFates(this); // the officers' requests and loves (docs/12 P10 #11)
-    if (Math.floor(this.now) % 5 === 0) stepRenown(this); // careers, the week's challenges, the album, feats (docs/16 #26–29)
-    if (Math.floor(this.now) % 5 === 0) stepWorldGoals(this); // the sea's goals of the week (docs/16 #32)
-    if (Math.floor(this.now) % 5 === 0) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
-    if (Math.floor(this.now) % 5 === 0) stepH3(this); // the Heroes' calendar: dawns, weeks, mines, halls (docs/17 H3)
+    if (sec % 10 === 3) for (const s of this.sessions) sendBazaarShadows(this, s);
+    if (sec % 10 === 6) stepBottles(this); // bottles adrift (docs/12 P10 #6)
+    if (sec % 5 === 1) stepWonders(this); // the wonders of the sea (docs/12 P10 #8)
+    if (sec % 5 === 2) stepOmens(this); // the omen of the day (docs/12 P10 #9)
+    if (sec % 5 === 3) stepDutchman(this); // the Flying Dutchman's week (docs/12 P10 #10)
+    if (sec % 30 === 15) stepFates(this); // the officers' requests and loves (docs/12 P10 #11)
+    stepRenown(this, true); // careers, the week's challenges, the album, feats (docs/16 #26–29) — a fifth of the captains a second
+    if (sec % 5 === 4) stepWorldGoals(this); // the sea's goals of the week (docs/16 #32)
+    if (sec % 5 === 1) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
+    if (sec % 5 === 2) stepH3(this); // the Heroes' calendar: dawns, weeks, mines, halls (docs/17 H3)
     stepH4(this); // the adventure map: guards, things to visit, the Grail's diggers (docs/17 H4)
     stepLairs(this); // the lairs of the land's creatures: what each captain sees, her card (docs/18 II)
     stepDrifts(this); // drifting creatures, the season's legend (docs/18 IV)
@@ -921,7 +924,7 @@ export class Game {
     stepHoldings(this);
     stepGuilds(this);
     stepSieges(this);
-    if (Math.floor(now) % 5 === 0) recordTrails(this);
+    if (sec % 5 === 3) recordTrails(this);
     for (const [id, t] of this.sunkRecently) if (now - t > 900) this.sunkRecently.delete(id);
     for (const [id, v] of this.volleys) if (now - v.t > 30) this.volleys.delete(id);
 

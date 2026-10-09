@@ -239,10 +239,20 @@ function lairThere(game: Game, l: Lair): boolean {
 export function lairMen(game: Game, l: Lair): ArmyStack[] {
   const st = L(game).store.st[l.id];
   if (st?.army && st.at !== undefined && game.now < st.at + LAIR_RESPAWN[l.role]) return st.army.map((x) => ({ ...x }));
-  const men = lairArmy(l.kind, l.level, l.size);
+  const men = lairArmyOf(l);
   // docs/18 #45: the week of its kind — a quarter more of them (a grotto's and a guardian's own stay as they are).
   if (lairWeek(game, l)) men.forEach((x, i) => (x.n = l.role !== 'shore' && i === 0 ? x.n : Math.max(1, Math.round(x.n * WEEK_BEAST_LAIR))));
   return men;
+}
+
+/** A lair's own army (lairArmy is a function of its kind, level and size alone): reckoned once, handed out as copies —
+ *  each captain's marks asked it of every lair she had seen, every other second. */
+const ARMY_MEMO = new Map<string, ArmyStack[]>();
+function lairArmyOf(l: Lair): ArmyStack[] {
+  const key = `${l.kind}|${l.level}|${l.size}`;
+  let a = ARMY_MEMO.get(key);
+  if (!a) ARMY_MEMO.set(key, (a = lairArmy(l.kind, l.level, l.size)));
+  return a.map((x) => ({ ...x }));
 }
 
 /** docs/18 #45: this week is named for the lair's own kind. */
@@ -448,7 +458,9 @@ function cardLair(game: Game, s: PlayerSession): Lair | null {
   if (quiet(game)) return null;
   const S = L(game);
   let best: Lair | null = null, bd = LAIR_CARD_R;
-  for (const l of S.lairs) {
+  // (the lairs of her cell and the eight about it — the card's reach is well inside them; a walk over every lair of the
+  // doubled sea, each captain each second, was the most of stepLairs: docs/19 E19's open item)
+  for (const l of lairsAbout(S, ship.state.x, ship.state.y)) {
     const p = l.turtle !== undefined ? lairPos(game, l) : l;
     if (Math.abs(p.x - ship.state.x) > bd || Math.abs(p.y - ship.state.y) > bd) continue;
     const d = dist(p.x, p.y, ship.state.x, ship.state.y);

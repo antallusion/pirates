@@ -83,7 +83,8 @@ test('driftwood: planks or timber for about its worth, then not again today; a d
   const lv = s.ship!.shipLevel;
   const value = gotP * GOODS.planks.basePrice + gotT * GOODS.timber.basePrice;
   assert.ok(value >= seaHour(lv) * 0.02 * 0.5 && value <= seaHour(lv) * 0.05 * 1.6, `worth ${value} at ⚓${lv}`);
-  assert.match(toasts(s).at(-1)!.msg, /Driftwood hauled aboard/);
+  // (among her latest lines: the sea's own news may come after it in the same second)
+  assert.ok(toasts(s).slice(-4).some((t) => /Driftwood hauled aboard/.test(t.msg)), toasts(s).slice(-4).map((t) => t.msg).join(' | '));
   // Once a day a captain a mark.
   assert.equal(startMark(game, s, m.id), 'Your boats worked this one today already.');
   assert.ok(markAgain(game, s.profile!, m.id) > 23 * 3_600_000);
