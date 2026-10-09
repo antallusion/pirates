@@ -454,10 +454,12 @@ export function wetSheen(g: CanvasRenderingContext2D, sky: Sky, t: number, boxes
   g.globalCompositeOperation = 'source-over';
 }
 /** Fog lying in banks over the field, drifting with the wind: two or three great soft clouds, and a veil. */
-export function fog(g: CanvasRenderingContext2D, sky: Sky, t: number, cw: number, ch: number, banks: number, level = sky.fog): void {
+export function fog(g: CanvasRenderingContext2D, sky: Sky, t: number, cw: number, ch: number, banks: number, level = sky.fog, veil = true): void {
   if (!(level > 0.02)) return;
-  g.fillStyle = `rgba(150,160,165,${(0.1 * level).toFixed(3)})`;
-  g.fillRect(0, 0, cw, ch);
+  if (veil) {
+    g.fillStyle = `rgba(150,160,165,${(0.1 * level).toFixed(3)})`;
+    g.fillRect(0, 0, cw, ch);
+  }
   const s = t / 1000;
   for (let i = 0; i < banks; i++) {
     const R = Math.max(cw, ch) * (0.45 + 0.15 * i);

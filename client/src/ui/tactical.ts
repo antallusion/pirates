@@ -4341,7 +4341,7 @@ export class TacticalPanel {
     // The powder smoke hanging over the fight, the fog in banks, the rain, a storm's lightning (items 16, 20), the
     // ultimate's film frame (item 12): over the whole screen, not with the camera.
     this.plainTf(g);
-    if (this.haze > 0.01) fogBanks(g, this.sk, t, cw, ch, 1, this.haze);
+    if (this.haze > (this.lv.fine ? 0.05 : 0.1)) fogBanks(g, this.sk, t, cw, ch, 1, this.haze, false);
     if (this.sk.fog > 0.02) fogBanks(g, this.sk, t, cw, ch, this.lv.fine ? 3 : 2);
     if (this.sk.rain) rainFall(g, this.sk, t, cw, ch, this.lv.rain);
     if (this.sk.storm) this.storm(g, t, cw, ch, w);
