@@ -23,6 +23,16 @@ body.reduce-motion #tut-finger .tf-hand, body.reduce-motion .tut-target { animat
 #hud-watch .w-body { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #hud-watch .w-t { font-style: normal; }
 #hud-watch .w-short { display: none; }
+/* A desk's lesson in two rows: the count and the step's name, then its line beside the two short skips (three rows took
+   95 px of the top band and pushed the toasts under it 25 px into the middle of a 1500×600 sea, QA 2026-10-09). */
+@media (min-height: 521px) {
+  #hud-watch:not(.hidden) { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; }
+  #hud-watch .w-head { flex: 1 1 100%; }
+  #hud-watch .w-body { flex: 1 1 0; min-width: 0; }
+  #hud-watch .w-act { flex: none; margin-top: 0; }
+  #hud-watch .w-long { display: none; }
+  #hud-watch .w-short { display: inline; }
+}
 @media (max-height: 520px) {
   #hud-watch:not(.hidden) { flex-wrap: nowrap; justify-self: start; align-self: flex-start; padding: 3px 4px 3px 8px; }
   /* (the stack's children are all stretched to its width with !important, styles.css #hud #hud-stack > *) */
@@ -34,6 +44,11 @@ body.reduce-motion #tut-finger .tf-hand, body.reduce-motion .tut-target { animat
   #hud-watch .w-act .btn { height: 22px; padding: 0 6px; font-size: 10.5px; }
   #hud-watch .w-t, #hud-watch .w-long { display: none; }
   #hud-watch .w-short { display: inline; }
+  /* A finger: the step's title and the finger over the button say it — the line «Нажмите «Атаковать».» was cut to
+     «Нажмит…» between the title and the skips (73 of 134 px missing at 812×375, QA 2026-10-09). The skips reach a
+     finger's 44 px past their 22 px plates. */
+  body.touch #hud-watch .w-body { display: none; }
+  body.touch #hud-watch .w-act .btn::after { inset: -11px -3px; }
 }
 
 /* In the First Watch the counter of news and goals keeps away: the lesson's row stood under it (the counter at 172 px

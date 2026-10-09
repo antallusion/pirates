@@ -20,6 +20,11 @@
         document.documentElement.classList.add('i18n-pending');
         document.title = 'GRAVETIDE — пиратская готическая MMORPG';
       }
+      // A tap on «Set sail as a guest» before the game's script is in (the form's own «return false» held it, and the
+      // first tap on a fresh page did nothing): kept, and answered by main.ts the moment it is.
+      document.addEventListener('submit', function (e) {
+        if (e.target && e.target.id === 'login-form' && !window.__gtReady) window.__earlySubmit = 'login';
+      }, true);
     })();
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />

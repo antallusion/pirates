@@ -269,6 +269,8 @@ export function tradeTip(game: Game, s: PlayerSession): Tutorial['tip'] {
 export const PRACTICE_FLOOR = 0.7;
 /** …and the share of her hull they leave her: she is there to be boarded, not sunk (docs/23 item 79). */
 export const PRACTICE_HULL = 0.3;
+/** …and the share of her pupil's hull the raider's guns leave: the lesson tows no one home. */
+export const PUPIL_HULL = 0.25;
 /** Each novice's practice raider (entity id). */
 const raiders = new WeakMap<PlayerSession, number>();
 

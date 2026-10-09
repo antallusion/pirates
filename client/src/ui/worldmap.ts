@@ -863,7 +863,7 @@ export class WorldMap {
       const fresh = Math.max(0.3, 1 - (now - sg.t) / 3600);
       g.strokeStyle = sg.kind === 'ghost' ? `rgba(46,230,200,${fresh})` : `rgba(208,106,94,${fresh})`;
       g.globalAlpha = fresh;
-      const drawn = mark(sg.kind === 'ghost' ? 'icon.map_monster' : 'icon.danger', x, y, ms * 0.85);
+      const drawn = mark(sg.kind === 'ghost' ? 'icon.map_monster' : 'icon.omen_red_sky', x, y, ms * 0.85);
       g.globalAlpha = 1;
       if (!drawn) {
         g.lineWidth = 1.5;
@@ -957,7 +957,7 @@ export class WorldMap {
       g.arc(x, y, Math.max(7, t.r * k), 0, Math.PI * 2);
       g.fill();
       g.stroke();
-      if (!mark(t.kind === 'wreck' ? 'icon.map_wreck' : t.kind === 'haunt' ? 'icon.map_monster' : 'icon.danger', x, y, ms * 0.9)) {
+      if (!mark(t.kind === 'wreck' ? 'icon.map_wreck' : t.kind === 'haunt' ? 'icon.map_monster' : 'icon.omen_red_sky', x, y, ms * 0.9)) {
         g.fillStyle = t.kind === 'wreck' ? '#50c8be' : t.kind === 'haunt' ? '#aa82e6' : '#e88c40';
         g.font = '700 14px Inter, system-ui, sans-serif';
         g.textAlign = 'center';

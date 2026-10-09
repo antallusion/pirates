@@ -98,7 +98,7 @@ export const SERVER_RU_H3: Record<string, string> = {
   'Off {0}, by the {1}.': 'У острова {0}, рядом: {1}.',
   'Off {0}.': 'У острова {0}.',
   'the raiders’': 'у налётчиков',
-  'Town raised: {0}; the dwellings full ({1}).': 'Город построен: {0}; жилища полны ({1}).',
+  'Town raised: {0} buildings, {1} levels in all; the dwellings full: {2} creatures.': 'Город построен — построек: {0}, уровней всего: {1}; жилища полны — существ: {2}.',
   '{0} of each resource in the hold{1}.': 'По {0} каждого ресурса в трюме{1}.',
   ' and in the island’s yard': ' и во дворе острова',
 };

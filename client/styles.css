@@ -418,8 +418,11 @@ kbd { font-family: var(--sans); border: 1px solid var(--brass-dim); padding: 0 5
 
 /* The First Watch (docs/07 §13) */
 .tut-hidden { display: none !important; }
-.tut-reveal { animation: tut-draw 900ms ease-out both; }
-@keyframes tut-draw { from { opacity: 0; clip-path: inset(0 100% 0 0); filter: brightness(1.6); } to { opacity: 1; clip-path: inset(0 0 0 0); filter: none; } }
+/* (backwards, not both: a fill that held the last frame kept clip-path: inset(0) on the block for good — the key chips
+   under «Огонь» and «Цель» hung half cut off below the frame, and its own filter and opacity were overridden; QA
+   2026-10-09. The wipe reaches 40 px past the frame, so the rings and chips come in with it.) */
+.tut-reveal { animation: tut-draw 900ms ease-out backwards; }
+@keyframes tut-draw { from { opacity: 0; clip-path: inset(-40px 100% -40px -40px); filter: brightness(1.6); } to { opacity: 1; clip-path: inset(-40px -40px -40px -40px); filter: brightness(1); } }
 #hud-watch { left: 50%; top: 12px; transform: translateX(-50%); width: min(520px, 60vw); font-family: var(--sans); font-size: 13px; color: var(--bone); }
 #hud-watch .w-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 4px; }
 #hud-watch .w-head span { text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; color: var(--brass); }
@@ -752,6 +755,11 @@ body.touch { --touch-h: calc(var(--stick) + 20px); }
 @media (max-width: 699px), (max-height: 520px) {
   .ship-head { grid-template-columns: 52px minmax(0, 1fr); }
   .ship-head > .muted { display: none; }
+  /* «Снаряжение» and «Облик» in a row under the name, not a column under the 52 px picture that pushed the figures
+     down to y 225 of 375; the key's «[I] закрыть» is a keyboard's (QA 2026-10-09). */
+  .ship-head > .ship-head-r { grid-column: 2; flex-direction: row; align-items: center; justify-content: flex-start; flex-wrap: wrap; margin-left: 0; }
+  .ship-head-r > .muted { display: none; }
+  .ship-head .sub.ship-passive { white-space: normal; text-overflow: clip; } /* (640×360 cut «…у кораблей кр» 28 px short) */
   .ship-hero { width: 52px; height: 52px; }
   .ship-hero img { height: 48px; }
   .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1045,6 +1053,24 @@ body.touch #hud-dive .dhint { display: none; }
   #modal-panel[data-modal="boarding"] .choice-grid.one { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
   #modal-panel[data-modal="boarding"] .btn.choice { min-height: 44px; grid-template-columns: 22px minmax(0, 1fr); gap: 6px; padding: 3px 8px; font-size: 11.5px; line-height: 1.15; } /* a finger's 44 (docs/23 item 92) */
   #modal-panel[data-modal="boarding"] .choice-ico { width: 22px; height: 22px; }
+}
+/* …and on a desk's short screen (1500×600, 1280×720) the same plan in the desk's type: four of the five fates stood
+   under the window's foot (568–878 px of a window that ends at 576), QA 2026-10-09. */
+@media (min-height: 521px) and (max-height: 820px) and (min-width: 1000px) {
+  #modal-panel[data-modal="boarding"] .cols { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.3fr); gap: 16px; grid-auto-flow: row dense; align-items: start; }
+  #modal-panel[data-modal="boarding"] .cols > div:first-child, #modal-panel[data-modal="boarding"] .cols > div:last-child > .card { grid-column: 1; }
+  #modal-panel[data-modal="boarding"] .cols > div:last-child { display: contents; }
+  #modal-panel[data-modal="boarding"] .cols > div:last-child > .card:last-child { grid-column: 2; grid-row: 1 / span 4; }
+  #modal-panel[data-modal="boarding"] .cols .card { margin-bottom: 10px; }
+  #modal-panel[data-modal="boarding"] .choice-grid.one { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+  #modal-panel[data-modal="boarding"] .btn.choice { min-height: 52px; padding: 6px 12px; font-size: 13.5px; line-height: 1.2; }
+}
+/* A boarded ship's fates in a word on a narrow phone (dialogs.ts): at 640×360 the prize's line ran to five rows and the
+   fifth fate stood under the window's foot (332–392 px of a window ending at 342), QA 2026-10-09. */
+.choice .ch-short { display: none; }
+@media (max-width: 699px) {
+  #modal-panel[data-modal="boarding"] .choice .ch-long { display: none; }
+  #modal-panel[data-modal="boarding"] .choice .ch-short { display: inline; }
 }
 /* Scrollbars in the game's own hand: a thin brass rail on a dark groove, everywhere. */
 /* Firefox takes the standard properties; Chromium keeps its own (setting both would disable the brass thumb). */
@@ -4380,11 +4406,17 @@ body.tac-ph .tb-pl .tb-rb { width: 52px; height: 52px; }
 .tb-end.sea .tb-why { display: none; }
 .tb-end.sea .tb-end-rows { flex-direction: row; flex-wrap: wrap; margin: 0; gap: 4px 16px; }
 .tb-end.sea .tb-er { grid-template-columns: auto auto; column-gap: 6px; }
+/* (in the band a label and its «нет» on one line: the label's 8 px drop left «нет» riding above it, QA 2026-10-09) */
+.tb-end.sea .tb-er { align-items: center; }
+.tb-end.sea .tb-er > small { padding-top: 0; }
 .tb-end.sea .tb-endbtn { min-width: 0; }
 @media (max-height: 520px) {
   .tb-banner.tb-end.sea { top: 4px; bottom: auto; max-height: 64px; padding: 4px 10px; }
   .tb-end.sea .tb-bsc > b { font-size: 20px; }
   .tb-end.sea .tb-er > small { display: none; }
+  /* …and with the labels gone a lone «нет» said nothing (640×360: «Примкнули: 1 нет Дальше»): a row with nothing in it
+     stays out of the band. */
+  .tb-end.sea .tb-er:has(> div > em.muted:only-child) { display: none; }
   .tb-end.sea .tb-rs, .tb-end.sea .tb-rs-ico { width: 24px; height: 24px; }
   .tb-end.sea .tb-endbtn { min-height: 44px; padding: 0 14px; }
   .tb-end.land { padding: 8px 16px 10px; gap: 6px; }
@@ -4537,6 +4569,13 @@ body:has(#modal:not(.hidden)) #encounter, body:has(#modal:not(.hidden)) #surrend
 #surrender .sur-choice small { display: none; }
 #surrender .sur-choice b { font-size: 12px; line-height: 1.15; }
 #surrender .sur-choice .choice-ico { width: 20px; height: 20px; }
+/* A desk's wide screen: the terms a little wider, so a choice keeps to two lines («Keep her as a trophy» ran four and the
+   card 216 px down into the middle of a 1500×600 sea), and the toasts wait while they are up — a toast stood under the
+   card, its words showing through the ship's line (QA 2026-10-09; on touch they wait already, seahud.css). */
+@media (min-width: 1100px) and (min-height: 521px) {
+  #surrender { width: min(640px, calc(100vw - 600px)); }
+  body.simple:not(.touch):has(#surrender:not(.hidden)) #toasts { display: none !important; }
+}
 @media (max-width: 699px), (max-height: 520px) {
   #surrender, #lairchest { top: calc(var(--sa-t, 0px) + 6px); left: calc(var(--sa-l, 0px) + 8px); transform: none; width: min(440px, calc(var(--ts-left, 360px) - var(--sa-l, 0px) - 16px)); min-width: 0; }
   body:has(#surrender:not(.hidden)) #hud-captain, body:has(#lairchest:not(.hidden)) #hud-captain { visibility: hidden; }

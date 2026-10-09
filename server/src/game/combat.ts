@@ -6,7 +6,7 @@ import { tributeBroken } from './raiding.ts';
 import { lairImpact } from './wanted.ts';
 import { ladderBetween } from './ladder.ts';
 import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, LAY_ARC_DEG, LAY_OVER, SEA_DAMAGE, SEA_RELOAD, aimFocus, seaLevelPace, windDriftAngle } from '../../../shared/src/data/gunnery.ts';
-import { onboardingVolley, PRACTICE_HULL } from './onboarding.ts';
+import { onboardingVolley, PRACTICE_HULL, PUPIL_HULL } from './onboarding.ts';
 import { softDealt, softenFoe } from './firstfights.ts';
 import { AMMO, ARMOR_PIERCE, CHASER_CONE, CHASER_GUN, CHASER_RELOAD, GUNS } from '../../../shared/src/data/ships.ts';
 import type { ChaserEnd, GunId } from '../../../shared/src/data/ships.ts';
@@ -799,6 +799,9 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     // The First Watch's raider is there to be boarded (docs/23 item 79): her pupil's guns leave her a third of her hull
     // (alongside, the gun crews and the bump of the run-in sank her in five seconds, before «На абордаж»).
     if (target.npcRole && game.npcs.get(target.id)?.practice === source?.id && source) hull = Math.min(hull, Math.max(0, target.hull - PRACTICE_HULL * target.stats.hullMax));
+    // …and the raider never sends her pupil down (QA 2026-10-09: a newcomer who stopped to read at «Атакуйте» was sunk by
+    // the lesson's raider and towed home before she had fired a gun): her round shot leaves the pupil a quarter.
+    if (source?.npcRole && game.npcs.get(source.id)?.practice === target.id) hull = Math.min(hull, Math.max(0, target.hull - PUPIL_HULL * target.stats.hullMax));
     if (target.zoneBoss) zbCredit(game, target, source, Math.min(Math.max(0, target.hull), hull)); // each captain's part of her (docs/21)
     target.hull -= hull;
     onHullDamage(game, target, hull, source);

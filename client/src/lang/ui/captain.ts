@@ -8,6 +8,13 @@ export const EN = {
   starts: 'Starts with a {ship} ({gun}s), {crew} crew, {gold} silver, in Saltmarrow on the Black Coast.',
   shipName: 'Name your ship',
   takeCommand: 'Take command',
+  // The ship's name offered in the field (a Russian captain met «Iron Verdict» in Latin at the head of every battle).
+  'ship.corsair': 'Iron Verdict',
+  'ship.smuggler': 'Quiet Ledger',
+  'ship.reaver': 'Red Hook',
+  'ship.navigator': 'Northern Wren',
+  'ship.drowned': 'Saint Verity',
+  'ship.admiral': 'Black Signal',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -18,4 +25,10 @@ export const RU: Record<keyof typeof EN, string> = {
   starts: 'Начинает на судне класса «{ship}» ({gun}), экипаж {crew}, {gold} серебра, в Солтмарроу на Чёрном берегу.',
   shipName: 'Наречь корабль',
   takeCommand: 'Принять командование',
+  'ship.corsair': 'Железный приговор',
+  'ship.smuggler': 'Тихая книга',
+  'ship.reaver': 'Красный крюк',
+  'ship.navigator': 'Северный крапивник',
+  'ship.drowned': 'Святая Верность',
+  'ship.admiral': 'Чёрный сигнал',
 };

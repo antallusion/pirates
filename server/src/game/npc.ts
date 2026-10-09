@@ -213,6 +213,10 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
   if (npc.id === other.id || !other.alive || other.docked) return false;
   // The adventure map's guards (docs/17 H4): they bar a captain's way; the sea's own ships leave them be.
   if (npc.guardOf || other.guardOf) return !!npc.guardOf && other.isPlayer;
+  // The First Watch's raider is her pupil's lesson, and a ship boarded and being looted is her captor's: the sea's
+  // other ships leave them be (QA 2026-10-09: a Crown patrol off the harbour shot the raider from 100 % to nothing
+  // before «На абордаж» twice, and sank her under the card of spoils — «Приз ускользнул», the ransom lost).
+  if (!other.isPlayer && (other.lootLockedFor !== null || game.npcs.get(other.id)?.practice !== undefined)) return false;
   const role = npc.npcRole;
   // The beasts of the sea (docs/12 P4): the predators hunt captains; the sea's ships and the beasts leave each other be.
   if (role === 'beast') return other.isPlayer && (beastPredator(npc, other) || (npc.attackers.get(other.id) ?? -999) > game.now - 120);

@@ -59,6 +59,8 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
   onLang(() => {
     if ($('screen-captain').classList.contains('hidden')) return;
     ship0 = ($('ship-name') as HTMLInputElement).value;
+    // (an offered name left as it was follows the language; one she typed stays)
+    if (CAPTAIN_IDS.some((id) => ship0 === EN[`ship.${id}`] || ship0 === RU[`ship.${id}`])) ship0 = null;
     know0 = ($('know-sea') as HTMLInputElement).checked;
     render();
     ship0 = null;
@@ -73,6 +75,7 @@ function knowSea(): string {
   return `<label class="check know-sea"><input type="checkbox" id="know-sea" /><span><b>${esc(say)}</b>${does ? `<small>${esc(does)}</small>` : ''}</span></label>`;
 }
 
+/** The name offered for her ship, in the reader's language (the field keeps whatever she types). */
 function defaultShipName(id: CaptainId): string {
-  return { corsair: 'Iron Verdict', smuggler: 'Quiet Ledger', reaver: 'Red Hook', navigator: 'Northern Wren', drowned: 'Saint Verity', admiral: 'Black Signal' }[id];
+  return L(`ship.${id}`);
 }

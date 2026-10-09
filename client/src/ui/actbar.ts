@@ -36,6 +36,9 @@ export interface ActFacts {
   port?: { name: string } | null;
   /** docs/23 item 79: the First Watch's «В порт» far from any harbour — the helmsman sails her to the nearest one. */
   homeport?: { name: string } | null;
+  /** The First Watch's last step, «В порт», is under way: the harbour's button leads (QA 2026-10-09: a pirate outpost a
+   *  cable off took the gold button and «В порт» hid behind «⋯ ещё 4», with the lesson's finger nowhere). */
+  watchHome?: boolean;
   landable?: { action: LandAction; feature: string; island: string; blocked?: boolean; title?: string } | null;
   mastWreck?: boolean;
   cast?: 'net' | 'lamp' | null;
@@ -131,6 +134,10 @@ export function buildActs(f: ActFacts): Act[] {
   for (const k of f.looks ?? []) out.push({ id: 'look', icon: LOOK_ICON[k.kind], label: L('a.look'), sub: k.name, title: L('a.lookTitle', { name: k.name }), arg: k.kind });
   const r = f.repair;
   if (r && (r.repairing || (!r.combat && r.hurt && !r.short))) out.push({ id: 'repair', icon: 'prof_carpenter', label: L(r.repairing ? 'a.repairStop' : 'a.repair'), title: L(r.repairing ? 'a.repairStop' : 'a.repair'), key: 'repair' });
+  if (f.watchHome && !f.grabbed) {
+    const i = out.findIndex((a) => a.id === 'dock' || a.id === 'homeport');
+    if (i > 0) out.unshift(...out.splice(i, 1));
+  }
   return out;
 }
 

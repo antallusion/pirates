@@ -874,6 +874,16 @@ fetch('/auth/providers').then((r) => r.json()).then((d: { providers: { id: strin
   net.forget();
   net.connect(name);
 };
+// A tap on «Отчалить гостем» while this script was still on its way (index.html kept it): answered now (QA 2026-10-09:
+// the first tap on a fresh page, 0.8 s in, did nothing — the script came in seconds later).
+{
+  const early = globalThis as { __gtReady?: boolean; __earlySubmit?: string };
+  early.__gtReady = true;
+  if (early.__earlySubmit === 'login' && !net.live) {
+    delete early.__earlySubmit;
+    ($('login-form') as HTMLFormElement).requestSubmit();
+  }
+}
 
 net.onStatus = (ok) => $('connection').classList.toggle('hidden', ok || !inGame);
 net.on(onMessage);
@@ -2224,7 +2234,9 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
   // Just out of the harbour, «В порт» is not the gold button for half a minute (unless she is hurt): the 2026-10-06
   // newcomer's run cast off, saw «В порт» as the one thing to press and put straight back in — 190 times in 15 minutes.
-  if (port && !(performance.now() - castOffAt < CAST_OFF_QUIET && you.hull >= you.hullMax * 0.5)) facts.port = { name: sv(port.name) };
+  const watchHome = state.onboarding?.stage === 'port';
+  if (port && (watchHome || !(performance.now() - castOffAt < CAST_OFF_QUIET && you.hull >= you.hullMax * 0.5))) facts.port = { name: sv(port.name) };
+  if (watchHome) facts.watchHome = true;
   const ab = self.abyss;
   facts.ritual = !!ab && ab.shards >= 3 && dist(own.x, own.y, ab.eye.x, ab.eye.y) < 1500;
   const l = self.landable;
@@ -2338,6 +2350,9 @@ function runAct(a: Act): void {
       return requestDock(false);
     case 'homeport':
       if (!homeport) return;
+      // Already on her way there: a second tap sends nothing (each one said «Автоплавание: штурвал у рулевого…» again,
+      // ×37 under a finger that kept tapping the gold button, QA 2026-10-09).
+      if (homeRun === homeport.id && state.autosail) return;
       homeRun = homeport.id;
       homeRunAt = performance.now();
       return void net.send({ t: 'autosail', x: homeport.x, y: homeport.y });
