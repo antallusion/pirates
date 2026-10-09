@@ -113,21 +113,20 @@ export const FIT = { page: { ref: 1.6, aim: 0.11, heal: 0.1, healAim: 0.13 }, mo
 export const DROWNED_RAISE: [number, number][] = [[1, 0.2], [20, 0.3], [60, 0.48]];
 
 /** docs/25 items 54 and 70: each path's edge over the fitted figures, so the six stand even under the boarding's rules
- *  (`--balance` searches it): her pages' power at the middle levels (POWER_AT's 25 and 40) and at the top (60), her
- *  pages' shares, her moves' power at the middle and the top, her moves' shares, the Drowned's raising. Held where her
- *  moves stay 8–25% in their role (tests/balance/boarding.test.ts). */
-export interface Edge { page: [number, number]; buff: number; move: [number, number]; mbuff: number; mmend: number }
+ *  (`--balance` searches it): her pages' power and her moves' power at each of POWER_AT's levels, her pages' shares, her
+ *  moves' shares, the Drowned's raising. Held where her moves stay 8–25% in their role (tests/balance/boarding.test.ts). */
+export interface Edge { page: number[]; buff: number; move: number[]; mbuff: number; mmend: number }
 export const EDGE: Record<CaptainId, Edge> = {
-  corsair: { page: [0.87, 1.15], buff: 1, move: [1.15, 0.66], mbuff: 1, mmend: 1 },
-  smuggler: { page: [1.15, 1], buff: 0.87, move: [1, 1], mbuff: 0.87, mmend: 1 },
-  reaver: { page: [1.15, 0.87], buff: 0.87, move: [1, 1], mbuff: 1, mmend: 1 },
-  navigator: { page: [1.3, 0.87], buff: 0.87, move: [1, 1], mbuff: 0.87, mmend: 1 },
-  drowned: { page: [1, 1], buff: 1, move: [1.52, 1], mbuff: 0.87, mmend: 1 },
-  admiral: { page: [0.76, 0.87], buff: 0.87, move: [0.8, 0.76], mbuff: 0.76, mmend: 1 },
+  corsair: { page: [1, 1, 1, 0.87, 0.87, 1.15], buff: 1, move: [1, 1, 1, 1.15, 1.15, 0.66], mbuff: 1, mmend: 1 },
+  smuggler: { page: [1, 1, 1, 1.15, 1.15, 1], buff: 0.87, move: [1, 1, 1, 1, 1, 1], mbuff: 0.87, mmend: 1 },
+  reaver: { page: [1, 1, 1, 1.15, 1.15, 0.87], buff: 0.87, move: [1, 1, 1, 1, 1, 1], mbuff: 1, mmend: 1 },
+  navigator: { page: [1, 1, 1, 1.3, 1.3, 0.87], buff: 0.87, move: [1, 1, 1, 1, 1, 1], mbuff: 0.87, mmend: 1 },
+  drowned: { page: [1, 1, 1, 1, 1, 1], buff: 1, move: [1, 1, 1, 1.52, 1.52, 1], mbuff: 0.87, mmend: 1 },
+  admiral: { page: [1, 1, 1, 0.76, 0.76, 0.87], buff: 0.87, move: [1, 1, 1, 0.8, 0.8, 0.76], mbuff: 0.76, mmend: 1 },
 };
 const EDGE_BOUNDS: Record<keyof Edge, [number, number]> = { page: [0.75, 1.3], buff: [0.7, 1], move: [0.5, 1.6], mbuff: [0.5, 1.4], mmend: [0.6, 1.4] };
-/** The edge at each of POWER_AT's levels (none below the middle). */
-const edgeAt = (e: [number, number], i: number): number => (POWER_AT[i] >= 60 ? e[1] : POWER_AT[i] >= 25 ? e[0] : 1);
+/** The edge at each of POWER_AT's levels. */
+const edgeAt = (e: number[], i: number): number => e[i] ?? 1;
 
 /** The `power` and `mend` figures at POWER_AT that put each path's reference blow and heal at their aim of her army
  *  on her real build at each level (her schools' lift, the boarding's scale at the level): the same share at every
@@ -195,32 +194,37 @@ export function rolesOk(p: CaptainId): boolean {
 }
 
 /** docs/25 item 70's first step: a coordinate search on EDGE (the same dice each time, so a change is weighed fairly)
- *  towards every path 50% against all at levels 30 and 60, her moves held in their role (rolesOk). */
+ *  towards every path 50% against all at POWER_AT's levels from 15 (each figure weighed at its own level, where it alone
+ *  stands; the shares at all of them), her moves held in their role (rolesOk). */
 function balance(n: number, sweeps: number): void {
-  const levels = [30, 60];
-  const cost = (): number => {
-    fitPower();
+  const levels = POWER_AT.filter((L) => L >= 15);
+  const at = new Map<number, number>();
+  // Two sets of dice, so a step is not taken for one set's luck.
+  const costAt = (L: number): number => {
     let j = 0;
-    // Two sets of dice, so a step is not taken for one set's luck.
-    for (const L of levels) for (const salt of [0, 500]) for (const v of Object.values(winsAt(L, n, salt))) j += (v - 0.5) ** 2;
+    for (const salt of [0, 500]) for (const v of Object.values(winsAt(L, n, salt))) j += (v - 0.5) ** 2;
     return j / 2;
   };
-  let best = cost();
-  console.log(`start: cost ${best.toFixed(4)}`);
+  const total = () => [...at.values()].reduce((a, b) => a + b, 0);
+  fitPower();
+  for (const L of levels) at.set(L, costAt(L));
+  console.log(`start: cost ${total().toFixed(4)} ${levels.map((L) => `L${L} ${at.get(L)!.toFixed(4)}`).join(' ')}`);
   for (let sw = 0; sw < sweeps; sw++) {
     for (const p of CAPTAIN_IDS) for (const key of ['page', 'move', 'buff', 'mbuff', 'mmend'] as const) {
       if (key === 'mmend' && p !== 'drowned') continue;
       if (key === 'mbuff' && p === 'reaver') continue; // docs/25 item 58: her ultimate's +12% as written
       if (key === 'move' && !['corsair', 'admiral', 'drowned'].includes(p)) continue; // no blow in her moves
-      const slots = key === 'page' || key === 'move' ? [0, 1] : [-1];
+      const slots = key === 'page' || key === 'move' ? POWER_AT.map((L, i) => (L >= 15 ? i : -2)).filter((i) => i >= 0) : [-1];
       for (const s of slots) {
         const e = EDGE[p];
-        const get = () => (s < 0 ? (e[key] as number) : (e[key] as [number, number])[s]);
+        const get = () => (s < 0 ? (e[key] as number) : (e[key] as number[])[s]);
         const set = (v: number) => {
           if (s < 0) (e as unknown as Record<string, number>)[key] = v;
-          else (e[key] as [number, number])[s] = v;
+          else (e[key] as number[])[s] = v;
         };
         const v0 = get();
+        // A figure at one level is weighed there; a share at every level.
+        const mine = s >= 0 ? [POWER_AT[s]] : levels;
         for (const f of [1.15, 1 / 1.15]) {
           const [lo, hi] = EDGE_BOUNDS[key];
           const v = Math.max(lo, Math.min(hi, Math.round(v0 * f * 100) / 100));
@@ -231,20 +235,21 @@ function balance(n: number, sweeps: number): void {
             set(v0);
             continue;
           }
-          const j = cost();
-          if (j < best - 1e-9) {
-            best = j;
+          const was = mine.map((L) => at.get(L)!), now = mine.map((L) => costAt(L));
+          if (now.reduce((a, b) => a + b, 0) < was.reduce((a, b) => a + b, 0) - 1e-9) {
+            mine.forEach((L, i) => at.set(L, now[i]));
             break;
           }
           set(v0);
         }
       }
     }
-    console.log(`sweep ${sw}: cost ${best.toFixed(4)} ${JSON.stringify(EDGE)}`);
+    fitPower();
+    console.log(`sweep ${sw}: cost ${total().toFixed(4)} ${JSON.stringify(EDGE)}`);
   }
   fitPower();
   // And on dice it was not tuned on.
-  for (const L of levels) console.log(`L${L} (other dice): ${Object.entries(winsAt(L, n, 1000)).map(([p, v]) => `${p} ${Math.round(v * 100)}%`).join(' · ')}`);
+  for (const L of [15, 30, 45, 60]) console.log(`L${L} (other dice): ${Object.entries(winsAt(L, n, 1000)).map(([p, v]) => `${p} ${Math.round(v * 100)}%`).join(' · ')}`);
 }
 
 /** The engine's own exchange rate of a point against a share of blows: in a mirror of each path, one side given a hold
