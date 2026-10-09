@@ -4147,6 +4147,11 @@ body.touch .act-btn { --h: 38px; }
 @media (max-width: 1099px), (max-height: 520px) {
   body.touch .cit-act .btn, body.touch .cit-stack .btn, body.touch .cit-titan { min-height: 40px; }
 }
+/* The Throne's seven tabs on a phone: one row (docs/19 E4–E8 brought it to seven). */
+@media (max-width: 1099px), (max-height: 520px) {
+  .throne-win .tabs .tab { padding: 9px 6px; font-size: 11px; letter-spacing: 0.01em; gap: 3px; }
+  .throne-win .tabs .tab .ico-sm { width: 14px; height: 14px; }
+}
 @media (max-width: 520px) {
   .cit-row { grid-template-columns: 44px minmax(0, 1fr); grid-template-areas: 'f m' 'a a' 'x x'; }
   .cit-face, .cit-face .ico-lg { width: 44px; height: 44px; }

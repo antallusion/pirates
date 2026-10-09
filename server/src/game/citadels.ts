@@ -425,6 +425,8 @@ function capture(game: Game, id: number, gid: number): void {
   if (prev !== null && prev !== gid) guildNotify(game, prev, `The ${nameOf(c)} has fallen`, `[${t.tag}] ${t.name} has taken the ${nameOf(c)} from your guild.`);
   const g = guildOf(game, gid);
   if (g) guildLog(game, g, `Your guild takes the ${nameOf(c)}.`);
+  // TODO docs/19 E12 (the relics' helper exports it): relic parts from a citadel taken — one call here, e.g.
+  // relicPartsFromCitadel(game, gid, c.level) — its besiegers are the guild's captains who cut the garrison.
   save(game);
   touch(game);
 }

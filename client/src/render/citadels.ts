@@ -11,7 +11,7 @@ import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/citadels.ts';
 import type { ClientState } from '../state.ts';
 import { citLabel } from '../ui/citadels.ts';
-import { drawArt, drawPiece, markRing } from './seaart.ts';
+import { drawArt, markRing } from './seaart.ts';
 
 const L = dict(EN, RU);
 type G = CanvasRenderingContext2D;
@@ -37,23 +37,33 @@ function label(g: G, text: string, x: number, y: number, col: string, size = 11)
   g.fillText(text, x, y);
 }
 
-/** The holder's pennant on its pole (a crown over it for the Masters of the Throne). */
+/** The holder's flag on its pole, waving (a crown over it for the Masters of the Throne). */
 function pennant(g: G, x: number, y: number, len: number, col: string, crown: boolean, t: number): void {
-  g.strokeStyle = '#2a2622';
-  g.lineWidth = Math.max(1, len * 0.05);
+  g.strokeStyle = 'rgba(0,0,0,0.85)';
+  g.lineWidth = Math.max(2, len * 0.08);
   g.beginPath();
   g.moveTo(x, y);
   g.lineTo(x, y - len);
   g.stroke();
-  if (!drawPiece(g, 'pennant', x + len * 0.42, y - len * 0.86, len * 0.72, Math.sin(t * 3 + x) * 0.06, 1, col)) {
-    g.fillStyle = col;
-    g.beginPath();
-    g.moveTo(x, y - len);
-    g.lineTo(x + len * 0.7, y - len * 0.85);
-    g.lineTo(x, y - len * 0.7);
-    g.closePath();
-    g.fill();
-  }
+  g.strokeStyle = '#8a7a5a';
+  g.lineWidth = Math.max(1, len * 0.04);
+  g.stroke();
+  // The cloth: a swallow-tailed flag in the guild's colour, its far edge waving.
+  const fw = len * 0.62, fh = len * 0.36, top = y - len, wv = Math.sin(t * 3 + x * 0.01) * fh * 0.12;
+  g.beginPath();
+  g.moveTo(x, top);
+  g.quadraticCurveTo(x + fw * 0.5, top - wv, x + fw, top + wv);
+  g.lineTo(x + fw * 0.78, top + fh * 0.5 + wv);
+  g.lineTo(x + fw, top + fh + wv);
+  g.quadraticCurveTo(x + fw * 0.5, top + fh - wv, x, top + fh);
+  g.closePath();
+  g.fillStyle = col;
+  g.fill();
+  g.strokeStyle = 'rgba(0,0,0,0.8)';
+  g.lineWidth = 1.2;
+  g.stroke();
+  g.fillStyle = 'rgba(255,255,255,0.18)';
+  g.fillRect(x + 1, top + 1, fw * 0.4, fh * 0.18);
   if (crown) {
     const cx = x, cy = y - len * 1.08, s = len * 0.22;
     g.fillStyle = '#e0b862';
@@ -98,7 +108,7 @@ export function drawCitadelsWorld(g: G, state: ClientState, c: Ctx): void {
       g.fill();
     }
     const col = colourOf(m);
-    pennant(g, x + s * 0.3, y - s * 0.28, Math.max(14, s * 0.32), col, !!m.crown, c.time);
+    pennant(g, x + s * 0.22, y - s * 0.18, Math.max(18, s * 0.34), col, !!m.crown, c.time);
     // Before its gate: an open window's slow amber ring, a siege's red one.
     const ax = c.sx(m.x), ay = c.sy(m.y);
     const pulse = 0.5 + 0.5 * Math.sin(c.time * 2 + m.id);
