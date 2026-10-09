@@ -1667,7 +1667,11 @@ function sendChat(): void {
   chatInput.value = '';
   whisperPrefill = '';
 }
-$('hud-map').onclick = () => toggle('map');
+// (with a mark on a touch screen the chart came down by her tap on its tab: a tap again puts it back up — seahud.ts)
+$('hud-map').onclick = () => {
+  if (seaHud.mapTap()) return;
+  toggle('map');
+};
 // docs/23 item 30: a long press on the minimap marks the sea there and the helmsman takes her to it.
 hud.onMiniMark = (x, y) => {
   if (!inGame || state.self?.dockedAt || !worldMap.onAutosail) return false;
@@ -2666,6 +2670,8 @@ function seaFrame(): void {
     reload: Math.max(you.reload.port, you.reload.starboard),
     news,
     unread,
+    markId: targetId,
+    mmShow: settings().mmTarget === 'show',
   });
 }
 

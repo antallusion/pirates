@@ -1,5 +1,6 @@
 // The options screen (docs/07 §11). docs/23 item 75: it opens on the six that matter on a phone — sound, music,
-// language, auto-fire, auto-battle with the weak, the interface's size — and «Подробнее» leads to the rest
+// language, auto-fire, auto-battle with the weak, the interface's size — and the seventh, the minimap with a mark
+// (owner, 2026-10-09: «это в настройках должно меняться»); «Подробнее» leads to the rest
 // (interface, sight and motion, sound, controls) as chips of the band. Every change applies at once.
 
 import { lang, setLang, t } from '../i18n.ts';
@@ -78,6 +79,10 @@ export class OptionsScreen {
       setLang(b.dataset.olang as Lang);
       this.render(root);
     }));
+    root.querySelectorAll<HTMLButtonElement>('[data-omm]').forEach((b) => (b.onclick = () => {
+      update({ mmTarget: b.dataset.omm === 'show' ? 'show' : 'hide' });
+      this.render(root);
+    }));
     root.querySelectorAll<HTMLButtonElement>('[data-osize]').forEach((b) => (b.onclick = () => {
       update({ uiScale: Number(b.dataset.osize) });
       this.render(root);
@@ -122,7 +127,7 @@ export class OptionsScreen {
 
   /** docs/23 item 75: the six on one page (two columns on a phone held sideways), and «Подробнее». */
   private main(s: Settings): string {
-    const row = (ico: string, label: string, ctl: string, hint = '') => `<div class="opt-row"${hint ? ` data-hint="${esc(hint)}"` : ''}>${icon(ico, '', 'opt-ico')}<span class="opt-name">${esc(label)}</span>${ctl}</div>`;
+    const row = (ico: string, label: string, ctl: string, hint = '', cls = '') => `<div class="opt-row${cls ? ` ${cls}` : ''}"${hint ? ` data-hint="${esc(hint)}"` : ''}>${icon(ico, '', 'opt-ico')}<span class="opt-name">${esc(label)}</span>${ctl}</div>`;
     const vol = (k: 'master' | 'music', label: string) => `<input type="range" data-vol="${k}" min="0" max="1" step="0.05" value="${s.volume[k]}" aria-label="${esc(label)}"/><output>${Math.round(s.volume[k] * 100)}%</output>`;
     const sw = (k: 'autoFire' | 'autoWeak', label: string) => `<button type="button" class="w-switch" role="switch" aria-checked="${s[k]}" aria-label="${esc(label)}" data-oswitch="${k}"><i aria-hidden="true"></i><span>${esc(s[k] ? W('opt.on') : W('opt.off'))}</span></button>`;
     // Each language by its own name (a language's name is not translated: the class keeps the checks off it).
@@ -135,6 +140,7 @@ export class OptionsScreen {
       ${row('fire', W('opt.autofire'), sw('autoFire', W('opt.autofire')), W('opt.autofireHint'))}
       ${row('bt_auto', W('opt.autobattle'), sw('autoWeak', W('opt.autobattle')), W('opt.autobattleHint'))}
       ${row('menu_options', W('opt.size'), seg(UI_SIZES.map((v) => [String(v), `${Math.round(v * 100)}%`, v === near] as [string, string, boolean]), 'osize', W('opt.size')), W('opt.sizeHint'))}
+      ${row('menu_map', W('opt.mmTarget'), seg([['hide', W('opt.mmHide'), s.mmTarget === 'hide'], ['show', W('opt.mmShow'), s.mmTarget === 'show']], 'omm', W('opt.mmTarget')), W('opt.mmTargetHint'), 'opt-row--wide')}
     </div>
     <button type="button" class="k-btn k-btn--secondary k-btn--md opt-more" data-omore>${esc(W('opt.more'))}</button>`;
   }

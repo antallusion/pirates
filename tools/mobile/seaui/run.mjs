@@ -161,7 +161,7 @@ const flows = {
   async minimap() {
     await atSea('gravewater');
     await admin('/heal');
-    await admin('/foe pirate brig 420');
+    await admin(`/foe ${process.env.FOE ?? 'merchant'} brig 420`);
     await sleep(1500);
     const id = await state(() => { const g = globalThis.gravetide; const own = g.state.ownDisplay; let best = null, bd = 1e9; for (const s of g.state.ships.values()) { if (!s.info || s.info.isPlayer) continue; const d = Math.hypot(s.cur.x - own.x, s.cur.y - own.y); if (d < bd) { bd = d; best = s.id; } } return best; });
     if (id !== null) await p.evaluate((x) => globalThis.gravetide.target(x), id);
@@ -173,14 +173,37 @@ const flows = {
     await sleep(900);
     const mm2 = await rect('#hud-map');
     await measure('minimap_back', { extra: { got, mm: mm2, mmShown: onScreen(mm2), touch: await touchables(), targets: await targets() } });
+    // A tap again on the chart: back up behind its tab (not the world map).
+    const tuck = await press('#hud-map');
+    await sleep(900);
+    const mmT = await rect('#hud-map');
+    L.log(tag, 'a tap again', JSON.stringify({ tuck, mm: mmT, shown: onScreen(mmT), tab: await rect('#mm-tab'), map: await state(() => !!document.querySelector('#modal:not(.hidden) .worldmap, #modal:not(.hidden) #map-canvas')) }));
+    await press('#mm-tab');
+    await sleep(700);
     // A new mark: hidden again.
-    await admin('/foe pirate sloop 380');
+    await admin(`/foe ${process.env.FOE ?? 'merchant'} sloop 380`);
     await sleep(1200);
     const id2 = await state((was) => { const g = globalThis.gravetide; const own = g.state.ownDisplay; let best = null, bd = 1e9; for (const s of g.state.ships.values()) { if (!s.info || s.info.isPlayer || s.id === was) continue; const d = Math.hypot(s.cur.x - own.x, s.cur.y - own.y); if (d < bd) { bd = d; best = s.id; } } return best; }, id);
     if (id2 !== null) await p.evaluate((x) => globalThis.gravetide.target(x), id2);
     await sleep(1200);
     const mm3 = await rect('#hud-map');
     L.log(tag, 'a new mark', JSON.stringify({ mm3, shown: onScreen(mm3) }));
+    // The setting «всегда показывать»: the chart and the menu stay with a mark, no tab.
+    await p.evaluate(() => { const k = 'gravetide.settings'; const v = JSON.parse(localStorage.getItem(k) ?? '{}'); v.mmTarget = 'show'; localStorage.setItem(k, JSON.stringify(v)); });
+    await L.open(p, 'options');
+    await sleep(800);
+    await measure('options_main', { extra: { row: await p.evaluate(() => [...document.querySelectorAll('#modal-panel [data-omm]')].map((b) => `${b.textContent} ${b.getAttribute('aria-pressed')} ${Math.round(b.getBoundingClientRect().width)}×${Math.round(b.getBoundingClientRect().height)}`)), scroll: await p.evaluate(() => { const b = document.querySelector('#modal-panel .modal-body'); return b ? b.scrollHeight - b.clientHeight : null; }) } });
+    await press('#modal-panel [data-omm="show"]');
+    await sleep(500);
+    await close();
+    await sleep(900);
+    const mm4 = await rect('#hud-map');
+    await measure('minimap_show', { extra: { mm: mm4, mmShown: onScreen(mm4), tab: await rect('#mm-tab'), targets: await targets() } });
+    await L.open(p, 'options');
+    await sleep(600);
+    await press('#modal-panel [data-omm="hide"]');
+    await sleep(400);
+    await close();
   },
   async lawless() {
     await atSea('gravewater');

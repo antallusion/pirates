@@ -5110,7 +5110,7 @@ body.touch #hud-captain .fbar > span { display: none; }
 /* The top row: the news counter after the portrait; the menu left of the minimap. */
 body.touch #touch > .tc-news { position: absolute; top: calc(var(--sa-t) + 8px); left: calc(var(--sa-l) + 172px); pointer-events: auto; }
 body.touch #touch > #tc-menu { position: absolute; top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + var(--mm) + 20px); pointer-events: auto; }
-body.touch.sea-target #touch > .tc-news, body.touch.sea-target #hud-map { display: none !important; }
+body.touch.sea-target #touch > .tc-news { display: none !important; } /* (the chart steps up behind its tab: seahud.css mm-peek) */
 body.touch #hud-stack, body.touch #hud #hud-stack { left: calc(var(--sa-l) + 228px); right: calc(var(--sa-r) + var(--mm) + 76px); top: calc(var(--sa-t) + 8px); transform: none; width: auto; min-width: 0; }
 /* (the menu keeps its place in a fight: the stack stops short of it, docs/23 item 97 — a hunt's card lay under it) */
 body.touch.sea-target #hud-stack, body.touch.sea-target #hud #hud-stack { left: calc(var(--sa-l) + 172px); right: calc(var(--sa-r) + var(--mm) + 76px); }
