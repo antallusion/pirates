@@ -2728,6 +2728,7 @@ body.touch .depart-panel .dp-buy { min-height: 44px; }
   .depart-panel .dp-text .muted { font-size: 12px; line-height: 1.25; }
   .depart-panel .k-sheet-foot { padding-top: 6px; flex-wrap: nowrap; }
   .depart-panel .k-sheet-foot > .k-btn { flex: 1 1 0; min-width: 0; }
+  .depart-panel .k-sheet-foot > .k-btn[data-dp="all"] { flex-grow: 1.5; white-space: nowrap; }
 }
 /* The market's quick row: provisions for a voyage. */
 
