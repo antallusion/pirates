@@ -4173,7 +4173,7 @@ body.touch .act-btn { --h: 38px; }
 .adm-pay { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 13px; min-width: 0; }
 .adm-glory { color: var(--xp); white-space: nowrap; }
 .adm-part { display: inline-flex; align-items: center; gap: 3px; color: var(--gold); white-space: nowrap; }
-.adm-acts { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; }
+.adm-acts { flex: none; display: inline-flex; flex-direction: column; align-items: stretch; gap: 4px; margin-left: auto; }
 .adm-acts .btn { white-space: nowrap; }
 .adm-medal span { line-height: 1; }
 .adm-medal b { font-size: 24px; }
@@ -4185,10 +4185,21 @@ body.touch .act-btn { --h: 38px; }
   body.touch .adm-acts .btn { min-height: 40px; }
   .adm-tt b { font-size: 15px; }
 }
+@media (max-width: 520px) {
+  .adm-top { flex-wrap: wrap; }
+  .adm-acts { flex-direction: row; width: 100%; justify-content: flex-end; }
+}
 /* The Throne's seven tabs on a phone: one row (docs/19 E4–E8 brought it to seven). */
 @media (max-width: 1099px), (max-height: 520px) {
   .throne-win .tabs .tab { padding: 9px 6px; font-size: 11px; letter-spacing: 0.01em; gap: 3px; }
   .throne-win .tabs .tab .ico-sm { width: 14px; height: 14px; }
+}
+/* docs/19 E15 brought the Throne to eight tabs: on a phone they keep one row with narrower sides. */
+@media (max-width: 1099px), (max-height: 520px) {
+  .throne-win .tabs:has(.tab:nth-child(8)) { gap: 1px; padding: 0 4px; }
+  .throne-win .tabs:has(.tab:nth-child(8)) .tab { padding-left: 3px; padding-right: 3px; gap: 2px; font-size: 10.5px; letter-spacing: 0; }
+  .skinned .throne-win .tabs:has(.tab:nth-child(8)) .tab { border-left-width: 6px; border-right-width: 6px; border-image-width: 6px 6px 0; }
+  .throne-win .tabs:has(.tab:nth-child(8)) .tab .ico-sm { width: 13px; height: 13px; }
 }
 @media (max-width: 520px) {
   .cit-row { grid-template-columns: 44px minmax(0, 1fr); grid-template-areas: 'f m' 'a a' 'x x'; }

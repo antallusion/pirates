@@ -223,7 +223,7 @@ test('the citadels: the watches of the week kept by account — an assault, a ci
   assert.equal(ADM_WATCH.take, ADM_WATCHES);
 });
 
-test('the rogue legend: at her mark she comes alongside and grapples; held — what was cut stays cut; struck — the warrant served, her groupmate’s too', () => {
+test('the rogue legend: at her mark she comes alongside and grapples; her group’s hunt one boarding at a time; held — what was cut stays cut; struck — the warrant served, her groupmate’s too', () => {
   const { game } = world();
   const s = capped(game, 'Warrant Bearer'), mate = capped(game, 'Warrant Mate');
   const c = weekWith(game, s, 'legend');
@@ -254,6 +254,8 @@ test('the rogue legend: at her mark she comes alongside and grapples; held — w
   assert.equal(bt.heroes[1].input.name, legend.captainName);
   assert.equal(legend.name, LEGENDS[c.legend!.skill].ship[0]);
   assert.equal(admView(game, s)!.rows.find((r) => r.id === c.id)!.legend!.fighting, true);
+  // Her group's hunt: one boarding of their legend at a time.
+  assert.equal(admView(game, mate)!.rows.find((r) => r.id === c.id)!.legend!.why, 'The legend is boarded already.');
   act(bt, 0, { a: 'surrender' }, game.now, new Rng(1));
   steps(game, 80);
   assert.equal(s.ship!.boarding, null);
@@ -383,12 +385,18 @@ test('every word of the contracts reads in Russian: their names, givers, stories
   for (const v of Object.values(UI_RU)) assert.ok(!/[A-Za-z]{3,}/.test(v.replace(/\{\w+\}/g, '')), v);
 });
 
-test('balance: an hour of a contract pays 0.6 h at sea ⚓10 in silver and an hour’s experience in glory; the relic part 20–55 %', () => {
+test('balance: an hour of a contract pays 0.6 h at sea ⚓10 in silver and an hour’s experience in glory; the relic part 15–45 %, a week’s three about one', () => {
   for (const h of [1, 1.5, 2, 3]) {
     const pay = admPay(h);
     assert.ok(Math.abs(pay.silver / h - 0.6 * seaHourOf(10)) < 20, `${h} h: ${pay.silver}`);
     assert.ok(Math.abs(pay.glory / h - seaHourXp(10)) < 2);
-    assert.ok(pay.part >= 0.2 && pay.part <= 0.55);
+    assert.ok(pay.part >= 0.15 && pay.part <= 0.45);
+  }
+  // A week's three: about one relic part in all.
+  const { game } = world();
+  for (let w = 300; w < 312; w++) {
+    const parts = admiraltyWeek(w, game.world).reduce((a, c) => a + c.pay.part, 0);
+    assert.ok(parts >= 0.8 && parts <= 1.3, `week ${w}: ${parts.toFixed(2)} parts`);
   }
   // The seal's asks: about an hour of a geared captain at the seal.
   for (const a of ADM_SEAL_ASKS) assert.ok(sealHours(a.lv, a.count) >= 1 && sealHours(a.lv, a.count) <= 1.5, `${a.lv}×${a.count}: ${sealHours(a.lv, a.count)}`);

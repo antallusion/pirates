@@ -57,8 +57,10 @@ interface Store {
   week: number;
   /** Each captain's watches on the citadels' walls this week (by account). */
   watch: Record<string, number>;
-  /** What is left of each captain's legend this week (by account). */
+  /** What is left of each hunt's legend this week: a captain's own (`s<account>`) or her group's (`g<leader>`). */
   legend: Record<string, ArmyStack[]>;
+  /** The captains who have boarded each hunt's legend this week (her warrant is theirs when she strikes). */
+  who: Record<string, number[]>;
   /** The places on the board each captain has fulfilled this week (by account). */
   done: Record<string, number[]>;
 }
@@ -75,9 +77,10 @@ function store(game: Game): Store {
   let s = stores.get(game);
   if (!s) {
     const kept = game.db.getKv<Store>(KEY);
-    s = kept && kept.v === 1 ? kept : { v: 1, shift: 0, week: -1, watch: {}, legend: {}, done: {} };
+    s = kept && kept.v === 1 ? kept : { v: 1, shift: 0, week: -1, watch: {}, legend: {}, who: {}, done: {} };
     s.watch ??= {};
     s.legend ??= {};
+    s.who ??= {};
     s.done ??= {};
     s.shift = Math.max(0, Math.floor(s.shift || 0));
     stores.set(game, s);
@@ -88,6 +91,7 @@ function store(game: Game): Store {
     s.week = week;
     s.watch = {};
     s.legend = {};
+    s.who = {};
     s.done = {};
     save(game);
   }
@@ -197,14 +201,22 @@ export function legendHero(tier: number, path: CaptainId): HeroBattle {
   return heroBattle(prim, skills, null, book, manaMaxOf(prim.will) * 2, { path, level: MAX_LEVEL });
 }
 
-/** The legends alongside now: whose contract and the army she came aboard with; their heroes and faces. */
-const legends = new WeakMap<ShipEntity, { acc: number; id: string; tier: number; before: ArmyStack[] }>();
+/** A captain's hunt of the legend: her group's (the group wears the same legend down, as the Abyss's raid does), or her
+ *  own. */
+const huntOf = (game: Game, acc: number): string => {
+  const g = groupOfAccount(game, acc);
+  return g ? `g${g.leader}` : `s${acc}`;
+};
+
+/** The legends alongside now: whose hunt and contract, who boarded, the army she came aboard with; heroes and faces. */
+const legends = new WeakMap<ShipEntity, { acc: number; hunt: string; id: string; tier: number; before: ArmyStack[] }>();
 const heroes = new WeakMap<ShipEntity, { hero: HeroBattle; face: string }>();
-const boardings = new WeakMap<Game, Map<number, ShipEntity>>();
-function fightingOf(game: Game): Map<number, ShipEntity> {
+/** One boarding of a hunt at a time: hunt → the legend alongside. */
+const boardings = new WeakMap<Game, Map<string, ShipEntity>>();
+function fightingOf(game: Game): Map<string, ShipEntity> {
   let m = boardings.get(game);
   if (!m) boardings.set(game, (m = new Map()));
-  for (const [acc, ship] of m) if (!ship.alive || !legends.has(ship)) m.delete(acc);
+  for (const [k, ship] of m) if (!ship.alive || !legends.has(ship)) m.delete(k);
   return m;
 }
 
@@ -214,9 +226,9 @@ export const isContractLegend = (ship: ShipEntity): boolean => legends.has(ship)
 export const contractHeroOf = (ship: ShipEntity): HeroBattle | undefined => heroes.get(ship)?.hero;
 export const contractFaceOf = (ship: ShipEntity): string | undefined => heroes.get(ship)?.face;
 
-/** What is left of her legend this week (the whole of its tier's army when she has not boarded it yet). */
-function legendLeft(game: Game, acc: number, c: AdmContract): ArmyStack[] {
-  const left = store(game).legend[acc];
+/** What is left of her hunt's legend this week (the whole of its tier's army when nobody has boarded it yet). */
+function legendLeft(game: Game, hunt: string, c: AdmContract): ArmyStack[] {
+  const left = store(game).legend[hunt];
   return left?.length ? left.map((x) => ({ ...x })) : raidArmy(c.legend!.tier);
 }
 
@@ -228,7 +240,7 @@ export function legendWhy(game: Game, s: PlayerSession, c: AdmContract | undefin
   if (!p.quests.active.some((a) => a.id === c.id)) return 'Take the Admiralty’s contract first.';
   if (!ship || !ship.alive || ship.docked) return 'Put to sea first.';
   if (ship.boarding || ship.grappled || ship.landing) return 'Not in the middle of a boarding';
-  if (fightingOf(game).has(s.accountId)) return 'The legend is boarded already.';
+  if (fightingOf(game).has(huntOf(game, s.accountId))) return 'The legend is boarded already.';
   if (dist(c.legend.x, c.legend.y, ship.state.x, ship.state.y) > ADM_LEGEND_R) return 'Bring your ship to the gold mark: the legend sails there.';
   if (ship.underFire(game.now)) return 'Not while under fire';
   if (p.company.mutiny) return 'The crew holds the ship';
@@ -246,7 +258,8 @@ export function boardLegend(game: Game, s: PlayerSession, id: string): string | 
   const v = headingVec(ship.state.heading + (side * Math.PI) / 2);
   const o = game.spawnNpcShip('hunter', ship.loadout.classId, 'free', ship.state.x + v.x * 18, ship.state.y + v.y * 18, ship.state.heading, { ship: lg.ship[0], captain: lg.name[0] });
   game.setNpcLevel(o, 10);
-  o.setArmy(legendLeft(game, s.accountId, c));
+  const hunt = huntOf(game, s.accountId);
+  o.setArmy(legendLeft(game, hunt, c));
   o.god = true;
   o.morale = 90;
   o.purse = 0;
@@ -255,16 +268,21 @@ export function boardLegend(game: Game, s: PlayerSession, id: string): string | 
   const brain = game.npcs.get(o.id);
   if (brain) brain.active = true;
   game.grid.upsert(o.id, o.state.x, o.state.y);
-  legends.set(o, { acc: s.accountId, id: c.id, tier: c.legend.tier, before: o.army.map((x) => ({ ...x })) });
+  legends.set(o, { acc: s.accountId, hunt, id: c.id, tier: c.legend.tier, before: o.army.map((x) => ({ ...x })) });
   heroes.set(o, { hero: legendHero(c.legend.tier, lg.path), face: CAPTAINS[lg.path].portrait.replace(/^portrait\./, '') });
-  fightingOf(game).set(s.accountId, o);
+  fightingOf(game).set(hunt, o);
+  const S = store(game);
+  const who = (S.who[hunt] ??= []);
+  if (!who.includes(s.accountId)) who.push(s.accountId);
+  save(game);
   game.sendTo(s, { t: 'toast', msg: `${lg.name[0]} comes about to meet you aboard the ${lg.ship[0]}: the Admiralty’s warrant is served.`, kind: 'gold' });
   startBoarding(game, ship, o, 'standard');
   return null;
 }
 
-/** A boarding of a contract's legend is over (boarding.ts finishBoarding): struck — the contract is hers (and her
- *  groupmates' in company who hold it); held — what she cut stays cut. True when it was one (no prize, no repulse). */
+/** A boarding of a contract's legend is over (boarding.ts finishBoarding): struck — the contract is hers, and theirs
+ *  who hold it and boarded this legend with her or lie in company; held — what she cut stays cut for her hunt. True
+ *  when it was one (no prize, no repulse). */
 export function contractOver(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: boolean): boolean {
   const legend = legends.has(b) ? b : legends.has(a) ? a : null;
   if (!legend) return false;
@@ -273,7 +291,7 @@ export function contractOver(game: Game, a: ShipEntity, b: ShipEntity, attackerW
   const won = legend === b ? attackerWins : !attackerWins;
   legends.delete(legend);
   heroes.delete(legend);
-  boardings.get(game)?.delete(L.acc);
+  boardings.get(game)?.delete(L.hunt);
   const after = legend.army.filter((x) => x.n > 0).map((x) => ({ ...x }));
   const shipName = legend.name;
   game.removeShip(legend.id);
@@ -281,18 +299,20 @@ export function contractOver(game: Game, a: ShipEntity, b: ShipEntity, attackerW
   const S = store(game);
   const s = game.sessionOf(mine);
   if (won) {
-    delete S.legend[L.acc];
+    const boarded = S.who[L.hunt] ?? [];
+    delete S.legend[L.hunt];
+    delete S.who[L.hunt];
     save(game);
     if (s) {
       game.toastShip(mine, `The ${shipName} strikes her colours: the Admiralty’s warrant is served.`, 'gold');
       questEvent(game, s, { k: 'legend' });
-      // Her groupmates in company who hold the same warrant: theirs is served too.
+      // Her groupmates who hold the same warrant and boarded this legend, or lie in company: theirs is served too.
       const g = groupOfAccount(game, s.accountId);
-      for (const acc of g?.members ?? []) {
+      for (const acc of new Set([...(g?.members ?? []), ...boarded])) {
         if (acc === s.accountId) continue;
         const m = game.sessionByAccount(acc);
-        if (!m?.ship?.alive || !m.profile?.quests.active.some((x) => x.id === L.id)) continue;
-        if (dist(m.ship.state.x, m.ship.state.y, mine.state.x, mine.state.y) > CONVOY_RANGE) continue;
+        if (!m?.ship || !m.profile?.quests.active.some((x) => x.id === L.id)) continue;
+        if (!boarded.includes(acc) && (!m.ship.alive || dist(m.ship.state.x, m.ship.state.y, mine.state.x, mine.state.y) > CONVOY_RANGE)) continue;
         game.toastShip(m.ship, `The ${shipName} struck to ${s.name}: your warrant is served too.`, 'gold');
         questEvent(game, m, { k: 'legend' });
       }
@@ -301,10 +321,10 @@ export function contractOver(game: Game, a: ShipEntity, b: ShipEntity, attackerW
     return true;
   }
   const whole = raidArmy(L.tier);
-  S.legend[L.acc] = after.length ? after : whole;
+  S.legend[L.hunt] = after.length ? after : whole;
   save(game);
   if (s) {
-    const cut = Math.round((1 - hpOf(S.legend[L.acc]) / Math.max(1, hpOf(whole))) * 100);
+    const cut = Math.round((1 - hpOf(S.legend[L.hunt]) / Math.max(1, hpOf(whole))) * 100);
     game.toastShip(mine, `The ${shipName} holds her deck. You have cut ${cut}% of her army; what is left of it waits for your next boarding.`, 'bad');
     game.pushSelf(s, true);
   }
@@ -427,10 +447,11 @@ export function admView(game: Game, s: PlayerSession, cit?: CitView, seal?: Seal
     };
     if (c.legend) {
       const lg = LEGENDS[c.legend.skill];
-      const left = legendLeft(game, s.accountId, c);
+      const hunt = huntOf(game, s.accountId);
+      const left = legendLeft(game, hunt, c);
       row.legend = {
         skill: c.legend.skill, name: lg.name[0], ship: lg.ship[0], path: lg.path, tier: c.legend.tier, left, share: Math.round((hpOf(left) / Math.max(1, hpOf(raidArmy(c.legend.tier)))) * 100),
-        why: state === 'taken' ? legendWhy(game, s, c) : null, ...(fightingOf(game).has(s.accountId) ? { fighting: true } : {}),
+        why: state === 'taken' ? legendWhy(game, s, c) : null, ...(fightingOf(game).has(hunt) ? { fighting: true } : {}),
       };
     }
     if (c.seal) row.seal = { ...c.seal, mine: p.seal?.lv ?? 0 };
@@ -503,7 +524,8 @@ export function adminContract(game: Game, s: PlayerSession, args: string[]): str
       p.quests.active = p.quests.active.filter((a) => !isAdmId(a.id));
       p.quests.done = p.quests.done.filter((id) => !isAdmId(id));
       delete S.watch[s.accountId];
-      delete S.legend[s.accountId];
+      delete S.legend[huntOf(game, s.accountId)];
+      delete S.who[huntOf(game, s.accountId)];
       delete S.done[s.accountId];
       save(game);
       game.pushSelf(s, true);

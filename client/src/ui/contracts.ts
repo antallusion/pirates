@@ -75,12 +75,13 @@ function card(r: AdmRow, v: AdmView, board: boolean): string {
     <div class="adm-top">
       <div class="th-face adm-face">${face}${icon(ADM_KIND_ICON[r.kind], '', 'ico-sm th-sk')}</div>
       <div class="adm-tt"><b>${esc(serverText(r.name))}</b><small class="muted">${esc(kind)} · ${esc(serverText(r.mentor))}</small>${stateChip}</div>
+      ${acts.length ? `<span class="adm-acts">${acts.join('')}</span>` : ''}
     </div>
     <p class="adm-say">«${esc(serverText(r.summary))}»</p>
     ${stepsList(r)}
     ${extra}
     ${legendPanel(r)}
-    <div class="adm-foot">${payLine(r)}<span class="adm-acts">${acts.join('')}</span></div>
+    <div class="adm-foot">${payLine(r)}</div>
     ${why ? `<small class="muted th-why">${esc(serverText(why))}</small>` : ''}
   </div>`;
 }

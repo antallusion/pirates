@@ -50,13 +50,16 @@ export const admWeekOf = (id: string): number => Number(/^adm_(-?\d+)_\d+$/.exec
 /** The pay of an hour a geared captain spends on a contract (over what the work itself pays: the depth's spoils, the
  *  battle's lesson, the ambushers' purses): silver in hours at sea at ⚓10, glory in an hour's experience at ⚓10, and
  *  the relic part's chance — a base and so much an hour, up to a cap. */
-export const ADM_PAY = { silver: 0.6, glory: 1, partBase: 0.2, partHour: 0.12, partMax: 0.55 };
+// (balance: tools/balance-contracts.ts pay — a week's three, 4–6 hours, bring about one part, as the Abyss's week does)
+export const ADM_PAY = { silver: 0.6, glory: 1, partBase: 0.15, partHour: 0.1, partMax: 0.45 };
 
-/** The legend's tiers of the Abyss (its army and hero), and the hours a geared captain spends on each: the boardings it
- *  asks (tests/balance/abyssraid.ts raidBoardings(1.3): tier 2 — 2, 3 — 2, 4 — 3), the sailing out, the men hired again
- *  between them. */
+/** The legend's tiers of the Abyss (its army and hero), and the hours a geared captain alone spends on each: the
+ *  boardings it asks with the heroes on the field (tools/balance-contracts.ts, the median: tier 2 — 2, 3 — 5, 4 — 5;
+ *  her army fresh each time, the legend's what was left), some ten minutes a boarding, twenty to hire her men again
+ *  between them, and the sailing out. A group wears the same legend down (a company of three: an hour or so). */
 export const ADM_LEGEND_TIERS = [2, 3, 4] as const;
-export const ADM_LEGEND_HOURS: Record<number, number> = { 2: 1.25, 3: 1.5, 4: 2.25 };
+export const ADM_LEGEND_BOARDINGS: Record<number, number> = { 2: 2, 3: 5, 4: 5 };
+export const ADM_LEGEND_HOURS: Record<number, number> = { 2: 1.25, 3: 2.5, 4: 2.75 };
 /** Within this of the legend's mark her ship comes alongside. */
 export const ADM_LEGEND_R = 1500;
 
