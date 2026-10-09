@@ -10,7 +10,7 @@ import { ask, tell } from './ui/confirm.ts';
 import { BEASTS, beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
 import { NetHaulPanel } from './ui/nethaul.ts';
-import { departOrAsk, setDepartSay } from './ui/depart.ts';
+import { departOrAsk } from './ui/depart.ts';
 import { EncounterCard } from './ui/encounter.ts';
 import { SurrenderCard } from './ui/surrender.ts';
 import { LairChestCard } from './ui/lairchest.ts';
@@ -139,8 +139,6 @@ const net = new Net();
 const state = new ClientState();
 const renderer = new Renderer($('world') as HTMLCanvasElement);
 const hud = new Hud();
-// The way out of port says in one line what it bought for the voyage (docs/23 item 96).
-setDepartSay((msg, kind) => hud.toast(msg, kind));
 const audio = new AudioEngine();
 renderer.onLightning = () => audio.thunder();
 for (const ev of ['keydown', 'mousedown', 'touchstart'] as const) addEventListener(ev, () => audio.unlock(), { passive: true });

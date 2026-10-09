@@ -13,5 +13,4 @@ export const SERVER_RU_BEASTFIGHT: Record<string, string> = {
   'No sailcloth aboard: the carpenters mend the sails with sailcloth, one bolt for 20 points of them. Buy sailcloth in port, or have the yard mend her.': 'В трюме нет парусины: паруса чинят парусиной, один рулон — 20 единиц парусов. Купите парусину в порту или почините корабль на верфи.',
   'No planks or sailcloth aboard: the carpenters mend her with them. Buy them in port, or have the yard mend her.': 'В трюме нет ни досок, ни парусины, а плотники чинят корабль ими. Купите их в порту или почините корабль на верфи.',
   'She is already sound.': 'Корабль цел — чинить нечего.',
-  'The quartermaster takes on {0} planks and {1} sailcloth for the carpenters ({2} silver).': 'Квартирмейстер берёт для плотников досок: {0}, парусины: {1} ({2} серебра).',
 };

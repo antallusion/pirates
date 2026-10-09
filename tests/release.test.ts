@@ -1,13 +1,11 @@
 // docs/23 phase 9 (items 93–96): what the review, the silent-failure hunt and the production audit found, each fix held
-// by a test — the way out of port's purse, «Продать всё»'s lots and a quest's cargo, the easy fights across a
+// by a test — «Продать всё»'s lots and a quest's cargo, the easy fights across a
 // reconnect, the pirates brought to an idle novice, the boarding run under the captain's own hand, an outdated tab, the
 // QA's /foe in a safe sea.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ASK_BELOW, RESERVE_MIN, departPlan } from '../client/src/ui/depart.ts';
-import type { Offer } from '../client/src/ui/depart.ts';
 import { sellAllOrders, sellableGoods } from '../client/src/ui/port.ts';
 import type { ClientState } from '../client/src/state.ts';
 import { runAdmin } from '../server/src/game/admin.ts';
@@ -20,36 +18,6 @@ import { FakeConn, join, makeGame, steps } from './helpers.ts';
 import type { WsConnection } from '../server/src/net/websocket.ts';
 
 const src = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8').replace(/\r/g, '');
-
-const offer = (kind: Offer['need']['kind'], cost: number, extra: Record<string, number> = {}): Offer => {
-  const need = kind === 'repair' ? { kind, hull: extra.hull ?? 0.7, sails: extra.sails ?? 0.9 } : { kind, have: extra.have ?? 5, want: 30, buy: 25, minutes: 10 };
-  return { need: need as Offer['need'], n: extra.n ?? 1, cost, msgs: [] };
-};
-
-test('the way out of port: repairs first, then food, a quarter of the purse kept back from shot and hands (item 96)', () => {
-  // A newcomer's 200: the repairs (120) and the food (30) bought; shot and hands would eat the repair money.
-  let p = departPlan([offer('food', 30), offer('crew', 40), offer('ammo', 20), offer('repair', 120)], 200);
-  assert.deepEqual(p.buy.map((o) => o.need.kind), ['repair', 'food'], 'shot and hands wait: 50 left, 60 kept back');
-  assert.equal(p.cost, 150);
-  assert.equal(p.ask, false, 'nothing grave: she sails, and the line says what was bought');
-  // A full purse buys it all, and keeps a quarter.
-  p = departPlan([offer('food', 30), offer('crew', 40), offer('ammo', 20), offer('repair', 120)], 2000);
-  assert.equal(p.buy.length, 4);
-  assert.ok(2000 - p.cost >= RESERVE_MIN);
-  // No silver for repairs: a scratched hull sails as she is, a hull under half is asked about.
-  p = departPlan([offer('repair', 500, { hull: 0.7 })], 100);
-  assert.equal(p.ask, false);
-  p = departPlan([offer('repair', 500, { hull: ASK_BELOW - 0.1 })], 100);
-  assert.equal(p.ask, true, 'a hull under half, unmended: asked');
-  // No food aboard and none to be had: asked.
-  assert.equal(departPlan([offer('food', 300, { have: 0 })], 100).ask, true);
-  assert.equal(departPlan([offer('food', 300, { have: 12 })], 100).ask, false, 'some food aboard: she sails');
-  // The departure sheet remembers she sailed anyway (not asked again for a while), and says what it bought.
-  const dp = src('client/src/ui/depart.ts');
-  assert.ok(dp.includes('sailedAnyway = { key: graveKey('));
-  assert.ok(dp.includes("say(boughtLine(plan.buy, plan.cost), 'info')"));
-  assert.ok(src('client/src/main.ts').includes('setDepartSay((msg, kind) => hud.toast(msg, kind));'));
-});
 
 /** A harbour and a captain as «Продать всё» sees them. */
 function portState(cargo: Record<string, number>, quests: { id: string; step: number }[] = []): ClientState {

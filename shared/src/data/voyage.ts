@@ -3,6 +3,8 @@
 // fight, and the state of her hull and canvas — and so what is short before she leaves port. Pure: the port screen
 // asks it (client/src/ui/depart.ts), the server eats by the same rate (Game.ts shipUpkeep).
 
+import { HULL_PER_PLANK, SAILS_PER_CLOTH } from './dealings.ts';
+
 /** Provisions eaten a minute at sea: 6 units for every 40 hands, times the ship's appetite (cooks, talents). */
 export function provisionsPerMinute(crew: number, provisionUse = 1): number {
   return (Math.max(0, crew) / 40) * 6 * Math.max(0.1, provisionUse);
@@ -70,6 +72,18 @@ export function voyageNeeds(s: VoyageShip): VoyageNeed[] {
   const hull = s.hull / Math.max(1, s.hullMax), sails = s.sails / Math.max(1, s.sailsMax);
   if (hull < REPAIR_BELOW || sails < REPAIR_BELOW) out.push({ kind: 'repair', hull, sails });
   return out;
+}
+
+/** The planks and the sailcloth her carpenters need to mend at sea the harm she has (a plank for HULL_PER_PLANK of hull
+ *  and one for a broken rudder, a bolt for SAILS_PER_CLOTH of sail, times her use of them), less what is aboard. The
+ *  window before sailing offers them when the yard's whole mending is past her purse (owner, 2026-10-09: no buying at
+ *  the way out by itself). */
+export function voyageStores(s: { hull: number; hullMax: number; sails: number; sailsMax: number; rudderHp: number; use: number; planks: number; cloth: number }): { planks: number; cloth: number } {
+  const use = Math.max(0.3, s.use);
+  return {
+    planks: Math.max(0, Math.ceil(((s.hullMax - s.hull) / HULL_PER_PLANK) * use + (s.rudderHp < 1 ? 1 : 0) - s.planks)),
+    cloth: Math.max(0, Math.ceil(((s.sailsMax - s.sails) / SAILS_PER_CLOTH) * use - s.cloth)),
+  };
 }
 
 /** How long the provisions aboard last at sea, in minutes. */

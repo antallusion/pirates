@@ -2688,13 +2688,15 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
 @media (max-width: 699px), (max-height: 520px) {
   #modal:has(#modal-toasts:not(:empty)) { background: #060607; }
 }
-/* Before setting sail (owner, 2026-09-30): what is short for the voyage, each with its price and a button. */
+/* Before setting sail (owner, 2026-09-30; 2026-10-09: a window of what to buy, nothing bought by itself): what is short
+   for the voyage, each with how many, its price and a button; «Докупить всё», «Отплыть так», «Остаться». */
 .confirm-panel.depart-panel { width: min(580px, 100%); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; text-align: left; }
+.depart-panel .dp-head { display: flex; flex-direction: column; }
 .depart-panel .dp-title { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-family: var(--serif); font-size: 22px; color: var(--bone); }
 .depart-panel .dp-title .ico-md { margin: 0; }
 .depart-panel p.dp-lead { margin: 0 0 8px; font-size: 16px; text-align: left; }
 .depart-panel p.dp-ok { color: #9fe08a; }
-.depart-panel p.dp-warn { margin: 6px 0 0; font-size: 14px; color: var(--bad, #e0473a); text-align: left; font-family: inherit; }
+.depart-panel p.dp-warn { margin: 0 0 8px; font-size: 14px; color: var(--bad, #e0473a); text-align: left; font-family: inherit; }
 .depart-panel .dp-list { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
 .depart-panel .dp-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border: 1px solid rgba(217, 178, 90, 0.28); border-radius: 5px; background: rgba(0, 0, 0, 0.22); }
 .depart-panel .dp-row .ico-md { width: 36px; height: 36px; margin: 0; flex: none; }
@@ -2702,11 +2704,31 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
 .depart-panel .dp-text b { font-size: 15px; }
 .depart-panel .dp-text .muted { font-size: 13px; line-height: 1.3; }
 .depart-panel .dp-buy { flex: none; white-space: nowrap; min-height: 36px; }
-.depart-panel .dp-none { flex: none; font-size: 12px; max-width: 110px; text-align: right; }
+body.touch .depart-panel .dp-buy { min-height: 44px; }
+.depart-panel .dp-buy.dp-part { border-style: dashed; }
+.depart-panel .dp-none { flex: none; font-size: 12px; max-width: 120px; text-align: right; }
 .depart-panel .k-sheet-foot { flex-wrap: wrap; }
 .depart-panel .k-sheet-foot > .k-btn { flex: 1 1 140px; max-width: none; }
 @media (max-width: 480px) { .depart-panel .dp-row { flex-wrap: wrap; } .depart-panel .dp-buy { width: 100%; } .depart-panel .dp-none { max-width: none; width: 100%; text-align: left; } }
-@media (max-height: 520px) { .confirm-panel.depart-panel { width: min(640px, 100%); padding: 12px 14px; } .depart-panel .dp-title { font-size: 18px; } .depart-panel p.dp-lead { font-size: 14px; margin-bottom: 6px; } .depart-panel .dp-row { padding: 4px 8px; } .depart-panel .k-sheet-foot { padding-top: 8px; } }
+/* A phone held sideways (812×375, 640×360): the heading, the lead and the purse's word on one line, four rows of one
+   or two lines, the foot's three buttons in a row — one screen, nothing to scroll. */
+@media (max-height: 520px) {
+  .confirm-panel.depart-panel { width: min(600px, 100%); padding: 8px 12px 10px; }
+  .depart-panel .dp-head { flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: 10px; margin: 0 0 4px; }
+  .depart-panel .dp-title { font-size: 17px; margin: 0; align-self: center; }
+  .depart-panel .dp-title .ico-md { width: 24px; height: 24px; }
+  .depart-panel p.dp-lead { font-size: 13px; margin: 0; }
+  .depart-panel p.dp-warn { font-size: 12.5px; margin: 0; }
+  .depart-panel .k-sheet-grip { height: 10px; }
+  .depart-panel .dp-list { gap: 3px; }
+  .depart-panel .dp-row { padding: 0 8px; gap: 8px; min-height: 44px; }
+  .depart-panel .dp-row .ico-md { width: 28px; height: 28px; }
+  .depart-panel .dp-text { gap: 0; }
+  .depart-panel .dp-text b { font-size: 14px; line-height: 1.15; }
+  .depart-panel .dp-text .muted { font-size: 12px; line-height: 1.25; }
+  .depart-panel .k-sheet-foot { padding-top: 6px; flex-wrap: nowrap; }
+  .depart-panel .k-sheet-foot > .k-btn { flex: 1 1 0; min-width: 0; }
+}
 /* The market's quick row: provisions for a voyage. */
 
 /* Goods as their picture and count (the outposts' costs). */
