@@ -529,6 +529,9 @@ export class TacticalPanel {
   private steps = new Map<number, number>();
   /** The fires' embers and smoke owed this frame (item 18). */
   private emit = 0;
+  /** What the looks did this fight, for the QA kit: holds, knocks (and the hardest, px), falls (over the side), sparks,
+   *  schools, ultimates, footfalls. */
+  private tally = { stops: 0, knocks: 0, maxKnock: 0, falls: 0, overboard: 0, sparks: 0, schools: 0, ults: 0, steps: 0 };
 
   /** Her purse (main.ts): a ransom she cannot pay is shown, and why, but not offered (docs/23 item 93: the wheel
    *  offered «Откуп 340» to an empty purse, the confirm sheet, then nothing). */
@@ -579,6 +582,7 @@ export class TacticalPanel {
       dying: [...this.fallen.values()].filter((f) => this.ft >= f.at).length, overboard: [...this.fallen.values()].filter((f) => this.ft >= f.at && f.over).length,
       decals: this.decals.filter((d) => d.done).length, intro: !!this.intro, ult: this.pathFx.some((f) => f.ult), finale: !!this.finale,
       roll: this.roll.map((r) => +r.toFixed(2)), rolling: [...this.rolls.values()].filter((r) => r.from !== r.to && t - r.t0 < ROLL_MS).length,
+      tally: { ...this.tally }, edge: this.view ? this.view.stacks.filter((s) => this.overboardTo(s, this.view!)).length : 0,
       sky: { rain: this.sk.rain, fog: +this.sk.fog.toFixed(2), night: +this.sk.night.toFixed(2), storm: this.sk.storm }, haze: +this.haze.toFixed(2), level: this.lv, still: this.mo.still,
     };
   }
@@ -652,6 +656,7 @@ export class TacticalPanel {
         this.intro = this.finale = null;
         this.haze = 0;
         this.seaLayer = null;
+        this.tally = { stops: 0, knocks: 0, maxKnock: 0, falls: 0, overboard: 0, sparks: 0, schools: 0, ults: 0, steps: 0 };
         this.seen = 0;
         this.preview = this.targeting = this.info = null;
         this.moreOpen = this.sheetOpen = this.bookOpen = false;
@@ -914,6 +919,8 @@ export class TacticalPanel {
       if (c) {
         this.shake.kick(hit, share, from ? c.x - from.x : 1, from ? c.y - from.y : 0);
         this.clock.stop(hit, stopMs(share));
+        if (stopMs(share) && !this.clock.off) this.tally.stops++;
+        if (share >= 0.002 && !this.shake.off) this.tally.knocks++;
         if (e.k !== 'shot' && !spill) this.steel(c, from, hit, e.k === 'ret' ? t + 90 : null, w);
         // The marks it leaves (item 7): a hat or a sabre where men fell, splinters where a shot bit, rum by the barrels.
         const hex = e.hex ?? hexOf(e.t);
@@ -1000,7 +1007,10 @@ export class TacticalPanel {
         const cc = at(hexOf(id));
         if (cc && !spots.some((p) => Math.abs(p.x - cc.x) < 2 && Math.abs(p.y - cc.y) < 2)) spots.push(cc);
       }
-      if (school) this.schoolLook(school, spots.slice(0, 8), t1, w);
+      if (school) {
+        this.schoolLook(school, spots.slice(0, 8), t1, w);
+        this.tally.schools++;
+      }
       // An order that harms her stack knocks the field by its share too.
       const tgt = e.t !== undefined ? was.stacks.find((x) => x.id === e.t) : undefined;
       if (tgt && e.dmg && c) this.shake.kick(t1, e.dmg / this.armyHp(was, tgt.side), 0, 1);
@@ -1023,7 +1033,10 @@ export class TacticalPanel {
       this.pathFx.push({ path: e.id as CaptainId, ult, mine: e.side === v.you, t0: t, at: on });
       // docs/25 item 12: an ultimate is a film's frame — its name on the band with her face (drawn with the frame), its
       // path's own sky or fire over the field.
-      if (ult) this.ultBurst(e.id as CaptainId, e.side, t, on, v);
+      if (ult) {
+        this.ultBurst(e.id as CaptainId, e.side, t, on, v);
+        this.tally.ults++;
+      }
       else this.addFloat({ text: moveName(e.id ?? '', ult), x: this.size.cw / 2, y: this.size.ch * 0.18, t0: t, color: e.side === v.you ? YOU : FOE, big: true });
       for (const c of on.slice(0, 7)) this.addFloat({ text: moveName(e.id ?? '', ult), x: c.x, y: c.y - w * 0.62, t0: t + 120, color: ult ? '#ffd27a' : '#e0b862' });
     } else if (e.k === 'boss') {
@@ -1069,6 +1082,7 @@ export class TacticalPanel {
       if (c) this.bursts.push({ id: 'part.smoke', x: c.x, y: c.y, t0: t, size: w * 0.9 });
       // docs/25 item 1: a stack's fall holds the field a moment.
       this.clock.stop(t, stopMs(0, true));
+      if (!this.clock.off) this.tally.stops++;
     } else if (e.k === 'siege') this.siegeMark(e, v, t, hit);
   }
 
@@ -1123,6 +1137,7 @@ export class TacticalPanel {
       this.light(px, py, at, 110, w * 1.1, '255,220,160', 0.35);
     };
     fly(hit, Math.max(3, Math.round(10 * this.lv.burst)));
+    this.tally.sparks++;
     if (parry !== null) fly(parry, Math.max(2, Math.round(4 * this.lv.burst)));
   }
 
@@ -2580,6 +2595,7 @@ export class TacticalPanel {
       if (this.finale && now > this.finale.t0 && !v.land && !v.siege && !v.arena) k *= finaleZoom((now - this.finale.t0) / FINALE_MS);
     }
     const mag = Math.hypot(kn.x, kn.y);
+    this.tally.maxKnock = Math.max(this.tally.maxKnock, +mag.toFixed(2));
     if (mag > 0 && (v.land || v.siege || v.arena)) k *= 1 + (2 * mag) / Math.max(1, Math.min(cw, ch));
     this.cam = { x: kn.x, y: kn.y, k, px, py };
   }
@@ -3716,6 +3732,7 @@ export class TacticalPanel {
     const last = this.steps.get(s.id);
     this.steps.set(s.id, p.step);
     if (last === undefined || last === p.step || s.sp.includes('flying')) return;
+    this.tally.steps++;
     const fy = p.y + (w / SQ3) * 0.42;
     if (this.sk.rain > 0 || s.wet) {
       for (let j = 0; j < Math.max(2, Math.round(4 * this.lv.burst)); j++) this.parts.add({ k: 'drop', x: p.x + (Math.random() - 0.5) * w * 0.3, y: fy, vx: (Math.random() - 0.5) * 60, vy: -50 - 40 * Math.random(), g: 420, t0: t, life: 320, size: 1.2 + Math.random(), rgb: '170,205,225' });
@@ -3749,7 +3766,11 @@ export class TacticalPanel {
   }
 
   private fallMs(f: { s: TacStackView; over?: { x: number; y: number } | null }, v: TacView): number {
-    if (f.over === undefined) f.over = this.mo.still ? null : this.overboardTo(f.s, v);
+    if (f.over === undefined) {
+      f.over = this.mo.still ? null : this.overboardTo(f.s, v);
+      this.tally.falls++;
+      if (f.over) this.tally.overboard++;
+    }
     return f.over ? 900 : this.mo.still ? 520 : 720;
   }
 
@@ -4008,10 +4029,10 @@ export class TacticalPanel {
       const sx = par ? -avg * 1.2 + Math.sin(t / 5200) * 3 : 0, sy = par ? -avg * 0.8 + Math.cos(t / 6100) * 2 : 0;
       const m = SEA_MARGIN;
       g.drawImage(this.seaLayer, (sx - m) * dpr, (sy - m) * dpr);
-      this.turned(g, true);
-      this.water(g, t);
       this.camTf(g);
       for (const x of [0, 1] as const) this.deckBlit(g, bg, x);
+      this.turned(g, true);
+      this.water(g, t);
     } else {
       this.camTf(g);
       g.drawImage(bg, 0, 0, cw, ch);
