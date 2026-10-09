@@ -21,7 +21,7 @@ export const EN = {
   board: 'Board her',
   km: '{km} km',
   progress: '{n}/{m}',
-  'legend.h': '{name} aboard the «{ship}»',
+  'legend.h': '{name} aboard the {ship}',
   'legend.tier': 'Army and hero of tier {n} of the Abyss',
   'legend.left': 'Left of her army: {p}%',
   'legend.fighting': 'The legend is boarded now.',

@@ -54,12 +54,15 @@ export const admWeekOf = (id: string): number => Number(/^adm_(-?\d+)_\d+$/.exec
 export const ADM_PAY = { silver: 0.6, glory: 1, partBase: 0.15, partHour: 0.1, partMax: 0.45 };
 
 /** The legend's tiers of the Abyss (its army and hero), and the hours a geared captain alone spends on each: the
- *  boardings it asks with the heroes on the field (tools/balance-contracts.ts, the median: tier 2 — 2, 3 — 5, 4 — 5;
+ *  boardings it asks with the heroes on the field (tools/balance-contracts.ts, the median: tier 2 — 1–2, 3 — 4, 4 — 4;
  *  her army fresh each time, the legend's what was left), some ten minutes a boarding, twenty to hire her men again
- *  between them, and the sailing out. A group wears the same legend down (a company of three: an hour or so). */
+ *  between them, and the sailing out. A group wears the same legend down (a company of three: about an hour). */
 export const ADM_LEGEND_TIERS = [2, 3, 4] as const;
-export const ADM_LEGEND_BOARDINGS: Record<number, number> = { 2: 2, 3: 5, 4: 5 };
-export const ADM_LEGEND_HOURS: Record<number, number> = { 2: 1.25, 3: 2.5, 4: 2.75 };
+export const ADM_LEGEND_BOARDINGS: Record<number, number> = { 2: 1.5, 3: 4, 4: 4 };
+/** Her orders are a captain's, not her army's (as a castellan's: shared/src/data/citadels.ts citSpellHp): reckoned from
+ *  the ladder's ⚓10 crew this many times over — else one volley of her book empties a captain's deck in the first round. */
+export const ADM_LEGEND_SPELL: Record<number, number> = { 2: 1, 3: 1.15, 4: 1.3 };
+export const ADM_LEGEND_HOURS: Record<number, number> = { 2: 1, 3: 2.25, 4: 2.5 };
 /** Within this of the legend's mark her ship comes alongside. */
 export const ADM_LEGEND_R = 1500;
 

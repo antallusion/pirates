@@ -17,14 +17,14 @@
 import { MAX_LEVEL } from '../../../shared/src/constants.ts';
 import { RAID, raidArmy } from '../../../shared/src/data/abyssraid.ts';
 import {
-  ADM_BAND_SHIPS, ADM_GARRISON_MEN, ADM_KIND_NAMES, ADM_LEGEND_R, ADM_WATCH, admWeekEnd, admWeekOf, admiraltyPorts, admiraltyWeek, isAdmId, isAdmiraltyPort,
+  ADM_BAND_SHIPS, ADM_GARRISON_MEN, ADM_KIND_NAMES, ADM_LEGEND_R, ADM_LEGEND_SPELL, ADM_WATCH, admWeekEnd, admWeekOf, admiraltyPorts, admiraltyWeek, isAdmId, isAdmiraltyPort,
 } from '../../../shared/src/data/admiralty.ts';
 import type { AdmContract, AdmRow, AdmView } from '../../../shared/src/data/admiralty.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
-import { citWeek } from '../../../shared/src/data/citadels.ts';
+import { citSpellHp, citWeek } from '../../../shared/src/data/citadels.ts';
 import type { CitView } from '../../../shared/src/data/citadels.ts';
 import { ORDER_IDS, SKILL_IDS, heroBattle, manaMaxOf, startingOrders } from '../../../shared/src/data/hero.ts';
 import type { HeroBattle, OrderId, SkillSlot } from '../../../shared/src/data/hero.ts';
@@ -225,6 +225,9 @@ export const isContractLegend = (ship: ShipEntity): boolean => legends.has(ship)
 /** The hero she brings aboard (hero.ts heroInput), and her face (heroFace). */
 export const contractHeroOf = (ship: ShipEntity): HeroBattle | undefined => heroes.get(ship)?.hero;
 export const contractFaceOf = (ship: ShipEntity): string | undefined => heroes.get(ship)?.face;
+/** The hit points her orders are reckoned from (server tactical.ts, as a castellan's: tacbattle.ts spellPower). */
+export const legendSpellHp = (tier: number): number => Math.round(citSpellHp(10) * (ADM_LEGEND_SPELL[tier] ?? 1));
+export const contractSpellHp = (ship: ShipEntity): number | undefined => (legends.has(ship) ? legendSpellHp(legends.get(ship)!.tier) : undefined);
 
 /** What is left of her hunt's legend this week (the whole of its tier's army when nobody has boarded it yet). */
 function legendLeft(game: Game, hunt: string, c: AdmContract): ArmyStack[] {

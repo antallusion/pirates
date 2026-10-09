@@ -20,7 +20,7 @@ import { seaHourOf } from '../shared/src/data/seamarks.ts';
 import { Rng } from '../shared/src/rng.ts';
 import { newBattle, quickFinish } from '../server/src/game/tacbattle.ts';
 import type { TacSideInput } from '../server/src/game/tacbattle.ts';
-import { legendHero } from '../server/src/game/admiralty.ts';
+import { legendHero, legendSpellHp } from '../server/src/game/admiralty.ts';
 import { capHero } from './balance-glory.ts';
 
 const side = (army: ArmyStack[], hero: HeroBattle | undefined, captain: CaptainId | null): TacSideInput => ({
@@ -40,7 +40,7 @@ export function legendBoardings(tier: number, gear: number, runs: number, heroes
       const me = armyForLevel(10, 600, 7, 'player').map((x) => ({ ...x, n: Math.round(x.n * gear) }));
       const seed = 4000 + run * 97 + k * 13 + tier * 7 + CAPTAIN_IDS.indexOf(c) * 1009;
       const rng = new Rng(seed);
-      const bt = newBattle(side(me, heroes ? capHero(c, seed) : undefined, c), side(foe, heroes ? legendHero(tier, path) : undefined, path), seed, 0, rng);
+      const bt = newBattle(side(me, heroes ? capHero(c, seed) : undefined, c), { ...side(foe, heroes ? legendHero(tier, path) : undefined, path), ...(heroes ? { spellHp: legendSpellHp(tier) } : {}) }, seed, 0, rng);
       quickFinish(bt, 0, rng);
       if (bt.over!.winner === 0) break;
       foe = bt.stacks.filter((s) => s.side === 1 && s.count > 0).map((s) => ({ u: s.unit as UnitId, n: s.count }));

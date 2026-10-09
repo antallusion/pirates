@@ -25,7 +25,7 @@ import { sectorAt } from '../shared/src/world/sectors.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { runAdmin } from '../server/src/game/admin.ts';
-import { admView, admWeek, contractCitadel, contractGarrison, contractSeal, stepContracts } from '../server/src/game/admiralty.ts';
+import { admView, admWeek, contractCitadel, contractGarrison, contractSeal, legendSpellHp, stepContracts } from '../server/src/game/admiralty.ts';
 import { MAX_ACTIVE_QUESTS, questsUnderWay } from '../server/src/game/quests.ts';
 import { act } from '../server/src/game/tacbattle.ts';
 import { isTrialShip, throneOf } from '../server/src/game/throne.ts';
@@ -252,6 +252,7 @@ test('the rogue legend: at her mark she comes alongside and grapples; her group�
   const legend = game.ships.get(s.ship!.boarding!.with)!;
   assert.ok(isTrialShip(legend), 'no artifact on her, none of hers joins');
   assert.equal(bt.heroes[1].input.name, legend.captainName);
+  assert.equal(bt.heroes[1].input.spellHp, legendSpellHp(c.legend!.tier), 'her orders a captain’s, not her army’s');
   assert.equal(legend.name, LEGENDS[c.legend!.skill].ship[0]);
   assert.equal(admView(game, s)!.rows.find((r) => r.id === c.id)!.legend!.fighting, true);
   // Her group's hunt: one boarding of their legend at a time.
