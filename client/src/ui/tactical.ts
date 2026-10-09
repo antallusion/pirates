@@ -1131,7 +1131,7 @@ export class TacticalPanel {
       for (let i = 0; i < n; i++) {
         const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4 - ux * 0.5;
         const sp = (140 + 180 * Math.random()) * sc;
-        this.parts.add({ k: 'spark', x: px, y: py, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 520 * sc, drag: 0.25, t0: at, life: 260 + 200 * Math.random(), size: 2 + Math.random(), rgb: '255,214,140' });
+        this.parts.add({ k: 'spark', x: px, y: py, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 520 * sc, drag: 0.25, t0: at, life: 260 + 200 * Math.random(), size: (2 + Math.random()) * Math.max(1, sc), rgb: '255,214,140' });
       }
       this.parts.add({ k: 'glint', x: px, y: py, vx: 0, vy: 0, t0: at, life: 220, size: w * 0.32, rgb: '255,246,220' });
       this.light(px, py, at, 110, w * 1.1, '255,220,160', 0.35);
@@ -1158,7 +1158,7 @@ export class TacticalPanel {
   /** An ember off a fire, carried up and down the wind. */
   private ember(x: number, y: number, at: number, w: number): void {
     const s = this.sk;
-    this.parts.add({ k: 'ember', x, y, vx: s.wx * 30 * s.wk + (Math.random() - 0.5) * 20, vy: -40 - 50 * Math.random() + s.wy * 10, g: -6, drag: 0.6, t0: at, life: 900 + 700 * Math.random(), size: (1.2 + Math.random()) * Math.max(1, w / 45), rgb: '255,140,50' });
+    this.parts.add({ k: 'ember', x, y, vx: s.wx * 30 * s.wk + (Math.random() - 0.5) * 20, vy: -40 - 50 * Math.random() + s.wy * 10, g: -6, drag: 0.6, t0: at, life: 900 + 700 * Math.random(), size: (1.5 + 1.2 * Math.random()) * Math.max(1, w / 40), rgb: '255,140,50' });
   }
 
   /** An order's school seen as it lands on each spot (item 13). */
@@ -1168,7 +1168,7 @@ export class TacticalPanel {
     for (const [i, p] of spots.entries()) {
       const at = t + i * 40;
       if (school === 'fire') {
-        for (let j = 0; j < n(7); j++) this.ember(p.x + (Math.random() - 0.5) * w * 0.6, p.y - w * 0.2, at + j * 25, w);
+        for (let j = 0; j < n(10); j++) this.ember(p.x + (Math.random() - 0.5) * w * 0.6, p.y - w * 0.2, at + j * 25, w);
         this.parts.add({ k: 'flash', x: p.x, y: p.y - w * 0.3, vx: 0, vy: 0, t0: at, life: 380, size: w * 0.9, rgb: '255,130,40' });
         this.light(p.x, p.y - w * 0.3, at, 300, w * 1.8, '255,140,60', 0.4);
       } else if (school === 'wind') {
@@ -3536,8 +3536,8 @@ export class TacticalPanel {
     g.rect(x0, gp.y0 - w, wd, hgt + w * 2);
     g.clip();
     const n = this.phone ? 4 : 8;
-    g.strokeStyle = 'rgba(170,215,225,0.17)';
-    g.lineWidth = Math.max(1, w * 0.04);
+    g.strokeStyle = 'rgba(180,222,232,0.3)';
+    g.lineWidth = Math.max(1.2, w * 0.045);
     g.beginPath();
     for (let j = 0; j < n; j++) {
       const y = gp.y0 + (((j / n) + s * 0.05) % 1) * hgt;
@@ -3549,7 +3549,7 @@ export class TacticalPanel {
     for (const side of [0, 1] as const) {
       const hx = side === 0 ? x0 : x1, out = side === 0 ? 1 : -1;
       const slap = 0.5 + 0.5 * Math.sin(s * (side === 0 ? 1.21 : 0.97) + (side ? 2.1 : 0) + Math.PI / 2);
-      for (const [lw, a] of [[w * 0.12, 0.1 + 0.14 * slap], [Math.max(1, w * 0.035), 0.3 + 0.3 * slap]] as const) {
+      for (const [lw, a] of [[w * 0.14, 0.16 + 0.2 * slap], [Math.max(1.2, w * 0.04), 0.42 + 0.38 * slap]] as const) {
         g.strokeStyle = `rgba(225,240,245,${a.toFixed(3)})`;
         g.lineWidth = lw;
         g.beginPath();
@@ -3905,7 +3905,7 @@ export class TacticalPanel {
       g.fillRect(0, 0, cw, ch);
     } else if (f.path === 'navigator') {
       const side = f.mine ? v.you : 1 - v.you;
-      rainFall(g, { ...this.sk, rain: 1, wx: side === 0 ? 0.85 : -0.85, wy: 0.5, wk: 1 }, t * 1.6, cw, ch, Math.round(this.lv.rain * 1.6 * fade));
+      rainFall(g, { ...this.sk, rain: 1, wx: side === 0 ? 0.85 : -0.85, wy: 0.5, wk: 1 }, t * 1.6, cw, ch, Math.round(this.lv.rain * 1.6 * fade), 0.6, 1.6);
     } else if (f.path === 'smuggler') fogBanks(g, this.sk, t * 4, cw, ch, 2, 0.85 * fade);
     const side = f.mine ? v.you : 1 - v.you;
     const h = v.heroes[side];

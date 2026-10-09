@@ -397,14 +397,14 @@ export function trail(g: CanvasRenderingContext2D, id: string, k: number, pos: (
 
 /** Rain over the field: `n` streaks falling slant with the wind (the same streaks each frame, moving), drawn as one
  *  path. */
-export function rain(g: CanvasRenderingContext2D, sky: Sky, t: number, cw: number, ch: number, n: number): void {
+export function rain(g: CanvasRenderingContext2D, sky: Sky, t: number, cw: number, ch: number, n: number, alpha = 0, width = 1): void {
   const count = Math.round(n * sky.rain);
   if (!count) return;
   const fall = 900, drift = sky.wx * 260 * sky.wk;
   const len = 14 + 10 * sky.rain;
   const s = t / 1000;
-  g.strokeStyle = `rgba(190,210,225,${(0.22 + 0.18 * sky.rain).toFixed(3)})`;
-  g.lineWidth = 1;
+  g.strokeStyle = `rgba(190,210,225,${(alpha || 0.22 + 0.18 * sky.rain).toFixed(3)})`;
+  g.lineWidth = width;
   g.beginPath();
   for (let i = 0; i < count; i++) {
     const sp = 0.8 + rnd(i * 3 + 1) * 0.4;
