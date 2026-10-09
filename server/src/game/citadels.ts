@@ -698,12 +698,11 @@ export function citView(game: Game, s: PlayerSession): CitView | undefined {
     const ws = [...(w ? [w] : []), next, citNextWindow(m.id, next.end)].slice(0, 2);
     const mine = !!g && rec.owner === g.id;
     const full = hpOf(citGarrison(c.level));
-    const d = ship ? Math.round(dist(c.x, c.y, ship.state.x, ship.state.y) / 50) * 50 : 0;
     const hw = holdWhy(game, s, m.id);
     const titanFree = rec.owner !== null && rec.titanWeek !== week;
     return {
       ...m, ...(mine ? { mine: true } : {}), garrison: rec.garrison.filter((x) => x.n > 0).map((x) => ({ u: x.u, n: x.n })), share: Math.round((hpOf(rec.garrison) / Math.max(1, full)) * 100),
-      hp: [...rec.hp], max: maxOf(game, rec), windows: ws, d,
+      hp: [...rec.hp], max: maxOf(game, rec), windows: ws,
       ...(sg ? { siegeOf: { tag: sg.tag, guild: sg.guild, start: sg.start, end: sg.end, assaults: sg.assaults.map((a) => sg.names[a] ?? '?'), ...(sg.fighting !== undefined ? { fighting: sg.names[sg.fighting] ?? '?' } : {}), ...(g && sg.gid === g.id ? { mine: true } : {}) } } : {}),
       why: {
         declare: declareWhy(game, s, m.id), assault: assaultWhy(game, s, m.id), leave: hw,
@@ -722,7 +721,8 @@ export function citView(game: Game, s: PlayerSession): CitView | undefined {
   return {
     rows, guild: g ? { tag: g.tag, name: g.name, points: S.points[g.id] ?? 0, place } : null, war,
     ...(S.champion ? { champion: { tag: S.champion.tag, name: S.champion.name, season: S.champion.season + 1 } } : {}),
-    season: S.season + 1, endsIn: Math.max(0, Math.round((seasonEnd - now) / 1000)),
+    // (by the minute: a count of seconds sent every second sent the whole tab with it — docs/19 E19)
+    season: S.season + 1, endsIn: Math.max(0, Math.round((seasonEnd - now) / 60_000) * 60),
     army: (ship?.army ?? []).filter((x) => x.n > 0).map((x) => ({ u: x.u, n: x.n })),
   };
 }

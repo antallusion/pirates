@@ -98,8 +98,8 @@ export interface RaidView {
   /** What is left of the tier's army, and its share of the whole in hit points (%). */
   left: { u: UnitId; n: number }[];
   share: number;
-  /** The Stair's gate and how far she lies from it. */
-  gate: { x: number; y: number; d: number };
+  /** The Stair's gate (how far she lies from it, the client reckons — docs/19 E19). */
+  gate: { x: number; y: number };
   /** Why she may not board the legend now (null: she may). */
   why: string | null;
   /** Its captains and the hit points each has cut down this week. */

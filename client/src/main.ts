@@ -1403,10 +1403,9 @@ function selfKeyFor(m: Modal): string {
   if (m === 'hero') return JSON.stringify([m, lang(), s.name, s.level, s.dockedAt, s.gold, s.hero, s.captainGear, s.glory?.open, s.stash, s.loadout, s.cargo]);
   if (m === 'research') return JSON.stringify([m, lang(), s.loadout.classId, s.berths.map((b) => b.classId), s.research && { done: s.research.done, free: Math.floor(s.research.free / 50), xp: Object.values(s.research.xp).map((x) => Math.floor((x ?? 0) / 50)) }]);
   if (m === 'throne') return JSON.stringify([m, lang(), s.name, s.level, s.dockedAt, s.gold, s.glory && { ...s.glory, xp: Math.floor(s.glory.xp / Math.max(1, s.glory.need) * 200), trials: s.glory.trials.map((v) => ({ ...v, wait: Math.ceil((v.wait ?? 0) / 60) })) },
-    // docs/19 E4–E8: the citadels' tab, its distances by the half kilometre (a ship under sail does not redraw it each step).
-    s.cit && { ...s.cit, rows: s.cit.rows.map((r) => ({ ...r, d: Math.round(r.d / 500) })) },
-    // docs/19 E15: the contracts' tab, its distances by the half kilometre and its week's end by the minute.
-    s.adm && { ...s.adm, endsIn: Math.round(s.adm.endsIn / 60), rows: s.adm.rows.map((r) => ({ ...r, at: r.at && { ...r.at, d: Math.round(r.at.d / 500) } })) }]);
+    // docs/19 E4–E8, E15: the citadels' and the contracts' tabs; their distances the client reckons from her own place
+    // (docs/19 E19), redrawn as she moves half a kilometre (a ship under sail does not redraw them each step).
+    s.cit, s.adm, state.ownDisplay && [Math.round(state.ownDisplay.x / 500), Math.round(state.ownDisplay.y / 500)]]);
   return m === 'company' ? JSON.stringify([m, lang(), s.name, s.dockedAt, s.berths, s.pvp, s.maps, s.company, s.cargo, s.builds, s.gold]) : JSON.stringify([m, lang(), s.gold, s.cargo, s.dockedAt, s.homeIsle]);
 }
 

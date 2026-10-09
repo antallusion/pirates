@@ -379,7 +379,8 @@ export function trialViews(now: number, p: Profile): TrialView[] {
   return SKILL_IDS.map((id) => {
     const rank = h.skills.find((x) => x.id === id)?.r ?? 0;
     const rec = t.trials[id];
-    const wait = Math.max(0, Math.ceil((rec?.next ?? 0) - now));
+    // (by the minute, as the tab shows it: a count of seconds sent every second sent the whole glory with it — docs/19 E19)
+    const wait = Math.max(0, Math.ceil(((rec?.next ?? 0) - now) / 60) * 60);
     const state: TrialView['state'] = rank >= GM_RANK ? 'won' : rank < SKILL_MAX || p.level < MAX_LEVEL ? 'locked' : wait > 0 ? 'wait' : 'ready';
     return { skill: id, rank, state, ...(state === 'wait' ? { wait } : {}), tries: rec?.tries ?? 0 };
   });

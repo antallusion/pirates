@@ -341,9 +341,13 @@ export function sealView(game: Game, s: PlayerSession): SealView | undefined {
   const ship = s.ship;
   let near: SealView['near'] = null;
   if (ship) {
+    let nd = Infinity;
     for (const l of lairsOfKind(game, seal.kind)) {
       const d = dist(l.x, l.y, ship.state.x, ship.state.y);
-      if (!near || d < near.d) near = { x: Math.round(l.x), y: Math.round(l.y), d: Math.round(d), island: lairIsland(game, l) };
+      if (d < nd) {
+        nd = d;
+        near = { x: Math.round(l.x), y: Math.round(l.y), island: lairIsland(game, l) };
+      }
     }
   }
   const l = ship ? lairInReachOf(game, s, new Set([seal.kind])) : null;

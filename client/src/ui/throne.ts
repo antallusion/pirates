@@ -140,7 +140,7 @@ function sealsTab(g: GloryView, state: ClientState): string {
   if (!g.open || !v) return `<p class="muted th-locked">${esc(L('locked', { n: MAX_LEVEL, m: state.self?.level ?? 0 }))}</p>`;
   const lair = T(LAIRS[v.kind].name);
   const affixes = v.affixes.map((a) => `<div class="th-affix">${icon(AFFIX_ICON[a], '', 'ico-md')}<span><b>${esc(T(SEAL_AFFIX_NAMES[a]))}</b><small>${esc(T(SEAL_AFFIX_TEXT[a]))}</small></span></div>`).join('');
-  const near = v.near ? L('seal.near', { island: placeName(v.near.island), km: (v.near.d / 1000).toFixed(1).replace('.', lang() === 'ru' ? ',' : '.') }) : L('seal.nearNone');
+  const near = v.near ? L('seal.near', { island: placeName(v.near.island), km: (state.farTo(v.near.x, v.near.y) / 1000).toFixed(1).replace('.', lang() === 'ru' ? ',' : '.') }) : L('seal.nearNone');
   const why = v.why ? serverText(v.why) : '';
   const board = v.board.length
     ? `<ol class="th-board">${v.board.map((r) => `<li class="${r.you ? 'you' : ''}"><b>${esc(r.name)}</b><span>${esc(L('seal.row', { lv: r.lv, r: r.rounds }))}</span></li>`).join('')}</ol>`
@@ -172,7 +172,7 @@ function sealsTab(g: GloryView, state: ClientState): string {
 function raidTab(g: GloryView, state: ClientState): string {
   const v = g.raid;
   if (!g.open || !v) return `<p class="muted th-locked">${esc(L('locked', { n: MAX_LEVEL, m: state.self?.level ?? 0 }))}</p>`;
-  const km = (v.gate.d / 1000).toFixed(1).replace('.', lang() === 'ru' ? ',' : '.');
+  const km = (state.farTo(v.gate.x, v.gate.y) / 1000).toFixed(1).replace('.', lang() === 'ru' ? ',' : '.');
   const steps = RAID.map((t) => {
     const st = v.cleared.includes(t.n) ? 'done' : t.n === v.tier ? 'on' : 'off';
     return `<li class="th-rt ${st}" title="${esc(T(t.name))}"><b>${t.n}</b><span>${esc(T(t.name))}</span></li>`;

@@ -148,8 +148,9 @@ export interface SealView {
   fast: number;
   week: number;
   best: { lv: number; rounds: number } | null;
-  /** The nearest lair of its kind (where, how far, its island), and whether her boats reach one now. */
-  near: { x: number; y: number; d: number; island: string } | null;
+  /** The nearest lair of its kind (where and its island: how far, the client reckons — docs/19 E19), and whether her
+   *  boats reach one now. */
+  near: { x: number; y: number; island: string } | null;
   reach: boolean;
   /** Why the mythic depth may not be entered now (null: it may). */
   why: string | null;

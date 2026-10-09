@@ -48,12 +48,12 @@ function wallMarks(r: CitRow): string {
 /** The citadel row open to its garrison (none: the nearest of hers, or of the war, or the nearest). */
 let opened: number | null = null;
 
-function rowOrder(v: CitView): CitRow[] {
+function rowOrder(v: CitView, state: ClientState): CitRow[] {
   const weight = (r: CitRow) => (r.siegeOf?.fighting ? 0 : !r.why.assault ? 1 : r.mine ? 2 : r.siegeOf?.mine ? 3 : r.siegeOf ? 4 : 5);
-  return [...v.rows].sort((a, b) => weight(a) - weight(b) || a.d - b.d);
+  return [...v.rows].sort((a, b) => weight(a) - weight(b) || state.farTo(a.x, a.y) - state.farTo(b.x, b.y));
 }
 
-function citRow(r: CitRow, v: CitView, open: boolean): string {
+function citRow(r: CitRow, v: CitView, open: boolean, d: number): string {
   const name = citLabel(r);
   const region = placeName(REGIONS[r.region].name);
   const flag = r.tag ? `<span class="cit-flag${r.crown ? ' crown' : ''}" style="background:${guildColour(r.tag)}">${r.crown ? '♛' : ''}</span>` : '';
@@ -75,7 +75,7 @@ function citRow(r: CitRow, v: CitView, open: boolean): string {
   return `<div class="cit-row${r.mine ? ' mine' : ''}${sg ? ' sieged' : ''}${open ? ' open' : ''}" data-citrow="${r.id}">
     <div class="cit-face">${icon('build_fort_2', '♜', 'ico-lg')}<b class="cit-lv">⚓${r.level}</b>${flag}</div>
     <div class="cit-main">
-      <span class="cit-name"><b>${esc(name)}</b><small class="muted">${esc(region)} · ${esc(L('cit.km', { km: km(r.d) }))}</small></span>
+      <span class="cit-name"><b>${esc(name)}</b><small class="muted">${esc(region)} · ${esc(L('cit.km', { km: km(d) }))}</small></span>
       <span class="cit-holder${r.mine ? ' gold' : ''}">${esc(holder)}</span>
       <span class="cit-stat"><span class="cit-gar">${esc(L('cit.garrison', { p: r.share }))}<i class="th-bar"><i style="width:${Math.max(0, Math.min(100, r.share))}%"></i></i></span>${wallMarks(r)}</span>
       <small class="cit-win${r.open ? ' open' : ''}">${esc(win)}</small>${siege}${why}
@@ -103,9 +103,9 @@ function holdPanel(r: CitRow, v: CitView): string {
 function citTab(_g: GloryView, state: ClientState): string {
   const v = state.self?.cit;
   if (!v || !v.rows.length) return `<p class="muted th-locked">${esc(L('cit.none'))}</p>`;
-  const rows = rowOrder(v);
+  const rows = rowOrder(v, state);
   if (opened === null || !rows.some((r) => r.id === opened)) opened = rows[0].id;
-  return `<div class="cit-list">${rows.map((r) => citRow(r, v, r.id === opened)).join('')}</div>
+  return `<div class="cit-list">${rows.map((r) => citRow(r, v, r.id === opened, state.farTo(r.x, r.y))).join('')}</div>
     <p class="muted hx-note">${esc(L('cit.rule'))}</p>`;
 }
 

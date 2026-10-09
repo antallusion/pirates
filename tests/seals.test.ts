@@ -141,7 +141,7 @@ test('below the cap there is no seal; at the cap the first is seal 2 of a lair t
   assert.equal(seal.lv, 2);
   assert.ok(SEAL_KINDS.includes(seal.kind));
   const v = sealView(game, s)!;
-  assert.ok(v.near && v.near.d > 0, 'its nearest lair on the sea');
+  assert.ok(v.near && Math.hypot(v.near.x - s.ship!.state.x, v.near.y - s.ship!.state.y) > 0, 'its nearest lair on the sea');
   assert.ok(v.why, 'not in reach out here');
 });
 

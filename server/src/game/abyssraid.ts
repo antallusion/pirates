@@ -310,12 +310,11 @@ export function raidView(game: Game, s: PlayerSession): RaidView | undefined {
   const tier = r?.tier ?? 1;
   const left = r?.left ?? raidArmy(1);
   const g = gateOf(game);
-  const d = s.ship ? Math.round(dist(g.x, g.y, s.ship.state.x, s.ship.state.y)) : 0;
   const full = tier <= RAID_TIERS ? hpOf(raidArmy(tier)) : 1;
   const members = (r?.members ?? []).map((acc) => ({ name: r!.names[acc] ?? '?', cut: (r!.dealt[acc] ?? []).reduce((a, x) => a + x, 0), ...(acc === s.accountId ? { you: true } : {}) }));
   return {
     week: S.week, tier, cleared: r?.cleared ?? [], left: left.map((x) => ({ u: x.u, n: x.n })), share: tier <= RAID_TIERS ? Math.round((hpOf(left) / full) * 100) : 0,
-    gate: { x: Math.round(g.x), y: Math.round(g.y), d }, why: whyNot(game, s, r), members, board: S.board.slice(0, 10).map((b) => ({ names: b.names, tiers: b.tiers })),
+    gate: { x: Math.round(g.x), y: Math.round(g.y) }, why: whyNot(game, s, r), members, board: S.board.slice(0, 10).map((b) => ({ names: b.names, tiers: b.tiers })),
     ...(r?.fighting !== undefined ? { fighting: r.names[r.fighting] ?? '' } : {}),
   };
 }

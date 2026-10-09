@@ -410,7 +410,7 @@ export function stepContracts(game: Game, s: PlayerSession): void {
 // ------------------------------------------------------------------ what she sees
 
 /** Where a contract's course leads her now. */
-function targetOf(game: Game, c: AdmContract, qs: QuestState | undefined, cit?: CitView, seal?: SealView): { x: number; y: number } | null {
+function targetOf(game: Game, c: AdmContract, qs: QuestState | undefined, cit?: CitView, seal?: SealView, from?: { x: number; y: number }): { x: number; y: number } | null {
   if (c.legend) return { x: c.legend.x, y: c.legend.y };
   if (c.delivery) {
     const port = game.portById(qs && qs.step >= 1 ? c.delivery.to : c.delivery.from);
@@ -418,7 +418,8 @@ function targetOf(game: Game, c: AdmContract, qs: QuestState | undefined, cit?: 
   }
   if (c.seal) return seal?.near ? { x: seal.near.x, y: seal.near.y } : null;
   const rows = cit?.rows ?? [];
-  const best = [...rows].sort((a, b) => Number(!!b.mine || !!b.siegeOf?.mine) - Number(!!a.mine || !!a.siegeOf?.mine) || a.d - b.d)[0];
+  const far = (r: { x: number; y: number }) => (from ? dist(r.x, r.y, from.x, from.y) : 0);
+  const best = [...rows].sort((a, b) => Number(!!b.mine || !!b.siegeOf?.mine) - Number(!!a.mine || !!a.siegeOf?.mine) || far(a) - far(b))[0];
   return best ? { x: best.x, y: best.y } : null;
 }
 
@@ -441,12 +442,12 @@ export function admView(game: Game, s: PlayerSession, cit?: CitView, seal?: Seal
     const pr = qs ? stepProgress(qs) : null;
     const first = c.quest.steps[0];
     const need = pr?.need ?? ('count' in first ? first.count : 1);
-    const at = state === 'done' ? null : targetOf(game, c, qs, cit, seal);
+    const at = state === 'done' ? null : targetOf(game, c, qs, cit, seal, ship?.state);
     const row: AdmRow = {
       id: c.id, n: c.n, kind: c.kind, name: c.quest.name, mentor: c.quest.mentor, summary: c.quest.summary, ...(c.quest.portrait ? { portrait: c.quest.portrait } : {}),
       steps: c.quest.steps.map((x) => x.text), state, step: qs ? qs.step : state === 'done' ? c.quest.steps.length : 0, progress: pr?.progress ?? (state === 'done' ? need : 0), need,
       hours: c.hours, pay: c.pay, why: state === 'open' ? takeWhy(game, s, c) : null,
-      ...(at && ship ? { at: { x: Math.round(at.x), y: Math.round(at.y), d: Math.round(dist(at.x, at.y, ship.state.x, ship.state.y)) } } : {}),
+      ...(at && ship ? { at: { x: Math.round(at.x), y: Math.round(at.y) } } : {}),
     };
     if (c.legend) {
       const lg = LEGENDS[c.legend.skill];
@@ -462,7 +463,8 @@ export function admView(game: Game, s: PlayerSession, cit?: CitView, seal?: Seal
     return row;
   });
   return {
-    week: S.week, endsIn: Math.max(0, Math.round((admWeekEnd(S.week - S.shift) - game.wallNow()) / 1000)), board: isAdmiraltyPort(port), ports: admiraltyPorts(game.world).map((x) => x.id), rows,
+    // (the week's end by the minute: a count of seconds sent every second sent the whole tab with it — docs/19 E19)
+    week: S.week, endsIn: Math.max(0, Math.round((admWeekEnd(S.week - S.shift) - game.wallNow()) / 60_000) * 60), board: isAdmiraltyPort(port), ports: admiraltyPorts(game.world).map((x) => x.id), rows,
     done: rows.filter((r) => r.state === 'done').length,
   };
 }

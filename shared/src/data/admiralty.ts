@@ -339,8 +339,9 @@ export interface AdmRow {
   pay: { silver: number; glory: number; part: number };
   /** Why she cannot take it now (null: she can, here). */
   why: string | null;
-  /** Where its course leads now (the legend's mark, the cargo's next port, her seal's lair, a citadel). */
-  at?: { x: number; y: number; d: number };
+  /** Where its course leads now (the legend's mark, the cargo's next port, her seal's lair, a citadel); how far, the
+   *  client reckons from her own position (docs/19 E19: a distance sent by the server changed every second). */
+  at?: { x: number; y: number };
   legend?: { skill: SkillId; name: string; ship: string; path: string; tier: number; share: number; left: { u: string; n: number }[]; why: string | null; fighting?: boolean };
   seal?: { lv: number; count: number; mine: number };
   delivery?: { from: string; to: string; good: string; qty: number; bands: number; km: number };

@@ -678,6 +678,13 @@ export class ClientState {
     return isNight(this.estServerTime());
   }
 
+  /** How far her ship lies from a point (m; 0 before her first sight of herself). The Throne's tabs reckon their
+   *  distances here — the server no longer sends them, they changed every second (docs/19 E19). */
+  farTo(x: number, y: number): number {
+    const o = this.ownDisplay;
+    return o ? Math.hypot(x - o.x, y - o.y) : 0;
+  }
+
   /** Interpolate remote ships at render time. */
   updateRemote(): void {
     const est = this.estServerTime();

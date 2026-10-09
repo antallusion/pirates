@@ -60,12 +60,12 @@ function legendPanel(r: AdmRow): string {
 }
 
 /** One contract's card: the giver and the kind, the story, the steps, the pay, the buttons. `board`: in port. */
-function card(r: AdmRow, v: AdmView, board: boolean): string {
+function card(r: AdmRow, v: AdmView, board: boolean, state: ClientState): string {
   const face = r.portrait ? icon(`portrait.${r.portrait}`, '', 'ico-lg ico-round') : icon(ADM_KIND_ICON[r.kind], '', 'ico-lg');
   const kind = ADM_KIND_NAMES[r.kind][ru()];
   const stateChip = `<span class="adm-st adm-st-${r.state}">${r.state === 'done' ? '✓ ' : ''}${esc(L(`st.${r.state}`))}${r.state === 'taken' && r.need > 1 ? ` · ${esc(L('progress', { n: r.progress, m: r.need }))}` : ''}</span>`;
   const acts: string[] = [];
-  if (r.at && r.state !== 'done' && !board) acts.push(`<button class="btn btn-small" data-admcourse="${r.at.x},${r.at.y}">${esc(L('course'))} · ${esc(L('km', { km: km(r.at.d) }))}</button>`);
+  if (r.at && r.state !== 'done' && !board) acts.push(`<button class="btn btn-small" data-admcourse="${r.at.x},${r.at.y}">${esc(L('course'))} · ${esc(L('km', { km: km(state.farTo(r.at.x, r.at.y)) }))}</button>`);
   if (r.state === 'open') acts.push(`<button class="btn btn-small${r.why ? '' : ' btn-primary'}" data-admtake="${esc(r.id)}" ${r.why ? 'disabled' : ''} title="${esc(r.why ? serverText(r.why) : '')}">${esc(L('take'))}</button>`);
   if (r.legend && r.state === 'taken' && !board) acts.push(`<button class="btn btn-small${r.legend.why ? '' : ' btn-primary'}" data-admboard="${esc(r.id)}" ${r.legend.why ? 'disabled' : ''} title="${esc(r.legend.why ? serverText(r.legend.why) : '')}">${esc(L('board'))}</button>`);
   const why = r.state === 'open' && r.why && !(board && v.board) ? r.why : r.state === 'taken' && r.legend?.why ? r.legend.why : null;
@@ -106,7 +106,7 @@ function contractsTab(_g: GloryView, state: ClientState): string {
         <span class="gold">${esc(L('doneOf', { n: v.done, m: v.rows.length }))}</span></div>
     </div>
     ${locked}
-    <div class="adm-list">${v.rows.map((r) => card(r, v, false)).join('')}</div>
+    <div class="adm-list">${v.rows.map((r) => card(r, v, false, state)).join('')}</div>
     <p class="muted hx-note">${esc(L('rule'))} ${esc(L('boards', { list: v.ports.map((id) => placeName(portName(id))).join(', ') }))}</p>`;
 }
 
@@ -139,6 +139,6 @@ export function admiraltyBoard(state: ClientState, portId: string): string {
   if (!v || !v.ports.includes(portId) || !v.rows.length) return '';
   learnPorts(state);
   return `<div class="adm-board card"><h4 class="card-h">${icon('set_admiralty', '⚓', 'ico-md')}<span>${esc(L('board.h'))}<small class="muted">${esc(L('board.sub'))} · ${esc(L('week', { n: v.week, t: endsIn(v.endsIn) }))}</small></span></h4>
-    <div class="adm-list">${v.rows.map((r) => card(r, v, true)).join('')}</div>
+    <div class="adm-list">${v.rows.map((r) => card(r, v, true, state)).join('')}</div>
     <small class="muted">${esc(L('board.note'))}</small></div>`;
 }

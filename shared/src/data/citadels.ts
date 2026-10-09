@@ -301,8 +301,6 @@ export interface CitRow extends CitMark {
   windows: { start: number; end: number }[];
   /** A siege declared on it: by whom, for which window, the captains who have assaulted, one aboard now. */
   siegeOf?: { tag: string; guild: string; start: number; end: number; assaults: string[]; fighting?: string; mine?: boolean };
-  /** Her distance from its anchorage (m). */
-  d: number;
   /** Why she may not declare, assault, leave men or hire its titan now (null: she may). */
   why: { declare: string | null; assault: string | null; leave: string | null; titan: string | null };
   /** Its titan this week: still to be hired. */
