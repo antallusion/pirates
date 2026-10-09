@@ -4274,6 +4274,10 @@ body.touch .act-btn { --h: 38px; }
 .ar-acts .btn { white-space: nowrap; }
 .tb-end .tb-why.tb-arena, .tb-end.sea .tb-why.tb-arena { display: inline-flex; align-items: center; gap: 6px; color: var(--gold); font-weight: 600; }
 .tb-end .tb-why.tb-arena.down { color: var(--bad); }
+/* docs/19 E19: a bout's end in the band of a phone on its side — the rating's line and the button, not the drafted
+   armies' faces (the sand costs her none of her own men): with them the band wrapped and «Дальше» went under its edge
+   (812×375: 41 px of it cut, 640×360: all of it; the band 16.6–17.1 % of the screen). */
+@media (max-height: 520px) { .tb-end.sea:has(.tb-arena) .tb-end-rows { display: none; } }
 @media (max-width: 1099px), (max-height: 520px) {
   body.touch .ar-acts .btn, body.touch .ar-go .btn { min-height: 44px; }
   .ar-draft { grid-template-columns: 120px minmax(0, 1fr) 120px; gap: 6px; }
