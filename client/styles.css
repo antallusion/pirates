@@ -4085,6 +4085,14 @@ body.touch .act-btn { --h: 38px; }
    the rank, the Abyss's «На абордаж» above the tier's account (they were 3–147 px under the fold: 640×360's tabs take
    two rows). */
 @media (max-height: 520px) {
+  /* (a mastery node's «Изучить» beside its words, not under them: the first was 51 px under the fold at 640×360; the
+     medals of the tabs' heads a size smaller — a contract's «Взять» was 3 px under it) */
+  .th-node { grid-template-columns: 34px minmax(0, 1fr) auto; grid-template-areas: 'i t b'; align-items: center; }
+  .th-node .btn { align-self: center; }
+  .th-branches { gap: 6px; }
+  .th-branch { padding: 6px; gap: 4px; }
+  .throne-win .th-head .th-medal { width: 52px; height: 52px; }
+  .throne-win .th-head .th-medal b { font-size: 20px; }
   .throne-win > .tabs { order: -3; }
   .throne-win > .th-boon { order: -2; }
   .throne-win > .th-raid { order: -2; }
