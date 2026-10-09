@@ -235,14 +235,18 @@ export function draftChoice(d: Draft, side: 0 | 1, rng: Rng, path: CaptainId | n
 /** The eight battle skills every hero of the Colosseum has at expert. */
 export const ARENA_SKILLS: SkillId[] = ['boarding', 'armor', 'artillery', 'leadership', 'tactics', 'luck', 'first_aid', 'mysticism'];
 
-/** Each path's weight on the sand: points of Attack and Defence more (or fewer) than its standard primaries, so that
- *  the paths stand even in the Colosseum as HotA's tournaments even out their heroes (`node tools/balance-arena.ts 120
- *  --paths`; the paths' own books, innate moves and ultimates stay theirs). */
-export const ARENA_PATH: Partial<Record<CaptainId, number>> = { corsair: -9, smuggler: 4, reaver: -2, navigator: 2, drowned: 3, admiral: 4 };
+/** Each path's weight on the sand: points of its primaries more (or fewer) than its standard ones, so that every pair
+ *  of paths stands near even in the Colosseum as HotA's tournaments even out their heroes (`node tools/balance-arena.ts
+ *  400 --pairs`; the paths' own books, innate moves and ultimates stay theirs). A point of Attack or Defence is about
+ *  three bouts in a hundred. The admiral's Defence goes into Attack: Defence blunts only blows and shots, never an
+ *  order's damage, so her wall of 28 held off the paths of steel and not the Drowned's orders (they took 57 % of her
+ *  bouts with the means even). The smuggler and the navigator, of the same standard primaries, stand on the same. */
+export const ARENA_PATH: Partial<Record<CaptainId, Partial<Prims>>> = {
+  corsair: { atk: -5, def: -5 }, smuggler: { atk: 1, def: 2 }, reaver: { atk: -1 }, navigator: { atk: 1, def: 2 }, drowned: { atk: 2, def: 1 }, admiral: { atk: 4, def: -1 },
+};
 
 /** A path's standard primaries at the cap: its start and its odds over the level-ups, whole points by the largest
- *  remainders (no dice: every captain of a path the same), and its weight on the sand (ARENA_PATH: Attack the odd
- *  point). */
+ *  remainders (no dice: every captain of a path the same), and its weight on the sand (ARENA_PATH). */
 export function arenaPrims(path: CaptainId): Prims {
   const base = PRIM_BASE[path], w = PRIM_WEIGHTS[path];
   const ups = MAX_LEVEL - 1;
@@ -256,10 +260,8 @@ export function arenaPrims(path: CaptainId): Prims {
     rest--;
   }
   const out = { ...base };
-  PRIMS.forEach((k, i) => (out[k] += whole[i]));
-  const h = Math.round(ARENA_PATH[path] ?? 0);
-  out.atk = Math.max(0, out.atk + Math.ceil(h / 2));
-  out.def = Math.max(0, out.def + Math.floor(h / 2));
+  const sand = ARENA_PATH[path];
+  PRIMS.forEach((k, i) => (out[k] = Math.max(0, out[k] + whole[i] + Math.round(sand?.[k] ?? 0))));
   return out;
 }
 

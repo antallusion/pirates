@@ -3598,7 +3598,9 @@ body.touch .rc-slide input[type="range"] { min-height: 44px; } /* (a titan's or 
     linear-gradient(#2b1a0d, #1a0f07) border-box;
   border: max(4px, calc(var(--bk-w) * 0.012)) solid transparent; box-shadow: 0 10px 40px #000, inset 0 0 calc(var(--bk-w) * 0.04) rgba(80, 50, 20, 0.45); }
 .tb-book.bk.painted { background: center / 100% 100% no-repeat; border: none; box-shadow: none; filter: drop-shadow(0 10px 24px #000);
-  --bk-t: 12%; --bk-b: 25%; --bk-o: 17.5%; --bk-i: 2.8%; }
+  --bk-t: 12%; --bk-b: 28%; --bk-o: 17.5%; --bk-i: 2.8%; }
+/* (--bk-b: the painting's parchment ends at 73.5–78 % of its height — lowest by the spine and the right page's curl; at
+   25 % the lowest row's prices lay 4–5 px over that edge, QA 2026-10-09) */
 /* On the painting the corners to turn sit at the pages' lower corners, the bookmarks and the close on the table. */
 .tb-book.bk.painted .bk-turn.prev { left: 11%; bottom: 21%; }
 .tb-book.bk.painted .bk-turn.next { right: 11%; bottom: 21%; }
@@ -3643,6 +3645,31 @@ body:has(.tb-book.bk:not(.hidden)) #toasts { display: none; }
 .bk-turn.prev { left: 1.6%; bottom: 3%; }
 .bk-turn.next { right: 1.6%; bottom: 3%; }
 .bk-close { right: 1.6%; top: 3%; }
+/* docs/23 (2026-10-09): an order's whole words — beside a page of the panel or the book under the mouse or a key's
+   focus, over a card of a phone's book held by a finger (client/src/ui/tactical.ts showWords). Above the sheets. */
+.tb-words { position: fixed; z-index: 78; width: min(300px, calc(100vw - 16px)); box-sizing: border-box; padding: 8px 11px 9px; pointer-events: none;
+  background: rgba(14, 12, 10, 0.97); border: 1px solid var(--brass-dim); border-top: 3px solid var(--gold); border-radius: 6px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65);
+  color: var(--bone); font-size: 12.5px; line-height: 1.38; text-align: left; }
+.tb-words.hidden { display: none; }
+.tb-words-h { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.tb-words-h .ico { width: 34px; height: 34px; flex: none; margin: 0; border-radius: 4px; }
+.tb-words-h span { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.tb-words-h b { font-family: var(--display); font-weight: 400; font-size: 16px; color: var(--gold); }
+.tb-words-h b .ico-xs { width: 13px; height: 13px; margin: 0 1px 0 0; vertical-align: -1px; }
+.tb-words-h small { color: var(--fog); font-size: 11px; }
+.tb-words p { margin: 0; }
+.tb-words p.tb-words-why { margin-top: 5px; color: #e3998a; font-size: 11.5px; }
+/* A page of the desk's panel stands the same height every turn — its words, «через 4» or «не хватает воли» — so
+   nothing under it moves (a cast page fell from 61 to 50 px and the column shifted, QA 2026-10-09); its words take the
+   lines the screen's height gives (2 up to 700 px, 3 up to 860, 4 above), the whole of them beside it (.tb-words). */
+@media (min-width: 900px) and (min-height: 521px) and (min-aspect-ratio: 7/5) {
+  .tb-root .tb-spells { --pg-lines: 2; gap: 5px; }
+  .tb-root .tb-spells .tb-spell { box-sizing: border-box; height: calc(16px + 1.15 * 14px + var(--pg-lines) * 1.15 * 11px); min-height: 0; padding-top: 2px; padding-bottom: 2px; }
+  .skinned .tb-root .tb-spells .tb-spell { border-width: 5px 9px; border-image-width: 5px 9px; }
+  .tb-root .tb-spells .tb-spell small { -webkit-line-clamp: var(--pg-lines); line-clamp: var(--pg-lines); }
+}
+@media (min-width: 900px) and (min-height: 701px) and (min-aspect-ratio: 7/5) { .tb-root .tb-spells { --pg-lines: 3; } }
+@media (min-width: 900px) and (min-height: 861px) and (min-aspect-ratio: 7/5) { .tb-root .tb-spells { --pg-lines: 4; } }
 /* docs/17 H4: the adventure map's visit card over the sea (placed like the lair's chest), and the Grail's chart. */
 #advcard { position: fixed; left: 50%; top: calc(var(--sa-t, 0px) + 150px); transform: translateX(-50%); width: min(380px, calc(100vw - 24px)); z-index: 40; pointer-events: auto; display: grid; gap: 6px; }
 #advcard.hidden { display: none; }

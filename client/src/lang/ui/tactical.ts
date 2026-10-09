@@ -53,6 +53,7 @@ export const EN = {
   'book.n': '{n} pages',
   // The captain's orders and the officers' words.
   'ready.in': 'in {n}',
+  'words.level': 'level {n}',
   'o.rally': 'Rally',
   'o.all_hands': 'All hands',
   'o.lay_true': 'Lay her true',
@@ -260,6 +261,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'book': 'Книга приказов',
   'book.n': 'страниц: {n}',
   'ready.in': 'через {n}',
+  'words.level': '{n}-й уровень',
   'o.rally': 'Сплотиться',
   'o.all_hands': 'Все наверх',
   'o.lay_true': 'Целься вернее',

@@ -41,6 +41,7 @@ import type { IslandBiome } from '../../../shared/src/world/regions.ts';
 import { assetMeta, pattern, sprite } from '../assets.ts';
 import type { ClientState, RemoteShip } from '../state.ts';
 import { Fx } from './fx.ts';
+import { FightView, HitShake, fightShare } from './camfight.ts';
 import type { CritPart } from './fx.ts';
 import { drawBossZones, drawMonster, drawPveSites } from './monsters.ts';
 import { drawAdvWorld, drawGuardShip, guardTag } from './advmap.ts'; // docs/17 H4
@@ -300,6 +301,15 @@ export class Renderer {
   targetZoom = 2.6;
   /** Once the captain zooms, the screen size no longer picks the zoom. */
   userZoomed = false;
+  /** The sea fight's view (camfight.ts): on a desk it steps back while she fights; the share of her zoom it wants. */
+  readonly fight = new FightView();
+  fightShare = 1;
+  /** A ball on her hull: the whole view knocked a few pixels, by the blow (camfight.ts). */
+  readonly knock = new HitShake();
+  /** Her zoom as the last frame saw it: a change since is the wheel's (or a pinch's), not the fight's. */
+  private seenZoom = 2.6;
+  /** Where the camera looks before the knock and the jitter (the ease runs on this; camX/camY are drawn). */
+  private camBase = { x: 0, y: 0 };
   /** Her mark within the close fight's band (her gun captains fire) or not yet: the word under its ring (main.ts). */
   markRange: 'in' | 'far' | null = null;
   time = 0;
@@ -360,6 +370,7 @@ export class Renderer {
     // The default view spans about 260 m across the short side of the screen: a phone still sees a broadside's
     // reach around her, a desktop keeps the close view.
     if (!this.userZoomed) this.targetZoom = clamp(Math.min(this.w, this.h) / 260, 1.3, 2.6);
+    this.seenZoom = this.targetZoom;
   }
 
   private makeNoise(size: number): HTMLCanvasElement {
@@ -403,22 +414,49 @@ export class Renderer {
     this.time += dt;
     this.markRange = aim.range ?? null;
     this.frameNo++;
-    this.zoom += (this.targetZoom - this.zoom) * Math.min(1, dt * 8);
+    const opt = settings();
+    // docs/23 (owner, 2026-10-09): the sea fight's view (camfight.ts). The wheel (or a pinch) since the last frame turns
+    // the zoom on the screen, and the view is the captain's till the fight ends.
+    if (this.targetZoom !== this.seenZoom) {
+      this.targetZoom = clamp(this.fight.wheel(this.seenZoom, this.targetZoom, fightShare(this.seenZoom, this.w, this.h)), 0.35, 4);
+      this.seenZoom = this.targetZoom;
+    }
+    // Signs of a fight: her mark hostile in the close band, «Атаковать», a shot of hers, a ball on her hull. On a desk the
+    // view steps back to keep a broadside's band round her in sight; a phone keeps its own (it spans the band already).
+    const sign = !!own && !state.self?.dockedAt && (aim.range === 'in' || !!state.pursuit || this.fx.fought);
+    this.fx.fought = false;
+    this.fight.step(dt, sign, !globalThis.document?.body.classList.contains('touch'));
+    this.fightShare = fightShare(this.targetZoom, this.w, this.h);
+    this.zoom += (this.fight.zoom(this.targetZoom, this.fightShare) - this.zoom) * Math.min(1, dt * 8);
     const g = this.g;
+    const cam = this.camBase;
     if (own) {
       // Look a little ahead of the ship, further at the pace of the sea, but never so far that she leaves the middle
-      // of the screen: the look ahead eases slower than she turns, so she stays put and the sea turns about her.
+      // of the screen: the look ahead eases slower than she turns, so she stays put and the sea turns about her. In a
+      // fight half as far: she turns about her mark, and the band round her is what matters.
       const v = headingVec(own.heading);
-      const reach = Math.min(own.speed * SPEED_SCALE * 0.8, (Math.min(this.w, this.h) * 0.18) / Math.max(0.1, this.zoom));
+      const reach = Math.min(own.speed * SPEED_SCALE * 0.8, (Math.min(this.w, this.h) * 0.18) / Math.max(0.1, this.zoom)) * (1 - 0.5 * this.fight.w);
       // A long way off (the first frame, a respawn, a teleport): cut straight to her instead of flying the chart.
-      const far = Math.hypot(own.x - this.camX, own.y - this.camY) > 1500;
+      const far = Math.hypot(own.x - cam.x, own.y - cam.y) > 1500;
       const kl = far ? 1 : Math.min(1, dt * 0.8);
       this.lead.x += (v.x * reach - this.lead.x) * kl;
       this.lead.y += (v.y * reach - this.lead.y) * kl;
       const k = far ? 1 : Math.min(1, dt * 6);
-      this.camX += (own.x + this.lead.x + this.look.x - this.camX) * k;
-      this.camY += (own.y + this.lead.y + this.look.y - this.camY) * k;
+      cam.x += (own.x + this.lead.x + this.look.x - cam.x) * k;
+      cam.y += (own.y + this.lead.y + this.look.y - cam.y) * k;
     }
+    // A ball on her hull knocks the whole view away from it, by its share of her hull; a blast near her jitters it as
+    // before. Both move the camera, the shader sea with the ships (the jitter moved the 2D canvas alone, the sea stood
+    // still under them). None with «меньше движения» or the shake turned off.
+    const still = opt.reduceMotion || !opt.screenShake;
+    if (!still && own && state.you) for (const b of this.fx.blows) this.knock.kick(b.dmg / Math.max(1, state.you.hullMax), own.x - b.x, own.y - b.y);
+    this.fx.blows.length = 0;
+    if (still) this.knock.stop();
+    const kn = this.knock.step(dt);
+    const jit = still ? 0 : this.fx.shake * 4;
+    const ox = kn.x + (jit ? (Math.random() - 0.5) * 2 * jit : 0), oy = kn.y + (jit ? (Math.random() - 0.5) * 2 * jit : 0);
+    this.camX = cam.x - ox / this.zoom;
+    this.camY = cam.y - oy / this.zoom;
     // Particle LOD: the frame time picks it; nothing decorative is born off screen.
     this.fx.frame(dt * 1000);
     {
@@ -426,10 +464,7 @@ export class Renderer {
       this.fx.view = { x0: this.camX - mx, y0: this.camY - my, x1: this.camX + mx, y1: this.camY + my };
     }
     this.fx.update(dt);
-    const opt = settings();
-    const shake = opt.screenShake ? this.fx.shake : 0;
-    const shx = shake ? (Math.random() - 0.5) * shake * 8 : 0, shy = shake ? (Math.random() - 0.5) * shake * 8 : 0;
-    g.setTransform(this.dpr, 0, 0, this.dpr, shx * this.dpr, shy * this.dpr);
+    g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
     const night = nightFactor(state.estServerTime());
     this.nightNow = night;
