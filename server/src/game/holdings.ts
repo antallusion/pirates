@@ -111,11 +111,16 @@ export class HoldingsHub {
 
   touch(): void {
     this.dirty = true;
+    this.rev++;
   }
+
+  /** Bumped at every change told (touch) and every reload (drop): what is reckoned from the holdings keeps by it. */
+  rev = 0;
 
   /** Another zone rewrote the record: reload it on next use. */
   drop(): void {
     if (!this.dirty) this.all = null;
+    this.rev++;
   }
 
   save(game: Game): void {
@@ -186,10 +191,35 @@ export function rentPrice(isl: Island, days: RentDays): number {
 }
 
 /** The island within reach of this ship (at sea, near its shore). */
+/** The islands by cells (an island in every cell its reach touches), built once a world: islandNear asks only the
+ *  ship's cell — it walked all 1 700 islands, for every captain, many times a second (docs/19 E19's open item). */
+const ISLE_CELL = 2000;
+const isleCells = new WeakMap<object, Map<number, Island[]>>();
+function islesAbout(game: Game, x: number, y: number): Island[] {
+  let cells = isleCells.get(game.world);
+  if (!cells) {
+    cells = new Map();
+    for (const isl of game.world.islands) {
+      if (isl.portId || isl.minor) continue;
+      const r = isl.radius + REACH;
+      for (let cy = Math.floor((isl.y - r) / ISLE_CELL); cy <= Math.floor((isl.y + r) / ISLE_CELL); cy++) {
+        for (let cx = Math.floor((isl.x - r) / ISLE_CELL); cx <= Math.floor((isl.x + r) / ISLE_CELL); cx++) {
+          const k = cy * 100_000 + cx;
+          let list = cells.get(k);
+          if (!list) cells.set(k, (list = []));
+          list.push(isl);
+        }
+      }
+    }
+    isleCells.set(game.world, cells);
+  }
+  return cells.get(Math.floor(y / ISLE_CELL) * 100_000 + Math.floor(x / ISLE_CELL)) ?? [];
+}
+
 export function islandNear(game: Game, ship: ShipEntity): Island | null {
   if (ship.docked) return null;
   let best: Island | null = null, bd = Infinity;
-  for (const isl of game.world.islands) {
+  for (const isl of islesAbout(game, ship.state.x, ship.state.y)) {
     if (isl.portId || isl.minor) continue; // a sea stack is no estate (docs/16 P3)
     const d = dist(isl.x, isl.y, ship.state.x, ship.state.y) - isl.radius;
     if (d < REACH && d < bd) {

@@ -426,6 +426,13 @@ export function buyArtifact(game: Game, s: PlayerSession, port: Port, index: num
 
 // ------------------------------------------------------------------ what she sees
 
+/** docs/19 E12: each relic's parts, worn and in the locker (the two sets made once, not once a relic). */
+function relicRows(p: Profile): HeroView['relics'] {
+  const worn = new Set(wornOf(p).map((it) => it.art));
+  const locker = new Set(p.stash.map((it) => it.art));
+  return RELIC_IDS.map((id) => ({ id, worn: RELICS[id].parts.filter((x) => worn.has(x)), held: RELICS[id].parts.filter((x) => locker.has(x) && !worn.has(x)) }));
+}
+
 export function heroView(p: Profile, army: readonly { u: string; n: number }[] | undefined = p.army): HeroView {
   const h = heroOf(p);
   const a = artTotals(wornOf(p));
@@ -442,11 +449,7 @@ export function heroView(p: Profile, army: readonly { u: string; n: number }[] |
     pending, offer: pending > 0 ? currentOffer(p, h) : [], orders: [...h.orders], cap: orderLevelCap(p.level, rankOf(h.skills, 'mysticism')),
     cd: { ...h.cd }, costs, sets: a.sets,
     // docs/19 E12: each relic's parts, worn and in the locker.
-    relics: RELIC_IDS.map((id) => {
-      const worn = new Set(wornOf(p).map((it) => it.art));
-      const locker = new Set(p.stash.map((it) => it.art));
-      return { id, worn: RELICS[id].parts.filter((x) => worn.has(x)), held: RELICS[id].parts.filter((x) => locker.has(x) && !worn.has(x)) };
-    }),
+    relics: relicRows(p),
     stam: Math.floor(stamOf(p, h)), stamMax: stamMax(p, h), scrolls: { ...(h.scrolls ?? {}) }, pages: pathPagesAt(p.captain, p.level),
     lift: { ...lift, nodes: Object.keys(p.talents ?? {}).filter((id) => TALENT_BOOK[id] && (p.talents[id] ?? 0) > 0) },
     blast: Math.round((army ?? []).reduce((n, x) => n + (UNITS[x.u as keyof typeof UNITS]?.hp ?? 0) * x.n, 0) * 0.07),

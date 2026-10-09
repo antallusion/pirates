@@ -245,12 +245,13 @@ export function stepRoamers(game: Game): void {
     }
     if (st.k === 0 && st.fighter === undefined && st.left === undefined && st.down === undefined) S.st.delete(id);
   }
-  const even = Math.floor(game.now) % 2 === 0;
+  // (half the captains told on the even seconds, half on the odd, so no one second carries them all)
+  const sec = Math.floor(game.now);
   const dirty = S.dirty;
   S.dirty = false;
-  if (!even && !dirty) return;
   for (const s of game.sessions) {
     if (!s.profile || !s.ship || s.ship.ghost) continue;
+    if (!dirty && (s.accountId + sec) % 2 !== 0) continue;
     if (s.ship.docked) {
       if (S.sent.get(s)) {
         S.sent.set(s, '');

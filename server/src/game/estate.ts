@@ -107,8 +107,19 @@ function save(game: Game): void {
 // ------------------------------------------------------------------------------------------------ the island
 
 /** A captain's own island (bought outright), if she has one. */
+/** Each captain's own island, by account, reckoned again when the holdings change (it walked them all, for every
+ *  captain, every second: docs/19 E19's open item). A holding found is checked before it is handed out. */
+const owners = new WeakMap<object, { rev: number; map: object; by: Map<number, Holding> }>();
 export function ownIsland(game: Game, account: number): Holding | undefined {
-  return Object.values(game.holdings.map(game)).find((h) => h.owned && h.owner.kind === 'player' && h.owner.id === account);
+  const hub = game.holdings, map = hub.map(game);
+  const mine = (h: Holding | undefined) => !!h && h.owned === true && h.owner.kind === 'player' && h.owner.id === account && map[h.island] === h;
+  let ix = owners.get(hub);
+  if (!ix || ix.rev !== hub.rev || ix.map !== map || (ix.by.has(account) && !mine(ix.by.get(account)))) {
+    const by = new Map<number, Holding>();
+    for (const h of Object.values(map)) if (h.owned && h.owner.kind === 'player' && !by.has(h.owner.id)) by.set(h.owner.id, h);
+    owners.set(hub, (ix = { rev: hub.rev, map, by }));
+  }
+  return ix.by.get(account);
 }
 
 /** The price of an island claimed as one's own: by its size and its waters (docs/15 item 6). */
