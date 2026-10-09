@@ -11,6 +11,7 @@ import {
 import type { Item } from '../shared/src/data/items.ts';
 import { Rng } from '../shared/src/rng.ts';
 import { computeShipStats } from '../shared/src/sim/shipstats.ts';
+import { gearDefCeil, gearOffCeil, referenceKit } from '../shared/src/data/seabalance.ts';
 import { BOARDED_SLOTS, SUNK_SLOTS, chandlerWares, rollDrop } from '../server/src/game/gear.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
@@ -54,12 +55,24 @@ test('sets: two, four and six pieces; a legendary carries its gift', () => {
   assert.equal(itemName(leg, true), LEGENDARY_ITEMS.vane_tricorne.name[1]);
 });
 
-test('gear shares the talents’ caps: a hold full of double charges cannot pass +25% gun damage', () => {
-  const l = { classId: 'brig' as const, name: 'x', guns: { port: 'medium_12' as const, starboard: 'medium_12' as const }, modules: {} };
+// docs/25 items 5–6 (owner, 2026-10-09): gear no longer shares the talents' +25% / −25% caps (filled by her 26th level,
+// every line past them worth nothing); its broadside lines rise toward ×(1.1 + 0.11·⚓) of her broadside and its hull
+// lines toward ×(1 + 0.025·⚓) of her hull, each line a little less than the one before. Was: a hold full of double
+// charges stopped at +25%.
+test('gear weighs apart from the talents: the full kit reaches the ⚓ ceilings, every line adds, each a little less', () => {
+  const l = { classId: 'brig' as const, name: 'x', guns: { port: 'medium_12' as const, starboard: 'medium_12' as const }, modules: {}, level: 5 };
   const base = computeShipStats(l, 'corsair', {});
+  const kit = referenceKit(5);
+  const full = computeShipStats(l, 'corsair', {}, [], kit);
+  assert.ok(Math.abs(full.gunDamageMul / base.gunDamageMul - gearOffCeil(5)) < 1e-6, `the full kit's broadside ×${full.gunDamageMul / base.gunDamageMul}`);
+  const eHP = (st: typeof base) => st.hullMax / ((1 - st.armor * 0.7) * st.incomingDamageMul);
+  assert.ok(Math.abs(eHP(full) / eHP(base) - gearDefCeil(5)) < 0.01, `the full kit's hull ×${eHP(full) / eHP(base)}`);
+  // A hold full of double charges: more than the full kit's broadside, but not by much — each line adds less.
   const many = Array.from({ length: 10 }, () => item('double_charge', 5, { rarity: 3, affixes: [{ a: 'damage' as const, v: 0.05 }] }));
-  const st = computeShipStats({ ...l, gear: { battery: many[0] } }, 'corsair', {}, [], many.slice(1));
-  assert.ok(st.gunDamageMul / base.gunDamageMul <= 1.25 + 1e-9, `${st.gunDamageMul / base.gunDamageMul}`);
+  const gains = [1, 3, 6, 10].map((n) => computeShipStats(l, 'corsair', {}, [], many.slice(0, n)).gunDamageMul / base.gunDamageMul);
+  for (let i = 1; i < gains.length; i++) assert.ok(gains[i] > gains[i - 1], `every line adds: ${gains.map((g) => g.toFixed(3)).join(' ')}`);
+  assert.ok((gains[3] - gains[2]) / 4 < (gains[1] - gains[0]) / 2, 'each a little less');
+  assert.ok(gains[3] < gearOffCeil(5) * 1.2, `never far past the ceiling: ×${gains[3].toFixed(3)}`);
 });
 
 test('putting gear on: the ship’s level and slots, the captain’s band; an item takes the yard fitting’s place; off again', () => {

@@ -414,6 +414,11 @@ export class Renderer {
     this.time += dt;
     this.markRange = aim.range ?? null;
     this.frameNo++;
+    // An elite, a boss, a zone boss or one of the deep's great ones: her broadside numbers bigger (docs/25 item 11).
+    this.fx.bigTarget = (id) => {
+      const i = state.ships.get(id)?.info;
+      return !!i && (!!i.elite || i.npcRole === 'boss' || i.shipLevel === undefined || i.classId.startsWith('zb_'));
+    };
     const opt = settings();
     // docs/23 (owner, 2026-10-09): the sea fight's view (camfight.ts). The wheel (or a pinch) since the last frame turns
     // the zoom on the screen, and the view is the captain's till the fight ends.
@@ -2510,6 +2515,8 @@ export class Renderer {
       g.fillText(p.text, this.sx(p.x) + 1, this.sy(p.y) + 1);
       g.fillStyle = p.color;
       g.fillText(p.text, this.sx(p.x), this.sy(p.y));
+      // «Броня держит» (docs/25 items 1–2): a small shield drawn left of a number past the broadside's alpha limit.
+      if (p.guard) guardShield(g, this.sx(p.x) - g.measureText(p.text).width / 2 - p.size * 0.45, this.sy(p.y) - p.size * 0.35, p.size * 0.62, p.color);
     }
     g.globalAlpha = 1;
   }
@@ -4105,6 +4112,33 @@ function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number,
   g.arcTo(x, y + h, x, y, r);
   g.arcTo(x, y, x + w, y, r);
   g.closePath();
+}
+
+/** «Броня держит» (docs/25 items 1–2): a heater shield `s` px tall centred on (x, y), drawn in a few strokes. */
+export function guardShield(g: CanvasRenderingContext2D, x: number, y: number, s: number, color: string): void {
+  g.save();
+  g.translate(x, y);
+  const w = s * 0.42, h = s * 0.5;
+  g.beginPath();
+  g.moveTo(-w, -h);
+  g.lineTo(w, -h);
+  g.lineTo(w, -h * 0.1);
+  g.quadraticCurveTo(w * 0.9, h * 0.65, 0, h);
+  g.quadraticCurveTo(-w * 0.9, h * 0.65, -w, -h * 0.1);
+  g.closePath();
+  g.fillStyle = 'rgba(0,0,0,0.55)';
+  g.fill();
+  g.lineWidth = Math.max(1.2, s * 0.09);
+  g.strokeStyle = color;
+  g.stroke();
+  g.beginPath();
+  g.moveTo(0, -h * 0.75);
+  g.lineTo(0, h * 0.7);
+  g.moveTo(-w * 0.7, -h * 0.25);
+  g.lineTo(w * 0.7, -h * 0.25);
+  g.lineWidth = Math.max(1, s * 0.06);
+  g.stroke();
+  g.restore();
 }
 
 /** The struck part in a few strokes (docs/16 #2), about 14 px across, centred on (x, y). */

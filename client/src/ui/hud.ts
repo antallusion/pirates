@@ -36,6 +36,7 @@ import { SF } from '../../../shared/src/protocol.ts';
 import { activeTalents } from '../../../shared/src/data/talents.ts';
 import { relWindDeg, windPush } from '../../../shared/src/sim/sailing.ts';
 import { cargoVolume, tx as tval } from '../../../shared/src/sim/shipstats.ts';
+import { volleysToSink } from '../../../shared/src/sim/volleys.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { seasonName } from '../../../shared/src/world/worldgen.ts';
 import { bandOf, captainBand, SECTOR_SIZE, sectorIndex } from '../../../shared/src/world/sectors.ts';
@@ -635,7 +636,7 @@ export class Hud {
       }
     };
     for (const x of abil) {
-      setCd(x.a.id, x.left, x.a.cooldown, x.locked);
+      setCd(x.a.id, x.left, x.a.cooldown * (state.ownStats?.cooldownMul ?? 1), x.locked);
       const ch = this.cdEls.get(x.a.id)?.charge;
       if (ch) ch.style.width = `${Math.round(you.resolve)}%`;
     }
@@ -1714,7 +1715,10 @@ export class Hud {
     // Her boarding chance (docs/23 item 49): the battle played out on the server, asked every few seconds.
     const od = id !== null ? state.boardOdds.get(id) : undefined;
     const odds = od && performance.now() / 1000 - od.at < 15 ? od : null;
-    const key = `${odds ? `${odds.chance}|${odds.risky}` : ''}|${lang()}|${id}|${info.shipLevel}|${threat}|${Math.round(c.hull * 50)}|${Math.round(c.crew * 50)}|${Math.round(c.sails * 50)}|${fx.join(',')}|${dist}|${info.title ?? ''}|${ap ? `${ap.value}|${ap.fill}|${ap.escorts}|${ap.dest}` : ''}|${struck}|${c.flags & (SF.BLACK_FLAG | SF.NEUTRAL | SF.NO_BOARD)}:${info.city ?? ''}`;
+    // «≈ N залпов» (docs/25 item 12): her broadsides to sink the mark as she stands — sink her or board her.
+    const self = state.self, st = state.ownStats;
+    const vol = self && st && info.hullMax && info.shipLevel ? volleysToSink(st, self.loadout, { isPlayer: true, ironRain: (self.talents.gun_iron_rain ?? 0) > 0 }, { classId: info.classId, shipLevel: info.shipLevel, isPlayer: info.isPlayer, hullMax: info.hullMax, armor: info.armor ?? 0, inc: info.inc ?? 1, hullFrac: c.hull }) : null;
+    const key = `${vol ?? ''}|${odds ? `${odds.chance}|${odds.risky}` : ''}|${lang()}|${id}|${info.shipLevel}|${threat}|${Math.round(c.hull * 50)}|${Math.round(c.crew * 50)}|${Math.round(c.sails * 50)}|${fx.join(',')}|${dist}|${info.title ?? ''}|${ap ? `${ap.value}|${ap.fill}|${ap.escorts}|${ap.dest}` : ''}|${struck}|${c.flags & (SF.BLACK_FLAG | SF.NEUTRAL | SF.NO_BOARD)}:${info.city ?? ''}`;
     if (key === this.lastTargetKey) return;
     this.lastTargetKey = key;
     el.classList.remove('hidden');
@@ -1745,7 +1749,7 @@ export class Hud {
       ${bar('hull', c.hull)}${bar('crew', c.crew)}${bar('sails', c.sails)}
       ${isZoneBossClass(info.classId) ? `<div class="tg-glass">${esc(L('tg.zboss'))}</div>` : info.crewMax ? armyGlance(Math.round(c.crew * info.crewMax), info.units ?? []) : ''}
       ${ap && !isZoneBossClass(info.classId) ? `<div class="tg-glass">${esc(L(ap.exact ? 'tg.glassExact' : 'tg.glass', { v: ap.value.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB'), fill: Math.round(ap.fill * 100), esc: ap.escorts, crew: ap.crew }))}${ap.dest ? ` · ${esc(L('tg.glassDest', { port: placeName(ap.dest) }))}` : ''}</div>` : ''}
-      <div class="tg-foot">${threat ? `<span class="tg-threat" style="color:${THREAT_COLOR[threat]}">${esc(L(`tg.${threat}`))}</span>` : ''}${odds ? `<span class="tg-odds tg-odds-${odds.risky ? 'bad' : odds.chance < 0.55 ? 'warn' : 'good'}" title="${esc(LSF('tg.oddsTip', { n: ODDS_SIMS_SHOWN }))}">${esc(LSF('tg.odds', { p: Math.round(odds.chance * 100) }))}</span>` : ''}${fx.length ? `<span class="tg-fx">${esc(fx.join(' · '))}</span>` : ''}${struck ? `<button class="btn btn-small tg-tribute" data-tribute="${id}">${esc(L('tg.tribute'))}</button>` : ''}</div>`;
+      <div class="tg-foot">${threat ? `<span class="tg-threat" style="color:${THREAT_COLOR[threat]}">${esc(L(`tg.${threat}`))}</span>` : ''}${vol ? `<span class="tg-volleys" title="${esc(LSF('tg.volleysTip'))}">${esc(LSF('tg.volleys', { n: vol, w: plural(vol, LSF('tg.volley.one'), LSF('tg.volley.few'), LSF('tg.volley.many')) }))}</span>` : ''}${odds ? `<span class="tg-odds tg-odds-${odds.risky ? 'bad' : odds.chance < 0.55 ? 'warn' : 'good'}" title="${esc(LSF('tg.oddsTip', { n: ODDS_SIMS_SHOWN }))}">${esc(LSF('tg.odds', { p: Math.round(odds.chance * 100) }))}</span>` : ''}${fx.length ? `<span class="tg-fx">${esc(fx.join(' · '))}</span>` : ''}${struck ? `<button class="btn btn-small tg-tribute" data-tribute="${id}">${esc(L('tg.tribute'))}</button>` : ''}</div>`;
     el.querySelector<HTMLElement>('[data-tribute]')?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.onTribute(id!);

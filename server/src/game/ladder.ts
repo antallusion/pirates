@@ -35,5 +35,7 @@ export function ladderBetween(game: Game, a: ShipEntity | null, b: ShipEntity): 
   if (!a || a === b || !laddered(a) || !laddered(b)) return NONE;
   const pvp = a.isPlayer && b.isPlayer;
   const junior = b.combatLevel > a.combatLevel;
-  return ladder(a.combatLevel, b.combatLevel, pvp, junior && outweighed(game, a, b, pvp));
+  // Two ships of the broadside table (no beast between them) by its own measure (docs/25 §1.1).
+  const ships = a.npcRole !== 'beast' && b.npcRole !== 'beast' && !a.cls.monster && !b.cls.monster;
+  return ladder(a.combatLevel, b.combatLevel, pvp, junior && outweighed(game, a, b, pvp), ships);
 }

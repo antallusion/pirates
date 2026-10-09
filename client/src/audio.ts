@@ -494,7 +494,8 @@ export class AudioEngine {
         this.splash(e.x, e.y, true);
         break;
       case 'hit':
-        if (e.dmg <= 0) this.splash(e.x, e.y, false);
+        // Only a ball that flew wide (the dash) splashes; one that struck thuds, whatever it did (docs/25 item 2).
+        if (e.evaded) this.splash(e.x, e.y, false);
         else this.hit(e.x, e.y, !!e.crit);
         break;
       case 'sunk':

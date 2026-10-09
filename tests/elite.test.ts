@@ -2,7 +2,7 @@
 // of three; everyone who takes it hunts the same ship, a groupmate's kill counts for all, and a lost quarry is put
 // to sea again.
 
-import { SHIP_CLASSES } from '../shared/src/data/ships.ts';
+import { npcSeaScale } from '../shared/src/data/seabalance.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ELITE_GROUP, eliteContractFor, eliteLevel, elitePatterns } from '../shared/src/data/elite.ts';
@@ -49,7 +49,14 @@ test('on the board, taken by two captains of a group: one flagship with her esco
   assert.ok(qa.leader !== undefined && qa.leader === qb.leader, 'one flagship for all who hold the contract');
   const flag = game.ships.get(qa.leader!)!;
   assert.ok(flag.elite, 'an elite built for a company (canon D12)');
-  assert.ok(flag.stats.hullMax > 2 * SHIP_CLASSES[flag.cls.id].hull, 'her hull is two and a half times her class');
+  // docs/25 item 7: an elite is a captain in full gear of her ⚓ to the broadside table (was hull ×2.5, guns ×1.5 over
+  // her class): her hull beside a common pirate's of her class and level is the table's full defence beside 70% of half.
+  const common = game.spawnNpcShip('pirate', flag.cls.id, 'confederacy', flag.state.x + 3000, flag.state.y, 0);
+  game.setNpcLevel(common, flag.shipLevel);
+  const want = npcSeaScale(flag.shipLevel, true).hull / npcSeaScale(flag.shipLevel, false).hull;
+  assert.ok(want > 1.2 && Math.abs(flag.stats.hullMax / common.stats.hullMax - want) < 0.02, `her hull ×${(flag.stats.hullMax / common.stats.hullMax).toFixed(2)} of a common one's (the table: ×${want.toFixed(2)})`);
+  assert.ok(npcSeaScale(flag.shipLevel, true).guns > npcSeaScale(flag.shipLevel, false).guns, 'and her guns a full captain’s');
+  game.removeShip(common.id);
   const escorts = [...game.ships.values()].filter((x) => x !== flag && x.alive && x.npcRole === 'pirate' && Math.hypot(x.state.x - flag.state.x, x.state.y - flag.state.y) < 400);
   assert.ok(escorts.length >= 1, 'escorts at her side');
   assert.ok(a.all('toast').some((t) => t.msg.includes('with two escorts in')), 'word of the quarry');

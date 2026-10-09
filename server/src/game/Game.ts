@@ -36,7 +36,8 @@ import { callClosed, onNpcHit, raiderSunk } from './npcwars.ts';
 import { buyWare, equip, mendGear, reforgeItem, rollDrop, salvageItem, sellItem, takeItem, temperItem, unequip, wearOnSinking } from './gear.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import { orderRefit, refitHolds, stepRefit } from './refit.ts';
-import { ELITE_MODS, clampLevel, levelRange, npcSkill } from '../../../shared/src/data/shiplevel.ts';
+import { clampLevel, levelRange, npcSkill } from '../../../shared/src/data/shiplevel.ts';
+import { npcSeaScale } from '../../../shared/src/data/seabalance.ts';
 import { XP_UNITS, contractPay, pointsXp, prizeXp, xpGap } from '../../../shared/src/data/xpcurve.ts';
 import { generateIslandJobs, generateQuests } from '../../../shared/src/data/questgen.ts';
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
@@ -56,7 +57,6 @@ import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, CHASER_RELOAD, SHIP_CLASSES, defaultGunFor, emptyAmmo } from '../../../shared/src/data/ships.ts';
-import { SEA_RELOAD } from '../../../shared/src/data/gunnery.ts';
 import { aimedVolley, pursuitInput, pursuitOf, startPursuit, startRoamRun, stepAutoFire, stepPursuit, stopPursuit } from './pursuit.ts';
 import { boardOdds, boardRisk, isRisky } from './boardodds.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
@@ -185,7 +185,7 @@ import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onU
 import { adminEnabled, mend, runAdmin } from './admin.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
 import { ZoneBossHub, stepZoneBosses, zoneBossSinking } from './zonebosses.ts';
-import { applyDamage, cutMastWreck, damageBlocked, killMen, dash, fireBroadside, fireChaser, holdAim, reloadTime, stepProjectiles } from './combat.ts';
+import { applyDamage, cutMastWreck, damageBlocked, killMen, dash, fireBroadside, fireChaser, holdAim, reloadTime, seaReload, stepProjectiles } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
 import { captiveAction, losePrizes, prizeCrewNeeded, prizeValue, sellPrizes, stepBoats, surrenderTerms, seizeCaptain, takeCaptive, takePrize } from './prizes.ts';
@@ -1455,9 +1455,12 @@ export class Game {
     const crewFrac = ship.crew / Math.max(1, ship.stats.crewMax);
     ship.loadout.level = clampLevel(ship.loadout.classId, level);
     const sk = npcSkill(ship.shipLevel);
-    ship.effects = ship.effects.filter((e) => e.id !== 'npc_craft');
+    ship.effects = ship.effects.filter((e) => e.id !== 'npc_craft' && e.id !== 'elite');
     if (sk.spread > 0) ship.effects.push({ id: 'npc_craft', until: 1e12, mods: { spreadMul: sk.spread } });
-    if (ship.elite) ship.effects.push({ id: 'elite', until: 1e12, mods: { ...ELITE_MODS } });
+    // To the broadside table (docs/25 item 7): a common ship of the sea as a captain in half gear of her ⚓, sinking in 30%
+    // fewer broadsides; an elite as a captain in full gear (was hull ×2.5, guns ×1.5). Monsters, beasts and the zone
+    // bosses keep their own scales.
+    ship.seaScale = ship.onLadder && ship.npcRole !== 'beast' && !ship.zoneBoss && !ship.cls.monster ? npcSeaScale(ship.shipLevel, !!ship.elite) : null;
     ship.recompute(this.now);
     ship.hull = ship.stats.hullMax;
     ship.sails = ship.stats.sailHpMax;
@@ -4410,8 +4413,8 @@ export class Game {
         reload: {
           port: me.reload.port <= 0 ? 1 : 1 - me.reload.port / Math.max(0.1, reloadEstimate(me, 'port')),
           starboard: me.reload.starboard <= 0 ? 1 : 1 - me.reload.starboard / Math.max(0.1, reloadEstimate(me, 'starboard')),
-          bow: me.cls.bowChasers ? 1 - me.chaserReload.bow / (CHASER_RELOAD * SEA_RELOAD) : 0,
-          stern: me.cls.sternChasers ? 1 - me.chaserReload.stern / (CHASER_RELOAD * SEA_RELOAD) : 0,
+          bow: me.cls.bowChasers ? 1 - me.chaserReload.bow / (CHASER_RELOAD * seaReload(me)) : 0,
+          stern: me.cls.sternChasers ? 1 - me.chaserReload.stern / (CHASER_RELOAD * seaReload(me)) : 0,
           mount: me.loadout.mount ? 1 - me.mountReload / mountReloadTime(me) : 0,
         },
         ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now) | (frame.tethered.has(me.id) ? SF.TETHERED : 0) | pvpFlags(this, me), combat: me.inCombat(this.now), underFire: me.underFire(this.now),

@@ -237,10 +237,11 @@ test('the guns at work: pierce, stone, shells, the gunbreaker, the bomb-lance, t
   };
   assert.equal(fires('heavy_18'), 0);
   assert.ok(fires('shell_gun') > 0, 'shells start fires');
-  // The gunbreaker dismounts a gun three times as often.
+  // The gunbreaker dismounts a gun three times as often. (1200 broadsides, was 300: a ball's chance of a part struck is
+  // the less as a fight of the broadside table has the more broadsides, docs/25 item 4 — as many over a fight.)
   const dismounts = (gun: GunId) => {
     let n = 0;
-    for (let i = 0; i < 300; i++) {
+    for (let i = 0; i < 1200; i++) {
       t.gunsDisabled = { port: 0, starboard: 0 };
       t.hull = t.stats.hullMax;
       shoot(game, t, 'round', gun);

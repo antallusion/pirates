@@ -29,6 +29,18 @@ export interface Particle {
   badge?: CritPart;
   /** The ship it stands over. */
   ship?: number;
+  /** A broadside's number past its alpha limit (docs/25 item 1): drawn with the shield of «броня держит». */
+  guard?: boolean;
+}
+
+/** The grey of a ball her armour held (past the broadside's alpha limit). */
+export const GUARD_GREY = '#a9a49a';
+
+/** A broadside's number by its sum (docs/25 item 11): 18 px for a few, about 27 for thousands; an elite's or a boss's
+ *  a third bigger again. */
+export function sumSize(sum: number, big: boolean): number {
+  const s = 15 + 3.2 * Math.log10(Math.max(1, sum));
+  return Math.round(Math.min(big ? 44 : 32, big ? s * 1.35 : s));
 }
 
 /** Her parts a critical hit can strike, each with its plate over the target (docs/16 #2). */
@@ -78,6 +90,8 @@ export class Fx {
   blows: { dmg: number; x: number; y: number }[] = [];
   /** She fired or was hit since the renderer last looked: a sign of the fight for its camera (camfight.ts). */
   fought = false;
+  /** An elite, a boss or one of the deep's great ones: her broadside numbers are drawn bigger (set by the renderer). */
+  bigTarget: (ship: number) => boolean = () => false;
   flash = 0; // lightning / explosion screen flash
 
   private lastFlash = -1;
@@ -270,27 +284,36 @@ export class Fx {
           }
         }
         if (best) best.alive = false;
-        if (e.dmg <= 0) {
+        // Only a ball that flew wide in her dash is a miss to the eye (docs/25 item 2): one that struck is never drawn as a
+        // splash — one the rules kept off her (protection, a duel) still knocks splinters from her side.
+        if (e.evaded) {
           this.splash(e.x, e.y);
-          // The dash's moment: the ball flew wide of her.
-          if (e.evaded && !this.particles.some((p) => p.kind === 'text' && p.text === L('evaded') && p.t < 0.5 && Math.hypot(p.x - e.x, p.y - e.y) < 60)) this.text(e.x, e.y - 8, L('evaded'), '#9fc3d6');
+          if (!this.particles.some((p) => p.kind === 'text' && p.text === L('evaded') && p.t < 0.5 && Math.hypot(p.x - e.x, p.y - e.y) < 60)) this.text(e.x, e.y - 8, L('evaded'), '#9fc3d6');
+          break;
+        }
+        if (e.dmg <= 0) {
+          this.splinters(e.x, e.y, 3);
           break;
         }
         this.splinters(e.x, e.y, e.ammo === 'grape' ? 3 : 8);
         this.smoke(e.x, e.y, 2, 5, true);
         this.light(e.x, e.y, 50, 'rgba(255,170,90,1)', 0.5, 0.2);
-        const color = e.ship === ownId ? '#e07a6a' : e.crit ? '#f0c060' : '#e8e0cc';
+        // Past the broadside's alpha limit (docs/25 item 1) the ball strikes a quarter as hard: a grey number with the
+        // shield of «броня держит».
+        const color = e.capped ? GUARD_GREY : e.ship === ownId ? '#e07a6a' : e.crit ? '#f0c060' : '#e8e0cc';
         if (e.crit && (CRIT_PARTS as readonly string[]).includes(e.crit)) this.critHit(e.x, e.y, e.ship, e.crit as CritPart, e.dmg, e.ship === ownId);
         else if (e.crit) this.text(e.x, e.y - 6, `${e.dmg} ${`crit.${e.crit}` in REN ? L(`crit.${e.crit}` as 'crit.fire') : e.crit.toUpperCase()}`, color);
         else {
-          // The balls of one broadside land together: their damage reads as one rising number, not a pile.
-          const near = this.particles.find((p) => p.kind === 'text' && p.sum !== undefined && p.t < 0.35 && p.color === color && Math.hypot(p.x - e.x, p.y - (e.y - 6)) < 40);
-          // docs/23 item 37: fewer balls, each one felt — the broadside's number is big, and grows as its balls land.
+          // The balls of one broadside on one ship land together: their damage reads as one rising number over her
+          // (docs/25 item 11), as big as the sum (it grows as the captain does), bigger still on an elite or a boss.
+          const big = this.bigTarget(e.ship);
+          const near = this.particles.find((p) => p.kind === 'text' && p.sum !== undefined && p.ship === e.ship && p.t < 0.6 && (p.color === color || (p.guard && e.capped)));
           if (near) {
             near.sum! += e.dmg;
             near.text = String(near.sum);
-            near.size = Math.min(30, (near.size ?? 20) + 1.5);
-          } else this.add({ kind: 'text', x: e.x, y: e.y - 6, vy: -9, life: 1.6, size: 20, color, text: String(e.dmg), sum: e.dmg });
+            near.size = sumSize(near.sum!, big);
+            if (e.capped) near.guard = true;
+          } else this.add({ kind: 'text', x: e.x, y: e.y - 6, vy: -9, life: big ? 2 : 1.6, size: sumSize(e.dmg, big), color, text: String(e.dmg), sum: e.dmg, ship: e.ship, ...(e.capped ? { guard: true } : {}) });
         }
         // Her own hull: the camera's knock by the blow's share of her hull (renderer.ts, camfight.ts), not the jitter.
         if (e.ship === ownId) {

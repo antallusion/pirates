@@ -8,7 +8,8 @@ import { applyDamage, fireBroadside } from '../server/src/game/combat.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { headingVec } from '../shared/src/math.ts';
-import { join, makeGame, steps } from './helpers.ts';
+import { ALPHA_OVER, alphaShare } from '../shared/src/data/seabalance.ts';
+import { join, makeGame, onHull, steps } from './helpers.ts';
 
 function captain(game: Game, name: string, talents: TalentRanks) {
   const c = join(game, name, 'admiral');
@@ -126,23 +127,50 @@ test('armour and structure: Iron Strapping vs heavy shot and rams, Ironbound Mas
   assert.ok(!ship.hasEffect('broken_mast'), 'ironbound');
 });
 
-test('Iron Coffin: no broadside takes more than 20%, and nothing mends the hull in combat', () => {
+// docs/25 item 1: the broadside's limit no longer zeroes the balls past it (they strike a quarter as hard), and it is the
+// table's alpha share of her ⚓ (2.5 × a full captain's share of a bare hull), the Iron Coffin's two thirds of it — was a
+// flat 20% (30% without) past which nothing landed. So: the coffin's broadside is the one cut the sooner, and past its
+// limit only a quarter of the overflow lands.
+test('Iron Coffin: a broadside past two thirds of the alpha limit strikes a quarter as hard, and nothing mends the hull in combat', () => {
   const { game } = makeGame();
   const { c, s, ship } = captain(game, 'Coffin', { shp_iron_coffin: 1, srv_battle_repair: 1 });
   toSea(game, s);
+  onHull(game, ship, 'frigate', 6); // the gunner's equal: the ladder stands aside
   const v = headingVec(ship.state.heading - Math.PI / 2);
   const gunner = game.spawnNpcShip('pirate', 'frigate', 'confederacy', ship.state.x + v.x * 60, ship.state.y + v.y * 60, ship.state.heading + Math.PI);
   game.npcs.delete(gunner.id);
   game.grid.upsert(gunner.id, gunner.state.x, gunner.state.y);
-  gunner.addEffect({ id: 'test', until: 1e9, mods: { gunDamageMul: 20, spreadMul: -0.95 } }, game.now);
+  gunner.addEffect({ id: 'test', until: 1e9, mods: { gunDamageMul: 5, spreadMul: -0.95 } }, game.now);
   gunner.ammo.round = 100;
-  gunner.reload.port = 0;
-  gunner.reload.starboard = 0;
-  const h0 = ship.hull;
-  fireBroadside(game, gunner, 'port', 60);
-  fireBroadside(game, gunner, 'starboard', 60);
-  steps(game, 30);
-  assert.ok(h0 - ship.hull <= ship.stats.hullMax * 0.2 + 1, `one volley took ${h0 - ship.hull}`);
+  let capped = 0;
+  const emit = game.emit.bind(game);
+  game.emit = (ev, x, y) => {
+    if (ev.k === 'hit' && ev.capped) capped++;
+    emit(ev, x, y);
+  };
+  const volley = (): number => {
+    ship.hull = ship.stats.hullMax;
+    gunner.reload.port = 0;
+    gunner.reload.starboard = 0;
+    const h0 = ship.hull;
+    fireBroadside(game, gunner, 'port', 60);
+    steps(game, 30);
+    return h0 - ship.hull;
+  };
+  const coffin = volley();
+  assert.ok(capped > 0, 'the limit bites');
+  const cap = ship.stats.hullMax * alphaShare(ship.combatLevel) * (2 / 3);
+  ship.talents.shp_iron_coffin = 0;
+  ship.recompute(game.now);
+  const open = volley();
+  ship.talents.shp_iron_coffin = 1;
+  ship.recompute(game.now);
+  game.emit = emit;
+  assert.ok(coffin < open, `the coffin's limit is the lower: ${Math.round(coffin)} against ${Math.round(open)}`);
+  // Past either limit a quarter of the overflow lands, so the same broadside (raw R) takes c + ¼(R − c) under the coffin's
+  // limit c and 1.5c + ¼(R − 1.5c) without it: the coffin's is the open one less ⅜ of c (the balls' dice aside).
+  const want = open - (1.5 - 1) * (1 - ALPHA_OVER) * cap;
+  assert.ok(Math.abs(coffin - want) <= open * 0.12 && coffin < ship.stats.hullMax, `one volley took ${Math.round(coffin)} of ${ship.stats.hullMax} (limit ${Math.round(cap)}, without the coffin ${Math.round(open)}, the rule ${Math.round(want)})`);
   ship.cargo.planks = 50;
   c.push({ t: 'repair', on: true });
   applyDamage(game, ship, { hull: 1 }, gunner);

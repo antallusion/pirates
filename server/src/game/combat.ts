@@ -5,7 +5,8 @@ import { regattaBlocked } from './regatta.ts';
 import { tributeBroken } from './raiding.ts';
 import { lairImpact } from './wanted.ts';
 import { ladderBetween } from './ladder.ts';
-import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, LAY_ARC_DEG, LAY_OVER, SEA_DAMAGE, SEA_RELOAD, aimFocus, seaLevelPace, windDriftAngle } from '../../../shared/src/data/gunnery.ts';
+import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, LAY_ARC_DEG, LAY_OVER, SEA_DAMAGE, SEA_RELOAD, aimFocus, windDriftAngle } from '../../../shared/src/data/gunnery.ts';
+import { ALPHA_OFF_LADDER, ALPHA_OVER, IRON_RAIN_PIERCE, alphaShare, seaCrewPace, seaCritPace, seaGrapePace, seaHullPace, seaReloadBy } from '../../../shared/src/data/seabalance.ts';
 import { onboardingVolley, PRACTICE_HULL, PUPIL_HULL } from './onboarding.ts';
 import { softDealt, softenFoe } from './firstfights.ts';
 import { AMMO, ARMOR_PIERCE, CHASER_CONE, CHASER_GUN, CHASER_RELOAD, GUNS } from '../../../shared/src/data/ships.ts';
@@ -95,15 +96,36 @@ export const MAST_CRIT_TIME = 20;
 export const MAST_CRIT_SLOW = 0.1;
 export const MAGAZINE_CRIT_HEAVY = 0.01;
 
+/** A ship of the ladder fought by the broadside table (docs/25 §1.1): not a zone boss, a monster, a beast, a boss or
+ *  a hulk, which keep their own scales. */
+export function onSeaTable(target: ShipEntity): boolean {
+  return !target.zoneBoss && !isMonster(target) && target.npcRole !== 'beast' && !target.bossOf && !target.bossPart && target.onLadder;
+}
+
 /** The quick sea fight (docs/23 item 36): a ball into a ship of the ladder (or a zone boss) strikes SEA_DAMAGE times as
  *  hard. Into the deep's creatures, the world's great ones and the wreck hulks it strikes as much softer as the guns load
  *  faster: their fights keep the length they were weighed at (tests/balance hunt, bosses), only the volleys come
- *  quicker. Into her hull (`hull`) a ship of the ladder of ⚓7 and up takes it harder still (seaLevelPace, item 47: the
- *  great hulls grow tougher than their guns); her men and her canvas do not. */
-export function seaPace(target: ShipEntity, hull = false): number {
+ *  quicker. Into the hull of a ship of the ladder (`hull`) it strikes by her ⚓, so that an equal sinks in the table's
+ *  broadsides (docs/25 items 1 and 4: 6 bare at ⚓1, 24 at ⚓10 — was 5, ×1.3 from ⚓7: every equal in four); her canvas
+ *  takes SEA_DAMAGE, her men their own share (seaCrewPace, item 8). */
+export function seaPace(target: ShipEntity, hull = false, shooter: ShipEntity | null = null): number {
   if (target.zoneBoss) return SEA_DAMAGE;
-  if (isMonster(target) || target.npcRole === 'beast' || target.bossOf || target.bossPart || !target.onLadder) return SEA_RELOAD;
-  return SEA_DAMAGE * (hull ? seaLevelPace(target.combatLevel) : 1);
+  if (!onSeaTable(target)) return SEA_RELOAD;
+  if (!hull) return SEA_DAMAGE;
+  // Between ⚓s the pace of both (their geometric mean): a level apart a ship is the canon's 1.3 of the other's strength
+  // (D12: hull and guns ×1.14 each), not that and her ⚓'s pace again on top.
+  const pt = seaHullPace(target.combatLevel);
+  return shooter && shooter !== target && onSeaTable(shooter) && shooter.combatLevel !== target.combatLevel ? Math.sqrt(pt * seaHullPace(shooter.combatLevel)) : pt;
+}
+
+/** Her guns load by her ⚓ against a ship of the table (docs/25 §1.1: a fight of equals under way 25–35 s at ⚓1, about
+ *  two minutes at ⚓10 in full gear), × the quick fight's SEA_RELOAD. Laid on the deep's creatures, a boss or a zone boss
+ *  they keep the quick fight's pace (`vsTable` false): those fights keep the length they were weighed at. */
+export function reloadPace(ship: ShipEntity, vsTable = true): number {
+  return vsTable && ship.onLadder ? seaReloadBy(ship.shipLevel) : 1;
+}
+export function seaReload(ship: ShipEntity, vsTable = true): number {
+  return SEA_RELOAD * reloadPace(ship, vsTable);
 }
 
 export function sideHeading(ship: ShipEntity, side: Side): number {
@@ -134,7 +156,7 @@ export function aimTarget(game: Game, ship: ShipEntity, side: Side, range: numbe
   return best;
 }
 
-export function reloadTime(ship: ShipEntity, side: Side, now: number): number {
+export function reloadTime(ship: ShipEntity, side: Side, now: number, vsTable = true): number {
   const gun = GUNS[ship.loadout.guns[side]];
   // Gun Crew Drill: a short-handed crew loses less.
   const gcf = 1 - (1 - gunCrewFactor(ship.stats, ship.loadout, ship.crew)) * Math.max(0, 1 - tval(ship.stats, 'gunCrewDrill'));
@@ -146,7 +168,7 @@ export function reloadTime(ship: ShipEntity, side: Side, now: number): number {
   if (ship.cls.passive.id === 'gun_brig' && ship.reload.port === 0 && ship.reload.starboard === 0) t *= 0.92;
   if (ship.ammoSel === 'grape' && ship.hasEffect('grapeshot_frenzy')) t *= 0.5;
   void now;
-  return t * SEA_RELOAD; // the quick sea fight (docs/23 item 36)
+  return t * seaReload(ship, vsTable); // the quick sea fight (docs/23 item 36), by her ⚓ against a ship (docs/25 §1.1)
 }
 
 /** How far the cross wind turns a ball's line (docs/16 #1), less what her gunners allow for it (`allow` 0..1: a
@@ -172,7 +194,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   // Swallowed by the Lantern Maw: the broadside goes into its gut.
   if (innerVolley(game, ship, shots * gun.damage * ship.stats.gunDamageMul * AMMO[ammo].hullMul)) {
     ship.ammo[ammo] -= shots;
-    ship.reload[side] = reloadTime(ship, side, game.now);
+    ship.reload[side] = reloadTime(ship, side, game.now, false);
     ship.lastReloadTotal[side] = ship.reload[side];
     ship.lastCombat = game.now;
     return null;
@@ -252,7 +274,9 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   ship.ammo[ammo] -= shots;
   gunPractice(game, ship, shots, 0); // and from every shot fired (docs/16 #18)
   if (ammo === 'cursed') onCursedVolley(game, ship);
-  ship.reload[side] = reloadTime(ship, side, game.now);
+  // Laid on a ship of the table (or on nothing), at the table's pace; on the deep, a boss, a zone boss, the quick fight's.
+  const mark = (aimAt ? shipNear(game, ship, aimAt.x, aimAt.y) : null) ?? target;
+  ship.reload[side] = reloadTime(ship, side, game.now, !mark || onSeaTable(mark));
   ship.lastReloadTotal[side] = ship.reload[side];
   ship.swapBonus = false;
   ship.doubleShotArmed = false;
@@ -268,6 +292,20 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   ship.repairing = ship.repairing && ship.hasFlag('battle_repair');
   game.emit({ k: 'volley', ship: ship.id, side, ammo, balls, spd: shotSpeed !== 1 ? shotSpeed : undefined, ...(focus.perfect ? { perfect: true as const } : {}) }, ship.state.x, ship.state.y);
   return null;
+}
+
+/** The ship nearest a point she lays her guns on (within 120 m), not herself: her mark, whoever it is. */
+function shipNear(game: Game, ship: ShipEntity, x: number, y: number): ShipEntity | null {
+  let best: ShipEntity | null = null;
+  let bd = 120;
+  game.forShipsNear(x, y, 120, (o) => {
+    const d = Math.hypot(o.state.x - x, o.state.y - y);
+    if (o.id !== ship.id && o.alive && d < bd) {
+      bd = d;
+      best = o;
+    }
+  });
+  return best;
 }
 
 /** The broadside's order is held: the charge counts from when the guns are loaded. */
@@ -309,6 +347,8 @@ export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: num
   const gun = GUNS[CHASER_GUN];
   const range = gun.range * ship.stats.rangeMul * AMMO[ammo].rangeMul;
   const d = clamp(Math.hypot(tx - ship.state.x, ty - ship.state.y), 40, range);
+  // Her mark: the ship nearest the point she aims at (her chasers load by it, as her broadsides do).
+  const mark = shipNear(game, ship, tx, ty);
   const v = headingVec(keel);
   const ox = ship.state.x + v.x * ship.stats.length * 0.5, oy = ship.state.y + v.y * ship.stats.length * 0.5;
   const balls: [number, number, number, number, number][] = [];
@@ -321,7 +361,7 @@ export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: num
     balls.push([Math.round(ox), Math.round(oy), Math.round(bh * 1000) / 1000, Math.round(bd), delay]);
   }
   ship.ammo[ammo] -= shots;
-  ship.chaserReload[end] = CHASER_RELOAD * SEA_RELOAD * ship.stats.reloadMul;
+  ship.chaserReload[end] = CHASER_RELOAD * seaReload(ship, !mark || onSeaTable(mark)) * ship.stats.reloadMul;
   ship.lastCombat = game.now;
   ship.protectedUntil = 0;
   const spd = 1 + tval(ship.stats, 'shotSpeed');
@@ -501,7 +541,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   const blocked = damageBlocked(game, shooter, target);
   if (blocked) {
     if (shooter?.isPlayer && blocked.length > 12) game.toastShip(shooter, blocked, 'bad');
-    game.emit({ k: 'hit', x: Math.round(hx), y: Math.round(hy), ship: target.id, dmg: 0, ammo: p.ammo }, hx, hy);
+    game.emit({ k: 'hit', x: Math.round(hx), y: Math.round(hy), ship: target.id, dmg: 0, ammo: p.ammo, blocked: true }, hx, hy);
     return;
   }
   const ammo = AMMO[p.ammo];
@@ -525,33 +565,57 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
 
   // Iron Strapping: extra armour against armour-piercing shot.
   const strap = p.ammo === 'heavy' ? 1 + tval(target.stats, 'strapping') : 1;
-  const armor = Math.min(0.85, target.stats.armor * strap * (1 - (ARMOR_PIERCE[p.ammo] ?? 0)) * (1 - (gd?.pierce ?? 0)));
+  // Iron Rain (docs/25 item 9): her balls go through a tenth more of any armour.
+  const ironRain = shooter && shooter.rank('gun_iron_rain') > 0 ? IRON_RAIN_PIERCE : 0;
+  const armor = Math.min(0.85, target.stats.armor * strap * (1 - (ARMOR_PIERCE[p.ammo] ?? 0)) * (1 - (gd?.pierce ?? 0)) * (1 - ironRain));
   const lore = (shooter?.hasFlag('leviathan_lore') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_harpooneer') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_white_orca') && target.npcRole === 'beast' ? 1.1 : 1) * (shooter?.hasFlag('tattoo_orca') && target.npcRole === 'beast' ? 1.1 : 1) * (shooter?.hasFlag('saint_maws_bell') && isMonster(target) ? 1.2 : 1) // Leviathan Lore, the Harpooneer, Saint Maw's Bell
     * (isMonster(target) ? (gd?.monster ?? 1) * (p.ammo === 'salt' ? 2.5 : 1) : 1); // the bomb-lance gun; blessed salt for the deep and the dead
   // The ladder (canon D12): the gap of levels cuts or swells the shot, and a junior makes fewer criticals, or none.
   const lad = ladderBetween(game, shooter, target);
-  const cx = lad.crits;
+  // Her parts struck: as many over a fight of the table's broadsides as over the old fights of four (docs/25 item 4).
+  const table = onSeaTable(target);
+  const cx = lad.crits * (table ? seaCritPace(target.combatLevel) : 1);
   const pace = seaPace(target); // the quick sea fight (docs/23 item 36)
-  let hullDmg = p.damage * seaPace(target, true) * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul * lore * lad.dealt;
-  // No single broadside may take more than 30% of a hull (Iron Coffin: 20%).
+  // The sea's own ships fire on a ship of the table as a captain of their ⚓ would (docs/25 item 7: ship.ts seaScale).
+  const npcGuns = table && shooter?.seaScale ? shooter.seaScale.guns : 1;
+  const hullPace = seaPace(target, true, shooter);
+  let hullDmg = p.damage * hullPace * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul * lore * lad.dealt * npcGuns;
+  // The alpha strike (docs/25 item 1): a broadside past 2.5 times the table's share of her hull (≈ 50% at ⚓1, 23% at
+  // ⚓10; off the ladder 30%; Iron Coffin two thirds of it) strikes a quarter as hard past it — never for nothing. It
+  // was 30% for every ship, and every ball past it did 0 and was drawn as a miss: an equal sank in four broadsides
+  // whatever her gear or her captain.
+  let capped = false;
   if (p.volley !== undefined) {
     const rec = game.volleys.get(p.volley);
     if (rec) {
-      const cap = target.stats.hullMax * (target.hasFlag('iron_coffin') ? 0.2 : 0.3);
+      const cap = target.stats.hullMax * (onSeaTable(target) ? alphaShare(target.combatLevel) : ALPHA_OFF_LADDER) * (target.hasFlag('iron_coffin') ? 2 / 3 : 1);
       const done = rec.dealt.get(target.id) ?? 0;
-      hullDmg = Math.max(0, Math.min(hullDmg, cap - done));
+      const within = Math.max(0, Math.min(hullDmg, cap - done));
       rec.dealt.set(target.id, done + hullDmg);
+      if (within < hullDmg) {
+        hullDmg = within + (hullDmg - within) * ALPHA_OVER;
+        capped = true;
+      }
     }
   }
+  // What the ball would have done at the old pace (×5): the gates of her parts struck (a splinter, a leak, a fire, the
+  // cargo, the powder room) keep their weight whatever her ⚓.
+  const felt = table ? (hullDmg * SEA_DAMAGE) / hullPace : hullDmg;
   const chain = p.ammo === 'chain' ? 1 + (sst ? tval(sst, 'chainSail') : 0) : 1;
-  const sailDmg = p.damage * (p.ammo === 'chain' ? pace : 1) * ammo.sailMul * falloff * (sst?.sailDamageMul ?? 1) * chain * lad.dealt * (gd?.sailMul ?? 1);
+  // Her nerve over a fight of the table's broadsides as over the old fights of four (docs/25 item 4); her canvas by her ⚓
+  // as her hull is (a broadside takes the share of it that it takes of her hull, chain shot five times round's).
+  const parts = table ? seaCritPace(target.combatLevel) : 1;
+  const canvas = table ? hullPace / SEA_DAMAGE : 1;
+  const sailDmg = p.damage * (p.ammo === 'chain' ? pace : 1) * canvas * ammo.sailMul * falloff * (sst?.sailDamageMul ?? 1) * chain * lad.dealt * (gd?.sailMul ?? 1);
   const grape = p.ammo === 'grape' ? 1 + (sst ? tval(sst, 'grapeCrew') : 0) : 1;
   // Splinter Storm: every ball into the hull sends splinters through the gun deck.
-  const splinters = sst?.flags.has('splinter_storm') && p.ammo !== 'grape' && hullDmg > 5 ? 1 : 0;
+  const splinters = sst?.flags.has('splinter_storm') && p.ammo !== 'grape' && felt > 5 ? 1 : 0;
   // The hull is the wall the stacks stand behind (docs/17 H1): grape sweeps the open deck, a ball kills more through a
   // shattered side than through a sound one; and the men fall out of her stacks, the tougher and the better covered
   // her army the fewer.
-  const crewKill = (ammo.crewKill * (sst?.crewKillMul ?? 1) * grape * (gd?.crewMul ?? 1) * (raking ? 1.8 : 1) * (0.5 + game.rng.float()) + splinters) * pace * lad.dealt * wallsOf(target, p.ammo === 'grape') * killFactor(target);
+  // A ship of the table loses her men by her ⚓ (docs/25 item 8): 2–4% of them a round-shot broadside, grape twice that.
+  const menPace = !table ? pace : p.ammo === 'grape' ? seaGrapePace(target.combatLevel) : seaCrewPace(target.combatLevel);
+  const crewKill = (ammo.crewKill * (sst?.crewKillMul ?? 1) * grape * (gd?.crewMul ?? 1) * (raking ? 1.8 : 1) * (0.5 + game.rng.float()) + splinters) * menPace * lad.dealt * wallsOf(target, p.ammo === 'grape') * killFactor(target);
 
   let crit: string | undefined;
   let rudderDmg = 0;
@@ -581,13 +645,13 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   }
   if (raking) crit = crit ?? 'raked';
   if (crit && crit !== 'raked') target.talentReady.patchPause = game.now + 3; // Patchwork Hull pauses
-  if ((p.ammo === 'round' || p.ammo === 'heavy') && hullDmg > 15 && target.leaks < MAX_LEAKS && game.rng.chance(leakChance(target, p.ammo === 'heavy') * cx)) {
+  if ((p.ammo === 'round' || p.ammo === 'heavy') && felt > 15 && target.leaks < MAX_LEAKS && game.rng.chance(leakChance(target, p.ammo === 'heavy') * cx)) {
     target.leaks++;
     crit = 'leak';
   }
 
   // Waterline Gunner: a breach below the waterline leaks through any armour.
-  if (sst && p.ammo !== 'grape' && hullDmg > 5 && game.rng.chance(tval(sst, 'breachChance') * cx)) {
+  if (sst && p.ammo !== 'grape' && felt > 5 && game.rng.chance(tval(sst, 'breachChance') * cx)) {
     target.addEffect({ id: 'breach', until: game.now + 10 * Math.max(0.2, 1 - tval(target.stats, 'damageControl')), source: shooter!.id }, game.now);
     crit = 'breach';
   }
@@ -604,7 +668,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   }
   // Drowned bronze shakes a crew; a stinkpot chokes it.
   const dread = (gd?.morale ?? 0) + (p.ammo === 'stinkpot' ? 2 : 0);
-  const men = applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: (0.35 + grapeMorale + battery + dread) * lad.dealt, laddered: true }, shooter, { x: hx, y: hy });
+  const men = applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: (0.35 + grapeMorale + battery + dread) * lad.dealt * parts, laddered: true }, shooter, { x: hx, y: hy });
   if (men > 0) {
     const rec = p.volley !== undefined ? game.volleys.get(p.volley) : undefined;
     if (rec) (rec.men ??= new Map()).set(target.id, (rec.men.get(target.id) ?? 0) + men);
@@ -627,15 +691,15 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   if (shooter) giftOnHit(game, shooter, target); // a premium hull's strike (docs/02 §1.A.9)
 
   // Cargo destroyed by hull hits; powder may go up.
-  if (p.ammo !== 'grape' && hullDmg > 10) {
+  if (p.ammo !== 'grape' && felt > 10) {
     const deepHold = target.cls.passive.id === 'deep_hold' ? 0.5 : 1;
-    if (game.rng.chance(0.07 * deepHold)) destroyRandomCargo(game, target, 1 + game.rng.int(0, 2));
+    if (game.rng.chance(0.07 * deepHold * (table ? seaCritPace(target.combatLevel) : 1))) destroyRandomCargo(game, target, 1 + game.rng.int(0, 2));
     // Fire shot in the magazine burns like powder.
     const powder = (target.cargo.gunpowder ?? 0) + target.ammo.incendiary / 10;
     const sealed = target.hasFlag('sealed_magazine') ? 0.25 : 1;
     const hold = powder >= 5 ? cx * 0.012 * GOODS.gunpowder.danger * Math.min(3, powder / 10) * sealed : 0;
     // Her own magazine (docs/16 #2): a forged ball that goes deep amidships may find the powder room itself.
-    const magazine = p.ammo === 'heavy' && midships && hullDmg > 15 && !target.cls.monster && target.npcRole !== 'beast' ? cx * MAGAZINE_CRIT_HEAVY * sealed : 0;
+    const magazine = p.ammo === 'heavy' && midships && felt > 15 && !target.cls.monster && target.npcRole !== 'beast' ? cx * MAGAZINE_CRIT_HEAVY * sealed : 0;
     if ((hold > 0 || magazine > 0) && game.rng.chance(hold + magazine)) {
       if (target.cargo.gunpowder) target.cargo.gunpowder = Math.floor(target.cargo.gunpowder * 0.4);
       applyDamage(game, target, { hull: target.stats.hullMax * 0.14, crew: 3, morale: 12, sails: 10 }, shooter);
@@ -650,7 +714,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   const fireRisk = Math.max(0, 1 + tval(target.stats, 'fireRisk'));
   const shell = gd?.fire && p.ammo !== 'grape' && p.ammo !== 'chain' ? gd.fire : 0; // a shell gun's hollow shot
   const ignite = ((p.ammo === 'incendiary' ? 0.25 * (shooter?.hasFlag('alchemist') ? 1.2 : 1) : p.ammo === 'round' && sst ? tval(sst, 'heatedShot') : 0) + shell) * fireRisk;
-  if (ignite > 0 && hullDmg > 5 && game.rng.chance(ignite * cx)) {
+  if (ignite > 0 && felt > 5 && game.rng.chance(ignite * cx)) {
     igniteShip(game, target, 10 + game.rng.float() * 6, shooter);
     crit = 'fire';
   }
@@ -658,7 +722,8 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     target.addEffect({ id: 'tangled', until: game.now + 6, mods: { turnRate: -0.35 }, source: shooter.id }, game.now);
   }
   if (crit === 'rudder' || crit === 'gun' || crit === 'powder' || crit === 'fire' || (crit === 'mast' && !mastByTalent)) onCrit(shooter);
-  game.emit({ k: 'hit', x: Math.round(hx), y: Math.round(hy), ship: target.id, dmg: Math.round(hullDmg), ammo: p.ammo, crit }, hx, hy);
+  // A ball that struck is never drawn as a miss (docs/25 item 2): at least 1; past the alpha limit, grey («броня держит»).
+  game.emit({ k: 'hit', x: Math.round(hx), y: Math.round(hy), ship: target.id, dmg: hullDmg > 0 ? Math.max(1, Math.round(hullDmg)) : 0, ammo: p.ammo, crit, ...(capped ? { capped: true as const } : {}) }, hx, hy);
 }
 
 /** The rarer shot at work on the ship it strikes: a star lights her up, a stinkpot chokes her gun crews, a drag hook
