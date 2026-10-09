@@ -109,8 +109,12 @@ export interface CaptainCfg {
  *  water (any captain may fire on her). Her first fights long behind her. */
 export function captainShip(game: Game, cfg: CaptainCfg, x: number, y: number, heading = 0): { s: PlayerSession; ship: ShipEntity } {
   const name = `SeaCap${++seq}`;
-  join(game, name, cfg.captain ?? 'corsair');
+  const conn = join(game, name, cfg.captain ?? 'corsair');
   const s = game.sessionByName(name)!;
+  // Her line goes quiet: the bench reads the game, not her inbox (a run of fights kept every snapshot in it).
+  conn.inbox.length = 0;
+  conn.send = () => {};
+  conn.sendBinary = () => {};
   const p = s.profile!;
   if (p.tutorial) {
     p.tutorial.on = false;
@@ -183,6 +187,7 @@ export function restore(t: ShipEntity, army?: { u: string; n: number }[]): void 
   t.recompute(0);
   t.hull = t.stats.hullMax;
   t.surrendered = false;
+  t.sinkingUntil = 0; // a broadside that sank her is undone too
   t.lastStandUntil = 0;
   t.attackers.clear();
   t.morale = 100;
@@ -271,6 +276,10 @@ export function bench(): Game {
   return duelSea();
 }
 export function clearSea(game: Game): void {
+  // The bench's captains go with their ships (a session left without one is brought home to a port, and the bench's sea
+  // has none of the islands a port's view reads).
+  for (const s of [...game.sessions]) game.sessions.delete(s);
+  game.pvp.duelOf.clear();
   for (const id of [...game.ships.keys()]) game.removeShip(id);
   game.projectiles.length = 0;
   game.strikes.length = 0;
@@ -300,7 +309,12 @@ export function underway(game: Game, A: ShipEntity, B: ShipEntity, k: number, ma
   };
   place(A, at.x, at.y, h);
   place(B, at.x + Math.sin(h + 1.3) * 900, at.y - Math.cos(h + 1.3) * 900, h + Math.PI);
-  for (const s of [A, B]) s.region = 'the_abyss';
+  // Two captains fight a duel by consent (pvp.ts: duel_ok), so the waters' rules stand aside.
+  if (A.isPlayer && B.isPlayer) {
+    const d = { id: 1, sides: [[A.accountId!], [B.accountId!]] as [number[], number[]], cx: at.x, cy: at.y, r: 1e6, startAt: -1, endAt: 1e15, struck: new Set<number>(), outside: new Map(), snaps: new Map(), ranked: false };
+    game.pvp.duelOf.set(A.accountId!, d as never);
+    game.pvp.duelOf.set(B.accountId!, d as never);
+  }
   const brains = new Map<number, NpcBrain>();
   for (const s of [A, B]) {
     const b = newBrain(s.id, 'hunter', game.now);
@@ -331,12 +345,22 @@ export function underway(game: Game, A: ShipEntity, B: ShipEntity, k: number, ma
     engage(game, me, b, foe, Math.hypot(foe.state.x - me.state.x, foe.state.y - me.state.y));
   };
   for (const s of [A, B]) s.lastStandUntil = 0;
-  while (game.now - t0 < maxSec && A.alive && B.alive && A.hull > 0 && B.hull > 0) {
+  const companies = [A, B].map((s) => game.sessionOf(s)?.profile?.company).filter((c) => !!c);
+  // Down: sunk, or beaten to her last plank (a duel between captains ends there, the loser striking, pvp.ts).
+  const down = (s: ShipEntity) => !s.alive || s.hull <= 1 || s.surrendered;
+  while (game.now - t0 < maxSec && !down(A) && !down(B)) {
     think(A, B);
     think(B, A);
+    // The bench's crews are content (no mutiny sails her off to port mid-fight).
+    for (const c of companies) {
+      c!.course = null;
+      c!.mutiny = null;
+      c!.loyalty = 100;
+      c!.unrest = { phase: 0, t: 0 };
+    }
     game.step();
   }
   vol.delete = del;
-  const aDown = !A.alive || A.hull <= 0, bDown = !B.alive || B.hull <= 0;
+  const aDown = down(A), bDown = down(B);
   return { sec: Math.round(game.now - t0), sunk: aDown || bDown, volleysA: landed.get(A.id) ?? 0, volleysB: landed.get(B.id) ?? 0, winner: bDown && !aDown ? 'a' : aDown && !bDown ? 'b' : 'draw' };
 }
