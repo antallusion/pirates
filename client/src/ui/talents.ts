@@ -11,6 +11,7 @@ import { EN, RU } from '../lang/ui/talents.ts';
 import { serverText } from '../lang/server.ts';
 import { ask } from './confirm.ts';
 import { esc, fmt, icon } from './dom.ts';
+import { keyless } from './hud.ts';
 import { TALENT_BOOK } from '../../../shared/src/data/paths.ts';
 import { EN as PB_EN, RU as PB_RU } from '../lang/ui/pathbook.ts';
 
@@ -129,7 +130,7 @@ function card(x: TalentDef, self: NonNullable<ClientState['self']>, ctx: { level
   const pips = `<span class="pips">${Array.from({ length: x.maxRank }, (_, i) => `<i class="${i < rank ? 'on' : ''}"></i>`).join('')}</span>`;
   return `<div class="talent ${rank ? 'has' : ''} ${rank >= x.maxRank ? 'max' : ''} ${x.keystone ? 'keystone' : ''} ${locked ? 'locked' : ''}" data-id="${x.id}" title="${esc(why ? serverText(why) : L('learn'))}">
     ${icon(`talent_${x.id}`, '', 'talent-ico') || icon(art, '✦', 'talent-ico')}<div class="talent-body"><div class="talent-top"><b>${esc(x.name)}</b>${x.active ? `<span class="tag">${esc(L('active'))}</span>` : ''}${pips}${forgettable ? `<span class="forget" data-forget="${x.id}" title="${esc(L('forget'))}">×</span>` : ''}</div>
-    <small>${esc(x.description)}</small>${bookLine(x.id)}${locked && why ? `<small class="why">${icon('danger', '', 'ico-xs')}${esc(serverText(why))}</small>` : ''}</div></div>`;
+    <small>${esc(keyless(x.description))}</small>${bookLine(x.id)}${locked && why ? `<small class="why">${icon('danger', '', 'ico-xs')}${esc(serverText(why))}</small>` : ''}</div></div>`;
 }
 
 function deeds(have: string[]): string {

@@ -2024,7 +2024,9 @@ export const KEY_HINT = /\s*\[(?:[A-Z0-9]|[A-Z]\/[A-Z]|(?:Shift|Ctrl|Alt)\+[A-Z0
 
 export function keyless(s: string, touch = document.body.classList.contains('touch')): string {
   // "[T]", "(T)", "(Y → Company)": a touch screen has no keys to name.
-  return touch ? s.replace(KEY_HINT, '').replace(/\s*\((?:[A-Z0-9]{1,3}|[^()]*→[^()]*)\)/g, '').replace(/ +([.,;:!?])/g, '$1').trim() : s;
+  // (and a note in brackets that names a key held down — «(при абордаже: B, затем Shift+B)», «(Shift — бережно, Ctrl —
+  // жёстко)»: the play-through of 2026-10-09 read them in a talent's line on a phone)
+  return touch ? s.replace(KEY_HINT, '').replace(/\s*\((?:[A-Z0-9]{1,3}|[^()]*→[^()]*|[^()]*\b(?:Shift|Ctrl|Alt)\b[^()]*)\)/g, '').replace(/ +([.,;:!?])/g, '$1').trim() : s;
 }
 
 /** A named pirate (docs/12 P5) or one of her lieutenants ("id#n"): the name in the player's tongue and the tag. */
