@@ -13,6 +13,9 @@ import { ask } from './confirm.ts';
 import { esc, fmt, icon } from './dom.ts';
 import { keyless } from './hud.ts';
 import { TALENT_BOOK } from '../../../shared/src/data/paths.ts';
+import { SEA_SKILLS, SKILL_NODES } from '../../../shared/src/data/seaskill.ts';
+import { CAPTAINS } from '../../../shared/src/data/captains.ts';
+import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { EN as PB_EN, RU as PB_RU } from '../lang/ui/pathbook.ts';
 
 const L = dict(EN, RU);
@@ -112,6 +115,14 @@ export class TalentScreen {
   }
 }
 
+/** docs/25 item 42: the ability of hers this talent feeds (one node of her favoured trees an ability). */
+function skillLine(id: string, captain: CaptainId): string {
+  const hook = SKILL_NODES[id];
+  if (!hook || SEA_SKILLS[hook.skill]?.captain !== captain) return '';
+  const name = CAPTAINS[captain].abilities.find((a) => a.id === hook.skill)?.name ?? hook.skill;
+  return `<small class="tal-book">${icon(`ab_${hook.skill}`, '', 'ico-xs')}${esc(L(hook.kind === 'power' ? 'skill.power' : 'skill.dur', { name, n: Math.round(hook.per * 100) }))}</small>`;
+}
+
 /** docs/18 item 6: what a talent also lifts in the path book in a boarding (its sea side as it was). */
 function bookLine(id: string): string {
   const t = TALENT_BOOK[id];
@@ -130,7 +141,7 @@ function card(x: TalentDef, self: NonNullable<ClientState['self']>, ctx: { level
   const pips = `<span class="pips">${Array.from({ length: x.maxRank }, (_, i) => `<i class="${i < rank ? 'on' : ''}"></i>`).join('')}</span>`;
   return `<div class="talent ${rank ? 'has' : ''} ${rank >= x.maxRank ? 'max' : ''} ${x.keystone ? 'keystone' : ''} ${locked ? 'locked' : ''}" data-id="${x.id}" title="${esc(why ? serverText(why) : L('learn'))}">
     ${icon(`talent_${x.id}`, '', 'talent-ico') || icon(art, '✦', 'talent-ico')}<div class="talent-body"><div class="talent-top"><b>${esc(x.name)}</b>${x.active ? `<span class="tag">${esc(L('active'))}</span>` : ''}${pips}${forgettable ? `<span class="forget" data-forget="${x.id}" title="${esc(L('forget'))}">×</span>` : ''}</div>
-    <small>${esc(keyless(x.description))}</small>${bookLine(x.id)}${locked && why ? `<small class="why">${icon('danger', '', 'ico-xs')}${esc(serverText(why))}</small>` : ''}</div></div>`;
+    <small>${esc(keyless(x.description))}</small>${skillLine(x.id, self.captain)}${bookLine(x.id)}${locked && why ? `<small class="why">${icon('danger', '', 'ico-xs')}${esc(serverText(why))}</small>` : ''}</div></div>`;
 }
 
 function deeds(have: string[]): string {

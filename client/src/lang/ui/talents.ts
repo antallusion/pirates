@@ -45,6 +45,9 @@ export const EN = {
   'active': 'active',
   'deedsMotto': 'Each deed is a point of talent; sixteen of the twenty-four count. Most never require PvP or the Abyss.',
   'opensWith': '(opens with {what})',
+  /** docs/25 item 42: her ability this talent feeds (her favoured trees). */
+  'skill.power': '{name}: +{n}% power a rank',
+  'skill.dur': '{name}: +{n}% duration a rank',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -92,4 +95,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'active': 'активный',
   'deedsMotto': 'Каждое деяние — очко таланта; в счёт идут шестнадцать из двадцати четырёх. Большинство не требует ни боёв с капитанами, ни Бездны.',
   'opensWith': '(откроется с: {what})',
+  'skill.power': '{name}: +{n}% силы за ранг',
+  'skill.dur': '{name}: +{n}% длительности за ранг',
 };

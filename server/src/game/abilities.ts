@@ -87,7 +87,8 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
       break;
     case 'hard_over':
       mods = { turnRate: n.turn ?? 0.8, maxSpeed: n.keepWay ? 0 : -0.1 };
-      k.rake = { until: now + dur + (n.win ?? 3), left: n.twice ? 2 : 1, bonus: n.rake ?? 0.2, men: n.men ?? 0 };
+      // The rake (item 16): the broadside in its window, once in her rake's time (the helm itself is ready sooner).
+      if (now >= k.rake.readyAt) k.rake = { until: now + dur + (n.win ?? 3), left: n.twice ? 2 : 1, bonus: n.rake ?? 0.2, men: n.men ?? 0, readyAt: now + (n.every ?? 45) };
       if (n.evade) ship.addEffect({ id: 'evasive', until: now + 1.5, flags: ['evasive'] }, now);
       break;
     case 'spotters_eye':
@@ -131,7 +132,7 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
       break;
     }
     case 'admiralty_barrage': {
-      // Into the ship she marked (the combo, item 41): the shells home on her, a fifth harder.
+      // Into the ship she marked (the combo, item 41): the shells home on her (within 60 m), 15% harder.
       const marked = k.cast.markOn !== undefined ? game.ships.get(k.cast.markOn) : undefined;
       const combo = !!marked && marked.alive && now - (k.cast.mark_target ?? -1e9) <= (SEA_SKILLS.mark_target.combo?.win ?? 5) && dist(marked.state.x, marked.state.y, x, y) <= 200;
       if (combo) {
@@ -139,7 +140,7 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
         y = marked!.state.y;
         comboCue(game, ship, 'mark_target');
       }
-      game.strikes.push({ at: now + 3, x, y, radius: combo ? 45 : n.radius ?? 90, hull: 0, rudder: 0, owner: ship.id, slow: 0, shells: Math.round(n.shells ?? 12), fx: 'barrage', share: (n.shell ?? 0.012) * (combo ? 1.2 : 1), self: ship.stats.hullMax, skill: def.id, ...(n.fire ? { fire: n.fire } : {}) });
+      game.strikes.push({ at: now + 3, x, y, radius: combo ? Math.min(60, n.radius ?? 90) : n.radius ?? 90, hull: 0, rudder: 0, owner: ship.id, slow: 0, shells: Math.round(n.shells ?? 12), fx: 'barrage', share: (n.shell ?? 0.008) * (combo ? 1.15 : 1), self: ship.stats.hullMax, skill: def.id, ...(n.fire ? { fire: n.fire } : {}) });
       break;
     }
     // -------------------------------------------------------------------------------- the Reaver

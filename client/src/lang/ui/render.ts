@@ -43,6 +43,9 @@ export const EN = {
   'perfect': 'Perfect broadside!',
   'evaded': 'wide!',
   'menLost': '−{n} men',
+  /** A captain's combo landed (docs/25 item 41), over her; an ability's numbers over the ship it struck. */
+  'combo': 'Combo · {name}',
+  'skillHeal': '+{n}',
   'raking': 'raking',
   'dist.km': '{n} km',
   'tag.npc': '{cls} · {faction} {role}',
@@ -93,6 +96,8 @@ export const RU: Record<keyof typeof EN, string> = {
   'perfect': 'Идеальный залп!',
   'evaded': 'мимо!',
   'menLost': '−{n} чел.',
+  'combo': 'Связка · {name}',
+  'skillHeal': '+{n}',
   'raking': 'продольный',
   'dist.km': '{n} км',
   'tag.npc': '{cls} · {role} · {faction}',

@@ -104,6 +104,8 @@ export interface CaptainCfg {
   captain?: CaptainId;
   seed?: number;
   level?: number;
+  /** Her captain's kit (her passive and abilities, docs/25 items 13–43): off for the table, which is the bare sea's. */
+  kit?: boolean;
 }
 
 /** A captain's warship of her ⚓ as configured, at (x, y), heading north (her starboard battery faces east), in lawless
@@ -136,6 +138,7 @@ export function captainShip(game: Game, cfg: CaptainCfg, x: number, y: number, h
   ship.worn = kit.worn;
   ship.docked = null;
   p.docked = null; // (her sheet at sea too: a ship out of a port her sheet still lay in was put back at its mouth)
+  ship.kitOff = !cfg.kit; // the table is the bare sea's: her captain's kit comes on top of it (kitbench.ts)
   ship.protectedUntil = 0;
   ship.state.x = x;
   ship.state.y = y;

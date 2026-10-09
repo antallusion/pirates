@@ -37,7 +37,7 @@ export interface KitState {
   /** Double Shot: broadsides left, the bonus each, until when; its facets (canvas, fire). */
   ds: { left: number; bonus: number; until: number; sails: boolean; fire: boolean };
   /** Hard Over's rake: until when, broadsides left, the bonus, men more. */
-  rake: { until: number; left: number; bonus: number; men: number };
+  rake: { until: number; left: number; bonus: number; men: number; readyAt: number };
   /** The Spotter's Eye: until when, the critical's chance a broadside, and on what. */
   spot: { until: number; crit: number; on: 'any' | 'mast' | 'rudder' };
   /** The Smuggler's ambush: armed (smoke, the dark, the fog) and ready again at. */
@@ -55,7 +55,7 @@ export interface KitState {
 export function newKit(): KitState {
   return {
     ds: { left: 0, bonus: 0, until: 0, sails: false, fire: false },
-    rake: { until: 0, left: 0, bonus: 0, men: 0 },
+    rake: { until: 0, left: 0, bonus: 0, men: 0, readyAt: 0 },
     spot: { until: 0, crit: 0, on: 'any' },
     ambush: { armed: false, readyAt: 0 },
     knife: { left: 0, until: 0, bonus: 0, pierce: 0 },

@@ -1,13 +1,19 @@
 // Visual effects: cannonballs (simulated from volley events), smoke, splashes, splinters, fire,
 // explosions, ability effects and floating combat text. Pure presentation — never game state.
 
-import { dict } from '../i18n.ts';
+import { dict, lang } from '../i18n.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
 import { AMMO } from '../../../shared/src/data/ships.ts';
 import type { AmmoId } from '../../../shared/src/data/ships.ts';
 import { headingVec } from '../../../shared/src/math.ts';
 import { SPEED_SCALE } from '../../../shared/src/constants.ts';
 import type { GameEvent } from '../../../shared/src/protocol.ts';
+import { SEA_SKILLS } from '../../../shared/src/data/seaskill.ts';
+
+/** A captain's ability's number over the ship it struck (docs/25 items 13–41): its own colour, apart from the guns'. */
+export const SKILL_VIOLET = '#c79bff';
+const SKILL_HEAL = '#7fe0a0';
+const COMBO_GOLD = '#ffd66b';
 
 const L = dict(REN, RRU);
 
@@ -320,6 +326,23 @@ export class Fx {
           this.blows.push({ dmg: e.dmg, x: e.x, y: e.y });
           this.fought = true;
         }
+        break;
+      }
+      case 'skill': {
+        // A combo (docs/25 item 41): its name over the captain who landed it, gold, with a ring; an ability's own blow, mend
+        // or men over the ship it touched, in the abilities' violet (never mistaken for the guns' numbers).
+        if (e.combo) {
+          const c = SEA_SKILLS[e.id]?.combo;
+          const name = c ? c.name[lang() === 'ru' ? 1 : 0] : e.id;
+          this.add({ kind: 'text', x: e.x, y: e.y - 46, vy: -5, life: 2.2, size: 19, color: COMBO_GOLD, text: L('combo', { name }) });
+          this.add({ kind: 'ring', x: e.x, y: e.y, life: 0.7, size: 14, grow: 120, color: COMBO_GOLD });
+          this.light(e.x, e.y, 120, 'rgba(255,214,107,1)', 0.7, 0.4);
+          if (e.ship === ownId) this.shake = Math.max(this.shake, 0.35);
+          break;
+        }
+        if (e.dmg) this.add({ kind: 'text', x: e.x + 14, y: e.y - 22, vy: -8, life: 1.8, size: sumSize(e.dmg, false), color: SKILL_VIOLET, text: String(e.dmg) });
+        if (e.heal) this.add({ kind: 'text', x: e.x - 14, y: e.y - 22, vy: -8, life: 1.6, size: 15, color: SKILL_HEAL, text: L('skillHeal', { n: e.heal }) });
+        if (e.men) this.add({ kind: 'text', x: e.x, y: e.y - 38, vy: -6, life: 2.2, size: 16, color: SKILL_VIOLET, text: L('menLost', { n: e.men }) });
         break;
       }
       case 'men':

@@ -53,8 +53,8 @@ export function skillNumber(game: Game, target: ShipEntity, id: string, v: { dmg
 
 /** A combo landed (item 41): its short cue over her (the combo's first ability names it). */
 export function comboCue(game: Game, ship: ShipEntity, first: string): void {
+  // (the cue is drawn over her in her captain's language: the client names the combo)
   game.emit({ k: 'skill', ship: ship.id, id: first, x: Math.round(ship.state.x), y: Math.round(ship.state.y), combo: true }, ship.state.x, ship.state.y);
-  if (ship.isPlayer) game.toastShip(ship, `Combo: ${SEA_SKILLS[first]?.combo?.name[0] ?? first}!`, 'good');
 }
 
 /** A blow over time (the Deep Call's leak): its hull added up and shown once a second. */
@@ -122,7 +122,7 @@ export function volleyKit(game: Game, ship: ShipEntity, mark: ShipEntity | null,
     v.rake = true;
     v.men += k.rake.men;
     if (ds && now - (k.cast.hard_over ?? -1e9) <= (SEA_SKILLS.hard_over.combo!.win + 3)) {
-      v.mul *= 1.15;
+      v.mul *= 1.1;
       comboCue(game, ship, 'hard_over');
     }
     any = true;
@@ -268,13 +268,13 @@ export function stepSeaSkills(game: Game, ship: ShipEntity): void {
       break;
     }
     case 'drowned': {
-      // Dread as a weapon (item 36): every 25 Dread costs the foes within 400 m 5 morale each 10 s; below 30 they are
+      // Dread as a weapon (item 36): every 25 Dread costs the foes within 400 m 5 morale each 15 s; below 30 they are
       // shaken, and reload slower (item 24's link: spirit → rate of fire).
       const p = passiveNums(game, ship);
       if (!p) break;
       const bite = Math.floor(ship.dread / 25) * 5;
       const tick = (ship.talentReady.dreadBite ?? 0) <= now;
-      if (tick && bite > 0) ship.talentReady.dreadBite = now + 10;
+      if (tick && bite > 0) ship.talentReady.dreadBite = now + 15;
       foes(400, (o) => {
         if (tick && bite > 0) o.morale = Math.max(0, o.morale - bite);
         if (o.morale < 30) o.addEffect({ id: 'dread_shaken', until: now + 1.6, mods: { skillReload: p.n.shake }, source: ship.id }, now);
@@ -337,8 +337,7 @@ export function chooseFacet(game: Game, s: PlayerSession, id: string, rank: numb
   }
   p.facets[key] = pick;
   s.ship?.recompute(game.now);
-  const f = def.facets[rank as 3 | 5]![pick === 'a' ? 0 : 1];
-  game.sendTo(s, { t: 'toast', msg: `${def.id === id ? CAPTAINS[p.captain].abilities.find((a) => a.id === id)?.name ?? id : id}: ${f.name[0]}.`, kind: 'good' });
+  game.sendTo(s, { t: 'toast', msg: 'Facet chosen.', kind: 'good' });
   game.pushSelf(s, true);
   return null;
 }

@@ -153,6 +153,7 @@ import { adminZoneBoss } from './zonebosses.ts';
 import { adminGrail, adminObelisk } from './grail.ts';
 import { RES_GOODS } from '../../../shared/src/data/mines.ts';
 import { OMEN_IDS } from '../../../shared/src/data/omens.ts';
+import { SEA_SKILLS, captainSkills, facetKey, skillRank } from '../../../shared/src/data/seaskill.ts';
 
 export function adminEnabled(): boolean {
   return process.env.GRAVETIDE_ADMIN === '1';
@@ -160,7 +161,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] [grapple|hunt] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level|go] · /prim [atk|def|pow|will N|reset] · /skill id [0-3]|offer [n]|clear · /order id|all|clear · /art [id|set regalia|hook|storm|list] · /will [N|full] · /guard [go|beat|weak|board|reset] [kind] [level] · /obj [kind] [go|reset] · /obelisk [n|all|go] · /grail [go|found|reset] · /isle level|type kind|atoll|ridge|small|hidden [reveal]|danger [deadly] · /zone [go] · /turtle [go|up|down|off] · /sandbar · /supply [claim|link|week] · /path [learn page|forget] · /stam [N|full] · /scroll [page|random|clear] [n] · /pathfoe [path] [class] [grapple] · /lair [kind] [go|fight|beat|weak|reset|chain|grotto|guardian|dwell|turtle|sandbar] · /creature [kind] [n] · /egg [kind|hatch|grow] · /landres [n] · /drift [kind|legend|whale|kraken] [go|save|fail|fight|clear] · /tame [kind] [wins N|rank R|hunger S|pen N|slip] · /feed [N|starve] · /tamer [go] · /landecon [fit id rank|cap] · /bestiary [all|clear|kind] · /seamark [drift|wreck|buoy|lantern|bones|floe] [go|done|reset] · /glory [n|xp N|reset] · /mastery [node|branch|all|reset] · /trial [skill] [go|win|lose|reset] · /find [bottle|flyfish|calm|gulls|boat|chest] [go|done|reset] · /haul [reset] · /stack [kind] [go|fight|beat|reset] · /doubloons [N|-N|sample [on|off]] · /zboss [region] [rise|here|leave|kill|announce|reset] · /flag [neutral|faction|pirate] [city] · /noboard on|off · /seal [lv N|kind K|go|win|lose|reset|board] · /titan [kind|grail|reset] · /maw [tier N|win|lose|go|reset|board] · /relic [id|parts id|all|drop [N]|clear] · /invasion [region|start|wave|win|fail|clear] · /cit [go|guild|window|siege|win|own|lose|free|points N|season|reset] [n] · /contract [list|take N|done N|week|reset|go N] · /arena [queue|bot|win|lose|rating N|season|reset]';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] [grapple|hunt] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level|go] · /prim [atk|def|pow|will N|reset] · /skill id [0-3]|offer [n]|clear · /order id|all|clear · /art [id|set regalia|hook|storm|list] · /will [N|full] · /guard [go|beat|weak|board|reset] [kind] [level] · /obj [kind] [go|reset] · /obelisk [n|all|go] · /grail [go|found|reset] · /isle level|type kind|atoll|ridge|small|hidden [reveal]|danger [deadly] · /zone [go] · /turtle [go|up|down|off] · /sandbar · /supply [claim|link|week] · /path [learn page|forget] · /stam [N|full] · /scroll [page|random|clear] [n] · /pathfoe [path] [class] [grapple] · /lair [kind] [go|fight|beat|weak|reset|chain|grotto|guardian|dwell|turtle|sandbar] · /creature [kind] [n] · /egg [kind|hatch|grow] · /landres [n] · /drift [kind|legend|whale|kraken] [go|save|fail|fight|clear] · /tame [kind] [wins N|rank R|hunger S|pen N|slip] · /feed [N|starve] · /tamer [go] · /landecon [fit id rank|cap] · /bestiary [all|clear|kind] · /seamark [drift|wreck|buoy|lantern|bones|floe] [go|done|reset] · /glory [n|xp N|reset] · /mastery [node|branch|all|reset] · /trial [skill] [go|win|lose|reset] · /find [bottle|flyfish|calm|gulls|boat|chest] [go|done|reset] · /haul [reset] · /stack [kind] [go|fight|beat|reset] · /doubloons [N|-N|sample [on|off]] · /zboss [region] [rise|here|leave|kill|announce|reset] · /flag [neutral|faction|pirate] [city] · /noboard on|off · /seal [lv N|kind K|go|win|lose|reset|board] · /titan [kind|grail|reset] · /maw [tier N|win|lose|go|reset|board] · /relic [id|parts id|all|drop [N]|clear] · /invasion [region|start|wave|win|fail|clear] · /cit [go|guild|window|siege|win|own|lose|free|points N|season|reset] [n] · /contract [list|take N|done N|week|reset|go N] · /arena [queue|bot|win|lose|rating N|season|reset] · /kit [show|facet id 3|5 a|b|clear]';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -1345,6 +1346,29 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     case 'trial':
       // The Throne of the Sea (docs/19 E1–E3): glory ranks, the mastery tree, the trials of mastery.
       return throneAdmin(game, s, cmd.toLowerCase(), args);
+    case 'kit': {
+      // docs/25 items 37–38: her abilities' ranks and facets; a facet set or cleared at once (the tester's: no port, no silver).
+      const sub = (args[0] ?? 'show').toLowerCase();
+      if (sub === 'clear') {
+        p.facets = {};
+        ship.recompute(game.now);
+        game.pushSelf(s, true);
+        return 'Facets cleared.';
+      }
+      if (sub === 'facet') {
+        const id = args[1] ?? '', rank = Math.round(num(2)), pick = args[3] === 'b' ? 'b' : 'a';
+        const sk = SEA_SKILLS[id];
+        if (!sk || sk.captain !== p.captain || !sk.facets?.[rank as 3 | 5]) return 'Usage: /kit [show|facet id 3|5 a|b|clear]';
+        (p.facets ??= {})[facetKey(id, rank)] = pick;
+        ship.recompute(game.now);
+        game.pushSelf(s, true);
+        return `Facet ${facetKey(id, rank)} → ${pick}.`;
+      }
+      if (sub !== 'show') return 'Usage: /kit [show|facet id 3|5 a|b|clear]';
+      const ranks = captainSkills(p.captain).map((k) => `${k.key}${skillRank(p.level, k.key)}`).join(' ');
+      const f = Object.entries(p.facets ?? {}).map(([k, v]) => `${k}=${v}`).join(', ');
+      return `Ranks: ${ranks}; facets: ${f || 'none'}.`;
+    }
     case 'reveal': {
       let n = 0;
       for (const is of game.world.islands) {

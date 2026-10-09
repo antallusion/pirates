@@ -57,7 +57,7 @@ import { FACTIONS, WANTED_THRESHOLDS, WANTED_TITLES, wantedLevel } from '../../.
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { AMMO_IDS, CHASER_RELOAD, SHIP_CLASSES, defaultGunFor, emptyAmmo } from '../../../shared/src/data/ships.ts';
+import { AMMO_IDS, CHASER_RELOAD, GUNS, SHIP_CLASSES, defaultGunFor, emptyAmmo } from '../../../shared/src/data/ships.ts';
 import { aimedVolley, pursuitInput, pursuitOf, startPursuit, startRoamRun, stepAutoFire, stepPursuit, stopPursuit } from './pursuit.ts';
 import { boardOdds, boardRisk, isRisky } from './boardodds.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
@@ -1528,9 +1528,14 @@ export class Game {
       const x = owner.state.x + back.x * 300, y = owner.state.y + back.y * 300;
       const ship = this.spawnNpcShip('escort', cls, 'free', x, y, owner.state.heading, { ship: names + this.rng.pick(['Tenacity', 'Warrant', 'Loyal Oath', 'Salt Debt']), captain: 'Sailing Master' });
       this.setNpcLevel(ship, cls === 'man_o_war' ? Math.max(9, e) : e);
-      // Her guns a share of a captain's in full gear of her ⚓ (two share the hire's weight), her hull as the sea's own.
-      const elite = npcSeaScale(ship.shipLevel, true), common = npcSeaScale(ship.shipLevel, false);
-      ship.seaScale = { hull: common.hull * (opts.heavy ? 1.5 : 1), guns: elite.guns * (opts.guns ?? 0.36) * (n > 1 ? 0.6 : 1) };
+      // Her broadsides a share of the Admiral's own (her guns by the weight of metal a second; two share the hire's
+      // weight), whatever hull the hire is; her hull as the sea's own.
+      const common = npcSeaScale(ship.shipLevel, false);
+      ship.seaScale = { hull: common.hull * (opts.heavy ? 1.5 : 1), guns: 1 };
+      ship.ownerId = owner.id;
+      ship.recompute(this.now);
+      const rate = (s: ShipEntity) => (s.stats.gunsPerSide * GUNS[s.loadout.guns.starboard].damage * s.stats.gunDamageMul) / Math.max(0.1, reloadTime(s, 'starboard', this.now));
+      ship.seaScale.guns = ((opts.guns ?? 0.1) * (n > 1 ? 0.6 : 1) * rate(owner)) / Math.max(1e-6, rate(ship));
       ship.ownerId = owner.id;
       ship.recompute(this.now);
       ship.hull = ship.stats.hullMax;

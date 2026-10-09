@@ -242,6 +242,8 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
     if (tb) tb.spared.set(ship.id, game.now + 4);
   }
   unmask(game, ship, 'you opened fire');
+  // The Drowned opening a fight (docs/25 item 36): the sea answers her first broadside with her rank's Dread.
+  if (ship.captain === 'drowned' && !ship.inCombat(game.now)) ship.dread = Math.max(ship.dread, passiveNums(game, ship)?.n.wake ?? 0);
   if (ship.hasEffect('slip_away')) {
     ship.effects = ship.effects.filter((e) => e.id !== 'slip_away');
     ship.recompute(game.now);

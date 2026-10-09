@@ -16,6 +16,7 @@ import { kitNums } from '../../server/src/game/seaskill.ts';
 import type { Game } from '../../server/src/game/Game.ts';
 import type { ShipEntity } from '../../server/src/game/ship.ts';
 import { captainShip, clearSea, fightDistance, spot } from './seakit.ts';
+import { depthAt, isLand } from '../../shared/src/world/worldgen.ts';
 import type { Gear } from './seakit.ts';
 
 export interface KitSide {
@@ -48,21 +49,25 @@ export interface KitFight {
 /** The ram's run-in: her way into the mark as a share of her top speed (both under way, she does not meet her at rest). */
 export const RAM_CLOSING = 0.7;
 /** …and the time she needs to come about and run in again after a ram. */
-export const RAM_AGAIN = 40;
+export const RAM_AGAIN = 45;
 
 /** One fight: `a` fires on `b` till `b` sinks or strikes. Either side's kit as asked; the sea's dice by `seed`. */
 export function kitFight(game: Game, a: KitSide, b: KitSide, seed = 1, maxSec = 900): KitFight {
   clearSea(game);
   Object.assign(game.rng, new Rng(seed * 7919 + 13));
-  const { x, y } = spot(game);
+  // Lawless water (the Ashen Isles): two captains fight there as they please, and the Admiral's escort with them (a duel
+  // bars every escort). Her mark lies downwind of her, beam on (the weather gauge is the Navigator's to hold).
+  const { x, y } = lawlessWater(game);
   const A = captainShip(game, { anchor: a.anchor, gear: a.gear, captain: a.captain, level: a.level }, x, y).ship;
   const d = fightDistance(A);
-  const B = captainShip(game, { anchor: b.anchor, gear: b.gear, captain: b.captain, level: b.level }, x + d, y).ship;
+  const wind = game.windFor(A).dir;
+  const bx = x + Math.sin(wind) * d, by = y - Math.cos(wind) * d;
+  const B = captainShip(game, { anchor: b.anchor, gear: b.gear, captain: b.captain, level: b.level }, bx, by).ship;
+  for (const s of [A, B]) s.state.heading = wind - Math.PI / 2; // her starboard battery toward her mark
+  const at = new Map([[A, [x, y]], [B, [bx, by]]] as const);
   for (const [s, side] of [[A, a], [B, b]] as const) {
     s.resolve = 0;
     s.dread = 0;
-    // Her own waters (the stills' «lawless» abyss is for the stills: here the sea's clock runs, and the Abyss's own
-    // seconds would carry her off); the duel below lets them fight.
     s.region = game.regionAt(s.state.x, s.state.y);
     const p = game.profileOf(s)!;
     s.kitOff = !side.kit;
@@ -71,10 +76,6 @@ export function kitFight(game: Game, a: KitSide, b: KitSide, seed = 1, maxSec = 
     s.recompute(game.now);
     s.hull = s.stats.hullMax;
   }
-  // Two captains fight a duel by consent (pvp.ts: duel_ok): the waters' rules stand aside (as seakit.ts underway).
-  const duel = { id: 1, sides: [[A.accountId!], [B.accountId!]] as [number[], number[]], cx: x, cy: y, r: 1e6, startAt: -1, endAt: 1e15, struck: new Set<number>(), outside: new Map(), snaps: new Map(), ranked: false };
-  game.pvp.duelOf.set(A.accountId!, duel as never);
-  game.pvp.duelOf.set(B.accountId!, duel as never);
   const casts: Record<string, number> = {};
   const t0 = game.now;
   let first = -1, volleys = 0;
@@ -88,6 +89,12 @@ export function kitFight(game: Game, a: KitSide, b: KitSide, seed = 1, maxSec = 
     for (const s of [A, B]) {
       s.state.speed = 0;
       s.input = { rudder: 0, sailTarget: 0 };
+      // (held where she lies: the sea's currents would part them in a long fight)
+      const [px, py] = at.get(s)!;
+      s.state.x = px;
+      s.state.y = py;
+      s.state.heading = wind - Math.PI / 2;
+      game.grid.upsert(s.id, px, py);
     }
     // The dice's slow fires: a fire, a breach or a leak a ball starts burns on for many seconds and swung one fight of
     // equals by a third against the next; the bench's crews put them out at once (both kits alike), so what an ability
@@ -124,13 +131,33 @@ export function kitFight(game: Game, a: KitSide, b: KitSide, seed = 1, maxSec = 
 
 /** The fight's length to a fraction of a reload: a broadside that finished her with half its weight to spare finished a
  *  fight half a reload shorter than the one that took all of it (a whole broadside's step otherwise drowned what an
- *  ability adds in the noise of which broadside it was). Sunk by a fire or a leak between broadsides: as it came. */
+ *  ability adds in the noise of which broadside it was), and her first broadside's loading with it (n broadsides are n
+ *  reloads: a fight of five is not «four»). Sunk by a fire or a leak between broadsides: as it came. */
 function fractional(fires: [number, number][], end: number, sunk: boolean, first: number): number {
   const k = fires.length - 1;
-  if (!sunk || k < 1 || end - fires[k][0] > 3) return end - first;
+  const load = k >= 1 ? fires[1][0] - fires[0][0] : 0;
+  if (!sunk || k < 1 || end - fires[k][0] > 3) return end - first + load;
   const mean = (fires[0][1] - fires[k][1]) / k;
   const f = mean > 0 ? Math.max(0, Math.min(1, fires[k][1] / mean)) : 1;
-  return fires[k - 1][0] - first + f * (fires[k][0] - fires[k - 1][0]);
+  return fires[k - 1][0] - first + f * (fires[k][0] - fires[k - 1][0]) + load;
+}
+
+/** Open water of the Ashen Isles, clear of land and shoals for a mile (lawless: any captain fires on any). */
+const lawless = new WeakMap<Game, { x: number; y: number }>();
+export function lawlessWater(game: Game): { x: number; y: number } {
+  let p = lawless.get(game);
+  if (p) return p;
+  for (let i = 0; i < 2000 && !p; i++) {
+    const x = 78_000 + ((i * 7919) % 12_000), y = 64_000 + ((i * 104_729) % 12_000);
+    if (game.regionAt(x, y) !== 'ashen_isles') continue;
+    let clear = true;
+    for (let a = 0; a < 16 && clear; a++) for (const r of [300, 800, 1400]) if (isLand(game.world, x + Math.cos(a) * r, y + Math.sin(a) * r)) clear = false;
+    for (let a = 0; a < 32 && clear; a++) for (const r of [100, 250, 450, 700, 1000]) if (depthAt(game.world, x + Math.cos(a * 0.196) * r, y + Math.sin(a * 0.196) * r) < 12) clear = false;
+    if (clear) p = { x, y };
+  }
+  p ??= spot(game);
+  lawless.set(game, p);
+  return p;
 }
 
 /** Her hired escorts (the Admiral's) lie astern of her, beam on to the mark, and fire as they load. */
@@ -141,8 +168,10 @@ function escorts(game: Game, me: ShipEntity, foe: ShipEntity): void {
     const brain = game.npcs.get(o.id);
     if (brain) brain.active = false;
     i++;
-    o.state.x = me.state.x;
-    o.state.y = me.state.y + 150 * i;
+    // (in her line, a cable's length astern of her: within her guns' reach of the mark)
+    const back = me.state.heading + Math.PI;
+    o.state.x = me.state.x + Math.sin(back) * 85 * i;
+    o.state.y = me.state.y - Math.cos(back) * 85 * i;
     o.state.heading = me.state.heading;
     o.state.speed = 0;
     o.input = { rudder: 0, sailTarget: 0 };
@@ -185,7 +214,7 @@ function castKit(game: Game, me: ShipEntity, foe: ShipEntity, side: KitSide, cas
         if (full && may('mark_target')) {
           cast('mark_target');
           cast('admiralty_barrage');
-        } else if (full && (markedAgo <= 4 || markIn > 20)) cast('admiralty_barrage');
+        } else if (full && (markedAgo <= 4 || markIn > 20 || (side.only && !side.only.includes('mark_target')))) cast('admiralty_barrage');
         else cast('mark_target');
         break;
       }
@@ -219,7 +248,8 @@ function castKit(game: Game, me: ShipEntity, foe: ShipEntity, side: KitSide, cas
           cast('deep_call');
           cast('maw_of_the_deep');
         } else if (full && me.dread >= 50 && (!may('deep_call') || me.dread < call + 50)) cast('maw_of_the_deep');
-        else if (!full && me.resolve < 60 && me.dread >= call) cast('deep_call');
+        // (the call again only while the maw is far off, or with Dread enough for both: the maw is her blow)
+        else if (!full && me.dread >= call && (me.resolve < 30 || me.dread >= call + 50)) cast('deep_call');
         break;
       }
     }

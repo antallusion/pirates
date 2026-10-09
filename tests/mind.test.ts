@@ -4,7 +4,7 @@ import type { CaptainId } from '../shared/src/data/captains.ts';
 import { REGIONS } from '../shared/src/world/regions.ts';
 import { applyDamage } from '../server/src/game/combat.ts';
 import type { Game } from '../server/src/game/Game.ts';
-import { onCrit, onGrapple, sanityDrain, stepMind } from '../server/src/game/mind.ts';
+import { RESOLVE_DEALT, onCrit, onGrapple, sanityDrain, stepMind } from '../server/src/game/mind.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { join, makeGame, steps, onHull } from './helpers.ts';
 
@@ -46,18 +46,19 @@ test('resolve: trading blows charges the Ultimate; it fires only when full and e
   c.push({ t: 'ability', id: 'last_volley' });
   assert.ok(!ship.hasEffect('last_volley'), 'refused at 0 resolve');
   assert.ok(c.all('toast').some((t) => /full resolve/.test(t.msg)));
-  // 10% of her hull dealt → +10; 10% of ours taken → +10.
+  // 10% of her hull dealt → +15 (docs/25 item 40: the ultimate charges from what she deals, RESOLVE_DEALT a point — it
+  // was +10); 10% of ours taken → +10, as before.
   applyDamage(game, foe, { hull: foe.stats.hullMax * 0.1 }, ship);
-  assert.ok(Math.abs(ship.resolve - 10) < 0.01, `dealt: ${ship.resolve}`);
+  assert.ok(Math.abs(ship.resolve - 10 * RESOLVE_DEALT) < 0.01, `dealt: ${ship.resolve}`);
   applyDamage(game, ship, { hull: ship.stats.hullMax * 0.1 }, foe);
-  assert.ok(Math.abs(ship.resolve - 20) < 0.01);
+  assert.ok(Math.abs(ship.resolve - 10 * RESOLVE_DEALT - 10) < 0.01);
   onCrit(ship);
   onGrapple(ship);
-  assert.ok(Math.abs(ship.resolve - 43) < 0.01, 'crit +8, grapple +15');
+  assert.ok(Math.abs(ship.resolve - 10 * RESOLVE_DEALT - 33) < 0.01, 'crit +8, grapple +15');
   // Ten enemy crew killed: +5.
   foe.crew = 40;
   applyDamage(game, foe, { crew: 10 }, ship);
-  assert.ok(ship.resolve >= 48 - 0.01);
+  assert.ok(ship.resolve >= 10 * RESOLVE_DEALT + 38 - 0.01);
   ship.resolve = 100;
   c.push({ t: 'ability', id: 'last_volley' });
   assert.ok(ship.hasEffect('last_volley'));
@@ -77,9 +78,9 @@ test('dread: the Drowned Captain bleeds into it, pays miracles with it, and the 
   const foe = dummy(game, ship, 200, 0);
   c.push({ t: 'ability', id: 'deep_call', x: foe.state.x, y: foe.state.y });
   assert.equal(game.zones.length, 0, 'no Dread, no miracle');
-  // 20% hull lost → +10 Dread.
+  // 20% hull lost → +10 Dread, on the 30 the sea gives her as the fight begins (docs/25 item 36, her passive).
   applyDamage(game, ship, { hull: ship.stats.hullMax * 0.2 }, foe);
-  assert.ok(Math.abs(ship.dread - 10) < 0.01, `dread ${ship.dread}`);
+  assert.ok(Math.abs(ship.dread - 40) < 0.01, `dread ${ship.dread}`);
   ship.dread = 60;
   const m0 = ship.morale;
   c.push({ t: 'ability', id: 'deep_call', x: foe.state.x, y: foe.state.y });

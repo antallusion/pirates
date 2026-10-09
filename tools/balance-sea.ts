@@ -8,8 +8,19 @@
 // --calibrate prints SEA_HULL_PACE, NPC_SEA and ELITE_SEA re-weighed to the table (paste them into seabalance.ts and run
 // again: two passes settle them). --moving: the same fights under way, each side fought by the sea's fighting mind
 // (bot against bot), the seconds to a sinking and the broadsides each side landed.
+//
+//   node --disable-warning=ExperimentalWarning tools/balance-sea.ts --abilities [--anchors 1,5,10] [--seeds 3] [--gear full,bare] [--captains corsair,…] [--per] [--md out.md]
+//
+// --abilities (docs/25 items 13–43): the captains' kits on top of the table — a fight of equals of each ⚓ by the game's
+// clock (tests/balance/kitbench.ts), her kit off and on, as the one firing (shorter by it) and as the one fired upon
+// (longer by it), and how far the quickest kit is ahead of the slowest; --per adds each ability alone (its share).
+// The table itself (every mode but this one) is the bare sea's: the captains' kits are off on it.
 
 import { writeFileSync } from 'node:fs';
+import { CAPTAINS as CAPTAIN_DEFS } from '../shared/src/data/captains.ts';
+import type { CaptainId } from '../shared/src/data/captains.ts';
+import { refLevel } from '../shared/src/data/xpcurve.ts';
+import { KIT_CAPTAINS, kitMedian, kitRows } from '../tests/balance/kitbench.ts';
 import { gearSource } from '../shared/src/data/items.ts';
 import { ELITE_SEA, NPC_SEA, SEA_CREW_PACE, SEA_GRAPE_PACE, SEA_HULL_PACE, SEA_RELOAD_BY, defRaw, gearDefence, gearOffCeil, gearDefCeil, gearOffence, halfGearDef, halfGearOff, NPC_VOLLEYS, seaBase } from '../shared/src/data/seabalance.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
@@ -24,6 +35,8 @@ const MOVING = process.argv.includes('--moving');
 const DUELS = Number(arg('duels', '6'));
 const MD = arg('md', '');
 const SEEDS = [11, 12, 13];
+
+if (process.argv.includes('--abilities')) abilities();
 
 const game = bench();
 const hits = tallyHits(game);
@@ -176,3 +189,42 @@ const text = out.join('\n');
 console.log(text);
 if (MD) writeFileSync(MD, text + '\n');
 process.exit(0);
+
+/** The captains' kits at sea (--abilities): the table of shares by ⚓ and captain, and each ability's own with --per. */
+function abilities(): never {
+  const g = bench();
+  const seeds = Array.from({ length: Number(arg('seeds', '3')) }, (_, i) => i + 1);
+  const gears = arg('gear', 'full').split(',') as Gear[];
+  const caps = arg('captains', KIT_CAPTAINS.join(',')).split(',') as CaptainId[];
+  const anchors = process.argv.includes('--anchors') ? LIST : [1, 5, 10];
+  // The band's level: its first ranks at ⚓1, its last at ⚓10, the middle of the band between.
+  const lvl = (a: number) => (a === 1 ? 3 : a === 10 ? 58 : refLevel(a));
+  const f1 = (v: number) => Math.round(v * 10) / 10;
+  const pc = (v: number) => `${Math.round(v * 100)}%`;
+  const o: string[] = ['## The captains\' kits at sea (docs/25 §1.1: 15–25% off a fight, the Corsair\'s to 30%; the defensive as much on; no captain 15% ahead)', ''];
+  o.push('| ⚓ (L) | gear | captain | plain s | kit on s | shorter | fired upon, kit on s | longer | casts a fight |');
+  o.push('|---|---|---|---|---|---|---|---|---|');
+  const rows = kitRows(g, anchors, gears, seeds, caps, lvl);
+  for (const r of rows) o.push(`| ${r.anchor} (L${r.level}) | ${r.gear} | ${r.captain} | ${f1(r.plain)} | ${f1(r.on)} | ${pc(1 - r.on / r.plain)} | ${f1(r.def)} | ${pc(r.def / r.plain - 1)} | ${Object.entries(r.casts).map(([k, v]) => `${k} ${v}`).join(', ')} |`);
+  o.push('');
+  for (const a of anchors) for (const gear of gears) {
+    const t = rows.filter((r) => r.anchor === a && r.gear === gear).map((r) => r.on);
+    o.push(`⚓${a} ${gear}: the slowest kit ${pc(Math.max(...t) / Math.min(...t) - 1)} behind the quickest.`);
+  }
+  if (process.argv.includes('--per')) {
+    o.push('', '| ⚓ (L) | captain | passive | Z | X | C | V |', '|---|---|---|---|---|---|---|');
+    for (const a of anchors) for (const c of caps) {
+      const L = lvl(a);
+      const foe = { anchor: a, gear: 'full' as Gear, captain: 'navigator' as CaptainId, level: L, kit: false };
+      const me = (kit: boolean, only?: string[]) => ({ anchor: a, gear: 'full' as Gear, captain: c, level: L, kit, only });
+      const off = kitMedian(g, me(false), foe, seeds).sec, base = kitMedian(g, me(true, []), foe, seeds).sec;
+      const cells = [pc(1 - base / off)];
+      for (const ab of CAPTAIN_DEFS[c].abilities) cells.push(pc(1 - kitMedian(g, me(true, [ab.id]), foe, seeds).sec / base));
+      o.push(`| ${a} (L${L}) | ${c} | ${cells.join(' | ')} |`);
+    }
+  }
+  const text = o.join('\n');
+  console.log(text);
+  if (MD) writeFileSync(MD, text + '\n');
+  process.exit(0);
+}
