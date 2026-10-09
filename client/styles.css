@@ -4152,6 +4152,113 @@ body.touch .act-btn { --h: 38px; }
   .throne-win .tabs .tab { padding: 9px 6px; font-size: 11px; letter-spacing: 0.01em; gap: 3px; }
   .throne-win .tabs .tab .ico-sm { width: 14px; height: 14px; }
 }
+/* docs/19 E14 brought them to eight: on a phone held sideways the words alone, still one row. */
+@media (max-height: 520px) {
+  .throne-win .tabs .tab .ico-sm { display: none; }
+  .throne-win .tabs .tab { padding: 7px 6px; }
+}
+/* docs/19 E14: the Colosseum in the Throne's window — the lobby (the rating's bronze medal, the queue, the table, the
+   rewards) and the draft board: the two seats beside the table of lots, the turn and its clock above it, the tapped lot
+   below. One screen on a phone held sideways (812×375) and with a mouse; nothing to scroll for a button. */
+.th-medal.ar-medal { background: radial-gradient(circle at 50% 38%, #4a2f18, #170e08 70%); box-shadow: 0 0 0 2px #c58a4a, 0 0 0 5px rgba(168, 118, 62, 0.35), 0 0 18px rgba(197, 138, 74, 0.3); }
+.th-medal.ar-medal span .ico-sm { width: 18px; height: 18px; }
+.ar-last { margin: 0; font-size: 13px; }
+.ar-last.won { color: var(--gold); }
+.ar-last.lost { color: var(--bad); }
+.ar-go b { color: var(--bone); font-variant-numeric: tabular-nums; }
+.ar-table { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.ar-table li { display: flex; gap: 8px; align-items: baseline; padding: 3px 8px; border-radius: 4px; background: rgba(20, 16, 10, 0.4); font-size: 13px; }
+.ar-table li i { font-style: normal; color: var(--fog); min-width: 1.8em; }
+.ar-table li b { flex: 1; min-width: 0; font-weight: 600; color: var(--bone); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-table li span { flex: none; font-variant-numeric: tabular-nums; color: var(--gold); }
+.ar-table li.you { box-shadow: inset 0 0 0 1px var(--gold); }
+.ar-rw { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.ar-rw li { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; padding: 2px 8px; border-bottom: 1px solid rgba(176, 141, 87, 0.15); }
+.ar-rw li b { color: var(--bone); font-weight: 600; }
+.ar-rw li > span { color: var(--fog); overflow-wrap: anywhere; }
+.ar-draft { display: grid; grid-template-columns: 148px minmax(0, 1fr) 148px; grid-template-areas: 'you turn foe' 'you pool foe' 'you sel foe'; grid-template-rows: auto auto 1fr; gap: 6px 8px; align-items: start; }
+.ar-draft > .ar-seat.you { grid-area: you; }
+.ar-draft > .ar-seat.foe { grid-area: foe; }
+.ar-draft > .ar-turn { grid-area: turn; }
+.ar-draft > .ar-pool { grid-area: pool; }
+.ar-draft > .ar-sel { grid-area: sel; }
+.ar-seat { display: flex; flex-direction: column; gap: 5px; padding: 6px; border: 1px solid rgba(176, 141, 87, 0.3); border-radius: 8px; background: rgba(20, 16, 10, 0.55); min-width: 0; }
+.ar-seat.you { border-color: rgba(224, 184, 98, 0.55); }
+.ar-seat.foe { border-color: rgba(176, 71, 58, 0.5); }
+.ar-seat.turn { box-shadow: 0 0 0 1px var(--gold), 0 0 12px rgba(224, 184, 98, 0.25); }
+.ar-seat.foe.turn { box-shadow: 0 0 0 1px #c4574a, 0 0 12px rgba(196, 87, 74, 0.25); }
+.ar-who { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.ar-who .ico-md { width: 34px; height: 34px; flex: none; object-position: 50% 18%; }
+.ar-who span { display: flex; flex-direction: column; min-width: 0; }
+.ar-who b { font-size: 13px; color: var(--bone); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-who small { font-size: 11px; color: var(--fog); white-space: nowrap; }
+.ar-pts { font-size: 12px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.ar-bans { display: flex; gap: 3px; min-height: 22px; align-items: center; }
+.ar-bn { position: relative; width: 22px; height: 22px; border-radius: 4px; overflow: hidden; filter: grayscale(1) brightness(0.7); }
+.ar-bn i { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #e05a4a; font-style: normal; font-weight: 700; font-size: 16px; text-shadow: 0 0 3px #000; }
+.ar-army { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; }
+.ar-pk { position: relative; display: block; aspect-ratio: 1; border-radius: 4px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.45); }
+.ar-pk b { position: absolute; left: 0; right: 0; bottom: 0; font-size: 10px; line-height: 12px; text-align: center; color: var(--bone); background: rgba(0, 0, 0, 0.6); font-variant-numeric: tabular-nums; }
+.ar-turn { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--fog); }
+.ar-turn b { color: var(--bone); font-weight: 600; }
+.ar-turn.mine > span:not(.th-chip) { color: var(--gold); font-weight: 600; }
+.ar-clock { margin-left: auto; min-width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 2px rgba(176, 141, 87, 0.6); font-variant-numeric: tabular-nums; color: var(--bone); }
+.ar-clock.low { box-shadow: inset 0 0 0 2px #c4574a; color: #f0a090; }
+.ar-pool { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 4px; }
+.ar-lot { position: relative; aspect-ratio: 1; padding: 0; border-radius: 6px; border: 1px solid rgba(176, 141, 87, 0.45); background: rgba(20, 16, 10, 0.65); overflow: hidden; cursor: pointer; min-width: 0; }
+.ar-lot .ar-face { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ar-lot .ar-n { position: absolute; left: 0; right: 0; bottom: 0; font-size: 11px; line-height: 14px; font-weight: 600; text-align: center; color: var(--bone); background: rgba(0, 0, 0, 0.62); font-variant-numeric: tabular-nums; }
+.ar-lot .ar-p { position: absolute; top: 2px; right: 2px; min-width: 16px; padding: 0 3px; border-radius: 8px; font-style: normal; font-size: 10px; line-height: 15px; font-weight: 700; text-align: center; color: #1a120a; background: var(--gold); box-shadow: 0 1px 2px #000; }
+.ar-lot .ar-x { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-style: normal; font-size: 30px; font-weight: 700; color: #e05a4a; text-shadow: 0 0 4px #000; }
+.ar-lot.banned { filter: grayscale(1) brightness(0.55); cursor: default; }
+.ar-lot.mine { border-color: var(--gold); box-shadow: inset 0 0 0 2px var(--gold); }
+.ar-lot.theirs { border-color: #c4574a; box-shadow: inset 0 0 0 2px #c4574a; filter: brightness(0.6); }
+.ar-lot.dear { opacity: 0.45; }
+.ar-lot.sel { outline: 2px solid var(--bone); outline-offset: 1px; z-index: 1; }
+@media (hover: hover) and (pointer: fine) { .ar-lot.open:hover { border-color: var(--gold); } }
+.ar-sel { display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 4px 6px; border-radius: 6px; background: rgba(20, 16, 10, 0.55); border: 1px solid rgba(176, 141, 87, 0.25); }
+.ar-sel > .army-face-sm { width: 36px; height: 36px; }
+.ar-st { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ar-st b { font-size: 13px; color: var(--bone); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-st small { font-size: 11px; line-height: 1.25; color: var(--fog); overflow-wrap: anywhere; }
+.ar-acts { flex: none; display: flex; gap: 6px; }
+.ar-acts .btn { white-space: nowrap; }
+.tb-end .tb-why.tb-arena, .tb-end.sea .tb-why.tb-arena { display: inline-flex; align-items: center; gap: 6px; color: var(--gold); font-weight: 600; }
+.tb-end .tb-why.tb-arena.down { color: var(--bad); }
+@media (max-width: 1099px), (max-height: 520px) {
+  body.touch .ar-acts .btn, body.touch .ar-go .btn { min-height: 44px; }
+  .ar-draft { grid-template-columns: 120px minmax(0, 1fr) 120px; gap: 6px; }
+  .ar-pool { grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 3px; }
+  .ar-turn { font-size: 12px; gap: 6px; }
+  .ar-turn .th-chip { padding: 1px 6px; font-size: 11px; }
+  .ar-clock { min-width: 26px; height: 26px; }
+  .ar-seat { padding: 4px; gap: 3px; }
+  .ar-who .ico-md { width: 28px; height: 28px; }
+  .ar-who b { font-size: 12px; }
+  .ar-who small, .ar-pts { font-size: 11px; }
+  .ar-bans { min-height: 18px; }
+  .ar-bn { width: 18px; height: 18px; }
+  .ar-bn i { font-size: 13px; }
+  .ar-lot .ar-n { font-size: 10px; line-height: 12px; }
+  .ar-lot .ar-p { font-size: 9px; line-height: 13px; min-width: 14px; }
+  .ar-sel { min-height: 44px; padding: 2px 6px; }
+  .ar-sel > .army-face-sm { width: 30px; height: 30px; }
+  .ar-st small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+/* A narrow phone (640×360): each seat a line beside the turn — the table itself shows whose lot is whose — and the
+   table and the tapped lot the whole width. */
+@media (max-width: 699px) {
+  .ar-draft { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-areas: 'you turn foe' 'pool pool pool' 'sel sel sel'; grid-template-rows: auto; gap: 3px 6px; }
+  .ar-seat { flex-direction: row; align-items: center; gap: 4px 6px; padding: 2px 6px; }
+  .ar-seat .ar-bans, .ar-seat .ar-army, .ar-who small, .ar-who .ico-md { display: none; }
+  .ar-who b { font-size: 12px; }
+  .ar-turn { flex-wrap: nowrap; }
+  .ar-turn .th-chip, .ar-turn > span:not(.th-chip) { display: none; }
+  .ar-pool { grid-template-columns: repeat(11, minmax(0, 1fr)); }
+  .ar-lot { aspect-ratio: 1 / 0.86; }
+  .ar-sel { min-height: 40px; }
+  #modal-panel .throne-win.th-drafting .tabs .tab:not(.active) { display: none; }
+}
 @media (max-width: 520px) {
   .cit-row { grid-template-columns: 44px minmax(0, 1fr); grid-template-areas: 'f m' 'a a' 'x x'; }
   .cit-face, .cit-face .ico-lg { width: 44px; height: 44px; }

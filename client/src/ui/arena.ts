@@ -33,6 +33,8 @@ let sel: UnitId | null = null;
 /** The client's state the clocks read (the window's render hands it). */
 let stateRef: ClientState | null = null;
 
+/** A rating's change with its sign (a true minus). */
+const signed = (d: number) => (d > 0 ? `+${d}` : d < 0 ? `−${-d}` : '0');
 const mmss = (s: number) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 const nameOf = (v: ArenaDraftView, k: 0 | 1) => (v.seats[k].ai ? serverText(v.seats[k].name) : personName(v.seats[k].name));
 /** A foe's name: a captain's, or a legend of the sea's in her tongue. */
@@ -57,7 +59,7 @@ function rewardsHtml(): string {
 function lobby(v: ArenaView, state: ClientState): string {
   const days = Math.ceil((v.ends - Date.now()) / 86_400_000);
   const last = v.last
-    ? `<p class="ar-last ${v.last.won ? 'won' : 'lost'}">${esc(!v.last.foe ? L(v.last.won ? 'lastWonAny' : 'lastLostAny') : v.last.won ? L('lastWon', { foe: foeName(v.last.foe) }) : L('lastLost', { foe: foeName(v.last.foe) }))} · ${esc(v.last.practice || !v.last.delta ? L('lastFriendly') : L('lastDelta', { d: `${v.last.delta > 0 ? '+' : ''}${v.last.delta}` }))}</p>`
+    ? `<p class="ar-last ${v.last.won ? 'won' : 'lost'}">${esc(!v.last.foe ? L(v.last.won ? 'lastWonAny' : 'lastLostAny') : v.last.won ? L('lastWon', { foe: foeName(v.last.foe) }) : L('lastLost', { foe: foeName(v.last.foe) }))} · ${esc(v.last.practice || !v.last.delta ? L('lastFriendly') : L('lastDelta', { d: signed(v.last.delta) }))}</p>`
     : '';
   const why = v.why && !v.queue ? serverText(v.why) : '';
   const go = v.queue
@@ -133,9 +135,9 @@ function selBar(v: ArenaDraftView): string {
       return `${unitIcon(lot.u, 'army-face-sm')}<span class="ar-st"><b>${esc(L('lot', { name: unitName(lot.u), n: lot.n }))}</b><small>${esc(L('lotStats', { t: d.tier, atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp, sp: d.speed }))}${esc(sp)}</small></span>`;
     })()
     : `<span class="ar-st muted"><small>${esc(L('selNone', { verb: v.stage === 'ban' ? L('verbBan') : L('verbPick') }))}</small></span>`;
-  const act = verb === 'ban'
-    ? `<button class="btn btn-small btn-danger" data-arop="ban">${esc(L('banBtn'))}</button>`
-    : `<button class="btn btn-small btn-primary" data-arop="pick" ${verb === 'pick' ? '' : 'disabled'}>${esc(L('pickBtn', { p: lot?.price ?? '' }))}</button>`;
+  const act = v.stage === 'ban'
+    ? `<button class="btn btn-small btn-danger" data-arop="ban" ${verb === 'ban' ? '' : 'disabled'}>${esc(L('banBtn'))}</button>`
+    : `<button class="btn btn-small btn-primary" data-arop="pick" ${verb === 'pick' ? '' : 'disabled'}>${esc(lot ? L('pickBtn', { p: lot.price }) : L('pickBtn0'))}</button>`;
   const pass = v.stage === 'pick' ? `<button class="btn btn-small" data-arop="pass" ${myTurn && v.picks[v.you].length && !v.done[v.you] ? '' : 'disabled'} title="${esc(L('passTip'))}">${esc(L('passBtn'))}</button>` : '';
   return `<div class="ar-sel">${info}<span class="ar-acts">${act}${pass}</span></div>`;
 }
@@ -146,14 +148,14 @@ function board(v: ArenaDraftView): string {
   const who = v.stage === 'fight' || v.stage === 'done' ? '' : v.turn === v.you ? L('yourTurn') : L('theirTurn', { name: nameOf(v, v.turn) });
   const kind = v.practice ? L('practice') : v.rated ? L('rated') : L('friendly');
   void nb;
+  // One grid: the two seats beside the turn, the table of lots and the tapped lot (on a narrow screen the seats shrink
+  // to a line each above the table).
   return `<div class="ar-draft">
     ${seat(v, v.you)}
-    <div class="ar-mid">
-      <div class="ar-turn${v.turn === v.you && v.stage !== 'fight' ? ' mine' : ''}"><span class="th-chip">${esc(kind)}</span><b>${esc(stage)}</b>${who ? `<span>${esc(who)}</span>` : ''}${v.stage === 'ban' || v.stage === 'pick' ? `<b class="ar-clock" data-aruntil="${v.until}">${Math.max(0, Math.ceil(v.until - (stateRef?.estServerTime() ?? 0)))}</b>` : ''}</div>
-      <div class="ar-pool">${v.pool.map((l) => lotTile(v, l)).join('')}</div>
-      ${selBar(v)}
-    </div>
+    <div class="ar-turn${v.turn === v.you && v.stage !== 'fight' ? ' mine' : ''}"><span class="th-chip">${esc(kind)}</span><b>${esc(stage)}</b>${who ? `<span>${esc(who)}</span>` : ''}${v.stage === 'ban' || v.stage === 'pick' ? `<b class="ar-clock" data-aruntil="${v.until}">${Math.max(0, Math.ceil(v.until - (stateRef?.estServerTime() ?? 0)))}</b>` : ''}</div>
     ${seat(v, (1 - v.you) as 0 | 1)}
+    <div class="ar-pool">${v.pool.map((l) => lotTile(v, l)).join('')}</div>
+    ${selBar(v)}
   </div>`;
 }
 
@@ -236,5 +238,5 @@ export const ARENA_TABS: ThroneTab[] = [
 export function arenaEndLine(r: { rated: boolean; practice: boolean; rating: number; delta: number }): string {
   if (r.practice) return L('endPractice');
   if (!r.rated) return L('endFriendly');
-  return L('endRated', { r: r.rating, d: `${r.delta >= 0 ? '+' : ''}${r.delta}` });
+  return L('endRated', { r: r.rating, d: signed(r.delta) });
 }
