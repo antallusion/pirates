@@ -240,6 +240,7 @@ import { installLairHooks, landFighting, landTac, lairMessage, lairPrompt, resen
 import { installSealHooks, sealView } from './seals.ts'; // docs/19 E9
 import { installTitanHooks } from './titans.ts'; // docs/19 E10
 import { raidView, stepAbyssRaid } from './abyssraid.ts'; // docs/19 E11
+import { citView, stepCitadels } from './citadels.ts'; // docs/19 E4–E8
 import { shoreBossPrompt, stepShoreBosses } from './shorebosses.ts'; // the great ones ashore (owner, 2026-10-03)
 import { installLandHooks } from './landecon.ts'; // docs/18 V
 import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
@@ -896,6 +897,7 @@ export class Game {
     stepDrifts(this); // drifting creatures, the season's legend (docs/18 IV)
     if (this.tick % 20 === 0) stepTrials(this); // docs/19 E3: a trial whose captain is gone
     if (this.tick % 20 === 0) stepAbyssRaid(this); // docs/19 E11: the raid's owed paid, a boarding long over forgotten
+    stepCitadels(this); // docs/19 E4–E8: the windows, the hours held, the week, the season, the charts
     stepSeaMarks(this); // the boats at the dense sea's marks
     stepSeaFinds(this); // docs/19 D5: the sea's small things; her time at sea for the day's caps
     stepRoamers(this); // docs/19 D7: the creatures roaming the sea, as HoMM3's neutral stacks
@@ -1580,6 +1582,7 @@ export class Game {
     return {
       seal: sealView(this, s),
       raid: raidView(this, s),
+      cit: citView(this, s),
       homeIsle: ownIsland(this, s.accountId)?.island ?? null,
       isleRaid: raidPointer(this, s),
       claimIsle: claimPrompt(this, s),

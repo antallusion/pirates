@@ -50,6 +50,7 @@ export const EN = {
   'lg.crew_lost': 'The fight off {0}: {n} dead, {w} wounded.',
   'lg.wounded_died': '{n} of the wounded died below.',
   'lg.level': 'Reached level {n}.',
+  'lg.siege': 'Summons: [{0}] besieges the {1}.',
 };
 
 export const RU: typeof EN = {
@@ -101,4 +102,5 @@ export const RU: typeof EN = {
   'lg.crew_lost': 'Бой у острова {0}: убитых — {n}, раненых — {w}.',
   'lg.wounded_died': 'Раненых умерло в кубрике: {n}.',
   'lg.level': 'Достигнут {n}-й уровень.',
+  'lg.siege': 'Призыв: [{0}] осаждает — {1}.',
 };

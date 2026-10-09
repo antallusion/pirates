@@ -2,7 +2,8 @@
 // recruit window (next to the pen's: dwell.ts dwellHooks.isleRows), the hire itself (one a week, two aboard at the
 // most, never two of a kind, a ship of ⚓9 and up, the price in silver and pearls — the pearls from her island's store
 // and her hold, as the window pays its goods), and the tester's
-// `/titan`. The citadels of docs/19 E4 will keep them too.
+// `/titan`. The citadels of docs/19 E4 keep them too: one a week to the captains of the guild that holds one
+// (citadels.ts hireCitadelTitan → citadelTitan here), at the Grail's price, the pearls from her hold.
 
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
@@ -25,17 +26,38 @@ function hiredThisWeek(game: Game, s: PlayerSession): number {
 }
 
 /** Why she may not hire this titan now (null: she may). Her island, its Grail and her ship lying off it are the
- *  window's own; these are the titan's. */
-export function titanWhy(game: Game, s: PlayerSession, u: TitanId): string | null {
+ *  window's own; these are the titan's. `grail` false: a citadel's titan (docs/19 E6) — the citadel's own week, and the
+ *  pearls from her hold. */
+export function titanWhy(game: Game, s: PlayerSession, u: TitanId, grail = true): string | null {
   const ship = s.ship!;
   if (ship.shipLevel < TITAN_SHIP_LEVEL) return `A titan serves a ship of level ${TITAN_SHIP_LEVEL} and up.`;
-  if (hiredThisWeek(game, s) >= TITAN_WEEKLY) return 'The Grail gives one titan a week: come again next week.';
+  if (grail && hiredThisWeek(game, s) >= TITAN_WEEKLY) return 'The Grail gives one titan a week: come again next week.';
   if (ship.army.some((x) => x.u === u)) return `The ${name(u)} serves you already: never two of a kind.`;
   if (titansIn(ship.army) >= TITAN_MAX) return 'Two titans aboard at the most.';
   if (ship.army.length >= ship.armySlots) return 'No free slot in the army for a new kind of man.';
   if (ship.crew >= ship.stats.crewMax) return 'No hammocks left aboard';
   if (s.profile!.gold < TITAN_PRICE.silver) return `Needs ${TITAN_PRICE.silver} silver`;
+  if (!grail) return (ship.cargo.pearls ?? 0) < TITAN_PRICE.pearls ? `Needs ${TITAN_PRICE.pearls} pearls in the hold` : null;
   return islePay(game, s, { pearls: TITAN_PRICE.pearls }, false);
+}
+
+/** docs/19 E6: a citadel's titan signed on by a captain of the guild that holds it, lying off it (citadels.ts has seen
+ *  to the citadel and its week): the Grail's price, the pearls from her hold. */
+export function citadelTitan(game: Game, s: PlayerSession, u: TitanId): string | null {
+  const why = titanWhy(game, s, u, false);
+  if (why) return why;
+  const p = s.profile!;
+  const ship = s.ship!;
+  p.gold -= TITAN_PRICE.silver;
+  ship.cargo.pearls = (ship.cargo.pearls ?? 0) - TITAN_PRICE.pearls;
+  if (!ship.cargo.pearls) delete ship.cargo.pearls;
+  game.db.ledger(s.accountId, 'recruit', -TITAN_PRICE.silver, `titan:${u}:citadel`);
+  ship.addMen(u, 1);
+  p.company.pools.sailor += 1;
+  ship.companyKey = '';
+  game.toastShip(ship, `The ${name(u)} rises from the citadel’s sea-gate and follows your ship.`, 'gold');
+  game.pushSelf(s, true);
+  return null;
 }
 
 /** The Grail's rows in her island's recruit window (none without a Grail). */

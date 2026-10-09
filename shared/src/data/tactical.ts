@@ -109,8 +109,15 @@ export function tacSchedule(events: readonly TacBeatEvent[], speed = 1): { beats
       continue;
     }
     const wasVolley = volley;
-    volley = e.k === 'shot' && e.id === 'volley';
+    volley = (e.k === 'shot' && e.id === 'volley') || (e.k === 'siege' && e.id === 'gun');
     switch (e.k) {
+      case 'siege': {
+        // docs/19 E5: a stone of the catapult or a tower's shot is a shot's beat; the ship's broadside before the
+        // assault fires gun after gun, a third of a second apart, as a volley's muskets do.
+        const start = volley && wasVolley && last ? last.at + 0.32 * k : at;
+        last = put(start, (P.shot + P.hit) * k, start + P.shot * k);
+        break;
+      }
       case 'move':
         last = put(at, walkSecs(e.n ?? 1, e.id === 'fly', speed));
         break;
@@ -210,8 +217,48 @@ export const TAC_CHANCE_PER_POINT = 0.04;
 export type TacCell = '.' | '~' | '=' | 'M' | 'C' | 'B' | 'K' | '#' | 'H' | 'F'
   /** docs/18 II, the battlefield ashore: a rock, a palm (both give cover from shots to a stack beside them), the surf
    *  (no footing but for the creatures that dive). The sand is '.'. */
-  | 'R' | 'P' | 'W';
-export const TAC_BLOCKING: ReadonlySet<TacCell> = new Set(['~', 'M', 'C', 'B', 'K', '#', 'H', 'R', 'P', 'W']);
+  | 'R' | 'P' | 'W'
+  /** docs/19 E5, a citadel's siege: a wall segment whole and cracked ('X', 'Y'), the gate whole and cracked ('G', 'J':
+   *  the defenders' way out, nobody else's), an arrow tower whole, cracked and silenced ('T', 'U', 'V'), the rubble of
+   *  what fell ('r', ground again), the moat ('O': a stack that steps in stops there) and the causeway before the gate
+   *  ('D', ground). */
+  | 'X' | 'Y' | 'G' | 'J' | 'T' | 'U' | 'V' | 'r' | 'O' | 'D';
+export const TAC_BLOCKING: ReadonlySet<TacCell> = new Set(['~', 'M', 'C', 'B', 'K', '#', 'H', 'R', 'P', 'W', 'X', 'Y', 'G', 'J', 'T', 'U', 'V']);
+
+/** docs/19 E5: the siege of a citadel on the same hexes (as HoMM3's castle battle). The wall line stands down the
+ *  column `wallX` (it bars the field from edge to edge: no hex steps across a whole column), the gate in its middle row,
+ *  an arrow tower two rows from each end; the moat runs down the column before it but for the causeway at the gate.
+ *  The defenders stand behind it (side 1, the right). A segment, the gate or a tower takes `hp` stones to bring down —
+ *  a broken segment or gate is rubble, ground for both; a silenced tower is a stump. */
+export const SIEGE = {
+  wallX: 7,
+  moatX: 6,
+  gateY: 4,
+  towers: [1, 7] as readonly number[],
+  hp: 2,
+  /** A stack in the moat, wet to the waist: its defence. */
+  moatDef: 0.8,
+  /** Shots from without the wall at a stack within it. */
+  cover: 0.5,
+  /** The catapult's stone (and the ship's ball) finds the stone it is laid on. */
+  hit: 0.75,
+  /** A cracked tower shoots this share of a whole one's shot. */
+  cracked: 0.5,
+} as const;
+
+export type SiegePart = 'wall' | 'gate' | 'tower';
+/** What stands in a row of the wall line. */
+export const siegePart = (y: number): SiegePart => (y === SIEGE.gateY ? 'gate' : SIEGE.towers.includes(y) ? 'tower' : 'wall');
+/** The cell a part of the wall line shows with `hp` of its `max` left. */
+export function siegeCell(part: SiegePart, hp: number, max: number): TacCell {
+  if (part === 'tower') return hp <= 0 ? 'V' : hp < max ? 'U' : 'T';
+  if (hp <= 0) return 'r';
+  if (part === 'gate') return hp < max ? 'J' : 'G';
+  return hp < max ? 'Y' : 'X';
+}
+export const isGateCell = (c: string): boolean => c === 'G' || c === 'J';
+/** Within the walls: behind the wall line. */
+export const insideWalls = (i: number): boolean => hexX(i) > SIEGE.wallX;
 /** Cover ashore: a shot at a stack beside a rock or a palm does this share of its harm. */
 export const TAC_COVER = 0.75;
 /** A stack on a burning hex loses this share of its strength (at least a man's hit points) as its turn comes. */

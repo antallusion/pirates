@@ -6,7 +6,9 @@
 import type { SagaKind } from './saga.ts';
 
 export type LogKind =
-  | 'sank' | 'prize' | 'storm' | 'sea' | 'port' | 'boss_seen' | 'boss' | 'officer_dead' | 'crew_lost' | 'wounded_died' | 'level' | 'saga';
+  | 'sank' | 'prize' | 'storm' | 'sea' | 'port' | 'boss_seen' | 'boss' | 'officer_dead' | 'crew_lost' | 'wounded_died' | 'level' | 'saga'
+  /** docs/19 E7: a summons — a guild (its tag) declares a siege on her guild's citadel (its name). */
+  | 'siege';
 
 export interface LogEntry {
   /** Wall-clock ms. */
@@ -27,7 +29,7 @@ export const LOG_MAX = 160;
 
 export const LOG_ICON: Record<LogKind, string> = {
   sank: 'map_wreck', prize: 'tree_boarding', storm: 'weather_storm', sea: 'map_port', port: 'anchor', boss_seen: 'danger', boss: 'danger',
-  officer_dead: 'danger', crew_lost: 'stat_crew', wounded_died: 'stat_crew', level: 'xp', saga: 'tab_legends',
+  officer_dead: 'danger', crew_lost: 'stat_crew', wounded_died: 'stat_crew', level: 'xp', saga: 'tab_legends', siege: 'build_fort',
 };
 
 export type { SagaKind };

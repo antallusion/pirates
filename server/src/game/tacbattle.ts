@@ -13,6 +13,7 @@ import type { UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import {
   TAC_AI_DELAY, TAC_BLOCKING, TAC_FAST, TAC_BURN, TAC_CHANCE_PER_POINT, TAC_COVER, TAC_FEAR, TAC_FLANK, TAC_GAP, TAC_H, TAC_LONG_SHOT, TAC_MAX_ROUNDS, TAC_ORDER_OF, TAC_SPELLS, TAC_TURN, TAC_UNITS, TAC_W,
   TAC_PLAY_WINDOW, captainSpells, flankOf, hexDir, hexDist, hexIndex, hexMirror, hexNeighbors, hexX, hexY, kindOfUnit, tacSchedule,
+  SIEGE, insideWalls, isGateCell, siegeCell, siegePart,
 } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacKind, TacOrderId, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import type { TacAction, TacEvent, TacHeroView, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
@@ -88,6 +89,28 @@ export interface TacSideInput {
   /** A premium hull's deck gift (docs/02 §1.A.9): laid on her side's stacks (`mine`) and the other side's (`theirs`) for
    *  the first `rounds` rounds, as an order is — a clearing page lifts it as it lifts any. */
   gift?: { rounds: number; mine?: BtMods; theirs?: BtMods };
+}
+
+/** docs/19 E5: a citadel's siege as it is laid out — the ground it stands on, the wall line as an assault before left
+ *  it (stones left in each row's wall, gate or tower: SIEGE.hp each, a hit more under the Masters of the Throne), the
+ *  ship's broadside before the assault (stones on the wall), the catapult's stones a round, a tower's shot (hit points
+ *  before her stack's defence). The boarders are side 0, the garrison side 1. */
+export interface SiegeInput {
+  type: string;
+  hp?: number[];
+  max?: number[];
+  bombard?: number;
+  catapult?: number;
+  tower?: number;
+  name?: string;
+}
+
+export interface SiegeState {
+  hp: number[];
+  max: number[];
+  catapult: number;
+  tower: number;
+  name?: string;
 }
 
 export interface TacStack {
@@ -196,6 +219,8 @@ export interface TacBattle {
   /** The last event before the turn now running: what came after it is played on the screens before the next turn
    *  (owner, 2026-10-08: the field's pace, TAC_PACE). */
   beatFrom?: number;
+  /** docs/19 E5: a citadel's siege — the wall line's stones, the catapult, the towers. */
+  siege?: SiegeState;
 }
 
 const sp = (s: TacStack, x: UnitSpecial): boolean => s.sp.includes(x);
@@ -265,6 +290,31 @@ export function makeLandField(seed: number, type: string): TacCell[] {
     const i = hexIndex(5, rng.pick([2, 4]));
     if (cells[i] === '.') cells[i] = pool[0] === 'W' ? 'R' : pool[0];
   }
+  return cells;
+}
+
+/** docs/19 E5: the siege field — the island's ground before the citadel (a rock or two, or palms, on the approach), the
+ *  moat down the column before the wall with the causeway at the gate, the wall line as it stands (`hp` of `max` in each
+ *  row: SIEGE), the courtyard within with a stack of the stores by the back wall. Not mirrored: the walls are the
+ *  garrison's. */
+export function makeSiegeField(seed: number, type: string, hp: readonly number[], max: readonly number[]): TacCell[] {
+  const rng = new Rng((seed ^ 0x51e6e) >>> 0);
+  const cells: TacCell[] = Array.from({ length: TAC_W * TAC_H }, () => '.');
+  for (let y = 1; y < TAC_H; y += 2) cells[hexIndex(TAC_W - 1, y)] = '#';
+  for (let y = 0; y < TAC_H; y++) {
+    cells[hexIndex(SIEGE.moatX, y)] = y === SIEGE.gateY ? 'D' : 'O';
+    cells[hexIndex(SIEGE.wallX, y)] = siegeCell(siegePart(y), hp[y] ?? SIEGE.hp, max[y] ?? SIEGE.hp);
+  }
+  const pool: TacCell[] = type === 'tropical' || type === 'swamp' ? ['P', 'R'] : ['R', 'R', 'P'];
+  let n = 1 + rng.int(0, 1);
+  for (let tries = 0; n > 0 && tries < 40; tries++) {
+    const i = hexIndex(rng.int(2, 4), rng.int(0, TAC_H - 1));
+    if (cells[i] !== '.' || hexNeighbors(i).some((j) => cells[j] !== '.' && cells[j] !== '#')) continue;
+    cells[i] = pool[rng.int(0, pool.length - 1)];
+    n--;
+  }
+  const back = hexIndex(TAC_W - 1, rng.pick([0, 8]));
+  cells[back] = rng.chance(0.5) ? 'B' : 'K';
   return cells;
 }
 
@@ -437,25 +487,185 @@ function newHero(input: TacSideInput, stacks: TacStack[]): TacHero {
 }
 
 /** A battle laid out: the field, what the guns left of each deck, both sides' stacks, round one about to open. */
-export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: number, rng: Rng, opts: { land?: string } = {}): TacBattle {
-  const cells = opts.land ? makeLandField(seed, opts.land) : makeField(seed);
+export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: number, rng: Rng, opts: { land?: string; siege?: SiegeInput } = {}): TacBattle {
+  // docs/19 E5: a citadel's siege is fought ashore before its walls.
+  const sg = opts.siege;
+  const land = sg ? sg.type : opts.land;
+  const max = sg ? Array.from({ length: TAC_H }, (_, y) => Math.max(1, Math.round(sg.max?.[y] ?? SIEGE.hp))) : [];
+  const hp = sg ? max.map((m, y) => Math.max(0, Math.min(m, Math.round(sg.hp?.[y] ?? m)))) : [];
+  const cells = sg ? makeSiegeField(seed, sg.type, hp, max) : land ? makeLandField(seed, land) : makeField(seed);
   // Ashore (docs/18 II) the ship's guns are not there: no holes, no fire, no swivels.
-  if (!opts.land) for (const [x, side] of [[a, 0], [b, 1]] as const) if ((x.holes ?? 0) > 0 || x.fire) scarDeck(cells, side, x.holes ?? 0, !!x.fire, seed);
-  // Tactics (docs/17 H2): the higher hand has the field, the lower none.
+  if (!land) for (const [x, side] of [[a, 0], [b, 1]] as const) if ((x.holes ?? 0) > 0 || x.fire) scarDeck(cells, side, x.holes ?? 0, !!x.fire, seed);
+  // Tactics (docs/17 H2): the higher hand has the field, the lower none — but a garrison keeps within its walls.
   const ta = a.hero?.tactics ?? 0, tb = b.hero?.tactics ?? 0;
   const sa = buildStacks(a, 0, cells, 1, ta > tb ? TACTICS_DEPLOY[ta] : 0);
-  const sb = buildStacks(b, 1, cells, sa.length + 1, tb > ta ? TACTICS_DEPLOY[tb] : 0);
-  if (opts.land) for (const s of [...sa, ...sb]) {
+  const sb = buildStacks(b, 1, cells, sa.length + 1, tb > ta && !sg ? TACTICS_DEPLOY[tb] : 0);
+  if (land) for (const s of [...sa, ...sb]) {
     s.sp = s.sp.filter((x) => x !== 'blast');
     s.dmgMul = 1;
   }
   const bt: TacBattle = {
     cells, stacks: [...sa, ...sb], heroes: [newHero(a, sa), newHero(b, sb)], round: 0, queue: [], active: null, turnEnds: now, aiAt: now,
-    log: [], events: 0, seq: 0, over: null, dead: [0, 0], hurt: [], broken: [0, 0], ...(opts.land ? { land: opts.land } : {}),
+    log: [], events: 0, seq: 0, over: null, dead: [0, 0], hurt: [], broken: [0, 0], ...(land ? { land } : {}),
+    ...(sg ? { siege: { hp, max, catapult: Math.max(0, Math.round(sg.catapult ?? 1)), tower: Math.max(0, sg.tower ?? 0), ...(sg.name ? { name: sg.name } : {}) } } : {}),
   };
+  // The ship's broadside before the assault: its balls on the wall, the gate and the towers.
+  if (sg) for (let k = 0; k < Math.max(0, Math.min(8, Math.round(sg.bombard ?? 0))); k++) siegeStone(bt, rng, 'gun');
   checkOver(bt);
   if (!bt.over) newRound(bt, now, rng);
   return bt;
+}
+
+// ------------------------------------------------------------------ the siege (docs/19 E5)
+
+/** A row of the wall line brought to `hp` stones, and its cell with it. */
+function setWall(bt: TacBattle, y: number, hp: number): void {
+  const sg = bt.siege!;
+  sg.hp[y] = Math.max(0, hp);
+  bt.cells[hexIndex(SIEGE.wallX, y)] = siegeCell(siegePart(y), sg.hp[y], sg.max[y]);
+}
+
+/** The row the besiegers' stones are laid on (-1: nothing left standing): the gate first, then what is closest to
+ *  falling, the stones nearest the gate before the far ones; the towers after the segments beside the gate. */
+export function siegeAim(bt: TacBattle, rng: Rng | null): number {
+  const sg = bt.siege;
+  if (!sg) return -1;
+  let best = -1, bs = Infinity;
+  for (let y = 0; y < TAC_H; y++) {
+    if (sg.hp[y] <= 0) continue;
+    const part = siegePart(y);
+    const score = sg.hp[y] * 10 + (part === 'gate' ? -1 : part === 'tower' ? 2.5 : Math.abs(y - SIEGE.gateY)) + (rng ? rng.float() * 0.4 : 0);
+    if (score < bs) {
+      bs = score;
+      best = y;
+    }
+  }
+  return best;
+}
+
+/** One stone of the catapult (or one ball of the ship's broadside before the assault) at the wall line. */
+function siegeStone(bt: TacBattle, rng: Rng, id: 'catapult' | 'gun'): void {
+  const y = siegeAim(bt, rng);
+  if (y < 0) return;
+  const hit = rng.chance(SIEGE.hit);
+  if (hit) setWall(bt, y, bt.siege!.hp[y] - 1);
+  push(bt, { k: 'siege', side: 0, id, hex: hexIndex(SIEGE.wallX, y), dmg: hit ? 1 : 0, n: bt.siege!.hp[y] });
+}
+
+/** A tower's shot at one of her stacks (rng null: the expected one): the tower's own strength against the stack's
+ *  defence (the garrison's captain's Attack in its aim), her captain's armour, a shield or a shell, what the moves lay. */
+export function towerShot(bt: TacBattle, t: TacStack, shot: number, rng: Rng | null): number {
+  const h0 = bt.heroes[t.side].input.hero, h1 = bt.heroes[1 - t.side].input.hero;
+  const a = 10 + (h1?.atk ?? 0);
+  const d = t.def * (bt.cells[t.hex] === 'O' ? SIEGE.moatDef : 1) * (t.defending ? 1.3 : 1);
+  let mul = Math.max(0.3, Math.min(3, a >= d ? 1 + 0.05 * (a - d) : 1 / (1 + 0.05 * (d - a))));
+  if (h0) mul *= 1 - h0.taken;
+  if (sp(t, 'shield_wall')) mul *= 0.5;
+  if (sp(t, 'shell')) mul *= 0.38;
+  const m = smods(bt, t);
+  mul *= Math.max(0.1, 1 + m.taken + m.shotTaken);
+  return Math.max(1, Math.round(shot * mul * (rng ? 0.85 + rng.float() * 0.3 : 1)));
+}
+
+/** A round of the siege opens: the catapult's stones, then each standing tower shoots her stack most worth it. */
+function siegeRound(bt: TacBattle, rng: Rng): void {
+  const sg = bt.siege!;
+  for (let k = 0; k < sg.catapult && alive(bt).some((s) => s.side === 0); k++) siegeStone(bt, rng, 'catapult');
+  for (const y of SIEGE.towers) {
+    if (sg.hp[y] <= 0 || sg.tower <= 0) continue;
+    const foes = alive(bt).filter((o) => o.side === 0);
+    if (!foes.length) return;
+    const shot = sg.tower * (sg.hp[y] < sg.max[y] ? SIEGE.cracked : 1);
+    let best = foes[0], bv = -1;
+    for (const t of foes) {
+      const v = valueOf(bt, t, towerShot(bt, t, shot, null));
+      if (v > bv) {
+        bv = v;
+        best = t;
+      }
+    }
+    const dmg = towerShot(bt, best, shot, rng);
+    const kills = hurt(bt, best, dmg, 1);
+    wake(bt, best);
+    push(bt, { k: 'siege', side: 1, id: 'tower', n: hexIndex(SIEGE.wallX, y), t: best.id, hex: best.hex, dmg, kills });
+    checkOver(bt);
+    if (bt.over) return;
+  }
+}
+
+/** The wall line as the battle left it (stones left in each row), for the next assault of the siege. */
+export function siegeLeft(bt: TacBattle): number[] | null {
+  return bt.siege ? [...bt.siege.hp] : null;
+}
+
+/** docs/19 E5: steps from each hex to the nearest hex beside a stack of the other side, round the walls (the stacks
+ *  aside - they move; the moat three steps, as it stops whoever steps in; the gate the garrison's alone). */
+function siegeDist(bt: TacBattle, s: TacStack): Map<number, number> {
+  const fly = sp(s, 'flying');
+  const ground = (i: number) => {
+    const c = bt.cells[i];
+    if (c === '#') return false;
+    return fly || !TAC_BLOCKING.has(c) || (s.side === 1 && isGateCell(c));
+  };
+  const out = new Map<number, number>();
+  const buckets: number[][] = [[]];
+  for (const o of alive(bt)) {
+    if (o.side === s.side) continue;
+    for (const j of hexNeighbors(o.hex)) if (ground(j) && !out.has(j)) {
+      out.set(j, 0);
+      buckets[0].push(j);
+    }
+  }
+  for (let d = 0; d < buckets.length; d++) {
+    for (const i of buckets[d] ?? []) {
+      if (out.get(i) !== d) continue;
+      for (const j of hexNeighbors(i)) {
+        if (!ground(j)) continue;
+        const nd = d + (bt.cells[j] === 'O' && !fly ? 3 : 1);
+        if (nd >= (out.get(j) ?? Infinity)) continue;
+        out.set(j, nd);
+        (buckets[nd] ??= []).push(j);
+      }
+    }
+  }
+  return out;
+}
+
+/** The sea's mind in a siege when no foe is in reach: the garrison keeps within its walls (one gone out comes back);
+ *  the besiegers walk round the walls to the way in - or, while there is none, wait before the moat over against the
+ *  stone the catapult is working on. */
+function siegeMove(bt: TacBattle, s: TacStack, reach: Map<number, number>): TacAction {
+  if (s.side === 1) {
+    if (insideWalls(s.hex) || hexX(s.hex) === SIEGE.wallX) return { a: 'defend' };
+    let to: number | null = null, td = Infinity;
+    for (const [h, d] of reach) if ((insideWalls(h) || hexX(h) === SIEGE.wallX) && d < td) {
+      td = d;
+      to = h;
+    }
+    return to === null ? { a: 'defend' } : { a: 'move', to };
+  }
+  const dist = siegeDist(bt, s);
+  const here = dist.get(s.hex) ?? Infinity;
+  let to: number | null = null, td = here;
+  for (const [h] of reach) {
+    const d = dist.get(h) ?? Infinity;
+    if (d < td || (d === td && to !== null && bt.cells[h] !== 'O' && bt.cells[to] === 'O')) {
+      td = d;
+      to = h;
+    }
+  }
+  if (to !== null && td < Infinity) return { a: 'move', to };
+  if (here < Infinity) return { a: 'defend' };
+  // No way in yet: before the moat, over against the stone the catapult works on (a flier never waits: it has gone over).
+  const y = Math.max(0, siegeAim(bt, null));
+  const at = hexIndex(SIEGE.moatX - 1, y);
+  const far = (h: number) => hexDist(h, at) + (hexX(h) >= SIEGE.moatX ? 99 : 0);
+  let best: number | null = null, bd = far(s.hex);
+  for (const [h] of reach) if (far(h) < bd) {
+    bd = far(h);
+    best = h;
+  }
+  return best === null ? { a: 'defend' } : { a: 'move', to: best };
 }
 
 // ------------------------------------------------------------------ what a stack is worth right now
@@ -558,7 +768,8 @@ function initOf(bt: TacBattle, s: TacStack): number {
 }
 
 /** A hex a stack may stand on: no obstacle (the surf only for a creature that dives, docs/18 II) and nobody there. */
-const passable = (bt: TacBattle, i: number, self: TacStack | null) => (!TAC_BLOCKING.has(bt.cells[i]) || (bt.cells[i] === 'W' && !!self && sp(self, 'diving'))) && !bt.stacks.some((s) => s.count > 0 && s !== self && s.hex === i);
+const passable = (bt: TacBattle, i: number, self: TacStack | null) => (!TAC_BLOCKING.has(bt.cells[i]) || (bt.cells[i] === 'W' && !!self && sp(self, 'diving'))
+  || (isGateCell(bt.cells[i]) && !!self && self.side === 1)) && !bt.stacks.some((s) => s.count > 0 && s !== self && s.hex === i); // docs/19 E5: the gate opens for the garrison
 
 /** Steps to every hex the stack can reach this turn (by the path around obstacles and stacks). A creature that flies
  *  goes over them (docs/18 II), landing where it may; one that dives goes into the surf and comes out of it anywhere
@@ -573,6 +784,8 @@ export function reachOf(bt: TacBattle, s: TacStack): Map<number, number> {
   for (let d = 1; d <= spd && frontier.length; d++) {
     const next: number[] = [];
     for (const i of frontier) {
+      // docs/19 E5: whoever steps into the moat stops there (a flier goes over it).
+      if (i !== s.hex && !fly && bt.cells[i] === 'O') continue;
       for (const j of hexNeighbors(i)) {
         if (seen.has(j)) continue;
         const ok = passable(bt, j, s);
@@ -667,7 +880,8 @@ export interface BlowParts {
 export function blowParts(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'shot' | 'ret', from = s.hex): BlowParts {
   const h = bt.heroes[s.side], e = bt.heroes[t.side];
   const r = bt.round;
-  const defMul = (t.defending ? 1.3 : 1) * (e.input.castle && t.side === 1 ? 1.25 : 1) * (has(e, 'iron_discipline', r) ? 1.4 : 1) * (has(e, 'shield_wall', r) ? 1.3 : 1);
+  const defMul = (t.defending ? 1.3 : 1) * (e.input.castle && t.side === 1 ? 1.25 : 1) * (has(e, 'iron_discipline', r) ? 1.4 : 1) * (has(e, 'shield_wall', r) ? 1.3 : 1)
+    * (bt.siege && bt.cells[t.hex] === 'O' ? SIEGE.moatDef : 1); // docs/19 E5: wet to the waist in the moat
   const a = s.atk, d = t.def * defMul;
   const mod = Math.max(0.3, Math.min(3, a >= d ? 1 + 0.05 * (a - d) : 1 / (1 + 0.05 * (d - a))));
   let mul = h.input.dealt * h.input.power * (how === 'shot' ? 1 : h.input.melee) * s.dmgMul;
@@ -696,6 +910,8 @@ export function blowParts(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' 
     if (sp(t, 'shell')) mul *= 0.38;
     if (bt.cells[t.hex] === 'W') mul *= 0.5;
     if (bt.land && hexNeighbors(t.hex).some((j) => bt.cells[j] === 'R' || bt.cells[j] === 'P')) mul *= TAC_COVER;
+    // docs/19 E5: a shot from without the walls at a stack within them.
+    if (bt.siege && insideWalls(t.hex) && hexX(from) < SIEGE.wallX) mul *= SIEGE.cover;
   } else if (isShooter(s) && !sp(s, 'no_penalty')) mul *= 0.5; // a musket is a poor club
   // docs/18 II: a swarm's foes answer it half as hard.
   if (how === 'ret' && sp(t, 'swarm')) mul *= 0.5;
@@ -1304,6 +1520,14 @@ function newRound(bt: TacBattle, now: number, rng: Rng): void {
   const tie = new Map(list.map((s) => [s.id, rng.float()]));
   bt.queue = list.sort((x, y) => initOf(bt, y) - initOf(bt, x) || tie.get(x.id)! - tie.get(y.id)!).map((s) => s.id);
   if (bt.round > 1) push(bt, { k: 'round', side: 0, n: bt.round });
+  // docs/19 E5: the catapult and the towers as the round opens.
+  if (bt.siege) {
+    siegeRound(bt, rng);
+    if (bt.over) {
+      bt.active = null;
+      return;
+    }
+  }
   nextTurn(bt, now, rng);
 }
 
@@ -1313,7 +1537,8 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
     if (id === undefined) {
       if (bt.round >= TAC_MAX_ROUNDS) {
         const left = (side: 0 | 1) => alive(bt).filter((s) => s.side === side).reduce((n, s) => n + hpOf(s), 0) / Math.max(1, bt.heroes[side].startHp);
-        bt.over = { winner: left(0) > left(1) ? 0 : 1, why: 'rounds' };
+        // docs/19 E5: a siege not carried in time is the garrison's.
+        bt.over = { winner: bt.siege ? 1 : left(0) > left(1) ? 0 : 1, why: 'rounds' };
         bt.active = null;
         bt.seq++;
         return;
@@ -1983,9 +2208,12 @@ export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
   for (const t of foes) {
     for (const h of hexNeighbors(t.hex)) {
       if (h !== s.hex && !reach.has(h)) continue;
+      // docs/19 E5: the garrison strikes from within its walls, from the gate and the breaches, never from without.
+      if (bt.siege && s.side === 1 && hexX(h) < SIEGE.wallX && !sp(s, 'flying')) continue;
       const dmg = blow(bt, s, t, 'melee', null, h).dmg * (sp(s, 'double_strike') ? 2 : 1);
       const answered = t.ret && !sp(s, 'no_retaliation') && !sp(s, 'sweep') && dmg < hpOf(t);
-      const v = valueOf(bt, t, dmg) * nap(t) - (answered ? 0.5 * valueOf(bt, s, blow(bt, t, s, 'ret', null).dmg) : 0) - (h === s.hex ? 0 : 0.01 * (reach.get(h) ?? 0)) - (bt.cells[h] === 'F' ? threat(bt, s) * 0.1 : 0);
+      const v = valueOf(bt, t, dmg) * nap(t) - (answered ? 0.5 * valueOf(bt, s, blow(bt, t, s, 'ret', null).dmg) : 0) - (h === s.hex ? 0 : 0.01 * (reach.get(h) ?? 0)) - (bt.cells[h] === 'F' ? threat(bt, s) * 0.1 : 0)
+        - (bt.siege && bt.cells[h] === 'O' ? threat(bt, s) * 0.05 : 0);
       if (v > pv) {
         pv = v;
         pick = { t, from: h };
@@ -1993,6 +2221,7 @@ export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
     }
   }
   if (pick) return { a: 'attack', target: pick.t.id, from: pick.from };
+  if (bt.siege) return siegeMove(bt, s, reach);
   // Out of reach: close on the nearest foe (a shooter out of shot waits behind the steel), round the fires.
   let to: number | null = null, td = Infinity;
   for (const [h] of reach) {
@@ -2115,6 +2344,7 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
     reach: [...reach.keys()], melee: mine && act0 ? meleeTargets(bt, act0, reach).map((t) => t.id) : [], shoot: mine && act0 && canShoot(bt, act0) ? alive(bt).filter((t) => t.side !== side).map((t) => t.id) : [],
     ...(mine && act0 ? { pv: previewsOf(bt, act0, reach) } : {}),
     heroes: [hero(0), hero(1)], log: bt.log.slice(-12), seq: bt.seq, over: bt.over, canCut, canStrike: side === 1, ...(bt.warn?.length && !bt.over ? { warn: [...bt.warn] } : {}), ...extra,
+    ...(bt.siege ? { siege: { type: bt.land ?? 'rocky', hp: [...bt.siege.hp], max: [...bt.siege.max], cat: bt.siege.catapult, ...(bt.siege.name ? { name: bt.siege.name } : {}) } } : {}),
   };
 }
 
