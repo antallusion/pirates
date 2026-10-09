@@ -118,6 +118,11 @@ export type ClientMsg =
   | { t: 'tac'; act: TacAction }
   /** The captain would rather fight boardings the old way, round by round (Boarding 2.0). */
   | { t: 'board_pref'; classic: boolean }
+  /** docs/25 item 64: come aboard a group mate's boarding (`with`: the ship that grappled, BoardOffer.with) with the kinds of
+   *  her army she chose (none: her strongest); `no`: let it be. */
+  | { t: 'board_join'; with: number; bring?: string[]; no?: boolean }
+  /** docs/25 item 64: whether she comes aboard her group's boardings at once, and the kinds she brings. */
+  | { t: 'board_assist'; auto: boolean; bring?: string[] }
   | { t: 'scuttle' }
   | { t: 'captive'; index: number; mode: 'ransom' | 'hand_over' | 'officer' | 'skipper' }
   | { t: 'repair'; on: boolean }
@@ -1594,6 +1599,22 @@ export interface TacEvent {
 /** docs/25 item 64: an allied captain on the field — her side and slot (her stacks carry it as `own`), her name, ship,
  *  path, level and face, her chess clock (seconds as the turn now running began), whether she plays by herself and has
  *  given her order this round, her men on deck and as she came aboard, the round she came, and whether she is you. */
+/** docs/25 item 64: a mate of her group fights a boarding within reach — the ship that grappled (`with`, what she answers
+ *  with), her side, who of the group is in it and against whom, the round it is in and the last she may come aboard at,
+ *  the stacks of her army (her picks marked) and how many she may bring, and whether she comes at once next time. */
+export interface BoardOffer {
+  with: number;
+  side: 0 | 1;
+  mate: string;
+  foe: string;
+  round: number;
+  last: number;
+  army: { u: UnitId; n: number }[];
+  bring: string[];
+  n: number;
+  auto: boolean;
+}
+
 export interface TacAllyView {
   side: 0 | 1;
   slot: number;
@@ -1657,6 +1678,8 @@ export interface TacView {
   result?: { lost: { u: UnitId; n: number }[]; killed: { u: UnitId; n: number }[]; xp: number; paid?: number; loot?: LairLoot;
     /** The beaten who came over to her after a boarding won (owner, 2026-10-08): by the kind they serve as. */
     joined?: { u: UnitId; n: number }[];
+    /** docs/25 item 67: a group's boarding — each captain's share of what her side cut down, and what it paid her. */
+    shares?: { side: 0 | 1; slot: number; name: string; share: number; xp?: number; silver?: number; you?: boolean }[];
     /** docs/19 E14: a bout of the Colosseum — rated or not, her rating after it and its change. */
     arena?: import('./data/arena.ts').ArenaResult };
   /** docs/18 II: the battle is fought ashore at a lair of the land's creatures (the kind of island it is drawn as). */
@@ -1780,6 +1803,8 @@ export type ServerMsg =
   | { t: 'pursuit'; on: boolean; target?: number; mode?: PursuitMode; why?: PursuitStop; roam?: number }
   /** The odds of a boarding asked before the grapples fly (docs/23 item 49): the window «Скорее всего, вы проиграете». */
   | { t: 'board_risk'; risk: BoardRisk }
+  /** docs/25 item 64: a mate of her group boards (or is boarded) within reach: she may come aboard (null: no longer). */
+  | { t: 'board_offer'; offer: BoardOffer | null }
   /** The chance for the target line (docs/23 item 49). */
   | { t: 'board_odds'; id: number; chance: number; risky: boolean }
   /** docs/16 #32: the sea's goals of the week. */

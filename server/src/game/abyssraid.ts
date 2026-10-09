@@ -192,7 +192,7 @@ export function boardRaid(game: Game, s: PlayerSession): string | null {
 
 /** A boarding of the raid is over (boarding.ts finishBoarding): what she cut down, the tier taken or what is left of it.
  *  True when it was one (no prize, no repulse, nobody sent home). */
-export function raidOver(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: boolean): boolean {
+export function raidOver(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: boolean, cutBy?: Map<number, number>): boolean {
   const legend = legends.has(b) ? b : legends.has(a) ? a : null;
   if (!legend) return false;
   const L = legends.get(legend)!;
@@ -212,8 +212,21 @@ export function raidOver(game: Game, a: ShipEntity, b: ShipEntity, attackerWins:
   }
   // What she cut down (the legend struck: all of it, its last men too).
   const cut = Math.max(0, hpOf(L.before) - (won ? 0 : hpOf(after)));
-  const row = (r.dealt[L.acc] ??= Array(RAID_TIERS).fill(0));
-  row[L.tier - 1] += cut;
+  // docs/25 item 67: a group's boarding — each captain of it by her share of the cut (she joins the raid, if it has room
+  // and she is bound to no other this week).
+  const by = cutBy && cutBy.size > 1 ? cutBy : new Map([[L.acc, 1]]);
+  for (const [acc, sh] of by) {
+    if (acc !== L.acc) {
+      if (S.of[acc] !== undefined && S.of[acc] !== r.key) continue;
+      if (!r.members.includes(acc)) {
+        if (r.members.length >= RAID_GROUP) continue;
+        r.members.push(acc);
+      }
+      r.names[acc] ??= game.sessionByAccount(acc)?.name ?? '?';
+      S.of[acc] = r.key;
+    }
+    (r.dealt[acc] ??= Array(RAID_TIERS).fill(0))[L.tier - 1] += cut * sh;
+  }
   const s = game.sessionOf(mine);
   const name = RAID[L.tier - 1].name[0];
   if (won) takeTier(game, r, L.tier);

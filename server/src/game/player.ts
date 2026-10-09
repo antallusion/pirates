@@ -394,6 +394,10 @@ export class PlayerSession {
   name = '';
   /** Would rather fight boardings round by round than turn by turn (docs/16 P4). */
   classicBoarding = false;
+  /** docs/25 item 64: she comes aboard her group's boardings at once (else she is asked), and the kinds of her army she
+   *  brings (none chosen: her strongest). */
+  boardJoin = true;
+  boardBring: string[] = [];
   /** The captain's gunnery (docs/23 items 35, 42, 46): her gun captains fire as the mark bears; a mark two levels down
    *  is settled by itself; the expert's hand keeps the held broadsides and the chasers to herself. */
   autoFire = false;

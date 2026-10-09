@@ -23,7 +23,8 @@ import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { onCrewKilled, onGrapple } from './mind.ts';
 import { beatenJoin, joinsFrom, moraleLossMul } from './crew.ts';
 import { bloodAndSalt, drownedBoardersRise, drownedTakeLosses } from './bridgefx.ts';
-import { closeTac, sendTac, startTactical, stepTactical, wantsTactical } from './tactical.ts';
+import { closeTac, resendAlly, sendTac, startTactical, stepTactical, wantsTactical } from './tactical.ts';
+import { releaseAllies, sharesByAcc } from './boardgroup.ts'; // docs/25 block Е
 import { guardBeaten } from './advmap.ts';
 import { isTrialShip, trialOver } from './throne.ts'; // docs/19 E3
 import { raidOver } from './abyssraid.ts'; // docs/19 E11
@@ -56,7 +57,7 @@ export function boardingRangeBetween(a: ShipEntity, b: ShipEntity): number {
 
 export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | null {
   if (!a.alive || !b.alive) return 'Nothing left to board';
-  if (a.boarding || b.boarding) return 'Already locked in a boarding action';
+  if (a.boarding || b.boarding || a.boardAlly !== null || b.boardAlly !== null) return 'Already locked in a boarding action';
   if (a.docked || b.docked) return 'Not at sea';
   if (a.surrendered) return 'You struck your colours';
   if (inDuel(game, a) || inDuel(game, b)) return 'No boarding in a duel';
@@ -206,6 +207,7 @@ export function cutGrapples(game: Game, ship: ShipEntity): string | null {
 
 function endBoarding(game: Game, a: ShipEntity, b: ShipEntity): void {
   const bs = a.boarding;
+  if (bs) releaseAllies(game, bs.fight); // docs/25 item 64: her allies' ships let go
   if (bs?.remote && bs.party) a.crew += bs.party; // the boat pulls back
   a.boarding = null;
   b.boarding = null;
@@ -246,6 +248,7 @@ export function stepBoarding(game: Game): void {
     if (!bs || !bs.attacker) continue;
     const b = game.ships.get(bs.with);
     if (!b || !b.alive || !a.alive || !b.boarding) {
+      releaseAllies(game, bs.fight);
       a.boarding = null;
       closeFight(game, a);
       if (b) {
@@ -653,6 +656,7 @@ function sendFight(game: Game, a: ShipEntity, b: ShipEntity | null): void {
 /** A captain back at the helm (a reload, a dropped line) in the middle of a boarding: her fight as it stands — the
  *  login sent none, and the fight went on unseen, every turn of hers run out (QA, 2026-10-04). */
 export function resendBoarding(game: Game, ship: ShipEntity): void {
+  if (!ship.boarding && ship.boardAlly !== null) return resendAlly(game, ship); // docs/25 item 64
   if (!ship.boarding) return;
   if (ship.boarding.fight.tac) sendTac(game, ship, null);
   else sendFight(game, ship, null);
@@ -668,6 +672,9 @@ function closeFight(game: Game, s: ShipEntity): void {
 function finishBoarding(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: boolean): void {
   const bs = a.boarding!;
   const fight = bs.fight;
+  // docs/25 item 67: a group's raid and siege count each captain's share of the cut.
+  const cutBy = fight.tac?.allies?.length ? sharesByAcc(game, fight, a, b, 0) : undefined;
+  releaseAllies(game, fight);
   a.boarding = null;
   b.boarding = null;
   closeFight(game, a);
@@ -676,8 +683,8 @@ function finishBoarding(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: 
   game.emit({ k: 'board_end', a: a.id, b: b.id, winner: attackerWins ? a.id : b.id }, a.state.x, a.state.y);
   if (arenaOver(game, a, b, attackerWins, fight)) return; // a bout of the Colosseum: the ratings, nothing of the sea's (docs/19 E14)
   if (trialOver(game, a, b, attackerWins)) return; // a trial of mastery: no prize, no repulse (docs/19 E3)
-  if (raidOver(game, a, b, attackerWins)) return; // a tier of the Abyss: what was cut stays cut (docs/19 E11)
-  if (assaultOver(game, a, b, attackerWins, fight.tac)) return; // a citadel's assault: what was cut stays cut (docs/19 E5)
+  if (raidOver(game, a, b, attackerWins, cutBy)) return; // a tier of the Abyss: what was cut stays cut (docs/19 E11)
+  if (assaultOver(game, a, b, attackerWins, fight.tac, cutBy)) return; // a citadel's assault: what was cut stays cut (docs/19 E5)
   if (contractOver(game, a, b, attackerWins)) return; // an Admiralty's legend: what was cut stays cut (docs/19 E15)
   if (!attackerWins) {
     a.morale = Math.max(0, a.morale - 15);

@@ -93,6 +93,26 @@ export interface BoardFight {
   tacPaid?: number;
   /** The beaten who came over to each side's captain after the battle (owner, 2026-10-08; crew.ts beatenJoin). */
   tacJoined?: [{ u: UnitId; n: number }[], { u: UnitId; n: number }[]];
+  /** docs/25 block Е: the allied captains of both sides (`slot` once aboard: the battle's TacAlly), and the mates of the
+   *  group offered to come aboard. */
+  tacAllies?: BoardAlly[];
+  tacOffered?: Set<number>;
+  tacScanAt?: number;
+}
+
+/** docs/25 block Е: an allied captain in a boarding — her account and ship, her side, her slot on the field (none: she
+ *  comes aboard as the next round opens), her crew as she came, the men she lost, what the fight paid her. */
+export interface BoardAlly {
+  acc: number;
+  ship: number;
+  side: 0 | 1;
+  slot?: number;
+  name: string;
+  startCrew: number;
+  lost: number;
+  xp?: number;
+  silver?: number;
+  share?: number;
 }
 
 export interface BoardDuel {
@@ -162,6 +182,8 @@ export class ShipEntity {
   sinkingUntil = 0;
   surrendered = false;
   boarding: BoardingState | null = null;
+  /** docs/25 item 64: she fights another's boarding as an ally of her group — the ship that grappled (the fight's key). */
+  boardAlly: number | null = null;
   lastCombat = -999;
   /** The last time another ship's fire (not a beast's, not her own, not the sea's) struck her (owner, 2026-10-07: «я
    *  должен со всем взаимодействовать, ошибок типа "не под огнём" быть не должно абсолютно»). */
@@ -408,9 +430,10 @@ export class ShipEntity {
     return combatLevelOf(this.loadout.classId, this.shipLevel);
   }
 
-  /** Locked alongside another ship (a jolly-boat raid leaves the mother ship free). */
+  /** Locked alongside another ship (a jolly-boat raid leaves the mother ship free; docs/25 item 64: an ally lies to
+   *  beside the boarding she fights in). */
   get grappled(): boolean {
-    return !!this.boarding && !this.boarding.remote;
+    return (!!this.boarding && !this.boarding.remote) || this.boardAlly !== null;
   }
 
   get alive(): boolean {
@@ -488,7 +511,7 @@ export class ShipEntity {
     if (this.ghost) return (this.ghostFlags & ~SF.HOSTILE) | (hostile ? SF.HOSTILE : 0);
     let f = 0;
     if (this.sinkingUntil) f |= SF.SINKING;
-    if (this.boarding) f |= SF.BOARDING;
+    if (this.boarding || this.boardAlly !== null) f |= SF.BOARDING;
     if (this.hasFlag('hidden')) f |= SF.HIDDEN;
     if (this.hasEffect('marked')) f |= SF.MARKED;
     if (this.surrendered) f |= SF.SURRENDERED;

@@ -163,6 +163,7 @@ import { playTrek, stepTreks } from './trek.ts';
 import { islesPrompt, islesSecond, payKeeper, recallLookouts, sendIsles } from './isles.ts';
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, claimPrize, cutGrapples, resendBoarding, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
+import { assistPref, joinBoarding } from './boardgroup.ts'; // docs/25 block Е
 import { tacAction } from './tactical.ts';
 import { surrenderBlocked, surrenderClosed } from './struck.ts';
 import { endStreak, onStreakKill, streakAhead } from './streak.ts';
@@ -3097,6 +3098,11 @@ export class Game {
       case 'board_pref':
         s.classicBoarding = msg.classic === true;
         return;
+      // docs/25 item 64: come aboard a group mate's boarding; come at once next time (and with what).
+      case 'board_join':
+        return err(joinBoarding(this, s, Number(msg.with), Array.isArray(msg.bring) ? msg.bring.map(String) : undefined, msg.no === true));
+      case 'board_assist':
+        return assistPref(s, msg.auto === true, Array.isArray(msg.bring) ? msg.bring.map(String) : undefined);
       case 'scuttle':
         return err(lightFuse(this, ship));
       case 'captive':

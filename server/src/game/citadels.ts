@@ -372,7 +372,7 @@ export function assaultCitadel(game: Game, s: PlayerSession, id: number): string
 
 /** An assault over (boarding.ts finishBoarding, before any prize): what she cut of the garrison and of the walls stays
  *  cut for the next of the siege; the garrison struck — the citadel taken. True when it was one. */
-export function assaultOver(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: boolean, bt?: TacBattle): boolean {
+export function assaultOver(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: boolean, bt?: TacBattle, cutBy?: Map<number, number>): boolean {
   const cas = castellans.has(b) ? b : castellans.has(a) ? a : null;
   if (!cas) return false;
   const L = castellans.get(cas)!;
@@ -386,7 +386,9 @@ export function assaultOver(game: Game, a: ShipEntity, b: ShipEntity, attackerWi
   const c = defs(game)[L.cit];
   const sg = S.sieges[L.cit];
   const side = cas === b ? 1 : 0;
-  const left = won ? [] : bt ? bt.stacks.filter((x) => x.side === side && x.count > 0).map((x) => ({ u: x.unit, n: x.count })) : L.before;
+  // docs/25 item 66: a garrison grown against a group keeps its own share of what is left.
+  const k = bt?.boost?.[side] ?? 1;
+  const left = won ? [] : bt ? bt.stacks.filter((x) => x.side === side && x.count > 0).map((x) => ({ u: x.unit, n: Math.max(1, Math.round(x.count / k)) })) : L.before;
   const cut = Math.max(0, hpOf(L.before) - hpOf(left));
   rec.garrison = left;
   const walls = bt ? siegeLeft(bt) : null;
@@ -394,7 +396,8 @@ export function assaultOver(game: Game, a: ShipEntity, b: ShipEntity, attackerWi
   contractCitadel(game, L.acc, 'assault'); // docs/19 E15: a watch on the walls for the Admiralty
   if (sg) {
     if (sg.fighting === L.acc) sg.fighting = undefined;
-    sg.cut[L.acc] = (sg.cut[L.acc] ?? 0) + cut;
+    // docs/25 item 67: a group's assault — each captain of it by her share of the cut.
+    for (const [acc, sh] of cutBy && cutBy.size > 1 ? cutBy : new Map([[L.acc, 1]])) sg.cut[acc] = (sg.cut[acc] ?? 0) + cut * sh;
   }
   if (mine.alive) mine.state.speed = 0;
   const s = game.sessionOf(mine);
