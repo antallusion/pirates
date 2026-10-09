@@ -5166,6 +5166,8 @@ body.touch.sea-docked #touch > :is(#tc-stick, .tc-special, #tc-target) { display
 .tw-fg-it { position: relative; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border: 1px solid #6f5a38; border-radius: 4px; background: #0b0b0d; cursor: pointer; }
 .tw-fg-it .ico-md { width: 34px; height: 34px; }
 .tw-fg-it.on { box-shadow: 0 0 0 2px #ffe08a, 0 0 8px rgba(255, 224, 138, 0.6); }
+/* docs/19 E19: a finger's 44 px on the anvil's things (40 px squares, 4 px apart: the reach fills the gap, no two touch). */
+:where(body.touch) .tw-fg-it::after { content: ''; position: absolute; inset: -2px; }
 .tw-fg-it.wait::before { content: '⚒'; position: absolute; right: 1px; bottom: -1px; font-size: 11px; color: #ffe08a; text-shadow: 0 0 3px #000; }
 .tw-fg-w { position: absolute; left: 2px; top: 0; font-size: 8px; font-style: normal; color: #e6cc80; }
 .tw-fg-pane { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid rgba(140, 107, 58, 0.2); padding-top: 6px; }
