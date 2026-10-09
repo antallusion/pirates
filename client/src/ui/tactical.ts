@@ -443,6 +443,14 @@ export class TacticalPanel {
   private foeArmed: number | null = null;
   /** The end put away by its button (a battle at sea closes itself a moment later). */
   private endHidden = false;
+  /** An order's whole words (docs/23, 2026-10-09: the panel's pages cut them at two lines): beside a page of the panel
+   *  or the book under the mouse or a key's focus, over a card of a phone's book held by a finger. One for the battle,
+   *  over the sheets (in the body). */
+  private wordsEl: HTMLElement | null = null;
+  private wordsFor: HTMLElement | null = null;
+  private wordsTimer = 0;
+  /** A finger's long press showed them: the click the browser makes of it does not give the order. */
+  private wordsHeld = false;
   /** The screen's clock (owner, 2026-10-08: «сам бой должен быть плавнее по игре, там как-то слишком быстро всё
    *  перемещается»): what came in is played beat by beat (shared TAC_PACE, the server waits as long) — a view coming
    *  in meanwhile waits for it, and the field takes no order till it is played. */
@@ -561,6 +569,7 @@ export class TacticalPanel {
         this.moreOpen = this.sheetOpen = this.bookOpen = false;
         this.spNote = null;
         this.closeSheet();
+        this.hideWords();
         this.foeArmed = null;
         this.endHidden = false;
       }
@@ -576,16 +585,38 @@ export class TacticalPanel {
 
   private build(root: HTMLElement): void {
     root.classList.remove('hidden');
+    // The open book lies over the whole battle, not inside the field: the field's box hides what runs past its edge, and
+    // at 1500×600 the book's top row stood 8–9 px over it (docs/19 E19, QA 2026-10-09).
     root.innerHTML = `<div class="tb-root">
       <div class="tb-hero you"></div><div class="tb-mid"></div><div class="tb-hero foe"></div>
       <div class="tb-queue" aria-label="${esc(L('order.label'))}"></div>
-      <div class="tb-stage"><canvas class="tb-board"></canvas><div class="tb-pv hidden" role="status"></div><div class="tb-card hidden"></div><div class="tb-banner hidden"></div><div class="tb-book hidden"></div></div>
+      <div class="tb-stage"><canvas class="tb-board"></canvas><div class="tb-pv hidden" role="status"></div><div class="tb-card hidden"></div><div class="tb-banner hidden"></div></div>
       <div class="tb-feed"><div class="tb-hint"></div><div class="tb-lines"></div></div>
       <div class="tb-spells"></div>
       <div class="tb-acts"></div>
       <div class="tb-pad"></div>
+      <div class="tb-book hidden"></div>
     </div>`;
     this.el = root.querySelector('.tb-root');
+    // An order's whole words: the mouse resting on a page of the panel or the book, or a key's focus on it.
+    const PAGE = '.tb-spells [data-spell], .tb-spells [data-move], .tb-book [data-spell]';
+    const el = this.el!;
+    el.addEventListener('pointerover', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      const b = (e.target as HTMLElement).closest<HTMLElement>(PAGE);
+      if (b && b !== this.wordsFor) this.wordsSoon(b);
+    });
+    el.addEventListener('pointerout', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      const b = (e.target as HTMLElement).closest<HTMLElement>(PAGE);
+      if (b && !b.contains(e.relatedTarget as Node | null)) this.hideWords();
+    });
+    el.addEventListener('pointerdown', () => this.hideWords());
+    el.addEventListener('focusin', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>(PAGE);
+      if (b && b.matches(':focus-visible')) this.showWords(b);
+    });
+    el.addEventListener('focusout', () => this.hideWords());
     this.canvas = root.querySelector('canvas');
     const deck = assetUrl('bg.boarding');
     if (deck) this.el!.style.setProperty('--tb-deck', `url('${deck}')`);
@@ -1181,7 +1212,7 @@ export class TacticalPanel {
       const poor = sp.cost !== undefined && pool !== undefined && pool < sp.cost;
       const off = !v.mine || me.cast || wait > 0 || poor;
       const cost = sp.scroll ? ` <em class="tb-cost scroll">${esc(L('scroll', { n: sp.scroll }))}</em>` : sp.cost !== undefined ? ` <em class="tb-cost${sp.res === 'stam' ? ' stam' : ''}">${sp.cost}</em>` : '';
-      return `<button class="btn tb-spell${this.targeting === sp.id ? ' on' : ''}${poor ? ' poor' : ''}${sp.scroll ? ' scroll' : ''}" data-spell="${sp.id}" ${off ? 'disabled' : ''} title="${esc(spText(sp.id))}">${spIcon(sp.id)}<span><b>${esc(spName(sp.id))}${cost}</b><small>${wait > 0 ? esc(L('ready.in', { n: wait })) : poor ? esc(L(sp.res === 'stam' ? 'noStam' : 'noWill')) : esc(spText(sp.id))}</small></span></button>`;
+      return `<button class="btn tb-spell${this.targeting === sp.id ? ' on' : ''}${poor ? ' poor' : ''}${sp.scroll ? ' scroll' : ''}" data-spell="${sp.id}" ${off ? 'disabled' : ''}>${spIcon(sp.id)}<span><b>${esc(spName(sp.id))}${cost}</b><small>${wait > 0 ? esc(L('ready.in', { n: wait })) : poor ? esc(L(sp.res === 'stam' ? 'noStam' : 'noWill')) : esc(spText(sp.id))}</small></span></button>`;
     };
     // docs/18: her path's innate move and ultimate, each once a battle and free, beside the round's order. The move's own
     // name on the plate, «Сила пути» / «Высший приём» in the small line under it (a desk's 236 px column cut
@@ -1193,7 +1224,7 @@ export class TacticalPanel {
       const early = kind === 'ult' && v.round < ULT_ROUND;
       const off = !v.mine || st !== 'ready' || early;
       const note = st === 'locked' ? L('ultLocked') : st === 'used' ? L('used') : early ? L('ultRound') : L('free');
-      return `<button class="btn tb-spell tb-move ${kind}${this.targeting === kind ? ' on' : ''}${st !== 'ready' ? ' spent' : ''}" data-move="${kind}" ${off ? 'disabled' : ''} title="${esc(moveText(me.path, kind === 'ult'))}">${icon(`icon.${mv.icon}`, '', 'ico')}<span><b>${esc(moveName(me.path, kind === 'ult'))}</b><small>${esc(L(kind))} · ${esc(note)}</small></span></button>`;
+      return `<button class="btn tb-spell tb-move ${kind}${this.targeting === kind ? ' on' : ''}${st !== 'ready' ? ' spent' : ''}" data-move="${kind}" ${off ? 'disabled' : ''}>${icon(`icon.${mv.icon}`, '', 'ico')}<span><b>${esc(moveName(me.path, kind === 'ult'))}</b><small>${esc(L(kind))} · ${esc(note)}</small></span></button>`;
     };
     // Four pages on the panel (keys 1–4); the rest in the book, opened over the field as in HoMM3. A phone has no panel:
     // every page is in the book, opened by its round button.
@@ -1228,7 +1259,7 @@ export class TacticalPanel {
         const poor = sp.cost !== undefined && pool !== undefined && pool < sp.cost;
         const off = !v.mine || me.cast || wait > 0 || poor;
         const note = wait > 0 ? esc(L('ready.in', { n: wait })) : sp.scroll ? esc(L('scroll', { n: sp.scroll })) : sp.cost !== undefined ? `${icon(sp.res === 'stam' ? 'icon.tree_survival' : 'icon.ab_brine_mend', '', 'ico-xs')}${sp.cost}` : '';
-        return `<button class="bk-sp${this.targeting === sp.id ? ' on' : ''}${poor ? ' poor' : ''}" data-spell="${sp.id}" ${off ? 'disabled' : ''} title="${esc(`${spName(sp.id)} — ${spText(sp.id)}`)}">${spIcon(sp.id, 'bk-ico')}<b>${esc(spName(sp.id))}</b><small>${note}</small></button>`;
+        return `<button class="bk-sp${this.targeting === sp.id ? ' on' : ''}${poor ? ' poor' : ''}" data-spell="${sp.id}" ${off ? 'disabled' : ''}>${spIcon(sp.id, 'bk-ico')}<b>${esc(spName(sp.id))}</b><small>${note}</small></button>`;
       };
       const tabBtn = (id: School | 'all', ico: string, name: string) => `<button class="bk-tab${tab === id ? ' on' : ''}" data-booktab="${id}" title="${esc(name)}" aria-label="${esc(name)}">${ico}</button>`;
       const art = tall ? null : assetUrl('bg.spellbook');
@@ -1357,6 +1388,8 @@ export class TacticalPanel {
       if (v.over) this.closeSheet();
       else this.sheetH.body.innerHTML = this.bookHtml(v);
     }
+    // The page whose words are open, drawn anew: the words follow it (its «ready in N»), or go with it.
+    this.refreshWords();
     this.hint(v);
     if (this.info !== null) this.showInfo(this.info);
   }
@@ -1493,6 +1526,7 @@ export class TacticalPanel {
   /** The phone's sheet put away (a card or the book). */
   private closeSheet(): void {
     const h = this.sheetH;
+    if (this.wordsFor?.classList.contains('tb-bc')) this.hideWords();
     this.sheetH = null;
     this.sheetKind = null;
     if (h?.open) h.close('code');
@@ -1501,6 +1535,7 @@ export class TacticalPanel {
   /** A sheet gone by the captain's hand (a swipe, a tap beside it, its cross). */
   private sheetGone(kind: 'card' | 'book'): void {
     if (this.sheetKind !== kind) return;
+    if (this.wordsFor?.classList.contains('tb-bc')) this.hideWords();
     this.sheetH = null;
     this.sheetKind = null;
     if (kind === 'card') this.info = null;
@@ -1560,8 +1595,132 @@ export class TacticalPanel {
       this.key = '';
       if (this.view) this.dom(this.view);
     });
+    // A finger held on a card (0,42 s) opens its whole words over it instead of giving the order; letting go keeps them
+    // until the next touch. The click the browser makes of the long press is swallowed before the one above.
+    const body = this.sheetH.body;
+    let held = 0, sx = 0, sy = 0;
+    body.addEventListener('pointerdown', (e) => {
+      this.wordsHeld = false;
+      this.hideWords();
+      clearTimeout(held);
+      const b = (e.target as HTMLElement).closest<HTMLElement>('.tb-bc');
+      if (!b) return;
+      sx = e.clientX;
+      sy = e.clientY;
+      held = window.setTimeout(() => {
+        this.wordsHeld = true;
+        this.showWords(b, true);
+        navigator.vibrate?.(8);
+      }, 420);
+    });
+    body.addEventListener('pointermove', (e) => {
+      if (Math.hypot(e.clientX - sx, e.clientY - sy) > 10) clearTimeout(held);
+    });
+    for (const k of ['pointerup', 'pointercancel'] as const) body.addEventListener(k, () => clearTimeout(held));
+    body.addEventListener('contextmenu', (e) => e.preventDefault());
+    body.addEventListener('click', (e) => {
+      if (!this.wordsHeld) return;
+      this.wordsHeld = false;
+      e.stopImmediatePropagation();
+      e.preventDefault();
+    }, true);
     this.key = '';
     this.dom(v);
+  }
+
+  // ------------------------------------------------------------------ an order's whole words
+
+  /** The words of a page of the panel or the book, a path's move or a card of a phone's book: its picture, name and
+   *  price, its school and level, the whole of what it does, and why not now. */
+  private wordsHtml(b: HTMLElement): string | null {
+    const v = this.view;
+    if (!v) return null;
+    const me = v.heroes[v.you];
+    const ru = lang() === 'ru' ? 1 : 0;
+    const id = (b.dataset.spell ?? b.dataset.bkspell) as TacSpellId | undefined;
+    const mv = (b.dataset.move ?? b.dataset.bkmove) as 'innate' | 'ult' | undefined;
+    const head = (pic: string, name: string, sub: string, cost = '') =>
+      `<div class="tb-words-h">${pic}<span><b>${esc(name)}${cost}</b><small>${esc(sub)}</small></span></div>`;
+    if (id) {
+      const sp = me.spells.find((x) => x.id === id);
+      const o = ORDERS[id];
+      const wait = sp ? Math.max(0, sp.ready - v.round) : 0;
+      const pool = sp?.res === 'stam' ? me.stam : me.mana;
+      const poor = !!sp && sp.cost !== undefined && pool !== undefined && pool < sp.cost;
+      const cost = sp?.scroll ? ` <em class="tb-cost scroll">${esc(L('scroll', { n: sp.scroll }))}</em>` : sp?.cost !== undefined ? ` <em class="tb-cost${sp.res === 'stam' ? ' stam' : ''}">${icon(sp.res === 'stam' ? 'icon.tree_survival' : 'icon.ab_brine_mend', '', 'ico-xs')}${sp.cost}</em>` : '';
+      const why = wait > 0 ? L('ready.in', { n: wait }) : poor ? L(sp!.res === 'stam' ? 'noStam' : 'noWill') : '';
+      const sub = o ? `${SCHOOL_NAMES[o.school as School]?.[ru] ?? ''} · ${L('words.level', { n: o.level })}` : '';
+      return `${head(spIcon(id), spName(id), sub, cost)}<p>${esc(spText(id))}</p>${why ? `<p class="tb-words-why">${esc(why)}</p>` : ''}`;
+    }
+    if (mv && me.path) {
+      const m = (mv === 'innate' ? INNATE : ULTIMATE)[me.path];
+      return `${head(icon(`icon.${m.icon}`, '', 'ico'), moveName(me.path, mv === 'ult'), L(mv))}<p>${esc(moveText(me.path, mv === 'ult'))}</p>`;
+    }
+    const act = v.stacks.find((s) => s.id === v.active);
+    const o = act?.officer;
+    if (b.dataset.bk === 'order' && o) return `${head(icon(`icon.role_${o.role}`, '', 'ico'), L(`o.${o.order}` as K), L('book.officer'))}<p>${esc(L(`od.${o.order}` as K))}</p>`;
+    return null;
+  }
+
+  /** The words a moment after the mouse comes to rest on a page (not while it only crosses the panel). */
+  private wordsSoon(b: HTMLElement): void {
+    clearTimeout(this.wordsTimer);
+    this.wordsTimer = window.setTimeout(() => b.isConnected && b.matches(':hover') && this.showWords(b), 160);
+  }
+
+  /** The words beside the page (the panel's: over the field's edge, never over the next page), or over the card a
+   *  finger holds; inside the screen whatever its size. */
+  private showWords(b: HTMLElement, finger = false): void {
+    clearTimeout(this.wordsTimer);
+    const html = this.wordsHtml(b);
+    if (!html) return this.hideWords();
+    let w = this.wordsEl;
+    if (!w || !w.isConnected) {
+      w = this.wordsEl = document.createElement('div');
+      w.className = 'tb-words hidden';
+      w.id = 'tb-words';
+      w.setAttribute('role', 'tooltip');
+      document.body.append(w);
+    }
+    w.innerHTML = html;
+    w.classList.remove('hidden');
+    if (this.wordsFor && this.wordsFor !== b) this.wordsFor.removeAttribute('aria-describedby');
+    this.wordsFor = b;
+    b.setAttribute('aria-describedby', 'tb-words');
+    const r = b.getBoundingClientRect();
+    const ww = w.offsetWidth, wh = w.offsetHeight, m = 8;
+    let x: number, y: number;
+    if (finger) {
+      x = r.left + r.width / 2 - ww / 2;
+      y = r.top - wh - m;
+      if (y < m) y = r.bottom + m;
+    } else {
+      x = r.right + m;
+      if (x + ww > innerWidth - m) x = r.left - m - ww;
+      y = r.top;
+    }
+    w.style.left = `${Math.round(Math.max(m, Math.min(innerWidth - m - ww, x)))}px`;
+    w.style.top = `${Math.round(Math.max(m, Math.min(innerHeight - m - wh, y)))}px`;
+  }
+
+  private hideWords(): void {
+    clearTimeout(this.wordsTimer);
+    this.wordsFor?.removeAttribute('aria-describedby');
+    this.wordsFor = null;
+    this.wordsEl?.classList.add('hidden');
+  }
+
+  /** After the panel, the book or the phone's sheet is drawn anew: the words move to the same page's new element (its
+   *  «ready in N» kept true), or go when the page has gone or the mouse has left it. */
+  private refreshWords(): void {
+    const was = this.wordsFor;
+    if (!was || was.isConnected) return;
+    const d = was.dataset;
+    const sel = d.spell ? `[data-spell="${d.spell}"]` : d.move ? `[data-move="${d.move}"]` : d.bkspell ? `[data-bkspell="${d.bkspell}"]` : d.bkmove ? `[data-bkmove="${d.bkmove}"]` : d.bk ? `[data-bk="${d.bk}"]` : '';
+    const scope = was.classList.contains('tb-bc') ? this.sheetH?.body : was.classList.contains('bk-sp') ? this.el?.querySelector('.tb-book') : this.el?.querySelector('.tb-spells');
+    const now = sel && scope ? scope.querySelector<HTMLElement>(sel) : null;
+    if (now && (this.wordsHeld || now.classList.contains('tb-bc') || now.matches(':hover, :focus-visible'))) this.showWords(now, now.classList.contains('tb-bc'));
+    else this.hideWords();
   }
 
   // ------------------------------------------------------------------ orders
