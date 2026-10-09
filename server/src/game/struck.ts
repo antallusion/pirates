@@ -50,6 +50,7 @@ export function canStrike(ship: ShipEntity): boolean {
   if (ship.npcRole !== 'pirate' && ship.npcRole !== 'patrol' && ship.npcRole !== 'hunter') return false;
   if (ship.cls.monster || ship.bossOf || ship.bossPart || ship.named || ship.namedMate || ship.dutchman || ship.yardOf || ship.caravanId || ship.caravanOf !== null) return false;
   if (ship.cls.passive.id === 'dead_crew' || ship.hasFlag('crew_of_drowned')) return false; // the dead do not surrender
+  if (ship.invader) return false; // nor the Choir's zealots of an invasion (docs/19 E16)
   return true;
 }
 

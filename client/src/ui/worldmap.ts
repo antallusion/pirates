@@ -771,7 +771,7 @@ export class WorldMap {
       // region named over its dark squares.
       if (e.kind === 'black_tide') {
         g.font = `italic 13px "Cormorant Garamond", serif`;
-        label(INV('inv.tideMark', { h: Math.max(1, Math.ceil((e.endsIn - (performance.now() - state.eventsAt) / 1000) / 3600)) }), x, y + ms * 0.9, 'rgba(120,230,210,0.95)', 0);
+        label(INV('inv.tideMark', { h: Math.max(1, Math.ceil((e.endsIn - (performance.now() - state.eventsAt) / 1000) / 3600)) }), x, y - ms * 1.2, 'rgba(120,230,210,0.95)', -1);
         continue;
       }
       if (e.kind === 'invasion') {
@@ -784,7 +784,8 @@ export class WorldMap {
         const [n, w] = (e.stage ?? '0/3').split('/').map(Number);
         const left = Math.max(1, Math.ceil((e.endsIn - (performance.now() - state.eventsAt) / 1000) / 60));
         g.font = `italic 12px "Cormorant Garamond", serif`;
-        label(n ? INV('inv.mark', { n, w, m: left }) : `${INV('inv.title')} · ${INV('inv.left', { m: left })}`, x, y + ms * 1.05, 'rgba(140,240,220,0.98)', 0);
+        // (above the ring and before the ports' names: the port it comes to stands just under it)
+        label(n ? INV('inv.mark', { n, w, m: left }) : `${INV('inv.title')} · ${INV('inv.left', { m: left })}`, x, y - ms * 1.1, 'rgba(140,240,220,0.98)', -1);
         continue;
       }
       // A zone boss at sea (docs/21): her own mark, her name and the minutes till she leaves into the fog.

@@ -99,7 +99,7 @@ function forgeBlock(l: LandTownView, gold: number): string {
       ${why ? `<p class="muted tw-why">${esc(serverText(why))}</p>` : ''}${acts}`;
   }
   return `<div class="card tw-land tw-forge"><h4 class="card-h">${icon('build_forge', '', 'ico-md')}${esc(RL('forge.title'))}</h4><p class="muted">${esc(RL('forge.sub'))}</p>
-    <div class="tw-fg-list">${chips}</div><div class="tw-fg-pane">${head}${body}</div></div>`;
+    <div class="tw-fg-body"><div class="tw-fg-list">${chips}</div><div class="tw-fg-pane">${head}${body}</div></div></div>`;
 }
 
 /** docs/18 #43: a cost of the land's resources, each piece short marked. */

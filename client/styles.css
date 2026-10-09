@@ -4905,7 +4905,12 @@ body.touch.sea-docked #touch > :is(#tc-stick, .tc-special, #tc-target) { display
 .gi-relic { color: #e6cc80; }
 .gi-forged span { color: #9fc7d8; }
 /* docs/19 E13: the workshop's anvil. */
-.tw-forge .tw-fg-list { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.tw-lands .tw-forge { grid-column: 1 / -1; }
+.tw-forge .tw-fg-list { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px; margin: 6px 0; }
+@media (min-width: 760px) {
+  .tw-fg-body { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 12px; align-items: start; }
+  .tw-fg-body .tw-fg-pane { border-top: 0; padding-top: 0; border-left: 1px solid rgba(140, 107, 58, 0.2); padding-left: 12px; margin-top: 6px; }
+}
 .tw-fg-it { position: relative; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border: 1px solid #6f5a38; border-radius: 4px; background: #0b0b0d; cursor: pointer; }
 .tw-fg-it .ico-md { width: 34px; height: 34px; }
 .tw-fg-it.on { box-shadow: 0 0 0 2px #ffe08a, 0 0 8px rgba(255, 224, 138, 0.6); }

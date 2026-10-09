@@ -72,16 +72,20 @@ export function wearScore(it: Item | null | undefined): number {
 }
 
 /** «Надеть лучшее» (docs/23 item 71): for every slot she may fill, the locker's best piece when it beats what is
- *  worn — not one above her level, not a ship's slot her hull has not opened yet. */
+ *  worn — not one above her level, not a ship's slot her hull has not opened yet, never a part of a relic she has
+ *  assembled (docs/19 E12: the relic holds its parts' slots). */
 export function bestGear(self: NonNullable<ClientState['self']>): { uid: number; slot: Slot }[] {
   const lvl = shipLevelOf(self.loadout);
   const shipGear = self.loadout.gear ?? {};
   const capGear = self.captainGear ?? {};
   const out: { uid: number; slot: Slot }[] = [];
+  const relicsOn = fullRelics(Object.values(capGear).filter((x): x is Item => !!x));
   for (const slot of [...CAPTAIN_SLOTS, ...SHIP_SLOTS] as Slot[]) {
     const ship = isShipSlot(slot);
     if (ship && lvl < SLOT_OPENS[slot]) continue;
     const worn = (ship ? shipGear[slot] : capGear[slot as never]) as Item | undefined;
+    const part = worn?.art ? ARTIFACTS[worn.art]?.part : undefined;
+    if (part && relicsOn.includes(part)) continue;
     let best: Item | null = null;
     for (const it of self.stash) {
       if (itemSlot(it) !== slot) continue;

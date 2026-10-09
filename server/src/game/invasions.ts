@@ -247,7 +247,7 @@ function scanWave(game: Game, c: Cur): boolean {
     const ship = game.ships.get(id);
     const set = hub.touched.get(id) ?? new Set<number>();
     hub.touched.set(id, set);
-    if (ship && ship.alive && !ship.sinkingUntil && ship.ownerId === null && !ship.prize) {
+    if (ship && ship.alive && !ship.sinkingUntil && ship.ownerId === null && !ship.prize && !ship.surrendered) {
       for (const [aid, t] of ship.attackers) if (t > game.now - 30) {
         const s = handOf(game, aid);
         if (s) set.add(s.accountId);
@@ -256,6 +256,7 @@ function scanWave(game: Game, c: Cur): boolean {
     }
     hub.live.delete(id);
     hub.touched.delete(id);
+    if (ship?.alive) delete ship.invader; // taken or let go: no more of the wave
     c.beaten++;
     for (const acc of set) {
       const s = game.sessionByAccount(acc);
