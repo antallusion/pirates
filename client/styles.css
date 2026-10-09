@@ -4073,7 +4073,18 @@ body.touch .act-btn { --h: 38px; }
 .th-unit { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; min-width: 40px; }
 .th-unit .army-face-xs { width: 34px; height: 34px; }
 .th-unit b { font-size: 12px; font-weight: 600; color: var(--bone); font-variant-numeric: tabular-nums; }
-@media (max-width: 699px) { .th-rt span { display: none; } }
+@media (max-width: 699px) { .th-rt span { display: none; } .th-rt { padding: 6px 2px 2px; } } /* (a tier's number alone sat 2 px high in its cell) */
+/* docs/19 E19: the Abyss's «На абордаж» in the first screen of a phone (640×360: 10 px under the fold). */
+@media (max-height: 520px) { .th-raid { margin-bottom: 4px; } .throne-win:has(.th-raid) .th-head .th-medal { width: 52px; height: 52px; } .throne-win:has(.th-raid) .th-head .th-medal b { font-size: 20px; } }
+/* docs/19 E19: on a phone on its side what waits for her hand comes first, under the tabs — a glory boon's choice above
+   the rank, the Abyss's «На абордаж» above the tier's account (they were 3–147 px under the fold: 640×360's tabs take
+   two rows). */
+@media (max-height: 520px) {
+  .throne-win > .tabs { order: -3; }
+  .throne-win > .th-boon { order: -2; }
+  .throne-win > .th-raid { order: -2; }
+  .throne-win > .th-seal-go:has([data-thraid]) { order: -1; }
+}
 .th-why { margin: 4px 0 0; font-size: 12px; }
 .th-board { margin: 0; padding: 0; list-style: none; counter-reset: th-row; display: flex; flex-direction: column; gap: 2px; }
 .th-board li { counter-increment: th-row; display: flex; gap: 8px; align-items: baseline; padding: 3px 8px; border-radius: 4px; background: rgba(20, 16, 10, 0.4); font-size: 13px; }
@@ -4085,7 +4096,15 @@ body.touch .act-btn { --h: 38px; }
 }
 @media (max-width: 1099px) { .th-branches { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 699px), (max-height: 520px) {
-  .th-boons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .th-boons { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  /* docs/19 E19: a boon a row — its face, name and pips, its words, «Взять» beside them — so the four and their buttons
+     stand in the first screen (as tiles the first «Взять» was 73 px under the fold at 812×375, 147 px at 640×360). */
+  .th-bt { display: grid; grid-template-columns: 36px auto minmax(0, 1fr) auto; grid-template-areas: 'i n r b' 'i s s b'; align-items: center; gap: 1px 8px; padding: 5px 8px; text-align: left; }
+  .th-bt .ico-lg { grid-area: i; width: 36px; height: 36px; }
+  .th-bt b { grid-area: n; font-size: 15px; line-height: 1.1; }
+  .th-bt .hx-rank { grid-area: r; justify-self: start; }
+  .th-bt small { grid-area: s; font-size: 11px; line-height: 1.25; }
+  .th-bt .btn { grid-area: b; margin: 0; }
   .th-lift { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .th-medal { width: 64px; height: 64px; }
   .th-medal b { font-size: 24px; }
