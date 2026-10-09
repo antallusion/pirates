@@ -17,7 +17,7 @@ import { heroBattle, npcHeroBattle, npcHeroLevel, npcKit, npcSkills, primsAtLeve
 import type { HeroBattle } from '../../shared/src/data/hero.ts';
 import { artTotals, makeArtifact } from '../../shared/src/data/artifacts.ts';
 import { TAC_AI_DELAY, boardSlots, npcBoardSlots, tacSchedule } from '../../shared/src/data/tactical.ts';
-import { aiAct, battleLevel, newBattle, tacHp } from '../../server/src/game/tacbattle.ts';
+import { aiAct, battleLevel, capOf, newBattle, tacHp } from '../../server/src/game/tacbattle.ts';
 import type { TacBattle, TacSideInput } from '../../server/src/game/tacbattle.ts';
 import { battleFit } from '../../server/src/game/tactical.ts';
 
@@ -91,16 +91,19 @@ export interface BoardRun {
   /** Share of each side's harm laid by her captain's moves (orders, innate, ultimate), by kind. */
   moves: [Record<string, number>, Record<string, number>];
   harm: [number, number];
+  /** The battle as it ended (docs/25 block Е: what each captain cut down and lost). */
+  end: TacBattle;
 }
 
 /** One boarding played to its end by the sea's mind on both sides, timed turn by turn. */
-export function playBoard(a: TacSideInput, b: TacSideInput, seed: number, opts: { len?: 'board' | 'long'; level?: number; decide?: number } = {}): BoardRun {
+export function playBoard(a: TacSideInput, b: TacSideInput, seed: number, opts: { len?: 'board' | 'long'; level?: number; decide?: number; allies?: { side: 0 | 1; input: TacSideInput; grow?: boolean | number }[] } = {}): BoardRun {
   const rng = new Rng(1000 + seed * 17);
   const level = opts.level ?? battleLevel(a, b);
-  const bt = newBattle(a, b, seed + 1, 0, rng, { len: opts.len ?? 'board', level });
+  const bt = newBattle(a, b, seed + 1, 0, rng, { len: opts.len ?? 'board', level, ...(opts.allies ? { allies: opts.allies } : {}) });
   const start = [hpSide(bt, 0), hpSide(bt, 1)];
-  const run: BoardRun = { rounds: 0, winner: 0, why: '', cut1: [0, 0], turns: [0, 0], secs: 0, play: 0, moves: [{}, {}], harm: [0, 0] };
-  const decide = (x: 0 | 1) => (bt.heroes[x].input.human ? opts.decide ?? HUMAN_DECIDE : TAC_AI_DELAY);
+  const run: BoardRun = { rounds: 0, winner: 0, why: '', cut1: [0, 0], turns: [0, 0], secs: 0, play: 0, moves: [{}, {}], harm: [0, 0], end: bt };
+  // docs/25 block Е: an ally's stack is decided by her captain (a captain thinks, the sea breathes).
+  const decide = (s: Parameters<typeof capOf>[1]) => (capOf(bt, s).input.human ? opts.decide ?? HUMAN_DECIDE : TAC_AI_DELAY);
   let r1done = false;
   for (let i = 0; i < 4000 && !bt.over && bt.active !== null; i++) {
     const s = bt.stacks.find((x) => x.id === bt.active)!;
@@ -111,7 +114,7 @@ export function playBoard(a: TacSideInput, b: TacSideInput, seed: number, opts: 
     const play = tacSchedule(fresh).total;
     run.turns[s.side]++;
     run.play += play;
-    run.secs += play + decide(s.side);
+    run.secs += play + decide(s);
     // Who laid what: a turn's harm of the captain's moves (orders, innate, ultimate) against her blows.
     for (const e of fresh) if ((e.k === 'spell' || e.k === 'innate' || e.k === 'ult') && e.side !== undefined) {
       const k = e.k === 'spell' ? String(e.id) : e.k;

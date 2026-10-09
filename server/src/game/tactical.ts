@@ -94,6 +94,19 @@ function manWorth(u: TacArmyEntry['u']): number {
   return Math.sqrt(d.hp * ((d.dmin + d.dmax) / 2)) * k * (d.shots ? 1.15 : 1) * (d.specials.includes('double_strike') ? 1.2 : 1);
 }
 
+/** docs/25 item 64: the stacks of her army an ally brings to a group's boarding — the kinds she chose (in her order),
+ *  else her strongest by worth (men × a man's worth), TAC_GROUP.bring at most; never her last man's only stack empty. */
+export function pickBring<T extends { u: TacArmyEntry['u']; n: number }>(army: readonly T[], n: number, choice: readonly string[] = []): T[] {
+  const live = army.filter((x) => x.n > 0 && UNITS[x.u]);
+  const out: T[] = [];
+  for (const u of choice) {
+    const x = live.find((y) => y.u === u && !out.includes(y));
+    if (x && out.length < n) out.push(x);
+  }
+  for (const x of [...live].sort((p, q) => q.n * manWorth(q.u) - p.n * manWorth(p.u))) if (out.length < n && !out.includes(x)) out.push(x);
+  return out;
+}
+
 /** A man's hit points behind his Defense, and his mean blow behind his Attack (the stack's own lift on them). */
 const manHp = (x: TacArmyEntry) => UNITS[x.u].hp * (1 + 0.05 * UNITS[x.u].def) * (x.hpK ?? 1);
 const manBlow = (x: TacArmyEntry) => ((UNITS[x.u].dmin + UNITS[x.u].dmax) / 2) * (1 + 0.05 * UNITS[x.u].atk) * (x.dmgK ?? 1);

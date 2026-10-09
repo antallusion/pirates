@@ -13,7 +13,7 @@ import type { UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import {
   TAC_AI_DELAY, TAC_BLOCKING, TAC_FAST, TAC_BURN, TAC_CHANCE_PER_POINT, TAC_COVER, TAC_FEAR, TAC_FLANK, TAC_GAP, TAC_H, TAC_LONG_SHOT, TAC_MAX_ROUNDS, TAC_ORDER_OF, TAC_SPELLS, TAC_TURN, TAC_UNITS, TAC_W,
   TAC_PLAY_WINDOW, captainSpells, flankOf, hexDir, hexDist, hexIndex, hexMirror, hexNeighbors, hexX, hexY, kindOfUnit, tacSchedule, TAC_DECK_COVER, deckCover, unitResist,
-  SIEGE, insideWalls, isGateCell, siegeCell, siegePart, TAC_LEN, TAC_GROUP, tacGroupPace, tacBankSecs, tacFatigue, tacFlagHex, tacNpc, tacOpen, tacTempo, tacTurnSecs,
+  SIEGE, insideWalls, isGateCell, siegeCell, siegePart, TAC_LEN, TAC_GROUP, TAC_ROLES, tacBring, tacGroupPace, tacLevel, tacBankSecs, tacFatigue, tacFlagHex, tacNpc, tacOpen, tacTempo, tacTurnSecs,
 } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacKind, TacOrderId, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import type { TacAction, TacAllyView, TacEvent, TacHeroView, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
@@ -161,6 +161,8 @@ export interface TacStack {
   officer?: { id: string; role: OfficerRole; name: string; unique?: string; order: TacOrderId; used: boolean };
   /** docs/25 item 64: the allied captain whose stack she is (her slot on the side, TacAlly); absent: the side's own. */
   own?: number;
+  /** docs/25 item 65: the round a captain's move last gave her another turn (in a group, once a round). */
+  extra?: number;
   /** docs/25 item 66: men a group's foe was grown by (not her ship's: the reckoning takes her losses back by it). */
   boost?: number;
 }
@@ -263,7 +265,7 @@ export interface TacBattle {
   /** docs/25 item 64: the allied captains on the field, both sides; those who asked to come aboard as the next round
    *  opens (up to TAC_GROUP.late), with what her side's foe grows by as she does (item 66). */
   allies?: TacAlly[];
-  joinQ?: { side: 0 | 1; input: TacSideInput; foeK: number; tag?: number }[];
+  joinQ?: { side: 0 | 1; input: TacSideInput; grow: boolean | number; tag?: number }[];
   /** docs/25 item 67: the hit points of the other side each captain cut down — `side:slot` (0: the side's own captain). */
   dealt?: Record<string, number>;
   /** docs/25 item 64: the captain whose order or path move is being given now (her ally slot), while it lands. */
@@ -272,8 +274,10 @@ export interface TacBattle {
    *  since the server last took her losses (it takes them back from its count). */
   boost?: [number, number];
   grown?: { id: number; n: number }[];
-  /** docs/25 block Е: the lift on blows and orders the allies on the field brought (TAC_GROUP.pace). */
+  /** docs/25 block Е: the lift on blows and orders the allies on the field brought (TAC_GROUP.pace; in `tempo`, `blast`). */
   groupPace?: number;
+  /** docs/25 item 65: the captains (slots) of each side who gave a path's page or move this round, by `side:round:path`. */
+  echo?: Record<string, number[]>;
   /** docs/25 item 52: the quarterdeck's flags (from level 40) — each side's own hex (the other side takes it), whole
    *  rounds a stack of each side has stood on the other's, and whether one stood there as the round opened. */
   flag?: { hex: [number, number]; held: [number, number]; open: [boolean, boolean] };
@@ -611,7 +615,7 @@ export function battleLevel(a: TacSideInput, b: TacSideInput): number {
 }
 
 /** A battle laid out: the field, what the guns left of each deck, both sides' stacks, round one about to open. */
-export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: number, rng: Rng, opts: { land?: string; siege?: SiegeInput; arena?: boolean; len?: TacLen; level?: number; allies?: { side: 0 | 1; input: TacSideInput; foeK?: number; tag?: number }[] } = {}): TacBattle {
+export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: number, rng: Rng, opts: { land?: string; siege?: SiegeInput; arena?: boolean; len?: TacLen; level?: number; allies?: { side: 0 | 1; input: TacSideInput; grow?: boolean | number; tag?: number }[] } = {}): TacBattle {
   // docs/19 E5: a citadel's siege is fought ashore before its walls.
   const sg = opts.siege;
   const land = sg ? sg.type : opts.land;
@@ -645,7 +649,7 @@ export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: n
   // The flag's hex is kept clear of what the guns left (a hole or a fire on it).
   if (bt.flag) for (const i of bt.flag.hex) if (bt.cells[i] === 'H' || bt.cells[i] === 'F') bt.cells[i] = '.';
   // docs/25 item 64: the allies of each side who came with the grapples (her group's mates within TAC_GROUP.range).
-  for (const x of opts.allies ?? []) addAlly(bt, x.side, x.input, x.foeK ?? 1, x.tag);
+  for (const x of opts.allies ?? []) addAlly(bt, x.side, x.input, x.grow ?? false, x.tag);
   // docs/25 item 55: against an army half as large again as hers, her ultimate from the first round.
   for (const x of [0, 1] as const) if (sideStrength(bt, (1 - x) as 0 | 1) >= ULT_EARLY * sideStrength(bt, x)) for (const h of sideHeroes(bt, x)) h.ultFrom = 1;
   // The ship's broadside before the assault: its balls on the wall, the gate and the towers.
@@ -730,20 +734,22 @@ function placeAllies(bt: TacBattle, side: 0 | 1, stacks: TacStack[]): void {
 /** docs/25 item 64: an allied captain comes aboard side `side` with the stacks of her own army she brought (at most
  *  TAC_GROUP.bring): on her side's back rows, her primaries on them, her clock her share of the side's (by the stacks
  *  each captain plays: a side's clock stays one captain's), the battle's pace lifted for the group (TAC_GROUP.pace), the
- *  other side grown by `foeK` (item 66: the sea's ships, the legends, the raid, a citadel; 1 between captains). `tag`:
- *  whose she is to the server. Returns her slot, or why not. */
-export function addAlly(bt: TacBattle, side: 0 | 1, input: TacSideInput, foeK = 1, tag?: number): number | string {
+ *  other side grown (item 66 — `grow`: true for the sea's ships, the legends, the raid and a citadel: by the strength she
+ *  brought, TAC_GROUP.foe; a number: by that; false between captains). `tag`: whose she is to the server. Returns her
+ *  slot, or why not. */
+export function addAlly(bt: TacBattle, side: 0 | 1, input: TacSideInput, grow: boolean | number = false, tag?: number): number | string {
   const mine = (bt.allies ?? []).filter((x) => x.side === side);
   if (mine.length + 1 >= TAC_GROUP.side) return 'Three captains a side at the most';
   const slot = mine.length ? Math.max(...mine.map((x) => x.slot)) + 1 : 1;
   const first = bt.stacks.reduce((n, s) => Math.max(n, s.id), 0) + 1;
-  const stacks = buildStacks({ ...input, officers: [] }, side, [...bt.cells], first).slice(0, TAC_GROUP.bring);
+  const stacks = buildStacks({ ...input, officers: [] }, side, [...bt.cells], first).slice(0, tacBring(bt.level));
   if (!stacks.length) return 'She brings no men';
   if (bt.land) for (const s of stacks) {
     s.sp = s.sp.filter((x) => x !== 'blast');
     s.dmgMul = 1;
   }
   const sideStacks = bt.stacks.filter((s) => s.side === side && s.count > 0).length;
+  const s0 = grow === true ? sideStrength(bt, side) : 0;
   placeAllies(bt, side, stacks);
   for (const s of stacks) s.own = slot;
   const main = bt.heroes[side];
@@ -765,25 +771,54 @@ export function addAlly(bt: TacBattle, side: 0 | 1, input: TacSideInput, foeK = 
   // A group's pace: its rounds fewer, so its many stacks keep the boarding's length (a legend's, the raid's and a
   // citadel's are long by design and keep theirs).
   if (bt.len === 'board') {
-    const n = bt.allies.length;
-    const k = tacGroupPace(bt.level, n) / tacGroupPace(bt.level, n - 1);
+    const n = bt.allies.length, sea = !(bt.heroes[0].input.human && bt.heroes[1].input.human);
+    const k = tacGroupPace(bt.level, n, sea) / tacGroupPace(bt.level, n - 1, sea);
     bt.tempo *= k;
     bt.blast *= k;
-    bt.groupPace = tacGroupPace(bt.level, n);
+    bt.groupPace = tacGroupPace(bt.level, n, sea);
   }
-  growSide(bt, (1 - side) as 0 | 1, foeK);
+  // docs/25 item 66: the strength she brought, by the square law (her book and path `order` on top of it).
+  growSide(bt, (1 - side) as 0 | 1, grow === true ? foeGrowth(bt.level, sideStrength(bt, side) / Math.max(1e-9, s0)) : typeof grow === 'number' ? grow : 1);
+  setRoles(bt, side);
   if (bt.round > 0) push(bt, { k: 'join', side, n: slot, on: stacks.map((s) => s.id) });
   return slot;
 }
 
+/** docs/25 item 66: what a group's foe of the sea grows by as an ally comes aboard her side, which grew `ratio` times by
+ *  the square law (TAC_GROUP.foe: that share of the growth, and `order` more for her book and path). */
+export function foeGrowth(level: number, ratio: number): number {
+  return (1 + Math.max(0, ratio - 1) * tacLevel(TAC_GROUP.foe.share, Math.max(1, level))) * (1 + tacLevel(TAC_GROUP.foe.order, Math.max(1, level)));
+}
+
+/** docs/25 item 65: the paths a side fights with as a group (none for a captain alone): each once. */
+export function rolesOf(bt: TacBattle, side: 0 | 1): CaptainId[] {
+  if (captainsOn(bt, side) < 2) return [];
+  const out: CaptainId[] = [];
+  for (const h of sideHeroes(bt, side)) {
+    const p = h.input.hero?.path;
+    if (p && TAC_ROLES[p] && !out.includes(p)) out.push(p);
+  }
+  return out;
+}
+/** docs/25 item 65: the roles a side's paths lay on her stacks and on the other side's, while the battle lasts. */
+function setRoles(bt: TacBattle, side: 0 | 1): void {
+  const h = bt.heroes[side];
+  keepFx(h, (f) => !f.id.startsWith('role:'));
+  for (const p of rolesOf(bt, side)) {
+    const r = TAC_ROLES[p];
+    if (r.self) h.fx.push({ id: `role:${p}`, until: 1e9, mods: r.self });
+    if (r.foe) h.fx.push({ id: `role:${p}:foe`, until: 1e9, mods: r.foe, foe: true });
+  }
+}
+
 /** docs/25 item 64: an ally arriving mid-battle comes aboard as the next round opens, up to round TAC_GROUP.late. */
-export function queueAlly(bt: TacBattle, side: 0 | 1, input: TacSideInput, foeK = 1, tag?: number): string | null {
+export function queueAlly(bt: TacBattle, side: 0 | 1, input: TacSideInput, grow: boolean | number = false, tag?: number): string | null {
   if (bt.over) return 'The fight is over';
   if (bt.round + 1 > TAC_GROUP.late) return 'Allies come aboard up to round 3';
   const n = (bt.allies ?? []).filter((x) => x.side === side).length + (bt.joinQ ?? []).filter((x) => x.side === side).length;
   if (n + 1 >= TAC_GROUP.side) return 'Three captains a side at the most';
   if (tag !== undefined && ((bt.allies ?? []).some((x) => x.tag === tag) || (bt.joinQ ?? []).some((x) => x.tag === tag))) return 'She is aboard already';
-  (bt.joinQ ??= []).push({ side, input, foeK, ...(tag !== undefined ? { tag } : {}) });
+  (bt.joinQ ??= []).push({ side, input, grow, ...(tag !== undefined ? { tag } : {}) });
   return null;
 }
 
@@ -1675,7 +1710,7 @@ function applyFx(bt: TacBattle, side: 0 | 1, id: string, fx: PageFx, k: number, 
   // The clearing wind: all she laid on both decks ends before anything new is laid.
   if (fx.clear && (e.fx.length || e.free)) {
     for (const f of e.fx) for (const x of f.on !== undefined ? [stackById(bt, f.on)] : f.foe ? own() : foes()) if (x) on.add(x.id);
-    keepFx(e, () => false);
+    keepFx(e, (f) => f.id.startsWith('role:')); // docs/25 item 65: a group's roles are its captains', not orders
     e.free = 0;
   }
   // docs/25 item 56: each of hers that resists shrugs off what is laid on her as often as she resists.
@@ -1697,6 +1732,9 @@ function applyFx(bt: TacBattle, side: 0 | 1, id: string, fx: PageFx, k: number, 
   }
   // Another turn this round: a stack that has acted goes again at the round's end; one still to act, twice.
   const again = (x: TacStack) => {
+    // docs/25 item 65: in a group, a stack is given another turn by her side's moves once a round.
+    if (bt.allies?.length && x.extra === bt.round) return;
+    x.extra = bt.round;
     if (x.id === bt.active || bt.queue.includes(x.id)) x.again++;
     else bt.queue.push(x.id);
     on.add(x.id);
@@ -1729,6 +1767,35 @@ function layFx(bt: TacBattle, h: TacHero, f: Fx): void {
     h.fx.splice(i, 1);
   }
   h.fx.push(by ? { ...f, by } : f);
+}
+/** docs/25 item 65: the second captain of one path to give her path's page or move in a round gives it at
+ *  ×TAC_GROUP.echo, the third at its square — her foe has just read that book (a common page: the second captain to give
+ *  that page in a round); the innate move and the ultimate so over the whole battle (`give`: count her as having given
+ *  one). */
+/** docs/25 item 65: a move echoed — its blows and raises by `e` (applyFx's strength), what it lays and the share of her
+ *  side it gives another turn by `e` too (points rounded: a third captain's one point may be none). */
+function echoFx(fx: PageFx, e: number): PageFx {
+  if (e >= 1) return fx;
+  const m = (x: BtMods | undefined): BtMods | undefined => {
+    if (!x) return x;
+    const o: BtMods = { ...x };
+    for (const k of ['melee', 'shot', 'taken', 'shotTaken'] as const) if (o[k] !== undefined) o[k] = o[k]! * e;
+    for (const k of ['speed', 'init', 'morale', 'luck'] as const) if (o[k] !== undefined) o[k] = Math.round(o[k]! * e);
+    return o;
+  };
+  return { ...fx, ...(fx.self ? { self: m(fx.self) } : {}), ...(fx.foe ? { foe: m(fx.foe) } : {}), ...(fx.one ? { one: m(fx.one) } : {}), ...(fx.allAgain ? { allShare: (fx.allShare ?? 1) * e } : {}) };
+}
+/** docs/25 item 65: what echoes — a path's pages by her path, a common page by itself. */
+const echoKey = (id: TacSpellId): string => (isPathPage(id) ? PATH_PAGES[id].path : `page_${id}`);
+function echoMul(bt: TacBattle, side: 0 | 1, path: string | null | undefined, give: boolean, move?: 'innate' | 'ult'): number {
+  if (!path || !bt.allies?.length) return 1;
+  const by = bt.casting ?? 0;
+  // A page echoes in its round; the innate move and the ultimate (once a battle each) over the whole battle.
+  const key = move ? `${side}:${move}:${path}` : `${side}:${bt.round}:${path}`;
+  const who = (bt.echo ??= {})[key] ?? [];
+  const others = who.filter((x) => x !== by).length;
+  if (give && !who.includes(by)) bt.echo[key] = [...who, by];
+  return Math.pow(TAC_GROUP.echo, others);
 }
 /** docs/25 item 65: another captain of her side laid this move and it holds past this round (the sea's mind weighs a
  *  renewal as little). */
@@ -1798,7 +1865,11 @@ export function castMove(bt: TacBattle, side: 0 | 1, kind: 'innate' | 'ult', tar
   const t = target !== undefined ? stackById(bt, target) : undefined;
   const hex = t?.hex;
   const hp0 = foeHp(bt, side);
-  const { kills, on, res } = applyFx(bt, side, `${kind}:${path}`, powered(moveFx(path, kind, hb.level ?? 1), path, hb.level ?? 1, 'move'), moveMul(bt, side), target, rng);
+  // docs/25 item 65: the second captain of her path to give this move in the battle gives it echoed — its blows and
+  // raises, and the share of her side that acts again.
+  const echo = echoMul(bt, side, path, true, kind);
+  const mfx = echoFx(powered(moveFx(path, kind, hb.level ?? 1), path, hb.level ?? 1, 'move'), echo);
+  const { kills, on, res } = applyFx(bt, side, `${kind}:${path}`, mfx, moveMul(bt, side) * echo, target, rng);
   tallyHarm(bt, side, kind, hp0);
   push(bt, { k: kind, side, id: path, ...(t ? { t: t.id, hex } : {}), kills, on, ...(res ? { res } : {}) });
   checkOver(bt);
@@ -1839,7 +1910,8 @@ export function castSpell(bt: TacBattle, side: 0 | 1, id: TacSpellId, target: nu
     const t0 = target !== undefined ? stackById(bt, target) : undefined;
     const hex = t0?.hex;
     const hp0 = foeHp(bt, side);
-    const { kills, on, res } = applyFx(bt, side, id, pfx, spellMul(bt, side, id), target, rng, !isPathPage(id));
+    const echo = echoMul(bt, side, echoKey(id), true);
+    const { kills, on, res } = applyFx(bt, side, id, echoFx(pfx, echo), spellMul(bt, side, id) * echo, target, rng, !isPathPage(id));
     tallyHarm(bt, side, id, hp0);
     push(bt, { k: 'spell', side, id, ...(t0 ? { t: t0.id, hex } : {}), kills, on, ...(res ? { res } : {}), ...(scroll ? { via: 'scroll' as const } : {}) });
     checkOver(bt);
@@ -1848,7 +1920,7 @@ export function castSpell(bt: TacBattle, side: 0 | 1, id: TacSpellId, target: nu
   const t = target !== undefined ? stackById(bt, target) : undefined;
   let kills = 0;
   const hp0 = foeHp(bt, side);
-  const k = spellMul(bt, side, id);
+  const k = spellMul(bt, side, id) * echoMul(bt, side, echoKey(id), true);
   const hold = r + 1 + holdOf(bt, side);
   const P = spellPower(bt, side) * (0.85 + rng.float() * 0.3) * k;
   const foes = () => alive(bt).filter((o) => o.side !== side);
@@ -1980,11 +2052,12 @@ function newRound(bt: TacBattle, now: number, rng: Rng): void {
     if (bt.over) return;
   }
   bt.round++;
+  if (bt.echo) for (const k of Object.keys(bt.echo)) if (!/:(innate|ult):/.test(k)) delete bt.echo[k];
   // docs/25 item 64: the allies who asked to come aboard do so as the round opens (up to TAC_GROUP.late).
   if (bt.joinQ?.length) {
     const q = bt.joinQ;
     bt.joinQ = [];
-    if (bt.round <= TAC_GROUP.late) for (const j of q) addAlly(bt, j.side, j.input, j.foeK, j.tag);
+    if (bt.round <= TAC_GROUP.late) for (const j of q) addAlly(bt, j.side, j.input, j.grow, j.tag);
   }
   const list = alive(bt);
   for (const s of list) {
@@ -1992,6 +2065,15 @@ function newRound(bt: TacBattle, now: number, rng: Rng): void {
     s.waited = false;
     s.surged = false;
     s.again = 0;
+  }
+  // docs/25 item 65: a group's Drowned raises a share of every stack of her side as the round opens.
+  if (bt.round > 1 && bt.allies?.length) for (const x of [0, 1] as const) {
+    const raise = rolesOf(bt, x).reduce((n, p) => n + (TAC_ROLES[p].raise ?? 0), 0);
+    if (raise > 0) for (const s of list) {
+      if (s.side !== x) continue;
+      const n = restore(bt, s, s.start * s.hpMax * raise);
+      if (n > 0) push(bt, { k: 'regen', side: x, s: s.id, dmg: n, hex: s.hex, id: 'role' });
+    }
   }
   // Stamina comes back a share every round (docs/18 item 4).
   if (bt.round > 1) for (const h of heroesAll(bt)) if (h.stam >= 0) h.stam = Math.min(h.input.hero?.stamMax ?? 0, h.stam + (h.input.hero?.stamRegen ?? 0));
@@ -2550,7 +2632,7 @@ export function fxValue(bt: TacBattle, side: 0 | 1, fx: PageFx, k: number, t?: T
   // ready to give.
   if (fx.clear) {
     for (const f of e.fx) {
-      if (f.until < bt.round) continue;
+      if (f.until < bt.round || f.id.startsWith('role:')) continue;
       const on = f.on !== undefined ? alive(bt).filter((x) => x.id === f.on) : null;
       const n = Math.min(2, f.until - bt.round + 1);
       v += f.mods ? -(f.foe ? lay(f.mods, on ?? own, foes, 1) : lay(f.mods, on ?? foes, own, -1)) / R * n : 0.025 * (sum(own) + sum(foes)) * n;
@@ -2599,7 +2681,7 @@ function aiSpell(bt: TacBattle, side: 0 | 1, rng: Rng): AiOrder | null {
     // A thrifty captain: with a small store she keeps it for what is worth it (and the scarcer the store, the more).
     const max = res === 'stam' ? h.input.hero?.stamMax ?? 0 : h.input.hero?.manaMax ?? 0;
     const thrift = pool >= 0 && h.input.hero ? (1 - Math.min(0.5, cost / Math.max(1, max)) * 0.5) * (res === 'stam' && h.stam >= 0 ? 0.8 + 0.2 * Math.min(1, pool / Math.max(1, max)) : 1) : 1;
-    const km = spellMul(bt, side, s0.id);
+    const km = spellMul(bt, side, s0.id) * echoMul(bt, side, echoKey(s0.id), false);
     const pfx = pageFx(bt, side, s0.id);
     if (pfx) {
       const b = bestFx(bt, side, pfx, km, !isPathPage(s0.id));
@@ -2696,7 +2778,7 @@ function aiMove(bt: TacBattle, side: 0 | 1, rng: Rng): { kind: 'innate' | 'ult';
   for (const kind of ['ult', 'innate'] as const) {
     if ((kind === 'innate' ? h.innate : h.ult) !== 1 || (kind === 'ult' && bt.round < h.ultFrom)) continue;
     const mfx = powered(moveFx(hb.path, kind, hb.level ?? 1), hb.path, hb.level ?? 1, 'move');
-    const b = bestFx(bt, side, mfx, moveMul(bt, side));
+    const b = bestFx(bt, side, mfx, moveMul(bt, side) * echoMul(bt, side, hb.path, false, kind));
     b.v *= echoed(bt, side, `${kind}:${hb.path}`) && (mfx.self || mfx.foe || mfx.one) ? 0.4 : 1;
     if (b.v > total * 0.03 && b.v > bv) {
       bv = b.v;

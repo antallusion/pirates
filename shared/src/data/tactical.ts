@@ -9,7 +9,7 @@ import { UNITS } from './army.ts';
 import { BOSS_UNITS } from './bossunits.ts';
 import type { UnitId } from './army.ts';
 import { BOOK_PAGES, BOOK_PAGE_IDS, PATH_PAGES, PATH_PAGE_IDS } from './paths.ts';
-import type { BookPageId, PathPageId } from './paths.ts';
+import type { BookPageId, BtMods, PathPageId } from './paths.ts';
 
 /** The field: 11 columns by 9 rows of hexes, odd rows pushed half a hex to the right and one hex shorter ('#'). */
 export const TAC_W = 11;
@@ -34,25 +34,53 @@ export function tacBankSecs(level: number): number {
  *  решали … делай все пункты»): a boarding fought by a group.
  *  - `range`: a mate of her group within this many metres of the grapple, at sea and in no other fight, may join (64);
  *  - `side`: captains a side at most, the one who grappled (or was grappled) among them;
- *  - `bring`: stacks of her own army an ally brings (her choice, else her strongest);
+ *  - `bring`: stacks of her own army an ally brings (her choice, else her strongest) — one below level `bringFrom` (a
+ *    crew of three or four stacks: her strongest is most of it), two from it;
  *  - `late`: the last round an ally arriving mid-battle comes aboard at (as a round opens);
- *  - `foe`: item 66 — a ship of the sea, a legend, the raid's tier or a citadel's garrison against a group grows by the
- *    strength her allies brought (the square law, sideStrength) and `order` more for each ally's book and path;
+ *  - `foe`: item 66 — a ship of the sea, a legend, the raid's tier or a citadel's garrison against a group grows by
+ *    `share(level)` of the strength her allies brought (the square law, sideStrength), and `order(level)` more for each
+ *    ally's book and path;
  *  - `pace`: a group's blows and orders land harder by `pace(level)` an ally on the field (both sides counted), so its
- *    rounds are fewer than one captain's and its many stacks keep §1.2's length (shorter at the low levels);
- *  - `echo`: item 65 — a page or path move another captain of her side already laid holds once (the later one renews
- *    it, it does not stack), so three of one path weigh less than a mixed group. */
+ *    rounds are fewer than one captain's and its many stacks keep §1.2's length; `paceSea` against the sea's mind (its
+ *    fights shorter, as item 50 has them: a group of the low levels is quicker than one captain alone);
+ *  - `echo`: item 65 — the second captain of one path to give her path's page or move in a round gives it at ×echo,
+ *    the third at its square (her foe has just read that book); and what another captain of her side laid of the same
+ *    page holds once (tacbattle.ts layFx: the later renews it, it does not stack). Three of one path weigh less than a
+ *    mixed group. */
 export const TAC_GROUP = {
   range: 600,
   side: 3,
   bring: 2,
+  bringFrom: 11,
   late: 3,
-  foe: { order: 0.1 },
-  pace: [[1, 0.3], [30, 0.2], [60, 0.12]] as [number, number][],
+  echo: 0.6,
+  foe: { share: [[1, 0.7], [10, 0.7], [30, 0.9], [60, 1]] as [number, number][], order: [[1, 0], [30, 0.15], [60, 0.3]] as [number, number][] },
+  pace: [[1, 2], [10, 1.6], [20, 0.8], [30, 0.4], [60, 0.2]] as [number, number][],
+  paceSea: [[1, 2.5], [10, 2], [30, 0.6], [60, 0.7]] as [number, number][],
 };
-/** docs/25 block Е: the lift on a boarding's blows and orders with `allies` allied captains on the field (both sides). */
-export function tacGroupPace(level: number, allies: number): number {
-  return allies <= 0 ? 1 : 1 + Math.max(0, allies) * tacLevel(TAC_GROUP.pace, Math.max(1, level));
+/** docs/25 block Е: the lift on a boarding's blows and orders with `allies` allied captains on the field (both sides;
+ *  `sea`: against the sea's mind, `paceSea`). */
+export function tacGroupPace(level: number, allies: number, sea = false): number {
+  return allies <= 0 ? 1 : 1 + Math.max(0, allies) * tacLevel(sea ? TAC_GROUP.paceSea : TAC_GROUP.pace, Math.max(1, level));
+}
+/** docs/25 item 65 (owner: «у каждого пути своя роль на поле — Адмирал держит строй, Утопленница поднимает павших,
+ *  Навигатор даёт лишние ходы, Корсар бьёт»): the paths' roles in a group's boarding. Each path among a side's captains
+ *  — once, however many of them walk it — lays its role on every stack of the side (the allies' too) while the battle
+ *  lasts: `self` on hers, `foe` on the other side's, `raise` a share of each of her stacks standing up again as every
+ *  round from the second opens. Only when a side fights as a group (a captain alone has her path's book and moves as
+ *  before): a mixed group brings three roles, three of one path one. */
+export const TAC_ROLES: Record<CaptainId, { self?: BtMods; foe?: BtMods; raise?: number; name: [string, string]; text: [string, string] }> = {
+  admiral: { self: { taken: -0.05 }, name: ['Holds the line', 'Держит строй'], text: ['Every stack of the group takes 5% less.', 'Каждый отряд группы получает на 5% меньше.'] },
+  drowned: { raise: 0.02, name: ['Raises the fallen', 'Поднимает павших'], text: ['As each round opens, 2% of every stack of the group stands up again.', 'В начале каждого раунда встают 2% каждого отряда группы.'] },
+  navigator: { self: { speed: 1, luck: 1 }, name: ['Gives the turns', 'Даёт лишние ходы'], text: ['Every stack of the group a hex faster and a point luckier.', 'Каждый отряд группы на гекс быстрее и на очко удачливее.'] },
+  corsair: { self: { melee: 0.04, shot: 0.06 }, name: ['Strikes', 'Бьёт'], text: ["The group's blows 4% and shots 6% harder.", 'Удары группы на 4%, выстрелы на 6% сильнее.'] },
+  smuggler: { foe: { shot: -0.12, luck: -1 }, name: ['Blinds', 'Слепит'], text: ["The foe's shots 12% lighter and her luck a point lower.", 'Выстрелы противника на 12% слабее, удача на очко ниже.'] },
+  reaver: { self: { melee: 0.03 }, foe: { morale: -1 }, name: ['Breaks', 'Ломает'], text: ["The group's blows 3% harder, the foe's morale a point lower.", 'Удары группы на 3% сильнее, дух противника на очко ниже.'] },
+};
+
+/** docs/25 item 64: the stacks an ally brings to a boarding of `level` (0: a battle of no level — two). */
+export function tacBring(level: number): number {
+  return level > 0 && level < TAC_GROUP.bringFrom ? 1 : TAC_GROUP.bring;
 }
 /** Seconds the sea's captains wait before a stack's turn, once what was done before it has been played on the screen
  *  (owner, 2026-10-08: «там как-то слишком быстро всё перемещается, непонятно даже» — docs/23 item 60 had it 0.45 s
