@@ -43,8 +43,8 @@ export function arenaSide(d: Draft, side: 0 | 1, path: CaptainId): TacSideInput 
 /** One bout on the sand: true when side 0 wins. */
 export function fight(d: Draft, paths: [CaptainId, CaptainId], seed: number): boolean {
   const rng = new Rng(seed * 7919 + 17);
-  // docs/25 block Г: a bout between two captains is a boarding's length at the top (arena.ts arenaSetup → tactical.ts).
-  const bt = newBattle(arenaSide(d, 0, paths[0]), arenaSide(d, 1, paths[1]), seed, 0, rng, { arena: true, len: 'board' });
+  // docs/25 block Г: a bout keeps its own length under the boarding's reckoning (items 45–47), as tactical.ts lays it out.
+  const bt = newBattle(arenaSide(d, 0, paths[0]), arenaSide(d, 1, paths[1]), seed, 0, rng, { arena: true, len: 'long' });
   quickFinish(bt, 0, rng);
   return bt.over!.winner === 0;
 }

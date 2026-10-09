@@ -54,10 +54,13 @@ export const ARENA_POINT = 14.15;
 /** Each kind's measure in the Colosseum beside its square-law weight (>1: it fights above its weight, and a lot of it
  *  has fewer men), set by the bouts themselves (`node tools/balance-arena.ts --calibrate`): every kind's pick wins
  *  about half the bouts. */
+// docs/25 block Г (2026-10-09): re-set by `balance-arena.ts 1200 --calibrate 3` under the boarding's reckoning of Attack and
+// Defense, guards and orders (items 45–47): the shooters weigh more, the life guard's and the titans' walls less.
 export const ARENA_CAL: Partial<Record<UnitId, number>> = {
-  deckhand: 0.72, sailor: 0.79, marine: 0.86, sea_guard: 0.95, musketeer: 1.02, sharpshooter: 1.22, gunner: 0.98, bombardier: 1.02, boarder: 0.96, cutthroat: 0.99,
-  guard: 1.15, life_guard: 1.18, drowned: 0.88, deep_spawn: 1.23, bilge_rat: 0.97, cave_bat: 0.99, giant_centipede: 0.99, jungle_spider: 1.18, cliff_harpy: 0.94, cultist: 1.03,
-  mangrove_hydra: 1.01, wreck_titan: 0.77,
+  deckhand: 0.71, sailor: 0.77, marine: 0.82, sea_guard: 0.9, musketeer: 1.1, sharpshooter: 1.33, gunner: 1.07,
+  bombardier: 1, boarder: 0.96, cutthroat: 0.96, guard: 1.12, life_guard: 0.99, drowned: 0.97, deep_spawn: 1.21,
+  bilge_rat: 0.99, cave_bat: 0.88, giant_centipede: 0.94, jungle_spider: 1.09, cliff_harpy: 0.81, cultist: 1.13,
+  mangrove_hydra: 1.11, wreck_titan: 0.88,
 };
 
 /** One man of a kind's battle weight in plain deckhands (armyWeight's square law). */
@@ -240,9 +243,12 @@ export const ARENA_SKILLS: SkillId[] = ['boarding', 'armor', 'artillery', 'leade
  *  400 --pairs`; the paths' own books, innate moves and ultimates stay theirs). A point of Attack or Defence is about
  *  three bouts in a hundred. The admiral's Defence goes into Attack: Defence blunts only blows and shots, never an
  *  order's damage, so her wall of 28 held off the paths of steel and not the Drowned's orders (they took 57 % of her
- *  bouts with the means even). The smuggler and the navigator, of the same standard primaries, stand on the same. */
+ *  bouts with the means even). The smuggler and the navigator, of the same standard primaries, stand on the same.
+ *  docs/25 block Г (2026-10-09): re-set under the boarding's reckoning of Attack and Defense, guards and orders (items
+ *  45–47: +100% and −50% at most, the common orders to ×3) by `balance-arena.ts 60 --paths 6` and a step on the test's
+ *  own table: the pairs at 45–59%, the means 48–55%. */
 export const ARENA_PATH: Partial<Record<CaptainId, Partial<Prims>>> = {
-  corsair: { atk: -5, def: -5 }, smuggler: { atk: 1, def: 2 }, reaver: { atk: -1 }, navigator: { atk: 1, def: 2 }, drowned: { atk: 2, def: 1 }, admiral: { atk: 4, def: -1 },
+  corsair: { atk: -5, def: -5 }, smuggler: { atk: 3, def: 3 }, reaver: { atk: 1, def: 1 }, navigator: { atk: 2, def: 3 }, drowned: { atk: 0, def: -2 }, admiral: { atk: 5, def: -1 },
 };
 
 /** A path's standard primaries at the cap: its start and its odds over the level-ups, whole points by the largest

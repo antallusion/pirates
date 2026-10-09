@@ -196,7 +196,9 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
   const rng = new Rng(seed ^ 0x7ac7);
   fight.tacRng = rng;
   // docs/25 block Г: a boarding's length by its level; the legends, the raid, the citadels and the trials long by design.
-  if (arena) fight.tac = newBattle(arena.sides[0], arena.sides[1], seed, game.now, rng, { arena: true, len: 'board' });
+  // A bout of the Colosseum keeps its own short length (a drafted army, template captains, its pairs evened at it): the
+  // boarding's reckoning of Attack and Defense, guards and orders (items 45–47), not its tempo, clocks or flag.
+  if (arena) fight.tac = newBattle(arena.sides[0], arena.sides[1], seed, game.now, rng, { arena: true, len: 'long' });
   else {
     // docs/19 E5: a castellan alongside — the siege before her citadel's walls, its garrison in its own seven stacks.
     const so = siegeSetup(game, a, b);
