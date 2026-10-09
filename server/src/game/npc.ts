@@ -22,7 +22,8 @@ import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { depthAt, isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
-import { clearAt, clearPath } from '../../../shared/src/world/solids.ts';
+import { clearAt } from '../../../shared/src/world/solids.ts';
+import { laneFoul } from './seaway.ts';
 import { sectorAt } from '../../../shared/src/world/sectors.ts';
 import { canBoard, startBoarding } from './boarding.ts';
 import { npcWouldBoard } from './army.ts';
@@ -723,6 +724,8 @@ export const WIND_EYE_COST = 1.5;
  *  FIGHT_NEAR of it. At the very edge of it two ships used to circle just out of range, firing nothing but the chasers. */
 export const FIGHT_HOLD = 0.92;
 export const FIGHT_NEAR = 0.7;
+/** What a broadside's course onto something she would strike costs her in the choice of side (more than any other). */
+export const FOUL_COST = 4;
 
 /** The fighting helm (the sea's ships, and a captain's under «Атаковать», docs/23 item 33): steers, and says where her
  *  foe will be when a ball arrives (`lead`: the share of the true lead her gunners allow). `hold`: a captain's close
@@ -757,9 +760,9 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
   // (The close fight runs straight at a mark past half as far again as the band's far edge: one running from her gained
   // on her all the way out to 1.5 × her reach, her bow 50° off it.)
   if (d > (hold ? hold.far * 1.5 : maxRange * 1.5)) {
-    steer(game, ship, brain, bearing, 1);
+    steer(game, ship, brain, bearing, 1, false, d);
   } else if (mode === 'close') {
-    steer(game, ship, brain, leadBearing, d < 250 ? 0.75 : 1); // close for the grapple
+    steer(game, ship, brain, leadBearing, d < 250 ? 0.75 : 1, false, leadD); // close for the grapple
   } else {
     // Present a loaded broadside, spiralling in or out to hold the ideal distance.
     const hPort = wrapAngle(bearing + Math.PI / 2); // target on our port beam
@@ -785,9 +788,13 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
     // The quick sea fight (docs/23 item 47): a side whose course lies in the wind's eye cannot be held (she would sit at
     // the no-go edge for a whole tack, her guns 40–50° off her mark), and the other beam's course always can.
     const eye = ship.stats.noGoDeg + 6;
+    // (2026-10-09: and a side whose course runs her onto a reef, a coast or a wreck close aboard is the other's:
+    // circling her mark she ran her broadside's course over the reef the mark had skated across, and lost her hull on
+    // it. Close aboard: a few lengths and her way's next seconds — a coast a cable off is the lead line's to round.)
+    const look = ship.stats.length * 2 + 40 + ship.state.speed * 3;
     const score = (side: 'port' | 'starboard', h: number) =>
       Math.abs(angleDiff(ship.state.heading, h)) + (ship.reload[side] > 0 ? 1.2 : 0) + (rangeOf(side) < d * 0.9 ? 0.8 : 0) +
-      (relWindDeg(course(side), game.windFor(ship)) < eye ? WIND_EYE_COST : 0);
+      (relWindDeg(course(side), game.windFor(ship)) < eye ? WIND_EYE_COST : 0) + (courseFoul(game, ship, course(side), look) ? FOUL_COST : 0);
     const side = score('port', hPort) <= score('starboard', hStar) ? 'port' : 'starboard';
     steer(game, ship, brain, course(side), 1, true);
   }
@@ -823,9 +830,20 @@ export function beatAngle(rig: Rig, noGoDeg: number, weatherly: boolean, strengt
   return best;
 }
 
+/** The courses she tries round what lies ahead, nearest first: radians off the one she wants. */
+const AVOID = [0.5, -0.5, 1.0, -1.0, 1.6, -1.6, 2.4, -2.4];
+
+/** Her lead line on a course (seaway.ts laneFoul): whether anything her hull or her keel would strike lies within
+ *  `len` metres of her middle that way — as wide as she is and 8 m. */
+export function courseFoul(game: Game, ship: ShipEntity, h: number, len: number): boolean {
+  const v = headingVec(h);
+  return laneFoul(game, ship, ship.state.x, ship.state.y, ship.state.x + v.x * len, ship.state.y + v.y * len, ship.stats.beam * 0.5 + 8);
+}
+
 /** Steering with tacking and island avoidance. To windward (docs/16 P5): on the tack that points nearer her mark,
- *  held until the other tack points clearly nearer (the mark has crossed the wind's eye), then about. */
-function steer(game: Game, ship: ShipEntity, brain: NpcBrain, desired: number, sail: number, fight = false): void {
+ *  held until the other tack points clearly nearer (the mark has crossed the wind's eye), then about. `upTo`: her
+ *  mark's distance in a chase (what lies beyond it is not in her way). */
+function steer(game: Game, ship: ShipEntity, brain: NpcBrain, desired: number, sail: number, fight = false, upTo = Infinity): void {
   const now = game.now;
   const wind = game.windFor(ship);
   const rel = relWindDeg(desired, wind);
@@ -863,27 +881,41 @@ function steer(game: Game, ship: ShipEntity, brain: NpcBrain, desired: number, s
       desired = brain.tackSide > 0 ? a : b;
     }
   }
-  // Island avoidance probes.
-  const look = 180 + ship.state.speed * 7;
-  // (And the keel's own clearance, 2026-10-08: the shore band and the sea's solid things — a wreck, a skerry, a pier —
-  // that a shallow keel's sounding never finds.)
-  // (From her middle, as wide as she is and a margin: a turn toward a thing beside her bow sees it too.)
-  const wide = ship.stats.beam * 0.5 + 8;
-  const probe = (h: number) => {
-    const v = headingVec(h);
-    const x1 = ship.state.x + v.x * look, y1 = ship.state.y + v.y * look;
-    const x2 = ship.state.x + v.x * look * 0.5, y2 = ship.state.y + v.y * look * 0.5;
-    const clear = () => clearPath(game.world, ship.state.x, ship.state.y, x1, y1, wide);
-    if (ship.cls.passive.id === 'shallow_runner') return !!isLand(game.world, x1, y1) || !!isLand(game.world, x2, y2) || !clear();
-    const draft = ship.cls.draft;
-    return depthAt(game.world, x1, y1) < draft || depthAt(game.world, x2, y2) < draft || !clear();
-  };
-  if (probe(desired)) {
-    for (const off of [0.5, -0.5, 1.0, -1.0, 1.6, -1.6, 2.4, -2.4]) {
-      if (!probe(desired + off)) {
-        desired = wrapAngle(desired + off);
-        break;
+  // The lead line (seaway.ts, 2026-10-09): the whole of her look sounded — the coast's band and the solid things her
+  // hull would strike (2026-10-08: a wreck, a skerry, a pier, that a shallow keel's sounding never found), the reefs her
+  // keel drags on along the whole run (two soundings missed a reef between them, or nearer than the first), the bared
+  // banks. In a chase she looks no farther than her mark (`upTo`): a coast behind her mark is not in her way.
+  const look = Math.min(180 + ship.state.speed * 7, Math.max(upTo + ship.stats.length * 0.5, ship.stats.length * 2 + 40));
+  if (courseFoul(game, ship, desired, look)) {
+    // Round it: the nearest clear course either way, the starboard hand first as she always did (the sea's fights are
+    // tuned on it, tests/balance/); none at her look, the same at a short one (a thing close aboard); boxed in, the
+    // way out under easy canvas.
+    const short = ship.stats.length * 1.5 + 40 + ship.state.speed * 2;
+    let found: number | null = null;
+    for (const l of short < look - 20 ? [look, short] : [look]) {
+      for (const off of AVOID) {
+        if (!courseFoul(game, ship, desired + off, l)) {
+          found = wrapAngle(desired + off);
+          break;
+        }
       }
+      if (found !== null) break;
+    }
+    if (found !== null) desired = found;
+    else {
+      // Boxed in (a pocket of a reef, a pier's slip): the open water nearest her head at a hull's length, slowly; none
+      // at all, she holds her head under bare steerage and her hull slides her along what she touches.
+      let best: number | null = null, bd = Infinity;
+      for (let k = 0; k < 16; k++) {
+        const h = ship.state.heading + (k / 16) * Math.PI * 2;
+        const off = Math.abs(angleDiff(desired, h));
+        if (off < bd && !courseFoul(game, ship, h, ship.stats.length + 20)) {
+          bd = off;
+          best = h;
+        }
+      }
+      desired = wrapAngle(best ?? ship.state.heading);
+      sail = Math.min(sail, best === null ? 0.15 : 0.35);
     }
   }
   // The turn itself (2026-10-08): the headings she swings through on the way, a short look each, so her hull does not
@@ -892,10 +924,7 @@ function steer(game: Game, ship: ShipEntity, brain: NpcBrain, desired: number, s
   if (Math.abs(swing) > 0.3) {
     const reach = 50 + ship.state.speed * 5;
     const sweep = (sign: number) => {
-      for (let a = 0.3; a < Math.abs(swing) + 0.01; a += 0.3) {
-        const v = headingVec(ship.state.heading + sign * a);
-        if (!clearPath(game.world, ship.state.x, ship.state.y, ship.state.x + v.x * reach, ship.state.y + v.y * reach, wide)) return false;
-      }
+      for (let a = 0.3; a < Math.abs(swing) + 0.01; a += 0.3) if (courseFoul(game, ship, ship.state.heading + sign * a, reach)) return false;
       return true;
     };
     const sign = Math.sign(swing);

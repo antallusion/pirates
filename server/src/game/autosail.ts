@@ -13,10 +13,10 @@ import { angleDiff, clamp, headingOf, headingVec, pointInPolygon, wrapAngle } fr
 import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { depthAt, isLand, navBlocked } from '../../../shared/src/world/worldgen.ts';
-import { clearPath } from '../../../shared/src/world/solids.ts';
 import type { Game } from './Game.ts';
 import { banksUp } from './isles.ts';
 import { findPath, lineFree, nearestFree } from './nav.ts';
+import { hullWater, laneFoul, nearestWater, runClear, waterAt } from './seaway.ts';
 import type { Path } from './nav.ts';
 import { beatAngle } from './npc.ts';
 import type { PlayerSession } from './player.ts';
@@ -24,6 +24,9 @@ import type { ShipEntity } from './ship.ts';
 import { onboardingProtected } from './onboarding.ts';
 
 const DEG = Math.PI / 180;
+/** Never 100 m nearer her mark in this many seconds: she is going round something, not to her mark (a beat to
+ *  windward makes good far more than that). */
+export const AUTOSAIL_ROUND = 60;
 
 export interface AutoSail {
   /** Her mark, and the point of open water nearest it the route ends at. */
@@ -40,6 +43,9 @@ export interface AutoSail {
   beatAt: number;
   stuck: { x: number; y: number; t: number };
   replans: number;
+  /** The nearest she has been to her mark, and when (round and round a thing, never nearer: plan afresh). */
+  best?: number;
+  bestAt?: number;
 }
 
 const runs = new WeakMap<ShipEntity, AutoSail>();
@@ -90,18 +96,27 @@ export function autosailDanger(game: Game, s: PlayerSession, ship: ShipEntity, s
   return hostile ? 'hostile' : null;
 }
 
-/** A route from her to the mark, ending on the open water nearest it when the mark itself is ashore or shoal. */
-function plan(game: Game, ship: ShipEntity, x: number, y: number): Path | null {
+/** A route from her to the mark, ending on the open water nearest it when the mark itself is ashore or shoal — or on
+ *  a solid thing (2026-10-09: a hulk, a pier, a skerry: the water by it her hull may lie in, not the thing). Every leg
+ *  sounded for her hull and keel and taken round what lies on it (nav.ts soundPath). */
+export function plan(game: Game, ship: ShipEntity, x: number, y: number): Path | null {
   let tx = x, ty = y;
-  if (foulWater(game, ship, x, y) || navBlocked(game.world, Math.floor(x / NAV_CELL), Math.floor(y / NAV_CELL))) {
-    const c = nearestFree(game.world, Math.floor(x / NAV_CELL), Math.floor(y / NAV_CELL));
-    if (!c) return null;
-    tx = c[0] * NAV_CELL + NAV_CELL / 2;
-    ty = c[1] * NAV_CELL + NAV_CELL / 2;
+  const hw = hullWater(ship);
+  const ok = (px: number, py: number) => !foulWater(game, ship, px, py);
+  if (foulWater(game, ship, x, y) || !waterAt(game.world, x, y, hw)) {
+    // The water by the mark (a quay's, a hulk's) when there is some within a cable or so; else the grid's open cell.
+    const w = nearestWater(game.world, x, y, hw, 450, ok);
+    if (w) [tx, ty] = w;
+    else {
+      const c = nearestFree(game.world, Math.floor(x / NAV_CELL), Math.floor(y / NAV_CELL));
+      if (!c) return null;
+      tx = c[0] * NAV_CELL + NAV_CELL / 2;
+      ty = c[1] * NAV_CELL + NAV_CELL / 2;
+    }
   }
   // Open water all the way: straight there (the grid's coarse cells would only bend a clear line).
-  if (lineFree(game.world, ship.state.x, ship.state.y, tx, ty) && !probeLine(game, ship, ship.state.x, ship.state.y, tx, ty)) return [[ship.state.x, ship.state.y], [tx, ty]];
-  return findPath(game.world, ship.state.x, ship.state.y, tx, ty, 80_000);
+  if (lineFree(game.world, ship.state.x, ship.state.y, tx, ty) && !probeLine(game, ship, ship.state.x, ship.state.y, tx, ty) && runClear(game.world, ship.state.x, ship.state.y, tx, ty, hw)) return [[ship.state.x, ship.state.y], [tx, ty]];
+  return findPath(game.world, ship.state.x, ship.state.y, tx, ty, 80_000, hw);
 }
 
 /** Foul water somewhere on a straight line (every 60 m). */
@@ -212,13 +227,15 @@ export function autosailHeading(game: Game, ship: ShipEntity, run: AutoSail): nu
   }
   // Feeling ahead: the lead line at half and full look; round whatever is there, the nearer turn first. A beat
   // that runs her at foul water comes about onto the other tack before anything else.
-  // (And her hull's clearance, 2026-10-08: the shore band, a wreck, a skerry, a pier — what the keel would strike.)
-  const look = 160 + ship.state.speed * 8;
+  // (And her hull's clearance, 2026-10-08: the shore band, a wreck, a skerry, a pier — what the keel would strike;
+  // 2026-10-09: the whole run sounded for the reefs and the bared banks, seaway.ts — and no farther than the route's
+  // point she steers for: the water beyond a mark by a hulk is the hulk, and she went round and round it.)
+  const look = Math.min(160 + ship.state.speed * 8, Math.max(Math.hypot(tx - x, ty - y) + ship.stats.length * 0.5, ship.stats.length * 2 + 40));
   const wide = ship.stats.beam * 0.5 + 6, bow = ship.stats.length * 0.5;
   const foul = (h: number) => {
     const v = headingVec(h);
     const x1 = x + v.x * look, y1 = y + v.y * look, x2 = x + v.x * look * 0.5, y2 = y + v.y * look * 0.5;
-    return foulWater(game, ship, x1, y1) || foulWater(game, ship, x2, y2) || !clearPath(game.world, x + v.x * bow, y + v.y * bow, x1, y1, wide);
+    return foulWater(game, ship, x1, y1) || foulWater(game, ship, x2, y2) || laneFoul(game, ship, x + v.x * bow, y + v.y * bow, x1, y1, wide);
   };
   if (!foul(desired)) return desired;
   if (beat > 0 && rel < beat && now - run.tackAt > 8) {
@@ -260,11 +277,21 @@ export function stepAutosail(game: Game): void {
       stopAutosail(game, s, why);
       continue;
     }
-    // Stuck (a headland the grid did not see, a dead calm): plan afresh a few times, then give up.
-    if (game.now - run.stuck.t > AUTOSAIL_STUCK_SEC) {
+    // Stuck (a headland the grid did not see, a dead calm), or going round and round (2026-10-09: never 100 m nearer
+    // her mark in AUTOSAIL_ROUND seconds): plan afresh a few times, then give up.
+    if (run.best === undefined || d < run.best - 100) {
+      run.best = d;
+      run.bestAt = game.now;
+    }
+    const round = game.now - (run.bestAt ?? game.now) > AUTOSAIL_ROUND;
+    if (round || game.now - run.stuck.t > AUTOSAIL_STUCK_SEC) {
       const moved = Math.hypot(ship.state.x - run.stuck.x, ship.state.y - run.stuck.y);
       run.stuck = { x: ship.state.x, y: ship.state.y, t: game.now };
-      if (moved < 60) {
+      if (round) {
+        run.best = d;
+        run.bestAt = game.now;
+      }
+      if (moved < 60 || round) {
         if (++run.replans > AUTOSAIL_REPLANS) {
           stopAutosail(game, s, 'stuck');
           continue;

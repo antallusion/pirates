@@ -11,6 +11,7 @@
 
 import { CHUNK_SIZE, CHUNKS_PER_SIDE } from '../constants.ts';
 import { buildAdv } from '../data/advmap.ts';
+import { QUAY_LINE, QUAY_PIERS } from '../data/quays.ts';
 import { placeWonders } from '../data/wonders.ts';
 import type { WonderKind } from '../data/wonders.ts';
 import { RAFT_PAD, SHORE_PAD, SOLID_PAD, blockerProbe, boxBlocker, coastBlocker, discBlocker } from '../sim/hull.ts';
@@ -199,14 +200,35 @@ export function portLayout(port: { x: number; y: number; size: number }, island:
   return { x: shoreX + ux * size * 0.24, y: shoreY + uy * size * 0.24, ang: Math.atan2(-dx, dy) + Math.PI, size, reach: tIn };
 }
 
-/** A town's quays: the painting's foot (its lowest quarter, 0.235–0.5 of it below its middle) where the piers run out
- *  over the water — 0.64 of its width, out to the pier heads at 0.47. */
-export function quayBlockers(p: { x: number; y: number; size: number; raft?: boolean }, island: { x: number; y: number; r: number; poly: ArrayLike<number> }): Blocker[] {
+/** The painting a town is drawn with (client/src/render/renderer.ts townArt: her own, else her flag's), when its piers
+ *  are known (shared/src/data/quays.ts); null: the old stand-in. */
+export function quayArt(p: { id?: string; faction?: string }): string | null {
+  for (const id of [`prop.port_${p.id}`, `prop.port_${p.faction}`]) if (QUAY_PIERS[id]) return id;
+  return null;
+}
+
+/** A town's quays: the painting's foot (its lowest quarter, 0.235–0.5 of it below its middle) out over the water, one box
+ *  for each pier and each stretch of quay wall as its painting draws them (2026-10-09: one box over the whole foot made
+ *  the water between the piers solid) — the gaps between are water a small ship may enter. A town whose painting's
+ *  piers are not known: the old box, 0.64 of its width out to the pier heads at 0.47. */
+export function quayBlockers(p: { id?: string; faction?: string; x: number; y: number; size: number; raft?: boolean }, island: { x: number; y: number; r: number; poly: ArrayLike<number> }): Blocker[] {
   return once(p, (out) => {
     if (p.raft) return;
     const lay = portLayout(p, island);
-    const [qx, qy] = turn(lay.x, lay.y, lay.ang, 0, lay.size * 0.355);
-    out.push(boxBlocker(qx, qy, lay.size * 0.32, lay.size * 0.115, lay.ang, 'pier', 0.8, SOLID_PAD));
+    const art = quayArt(p);
+    if (!art) {
+      const [qx, qy] = turn(lay.x, lay.y, lay.ang, 0, lay.size * 0.355);
+      out.push(boxBlocker(qx, qy, lay.size * 0.32, lay.size * 0.115, lay.ang, 'pier', 0.8, SOLID_PAD));
+      return;
+    }
+    // In the painting's frame: across it u = (share − 0.5)·size, down it v = (share − 0.5)·size, the quay line at
+    // QUAY_LINE (as the renderer lays the foot: the image's own shares on the square it draws).
+    const top = (QUAY_LINE - 0.5) * lay.size;
+    for (const [a, b, depth] of QUAY_PIERS[art]) {
+      const u = ((a + b) / 2 - 0.5) * lay.size, hw = ((b - a) / 2) * lay.size, hh = (depth / 2) * lay.size;
+      const [qx, qy] = turn(lay.x, lay.y, lay.ang, u, top + hh);
+      out.push(boxBlocker(qx, qy, hw, hh, lay.ang, 'pier', 0.8, SOLID_PAD));
+    }
   });
 }
 

@@ -1,9 +1,18 @@
 // NPC navigation: A* over the coarse nav grid with line-of-sight smoothing, plus a route cache.
 // Routes between ports are reused by every merchant, so the cost is paid once per port pair.
+//
+// The solid things (2026-10-09): the grid's cells are 400 m and know the coasts, the reefs and the maelstroms, not
+// what a keel strikes besides (shared/src/world/solids.ts: a hulk, a wreck, a floe, a buoy, a skerry, a pier, a bared
+// bank). A plan for a hull (`hull`: the helmsman's runs, a captain's pursuit round the land) is made good for her: its
+// end the nearest water she may lie in by her mark, every leg sounded for her hull and her keel (seaway.ts), and a leg
+// that runs over something a way round it on a fine grid of its own window (fineDetour) — her run never ends against
+// a hulk or a pier, and never leads her onto one.
 
 import { NAV_CELL } from '../../../shared/src/constants.ts';
 import type { World } from '../../../shared/src/world/worldgen.ts';
 import { navBlocked } from '../../../shared/src/world/worldgen.ts';
+import { fineDetour, nearestWater, runClear, waterAt } from './seaway.ts';
+import type { HullWater } from './seaway.ts';
 
 export type Path = [number, number][];
 
@@ -74,7 +83,12 @@ export function lineFree(world: World, x0: number, y0: number, x1: number, y1: n
   return true;
 }
 
-export function findPath(world: World, sx: number, sy: number, tx: number, ty: number, maxExpand = 60000): Path | null {
+export function findPath(world: World, sx: number, sy: number, tx: number, ty: number, maxExpand = 60000, hull?: HullWater): Path | null {
+  // For a hull: her mark the nearest water she may lie in (a mark on a hulk or a pier: the water by it).
+  if (hull && !waterAt(world, tx, ty, hull)) {
+    const w = nearestWater(world, tx, ty, hull);
+    if (w) [tx, ty] = w;
+  }
   const n = world.navSize;
   const s = nearestFree(world, Math.floor(sx / NAV_CELL), Math.floor(sy / NAV_CELL));
   const t = nearestFree(world, Math.floor(tx / NAV_CELL), Math.floor(ty / NAV_CELL));
@@ -126,15 +140,66 @@ export function findPath(world: World, sx: number, sy: number, tx: number, ty: n
   cells[cells.length - 1] = [tx, ty];
   // String pulling.
   const out: Path = [cells[0]];
+  const at = [0];
   let anchor = 0;
   for (let i = 2; i < cells.length; i++) {
     if (!lineFree(world, cells[anchor][0], cells[anchor][1], cells[i][0], cells[i][1])) {
       out.push(cells[i - 1]);
+      at.push(i - 1);
       anchor = i - 1;
     }
   }
   out.push(cells[cells.length - 1]);
-  return out;
+  at.push(cells.length - 1);
+  return hull ? soundPath(world, out, at, cells, hull) : out;
+}
+
+/** A pulled path made good for a hull: each leg sounded for her hull and keel; a foul one split back into the grid's
+ *  own cells, and a cell-to-cell leg still foul taken round what lies on it on the fine grid. Then the points she can
+ *  pass by in clear water dropped again. */
+export function soundPath(world: World, out: Path, at: number[], cells: [number, number][], hull: HullWater): Path {
+  const made: Path = [out[0]];
+  for (let k = 1; k < out.length; k++) {
+    const a = made[made.length - 1], b = out[k];
+    if (runClear(world, a[0], a[1], b[0], b[1], hull)) {
+      made.push(b);
+      continue;
+    }
+    // Back to the grid's cells between them, each step sounded; round what lies on a step.
+    const steps: [number, number][] = [];
+    // (A cell's middle on a hulk or a skerry: the water by it.)
+    for (let i = at[k - 1] + 1; i < at[k]; i++) steps.push(waterAt(world, cells[i][0], cells[i][1], hull) ? cells[i] : nearestWater(world, cells[i][0], cells[i][1], hull, 200) ?? cells[i]);
+    steps.push(b);
+    for (const [j, c] of steps.entries()) {
+      const p = made[made.length - 1];
+      if (!runClear(world, p[0], p[1], c[0], c[1], hull)) {
+        const way = fineDetour(world, p[0], p[1], c[0], c[1], hull);
+        if (way) for (let i = 1; i < way.length - 1; i++) made.push(way[i]);
+        else if (k === out.length - 1 && j === steps.length - 1) {
+          // Her mark's water is a pocket she cannot sail into (a slip too narrow for her between two piers): the run
+          // ends where the clear water toward it does.
+          const len = Math.hypot(c[0] - p[0], c[1] - p[1]);
+          let far = 0;
+          for (let d = 10; d < len; d += 10) {
+            const q: [number, number] = [p[0] + ((c[0] - p[0]) * d) / len, p[1] + ((c[1] - p[1]) * d) / len];
+            if (!runClear(world, p[0], p[1], q[0], q[1], hull)) break;
+            far = d;
+          }
+          if (far > 0) made.push([p[0] + ((c[0] - p[0]) * far) / len, p[1] + ((c[1] - p[1]) * far) / len]);
+          continue;
+        }
+      }
+      made.push(c);
+    }
+  }
+  // Pull it tight again where clear water allows (one pass: a point dropped when its neighbours see each other).
+  const tight: Path = [made[0]];
+  for (let i = 1; i < made.length - 1; i++) {
+    const p = tight[tight.length - 1], q = made[i + 1];
+    if (!(lineFree(world, p[0], p[1], q[0], q[1]) && runClear(world, p[0], p[1], q[0], q[1], hull))) tight.push(made[i]);
+  }
+  tight.push(made[made.length - 1]);
+  return tight;
 }
 
 export function pathLength(p: Path): number {
