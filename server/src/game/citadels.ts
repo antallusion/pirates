@@ -129,7 +129,12 @@ function store(game: Game): Store {
   stores.set(game, s);
   return s;
 }
-const save = (game: Game) => game.db.setKv(KEY, stores.get(game)!);
+const save = (game: Game) => {
+  game.db.setKv(KEY, stores.get(game)!);
+  // (a change written is a change every tab shows at once: the tick's shared rows and marks read again — docs/19 E19)
+  marksNow = null;
+  sharedNow = null;
+};
 
 const hpOf = (army: readonly ArmyStack[]): number => army.reduce((a, x) => a + x.n * (UNITS[x.u]?.hp ?? 0), 0);
 
@@ -651,9 +656,12 @@ export function throneHall(game: Game): { name: string; season: number }[] {
 const sent = new WeakMap<PlayerSession, string>();
 let lastMarks: { game: Game; at: number; json: string } | null = null;
 
+/** (once a second: every captain's tab reads the same twelve — docs/19 E19) */
+let marksNow: { game: Game; sec: number; list: CitMark[] } | null = null;
 function marks(game: Game): CitMark[] {
+  if (marksNow && marksNow.game === game && marksNow.sec === Math.floor(game.now)) return marksNow.list;
   const S = store(game);
-  return defs(game).map((c) => {
+  const list = defs(game).map((c) => {
     const rec = S.cits[c.id];
     const t = rec.owner !== null ? tagOf(game, rec.owner) : null;
     const sg = siegeNow(game, c.id);
@@ -663,6 +671,8 @@ function marks(game: Game): CitMark[] {
       ...(windowNow(game, c.id) ? { open: true } : {}), ...(sg ? { siege: sg.tag } : {}),
     };
   });
+  marksNow = { game, sec: Math.floor(game.now), list };
+  return list;
 }
 
 /** The charts' citadels to every captain who has not seen them as they stand (every few seconds at the most). */
@@ -678,6 +688,33 @@ function sendMarks(game: Game): void {
 /** A change the charts should show at once. */
 function touch(game: Game): void {
   if (lastMarks?.game === game) lastMarks.at = -Infinity;
+  if (marksNow?.game === game) marksNow = null;
+  if (sharedNow?.game === game) sharedNow = null;
+}
+
+/** What every captain's tab says alike of a citadel this second (its garrison, walls, windows, siege): built once a
+ *  second, not once a captain (docs/19 E19: the windows' calendar was reckoned twelve times for each of forty captains);
+ *  anything written (save) is read again at once. */
+let sharedNow: { game: Game; sec: number; list: { m: CitMark; c: CitadelDef; rec: CitRec; sg: SiegeRec | undefined; garrison: { u: ArmyStack['u']; n: number }[]; share: number; hp: number[]; max: number[]; windows: { start: number; end: number }[]; siegeOf?: NonNullable<CitRow['siegeOf']> }[] } | null = null;
+function shared(game: Game): NonNullable<typeof sharedNow>['list'] {
+  if (sharedNow && sharedNow.game === game && sharedNow.sec === Math.floor(game.now)) return sharedNow.list;
+  const S = store(game);
+  const now = game.wallNow();
+  const list = marks(game).map((m) => {
+    const c = defs(game)[m.id];
+    const rec = S.cits[m.id];
+    const sg = S.sieges[m.id];
+    const w = windowNow(game, m.id);
+    const next = citNextWindow(m.id, w ? w.end : now);
+    const full = hpOf(citGarrison(c.level));
+    return {
+      m, c, rec, sg, garrison: rec.garrison.filter((x) => x.n > 0).map((x) => ({ u: x.u, n: x.n })), share: Math.round((hpOf(rec.garrison) / Math.max(1, full)) * 100),
+      hp: [...rec.hp], max: maxOf(game, rec), windows: [...(w ? [w] : []), next, citNextWindow(m.id, next.end)].slice(0, 2),
+      ...(sg ? { siegeOf: { tag: sg.tag, guild: sg.guild, start: sg.start, end: sg.end, assaults: sg.assaults.map((a) => sg.names[a] ?? '?'), ...(sg.fighting !== undefined ? { fighting: sg.names[sg.fighting] ?? '?' } : {}) } } : {}),
+    };
+  });
+  sharedNow = { game, sec: Math.floor(game.now), list };
+  return list;
 }
 
 /** The Throne's citadels and war tabs (undefined below level 55, as the Throne itself). */
@@ -689,24 +726,21 @@ export function citView(game: Game, s: PlayerSession): CitView | undefined {
   const g = game.guilds.of(game, s.accountId);
   const ship = s.ship;
   const week = citWeek(now);
-  const rows: CitRow[] = marks(game).map((m) => {
-    const c = defs(game)[m.id];
-    const rec = S.cits[m.id];
-    const sg = S.sieges[m.id];
-    const w = windowNow(game, m.id);
-    const next = citNextWindow(m.id, w ? w.end : now);
-    const ws = [...(w ? [w] : []), next, citNextWindow(m.id, next.end)].slice(0, 2);
+  // (whether any titan may come aboard her ship is hers, not a citadel's: asked once, not twelve times — docs/19 E19)
+  let anyTitan: string | null | undefined;
+  const titanAny = () => (anyTitan === undefined ? (anyTitan = titanWhyAny(game, s)) : anyTitan);
+  const rows: CitRow[] = shared(game).map((x) => {
+    const { m, c, rec, sg } = x;
     const mine = !!g && rec.owner === g.id;
-    const full = hpOf(citGarrison(c.level));
     const hw = holdWhy(game, s, m.id);
     const titanFree = rec.owner !== null && rec.titanWeek !== week;
     return {
-      ...m, ...(mine ? { mine: true } : {}), garrison: rec.garrison.filter((x) => x.n > 0).map((x) => ({ u: x.u, n: x.n })), share: Math.round((hpOf(rec.garrison) / Math.max(1, full)) * 100),
-      hp: [...rec.hp], max: maxOf(game, rec), windows: ws,
-      ...(sg ? { siegeOf: { tag: sg.tag, guild: sg.guild, start: sg.start, end: sg.end, assaults: sg.assaults.map((a) => sg.names[a] ?? '?'), ...(sg.fighting !== undefined ? { fighting: sg.names[sg.fighting] ?? '?' } : {}), ...(g && sg.gid === g.id ? { mine: true } : {}) } } : {}),
+      ...m, ...(mine ? { mine: true } : {}), garrison: x.garrison, share: x.share,
+      hp: x.hp, max: x.max, windows: x.windows,
+      ...(sg && x.siegeOf ? { siegeOf: g && sg.gid === g.id ? { ...x.siegeOf, mine: true } : x.siegeOf } : {}),
       why: {
         declare: declareWhy(game, s, m.id), assault: assaultWhy(game, s, m.id), leave: hw,
-        titan: hw ?? (!titanFree ? 'Its titan of the week is taken: another rises next week.' : titanWhyAny(game, s)),
+        titan: hw ?? (!titanFree ? 'Its titan of the week is taken: another rises next week.' : titanAny()),
       },
       titan: titanFree, tax: citTax(c.level), points: CIT_POINTS.hour[c.level],
     };

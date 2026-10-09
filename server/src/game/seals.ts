@@ -305,10 +305,15 @@ interface Board {
   rows: { acc: number; name: string; lv: number; rounds: number }[];
 }
 
+/** The table kept in memory, written through (docs/19 E19: every captain's Throne read it from the database once a
+ *  second — a statement prepared, a row read and parsed each time). */
+const boards = new WeakMap<Game, Board>();
 function board(game: Game): Board {
   const week = sealWeek(game);
-  const b = game.db.getKv<Board>(BOARD_KEY);
-  return b && b.week === week ? b : { week, rows: [] };
+  let b = boards.get(game) ?? game.db.getKv<Board>(BOARD_KEY);
+  if (!b || b.week !== week) b = { week, rows: [] };
+  boards.set(game, b);
+  return b;
 }
 
 /** Her best of the week, on her and on the table: a higher seal first, then fewer rounds. */
