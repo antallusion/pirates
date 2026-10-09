@@ -83,6 +83,7 @@ import type { DriftProfile } from './drifts.ts';
 import { addGlory, gloryView } from './throne.ts';
 import { gloryXp } from '../../../shared/src/data/throne.ts';
 import type { ThroneRec } from './throne.ts';
+import type { RelicRec } from './relics.ts'; // docs/19 E12
 import type { SealRec, SealView } from '../../../shared/src/data/seals.ts';
 import type { RaidView } from '../../../shared/src/data/abyssraid.ts';
 import { hullXp, researchView } from './research.ts';
@@ -302,6 +303,8 @@ export interface Profile {
   throne?: ThroneRec;
   /** docs/19 E9: her seal of the deep (seals.ts). */
   seal?: SealRec;
+  /** docs/19 E12: her relics — assembled now, ever assembled, the parts the drops gave her (relics.ts). */
+  relics?: RelicRec;
   /** docs/19 E10: the titans she hired at the Grail this week (titans.ts). */
   titans?: { week: number; n: number };
   /** docs/19 D1–D5: her day's finds at their full worth by source, and her seconds at sea that day (seahaul.ts). */

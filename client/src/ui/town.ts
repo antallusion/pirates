@@ -28,7 +28,12 @@ import { EN as LP_EN, RU as LP_RU } from '../lang/ui/lairs.ts';
 import { EN as V_EN, RU as V_RU } from '../lang/ui/heroes18v.ts';
 import { LAND_RES, LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
 import type { LandRes } from '../../../shared/src/data/bestiary.ts';
-import { ARTIFACTS } from '../../../shared/src/data/artifacts.ts';
+import { ARTIFACTS, ART_CLASS_NAMES, ART_RARITY, FORGE_LINES, forgeSpan, primSum } from '../../../shared/src/data/artifacts.ts';
+import type { ArtForge } from '../../../shared/src/data/artifacts.ts';
+import { PRIMS, PRIM_NAMES } from '../../../shared/src/data/hero.ts';
+import { RARITY_COLOR, SLOT_NAMES } from '../../../shared/src/data/items.ts';
+import { EN as REL_EN, RU as REL_RU } from '../lang/ui/relics.ts';
+import { forgeLineText } from './gear.ts';
 import { FITTINGS } from '../../../shared/src/data/landecon.ts';
 import type { FittingId, LandCost } from '../../../shared/src/data/landecon.ts';
 import type { LandTownView } from '../../../shared/src/h3proto.ts';
@@ -37,6 +42,65 @@ const L = dict(EN, RU);
 const B = dict(B_EN, B_RU);
 const LP = dict(LP_EN, LP_RU);
 const V = dict(V_EN, V_RU);
+const RL = dict(REL_EN, REL_RU);
+
+/** docs/19 E13: the anvil's piece in hand, and the work she has asked to strike (the confirm step). */
+let forgeSel: number | null = null;
+let forgeAsk: 'prim' | 'line' | null = null;
+
+/** An artifact's primaries as words («Атака +2 · Воля +1»). */
+function primWords(p: Partial<Record<'atk' | 'def' | 'pow' | 'will', number>>): string {
+  return PRIMS.filter((k) => p[k]).map((k) => `${PRIM_NAMES[k][ru()]} +${p[k]}`).join(' · ') || '—';
+}
+
+/** The work on a piece as words: its primaries and its forged line. */
+function workWords(art: string, f: ArtForge | undefined): string {
+  const p = f?.p ?? ARTIFACTS[art].prim ?? {};
+  return `${primWords(p)}${f?.k ? ` · ${forgeLineText(f)}` : ''}`;
+}
+
+/** docs/19 E13: the anvil — her artifacts as chips, the one in hand: its work, the odds, the cost, the strike (asked
+ *  once more before it is paid), and after the strike the old work and the new side by side to choose from. */
+function forgeBlock(l: LandTownView, gold: number): string {
+  const list = l.forge ?? [];
+  if (!list.length) return `<div class="card tw-land tw-forge"><h4 class="card-h">${icon('build_forge', '', 'ico-md')}${esc(RL('forge.title'))}</h4><p class="muted">${esc(RL('forge.none'))}</p></div>`;
+  const cur = list.find((x) => x.uid === forgeSel) ?? list.find((x) => x.was) ?? list[0];
+  forgeSel = cur.uid;
+  const chips = list.map((x) => {
+    const a = ARTIFACTS[x.art];
+    return `<button class="tw-fg-it${x.uid === cur.uid ? ' on' : ''}${x.was ? ' wait' : ''}" data-fgsel="${x.uid}" title="${esc(`${a.name[ru()]} · ${x.worn ? RL('forge.worn') : RL('forge.locker')}`)}" style="border-color:${RARITY_COLOR[ART_RARITY[a.cls]]}">${icon(a.icon, '◆', 'ico-md')}${x.worn ? '<i class="tw-fg-w">◆</i>' : ''}</button>`;
+  }).join('');
+  const a = ARTIFACTS[cur.art];
+  const head = `<div class="tw-fg-head">${icon(a.icon, '◆', 'ico-lg')}<div class="tw-craft-t"><b style="color:${RARITY_COLOR[ART_RARITY[a.cls]]}">${esc(a.name[ru()])}</b><span class="muted">${esc(ART_CLASS_NAMES[a.cls][ru()])} · ${esc(SLOT_NAMES[a.slot][ru()])} · ${esc(cur.worn ? RL('forge.worn') : RL('forge.locker'))}${cur.forge?.n ? ` · ${esc(RL('forge.times', { n: cur.forge.n }))}` : ''}</span></div></div>`;
+  let body: string;
+  if (cur.was) {
+    // The strike is done: the old work and the new, side by side.
+    body = `<p class="tw-fg-q">${esc(RL('forge.choose'))}</p><div class="tw-fg-cmp"><div class="tw-fg-was"><span class="muted">${esc(RL('forge.old'))}</span><b>${esc(workWords(cur.art, cur.was.p || cur.was.k ? cur.was : undefined))}</b></div>
+      <div class="tw-fg-now"><span class="muted">${esc(RL('forge.new'))}</span><b>${esc(workWords(cur.art, cur.forge))}</b></div></div>
+      <div class="tw-fg-acts"><button class="btn btn-small btn-primary" data-fgkeep="new">${esc(RL('forge.keepNew'))}</button><button class="btn btn-small" data-fgkeep="old">${esc(RL('forge.keepOld'))}</button></div>`;
+  } else {
+    const c = cur.cost;
+    const pct = (v: number) => `${String(Math.round(v * 1000) / 10).replace('.', ru() ? ',' : '.')}%`;
+    const odds = FORGE_LINES.map((k) => {
+      const [lo, hi] = forgeSpan(cur.art, k);
+      return RL(`fl.${k}`, { v: `${pct(lo)}–${pct(hi)}` });
+    }).join(', ');
+    const n = primSum(cur.forge?.p ?? a.prim);
+    const cost = `<span class="bcosts"><span class="bcost${gold < c.silver ? ' lack' : ''}">${money(c.silver)}</span><span class="bcost">${icon('good_pearls', '', 'ico-sm')}${fmt(c.pearls)}</span>${landLine(c.land, l.res)}</span>`;
+    const why = cur.why.line ?? cur.why.prim;
+    const lineBtn = cur.forge?.k ? RL('forge.lineRe') : RL('forge.lineNew');
+    const acts = forgeAsk
+      ? `<div class="tw-fg-acts tw-fg-ask"><span>${esc(RL('forge.ask'))} <b>${esc(forgeAsk === 'prim' ? RL('forge.prim') : lineBtn)}</b></span><button class="btn btn-small btn-primary" data-fgyes>${esc(RL('forge.yes'))}</button><button class="btn btn-small" data-fgno>${esc(RL('forge.no'))}</button></div>`
+      : `<div class="tw-fg-acts"><button class="btn btn-small btn-primary" data-fgdo="prim"${cur.why.prim ? ' disabled' : ''}>${esc(RL('forge.prim'))}</button><button class="btn btn-small btn-primary" data-fgdo="line"${cur.why.line ? ' disabled' : ''}>${esc(lineBtn)}</button></div>`;
+    body = `<div class="tw-fg-now"><span class="muted">${esc(RL('forge.prims'))}</span><b>${esc(primWords(cur.forge?.p ?? a.prim ?? {}))}</b></div>
+      <div class="tw-fg-now"><span class="muted">${esc(RL('forge.line'))}</span><b>${esc(cur.forge?.k ? forgeLineText(cur.forge) : RL('forge.noLine'))}</b></div>
+      <p class="muted tw-fg-odds">${esc(RL('forge.oddsPrim', { n }))} ${esc(RL('forge.oddsLine', { list: odds }))}</p>
+      <div class="tw-fg-cost"><span class="muted">${esc(RL('forge.cost', { h: dec1(c.hours).replace(/[.,]0$/, '') }))}</span>${cost}</div>
+      ${why ? `<p class="muted tw-why">${esc(serverText(why))}</p>` : ''}${acts}`;
+  }
+  return `<div class="card tw-land tw-forge"><h4 class="card-h">${icon('build_forge', '', 'ico-md')}${esc(RL('forge.title'))}</h4><p class="muted">${esc(RL('forge.sub'))}</p>
+    <div class="tw-fg-list">${chips}</div><div class="tw-fg-pane">${head}${body}</div></div>`;
+}
 
 /** docs/18 #43: a cost of the land's resources, each piece short marked. */
 function landLine(c: LandCost | undefined, have: Partial<Record<LandRes, number>> | undefined): string {
@@ -62,6 +126,7 @@ function landBlock(l: LandTownView, gold: number, have: Partial<Record<GoodId, n
   return `<div class="card tw-land"><h4 class="card-h">${icon('tattoo_turtle', '', 'ico-md')}${esc(V('land.title'))}</h4><p class="muted">${esc(V('land.sub', { cap: l.cap }))} ${esc(V('land.uses'))}</p>
       <div class="tw-lstore">${store}</div>${l.sell ? '' : `<p class="muted">${esc(V('land.noMarket'))}</p>`}</div>
     <div class="card tw-land"><h4 class="card-h">${icon('build_forge', '', 'ico-md')}${esc(V('craft.title'))}</h4><p class="muted">${esc(V('craft.sub'))}</p>${crafts}</div>
+    ${l.forge ? forgeBlock(l, gold) : ''}
     <div class="card tw-land"><h4 class="card-h">${icon('build_shipyard', '', 'ico-md')}${esc(V('fit.title'))}</h4><p class="muted">${esc(V('fit.sub'))}</p>${fits}</div>`;
 }
 const ru = () => (lang() === 'ru' ? 1 : 0);
@@ -187,6 +252,29 @@ export function bindTown(root: HTMLElement, send: (m: ClientMsg) => void, mk: { 
   root.querySelectorAll<HTMLElement>('[data-lcraft]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'craft', i: Number(el.dataset.lcraft) })));
   root.querySelectorAll<HTMLElement>('[data-lfit]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'fit', id: el.dataset.lfit as FittingId })));
   root.querySelectorAll<HTMLElement>('[data-lsell]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'sellres', r: el.dataset.lsell as LandRes, n: 10 })));
+  // docs/19 E13: the anvil — a piece taken in hand, a work asked, struck (paid) or let be, the new work kept or not.
+  root.querySelectorAll<HTMLElement>('[data-fgsel]').forEach((el) => (el.onclick = () => {
+    forgeSel = Number(el.dataset.fgsel);
+    forgeAsk = null;
+    redraw();
+  }));
+  root.querySelectorAll<HTMLElement>('[data-fgdo]').forEach((el) => (el.onclick = () => {
+    forgeAsk = el.dataset.fgdo === 'prim' ? 'prim' : 'line';
+    redraw();
+  }));
+  root.querySelector<HTMLElement>('[data-fgno]')?.addEventListener('click', () => {
+    forgeAsk = null;
+    redraw();
+  });
+  root.querySelector<HTMLElement>('[data-fgyes]')?.addEventListener('click', (e) => {
+    (e.currentTarget as HTMLButtonElement).disabled = true;
+    if (forgeSel !== null && forgeAsk) send({ t: 'h3', action: 'forge', uid: forgeSel, what: forgeAsk });
+    forgeAsk = null;
+  });
+  root.querySelectorAll<HTMLButtonElement>('[data-fgkeep]').forEach((el) => (el.onclick = () => {
+    el.disabled = true;
+    if (forgeSel !== null) send({ t: 'h3', action: 'forgekeep', uid: forgeSel, keep: el.dataset.fgkeep === 'old' ? 'old' : 'new' });
+  }));
   root.querySelectorAll<HTMLElement>('[data-pnest]').forEach((el) => (el.onclick = () => send({ t: 'lair', action: 'nest', egg: Number(el.dataset.pnest) })));
   const give = root.querySelector<HTMLSelectElement>('[data-mkgive]');
   const get = root.querySelector<HTMLSelectElement>('[data-mkget]');

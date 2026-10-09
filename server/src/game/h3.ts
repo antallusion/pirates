@@ -15,7 +15,7 @@ import { lairDwellView, lairRecruit, penRecruit } from './beastlairs.ts';
 import { isBeast } from '../../../shared/src/data/bestiary.ts';
 import { isTitan } from '../../../shared/src/data/titans.ts';
 import { titanRecruit } from './titans.ts';
-import { buyFitting, craftArtifact, sellLand } from './landecon.ts';
+import { buyFitting, craftArtifact, forgeArtifact, forgeKeep, sellLand } from './landecon.ts';
 
 export function h3Message(game: Game, s: PlayerSession, msg: H3ClientMsg): void {
   const err = (e: string | null) => {
@@ -64,6 +64,13 @@ export function h3Message(game: Game, s: PlayerSession, msg: H3ClientMsg): void 
       return refresh(null);
     case 'sellres':
       err(sellLand(game, s, String(msg.r), Math.trunc(Number(msg.n))));
+      return refresh(null);
+    // docs/19 E13: the workshop's anvil.
+    case 'forge':
+      err(forgeArtifact(game, s, Math.trunc(Number(msg.uid)), String(msg.what)));
+      return refresh(null);
+    case 'forgekeep':
+      err(forgeKeep(game, s, Math.trunc(Number(msg.uid)), String(msg.keep)));
       return refresh(null);
   }
 }

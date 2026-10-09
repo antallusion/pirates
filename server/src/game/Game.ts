@@ -240,6 +240,7 @@ import { installLairHooks, landFighting, landTac, lairMessage, lairPrompt, resen
 import { installSealHooks, sealView } from './seals.ts'; // docs/19 E9
 import { installTitanHooks } from './titans.ts'; // docs/19 E10
 import { raidView, stepAbyssRaid } from './abyssraid.ts'; // docs/19 E11
+import { relicCheck } from './relics.ts'; // docs/19 E12
 import { shoreBossPrompt, stepShoreBosses } from './shorebosses.ts'; // the great ones ashore (owner, 2026-10-03)
 import { installLandHooks } from './landecon.ts'; // docs/18 V
 import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
@@ -3373,10 +3374,17 @@ export class Game {
           this.pushSelf(s, true);
         };
         switch (msg.action) {
-          case 'equip':
-            return err(equip(this, s, Number(msg.uid)));
-          case 'unequip':
-            return err(unequip(this, s, msg.slot));
+          // docs/19 E12: a relic assembled or taken apart by what she put on or took off.
+          case 'equip': {
+            const why = equip(this, s, Number(msg.uid));
+            if (!why) relicCheck(this, s);
+            return err(why);
+          }
+          case 'unequip': {
+            const why = unequip(this, s, msg.slot);
+            if (!why) relicCheck(this, s);
+            return err(why);
+          }
           case 'sell':
             return portAction(() => sellItem(this, s, Number(msg.uid)));
           case 'salvage':

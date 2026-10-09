@@ -22,7 +22,9 @@ import { esc, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
 import { bindStormForge, stormForgeCard } from './storms.ts';
 import { LOWER_BETTER, compareRows } from './gearcmp.ts';
-import { ARTIFACTS, ART_CLASS_NAMES, ART_SETS } from '../../../shared/src/data/artifacts.ts';
+import { ARTIFACTS, ART_CLASS_NAMES, ART_SETS, RELICS, artPrimOf, fullRelics } from '../../../shared/src/data/artifacts.ts';
+import type { ArtForge } from '../../../shared/src/data/artifacts.ts';
+import { EN as REL_EN, RU as REL_RU } from '../lang/ui/relics.ts';
 import { PRIMS, PRIM_NAMES } from '../../../shared/src/data/hero.ts';
 import { EN as HERO_EN, RU as HERO_RU } from '../lang/ui/hero.ts';
 import type { CmpRow } from './gearcmp.ts';
@@ -142,6 +144,15 @@ export function coloured(it: Item): string {
   return `<b class="gi-name" style="color:${RARITY_COLOR[it.rarity]}">${esc(nameOf(it))}</b>`;
 }
 
+const RL = dict(REL_EN, REL_RU);
+
+/** docs/19 E13: a forged line's words («Рукопашная +3%»). */
+export function forgeLineText(f: ArtForge | undefined): string {
+  if (!f?.k || !Number.isFinite(f.v)) return '';
+  const v = `${String(Math.round((f.v ?? 0) * 1000) / 10).replace('.', ru() ? ',' : '.')}%`;
+  return RL(`fl.${f.k}`, { v });
+}
+
 /** An item's card: name, rarity, slot and level, its lines, its set, its gift, its wear. */
 function card(it: Item, worn: Item[]): string {
   const e = itemEffect({ ...it, dur: Math.max(1, it.dur) });
@@ -153,12 +164,20 @@ function card(it: Item, worn: Item[]): string {
   const leg = it.legendary ? LEGENDARY_ITEMS[it.legendary] : null;
   // A hero's artifact (docs/17 H2): its primaries, its words, its set.
   const art = it.art ? ARTIFACTS[it.art] : null;
-  const artLines = art ? PRIMS.filter((p) => art.prim?.[p]).map((p) => `<div class="gl g-up"><span>${esc(PRIM_NAMES[p][ru() ? 1 : 0])}</span><b>+${art.prim![p]}</b></div>`).join('') : '';
+  // docs/19 E13: the primaries as the anvil spread them, and its forged line.
+  const ap = art ? artPrimOf(it) : {};
+  const artLines = art ? PRIMS.filter((p) => ap[p]).map((p) => `<div class="gl g-up"><span>${esc(PRIM_NAMES[p][ru() ? 1 : 0])}</span><b>+${ap[p]}</b></div>`).join('') + (it.forge?.k ? `<div class="gl g-up gi-forged"><span>${esc(forgeLineText(it.forge))}</span><b>⚒</b></div>` : '') : '';
   let artSet = '';
   if (art?.set) {
     const def = ART_SETS[art.set];
     const have = def.pieces.filter((p) => worn.some((w) => w.art === p)).length;
     artSet = `<div class="gi-set">${esc(def.name[ru() ? 1 : 0])} (${have}/${def.pieces.length})<div class="gi-bonus${have >= def.pieces.length ? ' on' : ''}">(${def.pieces.length}) ${esc(def.text[ru() ? 1 : 0])}</div><div class="muted">${esc(def.pieces.map((p) => ARTIFACTS[p].name[ru() ? 1 : 0]).join(' · '))}</div></div>`;
+  }
+  // docs/19 E12: a relic's part — the relic, how many of its parts are worn, the whole's gift.
+  if (art?.part) {
+    const def = RELICS[art.part];
+    const have = def.parts.filter((p) => worn.some((w) => w.art === p)).length;
+    artSet += `<div class="gi-set gi-relic">${icon('tattoo_crown', '', 'ico-sm')}${esc(RL('relic.part', { name: def.name[ru() ? 1 : 0], n: have, m: def.parts.length }))}<div class="gi-bonus${have >= def.parts.length ? ' on' : ''}">(${def.parts.length}) ${esc(def.text[ru() ? 1 : 0])}</div><div class="muted">${esc(def.parts.map((p) => ARTIFACTS[p].name[ru() ? 1 : 0]).join(' · '))}</div></div>`;
   }
   let set = '';
   if (it.set) {
@@ -217,6 +236,9 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
   const worn = [...Object.values(shipGear), ...Object.values(capGear)].filter((x): x is Item => !!x);
   const docked = !!self.dockedAt;
   const sy = docked ? state.portView?.shipyard : null;
+  // docs/19 E12: the slots an assembled relic holds wear its frame.
+  const relicsOn = fullRelics(Object.values(capGear).filter((x): x is Item => !!x));
+  const relicAt = (it: Item | undefined) => (it?.art && ARTIFACTS[it.art]?.part && relicsOn.includes(ARTIFACTS[it.art].part!) ? RELICS[ARTIFACTS[it.art].part!] : null);
   if (tab === 'shop' && !docked) tab = 'ship';
 
   // The captain's sheet (WoW's paper doll): the portrait, the pieces in squares down both sides.
@@ -225,8 +247,9 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
     const it = (isShipSlot(slot) ? shipGear[slot] : capGear[slot as never]) as Item | undefined;
     const locked = isShipSlot(slot) && lvl < SLOT_OPENS[slot];
     const on = pick?.kind === 'slot' && pick.slot === slot;
-    const label = it ? nameOf(it) : locked ? `${SLOT_NAMES[slot][ru() ? 1 : 0]} — ${L('locked', { n: SLOT_OPENS[slot as never] })}` : SLOT_NAMES[slot][ru() ? 1 : 0];
-    return `<button class="doll-slot${it ? ' full' : ''}${locked ? ' locked' : ''}${on ? ' on' : ''}" data-gslot="${slot}" ${locked ? 'disabled' : ''} title="${esc(label)}" aria-label="${esc(label)}"${it ? ` style="border-color:${RARITY_COLOR[it.rarity]}"` : ''}>${itemIcon(it ?? null, slot, 'doll-ico')}${it ? `<span class="doll-lv">${it.ilvl}</span>` : locked ? `<span class="doll-lock-lv">⚓${SLOT_OPENS[slot as never]}</span>` : ''}</button>`;
+    const rel = isShipSlot(slot) ? null : relicAt(it);
+    const label = (it ? nameOf(it) : locked ? `${SLOT_NAMES[slot][ru() ? 1 : 0]} — ${L('locked', { n: SLOT_OPENS[slot as never] })}` : SLOT_NAMES[slot][ru() ? 1 : 0]) + (rel ? ` · ${RL('relic.slot', { name: rel.name[ru() ? 1 : 0] })}` : '');
+    return `<button class="doll-slot${it ? ' full' : ''}${locked ? ' locked' : ''}${on ? ' on' : ''}${rel ? ' relic' : ''}" data-gslot="${slot}" ${locked ? 'disabled' : ''} title="${esc(label)}" aria-label="${esc(label)}"${it ? ` style="border-color:${RARITY_COLOR[it.rarity]}"` : ''}>${itemIcon(it ?? null, slot, 'doll-ico')}${it ? `<span class="doll-lv">${it.ilvl}</span>` : locked ? `<span class="doll-lock-lv">⚓${SLOT_OPENS[slot as never]}</span>` : ''}</button>`;
   };
   const dollOf = (slots: readonly Slot[], face: string | null, name: string, sub: string, kind: string) => {
     const half = Math.ceil(slots.length / 2);

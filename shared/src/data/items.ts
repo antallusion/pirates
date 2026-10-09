@@ -11,6 +11,7 @@
 import type { ModuleId } from './ships.ts';
 import type { Flag, StatKey, StatMods } from './stats.ts';
 import { ARTIFACTS, artSeaSource } from './artifacts.ts';
+import type { ArtForge } from './artifacts.ts';
 
 export type ShipSlot = 'sails' | 'rigging' | 'plating' | 'rudder' | 'hold' | 'quarters' | 'battery' | 'banner' | 'relic' | 'tackle';
 export type CaptainSlot = 'hat' | 'coat' | 'sash' | 'boots' | 'blade' | 'pistols' | 'spyglass' | 'compass' | 'charm' | 'ring';
@@ -404,6 +405,9 @@ export interface Item {
   maker?: string;
   /** A hero's artifact (docs/17 H2, shared/src/data/artifacts.ts): its own name, primaries and gifts; it never wears. */
   art?: string;
+  /** docs/19 E13: an artifact forged at the island's workshop, and the roll before the last (kept till she chooses). */
+  forge?: ArtForge;
+  forgeWas?: ArtForge;
 }
 
 export function itemSlot(it: Item): Slot {

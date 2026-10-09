@@ -4882,3 +4882,45 @@ body.touch.sea-docked #touch > :is(#tc-stick, .tc-special, #tc-target) { display
 /* A sheet that holds HUD blocks lent to it (the news, the target's card): they stand in its flow. */
 .sea-lent { display: flex; flex-direction: column; gap: var(--k-sp-2); padding-bottom: var(--k-sp-2); }
 .sea-lent > :not(.hidden) { position: static !important; display: block !important; width: auto !important; max-width: none !important; transform: none !important; margin: 0 !important; max-height: none !important; overflow: visible !important; }
+/* docs/19 E12: the relics in the hero window (each a card: its face, its parts lit when worn, dim in the locker, dark
+   when not found; assembled, it glows as a whole set) and a relic's slots on the paper doll. */
+.hx-relics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.hx-relic { display: flex; flex-direction: column; gap: 4px; padding: 6px; border: 1px solid rgba(176, 141, 87, 0.3); border-radius: 6px; font-size: 12px; min-width: 0; background: rgba(10, 12, 16, 0.35); }
+.hx-relic.on { border-color: #e6cc80; box-shadow: 0 0 12px rgba(230, 204, 128, 0.35), inset 0 0 8px rgba(230, 204, 128, 0.12); }
+.hx-relic small { color: var(--fog); line-height: 1.3; }
+.hx-rhead { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.hx-rhead b { color: #e6cc80; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.hx-rn { margin-left: auto; flex: none; white-space: nowrap; }
+.hx-rface { flex: none; border-radius: 4px; }
+.hx-rparts { display: flex; flex-wrap: wrap; gap: 4px; }
+.hx-rpart { display: inline-grid; place-items: center; width: 30px; height: 30px; border: 1px solid #3c3c40; border-radius: 4px; background: #0b0b0d; }
+.hx-rpart .ico-sm { width: 26px; height: 26px; }
+.hx-rpart.worn { border-color: #e6cc80; box-shadow: 0 0 6px rgba(230, 204, 128, 0.45); }
+.hx-rpart.held { border-color: #6f5a38; }
+.hx-rpart.held .ico-sm { opacity: 0.6; }
+.hx-rpart.miss .ico-sm { opacity: 0.18; filter: grayscale(1); }
+@media (max-width: 600px), (max-height: 420px) { .hx-relics { grid-template-columns: 1fr; } }
+.doll-slot.relic { box-shadow: 0 0 0 1px #e6cc80, 0 0 9px rgba(230, 204, 128, 0.55), inset 0 0 6px rgba(0, 0, 0, 0.8); }
+.doll-slot.relic::after { content: '♛'; position: absolute; left: 2px; top: 0; font-size: 10px; color: #e6cc80; text-shadow: 0 0 3px #000; pointer-events: none; }
+.gi-relic { color: #e6cc80; }
+.gi-forged span { color: #9fc7d8; }
+/* docs/19 E13: the workshop's anvil. */
+.tw-forge .tw-fg-list { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.tw-fg-it { position: relative; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border: 1px solid #6f5a38; border-radius: 4px; background: #0b0b0d; cursor: pointer; }
+.tw-fg-it .ico-md { width: 34px; height: 34px; }
+.tw-fg-it.on { box-shadow: 0 0 0 2px #ffe08a, 0 0 8px rgba(255, 224, 138, 0.6); }
+.tw-fg-it.wait::before { content: '⚒'; position: absolute; right: 1px; bottom: -1px; font-size: 11px; color: #ffe08a; text-shadow: 0 0 3px #000; }
+.tw-fg-w { position: absolute; left: 2px; top: 0; font-size: 8px; font-style: normal; color: #e6cc80; }
+.tw-fg-pane { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid rgba(140, 107, 58, 0.2); padding-top: 6px; }
+.tw-fg-head { display: flex; align-items: center; gap: 8px; }
+.tw-fg-head .ico-lg { flex: none; width: 44px; height: 44px; }
+.tw-fg-now, .tw-fg-was { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; font-size: 12.5px; }
+.tw-fg-now .muted, .tw-fg-was .muted { flex: none; min-width: 9em; }
+.tw-fg-was b { color: var(--fog); font-weight: 500; }
+.tw-fg-now b { color: #e6cc80; font-weight: 500; }
+.tw-fg-odds { font-size: 11.5px; line-height: 1.35; margin: 2px 0; }
+.tw-fg-cost { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12px; }
+.tw-fg-acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 2px; }
+.tw-fg-ask span { flex: 1 1 100%; font-size: 12.5px; }
+.tw-fg-q { margin: 2px 0; font-size: 12.5px; color: #e6cc80; }
+.tw-fg-cmp { display: flex; flex-direction: column; gap: 2px; padding: 4px 6px; border: 1px solid rgba(176, 141, 87, 0.3); border-radius: 6px; }

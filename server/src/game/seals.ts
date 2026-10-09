@@ -25,6 +25,8 @@ import { giveGoods } from './director.ts';
 import { weekOf } from './empires.ts';
 import type { Game } from './Game.ts';
 import { artifactFind } from './hero.ts';
+import { relicPartDrop } from './relics.ts'; // docs/19 E12
+import { sealPartChance } from '../../../shared/src/data/artifacts.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { chronicle } from './renown.ts';
 import { aiAct, buildStacks, checkOver, lossesOf, newBattle, tacHurt, tacPush } from './tacbattle.ts';
@@ -286,6 +288,9 @@ function endDepth(game: Game, s: PlayerSession, l: Lair, lv: number, won: boolea
     const it = artifactFind(game, s, 'boss');
     if (it?.art) loot.artifact = it.art;
   }
+  // docs/19 E12: a relic's part, now and then, from a depth won in time.
+  const part = relicPartDrop(game, s, 'seal', sealPartChance(lv));
+  if (part && !loot.artifact) loot.artifact = part;
   game.toastShip(ship, `Seal ${lv} won in ${rounds} rounds: the seal rises to ${seal.lv} and now opens ${lairName(seal.kind)}.`, 'good');
   if (before < 10 && seal.lv >= 10) chronicle(game, `${s.name} carries a seal of the deep to ${seal.lv}.`);
   return loot;

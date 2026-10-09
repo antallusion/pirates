@@ -2,9 +2,15 @@
 // rots on the beach), the town's buildings that ask for them (town.ts reads townLand through townHooks), the island's
 // workshop that makes four artifacts of them, the ship's fittings the captain buys a rank at a time, and the island's
 // market that buys them at its poor rates. The creature dwellings' settling is beastlairs.ts's (it keeps the
-// dwellings). Nothing here rolls dice.
+// dwellings). docs/19 E13: the workshop's anvil — an artifact forged and reforged (shared/src/data/forge.ts), its new
+// roll beside the old until she chooses; the anvil's dice are its own Rng.
 
 import { ARTIFACTS } from '../../../shared/src/data/artifacts.ts';
+import { FORGE_MARKET, forgeCost, forgeRoll, forgeable } from '../../../shared/src/data/forge.ts';
+import type { ForgeWhat } from '../../../shared/src/data/forge.ts';
+import type { Item } from '../../../shared/src/data/items.ts';
+import { Rng } from '../../../shared/src/rng.ts';
+import { applyWorn } from './gear.ts';
 import { LAND_RES, LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
 import type { LandRes } from '../../../shared/src/data/bestiary.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -122,6 +128,95 @@ export function craftArtifact(game: Game, s: PlayerSession, i: number): string |
   return null;
 }
 
+// ------------------------------------------------------------------------------------------------ the anvil (docs/19 E13)
+
+const anvils = new WeakMap<Game, Rng>();
+function anvil(game: Game): Rng {
+  let r = anvils.get(game);
+  if (!r) anvils.set(game, (r = new Rng(0xf07e2a11)));
+  return r;
+}
+
+/** One of her artifacts by its uid: worn, or in her locker. */
+function artOf(p: Profile, uid: number): { it: Item; worn: boolean } | null {
+  for (const it of Object.values(p.captainGear ?? {})) if (it?.uid === uid && it.art) return { it, worn: true };
+  const it = p.stash.find((x) => x.uid === uid && x.art);
+  return it ? { it, worn: false } : null;
+}
+
+function forgeWhy(game: Game, s: PlayerSession, h: Holding, y: Yard, it: Item, what: ForgeWhat): string | null {
+  if (!it.art || !ARTIFACTS[it.art]) return 'Only an artifact goes to the anvil.';
+  if (!forgeable(it, what)) return 'It has no primaries to spread.';
+  if (townLevel(y, 'market') < FORGE_MARKET) return 'Build a market in your town first: its workshop keeps the anvil.';
+  if (!lyingOff(game, s, h)) return 'Lie off your island: its workshop forges it.';
+  if (it.forgeWas) return 'Choose first: the new roll or the old one.';
+  if (s.ship?.underFire(game.now)) return 'Not in the middle of a fight';
+  const c = forgeCost(it);
+  if (s.profile!.gold < c.silver) return `Needs ${c.silver} silver`;
+  return landLack(s.profile!, c.land) ?? lacking(h, y, s, true, { pearls: c.pearls });
+}
+
+/** An artifact at the anvil: its primaries spread anew (`prim`) or its forged line rolled anew (`line`). The new roll
+ *  stands beside the old one until she chooses (forgeKeep); the price is paid either way. */
+export function forgeArtifact(game: Game, s: PlayerSession, uid: number, what: string): string | null {
+  if (what !== 'prim' && what !== 'line') return 'Bad order';
+  const m = ownBase(game, s);
+  if (typeof m === 'string') return m;
+  const p = s.profile!;
+  const a = artOf(p, uid);
+  if (!a) return 'No such piece';
+  const why = forgeWhy(game, s, m.h, m.y, a.it, what);
+  if (why) return why;
+  const c = forgeCost(a.it);
+  p.gold -= c.silver;
+  takeLand(p, c.land);
+  takeGoods(m.h, m.y, s, true, { pearls: c.pearls });
+  a.it.forgeWas = a.it.forge ? structuredClone(a.it.forge) : { n: 0 };
+  a.it.forge = forgeRoll(anvil(game), a.it, what);
+  game.db.ledger(s.accountId, 'forge', -c.silver, `${a.it.art}:${what}:${a.it.forge.n}`);
+  game.holdings.touch();
+  if (a.worn) {
+    applyWorn(game, s);
+    applyHero(game, s);
+  }
+  game.sendTo(s, { t: 'toast', msg: `The anvil rings over the ${ARTIFACTS[a.it.art!].name[0]}: keep the new work or the old.`, kind: 'gold' });
+  return null;
+}
+
+/** Her choice after the anvil: the new roll, or the old one back (the time at the anvil counts either way). */
+export function forgeKeep(game: Game, s: PlayerSession, uid: number, keep: string): string | null {
+  const p = s.profile!;
+  const a = artOf(p, uid);
+  if (!a) return 'No such piece';
+  const was = a.it.forgeWas;
+  if (!was) return 'Nothing waits at the anvil.';
+  const n = a.it.forge?.n ?? was.n;
+  if (keep === 'old') {
+    if (was.p || was.k) a.it.forge = { ...structuredClone(was), n };
+    else a.it.forge = { n };
+  }
+  delete a.it.forgeWas;
+  if (a.worn) {
+    applyWorn(game, s);
+    applyHero(game, s);
+  }
+  game.sendTo(s, { t: 'toast', msg: keep === 'old' ? `The ${ARTIFACTS[a.it.art!].name[0]} keeps its old work.` : `The ${ARTIFACTS[a.it.art!].name[0]} takes its new work.`, kind: 'good' });
+  return null;
+}
+
+/** Her artifacts at the anvil, for the town's screen: worn first, then the locker's. */
+function forgeView(game: Game, s: PlayerSession, h: Holding, y: Yard): NonNullable<LandTownView['forge']> {
+  const p = s.profile!;
+  const list: { it: Item; worn: boolean }[] = [
+    ...Object.values(p.captainGear ?? {}).filter((x): x is Item => !!x?.art && !!ARTIFACTS[x.art]).map((it) => ({ it, worn: true })),
+    ...p.stash.filter((x) => !!x.art && !!ARTIFACTS[x.art]).map((it) => ({ it, worn: false })),
+  ];
+  return list.map(({ it, worn }) => ({
+    uid: it.uid, art: it.art!, worn, forge: it.forge ? structuredClone(it.forge) : undefined, was: it.forgeWas ? structuredClone(it.forgeWas) : undefined,
+    cost: forgeCost(it), why: { prim: forgeWhy(game, s, h, y, it, 'prim'), line: forgeWhy(game, s, h, y, it, 'line') },
+  }));
+}
+
 // ------------------------------------------------------------------------------------------------ the market
 
 /** The island's market buys `n` of a land resource at its poor rate. */
@@ -158,6 +253,7 @@ export function landTownView(game: Game, s: PlayerSession, h: Holding, y: Yard):
       const rank = fit[id] ?? 0;
       return { id, rank, max: FITTING_MAX, next: rank < FITTING_MAX ? fittingCost(id, rank + 1) : null, why: fitWhy(game, s, h, id) };
     }),
+    forge: forgeView(game, s, h, y), // docs/19 E13
   };
 }
 
