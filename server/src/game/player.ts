@@ -302,6 +302,8 @@ export interface Profile {
   seaMarks?: Record<string, number>;
   /** docs/19 E1–E3: her glory past the cap, her mastery tree, her trials of mastery (throne.ts). */
   throne?: ThroneRec;
+  /** docs/25 item 38: the facets of her abilities she has chosen («ability@rank» → a | b; shared/src/data/seaskill.ts). */
+  facets?: Record<string, 'a' | 'b'>;
   /** docs/19 E9: her seal of the deep (seals.ts). */
   seal?: SealRec;
   /** docs/19 E12: her relics — assembled now, ever assembled, the parts the drops gave her (relics.ts). */
@@ -659,6 +661,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     lastPort: p.lastPort,
     contracts: p.contracts.map((c) => contractFor(p.level, c)),
     cooldowns: p.cooldowns,
+    facets: p.facets ?? {}, // docs/25 item 38
     repairing: ship?.repairing ?? false,
     curse: Math.round(ship ? ship.curse : p.curse),
     stolen: p.stolen,

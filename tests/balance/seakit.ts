@@ -135,6 +135,7 @@ export function captainShip(game: Game, cfg: CaptainCfg, x: number, y: number, h
   ship.loadout.gear = kit.ship;
   ship.worn = kit.worn;
   ship.docked = null;
+  p.docked = null; // (her sheet at sea too: a ship out of a port her sheet still lay in was put back at its mouth)
   ship.protectedUntil = 0;
   ship.state.x = x;
   ship.state.y = y;

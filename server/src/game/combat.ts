@@ -46,6 +46,8 @@ import { kegImpact } from './holidays.ts';
 import { SPEED_SCALE } from '../../../shared/src/constants.ts';
 import { killFactor, menLost, wallsOf } from './army.ts';
 import { giftOnHit } from './shipgifts.ts';
+import { kitCrit, passiveNums, skillNumber, volleyKit } from './seaskill.ts';
+import type { VolleyKit } from './seaskill.ts';
 
 /** A broadside laid on a mark by her gun captains (auto-aim, the sea's own gunners): the balls converge on `aimAt`. */
 export interface Lay {
@@ -83,6 +85,8 @@ export interface VolleyRec {
   t: number;
   battery?: Set<number>; // Grand Battery: targets already shaken by this volley
   men?: Map<number, number>; // men killed per target (docs/17 H1: one "−N" a broadside)
+  /** What her captain's kit put into it (docs/25 items 13–41: seaskill.ts), and the once-a-broadside parts spent. */
+  kit?: VolleyKit & { critDone?: boolean; fireDone?: boolean; armyDone?: Set<number> };
 }
 
 export const COMBAT_TAG = 20;
@@ -162,7 +166,7 @@ export function reloadTime(ship: ShipEntity, side: Side, now: number, vsTable = 
   const gcf = 1 - (1 - gunCrewFactor(ship.stats, ship.loadout, ship.crew)) * Math.max(0, 1 - tval(ship.stats, 'gunCrewDrill'));
   let t = gun.reload * ship.stats.reloadMul / gcf * (AMMO[ship.ammoSel].reloadMul ?? 1);
   const fullVolley = !ship.rollingFire || ship.hasFlag('rolling_broadside');
-  if (ship.captain === 'corsair' && ship.gunsDisabled[side] === 0 && fullVolley) t *= 0.85; // Broadside Discipline
+  if (ship.captain === 'corsair' && !ship.kitOff && ship.gunsDisabled[side] === 0 && fullVolley) t *= 0.85; // Broadside Discipline
   if (ship.rollingFire) t *= 0.85; // guns reload as they fire
   if (ship.swapBonus) t *= 1 - 0.05 * ship.rank('gun_quick_swap'); // Quick Swap: 10% at rank 2
   if (ship.cls.passive.id === 'gun_brig' && ship.reload.port === 0 && ship.reload.starboard === 0) t *= 0.92;
@@ -210,8 +214,11 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   }
   const fwd = headingVec(ship.state.heading);
   const outward = headingVec(baseHeading);
-  const doubleShot = ship.doubleShotArmed;
   const target = aimTarget(game, ship, side, range);
+  // Her captain's kit (docs/25 items 13–41): the double charge, the rake, the ambush, the knife, the weather gauge…
+  const kitMark = (aimAt ? shipNear(game, ship, aimAt.x, aimAt.y) : null) ?? target;
+  const kit = volleyKit(game, ship, kitMark, ammo);
+  const doubleShot = !!kit?.twin;
   const rolling = ship.rollingFire;
   const rollMul = rolling ? (ship.hasFlag('rolling_broadside') ? 0.8 : 1.15) : 1;
   const rangedIn = target?.hasEffect('ranged_in') ? 0.85 : 1;
@@ -220,7 +227,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   const held = ship.aimStart[side] >= 0 ? game.now - ship.aimStart[side] : 0;
   const focus = aimFocus(held > AIM_CHARGE * 4 ? 0 : held);
   ship.aimStart[side] = -1;
-  const spreadRad = gun.spreadDeg * DEG * ship.stats.spreadMul * (doubleShot ? 1.4 : 1) * (ship.morale < 25 ? 1.3 : 1) * game.seaSpread(ship) * rollMul * rangedIn * focus.spread * (lay?.spread ?? 1);
+  const spreadRad = gun.spreadDeg * DEG * ship.stats.spreadMul * (doubleShot ? 1.15 : 1) * (ship.morale < 25 ? 1.3 : 1) * game.seaSpread(ship) * rollMul * rangedIn * focus.spread * (lay?.spread ?? 1);
   // Laid on her mark (docs/23 item 34): each gun trained from its own port onto the point, within the arc of her beam.
   const layArc = (LAY_ARC_DEG + tval(ship.stats, 'gunTrain')) * DEG;
   const sideH = sideHeading(ship, side);
@@ -240,7 +247,9 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
     ship.recompute(game.now);
   }
   const volley = game.allocId();
-  const rec: VolleyRec = { owner: ship.id, total: 0, left: 0, hits: new Map(), counts: !rolling || ship.hasFlag('rolling_broadside'), demoralised: new Set(), dealt: new Map(), t: game.now };
+  const rec: VolleyRec = { owner: ship.id, total: 0, left: 0, hits: new Map(), counts: !rolling || ship.hasFlag('rolling_broadside'), demoralised: new Set(), dealt: new Map(), t: game.now, ...(kit ? { kit } : {}) };
+  // The double charge's two balls a gun share its damage (two halves of the gun's charge and the bonus).
+  const kitMul = kit ? kit.mul / (doubleShot ? 2 : 1) : 1;
   // A culverin's ball flies faster than her other guns' (and drifts the less for it).
   const gunSpeed = 1 + (gun.shotSpeed ?? 0);
   const shotSpeed = (1 + tval(ship.stats, 'shotSpeed')) * gunSpeed;
@@ -250,7 +259,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
     const along = shots === 1 ? 0 : (i / (shots - 1) - 0.5) * ship.stats.length * 0.7;
     const bx = ship.state.x + fwd.x * along + outward.x * ship.stats.beam * 0.55;
     const by = ship.state.y + fwd.y * along + outward.y * ship.stats.beam * 0.55;
-    const n = doubleShot || rng.chance(ship.stats.doubleShotChance) ? 2 : 1;
+    const n = doubleShot ? 2 : rng.chance(ship.stats.doubleShotChance) ? 2 : 1;
     let laidH = baseHeading, laidD = dist;
     if (lay && aimAt) {
       laidH = wrapAngle(sideH + clamp(wrapAngle(Math.atan2(aimAt.x - bx, -(aimAt.y - by)) - sideH), -layArc, layArc));
@@ -263,7 +272,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
       const delay = Math.round((rolling ? (i * 2500) / Math.max(1, shots) : i * 45) + rng.float() * 60 + k * 90);
       game.projectiles.push({
         owner: ship.id, x: bx, y: by, heading: h, speed: AMMO[ammo].speed * shotSpeed * SPEED_SCALE, dist: d, traveled: 0, ammo,
-        damage: gun.damage * ship.stats.gunDamageMul * shadow * focus.damage * (ammo === 'cursed' ? cursedDamageMul(ship) : 1), maxRange: range, delay: delay / 1000, volley, gun: gun.id,
+        damage: gun.damage * ship.stats.gunDamageMul * shadow * focus.damage * kitMul * (ammo === 'cursed' ? cursedDamageMul(ship) : 1), maxRange: range, delay: delay / 1000, volley, gun: gun.id,
       });
       rec.total++;
       balls.push([Math.round(bx), Math.round(by), Math.round(h * 1000) / 1000, Math.round(d), delay]);
@@ -468,6 +477,16 @@ function volleyBall(game: Game, p: Projectile, target: ShipEntity | null): void 
   }
   const owner = game.ships.get(rec.owner);
   if (!owner) return;
+  // The grapeshot frenzy's first broadside (docs/25 item 23): a share of her boarding army besides, before the fight.
+  if (rec.kit?.army) for (const [id] of rec.hits) {
+    const t = game.ships.get(id);
+    if (!t || !t.alive || t.id === owner.id) continue;
+    const fell = killMen(game, t, Math.round(t.stats.crewMax * rec.kit.army), owner);
+    if (fell > 0) {
+      menLost(game, t, fell);
+      skillNumber(game, t, 'grapeshot_frenzy', { men: fell });
+    }
+  }
   if (owner.isPlayer) onboardingVolley(game, owner, [...rec.hits.values()].reduce((x, y) => x + y, 0));
   let top = 0, topId = 0;
   for (const [id, n] of rec.hits) if (n > top) {
@@ -556,6 +575,11 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   const fromBow = local.y > 0;
   let raking = along > 0.87;
   if (raking && fromBow && target.cls.passive.id === 'line') raking = false;
+  // Her captain's kit in this broadside (docs/25 items 13–41): its own rake bonus is in the ball already; to the crits and
+  // the men it is a rake (Hard Over's window, the star fix's angles).
+  const krec = p.volley !== undefined ? game.volleys.get(p.volley) : undefined;
+  const kv = krec?.kit;
+  const kitRake = !!kv?.rake;
   // Raking Fire: shot along the keel from astern.
   const sst = shooter?.stats;
   const sternRake = raking && !fromBow && sst ? 1 + tval(sst, 'rakingFire') : 1;
@@ -567,7 +591,9 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   const strap = p.ammo === 'heavy' ? 1 + tval(target.stats, 'strapping') : 1;
   // Iron Rain (docs/25 item 9): her balls go through a tenth more of any armour.
   const ironRain = shooter && shooter.rank('gun_iron_rain') > 0 ? IRON_RAIN_PIERCE : 0;
-  const armor = Math.min(0.85, target.stats.armor * strap * (1 - (ARMOR_PIERCE[p.ammo] ?? 0)) * (1 - (gd?.pierce ?? 0)) * (1 - ironRain));
+  // The knife in the fog and the Admiral's weak side (docs/25 items 20, 28): a share of her armour gone through.
+  const kitPierce = Math.max(kv?.pierce ?? 0, target.hasEffect('weak_side') ? 0.15 : 0);
+  const armor = Math.min(0.85, target.stats.armor * strap * (1 - (ARMOR_PIERCE[p.ammo] ?? 0)) * (1 - (gd?.pierce ?? 0)) * (1 - ironRain) * (1 - kitPierce));
   const lore = (shooter?.hasFlag('leviathan_lore') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_harpooneer') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_white_orca') && target.npcRole === 'beast' ? 1.1 : 1) * (shooter?.hasFlag('tattoo_orca') && target.npcRole === 'beast' ? 1.1 : 1) * (shooter?.hasFlag('saint_maws_bell') && isMonster(target) ? 1.2 : 1) // Leviathan Lore, the Harpooneer, Saint Maw's Bell
     * (isMonster(target) ? (gd?.monster ?? 1) * (p.ammo === 'salt' ? 2.5 : 1) : 1); // the bomb-lance gun; blessed salt for the deep and the dead
   // The ladder (canon D12): the gap of levels cuts or swells the shot, and a junior makes fewer criticals, or none.
@@ -585,7 +611,8 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   // was 30% for every ship, and every ball past it did 0 and was drawn as a miss: an equal sank in four broadsides
   // whatever her gear or her captain.
   let capped = false;
-  if (p.volley !== undefined) {
+  let cut = 0;
+  if (p.volley !== undefined && !kv?.noAlpha) {
     const rec = game.volleys.get(p.volley);
     if (rec) {
       const cap = target.stats.hullMax * (onSeaTable(target) ? alphaShare(target.combatLevel) : ALPHA_OFF_LADDER) * (target.hasFlag('iron_coffin') ? 2 / 3 : 1);
@@ -593,6 +620,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
       const within = Math.max(0, Math.min(hullDmg, cap - done));
       rec.dealt.set(target.id, done + hullDmg);
       if (within < hullDmg) {
+        cut = (hullDmg - within) * (1 - ALPHA_OVER);
         hullDmg = within + (hullDmg - within) * ALPHA_OVER;
         capped = true;
       }
@@ -606,7 +634,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   // as her hull is (a broadside takes the share of it that it takes of her hull, chain shot five times round's).
   const parts = table ? seaCritPace(target.combatLevel) : 1;
   const canvas = table ? hullPace / SEA_DAMAGE : 1;
-  const sailDmg = p.damage * (p.ammo === 'chain' ? pace : 1) * canvas * ammo.sailMul * falloff * (sst?.sailDamageMul ?? 1) * chain * lad.dealt * (gd?.sailMul ?? 1);
+  const sailDmg = p.damage * (p.ammo === 'chain' ? pace : 1) * canvas * ammo.sailMul * falloff * (sst?.sailDamageMul ?? 1) * chain * lad.dealt * (gd?.sailMul ?? 1) * (1 + (kv?.sails ?? 0));
   const grape = p.ammo === 'grape' ? 1 + (sst ? tval(sst, 'grapeCrew') : 0) : 1;
   // Splinter Storm: every ball into the hull sends splinters through the gun deck.
   const splinters = sst?.flags.has('splinter_storm') && p.ammo !== 'grape' && felt > 5 ? 1 : 0;
@@ -615,12 +643,12 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   // her army the fewer.
   // A ship of the table loses her men by her ⚓ (docs/25 item 8): 2–4% of them a round-shot broadside, grape twice that.
   const menPace = !table ? pace : p.ammo === 'grape' ? seaGrapePace(target.combatLevel) : seaCrewPace(target.combatLevel);
-  const crewKill = (ammo.crewKill * (sst?.crewKillMul ?? 1) * grape * (gd?.crewMul ?? 1) * (raking ? 1.8 : 1) * (0.5 + game.rng.float()) + splinters) * menPace * lad.dealt * wallsOf(target, p.ammo === 'grape') * killFactor(target);
+  const crewKill = (ammo.crewKill * (sst?.crewKillMul ?? 1) * grape * (gd?.crewMul ?? 1) * (raking || kitRake ? 1.8 : 1) * (1 + (kv?.men ?? 0)) * (0.5 + game.rng.float()) + splinters) * menPace * lad.dealt * wallsOf(target, p.ammo === 'grape') * killFactor(target);
 
   let crit: string | undefined;
   let rudderDmg = 0;
   // Bar shot spins as it flies: a hit astern fouls the rudder twice as often.
-  const rudderChance = (0.14 + (raking && !fromBow && sst ? tval(sst, 'rakingFire') : 0)) * (p.ammo === 'bar' ? 2 : 1);
+  const rudderChance = (0.14 + ((raking || kitRake) && !fromBow && sst ? tval(sst, 'rakingFire') : 0)) * (p.ammo === 'bar' ? 2 : 1);
   if (p.ammo !== 'grape' && local.y < -target.stats.length * 0.33 && !target.hasFlag('iron_tiller') && game.rng.chance(rudderChance * cx)) {
     rudderDmg = 0.2 + game.rng.float() * 0.15;
     crit = 'rudder';
@@ -643,7 +671,18 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     game.toastShip(target, 'The topmast is shot away: she loses way for a while.', 'bad');
     crit = 'mast';
   }
-  if (raking) crit = crit ?? 'raked';
+  if (raking || kitRake) crit = crit ?? 'raked';
+  // Her kit's critical and fire, on the first ball of the broadside home (the Spotter's Eye, the ambush, the star fix's
+  // combo; the heated double charge).
+  if (kv && kv.crit && !kv.critDone && hullDmg > 0) {
+    kv.critDone = true;
+    crit = kitCrit(game, shooter, target, kv.crit);
+  }
+  if (kv && kv.fire && !kv.fireDone && hullDmg > 0) {
+    kv.fireDone = true;
+    igniteShip(game, target, 8, shooter);
+    crit = 'fire';
+  }
   if (crit && crit !== 'raked') target.talentReady.patchPause = game.now + 3; // Patchwork Hull pauses
   if ((p.ammo === 'round' || p.ammo === 'heavy') && felt > 15 && target.leaks < MAX_LEAKS && game.rng.chance(leakChance(target, p.ammo === 'heavy') * cx)) {
     target.leaks++;
@@ -668,7 +707,8 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   }
   // Drowned bronze shakes a crew; a stinkpot chokes it.
   const dread = (gd?.morale ?? 0) + (p.ammo === 'stinkpot' ? 2 : 0);
-  const men = applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: (0.35 + grapeMorale + battery + dread) * lad.dealt * parts, laddered: true }, shooter, { x: hx, y: hy });
+  const kitMorale = kv?.morale ? kv.morale / Math.max(1, krec!.total) : 0; // a broadside's worth, shared by its balls
+  const men = applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: (0.35 + grapeMorale + battery + dread) * lad.dealt * parts + kitMorale, laddered: true, cut }, shooter, { x: hx, y: hy });
   if (men > 0) {
     const rec = p.volley !== undefined ? game.volleys.get(p.volley) : undefined;
     if (rec) (rec.men ??= new Map()).set(target.id, (rec.men.get(target.id) ?? 0) + men);
@@ -788,6 +828,8 @@ export interface DamagePacket {
   morale?: number;
   /** The ladder of strength is already reckoned in (a cannonball, capped per broadside after it). */
   laddered?: boolean;
+  /** Hull the broadside's alpha limit took off this blow: it charges the dealer's ultimate all the same (docs/25 item 40). */
+  cut?: number;
 }
 
 /** A mast gone by the board: its wreckage drags alongside — the helm answers slowly, but the tangle of spars and
@@ -833,6 +875,8 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   if (source && isMonster(source) && d.hull) d = { ...d, hull: d.hull * pactDamageMul(target) };
   // The Drowned Man on the bow: the Drowned Captain enters every fight with 10 Dread.
   for (const x of [source, target]) if (x && x.captain === 'drowned' && x.hasFlag('fh_drowned_man') && !x.inCombat(now)) x.dread = Math.max(x.dread, 10);
+  // The sea answers the Drowned the moment a fight begins (docs/25 item 36, her passive): she enters it with her rank's Dread.
+  for (const x of [source, target]) if (x && x.captain === 'drowned' && !x.inCombat(now)) x.dread = Math.max(x.dread, passiveNums(game, x)?.n.wake ?? 0);
   // Nobody reaches into a duel, and duellists reach nobody else.
   if (source && source !== target) {
     const pv = pvpBlocked(game, source, target);
@@ -870,7 +914,7 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     if (source?.npcRole && game.npcs.get(source.id)?.practice === target.id) hull = Math.min(hull, Math.max(0, target.hull - PUPIL_HULL * target.stats.hullMax));
     if (target.zoneBoss) zbCredit(game, target, source, Math.min(Math.max(0, target.hull), hull)); // each captain's part of her (docs/21)
     target.hull -= hull;
-    onHullDamage(game, target, hull, source);
+    onHullDamage(game, target, hull, source, d.cut ?? 0);
   }
   if (d.sails) target.sails = Math.max(0, target.sails - d.sails);
   if (d.rudder && !target.hasFlag('iron_tiller')) target.rudderHp = Math.max(0, target.rudderHp - d.rudder);

@@ -13,6 +13,8 @@ import { whirlpoolAt } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
 import { madnessCheck } from './crew.ts';
+import { applyDamage } from './combat.ts';
+import { dotNumber } from './seaskill.ts';
 
 export const RESOLVE_MAX = 100;
 export const CALL_THRESHOLD = 80;
@@ -35,12 +37,18 @@ export function gainResolve(ship: ShipEntity, n: number): void {
   ship.resolve = Math.min(RESOLVE_MAX, ship.resolve + n);
 }
 
-/** Hull damage: both sides steel themselves; the Drowned Captain's losses feed her Dread. */
-export function onHullDamage(game: Game, target: ShipEntity, hull: number, source: ShipEntity | null): void {
+/** The ultimate charges from the damage she deals (docs/25 item 40): her share of the hull she struck, the part the
+ *  alpha limit cut off it too, at this rate a point (her gear, which deals more, charges it sooner). Taking a blow
+ *  charges it at one a point, as it always did. */
+export const RESOLVE_DEALT = 1.5;
+
+/** Hull damage: both sides steel themselves; the Drowned Captain's losses feed her Dread. `cut`: the hull the alpha
+ *  limit took off the blow (item 40: it charges the dealer's ultimate all the same). */
+export function onHullDamage(game: Game, target: ShipEntity, hull: number, source: ShipEntity | null, cut = 0): void {
   if (hull <= 0) return;
   const pct = (hull / target.stats.hullMax) * 100;
   gainResolve(target, pct);
-  if (source && source !== target) gainResolve(source, pct);
+  if (source && source !== target) gainResolve(source, ((hull + Math.max(0, cut)) / target.stats.hullMax) * 100 * RESOLVE_DEALT);
   if (target.captain === 'drowned') gainDread(game, target, pct / 2);
 }
 
@@ -294,6 +302,14 @@ function endBetweenWorlds(game: Game, ship: ShipEntity): void {
 
 export interface DeepZone {
   kind: 'hands' | 'undertow' | 'maw_pull' | 'black_water' | 'siren';
+  /** The Deep Call's leak (docs/25 item 34): a share of a caught ship's hull a second, for the hands' seconds after she
+   *  is caught; the ships caught and until when. */
+  leak?: number;
+  caught?: Record<number, number>;
+  /** The Undertow's facets: its half-width (m), the turn lost against it, the way she gains in it. */
+  width?: number;
+  rip?: number;
+  ride?: number;
   target?: number; // the siren's listener
   x: number;
   y: number;
@@ -313,7 +329,7 @@ function inZone(z: DeepZone, x: number, y: number): boolean {
     const dx = x - z.x, dy = y - z.y;
     const along = dx * v.x + dy * v.y;
     const across = Math.abs(dx * -v.y + dy * v.x);
-    return Math.abs(along) <= z.r && across <= 30;
+    return Math.abs(along) <= z.r && across <= (z.width ?? 30);
   }
   const d = dist(x, y, z.x, z.y);
   return d <= z.r && d >= (z.inner ?? 0);
@@ -350,6 +366,7 @@ export function stepZones(game: Game, dt: number): void {
         if (!z.hit.includes(o.id)) {
           z.hit.push(o.id);
           if (o.leaks < 8) o.leaks++;
+          if (z.leak) (z.caught ??= {})[o.id] = now + (z.until - z.start);
           o.lastCombat = now;
           if (owner) o.attackers.set(owner.id, now);
         }
@@ -358,7 +375,10 @@ export function stepZones(game: Game, dt: number): void {
         const h = headingVec(o.state.heading);
         const cos = h.x * v.x + h.y * v.y;
         const m = cos > 0.3 ? 0.3 : cos < -0.3 ? -0.3 : 0;
-        if (m) o.addEffect({ id: 'undertow_strip', until: now + 0.3, mods: { maxSpeed: m * z.power }, source: z.owner }, now);
+        // Her facets (docs/25 item 38): a rip that takes the helm of those against it; her own way in it.
+        const ride = o.id === z.owner && m > 0 && z.ride ? z.ride : 0;
+        const rip = m < 0 && z.rip && o.id !== z.owner ? -z.rip : 0;
+        if (m) o.addEffect({ id: 'undertow_strip', until: now + 0.3, mods: { maxSpeed: m * z.power + ride, ...(rip ? { turnRate: rip } : {}) }, source: z.owner }, now);
         // A ship with no way on is dragged along.
         if (Math.abs(o.state.speed) < 1) {
           o.state.x += v.x * 2 * z.power * dt;
@@ -372,5 +392,15 @@ export function stepZones(game: Game, dt: number): void {
         o.state.y += ((z.y - o.state.y) / d) * pull;
       }
     });
+    // The Deep Call's leak (docs/25 item 34): every ship the hands caught bleeds her share a second, for their seconds.
+    if (z.kind === 'hands' && z.leak && z.caught) {
+      for (const id in z.caught) {
+        const o = game.ships.get(Number(id));
+        if (!o || !o.alive || now > z.caught[id]) continue;
+        const h0 = o.hull;
+        applyDamage(game, o, { hull: z.leak * o.stats.hullMax * dt }, owner ?? null);
+        if (h0 > o.hull) dotNumber(game, o, 'deep_call', h0 - o.hull);
+      }
+    }
   }
 }

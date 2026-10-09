@@ -258,12 +258,16 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
     switch (role) {
       case 'patrol':
         if (other.hasEffect('bribe_signal') && npc.faction !== 'harpoon') return false;
+        // (the Bribe Signal's ranks and facets reach the pirates and the hunters too: docs/25 item 29, abilities.ts)
         // The pirate flag (docs/24 D1: «на вас напасть могут все»): the Crown's and the League's patrols come for her.
         if (coloursOf(p) === 'pirate' && (npc.faction === 'crown' || npc.faction === 'league')) return true;
         return wanted >= 2 && (npc.faction === 'crown' || (npc.faction === 'league' && wanted >= 3) || (npc.faction === 'harpoon' && wanted >= 4));
       case 'hunter':
+        if (other.hasEffect('bribe_signal') && (other.talentReady.bribeReach ?? 0) >= 2) return false;
         return wanted >= 3;
       case 'pirate':
+        // The Smuggler's bribe from its third rank (docs/25 item 29): the sea's pirates take her money too.
+        if (other.hasEffect('bribe_signal') && (other.talentReady.bribeReach ?? 0) >= 1 && !npc.lairGuard) return false;
         // Sworn to the Code: the Brethren do not fire first.
         if (p?.oath === 'code') return false;
         // A lair's garrison (docs/16 #7) goes for any captain who comes to its island.
@@ -308,7 +312,7 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
 function detectionRange(game: Game, npc: ShipEntity, other: ShipEntity): number {
   let r = npc.stats.detection * signature(other);
   if (other.hasFlag('hidden')) return 230;
-  if (other.hasFlag('dark_running')) r *= 0.4;
+  if (other.hasFlag('dark_running')) r *= other.talentReady.darkSeen || 0.4; // her Dark Running's facet (docs/25 item 38)
   if (other.hasFlag('lamplighter') && npc.npcRole === 'ghost') r *= 2; // the Lamplighter's lights draw the dead
   const w = game.weatherOf(other);
   if (w === 'fog') r *= 0.55;
