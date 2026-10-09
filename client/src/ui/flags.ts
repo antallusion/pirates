@@ -6,6 +6,7 @@
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { COLOURS } from '../../../shared/src/data/colours.ts';
+import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Colours } from '../../../shared/src/data/colours.ts';
 import { SF } from '../../../shared/src/protocol.ts';
 import type { ClientMsg, ShipInfo } from '../../../shared/src/protocol.ts';
@@ -82,8 +83,19 @@ export function flagLine(c: ShipColours | null): { kind: Colours; color: string;
   return { kind: c.kind, color, stripe, label: [c.label, c.noBoard ? L('mark.noBoard') : ''].filter(Boolean).join(' · '), ...(c.noBoard ? { noBoard: true } : {}) };
 }
 
+/** Lawless water about her (owner, 2026-10-09: there the colours shield nobody). */
+export function lawlessHere(state: Pick<ClientState, 'region'>): boolean {
+  return REGIONS[state.region]?.safety === 'lawless';
+}
+
+/** The lawless waters' notice: its heading and its line. */
+export function lawlessWords(): { title: string; line: string } {
+  return { title: L('fl.lawTitle'), line: L('fl.lawNote') };
+}
+
 /** The card: three big options (each with its line), what flies now and what is ordered, and the boarding switch.
- *  Live only in port; at sea it says where they are changed. */
+ *  Live only in port; at sea it says where they are changed. In lawless water it says first that no flag shields
+ *  anyone there (owner, 2026-10-09). */
 export function coloursCard(state: ClientState, opts: { head?: boolean } = {}): string {
   const self = state.self;
   const v = self?.pvp;
@@ -110,7 +122,8 @@ export function coloursCard(state: ClientState, opts: { head?: boolean } = {}): 
   // (In the port the option says «зелёный вымпел» already; the ship window and «Флаг и закон» say what it is.)
   const pennant = v.pennant && opts.head !== false ? ` ${L('fl.pennant', { n: v.pennantHoursLeft })}` : '';
   // (The port's own place is named «Флаг» already: no heading over it there, the room is the boarding switch's.)
-  return `<div class="card fl-card">${opts.head === false ? '' : `<h4 class="card-h">${icon('tab_law', '', 'ico-md')}${esc(L('fl.title'))}</h4>`}
+  const law = lawlessHere(state) ? `<p class="fl-law" role="note">${icon('danger', '', 'ico-sm')}<span>${esc(L('fl.lawCard'))}</span></p>` : '';
+  return `<div class="card fl-card${law ? ' fl-card--lawless' : ''}">${opts.head === false ? '' : `<h4 class="card-h">${icon('tab_law', '', 'ico-md')}${esc(L('fl.title'))}</h4>`}${law}
     <div class="fl-opts" role="radiogroup" aria-label="${esc(L('fl.title'))}">${COLOURS.map(opt).join('')}</div>
     <p class="fl-line muted">${esc(line)}${pennant ? `<span class="good">${esc(pennant)}</span>` : ''}</p>
     <button type="button" class="fl-board${v.noBoard ? ' off' : ''}" role="switch" aria-checked="${!v.noBoard}" data-noboard="${v.noBoard ? '0' : '1'}"${docked ? '' : ' disabled'}>

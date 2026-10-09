@@ -30,6 +30,9 @@ import { serverTable, serverText } from '../client/src/lang/server.ts';
 import { SERVER_RU_ADMIN } from '../client/src/lang/server.ru.admin.ts';
 import { SERVER_RU_FLAGS } from '../client/src/lang/server.ru.flags.ts';
 import { EN as FL_EN, RU as FL_RU } from '../client/src/lang/ui/flags.ts';
+import { coloursCard, lawlessHere, lawlessWords } from '../client/src/ui/flags.ts';
+import type { ClientState } from '../client/src/state.ts';
+import { readFileSync } from 'node:fs';
 import { applyDataLocale } from '../client/src/lang/data.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { join, makeGame, onHull } from './helpers.ts';
@@ -73,9 +76,11 @@ const MAY: Record<string, boolean> = {
   'faction>neutral': false, 'faction>faction': false, 'faction>faction:enemies': true, 'faction>pirate': true,
   'pirate>neutral': false, 'pirate>faction': true, 'pirate>pirate': true,
 };
-const may = (a: Colours, b: Colours, enemies: boolean): boolean => MAY[`${a}>${b}${enemies && a === 'faction' && b === 'faction' ? ':enemies' : ''}`] ?? MAY[`${a}>${b}`];
+/** Lawless water (owner, 2026-10-09: «в беззаконных водах правил вообще нет»): every pair, every way. */
+const may = (a: Colours, b: Colours, enemies: boolean, region: RegionId = 'gravewater'): boolean =>
+  region === 'dead_mans_expanse' || (MAY[`${a}>${b}${enemies && a === 'faction' && b === 'faction' ? ':enemies' : ''}`] ?? MAY[`${a}>${b}`]);
 
-test('who may attack whom: every pair of colours, guns and grapples, in contested and lawless water; none in safe water', () => {
+test('who may attack whom: every pair of colours, guns and grapples, by the flags in contested water, all in lawless; none in safe water', () => {
   for (const region of ['gravewater', 'dead_mans_expanse'] as RegionId[]) {
     for (const enemies of [false, true]) {
       for (const fa of COLOURS) {
@@ -87,7 +92,7 @@ test('who may attack whom: every pair of colours, guns and grapples, in conteste
           B.profile!.pvp.flag = fb;
           A.profile!.pvp.city = 'crown';
           B.profile!.pvp.city = enemies ? 'confederacy' : 'crown';
-          const want = may(fa, fb, enemies);
+          const want = may(fa, fb, enemies, region);
           const tag = `${region}: ${fa} › ${fb}${enemies ? ' (cities at enmity)' : ''}`;
           // The guns.
           const why = damageBlocked(game, A.ship!, B.ship!);
@@ -100,7 +105,9 @@ test('who may attack whom: every pair of colours, guns and grapples, in conteste
           const bw = canBoard(game, A.ship!, B.ship!);
           assert.equal(bw === null, want, `${tag}: boarding — ${bw}`);
           // The same both ways: whoever may attack may be attacked back.
-          assert.equal(damageBlocked(game, B.ship!, A.ship!) === null, may(fb, fa, enemies), `${tag}: back`);
+          assert.equal(damageBlocked(game, B.ship!, A.ship!) === null, may(fb, fa, enemies, region), `${tag}: back`);
+          // Lawless water is no crime, whoever she is; in contested water a captain who is no fair game is one.
+          if (region === 'dead_mans_expanse') assert.equal(A.profile!.infamy, 0, `${tag}: no crime in lawless water`);
           // Her snapshot shows her colours to every eye.
           const f = pvpFlags(game, B.ship!);
           assert.equal(!!(f & SF.NEUTRAL), fb === 'neutral');
@@ -303,6 +310,53 @@ test('boarding off, both ways: she boards nobody and nobody boards her — capta
   assert.ok(A.ship!.boarding, 'boarded');
 });
 
+test('lawless water (owner, 2026-10-09): no rules — boarding off and the pennant shield nobody, the sea’s pirates come for a neutral as for anyone; a group and a duel as ever', () => {
+  const { game } = makeGame();
+  const { a, b, A, B } = pair(game, 'dead_mans_expanse');
+  A.profile!.pvp.flag = 'neutral';
+  B.profile!.pvp.flag = 'neutral';
+  // Two neutral captains: guns, the grapples and the «Атаковать» run both ways, no crime.
+  assert.equal(damageBlocked(game, A.ship!, B.ship!), null);
+  assert.equal(damageBlocked(game, B.ship!, A.ship!), null);
+  assert.equal(canBoard(game, A.ship!, B.ship!), null);
+  applyDamage(game, B.ship!, { hull: 10 }, A.ship!);
+  assert.equal(A.profile!.infamy, 0);
+  // «Абордаж: выкл» on either ship: she is boarded and boards, and her snapshot no longer says «без абордажа».
+  B.profile!.noBoard = true;
+  assert.equal(canBoard(game, A.ship!, B.ship!), null, 'boarding off shields nobody here');
+  assert.equal(canBoard(game, B.ship!, A.ship!), null, 'nor holds her own hand');
+  assert.equal(pvpFlags(game, B.ship!) & SF.NO_BOARD, 0);
+  assert.equal(startPursuit(game, A, B.ship!.id, 'board'), null);
+  assert.equal(a.last('pursuit')!.mode, 'board', '«Атаковать» to board her stays a boarding run');
+  // …and the same ship over the line in contested water is shielded again, the badge back over her.
+  B.ship!.region = 'gravewater';
+  assert.match(String(canBoard(game, A.ship!, B.ship!)), /off on her ship/);
+  assert.ok(pvpFlags(game, B.ship!) & SF.NO_BOARD);
+  B.ship!.region = 'dead_mans_expanse';
+  B.profile!.noBoard = false;
+  // A young captain under her city's flag: no pennant here (it is the contested water's).
+  B.profile!.pvp.flag = 'faction';
+  B.profile!.level = 4;
+  B.profile!.pvp.played = 3600;
+  B.profile!.pvp.aggressedAt = 0;
+  assert.equal(damageBlocked(game, A.ship!, B.ship!), null);
+  assert.equal(pvpFlags(game, B.ship!) & SF.GREEN_PENNANT, 0);
+  // The sea's pirates: every one comes for a neutral captain, every time; the hunts spare her never.
+  B.profile!.pvp.flag = 'neutral';
+  const pirate = game.spawnNpcShip('pirate', 'brig', 'confederacy', B.ship!.state.x + 400, B.ship!.state.y, 0);
+  game.setNpcLevel(pirate, 5);
+  const brain = game.npcs.get(pirate.id)!;
+  for (let i = 0; i < 200; i++) {
+    brain.dares = new Map();
+    assert.ok(npcHostileTo(game, pirate, B.ship!), 'a neutral captain is anyone’s here');
+    assert.equal(neutralSpared(game, B.ship!), false);
+  }
+  // A group still does not fire on its own (a crew, not a rule).
+  a.push({ t: 'group', action: 'invite', name: 'Bram Colours' });
+  b.push({ t: 'group', action: 'accept', id: b.last('party')!.invites[0].id });
+  assert.equal(damageBlocked(game, A.ship!, B.ship!), 'friendly');
+});
+
 test('the cannon’s dead fall the fewest hit points a man first, men and creatures alike; a shot weighs what it weighed', () => {
   // The order: by hit points, then defence (a creature among the men takes its place by its own).
   const kinds = (Object.keys(UNITS) as UnitId[]).filter((u) => UNITS[u].hp > 0);
@@ -444,4 +498,35 @@ test('the tester’s /flag and /noboard, in HELP command for command; every new 
   // The interface's words: twins, no Latin left in the Russian.
   assert.deepEqual(Object.keys(FL_RU).sort(), Object.keys(FL_EN).sort());
   for (const [k, v] of Object.entries(FL_RU)) assert.ok(!/[A-Za-z]{2,}/.test(v.replace(/\{\w+\}/g, '')), `${k}: ${v}`);
+});
+
+test('lawless water on her screen (owner, 2026-10-09: «при входе в них игроку должно быть сказано об этом»): the notice in both tongues, the colours card says the flag shields nobody there', () => {
+  const st = (region: RegionId, docked: string | null = null) => ({
+    region, ports: [],
+    self: { dockedAt: docked, pvp: { flag: 'neutral', blackFlag: false, city: 'crown', guild: null, next: null, nextAt: 0, noNeutral: null, noBoard: true, pennant: false, pennantHoursLeft: 0 } },
+  }) as unknown as ClientState;
+  assert.equal(lawlessHere(st('dead_mans_expanse')), true);
+  assert.equal(lawlessHere(st('gravewater')), false);
+  assert.equal(lawlessHere(st('black_coast')), false);
+  assert.ok(coloursCard(st('dead_mans_expanse')).includes('class="fl-law"'), 'at sea in lawless water');
+  assert.ok(coloursCard(st('ashen_isles', 'p1')).includes('class="fl-law"'), 'in a lawless port');
+  assert.ok(!coloursCard(st('gravewater')).includes('fl-law'));
+  setLang('ru');
+  try {
+    const w = lawlessWords();
+    assert.equal(w.title, 'Беззаконные воды');
+    assert.match(w.line, /нет правил\s—\sлюбой может напасть на любого, флаг не защищает/);
+    assert.match(coloursCard(st('dead_mans_expanse')), /здесь флаг не защищает/);
+  } finally {
+    setLang('en');
+  }
+  assert.match(lawlessWords().line, /anyone may attack anyone; your flag does not protect you/);
+  // The notice on entering lawless water from other water and on logging in there, once she is at sea with nothing over
+  // it; the «Атаковать» on any captain there but her own group and guild (main.ts).
+  const main = readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8');
+  assert.ok(main.includes("if (r.safety === 'lawless' && lastSafety !== 'lawless') lawlessDue = true;"));
+  assert.ok(main.includes('hud.lawless(w.title, w.line);'));
+  assert.ok(main.includes('if (lawlessHere(state)) return !state.party?.members.some((m) => m.name === info.name)'));
+  const css = readFileSync(new URL('../client/seahud.css', import.meta.url), 'utf8');
+  assert.match(css, /#lawless-note\.go \{ animation: lawless-note 6\.5s/);
 });

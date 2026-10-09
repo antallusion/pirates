@@ -4,6 +4,10 @@
 // `pirateDares` before they come for a neutral captain (npc.ts), and the hunts put out after her ask `neutralSpared`
 // (traffic.ts, director.ts, quests.ts). The law's own rules stand: no fighting between captains in safe water, a group
 // and a guild never fire on their own, duels by consent, infamy for an attack on a captain who is no fair game.
+// Lawless waters (owner, 2026-10-09: «в беззаконных водах правил вообще нет, и при входе в них игроку должно быть сказано
+// об этом»): no colours there — any captain may fire on and board any other, neutral, city or pirate; «Абордаж: выкл»
+// and the Green Pennant shield nobody; the sea's pirates come for a neutral captain as for anyone; no crime for it. A
+// group and a guild still do not fire on their own (a crew, not a rule), and a duel is still by consent.
 
 import { COLOURS_FIGHT_MS, COLOURS_HOIST_MS, NEUTRAL_MIND_SEC, NEUTRAL_PIRATE_RATE, NEUTRAL_WANTED_MAX, PENNANT_AGGRESSED_MS, PENNANT_LEVEL, PENNANT_SECONDS, citiesHostile, coloursBar } from '../../../shared/src/data/colours.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
@@ -34,6 +38,11 @@ export const COLOURS_SAY: Record<ColoursBar, string> = {
 export const PENNANT_SAY = 'Green Pennant: a young captain sails under protection here.';
 export const NO_BOARD_OWN = 'Boarding is off on your ship: guns only. Turn it on in port.';
 export const NO_BOARD_HER = 'Boarding is off on her ship: guns only, until one of you sinks.';
+
+/** Lawless water about a ship (docs/24, owner 2026-10-09): there the colours and «Абордаж: выкл» bar nobody. */
+export function lawless(ship: ShipEntity): boolean {
+  return REGIONS[ship.region]?.safety === 'lawless';
+}
 
 /** The colours she flies. */
 export function coloursOf(p: Profile | null | undefined): Colours {
@@ -66,6 +75,8 @@ export function hasPennant(game: Game, p: Profile): boolean {
 export function coloursBlocked(game: Game, a: ShipEntity, b: ShipEntity): string | null {
   const pa = game.profileOf(a), pb = game.profileOf(b);
   if (!pa || !pb || a.accountId === b.accountId) return null;
+  // Lawless water: no colours bar anyone (owner, 2026-10-09: «правил вообще нет»).
+  if (lawless(b)) return null;
   const ca = coloursOf(pa), cb = coloursOf(pb);
   // The pennant shields her one way only: the young captain may still fire first.
   if (ca !== 'neutral' && REGIONS[b.region].safety === 'contested' && hasPennant(game, pb)) return PENNANT_SAY;
@@ -73,9 +84,10 @@ export function coloursBlocked(game: Game, a: ShipEntity, b: ShipEntity): string
   return bar ? COLOURS_SAY[bar] : null;
 }
 
-/** «Абордаж: выкл» (docs/24 C1): a captain's ship that boards nobody and is boarded by nobody. */
+/** «Абордаж: выкл» (docs/24 C1): a captain's ship that boards nobody and is boarded by nobody — but in lawless water,
+ *  where it shields nobody (owner, 2026-10-09). */
 export function boardingOff(game: Game, ship: ShipEntity): boolean {
-  return ship.accountId !== null && !!game.profileOf(ship)?.noBoard;
+  return ship.accountId !== null && !!game.profileOf(ship)?.noBoard && !lawless(ship);
 }
 
 /** A fight between two captains (or their ships): the last of it, for the colours' wait in port. */
@@ -223,9 +235,9 @@ export function pirateDares(game: Game, brain: NpcBrain | undefined, prey: ShipE
 }
 
 /** A pirate put out after her by the sea (a hunt, an ambush, a tavern's tip): spared her under neutral colours nine
- *  times in ten. */
+ *  times in ten — never in lawless water. */
 export function neutralSpared(game: Game, prey: ShipEntity): boolean {
-  return coloursOf(game.profileOf(prey)) === 'neutral' && !cr(game).chance(NEUTRAL_PIRATE_RATE);
+  return coloursOf(game.profileOf(prey)) === 'neutral' && !lawless(prey) && !cr(game).chance(NEUTRAL_PIRATE_RATE);
 }
 
 /** A pirate put out after her by the sea came for her: his mind is made up (a neutral captain is his prey after all). */

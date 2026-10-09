@@ -279,7 +279,13 @@
 .w-switch:focus { outline: none; }
 .w-switch:focus-visible { outline: 2px solid var(--k-gold); outline-offset: 2px; }
 .opt-more { width: 100%; margin-top: var(--k-sp-3); }
+/* the seventh, the minimap with a mark (owner, 2026-10-09), across both columns: its name and two words whole */
+.opt-row--wide { grid-column: 1 / -1; }
 @media (max-width: 699px) and (min-height: 521px) { .opt-grid { grid-template-columns: minmax(0, 1fr); } }
+/* a phone held sideways: the seven rows and «Подробнее» in one screen (812×375, 640×360) */
+@media (max-height: 420px) { .opt-grid { gap: 4px var(--k-sp-3); } .opt-row { min-height: 46px; } .opt-more { margin-top: var(--k-sp-2); } }
+/* 640×360: the four sizes' chips a finger wide and no wider, so «Размер» keeps its word beside them (it was cut to 3 px) */
+@media (max-width: 699px) { .opt-row .w-seg .w-chip { min-width: 44px; padding: 0 5px; } .opt-row { gap: 6px; } .opt-ico { width: 22px; height: 22px; } }
 
 /* ---------- The island (base.ts, docs/23 item 72): «Собрать всё» heads the column, the buildings as big tiles */
 .b-quick { margin: 0 0 var(--k-sp-2); }

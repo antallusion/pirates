@@ -119,7 +119,9 @@ test('a fight brings the guns out; leaving port, the helm alone', () => {
   assert.deepEqual(seaTargets(base), ['stick', 'menu', 'minimap']);
   assert.equal(inFight({ ...base, fight: true }), true);
   assert.equal(inFight({ ...base, docked: true, fight: true }), false);
-  assert.deepEqual(seaTargets({ ...base, fight: true }), ['stick', 'fire', 'ammo', 'lock', 'menu']);
+  // (the chart and the menu stepped up behind their tab in a fight, owner 2026-10-09; back by her tap or the setting)
+  assert.deepEqual(seaTargets({ ...base, fight: true }), ['stick', 'fire', 'ammo', 'lock', 'mmtab']);
+  assert.deepEqual(seaTargets({ ...base, fight: true, mmOut: true }), ['stick', 'fire', 'ammo', 'lock', 'menu', 'minimap']);
   assert.deepEqual(seaTargets({ ...base, docked: true }), ['cast', 'menu', 'minimap']);
   // a desk: the helm, «Огонь», «Цель» and the gun deck at sea in every state (owner, 2026-10-07: «возвращай управление»)
   assert.deepEqual(seaTargets({ ...base, touch: false, fight: true, target: { name: 'x' } }), ['captain', 'menu', 'target', 'minimap', 'stick', 'fire', 'lock', 'deck']);

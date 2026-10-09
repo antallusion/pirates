@@ -275,8 +275,9 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
         // Gold Fever: a hoard in the hold draws pirates even into safe water.
         if (safety === 'safe' && !p?.explore.hoardAboard) return false;
         if (p && (p.reputation.confederacy ?? 0) >= 30) return false;
-        // Neutral colours (docs/24 D1): «на нейтральный флаг только пираты NPC могут нападать иногда, очень редко».
-        if (p && coloursOf(p) === 'neutral' && !pirateDares(game, game.npcs.get(npc.id), other)) return false;
+        // Neutral colours (docs/24 D1): «на нейтральный флаг только пираты NPC могут нападать иногда, очень редко» — but
+        // not in lawless water, where a neutral captain is anyone's (owner, 2026-10-09: «правил вообще нет»).
+        if (p && coloursOf(p) === 'neutral' && safety !== 'lawless' && !pirateDares(game, game.npcs.get(npc.id), other)) return false;
         return !other.surrendered;
       case 'ghost':
         if (other.hasFlag('tattoo_dutchman') || other.hasFlag('fh_dutchman')) return false; // the Flying Dutchman's mark (docs/12 P9)

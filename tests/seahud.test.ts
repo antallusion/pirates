@@ -6,7 +6,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { bestSpecial, pettyOf, SEA_TILES, seaTargets, stickSail } from '../client/src/ui/seahud.ts';
+import { bestSpecial, minimapMode, pettyOf, SEA_TILES, seaTargets, stickSail } from '../client/src/ui/seahud.ts';
+import { defaults, sanitize } from '../client/src/settings.ts';
+import { EN as WEN, RU as WRU } from '../client/src/lang/ui/win.ts';
 import type { SeaView } from '../client/src/ui/seahud.ts';
 import { pickSector, WHEEL_MAX, wheelLayout } from '../client/src/ui/kit/radial.ts';
 import { EN as SEN, RU as SRU } from '../client/src/lang/ui/seahud.ts';
@@ -49,29 +51,66 @@ test('«Особое»: the ultimate when it is ready, else the strongest stroke
   assert.equal(bestSpecial([a('z', false, 30), a('v', false, 150, 'ultimate')]), null);
 });
 
-test('seven things to touch at most on a touch screen\'s sea, in every state of the HUD; a desk\'s drawn controls nine at most', () => {
+test('seven things to touch at most on a touch screen’s sea, in every state of the HUD (eight in a fight only when she brings the chart back herself); a desk’s drawn controls nine at most', () => {
   const tg = { name: 'Covenant', level: 1, hull: 1, crew: 0.7, chance: 0.6 };
-  for (const touch of [true, false, undefined]) for (const docked of [false, true]) for (const fight of [false, true, undefined]) for (const act of [null, { id: 'attack', icon: 'x', label: 'Атаковать', more: 3 }]) for (const special of [null, { id: 'v', icon: 'ab_v', name: 'V' }]) for (const target of [null, tg]) for (const news of [0, 5]) {
-    const v: SeaView = { docked, touch, fight: fight === undefined ? undefined : fight || !!target, act, special, target, ammo: 'round', ammoN: 60, reload: 1, news, unread: 2 };
+  for (const touch of [true, false, undefined]) for (const docked of [false, true]) for (const fight of [false, true, undefined]) for (const act of [null, { id: 'attack', icon: 'x', label: 'Атаковать', more: 3 }]) for (const special of [null, { id: 'v', icon: 'ab_v', name: 'V' }]) for (const target of [null, tg]) for (const news of [0, 5]) for (const mm of ['default', 'tapped', 'setting'] as const) {
+    const v: SeaView = { docked, touch, fight: fight === undefined ? undefined : fight || !!target, act, special, target, ammo: 'round', ammoN: 60, reload: 1, news, unread: 2, markId: target ? 7 : null, ...(mm === 'tapped' ? { mmOut: true } : mm === 'setting' ? { mmShow: true } : {}) };
     const t = seaTargets(v);
+    const mode = minimapMode(v);
     if (touch === false) {
       // the desk plays by its keys and shows what they drive (owner, 2026-10-07: «возвращай управление… штурвал»): the
-      // helm, «Огонь», «Цель» and the gun deck at sea in every state, «В море» in port — nine things at most
+      // helm, «Огонь», «Цель» and the gun deck at sea in every state, «В море» in port — nine things at most; its chart
+      // never steps aside
       assert.ok(t.length <= 9, `${JSON.stringify(v)} → ${t.join(',')}`);
+      assert.equal(mode, 'shown');
       if (docked) assert.ok(t.includes('cast') && !t.includes('stick') && !t.includes('fire'), t.join(','));
       else assert.ok(t.includes('stick') && t.includes('fire') && t.includes('lock') && t.includes('deck') && !t.includes('ammo'), t.join(','));
       continue;
     }
-    assert.ok(t.length <= 7, `${JSON.stringify(v)} → ${t.join(',')}`);
     const inFight = !docked && (v.fight ?? !!target);
+    // The default (owner, 2026-10-09): seven at most, the chart's tab one of them; she may ask for the chart back (the
+    // tab's tap, the setting): eight then.
+    assert.ok(t.length <= (mm === 'default' || !inFight ? 7 : 8), `${JSON.stringify(v)} → ${t.join(',')}`);
     if (inFight) {
-      assert.ok(!t.includes('minimap') && !t.includes('news'), 'a fight puts the minimap and the counter away');
+      assert.ok(!t.includes('news'), 'a fight puts the counter away');
       assert.ok(t.includes('fire') && t.includes('stick') && t.includes('ammo') && t.includes('lock'), 'a fight: «Огонь», «Снаряд», «Цель» and the helm');
-    } else if (!docked) {
-      // leaving port (owner, 2026-10-07: «давать только штурвал и всё необходимое»): the helm, no guns
-      assert.ok(t.includes('stick') && !t.includes('fire') && !t.includes('special'), t.join(','));
-    } else assert.ok(t.includes('cast') && !t.includes('stick'), 'in port: «В море», no helm');
+      if (mm === 'default') {
+        assert.equal(mode, 'peek');
+        assert.ok(t.includes('mmtab') && !t.includes('minimap') && !t.includes('menu'), 'the chart and the menu up behind one tab');
+      } else {
+        assert.equal(mode, 'out');
+        assert.ok(t.includes('minimap') && t.includes('menu') && !t.includes('mmtab'), 'the chart and the menu back');
+      }
+    } else {
+      assert.equal(mode, 'shown');
+      assert.ok(t.includes('minimap') && t.includes('menu') && !t.includes('mmtab'));
+      if (!docked) assert.ok(t.includes('stick') && !t.includes('fire') && !t.includes('special'), t.join(',')); // leaving port: the helm, no guns
+      else assert.ok(t.includes('cast') && !t.includes('stick'), 'in port: «В море», no helm');
+    }
   }
+});
+
+test('the chart with a mark on a touch screen (owner, 2026-10-09): stepped up behind its tab, back by a tap until the next mark, or always by the setting', () => {
+  const css = readFileSync(new URL('../client/seahud.css', import.meta.url), 'utf8');
+  const styles = readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8');
+  // No longer hidden outright with a mark or in a fight: it slides (a transform), its tab stays to tap.
+  assert.ok(!/sea-(target|fight) #hud-map[^{]*\{ display: none/.test(css + styles), 'not display: none');
+  assert.match(css, /body\.touch\.mm-peek #hud-map \{ transform: translateY\(/);
+  assert.match(css, /body\.touch\.mm-peek #touch > #mm-tab \{ display: block;[^}]*height: calc\(var\(--sa-t\) \+ 44px\)/);
+  assert.match(css, /transition: transform var\(--k-dur-3/);
+  // The setting, its words in both tongues, and the tab's.
+  assert.equal(defaults().mmTarget, 'hide');
+  assert.equal(sanitize({ mmTarget: 'show' }).mmTarget, 'show');
+  assert.equal(sanitize({ mmTarget: 'sideways' as never }).mmTarget, 'hide');
+  assert.equal(WRU['opt.mmTarget'], 'Мини-карта при цели');
+  assert.deepEqual([WRU['opt.mmHide'], WRU['opt.mmShow']], ['Прятать', 'Всегда показывать']);
+  for (const k of ['opt.mmTarget', 'opt.mmHide', 'opt.mmShow', 'opt.mmTargetHint'] as const) assert.ok(WEN[k] && !/[А-Яа-я]/.test(WEN[k]) && !/[A-Za-z]{2,}/.test(WRU[k]), k);
+  assert.ok(SRU.mmShow && SEN.mmShow && !/[A-Za-z]{2,}/.test(SRU.mmShow));
+  // Her tap is held for the mark she tapped it on (seahud.ts), the chart's own tap first asks it (main.ts).
+  const hud = readFileSync(new URL('../client/src/ui/seahud.ts', import.meta.url), 'utf8');
+  assert.ok(hud.includes('if (!fight || (mark !== null && mark !== this.mmMark)) this.mmOut = false;'));
+  const main = readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8');
+  assert.ok(main.includes("if (seaHud.mapTap()) return;") && main.includes("mmShow: settings().mmTarget === 'show'") && main.includes('markId: targetId'));
 });
 
 test('the menu: eight big tiles, «Ещё» among them', () => {

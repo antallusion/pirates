@@ -162,6 +162,10 @@ export interface Settings {
    *  column of round buttons, the compass, the ship's plate, the chart's lines. Off: one simple sea HUD for every input
    *  (body.simple). */
   expertHud: boolean;
+  /** The chart on a touch screen while she has a mark (owner, 2026-10-09: «это в настройках должно меняться, но
+   *  по-умолчанию пусть скрывается немного… если тапнуть то можно вернуть»): 'hide' — it steps up out of the corner with
+   *  the menu, a tab left to tap them back; 'show' — it stays. */
+  mmTarget: MinimapOnMark;
   /** The hex battle (docs/23 item 57): a step or a blow asks a second tap on the same hex to be sure (off: one tap). */
   tacConfirm: boolean;
   /** The hex battle at twice the pace (docs/23 item 60), kept from one battle to the next. */
@@ -171,6 +175,9 @@ export interface Settings {
   volume: { master: number; sea: number; combat: number; ui: number; music: number };
   keys: Keymap;
 }
+
+export type MinimapOnMark = 'hide' | 'show';
+export const MINIMAP_ON_MARK: readonly MinimapOnMark[] = ['hide', 'show'];
 
 /** A touch screen (a phone, a tablet): auto-fire comes on by default there (docs/23 item 35). */
 function coarse(): boolean {
@@ -185,7 +192,7 @@ export function defaults(): Settings {
   return {
     uiScale: 1, density: 'normal', firstHints: true, shipVoices: true, textScale: 1, hudAlpha: 0.65, colorblind: 'off', highContrast: false, plainFont: false, lanternMarks: false,
     reduceFlashes: false, screenShake: true, vibrate: true, lanternFlicker: true, reduceMotion: false, effects: 'auto', webgl: true,
-    plainTerms: false, classicBoarding: false, autoFire: coarse(), autoWeak: true, expertGuns: false, expertHud: false, tacConfirm: false, tacFast: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
+    plainTerms: false, classicBoarding: false, autoFire: coarse(), autoWeak: true, expertGuns: false, expertHud: false, mmTarget: 'hide', tacConfirm: false, tacFast: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
     keys: structuredClone(CLASSIC),
   };
 }
@@ -214,6 +221,7 @@ export function sanitize(raw: Partial<Settings> | null): Settings {
   s.hudAlpha = Math.min(1, Math.max(0.3, Number(s.hudAlpha) || 0.65));
   if (!['off', 'protan', 'deutan', 'tritan'].includes(s.colorblind)) s.colorblind = 'off';
   if (!DENSITIES.includes(s.density)) s.density = 'normal';
+  if (!MINIMAP_ON_MARK.includes(s.mmTarget)) s.mmTarget = 'hide';
   s.firstHints = s.firstHints !== false;
   s.shipVoices = s.shipVoices !== false;
   s.vibrate = s.vibrate !== false;

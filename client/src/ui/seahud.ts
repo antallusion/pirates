@@ -157,6 +157,12 @@ export interface SeaView {
   news: number;
   /** Chat lines and letters unread (the menu's badge). */
   unread: number;
+  /** Her mark's id (a new one puts the chart away again). */
+  markId?: number | null;
+  /** «Мини-карта при цели: всегда показывать» (settings.ts mmTarget 'show'). */
+  mmShow?: boolean;
+  /** She tapped the chart's tab: the chart and the menu are back for this mark (SeaHud keeps it). */
+  mmOut?: boolean;
 }
 
 /** A fight on the sea's screen: her mark, or the fight itself (old views without the field: a mark is one). */
@@ -164,8 +170,18 @@ export function inFight(v: SeaView): boolean {
   return !v.docked && (v.fight ?? !!v.target);
 }
 
+/** The chart in the top right corner (owner, 2026-10-09: «по-умолчанию пусть скрывается немного, типа вверх или вбок
+ *  заезжает, но если тапнуть то можно вернуть»): 'shown' as ever; on a touch screen with a mark or a fight 'peek' —
+ *  stepped up out of the corner with the menu, a tab of its ring left to tap them back (one thing to touch for two, so
+ *  the fight keeps seven) — or 'out' — back by her tap until the next mark, or always by the setting. */
+export function minimapMode(v: SeaView): 'shown' | 'peek' | 'out' {
+  if (v.touch === false || !inFight(v)) return 'shown';
+  return v.mmShow || v.mmOut ? 'out' : 'peek';
+}
+
 /** The things to touch the sea HUD shows for a view (seven at most on a touch screen: docs/23 item 32, owner
- *  2026-10-07). The stick counts as one; the target's line on a touch screen is words, not a button (its card is
+ *  2026-10-07 — eight in a fight only when she brings the chart and the menu back herself, by the tab or the setting).
+ *  The stick counts as one; the target's line on a touch screen is words, not a button (its card is
  *  «Цель»'s long press). A desk is played by its keys and shows what they drive (owner, 2026-10-07: «возвращай
  *  управление… штурвал»): the captain's frame, the menu, her mark's line, the chart and the counter, and at sea the
  *  helm, «Огонь», «Цель» and the gun deck (one group of key-driven slots) — nine at most; in port «В море». */
@@ -189,11 +205,11 @@ export function seaTargets(v: SeaView): string[] {
   }
   if (v.act) out.push('act');
   if (v.special && fight) out.push('special');
-  out.push('menu');
-  if (!fight) {
-    out.push('minimap');
-    if (v.news > 0) out.push('news');
-  }
+  // A fight: the chart and the menu stepped up behind their tab, or back by her own choice (the tab's tap, the setting).
+  const mm = minimapMode(v);
+  if (mm === 'peek') out.push('mmtab');
+  else out.push('menu', 'minimap');
+  if (!fight && v.news > 0) out.push('news');
   return out;
 }
 
@@ -296,6 +312,11 @@ export class SeaHud {
   readonly lockEl: HTMLButtonElement;
   readonly menuEl: HTMLButtonElement;
   readonly newsEl: HTMLButtonElement;
+  /** The chart's tab while the chart and the menu are stepped up out of the corner (a mark on a touch screen). */
+  readonly mmTabEl: HTMLButtonElement;
+  /** She tapped the tab: the chart and the menu back for this mark; the mark it was for. */
+  private mmOut = false;
+  private mmMark: number | null = null;
   /** The desk's gun deck: two rows of painted slots, the abilities over the shots. */
   readonly deckEl: HTMLElement;
   private target: TargetLine;
@@ -317,6 +338,13 @@ export class SeaHud {
     };
     this.newsEl = make(buttonHtml({ kind: 'icon', id: 'tc-news', icon: SEA_ART.news, glyph: '!', aria: L('news'), cls: 'tc-news k-count sea-round hidden' })) as HTMLButtonElement;
     this.menuEl = make(buttonHtml({ kind: 'icon', id: 'tc-menu', icon: SEA_ART.menu, glyph: '☰', aria: L('menu'), cls: 'sea-round' })) as HTMLButtonElement;
+    // The chart's tab (owner, 2026-10-09): the bottom of its compass ring and a brass tab hanging from the top edge; a tap
+    // brings the chart and the menu back down for this mark.
+    this.mmTabEl = make(`<button type="button" id="mm-tab" class="mm-tab hidden" aria-label="${esc(L('mmShow'))}" title="${esc(L('mmShow'))}"><span class="mm-tab-pill">${icon('menu_map', '', 'mm-tab-ico')}<i class="mm-tab-chev" aria-hidden="true"></i></span></button>`) as HTMLButtonElement;
+    this.mmTabEl.addEventListener('click', () => {
+      this.mmOut = true;
+      this.applyMinimap();
+    });
     // Her mark's line heads the top band (in the top stack, so a boss's line, the lesson and the toasts stand under it).
     const host = make('<div id="tc-target" class="hidden"></div>');
     document.getElementById('hud-stack')?.prepend(host);
@@ -393,6 +421,11 @@ export class SeaHud {
     const fight = inFight(v);
     body.classList.toggle('sea-target', !!v.target && !v.docked);
     body.classList.toggle('sea-fight', fight);
+    // The chart and the menu: stepped up with a mark, back by her tap until the next mark (the fight over: up again).
+    const mark = fight ? v.markId ?? null : null;
+    if (!fight || (mark !== null && mark !== this.mmMark)) this.mmOut = false;
+    if (mark !== null || !fight) this.mmMark = mark;
+    this.applyMinimap();
     body.classList.toggle('sea-docked', v.docked);
     this.castEl.classList.toggle('hidden', !v.docked);
     const a = v.act;
@@ -441,8 +474,29 @@ export class SeaHud {
       setBadge(this.newsEl, v.news);
       this.newsEl.classList.toggle('hidden', v.news <= 0);
     });
-    this.once('unread', String(v.unread), () => setBadge(this.menuEl, v.unread));
+    this.once('unread', String(v.unread), () => {
+      setBadge(this.menuEl, v.unread);
+      setBadge(this.mmTabEl, v.unread); // (the menu's letters on its tab while it is up)
+    });
     this.drawDeck(v.touch === false && !v.docked ? v.deck ?? null : null);
+  }
+
+  /** The chart's place as the view and her tap say (body.mm-peek: stepped up behind its tab; body.mm-out: back). */
+  private applyMinimap(): void {
+    const mode = this.view ? minimapMode({ ...this.view, mmOut: this.mmOut }) : 'shown';
+    const body = document.body;
+    if (body.classList.contains('mm-peek') !== (mode === 'peek')) body.classList.toggle('mm-peek', mode === 'peek');
+    if (body.classList.contains('mm-out') !== (mode === 'out')) body.classList.toggle('mm-out', mode === 'out');
+    this.mmTabEl.classList.toggle('hidden', mode !== 'peek');
+  }
+
+  /** A tap on the chart (main.ts): back up behind its tab when she brought it down for this mark (owner's «тапнуть —
+   *  вернуть»; a tap again puts it away); true when it went, false when the tap is the chart's own (the world map). */
+  mapTap(): boolean {
+    if (!this.view || this.view.mmShow || !this.mmOut || minimapMode({ ...this.view, mmOut: true }) !== 'out') return false;
+    this.mmOut = false;
+    this.applyMinimap();
+    return true;
   }
 
   /** The desk's gun deck: rebuilt when what it holds changes (a shot taken, a count, a lock), its cooldowns moved in
@@ -492,6 +546,8 @@ export class SeaHud {
     swap(this.menuEl, '.k-btn-ico', SEA_ART.menu, '☰', 'k-btn-ico');
     swap(this.newsEl, '.k-btn-ico', SEA_ART.news, '!', 'k-btn-ico');
     swap(this.lockEl, '.k-btn-ico', SEA_ART.lock, '◎', 'k-btn-ico');
+    const pill = this.mmTabEl.querySelector('.mm-tab-pill');
+    if (pill) pill.innerHTML = `${icon('menu_map', '', 'mm-tab-ico')}<i class="mm-tab-chev" aria-hidden="true"></i>`;
     // the target line's «в дальности» on a narrow screen: the gun's picture (seahud.css)
     const gun = assetUrl(`icon.${SEA_ART.fire}`);
     if (gun) document.documentElement.style.setProperty('--ico-range', `url('${gun}')`);

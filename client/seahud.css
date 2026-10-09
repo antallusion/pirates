@@ -121,8 +121,30 @@ body.simple #touch > #tc-news { position: absolute; top: calc(var(--sa-t) + 12px
 #hud-map > .kc-map { left: 15%; bottom: 9%; }
 /* The First Watch's lesson is the news now: the counter waits (seven things to touch at most with its two skips). */
 body.simple:has(#hud-watch:not(.hidden):not(.tut-hidden)) #touch > #tc-news { display: none !important; }
-/* A fight on a touch screen: the chart and the counter step aside (seven things to touch at most). */
-body.simple.touch.sea-fight #hud-map, body.simple.touch.sea-fight #touch > #tc-news { display: none !important; }
+/* A fight on a touch screen: the counter steps aside (seven things to touch at most). */
+body.simple.touch.sea-fight #touch > #tc-news { display: none !important; }
+/* …and the chart with the menu step up out of the corner (owner, 2026-10-09: «по-умолчанию пусть скрывается немного,
+   типа вверх или вбок заезжает, но если тапнуть то можно вернуть»): the bottom of the compass ring and a brass tab
+   hang from the top edge; a tap on them brings both back down for this mark (seahud.ts minimapMode). One thing to
+   touch for the two, so a fight keeps seven. «Мини-карта при цели: всегда показывать» keeps them where they are. */
+body.touch #hud-map, body.touch #touch > #tc-menu { transition: transform var(--k-dur-3, 320ms) var(--k-ease-out, ease-out), opacity var(--k-dur-3, 320ms) var(--k-ease-out, ease-out), visibility 0s; }
+body.touch.mm-peek #hud-map { transform: translateY(calc(-1 * (var(--mm) + var(--sa-t) + 8px) + 13px)); pointer-events: none; }
+body.touch.mm-peek #touch > #tc-menu { transform: translateY(calc(-100% - var(--sa-t) - 20px)); opacity: 0; visibility: hidden; pointer-events: none;
+  transition: transform var(--k-dur-3, 320ms) var(--k-ease-out, ease-out), opacity var(--k-dur-2, 200ms) var(--k-ease-out, ease-out), visibility 0s var(--k-dur-3, 320ms); }
+#mm-tab { display: none; }
+body.touch.mm-peek #touch > #mm-tab { display: block; position: absolute; top: 0; right: calc(var(--sa-r) + 8px); width: var(--mm); height: calc(var(--sa-t) + 44px); margin: 0; padding: 0;
+  border: 0; background: none; pointer-events: auto; cursor: pointer; -webkit-tap-highlight-color: transparent; animation: mm-tab-in var(--k-dur-3, 320ms) var(--k-ease-out, ease-out); }
+#mm-tab .mm-tab-pill { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 2px;
+  width: 54px; height: 27px; border-radius: 0 0 14px 14px;
+  background: linear-gradient(180deg, rgba(30, 24, 17, 0.94), rgba(10, 9, 7, 0.94)); box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.75), 0 2px 5px rgba(0, 0, 0, 0.75); }
+#mm-tab .mm-tab-ico { width: 19px; height: 19px; margin: 0; object-fit: contain; filter: drop-shadow(0 1px 1px #000); }
+#mm-tab .mm-tab-chev { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid var(--k-gold, #e0b862); margin-top: 2px; }
+#mm-tab:active .mm-tab-pill { transform: translateX(-50%) translateY(1px); filter: brightness(1.15); }
+#mm-tab:focus-visible .mm-tab-pill { box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.75), 0 0 0 2px var(--k-gold, #e0b862); }
+#mm-tab .k-badge { top: auto; bottom: 18px; right: calc(50% - 34px); }
+@keyframes mm-tab-in { from { transform: translateY(-14px); opacity: 0; } to { transform: none; opacity: 1; } }
+body.reduce-motion :is(#hud-map, #touch > #tc-menu, #touch > #mm-tab) { transition: none !important; animation: none !important; }
+@media (prefers-reduced-motion: reduce) { body.touch :is(#hud-map, #touch > #tc-menu, #touch > #mm-tab) { transition: none !important; animation: none !important; } }
 
 /* ---------- top middle: one column — her mark, a boss's line, the lesson, the sea's name — and the toasts under it */
 body.simple #hud-stack, body.simple #hud #hud-stack, body.simple.touch #hud-stack, body.simple.touch #hud #hud-stack, body.simple.touch.sea-target #hud #hud-stack {
@@ -166,6 +188,18 @@ body.simple #sea-herald.hidden { display: none !important; }
 #sea-herald.go { animation: sea-herald 4.2s var(--k-ease-out) forwards; }
 @keyframes sea-herald { 0% { opacity: 0; transform: translateY(-4px); } 10%, 72% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 body.reduce-motion #sea-herald.go { animation: none; }
+/* lawless waters entered (owner, 2026-10-09: «при входе в них игроку должно быть сказано об этом»): a line under the
+   sea's name for six seconds and a half, the danger's red on its edge — no rules, anyone may attack anyone, the flag
+   does not protect */
+#lawless-note.hidden { display: none !important; }
+body.simple #hud-stack > #lawless-note { order: -29; align-self: stretch; display: flex; align-items: flex-start; gap: 8px; padding: 5px 10px; pointer-events: none;
+  border-left: 3px solid #b23a3a; border-radius: var(--k-r-2); background: linear-gradient(90deg, rgba(40, 10, 9, 0.9), rgba(12, 8, 8, 0.8));
+  box-shadow: inset 0 0 0 1px rgba(178, 58, 58, 0.45), 0 2px 6px rgba(0, 0, 0, 0.6); color: var(--k-bone); font: 500 12px/1.3 var(--k-font-sans); text-align: left; }
+#lawless-note b { color: #f0b0a2; font-weight: 700; }
+#lawless-note .ln-ico { width: 18px; height: 18px; flex: none; margin: 0; }
+#lawless-note.go { animation: lawless-note 6.5s var(--k-ease-out) forwards; }
+@keyframes lawless-note { 0% { opacity: 0; transform: translateY(-4px); } 5%, 90% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+body.reduce-motion #lawless-note.go { animation: none; }
 /* the toasts: one band under the column, two at most, in the middle and clear of the captain and the chart (hud.ts) */
 body.simple #toasts, body.simple.tq-side #toasts, body.simple.touch #toasts {
   top: var(--st-top, calc(var(--sa-t) + 8px)) !important; bottom: auto !important; left: var(--st-left, 27vw) !important; right: auto !important; transform: none !important;

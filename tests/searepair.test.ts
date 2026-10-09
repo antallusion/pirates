@@ -2,14 +2,16 @@
 // "хватит чинить" и всё»): the button turned to «Хватит чинить» and a sloop's hull gained a point a second — six
 // hundredths a minute — or nothing at all with no planks aboard and no word why. Now the carpenters mend a third of the
 // hull in half a minute; with nothing to mend her with she is told in plain words what is wanted and the button does not
-// change; leaving port hurt, her quartermaster takes on the planks and sailcloth they need; in port the yard mends her.
+// change; leaving port hurt, the window before sailing offers the planks and sailcloth they need (nothing bought by
+// itself since the owner's 2026-10-09); in port the yard mends her.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { STORES_SILVER_SHARE } from '../shared/src/data/dealings.ts';
+import { voyageStores } from '../shared/src/data/voyage.ts';
+import { tx } from '../shared/src/sim/shipstats.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
-import { NO_PLANKS, NO_STORES, SOUND } from '../server/src/game/searepair.ts';
+import { NO_PLANKS, NO_STORES, SOUND, seaRepairView } from '../server/src/game/searepair.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import type { FakeConn } from './helpers.ts';
@@ -77,11 +79,10 @@ test('nothing to mend her with: plain words of what is wanted, and the button do
   assert.deepEqual(toasts(c, from).map((t) => t.msg), [SOUND]);
   setLang('ru');
   for (const m of [NO_PLANKS, NO_STORES, SOUND]) assert.match(serverText(m), /[а-яё]/i, m);
-  assert.match(serverText('The quartermaster takes on 12 planks and 4 sailcloth for the carpenters (300 silver).'), /Квартирмейстер/);
   setLang('en');
 });
 
-test('leaving port hurt, the quartermaster takes on what the carpenters need (a quarter of her silver at most); in port the yard mends her', () => {
+test('leaving port hurt buys nothing by itself (owner, 2026-10-09); the window’s reckoning of planks and sailcloth is the carpenters’; in port the yard mends her', () => {
   const { game } = makeGame();
   const c = join(game, 'Leaver Lin');
   const s = game.sessionByName('Leaver Lin')!;
@@ -90,16 +91,22 @@ test('leaving port hurt, the quartermaster takes on what the carpenters need (a 
   assert.ok(ship.docked, 'in port');
   ship.cargo = {};
   ship.hull = ship.stats.hullMax * 0.5;
+  ship.sails = ship.stats.sailHpMax * 0.7;
   p.gold = 4000;
+  // What the window before sailing offers for her carpenters: the planks and bolts seaRepairView reckons for the harm.
+  const view = seaRepairView(ship);
+  const want = voyageStores({ hull: ship.hull, hullMax: ship.stats.hullMax, sails: ship.sails, sailsMax: ship.stats.sailHpMax, rudderHp: ship.rudderHp, use: 1 + tx(ship.stats, 'materialUse'), planks: 0, cloth: 0 });
+  assert.deepEqual(want, { planks: view.planks + (ship.rudderHp < 1 ? 1 : 0), cloth: view.cloth });
+  assert.ok(want.planks > 0 && want.cloth > 0);
+  assert.deepEqual(voyageStores({ hull: ship.hull, hullMax: ship.stats.hullMax, sails: ship.sails, sailsMax: ship.stats.sailHpMax, rudderHp: 1, use: 1, planks: 999, cloth: 999 }), { planks: 0, cloth: 0 }, 'enough aboard: none wanted');
   const from = c.inbox.length;
   c.push({ t: 'undock' });
   assert.equal(ship.docked, null);
-  const said = toasts(c, from).find((t) => t.msg.startsWith('The quartermaster takes on'));
-  assert.ok(said, JSON.stringify(toasts(c, from)));
-  assert.ok((ship.cargo.planks ?? 0) > 0, 'planks aboard');
-  assert.ok(4000 - p.gold <= 4000 * STORES_SILVER_SHARE + 1, `spent ${4000 - p.gold}`);
+  assert.equal(p.gold, 4000, 'not a coin spent on the way out');
+  assert.equal(ship.cargo.planks ?? 0, 0, 'no planks taken on by themselves');
+  assert.ok(!toasts(c, from).some((t) => /quartermaster/i.test(t.msg)), JSON.stringify(toasts(c, from)));
   c.push({ t: 'repair', on: true });
-  assert.equal(ship.repairing, true, 'the carpenters at it at once');
+  assert.equal(ship.repairing, false, 'nothing to mend her with');
   // Back in port: «Чинить» is the yard's, at once, for silver.
   ship.docked = p.lastPort ?? game.world.ports[0].id;
   ship.hull = ship.stats.hullMax * 0.6;

@@ -141,11 +141,13 @@ export class RecruitWindow {
       this.n = Math.max(0, Math.min(most, this.n || (most > 0 ? 1 : 0)));
       const price = priceOf(unit.per, unit.goods, this.n);
       const why = v.why ? serverText(v.why) : r.why ? serverText(r.why) : r.pool <= 0 ? L('nobody') : v.crew >= v.crewMax ? L('nohammock') : !v.army.some((x) => x.u === u) && v.army.length >= v.slots ? L('noslot') : d.tier >= PICKED_TIER && !UNITS[u].titan && v.picked <= 0 ? L('picked.full', { max: v.pickedMax }) : unit.room === 0 ? L('might.full') : most <= 0 ? L('lack') : '';
-      pick = `<div class="rc-pick"><div class="rc-ph">${unitIcon(u, 'rc-big')}<div><b>${esc(unitName(u))}</b><span class="muted">${esc(L('stats', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp, spd: d.speed }))}</span><span class="muted">${esc(L('avail', { n: r.pool }))}</span></div></div>
+      // (the cost and «Нанять» share a row on a phone held sideways, the men waiting said by the dwelling's card: the
+      // button stood 6–15 px under the fold at 640×360 — docs/19 E19)
+      pick = `<div class="rc-pick"><div class="rc-ph">${unitIcon(u, 'rc-big')}<div><b>${esc(unitName(u))}</b><span class="muted">${esc(L('stats', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp, spd: d.speed }))}</span><span class="muted rc-avail">${esc(L('avail', { n: r.pool }))}</span></div></div>
         <div class="rc-slide"><input type="range" min="0" max="${most}" value="${this.n}" data-rcn aria-label="${esc(unitName(u))}"${most <= 0 ? ' disabled' : ''}><b class="rc-count" data-rccount>${this.n}</b><button class="btn btn-small" data-rcmax${most <= 0 ? ' disabled' : ''}>${esc(L('max'))} ${most}</button></div>
-        <div class="rc-cost"><span class="muted">${esc(L('cost'))}</span><span data-rccost>${costLine(price, v.gold, v.have)}</span></div>
         ${why ? `<p class="bad rc-why">${esc(why)}</p>` : ''}
-        <button class="btn btn-primary rc-go" data-rcgo${this.n > 0 && !why ? '' : ' disabled'}>${esc(L('recruit'))}</button></div>`;
+        <div class="rc-buy"><div class="rc-cost"><span class="muted">${esc(L('cost'))}</span><span data-rccost>${costLine(price, v.gold, v.have)}</span></div>
+        <button class="btn btn-primary rc-go" data-rcgo${this.n > 0 && !why ? '' : ' disabled'}>${esc(L('recruit'))}</button></div></div>`;
     }
     const have = (Object.entries(v.have) as [GoodId, number][]).filter(([g, n]) => n > 0 && ['timber', 'iron', 'tar', 'gunpowder', 'pearls', 'rum'].includes(g));
     const res = have.length ? `<p class="rc-have"><span class="muted">${esc(L('have'))}:</span> ${have.map(([g, n]) => `<span class="bcost" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('')}</p>` : '';

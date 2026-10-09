@@ -227,7 +227,7 @@ import { chooseBoon, descentLandable, leaveDescent, startDescent, stepDescent, s
 import { holidayGhostSunk, stepHolidays } from './holidays.ts';
 import { addGood, addItem, buyAtStall, claimBazaar, closeStall, openStall, removeLine, sendBazaarShadows, stepBazaar } from './bazaar.ts';
 import { HULL_PER_PLANK, SAILS_PER_CLOTH, SEA_FIRE_PACE, SEA_HULL_PER_MIN, SEA_RUDDER_PER_MIN, SEA_SAILS_PER_MIN } from '../../../shared/src/data/dealings.ts';
-import { repairLack, repairOrder, seaCrewShare, takeOnStores } from './searepair.ts';
+import { repairLack, repairOrder, seaCrewShare } from './searepair.ts';
 import { hearOfPorts } from './demand.ts';
 import { abandonRun, acceptRun, expireRuns, settleRuns } from './traderuns.ts';
 import { bid as auctionBid, claimAuction, putUp, stepAuction } from './auction.ts';
@@ -4210,9 +4210,8 @@ export class Game {
     const refitting = refitHolds(this, s.profile!);
     if (refitting) return refitting;
     const port = this.portById(ship.docked)!;
-    // Leaving hurt: the carpenters' stores taken on for it (owner, 2026-10-07: repairs at sea that did nothing).
-    const stores = takeOnStores(this, s, port);
-    if (stores) this.sendTo(s, { t: 'toast', msg: `The quartermaster takes on ${stores.planks} planks and ${stores.cloth} sailcloth for the carpenters (${stores.silver} silver).`, kind: 'info' });
+    // Nothing is bought on the way out by itself (owner, 2026-10-09: «не прям автодокупку…»): the window before sailing
+    // (client/src/ui/depart.ts) says what is short — the carpenters' planks and sailcloth among it — and she buys it.
     const is = this.world.islands[port.islandId];
     // Leave harbour on the best point of sail within 90° of straight out to sea.
     const out = Math.atan2(port.x - is.x, -(port.y - is.y));

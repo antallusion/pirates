@@ -77,7 +77,7 @@ test('the pirate flag (the old Black Flag): ordered in port, up a minute later; 
   assert.ok(Math.abs(lootMul(game, A.ship!, B.ship!) - 1.2) < 1e-9);
 });
 
-test('neutral colours: no captain fires on her anywhere, at any level; she fires on none', () => {
+test('neutral colours: no captain fires on her in contested water, at any level; she fires on none — lawless water is no one’s', () => {
   const { game } = makeGame();
   const { A, B } = three(game);
   sea(A, 30_000, 30_000, 'gravewater', 30);
@@ -89,8 +89,7 @@ test('neutral colours: no captain fires on her anywhere, at any level; she fires
   const hull = B.ship!.hull;
   applyDamage(game, B.ship!, { hull: 50 }, A.ship!);
   assert.equal(B.ship!.hull, hull, 'no damage gets through by any road');
-  // In lawless water too (the pennant was not), and past level 15 and twenty hours at sea.
-  B.ship!.region = 'dead_mans_expanse';
+  // Past level 15 and twenty hours at sea (the pennant is gone, the colours hold).
   B.profile!.level = 60;
   B.profile!.pvp.played = 40 * 3600;
   assert.match(String(damageBlocked(game, A.ship!, B.ship!)), /She sails under neutral colours/);
@@ -99,6 +98,14 @@ test('neutral colours: no captain fires on her anywhere, at any level; she fires
   const aHull = A.ship!.hull;
   applyDamage(game, A.ship!, { hull: 50 }, B.ship!);
   assert.equal(A.ship!.hull, aHull);
+  // Lawless water (owner, 2026-10-09: «правил вообще нет»): the colours shield her nowhere there, and hold her hand from
+  // nobody — both ways, her flag still flying for every eye.
+  A.ship!.region = B.ship!.region = 'dead_mans_expanse';
+  assert.equal(damageBlocked(game, A.ship!, B.ship!), null);
+  assert.equal(damageBlocked(game, B.ship!, A.ship!), null);
+  applyDamage(game, B.ship!, { hull: 50 }, A.ship!);
+  assert.ok(B.ship!.hull < hull, 'the ball lands');
+  assert.ok(pvpFlags(game, B.ship!) & SF.NEUTRAL);
 });
 
 test('the Green Pennant shields a young captain under her city’s flag in contested water until she attacks someone', () => {
