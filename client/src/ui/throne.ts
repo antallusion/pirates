@@ -24,6 +24,7 @@ import { RAID, RAID_TIERS, raidPay } from '../../../shared/src/data/abyssraid.ts
 import { unitIcon, unitName } from './army.ts';
 import { CIT_TABS } from './citadels.ts'; // docs/19 E4–E8
 import { ADM_TABS } from './contracts.ts'; // docs/19 E15
+import { ARENA_TABS } from './arena.ts'; // docs/19 E14
 import type { ClientState } from '../state.ts';
 import { esc, fmt, icon, money } from './dom.ts';
 
@@ -265,6 +266,8 @@ export const THRONE_TABS: ThroneTab[] = [
   ...CIT_TABS,
   // docs/19 E15: the Admiralty's contracts of the week.
   ...ADM_TABS,
+  // docs/19 E14: the Colosseum.
+  ...ARENA_TABS,
 ];
 
 export class ThroneWindow {
@@ -290,7 +293,9 @@ export class ThroneWindow {
       root.innerHTML = `${head}<div class="modal-body throne-win"><p class="muted th-locked">${esc(L('locked', { n: MAX_LEVEL, m: self.level }))}</p></div>`;
     } else {
       const tab = THRONE_TABS.find((t) => t.id === this.tab) ?? THRONE_TABS[0];
-      root.innerHTML = `${head}<div class="modal-body throne-win"><div class="tabs">${THRONE_TABS.map((t) => {
+      // docs/19 E14: her draft in the Colosseum's tab — on a narrow phone the other tabs step aside for its board.
+      const drafting = tab.id === 'arena' && !!g.arena?.draft && g.arena.draft.stage !== 'fight';
+      root.innerHTML = `${head}<div class="modal-body throne-win${drafting ? ' th-drafting' : ''}"><div class="tabs">${THRONE_TABS.map((t) => {
         const n = t.badge?.(g, state) ?? 0;
         return `<button class="tab${t === tab ? ' active' : ''}" data-thtab="${t.id}">${icon(t.icon, '', 'ico-sm')}${esc(t.label())}${n ? ` <span class="hx-dot">${n}</span>` : ''}</button>`;
       }).join('')}</div>${tab.render(g, state)}</div>`;

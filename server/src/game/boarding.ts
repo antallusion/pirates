@@ -29,6 +29,7 @@ import { isTrialShip, trialOver } from './throne.ts'; // docs/19 E3
 import { raidOver } from './abyssraid.ts'; // docs/19 E11
 import { assaultOver } from './citadels.ts'; // docs/19 E5
 import { contractOver } from './admiralty.ts'; // docs/19 E15
+import { arenaOver, isArenaFight } from './arena.ts'; // docs/19 E14
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { softenFoe } from './firstfights.ts';
 
@@ -174,6 +175,7 @@ export function cutGrapples(game: Game, ship: ShipEntity): string | null {
   if (!other) return 'Nothing to cut';
   const now = game.now;
   const a = bs.attacker ? ship : other, b = bs.attacker ? other : ship;
+  if (isArenaFight(bs.fight)) return 'No grapples on the sand of the Colosseum: strike your colours to yield the bout.'; // docs/19 E14
   if (bs.attacker) {
     if (ship.hasFlag('no_quarter')) return 'No Quarter: there is no retreat';
     endBoarding(game, a, b);
@@ -257,7 +259,8 @@ export function stepBoarding(game: Game): void {
     b.state.speed *= 0.8;
     const d = dist(a.state.x, a.state.y, b.state.x, b.state.y);
     const want = (a.stats.beam + b.stats.beam) / 2 + 4;
-    if (d > want && !bs.remote) {
+    // docs/19 E14: a bout of the Colosseum holds both ships where they are, however far apart.
+    if (d > want && !bs.remote && !isArenaFight(bs.fight)) {
       const k = Math.min(1, 0.08);
       const mx = (b.state.x - a.state.x) * k, my = (b.state.y - a.state.y) * k;
       a.state.x += mx * 0.5;
@@ -671,6 +674,7 @@ function finishBoarding(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: 
   closeFight(game, b);
   if (bs.remote) a.crew += Math.max(0, bs.party ?? 0); // survivors row back (or stay as the prize crew)
   game.emit({ k: 'board_end', a: a.id, b: b.id, winner: attackerWins ? a.id : b.id }, a.state.x, a.state.y);
+  if (arenaOver(game, a, b, attackerWins, fight)) return; // a bout of the Colosseum: the ratings, nothing of the sea's (docs/19 E14)
   if (trialOver(game, a, b, attackerWins)) return; // a trial of mastery: no prize, no repulse (docs/19 E3)
   if (raidOver(game, a, b, attackerWins)) return; // a tier of the Abyss: what was cut stays cut (docs/19 E11)
   if (assaultOver(game, a, b, attackerWins, fight.tac)) return; // a citadel's assault: what was cut stays cut (docs/19 E5)

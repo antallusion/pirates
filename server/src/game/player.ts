@@ -511,6 +511,8 @@ export interface WorldView {
   cit?: import('../../../shared/src/data/citadels.ts').CitView;
   /** docs/19 E15: the Admiralty's contracts of the week (admiralty.ts admView). */
   adm?: import('../../../shared/src/data/admiralty.ts').AdmView;
+  /** docs/19 E14: the Colosseum, for the Throne's tab (arena.ts arenaView). */
+  arena?: import('../../../shared/src/data/arena.ts').ArenaView;
   /** One's own island (docs/15). */
   homeIsle?: number | null;
   /** Raiders at her island (docs/15 item 7), and a wild island off the bow she may claim (item 6). */
@@ -553,7 +555,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     // docs/19 E1: past the cap the bar is her glory's.
     xp: p.level >= MAX_LEVEL ? Math.floor(p.throne?.xp ?? 0) : p.xp,
     xpNext: p.level >= MAX_LEVEL ? gloryXp(p.throne?.rank ?? 0) : xpForLevel(p.level),
-    glory: gloryView(now, s, world.seal, world.raid),
+    glory: gloryView(now, s, world.seal, world.raid, world.arena),
     ...(world.cit ? { cit: world.cit } : {}),
     ...(world.adm ? { adm: world.adm } : {}), // docs/19 E15
     rested: Math.round(p.rested ?? 0),

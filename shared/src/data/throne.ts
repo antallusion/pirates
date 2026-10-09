@@ -307,6 +307,8 @@ export interface GloryView {
   seal?: SealView;
   /** docs/19 E11: her raid of the Abyss. */
   raid?: RaidView;
+  /** docs/19 E14: the Colosseum — her rating, the queue, her draft, the season's table. */
+  arena?: import('./arena.ts').ArenaView;
 }
 
 /** Silver to forget the mastery tree in a port: a thousand a point spent. */

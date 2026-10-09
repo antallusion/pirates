@@ -245,6 +245,7 @@ import { InvasionHub, invasionKill, invasionView, stepInvasions } from './invasi
 import { citView, stepCitadels } from './citadels.ts'; // docs/19 E4–E8
 import { admView, contractPointer, stepContracts } from './admiralty.ts'; // docs/19 E15
 import { registerAdmiralty } from '../../../shared/src/data/admiralty.ts';
+import { arenaView, stepArena } from './arena.ts'; // docs/19 E14
 import { shoreBossPrompt, stepShoreBosses } from './shorebosses.ts'; // the great ones ashore (owner, 2026-10-03)
 import { installLandHooks } from './landecon.ts'; // docs/18 V
 import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
@@ -631,6 +632,7 @@ export class Game {
     stepProjectiles(this, dt);
     prof.lap('projectiles');
     stepBoarding(this);
+    stepArena(this); // docs/19 E14: the Colosseum's queue, its drafts' clocks, its season (twice a second)
     stepLandFights(this); // the battles ashore at the lairs of the land's creatures (docs/18 II)
     stepStrikes(this);
     prof.lap('boarding');
@@ -1601,6 +1603,7 @@ export class Game {
       raid: raidView(this, s),
       cit,
       adm: admView(this, s, cit, seal), // docs/19 E15
+      arena: arenaView(this, s), // docs/19 E14
       homeIsle: ownIsland(this, s.accountId)?.island ?? null,
       isleRaid: raidPointer(this, s),
       claimIsle: claimPrompt(this, s),

@@ -20,6 +20,8 @@ import { enterDepth } from './seals.ts';
 import { boardRaid, isRaidLegend } from './abyssraid.ts';
 import { citMessage, isCastellan } from './citadels.ts'; // docs/19 E4–E8
 import { contractMessage, isContractLegend } from './admiralty.ts'; // docs/19 E15
+import { arenaMessage, isArenaLegend } from './arena.ts'; // docs/19 E14
+import type { ArenaView } from '../../../shared/src/data/arena.ts';
 import type { RaidView } from '../../../shared/src/data/abyssraid.ts';
 import type { StatMods } from '../../../shared/src/data/stats.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
@@ -233,7 +235,7 @@ export function trialFace(ship: ShipEntity): string | undefined {
   return t ? CAPTAINS[LEGENDS[t.skill].path].portrait.replace(/^portrait\./, '') : undefined;
 }
 /** A legend of the trials — or of the Abyss's raid (docs/19 E11): no artifact found on her, none of hers ever joins. */
-export const isTrialShip = (ship: ShipEntity): boolean => trials.has(ship) || isRaidLegend(ship) || isCastellan(ship) || isContractLegend(ship);
+export const isTrialShip = (ship: ShipEntity): boolean => trials.has(ship) || isRaidLegend(ship) || isCastellan(ship) || isContractLegend(ship) || isArenaLegend(ship);
 
 /** The legend of a skill as a hero, against a challenger with these primaries and skills (the sims use it too): her
  *  skills as the challenger's (none above expert), the trial's at grandmaster, and her own two at expert in what slots
@@ -383,7 +385,7 @@ export function trialViews(now: number, p: Profile): TrialView[] {
   });
 }
 
-export function gloryView(now: number, s: PlayerSession, seal?: SealView, raid?: RaidView): GloryView | undefined {
+export function gloryView(now: number, s: PlayerSession, seal?: SealView, raid?: RaidView, arena?: ArenaView): GloryView | undefined {
   const p = s.profile;
   if (!p) return undefined;
   if (p.level < MAX_LEVEL - 5 && !p.throne) return undefined;
@@ -396,6 +398,7 @@ export function gloryView(now: number, s: PlayerSession, seal?: SealView, raid?:
     trials: trialViews(now, p), reset: resetCost(spent), lift: liftOf(p), ...(fight && trials.get(fight) ? { fighting: trials.get(fight)!.skill } : {}),
     ...(seal ? { seal } : {}),
     ...(raid ? { raid } : {}),
+    ...(arena ? { arena } : {}),
   };
 }
 
@@ -430,6 +433,10 @@ export function throneMessage(game: Game, s: PlayerSession, msg: ThroneClientMsg
     case 'contract':
       // docs/19 E15: a contract of the week taken at an Admiralty board, its legend boarded.
       why = contractMessage(game, s, msg.op, String(msg.id ?? ''));
+      break;
+    case 'arena':
+      // docs/19 E14: the Colosseum's queue, a practice bout, her draft's bans and picks.
+      why = arenaMessage(game, s, msg.op as Parameters<typeof arenaMessage>[2], msg.u);
       break;
     case 'view':
       break;

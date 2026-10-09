@@ -44,6 +44,7 @@ import { ARTIFACTS } from '../../../shared/src/data/artifacts.ts';
 import { $, dec1, esc, icon, portraitUrl } from './dom.ts';
 import { placeName } from './maps.ts';
 import { specialName, specialNote, unitArt, unitIcon, unitName, unitNote } from './army.ts';
+import { arenaEndLine } from './arena.ts'; // docs/19 E14
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import { SHIP_BEAST_DEFS, isShipBeast } from '../../../shared/src/data/shipbeasts.ts'; // the premium hulls' own (docs/02 §1.A.9)
@@ -918,6 +919,7 @@ export class TacticalPanel {
   private heroName(v: TacView, x: 0 | 1): string {
     const h = v.heroes[x];
     if (v.siege && x !== v.you) return serverText(h.name); // docs/19 E5: the citadel's castellan
+    if (v.arena?.practice && x !== v.you) return serverText(h.name); // docs/19 E14: a legend of the sea at practice
     if (!v.land || x === v.you) return personName(h.name);
     const ru = lang() === 'ru' ? 1 : 0;
     const lair = v.land.lair;
@@ -1334,10 +1336,12 @@ export class TacticalPanel {
         ? `<div class="tb-er tb-joined"><small><span class="tb-jl">${esc(L('res.joined', { n: `${came} ${plural(came, L('res.men1'), L('res.men2'), L('res.men5'))}` }))}</span><span class="tb-js">${esc(L('res.joinedShort', { n: came }))}</span></small><div class="tb-rs-row">${r!.joined!.map((x) => `<span class="tb-rs" title="${esc(unitName(x.u))}">${unitIcon(x.u, 'tb-rs-ico')}<i class="up">+${x.n}</i></span>`).join('')}</div></div>`
         : '';
       const rows = r
-        ? `<div class="tb-end-rows"><div class="tb-er"><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div class="tb-er"><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${joined}<div class="tb-er"><small>${esc(L('res.loot'))}</small><div class="tb-lchips">${spoils.length ? spoils.join('') : none}</div></div></div>`
+        ? `<div class="tb-end-rows"><div class="tb-er"><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div class="tb-er"><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${joined}${r.arena ? '' : `<div class="tb-er"><small>${esc(L('res.loot'))}</small><div class="tb-lchips">${spoils.length ? spoils.join('') : none}</div></div>`}</div>`
         : '';
       banner.className = `tb-banner tb-end ${won ? 'won' : 'lost'}${v.land ? ' land' : ' sea'}${r ? ' tb-result' : ''}`;
-      banner.innerHTML = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span class="tb-why">${esc(whyText)}</span>${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${rows}</div><button class="k-btn k-btn--primary k-btn--lg tb-endbtn" data-endbtn>${esc(v.land ? LL('close') : L('next'))}</button>`;
+      // docs/19 E14: a bout of the Colosseum — its rating under the why.
+      const arenaLine = r?.arena ? `<span class="tb-why tb-arena${r.arena.rated ? (r.arena.delta >= 0 ? ' up' : ' down') : ''}">${icon('icon.item_duelling_pistols', '', 'ico-sm')}${esc(arenaEndLine(r.arena))}</span>` : '';
+      banner.innerHTML = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span class="tb-why">${esc(whyText)}</span>${arenaLine}${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${rows}</div><button class="k-btn k-btn--primary k-btn--lg tb-endbtn" data-endbtn>${esc(v.land ? LL('close') : L('next'))}</button>`;
       banner.querySelector<HTMLElement>('[data-endbtn]')!.addEventListener('click', () => {
         if (v.land) this.send({ t: 'lair', action: 'close' });
         else {
@@ -2224,7 +2228,7 @@ export class TacticalPanel {
   }
 
   private background(v: TacView): HTMLCanvasElement {
-    const key = `${v.cells}|${this.size.cw}|${this.size.ch}|${this.size.dpr}|${v.you}|${this.size.rot}|${v.land?.type ?? v.siege?.type ?? ''}|${v.heroes[0].hull}|${v.heroes[1].hull}|${sprite('bg.battle_sea') ? 1 : 0}`;
+    const key = `${v.cells}|${this.size.cw}|${this.size.ch}|${this.size.dpr}|${v.you}|${this.size.rot}|${v.land?.type ?? v.siege?.type ?? (v.arena ? 'arena' : '')}|${v.heroes[0].hull}|${v.heroes[1].hull}|${sprite('bg.battle_sea') ? 1 : 0}`;
     if (this.bg && key === this.bgKey) return this.bg;
     this.bgKey = key;
     const { cw, ch, dpr, w } = this.size;
@@ -2235,7 +2239,7 @@ export class TacticalPanel {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, c.width, c.height);
     this.turned(g);
-    if (v.land || v.siege) {
+    if (v.land || v.siege || v.arena) {
       this.landField(g, v);
       // docs/19 E5: a citadel's siege — the courtyard, the moat, the causeway, the wall line, the catapult.
       if (v.siege) {
@@ -2423,16 +2427,18 @@ export class TacticalPanel {
     const { w } = this.size;
     const r = w / SQ3;
     const cells = v.cells;
-    const type = v.land?.type ?? v.siege?.type ?? 'rocky';
+    // docs/19 E14: the sand of the Colosseum — the fort's courtyard painting, its flagstones.
+    const type = v.land?.type ?? v.siege?.type ?? (v.arena ? 'arena' : 'rocky');
     const GROUND: Record<string, [string, string, string]> = {
       tropical: ['#d2b37a', '#c4a46a', '#e3c88f'], rocky: ['#8e877a', '#7d776b', '#a39c8d'], volcanic: ['#3e3532', '#332b29', '#54463f'],
       swamp: ['#5f5b3c', '#4f4c31', '#6f6a47'], graveyard: ['#86735a', '#76644d', '#9a8566'], dead: ['#59616a', '#4c535b', '#6e767e'],
+      arena: ['#4f4b47', '#3f3c39', '#625d57'],
     };
     const [base, dark, light] = GROUND[type] ?? GROUND.rocky;
     const b0 = this.lc(0), b1 = this.lc(TAC_W * TAC_H - 1);
     const X0 = b0.x - w * 0.6, Y0 = b0.y - r * 1.1, X1 = b1.x + w * 0.6, Y1 = b1.y + r * 1.1;
     // The island's ground painted as in Heroes (owner, 2026-10-02): the painting over the whole stage, the hexes on it.
-    const art = sprite(`bg.field_${type}`);
+    const art = sprite(`bg.field_${type === 'arena' ? 'fort' : type}`);
     this.painted = !!art;
     if (art) {
       g.save();
@@ -2966,7 +2972,7 @@ export class TacticalPanel {
     const placed: { s?: TacStackView; prop?: string; i?: number; p: { x: number; y: number; lift?: number; walking?: boolean; dx?: number } }[] = shown.map((s) => ({ s, p: this.standAt(s, t) }));
     const walking = placed.some((x) => x.p.walking);
     for (let i = 0; i < v.cells.length; i++) {
-      const prop = propArt(v.cells[i], v.land?.type ?? v.siege?.type ?? '');
+      const prop = propArt(v.cells[i], v.land?.type ?? v.siege?.type ?? (v.arena ? 'arena' : ''));
       if (prop) placed.push({ prop, i, p: this.center(i) });
     }
     // In one row the bigger first: a giant stands no nearer than the man beside it, so it must not cover him.

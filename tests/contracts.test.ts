@@ -330,9 +330,9 @@ test('the week turns: a contract of the week before lapses; the tester’s comma
   assert.equal(runAdmin(game, s, '/contract reset'), 'Your Admiralty contracts are forgotten.');
   assert.ok(!s.profile!.quests.done.some((x) => x.startsWith('adm_')));
   assert.match(runAdmin(game, s, '/contract nonsense') ?? '', /^Usage: \/contract/);
-  // HELP: /contract at its end, command for command in Russian.
+  // HELP: /contract in it (the commands after it are other systems'), command for command in Russian.
   const help = runAdmin(game, s, '/help')!;
-  assert.ok(help.endsWith('/contract [list|take N|done N|week|reset|go N]'));
+  assert.ok(help.includes(' · /contract [list|take N|done N|week|reset|go N]'));
   const ru = SERVER_RU_ADMIN[help];
   assert.ok(ru, 'the Russian HELP');
   const cmds = (x: string) => [...x.matchAll(/\/[a-z]+/g)].map((m) => m[0]);

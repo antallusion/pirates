@@ -1,0 +1,68 @@
+// The server's lines of the Colosseum (docs/19 E14), English → Russian: the queue, the draft's refusals, the bout's
+// start and end, the season's rewards, the tester's /arena. The titles it hands out come from the shared data.
+
+import { arenaPatterns } from '../../../shared/src/data/arena.ts';
+
+export const SERVER_RU_ARENA: Record<string, string> = {
+  ...Object.fromEntries(arenaPatterns()),
+  'The Hall of the Colosseum': 'Зал Колизея',
+  // who may come
+  'The Colosseum opens at level {0}.': 'Колизей открывается на {0}-м уровне.',
+  'Not in the middle of a duel.': 'Не во время дуэли.',
+  'Your bout is under way.': 'Ваш бой в Колизее уже идёт.',
+  'You are in the queue already.': 'Вы уже в очереди.',
+  'You are not in the queue.': 'Вас нет в очереди.',
+  'You join the queue of the Colosseum. If no captain comes within {0} s, a legend of the sea will spar with you.': 'Вы в очереди Колизея. Если за {0} с не найдётся капитана, с вами сразится легенда моря.',
+  'You leave the queue of the Colosseum: it waits for captains at sea.': 'Вы вышли из очереди Колизея: она ждёт капитанов в море.',
+  // the draft
+  'The Colosseum: {0} (rating {1}) is your match. Ban three kinds, then draft your army.': 'Колизей: ваш соперник — {0} (рейтинг {1}). Запретите три вида, потом наберите армию.',
+  'The Colosseum: {0} again — a friendly bout, the rating stands.': 'Колизей: снова {0} — товарищеский бой, рейтинг не меняется.',
+  '{0} comes to spar on the sand of the Colosseum: a practice bout, the rating stands. Ban three kinds, then draft your army.': '{0} выходит на арену Колизея: тренировочный бой, рейтинг не меняется. Запретите три вида, потом наберите армию.',
+  'You are not drafting.': 'Вы сейчас не набираете армию.',
+  'Your time ran out: the steward of the Colosseum chose for you.': 'Время вышло: распорядитель Колизея выбрал за вас.',
+  'The draft is over.': 'Набор окончен.',
+  'Not your turn.': 'Сейчас не ваш ход.',
+  'The bans are over: pick.': 'Запреты окончены: выбирайте.',
+  'That kind is not on the table.': 'Этого вида нет среди лотов.',
+  'Ban first.': 'Сначала запрет.',
+  'Take one lot at least.': 'Возьмите хотя бы один лот.',
+  'No such move.': 'Такого хода нет.',
+  'That lot is gone.': 'Этот лот уже занят.',
+  'Seven stacks at the most.': 'Не больше семи отрядов.',
+  'Not enough points for that lot.': 'Не хватает очков на этот лот.',
+  // the bout
+  'The draft is done: the bout begins on the sand of the Colosseum.': 'Набор окончен: бой начинается на арене Колизея.',
+  'The bout is called off: {0} cannot come to the sand. The rating stands.': 'Бой отменён: {0} не может выйти на арену. Рейтинг не меняется.',
+  'The bout is called off. The rating stands.': 'Бой отменён. Рейтинг не меняется.',
+  'The Colosseum: you beat {0}. A practice bout: the rating stands.': 'Колизей: вы победили — {0}. Тренировочный бой: рейтинг не меняется.',
+  'The Colosseum: {0} beats you. A practice bout: the rating stands.': 'Колизей: победа за соперником — {0}. Тренировочный бой: рейтинг не меняется.',
+  'The Colosseum: you beat {0}. A friendly bout: the rating stands.': 'Колизей: вы победили — {0}. Товарищеский бой: рейтинг не меняется.',
+  'The Colosseum: {0} beats you. A friendly bout: the rating stands.': 'Колизей: победа за соперником — {0}. Товарищеский бой: рейтинг не меняется.',
+  'The Colosseum: you beat {0}. Rating {1} (+{2}).': 'Колизей: вы победили — {0}. Рейтинг {1} (+{2}).',
+  'The Colosseum: {0} beats you. Rating {1} ({2}).': 'Колизей: победа за соперником — {0}. Рейтинг {1} ({2}).',
+  'No grapples on the sand of the Colosseum: strike your colours to yield the bout.': 'На арене Колизея нет абордажных крючьев: чтобы сдаться, спустите флаг.',
+  // the season
+  '{0} is the Champion of the Colosseum of season {1}.': '{0} — Чемпион Колизея {1}-го сезона.',
+  "The Colosseum's season {0} is over: place {1}, rating {2}.": 'Сезон Колизея {0} окончен: место {1}, рейтинг {2}.',
+  'The Colosseum pays you {0} silver.': 'Колизей платит вам {0} серебра.',
+  'The title «{0}» is yours.': 'Титул «{0}» ваш.',
+  "The Colosseum's pennant is yours.": 'Вымпел Колизея ваш.',
+  'You enter the Pantheon: the Hall of the Colosseum.': 'Вы входите в Пантеон: Зал Колизея.',
+  "The Colosseum's season": 'Сезон Колизея',
+  // the tester's /arena
+  'The Colosseum opens at level {0} (/level {1}).': 'Колизей открывается на {0}-м уровне (/level {1}).',
+  'Colosseum, season {0}: rating {1}, bouts {2}, won {3}, in the queue {4}.': 'Колизей, сезон {0}: рейтинг {1}, боёв {2}, побед {3}, в очереди {4}.',
+  'Colosseum, season {0}: rating {1}, bouts {2}, won {3}, in the queue {4}. Your draft is under way.': 'Колизей, сезон {0}: рейтинг {1}, боёв {2}, побед {3}, в очереди {4}. Идёт ваш набор армии.',
+  'Colosseum, season {0}: rating {1}, bouts {2}, won {3}, in the queue {4}. Your bout is on the sand.': 'Колизей, сезон {0}: рейтинг {1}, боёв {2}, побед {3}, в очереди {4}. Ваш бой идёт на арене.',
+  'In the queue of the Colosseum.': 'Вы в очереди Колизея.',
+  'A legend of the sea comes to spar: the draft begins.': 'Легенда моря выходит на арену: начинается набор армии.',
+  'The other side strikes: the bout is yours.': 'Соперник сдаётся: бой ваш.',
+  'You strike: the bout is theirs.': 'Вы сдаётесь: бой за соперником.',
+  'Rating {0} ({1}), bouts {2}.': 'Рейтинг {0} ({1}), боёв {2}.',
+  'Rating {0}, bouts {1}.': 'Рейтинг {0}, боёв {1}.',
+  'The season of the Colosseum is closed: {0} is its champion.': 'Сезон Колизея закрыт: чемпион — {0}.',
+  'The season of the Colosseum is closed: nobody fought ten rated bouts.': 'Сезон Колизея закрыт: никто не провёл десяти рейтинговых боёв.',
+  'The Colosseum begins anew.': 'Колизей начинается заново.',
+  'Usage: /arena rating N': 'Как вызывать: /arena rating N',
+  'Usage: /arena [queue|bot|win|lose|rating N|season|reset]': 'Как вызывать: /arena [queue|bot|win|lose|rating N|season|reset]',
+};

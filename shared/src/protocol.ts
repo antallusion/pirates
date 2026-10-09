@@ -1602,7 +1602,9 @@ export interface TacView {
    *  (docs/18 II), what the lair left. */
   result?: { lost: { u: UnitId; n: number }[]; killed: { u: UnitId; n: number }[]; xp: number; paid?: number; loot?: LairLoot;
     /** The beaten who came over to her after a boarding won (owner, 2026-10-08): by the kind they serve as. */
-    joined?: { u: UnitId; n: number }[] };
+    joined?: { u: UnitId; n: number }[];
+    /** docs/19 E14: a bout of the Colosseum — rated or not, her rating after it and its change. */
+    arena?: import('./data/arena.ts').ArenaResult };
   /** docs/18 II: the battle is fought ashore at a lair of the land's creatures (the kind of island it is drawn as). */
   land?: { type: string; lair: string; island: string; level: number };
   /** The hexes a great one ashore will fall on as the next round opens (shorebosses.ts): step off them. */
@@ -1610,6 +1612,8 @@ export interface TacView {
   /** docs/19 E5: a citadel's siege — the ground it stands on (as `land.type`), each row's wall, gate or tower: stones
    *  left of how many, the catapult's stones a round, the citadel's name. */
   siege?: { type: string; hp: number[]; max: number[]; cat: number; name?: string };
+  /** docs/19 E14: a bout of the Colosseum on its sand (a practice bout against a legend of the sea, or rated). */
+  arena?: { practice: boolean; rated: boolean };
 }
 
 export type ServerMsg =
