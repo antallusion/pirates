@@ -54,7 +54,11 @@ export const ARENA_POINT = 14.15;
 /** Each kind's measure in the Colosseum beside its square-law weight (>1: it fights above its weight, and a lot of it
  *  has fewer men), set by the bouts themselves (`node tools/balance-arena.ts --calibrate`): every kind's pick wins
  *  about half the bouts. */
-export const ARENA_CAL: Partial<Record<UnitId, number>> = {};
+export const ARENA_CAL: Partial<Record<UnitId, number>> = {
+  deckhand: 0.72, sailor: 0.79, marine: 0.86, sea_guard: 0.95, musketeer: 1.02, sharpshooter: 1.22, gunner: 0.98, bombardier: 1.02, boarder: 0.96, cutthroat: 0.99,
+  guard: 1.15, life_guard: 1.18, drowned: 0.88, deep_spawn: 1.23, bilge_rat: 0.97, cave_bat: 0.99, giant_centipede: 0.99, jungle_spider: 1.18, cliff_harpy: 0.94, cultist: 1.03,
+  mangrove_hydra: 1.01, wreck_titan: 0.77,
+};
 
 /** One man of a kind's battle weight in plain deckhands (armyWeight's square law). */
 const manWeight = (u: UnitId): number => armyWeight([{ u, n: 1 }]);
@@ -174,9 +178,14 @@ export function draftArmy(d: Draft, side: 0 | 1): ArmyStack[] {
 
 // ------------------------------------------------------------------ the steward's hand (the sea's side, a captain's turn run out)
 
-/** How each kind has fared in the bouts (the share of bouts won by the side that took it, `tools/balance-arena.ts`):
- *  what a steward who has watched the Colosseum knows. Absent: an even half. */
-export const ARENA_FAME: Partial<Record<UnitId, number>> = {};
+/** How each kind has fared in the bouts (the share of bouts won by the side that took it in the dice's drafts,
+ *  `node tools/balance-arena.ts 8000 --fame`): what a steward who has watched the Colosseum knows, and bans by. Absent:
+ *  an even half. */
+export const ARENA_FAME: Partial<Record<UnitId, number>> = {
+  deckhand: 0.49, sailor: 0.5, marine: 0.5, sea_guard: 0.51, musketeer: 0.49, sharpshooter: 0.49, gunner: 0.51, bombardier: 0.5, boarder: 0.49, cutthroat: 0.49, guard: 0.49,
+  life_guard: 0.48, drowned: 0.51, deep_spawn: 0.51, bilge_rat: 0.5, cave_bat: 0.49, giant_centipede: 0.49, jungle_spider: 0.49, cliff_harpy: 0.51, cultist: 0.5,
+  mangrove_hydra: 0.48, wreck_titan: 0.52,
+};
 
 const isShooterKind = (u: UnitId): boolean => hasSpecial(u, 'shooter');
 const isSwift = (u: UnitId): boolean => hasSpecial(u, 'flying') || (UNITS[u]?.speed ?? 0) >= 6;
@@ -196,14 +205,14 @@ export function lotWish(d: Draft, side: 0 | 1, u: UnitId, path: CaptainId | null
   return v;
 }
 
-/** The steward's (or a legend's) move for a side: a ban of what the other side would like most, the lot she likes
+/** The steward's (or a legend's) move for a side: a ban of a kind the Colosseum has seen win most, the lot she likes
  *  most, a little of the dice in both (`care` 0: by the dice alone — the random drafter of the sims). */
 export function draftChoice(d: Draft, side: 0 | 1, rng: Rng, path: CaptainId | null, care = 1): DraftAction {
   const t = draftTurn(d);
-  const best = (list: UnitId[], score: (u: UnitId) => number): UnitId => {
+  const best = (list: UnitId[], score: (u: UnitId) => number, noise = 0.12): UnitId => {
     let top = list[0], tv = -Infinity;
     for (const u of list) {
-      const v = care > 0 ? score(u) + rng.float() * 0.12 / care : rng.float();
+      const v = care > 0 ? score(u) + rng.float() * noise / care : rng.float();
       if (v > tv) {
         tv = v;
         top = u;
@@ -213,7 +222,8 @@ export function draftChoice(d: Draft, side: 0 | 1, rng: Rng, path: CaptainId | n
   };
   if (t.stage === 'ban') {
     const open = draftOpen(d);
-    return { op: 'ban', u: best(open, (u) => lotWish(d, (1 - side) as 0 | 1, u, null)) };
+    // The kinds stand near even (ARENA_CAL): what it has seen win is a leaning, not a certainty.
+    return { op: 'ban', u: best(open, (u) => 2 * (ARENA_FAME[u] ?? 0.5), 0.5) };
   }
   const can = draftAffordable(d, side);
   if (!can.length) return { op: 'pass' };
@@ -225,8 +235,14 @@ export function draftChoice(d: Draft, side: 0 | 1, rng: Rng, path: CaptainId | n
 /** The eight battle skills every hero of the Colosseum has at expert. */
 export const ARENA_SKILLS: SkillId[] = ['boarding', 'armor', 'artillery', 'leadership', 'tactics', 'luck', 'first_aid', 'mysticism'];
 
+/** Each path's weight on the sand: points of Attack and Defence more (or fewer) than its standard primaries, so that
+ *  the paths stand even in the Colosseum as HotA's tournaments even out their heroes (`node tools/balance-arena.ts 120
+ *  --paths`; the paths' own books, innate moves and ultimates stay theirs). */
+export const ARENA_PATH: Partial<Record<CaptainId, number>> = { corsair: -9, smuggler: 4, reaver: -2, navigator: 2, drowned: 3, admiral: 4 };
+
 /** A path's standard primaries at the cap: its start and its odds over the level-ups, whole points by the largest
- *  remainders (no dice: every captain of a path the same). */
+ *  remainders (no dice: every captain of a path the same), and its weight on the sand (ARENA_PATH: Attack the odd
+ *  point). */
 export function arenaPrims(path: CaptainId): Prims {
   const base = PRIM_BASE[path], w = PRIM_WEIGHTS[path];
   const ups = MAX_LEVEL - 1;
@@ -241,6 +257,9 @@ export function arenaPrims(path: CaptainId): Prims {
   }
   const out = { ...base };
   PRIMS.forEach((k, i) => (out[k] += whole[i]));
+  const h = Math.round(ARENA_PATH[path] ?? 0);
+  out.atk = Math.max(0, out.atk + Math.ceil(h / 2));
+  out.def = Math.max(0, out.def + Math.floor(h / 2));
   return out;
 }
 

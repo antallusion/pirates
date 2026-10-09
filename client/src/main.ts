@@ -981,6 +981,7 @@ function onMessage(m: ServerMsg): void {
     case 'self_patch':
       runTestBattle();
       noteHearsay(state.self); // a whisper just bought becomes her mark (docs/16 #14)
+      arenaMoments(); // docs/19 E14: the Colosseum's draft opens its tab, its bout closes the window
       if (state.self?.company.mutiny && modal !== 'mutiny') openModal('mutiny');
       else if (!state.self?.company.mutiny && modal === 'mutiny') closeModal();
       else if (modal === 'company' || modal === 'base' || modal === 'gear' || modal === 'hero' || modal === 'throne' || modal === 'research') {
@@ -1328,6 +1329,17 @@ function openModal(m: Modal): void {
   }
   if (m === null) releaseModalToasts();
   refreshModal();
+}
+
+/** docs/19 E14: a draft of the Colosseum begun (a captain matched, a legend come to spar) opens the Throne at its tab;
+ *  the bout beginning closes it, so the sand is seen. */
+let arenaDraftWas = false;
+function arenaMoments(): void {
+  const d = state.self?.glory?.arena?.draft;
+  const drafting = !!d && d.stage !== 'fight';
+  if (drafting && !arenaDraftWas && modal !== 'throne' && modal !== 'mutiny' && !state.boardTac && !state.boardFight) openThrone('arena');
+  if (d?.stage === 'fight' && modal === 'throne') closeModal();
+  arenaDraftWas = drafting;
 }
 
 function closeModal(): void {

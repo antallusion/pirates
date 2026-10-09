@@ -23,6 +23,7 @@ import { placeName } from './maps.ts';
 import { RAID, RAID_TIERS, raidPay } from '../../../shared/src/data/abyssraid.ts';
 import { unitIcon, unitName } from './army.ts';
 import { CIT_TABS } from './citadels.ts'; // docs/19 E4–E8
+import { ARENA_TABS } from './arena.ts'; // docs/19 E14
 import type { ClientState } from '../state.ts';
 import { esc, fmt, icon, money } from './dom.ts';
 
@@ -262,6 +263,8 @@ export const THRONE_TABS: ThroneTab[] = [
   },
   // docs/19 E4–E8: the citadels and the Throne war.
   ...CIT_TABS,
+  // docs/19 E14: the Colosseum.
+  ...ARENA_TABS,
 ];
 
 export class ThroneWindow {

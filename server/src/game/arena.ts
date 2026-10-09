@@ -478,8 +478,11 @@ function finish(game: Game, bout: Bout, ships: ShipEntity[]): void {
     if (!s || !r) return;
     const won = bout.winner === k;
     const foe = bout.seats[1 - k].name;
-    if (!r.rated) game.toastShip(s.ship, won ? `The Colosseum: you beat ${foe}. ${r.practice ? 'A practice bout' : 'A friendly bout'}: the rating stands.` : `The Colosseum: ${foe} beats you. ${r.practice ? 'A practice bout' : 'A friendly bout'}: the rating stands.`, won ? 'gold' : 'info');
-    else game.toastShip(s.ship, won ? `The Colosseum: you beat ${foe}. Rating ${r.rating} (+${r.delta}).` : `The Colosseum: ${foe} beats you. Rating ${r.rating} (${r.delta}).`, won ? 'gold' : 'bad');
+    let msg: string;
+    if (r.practice) msg = won ? `The Colosseum: you beat ${foe}. A practice bout: the rating stands.` : `The Colosseum: ${foe} beats you. A practice bout: the rating stands.`;
+    else if (!r.rated) msg = won ? `The Colosseum: you beat ${foe}. A friendly bout: the rating stands.` : `The Colosseum: ${foe} beats you. A friendly bout: the rating stands.`;
+    else msg = won ? `The Colosseum: you beat ${foe}. Rating ${r.rating} (+${r.delta}).` : `The Colosseum: ${foe} beats you. Rating ${r.rating} (${r.delta}).`;
+    game.toastShip(s.ship, msg, won ? 'gold' : r.rated ? 'bad' : 'info');
     game.pushSelf(s, true);
   });
 }
@@ -723,7 +726,10 @@ export function adminArena(game: Game, s: PlayerSession, args: string[]): string
     case undefined: {
       const r = S.rows[s.accountId];
       const b = L.of.get(s.accountId);
-      return `Colosseum, season ${S.season + 1}: rating ${r?.r ?? ARENA_START}, bouts ${r?.n ?? 0}, won ${r?.w ?? 0} · queue ${L.queue.size}${b ? ` · bout ${b.stage}` : ''}.`;
+      const [se, rt, n, w, q] = [S.season + 1, r?.r ?? ARENA_START, r?.n ?? 0, r?.w ?? 0, L.queue.size];
+      if (!b) return `Colosseum, season ${se}: rating ${rt}, bouts ${n}, won ${w}, in the queue ${q}.`;
+      if (b.stage === 'draft') return `Colosseum, season ${se}: rating ${rt}, bouts ${n}, won ${w}, in the queue ${q}. Your draft is under way.`;
+      return `Colosseum, season ${se}: rating ${rt}, bouts ${n}, won ${w}, in the queue ${q}. Your bout is on the sand.`;
     }
     case 'queue':
       return arenaQueue(game, s) ?? 'In the queue of the Colosseum.';
@@ -755,9 +761,10 @@ export function adminArena(game: Game, s: PlayerSession, args: string[]): string
       row.best = Math.max(row.best, row.r);
       row.at = now;
       save(game);
-      L.last.set(s.accountId, { won, delta: d, foe: 'Colosseum' });
+      L.last.set(s.accountId, { won, delta: d, foe: '' });
       game.pushSelf(s, true);
-      return `Rating ${row.r} (${d >= 0 ? '+' : ''}${d}), bouts ${row.n}.`;
+      const sd = `${d >= 0 ? '+' : ''}${d}`;
+      return `Rating ${row.r} (${sd}), bouts ${row.n}.`;
     }
     case 'rating': {
       const n = Math.round(Number(args[1]));

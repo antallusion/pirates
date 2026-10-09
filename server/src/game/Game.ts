@@ -629,6 +629,7 @@ export class Game {
     stepProjectiles(this, dt);
     prof.lap('projectiles');
     stepBoarding(this);
+    stepArena(this); // docs/19 E14: the Colosseum's queue, its drafts' clocks, its season (twice a second)
     stepLandFights(this); // the battles ashore at the lairs of the land's creatures (docs/18 II)
     stepStrikes(this);
     prof.lap('boarding');
@@ -904,7 +905,6 @@ export class Game {
     if (this.tick % 20 === 0) stepTrials(this); // docs/19 E3: a trial whose captain is gone
     if (this.tick % 20 === 0) stepAbyssRaid(this); // docs/19 E11: the raid's owed paid, a boarding long over forgotten
     stepCitadels(this); // docs/19 E4–E8: the windows, the hours held, the week, the season, the charts
-    stepArena(this); // docs/19 E14: the Colosseum's queue, its drafts' clocks, its season
     stepSeaMarks(this); // the boats at the dense sea's marks
     stepSeaFinds(this); // docs/19 D5: the sea's small things; her time at sea for the day's caps
     stepRoamers(this); // docs/19 D7: the creatures roaming the sea, as HoMM3's neutral stacks
