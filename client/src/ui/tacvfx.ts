@@ -323,7 +323,7 @@ export function drawDecal(g: CanvasRenderingContext2D, k: DecalKind, x: number, 
       g.save();
       g.translate((r(3 + j) - 0.5) * w * 0.5, (r(11 + j) - 0.5) * w * 0.3);
       g.rotate(r(20 + j) * Math.PI);
-      drawThing(g, 'chip', w * (0.1 + r(30 + j) * 0.12), '186,150,104', );
+      drawThing(g, 'chip', w * (0.1 + r(30 + j) * 0.12), '186,150,104');
       g.restore();
     }
   } else drawThing(g, k, w * (k === 'hat' ? 0.34 : 0.5), '');

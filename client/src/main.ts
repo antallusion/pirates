@@ -25,7 +25,7 @@ import { BoardFightPanel } from './ui/boardfight.ts';
 import { TacticalPanel } from './ui/tactical.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
 import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, KEYED_AMMO, MOUNTS, SHIP_CLASSES, isZoneBossClass } from '../../shared/src/data/ships.ts';
-import { PORT_DOCK_RADIUS, isNight, timeOfDay } from '../../shared/src/constants.ts';
+import { PORT_DOCK_RADIUS, isNight, nightFactor, timeOfDay } from '../../shared/src/constants.ts';
 import { angleDiff, clamp, dist, toShipLocal } from '../../shared/src/math.ts';
 import type { Aggression, SeaMarkData, ServerMsg, ShipInfo } from '../../shared/src/protocol.ts';
 import { SF, STATIONS } from '../../shared/src/protocol.ts';
@@ -411,6 +411,8 @@ const divePanel = new DivePanel((m) => net.send(m));
 const boardFight = new BoardFightPanel((m) => net.send(m), () => state.estServerTime());
 const tactical = new TacticalPanel((m) => net.send(m), () => state.estServerTime());
 tactical.purse = () => state.self?.gold ?? 0;
+// docs/25 item 16: the boarding under the sea's own weather and hour (rain, fog, a storm's lightning, night).
+tactical.sky = () => ({ weather: state.weather, fog: state.fog, wind: state.wind, night: nightFactor(state.estServerTime()) });
 const optionsScreen = new OptionsScreen();
 optionsScreen.close = () => closeModal();
 // A phone plays sideways only (owner, 2026-10-02). On the first touch the game goes full screen and holds the screen

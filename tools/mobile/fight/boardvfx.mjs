@@ -59,12 +59,15 @@ if (WEATHER) await say(`/weather ${WEATHER}`, 1500);
 if (HOUR) await say(`/time ${HOUR}`, 1500);
 await sleep(3000);
 const sky = await p.evaluate(() => { const s = globalThis.gravetide.state; return { weather: s.weather, fog: s.fog, wind: s.wind }; });
+// INTROSLOW=ms: the opening slowed to shoot its moments (the grapples, the lines drawn taut, the planks, the first over).
+const SLOW = Number(process.env.INTROSLOW ?? 0);
+if (SLOW) await p.evaluate((ms) => { globalThis.gravetide.tactical.introMs = ms; }, SLOW);
 await say(`/board ${process.env.FOE ?? 'pirate frigate'}`, 300);
 // The opening: shot as it plays (the grapples, the planks falling, the first over).
 const v0 = await waitFor(async () => view(), 30000, 120);
 if (!v0) { console.log('no battle'); await b.close(); process.exit(1); }
 const intro = [];
-for (const at of [150, 600, 1100, 1700]) {
+for (const at of SLOW ? [0.12, 0.3, 0.48, 0.62, 0.8].map((k) => Math.round(k * SLOW)) : [150, 600, 1100, 1700]) {
   await sleep(Math.max(0, at - (intro.at(-1)?.at ?? 0)));
   intro.push({ at, st: await stats() });
   await shot(`intro_${at}`);
@@ -77,6 +80,13 @@ const rec = { tag, sky, intro, errors: p.errors };
 if (FPS) rec.idle = await fps(6000);
 rec.idleStats = await stats();
 await shot('idle');
+// FIRE=1: two fires laid on her deck in this screen's view (as a sea fight's burning leaves them), to see them live.
+if (process.env.FIRE === '1') {
+  await p.evaluate(() => { const t = globalThis.gravetide.state.boardTac; const c = [...t.cells]; let n = 0; for (const i of [3 * 11 + 8, 5 * 11 + 7, 6 * 11 + 9]) if (c[i] === '.' && n < 2) { c[i] = 'F'; n++; } globalThis.gravetide.state.boardTac = { ...t, cells: c.join('') }; });
+  await sleep(2500);
+  rec.fire = await stats();
+  await shot('fire');
+}
 // Her round 1 spent on guard (her ultimate from round 2), then her ultimate at a foe.
 if (process.env.ULT !== '0' && LEVEL >= 20) {
   await waitFor(async () => {

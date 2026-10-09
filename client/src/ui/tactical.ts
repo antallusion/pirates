@@ -63,6 +63,11 @@ import type { SheetHandle } from './kit/sheet.ts';
 import { attachWheel, wheel } from './kit/radial.ts';
 import { faceAttrs } from './kit/faces.ts'; // the captains' faces in their circles (2026-10-07)
 import type { WheelOption } from './kit/radial.ts';
+// docs/25 §3: the boarding's looks — the field's clockwork (tacfx.ts) and its effects (tacvfx.ts).
+import { FINALE_MS, FieldClock, FieldShake, INTRO_MS, ROLL_MS, deckRoll, finaleZoom, fxLevel, introZoom, lightning, motionOf, rnd, rollCount, skyOf, stopMs, swing, ultZoom } from './tacfx.ts';
+import type { FxLevel, Motion, Sky } from './tacfx.ts';
+import { Parts, blob, drawDecal, drawThing, fog as fogBanks, lantern, night as nightSky, pennant, rain as rainFall, rainRings, rigging, trail, ultFrame, wetSheen } from './tacvfx.ts';
+import type { DecalKind, Part } from './tacvfx.ts';
 
 const L = dict(EN, RU);
 const CL = dict(CEN, CRU); // docs/19 E5: the siege's words
@@ -149,6 +154,8 @@ const spText = (id: TacSpellId) => (ORDERS[id]?.text ?? [id, id])[lang() === 'ru
 type K = keyof typeof EN;
 
 const SQ3 = Math.sqrt(3);
+/** docs/25 item 17: the sea's layer runs this far past the screen's edges (CSS px), so it may shift with the swell. */
+const SEA_MARGIN = 10;
 const easeOut = (k: number): number => (k <= 0 ? 0 : k >= 1 ? 1 : 1 - (1 - k) ** 3);
 const YOU = '#7fb0d0';
 const FOE = '#d2473a';
@@ -227,6 +234,11 @@ const PATH_RGB: Record<CaptainId, [number, number, number]> = {
   corsair: [255, 150, 60], smuggler: [170, 190, 180], reaver: [220, 40, 40], navigator: [120, 200, 255], drowned: [60, 220, 190], admiral: [240, 200, 100],
 };
 const PATH_FX_MS = { innate: 1200, ult: 2200 };
+/** docs/25 item 13: each school of orders its own look — fire's embers, wind's streaks, water's drops, steel's glints,
+ *  the boarders' hooks, fog's layers — and the light its captain gathers before it. */
+const SCHOOL_RGB: Record<School, string> = { fire: '255,140,50', wind: '200,236,255', water: '90,190,235', steel: '225,232,240', board: '200,150,90', fog: '180,190,195' };
+/** docs/25 item 20: the colours on a ship's masts (the side's own; white when struck). */
+const MAST_RGB = ['74,134,180', '184,56,43'] as const;
 /** A move's name (a path's innate or ultimate). */
 const moveName = (path: string, ult: boolean) => ((ult ? ULTIMATE : INNATE)[path as CaptainId]?.name ?? [path, path])[lang() === 'ru' ? 1 : 0];
 const moveText = (path: string, ult: boolean) => ((ult ? ULTIMATE : INNATE)[path as CaptainId]?.text ?? [path, path])[lang() === 'ru' ? 1 : 0];
@@ -461,7 +473,7 @@ export class TacticalPanel {
    *  its count as the blow lands, not before). */
   private counts = new Map<number, { at: number; n: number }[]>();
   /** Stacks felled in what is being played: drawn till the blow that fells them lands, then fading out. */
-  private fallen = new Map<number, { s: TacStackView; at: number }>();
+  private fallen = new Map<number, { s: TacStackView; at: number; over?: { x: number; y: number } | null; fx?: boolean; splash?: boolean; dir?: number }>();
   /** The foe under the mouse or the finger and the hex she would strike it from (owner, 2026-10-08: «при наведении…
    *  сколько я убью и какой урон нанесу»), the preview over it. */
   private aimFoe: { t: number; from?: number } | null = null;
@@ -472,6 +484,52 @@ export class TacticalPanel {
   private ptr: { x: number; y: number } | null = null;
   private tipKey = '';
 
+  // ------------------------------------------------------------------ docs/25 §3: the boarding's looks
+  /** The field's clock: the battle's, held through a hit-stop (item 1); the knocks (item 2); the particles. */
+  private clock = new FieldClock();
+  private shake = new FieldShake();
+  private parts = new Parts();
+  /** The field's time this frame (performance ms, behind the battle's through a hit-stop). */
+  private ft = 0;
+  private ftWas = 0;
+  /** What the player asked of motion, and how much this screen draws (a phone the lighter field). */
+  private mo: Motion = { still: false, shake: true, flash: 1 };
+  private lv: FxLevel = fxLevel(false, false);
+  /** The weather and the hour off the sea (main.ts feeds it; none: a clear day). */
+  sky: () => { weather?: string; fog?: number; night?: number; wind?: [number, number] } | null = () => null;
+  private sk: Sky = skyOf('breeze', 0, 0, undefined);
+  /** The camera this frame (CSS px): the knock, and the zoom about a point (the opening, an ultimate, the end). */
+  private cam = { x: 0, y: 0, k: 1, px: 0, py: 0 };
+  /** Each deck's rise and fall this frame (board px; item 3), and the boarded deck's slide in as the grapples bite. */
+  private roll: [number, number] = [0, 0];
+  private slide = 0;
+  /** The decks' boxes and the water between them (board px), for the field laid out now. */
+  private boxes: [{ x0: number; y0: number; x1: number; y1: number } | null, { x0: number; y0: number; x1: number; y1: number } | null] = [null, null];
+  private gap: { x0: number; y0: number; x1: number; y1: number } | null = null;
+  /** The sea alone, under the decks (item 17: it shifts with the roll). */
+  private seaLayer: HTMLCanvasElement | null = null;
+  /** Lights of a moment over the field (a muzzle's, a blast's: item 9), and the lanterns of this frame. */
+  private lights: { x: number; y: number; t0: number; dur: number; r: number; rgb: string; a: number }[] = [];
+  private lamps: { x: number; y: number }[] = [];
+  /** The marks the fight leaves on the decks (item 7), laid on the deck's painting as their blows land. */
+  private decals: { at: number; k: DecalKind; hex: number; dx: number; dy: number; seed: number; done: boolean }[] = [];
+  /** Each plate's count rolling down (item 15). */
+  private rolls = new Map<number, { from: number; to: number; t0: number; shown: number }>();
+  /** The opening (item 11): the grapples, the ropes, the planks falling, the first over. */
+  private intro: { t0: number; dur: number; dust: boolean } | null = null;
+  /** The opening's length (ms): the QA kit slows it to shoot its moments (tools/mobile/fight/boardvfx.mjs). */
+  introMs = INTRO_MS;
+  /** A captain gathering herself before an order (item 13). */
+  private charges: { side: number; t0: number; rgb: string }[] = [];
+  /** The end (item 20): the winners' arms up, the loser's colours struck, the camera drawn back, the smoke clearing. */
+  private finale: { t0: number; winner: 0 | 1; why: string } | null = null;
+  /** The powder smoke hanging over the field as the fight goes on (0–0.35), cleared at the end. */
+  private haze = 0;
+  /** Each walk's last step (item 19: a splash or a puff at each footfall). */
+  private steps = new Map<number, number>();
+  /** The fires' embers and smoke owed this frame (item 18). */
+  private emit = 0;
+
   /** Her purse (main.ts): a ransom she cannot pay is shown, and why, but not offered (docs/23 item 93: the wheel
    *  offered «Откуп 340» to an empty purse, the confirm sheet, then nothing). */
   purse: () => number = () => Infinity;
@@ -479,6 +537,7 @@ export class TacticalPanel {
   constructor(send: (m: ClientMsg) => void, now: () => number) {
     this.send = send;
     this.now = now;
+    this.parts.onLand = (p) => this.landed(p);
   }
 
   /** The battle's pace on this screen: 2 under «Ускорить ×2» (docs/23 item 60) — hers, or the other captain's (the
@@ -506,7 +565,22 @@ export class TacticalPanel {
   /** The battle's end shown on the field with its last blows played (main.ts plays the victory's or the defeat's film
    *  then, not over the blows still being played): the view, else null. */
   endShown(): TacView | null {
-    return this.view?.over && !this.busy() ? this.view : null;
+    // docs/25 item 20: the end's own moment (the winners' arms up, the loser's colours struck) is seen before the film.
+    return this.view?.over && !this.busy() && (this.mo.still || performance.now() > this.busyUntil + 1800) ? this.view : null;
+  }
+
+  /** The effects alive now, for the QA kit (tools/mobile/fight/boardvfx.mjs): the knock (px), a hit-stop, the falls, the
+   *  particles, the decks' marks, the opening, an ultimate, the end, the weather drawn. */
+  fxStats(): Record<string, unknown> {
+    const t = performance.now();
+    const k = this.shake.at(t);
+    return {
+      shake: +Math.hypot(k.x, k.y).toFixed(2), stop: this.clock.held(t), zoom: +this.cam.k.toFixed(3), parts: this.parts.list.length,
+      dying: [...this.fallen.values()].filter((f) => this.ft >= f.at).length, overboard: [...this.fallen.values()].filter((f) => this.ft >= f.at && f.over).length,
+      decals: this.decals.filter((d) => d.done).length, intro: !!this.intro, ult: this.pathFx.some((f) => f.ult), finale: !!this.finale,
+      roll: this.roll.map((r) => +r.toFixed(2)), rolling: [...this.rolls.values()].filter((r) => r.from !== r.to && t - r.t0 < ROLL_MS).length,
+      sky: { rain: this.sk.rain, fog: +this.sk.fog.toFixed(2), night: +this.sk.night.toFixed(2), storm: this.sk.storm }, haze: +this.haze.toFixed(2), level: this.lv, still: this.mo.still,
+    };
   }
 
   render(v: TacView | null): void {
@@ -566,6 +640,18 @@ export class TacticalPanel {
         this.bursts = [];
         this.missiles = [];
         this.pathFx = [];
+        // docs/25 §3: the looks of this fight let go.
+        this.clock.clear();
+        this.shake.clear();
+        this.parts.clear();
+        this.lights = [];
+        this.decals = [];
+        this.rolls.clear();
+        this.steps.clear();
+        this.charges = [];
+        this.intro = this.finale = null;
+        this.haze = 0;
+        this.seaLayer = null;
         this.seen = 0;
         this.preview = this.targeting = this.info = null;
         this.moreOpen = this.sheetOpen = this.bookOpen = false;
@@ -669,6 +755,7 @@ export class TacticalPanel {
     // who struck whom, how many fell. Less motion asked: the same clock, no walks or lunges.
     const t = performance.now();
     const calm = this.calm();
+    this.looks();
     // The battle's end shows its last blows only (a quick combat's whole fight is not played again), as the server holds it.
     // docs/19 E5: a siege opens with the ship's broadside and the round's first stones and shots, played as it opens.
     const fresh = (was ? v.log.filter((e) => e.i > this.seen) : v.siege ? v.log.filter((e) => e.k === 'siege') : []).slice(v.over ? -TAC_END_WINDOW : -TAC_PLAY_WINDOW);
@@ -730,11 +817,17 @@ export class TacticalPanel {
       else if (p.hex !== s.hex) this.pos.set(s.id, { hex: s.hex, path: [p.hex, s.hex], t0: t, dur: calm ? 0 : glideMs(hexDist(p.hex, s.hex), this.speed(v)), fly: !calm });
     }
     this.busyUntil = Math.max(this.busyUntil, end);
-    if (v.over && !was?.over) this.endUntil = this.busyUntil + 3500;
+    if (v.over && !was?.over) {
+      this.endUntil = this.busyUntil + 3500;
+      // docs/25 item 20: the end's moment, once its last blows are played.
+      this.finale = { t0: this.busyUntil, winner: v.over.winner, why: v.over.why };
+    }
     if (this.eventAt.size > 80) for (const k of [...this.eventAt.keys()].slice(0, this.eventAt.size - 60)) this.eventAt.delete(k);
     if (!was) {
       this.heroFx = [0, 1].map((side) => ({ side, t0: performance.now() + 400 + side * 250, dur: 1900 }));
       this.endHidden = false;
+      // docs/25 item 11: the opening as the battle opens (a tap skips it; none with «меньше движения», none ashore).
+      if (!this.mo.still && !v.land && !v.siege && !v.arena && !v.over) this.intro = { t0: performance.now(), dur: this.introMs, dust: false };
       // «Ускорить ×2» is kept from the last battle (docs/23 item 60).
       if (settings().tacFast && !v.heroes[v.you].fast && !v.over) this.order({ a: 'pace', fast: true });
       this.seen = v.log.length ? v.log[v.log.length - 1].i : 0;
@@ -814,6 +907,23 @@ export class TacticalPanel {
         this.addAct(e.s, { k: e.k === 'shot' ? 'shot' : 'atk', t0: t, hit, dx: (c.x - from.x) / len, dy: (c.y - from.y) / len });
       }
       if (e.t !== undefined) this.addAct(e.t, { k: 'hurt', t0: hit, hit, dx: from && c ? Math.sign(c.x - from.x) || 1 : 1, dy: 0 });
+      // docs/25 §3: the blow's weight on the field — the knock by the share of her army it takes (item 2), the field
+      // held a moment on a heavy one (item 1), steel's sparks where blades meet and an answer's parry (item 10).
+      const tgt = e.t !== undefined ? was.stacks.find((x) => x.id === e.t) ?? v.stacks.find((x) => x.id === e.t) : undefined;
+      const share = tgt && e.dmg ? e.dmg / this.armyHp(was, tgt.side) : 0;
+      if (c) {
+        this.shake.kick(hit, share, from ? c.x - from.x : 1, from ? c.y - from.y : 0);
+        this.clock.stop(hit, stopMs(share));
+        if (e.k !== 'shot' && !spill) this.steel(c, from, hit, e.k === 'ret' ? t + 90 : null, w);
+        // The marks it leaves (item 7): a hat or a sabre where men fell, splinters where a shot bit, rum by the barrels.
+        const hex = e.hex ?? hexOf(e.t);
+        if (hex !== undefined) {
+          if (e.kills && rnd(e.i * 3) < 0.5) this.decal(hit + 200, rnd(e.i * 5) < 0.5 ? 'hat' : 'blade', hex, e.i * 11);
+          else if (e.k === 'shot' && rnd(e.i * 7) < 0.4) this.decal(hit, 'splinter', hex, e.i * 13);
+          if (e.k !== 'shot' && e.kills && rnd(e.i * 17) < 0.35) this.decal(hit, 'blood', hex, e.i * 19);
+          if (this.nearBarrels(v.cells, hex) && rnd(e.i * 23) < 0.6) this.decal(hit, 'rum', hex, e.i * 29);
+        }
+      }
       if (c) {
         // The numbers as it lands: the harm, the fallen under it in red, and a blow into her side or from behind told
         // over it (owner, 2026-10-08) — on a phone by its share alone (the field carries no words there).
@@ -823,15 +933,29 @@ export class TacticalPanel {
         if (e.fl) this.addFloat({ text: this.phone ? L(e.fl === 2 ? 'fl.rearX' : 'fl.sideX') : L(e.fl === 2 ? 'fl.rear' : 'fl.side'), x: c.x, y: y0, t0: hit, color: '#ffb54a', size: 0.95 });
       }
       if (e.k === 'shot' && e.id === 'blast') {
-        if (c) this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: hit, size: w * 1.4 });
+        if (c) {
+          this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: hit, size: w * 1.4 });
+          this.blast(c, hit, w, e.hex ?? hexOf(e.t), e.i);
+        }
       } else if (e.k === 'shot') {
         const s = at(hexOf(e.s));
         const shooter = (v.stacks.find((x) => x.id === e.s) ?? was.stacks.find((x) => x.id === e.s))?.unit ?? '';
         const ms = MISSILE_OF[shooter] ?? (isShipBeast(shooter) ? SHIP_BEAST_DEFS[shooter].missile : undefined) ?? 'part.ms_ball';
         const fly = s && c && sprite(ms) ? Math.max(120, hit - t - 80) : 0;
         if (fly) this.missiles.push({ id: ms, x0: s!.x, y0: s!.y - w * 0.55, x1: c!.x, y1: c!.y - w * 0.4, t0: t + 80, dur: fly, arc: THROWN.has(ms) ? Math.hypot(c!.x - s!.x, c!.y - s!.y) * 0.25 : 0 });
-        if (s) this.bursts.push({ id: 'part.muzzle', x: s.x + (c && c.x < s.x ? -w * 0.45 : w * 0.45), y: s.y - w * 0.55, t0: t + 40, size: w * 0.9 });
-        if (c) this.bursts.push({ id: THROWN.has(ms) && fly ? 'part.explosion' : 'part.smoke', x: c.x, y: c.y - w * 0.3, t0: hit, size: w * (THROWN.has(ms) ? 1.1 : 0.8) });
+        if (s) {
+          const mx = s.x + (c && c.x < s.x ? -w * 0.45 : w * 0.45), my = s.y - w * 0.55;
+          this.bursts.push({ id: 'part.muzzle', x: mx, y: my, t0: t + 40, size: w * 0.9 });
+          // docs/25 item 9: the shot's flash lights the deck and the figures beside it for a moment; its smoke hangs.
+          this.light(mx, my, t + 40, 170, w * 2.4, '255,196,120', 0.55);
+          for (let j = 0; j < Math.round(3 * this.lv.burst + 1); j++) this.parts.add({ k: 'smoke', x: mx, y: my, vx: (c && c.x < s.x ? -1 : 1) * (20 + 30 * Math.random()) + this.sk.wx * 10, vy: -12 - 10 * Math.random(), drag: 0.4, t0: t + 60 + j * 40, life: 1100, size: w * 0.22, rgb: '170,166,158' });
+          this.haze = Math.min(0.3, this.haze + 0.012);
+        }
+        if (c) {
+          this.bursts.push({ id: THROWN.has(ms) && fly ? 'part.explosion' : 'part.smoke', x: c.x, y: c.y - w * 0.3, t0: hit, size: w * (THROWN.has(ms) ? 1.1 : 0.8) });
+          if (THROWN.has(ms) && fly) this.blast(c, hit, w, e.hex ?? hexOf(e.t), e.i);
+          else for (let j = 0; j < Math.round(5 * this.lv.burst); j++) this.parts.add({ k: 'chip', x: c.x, y: c.y - w * 0.4, vx: (Math.random() - 0.5) * 160, vy: -60 - 90 * Math.random(), g: 420, drag: 0.5, t0: hit, life: 600, size: w * 0.12, rgb: '176,140,96', vr: (Math.random() - 0.5) * 20 });
+        }
       } else if (c) this.bursts.push({ id: 'part.splinters', x: c.x, y: c.y, t0: hit, size: w * 0.8 });
     } else if (e.k === 'luck' || e.k === 'morale' || e.k === 'fear') {
       const c = at(hexOf(e.s));
@@ -847,20 +971,39 @@ export class TacticalPanel {
       }
     } else if (e.k === 'spell') {
       this.heroStep(e.side, t);
+      // docs/25 item 13: her captain gathers herself 0.3 s, then the order lands in its school's look.
+      const school = ORDERS[e.id as TacSpellId]?.school as School | undefined;
+      const rgb = SCHOOL_RGB[school ?? 'steel'];
+      this.charges.push({ side: e.side, t0: t, rgb });
+      const t1 = t + 300;
       const c = at(e.hex ?? hexOf(e.t));
+      const spots: { x: number; y: number }[] = [];
       if (e.id === 'grenades' && c) {
-        this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: t, size: w * 2.4 });
-      } else if (c) this.bursts.push({ id: 'part.muzzle', x: c.x, y: c.y, t0: t, size: w * 1.6 });
-      else {
+        this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: t1, size: w * 2.4 });
+        this.blast(c, t1, w, e.hex ?? hexOf(e.t), e.i, 1.6);
+        spots.push(c);
+      } else if (c) {
+        this.bursts.push({ id: 'part.muzzle', x: c.x, y: c.y, t0: t1, size: w * 1.6 });
+        spots.push(c);
+      } else {
         // A whole-deck order: smoke over her deck, or a ring over one's own (a page over the stacks it fell on).
         const foe = e.side !== v.you;
         const onFoe = e.id === 'smoke_and_knives' || e.id === 'call_of_the_deep' ? !foe : foe;
         const mine = e.on?.length ? v.stacks.filter((s) => e.on!.includes(s.id)) : v.stacks.filter((s) => (s.side === v.you) !== onFoe);
         for (const s of mine) {
           const cc = this.center(s.hex);
-          this.bursts.push({ id: e.id === 'call_of_the_deep' ? (sprite('fx.bt_deep_0') ? 'fx.bt_deep' : 'part.splash') : 'part.smoke', x: cc.x, y: cc.y, t0: t + Math.random() * 200, size: w * 1.3 });
+          this.bursts.push({ id: e.id === 'call_of_the_deep' ? (sprite('fx.bt_deep_0') ? 'fx.bt_deep' : 'part.splash') : 'part.smoke', x: cc.x, y: cc.y, t0: t1 + Math.random() * 200, size: w * 1.3 });
+          spots.push(cc);
         }
       }
+      for (const id of e.on ?? []) {
+        const cc = at(hexOf(id));
+        if (cc && !spots.some((p) => Math.abs(p.x - cc.x) < 2 && Math.abs(p.y - cc.y) < 2)) spots.push(cc);
+      }
+      if (school) this.schoolLook(school, spots.slice(0, 8), t1, w);
+      // An order that harms her stack knocks the field by its share too.
+      const tgt = e.t !== undefined ? was.stacks.find((x) => x.id === e.t) : undefined;
+      if (tgt && e.dmg && c) this.shake.kick(t1, e.dmg / this.armyHp(was, tgt.side), 0, 1);
       this.addFloat({ text: spName(e.id as TacSpellId), x: this.size.cw / 2, y: this.size.ch * 0.18, t0: t, color: e.side === v.you ? YOU : FOE, big: true });
       // docs/18: a path page's name over every stack it fell on.
       for (const id of (e.on ?? []).slice(0, 7)) {
@@ -878,7 +1021,10 @@ export class TacticalPanel {
       this.heroStep(e.side, t);
       const on = (e.on ?? []).map((id) => at(hexOf(id))).filter((c): c is { x: number; y: number } => !!c);
       this.pathFx.push({ path: e.id as CaptainId, ult, mine: e.side === v.you, t0: t, at: on });
-      this.addFloat({ text: moveName(e.id ?? '', ult), x: this.size.cw / 2, y: this.size.ch * (ult ? 0.3 : 0.18), t0: t, color: e.side === v.you ? YOU : FOE, big: true });
+      // docs/25 item 12: an ultimate is a film's frame — its name on the band with her face (drawn with the frame), its
+      // path's own sky or fire over the field.
+      if (ult) this.ultBurst(e.id as CaptainId, e.side, t, on, v);
+      else this.addFloat({ text: moveName(e.id ?? '', ult), x: this.size.cw / 2, y: this.size.ch * 0.18, t0: t, color: e.side === v.you ? YOU : FOE, big: true });
       for (const c of on.slice(0, 7)) this.addFloat({ text: moveName(e.id ?? '', ult), x: c.x, y: c.y - w * 0.62, t0: t + 120, color: ult ? '#ffd27a' : '#e0b862' });
     } else if (e.k === 'boss') {
       // A great one ashore does its own (2026-10-03): its move's name over the field and over each stack it fell on.
@@ -905,6 +1051,8 @@ export class TacticalPanel {
         if (tc) {
           this.addFloat({ text: `−${e.dmg}${e.kills ? ` †${e.kills}` : ''}`, x: tc.x, y: tc.y - w * 0.2, t0: t, color: '#f3d7a0' });
           this.bursts.push({ id: 'part.splinters', x: tc.x, y: tc.y, t0: t, size: w * 0.9 });
+          const tgt = was.stacks.find((x) => x.id === e.t);
+          if (tgt && e.dmg) this.shake.kick(t, e.dmg / this.armyHp(was, tgt.side), 0, 1);
         }
       }
     } else if (e.k === 'burn') {
@@ -912,11 +1060,165 @@ export class TacticalPanel {
       if (c) {
         this.addFloat({ text: `−${e.dmg}${e.kills ? ` †${e.kills}` : ''}`, x: c.x, y: c.y - w * 0.2, t0: t, color: '#ff9a4a' });
         this.bursts.push({ id: sprite('fx.bt_fire_0') ? 'fx.bt_fire' : 'part.explosion', x: c.x, y: c.y - w * 0.2, t0: t, size: w * 0.9 });
+        for (let j = 0; j < Math.round(6 * this.lv.burst); j++) this.ember(c.x + (Math.random() - 0.5) * w * 0.5, c.y - w * 0.3, t + j * 30, w);
+        const hex = e.hex ?? hexOf(e.s);
+        if (hex !== undefined && rnd(e.i * 37) < 0.5) this.decal(t, 'scorch', hex, e.i * 41);
       }
     } else if (e.k === 'die') {
       const c = at(e.hex);
-      if (c) this.bursts.push({ id: 'part.smoke', x: c.x, y: c.y, t0: t, size: w * 1.2 });
+      if (c) this.bursts.push({ id: 'part.smoke', x: c.x, y: c.y, t0: t, size: w * 0.9 });
+      // docs/25 item 1: a stack's fall holds the field a moment.
+      this.clock.stop(t, stopMs(0, true));
     } else if (e.k === 'siege') this.siegeMark(e, v, t, hit);
+  }
+
+  // ------------------------------------------------------------------ docs/25 §3: the effects a blow or an order sets off
+
+  /** What the player asked of motion and what this screen draws, read afresh (the options may change mid-fight). */
+  private looks(): void {
+    const s = settings();
+    this.mo = motionOf(s, !!this.calmMq?.matches);
+    this.clock.off = this.mo.still;
+    this.shake.off = !this.mo.shake;
+    this.lv = fxLevel(this.phone, s.effects === 'low');
+    this.parts.cap = this.lv.parts;
+  }
+
+  /** A side's army in hit points as the view stood (the share a blow takes of it, item 2). */
+  private armyHp(v: TacView, side: number): number {
+    let n = 0;
+    for (const s of v.stacks) if (s.side === side) n += Math.max(0, (s.count - 1) * s.hpMax + s.hp);
+    return Math.max(1, n);
+  }
+
+  /** A light of a moment over the field (item 9): softer with «меньше вспышек». */
+  private light(x: number, y: number, t0: number, dur: number, r: number, rgb: string, a: number): void {
+    this.lights.push({ x, y, t0, dur, r, rgb, a: a * this.mo.flash });
+    if (this.lights.length > 40) this.lights.splice(0, this.lights.length - 40);
+  }
+
+  /** A mark to lay on a deck as its blow lands (item 7), a little off the hex's middle (the same on a field laid anew). */
+  private decal(at: number, k: DecalKind, hex: number, seed: number): void {
+    this.decals.push({ at, k, hex, dx: (rnd(seed + 1) - 0.5) * 0.7, dy: (rnd(seed + 2) - 0.5) * 0.45, seed, done: false });
+    if (this.decals.length > 90) this.decals.splice(0, this.decals.length - 90);
+  }
+
+  /** A hex beside the barrels (a blow there stoves one: rum on the deck). */
+  private nearBarrels(cells: string, hex: number): boolean {
+    return cells[hex] === 'B' || hexNeighbors(hex).some((n) => cells[n] === 'B');
+  }
+
+  /** Steel on steel (item 10): sparks and a glint where the blow lands; an answer's parry a spark of its own first. */
+  private steel(c: { x: number; y: number }, from: { x: number; y: number } | null, hit: number, parry: number | null, w: number): void {
+    const ux = from ? Math.sign(c.x - from.x) || 1 : 1;
+    const px = c.x - ux * w * 0.22, py = c.y - w * 0.5;
+    const sc = w / 40;
+    const fly = (at: number, n: number) => {
+      for (let i = 0; i < n; i++) {
+        const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4 - ux * 0.5;
+        const sp = (140 + 180 * Math.random()) * sc;
+        this.parts.add({ k: 'spark', x: px, y: py, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 520 * sc, drag: 0.25, t0: at, life: 260 + 200 * Math.random(), size: 2 + Math.random(), rgb: '255,214,140' });
+      }
+      this.parts.add({ k: 'glint', x: px, y: py, vx: 0, vy: 0, t0: at, life: 220, size: w * 0.32, rgb: '255,246,220' });
+      this.light(px, py, at, 110, w * 1.1, '255,220,160', 0.35);
+    };
+    fly(hit, Math.max(3, Math.round(10 * this.lv.burst)));
+    if (parry !== null) fly(parry, Math.max(2, Math.round(4 * this.lv.burst)));
+  }
+
+  /** A blast (a grenade, a powder keg, a bombard's shell): its light, a heavier knock, burning bits and soot left. */
+  private blast(c: { x: number; y: number }, at: number, w: number, hex: number | undefined, seed: number, big = 1): void {
+    this.light(c.x, c.y - w * 0.2, at, 260, w * 3 * big, '255,170,80', 0.7);
+    this.shake.kick(at, 0.04 * big, 0, 1);
+    this.haze = Math.min(0.3, this.haze + 0.03);
+    for (let j = 0; j < Math.round(8 * this.lv.burst * big); j++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.6;
+      const sp = (90 + 150 * Math.random()) * (w / 40);
+      this.parts.add({ k: j % 3 ? 'ember' : 'chip', x: c.x, y: c.y - w * 0.2, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 380, drag: 0.4, t0: at, life: 500 + 400 * Math.random(), size: j % 3 ? 1.6 + Math.random() : w * 0.12, rgb: j % 3 ? '255,150,60' : '60,44,30', vr: 12 });
+    }
+    for (let j = 0; j < Math.round(3 * this.lv.burst + 1); j++) this.parts.add({ k: 'smoke', x: c.x + (Math.random() - 0.5) * w * 0.6, y: c.y - w * 0.3, vx: this.sk.wx * 18 * this.sk.wk, vy: -18 - 12 * Math.random(), drag: 0.5, t0: at + 120 + j * 60, life: 1600, size: w * 0.32, rgb: '96,90,84' });
+    if (hex !== undefined) this.decal(at, 'soot', hex, seed * 3 + 7);
+  }
+
+  /** An ember off a fire, carried up and down the wind. */
+  private ember(x: number, y: number, at: number, w: number): void {
+    const s = this.sk;
+    this.parts.add({ k: 'ember', x, y, vx: s.wx * 30 * s.wk + (Math.random() - 0.5) * 20, vy: -40 - 50 * Math.random() + s.wy * 10, g: -6, drag: 0.6, t0: at, life: 900 + 700 * Math.random(), size: (1.2 + Math.random()) * Math.max(1, w / 45), rgb: '255,140,50' });
+  }
+
+  /** An order's school seen as it lands on each spot (item 13). */
+  private schoolLook(school: School, spots: { x: number; y: number }[], t: number, w: number): void {
+    const b = this.lv.burst, sc = w / 40, s = this.sk;
+    const n = (k: number) => Math.max(1, Math.round(k * b));
+    for (const [i, p] of spots.entries()) {
+      const at = t + i * 40;
+      if (school === 'fire') {
+        for (let j = 0; j < n(7); j++) this.ember(p.x + (Math.random() - 0.5) * w * 0.6, p.y - w * 0.2, at + j * 25, w);
+        this.parts.add({ k: 'flash', x: p.x, y: p.y - w * 0.3, vx: 0, vy: 0, t0: at, life: 380, size: w * 0.9, rgb: '255,130,40' });
+        this.light(p.x, p.y - w * 0.3, at, 300, w * 1.8, '255,140,60', 0.4);
+      } else if (school === 'wind') {
+        for (let j = 0; j < n(6); j++) {
+          const y = p.y - w * (0.9 * Math.random());
+          const sp = (280 + 120 * Math.random()) * sc;
+          this.parts.add({ k: 'streak', x: p.x - s.wx * w * 1.2, y: y - s.wy * w * 1.2, vx: s.wx * sp, vy: s.wy * sp, t0: at + j * 35, life: 420, size: w * 0.8, rgb: '225,245,255' });
+        }
+      } else if (school === 'water') {
+        for (let j = 0; j < n(8); j++) this.parts.add({ k: 'drop', x: p.x + (Math.random() - 0.5) * w * 0.7, y: p.y - w * (0.9 + 0.4 * Math.random()), vx: 0, vy: (60 + 60 * Math.random()) * sc, g: 380 * sc, t0: at + j * 30, life: 520, size: 1.6 + Math.random(), rgb: '150,215,240' });
+        for (let j = 0; j < 2; j++) this.parts.add({ k: 'ring', x: p.x, y: p.y + w * 0.28, vx: 0, vy: 0, t0: at + 250 + j * 200, life: 700, size: w * 0.7, rgb: '170,225,245' });
+      } else if (school === 'steel') {
+        for (let j = 0; j < n(3); j++) this.parts.add({ k: 'glint', x: p.x + (Math.random() - 0.5) * w * 0.6, y: p.y - w * (0.3 + 0.6 * Math.random()), vx: 0, vy: 0, t0: at + j * 90, life: 300, size: w * 0.35, rgb: '240,246,255' });
+        this.light(p.x, p.y - w * 0.4, at, 200, w * 1.2, '220,232,255', 0.3);
+      } else if (school === 'board') {
+        // The grapples thrown in at it from her side of the field.
+        for (let j = 0; j < n(2); j++) {
+          const x0 = p.x + (j ? 1 : -1) * w * 1.6, y0 = p.y - w * 1.2;
+          const life = 360;
+          this.parts.add({ k: 'hook', x: x0, y: y0, vx: ((p.x - x0) / life) * 1000, vy: ((p.y - w * 0.4 - y0) / life) * 1000, t0: at + j * 80, life, size: w * 0.32, rgb: '', rot: Math.atan2(p.y - y0, p.x - x0), vr: 0 });
+        }
+      } else {
+        for (let j = 0; j < n(3); j++) this.parts.add({ k: 'mist', x: p.x + (Math.random() - 0.5) * w, y: p.y - w * (0.1 + 0.4 * Math.random()), vx: (Math.random() - 0.5) * 20 + s.wx * 8, vy: -4, drag: 0.7, t0: at + j * 80, life: 1500, size: w * 0.75, rgb: '186,194,198' });
+      }
+    }
+  }
+
+  /** An ultimate's own fire over the field (item 12): the corsair's flashes down her rail, the Admiral's line firing as
+   *  one, the Drowned's water out of the deck's seams, the smuggler's fog rolling in (its sky and squall are drawn
+   *  with the frame). */
+  private ultBurst(path: CaptainId, side: number, t: number, on: { x: number; y: number }[], v: TacView): void {
+    const w = this.size.w || 30;
+    if (path === 'corsair' || path === 'admiral') {
+      const col = path === 'corsair' ? (side === 0 ? 4 : 6) : side === 0 ? 3 : 7;
+      for (let y = 0; y < TAC_H; y++) {
+        const hex = hexIndex(col, y);
+        if (TAC_BLOCKING.has(v.cells[hex] as TacCell) && v.cells[hex] !== 'C') continue;
+        const c = this.center(hex);
+        const at = t + 250 + (path === 'corsair' ? y * 95 : (y % 2) * 40);
+        const mx = c.x + (side === 0 ? 1 : -1) * w * 0.4;
+        this.bursts.push({ id: 'part.muzzle', x: mx, y: c.y - w * 0.4, t0: at, size: w * 1.1 });
+        this.light(mx, c.y - w * 0.4, at, 200, w * 2, '255,190,110', 0.5);
+        this.parts.add({ k: 'smoke', x: mx, y: c.y - w * 0.4, vx: (side === 0 ? 1 : -1) * 30, vy: -10, drag: 0.4, t0: at + 60, life: 1400, size: w * 0.3, rgb: '160,156,150' });
+      }
+      this.shake.kick(t + (path === 'corsair' ? 600 : 300), 0.06, side === 0 ? 1 : -1, 0);
+      this.haze = Math.min(0.3, this.haze + 0.06);
+    } else if (path === 'drowned') {
+      // Water spurting up between the planks: at the stacks it fell on, and at seams about the decks.
+      const spots = [...on];
+      for (let k = 0; spots.length < (this.phone ? 7 : 12) && k < 40; k++) {
+        const hex = Math.floor(rnd(t * 0.001 + k) * TAC_W * TAC_H);
+        if (v.cells[hex] === '.') spots.push(this.center(hex));
+      }
+      for (const [i, p] of spots.entries()) {
+        const at = t + 200 + i * 70;
+        for (let j = 0; j < Math.max(2, Math.round(6 * this.lv.burst)); j++) this.parts.add({ k: 'drop', x: p.x + (Math.random() - 0.5) * w * 0.3, y: p.y + w * 0.2, vx: (Math.random() - 0.5) * 50, vy: -(150 + 120 * Math.random()) * (w / 40), g: 520 * (w / 40), t0: at + j * 25, life: 700, size: 1.5 + Math.random() * 1.5, rgb: '120,225,210' });
+        this.parts.add({ k: 'ring', x: p.x, y: p.y + w * 0.28, vx: 0, vy: 0, t0: at + 300, life: 800, size: w * 0.8, rgb: '140,235,215' });
+      }
+    } else if (path === 'smuggler') {
+      for (let j = 0; j < (this.phone ? 6 : 10); j++) {
+        const y = (this.size.ch * (j + 0.5)) / (this.phone ? 6 : 10);
+        const x0 = side === 0 ? -w : this.size.cw + w;
+        this.parts.add({ k: 'mist', x: x0, y, vx: (side === 0 ? 1 : -1) * this.size.cw * 0.45, vy: 0, drag: 0.5, t0: t + 100 + j * 60, life: 2000, size: w * 1.8, rgb: '176,186,190' });
+      }
+    }
   }
 
   /** docs/19 E5: a stone of the catapult or a ball of the ship's broadside flying in from beyond the field's left edge
@@ -1953,6 +2255,11 @@ export class TacticalPanel {
 
   private down(e: PointerEvent): void {
     this.cancelPress();
+    // docs/25 item 11: a tap on the field skips the opening (and gives no order).
+    if (this.intro) {
+      this.intro = null;
+      return;
+    }
     const x = e.clientX, y = e.clientY;
     // A finger on a foe she may strike shows what the blow would do while it is down (owner, 2026-10-08), the side of
     // the foe it comes from chosen by where the finger lies on it (it may slide round the foe to choose); let go, and
@@ -2229,7 +2536,18 @@ export class TacticalPanel {
     const { w } = this.size;
     const h = (w * 2) / SQ3;
     const x = hexX(i), y = hexY(i);
-    return { x: w * (x + 0.5 + (y & 1 ? 0.5 : 0)), y: h / 2 + y * h * 0.75 };
+    // docs/25 item 3: a hex rides its deck's rise and fall (the gangway's between them, sagging); in the opening the
+    // boarded deck slides in as the grapples bite (item 11). The painting's cache is laid level.
+    const dy = this.level ? 0 : x < 5 ? this.roll[0] : x > 5 ? this.roll[1] : (this.roll[0] + this.roll[1]) / 2 + this.sag();
+    const dx = this.level || x <= 5 ? 0 : this.slide;
+    return { x: w * (x + 0.5 + (y & 1 ? 0.5 : 0)) + dx, y: h / 2 + y * h * 0.75 + dy };
+  }
+  /** The hexes laid level (the background's cache is drawn so). */
+  private level = false;
+  /** The gangway's sag at its middle (board px): more as the decks part. */
+  private sag(): number {
+    const w = this.size.w || 30;
+    return this.mo.still ? 0 : w * 0.035 + Math.abs(this.roll[0] - this.roll[1]) * 0.35;
   }
 
   /** The board's turn onto the screen: screen = (a·x + c·y + e, b·x + d·y + f). */
@@ -2240,6 +2558,43 @@ export class TacticalPanel {
     return [1, 0, 0, 1, ox, oy];
   }
 
+  /** docs/25 §3: the camera this frame — the knock (item 2), the opening's push (item 11), an ultimate's 7 % nearer
+   *  its blow (item 12), the end drawn slowly back (item 20); none of the zooms with «меньше движения». A field with
+   *  no sea under it (ashore) is drawn a hair larger while it shakes, so its edges stay covered. */
+  private camera(v: TacView, now: number, t: number): void {
+    const { cw, ch, w } = this.size;
+    const kn = this.shake.at(now);
+    let k = 1, px = cw / 2, py = ch / 2;
+    if (!this.mo.still) {
+      if (this.intro) k *= introZoom((now - this.intro.t0) / this.intro.dur);
+      for (const f of this.pathFx) {
+        if (!f.ult) continue;
+        const z = ultZoom((t - f.t0) / PATH_FX_MS.ult);
+        if (z <= 1) continue;
+        k *= z;
+        if (f.at.length) {
+          px = f.at.reduce((a, p) => a + p.x, 0) / f.at.length;
+          py = f.at.reduce((a, p) => a + p.y, 0) / f.at.length - w * 0.3;
+        }
+      }
+      if (this.finale && now > this.finale.t0 && !v.land && !v.siege && !v.arena) k *= finaleZoom((now - this.finale.t0) / FINALE_MS);
+    }
+    const mag = Math.hypot(kn.x, kn.y);
+    if (mag > 0 && (v.land || v.siege || v.arena)) k *= 1 + (2 * mag) / Math.max(1, Math.min(cw, ch));
+    this.cam = { x: kn.x, y: kn.y, k, px, py };
+  }
+  /** The screen's transform with the camera (CSS px in). */
+  private camTf(g: CanvasRenderingContext2D): void {
+    const { dpr } = this.size;
+    const { x, y, k, px, py } = this.cam;
+    g.setTransform(dpr * k, 0, 0, dpr * k, dpr * (px * (1 - k) + x), dpr * (py * (1 - k) + y));
+  }
+  /** The screen's transform without it (the weather, the film's frame, the captains at their corners). */
+  private plainTf(g: CanvasRenderingContext2D): void {
+    const { dpr } = this.size;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
   /** A hex's centre on the screen. */
   private center(i: number): { x: number; y: number } {
     const p = this.lc(i);
@@ -2247,10 +2602,17 @@ export class TacticalPanel {
     return { x: a * p.x + c * p.y + e, y: b * p.x + d * p.y + f };
   }
 
-  private turned(g: CanvasRenderingContext2D): void {
+  private turned(g: CanvasRenderingContext2D, cam = false): void {
     const k = this.size.dpr;
     const [a, b, c, d, e, f] = this.xf();
-    g.setTransform(a * k, b * k, c * k, d * k, e * k, f * k);
+    if (!cam) {
+      g.setTransform(a * k, b * k, c * k, d * k, e * k, f * k);
+      return;
+    }
+    // With the camera (docs/25 §3): its zoom about its point and its knock, over the board's turn.
+    const { x, y, k: z, px, py } = this.cam;
+    const tx = px * (1 - z) + x, ty = py * (1 - z) + y;
+    g.setTransform(a * z * k, b * z * k, c * z * k, d * z * k, (e * z + tx) * k, (f * z + ty) * k);
   }
 
   /** Less motion asked for: no walks, glides or lunges, every stack where it stands. */
@@ -2260,7 +2622,7 @@ export class TacticalPanel {
 
   /** Where a stack stands this frame: along its walk while it walks, hex by hex (a step's bob, a flier's rise and
    *  fall), waiting at its first hex till its walk's beat comes; its hex otherwise. `dx`: the way it walks (screen). */
-  private standAt(s: TacStackView, t: number): { x: number; y: number; lift: number; walking: boolean; dx: number } {
+  private standAt(s: TacStackView, t: number): { x: number; y: number; lift: number; walking: boolean; dx: number; step?: number } {
     const p = this.pos.get(s.id);
     if (!p || p.hex !== s.hex || p.dur <= 0 || t >= p.t0 + p.dur || p.path.length < 2) return { ...this.center(s.hex), lift: 0, walking: false, dx: 0 };
     const k = Math.max(0, (t - p.t0) / p.dur);
@@ -2269,9 +2631,12 @@ export class TacticalPanel {
     const share = stepEase(k, steps);
     const q = along(pts, share), ahead = along(pts, Math.min(1, share + 0.03));
     const w = this.size.w || 30;
-    const lift = p.fly ? Math.sin(Math.PI * k) * w * 0.45 : Math.abs(Math.sin(Math.PI * k * steps)) * w * 0.07;
+    let lift = p.fly ? Math.sin(Math.PI * k) * w * 0.45 : Math.abs(Math.sin(Math.PI * k * steps)) * w * 0.07;
+    // docs/25 item 19: a step on or off a gangway is a leap over the gap between the hulls, in an arc.
+    const seg = Math.min(steps - 1, Math.floor(share * steps));
+    if (!p.fly && !this.mo.still && (hexX(p.path[seg]) === 5) !== (hexX(p.path[seg + 1]) === 5)) lift = Math.sin(Math.PI * (share * steps - seg)) * w * 0.32;
     const dx = t < p.t0 ? 0 : ahead.x - q.x || pts[pts.length - 1].x - pts[0].x;
-    return { x: q.x, y: q.y, lift, walking: true, dx };
+    return { x: q.x, y: q.y, lift, walking: true, dx, step: p.fly ? undefined : Math.floor(k * steps) };
   }
 
   /** The way a stack faces on the screen (a unit vector): the way it faces on the board, turned with the board. */
@@ -2364,7 +2729,7 @@ export class TacticalPanel {
     const lg = layer.getContext('2d')!;
     lg.setTransform(1, 0, 0, 1, 0, 0);
     lg.clearRect(0, 0, layer.width, layer.height);
-    lg.setTransform(this.size.dpr, 0, 0, this.size.dpr, 0, 0);
+    this.camTf(lg);
     const p = this.center(hex);
     const keep = this.plates, act = this.act.get(s.id);
     this.plates = [];
@@ -2486,7 +2851,23 @@ export class TacticalPanel {
     return nx >= 0 && ny >= 0 && nx < TAC_W && ny < TAC_H ? hexIndex(nx, ny) : null;
   }
 
+  /** The field's painting, cached (laid level: the decks' roll is the frame's); laid anew, the fight's marks on it are
+   *  laid again (docs/25 item 7). */
   private background(v: TacView): HTMLCanvasElement {
+    const was = this.bgKey;
+    this.level = true;
+    try {
+      const bg = this.paintBackground(v);
+      if (this.bgKey !== was) {
+        for (const d of this.decals) if (d.done) this.layDecal(bg, d, v);
+      }
+      return bg;
+    } finally {
+      this.level = false;
+    }
+  }
+
+  private paintBackground(v: TacView): HTMLCanvasElement {
     const key = `${v.cells}|${this.size.cw}|${this.size.ch}|${this.size.dpr}|${v.you}|${this.size.rot}|${v.land?.type ?? v.siege?.type ?? (v.arena ? 'arena' : '')}|${v.heroes[0].hull}|${v.heroes[1].hull}|${sprite('bg.battle_sea') ? 1 : 0}`;
     if (this.bg && key === this.bgKey) return this.bg;
     this.bgKey = key;
@@ -2519,11 +2900,21 @@ export class TacticalPanel {
     const decks = [deckOf(0), deckOf(1)];
     const seaArt = sprite('bg.battle_sea');
     this.painted = !!(decks[0] && decks[1] && seaArt);
+    this.boxes = [null, null];
+    this.gap = null;
+    this.seaLayer = null;
     if (decks[0] && decks[1] && seaArt) {
       g.save();
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
       cover(g, seaArt.img, 0, 0, this.size.cw, this.size.ch);
       g.restore();
+      // docs/25 items 3, 17: the sea apart, a margin larger all round (it shifts under the decks with the swell).
+      const sea = (this.seaLayer = document.createElement('canvas'));
+      sea.width = Math.round((this.size.cw + SEA_MARGIN * 2) * dpr);
+      sea.height = Math.round((this.size.ch + SEA_MARGIN * 2) * dpr);
+      const sg = sea.getContext('2d')!;
+      sg.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cover(sg, seaArt.img, 0, 0, this.size.cw + SEA_MARGIN * 2, this.size.ch + SEA_MARGIN * 2);
       for (const x of [0, 1] as const) {
         let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
         for (let i = 0; i < cells.length; i++) {
@@ -2550,7 +2941,10 @@ export class TacticalPanel {
         g.fillStyle = 'rgba(0,0,0,0.35)';
         if (x === 0) g.fillRect(x1, y0, w * 0.18, y1 - y0);
         else g.fillRect(x0 - w * 0.18, y0, w * 0.18, y1 - y0);
+        // Its box with its shadow: the part of the painting that rides this deck's swell.
+        this.boxes[x] = { x0: x === 1 ? x0 - w * 0.18 : x0, y0, x1: x === 0 ? x1 + w * 0.18 : x1, y1 };
       }
+      if (this.boxes[0] && this.boxes[1]) this.gap = { x0: this.boxes[0].x1 - w * 0.18, y0: Math.min(this.boxes[0].y0, this.boxes[1].y0), x1: this.boxes[1].x0 + w * 0.18, y1: Math.max(this.boxes[0].y1, this.boxes[1].y1) };
       g.strokeStyle = 'rgba(0,0,0,0.28)';
       g.lineWidth = 1;
       for (let i = 0; i < cells.length; i++) {
@@ -2559,7 +2953,8 @@ export class TacticalPanel {
         this.hexPath(g, p.x, p.y, r);
         g.stroke();
       }
-      this.boardingPlanks(g, cells, w, r);
+      // The gangways are drawn live over the water (they bend as the decks part, and fall in the opening).
+      if (!this.boxes[0] || !this.boxes[1]) this.boardingPlanks(g, cells, w, r);
       this.deckThings(g, cells, w, true);
       return c;
     }
@@ -2979,7 +3374,7 @@ export class TacticalPanel {
   /** A fire on deck, flickering (drawn each frame). */
   /** docs/25 item 52: a quarterdeck's flag, drawn: a dark pole at the hex's back with a brass knob, a pennant in its
    *  side's colour that stirs in the wind, and — while the other side holds it — the whole rounds held of those it takes. */
-  private flagPole(g: CanvasRenderingContext2D, x: number, y: number, w: number, ours: boolean, held: number, need: number, t: number): void {
+  private flagPole(g: CanvasRenderingContext2D, x: number, y: number, w: number, ours: boolean, held: number, need: number, t: number, st: { down: number; white: boolean } = { down: 0, white: false }): void {
     const bx = x - w * 0.26, by = y + w * 0.14, top = by - w * 1.15;
     g.save();
     g.lineCap = 'round';
@@ -3009,7 +3404,10 @@ export class TacticalPanel {
     g.fill();
     const wave = this.calm() ? 0 : Math.sin(t / 320 + x * 0.01);
     const len = w * 0.62, h = w * 0.36;
-    g.fillStyle = ours ? '#4a86b4' : '#b8382b';
+    // docs/25 item 20: the loser's colours struck down the pole (a white one run up when she struck).
+    g.save();
+    g.translate(0, st.down * (by - top - h * 1.1));
+    g.fillStyle = st.white ? '#ece6d8' : ours ? '#4a86b4' : '#b8382b';
     g.strokeStyle = 'rgba(10,8,6,0.9)';
     g.lineWidth = 1.5;
     g.beginPath();
@@ -3026,6 +3424,7 @@ export class TacticalPanel {
     g.moveTo(bx + len * 0.12, top + h * 0.5);
     g.lineTo(bx + len * 0.7, top + h * 0.5 + wave * h * 0.1);
     g.stroke();
+    g.restore();
     if (held > 0) {
       const tx = bx + len * 0.5, ty = top - w * 0.12;
       g.font = `700 ${Math.max(10, Math.round(w * 0.22))}px sans-serif`;
@@ -3066,6 +3465,453 @@ export class TacticalPanel {
       g.closePath();
       g.fill();
     }
+    // docs/25 item 18: the heat haze over it, shimmering (a desk's).
+    if (this.lv.fine && !this.mo.still) {
+      g.strokeStyle = 'rgba(255,226,190,0.1)';
+      g.lineWidth = Math.max(1, w * 0.05);
+      g.beginPath();
+      for (let k = 0; k < 3; k++) {
+        const yy = y - w * (0.5 + k * 0.16);
+        g.moveTo(x - w * 0.3, yy);
+        for (let q = 1; q <= 6; q++) g.lineTo(x - w * 0.3 + (q / 6) * w * 0.6 + this.sk.wx * w * 0.08 * k, yy + Math.sin(t / 110 + q * 1.4 + k * 2 + seed) * w * 0.035);
+      }
+      g.stroke();
+    }
+  }
+
+  // ------------------------------------------------------------------ docs/25 §3: the field alive
+
+  /** A deck cut from the painting at its own rise and fall (item 3): its box, moved by its roll (and, in the opening,
+   *  the boarded deck's slide in). The camera's transform is on. */
+  private deckBlit(g: CanvasRenderingContext2D, bg: HTMLCanvasElement, side: 0 | 1): void {
+    const b = this.boxes[side];
+    if (!b) return;
+    const { dpr } = this.size;
+    const [A, B, C, D, E, F] = this.xf();
+    const xs = [b.x0, b.x1], ys = [b.y0, b.y1];
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const x of xs) for (const y of ys) {
+      const sx = A * x + C * y + E, sy = B * x + D * y + F;
+      x0 = Math.min(x0, sx);
+      x1 = Math.max(x1, sx);
+      y0 = Math.min(y0, sy);
+      y1 = Math.max(y1, sy);
+    }
+    x0 = Math.max(0, Math.floor(x0));
+    y0 = Math.max(0, Math.floor(y0));
+    x1 = Math.min(this.size.cw, Math.ceil(x1));
+    y1 = Math.min(this.size.ch, Math.ceil(y1));
+    if (x1 <= x0 || y1 <= y0) return;
+    const ry = this.roll[side], rx = side === 1 ? this.slide : 0;
+    const ox = A * rx + C * ry, oy = B * rx + D * ry;
+    g.drawImage(bg, x0 * dpr, y0 * dpr, (x1 - x0) * dpr, (y1 - y0) * dpr, x0 + ox, y0 + oy, x1 - x0, y1 - y0);
+  }
+
+  /** The live water between the hulls (item 4): the swell's light running along the gap, foam slapping both hulls as
+   *  they roll, the moon on it by night. Board px, the camera on. */
+  private water(g: CanvasRenderingContext2D, t: number): void {
+    const gp = this.gap;
+    if (!gp) return;
+    const w = this.size.w;
+    const s = this.mo.still ? 0 : t / 1000;
+    const x0 = gp.x0, x1 = gp.x1 + this.slide, wd = x1 - x0, hgt = gp.y1 - gp.y0;
+    g.save();
+    g.beginPath();
+    g.rect(x0, gp.y0 - w, wd, hgt + w * 2);
+    g.clip();
+    const n = this.phone ? 4 : 8;
+    g.strokeStyle = 'rgba(170,215,225,0.17)';
+    g.lineWidth = Math.max(1, w * 0.04);
+    g.beginPath();
+    for (let j = 0; j < n; j++) {
+      const y = gp.y0 + (((j / n) + s * 0.05) % 1) * hgt;
+      g.moveTo(x0, y);
+      for (let q = 1; q <= 4; q++) g.lineTo(x0 + (q / 4) * wd, y + Math.sin(s * 1.7 + q * 1.3 + j) * w * 0.07);
+    }
+    g.stroke();
+    // Foam where the water slaps each hull, brighter as it rolls toward it.
+    for (const side of [0, 1] as const) {
+      const hx = side === 0 ? x0 : x1, out = side === 0 ? 1 : -1;
+      const slap = 0.5 + 0.5 * Math.sin(s * (side === 0 ? 1.21 : 0.97) + (side ? 2.1 : 0) + Math.PI / 2);
+      for (const [lw, a] of [[w * 0.12, 0.1 + 0.14 * slap], [Math.max(1, w * 0.035), 0.3 + 0.3 * slap]] as const) {
+        g.strokeStyle = `rgba(225,240,245,${a.toFixed(3)})`;
+        g.lineWidth = lw;
+        g.beginPath();
+        for (let q = 0; q <= 12; q++) {
+          const y = gp.y0 + (q / 12) * hgt;
+          const x = hx + out * (w * 0.05 + Math.abs(Math.sin(y * 0.09 + s * 2.6 + side)) * w * 0.05 * (0.6 + slap));
+          if (q) g.lineTo(x, y);
+          else g.moveTo(x, y);
+        }
+        g.stroke();
+      }
+    }
+    if (this.sk.night > 0.4 && this.sk.rain < 0.5) {
+      g.globalCompositeOperation = 'lighter';
+      for (let j = 0; j < 3; j++) blob(g, '150,180,220', x0 + wd / 2 + Math.sin(s * 0.8 + j * 2) * wd * 0.2, gp.y0 + hgt * (0.25 + 0.25 * j), w * 0.5, 0.18 * this.sk.night, 0.2);
+      g.globalCompositeOperation = 'source-over';
+    }
+    g.restore();
+  }
+
+  /** The gangways across the water, live (item 3): each end on its deck as it rolls, the middle sagging; in the opening
+   *  they fall from the boarders' rail (item 11). Board px, the camera on. */
+  private livePlanks(g: CanvasRenderingContext2D, v: TacView, t: number, ik: number): void {
+    if (!this.boxes[0] || !this.boxes[1]) return;
+    const w = this.size.w, r = w / SQ3;
+    const fall = ik < 0 ? 1 : Math.max(0, Math.min(1, (ik - 0.42) / 0.3));
+    if (fall <= 0) return;
+    // A fall with a little bounce as it lands.
+    const lenK = fall < 1 ? Math.sin((fall * Math.PI) / 2) : 1;
+    const bounce = ik >= 0 && fall >= 1 ? Math.max(0, 1 - (ik - 0.72) / 0.12) * Math.sin(((ik - 0.72) / 0.12) * Math.PI * 2) * w * 0.04 : 0;
+    const [r0, r1] = this.roll;
+    for (let i = 0; i < v.cells.length; i++) {
+      if (v.cells[i] !== '=') continue;
+      this.level = true;
+      const p = this.lc(i);
+      this.level = false;
+      const xL = p.x - w * 0.95, xR0 = p.x + w * 0.95 + this.slide;
+      const xR = xL + (xR0 - xL) * lenK;
+      const yL = p.y + r0, yR = p.y + (lenK >= 1 ? r1 : r0) + bounce, mid = p.y + (r0 + r1) / 2 + this.sag() + bounce;
+      const cy = (4 * mid - yL - yR) / 2, xm = (xL + xR) / 2;
+      const h = r * 0.45;
+      const band = (dy: number, hh: number) => {
+        g.beginPath();
+        g.moveTo(xL, yL - hh + dy);
+        g.quadraticCurveTo(xm, cy - hh + dy, xR, yR - hh + dy);
+        g.lineTo(xR, yR + hh + dy);
+        g.quadraticCurveTo(xm, cy + hh + dy, xL, yL + hh + dy);
+        g.closePath();
+      };
+      // Its shadow on the water (further below it as it falls).
+      g.fillStyle = 'rgba(0,0,0,0.35)';
+      band(3 + (1 - fall) * w * 0.6, h * 0.95);
+      g.fill();
+      const pg = g.createLinearGradient(0, mid - h, 0, mid + h);
+      pg.addColorStop(0, '#9a7446');
+      pg.addColorStop(1, '#6b4b2b');
+      g.fillStyle = pg;
+      band(0, h);
+      g.fill();
+      g.strokeStyle = 'rgba(20,10,4,0.7)';
+      g.lineWidth = 1;
+      g.beginPath();
+      for (const yy of [-r * 0.15, r * 0.15]) {
+        g.moveTo(xL, yL + yy);
+        g.quadraticCurveTo(xm, cy + yy, xR, yR + yy);
+      }
+      g.stroke();
+      // The lashings: the grapple lines along both edges, slacker than the plank.
+      g.strokeStyle = '#c9b48a';
+      g.lineWidth = Math.max(1, w * 0.035);
+      g.beginPath();
+      for (const sd of [-1, 1]) {
+        g.moveTo(xL + w * 0.05, yL + sd * r * 0.5);
+        g.quadraticCurveTo(xm, cy + sd * r * 0.95 + this.sag() * 0.6, xR - w * 0.05, yR + sd * r * 0.5);
+      }
+      g.stroke();
+      // Landed in the opening: a puff of dust and splinters, a knock.
+      if (ik >= 0 && fall >= 1 && this.intro && !this.intro.dust) {
+        this.intro.dust = true;
+        for (let j = 0; j < v.cells.length; j++) {
+          if (v.cells[j] !== '=') continue;
+          const c = this.center(j);
+          for (let q = 0; q < Math.max(2, Math.round(4 * this.lv.burst)); q++) this.parts.add({ k: 'dust', x: c.x + (Math.random() - 0.5) * w * 1.6, y: c.y, vx: (Math.random() - 0.5) * 40, vy: -10 - 15 * Math.random(), drag: 0.4, t0: t, life: 700, size: w * 0.25, rgb: '150,128,100' });
+        }
+        this.shake.kick(performance.now(), 0.02, 0, 1);
+      }
+    }
+  }
+
+  /** The sails' shadows over the decks, stirring (item 14). Board px, the camera on. */
+  private sails(g: CanvasRenderingContext2D, t: number): void {
+    const w = this.size.w;
+    for (const [x, b] of this.boxes.entries()) {
+      if (!b) continue;
+      const cx = (b.x0 + b.x1) / 2 + (x === 1 ? this.slide : 0);
+      for (let i = 0; i < 2; i++) {
+        const px = cx + Math.sin(t / 3100 + i * 2 + x) * w * 0.45;
+        const py = b.y0 + (b.y1 - b.y0) * (0.3 + 0.4 * i) + Math.cos(t / 2700 + i + x) * w * 0.3 + this.roll[x as 0 | 1];
+        blob(g, '0,0,0', px, py, w * 2.3 * (1 + 0.06 * Math.sin(t / 900 + i)), 0.11, 0.3);
+      }
+    }
+  }
+
+  /** The opening on the board (item 11): grapples flung from the boarders' rail, their lines paid out, then drawn taut as
+   *  the boarded hull is hauled in. Board px, the camera on. */
+  private introBoard(g: CanvasRenderingContext2D, v: TacView, ik: number, w: number): void {
+    const b0 = this.boxes[0], b1 = this.boxes[1];
+    if (!b0 || !b1) return;
+    const fade = ik > 0.85 ? Math.max(0, 1 - (ik - 0.85) / 0.15) : 1;
+    for (const [j, row] of [1, 3, 5, 7].entries()) {
+      this.level = true;
+      const y = this.lc(hexIndex(0, row)).y;
+      this.level = false;
+      const xs = b0.x1 - w * 1.3, ys = y + this.roll[0];
+      const xt = b1.x0 + w * 0.5 + this.slide, yt = y + this.roll[1];
+      const kk = Math.max(0, Math.min(1, (ik - j * 0.05) / 0.3));
+      if (kk <= 0) continue;
+      const hx = xs + (xt - xs) * kk, hy = ys + (yt - ys) * kk - Math.sin(Math.PI * kk) * w * 1.1;
+      const taut = Math.max(0, Math.min(1, (ik - 0.35) / 0.2));
+      const sagL = kk < 1 ? w * 0.5 * kk : w * 0.5 * (1 - taut) + w * 0.06;
+      g.globalAlpha = fade;
+      g.strokeStyle = '#d2bf94';
+      g.lineWidth = Math.max(1, w * 0.035);
+      g.beginPath();
+      g.moveTo(xs, ys);
+      g.quadraticCurveTo((xs + hx) / 2, (ys + hy) / 2 + sagL, hx, hy);
+      g.stroke();
+      g.save();
+      g.translate(hx, hy);
+      g.rotate(kk < 1 ? Math.atan2(yt - ys - Math.cos(Math.PI * kk) * Math.PI * w * 1.1, xt - xs) : 0);
+      drawThing(g, 'hook', w * 0.36, '');
+      g.restore();
+      g.globalAlpha = 1;
+    }
+  }
+
+  /** The opening's first over (item 11): two of the boarders leap the gangways onto her deck. The camera on. */
+  private introJump(g: CanvasRenderingContext2D, v: TacView, ik: number, w: number): void {
+    const planks = [...v.cells].map((c, i) => (c === '=' ? i : -1)).filter((i) => i >= 0);
+    if (!planks.length) return;
+    const crew = v.stacks.filter((s) => s.side === 0 && figureArt(s)).sort((a, b) => hexX(b.hex) - hexX(a.hex));
+    for (let j = 0; j < Math.min(2, crew.length); j++) {
+      const kk = (ik - 0.62 - j * 0.1) / 0.28;
+      if (kk <= 0 || kk >= 1) continue;
+      const pl = planks[j % planks.length];
+      const c = this.center(pl);
+      const id = figureArt(crew[j])!;
+      const img = sprite(sprite(`${id}_atk`) ? `${id}_atk` : id)!.img;
+      const H = w * 1.25, W = (img.naturalWidth * H) / img.naturalHeight;
+      const [A, B] = this.xf();
+      const ax = c.x - A * w * 1.4, ay = c.y - B * w * 1.4, bx = c.x + A * w * 1.6, by = c.y + B * w * 1.6;
+      const x = ax + (bx - ax) * kk, y = ay + (by - ay) * kk - Math.sin(Math.PI * kk) * w * 0.7 + w * 0.25;
+      const a = kk > 0.75 ? (1 - kk) / 0.25 : 1;
+      g.globalAlpha = 0.35 * a;
+      g.fillStyle = '#000';
+      g.beginPath();
+      g.ellipse(x, ay + (by - ay) * kk + w * 0.25, w * 0.3 * (1 - 0.4 * Math.sin(Math.PI * kk)), w * 0.1, 0, 0, Math.PI * 2);
+      g.fill();
+      g.globalAlpha = a;
+      g.save();
+      g.translate(x, y);
+      if (A < 0 || (A === 0 && B < 0)) g.scale(-1, 1);
+      g.drawImage(img, -W / 2, -H, W, H);
+      g.restore();
+      g.globalAlpha = 1;
+    }
+  }
+
+  /** A fire's life (item 18): embers down the wind and smoke rising and leaning with it. */
+  private fireLife(i: number, t: number, w: number): void {
+    const c = this.center(i);
+    const s = this.sk;
+    for (let j = 0; j < (this.phone ? 1 : 2); j++) this.ember(c.x + (Math.random() - 0.5) * w * 0.4, c.y - w * 0.1, t, w);
+    if (Math.random() < (this.phone ? 0.35 : 0.6)) this.parts.add({ k: 'smoke', x: c.x + (Math.random() - 0.5) * w * 0.3, y: c.y - w * 0.35, vx: s.wx * 26 * s.wk + (Math.random() - 0.5) * 6, vy: -24 - 10 * Math.random() + s.wy * 8, drag: 0.85, t0: t, life: 2200, size: w * 0.26, rgb: '70,64,60' });
+  }
+
+  /** A footfall on the deck (item 19): a splash on wet boards, a puff of dust on dry ones (a desk's). */
+  private footfall(s: TacStackView, p: { x: number; y: number; step?: number }, t: number, w: number): void {
+    if (p.step === undefined || this.mo.still) return;
+    const last = this.steps.get(s.id);
+    this.steps.set(s.id, p.step);
+    if (last === undefined || last === p.step || s.sp.includes('flying')) return;
+    const fy = p.y + (w / SQ3) * 0.42;
+    if (this.sk.rain > 0 || s.wet) {
+      for (let j = 0; j < Math.max(2, Math.round(4 * this.lv.burst)); j++) this.parts.add({ k: 'drop', x: p.x + (Math.random() - 0.5) * w * 0.3, y: fy, vx: (Math.random() - 0.5) * 60, vy: -50 - 40 * Math.random(), g: 420, t0: t, life: 320, size: 1.2 + Math.random(), rgb: '170,205,225' });
+      this.parts.add({ k: 'ring', x: p.x, y: fy, vx: 0, vy: 0, t0: t, life: 420, size: w * 0.4, rgb: '180,215,230' });
+    } else if (this.lv.fine) this.parts.add({ k: 'dust', x: p.x, y: fy, vx: (Math.random() - 0.5) * 20, vy: -6, drag: 0.4, t0: t, life: 500, size: w * 0.14, rgb: '140,120,96' });
+  }
+
+  /** A side's colours at the end (item 20): the loser's struck down its mast; a white one run up when she struck. */
+  private struck(side: number, now: number): { down: number; white: boolean } {
+    const f = this.finale;
+    if (!f || side === f.winner || now < f.t0) return { down: 0, white: false };
+    const k = (now - f.t0) / 1200;
+    if (f.why === 'struck' && k > 1.1) return { down: Math.max(0, 1 - (k - 1.1) / 0.9), white: true };
+    return { down: Math.min(1, Math.max(0, k)), white: false };
+  }
+
+  /** Where a stack fallen at the deck's edge goes over (item 5): over the outer rail, or into the water between the
+   *  hulls (screen px); none inland, ashore, or on a gangway. */
+  private overboardTo(s: TacStackView, v: TacView): { x: number; y: number } | null {
+    if (v.land || v.siege || v.arena || !this.gap) return null;
+    const w = this.size.w, x = hexX(s.hex);
+    const p = this.lc(s.hex);
+    let bx: number | null = null;
+    if (x === 0) bx = p.x - w * 1.3;
+    else if (x === TAC_W - 1) bx = p.x + w * 1.3;
+    else if ((x === 4 || x === 6) && hexNeighbors(s.hex).some((n) => v.cells[n] === '~')) bx = (this.gap.x0 + this.gap.x1) / 2 + (x === 6 ? this.slide : 0);
+    if (bx === null) return null;
+    const [A, B, C, D, E, F] = this.xf();
+    const by = p.y + w * 0.35;
+    return { x: A * bx + C * by + E, y: B * bx + D * by + F };
+  }
+
+  private fallMs(f: { s: TacStackView; over?: { x: number; y: number } | null }, v: TacView): number {
+    if (f.over === undefined) f.over = this.mo.still ? null : this.overboardTo(f.s, v);
+    return f.over ? 900 : this.mo.still ? 520 : 720;
+  }
+
+  /** A stack's fall (item 6): it staggers, sinks and topples away from the blow, its sabre flung loose and its plate
+   *  flying apart; at the deck's edge it goes over in an arc, a splash and rings where it strikes the water (item 5). */
+  private dying(g: CanvasRenderingContext2D, id: number, k: number, v: TacView, t: number, w: number): void {
+    const f = this.fallen.get(id);
+    if (!f) return;
+    const s = f.s;
+    const fig = figureArt(s);
+    if (!fig || this.mo.still) {
+      this.ghost(g, s, s.hex, v, Math.max(0, 1 - k) * 0.9, 'grayscale(0.6) brightness(0.8)');
+      return;
+    }
+    const p0 = this.center(s.hex);
+    const r = w / SQ3, fy = p0.y + r * 0.42;
+    const base = sprite(fig)!.img;
+    const size = figureSize(s);
+    const sc = Math.min((size * w) / base.naturalHeight, (Math.min(size * 1.25, 2) * w) / base.naturalWidth);
+    const flip = this.facesLeft(s);
+    const dir = flip ? 1 : -1;
+    if (!f.fx) {
+      f.fx = true;
+      const hy = fy - base.naturalHeight * sc * 0.55;
+      const land = fy + (Math.random() - 0.3) * w * 0.25;
+      if (!f.over) this.parts.add({ k: 'blade', x: p0.x - dir * w * 0.2, y: hy, vx: -dir * (50 + 70 * Math.random()), vy: -(150 + 60 * Math.random()), g: 620, t0: t, life: 1500, size: w * 0.5, rgb: '', vr: -dir * 14, land, hex: s.hex, seed: s.id * 13 });
+      if (Math.random() < 0.45) this.parts.add({ k: 'hat', x: p0.x, y: hy - w * 0.25, vx: dir * (30 + 50 * Math.random()), vy: -120, g: 520, t0: t + 60, life: 1500, size: w * 0.34, rgb: '', vr: dir * 8, land: land + w * 0.1, hex: s.hex, seed: s.id * 17 });
+      // Its plate flies apart (item 15).
+      const px = p0.x + (flip ? -1 : 1) * w * 0.3, py = fy + r * 0.3;
+      for (let j = 0; j < 3; j++) this.parts.add({ k: 'shard', x: px, y: py, vx: (j - 1) * 70 + (Math.random() - 0.5) * 30, vy: -70 - 40 * Math.random(), g: 380, t0: t, life: 520, size: w * 0.16, rgb: s.side === v.you ? '14,40,52' : '52,16,14', vr: (j - 1) * 9 });
+    }
+    const kf = sprite(`${fig}_hit`) && k < 0.35 ? `${fig}_hit` : fig;
+    const img = sprite(kf)!.img;
+    const W = img.naturalWidth * sc, H = img.naturalHeight * sc;
+    const fx = footX(kf, img);
+    g.save();
+    if (f.over) {
+      // Over the side in an arc, tumbling, into the water.
+      const kk = Math.min(1, k / 0.75);
+      const x = p0.x + (f.over.x - p0.x) * kk, y = fy + (f.over.y - fy) * kk - Math.sin(Math.PI * kk) * w * 0.9;
+      if (kk >= 1 && !f.splash) {
+        f.splash = true;
+        this.bursts.push({ id: sprite('fx.bt_splash_0') ? 'fx.bt_splash' : 'part.splash', x: f.over.x, y: f.over.y - w * 0.2, t0: t, size: w * 1.2 });
+        for (let j = 0; j < 2; j++) this.parts.add({ k: 'ring', x: f.over.x, y: f.over.y, vx: 0, vy: 0, t0: t + j * 180, life: 900, size: w * 0.9, rgb: '200,230,240' });
+        for (let j = 0; j < Math.max(3, Math.round(8 * this.lv.burst)); j++) this.parts.add({ k: 'drop', x: f.over.x + (Math.random() - 0.5) * w * 0.3, y: f.over.y, vx: (Math.random() - 0.5) * 90, vy: -(120 + 100 * Math.random()), g: 520, t0: t, life: 520, size: 1.5 + Math.random(), rgb: '190,225,240' });
+      }
+      if (kk < 1) {
+        g.translate(x, y);
+        g.rotate(dir * kk * Math.PI * 1.25);
+        g.scale((flip ? -1 : 1) * (1 - 0.3 * kk), 1 - 0.3 * kk);
+        g.drawImage(img, -W * fx, -H * 0.6, W, H);
+      }
+    } else {
+      const a = Math.min(1, k / 0.55);
+      g.globalAlpha = k < 0.62 ? 1 : Math.max(0, 1 - (k - 0.62) / 0.38);
+      g.translate(p0.x, fy + w * 0.06 * a);
+      g.rotate(dir * a * a * (Math.PI / 2.15));
+      if (flip) g.scale(-1, 1);
+      g.filter = `grayscale(${(0.5 * a).toFixed(2)}) brightness(${(1 - 0.25 * a).toFixed(2)})`;
+      g.drawImage(img, -W * fx, -H, W, H);
+      g.filter = 'none';
+    }
+    g.restore();
+    this.drawn.ghosts++;
+  }
+
+  /** The fight's marks whose blows have landed, laid on the deck's painting (item 7). */
+  private bakeDecals(v: TacView, t: number): void {
+    if (!this.bg) return;
+    for (const d of this.decals) {
+      if (d.done || d.at > t) continue;
+      d.done = true;
+      this.layDecal(this.bg, d, v);
+    }
+  }
+  private layDecal(bg: HTMLCanvasElement, d: { k: DecalKind; hex: number; dx: number; dy: number; seed: number }, v: TacView): void {
+    const cell = v.cells[d.hex];
+    if (cell === '~' || cell === '#' || cell === '=' || cell === 'W' || cell === 'O') return;
+    const gg = bg.getContext('2d')!;
+    const lvl = this.level;
+    this.level = true;
+    this.turned(gg);
+    const w = this.size.w;
+    const p = this.lc(d.hex);
+    drawDecal(gg, d.k, p.x + d.dx * w, p.y + d.dy * w + w * 0.15, w, d.seed);
+    gg.setTransform(1, 0, 0, 1, 0, 0);
+    this.level = lvl;
+  }
+  /** A sabre, a hat or a chip down on the deck: it stays there as a mark (item 7). */
+  private landed(p: Part): void {
+    const v = this.view;
+    if (!v || p.hex === undefined || (p.k !== 'blade' && p.k !== 'hat')) return;
+    // Where it lies against its hex's middle, on the board.
+    const c = this.center(p.hex), w = this.size.w || 30;
+    const [A, B, C, D] = this.xf();
+    const dx = p.x - c.x, dy = p.y - (c.y + w * 0.15);
+    const bx = A * dx + B * dy, by = C * dx + D * dy;
+    this.decals.push({ at: 0, k: p.k, hex: p.hex, dx: Math.max(-0.8, Math.min(0.8, bx / w)), dy: Math.max(-0.6, Math.min(0.6, by / w)), seed: p.seed ?? 1, done: false });
+  }
+
+  /** A storm's lightning (item 16): the field flashes white and a stroke stands over the sea a moment. */
+  private storm(g: CanvasRenderingContext2D, t: number, cw: number, ch: number, w: number): void {
+    const f = lightning(t);
+    if (f <= 0) return;
+    g.fillStyle = `rgba(225,232,255,${(f * 0.32 * this.mo.flash).toFixed(3)})`;
+    g.fillRect(0, 0, cw, ch);
+    const n = Math.floor(t / 7000);
+    const fr = sprite(`fx.bt_lightning_${Math.min(3, Math.floor((1 - f) * 4))}`);
+    if (fr && f > 0.15) {
+      const s = Math.min(ch * 0.8, w * 6);
+      g.globalCompositeOperation = 'lighter';
+      g.globalAlpha = Math.min(1, f * 1.4) * this.mo.flash;
+      g.drawImage(fr.img, cw * (n % 2 ? 0.1 : 0.9) - s / 2, ch * 0.05, s, s);
+      g.globalAlpha = 1;
+      g.globalCompositeOperation = 'source-over';
+    }
+  }
+
+  /** An ultimate's sky (item 12) — the Reaver's red, the navigator's slanting squall, the smuggler's fog rolling in —
+   *  and its film frame: the edges dark, the band with her face and the move's name. */
+  private ultSky(g: CanvasRenderingContext2D, v: TacView, f: PathFx, t: number, w: number): void {
+    const { cw, ch } = this.size;
+    const k = (t - f.t0) / PATH_FX_MS.ult;
+    if (k < 0 || k >= 1) return;
+    const fade = k < 0.12 ? k / 0.12 : k > 0.75 ? (1 - k) / 0.25 : 1;
+    if (f.path === 'reaver') {
+      const sky = g.createLinearGradient(0, 0, 0, ch);
+      sky.addColorStop(0, `rgba(170,12,8,${(0.5 * fade).toFixed(3)})`);
+      sky.addColorStop(0.6, `rgba(120,8,6,${(0.18 * fade).toFixed(3)})`);
+      sky.addColorStop(1, 'rgba(90,0,0,0)');
+      g.fillStyle = sky;
+      g.fillRect(0, 0, cw, ch);
+    } else if (f.path === 'navigator') {
+      const side = f.mine ? v.you : 1 - v.you;
+      rainFall(g, { ...this.sk, rain: 1, wx: side === 0 ? 0.85 : -0.85, wy: 0.5, wk: 1 }, t * 1.6, cw, ch, Math.round(this.lv.rain * 1.6 * fade));
+    } else if (f.path === 'smuggler') fogBanks(g, this.sk, t * 4, cw, ch, 2, 0.85 * fade);
+    const side = f.mine ? v.you : 1 - v.you;
+    const h = v.heroes[side];
+    const face = sprite(CAPTAINS[(h?.captain ?? f.path) as CaptainId]?.portrait ?? '')?.img ?? null;
+    ultFrame(g, k, cw, ch, face, moveName(f.path, true), PATH_RGB[f.path], f.mine, w);
+  }
+
+  /** A captain gathering herself before an order (item 13): a ring of her school's light drawn in to her corner. */
+  private charge(g: CanvasRenderingContext2D, h: { side: number; t0: number; rgb: string }, t: number, w: number, cw: number, ch: number): void {
+    const k = (t - h.t0) / 300;
+    if (k < 0) return;
+    const x = h.side === 0 ? w * 0.9 : cw - w * 0.9, y = ch - w * 1.3;
+    g.globalCompositeOperation = 'lighter';
+    if (k < 1) {
+      g.strokeStyle = `rgba(${h.rgb},${(0.3 + 0.6 * k).toFixed(3)})`;
+      g.lineWidth = 2 + 2 * k;
+      g.beginPath();
+      g.arc(x, y, w * (1.6 - 1.1 * k), 0, Math.PI * 2);
+      g.stroke();
+      for (let j = 0; j < 6; j++) {
+        const a = j * (Math.PI / 3) + k * 2;
+        const rr = w * 1.6 * (1 - k);
+        blob(g, h.rgb, x + Math.cos(a) * rr, y + Math.sin(a) * rr, w * 0.12, 0.8, 0.3);
+      }
+      blob(g, h.rgb, x, y, w * (0.4 + 0.5 * k), 0.25 + 0.4 * k, 0.25);
+    } else blob(g, h.rgb, x, y, w * 1.2, Math.max(0, 1 - (k - 1) / 0.4) * 0.7, 0.2);
+    g.globalCompositeOperation = 'source-over';
   }
 
   private crates(g: CanvasRenderingContext2D, x: number, y: number, w: number): void {
@@ -3126,20 +3972,76 @@ export class TacticalPanel {
     this.fit();
     const { dpr, w, cw, ch } = this.size;
     const g = c.getContext('2d')!;
+    // docs/25 §3: the field's clock (held through a hit-stop), the weather off the sea, the opening, the decks' roll,
+    // the camera (the knock, an ultimate's push, the end drawn back).
+    this.looks();
+    const now = performance.now();
+    const t = this.clock.at(now);
+    const dt = this.ftWas ? Math.min(0.1, Math.max(0, (t - this.ftWas) / 1000)) : 0;
+    this.ft = this.ftWas = t;
+    const ship = !v.land && !v.siege && !v.arena;
+    const sky = this.sky();
+    this.sk = skyOf(sky?.weather, sky?.fog ?? 0, sky?.night ?? 0, sky?.wind);
+    let ik = -1;
+    if (this.intro) {
+      ik = (now - this.intro.t0) / this.intro.dur;
+      if (ik >= 1 || this.mo.still) {
+        this.intro = null;
+        ik = -1;
+      }
+    }
+    const amp = ship && !this.mo.still ? w * 0.05 : 0;
+    this.roll = [deckRoll(t, 0, amp), deckRoll(t, 1, amp)];
+    this.slide = ik >= 0 ? w * 0.9 * (1 - easeOut(Math.min(1, ik / 0.42))) : 0;
+    this.haze = Math.max(0, this.haze - dt * (this.finale && now > this.finale.t0 ? 0.25 : 0.004));
+    this.camera(v, now, t);
+    const bg = this.background(v);
+    this.bakeDecals(v, t);
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, c.width, c.height);
-    g.drawImage(this.background(v), 0, 0);
+    const [b0, b1] = this.boxes;
+    if (ship && this.seaLayer && b0 && b1) {
+      // The sea under the hulls, shifting a little with the swell (a desk's; item 17), the live water between them
+      // (item 4), then each deck cut from the painting at its own rise and fall (item 3).
+      const par = this.lv.parallax && !this.mo.still;
+      const avg = (this.roll[0] + this.roll[1]) / 2;
+      const sx = par ? -avg * 1.2 + Math.sin(t / 5200) * 3 : 0, sy = par ? -avg * 0.8 + Math.cos(t / 6100) * 2 : 0;
+      const m = SEA_MARGIN;
+      g.drawImage(this.seaLayer, (sx - m) * dpr, (sy - m) * dpr);
+      this.turned(g, true);
+      this.water(g, t);
+      this.camTf(g);
+      for (const x of [0, 1] as const) this.deckBlit(g, bg, x);
+    } else {
+      this.camTf(g);
+      g.drawImage(bg, 0, 0, cw, ch);
+    }
     this.drawn = { figures: new Map(), ghosts: 0, path: 0, walking: [] };
     // The marks on the hexes lie with the board (turned upright on a phone), the tokens and numbers stand straight.
-    this.turned(g);
-    const t = performance.now();
+    this.turned(g, true);
     const pulse = 0.5 + 0.5 * Math.sin(t / 260);
     const r = w / SQ3;
-    // Fires still burning on her deck (docs/17 H1).
+    if (ship) {
+      // The gangways across the water, bending as the decks part (live: they fall in the opening), the sails' shadows
+      // over the decks (item 14), the boards wet in the rain (item 16), the grapples' lines in the opening (item 11).
+      this.livePlanks(g, v, t, ik);
+      if (this.lv.fine && !this.mo.still) this.sails(g, t);
+      if (this.sk.rain) {
+        const bx = this.boxes.filter((b): b is NonNullable<typeof b> => !!b);
+        wetSheen(g, this.sk, t, bx);
+        rainRings(g, this.sk, t, bx, this.phone ? 6 : 14);
+      }
+      if (ik >= 0) this.introBoard(g, v, ik, w);
+    }
+    // Fires still burning on her deck (docs/17 H1), alive (item 18): embers down the wind, a haze over them, smoke.
+    this.emit += dt;
+    const owed = this.emit >= 0.11;
+    if (owed) this.emit = 0;
     for (let i = 0; i < v.cells.length; i++) {
       if (v.cells[i] !== 'F') continue;
       const p = this.lc(i);
       this.flames(g, p.x, p.y, w, t, i);
+      if (owed) this.fireLife(i, t, w);
     }
     // The ground a great one ashore will fall on as the next round opens (shorebosses.ts): glowing, to be stepped off.
     for (const i of v.warn ?? []) {
@@ -3294,7 +4196,7 @@ export class TacticalPanel {
         g.fill();
       }
     }
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.camTf(g);
     // The stacks, the active one ringed in gold; the figures back to front, so the nearer stands before the farther.
     // While blows are being played each shows the count it had till they land; the fallen stand till then (owner,
     // 2026-10-08: how many died, seen as it happens).
@@ -3302,13 +4204,15 @@ export class TacticalPanel {
       const n = this.countNow(s, t);
       return n === s.count ? s : { ...s, count: n };
     });
-    const fading: { s: TacStackView; k: number }[] = [];
+    // docs/25 items 5, 6: the fallen sink and fall (over the rail into the water at the deck's edge), not just fade.
+    const fading: { id: number; k: number }[] = [];
     for (const [id, f] of this.fallen) {
-      if (t > f.at + 520) this.fallen.delete(id);
-      else if (t >= f.at) fading.push({ s: f.s, k: 1 - (t - f.at) / 520 });
+      const dur = this.fallMs(f, v);
+      if (t > f.at + dur) this.fallen.delete(id);
+      else if (t >= f.at) fading.push({ id, k: (t - f.at) / dur });
       else shown.push({ ...f.s, count: Math.max(1, this.countNow(f.s, t)) });
     }
-    const placed: { s?: TacStackView; prop?: string; i?: number; flag?: 0 | 1; p: { x: number; y: number; lift?: number; walking?: boolean; dx?: number } }[] = shown.map((s) => ({ s, p: this.standAt(s, t) }));
+    const placed: { s?: TacStackView; prop?: string; i?: number; flag?: 0 | 1; p: { x: number; y: number; lift?: number; walking?: boolean; dx?: number; step?: number } }[] = shown.map((s) => ({ s, p: this.standAt(s, t) }));
     if (v.flag) for (const x of [0, 1] as const) placed.push({ flag: x, p: this.center(v.flag.hex[x]) });
     const walking = placed.some((x) => x.p.walking);
     for (let i = 0; i < v.cells.length; i++) {
@@ -3333,22 +4237,42 @@ export class TacticalPanel {
         this.liftNow = 0;
         this.walkDx = 0;
         this.drawn.figures.set(x.s.id, (this.drawn.figures.get(x.s.id) ?? 0) + 1);
-        if (x.p.walking) this.drawn.walking.push(x.s.id);
-      } else if (x.flag !== undefined) this.flagPole(g, x.p.x, x.p.y, w, x.flag === v.you, v.flag!.held[1 - x.flag], v.flag!.need, t);
-      else this.prop(g, x.prop!, x.p.x, x.p.y, w, hexX(x.i!) > 5);
+        if (x.p.walking) {
+          this.drawn.walking.push(x.s.id);
+          this.footfall(x.s, x.p, t, w);
+        } else this.steps.delete(x.s.id);
+      } else if (x.flag !== undefined) this.flagPole(g, x.p.x, x.p.y, w, x.flag === v.you, v.flag!.held[1 - x.flag], v.flag!.need, t, this.struck(x.flag, now));
+      else this.prop(g, x.prop!, x.p.x, x.p.y, w, hexX(x.i!) > 5, x.i!, v, t, now);
     }
+    // The fallen falling where they fell (before the plates: a plate flies apart as its stack falls).
+    for (const f of fading) this.dying(g, f.id, f.k, v, t, w);
     for (const f of this.plates) f();
     this.plates = null;
-    // The fallen fading where they fell.
-    for (const f of fading) this.ghost(g, f.s, f.s.hex, v, Math.max(0, f.k) * 0.9, 'grayscale(0.6) brightness(0.8)');
     // A ghost of the stack where it would step (owner, 2026-10-05: «фигурка не имеет прозрачности … она как бы
     // задваивается»): dim and whole, drawn on its own layer, without its number; none while a stack walks.
     const aim = this.aim(v);
     if (aim !== null && active && !walking) this.ghost(g, active, aim, v, this.preview !== null ? 0.55 : 0.32);
+    // docs/25 §3: the night over the field (item 16), then what gives light over it — the lanterns, the muzzles' and
+    // the blasts' flashes (item 9) — the particles (sparks, embers, drops, smoke), the opening's first over (item 11).
+    this.plainTf(g);
+    if (this.sk.night > 0.05) nightSky(g, this.sk, cw, ch, !this.phone || this.sk.night > 0.6);
+    this.camTf(g);
+    g.globalCompositeOperation = 'lighter';
+    for (const p of this.lamps) blob(g, '255,170,80', p.x, p.y + w * 0.1, w * (0.6 + 1.1 * this.sk.night), 0.12 + 0.45 * this.sk.night, 0.25);
+    this.lights = this.lights.filter((l) => t - l.t0 < l.dur);
+    for (const l of this.lights) {
+      const k = (t - l.t0) / l.dur;
+      if (k >= 0) blob(g, l.rgb, l.x, l.y, l.r * (0.8 + 0.3 * k), l.a * (1 - k) ** 1.5, 0.2);
+    }
+    g.globalCompositeOperation = 'source-over';
+    this.lamps = [];
+    this.parts.step(t);
+    this.parts.draw(g, t);
+    if (ik >= 0) this.introJump(g, v, ik, w);
     // The paths' moves (docs/18): their light over the field.
     this.pathFx = this.pathFx.filter((f) => t - f.t0 < (f.ult ? PATH_FX_MS.ult : PATH_FX_MS.innate));
     for (const f of this.pathFx) this.drawPathFx(g, f, t, w);
-    // Shots and throws in flight, turned along their path.
+    // Shots and throws in flight, turned along their path, each with its trail (item 8).
     this.missiles = this.missiles.filter((m) => t - m.t0 < m.dur);
     for (const m of this.missiles) {
       const k = (t - m.t0) / m.dur;
@@ -3356,6 +4280,7 @@ export class TacticalPanel {
       const img = sprite(m.id)!.img;
       const x = m.x0 + (m.x1 - m.x0) * k, y = m.y0 + (m.y1 - m.y0) * k - m.arc * 4 * k * (1 - k);
       const dy = m.y1 - m.y0 - m.arc * 4 * (1 - 2 * k);
+      trail(g, m.id, k, (q) => ({ x: m.x0 + (m.x1 - m.x0) * q, y: m.y0 + (m.y1 - m.y0) * q - m.arc * 4 * q * (1 - q) }), { x: m.x0, y: m.y0 }, w, t, this.phone ? 3 : 6);
       const L = w * (m.id === 'part.ms_harpoon' || m.id === 'part.ms_spear' || m.id === 'part.ms_rocket' ? 0.9 : 0.45);
       const H = (L * img.naturalHeight) / img.naturalWidth;
       g.save();
@@ -3392,9 +4317,21 @@ export class TacticalPanel {
       }
       g.globalAlpha = 1;
     }
-    // The captains at their corners, under the names of what they did.
+    // The powder smoke hanging over the fight, the fog in banks, the rain, a storm's lightning (items 16, 20), the
+    // ultimate's film frame (item 12): over the whole screen, not with the camera.
+    this.plainTf(g);
+    if (this.haze > 0.01) fogBanks(g, this.sk, t, cw, ch, 1, this.haze);
+    if (this.sk.fog > 0.02) fogBanks(g, this.sk, t, cw, ch, this.lv.fine ? 3 : 2);
+    if (this.sk.rain) rainFall(g, this.sk, t, cw, ch, this.lv.rain);
+    if (this.sk.storm) this.storm(g, t, cw, ch, w);
+    if (this.lv.parallax && !this.mo.still && ship) rigging(g, t, cw, ch, this.roll[0] - this.roll[1], (this.roll[0] + this.roll[1]) / 2);
+    for (const f of this.pathFx) if (f.ult) this.ultSky(g, v, f, t, w);
+    // The captains at their corners, under the names of what they did — each gathering herself before an order.
     this.heroFx = this.heroFx.filter((h) => t - h.t0 < h.dur);
     for (const h of this.heroFx) this.drawHero(g, v, h, t, w, cw, ch);
+    this.charges = this.charges.filter((h) => t - h.t0 < 420);
+    for (const h of this.charges) this.charge(g, h, t, w, cw, ch);
+    this.camTf(g);
     // The numbers over the stacks.
     this.floats = this.floats.filter((f) => t - f.t0 < (f.big ? 1600 : 1200));
     g.textAlign = 'center';
@@ -3415,8 +4352,8 @@ export class TacticalPanel {
       g.fillText(f.text, x, y);
       g.globalAlpha = 1;
     }
-    void cw;
-    void ch;
+    // The knocks done let go.
+    this.shake.prune(now);
     // The preview beside the foe aimed at (owner, 2026-10-08).
     this.tipDom(v);
   }
@@ -3590,7 +4527,7 @@ export class TacticalPanel {
   }
 
   /** A painted prop standing on its hex: its foot at the hex's foot, a shadow under it; the right deck's mirrored. */
-  private prop(g: CanvasRenderingContext2D, id: string, x: number, y: number, w: number, flip: boolean): void {
+  private prop(g: CanvasRenderingContext2D, id: string, x: number, y: number, w: number, flip: boolean, i = -1, v: TacView | null = null, t = 0, now = 0): void {
     const img = sprite(id)!.img;
     const [bw, bh] = PROP_BOX[id] ?? [1.1, 1.2];
     const k = Math.min((bw * w) / img.naturalWidth, (bh * w) / img.naturalHeight);
@@ -3605,6 +4542,18 @@ export class TacticalPanel {
     if (flip) g.scale(-1, 1);
     g.drawImage(img, -W * footX(id, img), -H, W, H);
     g.restore();
+    // docs/25 items 3, 14, 20: a ship's mast flies her colours at its head (streaming down the wind; struck at the
+    // end), and a lantern hangs on it, swinging as the deck rolls (lit by night).
+    if (id === 'prop.bt_mast' && v && i >= 0 && !v.land && !v.siege && !v.arena) {
+      const side = (hexX(i) > 5 ? 1 : 0) as 0 | 1;
+      const st = this.struck(side, now);
+      const still = this.mo.still;
+      pennant(g, x, fy - H * 0.96, w, st.white ? '236,230,216' : MAST_RGB[side === v.you ? 0 : 1], t, still ? 0 : 1, st.down, H * 0.55, this.sk.wx >= 0 ? 1 : -1);
+      const hx = x + (flip ? -1 : 1) * w * 0.14, hy = fy - H * 0.46;
+      const a = still ? 0 : swing(t, side, i);
+      lantern(g, hx, hy, w, a, this.sk.night);
+      this.lamps.push({ x: hx + Math.sin(a) * w * 0.28, y: hy + Math.cos(a) * w * 0.28 });
+    }
   }
 
   /** A stack as in Heroes: its kind's full figure standing on the hex, facing the other side, a ring of its side's
@@ -3612,7 +4561,8 @@ export class TacticalPanel {
    *  struck. The marks the paths' moves lay on it keep to the ring and the plate. */
   private figure(g: CanvasRenderingContext2D, s: TacStackView, id: string, x: number, y: number, w: number, on: boolean, pulse: number, v: TacView): void {
     const base = sprite(id)!.img;
-    const t = performance.now();
+    // The field's clock (docs/25 item 1: held through a hit-stop).
+    const t = this.ft || performance.now();
     const col = s.side === v.you ? YOU : FOE;
     const r = w / SQ3;
     const fy = y + r * 0.42; // the feet
@@ -3654,10 +4604,32 @@ export class TacticalPanel {
         flash = k < 0.45 ? 1 - k / 0.45 : 0;
       }
     }
+    // docs/25 item 14: alive while it stands — its weight shifting, its arms swaying, an officer's gesture now and then;
+    // item 20: the winners' arms up at the end, a jump or two.
+    let tilt = 0, hop = 0;
+    const fin = this.finale, real = performance.now();
+    if (!a && !this.walkDx) {
+      if (!this.mo.still) {
+        const ph = s.id * 1.7;
+        ox += w * 0.012 * Math.sin(t / 2300 + ph);
+        tilt = 0.014 * Math.sin(t / 1700 + ph);
+        if ((s.kind === 'officer' || s.officer) && (t + s.id * 1531) % 6500 < 420 && sprite(`${id}_atk`)) frame = `${id}_atk`;
+      }
+      if (fin && s.side === fin.winner && real > fin.t0 && real < fin.t0 + 2600 + (s.id % 4) * 150) {
+        const kk = (real - fin.t0 - (s.id % 4) * 150) / 650;
+        if (kk > 0) {
+          if (sprite(`${id}_atk`)) frame = `${id}_atk`;
+          if (!this.mo.still) hop = Math.abs(Math.sin(Math.PI * kk)) * w * 0.12;
+        }
+      }
+    }
+    // Its height off the deck: a flier's, a leap's (item 19: the shadow under it smaller and fainter the higher it is).
+    const lift = (s.sp.includes('flying') ? w * 0.28 * (1 + 0.15 * Math.sin(t / 300 + s.id)) : 0) + this.liftNow + hop;
+    const shade = 1 / (1 + lift / (w * 0.7));
     // The ground under it: a shadow, the side's ring, the gold of the one whose turn it is.
-    g.fillStyle = 'rgba(0,0,0,0.42)';
+    g.fillStyle = `rgba(0,0,0,${(0.42 * (0.4 + 0.6 * shade)).toFixed(3)})`;
     g.beginPath();
-    g.ellipse(x + ox * 0.4, fy + oy * 0.4, rx, ry, 0, 0, Math.PI * 2);
+    g.ellipse(x + ox * 0.4, fy + oy * 0.4, rx * shade, ry * shade, 0, 0, Math.PI * 2);
     g.fill();
     g.strokeStyle = col;
     g.globalAlpha = 0.85;
@@ -3717,9 +4689,9 @@ export class TacticalPanel {
     // It faces the way it last went (owner, 2026-10-08), walking the way it walks; the painting faces right.
     const flip = this.walkDx ? this.walkDx < 0 : this.facesLeft(s);
     const fx = footX(frame, img);
-    const lift = (s.sp.includes('flying') ? w * 0.28 * (1 + 0.15 * Math.sin(t / 300 + s.id)) : 0) + this.liftNow;
     g.save();
     g.translate(x + ox, fy + oy - lift);
+    if (tilt) g.rotate(tilt);
     if (flip) g.scale(-1, 1);
     const tint = standTint(s, id);
     if (s.blind) g.filter = 'grayscale(0.7) brightness(0.8)';
@@ -3779,22 +4751,45 @@ export class TacticalPanel {
     // Its number on a plate at the hex's foot, on the side it faces, and what is left of it beneath.
     // Drawn after every figure (a giant beside it must not hide its number).
     const plate = (): void => {
-      const txt = String(s.count);
+      // docs/25 item 15: the count rolls down to the battle's number as its men fall, the plate flashing red and jolting.
+      let r = this.rolls.get(s.id);
+      if (!r) this.rolls.set(s.id, (r = { from: s.count, to: s.count, t0: 0, shown: s.count }));
+      else if (r.to !== s.count) {
+        r.from = r.shown;
+        r.to = s.count;
+        r.t0 = t;
+      }
+      const rk = r.t0 ? (t - r.t0) / ROLL_MS : 1;
+      r.shown = this.mo.still ? r.to : rollCount(r.from, r.to, rk);
+      const hurt = r.to < r.from && rk < 1.6 ? 1 - rk / 1.6 : 0;
+      const bump = r.to < r.from && rk < 1 && !this.mo.still ? Math.sin(Math.PI * rk) * 0.22 : 0;
+      const txt = String(r.shown);
       g.font = `700 ${Math.round(Math.max(10, w * 0.28))}px Inter, system-ui, sans-serif`;
       const tw = Math.max(g.measureText(txt).width + 8, w * 0.36);
       const th = Math.max(12, w * 0.3);
       const px = flip ? x - w * 0.47 : x + w * 0.47 - tw, py = fy + ry * 0.2;
+      g.save();
+      if (bump) {
+        g.translate(px + tw / 2, py + th / 2);
+        g.scale(1 + bump, 1 + bump);
+        g.translate(-(px + tw / 2), -(py + th / 2));
+      }
       g.fillStyle = s.side === v.you ? 'rgba(14,40,52,0.95)' : 'rgba(52,16,14,0.95)';
       g.strokeStyle = '#c9a45a';
       g.lineWidth = 1;
       g.beginPath();
       g.roundRect(px, py, tw, th, 2);
       g.fill();
+      if (hurt) {
+        g.fillStyle = `rgba(220,40,30,${(0.85 * hurt).toFixed(3)})`;
+        g.fill();
+      }
       g.stroke();
-      g.fillStyle = '#f2ead8';
+      g.fillStyle = hurt > 0.5 ? '#ffffff' : '#f2ead8';
       g.textAlign = 'center';
       g.textBaseline = 'middle';
       g.fillText(txt, px + tw / 2, py + th / 2 + 0.5);
+      g.restore();
       const frac = Math.max(0, Math.min(1, ((s.count - 1) * s.hpMax + s.hp) / Math.max(1, s.start * s.hpMax)));
       const bh = Math.max(2.5, w * 0.06);
       g.fillStyle = 'rgba(0,0,0,0.75)';
