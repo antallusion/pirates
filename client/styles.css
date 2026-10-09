@@ -4225,6 +4225,14 @@ body.touch .act-btn { --h: 38px; }
   .throne-win .tabs .tab .ico-sm { display: none; }
   .throne-win .tabs .tab { padding: 7px 6px; }
 }
+/* docs/19 E19: nine tabs with a mouse (1500×600, 1440×900) — the row was 1196 px in a window of 1060, the body scrolled
+   sideways and «Колизей» stood past the window's edge (96–134 px), a contract's «Курс» 23 px under it. Narrower sides
+   and letters keep the nine in one row with their marks; a window narrower still wraps them, never hides one. */
+@media (min-width: 1100px) and (min-height: 521px) {
+  .throne-win .tabs:has(.tab:nth-child(9)) { gap: 0; padding: 0 6px; flex-wrap: wrap; }
+  .throne-win .tabs:has(.tab:nth-child(9)) .tab { letter-spacing: 0.02em; gap: 3px; }
+  .skinned .throne-win .tabs:has(.tab:nth-child(9)) .tab { border-left-width: 6px; border-right-width: 6px; border-image-width: 6px 6px 0; padding-left: 5px; padding-right: 5px; }
+}
 /* docs/19 E14: the Colosseum in the Throne's window — the lobby (the rating's bronze medal, the queue, the table, the
    rewards) and the draft board: the two seats beside the table of lots, the turn and its clock above it, the tapped lot
    below. One screen on a phone held sideways (812×375) and with a mouse; nothing to scroll for a button. */
