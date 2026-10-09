@@ -35,7 +35,7 @@ export function volleysToSink(st: ShipStats, loadout: ShipLoadout, me: { isPlaye
     const gun = GUNS[loadout.guns[side]];
     const armor = Math.min(0.85, t.armor * (1 - (gun.pierce ?? 0)) * (1 - (me.ironRain ? IRON_RAIN_PIERCE : 0)));
     const ball = gun.damage * st.gunDamageMul * pace * AMMO.round.hullMul * EST_FALLOFF * (1 - armor) * t.inc * lad;
-    best = Math.max(best, st.gunsPerSide * ball * EST_HITS);
+    best = Math.max(best, st.gunsPerSide * (1 + st.doubleShotChance) * ball * EST_HITS); // Double Charge: two balls a gun now and then
   }
   if (best <= 0) return null;
   const cap = t.hullMax * alphaShare(theirs);

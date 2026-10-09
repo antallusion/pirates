@@ -221,7 +221,7 @@ export const PVE_CRITS = [1, 0.35, 0, 0];
  *  every broadside of a fight of 6–24, where the 30% cap used to level every fight to four and the cuts above were
  *  what was left of the ladder. Re-weighed by the duel sims (tests/balance/ladder.test.ts): a perfect captain wins
  *  about one fight in ten a level up, an average one hardly any, none two levels up. The beasts keep the cuts above. */
-export const PVE_SHIP_JUNIOR = [1, 0.75, 0.5, 0.3];
+export const PVE_SHIP_JUNIOR = [1, 0.7, 0.5, 0.3];
 export const PVE_SHIP_SENIOR = [1, 1, 1.15, 1.3];
 /** Juniors who together outweigh a ship of the sea (a company against one a level up) are cut less; three levels
  *  up she is a skull to a company too. */
