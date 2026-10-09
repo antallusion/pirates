@@ -74,6 +74,10 @@ export class Fx {
   tethers: { a: number; b: number; until: number }[] = [];
   beams: { x: number; y: number; x2: number; y2: number; t: number }[] = [];
   shake = 0;
+  /** Balls on her own hull since the renderer last looked (docs/23, 2026-10-09: the camera's knock, by the blow). */
+  blows: { dmg: number; x: number; y: number }[] = [];
+  /** She fired or was hit since the renderer last looked: a sign of the fight for its camera (camfight.ts). */
+  fought = false;
   flash = 0; // lightning / explosion screen flash
 
   private lastFlash = -1;
@@ -235,7 +239,10 @@ export class Fx {
             }
           }, flashDelay * 1000);
         }
-        if (e.ship === ownId) this.shake = Math.max(this.shake, e.perfect ? 0.45 : 0.25);
+        if (e.ship === ownId) {
+          this.shake = Math.max(this.shake, e.perfect ? 0.45 : 0.25);
+          this.fought = true;
+        }
         // A held broadside released in its window: the crews' shout over the smoke.
         if (e.perfect && e.balls.length) {
           const [x, y] = e.balls[Math.floor(e.balls.length / 2)];
@@ -285,7 +292,11 @@ export class Fx {
             near.size = Math.min(30, (near.size ?? 20) + 1.5);
           } else this.add({ kind: 'text', x: e.x, y: e.y - 6, vy: -9, life: 1.6, size: 20, color, text: String(e.dmg), sum: e.dmg });
         }
-        if (e.ship === ownId) this.shake = Math.max(this.shake, 0.35);
+        // Her own hull: the camera's knock by the blow's share of her hull (renderer.ts, camfight.ts), not the jitter.
+        if (e.ship === ownId) {
+          this.blows.push({ dmg: e.dmg, x: e.x, y: e.y });
+          this.fought = true;
+        }
         break;
       }
       case 'men':
