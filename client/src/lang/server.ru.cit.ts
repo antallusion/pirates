@@ -45,6 +45,7 @@ export const SERVER_RU_CIT: Record<string, string> = {
   'The {0} has fallen': 'Пала: {0}',
   '[{0}] {1} has taken the {2} from your guild.': '[{0}] {1} отняла у вашей гильдии: {2}.',
   'Your guild takes the {0}.': 'Ваша гильдия берёт: {0}.',
+  'The {0} is your guild’s: your assault was one of those that broke it.': 'Теперь за вашей гильдией — {0}: ваш штурм был среди тех, что её сломили.',
   // holding it (E6)
   'Only its guild’s captains may do that.': 'Это могут только капитаны гильдии-владелицы.',
   'Bring your ship to its anchorage.': 'Приведите корабль к её якорной стоянке.',

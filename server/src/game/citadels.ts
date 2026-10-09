@@ -418,6 +418,7 @@ function capture(game: Game, id: number, gid: number): void {
   mend(game, rec);
   rec.left = {};
   rec.titanWeek = -1;
+  const besiegers = S.sieges[id]?.assaults ?? [];
   delete S.sieges[id];
   S.points[gid] = (S.points[gid] ?? 0) + CIT_POINTS.take;
   chronicle(game, `[${t.tag}] takes the ${nameOf(c)}.`);
@@ -425,8 +426,12 @@ function capture(game: Game, id: number, gid: number): void {
   if (prev !== null && prev !== gid) guildNotify(game, prev, `The ${nameOf(c)} has fallen`, `[${t.tag}] ${t.name} has taken the ${nameOf(c)} from your guild.`);
   const g = guildOf(game, gid);
   if (g) guildLog(game, g, `Your guild takes the ${nameOf(c)}.`);
-  // TODO docs/19 E12 (the relics' helper exports it): relic parts from a citadel taken — one call here, e.g.
-  // relicPartsFromCitadel(game, gid, c.level) — its besiegers are the guild's captains who cut the garrison.
+  for (const acc of besiegers) {
+    const bs = game.sessionByAccount(acc);
+    if (!bs) continue;
+    game.sendTo(bs, { t: 'toast', msg: `The ${nameOf(c)} is your guild’s: your assault was one of those that broke it.`, kind: 'gold' });
+    // FOR THE RELICS (docs/19 E12: relics.ts relicPartDrop, on the main branch, not merged here): relicPartDrop(game, bs, 'citadel', 0.35);
+  }
   save(game);
   touch(game);
 }
@@ -538,6 +543,7 @@ export function stepCitadels(game: Game): void {
         tellGuild(game, rec.owner, `The siege of the ${nameOf(c)} is lifted: its garrison held.`);
       }
       tellGuild(game, sg.gid, `The siege of the ${nameOf(c)} is lifted: its garrison held.`);
+      // FOR THE RELICS (docs/19 E12: relics.ts relicPartDrop, on the main branch, not merged here) — its defenders, the captains who left men in it: for (const acc of Object.keys(rec.left)) { const ds = game.sessionByAccount(Number(acc)); if (ds) relicPartDrop(game, ds, 'citadel', 0.15); }
       delete S.sieges[id];
       dirty = true;
     }
