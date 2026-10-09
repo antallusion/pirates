@@ -1,0 +1,100 @@
+{
+ "tag": "before_1500x600",
+ "sky": {
+  "weather": "fog",
+  "fog": 0.68,
+  "wind": [
+   -3.0652,
+   0.29
+  ]
+ },
+ "intro": [
+  {
+   "at": 150,
+   "st": null
+  },
+  {
+   "at": 600,
+   "st": null
+  },
+  {
+   "at": 1100,
+   "st": null
+  },
+  {
+   "at": 1700,
+   "st": null
+  }
+ ],
+ "errors": [],
+ "idle": {
+  "fps": 4.54,
+  "p50": 220,
+  "p95": 235,
+  "frames": 28
+ },
+ "idleStats": null,
+ "ult": [
+  {
+   "at": 250,
+   "st": null
+  },
+  {
+   "at": 700,
+   "st": null
+  },
+  {
+   "at": 1300,
+   "st": null
+  },
+  {
+   "at": 2000,
+   "st": null
+  }
+ ],
+ "fight": {
+  "fps": 4.82,
+  "p50": 205.1,
+  "p95": 390,
+  "frames": 40
+ },
+ "fightStats": null,
+ "blows": [
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null
+ ],
+ "over": {
+  "winner": 1,
+  "why": "rout"
+ },
+ "finale": [
+  {
+   "at": 200,
+   "st": null
+  },
+  {
+   "at": 900,
+   "st": null
+  },
+  {
+   "at": 1700,
+   "st": null
+  },
+  {
+   "at": 2600,
+   "st": null
+  }
+ ]
+}

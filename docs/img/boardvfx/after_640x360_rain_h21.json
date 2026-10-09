@@ -1,0 +1,1292 @@
+{
+ "tag": "after_640x360_rain_h21",
+ "sky": {
+  "weather": "rain",
+  "fog": 0.352,
+  "wind": [
+   0.691,
+   0.48
+  ]
+ },
+ "intro": [
+  {
+   "at": 150,
+   "st": {
+    "shake": 0,
+    "stop": false,
+    "zoom": 1.038,
+    "parts": 0,
+    "dying": 0,
+    "overboard": 0,
+    "decals": 0,
+    "intro": true,
+    "ult": false,
+    "finale": false,
+    "roll": [
+     -0.63,
+     -2.21
+    ],
+    "rolling": 0,
+    "tally": {
+     "stops": 0,
+     "knocks": 0,
+     "maxKnock": 0,
+     "falls": 0,
+     "overboard": 0,
+     "sparks": 0,
+     "schools": 0,
+     "ults": 0,
+     "steps": 0
+    },
+    "edge": 6,
+    "sky": {
+     "rain": 0.6,
+     "fog": 0.14,
+     "night": 0.98,
+     "storm": false
+    },
+    "haze": 0,
+    "level": {
+     "parts": 110,
+     "burst": 0.55,
+     "rain": 32,
+     "parallax": false,
+     "fine": false
+    },
+    "still": false
+   }
+  },
+  {
+   "at": 600,
+   "st": {
+    "shake": 0,
+    "stop": false,
+    "zoom": 1,
+    "parts": 10,
+    "dying": 0,
+    "overboard": 0,
+    "decals": 0,
+    "intro": false,
+    "ult": false,
+    "finale": false,
+    "roll": [
+     1.18,
+     -0.1
+    ],
+    "rolling": 0,
+    "tally": {
+     "stops": 2,
+     "knocks": 1,
+     "maxKnock": 0.17,
+     "falls": 1,
+     "overboard": 0,
+     "sparks": 1,
+     "schools": 1,
+     "ults": 0,
+     "steps": 1
+    },
+    "edge": 5,
+    "sky": {
+     "rain": 0.6,
+     "fog": 0.14,
+     "night": 0.98,
+     "storm": false
+    },
+    "haze": 0,
+    "level": {
+     "parts": 110,
+     "burst": 0.55,
+     "rain": 32,
+     "parallax": false,
+     "fine": false
+    },
+    "still": false
+   }
+  },
+  {
+   "at": 1100,
+   "st": {
+    "shake": 0,
+    "stop": false,
+    "zoom": 1,
+    "parts": 8,
+    "dying": 0,
+    "overboard": 0,
+    "decals": 0,
+    "intro": false,
+    "ult": false,
+    "finale": false,
+    "roll": [
+     -0.75,
+     1.57
+    ],
+    "rolling": 0,
+    "tally": {
+     "stops": 2,
+     "knocks": 1,
+     "maxKnock": 0.17,
+     "falls": 1,
+     "overboard": 0,
+     "sparks": 1,
+     "schools": 1,
+     "ults": 0,
+     "steps": 3
+    },
+    "edge": 5,
+    "sky": {
+     "rain": 0.6,
+     "fog": 0.14,
+     "night": 0.98,
+     "storm": false
+    },
+    "haze": 0,
+    "level": {
+     "parts": 110,
+     "burst": 0.55,
+     "rain": 32,
+     "parallax": false,
+     "fine": false
+    },
+    "still": false
+   }
+  },
+  {
+   "at": 1700,
+   "st": {
+    "shake": 0.01,
+    "stop": false,
+    "zoom": 1,
+    "parts": 9,
+    "dying": 1,
+    "overboard": 0,
+    "decals": 0,
+    "intro": false,
+    "ult": false,
+    "finale": false,
+    "roll": [
+     -1.66,
+     1.49
+    ],
+    "rolling": 0,
+    "tally": {
+     "stops": 2,
+     "knocks": 1,
+     "maxKnock": 1.64,
+     "falls": 1,
+     "overboard": 0,
+     "sparks": 1,
+     "schools": 1,
+     "ults": 0,
+     "steps": 4
+    },
+    "edge": 5,
+    "sky": {
+     "rain": 0.6,
+     "fog": 0.14,
+     "night": 0.98,
+     "storm": false
+    },
+    "haze": 0,
+    "level": {
+     "parts": 110,
+     "burst": 0.55,
+     "rain": 32,
+     "parallax": false,
+     "fine": false
+    },
+    "still": false
+   }
+  }
+ ],
+ "errors": [],
+ "idleStats": {
+  "shake": 0,
+  "stop": false,
+  "zoom": 1,
+  "parts": 0,
+  "dying": 0,
+  "overboard": 0,
+  "decals": 2,
+  "intro": false,
+  "ult": false,
+  "finale": false,
+  "roll": [
+   1.28,
+   -1.07
+  ],
+  "rolling": 0,
+  "tally": {
+   "stops": 2,
+   "knocks": 2,
+   "maxKnock": 1.64,
+   "falls": 1,
+   "overboard": 0,
+   "sparks": 1,
+   "schools": 1,
+   "ults": 0,
+   "steps": 12
+  },
+  "edge": 3,
+  "sky": {
+   "rain": 0.6,
+   "fog": 0.14,
+   "night": 0.99,
+   "storm": false
+  },
+  "haze": 0.01,
+  "level": {
+   "parts": 110,
+   "burst": 0.55,
+   "rain": 32,
+   "parallax": false,
+   "fine": false
+  },
+  "still": false
+ },
+ "ult": [
+  {
+   "at": 250,
+   "st": {
+    "shake": 0,
+    "stop": false,
+    "zoom": 1,
+    "parts": 0,
+    "dying": 0,
+    "overboard": 0,
+    "decals": 4,
+    "intro": false,
+    "ult": false,
+    "finale": false,
+    "roll": [
+     -0.28,
+     -0.53
+    ],
+    "rolling": 0,
+    "tally": {
+     "stops": 4,
+     "knocks": 3,
+     "maxKnock": 1.64,
+     "falls": 2,
+     "overboard": 0,
+     "sparks": 2,
+     "schools": 2,
+     "ults": 0,
+     "steps": 15
+    },
+    "edge": 3,
+    "sky": {
+     "rain": 0.6,
+     "fog": 0.14,
+     "night": 1,
+     "storm": false
+    },
+    "haze": 0,
+    "level": {
+     "parts": 110,
+     "burst": 0.55,
+     "rain": 32,
+     "parallax": false,
+     "fine": false
+    },
+    "still": false
+   }
+  },
+  {
+   "at": 700,
+   "st": {
+    "shake": 0,
+    "stop": false,
+    "zoom": 1.07,
+    "parts": 5,
+    "dying": 0,
+    "overboard": 0,
+    "decals": 4,
+    "intro": false,
+    "ult": true,
+    "finale": false,
+    "roll": [
+     1.39,
+     1.25
+    ],
+    "rolling": 0,
+    "tally": {
+     "stops": 4,
+     "knocks": 3,
+     "maxKnock": 1.64,
+     "falls": 2,
+     "overboard": 0,
+     "sparks": 2,
+     "schools": 2,
+     "ults": 1,
+     "steps": 15
+    },
+    "edge": 3,
+    "sky": {
+     "rain": 0.6,
+     "fog": 0.14,
+     "night": 1,
+     "storm": false
+    },
+    "haze": 0.06,
+    "level": {
+     "parts": 110,
+     "burst": 0.55,
+     "rain": 32,
+     "parallax": false,
+     "fine": false
+    },
+    "still": false
+   }
+  },
+  {
+   "at": 1300,
+   "st": {
+    "shake": 0,
+    "stop": false,
+    "zoom": 1.067,
+    "parts": 5,
+    "dying": 0,
+    "overboard": 0,
+    "decals": 4,
+    "intro": false,
+    "ult": true,
+    "finale": false,
+    "roll": [
+     0.77,
+     2.21
+    ],
+    "rolling": 0,
+    "tally": {
+     "stops": 4,
+     "knocks": 3,
+     "maxKnock": 1.64,
+     "falls": 2,
+     "overboard": 0,
+     "sparks": 2,
+     "schools": 2,
+     "ults": 1,
+     "steps": 15
+    },
+    "edge": 3,
+    "sky": {
+     "rain": 0.6,
+     "fog": 0.14,
+     "night": 1,
+     "storm": false
+    },
+    "haze": 0.05,
+    "level": {
+     "parts": 110,
+     "burst": 0.55,
+     "rain": 32,
+     "parallax": false,
+     "fine": false
+    },
+    "still": false
+   }
+  },
+  {
+   "at": 2000,
+   "st": {
+    "shake": 0,
+    "stop": false,
+    "zoom": 1,
+    "parts": 0,
+    "dying": 0,
+    "overboard": 0,
+    "decals": 4,
+    "intro": false,
+    "ult": false,
+    "finale": false,
+    "roll": [
+     -1.88,
+     0.65
+    ],
+    "rolling": 0,
+    "tally": {
+     "stops": 4,
+     "knocks": 3,
+     "maxKnock": 1.64,
+     "falls": 2,
+     "overboard": 0,
+     "sparks": 2,
+     "schools": 2,
+     "ults": 1,
+     "steps": 15
+    },
+    "edge": 3,
+    "sky": {
+     "rain": 0.6,
+     "fog": 0.14,
+     "night": 1,
+     "storm": false
+    },
+    "haze": 0.05,
+    "level": {
+     "parts": 110,
+     "burst": 0.55,
+     "rain": 32,
+     "parallax": false,
+     "fine": false
+    },
+    "still": false
+   }
+  }
+ ],
+ "fightStats": {
+  "shake": 0,
+  "stop": false,
+  "zoom": 1,
+  "parts": 17,
+  "dying": 0,
+  "overboard": 0,
+  "decals": 4,
+  "intro": false,
+  "ult": false,
+  "finale": false,
+  "roll": [
+   -1.44,
+   -1.39
+  ],
+  "rolling": 0,
+  "tally": {
+   "stops": 7,
+   "knocks": 5,
+   "maxKnock": 1.64,
+   "falls": 3,
+   "overboard": 1,
+   "sparks": 4,
+   "schools": 2,
+   "ults": 1,
+   "steps": 15
+  },
+  "edge": 3,
+  "sky": {
+   "rain": 0.6,
+   "fog": 0.14,
+   "night": 1,
+   "storm": false
+  },
+  "haze": 0.05,
+  "level": {
+   "parts": 110,
+   "burst": 0.55,
+   "rain": 32,
+   "parallax": false,
+   "fine": false
+  },
+  "still": false
+ },
+ "blows": [
+  {
+   "shake": 0,
+   "stop": false,
+   "zoom": 1,
+   "parts": 17,
+   "dying": 0,
+   "overboard": 0,
+   "decals": 4,
+   "intro": false,
+   "ult": false,
+   "finale": false,
+   "roll": [
+    -1.44,
+    -1.39
+   ],
+   "rolling": 0,
+   "tally": {
+    "stops": 7,
+    "knocks": 5,
+    "maxKnock": 1.64,
+    "falls": 3,
+    "overboard": 1,
+    "sparks": 4,
+    "schools": 2,
+    "ults": 1,
+    "steps": 15
+   },
+   "edge": 3,
+   "sky": {
+    "rain": 0.6,
+    "fog": 0.14,
+    "night": 1,
+    "storm": false
+   },
+   "haze": 0.05,
+   "level": {
+    "parts": 110,
+    "burst": 0.55,
+    "rain": 32,
+    "parallax": false,
+    "fine": false
+   },
+   "still": false
+  },
+  {
+   "shake": 0,
+   "stop": false,
+   "zoom": 1,
+   "parts": 10,
+   "dying": 0,
+   "overboard": 0,
+   "decals": 6,
+   "intro": false,
+   "ult": false,
+   "finale": false,
+   "roll": [
+    0.81,
+    -1.56
+   ],
+   "rolling": 0,
+   "tally": {
+    "stops": 7,
+    "knocks": 5,
+    "maxKnock": 1.64,
+    "falls": 3,
+    "overboard": 1,
+    "sparks": 4,
+    "schools": 2,
+    "ults": 1,
+    "steps": 15
+   },
+   "edge": 3,
+   "sky": {
+    "rain": 0.6,
+    "fog": 0.14,
+    "night": 1,
+    "storm": false
+   },
+   "haze": 0.04,
+   "level": {
+    "parts": 110,
+    "burst": 0.55,
+    "rain": 32,
+    "parallax": false,
+    "fine": false
+   },
+   "still": false
+  },
+  {
+   "shake": 0,
+   "stop": false,
+   "zoom": 1,
+   "parts": 9,
+   "dying": 0,
+   "overboard": 0,
+   "decals": 6,
+   "intro": false,
+   "ult": false,
+   "finale": false,
+   "roll": [
+    1.48,
+    -1.21
+   ],
+   "rolling": 0,
+   "tally": {
+    "stops": 7,
+    "knocks": 5,
+    "maxKnock": 1.64,
+    "falls": 3,
+    "overboard": 1,
+    "sparks": 4,
+    "schools": 2,
+    "ults": 1,
+    "steps": 15
+   },
+   "edge": 3,
+   "sky": {
+    "rain": 0.6,
+    "fog": 0.14,
+    "night": 1,
+    "storm": false
+   },
+   "haze": 0.04,
+   "level": {
+    "parts": 110,
+    "burst": 0.55,
+    "rain": 32,
+    "parallax": false,
+    "fine": false
+   },
+   "still": false
+  },
+  {
+   "shake": 0.11,
+   "stop": false,
+   "zoom": 1,
+   "parts": 11,
+   "dying": 1,
+   "overboard": 1,
+   "decals": 7,
+   "intro": false,
+   "ult": false,
+   "finale": false,
+   "roll": [
+    1.82,
+    -0.53
+   ],
+   "rolling": 0,
+   "tally": {
+    "stops": 7,
+    "knocks": 5,
+    "maxKnock": 1.64,
+    "falls": 3,
+    "overboard": 1,
+    "sparks": 4,
+    "schools": 2,
+    "ults": 1,
+    "steps": 15
+   },
+   "edge": 3,
+   "sky": {
+    "rain": 0.6,
+    "fog": 0.14,
+    "night": 1,
+    "storm": false
+   },
+   "haze": 0.04,
+   "level": {
+    "parts": 110,
+    "burst": 0.55,
+    "rain": 32,
+    "parallax": false,
+    "fine": false
+   },
+   "still": false
+  },
+  {
+   "shake": 0,
+   "stop": false,
+   "zoom": 1,
+   "parts": 2,
+   "dying": 0,
+   "overboard": 0,
+   "decals": 8,
+   "intro": false,
+   "ult": false,
+   "finale": false,
+   "roll": [
+    0.58,
+    1.02
+   ],
+   "rolling": 0,
+   "tally": {
+    "stops": 7,
+    "knocks": 5,
+    "maxKnock": 1.64,
+    "falls": 3,
+    "overboard": 1,
+    "sparks": 4,
+    "schools": 2,
+    "ults": 1,
+    "steps": 15
+   },
+   "edge": 3,
+   "sky": {
+    "rain": 0.6,
+    "fog": 0.14,
+    "night": 1,
+    "storm": false
+   },
+   "haze": 0.03,
+   "level": {
+    "parts": 110,
+    "burst": 0.55,
+    "rain": 32,
+    "parallax": false,
+    "fine": false
+   },
+   "still": false
+  },
+  {
+   "shake": 0,
+   "stop": false,
+   "zoom": 1,
+   "parts": 0,
+   "dying": 0,
+   "overboard": 0,
+   "decals": 8,
+   "intro": false,
+   "ult": false,
+   "finale": false,
+   "roll": [
+    -1.23,
+    1.24
+   ],
+   "rolling": 0,
+   "tally": {
+    "stops": 7,
+    "knocks": 5,
+    "maxKnock": 1.64,
+    "falls": 3,
+    "overboard": 1,
+    "sparks": 4,
+    "schools": 2,
+    "ults": 1,
+    "steps": 15
+   },
+   "edge": 3,
+   "sky": {
+    "rain": 0.6,
+    "fog": 0.14,
+    "night": 1,
+    "storm": false
+   },
+   "haze": 0.03,
+   "level": {
+    "parts": 110,
+    "burst": 0.55,
+    "rain": 32,
+    "parallax": false,
+    "fine": false
+   },
+   "still": false
+  },
+  {
+   "shake": 0,
+   "stop": false,
+   "zoom": 1,
+   "parts": 0,
+   "dying": 0,
+   "overboard": 0,
+   "decals": 8,
+   "intro": false,
+   "ult": false,
+   "finale": false,
+   "roll": [
+    -1.32,
+    0.81
+   ],
+   "rolling": 0,
+   "tally": {
+    "stops": 7,
+    "knocks": 5,
+    "maxKnock": 1.64,
+    "falls": 3,
+    "overboard": 1,
+    "sparks": 4,
+    "schools": 2,
+    "ults": 1,
+    "steps": 15
+   },
+   "edge": 3,
+   "sky": {
+    "rain": 0.6,
+    "fog": 0.14,
+    "night": 1,
+    "storm": false
+   },
+   "haze": 0.03,
+   "level": {
+    "parts": 110,
+    "burst": 0.55,
+    "rain": 32,
+    "parallax": false,
+    "fine": false
+   },
+   "still": false
+  },
+  {
+   "shake": 0,
+   "stop": false,
+   "zoom": 1,
+   "parts": 7,
+   "dying": 0,
+   "overboard": 0,
+   "decals": 8,
+   "intro": false,
+   "ult": false,
+   "finale": false,
+   "roll": [
+    -0.89,
+    0.11
+   ],
+   "rolling": 0,
+   "tally": {
+    "stops": 9,
+    "knocks": 6,
+    "maxKnock": 1.64,
+    "falls": 4,
+    "overboard": 2,
+    "sparks": 5,
+    "schools": 2,
+    "ults": 1,
+    "steps": 15
+   },
+   "edge": 2,
+   "sky": {
+    "rain": 0.6,
+    "fog": 0.14,
+    "night": 1,
+    "storm": false
+   },
+   "haze": 0.03,
+   "level": {
+    "parts": 110,
+    "burst": 0.55,
+    "rain": 32,
+    "parallax": false,
+    "fine": false
+   },
+   "still": false
+  },
+  {
+   "shake": 0,
+   "stop": false,
+   "zoom": 1,
+   "parts": 10,
+   "dying": 0,
+   "overboard": 0,
+   "decals": 8,
+   "intro": false,
+   "ult": false,
+   "finale": false,
+   "roll": [
+    -0.12,
+    -0.65
+   ],
+   "rolling": 0,
+   "tally": {
+    "stops": 9,
+    "knocks": 6,
+    "maxKnock": 1.64,
+    "falls": 4,
+    "overboard": 2,
+    "sparks": 5,
+    "schools": 2,
+    "ults": 1,
+    "steps": 16
+   },
+   "edge": 2,
+   "sky": {
+    "rain": 0.6,
+    "fog": 0.14,
+    "night": 1,
+    "storm": false
+   },
+   "haze": 0.02,
+   "level": {
+    "parts": 110,
+    "burst": 0.55,
+    "rain": 32,
+    "parallax": false,
+    "fine": false
+   },
+   "still": false
+  },
+  {
+   "shake": 0.35,
+   "stop": false,
+   "zoom": 1,
+   "parts": 10,
+   "dying": 1,
+   "overboard": 1,
+   "decals": 9,
+   "intro": false,
+   "ult": false,
+   "finale": false,
+   "roll": [
+    1.49,
+    -1.82
+   ],
+   "rolling": 0,
+   "tally": {
+    "stops": 9,
+    "knocks": 6,
+    "maxKnock": 2.28,
+    "falls": 4,
+    "overboard": 2,
+    "sparks": 5,
+    "schools": 2,
+    "ults": 1,
+    "steps": 17
+   },
+   "edge": 2,
+   "sky": {
+    "rain": 0.6,
+    "fog": 0.14,
+    "night": 1,
+    "storm": false
+   },
+   "haze": 0.02,
+   "level": {
+    "parts": 110,
+    "burst": 0.55,
+    "rain": 32,
+    "parallax": false,
+    "fine": false
+   },
+   "still": false
+  },
+  {
+   "shake": 0,
+   "stop": false,
+   "zoom": 1,
+   "parts": 6,
+   "dying": 0,
+   "overboard": 0,
+   "decals": 9,
+   "intro": false,
+   "ult": false,
+   "finale": false,
+   "roll": [
+    1.74,
+    -1.92
+   ],
+   "rolling": 0,
+   "tally": {
+    "stops": 9,
+    "knocks": 6,
+    "maxKnock": 2.28,
+    "falls": 4,
+    "overboard": 2,
+    "sparks": 5,
+    "schools": 2,
+    "ults": 1,
+    "steps": 17
+   },
+   "edge": 2,
+   "sky": {
+    "rain": 0.6,
+    "fog": 0.14,
+    "night": 1,
+    "storm": false
+   },
+   "haze": 0.02,
+   "level": {
+    "parts": 110,
+    "burst": 0.55,
+    "rain": 32,
+    "parallax": false,
+    "fine": false
+   },
+   "still": false
+  },
+  {
+   "shake": 0,
+   "stop": false,
+   "zoom": 1,
+   "parts": 2,
+   "dying": 0,
+   "overboard": 0,
+   "decals": 9,
+   "intro": false,
+   "ult": false,
+   "finale": false,
+   "roll": [
+    0.91,
+    -1.33
+   ],
+   "rolling": 0,
+   "tally": {
+    "stops": 9,
+    "knocks": 6,
+    "maxKnock": 2.28,
+    "falls": 4,
+    "overboard": 2,
+    "sparks": 5,
+    "schools": 2,
+    "ults": 1,
+    "steps": 17
+   },
+   "edge": 2,
+   "sky": {
+    "rain": 0.6,
+    "fog": 0.14,
+    "night": 1,
+    "storm": false
+   },
+   "haze": 0.02,
+   "level": {
+    "parts": 110,
+    "burst": 0.55,
+    "rain": 32,
+    "parallax": false,
+    "fine": false
+   },
+   "still": false
+  },
+  {
+   "shake": 0,
+   "stop": false,
+   "zoom": 1,
+   "parts": 7,
+   "dying": 0,
+   "overboard": 0,
+   "decals": 9,
+   "intro": false,
+   "ult": false,
+   "finale": false,
+   "roll": [
+    -0.11,
+    -0.57
+   ],
+   "rolling": 0,
+   "tally": {
+    "stops": 11,
+    "knocks": 7,
+    "maxKnock": 2.28,
+    "falls": 5,
+    "overboard": 2,
+    "sparks": 6,
+    "schools": 2,
+    "ults": 1,
+    "steps": 17
+   },
+   "edge": 2,
+   "sky": {
+    "rain": 0.6,
+    "fog": 0.14,
+    "night": 1,
+    "storm": false
+   },
+   "haze": 0.01,
+   "level": {
+    "parts": 110,
+    "burst": 0.55,
+    "rain": 32,
+    "parallax": false,
+    "fine": false
+   },
+   "still": false
+  },
+  {
+   "shake": 0.15,
+   "stop": false,
+   "zoom": 1,
+   "parts": 11,
+   "dying": 1,
+   "overboard": 0,
+   "decals": 10,
+   "intro": false,
+   "ult": false,
+   "finale": false,
+   "roll": [
+    -2.07,
+    1.37
+   ],
+   "rolling": 0,
+   "tally": {
+    "stops": 11,
+    "knocks": 7,
+    "maxKnock": 2.28,
+    "falls": 5,
+    "overboard": 2,
+    "sparks": 6,
+    "schools": 2,
+    "ults": 1,
+    "steps": 18
+   },
+   "edge": 2,
+   "sky": {
+    "rain": 0.6,
+    "fog": 0.14,
+    "night": 1,
+    "storm": false
+   },
+   "haze": 0.01,
+   "level": {
+    "parts": 110,
+    "burst": 0.55,
+    "rain": 32,
+    "parallax": false,
+    "fine": false
+   },
+   "still": false
+  }
+ ],
+ "over": {
+  "winner": 1,
+  "why": "rout"
+ },
+ "finale": [
+  {
+   "at": 200,
+   "st": {
+    "shake": 0,
+    "stop": false,
+    "zoom": 1,
+    "parts": 37,
+    "dying": 0,
+    "overboard": 0,
+    "decals": 13,
+    "intro": false,
+    "ult": false,
+    "finale": true,
+    "roll": [
+     -0.38,
+     1.18
+    ],
+    "rolling": 0,
+    "tally": {
+     "stops": 14,
+     "knocks": 10,
+     "maxKnock": 2.28,
+     "falls": 6,
+     "overboard": 3,
+     "sparks": 7,
+     "schools": 4,
+     "ults": 1,
+     "steps": 20
+    },
+    "edge": 1,
+    "sky": {
+     "rain": 0.6,
+     "fog": 0.14,
+     "night": 1,
+     "storm": false
+    },
+    "haze": 0.01,
+    "level": {
+     "parts": 110,
+     "burst": 0.55,
+     "rain": 32,
+     "parallax": false,
+     "fine": false
+    },
+    "still": false
+   }
+  },
+  {
+   "at": 900,
+   "st": {
+    "shake": 1.61,
+    "stop": false,
+    "zoom": 1,
+    "parts": 10,
+    "dying": 1,
+    "overboard": 1,
+    "decals": 13,
+    "intro": false,
+    "ult": false,
+    "finale": true,
+    "roll": [
+     2.15,
+     1.39
+    ],
+    "rolling": 0,
+    "tally": {
+     "stops": 14,
+     "knocks": 10,
+     "maxKnock": 2.28,
+     "falls": 6,
+     "overboard": 3,
+     "sparks": 7,
+     "schools": 4,
+     "ults": 1,
+     "steps": 20
+    },
+    "edge": 1,
+    "sky": {
+     "rain": 0.6,
+     "fog": 0.14,
+     "night": 1,
+     "storm": false
+    },
+    "haze": 0.01,
+    "level": {
+     "parts": 110,
+     "burst": 0.55,
+     "rain": 32,
+     "parallax": false,
+     "fine": false
+    },
+    "still": false
+   }
+  },
+  {
+   "at": 1700,
+   "st": {
+    "shake": 0,
+    "stop": false,
+    "zoom": 0.971,
+    "parts": 2,
+    "dying": 0,
+    "overboard": 0,
+    "decals": 13,
+    "intro": false,
+    "ult": false,
+    "finale": true,
+    "roll": [
+     -0.09,
+     -1.23
+    ],
+    "rolling": 0,
+    "tally": {
+     "stops": 14,
+     "knocks": 10,
+     "maxKnock": 2.28,
+     "falls": 6,
+     "overboard": 3,
+     "sparks": 7,
+     "schools": 4,
+     "ults": 1,
+     "steps": 20
+    },
+    "edge": 1,
+    "sky": {
+     "rain": 0.6,
+     "fog": 0.14,
+     "night": 1,
+     "storm": false
+    },
+    "haze": 0,
+    "level": {
+     "parts": 110,
+     "burst": 0.55,
+     "rain": 32,
+     "parallax": false,
+     "fine": false
+    },
+    "still": false
+   }
+  },
+  {
+   "at": 2600,
+   "st": {
+    "shake": 0,
+    "stop": false,
+    "zoom": 0.95,
+    "parts": 0,
+    "dying": 0,
+    "overboard": 0,
+    "decals": 13,
+    "intro": false,
+    "ult": false,
+    "finale": true,
+    "roll": [
+     -1.63,
+     -1.89
+    ],
+    "rolling": 0,
+    "tally": {
+     "stops": 14,
+     "knocks": 10,
+     "maxKnock": 2.28,
+     "falls": 6,
+     "overboard": 3,
+     "sparks": 7,
+     "schools": 4,
+     "ults": 1,
+     "steps": 20
+    },
+    "edge": 1,
+    "sky": {
+     "rain": 0.6,
+     "fog": 0.14,
+     "night": 1,
+     "storm": false
+    },
+    "haze": 0,
+    "level": {
+     "parts": 110,
+     "burst": 0.55,
+     "rain": 32,
+     "parallax": false,
+     "fine": false
+    },
+    "still": false
+   }
+  }
+ ]
+}

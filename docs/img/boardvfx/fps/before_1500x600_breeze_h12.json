@@ -1,0 +1,94 @@
+{
+ "tag": "before_1500x600_breeze_h12",
+ "sky": {
+  "weather": "breeze",
+  "fog": 0.1,
+  "wind": [
+   2.297,
+   0.29
+  ]
+ },
+ "intro": [
+  {
+   "at": 150,
+   "st": null
+  },
+  {
+   "at": 600,
+   "st": null
+  },
+  {
+   "at": 1100,
+   "st": null
+  },
+  {
+   "at": 1700,
+   "st": null
+  }
+ ],
+ "errors": [],
+ "idle": {
+  "fps": 4.49,
+  "p50": 220,
+  "p95": 435,
+  "frames": 28
+ },
+ "idleStats": null,
+ "ult": [
+  {
+   "at": 250,
+   "st": null
+  },
+  {
+   "at": 700,
+   "st": null
+  },
+  {
+   "at": 1300,
+   "st": null
+  },
+  {
+   "at": 2000,
+   "st": null
+  }
+ ],
+ "fight": {
+  "fps": 4.51,
+  "p50": 215,
+  "p95": 424.9,
+  "frames": 37
+ },
+ "fightStats": null,
+ "blows": [
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null
+ ],
+ "over": {
+  "winner": 1,
+  "why": "rout"
+ },
+ "finale": [
+  {
+   "at": 200,
+   "st": null
+  },
+  {
+   "at": 900,
+   "st": null
+  },
+  {
+   "at": 1700,
+   "st": null
+  },
+  {
+   "at": 2600,
+   "st": null
+  }
+ ]
+}
