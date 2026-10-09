@@ -1,6 +1,7 @@
 // Server-side ship entity: the authoritative state of every vessel (player or NPC) at sea.
 
 import { regattaSail } from '../../../shared/src/data/regatta.ts';
+import { NPC_VOLLEYS } from '../../../shared/src/data/seabalance.ts';
 import type { NemesisCause } from '../../../shared/src/data/nemesis.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import type { InvaderTag } from './invasions.ts';
@@ -422,7 +423,8 @@ export class ShipEntity {
     this.stats = computeShipStats(this.loadout, this.captain, this.talents, this.effects, this.worn, this.hero);
     // (Her guns' share strikes the hull of a ship of the table only: combat.ts resolveHit. Her canvas shot, her chasers'
     // weight and her strength as others reckon it stay her class's.)
-    if (this.seaScale) this.stats.hullMax = Math.round(this.stats.hullMax * this.seaScale.hull);
+    // A captain's own escort or prize sails as hers: no discount of the sea's ships on her hull (docs/25 item 7).
+    if (this.seaScale) this.stats.hullMax = Math.round(this.stats.hullMax * this.seaScale.hull * (this.ownerId !== null && !this.elite ? 1 / NPC_VOLLEYS : 1));
     if (this.hull > this.stats.hullMax) this.hull = this.stats.hullMax;
     if (this.sails > this.stats.sailHpMax) this.sails = this.stats.sailHpMax;
     if (this.crew > this.stats.crewMax) this.crew = this.stats.crewMax;
@@ -520,6 +522,8 @@ export class ShipEntity {
       isPlayer: this.isPlayer, level: this.level, wanted: this.wantedCache, guild: this.guildTag ?? undefined, city: this.city ?? undefined, shipLevel: this.onLadder ? this.shipLevel : undefined, elite: this.elite || undefined, named: this.named ?? this.namedMate,
       title: this.title ?? undefined, pennant: this.pennant ?? undefined, look: this.look ?? undefined, lfg: this.lfg ?? undefined,
       ...(this.cls.monster || this.npcRole === 'beast' ? {} : { crewMax: this.guardOf ? Math.max(this.stats.crewMax, this._men) : this.stats.crewMax, units: this._army.map((s) => s.u) }),
+      // The broadside table's ship (docs/25 item 12): what the target card's «≈ N залпов» is reckoned from.
+      ...(this.onLadder && this.npcRole !== 'beast' && !this.zoneBoss && !this.cls.monster ? { hullMax: this.stats.hullMax, armor: Math.round(this.stats.armor * 1000) / 1000, inc: Math.round(this.stats.incomingDamageMul * 1000) / 1000 } : {}),
     };
   }
 }

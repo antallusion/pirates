@@ -217,6 +217,12 @@ const PVP_FLOOR_CREW = [0, 0.5, 0.7, 1];
 export const PVE_JUNIOR = [1, 0.33, 0.2, 0.1];
 export const PVE_SENIOR = [1, 1.2, 1.35, 1.6];
 export const PVE_CRITS = [1, 0.35, 0, 0];
+/** …and between ships of the broadside table (docs/25 §1.1): a level's ×1.3 of strength (D12) now carries through
+ *  every broadside of a fight of 6–24, where the 30% cap used to level every fight to four and the cuts above were
+ *  what was left of the ladder. Re-weighed by the duel sims (tests/balance/ladder.test.ts): a perfect captain wins
+ *  about one fight in ten a level up, an average one hardly any, none two levels up. The beasts keep the cuts above. */
+export const PVE_SHIP_JUNIOR = [1, 0.75, 0.5, 0.3];
+export const PVE_SHIP_SENIOR = [1, 1, 1.15, 1.3];
 /** Juniors who together outweigh a ship of the sea (a company against one a level up) are cut less; three levels
  *  up she is a skull to a company too. */
 export const PVE_GROUP = [1, 1, 0.6, 0.15];
@@ -224,17 +230,18 @@ export const PVE_GROUP = [1, 1, 0.6, 0.15];
 /**
  * The ladder between a shooter at combat level `a` and a target at combat level `b`.
  * `pvp`: both are captains' ships. `group`: the juniors attacking together outweigh the target (between captains no
- * floor then; against the sea's ships a softer cut, a skull still floored).
+ * floor then; against the sea's ships a softer cut, a skull still floored). `ships`: two ships of the broadside table
+ * (not a beast), cut by its own measure.
  */
-export function ladder(a: number, b: number, pvp: boolean, group = false): LadderMods {
+export function ladder(a: number, b: number, pvp: boolean, group = false, ships = false): LadderMods {
   const gap = b - a;
   if (gap === 0) return NONE;
   const d = Math.min(3, Math.abs(gap));
-  if (gap < 0) return { ...NONE, dealt: pvp ? PVP_SENIOR[d] : PVE_SENIOR[d] };
+  if (gap < 0) return { ...NONE, dealt: pvp ? PVP_SENIOR[d] : (ships ? PVE_SHIP_SENIOR : PVE_SENIOR)[d] };
   if (pvp) {
     return { dealt: PVP_JUNIOR[d], crits: 0, board: false, floorHull: group ? 0 : PVP_FLOOR_HULL[d], floorCrew: group ? 0 : PVP_FLOOR_CREW[d] };
   }
-  return { dealt: (group ? PVE_GROUP : PVE_JUNIOR)[d], crits: PVE_CRITS[d], board: d < 2, floorHull: d >= 3 ? 0.4 : 0, floorCrew: d >= 3 ? 0.6 : 0 };
+  return { dealt: (group ? PVE_GROUP : ships ? PVE_SHIP_JUNIOR : PVE_JUNIOR)[d], crits: PVE_CRITS[d], board: d < 2, floorHull: d >= 3 ? 0.4 : 0, floorCrew: d >= 3 ? 0.6 : 0 };
 }
 
 /** Juniors together beat a senior when their budgets reach 1.2 of hers. */
@@ -327,11 +334,11 @@ export function npcSkill(level: number): NpcSkill {
   // docs/23 item 36: the sea's gunners lay their broadsides on the mark now (the guns train onto her); a green crew still
   // misjudges her range and her way more than a seasoned one. Item 47: they let fly within 30° of the beam (a captain's
   // gun captains within AUTO_ARC_DEG, 36°: her edge over a bot of her level, about seven fights in ten).
-  if (level <= 2) return { lead: 0.6, rangeErr: 0.12, arcDeg: 30, spread: 0.3, react: 1.4, dash: false };
-  if (level <= 4) return { lead: 0.62, rangeErr: 0.12, arcDeg: 30, spread: 0.28, react: 1.3, dash: false };
-  if (level <= 6) return { lead: 0.65, rangeErr: 0.12, arcDeg: 30, spread: 0.26, react: 1.2, dash: false };
-  if (level <= 8) return { lead: 0.68, rangeErr: 0.12, arcDeg: 30, spread: 0.24, react: 1.1, dash: true };
-  return { lead: 0.7, rangeErr: 0.12, arcDeg: 30, spread: 0.2, react: 1.0, dash: true };
+  if (level <= 2) return { lead: 0.82, rangeErr: 0.09, arcDeg: 34, spread: 0.15, react: 1.4, dash: false };
+  if (level <= 4) return { lead: 0.83, rangeErr: 0.09, arcDeg: 34, spread: 0.15, react: 1.3, dash: false };
+  if (level <= 6) return { lead: 0.84, rangeErr: 0.085, arcDeg: 34, spread: 0.14, react: 1.2, dash: false };
+  if (level <= 8) return { lead: 0.85, rangeErr: 0.08, arcDeg: 35, spread: 0.13, react: 1.1, dash: true };
+  return { lead: 0.86, rangeErr: 0.08, arcDeg: 35, spread: 0.12, react: 1.0, dash: true };
 }
 
 /** An elite ⚔ (group contracts, barons): built for a company — hull ×2.5, guns ×1.5. */

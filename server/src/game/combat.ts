@@ -107,22 +107,25 @@ export function onSeaTable(target: ShipEntity): boolean {
  *  faster: their fights keep the length they were weighed at (tests/balance hunt, bosses), only the volleys come
  *  quicker. Into the hull of a ship of the ladder (`hull`) it strikes by her ⚓, so that an equal sinks in the table's
  *  broadsides (docs/25 items 1 and 4: 6 bare at ⚓1, 24 at ⚓10 — was 5, ×1.3 from ⚓7: every equal in four); her canvas
- *  takes SEA_DAMAGE, her men their own share (seaCrewPace, item 8). Off the table the ball strikes the harder as her guns
- *  load the slower by her ⚓ (seaReloadBy): the zone bosses', the deep's and the great ones' fights keep their length. */
+ *  takes SEA_DAMAGE, her men their own share (seaCrewPace, item 8). */
 export function seaPace(target: ShipEntity, hull = false, shooter: ShipEntity | null = null): number {
-  const slow = shooter ? reloadPace(shooter) : 1;
-  if (target.zoneBoss) return SEA_DAMAGE * slow;
-  if (!onSeaTable(target)) return SEA_RELOAD * slow;
-  return hull ? seaHullPace(target.combatLevel) : SEA_DAMAGE;
+  if (target.zoneBoss) return SEA_DAMAGE;
+  if (!onSeaTable(target)) return SEA_RELOAD;
+  if (!hull) return SEA_DAMAGE;
+  // Between ⚓s the pace of both (their geometric mean): a level apart a ship is the canon's 1.3 of the other's strength
+  // (D12: hull and guns ×1.14 each), not that and her ⚓'s pace again on top.
+  const pt = seaHullPace(target.combatLevel);
+  return shooter && shooter !== target && onSeaTable(shooter) && shooter.combatLevel !== target.combatLevel ? Math.sqrt(pt * seaHullPace(shooter.combatLevel)) : pt;
 }
 
-/** Her guns load the slower the greater her ⚓ (docs/25 §1.1: a broadside every 5 s or so at ⚓1, every 8–9 s at ⚓10, the
- *  other side turned to her), × the quick fight's SEA_RELOAD. */
-export function reloadPace(ship: ShipEntity): number {
-  return ship.onLadder ? seaReloadBy(ship.shipLevel) : 1;
+/** Her guns load by her ⚓ against a ship of the table (docs/25 §1.1: a fight of equals under way 25–35 s at ⚓1, about
+ *  two minutes at ⚓10 in full gear), × the quick fight's SEA_RELOAD. Laid on the deep's creatures, a boss or a zone boss
+ *  they keep the quick fight's pace (`vsTable` false): those fights keep the length they were weighed at. */
+export function reloadPace(ship: ShipEntity, vsTable = true): number {
+  return vsTable && ship.onLadder ? seaReloadBy(ship.shipLevel) : 1;
 }
-export function seaReload(ship: ShipEntity): number {
-  return SEA_RELOAD * reloadPace(ship);
+export function seaReload(ship: ShipEntity, vsTable = true): number {
+  return SEA_RELOAD * reloadPace(ship, vsTable);
 }
 
 export function sideHeading(ship: ShipEntity, side: Side): number {
@@ -153,7 +156,7 @@ export function aimTarget(game: Game, ship: ShipEntity, side: Side, range: numbe
   return best;
 }
 
-export function reloadTime(ship: ShipEntity, side: Side, now: number): number {
+export function reloadTime(ship: ShipEntity, side: Side, now: number, vsTable = true): number {
   const gun = GUNS[ship.loadout.guns[side]];
   // Gun Crew Drill: a short-handed crew loses less.
   const gcf = 1 - (1 - gunCrewFactor(ship.stats, ship.loadout, ship.crew)) * Math.max(0, 1 - tval(ship.stats, 'gunCrewDrill'));
@@ -165,7 +168,7 @@ export function reloadTime(ship: ShipEntity, side: Side, now: number): number {
   if (ship.cls.passive.id === 'gun_brig' && ship.reload.port === 0 && ship.reload.starboard === 0) t *= 0.92;
   if (ship.ammoSel === 'grape' && ship.hasEffect('grapeshot_frenzy')) t *= 0.5;
   void now;
-  return t * seaReload(ship); // the quick sea fight (docs/23 item 36), by her ⚓ (docs/25 §1.1)
+  return t * seaReload(ship, vsTable); // the quick sea fight (docs/23 item 36), by her ⚓ against a ship (docs/25 §1.1)
 }
 
 /** How far the cross wind turns a ball's line (docs/16 #1), less what her gunners allow for it (`allow` 0..1: a
@@ -191,7 +194,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   // Swallowed by the Lantern Maw: the broadside goes into its gut.
   if (innerVolley(game, ship, shots * gun.damage * ship.stats.gunDamageMul * AMMO[ammo].hullMul)) {
     ship.ammo[ammo] -= shots;
-    ship.reload[side] = reloadTime(ship, side, game.now);
+    ship.reload[side] = reloadTime(ship, side, game.now, false);
     ship.lastReloadTotal[side] = ship.reload[side];
     ship.lastCombat = game.now;
     return null;
@@ -271,7 +274,9 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   ship.ammo[ammo] -= shots;
   gunPractice(game, ship, shots, 0); // and from every shot fired (docs/16 #18)
   if (ammo === 'cursed') onCursedVolley(game, ship);
-  ship.reload[side] = reloadTime(ship, side, game.now);
+  // Laid on a ship of the table (or on nothing), at the table's pace; on the deep, a boss, a zone boss, the quick fight's.
+  const mark = (aimAt ? shipNear(game, ship, aimAt.x, aimAt.y) : null) ?? target;
+  ship.reload[side] = reloadTime(ship, side, game.now, !mark || onSeaTable(mark));
   ship.lastReloadTotal[side] = ship.reload[side];
   ship.swapBonus = false;
   ship.doubleShotArmed = false;
@@ -287,6 +292,20 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   ship.repairing = ship.repairing && ship.hasFlag('battle_repair');
   game.emit({ k: 'volley', ship: ship.id, side, ammo, balls, spd: shotSpeed !== 1 ? shotSpeed : undefined, ...(focus.perfect ? { perfect: true as const } : {}) }, ship.state.x, ship.state.y);
   return null;
+}
+
+/** The ship nearest a point she lays her guns on (within 120 m), not herself: her mark, whoever it is. */
+function shipNear(game: Game, ship: ShipEntity, x: number, y: number): ShipEntity | null {
+  let best: ShipEntity | null = null;
+  let bd = 120;
+  game.forShipsNear(x, y, 120, (o) => {
+    const d = Math.hypot(o.state.x - x, o.state.y - y);
+    if (o.id !== ship.id && o.alive && d < bd) {
+      bd = d;
+      best = o;
+    }
+  });
+  return best;
 }
 
 /** The broadside's order is held: the charge counts from when the guns are loaded. */
@@ -328,6 +347,8 @@ export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: num
   const gun = GUNS[CHASER_GUN];
   const range = gun.range * ship.stats.rangeMul * AMMO[ammo].rangeMul;
   const d = clamp(Math.hypot(tx - ship.state.x, ty - ship.state.y), 40, range);
+  // Her mark: the ship nearest the point she aims at (her chasers load by it, as her broadsides do).
+  const mark = shipNear(game, ship, tx, ty);
   const v = headingVec(keel);
   const ox = ship.state.x + v.x * ship.stats.length * 0.5, oy = ship.state.y + v.y * ship.stats.length * 0.5;
   const balls: [number, number, number, number, number][] = [];
@@ -340,7 +361,7 @@ export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: num
     balls.push([Math.round(ox), Math.round(oy), Math.round(bh * 1000) / 1000, Math.round(bd), delay]);
   }
   ship.ammo[ammo] -= shots;
-  ship.chaserReload[end] = CHASER_RELOAD * seaReload(ship) * ship.stats.reloadMul;
+  ship.chaserReload[end] = CHASER_RELOAD * seaReload(ship, !mark || onSeaTable(mark)) * ship.stats.reloadMul;
   ship.lastCombat = game.now;
   ship.protectedUntil = 0;
   const spd = 1 + tval(ship.stats, 'shotSpeed');
@@ -554,10 +575,11 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   // Her parts struck: as many over a fight of the table's broadsides as over the old fights of four (docs/25 item 4).
   const table = onSeaTable(target);
   const cx = lad.crits * (table ? seaCritPace(target.combatLevel) : 1);
-  const pace = seaPace(target, false, shooter); // the quick sea fight (docs/23 item 36)
+  const pace = seaPace(target); // the quick sea fight (docs/23 item 36)
   // The sea's own ships fire on a ship of the table as a captain of their ⚓ would (docs/25 item 7: ship.ts seaScale).
   const npcGuns = table && shooter?.seaScale ? shooter.seaScale.guns : 1;
-  let hullDmg = p.damage * seaPace(target, true, shooter) * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul * lore * lad.dealt * npcGuns;
+  const hullPace = seaPace(target, true, shooter);
+  let hullDmg = p.damage * hullPace * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul * lore * lad.dealt * npcGuns;
   // The alpha strike (docs/25 item 1): a broadside past 2.5 times the table's share of her hull (≈ 50% at ⚓1, 23% at
   // ⚓10; off the ladder 30%; Iron Coffin two thirds of it) strikes a quarter as hard past it — never for nothing. It
   // was 30% for every ship, and every ball past it did 0 and was drawn as a miss: an equal sank in four broadsides
@@ -578,12 +600,12 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   }
   // What the ball would have done at the old pace (×5): the gates of her parts struck (a splinter, a leak, a fire, the
   // cargo, the powder room) keep their weight whatever her ⚓.
-  const felt = table ? (hullDmg * SEA_DAMAGE) / seaHullPace(target.combatLevel) : hullDmg;
+  const felt = table ? (hullDmg * SEA_DAMAGE) / hullPace : hullDmg;
   const chain = p.ammo === 'chain' ? 1 + (sst ? tval(sst, 'chainSail') : 0) : 1;
   // Her nerve over a fight of the table's broadsides as over the old fights of four (docs/25 item 4); her canvas by her ⚓
   // as her hull is (a broadside takes the share of it that it takes of her hull, chain shot five times round's).
   const parts = table ? seaCritPace(target.combatLevel) : 1;
-  const canvas = table ? seaHullPace(target.combatLevel) / SEA_DAMAGE : 1;
+  const canvas = table ? hullPace / SEA_DAMAGE : 1;
   const sailDmg = p.damage * (p.ammo === 'chain' ? pace : 1) * canvas * ammo.sailMul * falloff * (sst?.sailDamageMul ?? 1) * chain * lad.dealt * (gd?.sailMul ?? 1);
   const grape = p.ammo === 'grape' ? 1 + (sst ? tval(sst, 'grapeCrew') : 0) : 1;
   // Splinter Storm: every ball into the hull sends splinters through the gun deck.

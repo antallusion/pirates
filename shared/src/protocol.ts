@@ -923,6 +923,11 @@ export interface ShipInfo {
    *  her head count) and the kinds of man in her stacks, the strongest first. */
   crewMax?: number;
   units?: UnitId[];
+  /** A ship of the broadside table (docs/25 item 12): her hull, armour and «less damage» for the target card's «≈ N
+   *  залпов» (shared/src/sim/volleys.ts). */
+  hullMax?: number;
+  armor?: number;
+  inc?: number;
 }
 
 export interface LootInfo {

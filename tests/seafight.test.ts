@@ -23,7 +23,13 @@ import { steps } from './helpers.ts';
 
 const LEVELS = [1, 3, 5, 8];
 
-test('two ships of a level sink each other with broadsides alone in 30 s or less, median and 90th percentile, at ⚓1/3/5/8', () => {
+// docs/25 §1.1 (owner, 2026-10-09: «2 минуты корабль пинать на высоком уровне это норма… а на низком это извращение»):
+// the quick fight's 30 s at every ⚓ gave way to the broadside table — two of the sea's ships of a level (each a captain
+// in half gear, sinking in 30% fewer broadsides) take about half a minute at ⚓1 and two at ⚓8–10. Was: median and p90
+// ≤ 30 s at all four. Measured after: ⚓1 34/43 s, ⚓3 50/55, ⚓5 67/81, ⚓8 109/129.
+const SEA_TIME: Record<number, [number, number]> = { 1: [15, 50], 3: [25, 75], 5: [35, 100], 8: [55, 160] };
+
+test('two ships of a level sink each other with broadsides alone in the table’s time (docs/25 §1.1), median and 90th percentile, at ⚓1/3/5/8', () => {
   const game = duelSea();
   const rows: string[] = [];
   for (const L of LEVELS) {
@@ -35,7 +41,8 @@ test('two ships of a level sink each other with broadsides alone in 30 s or less
     }
     const { med, p90 } = pct(fights);
     rows.push(`⚓${L} ${LEVEL_HULL[L]}: median ${med} s, p90 ${p90} s`);
-    assert.ok(med <= 30 && p90 <= 30, `⚓${L}: median ${med} s, p90 ${p90} s`);
+    const [lo, hi] = SEA_TIME[L];
+    assert.ok(med >= lo && med <= hi && p90 <= hi * 1.25, `⚓${L}: median ${med} s, p90 ${p90} s (the table: ${lo}–${hi} s)`);
   }
   console.log(rows.join('\n'));
 });

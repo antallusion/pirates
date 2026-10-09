@@ -77,7 +77,7 @@ function gunsRun(game: Game, level: number, k: number): { held: number[]; fired:
   const t0 = game.now;
   let next = 0, sample = 0;
   assert.equal(startPursuit(game, s, B.ship.id, 'guns'), null);
-  while (game.now - t0 < 90 && me.alive && me.hull > 1 && B.ship.alive) {
+  while (game.now - t0 < 240 && me.alive && me.hull > 1 && B.ship.alive) {
     if (game.now >= next) {
       next = game.now + (B.brain.skill?.react ?? 0.5);
       engage(game, B.ship, B.brain, me, Math.hypot(me.state.x - B.ship.state.x, me.state.y - B.ship.state.y));
@@ -99,7 +99,12 @@ function gunsRun(game: Game, level: number, k: number): { held: number[]; fired:
   return out;
 }
 
-test('«Атаковать» with the guns: she lies close (median ≤ 160 m, on the screen), nine balls in ten strike, no broadside from past her effective reach, the fight ≤ 30 s', () => {
+// The fight's length (docs/25 §1.1): was ≤ 30 s at every ⚓ (the quick fight); now the broadside table's — a captain
+// with no talents and no gear against the sea's ship of her ⚓ (a captain in half gear) fights about half a minute at ⚓1
+// and two minutes at ⚓8 (measured after: ⚓1 30–64 s, ⚓3 61–81, ⚓5 78–107, ⚓8 102–124).
+const GUNS_TIME: Record<number, number> = { 1: 75, 3: 110, 5: 150, 8: 190 };
+
+test('«Атаковать» with the guns: she lies close (median ≤ 160 m, on the screen), nine balls in ten strike, no broadside from past her effective reach, the fight in the table’s time', () => {
   const game = duelSea();
   const med = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
   const rows: string[] = [];
@@ -118,7 +123,7 @@ test('«Атаковать» with the guns: she lies close (median ≤ 160 m, on
     rows.push(`⚓${L}: held median ${Math.round(med(held))} m, ${hits}/${balls} balls, ${wins}/4 won, median ${med(secs).toFixed(1)} s`);
     assert.ok(med(held) <= 160, rows.at(-1));
     assert.ok(balls > 20 && hits / balls >= 0.75, rows.at(-1));
-    assert.ok(med(secs) <= 30, rows.at(-1));
+    assert.ok(med(secs) <= GUNS_TIME[L], rows.at(-1));
   }
   console.log(rows.join('\n'));
 });

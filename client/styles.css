@@ -5125,6 +5125,8 @@ body.tq-side #toasts .toast.herald small { font-size: 11px; line-height: 14px; w
 .tg-odds-bad { color: #d2473a; }
 .tg-odds-warn { color: #e0b862; }
 .tg-odds-good { color: #7fae6a; }
+/* docs/25 item 12: her broadsides to sink the mark («≈ 13 залпов»). */
+.tg-volleys { font-variant-numeric: tabular-nums; white-space: nowrap; color: #d9cfb8; }
 /* docs/23 item 39: the best shot for the mark now. */
 .ab-ammo .best { box-shadow: 0 0 0 2px var(--gold), 0 0 8px rgba(224, 184, 98, 0.6); }
 

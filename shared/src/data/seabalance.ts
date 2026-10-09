@@ -184,8 +184,8 @@ export function seaReloadBy(anchor: number): number {
 }
 
 /** The sea's own ships of each ⚓ against the table (index = ⚓): hull × and guns × over her class at her level. */
-export const NPC_SEA_TABLE: [number, number][] = [[1, 1], [0.709, 1.149], [0.74, 1.279], [0.773, 2.037], [0.788, 2.576], [0.845, 2.434], [0.87, 3.333], [0.824, 3.478], [1.018, 3.597], [1.012, 6.241], [1.025, 6.452]];
-export const ELITE_SEA_TABLE: [number, number][] = [[2.5, 1.5], [1.026, 1.285], [1.083, 1.425], [1.144, 2.398], [1.22, 3.124], [1.278, 3.032], [1.273, 4.251], [1.309, 4.532], [1.524, 4.78], [1.604, 8.443], [1.61, 8.871]];
+export const NPC_SEA_TABLE: [number, number][] = [[1, 1], [0.709, 1.149], [0.74, 1.253], [0.773, 2.037], [0.775, 2.576], [0.812, 2.434], [0.827, 3.333], [0.855, 3.478], [0.978, 3.597], [1.009, 6.241], [1.003, 6.452]];
+export const ELITE_SEA_TABLE: [number, number][] = [[2.5, 1.5], [1.026, 1.258], [1.083, 1.425], [1.144, 2.398], [1.17, 3.123], [1.286, 3.031], [1.272, 4.251], [1.288, 4.532], [1.568, 4.78], [1.591, 8.442], [1.584, 8.871]];
 export const NPC_SEA = NPC_SEA_TABLE.map(([hull, guns]) => ({ hull, guns }));
 export const ELITE_SEA = ELITE_SEA_TABLE.map(([hull, guns]) => ({ hull, guns }));
 export function npcSeaScale(anchor: number, elite: boolean): { hull: number; guns: number } {

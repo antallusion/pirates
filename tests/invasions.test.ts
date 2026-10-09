@@ -141,7 +141,9 @@ test('the time runs out: the black tide a day — its patrols, its ports dear, t
 
 test('balance: a wave of the waters’ level falls to a group of 3–5 captains of that level', () => {
   const game = duelSea();
-  const three = waveShare(game, 5, 3, 3, false, 10, 500), four = waveShare(game, 5, 4, 3, false, 10, 520), five = waveShare(game, 5, 5, 3, true, 10, 540);
+  // Twenty fights a cell (were ten): the broadside table's longer fights (docs/25 §1.1) sit the ten of each cell on its
+  // edge (five against the flagship's wave 0.6–0.7 of ten, 0.9 of twenty); twenty tell the share.
+  const three = waveShare(game, 5, 3, 3, false, 20, 500), four = waveShare(game, 5, 4, 3, false, 20, 520), five = waveShare(game, 5, 5, 3, true, 20, 540);
   assert.ok(three >= 0.4, `three captains against a wave: ${three}`);
   assert.ok(four >= 0.7, `four: ${four}`);
   assert.ok(five >= 0.8, `five against the flagship’s wave: ${five}`);
