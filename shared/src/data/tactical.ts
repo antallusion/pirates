@@ -6,6 +6,7 @@
 import type { CaptainId } from './captains.ts';
 import type { OfficerRole } from './crew.ts';
 import { UNITS } from './army.ts';
+import { BOSS_UNITS } from './bossunits.ts';
 import type { UnitId } from './army.ts';
 import { BOOK_PAGES, BOOK_PAGE_IDS, PATH_PAGES, PATH_PAGE_IDS } from './paths.ts';
 import type { BookPageId, PathPageId } from './paths.ts';
@@ -344,6 +345,27 @@ export const isGateCell = (c: string): boolean => c === 'G' || c === 'J';
 export const insideWalls = (i: number): boolean => hexX(i) > SIEGE.wallX;
 /** Cover ashore: a shot at a stack beside a rock or a palm does this share of its harm. */
 export const TAC_COVER = 0.75;
+/** docs/25 item 62 (owner, 2026-10-09: «Абордаж должен быть интересный, чтобы капитанские навыки, группа и умения
+ *  решали»): on a ship's deck the mast, the barrels, the crates and the guns run in stand between a stack and a shot —
+ *  a shot at a stack with one of them beside it, on the shooter's side of it, does this share of its harm. Where she
+ *  stands and the way round decide, not the figures alone. */
+export const TAC_DECK_COVER = 0.6;
+export const TAC_COVER_CELLS: ReadonlySet<TacCell> = new Set(['M', 'B', 'K', 'C']);
+/** The hex of what covers a stack on `hex` from a shot out of `from` on a deck (−1: nothing). */
+export function deckCover(cells: ArrayLike<string>, hex: number, from: number): number {
+  const d = hexDist(hex, from);
+  for (const j of hexNeighbors(hex)) if (TAC_COVER_CELLS.has(cells[j] as TacCell) && hexDist(j, from) < d) return j;
+  return -1;
+}
+/** docs/25 item 56: the great ones shrug off a share of the captains' orders and path pages — of their harm, and as
+ *  often of what they would lay on them (her path's innate move and ultimate pass): a legend of the sea, a titan, a
+ *  great one ashore. A side may bring its own (a legend of the trials, a great ship of the sea). */
+export const TAC_RESIST = { legend: 0.3, titan: 0.4, boss: 0.5 } as const;
+export function unitResist(u: UnitId): number {
+  const d = UNITS[u];
+  if (!d) return 0;
+  return u in BOSS_UNITS ? TAC_RESIST.boss : d.titan ? TAC_RESIST.titan : d.legend ? TAC_RESIST.legend : 0;
+}
 /** A stack on a burning hex loses this share of its strength (at least a man's hit points) as its turn comes. */
 export const TAC_BURN = 0.1;
 /** The deep's own freeze a living stack of the other side one turn in ten. */

@@ -8,7 +8,7 @@ import { SEAL_MOVES } from '../../../shared/src/data/seals.ts';
 import { findTitle } from '../render/seafinds.ts'; // docs/19 D5: the chest among the sharks
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { OFFICER_DEFS } from '../../../shared/src/data/crew.ts';
-import { TAC_BLOCKING, TAC_END_WINDOW, TAC_H, TAC_PLAY_WINDOW, TAC_SPELLS, TAC_TURN, TAC_W, hexDist, hexIndex, hexNeighbors, hexX, hexY, tacSchedule } from '../../../shared/src/data/tactical.ts';
+import { TAC_BLOCKING, TAC_END_WINDOW, TAC_H, TAC_PLAY_WINDOW, TAC_SPELLS, TAC_TURN, TAC_W, deckCover, hexDist, hexIndex, hexNeighbors, hexX, hexY, tacSchedule } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import type { ClientMsg, TacAction, TacEvent, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
 import { assetUrl, sprite } from '../assets.ts';
@@ -867,6 +867,11 @@ export class TacticalPanel {
         const cc = at(hexOf(id));
         if (cc) this.addFloat({ text: spName(e.id as TacSpellId), x: cc.x, y: cc.y - w * 0.62, t0: t + 100, color: '#e0b862' });
       }
+      // docs/25 item 56: the great ones that shrugged it off.
+      for (const id of (e.res ?? []).slice(0, 7)) {
+        const cc = at(hexOf(id));
+        if (cc) this.addFloat({ text: L('float.resist'), x: cc.x, y: cc.y - w * 0.62, t0: t + 160, color: '#9fc3d8' });
+      }
     } else if (e.k === 'innate' || e.k === 'ult') {
       // docs/18: the path's move — its light over the stacks it fell on, its name over the field and each of them.
       const ult = e.k === 'ult';
@@ -1014,7 +1019,7 @@ export class TacticalPanel {
     const rb = (data: string, label: string, art: string, cls = '', off = false): string =>
       `<button class="tb-rb${cls}" ${data} title="${esc(label)}" aria-label="${esc(label)}"${off ? ' disabled' : ''}>${art}</button>`;
     const officer = v.mine && act?.officer?.ready ? act.officer : null;
-    const pathReady = v.mine && !!me.path && (me.innate === 'ready' || (me.ult === 'ready' && v.round >= ULT_ROUND));
+    const pathReady = v.mine && !!me.path && (me.innate === 'ready' || (me.ult === 'ready' && v.round >= (me.ultFrom ?? ULT_ROUND)));
     // From the corner up: wait under the thumb, then defend, then auto (its wheel).
     const left = [
       rb('data-a="wait"', L('wait'), btIcon('bt_wait', 'icon.bt_hold', 'ico'), '', !v.mine || !!act?.waited),
@@ -1227,9 +1232,9 @@ export class TacticalPanel {
       const st = kind === 'innate' ? me.innate : me.ult;
       if (!me.path || !st) return '';
       const mv = (kind === 'innate' ? INNATE : ULTIMATE)[me.path];
-      const early = kind === 'ult' && v.round < ULT_ROUND;
+      const early = kind === 'ult' && v.round < (me.ultFrom ?? ULT_ROUND);
       const off = !v.mine || st !== 'ready' || early;
-      const note = st === 'locked' ? L('ultLocked') : st === 'used' ? L('used') : early ? L('ultRound') : L('free');
+      const note = st === 'locked' ? L('ultLocked') : st === 'used' ? L('used') : early ? L('ultRound', { n: me.ultFrom ?? ULT_ROUND }) : L('free');
       return `<button class="btn tb-spell tb-move ${kind}${this.targeting === kind ? ' on' : ''}${st !== 'ready' ? ' spent' : ''}" data-move="${kind}" ${off ? 'disabled' : ''}>${icon(`icon.${mv.icon}`, '', 'ico')}<span><b>${esc(moveName(me.path, kind === 'ult'))}</b><small>${esc(L(kind))} · ${esc(note)}</small></span></button>`;
     };
     // Four pages on the panel (keys 1–4); the rest in the book, opened over the field as in HoMM3. A phone has no panel:
@@ -1606,6 +1611,7 @@ export class TacticalPanel {
     return `${head ? `<div class="tb-card-h">${face}<div><b>${esc(stackName(s))}</b><small>${sub}</small></div><button class="tb-cardx" title="${esc(L('close'))}" aria-label="${esc(L('close'))}"></button></div>` : `<div class="tb-card-h">${face}<div><small>${sub}</small></div></div>`}
       <div class="tb-stats">${row('icon.stat_crew', 'st.count', `${s.count} / ${s.start}`)}${row('icon.item_cutlass', 'st.atk', num(s.atk))}${row('icon.mod_hull_plating', 'st.def', num(s.def))}${row('icon.tree_boarding', 'st.dmg', `${s.dmg[0]}–${s.dmg[1]}`)}${row('icon.tattoo_heart', 'st.hp', `${s.hp} / ${s.hpMax}`)}${row('icon.item_seaboots', 'st.speed', String(s.speed))}${row('icon.mount_war_drums', 'st.init', String(s.init))}${s.shotsMax ? row('icon.item_powder_horn', 'st.shots', `${s.shots} / ${s.shotsMax}`) : ''}${row('icon.st_no_ret', 'st.ret', L(s.ret ? 'st.retYes' : 'st.retNo'))}</div>
       ${STATUS.some(([f]) => s[f]) ? `<div class="tb-sts">${STATUS.filter(([f]) => s[f]).map(([, ic, k]) => `<span class="chip tb-st${k === 'sts.defending' || k === 'sts.braced' || k === 'sts.again' ? ' good' : k === 'sts.waited' ? '' : ' bad'}">${btIcon(ic, '', 'ico-xs')}${esc(L(k))}</span>`).join('')}</div>` : ''}
+      ${s.resist || this.covered(v).has(s.id) ? `<div class="tb-sts">${s.resist ? `<span class="chip tb-st good">${btIcon('st_braced', '', 'ico-xs')}${esc(L('sts.resist', { n: Math.round(s.resist * 100) }))}</span>` : ''}${this.covered(v).has(s.id) ? `<span class="chip tb-st good">${btIcon('bt_defend', '', 'ico-xs')}${esc(L('sts.cover'))}</span>` : ''}</div>` : ''}
       ${s.sp?.length ? `<div class="tb-sps">${s.sp.map((x) => `<button class="chip tb-spc${note === x ? ' on' : ''}" data-spnote="${esc(x)}" title="${esc(specialNote(x))}">${esc(specialName(x))}</button>`).join('')}</div>${note ? `<p class="tb-spn">${esc(specialNote(note))}</p>` : ''}` : ''}
       <p class="muted">${esc(s.kind === 'officer' || !s.unit ? L(`kd.${s.kind}` as K) : unitNote(s.unit))}${o ? ` ${esc(L(`o.${o.order}` as K))}: ${esc(L(`od.${o.order}` as K))}` : ''}</p>`;
   }
@@ -1646,9 +1652,9 @@ export class TacticalPanel {
     for (const kind of ['innate', 'ult'] as const) {
       const st = kind === 'innate' ? me.innate : me.ult;
       if (!me.path || !st || st === 'locked') continue;
-      const early = kind === 'ult' && v.round < ULT_ROUND;
+      const early = kind === 'ult' && v.round < (me.ultFrom ?? ULT_ROUND);
       const off = !v.mine || st !== 'ready' || early;
-      cards.push(card(`data-bkmove="${kind}"`, icon(`icon.${(kind === 'innate' ? INNATE : ULTIMATE)[me.path].icon}`, '', 'tb-bc-ico'), moveName(me.path, kind === 'ult'), esc(st === 'used' ? L('used') : early ? L('ultRound') : L('free')), off, ` mv ${kind}`));
+      cards.push(card(`data-bkmove="${kind}"`, icon(`icon.${(kind === 'innate' ? INNATE : ULTIMATE)[me.path].icon}`, '', 'tb-bc-ico'), moveName(me.path, kind === 'ult'), esc(st === 'used' ? L('used') : early ? L('ultRound', { n: me.ultFrom ?? ULT_ROUND }) : L('free')), off, ` mv ${kind}`));
     }
     const all = [...me.spells].sort((a, b) => SCHOOLS.indexOf(ORDERS[a.id]?.school as School) - SCHOOLS.indexOf(ORDERS[b.id]?.school as School) || (ORDERS[a.id]?.level ?? 0) - (ORDERS[b.id]?.level ?? 0));
     for (const sp of all) {
@@ -2165,6 +2171,7 @@ export class TacticalPanel {
       `<div class="tb-pv-r"><span>${esc(L('pv.kills'))}</span><b>${r(p.kills)}</b></div>`,
       p.fl ? `<div class="tb-pv-fl">${esc(L(p.fl === 2 ? 'fl.rear' : 'fl.side'))}</div>` : '',
       p.far ? `<div class="tb-pv-n">${esc(L('pv.far'))}</div>` : '',
+      p.cov ? `<div class="tb-pv-n">${esc(L('pv.cov'))}</div>` : '',
       p.sweep ? `<div class="tb-pv-n">${esc(L('pv.sweep'))}</div>` : '',
       p.shot || p.sweep ? '' : p.ret ? `<div class="tb-pv-ret"><span>${esc(L('pv.ret'))}:</span><b>${p.ret[0] > 0 ? '−' : ''}${r(p.ret)}</b></div>` : `<div class="tb-pv-ret none">${esc(L('pv.noRet'))}</div>`,
       p.luck && !this.phone ? `<div class="tb-pv-n">${esc(L('pv.luck', { n: p.luck }))}</div>` : '',
@@ -3317,6 +3324,12 @@ export class TacticalPanel {
         this.liftNow = x.p.lift ?? 0;
         this.walkDx = x.p.walking ? x.p.dx ?? 0 : 0;
         this.token(g, x.s, x.p.x, x.p.y, w, x.s.id === v.active && !x.p.walking && live, pulse, v);
+        if (!x.p.walking && this.covered(v).has(x.s.id)) {
+          const s0 = x.s, px = x.p.x, py = x.p.y;
+          const mark = () => this.coverMark(g, s0, px, py, w, v);
+          if (this.plates) this.plates.push(mark);
+          else mark();
+        }
         this.liftNow = 0;
         this.walkDx = 0;
         this.drawn.figures.set(x.s.id, (this.drawn.figures.get(x.s.id) ?? 0) + 1);
@@ -3814,6 +3827,54 @@ export class TacticalPanel {
     };
     if (this.plates) this.plates.push(plate);
     else plate();
+  }
+
+  /** docs/25 item 62: the stacks on a ship's deck that the mast, a barrel, crates or a gun cover from one of the other
+   *  side's shooters (with shots left), as the battle reckons it (shared deckCover); once a view. */
+  private coverOf: { seq: number; you: number; ids: Set<number> } | null = null;
+  private covered(v: TacView): Set<number> {
+    if (this.coverOf && this.coverOf.seq === v.seq && this.coverOf.you === v.you) return this.coverOf.ids;
+    const ids = new Set<number>();
+    if (!v.land && !v.siege && !v.arena) {
+      for (const s of v.stacks) {
+        if (s.count <= 0) continue;
+        const shooters = v.stacks.filter((o) => o.side !== s.side && o.count > 0 && o.shots > 0 && !o.blind);
+        if (shooters.some((o) => deckCover(v.cells, s.hex, o.hex) >= 0)) ids.add(s.id);
+      }
+    }
+    this.coverOf = { seq: v.seq, you: v.you, ids };
+    return ids;
+  }
+  /** A small steel shield at her shoulder, the side the shot would come from: she stands in cover. */
+  private coverMark(g: CanvasRenderingContext2D, s: TacStackView, x: number, y: number, w: number, v: TacView): void {
+    const shooters = v.stacks.filter((o) => o.side !== s.side && o.count > 0 && o.shots > 0 && !o.blind);
+    const by = shooters.map((o) => deckCover(v.cells, s.hex, o.hex)).find((j) => j >= 0);
+    const c = by !== undefined ? this.center(by) : { x: x - w, y };
+    const dx = c.x - x, dy = c.y - y, d = Math.hypot(dx, dy) || 1;
+    const r = Math.max(6, w * 0.15);
+    const sx = x + (dx / d) * w * 0.38, sy = y - w * 0.2 + (dy / d) * w * 0.12;
+    g.save();
+    g.beginPath();
+    g.moveTo(sx - r * 0.75, sy - r * 0.8);
+    g.lineTo(sx + r * 0.75, sy - r * 0.8);
+    g.lineTo(sx + r * 0.75, sy - r * 0.1);
+    g.quadraticCurveTo(sx + r * 0.6, sy + r * 0.65, sx, sy + r);
+    g.quadraticCurveTo(sx - r * 0.6, sy + r * 0.65, sx - r * 0.75, sy - r * 0.1);
+    g.closePath();
+    g.fillStyle = 'rgba(150,180,200,0.92)';
+    g.strokeStyle = 'rgba(20,28,36,0.9)';
+    g.lineWidth = Math.max(1, w * 0.03);
+    g.fill();
+    g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,0.75)';
+    g.lineWidth = Math.max(1, w * 0.022);
+    g.beginPath();
+    g.moveTo(sx, sy - r * 0.6);
+    g.lineTo(sx, sy + r * 0.7);
+    g.moveTo(sx - r * 0.5, sy - r * 0.2);
+    g.lineTo(sx + r * 0.5, sy - r * 0.2);
+    g.stroke();
+    g.restore();
   }
 
   private token(g: CanvasRenderingContext2D, s: TacStackView, x: number, y: number, w: number, on: boolean, pulse: number, v: TacView): void {

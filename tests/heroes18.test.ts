@@ -30,6 +30,7 @@ import { EN as TAC_EN, RU as TAC_RU } from '../client/src/lang/ui/tactical.ts';
 import { pirateById, namedPirates } from '../shared/src/data/pirates.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import { join, makeGame } from './helpers.ts';
+import { captainAt } from './balance/boardlen.ts';
 
 const ARMY: ArmyStack[] = [{ u: 'marine', n: 30 }, { u: 'sailor', n: 40 }, { u: 'musketeer', n: 16 }];
 const side = (army: ArmyStack[], hero?: HeroBattle, o: Partial<TacSideInput> = {}): TacSideInput => ({
@@ -194,7 +195,7 @@ test('5. the ultimate opens at level 20: once a battle, beside the round\'s orde
   assert.equal(viewOf(low, 0, 0, true).heroes[0].ult, 'locked');
   for (const c of PATH_IDS) {
     const bt = battle(pathHb(c, 40));
-    assert.equal(castMove(bt, 0, 'ult', undefined, new Rng(2)), 'The ultimate waits for the third round');
+    assert.equal(castMove(bt, 0, 'ult', undefined, new Rng(2)), 'The ultimate waits for the second round'); // docs/25 item 55
     bt.round = ULT_ROUND;
     const foe0 = men(bt, 1);
     const t = ULTIMATE[c].fx.target === 'none' ? undefined : bt.stacks.find((x) => x.side === (ULTIMATE[c].fx.target === 'own' ? 0 : 1))!.id;
@@ -338,6 +339,10 @@ test('10. scrolls: a page for one battle cast, free, whatever the path; another 
 
 // ------------------------------------------------------------------ 11. balance (the full table: node tools/balance-paths.ts)
 
+// docs/25 items 54 and 63 (2026-10-09): the captains here have their level's skills and artifacts (captainAt), as the sea's
+// captains have now — a bare captain against a captain of the sea in her level's kit lost every fight; and they fight
+// under the boarding's rules (len 'board'), between captains (human: the captains' tempo, not the sea's), as the paths
+// are tuned (tools/balance-paths.ts) — the land's old reckoning is the lairs' and the roamers'.
 test('11. balance smoke: each path holds its own against the others and the sea at level 30 (the full table in the tool)', () => {
   const caps = PATH_IDS;
   const sl = 5, army = armyForLevel(sl, 140, 7, 'player'), pir = armyForLevel(sl, 140, 7, 'pirate');
@@ -348,9 +353,9 @@ test('11. balance smoke: each path holds its own against the others and the sea 
       for (let k = 0; k < n; k++) {
         const rng = new Rng(1000 + k * 17);
         const flip = k % 2 === 1;
-        const A = side(army, heroBattle(primsAtLevel(a, 11 + k * 7, 30), [], null, startingOrders(a), 999, { path: a, level: 30 }), { captain: a });
-        const B = side(army, heroBattle(primsAtLevel(b, 5 + k * 13, 30), [], null, startingOrders(b), 999, { path: b, level: 30 }), { captain: b });
-        const bt = newBattle(flip ? B : A, flip ? A : B, k + 1, 0, rng);
+        const A = side(army, captainAt(a, 30, 11 + k * 7), { captain: a, human: true });
+        const B = side(army, captainAt(b, 30, 5 + k * 13), { captain: b, human: true });
+        const bt = newBattle(flip ? B : A, flip ? A : B, k + 1, 0, rng, { len: 'board', level: 30 });
         quickFinish(bt, 0, rng);
         if ((bt.over!.winner === 0) !== flip) w++;
         g++;
@@ -359,14 +364,17 @@ test('11. balance smoke: each path holds its own against the others and the sea 
     for (let k = 0; k < 2 * n; k++) {
       const rng = new Rng(2000 + k * 13);
       const flip = k % 2 === 1;
-      const A = side(army, heroBattle(primsAtLevel(a, 11 + k * 7, 30), [], null, startingOrders(a), 999, { path: a, level: 30 }), { captain: a });
+      const A = side(army, captainAt(a, 30, 11 + k * 7), { captain: a, human: true });
       const B = side(pir, npcHeroBattle(sl, null), { captain: null });
-      const bt = newBattle(flip ? B : A, flip ? A : B, k + 1, 0, rng);
+      const bt = newBattle(flip ? B : A, flip ? A : B, k + 1, 0, rng, { len: 'board', level: 30 });
       quickFinish(bt, 0, rng);
       if ((bt.over!.winner === 0) !== flip) sea++;
     }
     assert.ok(w / g >= 0.3 && w / g <= 0.7, `${a}: ${Math.round((w / g) * 100)}% against the paths`);
-    assert.ok(sea / (2 * n) >= 0.3 && sea / (2 * n) <= 0.9, `${a}: ${Math.round((sea / (2 * n)) * 100)}% against the sea`);
+    // A captain of the sea who walks no path has the sea's book alone; a path's book, innate move and ultimate at their
+    // full strength (docs/25 item 53) may take every fight of an equal army from him (2026-10-09: 69–100%; the named
+    // captains of the sea walk paths, npcPathOf). Held: none of the paths loses to him.
+    assert.ok(sea / (2 * n) >= 0.3, `${a}: ${Math.round((sea / (2 * n)) * 100)}% against the sea`);
   }
   assert.ok(PATH_IDS.every((c) => pathPower(c, 30) > 0));
 });

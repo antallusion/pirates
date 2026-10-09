@@ -17,6 +17,7 @@ import assert from 'node:assert/strict';
 import { isPathPage } from '../../shared/src/data/paths.ts';
 import { tacStats } from '../../server/src/game/tacbattle.ts';
 import { BANDS, PATHS, bandStat, playBoard, sidesAt } from './boardlen.ts';
+import { BAND_LEVELS, isHomePage, movesAt, roleOf } from './boardskill.ts';
 import type { BandStat } from './boardlen.ts';
 
 /** Two levels a band, a third and two thirds in. */
@@ -59,11 +60,11 @@ test('docs/25 item 44: round 1 takes ~35% of an equal army at levels 1–10 and 
   for (const r of rows) assert.ok(r.b.lo >= 41 ? r.flags > 0 && r.flags < 0.4 : r.flags === 0, `${tag(r)}: the flag took ${(r.flags * 100).toFixed(0)}%`);
 });
 
-// Under the boarding's rules (2026-10-09) the six paths stand at 29–71% against all at levels 30 and 60 (the old rules'
-// H1 spread was 37–69%): the Corsair's point-blank volley and the Reaver's harvest are common orders now held to ×3, and
-// the paths' books fade with the level (docs/25 §0). Bringing them within ±15% is item 70's (with 53–61); this holds the
-// floor and the ceiling a path must not leave: 25–75%.
-test('docs/25 item 69: under the boarding\'s rules no path wins or loses three fights in four against all (item 70 narrows it)', () => {
+// Under the boarding's rules the six paths stood at 29–71% against all at levels 30 and 60 after block Г (2026-10-09:
+// the paths' books faded with the level, docs/25 §0). Block Д (items 53–61) gave each path's moves their own knobs on
+// real builds and evened them (tools/balance-paths.ts --balance): 35–65% now (the final ±15% between any two is item
+// 70's). 48 fights a path a level: one standard error is ~7 points.
+test('docs/25 items 54 and 69: under the boarding\'s rules every path wins 35–65% of her fights against all at levels 30 and 60', () => {
   for (const L of [30, 60]) {
     const w: Record<string, [number, number]> = {};
     for (const p of PATHS) for (const q of PATHS) for (let i = 0; i < 8; i++) {
@@ -76,17 +77,28 @@ test('docs/25 item 69: under the boarding\'s rules no path wins or loses three f
     }
     for (const p of PATHS) {
       const s = w[p][0] / w[p][1];
-      assert.ok(s >= 0.25 && s <= 0.75, `level ${L}: ${p} ${(s * 100).toFixed(0)}%`);
+      assert.ok(s >= 0.35 && s <= 0.65, `level ${L}: ${p} ${(s * 100).toFixed(0)}%`);
     }
   }
 });
 
-// docs/25 item 69's third line: «вклад каждой страницы и ульты ≥ 8% в своей роли». Measured here as the share of a
-// path's harm its own moves lay (her innate move, her ultimate, her path's pages) in a mirror at levels 30 and 60. On
-// 2026-10-09: 12–29% at 30, but the Reaver's 4.4% at 60 (her path's power fades with the level: docs/25 §0), and the
-// moves that strengthen rather than strike have no harm to show. Their own knobs are items 53–55 (the next wave:
-// separate power, buffs and rounds, the ultimate from round 2), so this waits on them.
-test('docs/25 item 69: a path\'s own moves lay at least 8% of her harm at every level (items 53–55 first)', { todo: 'items 53–55: the Reaver\'s path moves are 4.4% of her harm at level 60; buffs need a measure of their own' }, () => {
+// docs/25 items 54 and 69's third line: «вклад каждой страницы и ульты ≥ 8% в своей роли»; «каждая страница своей школы
+// на любом уровне даёт 8–25% в своей роли». Each move in its role (tests/balance/boardskill.ts: a strike as a share of
+// her army, a heal of each stack, a hold of a side's blows by the engine's own rates) on a real build of each band's two
+// levels: a page of her home school 8–25%, every page 8–25%, her innate move and her ultimate 8% at the least.
+test('docs/25 items 54 and 69: every page lays 8–25% in its role at every band, her innate move and her ultimate 8% or more', () => {
+  const out: string[] = [];
+  for (const p of PATHS) for (const L of BAND_LEVELS) for (const id of movesAt(p, L)) {
+    const v = roleOf(p, id, L).v;
+    const move = id === 'innate' || id === 'ult';
+    if (v < 0.08 - 1e-9 || (!move && v > 0.25 + 1e-9)) out.push(`${p} ${id}${isHomePage(p, id) ? ' (home)' : ''} at ${L}: ${(v * 100).toFixed(1)}%`);
+  }
+  assert.deepEqual(out, []);
+});
+
+// And in the fight itself: the share of a path's harm her own moves lay (her innate move, her ultimate, her path's
+// pages) in a mirror at levels 30 and 60 — 2026-10-09 before block Д: 12–29% at 30, the Reaver's 4.4% at 60.
+test('docs/25 item 69: a path\'s own moves lay at least 8% of her harm at levels 30 and 60', () => {
   tacStats.on = true;
   try {
     for (const L of [30, 60]) for (const p of PATHS) {

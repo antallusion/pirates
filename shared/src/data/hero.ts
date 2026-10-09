@@ -24,6 +24,8 @@
 // Artifacts (item 9) are in shared/src/data/artifacts.ts.
 
 import type { ArtTotals, RelicId } from './artifacts.ts';
+import { ART_SETS, artTotals, makeArtifact } from './artifacts.ts';
+import { captainIlvl } from './items.ts';
 import type { CaptainId } from './captains.ts';
 import type { StatMods } from './stats.ts';
 import type { TreeId } from './talents.ts';
@@ -589,13 +591,46 @@ export function heroBattle(prim: Prims, skills: readonly SkillSlot[], art: ArtTo
   return out;
 }
 
-/** A sea captain's battle self for her ship's level: an even hand of primaries, a full store; a named captain of the
- *  sea (docs/18 item 8) her path's book, home school, stamina, innate move and ultimate, as a captain of her level;
- *  the rest the sea's own book. */
+/** A sea captain's battle self for her ship's level: an even hand of primaries, a full store, and (docs/25 item 63,
+ *  owner 2026-10-09: «… чтобы капитанские навыки, группа и умения решали»; before, a captain of the sea had neither,
+ *  and from level 20 a boarding of one was no fight) the skills and the artifacts of her level, as a captain of that
+ *  level has them; a named captain of the sea (docs/18 item 8) her path's book, home school, stamina, innate move and
+ *  ultimate as well, and the sea's book beside her path's; the rest the sea's own book. */
 export function npcHeroBattle(shipLevel: number, path: CaptainId | null): HeroBattle {
-  const prim = npcPrims(shipLevel);
-  if (!path) return heroBattle(prim, [], null, npcBook(shipLevel), manaMaxOf(prim.will), { path: null, level: npcHeroLevel(shipLevel) });
-  return heroBattle(prim, [], null, startingOrders(path), manaMaxOf(prim.will), { path, level: npcHeroLevel(shipLevel) });
+  const base = npcPrims(shipLevel);
+  const level = npcHeroLevel(shipLevel);
+  const kit = npcKit(level).map((id, i) => makeArtifact(id, i + 1));
+  const art = kit.length ? artTotals(kit) : null;
+  const prim = art ? { atk: base.atk + art.prim.atk, def: base.def + art.prim.def, pow: base.pow + art.prim.pow, will: base.will + art.prim.will } : base;
+  const skills = npcSkills(level);
+  if (!path) return heroBattle(prim, skills, art, npcBook(shipLevel), manaMaxOf(prim.will), { path: null, level });
+  const book = [...startingOrders(path), ...npcBook(shipLevel).filter((id) => !startingOrders(path).includes(id))];
+  return heroBattle(prim, skills, art, book, manaMaxOf(prim.will), { path, level });
+}
+
+/** docs/25 item 63: the eight battle skills a captain of the sea learns, a pick a level-up, rank by rank round the
+ *  eight (as the balance tools build a captain of a level: tests/balance/boardlen.ts). */
+export const NPC_SKILLS: SkillId[] = ['boarding', 'armor', 'artillery', 'leadership', 'tactics', 'luck', 'first_aid', 'mysticism'];
+export function npcSkills(level: number): SkillSlot[] {
+  const r = NPC_SKILLS.map(() => 0);
+  for (let i = 0; i < level - 1; i++) {
+    const k = i % NPC_SKILLS.length;
+    if (r[k] < SKILL_MAX) r[k]++;
+    else {
+      const j = r.findIndex((x) => x < SKILL_MAX);
+      if (j >= 0) r[j]++;
+    }
+  }
+  return NPC_SKILLS.map((id, i) => ({ id, r: r[i] as SkillRank })).filter((x) => x.r > 0);
+}
+/** docs/25 item 63: the artifacts of her level (the bands of captainIlvl: the treasures, the minors, then the three sets
+ *  and the Medal of Saint Mercy). */
+export function npcKit(level: number): string[] {
+  const band = captainIlvl(level);
+  if (level <= 1) return [];
+  if (band <= 1) return ['first_mate_cutlass', 'mail_lined_coat', 'duellist_pistols'];
+  if (band <= 3) return ['bandana_of_fury', 'dress_uniform', 'cartridge_bandolier', 'tide_boots', 'quartermaster_rapier', 'duellist_pistols', 'watch_glass', 'lodestone_compass', 'orca_talisman'];
+  return [...Object.values(ART_SETS).flatMap((s) => s.pieces), 'mercy_medal'];
 }
 
 /** A sea captain's book without a path of her own: the grenades, and the common pages as her waters grow harder. */

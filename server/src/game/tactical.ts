@@ -10,7 +10,7 @@ import { deckGift } from './shipgifts.ts'; // the premium hulls' gifts (docs/02 
 import { FIRST_NAMES, LAST_NAMES } from '../../../shared/src/data/crew.ts';
 import type { OfficerRole } from '../../../shared/src/data/crew.ts';
 import { armyCost, hasSpecial, UNITS } from '../../../shared/src/data/army.ts';
-import { TAC_END_WINDOW, TAC_LEN, kindOfUnit, npcBoardSlots } from '../../../shared/src/data/tactical.ts';
+import { TAC_END_WINDOW, TAC_LEN, TAC_RESIST, kindOfUnit, npcBoardSlots } from '../../../shared/src/data/tactical.ts';
 import { npcHeroLevel } from '../../../shared/src/data/hero.ts';
 import type { TacAction } from '../../../shared/src/protocol.ts';
 import { XP_UNITS, battleXp, targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
@@ -183,6 +183,8 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
     mixed: mixedOf(s?.profile, ship.army), // docs/18 #38: the peoples of a mixed army
     ...(deckGift(ship) ? { gift: deckGift(ship) } : {}), // a premium hull's deck gift (docs/02 §1.A.9)
     ...(heroFace(game, ship) ? { face: heroFace(game, ship) } : {}), // docs/18 item 8: a named captain's own face
+    // docs/25 item 56: a legend of the trials and a great ship of the sea shrug off a share of a captain's orders.
+    ...(!s && isTrialShip(ship) ? { resist: TAC_RESIST.legend } : !s && ship.npcRole === 'boss' ? { resist: TAC_RESIST.boss } : {}),
   };
 }
 
