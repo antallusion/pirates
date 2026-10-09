@@ -1071,7 +1071,9 @@ for sea, ship in ZBOSS_SHOTS.items():
 
 
 # ---- Reel 21: the twelve new lairs of the islands (shared/src/data/lairs.ts), each the first time she lands against
-# one (client/src/main.ts LAIR_FILM) — no blood, no bones, no skulls ---------------------------------------------------
+# one — no blood, no bones, no skulls. NOT TO BE FILMED (owner, 2026-10-09: «Фильмы логовищ … обходимся без них»;
+# «через хигсфилд ниче не генерируем»): kept as written, left out of the queue (NOT_FILMED); the client asks for none of
+# them (client/src/main.ts SHORE_DOWN has no row for these lairs). ------------------------------------------------------
 v('cut_frog_pools', 'lair_frog_pools', 'Лягушачьи заводи',
   'A warm green swamp at dawn, mist on still pools among mangrove roots and giant lily pads: dozens of tiny poison frogs as '
   'bright as jewels — red, blue and yellow — hop across the pads, and a huge warty toad on a mossy log puffs out its throat '
@@ -1123,8 +1125,13 @@ v('cut_serpent_temple', 'lair_serpent_temple', 'Храм пернатого зм
   'and two jaguars pace on the steps below as pirates step out of the trees. The camera rises slowly up the temple steps.')
 
 
+# The scenes the owner has said will not be filmed (2026-10-09): written, never queued.
+NOT_FILMED = {'cut_frog_pools', 'cut_rat_wreck', 'cut_iguana_rocks', 'cut_ghost_strand', 'cut_centipede_ravine', 'cut_spider_grove',
+              'cut_bull_savanna', 'cut_cinder_slopes', 'cut_harpy_crags', 'cut_banshee_hollow', 'cut_titan_wreck', 'cut_serpent_temple'}
+
+
 def main() -> None:
-    jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
+    jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V if x['id'] not in NOT_FILMED]
     with open(OUT, 'w', encoding='utf-8') as f:
         json.dump(jobs, f, ensure_ascii=False)
     print(len(jobs), 'clips; longest prompt', max(len(j['prompt']) for j in jobs))
