@@ -146,7 +146,11 @@ function store(game: Game): Store {
   stores.set(game, s);
   return s;
 }
-const save = (game: Game) => game.db.setKv(KEY, stores.get(game)!);
+const save = (game: Game) => {
+  const S = stores.get(game)!;
+  tables.delete(S);
+  game.db.setKv(KEY, S);
+};
 
 /** The fights that are bouts of the Colosseum, and the legends' ships at practice. */
 const fights = new WeakMap<BoardFight, Bout>();
@@ -668,13 +672,23 @@ function draftView(game: Game, b: Bout, acc: number): ArenaDraftView {
   };
 }
 
+/** The season's table, the best first (sorted at most once a second of the world: every captain's state reads it). */
+const tables = new WeakMap<Store, { at: number; rows: [string, Row][] }>();
+function tableOf(game: Game, S: Store): [string, Row][] {
+  const c = tables.get(S);
+  if (c && game.now - c.at < 1) return c.rows;
+  const rows = Object.entries(S.rows).filter(([, r]) => r.n > 0).sort((a, b) => b[1].r - a[1].r || b[1].w - a[1].w || Number(a[0]) - Number(b[0]));
+  tables.set(S, { at: game.now, rows });
+  return rows;
+}
+
 /** The Colosseum's tab (undefined below level 55, as the Throne itself). */
 export function arenaView(game: Game, s: PlayerSession): ArenaView | undefined {
   const p = s.profile;
   if (!p || p.level < ARENA_LEVEL - 5) return undefined;
   const S = store(game);
   const L = live(game);
-  const rows = Object.entries(S.rows).filter(([, r]) => r.n > 0).sort((a, b) => b[1].r - a[1].r || b[1].w - a[1].w || Number(a[0]) - Number(b[0]));
+  const rows = tableOf(game, S);
   const at = rows.findIndex(([k]) => Number(k) === s.accountId);
   const me = S.rows[s.accountId];
   const table = rows.slice(0, 10).map(([k, r]) => ({ name: r.name, rating: r.r, bouts: r.n, wins: r.w, ...(Number(k) === s.accountId ? { you: true } : {}) }));
