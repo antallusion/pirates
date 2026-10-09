@@ -468,8 +468,9 @@ export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): 
   if (a.isPlayer && (b.isPlayer || b.caravanId)) {
     const safety = REGIONS[b.region].safety;
     if (safety === 'safe') return 'Safe waters: no PvP here.';
-    // Neutral colours (docs/24 D1) fire on no captain, nor on a captain's caravan.
-    if (b.caravanId && neutral(game.profileOf(a))) return 'You sail under neutral colours: you fire on no captain and board none. Change them in port.';
+    // Neutral colours (docs/24 D1) fire on no captain, nor on a captain's caravan — but in lawless water (owner,
+    // 2026-10-09: «правил вообще нет»).
+    if (b.caravanId && neutral(game.profileOf(a)) && safety !== 'lawless') return 'You sail under neutral colours: you fire on no captain and board none. Change them in port.';
   }
   if (a.isPlayer && a.hasFlag('honest_merchant') && b.npcRole !== 'beast' && !game.isHostile(b, a) && !b.attackers.has(a.id)) {
     return 'Honest Merchant: you do not fire on peaceful ships.';
@@ -895,8 +896,9 @@ function registerAggression(game: Game, a: ShipEntity, b: ShipEntity): void {
   let infamy = 0;
   if (b.isPlayer) {
     onPlayerAttack(game, a, b);
-    // Fair game (the Black Flag, Wanted 2+, a price on the head for a licensed hunter) costs nothing.
-    if (!legalTarget(game, a, b)) infamy = 18 * zoneMul * crueltyMul(game, a, b);
+    // Fair game (the Black Flag, Wanted 2+, a price on the head for a licensed hunter) costs nothing; so does any
+    // captain in lawless water (owner, 2026-10-09: «правил вообще нет»), as her sinking there always did.
+    if (!legalTarget(game, a, b) && safety !== 'lawless') infamy = 18 * zoneMul * crueltyMul(game, a, b);
   } else if (b.caravanId) {
     // A captain's caravan (docs/12 P8): a crime in contested water, fair game in lawless.
     infamy = REGIONS[b.region].safety === 'lawless' ? 0 : 14 * zoneMul;

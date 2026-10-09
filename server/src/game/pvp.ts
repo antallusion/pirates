@@ -4,6 +4,8 @@
 //    city's or guild's (pirates and the captains of a city at enmity or a guild at war may come for her), or the pirate
 //    flag — the old Black Flag: anyone may come for her and she for anyone, no crime either way; NPC plunder +15%,
 //    plunder from captains ×1.2. Changed only in port, a minute after the order and ten after a fight with a captain.
+//    In lawless water the colours bar nobody (owner, 2026-10-09: «правил вообще нет»): any captain may fire on and
+//    board any other there, no crime for it, and «Абордаж: выкл» shields nobody; a group, a guild and a duel as ever.
 //  - The Green Pennant (colours.ts hasPennant): under level 15 and 20 hours at sea, a captain under her city's flag is
 //    neutral to other captains in contested water — until she attacks a captain herself (30 min) or hoists other
 //    colours. Pennant and neutral captains take no goods from other captains at sea.
@@ -263,7 +265,7 @@ export function pvpFlags(game: Game, ship: ShipEntity): number {
     if (c === 'pirate') f |= SF.BLACK_FLAG;
     else if (c === 'neutral') f |= SF.NEUTRAL;
     else if (hasPennant(game, p) && REGIONS[ship.region].safety === 'contested') f |= SF.GREEN_PENNANT;
-    if (p.noBoard) f |= SF.NO_BOARD; // «Абордаж: выкл» (docs/24 C1)
+    if (p.noBoard && REGIONS[ship.region].safety !== 'lawless') f |= SF.NO_BOARD; // «Абордаж: выкл» (docs/24 C1), which shields nobody in lawless water
     if (shamed(game, p)) f |= SF.SHAME;
     if (bountyOn(game, ship.accountId) > 0 || wantedLevel(p.infamy) >= 2) f |= SF.BOUNTY;
   }
