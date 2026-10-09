@@ -1459,7 +1459,14 @@ export function moveError(bt: TacBattle, side: 0 | 1, kind: 'innate' | 'ult', ta
 export const TAC_POINT_BLANK = { k: 1.6, path: 1.1 };
 
 /** The balance tools' count of what each captain gives (tools/balance-paths-casts.ts); off in the game. */
-export const tacStats: { on: boolean; casts: Map<string, number> } = { on: false, casts: new Map() };
+export const tacStats: { on: boolean; casts: Map<string, number>; harm: Map<string, number> } = { on: false, casts: new Map(), harm: new Map() };
+/** docs/25 item 69: the hit points of the other side a captain's move took (the balance tools' share of a page). */
+const foeHp = (bt: TacBattle, side: 0 | 1): number => (tacStats.on ? bt.stacks.reduce((n, s) => n + (s.side !== side ? hpOf(s) : 0), 0) : 0);
+const tallyHarm = (bt: TacBattle, side: 0 | 1, id: string, before: number): void => {
+  if (!tacStats.on) return;
+  const k = `${bt.heroes[side].input.hero?.path ?? 'sea'}:${id}`;
+  tacStats.harm.set(k, (tacStats.harm.get(k) ?? 0) + Math.max(0, before - foeHp(bt, side)));
+};
 const tally = (bt: TacBattle, side: 0 | 1, id: string) => {
   if (!tacStats.on) return;
   const k = `${bt.heroes[side].input.hero?.path ?? 'sea'}:${id}`;
@@ -1479,7 +1486,9 @@ export function castMove(bt: TacBattle, side: 0 | 1, kind: 'innate' | 'ult', tar
   h.moved = bt.round;
   const t = target !== undefined ? stackById(bt, target) : undefined;
   const hex = t?.hex;
+  const hp0 = foeHp(bt, side);
   const { kills, on } = applyFx(bt, side, `${kind}:${path}`, powered(mv.fx, path, hb.level ?? 1, 'move'), moveMul(bt, side), target, rng);
+  tallyHarm(bt, side, kind, hp0);
   push(bt, { k: kind, side, id: path, ...(t ? { t: t.id, hex } : {}), kills, on });
   checkOver(bt);
   return null;
@@ -1518,13 +1527,16 @@ export function castSpell(bt: TacBattle, side: 0 | 1, id: TacSpellId, target: nu
   if (pfx) {
     const t0 = target !== undefined ? stackById(bt, target) : undefined;
     const hex = t0?.hex;
+    const hp0 = foeHp(bt, side);
     const { kills, on } = applyFx(bt, side, id, pfx, spellMul(bt, side, id), target, rng, !isPathPage(id));
+    tallyHarm(bt, side, id, hp0);
     push(bt, { k: 'spell', side, id, ...(t0 ? { t: t0.id, hex } : {}), kills, on, ...(scroll ? { via: 'scroll' as const } : {}) });
     checkOver(bt);
     return null;
   }
   const t = target !== undefined ? stackById(bt, target) : undefined;
   let kills = 0;
+  const hp0 = foeHp(bt, side);
   const k = spellMul(bt, side, id);
   const hold = r + 1 + holdOf(bt, side);
   const P = spellPower(bt, side) * (0.85 + rng.float() * 0.3) * k;
@@ -1580,6 +1592,7 @@ export function castSpell(bt: TacBattle, side: 0 | 1, id: TacSpellId, target: nu
     default:
       h.fx.push({ id, until: id === 'smoke_and_knives' ? r : hold });
   }
+  tallyHarm(bt, side, id, hp0);
   if (id === 'iron_discipline') h.morale = Math.min(100, h.morale + 10);
   if (id === 'war_cry') h.morale = Math.min(100, h.morale + 6);
   push(bt, { k: 'spell', side, id, ...(t ? { t: t.id, hex: t.hex } : {}), kills, ...(scroll ? { via: 'scroll' as const } : {}) });
