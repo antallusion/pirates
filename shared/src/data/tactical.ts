@@ -54,9 +54,9 @@ export const TAC_GROUP = {
   bringFrom: 11,
   late: 3,
   echo: 0.6,
-  foe: { share: [[1, 0.7], [10, 0.7], [30, 0.9], [60, 1]] as [number, number][], order: [[1, 0], [30, 0.15], [60, 0.3]] as [number, number][] },
-  pace: [[1, 2], [10, 1.6], [20, 0.8], [30, 0.4], [60, 0.2]] as [number, number][],
-  paceSea: [[1, 2.5], [10, 2], [30, 0.6], [60, 0.7]] as [number, number][],
+  foe: { share: [[1, 0.7], [10, 0.7], [11, 1], [20, 1], [30, 0.9], [60, 1]] as [number, number][], order: [[1, 0], [30, 0.15], [60, 0.3]] as [number, number][] },
+  pace: [[1, 2.2], [10, 1.8], [20, 1], [30, 0.4], [60, 0.2]] as [number, number][],
+  paceSea: [[1, 2.5], [10, 2.2], [20, 1.6], [30, 0.8], [60, 0.7]] as [number, number][],
 };
 /** docs/25 block Е: the lift on a boarding's blows and orders with `allies` allied captains on the field (both sides;
  *  `sea`: against the sea's mind, `paceSea`). */

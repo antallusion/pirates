@@ -2,7 +2,11 @@
 // низких 1 минуты норма это если игрок против игрока. С нпс можно быстрее сражаться»): how long a boarding takes in
 // real time, band by band, against a captain and against the sea, beside the owner's table.
 //
-//   node --disable-warning=ExperimentalWarning tools/boarding-time.ts [n=4] [levels=3,8,13,…]
+//   node --disable-warning=ExperimentalWarning tools/boarding-time.ts [n=4] [levels=3,8,13,…] [--group]
+//
+// --group (docs/25 block Е): a group's boarding beside one captain's — between captains 1 v 1, 2 v 2, 3 v 3 and 3 v 1,
+// and against the sea alone, two and three (the sea's ship grown against the group, item 66). Each ally's stacks are
+// decided by her own captain (the same HUMAN_DECIDE), tests/balance/boardgroup.ts.
 //
 // The model (tests/balance/boardlen.ts): whole battles played by the engine's own mind on both sides, each stack's
 // turn timed as the screens play it (TAC_PACE through tacSchedule, as the server waits for it) plus the decision:
@@ -12,6 +16,7 @@
 // fewer (npcBoardSlots), the captains in their level's kit (skills a pick a level, the artifacts of their band).
 
 import { BANDS, HUMAN_DECIDE, bandStat } from '../tests/balance/boardlen.ts';
+import { groupStat } from '../tests/balance/boardgroup.ts';
 import { TAC_AI_DELAY, boardSlots, npcBoardSlots, tacOpen, tacTempo } from '../shared/src/data/tactical.ts';
 
 const arg = (k: string, d: string): string => process.argv.find((a) => a.startsWith(`${k}=`))?.slice(k.length + 1) ?? d;
@@ -49,4 +54,17 @@ for (const b of BANDS) {
   const k = band[b.lo];
   if (!k) continue;
   console.log(`| ${b.lo}–${b.hi} | ${mean(k.r).toFixed(1)} [${span(b.rounds, String)}] | ${mm(mean(k.p))} [${span(b.pvp, mm)}] | ${mm(mean(k.s))} [${span(b.npc, mm)}] | ${pc(mean(k.c))} |`);
+}
+
+if (process.argv.includes('--group')) {
+  // docs/25 block Е: a group's boarding (the owner: «на высоких уровнях игрок против игрока — 5–10 минут… решают
+  // капитанские навыки, группа и умения»): 51–60 between groups in 5–10 min, the low levels no slower with allies.
+  console.log('');
+  console.log(`A group's boarding (docs/25 block Е) — ${N * 6} battles a cell; minutes (rounds):`);
+  console.log('| L | 1 v 1 | 2 v 2 | 3 v 3 | 3 v 1 | sea: alone | sea: 2 (grown) | sea: 3 (grown) |');
+  console.log('|---|---|---|---|---|---|---|---|');
+  const cell = (s: { mins: number; rounds: number }) => `${mm(s.mins)} (${s.rounds.toFixed(1)})`;
+  for (const L of LEVELS) {
+    console.log(`| ${L} | ${cell(bandStat(L, true, N))} | ${cell(groupStat(L, 2, 2, N))} | ${cell(groupStat(L, 3, 3, N))} | ${cell(groupStat(L, 3, 1, N))} | ${cell(bandStat(L, false, N))} | ${cell(groupStat(L, 2, null, N, { grow: true }))} | ${cell(groupStat(L, 3, null, N, { grow: true }))} |`);
+  }
 }

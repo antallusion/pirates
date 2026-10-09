@@ -371,7 +371,7 @@ test('67 on the ships: each captain\'s losses off her own ship; the lesson and t
   const A = atSea(game, 'Ada', 'corsair', 0, 5), B = atSea(game, 'Bel', 'admiral', 150, 5);
   group(game, A, B);
   B.c.push({ t: 'board_assist', auto: true });
-  const npc = pirateBy(game, A.ship, 30);
+  const npc = pirateBy(game, A.ship, 16);
   npc.purse = 1000;
   npc.cargo = { rum: 20 };
   const crewA = A.ship.crew, crewB = B.ship.crew;
@@ -380,7 +380,7 @@ test('67 on the ships: each captain\'s losses off her own ship; the lesson and t
   const bt = fight.tac!;
   for (const x of [A, B]) x.c.push({ t: 'tac', act: { a: 'auto', on: true } });
   for (let i = 0; i < 20 * 400 && !bt.over; i++) game.step();
-  assert.equal(bt.over?.winner, 0, 'the two carry a pirate of thirty');
+  assert.equal(bt.over?.winner, 0, 'the two carry a pirate of sixteen');
   const e = fight.tacAllies![0];
   const lostB = bt.stacks.filter((s) => s.own === 1).reduce((n, s) => n + s.start - s.count, 0);
   const lostA = bt.stacks.filter((s) => s.side === 0 && !s.own).reduce((n, s) => n + s.start - s.count, 0);
