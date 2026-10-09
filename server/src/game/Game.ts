@@ -240,6 +240,8 @@ import { installLairHooks, landFighting, landTac, lairMessage, lairPrompt, resen
 import { installSealHooks, sealView } from './seals.ts'; // docs/19 E9
 import { installTitanHooks } from './titans.ts'; // docs/19 E10
 import { raidView, stepAbyssRaid } from './abyssraid.ts'; // docs/19 E11
+import { relicCheck } from './relics.ts'; // docs/19 E12
+import { InvasionHub, invasionKill, invasionView, stepInvasions } from './invasions.ts'; // docs/19 E16
 import { shoreBossPrompt, stepShoreBosses } from './shorebosses.ts'; // the great ones ashore (owner, 2026-10-03)
 import { installLandHooks } from './landecon.ts'; // docs/18 V
 import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
@@ -326,6 +328,8 @@ export class Game {
   bosses = new BossHub();
   /** The zone bosses, one great ship for each sea (zonebosses.ts, docs/21). */
   zoneBosses = new ZoneBossHub();
+  /** docs/19 E16: the Choir's invasions and the black tides (invasions.ts). */
+  invasions = new InvasionHub();
   /** A ship taken by boarding as she goes down (her captain's gear is given; no ship gear on top: docs/21 §5). */
   private boardedDown = new Set<number>();
   worldEvents = new EventHub();
@@ -834,6 +838,7 @@ export class Game {
     const now = this.now;
     this.bosses.second(this);
     this.zoneBosses.second(this); // the great ships of the seas (docs/21)
+    stepInvasions(this); // docs/19 E16: the Choir's invasions, the black tides
     stepShoreBosses(this); // the great ones ashore: their calendar (2026-10-03)
     stepEvents(this);
     expeditionsSecond(this);
@@ -1587,6 +1592,7 @@ export class Game {
       questMates: this.questMates(s),
       questXp: Object.fromEntries(p.quests.active.map((a) => [a.id, QUESTS_BY_ID[a.id] ? questXpOf(this, p, QUESTS_BY_ID[a.id]) : 0])),
       common: commonView(this, s.accountId),
+      invasion: invasionView(this, s), // docs/19 E16
       service: serviceView(this, p),
       captives: p.captives.map((c) => ({ name: c.name, role: sanitizeCaptive(c).role, level: c.level, traits: c.traits, skills: c.skills, loyalty: captiveLoyalty(this, p, c), turnCost: turnCost(c), tried: c.tried === Math.floor(this.now / DAY_LENGTH_SEC) })),
       coves: this.coves,
@@ -1957,6 +1963,7 @@ export class Game {
     if (victim.npcRole === 'beast' && victim.cls.tier >= 3) sagaNote(this, s, 'beast', [victim.name, this.nearestIslandName(victim.state.x, victim.state.y)]); // the saga (docs/12 P10 #20)
     renownKill(this, s, victim, how); // careers, feats, the week's pirates and prizes (docs/16 #26–29)
     worldGoalKill(this, s, victim, how); // the sea's goals of the week (docs/16 #32)
+    invasionKill(this, s, victim); // docs/19 E16: a ship of the Choir's invasion, her part
     serviceKill(this, s, victim, how); // a letter of marque: bounty, merit, orders; her own flag costs her the letter (docs/12 P10 #15)
     if (how === 'boarded') grantDeed(this, s, 'deed_first_prize');
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');
@@ -3373,10 +3380,17 @@ export class Game {
           this.pushSelf(s, true);
         };
         switch (msg.action) {
-          case 'equip':
-            return err(equip(this, s, Number(msg.uid)));
-          case 'unequip':
-            return err(unequip(this, s, msg.slot));
+          // docs/19 E12: a relic assembled or taken apart by what she put on or took off.
+          case 'equip': {
+            const why = equip(this, s, Number(msg.uid));
+            if (!why) relicCheck(this, s);
+            return err(why);
+          }
+          case 'unequip': {
+            const why = unequip(this, s, msg.slot);
+            if (!why) relicCheck(this, s);
+            return err(why);
+          }
           case 'sell':
             return portAction(() => sellItem(this, s, Number(msg.uid)));
           case 'salvage':

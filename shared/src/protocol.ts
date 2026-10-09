@@ -60,6 +60,7 @@ import type { RoamClientMsg, RoamServerMsg } from './roamproto.ts'; // docs/19 D
 import type { PremiumClientMsg, PremiumServerMsg } from './premiumproto.ts'; // the premium shop (owner, 2026-10-03)
 import type { IsleType } from './world/archipelago.ts';
 import type { CommonKind } from './data/commongoal.ts';
+import type { InvasionView } from './data/invasions.ts';
 import type { QuestPay } from './data/questpay.ts';
 import type { TaskView } from './data/worldtasks.ts';
 import type { GuildGoalKind } from './data/guildgoal.ts';
@@ -662,6 +663,8 @@ export interface PrivateState {
   daily: { day: number; orders: { kind: DailyKind; need: number; progress: number; done: boolean; silver: number }[]; streak: number; chest: boolean; chestSilver: number };
   /** The sea's common cause today (docs/11 P6): the goal, the bar, this captain's deeds, seconds left. */
   common: { kind: CommonKind; target: number; progress: number; mine: number; done: boolean; endsIn: number; /** the day's busiest hands */ leaders?: { name: string; n: number }[] } | null;
+  /** docs/19 E16: the Choir's invasion afoot (a common cause of the sea) and the regions under the black tide. */
+  invasion?: InvasionView;
   paths: CaptainId[];
   oath: 'code' | 'marque' | null;
   pathSwitchAt: number;
@@ -1176,7 +1179,10 @@ export interface WorldEventView {
     /** A great one come ashore on an island for a while (shorebosses.ts): any captain may land against it. */
     | 'boss_ashore'
     /** A zone boss at sea (zonebosses.ts, docs/21): her name, and the time till she leaves into the fog. */
-    | 'zone_boss';
+    | 'zone_boss'
+    /** docs/19 E16: the Choir's invasion where it comes (`stage` its wave «n/w», `by` its ships afloat), and a region
+     *  under the black tide (`sectors` its squares, to darken on the chart). */
+    | 'invasion' | 'black_tide';
   title: string;
   region: RegionId;
   port?: string;
@@ -1186,6 +1192,7 @@ export interface WorldEventView {
   by?: string;
   stage?: string;
   quarantine?: boolean;
+  sectors?: number[];
 }
 
 /** A world boss fight as its neighbours see it (sent once a second within range; bosses.ts). */

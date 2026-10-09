@@ -12,7 +12,7 @@ import { DAY_LENGTH_SEC } from '../../../shared/src/constants.ts';
 import { dayOf } from '../../../shared/src/data/dailies.ts';
 import { STASH_SIZE } from '../../../shared/src/data/items.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
-import { ARTIFACTS, ARTIFACT_IDS, artMerchantAt, artTotals, artWares, makeArtifact, rollArtifact } from '../../../shared/src/data/artifacts.ts';
+import { ARTIFACTS, ARTIFACT_IDS, RELICS, RELIC_IDS, artMerchantAt, artTotals, artWares, makeArtifact, rollArtifact } from '../../../shared/src/data/artifacts.ts';
 import type { ART_WEIGHTS } from '../../../shared/src/data/artifacts.ts';
 import {
   LEARNABLE, ORDERS, PRIM_NAMES, PRIMS, RANK_NAMES, SCHOOL_SKILL, SKILLS, SKILL_MAX, SKILL_SLOTS, WILL_DAY, WILL_PORT, growPrims, guildOf, guildPrice, heroBattle, heroSeed,
@@ -439,6 +439,12 @@ export function heroView(p: Profile, army: readonly { u: string; n: number }[] |
     prim: { ...h.prim }, artPrim: a.prim, will: Math.floor(h.mana), willMax: willMax(p, h), skills: h.skills.map((x) => ({ ...x })),
     pending, offer: pending > 0 ? currentOffer(p, h) : [], orders: [...h.orders], cap: orderLevelCap(p.level, rankOf(h.skills, 'mysticism')),
     cd: { ...h.cd }, costs, sets: a.sets,
+    // docs/19 E12: each relic's parts, worn and in the locker.
+    relics: RELIC_IDS.map((id) => {
+      const worn = new Set(wornOf(p).map((it) => it.art));
+      const locker = new Set(p.stash.map((it) => it.art));
+      return { id, worn: RELICS[id].parts.filter((x) => worn.has(x)), held: RELICS[id].parts.filter((x) => locker.has(x) && !worn.has(x)) };
+    }),
     stam: Math.floor(stamOf(p, h)), stamMax: stamMax(p, h), scrolls: { ...(h.scrolls ?? {}) }, pages: pathPagesAt(p.captain, p.level),
     lift: { ...lift, nodes: Object.keys(p.talents ?? {}).filter((id) => TALENT_BOOK[id] && (p.talents[id] ?? 0) > 0) },
     blast: Math.round((army ?? []).reduce((n, x) => n + (UNITS[x.u as keyof typeof UNITS]?.hp ?? 0) * x.n, 0) * 0.07),

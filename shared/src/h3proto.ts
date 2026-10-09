@@ -9,6 +9,8 @@ import type { WeekKind } from './data/week.ts';
 import type { OrderId } from './data/hero.ts';
 import type { BeastId, LandRes } from './data/bestiary.ts';
 import type { FittingId, LandCost } from './data/landecon.ts';
+import type { ArtForge } from './data/artifacts.ts';
+import type { ForgeCost } from './data/forge.ts';
 
 /** The sea's calendar: week `n` (from 1), day 1–7 of it, what the week is named for, world seconds to the next. */
 export interface WeekView {
@@ -144,6 +146,9 @@ export interface LandTownView {
   sell: Record<LandRes, number> | null;
   crafts: { art: string; land: LandCost; goods: Partial<Record<GoodId, number>>; silver: number; why: string | null }[];
   fits: { id: FittingId; rank: number; max: number; next: { silver: number; land: LandCost } | null; why: string | null }[];
+  /** docs/19 E13: her artifacts at the workshop's anvil — worn or in the locker, their forged work and the roll
+   *  waiting beside it, the next time's cost, and why each work may not be done now. */
+  forge?: { uid: number; art: string; worn: boolean; forge?: ArtForge; was?: ArtForge; cost: ForgeCost; why: { prim: string | null; line: string | null } }[];
 }
 
 export type H3ClientMsg =
@@ -156,7 +161,10 @@ export type H3ClientMsg =
   // docs/18 #43: the workshop, the fittings, the market for the land's resources.
   | { t: 'h3'; action: 'craft'; i: number }
   | { t: 'h3'; action: 'fit'; id: FittingId }
-  | { t: 'h3'; action: 'sellres'; r: LandRes; n: number };
+  | { t: 'h3'; action: 'sellres'; r: LandRes; n: number }
+  // docs/19 E13: the anvil — a work on an artifact, and her choice of the new roll or the old.
+  | { t: 'h3'; action: 'forge'; uid: number; what: 'prim' | 'line' }
+  | { t: 'h3'; action: 'forgekeep'; uid: number; keep: 'new' | 'old' };
 
 export type H3ServerMsg =
   | { t: 'dwell'; view: DwellView | null }

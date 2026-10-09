@@ -63,6 +63,8 @@ export function makeGame(): { game: Game; db: Database } {
   // The zone bosses' calendar (docs/21) keeps still too: by the wall clock one of the eight is up two hours in three
   // (tests/zonebosses.test.ts turns it on).
   game.zoneBosses.on = false;
+  // The Choir's invasions (docs/19 E16) wait for their own tests (tests/invasions.test.ts).
+  game.invasions.on = false;
   return { game, db };
 }
 

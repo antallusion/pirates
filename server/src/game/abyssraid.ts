@@ -13,7 +13,7 @@
 import { MAX_LEVEL } from '../../../shared/src/constants.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
-import { ARTIFACTS } from '../../../shared/src/data/artifacts.ts';
+import { ARTIFACTS, abyssPartChance } from '../../../shared/src/data/artifacts.ts';
 import { RAID, RAID_GATE_R, RAID_GROUP, RAID_TIERS, raidArmy, raidPay } from '../../../shared/src/data/abyssraid.ts';
 import type { RaidView } from '../../../shared/src/data/abyssraid.ts';
 import { ORDER_IDS, SKILL_IDS, heroBattle, manaMaxOf, startingOrders } from '../../../shared/src/data/hero.ts';
@@ -27,6 +27,7 @@ import { gateOf } from './descent.ts';
 import { weekOf } from './empires.ts';
 import type { Game } from './Game.ts';
 import { artifactFind } from './hero.ts';
+import { relicPartDrop } from './relics.ts'; // docs/19 E12
 import { groupOfAccount } from './party.ts';
 import type { PlayerSession } from './player.ts';
 import { chronicle } from './renown.ts';
@@ -54,6 +55,8 @@ interface Owed {
   silver: number;
   units: number;
   art?: 'relic' | 'major';
+  /** docs/19 E12: a relic's part won on this tier (rolled as it was taken, given when she is aboard). */
+  part?: boolean;
 }
 
 interface Store {
@@ -231,6 +234,8 @@ function takeTier(game: Game, r: Raid, tier: number): void {
       if (x.acc === top.acc) o.art = 'relic';
       else if (ar(game).chance(Math.min(0.6, share * 2))) o.art = 'major';
     }
+    // docs/19 E12: a relic's part by her share of the tier (the Master's top hand one for sure).
+    if ((tier === RAID_TIERS && x.acc === top.acc) || ar(game).chance(abyssPartChance(tier, share))) o.part = true;
     (S.owed[x.acc] ??= []).push(o);
   }
   r.cleared.push(tier);
@@ -265,6 +270,7 @@ function payOwed(game: Game): void {
         const relics = Object.values(ARTIFACTS).filter((a) => a.cls === 'relic').map((a) => a.id);
         artifactFind(game, s, 'boss', relics[ar(game).int(0, relics.length - 1)]);
       } else if (o.art === 'major') artifactFind(game, s, 'boss');
+      if (o.part) relicPartDrop(game, s, 'abyss', 1);
       game.toastShip(s.ship, `Your share of tier ${o.tier} of the Abyss: ${o.silver} silver.`, 'gold');
     }
     delete S.owed[acc];

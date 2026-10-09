@@ -45,6 +45,7 @@ import type { Profession } from '../../../shared/src/data/crew.ts';
 import { traitChips } from './crew.ts';
 import { dict, lang, plural } from '../i18n.ts';
 import { commonCard, dailyCard } from './daily.ts';
+import { invasionCard } from './invasion.ts'; // docs/19 E16
 import { giverDialog } from './giver.ts';
 import { EN, RU } from '../lang/ui/port.ts';
 import { serverText } from '../lang/server.ts';
@@ -786,7 +787,7 @@ ${orders}${berths}</div>` : ''}`;
     return `${sec(W('q.best'))}${top.length ? `<div class="q-best">${top.map(card).join('')}</div>` : `<p class="muted">${esc(W('q.none'))}</p>`}
       ${rest.length ? `${sec(W('q.rest'))}<div class="mk-list">${rest.map(row).join('')}</div>` : ''}
       ${mine ? `${sec(W('q.mine'), `${self.contracts.length}/${3 + ((self.talents.trd_contract_broker ?? 0) > 0 ? 1 : 0)}`)}<div class="mk-list">${mine}</div>` : ''}
-      ${more(W('more'), `${runsCard(view, state)}${dailyCard(self.daily)}${commonCard(self.common)}`, 'q-more')}`;
+      ${more(W('more'), `${runsCard(view, state)}${dailyCard(self.daily)}${commonCard(self.common)}${invasionCard(self.invasion)}`, 'q-more')}`;
   }
 
   /** The tavern's talk (the second row's «Слухи»): omens, rumours and whispers, the wanted and the tips, the bard. */

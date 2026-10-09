@@ -14,6 +14,7 @@ import { wantedBoard } from './wanted.ts';
 import { fishRecords } from './fishing.ts';
 import type { FishId } from '../../../shared/src/data/fishing.ts';
 import { festivalAt } from './happenings.ts';
+import { tidePrice } from './invasions.ts';
 import { chandlerWares, takeGearBack, wornItems } from './gear.ts';
 import { mendCost } from '../../../shared/src/data/items.ts';
 import { refitHolds, refitView } from './refit.ts';
@@ -101,6 +102,9 @@ export function priceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0, ga
     const c = careerBuyMul(p, port.faction);
     if (c !== 1) mods = { ...mods, buyMul: mods.buyMul * c };
   }
+  // docs/19 E16: a port under the black tide buys dear and pays little.
+  const tide = game ? tidePrice(game, port.region) : null;
+  if (tide) mods = { ...mods, buyMul: mods.buyMul * tide.buy, sellMul: mods.sellMul * tide.sell };
   // A festival's kind prices (docs/12 P2).
   if (game && festivalAt(game, port.id)) return { ...mods, buyMul: mods.buyMul * 0.9, sellMul: mods.sellMul * 1.05 };
   return mods;

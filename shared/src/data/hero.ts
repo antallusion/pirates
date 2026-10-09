@@ -23,7 +23,7 @@
 //
 // Artifacts (item 9) are in shared/src/data/artifacts.ts.
 
-import type { ArtTotals } from './artifacts.ts';
+import type { ArtTotals, RelicId } from './artifacts.ts';
 import type { CaptainId } from './captains.ts';
 import type { StatMods } from './stats.ts';
 import type { TreeId } from './talents.ts';
@@ -627,6 +627,8 @@ export interface HeroView {
   costs: Partial<Record<OrderId, number>>;
   /** Her full artifact sets. */
   sets: string[];
+  /** docs/19 E12: each relic — its parts worn, its parts in the locker; assembled when every part is worn. */
+  relics?: { id: RelicId; worn: string[]; held: string[] }[];
   /** docs/18: her stamina now and at most; the scrolls she carries; the pages of her path open to her; the talents
    *  that lift her book and by how much. */
   stam?: number;

@@ -6,7 +6,8 @@
 // And the HUD's compact bar of sea orders: her will and a finger-wide button for each sea order she knows.
 
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
-import { ARTIFACTS, ART_CLASS_NAMES, ART_RARITY, ART_SETS } from '../../../shared/src/data/artifacts.ts';
+import { ARTIFACTS, ART_CLASS_NAMES, ART_RARITY, ART_SETS, RELICS } from '../../../shared/src/data/artifacts.ts';
+import { EN as REL_EN, RU as REL_RU } from '../lang/ui/relics.ts';
 import type { ArtSetId } from '../../../shared/src/data/artifacts.ts';
 import { RARITY_COLOR, SLOT_NAMES } from '../../../shared/src/data/items.ts';
 import {
@@ -37,6 +38,7 @@ const W = dict(WIN_EN, WIN_RU);
 const PB = dict(PB_EN, PB_RU);
 
 const L = dict(EN, RU);
+const RL = dict(REL_EN, REL_RU);
 const k = () => (lang() === 'ru' ? 1 : 0);
 const T = (x: [string, string]) => x[k()];
 
@@ -55,6 +57,20 @@ function primTile(h: HeroView, p: (typeof PRIMS)[number]): string {
 function pips(r: number): string {
   // docs/19 E2: a grandmaster's fourth rank is a star after the three.
   return `<span class="hx-pips">${[1, 2, 3].map((i) => `<i class="${i <= r ? 'on' : ''}"></i>`).join('')}${r >= GM_RANK ? '<b class="hx-gm">★</b>' : ''}</span>`;
+}
+
+/** docs/19 E12: a relic's card — its face, its parts (worn lit, in the locker dim, not found dark), and the whole's
+ *  gift; assembled, it glows as a set worn whole. */
+function relicCard(r: NonNullable<HeroView['relics']>[number]): string {
+  const d = RELICS[r.id];
+  const on = r.worn.length >= d.parts.length;
+  const parts = d.parts.map((id) => {
+    const a = ARTIFACTS[id];
+    const st = r.worn.includes(id) ? 'worn' : r.held.includes(id) ? 'held' : 'miss';
+    return `<span class="hx-rpart ${st}" title="${esc(`${T(a.name)} · ${T(SLOT_NAMES[a.slot])} · ${RL(`relic.${st}`)}`)}">${icon(a.icon, '◆', 'ico-sm')}</span>`;
+  }).join('');
+  return `<div class="hx-relic${on ? ' on' : ''}"><div class="hx-rhead">${icon(ARTIFACTS[d.parts[0]].icon, '◆', 'ico-md hx-rface')}<b>${esc(T(d.name))}</b><span class="muted hx-rn">${esc(on ? RL('relic.on') : RL('relic.of', { n: r.worn.length, m: d.parts.length }))}</span></div>
+    <div class="hx-rparts">${parts}</div><small>${esc(T(d.text))}</small></div>`;
 }
 
 /** The will bar. */
@@ -172,7 +188,8 @@ export class HeroWindow {
       ${h.pending && h.offer.length ? '' : offer}
       <div class="gi-h">${esc(L('skills'))} <span class="muted">${h.skills.length}/${SKILL_SLOTS}</span>${throne ? `<button class="btn btn-small hx-throne" data-hthrone>${icon('tattoo_crown', '', 'ico-sm')}${esc(throneLabel())}</button>` : ''}</div>
       <div class="hx-slots">${slots}</div>
-      <div class="gi-h">${esc(L('sets'))}</div><div class="hx-sets">${sets}</div>`;
+      <div class="gi-h">${esc(L('sets'))}</div><div class="hx-sets">${sets}</div>
+      ${h.relics?.length ? `<div class="gi-h">${icon('tattoo_crown', '', 'ico-sm')}${esc(RL('relics'))}</div><p class="muted hx-note">${esc(RL('relic.note'))}</p><div class="hx-relics">${h.relics.map(relicCard).join('')}</div>` : ''}`;
   }
 
   private bookTab(h: HeroView, docked: boolean, now: number): string {

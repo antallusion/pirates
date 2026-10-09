@@ -31,6 +31,7 @@ import type { Aggression, SeaMarkData, ServerMsg, ShipInfo } from '../../shared/
 import { SF, STATIONS } from '../../shared/src/protocol.ts';
 import { REGIONS } from '../../shared/src/world/regions.ts';
 import { assetUrl, loadAssets } from './assets.ts';
+import { tideVeil } from './ui/invasion.ts'; // docs/19 E16
 import { AudioEngine, turnCreakLoad } from './audio.ts';
 import { AutosailPill, FirstTips, autosailRequest, autosailStopText, tipForMsg, tipForState } from './ui/ease.ts';
 import { ACT_SHOW, actBarHtml, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
@@ -2636,6 +2637,7 @@ function seaFrame(): void {
   const fight = !self.dockedAt && (targetId !== null || !!state.pursuit || !!you.combat);
   // A world boss as her mark: its slim line steps aside for her mark's (owner, 2026-10-07: «OLD MOORINGS» twice).
   document.body.classList.toggle('sea-boss-target', targetId !== null && (state.bosses.some((b) => b.id === targetId) || state.ships.get(targetId)?.info?.npcRole === 'boss'));
+  tideVeil(state); // docs/19 E16: the black tide's veil over its region's sea
   seaHud.frame({
     docked: !!self.dockedAt,
     touch: touch.enabled,
