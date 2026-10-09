@@ -1025,8 +1025,9 @@ function onMessage(m: ServerMsg): void {
       lastSunk = { lost: m.lost, port: placeName(state.ports.find((p) => p.id === m.respawnPort)?.name ?? '') || L('port'), towed: !!m.towed, ...(m.boarded ? { boarded: { by: sv(m.boarded.by), silver: m.boarded.silver, repelled: !!m.boarded.repelled } } : {}) };
       openModal('sunk');
       sunkAt = performance.now();
-      // A boarding lost has the defeat's film (the battle's end has it already, once); a ship gone down her own.
-      playFilm(m.boarded ? 'cut_defeat' : 'cut_sunk', undefined, { over: true });
+      // A boarding lost has the defeat's film (the battle's end has it already, once). A ship gone down to the guns has
+      // none (owner, 2026-10-09: films only into and out of port, ashore, and a boarding won or lost).
+      if (m.boarded) playFilm('cut_defeat', undefined, { over: true });
       break;
     case 'quest_offer':
       // An island's people offer their job on the beach, or a groupmate shares theirs: the giver's window, then the
