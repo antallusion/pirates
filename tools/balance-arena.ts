@@ -36,14 +36,15 @@ export function arenaSide(d: Draft, side: 0 | 1, path: CaptainId): TacSideInput 
   const army = draftArmy(d, side);
   return {
     name: 'Captain', ship: 'Wake', captain: path, hands: 0, marines: 0, gunners: 0, army: army.map((x) => ({ u: x.u, n: x.n, src: x.u })), officers: [], skill: 3, morale: 70, dealt: 1,
-    power: 1, melee: 1, extraShots: 0, firstRush: 1, nets: 0, blooded: 0, castle: false, struck: false, human: false, holes: 0, gunsOut: 0, fire: false, hero: arenaHero(path), mixed: mixMorale(army, path),
+    power: 1, melee: 1, extraShots: 0, firstRush: 1, nets: 0, blooded: 0, castle: false, struck: false, human: true, holes: 0, gunsOut: 0, fire: false, hero: arenaHero(path), mixed: mixMorale(army, path),
   };
 }
 
 /** One bout on the sand: true when side 0 wins. */
 export function fight(d: Draft, paths: [CaptainId, CaptainId], seed: number): boolean {
   const rng = new Rng(seed * 7919 + 17);
-  const bt = newBattle(arenaSide(d, 0, paths[0]), arenaSide(d, 1, paths[1]), seed, 0, rng, { arena: true });
+  // docs/25 block Г: a bout between two captains is a boarding's length at the top (arena.ts arenaSetup → tactical.ts).
+  const bt = newBattle(arenaSide(d, 0, paths[0]), arenaSide(d, 1, paths[1]), seed, 0, rng, { arena: true, len: 'board' });
   quickFinish(bt, 0, rng);
   return bt.over!.winner === 0;
 }

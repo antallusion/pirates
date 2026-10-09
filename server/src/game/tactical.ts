@@ -88,9 +88,13 @@ function manWorth(u: TacArmyEntry['u']): number {
   return Math.sqrt(d.hp * ((d.dmin + d.dmax) / 2)) * k * (d.shots ? 1.15 : 1) * (d.specials.includes('double_strike') ? 1.2 : 1);
 }
 
-/** docs/25 item 50: the sea's army in `slots` stacks for the battle only (her ship keeps hers): the smallest stack
- *  stands in with the nearest kind of hers (a shooter with a shooter), its men counted over by their worth — the same
- *  strength in fewer, fuller stacks. */
+/** A man's hit points behind his Defense, and his mean blow behind his Attack (the stack's own lift on them). */
+const manHp = (x: TacArmyEntry) => UNITS[x.u].hp * (1 + 0.05 * UNITS[x.u].def) * (x.hpK ?? 1);
+const manBlow = (x: TacArmyEntry) => ((UNITS[x.u].dmin + UNITS[x.u].dmax) / 2) * (1 + 0.05 * UNITS[x.u].atk) * (x.dmgK ?? 1);
+
+/** docs/25 item 50: the sea's army in `slots` stacks for the battle only (her ship keeps hers): the weakest stack
+ *  stands in, man for man, with the kind of hers nearest it in worth (a shooter with a shooter), and that stack carries
+ *  their hit points and blows with it — the same head count and the same strength in fewer, fuller stacks. */
 export function battleFit(army: TacArmyEntry[], slots: number): TacArmyEntry[] {
   const out = army.map((x) => ({ ...x }));
   const worth = (x: TacArmyEntry) => x.n * manWorth(x.u);
@@ -99,12 +103,18 @@ export function battleFit(army: TacArmyEntry[], slots: number): TacArmyEntry[] {
     for (let i = 1; i < out.length; i++) if (worth(out[i]) < worth(out[small])) small = i;
     const [s] = out.splice(small, 1);
     const shoots = hasSpecial(s.u, 'shooter');
-    const pool = out.filter((x) => hasSpecial(x.u, 'shooter') === shoots);
-    const into = (pool.length ? pool : out).reduce((b, x) => {
-      const dt = Math.abs(UNITS[x.u].tier - UNITS[s.u].tier), db = Math.abs(UNITS[b.u].tier - UNITS[s.u].tier);
-      return dt < db || (dt === db && x.n > b.n) ? x : b;
+    const same = out.filter((x) => hasSpecial(x.u, 'shooter') === shoots);
+    const w = manWorth(s.u);
+    const into = (same.length ? same : out).reduce((b, x) => {
+      const dx = Math.abs(manWorth(x.u) - w), db = Math.abs(manWorth(b.u) - w);
+      return dx < db || (dx === db && x.n > b.n) ? x : b;
     });
-    into.n += Math.max(1, Math.round((s.n * manWorth(s.u)) / manWorth(into.u)));
+    const n = into.n + s.n;
+    const hp = into.n * manHp(into) + s.n * manHp(s), blows = into.n * manBlow(into) + s.n * manBlow(s);
+    const base = { ...into, hpK: 1, dmgK: 1 };
+    into.hpK = Math.round((hp / (n * manHp(base))) * 1000) / 1000;
+    into.dmgK = Math.round((blows / (n * manBlow(base))) * 1000) / 1000;
+    into.n = n;
   }
   return out;
 }

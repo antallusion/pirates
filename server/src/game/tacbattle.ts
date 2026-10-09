@@ -34,6 +34,10 @@ export interface TacArmyEntry {
   rank?: number;
   /** docs/18 #44: a favourite kind of her path — attack and defence FAV_BONUS more. */
   fav?: boolean;
+  /** docs/25 item 50: a stack the sea's fewer stacks were merged into carries the merged men's hit points and blows
+   *  (a share on its own men's). */
+  hpK?: number;
+  dmgK?: number;
 }
 
 /** What one side brings to the fight, as the ship and her crew make it. */
@@ -426,9 +430,10 @@ export function buildStacks(input: TacSideInput, side: 0 | 1, cells: TacCell[], 
       const fk = e.fav ? 1 + FAV_BONUS : 1;
       let shots = d.shots ? d.shots + input.extraShots : 0;
       if (blast && gunsOut > 0) shots = Math.max(1, Math.round(shots * (1 - gunsOut)));
+      const hpM = Math.max(1, Math.round(d.hp * rk * (e.hpK ?? 1)));
       out.push({
-        id: id++, side, kind: kindOfUnit(e.u), unit: e.u, sp: [...d.specials], src: e.src ?? e.u, count: Math.floor(e.n), start: Math.floor(e.n), hpTop: Math.round(d.hp * rk), hpMax: Math.round(d.hp * rk), hex: -1,
-        atk: r1(d.atk * rk * fk), def: r1(d.def * rk * fk), dmin: d.dmin, dmax: d.dmax, speed: d.speed, init: d.init, shots, shotsMax: shots, dmgMul: blast ? 1 - 0.5 * gunsOut : 1,
+        id: id++, side, kind: kindOfUnit(e.u), unit: e.u, sp: [...d.specials], src: e.src ?? e.u, count: Math.floor(e.n), start: Math.floor(e.n), hpTop: hpM, hpMax: hpM, hex: -1,
+        atk: r1(d.atk * rk * fk), def: r1(d.def * rk * fk), dmin: d.dmin, dmax: d.dmax, speed: d.speed, init: d.init, shots, shotsMax: shots, dmgMul: (blast ? 1 - 0.5 * gunsOut : 1) * (e.dmgK ?? 1),
         ret: true, defending: false, waited: false, surged: false, again: 0, face: side ? 3 : 0,
       });
     }
@@ -621,15 +626,19 @@ export function towerShot(bt: TacBattle, t: TacStack, shot: number, rng: Rng | n
   const h0 = bt.heroes[t.side].input.hero, h1 = bt.heroes[1 - t.side].input.hero;
   const a = 10 + (h1?.atk ?? 0);
   // docs/25 items 45 and 47: the moat and the stance on the stack's own Defense; all that guards her at most halves it.
-  const heroDef = Math.min(t.def, h0?.def ?? 0);
+  const rules = boardRules(bt);
+  const heroDef = rules ? Math.min(t.def, h0?.def ?? 0) : 0;
   const d = (t.def - heroDef) * (bt.cells[t.hex] === 'O' ? SIEGE.moatDef : 1) * (t.defending ? 1.3 : 1) + heroDef;
-  const mod = adMod(a, d);
-  let guard = Math.min(1, mod);
-  if (h0) guard *= 1 - h0.taken;
   const m = smods(bt, t);
   const took = 1 + m.taken + m.shotTaken;
-  if (took < 1) guard *= Math.max(0.1, took);
-  let mul = Math.max(1, mod) * Math.max(1, took) * Math.max(TAC_GUARD_MIN, guard);
+  let mul: number;
+  if (rules) {
+    const mod = adMod(a, d);
+    let guard = Math.min(1, mod);
+    if (h0) guard *= 1 - h0.taken;
+    if (took < 1) guard *= Math.max(0.1, took);
+    mul = Math.max(1, mod) * Math.max(1, took) * Math.max(TAC_GUARD_MIN, guard);
+  } else mul = adModOld(a, d) * (h0 ? 1 - h0.taken : 1) * Math.max(0.1, took);
   if (sp(t, 'shield_wall')) mul *= 0.5;
   if (sp(t, 'shell')) mul *= 0.38;
   return Math.max(1, Math.round(shot * mul * (rng ? 0.85 + rng.float() * 0.3 : 1)));
@@ -673,7 +682,8 @@ function siegeDist(bt: TacBattle, s: TacStack): Map<number, number> {
   const ground = (i: number) => {
     const c = bt.cells[i];
     if (c === '#') return false;
-    return fly || !TAC_BLOCKING.has(c) || (s.side === 1 && isGateCell(c));
+    // docs/25: the way round the deck for the sea's mind anywhere (a creature that dives goes through the surf).
+    return fly || !TAC_BLOCKING.has(c) || (s.side === 1 && isGateCell(c)) || (c === 'W' && sp(s, 'diving'));
   };
   const out = new Map<number, number>();
   const buckets: number[][] = [[]];
@@ -957,6 +967,14 @@ export const TAC_GUARD_MIN = 0.5;
 export function adMod(a: number, d: number): number {
   return a >= d ? 1 + Math.min(TAC_AD.max, TAC_AD.up * (a - d)) : Math.max(TAC_AD.min, 1 - TAC_AD.down * (d - a));
 }
+/** The old reckoning of it (the land's fights, calibrated on it: the lairs, the roamers, the guards, the great ones
+ *  ashore): +5% a point to ×3, down as 1/(1 + 5% a point) to ×0.3. */
+export function adModOld(a: number, d: number): number {
+  return Math.max(0.3, Math.min(3, a >= d ? 1 + 0.05 * (a - d) : 1 / (1 + 0.05 * (d - a))));
+}
+/** docs/25 items 45–47 hold in a boarding (a ship's, the Colosseum's, a siege's, the raid's, a legend's: every battle
+ *  with a length); the land's fights keep the reckoning they were calibrated on. */
+export const boardRules = (bt: TacBattle): boolean => bt.len !== undefined;
 
 export function blowParts(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'shot' | 'ret', from = s.hex): BlowParts {
   const h = bt.heroes[s.side], e = bt.heroes[t.side];
@@ -966,11 +984,12 @@ export function blowParts(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' 
   // of it, and in a siege 99% of the stacks sat on the old floor).
   const defMul = (t.defending ? 1.3 : 1) * (e.input.castle && t.side === 1 ? 1.25 : 1) * (has(e, 'iron_discipline', r) ? 1.4 : 1) * (has(e, 'shield_wall', r) ? 1.3 : 1)
     * (bt.siege && bt.cells[t.hex] === 'O' ? SIEGE.moatDef : 1); // docs/19 E5: wet to the waist in the moat
-  const heroDef = Math.min(t.def, e.input.hero?.def ?? 0);
+  const rules = boardRules(bt);
+  const heroDef = rules ? Math.min(t.def, e.input.hero?.def ?? 0) : 0;
   const a = s.atk, d = (t.def - heroDef) * defMul + heroDef;
-  const mod = adMod(a, d);
+  const mod = rules ? adMod(a, d) : adModOld(a, d);
   // What guards her (item 47): her Defense's share of the blow, her captain's armour and what the moves lay on her.
-  let guard = Math.min(1, mod);
+  let guard = rules ? Math.min(1, mod) : 1;
   let mul = h.input.dealt * h.input.power * (how === 'shot' ? 1 : h.input.melee) * s.dmgMul;
   // docs/25 items 44 and 51: a boarding's blows by its level, and harder from round 8 on.
   if (bt.len === 'board') mul *= bt.tempo * tacFatigue(r) * (r <= 1 ? tacOpen(bt.level) : 1);
@@ -984,17 +1003,23 @@ export function blowParts(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' 
   // The heroes' skills and artifacts (docs/17 H2): her blows and shots, the other's armour; Fury on the melee.
   const hb = h.input.hero, eb = e.input.hero;
   if (hb) mul *= 1 + (how === 'shot' ? hb.shot : hb.melee);
-  if (eb) guard *= 1 - eb.taken;
+  if (eb) {
+    if (rules) guard *= 1 - eb.taken;
+    else mul *= 1 - eb.taken;
+  }
   if (how !== 'shot' && has(h, 'fury', r)) mul *= 1.3;
   // The paths' moves on both (docs/18): her blows and shots, what the other takes.
   const ma = smods(bt, s), mt = smods(bt, t);
   mul *= Math.max(0.1, 1 + (how === 'shot' ? ma.shot : ma.melee));
   const took = 1 + mt.taken + (how === 'shot' ? mt.shotTaken : 0);
   // A move that lays more harm on her (a mark, a curse) is the attacker's; one that shields her is her guard.
-  if (took >= 1) mul *= took;
-  else guard *= Math.max(0.1, took);
-  // `mod` stays the blow's own (the dice are multiplied by it); its share of the guard is taken back out of `mul`.
-  mul *= Math.max(TAC_GUARD_MIN, guard) / Math.min(1, mod);
+  if (!rules) mul *= Math.max(0.1, took);
+  else {
+    if (took >= 1) mul *= took;
+    else guard *= Math.max(0.1, took);
+    // `mod` stays the blow's own (the dice are multiplied by it); its share of the guard is taken back out of `mul`.
+    mul *= Math.max(TAC_GUARD_MIN, guard) / Math.min(1, mod);
+  }
   if (how === 'shot') {
     if (hexDist(from, t.hex) > TAC_LONG_SHOT && !sp(s, 'no_penalty')) mul *= 0.5;
     if (has(h, 'lay_true', r)) mul *= 1.25;
@@ -1231,7 +1256,7 @@ export function commonMul(raw: number): number {
  *  this share of what that stack brought aboard (by the battle's scale), times its own share. */
 export const TAC_BLAST_STACK = 0.35;
 function blastOn(bt: TacBattle, t: TacStack, P: number, share: number, common = true): number {
-  const p = common ? Math.min(P, TAC_BLAST_STACK * t.start * t.hpMax * blastScale(bt)) : P;
+  const p = common && boardRules(bt) ? Math.min(P, TAC_BLAST_STACK * t.start * t.hpMax * blastScale(bt)) : P;
   return Math.max(1, Math.round(p * share));
 }
 
@@ -1271,7 +1296,7 @@ function spellMul(bt: TacBattle, side: 0 | 1, id: TacSpellId): number {
   if (!hb) return 1;
   const d = ORDERS[id];
   const raw = (hb.mul[d?.school ?? 'fire'] ?? 1) * homeMul(hb.path, id) * (d?.path && d.path === hb.path ? hb.pageMul ?? 1 : 1);
-  return isPathPage(id) ? raw : commonMul(raw);
+  return isPathPage(id) || !boardRules(bt) ? raw : commonMul(raw);
 }
 /** The pool an order is paid from now. */
 function poolOf(h: TacHero, res: OrderRes): number {
@@ -2132,7 +2157,7 @@ export function fxValue(bt: TacBattle, side: 0 | 1, fx: PageFx, k: number, t?: T
   const own = alive(bt).filter((o) => o.side === side);
   const P = spellPower(bt, side) * k;
   // docs/25 item 46: a common page's blast on one stack as it would land.
-  const on1 = (o: TacStack, share: number) => (common ? Math.min(P, TAC_BLAST_STACK * o.start * o.hpMax * blastScale(bt)) : P) * share;
+  const on1 = (o: TacStack, share: number) => (common && boardRules(bt) ? Math.min(P, TAC_BLAST_STACK * o.start * o.hpMax * blastScale(bt)) : P) * share;
   const sum = (xs: TacStack[], f: (x: TacStack) => boolean = () => true) => xs.reduce((n, x) => n + (f(x) ? threat(bt, x) : 0), 0);
   const shoots = (x: TacStack) => isShooter(x) && x.shots > 0;
   let v = 0;
@@ -2258,7 +2283,7 @@ function aiSpell(bt: TacBattle, side: 0 | 1, rng: Rng): AiOrder | null {
     };
     // docs/25 item 46: what a common order's blast would lay on each stack (the blast reckoned from the stack too).
     const P0 = spellPower(bt, side) * km;
-    const on1 = (o: TacStack, share: number) => Math.min(P0, TAC_BLAST_STACK * o.start * o.hpMax * blastScale(bt)) * share;
+    const on1 = (o: TacStack, share: number) => (boardRules(bt) ? Math.min(P0, TAC_BLAST_STACK * o.start * o.hpMax * blastScale(bt)) : P0) * share;
     if (s0.id === 'musket_storm' || s0.id === 'maelstrom') {
       const share = s0.id === 'musket_storm' ? 0.45 : 0.55;
       pick(foes.reduce((n, t) => n + valueOf(bt, t, on1(t, share)), 0) + (s0.id === 'maelstrom' ? foes.reduce((n, t) => n + threat(bt, t), 0) * 0.03 : 0));
@@ -2410,9 +2435,11 @@ export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
   if (bt.siege) return siegeMove(bt, s, reach);
   // Out of reach: close on the nearest foe (a shooter out of shot waits behind the steel), round the fires. The way is
   // counted round what stands on deck (docs/25, 2026-10-09: by the straight line a stack two hexes from a foe behind the
-  // mast and a barrel stood «defending» to the twentieth round, and so did the foe).
-  const way = siegeDist(bt, s);
-  const far = (h: number) => (way.get(h) ?? 50 + Math.min(...foes.map((t) => hexDist(h, t.hex)))) + (bt.cells[h] === 'F' ? 1.5 : 0);
+  // mast and a barrel stood «defending» to the twentieth round, and so did the foe). The land's fights keep the straight
+  // line they were calibrated on.
+  const way = boardRules(bt) ? siegeDist(bt, s) : null;
+  const line = (h: number) => Math.min(...foes.map((t) => hexDist(h, t.hex)));
+  const far = (h: number) => (way ? way.get(h) ?? 50 + line(h) : line(h)) + (bt.cells[h] === 'F' ? 1.5 : 0);
   let to: number | null = null, td = Infinity;
   for (const [h] of reach) {
     const d = far(h);

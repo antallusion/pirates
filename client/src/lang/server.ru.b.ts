@@ -1273,6 +1273,8 @@ export const SERVER_RU_B: Record<string, string> = {
   // The turn-based boarding battle (docs/16 P4).
   "A foe at arm's length: no room to shoot": "Враг вплотную: стрелять некуда",
   "Boarders do not strike: fall back instead": "Абордажники флаг не спускают — отступите",
+  // docs/25 item 49: a legend, the Abyss raid, a citadel, the Colosseum, a trial.
+  "No quick fight here: this one is fought to the end": "Быстрого боя нет: этот бой идёт до конца",
   "No officer's order to give": "Слово офицера уже сказано",
   "No shots left": "Выстрелов не осталось",
   "Not your turn": "Сейчас не ваш ход",

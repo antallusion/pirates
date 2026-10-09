@@ -1109,7 +1109,7 @@ export class TacticalPanel {
     const art = (id: string, fb: string) => (assetUrl(`icon.${id}`) ? `icon.${id}` : fb);
     const out: WheelOption[] = [
       { id: 'auto', label: L('autoEnd'), icon: art('bt_auto', 'icon.bt_captain') },
-      { id: 'quick', label: L('quick'), icon: art('bt_quick', 'icon.bt_charge') },
+      ...(v.noQuick ? [] : [{ id: 'quick', label: L('quick'), icon: art('bt_quick', 'icon.bt_charge') }]),
     ];
     if (v.canCut) out.push({ id: 'cut', label: v.you === 0 ? L('fallBack') : L('cut'), icon: art('bt_retreat', 'icon.bt_colours') });
     if (v.ransom) {
@@ -1179,7 +1179,7 @@ export class TacticalPanel {
     // The fight over, the book is put away (it stood over the reckoning on a desk).
     if (v.over) this.bookOpen = false;
     const act = v.stacks.find((s) => s.id === v.active);
-    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.bookTab, this.bookPage, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result, this.phone, this.tall, this.moreOpen, this.sheetOpen, this.sheetKind, settings().tacFast, this.endHidden, this.foeArmed]);
+    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.bookTab, this.bookPage, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result, v.flag, v.quickNow, v.noQuick, !!v.bank, this.phone, this.tall, this.moreOpen, this.sheetOpen, this.sheetKind, settings().tacFast, this.endHidden, this.foeArmed]);
     if (key === this.key) return;
     this.key = key;
     const hero = (x: 0 | 1) => {
@@ -1196,7 +1196,7 @@ export class TacticalPanel {
     el.querySelector('.tb-hero.you')!.innerHTML = hero(v.you);
     el.querySelector('.tb-hero.foe')!.innerHTML = hero((1 - v.you) as 0 | 1);
     const turn = v.over ? '' : v.mine ? L('yourTurn') : act && act.side === v.you ? L('autoTurn') : L('theirTurn');
-    el.querySelector('.tb-mid')!.innerHTML = `<div class="tb-round">${esc(L('round', { n: v.round }))}</div><div class="tb-turn${v.mine ? ' mine' : ''}">${act ? `<span class="tb-dot ${act.side === v.you ? 'you' : 'foe'}"></span>` : ''}${esc(turn)} <em class="tb-secs"></em></div><div class="tb-timer"><i></i></div>`;
+    el.querySelector('.tb-mid')!.innerHTML = `<div class="tb-round">${esc(L('round', { n: v.round }))}</div><div class="tb-turn${v.mine ? ' mine' : ''}">${act ? `<span class="tb-dot ${act.side === v.you ? 'you' : 'foe'}"></span>` : ''}${esc(turn)} <em class="tb-secs"></em></div><div class="tb-timer"><i></i></div>${this.clocksHtml(v)}`;
     // The order of the round, then the next round's first few.
     el.querySelector('.tb-queue')!.innerHTML = this.queue(v);
     el.querySelectorAll<HTMLElement>('.tb-q').forEach((b) => (b.onclick = () => this.showInfo(Number(b.dataset.info))));
@@ -1331,7 +1331,7 @@ export class TacticalPanel {
       `<button class="btn" data-a="defend" ${lab(L('defend'))} ${!v.mine ? 'disabled' : ''}>${btIcon('bt_defend', 'icon.mod_hull_plating')}${word(L('defend'))}</button>`,
       officer ? `<button class="btn btn-primary" data-a="order" ${lab(L(`o.${officer.order}` as K), L(`od.${officer.order}` as K))}>${icon(`icon.role_${officer.role}`, '', 'ico-sm')}${word(L(`o.${officer.order}` as K))}</button>` : '',
       `<button class="btn${me.auto ? ' on' : ''}" data-a="auto" ${lab(auto)}>${btIcon('bt_auto', '')}${word(auto)}</button>`,
-      `<button class="btn" data-a="quick" ${lab(L('quick'))} ${v.over ? 'disabled' : ''}>${btIcon('bt_quick', '')}${word(L('quick'))}</button>`,
+      v.noQuick ? '' : `<button class="btn${v.quickNow ? ' btn-primary tb-quicknow' : ''}" data-a="quick" ${lab(L('quick'), v.quickNow ? L('quickNow') : undefined)} ${v.over ? 'disabled' : ''}>${btIcon('bt_quick', '')}${word(L('quick'))}</button>`,
       v.canCut && !v.over ? `<button class="btn btn-danger" data-a="cut" ${lab(cut)}>${btIcon('bt_retreat', '')}${word(cut)}</button>` : '',
       v.ransom && !v.over ? `<button class="btn${ransomOn ? ' on armed' : ''}" data-a="ransom" ${lab(ransom, L('ransomTip'))}${poor ? ' disabled' : ''}>${btIcon('bt_ransom', 'icon.coin')}${word(ransom)}</button>` : '',
       v.canStrike && !v.over ? `<button class="btn btn-danger${armed ? ' on armed' : ''}" data-a="surrender" ${lab(strike)}>${btIcon('bt_strike', '')}${word(strike)}</button>` : '',
@@ -1353,7 +1353,7 @@ export class TacticalPanel {
     banner.classList.toggle('hidden', !v.over || this.endHidden);
     if (v.over) {
       const won = v.over.winner === v.you;
-      const why = v.over.why === 'rout' ? (won ? 'why.rout' : 'why.routLost') : v.over.why === 'struck' ? (won ? 'why.struck' : 'why.struckYou') : v.over.why === 'ransom' ? (won ? 'why.ransomThem' : 'why.ransomYou') : 'why.rounds';
+      const why = v.over.why === 'rout' ? (won ? 'why.rout' : 'why.routLost') : v.over.why === 'struck' ? (won ? 'why.struck' : 'why.struckYou') : v.over.why === 'ransom' ? (won ? 'why.ransomThem' : 'why.ransomYou') : v.over.why === 'flag' ? (won ? 'why.flag' : 'why.flagLost') : 'why.rounds';
       // docs/18 II: ashore, the lair is broken, or the party thrown back or fallen back to the boats.
       const whyText = v.land && isShoreBoss(v.land.lair) ? BL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : roamOf(v.land?.lair) ? RL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land?.lair === 'find_chest' ? FL(won ? 'why.chest' : v.over.why === 'struck' ? 'why.chestBack' : 'why.chestLost') : v.land && isDriftKind(v.land.lair) ? DL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land ? LL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : L(why as K);
       const r = v.result;
@@ -1437,6 +1437,8 @@ export class TacticalPanel {
         return e.id === 'harpoon' && e.t !== undefined ? L('log.harpoon', { a: name(e.s), b: name(e.t), dmg: e.dmg ?? 0, kills: e.kills ?? 0 }) : L('log.order', { a: name(e.s), name: L(`o.${e.id}` as K) });
       case 'round':
         return L('log.round', { n: e.n ?? 0 });
+      case 'flag':
+        return L('log.flag', { side: L(e.side === v.you ? 'side.you' : 'side.foe') });
       case 'siege': {
         // docs/19 E5: the catapult, the ship's broadside, a tower.
         if (e.id === 'tower') return CL('siege.tower', { t: name(e.t), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
@@ -1467,9 +1469,71 @@ export class TacticalPanel {
     const h = this.el!.querySelector('.tb-hint')!;
     const act = v.stacks.find((s) => s.id === v.active);
     const own = this.targetKind() === 'own';
-    const text = v.over ? '' : !v.mine ? (act && act.side !== v.you ? L('hint.wait') : '') : this.targeting ? L(own ? 'hint.own' : 'hint.target') : this.preview !== null ? L('hint.again') : v.warn?.length ? BL('hint.warn') : v.shoot.length ? L('hint.shoot') : L('hint.move');
+    const lead = this.leadHint(v);
+    const text = v.over ? '' : lead && !this.targeting && this.preview === null ? lead : !v.mine ? (act && act.side !== v.you ? L('hint.wait') : '') : this.targeting ? L(own ? 'hint.own' : 'hint.target') : this.preview !== null ? L('hint.again') : v.warn?.length ? BL('hint.warn') : v.shoot.length ? L('hint.shoot') : L('hint.move');
     h.textContent = text;
     h.classList.toggle('hidden', !text);
+  }
+
+  /** docs/25 items 48, 49, 52: what the hint line says first — the flag lost or held, the clock spent, the quick fight
+   *  offered at once, the flag's rule while she waits on the other side (null: the usual words). */
+  private leadHint(v: TacView): string | null {
+    if (v.over) return null;
+    const f = v.flag, me = v.you, foe = (1 - v.you) as 0 | 1;
+    if (f) {
+      const on = (side: 0 | 1, hex: number) => v.stacks.some((s) => s.side === side && s.hex === hex);
+      if (on(foe, f.hex[me])) return L('hint.flagLost', { n: f.held[foe], m: f.need });
+      if (on(me, f.hex[foe])) return L('hint.flagHeld', { n: f.held[me], m: f.need });
+    }
+    if (v.mine && v.bank && v.bank[me] === 0) return L('clock.out');
+    if (v.quickNow) return L('quickNow');
+    if (f && (!v.mine || v.round <= 1)) return L('hint.flag', { m: f.need });
+    return null;
+  }
+
+  /** docs/25 item 48: a captain's chess clock left now — the side whose turn runs on it loses its seconds as they go
+   *  (her clock started once what came before her turn was played: `ends` less the turn's seconds, or what was left). */
+  private bankNow(v: TacView, side: 0 | 1): number {
+    const b = v.bank?.[side] ?? -1;
+    if (b < 0) return -1;
+    const act = v.stacks.find((s) => s.id === v.active);
+    if (v.over || !act || act.side !== side || v.heroes[side].auto) return b;
+    const from = v.ends - Math.min(v.turn ?? TAC_TURN, b);
+    return Math.max(0, b - Math.max(0, this.now() - from));
+  }
+
+  /** Seconds as m:ss. */
+  private mmss(secs: number): string {
+    const t = Math.max(0, Math.ceil(secs));
+    return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+  }
+
+  /** The two chess clocks (hers first), each in its side's colour; none in a fight that keeps none. */
+  private clocksHtml(v: TacView): string {
+    if (!v.bank) return '';
+    const one = (x: 0 | 1) => {
+      const mine = x === v.you;
+      const b = v.bank![x];
+      if (b < 0) return '';
+      const tip = mine ? `${L('clock.you', { t: this.mmss(b) })}. ${L('clock.tip')}` : L('clock.foe', { t: this.mmss(b) });
+      return `<span class="tb-clock ${mine ? 'you' : 'foe'}" data-clock="${x}" title="${esc(tip)}" aria-label="${esc(tip)}">${icon('icon.bt_hold', '', 'ico-xs')}<b>${this.mmss(b)}</b></span>`;
+    };
+    return `<div class="tb-clocks">${one(v.you)}${one((1 - v.you) as 0 | 1)}</div>`;
+  }
+
+  /** Once a frame: the clocks' numbers, the one that runs going down. */
+  private clocksTick(v: TacView): void {
+    if (!v.bank || !this.el) return;
+    const act = v.stacks.find((s) => s.id === v.active);
+    this.el.querySelectorAll<HTMLElement>('[data-clock]').forEach((c) => {
+      const x = Number(c.dataset.clock) as 0 | 1;
+      const n = this.bankNow(v, x);
+      const txt = this.mmss(n);
+      const b = c.querySelector('b');
+      if (b && b.textContent !== txt) b.textContent = txt;
+      c.classList.toggle('run', !v.over && !!act && act.side === x && !v.heroes[x].auto);
+      c.classList.toggle('low', n >= 0 && n < 15);
+    });
   }
 
   /** The stack's card: what it is, its numbers, its officer. A desk's beside the field; a phone's a bottom sheet
@@ -2944,15 +3008,17 @@ export class TacticalPanel {
     const el = this.el;
     if (!v || !el) return;
     // Her clock starts once what came before her turn is played (the server's `ends` counts it in): it shows 30 s till then.
-    const left = Math.min(TAC_TURN, Math.max(0, v.ends - this.now()));
+    const whole = v.turn ?? TAC_TURN;
+    const left = Math.min(whole, Math.max(0, v.ends - this.now()));
     const bar = el.querySelector<HTMLElement>('.tb-timer > i');
-    if (bar) bar.style.width = `${v.over ? 0 : Math.min(1, left / 30) * 100}%`;
+    if (bar) bar.style.width = `${v.over ? 0 : Math.min(1, left / whole) * 100}%`;
+    this.clocksTick(v);
     const secs = el.querySelector<HTMLElement>('.tb-secs');
     if (secs) secs.textContent = v.mine && !v.over ? L('secs', { n: Math.ceil(left) }) : '';
     // A phone's clock: the ring round the turn's face, running down (no number on it).
     const face = el.querySelector<HTMLElement>('.tb-chip.turn');
     if (face) {
-      const k = (v.over ? 0 : Math.min(1, left / 30)).toFixed(3);
+      const k = (v.over ? 0 : Math.min(1, left / whole)).toFixed(3);
       if (face.style.getPropertyValue('--tl') !== k) face.style.setProperty('--tl', k);
     }
     this.feedDom(v);
