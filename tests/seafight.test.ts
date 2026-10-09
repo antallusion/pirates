@@ -15,7 +15,7 @@ import { pursuitInput, pursuitOf, PURSUIT_RESUME, startPursuit } from '../server
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import { STRIKE_CREW, wouldStrike } from '../server/src/game/struck.ts';
 import { newBattle, quickFinish } from '../server/src/game/tacbattle.ts';
-import { sideOf } from '../server/src/game/tactical.ts';
+import { boardLen, sideOf } from '../server/src/game/tactical.ts';
 import { duelSea, openWater, putSide } from './balance/duel.ts';
 import { LEVEL_HULL, captainRun, pct, seaCaptain, seaDuel } from './balance/seafight.ts';
 import type { FakeConn } from './helpers.ts';
@@ -206,7 +206,7 @@ test('the chance is honest: the battles played afresh bear it out within 5%, and
   for (let k = 0; k < 200; k++) {
     const seed = seeds.int(1, 1e9);
     const r = new Rng(seed ^ 0x7ac7);
-    const bt = newBattle(structuredClone(sa), structuredClone(sb), seed, game.now, r);
+    const bt = newBattle(structuredClone(sa), structuredClone(sb), seed, game.now, r, { len: boardLen(me, foe) }); // docs/25: a boarding's own length, as the game fights it
     quickFinish(bt, game.now, r);
     if (bt.over?.winner === 0) won++;
   }

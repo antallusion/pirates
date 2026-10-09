@@ -81,6 +81,12 @@ export function longFoe(ship: ShipEntity): boolean {
   return isTrialShip(ship) || raidSpellHp(ship) !== undefined || ship.npcRole === 'boss';
 }
 
+/** docs/25 block Г: the length a boarding of these two ships is fought at (startTactical lays it out so; the odds
+ *  shown before it, boardodds.ts, the same). */
+export function boardLen(a: ShipEntity, b: ShipEntity): 'board' | 'long' {
+  return longFoe(a) || longFoe(b) ? 'long' : 'board';
+}
+
 /** A man's worth in a boarding (HoMM3's square law: his blows by his hit points, each behind his Attack and Defense). */
 function manWorth(u: TacArmyEntry['u']): number {
   const d = UNITS[u];
@@ -200,7 +206,7 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
       bIn.spellHp = so.spellHp;
     }
     bIn.spellHp ??= contractSpellHp(b) ?? raidSpellHp(b); // docs/19 E15, E11: a legend of the Admiralty or of the Abyss orders as a captain, not as her army
-    const len = so || longFoe(a) || longFoe(b) ? 'long' : 'board';
+    const len = so ? 'long' : boardLen(a, b);
     const bt = newBattle(sideOf(game, a, b, true), bIn, seed, game.now, rng, { ...(so ? { siege: so.siege } : {}), len });
     fight.tac = bt;
     // docs/25 item 49: a captain against a clearly weaker ship of the sea is offered the quick fight at once.

@@ -14,7 +14,7 @@ import { BOARD_LOSS_PURSE } from './Game.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
 import { lossesOf, newBattle, quickFinish } from './tacbattle.ts';
-import { sideOf } from './tactical.ts';
+import { boardLen, sideOf } from './tactical.ts';
 
 /** The battles played out for one chance (±3.5% at worst: the window's chance matches the outcomes it promises). */
 export const ODDS_SIMS = 200;
@@ -55,7 +55,7 @@ export function boardOdds(game: Game, a: ShipEntity, b: ShipEntity, sims = ODDS_
   for (let k = 0; k < sims; k++) {
     const seed = oddsSeed(a, b, k);
     const rng = new Rng(seed ^ 0x7ac7);
-    const bt = newBattle(structuredClone(sa), structuredClone(sb), seed, game.now, rng);
+    const bt = newBattle(structuredClone(sa), structuredClone(sb), seed, game.now, rng, { len: boardLen(a, b) }); // docs/25: as the boarding is fought
     quickFinish(bt, game.now, rng);
     if (bt.over?.winner === 0) won++;
     else {
