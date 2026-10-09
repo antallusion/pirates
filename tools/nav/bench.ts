@@ -2,7 +2,7 @@
 // stacks and hulks thick about them), a third of them under «Атаковать» on a pirate of the sea a little way off, a third
 // on the helmsman's run to a mark two kilometres off past what lies there, a third under way by hand; the sea's own
 // ships awake about them. Prints the mean and median ms a tick (blocks of 100 after a warm-up) and the profiler's laps.
-//   node --disable-warning=ExperimentalWarning tools/nav/bench.ts [ticks]
+//   node --disable-warning=ExperimentalWarning tools/nav/bench.ts [ticks] [--quiet]
 
 import { join, makeGame, onHull } from '../../tests/helpers.ts';
 import { spawnPirate } from '../../server/src/game/npc.ts';
@@ -11,7 +11,8 @@ import { openAt } from './harness.ts';
 
 const TICKS = Math.max(400, Number(process.argv[2] ?? 1600));
 const { game } = makeGame();
-game.directorOn = true;
+// (`--quiet`: the sea director kept still, as the tests keep it: the helms' own share stands out.)
+game.directorOn = !process.argv.includes('--quiet');
 const w = game.world;
 // Two crowds of twenty in the dense sea: open water about two reefs, within three kilometres of each.
 const spots: { x: number; y: number }[] = [];
