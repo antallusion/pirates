@@ -243,6 +243,7 @@ import { raidView, stepAbyssRaid } from './abyssraid.ts'; // docs/19 E11
 import { relicCheck } from './relics.ts'; // docs/19 E12
 import { InvasionHub, invasionKill, invasionView, stepInvasions } from './invasions.ts'; // docs/19 E16
 import { citView, stepCitadels } from './citadels.ts'; // docs/19 E4–E8
+import { arenaView, stepArena } from './arena.ts'; // docs/19 E14
 import { shoreBossPrompt, stepShoreBosses } from './shorebosses.ts'; // the great ones ashore (owner, 2026-10-03)
 import { installLandHooks } from './landecon.ts'; // docs/18 V
 import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
@@ -903,6 +904,7 @@ export class Game {
     if (this.tick % 20 === 0) stepTrials(this); // docs/19 E3: a trial whose captain is gone
     if (this.tick % 20 === 0) stepAbyssRaid(this); // docs/19 E11: the raid's owed paid, a boarding long over forgotten
     stepCitadels(this); // docs/19 E4–E8: the windows, the hours held, the week, the season, the charts
+    stepArena(this); // docs/19 E14: the Colosseum's queue, its drafts' clocks, its season
     stepSeaMarks(this); // the boats at the dense sea's marks
     stepSeaFinds(this); // docs/19 D5: the sea's small things; her time at sea for the day's caps
     stepRoamers(this); // docs/19 D7: the creatures roaming the sea, as HoMM3's neutral stacks
@@ -1588,6 +1590,7 @@ export class Game {
       seal: sealView(this, s),
       raid: raidView(this, s),
       cit: citView(this, s),
+      arena: arenaView(this, s), // docs/19 E14
       homeIsle: ownIsland(this, s.accountId)?.island ?? null,
       isleRaid: raidPointer(this, s),
       claimIsle: claimPrompt(this, s),

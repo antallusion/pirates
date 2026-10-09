@@ -26,6 +26,7 @@ import { afterBattle, heroFace, heroInput, maybeArtifact } from './hero.ts';
 import { npcPathOf } from './pathbook.ts';
 import { isTrialShip } from './throne.ts'; // docs/19 E3
 import { isCastellan, siegeSetup } from './citadels.ts'; // docs/19 E5
+import { arenaResultOf, arenaSettle, arenaSetup, arenaTag, isArenaFight } from './arena.ts'; // docs/19 E14
 import { act, endByRansom, killedHp, lossesOf, newBattle, playSince, stepBattle, viewOf } from './tacbattle.ts';
 import type { TacArmyEntry, TacBattle, TacSideInput } from './tacbattle.ts';
 
@@ -133,17 +134,22 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
  *  a battle never shifts the rest of the world's. */
 export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
   const fight = a.boarding!.fight;
-  const seed = game.rng.int(1, 1e9);
+  // docs/19 E14: a bout of the Colosseum — the drafted armies and the template heroes on its sand, its own seed.
+  const arena = arenaSetup(game, a, b);
+  const seed = arena ? arena.seed : game.rng.int(1, 1e9);
   const rng = new Rng(seed ^ 0x7ac7);
   fight.tacRng = rng;
-  // docs/19 E5: a castellan alongside — the siege before her citadel's walls, its garrison in its own seven stacks.
-  const so = siegeSetup(game, a, b);
-  const bIn = sideOf(game, b, a, false);
-  if (so) {
-    bIn.army = so.army.map((x) => ({ u: x.u, n: x.n, src: x.u }));
-    bIn.spellHp = so.spellHp;
+  if (arena) fight.tac = newBattle(arena.sides[0], arena.sides[1], seed, game.now, rng, { arena: true });
+  else {
+    // docs/19 E5: a castellan alongside — the siege before her citadel's walls, its garrison in its own seven stacks.
+    const so = siegeSetup(game, a, b);
+    const bIn = sideOf(game, b, a, false);
+    if (so) {
+      bIn.army = so.army.map((x) => ({ u: x.u, n: x.n, src: x.u }));
+      bIn.spellHp = so.spellHp;
+    }
+    fight.tac = newBattle(sideOf(game, a, b, true), bIn, seed, game.now, rng, so ? { siege: so.siege } : {});
   }
-  fight.tac = newBattle(sideOf(game, a, b, true), bIn, seed, game.now, rng, so ? { siege: so.siege } : {});
   fight.tacSync = [0, 0];
   fight.tacSeen = new Map(fight.tac.stacks.map((s) => [s.id, s.count]));
   sendTac(game, a, b);
@@ -155,6 +161,7 @@ const rngOf = (game: Game, a: ShipEntity): Rng => a.boarding?.fight.tacRng ?? ga
  *  them again; the crews' heart follows the battle's. */
 function sync(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle): void {
   const fight = a.boarding!.fight;
+  if (isArenaFight(fight)) return; // docs/19 E14: a bout touches neither ship's men nor her heart
   const synced = (fight.tacSync ??= [0, 0]);
   const seen = (fight.tacSeen ??= new Map(bt.stacks.map((s) => [s.id, s.start])));
   for (const side of [0, 1] as const) {
@@ -236,49 +243,54 @@ function settle(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle, seq: nu
     a.boarding!.lostRounds = b.boarding!.won = bt.broken[0];
     fight.fires = bt.log.filter((e) => e.k === 'spell' && e.id === 'grenades').length;
     a.boarding!.moves = bt.log.filter((e) => e.k === 'spell' && e.side === 0).length;
-    // Officers whose parties were cut down are carried below.
-    for (const hurt of bt.hurt) {
-      const s = game.sessionOf(hurt.side ? b : a);
-      const o = s?.profile?.company.officers.find((x) => x.id === hurt.id);
-      if (s && o) woundOfficer(game, s, hurt.heavy, 'in the boarding', o);
-    }
-    // The heroes' will spent, First Aid's patched-up men, a guarded ship's artifact (docs/17 H2).
-    for (const side of [0, 1] as const) {
-      const ship = side ? b : a;
-      afterBattle(game, ship, bt.heroes[side].mana, lossesOf(bt, side), bt.heroes[side].input.hero?.raise ?? 0, bt.heroes[side].stam, bt.heroes[side].scrollsUsed);
-    }
-    {
-      const w = bt.over.winner === 0 ? a : b, l = w === a ? b : a;
-      const ws0 = game.sessionOf(w);
-      if (ws0?.profile && !game.sessionOf(l) && bt.over.why !== 'ransom' && !isTrialShip(l)) maybeArtifact(game, ws0, 'guard', l.elite ? 0.6 : Math.min(0.3, bt.heroes[w === a ? 1 : 0].startMen / 400));
-    }
-    // The victor's captain learns from the men his side cut down (HoMM3: the experience of a battle won).
-    const wSide = bt.over.winner;
-    // The beaten who come over (owner, 2026-10-08): to a captain who won the boarding against a ship's crew — every man
-    // of a ship of the sea she took (the fallen who were only wounded and those who struck), the fallen of any other.
-    const loser = winner === a ? b : a;
-    if (bt.over.why !== 'ransom' && !isTrialShip(loser) && joinsFrom(loser)) {
-      const lSide = (1 - wSide) as 0 | 1;
-      const all = wSide === 0 && !loser.isPlayer;
-      const beaten = bt.stacks.filter((x) => x.side === lSide).map((x) => ({ u: x.src, n: all ? x.start : x.start - x.count }));
-      const came = beatenJoin(game, winner, beaten, all ? loser : undefined);
-      if (came.length) {
-        fight.tacJoined = [[], []];
-        fight.tacJoined[wSide] = came;
+    // docs/19 E14: a bout of the Colosseum moves the ratings and nothing of the sea's (no officer hurt, no will spent, no
+    // experience, no artifact, nobody coming over).
+    if (isArenaFight(fight)) arenaSettle(game, fight, bt.over.winner);
+    else {
+      // Officers whose parties were cut down are carried below.
+      for (const hurt of bt.hurt) {
+        const s = game.sessionOf(hurt.side ? b : a);
+        const o = s?.profile?.company.officers.find((x) => x.id === hurt.id);
+        if (s && o) woundOfficer(game, s, hurt.heavy, 'in the boarding', o);
       }
-    }
-    creaturesWon(game, winner, bt.stacks.filter((x) => x.side === wSide).map((x) => x.src)); // docs/18 #39
-    const ws = game.sessionOf(winner);
-    const lost = winner === a ? b : a;
-    const xp = ws?.profile ? battleXp(ws.profile.level, lost.onLadder ? lost.combatLevel : null, killedHp(bt, wSide), bt.stacks.reduce((n, x) => n + (x.side !== wSide ? x.start * x.hpMax : 0), 0), TAC_XP_SHARE) : 0;
-    fight.tacXp = [wSide === 0 ? xp : 0, wSide === 1 ? xp : 0];
-    if (ws?.profile && xp > 0) game.grantXp(ws, xp, `Won the boarding battle with ${(winner === a ? b : a).name}`, true);
-    // Boarders thrown back: the defenders' fight won (the victor's is counted with the prize).
-    if (winner === b && bt.over.why !== 'ransom') {
-      const s = game.sessionOf(b);
-      if (s?.profile) {
-        onFightWon(game, s);
-        game.grantXp(s, targetXp(s.profile.level, a.onLadder ? a.combatLevel : null, XP_UNITS.repelled), `Threw back the boarders of ${a.name}`, true);
+      // The heroes' will spent, First Aid's patched-up men, a guarded ship's artifact (docs/17 H2).
+      for (const side of [0, 1] as const) {
+        const ship = side ? b : a;
+        afterBattle(game, ship, bt.heroes[side].mana, lossesOf(bt, side), bt.heroes[side].input.hero?.raise ?? 0, bt.heroes[side].stam, bt.heroes[side].scrollsUsed);
+      }
+      {
+        const w = bt.over.winner === 0 ? a : b, l = w === a ? b : a;
+        const ws0 = game.sessionOf(w);
+        if (ws0?.profile && !game.sessionOf(l) && bt.over.why !== 'ransom' && !isTrialShip(l)) maybeArtifact(game, ws0, 'guard', l.elite ? 0.6 : Math.min(0.3, bt.heroes[w === a ? 1 : 0].startMen / 400));
+      }
+      // The victor's captain learns from the men his side cut down (HoMM3: the experience of a battle won).
+      const wSide = bt.over.winner;
+      // The beaten who come over (owner, 2026-10-08): to a captain who won the boarding against a ship's crew — every man
+      // of a ship of the sea she took (the fallen who were only wounded and those who struck), the fallen of any other.
+      const loser = winner === a ? b : a;
+      if (bt.over.why !== 'ransom' && !isTrialShip(loser) && joinsFrom(loser)) {
+        const lSide = (1 - wSide) as 0 | 1;
+        const all = wSide === 0 && !loser.isPlayer;
+        const beaten = bt.stacks.filter((x) => x.side === lSide).map((x) => ({ u: x.src, n: all ? x.start : x.start - x.count }));
+        const came = beatenJoin(game, winner, beaten, all ? loser : undefined);
+        if (came.length) {
+          fight.tacJoined = [[], []];
+          fight.tacJoined[wSide] = came;
+        }
+      }
+      creaturesWon(game, winner, bt.stacks.filter((x) => x.side === wSide).map((x) => x.src)); // docs/18 #39
+      const ws = game.sessionOf(winner);
+      const lost = winner === a ? b : a;
+      const xp = ws?.profile ? battleXp(ws.profile.level, lost.onLadder ? lost.combatLevel : null, killedHp(bt, wSide), bt.stacks.reduce((n, x) => n + (x.side !== wSide ? x.start * x.hpMax : 0), 0), TAC_XP_SHARE) : 0;
+      fight.tacXp = [wSide === 0 ? xp : 0, wSide === 1 ? xp : 0];
+      if (ws?.profile && xp > 0) game.grantXp(ws, xp, `Won the boarding battle with ${(winner === a ? b : a).name}`, true);
+      // Boarders thrown back: the defenders' fight won (the victor's is counted with the prize).
+      if (winner === b && bt.over.why !== 'ransom') {
+        const s = game.sessionOf(b);
+        if (s?.profile) {
+          onFightWon(game, s);
+          game.grantXp(s, targetXp(s.profile.level, a.onLadder ? a.combatLevel : null, XP_UNITS.repelled), `Threw back the boarders of ${a.name}`, true);
+        }
       }
     }
   }
@@ -291,7 +303,7 @@ function settle(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle, seq: nu
 export function ransomCost(game: Game, ship: ShipEntity): number | null {
   const st = ship.boarding;
   const bt = st?.fight.tac;
-  if (!st || !bt || st.attacker || bt.over) return null;
+  if (!st || !bt || st.attacker || bt.over || isArenaFight(st.fight)) return null; // docs/19 E14: no silver on the sand
   const s = game.sessionOf(ship);
   if (!s?.profile) return null;
   const foe = bt.stacks.filter((x) => x.side === 0 && x.count > 0).map((x) => ({ u: x.unit, n: x.count }));
@@ -327,7 +339,8 @@ export function tacAction(game: Game, ship: ShipEntity, action: TacAction): stri
   const a = st.attacker ? ship : other, b = st.attacker ? other : ship;
   const side = st.attacker ? 0 : 1;
   if (!action || typeof action !== 'object') return 'No such order';
-  if (action.a === 'surrender' && side === 0) return 'Boarders do not strike: fall back instead';
+  // docs/19 E14: on the sand of the Colosseum either side may yield the bout.
+  if (action.a === 'surrender' && side === 0 && !isArenaFight(st.fight)) return 'Boarders do not strike: fall back instead';
   const seq = bt.seq;
   if (action.a === 'ransom') {
     if (side === 0) return 'Boarders do not pay: fall back instead';
@@ -355,8 +368,11 @@ export function sendTac(game: Game, a: ShipEntity, b: ShipEntity | null): void {
     const side = st.attacker ? 0 : 1;
     const f = st.fight;
     const joined = f.tacJoined?.[side];
-    const result = bt.over ? { lost: lossesOf(bt, side), killed: lossesOf(bt, (1 - side) as 0 | 1), xp: f.tacXp?.[side] ?? 0, ...(f.tacPaid && side === 1 ? { paid: f.tacPaid } : {}), ...(joined?.length ? { joined } : {}) } : undefined;
-    game.sendTo(ses, { t: 'board_tac', view: viewOf(bt, side, game.now, st.attacker ? !s.hasFlag('no_quarter') : true, { ransom: ransomCost(game, s), ...(result ? { result } : {}) }) });
+    // docs/19 E14: a bout of the Colosseum — no grapples to cut, either side may yield, its rating on the end screen.
+    const arena = arenaTag(f);
+    const ar = arena ? arenaResultOf(f, side) : undefined;
+    const result = bt.over ? { lost: lossesOf(bt, side), killed: lossesOf(bt, (1 - side) as 0 | 1), xp: f.tacXp?.[side] ?? 0, ...(f.tacPaid && side === 1 ? { paid: f.tacPaid } : {}), ...(joined?.length ? { joined } : {}), ...(ar ? { arena: ar } : {}) } : undefined;
+    game.sendTo(ses, { t: 'board_tac', view: viewOf(bt, side, game.now, arena ? false : st.attacker ? !s.hasFlag('no_quarter') : true, { ransom: ransomCost(game, s), ...(result ? { result } : {}), ...(arena ? { canStrike: true, arena } : {}) }) });
   }
 }
 

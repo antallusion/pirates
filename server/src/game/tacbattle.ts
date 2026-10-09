@@ -224,6 +224,8 @@ export interface TacBattle {
   beatFrom?: number;
   /** docs/19 E5: a citadel's siege — the wall line's stones, the catapult, the towers. */
   siege?: SiegeState;
+  /** docs/19 E14: a bout of the Colosseum, on its sand. */
+  arena?: true;
 }
 
 const sp = (s: TacStack, x: UnitSpecial): boolean => s.sp.includes(x);
@@ -318,6 +320,23 @@ export function makeSiegeField(seed: number, type: string, hp: readonly number[]
   }
   const back = hexIndex(TAC_W - 1, rng.pick([0, 8]));
   cells[back] = rng.chance(0.5) ? 'B' : 'K';
+  return cells;
+}
+
+/** docs/19 E14: the sand of the Colosseum — one open ring, no planks and no surf, a stack of barrels and one of crates in
+ *  the middle ground of each half (the same seen from either side, as the decks are), so a bout is the draft's and the
+ *  captains' and nobody's deck. */
+export function makeArenaField(seed: number): TacCell[] {
+  const rng = new Rng((seed ^ 0xa7e4a) >>> 0);
+  const cells: TacCell[] = Array.from({ length: TAC_W * TAC_H }, () => '.');
+  for (let y = 1; y < TAC_H; y += 2) cells[hexIndex(TAC_W - 1, y)] = '#';
+  const set = (i: number, c: TacCell) => {
+    cells[i] = c;
+    cells[hexMirror(i)] = c;
+  };
+  const rows = rng.chance(0.5) ? [1, 6] : [2, 7];
+  set(hexIndex(3, rows[0]), 'B');
+  set(hexIndex(3, rows[1]), 'K');
   return cells;
 }
 
@@ -490,15 +509,16 @@ function newHero(input: TacSideInput, stacks: TacStack[]): TacHero {
 }
 
 /** A battle laid out: the field, what the guns left of each deck, both sides' stacks, round one about to open. */
-export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: number, rng: Rng, opts: { land?: string; siege?: SiegeInput } = {}): TacBattle {
+export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: number, rng: Rng, opts: { land?: string; siege?: SiegeInput; arena?: boolean } = {}): TacBattle {
   // docs/19 E5: a citadel's siege is fought ashore before its walls.
   const sg = opts.siege;
   const land = sg ? sg.type : opts.land;
   const max = sg ? Array.from({ length: TAC_H }, (_, y) => Math.max(1, Math.round(sg.max?.[y] ?? SIEGE.hp))) : [];
   const hp = sg ? max.map((m, y) => Math.max(0, Math.min(m, Math.round(sg.hp?.[y] ?? m)))) : [];
-  const cells = sg ? makeSiegeField(seed, sg.type, hp, max) : land ? makeLandField(seed, land) : makeField(seed);
+  // docs/19 E14: a bout of the Colosseum on its own sand (no deck of either ship: no holes, no fire).
+  const cells = sg ? makeSiegeField(seed, sg.type, hp, max) : land ? makeLandField(seed, land) : opts.arena ? makeArenaField(seed) : makeField(seed);
   // Ashore (docs/18 II) the ship's guns are not there: no holes, no fire, no swivels.
-  if (!land) for (const [x, side] of [[a, 0], [b, 1]] as const) if ((x.holes ?? 0) > 0 || x.fire) scarDeck(cells, side, x.holes ?? 0, !!x.fire, seed);
+  if (!land && !opts.arena) for (const [x, side] of [[a, 0], [b, 1]] as const) if ((x.holes ?? 0) > 0 || x.fire) scarDeck(cells, side, x.holes ?? 0, !!x.fire, seed);
   // Tactics (docs/17 H2): the higher hand has the field, the lower none — but a garrison keeps within its walls.
   const ta = a.hero?.tactics ?? 0, tb = b.hero?.tactics ?? 0;
   const sa = buildStacks(a, 0, cells, 1, ta > tb ? TACTICS_DEPLOY[ta] : 0);
@@ -509,7 +529,7 @@ export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: n
   }
   const bt: TacBattle = {
     cells, stacks: [...sa, ...sb], heroes: [newHero(a, sa), newHero(b, sb)], round: 0, queue: [], active: null, turnEnds: now, aiAt: now,
-    log: [], events: 0, seq: 0, over: null, dead: [0, 0], hurt: [], broken: [0, 0], ...(land ? { land } : {}),
+    log: [], events: 0, seq: 0, over: null, dead: [0, 0], hurt: [], broken: [0, 0], ...(land ? { land } : {}), ...(opts.arena ? { arena: true as const } : {}),
     ...(sg ? { siege: { hp, max, catapult: Math.max(0, Math.round(sg.catapult ?? 1)), tower: Math.max(0, sg.tower ?? 0), ...(sg.name ? { name: sg.name } : {}) } } : {}),
   };
   // The ship's broadside before the assault: its balls on the wall, the gate and the towers.
@@ -2316,7 +2336,7 @@ function flagsOf(bt: TacBattle, s: TacStack): Partial<TacStackView> {
   return out;
 }
 
-export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean, extra: Partial<Pick<TacView, 'ransom' | 'result' | 'land'>> = {}): TacView {
+export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean, extra: Partial<Pick<TacView, 'ransom' | 'result' | 'land' | 'canStrike' | 'arena'>> = {}): TacView {
   const act0 = bt.active !== null ? stackById(bt, bt.active) : undefined;
   const mine = !!act0 && act0.side === side && !bt.over && !bt.heroes[side].auto;
   const reach = mine && act0 ? reachOf(bt, act0) : new Map<number, number>();
