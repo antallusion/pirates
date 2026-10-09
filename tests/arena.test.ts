@@ -25,7 +25,7 @@ import { act } from '../server/src/game/tacbattle.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { SERVER_RU_ADMIN } from '../client/src/lang/server.ru.admin.ts';
 import { setLang } from '../client/src/i18n.ts';
-import { kindTable, mirror, pathMatrix, share } from '../tools/balance-arena.ts';
+import { kindTable, mirror, pathMatrix, pathPairs, share } from '../tools/balance-arena.ts';
 import { join, makeGame, onHull, steps } from './helpers.ts';
 
 // ------------------------------------------------------------------ the draft
@@ -376,4 +376,11 @@ test('balance: the paths stand near even on the sand (their weights, ARENA_PATH)
     assert.ok(mean > 0.4 && mean < 0.6, `${a}: ${mean}`);
   }
   void draftOpen;
+});
+
+test('balance: every pair of paths stands near even on the sand, not only their means (ARENA_PATH)', () => {
+  // 240 bouts a pair (both its cells): a share's noise is ±3.2 points. At 400 bouts a cell on five sets of seeds the
+  // pairs stand at 47–53 % (the navigator against the admiral was at 42 before), so ±14 is three noises past the
+  // worst: it fails on a weight that breaks a pair, not on the dice. The finer table: `balance-arena.ts 400 --pairs`.
+  for (const p of pathPairs(pathMatrix(120, false))) assert.ok(p.share > 0.36 && p.share < 0.64, `${p.a} against ${p.b}: ${p.share}`);
 });

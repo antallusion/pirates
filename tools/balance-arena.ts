@@ -3,6 +3,9 @@
 //                                                          dice, each kind's picks, wins and bans, the paths)
 //   node tools/balance-arena.ts 4000 --calibrate [iters]  ARENA_CAL: each kind's measure, so that a kind's pick wins half
 //   node tools/balance-arena.ts 4000 --features           what wins a random draft (stacks, shooters, the swift, mixing)
+//   node tools/balance-arena.ts 400 --pairs               the paths' table at 400 bouts a cell, each pair's share over
+//                                                          both its cells, the worst pair
+//   node tools/balance-arena.ts 400 --paths [iters]       ARENA_PATH's Attack and Defence, so that each path's mean is half
 //
 // Both heroes are the Colosseum's template on their paths (arenaHero), both armies the draft's (draftArmy); a bout is
 // the quick battle on the sand (newBattle with `arena`, quickFinish). Drafters:
@@ -137,12 +140,17 @@ export function mirror(n: number, seed = 3): number {
   return w / n;
 }
 
-/** Path against path, the same draft by the steward for both: the row path's share. */
-export function pathMatrix(n: number): Record<string, Record<string, number>> {
+/** Path against path, the same draft by the steward for both: the row path's share (`mirrors` false: a path against
+ *  itself is not fought, a half; the other cells the same). */
+export function pathMatrix(n: number, mirrors = true): Record<string, Record<string, number>> {
   const out: Record<string, Record<string, number>> = {};
   for (const a of CAPTAIN_IDS) {
     out[a] = {};
     for (const b of CAPTAIN_IDS) {
+      if (a === b && !mirrors) {
+        out[a][b] = 0.5;
+        continue;
+      }
       const rng = new Rng(11 + CAPTAIN_IDS.indexOf(a) * 31 + CAPTAIN_IDS.indexOf(b));
       let w = 0;
       for (let i = 0; i < n; i++) {
@@ -155,6 +163,28 @@ export function pathMatrix(n: number): Record<string, Record<string, number>> {
     }
   }
   return out;
+}
+
+/** Each pair of paths from a path table: the first path's share over both cells (her row and her column, each seat
+ *  half the bouts), the farthest from half first. */
+export function pathPairs(m: Record<string, Record<string, number>>): { a: CaptainId; b: CaptainId; share: number }[] {
+  const out: { a: CaptainId; b: CaptainId; share: number }[] = [];
+  CAPTAIN_IDS.forEach((a, i) => CAPTAIN_IDS.slice(i + 1).forEach((b) => out.push({ a, b, share: (m[a][b] + 1 - m[b][a]) / 2 })));
+  return out.sort((x, y) => Math.abs(y.share - 0.5) - Math.abs(x.share - 0.5));
+}
+
+/** The path table at `n` bouts a cell, each path's mean, each pair's share and the worst. */
+function pairsReport(n: number): void {
+  const m = pathMatrix(n);
+  const p1 = (x: number) => `${(x * 100).toFixed(1)}`;
+  console.log(`Paths (row against column, the steward's drafts, ${n} bouts a cell):`);
+  console.log(`  ${''.padEnd(10)}${CAPTAIN_IDS.map((c) => c.slice(0, 6).padStart(7)).join('')}   mean`);
+  for (const a of CAPTAIN_IDS) console.log(`  ${a.padEnd(10)}${CAPTAIN_IDS.map((b) => p1(m[a][b]).padStart(7)).join('')}   ${p1(CAPTAIN_IDS.reduce((x, b) => x + m[a][b], 0) / CAPTAIN_IDS.length)}`);
+  const pairs = pathPairs(m);
+  console.log(`Pairs (both cells, ${2 * n} bouts each):`);
+  for (const p of pairs) console.log(`  ${`${p.a} – ${p.b}`.padEnd(22)} ${p1(p.share).padStart(5)}`);
+  const cells = CAPTAIN_IDS.flatMap((a) => CAPTAIN_IDS.filter((b) => b !== a).map((b) => ({ a, b, v: m[a][b] }))).sort((x, y) => Math.abs(y.v - 0.5) - Math.abs(x.v - 0.5));
+  console.log(`  the worst pair ${pairs[0].a} – ${pairs[0].b} ${p1(pairs[0].share)}; the worst cell ${cells[0].a} against ${cells[0].b} ${p1(cells[0].v)}`);
 }
 
 /** What wins a random draft: each feature's bucket, the share of its armies that won. */
@@ -200,19 +230,28 @@ function calibrate(n: number, iters: number): void {
   console.log(JSON.stringify(Object.fromEntries(ARENA_POOL.map((u) => [u, Math.round((ARENA_CAL[u] ?? 1) * 100) / 100]))));
 }
 
-/** ARENA_PATH: each path's weight on the sand, so that its mean against all paths is half. */
+/** ARENA_PATH: each path's weight on the sand, so that its mean against all paths is half — its points of Attack and
+ *  Defence together, their lean (Attack less Defence: the pairs pick it, `--pairs`) kept, Attack the odd point. */
 function calibratePaths(n: number, iters: number): void {
+  const lean = Object.fromEntries(CAPTAIN_IDS.map((c) => [c, (ARENA_PATH[c]?.atk ?? 0) - (ARENA_PATH[c]?.def ?? 0)]));
   for (let it = 0; it < iters; it++) {
-    const m = pathMatrix(n);
+    const m = pathMatrix(n, false);
     const mean = Object.fromEntries(CAPTAIN_IDS.map((a) => [a, CAPTAIN_IDS.reduce((x, b) => x + m[a][b], 0) / CAPTAIN_IDS.length]));
-    console.log(`  round ${it + 1}: ${CAPTAIN_IDS.map((c) => `${c} ${pc(mean[c])} (${ARENA_PATH[c] ?? 0})`).join(' · ')}`);
-    for (const c of CAPTAIN_IDS) ARENA_PATH[c] = (ARENA_PATH[c] ?? 0) + Math.round((0.5 - mean[c]) * (it < 3 ? 16 : 8));
+    const worst = pathPairs(m)[0];
+    console.log(`  round ${it + 1}: ${CAPTAIN_IDS.map((c) => `${c} ${pc(mean[c])} (${ARENA_PATH[c]?.atk ?? 0}/${ARENA_PATH[c]?.def ?? 0})`).join(' · ')}; the worst pair ${worst.a} – ${worst.b} ${pc(worst.share)}`);
+    for (const c of CAPTAIN_IDS) {
+      const w = (ARENA_PATH[c] ??= {});
+      const tot = (w.atk ?? 0) + (w.def ?? 0) + Math.round((0.5 - mean[c]) * (it < 3 ? 16 : 8));
+      w.atk = Math.ceil((tot + lean[c]) / 2);
+      w.def = tot - w.atk;
+    }
   }
   console.log(JSON.stringify(ARENA_PATH));
 }
 
 if (import.meta.main ?? process.argv[1]?.endsWith('balance-arena.ts')) {
-  if (process.argv.includes('--paths')) calibratePaths(N, Number(process.argv[process.argv.indexOf('--paths') + 1]) || 8);
+  if (process.argv.includes('--pairs')) pairsReport(N);
+  else if (process.argv.includes('--paths')) calibratePaths(N, Number(process.argv[process.argv.indexOf('--paths') + 1]) || 8);
   else if (process.argv.includes('--calibrate')) calibrate(N, Number(process.argv[process.argv.indexOf('--calibrate') + 1]) || 8);
   else if (process.argv.includes('--features')) features(N);
   else if (process.argv.includes('--fame')) {
