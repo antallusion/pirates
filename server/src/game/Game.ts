@@ -238,6 +238,7 @@ import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
 import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
 import { installLairHooks, landFighting, landTac, lairMessage, lairPrompt, resendLandFight, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
 import { installSealHooks, sealView } from './seals.ts'; // docs/19 E9
+import { installTitanHooks } from './titans.ts'; // docs/19 E10
 import { shoreBossPrompt, stepShoreBosses } from './shorebosses.ts'; // the great ones ashore (owner, 2026-10-03)
 import { installLandHooks } from './landecon.ts'; // docs/18 V
 import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
@@ -430,6 +431,7 @@ export class Game {
     // Some three thousand jobs for the ports' people (docs/11 P4), the same on every server of this seed.
     registerJobs([...generateQuests(this.world, seed), ...generateLairJobs(this.world, seed)]); // and the creature jobs (docs/18 #23)
     installLairHooks(); // the pen in the town and its recruit window (docs/18 #20)
+    installTitanHooks(); // docs/19 E10: the Grail's titans beside the pen's rows
     installSealHooks(); // docs/19 E9: a seal's mythic depth on its lair's card
     installLandHooks(); // the land's resources in the town (docs/18 #43)
     registerArcs(generateArcs(this.world, seed)); // five written arcs a region, three chapters each

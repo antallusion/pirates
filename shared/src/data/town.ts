@@ -61,11 +61,13 @@ export function mightCap(level: number, crewMax: number, slots: number, k = MIGH
 
 /** How many men of kind `u` (trained up from `from`, if given) may join `army` under the cap. */
 export function mightRoom(army: readonly ArmyStack[], u: UnitId, level: number, crewMax: number, slots: number, from?: UnitId, k?: number): number {
-  if (UNITS[u].tier <= 1) return Infinity;
+  // (docs/19 E10: the titans stand out of the cap — hired at the Grail by their own rules, and never counted against it)
+  if (UNITS[u].tier <= 1 || UNITS[u].titan) return Infinity;
   const cap = mightCap(level, crewMax, slots, k);
   const men = army.reduce((a, x) => a + x.n, 0);
+  const own = army.filter((x) => !UNITS[x.u]?.titan);
   const trial = (n: number): ArmyStack[] => {
-    const out = army.map((x) => ({ ...x }));
+    const out = own.map((x) => ({ ...x }));
     if (from) {
       const f = out.find((x) => x.u === from);
       if (f) f.n -= n;

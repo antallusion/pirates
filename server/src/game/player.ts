@@ -301,6 +301,8 @@ export interface Profile {
   throne?: ThroneRec;
   /** docs/19 E9: her seal of the deep (seals.ts). */
   seal?: SealRec;
+  /** docs/19 E10: the titans she hired at the Grail this week (titans.ts). */
+  titans?: { week: number; n: number };
   /** docs/19 D1–D5: her day's finds at their full worth by source, and her seconds at sea that day (seahaul.ts). */
   seaHaul?: { day: number; sec: number; n: Partial<Record<string, number>>; told?: Partial<Record<string, number>> };
   /** docs/19 D5: the small things of the sea she has had, by kind (for her log and the tests). */

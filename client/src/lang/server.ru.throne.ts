@@ -3,9 +3,11 @@
 // the sentences carry (the nodes, the branches, the legends and their ships) come from the shared data.
 
 import { thronePatterns } from '../../../shared/src/data/throne.ts';
+import { TITAN_IDS, TITAN_NAMES } from '../../../shared/src/data/titans.ts';
 
 export const SERVER_RU_THRONE: Record<string, string> = {
   ...Object.fromEntries(thronePatterns()),
+  ...Object.fromEntries(TITAN_IDS.map((k) => TITAN_NAMES[k].name)), // the titans' names in the lines (docs/19 E10)
   // glory
   'The Throne of the Sea opens: past the cap your experience is glory. Open it from the captain’s plate.': 'Открывается Престол Моря: после потолка опыт идёт в славу. Откройте его с плашки капитана.',
   'Glory rank {0}!': 'Ранг славы {0}!',
@@ -54,5 +56,12 @@ export const SERVER_RU_THRONE: Record<string, string> = {
   '{0} carries a seal of the deep to {1}.': '{0} поднимает печать глубин до {1}.',
   'The seals open at level {0}.': 'Печати открываются на {0}-м уровне.',
   'Seal {0}, mythic depth: {1}': 'Печать {0}, мифическая глубина: «{1}»',
+  // the titans (docs/19 E10)
+  'A titan serves a ship of level {0} and up.': 'Титан служит кораблю уровня {0} и выше.',
+  'The Grail gives one titan a week: come again next week.': 'Грааль даёт одного титана в неделю: приходите на следующей неделе.',
+  'The {0} serves you already: never two of a kind.': '{0} уже служит вам: двух одного вида не бывает.',
+  'Two titans aboard at the most.': 'На борту не больше двух титанов.',
+  'Raise the Grail over your town first.': 'Сначала поднимите Грааль над своим городом.',
+  'The {0} rises at the Grail and follows your ship.': '{0} поднимается у Грааля и идёт за вашим кораблём.',
   'Come in to the shore of a lair of your seal: within the boats’ reach.': 'Подойдите к берегу логова вашей печати, на расстояние шлюпок.',
 };

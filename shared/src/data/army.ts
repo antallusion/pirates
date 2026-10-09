@@ -12,11 +12,12 @@ import { PREMIUM_BEASTS } from './premiumbeasts.ts';
 import type { PremiumBeastId } from './premiumbeasts.ts';
 import { SHIP_BEASTS, type ShipBeastId } from './shipbeasts.ts'; // the premium hulls' own kinds (owner, 2026-10-03)
 import { BOSS_UNITS, type BossUnitId } from './bossunits.ts'; // the great ones ashore (2026-10-03), never hired
+import { TITANS, type TitanId } from './titans.ts'; // docs/19 E10: the eighth tier, hired at the Grail
 
 /** Every kind of fighting man: seven tiers, a plain and an upgraded kind of each — and the land's creatures beside
  *  them (docs/18 II, shared/src/data/bestiary.ts), the world's armies, the shop's creatures (premiumbeasts.ts), the
  *  premium hulls' own kinds (shipbeasts.ts) and the great ones ashore (bossunits.ts). */
-export type UnitId = MenId | BeastId | SeaBeastId | FactionKindId | PremiumBeastId | ShipBeastId | BossUnitId;
+export type UnitId = MenId | BeastId | SeaBeastId | FactionKindId | PremiumBeastId | ShipBeastId | BossUnitId | TitanId;
 export type MenId =
   | 'deckhand' | 'sailor'
   | 'marine' | 'sea_guard'
@@ -115,6 +116,8 @@ export interface UnitDef {
   beast?: boolean;
   /** A legend of the sea (docs/18 #40): the white whale, the young kraken — one a captain, never sold. */
   legend?: boolean;
+  /** docs/19 E10: a titan of the eighth tier — one to a stack, hired at the Grail only, out of the might cap. */
+  titan?: boolean;
   /** One of the world's armies (shared/src/data/factionunits.ts): whose, and the pirate kind it fights as. */
   roster?: Roster;
   as?: MenId;
@@ -168,7 +171,7 @@ function factionUnits(): Record<FactionKindId, UnitDef> {
   return out;
 }
 
-export const UNITS: Record<UnitId, UnitDef> = { ...BASE_UNITS, ...factionUnits(), ...PREMIUM_BEASTS, ...SHIP_BEASTS, ...BOSS_UNITS };
+export const UNITS: Record<UnitId, UnitDef> = { ...BASE_UNITS, ...factionUnits(), ...PREMIUM_BEASTS, ...SHIP_BEASTS, ...BOSS_UNITS, ...TITANS };
 
 export const hasSpecial = (u: UnitId, s: UnitSpecial): boolean => UNITS[u].specials.includes(s);
 

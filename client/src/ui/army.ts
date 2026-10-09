@@ -3,6 +3,7 @@
 // kinds of men, and the word for an army seen from afar («Горстка… Тьма»).
 
 import { BOSS_UNIT_NAMES, isBossUnit } from '../../../shared/src/data/bossunits.ts'; // the great ones ashore (2026-10-03)
+import { TITAN_NAMES, isTitan } from '../../../shared/src/data/titans.ts'; // docs/19 E10
 import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
 import { ARMY_WORD_MIN, UNITS, armyWord } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
@@ -24,6 +25,7 @@ type K = keyof typeof EN;
 const own = (u: UnitId, k: 0 | 2): string | null => {
   const r = k + (lang() === 'ru' ? 1 : 0);
   if (isBossUnit(u)) return BOSS_UNIT_NAMES[u][k ? 'note' : 'name'][lang() === 'ru' ? 1 : 0];
+  if (isTitan(u)) return TITAN_NAMES[u][k ? 'note' : 'name'][lang() === 'ru' ? 1 : 0];
   const n = UNITS[u]?.roster ? FACTION_NAMES[u as FactionKindId] : isPremiumBeast(u) ? PREMIUM_NAMES[u] : isShipBeast(u) ? SHIP_BEAST_NAMES[u] : null;
   return n ? n[r] : null;
 };

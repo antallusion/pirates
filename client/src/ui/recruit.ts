@@ -102,7 +102,7 @@ export class RecruitWindow {
     if (!unit || r.why || v.why) return 0;
     const room = Math.max(0, v.crewMax - v.crew);
     if (!v.army.some((x) => x.u === u) && v.army.length >= v.slots) return 0;
-    const picked = UNITS[u].tier >= PICKED_TIER ? v.picked : Infinity;
+    const picked = UNITS[u].tier >= PICKED_TIER && !UNITS[u].titan ? v.picked : Infinity; // (docs/19 E10: a titan stands out of it)
     const might = unit.room === undefined || unit.room < 0 ? Infinity : unit.room;
     return affordable(u, (n) => priceOf(unit.per, unit.goods, n), v.gold, v.have, Math.min(r.pool, room, picked, might));
   }
@@ -140,7 +140,7 @@ export class RecruitWindow {
       const most = this.most(v, r, u);
       this.n = Math.max(0, Math.min(most, this.n || (most > 0 ? 1 : 0)));
       const price = priceOf(unit.per, unit.goods, this.n);
-      const why = v.why ? serverText(v.why) : r.why ? serverText(r.why) : r.pool <= 0 ? L('nobody') : v.crew >= v.crewMax ? L('nohammock') : !v.army.some((x) => x.u === u) && v.army.length >= v.slots ? L('noslot') : d.tier >= PICKED_TIER && v.picked <= 0 ? L('picked.full', { max: v.pickedMax }) : unit.room === 0 ? L('might.full') : most <= 0 ? L('lack') : '';
+      const why = v.why ? serverText(v.why) : r.why ? serverText(r.why) : r.pool <= 0 ? L('nobody') : v.crew >= v.crewMax ? L('nohammock') : !v.army.some((x) => x.u === u) && v.army.length >= v.slots ? L('noslot') : d.tier >= PICKED_TIER && !UNITS[u].titan && v.picked <= 0 ? L('picked.full', { max: v.pickedMax }) : unit.room === 0 ? L('might.full') : most <= 0 ? L('lack') : '';
       pick = `<div class="rc-pick"><div class="rc-ph">${unitIcon(u, 'rc-big')}<div><b>${esc(unitName(u))}</b><span class="muted">${esc(L('stats', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp, spd: d.speed }))}</span><span class="muted">${esc(L('avail', { n: r.pool }))}</span></div></div>
         <div class="rc-slide"><input type="range" min="0" max="${most}" value="${this.n}" data-rcn aria-label="${esc(unitName(u))}"${most <= 0 ? ' disabled' : ''}><b class="rc-count" data-rccount>${this.n}</b><button class="btn btn-small" data-rcmax${most <= 0 ? ' disabled' : ''}>${esc(L('max'))} ${most}</button></div>
         <div class="rc-cost"><span class="muted">${esc(L('cost'))}</span><span data-rccost>${costLine(price, v.gold, v.have)}</span></div>

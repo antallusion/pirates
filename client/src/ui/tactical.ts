@@ -46,6 +46,9 @@ import type { UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import { SHIP_BEAST_DEFS, isShipBeast } from '../../../shared/src/data/shipbeasts.ts'; // the premium hulls' own (docs/02 §1.A.9)
 import { deckArt } from '../../../shared/src/data/fleet.ts';
 import { BOSS_UNIT_STAND_IN, isBossUnit } from '../../../shared/src/data/bossunits.ts'; // the great ones ashore (2026-10-03)
+import { TITAN_STAND_IN, isTitan } from '../../../shared/src/data/titans.ts'; // docs/19 E10
+/** The figure that stands in for a great one ashore or a titan until its own is painted (null: none needed). */
+const STAND_IN = (u: string | undefined): { u: string; tint: string; size: number } | null => (u && isBossUnit(u) ? BOSS_UNIT_STAND_IN[u] : u && isTitan(u) ? TITAN_STAND_IN[u] : null);
 import { SHORE_BOSSES, SHORE_MOVES, isShoreBoss } from '../../../shared/src/data/shorebosses.ts';
 import type { ShoreMove } from '../../../shared/src/data/shorebosses.ts';
 import { EN as BEN, RU as BRU } from '../lang/ui/bosses.ts';
@@ -241,11 +244,12 @@ function figureArt(s: TacStackView): string | null {
   const id = `unit.${s.kind === 'officer' || !s.unit ? KIND_FIGURE[s.kind] ?? 'sailor' : s.unit}`;
   if (sprite(id)) return id;
   // A great one ashore (2026-10-03) whose own figure is not painted yet: a kind of like shape stands in, tinted.
-  const stand = s.unit && isBossUnit(s.unit) ? `unit.${BOSS_UNIT_STAND_IN[s.unit].u}` : null;
+  const si = STAND_IN(s.unit);
+  const stand = si ? `unit.${si.u}` : null;
   return stand && sprite(stand) ? stand : null;
 }
 /** The tint over a great one's stand-in figure (none over its own). */
-const standTint = (s: TacStackView, id: string): string | undefined => (s.unit && isBossUnit(s.unit) && !id.startsWith(`unit.${s.unit}`) ? BOSS_UNIT_STAND_IN[s.unit].tint : undefined);
+const standTint = (s: TacStackView, id: string): string | undefined => (STAND_IN(s.unit) && !id.startsWith(`unit.${s.unit}`) ? STAND_IN(s.unit)!.tint : undefined);
 /** How tall a kind stands beside a hex's width: the men alike, the creatures by their bulk. */
 const FIGURE_SIZE: Record<string, number> = {
   crab: 0.85, gull: 0.95, seal: 1.0, reef_shark: 1.15, rock_turtle: 1.05, sea_turtle: 1.05, marsh_serpent: 1.45, hermit: 1.3,
@@ -261,7 +265,7 @@ const FIGURE_SIZE: Record<string, number> = {
 };
 // docs/18 VII: the kinds still in the painter's queue keep their height in shared/src/data/unitart.ts; the premium
 // hulls' own kinds theirs in shipbeasts.ts, the great ones ashore theirs in bossunits.ts.
-const figureSize = (s: TacStackView): number => (FIGURE_SIZE[s.kind === 'officer' ? 'officer' : s.unit] ?? FIGURES[s.unit]?.size ?? (s.kind !== 'officer' && s.unit && isShipBeast(s.unit) ? SHIP_BEAST_DEFS[s.unit].fig : undefined) ?? (s.unit && isBossUnit(s.unit) ? BOSS_UNIT_STAND_IN[s.unit].size : undefined) ?? 1.28) * 1.22;
+const figureSize = (s: TacStackView): number => (FIGURE_SIZE[s.kind === 'officer' ? 'officer' : s.unit] ?? FIGURES[s.unit]?.size ?? (s.kind !== 'officer' && s.unit && isShipBeast(s.unit) ? SHIP_BEAST_DEFS[s.unit].fig : undefined) ?? STAND_IN(s.unit)?.size ?? 1.28) * 1.22;
 /** Where the feet stand across a figure (a musket held out to one side does not move the man off his hex): the middle
  *  of what is painted in its lowest tenth, found once per picture. */
 const footCache = new Map<string, number>();
@@ -884,7 +888,7 @@ export class TacticalPanel {
     const h = v.heroes[x];
     const url = h.captain ? assetUrl(CAPTAINS[h.captain].portrait) : null;
     // A great one ashore whose own figure is not painted yet shows the figure that stands in for it (2026-10-03).
-    const fid = h.face?.startsWith('unit.') && isBossUnit(h.face.slice(5)) && !assetUrl(h.face) ? UNITS[h.face.slice(5) as UnitId].art : h.face;
+    const fid = h.face?.startsWith('unit.') && STAND_IN(h.face.slice(5)) && !assetUrl(h.face) ? UNITS[h.face.slice(5) as UnitId].art : h.face;
     return fid ? (fid.includes('.') && !fid.startsWith('portrait.') ? assetUrl(fid) : portraitUrl(fid.replace(/^portrait\./, ''))) ?? url : url;
   }
 
@@ -3446,7 +3450,7 @@ export class TacticalPanel {
       const iw = sp.img.naturalWidth, ih = sp.img.naturalHeight;
       const k = (R * 2.1) / Math.min(iw, ih);
       // docs/18 II: a creature with no picture of its own is a tinted token of one that is.
-      const tint = s.unit ? BEAST_TINT[s.unit as keyof typeof BEAST_TINT] ?? (isBossUnit(s.unit) ? BOSS_UNIT_STAND_IN[s.unit].tint : undefined) : undefined;
+      const tint = s.unit ? BEAST_TINT[s.unit as keyof typeof BEAST_TINT] ?? STAND_IN(s.unit)?.tint : undefined;
       if (tint) g.filter = tint;
       g.drawImage(sp.img, x - (iw * k) / 2, y - (ih * k) / 2, iw * k, ih * k);
       g.filter = 'none';

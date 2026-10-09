@@ -13,6 +13,8 @@ import type { PlayerSession } from './player.ts';
 import { buildTown, learnAtIsle, marketTrade } from './town.ts';
 import { lairDwellView, lairRecruit, penRecruit } from './beastlairs.ts';
 import { isBeast } from '../../../shared/src/data/bestiary.ts';
+import { isTitan } from '../../../shared/src/data/titans.ts';
+import { titanRecruit } from './titans.ts';
 import { buyFitting, craftArtifact, sellLand } from './landecon.ts';
 
 export function h3Message(game: Game, s: PlayerSession, msg: H3ClientMsg): void {
@@ -33,7 +35,7 @@ export function h3Message(game: Game, s: PlayerSession, msg: H3ClientMsg): void 
     case 'recruit': {
       // docs/18 II: the creatures of a dwelling flagged over a lair, and of the town's pen.
       const where = src(msg.src), u = String(msg.u) as UnitId, n = Math.trunc(Number(msg.n));
-      err(where === 'lair' ? lairRecruit(game, s, u, n) : where === 'isle' && isBeast(u) ? penRecruit(game, s, u, n) : where === 'port' ? recruit(game, s, 'port', u, n) : recruit(game, s, 'isle', u, n));
+      err(where === 'lair' ? lairRecruit(game, s, u, n) : where === 'isle' && isTitan(u) ? titanRecruit(game, s, u) : where === 'isle' && isBeast(u) ? penRecruit(game, s, u, n) : where === 'port' ? recruit(game, s, 'port', u, n) : recruit(game, s, 'isle', u, n));
       return refresh(where);
     }
     case 'train': {

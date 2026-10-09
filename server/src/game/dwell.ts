@@ -7,6 +7,8 @@
 // the limit. An upgraded dwelling trains a stack of its tier's plain kind up for the difference in price.
 
 import { BOSS_UNIT_IDS, BOSS_UNIT_NAMES } from '../../../shared/src/data/bossunits.ts';
+import { TITAN_IDS, TITAN_NAMES } from '../../../shared/src/data/titans.ts';
+import type { TitanId } from '../../../shared/src/data/titans.ts';
 import type { BossUnitId } from '../../../shared/src/data/bossunits.ts';
 import { FACTION_KIND_IDS, FACTION_NAMES } from '../../../shared/src/data/factionunits.ts';
 import type { FactionKindId } from '../../../shared/src/data/factionunits.ts';
@@ -177,6 +179,17 @@ function take(game: Game, s: PlayerSession, at: Here, goods: Partial<Record<Good
   }
 }
 
+/** docs/19 E10: goods paid at her island as its recruit window pays them (its store, and her hold lying off it): why
+ *  not (null: paid). */
+export function islePay(game: Game, s: PlayerSession, goods: Partial<Record<GoodId, number>>, pay: boolean): string | null {
+  const at = here(game, s, 'isle');
+  if (typeof at === 'string') return at;
+  const why = lack(game, s, at, goods);
+  if (why || !pay) return why;
+  take(game, s, at, goods);
+  return null;
+}
+
 function busy(game: Game, s: PlayerSession): string | null {
   const ship = s.ship!;
   if (!ship.alive) return 'Not now';
@@ -264,6 +277,7 @@ const NAMES: Record<UnitId, string> = {
   ...(Object.fromEntries(PREMIUM_BEAST_IDS.map((k) => [k, PREMIUM_PLURAL[k][0]])) as Record<PremiumBeastId, string>), // the shop's creatures
   ...(Object.fromEntries(SHIP_BEAST_IDS.map((u) => [u, SHIP_BEAST_PLURAL[u][0]])) as Record<ShipBeastId, string>), // the premium hulls' own (docs/02 §1.A.9)
   ...(Object.fromEntries(BOSS_UNIT_IDS.map((k) => [k, BOSS_UNIT_NAMES[k].name[0]])) as Record<BossUnitId, string>), // the great ones ashore (never hired)
+  ...(Object.fromEntries(TITAN_IDS.map((k) => [k, TITAN_NAMES[k].name[0]])) as Record<TitanId, string>), // docs/19 E10: the titans
 };
 const plural = (u: UnitId, _n: number) => NAMES[u];
 
