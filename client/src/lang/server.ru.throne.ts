@@ -4,10 +4,24 @@
 
 import { thronePatterns } from '../../../shared/src/data/throne.ts';
 import { TITAN_IDS, TITAN_NAMES } from '../../../shared/src/data/titans.ts';
+import { RAID } from '../../../shared/src/data/abyssraid.ts';
 
 export const SERVER_RU_THRONE: Record<string, string> = {
   ...Object.fromEntries(thronePatterns()),
   ...Object.fromEntries(TITAN_IDS.map((k) => TITAN_NAMES[k].name)), // the titans' names in the lines (docs/19 E10)
+  ...Object.fromEntries(RAID.flatMap((t) => [t.name, t.ship])), // the Abyss's legends and their ships (docs/19 E11)
+  // the Abyss of the Throne (docs/19 E11)
+  'The Abyss opens at level {0}.': 'Бездна открывается на {0}-м уровне.',
+  'The Master of the Abyss is down: the Maw opens again next week.': 'Хозяин Бездны повержен: Пасть мира откроется снова на следующей неделе.',
+  'Another captain of your raid is aboard the legend now.': 'Сейчас на борту легенды другой капитан вашего рейда.',
+  'Five captains at the most in one raid.': 'В одном рейде не больше пяти капитанов.',
+  'Come to the gate of the Stair: the Maw opens there.': 'Подойдите к вратам Лестницы: Пасть открывается там.',
+  '{0} comes up out of the Maw aboard the {1}: tier {2} of the Abyss.': '{0} поднимается из Пасти на «{1}»: ярус {2} Бездны.',
+  '{0} holds the Maw. Your raid has cut {1}% of the tier; what is left of it waits for the next boarding.': '{0} удерживает Пасть. Ваш рейд выбил {1}% яруса; остаток ждёт следующего абордажа.',
+  'Tier {0} of the Abyss is taken: {1} is down.': 'Ярус {0} Бездны взят: «{1}» больше не стоит на пути.',
+  'The Master of the Abyss falls to {0}.': 'Хозяин Бездны пал. Его одолели: {0}.',
+  'Your share of tier {0} of the Abyss: {1} silver.': 'Ваша доля за ярус {0} Бездны: {1} серебра.',
+  'Tier {0} of the Abyss': 'Ярус {0} Бездны',
   // glory
   'The Throne of the Sea opens: past the cap your experience is glory. Open it from the captain’s plate.': 'Открывается Престол Моря: после потолка опыт идёт в славу. Откройте его с плашки капитана.',
   'Glory rank {0}!': 'Ранг славы {0}!',

@@ -5,7 +5,7 @@ export interface ThroneClientMsg {
   t: 'throne';
   /** glory: a boon (id = primary); node: a rank of a mastery node (id); reset: the tree forgotten in port; trial: the
    *  legend of a skill (id) alongside; view: nothing but her state again; seal: her seal's mythic depth at the lair her
-   *  boats reach (docs/19 E9). */
-  action: 'glory' | 'node' | 'reset' | 'trial' | 'view' | 'seal';
+   *  boats reach (docs/19 E9); raid: her raid's legend alongside at the Stair (docs/19 E11). */
+  action: 'glory' | 'node' | 'reset' | 'trial' | 'view' | 'seal' | 'raid';
   id?: string;
 }

@@ -18,6 +18,7 @@
 // tests/throne.test.ts); the endgame's battle lift is held under ENDGAME_CAP whatever is stacked.
 
 import type { SealView } from './seals.ts';
+import type { RaidView } from './abyssraid.ts';
 import { MAX_LEVEL, xpForLevel } from '../constants.ts';
 import type { CaptainId } from './captains.ts';
 import type { PrimId, Prims, SkillId } from './hero.ts';
@@ -304,6 +305,8 @@ export interface GloryView {
   fighting?: SkillId;
   /** docs/19 E9: her seal of the deep. */
   seal?: SealView;
+  /** docs/19 E11: her raid of the Abyss. */
+  raid?: RaidView;
 }
 
 /** Silver to forget the mastery tree in a port: a thousand a point spent. */

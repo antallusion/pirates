@@ -17,6 +17,8 @@ import {
 import type { GloryView, MasteryRanks, ThroneLift, TrialView } from '../../../shared/src/data/throne.ts';
 import type { SealView } from '../../../shared/src/data/seals.ts';
 import { enterDepth } from './seals.ts';
+import { boardRaid, isRaidLegend } from './abyssraid.ts';
+import type { RaidView } from '../../../shared/src/data/abyssraid.ts';
 import type { StatMods } from '../../../shared/src/data/stats.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import { headingVec } from '../../../shared/src/math.ts';
@@ -228,7 +230,8 @@ export function trialFace(ship: ShipEntity): string | undefined {
   const t = trials.get(ship);
   return t ? CAPTAINS[LEGENDS[t.skill].path].portrait.replace(/^portrait\./, '') : undefined;
 }
-export const isTrialShip = (ship: ShipEntity): boolean => trials.has(ship);
+/** A legend of the trials — or of the Abyss's raid (docs/19 E11): no artifact found on her, none of hers ever joins. */
+export const isTrialShip = (ship: ShipEntity): boolean => trials.has(ship) || isRaidLegend(ship);
 
 /** The legend of a skill as a hero, against a challenger with these primaries and skills (the sims use it too): her
  *  skills as the challenger's (none above expert), the trial's at grandmaster, and her own two at expert in what slots
@@ -378,7 +381,7 @@ export function trialViews(now: number, p: Profile): TrialView[] {
   });
 }
 
-export function gloryView(now: number, s: PlayerSession, seal?: SealView): GloryView | undefined {
+export function gloryView(now: number, s: PlayerSession, seal?: SealView, raid?: RaidView): GloryView | undefined {
   const p = s.profile;
   if (!p) return undefined;
   if (p.level < MAX_LEVEL - 5 && !p.throne) return undefined;
@@ -390,6 +393,7 @@ export function gloryView(now: number, s: PlayerSession, seal?: SealView): Glory
     open: p.level >= MAX_LEVEL, rank: t.rank, xp: Math.floor(t.xp), need: gloryXp(t.rank), picks, pending: gloryPending(t.rank, t.picks), points: masteryPoints(t.rank), spent, nodes: { ...t.nodes },
     trials: trialViews(now, p), reset: resetCost(spent), lift: liftOf(p), ...(fight && trials.get(fight) ? { fighting: trials.get(fight)!.skill } : {}),
     ...(seal ? { seal } : {}),
+    ...(raid ? { raid } : {}),
   };
 }
 
@@ -412,6 +416,10 @@ export function throneMessage(game: Game, s: PlayerSession, msg: ThroneClientMsg
     case 'seal':
       // docs/19 E9: her seal's mythic depth at the lair her boats reach.
       why = enterDepth(game, s);
+      break;
+    case 'raid':
+      // docs/19 E11: her raid's legend alongside at the Stair.
+      why = boardRaid(game, s);
       break;
     case 'view':
       break;

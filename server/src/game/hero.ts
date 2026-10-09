@@ -35,6 +35,7 @@ import { STAM_REST_SEC, TALENT_BOOK, isPathPage, pathPagesAt, talentBook } from 
 import { fittingMods } from '../../../shared/src/data/landecon.ts';
 import { GM_RANK } from '../../../shared/src/data/hero.ts';
 import { applyLift, liftOf, seaCostLift, throneSea, trialFace, trialHero, willDayLift, willLift } from './throne.ts'; // docs/19 E1–E3
+import { raidFaceOf, raidHeroOf } from './abyssraid.ts'; // docs/19 E11
 
 /** What the profile keeps of the hero. */
 export interface HeroRec {
@@ -349,7 +350,7 @@ export function castSea(game: Game, s: PlayerSession, id: string): string | null
 export function heroInput(game: Game, ship: ShipEntity): HeroBattle {
   const s = game.sessionOf(ship);
   const p = s?.profile;
-  const legend = trialHero(ship); // docs/19 E3: a legend of the trials
+  const legend = trialHero(ship) ?? raidHeroOf(ship); // docs/19 E3: a legend of the trials; E11: of the Abyss
   if (legend) return structuredClone(legend);
   if (!p) return npcHeroBattle(ship.shipLevel, npcPathOf(ship)); // docs/18 item 8: the named captains walk paths
   const h = heroOf(p);
@@ -360,7 +361,7 @@ export function heroInput(game: Game, ship: ShipEntity): HeroBattle {
 
 /** The face a ship's captain shows beside the field (a named captain of the sea her own). */
 export function heroFace(game: Game, ship: ShipEntity): string | undefined {
-  return game.sessionOf(ship)?.profile ? undefined : trialFace(ship) ?? npcFaceOf(ship);
+  return game.sessionOf(ship)?.profile ? undefined : trialFace(ship) ?? raidFaceOf(ship) ?? npcFaceOf(ship);
 }
 
 /** After a battle: the will she spent, and the fallen her First Aid patches up. */

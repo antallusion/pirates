@@ -20,6 +20,8 @@ import { SEAL_AFFIX_NAMES, SEAL_AFFIX_TEXT } from '../../../shared/src/data/seal
 import type { SealAffix } from '../../../shared/src/data/seals.ts';
 import { serverText } from '../lang/server.ts';
 import { placeName } from './maps.ts';
+import { RAID, RAID_TIERS, raidPay } from '../../../shared/src/data/abyssraid.ts';
+import { unitIcon, unitName } from './army.ts';
 import type { ClientState } from '../state.ts';
 import { esc, fmt, icon, money } from './dom.ts';
 
@@ -162,6 +164,51 @@ function sealsTab(g: GloryView, state: ClientState): string {
     <p class="muted hx-note">${esc(L('seal.rule', { r: v.rounds, f: v.fast }))}</p>`;
 }
 
+// ------------------------------------------------------------------ the Abyss (docs/19 E11)
+
+function raidTab(g: GloryView, state: ClientState): string {
+  const v = g.raid;
+  if (!g.open || !v) return `<p class="muted th-locked">${esc(L('locked', { n: MAX_LEVEL, m: state.self?.level ?? 0 }))}</p>`;
+  const km = (v.gate.d / 1000).toFixed(1).replace('.', lang() === 'ru' ? ',' : '.');
+  const steps = RAID.map((t) => {
+    const st = v.cleared.includes(t.n) ? 'done' : t.n === v.tier ? 'on' : 'off';
+    return `<li class="th-rt ${st}" title="${esc(T(t.name))}"><b>${t.n}</b><span>${esc(T(t.name))}</span></li>`;
+  }).join('');
+  const down = v.tier > RAID_TIERS;
+  const t = RAID[Math.min(RAID_TIERS, v.tier) - 1];
+  const army = v.left.map((x) => `<span class="th-unit" title="${esc(unitName(x.u))}">${unitIcon(x.u, 'army-face-xs')}<b>${fmt(x.n)}</b></span>`).join('');
+  const why = v.why ? serverText(v.why) : '';
+  const members = v.members.length
+    ? `<ol class="th-board">${[...v.members].sort((a, b) => b.cut - a.cut).map((m) => `<li class="${m.you ? 'you' : ''}"><b>${esc(m.name)}</b><span>${esc(L('raid.cut', { n: fmt(m.cut) }))}</span></li>`).join('')}</ol>`
+    : `<p class="muted hx-none">${esc(L('raid.membersNone'))}</p>`;
+  const board = v.board.length ? `<ol class="th-board">${v.board.map((b) => `<li><b>${esc(b.names.join(', '))}</b></li>`).join('')}</ol>` : `<p class="muted hx-none">${esc(L('raid.weekNone'))}</p>`;
+  const now = down
+    ? `<p class="th-pay">${esc(L('raid.down'))}</p>`
+    : `<div class="th-head">
+      <div class="th-medal th-seal" title="${esc(T(t.name))}"><span>${icon('ab_maw_of_the_deep', '◈', 'ico-sm')}</span><b>${t.n}</b></div>
+      <div class="th-hside"><div class="gi-h">${esc(L('raid.tier', { n: t.n, m: RAID_TIERS, name: T(t.name) }))}</div>
+        <div class="muted">${esc(L('raid.ship', { ship: T(t.ship) }))}</div>
+        <div class="th-chips"><span class="th-chip">${esc(L('raid.left', { p: v.share }))}</span></div>
+        <div class="th-bar"><i style="width:${Math.max(0, Math.min(100, v.share))}%"></i></div></div>
+    </div>
+    <div class="th-seal-go">
+      <span class="muted">${esc(L('raid.gate', { km }))}</span>
+      <button class="btn btn-small" data-thcourse="${v.gate.x},${v.gate.y}">${esc(L('raid.course'))}</button>
+      <button class="btn btn-small btn-primary" data-thraid ${v.why ? 'disabled' : ''} title="${esc(why)}">${esc(L('raid.board'))}</button>
+    </div>
+    ${why ? `<p class="muted th-why">${esc(why)}</p>` : ''}
+    <div class="th-raid-army">${army}</div>
+    <p class="th-pay">${esc(L('raid.pay', { silver: fmt(raidPay(t.n).silver) }))}</p>`;
+  return `${v.fighting ? `<div class="th-fight card">${icon('bt_charge', '', 'ico-md')}${esc(L('raid.fighting', { name: v.fighting }))}</div>` : ''}
+    <ol class="th-raid">${steps}</ol>
+    ${now}
+    <h4 class="card-h">${esc(L('raid.members'))}</h4>
+    ${members}
+    <h4 class="card-h">${esc(L('raid.week'))}</h4>
+    ${board}
+    <p class="muted hx-note">${esc(L('raid.rule'))}</p>`;
+}
+
 /** The tabs of the Throne, in order (later parts of docs/19 add theirs here). */
 export const THRONE_TABS: ThroneTab[] = [
   {
@@ -188,6 +235,21 @@ export const THRONE_TABS: ThroneTab[] = [
     bind: (root, send, close) => {
       root.querySelectorAll<HTMLElement>('[data-thseal]').forEach((b) => (b.onclick = () => {
         send({ t: 'throne', action: 'seal' });
+        close();
+      }));
+      root.querySelectorAll<HTMLElement>('[data-thcourse]').forEach((b) => (b.onclick = () => {
+        const [x, y] = (b.dataset.thcourse ?? '').split(',').map(Number);
+        if (Number.isFinite(x) && Number.isFinite(y)) send({ t: 'autosail', x, y });
+        close();
+      }));
+    },
+  },
+  {
+    // docs/19 E11: the Abyss of the Throne — a mark on the tab when the legend may be boarded.
+    id: 'raid', label: () => L('tab.raid'), icon: 'ab_maw_of_the_deep', badge: (g) => (g.raid && !g.raid.why ? 1 : 0), render: raidTab,
+    bind: (root, send, close) => {
+      root.querySelectorAll<HTMLElement>('[data-thraid]').forEach((b) => (b.onclick = () => {
+        send({ t: 'throne', action: 'raid' });
         close();
       }));
       root.querySelectorAll<HTMLElement>('[data-thcourse]').forEach((b) => (b.onclick = () => {

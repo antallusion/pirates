@@ -84,6 +84,7 @@ import { addGlory, gloryView } from './throne.ts';
 import { gloryXp } from '../../../shared/src/data/throne.ts';
 import type { ThroneRec } from './throne.ts';
 import type { SealRec, SealView } from '../../../shared/src/data/seals.ts';
+import type { RaidView } from '../../../shared/src/data/abyssraid.ts';
 import { hullXp, researchView } from './research.ts';
 import type { ResearchView } from '../../../shared/src/data/research.ts';
 
@@ -500,6 +501,8 @@ export function pardonCost(p: Profile): number {
 export interface WorldView {
   /** docs/19 E9: her seal of the deep, for the Throne's tab (seals.ts sealView). */
   seal?: SealView;
+  /** docs/19 E11: her raid of the Abyss, for the Throne's tab (abyssraid.ts raidView). */
+  raid?: RaidView;
   /** One's own island (docs/15). */
   homeIsle?: number | null;
   /** Raiders at her island (docs/15 item 7), and a wild island off the bow she may claim (item 6). */
@@ -540,7 +543,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     // docs/19 E1: past the cap the bar is her glory's.
     xp: p.level >= MAX_LEVEL ? Math.floor(p.throne?.xp ?? 0) : p.xp,
     xpNext: p.level >= MAX_LEVEL ? gloryXp(p.throne?.rank ?? 0) : xpForLevel(p.level),
-    glory: gloryView(now, s, world.seal),
+    glory: gloryView(now, s, world.seal, world.raid),
     rested: Math.round(p.rested ?? 0),
     talentPoints: talentPointsAvailable(p),
     deeds: p.deeds,

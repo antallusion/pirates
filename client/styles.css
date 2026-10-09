@@ -4058,6 +4058,22 @@ body.touch .act-btn { --h: 38px; }
 .th-seal-go { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .th-seal-go .muted { flex: 1 1 180px; }
 .th-seal-go .btn { flex: none; white-space: nowrap; }
+/* docs/19 E11: the Abyss — the seven tiers in a row, the legend's army, how much of it is left. */
+.th-raid { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.th-rt { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; border-radius: 6px; border: 1px solid rgba(111, 201, 189, 0.25); background: rgba(8, 20, 26, 0.5); min-width: 0; }
+.th-rt b { font-family: var(--display); font-weight: 400; font-size: 18px; line-height: 1; color: var(--fog); }
+.th-rt span { font-size: 10px; line-height: 1.15; color: var(--fog); text-align: center; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.th-rt.done { border-color: rgba(176, 141, 87, 0.6); }
+.th-rt.done b { color: var(--gold); }
+.th-rt.on { border-color: #6fc9bd; box-shadow: 0 0 10px rgba(46, 230, 200, 0.25); }
+.th-rt.on b, .th-rt.on span { color: var(--bone); }
+.th-bar { height: 6px; margin-top: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.th-bar i { display: block; height: 100%; background: linear-gradient(90deg, #2e8f86, #6fc9bd); }
+.th-raid-army { margin: 8px 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.th-unit { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; min-width: 40px; }
+.th-unit .army-face-xs { width: 34px; height: 34px; }
+.th-unit b { font-size: 12px; font-weight: 600; color: var(--bone); font-variant-numeric: tabular-nums; }
+@media (max-width: 699px) { .th-rt span { display: none; } }
 .th-why { margin: 4px 0 0; font-size: 12px; }
 .th-board { margin: 0; padding: 0; list-style: none; counter-reset: th-row; display: flex; flex-direction: column; gap: 2px; }
 .th-board li { counter-increment: th-row; display: flex; gap: 8px; align-items: baseline; padding: 3px 8px; border-radius: 4px; background: rgba(20, 16, 10, 0.4); font-size: 13px; }

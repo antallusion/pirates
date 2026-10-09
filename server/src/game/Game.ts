@@ -239,6 +239,7 @@ import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
 import { installLairHooks, landFighting, landTac, lairMessage, lairPrompt, resendLandFight, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
 import { installSealHooks, sealView } from './seals.ts'; // docs/19 E9
 import { installTitanHooks } from './titans.ts'; // docs/19 E10
+import { raidView, stepAbyssRaid } from './abyssraid.ts'; // docs/19 E11
 import { shoreBossPrompt, stepShoreBosses } from './shorebosses.ts'; // the great ones ashore (owner, 2026-10-03)
 import { installLandHooks } from './landecon.ts'; // docs/18 V
 import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
@@ -894,6 +895,7 @@ export class Game {
     stepLairs(this); // the lairs of the land's creatures: what each captain sees, her card (docs/18 II)
     stepDrifts(this); // drifting creatures, the season's legend (docs/18 IV)
     if (this.tick % 20 === 0) stepTrials(this); // docs/19 E3: a trial whose captain is gone
+    if (this.tick % 20 === 0) stepAbyssRaid(this); // docs/19 E11: the raid's owed paid, a boarding long over forgotten
     stepSeaMarks(this); // the boats at the dense sea's marks
     stepSeaFinds(this); // docs/19 D5: the sea's small things; her time at sea for the day's caps
     stepRoamers(this); // docs/19 D7: the creatures roaming the sea, as HoMM3's neutral stacks
@@ -1577,6 +1579,7 @@ export class Game {
     const p = s.profile!;
     return {
       seal: sealView(this, s),
+      raid: raidView(this, s),
       homeIsle: ownIsland(this, s.accountId)?.island ?? null,
       isleRaid: raidPointer(this, s),
       claimIsle: claimPrompt(this, s),
