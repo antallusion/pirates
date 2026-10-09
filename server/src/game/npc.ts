@@ -44,6 +44,7 @@ import type { Path } from './nav.ts';
 import type { NpcRole, ShipEntity } from './ship.ts';
 import { holdGuard } from './advmap.ts';
 import { onboardingProtected } from './onboarding.ts';
+import { invaderHostile } from './invasions.ts'; // docs/19 E16
 
 export interface NpcBrain {
   id: number;
@@ -219,6 +220,9 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
   // before «На абордаж» twice, and sank her under the card of spoils — «Приз ускользнул», the ransom lost).
   if (!other.isPlayer && (other.lootLockedFor !== null || game.npcs.get(other.id)?.practice !== undefined)) return false;
   const role = npc.npcRole;
+  // docs/19 E16: the Choir's invaders go for every captain and the sea's ships; the law's patrols go for them.
+  const inv = npc.invader || other.invader ? invaderHostile(npc, other) : null;
+  if (inv !== null) return inv;
   // The beasts of the sea (docs/12 P4): the predators hunt captains; the sea's ships and the beasts leave each other be.
   if (role === 'beast') return other.isPlayer && (beastPredator(npc, other) || (npc.attackers.get(other.id) ?? -999) > game.now - 120);
   // The Harpoon's whalers and the hunters go for the beasts they see (docs/16 P1).

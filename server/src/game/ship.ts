@@ -3,6 +3,7 @@
 import { regattaSail } from '../../../shared/src/data/regatta.ts';
 import type { NemesisCause } from '../../../shared/src/data/nemesis.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
+import type { InvaderTag } from './invasions.ts';
 import { combatLevelOf, onLadder, shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import type { BoardTactic } from '../../../shared/src/data/boarding.ts';
@@ -292,6 +293,8 @@ export class ShipEntity {
   convoyOf: { guild: number; to: string } | null = null;
   /** A neutral guard of the adventure map (docs/17 H4): its id there. It stands where it is put and never moves. */
   guardOf?: string;
+  /** docs/19 E16: a ship of the Choir's invasion (its wave) or of the black tide's patrols. */
+  invader?: InvaderTag;
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;

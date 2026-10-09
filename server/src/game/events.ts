@@ -24,6 +24,7 @@ import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { shoreEvents } from './shorebosses.ts';
 import { zoneBossEvents } from './zonebosses.ts';
+import { invasionEvents } from './invasions.ts';
 
 export type EventKind = 'armada' | 'blockade' | 'storm_century' | 'new_island' | 'epidemic' | HappeningKind;
 
@@ -656,12 +657,14 @@ export function eventViews(game: Game): WorldEventView[] {
   list.push(...shoreEvents(game));
   // The zone bosses at sea, each where she sails while her hour lasts (zonebosses.ts, docs/21).
   list.push(...zoneBossEvents(game));
+  // docs/19 E16: the Choir's invasion where it comes, and each black tide's region.
+  list.push(...invasionEvents(game));
   return list;
 }
 
 function broadcast(game: Game): void {
   const list = eventViews(game);
-  const key = JSON.stringify(list.map((x) => [x.id, x.title, x.stage, Math.round(x.x / 400), Math.round(x.y / 400)]));
+  const key = JSON.stringify(list.map((x) => [x.id, x.title, x.stage, x.by, Math.round(x.x / 400), Math.round(x.y / 400)]));
   const hub = game.worldEvents;
   if (key === hub.lastSent) return;
   hub.lastSent = key;

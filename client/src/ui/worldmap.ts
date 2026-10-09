@@ -22,6 +22,8 @@ import { EN as EASE_EN, RU as EASE_RU } from '../lang/ui/ease.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
 import { dec1 } from './dom.ts';
 import { commonLog, dailyLog } from './daily.ts';
+import { bindInvasion, invasionLog } from './invasion.ts'; // docs/19 E16
+import { EN as INV_EN, RU as INV_RU } from '../lang/ui/relics.ts';
 import { dict, lang, plural } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/worldmap.ts';
 import { EN as DEN, RU as DRU } from '../lang/ui/dealings.ts';
@@ -59,6 +61,7 @@ export function toggleLayer(cur: Set<MapLayer>, l: MapLayer): Set<MapLayer> {
 
 const H4L = dict(H4_EN, H4_RU);
 const L = dict(EN, RU);
+const INV = dict(INV_EN, INV_RU); // docs/19 E16
 const LI = dict(IEN, IRU);
 const LS = dict(SEN, SRU);
 const RL = dict(REN, RRU);
@@ -282,7 +285,7 @@ export class WorldMap {
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas><div class="map-wp-acts">${this.onAutosail ? `<button type="button" class="k-btn k-btn--primary k-btn--lg map-wp-sail${waypoint() && !state.self?.dockedAt ? '' : ' hidden'}" data-hint="${esc(W('map.sailHint'))}" title="${esc(EL('as_goTitle'))}">${icon('stat_sails', '⛵', 'k-btn-ico')}<span class="k-btn-l">${esc(W('map.sail'))}</span><small class="map-wp-name">${esc(this.markLabel())}</small></button>` : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'k-btn-ico')}<span class="k-btn-l">${esc(L('wp.clear'))}</span></button>${this.onPuzzle && ((state.adv?.pieces ?? 0) > 0 || state.adv?.grail === 'held') ? `<button type="button" class="k-btn k-btn--secondary k-btn--md map-pz">${icon('map_treasure', '', 'k-btn-ico')}<span class="k-btn-l">${esc(H4L('puzzle.btn'))}</span></button>` : ''}</div>
       <details class="map-legend"${localStorage.getItem(LEGEND_KEY) === '1' ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span><span><b style="color:#cdb98a;font-weight:400">●</b>&nbsp;${LI('tide.legend')}</span><span><b style="color:#d0503a;font-weight:400">▲</b>&nbsp;${LI('look.legend')}</span><span><b style="color:#f5c77a;font-weight:400">✶</b>&nbsp;${LI('light.legend')}</span><span>${icon('map_treasure', '', 'ico')}${LI('cache.chart')}</span><span><b style="color:#e8ce78;font-weight:400">◆</b>&nbsp;${LROAM('lg')}</span>${socialLegend()}${heroLegend()}${isleLegend()}</div></details></div>
       <div class="map-logs">${zoneHint(state)}${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
-      ${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${worldGoalsLog(state)}${lfgLog(state)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
+      ${invasionLog(state.self?.invasion)}${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${worldGoalsLog(state)}${lfgLog(state)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
     root.querySelectorAll<HTMLElement>('[data-mlayer]').forEach((b) => (b.onclick = () => {
       this.layers = toggleLayer(this.layers, b.dataset.mlayer as MapLayer);
       try { localStorage.setItem(LAYERS_KEY, JSON.stringify([...this.layers])); } catch { /* no storage */ }
@@ -327,6 +330,12 @@ export class WorldMap {
     }));
     // Share a quest with the group: each groupmate who may take it is asked.
     root.querySelectorAll<HTMLElement>('[data-share]').forEach((b) => (b.onclick = () => this.send?.({ t: 'quest', action: 'share', id: b.dataset.share! })));
+    // docs/19 E16: «Проложить курс» to where the Choir comes — her mark there, and the helmsman takes her.
+    bindInvasion(root, (x, y) => {
+      setWaypoint({ x, y });
+      this.onAutosail?.({ x, y });
+      this.draw(state);
+    });
     // A quest in the log: it becomes the one followed (the gold mark on the screen's rim), and the chart turns to
     // where its step points.
     root.querySelectorAll<HTMLElement>('[data-q]').forEach((b) => (b.onclick = () => {
@@ -560,6 +569,22 @@ export class WorldMap {
         g.globalAlpha = 1;
       });
     }
+    // docs/19 E16: a region under the black tide — its squares darkened and hatched in the Choir's sea-green.
+    for (const e of on('goals') || on('all') ? state.events : []) {
+      if (e.kind !== 'black_tide' || !e.sectors?.length) continue;
+      const side = SECTOR_SIZE * k;
+      const sq = e.sectors.map((i) => [tx((i % SECTORS_PER_SIDE) * SECTOR_SIZE), ty(Math.floor(i / SECTORS_PER_SIDE) * SECTOR_SIZE)] as const).filter(([x, y]) => x < W && y < H && x + side > 0 && y + side > 0);
+      g.fillStyle = 'rgba(3,16,20,0.52)';
+      for (const [x, y] of sq) g.fillRect(x, y, side, side);
+      g.strokeStyle = 'rgba(46,230,200,0.12)';
+      g.lineWidth = 1;
+      g.beginPath();
+      for (const [x, y] of sq) for (let d = 8; d < side * 2; d += 12) {
+        g.moveTo(x + Math.min(d, side), y + Math.max(0, d - side));
+        g.lineTo(x + Math.max(0, d - side), y + Math.min(d, side));
+      }
+      g.stroke();
+    }
     // Maelstrom wall.
     g.strokeStyle = 'rgba(142,42,42,0.28)';
     g.lineWidth = 1.2;
@@ -742,6 +767,26 @@ export class WorldMap {
     // World events: a flag on the place, and its title.
     for (const e of on('goals') ? state.events : []) {
       const x = tx(e.x), y = ty(e.y);
+      // docs/19 E16: the Choir's invasion — its crest in a sea-green ring, its wave and the minutes; a black tide's
+      // region named over its dark squares.
+      if (e.kind === 'black_tide') {
+        g.font = `italic 13px "Cormorant Garamond", serif`;
+        label(INV('inv.tideMark', { h: Math.max(1, Math.ceil((e.endsIn - (performance.now() - state.eventsAt) / 1000) / 3600)) }), x, y + ms * 0.9, 'rgba(120,230,210,0.95)', 0);
+        continue;
+      }
+      if (e.kind === 'invasion') {
+        g.strokeStyle = 'rgba(46,230,200,0.85)';
+        g.lineWidth = 2;
+        g.beginPath();
+        g.arc(x, y, ms * 0.95, 0, Math.PI * 2);
+        g.stroke();
+        mark('icon.faction_choir', x, y, ms * 1.25);
+        const [n, w] = (e.stage ?? '0/3').split('/').map(Number);
+        const left = Math.max(1, Math.ceil((e.endsIn - (performance.now() - state.eventsAt) / 1000) / 60));
+        g.font = `italic 12px "Cormorant Garamond", serif`;
+        label(n ? INV('inv.mark', { n, w, m: left }) : `${INV('inv.title')} · ${INV('inv.left', { m: left })}`, x, y + ms * 1.05, 'rgba(140,240,220,0.98)', 0);
+        continue;
+      }
       // A zone boss at sea (docs/21): her own mark, her name and the minutes till she leaves into the fog.
       if (e.kind === 'zone_boss') {
         if (!mark('icon.map_monster', x, y, ms * 1.3)) {
