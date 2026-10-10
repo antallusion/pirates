@@ -1,7 +1,7 @@
 // A diagnostic for tools/balance-paths.ts (docs/25 item 70): each path's wins against all under the boarding's rules
 // (real builds: her level's skills and kit, tests/balance/boardlen.ts) with parts of her path taken away — what each
 // part is worth to her at a level. (In her mirror the innate move goes from both sides.)
-//   node tools/balance-paths-diag.ts [battles a pairing] [--levels=5,30] [--paths=navigator,admiral]
+//   node tools/balance-paths-diag.ts [battles a pairing] [--levels=5,30] [--paths=navigator,admiral] [--variants=full,noKit]
 import { CAPTAIN_IDS } from '../shared/src/data/captains.ts';
 import type { CaptainId } from '../shared/src/data/captains.ts';
 import type { HeroBattle } from '../shared/src/data/hero.ts';
@@ -22,7 +22,10 @@ const VARIANTS: Record<string, Variant> = {
   noPages: { hero: (h) => ({ ...h, book: h.book.filter((id) => !isPathPage(id)) }) },
   noOwnOrder: { hero: (h, p) => ({ ...h, book: h.book.filter((id) => id !== TAC_BOOK[p][0]) }) },
   noCommon: { hero: (h, p) => ({ ...h, book: h.book.filter((id) => isPathPage(id) || id === TAC_BOOK[p][0]) }) },
+  // docs/25 item 70: her whole path kit — the innate move, the ultimate and her path's pages.
+  noKit: { innate: false, hero: (h) => ({ ...h, ult: false, book: h.book.filter((id) => !isPathPage(id)) }) },
 };
+const ONLY = arg('variants')?.split(',');
 
 /** Her wins against every path (`n` a pairing, the sides swapped by turns), the variant on her side alone. */
 function winsOf(p: CaptainId, L: number, v: Variant): number {
@@ -45,5 +48,5 @@ function winsOf(p: CaptainId, L: number, v: Variant): number {
 
 for (const L of LEVELS) {
   console.log(`\nLevel ${L}: her wins against all (${n * 6} battles), parts of her path taken away`);
-  for (const p of WHO) console.log(`  ${p.padEnd(10)} ${Object.entries(VARIANTS).map(([name, v]) => `${name} ${Math.round(winsOf(p, L, v) * 100)}%`).join(' · ')}`);
+  for (const p of WHO) console.log(`  ${p.padEnd(10)} ${Object.entries(VARIANTS).filter(([name]) => !ONLY || ONLY.includes(name)).map(([name, v]) => `${name} ${Math.round(winsOf(p, L, v) * 100)}%`).join(' · ')}`);
 }

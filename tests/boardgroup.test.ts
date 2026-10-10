@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { headingVec } from '../shared/src/math.ts';
 import { Rng } from '../shared/src/rng.ts';
 import type { CaptainId } from '../shared/src/data/captains.ts';
-import { TAC_GROUP, TAC_ROLES, hexX, tacBankSecs, tacBring, tacFlagHex } from '../shared/src/data/tactical.ts';
+import { TAC_GROUP, TAC_ROLES, hexX, tacBankSecs, tacBring, tacEcho, tacFlagHex } from '../shared/src/data/tactical.ts';
 import { act, addAlly, aiAct, capOf, castSpell, chargeClock, foeGrowth, modsOf, newBattle, queueAlly, rolesOf, sharesOf, sideStrength, stackById, stepBattle, viewOf } from '../server/src/game/tacbattle.ts';
 import type { TacBattle, TacSideInput } from '../server/src/game/tacbattle.ts';
 import { pickBring } from '../server/src/game/tactical.ts';
@@ -171,7 +171,7 @@ test('65: the roles — each path among a side\'s captains lays its role once on
 });
 
 test('65: the echo — a second captain of one path gives her page at ×0.6 in its round, and what she lays renews it rather than doubling', () => {
-  assert.equal(TAC_GROUP.echo, 0.6);
+  assert.equal(tacEcho(30), 0.6);
   const { bt, rng } = field(30, 'admiral', ['admiral'], 'reaver');
   bt.heroes[1].auto = true;
   // Both admirals give «В каре» as their stacks come: it holds once.

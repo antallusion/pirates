@@ -51,18 +51,24 @@ export function tacBankSecs(level: number): number {
  *  - `echo`: item 65 — the second captain of one path to give her path's page or move in a round gives it at ×echo,
  *    the third at its square (her foe has just read that book); and what another captain of her side laid of the same
  *    page holds once (tacbattle.ts layFx: the later renews it, it does not stack). Three of one path weigh less than a
- *    mixed group. */
+ *    mixed group. docs/25 item 70: by level (`tacEcho`) — ×0.35 to level 22, ×0.6 from 30: in the short fights of the
+ *    low levels three Corsairs' blows and three Navigators' double turns beat an average mixed group 61–74% at ×0.6
+ *    (tools/balance-group.ts --roles); an echoed «another turn» is given that share of the times. */
 export const TAC_GROUP = {
   range: 600,
   side: 3,
   bring: 2,
   bringFrom: 11,
   late: 3,
-  echo: 0.6,
+  echo: [[1, 0.35], [22, 0.35], [30, 0.6], [60, 0.6]] as [number, number][],
   foe: { share: [[1, 0.7], [10, 0.7], [11, 1], [20, 1], [30, 0.9], [60, 1]] as [number, number][], order: [[1, 0], [30, 0.15], [60, 0.3]] as [number, number][] },
   pace: [[1, 2.2], [10, 1.8], [20, 1], [30, 0.4], [60, 0.2]] as [number, number][],
   paceSea: [[1, 2.5], [10, 2.2], [20, 1.6], [30, 0.8], [60, 0.7]] as [number, number][],
 };
+/** docs/25 items 65 and 70: the echo of a second captain of one path at a boarding's level (TAC_GROUP.echo). */
+export function tacEcho(level: number): number {
+  return tacLevel(TAC_GROUP.echo, Math.max(1, level));
+}
 /** docs/25 block Е: the lift on a boarding's blows and orders with `allies` allied captains on the field (both sides;
  *  `sea`: against the sea's mind, `paceSea`). */
 export function tacGroupPace(level: number, allies: number, sea = false): number {

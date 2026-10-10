@@ -13,7 +13,7 @@ import type { UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import {
   TAC_AI_DELAY, TAC_BLOCKING, TAC_FAST, TAC_BURN, TAC_CHANCE_PER_POINT, TAC_COVER, TAC_FEAR, TAC_FLANK, TAC_GAP, TAC_H, TAC_LONG_SHOT, TAC_MAX_ROUNDS, TAC_ORDER_OF, TAC_SPELLS, TAC_TURN, TAC_UNITS, TAC_W,
   TAC_PLAY_WINDOW, TAC_SIGNATURE, captainSpells, flankOf, hexDir, hexDist, hexIndex, hexMirror, hexNeighbors, hexX, hexY, kindOfUnit, tacSchedule, TAC_DECK_COVER, deckCover, unitResist,
-  SIEGE, insideWalls, isGateCell, siegeCell, siegePart, TAC_LEN, TAC_GROUP, TAC_ROLES, tacBring, tacGroupPace, tacLevel, tacBankSecs, tacFatigue, tacFlagHex, tacNpc, tacOpen, tacTempo, tacTurnSecs,
+  SIEGE, insideWalls, isGateCell, siegeCell, siegePart, TAC_LEN, TAC_GROUP, TAC_ROLES, tacBring, tacEcho, tacGroupPace, tacLevel, tacBankSecs, tacFatigue, tacFlagHex, tacNpc, tacOpen, tacTempo, tacTurnSecs,
 } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacKind, TacOrderId, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import type { TacAction, TacAllyView, TacEvent, TacHeroView, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
@@ -1761,7 +1761,7 @@ function applyFx(bt: TacBattle, side: 0 | 1, id: string, fx: PageFx, k: number, 
     else bt.queue.push(x.id);
     on.add(x.id);
   };
-  if (fx.again && t && t.side === side) again(t);
+  if (fx.again && t && t.side === side && (fx.againShare === undefined || rng.chance(fx.againShare))) again(t);
   if (fx.allAgain) {
     const list = own().sort((a, b) => threat(bt, b) - threat(bt, a));
     for (const x of list.slice(0, Math.max(1, Math.ceil(list.length * (fx.allShare ?? 1))))) again(x);
@@ -1805,7 +1805,7 @@ function echoFx(fx: PageFx, e: number): PageFx {
     for (const k of ['speed', 'init', 'morale', 'luck'] as const) if (o[k] !== undefined) o[k] = Math.round(o[k]! * e);
     return o;
   };
-  return { ...fx, ...(fx.self ? { self: m(fx.self) } : {}), ...(fx.foe ? { foe: m(fx.foe) } : {}), ...(fx.one ? { one: m(fx.one) } : {}), ...(fx.allAgain ? { allShare: (fx.allShare ?? 1) * e } : {}) };
+  return { ...fx, ...(fx.self ? { self: m(fx.self) } : {}), ...(fx.foe ? { foe: m(fx.foe) } : {}), ...(fx.one ? { one: m(fx.one) } : {}), ...(fx.allAgain ? { allShare: (fx.allShare ?? 1) * e } : {}), ...(fx.again ? { againShare: (fx.againShare ?? 1) * e } : {}) };
 }
 /** docs/25 item 65: what echoes — a path's pages by her path, a common page by itself. */
 const echoKey = (id: TacSpellId): string => (isPathPage(id) ? PATH_PAGES[id].path : `page_${id}`);
@@ -1817,7 +1817,7 @@ function echoMul(bt: TacBattle, side: 0 | 1, path: string | null | undefined, gi
   const who = (bt.echo ??= {})[key] ?? [];
   const others = who.filter((x) => x !== by).length;
   if (give && !who.includes(by)) bt.echo[key] = [...who, by];
-  return Math.pow(TAC_GROUP.echo, others);
+  return Math.pow(tacEcho(bt.level), others);
 }
 /** docs/25 item 65: another captain of her side laid this move and it holds past this round (the sea's mind weighs a
  *  renewal as little). */
@@ -2670,7 +2670,7 @@ export function fxValue(bt: TacBattle, side: 0 | 1, fx: PageFx, k: number, t?: T
   v += lay(fx.self, own, foes, 1);
   v += lay(fx.foe, foes, own, -1) * foeKeep;
   if (fx.one && t) v += t.side === side ? lay(fx.one, [t], foes, 1, threat(bt, t) / Math.max(1, sum(own))) : lay(fx.one, [t], own, -1) * keep(t);
-  if (fx.again && t && t.side === side) v += threat(bt, t) * 0.9;
+  if (fx.again && t && t.side === side) v += threat(bt, t) * 0.9 * (fx.againShare ?? 1);
   if (fx.allAgain) v += sum(own) * 0.6 * (fx.allShare ?? 1);
   if (fx.free) v += Math.min(fx.free, own.length) / Math.max(1, own.length) * sum(own, (x) => !shoots(x)) * 0.15;
   v += ((fx.heart ?? 0) + (fx.dread ?? 0)) * 0.003 * sum(own);

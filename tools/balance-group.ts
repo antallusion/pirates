@@ -20,7 +20,7 @@ const mm = (m: number) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 };
 const has = (f: string) => process.argv.includes(f);
-TAC_GROUP.echo = Number(arg('echo', String(TAC_GROUP.echo)));
+if (arg('echo', '')) TAC_GROUP.echo = [[1, Number(arg('echo', ''))]];
 if (arg('roles', '1') === '0') for (const k of Object.keys(TAC_ROLES) as (keyof typeof TAC_ROLES)[]) TAC_ROLES[k] = { name: TAC_ROLES[k].name, text: TAC_ROLES[k].text };
 
 if (has('--foe')) {
@@ -39,7 +39,7 @@ if (has('--foe')) {
 }
 
 if (has('--roles')) {
-  console.log(`Item 65: six mixed groups of three against three of one path (${N * 2} boardings a pair, each side boarding in turn; echo ×${TAC_GROUP.echo}, roles ${arg('roles', '1') === '0' ? 'off' : 'on'}): the mixed side's wins, the mean and against each path`);
+  console.log(`Item 65: six mixed groups of three against three of one path (${N * 2} boardings a pair, each side boarding in turn; echo ${TAC_GROUP.echo.map(([l, e]) => `×${e}@${l}`).join(' ')}, roles ${arg('roles', '1') === '0' ? 'off' : 'on'}): the mixed side's wins, the mean and against each path`);
   const MIXES: CaptainId[][] = [['admiral', 'drowned', 'corsair'], ['navigator', 'reaver', 'smuggler'], ['admiral', 'navigator', 'reaver'], ['drowned', 'corsair', 'smuggler'], ['corsair', 'navigator', 'admiral'], ['reaver', 'drowned', 'smuggler']];
   console.log(`| L | mean | ${PATHS.map((p) => `vs 3 × ${p}`).join(' | ')} |`);
   console.log(`|---|---|${PATHS.map(() => '---').join('|')}|`);
