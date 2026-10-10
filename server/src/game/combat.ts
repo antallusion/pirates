@@ -261,7 +261,9 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
     const along = shots === 1 ? 0 : (i / (shots - 1) - 0.5) * ship.stats.length * 0.7;
     const bx = ship.state.x + fwd.x * along + outward.x * ship.stats.beam * 0.55;
     const by = ship.state.y + fwd.y * along + outward.y * ship.stats.beam * 0.55;
-    const n = doubleShot ? 2 : rng.chance(ship.stats.doubleShotChance) ? 2 : 1;
+    // Double Charge (the talent) a gun now and then, and the Double Shot's two halves of every charge on top of it.
+    const n0 = rng.chance(ship.stats.doubleShotChance) ? 2 : 1;
+    const n = doubleShot ? n0 * 2 : n0;
     let laidH = baseHeading, laidD = dist;
     if (lay && aimAt) {
       laidH = wrapAngle(sideH + clamp(wrapAngle(Math.atan2(aimAt.x - bx, -(aimAt.y - by)) - sideH), -layArc, layArc));
