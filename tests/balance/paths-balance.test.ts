@@ -4,7 +4,8 @@
 // level's skills and kit, tests/balance/boardlen.ts), each against each.
 //
 // The figures that hold them even are tuned level by level — every hero level its own (shared/src/data/paths.ts
-// POWER_AT, PATH_KNOBS, MOVE_KNOBS, ORDER_KNOBS) by tools/balance-paths.ts --balance and --pairs on dice of their own.
+// POWER_AT, PATH_KNOBS, MOVE_KNOBS — the figures her book shows) by tools/balance-paths.ts --balance and --pairs on dice
+// of their own. (ORDER_KNOBS, her own order by level, which no book showed, is gone: owner, 2026-10-10.)
 // The full check (400 boardings a pairing at each level band, other dice): node tools/balance-paths.ts --check — every
 // path 42.5–57.5% against all and every pairing 35–65%. Here a reduced sample for the suite (`N` a way round, 2N a
 // pairing, on dice neither tuner saw), so its bounds are widened by its noise:
@@ -16,7 +17,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Rng } from '../../shared/src/rng.ts';
 import type { CaptainId } from '../../shared/src/data/captains.ts';
-import { INNATE, ORDER_KNOBS, POWER_AT, moveFx, orderPower, pathPower, powered } from '../../shared/src/data/paths.ts';
+import { INNATE, POWER_AT, moveFx, pathPower, powered } from '../../shared/src/data/paths.ts';
 import { TAC_RESIST, tacEcho } from '../../shared/src/data/tactical.ts';
 import { TAC_HEAL, castSpell, commonHeal, fxValue, newBattle, tacStats } from '../../server/src/game/tacbattle.ts';
 import type { TacBattle, TacSideInput } from '../../server/src/game/tacbattle.ts';
@@ -77,23 +78,18 @@ test('docs/25 item 70: a path\'s kit lays 10% or more in its role on the mean at
   assert.deepEqual(out, []);
 });
 
-test('docs/25 item 70: every hero level has figures of its own; her own order by level, in a ship\'s boarding alone', () => {
+test('docs/25 item 70: every hero level has figures of its own (her book shows them); her own order is what her book says at every level', () => {
   assert.equal(POWER_AT.length, 60);
   POWER_AT.forEach((L, i) => assert.equal(L, i + 1));
-  for (const p of PATHS) {
-    assert.equal(ORDER_KNOBS[p].length, 60);
-    for (const L of [1, 30, 60]) assert.equal(orderPower(p, L), ORDER_KNOBS[p][L - 1]);
-  }
-  // The Reaver's Red Harvest: held at her knob in a ship's boarding, as before (×1) on the land's or the Colosseum's.
-  const give = (len?: 'board'): number | undefined => {
-    const a = side(playerArmy(8), captainAt('reaver', 8, 3), 'reaver', true), b = side(playerArmy(8), captainAt('admiral', 8, 4), 'admiral', true);
-    const bt = newBattle(a, b, 3, 0, new Rng(3), len ? { len } : {});
+  // The Reaver's Red Harvest at levels 1, 8 and 60, in a ship's boarding and elsewhere: held as given (+25% her blows).
+  for (const L of [1, 8, 60]) for (const len of ['board', undefined] as const) {
+    const a = side(playerArmy(8), captainAt('reaver', L, 3), 'reaver', true), b = side(playerArmy(8), captainAt('admiral', L, 4), 'admiral', true);
+    const bt: TacBattle = newBattle(a, b, 3, 0, new Rng(3), len ? { len } : {});
     bt.round = 2;
     assert.equal(castSpell(bt, 0, 'red_harvest', undefined, new Rng(4)), null);
-    return bt.heroes[0].fx.find((f) => f.id === 'red_harvest')?.k ?? 1;
-  };
-  assert.equal(give('board'), orderPower('reaver', 8));
-  assert.equal(give(), 1);
+    const f = bt.heroes[0].fx.find((x) => x.id === 'red_harvest');
+    assert.ok(f && !('k' in f), `level ${L}: no hidden strength on her order`);
+  }
 });
 
 test('docs/25 item 70: the Navigator\'s squall — her stack\'s blows by her moves\' power while it holds; the echo by level', () => {

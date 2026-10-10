@@ -79,7 +79,7 @@ export function allyInput(game: Game, ms: PlayerSession, enemy: ShipEntity, atta
   const base = sideOf(game, ms.ship!, enemy, attacker);
   const all = base.army ?? [];
   const army = pickBring(all, tacBring(level), prefOf(game, ms.accountId).bring);
-  const spellHp = all.reduce((n, x) => n + x.n * (UNITS[x.u]?.hp ?? 0) * (x.hpK ?? 1), 0);
+  const spellHp = all.reduce((n, x) => n + x.n * (UNITS[x.u]?.hp ?? 0), 0);
   const { gift: _gift, ...rest } = base;
   return { ...rest, army, officers: [], holes: 0, gunsOut: 0, fire: false, spellHp: Math.max(1, Math.round(spellHp)) };
 }

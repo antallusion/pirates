@@ -1503,6 +1503,10 @@ export interface TacStackView {
   resist?: number;
   /** docs/25 item 64: the allied captain whose stack she is (TacView.allies' slot); absent: her side's own captain's. */
   own?: number;
+  /** Owner, 2026-10-10 («чини атаку всем»): what her side lays on her blows, her shots and what she takes beyond her
+   *  men's dice and Attack against Defense (server/src/game/tacbattle.ts stackBonus: her ship's boarding power and gear,
+   *  the ladder between the ships, her captain's skills, artifacts and armour), in percent; absent when all are 0. */
+  bonus?: { melee: number; shot: number; taken: number };
 }
 
 /** What a blow or a shot of the captain's active stack would do (owner, 2026-10-08, as HoMM3 shows it under the
@@ -1525,6 +1529,9 @@ export interface TacPreview {
   far?: boolean;
   /** docs/25 item 62: the mast, a barrel, crates or a gun stand between (the shot's harm as shown, cut). */
   cov?: boolean;
+  /** Owner, 2026-10-10: her Attack against the other's Defense (+5% a point to +100%, −2.5% a point to −50%), percent —
+   *  what the two stack cards make of the blow before anything else. */
+  ad?: number;
 }
 
 /** A captain on the side panel. */

@@ -192,22 +192,8 @@ export const MOVE_KNOBS: Record<CaptainId, PathKnobs> = {
   drowned: { power: [0.77, 0.71, 0.71, 0.71, 0.65, 0.65, 0.59, 0.52, 0.48, 0.47, 0.45, 0.45, 0.42, 0.42, 0.42, 0.41, 0.4, 0.4, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.24, 0.25, 0.27, 0.3, 0.33, 0.35, 0.37, 0.38, 0.41, 0.43, 0.44, 0.46, 0.49, 0.5, 0.52, 0.53, 0.54, 0.55, 0.56, 0.57, 0.6, 0.58, 0.58, 0.56, 0.54, 0.52, 0.51, 0.49, 0.47, 0.46, 0.44, 0.43, 0.42, 0.4, 0.39, 0.36], mend: [0.73, 0.62, 0.85, 0.83, 1.4, 0.88, 1.54, 1.34, 0.96, 1.2, 0.97, 0.91, 1.09, 0.91, 1.07, 1.12, 1.12, 1.14, 0.5, 0.34, 0.33, 0.43, 0.38, 0.44, 0.52, 0.5, 0.52, 0.47, 0.5, 0.5, 0.53, 0.53, 0.51, 0.53, 0.55, 0.56, 0.56, 0.59, 0.55, 0.53, 0.5, 0.46, 0.4, 0.38, 0.3, 0.39, 0.41, 0.47, 0.57, 0.58, 0.58, 0.57, 0.6, 0.6, 0.59, 0.59, 0.55, 0.51, 0.45, 0.44], buff: 0.87, pts: 1 },
   admiral: { power: [4.74, 4.13, 5.7, 4.04, 2.28, 4.23, 1.99, 2.15, 2.29, 2.46, 1.64, 2.32, 1.76, 1.81, 1.42, 1.76, 1.42, 1.45, 1.02, 0.96, 0.8, 0.52, 0.83, 0.68, 0.64, 0.52, 0.55, 0.62, 0.56, 0.55, 0.66, 0.57, 0.57, 0.47, 0.71, 0.7, 0.69, 0.68, 0.66, 0.73, 0.73, 0.7, 0.7, 0.73, 0.79, 0.83, 0.76, 0.82, 0.9, 0.9, 0.9, 0.92, 0.91, 0.92, 0.92, 0.9, 0.99, 0.9, 0.92, 0.95], mend: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], buff: 0.66, pts: 1 },
 };
-/** docs/25 item 70 (owner, 2026-10-10: «надо этот момент для всех капитанов проработать идеально … делай все пункты»):
- *  her own order — the Corsair's Point-Blank, the Smuggler's Smoke and Knives, the Reaver's Red Harvest, the
- *  Navigator's Turning the Flank, the Drowned's Call of the Deep, the Admiral's Iron Discipline — at each of POWER_AT's
- *  hero levels, in a ship's boarding (its blow, its drowning, the share its blows or guard are lifted by, its initiative;
- *  its points of speed and morale stay whole). Elsewhere — the Colosseum, the long battles, the land — as before (1).
- *  Before, these stood at one strength from level 1 to 60, and the Navigator's Turning the Flank alone won her three
- *  boardings in four at level 5 (tools/balance-paths-diag.ts). Tuned with the pages' and moves' power
- *  (tools/balance-paths.ts --balance). */
-export const ORDER_KNOBS: Record<CaptainId, readonly number[]> = {
-  corsair: [1.79, 2.38, 2.34, 2.25, 1.55, 1.59, 1.66, 0.75, 0.96, 1.77, 1.34, 0.91, 0.7, 0.7, 0.88, 0.71, 0.7, 0.86, 0.6, 0.98, 0.83, 0.8, 0.84, 0.85, 0.87, 0.73, 0.64, 0.71, 0.74, 0.9, 0.71, 0.71, 0.78, 0.72, 0.69, 0.64, 0.69, 0.63, 0.67, 0.71, 0.74, 0.72, 0.78, 0.79, 0.79, 0.8, 0.82, 0.76, 0.78, 0.76, 0.76, 0.74, 0.79, 0.77, 0.81, 0.84, 0.89, 0.88, 0.99, 1.03],
-  smuggler: [0.72, 0.82, 0.92, 0.77, 0.56, 0.73, 0.85, 0.96, 0.85, 0.93, 0.82, 0.88, 0.98, 1.07, 1.14, 1.22, 1.22, 1.27, 1.25, 1.49, 1.12, 1.12, 1.21, 1.21, 0.98, 0.9, 1.02, 0.89, 0.9, 1.18, 0.88, 0.92, 0.9, 1.22, 1.26, 1.28, 1.39, 1.51, 1.46, 1.39, 1.5, 1.46, 1.62, 1.63, 1.62, 1.94, 2.06, 1.64, 1.48, 1.46, 1.47, 1.48, 1.46, 1.42, 1.44, 1.52, 1.32, 1.3, 1.32, 1.3],
-  reaver: [3, 2.86, 3, 3, 2.96, 3, 2.38, 3, 1.55, 2.97, 1.98, 2.06, 1.32, 0.62, 1.2, 1.2, 0.68, 0.48, 0.81, 1.63, 2, 2.4, 2.11, 2.1, 1.15, 1, 1.14, 1.02, 1.05, 1.03, 0.62, 0.81, 1.52, 1.05, 0.99, 0.97, 0.88, 0.86, 1.09, 0.96, 1.02, 1, 0.98, 1, 1.16, 1.66, 0.93, 0.99, 0.8, 0.74, 0.71, 0.71, 0.67, 0.62, 0.65, 0.5, 0.57, 0.62, 0.55, 0.52],
-  navigator: [0.35, 0.35, 0.35, 0.42, 0.36, 0.38, 0.35, 0.36, 0.35, 0.36, 0.36, 0.35, 0.6, 1.17, 0.73, 0.97, 1.24, 0.92, 0.77, 0.55, 0.54, 0.62, 0.53, 0.58, 0.91, 0.76, 0.87, 0.81, 0.84, 0.84, 0.97, 0.83, 1.1, 1.04, 1.05, 1.13, 1.27, 1.19, 1.33, 1.4, 1.51, 1.6, 1.66, 1.74, 1.83, 2.05, 1.26, 1.41, 1.33, 1.17, 1.19, 1.14, 1.15, 1.23, 1.23, 1.28, 1.22, 1.51, 1.33, 1.34],
-  drowned: [1.3, 0.48, 0.55, 0.41, 2.22, 0.73, 1.26, 1.22, 1.09, 1.75, 0.9, 1.01, 1.71, 1.83, 1.69, 1.63, 1.47, 1.54, 1.6, 1.04, 1.26, 1.21, 1.18, 1.19, 1.98, 2.04, 2.08, 1.71, 1.85, 1.85, 2.04, 2.07, 1.93, 2.06, 1.68, 1.66, 1.67, 1.69, 1.64, 1.42, 1.37, 1.19, 1.04, 0.9, 0.72, 0.91, 1.08, 1.41, 1.64, 1.66, 1.65, 1.67, 1.67, 1.66, 1.66, 1.69, 1.41, 1.28, 1.1, 1],
-  admiral: [1.58, 1.3, 1.49, 1.3, 1.01, 1.37, 1.21, 1.48, 1.09, 1.32, 0.98, 1.41, 1.17, 1.31, 1.43, 1.32, 1.39, 1.33, 1.34, 1.5, 1.08, 1.41, 1.39, 1.26, 1.2, 0.95, 1.17, 0.95, 0.94, 1.12, 0.88, 0.9, 1.01, 0.63, 1.02, 1.04, 1.01, 0.99, 1.25, 1, 1.02, 0.99, 1.01, 1.06, 1.03, 1.05, 1.11, 1.02, 1.14, 1.1, 1.05, 1.06, 1.04, 1.02, 0.99, 0.98, 1.04, 1.17, 0.99, 0.99],
-};
+// (docs/25 item 70's ORDER_KNOBS — her own order at ×0.35 to ×3 of what her book says, by her level, in a ship's
+// boarding alone — is gone, owner 2026-10-10: «чини атаку всем». Her own order is what her book says at every level.)
 export const pathKnobs = (path: CaptainId, kind: 'page' | 'move' = 'page'): PathKnobs => (kind === 'move' ? MOVE_KNOBS : PATH_KNOBS)[path];
 /** A figure at each of POWER_AT's levels, at a hero level (the line between them; beyond, the last). */
 function atLevel(k: readonly number[], level: number): number {
@@ -215,10 +201,6 @@ function atLevel(k: readonly number[], level: number): number {
   if (level <= at[0]) return k[0];
   for (let i = 1; i < at.length; i++) if (level <= at[i]) return k[i - 1] + ((k[i] - k[i - 1]) * (level - at[i - 1])) / (at[i] - at[i - 1]);
   return k[k.length - 1];
-}
-/** Her own order's strength at a hero level (ORDER_KNOBS). */
-export function orderPower(path: CaptainId, level: number): number {
-  return atLevel(ORDER_KNOBS[path] ?? [1], level);
 }
 /** The `power` knob at a hero level (`mend`: the `mend` knob). */
 export function pathPower(path: CaptainId, level: number, kind: 'page' | 'move' = 'page', knob: 'power' | 'mend' = 'power'): number {

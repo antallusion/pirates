@@ -3,8 +3,9 @@
 // a boarding runs — the hero's Attack against Defense held in, the common orders' lift with a waning return and their
 // blast reckoned from the stack it falls on, the guarding multipliers on a stack's own Defense and all of them at most
 // half a blow, the turn's clock by level and the chess clocks, the quick fight offered at once against a clearly weaker
-// ship of the sea and none against a legend, the sea's fewer stacks and shorter breath, the fatigue from round 8, the
-// quarterdeck's flag from level 40. The table itself (rounds, minutes, round 1's cut): tests/balance/boarding.test.ts.
+// ship of the sea and none against a legend, the sea's fewer stacks and shorter breath, the quarterdeck's flag from
+// level 40. (Owner, 2026-10-10: «9 матросов убили 20 моих матросов с одного удара … чини атаку всем» — the tempo by
+// level, the sea's lift, round 1's scale and the fatigue are gone: a blow is its stacks' own, tests/fairhit.test.ts.) The table itself (rounds, minutes, round 1's cut): tests/balance/boarding.test.ts.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,7 +14,7 @@ import { Rng } from '../shared/src/rng.ts';
 import { armyForLevel } from '../shared/src/data/army.ts';
 import { npcHeroBattle, npcHeroLevel } from '../shared/src/data/hero.ts';
 import {
-  TAC_AI_DELAY, TAC_LEN, boardSlots, hexNeighbors, npcBoardSlots, tacBankSecs, tacFatigue, tacFlagHex, tacTempo, tacTurnSecs,
+  TAC_AI_DELAY, TAC_LEN, boardSlots, hexNeighbors, npcBoardSlots, tacBankSecs, tacFlagHex, tacTurnSecs,
 } from '../shared/src/data/tactical.ts';
 import {
   TAC_BLAST_STACK, TAC_GUARD_MIN, TAC_ORDER_CAP, act, adMod, aiAct, aiChoice, blowParts, castSpell, commonMul, newBattle, sideStrength, stackById, stepBattle, tacHp,
@@ -85,29 +86,17 @@ test('docs/25 item 46: a common order\'s lift wanes and stops at ×3; its blast 
   assert.ok(cut > 0.05 && cut <= 0.55 * TAC_BLAST_STACK + 0.01, `the Maelstrom takes ${(cut * 100).toFixed(0)}% of her army`);
 });
 
-test('docs/25 item 44: a boarding\'s blows by its level — quick at the bottom, slow at the top; the sea\'s fights quicker', () => {
-  for (let L = 2; L <= 60; L++) assert.ok(tacTempo(L) <= tacTempo(L - 1) + 1e-9, `tempo at ${L}`);
-  assert.ok(tacTempo(1) / tacTempo(60) > 4, 'the curve turned over');
-  assert.equal(tacTempo(0), 1, 'a battle of no level as before');
-  const pvp = newBattle(L60(), L60(), 1, 0, new Rng(1), { len: 'board' });
-  const sea = newBattle(L60(), L60(false), 1, 0, new Rng(1), { len: 'board' });
-  assert.ok(sea.tempo > pvp.tempo, 'against the sea\'s mind a shade quicker');
-  assert.equal(newBattle(L60(), L60(), 1, 0, new Rng(1), { len: 'long' }).tempo, 1, 'the legends, the raid and the citadels: long by design');
-});
-
-test('docs/25 item 51: from round 8 every blow lands 15% harder a round, both sides', () => {
-  assert.equal(tacFatigue(7), 1);
-  assert.ok(Math.abs(tacFatigue(8) - 1.15) < 1e-9);
-  assert.ok(Math.abs(tacFatigue(10) - 1.45) < 1e-9);
-  const bt = newBattle(L60(), L60(), 2, 0, new Rng(2), { len: 'board' });
-  const s = bt.stacks.find((x) => x.side === 0)!, t = bt.stacks.find((x) => x.side === 1)!;
-  const r1 = blowParts(bt, s, t, 'melee').mul;
-  bt.round = 7;
-  const r7 = blowParts(bt, s, t, 'melee').mul;
-  bt.round = 9;
-  const r9 = blowParts(bt, s, t, 'melee').mul;
-  assert.ok(r7 > r1, 'round 1 opens lighter (the crews cross the rail)');
-  assert.ok(Math.abs(r9 / r7 - 1.3) < 1e-6, `round 9 against round 7 ×${(r9 / r7).toFixed(3)}`);
+test("owner, 2026-10-10: no lift on a blow by the battle's level, the sea's mind, round 1 or the rounds gone (items 44, 50, 51 undone)", () => {
+  const mul = (L: number, human: boolean, len: 'board' | 'long', round: number) => {
+    const bt = newBattle(L60(), L60(human), 2, 0, new Rng(2), { len, level: L });
+    bt.round = round;
+    return blowParts(bt, bt.stacks.find((x) => x.side === 0)!, bt.stacks.find((x) => x.side === 1)!, 'melee').mul;
+  };
+  const base = mul(60, true, 'board', 2);
+  for (const L of [1, 10, 30, 60]) for (const human of [true, false]) for (const round of [2, 8, 12, 19]) {
+    assert.ok(Math.abs(mul(L, human, 'board', round) - base) < 1e-9, `level ${L}, ${human ? 'a captain' : 'the sea'}, round ${round}`);
+  }
+  assert.ok(Math.abs(mul(60, true, 'long', 9) - base) < 1e-9, 'a long battle the same');
 });
 
 test('docs/25 items 48 and 70: a stack\'s turn by level (10 / 20 / 30 s), a captain\'s chess clock over the fight; spent, her stacks defend', () => {
@@ -140,19 +129,20 @@ test('docs/25 items 48 and 70: a stack\'s turn by level (10 / 20 / 30 s), a capt
   assert.equal(TAC_AI_DELAY, 0.35, 'docs/25 item 50: the sea\'s breath 0.7 → 0.35 s');
 });
 
-test('docs/25 item 50: the sea brings a stack or two fewer — the same men, the same strength in fewer, fuller stacks', () => {
+test('docs/25 item 50: the sea brings a stack or two fewer — the same strength in fewer, fuller stacks of plain men', () => {
   for (const L of [5, 15, 25, 35, 60]) assert.equal(npcBoardSlots(L), Math.max(2, boardSlots(L) - TAC_LEN.npcFewer));
   for (const mix of ['pirate', 'navy', 'deep'] as const) for (let sl = 2; sl <= 10; sl++) {
     const army: TacArmyEntry[] = armyForLevel(sl, 40 + sl * 50, 7, mix).map((x) => ({ ...x, src: x.u }));
     const fit = battleFit(army, npcBoardSlots(npcHeroLevel(sl)));
     assert.ok(fit.length <= npcBoardSlots(npcHeroLevel(sl)));
-    assert.equal(fit.reduce((n, x) => n + x.n, 0), army.reduce((n, x) => n + x.n, 0), 'nobody lost or made up');
+    // Owner, 2026-10-10: each man of a stack is the man its card shows — the merged come as men of its kind by their worth.
+    assert.ok(fit.every((x) => !('hpK' in x) && !('dmgK' in x)), 'no hidden share on a stack');
     const strength = (ar: TacArmyEntry[]) => {
       const bt = newBattle(side(ar, undefined, null, false), side([{ u: 'deckhand', n: 1 }], undefined, null, false), 1, 0, new Rng(1));
       return sideStrength(bt, 0);
     };
     const k = strength(fit) / strength(army);
-    assert.ok(k > 0.97 && k < 1.03, `${mix} ⚓${sl}: ×${k.toFixed(3)}`);
+    assert.ok(k > 0.95 && k < 1.05, `${mix} ⚓${sl}: ×${k.toFixed(3)}`);
   }
 });
 

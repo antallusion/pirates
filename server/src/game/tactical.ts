@@ -111,13 +111,11 @@ export function pickBring<T extends { u: TacArmyEntry['u']; n: number }>(army: r
   return out;
 }
 
-/** A man's hit points behind his Defense, and his mean blow behind his Attack (the stack's own lift on them). */
-const manHp = (x: TacArmyEntry) => UNITS[x.u].hp * (1 + 0.05 * UNITS[x.u].def) * (x.hpK ?? 1);
-const manBlow = (x: TacArmyEntry) => ((UNITS[x.u].dmin + UNITS[x.u].dmax) / 2) * (1 + 0.05 * UNITS[x.u].atk) * (x.dmgK ?? 1);
-
 /** docs/25 item 50: the sea's army in `slots` stacks for the battle only (her ship keeps hers): the weakest stack
- *  stands in, man for man, with the kind of hers nearest it in worth (a shooter with a shooter), and that stack carries
- *  their hit points and blows with it — the same head count and the same strength in fewer, fuller stacks. */
+ *  stands in with the kind of hers nearest it in worth (a shooter with a shooter) as as many of that kind's men as
+ *  she is worth (her men × her man's worth ÷ theirs) — the same strength in fewer, fuller stacks. Owner, 2026-10-10
+ *  («9 матросов убили 20 моих матросов с одного удара»): every man of a stack is the man its card shows — before, the
+ *  stack carried the merged men's hit points and blows as a hidden share on its own (9 «deckhands» struck as 12). */
 export function battleFit(army: TacArmyEntry[], slots: number): TacArmyEntry[] {
   const out = army.map((x) => ({ ...x }));
   const worth = (x: TacArmyEntry) => x.n * manWorth(x.u);
@@ -132,12 +130,7 @@ export function battleFit(army: TacArmyEntry[], slots: number): TacArmyEntry[] {
       const dx = Math.abs(manWorth(x.u) - w), db = Math.abs(manWorth(b.u) - w);
       return dx < db || (dx === db && x.n > b.n) ? x : b;
     });
-    const n = into.n + s.n;
-    const hp = into.n * manHp(into) + s.n * manHp(s), blows = into.n * manBlow(into) + s.n * manBlow(s);
-    const base = { ...into, hpK: 1, dmgK: 1 };
-    into.hpK = Math.round((hp / (n * manHp(base))) * 1000) / 1000;
-    into.dmgK = Math.round((blows / (n * manBlow(base))) * 1000) / 1000;
-    into.n = n;
+    into.n += Math.max(1, Math.round((s.n * w) / manWorth(into.u)));
   }
   return out;
 }

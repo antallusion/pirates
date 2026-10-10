@@ -27,7 +27,7 @@ import {
 } from '../../shared/src/data/paths.ts';
 import type { BtMods, PageFx, PathPageId } from '../../shared/src/data/paths.ts';
 import { SICK_TURNS } from '../../shared/src/data/paths.ts';
-import { TAC_CHANCE_PER_POINT, boardSlots, tacTempo, TAC_LEN } from '../../shared/src/data/tactical.ts';
+import { TAC_CHANCE_PER_POINT, boardSlots } from '../../shared/src/data/tactical.ts';
 import { captainAt, playerArmy } from './boardlen.ts';
 
 export type Role = 'strike' | 'drain' | 'mend' | 'hold' | 'again';
@@ -57,15 +57,12 @@ export function shooterShare(army: readonly ArmyStack[]): number {
   return all > 0 ? sh / all : 0;
 }
 
-/** The boarding's scale on a captain's blast at `level`, from round 2 (docs/25 item 44: min(1, tempo); no fatigue). */
-export const blastAt = (level: number): number => Math.min(TAC_LEN.blastMax, tacTempo(level));
-
 /** What a powered move lays in its role (the hero `hb` gives it, `k` her school's lift on it). */
 export function roleOfFx(fx: PageFx, k: number, level: number, hb: HeroBattle, path: CaptainId): RoleOf {
   const n = boardSlots(level);
   const fs = shooterShare(playerArmy(level)), fm = 1 - fs;
   const rounds = fx.self || fx.foe || fx.one ? 1 + pathHoldExtra(fx, hb.pow) : 0;
-  const blast = 0.07 * blastAt(level) * k;
+  const blast = 0.07 * k;
   const strike = (fx.dmg ?? 0) + (fx.ring ?? 0) + n * (fx.all ?? 0) + n * fs * (fx.shooters ?? 0) + 2 * (fx.row ?? 0) + SICK_TURNS * (fx.sicken ?? 0);
   if (strike > 0) return { role: 'strike', v: blast * strike, rounds };
   if (fx.heal || fx.raise || fx.mend) {

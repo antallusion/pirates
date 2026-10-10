@@ -17,7 +17,7 @@
 
 import { BANDS, HUMAN_DECIDE, bandStat } from '../tests/balance/boardlen.ts';
 import { groupStat } from '../tests/balance/boardgroup.ts';
-import { TAC_AI_DELAY, boardSlots, npcBoardSlots, tacOpen, tacTempo } from '../shared/src/data/tactical.ts';
+import { TAC_AI_DELAY, boardSlots, npcBoardSlots } from '../shared/src/data/tactical.ts';
 
 const arg = (k: string, d: string): string => process.argv.find((a) => a.startsWith(`${k}=`))?.slice(k.length + 1) ?? d;
 const N = Number(arg('n', '4'));
@@ -32,8 +32,8 @@ const span = (a: [number, number], f: (x: number) => string) => (a[0] === a[1] ?
 
 console.log(`Boarding time by level (docs/25 §1.2) — ${N * 6} battles a level and side; a captain's decision ${HUMAN_DECIDE} s a stack, the sea's ${TAC_AI_DELAY} s.`);
 console.log('');
-console.log('| L | tempo | r.1 | stacks (her / sea) | rounds vs captain [table] | min vs captain [table] | min vs sea [table] | round-1 cut [table] | flag wins | turns |');
-console.log('|---|---|---|---|---|---|---|---|---|---|');
+console.log('| L | stacks (her / sea) | rounds vs captain [table] | min vs captain [table] | min vs sea [table] | round-1 cut [table] | flag wins | turns |');
+console.log('|---|---|---|---|---|---|---|---|');
 const band: Record<number, { r: number[]; p: number[]; s: number[]; c: number[] }> = {};
 for (const L of LEVELS) {
   const b = BANDS.find((x) => L >= x.lo && L <= x.hi)!;
@@ -43,7 +43,7 @@ for (const L of LEVELS) {
   k.p.push(pvp.mins);
   k.s.push(npc.mins);
   k.c.push(pvp.cut1);
-  console.log(`| ${L} | ×${tacTempo(L).toFixed(2)} | ×${tacOpen(L).toFixed(2)} | ${boardSlots(L)} / ${npcBoardSlots(L)} | ${pvp.rounds.toFixed(1)} [${span(b.rounds, String)}] | ${mm(pvp.mins)} [${span(b.pvp, mm)}] | ${mm(npc.mins)} [${span(b.npc, mm)}] | ${pc(pvp.cut1)} | ${pc(pvp.flags)} | ${pvp.turns.toFixed(0)} / ${npc.turns.toFixed(0)} |`);
+  console.log(`| ${L} | ${boardSlots(L)} / ${npcBoardSlots(L)} | ${pvp.rounds.toFixed(1)} [${span(b.rounds, String)}] | ${mm(pvp.mins)} [${span(b.pvp, mm)}] | ${mm(npc.mins)} [${span(b.npc, mm)}] | ${pc(pvp.cut1)} | ${pc(pvp.flags)} | ${pvp.turns.toFixed(0)} / ${npc.turns.toFixed(0)} |`);
 }
 console.log('');
 console.log('By band (the mean of its levels):');

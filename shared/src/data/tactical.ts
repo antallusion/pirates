@@ -45,17 +45,15 @@ export function tacBankSecs(level: number): number {
  *  - `foe`: item 66 — a ship of the sea, a legend, the raid's tier or a citadel's garrison against a group grows by
  *    `share(level)` of the strength her allies brought (the square law, sideStrength), and `order(level)` more for each
  *    ally's book and path. docs/25 item 70: the share 1 → 1.6 at 11 and 1.4 at 15 (three of level 12 lost 23% of their
- *    men each, the boarder 8%, against a lone captain's 51%; now 28% and 15%), and `paceSea` 1.9 → 2.4 at 15 and 1.7 →
- *    2.2 at 18 (two against the sea took as long as one; now 3–4% quicker);
- *  - `pace`: a group's blows and orders land harder by `pace(level)` an ally on the field (both sides counted), so its
- *    rounds are fewer than one captain's and its many stacks keep §1.2's length; `paceSea` against the sea's mind (its
- *    fights shorter, as item 50 has them: a group of the low levels is quicker than one captain alone);
+ *    men each, the boarder 8%, against a lone captain's 51%; now 28% and 15%);
  *  - `echo`: item 65 — the second captain of one path to give her path's page or move in a round gives it at ×echo,
  *    the third at its square (her foe has just read that book); and what another captain of her side laid of the same
  *    page holds once (tacbattle.ts layFx: the later renews it, it does not stack). Three of one path weigh less than a
  *    mixed group. docs/25 item 70: by level (`tacEcho`) — ×0.35 to level 22, ×0.6 from 30: in the short fights of the
  *    low levels three Corsairs' blows and three Navigators' double turns beat an average mixed group 61–74% at ×0.6
- *    (tools/balance-group.ts --roles); an echoed «another turn» is given that share of the times. */
+ *    (tools/balance-group.ts --roles); an echoed «another turn» is given that share of the times.
+ *  (`pace` and `paceSea` — a group's blows and orders harder by each ally on the field — are gone, owner 2026-10-10:
+ *  «9 матросов убили 20 моих матросов с одного удара … чини атаку всем». A blow is its stack's own.) */
 export const TAC_GROUP = {
   range: 600,
   side: 3,
@@ -64,17 +62,10 @@ export const TAC_GROUP = {
   late: 3,
   echo: [[1, 0.35], [22, 0.35], [30, 0.6], [60, 0.6]] as [number, number][],
   foe: { share: [[1, 0.7], [10, 0.7], [11, 1.6], [15, 1.4], [20, 1.1], [30, 0.9], [60, 1]] as [number, number][], order: [[1, 0], [30, 0.15], [60, 0.3]] as [number, number][] },
-  pace: [[1, 2.2], [10, 1.8], [20, 1], [30, 0.4], [60, 0.2]] as [number, number][],
-  paceSea: [[1, 2.5], [10, 2.2], [15, 2.4], [20, 2], [30, 0.8], [60, 0.7]] as [number, number][],
 };
 /** docs/25 items 65 and 70: the echo of a second captain of one path at a boarding's level (TAC_GROUP.echo). */
 export function tacEcho(level: number): number {
   return tacLevel(TAC_GROUP.echo, Math.max(1, level));
-}
-/** docs/25 block Е: the lift on a boarding's blows and orders with `allies` allied captains on the field (both sides;
- *  `sea`: against the sea's mind, `paceSea`). */
-export function tacGroupPace(level: number, allies: number, sea = false): number {
-  return allies <= 0 ? 1 : 1 + Math.max(0, allies) * tacLevel(sea ? TAC_GROUP.paceSea : TAC_GROUP.pace, Math.max(1, level));
 }
 /** docs/25 item 65 (owner: «у каждого пути своя роль на поле — Адмирал держит строй, Утопленница поднимает павших,
  *  Навигатор даёт лишние ходы, Корсар бьёт»): the paths' roles in a group's boarding. Each path among a side's captains
@@ -102,33 +93,22 @@ export function tacBring(level: number): number {
 export const TAC_AI_DELAY = 0.35;
 
 /** docs/25 block Г (owner, 2026-10-09: «абордаж на высоких уровнях должен быть такой, чтобы люди играли по 5-10 минут…
- *  На низких 1 минуты норма»): how long a boarding runs by its level.
- *  Each table is by level, straight between its points (tacLevel).
- *  - `tempo`: every blow and shot of a boarding of level L lands ×tempo(L) — the army's strength grows with the level
- *    faster than a blow does (item 44): a fight of level 1 is two or three rounds, one of level 60 five to seven.
- *  - `blastMax`: the captains' orders slow with the tempo but speed up no more than this — a low level's orders
- *    already land hard (her path's power is at its highest there); its quick fights come from the men's blows.
- *  - `open`: round 1's blows and orders land ×open(L) (item 44: the share of an equal army cut in round 1 goes from
- *    ~35% at levels 1–10 to 15–18% at 51–60) — the crews cross the rail and feel each other out; the big fights are
- *    decided in the rounds after, by the captains' moves and the stacks' places, not by the first volley.
- *  - `npc`: a boarding against the sea's mind lands this much harder on both sides than one between two captains of its
- *    level (item 50, owner: «с нпс можно быстрее сражаться»): the odds stay, the fight is shorter.
+ *  На низких 1 минуты норма»): how long a boarding runs by its level — by its honest levers alone (owner, 2026-10-10:
+ *  «9 матросов убили 20 моих матросов с одного удара … чини атаку всем, чини баланс»): the stacks a side brings, the
+ *  turn's clock and the chess clock (tacTurnSecs, tacBankSecs), the quick fight against a clearly weaker ship of the sea
+ *  and the quarterdeck's flag. A blow is what the stacks' cards say at every level, against the sea and a captain alike:
+ *  items 44, 50 and 51's lifts on the blows (`tempo` ×2.4 at levels 1–10 to ×0.4 at 60, `npc` ×1.8–2.8 against the sea,
+ *  `open` ×0.58–1 in round 1, `fatigue` +15% a round from round 8) are gone.
  *  - `npcFewer`: the stacks fewer a ship of the sea brings than a captain of her level (item 50).
- *  - `fatigue`: from round `from` every blow lands `step` harder a round, both sides (item 51) — nobody holds out.
  *  - `flag`: from level `level` the quarterdeck's flag stands on each deck's stern; a stack of hers on the other's for
  *    `rounds` whole rounds takes the ship (item 52).
  *  - `quick`: a quick fight is offered at once when her side is this many times the other's strength (item 49). */
 export const TAC_LEN = {
-  tempo: [[1, 2.4], [10, 2.4], [20, 1.3], [30, 0.74], [40, 0.57], [50, 0.47], [60, 0.4]] as [number, number][],
-  blastMax: 1,
-  open: [[1, 1], [10, 0.85], [20, 0.7], [30, 0.65], [40, 0.62], [50, 0.66], [60, 0.7]] as [number, number][],
-  npc: [[1, 1.8], [10, 2.2], [20, 2.8], [30, 2.8], [40, 1.9], [60, 1.15]] as [number, number][],
   npcFewer: 2,
-  fatigue: { from: 8, step: 0.15 },
   flag: { level: 40, rounds: 2 },
   quick: 1.5,
 };
-/** A TAC_LEN table at `level`: straight between its points, flat past its ends. */
+/** A table by level (TAC_GROUP's): straight between its points, flat past its ends. */
 export function tacLevel(pts: readonly (readonly [number, number])[], level: number): number {
   const L = Math.max(pts[0][0], Math.min(pts[pts.length - 1][0], level));
   for (let i = 1; i < pts.length; i++) {
@@ -142,28 +122,10 @@ export function tacLevel(pts: readonly (readonly [number, number])[], level: num
 export function boardSlots(level: number): number {
   return level <= 10 ? 4 : level <= 20 ? 5 : level <= 30 ? 6 : 7;
 }
-/** docs/25 item 50: a ship of the sea fights with one stack fewer than a captain of her level (two from level 31) —
- *  the same men in fewer, fuller stacks, so the fight with her is quicker and as hard. */
+/** docs/25 item 50: a ship of the sea fights with fewer stacks than a captain of her level — the same men in fewer,
+ *  fuller stacks, so the fight with her is quicker and as hard. */
 export function npcBoardSlots(level: number): number {
   return Math.max(2, boardSlots(level) - TAC_LEN.npcFewer);
-}
-
-/** item 44: the blows' scale in a boarding of `level` (1 for a battle of no level). */
-export function tacTempo(level: number): number {
-  return level <= 0 ? 1 : tacLevel(TAC_LEN.tempo, level);
-}
-/** item 44: round 1's scale in a boarding of `level`. */
-export function tacOpen(level: number): number {
-  return level <= 0 ? 1 : tacLevel(TAC_LEN.open, level);
-}
-/** item 50: a boarding against the sea's mind, its blows' and orders' lift at `level`. */
-export function tacNpc(level: number): number {
-  return level <= 0 ? 1 : tacLevel(TAC_LEN.npc, level);
-}
-/** item 51: the blows' lift in round `round` (1 before TAC_LEN.fatigue.from). */
-export function tacFatigue(round: number): number {
-  const f = TAC_LEN.fatigue;
-  return round >= f.from ? 1 + f.step * (round - f.from + 1) : 1;
 }
 /** item 52: the quarterdeck's flag of side `side`: on her own deck, at her stern (the bottom rail), a hex in from the
  *  edge — side 0's on the left deck, side 1's its mirror. The other side takes it. */
