@@ -149,8 +149,11 @@ test('docs/25 item 70: the sea\'s mind gives «Шкура из ракушек» 
       }
     });
     const per = (id: string) => (tacStats.casts.get(`drowned:${id}`) ?? 0) / k;
-    assert.ok(per('dr_barnacles') >= 0.5, `«Шкура из ракушек» ${per('dr_barnacles').toFixed(2)} a battle (0 before)`);
-    assert.ok(per('dr_brine_kiss') >= 0.3, `«Поцелуй соли» ${per('dr_brine_kiss').toFixed(2)} a battle`);
+    // 2026-10-10 (the boarding's blows its stacks' own): a fight at level 45 is ~3.7 rounds now (5 before) and the page
+    // waits four rounds between casts — once a battle at the most; the sea's mind gives it in a third of them (0.5 → 0.25).
+    assert.ok(per('dr_barnacles') >= 0.25, `«Шкура из ракушек» ${per('dr_barnacles').toFixed(2)} a battle (0 before)`);
+    assert.ok(per('dr_brine_kiss') >= 0.2, // (the same shorter fights: 0.3 → 0.2)
+      `«Поцелуй соли» ${per('dr_brine_kiss').toFixed(2)} a battle`);
   } finally {
     tacStats.on = false;
     tacStats.casts.clear();

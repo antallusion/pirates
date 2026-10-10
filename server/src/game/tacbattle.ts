@@ -1827,8 +1827,10 @@ export function moveError(bt: TacBattle, side: 0 | 1, kind: 'innate' | 'ult', ta
 }
 
 /** The point-blank volley's blow, a share of the captain's blast: H2's corsair signature in the sea's book (`k`), and
- *  in a corsair's own hands (`path`: docs/18 #47 — her path book carries her now, the volley a little less). */
-export const TAC_POINT_BLANK = { k: 1.6, path: 1.1 };
+ *  in a corsair's own hands (`path`: docs/18 #47 — her path book carries her now, the volley a little less). 2026-10-10:
+ *  `path` 1.1 → 1 — with ORDER_KNOBS gone (it held her volley at ×0.6–0.9 from level 8) the Corsair won 58% against all
+ *  at level 30 with her pages and moves at their least. */
+export const TAC_POINT_BLANK = { k: 1.6, path: 1 };
 /** The Drowned's own order, «Зов бездны»: the share of every stack of hers it drags under (her book: «a tenth»). */
 export const TAC_CALL_DEEP = 0.1;
 /** The point-blank volley's share of her blast as she gives it. */
@@ -2578,8 +2580,10 @@ const valueOf = (bt: TacBattle, t: TacStack, dmg: number) => (Math.min(dmg, hpOf
  *  third more than blows +20% (0.33); two points of morale as a strike of 3%, of luck 5%, of speed 9%; initiative
  *  helps at some levels and hurts at others (+3: −12 … +20 points), 6% for three points on the mean. Before, harm
  *  taken was weighed 0.2, morale 0.015 and luck 0.02 a point: the sea's mind passed over «Шкура из ракушек» and «В
- *  каре» and gave a page of morale or luck before a blow. */
-export const TAC_AI_RATE = { blow: 0.25, taken: 0.33, speed: 0.015, init: 0.007, morale: 0.005, luck: 0.008 };
+ *  каре» and gave a page of morale or luck before a blow. 2026-10-10, measured again on the stacks' own blows (no tempo,
+ *  no lift against the sea; 360 mirrors a line at 15 and 45): harm taken −20% for three rounds won 22–24 points, blows
+ *  +20% 12–14 — taken 0.33 → 0.4 (with 0.33 the Drowned of level 45 gave «Шкура из ракушек» once in thirty battles). */
+export const TAC_AI_RATE = { blow: 0.25, taken: 0.4, speed: 0.015, init: 0.007, morale: 0.005, luck: 0.008 };
 
 /** What a path's move is worth to the sea's mind now (docs/18): its blows as the stacks' worth, its holds as a share
  *  of the strength they lift or blunt for the rounds they hold (TAC_AI_RATE), another turn as the stack's own. docs/25
@@ -2731,8 +2735,7 @@ function aiSpell(bt: TacBattle, side: 0 | 1, rng: Rng): AiOrder | null {
     const pfx = pageFx(bt, side, s0.id);
     if (pfx) {
       const b = bestFx(bt, side, pfx, km, !isPathPage(s0.id));
-      const v = b.v * thrift * (echoed(bt, side, s0.id) && (pfx.self || pfx.foe || pfx.one) ? 0.4 : 1);
-      if (v > bv) {
+      const v = b.v * thrift * (echoed(bt, side, s0.id) && (pfx.self || pfx.foe || pfx.one) ? 0.4 : 1);      if (v > bv) {
         bv = v;
         best = { id: s0.id, ...(b.target !== undefined ? { target: b.target } : {}) };
       }
