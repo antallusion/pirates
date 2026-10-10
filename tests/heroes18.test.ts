@@ -20,7 +20,7 @@ import type { TreeId } from '../shared/src/data/talents.ts';
 import { TAC_ORDER_OF, TAC_SPELLS } from '../shared/src/data/tactical.ts';
 import { canShoot, castMove, castSpell, modsOf, moralePoints, newBattle, quickFinish, spellCost, spellRes, tacStats, viewOf } from '../server/src/game/tacbattle.ts';
 import type { TacBattle, TacSideInput } from '../server/src/game/tacbattle.ts';
-import { act } from '../server/src/game/tacbattle.ts';
+import { act, aiAct } from '../server/src/game/tacbattle.ts';
 import { afterBattle, heroInput, heroOf, heroSecond, heroView } from '../server/src/game/hero.ts';
 import { foreignAt, giveScroll, learnForeign, npcPathOf, stamMax } from '../server/src/game/pathbook.ts';
 import { runAdmin } from '../server/src/game/admin.ts';
@@ -167,11 +167,13 @@ test('4. Stamina: physical pages spend it, magical ones will; a share comes back
   bt.heroes[0].spells.find((x) => x.id === 'cs_chain_shot')!.ready = 0;
   assert.equal(castSpell(bt, 0, 'cs_chain_shot', bt.stacks.find((x) => x.side === 1)!.id, new Rng(1)), 'Not enough stamina');
   assert.ok(stamMaxOf(10, 10) > stamMaxOf(2, 2), 'Attack and Defense make it');
-  // Each round a share back.
+  // Each round a share back: spent to nothing, she has some again as round 2 opens. (2026-10-10: read as the round
+  // opens — with the boarding's blows its stacks' own the fight runs on, and she spends what came back.)
   const b2 = battle(pathHb('reaver', 30));
   b2.heroes[0].stam = 0;
-  quickFinish(b2, 0, new Rng(9));
-  assert.ok(b2.round < 2 || b2.heroes[0].stam > 0, 'it came back');
+  const r9 = new Rng(9);
+  for (let i = 0; i < 400 && !b2.over && b2.round < 2; i++) aiAct(b2, 0, r9);
+  assert.ok(b2.over || b2.heroes[0].stam > 0, 'it came back');
   // Her stamina after the battle stays spent, and comes back with rest; a port fills it.
   const { game } = makeGame();
   const { s, p, ship } = captain(game, 'Rester', 'reaver');

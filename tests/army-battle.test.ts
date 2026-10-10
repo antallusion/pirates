@@ -349,7 +349,9 @@ test('the ransom: attacked by the sea, a captain pays the boarders off — no pr
   g2.tacticalBoarding = true;
   const o = atSea(g2, 'Boarder');
   const n2 = alongside(g2, o.ship);
-  o.c.push({ t: 'board', target: n2.id, aggression: 'standard' });
+  // (Asked through the odds' window: with the boarding's blows its stacks' own, 2026-10-10, her chance against this pirate
+  // is a third — the window shows below 35%; this is about the ransom.)
+  o.c.push({ t: 'board', target: n2.id, aggression: 'standard', risk: true });
   assert.equal(o.c.last('board_tac')!.view!.ransom, null);
   o.c.push({ t: 'tac', act: { a: 'ransom' } });
   assert.ok(o.c.all('toast').some((t) => /fall back/.test(t.msg)));

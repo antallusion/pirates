@@ -196,8 +196,9 @@ test('the chance is honest: the battles played afresh bear it out within 5%, and
   // docs/25 item 63 (2026-10-09): the sea's captains have their level's skills and kit now, and this test's captain has
   // neither — at ⚓5 she no longer contests an equal ship (her chance 0). With docs/25 item 8 (each volley before the
   // boarding thins her army) on top, ⚓6 against ⚓5 fell to 0.035; a hull two levels above hers is the real contest now
-  // (shown 0.50, 1000 battles played 0.47).
-  const { game, me, foe } = pair(7, 5, 40);
+  // (shown 0.50, 1000 battles played 0.47). 2026-10-10 (owner: «чини атаку всем» — the boarding's blows its stacks'
+  // own, no lift against the sea): ⚓7 against ⚓5 is 0.95 now, ⚓6 against ⚓5 the contest (0.35).
+  const { game, me, foe } = pair(6, 5, 40);
   let calls = 0;
   const rng = game.rng as unknown as Record<string, (...a: unknown[]) => unknown>;
   for (const k of ['float', 'int', 'chance', 'range', 'pick', 'gauss', 'weighted']) {
