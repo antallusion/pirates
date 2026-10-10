@@ -189,7 +189,8 @@ export const SCREENS = [
     const ok = await p.evaluate(async () => { let q = [...document.querySelectorAll('#board-tac .tb-queue .tb-q[data-info]')].find((e) => e.getBoundingClientRect().width > 0); if (!q) { document.querySelector('#board-tac [data-sheet]')?.click(); await new Promise((r) => setTimeout(r, 400)); q = document.querySelector('.tb-sheet .tb-q, .k-sheet .tb-q'); } if (!q) return false; q.click(); return true; });
     await sleep(500); return ok; }, after: tacSheet },
   { id: 'battle:end', root: '#board-tac', setup: async (p) => { await tacSheet(p); await L.send(p, { t: 'tac', act: { a: 'quick' } }); await sleep(4000); await film(p); },
-    open: async (p) => { await film(p); return visible(p, '#board-tac .tb-banner.tb-end, #board-tac .tb-end', 3000); },
+    // (the end's banner does not wait for every size: a fresh fight and its quick end where it has gone)
+    open: async (p) => { await film(p); if (await visible(p, '#board-tac .tb-end', 1500)) return true; await battle(p, '/board pirate sloop'); await L.send(p, { t: 'tac', act: { a: 'quick' } }); await sleep(4000); await film(p); return visible(p, '#board-tac .tb-end', 4000); },
     after: async (p) => { await p.evaluate(() => document.querySelector('#board-tac [data-endbtn]')?.click()); await sleep(1500); await film(p); await close(p); } },
   // --- a land fight at a lair
   { id: 'land', root: '#board-tac', setup: (p) => battle(p, '/lair crab_beach fight'), open: async (p) => { await tacSheet(p); return inBattle(p); }, settle: 900,

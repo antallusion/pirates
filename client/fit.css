@@ -399,3 +399,39 @@
   #modal-panel .q-card { padding-left: calc(42px + 10 * var(--u)); }
   #modal-panel .q-card > .q-ico { left: calc(5px + 3 * var(--u)); top: calc(5px + 3 * var(--u)); width: calc(30px + 6 * var(--u)); height: calc(30px + 6 * var(--u)); }
 }
+@media (max-height: 520px) {
+  /* her mark's name wraps in the line rather than losing its end («Цепь бух…» at every phone size) */
+  body.simple #tc-target .k-target-name { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.08; font-size: var(--f-fs); overflow-wrap: anywhere; }
+}
+@media (max-height: 520px) {
+  /* the Throne's tabs in the band at every phone width: the lit one its picture and word, the others their picture
+     (at 740–812 px the words came back and «Колизей» stood past the screen's edge) */
+  .throne-win .tabs:has(.tab:nth-child(9)) .tab .ico-sm { display: inline-block; width: calc(18px + 4 * var(--u)); height: calc(18px + 4 * var(--u)); margin: 0; flex: none; }
+  .throne-win .tabs:has(.tab:nth-child(9)) .tab { justify-content: center; gap: 3px; flex: 0 0 auto; }
+  .throne-win .tabs .tab:not(.active) .th-tw { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+  .throne-win .tabs .tab:not(.active) .hx-dot { margin-left: 0; }
+  .th-rt > span { font-size: var(--f-fs-s); }
+  /* a task's name wraps to a third line rather than being clamped at two */
+  #modal-panel .q-t > b { -webkit-line-clamp: unset; line-clamp: unset; display: block; overflow: visible; }
+  /* the boarding's order chips in a creature's card a finger tall */
+  .tb-sps > .chip.tb-spc { min-height: var(--f-tap); }
+}
+@media (max-height: 520px) {
+  /* the departure check down to 480×270: each row one line high, its buy button beside it (a narrow phone put the
+     button under the words and the rows ran under the screen's foot) */
+  .confirm-panel.depart-panel { padding: calc(4px + 4 * var(--u)) var(--f-pad) var(--f-pad); }
+  .depart-panel .dp-row { flex-wrap: nowrap; min-height: calc(var(--f-tap) + 4px); gap: calc(4px + 4 * var(--u)); padding: 0 calc(4px + 4 * var(--u)); }
+  .depart-panel .dp-row .ico-md { width: calc(22px + 6 * var(--u)); height: calc(22px + 6 * var(--u)); }
+  .depart-panel .dp-text b { font-size: var(--f-fs-m); }
+  .depart-panel .dp-text .muted { font-size: var(--f-fs-s); }
+  .depart-panel .dp-buy, body.touch .depart-panel .dp-buy { width: auto; max-width: 48%; min-height: var(--f-tap); white-space: normal; line-height: 1.15; font-size: var(--f-fs); padding-block: 2px; }
+  .depart-panel .dp-none { width: auto; max-width: 40%; text-align: right; font-size: var(--f-fs-s); }
+  .depart-panel .dp-title { font-size: var(--f-fs-t); }
+  .depart-panel p.dp-lead, .depart-panel p.dp-warn { font-size: var(--f-fs); }
+  .depart-panel .k-sheet-foot > .k-btn { min-height: var(--f-btn); font-size: var(--f-fs); }
+}
+@media (max-height: 520px) {
+  /* the adventure card in the top band between the captain's frame and the chart at every width (it stood at 360 px
+     from the left: 124 px wide at 640×360 with its button past the screen, off the screen at 480×270) */
+  #advcard { left: calc(var(--sa-l) + var(--cs-face, 44px) + var(--cs-bar, 100px) + 74px); right: calc(var(--sa-r) + var(--mm, 86px) + 20px); width: auto; min-width: 0; max-width: 420px; }
+}
