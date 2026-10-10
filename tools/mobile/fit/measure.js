@@ -42,8 +42,10 @@
   };
   globalThis.__fit = (rootSel) => {
     const W = innerWidth, H = innerHeight;
+    // the limits (owner, 2026-10-10): taps 36 px and words 11 px from a 360 px short side, 32 and 10 px below it (270)
+    const short = Math.min(W, H), minTap = short >= 360 ? 36 : 32, minText = short >= 360 ? 11 : 10;
     const roots = rootSel ? [...document.querySelectorAll(rootSel)].filter(vis) : [document.body];
-    const res = { scroll: [], out: [], cut: [], small: [], under36: 0, tiny: [], share: 0, page: null, root: rootSel ?? 'body' };
+    const res = { scroll: [], out: [], cut: [], small: [], under36: 0, underMin: 0, minTap: 0, minText: 0, tiny: [], share: 0, page: null, root: rootSel ?? 'body' };
     const se = document.scrollingElement;
     if (se.scrollHeight > se.clientHeight + 1 || se.scrollWidth > se.clientWidth + 1) res.page = `${se.scrollWidth}×${se.scrollHeight} > ${se.clientWidth}×${se.clientHeight}`;
     let area = 0;
@@ -87,8 +89,17 @@
           else if (cs.overflow !== 'visible' && !/(auto|scroll)/.test(cs.overflowY) && (e.scrollHeight > e.clientHeight + 3 || e.scrollWidth > e.clientWidth + 3) && e.clientHeight > 0) res.cut.push(`${name(e)} «${t}» ${e.scrollWidth}×${e.scrollHeight}/${e.clientWidth}×${e.clientHeight}`);
           else {
             // clipped by an ancestor that hides overflow (not a scroll box: that is counted as a scroll)
+            // (an absolutely placed box is clipped only by the boxes from its containing block up)
+            let need = getComputedStyle(e).position === 'absolute' ? e.offsetParent : null;
+            if (getComputedStyle(e).position === 'fixed') need = document.body;
             for (let q = e.parentElement; q && q !== document.body; q = q.parentElement) {
+              // skipping up to the containing block of an absolutely placed box below
+              if (need && q !== need) continue;
+              if (need === q) need = null;
               const qc = getComputedStyle(q);
+              // q itself absolutely placed: what lies between it and its containing block does not clip
+              if (qc.position === 'absolute') need = q.offsetParent;
+              else if (qc.position === 'fixed') need = document.body;
               if (qc.overflow === 'visible' && qc.overflowX === 'visible' && qc.overflowY === 'visible') continue;
               if (/(auto|scroll)/.test(qc.overflowY + qc.overflowX)) break;
               const qr = q.getBoundingClientRect();
@@ -97,12 +108,13 @@
             }
           }
           const fs = parseFloat(cs.fontSize);
-          if (fs < 10.5 && fs > 0) res.tiny.push(`${name(e)} ${fs}px «${t.slice(0, 14)}»`);
+          if (fs < minText - 0.5 && fs > 0) res.tiny.push(`${name(e)} ${fs}px «${t.slice(0, 14)}»`);
         }
         // 4. small taps
-        if (tap && Math.min(r.width, r.height) < 39.5 && !e.matches('input[type=checkbox], input[type=radio], input[type=range]') && !e.disabled) { if (Math.min(r.width, r.height) < 35.5) res.under36++; res.small.push(`${name(e)} ${Math.round(r.width)}×${Math.round(r.height)}`); }
+        if (tap && Math.min(r.width, r.height) < 39.5 && !e.matches('input[type=checkbox], input[type=radio], input[type=range]') && !e.disabled) { if (Math.min(r.width, r.height) < 35.5) res.under36++; if (Math.min(r.width, r.height) < minTap - 0.5) res.underMin++; res.small.push(`${name(e)} ${Math.round(r.width)}×${Math.round(r.height)}`); }
       }
     }
+    res.minTap = minTap; res.minText = minText;
     res.share = Math.round((area / (W * H)) * 100);
     res.pages = Math.max(0, ...[...document.querySelectorAll('.fit-pager')].filter((b) => vis(b) && roots.some((r) => r.contains(b))).map((b) => Number((/\/(\d+)/.exec(b.textContent) ?? [])[1] ?? 0)));
     const rl = document.getElementById('rotate-lock');

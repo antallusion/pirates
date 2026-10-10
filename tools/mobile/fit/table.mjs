@@ -2,7 +2,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 
 const load = (ph) => (existsSync(`tools/mobile/fit/out/${ph}.json`) ? JSON.parse(readFileSync(`tools/mobile/fit/out/${ph}.json`, 'utf8')).rows : []);
-const LAND = ['640x360', '740x360', '812x375', '844x390', '915x412'];
+const LAND = ['480x270', '568x320', '640x360', '740x360', '812x375', '844x390', '915x412'];
 const n = (r, k) => (r && !r.missing && !r.error ? (Array.isArray(r[k]) ? r[k].length : r[k] ?? 0) : null);
 const sum = (rs, k) => rs.reduce((a, r) => a + (n(r, k) ?? 0), 0);
 

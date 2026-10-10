@@ -88,6 +88,7 @@ function unpage(el: HTMLElement): void {
   const p = panes.get(el);
   el.classList.remove('fit-paged', 'fit-flow');
   el.style.removeProperty('--fit-cols');
+  delete el.dataset.fitGrid;
   el.style.removeProperty('--fit-gap');
   el.scrollLeft = 0;
   p?.bar?.remove();
@@ -111,6 +112,8 @@ function fit(el: HTMLElement, phone: boolean): void {
     if (!wired.has(el)) { wired.add(el); wire(p); }
   }
   p.key = keyOf(el);
+  const cols = String(pageCols(el.clientWidth, Number(el.dataset.fitGrid ?? 1), getComputedStyle(el).getPropertyValue('--fit-two').trim() === '1'));
+  if (el.style.getPropertyValue('--fit-cols') !== cols) el.style.setProperty('--fit-cols', cols);
   p.n = pageCount(el.scrollWidth, step(el));
   // One page: no bar. Back to the plain pane only if that would not scroll (a few px of margin overflow a plain pane
   // and not a column).
@@ -141,11 +144,18 @@ export function gridCols(template: string): number {
 }
 function flow(el: HTMLElement): void {
   const cs = getComputedStyle(el);
+  el.dataset.fitGrid = String(cs.display.includes('grid') ? gridCols(cs.gridTemplateColumns) : 1);
   if (cs.display === 'block' || cs.display === 'flow-root') return;
-  const cols = cs.display.includes('grid') ? gridCols(cs.gridTemplateColumns) : 1;
-  el.style.setProperty('--fit-cols', String(cols));
   el.style.setProperty('--fit-gap', cs.rowGap === 'normal' ? '0px' : cs.rowGap);
   el.classList.add('fit-flow');
+}
+
+/** Columns a page: a grid's own tracks; else two where the stylesheet allows it (--fit-two: 1 — lists of short
+ *  rows and cards, where a tall stack reads better across the landscape) on a pane wide enough for two readable
+ *  columns; else one. */
+export function pageCols(paneWidth: number, grid: number, two: boolean): number {
+  if (grid > 1) return grid;
+  return two && paneWidth >= 520 ? 2 : 1;
 }
 
 function wire(p0: Pane): void {

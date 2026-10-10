@@ -15,11 +15,11 @@ import { SCREENS, PRE } from './screens.mjs';
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const PHASE = arg('phase', 'before');
 const PORT = Number(process.env.PORT ?? arg('port', 58997));
-const ALL_SIZES = ['640x360', '740x360', '812x375', '844x390', '915x412', '375x812', '820x1180', '1500x600', '1440x900'];
+const ALL_SIZES = ['480x270', '568x320', '640x360', '740x360', '812x375', '844x390', '915x412', '375x812', '270x480', '820x1180', '1500x600', '1440x900'];
 const SIZES = (arg('sizes', ALL_SIZES.join(','))).split(',');
 const LANGS = arg('langs', 'ru,en').split(',');
 const ONLY = arg('only', '') ? arg('only', '').split(',') : null;
-const SHOTS = new Set((arg('shots', '640x360/ru,640x360/en,812x375/ru,375x812/ru,1440x900/ru')).split(','));
+const SHOTS = new Set((arg('shots', '480x270/ru,640x360/ru,640x360/en,812x375/ru,375x812/ru,1440x900/ru')).split(','));
 const FIT = readFileSync(new URL('./measure.js', import.meta.url), 'utf8');
 const IMG = ['before', 'after'].includes(PHASE) ? `docs/img/mobilefit/${PHASE}` : `assets/raw/audit/fit/${PHASE}`;
 const OUTD = 'tools/mobile/fit/out';
@@ -39,9 +39,9 @@ async function measure(p, id, size, lang, root) {
   const r = await p.evaluate((q) => globalThis.__fit(q), root);
   const shot = SHOTS.has(`${size}/${lang}`);
   if (shot) await p.screenshot({ path: `${IMG}/${id.replace(/[:/]/g, '_')}__${size}_${lang}.jpg`, type: 'jpeg', quality: 62 });
-  const row = { screen: id, size, lang, root, scroll: r.scroll, out: r.out, cut: r.cut, small: r.small, under36: r.under36, tiny: r.tiny, share: r.share, page: r.page, pages: r.pages ?? null, rotate: r.rotate ?? null };
+  const row = { screen: id, size, lang, root, scroll: r.scroll, out: r.out, cut: r.cut, small: r.small, under36: r.under36, underMin: r.underMin, minTap: r.minTap, tiny: r.tiny, share: r.share, page: r.page, pages: r.pages ?? null, rotate: r.rotate ?? null };
   rows.push(row);
-  L.log(`${id.padEnd(26)} ${size.padEnd(9)} ${lang}  scroll ${r.scroll.length}${r.page ? '+page' : ''}  out ${r.out.length}  cut ${r.cut.length}  <40 ${r.small.length} (<36 ${r.under36})  tiny ${r.tiny.length}  ${r.share}%${r.pages ? '  pages ' + r.pages : ''}${r.rotate ? '  ROTATE' : ''}`);
+  L.log(`${id.padEnd(26)} ${size.padEnd(9)} ${lang}  scroll ${r.scroll.length}${r.page ? '+page' : ''}  out ${r.out.length}  cut ${r.cut.length}  <40 ${r.small.length} (<${r.minTap} ${r.underMin})  tiny ${r.tiny.length}  ${r.share}%${r.pages ? '  pages ' + r.pages : ''}${r.rotate ? '  ROTATE' : ''}`);
   return row;
 }
 
