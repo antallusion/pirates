@@ -347,8 +347,9 @@
   .captain-detail .epithet { display: none; }
   .captain-detail .cd-play, .captain-detail .cd-start { line-height: 1.18 !important; }
   .captain-detail .cd-passive b { line-height: 1.18; }
-  .captain-detail .pick-bar label.know-sea span { display: block; }
-  .captain-detail .pick-bar label.know-sea small { display: inline; margin-left: 4px; }
+  /* the tick's own word only: its note («skip the First Watch») ran under the order's button at 480×270 */
+  .captain-detail .pick-bar label.know-sea span { display: block; overflow: hidden; }
+  .captain-detail .pick-bar label.know-sea small { display: none; }
 }
 
 /* ================================================================== the sea's HUD below 360 px tall (seahud.css) */
