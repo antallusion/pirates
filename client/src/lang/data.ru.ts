@@ -95,7 +95,7 @@ export const DATA_RU_CORE: Record<string, string> = {
   "captains.CAPTAINS.drowned.abilities.2.name": "Отбойное течение",
   "captains.CAPTAINS.drowned.abilities.2.description": "35 Ужаса. Стремнина 400 × 60 м от тебя к цели на 10 с (×1 … ×1,4 по рангам): по течению — быстрее, против — медленнее, судно без хода тащит.",
   "captains.CAPTAINS.drowned.abilities.3.name": "Пасть Глубин",
-  "captains.CAPTAINS.drowned.abilities.3.description": "УЛЬТА (100 решимости + 50 Ужаса). Вода кипит 3 с, затем пасть шириной 45 м: 18% корпуса каждого корабля (сквозь броню), мачта и две течи; корабли в 90 м затягивает. Снова через 300 с (210 с на 4-м ранге).",
+  "captains.CAPTAINS.drowned.abilities.3.description": "УЛЬТА (100 решимости + 50 Ужаса). Вода кипит 3 с, затем пасть шириной 45 м: 15% корпуса каждого корабля (сквозь броню), мачта и две течи; корабли в 90 м затягивает. Снова через 300 с (210 с на 4-м ранге).",
   "captains.CAPTAINS.admiral.archetype": "Чёрный адмирал",
   "captains.CAPTAINS.admiral.name": "Кассий Дрей",
   "captains.CAPTAINS.admiral.epithet": "Чёрный адмирал",

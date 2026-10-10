@@ -5,6 +5,7 @@ import { REGIONS } from '../shared/src/world/regions.ts';
 import { applyDamage } from '../server/src/game/combat.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import { RESOLVE_DEALT, onCrit, onGrapple, sanityDrain, stepMind } from '../server/src/game/mind.ts';
+import { skillNums } from '../shared/src/data/seaskill.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { join, makeGame, steps, onHull } from './helpers.ts';
 
@@ -78,9 +79,11 @@ test('dread: the Drowned Captain bleeds into it, pays miracles with it, and the 
   const foe = dummy(game, ship, 200, 0);
   c.push({ t: 'ability', id: 'deep_call', x: foe.state.x, y: foe.state.y });
   assert.equal(game.zones.length, 0, 'no Dread, no miracle');
-  // 20% hull lost → +10 Dread, on the 30 the sea gives her as the fight begins (docs/25 item 36, her passive).
+  // 20% hull lost → +10 Dread, on what the sea gives her as the fight begins (docs/25 item 36, her passive: 40 at her
+  // 30th level's rank).
   applyDamage(game, ship, { hull: ship.stats.hullMax * 0.2 }, foe);
-  assert.ok(Math.abs(ship.dread - 40) < 0.01, `dread ${ship.dread}`);
+  const wake = skillNums('drowned_once', { level: 30, facets: {}, glory: 0, talents: {} }).n.wake;
+  assert.ok(Math.abs(ship.dread - wake - 10) < 0.01, `dread ${ship.dread}`);
   ship.dread = 60;
   const m0 = ship.morale;
   c.push({ t: 'ability', id: 'deep_call', x: foe.state.x, y: foe.state.y });
@@ -103,7 +106,7 @@ test('dread: the Drowned Captain bleeds into it, pays miracles with it, and the 
   assert.equal(other.ship.dread, 0);
 });
 
-test('Undertow drags a ship with no way on; the Maw takes 18% of her hull, a mast and two leaks', () => {
+test('Undertow drags a ship with no way on; the Maw takes 15% of her hull, a mast and two leaks', () => {
   const { game } = makeGame();
   const { c, s, ship } = captain(game, 'Undertow', 'drowned');
   toSea(game, s);
@@ -124,8 +127,9 @@ test('Undertow drags a ship with no way on; the Maw takes 18% of her hull, a mas
   assert.equal(ship.resolve, 0);
   assert.equal(ship.dread, 10);
   steps(game, 20 * 4);
-  // (18% of her hull now: docs/25 item 35, weighed against the five other captains' ultimates — it was a fifth)
-  assert.ok(Math.abs(h0 - big.hull - big.stats.hullMax * 0.18) < big.stats.hullMax * 0.02, `maw took ${h0 - big.hull}`);
+  // (15% of her hull now: docs/25 item 35, weighed against the five other captains' ultimates on the kit bench — it
+  // was a fifth, and a fifth with the Deep Call's leak took 31% off a fight at ⚓10 where the others take 21–26%)
+  assert.ok(Math.abs(h0 - big.hull - big.stats.hullMax * 0.15) < big.stats.hullMax * 0.02, `maw took ${h0 - big.hull}`);
   assert.ok(big.hasEffect('broken_mast'));
   assert.ok(big.leaks >= 2);
 });

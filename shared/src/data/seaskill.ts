@@ -389,7 +389,7 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
     node: { talent: 'abs_black_water', kind: 'dur', per: 0.3 },
   },
   maw_of_the_deep: {
-    id: 'maw_of_the_deep', captain: 'drowned', key: 'V', by: { hull: 0.18, cd: [300, 270, 240, 210], r: 45, dread: 50 }, pow: ['hull'], fmt: { hull: 'pct', cd: 'sec', r: 'm', dread: 'n' },
+    id: 'maw_of_the_deep', captain: 'drowned', key: 'V', by: { hull: 0.15, cd: [300, 270, 240, 210], r: 45, dread: 50 }, pow: ['hull'], fmt: { hull: 'pct', cd: 'sec', r: 'm', dread: 'n' },
     text: ['ULTIMATE (100 resolve + {dread} Dread). The water boils for 3 s, then a maw {r} wide opens: {hull} of each ship\'s hull (through armour; a boss to 150 × her level), a mast and two leaks; ships within 90 m are dragged in. Again after {cd}.', 'УЛЬТА (100 решимости + {dread} Ужаса). Вода кипит 3 с, затем пасть шириной {r}: {hull} корпуса каждого корабля (сквозь броню; боссу — до 150 × её уровень), мачта и две течи; корабли в 90 м затягивает. Снова через {cd}.'],
     facets: {
       3: [F('Hungry maw', 'Голодная пасть', '+20% to its bite.', 'Укус +20%.', { mul: { hull: 1.2 } }),
