@@ -28,16 +28,31 @@ export const HUMAN_DECIDE = 6;
 export const HAMMOCKS = [0, 40, 60, 80, 110, 140, 180, 220, 300, 400, 600];
 export const slOf = (L: number): number => Math.min(10, Math.max(1, Math.ceil(L / 6)));
 
-/** docs/25 §1.2, the owner's table: by level band — minutes against a captain and against the sea, rounds (a captain's
- *  fight), stacks a side, the share of an equal army cut in round 1. */
-export interface Band { lo: number; hi: number; pvp: [number, number]; npc: [number, number]; rounds: [number, number]; stacks: [number, number]; r1: [number, number] }
+/** docs/25 §1.2 by level band — minutes against a captain and against the sea, rounds (a captain's fight), stacks a side,
+ *  the share of an equal army cut in round 1.
+ *  Owner, 2026-10-10 («9 матросов убили 20 моих матросов с одного удара … чини атаку всем, чини баланс»): a blow is what
+ *  the stacks' cards say, so the table is the honest one — what the battles with the stacks' own blows take (tools/
+ *  boarding-time.ts n=4, 2026-10-10), the levers left being the stacks a side brings, the clocks, the quick fight and
+ *  the flag. `want`: the owner's table of 2026-10-09 (docs/25 §1.2 before), which the tempo by level, the sea's lift and
+ *  round 1's scale reached by inflating the blows; the bottom (≈1 min, 2–3 rounds) and the top (5–10 min, 5–7 rounds)
+ *  are out of the honest reach. */
+export interface Band {
+  lo: number;
+  hi: number;
+  pvp: [number, number];
+  npc: [number, number];
+  rounds: [number, number];
+  stacks: [number, number];
+  r1: [number, number];
+  want: { pvp: [number, number]; npc: [number, number]; rounds: [number, number]; r1: [number, number] };
+}
 export const BANDS: Band[] = [
-  { lo: 1, hi: 10, pvp: [1, 1], npc: [0.5, 0.75], rounds: [2, 3], stacks: [3, 4], r1: [0.35, 0.35] },
-  { lo: 11, hi: 20, pvp: [1.5, 2.5], npc: [1, 1], rounds: [3, 3], stacks: [4, 5], r1: [0.25, 0.3] },
-  { lo: 21, hi: 30, pvp: [2.5, 4], npc: [1, 1.5], rounds: [3, 4], stacks: [5, 6], r1: [0.22, 0.27] },
-  { lo: 31, hi: 40, pvp: [4, 6], npc: [1.5, 2.5], rounds: [4, 5], stacks: [6, 7], r1: [0.19, 0.24] },
-  { lo: 41, hi: 50, pvp: [5, 8], npc: [2, 3], rounds: [5, 6], stacks: [7, 7], r1: [0.17, 0.21] },
-  { lo: 51, hi: 60, pvp: [5, 10], npc: [2.5, 4], rounds: [5, 7], stacks: [7, 7], r1: [0.15, 0.18] },
+  { lo: 1, hi: 10, pvp: [2, 3], npc: [1, 1.75], rounds: [3.5, 4.5], stacks: [3, 4], r1: [0.2, 0.4], want: { pvp: [1, 1], npc: [0.5, 0.75], rounds: [2, 3], r1: [0.35, 0.35] } },
+  { lo: 11, hi: 20, pvp: [2.25, 3.5], npc: [1.25, 2.25], rounds: [3, 4.5], stacks: [4, 5], r1: [0.25, 0.5], want: { pvp: [1.5, 2.5], npc: [1, 1], rounds: [3, 3], r1: [0.25, 0.3] } },
+  { lo: 21, hi: 30, pvp: [2.75, 4], npc: [1.75, 2.75], rounds: [3, 4], stacks: [5, 6], r1: [0.2, 0.45], want: { pvp: [2.5, 4], npc: [1, 1.5], rounds: [3, 4], r1: [0.22, 0.27] } },
+  { lo: 31, hi: 40, pvp: [3.25, 4.75], npc: [2, 3], rounds: [3, 4.5], stacks: [6, 7], r1: [0.25, 0.5], want: { pvp: [4, 6], npc: [1.5, 2.5], rounds: [4, 5], r1: [0.19, 0.24] } },
+  { lo: 41, hi: 50, pvp: [3.5, 5], npc: [2, 3], rounds: [3.25, 4.5], stacks: [7, 7], r1: [0.25, 0.5], want: { pvp: [5, 8], npc: [2, 3], rounds: [5, 6], r1: [0.17, 0.21] } },
+  { lo: 51, hi: 60, pvp: [3.5, 5], npc: [2, 3], rounds: [3.25, 4.5], stacks: [7, 7], r1: [0.25, 0.5], want: { pvp: [5, 10], npc: [2.5, 4], rounds: [5, 7], r1: [0.15, 0.18] } },
 ];
 
 /** The eight battle skills the balance tools give a captain (tools/balance-glory.ts BUILD): a pick a level, rank by

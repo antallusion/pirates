@@ -47,13 +47,13 @@ for (const L of LEVELS) {
 }
 console.log('');
 console.log('By band (the mean of its levels):');
-console.log('| levels | rounds [table] | vs captain [table] | vs sea [table] | round-1 cut [owner: ~35% → 15–18%] |');
+console.log('| levels | rounds [honest / owner 2026-10-09] | vs captain [honest / owner] | vs sea [honest / owner] | round-1 cut [honest / owner] |');
 console.log('|---|---|---|---|---|');
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
 for (const b of BANDS) {
   const k = band[b.lo];
   if (!k) continue;
-  console.log(`| ${b.lo}–${b.hi} | ${mean(k.r).toFixed(1)} [${span(b.rounds, String)}] | ${mm(mean(k.p))} [${span(b.pvp, mm)}] | ${mm(mean(k.s))} [${span(b.npc, mm)}] | ${pc(mean(k.c))} |`);
+  console.log(`| ${b.lo}–${b.hi} | ${mean(k.r).toFixed(1)} [${span(b.rounds, String)} / ${span(b.want.rounds, String)}] | ${mm(mean(k.p))} [${span(b.pvp, mm)} / ${span(b.want.pvp, mm)}] | ${mm(mean(k.s))} [${span(b.npc, mm)} / ${span(b.want.npc, mm)}] | ${pc(mean(k.c))} [${span(b.r1, pc)} / ${span(b.want.r1, pc)}] |`);
 }
 
 if (process.argv.includes('--group')) {

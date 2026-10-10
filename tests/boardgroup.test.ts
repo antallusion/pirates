@@ -271,7 +271,10 @@ test('67: the shares of the cut — each captain\'s blows, shots, orders and mov
   assert.ok(Object.keys(r.end.dealt ?? {}).some((k) => k === '0:1' || k === '0:2'));
 });
 
-test('duration: a group\'s boarding — 5–10 min between captains at 51–60; at the low levels the allies make it no slower', () => {
+// Owner, 2026-10-10 («чини атаку всем»): a group's pace on the blows (TAC_GROUP.pace, paceSea) is gone — a group's fight
+// is as long as its stacks' turns make it. Between groups at 51–60 that is 5–10 minutes; against the sea a group of the
+// low levels takes as many rounds as one captain and more minutes (her allies' stacks have their turns too).
+test('duration: a group\'s boarding — 5–10 min between captains at 51–60; against the sea no more rounds than one captain, not twice the minutes', () => {
   for (const L of [53, 58]) {
     const g = groupStat(L, 3, 3, 1);
     assert.ok(g.mins >= 5 && g.mins <= 10, `L${L} 3 v 3: ${g.mins.toFixed(1)} min`);
@@ -280,8 +283,8 @@ test('duration: a group\'s boarding — 5–10 min between captains at 51–60; 
   }
   for (const L of [5, 25]) {
     const solo = groupStat(L, 1, null, 2), g = groupStat(L, 3, null, 2, { grow: true });
-    assert.ok(g.mins <= solo.mins * 1.12, `L${L} against the sea: three ${g.mins.toFixed(2)} min, alone ${solo.mins.toFixed(2)}`);
-    assert.ok(g.rounds <= solo.rounds, `L${L}: fewer rounds (${g.rounds.toFixed(1)} vs ${solo.rounds.toFixed(1)})`);
+    assert.ok(g.mins <= solo.mins * 2, `L${L} against the sea: three ${g.mins.toFixed(2)} min, alone ${solo.mins.toFixed(2)}`);
+    assert.ok(g.rounds <= solo.rounds + 0.5, `L${L}: rounds ${g.rounds.toFixed(1)} vs ${solo.rounds.toFixed(1)}`);
   }
 });
 

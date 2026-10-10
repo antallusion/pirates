@@ -375,7 +375,7 @@ export const ORDERS: Record<OrderId, OrderDef> = Object.fromEntries([
   O('smoke_and_knives', 'fog', 3, 'battle', 6, 'bt_hold', ['Smoke and knives', 'Дым и ножи'], ['Smoke on her deck: her blows at half this round.', 'Дым на её палубе: её удары вдвое слабее в этом раунде.'], { sig: 'smuggler' }),
   O('red_harvest', 'board', 3, 'battle', 6, 'bt_charge', ['Blood frenzy', 'Кровавый угар'], ['Your blows +25% for two rounds; her morale −1.', 'Ваши удары +25% на два раунда; её боевой дух −1.'], { sig: 'reaver' }),
   O('turn_the_flank', 'wind', 3, 'battle', 6, 'bt_officers', ['Turn the flank', 'Обход с фланга'], ['Two rounds: your men faster, first to act, every blow a flank.', 'Два раунда: ваши люди быстрее, ходят первыми, каждый удар — с фланга.'], { sig: 'navigator' }),
-  O('call_of_the_deep', 'water', 3, 'battle', 6, 'bt_colours', ['Call of the deep', 'Зов бездны'], ['The drowned drag a twelfth of every stack of hers under; her morale −1.', 'Утопленники утаскивают двенадцатую часть каждого её отряда; её дух −1.'], { sig: 'drowned' }),
+  O('call_of_the_deep', 'water', 3, 'battle', 6, 'bt_colours', ['Call of the deep', 'Зов бездны'], ['The drowned drag a tenth of every stack of hers under; her morale −1.', 'Утопленники утаскивают десятую часть каждого её отряда; её дух −1.'], { sig: 'drowned' }),
   O('iron_discipline', 'steel', 3, 'battle', 6, 'bt_captain', ['Iron discipline', 'Железная дисциплина'], ['Two rounds: your stacks stand firm and strike harder; morale +1.', 'Два раунда: ваши отряды стоят крепче и бьют сильнее; дух +1.'], { sig: 'admiral' }),
   // The path books (docs/18 item 3): six pages a path, levels 1–5.
   ...PATH_PAGE_IDS.map((id) => {

@@ -1829,6 +1829,8 @@ export function moveError(bt: TacBattle, side: 0 | 1, kind: 'innate' | 'ult', ta
 /** The point-blank volley's blow, a share of the captain's blast: H2's corsair signature in the sea's book (`k`), and
  *  in a corsair's own hands (`path`: docs/18 #47 — her path book carries her now, the volley a little less). */
 export const TAC_POINT_BLANK = { k: 1.6, path: 1.1 };
+/** The Drowned's own order, «Зов бездны»: the share of every stack of hers it drags under (her book: «a tenth»). */
+export const TAC_CALL_DEEP = 0.1;
 /** The point-blank volley's share of her blast as she gives it. */
 function pointBlank(bt: TacBattle, side: 0 | 1): number {
   return bt.heroes[side].input.hero?.path === 'corsair' ? TAC_POINT_BLANK.path : TAC_POINT_BLANK.k;
@@ -1934,7 +1936,9 @@ export function castSpell(bt: TacBattle, side: 0 | 1, id: TacSpellId, target: nu
       if (t) kills += hurt(bt, t, blastOn(bt, t, P, pointBlank(bt, side)), side);
       break;
     case 'call_of_the_deep':
-      for (const o of alive(bt)) if (o.side !== side && o.count > 1) kills += hurt(bt, o, Math.max(1, Math.round(o.count * Math.min(0.25, 0.08 * k) * (1 - resistOf(bt, o)))) * o.hpMax, side);
+      // A tenth of every stack of hers (her book's words; 2026-10-10: a twelfth before, and ORDER_KNOBS gave the Drowned
+      // ×1.4–2 of it unseen at most levels — gone, owner: «чини атаку всем»), by her lift, a quarter at most.
+      for (const o of alive(bt)) if (o.side !== side && o.count > 1) kills += hurt(bt, o, Math.max(1, Math.round(o.count * Math.min(0.25, TAC_CALL_DEEP * k) * (1 - resistOf(bt, o)))) * o.hpMax, side);
       h.fx.push({ id, until: hold });
       break;
     case 'mark_target':
@@ -2701,7 +2705,7 @@ export const TAC_ORDER_READ: Partial<Record<TacSpellId, PageFx>> = {
   // Her morale +1 and heart +6, the other side's −1.
   war_cry: { target: 'none', self: { morale: 1 }, foe: { morale: -1 }, rounds: 1, heart: 6 },
   // The deep drags 8% of every stack of hers under (her Power on it), and her morale −1.
-  call_of_the_deep: { target: 'none', drain: 0.08, foe: { morale: -1 }, rounds: 1 },
+  call_of_the_deep: { target: 'none', drain: TAC_CALL_DEEP, foe: { morale: -1 }, rounds: 1 },
 };
 
 /** The captain's order the sea's mind would give now (or null): a page, or her path's innate move or ultimate. She
