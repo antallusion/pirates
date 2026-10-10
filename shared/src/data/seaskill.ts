@@ -222,7 +222,7 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
     node: { talent: 'brd_pistol_volley', kind: 'power', per: 0.2 },
   },
   ramming_speed: {
-    id: 'ramming_speed', captain: 'reaver', key: 'X', by: { ram: [3, 3.45, 3.75, 3.9, 4], speed: 0.35, dur: 5, plain: RAM_SHARE }, pow: ['ram'], fmt: { ram: 'x', speed: 'pct', dur: 'sec', plain: 'pct' },
+    id: 'ramming_speed', captain: 'reaver', key: 'X', by: { ram: [2.9, 3.8, 4.1, 4.2, 4.3], speed: 0.35, dur: 5, plain: RAM_SHARE }, pow: ['ram'], fmt: { ram: 'x', speed: 'pct', dur: 'sec', plain: 'pct' },
     text: ['Every hand to the braces: +{speed} speed and double acceleration for {dur}; a ram strikes ×{ram} (a plain ram at full way: {plain} of a hull at ⚓1, the same share of a broadside of her ⚓ higher).', 'Все на брасы: +{speed} хода и двойной разгон на {dur}; таран бьёт ×{ram} (простой таран на полном ходу — {plain} корпуса на ⚓1, выше — та же доля залпа её ступени).'],
     facets: {
       3: [F('Iron bow', 'Окованный нос', 'He takes half the ram\'s blow back.', 'Отдача тарана ему — вдвое меньше.', { add: { bow: 1 } }),
@@ -259,7 +259,7 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
     text: ['Contraband takes {hold} less hold and is never found by patrol inspections. −10% detection signature.', 'Контрабанда занимает на {hold} меньше места и не находится при досмотре. −10% к заметности.'],
   },
   smoke_pots: {
-    id: 'smoke_pots', captain: 'smuggler', key: 'Z', by: { cut: [0.45, 0.46, 0.47, 0.48, 0.48], dur: [8, 8.5, 9, 9.5, 10] }, pow: ['cut'], fmt: { cut: 'pct', dur: 'sec' },
+    id: 'smoke_pots', captain: 'smuggler', key: 'Z', by: { cut: [0.45, 0.48, 0.5, 0.5, 0.5], dur: [8, 8.5, 9.5, 9.75, 10] }, pow: ['cut'], fmt: { cut: 'pct', dur: 'sec' },
     text: ['Tar pots over the side: a smoke bank for {dur}. Incoming fire −{cut}, NPCs lose their lock; her first broadside out of it is an ambush.', 'Смоляные горшки за борт: дымовая завеса на {dur}. Входящий огонь −{cut}, НПС теряют цель; её первый залп из дыма — засада.'],
     facets: {
       3: [F('Fire from the smoke', 'Стрелять из дыма', 'Firing does not unmask her: the smoke still hides her.', 'Выстрел её не раскрывает: дым по-прежнему скрывает.', { add: { keep: 1 } }),
@@ -270,7 +270,7 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
     node: { talent: 'smg_slip_away', kind: 'dur', per: 0.25 },
   },
   dark_running: {
-    id: 'dark_running', captain: 'smuggler', key: 'X', by: { ambush: [0.6, 0.6, 0.61, 0.62, 0.63], seen: 0.4, every: 50, dur: 60 }, pow: ['ambush'], fmt: { ambush: 'pct', seen: 'pct', every: 'sec', dur: 'sec' },
+    id: 'dark_running', captain: 'smuggler', key: 'X', by: { ambush: [0.65, 0.65, 0.65, 0.65, 0.66], seen: 0.4, every: 50, dur: 60 }, pow: ['ambush'], fmt: { ambush: 'pct', seen: 'pct', every: 'sec', dur: 'sec' },
     text: ['All lanterns out for {dur}: NPCs notice her at {seen} of the usual distance, −10% speed. Ambush: her first broadside out of the dark or the smoke +{ambush}, and a critical — her rudder or her powder (again after {every}).', 'Фонари погашены на {dur}: НПС замечают её на {seen} дистанции, −10% хода. Засада: первый залп из тьмы или дыма +{ambush} и крит — по рулю или по пороху (снова через {every}).'],
     facets: {
       3: [F('Black lanterns', 'Чёрные фонари', 'Seen at a quarter of the distance.', 'Видна лишь с четверти дистанции.', { add: { seen: -0.15 } }),
@@ -329,7 +329,7 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
     node: { talent: 'nav_current_reader', kind: 'dur', per: 0.3 },
   },
   star_fix: {
-    id: 'star_fix', captain: 'navigator', key: 'C', by: { rake: [0.1, 0.12, 0.14, 0.17, 0.2], dur: 20 }, pow: ['rake'], fmt: { rake: 'pct', dur: 'sec' },
+    id: 'star_fix', captain: 'navigator', key: 'C', by: { rake: [0.12, 0.13, 0.15, 0.17, 0.2], dur: 20 }, pow: ['rake'], fmt: { rake: 'pct', dur: 'sec' },
     text: ['A star fix: every island within 7 km charted, and for {dur} the weak angles of enemies within 1.5 km shown — her broadsides on them rake, +{rake}.', 'Звёздный отсчёт: все острова в 7 км на карте, и {dur} видны слабые углы врагов в 1,5 км — её залпы по ним продольные, +{rake}.'],
     facets: {
       3: [F('Star chart', 'Звёздная карта', '6 s longer.', 'На 6 с дольше.', { add: { dur: 6 } }),
@@ -355,7 +355,7 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
     text: ['Once per 5 min, lethal damage leaves her between water and light for 12 s (−50% incoming); mend to 10% or sink. She enters every fight with {wake} Dread. Dread as a weapon: every 25 Dread costs enemies within 400 m 5 morale each 15 s, and below 30 morale they reload {shake} slower.', 'Раз в 5 мин смертельный урон оставляет её между водой и светом на 12 с (−50% входящего); залатать до 10% — или ко дну. В каждый бой она входит с {wake} Ужаса. Ужас как оружие: каждые 25 Ужаса снимают врагам в 400 м 5 духа раз в 15 с, а ниже 30 духа они заряжают на {shake} медленнее.'],
   },
   deep_call: {
-    id: 'deep_call', captain: 'drowned', key: 'Z', by: { leak: [0.7, 0.7, 0.7, 0.7, 0.7], r: 60, dur: 6, dread: 30 }, pow: ['leak'], fmt: { leak: 'vol', r: 'm', dur: 'sec', dread: 'n' },
+    id: 'deep_call', captain: 'drowned', key: 'Z', by: { leak: [0.8, 0.8, 0.8, 0.8, 0.8], r: 60, dur: 6, dread: 30 }, pow: ['leak'], fmt: { leak: 'vol', r: 'm', dur: 'sec', dread: 'n' },
     text: ['{dread} Dread. Drowned hands rise at the point ({r}) for {dur}: −40% speed and −30% turn inside, and every ship caught leaks {leak} over those seconds.', '{dread} Ужаса. Руки утопленников в точке ({r}) на {dur}: внутри −40% хода и −30% поворота, и каждый пойманный корабль течёт на {leak} за эти секунды.'],
     facets: {
       3: [F('Grasping', 'Цепкие руки', 'The hands reach 90 m.', 'Руки тянутся на 90 м.', { add: { r: 30 } }),
@@ -367,7 +367,7 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
     combo: { then: 'maw_of_the_deep', win: 6, name: ['Call → maw', 'Зов → пасть'], text: ['A maw opened on a ship the hands hold: +10%.', 'Пасть на корабле в руках утопленников: +10%.'] },
   },
   brine_mend: {
-    id: 'brine_mend', captain: 'drowned', key: 'X', by: { heal: [0.8, 0.85, 0.9, 0.95, 1], dur: 8, dread: 25 }, pow: ['heal'], fmt: { heal: 'vol', dur: 'sec', dread: 'n' },
+    id: 'brine_mend', captain: 'drowned', key: 'X', by: { heal: [0.8, 0.9, 1, 1, 1], dur: 8, dread: 25 }, pow: ['heal'], fmt: { heal: 'vol', dur: 'sec', dread: 'n' },
     text: ['{dread} Dread. The sea knits her planks: {heal} back over {dur}, a leak sealed, the rudder mended. Crew morale −6, and 2% of the crew go into the water.', '{dread} Ужаса. Море сращивает доски: {heal} за {dur}, течь заделана, руль исправлен. Дух −6, и 2% команды уходит в воду.'],
     facets: {
       3: [F('Deep mend', 'Глубокая штопка', 'Two leaks sealed.', 'Заделаны две течи.', { add: { leaks: 1 } }),

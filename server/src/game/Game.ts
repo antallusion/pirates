@@ -1535,6 +1535,9 @@ export class Game {
       const common = npcSeaScale(ship.shipLevel, false);
       ship.seaScale = { hull: common.hull * (opts.heavy ? 1.5 : 1), guns: 1 };
       ship.ownerId = owner.id;
+      // (shot for her whole hire: forty broadsides of both batteries — a ship of the line ran dry of the sea's 400 balls
+      // in two minutes, and the hire was worth the less the bigger the hull)
+      ship.ammo.round = Math.max(ship.ammo.round, ship.stats.gunsPerSide * 2 * 40);
       ship.recompute(this.now);
       const rate = (s: ShipEntity) => (s.stats.gunsPerSide * GUNS[s.loadout.guns.starboard].damage * s.stats.gunDamageMul) / Math.max(0.1, reloadTime(s, 'starboard', this.now));
       // (a ⚓ below hers, the ladder cuts her blows on a mark of the Admiral's ⚓: the share is the share after it — as at ⚓1,

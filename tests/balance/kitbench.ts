@@ -49,7 +49,7 @@ export interface KitFight {
 /** The ram's run-in: her way into the mark as a share of her top speed (both under way, she does not meet her at rest). */
 export const RAM_CLOSING = 0.7;
 /** …and the time she needs to come about and run in again after a ram. */
-export const RAM_AGAIN = 45;
+export const RAM_AGAIN = 40;
 
 /** One fight: `a` fires on `b` till `b` sinks or strikes. Either side's kit as asked; the sea's dice by `seed`. */
 export function kitFight(game: Game, a: KitSide, b: KitSide, seed = 1, maxSec = 900): KitFight {
@@ -156,10 +156,13 @@ export function kitFight(game: Game, a: KitSide, b: KitSide, seed = 1, maxSec = 
 function fractional(fires: [number, number][], end: number, sunk: boolean, first: number): number {
   const k = fires.length - 1;
   const load = k >= 1 ? fires[1][0] - fires[0][0] : 0;
-  if (!sunk || k < 1 || end - fires[k][0] > 3) return end - first + load;
-  const mean = (fires[0][1] - fires[k][1]) / k;
-  const f = mean > 0 ? Math.max(0, Math.min(1, fires[k][1] / mean)) : 1;
-  return fires[k - 1][0] - first + f * (fires[k][0] - fires[k - 1][0]) + load;
+  if (!sunk || k < 1) return end - first + load;
+  // Her hull at each of her broadsides: the fight's pace from the first to the last before the end (every source of it —
+  // her guns, her escort's, a leak, a maw), and the hull at that pace to the last plank. (A fight finished between two
+  // of her broadsides by another's guns or a leak no longer moves by a whole reload with the tick it fell on.)
+  const span = fires[k][0] - fires[0][0], lost = fires[0][1] - fires[k][1];
+  if (span <= 0 || lost <= 0) return end - first + load;
+  return (span * fires[0][1]) / lost + load;
 }
 
 /** The bench's weather held: a steady breeze from one quarter (the sea's veering wind and its fronts made one fight of
