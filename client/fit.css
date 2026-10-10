@@ -63,3 +63,229 @@
   .captain-detail .pick-bar label.know-sea small { font-size: 11px; }
   .captain-detail .pick-bar .btn { flex: 0 0 auto; min-height: 38px; font-size: 13px; padding-inline: 10px; }
 }
+
+/* ================================================================== windows and sheets on a phone held sideways */
+@media (max-height: 520px) {
+  /* The kit's sizes for a phone: buttons 36–40 px, text 11–13.5 px, headings 17 px, compact gaps. */
+  #modal, .k-sheet-root { --k-h-1: 36px; --k-h-2: 38px; --k-h-3: 40px; --k-fs-1: 11px; --k-fs-2: 12.5px; --k-fs-3: 13.5px; --k-fs-4: 17px; --k-sp-3: 10px; --k-sp-4: 12px; }
+  /* the window takes the whole screen: the sea above a sheet was 10 % of the height lost to every page */
+  #modal-panel { height: 100dvh; font-size: 12.5px; }
+  .skinned #modal-panel { border-width: 8px 8px 0; border-image-width: 8px 8px 0; }
+  #modal-panel .w-grip { height: 8px; padding-top: 1px; }
+  #modal-panel .w-grip i { height: 3px; }
+  .w-head.modal-head, #modal-panel > .modal-head:not(.w-head) { min-height: 40px; padding-right: 48px; }
+  #modal-panel .x-btn { width: 38px; height: 38px; top: 1px; right: 2px; }
+  .w-title, .skinned .w-head h2.w-title { font-size: 17px; }
+  .w-fig { height: 26px; padding: 0 7px; font-size: 12px; }
+  .w-fig-ico { width: 16px; height: 16px; }
+  /* the rail of places, narrower and lower */
+  .w-rail { width: 76px; gap: 2px; padding: 2px; }
+  .w-tab { height: 44px; font-size: 11px; gap: 0; }
+  .w-tab-ico { width: 22px; height: 22px; }
+  .w-tab--go { min-height: 44px; }
+  /* the second row: chips 36 px; a long row keeps the words of the lit chip only (the rest: their icons, the name in
+     the long-press hint) — it ran 1119 px in a 528 px row on 640×360 */
+  .w-chips { gap: 4px; padding: 3px 6px; }
+  .w-chip { min-height: 36px; padding: 0 9px 0 6px; font-size: 12px; gap: 4px; }
+  .w-chip-ico { width: 20px; height: 20px; }
+  .w-chips:has(> .w-chip:nth-child(6)) > .w-chip:not(.on):has(.w-chip-ico) > .w-chip-l { display: none; }
+  .w-chips:has(> .w-chip:nth-child(6)) > .w-chip:not(.on):has(.w-chip-ico) { padding: 0; min-width: 38px; justify-content: center; }
+  /* the page */
+  #modal-panel .modal-body { font-size: 12.5px; line-height: 1.35; }
+  #modal-panel h3 { font-size: 16px; }
+  #modal-panel h4 { font-size: 14px; }
+  #modal-panel .btn { min-height: 36px; font-size: 12.5px; }
+  .w-row { min-height: 40px; padding: 2px 4px; gap: 6px; }
+  .w-row-b > .k-btn { min-width: 56px; padding: 0 8px; }
+  .w-row-ico { width: 28px; height: 28px; }
+  .w-row-t > b { font-size: 14px; }
+  .w-sec { margin: 8px 0 4px; }
+  .w-quick { gap: 6px; margin-bottom: 8px; }
+  .w-qbtn .k-btn-ico { width: 22px; height: 22px; }
+  .w-tile { min-height: 72px; padding: 4px 3px; }
+  .w-tile-ico { width: 36px; height: 36px; }
+  .k-sheet-body { font-size: 12.5px; }
+
+  /* ---------- the pager (kit/fit.ts): a page that would scroll is laid out in pages side by side */
+  .fit-paged { overflow: hidden !important; column-count: var(--fit-cols, 1); column-gap: 16px; column-fill: auto; padding-left: 8px !important; padding-right: 8px !important; overscroll-behavior: contain; }
+  .fit-paged.fit-flow { display: block !important; }
+  .fit-paged.fit-flow > * + * { margin-top: var(--fit-gap, 0px); }
+  .fit-paged .w-row, .fit-paged .q-card, .fit-paged .talent, .fit-paged .w-tile, .fit-paged tr, .fit-paged li, .fit-paged .ability, .fit-paged .w-wb, .fit-paged .w-quick, .fit-paged .w-sec, .fit-paged h3, .fit-paged h4 { break-inside: avoid; }
+  .fit-paged .w-sec, .fit-paged h3, .fit-paged h4 { break-after: avoid; }
+  /* list-like pages: two columns to a page (a tall stack of rows read across the landscape) */
+  .fit-pager { flex: none; display: flex; align-items: center; justify-content: center; gap: 12px; height: 40px; border-top: 1px solid rgba(140, 107, 58, 0.3); background: rgba(8, 8, 9, 0.6); }
+  .fit-pg-b { width: 56px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--k-brass-dim); border-radius: var(--k-r-1); background: linear-gradient(180deg, #2a2521, #17140f); color: var(--k-gold); font: 600 22px/1 var(--k-font-serif); cursor: pointer; touch-action: manipulation; }
+  .fit-pg-b:disabled { opacity: 0.35; cursor: default; }
+  .fit-pg-n { min-width: 44px; text-align: center; font: 600 13px var(--k-font-sans); color: var(--k-bone); font-variant-numeric: tabular-nums; }
+}
+
+/* ================================================================== the older windows' heads and tabs on a phone */
+@media (max-height: 520px) {
+  /* the gold «В море» keeps its word whole (its 15 px line sat in a 10 px box) */
+  .w-tab--go { min-height: 46px; padding: 2px; }
+  .w-tab--go .w-tab-l { line-height: 1.2; overflow: visible; }
+  /* one band: the name, and the line under it goes to the desk (it stood 18 px over every page) */
+  #modal-panel > .modal-head:not(.w-head) { flex-wrap: nowrap; min-height: 40px; padding-top: 0; padding-bottom: 0; }
+  #modal-panel > .modal-head:not(.w-head) .sub, #modal-panel > .modal-head:not(.w-head) > p, #modal-panel > .modal-head:not(.w-head) > .muted { display: none; }
+  .skinned #modal-panel > .modal-head:not(.w-head) h2 { font-size: 16px; white-space: nowrap; }
+  #modal-panel .tabs { padding: 0 4px; gap: 2px; min-height: 0; }
+  #modal-panel .tabs .tab, body.touch #modal-panel .tabs .tab { min-height: 36px; padding: 0 9px; font-size: 11.5px; letter-spacing: 0.03em; }
+  #modal-panel .tabs .tab .ico { width: 18px; height: 18px; margin-right: 4px; vertical-align: -4px; }
+}
+
+/* ================================================================== the page's parts, phone-sized */
+@media (max-height: 520px) {
+  #modal-panel .card, .k-sheet .card { padding: 6px 8px; margin-bottom: 6px; }
+  #modal-panel .card h4, .k-sheet .card h4 { font-size: 14.5px; margin-bottom: 2px; }
+  #modal-panel .card p, .k-sheet .card p { font-size: 13px; line-height: 1.3; margin-bottom: 4px; }
+  #modal-panel .card h4 .ico-md { width: 26px; height: 26px; margin: -2px 6px 2px 0; }
+  #modal-panel p { margin-top: 0; margin-bottom: 5px; }
+  #modal-panel ul { margin: 2px 0 6px; padding-left: 18px; }
+  #modal-panel .cols { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  /* painted banners shrink to a strip: the words and the buttons are what a phone needs on its one screen */
+  #modal-panel .card-art { height: 44px; margin-bottom: 4px; }
+  .hol-card .hol-art { aspect-ratio: auto; height: 44px; }
+  #modal-panel table.grid td, #modal-panel table.grid th { padding: 3px 5px; font-size: 12px; }
+}
+
+/* ================================================================== small words and small taps, everywhere on a phone */
+@media (max-height: 520px) {
+  /* no word under 11 px: the «small» of a 12.5 px page was 10.4 px, the tags 9 px, the tiles' names 10 px */
+  #modal-panel small, .k-sheet small, #board-tac small, #advcard small, #lairchest small, #board-offer small { font-size: max(11px, 0.83em); }
+  .tag, .talent .tag, .hx-otag .tag, .pb-tags .tag { font-size: 11px; }
+  .stat-l { font-size: 11px; letter-spacing: 0.03em; }
+  .tb-store, .bk-will .tb-store { font-size: 11px; }
+  .tb-chip-men { font-size: 11px; height: 16px; line-height: 16px; }
+  .tb-rs i { font-size: 11px; line-height: 14px; }
+  body.simple #touch > #tc-ammo .tc-ammo-n, #touch > .tc-act .tc-act-more { font-size: 11px; }
+  /* the captain's rail: «Снаряжение» whole */
+  #modal-panel[data-modal="hero"] .w-rail { width: 84px; }
+  /* the level's choice in the Hero tab: its words whole (they were clamped to two lines) */
+  .cap-body .hx-pick-t small { display: block; -webkit-line-clamp: unset; overflow: visible; }
+  /* the order book's six schools wrap to a second row instead of running sideways */
+  .cap-body .w-chips.hx-schools { flex-wrap: wrap; overflow: visible; }
+  /* chips in a window's band: five or more keep the lit one's words only */
+  .w-head--chips .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:not(.on):has(.w-chip-ico) > .w-chip-l,
+  .w-pane > .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:not(.on):has(.w-chip-ico) > .w-chip-l { display: none; }
+  .w-head--chips .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:not(.on):has(.w-chip-ico),
+  .w-pane > .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:not(.on):has(.w-chip-ico) { padding: 0; min-width: 38px; justify-content: center; }
+  /* the departure check: its list is the sheet's, not a box of its own */
+  .depart-panel .dp-list { overflow: visible; }
+  /* the pirate's chest */
+  #lairchest .lc-foot .btn { min-height: 36px; }
+  /* a mate's boarding offer */
+  .bo-x { width: 36px; height: 36px; }
+  .bo-st { width: 38px; height: 38px; }
+  .bo-st b { font-size: 11px; line-height: 13px; }
+  .bo-auto .bo-as { font-size: 11px; }
+}
+/* the title screen's small controls a finger wide (any height: the language buttons were 34 px, the account's fields 30–32) */
+@media (max-height: 520px), (max-width: 699px) {
+  #screen-login .lang-switch .btn { min-width: 40px; min-height: 36px; }
+  .login-account summary { min-height: 38px; }
+  .login-panel input { min-height: 38px; }
+  .login-account form .row #forgot-btn { min-height: 36px; }
+  .login-account form .row .btn { min-height: 38px; }
+}
+
+/* ================================================================== the chat on a phone held sideways */
+/* It stood 116 px wide between the captain's frame and the minimap at 640×360 (the field 21 px, the tabs 17×22 px):
+   now a panel over the right of the sea, clear of the helm, its tabs, field and buttons a finger wide. */
+@media (max-height: 520px) {
+  #hud-chat #chat { left: max(calc(var(--sa-l) + 150px), 34vw); right: calc(var(--sa-r) + 6px); top: calc(var(--sa-t) + 6px); bottom: calc(var(--sa-b) + 6px); width: auto; height: auto; max-height: none; }
+  #hud-chat #chat-tabs { gap: 4px; }
+  #hud-chat #chat-tabs .ct, #hud-chat #chat-tabs .ct:not(.on) { min-height: 36px; min-width: 40px; padding: 0 8px; justify-content: center; }
+  #hud-chat #chat-tabs .ct .ico-sm { width: 18px; height: 18px; }
+  #hud-chat #chat-tabs .ct-n { font-size: 11px; min-width: 16px; height: 16px; line-height: 16px; }
+  #hud-chat .chat-x { width: 38px; height: 38px; }
+  #hud-chat .chat-emo-btn { width: 38px; height: 38px; }
+  #hud-chat #chat-input { min-height: 38px; font-size: 13px; }
+  #hud-chat .chat-send { height: 38px; }
+  #hud-chat #chat-emotes button { height: 38px; }
+  #hud-chat .cl-lv, #hud-chat .cl-tag, #hud-chat .cl-head time { font-size: 11px; }
+  #hud-chat .chat-unread { font-size: 11px; }
+}
+
+/* ================================================================== talents (talents.ts) on a phone held sideways */
+/* The rose stood 272 px over a single column and the trees ran 13 pages under it: now the rose (smaller) keeps the
+   left of the screen, the chosen tree pages beside it. */
+@media (max-height: 520px) and (min-width: 560px) {
+  #modal-panel[data-modal="talents"] .modal-body { display: grid; grid-template-columns: 196px minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: 'side chips' 'side load' 'side main' 'respec pager'; gap: 6px 10px; overflow: hidden; padding: 6px 8px; }
+  #modal-panel[data-modal="talents"] .tal-layout { display: contents; }
+  #modal-panel[data-modal="talents"] .tal-chips { grid-area: chips; gap: 4px; }
+  #modal-panel[data-modal="talents"] .chip-stat { padding: 2px 8px 2px 4px; font-size: 12px; }
+  #modal-panel[data-modal="talents"] .tal-loadout { grid-area: load; margin: 0; gap: 4px; }
+  #modal-panel[data-modal="talents"] .tal-loadout .btn { min-height: 36px; padding-block: 0; }
+  #modal-panel[data-modal="talents"] .tal-side { grid-area: side; min-height: 0; }
+  #modal-panel[data-modal="talents"] .tal-main { grid-area: main; min-height: 0; overflow-y: auto; }
+  #modal-panel[data-modal="talents"] .tal-respec { grid-area: respec; min-height: 0; align-self: end; }
+  #modal-panel[data-modal="talents"] .tal-main + .fit-pager { grid-area: pager; border-top: 0; background: none; }
+  /* the respec card is its two buttons on a phone (their words say what they cost) */
+  #modal-panel[data-modal="talents"] .tal-respec .card { margin: 0; padding: 0; border: 0; background: none; }
+  #modal-panel[data-modal="talents"] .tal-respec .card > :not(.respec-btns) { display: none; }
+  #modal-panel[data-modal="talents"] .respec-btns { gap: 4px; }
+  #modal-panel[data-modal="talents"] .respec-btns .btn { min-height: 38px; font-size: 11.5px; line-height: 1.15; padding: 0 4px; }
+  #modal-panel[data-modal="talents"] .tal-rules { display: none; }
+  #modal-panel[data-modal="talents"] .rose { width: 188px; height: 188px; }
+  #modal-panel[data-modal="talents"] .rose-node { width: 40px; height: 40px; margin: -20px 0 0 -20px; transform: rotate(var(--a)) translateY(-72px) rotate(calc(-1 * var(--a))); }
+  #modal-panel[data-modal="talents"] .rose-node .rose-ico { inset: 3px; width: 34px; height: 34px; }
+  #modal-panel[data-modal="talents"] .rose-pts { font-size: 11px; min-width: 18px; height: 16px; line-height: 14px; }
+  #modal-panel[data-modal="talents"] .rose-core { width: 84px; }
+  #modal-panel[data-modal="talents"] .rose-core-ico { width: 34px; height: 34px; }
+  #modal-panel[data-modal="talents"] .rose-core b { font-size: 13px; }
+  #modal-panel[data-modal="talents"] .rose-extra { margin-top: 6px; gap: 4px; }
+  #modal-panel[data-modal="talents"] .rose-extra .btn { min-height: 36px; font-size: 12px; padding-inline: 4px; }
+  #modal-panel[data-modal="talents"] .tier-row { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+}
+@media (max-height: 520px) and (min-width: 560px) {
+  /* the tree: two columns of talents a page, each talent whole; the motto is the desk's */
+  #modal-panel[data-modal="talents"] .tal-main.fit-paged { column-count: 2; column-gap: 16px; }
+  #modal-panel[data-modal="talents"] .tal-main .tier-row { display: block; }
+  #modal-panel[data-modal="talents"] .tal-main .talent { margin: 0 0 4px; padding: 4px 6px; grid-template-columns: 28px minmax(0, 1fr); gap: 6px; }
+  #modal-panel[data-modal="talents"] .tal-main .talent-ico { width: 28px; height: 28px; }
+  #modal-panel[data-modal="talents"] .tal-main .motto { display: none; }
+  #modal-panel[data-modal="talents"] .tal-main .tree-h { font-size: 15px; break-after: avoid; }
+  #modal-panel[data-modal="talents"] .tal-main .tree-h .ico-md { width: 26px; height: 26px; }
+  #modal-panel[data-modal="talents"] .tal-main .tier-label { break-after: avoid; margin: 2px 0; }
+  #modal-panel[data-modal="talents"] .tal-loadout > .muted { display: none; }
+}
+@media (max-height: 520px) and (min-width: 560px) {
+  /* the rose as two columns of its trees down the left (the circle took 196 px of width and the trees ran 21 pages
+     beside it); the tree's name and points head the page beside them */
+  #modal-panel[data-modal="talents"] .modal-body { grid-template-columns: 92px minmax(0, 1fr); }
+  #modal-panel[data-modal="talents"] .rose { width: auto; height: auto; display: grid; grid-template-columns: repeat(2, 42px); gap: 4px; justify-content: center; border-radius: 0; background: none; box-shadow: none; }
+  #modal-panel[data-modal="talents"] .rose::before, #modal-panel[data-modal="talents"] .rose-core { display: none; }
+  #modal-panel[data-modal="talents"] .rose-node { position: relative; left: auto; top: auto; width: 42px; height: 42px; margin: 0; transform: none; }
+  #modal-panel[data-modal="talents"] .rose-node .rose-ico { inset: 3px; width: 36px; height: 36px; }
+  #modal-panel[data-modal="talents"] .rose-extra { grid-template-columns: 1fr; margin-top: 4px; }
+  #modal-panel[data-modal="talents"] .rose-extra .btn { min-height: 36px; padding: 0 2px; gap: 2px; font-size: 11px; white-space: normal; line-height: 1.1; }
+  #modal-panel[data-modal="talents"] .rose-extra .btn .ico-sm { display: none; }
+  #modal-panel[data-modal="talents"] .tal-respec { grid-column: 1 / 2; }
+  #modal-panel[data-modal="talents"] .respec-btns { grid-template-columns: 1fr; }
+  #modal-panel[data-modal="talents"] .respec-btns .btn:last-child { display: none; }
+  #modal-panel[data-modal="talents"] .tal-main.fit-paged { column-count: 2; }
+}
+@media (max-height: 520px) and (min-width: 560px) {
+  #modal-panel[data-modal="talents"] .modal-body { grid-template-columns: 132px minmax(0, 1fr); }
+  #modal-panel[data-modal="talents"] .rose { grid-template-columns: repeat(3, 40px); gap: 3px; }
+  #modal-panel[data-modal="talents"] .rose-node { width: 40px; height: 40px; }
+  #modal-panel[data-modal="talents"] .rose-node .rose-ico { width: 34px; height: 34px; }
+  #modal-panel[data-modal="talents"] .rose-extra { grid-template-columns: 1fr 1fr; gap: 3px; }
+}
+@media (max-height: 520px) and (min-width: 560px) {
+  /* the level, the points and the deeds ride in the band; the loadouts head the left column — the tree gets the height */
+  #modal-panel[data-modal="talents"] .modal-body { grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: 'load main' 'side main' 'respec pager'; }
+  #modal-panel[data-modal="talents"] .tal-chips { position: absolute; z-index: 3; top: 7px; left: 150px; right: 50px; height: 26px; flex-wrap: nowrap; overflow: hidden; }
+  #modal-panel[data-modal="talents"] .tal-loadout { display: grid; grid-template-columns: 1fr 1fr; }
+  #modal-panel[data-modal="talents"] .tal-loadout > .with-ico { display: none; }
+  #modal-panel[data-modal="talents"] .tal-loadout .btn { padding-inline: 2px; font-size: 11.5px; }
+  #modal-panel[data-modal="talents"] .rose { gap: 2px 3px; }
+  #modal-panel[data-modal="talents"] .rose-extra .btn { min-height: 36px; }
+}
+@media (max-height: 520px) and (min-width: 560px) {
+  /* a talent's picture beside its name, its words the card's whole width */
+  #modal-panel[data-modal="talents"] .tal-main .talent { display: block; position: relative; padding: 4px 6px 4px 6px; font-size: 12px; line-height: 1.28; }
+  #modal-panel[data-modal="talents"] .tal-main .talent-ico { float: left; width: 24px; height: 24px; margin: 0 6px 0 0; }
+  #modal-panel[data-modal="talents"] .tal-main .talent-top { min-height: 24px; }
+  #modal-panel[data-modal="talents"] .tal-main .talent-top b { font-size: 13px; }
+}

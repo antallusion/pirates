@@ -52,6 +52,7 @@ import type { Act, ActFacts } from './ui/actbar.ts';
 import { riskConfirm } from './ui/kit/risk.ts';
 import { wireSheetSwipe } from './ui/kit/sheet.ts';
 import { wireHints } from './ui/kit/hint.ts';
+import { installPager } from './ui/kit/fit.ts';
 import { DASH_COOLDOWN, LAY_ARC_DEG, closeRange, suggestAmmo } from '../../shared/src/data/gunnery.ts';
 import { EN as SEAF_EN, RU as SEAF_RU } from './lang/ui/seafight.ts';
 import type { BoardRisk } from '../../shared/src/protocol.ts';
@@ -1739,6 +1740,8 @@ $('modal').addEventListener('click', (e) => {
   }
 });
 wireHints();
+// docs/23, 2026-10-10: on a phone held sideways a window that would scroll turns pages instead (kit/fit.ts).
+installPager();
 
 function toggle(m: Modal): void {
   if (modal === m) closeModal();

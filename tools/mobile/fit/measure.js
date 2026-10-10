@@ -25,6 +25,7 @@
   };
   const ownText = (e) => [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim().length > 1);
   const clickable = (e) => {
+    if (getComputedStyle(e).pointerEvents === 'none') return false;
     if (e.matches('button, a[href], input:not([type=hidden]), select, textarea, summary, [role=button], [role=tab], label.check')) return true;
     const c = getComputedStyle(e).cursor;
     if (c !== 'pointer') return false;
@@ -59,7 +60,11 @@
         if (!vis(e)) continue;
         const cs = getComputedStyle(e);
         const r = e.getBoundingClientRect();
-        if (r.width < 1 || r.height < 1) continue;
+        // (a word kept for a screen reader only — 1 px, clipped — is not on the screen)
+        if (r.width < 3 || r.height < 3) continue;
+        // another page of a paged pane (kit/fit.ts) is that pane's, not this screen's: it is turned to, not scrolled
+        const pg = e.closest('.fit-paged');
+        if (pg && pg !== e) { const pr = pg.getBoundingClientRect(); if (r.right <= pr.left + 1 || r.left >= pr.right - 1) continue; }
         // 1. scroll boxes that overflow
         if (/(auto|scroll)/.test(cs.overflowY) && e.scrollHeight > e.clientHeight + 2 && e.clientHeight > 0) res.scroll.push(`${name(e)} ↕${e.scrollHeight}/${e.clientHeight}`);
         else if (/(auto|scroll)/.test(cs.overflowX) && e.scrollWidth > e.clientWidth + 2 && e.clientWidth > 0) res.scroll.push(`${name(e)} ↔${e.scrollWidth}/${e.clientWidth}`);
@@ -84,13 +89,16 @@
             }
           }
           const fs = parseFloat(cs.fontSize);
-          if (fs < 10.5) res.tiny.push(`${name(e)} ${fs}px «${t.slice(0, 14)}»`);
+          if (fs < 10.5 && fs > 0) res.tiny.push(`${name(e)} ${fs}px «${t.slice(0, 14)}»`);
         }
         // 4. small taps
         if (tap && Math.min(r.width, r.height) < 39.5 && !e.matches('input[type=checkbox], input[type=radio], input[type=range]') && !e.disabled) { if (Math.min(r.width, r.height) < 35.5) res.under36++; res.small.push(`${name(e)} ${Math.round(r.width)}×${Math.round(r.height)}`); }
       }
     }
     res.share = Math.round((area / (W * H)) * 100);
+    res.pages = Math.max(0, ...[...document.querySelectorAll('.fit-pager')].filter(vis).map((b) => Number((/\/(\d+)/.exec(b.textContent) ?? [])[1] ?? 0)));
+    const rl = document.getElementById('rotate-lock');
+    res.rotate = !!rl && vis(rl) && rl.getBoundingClientRect().width > W * 0.8;
     return res;
   };
   return 'fit ready';

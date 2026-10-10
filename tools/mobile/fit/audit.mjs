@@ -21,7 +21,7 @@ const LANGS = arg('langs', 'ru,en').split(',');
 const ONLY = arg('only', '') ? arg('only', '').split(',') : null;
 const SHOTS = new Set((arg('shots', '640x360/ru,640x360/en,812x375/ru,375x812/ru,1440x900/ru')).split(','));
 const FIT = readFileSync(new URL('./measure.js', import.meta.url), 'utf8');
-const IMG = `docs/img/mobilefit/${PHASE}`;
+const IMG = ['before', 'after'].includes(PHASE) ? `docs/img/mobilefit/${PHASE}` : `assets/raw/audit/fit/${PHASE}`;
 const OUTD = 'tools/mobile/fit/out';
 mkdirSync(IMG, { recursive: true });
 mkdirSync(OUTD, { recursive: true });
@@ -39,9 +39,9 @@ async function measure(p, id, size, lang, root) {
   const r = await p.evaluate((q) => globalThis.__fit(q), root);
   const shot = SHOTS.has(`${size}/${lang}`);
   if (shot) await p.screenshot({ path: `${IMG}/${id.replace(/[:/]/g, '_')}__${size}_${lang}.jpg`, type: 'jpeg', quality: 62 });
-  const row = { screen: id, size, lang, root, scroll: r.scroll, out: r.out, cut: r.cut, small: r.small, under36: r.under36, tiny: r.tiny, share: r.share, page: r.page, pages: r.pages ?? null };
+  const row = { screen: id, size, lang, root, scroll: r.scroll, out: r.out, cut: r.cut, small: r.small, under36: r.under36, tiny: r.tiny, share: r.share, page: r.page, pages: r.pages ?? null, rotate: r.rotate ?? null };
   rows.push(row);
-  L.log(`${id.padEnd(26)} ${size.padEnd(9)} ${lang}  scroll ${r.scroll.length}${r.page ? '+page' : ''}  out ${r.out.length}  cut ${r.cut.length}  <40 ${r.small.length} (<36 ${r.under36})  tiny ${r.tiny.length}  ${r.share}%`);
+  L.log(`${id.padEnd(26)} ${size.padEnd(9)} ${lang}  scroll ${r.scroll.length}${r.page ? '+page' : ''}  out ${r.out.length}  cut ${r.cut.length}  <40 ${r.small.length} (<36 ${r.under36})  tiny ${r.tiny.length}  ${r.share}%${r.pages ? '  pages ' + r.pages : ''}${r.rotate ? '  ROTATE' : ''}`);
   return row;
 }
 
@@ -104,5 +104,5 @@ writeFileSync(outFile, JSON.stringify({ at: new Date().toISOString(), phase: PHA
 L.log('rows', rows.length, '→', outFile);
 // The table.
 const { table } = await import('./table.mjs');
-writeFileSync(`docs/img/mobilefit/audit-${PHASE}.md`, table(PHASE));
+writeFileSync(['before', 'after'].includes(PHASE) ? `docs/img/mobilefit/audit-${PHASE}.md` : `${OUTD}/audit-${PHASE}.md`, table(PHASE));
 L.log('table → docs/img/mobilefit/audit-' + PHASE + '.md');
