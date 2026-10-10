@@ -2670,8 +2670,11 @@ export function fxValue(bt: TacBattle, side: 0 | 1, fx: PageFx, k: number, t?: T
   v += lay(fx.self, own, foes, 1);
   v += lay(fx.foe, foes, own, -1) * foeKeep;
   if (fx.one && t) v += t.side === side ? lay(fx.one, [t], foes, 1, threat(bt, t) / Math.max(1, sum(own))) : lay(fx.one, [t], own, -1) * keep(t);
-  if (fx.again && t && t.side === side) v += threat(bt, t) * 0.9 * (fx.againShare ?? 1);
-  if (fx.allAgain) v += sum(own) * 0.6 * (fx.allShare ?? 1);
+  // docs/25 item 70: another turn is a turn of blows — this round her smoke (Smoke and Knives) takes that share of them
+  // (the Navigator gave her squall into the Smuggler's smoke and lost three in four).
+  const blowsNow = Math.max(0.1, 1 - 0.5 * held(e, 'smoke_and_knives', bt.round));
+  if (fx.again && t && t.side === side) v += threat(bt, t) * 0.9 * (fx.againShare ?? 1) * blowsNow;
+  if (fx.allAgain) v += sum(own) * 0.6 * (fx.allShare ?? 1) * blowsNow;
   if (fx.free) v += Math.min(fx.free, own.length) / Math.max(1, own.length) * sum(own, (x) => !shoots(x)) * 0.15;
   v += ((fx.heart ?? 0) + (fx.dread ?? 0)) * 0.003 * sum(own);
   // The clearing wind: what she has laid on both decks undone for the rounds it had left (her orders given by hand
