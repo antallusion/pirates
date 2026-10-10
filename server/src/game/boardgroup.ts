@@ -78,7 +78,7 @@ function matesFor(game: Game, ship: ShipEntity, at: ShipEntity, skip: ReadonlySe
 export function allyInput(game: Game, ms: PlayerSession, enemy: ShipEntity, attacker: boolean, level: number): TacSideInput {
   const base = sideOf(game, ms.ship!, enemy, attacker);
   const all = base.army ?? [];
-  const army = pickBring(all, tacBring(level), ms.boardBring);
+  const army = pickBring(all, tacBring(level), prefOf(game, ms.accountId).bring);
   const spellHp = all.reduce((n, x) => n + x.n * (UNITS[x.u]?.hp ?? 0) * (x.hpK ?? 1), 0);
   const { gift: _gift, ...rest } = base;
   return { ...rest, army, officers: [], holes: 0, gunsOut: 0, fire: false, spellHp: Math.max(1, Math.round(spellHp)) };
@@ -102,11 +102,11 @@ function offerOf(game: Game, ms: PlayerSession, a: ShipEntity, b: ShipEntity, x:
   const army = ms.ship!.army.filter((y) => y.n > 0).map((y) => ({ u: y.u, n: y.n }));
   return {
     with: a.id, side: x, mate: game.sessionOf(mine)?.name ?? mine.captainName, foe: foe.name, round: bt?.round ?? 0, last: TAC_GROUP.late,
-    army, bring: pickBring(army, tacBring(level), ms.boardBring).map((y) => y.u), n: tacBring(level), auto: ms.boardJoin,
+    army, bring: pickBring(army, tacBring(level), prefOf(game, ms.accountId).bring).map((y) => y.u), n: tacBring(level), auto: prefOf(game, ms.accountId).auto,
   };
 }
 
-/** docs/25 item 64: the mates who come aboard with the grapples — those who come at once (boardJoin); the others are
+/** docs/25 item 64: the mates who come aboard with the grapples — those who come at once (prefOf); the others are
  *  asked (the offer card). The battle lays them out (newBattle's `allies`); `link` ties their slots after. */
 export function alliesAtStart(game: Game, a: ShipEntity, b: ShipEntity, aIn: TacSideInput, bIn: TacSideInput, level: number): { side: 0 | 1; input: TacSideInput; grow: boolean; tag: number }[] {
   const fight = a.boarding!.fight;
@@ -120,7 +120,7 @@ export function alliesAtStart(game: Game, a: ShipEntity, b: ShipEntity, aIn: Tac
     for (const ms of matesFor(game, mine, a, fight.tacOffered)) {
       if (n >= TAC_GROUP.side - 1) break;
       fight.tacOffered.add(ms.accountId);
-      if (!ms.boardJoin) {
+      if (!prefOf(game, ms.accountId).auto) {
         game.sendTo(ms, { t: 'board_offer', offer: offerOf(game, ms, a, b, x, null, level) });
         continue;
       }
@@ -142,15 +142,29 @@ export function linkAllies(fight: BoardFight, bt: TacBattle): void {
   }
 }
 
+/** docs/25 item 64: whether a captain comes aboard her group's boardings at once (else — as she starts — she is asked:
+ *  the card on the sea, whose «В следующий раз — сразу» sets it), and the kinds of her army she brings (none chosen: her
+ *  strongest). Kept by her account for the server's life (a reload keeps them). */
+const PREFS = new WeakMap<Game, Map<number, { auto: boolean; bring: string[] }>>();
+export function prefOf(game: Game, acc: number): { auto: boolean; bring: string[] } {
+  let m = PREFS.get(game);
+  if (!m) PREFS.set(game, (m = new Map()));
+  let p = m.get(acc);
+  if (!p) m.set(acc, (p = { auto: false, bring: [] }));
+  return p;
+}
+const kinds = (bring: readonly unknown[]): string[] => bring.filter((u): u is string => typeof u === 'string' && u in UNITS).slice(0, TAC_GROUP.bring);
+
 /** docs/25 item 64: whether she comes aboard her group's boardings at once, and the kinds of her army she brings. */
-export function assistPref(ms: PlayerSession, auto: boolean, bring?: string[]): void {
-  ms.boardJoin = auto;
-  if (bring) ms.boardBring = bring.filter((u) => typeof u === 'string' && u in UNITS).slice(0, TAC_GROUP.bring);
+export function assistPref(game: Game, ms: PlayerSession, auto: boolean, bring?: string[]): void {
+  const p = prefOf(game, ms.accountId);
+  p.auto = auto;
+  if (bring) p.bring = kinds(bring);
 }
 
 /** docs/25 item 64: she asks to come aboard a group mate's boarding (the offer card), or lets it be (`no`). */
 export function joinBoarding(game: Game, ms: PlayerSession, withId: number, bring?: string[], no?: boolean): string | null {
-  if (Array.isArray(bring)) ms.boardBring = bring.filter((u) => typeof u === 'string' && u in UNITS).slice(0, TAC_GROUP.bring);
+  if (Array.isArray(bring)) prefOf(game, ms.accountId).bring = kinds(bring);
   if (no) {
     game.sendTo(ms, { t: 'board_offer', offer: null });
     return null;
@@ -219,7 +233,7 @@ export function stepGroup(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattl
     for (const ms of matesFor(game, mine, a, offered)) {
       if (1 + fight.tacAllies.filter((e) => e.side === x).length >= TAC_GROUP.side) break;
       offered.add(ms.accountId);
-      if (ms.boardJoin) queueJoin(game, ms, a, b, x);
+      if (prefOf(game, ms.accountId).auto) queueJoin(game, ms, a, b, x);
       else game.sendTo(ms, { t: 'board_offer', offer: offerOf(game, ms, a, b, x, bt, bt.level) });
     }
   }

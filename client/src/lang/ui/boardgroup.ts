@@ -10,6 +10,7 @@ export const EN = {
   'join': 'Come aboard',
   'no': 'Not now',
   'auto': 'Come at once next time',
+  'autoShort': 'Always',
   'pick': 'Your stack: tap to bring it or leave it',
 };
 
@@ -22,5 +23,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'join': 'На абордаж',
   'no': 'Не сейчас',
   'auto': 'В следующий раз — сразу',
+  'autoShort': 'Всегда',
   'pick': 'Ваш отряд: коснитесь, чтобы взять или оставить',
 };

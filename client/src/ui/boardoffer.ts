@@ -66,7 +66,7 @@ export class BoardOfferCard {
       <div class="bo-h">${icon('icon.bt_charge', '', 'ico-sm')}<b>${esc(title)}</b><button class="bo-x" data-no title="${esc(L('no'))}" aria-label="${esc(L('no'))}">✕</button></div>
       <div class="bo-sub">${esc(sub)}</div>
       <div class="bo-row"><div class="bo-sts">${chips}</div>
-      <label class="bo-auto" title="${esc(L('auto'))}"><input type="checkbox" data-auto${o.auto ? ' checked' : ''} /><span>${esc(L('auto'))}</span></label>
+      <label class="bo-auto" title="${esc(L('auto'))}"><input type="checkbox" data-auto${o.auto ? ' checked' : ''} /><span class="bo-al">${esc(L('auto'))}</span><span class="bo-as">${esc(L('autoShort'))}</span></label>
       <button class="k-btn k-btn--primary bo-go" data-go>${esc(L('join'))}</button></div></div>`;
     this.el.querySelectorAll<HTMLElement>('[data-u]').forEach((b) => (b.onclick = () => {
       const u = b.dataset.u!;

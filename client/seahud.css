@@ -542,7 +542,7 @@ body.tac-ph .tb-grouped .tb-top { left: calc(env(safe-area-inset-left, 0px) + 12
 #board-offer.hidden { display: none; }
 .bo-card { background: rgba(10, 12, 16, 0.94); border: 1px solid rgba(201, 164, 90, 0.7); border-radius: 6px; padding: 6px 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6); color: var(--bone); }
 .bo-h { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 1.2; }
-.bo-h b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bo-h b { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .bo-x { flex: none; width: 24px; height: 24px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.08); color: var(--bone); cursor: pointer; }
 .bo-sub { margin: 2px 0 4px; font-size: 11px; color: var(--k-haze, #b9b2a2); line-height: 1.25; }
 .bo-row { display: flex; align-items: center; gap: 6px; }
@@ -553,8 +553,10 @@ body.tac-ph .tb-grouped .tb-top { left: calc(env(safe-area-inset-left, 0px) + 12
 .bo-st b { position: absolute; right: -3px; bottom: -3px; padding: 0 2px; font-size: 9px; line-height: 12px; border-radius: 3px; background: #111; color: var(--bone); }
 .bo-auto { display: inline-flex; align-items: center; gap: 3px; flex: none; font-size: 10px; color: var(--k-haze, #b9b2a2); max-width: 92px; line-height: 1.1; }
 .bo-go { flex: none; }
+.bo-auto .bo-as { display: none; }
 @media (max-height: 420px) {
   #board-offer { top: calc(env(safe-area-inset-top, 0px) + 6px); width: min(400px, calc(100vw - 200px)); }
   .bo-sub { display: none; }
-  .bo-auto span { display: none; }
+  .bo-auto .bo-al { display: none; }
+  .bo-auto .bo-as { display: inline; }
 }

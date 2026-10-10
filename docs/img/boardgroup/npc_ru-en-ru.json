@@ -1,0 +1,662 @@
+{
+ "mode": "npc",
+ "names": [
+  "Группаэжгб",
+  "Crewuapx",
+  "Группаграп"
+ ],
+ "steps": [
+  {
+   "k": "mates",
+   "said": [],
+   "at": [
+    {
+     "x": 56000,
+     "y": 73963.01941424054,
+     "h": 0,
+     "docked": null,
+     "lvl": 45,
+     "xp": 2963,
+     "silver": 1748,
+     "region": "gravewater",
+     "board": false,
+     "onb": null
+    },
+    {
+     "x": 56000,
+     "y": 74021.01113530669,
+     "h": 0,
+     "docked": null,
+     "lvl": 45,
+     "xp": 411,
+     "silver": 1463,
+     "region": "gravewater",
+     "board": false,
+     "onb": null
+    },
+    {
+     "x": 56000,
+     "y": 73994.47341547626,
+     "h": 0,
+     "docked": null,
+     "lvl": 45,
+     "xp": 411,
+     "silver": 1063,
+     "region": "gravewater",
+     "board": false,
+     "onb": null
+    }
+   ]
+  },
+  {
+   "k": "offer",
+   "shown": true,
+   "share": 10.8,
+   "centre": false,
+   "outside": 0,
+   "cut": []
+  },
+  {
+   "k": "asked",
+   "said": [
+    "Mercy of Hollowmere strikes her colours!",
+    "Группаэжгб asks you to sail with them. Answer in the Company screen [Y].",
+    "Crewuapx joins the group.",
+    "Группаграп joins the group."
+   ]
+  },
+  {
+   "k": "r1_0",
+   "faces": [
+    "portrait.navigator:422",
+    "portrait.reaver:422"
+   ],
+   "v": {
+    "round": 1,
+    "over": null,
+    "mine": false,
+    "slot": 0,
+    "you": 0,
+    "allies": [
+     [
+      0,
+      0,
+      "Группаэжгб",
+      180,
+      60
+     ],
+     [
+      1,
+      0,
+      "Juno Blackwood",
+      null,
+      90
+     ],
+     [
+      0,
+      1,
+      "Группаграп",
+      60,
+      38
+     ]
+    ],
+    "cast": false,
+    "spells": [
+     [
+      "turn_the_flank",
+      1,
+      6
+     ],
+     [
+      "grenades",
+      1,
+      4
+     ],
+     [
+      "mark_target",
+      1,
+      3
+     ],
+     [
+      "brine_mend",
+      1,
+      5
+     ],
+     [
+      "nv_marlinspike",
+      1,
+      4
+     ],
+     [
+      "nv_tailwind",
+      1,
+      3
+     ],
+     [
+      "nv_flank_drill",
+      1,
+      6
+     ],
+     [
+      "nv_squall",
+      1,
+      8
+     ],
+     [
+      "nv_harpoon_line",
+      1,
+      12
+     ],
+     [
+      "nv_eye_of_storm",
+      1,
+      13
+     ]
+    ],
+    "mana": 20,
+    "stam": 91,
+    "coming": null,
+    "active": 11,
+    "own": 1,
+    "side": 0,
+    "shares": null,
+    "name": "Группаэжгб"
+   },
+   "caps": 0,
+   "capsDesk": 1,
+   "clocks": [
+    "3:00",
+    "0:51"
+   ],
+   "outside": 0,
+   "onFaces": 0,
+   "onClocks": 0,
+   "q": 12,
+   "cut": [],
+   "hint": [
+    "Враг явно слабее: «Быстрый бой» решит вс"
+   ],
+   "turn": [
+    "Ходит: Группаграп"
+   ]
+  },
+  {
+   "k": "r1_1",
+   "faces": [
+    "portrait.navigator:422",
+    "portrait.reaver:422"
+   ],
+   "v": {
+    "round": 1,
+    "over": null,
+    "mine": false,
+    "slot": -1,
+    "you": 0,
+    "allies": [
+     [
+      0,
+      0,
+      "Группаэжгб",
+      180,
+      60
+     ],
+     [
+      1,
+      0,
+      "Juno Blackwood",
+      null,
+      90
+     ],
+     [
+      0,
+      1,
+      "Группаграп",
+      60,
+      38
+     ]
+    ],
+    "cast": false,
+    "spells": [
+     [
+      "turn_the_flank",
+      1,
+      6
+     ],
+     [
+      "grenades",
+      1,
+      4
+     ],
+     [
+      "mark_target",
+      1,
+      3
+     ],
+     [
+      "brine_mend",
+      1,
+      5
+     ],
+     [
+      "nv_marlinspike",
+      1,
+      4
+     ],
+     [
+      "nv_tailwind",
+      1,
+      3
+     ],
+     [
+      "nv_flank_drill",
+      1,
+      6
+     ],
+     [
+      "nv_squall",
+      1,
+      8
+     ],
+     [
+      "nv_harpoon_line",
+      1,
+      12
+     ],
+     [
+      "nv_eye_of_storm",
+      1,
+      13
+     ]
+    ],
+    "mana": 20,
+    "stam": 91,
+    "coming": [
+     {
+      "side": 0,
+      "name": "Crewuapx",
+      "path": "smuggler"
+     }
+    ],
+    "active": 11,
+    "own": 1,
+    "side": 0,
+    "shares": null,
+    "name": "Группаэжгб"
+   },
+   "caps": 1,
+   "capsDesk": 0,
+   "clocks": [
+    "3:00",
+    "0:58"
+   ],
+   "outside": 0,
+   "onFaces": 0,
+   "onClocks": 0,
+   "q": 0,
+   "cut": [],
+   "hint": [],
+   "turn": []
+  },
+  {
+   "k": "r1_2",
+   "faces": [
+    "portrait.navigator:422",
+    "portrait.reaver:422"
+   ],
+   "v": {
+    "round": 1,
+    "over": null,
+    "mine": true,
+    "slot": 1,
+    "you": 0,
+    "allies": [
+     [
+      0,
+      0,
+      "Группаэжгб",
+      180,
+      60
+     ],
+     [
+      1,
+      0,
+      "Juno Blackwood",
+      null,
+      90
+     ],
+     [
+      0,
+      1,
+      "Группаграп",
+      60,
+      38
+     ]
+    ],
+    "cast": false,
+    "spells": [
+     [
+      "red_harvest",
+      1,
+      6
+     ],
+     [
+      "grenades",
+      1,
+      4
+     ],
+     [
+      "war_cry",
+      1,
+      4
+     ],
+     [
+      "mark_target",
+      1,
+      3
+     ],
+     [
+      "rv_hook",
+      1,
+      3
+     ],
+     [
+      "rv_blood_scent",
+      1,
+      4
+     ],
+     [
+      "rv_berserk",
+      1,
+      4
+     ],
+     [
+      "rv_howl",
+      1,
+      8
+     ],
+     [
+      "rv_butcher",
+      1,
+      12
+     ],
+     [
+      "rv_red_mist",
+      1,
+      15
+     ]
+    ],
+    "mana": 10,
+    "stam": 112,
+    "coming": [
+     {
+      "side": 0,
+      "name": "Crewuapx",
+      "path": "smuggler"
+     }
+    ],
+    "active": 11,
+    "own": 1,
+    "side": 0,
+    "shares": null,
+    "name": "Группаграп"
+   },
+   "caps": 1,
+   "capsDesk": 0,
+   "clocks": [
+    "0:51"
+   ],
+   "outside": 0,
+   "onFaces": 0,
+   "onClocks": 0,
+   "q": 0,
+   "cut": [],
+   "hint": [],
+   "turn": []
+  },
+  {
+   "k": "turn_0",
+   "round": 1,
+   "slot": 0,
+   "own": 0,
+   "clocks": [
+    "2:20"
+   ],
+   "turn": [
+    "Ваш ход 20 с"
+   ],
+   "hint": [
+    "Враг явно слабее: «Быстрый бой» решит вс"
+   ],
+   "outside": 0,
+   "onFaces": 0,
+   "cut": []
+  },
+  {
+   "k": "order_0",
+   "id": "turn_the_flank",
+   "slot": 0,
+   "before": {
+    "mana": 20,
+    "stam": 91
+   },
+   "after": {
+    "mana": 14,
+    "stam": 91
+   },
+   "second": "grenades",
+   "stillCast": true,
+   "toast": [
+    "Один капитанский приказ за раунд",
+    "Один капитанский приказ за раунд"
+   ]
+  },
+  {
+   "k": "turn_2",
+   "round": 1,
+   "slot": 1,
+   "own": 1,
+   "clocks": [
+    "0:27"
+   ],
+   "turn": [],
+   "hint": [],
+   "outside": 0,
+   "onFaces": 0,
+   "cut": []
+  },
+  {
+   "k": "order_2",
+   "id": "red_harvest",
+   "slot": 1,
+   "before": {
+    "mana": 10,
+    "stam": 112
+   },
+   "after": {
+    "mana": 4,
+    "stam": 112
+   },
+   "second": "grenades",
+   "stillCast": true,
+   "toast": []
+  },
+  {
+   "k": "turn_1",
+   "round": 2,
+   "slot": 2,
+   "own": 2,
+   "clocks": [
+    "0:23"
+   ],
+   "turn": [],
+   "hint": [],
+   "outside": 0,
+   "onFaces": 0,
+   "cut": []
+  },
+  {
+   "k": "order_1",
+   "id": "smoke_and_knives",
+   "slot": 2,
+   "before": {
+    "mana": 20,
+    "stam": 82
+   },
+   "after": {
+    "mana": 14,
+    "stam": 82
+   },
+   "second": "grenades",
+   "stillCast": true,
+   "toast": [
+    "One captain's order a round"
+   ]
+  },
+  {
+   "k": "end_2",
+   "over": {
+    "winner": 0,
+    "why": "rout"
+   },
+   "shares": [
+    {
+     "side": 0,
+     "slot": 0,
+     "name": "Группаэжгб",
+     "share": 0.41
+    },
+    {
+     "side": 0,
+     "slot": 1,
+     "name": "Группаграп",
+     "share": 0.21,
+     "you": true
+    },
+    {
+     "side": 0,
+     "slot": 2,
+     "name": "Crewuapx",
+     "share": 0.38
+    },
+    {
+     "side": 1,
+     "slot": 0,
+     "name": "Juno Blackwood",
+     "share": 1
+    }
+   ],
+   "shareChips": [
+    "41%",
+    "21%",
+    "38%"
+   ],
+   "outside": 0,
+   "cut": [],
+   "said": [
+    "Not your turn",
+    "MUTINY! Tamsin Jessop and 21 men seize the waist — too many dead this voyage.",
+    "Your share of the boarding: 21% of what was cut down — 0 silver, 0 experience.",
+    "Sorrowful Dove throws cargo over the side to run lighter!"
+   ]
+  },
+  {
+   "k": "end_1",
+   "over": {
+    "winner": 0,
+    "why": "rout"
+   },
+   "shares": [
+    {
+     "side": 0,
+     "slot": 0,
+     "name": "Группаэжгб",
+     "share": 0.41
+    },
+    {
+     "side": 0,
+     "slot": 1,
+     "name": "Группаграп",
+     "share": 0.21
+    },
+    {
+     "side": 0,
+     "slot": 2,
+     "name": "Crewuapx",
+     "share": 0.38,
+     "you": true
+    },
+    {
+     "side": 1,
+     "slot": 0,
+     "name": "Juno Blackwood",
+     "share": 1
+    }
+   ],
+   "shareChips": [
+    "41%",
+    "21%",
+    "38%"
+   ],
+   "outside": 0,
+   "cut": [],
+   "said": [
+    "One captain's order a round",
+    "MUTINY! Dorran Jessop and 26 men seize the waist — too many dead this voyage.",
+    "Your share of the boarding: 38% of what was cut down — 0 silver, 0 experience.",
+    "Sorrowful Dove throws cargo over the side to run lighter!"
+   ]
+  },
+  {
+   "k": "end_0",
+   "over": {
+    "winner": 0,
+    "why": "rout"
+   },
+   "shares": [
+    {
+     "side": 0,
+     "slot": 0,
+     "name": "Группаэжгб",
+     "share": 0.41,
+     "you": true
+    },
+    {
+     "side": 0,
+     "slot": 1,
+     "name": "Группаграп",
+     "share": 0.21
+    },
+    {
+     "side": 0,
+     "slot": 2,
+     "name": "Crewuapx",
+     "share": 0.38
+    },
+    {
+     "side": 1,
+     "slot": 0,
+     "name": "Juno Blackwood",
+     "share": 1
+    }
+   ],
+   "shareChips": [
+    "41%",
+    "21%",
+    "38%"
+   ],
+   "outside": 0,
+   "cut": [],
+   "said": [
+    "Pirates attack Bell of Gravesend, 4.0 km south-west: she calls for help!",
+    "A ghost ship attacks Lantern Bride, 1.7 km west: she calls for help!",
+    "Sorrowful Dove throws cargo over the side to run lighter!",
+    "Sorrowful Dove throws cargo over the side to run lighter!"
+   ]
+  }
+ ],
+ "errors": [
+  [],
+  [],
+  []
+ ]
+}

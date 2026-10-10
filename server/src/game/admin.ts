@@ -50,6 +50,7 @@ import { TATTOOS, TATTOO_BY_ID } from '../../../shared/src/data/sidequests.ts';
 import { ownIsland } from './estate.ts';
 import { capOf, grantSpeedups, plotCount, yardOf } from './base.ts';
 import { groupAnswer, groupInvite, groupOfAccount, lfgPost } from './party.ts';
+import { prefOf } from './boardgroup.ts'; // docs/25 block Е
 import { worldGoalsAdd } from './worldgoals.ts';
 import { gyardFill, gyardStart } from './guildyard.ts';
 import { sendSignal } from './signals.ts';
@@ -1200,7 +1201,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       // her (120 m and 240 m off her beam), so a boarding of hers takes them aboard.
       if (!args.length) return 'Usage: /mates name [name]';
       if (ship.docked) return 'Put to sea first.';
-      const done: string[] = [];
+      const done: string[] = [], now: string[] = [];
       for (const [k, name] of args.slice(0, 2).entries()) {
         const t = game.sessionByName(name);
         if (!t?.ship || t === s || !t.profile) return `No captain named ${name} is at sea.`;
@@ -1223,8 +1224,9 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
         game.grid.upsert(t.ship.id, t.ship.state.x, t.ship.state.y);
         game.pushSelf(t, true);
         done.push(t.name);
+        if (prefOf(game, t.accountId).auto) now.push(t.name);
       }
-      return `Your group within reach: ${done.join(', ')}.`;
+      return `Your group within reach: ${done.join(', ')}. At once: ${now.join(', ') || '—'}.`;
     }
     case 'near': {
       // Alongside another captain at sea (docs/16 #33 QA): /near name — 150 m off her beam.

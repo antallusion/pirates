@@ -1,0 +1,587 @@
+{
+ "mode": "pvp",
+ "names": [
+  "Crewotil",
+  "Группахрвп",
+  "Группавхпб"
+ ],
+ "steps": [
+  {
+   "k": "board",
+   "said": [
+    "Day 1 at sea in a row: the harbour-master pays you 63 silver.",
+    "Fish of the day: Mackerel — twice the catch.",
+    "WORLD: The Lantern Maw will rise in Dead Man's Expanse in about 17 min.",
+    "WORLD: A star falls from the sky onto Siltwisp Isle in Whispering Archipelago! The first to anchor off it claims the star-iron.",
+    "Level 1 → 45.",
+    "She is a Frigate now, level 8 (crew 60).",
+    "Army set: 60 men in 6 stacks.",
+    "60 Provisions in the hold.",
+    "Morale at 100.",
+    "The omen is broken: misfortune follows you for an hour.",
+    "A light on the horizon: the lighthouse of Widowstead.",
+    "Set down at Gravewater Sea.",
+    "Daily order done: Chart islands: 4. +385 silver.",
+    "A light on the horizon: the lighthouse of Greyreach.",
+    "Storm! Reef the sails or lose them.",
+    "Ride out the storm at sea: the sea pays back those who stay.",
+    "A ghost ship attacks Mourning Star, 2.4 km south-east: she calls for help!",
+    "Colours: the pirate flag of The Crown Admiralty.",
+    "Guns are still loading",
+    "Set down at 56306, 73987.",
+    "Grappled: Железный приговор."
+   ],
+   "said2": [
+    "Day 1 at sea in a row: the harbour-master pays you 63 silver.",
+    "Fish of the day: Mackerel — twice the catch.",
+    "Level 1 → 45.",
+    "She is a Frigate now, level 8 (crew 60).",
+    "Army set: 60 men in 6 stacks.",
+    "60 Provisions in the hold.",
+    "Morale at 100.",
+    "The omen is broken: misfortune follows you for an hour.",
+    "A light on the horizon: the lighthouse of Widowstead.",
+    "Set down at Gravewater Sea.",
+    "Daily order done: Chart islands: 5. +385 silver.",
+    "A light on the horizon: the lighthouse of Greyreach.",
+    "Storm! Reef the sails or lose them.",
+    "Ride out the storm at sea: the sea pays back those who stay.",
+    "Colours: the pirate flag of The Crown Admiralty.",
+    "Alongside Crewotil.",
+    "Guns are still loading"
+   ],
+   "at": [
+    {
+     "x": 56309.127041741325,
+     "y": 73987.08389937028,
+     "h": 1.5,
+     "docked": null,
+     "lvl": 45,
+     "xp": 3445,
+     "silver": 1748,
+     "region": "gravewater",
+     "board": true,
+     "onb": null
+    },
+    {
+     "x": 56323.95365899305,
+     "y": 73987.37492032757,
+     "h": 1.5,
+     "docked": null,
+     "lvl": 45,
+     "xp": 3445,
+     "silver": 1648,
+     "region": "gravewater",
+     "board": true,
+     "onb": null
+    }
+   ]
+  },
+  {
+   "k": "r1_0",
+   "faces": [],
+   "v": {
+    "round": 1,
+    "over": null,
+    "mine": true,
+    "slot": 0,
+    "you": 0,
+    "allies": [],
+    "cast": false,
+    "spells": [
+     [
+      "iron_discipline",
+      1,
+      6
+     ],
+     [
+      "grenades",
+      1,
+      4
+     ],
+     [
+      "double_shot",
+      1,
+      5
+     ],
+     [
+      "war_cry",
+      1,
+      4
+     ],
+     [
+      "ad_volley_order",
+      1,
+      4
+     ],
+     [
+      "ad_signal_flags",
+      1,
+      4
+     ],
+     [
+      "ad_square",
+      1,
+      5
+     ],
+     [
+      "ad_fog_of_war",
+      1,
+      8
+     ],
+     [
+      "ad_bayonets",
+      1,
+      10
+     ],
+     [
+      "ad_admiralty",
+      1,
+      15
+     ]
+    ],
+    "mana": 10,
+    "stam": 106,
+    "coming": [
+     {
+      "side": 0,
+      "name": "Группахрвп",
+      "path": "drowned"
+     }
+    ],
+    "active": 3,
+    "own": 0,
+    "side": 0,
+    "shares": null,
+    "name": "Crewotil"
+   },
+   "caps": 0,
+   "capsDesk": 0,
+   "clocks": [
+    "4:50",
+    "5:00"
+   ],
+   "outside": 0,
+   "onFaces": 0,
+   "onClocks": 0,
+   "q": 0,
+   "cut": [],
+   "hint": [],
+   "turn": []
+  },
+  {
+   "k": "r1_1",
+   "faces": [],
+   "v": {
+    "round": 1,
+    "over": null,
+    "mine": false,
+    "slot": -1,
+    "you": 0,
+    "allies": [],
+    "cast": false,
+    "spells": [
+     [
+      "iron_discipline",
+      1,
+      6
+     ],
+     [
+      "grenades",
+      1,
+      4
+     ],
+     [
+      "double_shot",
+      1,
+      5
+     ],
+     [
+      "war_cry",
+      1,
+      4
+     ],
+     [
+      "ad_volley_order",
+      1,
+      4
+     ],
+     [
+      "ad_signal_flags",
+      1,
+      4
+     ],
+     [
+      "ad_square",
+      1,
+      5
+     ],
+     [
+      "ad_fog_of_war",
+      1,
+      8
+     ],
+     [
+      "ad_bayonets",
+      1,
+      10
+     ],
+     [
+      "ad_admiralty",
+      1,
+      15
+     ]
+    ],
+    "mana": 10,
+    "stam": 106,
+    "coming": [
+     {
+      "side": 0,
+      "name": "Группахрвп",
+      "path": "drowned"
+     }
+    ],
+    "active": 3,
+    "own": 0,
+    "side": 0,
+    "shares": null,
+    "name": "Crewotil"
+   },
+   "caps": 0,
+   "capsDesk": 0,
+   "clocks": [
+    "4:49",
+    "5:00"
+   ],
+   "outside": 0,
+   "onFaces": 0,
+   "onClocks": 0,
+   "q": 0,
+   "cut": [],
+   "hint": [],
+   "turn": []
+  },
+  {
+   "k": "r1_2",
+   "faces": [],
+   "v": {
+    "round": 1,
+    "over": null,
+    "mine": false,
+    "slot": 0,
+    "you": 1,
+    "allies": [],
+    "cast": false,
+    "spells": [
+     [
+      "point_blank",
+      1,
+      6
+     ],
+     [
+      "grenades",
+      1,
+      4
+     ],
+     [
+      "double_shot",
+      1,
+      5
+     ],
+     [
+      "mark_target",
+      1,
+      3
+     ],
+     [
+      "cs_chain_shot",
+      1,
+      3
+     ],
+     [
+      "cs_spotter",
+      1,
+      4
+     ],
+     [
+      "cs_pistol_line",
+      1,
+      6
+     ],
+     [
+      "cs_gunsmoke",
+      1,
+      8
+     ],
+     [
+      "cs_grape",
+      1,
+      10
+     ],
+     [
+      "cs_iron_tide",
+      1,
+      15
+     ]
+    ],
+    "mana": 10,
+    "stam": 88,
+    "coming": [
+     {
+      "side": 0,
+      "name": "Группахрвп",
+      "path": "drowned"
+     }
+    ],
+    "active": 3,
+    "own": 0,
+    "side": 0,
+    "shares": null,
+    "name": "Группавхпб"
+   },
+   "caps": 0,
+   "capsDesk": 0,
+   "clocks": [
+    "5:00",
+    "4:47"
+   ],
+   "outside": 0,
+   "onFaces": 0,
+   "onClocks": 0,
+   "q": 0,
+   "cut": [],
+   "hint": [],
+   "turn": []
+  },
+  {
+   "k": "turn_0",
+   "round": 1,
+   "slot": 0,
+   "own": 0,
+   "clocks": [
+    "4:50",
+    "5:00"
+   ],
+   "turn": [],
+   "hint": [],
+   "outside": 0,
+   "onFaces": 0,
+   "cut": []
+  },
+  {
+   "k": "order_0",
+   "id": "iron_discipline",
+   "slot": 0,
+   "before": {
+    "mana": 10,
+    "stam": 106
+   },
+   "after": {
+    "mana": 4,
+    "stam": 106
+   },
+   "second": "grenades",
+   "stillCast": true,
+   "toast": [
+    "One captain's order a round",
+    "One captain's order a round"
+   ]
+  },
+  {
+   "k": "turn_2",
+   "round": 1,
+   "slot": 0,
+   "own": 0,
+   "clocks": [
+    "4:57",
+    "4:47"
+   ],
+   "turn": [],
+   "hint": [],
+   "outside": 0,
+   "onFaces": 0,
+   "cut": []
+  },
+  {
+   "k": "order_2",
+   "id": "point_blank",
+   "slot": 0,
+   "before": {
+    "mana": 10,
+    "stam": 88
+   },
+   "after": {
+    "mana": 4,
+    "stam": 88
+   },
+   "second": "grenades",
+   "stillCast": true,
+   "toast": [
+    "Один капитанский приказ за раунд",
+    "Один капитанский приказ за раунд"
+   ]
+  },
+  {
+   "k": "turn_1",
+   "round": 2,
+   "slot": 1,
+   "own": 1,
+   "clocks": [
+    "1:12",
+    "4:48"
+   ],
+   "turn": [],
+   "hint": [],
+   "outside": 0,
+   "onFaces": 0,
+   "cut": []
+  },
+  {
+   "k": "order_1",
+   "id": "call_of_the_deep",
+   "slot": 1,
+   "before": {
+    "mana": 20,
+    "stam": 85
+   },
+   "after": {
+    "mana": 14,
+    "stam": 85
+   },
+   "second": "grenades",
+   "stillCast": true,
+   "toast": []
+  },
+  {
+   "k": "end_0",
+   "over": {
+    "winner": 0,
+    "why": "rout"
+   },
+   "shares": [
+    {
+     "side": 0,
+     "slot": 0,
+     "name": "Crewotil",
+     "share": 0.59,
+     "xp": 58,
+     "you": true
+    },
+    {
+     "side": 0,
+     "slot": 1,
+     "name": "Группахрвп",
+     "share": 0.41,
+     "xp": 40,
+     "silver": 389
+    },
+    {
+     "side": 1,
+     "slot": 0,
+     "name": "Группавхпб",
+     "share": 1
+    }
+   ],
+   "shareChips": [
+    "59%",
+    "41%389"
+   ],
+   "outside": 0,
+   "cut": [],
+   "said": [
+    "Pirates attack Gallows Rose, 3.2 km north-east: she calls for help!",
+    "WORLD: The Lantern Maw rises in Dead Man's Expanse within five minutes!",
+    "Pirates attack Drowned Lamb, 2.8 km south: she calls for help!",
+    "+58 XP — Won the boarding battle with Железный приговор"
+   ]
+  },
+  {
+   "k": "end_2",
+   "over": {
+    "winner": 0,
+    "why": "rout"
+   },
+   "shares": [
+    {
+     "side": 0,
+     "slot": 0,
+     "name": "Crewotil",
+     "share": 0.59,
+     "xp": 58
+    },
+    {
+     "side": 0,
+     "slot": 1,
+     "name": "Группахрвп",
+     "share": 0.41,
+     "xp": 40,
+     "silver": 389
+    },
+    {
+     "side": 1,
+     "slot": 0,
+     "name": "Группавхпб",
+     "share": 1,
+     "you": true
+    }
+   ],
+   "shareChips": [],
+   "outside": 0,
+   "cut": [],
+   "said": [
+    "WORLD: Old Moorings has risen in The Black Coast. Every captain who dares, to arms!",
+    "Pirates attack Gallows Rose, 3.2 km north-east: she calls for help!",
+    "WORLD: The Lantern Maw rises in Dead Man's Expanse within five minutes!",
+    "Pirates attack Drowned Lamb, 2.8 km south: she calls for help!"
+   ]
+  },
+  {
+   "k": "end_1",
+   "over": {
+    "winner": 0,
+    "why": "rout"
+   },
+   "shares": [
+    {
+     "side": 0,
+     "slot": 0,
+     "name": "Crewotil",
+     "share": 0.59,
+     "xp": 58
+    },
+    {
+     "side": 0,
+     "slot": 1,
+     "name": "Группахрвп",
+     "share": 0.41,
+     "xp": 40,
+     "silver": 389,
+     "you": true
+    },
+    {
+     "side": 1,
+     "slot": 0,
+     "name": "Группавхпб",
+     "share": 1
+    }
+   ],
+   "shareChips": [
+    "59%",
+    "41%389"
+   ],
+   "outside": 0,
+   "cut": [],
+   "said": [
+    "Black Heron throws cargo over the side to run lighter!",
+    "+392 XP — Crewotil took Железный приговор",
+    "Pale Regent throws cargo over the side to run lighter!",
+    "Sail to the north-west, 2.3 km off: a pirate is coming for you!"
+   ]
+  }
+ ],
+ "errors": [
+  [],
+  [],
+  []
+ ]
+}

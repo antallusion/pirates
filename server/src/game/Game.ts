@@ -3102,7 +3102,7 @@ export class Game {
       case 'board_join':
         return err(joinBoarding(this, s, Number(msg.with), Array.isArray(msg.bring) ? msg.bring.map(String) : undefined, msg.no === true));
       case 'board_assist':
-        return assistPref(s, msg.auto === true, Array.isArray(msg.bring) ? msg.bring.map(String) : undefined);
+        return assistPref(this, s, msg.auto === true, Array.isArray(msg.bring) ? msg.bring.map(String) : undefined);
       case 'scuttle':
         return err(lightFuse(this, ship));
       case 'captive':
