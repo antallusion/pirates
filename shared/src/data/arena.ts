@@ -257,7 +257,7 @@ export const ARENA_SKILLS: SkillId[] = ['boarding', 'armor', 'artillery', 'leade
  *  --paths 6` and a search over a point of Attack and Defence about it (400 bouts a cell, `--pairs`): the means
  *  48–52%, the pairs 42.9–58.1% (the Corsair over the Navigator the highest, a point over the 57 before). */
 export const ARENA_PATH: Partial<Record<CaptainId, Partial<Prims>>> = {
-  corsair: { atk: 2, def: -1 }, smuggler: { atk: 2, def: 1 }, reaver: { atk: -1, def: -2 }, navigator: { atk: 2, def: 1 }, drowned: { atk: 4, def: 0 }, admiral: { atk: 3, def: -4 },
+  corsair: { atk: 4, def: 1 }, smuggler: { atk: 4, def: 2 }, reaver: { atk: -2, def: -3 }, navigator: { atk: 2, def: 0 }, drowned: { atk: 4, def: -1 }, admiral: { atk: 2, def: -5 },
 };
 
 /** A path's standard primaries at the cap: its start and its odds over the level-ups, whole points by the largest
