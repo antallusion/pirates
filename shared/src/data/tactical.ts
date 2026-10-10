@@ -18,10 +18,15 @@ export const TAC_H = 9;
 export const TAC_GAP = 5;
 /** Seconds a captain has for each of his stacks' turns at the top (from level 31); then the stack defends. */
 export const TAC_TURN = 30;
-/** docs/25 item 48 (owner, 2026-10-09: «на низких 1 минуты норма»): a stack's turn by the battle's level — 15 s at
- *  levels 1–10, 20 s at 11–30, 30 s from 31. A battle of no level (a test's bare armies) keeps the 30 s. */
+/** docs/25 item 48 (owner, 2026-10-09: «на низких 1 минуты норма»): a stack's turn by the battle's level — 10 s at
+ *  levels 1–10, 20 s at 11–30, 30 s from 31. A battle of no level (a test's bare armies) keeps the 30 s. docs/25 item
+ *  70: 15 → 10 s at 1–10. The time model's decision (tests/balance/boardlen.ts HUMAN_DECIDE, 6 s a stack) sits inside
+ *  it, and a low stack's choice is the smallest of all: four of hers against four, three or four orders and two pages,
+ *  no ultimate — some ten choices against sixteen at level 30 and nineteen at 55, so by Hick's law (a + b·log2(n+1))
+ *  its decision is a tenth shorter than at level 30, never longer. The modelled mean is the same (its turns are 6 s);
+ *  a slow captain's worst is cut by a third. */
 export function tacTurnSecs(level: number): number {
-  return level <= 0 ? TAC_TURN : level <= 10 ? 15 : level <= 30 ? 20 : TAC_TURN;
+  return level <= 0 ? TAC_TURN : level <= 10 ? 10 : level <= 30 ? 20 : TAC_TURN;
 }
 /** docs/25 item 48: each captain's chess clock over a whole boarding — a minute at levels 1–10, a minute more every ten
  *  levels, six at 51–60. A turn's seconds come off it; once it is spent her stacks' turns go to defence. With it no
@@ -108,8 +113,8 @@ export const TAC_AI_DELAY = 0.35;
 export const TAC_LEN = {
   tempo: [[1, 2], [10, 1.9], [20, 1.15], [30, 0.74], [40, 0.57], [50, 0.47], [60, 0.4]] as [number, number][],
   blastMax: 1,
-  open: [[1, 1], [10, 0.85], [20, 0.7], [30, 0.65], [40, 0.6], [50, 0.58], [60, 0.58]] as [number, number][],
-  npc: [[1, 1.8], [30, 1.8], [60, 1.15]] as [number, number][],
+  open: [[1, 1], [10, 0.85], [20, 0.7], [30, 0.65], [40, 0.62], [50, 0.66], [60, 0.7]] as [number, number][],
+  npc: [[1, 1.8], [10, 2.2], [20, 2.8], [30, 2.8], [40, 1.9], [60, 1.15]] as [number, number][],
   npcFewer: 2,
   fatigue: { from: 8, step: 0.15 },
   flag: { level: 40, rounds: 2 },

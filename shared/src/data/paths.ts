@@ -168,34 +168,58 @@ export interface PathKnobs {
   buff: number;
   pts: number;
 }
-/** The hero levels `power` and `mend` stand at. */
-export const POWER_AT = [1, 5, 15, 25, 40, 60] as const;
+/** The hero levels `power` and `mend` stand at (docs/25 item 70: the levels the paths' matrix is read at — 5, 15, 30, 45,
+ *  60 — so each level's figures are its own; they stood at 25 and 40 before). */
+export const POWER_AT = [1, 5, 15, 30, 45, 60] as const;
 /** The path books' pages. */
 export const PATH_KNOBS: Record<CaptainId, PathKnobs> = {
-  corsair: { power: [0.89, 0.73, 0.5, 0.23, 0.36, 0.56], mend: [1.18, 0.97, 0.67, 0.29, 0.27, 0.3], buff: 1, pts: 1 },
-  smuggler: { power: [0.82, 0.68, 0.48, 0.35, 0.53, 0.53], mend: [1.09, 0.9, 0.64, 0.43, 0.4, 0.28], buff: 0.87, pts: 1 },
-  reaver: { power: [0.89, 0.83, 0.5, 0.31, 0.41, 0.45], mend: [1.18, 1.1, 0.66, 0.38, 0.31, 0.23], buff: 0.87, pts: 1 },
-  navigator: { power: [0.82, 0.68, 0.48, 0.33, 0.43, 0.39], mend: [1.09, 0.9, 0.64, 0.4, 0.33, 0.21], buff: 0.87, pts: 1 },
-  drowned: { power: [0.77, 0.65, 0.48, 0.19, 0.38, 0.36], mend: [1.02, 0.86, 0.63, 0.23, 0.29, 0.19], buff: 1, pts: 1 },
-  admiral: { power: [0.89, 0.73, 0.57, 0.2, 0.37, 0.44], mend: [1.18, 0.97, 0.77, 0.25, 0.28, 0.23], buff: 0.87, pts: 1 },
+  corsair: { power: [0.93, 0.76, 0.5, 0.3, 0.49, 0.57], mend: [1.23, 1.01, 0.67, 0.3, 0.34, 0.3], buff: 1, pts: 1 },
+  smuggler: { power: [1.43, 1.19, 0.51, 0.36, 0.64, 0.62], mend: [1.91, 1.58, 0.68, 0.35, 0.44, 0.33], buff: 0.87, pts: 1 },
+  reaver: { power: [1.58, 1.47, 0.43, 0.44, 0.5, 0.46], mend: [2.09, 1.95, 0.58, 0.43, 0.34, 0.24], buff: 0.87, pts: 1 },
+  navigator: { power: [1.22, 1.01, 0.54, 0.32, 0.48, 0.48], mend: [1.62, 1.34, 0.72, 0.31, 0.33, 0.25], buff: 0.87, pts: 1 },
+  drowned: { power: [0.83, 0.7, 0.47, 0.23, 0.35, 0.44], mend: [1.1, 0.93, 0.62, 0.23, 0.24, 0.23], buff: 1, pts: 1 },
+  admiral: { power: [1.6, 1.31, 0.6, 0.28, 0.45, 0.41], mend: [2.12, 1.75, 0.8, 0.28, 0.31, 0.22], buff: 0.87, pts: 1 },
 };
 /** The innate move and the ultimate. */
 export const MOVE_KNOBS: Record<CaptainId, PathKnobs> = {
-  corsair: { power: [1.62, 1.24, 0.83, 0.55, 0.86, 0.59], mend: [1, 1, 1, 1, 1, 1], buff: 1, pts: 1 },
+  corsair: { power: [2.35, 1.8, 0.62, 0.6, 0.94, 0.73], mend: [1, 1, 1, 1, 1, 1], buff: 1, pts: 1 },
   smuggler: { power: [1, 1, 1, 1, 1, 1], mend: [1, 1, 1, 1, 1, 1], buff: 0.87, pts: 1 },
   reaver: { power: [1, 1, 1, 1, 1, 1], mend: [1, 1, 1, 1, 1, 1], buff: 1, pts: 1 },
   navigator: { power: [1, 1, 1, 1, 1, 1], mend: [1, 1, 1, 1, 1, 1], buff: 0.87, pts: 1 },
-  drowned: { power: [0.77, 0.65, 0.42, 0.29, 0.58, 0.36], mend: [1.12, 1.12, 0.88, 0.35, 0.41, 0.43], buff: 0.87, pts: 1 },
-  admiral: { power: [2.43, 1.87, 1.25, 0.48, 0.9, 1.05], mend: [1, 1, 1, 1, 1, 1], buff: 0.66, pts: 1 },
+  drowned: { power: [0.77, 0.65, 0.42, 0.35, 0.6, 0.36], mend: [1.63, 1.63, 1.28, 0.54, 0.35, 0.52], buff: 0.87, pts: 1 },
+  admiral: { power: [4.47, 3.44, 1.3, 0.62, 0.74, 0.97], mend: [1, 1, 1, 1, 1, 1], buff: 0.66, pts: 1 },
+};
+/** docs/25 item 70 (owner, 2026-10-10: «надо этот момент для всех капитанов проработать идеально … делай все пункты»):
+ *  her own order — the Corsair's Point-Blank, the Smuggler's Smoke and Knives, the Reaver's Red Harvest, the
+ *  Navigator's Turning the Flank, the Drowned's Call of the Deep, the Admiral's Iron Discipline — at each of POWER_AT's
+ *  hero levels, in a ship's boarding (its blow, its drowning, the share its blows or guard are lifted by, its initiative;
+ *  its points of speed and morale stay whole). Elsewhere — the Colosseum, the long battles, the land — as before (1).
+ *  Before, these stood at one strength from level 1 to 60, and the Navigator's Turning the Flank alone won her three
+ *  boardings in four at level 5 (tools/balance-paths-diag.ts). Tuned with the pages' and moves' power
+ *  (tools/balance-paths.ts --balance). */
+export const ORDER_KNOBS: Record<CaptainId, readonly number[]> = {
+  corsair: [1.51, 1.51, 0.75, 0.88, 0.8, 1.16],
+  smuggler: [0.97, 0.97, 1.07, 0.75, 1.59, 1.13],
+  reaver: [1.47, 1.47, 0.87, 0.93, 0.98, 0.46],
+  navigator: [0.35, 0.35, 0.94, 0.79, 1.69, 1.16],
+  drowned: [0.83, 0.83, 1.46, 1.91, 0.8, 1.2],
+  admiral: [2.11, 2.11, 1.04, 1.02, 1.03, 1],
 };
 export const pathKnobs = (path: CaptainId, kind: 'page' | 'move' = 'page'): PathKnobs => (kind === 'move' ? MOVE_KNOBS : PATH_KNOBS)[path];
-/** The `power` knob at a hero level (`mend`: the `mend` knob). */
-export function pathPower(path: CaptainId, level: number, kind: 'page' | 'move' = 'page', knob: 'power' | 'mend' = 'power'): number {
-  const k = pathKnobs(path, kind)?.[knob] ?? [1];
+/** A figure at each of POWER_AT's levels, at a hero level (the line between them; beyond, the last). */
+function atLevel(k: readonly number[], level: number): number {
   const at = POWER_AT;
   if (level <= at[0]) return k[0];
   for (let i = 1; i < at.length; i++) if (level <= at[i]) return k[i - 1] + ((k[i] - k[i - 1]) * (level - at[i - 1])) / (at[i] - at[i - 1]);
   return k[k.length - 1];
+}
+/** Her own order's strength at a hero level (ORDER_KNOBS). */
+export function orderPower(path: CaptainId, level: number): number {
+  return atLevel(ORDER_KNOBS[path] ?? [1], level);
+}
+/** The `power` knob at a hero level (`mend`: the `mend` knob). */
+export function pathPower(path: CaptainId, level: number, kind: 'page' | 'move' = 'page', knob: 'power' | 'mend' = 'power'): number {
+  return atLevel(pathKnobs(path, kind)?.[knob] ?? [1], level);
 }
 
 /** Rounds an order's effect holds past its own by the giver's Power (HoMM3's duration by power: 10+ one, 20+ two). */

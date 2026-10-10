@@ -110,8 +110,8 @@ test('docs/25 item 51: from round 8 every blow lands 15% harder a round, both si
   assert.ok(Math.abs(r9 / r7 - 1.3) < 1e-6, `round 9 against round 7 ×${(r9 / r7).toFixed(3)}`);
 });
 
-test('docs/25 item 48: a stack\'s turn by level (15 / 20 / 30 s), a captain\'s chess clock over the fight; spent, her stacks defend', () => {
-  assert.deepEqual([1, 10, 11, 30, 31, 60].map(tacTurnSecs), [15, 15, 20, 20, 30, 30]);
+test('docs/25 items 48 and 70: a stack\'s turn by level (10 / 20 / 30 s), a captain\'s chess clock over the fight; spent, her stacks defend', () => {
+  assert.deepEqual([1, 10, 11, 30, 31, 60].map(tacTurnSecs), [10, 10, 20, 20, 30, 30]);
   assert.deepEqual([1, 10, 11, 25, 45, 60].map(tacBankSecs), [60, 60, 120, 180, 300, 360]);
   const a = side(playerArmy(8), captainAt('reaver', 8, 1), 'reaver', true);
   const b = side(playerArmy(8), captainAt('admiral', 8, 2), 'admiral', false);
@@ -119,14 +119,14 @@ test('docs/25 item 48: a stack\'s turn by level (15 / 20 / 30 s), a captain\'s c
   const bt = newBattle(a, b, 4, 0, rng, { len: 'board' });
   assert.equal(bt.heroes[0].bank, 60, 'a minute at level 8');
   assert.equal(bt.heroes[1].bank, -1, 'the sea\'s mind keeps none');
-  // Play to her turn; she thinks ten seconds and defends: they come off her clock.
+  // Play to her turn; she thinks eight seconds and defends: they come off her clock.
   let t = 0;
   while (!bt.over && (bt.active === null || stackById(bt, bt.active)!.side !== 0)) stepBattle(bt, (t += 0.5), rng);
-  assert.ok(bt.turnEnds - t <= 15 + 10, 'her turn at most 15 s once the play is done');
+  assert.ok(bt.turnEnds - t <= 10 + 10, 'her turn at most 10 s once the play is done');
   const from = bt.clock!.from;
-  t = Math.max(t, from) + 10;
+  t = Math.max(t, from) + 8;
   assert.equal(act(bt, 0, { a: 'defend' }, t, rng), null);
-  assert.ok(Math.abs(bt.heroes[0].bank - 50) < 1e-6, `her clock: ${bt.heroes[0].bank} s`);
+  assert.ok(Math.abs(bt.heroes[0].bank - 52) < 1e-6, `her clock: ${bt.heroes[0].bank} s`);
   // Spent: her next turn runs out as soon as it is played, and the stack defends.
   bt.heroes[0].bank = 0;
   let timeouts = 0;
