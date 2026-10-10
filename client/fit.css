@@ -289,3 +289,36 @@
   #modal-panel[data-modal="talents"] .tal-main .talent-top { min-height: 24px; }
   #modal-panel[data-modal="talents"] .tal-main .talent-top b { font-size: 13px; }
 }
+@media (max-height: 520px) {
+  /* the title screen at 360 px: the account's controls kept 30 and 28 px to fit — they fit at 36 */
+  #screen-login .lang-switch .btn, #screen-login .login-panel:has(#login-account[open]) .lang-switch .btn { min-height: 36px; padding-top: 0; padding-bottom: 0; }
+  #screen-login #login-account summary { min-height: 36px; }
+  #screen-login .login-account form .row #forgot-btn { min-height: 36px; }
+  #screen-login #login-account label { margin-bottom: 3px; }
+  #screen-login #login-account input { padding: 5px 10px; min-height: 36px; }
+  /* settings' tick rows a finger tall */
+  #modal-panel label.check { min-height: 36px; display: flex; align-items: center; gap: 8px; }
+  .tal-main .tier-label, #modal-panel .tier-label { font-size: 11px; }
+  .army-slot > i.army-tier { font-size: 11px; }
+}
+
+/* ================================================================== the premium shop (premium.ts) on a phone held sideways */
+@media (max-height: 520px) and (min-width: 560px) {
+  /* two cards a column-pair a page, each whole; the italic flavour line is the desk's */
+  .pm-body.fit-paged { column-count: 2 !important; }
+  .pm-body.fit-paged .pm-grid { display: block; }
+  .pm-body.fit-paged .pm-card { break-inside: avoid; margin-bottom: 6px; }
+  .pm-body .pm-note { display: none; }
+  .pm-card, .pm-card.pm-ship { grid-template-columns: 64px minmax(0, 1fr); gap: 4px 8px; padding: 6px; }
+  .pm-art { width: 64px; height: 64px; }
+  .pm-hull { width: 64px; height: 44px; }
+  .pm-hull img { height: 64px; }
+  .pm-art .pm-face { width: 56px; height: 56px; }
+  .pm-name { font-size: 15px; }
+  .pm-buy { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: flex-end; gap: 8px; text-align: right; }
+  .pm-buy .pm-why { order: -1; margin-right: auto; text-align: left; }
+  .pm-buy .btn { min-height: 36px; min-width: 88px; }
+  .pm-price .dbl { font-size: 15px; }
+  .pm-list { font-size: 15px; break-after: avoid; }
+  .pm-gift { font-size: 12px; }
+}

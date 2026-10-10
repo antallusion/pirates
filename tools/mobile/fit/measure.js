@@ -64,7 +64,15 @@
         if (r.width < 3 || r.height < 3) continue;
         // another page of a paged pane (kit/fit.ts) is that pane's, not this screen's: it is turned to, not scrolled
         const pg = e.closest('.fit-paged');
-        if (pg && pg !== e) { const pr = pg.getBoundingClientRect(); if (r.right <= pr.left + 1 || r.left >= pr.right - 1) continue; }
+        let flowed = false;
+        if (pg && pg !== e) {
+          const pr = pg.getBoundingClientRect();
+          if (r.right <= pr.left + 1 || r.left >= pr.right - 1) continue;
+          // a paragraph that runs on to the next page (its pieces each whole on a page) is turned to, not cut
+          const rs = [...e.getClientRects()];
+          flowed = rs.length > 1 && rs.every((q) => q.top >= pr.top - 1 && q.bottom <= pr.bottom + 1);
+        }
+        if (flowed) continue;
         // 1. scroll boxes that overflow
         if (/(auto|scroll)/.test(cs.overflowY) && e.scrollHeight > e.clientHeight + 2 && e.clientHeight > 0) res.scroll.push(`${name(e)} ↕${e.scrollHeight}/${e.clientHeight}`);
         else if (/(auto|scroll)/.test(cs.overflowX) && e.scrollWidth > e.clientWidth + 2 && e.clientWidth > 0) res.scroll.push(`${name(e)} ↔${e.scrollWidth}/${e.clientWidth}`);
@@ -96,7 +104,7 @@
       }
     }
     res.share = Math.round((area / (W * H)) * 100);
-    res.pages = Math.max(0, ...[...document.querySelectorAll('.fit-pager')].filter(vis).map((b) => Number((/\/(\d+)/.exec(b.textContent) ?? [])[1] ?? 0)));
+    res.pages = Math.max(0, ...[...document.querySelectorAll('.fit-pager')].filter((b) => vis(b) && roots.some((r) => r.contains(b))).map((b) => Number((/\/(\d+)/.exec(b.textContent) ?? [])[1] ?? 0)));
     const rl = document.getElementById('rotate-lock');
     res.rotate = !!rl && vis(rl) && rl.getBoundingClientRect().width > W * 0.8;
     return res;

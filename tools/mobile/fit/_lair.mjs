@@ -1,0 +1,13 @@
+import * as L from 'file:///C:/Users/enosi/OneDrive/Рабочий стол/pirates-mobilefit/tools/mobile/m0/lib.mjs';
+const b = await L.browser();
+const p = await L.page(b, [640, 360], { lang: 'ru' });
+await L.login(p, { port: 58997, know: true });
+await L.send(p, { t: 'undock' }); await L.sleep(2500); await L.closeAll(p);
+await L.say(p, '/tp 21000 70000'); await L.sleep(2500); await L.closeAll(p);
+await L.say(p, '/lair crab_beach go'); await L.sleep(4000); await L.closeAll(p);
+console.log(await L.toasts(p));
+console.log(await p.evaluate(() => ({ act: document.querySelector('#tc-act')?.outerHTML.slice(0, 300), adv: document.querySelector('#advcard')?.className, lairCard: !!globalThis.gravetide.state.lairCard })));
+await p.evaluate(() => document.querySelector('#tc-act')?.click()); await L.sleep(1500);
+console.log(await p.evaluate(() => ({ adv: document.querySelector('#advcard')?.className, html: document.querySelector('#advcard')?.innerHTML.slice(0, 200), sheet: document.querySelector('.k-sheet')?.className })));
+await p.screenshot({ path: 'assets/raw/audit/fit/lair.png' });
+await b.close();

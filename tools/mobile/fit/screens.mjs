@@ -48,6 +48,17 @@ export const PRE = [
 PRE[4].resize = async (p) => { await p.evaluate(() => globalThis.gravetide.prologue()); await sleep(400); };
 
 // ---------- in the game
+// «Осмотреть» from the long press of «Действие» (a phone keeps the adventure card folded until then)
+async function lookWheel(p) {
+  const c = await p.evaluate(() => { const e = document.querySelector('#tc-act'); const r = e?.getBoundingClientRect(); return r && r.width ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null; });
+  if (!c) return false;
+  await p.mouse.move(c.x, c.y); await p.mouse.down(); await sleep(750);
+  const it = await p.evaluate(() => { const i = [...document.querySelectorAll('.k-wheel-item')].find((x) => /Осмотр|Look/i.test(x.textContent)); const r = i?.getBoundingClientRect(); return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null; });
+  if (it) await p.mouse.move(it.x, it.y, { steps: 4 });
+  else await p.mouse.move(c.x - 200, c.y - 200, { steps: 3 });
+  await p.mouse.up();
+  return it ? visible(p, '#advcard', 2500) : false;
+}
 const sheetGone = async (p) => { await p.evaluate(() => { document.querySelectorAll('[data-lulater]').forEach((b) => b.click()); document.querySelectorAll('.k-sheet-root .k-sheet-x').forEach((b) => b.click()); document.querySelectorAll('.k-sheet-root .k-scrim').forEach((b) => b.click()); }); await sleep(250); };
 const docked = (p) => p.evaluate(() => !!globalThis.gravetide.state.self?.dockedAt);
 async function dock(p) {
@@ -135,7 +146,7 @@ const toastsOn = (p) => p.evaluate(() => {
 
 export const SCREENS = [
   { id: 'levelup', root: SHEET, settle: 1300, setup: async (p) => { await admin(p, '/silver 90000'); await admin(p, '/order all'); await admin(p, '/army marine 40'); await close(p); },
-    open: async (p) => { await sheetGone(p); await admin(p, '/level ' + (20 + Math.floor(Math.random() * 9)), 300); await close(p); return visible(p, '.k-sheet.lu-sheet', 4000); },
+    open: async (p) => { await sheetGone(p); await close(p); await admin(p, '/level 1', 1400); await admin(p, '/level 25', 300); return visible(p, '.k-sheet.lu-sheet', 4000); },
     after: async (p) => { await sheetGone(p); await admin(p, '/level 30'); await sheetGone(p); } },
   ...['market', 'shipyard', 'tavern', 'quests', 'harbour', 'colours', 'holdings', 'exchange', 'auction', 'dice', 'rumours', 'charts', 'army', 'pets', 'tattoo'].map(port),
   { id: 'depart', root: SHEET, setup: async (p) => { await dock(p); await L.send(p, { t: 'onboarding', action: 'skip_all' }); await admin(p, '/hurt 40'); },
@@ -162,7 +173,7 @@ export const SCREENS = [
     after: async (p) => { await click(p, '#chat-close'); } },
   { id: 'toasts:sea', root: '#toasts', open: async (p) => { await close(p); await toastsOn(p); return true; }, settle: 400 },
   { id: 'lair-card', root: '#advcard', setup: async (p) => { await admin(p, '/lair crab_beach go', 3000); await film(p); },
-    open: async (p) => { await close(p); await sheetGone(p); if (await visible(p, '#advcard', 1500)) return true; await click(p, '#tc-act'); if (await visible(p, '#advcard', 1500)) return true; await click(p, '#hud-prompt [data-act="look"]'); return visible(p, '#advcard', 2000); } },
+    open: async (p) => { await close(p); await sheetGone(p); if (await visible(p, '#advcard', 1500)) return true; if (await lookWheel(p)) return true; await click(p, '#hud-prompt [data-act="look"]'); return visible(p, '#advcard', 2000); } },
   { id: 'roam-card', root: SHEET, setup: async (p) => { await p.evaluate(() => document.querySelector('#advcard .ac-x, #advcard [data-ax]')?.click()); await admin(p, '/stack gull go', 3000); await film(p); },
     open: async (p) => { await close(p); await sheetGone(p); return p.evaluate(async () => { const s = globalThis.gravetide.state; const v = s.roams?.[0]; if (!v) return false; const m = await import('/src/ui/roamcard.ts'); void m.openRoamCard(s, v, () => {}); await new Promise((r) => setTimeout(r, 500)); return !!document.querySelector('.roam-panel'); }); },
     after: sheetGone },
