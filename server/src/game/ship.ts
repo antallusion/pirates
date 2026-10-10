@@ -32,6 +32,39 @@ import type { Formation } from './fleet.ts';
 import type { TacBattle } from './tacbattle.ts';
 import type { Rng } from '../../../shared/src/rng.ts';
 
+/** A captain's sea abilities at work on her ship (docs/25 items 13–41): what the next broadsides carry and when. */
+export interface KitState {
+  /** Double Shot: broadsides left, the bonus each, until when; its facets (canvas, fire). */
+  ds: { left: number; bonus: number; until: number; sails: boolean; fire: boolean };
+  /** Hard Over's rake: until when, broadsides left, the bonus, men more. */
+  rake: { until: number; left: number; bonus: number; men: number; readyAt: number };
+  /** The Spotter's Eye: until when, the critical's chance a broadside, and on what. */
+  spot: { until: number; crit: number; on: 'any' | 'mast' | 'rudder' };
+  /** The Smuggler's ambush: armed (smoke, the dark, the fog) and ready again at. */
+  ambush: { armed: boolean; readyAt: number };
+  /** The knife in the fog: broadsides left, until when, the bonus and the armour it goes through. */
+  knife: { left: number; until: number; bonus: number; pierce: number };
+  /** The star fix: until when, the bonus, the combo's broadside still to come. */
+  star: { until: number; bonus: number; combo: boolean; sure: boolean };
+  /** The grapeshot frenzy: her army's share the first grape broadside takes; its facets. */
+  frenzy: { army: number; sails: boolean; morale: number };
+  /** When each of her abilities was last cast (the combos, item 41). */
+  cast: Record<string, number>;
+}
+
+export function newKit(): KitState {
+  return {
+    ds: { left: 0, bonus: 0, until: 0, sails: false, fire: false },
+    rake: { until: 0, left: 0, bonus: 0, men: 0, readyAt: 0 },
+    spot: { until: 0, crit: 0, on: 'any' },
+    ambush: { armed: false, readyAt: 0 },
+    knife: { left: 0, until: 0, bonus: 0, pierce: 0 },
+    star: { until: 0, bonus: 0, combo: false, sure: false },
+    frenzy: { army: 0, sails: false, morale: 0 },
+    cast: {},
+  };
+}
+
 export interface StatusEffect {
   id: string;
   until: number; // world time
@@ -205,6 +238,10 @@ export class ShipEntity {
   unsinkableReadyAt = 0;
   lastStandUntil = 0;
   doubleShotArmed = false;
+  /** Her captain's sea abilities at work (docs/25 items 13–41, server/src/game/seaskill.ts). */
+  kit: KitState = newKit();
+  /** The balance benches' captain without her kit (abilities and passive): the plain table. */
+  kitOff = false;
   lootLockedFor: number | null = null; // boarding winner may loot
   protectedUntil = 0;
   /** A boarding just lost (owner, 2026-10-05): no grapples bite her again until then. */

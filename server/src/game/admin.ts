@@ -75,7 +75,11 @@ import { shoalHere, startFight } from './fishing.ts';
 import { ENCOUNTERS } from '../../../shared/src/data/encounters.ts';
 import type { EncounterId } from '../../../shared/src/data/encounters.ts';
 import { startEncounter } from './director.ts';
-import { ITEM_BASES, makeItem } from '../../../shared/src/data/items.ts';
+import { CAPTAIN_SLOTS, ITEM_BASES, makeItem } from '../../../shared/src/data/items.ts';
+import type { Item } from '../../../shared/src/data/items.ts';
+import { referenceKit } from '../../../shared/src/data/seabalance.ts';
+import { shipBandOf } from '../../../shared/src/data/xpcurve.ts';
+import { canLearn } from '../../../shared/src/data/talents.ts';
 import { clampLevel } from '../../../shared/src/data/shiplevel.ts';
 import { DAY_LENGTH_SEC, MAX_LEVEL, timeOfDay } from '../../../shared/src/constants.ts';
 import { BOSSES } from '../../../shared/src/data/bosses.ts';
@@ -154,6 +158,7 @@ import { adminZoneBoss } from './zonebosses.ts';
 import { adminGrail, adminObelisk } from './grail.ts';
 import { RES_GOODS } from '../../../shared/src/data/mines.ts';
 import { OMEN_IDS } from '../../../shared/src/data/omens.ts';
+import { SEA_SKILLS, captainSkills, facetKey, skillRank } from '../../../shared/src/data/seaskill.ts';
 
 export function adminEnabled(): boolean {
   return process.env.GRAVETIDE_ADMIN === '1';
@@ -161,7 +166,18 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] [grapple|hunt] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level|go] · /prim [atk|def|pow|will N|reset] · /skill id [0-3]|offer [n]|clear · /order id|all|clear · /art [id|set regalia|hook|storm|list] · /will [N|full] · /guard [go|beat|weak|board|reset] [kind] [level] · /obj [kind] [go|reset] · /obelisk [n|all|go] · /grail [go|found|reset] · /isle level|type kind|atoll|ridge|small|hidden [reveal]|danger [deadly] · /zone [go] · /turtle [go|up|down|off] · /sandbar · /supply [claim|link|week] · /path [learn page|forget] · /stam [N|full] · /scroll [page|random|clear] [n] · /pathfoe [path] [class] [grapple] · /lair [kind] [go|fight|beat|weak|reset|chain|grotto|guardian|dwell|turtle|sandbar] · /creature [kind] [n] · /egg [kind|hatch|grow] · /landres [n] · /drift [kind|legend|whale|kraken] [go|save|fail|fight|clear] · /tame [kind] [wins N|rank R|hunger S|pen N|slip] · /feed [N|starve] · /tamer [go] · /landecon [fit id rank|cap] · /bestiary [all|clear|kind] · /seamark [drift|wreck|buoy|lantern|bones|floe] [go|done|reset] · /glory [n|xp N|reset] · /mastery [node|branch|all|reset] · /trial [skill] [go|win|lose|reset] · /find [bottle|flyfish|calm|gulls|boat|chest] [go|done|reset] · /haul [reset] · /stack [kind] [go|fight|beat|reset] · /doubloons [N|-N|sample [on|off]] · /zboss [region] [rise|here|leave|kill|announce|reset] · /flag [neutral|faction|pirate] [city] · /noboard on|off · /seal [lv N|kind K|go|win|lose|reset|board] · /titan [kind|grail|reset] · /maw [tier N|win|lose|go|reset|board] · /relic [id|parts id|all|drop [N]|clear] · /invasion [region|start|wave|win|fail|clear] · /cit [go|guild|window|siege|win|own|lose|free|points N|season|reset] [n] · /contract [list|take N|done N|week|reset|go N] · /arena [queue|bot|win|lose|rating N|season|reset] · /mates name [name]';
+/** /kit build's talents after her abilities' own: the sea bench's gunnery-first build (tests/balance/seakit.ts). */
+const KIT_BUILD: string[] = [
+  'gun_fast_hands', 'gun_fast_hands', 'gun_fast_hands', 'gun_steady_aim', 'gun_steady_aim', 'gun_steady_aim',
+  'gun_range_finder', 'gun_range_finder', 'gun_crew_drill', 'gun_crew_drill',
+  'gun_double_charge', 'gun_raking_fire', 'gun_raking_fire', 'gun_waterline', 'gun_waterline',
+  'gun_spotter', 'gun_splinter_storm', 'gun_chaser_master', 'gun_chaser_master', 'gun_quick_swap',
+  'gun_powder_mastery', 'gun_powder_mastery', 'gun_thunder_broadside', 'gun_crossfire', 'gun_heated_shot', 'gun_iron_rain',
+  'shp_sound_timbers', 'shp_sound_timbers', 'shp_sound_timbers', 'shp_salvager', 'shp_salvager',
+  'srv_carpenters', 'srv_carpenters', 'srv_carpenters', 'srv_bucket_brigade', 'srv_bucket_brigade', 'srv_iron_hull', 'srv_iron_hull', 'srv_iron_hull',
+];
+
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] [grapple|hunt] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level|go] · /prim [atk|def|pow|will N|reset] · /skill id [0-3]|offer [n]|clear · /order id|all|clear · /art [id|set regalia|hook|storm|list] · /will [N|full] · /guard [go|beat|weak|board|reset] [kind] [level] · /obj [kind] [go|reset] · /obelisk [n|all|go] · /grail [go|found|reset] · /isle level|type kind|atoll|ridge|small|hidden [reveal]|danger [deadly] · /zone [go] · /turtle [go|up|down|off] · /sandbar · /supply [claim|link|week] · /path [learn page|forget] · /stam [N|full] · /scroll [page|random|clear] [n] · /pathfoe [path] [class] [grapple] · /lair [kind] [go|fight|beat|weak|reset|chain|grotto|guardian|dwell|turtle|sandbar] · /creature [kind] [n] · /egg [kind|hatch|grow] · /landres [n] · /drift [kind|legend|whale|kraken] [go|save|fail|fight|clear] · /tame [kind] [wins N|rank R|hunger S|pen N|slip] · /feed [N|starve] · /tamer [go] · /landecon [fit id rank|cap] · /bestiary [all|clear|kind] · /seamark [drift|wreck|buoy|lantern|bones|floe] [go|done|reset] · /glory [n|xp N|reset] · /mastery [node|branch|all|reset] · /trial [skill] [go|win|lose|reset] · /find [bottle|flyfish|calm|gulls|boat|chest] [go|done|reset] · /haul [reset] · /stack [kind] [go|fight|beat|reset] · /doubloons [N|-N|sample [on|off]] · /zboss [region] [rise|here|leave|kill|announce|reset] · /flag [neutral|faction|pirate] [city] · /noboard on|off · /seal [lv N|kind K|go|win|lose|reset|board] · /titan [kind|grail|reset] · /maw [tier N|win|lose|go|reset|board] · /relic [id|parts id|all|drop [N]|clear] · /invasion [region|start|wave|win|fail|clear] · /cit [go|guild|window|siege|win|own|lose|free|points N|season|reset] [n] · /contract [list|take N|done N|week|reset|go N] · /arena [queue|bot|win|lose|rating N|season|reset] · /mates name [name] · /kit [show|build|charge|facet id 3|5 a|b|clear]';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -1378,6 +1394,72 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     case 'trial':
       // The Throne of the Sea (docs/19 E1–E3): glory ranks, the mastery tree, the trials of mastery.
       return throneAdmin(game, s, cmd.toLowerCase(), args);
+    case 'kit': {
+      // docs/25 items 37–38: her abilities' ranks and facets; a facet set or cleared at once (the tester's: no port, no silver).
+      const sub = (args[0] ?? 'show').toLowerCase();
+      if (sub === 'clear') {
+        p.facets = {};
+        ship.recompute(game.now);
+        game.pushSelf(s, true);
+        return 'Facets cleared.';
+      }
+      if (sub === 'facet') {
+        const id = args[1] ?? '', rank = Math.round(num(2)), pick = args[3] === 'b' ? 'b' : 'a';
+        const sk = SEA_SKILLS[id];
+        if (!sk || sk.captain !== p.captain || !sk.facets?.[rank as 3 | 5]) return 'Usage: /kit [show|build|charge|facet id 3|5 a|b|clear]';
+        (p.facets ??= {})[facetKey(id, rank)] = pick;
+        ship.recompute(game.now);
+        game.pushSelf(s, true);
+        return `Facet ${facetKey(id, rank)} → ${pick}.`;
+      }
+      if (sub === 'charge') {
+        // Her ultimate's resolve full, her Dread full, her cooldowns over (the tester's: to try them at once).
+        ship.resolve = 100;
+        ship.dread = 100;
+        p.cooldowns = {};
+        game.pushSelf(s, true);
+        return 'Resolve and Dread full, cooldowns over.';
+      }
+      if (sub === 'build') {
+        // A proper captain of her level to try the abilities on (docs/25 QA): the warship of her ⚓, the heaviest long gun
+        // her tier carries, the reference full kit of her ⚓, a gunnery-first talent build with her abilities' talents.
+        const a = Math.max(1, Math.min(10, shipBandOf(p.level)));
+        const cls = (['sloop', 'sloop', 'sloop', 'schooner', 'brigantine', 'brig', 'brig', 'frigate', 'frigate', 'man_o_war', 'man_o_war'] as ShipClassId[])[a];
+        ship.loadout.classId = cls;
+        ship.loadout.level = clampLevel(cls, a);
+        const tier = SHIP_CLASSES[cls].tier;
+        const gun = tier >= 4 ? 'demi_cannon_32' : tier >= 3 ? 'heavy_18' : tier >= 2 ? 'medium_12' : 'light_6';
+        ship.loadout.guns = { port: gun, starboard: gun };
+        const shipGear: Record<string, Item> = {};
+        const captainGear: Record<string, Item> = {};
+        for (const it of referenceKit(a)) {
+          const sl = ITEM_BASES[it.base].slot;
+          (CAPTAIN_SLOTS as readonly string[]).includes(sl) ? (captainGear[sl] = { ...it, uid: p.itemSeq++ }) : (shipGear[sl] = { ...it, uid: p.itemSeq++ });
+        }
+        ship.loadout.gear = { ...(ship.loadout.gear?.tackle ? { tackle: ship.loadout.gear.tackle } : {}), ...shipGear };
+        p.captainGear = captainGear as never;
+        ship.worn = Object.values(captainGear);
+        const order = [...captainSkills(p.captain).flatMap((k) => (k.node ? [k.node.talent, k.node.talent, k.node.talent] : [])), ...KIT_BUILD];
+        for (const k of Object.keys(p.talents)) delete p.talents[k];
+        let pts = Math.max(0, p.level - 1);
+        for (const id of order) {
+          if (pts <= 0) break;
+          if (canLearn(p.talents, id, pts, { level: p.level, abyssOpen: true })) continue;
+          p.talents[id] = (p.talents[id] ?? 0) + 1;
+          pts--;
+        }
+        ship.recompute(game.now);
+        ship.hull = ship.stats.hullMax;
+        ship.sails = ship.stats.sailHpMax;
+        ship.crew = ship.stats.crewMax;
+        game.pushSelf(s, true);
+        return `A proper captain of level ${p.level}: ${cls} ⚓${ship.shipLevel}, ${gun}, the full kit, ${Object.values(p.talents).reduce((n, r) => n + r, 0)} talents.`;
+      }
+      if (sub !== 'show') return 'Usage: /kit [show|build|charge|facet id 3|5 a|b|clear]';
+      const ranks = captainSkills(p.captain).map((k) => `${k.key}${skillRank(p.level, k.key)}`).join(' ');
+      const f = Object.entries(p.facets ?? {}).map(([k, v]) => `${k}=${v}`).join(', ');
+      return `Ranks: ${ranks}; facets: ${f || 'none'}.`;
+    }
     case 'reveal': {
       let n = 0;
       for (const is of game.world.islands) {

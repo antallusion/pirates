@@ -33,6 +33,7 @@ import { contractOver } from './admiralty.ts'; // docs/19 E15
 import { arenaOver, isArenaFight } from './arena.ts'; // docs/19 E14
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { softenFoe } from './firstfights.ts';
+import { kitNums, skillNumber } from './seaskill.ts';
 
 const AGG = {
   careful: { tempo: 0.75, cargo: 0.55, ownLoss: 0.9 },
@@ -151,6 +152,17 @@ function openingMoves(game: Game, a: ShipEntity, b: ShipEntity): void {
   }
   const axes = tx(a.stats, 'boardingAxes');
   if (axes > 0) b.sails = Math.max(0, b.sails - b.stats.sailHpMax * axes);
+  // Red Hook Boarding from rank 3 (docs/25 item 25): the hooks take a share of her army before the fight on the hexes.
+  const hook = a.hasEffect('red_hook_boarding') ? kitNums(game, a, 'red_hook_boarding')?.n.army ?? 0 : 0;
+  if (hook > 0) {
+    const n = Math.min(b.crew - 1, Math.round(b.crew * hook));
+    if (n > 0) {
+      b.crew -= n;
+      b.morale = Math.max(0, b.morale - n * 0.5);
+      if (a.boarding) a.boarding.killed += n;
+      skillNumber(game, b, 'red_hook_boarding', { men: n });
+    }
+  }
 }
 
 /** Jolly Boat Raid: a boat party boards while the mother ship keeps sailing and firing. */

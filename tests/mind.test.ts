@@ -4,7 +4,8 @@ import type { CaptainId } from '../shared/src/data/captains.ts';
 import { REGIONS } from '../shared/src/world/regions.ts';
 import { applyDamage } from '../server/src/game/combat.ts';
 import type { Game } from '../server/src/game/Game.ts';
-import { onCrit, onGrapple, sanityDrain, stepMind } from '../server/src/game/mind.ts';
+import { RESOLVE_DEALT, onCrit, onGrapple, sanityDrain, stepMind } from '../server/src/game/mind.ts';
+import { skillNums } from '../shared/src/data/seaskill.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { join, makeGame, steps, onHull } from './helpers.ts';
 
@@ -46,18 +47,19 @@ test('resolve: trading blows charges the Ultimate; it fires only when full and e
   c.push({ t: 'ability', id: 'last_volley' });
   assert.ok(!ship.hasEffect('last_volley'), 'refused at 0 resolve');
   assert.ok(c.all('toast').some((t) => /full resolve/.test(t.msg)));
-  // 10% of her hull dealt → +10; 10% of ours taken → +10.
+  // 10% of her hull dealt → +15 (docs/25 item 40: the ultimate charges from what she deals, RESOLVE_DEALT a point — it
+  // was +10); 10% of ours taken → +10, as before.
   applyDamage(game, foe, { hull: foe.stats.hullMax * 0.1 }, ship);
-  assert.ok(Math.abs(ship.resolve - 10) < 0.01, `dealt: ${ship.resolve}`);
+  assert.ok(Math.abs(ship.resolve - 10 * RESOLVE_DEALT) < 0.01, `dealt: ${ship.resolve}`);
   applyDamage(game, ship, { hull: ship.stats.hullMax * 0.1 }, foe);
-  assert.ok(Math.abs(ship.resolve - 20) < 0.01);
+  assert.ok(Math.abs(ship.resolve - 10 * RESOLVE_DEALT - 10) < 0.01);
   onCrit(ship);
   onGrapple(ship);
-  assert.ok(Math.abs(ship.resolve - 43) < 0.01, 'crit +8, grapple +15');
+  assert.ok(Math.abs(ship.resolve - 10 * RESOLVE_DEALT - 33) < 0.01, 'crit +8, grapple +15');
   // Ten enemy crew killed: +5.
   foe.crew = 40;
   applyDamage(game, foe, { crew: 10 }, ship);
-  assert.ok(ship.resolve >= 48 - 0.01);
+  assert.ok(ship.resolve >= 10 * RESOLVE_DEALT + 38 - 0.01);
   ship.resolve = 100;
   c.push({ t: 'ability', id: 'last_volley' });
   assert.ok(ship.hasEffect('last_volley'));
@@ -77,9 +79,11 @@ test('dread: the Drowned Captain bleeds into it, pays miracles with it, and the 
   const foe = dummy(game, ship, 200, 0);
   c.push({ t: 'ability', id: 'deep_call', x: foe.state.x, y: foe.state.y });
   assert.equal(game.zones.length, 0, 'no Dread, no miracle');
-  // 20% hull lost → +10 Dread.
+  // 20% hull lost → +10 Dread, on what the sea gives her as the fight begins (docs/25 item 36, her passive: 40 at her
+  // 30th level's rank).
   applyDamage(game, ship, { hull: ship.stats.hullMax * 0.2 }, foe);
-  assert.ok(Math.abs(ship.dread - 10) < 0.01, `dread ${ship.dread}`);
+  const wake = skillNums('drowned_once', { level: 30, facets: {}, glory: 0, talents: {} }).n.wake;
+  assert.ok(Math.abs(ship.dread - wake - 10) < 0.01, `dread ${ship.dread}`);
   ship.dread = 60;
   const m0 = ship.morale;
   c.push({ t: 'ability', id: 'deep_call', x: foe.state.x, y: foe.state.y });
@@ -102,7 +106,7 @@ test('dread: the Drowned Captain bleeds into it, pays miracles with it, and the 
   assert.equal(other.ship.dread, 0);
 });
 
-test('Undertow drags a ship with no way on; the Maw takes a fifth of her hull, a mast and two leaks', () => {
+test('Undertow drags a ship with no way on; the Maw takes 15% of her hull, a mast and two leaks', () => {
   const { game } = makeGame();
   const { c, s, ship } = captain(game, 'Undertow', 'drowned');
   toSea(game, s);
@@ -123,7 +127,9 @@ test('Undertow drags a ship with no way on; the Maw takes a fifth of her hull, a
   assert.equal(ship.resolve, 0);
   assert.equal(ship.dread, 10);
   steps(game, 20 * 4);
-  assert.ok(Math.abs(h0 - big.hull - big.stats.hullMax * 0.2) < big.stats.hullMax * 0.02, `maw took ${h0 - big.hull}`);
+  // (15% of her hull now: docs/25 item 35, weighed against the five other captains' ultimates on the kit bench — it
+  // was a fifth, and a fifth with the Deep Call's leak took 31% off a fight at ⚓10 where the others take 21–26%)
+  assert.ok(Math.abs(h0 - big.hull - big.stats.hullMax * 0.15) < big.stats.hullMax * 0.02, `maw took ${h0 - big.hull}`);
   assert.ok(big.hasEffect('broken_mast'));
   assert.ok(big.leaks >= 2);
 });

@@ -88,6 +88,8 @@ test('the table (§1.1): bare against bare and full against full ±1 broadside a
   assert.equal(hits.zero, 0, 'no ball that struck reported at 0 (drawn as a splash)');
 });
 
+// (The table is the bare sea's: the captains' kits — passives and abilities, docs/25 items 13–43 — are off on it, seakit.ts
+// captainShip; they come on top of it, held to their role by tests/balance/captains-sea.test.ts.)
 test('the six captains alike: their passives touch no broadside — bare and full against their like by the table at ⚓1, 5, 10', () => {
   const game = bench();
   const bad: string[] = [];

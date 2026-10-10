@@ -9,6 +9,9 @@ export type StatKey =
   | 'boardingRange' | 'boardingPower' | 'boardingCargoLoss' | 'moraleOnBoard' | 'enemyMoraleCollapse'
   | 'holdVolume' | 'crewMax' | 'detection' | 'provisionUse' | 'buyMul' | 'sellMul' | 'contrabandVolumeMul'
   | 'moraleRegen' | 'incomingDamageMul' | 'cooldownMul' | 'armorPct'
+  // the captains' abilities (docs/25 items 13–43): shares that multiply what the rest made of her (× (1 + Σ)), so a
+  // share is the same share whatever her talents and gear
+  | 'skillDamage' | 'skillReload' | 'skillIncoming'
   // navigation
   | 'turnDrag' | 'runningFreeAccel' | 'seaPenalty' | 'tackDrill' | 'draftMul' | 'reefDamage' | 'stormSailDamage' | 'evasion' | 'polarBoost'
   // gunnery

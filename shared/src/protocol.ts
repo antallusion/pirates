@@ -104,6 +104,8 @@ export type ClientMsg =
   | { t: 'mount'; x: number; y: number }
   | { t: 'ammo'; ammo: AmmoId }
   | { t: 'ability'; id: string; x?: number; y?: number }
+  /** docs/25 item 38: a facet of an ability at its rank (3 or 5) — free the first time, in a port for silver after. */
+  | { t: 'facet'; id: string; rank: number; pick: 'a' | 'b' }
   /** `risk`: the captain has seen the odds and boards all the same («Рискнуть», docs/23 item 49). */
   | { t: 'board'; target: number; aggression: Aggression; risk?: boolean }
   | { t: 'loot_take'; take: Cargo; fate: 'sink' | 'release' | 'ransom' | 'prize' | 'trophy'; recruit?: number }
@@ -733,6 +735,8 @@ export interface PrivateState {
   lastPort: string;
   contracts: Contract[];
   cooldowns: Record<string, number>; // ability id -> world time when ready
+  /** docs/25 item 38: the facets of her abilities she has chosen («ability@rank» → a | b). */
+  facets?: Record<string, 'a' | 'b'>;
   repairing: boolean;
   curse: number; // 0..100; stages at 25 / 50 / 80
   stolen: Partial<Record<GoodId, number>>; // plundered units customs may recognise
@@ -1289,6 +1293,9 @@ export type GameEvent =
   /** A round of a deck fight: the tactics of the attacker (a) and the defender (b), and the dead on each side. */
   | { k: 'board_round'; a: number; b: number; x: number; y: number; ta: BoardTactic; tb: BoardTactic; ka: number; kb: number }
   | { k: 'ability'; ship: number; id: string; x?: number; y?: number }
+  /** A captain's ability at work on a ship (docs/25 items 13–41): the hull it took (dmg), the men, the hull mended (heal)
+   *  over her; or a combo's cue over the caster (combo: the combo's first ability). */
+  | { k: 'skill'; ship: number; id: string; x: number; y: number; dmg?: number; men?: number; heal?: number; combo?: true }
   | { k: 'tether'; a: number; b: number; until: number }
   | { k: 'lance'; x: number; y: number; x2: number; y2: number }
   | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram' | 'hot_barrels' | 'broken_mast' | 'crossfire' | 'breach' | 'between_worlds' | 'maw_warn' | 'undertow' | 'drowned_hands'

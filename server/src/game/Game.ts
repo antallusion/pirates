@@ -36,8 +36,9 @@ import { callClosed, onNpcHit, raiderSunk } from './npcwars.ts';
 import { buyWare, equip, mendGear, reforgeItem, rollDrop, salvageItem, sellItem, takeItem, temperItem, unequip, wearOnSinking } from './gear.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import { orderRefit, refitHolds, stepRefit } from './refit.ts';
-import { clampLevel, levelRange, npcSkill } from '../../../shared/src/data/shiplevel.ts';
-import { npcSeaScale } from '../../../shared/src/data/seabalance.ts';
+import { clampLevel, ladder, levelRange, npcSkill } from '../../../shared/src/data/shiplevel.ts';
+import { ALPHA_OVER as ALPHA_OVER_RAM, alphaShare, npcSeaScale } from '../../../shared/src/data/seabalance.ts';
+import { RAM_SHARE, volleyShare } from '../../../shared/src/data/seaskill.ts';
 import { XP_UNITS, contractPay, pointsXp, prizeXp, xpGap } from '../../../shared/src/data/xpcurve.ts';
 import { generateIslandJobs, generateQuests } from '../../../shared/src/data/questgen.ts';
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
@@ -56,7 +57,7 @@ import { FACTIONS, WANTED_THRESHOLDS, WANTED_TITLES, wantedLevel } from '../../.
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { AMMO_IDS, CHASER_RELOAD, SHIP_CLASSES, defaultGunFor, emptyAmmo } from '../../../shared/src/data/ships.ts';
+import { AMMO_IDS, CHASER_RELOAD, GUNS, SHIP_CLASSES, defaultGunFor, emptyAmmo } from '../../../shared/src/data/ships.ts';
 import { aimedVolley, pursuitInput, pursuitOf, startPursuit, startRoamRun, stepAutoFire, stepPursuit, stopPursuit } from './pursuit.ts';
 import { boardOdds, boardRisk, isRisky } from './boardodds.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
@@ -101,6 +102,7 @@ import type { GameConn } from '../net/conn.ts';
 import type { Db } from '../persistence/db.ts';
 import type { SharedState } from '../persistence/redis.ts';
 import { stepStrikes, useAbility } from './abilities.ts';
+import { chooseFacet, comboCue, kitLevelUp, kitNums, skillNumber, stepSeaSkills } from './seaskill.ts';
 import { stepMind, stepZones } from './mind.ts';
 import {
   dismissOfficer, hireOfficer, maxRecruits, mutinyCourse, officerOrder, onDockCrew, onFightWon, onMagazineBlast, onSunkCrew, plunderShare, pressGang, recruitPrisoners,
@@ -821,22 +823,60 @@ export class Game {
           a.state.speed *= 0.6;
           b.state.speed *= 0.6;
         } else if (closing > 3) {
-          this.hullToHull(a, b);
-          this.hullToHull(b, a);
-          const ramA = a.hasEffect('ramming_speed') ? 3 : 1, ramB = b.hasEffect('ramming_speed') ? 3 : 1;
-          const base = closing * closing * 2.2;
-          // Reinforced Bow deals more and takes less; Iron Strapping shrugs off rams.
-          const ramMul = (x: ShipEntity, y: ShipEntity) => Math.max(0, 1 + tval(x.stats, 'ramDealt')) * Math.max(0.2, 1 + tval(y.stats, 'ramTaken')) * Math.max(0.2, 1 - tval(y.stats, 'strapping'));
-          applyDamage(this, b, { hull: base * ramA * (ma / (ma + mb)) * 2 * ramMul(a, b), crew: 1, morale: 4 }, a);
-          if (b.named && a.isPlayer) b.scar = 'ram';
-          if (a.named && b.isPlayer) a.scar = 'ram';
-          applyDamage(this, a, { hull: ((base * (mb / (ma + mb)) * 2) / ramA) * ramMul(b, a), morale: 2 }, b);
-          this.emit({ k: 'fx', fx: 'ram', x: Math.round((a.state.x + b.state.x) / 2), y: Math.round((a.state.y + b.state.y) / 2) }, a.state.x, a.state.y);
+          // The rammer is the ship under Ramming Speed if one is (the pair comes in the order of their ids).
+          if (b.hasEffect('ramming_speed') && !a.hasEffect('ramming_speed')) this.ram(b, a, closing);
+          else this.ram(a, b, closing);
           a.state.speed *= 0.4;
           b.state.speed *= 0.6;
         }
       });
     }
+  }
+
+  /** Two hulls meet at `closing` (m/s of her way into the other): the ram's blow both ways. A share of the hull struck
+   *  (docs/25 item 22, was closing² × 2.2 flat: one ship sunk at ⚓1, a fifth of one at ⚓10): RAM_SHARE of a hull at ⚓1 at
+   *  her own class's top speed, and the same share of a broadside of her ⚓ higher (the anchors' correction), by the square
+   *  of her way into her; the heavier hull deals the more. Ramming Speed ×3 → ×4 by its rank; past the broadside's alpha
+   *  limit the blow strikes a quarter as hard, as a broadside's balls do. */
+  ram(a: ShipEntity, b: ShipEntity, closing: number): void {
+    this.hullToHull(a, b);
+    this.hullToHull(b, a);
+    const ma = SHIP_CLASSES[a.loadout.classId].hull, mb = SHIP_CLASSES[b.loadout.classId].hull;
+    const ka = a.hasEffect('ramming_speed') ? kitNums(this, a, 'ramming_speed') : null;
+    const ramA = a.hasEffect('ramming_speed') ? ka?.n.ram ?? 3 : 1;
+    // Reinforced Bow deals more and takes less; Iron Strapping shrugs off rams.
+    const ramMul = (x: ShipEntity, y: ShipEntity) => Math.max(0, 1 + tval(x.stats, 'ramDealt')) * Math.max(0.2, 1 + tval(y.stats, 'ramTaken')) * Math.max(0.2, 1 - tval(y.stats, 'strapping'));
+    const way = (s: ShipEntity) => Math.min(1.69, (closing / Math.max(1, SHIP_CLASSES[s.loadout.classId].maxSpeed)) ** 2);
+    // A blow as a share of the struck hull (of the rammer's own on a ship off the table, whose scale is her own).
+    const blow = (on: ShipEntity, by: ShipEntity, share: number) => {
+      const table = on.onLadder && !on.zoneBoss && !on.cls.monster && on.npcRole !== 'beast';
+      const lvl = table ? on.combatLevel : by.combatLevel;
+      let h = RAM_SHARE * (volleyShare(lvl) / volleyShare(1)) * share * (table ? on.stats.hullMax : Math.min(on.stats.hullMax, by.stats.hullMax));
+      const cap = table ? on.stats.hullMax * alphaShare(on.combatLevel) : Infinity;
+      if (h > cap) h = cap + (h - cap) * ALPHA_OVER_RAM;
+      return h;
+    };
+    // War Cry then the ram within its window (the Reaver's combo, docs/25 item 41): a quarter harder and her men.
+    const combo = ramA > 1 && this.now - (a.kit.cast.war_cry ?? -1e9) <= 5 && !!kitNums(this, a, 'war_cry');
+    const dealt = blow(b, a, way(a) * (ma / (ma + mb)) * 2 * ramA * ramMul(a, b) * (combo ? 1.25 : 1));
+    const h0 = b.hull;
+    applyDamage(this, b, { hull: dealt, crew: 1, morale: 4 }, a);
+    if (ka && h0 > b.hull) skillNumber(this, b, 'ramming_speed', { dmg: h0 - b.hull });
+    if (combo) {
+      comboCue(this, a, 'war_cry');
+      killMen(this, b, Math.round(b.stats.crewMax * 0.03), a);
+    }
+    if (ka?.n.leaks) b.leaks = Math.min(8, b.leaks + ka.n.leaks);
+    if (ka?.n.shock) {
+      b.morale = Math.max(0, b.morale - 15);
+      killMen(this, b, Math.round(b.stats.crewMax * 0.03), a);
+    }
+    if (b.named && a.isPlayer) b.scar = 'ram';
+    if (a.named && b.isPlayer) a.scar = 'ram';
+    applyDamage(this, a, { hull: blow(a, b, way(a) * (mb / (ma + mb)) * 2 / ramA * ramMul(b, a) * (ka?.n.bow ? 0.5 : 1)), morale: 2 }, b);
+    // The boarding ram (rank 3's facet): the grapples bite at once.
+    if (ka?.n.grapple && !a.boarding && !b.boarding && b.alive && canBoard(this, a, b) === null) startBoarding(this, a, b, 'standard');
+    this.emit({ k: 'fx', fx: 'ram', x: Math.round((a.state.x + b.state.x) / 2), y: Math.round((a.state.y + b.state.y) / 2) }, a.state.x, a.state.y);
   }
 
   // ================================================================= periodic systems
@@ -966,6 +1006,7 @@ export class Game {
       stepSurvival(this, ship);
       if (ship.isPlayer) {
         stepTalents(this, ship);
+        stepSeaSkills(this, ship); // her captain's passive and the fields of her abilities (docs/25 items 17, 30, 33, 36)
         stepGifts(this, ship); // a premium hull's gift at sea (docs/02 §1.A.9)
         surrenderTerms(this, ship);
       }
@@ -1251,7 +1292,12 @@ export class Game {
     }
     curseAura(this, ship);
     // Brine Mend heal-over-time.
-    if (ship.hasEffect('brine_mend') && canMend(this, ship)) ship.hull = Math.min(st.hullMax, ship.hull + st.hullMax * 0.015 * (ship.talentReady.brinePower || 1));
+    if (ship.hasEffect('brine_mend') && canMend(this, ship)) {
+      // A share of her hull a second (docs/25 item 39: broadsides of her ⚓ over its seconds, abilities.ts).
+      const h0 = ship.hull;
+      ship.hull = Math.min(st.hullMax, ship.hull + st.hullMax * (ship.talentReady.brineHeal || 0.015 * (ship.talentReady.brinePower || 1)));
+      if (ship.hull > h0) skillNumber(this, ship, 'brine_mend', { heal: ship.hull - h0 });
+    }
     // Fireship charges.
     if (ship.fuseAt && this.now >= ship.fuseAt) {
       detonateFireship(this, ship);
@@ -1470,17 +1516,43 @@ export class Game {
     ship.setArmy(npcArmy(ship));
   }
 
-  spawnEscort(owner: ShipEntity, duration: number): string | null {
+  /** The Admiral's hired escort (docs/25 item 18, was a brig held to ⚓5–7 whatever her level): a ⚓ below hers (a brig,
+   *  a frigate, from her 50th a ship of the line), her guns `guns` of a captain's in full gear of the escort's ⚓; from her
+   *  60th (or the facet «Эскадра») two. */
+  spawnEscort(owner: ShipEntity, duration: number, opts: { guns?: number; heavy?: boolean; two?: boolean } = {}): string | null {
     for (const s of this.ships.values()) if (s.ownerId === owner.id && !s.prize && !s.fleetId) return 'Your escort is already at sea';
-    const back = headingVec(owner.state.heading + Math.PI);
-    const x = owner.state.x + back.x * 300, y = owner.state.y + back.y * 300;
-    const ship = this.spawnNpcShip('escort', 'brig', 'free', x, y, owner.state.heading, { ship: 'Hired Brig ' + this.rng.pick(['Tenacity', 'Warrant', 'Loyal Oath', 'Salt Debt']), captain: 'Sailing Master' });
-    this.setNpcLevel(ship, owner.shipLevel);
-    ship.ownerId = owner.id;
-    ship.removeAt = this.now + duration;
-    const brain = this.npcs.get(ship.id)!;
-    brain.active = true;
-    this.grid.upsert(ship.id, x, y);
+    const lvl = this.profileOf(owner)?.level ?? 1;
+    const e = Math.max(1, owner.shipLevel - 1);
+    const cls: ShipClassId = lvl >= 50 ? 'man_o_war' : e >= 8 ? 'frigate' : e >= 6 ? 'brig' : e >= 5 ? 'brigantine' : e >= 4 ? 'schooner' : 'sloop';
+    const names = cls === 'man_o_war' ? 'Hired Ship of the Line ' : cls === 'frigate' ? 'Hired Frigate ' : cls === 'brig' ? 'Hired Brig ' : 'Hired ';
+    const n = opts.two ? 2 : 1;
+    for (let i = 0; i < n; i++) {
+      const back = headingVec(owner.state.heading + Math.PI + (i ? 0.6 : 0));
+      const x = owner.state.x + back.x * 300, y = owner.state.y + back.y * 300;
+      const ship = this.spawnNpcShip('escort', cls, 'free', x, y, owner.state.heading, { ship: names + this.rng.pick(['Tenacity', 'Warrant', 'Loyal Oath', 'Salt Debt']), captain: 'Sailing Master' });
+      this.setNpcLevel(ship, cls === 'man_o_war' ? Math.max(9, e) : e);
+      // Her broadsides a share of the Admiral's own (her guns by the weight of metal a second; two share the hire's
+      // weight), whatever hull the hire is; her hull as the sea's own.
+      const common = npcSeaScale(ship.shipLevel, false);
+      ship.seaScale = { hull: common.hull * (opts.heavy ? 1.5 : 1), guns: 1 };
+      ship.ownerId = owner.id;
+      // (shot for her whole hire: forty broadsides of both batteries — a ship of the line ran dry of the sea's 400 balls
+      // in two minutes, and the hire was worth the less the bigger the hull)
+      ship.ammo.round = Math.max(ship.ammo.round, ship.stats.gunsPerSide * 2 * 40);
+      ship.recompute(this.now);
+      const rate = (s: ShipEntity) => (s.stats.gunsPerSide * GUNS[s.loadout.guns.starboard].damage * s.stats.gunDamageMul) / Math.max(0.1, reloadTime(s, 'starboard', this.now));
+      // (a ⚓ below hers, the ladder cuts her blows on a mark of the Admiral's ⚓: the share is the share after it — as at ⚓1,
+      // where no hull is a level lower — so the hire is worth the same at every level, docs/25 item 39)
+      const lad = ladder(ship.combatLevel, owner.combatLevel, false, false, true).dealt;
+      ship.seaScale.guns = ((opts.guns ?? 0.1) * (n > 1 ? 0.6 : 1) * rate(owner)) / Math.max(1e-6, rate(ship) * lad);
+      ship.ownerId = owner.id;
+      ship.recompute(this.now);
+      ship.hull = ship.stats.hullMax;
+      ship.removeAt = this.now + duration;
+      const brain = this.npcs.get(ship.id)!;
+      brain.active = true;
+      this.grid.upsert(ship.id, x, y);
+    }
     return null;
   }
 
@@ -1822,6 +1894,7 @@ export class Game {
     if (gained > 0) {
       this.sendTo(s, { t: 'toast', msg: `Level ${s.profile.level}! A new talent point awaits.`, kind: 'good' });
       onLevelUp(this, s);
+      kitLevelUp(this, s, s.profile.level - gained); // her abilities' ranks (docs/25 item 37)
       logNote(this, s, 'level', [], s.profile.level);
     }
   }
@@ -3069,6 +3142,9 @@ export class Game {
         return;
       case 'ability':
         return err(useAbility(this, ship, String(msg.id), msg.x, msg.y));
+      case 'facet':
+        // docs/25 item 38: a facet of an ability at its rank — free the first time, anywhere; a change in a port, for silver.
+        return err(chooseFacet(this, s, String(msg.id), Math.trunc(Number(msg.rank)), msg.pick === 'b' ? 'b' : 'a'));
       case 'board': {
         const target = this.ships.get(Number(msg.target));
         if (!target) return err('No such ship');

@@ -31,9 +31,12 @@ import { gearChips, gearTab, renderGear, setGearTab } from './gear.ts';
 import { captainRecord } from './hud.ts'; // the law and the experience, out of the HUD's plate (2026-10-07)
 import type { GearTab } from './gear.ts';
 import { openSheet } from './kit/sheet.ts';
+import { facetsWaiting, seaSkillsTab, wireSeaSkills } from './seaskills.ts';
+import { EN as SK_EN, RU as SK_RU } from '../lang/ui/seaskill.ts';
 import type { SheetHandle } from './kit/sheet.ts';
 
 const W = dict(WIN_EN, WIN_RU);
+const SK = dict(SK_EN, SK_RU);
 
 const PB = dict(PB_EN, PB_RU);
 
@@ -42,7 +45,7 @@ const RL = dict(REL_EN, REL_RU);
 const k = () => (lang() === 'ru' ? 1 : 0);
 const T = (x: [string, string]) => x[k()];
 
-type Tab = 'hero' | 'book' | 'gear';
+type Tab = 'hero' | 'skills' | 'book' | 'gear';
 /** The book's pages (the second row): the orders by school, the path's pages, a port's guild and merchant. */
 type BookPage = 'orders' | 'path' | 'guild';
 /** What the old callers ask for: a tab, or one of the book's pages by its old name. */
@@ -113,6 +116,8 @@ export class HeroWindow {
     // docs/23 item 70: three big tabs in place of six; each one's own places in the second row.
     const main: WinTab[] = [
       { id: 'hero', icon: 'bt_captain', label: W('cap.hero'), hint: W('cap.heroHint'), badge: h.pending },
+      // docs/25 items 37–43: her sea abilities — ranks, the next rank, facets (a badge for a facet waiting).
+      { id: 'skills', icon: `ab_${cap.abilities[0].id}`, label: SK('tab'), hint: SK('tabHint'), badge: facetsWaiting(state) },
       { id: 'book', icon: 'bt_book', label: W('cap.book'), hint: W('cap.bookHint') },
       { id: 'gear', icon: 'item_tricorne', label: W('cap.gear'), hint: W('cap.gearHint') },
     ];
@@ -125,10 +130,12 @@ export class HeroWindow {
     } else chips = chipRow(gearChips(state), gearTab(), 'cchip');
     let body = '';
     if (this.tab === 'hero') body = captainRecord(state) + this.heroTab(h, self.level, url, !!self.glory?.open);
+    else if (this.tab === 'skills') body = seaSkillsTab(state);
     else if (this.tab === 'book') body = this.page === 'path' ? pathTab(h, self.captain, self.level, self.talents ?? {}) : this.page === 'guild' ? this.portTab(h, self.gold) : this.bookTab(h, docked, state.estServerTime());
     root.innerHTML = `${winHead(W('cap.title'), { crest: 'bt_captain', sub: L('sub', { name: self.name, n: self.level, path: cap.archetype }), chips })}
       <div class="w-frame">${railTabs(main, this.tab, 'ctab')}<div class="w-pane"><div class="modal-body w-body cap-body${this.tab === 'gear' ? ' gear cap-gear' : ' hero-win'}">${body}</div></div></div>`;
     if (this.tab === 'gear') renderGear(root.querySelector<HTMLElement>('.cap-body')!, state, this.send);
+    if (this.tab === 'skills') wireSeaSkills(root, state, this.send);
     const redo = () => this.render(root, state);
     root.querySelectorAll<HTMLElement>('[data-ctab]').forEach((b) => (b.onclick = () => {
       this.tab = b.dataset.ctab as Tab;
