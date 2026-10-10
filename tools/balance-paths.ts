@@ -16,6 +16,8 @@ import type { HeroBattle } from '../shared/src/data/hero.ts';
 import { MOVE_KNOBS, PATH_KNOBS, POWER_AT, clearPowered, pathBook } from '../shared/src/data/paths.ts';
 import type { PathKnobs } from '../shared/src/data/paths.ts';
 import { HAMMOCKS as LADDER, captainAt, playBoard, sidesAt } from '../tests/balance/boardlen.ts';
+import { tacHp, tacHurt } from '../server/src/game/tacbattle.ts';
+import type { TacBattle } from '../server/src/game/tacbattle.ts';
 import { BAND_LEVELS, blastAt, isHomePage, liftOf, movesAt, roleOf } from '../tests/balance/boardskill.ts';
 import type { MoveId } from '../tests/balance/boardskill.ts';
 
@@ -42,7 +44,7 @@ export interface Table {
 
 /** One level's table under the boarding's rules: each pair `n` times a way round (the sides swapped), each path
  *  against a pirate of her waters `2n` times. */
-export function table(level: number, n: number, bare = BARE): Table {
+export function table(level: number, n: number, bare = BARE, salt = 0, withSea = true): Table {
   const m = {} as Table['m'];
   const sea = {} as Table['sea'];
   for (const a of CAPTAIN_IDS) m[a] = { [a]: 0.5 } as Record<CaptainId, number>;
@@ -52,14 +54,14 @@ export function table(level: number, n: number, bare = BARE): Table {
       let w = 0;
       for (let k = 0; k < 2 * n; k++) {
         const flip = k % 2 === 1;
-        const [x, y] = sidesAt(level, true, flip ? b : a, flip ? a : b, k * 13 + i * 7 + j, bare);
-        if ((playBoard(x, y, k * 31 + i * 5 + j + level).winner === 0) !== flip) w++;
+        const [x, y] = sidesAt(level, true, flip ? b : a, flip ? a : b, k * 13 + i * 7 + j + salt, bare);
+        if ((playBoard(x, y, k * 31 + i * 5 + j + level + salt).winner === 0) !== flip) w++;
       }
       m[a][b] = w / (2 * n);
       m[b][a] = 1 - w / (2 * n);
     });
     let s = 0;
-    for (let k = 0; k < 2 * n; k++) {
+    if (withSea) for (let k = 0; k < 2 * n; k++) {
       const [x, y] = sidesAt(level, false, a, a, k * 17 + i * 3, bare);
       if (playBoard(x, y, k * 29 + i * 11 + level).winner === 0) s++;
     }
@@ -255,13 +257,17 @@ function balance(n: number, sweeps: number): void {
 /** The engine's own exchange rate of a point against a share of blows: in a mirror of each path, one side given a hold
  *  for rounds 1–3 — her wins against those of a side whose blows and shots land a share harder (POINT_RATE). */
 function rates(level: number, n: number): void {
-  const wins = (mine: Record<string, number>): number => {
+  const wins = (mine: Record<string, number>, strike = 0): number => {
     let w = 0, g = 0;
     CAPTAIN_IDS.forEach((p) => {
       for (let i = 0; i < n; i++) {
         const [a, b] = sidesAt(level, true, p, p, i * 7 + 3);
         a.gift = { rounds: 3, mine };
-        if (playBoard(a, b, i * 13 + 5).winner === 0) w++;
+        // A strike: a share of every stack of hers cut down before the first turn.
+        const start = (bt: TacBattle) => {
+          for (const x of bt.stacks) if (x.side === 1 && x.count > 0) tacHurt(bt, x, Math.round(tacHp(x) * strike), 0);
+        };
+        if (playBoard(a, b, i * 13 + 5, strike ? { start } : {}).winner === 0) w++;
         g++;
       }
     });
@@ -270,11 +276,23 @@ function rates(level: number, n: number): void {
   console.log(`Level ${level}, ${n * 6} mirrors a line: side 0 given the hold for rounds 1–3`);
   for (const [tag, m] of [['nothing', {}], ['blows +10%', { melee: 0.1, shot: 0.1 }], ['blows +20%', { melee: 0.2, shot: 0.2 }], ['blows +30%', { melee: 0.3, shot: 0.3 }],
     ['initiative +1', { init: 1 }], ['initiative +2', { init: 2 }], ['initiative +3', { init: 3 }], ['speed +1', { speed: 1 }], ['speed +2', { speed: 2 }],
-    ['morale +1', { morale: 1 }], ['morale +2', { morale: 2 }], ['luck +1', { luck: 1 }], ['luck +2', { luck: 2 }]] as [string, Record<string, number>][]) console.log(`  ${tag.padEnd(14)} ${Math.round(wins(m) * 100)}%`);
+    ['morale +1', { morale: 1 }], ['morale +2', { morale: 2 }], ['luck +1', { luck: 1 }], ['luck +2', { luck: 2 }], ['taken -10%', { taken: -0.1 }], ['taken -20%', { taken: -0.2 }]] as [string, Record<string, number>][]) console.log(`  ${tag.padEnd(14)} ${Math.round(wins(m) * 100)}%`);
+  for (const f of [0.03, 0.06, 0.1, 0.15]) console.log(`  strike ${Math.round(f * 100)}% of her army at the start: ${Math.round(wins({}, f) * 100)}%`);
 }
 
 if (import.meta.main ?? process.argv[1]?.endsWith('balance-paths.ts')) {
-  if (process.argv.includes('--roles')) roles(arg('levels') ? LEVELS : BAND_LEVELS);
+  if (process.argv.includes('--matrix')) {
+    const salt = Number(arg('salt') ?? 0);
+    for (const l of arg('levels') ? LEVELS : [5, 15, 30, 45, 60]) {
+      const t = table(l, N, BARE, salt, false);
+      print(t);
+      const out: string[] = [];
+      CAPTAIN_IDS.forEach((a, i) => CAPTAIN_IDS.forEach((b, j) => {
+        if (j > i && (t.m[a][b] < 0.4 || t.m[a][b] > 0.6)) out.push(`${a}-${b} ${pc(t.m[a][b])}%`);
+      }));
+      console.log(`  outside 40–60: ${out.join(', ') || 'none'}`);
+    }
+  } else if (process.argv.includes('--roles')) roles(arg('levels') ? LEVELS : BAND_LEVELS);
   else if (process.argv.includes('--rates')) for (const l of arg('levels') ? LEVELS : [30]) rates(l, N);
   else if (process.argv.includes('--balance')) balance(N, Number(arg('sweeps') ?? 2));
   else if (process.argv.includes('--fit')) {

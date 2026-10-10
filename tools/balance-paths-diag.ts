@@ -1,40 +1,49 @@
-// A diagnostic for tools/balance-paths.ts: each path against the sea of her level with parts of her path taken away.
-// node tools/balance-paths-diag.ts [n] [level]
-import { Rng } from '../shared/src/rng.ts';
-import { armyForLevel } from '../shared/src/data/army.ts';
+// A diagnostic for tools/balance-paths.ts (docs/25 item 70): each path's wins against all under the boarding's rules
+// (real builds: her level's skills and kit, tests/balance/boardlen.ts) with parts of her path taken away — what each
+// part is worth to her at a level. (In her mirror the innate move goes from both sides.)
+//   node tools/balance-paths-diag.ts [battles a pairing] [--levels=5,30] [--paths=navigator,admiral]
 import { CAPTAIN_IDS } from '../shared/src/data/captains.ts';
+import type { CaptainId } from '../shared/src/data/captains.ts';
 import type { HeroBattle } from '../shared/src/data/hero.ts';
-import { isPathPage } from '../shared/src/data/paths.ts';
-import { newBattle, quickFinish } from '../server/src/game/tacbattle.ts';
-import type { TacSideInput } from '../server/src/game/tacbattle.ts';
-import { HAMMOCKS, pathHero, seaHero } from './balance-paths.ts';
+import { INNATE, isPathPage } from '../shared/src/data/paths.ts';
+import { TAC_BOOK } from '../shared/src/data/tactical.ts';
+import { playBoard, sidesAt } from '../tests/balance/boardlen.ts';
 
-const n = Number(process.argv[2] ?? 60);
-const level = Number(process.argv[3] ?? 30);
-const sl = Math.min(10, Math.ceil(level / 6));
-const army = armyForLevel(sl, HAMMOCKS[sl], 7, 'player'), pir = armyForLevel(sl, HAMMOCKS[sl], 7, 'pirate');
-const side = (a: typeof army, hero: HeroBattle): TacSideInput => ({ name: 'C', ship: 'W', captain: null, hands: 0, marines: 0, gunners: 0, army: a, officers: [], skill: 3, morale: 70, dealt: 1, power: 1, melee: 1, extraShots: 0, firstRush: 1, nets: 0, blooded: 0, castle: false, struck: false, human: false, hero });
-const variants: Record<string, (h: HeroBattle) => HeroBattle> = {
-  full: (h) => h,
-  ...(process.argv.includes('--quick') ? {} : { noUlt: (h: HeroBattle) => ({ ...h, ult: false }),
-  noInnateUlt: (h: HeroBattle) => ({ ...h, ult: false, path: null }),
-  noPages: (h: HeroBattle) => ({ ...h, book: h.book.filter((id) => !isPathPage(id)) }),
-  noStam: (h: HeroBattle) => ({ ...h, stam: 0, stamRegen: 0 }) }),
-  bare: (h) => ({ ...h, ult: false, path: null, book: h.book.filter((id) => !isPathPage(id)) }),
+const arg = (k: string): string | undefined => process.argv.find((a) => a.startsWith(`--${k}=`))?.slice(k.length + 3);
+const n = Number(process.argv.slice(2).find((a) => /^\d+$/.test(a)) ?? 24);
+const LEVELS = (arg('levels') ?? '5,15,30,45,60').split(',').map(Number);
+const WHO = (arg('paths')?.split(',') ?? CAPTAIN_IDS) as CaptainId[];
+
+type Variant = { hero?: (h: HeroBattle, p: CaptainId) => HeroBattle; innate?: boolean };
+const VARIANTS: Record<string, Variant> = {
+  full: {},
+  noInnate: { innate: false },
+  noUlt: { hero: (h) => ({ ...h, ult: false }) },
+  noPages: { hero: (h) => ({ ...h, book: h.book.filter((id) => !isPathPage(id)) }) },
+  noOwnOrder: { hero: (h, p) => ({ ...h, book: h.book.filter((id) => id !== TAC_BOOK[p][0]) }) },
+  noCommon: { hero: (h, p) => ({ ...h, book: h.book.filter((id) => isPathPage(id) || id === TAC_BOOK[p][0]) }) },
 };
-for (const c of CAPTAIN_IDS) {
-  const row: string[] = [];
-  for (const [name, f] of Object.entries(variants)) {
-    let w = 0;
-    for (let k = 0; k < 2 * n; k++) {
-      const rng = new Rng(1000 + k * 17);
-      const flip = k % 2 === 1;
-      const A = side(army, f(pathHero(c, level, 11 + k * 7))), B = side(pir, seaHero(sl));
-      const bt = newBattle(flip ? B : A, flip ? A : B, k + 1, 0, rng);
-      quickFinish(bt, 0, rng);
-      if ((bt.over!.winner === 0) !== flip) w++;
+
+/** Her wins against every path (`n` a pairing, the sides swapped by turns), the variant on her side alone. */
+function winsOf(p: CaptainId, L: number, v: Variant): number {
+  const keep = INNATE[p].fx;
+  if (v.innate === false) INNATE[p].fx = { target: 'none' };
+  let w = 0, k = 0;
+  CAPTAIN_IDS.forEach((q, j) => {
+    for (let i = 0; i < n; i++) {
+      const flip = i % 2 === 1;
+      const [a, b] = sidesAt(L, true, flip ? q : p, flip ? p : q, 9000 + i * 13 + j * 7);
+      const mine = flip ? b : a;
+      if (v.hero && mine.hero) mine.hero = v.hero(mine.hero, p);
+      if ((playBoard(a, b, 9000 + i * 31 + j * 5 + L).winner === 0) !== flip) w++;
+      k++;
     }
-    row.push(`${name} ${Math.round((w / (2 * n)) * 100)}%`);
-  }
-  console.log(`${c.padEnd(10)} ${row.join(' · ')}`);
+  });
+  INNATE[p].fx = keep;
+  return w / k;
+}
+
+for (const L of LEVELS) {
+  console.log(`\nLevel ${L}: her wins against all (${n * 6} battles), parts of her path taken away`);
+  for (const p of WHO) console.log(`  ${p.padEnd(10)} ${Object.entries(VARIANTS).map(([name, v]) => `${name} ${Math.round(winsOf(p, L, v) * 100)}%`).join(' · ')}`);
 }

@@ -1552,6 +1552,16 @@ export function commonMul(raw: number): number {
 /** docs/25 item 46: the blast is reckoned from the stack it falls on too — a common order lays on one stack at most
  *  this share of what that stack brought aboard (by the battle's scale), times its own share. */
 export const TAC_BLAST_STACK = 0.35;
+/** docs/25 item 70: the common heals of the order book — a share of every stack (`k` her lift on it), at most `cap`; in
+ *  a boarding at most `board`. A heal is a share of a stack and the boarding's slower blows do not slow it, so with her
+ *  lift growing to ×3 a Brine Mend stood up 15% of every stack at level 5 and 34–35% from level 30 — two or three times
+ *  the Drowned's own «Поцелуй соли», and the sea's mind never gave the page. Now no more than a path's own heal is set
+ *  at (tools/balance-paths.ts FIT.page.healAim, 13%) and a little; the Tide Returns, a guild's third-level order, twice it. */
+export const TAC_HEAL = { brine_mend: { base: 0.12, cap: 0.4, board: 0.15 }, tide_returns: { base: 0.25, cap: 0.6, board: 0.3 } } as const;
+export function commonHeal(bt: TacBattle, id: keyof typeof TAC_HEAL, k: number): number {
+  const h = TAC_HEAL[id];
+  return Math.min(boardRules(bt) ? h.board : h.cap, h.base * k);
+}
 function blastOn(bt: TacBattle, t: TacStack, P: number, share: number, common = true, pierce = false): number {
   const p = common && boardRules(bt) ? Math.min(P, TAC_BLAST_STACK * t.start * t.hpMax * blastScale(bt)) : P;
   // docs/25 item 56: a legend, a titan, a great one shrugs off a share (her path's innate move and ultimate pass).
@@ -1947,7 +1957,7 @@ export function castSpell(bt: TacBattle, side: 0 | 1, id: TacSpellId, target: nu
       h.fx.push({ id, until: hold });
       break;
     case 'brine_mend':
-      heal(bt, side, Math.min(0.4, 0.12 * k));
+      heal(bt, side, commonHeal(bt, 'brine_mend', k));
       break;
     // The order book's further pages (docs/17 H2).
     case 'musket_storm':
@@ -1961,7 +1971,7 @@ export function castSpell(bt: TacBattle, side: 0 | 1, id: TacSpellId, target: nu
       }
       break;
     case 'tide_returns':
-      heal(bt, side, Math.min(0.6, 0.25 * k));
+      heal(bt, side, commonHeal(bt, 'tide_returns', k));
       break;
     case 'maelstrom':
       for (const o of foes()) kills += hurt(bt, o, blastOn(bt, o, P, 0.55), side);
@@ -2567,16 +2577,31 @@ function threat(bt: TacBattle, s: TacStack): number {
 
 const valueOf = (bt: TacBattle, t: TacStack, dmg: number) => (Math.min(dmg, hpOf(t)) / Math.max(1, hpOf(t))) * threat(bt, t) + (dmg >= hpOf(t) ? threat(bt, t) * 0.3 : 0);
 
+/** docs/25 item 70: what the sea's mind takes a hold to be worth a round it holds, as a share of the strength it
+ *  lifts or blunts (a blow, a cut of the other side's army, is worth that share of her strength once): measured by the
+ *  engine itself (`node tools/balance-paths.ts --rates`, 1200 mirrors a line at levels 5, 15, 30, 45 and 60 — a side
+ *  given the hold for three rounds against one given nothing, and against one that cut a share of the other's army
+ *  before the first turn). Blows +20% for three rounds won as a strike of 15% did (0.25 a round); harm taken −20% a
+ *  third more than blows +20% (0.33); two points of morale as a strike of 3%, of luck 5%, of speed 9%; initiative
+ *  helps at some levels and hurts at others (+3: −12 … +20 points), 6% for three points on the mean. Before, harm
+ *  taken was weighed 0.2, morale 0.015 and luck 0.02 a point: the sea's mind passed over «Шкура из ракушек» and «В
+ *  каре» and gave a page of morale or luck before a blow. */
+export const TAC_AI_RATE = { blow: 0.25, taken: 0.33, speed: 0.015, init: 0.007, morale: 0.005, luck: 0.008 };
+
 /** What a path's move is worth to the sea's mind now (docs/18): its blows as the stacks' worth, its holds as a share
- *  of the strength they lift or blunt for the rounds they hold, another turn as the stack's own. */
-export function fxValue(bt: TacBattle, side: 0 | 1, fx: PageFx, k: number, t?: TacStack, common = false): number {
+ *  of the strength they lift or blunt for the rounds they hold (TAC_AI_RATE), another turn as the stack's own. docs/25
+ *  items 56 and 70: what a stack of hers shrugs off is worth that much less (`pierce`: the innate move and the
+ *  ultimate pass every resistance), and the Drowned's own caps stand for her raising and her drowning. */
+export function fxValue(bt: TacBattle, side: 0 | 1, fx: PageFx, k: number, t?: TacStack, common = false, pierce = false): number {
   const e = bt.heroes[1 - side];
   const foes = alive(bt).filter((o) => o.side !== side);
   const own = alive(bt).filter((o) => o.side === side);
   const P = spellPower(bt, side) * k * pathScale(bt, side, !common);
+  const keep = (o: TacStack) => (pierce ? 1 : 1 - resistOf(bt, o));
   // docs/25 item 46: a common page's blast on one stack as it would land.
-  const on1 = (o: TacStack, share: number) => (common && boardRules(bt) ? Math.min(P, TAC_BLAST_STACK * o.start * o.hpMax * blastScale(bt)) : P) * share;
+  const on1 = (o: TacStack, share: number) => (common && boardRules(bt) ? Math.min(P, TAC_BLAST_STACK * o.start * o.hpMax * blastScale(bt)) : P) * share * keep(o);
   const sum = (xs: TacStack[], f: (x: TacStack) => boolean = () => true) => xs.reduce((n, x) => n + (f(x) ? threat(bt, x) : 0), 0);
+  const caps = common ? { raise: RAISE_CAP, drain: DRAIN_CAP } : capsOf(bt, side);
   const shoots = (x: TacStack) => isShooter(x) && x.shots > 0;
   let v = 0;
   if (t && t.side !== side) {
@@ -2599,19 +2624,25 @@ export function fxValue(bt: TacBattle, side: 0 | 1, fx: PageFx, k: number, t?: T
   if (fx.mend && t && t.side === side) v += (Math.min(t.start * t.hpMax - hpOf(t), t.start * t.hpMax * Math.min(0.5, fx.mend * k)) / Math.max(1, hpOf(t))) * threat(bt, t);
   if (fx.all) for (const o of foes) v += valueOf(bt, o, on1(o, fx.all));
   if (fx.shooters) for (const o of foes) if (isShooter(o)) v += valueOf(bt, o, on1(o, fx.shooters));
-  if (fx.drain) for (const o of foes) if (o.count > 1) v += valueOf(bt, o, o.count * Math.min(0.12, fx.drain * k) * o.hpMax);
+  if (fx.drain) for (const o of foes) if (o.count > 1) v += valueOf(bt, o, o.count * Math.min(caps.drain, fx.drain * k) * o.hpMax * keep(o));
   const sh = fx.heal ?? fx.raise;
-  if (sh) for (const x of own) if (!sp(x, 'undead') || fx.raise) v += (Math.min(x.start * x.hpMax - hpOf(x), x.start * x.hpMax * Math.min(0.35, sh * k)) / Math.max(1, hpOf(x))) * threat(bt, x);
-  const R = (fx.rounds ?? 0) + 1;
+  if (sh) for (const x of own) if (!sp(x, 'undead') || fx.raise) v += (Math.min(x.start * x.hpMax - hpOf(x), x.start * x.hpMax * Math.min(fx.raise ? caps.raise : RAISE_CAP, sh * k)) / Math.max(1, hpOf(x))) * threat(bt, x);
+  // The rounds it holds, as applyFx lays it (a path's move as written and her Power a round more at most) — of this
+  // round, the share of its turns still to come.
+  const left = Math.min(1, (bt.queue.length + 1) / Math.max(1, foes.length + own.length));
+  const R = left + (fx.rounds ? (common ? fx.rounds + (fx.one?.still || fx.one?.mad ? 0 : holdOf(bt, side)) : pathHoldExtra(fx, bt.heroes[side].input.hero?.pow ?? 0)) : 0);
+  // What is laid on her side is shrugged off by the share of her strength that resists.
+  const foeKeep = pierce ? 1 : foes.reduce((n, o) => n + threat(bt, o) * keep(o), 0) / Math.max(1, sum(foes));
+  const A = TAC_AI_RATE;
   // `cover`: the share of her fire one stack's own cover from her shots is worth (the whole of it for a whole side).
   const lay = (m: BtMods | undefined, mine: TacStack[], theirs: TacStack[], sign: 1 | -1, cover = 1) => {
     if (!m) return 0;
     let w = 0;
-    w += sign * (m.melee ?? 0) * sum(mine, (x) => !shoots(x)) * 0.23;
-    w += sign * (m.shot ?? 0) * sum(mine, shoots) * 0.23;
-    w -= sign * (m.taken ?? 0) * sum(theirs) * 0.2;
-    w -= sign * (m.shotTaken ?? 0) * sum(theirs, shoots) * 0.2 * cover;
-    w += sign * ((m.speed ?? 0) * 0.02 + (m.init ?? 0) * 0.008 + (m.morale ?? 0) * 0.015 + (m.luck ?? 0) * 0.02) * sum(mine);
+    w += sign * (m.melee ?? 0) * sum(mine, (x) => !shoots(x)) * A.blow;
+    w += sign * (m.shot ?? 0) * sum(mine, shoots) * A.blow;
+    w -= sign * (m.taken ?? 0) * sum(theirs) * A.taken;
+    w -= sign * (m.shotTaken ?? 0) * sum(theirs, shoots) * A.taken * cover;
+    w += sign * ((m.speed ?? 0) * A.speed + (m.init ?? 0) * A.init + (m.morale ?? 0) * A.morale + (m.luck ?? 0) * A.luck) * sum(mine);
     if (m.blind) w -= sign * sum(mine, (x) => shoots(x) && enemiesAdjacent(bt, x).length === 0) * 0.8;
     if (m.noRet) w += sign * sum(mine, (x) => !shoots(x)) * 0.1;
     if (m.noAnswer) w += sign * sum(mine) * 0.08;
@@ -2621,8 +2652,8 @@ export function fxValue(bt: TacBattle, side: 0 | 1, fx: PageFx, k: number, t?: T
     return w * R;
   };
   v += lay(fx.self, own, foes, 1);
-  v += lay(fx.foe, foes, own, -1);
-  if (fx.one && t) v += t.side === side ? lay(fx.one, [t], foes, 1, threat(bt, t) / Math.max(1, sum(own))) : lay(fx.one, [t], own, -1);
+  v += lay(fx.foe, foes, own, -1) * foeKeep;
+  if (fx.one && t) v += t.side === side ? lay(fx.one, [t], foes, 1, threat(bt, t) / Math.max(1, sum(own))) : lay(fx.one, [t], own, -1) * keep(t);
   if (fx.again && t && t.side === side) v += threat(bt, t) * 0.9;
   if (fx.allAgain) v += sum(own) * 0.6 * (fx.allShare ?? 1);
   if (fx.free) v += Math.min(fx.free, own.length) / Math.max(1, own.length) * sum(own, (x) => !shoots(x)) * 0.15;
@@ -2646,12 +2677,12 @@ export function fxValue(bt: TacBattle, side: 0 | 1, fx: PageFx, k: number, t?: T
 }
 
 /** The best stack to point a move at (or none), and what it is worth. */
-function bestFx(bt: TacBattle, side: 0 | 1, fx: PageFx, k: number, common = false): { v: number; target?: number } {
-  if (fx.target === 'none') return { v: fxValue(bt, side, fx, k, undefined, common) };
+function bestFx(bt: TacBattle, side: 0 | 1, fx: PageFx, k: number, common = false, pierce = false): { v: number; target?: number } {
+  if (fx.target === 'none') return { v: fxValue(bt, side, fx, k, undefined, common, pierce) };
   let v = 0, target: number | undefined;
   for (const t of alive(bt)) {
     if ((fx.target === 'enemy') === (t.side === side)) continue;
-    const x = fxValue(bt, side, fx, k, t, common);
+    const x = fxValue(bt, side, fx, k, t, common, pierce);
     if (x > v) {
       v = x;
       target = t.id;
@@ -2661,6 +2692,25 @@ function bestFx(bt: TacBattle, side: 0 | 1, fx: PageFx, k: number, common = fals
 }
 
 type AiOrder = { id: TacSpellId; target?: number };
+
+/** docs/25 item 70: the captains' own orders given by hand (castSpell's switch, blowParts) as the sea's mind reads them
+ *  — what each lays, in the moves' own terms, so it weighs them by TAC_AI_RATE as it weighs a page. Before, every one
+ *  of them was «a tenth of her strength» (the War Cry half that), whatever it did: the Navigator gave her Marlinspike
+ *  before Turning the Flank, which wins her more. */
+export const TAC_ORDER_READ: Partial<Record<TacSpellId, PageFx>> = {
+  // Initiative +3, speed +1, every blow of hers a pincer (TAC_PINCER) — this round and the next, her Power longer.
+  turn_the_flank: { target: 'none', self: { speed: 1, init: 3, melee: 0.2 }, rounds: 1 },
+  // Her stacks' Defense ×1.4 (about a seventh less taken), her blows ×1.15, morale +1 and heart +10.
+  iron_discipline: { target: 'none', self: { melee: 0.15, shot: 0.15, taken: -0.15, morale: 1 }, rounds: 1, heart: 10 },
+  // Her blows ×1.25, the other side's morale −1.
+  red_harvest: { target: 'none', self: { melee: 0.25, shot: 0.25 }, foe: { morale: -1 }, rounds: 1 },
+  // This round every blow and shot on her side lands half as hard.
+  smoke_and_knives: { target: 'none', self: { taken: -0.5 } },
+  // Her morale +1 and heart +6, the other side's −1.
+  war_cry: { target: 'none', self: { morale: 1 }, foe: { morale: -1 }, rounds: 1, heart: 6 },
+  // The deep drags 8% of every stack of hers under (her Power on it), and her morale −1.
+  call_of_the_deep: { target: 'none', drain: 0.08, foe: { morale: -1 }, rounds: 1 },
+};
 
 /** The captain's order the sea's mind would give now (or null): a page, or her path's innate move or ultimate. She
  *  keeps an eye on what is left of each store: the scarcer one, the dearer it seems (docs/18 item 8). */
@@ -2701,7 +2751,8 @@ function aiSpell(bt: TacBattle, side: 0 | 1, rng: Rng): AiOrder | null {
     };
     // docs/25 item 46: what a common order's blast would lay on each stack (the blast reckoned from the stack too).
     const P0 = spellPower(bt, side) * km;
-    const on1 = (o: TacStack, share: number) => (boardRules(bt) ? Math.min(P0, TAC_BLAST_STACK * o.start * o.hpMax * blastScale(bt)) : P0) * share;
+    // docs/25 items 56 and 70: what a stack of hers shrugs off is worth that much less.
+    const on1 = (o: TacStack, share: number) => (boardRules(bt) ? Math.min(P0, TAC_BLAST_STACK * o.start * o.hpMax * blastScale(bt)) : P0) * share * (1 - resistOf(bt, o));
     if (s0.id === 'musket_storm' || s0.id === 'maelstrom') {
       const share = s0.id === 'musket_storm' ? 0.45 : 0.55;
       pick(foes.reduce((n, t) => n + valueOf(bt, t, on1(t, share)), 0) + (s0.id === 'maelstrom' ? foes.reduce((n, t) => n + threat(bt, t), 0) * 0.03 : 0));
@@ -2716,7 +2767,7 @@ function aiSpell(bt: TacBattle, side: 0 | 1, rng: Rng): AiOrder | null {
       continue;
     }
     if (s0.id === 'tide_returns') {
-      pick(own.reduce((n, x) => n + (Math.min(x.start * x.hpMax - hpOf(x), x.start * x.hpMax * 0.25 * km) / Math.max(1, hpOf(x))) * threat(bt, x), 0));
+      pick(own.reduce((n, x) => n + (Math.min(x.start * x.hpMax - hpOf(x), x.start * x.hpMax * commonHeal(bt, 'tide_returns', km)) / Math.max(1, hpOf(x))) * threat(bt, x), 0));
       continue;
     }
     if (s0.id === 'fury' || s0.id === 'shield_wall' || s0.id === 'dread' || s0.id === 'following_wind' || s0.id === 'head_wind') {
@@ -2744,9 +2795,9 @@ function aiSpell(bt: TacBattle, side: 0 | 1, rng: Rng): AiOrder | null {
         }
       }
     } else {
-      let v = foes.reduce((n, t) => n + threat(bt, t), 0) * 0.12;
-      if (s0.id === 'brine_mend') v = own.reduce((n, x) => n + (Math.min(x.start * x.hpMax - hpOf(x), x.start * x.hpMax * 0.12) / Math.max(1, hpOf(x))) * threat(bt, x), 0);
-      if (s0.id === 'war_cry') v = foes.reduce((n, t) => n + threat(bt, t), 0) * 0.06;
+      const read = TAC_ORDER_READ[s0.id];
+      let v = read ? fxValue(bt, side, read, km, undefined, true) : foes.reduce((n, t) => n + threat(bt, t), 0) * 0.12;
+      if (s0.id === 'brine_mend') v = own.reduce((n, x) => n + (sp(x, 'undead') ? 0 : (Math.min(x.start * x.hpMax - hpOf(x), x.start * x.hpMax * commonHeal(bt, 'brine_mend', km)) / Math.max(1, hpOf(x))) * threat(bt, x)), 0);
       if (s0.id === 'double_shot') {
         // One shot more for every shooter, and a third on its shots for two rounds.
         v = 0;
@@ -2778,7 +2829,7 @@ function aiMove(bt: TacBattle, side: 0 | 1, rng: Rng): { kind: 'innate' | 'ult';
   for (const kind of ['ult', 'innate'] as const) {
     if ((kind === 'innate' ? h.innate : h.ult) !== 1 || (kind === 'ult' && bt.round < h.ultFrom)) continue;
     const mfx = powered(moveFx(hb.path, kind, hb.level ?? 1), hb.path, hb.level ?? 1, 'move');
-    const b = bestFx(bt, side, mfx, moveMul(bt, side) * echoMul(bt, side, hb.path, false, kind));
+    const b = bestFx(bt, side, mfx, moveMul(bt, side) * echoMul(bt, side, hb.path, false, kind), false, true);
     b.v *= echoed(bt, side, `${kind}:${hb.path}`) && (mfx.self || mfx.foe || mfx.one) ? 0.4 : 1;
     if (b.v > total * 0.03 && b.v > bv) {
       bv = b.v;

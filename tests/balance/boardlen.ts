@@ -96,10 +96,12 @@ export interface BoardRun {
 }
 
 /** One boarding played to its end by the sea's mind on both sides, timed turn by turn. */
-export function playBoard(a: TacSideInput, b: TacSideInput, seed: number, opts: { len?: 'board' | 'long'; level?: number; decide?: number; allies?: { side: 0 | 1; input: TacSideInput; grow?: boolean | number }[] } = {}): BoardRun {
+export function playBoard(a: TacSideInput, b: TacSideInput, seed: number, opts: { len?: 'board' | 'long'; level?: number; decide?: number; allies?: { side: 0 | 1; input: TacSideInput; grow?: boolean | number }[]; start?: (bt: TacBattle) => void } = {}): BoardRun {
   const rng = new Rng(1000 + seed * 17);
   const level = opts.level ?? battleLevel(a, b);
   const bt = newBattle(a, b, seed + 1, 0, rng, { len: opts.len ?? 'board', level, ...(opts.allies ? { allies: opts.allies } : {}) });
+  // The balance tools' hand on the battle before its first turn (tools/balance-paths.ts --rates: a strike's worth).
+  opts.start?.(bt);
   const start = [hpSide(bt, 0), hpSide(bt, 1)];
   const run: BoardRun = { rounds: 0, winner: 0, why: '', cut1: [0, 0], turns: [0, 0], secs: 0, play: 0, moves: [{}, {}], harm: [0, 0], end: bt };
   // docs/25 block Е: an ally's stack is decided by her captain (a captain thinks, the sea breathes).

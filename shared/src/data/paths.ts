@@ -335,7 +335,7 @@ export const PATH_PAGES: Record<PathPageId, PathPage> = Object.fromEntries([
   P('dr_drowning_grip', 'drowned', 'board', 1, 4, 3, 'ab_undertow', ['Drowning grip', 'Хватка утопленника'], ['Cold hands on one stack of hers: a blow, and it is much slower.', 'Холодные руки на её отряде: удар, и он намного медленнее.'],
     { target: 'enemy', dmg: 1.6, one: { speed: -2 }, rounds: 1 }),
   P('dr_brine_kiss', 'drowned', 'water', 1, 4, 3, 'ab_brine_mend', ['Brine kiss', 'Поцелуй соли'], ['A share of every stack of yours stands again — the drowned too.', 'Часть каждого вашего отряда снова на ногах — и утопленники тоже.'],
-    { target: 'none', raise: 0.08 }),
+    { target: 'none', raise: 0.1 }),
   P('dr_anchor_chain', 'drowned', 'steel', 2, 6, 3, 'item_iron_rigging', ['Anchor chain', 'Якорная цепь'], ['An anchor chain swung through one stack of hers: a heavy blow.', 'Якорная цепь проходит сквозь её отряд: тяжёлый удар.'],
     { target: 'enemy', dmg: 1.6 }),
   P('dr_undertow', 'drowned', 'water', 3, 9, 4, 'ab_maw_of_the_deep', ['Undertow', 'Отбойное течение'], ['The undertow drags a share of every stack of hers under; she is later to act.', 'Течение утаскивает часть каждого её отряда; она позже в очереди.'],
