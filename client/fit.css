@@ -373,7 +373,7 @@
   #modal-panel .throne-win > .tabs .tab, #modal-panel .pm-body > .tabs .tab { min-height: var(--f-tap); }
   #modal-panel:has(.throne-win > .tabs) > .modal-head h2, #modal-panel:has(.pm-body > .tabs) > .modal-head h2 { max-width: calc(100vw - 480px); overflow: hidden; }
 }
-@media (max-height: 520px) and (max-width: 700px) {
+@media (max-height: 520px) and (max-width: 900px) {
   /* a narrow band: the window's crest stands for its name (the tab that is lit says where she is) */
   #modal-panel:has(.throne-win > .tabs) > .modal-head h2, #modal-panel:has(.pm-body > .tabs) > .modal-head h2 { font-size: 0 !important; max-width: none; padding-left: 4px; padding-right: 4px; border-width: 0; border-image: none; background: none; }
   #modal-panel:has(.throne-win > .tabs) > .modal-head h2 > span, #modal-panel:has(.pm-body > .tabs) > .modal-head h2 > span { display: none; }
@@ -491,4 +491,8 @@
 @media (max-height: 340px) and (min-width: 460px) {
   #screen-login .login-panel:has(#login-account[open]) { grid-template-areas: "lang acct" "brand acct" "brand reset" "hint err"; grid-template-rows: auto 1fr auto auto; }
   #screen-login .login-panel:has(#login-account[open]) .lang-switch { justify-content: center !important; }
+}
+@media (max-height: 520px) {
+  /* a mate's offer: the stacks wrap rather than run sideways (480×270 EN) */
+  .bo-sts { flex-wrap: wrap; overflow: visible; }
 }

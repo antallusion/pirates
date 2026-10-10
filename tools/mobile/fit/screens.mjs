@@ -172,7 +172,7 @@ export const SCREENS = [
   { id: 'chat', root: '#chat', open: async (p) => { await close(p); await sheetGone(p); await p.evaluate(() => globalThis.gravetide.hud.chatPanel.open(false)); return visible(p, '#chat.open', 3000); },
     after: async (p) => { await click(p, '#chat-close'); } },
   { id: 'toasts:sea', root: '#toasts', open: async (p) => { await close(p); await toastsOn(p); return true; }, settle: 400 },
-  { id: 'lair-card', root: '#advcard', setup: async (p) => { await admin(p, '/lair crab_beach go', 3000); await film(p); },
+  { id: 'lair-card', root: '#advcard', setup: async (p) => { await admin(p, '/lair crab_beach reset', 1200); await admin(p, '/lair crab_beach go', 3000); await film(p); },
     open: async (p) => { await close(p); await sheetGone(p); if (await visible(p, '#advcard', 1500)) return true; if (await lookWheel(p)) return true; await click(p, '#hud-prompt [data-act="look"]'); return visible(p, '#advcard', 2000); } },
   { id: 'roam-card', root: SHEET, setup: async (p) => { await p.evaluate(() => document.querySelector('#advcard .ac-x, #advcard [data-ax]')?.click()); await admin(p, '/stack gull go', 3000); await film(p); },
     open: async (p) => { await close(p); await sheetGone(p); return p.evaluate(async () => { const s = globalThis.gravetide.state; const v = s.roams?.[0]; if (!v) return false; const m = await import('/src/ui/roamcard.ts'); void m.openRoamCard(s, v, () => {}); await new Promise((r) => setTimeout(r, 500)); return !!document.querySelector('.roam-panel'); }); },
