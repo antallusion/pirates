@@ -1507,6 +1507,9 @@ export interface TacStackView {
    *  men's dice and Attack against Defense (server/src/game/tacbattle.ts stackBonus: her ship's boarding power and gear,
    *  the ladder between the ships, her captain's skills, artifacts and armour), in percent; absent when all are 0. */
   bonus?: { melee: number; shot: number; taken: number };
+  /** docs/17 H5, shown since 2026-10-10: her side's backs to the rail — her blows and shots this much harder (percent,
+   *  in `bonus` too) while her side has less of its strength left on deck than the other's. */
+  backs?: number;
 }
 
 /** What a blow or a shot of the captain's active stack would do (owner, 2026-10-08, as HoMM3 shows it under the

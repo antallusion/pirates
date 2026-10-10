@@ -211,6 +211,9 @@ export const EN = {
   'pv.cov': 'in cover: −40%',
   'sts.resist': 'Shrugs off {n}% of orders',
   'sts.cover': 'In cover from shots',
+  // Owner, 2026-10-10 («чини атаку всем»): what the cards make of a blow — Attack against Defense; the weaker side's lift.
+  'pv.ad': 'Attack − Defence {n}%',
+  'sts.backs': 'Backs to the rail: blows +{n}%',
   'pv.twice': 'strikes twice',
   'pv.sweep': 'hits all around',
   'pv.luck': 'luck {n}%: double',
@@ -444,6 +447,8 @@ export const RU: Record<keyof typeof EN, string> = {
   'pv.cov': 'в укрытии: −40%',
   'sts.resist': 'Устоит перед {n}% приказов',
   'sts.cover': 'В укрытии от выстрелов',
+  'pv.ad': 'Атака − Защита {n}%',
+  'sts.backs': 'Спиной к борту: удары +{n}%',
   'pv.twice': 'бьёт дважды',
   'pv.sweep': 'бьёт всех вокруг',
   'pv.luck': 'удача {n}%: вдвое',

@@ -28,7 +28,7 @@ import { learnAtIsle, townState, townView } from '../server/src/game/town.ts';
 import { lairIsland } from '../server/src/game/wanted.ts';
 import { mineSites } from '../server/src/game/mines.ts';
 import { runAdmin } from '../server/src/game/admin.ts';
-import { blowParts, newBattle, quickFinish } from '../server/src/game/tacbattle.ts';
+import { TAC_DESPERATION_MAX, desperation, newBattle, quickFinish } from '../server/src/game/tacbattle.ts';
 import type { TacSideInput } from '../server/src/game/tacbattle.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { setLang } from '../client/src/i18n.ts';
@@ -299,18 +299,17 @@ function thin(a: ArmyStack[], share: number): ArmyStack[] {
   return out;
 }
 
-// docs/17 H5's «backs to the rail» (the side with less strength left struck up to 40% harder, so a tenth fewer men lost
-// seven fights in ten) is gone — owner, 2026-10-10: «9 матросов убили 20 моих матросов с одного удара … чини атаку всем».
-// It was a lift no card showed, on the weaker side. A tenth fewer men is HoMM3's square law again: lost most of the time.
-test('a tenth fewer men: the square law, no lift for the weaker side; a third fewer is lost', () => {
+test('backs to the rail: a tenth fewer men is a hard fight, not a lost one; a third fewer is still lost', () => {
   const a = armyForLevel(5, 100, 6, 'pirate');
   const tenth = 1 - wins(thin(a, 0.1), a, 120);
-  assert.ok(tenth >= 0.7, `a tenth fewer: lost ${Math.round(tenth * 100)}%`);
-  assert.ok(1 - wins(thin(a, 0.34), a, 60) >= 0.9, 'a third shot away: lost');
-  // The same stack strikes the same whether her side is half the other's or whole.
-  const half = newBattle(side(a), side(thin(a, 0.5)), 3, 0, new Rng(1)), whole = newBattle(side(a), side(a), 3, 0, new Rng(1));
-  const mul = (bt: ReturnType<typeof newBattle>) => blowParts(bt, bt.stacks.find((x) => x.side === 1)!, bt.stacks.find((x) => x.side === 0)!, 'melee').mul;
-  assert.ok(Math.abs(mul(half) - mul(whole)) < 1e-9);
+  assert.ok(tenth >= 0.6 && tenth <= 0.8, `a tenth fewer: lost ${Math.round(tenth * 100)}% (H1: 93%)`);
+  assert.ok(1 - wins(thin(a, 0.34), a, 60) >= 0.85, 'a third shot away: still lost');
+  // The rule itself: only the side with less strength left, by twice the shortfall, to 40% at most (after H5).
+  const rng = new Rng(1);
+  const bt = newBattle(side(a), side(thin(a, 0.5)), 3, 0, rng);
+  assert.equal(desperation(bt, 0), 1);
+  assert.ok(desperation(bt, 1) > 1 + TAC_DESPERATION_MAX - 0.05 && desperation(bt, 1) <= 1 + TAC_DESPERATION_MAX);
+  assert.equal(TAC_DESPERATION_MAX, 0.4);
 });
 
 test('the picked men\'s might cap: a ship\'s trained men and upgrades held to her level\'s weight; deckhands always sign on', () => {

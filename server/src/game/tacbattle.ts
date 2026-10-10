@@ -1198,10 +1198,24 @@ function rollBase(s: TacStack, rng: Rng | null): number {
   return ((s.count * (s.dmin + s.dmax)) / 2) * (0.9 + rng.float() * 0.2);
 }
 
-// Backs to the rail (docs/17 H5: the side with less of her strength left struck up to 40% harder) is gone — owner,
-// 2026-10-10: «9 матросов убили 20 моих матросов с одного удара … чини атаку всем». It was a lift no card showed, and
-// it lay on the weaker side: the sea's thinned 9 struck her 20 harder for being fewer. A tenth fewer men is HoMM3's
-// lost fight again (the square law), told by the odds before the boarding.
+/** Backs to the rail (docs/17 H5): a side whose living strength on deck (hit points) is less than the other's strikes
+ *  harder — by TAC_DESPERATION of the shortfall, up to TAC_DESPERATION_MAX. HoMM3's square law left a tenth fewer
+ *  men a lost fight nine times in ten; with it, seven in ten. (After H5 the sea's pirates carry more shooters, whose
+ *  fights are steeper: twice the shortfall, to 40%, keeps the tenth fewer at seven in ten.) Owner, 2026-10-10 («чини
+ *  атаку всем»): no longer unseen — it is in her stack card's lift (stackBonus, TacStackView.backs) and the preview. */
+export const TAC_DESPERATION = 2;
+export const TAC_DESPERATION_MAX = 0.4;
+
+export function desperation(bt: TacBattle, side: 0 | 1): number {
+  let mine = 0, foe = 0;
+  for (const o of bt.stacks) {
+    if (o.count <= 0) continue;
+    if (o.side === side) mine += hpOf(o);
+    else foe += hpOf(o);
+  }
+  if (mine >= foe || foe <= 0) return 1;
+  return 1 + Math.min(TAC_DESPERATION_MAX, TAC_DESPERATION * (1 - mine / foe));
+}
 
 /** What a blow (or a shot, or an answer) of `s` on `t` is made of before the dice: her attack against the other's
  *  defence (`mod`), every multiplier laid on it (`mul`), the luck that may double it (points), and whether it comes
@@ -1240,13 +1254,14 @@ export const boardRules = (bt: TacBattle): boolean => bt.len !== undefined;
  *  stack card shows it (TacStackView.bonus), the attack preview counts it, and it is all there is:
  *  - `melee` / `shot`: her ship's boarding power and melee gear, the ladder between the two ships' levels (canon D12),
  *    her captain's skills and artifacts, the Blooded talent's fallen foes, First over the Rail in round 1 (less the
- *    other's Boarding Nets), a swivel crew's dismounted guns, the struck colours;
+ *    other's Boarding Nets), a swivel crew's dismounted guns, the struck colours, and her side's backs to the rail
+ *    (desperation: the side with less of her strength left on deck, up to +40%, shown on the card on its own too);
  *  - `taken`: her captain's armour on what she takes (a share of the blow; item 47's floor of a half holds).
  *  Factors (1: nothing). */
 export function stackBonus(bt: TacBattle, s: TacStack): { melee: number; shot: number; taken: number } {
   const h = capOf(bt, s), inp = h.input, hb = inp.hero;
   const other = bt.heroes[1 - s.side].input;
-  let k = inp.dealt * inp.power * s.dmgMul * (1 + Math.min(0.2, h.kills * inp.blooded)) * (inp.struck ? 0.1 : 1);
+  let k = inp.dealt * inp.power * s.dmgMul * (1 + Math.min(0.2, h.kills * inp.blooded)) * (inp.struck ? 0.1 : 1) * desperation(bt, s.side);
   if (bt.round === 1) k *= inp.firstRush * Math.max(0.2, 1 - other.nets);
   return { melee: k * inp.melee * (1 + (hb?.melee ?? 0)), shot: k * (1 + (hb?.shot ?? 0)), taken: 1 - (hb?.taken ?? 0) };
 }
@@ -3017,7 +3032,8 @@ function bonusView(bt: TacBattle, s: TacStack): Partial<TacStackView> {
   const b = stackBonus(bt, s);
   const pc = (x: number) => Math.round((x - 1) * 100);
   const out = { melee: pc(b.melee), shot: pc(b.shot), taken: pc(b.taken) };
-  return out.melee || out.shot || out.taken ? { bonus: out } : {};
+  const backs = pc(desperation(bt, s.side));
+  return { ...(out.melee || out.shot || out.taken ? { bonus: out } : {}), ...(backs > 0 ? { backs } : {}) };
 }
 
 export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean, extra: Partial<Pick<TacView, 'ransom' | 'result' | 'land' | 'canStrike' | 'arena' | 'quickNow' | 'noQuick'>> = {}, slot = 0): TacView {

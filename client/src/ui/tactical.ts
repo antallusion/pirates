@@ -2057,6 +2057,9 @@ export class TacticalPanel {
     // Each number by its painted mark and its word (the word cut short in a narrow column, whole in the title).
     // A hero's bonus leaves a tenth on her attack and defence: 20,5 in Russian.
     const num = (n: number) => (Number.isInteger(n) ? String(n) : dec1(n));
+    // Owner, 2026-10-10: her side's lift on her blows (her ship, her captain's skills and artifacts, backs to the rail)
+    // and her captain's armour on what she takes — the card's numbers are the blow's.
+    const lift = (n: number | undefined) => (n ? ` ${n > 0 ? '+' : '−'}${Math.abs(n)}%` : '');
     const row = (ic: string, k: K, val: string) => `<div title="${esc(L(k))}">${icon(ic, '', 'ico-xs')}<span>${esc(L(k))}</span><b>${esc(val)}</b></div>`;
     const o = s.officer;
     const d = s.unit ? UNITS[s.unit] : null;
@@ -2064,8 +2067,9 @@ export class TacticalPanel {
     const face = figureArt(s) ? icon(figureArt(s)!, '', 'ico-md fig') : icon(stackArt(s), '', 'ico-md');
     const sub = `${d ? esc(L('tierOf', { n: d.tier })) : ''}${o ? `${d ? ' · ' : ''}${esc(personName(o.name))}` : ''}`;
     return `${head ? `<div class="tb-card-h">${face}<div><b>${esc(stackName(s))}</b><small>${sub}</small></div><button class="tb-cardx" title="${esc(L('close'))}" aria-label="${esc(L('close'))}"></button></div>` : `<div class="tb-card-h">${face}<div><small>${sub}</small></div></div>`}
-      <div class="tb-stats">${row('icon.stat_crew', 'st.count', `${s.count} / ${s.start}`)}${row('icon.item_cutlass', 'st.atk', num(s.atk))}${row('icon.mod_hull_plating', 'st.def', num(s.def))}${row('icon.tree_boarding', 'st.dmg', `${s.dmg[0]}–${s.dmg[1]}`)}${row('icon.tattoo_heart', 'st.hp', `${s.hp} / ${s.hpMax}`)}${row('icon.item_seaboots', 'st.speed', String(s.speed))}${row('icon.mount_war_drums', 'st.init', String(s.init))}${s.shotsMax ? row('icon.item_powder_horn', 'st.shots', `${s.shots} / ${s.shotsMax}`) : ''}${row('icon.st_no_ret', 'st.ret', L(s.ret ? 'st.retYes' : 'st.retNo'))}</div>
+      <div class="tb-stats">${row('icon.stat_crew', 'st.count', `${s.count} / ${s.start}`)}${row('icon.item_cutlass', 'st.atk', num(s.atk))}${row('icon.mod_hull_plating', 'st.def', `${num(s.def)}${lift(s.bonus?.taken)}`)}${row('icon.tree_boarding', 'st.dmg', `${s.dmg[0]}–${s.dmg[1]}${lift(s.sp?.includes('shooter') ? s.bonus?.shot : s.bonus?.melee)}`)}${row('icon.tattoo_heart', 'st.hp', `${s.hp} / ${s.hpMax}`)}${row('icon.item_seaboots', 'st.speed', String(s.speed))}${row('icon.mount_war_drums', 'st.init', String(s.init))}${s.shotsMax ? row('icon.item_powder_horn', 'st.shots', `${s.shots} / ${s.shotsMax}`) : ''}${row('icon.st_no_ret', 'st.ret', L(s.ret ? 'st.retYes' : 'st.retNo'))}</div>
       ${STATUS.some(([f]) => s[f]) ? `<div class="tb-sts">${STATUS.filter(([f]) => s[f]).map(([, ic, k]) => `<span class="chip tb-st${k === 'sts.defending' || k === 'sts.braced' || k === 'sts.again' ? ' good' : k === 'sts.waited' ? '' : ' bad'}">${btIcon(ic, '', 'ico-xs')}${esc(L(k))}</span>`).join('')}</div>` : ''}
+      ${s.backs ? `<div class="tb-sts"><span class="chip tb-st good">${btIcon('bt_charge', '', 'ico-xs')}${esc(L('sts.backs', { n: s.backs }))}</span></div>` : ''}
       ${s.resist || this.covered(v).has(s.id) ? `<div class="tb-sts">${s.resist ? `<span class="chip tb-st good">${btIcon('st_braced', '', 'ico-xs')}${esc(L('sts.resist', { n: Math.round(s.resist * 100) }))}</span>` : ''}${this.covered(v).has(s.id) ? `<span class="chip tb-st good">${btIcon('bt_defend', '', 'ico-xs')}${esc(L('sts.cover'))}</span>` : ''}</div>` : ''}
       ${s.sp?.length ? `<div class="tb-sps">${s.sp.map((x) => `<button class="chip tb-spc${note === x ? ' on' : ''}" data-spnote="${esc(x)}" title="${esc(specialNote(x))}">${esc(specialName(x))}</button>`).join('')}</div>${note ? `<p class="tb-spn">${esc(specialNote(note))}</p>` : ''}` : ''}
       <p class="muted">${esc(s.kind === 'officer' || !s.unit ? L(`kd.${s.kind}` as K) : unitNote(s.unit))}${o ? ` ${esc(L(`o.${o.order}` as K))}: ${esc(L(`od.${o.order}` as K))}` : ''}</p>`;
@@ -2629,6 +2633,7 @@ export class TacticalPanel {
       p.shot ? `<div class="tb-pv-h">${esc(L('pv.shot'))}</div>` : '',
       `<div class="tb-pv-r"><span>${esc(L('pv.dmg'))}</span><b>${r(p.dmg)}</b>${p.twice ? `<i>×2</i>` : ''}</div>`,
       `<div class="tb-pv-r"><span>${esc(L('pv.kills'))}</span><b>${r(p.kills)}</b></div>`,
+      p.ad ? `<div class="tb-pv-n">${esc(L('pv.ad', { n: `${p.ad > 0 ? '+' : '−'}${Math.abs(p.ad)}` }))}</div>` : '',
       p.fl ? `<div class="tb-pv-fl">${esc(L(p.fl === 2 ? 'fl.rear' : 'fl.side'))}</div>` : '',
       p.far ? `<div class="tb-pv-n">${esc(L('pv.far'))}</div>` : '',
       p.cov ? `<div class="tb-pv-n">${esc(L('pv.cov'))}</div>` : '',
