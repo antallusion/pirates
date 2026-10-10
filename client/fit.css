@@ -1,0 +1,65 @@
+/* GRAVETIDE · the phone fit (docs/23, owner 2026-10-10: «на мобиле выбор капитанов начальный экран ужасный и вообще
+   много чего ужасно сверстано, слишком все большое, не видно нифига. должно помещаться без прокрутов всяких»).
+   Loaded last (index.html): a phone held sideways — any screen 520 px tall or less — gets phone-sized type and controls
+   (text 12–13 px, headings 16–18 px, buttons 36–40 px), compact paddings and side-by-side layouts, so every screen fits
+   without a scroll from 640×360 up. Measured by tools/mobile/fit/audit.mjs; the desk and the tablet are left as they were. */
+
+/* ================================================================== the captain's choice (captain.ts) */
+/* The desk keeps its look; the new pieces are the phone's. */
+.captain-card .cc-role, .captain-card .pm-short, .cd-start-s { display: none; }
+@media (max-height: 520px) and (min-width: 560px) {
+  #screen-captain { overflow: hidden; align-items: stretch; }
+  .skinned #screen-captain > .captain-wrap { border-width: 10px; border-image-width: 10px; }
+  #screen-captain > .captain-wrap {
+    width: 100vw; height: 100dvh; max-width: none; margin: 0; overflow: hidden;
+    padding: 6px max(10px, env(safe-area-inset-right)) 6px max(10px, env(safe-area-inset-left));
+    display: grid; gap: 6px 10px;
+    grid-template-columns: minmax(0, 0.74fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: 'title detail' 'list detail';
+  }
+  .captain-wrap h2.title-sm { grid-area: title; margin: 0; font-size: 18px; line-height: 1.2; justify-self: start; }
+  .skinned .captain-wrap h2.title-sm { border-width: 6px 28px; border-image-width: 6px 28px; padding: 0 4px; }
+  /* all six at once: two columns of three */
+  .captain-list { grid-area: list; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 6px; overflow: hidden; min-height: 0; flex-direction: initial; }
+  /* the portrait fades in on the card's right, the words run its whole width */
+  .captain-card { position: relative; min-height: 0; min-width: 0; overflow: hidden; display: block; padding: 5px 7px; }
+  .captain-card .portrait { position: absolute; top: 0; right: 0; bottom: 0; width: 52%; height: auto; border: 0; background-position: center 18%; opacity: 0.7; -webkit-mask-image: linear-gradient(90deg, transparent, #000 60%); mask-image: linear-gradient(90deg, transparent, #000 60%); }
+  .captain-card.active .portrait { opacity: 0.95; }
+  .captain-card .cc-t { position: relative; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-shadow: 0 1px 2px #000, 0 0 6px #000; }
+  .captain-card .arch { font-size: 14px; line-height: 1.15; }
+  .captain-card .nm { display: none; }
+  .captain-card .cc-role { display: block; color: var(--bone); font: 500 11.5px/1.25 var(--sans); }
+  .captain-card .premium { margin-top: auto; font: 600 11px/1.2 var(--sans); letter-spacing: 0.04em; }
+  .captain-card .pm-long { display: none; }
+  .captain-card .pm-short { display: inline; }
+  .captain-card.active { box-shadow: inset 0 0 0 1px var(--brass); }
+  /* the chosen one: the key facts beside the list, her portrait faded behind them, the order at the foot */
+  .captain-detail { grid-area: detail; position: relative; display: flex; flex-direction: column; min-height: 0; overflow: hidden; gap: 0;
+    background: linear-gradient(90deg, rgba(10, 9, 8, 0.96) 40%, rgba(10, 9, 8, 0.72)), var(--cd-art, none) right 15% / auto 100% no-repeat; border: 1px solid rgba(140, 107, 58, 0.35); padding: 6px 8px; }
+  .captain-detail .cd-art, .captain-detail .cd-bio, .captain-detail .cd-fav, .captain-detail .ability small, .captain-detail .cd-cd, .captain-detail .cd-start-l { display: none; }
+  .captain-detail .cd-text { display: flex; flex-direction: column; gap: 5px; min-height: 0; flex: 1 1 auto; }
+  .captain-detail h3 { font-size: 17px; line-height: 1.1; }
+  .captain-detail .epithet { font-size: 13px; line-height: 1.2; margin-top: -3px; }
+  .captain-detail p { margin: 0; }
+  .captain-detail .cd-play { font: 500 12px/1.3 var(--sans) !important; color: var(--bone); opacity: 0.9; }
+  .captain-detail .ability { margin: 0; padding: 0 0 0 6px; overflow: visible; }
+  .captain-detail .cd-passive b { font: 600 12px/1.3 var(--sans); color: var(--gold); }
+  .captain-detail .cd-abils { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 6px; }
+  .captain-detail .cd-abils .ability { display: flex; align-items: center; gap: 5px; min-width: 0; padding: 0; border: 0; }
+  .captain-detail .cd-abils .ab-ico { float: none; width: 26px; height: 26px; margin: 0; flex: none; }
+  .captain-detail .cd-abils .key { flex: none; min-width: 16px; margin: 0; font-size: 11px; line-height: 15px; }
+  .captain-detail .cd-abils b { font: 600 12px/1.2 var(--sans); min-width: 0; }
+  .captain-detail .cd-start { font: 500 12px/1.3 var(--sans) !important; color: var(--fog); }
+  .captain-detail .cd-start-s { display: inline; }
+  .captain-detail .cd-foot { margin-top: auto; display: flex; flex-direction: column; gap: 5px; }
+  .captain-detail .cd-name { display: flex; align-items: center; gap: 8px; margin: 0; font: 500 12px var(--sans); color: var(--fog); }
+  .captain-detail .cd-name > span { flex: none; }
+  .captain-detail .cd-name input { flex: 1 1 auto; min-width: 0; margin: 0; height: 36px; padding: 4px 8px; font-size: 14px; }
+  .captain-detail .pick-bar { position: static; margin: 0; padding: 0; background: none; display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; }
+  .captain-detail .pick-bar label.know-sea { flex: 1 1 auto; min-width: 0; min-height: 38px; gap: 6px; }
+  .captain-detail .pick-bar label.know-sea input { width: 18px; height: 18px; flex: none; }
+  .captain-detail .pick-bar label.know-sea b { font-size: 12px; }
+  .captain-detail .pick-bar label.know-sea small { font-size: 11px; }
+  .captain-detail .pick-bar .btn { flex: 0 0 auto; min-height: 38px; font-size: 13px; padding-inline: 10px; }
+}
