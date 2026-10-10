@@ -16,6 +16,7 @@ import { sellPrizes } from '../server/src/game/prizes.ts';
 import type { NpcBrain } from '../server/src/game/npc.ts';
 import type { FakeConn } from './helpers.ts';
 import { join, makeGame, onHull } from './helpers.ts';
+import { dailyRollover } from '../server/src/game/dailies.ts';
 
 function atSea(game: Game, name: string): { c: FakeConn; ship: ShipEntity } {
   const c = join(game, name);
@@ -289,6 +290,9 @@ test('ships in a row without making port: from the third a growing bonus to plun
   const { game } = makeGame();
   const { c, ship } = atSea(game, 'Streak');
   const s = [...game.sessions].find((x) => x.name === 'Streak')!;
+  // The day's orders done beforehand: one finished by a kill (whichever the calendar rolls) would lift her level mid-streak.
+  dailyRollover(game, s);
+  for (const o of s.profile!.daily.orders) o.done = true;
   const xp: number[] = [];
   const grant = game.grantXp.bind(game);
   game.grantXp = (ses, amount, reason, battle) => {

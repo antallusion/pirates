@@ -9,6 +9,7 @@ import {
   QUEST_FLOOR, XP_UNITS, battleXp, levelPct, prizeXp, questGap, questXpFor, shipBandOf, targetXp, xpGap, xpThreat,
 } from '../shared/src/data/xpcurve.ts';
 import { GLORY_BASE } from '../shared/src/data/throne.ts';
+import { dailyRollover } from '../server/src/game/dailies.ts';
 import { CURRENT, LEGACY, LEVELS, STYLES, hoursBetween, killsPerLevel as simKills, minutesAt, mixedHour, questShare, questShareRoad, styleHour } from './balance/xp.ts';
 import { TAC_XP_SHARE } from '../server/src/game/tactical.ts';
 import { XP_BOARDED, XP_SUNK } from '../server/src/game/Game.ts';
@@ -122,6 +123,9 @@ test('one kill, one prize: sunk 1, taken 2 of her level\'s ship; the battle a bo
   p.xp = 0;
   p.deeds.push('deed_first_prize', 'deed_hundred_wrecks');
   p.tutorial.goals.hidden = true;
+  // The day's orders done beforehand: whichever the calendar rolls (a Saturday's «take a ship») must not pay into the prize.
+  dailyRollover(game, s);
+  for (const o of p.daily.orders) o.done = true;
   c.push({ t: 'undock' });
   const ship = s.ship!;
   ship.docked = null;
