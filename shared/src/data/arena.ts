@@ -255,9 +255,12 @@ export const ARENA_SKILLS: SkillId[] = ['boarding', 'armor', 'artillery', 'leade
  *  docs/25 item 70 (2026-10-10): re-set for the paths' level-by-level figures, the sea's mind's new weights and the
  *  common heal's cap (the pairs had gone to 41–63%, the Reaver over the Drowned the highest) by `balance-arena.ts 400
  *  --paths 6` and a search over a point of Attack and Defence about it (400 bouts a cell, `--pairs`): the means
- *  48–52%, the pairs 42.9–58.1% (the Corsair over the Navigator the highest, a point over the 57 before). */
+ *  48–52%, the pairs 42.9–58.1% (the Corsair over the Navigator the highest, a point over the 57 before).
+ *  2026-10-10 (owner: «чини атаку всем» — a path's moves land their book's numbers on the sand too, no longer ×0.4 of
+ *  level 60's old boarding tempo): `balance-arena.ts 160 --paths 5` and `--paths 4` — the means 48–52%, the worst pair
+ *  (the Corsair over the Navigator) 59%. */
 export const ARENA_PATH: Partial<Record<CaptainId, Partial<Prims>>> = {
-  corsair: { atk: 4, def: 1 }, smuggler: { atk: 4, def: 2 }, reaver: { atk: -2, def: -3 }, navigator: { atk: 2, def: 0 }, drowned: { atk: 4, def: -1 }, admiral: { atk: 2, def: -5 },
+  corsair: { atk: 4, def: 0 }, smuggler: { atk: 4, def: 2 }, reaver: { atk: -2, def: -3 }, navigator: { atk: 2, def: 0 }, drowned: { atk: 4, def: -1 }, admiral: { atk: 2, def: -5 },
 };
 
 /** A path's standard primaries at the cap: its start and its odds over the level-ups, whole points by the largest

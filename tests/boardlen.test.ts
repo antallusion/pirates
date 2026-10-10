@@ -213,6 +213,13 @@ test('docs/25 item 52: from level 40 the quarterdeck\'s flag — a stack on hers
   const holder = bt.stacks.find((x) => x.side === 0 && x.count > 0)!;
   holder.hex = tacFlagHex(1);
   for (const x of bt.stacks) if (x !== holder) bt.heroes[0].fx.push({ id: 'test_hold', until: 99, on: x.id, foe: x.side === 1, mods: { still: true } });
+  // The captains' books shut (2026-10-10: her orders land as her book says, no longer at the boarding's ×0.5 of level 45,
+  // and they routed the frozen side before the flag's second round): the flag alone decides here.
+  for (const h of bt.heroes) {
+    h.spells = [];
+    h.innate = 2;
+    h.ult = 2;
+  }
   const rng = new Rng(7);
   for (let i = 0; i < 400 && !bt.over; i++) aiAct(bt, 0, rng);
   assert.equal(bt.over?.why, 'flag');
