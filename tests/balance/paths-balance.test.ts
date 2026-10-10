@@ -23,7 +23,7 @@ import type { TacBattle, TacSideInput } from '../../server/src/game/tacbattle.ts
 import { PATHS, captainAt, playBoard, playerArmy, side, sidesAt } from './boardlen.ts';
 import { BAND_LEVELS, movesAt, roleOf } from './boardskill.ts';
 
-const N = 30;
+const N = 50;
 const SALT = 91000;
 const LEVELS = [5, 15, 30, 45, 60];
 
@@ -112,8 +112,8 @@ test('docs/25 item 70: the Navigator\'s squall — her stack\'s blows by her mov
 test('docs/25 item 70: a common heal stands up no more than 15% of a stack in a boarding (35–40% before at levels 30–60)', () => {
   const a = side(playerArmy(40), captainAt('drowned', 40, 3), 'drowned', true), b = side(playerArmy(40), captainAt('admiral', 40, 4), 'admiral', true);
   const board = newBattle(a, b, 3, 0, new Rng(3), { len: 'board' }), land = newBattle(a, b, 3, 0, new Rng(3));
-  assert.equal(commonHeal(board, 'brine_mend', 3), TAC_HEAL.brine_mend.board);
-  assert.equal(commonHeal(land, 'brine_mend', 3), TAC_HEAL.brine_mend.cap);
+  assert.equal(commonHeal(board, 'brine_mend', 4), TAC_HEAL.brine_mend.board);
+  assert.equal(commonHeal(land, 'brine_mend', 4), TAC_HEAL.brine_mend.cap);
   assert.ok(Math.abs(commonHeal(board, 'brine_mend', 1) - 0.12) < 1e-9);
 });
 

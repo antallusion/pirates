@@ -117,7 +117,7 @@ export const TAC_AI_DELAY = 0.35;
  *    `rounds` whole rounds takes the ship (item 52).
  *  - `quick`: a quick fight is offered at once when her side is this many times the other's strength (item 49). */
 export const TAC_LEN = {
-  tempo: [[1, 2], [10, 1.9], [20, 1.15], [30, 0.74], [40, 0.57], [50, 0.47], [60, 0.4]] as [number, number][],
+  tempo: [[1, 2.4], [10, 2.4], [20, 1.3], [30, 0.74], [40, 0.57], [50, 0.47], [60, 0.4]] as [number, number][],
   blastMax: 1,
   open: [[1, 1], [10, 0.85], [20, 0.7], [30, 0.65], [40, 0.62], [50, 0.66], [60, 0.7]] as [number, number][],
   npc: [[1, 1.8], [10, 2.2], [20, 2.8], [30, 2.8], [40, 1.9], [60, 1.15]] as [number, number][],
