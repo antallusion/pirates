@@ -822,7 +822,9 @@ export class Game {
           a.state.speed *= 0.6;
           b.state.speed *= 0.6;
         } else if (closing > 3) {
-          this.ram(a, b, closing);
+          // The rammer is the ship under Ramming Speed if one is (the pair comes in the order of their ids).
+          if (b.hasEffect('ramming_speed') && !a.hasEffect('ramming_speed')) this.ram(b, a, closing);
+          else this.ram(a, b, closing);
           a.state.speed *= 0.4;
           b.state.speed *= 0.6;
         }
