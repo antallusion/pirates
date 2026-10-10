@@ -394,7 +394,9 @@ test('playthrough: a lost trial\'s dead count for nothing — no «too many dead
   const bt = ship.boarding!.fight.tac!;
   // Half her men fall on the blunted steel, the crew's second counting them as they go…
   ship.crew = Math.floor(ship.crew / 2);
-  steps(game, 21);
+  // (docs/25 item 70: the trial's side may open with an order and a step, and her stack's turn waits for her — up to
+  // its 30 s — before the first blow lands; the dead are counted as that blow falls.)
+  for (let i = 0; i < 40 * 20 && co.voyageLost === 0 && !bt.over; i++) steps(game, 1);
   assert.ok(co.voyageLost > 0, 'the dead counted as they fell');
   // …then she yields: the trial is lost.
   act(bt, 0, { a: 'surrender' }, game.now, new Rng(1));

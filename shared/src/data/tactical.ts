@@ -18,10 +18,15 @@ export const TAC_H = 9;
 export const TAC_GAP = 5;
 /** Seconds a captain has for each of his stacks' turns at the top (from level 31); then the stack defends. */
 export const TAC_TURN = 30;
-/** docs/25 item 48 (owner, 2026-10-09: «на низких 1 минуты норма»): a stack's turn by the battle's level — 15 s at
- *  levels 1–10, 20 s at 11–30, 30 s from 31. A battle of no level (a test's bare armies) keeps the 30 s. */
+/** docs/25 item 48 (owner, 2026-10-09: «на низких 1 минуты норма»): a stack's turn by the battle's level — 10 s at
+ *  levels 1–10, 20 s at 11–30, 30 s from 31. A battle of no level (a test's bare armies) keeps the 30 s. docs/25 item
+ *  70: 15 → 10 s at 1–10. The time model's decision (tests/balance/boardlen.ts HUMAN_DECIDE, 6 s a stack) sits inside
+ *  it, and a low stack's choice is the smallest of all: four of hers against four, three or four orders and two pages,
+ *  no ultimate — some ten choices against sixteen at level 30 and nineteen at 55, so by Hick's law (a + b·log2(n+1))
+ *  its decision is a tenth shorter than at level 30, never longer. The modelled mean is the same (its turns are 6 s);
+ *  a slow captain's worst is cut by a third. */
 export function tacTurnSecs(level: number): number {
-  return level <= 0 ? TAC_TURN : level <= 10 ? 15 : level <= 30 ? 20 : TAC_TURN;
+  return level <= 0 ? TAC_TURN : level <= 10 ? 10 : level <= 30 ? 20 : TAC_TURN;
 }
 /** docs/25 item 48: each captain's chess clock over a whole boarding — a minute at levels 1–10, a minute more every ten
  *  levels, six at 51–60. A turn's seconds come off it; once it is spent her stacks' turns go to defence. With it no
@@ -39,25 +44,33 @@ export function tacBankSecs(level: number): number {
  *  - `late`: the last round an ally arriving mid-battle comes aboard at (as a round opens);
  *  - `foe`: item 66 — a ship of the sea, a legend, the raid's tier or a citadel's garrison against a group grows by
  *    `share(level)` of the strength her allies brought (the square law, sideStrength), and `order(level)` more for each
- *    ally's book and path;
+ *    ally's book and path. docs/25 item 70: the share 1 → 1.6 at 11 and 1.4 at 15 (three of level 12 lost 23% of their
+ *    men each, the boarder 8%, against a lone captain's 51%; now 28% and 15%), and `paceSea` 1.9 → 2.4 at 15 and 1.7 →
+ *    2.2 at 18 (two against the sea took as long as one; now 3–4% quicker);
  *  - `pace`: a group's blows and orders land harder by `pace(level)` an ally on the field (both sides counted), so its
  *    rounds are fewer than one captain's and its many stacks keep §1.2's length; `paceSea` against the sea's mind (its
  *    fights shorter, as item 50 has them: a group of the low levels is quicker than one captain alone);
  *  - `echo`: item 65 — the second captain of one path to give her path's page or move in a round gives it at ×echo,
  *    the third at its square (her foe has just read that book); and what another captain of her side laid of the same
  *    page holds once (tacbattle.ts layFx: the later renews it, it does not stack). Three of one path weigh less than a
- *    mixed group. */
+ *    mixed group. docs/25 item 70: by level (`tacEcho`) — ×0.35 to level 22, ×0.6 from 30: in the short fights of the
+ *    low levels three Corsairs' blows and three Navigators' double turns beat an average mixed group 61–74% at ×0.6
+ *    (tools/balance-group.ts --roles); an echoed «another turn» is given that share of the times. */
 export const TAC_GROUP = {
   range: 600,
   side: 3,
   bring: 2,
   bringFrom: 11,
   late: 3,
-  echo: 0.6,
-  foe: { share: [[1, 0.7], [10, 0.7], [11, 1], [20, 1], [30, 0.9], [60, 1]] as [number, number][], order: [[1, 0], [30, 0.15], [60, 0.3]] as [number, number][] },
+  echo: [[1, 0.35], [22, 0.35], [30, 0.6], [60, 0.6]] as [number, number][],
+  foe: { share: [[1, 0.7], [10, 0.7], [11, 1.6], [15, 1.4], [20, 1.1], [30, 0.9], [60, 1]] as [number, number][], order: [[1, 0], [30, 0.15], [60, 0.3]] as [number, number][] },
   pace: [[1, 2.2], [10, 1.8], [20, 1], [30, 0.4], [60, 0.2]] as [number, number][],
-  paceSea: [[1, 2.5], [10, 2.2], [20, 1.6], [30, 0.8], [60, 0.7]] as [number, number][],
+  paceSea: [[1, 2.5], [10, 2.2], [15, 2.4], [20, 2], [30, 0.8], [60, 0.7]] as [number, number][],
 };
+/** docs/25 items 65 and 70: the echo of a second captain of one path at a boarding's level (TAC_GROUP.echo). */
+export function tacEcho(level: number): number {
+  return tacLevel(TAC_GROUP.echo, Math.max(1, level));
+}
 /** docs/25 block Е: the lift on a boarding's blows and orders with `allies` allied captains on the field (both sides;
  *  `sea`: against the sea's mind, `paceSea`). */
 export function tacGroupPace(level: number, allies: number, sea = false): number {
@@ -106,10 +119,10 @@ export const TAC_AI_DELAY = 0.35;
  *    `rounds` whole rounds takes the ship (item 52).
  *  - `quick`: a quick fight is offered at once when her side is this many times the other's strength (item 49). */
 export const TAC_LEN = {
-  tempo: [[1, 2], [10, 1.9], [20, 1.15], [30, 0.74], [40, 0.57], [50, 0.47], [60, 0.4]] as [number, number][],
+  tempo: [[1, 2.4], [10, 2.4], [20, 1.3], [30, 0.74], [40, 0.57], [50, 0.47], [60, 0.4]] as [number, number][],
   blastMax: 1,
-  open: [[1, 1], [10, 0.85], [20, 0.7], [30, 0.65], [40, 0.6], [50, 0.58], [60, 0.58]] as [number, number][],
-  npc: [[1, 1.8], [30, 1.8], [60, 1.15]] as [number, number][],
+  open: [[1, 1], [10, 0.85], [20, 0.7], [30, 0.65], [40, 0.62], [50, 0.66], [60, 0.7]] as [number, number][],
+  npc: [[1, 1.8], [10, 2.2], [20, 2.8], [30, 2.8], [40, 1.9], [60, 1.15]] as [number, number][],
   npcFewer: 2,
   fatigue: { from: 8, step: 0.15 },
   flag: { level: 40, rounds: 2 },

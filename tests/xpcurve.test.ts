@@ -214,7 +214,9 @@ test('the boarding battle on the hexes: its lesson a bonus by the share cut down
   game.npcs.get(npc.id)!.active = true;
   npc.input = { rudder: 0, sailTarget: 0 };
   npc.state.speed = 0;
-  npc.crew = 30;
+  // (docs/25 item 70: the sea's captain of a ⚓5 brig fights at hero level 28 in his kit, and since the paths were evened
+  // level by level a bare level-22 captain no longer carries 30 of his men: 22 — the lesson and the prize are the point)
+  npc.crew = 22;
   game.grid.upsert(npc.id, npc.state.x, npc.state.y);
   c.push({ t: 'board', target: npc.id, aggression: 'standard' });
   const bt = ship.boarding?.fight.tac;
