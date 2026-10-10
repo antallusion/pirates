@@ -1,0 +1,499 @@
+/* GRAVETIDE · the phone fit (docs/23, owner 2026-10-10: «на мобиле выбор капитанов начальный экран ужасный и вообще
+   много чего ужасно сверстано, слишком все большое, не видно нифига. должно помещаться без прокрутов всяких»; and the
+   same day: «даже на самом маленьком экране 270 пикселей телефоне андроиде все должно быть видно идеально и со всем можно
+   было бы взаимодействовать. может просто резиновый дизайн сделать»).
+   Loaded last (index.html). A phone held sideways — a screen 520 px tall or less — gets fluid phone sizes: one unit
+   --u grows from 0 at a 270 px tall screen to 1 px at 360 px and over, and every size below is a calc() on it — taps
+   32 → 36–38 px, text 10–10.5 → 12.5 px, headings 13.5 → 16.5 px, paddings 4 → 8 px. Windows take the whole screen;
+   what would still scroll is laid out in pages (kit/fit.ts). Measured by tools/mobile/fit/audit.mjs at 480×270 …
+   915×412; the desk and the tablet keep their own sizes. */
+
+@media (max-height: 520px) {
+  :root {
+    --u: clamp(0px, (100dvh - 270px) / 90, 1px);
+    --f-tap: calc(32px + 4 * var(--u));
+    --f-btn: calc(32px + 6 * var(--u));
+    --f-btn2: calc(32px + 8 * var(--u));
+    --f-tab: calc(36px + 8 * var(--u));
+    --f-head: calc(32px + 8 * var(--u));
+    --f-fs: calc(10.5px + 2 * var(--u));
+    --f-fs-s: calc(10px + 1 * var(--u));
+    --f-fs-m: calc(11px + 2 * var(--u));
+    --f-fs-h: calc(13.5px + 3 * var(--u));
+    --f-fs-t: calc(14.5px + 2.5 * var(--u));
+    --f-ico: calc(18px + 4 * var(--u));
+    --f-gap: calc(3px + 3 * var(--u));
+    --f-pad: calc(4px + 4 * var(--u));
+    --f-rail: calc(66px + 10 * var(--u));
+  }
+}
+
+/* ================================================================== the captain's choice (captain.ts) */
+/* The desk keeps its look; the new pieces are the phone's. */
+.captain-card .cc-role, .captain-card .pm-short, .cd-start-s { display: none; }
+@media (max-height: 520px) and (min-width: 460px) {
+  #screen-captain { overflow: hidden; align-items: stretch; }
+  .skinned #screen-captain > .captain-wrap { border-width: calc(6px + 4 * var(--u)); border-image-width: calc(6px + 4 * var(--u)); }
+  #screen-captain > .captain-wrap {
+    width: 100vw; height: 100dvh; max-width: none; margin: 0; overflow: hidden;
+    padding: var(--f-pad) max(calc(4px + 6 * var(--u)), env(safe-area-inset-right)) var(--f-pad) max(calc(4px + 6 * var(--u)), env(safe-area-inset-left));
+    display: grid; gap: var(--f-gap) calc(6px + 4 * var(--u));
+    grid-template-columns: minmax(0, 0.74fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: 'title detail' 'list detail';
+  }
+  .captain-wrap h2.title-sm { grid-area: title; margin: 0; font-size: min(17px, calc(12.5px + 5 * var(--u))) !important; line-height: 1.2; justify-self: start; }
+  .skinned .captain-wrap h2.title-sm { border-width: 5px calc(14px + 10 * var(--u)); border-image-width: 5px calc(14px + 10 * var(--u)); padding: 0 2px; max-width: 100%; }
+  /* all six at once: two columns of three */
+  .captain-list { grid-area: list; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: var(--f-gap); overflow: hidden; min-height: 0; flex-direction: initial; }
+  /* the portrait fades in on the card's right, the words run its whole width */
+  .captain-card { position: relative; min-height: var(--f-tap); min-width: 0; overflow: hidden; display: block; padding: calc(3px + 2 * var(--u)) calc(4px + 3 * var(--u)); }
+  .captain-card .portrait { position: absolute; top: 0; right: 0; bottom: 0; width: 52%; height: auto; border: 0; background-position: center 18%; opacity: 0.7; -webkit-mask-image: linear-gradient(90deg, transparent, #000 60%); mask-image: linear-gradient(90deg, transparent, #000 60%); }
+  .captain-card.active .portrait { opacity: 0.95; }
+  .captain-card .cc-t { position: relative; min-width: 0; display: flex; flex-direction: column; gap: 1px; text-shadow: 0 1px 2px #000, 0 0 6px #000; }
+  .captain-card .arch { font-size: calc(12px + 2 * var(--u)); line-height: 1.15; }
+  .captain-card .nm { display: none; }
+  .captain-card .cc-role { display: block; color: var(--bone); font: 500 calc(10px + 1.5 * var(--u))/1.22 var(--sans); }
+  .captain-card .premium { margin-top: auto; font: 600 var(--f-fs-s)/1.2 var(--sans); letter-spacing: 0.04em; }
+  .captain-card .pm-long { display: none; }
+  .captain-card .pm-short { display: inline; }
+  .captain-card.active { box-shadow: inset 0 0 0 1px var(--brass); }
+  /* the chosen one: the key facts beside the list, her portrait faded behind them, the order at the foot */
+  .captain-detail { grid-area: detail; position: relative; display: flex; flex-direction: column; min-height: 0; overflow: hidden; gap: 0;
+    background: linear-gradient(90deg, rgba(10, 9, 8, 0.96) 40%, rgba(10, 9, 8, 0.72)), var(--cd-art, none) right 15% / auto 100% no-repeat; border: 1px solid rgba(140, 107, 58, 0.35); padding: calc(3px + 5 * var(--u)) var(--f-pad); }
+  .captain-detail .cd-art, .captain-detail .cd-bio, .captain-detail .cd-fav, .captain-detail .ability small, .captain-detail .cd-cd, .captain-detail .cd-start-l { display: none; }
+  .captain-detail .cd-text { display: flex; flex-direction: column; gap: calc(1px + 4 * var(--u)); min-height: 0; flex: 1 1 auto; }
+  .captain-detail h3 { font-size: var(--f-fs-h); line-height: 1.1; }
+  .captain-detail .epithet { font-size: var(--f-fs-m); line-height: 1.2; margin-top: -2px; }
+  .captain-detail p { margin: 0; }
+  .captain-detail .cd-play { font: 500 var(--f-fs)/1.28 var(--sans) !important; color: var(--bone); opacity: 0.9; }
+  .captain-detail .ability { margin: 0; padding: 0 0 0 6px; overflow: visible; }
+  .captain-detail .cd-passive b { font: 600 var(--f-fs)/1.28 var(--sans); color: var(--gold); }
+  .captain-detail .cd-abils { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(2px + 2 * var(--u)) 6px; }
+  .captain-detail .cd-abils .ability { display: flex; align-items: center; gap: 4px; min-width: 0; padding: 0; border: 0; }
+  .captain-detail .cd-abils .ab-ico { float: none; width: calc(20px + 6 * var(--u)); height: calc(20px + 6 * var(--u)); margin: 0; flex: none; }
+  .captain-detail .cd-abils .key { flex: none; min-width: 15px; margin: 0; font-size: var(--f-fs-s); line-height: 14px; }
+  .captain-detail .cd-abils b { font: 600 var(--f-fs)/1.2 var(--sans); min-width: 0; }
+  .captain-detail .cd-start { font: 500 var(--f-fs)/1.28 var(--sans) !important; color: var(--fog); }
+  .captain-detail .cd-start-s { display: inline; }
+  .captain-detail .cd-foot { margin-top: auto; display: flex; flex-direction: column; gap: calc(2px + 3 * var(--u)); }
+  .captain-detail .cd-name { display: flex; align-items: center; gap: 6px; margin: 0; font: 500 var(--f-fs-s) var(--sans); color: var(--fog); }
+  .captain-detail .cd-name > span { flex: none; }
+  .captain-detail .cd-name input { flex: 1 1 auto; min-width: 0; margin: 0; height: var(--f-tap); padding: 2px 8px; font-size: var(--f-fs-m); }
+  .captain-detail .pick-bar { position: static; margin: 0; padding: 0; background: none; display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; }
+  .captain-detail .pick-bar label.know-sea { flex: 1 1 auto; min-width: 0; min-height: var(--f-tap); gap: 5px; }
+  .captain-detail .pick-bar label.know-sea input { width: 16px; height: 16px; flex: none; }
+  .captain-detail .pick-bar label.know-sea b { font-size: var(--f-fs); }
+  .captain-detail .pick-bar label.know-sea small { font-size: var(--f-fs-s); }
+  .captain-detail .pick-bar .btn { flex: 0 0 auto; min-height: var(--f-btn); font-size: var(--f-fs-m); padding-inline: calc(2px + 6 * var(--u)); }
+  .captain-detail .pick-bar label.know-sea span { line-height: 1.12; }
+}
+
+/* ================================================================== windows and sheets on a phone held sideways */
+@media (max-height: 520px) {
+  /* The kit's own sizes, fluid. */
+  #modal, .k-sheet-root { --k-h-1: var(--f-tap); --k-h-2: var(--f-btn); --k-h-3: var(--f-btn2); --k-fs-1: var(--f-fs-s); --k-fs-2: var(--f-fs); --k-fs-3: var(--f-fs-m); --k-fs-4: var(--f-fs-h); --k-sp-2: calc(5px + 3 * var(--u)); --k-sp-3: calc(6px + 4 * var(--u)); --k-sp-4: calc(8px + 4 * var(--u)); }
+  /* the window takes the whole screen: the sea above a sheet was 10 % of the height lost to every page */
+  #modal-panel { height: 100dvh; font-size: var(--f-fs); }
+  .skinned #modal-panel { border-width: calc(5px + 3 * var(--u)) calc(5px + 3 * var(--u)) 0; border-image-width: calc(5px + 3 * var(--u)) calc(5px + 3 * var(--u)) 0; }
+  #modal-panel .w-grip { height: 6px; padding-top: 1px; }
+  #modal-panel .w-grip i { height: 3px; }
+  .w-head.modal-head, #modal-panel > .modal-head:not(.w-head) { min-height: var(--f-head); padding-right: calc(var(--f-btn) + 8px); }
+  #modal-panel .x-btn { width: var(--f-btn); height: var(--f-btn); top: 1px; right: 2px; }
+  .w-title, .skinned .w-head h2.w-title { font-size: var(--f-fs-t); }
+  .w-crest { width: calc(18px + 6 * var(--u)); height: calc(18px + 6 * var(--u)); }
+  .w-fig { height: calc(22px + 4 * var(--u)); padding: 0 calc(4px + 3 * var(--u)); font-size: var(--f-fs); }
+  .w-fig-ico { width: calc(13px + 3 * var(--u)); height: calc(13px + 3 * var(--u)); }
+  /* the rail of places, narrower and lower */
+  .w-rail { width: var(--f-rail); gap: 2px; padding: 2px; }
+  #modal-panel[data-modal="hero"] .w-rail { width: calc(var(--f-rail) + 16px - 6 * var(--u)); }
+  .w-tab { height: var(--f-tab); font-size: var(--f-fs-s); gap: 0; letter-spacing: 0; }
+  .w-tab-ico { width: var(--f-ico); height: var(--f-ico); }
+  /* the gold «В море» keeps its word whole (its 15 px line sat in a 10 px box) */
+  .w-tab--go { min-height: calc(var(--f-tab) + 2px); padding: 2px; }
+  .w-tab--go .w-tab-l { line-height: 1.2; overflow: visible; }
+  .w-tab--go .w-tab-ico { width: var(--f-ico); height: var(--f-ico); }
+  /* the second row: chips a finger tall; a long row keeps the words of the lit chip only (the rest: their icons, the
+     name in the long-press hint) — it ran 1119 px in a 528 px row on 640×360 */
+  .w-chips { gap: calc(2px + 2 * var(--u)); padding: calc(2px + 1 * var(--u)) var(--f-pad); }
+  .w-chip { min-height: var(--f-tap); padding: 0 calc(6px + 3 * var(--u)) 0 calc(4px + 2 * var(--u)); font-size: var(--f-fs); gap: 4px; }
+  .w-chip-ico { width: var(--f-ico); height: var(--f-ico); }
+  .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:not(.on):has(.w-chip-ico) > .w-chip-l { display: none; }
+  .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:not(.on):has(.w-chip-ico) { padding: 0; min-width: var(--f-tap); justify-content: center; }
+  /* the page */
+  #modal-panel .modal-body { font-size: var(--f-fs); line-height: 1.33; }
+  #modal-panel h3 { font-size: var(--f-fs-h); }
+  #modal-panel h4 { font-size: calc(var(--f-fs-h) - 2px); }
+  #modal-panel .btn { min-height: var(--f-tap); font-size: var(--f-fs); }
+  #modal-panel .btn.btn-small { min-height: var(--f-tap); }
+  .w-row { min-height: calc(var(--f-tap) + 4px); padding: 1px 4px; gap: calc(4px + 2 * var(--u)); }
+  .w-row-b > .k-btn { min-width: calc(48px + 8 * var(--u)); padding: 0 calc(5px + 3 * var(--u)); }
+  .w-row-ico { width: calc(22px + 6 * var(--u)); height: calc(22px + 6 * var(--u)); }
+  .w-row-t > b { font-size: var(--f-fs-m); }
+  .w-sec { margin: calc(4px + 4 * var(--u)) 0 calc(2px + 2 * var(--u)); }
+  .w-quick { gap: var(--f-gap); margin-bottom: var(--f-pad); }
+  .w-qbtn .k-btn-ico { width: var(--f-ico); height: var(--f-ico); }
+  .w-tile { min-height: calc(56px + 16 * var(--u)); padding: 3px; }
+  .w-tile-ico { width: calc(28px + 8 * var(--u)); height: calc(28px + 8 * var(--u)); }
+  .k-sheet-body { font-size: var(--f-fs); }
+
+  /* ---------- the pager (kit/fit.ts): a page that would scroll is laid out in pages side by side */
+  .fit-paged { overflow: hidden !important; column-count: var(--fit-cols, 1); column-gap: 16px; column-fill: auto; padding-left: 8px !important; padding-right: 8px !important; overscroll-behavior: contain; }
+  .fit-paged.fit-flow { display: block !important; }
+  .fit-paged.fit-flow > * + * { margin-top: var(--fit-gap, 0px); }
+  .fit-paged .w-row, .fit-paged .q-card, .fit-paged .talent, .fit-paged .w-tile, .fit-paged tr, .fit-paged li, .fit-paged .ability, .fit-paged .w-wb, .fit-paged .w-quick, .fit-paged .w-sec, .fit-paged h3, .fit-paged h4 { break-inside: avoid; }
+  .fit-paged .w-sec, .fit-paged h3, .fit-paged h4 { break-after: avoid; }
+  .fit-pager { flex: none; display: flex; align-items: center; justify-content: center; gap: calc(8px + 4 * var(--u)); height: calc(var(--f-tap) + 4px); border-top: 1px solid rgba(140, 107, 58, 0.3); background: rgba(8, 8, 9, 0.6); }
+  .fit-pg-b { width: calc(48px + 8 * var(--u)); height: var(--f-tap); display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--k-brass-dim); border-radius: var(--k-r-1); background: linear-gradient(180deg, #2a2521, #17140f); color: var(--k-gold); font: 600 calc(18px + 4 * var(--u))/1 var(--k-font-serif); cursor: pointer; touch-action: manipulation; }
+  .fit-pg-b:disabled { opacity: 0.35; cursor: default; }
+  .fit-pg-n { min-width: 40px; text-align: center; font: 600 var(--f-fs) var(--k-font-sans); color: var(--k-bone); font-variant-numeric: tabular-nums; }
+
+  /* ---------- the older windows' heads and tabs: one band, the line under the name goes to the desk */
+  #modal-panel > .modal-head:not(.w-head) { flex-wrap: nowrap; padding-top: 0; padding-bottom: 0; }
+  #modal-panel > .modal-head:not(.w-head) .sub, #modal-panel > .modal-head:not(.w-head) > p, #modal-panel > .modal-head:not(.w-head) > .muted { display: none; }
+  .skinned #modal-panel > .modal-head:not(.w-head) h2 { font-size: var(--f-fs-t); white-space: nowrap; border-width: calc(4px + 2 * var(--u)) 26px; border-image-width: calc(4px + 2 * var(--u)) 26px; }
+  #modal-panel .tabs { padding: 0 4px; gap: 2px; min-height: 0; }
+  #modal-panel .tabs .tab, body.touch #modal-panel .tabs .tab { min-height: var(--f-tap); padding: 0 calc(5px + 4 * var(--u)); font-size: var(--f-fs-s); letter-spacing: 0.02em; display: inline-flex; align-items: center; }
+  #modal-panel .tabs .tab .ico { width: calc(14px + 4 * var(--u)); height: calc(14px + 4 * var(--u)); margin-right: 4px; vertical-align: -4px; }
+
+  /* ---------- the page's parts */
+  #modal-panel .card, .k-sheet .card { padding: calc(3px + 3 * var(--u)) calc(5px + 3 * var(--u)); margin-bottom: var(--f-gap); }
+  #modal-panel .card h4, .k-sheet .card h4 { font-size: calc(var(--f-fs-h) - 1.5px); margin-bottom: 2px; }
+  #modal-panel .card p, .k-sheet .card p { font-size: var(--f-fs-m); line-height: 1.28; margin-bottom: calc(2px + 2 * var(--u)); }
+  #modal-panel .card h4 .ico-md { width: calc(20px + 6 * var(--u)); height: calc(20px + 6 * var(--u)); margin: -2px 6px 2px 0; }
+  #modal-panel p { margin-top: 0; margin-bottom: calc(3px + 2 * var(--u)); }
+  #modal-panel ul { margin: 2px 0 calc(3px + 3 * var(--u)); padding-left: 16px; }
+  #modal-panel .cols { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(5px + 3 * var(--u)); }
+  /* painted banners shrink to a strip: the words and the buttons are what a phone needs on its one screen */
+  #modal-panel .card-art { height: calc(32px + 12 * var(--u)); margin-bottom: 4px; }
+  .hol-card .hol-art { aspect-ratio: auto; height: calc(32px + 12 * var(--u)); }
+  #modal-panel table.grid td, #modal-panel table.grid th { padding: 2px 4px; font-size: var(--f-fs); }
+
+  /* ---------- small words and small taps: no word under 10 px at 270 nor under 11 at 360 (the «small» of a page was
+     10.4 px, the tags 9 px, the tiles' names 10 px) */
+  #modal-panel small, .k-sheet small, #board-tac small, #advcard small, #lairchest small, #board-offer small, #encounter small, #surrender small { font-size: max(var(--f-fs-s), 0.83em); }
+  .tag, .talent .tag, .hx-otag .tag, .pb-tags .tag { font-size: var(--f-fs-s); }
+  .stat-l { font-size: var(--f-fs-s); letter-spacing: 0.03em; }
+  .tb-store, .bk-will .tb-store { font-size: var(--f-fs-s); }
+  .tb-chip-men { font-size: var(--f-fs-s); height: 16px; line-height: 16px; }
+  .tb-rs i { font-size: var(--f-fs-s); line-height: 14px; }
+  body.simple #touch > #tc-ammo .tc-ammo-n, #touch > .tc-act .tc-act-more { font-size: var(--f-fs-s); }
+  .tal-main .tier-label, #modal-panel .tier-label { font-size: var(--f-fs-s); }
+  .army-slot > i.army-tier { font-size: var(--f-fs-s); }
+  #modal-panel label.check { min-height: var(--f-tap); display: flex; align-items: center; gap: 8px; }
+  /* the level's choice in the Hero tab: its words whole (they were clamped to two lines) */
+  .cap-body .hx-pick-t small { display: block; -webkit-line-clamp: unset; overflow: visible; }
+  /* the order book's six schools wrap to a second row instead of running sideways */
+  .cap-body .w-chips.hx-schools { flex-wrap: wrap; overflow: visible; }
+  /* the departure check: its list is the sheet's, not a box of its own */
+  .depart-panel .dp-list { overflow: visible; }
+  /* the pirate's chest */
+  #lairchest .lc-foot .btn { min-height: var(--f-tap); }
+  /* a mate's boarding offer */
+  .bo-x { width: var(--f-tap); height: var(--f-tap); }
+  .bo-st { width: var(--f-btn); height: var(--f-btn); }
+  .bo-st b { font-size: var(--f-fs-s); line-height: 13px; }
+  .bo-auto .bo-as { font-size: var(--f-fs-s); }
+}
+
+/* ================================================================== the title screen */
+/* the account's controls kept 30 and 28 px to fit at 360: fluid, a finger wide at every height */
+@media (max-height: 520px), (max-width: 699px) {
+  #screen-login .lang-switch .btn, #screen-login .login-panel:has(#login-account[open]) .lang-switch .btn { min-width: 40px; min-height: var(--f-tap, 36px); padding-top: 0; padding-bottom: 0; }
+  #screen-login #login-account summary, .login-account summary { min-height: var(--f-tap, 38px); }
+  #screen-login .login-panel input, #screen-login #login-account input { min-height: var(--f-tap, 38px); padding-top: 3px; padding-bottom: 3px; }
+  #screen-login .login-account form .row #forgot-btn { min-height: var(--f-tap, 36px); }
+  #screen-login .login-account form .row .btn { min-height: var(--f-tap, 38px); }
+}
+@media (max-height: 520px) {
+  #screen-login #login-account label { margin-bottom: 2px; }
+  #screen-login .login-panel label { font-size: var(--f-fs-s); }
+  #screen-login .login-panel #login-form .btn-primary { min-height: var(--f-btn2); }
+  #screen-login .login-panel .subtitle { font-size: var(--f-fs-m); }
+  #screen-login .login-panel .hint { font-size: var(--f-fs-s); }
+}
+
+/* ================================================================== the chat on a phone held sideways */
+/* It stood 116 px wide between the captain's frame and the minimap at 640×360 (the field 21 px, the tabs 17×22 px):
+   now a panel over the right of the sea, clear of the helm, its tabs, field and buttons a finger wide. */
+@media (max-height: 520px) {
+  #hud-chat #chat { left: max(calc(var(--sa-l) + 150px), 34vw); right: calc(var(--sa-r) + 6px); top: calc(var(--sa-t) + 6px); bottom: calc(var(--sa-b) + 6px); width: auto; height: auto; max-height: none; }
+  #hud-chat #chat-tabs { gap: 4px; }
+  #hud-chat #chat-tabs .ct, #hud-chat #chat-tabs .ct:not(.on) { min-height: var(--f-tap); min-width: var(--f-btn); padding: 0 8px; justify-content: center; }
+  #hud-chat #chat-tabs .ct .ico-sm { width: 18px; height: 18px; }
+  #hud-chat #chat-tabs .ct-n { font-size: var(--f-fs-s); min-width: 16px; height: 16px; line-height: 16px; }
+  #hud-chat .chat-x { width: var(--f-btn); height: var(--f-btn); }
+  #hud-chat .chat-emo-btn { width: var(--f-btn); height: var(--f-btn); }
+  #hud-chat #chat-input { min-height: var(--f-btn); font-size: var(--f-fs-m); }
+  #hud-chat .chat-send { height: var(--f-btn); }
+  #hud-chat #chat-emotes button { height: var(--f-btn); }
+  #hud-chat .cl-lv, #hud-chat .cl-tag, #hud-chat .cl-head time { font-size: var(--f-fs-s); }
+  #hud-chat .chat-unread { font-size: var(--f-fs-s); }
+}
+
+/* ================================================================== talents (talents.ts) on a phone held sideways */
+/* The rose stood 272 px over a single column and the tree ran 13 pages under it: its trees now stand in a small grid
+   down the left with the loadouts and the clean slate, the level and the points ride in the band, the chosen tree
+   pages beside them in two columns, each talent whole (its picture beside its name). */
+@media (max-height: 520px) and (min-width: 460px) {
+  #modal-panel[data-modal="talents"] .modal-body { display: grid; grid-template-columns: calc(108px + 24 * var(--u)) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: 'load main' 'side main' 'respec pager'; gap: var(--f-gap) calc(6px + 4 * var(--u)); overflow: hidden; padding: var(--f-pad); }
+  #modal-panel[data-modal="talents"] .tal-layout { display: contents; }
+  #modal-panel[data-modal="talents"] .tal-chips { position: absolute; z-index: 3; top: calc((var(--f-head) - 24px) / 2); left: calc(120px + 30 * var(--u)); right: calc(var(--f-btn) + 12px); height: 24px; gap: 4px; flex-wrap: nowrap; overflow: hidden; }
+  #modal-panel[data-modal="talents"] .chip-stat { padding: 1px 7px 1px 4px; font-size: var(--f-fs); }
+  #modal-panel[data-modal="talents"] .tal-loadout { grid-area: load; margin: 0; gap: 3px; display: grid; grid-template-columns: 1fr 1fr; }
+  #modal-panel[data-modal="talents"] .tal-loadout > .with-ico, #modal-panel[data-modal="talents"] .tal-loadout > .muted { display: none; }
+  #modal-panel[data-modal="talents"] .tal-loadout.muted { display: none; }
+  #modal-panel[data-modal="talents"] .tal-loadout .btn { min-height: var(--f-tap); padding: 0 2px; font-size: var(--f-fs-s); }
+  #modal-panel[data-modal="talents"] .tal-side { grid-area: side; min-height: 0; }
+  #modal-panel[data-modal="talents"] .tal-main { grid-area: main; min-height: 0; overflow-y: auto; }
+  #modal-panel[data-modal="talents"] .tal-respec { grid-area: respec; min-height: 0; align-self: end; }
+  #modal-panel[data-modal="talents"] .tal-main + .fit-pager { grid-area: pager; border-top: 0; background: none; }
+  #modal-panel[data-modal="talents"] .tal-respec .card { margin: 0; padding: 0; border: 0; background: none; }
+  #modal-panel[data-modal="talents"] .tal-respec .card > :not(.respec-btns) { display: none; }
+  #modal-panel[data-modal="talents"] .respec-btns { grid-template-columns: 1fr; gap: 3px; }
+  #modal-panel[data-modal="talents"] .respec-btns .btn { min-height: var(--f-btn); font-size: var(--f-fs-s); line-height: 1.15; padding: 0 3px; }
+  #modal-panel[data-modal="talents"] .respec-btns .btn:last-child { display: none; }
+  #modal-panel[data-modal="talents"] .tal-rules { display: none; }
+  #modal-panel[data-modal="talents"] .rose { width: auto; height: auto; display: grid; grid-template-columns: repeat(3, var(--f-tap)); gap: 2px; justify-content: center; border-radius: 0; background: none; box-shadow: none; }
+  #modal-panel[data-modal="talents"] .rose::before, #modal-panel[data-modal="talents"] .rose-core { display: none; }
+  #modal-panel[data-modal="talents"] .rose-node { position: relative; left: auto; top: auto; width: var(--f-tap); height: var(--f-tap); margin: 0; transform: none; }
+  #modal-panel[data-modal="talents"] .rose-node .rose-ico { inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); }
+  #modal-panel[data-modal="talents"] .rose-pts { font-size: var(--f-fs-s); min-width: 16px; height: 15px; line-height: 13px; padding: 0 3px; }
+  #modal-panel[data-modal="talents"] .rose-extra { grid-template-columns: 1fr 1fr; margin-top: var(--f-gap); gap: 3px; }
+  #modal-panel[data-modal="talents"] .rose-extra .btn { min-height: var(--f-tap); padding: 0 2px; gap: 2px; font-size: var(--f-fs-s); white-space: normal; line-height: 1.1; }
+  #modal-panel[data-modal="talents"] .rose-extra .btn .ico-sm { display: none; }
+  #modal-panel[data-modal="talents"] .tal-main.fit-paged { column-count: 2; column-gap: 16px; }
+  #modal-panel[data-modal="talents"] .tal-main .tier-row { display: block; }
+  #modal-panel[data-modal="talents"] .tal-main .talent { display: block; position: relative; margin: 0 0 4px; padding: 3px 5px; font-size: var(--f-fs); line-height: 1.26; }
+  #modal-panel[data-modal="talents"] .tal-main .talent-ico { float: left; width: calc(20px + 4 * var(--u)); height: calc(20px + 4 * var(--u)); margin: 0 5px 0 0; }
+  #modal-panel[data-modal="talents"] .tal-main .talent-top { min-height: calc(20px + 4 * var(--u)); }
+  #modal-panel[data-modal="talents"] .tal-main .talent-top b { font-size: var(--f-fs-m); }
+  #modal-panel[data-modal="talents"] .tal-main .motto { display: none; }
+  #modal-panel[data-modal="talents"] .tal-main .tree-h { font-size: var(--f-fs-h); break-after: avoid; }
+  #modal-panel[data-modal="talents"] .tal-main .tree-h .ico-md { width: calc(20px + 6 * var(--u)); height: calc(20px + 6 * var(--u)); }
+  #modal-panel[data-modal="talents"] .tal-main .tier-label { break-after: avoid; margin: 2px 0; }
+}
+
+/* ================================================================== the premium shop (premium.ts) on a phone held sideways */
+@media (max-height: 520px) and (min-width: 460px) {
+  /* two cards a column-pair a page, each whole; the italic flavour line is the desk's */
+  .pm-body.fit-paged { column-count: 2 !important; }
+  .pm-body.fit-paged .pm-grid { display: block; }
+  .pm-body.fit-paged .pm-card { break-inside: avoid; margin-bottom: var(--f-gap); }
+  .pm-body .pm-note { display: none; }
+  .pm-card, .pm-card.pm-ship { grid-template-columns: calc(48px + 16 * var(--u)) minmax(0, 1fr); gap: 4px 8px; padding: var(--f-pad); }
+  .pm-art { width: calc(48px + 16 * var(--u)); height: calc(48px + 16 * var(--u)); }
+  .pm-hull { width: calc(48px + 16 * var(--u)); height: calc(34px + 10 * var(--u)); }
+  .pm-hull img { height: calc(48px + 16 * var(--u)); }
+  .pm-art .pm-face { width: calc(42px + 14 * var(--u)); height: calc(42px + 14 * var(--u)); }
+  .pm-name { font-size: var(--f-fs-h); }
+  .pm-buy { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: flex-end; gap: 8px; text-align: right; }
+  .pm-buy .pm-why { order: -1; margin-right: auto; text-align: left; }
+  .pm-buy .btn { min-height: var(--f-tap); min-width: 80px; }
+  .pm-price .dbl { font-size: var(--f-fs-h); }
+  .pm-list { font-size: var(--f-fs-h); break-after: avoid; }
+  .pm-gift, .pm-meta, .pm-why { font-size: var(--f-fs-s); }
+}
+
+/* ================================================================== sheets, cards and narrow rows on a phone held sideways */
+@media (max-height: 520px) {
+  /* the kit's sheet: the whole height when it needs it, a thinner grip and band */
+  .k-sheet { max-height: 100dvh; padding: 0 max(var(--f-pad), var(--sa-r, 0px)) calc(var(--f-pad) + var(--sa-b, 0px)) max(var(--f-pad), var(--sa-l, 0px)); }
+  .skinned .k-sheet.panel { border-width: calc(5px + 4 * var(--u)) calc(5px + 4 * var(--u)) 0; border-image-width: calc(5px + 4 * var(--u)) calc(5px + 4 * var(--u)) 0; }
+  .k-sheet-grip { height: calc(6px + 6 * var(--u)); }
+  .skinned .k-sheet .k-sheet-grip { margin-top: 0; }
+  .k-sheet-head { min-height: var(--f-head); }
+  .k-sheet-title { font-size: var(--f-fs-t); }
+  .k-sheet-x.k-btn--icon, .k-sheet-x { width: var(--f-btn); height: var(--f-btn); min-width: var(--f-btn); min-height: var(--f-btn); }
+  .k-sheet-foot { padding-top: var(--f-gap); gap: var(--f-gap); }
+  .k-sheet .btn, .k-sheet .btn.btn-small { min-height: var(--f-tap); }
+  /* the level's choice from below: two cards, each as tall as its words */
+  .lu-pick { min-height: 0; padding: var(--f-pad); gap: var(--f-gap); }
+  .lu-ico { width: calc(34px + 12 * var(--u)); height: calc(34px + 12 * var(--u)); }
+  .lu-t b { font-size: var(--f-fs-h); }
+  .lu-sub { margin-bottom: var(--f-gap); }
+  /* a list row's line under the name wraps rather than losing its end («в трюме 10 · скоропортящ…») */
+  .w-row-t > small { white-space: normal; text-overflow: clip; overflow: visible; }
+  /* settings: a row's name wraps rather than losing its end */
+  .opt-name { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.15; }
+  .opt-row { min-height: var(--f-btn2); padding: 0 var(--f-pad); }
+  /* a heading plate in a page wraps rather than losing its end («Вы ходите в одиноч…») */
+  #modal-panel .modal-body .title-sm, .skinned #modal-panel .modal-body .title-sm { white-space: normal; overflow: visible; text-overflow: clip; font-size: var(--f-fs-h) !important; border-width: calc(3px + 3 * var(--u)) calc(14px + 12 * var(--u)); border-image-width: calc(3px + 3 * var(--u)) calc(14px + 12 * var(--u)); }
+  /* the Throne's nine tabs: a finger wide each at any width */
+  .throne-win .tabs:has(.tab:nth-child(9)) .tab { min-width: var(--f-tap); min-height: var(--f-tap); padding: 0 calc(3px + 4 * var(--u)); }
+  .throne-win .tabs { flex-wrap: wrap; }
+  /* the adventure card folded: one row — its picture and name, its order, the cross — within the top band (it scrolled
+     2 px at 640×360 and 26 px at 480×270) */
+  #advcard .ac-card:not(.open) { display: flex; align-items: center; gap: calc(3px + 3 * var(--u)); padding: 2px calc(4px + 2 * var(--u)); }
+  #advcard .ac-card:not(.open) > .ac-head { flex: 1 1 auto; min-width: 0; }
+  #advcard .ac-card:not(.open) .enc-h { white-space: normal; overflow: visible; text-overflow: clip; font-size: var(--f-fs-m); line-height: 1.15; }
+  #advcard .ac-card:not(.open) > .ac-acts, #advcard .ac-card:not(.open) .ac-guard > .ac-acts { flex: 0 1 auto; margin: 0; }
+  #advcard .ac-card:not(.open) .ac-acts .btn { flex: 0 1 auto; }
+  #advcard .ac-card:not(.open) .ac-guard { margin: 0; padding: 0; border: 0; }
+  #advcard .ac-head { min-height: var(--f-tap); gap: calc(4px + 4 * var(--u)); }
+  #advcard .ac-head .ac-art { width: calc(22px + 6 * var(--u)); height: calc(22px + 6 * var(--u)); }
+  #advcard .ac-x { min-width: var(--f-tap); min-height: var(--f-tap); }
+  #advcard .ac-acts .btn { min-height: var(--f-tap); font-size: var(--f-fs); }
+}
+/* a phone narrower than 560 px held sideways: a long chip row keeps its pictures only, the lit one too (its border and
+   gold say which) — eleven chips and the lit one's word ran 433 px in a 404 px row at 480×270 */
+@media (max-height: 520px) and (max-width: 560px) {
+  .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:has(.w-chip-ico) > .w-chip-l { display: none; }
+  .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:has(.w-chip-ico) { padding: 0; min-width: var(--f-tap); justify-content: center; }
+}
+/* the captain's choice on the smallest phones (270–300 px tall): the epithet is the card's portrait's, the story a
+   line tighter, the order's note beside its word */
+@media (max-height: 300px) and (min-width: 460px) {
+  .captain-detail .epithet { display: none; }
+  .captain-detail .cd-play, .captain-detail .cd-start { line-height: 1.18 !important; }
+  .captain-detail .cd-passive b { line-height: 1.18; }
+  /* the tick's own word only: its note («skip the First Watch») ran under the order's button at 480×270 */
+  .captain-detail .pick-bar label.know-sea span { display: block; overflow: hidden; }
+  .captain-detail .pick-bar label.know-sea small { display: none; }
+}
+
+/* ================================================================== the sea's HUD below 360 px tall (seahud.css) */
+/* At 360 px and over it is as it was (phase 2's sizes); below, the helm, «Огонь», the buttons, the captain's frame and
+   the chart shrink with the screen (they covered half the sea at 480×270), and her mark's line gives its bars room. */
+@media (max-height: 520px) {
+  body.simple { --sea-pad: calc(6px + 4 * var(--u)); --sea-fire: calc(62px + 18 * var(--u)); --sea-btn: calc(38px + 10 * var(--u)); --sea-gap: calc(8px + 6 * var(--u)); --cs-face: calc(36px + 8 * var(--u)); --cs-bar: calc(76px + 24 * var(--u)); --mm: calc(66px + 20 * var(--u)); --stick: calc(88px + 24 * var(--u)); }
+  body.simple #tc-target .k-target { height: var(--f-tap); gap: calc(5px + 5 * var(--u)); padding: 0 calc(5px + 5 * var(--u)); }
+  body.simple #tc-target .k-target-name { min-width: 0; font-size: var(--f-fs-m); }
+  body.simple #tc-target .k-target-bars { flex: 0 1 calc(32px + 24 * var(--u)); min-width: 24px; }
+}
+@media (max-height: 520px) {
+  .skinned .throne-win .tabs:has(.tab:nth-child(8)) .tab { border-left-width: 3px; border-right-width: 3px; border-image-width: 6px 3px 0; }
+  .throne-win .tabs:has(.tab:nth-child(9)) { flex-wrap: nowrap; }
+}
+
+/* ================================================================== tabs that lived in a page ride in the band */
+/* The Throne's nine tabs and the shop's two stood at the top of their page: paged, they went away with page 1. On a
+   phone held sideways they stand in the window's band, right of its name, and stay whatever page is turned to. */
+@media (max-height: 520px) {
+  #modal-panel .throne-win > .tabs, #modal-panel .pm-body > .tabs { position: absolute; z-index: 4; top: 0; right: calc(var(--f-btn) + 8px); left: auto; height: var(--f-head); max-width: calc(100% - var(--f-btn) - 56px); margin: 0; padding: 0; border: 0; display: flex; align-items: center; flex-wrap: nowrap; gap: 2px; background: none; }
+  #modal-panel .throne-win > .tabs .tab, #modal-panel .pm-body > .tabs .tab { min-height: var(--f-tap); }
+  #modal-panel:has(.throne-win > .tabs) > .modal-head h2, #modal-panel:has(.pm-body > .tabs) > .modal-head h2 { max-width: calc(100vw - 480px); overflow: hidden; }
+}
+@media (max-height: 520px) and (max-width: 900px) {
+  /* a narrow band: the window's crest stands for its name (the tab that is lit says where she is) */
+  #modal-panel:has(.throne-win > .tabs) > .modal-head h2, #modal-panel:has(.pm-body > .tabs) > .modal-head h2 { font-size: 0 !important; max-width: none; padding-left: 4px; padding-right: 4px; border-width: 0; border-image: none; background: none; }
+  #modal-panel:has(.throne-win > .tabs) > .modal-head h2 > span, #modal-panel:has(.pm-body > .tabs) > .modal-head h2 > span { display: none; }
+}
+@media (max-height: 520px) {
+  /* in a paged page nothing small is split between two pages (a card's top on one page and its foot on the next) —
+     only what is taller than a page breaks */
+  .fit-paged :is(.card:not(:has(.card)), .hx-pick, .sk-card, .stat-tile, .help-row, .lu-pick, .pm-card, .tw-card, .dp-row, .opt-row, .army-slot, .gear-slot, .rs-card, .th-card, .adm-card, .cit-card, .ar-card, .deed-row, .w-wb-row, p, .btn) { break-inside: avoid; }
+}
+/* two columns a page (kit/fit.ts reads --fit-two) where the page is a list of short rows or cards: they read across the
+   landscape instead of as a tall stack (the journal's isles ran 21 pages in one column, 11 in two); the market's
+   rows, the rumours, the Throne's tiers and the paper doll keep one */
+@media (max-height: 520px) {
+  #modal-panel:is([data-modal="journal"], [data-modal="crew"], [data-modal="ship"], [data-modal="look"], [data-modal="options"], [data-modal="help"], [data-modal="tattoos"]) .modal-body:not(:has(table, .jr-side, .cols)),
+  .port-body:is([data-page="holdings"], [data-page="quests"], [data-page="harbour"], [data-page="charts"]):not(:has(.cols)),
+  .modal-body.tattoos,
+  .cap-body:has(> .sk-page) { --fit-two: 1; }
+  /* a row of two buttons or more wraps in a narrow column rather than running out of it */
+  .fit-paged :is(div, span, p):has(> .btn + .btn) { flex-wrap: wrap; }
+}
+@media (max-height: 520px) {
+  /* a task's card keeps its picture's room on the left (the phone's card padding took it, the picture lay over the name) */
+  #modal-panel .q-card { padding-left: calc(42px + 10 * var(--u)); }
+  #modal-panel .q-card > .q-ico { left: calc(5px + 3 * var(--u)); top: calc(5px + 3 * var(--u)); width: calc(30px + 6 * var(--u)); height: calc(30px + 6 * var(--u)); }
+}
+@media (max-height: 520px) {
+  /* her mark's name wraps in the line rather than losing its end («Цепь бух…» at every phone size) */
+  body.simple #tc-target .k-target-name { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.08; font-size: var(--f-fs); overflow-wrap: break-word; }
+}
+@media (max-height: 520px) {
+  /* the Throne's tabs in the band at every phone width: the lit one its picture and word, the others their picture
+     (at 740–812 px the words came back and «Колизей» stood past the screen's edge) */
+  .throne-win .tabs:has(.tab:nth-child(9)) .tab .ico-sm { display: inline-block; width: calc(18px + 4 * var(--u)); height: calc(18px + 4 * var(--u)); margin: 0; flex: none; }
+  .throne-win .tabs:has(.tab:nth-child(9)) .tab { justify-content: center; gap: 3px; flex: 0 0 auto; }
+  .throne-win .tabs .tab:not(.active) .th-tw { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+  .throne-win .tabs .tab:not(.active) .hx-dot { margin-left: 0; }
+  .th-rt > span { font-size: var(--f-fs-s); }
+  /* a task's name wraps to a third line rather than being clamped at two */
+  #modal-panel .q-t > b { -webkit-line-clamp: unset; line-clamp: unset; display: block; overflow: visible; }
+  /* the boarding's order chips in a creature's card a finger tall */
+  .tb-sps > .chip.tb-spc { min-height: var(--f-tap); }
+}
+@media (max-height: 520px) {
+  /* the departure check down to 480×270: each row one line high, its buy button beside it (a narrow phone put the
+     button under the words and the rows ran under the screen's foot) */
+  .confirm-panel.depart-panel { padding: calc(4px + 4 * var(--u)) var(--f-pad) var(--f-pad); }
+  .depart-panel .dp-row { flex-wrap: nowrap; min-height: calc(var(--f-tap) + 4px); gap: calc(4px + 4 * var(--u)); padding: 0 calc(4px + 4 * var(--u)); }
+  .depart-panel .dp-row .ico-md { width: calc(22px + 6 * var(--u)); height: calc(22px + 6 * var(--u)); }
+  .depart-panel .dp-text b { font-size: var(--f-fs-m); }
+  .depart-panel .dp-text .muted { font-size: var(--f-fs-s); }
+  .depart-panel .dp-buy, body.touch .depart-panel .dp-buy { width: auto; max-width: 48%; min-height: var(--f-tap); white-space: normal; line-height: 1.15; font-size: var(--f-fs); padding-block: 2px; }
+  .depart-panel .dp-none { width: auto; max-width: 40%; text-align: right; font-size: var(--f-fs-s); }
+  .depart-panel .dp-title { font-size: var(--f-fs-t); }
+  .depart-panel p.dp-lead, .depart-panel p.dp-warn { font-size: var(--f-fs); }
+  .depart-panel .k-sheet-foot > .k-btn { min-height: var(--f-btn); font-size: var(--f-fs); }
+}
+@media (max-height: 520px) {
+  /* the adventure card in the top band between the captain's frame and the chart at every width (it stood at 360 px
+     from the left: 124 px wide at 640×360 with its button past the screen, off the screen at 480×270) */
+  #advcard { left: calc(var(--sa-l) + var(--cs-face, 44px) + var(--cs-bar, 100px) + 74px); right: calc(var(--sa-r) + var(--mm, 86px) + 20px); width: auto; min-width: 0; max-width: 420px; }
+}
+@media (max-height: 520px) and (max-width: 560px) {
+  /* a narrow phone: her mark's line keeps its name, level and chance; the bars are on her card (a tap) */
+  body.simple #tc-target .k-target-bars { display: none; }
+  /* the Throne's lit tab is its picture too (the page's own heading names it) */
+  .throne-win .tabs .tab.active .th-tw { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+}
+@media (max-height: 520px) {
+  /* the boarding's end at sea, one band down to 480 px wide (it wrapped and «Дальше» went under its 64 px) */
+  .tb-banner.tb-end.sea { gap: 3px calc(6px + 8 * var(--u)); padding: 3px calc(6px + 4 * var(--u)); max-height: none; }
+  .tb-end.sea .tb-bsc { gap: 2px calc(6px + 8 * var(--u)); }
+  .tb-end.sea .tb-bsc > b { font-size: calc(15px + 5 * var(--u)); }
+  .tb-end.sea .tb-end-rows { gap: 3px calc(8px + 8 * var(--u)); }
+  .tb-end.sea .tb-rs, .tb-end.sea .tb-rs-ico { width: calc(20px + 4 * var(--u)); height: calc(20px + 4 * var(--u)); }
+  .tb-end.sea .tb-endbtn { min-height: var(--f-btn); padding: 0 calc(8px + 6 * var(--u)); font-size: var(--f-fs-m); }
+}
+
+/* ================================================================== the title screen on the smallest phones */
+/* Below 600 px wide the title screen stacked its name over the form and ran 130 px under a 270 px screen (it scrolled
+   as a whole): the name left, the form right, as from 600 px — and fluid. */
+@media (max-height: 520px) and (min-width: 460px) and (max-width: 599px) {
+  #screen-login > .login-panel {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); column-gap: 14px; align-items: start;
+    grid-template-areas: "brand lang" "brand form" "brand acct" "brand reset" "hint err";
+    width: 96vw; padding: var(--f-pad) calc(8px + 6 * var(--u));
+  }
+  #screen-login .login-brand { grid-area: brand; align-self: center; text-align: center; }
+  #screen-login .lang-switch { grid-area: lang; margin-bottom: 2px; }
+  #screen-login #login-form { grid-area: form; }
+  #screen-login #login-account { grid-area: acct; margin-top: 4px; }
+  #screen-login #reset-form { grid-area: reset; }
+  #screen-login #login-error { grid-area: err; margin: 2px 0 0; }
+  #screen-login .hint { grid-area: hint; margin: 4px 0 0; align-self: end; }
+  #screen-login .login-panel .title { font-size: clamp(22px, 5.6vw, 40px); margin: 0; }
+  #screen-login .login-panel .subtitle { margin: 4px 0 0; }
+  #screen-login .login-panel label { margin-bottom: 4px; }
+  #screen-login .login-panel:has(#login-account[open]) #login-form { display: none; }
+  #screen-login .login-panel:has(#login-account[open]) { grid-template-areas: "brand lang" "brand acct" "brand reset" "hint err"; }
+  #screen-login .login-account form .row .btn { white-space: nowrap; font-size: var(--f-fs); padding-left: 4px; padding-right: 4px; }
+}
+@media (max-height: 520px) {
+  #screen-login > .login-panel { max-height: 100dvh; }
+  /* settings: a row's name keeps its word whole; what does not fit beside it goes under it */
+  .opt-row { flex-wrap: wrap; row-gap: 2px; padding-top: 2px; padding-bottom: 2px; }
+  .opt-name { flex: 0 0 auto; white-space: nowrap; overflow-wrap: normal; }
+  .opt-row > input[type=range] { min-width: 48px; }
+}
+@media (max-height: 520px) {
+  /* the account's form at 270–320 px: a thinner frame, the three buttons in one row, the languages beside the name */
+  .skinned #screen-login > .login-panel { border-width: calc(8px + 10 * var(--u)); border-image-width: calc(8px + 10 * var(--u)); }
+  #screen-login .login-account form .row { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  #screen-login .login-account form .row #forgot-btn { grid-column: auto; }
+  #screen-login .login-account form .row .btn { white-space: normal !important; line-height: 1.1; font-size: var(--f-fs-s) !important; padding-left: 2px; padding-right: 2px; }
+}
+@media (max-height: 340px) and (min-width: 460px) {
+  #screen-login .login-panel:has(#login-account[open]) { grid-template-areas: "lang acct" "brand acct" "brand reset" "hint err"; grid-template-rows: auto 1fr auto auto; }
+  #screen-login .login-panel:has(#login-account[open]) .lang-switch { justify-content: center !important; }
+}
+@media (max-height: 520px) {
+  /* a mate's offer: the stacks wrap rather than run sideways (480×270 EN) */
+  .bo-sts { flex-wrap: wrap; overflow: visible; }
+}

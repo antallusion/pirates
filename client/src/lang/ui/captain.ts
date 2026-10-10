@@ -2,10 +2,14 @@
 
 export const EN = {
   premium: 'PREMIUM · SIDE-GRADE',
+  // the card's badge on a phone, where six cards share the screen
+  premiumShort: 'Premium',
   favoured: 'Favoured trees: {list}.',
   passive: 'Passive — {name}',
   cooldown: '{n}s',
   starts: 'Starts with a {ship} ({gun}s), {crew} crew, {gold} silver, in Saltmarrow on the Black Coast.',
+  // the start in one line on a phone held sideways
+  startsShort: 'Starts on a {ship} · {crew} crew · {gold} silver',
   shipName: 'Name your ship',
   takeCommand: 'Take command',
   // The ship's name offered in the field (a Russian captain met «Iron Verdict» in Latin at the head of every battle).
@@ -19,10 +23,12 @@ export const EN = {
 
 export const RU: Record<keyof typeof EN, string> = {
   premium: 'ПРЕМИУМ · РАВНОЦЕННАЯ ЗАМЕНА',
+  premiumShort: 'Премиум',
   favoured: 'Излюбленные ветви талантов: {list}.',
   passive: 'Врождённый дар — {name}',
   cooldown: '{n} с',
   starts: 'Начинает на судне класса «{ship}» ({gun}), экипаж {crew}, {gold} серебра, в Солтмарроу на Чёрном берегу.',
+  startsShort: 'Старт: «{ship}» · экипаж {crew} · {gold} серебра',
   shipName: 'Наречь корабль',
   takeCommand: 'Принять командование',
   'ship.corsair': 'Железный приговор',
