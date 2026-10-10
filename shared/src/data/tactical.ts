@@ -44,7 +44,9 @@ export function tacBankSecs(level: number): number {
  *  - `late`: the last round an ally arriving mid-battle comes aboard at (as a round opens);
  *  - `foe`: item 66 — a ship of the sea, a legend, the raid's tier or a citadel's garrison against a group grows by
  *    `share(level)` of the strength her allies brought (the square law, sideStrength), and `order(level)` more for each
- *    ally's book and path;
+ *    ally's book and path. docs/25 item 70: the share 1 → 1.6 at 11 and 1.4 at 15 (three of level 12 lost 23% of their
+ *    men each, the boarder 8%, against a lone captain's 51%; now 28% and 15%), and `paceSea` 1.9 → 2.4 at 15 and 1.7 →
+ *    2.2 at 18 (two against the sea took as long as one; now 3–4% quicker);
  *  - `pace`: a group's blows and orders land harder by `pace(level)` an ally on the field (both sides counted), so its
  *    rounds are fewer than one captain's and its many stacks keep §1.2's length; `paceSea` against the sea's mind (its
  *    fights shorter, as item 50 has them: a group of the low levels is quicker than one captain alone);
@@ -61,9 +63,9 @@ export const TAC_GROUP = {
   bringFrom: 11,
   late: 3,
   echo: [[1, 0.35], [22, 0.35], [30, 0.6], [60, 0.6]] as [number, number][],
-  foe: { share: [[1, 0.7], [10, 0.7], [11, 1], [20, 1], [30, 0.9], [60, 1]] as [number, number][], order: [[1, 0], [30, 0.15], [60, 0.3]] as [number, number][] },
+  foe: { share: [[1, 0.7], [10, 0.7], [11, 1.6], [15, 1.4], [20, 1.1], [30, 0.9], [60, 1]] as [number, number][], order: [[1, 0], [30, 0.15], [60, 0.3]] as [number, number][] },
   pace: [[1, 2.2], [10, 1.8], [20, 1], [30, 0.4], [60, 0.2]] as [number, number][],
-  paceSea: [[1, 2.5], [10, 2.2], [20, 1.6], [30, 0.8], [60, 0.7]] as [number, number][],
+  paceSea: [[1, 2.5], [10, 2.2], [15, 2.4], [20, 2], [30, 0.8], [60, 0.7]] as [number, number][],
 };
 /** docs/25 items 65 and 70: the echo of a second captain of one path at a boarding's level (TAC_GROUP.echo). */
 export function tacEcho(level: number): number {
