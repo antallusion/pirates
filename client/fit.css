@@ -106,7 +106,7 @@
   .w-fig-ico { width: calc(13px + 3 * var(--u)); height: calc(13px + 3 * var(--u)); }
   /* the rail of places, narrower and lower */
   .w-rail { width: var(--f-rail); gap: 2px; padding: 2px; }
-  #modal-panel[data-modal="hero"] .w-rail { width: calc(var(--f-rail) + 8px); }
+  #modal-panel[data-modal="hero"] .w-rail { width: calc(var(--f-rail) + 16px - 6 * var(--u)); }
   .w-tab { height: var(--f-tab); font-size: var(--f-fs-s); gap: 0; letter-spacing: 0; }
   .w-tab-ico { width: var(--f-ico); height: var(--f-ico); }
   /* the gold «В море» keeps its word whole (its 15 px line sat in a 10 px box) */
@@ -401,7 +401,7 @@
 }
 @media (max-height: 520px) {
   /* her mark's name wraps in the line rather than losing its end («Цепь бух…» at every phone size) */
-  body.simple #tc-target .k-target-name { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.08; font-size: var(--f-fs); overflow-wrap: anywhere; }
+  body.simple #tc-target .k-target-name { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.08; font-size: var(--f-fs); overflow-wrap: break-word; }
 }
 @media (max-height: 520px) {
   /* the Throne's tabs in the band at every phone width: the lit one its picture and word, the others their picture
@@ -434,4 +434,61 @@
   /* the adventure card in the top band between the captain's frame and the chart at every width (it stood at 360 px
      from the left: 124 px wide at 640×360 with its button past the screen, off the screen at 480×270) */
   #advcard { left: calc(var(--sa-l) + var(--cs-face, 44px) + var(--cs-bar, 100px) + 74px); right: calc(var(--sa-r) + var(--mm, 86px) + 20px); width: auto; min-width: 0; max-width: 420px; }
+}
+@media (max-height: 520px) and (max-width: 560px) {
+  /* a narrow phone: her mark's line keeps its name, level and chance; the bars are on her card (a tap) */
+  body.simple #tc-target .k-target-bars { display: none; }
+  /* the Throne's lit tab is its picture too (the page's own heading names it) */
+  .throne-win .tabs .tab.active .th-tw { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+}
+@media (max-height: 520px) {
+  /* the boarding's end at sea, one band down to 480 px wide (it wrapped and «Дальше» went under its 64 px) */
+  .tb-banner.tb-end.sea { gap: 3px calc(6px + 8 * var(--u)); padding: 3px calc(6px + 4 * var(--u)); max-height: none; }
+  .tb-end.sea .tb-bsc { gap: 2px calc(6px + 8 * var(--u)); }
+  .tb-end.sea .tb-bsc > b { font-size: calc(15px + 5 * var(--u)); }
+  .tb-end.sea .tb-end-rows { gap: 3px calc(8px + 8 * var(--u)); }
+  .tb-end.sea .tb-rs, .tb-end.sea .tb-rs-ico { width: calc(20px + 4 * var(--u)); height: calc(20px + 4 * var(--u)); }
+  .tb-end.sea .tb-endbtn { min-height: var(--f-btn); padding: 0 calc(8px + 6 * var(--u)); font-size: var(--f-fs-m); }
+}
+
+/* ================================================================== the title screen on the smallest phones */
+/* Below 600 px wide the title screen stacked its name over the form and ran 130 px under a 270 px screen (it scrolled
+   as a whole): the name left, the form right, as from 600 px — and fluid. */
+@media (max-height: 520px) and (min-width: 460px) and (max-width: 599px) {
+  #screen-login > .login-panel {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); column-gap: 14px; align-items: start;
+    grid-template-areas: "brand lang" "brand form" "brand acct" "brand reset" "hint err";
+    width: 96vw; padding: var(--f-pad) calc(8px + 6 * var(--u));
+  }
+  #screen-login .login-brand { grid-area: brand; align-self: center; text-align: center; }
+  #screen-login .lang-switch { grid-area: lang; margin-bottom: 2px; }
+  #screen-login #login-form { grid-area: form; }
+  #screen-login #login-account { grid-area: acct; margin-top: 4px; }
+  #screen-login #reset-form { grid-area: reset; }
+  #screen-login #login-error { grid-area: err; margin: 2px 0 0; }
+  #screen-login .hint { grid-area: hint; margin: 4px 0 0; align-self: end; }
+  #screen-login .login-panel .title { font-size: clamp(22px, 5.6vw, 40px); margin: 0; }
+  #screen-login .login-panel .subtitle { margin: 4px 0 0; }
+  #screen-login .login-panel label { margin-bottom: 4px; }
+  #screen-login .login-panel:has(#login-account[open]) #login-form { display: none; }
+  #screen-login .login-panel:has(#login-account[open]) { grid-template-areas: "brand lang" "brand acct" "brand reset" "hint err"; }
+  #screen-login .login-account form .row .btn { white-space: nowrap; font-size: var(--f-fs); padding-left: 4px; padding-right: 4px; }
+}
+@media (max-height: 520px) {
+  #screen-login > .login-panel { max-height: 100dvh; }
+  /* settings: a row's name keeps its word whole; what does not fit beside it goes under it */
+  .opt-row { flex-wrap: wrap; row-gap: 2px; padding-top: 2px; padding-bottom: 2px; }
+  .opt-name { flex: 0 0 auto; white-space: nowrap; overflow-wrap: normal; }
+  .opt-row > input[type=range] { min-width: 48px; }
+}
+@media (max-height: 520px) {
+  /* the account's form at 270–320 px: a thinner frame, the three buttons in one row, the languages beside the name */
+  .skinned #screen-login > .login-panel { border-width: calc(8px + 10 * var(--u)); border-image-width: calc(8px + 10 * var(--u)); }
+  #screen-login .login-account form .row { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  #screen-login .login-account form .row #forgot-btn { grid-column: auto; }
+  #screen-login .login-account form .row .btn { white-space: normal !important; line-height: 1.1; font-size: var(--f-fs-s) !important; padding-left: 2px; padding-right: 2px; }
+}
+@media (max-height: 340px) and (min-width: 460px) {
+  #screen-login .login-panel:has(#login-account[open]) { grid-template-areas: "lang acct" "brand acct" "brand reset" "hint err"; grid-template-rows: auto 1fr auto auto; }
+  #screen-login .login-panel:has(#login-account[open]) .lang-switch { justify-content: center !important; }
 }

@@ -32,6 +32,16 @@
     // the outermost of a pointer run is the target; its children inherit the cursor
     return !e.parentElement || getComputedStyle(e.parentElement).cursor !== 'pointer';
   };
+  // How far an element's own words run past its border box (a range over its text nodes), 0 when they do not.
+  const spill = (e, r) => {
+    let worst = 0;
+    for (const n of e.childNodes) {
+      if (n.nodeType !== 3 || !n.textContent.trim()) continue;
+      const rg = document.createRange(); rg.selectNodeContents(n);
+      for (const q of rg.getClientRects()) worst = Math.max(worst, q.right - r.right, r.left - q.left);
+    }
+    return worst > 2 ? Math.round(worst) : 0;
+  };
   // Is this element hidden away by a scroll box above it (then it is the box's overflow, counted once there)?
   const inScroller = (e) => {
     for (let q = e.parentElement; q && q !== document.body; q = q.parentElement) {
@@ -51,6 +61,11 @@
     let area = 0;
     const seen = new Set();
     for (const root of roots) {
+      // a scroll box around the window (the title screen scrolls as a whole when its panel is taller than the screen)
+      for (let q = root.parentElement; q && q !== document.body && q !== document.documentElement; q = q.parentElement) {
+        const qc = getComputedStyle(q);
+        if (/(auto|scroll)/.test(qc.overflowY) && q.scrollHeight > q.clientHeight + 2) res.scroll.push(`${name(q)} ↕${q.scrollHeight}/${q.clientHeight} (around)`);
+      }
       const rr = root.getBoundingClientRect();
       const ix = Math.max(0, Math.min(rr.right, W) - Math.max(rr.left, 0)), iy = Math.max(0, Math.min(rr.bottom, H) - Math.max(rr.top, 0));
       area += ix * iy;
@@ -87,6 +102,8 @@
           const t = [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim().slice(0, 24);
           if (cs.textOverflow === 'ellipsis' && e.scrollWidth > e.clientWidth + 1) res.cut.push(`${name(e)} «${t}» …${e.scrollWidth}/${e.clientWidth}`);
           else if (cs.overflow !== 'visible' && !/(auto|scroll)/.test(cs.overflowY) && (e.scrollHeight > e.clientHeight + 3 || e.scrollWidth > e.clientWidth + 3) && e.clientHeight > 0) res.cut.push(`${name(e)} «${t}» ${e.scrollWidth}×${e.scrollHeight}/${e.clientWidth}×${e.clientHeight}`);
+          // words wider than their own box spill over what lies beside it (a button's word under the next button)
+          else if (cs.overflow === 'visible' && cs.display !== 'inline' && spill(e, r)) res.cut.push(`${name(e)} «${t}» spills ${spill(e, r)} px`);
           else {
             // clipped by an ancestor that hides overflow (not a scroll box: that is counted as a scroll)
             // (an absolutely placed box is clipped only by the boxes from its containing block up)
