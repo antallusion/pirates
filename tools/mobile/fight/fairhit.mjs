@@ -4,6 +4,7 @@
 // blows that follow against what the cards say. Shots to OUT, the numbers to OUT/<tag>.json.
 //
 //   GPORT=58996 LEVEL=1 SIZE=1280x720 LANG2=ru FOE="pirate sloop 16" OUT=docs/img/fairhit node tools/mobile/fight/fairhit.mjs
+//   SHIP="frigate 7" …: her hull of a level first, her hammocks filled (then her army by the ladder of her ⚓).
 import * as L from '../m0/lib.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
@@ -28,6 +29,10 @@ await L.login(p, { port: Number(process.env.GPORT ?? 58996), name: (lang === 'ru
 await skip();
 await p.evaluate(() => document.body.classList.add('reduce-motion'));
 if (LEVEL > 1) await say(`/level ${LEVEL}`);
+if (process.env.SHIP) {
+  await say(`/ship ${process.env.SHIP}`);
+  await say('/army deckhand 9999');
+}
 await say(`/army level ${process.env.ARMY ?? Math.min(10, Math.max(1, Math.ceil(LEVEL / 6)))}`);
 if (await p.evaluate(() => !!globalThis.gravetide.state.self?.dockedAt)) { await L.send(p, { t: 'undock' }); await sleep(2500); await skip(); }
 await say('/tp gravewater', 2500);
