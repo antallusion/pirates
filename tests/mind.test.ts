@@ -103,7 +103,7 @@ test('dread: the Drowned Captain bleeds into it, pays miracles with it, and the 
   assert.equal(other.ship.dread, 0);
 });
 
-test('Undertow drags a ship with no way on; the Maw takes a fifth of her hull, a mast and two leaks', () => {
+test('Undertow drags a ship with no way on; the Maw takes 18% of her hull, a mast and two leaks', () => {
   const { game } = makeGame();
   const { c, s, ship } = captain(game, 'Undertow', 'drowned');
   toSea(game, s);
@@ -124,7 +124,8 @@ test('Undertow drags a ship with no way on; the Maw takes a fifth of her hull, a
   assert.equal(ship.resolve, 0);
   assert.equal(ship.dread, 10);
   steps(game, 20 * 4);
-  assert.ok(Math.abs(h0 - big.hull - big.stats.hullMax * 0.2) < big.stats.hullMax * 0.02, `maw took ${h0 - big.hull}`);
+  // (18% of her hull now: docs/25 item 35, weighed against the five other captains' ultimates — it was a fifth)
+  assert.ok(Math.abs(h0 - big.hull - big.stats.hullMax * 0.18) < big.stats.hullMax * 0.02, `maw took ${h0 - big.hull}`);
   assert.ok(big.hasEffect('broken_mast'));
   assert.ok(big.leaks >= 2);
 });

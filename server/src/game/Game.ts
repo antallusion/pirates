@@ -36,7 +36,7 @@ import { callClosed, onNpcHit, raiderSunk } from './npcwars.ts';
 import { buyWare, equip, mendGear, reforgeItem, rollDrop, salvageItem, sellItem, takeItem, temperItem, unequip, wearOnSinking } from './gear.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import { orderRefit, refitHolds, stepRefit } from './refit.ts';
-import { clampLevel, levelRange, npcSkill } from '../../../shared/src/data/shiplevel.ts';
+import { clampLevel, ladder, levelRange, npcSkill } from '../../../shared/src/data/shiplevel.ts';
 import { ALPHA_OVER as ALPHA_OVER_RAM, alphaShare, npcSeaScale } from '../../../shared/src/data/seabalance.ts';
 import { RAM_SHARE, volleyShare } from '../../../shared/src/data/seaskill.ts';
 import { XP_UNITS, contractPay, pointsXp, prizeXp, xpGap } from '../../../shared/src/data/xpcurve.ts';
@@ -1535,7 +1535,10 @@ export class Game {
       ship.ownerId = owner.id;
       ship.recompute(this.now);
       const rate = (s: ShipEntity) => (s.stats.gunsPerSide * GUNS[s.loadout.guns.starboard].damage * s.stats.gunDamageMul) / Math.max(0.1, reloadTime(s, 'starboard', this.now));
-      ship.seaScale.guns = ((opts.guns ?? 0.1) * (n > 1 ? 0.6 : 1) * rate(owner)) / Math.max(1e-6, rate(ship));
+      // (a ⚓ below hers, the ladder cuts her blows on a mark of the Admiral's ⚓: the share is the share after it — as at ⚓1,
+      // where no hull is a level lower — so the hire is worth the same at every level, docs/25 item 39)
+      const lad = ladder(ship.combatLevel, owner.combatLevel, false, false, true).dealt;
+      ship.seaScale.guns = ((opts.guns ?? 0.1) * (n > 1 ? 0.6 : 1) * rate(owner)) / Math.max(1e-6, rate(ship) * lad);
       ship.ownerId = owner.id;
       ship.recompute(this.now);
       ship.hull = ship.stats.hullMax;

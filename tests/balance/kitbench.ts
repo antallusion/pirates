@@ -9,7 +9,7 @@
 import type { CaptainId } from '../../shared/src/data/captains.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
 import { Rng } from '../../shared/src/rng.ts';
-import { fireBroadside } from '../../server/src/game/combat.ts';
+import { cutMastWreck, fireBroadside } from '../../server/src/game/combat.ts';
 import { useAbility } from '../../server/src/game/abilities.ts';
 import { gainDread } from '../../server/src/game/mind.ts';
 import { kitNums } from '../../server/src/game/seaskill.ts';
@@ -69,6 +69,13 @@ export function kitFight(game: Game, a: KitSide, b: KitSide, seed = 1, maxSec = 
   for (const [s, side] of [[A, a], [B, b]] as const) {
     s.resolve = 0;
     s.dread = 0;
+    // A steady crew (the morale ladder's middle, crew.ts stepSpirit: no reload either way) — the inspired crew's −10%
+    // came and went with the second the crew's mood was next weighed, a broadside's step between two runs of one fight.
+    s.morale = 70;
+    // …fed (an empty hold starved them through a long fight: their morale fell to the ladder's foot, and their guns with it),
+    // and no rum (its +8 lifted some crews, by their cooks, over the inspired 80 and others not)
+    s.cargo.provisions = 400;
+    delete s.cargo.rum;
     s.region = game.regionAt(s.state.x, s.state.y);
     const p = game.profileOf(s)!;
     s.kitOff = !side.kit;
@@ -86,6 +93,7 @@ export function kitFight(game: Game, a: KitSide, b: KitSide, seed = 1, maxSec = 
   const memo = { lastRam: -1e9, hullB: B.hull };
   // Her broadsides' moments and the hull left the moment each was fired (the fight's length to a fraction of a reload).
   const fires: [number, number][] = [];
+  let ticks = 0;
   while (game.now - t0 < maxSec && !down(B)) {
     for (const s of [A, B]) {
       s.state.speed = 0;
@@ -100,6 +108,8 @@ export function kitFight(game: Game, a: KitSide, b: KitSide, seed = 1, maxSec = 
     // The dice's slow fires: a fire, a breach or a leak a ball starts burns on for many seconds and swung one fight of
     // equals by a third against the next; the bench's crews put them out at once (both kits alike), so what an ability
     // adds is not lost in them. (Her own leak — the Deep Call's — is an ability's, and runs.)
+    // (and her mast's wreckage cut away at once — a ship under way needs her helm; left alongside it shields her side)
+    if (B.hasEffect('mast_wreck')) cutMastWreck(game, B);
     if (B.leaks || B.effects.some((e) => e.id === 'fire' || e.id === 'breach')) {
       B.leaks = 0;
       B.water = 0;
@@ -128,6 +138,9 @@ export function kitFight(game: Game, a: KitSide, b: KitSide, seed = 1, maxSec = 
       c!.loyalty = 100;
       c!.unrest = { phase: 0, t: 0 };
     }
+    // The sea's dice for this tick of the fight: the same tick of the same seed draws the same (a crit, a breach, the
+    // fire a ball starts), whatever the world's clock or another system drew before — paired fights stay paired.
+    Object.assign(game.rng, new Rng(seed * 7919 + (++ticks) * 104_729 + 3));
     game.step();
     // The sea's own comers (a pirate pack's ambush, the ghosts the Drowned's Dread calls, a lair's garrison) are struck
     // off the bench: the fight is the two of them and her hired escort alone.
@@ -185,10 +198,10 @@ function escorts(game: Game, me: ShipEntity, foe: ShipEntity): void {
     const brain = game.npcs.get(o.id);
     if (brain) brain.active = false;
     i++;
-    // (in her line, a cable's length astern of her: within her guns' reach of the mark)
-    const back = me.state.heading + Math.PI;
-    o.state.x = me.state.x + Math.sin(back) * 85 * i;
-    o.state.y = me.state.y - Math.cos(back) * 85 * i;
+    // (in her line, ahead of her and astern by turns, a cable's length apart: within her guns' reach of the mark)
+    const back = me.state.heading + (i % 2 ? Math.PI : 0), at = 85 * Math.ceil(i / 2);
+    o.state.x = me.state.x + Math.sin(back) * at;
+    o.state.y = me.state.y - Math.cos(back) * at;
     o.state.heading = me.state.heading;
     o.state.speed = 0;
     o.input = { rudder: 0, sailTarget: 0 };

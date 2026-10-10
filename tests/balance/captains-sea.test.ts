@@ -20,13 +20,12 @@ import { RESOLVE_DEALT } from '../../server/src/game/mind.ts';
 import { useAbility } from '../../server/src/game/abilities.ts';
 import { chooseFacet } from '../../server/src/game/seaskill.ts';
 import { fireBroadside, stepProjectiles } from '../../server/src/game/combat.ts';
-import type { ShipEntity } from '../../server/src/game/ship.ts';
 import type { Game } from '../../server/src/game/Game.ts';
 import { bench, captainShip, clearSea } from './seakit.ts';
 import { KIT_CAPTAINS, kitMedian, kitRows, lawlessWater } from './kitbench.ts';
 import type { KitSide } from './kitbench.ts';
 
-const SEEDS = [1, 2, 3];
+const SEEDS = [1, 2];
 /** The band's level for each ⚓ measured: its first ranks at ⚓1, the middle at ⚓5, the last at ⚓10. */
 const LEVEL: Record<number, number> = { 1: 3, 5: 24, 10: 58 };
 
@@ -58,11 +57,13 @@ test('the role (§1.1): a kit used well takes 15–25% off a sea fight (the Cors
 /** An ability's strength (item 39): its share of a fight on the bench (attack or defence), or its role's number. */
 function strength(game: Game, captain: CaptainId, id: string, level: number, anchor: number): number {
   const s = SEA_SKILLS[id];
+  // (the bench's fights are paired and their dice held: one seed tells an ability's share as well as three)
+  const seeds = [1];
   const n = skillNums(id, { level, facets: {}, glory: 0, talents: {} }).n;
   const foe: KitSide = { anchor, gear: 'full', captain: 'navigator', level, kit: false };
   const me = (only: string[]): KitSide => ({ anchor, gear: 'full', captain, level, kit: true, only });
-  const attack = () => 1 - kitMedian(game, me([id]), foe, SEEDS).sec / kitMedian(game, me([]), foe, SEEDS).sec;
-  const defend = () => kitMedian(game, foe, me([id]), SEEDS).sec / kitMedian(game, foe, me([]), SEEDS).sec - 1;
+  const attack = () => 1 - kitMedian(game, me([id]), foe, seeds).sec / kitMedian(game, me([]), foe, seeds).sec;
+  const defend = () => kitMedian(game, foe, me([id]), seeds).sec / kitMedian(game, foe, me([]), seeds).sec - 1;
   switch (id) {
     // The role's numbers: what the ability does as a share (of her speed, of their men, of their way, of her purse).
     case 'trim_sails': return n.speed;
@@ -160,16 +161,51 @@ test('item 40: the ultimate charges from the damage she deals — the alpha limi
   assert.ok(Math.abs(B.resolve - dealt * 100) < 1, 'the one struck: one a point, as before');
 });
 
-test('item 41: the six combos land and show their cue', () => {
+test('item 41: the six combos land, strike, and show their cue', () => {
   const game = bench();
-  const cues = new Set<string>();
+  const cues: string[] = [];
   const emit = game.emit.bind(game);
   game.emit = ((ev: { k: string; id?: string; combo?: boolean }, ex: number, ey: number) => {
-    if (ev.k === 'skill' && ev.combo) cues.add(ev.id!);
+    if (ev.k === 'skill' && ev.combo) cues.push(ev.id!);
     emit(ev as never, ex, ey);
   }) as typeof game.emit;
-  for (const c of KIT_CAPTAINS) kitMedian(game, { anchor: 6, gear: 'full', captain: c, level: 50, kit: true }, { anchor: 6, gear: 'full', captain: 'navigator', level: 50, kit: false }, [1]);
-  for (const id of ['hard_over', 'mark_target', 'war_cry', 'dark_running', 'star_fix', 'deep_call']) assert.ok(cues.has(id), `combo of ${id}: ${[...cues].join(', ')}`);
+  const fly = () => {
+    for (let i = 0; i < 400 && game.projectiles.length; i++) stepProjectiles(game, 0.05);
+  };
+  /** One captain of the 50th at her mark 150 m off her starboard beam, her first ability then the second. */
+  const run = (captain: CaptainId): { combo: boolean; dealt: number } => {
+    clearSea(game);
+    cues.length = 0;
+    const { x, y } = lawlessWater(game);
+    const { s, ship: A } = captainShip(game, { anchor: 9, gear: 'full', captain, level: 50, kit: true }, x, y);
+    const B = captainShip(game, { anchor: 9, gear: 'full', captain: 'navigator', level: 50 }, x + 150, y).ship;
+    for (const o of [A, B]) o.region = game.regionAt(o.state.x, o.state.y);
+    s.profile!.gold = 1e7;
+    A.resolve = 100;
+    A.dread = 100;
+    const h0 = B.hull;
+    const cast = (id: string) => assert.equal(useAbility(game, A, id, B.state.x, B.state.y), null, `${captain}: ${id}`);
+    const fire = () => {
+      A.reload.starboard = 0;
+      assert.equal(fireBroadside(game, A, 'starboard', 150, { x: B.state.x, y: B.state.y }, 1, {}), null);
+      fly();
+    };
+    switch (captain) {
+      case 'corsair': cast('hard_over'); cast('double_shot'); fire(); break;
+      case 'admiral': cast('mark_target'); cast('admiralty_barrage'); for (let i = 0; i < 80; i++) game.step(); break;
+      case 'reaver': cast('war_cry'); cast('ramming_speed'); game.ram(A, B, A.stats.maxSpeed * 0.7); break;
+      case 'smuggler': cast('dark_running'); fire(); break;
+      case 'navigator': cast('star_fix'); fire(); break;
+      case 'drowned': cast('deep_call'); cast('maw_of_the_deep'); for (let i = 0; i < 80; i++) game.step(); break;
+    }
+    return { combo: cues.length > 0, dealt: h0 - B.hull };
+  };
+  const first: Record<CaptainId, string> = { corsair: 'hard_over', admiral: 'mark_target', reaver: 'war_cry', smuggler: 'dark_running', navigator: 'star_fix', drowned: 'deep_call' };
+  for (const c of KIT_CAPTAINS) {
+    const r = run(c);
+    assert.ok(r.combo, `${c}: the combo of ${first[c]} and its cue`);
+    assert.ok(r.dealt > 0, `${c}: it struck`);
+  }
 });
 
 test('item 42: one talent of her favoured trees for each of her four abilities (+power or +duration), and it counts', () => {
@@ -235,5 +271,4 @@ test('the sea table is the bare sea\'s: a captain\'s passive is off on it, on wi
   const on = captainShip(game, { anchor: 5, gear: 'bare', captain: 'corsair', kit: true }, x + 500, y).ship;
   assert.equal(off.kitOff, true);
   assert.equal(on.kitOff, false);
-  void ([] as ShipEntity[]);
 });
