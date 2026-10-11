@@ -548,7 +548,8 @@ body.touch #mm-tab:focus-visible .mm-tab-pill { box-shadow: none; }
   #modal-panel :is(.pm-name, .th-tt > b, .cit-name > b, .fl-t b, .hx-pick-t > b, .sk-head > b, .th-bt > b, .adm-tt > b, .q-t > b, .w-wb-t > b, .lk-name, .talent-top b),
   .k-sheet :is(.lu-t > b, .w-wb-t > b, .fl-t b) { font-size: var(--f-fs-m) !important; }
   /* figures once shown big — a pack's doubloons, a medal's count, a rank, a level, the hands of a trade: a heading's size */
-  #modal-panel :is(.pm-pack-n, .th-medal b, .rn-rank, .hx-lv, .prof-n, .pm-price .dbl) { font-size: var(--f-fs-h) !important; }
+  #modal-panel :is(.pm-pack-n, .th-medal b, .rn-rank, .hx-lv, .prof-n) { font-size: var(--f-fs-h) !important; }
+  #modal-panel .pm-price .dbl { font-size: var(--f-fs-m) !important; }
   /* the talents' lines and the rules under them: the body's size (they were 11–12 px fixed) */
   #modal-panel .talent small, #modal-panel .tal-loadout, #modal-panel .tal-loadout .muted, #modal-panel .tal-rules, #modal-panel .tree .motto, #modal-panel .motto { font-size: var(--f-fs-s); }
   #modal-panel .talent { font-size: var(--f-fs); }
@@ -559,4 +560,32 @@ body.touch #mm-tab:focus-visible .mm-tab-pill { box-shadow: none; }
   .tb-rb > i.tb-x2 { font-size: var(--f-fs); }
   .tb-end .tb-bsc > b, .tb-end.sea .tb-bsc > b, .tb-end.land .tb-bsc > b { font-size: var(--f-fs-t) !important; }
   .enc-h { font-size: var(--f-fs-m); }
+}
+
+/* ux2: every word of a window's page and of a sheet on the phone's scale — the older windows set their own sizes in px
+   (12–14 px names, 11–13 px lines: 1 800 words over 10.5 px at 844×390): the names and figures 9.5–11 px, the lines 9–10,
+   the small and muted 8–9, a section's label 9.5–11. The fit's own rules for a part (#modal-panel .card p, the talents',
+   the depart window's…) are more particular and stay; the badges, tags, chips and keys keep their sizes. */
+@media (max-height: 520px) {
+  :is(#modal-panel .modal-body, #modal-panel #company-body, .k-sheet-body, #advcard, #lairchest, #board-offer, #encounter, #surrender) :where(span, p, li, label, dd, dt, div, output, td, th, summary):not(.k-badge, .rose-pts, .tag, .chip, .key, .pips, .hx-dot, .tier-label, .k-btn-l, .w-chip-l, .w-tab-l, .money, .dbl) { font-size: var(--f-fs); }
+  :is(#modal-panel .modal-body, #modal-panel #company-body, .k-sheet-body, #advcard, #lairchest, #board-offer, #encounter, #surrender) :where(b, strong, .money, .dbl, .stat-v, .gi-name, .pm-name, .po-name, .xpv):not(.k-badge, .rose-pts, .tag, .chip, .key) { font-size: var(--f-fs-m); }
+  :is(#modal-panel .modal-body, #modal-panel #company-body, .k-sheet-body, #advcard, #lairchest, #board-offer, #encounter, #surrender) :where(small, .muted, .sub, .hint, .hx-note, .w-sub):not(.k-badge, .tag, .chip, .key) { font-size: var(--f-fs-s); }
+  :is(#modal-panel .modal-body, #modal-panel #company-body, .k-sheet-body, #advcard, #lairchest, #board-offer, #encounter, #surrender) :where(.gi-h, .giver-h, .enc-h, .fp-head > b, .bo-h > b):not(.k-badge) { font-size: var(--f-fs-m); }
+  /* the band's line under a window's name, the boarding card's figures */
+  #modal-panel .w-head .w-sub { font-size: var(--f-fs-s); }
+  .tb-cardsh .tb-stats b, .tb-card-h b { font-size: var(--f-fs-m); }
+  /* the menu's tiles, a figure shown big (a rank, a seal, the raid's rounds, a primary skill) */
+  #modal-panel[data-modal="menu"] .menu-tile > span { font-size: var(--f-fs-m); }
+  #modal-panel :is(.th-rt > b, .hx-pv, .th-branch .card-h > span:first-of-type, .adm-board .card-h > span) { font-size: var(--f-fs-h) !important; }
+}
+@media (max-height: 520px) {
+  /* the looks' chips and the toasts' lines on the same scale */
+  #modal-panel .lk-chip { font-size: var(--f-fs); }
+  #toasts .toast, #modal-toasts .toast { font-size: var(--f-fs); }
+}
+/* the depart window's «Всегда докупать»: in its head line, right of the purse's word, a finger tall */
+.depart-panel .dp-always { margin: 4px 0 0; min-height: 32px; display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; font-size: 12px; color: var(--fog, #9aa3a8); cursor: pointer; }
+.depart-panel .dp-always input { width: 16px; height: 16px; margin: 0; flex: none; accent-color: var(--gold, #d8b45c); }
+@media (max-height: 520px) {
+  .depart-panel .dp-always { margin: 0 0 0 auto; min-height: var(--f-tap); align-self: center; font-size: var(--f-fs-s); }
 }
