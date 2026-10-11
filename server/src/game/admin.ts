@@ -13,7 +13,7 @@ import type { MinigameId } from '../../../shared/src/data/minigames.ts';
 // Admin commands for play-testing (docs/09_ART_PASS.md P8). Typed in chat with a leading slash; they exist only
 // when the server runs with GRAVETIDE_ADMIN=1 — on a normal server a slash line is ordinary chat.
 //   /help                      the list
-//   /speed N                   world time ×N (0.25–20); the client predicts at the same pace
+//   /speed N                   world time ×N (0.25–100); the client predicts at the same pace
 //   /xp N · /level N · /silver N
 //   /tp <port> | <region> | <x> <y>
 //   /boss <id>                 raise a boss 600 m off the bow
@@ -247,7 +247,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     case 'speed': {
       const k = num(0, 1);
       if (!Number.isFinite(k)) return 'Usage: /speed N';
-      game.timeScale = Math.max(0.25, Math.min(20, k));
+      game.timeScale = Math.max(0.25, Math.min(100, k)); // (×100 for the QA playthrough, 2026-10-12: as fast as the tick allows)
       return `World time ×${game.timeScale}.`;
     }
     case 'xp': {

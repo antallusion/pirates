@@ -19,7 +19,7 @@ test('admin commands are off unless GRAVETIDE_ADMIN=1; with it they speed the cl
     runAdmin(game, s, '/speed 8');
     assert.equal(game.timeScale, 8);
     runAdmin(game, s, '/speed 999');
-    assert.equal(game.timeScale, 20, 'the clock is capped');
+    assert.equal(game.timeScale, 100, 'the clock is capped (×100 for the QA playthrough)');
     runAdmin(game, s, '/level 40');
     assert.equal(s.profile!.level, 40);
     assert.equal(s.ship!.level, 40);
