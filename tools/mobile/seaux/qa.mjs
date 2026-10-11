@@ -3,13 +3,14 @@
 // «Застава» plate, a long window scrolled by a finger (CDP touch events), the captain's menu. Screenshots to
 // docs/img/seaux/, numbers to tools/mobile/seaux/out.json.
 // Run: GPORT=58994 OUT=docs/img/seaux node tools/mobile/seaux/qa.mjs [844x390,480x270,1500x600]
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
 import * as L from '../m0/lib.mjs';
 
 const PORT = Number(process.env.GPORT ?? 58994);
 const sizes = (process.argv[2] ?? '844x390,480x270,1500x600').split(',').map((s) => s.split('x').map(Number));
 const sleep = L.sleep;
-const out = {};
+const OUTF = 'tools/mobile/seaux/out.json';
+const out = existsSync(OUTF) ? JSON.parse(readFileSync(OUTF, 'utf8')) : {};
 mkdirSync('docs/img/seaux', { recursive: true });
 const shot = (p, name) => p.screenshot({ path: `docs/img/seaux/${name}.png` });
 const admin = async (p, line, ms = 900) => { await L.say(p, line); await sleep(ms); };
@@ -230,4 +231,4 @@ for (const [W, H] of sizes) {
   L.log(tag, JSON.stringify(R));
 }
 await b.close();
-writeFileSync('tools/mobile/seaux/out.json', JSON.stringify(out, null, 1));
+writeFileSync(OUTF, JSON.stringify(out, null, 1));

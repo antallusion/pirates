@@ -1,4 +1,166 @@
 {
+ "844x390": {
+  "capMenu": true,
+  "capMenuRect": {
+   "x": 42,
+   "y": 181.40625,
+   "w": 760,
+   "h": 208.59375,
+   "b": 390,
+   "r": 802
+  },
+  "capTiles": [
+   44,
+   44,
+   44,
+   44,
+   44,
+   44
+  ],
+  "capOptions": true,
+  "plate": {
+   "w": 50,
+   "h": 14,
+   "lines": 1,
+   "plate": 199
+  },
+  "find": {
+   "id": 1,
+   "x": 20901,
+   "y": 69820,
+   "d": 711
+  },
+  "actRow": [
+   {
+    "act": "find",
+    "w": 195,
+    "h": 36,
+    "top": 344
+   }
+  ],
+  "findTapped": true,
+  "findCourse": {
+   "x": 20901,
+   "y": 69820
+  },
+  "findDone": true,
+  "findToasts": [
+   "Автоплавание: метка достигнута. Штурвал у вас."
+  ],
+  "cast": {
+   "id": 1,
+   "x": 21167,
+   "y": 69934,
+   "sx": 968.835459621323,
+   "sy": 368.50632078011404,
+   "crew": 5
+  },
+  "castCourse": {
+   "x": 21167,
+   "y": 69934
+  },
+  "castWhy": {
+   "toasts": [
+    "Автоплавание: штурвал у рулевого. Любое движение руля возвращает его вам.",
+    "Записка в бутылке: потерпевший крушение указывает путь к острову Беллпойнт — 3 км на север. Остров на вашей карте."
+   ],
+   "fight": {
+    "pursuit": null,
+    "combat": false,
+    "hull": 900,
+    "hullMax": 900
+   }
+  },
+  "castAboard": true,
+  "castCrew": 5,
+  "castToasts": [
+   "С обломка мачты подняли потерпевших: 3 — нанимаются юнгами."
+  ],
+  "wreck": {
+   "id": 4512,
+   "x": 20742,
+   "y": 69326,
+   "d": 719,
+   "value": 96,
+   "sx": -194.70400417412566,
+   "sy": -710.3559845649215,
+   "n": 8
+  },
+  "wreckCourse": {
+   "x": 20742,
+   "y": 69326
+  },
+  "wreckTaken": true,
+  "wreckEnd": {
+   "d": 39,
+   "auto": {
+    "x": 20742,
+    "y": 69326
+   },
+   "spd": 6.79
+  },
+  "wreckToasts": [
+   "Поднято со дна: лес — 6."
+  ],
+  "claim": {
+   "name": "Gallowsreach Holm",
+   "d": 677
+  },
+  "claimActs": [
+   "claim",
+   "look",
+   "attack"
+  ],
+  "claimTapped": true,
+  "claimCourse": null,
+  "claimOpen": false,
+  "scrollIsles": {
+   "found": false
+  },
+  "scroll_journal": {
+   "found": true,
+   "long": true,
+   "sh": 1945,
+   "ch": 342,
+   "top": 1603,
+   "end": true,
+   "lastSeen": true
+  },
+  "scroll_hero": {
+   "found": true,
+   "long": true,
+   "sh": 1022,
+   "ch": 342,
+   "top": 680,
+   "end": true,
+   "lastSeen": true
+  },
+  "scroll_options": {
+   "found": true,
+   "long": false,
+   "sh": 342,
+   "ch": 342
+  },
+  "scroll_news": {
+   "found": true,
+   "long": true,
+   "sh": 224,
+   "ch": 224,
+   "top": 0,
+   "end": true,
+   "lastSeen": true
+  },
+  "scroll_company": {
+   "found": true,
+   "long": true,
+   "sh": 851,
+   "ch": 299,
+   "top": 552,
+   "end": true,
+   "lastSeen": true
+  },
+  "errors": []
+ },
  "480x270": {
   "capMenu": true,
   "capMenuRect": {
@@ -25,10 +187,10 @@
    "plate": 105
   },
   "find": {
-   "id": 9,
-   "x": 21000,
-   "y": 69803,
-   "d": 700
+   "id": 3,
+   "x": 20889,
+   "y": 69797,
+   "d": 711
   },
   "actRow": [
    {
@@ -40,30 +202,29 @@
   ],
   "findTapped": true,
   "findCourse": {
-   "x": 21000,
-   "y": 69803
+   "x": 20889,
+   "y": 69797
   },
   "findDone": true,
   "findToasts": [
-   "Автоплавание: метка достигнута. Штурвал у вас.",
-   "Свежий ветер — доброе плавание."
+   "Автоплавание: метка достигнута. Штурвал у вас."
   ],
   "cast": {
-   "id": 7,
-   "x": 21382,
-   "y": 69726,
-   "sx": 861.5985373343334,
-   "sy": 47.172979311326344,
+   "id": 2,
+   "x": 21120,
+   "y": 69899,
+   "sx": 660.5733454581671,
+   "sy": 282.0933504321307,
    "crew": 5
   },
   "castCourse": {
-   "x": 21382,
-   "y": 69726
+   "x": 21120,
+   "y": 69899
   },
   "castWhy": {
    "toasts": [
-    "Автоплавание: штурвал у рулевого. Любое движение руля возвращает его вам.",
-    "Записка в бутылке: потерпевший крушение указывает путь к острову Беллпойнт — 3 км на север. Остров на вашей карте."
+    "В бутылке — кусок карты сокровищ!",
+    "Свёрнута в бутылке: карта сокровищ! Запятнанная карта — Грейрич-Айл. (M — посмотреть круг)"
    ],
    "fight": {
     "pursuit": null,
@@ -78,31 +239,34 @@
    "С обломка мачты подняли потерпевших: 3 — нанимаются юнгами."
   ],
   "wreck": {
-   "id": 4512,
-   "x": 20613,
-   "y": 69390,
-   "d": 810,
-   "value": 80,
-   "sx": -731.4057370524454,
-   "sy": -305.83606728785963,
-   "n": 9
+   "id": 4676,
+   "x": 21991,
+   "y": 70317,
+   "d": 1001,
+   "value": 110,
+   "sx": 1396.7227914069251,
+   "sy": 686.9716996264135,
+   "n": 10
   },
   "wreckCourse": {
-   "x": 20613,
-   "y": 69390
+   "x": 21991,
+   "y": 70317
   },
   "wreckTaken": true,
   "wreckEnd": {
-   "d": 45,
-   "auto": null,
-   "spd": 4.4399999999999995
+   "d": 37,
+   "auto": {
+    "x": 21991,
+    "y": 70317
+   },
+   "spd": 7.744886141888525
   },
   "wreckToasts": [
-   "Поднято со дна: лес — 5."
+   "Поднято со дна: доски и смола — 5."
   ],
   "claim": {
    "name": "Gallowsreach Holm",
-   "d": 668
+   "d": 607
   },
   "claimActs": [
    "claim",
@@ -111,9 +275,15 @@
   ],
   "claimTapped": true,
   "claimCourse": null,
-  "claimOpen": false,
+  "claimOpen": true,
   "scrollIsles": {
-   "found": false
+   "found": true,
+   "long": true,
+   "sh": 682,
+   "ch": 196,
+   "top": 486,
+   "end": true,
+   "lastSeen": true
   },
   "scroll_journal": {
    "found": true,
@@ -154,9 +324,185 @@
   "scroll_company": {
    "found": true,
    "long": true,
-   "sh": 1071,
-   "ch": 196,
-   "top": 875,
+   "sh": 682,
+   "ch": 173,
+   "top": 509,
+   "end": true,
+   "lastSeen": true
+  },
+  "errors": []
+ },
+ "1500x600": {
+  "capMenu": true,
+  "capMenuRect": {
+   "x": 470,
+   "y": 382.9591369628906,
+   "w": 560,
+   "h": 219.59371948242188,
+   "b": 602.5528564453125,
+   "r": 1030
+  },
+  "capTiles": [
+   44,
+   44,
+   44,
+   44,
+   44,
+   44
+  ],
+  "capOptions": true,
+  "plate": {
+   "w": 85,
+   "h": 13,
+   "lines": 1,
+   "plate": 261
+  },
+  "find": {
+   "id": 5,
+   "x": 20875,
+   "y": 69772,
+   "d": 711
+  },
+  "actRow": [
+   {
+    "act": "0",
+    "w": 135,
+    "h": 30,
+    "top": 558
+   },
+   {
+    "act": "1",
+    "w": 219,
+    "h": 30,
+    "top": 558
+   }
+  ],
+  "findTapped": true,
+  "findCourse": {
+   "x": 20875,
+   "y": 69772
+  },
+  "findDone": true,
+  "findToasts": [
+   "Автоплавание: метка достигнута. Штурвал у вас."
+  ],
+  "cast": {
+   "id": 3,
+   "x": 21112,
+   "y": 69942,
+   "sx": 1494.116068847638,
+   "sy": 721.7754398971513,
+   "crew": 5
+  },
+  "castCourse": {
+   "x": 21112,
+   "y": 69942
+  },
+  "castWhy": {
+   "toasts": [
+    "Автоплавание: штурвал у рулевого. Любое движение руля возвращает его вам.",
+    "Потерпевший 3: на обломке 3 чел., 374 м от вас"
+   ],
+   "fight": {
+    "pursuit": null,
+    "combat": false,
+    "hull": 900,
+    "hullMax": 900
+   }
+  },
+  "castAboard": true,
+  "castCrew": 8,
+  "castToasts": [
+   "С обломка мачты подняли потерпевших: 3 — нанимаются юнгами."
+  ],
+  "wreck": {
+   "id": 4672,
+   "x": 21368,
+   "y": 71112,
+   "d": 1205,
+   "value": 50,
+   "sx": 1337.3387166225914,
+   "sy": 2998.0717336964485,
+   "n": 8
+  },
+  "wreckCourse": {
+   "x": 21368,
+   "y": 71112
+  },
+  "wreckTaken": true,
+  "wreckEnd": {
+   "d": 41,
+   "auto": {
+    "x": 21368,
+    "y": 71112
+   },
+   "spd": 5.594933512685525
+  },
+  "wreckToasts": [
+   "Поднято со дна: соль — 5."
+  ],
+  "claim": {
+   "name": "Gallowshaven",
+   "d": 644
+  },
+  "claimActs": [
+   "1",
+   "2",
+   "3",
+   "0",
+   "act-btn act-toggle"
+  ],
+  "claimTapped": true,
+  "claimCourse": {
+   "x": 17654,
+   "y": 70198
+  },
+  "claimOpen": true,
+  "scrollIsles": {
+   "found": true,
+   "long": true,
+   "sh": 514,
+   "ch": 412,
+   "top": 102,
+   "end": true,
+   "lastSeen": true
+  },
+  "scroll_journal": {
+   "found": true,
+   "long": true,
+   "sh": 1709,
+   "ch": 468,
+   "top": 1241,
+   "end": true,
+   "lastSeen": true
+  },
+  "scroll_hero": {
+   "found": true,
+   "long": true,
+   "sh": 880,
+   "ch": 468,
+   "top": 412,
+   "end": true,
+   "lastSeen": true
+  },
+  "scroll_options": {
+   "found": true,
+   "long": false,
+   "sh": 468,
+   "ch": 468
+  },
+  "scroll_news": {
+   "found": true,
+   "long": false,
+   "sh": 370,
+   "ch": 370
+  },
+  "scroll_company": {
+   "found": true,
+   "long": true,
+   "sh": 514,
+   "ch": 415,
+   "top": 99,
    "end": true,
    "lastSeen": true
   },
