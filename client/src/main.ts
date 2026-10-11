@@ -359,6 +359,11 @@ function openShop(topup = false): void {
   premiumWindow.open(topup);
   openModal('shop');
 }
+// «Свиток автобоя» (owner, 2026-10-11): «Купить» on the battle bar and in the locker opens the shop at its scrolls.
+addEventListener('gravetide:shop', (e) => {
+  if ((e as CustomEvent).detail === 'scrolls') premiumWindow.tab = 'scrolls';
+  openShop();
+});
 const puzzleWindow = new PuzzleWindow((m) => net.send(m));
 function openPuzzle(): void {
   puzzleWindow.open();

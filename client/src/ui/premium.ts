@@ -3,7 +3,7 @@
 // is the painted figure (a hull's sprite, a creature's own figure), its name, the line on what sets it apart, the
 // price in doubloons and Buy — shut, with the reason, while it cannot be had. The server decides; the window asks.
 
-import { DOUBLOON_PACKS } from '../../../shared/src/data/premium.ts';
+import { AUTO_SCROLL_ICON, AUTO_SCROLL_PACKS, DOUBLOON_PACKS } from '../../../shared/src/data/premium.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import { FLEET_LISTS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { giftOf } from '../../../shared/src/data/shipgifts.ts';
@@ -90,6 +90,21 @@ function unitCard(c: PremiumUnitCard): string {
     ${buyBox(c.price, c.why, c.lv, `data-pmunit="${c.id}"`)}</div>`;
 }
 
+/** «Свиток автобоя» (owner, 2026-10-11): her scrolls, and the three packs — each its count, the price a scroll and the
+ *  volume's discount against the single, the price and Buy (shut while the doubloons are short). */
+function scrollShelf(v: PremiumView): string {
+  const one = AUTO_SCROLL_PACKS[0].price / AUTO_SCROLL_PACKS[0].n;
+  const cards = AUTO_SCROLL_PACKS.map((p) => {
+    const each = Math.round(p.price / p.n);
+    const off = Math.round((1 - each / one) * 100);
+    const why: PremiumWhy | null = v.balance < p.price ? 'poor' : null;
+    return `<div class="card pm-card pm-scroll${why ? ' shut' : ''}"><div class="pm-art pm-sc">${icon(AUTO_SCROLL_ICON, '✉', 'ico-lg')}${off > 0 ? `<span class="pm-off">${esc(L('sc.off', { n: off }))}</span>` : ''}</div>
+      <div class="pm-text"><b class="pm-name">${esc(L('sc.name'))} <span class="pm-n">×${p.n}</span></b><span class="muted pm-meta">${doubloonIcon('ico-xs')}${esc(L('sc.each', { n: each }))}</span></div>
+      ${buyBox(p.price, why, 0, `data-pmscroll="${p.id}"`)}</div>`;
+  }).join('');
+  return `<div class="pm-sc-have">${icon(AUTO_SCROLL_ICON, '✉', 'ico-sm')}<b>${esc(L('sc.have', { n: v.scrolls ?? 0 }))}</b></div><div class="pm-grid">${cards}</div>`;
+}
+
 function emptyCard(tab: 'ships' | 'units'): string {
   return `<div class="card pm-empty">${doubloonIcon('ico-lg')}<div><b class="pm-name">${esc(L(tab === 'ships' ? 'empty.ships' : 'empty.units'))}</b><p class="muted">${esc(L('empty.text'))}</p></div></div>`;
 }
@@ -109,7 +124,7 @@ function topUp(v: PremiumView): string {
 }
 
 export class PremiumWindow {
-  tab: 'ships' | 'units' = 'ships';
+  tab: 'ships' | 'units' | 'scrolls' = 'ships';
   /** The top-up's packs in place of the shelves. */
   topup = false;
   private send: (m: ClientMsg) => void;
@@ -133,18 +148,19 @@ export class PremiumWindow {
     } else if (this.topup) {
       root.innerHTML = `${head}<div class="modal-body pm-body">${topUp(v)}</div>`;
     } else {
-      const tabs = (['ships', 'units'] as const).map((t) => {
-        const n = t === 'ships' ? v.ships.length : v.units.length;
-        return `<button class="tab${t === this.tab ? ' active' : ''}" data-pmtab="${t}">${icon(t === 'ships' ? 'menu_ship' : 'build_kennel', '', 'ico-sm')}${esc(L(t === 'ships' ? 'tab.ships' : 'tab.units'))}${n ? ` <span class="pm-count">${n}</span>` : ''}</button>`;
+      const tabs = (['ships', 'units', 'scrolls'] as const).map((t) => {
+        const n = t === 'ships' ? v.ships.length : t === 'units' ? v.units.length : v.scrolls ?? 0;
+        return `<button class="tab${t === this.tab ? ' active' : ''}" data-pmtab="${t}">${icon(t === 'ships' ? 'menu_ship' : t === 'units' ? 'build_kennel' : AUTO_SCROLL_ICON, '', 'ico-sm')}${esc(L(t === 'ships' ? 'tab.ships' : t === 'units' ? 'tab.units' : 'tab.scrolls'))}${n ? ` <span class="pm-count">${n}</span>` : ''}</button>`;
       }).join('');
       // The hulls on their four shelves (docs/02 §1.A.9): the warships, the traders, the runners and the haulers.
       const shelf = (l: string) => v.ships.filter((x) => (SHIP_CLASSES[x.id].list ?? 'combat') === l);
       const cards = this.tab === 'ships'
         ? FLEET_LISTS.map((l) => (shelf(l).length ? `<h4 class="pm-list">${esc(FL(`list.${l}` as keyof typeof FEN))}</h4><div class="pm-grid">${shelf(l).map(shipCard).join('')}</div>` : '')).join('')
+        : this.tab === 'scrolls' ? scrollShelf(v)
         : v.units.length ? `<div class="pm-grid">${v.units.map(unitCard).join('')}</div>` : '';
-      const rule = this.tab === 'ships' ? (v.port ? L('deliver', { port: placeName(v.port) }) : L('deliverSea')) : L('unitsRule');
+      const rule = this.tab === 'ships' ? (v.port ? L('deliver', { port: placeName(v.port) }) : L('deliverSea')) : this.tab === 'scrolls' ? L('sc.rule') : L('unitsRule');
       root.innerHTML = `${head}<div class="modal-body pm-body"><div class="tabs">${tabs}</div>
-        ${cards || emptyCard(this.tab)}
+        ${cards || emptyCard(this.tab === 'ships' ? 'ships' : 'units')}
         <p class="muted pm-rule">${esc(rule)}</p></div>`;
     }
     root.querySelector<HTMLElement>('[data-pmtop]')!.onclick = () => {
@@ -162,13 +178,18 @@ export class PremiumWindow {
       this.send({ t: 'premium', action: 'stars', pack: b.dataset.pmpack!, lang: lang() === 'ru' ? 'ru' : 'en' });
     }));
     root.querySelectorAll<HTMLElement>('[data-pmtab]').forEach((b) => (b.onclick = () => {
-      this.tab = b.dataset.pmtab as 'ships' | 'units';
+      this.tab = b.dataset.pmtab as 'ships' | 'units' | 'scrolls';
       this.render(root, state);
     }));
     root.querySelectorAll<HTMLButtonElement>('[data-pmship]').forEach((b) => (b.onclick = () => {
       const c = b.dataset.pmship as ShipClassId;
       const card = v?.ships.find((x) => x.id === c);
       if (card) void ask(L('ask.ship', { name: SHIP_CLASSES[c].name, n: fmt(card.price) })).then((ok) => ok && this.send({ t: 'premium', action: 'buy_ship', id: c }));
+    }));
+    // «Свиток автобоя» (owner, 2026-10-11): a pack of scrolls, asked once more.
+    root.querySelectorAll<HTMLButtonElement>('[data-pmscroll]').forEach((b) => (b.onclick = () => {
+      const p = AUTO_SCROLL_PACKS.find((x) => x.id === b.dataset.pmscroll);
+      if (p) void ask(L('ask.scrolls', { k: p.n, n: fmt(p.price) })).then((ok) => ok && this.send({ t: 'premium', action: 'buy_scrolls', pack: p.id }));
     }));
     root.querySelectorAll<HTMLButtonElement>('[data-pmunit]').forEach((b) => (b.onclick = () => {
       const u = b.dataset.pmunit as UnitId;

@@ -190,6 +190,8 @@ export class ClientState {
   tame: TameView | null = null;
   /** The premium shop (owner, 2026-10-03): her account's doubloons, and the shop as she last saw it. */
   doubloons = 0;
+  /** «Свиток автобоя» (owner, 2026-10-11): her account's auto-battle scrolls. */
+  scrolls = 0;
   premium: PremiumView | null = null;
   puzzle: PuzzleView | null = null;
   puzzleAt = 0;
@@ -522,10 +524,15 @@ export class ClientState {
       case 'doubloons':
         this.doubloons = m.n;
         if (this.premium) this.premium.balance = m.n;
+        if (typeof m.scrolls === 'number') {
+          this.scrolls = m.scrolls;
+          if (this.premium) this.premium.scrolls = m.scrolls;
+        }
         break;
       case 'premium':
         this.premium = m.view;
         this.doubloons = m.view.balance;
+        this.scrolls = m.view.scrolls ?? this.scrolls;
         break;
       case 'puzzle':
         this.puzzle = m.view;

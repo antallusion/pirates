@@ -31,6 +31,7 @@ import type { CmpRow } from './gearcmp.ts';
 import { EN as EASE_EN, RU as EASE_RU } from '../lang/ui/ease.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
 import { quickBar } from './kit/window.ts';
+import { AUTO_SCROLL_ICON } from '../../../shared/src/data/premium.ts'; // «Свиток автобоя» (owner, 2026-10-11)
 import type { WinTab } from './kit/window.ts';
 
 const L = dict(EN, RU);
@@ -321,7 +322,9 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
     // Best first: rarity, then level; one slot's pieces only when asked.
     const list = self.stash.filter((it) => !only || itemSlot(it) === only).sort((a, b) => b.rarity - a.rarity || b.ilvl - a.ilvl || a.base.localeCompare(b.base));
     const filter = only ? `<div class="gear-filter"><span class="muted">${esc(L('only', { slot: SLOT_NAMES[only][ru() ? 1 : 0] }))}</span><button class="btn btn-small" data-gall>${esc(L('all'))}</button></div>` : '';
-    body = filter + (list.length
+    // «Свиток автобоя» (owner, 2026-10-11): the account's auto-battle scrolls on top of the locker, «Купить» to the shop.
+    const scrolls = only ? '' : `<div class="gear-list gear-scrolls"><div class="gr gr-scroll" style="border-left-color:var(--gold, #e0b862)">${icon(AUTO_SCROLL_ICON, '✉', 'ico-md')}<span class="gs-t"><b>${esc(L('scroll.name'))} ×${state.scrolls}</b><span class="muted gs-sub">${esc(L('scroll.sub'))}</span></span><button class="btn btn-small gr-price" data-gscroll>${esc(L('scroll.buy'))}</button></div></div>`;
+    body = filter + scrolls + (list.length
       ? `<div class="gear-list">${list.map((it) => `<button class="gr${pick?.kind === 'item' && pick.uid === it.uid ? ' on' : ''}" data-gitem="${it.uid}" style="border-left-color:${RARITY_COLOR[it.rarity]}">${itemIcon(it, itemSlot(it))}<span class="gs-t">${coloured(it)}<span class="muted gs-sub">${esc(SLOT_NAMES[itemSlot(it)][ru() ? 1 : 0])} · ${esc(L('lv', { n: it.ilvl }))}${it.dur < 100 ? ` · ${esc(L('wear', { n: it.dur }))}` : ''}</span></span></button>`).join('')}</div>`
       : `<p class="muted">${esc(L('lockerEmpty'))}</p>`);
   } else if (tab === 'shop') {
@@ -389,6 +392,7 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
   root.querySelectorAll<HTMLElement>('[data-greforge]').forEach((b) => (b.onclick = () => send({ t: 'gear', action: 'reforge', uid: Number(b.dataset.greforge), line: Number(b.dataset.line) })));
   root.querySelectorAll<HTMLElement>('[data-gbuy]').forEach((b) => (b.onclick = () => send({ t: 'gear', action: 'buy', index: Number(b.dataset.gbuy) })));
   root.querySelector<HTMLElement>('[data-gmend]')?.addEventListener('click', () => send({ t: 'gear', action: 'mend' }));
+  root.querySelector<HTMLElement>('[data-gscroll]')?.addEventListener('click', () => dispatchEvent(new CustomEvent('gravetide:shop', { detail: 'scrolls' })));
   bindStormForge(root, send);
   // On a desktop a row under the cursor shows its card beside what is worn, without a click (docs/16 #38).
   if (!document.body.classList.contains('touch') && matchMedia('(hover: hover)').matches) {

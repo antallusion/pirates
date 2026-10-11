@@ -5,6 +5,7 @@
 // the order (a second tap on a lit hex moves there; a tap on a foe strikes or fires), a long press shows a stack.
 
 import { SEAL_MOVES } from '../../../shared/src/data/seals.ts';
+import { AUTO_SCROLL_ICON, AUTO_SCROLL_PACKS } from '../../../shared/src/data/premium.ts'; // «Свиток автобоя» (owner, 2026-10-11)
 import { findTitle } from '../render/seafinds.ts'; // docs/19 D5: the chest among the sharks
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { OFFICER_DEFS } from '../../../shared/src/data/crew.ts';
@@ -124,6 +125,8 @@ function lootParts(l: LairLoot): { chips: string[]; lines: string[] } {
     const name = r === 'pearls' ? GOODS.pearls.name : LAND_RES_DEF[r].name[ru];
     chips.push(`<span class="tb-lc" title="${esc(name)}">${icon(r === 'pearls' ? 'icon.good_pearls' : `icon.${LAND_RES_DEF[r].icon}`, '', 'ico-sm')}${esc(name)} ${n}</span>`);
   }
+  // «Свиток автобоя» (owner, 2026-10-11): a top seal's weekly scroll.
+  if (l.scrolls) chips.push(`<span class="tb-lc" title="${esc(L('scLoot', { n: l.scrolls }))}">${icon(AUTO_SCROLL_ICON, '', 'ico-sm')}×${l.scrolls}</span>`);
   const lines: string[] = [];
   if (l.artifact) lines.push(esc(LL('loot.art', { a: ARTIFACTS[l.artifact]?.name[ru] ?? l.artifact })));
   if (l.egg) lines.push(`${unitIcon(l.egg, 'ico-sm')} ${esc(LL('loot.egg', { u: unitName(l.egg) }))}`);
@@ -1441,11 +1444,14 @@ export class TacticalPanel {
       `<button class="tb-rb${cls}" ${data} title="${esc(label)}" aria-label="${esc(label)}"${off ? ' disabled' : ''}>${art}</button>`;
     const officer = v.mine && act?.officer?.ready ? act.officer : null;
     const pathReady = v.mine && !!me.path && (me.innate === 'ready' || (me.ult === 'ready' && v.round >= (me.ultFrom ?? ULT_ROUND)));
-    // From the corner up: wait under the thumb, then defend, then auto (its wheel).
+    // From the corner up: wait under the thumb, then defend, then auto (its wheel). «Свиток автобоя» (owner, 2026-10-11):
+    // «Авто» wears her scrolls' count, or a lock while she has none (its wheel offers «Купить свитки» then).
+    const locked = this.scrollLocked(v);
+    const autoTip = me.auto ? L('autoOff') : locked ? L('scLocked', { n: AUTO_SCROLL_PACKS[0].price }) : v.scrolls?.paid ? `${L('autoMenu')} · ${L('scPaid')}` : v.scrolls ? `${L('autoMenu')} · ${L('scN', { n: v.scrolls.n })}` : L('autoMenu');
     const left = [
       rb('data-a="wait"', L('wait'), btIcon('bt_wait', 'icon.bt_hold', 'ico'), '', !v.mine || !!act?.waited),
       rb('data-a="defend"', L('defend'), btIcon('bt_defend', 'icon.mod_hull_plating', 'ico'), '', !v.mine),
-      rb('data-autow', me.auto ? L('autoOff') : L('autoMenu'), btIcon('bt_auto', 'icon.bt_captain', 'ico'), me.auto ? ' on' : '', !!v.over),
+      rb('data-autow', autoTip, btIcon('bt_auto', 'icon.bt_captain', 'ico') + this.scrollBadge(v), `${me.auto ? ' on' : ''}${locked ? ' locked' : ''}`, !!v.over),
     ].join('');
     const t = this.targeting;
     const aimed = !t ? '' : t === 'innate' || t === 'ult' ? (me.path ? icon(`icon.${(t === 'innate' ? INNATE : ULTIMATE)[me.path].icon}`, '', 'ico') : '') : spIcon(t);
@@ -1534,10 +1540,17 @@ export class TacticalPanel {
     const v = this.view;
     if (!v) return [];
     const art = (id: string, fb: string) => (assetUrl(`icon.${id}`) ? `icon.${id}` : fb);
-    const out: WheelOption[] = [
-      { id: 'auto', label: L('autoEnd'), icon: art('bt_auto', 'icon.bt_captain') },
-      ...(v.noQuick ? [] : [{ id: 'quick', label: L('quick'), icon: art('bt_quick', 'icon.bt_charge') }]),
-    ];
+    // «Свиток автобоя» (owner, 2026-10-11): «Авто до конца» with her scrolls' count, or locked with the price and
+    // «Купить свитки» beside it; the quick fight free against a clearly weaker ship of the sea, else on a scroll.
+    const sc = v.scrolls;
+    const locked = this.scrollLocked(v);
+    const out: WheelOption[] = locked
+      ? [{ id: 'auto', label: L('scLocked', { n: AUTO_SCROLL_PACKS[0].price }), icon: art('bt_auto', 'icon.bt_captain'), disabled: true }, { id: 'buy', label: L('scBuy'), icon: `icon.${AUTO_SCROLL_ICON}` }]
+      : [{ id: 'auto', label: L('autoEnd'), icon: art('bt_auto', 'icon.bt_captain'), ...(sc && !sc.paid ? { count: sc.n } : {}) }];
+    if (!v.noQuick) {
+      const free = !sc || !!sc.freeQuick || !!sc.paid;
+      out.push({ id: 'quick', label: free ? L('quick') : locked ? L('scQuickLocked') : L('scQuick'), icon: art('bt_quick', 'icon.bt_charge'), ...(!free && locked ? { disabled: true } : {}) });
+    }
     if (v.canCut) out.push({ id: 'cut', label: v.you === 0 ? L('fallBack') : L('cut'), icon: art('bt_retreat', 'icon.bt_colours') });
     if (v.ransom) {
       const short = this.purse() < v.ransom;
@@ -1552,6 +1565,7 @@ export class TacticalPanel {
     if (!v || v.over) return;
     if (id === 'auto') return this.order({ a: 'auto', on: true });
     if (id === 'quick') return this.order({ a: 'quick' });
+    if (id === 'buy') return this.openShop();
     // The ways out are asked once more (a sheet with the verb and «Отменить»).
     const q = id === 'cut' ? L(v.you === 0 ? 'fallBackQ' : 'cutQ') : id === 'ransom' ? L('ransomQ', { n: v.ransom ?? 0 }) : L('strikeQ');
     const yes = id === 'cut' ? (v.you === 0 ? L('fallBack') : L('cut')) : id === 'ransom' ? L('ransom', { n: v.ransom ?? 0 }) : L('strike');
@@ -1606,7 +1620,7 @@ export class TacticalPanel {
     // The fight over, the book is put away (it stood over the reckoning on a desk).
     if (v.over) this.bookOpen = false;
     const act = v.stacks.find((s) => s.id === v.active);
-    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.allies, v.coming, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.bookTab, this.bookPage, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result, v.flag, v.quickNow, v.noQuick, !!v.bank, this.phone, this.tall, this.moreOpen, this.sheetOpen, this.sheetKind, settings().tacFast, this.endHidden, this.foeArmed]);
+    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.allies, v.coming, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.bookTab, this.bookPage, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result, v.flag, v.quickNow, v.noQuick, v.scrolls, !!v.bank, this.phone, this.tall, this.moreOpen, this.sheetOpen, this.sheetKind, settings().tacFast, this.endHidden, this.foeArmed]);
     if (key === this.key) return;
     this.key = key;
     const hero = (x: 0 | 1) => {
@@ -1750,6 +1764,11 @@ export class TacticalPanel {
     const lab = (t: string, tip?: string): string => `title="${esc(tip ?? t)}" aria-label="${esc(t)}"`;
     const word = (t: string): string => `<span class="tb-al">${esc(t)}</span>`;
     const auto = me.auto ? L('autoOff') : L('auto');
+    // «Свиток автобоя» (owner, 2026-10-11): «Авто» with her scrolls' count; without one locked with the price, and «Купить».
+    const sc = v.scrolls;
+    const locked = this.scrollLocked(v);
+    const autoTip = locked ? L('scLocked', { n: AUTO_SCROLL_PACKS[0].price }) : sc?.paid ? L('scPaid') : sc && !me.auto ? L('scN', { n: sc.n }) : undefined;
+    const quickFree = !sc || !!sc.freeQuick || !!sc.paid;
     const cut = v.you === 0 ? L('fallBack') : L('cut');
     const ransomOn = this.ransomArmed > performance.now();
     const poor = !!v.ransom && this.purse() < v.ransom;
@@ -1759,8 +1778,9 @@ export class TacticalPanel {
       `<button class="btn" data-a="wait" ${lab(L('wait'))} ${!v.mine || act?.waited ? 'disabled' : ''}>${btIcon('bt_wait', 'icon.bt_hold')}${word(L('wait'))}</button>`,
       `<button class="btn" data-a="defend" ${lab(L('defend'))} ${!v.mine ? 'disabled' : ''}>${btIcon('bt_defend', 'icon.mod_hull_plating')}${word(L('defend'))}</button>`,
       officer ? `<button class="btn btn-primary" data-a="order" ${lab(L(`o.${officer.order}` as K), L(`od.${officer.order}` as K))}>${icon(`icon.role_${officer.role}`, '', 'ico-sm')}${word(L(`o.${officer.order}` as K))}</button>` : '',
-      `<button class="btn${me.auto ? ' on' : ''}" data-a="auto" ${lab(auto)}>${btIcon('bt_auto', '')}${word(auto)}</button>`,
-      v.noQuick ? '' : `<button class="btn${v.quickNow ? ' btn-primary tb-quicknow' : ''}" data-a="quick" ${lab(L('quick'), v.quickNow ? L('quickNow') : undefined)} ${v.over ? 'disabled' : ''}>${btIcon('bt_quick', '')}${word(L('quick'))}</button>`,
+      `<button class="btn${me.auto ? ' on' : ''}${locked ? ' locked' : ''}" data-a="${locked ? 'buyscroll' : 'auto'}" ${lab(auto, autoTip)}>${btIcon('bt_auto', '')}${word(auto)}${this.scrollBadge(v, true)}</button>`,
+      locked ? `<button class="btn btn-primary tb-scbuy" data-a="buyscroll" ${lab(L('scBuy'))}>${icon(AUTO_SCROLL_ICON, '', 'ico-sm')}${word(L('scBuy'))}</button>` : '',
+      v.noQuick ? '' : `<button class="btn${v.quickNow ? ' btn-primary tb-quicknow' : ''}${!quickFree && locked ? ' locked' : ''}" data-a="${!quickFree && locked ? 'buyscroll' : 'quick'}" ${lab(L('quick'), v.quickNow ? L('quickNow') : quickFree ? undefined : locked ? L('scQuickLocked') : L('scQuick'))} ${v.over ? 'disabled' : ''}>${btIcon('bt_quick', '')}${word(L('quick'))}</button>`,
       v.canCut && !v.over ? `<button class="btn btn-danger" data-a="cut" ${lab(cut)}>${btIcon('bt_retreat', '')}${word(cut)}</button>` : '',
       v.ransom && !v.over ? `<button class="btn${ransomOn ? ' on armed' : ''}" data-a="ransom" ${lab(ransom, L('ransomTip'))}${poor ? ' disabled' : ''}>${btIcon('bt_ransom', 'icon.coin')}${word(ransom)}</button>` : '',
       v.canStrike && !v.over ? `<button class="btn btn-danger${armed ? ' on armed' : ''}" data-a="surrender" ${lab(strike)}>${btIcon('bt_strike', '')}${word(strike)}</button>` : '',
@@ -2281,6 +2301,27 @@ export class TacticalPanel {
     else this.hideWords();
   }
 
+  // ------------------------------------------------------------------ the auto-battle scroll
+
+  /** «Свиток автобоя» (owner, 2026-10-11): her «Авто» is shut — no scroll on her account and none spent on this battle. */
+  private scrollLocked(v: TacView): boolean {
+    const sc = v.scrolls;
+    return !!sc && !sc.paid && sc.n <= 0 && !v.heroes[v.you].auto && !v.over;
+  }
+
+  /** The mark on her «Авто»: her scrolls' count, or the lock (on the desk, the lock with the price in doubloons). */
+  private scrollBadge(v: TacView, desk = false): string {
+    const sc = v.scrolls;
+    if (!sc || sc.paid || v.heroes[v.you].auto || v.over) return '';
+    if (sc.n > 0) return `<b class="tb-scn" aria-hidden="true">${sc.n}</b>`;
+    return desk ? `<span class="tb-scp" aria-hidden="true"><i class="tb-lock"></i>${icon('doubloon', '', 'ico-xs')}${AUTO_SCROLL_PACKS[0].price}</span>` : '<i class="tb-lock" aria-hidden="true"></i>';
+  }
+
+  /** The premium shop opened at its scrolls (main.ts listens): bought there, the battle's view comes again with them. */
+  private openShop(): void {
+    dispatchEvent(new CustomEvent('gravetide:shop', { detail: 'scrolls' }));
+  }
+
   // ------------------------------------------------------------------ orders
 
   private order(a: TacAction): void {
@@ -2293,6 +2334,7 @@ export class TacticalPanel {
     if (a === 'wait' || a === 'defend' || a === 'order') this.order({ a });
     else if (a === 'auto') this.order({ a: 'auto', on: !v.heroes[v.you].auto });
     else if (a === 'quick') this.order({ a: 'quick' });
+    else if (a === 'buyscroll') this.openShop();
     else if (a === 'cut') this.send({ t: 'board_cut' });
     else if (a === 'ransom') {
       if (this.ransomArmed > performance.now()) {
@@ -2371,7 +2413,10 @@ export class TacticalPanel {
     if (code === 'KeyW') this.order({ a: 'wait' });
     else if (code === 'KeyD') this.order({ a: 'defend' });
     else if (code === 'KeyO') this.order({ a: 'order' });
-    else if (code === 'KeyA') this.order({ a: 'auto', on: !v.heroes[v.you].auto });
+    else if (code === 'KeyA') {
+      if (!v.heroes[v.you].auto && this.scrollLocked(v)) this.openShop();
+      else this.order({ a: 'auto', on: !v.heroes[v.you].auto });
+    }
     else if (code === 'KeyI') this.move2('innate');
     else if (code === 'KeyU') this.move2('ult');
     else if (/^Digit[1-4]$/.test(code)) {
