@@ -31,7 +31,7 @@ export type FetchFn = (url: string, init: { method: string; headers: Record<stri
 
 const DAY_S = 86_400;
 const NONCE_TTL = 10 * 60_000;
-const START_LIMIT = 10; // nonces per address per 10 minutes
+const START_LIMIT = 20; // nonces per address per 10 minutes (a carrier's NAT puts many phones behind one address)
 const POLL_LIMIT = 90; // polls per address per minute (the page asks every 2 s)
 const PROVIDER = 'telegram';
 

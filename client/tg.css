@@ -76,6 +76,14 @@
 /* the «turn your phone» veil's word on Telegram's auto-rotate */
 #rotate-lock .tg-rot { display: none; }
 .tg-app #rotate-lock .tg-rot { display: block; font-size: 13px; opacity: 0.7; max-width: 280px; }
-/* Telegram's own controls over the top in fullscreen: the title screen keeps clear of them */
-.tg-app #screen-login, .tg-app #screen-captain { padding-top: var(--tg-top, 0px); padding-bottom: var(--tg-bottom, 0px); box-sizing: border-box; }
+/* Telegram's fullscreen puts its controls over the top of the page (the content safe area, src/tg.ts → --tg-*): the
+   screens and the windows stand below them and take the rest of the height, so the phone fit (fit.css, kit/fit.ts —
+   it measures the panes, not the screen) lays them out in what is left */
+html.tg-app .screen, html.tg-app #modal { top: var(--tg-top, 0px); bottom: var(--tg-bottom, 0px); left: var(--tg-left, 0px); right: var(--tg-right, 0px); }
+html.tg-app #modal-panel, html.tg-app .captain-wrap, html.tg-app #screen-login > .login-panel { max-height: 100%; }
+@media (max-height: 520px), (max-width: 699px) {
+  html.tg-app #modal-panel, html.tg-app .captain-wrap { height: 100%; }
+}
 .tg-app body, html.tg-app { overscroll-behavior: none; }
+/* the toasts' band below Telegram's controls (hud.ts places it by the HUD; the content safe area is Telegram's) */
+html.tg-app body.simple #toasts, html.tg-app body.simple.tq-side #toasts, html.tg-app body.simple.touch #toasts { top: max(var(--st-top, 0px), calc(var(--sa-t) + 8px)) !important; }

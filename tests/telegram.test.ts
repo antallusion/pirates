@@ -122,9 +122,9 @@ test('«Войти через Телеграм»: a nonce, the bot binds it, the
   assert.deepEqual(tg.poll('nonsense', '1.2.3.4'), { status: 'expired' });
 });
 
-test('the deep link is rate-limited per address: ten nonces in ten minutes, the poll ninety a minute', () => {
+test('the deep link is rate-limited per address: twenty nonces in ten minutes, the poll ninety a minute', () => {
   const { tg, now } = setup();
-  for (let i = 0; i < 10; i++) assert.ok(!('error' in tg.start('5.5.5.5')));
+  for (let i = 0; i < 20; i++) assert.ok(!('error' in tg.start('5.5.5.5')));
   const r = tg.start('5.5.5.5');
   assert.ok('error' in r && r.status === 429);
   assert.ok(!('error' in tg.start('6.6.6.6')), 'another address has its own');
