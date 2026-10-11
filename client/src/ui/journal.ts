@@ -29,7 +29,8 @@ import type { ClientState } from '../state.ts';
 import { ask } from './confirm.ts';
 import { commonLog, dailyLog } from './daily.ts';
 import { invasionLog } from './invasion.ts'; // docs/19 E16
-import { esc, fishIcon, icon, portraitUrl, xpBadge } from './dom.ts';
+import { dec1, esc, fishIcon, icon, portraitUrl, xpBadge } from './dom.ts';
+import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
 import { logFrame } from './logbook.ts';
 import type { LogTab } from './logbook.ts';
 import { paidHtml } from './giver.ts';
@@ -65,6 +66,10 @@ const EN = {
   pay: 'Pay',
   follow: 'Follow',
   following: 'Followed',
+  sail: 'Sail there',
+  sailHint: 'The helmsman takes her there, puts in or lands the party as the step asks, and goes on to the next step',
+  sailPort: 'Sail after casting off',
+  noPlace: 'This step has no place on the chart',
   share: 'Share with the group',
   abandon: 'Set aside',
   confirmAbandon: 'Set this quest aside? Its progress is lost.',
@@ -116,6 +121,10 @@ const RU: typeof EN = {
   pay: 'Плата',
   follow: 'Следовать',
   following: 'Отслеживается',
+  sail: 'Плыть',
+  sailHint: 'Рулевой поведёт корабль к месту, сам зайдёт в порт или высадит десант, как просит шаг, и поведёт к следующему шагу',
+  sailPort: 'Плыть после выхода',
+  noPlace: 'У этого шага нет места на карте',
   share: 'Поделиться с группой',
   abandon: 'Отложить',
   confirmAbandon: 'Отложить это задание? Сделанное по нему пропадёт.',
@@ -143,6 +152,9 @@ const RU: typeof EN = {
   dWon: 'На этой неделе его упокоил капитан {name}.',
 };
 const L = dict(EN, RU);
+const RL = dict(REN, RRU);
+/** A distance as the sea's marks say it («2,4 км», «380 м»). */
+export const distWords = (d: number): string => (d >= 1000 ? RL('dist.km', { n: dec1(d / 1000) }) : RL('dist.m', { n: Math.round(d / 10) * 10 }));
 
 type Quest = NonNullable<ClientState['self']>['quests'][number];
 
@@ -154,6 +166,8 @@ export class Journal {
   openSaga: (() => void) | null = null;
   /** Opens the captain's log (docs/16 #20). */
   openLog: (() => void) | null = null;
+  /** «Плыть» (ux2): the course to the quest's place, and on to its next steps (main.ts, goalrun.ts). */
+  onSail: (key: string) => void = () => {};
   /** Another tab of «Журнал»: the company's pages (main.ts). */
   onTab: (t: Exclude<LogTab, 'quests'>) => void = () => {};
   private send: (m: ClientMsg) => void;
@@ -164,7 +178,7 @@ export class Journal {
   render(root: HTMLElement, state: ClientState): void {
     const self = state.self;
     const quests = self?.quests ?? [];
-    const tracked = trackedQuest(quests)?.id ?? null;
+    const tracked = trackedQuest(quests, state.ownDisplay)?.id ?? null;
     if (!this.chosen || !quests.some((q) => q.id === this.chosen)) this.chosen = tracked ?? quests[0]?.id ?? null;
     const q = quests.find((x) => x.id === this.chosen) ?? null;
     const inGroup = (state.party?.members.length ?? 0) > 1;
@@ -180,7 +194,7 @@ export class Journal {
           <div class="jr-day">${dailyLog(self?.daily)}${weeklyLog(state.renown?.weekly)}${commonLog(self?.common)}${invasionLog(self?.invasion, false)}${worldGoalsLog(state)}${tasksLog(state, false)}${omenLog(state.omen)}${dutchmanLog(state.dutchman)}${wondersLog(state.wonders)}${nemesisLog(state.wanted?.nemeses, state.wanted?.heads ?? 0)}${hunterLog(state.wanted)}${brethrenLog(state.raid)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
           ${self?.questsDone.length ? `<details class="jr-done"><summary>${esc(L('done', { n: self.questsDone.length }))}</summary><ol>${(self.questsRecent ?? []).map((n) => `<li>${esc(serverText(n))}</li>`).join('')}</ol></details>` : ''}
         </div>
-        <div class="jr-detail">${q ? this.detail(q, q.id === tracked, inGroup) : ''}</div>
+        <div class="jr-detail">${q ? this.detail(q, q.id === tracked, inGroup, state) : ''}</div>
       </div>`);
     root.querySelectorAll<HTMLElement>('[data-jtab]').forEach((b) => (b.onclick = () => b.dataset.jtab !== 'quests' && this.onTab(b.dataset.jtab as Exclude<LogTab, 'quests'>)));
     root.querySelector<HTMLElement>('[data-jchip="log"]')?.addEventListener('click', () => this.openLog?.());
@@ -200,6 +214,11 @@ export class Journal {
       setTracked(this.chosen);
       this.render(root, state);
     });
+    root.querySelector<HTMLElement>('[data-jsail]')?.addEventListener('click', () => {
+      if (!this.chosen) return;
+      setTracked(this.chosen);
+      this.onSail(`q:${this.chosen}`);
+    });
     root.querySelector<HTMLElement>('[data-share]')?.addEventListener('click', () => this.chosen && this.send({ t: 'quest', action: 'share', id: this.chosen }));
     // A group contract: on the board of those looking for a group, by its name.
     root.querySelector<HTMLElement>('[data-lfg]')?.addEventListener('click', () => q && this.send({ t: 'group', action: 'lfg', note: serverText(q.name) }));
@@ -215,7 +234,10 @@ export class Journal {
       <span class="muted">${esc(L(`kind_${q.kind}` as 'kind_job'))} · ${q.step}/${q.steps}${q.mates?.length ? ` · ${icon('tab_group', '⚑', 'ico-sm')}${q.mates.length}` : ''}</span></button>`;
   }
 
-  private detail(q: Quest, tracked: boolean, inGroup: boolean): string {
+  private detail(q: Quest, tracked: boolean, inGroup: boolean, state: ClientState): string {
+    const own = state.ownDisplay;
+    const docked = !!state.self?.dockedAt;
+    const far = q.target && own ? Math.hypot(q.target.x - own.x, q.target.y - own.y) : null;
     const face = q.portrait ? portraitUrl(q.portrait) : null;
     const texts = q.stepTexts ?? [q.text];
     const steps = texts.map((t, i) => {
@@ -236,6 +258,7 @@ export class Journal {
       ${q.mates?.length ? `<div class="jr-mates"><span class="giver-h">${esc(L('mates'))}</span>${q.mates.map((m) => `<span class="jr-mate">${esc(L('mateStep', { name: m.name, step: m.step }))}</span>`).join('')}</div>` : ''}
       ${q.silver !== undefined ? `<div class="giver-pay"><span class="giver-h">${esc(L('pay'))}</span>${paidHtml(q.silver, q.pay, q.paid)}${xpBadge(q.xp ?? 0)}${q.fastIn ? `<span class="jr-fast">${esc(L('fast', { m: Math.max(1, Math.ceil(q.fastIn / 60)) }))}</span>` : ''}</div>` : ''}
       <div class="jr-acts">
+        ${q.target ? `<button class="btn btn-small btn-primary jr-sail" data-jsail data-hint="${esc(L('sailHint'))}" title="${esc(L('sailHint'))}">${icon('stat_sails', '', 'ico-sm')}${esc(L(docked ? 'sailPort' : 'sail'))}${far !== null && !q.target.region ? ` · ${esc(distWords(far))}` : ''}</button>` : `<span class="muted jr-noplace">${esc(L('noPlace'))}</span>`}
         <button class="btn btn-small${tracked ? ' on' : ''}" data-follow ${tracked ? 'disabled' : ''}>${esc(L(tracked ? 'following' : 'follow'))}</button>
         ${canShare ? `<button class="btn btn-small" data-share>${esc(L('share'))}</button>` : ''}
         ${q.category === 'elite' && !inGroup ? `<button class="btn btn-small" data-lfg title="${esc(L('lfgHint'))}">${esc(L('lfg'))}</button>` : ''}

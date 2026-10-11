@@ -14,4 +14,6 @@ export const SERVER_RU_H: Record<string, string> = {
   'Foul water ahead: the helm stays with you': 'Впереди мели: штурвал остаётся у вас',
   'The hull is too weak to leave her to the helmsman': 'Корпус слишком слаб, чтобы доверить корабль рулевому',
   'Someone else has the wheel': 'Штурвал в чужих руках',
+  // ux2 (2026-10-11): a course broken off by a fight is taken up again once the sea is quiet
+  'The sea is quiet again: the helmsman takes her on to her mark.': 'Бой позади: рулевой снова ведёт корабль к метке.',
 };

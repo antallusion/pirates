@@ -1,4 +1,5 @@
-// The quest the captain follows (docs/11 P6): picked in the chart's quest log, else the first that points somewhere.
+// The quest the captain follows (docs/11 P6): picked in the journal or the chart's quest log, else the nearest that points
+// somewhere (ux2, owner 2026-10-11).
 // Its step shows under the region line and a gold mark on the screen's rim points the way to it.
 
 import type { PrivateState } from '../../../shared/src/protocol.ts';
@@ -16,10 +17,19 @@ export function setTracked(id: string | null): void {
   else globalThis.localStorage?.removeItem(KEY);
 }
 
-export function trackedQuest(quests: Quest[] | undefined): Quest | null {
+/** The quest followed: the one picked, else (ux2, 2026-10-11) the nearest to `at` that points somewhere, else the first
+ *  that does, else the first. */
+export function trackedQuest(quests: Quest[] | undefined, at?: { x: number; y: number } | null): Quest | null {
   const qs = quests ?? [];
   const id = trackedId();
-  return qs.find((q) => q.id === id) ?? qs.find((q) => q.target) ?? qs[0] ?? null;
+  const picked = qs.find((q) => q.id === id);
+  if (picked) return picked;
+  const placed = qs.filter((q) => q.target);
+  if (at && placed.length > 1) {
+    const d = (q: Quest) => Math.hypot(q.target!.x - at.x, q.target!.y - at.y);
+    return placed.reduce((a, b) => (d(b) < d(a) ? b : a));
+  }
+  return placed[0] ?? qs[0] ?? null;
 }
 
 /** The captain's own mark on the chart (owner, 2026-09-30: "put a point and this point would lead"): kept in the
@@ -76,6 +86,8 @@ export interface Objective {
   dir?: ReturnType<typeof compassKey>;
   /** Seconds left, when it has a clock. */
   left?: number;
+  /** ux2: the goal it is (goalrun.ts: `q:<id>` a quest, `c:<id>` a contract) — a tap on its mark runs the course there. */
+  key?: string;
 }
 
 interface ObjState {
@@ -101,10 +113,10 @@ export function objective(state: ObjState, x: number, y: number): Objective | nu
   }
   const raid = self.isleRaid;
   if (raid) return { kind: 'raid', title: raid.name, text: '', left: Math.max(0, raid.until - state.estServerTime()), ...at(raid.x, raid.y) };
-  const q = trackedQuest(self.quests);
+  const q = trackedQuest(self.quests, { x, y });
   if (q) {
     const p = questPointer(q, x, y, state.region);
-    return { kind: 'quest', title: q.name, text: q.need > 1 ? `${q.text} ${q.progress}/${q.need}` : q.text, ...(p ? at(p.x, p.y) : {}) };
+    return { kind: 'quest', key: `q:${q.id}`, title: q.name, text: q.need > 1 ? `${q.text} ${q.progress}/${q.need}` : q.text, ...(p ? at(p.x, p.y) : {}) };
   }
   const now = state.estServerTime();
   const contracts = [...(self.contracts ?? [])].sort((a, b) => a.expiresAt - b.expiresAt);
@@ -112,7 +124,7 @@ export function objective(state: ObjState, x: number, y: number): Objective | nu
   if (c) {
     const port = c.toPort ? state.ports.find((p) => p.id === c.toPort) : undefined;
     const count = c.kills ? ` ${c.progress ?? 0}/${c.kills}` : '';
-    return { kind: 'contract', title: c.title, text: count.trim(), left: Math.max(0, c.expiresAt - now), ...(port ? at(port.x, port.y) : {}) };
+    return { kind: 'contract', ...(port ? { key: `c:${c.id}` } : {}), title: c.title, text: count.trim(), left: Math.max(0, c.expiresAt - now), ...(port ? at(port.x, port.y) : {}) };
   }
   // A treasure map in the hold with a circle to search: the nearest one leads (owner, 2026-09-29: chests to find).
   const maps = (self.maps ?? []).filter((m) => m.r > 0).sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y));

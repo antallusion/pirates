@@ -4,6 +4,7 @@
 // mouse reads the same words in the element's title (set where the markup is made).
 
 import { esc } from '../dom.ts';
+import { TAB_SEL } from './taps.ts';
 
 /** How long a finger rests before the hint shows. */
 export const HINT_MS = 450;
@@ -67,11 +68,12 @@ export function wireHints(): void {
   };
   addEventListener('pointerup', up, true);
   addEventListener('pointercancel', up, true);
-  // A long press is a question, not an order: the click it ends in does nothing.
+  // A long press is a question, not an order: the click it ends in does nothing — but on a tab (ux2, 2026-10-11: «журнал
+  // иногда подзаедает и не переключает вкладки»: a slow deliberate tap on a phone is a long press), a place, not an order.
   addEventListener('click', (e) => {
     if (!shownFor) return;
     const el = (e.target as HTMLElement | null)?.closest?.('[data-hint]');
-    if (el === shownFor) {
+    if (el === shownFor && !el.matches(TAB_SEL)) {
       e.preventDefault();
       e.stopImmediatePropagation();
     }

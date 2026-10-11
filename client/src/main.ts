@@ -10,7 +10,10 @@ import { ask, tell } from './ui/confirm.ts';
 import { BEASTS, beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
 import { NetHaulPanel } from './ui/nethaul.ts';
-import { departOrAsk } from './ui/depart.ts';
+import { departHooks, departOrAsk } from './ui/depart.ts';
+import { GoalRun, goalTarget } from './ui/goalrun.ts'; // ux2: the course to a quest's place
+import { EN as UX2_EN, RU as UX2_RU } from './lang/ui/ux2.ts';
+import type { AutosailStop } from '../../shared/src/data/autosail.ts';
 import { EncounterCard } from './ui/encounter.ts';
 import { SurrenderCard } from './ui/surrender.ts';
 import { BoardOfferCard } from './ui/boardoffer.ts'; // docs/25 item 64: a group mate's boarding within reach
@@ -53,13 +56,14 @@ import { EN as ROAM_EN, RU as ROAM_RU } from './lang/ui/roamers.ts';
 import type { Act, ActFacts } from './ui/actbar.ts';
 import { riskConfirm } from './ui/kit/risk.ts';
 import { wireSheetSwipe } from './ui/kit/sheet.ts';
+import { holdRedraw, installTapGuard, rescueTaps } from './ui/kit/taps.ts'; // ux2: taps never lost to a redraw
 import { wireHints } from './ui/kit/hint.ts';
 import { DASH_COOLDOWN, LAY_ARC_DEG, closeRange, suggestAmmo } from '../../shared/src/data/gunnery.ts';
 import { EN as SEAF_EN, RU as SEAF_RU } from './lang/ui/seafight.ts';
 import type { BoardRisk } from '../../shared/src/protocol.ts';
 import { MARK_SLOW, markInReach } from '../../shared/src/data/seamarks.ts';
 import { EN as EASE_EN, RU as EASE_RU } from './lang/ui/ease.ts';
-import { setWaypoint as setMark, waypoint as markOf } from './ui/track.ts';
+import { objective, setTracked, setWaypoint as setMark, trackedQuest, waypoint as markOf } from './ui/track.ts';
 import { Net } from './net.ts';
 import { Renderer, shipHeel } from './render/renderer.ts';
 import { ClientState } from './state.ts';
@@ -161,14 +165,21 @@ journal.onTab = (t) => {
 worldMap.send = (m) => net.send(m);
 worldMap.onAutosail = (wp) => {
   touch.course = null; // the helm stick lets go, or it would take the wheel straight back
+  goalRun = null; // a course of her own: the run to a quest's place lets go
   net.send(autosailRequest(state, wp));
   closeModal();
 };
+// ux2: «Плыть» on a quest of the journal or the chart — the course to its place and on through its steps.
+journal.onSail = (key) => startGoal(key);
+worldMap.onGoal = (key) => startGoal(key);
 // docs/16 #36: the helmsman takes her to her mark; the pill at the top of the stack stops him.
 const EL = dict(EASE_EN, EASE_RU);
 const LSF = dict(SEAF_EN, SEAF_RU); // the quick sea fight (docs/23 phases 3–4)
 const autosailPill = new AutosailPill();
-autosailPill.onStop = () => net.send({ t: 'autosail', stop: true });
+autosailPill.onStop = () => {
+  goalRun = null; // the pill's stop ends the run to a quest's place too
+  net.send({ t: 'autosail', stop: true });
+};
 // docs/16 #37: a line the first time she meets each of the sea's mechanics.
 const firstTips = new FirstTips();
 firstTips.covered = () => modal !== null;
@@ -418,6 +429,7 @@ function stepClaimRun(): void {
 /** The helmsman's course to a spot (and how near he should bring her), drawn with its ring. */
 function sailToSpot(p: { x: number; y: number }, near?: number): void {
   touch.course = null; // the helm stick lets go, or it would take the wheel straight back
+  goalRun = null; // another course: the run to a quest's place lets go
   const wp = { x: Math.round(p.x), y: Math.round(p.y) };
   setMark(wp);
   net.send({ ...autosailRequest(state, wp), ...(near !== undefined ? { near: Math.round(near) } : {}) });
@@ -426,6 +438,11 @@ function sailToSpot(p: { x: number; y: number }, near?: number): void {
  *  helmsman's course to what she takes by passing. True when the tap was about a thing. */
 function sailToTap(px: number, py: number): boolean {
   if (!inGame || state.self?.dockedAt || !state.ownDisplay) return false;
+  // ux2: the goal's beacon on the sea or its arrow on the screen's edge — the course there (a quest: on through its steps)
+  if (renderer.goalHit(px, py)) {
+    tapGoal();
+    return true;
+  }
   const w = renderer.toWorld(px, py);
   const t = tapTarget(state, w.x, w.y, renderer.zoom);
   if (!t) return false;
@@ -435,6 +452,96 @@ function sailToTap(px: number, py: number): boolean {
   return true;
 }
 // ---- /seaux
+// ---- ux2 (2026-10-11, owner: «после взятия квеста должна быть метка куда плыть, нажатие на эту метку корабль начинает
+// плавание до места. вообще нужно максимум автоматизировать все»): the course to a quest's place (goalrun.ts)
+const U2 = dict(UX2_EN, UX2_RU);
+/** The run to a goal (a quest's place, a contract's port, a task of the sea), or none. */
+let goalRun: GoalRun | null = null;
+/** Why the helmsman last gave the wheel back, and when (the page's clock). */
+let helmStop: { why: AutosailStop; at: number } | null = null;
+/** The quests she had at the last private state (a new one is followed: its mark shows on the sea). */
+let questsKnown: Set<string> | null = null;
+/** The run to a goal: the helmsman takes her there (in port: as soon as she casts off), and on through a quest's steps. */
+function startGoal(key: string, quiet = false): void {
+  const t = goalTarget(state, key);
+  if (!t) return void hud.toast(U2('goal.none'), 'info');
+  touch.course = null;
+  claimRun = null;
+  homeRun = null;
+  setMark(null); // her own old mark would lead the «Now:» line and the beacon instead of the quest
+  if (key.startsWith('q:')) setTracked(key.slice(2));
+  goalRun = new GoalRun(key, performance.now(), PORT_DOCK_RADIUS);
+  if (modal) closeModal();
+  if (!quiet) hud.toast(U2(state.self?.dockedAt ? 'goal.afterPort' : 'goal.set', { name: sv(t.title) }), 'info');
+  stepGoal();
+}
+/** A tap on the beacon: the run to the goal it shows (a quest, a contract's port), else a plain course to it. */
+function tapGoal(): void {
+  if (goalRun && goalTarget(state, goalRun.key)) return; // already on her way there
+  const own = state.ownDisplay;
+  const o = own ? objective(state, own.x, own.y) : null;
+  if (o?.key) return startGoal(o.key);
+  if (o && o.x !== undefined && o.y !== undefined) sailToSpot({ x: o.x, y: o.y });
+}
+/** Each frame: what the run asks for — the course, putting in, a landing — and the beacon on its goal. */
+function stepGoal(): void {
+  const run = goalRun;
+  if (!run) {
+    renderer.goal = null;
+    return;
+  }
+  const target = goalTarget(state, run.key);
+  renderer.goal = target && !state.self?.dockedAt ? { x: target.x, y: target.y } : null;
+  const own = state.ownDisplay;
+  const l = state.self?.landable;
+  const r = run.step({ now: performance.now(), docked: state.self?.dockedAt ?? null, own: own ? { x: own.x, y: own.y } : null, region: state.region, autosail: state.autosail, stop: helmStop, landable: !!l && !l.blocked, target });
+  switch (r.do) {
+    case 'sail':
+      touch.course = null;
+      net.send({ ...autosailRequest(state, r), ...(r.near !== undefined ? { near: r.near } : {}) });
+      break;
+    case 'dock':
+      requestDock(false);
+      break;
+    case 'land':
+      sendLand();
+      break;
+    case 'arrived':
+      hud.toast(U2('goal.arrived', { name: sv(r.title) }), 'good');
+      break;
+    case 'end': {
+      goalRun = null;
+      renderer.goal = null;
+      // a quest still under way whose next step has no place: said, so she knows why the helmsman let go
+      const q = run.key.startsWith('q:') ? state.self?.quests.find((x) => x.id === run.key.slice(2)) : undefined;
+      if (r.why === 'done' && q) hud.toast(U2('goal.noPlace', { text: sv(q.text) }), 'info');
+      break;
+    }
+  }
+}
+/** Off the quay (ux2, «Курс к заданию»): no run yet and a followed quest with a place elsewhere — the course to it. */
+function goalOnCastOff(): void {
+  if (goalRun || !settings().autoGoal || state.onboarding?.stage) return;
+  const own = state.ownDisplay;
+  const q = trackedQuest(state.self?.quests, own);
+  if (!q?.target || !own || q.target.region === state.region) return;
+  if (Math.hypot(q.target.x - own.x, q.target.y - own.y) < PORT_DOCK_RADIUS * 1.5) return;
+  startGoal(`q:${q.id}`, true);
+  hud.toast(U2('goal.auto', { name: sv(q.name) }), 'info');
+}
+/** A quest just taken is followed (its mark shows on the sea at once) — said once. */
+function noteNewQuests(): void {
+  const qs = state.self?.quests;
+  if (!qs) return;
+  const known = questsKnown;
+  questsKnown = new Set(qs.map((q) => q.id));
+  const fresh = known ? qs.find((q) => !known.has(q.id)) : undefined;
+  if (!fresh) return;
+  setTracked(fresh.id);
+  if (fresh.target) hud.toast(U2('goal.tracked', { name: sv(fresh.name) }), 'info');
+}
+departHooks.told = (msg) => hud.toast(msg, 'gold');
+// ---- /ux2
 // "Whisper" on a friend: the chat opens over the window, addressed to them.
 let whisperPrefill = '';
 // A groupmate's frame on the HUD: their card.
@@ -1000,6 +1107,7 @@ function onMessage(m: ServerMsg): void {
       // docs/16 #36: the helmsman has the wheel, or has given it back and why.
       if (m.on) hud.toast(EL('as_on'), 'info');
       else {
+        helmStop = { why: m.why ?? 'off', at: performance.now() }; // ux2: the run to a goal reads why
         const w = autosailStopText(m.why);
         hud.toast(w.text, w.kind);
         if (m.why === 'arrived') setMark(null);
@@ -1076,6 +1184,7 @@ function onMessage(m: ServerMsg): void {
     case 'self':
     case 'self_patch':
       runTestBattle();
+      noteNewQuests(); // ux2: a quest just taken is followed, its mark on the sea
       noteHearsay(state.self); // a whisper just bought becomes her mark (docs/16 #14)
       arenaMoments(); // docs/19 E14: the Colosseum's draft opens its tab, its bout closes the window
       if (state.self?.company.mutiny && modal !== 'mutiny') openModal('mutiny');
@@ -1523,7 +1632,13 @@ function selfKeyFor(m: Modal): string {
   return m === 'company' ? JSON.stringify([m, lang(), s.name, s.dockedAt, s.berths, s.pvp, s.maps, s.company, s.cargo, s.builds, s.gold]) : JSON.stringify([m, lang(), s.gold, s.cargo, s.dockedAt, s.homeIsle]);
 }
 
+/** The open window drawn anew — held while a finger is down on it (ux2, «журнал иногда подзаедает и не переключает
+ *  вкладки»: a redraw between the finger's down and lift took the tab from under it, and the tap did nothing). */
 function refreshModal(): void {
+  holdRedraw(drawModal);
+}
+
+function drawModal(): void {
   lastSelfKey = modal === 'company' || modal === 'base' || modal === 'gear' || modal === 'hero' || modal === 'throne' || modal === 'research' ? selfKeyFor(modal) : '';
   const root = $('modal-panel');
   const marks = root.dataset.modal === (modal ?? '') ? scrollMarks(root) : null;
@@ -1807,6 +1922,9 @@ $('modal').addEventListener('click', (e) => {
   }
 });
 wireHints();
+// ux2: a window's redraw waits for the tap on it; a tab drawn away under the finger is found again and pressed.
+installTapGuard(() => [$('modal-panel'), ...document.querySelectorAll<HTMLElement>('.k-sheet-root')]);
+rescueTaps();
 // docs/23, 2026-10-10: the phone pager (kit/fit.ts) — removed by seaux below.
 // seaux (2026-10-11, owner: «Никакие из окошек с инфой нельзя вниз пролистнуть»): the phone pager (kit/fit.ts «‹ 1/3 ›»)
 // is not installed — on his iPhone it cut the windows off; every window and sheet scrolls with a finger instead (fit.css).
@@ -2491,6 +2609,7 @@ function runAct(a: Act): void {
       if (homeRun === homeport.id && state.autosail) return;
       homeRun = homeport.id;
       homeRunAt = performance.now();
+      goalRun = null;
       return void net.send({ t: 'autosail', x: homeport.x, y: homeport.y });
     case 'land':
       return sendLand();
@@ -3601,9 +3720,13 @@ function step(t: number): void {
     pollPad(raw);
     sendInput(t);
     const docked = !!state.self?.dockedAt;
-    if (wasDocked && !docked) castOffAt = performance.now();
+    if (wasDocked && !docked) {
+      castOffAt = performance.now();
+      goalOnCastOff(); // ux2: «Курс к заданию»
+    }
     wasDocked = docked;
     stepPendingDock();
+    stepGoal(); // ux2: the run to a quest's place
     stepClaimRun();
     stepPendingMark();
     stepPendingFind();
@@ -3678,4 +3801,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; } };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y) };

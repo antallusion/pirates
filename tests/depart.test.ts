@@ -11,6 +11,7 @@ import { walkBuyCost } from '../shared/src/data/goods.ts';
 import { voyageNeeds, voyageStores } from '../shared/src/data/voyage.ts';
 import { departOffers, departPlan, fitOffer, voyageOrder, voyageShip } from '../client/src/ui/depart.ts';
 import type { ClientState } from '../client/src/state.ts';
+import { defaults } from '../client/src/settings.ts';
 import { EN, RU } from '../client/src/lang/ui/port.ts';
 
 const src = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8').replace(/\r/g, '');
@@ -126,10 +127,14 @@ test('nothing short is no window; nothing bought by itself; the words in both to
   assert.deepEqual(departOffers(full), []);
   const dp = src('client/src/ui/depart.ts');
   assert.ok(dp.includes('!voyageNeeds(ship).length || state.onboarding?.stage) return go();'), 'nothing short: straight to sea');
-  // The one road to the harbour's orders is her press in the window.
+  // The roads to the harbour's orders: her press in the window, and (ux2, 2026-10-11) «Всегда докупать» — her own
+  // setting, off unless she turns it on (in the window or in Settings), and only when the purse covers all of it.
   const sends = [...dp.matchAll(/send\(m\)/g)].map((m) => m.index!);
-  assert.equal(sends.length, 1);
-  assert.ok(sends[0] > dp.indexOf("sheet.panel.addEventListener('click'"), 'only from a press');
+  assert.equal(sends.length, 2);
+  assert.ok(sends[1] > dp.indexOf("sheet.panel.addEventListener('click'"), 'from a press');
+  const auto = dp.indexOf('if (settings().autoTopUp) {');
+  assert.ok(auto > 0 && sends[0] > auto && dp.indexOf('if (plan.all && plan.buy.length)', auto) < sends[0], 'the other: her own setting, the whole list only');
+  assert.equal(defaults().autoTopUp, false, 'off by default: the owner asked for a window, not auto-buy');
   assert.ok(!/sailedAnyway|boughtLine|setDepartSay/.test(dp), 'no buying on the way out, no line of what was bought');
   // The server takes on no stores at the way out.
   assert.ok(!src('server/src/game/Game.ts').includes('takeOnStores'));
