@@ -76,10 +76,12 @@ function measure(img: HTMLImageElement): Pick<Sprite, 'extentX' | 'extentY' | 'c
 }
 
 async function loadEntry(id: string, e: ManifestEntry): Promise<void> {
+  // Our own server only (2026-10-11): the generator's CDN is closed (403) and the game asks no outside host for its
+  // art — a slow first load tries the same file once more instead.
+  const local = '/assets/' + e.local + (e.rev ? `?v=${e.rev}` : '');
   const attempts: [string, boolean][] = [
-    ['/assets/' + e.local + (e.rev ? `?v=${e.rev}` : ''), false],
-    [manifest!.cdn + e.remote, true],
-    [manifest!.cdn + e.remote, false],
+    [local, false],
+    [local, false],
   ];
   for (const [src, cors] of attempts) {
     try {
