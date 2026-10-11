@@ -179,7 +179,7 @@ import { sendWorldGoals, stepWorldGoals, worldGoalKill, worldGoalsCollect } from
 import { sendSignal } from './signals.ts';
 import { autosailInput, startAutosail, stepAutosail, stopAutosail } from './autosail.ts';
 import { cancelApproach, stepApproach } from './approach.ts'; // seaux: sail-to on tap
-import { lootSpot, stepWrecks } from './wrecks.ts'; // seaux: wreckage per captain
+import { LootMap, stepWrecks } from './wrecks.ts'; // seaux: wreckage per captain
 import { stepCastaways } from './castaways.ts'; // seaux: castaways
 import { gyardCancel, gyardGive, gyardStart } from './guildyard.ts';
 import { applyIslandNames, applyPantheon, seasonAction, seasonMods, seasonStat, seasonXp, stepSeasons, warKill } from './seasons.ts';
@@ -355,7 +355,8 @@ export class Game {
   /** Boardings with a captain aboard are fought turn by turn on the hexes (docs/16 P4); off, the round-by-round deck
    *  fight of Boarding 2.0 (GRAVETIDE_CLASSIC_BOARDING=1, and the tests of the older rules). */
   tacticalBoarding = process.env.GRAVETIDE_CLASSIC_BOARDING !== '1';
-  loot = new Map<number, Loot>();
+  /** (seaux: a piece put on a hulk, a skerry or the shore's edge is moved out to open water as it is dropped — wrecks.ts) */
+  loot: Map<number, Loot> = new LootMap<Loot>(this);
   markets = new Map<string, Market>();
   tavernCrew = new Map<string, number>();
   taverns = new Map<string, Tavern>();
@@ -981,13 +982,6 @@ export class Game {
       if (l.expires <= now) {
         this.loot.delete(l.id);
         continue;
-      }
-      // seaux: dropped on a hulk, a skerry, a floe or the shore's edge (no hull could ever come to it): moved out to
-      // the open water nearest, once — every piece on the water can be picked up
-      if (!l.placed) {
-        l.placed = true;
-        const p = lootSpot(this, l.x, l.y);
-        if (p) [l.x, l.y] = [p.x, p.y];
       }
       this.grid.query(l.x, l.y, 60, (id) => {
         const s = this.ships.get(id);

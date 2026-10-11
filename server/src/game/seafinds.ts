@@ -226,7 +226,7 @@ export function startFind(game: Game, s: PlayerSession, id: number): string | nu
   const S = F(game);
   const f = S.list.get(id);
   const why = whyNot(game, s, f);
-  if (why === FIND_FAR && f) return approach(game, s, { x: f.x, y: f.y, reach: FIND_REACH[f.kind], where: () => (S.list.has(f.id) ? f : null) }, why);
+  if (why === FIND_FAR && f) return approach(game, s, { x: f.x, y: f.y, reach: FIND_REACH[f.kind], where: () => (S.list.has(f.id) ? f : null), ...(FIND_SLOW[f.kind] < 50 ? { slow: FIND_SLOW[f.kind] - 0.2 } : {}) }, why);
   if (why) return why;
   if (S.busy.get(s)?.id === id) return null;
   if (f!.kind === 'chest') return fightChest(game, s, f!);

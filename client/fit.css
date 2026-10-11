@@ -177,7 +177,7 @@
   .tb-store, .bk-will .tb-store { font-size: var(--f-fs-s); }
   .tb-chip-men { font-size: var(--f-fs-s); height: 16px; line-height: 16px; }
   .tb-rs i { font-size: var(--f-fs-s); line-height: 14px; }
-  body.simple #touch > #tc-ammo .tc-ammo-n, #touch > .tc-act .tc-act-more { font-size: var(--f-fs-s); }
+  body.simple #touch > #tc-ammo .tc-ammo-n, #touch .tc-act .tc-act-more { font-size: var(--f-fs-s); }
   .tal-main .tier-label, #modal-panel .tier-label { font-size: var(--f-fs-s); }
   .army-slot > i.army-tier { font-size: var(--f-fs-s); }
   #modal-panel label.check { min-height: var(--f-tap); display: flex; align-items: center; gap: 8px; }
@@ -498,4 +498,20 @@
 @media (max-height: 520px) {
   /* a mate's offer: the stacks wrap rather than run sideways (480×270 EN) */
   .bo-sts { flex-wrap: wrap; overflow: visible; }
+}
+
+/* ==================================================================== seaux (2026-10-11): every window scrolls
+   Owner: «Там еще где цели у нас открывая эту модалку у нее нет скролла вниз, не понятно какие цели. Никакие из окошек с
+   инфой нельзя вниз пролистнуть». The pager (kit/fit.ts) is no longer installed: on his iPhone its columns cut the
+   windows off. Every window's page, the Journal's and the company's, the sheets (the goals and news, the menu, the
+   captain's), the talents' list scroll up and down with a finger — iOS Safari's momentum, the scroll kept inside the
+   pane — and with the wheel on a desk. Nothing on a scroll area takes the touch from it. */
+#modal-panel .modal-body, #modal-panel #company-body, #modal-panel .tal-main, .k-sheet-root .k-sheet-body, .w-rail {
+  overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: auto; }
+#modal-panel .modal-body, #modal-panel .tal-main, .k-sheet-body { min-height: 0; }
+#modal-panel > .modal-body, .w-frame, .w-pane { min-height: 0; }
+/* the talents' left column (the load and the side) on a phone: it scrolls too rather than being cut at the screen's foot */
+@media (max-height: 520px) {
+  #modal-panel[data-modal="talents"] .modal-body > :not(.tal-main):not(.fit-pager) { min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  #modal-panel .fit-pager { display: none; }
 }

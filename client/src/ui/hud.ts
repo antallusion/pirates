@@ -67,6 +67,7 @@ import { armyGlance } from './army.ts';
 import { gloryChip } from './throne.ts'; // docs/19 E1
 import { Toasts } from './kit/toast.ts'; // docs/23 phase 1
 import { faceAttrs } from './kit/faces.ts'; // the rebuild of 2026-10-07
+import { captainDot } from './capmenu.ts'; // seaux: the bead is news not yet seen
 
 const L = dict(EN, RU);
 const LSF = dict(SEAF_EN, SEAF_RU); // the quick sea fight (docs/23 phases 3–4)
@@ -227,6 +228,10 @@ export class Hud {
   onThrone: () => void = () => {};
   /** The simple HUD's captain on a desk: a click opens her sheet (main.ts). */
   onCaptain: () => void = () => {};
+  /** seaux: her frame drawn afresh (the captain's menu seen: its bead out). */
+  redrawCaptain(): void {
+    this.lastCaptainKey = '';
+  }
   private lastShipKey = '';
   private lastCombatKey = '';
   private lastBossKey = '';
@@ -667,24 +672,24 @@ export class Hud {
     const cap = CAPTAINS[self.captain];
     const url = assetUrl(cap.portrait);
     const xpPct = levelPct(self.xp, self.xpNext);
-    const key = `simple|${lang()}|${url ? 1 : 0}|${self.level}|${xpPct}|${self.gold}|${you.hull}|${you.hullMax}|${you.crew}|${you.crewMax}|${you.sails}|${you.sailsMax}|${self.talentPoints > 0}`;
+    const dot = captainDot(self.talentPoints, self.level);
+    const key = `simple|${lang()}|${url ? 1 : 0}|${self.level}|${xpPct}|${self.gold}|${you.hull}|${you.hullMax}|${you.crew}|${you.crewMax}|${you.sails}|${you.sailsMax}|${dot}`;
     if (key === this.lastCaptainKey) return;
     this.lastCaptainKey = key;
     const el = $('hud-captain');
     const row = (k: 'hull' | 'crew' | 'sails', v: number, max: number, art: string, val: string) =>
       `<div class="cs-row cs-${k}" title="${esc(`${L(k)}: ${fmt(v)} / ${fmt(max)}`)}">${icon(art, '', 'cs-ico')}<span class="cs-bar"><i style="width:${pct(clamp(v / Math.max(1, max), 0, 1))}"></i></span><span class="cs-v">${esc(val)}</span></div>`;
     el.innerHTML = `<div class="cs">
-      <div class="cs-frame"><div class="cs-face" ${faceAttrs(cap.portrait, url)}></div><b class="cs-lv" style="--xp:${xpPct}%" title="${esc(`${L('lv', { n: self.level })} · ${xpLine(self)}`)}">${self.level}</b>${self.talentPoints > 0 ? `<i class="cs-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}"></i>` : ''}</div>
+      <div class="cs-frame"><div class="cs-face" ${faceAttrs(cap.portrait, url)}></div><b class="cs-lv" style="--xp:${xpPct}%" title="${esc(`${L('lv', { n: self.level })} · ${xpLine(self)}`)}">${self.level}</b>${dot ? `<i class="cs-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}"></i>` : ''}</div>
       <div class="cs-body">${row('hull', you.hull, you.hullMax, 'stat_hull', fmt(you.hull))}${row('crew', you.crew, you.crewMax, 'stat_crew', `${you.crew}/${you.crewMax}`)}${row('sails', you.sails, you.sailsMax, 'stat_sails', fmt(you.sails))}
         <span class="cs-silver">${icon('coin', '⛁', 'cs-coin')}${fmt(self.gold)}</span></div>
     </div>`;
     el.setAttribute('aria-label', `${self.name}: ${L('lv', { n: self.level })}, ${xpLine(self)}`);
     el.title = self.name;
     requestAnimationFrame(() => this.placeStrip()); // the top column keeps clear of her frame
-    // On a desk the frame opens her sheet: a button for the keyboard too (Enter or Space on it).
-    const desk = !document.body.classList.contains('touch');
-    el.setAttribute('role', desk ? 'button' : 'group');
-    el.tabIndex = desk ? 0 : -1;
+    // The frame opens the captain's menu (seaux: on a phone too): a button for the keyboard and the screen reader.
+    el.setAttribute('role', 'button');
+    el.tabIndex = 0;
   }
 
   /** The sea's name a moment, as the ship comes into new waters: a slim line in the top band that fades on its own

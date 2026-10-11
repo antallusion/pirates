@@ -86,6 +86,25 @@ export function lootSpot(game: Game, x: number, y: number): { x: number; y: numb
   return null;
 }
 
+/** The sea's loot (Game.loot): each piece, as it is dropped, moved out to the open water nearest when it fell on a hulk,
+ *  a skerry, a floe or the shore's edge — every spawner at once (the wrecks of a sunk ship, the sea's flotsam, a wreck
+ *  field's crates, a storm's, a siege's, a holding's), so none lies where no hull can come to it. */
+export class LootMap<V extends { x: number; y: number; placed?: boolean }> extends Map<number, V> {
+  game: Game | null = null;
+  constructor(game: Game) {
+    super();
+    this.game = game;
+  }
+  set(k: number, v: V): this {
+    if (!v.placed && this.game) {
+      v.placed = true;
+      const p = lootSpot(this.game, v.x, v.y);
+      if (p) [v.x, v.y] = [p.x, p.y];
+    }
+    return super.set(k, v);
+  }
+}
+
 /** The spots she took and when (real milliseconds), those 48 hours old let go. */
 export function wrecksTaken(game: Game, p: Profile): Record<string, number> {
   const rec = (p.wrecks ??= {});
@@ -150,8 +169,9 @@ export function takeWreck(game: Game, s: PlayerSession, sp: WreckSpot): void {
     p.gold += silver;
     game.db.ledger(s.accountId, 'loot', silver, 'wreck');
   }
-  const words = [n > 0 ? `${n} ${g.name}` : '', silver > 0 ? `${silver} silver` : ''].filter(Boolean).join(', ');
-  game.toastShip(ship, n < sp.n ? `Salvaged from the wreckage: ${words} (no room in the hold for the rest: broken up for its silver).` : `Salvaged from the wreckage: ${words}.`, 'gold');
+  // (the lines of the salvage everywhere: «Поднято со дна: …», the full hold's own)
+  if (n > 0) game.toastShip(ship, `Salvaged: ${n} ${g.name}.`, 'gold');
+  if (silver > 0) game.toastShip(ship, `The hold is full: the rest of the salvage is broken up for ${silver} silver.`, 'gold');
 }
 
 /** Every second, each captain at sea: the spots she passed through taken, her view sent when it changed. */

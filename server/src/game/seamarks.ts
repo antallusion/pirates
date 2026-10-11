@@ -109,7 +109,7 @@ export function startMark(game: Game, s: PlayerSession, id: number): string | nu
   const m = markById(game, id);
   const why = whyNot(game, s, m);
   // seaux: out of reach, the helmsman sails her to it and the order is given again there (approach.ts)
-  if (why === MARK_FAR && m) return approach(game, s, { x: m.x, y: m.y, reach: MARK_REACH + m.r, near: () => !!s.ship && markInReach(m, s.ship.state.x, s.ship.state.y) }, why);
+  if (why === MARK_FAR && m) return approach(game, s, { x: m.x, y: m.y, reach: MARK_REACH + m.r, near: () => !!s.ship && markInReach(m, s.ship.state.x, s.ship.state.y), slow: MARK_SLOW - 0.2 }, why);
   if (why) return why;
   const S = M(game);
   const cur = S.busy.get(s);

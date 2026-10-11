@@ -35,6 +35,8 @@ import { assetUrl, loadAssets } from './assets.ts';
 import { tideVeil } from './ui/invasion.ts'; // docs/19 E16
 import { AudioEngine, turnCreakLoad } from './audio.ts';
 import { AutosailPill, FirstTips, autosailRequest, autosailStopText, tipForMsg, tipForState } from './ui/ease.ts';
+import { claimNear, claimSpot, tapTarget } from './ui/sailto.ts'; // seaux: sail-to on tap
+import { toggleCaptainMenu } from './ui/capmenu.ts'; // seaux: the captain's menu on her portrait
 import { ACT_SHOW, actBarHtml, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
 import { FIND_REACH, FIND_SLOW } from '../../shared/src/data/seafinds.ts';
 import type { FindView } from '../../shared/src/findproto.ts';
@@ -52,7 +54,6 @@ import type { Act, ActFacts } from './ui/actbar.ts';
 import { riskConfirm } from './ui/kit/risk.ts';
 import { wireSheetSwipe } from './ui/kit/sheet.ts';
 import { wireHints } from './ui/kit/hint.ts';
-import { installPager } from './ui/kit/fit.ts';
 import { DASH_COOLDOWN, LAY_ARC_DEG, closeRange, suggestAmmo } from '../../shared/src/data/gunnery.ts';
 import { EN as SEAF_EN, RU as SEAF_RU } from './lang/ui/seafight.ts';
 import type { BoardRisk } from '../../shared/src/protocol.ts';
@@ -393,6 +394,45 @@ function openClaim(): void {
   net.send({ t: 'estate', action: 'view' });
   openModal('company');
 }
+// ---- seaux (2026-10-11, owner: «я должен нажать и плыть к цели … Так же у кнопок занять»): sail-to on tap
+/** «Занять» far from the island: the helmsman takes her in to its shore and the claim's terms open there. */
+let claimRun: { island: number; at: number } | null = null;
+function claimIsland(): void {
+  const c = state.self?.claimIsle, own = state.ownDisplay;
+  const isl = c ? state.islands.get(c.island) : undefined;
+  if (!c || !own || !isl || claimNear(isl, own)) return openClaim();
+  claimRun = { island: c.island, at: performance.now() };
+  sailToSpot(claimSpot(isl, own));
+}
+function stepClaimRun(): void {
+  if (!claimRun) return;
+  const own = state.ownDisplay, isl = state.islands.get(claimRun.island);
+  if (!own || !isl || state.self?.dockedAt) claimRun = null;
+  else if (claimNear(isl, own)) {
+    claimRun = null;
+    openClaim();
+  } else if (!state.autosail && performance.now() - claimRun.at > 2500) claimRun = null;
+}
+/** The helmsman's course to a spot (and how near he should bring her), drawn with its ring. */
+function sailToSpot(p: { x: number; y: number }, near?: number): void {
+  touch.course = null; // the helm stick lets go, or it would take the wheel straight back
+  const wp = { x: Math.round(p.x), y: Math.round(p.y) };
+  setMark(wp);
+  net.send({ ...autosailRequest(state, wp), ...(near !== undefined ? { near: Math.round(near) } : {}) });
+}
+/** A tap on a thing on the sea: its own order (the server sails her there and gives it within reach), or the
+ *  helmsman's course to what she takes by passing. True when the tap was about a thing. */
+function sailToTap(px: number, py: number): boolean {
+  if (!inGame || state.self?.dockedAt || !state.ownDisplay) return false;
+  const w = renderer.toWorld(px, py);
+  const t = tapTarget(state, w.x, w.y, renderer.zoom);
+  if (!t) return false;
+  if (t.kind === 'find') workFind(Number(t.id));
+  else if (t.kind === 'mark' && !state.markDone.has(Number(t.id))) workMark(Number(t.id));
+  else sailToSpot(t, t.near);
+  return true;
+}
+// ---- /seaux
 // "Whisper" on a friend: the chat opens over the window, addressed to them.
 let whisperPrefill = '';
 // A groupmate's frame on the HUD: their card.
@@ -443,6 +483,7 @@ const touch = new TouchControls({
     const k = markAt(px, py);
     if (k) markTapAt = performance.now();
     openTargetMenu(k === 'ship' && targetId !== null ? `ship:${targetId}` : k === 'roam' && state.roamMark !== null ? `roam:${state.roamMark}` : '');
+    if (!k) sailToTap(px, py); // seaux: a tap on a thing on the sea sails her to it
   },
   zoom: (f) => {
     renderer.userZoomed = true;
@@ -457,6 +498,10 @@ const seaHud = new SeaHud($('touch'), {
   fireOptions: () => fireWheel(),
   firePick: (id) => pickFireWheel(id),
   act: () => padContext(),
+  actAt: (i) => {
+    const x = curActs[i];
+    if (x) runAct(x);
+  },
   // The wheel keeps the list it opened with while computePrompt() rebuilds curActs every frame: the pick runs that
   // list's own act (by position the slide to «Высадка» ran whatever stood there a moment later, docs/23 item 94).
   actOptions: () => (wheelActs = curActs.slice()).map((a, i) => ({ id: String(i), label: a.label, icon: a.icon, glyph: '•' })),
@@ -1772,8 +1817,9 @@ $('modal').addEventListener('click', (e) => {
   }
 });
 wireHints();
-// docs/23, 2026-10-10: on a phone held sideways a window that would scroll turns pages instead (kit/fit.ts).
-installPager();
+// docs/23, 2026-10-10: the phone pager (kit/fit.ts) — removed by seaux below.
+// seaux (2026-10-11, owner: «Никакие из окошек с инфой нельзя вниз пролистнуть»): the phone pager (kit/fit.ts «‹ 1/3 ›»)
+// is not installed — on his iPhone it cut the windows off; every window and sheet scrolls with a finger instead (fit.css).
 
 function toggle(m: Modal): void {
   if (modal === m) closeModal();
@@ -2040,6 +2086,7 @@ canvas.addEventListener('mousedown', (e) => {
   if (!inGame || e.button !== 0 || fromFinger(e)) return;
   // A click on a ship makes her the target; on a creature stack, marks the stack and fires nothing.
   if (markAt(e.clientX, e.clientY) === 'roam') return;
+  if (shipAtScreen(e.clientX, e.clientY) === null && sailToTap(e.clientX, e.clientY)) return; // seaux: a click on a thing on the sea sails her to it
   // The simple HUD fires by its keys (Space, Q, E): a click only picks the mark. The detailed one fires the side the
   // cursor lies off, as it always did.
   if (simpleHud()) return;
@@ -2137,8 +2184,25 @@ function sendAbility(id: string): void {
 }
 
 hud.onAbility = (id) => sendAbility(id);
-// The captain's frame on a desk opens her sheet (the law, the experience and the rest live there now).
-hud.onCaptain = () => (modal === 'hero' ? closeModal() : openHero());
+// seaux (2026-10-11, owner: «Нажимая на иконку капитана должны быть какие-то окошки настроек … щас ничего не происходит»):
+// her portrait, on a phone and on a desk, opens the captain's menu — her sheet, «Умения», the talents, the journal, the
+// settings, the account — with what its gold bead was about first.
+hud.onCaptain = () => {
+  const self = state.self;
+  if (!self) return;
+  if (modal) closeModal();
+  toggleCaptainMenu({ name: self.name, level: self.level, pts: self.talentPoints }, {
+    open: (id) => (id === 'hero' || id === 'skills' ? openHero(id) : openModal(id)),
+    support: (email, message) => authPost('/auth/support', { email, message, token: localStorage.getItem('gravetide.token') ?? '', website: '', t: String(Math.round(performance.now())), lang: lang() }),
+    logout: () => {
+      net.forget();
+      location.reload();
+    },
+    confirm: (q) => ask(q),
+    text: (s) => serverText(s),
+  });
+  hud.redrawCaptain(); // the bead seen: out
+};
 hud.onAmmo = (id) => net.send({ t: 'ammo', ammo: id as 'round' });
 hud.onTalent = (id) => sendTalent(id);
 hud.onAmmoCycle = () => cycleAmmo(1);
@@ -2204,9 +2268,19 @@ function findAtHand(): FindView | null {
   let best: FindView | null = null, bd = Infinity;
   for (const f of state.finds) {
     const d = f.kind === 'flyfish' ? 0 : dist(f.x, f.y, own.x, own.y);
-    if (d <= FIND_REACH[f.kind] && d < bd) [best, bd] = [f, d];
+    // (seaux: every find of hers in sight — out of reach its button sails her there, approach.ts)
+    if (d <= FIND_SEE && d < bd) [best, bd] = [f, d];
   }
   return best;
+}
+/** seaux: how far off a find of hers still shows its button (they turn up 650–1200 m off). */
+const FIND_SEE = 1800;
+/** Metres to a find beyond its reach (0: within it). */
+function findFar(f: FindView): number {
+  const own = state.ownDisplay;
+  if (!own || f.kind === 'flyfish') return 0;
+  const d = dist(f.x, f.y, own.x, own.y);
+  return d > FIND_REACH[f.kind] ? d : 0;
 }
 
 /** docs/19 D7: the roaming stack within a cable of her (the nearest). */
@@ -2356,7 +2430,8 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const fd = findAtHand();
   if (fd) {
     const busy = state.findBusy?.id === fd.id ? state.findBusy : null;
-    facts.find = { id: fd.id, kind: fd.kind, busy: !!busy, ...(fd.n ? { n: fd.n } : {}) };
+    const far = findFar(fd);
+    facts.find = { id: fd.id, kind: fd.kind, busy: !!busy, ...(fd.n ? { n: fd.n } : {}), ...(far ? { far: Math.round(far) } : {}) };
     if (busy) info.push(esc(findInfo(fd.kind, busy.until - state.estServerTime())));
     else if (pendingFind?.id === fd.id) info.push(esc(slowWord()));
   }
@@ -2444,7 +2519,7 @@ function runAct(a: Act): void {
     case 'base':
       return openBase();
     case 'claim':
-      return openClaim();
+      return claimIsland();
     case 'ritual':
       return void net.send({ t: 'abyss', action: 'ritual' });
     case 'mark':
@@ -2726,7 +2801,8 @@ function seaFrame(): void {
     deck: touch.enabled ? null : deckView(),
     keys: touch.enabled ? null : deskKeys(),
     fight,
-    act: a ? { id: a.id, icon: a.icon, label: a.label, ...(a.sub ? { sub: a.sub } : {}), more: curActs.length - 1 } : null,
+    // (seaux: the next two small beside it in one row; the rest behind its long press, its badge counting them)
+    act: a ? { id: a.id, icon: a.icon, label: a.label, ...(a.sub ? { sub: a.sub } : {}), more: Math.max(0, curActs.length - 3), extra: curActs.slice(1, 3).map((x, j) => ({ i: j + 1, id: x.id, icon: x.icon, label: x.label, ...(x.sub ? { sub: x.sub } : {}) })) } : null,
     special: specialNow(),
     target: self.dockedAt ? null : seaTarget(),
     ammo: you.ammoSel,
@@ -3063,6 +3139,12 @@ async function askRisk(r: BoardRisk): Promise<void> {
 /** Boats away to a sea mark: at speed the crew takes in sail first and they go as soon as she has slowed. */
 function workMark(id: number): void {
   const own = state.ownDisplay;
+  // (seaux: out of reach the order goes at once — the helmsman sails her there and the server gives it alongside)
+  const m = state.seaMarks.get(id);
+  if (own && m && !markInReach(m, own.x, own.y)) {
+    pendingMark = null;
+    return void net.send({ t: 'seamark', action: 'work', id });
+  }
   if (own && own.speed > MARK_SLOW) {
     state.input.sail = 0;
     pendingMark = { id, until: performance.now() + 25000 };
@@ -3075,6 +3157,10 @@ function workMark(id: number): void {
 function workFind(id: number): void {
   const own = state.ownDisplay;
   const f = state.finds.find((x) => x.id === id);
+  if (f && findFar(f)) {
+    pendingFind = null;
+    return void net.send({ t: 'seafind', action: 'work', id }); // seaux: the helmsman sails her there (approach.ts)
+  }
   if (f && own && own.speed > FIND_SLOW[f.kind]) {
     state.input.sail = 0;
     pendingFind = { id, until: performance.now() + 25000 };
@@ -3536,6 +3622,7 @@ function step(t: number): void {
     if (wasDocked && !docked) castOffAt = performance.now();
     wasDocked = docked;
     stepPendingDock();
+    stepClaimRun();
     stepPendingMark();
     stepPendingFind();
     state.updateRemote();

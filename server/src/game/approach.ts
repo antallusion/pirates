@@ -23,11 +23,14 @@ export interface ApproachTarget {
   reach: number;
   where?: () => { x: number; y: number } | null;
   near?: () => boolean;
+  /** The boats are lowered only this slow (m/s): arrived, she heaves to first and the order is given once she has. */
+  slow?: number;
 }
 
 interface Approach extends ApproachTarget {
   msg: ClientMsg;
   until: number;
+  heaving?: boolean;
 }
 
 /** An order waits this long at most (seconds of the sea's clock): past it, the moment is gone. */
@@ -108,7 +111,19 @@ export function stepApproach(game: Game): void {
     }
     // (a little inside the handler's own reach: its test then never says «too far» by a metre)
     const at = a.near ? a.near() : Math.hypot(p.x - ship.state.x, p.y - ship.state.y) <= Math.max(10, a.reach - 8);
-    if (at) {
+    if ((at || a.heaving) && a.slow !== undefined && Math.abs(ship.state.speed) > a.slow) {
+      // Alongside at speed: sail in, she lies to (the captain's last sail held off until she sets another), and the
+      // order goes the moment she lies still enough.
+      if (!a.heaving) {
+        a.heaving = true;
+        const run = autosailOf(ship);
+        s.sailHold = run ? run.sail : s.lastSail;
+        if (run) stopAutosail(game, s, 'arrived');
+        ship.input = { rudder: 0, sailTarget: 0 };
+      }
+      continue;
+    }
+    if (at || a.heaving) {
       m.delete(s);
       if (autosailOf(ship)) stopAutosail(game, s, 'arrived');
       redoing.add(s);

@@ -30,9 +30,6 @@ export const WAY_WORDS = new Map<string, number>([
   ['Heave to first — the boats cannot be lowered at speed', 2.4],
   ['Heave to first', 2.4],
   ['Take in sail before entering harbour', 6.5],
-  // seaux 2026-10-11: arrived by the helmsman at a find or a sea mark at full sail, she heaves to and the boats go
-  ['Shorten sail first: the boats cannot be lowered at speed.', 2.9],
-  ['Shorten sail first: the boats cannot work it at speed.', 2.9],
 ]);
 
 /** What she is told, once, of an order that waits for her to lie still (or slow for the harbour). */
