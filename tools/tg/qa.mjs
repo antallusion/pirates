@@ -60,7 +60,8 @@ try {
       await p.waitForSelector('#login-tg:not(.hidden)', { timeout: 60000 });
       const t0 = Date.now();
       await p.click('#login-tg');
-      await p.waitForSelector('#tg-wait', { timeout: 30000 });
+      // (the local server speaks HTTP/1.1: the start's POST waits behind the title screen's assets — six at a time)
+      await p.waitForSelector('#tg-wait', { timeout: 90000 });
       console.log(`     the card in ${Date.now() - t0} ms`);
       await L.sleep(400);
       const link = await p.evaluate(() => document.querySelector('#tg-wait .tgw-open')?.getAttribute('href'));
@@ -74,7 +75,7 @@ try {
         const nonce = link.split('login_')[1];
         const r = await botStart({ id: 700000 + Math.floor(Math.random() * 99999), first_name: lang === 'ru' ? 'Мэри' : 'Mary', language_code: lang }, nonce);
         check(r.status === 200, `${lang}: the webhook took the bot's /start (${r.status})`);
-        check(await until(p, () => !document.querySelector('#screen-captain')?.classList.contains('hidden'), null, 20000), `${lang}: signed in by Telegram — the captain's choice`);
+        check(await until(p, () => !document.querySelector('#screen-captain')?.classList.contains('hidden'), null, 60000), `${lang}: signed in by Telegram — the captain's choice`);
         check(!(await p.$('#tg-wait')), `${lang}: the wait card closed`);
         await shot(p, `deeplink-done__${w}x${h}_${lang}`);
       }
@@ -122,7 +123,7 @@ try {
     await p.evaluate(() => globalThis.gravetide.shop(true));
     await p.waitForSelector('[data-pmpack]', { timeout: 10000 });
     await L.sleep(500);
-    const prices = await p.$$eval('[data-pmpack]', (bs) => bs.map((x) => x.textContent.trim()));
+    const prices = await p.$$eval('[data-pmpack]', (bs) => bs.map((x) => x.textContent.replace(/[\s,]/g, '')));
     check(prices.join(',') === '75,375,750,1500,3750', `the packs' prices in Stars: ${prices}`);
     for (const [w, h] of [[480, 270], [640, 360], [812, 375], [915, 412], [1440, 900]]) {
       await p.setViewportSize({ width: w, height: h });

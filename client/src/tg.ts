@@ -13,7 +13,7 @@ import { dict } from './i18n.ts';
 import { EN, RU } from './lang/ui/tg.ts';
 import type { Net } from './net.ts';
 import type { ServerMsg } from '../../shared/src/protocol.ts';
-import { esc } from './ui/dom.ts';
+import { esc, fmt } from './ui/dom.ts';
 import { ask } from './ui/confirm.ts';
 
 const L = dict(EN, RU);
@@ -369,7 +369,7 @@ export function tgIcon(): string {
 
 /** The pack's Buy: the price in Stars on it. */
 export function tgPackButton(packId: string, stars: number): string {
-  return `<button class="btn btn-small btn-primary pm-stars" data-pmpack="${esc(packId)}" aria-label="${esc(`${L('buyStars')}: ${L('stars', { n: stars })}`)}">${starIcon()}<b>${stars}</b></button>`;
+  return `<button class="btn btn-small btn-primary pm-stars" data-pmpack="${esc(packId)}" aria-label="${esc(`${L('buyStars')}: ${L('stars', { n: stars })}`)}">${starIcon()}<b>${fmt(stars)}</b></button>`;
 }
 
 export const tgPayNote = (): string => L('payNote');
