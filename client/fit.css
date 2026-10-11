@@ -606,3 +606,14 @@ body.touch #mm-tab:focus-visible .mm-tab-pill { box-shadow: none; }
   /* a window's fields on the same scale (the page has maximum-scale=1: iOS does not zoom into a field under 16 px) */
   #modal-panel :is(input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea) { font-size: var(--f-fs-m); }
 }
+
+/* ================================================================== the iPhone's notch, held sideways
+   (owner, 2026-10-12: «из-за айфоновской шторки модалки и окна перекрывают часть текста … центруй все красиво и
+   ограничивай ширину окон»): every window, sheet and screen keeps off the safe areas on BOTH sides by the larger of
+   the two — the notch is on one side only, so equal margins keep the window in the middle of what can be seen — and
+   its width is capped (a window 880 px, a sheet 760 px); the window's own padding no longer carries the safe area. */
+@media (max-height: 520px) {
+  #modal, .k-sheet-root, .screen { --sa-x: max(var(--sa-l, 0px), var(--sa-r, 0px)); box-sizing: border-box; padding-left: var(--sa-x); padding-right: var(--sa-x); }
+  #modal-panel { width: min(100%, 880px) !important; max-width: 880px; margin-inline: auto; }
+  .k-sheet { width: min(100%, 760px); margin-inline: auto; padding-left: var(--f-pad); padding-right: var(--f-pad); }
+}
