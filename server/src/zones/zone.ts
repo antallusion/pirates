@@ -27,6 +27,8 @@ import type { PlayerSession, Profile } from '../game/player.ts';
 import { ShipEntity } from '../game/ship.ts';
 import { FrameReader, frame, secretsMatch } from '../net/link.ts';
 import { RemoteConnection } from '../net/link.ts';
+import { chatFromAfar } from '../game/chat.ts';
+import type { ChatWire } from '../game/chat.ts';
 
 const Z_HELLO = 20;
 const Z_MSG = 22;
@@ -94,7 +96,9 @@ type Msg =
   | { k: 'hit'; target: number; d: DamagePacket; source: number | null }
   | { k: 'kill'; killer: number; victim: GhostRow; how: 'sunk' | 'boarded' }
   | { k: 'events'; list: { ev: GameEvent; x: number; y: number }[] }
-  | { k: 'kv'; key: string };
+  | { k: 'kv'; key: string }
+  /** docs/28: a chat line for every zone (the world, a guild, private words to a captain sailing elsewhere) */
+  | { k: 'chat'; w: ChatWire };
 
 class PeerLink {
   socket: Socket | null = null;
@@ -437,6 +441,11 @@ export class ZoneRuntime {
 
   // ---------------------------------------------------------------------------------------- forwarding
 
+  /** docs/28: a chat line to every zone that is up (the zones are a full mesh: ZONE_PEERS names them all). */
+  relayChat(w: ChatWire): void {
+    for (const p of this.peers.values()) p.send({ k: 'chat', w });
+  }
+
   forwardHit(target: ShipEntity, d: DamagePacket, source: ShipEntity | null): void {
     this.peers.get(target.ghostZone)?.send({ k: 'hit', target: target.id, d, source: source?.id ?? null });
   }
@@ -490,6 +499,9 @@ export class ZoneRuntime {
         return;
       case 'kv':
         g.invalidateKv(m.key);
+        return;
+      case 'chat':
+        chatFromAfar(g, m.w);
         return;
     }
   }

@@ -36,6 +36,8 @@
   <link rel="stylesheet" href="/feel.css" />
   <link rel="stylesheet" href="/seahud.css" />
   <link rel="stylesheet" href="/tg.css" />
+  <!-- the players' chat (docs/28): its own phone sizes on the fit's --u scale (fit.css keeps no chat rules) -->
+  <link rel="stylesheet" href="/chat.css" />
   <!-- the phone fit (docs/23, 2026-10-10): last, so its phone sizes win -->
   <link rel="stylesheet" href="/fit.css" />
 </head>
@@ -173,13 +175,17 @@
   <div id="fishfight" class="hidden"></div>
   <div id="nethaul" class="hidden"></div>
   <div id="hud-chat" class="hud-layer hidden">
-    <!-- The players' chat: a button with the count of unread lines opens the panel (tabs, the log, the emblems, the field). -->
-    <button id="chat-toggle" class="chat-toggle" type="button" aria-label="Chat" data-i18n-aria="a11y.chat"><span class="chat-tg-ico"></span><i id="chat-unread" class="chat-unread hidden"></i></button>
-    <div id="chat" data-filter="all">
-      <div class="chat-head"><div id="chat-tabs"></div><button id="chat-close" class="chat-x" type="button" aria-label="Close" data-i18n-aria="a11y.close">×</button></div>
-      <div id="chat-log"></div>
-      <div id="chat-emotes" class="hidden"></div>
-      <div class="chat-row"><button id="chat-emote-btn" class="chat-emo-btn" type="button" aria-label=":)"></button><input id="chat-input" maxlength="200" placeholder="Say a word…" data-i18n-ph="hud.chatPh" autocomplete="off" enterkeyhint="send" /><button id="chat-send" class="btn btn-small chat-send" type="button"></button></div>
+    <!-- The players' chat (docs/28): a round button with the unread opens and closes the sheet (the channels' tabs, a
+         conversation's bar, the log, the captain's card and the emotes over it, the autocomplete, the field); a short
+         line by the button tells private words, the group's and the guild's while it is closed. -->
+    <button id="chat-toggle" class="chat-toggle" type="button" aria-label="Chat" aria-expanded="false" aria-controls="chat"><span class="chat-tg-ico"></span><i id="chat-unread" class="chat-unread hidden"></i></button>
+    <button id="chat-toast" class="chat-toast hidden" type="button"></button>
+    <div id="chat" data-filter="world" role="dialog" aria-label="Chat">
+      <div class="chat-head"><div id="chat-tabs" role="tablist"></div><button id="chat-dock" class="chat-x chat-dock" type="button"></button><button id="chat-close" class="chat-x" type="button" aria-label="Close">×</button></div>
+      <div id="chat-peers" class="hidden"></div>
+      <div class="chat-mid"><div id="chat-log" role="log" aria-live="polite"></div><div id="chat-card" class="hidden"></div><div id="chat-emotes" class="hidden"></div></div>
+      <div id="chat-suggest" class="hidden"></div>
+      <div class="chat-row"><button id="chat-emote-btn" class="chat-emo-btn" type="button" aria-label=":)"></button><input id="chat-input" maxlength="300" placeholder="" autocomplete="off" autocorrect="on" enterkeyhint="send" /><button id="chat-send" class="btn btn-small chat-send" type="button"></button></div>
     </div>
   </div>
 

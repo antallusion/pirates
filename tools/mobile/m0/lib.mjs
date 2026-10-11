@@ -38,12 +38,13 @@ export async function login(p, { port = Number(process.env.GPORT ?? 58791), name
     const on = await p.waitForSelector('#screen-captain:not(.hidden), #screen-login:not(.hidden) #login-name', { timeout: 90000 });
     if (await on.evaluate((e) => e.id === 'screen-captain')) break;
     await p.fill('#login-name', name);
-    await p.click('#login-form button');
-    try { await p.waitForSelector('#screen-captain:not(.hidden)', { timeout: 45000 }); break; } catch (e) { if (i >= 3) throw e; }
+    // (a press from the page itself: a busy software GPU kept Playwright's actionability wait past its timeout)
+    await p.evaluate(() => document.querySelector('#login-form button[type=submit], #login-form button')?.click());
+    try { await p.waitForSelector('#screen-captain:not(.hidden)', { timeout: 90000 }); break; } catch (e) { if (i >= 3) throw e; }
   }
-  await p.click(`.captain-card[data-id="${captain}"]`);
-  if (know) await p.check('#know-sea').catch(() => {});
-  await p.click('#pick-captain');
+  await p.evaluate((c) => document.querySelector(`.captain-card[data-id="${c}"]`)?.click(), captain);
+  if (know) await p.evaluate(() => { const k = document.getElementById('know-sea'); if (k && !k.checked) k.click(); });
+  await p.evaluate(() => document.getElementById('pick-captain')?.click());
   if (prologue === 'skip') {
     for (let i = 0; i < 40; i++) {
       if (await p.$('#hud:not(.hidden)')) break;

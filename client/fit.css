@@ -213,23 +213,7 @@
   #screen-login .login-panel .hint { font-size: var(--f-fs-s); }
 }
 
-/* ================================================================== the chat on a phone held sideways */
-/* It stood 116 px wide between the captain's frame and the minimap at 640×360 (the field 21 px, the tabs 17×22 px):
-   now a panel over the right of the sea, clear of the helm, its tabs, field and buttons a finger wide. */
-@media (max-height: 520px) {
-  #hud-chat #chat { left: max(calc(var(--sa-l) + 150px), 34vw); right: calc(var(--sa-r) + 6px); top: calc(var(--sa-t) + 6px); bottom: calc(var(--sa-b) + 6px); width: auto; height: auto; max-height: none; }
-  #hud-chat #chat-tabs { gap: 4px; }
-  #hud-chat #chat-tabs .ct, #hud-chat #chat-tabs .ct:not(.on) { min-height: var(--f-tap); min-width: var(--f-btn); padding: 0 8px; justify-content: center; }
-  #hud-chat #chat-tabs .ct .ico-sm { width: 18px; height: 18px; }
-  #hud-chat #chat-tabs .ct-n { font-size: var(--f-fs-s); min-width: 16px; height: 16px; line-height: 16px; }
-  #hud-chat .chat-x { width: var(--f-btn); height: var(--f-btn); }
-  #hud-chat .chat-emo-btn { width: var(--f-btn); height: var(--f-btn); }
-  #hud-chat #chat-input { min-height: var(--f-btn); font-size: var(--f-fs-m); }
-  #hud-chat .chat-send { height: var(--f-btn); }
-  #hud-chat #chat-emotes button { height: var(--f-btn); }
-  #hud-chat .cl-lv, #hud-chat .cl-tag, #hud-chat .cl-head time { font-size: var(--f-fs-s); }
-  #hud-chat .chat-unread { font-size: var(--f-fs-s); }
-}
+/* (the chat on a phone held sideways: client/chat.css — docs/28) */
 
 /* ================================================================== talents (talents.ts) on a phone held sideways */
 /* The rose stood 272 px over a single column and the tree ran 13 pages under it: its trees now stand in a small grid

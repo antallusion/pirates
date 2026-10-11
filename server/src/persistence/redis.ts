@@ -7,6 +7,7 @@ import type { Socket } from 'node:net';
 
 /** Who speaks in a chat line from another process: the captain's portrait, flag and level. */
 export interface ChatWho { face?: string; fac?: 'free' | 'crown'; lv?: number }
+import type { ChatWire } from '../game/chat.ts';
 
 export type RedisReply = string | number | null | RedisReply[];
 
@@ -135,6 +136,7 @@ export class SharedState {
   private sub: RedisClient;
   readonly origin: string;
   private onChat: (from: string, text: string, who?: ChatWho) => void = () => {};
+  private onWire: (w: ChatWire) => void = () => {};
   onlineCount = 0;
 
   private constructor(cmd: RedisClient, sub: RedisClient, origin: string) {
@@ -147,20 +149,37 @@ export class SharedState {
     const cmd = await RedisClient.connect(url);
     const sub = await RedisClient.connect(url);
     const st = new SharedState(cmd, sub, origin);
-    await sub.subscribe('gt:chat', (_ch, raw) => {
+    // one handler for the connection: the old chat bus and the chat's lines (docs/28) by channel
+    const route = (ch: string, raw: string) => {
       try {
+        if (ch === 'gt:chat2') {
+          const m = JSON.parse(raw) as { origin: string; w: ChatWire };
+          if (m.origin !== origin && m.w) st.onWire(m.w);
+          return;
+        }
         const m = JSON.parse(raw) as { origin: string; from: string; text: string; who?: ChatWho };
         if (m.origin !== origin) st.onChat(m.from, m.text, m.who);
       } catch {
         // ignore malformed messages
       }
-    });
+    };
+    await sub.subscribe('gt:chat', route);
+    await sub.subscribe('gt:chat2', route);
     return st;
   }
 
   /** Chat from other processes arrives here. */
   listenChat(fn: (from: string, text: string, who?: ChatWho) => void): void {
     this.onChat = fn;
+  }
+
+  /** docs/28: the chat's lines between processes (a line with its id, channel and addressee: chat.ts ChatWire). */
+  listenChatWire(fn: (w: ChatWire) => void): void {
+    this.onWire = fn;
+  }
+
+  publishChatWire(w: ChatWire): void {
+    void this.cmd.command('PUBLISH', 'gt:chat2', JSON.stringify({ origin: this.origin, w })).catch(() => {});
   }
 
   publishChat(from: string, text: string, who?: ChatWho): void {

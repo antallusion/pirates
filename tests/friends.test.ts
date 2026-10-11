@@ -82,7 +82,8 @@ test('whispers go to one captain by name (spaces and all), echo back, and "/r" a
   a.push({ t: 'chat', text: '/w Bob Whisper' });
   a.push({ t: 'chat', text: '/w Ann Whisper talking to myself' });
   assert.deepEqual(bad(c), ['No one has whispered to you yet']);
-  assert.deepEqual(bad(a), ['No captain of that name is at sea', 'Whisper to whom? /w Name words', 'You mutter to yourself']);
+  // (docs/28: a whisper may go to a captain ashore too — any name the database knows)
+  assert.deepEqual(bad(a), ['No captain goes by that name', 'Whisper to whom? /w Name words', 'You mutter to yourself']);
   // Not a whisper: "/where" is not "/w".
   assert.equal(whisperCommand('/where'), null);
   assert.deepEqual(whisperCommand('/W Ann hi'), { rest: 'Ann hi', reply: false });
@@ -115,7 +116,8 @@ test('the unheard: their chat, whispers and invitations do not reach one; hearin
   // Heard again.
   a.push({ t: 'friend', action: 'unignore', name: 'LOUD MOUTH' });
   assert.deepEqual(a.last('friends')!.ignored, []);
-  b.push({ t: 'chat', text: 'buy my rum' });
+  steps(game, 60); // (docs/28: a breath between lines, and new words — the same ones again are refused)
+  b.push({ t: 'chat', text: 'rum, cheap rum' });
   assert.equal(heard(), 1);
   a.push({ t: 'chat', text: '/ignore Deaf Ear' });
   assert.equal(bad(a).at(-1), 'You cannot stop hearing yourself');

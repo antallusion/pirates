@@ -4,7 +4,6 @@
 // And its other side, the unheard: a captain one will not hear — their chat lines, whispers, invitations to a
 // group, a barter or a duel do not reach one (letters still do: the packet boat reads no lists).
 
-import { chatFace } from './chat.ts';
 import { wornItems } from './gear.ts';
 import { FRESH_LEVEL, FRIENDS_MAX, WHO_MAX } from '../../../shared/src/protocol.ts';
 import type { FriendView, InspectView, WhoView } from '../../../shared/src/protocol.ts';
@@ -173,32 +172,5 @@ export function whisperCommand(text: string): { rest: string; reply: boolean } |
   return { rest: m[2], reply: /^(r|reply|о|ответ)$/i.test(m[1]) };
 }
 
-/** Whisper to a captain at sea ("Name words" — the longest name that sails wins), or reply to the last who did. */
-export function whisper(game: Game, s: PlayerSession, text: string, reply = false): string | null {
-  const raw = String(text ?? '').replace(/\s+/g, ' ').trim().slice(0, 240);
-  let to: PlayerSession | undefined;
-  let words = '';
-  if (reply) {
-    const last = game.social.lastWhisper.get(s.accountId);
-    if (!last) return 'No one has whispered to you yet';
-    to = game.sessionByName(last);
-    if (!to) return `${last} is not at sea`;
-    words = raw;
-  } else {
-    const parts = raw ? raw.split(' ') : [];
-    for (let k = parts.length - 1; k >= 1 && !to; k--) {
-      to = game.sessionByName(parts.slice(0, k).join(' '));
-      if (to) words = parts.slice(k).join(' ');
-    }
-    // Only a name (and no words), or nothing at all: how it is done.
-    if (!to) return parts.length < 2 || game.sessionByName(raw) ? 'Whisper to whom? /w Name words' : 'No captain of that name is at sea';
-  }
-  if (!words) return 'Whisper to whom? /w Name words';
-  if (to === s) return 'You mutter to yourself';
-  if (ignores(to, s.accountId)) return `${to.name} is not listening to you`;
-  const who = chatFace(s);
-  game.sendTo(to, { t: 'chat', from: s.name, text: words, ch: 'whisper', ...who });
-  game.sendTo(s, { t: 'chat', from: s.name, to: to.name, text: words, ch: 'whisper', ...who });
-  game.social.lastWhisper.set(to.accountId, s.name);
-  return null;
-}
+// The whisper itself (to any captain by name, at sea or ashore, kept and handed over in every zone) is the chat's:
+// whisperLine and dmSay in chat.ts (docs/28).

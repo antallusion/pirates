@@ -394,8 +394,6 @@ function openClaim(): void {
   net.send({ t: 'estate', action: 'view' });
   openModal('company');
 }
-// "Whisper" on a friend: the chat opens over the window, addressed to them.
-let whisperPrefill = '';
 // A groupmate's frame on the HUD: their card.
 hud.onPartyTap = (name) => net.send({ t: 'inspect', name });
 hud.onSignal = (kind) => net.send({ t: 'signal', kind }); // docs/16 #35
@@ -404,12 +402,8 @@ hud.onTargetTap = (name) => net.send({ t: 'inspect', name });
 hud.onFishing = (action) => net.send({ t: 'fishing', action });
 hud.onHunt = (action, id) => net.send(action === 'flense' ? { t: 'hunt', action, id: id ?? 0 } : { t: 'hunt', action });
 hud.onTribute = (id) => net.send({ t: 'tribute', id });
-companyScreen.onWhisper = (name) => {
-  const input = $('chat-input') as HTMLInputElement;
-  hud.chatPanel.open(false);
-  input.value = whisperPrefill = `${lang() === 'ru' ? '/ш' : '/w'} ${name} `;
-  input.focus();
-};
+// "Whisper" on a friend: the chat opens over the window on its private tab, addressed to them (docs/28).
+companyScreen.onWhisper = (name) => hud.chatPanel.openDm(name);
 const divePanel = new DivePanel((m) => net.send(m));
 const boardFight = new BoardFightPanel((m) => net.send(m), () => state.estServerTime());
 const tactical = new TacticalPanel((m) => net.send(m), () => state.estServerTime());
@@ -1142,7 +1136,10 @@ function onMessage(m: ServerMsg): void {
       // a press of hers just now, are not shown again (the band counted them up ×N for as long as they came).
       if (m.kind === 'bad' && refusalAgain(m.msg)) break;
       // World news goes to the feed (owner, 2026-09-29: the sea's news in a corner), the rest to the toasts.
-      if (m.msg.startsWith('WORLD: ')) hud.feed(serverText(m.msg));
+      if (m.msg.startsWith('WORLD: ')) {
+        hud.feed(serverText(m.msg));
+        hud.chatPanel.system(serverText(m.msg)); // docs/28: the sea's news in the chat's world tab too
+      }
       // While her men fight on a deck the sea's news (a fever, a tip) waits for the deck to clear. A refusal and a win
       // are told at once, in the battle's top band (docs/23 item 93: «Не ваш ход», a cut that failed, a ransom she cannot
       // pay — every refusal of the battle comes as a 'bad' toast, and was held to the end of it).
@@ -1169,6 +1166,9 @@ function onMessage(m: ServerMsg): void {
     }
     case 'chat':
       hud.chat(m);
+      break;
+    case 'chat_hist': // docs/28: the history on coming aboard, or one conversation whole
+      hud.chatPanel.history(m);
       break;
     case 'duel':
       if (m.view && m.view.startsIn === 5) hud.banner(L('duel'), m.view.sides.map((side) => side.map((x) => x.name).join(', ')).join(`  ${L('against')}  `));
@@ -1673,9 +1673,6 @@ function stripKeyHints(root: HTMLElement): void {
 function openMenuItem(m: MenuItem): void {
   if (m === 'chat') {
     if (modal) closeModal();
-    const input = $('chat-input') as HTMLInputElement;
-    // A touch keyboard has no Enter to name: the hint says what to do.
-    if (touch.enabled && hud.chatPanel.filter === 'all') input.placeholder = t('hud.chatPhTouch');
     hud.chatPanel.open(!touch.enabled);
   } else if (m === 'company') {
     companyScreen.open();
@@ -1693,44 +1690,25 @@ function buildMicroMenu(): void {
   $('hud-menu').querySelectorAll<HTMLElement>('[data-menu]').forEach((b) => (b.onclick = () => openMenuItem(b.dataset.menu as MenuItem)));
 }
 buildMicroMenu();
-// The chat's channels: a filter on the lines, and the field says where plain words go.
-const chatChannels = () => hud.chatTabs((ch) => {
-  const input = $('chat-input') as HTMLInputElement;
-  input.placeholder = ch === 'all' ? t(touch.enabled ? 'hud.chatPhTouch' : 'hud.chatPh') : HUD_L(`ph_${ch}`);
-});
-chatChannels();
-onLang(chatChannels);
+// ---- docs/28, the chat (client/src/ui/chat.ts): who the reader is and who is near her (the colour of each name, the
+// tabs she has), and what it asks of the game.
 onLang(() => hud.chatPanel.art());
-// Who the reader is and who is near her: the colour of each name in the chat.
 hud.chatPanel.context = () => ({
   self: state.self?.name ?? null,
   group: (state.party?.members ?? []).map((x) => x.name),
   guild: (state.guild?.members ?? []).map((x) => x.name),
   friends: state.friends.map((f) => f.name),
+  ignored: state.ignored,
 });
-hud.chatPanel.onSend = () => sendChat();
-
-/** What is in the chat's field goes where it is addressed: a command, the channel picked, or everyone. */
-function sendChat(): void {
-  const chatInput = $('chat-input') as HTMLInputElement;
-  const filter = hud.chatPanel.filter;
-  const said = chatInput.value.trim();
-  if (said === whisperPrefill.trim()) {
-    chatInput.value = '';
-    return;
-  }
-  // "/g …" speaks to your group only.
-  if (/^\/ritual\b/i.test(said)) net.send({ t: 'abyss', action: 'ritual' });
-  else if (/^\/gc\s/i.test(said)) net.send({ t: 'guild', action: 'say', text: said.slice(4) });
-  else if (/^\/g\s/i.test(said)) net.send({ t: 'group', action: 'say', text: said.slice(3) });
-  // Words with no command go to the chosen channel: the group, the guild, the last whisperer, or all.
-  else if (said && !said.startsWith('/') && filter === 'group') net.send({ t: 'group', action: 'say', text: said });
-  else if (said && !said.startsWith('/') && filter === 'guild') net.send({ t: 'guild', action: 'say', text: said });
-  else if (said && !said.startsWith('/') && filter === 'whisper') net.send({ t: 'chat', text: `/r ${said}` });
-  else if (said) net.send({ t: 'chat', text: said });
-  chatInput.value = '';
-  whisperPrefill = '';
-}
+hud.chatPanel.hooks = {
+  // (the Abyss's ritual is typed in the chat: /ritual)
+  send: (m) => (m.t === 'chat' && !m.ch && /^\/ritual\b/i.test(m.text) ? net.send({ t: 'abyss', action: 'ritual' }) : net.send(m)),
+  invite: (name) => net.send({ t: 'group', action: 'invite', name }),
+  befriend: (name) => net.send({ t: 'friend', action: 'add', name }),
+  block: (name, on) => net.send({ t: 'friend', action: on ? 'ignore' : 'unignore', name }),
+  toast: (text) => hud.toast(text, 'info'),
+};
+// ---- (docs/28 ends)
 // (with a mark on a touch screen the chart came down by her tap on its tab: a tap again puts it back up — seahud.ts)
 $('hud-map').onclick = () => {
   if (seaHud.mapTap()) return;
@@ -1793,32 +1771,24 @@ function typing(): boolean {
   return !!a && (a.tagName === 'INPUT' || a.tagName === 'SELECT' || a.tagName === 'TEXTAREA');
 }
 
-// The chat stays open until its button, its × or Esc folds it away; a whisper's address left alone is cleared.
-($('chat-input') as HTMLInputElement).addEventListener('blur', () => {
-  const input = $('chat-input') as HTMLInputElement;
-  setTimeout(() => {
-    if (document.activeElement !== input && whisperPrefill && input.value === whisperPrefill) input.value = '';
-  }, 150);
-});
+// The chat stays open until its button, its ×, a swipe or Esc folds it away (docs/28).
 
 addEventListener('keydown', (e) => {
   if (!inGame) return;
   const chatInput = $('chat-input') as HTMLInputElement;
   if (e.key === 'Escape' && hud.chatPanel.isOpen) {
     // Esc in the field leaves it (the keys steer the ship again); Esc once more folds the chat away.
-    if (document.activeElement === chatInput) {
-      if (chatInput.value === whisperPrefill) chatInput.value = '';
-      chatInput.blur();
-    } else hud.chatPanel.close();
+    if (document.activeElement === chatInput) chatInput.blur();
+    else hud.chatPanel.close();
     e.preventDefault();
     return;
   }
   if (e.key === 'Enter') {
     // Enter opens the chat and its field; Enter in the field sends (an empty field gives the keys back).
     if (document.activeElement === chatInput) {
-      if (chatInput.value.trim()) sendChat();
+      if (chatInput.value.trim()) hud.chatPanel.send();
       else chatInput.blur();
-    } else if (!typing()) hud.chatPanel.open(true);
+    } else if (!typing()) hud.chatPanel.focusInput();
     else return;
     e.preventDefault();
     return;
