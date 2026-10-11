@@ -434,7 +434,11 @@ test('no token, no Telegram: every Telegram route is a 404, the service is not m
   assert.equal(premiumView(game, s).pay, false);
   const { base, close } = await serve(null);
   try {
-    for (const [m, path] of [['GET', '/auth/tg/config'], ['POST', '/auth/tg/start'], ['GET', '/auth/tg/poll?nonce=x'], ['POST', '/auth/tg/webapp'], ['POST', '/tg/webhook']]) {
+    // the config says «off» (a 200, no red line in the console); the rest are a 404
+    const off = await fetch(`${base}/auth/tg/config`);
+    assert.equal(off.status, 200);
+    assert.equal(((await off.json()) as { enabled: boolean }).enabled, false);
+    for (const [m, path] of [['POST', '/auth/tg/start'], ['GET', '/auth/tg/poll?nonce=x'], ['POST', '/auth/tg/webapp'], ['POST', '/tg/webhook']]) {
       const r = await fetch(`${base}${path}`, { method: m, body: m === 'POST' ? '{}' : undefined });
       assert.equal(r.status, 404, path);
     }
