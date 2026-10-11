@@ -3,8 +3,8 @@
 // the client shows no Telegram button.
 //   GET  /auth/tg/config                         → {enabled, bot, webapp}
 //   POST /auth/tg/webapp {initData, token?}      → {token, name, accountId}   the Mini App's sign-in
-//   POST /auth/tg/start {token?}                 → {nonce, link, expires}     «Войти через Телеграм» / «Привязать Телеграм»
-//   GET  /auth/tg/poll?nonce=…                   → {status: wait|expired|taken|linked|done, token?, name?}
+//   POST /auth/tg/start {token?}                 → {nonce, link, expires, code} «Войти через Телеграм» / «Привязать Телеграм»
+//   GET  /auth/tg/poll?nonce=…                   → {status: wait|expired|mismatch|taken|linked|done, token?, name?}
 //   POST /auth/tg/linked {token}                 → {linked}
 //   POST /tg/webhook                             ← Telegram (X-Telegram-Bot-Api-Secret-Token)
 
@@ -71,7 +71,7 @@ export async function handleTelegram(req: IncomingMessage, res: ServerResponse, 
         return true;
       }
       case '/auth/tg/start': {
-        const r = tg.start(clientIp(req), str(b.token));
+        const r = tg.start(clientIp(req), str(b.token), String(req.headers['user-agent'] ?? ''));
         if ('error' in r) json(res, r.status, { error: r.error });
         else json(res, 200, r);
         return true;

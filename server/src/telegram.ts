@@ -9,13 +9,13 @@
 // signs in or makes a guest captain named from the first name. The bot token lives only in the server's environment:
 // it is never logged, never sent to a client, and a Bot API error is reported by its code and a cleaned description.
 
-import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import type { AuthResult, AuthService } from './auth.ts';
 import type { Db } from './persistence/db.ts';
 import type { Game } from './game/Game.ts';
 import { chargebackPremium, creditPremium, sendPremium, setPayDesk } from './game/premium.ts';
 import { doubloonPack } from '../../shared/src/data/premium.ts';
-import { tgLang, tgText } from '../../shared/src/data/telegram.ts';
+import { tgDevice, tgLang, tgText, tgTime } from '../../shared/src/data/telegram.ts';
 import type { TgLang } from '../../shared/src/data/telegram.ts';
 
 export interface TgUser {
@@ -133,12 +133,35 @@ export class BotApi {
 interface Pending {
   ip: string;
   expires: number;
+  created: number;
+  /** The code the page shows: the Telegram user picks it among three in the bot before anything is bound. */
+  code: string;
+  /** The browser that asked (its User-Agent): named in the bot's question. */
+  ua: string;
   /** Linking: the account the Telegram user is to be linked to (else a sign-in). */
   link?: number;
-  /** The Telegram user who answered the bot's link. */
+  /** The Telegram user who opened the link and was asked for the code (not yet bound). */
+  asked?: TgUser;
+  /** The three codes the bot offered (the real one among them), in their order. */
+  choices?: string[];
+  /** The Telegram user who picked the right code: only now is the nonce bound. */
   user?: TgUser;
   /** Linking refused: that Telegram user belongs to another captain. */
   taken?: boolean;
+  /** Killed: a wrong code picked, or a second Telegram user on the same link (the page says the code did not match). */
+  dead?: boolean;
+}
+
+/** Three distinct three-digit codes, the real one among them, in a random order. */
+function codeChoices(code: string): string[] {
+  const out = new Set([code]);
+  while (out.size < 3) out.add(String(randomInt(100, 1000)));
+  const list = [...out];
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = randomInt(0, i + 1);
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
 }
 
 /** A payment as kept in the kv table under `tgpay:<telegram_payment_charge_id>` (its doubloons are the ledger's
@@ -157,6 +180,7 @@ export type PollResult =
   | { status: 'wait' }
   | { status: 'expired' }
   | { status: 'taken' }
+  | { status: 'mismatch' }
   | { status: 'linked'; name: string }
   | ({ status: 'done' } & AuthResult);
 
@@ -215,7 +239,7 @@ export class TelegramService {
    *  commands. Failures are logged by their code and do not stop the world. */
   async setup(): Promise<void> {
     const steps: [string, Record<string, unknown>][] = [
-      ['setWebhook', { url: `${this.publicUrl}/tg/webhook`, secret_token: this.secret, allowed_updates: ['message', 'pre_checkout_query'] }],
+      ['setWebhook', { url: `${this.publicUrl}/tg/webhook`, secret_token: this.secret, allowed_updates: ['message', 'callback_query', 'pre_checkout_query'] }],
       ['setChatMenuButton', { menu_button: { type: 'web_app', text: tgText('play', 'ru'), web_app: { url: this.webappUrl } } }],
       ['setMyCommands', { commands: this.commands('en') }],
       ['setMyCommands', { commands: this.commands('ru'), language_code: 'ru' }],
@@ -278,8 +302,9 @@ export class TelegramService {
 
   // ---------------------------------------------------------------------------------------------- the deep link
 
-  /** A one-time nonce for «Войти через Телеграм» (or, with the page's game token, «Привязать Телеграм»): its bot link. */
-  start(ip: string, gameToken?: string): { nonce: string; link: string; expires: number } | { error: string; status: number } {
+  /** A one-time nonce for «Войти через Телеграм» (or, with the page's game token, «Привязать Телеграм»): its bot link
+   *  and the code the page shows — the bot binds the nonce only to the Telegram user who picks that code. */
+  start(ip: string, gameToken?: string, ua = ''): { nonce: string; link: string; expires: number; code: string } | { error: string; status: number } {
     if (!this.allow(`start:${ip}`, START_LIMIT, 10 * 60_000)) return { error: 'Too many attempts. Wait a minute.', status: 429 };
     let link: number | undefined;
     if (gameToken) {
@@ -290,9 +315,11 @@ export class TelegramService {
     this.sweep();
     if (this.pending.size > 10_000) return { error: 'Too many attempts. Wait a minute.', status: 429 };
     const nonce = randomBytes(18).toString('base64url');
-    const expires = this.now() + NONCE_TTL;
-    this.pending.set(nonce, { ip, expires, link });
-    return { nonce, link: `https://t.me/${this.bot}?start=login_${nonce}`, expires };
+    const created = this.now();
+    const expires = created + NONCE_TTL;
+    const code = String(randomInt(100, 1000));
+    this.pending.set(nonce, { ip, expires, created, code, ua: String(ua).slice(0, 300), link });
+    return { nonce, link: `https://t.me/${this.bot}?start=login_${nonce}`, expires, code };
   }
 
   /** The page asking whether the bot has seen its nonce: the game token (or the link made) once, then the nonce is gone. */
@@ -303,6 +330,11 @@ export class TelegramService {
       if (p) this.pending.delete(nonce);
       return { status: 'expired' };
     }
+    if (p.dead) {
+      this.pending.delete(nonce);
+      return { status: 'mismatch' };
+    }
+    // nothing is handed over before the right code was picked in the bot
     if (!p.user) return { status: 'wait' };
     this.pending.delete(nonce);
     if (p.taken) return { status: 'taken' };
@@ -310,10 +342,42 @@ export class TelegramService {
     return { status: 'done', ...this.signIn(p.user) };
   }
 
-  /** The bot's `/start login_<nonce>`: the nonce bound to this Telegram user (a link made at once). The reply's text. */
-  private bind(nonce: string, user: TgUser, l: TgLang): string {
+  /** The bot's `/start login_<nonce>`: nothing bound yet — the question «choose the code shown on your screen» with
+   *  three buttons (the real code and two decoys), the captain to be linked named, the device and the time of the ask.
+   *  A second Telegram user on the same link kills it. */
+  private async ask(chatId: number, nonce: string, user: TgUser, l: TgLang): Promise<void> {
     const p = this.pending.get(nonce);
-    if (!p || p.user || p.expires < this.now()) return tgText('loginExpired', l);
+    if (!p || p.user || p.dead || p.expires < this.now()) return this.say(chatId, tgText('loginExpired', l));
+    if (p.asked && p.asked.id !== user.id) {
+      p.dead = true;
+      return this.say(chatId, tgText('loginExpired', l));
+    }
+    p.asked = user;
+    p.choices ??= codeChoices(p.code);
+    const head = p.link === undefined ? tgText('confirmLogin', l) : tgText('confirmLink', l, { name: this.db.accountById(p.link)?.name ?? '' });
+    const text = `${head}\n\n${tgText('confirmFrom', l, { device: tgDevice(p.ua, l), time: tgTime(p.created) })}\n${tgText('confirmWarn', l)}`;
+    const keyboard = [p.choices.map((c) => ({ text: c, callback_data: `tgc:${nonce}:${c}` }))];
+    try {
+      await this.api.call('sendMessage', { chat_id: chatId, text, reply_markup: { inline_keyboard: keyboard } });
+    } catch (e) {
+      this.log(`[tg] ${(e as Error).message}`);
+    }
+  }
+
+  /** A code picked in the bot: the right one binds the nonce (the reply's text); a wrong one kills it. */
+  private pick(nonce: string, code: string, user: TgUser, l: TgLang): string {
+    const p = this.pending.get(nonce);
+    if (!p || p.user || p.dead || p.expires < this.now()) return tgText('loginExpired', l);
+    if (!p.asked || p.asked.id !== user.id) return tgText('notYours', l);
+    if (!p.choices?.includes(code) || !sameSecret(code, p.code)) {
+      p.dead = true;
+      return tgText('codeWrong', l);
+    }
+    return this.bind(p, user, l);
+  }
+
+  /** The nonce bound to this Telegram user (a link made at once). The reply's text. */
+  private bind(p: Pending, user: TgUser, l: TgLang): string {
     p.user = user;
     if (p.link === undefined) return tgText('loginDone', l);
     const other = this.db.accountByOAuth(PROVIDER, String(user.id));
@@ -340,9 +404,10 @@ export class TelegramService {
     return typeof header === 'string' && sameSecret(header, this.secret);
   }
 
-  /** One update from Telegram: a command, a pre-checkout query, a payment. */
+  /** One update from Telegram: a command, a code picked, a pre-checkout query, a payment. */
   async handleUpdate(u: TgUpdate): Promise<void> {
     if (u.pre_checkout_query) return this.preCheckout(u.pre_checkout_query);
+    if (u.callback_query) return this.callback(u.callback_query);
     const m = u.message;
     if (!m || !m.from) return;
     if (m.successful_payment) return this.paid(m.from, m.successful_payment);
@@ -358,7 +423,7 @@ export class TelegramService {
     switch (cmd[1].toLowerCase()) {
       case 'start': {
         const login = /^login_([\w-]{16,48})$/.exec(arg);
-        if (login) return this.say(m.chat.id, this.bind(login[1], m.from, l), true, l);
+        if (login) return this.ask(m.chat.id, login[1], m.from, l);
         return this.say(m.chat.id, tgText('welcome', l, { name: m.from.first_name || 'captain' }), true, l);
       }
       case 'paysupport':
@@ -370,6 +435,23 @@ export class TelegramService {
         return this.say(m.chat.id, await this.refund(arg));
       default:
         return this.say(m.chat.id, tgText('help', l));
+    }
+  }
+
+  /** A button of the code question pressed: answered (the small notice) and the question replaced by the outcome. */
+  private async callback(q: NonNullable<TgUpdate['callback_query']>): Promise<void> {
+    const l = tgLang(q.from?.language_code);
+    const m = /^tgc:([\w-]{16,48}):(\d{3})$/.exec(String(q.data ?? ''));
+    const text = m && q.from ? this.pick(m[1], m[2], q.from, l) : tgText('loginExpired', l);
+    const done = this.pending.get(m?.[1] ?? '')?.user !== undefined;
+    try {
+      await this.api.call('answerCallbackQuery', { callback_query_id: q.id, text: text.slice(0, 190) });
+      if (q.message?.chat) {
+        const play = done ? { reply_markup: { inline_keyboard: [[{ text: tgText('play', l), web_app: { url: this.webappUrl } }]] } } : {};
+        await this.api.call('editMessageText', { chat_id: q.message.chat.id, message_id: q.message.message_id, text, ...play });
+      }
+    } catch (e) {
+      this.log(`[tg] ${(e as Error).message}`);
     }
   }
 
@@ -496,6 +578,7 @@ export interface TgMessage {
 export interface TgUpdate {
   update_id?: number;
   message?: TgMessage;
+  callback_query?: { id: string; from?: TgUser; data?: string; message?: { message_id: number; chat: { id: number } } };
   pre_checkout_query?: { id: string; from?: TgUser; currency: string; total_amount: number; invoice_payload: string };
 }
 

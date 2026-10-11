@@ -96,15 +96,48 @@ test('the Mini App signs in: a new captain named from the first name (made uniqu
 
 // ------------------------------------------------------------------------------------------------ the deep link
 
-test('«Войти через Телеграм»: a nonce, the bot binds it, the poll returns the token once; it expires in ten minutes', async () => {
+/** The bot's question after `/start login_<nonce>`: its text and the three codes offered. */
+function question(calls: { method: string; params: Record<string, unknown> }[]): { text: string; codes: string[]; data: string[] } {
+  const q = calls.filter((c) => c.method === 'sendMessage').at(-1)!;
+  const kb = (q.params.reply_markup as { inline_keyboard: { text: string; callback_data: string }[][] } | undefined)?.inline_keyboard[0] ?? [];
+  return { text: String(q.params.text), codes: kb.map((b) => b.text), data: kb.map((b) => b.callback_data) };
+}
+
+/** A code button pressed in the bot (a callback_query). */
+const press = (tg: TelegramService, from: typeof anne, nonce: string, code: string) => tg.handleUpdate({ update_id: 2, callback_query: { id: `cb${code}`, from, data: `tgc:${nonce}:${code}`, message: { message_id: 9, chat: { id: from.id } } } });
+/** The bot's last word on a code pressed: the question's message edited to the outcome. */
+const edited = (calls: { method: string; params: Record<string, unknown> }[]) => String(calls.filter((c) => c.method === 'editMessageText').at(-1)?.params.text ?? '');
+
+/** `/start login_<nonce>`, then the right code pressed. */
+async function confirm(tg: TelegramService, calls: { method: string; params: Record<string, unknown> }[], from: typeof anne, nonce: string, code: string): Promise<void> {
+  await tg.handleUpdate(msg(from, `/start login_${nonce}`));
+  assert.ok(question(calls).codes.includes(code), 'the real code is among the three');
+  await press(tg, from, nonce, code);
+}
+
+test('«Войти через Телеграм»: the page shows a code, the bot asks for it among three, the right one binds; the token once; ten minutes', async () => {
   const { tg, calls, now } = setup();
-  const s = tg.start('1.2.3.4');
+  const s = tg.start('1.2.3.4', undefined, 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/129.0 Mobile Safari/537.36');
   assert.ok(!('error' in s));
   assert.match(s.link, /^https:\/\/t\.me\/gravetide_bot\?start=login_[\w-]{20,}$/);
+  assert.match(s.code, /^[1-9]\d{2}$/);
   assert.deepEqual(tg.poll(s.nonce, '1.2.3.4'), { status: 'wait' });
+  // /start binds nothing: it asks
   await tg.handleUpdate(msg(anne, `/start login_${s.nonce}`));
-  assert.equal(said(calls).at(-1), tgText('loginDone', 'ru'));
-  assert.match(said(calls).at(-1)!, /Готово, вернитесь в игру/);
+  const q = question(calls);
+  assert.match(q.text, /^Вход в GRAVETIDE: выберите код, который показан на вашем экране\./);
+  assert.match(q.text, /Вход с нового устройства: Chrome, Android, \d\d:\d\d \(МСК\)/);
+  assert.equal(q.codes.length, 3);
+  assert.equal(new Set(q.codes).size, 3, 'three different codes');
+  assert.ok(q.codes.includes(s.code));
+  for (const c of q.codes) assert.match(c, /^\d{3}$/);
+  assert.ok(q.data.every((d) => Buffer.byteLength(d) <= 64), 'callback data within the 64 bytes Telegram allows');
+  assert.deepEqual(tg.poll(s.nonce, '1.2.3.4'), { status: 'wait' }, 'no token before the code is picked');
+  // the right code
+  await press(tg, anne, s.nonce, s.code);
+  assert.equal(edited(calls), tgText('loginDone', 'ru'));
+  assert.match(edited(calls), /Готово, вернитесь в игру/);
+  assert.ok(calls.some((c) => c.method === 'answerCallbackQuery'));
   const done = tg.poll(s.nonce, '1.2.3.4');
   assert.equal(done.status, 'done');
   assert.ok('token' in done && done.token.length > 20 && done.name === 'Anne');
@@ -112,14 +145,53 @@ test('«Войти через Телеграм»: a nonce, the bot binds it, the
   // the same link sent again to the bot: refused
   await tg.handleUpdate(msg(anne, `/start login_${s.nonce}`));
   assert.equal(said(calls).at(-1), tgText('loginExpired', 'ru'));
-  // expiry: ten minutes
+  // expiry: ten minutes — a nonce opened by nobody, and one asked but never answered
   const late = tg.start('1.2.3.4');
-  assert.ok(!('error' in late));
+  const asked = tg.start('1.2.3.4');
+  assert.ok(!('error' in late) && !('error' in asked));
+  await tg.handleUpdate(msg(anne, `/start login_${asked.nonce}`));
   now.t += 10 * 60_000 + 1;
   assert.deepEqual(tg.poll(late.nonce, '1.2.3.4'), { status: 'expired' });
+  await press(tg, anne, asked.nonce, asked.code);
+  assert.equal(edited(calls), tgText('loginExpired', 'ru'), 'the right code too late binds nothing');
+  assert.deepEqual(tg.poll(asked.nonce, '1.2.3.4'), { status: 'expired' });
   await tg.handleUpdate(msg({ ...anne, language_code: 'en' }, `/start login_${late.nonce}`));
   assert.equal(said(calls).at(-1), tgText('loginExpired', 'en'));
   assert.deepEqual(tg.poll('nonsense', '1.2.3.4'), { status: 'expired' });
+});
+
+test('a wrong code kills the nonce: the page hears «mismatch», the right code after it binds nothing, no token ever', async () => {
+  const { tg, calls } = setup();
+  const s = tg.start('1.2.3.4');
+  assert.ok(!('error' in s));
+  await tg.handleUpdate(msg(anne, `/start login_${s.nonce}`));
+  const wrong = question(calls).codes.find((c) => c !== s.code)!;
+  await press(tg, anne, s.nonce, wrong);
+  assert.equal(edited(calls), tgText('codeWrong', 'ru'));
+  await press(tg, anne, s.nonce, s.code);
+  assert.equal(edited(calls), tgText('loginExpired', 'ru'), 'dead');
+  assert.deepEqual(tg.poll(s.nonce, '1.2.3.4'), { status: 'mismatch' });
+  assert.deepEqual(tg.poll(s.nonce, '1.2.3.4'), { status: 'expired' }, 'and gone');
+  // a code that was never offered (a forged button) kills it too
+  const f = tg.start('1.2.3.4');
+  assert.ok(!('error' in f));
+  await tg.handleUpdate(msg(anne, `/start login_${f.nonce}`));
+  const never = ['100', '101', '102', '103'].find((c) => !question(calls).codes.includes(c))!;
+  await press(tg, anne, f.nonce, never);
+  assert.deepEqual(tg.poll(f.nonce, '1.2.3.4'), { status: 'mismatch' });
+  // someone else pressing the asked user's button: not theirs, nothing changes
+  const o = tg.start('1.2.3.4');
+  assert.ok(!('error' in o));
+  await tg.handleUpdate(msg(anne, `/start login_${o.nonce}`));
+  await press(tg, { ...anne, id: 1 }, o.nonce, o.code);
+  assert.equal(edited(calls), tgText('notYours', 'ru'));
+  assert.deepEqual(tg.poll(o.nonce, '1.2.3.4'), { status: 'wait' });
+  // a second Telegram user opening the same link: killed (a link forwarded to a victim and opened by both)
+  await tg.handleUpdate(msg({ ...anne, id: 2 }, `/start login_${o.nonce}`));
+  await press(tg, anne, o.nonce, o.code);
+  assert.deepEqual(tg.poll(o.nonce, '1.2.3.4'), { status: 'mismatch' });
+  // never once did the bot report a sign-in without the matched code
+  assert.ok(!calls.some((c) => c.method === 'editMessageText' && c.params.text === tgText('loginDone', 'ru')));
 });
 
 test('the deep link is rate-limited per address: twenty nonces in ten minutes, the poll ninety a minute', () => {
@@ -143,7 +215,11 @@ test('«Привязать Телеграм»: an account links its Telegram; a 
   const s = tg.start('1.1.1.1', g.token);
   assert.ok(!('error' in s));
   await tg.handleUpdate(msg(anne, `/start login_${s.nonce}`));
-  assert.match(said(calls).at(-1)!, /Mary Read/);
+  assert.match(question(calls).text, /^Привязать Телеграм к капитану «Mary Read»\? Выберите код/);
+  assert.equal(db.accountByOAuth('telegram', '4242'), undefined, 'nothing linked before the code');
+  assert.deepEqual(tg.poll(s.nonce, '1.1.1.1'), { status: 'wait' });
+  await press(tg, anne, s.nonce, s.code);
+  assert.match(edited(calls), /Mary Read/);
   assert.deepEqual(tg.poll(s.nonce, '1.1.1.1'), { status: 'linked', name: 'Mary Read' });
   assert.equal(db.accountByOAuth('telegram', '4242')?.id, g.accountId);
   assert.equal(tg.linkedFor(g.token), true);
@@ -154,15 +230,15 @@ test('«Привязать Телеграм»: an account links its Telegram; a 
   const h = game.auth.register('Jack Rackham') as { accountId: number; token: string };
   const s2 = tg.start('1.1.1.1', h.token);
   assert.ok(!('error' in s2));
-  await tg.handleUpdate(msg(anne, `/start login_${s2.nonce}`));
-  assert.equal(said(calls).at(-1), tgText('linkTaken', 'ru', { name: 'Mary Read' }));
+  await confirm(tg, calls, anne, s2.nonce, s2.code);
+  assert.equal(edited(calls), tgText('linkTaken', 'ru', { name: 'Mary Read' }));
   assert.deepEqual(tg.poll(s2.nonce, '1.1.1.1'), { status: 'taken' });
   assert.equal(db.accountByOAuth('telegram', '4242')?.id, g.accountId, 'still Mary\'s');
   // a Telegram-made captain adds an e-mail by the claim flow
   const fresh = tg.start('2.2.2.2');
   assert.ok(!('error' in fresh));
   const bob = { id: 5151, first_name: 'Bob', language_code: 'en' };
-  await tg.handleUpdate(msg(bob as typeof anne, `/start login_${fresh.nonce}`));
+  await confirm(tg, calls, bob as typeof anne, fresh.nonce, fresh.code);
   const done = tg.poll(fresh.nonce, '2.2.2.2');
   assert.ok(done.status === 'done' && 'token' in done);
   const c = await game.auth.claim(done.token, 'bob@sea.org', 'windward-9');
@@ -198,7 +274,7 @@ test('setup sets the webhook to <PUBLIC_URL>/tg/webhook with its secret, the men
   await tg.setup();
   const hook = calls.find((c) => c.method === 'setWebhook')!;
   assert.equal(hook.params.url, 'https://gravetidegame.com/tg/webhook');
-  assert.deepEqual(hook.params.allowed_updates, ['message', 'pre_checkout_query']);
+  assert.deepEqual(hook.params.allowed_updates, ['message', 'callback_query', 'pre_checkout_query']);
   assert.equal(hook.params.secret_token, webhookSecret(TOKEN));
   assert.match(String(hook.params.secret_token), /^[0-9a-f]{64}$/);
   assert.equal(webhookSecret(TOKEN, 'my-own_secret'), 'my-own_secret');

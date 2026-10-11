@@ -236,7 +236,7 @@ let waiting: { stop: () => void } | null = null;
 /** «Войти через Телеграм» (no token) or «Привязать Телеграм» (the captain's token): the bot's link, the wait. */
 export async function tgDeepLink(o: { net?: Net; token?: string | null; onLinked?: (name: string) => void; toast?: (msg: string, kind: string) => void }): Promise<void> {
   waiting?.stop();
-  const s = await post<{ nonce?: string; link?: string; expires?: number }>('/auth/tg/start', o.token ? { token: o.token } : {});
+  const s = await post<{ nonce?: string; link?: string; expires?: number; code?: string }>('/auth/tg/start', o.token ? { token: o.token } : {});
   if (!s.nonce || !s.link) {
     o.toast?.(s.error ?? L('wait.failed'), 'bad');
     const err = document.getElementById('login-error');
@@ -258,6 +258,7 @@ export async function tgDeepLink(o: { net?: Net; token?: string | null; onLinked
   card.innerHTML = `<div class="tgw-card panel">
       <h3 id="tgw-h" class="tgw-h">${tgIcon()}<span>${esc(L('wait.title'))}</span></h3>
       <p class="tgw-text">${esc(o.token ? L('wait.linkText') : L('wait.text'))}</p>
+      <p class="tgw-code"><span>${esc(L('wait.code'))}</span><b>${esc(s.code ?? '')}</b></p>
       <p class="tgw-left muted" aria-live="polite"></p>
       <div class="tgw-btns"><a class="btn btn-primary tgw-open" href="${esc(s.link)}" target="_blank" rel="noopener">${esc(L('wait.open'))}</a><button type="button" class="btn tgw-cancel">${esc(L('wait.cancel'))}</button></div>
     </div>`;
@@ -308,6 +309,7 @@ export async function tgDeepLink(o: { net?: Net; token?: string | null; onLinked
       return;
     }
     if (r.status === 'taken') return end(L('wait.taken'));
+    if (r.status === 'mismatch') return end(L('wait.mismatch'));
     if (r.status === 'expired') return end(L('wait.expired'));
     if (fails >= 6) return end(L('wait.failed'));
     timer = setTimeout(() => void tick(), 2000) as unknown as number;
