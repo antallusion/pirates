@@ -5344,3 +5344,43 @@ body.tac-ph .tb-top { position: absolute; top: calc(env(safe-area-inset-top, 0px
 .tb-qn .ico-xs { width: 18px; height: 18px; margin: 0; }
 .tb-tline { max-width: 100%; padding: 2px 8px; border-radius: 6px; background: rgba(12, 10, 8, 0.82); color: var(--bone); font: 600 11px/1.3 var(--k-font-sans, sans-serif);
   text-align: center; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+/* ---- docs/29: the island as a mobile city-builder — the town's spots on the board, the tree's cards, the queue ---- */
+.bplot.town .bground::after { background: linear-gradient(160deg, #6f6650 0%, #4f473a 55%, #37312a 100%); }
+.bplot.town.hall .bground::after { background: linear-gradient(160deg, #8c7c52 0%, #5f5238 60%, #3f3626 100%); }
+.bplot.town.sel .bground { background: var(--gold); }
+.bplot.town.unbuilt .bart { opacity: 0.42; filter: grayscale(0.75) brightness(0.8); }
+.bplot.locked.rock .bground { opacity: 0.08; }
+.tr-pips { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
+.tr-pips i { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--brass); background: #16110d; }
+.tr-pips i.on { background: var(--gold); box-shadow: 0 0 4px rgba(214, 178, 94, 0.6); }
+.tr-asks { margin: 4px 0 2px; font-size: 12px; }
+.tr-needs { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.tr-needs li { font: 12px/1.35 var(--sans); white-space: nowrap; }
+.tr-needs li b { display: inline-block; width: 12px; text-align: center; }
+.tr-needs li.ok b { color: var(--good); }
+.tr-needs li.no b { color: var(--bad); }
+.tr-needs li.no { color: var(--bone); }
+.tr-none { font-size: 12px; margin: 2px 0; }
+.tr-gives, .tr-now { margin: 2px 0 4px; font: 13px/1.35 var(--sans); }
+.tr-card .row b, .tr-hall .row b { font-family: var(--sans); }
+.tr-hn { margin: 6px 0 0; font: 13px var(--sans); }
+.tr-queue .tr-q .tr-qm { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tr-queue .tr-q .tr-qm b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-queue .tr-q .btime { flex: none; color: var(--gold); font-variant-numeric: tabular-nums; }
+.tr-tile.unbuilt .w-tile-ico { opacity: 0.5; filter: grayscale(0.7); }
+.tr-tile.on { border-color: var(--gold); }
+.tr-others { font-size: 12px; }
+.mv-panel .mv-lose { color: var(--bad); }
+.mv-pay { border: 1px solid rgba(140, 107, 58, 0.45); margin: 8px 0 0; padding: 6px 10px; }
+.mv-pay legend { padding: 0 4px; font: 12px var(--sans); color: var(--fog); }
+.mv-pay label { display: flex; align-items: center; gap: 8px; min-height: 36px; font: 14px var(--sans); }
+.mv-pay label.lack { opacity: 0.5; }
+@media (max-height: 520px) and (min-aspect-ratio: 1/1) and (max-width: 560px) {
+  .base-sheet .bres-top .ico-sm { width: 13px; height: 13px; }
+  .base-sheet .bres { font-size: 11px; padding: 1px 1px 3px; }
+  .tr-needs li { font-size: 11px; }
+}
+@media (max-height: 520px) and (min-aspect-ratio: 1/1) {
+  .base-land .base-sheet .bdesc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+}

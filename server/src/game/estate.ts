@@ -648,7 +648,7 @@ export function estateView(game: Game, s: PlayerSession): EstateView {
   return {
     isle: h && isl ? {
       island: h.island, name: isl.name, level: lvl, levelName: ISLE_LEVELS[lvl].name[0], slots: ownedSlots(h, isl),
-      next: next ? { name: next.name[0], silver: next.silver, goods: next.goods, power: ISLE_POWER[lvl + 1] } : null, power: powerOf(h),
+      next: null, hall: Math.max(1, h.yard?.town?.b.hall ?? 1), power: powerOf(h), // docs/29: the island grows with its hall
       residents: (h.residents ?? []).map((r) => ({ id: r.id, name: residentName(r.id * 7 + h.island)[0], prof: r.prof, at: r.at ? ('b' in r.at ? r.at.b : `o:${r.at.o}`) : null, line: PROFESSION_DEFS[r.prof].lines[(r.id + Math.floor(game.wallNow() / HOUR)) % PROFESSION_DEFS[r.prof].lines.length][0] })),
       cap: residentCap(h), refugees: p.refugees ?? 0, outposts: ISLE_LEVELS[lvl].outposts, trophies: has(h, 'trophy_hall') ? trophies(game, p, s.name) : null, visitors: h.visitors ?? 0,
     } : null,

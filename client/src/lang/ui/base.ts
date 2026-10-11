@@ -112,7 +112,7 @@ export const EN = {
   raid_sail: 'Sail to defend',
   raid_far: 'Reckoned on the clock: you were away when they came.',
   abandon: 'Give up the island',
-  abandon_confirm: 'Give up {name}? {refund} silver comes back; its buildings, yard and residents stay behind, and another island may be claimed {h} h later.',
+  abandon_confirm: 'Give up {name}? Every building on it is pulled down, its yard, store and residents stay behind, and nothing comes back. The next island you claim counts as a move.',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -225,5 +225,5 @@ export const RU: Record<keyof typeof EN, string> = {
   raid_sail: 'Плыть на защиту',
   raid_far: 'Считается по часам: вас не было, когда они пришли.',
   abandon: 'Оставить остров',
-  abandon_confirm: 'Оставить {name}? Вернётся {refund} серебра; постройки, двор и жители останутся, а другой остров можно будет занять через {h} ч.',
+  abandon_confirm: 'Оставить {name}? Все постройки будут снесены, двор, склад и жители останутся, ничего не вернётся. Следующий занятый остров будет считаться переносом.',
 };

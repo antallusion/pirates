@@ -170,7 +170,7 @@ export function moveTerms(game: Game, s: PlayerSession, isl: Island): IsleMoveVi
   const town = h.yard?.town?.b ?? {};
   const fee = claimFee(game, s);
   return {
-    island: isl.id, name: isl.name, from: h.island, fromName: from?.name ?? '', free: !fee, silver: fee?.silver ?? 0, doubloons: fee?.doubloons ?? 0,
+    island: isl.id, name: isl.name, from: h.island, fromName: from?.name ?? '', free: !fee, silver: MOVE_SILVER, doubloons: MOVE_DOUBLOONS,
     gold: Math.floor(s.profile!.gold), balance: game.db.doubloons(s.accountId), moves: Math.max(0, claimsMade(game, s) - 1), freeMoves: FREE_MOVES,
     lose: {
       buildings: h.buildings.length, levels: h.buildings.reduce((a, b) => a + (b.level ?? 1), 0) + Object.values(town).reduce((a, n) => a + (n ?? 0), 0),

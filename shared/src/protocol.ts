@@ -2149,6 +2149,8 @@ export interface EstateView {
     levelName: string;
     slots: number;
     next: { name: string; silver: number; goods: Partial<Record<GoodId, number>>; power?: number } | null;
+    /** docs/29: the town hall's level (the island's level follows it). */
+    hall?: number;
     /** The island's power (docs/15 item 5). */
     power?: number;
     residents: { id: number; name: string; prof: string; at: string | null; line: string }[];

@@ -543,11 +543,9 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
     speedups: p.speedups ?? 0, tokenSecs: TOKEN_SECS, catalog,
     slots: { used: slotsUsed(h), total: slotsOf(isl, h) },
     now, near: lyingOff(game, s, h),
-    power: { now: power, need: lvl < ISLE_MAX ? ISLE_POWER[lvl + 1] : null, crew: POWER_CREW, crewHas: power >= POWER_CREW },
-    levelUp: lvl < ISLE_MAX ? {
-      level: lvl + 1, silver: ISLE_LEVELS[lvl + 1].silver, goods: ISLE_LEVELS[lvl + 1].goods, secs: 0, treasury: h.treasury, power: ISLE_POWER[lvl + 1],
-      why: isleLevelWhy(h),
-    } : null,
+    // docs/29: the island's level follows its town hall — no step of its own, no power asked (power brings a crew).
+    power: { now: power, need: null, crew: POWER_CREW, crewHas: power >= POWER_CREW },
+    levelUp: null,
     shipyard: ownYardView(game, s, h, y),
     claim: claimView(game, s, h),
     guildYard: game.guilds.of(game, s.accountId) ? gyardView(game, s) : null,

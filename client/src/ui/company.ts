@@ -35,6 +35,7 @@ import { EN, RU } from '../lang/ui/company.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
 import { ask } from './confirm.ts';
+import { T29 } from './isletree.ts'; // docs/29
 import { buildIcon, esc, fmt, icon, money, outpostIcon } from './dom.ts';
 import { placeName } from './maps.ts';
 import { skippersCard } from './turncoats.ts';
@@ -391,6 +392,8 @@ export class CompanyScreen {
       if (a === 'claim') {
         const t = state.estate?.claim;
         if (!t) return;
+        // docs/29: a move (or a paid claim) is asked by the server's own confirm, with what it pulls down; the first is free.
+        if (t.move || t.price > 0) return void this.send({ t: 'estate', action: 'buy', island: t.island });
         return void ask(L('ct_confirm', { name: placeName(t.name), price: fmt(t.price), tax: taxText(t), danger: dangerText(t) })).then((ok) => ok && this.send({ t: 'estate', action: 'buy', island: t.island }));
       }
       if (a === 'rob_isle') {
@@ -804,17 +807,17 @@ function dangerText(t: ClaimTermsView): string {
 export function claimCard(t: ClaimTermsView): string {
   const ru = lang() === 'ru' ? 1 : 0;
   const row = (k: string, v: string) => `<div class="ct-row"><dt>${esc(k)}</dt><dd>${v}</dd></div>`;
-  return `<div class="card est-card claim-card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}<span>${esc(L('est_claim_title', { name: placeName(t.name) }))}</span></h4>
-    <p class="muted">${esc(L('est_claim_text'))}</p>
+  return `<div class="card est-card claim-card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}<span>${esc(t.move ? T29('moveCard', { name: placeName(t.name) }) : L('est_claim_title', { name: placeName(t.name) }))}</span></h4>
+    <p class="muted">${esc(t.move ? T29('moveCardText') : L('est_claim_text'))}</p>
     <dl class="ct-terms">
       ${row(L('ct_waters'), `<b class="ct-w w-${t.waters}">${esc(WATERS[t.waters].name[ru])}</b> <span class="muted">· ${esc(serverText(REGIONS[t.region].name))} · ${esc(L(`size_${t.size}` as 'size_small'))}</span>`)}
-      ${row(L('ct_price'), `${money(t.price)}${t.credit ? ` <span class="muted">(${esc(L('ct_credit', { n: fmt(t.credit) }))})</span>` : ''}`)}
-      ${row(L('ct_tax'), esc(taxText(t)))}
+      ${row(L('ct_price'), t.price > 0 ? `${money(t.price)}${t.doubloons ? ` <span class="muted">/ ${fmt(t.doubloons)}</span>${icon('doubloon', '◈', 'ico-xs')}` : ''}` : `<b class="good">${esc(L('ct_free'))}</b>`)}
       ${row(L('ct_danger'), `<span class="${t.raidDay ? 'bad' : 'good'}">${esc(dangerText(t))}</span>`)}
-      ${row(L('ct_move'), esc(L('ct_move_n', { r: Math.round(t.refund * 100), h: t.cooldownH })))}
+      ${t.others ? row(L('ct_others'), esc(L('ct_others_n', { n: t.others }))) : ''}
+      ${row(L('ct_move'), esc(L('ct_move_n', { silver: fmt(1_000_000), d: fmt(2600) })))}
     </dl>
     ${t.why ? `<p class="bad">${esc(serverText(t.why))}</p>` : ''}
-    <button class="btn btn-primary" data-est="claim"${t.why ? ' disabled' : ''}>${esc(L('ct_claim', { price: fmt(t.price) }))}</button></div>`;
+    <button class="btn btn-primary" data-est="claim"${t.why ? ' disabled' : ''}>${esc(t.move ? L('ct_move_here') : t.price > 0 ? L('ct_claim', { price: fmt(t.price) }) : T29('claimFree'))}</button></div>`;
 }
 
 /** One's own island, its residents and its outposts (docs/12 P7). */
@@ -838,7 +841,7 @@ function estateHtml(state: ClientState): string {
     const residents = isle.residents.map((r) => `<div class="est-res">${icon(`portrait.res_${r.prof}_${residentIsWoman(r.id * 7 + isle.island) ? 'f' : 'm'}`, '', 'ico-md ico-round est-face')}<span><b>${esc(residentName(r.id * 7 + isle.island)[ru])}</b> <span class="muted">${esc(PROFESSION_DEFS[r.prof as Profession].name[ru])}</span><br><i class="muted">«${esc(serverText(r.line))}»</i></span><select data-assign="${r.id}">${opts(r.at)}</select></div>`).join('');
     parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_holdings', '', 'ico-md')}<span>${esc(L('est_isle', { name: placeName(isle.name), level: isle.level, title: serverText(isle.levelName) }))}</span></h4>
       <p class="muted">${esc(L('est_isle_meta', { slots: isle.slots, outposts: isle.outposts, n: isle.residents.length, cap: isle.cap }))}</p>
-      ${isle.next ? `<p>${withGoods('est_next', { title: serverText(isle.next.name), silver: fmt(isle.next.silver) }, isle.next.goods)}${isle.next.power ? ` <span class="${(isle.power ?? 0) >= isle.next.power ? 'good' : 'bad'}">${esc(L('est_power', { now: isle.power ?? 0, need: isle.next.power }))}</span>` : ''} <button class="btn btn-small btn-primary" data-est="level">${esc(L('est_raise'))}</button></p>` : `<p class="good">${esc(L('est_max'))}</p>`}
+      ${isle.hall ? `<p>${esc(T29('hall', { n: isle.hall, isle: isle.level }))} ${isle.hall < 5 ? `<span class="muted">· ${esc(T29('hallText'))}</span>` : ''}</p>` : isle.next ? `<p>${withGoods('est_next', { title: serverText(isle.next.name), silver: fmt(isle.next.silver) }, isle.next.goods)} <button class="btn btn-small btn-primary" data-est="level">${esc(L('est_raise'))}</button></p>` : `<p class="good">${esc(L('est_max'))}</p>`}
       <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn btn-small btn-primary" data-est="base">${esc(L('est_base'))}</button>${state.self?.dockedAt ? `<button class="btn btn-small" data-est="home" ${e.homeIn ? 'disabled' : ''}>${esc(e.homeIn ? L('est_home_in', { n: e.homeIn }) : L('est_home'))}</button>` : ''}<button class="btn btn-small" data-est="hire">${esc(L('est_hire'))}</button><button class="btn btn-small" data-guests="${isle.island}">${esc(L('est_guests'))}</button>${isle.refugees ? `<span class="muted">${esc(L('est_refugees', { n: isle.refugees }))}</span>` : ''}</div>
       ${residents ? `<h5 class="est-h">${esc(L('est_residents'))}</h5>${residents}` : `<p class="muted">${esc(L('est_no_res'))}</p>`}
       ${isle.trophies ? `<p class="muted">${esc(L('est_trophies', { flag: isle.trophies.flag, skull: isle.trophies.skull, fish: isle.trophies.fish, v: isle.visitors }))}</p>` : ''}
