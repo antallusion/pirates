@@ -20,6 +20,17 @@ test('admin commands are off unless GRAVETIDE_ADMIN=1; with it they speed the cl
     assert.equal(game.timeScale, 8);
     runAdmin(game, s, '/speed 999');
     assert.equal(game.timeScale, 100, 'the clock is capped (×100 for the QA playthrough)');
+    {
+      // the wall clock (builds, weeks, dailies) follows the world clock from the moment of /speed, without a jump
+      const w0 = game.wallNow(), r0 = Date.now();
+      while (Date.now() - r0 < 30) { /* a few real ms */ }
+      const dw = game.wallNow() - w0, dr = Date.now() - r0;
+      assert.ok(dw >= dr * 50 && dw <= dr * 100 + 200, `the wall clock ×100: ${dw} ms in ${dr} real ms`);
+      runAdmin(game, s, '/speed 1');
+      const w1 = game.wallNow();
+      assert.ok(w1 >= w0 + dw && w1 - (w0 + dw) < 2000, 'back to ×1 without going back in time');
+      runAdmin(game, s, '/speed 100');
+    }
     runAdmin(game, s, '/level 40');
     assert.equal(s.profile!.level, 40);
     assert.equal(s.ship!.level, 40);

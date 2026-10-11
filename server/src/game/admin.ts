@@ -248,6 +248,9 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       const k = num(0, 1);
       if (!Number.isFinite(k)) return 'Usage: /speed N';
       game.timeScale = Math.max(0.25, Math.min(100, k)); // (×100 for the QA playthrough, 2026-10-12: as fast as the tick allows)
+      // The wall clock too (builds, weeks, dailies, cooldowns all read wallNow): on from here at the same pace, no jump.
+      const at = game.wallNow(), t0 = Date.now(), ks = game.timeScale;
+      game.wallNow = () => at + (Date.now() - t0) * ks;
       return `World time ×${game.timeScale}.`;
     }
     case 'xp': {
