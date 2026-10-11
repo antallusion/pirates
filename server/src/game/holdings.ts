@@ -27,7 +27,7 @@ import type { HoldingView, IslandOffer, SiegeView } from '../../../shared/src/pr
 import { cargoValue, cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
-import type { Island, Port } from '../../../shared/src/world/worldgen.ts';
+import type { Island, Port, World } from '../../../shared/src/world/worldgen.ts';
 import { siegesFor } from './siege.ts';
 import type { Siege } from './siege.ts';
 import { hireTrade } from './crew.ts';
@@ -304,7 +304,7 @@ export function mayUse(game: Game, h: Holding, accountId: number): boolean {
   return game.guildMember?.(h.owner.id, accountId) ?? false;
 }
 
-export function rentable(isl: Island): string | null {
+export function rentable(isl: Island, _world?: World): string | null {
   if (isl.portId) return 'Port islands are not for rent';
   if (isCitadelIsland(isl)) return 'A citadel of the Throne war stands on that island.'; // docs/19 E4
   const mul = rentZoneMul(isl.region);
@@ -387,7 +387,7 @@ function ownedBy(game: Game, accountId: number): Holding[] {
 export function rentIsland(game: Game, s: PlayerSession, islandId: number, days: number, forGuild = false): string | null {
   const isl = island(game, islandId);
   if (!isl) return 'No such island';
-  const why = rentable(isl);
+  const why = rentable(isl, game.world);
   if (why) return why;
   if (!RENT_DAYS.includes(days as RentDays)) return 'A lease runs 7, 14 or 30 days';
   if (!atHand(game, s, isl)) return `Sail to ${isl.name}, or ask at a harbour office in ${REGIONS[isl.region].name}`;
@@ -915,7 +915,7 @@ export function islandOffer(game: Game, isl: Island): IslandOffer {
   const h = game.holdings.get(game, isl.id);
   return {
     island: isl.id, name: isl.name, region: isl.region, x: Math.round(isl.x), y: Math.round(isl.y), size: islandSize(isl.radius), slots: islandSlots(isl.radius, isl.region), biome: isl.biome,
-    mine: isl.features.includes('mine'), price: { 7: rentPrice(isl, 7), 14: rentPrice(isl, 14), 30: rentPrice(isl, 30) }, held: h ? h.owner.name : null, why: rentable(isl),
+    mine: isl.features.includes('mine'), price: { 7: rentPrice(isl, 7), 14: rentPrice(isl, 14), 30: rentPrice(isl, 30) }, held: h ? h.owner.name : null, why: rentable(isl, game.world),
   };
 }
 

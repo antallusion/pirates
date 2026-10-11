@@ -17,7 +17,6 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { islandSize } from '../../../shared/src/data/holdings.ts';
 import { FREE_MOVES, MOVE_DOUBLOONS, MOVE_SILVER } from '../../../shared/src/data/isletree.ts';
-import { portOfIsland } from '../../../shared/src/world/worldgen.ts';
 import { clampLevel, watersBand } from '../../../shared/src/data/shiplevel.ts';
 import type { ClaimTermsView, IsleClaimView, IsleMoveView, PrivateState } from '../../../shared/src/protocol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
@@ -121,7 +120,8 @@ export function claimOf(game: Game, h: Holding): IsleClaim {
 
 /** Why this island may not be claimed by anyone (null: it may). */
 export function claimBlock(game: Game, isl: Island, _account?: number): string | null {
-  if (isl.portId || portOfIsland(game.world, isl.id)) return 'Port islands are not for claiming.';
+  // (a step-9 harbour town stands on its island's coast and leaves the island free: shared/src/world/towns.ts)
+  if (isl.portId) return 'Port islands are not for claiming.';
   return null;
 }
 

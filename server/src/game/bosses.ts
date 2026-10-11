@@ -23,7 +23,7 @@ import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import type { WindSample } from '../../../shared/src/sim/wind.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
-import { depthAt, isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
+import { depthAt, isLand, nearHarbour, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { applyDamage } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
 import { hasOfficer } from './crew.ts';
@@ -240,7 +240,7 @@ export function risingPoint(game: Game, def: BossDef, regions: RegionId[]): { x:
     }
     if (!regions.includes(regionAt(game.world, x, y)) || !game.inZone(x, y)) continue;
     if (isLand(game.world, x, y) || depthAt(game.world, x, y) < 12) continue;
-    if (game.world.ports.some((p) => dist(p.x, p.y, x, y) < 2200)) continue;
+    if (nearHarbour(game.world, x, y, 2200)) continue; // (docs/29: a step-9 town keeps a hamlet's harbour)
     return { x, y };
   }
   return null;

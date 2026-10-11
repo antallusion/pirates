@@ -17,7 +17,7 @@ import {
 import type { Blocker } from '../shared/src/sim/hull.ts';
 import { isleType } from '../shared/src/world/archipelago.ts';
 import { blockersNear, islandBlockers, markBlockers, quayBlockers, skerryBlockers } from '../shared/src/world/solids.ts';
-import { generateWorld, legacyIslands } from '../shared/src/world/worldgen.ts';
+import { generateWorld, legacyIslands, portOfIsland } from '../shared/src/world/worldgen.ts';
 import { placeWonders } from '../shared/src/data/wonders.ts';
 import type { Island } from '../shared/src/world/worldgen.ts';
 import { clientBlockers } from '../client/src/collide.ts';
@@ -199,7 +199,8 @@ test('ramming a coast at full sail: one blow in the band, a short line «Уда�
   fair(game);
   const { c, ship } = captain(game, 'Hard Aport');
   onHull(game, ship, 'frigate');
-  const is = game.world.islands.find((i) => !i.slot && !i.minor && !i.raft && !i.isle && !i.portId && i.radius > 900)!;
+  // (an island with no harbour town of docs/29's step 9 on her coast: its quays stand off the shore)
+  const is = game.world.islands.find((i) => !i.slot && !i.minor && !i.raft && !i.isle && !i.portId && !portOfIsland(game.world, i.id) && i.radius > 900)!;
   const coast = coastOf(is.poly);
   const i = Math.floor(coast.n * 0.6);
   const px = coast.pts[i * 2], py = coast.pts[i * 2 + 1], nx = coast.nrm[i * 2], ny = coast.nrm[i * 2 + 1];

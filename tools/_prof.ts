@@ -1,0 +1,11 @@
+import { makeGame, join } from '../tests/helpers.ts';
+const t0 = performance.now();
+const { game } = makeGame();
+console.log('make', Math.round(performance.now() - t0), 'ports', game.world.ports.length);
+join(game, 'Prof A');
+let t = performance.now();
+for (let i = 0; i < 600; i++) game.step();
+console.log('600 steps', Math.round(performance.now() - t), 'ms');
+t = performance.now();
+for (let i = 0; i < 600; i++) game.step();
+console.log('600 more', Math.round(performance.now() - t), 'ms');

@@ -24,7 +24,7 @@ import type { EncounterView, SightView } from '../../../shared/src/protocol.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Island } from '../../../shared/src/world/worldgen.ts';
-import { isLand } from '../../../shared/src/world/worldgen.ts';
+import { isLand, nearHarbour } from '../../../shared/src/world/worldgen.ts';
 import { applyDamage, igniteShip } from './combat.ts';
 import { mapChance } from './explorefx.ts';
 import type { Game } from './Game.ts';
@@ -121,7 +121,7 @@ function nearestIsland(game: Game, x: number, y: number): { is: Island | null; d
 }
 
 function nearPort(game: Game, x: number, y: number): boolean {
-  return game.world.ports.some((p) => dist(p.x, p.y, x, y) < HARBOUR_R);
+  return nearHarbour(game.world, x, y, HARBOUR_R); // (docs/29: a step-9 town keeps a hamlet's harbour)
 }
 
 /** The sea keeps still for a captain in the First Watch, with a party ashore, at a boss or at an expedition's site —

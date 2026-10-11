@@ -15,7 +15,7 @@ import { dist } from '../../../shared/src/math.ts';
 import type { WorldEventView } from '../../../shared/src/protocol.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
-import { depthAt, isLand, islandChunkKeys, raiseIsland, regionAt } from '../../../shared/src/world/worldgen.ts';
+import { depthAt, isLand, islandChunkKeys, nearHarbour, raiseIsland, regionAt } from '../../../shared/src/world/worldgen.ts';
 import type { Port, RaisedIsland } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import { glories } from './legendary.ts';
@@ -475,7 +475,7 @@ function eruptionPoint(game: Game, region: RegionId): { x: number; y: number } |
     const x = cx + game.worldEvents.rng.range(-10000, 10000), y = cy + game.worldEvents.rng.range(-10000, 10000);
     if (regionAt(game.world, x, y) !== region || !game.inZone(x, y)) continue;
     if (game.world.islands.some((is) => dist(is.x, is.y, x, y) < is.radius + 1800)) continue;
-    if (game.world.ports.some((p) => dist(p.x, p.y, x, y) < 5000)) continue;
+    if (nearHarbour(game.world, x, y, 5000)) continue; // (docs/29: a step-9 town keeps a hamlet's harbour)
     if (game.world.reefs.some((r) => dist(r.x, r.y, x, y) < r.radius + 1200)) continue;
     return { x, y };
   }

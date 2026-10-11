@@ -712,8 +712,10 @@ export class WorldMap {
     if (on('all')) drawSupplyRoutes(g, state, tx, ty);
     if (on('lairs')) drawIslesChart(g, state, tx, ty, k, this.zoom, ms, label);
     // Ports: key ports are on every chart; villages only once found.
+    // (docs/29: the harbour towns of step 9 — ids `<sea>_t<n>` — are found as the villages are)
+    const found = new Set([...state.discovered].map((id) => state.islands.get(id)?.portId ?? state.islands.get(id)?.town));
     for (const p of on('ports') ? state.ports : []) {
-      const known = !p.id.includes('_v') || [...state.discovered].some((id) => state.islands.get(id)?.portId === p.id);
+      const known = (!p.id.includes('_v') && !/_t[0-9]+$/.test(p.id)) || found.has(p.id);
       if (!known) continue;
       if (!mark(`icon.faction_${p.faction}`, tx(p.x), ty(p.y), ms * 0.95)) {
         g.fillStyle = FACTIONS[p.faction].lantern;

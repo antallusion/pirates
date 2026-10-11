@@ -27,7 +27,7 @@ import { Rng, hashString } from '../../../shared/src/rng.ts';
 import { WORLD_SIZE } from '../../../shared/src/constants.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { sectorAt } from '../../../shared/src/world/sectors.ts';
-import { isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
+import { isLand, nearHarbour, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { advQuiet, parkNear } from './advmap.ts';
 import { fightCapture, landFighting, startCreatureFight } from './beastlairs.ts';
 import { giveGoods, quietSea } from './director.ts';
@@ -140,7 +140,7 @@ function openWater(game: Game, x: number, y: number): boolean {
     const a = (k / 8) * Math.PI * 2;
     if (isLand(game.world, x + Math.sin(a) * 160, y - Math.cos(a) * 160)) return false;
   }
-  for (const p of game.world.ports) if (Math.abs(p.x - x) < 1600 && Math.abs(p.y - y) < 1600 && dist(p.x, p.y, x, y) < 1600) return false;
+  if (nearHarbour(game.world, x, y, 1600)) return false; // (docs/29: a step-9 town keeps a hamlet's harbour)
   return true;
 }
 

@@ -167,7 +167,7 @@ test('fighting a guard opens the boarding battle against its stacks; won, it pay
   assert.deepEqual(s.ship!.boarding!.fight.tac!.stacks.filter((x) => x.side === 1).map((x) => x.unit).sort(), gs.army.map((x) => x.u).sort(), 'its own stacks on deck');
   const gold = s.profile!.gold;
   assert.equal(tacAction(game, s.ship!, { a: 'quick' }), null);
-  seconds(game, 5);
+  seconds(game, 8); // (the last blows' pace and the 3.5 s the field stands after them: 5–7 s by the sea's dice)
   assert.ok(!s.ship!.boarding, 'the battle is over');
   assert.ok(!guardUp(game, g), 'beaten');
   assert.equal(guardShip(game, g.id), null, 'gone from the water');

@@ -66,7 +66,7 @@ export const AUCTION_BIDDERS: [string, string][] = [
 ];
 /** The house's lots go on the block only in the free ports' own harbours (not their villages). */
 export function hasAuction(port: { faction: string; id: string }): boolean {
-  return port.faction === 'free' && !port.id.includes('_v');
+  return port.faction === 'free' && !port.id.includes('_v') && !/_t[0-9]+$/.test(port.id); // (docs/29: nor a step-9 harbour town)
 }
 /** The least raise over a standing bid. */
 export function minRaise(bid: number): number {

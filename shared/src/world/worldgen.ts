@@ -12,6 +12,7 @@ import type { IslandBiome, PortProfile, RegionId } from './regions.ts';
 import { appendIsles } from './moreisles.ts';
 import { appendMarks } from './moremarks.ts';
 import { appendPorts } from './newports.ts';
+import { appendTowns } from './towns.ts';
 
 export type IslandFeature = 'port' | 'ruins' | 'wreck' | 'lighthouse' | 'grove' | 'mine' | 'pearl_bank' | 'shrine' | 'cache'
   | 'fort' | 'volcano' | 'bones' | 'bell' | 'hermit' | 'spring';
@@ -143,6 +144,9 @@ export interface World {
    *  port and island before them is as she was. */
   portsFrom?: number;
   portIslesFrom?: number;
+  /** docs/29 step 9 (shared/src/world/towns.ts): the first of the harbour towns on about every fourth island; every
+   *  port before them is as she was, and they stand on islands of the world before (no new island). */
+  townsFrom?: number;
 }
 
 const REGION_CELL = 1000;
@@ -234,6 +238,11 @@ export function islandPoly(rng: Rng, x: number, y: number, radius: number, seed:
   return poly;
 }
 
+/** A small town's market by its island's ground (step 9's towns too: shared/src/world/towns.ts). */
+export function randomPortProfile(rng: Rng, biome: IslandBiome, size: number): PortProfile {
+  return randomProfile(rng, biome, size);
+}
+
 function randomProfile(rng: Rng, biome: IslandBiome, size: number): PortProfile {
   const pools: Record<IslandBiome, GoodId[]> = {
     temperate: ['provisions', 'timber', 'salt', 'cloth', 'sugar', 'rum'],
@@ -295,6 +304,35 @@ export function beforePorts(world: World): World {
   return beforePortsOf.get(world) ?? world;
 }
 
+/** docs/29 step 9: how far a harbour town of step 9 keeps the sea's happenings off (a hamlet's harbour, not a port's:
+ *  three hundred towns at the full clearances of the old harbours would leave no open sea for a nest or a storm). */
+export const TOWN_GAP = 800;
+
+/** Whether (x, y) lies within `gap` of a harbour — the ports before step 9 at `gap`, its towns at no more than TOWN_GAP. */
+export function nearHarbour(world: World, x: number, y: number, gap: number): boolean {
+  const from = world.townsFrom ?? world.ports.length;
+  const ports = world.ports;
+  for (let i = 0; i < ports.length; i++) {
+    const p = ports[i];
+    const g = i >= from ? Math.min(gap, TOWN_GAP) : gap;
+    if (Math.abs(p.x - x) < g && Math.abs(p.y - y) < g && Math.hypot(p.x - x, p.y - y) < g) return true;
+  }
+  return false;
+}
+
+/** Whether a port is one of step 9's harbour towns (docs/29). */
+const townIds = new WeakMap<World, Set<string>>();
+export function isTownPort(world: World, port: { id: string }): boolean {
+  let s = townIds.get(world);
+  if (!s) townIds.set(world, (s = new Set(world.ports.slice(world.townsFrom ?? world.ports.length).map((p) => p.id))));
+  return s.has(port.id);
+}
+
+/** The ports before step 9 (the harbours the sea's lanes run between). */
+export function harboursBeforeTowns(world: World): Port[] {
+  return world.townsFrom === undefined ? world.ports : world.ports.slice(0, world.townsFrom);
+}
+
 /** docs/29 step 9: the port standing on an island, if any — a port island's own (`portId`) or a harbour town of step 9
  *  (shared/src/world/towns.ts), whose island keeps no `portId` so that everything placed on the islands stays put. */
 const portByIsle = new WeakMap<World, Map<number, string>>();
@@ -311,8 +349,9 @@ export function portOfIsland(world: World, islandId: number): string | undefined
 }
 
 export function generateWorld(seed: number): World {
-  // step 7: the marks twice as many (docs/19 D1); step 8: twenty new ports (owner, 2026-10-03)
-  return appendPorts(appendMarks(appendIsles(legacyWorldOf(seed))));
+  // step 7: the marks twice as many (docs/19 D1); step 8: twenty new ports (owner, 2026-10-03); step 9: a harbour town
+  // on about every fourth island (owner, 2026-10-11; docs/29)
+  return appendTowns(appendPorts(appendMarks(appendIsles(legacyWorldOf(seed)))));
 }
 
 /** The world as it stood before docs/18 III (steps 1–5): what every placement made from the world alone is made on. */

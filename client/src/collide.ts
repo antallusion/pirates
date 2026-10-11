@@ -60,7 +60,7 @@ export function clientBlockers(src: CollideSource, x: number, y: number, reach: 
   if (src.ports.length) {
     if (portIslesFrom !== src.islands.size) {
       portIsles = new Map();
-      for (const is of src.islands.values()) if (is.portId) portIsles.set(is.portId, is);
+      for (const is of src.islands.values()) if (is.portId || is.town) portIsles.set((is.portId ?? is.town)!, is); // docs/29: a step-9 town's quays too
       portIslesFrom = src.islands.size;
     }
     for (const p of src.ports) {

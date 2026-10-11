@@ -26,7 +26,7 @@ import { hash2 } from '../rng.ts';
 import type { RegionId } from '../world/regions.ts';
 import { WORLD_EDGE_MARGIN } from '../world/regions.ts';
 import { sectorAt } from '../world/sectors.ts';
-import { isLand, portLanes, regionAt, segDist } from '../world/worldgen.ts';
+import { TOWN_GAP, harboursBeforeTowns, isLand, portLanes, regionAt, segDist } from '../world/worldgen.ts';
 import type { World } from '../world/worldgen.ts';
 
 // ------------------------------------------------------------------------------------------------ the kinds
@@ -170,7 +170,8 @@ function keepsOf(world: World): Keeps {
       else buckets.set(kk, [k]);
     }
   };
-  for (const p of world.ports) add(p.x, p.y, ROAM_HARBOUR);
+  // (docs/29: a harbour town of step 9 keeps a hamlet's harbour, and no lane is drawn to it: the stacks stand as they stood)
+  world.ports.forEach((p, i) => add(p.x, p.y, i >= (world.townsFrom ?? Infinity) ? Math.min(ROAM_HARBOUR, TOWN_GAP) : ROAM_HARBOUR));
   for (const q of world.reefs) add(q.x, q.y, q.radius + KEEP_REEF);
   for (const m of world.marks) add(m.x, m.y, m.r + KEEP_MARK);
   for (const w of world.whirlpools) add(w.x, w.y, w.radius * 1.4);
@@ -181,9 +182,9 @@ function keepsOf(world: World): Keeps {
   // stacks off them, and no stack comes onto a lane the old harbours sailed (nothing appears; shared/src/world/newports.ts).
   const old = world.ports.slice(0, world.portsFrom ?? world.ports.length);
   const lanes = portLanes(old);
-  if (old.length < world.ports.length) {
+  if (old.length < harboursBeforeTowns(world).length) {
     const seen = new Set(lanes.map((l) => l.join(',')));
-    for (const l of portLanes(world.ports)) if (!seen.has(l.join(','))) lanes.push(l);
+    for (const l of portLanes(harboursBeforeTowns(world))) if (!seen.has(l.join(','))) lanes.push(l);
   }
   const laneBuckets = new Map<number, number[]>();
   lanes.forEach(([ax, ay, bx, by], i) => {

@@ -10,7 +10,7 @@ import type { TaskKind, TaskView } from '../../../shared/src/data/worldtasks.ts'
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
-import { isLand } from '../../../shared/src/world/worldgen.ts';
+import { harboursBeforeTowns, isLand } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import { planWander } from './npc.ts';
 import type { PlayerSession } from './player.ts';
@@ -58,7 +58,8 @@ function placeTask(game: Game, kind: TaskKind): WorldTask | null {
     const x = is.x + Math.cos(a) * r, y = is.y + Math.sin(a) * r;
     // In this process's own waters (the world may be split between zones).
     if (isLand(game.world, x, y) || !game.inZone(x, y) || !game.inZone(is.x, is.y)) continue;
-    if (game.world.ports.some((p) => Math.hypot(p.x - x, p.y - y) < 3500)) continue;
+    // (docs/29: clear of the harbours before step 9 — the sea's nests lie where they lay; a hamlet's town may see one)
+    if (harboursBeforeTowns(game.world).some((p) => Math.hypot(p.x - x, p.y - y) < 3500)) continue;
     if (st(game).list.some((t) => Math.hypot(t.x - x, t.y - y) < 8000)) continue;
     const level = taskLevel(REGIONS[is.region].safety);
     return { id: st(game).nextId++, kind, island: is.name, region: is.region, x, y, until: game.now + TASK_SEC, level, tally: new Map(), done: new Set(), pirates: [], crates: [] };

@@ -420,6 +420,8 @@ export interface IslandData {
   poly: number[]; // rounded to meters
   features: IslandFeature[];
   portId?: string;
+  /** docs/29 step 9: the harbour town on her coast (its port id) — the island itself stays wild (no `portId`). */
+  town?: string;
   /** A sea stack of the dense sea (docs/16 P3). */
   minor?: boolean;
   /** A floating town's moored hulks (docs/16 P3). */

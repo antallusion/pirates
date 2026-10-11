@@ -396,7 +396,9 @@ test('playthrough: a lost trial\'s dead count for nothing — no «too many dead
   ship.crew = Math.floor(ship.crew / 2);
   // (docs/25 item 70: the trial's side may open with an order and a step, and her stack's turn waits for her — up to
   // its 30 s — before the first blow lands; the dead are counted as that blow falls.)
-  for (let i = 0; i < 40 * 20 && co.voyageLost === 0 && !bt.over; i++) steps(game, 1);
+  // (150 s: the trial's dice are the sea's — with docs/29's harbours two of her stacks came first and each waited out its
+  // 30 s before the enemy's first shot at ~100 s)
+  for (let i = 0; i < 150 * 20 && co.voyageLost === 0 && !bt.over; i++) steps(game, 1);
   assert.ok(co.voyageLost > 0, 'the dead counted as they fell');
   // …then she yields: the trial is lost.
   act(bt, 0, { a: 'surrender' }, game.now, new Rng(1));

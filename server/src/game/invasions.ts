@@ -17,7 +17,7 @@ import { Rng } from '../../../shared/src/rng.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { SECTORS_PER_SIDE, sectorAt, sectorGrid } from '../../../shared/src/world/sectors.ts';
-import { depthAt, regionAt } from '../../../shared/src/world/worldgen.ts';
+import { depthAt, nearHarbour, regionAt } from '../../../shared/src/world/worldgen.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { eventsChanged } from './events.ts';
 import type { Game } from './Game.ts';
@@ -355,7 +355,7 @@ function tideSecond(game: Game): boolean {
     const [cx, cy] = REGIONS[t.region].center;
     for (let i = 0; i < 12; i++) {
       const x = cx + hub.rng.range(-9000, 9000), y = cy + hub.rng.range(-9000, 9000);
-      if (regionAt(game.world, x, y) !== t.region || !openSea(game, x, y) || game.world.ports.some((p) => dist(p.x, p.y, x, y) < 1500)) continue;
+      if (regionAt(game.world, x, y) !== t.region || !openSea(game, x, y) || nearHarbour(game.world, x, y, 1500)) continue;
       const lv = Math.max(1, Math.min(10, sectorAt(game.world, x, y).level));
       const ship = choirShip(game, x, y, lv, { inv: -1, wave: 0, tide: t.region }, { ship: CHOIR_SHIPS[hub.rng.int(0, CHOIR_SHIPS.length - 1)], captain: CHOIR_CAPTAINS[hub.rng.int(0, CHOIR_CAPTAINS.length - 1)] });
       if (ship) ids.push(ship.id);

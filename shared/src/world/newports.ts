@@ -107,6 +107,10 @@ export const NEW_PORTS: NewPortDef[] = [
     ['kraken_ink', 'pearls'], ['provisions', 'rum', 'timber', 'cloth'], 'bone', [75650, 12000]),
 ];
 
+/** The adventure map's things and guards as the generation worked them out (not kept for the server, whose map counts
+ *  the raised islands too): step 9 keeps its harbours off them without working them out again. */
+export const advAtGen = new WeakMap<World, [number, number][]>();
+
 /** The sea the art queue gave each town where it is not the sea she stands in (the Abyss holds no port). */
 export const ART_REGION: Record<string, RegionId> = { last_light: 'the_abyss', marrowdeep: 'the_abyss' };
 
@@ -325,5 +329,6 @@ export function appendPorts(old: World): World {
   const world: World = { ...old, islands, ports, chunks, navGrid, portsFrom, portIslesFrom };
   legacyOf.set(world, legacyOf.get(old) ?? old);
   beforePortsOf.set(world, old);
+  advAtGen.set(world, advPoints); // (step 9 keeps its harbours off the same: shared/src/world/towns.ts)
   return world;
 }

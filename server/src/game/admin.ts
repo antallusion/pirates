@@ -94,7 +94,7 @@ import { AMMO_IDS, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/ships.t
 import type { MountId, ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { WeatherKind } from '../../../shared/src/protocol.ts';
 import { closestOnPolygon, headingVec, pointInPolygon } from '../../../shared/src/math.ts';
-import { isLand, islandsNear, portOfIsland } from '../../../shared/src/world/worldgen.ts';
+import { isLand, islandsNear } from '../../../shared/src/world/worldgen.ts';
 import { summon } from './bosses.ts';
 import { boardingRangeBetween, canBoard, startBoarding } from './boarding.ts';
 import { UNITS, UNIT_IDS, armyForLevel, armyMen, armyWord } from '../../../shared/src/data/army.ts';
@@ -443,7 +443,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       // safe or contested sea is given outright, or one's own raised to that level (docs/29: the hall with it).
       let h = ownIsland(game, s.accountId);
       if (!h) {
-        const wild = game.world.islands.filter((i) => !i.portId && !portOfIsland(game.world, i.id) && BUY_REGIONS.includes(i.region) && i.radius > 150);
+        const wild = game.world.islands.filter((i) => !i.portId && BUY_REGIONS.includes(i.region) && i.radius > 150);
         const best = wild.sort((a, b) => Math.hypot(a.x - ship.state.x, a.y - ship.state.y) - Math.hypot(b.x - ship.state.x, b.y - ship.state.y))[0];
         if (!best) return 'No wild island to give.';
         h = newOwnHolding(best, { id: s.accountId, name: s.name }, game.wallNow());

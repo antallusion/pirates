@@ -9,6 +9,7 @@ import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { applyDataLocale } from '../client/src/lang/data.ts';
 import { join, makeGame } from './helpers.ts';
+import { harboursBeforeTowns } from '../shared/src/world/worldgen.ts';
 
 type Credit = { creditKill(k: unknown, v: unknown, how: string): void };
 
@@ -20,7 +21,7 @@ test('nests are found about the map, kept stocked, told to the map, and lapse in
   const list = activeTasks(game);
   assert.equal(list.length, TASKS_AT_ONCE);
   for (const t of list) {
-    assert.ok(!game.world.ports.some((p) => Math.hypot(p.x - t.x, p.y - t.y) < 3500), 'clear of the ports');
+    assert.ok(!harboursBeforeTowns(game.world).some((p) => Math.hypot(p.x - t.x, p.y - t.y) < 3500), 'clear of the ports (docs/29: of the harbours before step 9)');
     assert.notEqual(t.region, 'the_abyss');
   }
   // Stocked on the tenth second.

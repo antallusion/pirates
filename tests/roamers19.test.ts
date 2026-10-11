@@ -14,7 +14,7 @@ import {
   buildRoamers, roamAt, roamPay, roamersNear, seaHourXp,
 } from '../shared/src/data/roamers.ts';
 import { sectorAt } from '../shared/src/world/sectors.ts';
-import { generateWorld, isLand, legacyWorld, portLanes, segDist } from '../shared/src/world/worldgen.ts';
+import { TOWN_GAP, generateWorld, harboursBeforeTowns, isLand, legacyWorld, portLanes, segDist } from '../shared/src/world/worldgen.ts';
 import type { World } from '../shared/src/world/worldgen.ts';
 import type { RoamView } from '../shared/src/roamproto.ts';
 import { Rng } from '../shared/src/rng.ts';
@@ -64,7 +64,8 @@ const roams = (s: PlayerSession): RoamView[] => (conn(s).last('roams')?.list as 
 test('D7: thousands of stacks on open water, clear of the shores, harbours, lanes, reefs, marks and the map\'s things', () => {
   const idx = buildRoamers(world);
   assert.ok(idx.list.length >= 4000, `${idx.list.length} stacks`);
-  const lanes = portLanes(world.ports);
+  // (docs/29: the lanes run between the harbours before step 9; a harbour town keeps a hamlet's harbour, TOWN_GAP)
+  const lanes = portLanes(harboursBeforeTowns(world));
   const adv = buildAdv(world);
   for (const sp of idx.list) {
     assert.ok(!isLand(world, sp.x, sp.y), `${sp.id} on land`);
@@ -72,7 +73,7 @@ test('D7: thousands of stacks on open water, clear of the shores, harbours, lane
       const a = (k / 8) * Math.PI * 2;
       assert.ok(!isLand(world, sp.x + Math.sin(a) * ROAM_SHORE, sp.y - Math.cos(a) * ROAM_SHORE), `${sp.id} by a shore`);
     }
-    for (const p of world.ports) assert.ok(Math.hypot(p.x - sp.x, p.y - sp.y) >= ROAM_HARBOUR, `${sp.id} in ${p.name}'s harbour`);
+    world.ports.forEach((p, i) => assert.ok(Math.hypot(p.x - sp.x, p.y - sp.y) >= (i >= (world.townsFrom ?? Infinity) ? Math.min(ROAM_HARBOUR, TOWN_GAP) : ROAM_HARBOUR), `${sp.id} in ${p.name}'s harbour`));
     assert.ok(lanes.every(([ax, ay, bx, by]) => segDist(sp.x, sp.y, ax, ay, bx, by) >= ROAM_LANE), `${sp.id} on a lane`);
     assert.ok(world.reefs.every((q) => Math.abs(q.x - sp.x) > q.radius + 300 || Math.hypot(q.x - sp.x, q.y - sp.y) >= q.radius), `${sp.id} on a reef`);
     assert.ok(adv.guards.every((g) => Math.abs(g.x - sp.x) > 400 || Math.hypot(g.x - sp.x, g.y - sp.y) >= 300), `${sp.id} on a guard`);
