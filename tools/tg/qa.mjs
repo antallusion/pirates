@@ -18,7 +18,13 @@ let fails = 0;
 const check = (ok, what) => { console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}`); if (!ok) fails++; };
 const shot = (p, name) => p.screenshot({ path: `${IMG}/${name}.jpg`, type: 'jpeg', quality: 72 });
 const hook = (update) => fetch(`${BASE}/tg/webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': SECRET }, body: JSON.stringify(update) });
-const botStart = (from, nonce) => hook({ update_id: Date.now(), message: { message_id: 1, from, chat: { id: from.id, type: 'private' }, text: `/start login_${nonce}` } });
+// the bot's part: /start login_<nonce> (it asks for the code), then a code button pressed (a callback_query)
+const botStart = async (from, nonce, code) => {
+  const r = await hook({ update_id: Date.now(), message: { message_id: 1, from, chat: { id: from.id, type: 'private' }, text: `/start login_${nonce}` } });
+  if (code) await hook({ update_id: Date.now() + 1, callback_query: { id: 'cb' + Date.now(), from, data: `tgc:${nonce}:${code}`, message: { message_id: 2, chat: { id: from.id } } } });
+  return r;
+};
+const cardCode = (p) => p.evaluate(() => document.querySelector('#tg-wait .tgw-code b')?.textContent ?? '');
 const until = async (p, fn, arg, ms = 15000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await p.evaluate(fn, arg).catch(() => false)) return true; await L.sleep(200); } return false; };
 const hmac = (key, data) => createHmac('sha256', key).update(data).digest();
 function initData(user) {
@@ -73,7 +79,9 @@ try {
       if (w === 812) {
         // the bot answers: the captain's choice comes up by itself
         const nonce = link.split('login_')[1];
-        const r = await botStart({ id: 700000 + Math.floor(Math.random() * 99999), first_name: lang === 'ru' ? 'Мэри' : 'Mary', language_code: lang }, nonce);
+        const code = await cardCode(p);
+        check(/^\d{3}$/.test(code), `${lang}: the card shows the code ${code}`);
+        const r = await botStart({ id: 700000 + Math.floor(Math.random() * 99999), first_name: lang === 'ru' ? 'Мэри' : 'Mary', language_code: lang }, nonce, code);
         check(r.status === 200, `${lang}: the webhook took the bot's /start (${r.status})`);
         check(await until(p, () => !document.querySelector('#screen-captain')?.classList.contains('hidden'), null, 60000), `${lang}: signed in by Telegram — the captain's choice`);
         check(!(await p.$('#tg-wait')), `${lang}: the wait card closed`);
@@ -82,6 +90,17 @@ try {
       if (w === 480 && lang === 'ru') {
         await p.click('#tg-wait .tgw-cancel');
         check(!(await p.$('#tg-wait')), 'cancel closes the card');
+      }
+      if (w === 1440) {
+        // a wrong code picked in the bot: the card says so and no sign-in happens
+        const nonce = link.split('login_')[1];
+        const code = await cardCode(p);
+        const wrong = String(code === '999' ? 998 : Number(code) + 1);
+        await botStart({ id: 600000 + Math.floor(Math.random() * 99999), first_name: 'Eve', language_code: lang }, nonce, wrong);
+        const want = lang === 'ru' ? 'Код не совпал, попробуйте снова.' : 'The code did not match. Try again.';
+        check(await until(p, (t) => document.querySelector('#tg-wait .tgw-left')?.textContent === t, want, 30000), `${lang}: a wrong code — «${want}»`);
+        check(!!(await p.$('#screen-login:not(.hidden)')), `${lang}: still on the start screen`);
+        await shot(p, `wait-mismatch__${w}x${h}_${lang}`);
       }
       await p.ctx.close();
     }
@@ -114,7 +133,7 @@ try {
     await p.waitForSelector('#tg-wait');
     const link = await p.evaluate(() => document.querySelector('#tg-wait .tgw-open')?.getAttribute('href'));
     await shot(p, 'link-wait__812x375_ru');
-    await botStart({ id: 800000 + Math.floor(Math.random() * 99999), first_name: 'Линк', language_code: 'ru' }, link.split('login_')[1]);
+    await botStart({ id: 800000 + Math.floor(Math.random() * 99999), first_name: 'Линк', language_code: 'ru' }, link.split('login_')[1], await cardCode(p));
     check(await until(p, () => /привязан/.test(document.querySelector('#tg-wait .tgw-left')?.textContent ?? ''), null, 10000), 'the card says the Telegram is linked');
     await shot(p, 'link-done__812x375_ru');
     check(await until(p, () => !document.querySelector('#tg-wait') && /Телеграм привязан/.test(document.querySelector('[data-otg]')?.textContent ?? ''), null, 8000), 'settings: «Телеграм привязан»');
@@ -177,11 +196,11 @@ try {
     const user = { id: 900000 + Math.floor(Math.random() * 99999), first_name: lang === 'ru' ? 'Аня' : 'Anne', last_name: 'Bonny', language_code: lang };
     await p.ctx.addInitScript(fake, { initData: initData(user), platform: 'android', top: 46, left: 0 });
     // the sign-in held a moment, so the loading screen can be seen
-    await p.route('**/auth/tg/webapp', async (r) => { await L.sleep(1200); await r.continue(); });
+    await p.route('**/auth/tg/webapp', async (r) => { await L.sleep(4000); await r.continue(); });
     await p.goto(`${BASE}/?tg`, { waitUntil: 'domcontentloaded' });
     check(await until(p, () => !!document.querySelector('#tg-boot'), null, 15000), `${w}x${h}: the Mini App's loading screen`);
     await shot(p, `miniapp-boot__${w}x${h}_${lang}`);
-    const bootBg = await p.evaluate(() => getComputedStyle(document.querySelector('#tg-boot')).backgroundColor);
+    const bootBg = await p.evaluate(() => { const e = document.querySelector('#tg-boot'); return e ? getComputedStyle(e).backgroundColor : 'gone'; });
     check(bootBg === 'rgb(23, 33, 43)', `the loading screen in the theme's colour (${bootBg})`);
     await p.waitForSelector('#screen-captain:not(.hidden)', { timeout: 45000 });
     const calls = await p.evaluate(() => globalThis.__tgCalls);

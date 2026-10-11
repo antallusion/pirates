@@ -44,7 +44,7 @@
 #tg-wait .tgw-left { margin: 0; font-size: 13px; min-height: 1.3em; }
 /* the code to pick in the bot (three are offered there, one is this) */
 #tg-wait .tgw-code { display: flex; align-items: baseline; gap: 10px; margin: 0; color: var(--fog, #9aa3a8); font-size: 13px; }
-#tg-wait .tgw-code b { font-family: 'Cormorant Garamond', Georgia, serif; font-size: clamp(26px, 8vh, 36px); line-height: 1; letter-spacing: 0.18em; color: var(--gold, #d8b45c); font-variant-numeric: tabular-nums; }
+#tg-wait .tgw-code b { font-family: Inter, system-ui, sans-serif; font-weight: 600; font-size: clamp(24px, 7.5vh, 34px); line-height: 1; letter-spacing: 0.16em; color: var(--gold, #d8b45c); font-variant-numeric: lining-nums tabular-nums; }
 #tg-wait .tgw-left.bad { color: #e08a7a; }
 #tg-wait .tgw-left.good { color: #a9c79a; }
 #tg-wait .tgw-btns { display: flex; gap: 8px; flex-wrap: wrap; }
