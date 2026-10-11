@@ -29,7 +29,8 @@ import { join, makeGame, steps } from './helpers.ts';
 
 const world = generateWorld(WORLD_SEED);
 const h = (x: unknown) => createHash('sha1').update(JSON.stringify(x)).digest('hex').slice(0, 12);
-const fresh = (w: World) => w.ports.slice(w.portsFrom);
+// (step 8's twenty: docs/29's harbour towns of step 9 come after them — tests/towns29.test.ts)
+const fresh = (w: World) => w.ports.slice(w.portsFrom, w.townsFrom);
 const dist = (ax: number, ay: number, bx: number, by: number) => Math.hypot(ax - bx, ay - by);
 
 // ------------------------------------------------------------------------------------------------ the twenty
@@ -38,7 +39,7 @@ test('twenty new ports, appended after every port before, each in her sea under 
   for (const w of [world, generateWorld(1), generateWorld(1337)]) {
     const ports = fresh(w);
     assert.equal(ports.length, 20, 'twenty, on every seed');
-    assert.equal(w.ports.length, (w.portsFrom ?? 0) + 20);
+    assert.equal(w.townsFrom ?? w.ports.length, (w.portsFrom ?? 0) + 20);
     assert.deepEqual(ports.map((p) => p.id), NEW_PORTS.map((d) => d.id), 'in the art queue\'s order');
     assert.equal(w.islands.length, (w.portIslesFrom ?? 0) + 20);
     ports.forEach((p, i) => {
@@ -119,7 +120,7 @@ test('every port, island, reef and mark before keeps her id and her place (the w
       assert.ok(fresh(w).some((p) => {
         const is = w.islands[p.islandId];
         return dist(x, y, is.x, is.y) < is.radius + 200 + NAV_CELL;
-      }), `cell ${k} changed away from the new islands`);
+      }) || w.ports.slice(w.townsFrom ?? w.ports.length).some((p) => dist(x, y, p.x, p.y) < NAV_CELL), `cell ${k} changed away from the new islands (or a step-9 town's anchorage, docs/29)`);
     }
   }
 });
@@ -162,7 +163,8 @@ test('each new island keeps a channel from all that was: islands, reefs, marks, 
   // towns still far out at sea, and no sunken city under their guns.
   for (const p of fresh(world)) {
     for (const o of [...adv.objs, ...adv.guards]) assert.ok(dist(o.x, o.y, p.x, p.y) >= 1600, `${o.id} under ${p.name}'s guns`);
-    for (const q of world.ports) if (q !== p) assert.ok(dist(q.x, q.y, p.x, p.y) >= (q.raft ? 5500 : 4000), `${p.name} by ${q.name}`);
+    // (the harbours of their day: docs/29's harbour towns of step 9 stand on the old islands' coasts, a hamlet each)
+    for (const q of world.ports.slice(0, world.townsFrom)) if (q !== p) assert.ok(dist(q.x, q.y, p.x, p.y) >= (q.raft ? 5500 : 4000), `${p.name} by ${q.name}`);
     for (const s of sites) assert.ok(dist(s.x, s.y, p.x, p.y) >= 4000, `${s.name} by ${p.name}`);
   }
 });

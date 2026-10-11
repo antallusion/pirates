@@ -7,6 +7,7 @@
 import type { GoodId } from './goods.ts';
 import type { IslandBiome, RegionId } from '../world/regions.ts';
 import { GOODS } from './goods.ts';
+import { treePatterns } from './isletree.ts';
 
 export type Tr = [string, string];
 
@@ -235,5 +236,6 @@ export function estatePatterns(): [string, string][] {
     ['Visitors to your trophy hall: {0}.', 'Гостей в вашем зале трофеев: {0}.'],
     ['Outposts', 'Аванпосты'],
   );
+  out.push(...treePatterns()); // docs/29: the tree, the claim and the move
   return out;
 }

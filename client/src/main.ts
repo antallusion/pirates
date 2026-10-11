@@ -70,6 +70,7 @@ import { CompanyScreen, renderBarter } from './ui/company.ts';
 import type { CompanyTab } from './ui/company.ts';
 import { LOG_PAGES } from './ui/logbook.ts';
 import { BaseWindow } from './ui/base.ts';
+import { askMove } from './ui/isletree.ts'; // docs/29: the island's move, its confirm
 import { $, decorateSums, esc, fmt, icon, keepInputs, knots } from './ui/dom.ts';
 import { Hud, TOUCH_FOLDED, releaseModalToasts } from './ui/hud.ts';
 import { SeaHud, bestSpecial, seaWord } from './ui/seahud.ts'; // docs/23 phase 2: the sea and five buttons
@@ -1265,6 +1266,9 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'base':
       if (modal === 'base') refreshModal();
+      break;
+    case 'isleMove': // docs/29: claiming another island is a move — her leave first
+      askMove(m.view, (x) => net.send(x));
       break;
     case 'supply': // docs/18 #32
       if (modal === 'base' && baseWindow.tab === 'supply') refreshModal();

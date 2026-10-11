@@ -1269,7 +1269,7 @@ export class Renderer {
     // Name label when zoomed out enough to matter or discovered.
     const known = state.discovered.has(is.id);
     // A village's island goes by the village's name, and the port writes it already.
-    if (known && is.r > 180 && this.zoom < 2.2 && !is.portId) {
+    if (known && is.r > 180 && this.zoom < 2.2 && !is.portId && !is.town) {
       g.font = `italic ${Math.round(clamp(is.r * this.zoom * 0.08, 11, 18))}px "Cormorant Garamond", Georgia, serif`;
       g.fillStyle = 'rgba(216,210,196,0.55)';
       g.textAlign = 'center';
@@ -1587,7 +1587,8 @@ export class Renderer {
     if (hit) return hit;
     const rnd = seeded(is.id * 7919 + 17);
     const inner = is.poly.map((v, i) => (i % 2 === 0 ? is.x + (v - is.x) * 0.78 : is.y + (v - is.y) * 0.78));
-    const port = is.portId ? state.ports.find((p) => p.id === is.portId) : null;
+    const pid = is.portId ?? is.town; // docs/29: a step-9 harbour town on her coast
+    const port = pid ? state.ports.find((p) => p.id === pid) : null;
     // Decor by area: a rock has a clump or two, a great island is wooded and strewn.
     const dense = is.biome === 'jungle' || is.biome === 'mangrove' ? 1.6 : is.biome === 'saltflat' ? 0.4 : 1;
     const want = Math.max(3, Math.min(56, Math.round(((is.r * is.r) / 26000) * dense)));
@@ -1777,7 +1778,7 @@ export class Renderer {
       if (Math.abs(p.x - this.camX) * this.zoom > this.w + 600 * this.zoom || Math.abs(p.y - this.camY) * this.zoom > this.h + 600 * this.zoom) continue;
       const art = p.raft ? null : townArt(p);
       const spr = art ? sprite(art) : undefined;
-      const island = [...state.islands.values()].find((is) => is.portId === p.id);
+      const island = [...state.islands.values()].find((is) => is.portId === p.id || is.town === p.id);
       if (!island) continue;
       let lay = this.portLayout.get(p.id);
       if (!lay) this.portLayout.set(p.id, (lay = this.layoutPort(p, island)));

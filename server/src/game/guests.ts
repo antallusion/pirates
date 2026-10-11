@@ -50,14 +50,16 @@ function near(game: Game, s: PlayerSession, islandId: number): boolean {
   return !!ship && !!is && !ship.docked && Math.hypot(is.x - ship.state.x, is.y - ship.state.y) - is.radius <= NEAR_M;
 }
 
-function holding(game: Game, islandId: number): GuestHolding | null {
-  const h = game.holdings.get(game, islandId) as GuestHolding | undefined;
+function holding(game: Game, islandId: number, guest?: number): GuestHolding | null {
+  // docs/29: many captains may hold this island — the guest calls on another's first (her own if none).
+  const all = game.holdings.onIsland(game, islandId) as GuestHolding[];
+  const h = all.find((x) => x.owner.id !== guest) ?? all[0];
   return h && h.owned && h.owner.kind === 'player' ? h : null;
 }
 
 /** She calls: the hall's view (and a visit counted, once a game hour for each guest). */
 export function callOn(game: Game, s: PlayerSession, islandId: number): HallView | string {
-  const h = holding(game, islandId);
+  const h = holding(game, islandId, s.accountId);
   if (!h) return 'No trophy hall there';
   if (!welcome(game, s, h)) return 'You are not invited to that island.';
   if (h.owner.id !== s.accountId && !near(game, s, islandId)) return `Sail to ${game.world.islands[islandId]?.name ?? '?'} first.`;
@@ -97,7 +99,7 @@ export function hallView(game: Game, s: PlayerSession, h: GuestHolding): HallVie
 
 /** A drink in her tavern: the silver to her treasury, a cheer for the guest's crew. */
 export function drink(game: Game, s: PlayerSession, islandId: number): string | null {
-  const h = holding(game, islandId);
+  const h = holding(game, islandId, s.accountId);
   if (!h || !welcome(game, s, h) || !near(game, s, islandId)) return 'You are not invited to that island.';
   if (!has(h, 'tavern')) return 'There is no tavern on that island.';
   const p = s.profile!;
@@ -116,7 +118,7 @@ export function drink(game: Game, s: PlayerSession, islandId: number): string | 
 
 /** A line in her guestbook (one a game day for each guest). */
 export function sign(game: Game, s: PlayerSession, islandId: number, textRaw: string): string | null {
-  const h = holding(game, islandId);
+  const h = holding(game, islandId, s.accountId);
   if (!h || !welcome(game, s, h) || !near(game, s, islandId)) return 'You are not invited to that island.';
   const text = String(textRaw ?? '').replace(/[<>{}`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 120);
   if (text.length < 2) return 'Write something first.';

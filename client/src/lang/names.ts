@@ -7,6 +7,7 @@
 import { lang } from '../i18n.ts';
 import { LEGENDS } from '../../../shared/src/data/throne.ts';
 import { NAME_RU } from './data.ts';
+import { townNameRu } from '../../../shared/src/world/towns.ts';
 
 const FIRST: Record<string, string> = {
   Grey: 'Грей', Raven: 'Рейвен', Salt: 'Солт', Widow: 'Видоу', Bell: 'Белл', Cold: 'Колд', Lantern: 'Лантерн', Gallows: 'Гэллоуз', Mourn: 'Морн', Iron: 'Айрон',
@@ -59,6 +60,10 @@ const firstKeys = Object.keys(FIRST).sort((a, b) => b.length - a.length);
 /** The Russian name of a generated place, or null when the name is not one of the generator's. */
 export function composedNameRu(en: string): string | null {
   if (FIXED[en]) return FIXED[en];
+  // docs/29: the harbour towns of step 9 ("Gull Landing" — «Чаячья Пристань», shared/src/world/towns.ts).
+  const num = /^(.*) (\d+)$/.exec(en);
+  const town = townNameRu(num ? num[1] : en);
+  if (town) return num ? `${town} ${num[2]}` : town;
   const m = /^([A-Z][a-z]+)(?: (Isle|Rock|Key|Holm))?(?: (\d+))?$/.exec(en);
   if (!m) return null;
   const word = m[1];

@@ -23,6 +23,7 @@ import { GOODS } from './goods.ts';
 import type { GoodId } from './goods.ts';
 import type { Port } from '../world/worldgen.ts';
 import { REGIONS } from '../world/regions.ts';
+import { DWELL_GROWTH, HALL_DAY, ISLE_OF_HALL, TREE_MAX, isTree, treeCost, treeNeeds } from './isletree.ts';
 
 export const TIERS = [1, 2, 3, 4, 5, 6, 7] as const;
 /** The plain kind of each tier (index: the tier). */
@@ -199,11 +200,16 @@ export interface TownDef {
   tier?: number;
 }
 
-const dw = (tier: number, plain: Tr, up: Tr, text: Tr, art: string): TownDef => ({ id: `dw${tier}` as TownId, names: [plain, up], text, art, max: 2, tier });
+// docs/29: five levels each; a dwelling keeps its plain name to its second level and trains the upgraded kind from its third.
+const dw = (tier: number, plain: Tr, up: Tr, text: Tr, art: string): TownDef => ({ id: `dw${tier}` as TownId, names: [plain, plain, up, up, up], text, art, max: TREE_MAX, tier });
 
 export const TOWN: Record<TownId, TownDef> = {
-  hall: { id: 'hall', names: [['Town Hall', 'Ратуша'], ['City Hall', 'Городская управа'], ['Capitol', 'Капитолий']], text: ['Silver every day into the island’s treasury: 60, then 125, then 250.', 'Серебро каждый день в казну острова: 60, потом 125, потом 250.'], art: 'trophy_hall', max: 3 },
-  keep: { id: 'keep', names: [['Keep', 'Крепость'], ['Citadel', 'Цитадель'], ['Castle', 'Замок']], text: ['Walls for the town: the citadel grows half as many men again in every dwelling, the castle twice as many.', 'Стены города: цитадель даёт всем жилищам +50% прироста, замок — вдвое больше.'], art: 'fort', max: 3 },
+  hall: {
+    id: 'hall', names: [['Town Hall', 'Ратуша'], ['Council Hall', 'Дом совета'], ['City Hall', 'Городская управа'], ['Governor’s Hall', 'Губернаторский дом'], ['Capitol', 'Капитолий']],
+    text: ['The heart of the island: it stands from the claim. Each level grows the island (plots, outposts, caravans, residents, builders) and pays silver every day into its treasury; its next level asks the town round it.', 'Сердце острова: стоит с самого занятия. Каждый уровень растит остров (участки, аванпосты, караваны, жители, бригады) и платит серебро каждый день в казну; следующий уровень требует города вокруг.'],
+    art: 'trophy_hall', max: TREE_MAX,
+  },
+  keep: { id: 'keep', names: [['Keep', 'Крепость'], ['Stockade', 'Острог'], ['Citadel', 'Цитадель'], ['Bastion', 'Бастион'], ['Castle', 'Замок']], text: ['Walls for the town: every level grows more men in every dwelling — the citadel half as many again, the castle twice as many.', 'Стены города: каждый уровень даёт всем жилищам больше бойцов — цитадель в полтора раза, замок вдвое.'], art: 'fort', max: TREE_MAX },
   dw1: dw(1, ['Bunkhouse', 'Кубрик'], ['Sailors’ Hall', 'Матросский дом'], ['Deckhands sign on here; upgraded, it trains them into seasoned sailors.', 'Здесь нанимаются юнги; улучшенный — учит их в бывалых матросов.'], 'residents_house'),
   dw2: dw(2, ['Marine Barracks', 'Казарма морпехов'], ['Guard House', 'Караульня'], ['Marines muster here; upgraded, sea guards.', 'Здесь собираются морпехи; улучшенная — морская гвардия.'], 'barracks'),
   dw3: dw(3, ['Shooting Range', 'Стрельбище'], ['Shooters’ Guild', 'Гильдия стрелков'], ['Musketeers practise here; upgraded, sharpshooters. They want powder.', 'Здесь упражняются мушкетёры; улучшенное — меткие стрелки. Им нужен порох.'], 'kennel'),
@@ -211,7 +217,7 @@ export const TOWN: Record<TownId, TownDef> = {
   dw5: dw(5, ['Veterans’ Den', 'Притон ветеранов'], ['Cutthroats’ Den', 'Логово головорезов'], ['Boarders who have taken ships; upgraded, cutthroats. They drink rum.', 'Абордажники, бравшие корабли; улучшенный — головорезы. Пьют ром.'], 'smuggler_store'),
   dw6: dw(6, ['Admiralty', 'Адмиралтейство'], ['Admiralty Court', 'Адмиралтейский двор'], ['The officers’ guard; upgraded, the life guard. Paid in pearls as well.', 'Офицерская гвардия; улучшенное — лейб-гвардия. Платят и жемчугом.'], 'chart_house'),
   dw7: dw(7, ['Drowned Shrine', 'Святилище утопленников'], ['Abyssal Altar', 'Алтарь бездны'], ['The drowned rise for the Choir and the cursed; upgraded, the deep’s spawn. Pearls for the sea.', 'Утопленники встают для Хора и проклятых; улучшенное — порождения бездны. Жемчуг — морю.'], 'chapel'),
-  market: { id: 'market', names: [['Marketplace', 'Рынок'], ['Exchange', 'Биржа'], ['Merchants’ Guild', 'Гильдия купцов']], text: ['Trades the island’s resources for silver and for each other — at poor rates, better with each level.', 'Меняет ресурсы острова на серебро и друг на друга — по плохому курсу, с каждым уровнем чуть лучше.'], art: 'caravan_office', max: 3 },
+  market: { id: 'market', names: [['Marketplace', 'Рынок'], ['Trading Row', 'Торговые ряды'], ['Exchange', 'Биржа'], ['Counting House', 'Торговый дом'], ['Merchants’ Guild', 'Гильдия купцов']], text: ['Trades the island’s resources for silver and for each other — at poor rates, better with each level.', 'Меняет ресурсы острова на серебро и друг на друга — по плохому курсу, с каждым уровнем чуть лучше.'], art: 'caravan_office', max: TREE_MAX },
   // docs/17 H5: HoMM3's mage guild — five floors, each teaching a fixed list of its level's orders free.
   guild: {
     id: 'guild', names: [['Guild of Orders', 'Гильдия приказов'], ['Hall of Orders', 'Зал приказов'], ['School of Orders', 'Школа приказов'], ['College of Orders', 'Коллегия приказов'], ['Tower of Orders', 'Башня приказов']],
@@ -236,23 +242,23 @@ export function townOf(what: string): TownId | null {
 /** A dwelling's town id by its tier. */
 export const dwellingOf = (tier: number): TownId => `dw${tier}` as TownId;
 
-/** The town hall's silver a day by its level. */
-export const HALL_INCOME = [0, 60, 125, 250];
-/** Growth by the keep's level: none, the keep, the citadel (+50%), the castle (+100%). */
-export const KEEP_GROWTH = [1, 1, 1.5, 2];
+/** The town hall's silver a day by its level (docs/29: five levels; isletree.ts HALL_DAY). */
+export const HALL_INCOME = HALL_DAY;
+/** Growth by the keep's level: none, the keep, … the citadel (3rd: +50%), … the castle (5th: +100%). */
+export const KEEP_GROWTH = [1, 1, 1.25, 1.5, 1.75, 2];
 
 /** The market: what it pays for a unit (by its base price) and what it asks, by its level. HoMM3's poor rates — the
  *  most it pays lies under the cheapest port's price, the least it asks over most ports' dearest. */
-export const MARKET_SELL = [0, 0.2, 0.25, 0.3];
-export const MARKET_BUY = [0, 3.4, 3.1, 2.8];
+export const MARKET_SELL = [0, 0.2, 0.225, 0.25, 0.275, 0.3];
+export const MARKET_BUY = [0, 3.4, 3.25, 3.1, 2.95, 2.8];
 /** What the market deals in: the six resources besides silver, and the island's stone. */
 export const MARKET_GOODS: GoodId[] = ['timber', 'iron', 'tar', 'gunpowder', 'pearls', 'rum', 'coal'];
 
 export function marketSell(good: GoodId, level: number, weekSell = 1): number {
-  return GOODS[good].basePrice * MARKET_SELL[Math.max(0, Math.min(3, level))] * weekSell;
+  return GOODS[good].basePrice * MARKET_SELL[Math.max(0, Math.min(TREE_MAX, level))] * weekSell;
 }
 export function marketBuy(good: GoodId, level: number, weekBuy = 1): number {
-  return GOODS[good].basePrice * MARKET_BUY[Math.max(0, Math.min(3, level))] * weekBuy;
+  return GOODS[good].basePrice * MARKET_BUY[Math.max(0, Math.min(TREE_MAX, level))] * weekBuy;
 }
 
 const round50 = (n: number) => Math.max(50, Math.round(n / 50) * 50);
@@ -261,52 +267,10 @@ const round50 = (n: number) => Math.max(50, Math.round(n / 50) * 50);
 export function townCost(id: TownId, level: number): BaseCost {
   const L = Math.max(1, level);
   const secs = (s: number) => Math.min(BUILD_MAX_SECS, s);
-  switch (id) {
-    case 'hall':
-      return [
-        { silver: 4_000, goods: { timber: 30, coal: 20 }, secs: 600 },
-        { silver: 20_000, goods: { timber: 80, coal: 60, iron: 30, tar: 20 }, secs: 1800 },
-        { silver: 60_000, goods: { timber: 150, coal: 120, iron: 60, tar: 40, pearls: 10, rum: 20 }, secs: 3600 },
-      ][Math.min(2, L - 1)];
-    case 'keep':
-      return [
-        { silver: 5_000, goods: { timber: 40, coal: 40 }, secs: 900 },
-        { silver: 15_000, goods: { timber: 60, coal: 80, iron: 40, tar: 10 }, secs: 2400 },
-        { silver: 40_000, goods: { timber: 100, coal: 150, iron: 80, tar: 30, gunpowder: 30 }, secs: 3600 },
-      ][Math.min(2, L - 1)];
-    case 'market':
-      return [
-        { silver: 3_000, goods: { timber: 30, coal: 20 }, secs: 600 },
-        { silver: 8_000, goods: { timber: 50, coal: 40, iron: 10 }, secs: 1200 },
-        { silver: 20_000, goods: { timber: 80, coal: 60, iron: 30, pearls: 4 }, secs: 2400 },
-      ][Math.min(2, L - 1)];
-    case 'guild':
-      return [
-        { silver: 6_000, goods: { timber: 40, coal: 30, tar: 20, pearls: 3 }, secs: 1200 },
-        { silver: 10_000, goods: { timber: 50, coal: 40, tar: 30, pearls: 5 }, secs: 1800 },
-        { silver: 16_000, goods: { timber: 60, coal: 50, tar: 40, pearls: 8, rum: 10 }, secs: 2400 },
-        { silver: 25_000, goods: { timber: 80, coal: 60, tar: 50, pearls: 12, rum: 20 }, secs: 3000 },
-        { silver: 40_000, goods: { timber: 100, coal: 80, tar: 60, pearls: 18, rum: 30 }, secs: 3600 },
-      ][Math.min(4, L - 1)];
-    case 'grail':
-      return { silver: 5_000, goods: { timber: 40, coal: 40, pearls: 6 }, secs: 1800 };
-    case 'pen':
-      return L <= 1 ? { silver: 3_000, goods: { timber: 40, coal: 20 }, secs: secs(900) } : { silver: 9_000, goods: { timber: 70, coal: 40, iron: 20, tar: 10 }, secs: secs(1800) };
-    default: {
-      const t = TOWN[id].tier ?? 1;
-      const goods: Partial<Record<GoodId, number>> = { timber: 20 + 10 * t, coal: 10 + 8 * t };
-      if (t >= 3) goods.iron = 6 * t;
-      if (t >= 4) goods.gunpowder = 5 * t;
-      if (t >= 5) goods.rum = 6 * t;
-      if (t >= 6) goods.pearls = 2 * t;
-      const silver = 1500 * t ** 1.5;
-      if (L <= 1) return { silver: round50(silver), goods, secs: secs(600 + 400 * t) };
-      const g2: Partial<Record<GoodId, number>> = {};
-      for (const [g, n] of Object.entries(goods) as [GoodId, number][]) g2[g] = Math.ceil(n * 1.5);
-      g2.tar = (g2.tar ?? 0) + 5 * t;
-      return { silver: round50(silver * 1.6), goods: g2, secs: secs(Math.round((600 + 400 * t) * 1.5)) };
-    }
-  }
+  // docs/29: the tree's own buildings by its costs (isletree.ts); the Grail and the pen keep theirs.
+  if (isTree(id)) return treeCost(id, L);
+  if (id === 'grail') return { silver: 5_000, goods: { timber: 40, coal: 40, pearls: 6 }, secs: 1800 };
+  return L <= 1 ? { silver: 3_000, goods: { timber: 40, coal: 20 }, secs: secs(900) } : { silver: round50(9_000), goods: { timber: 70, coal: 40, iron: 20, tar: 10 }, secs: secs(1800) };
 }
 
 /** What a level of a town building asks first: the island's level and the town's other buildings. */
@@ -317,27 +281,19 @@ export interface TownGate {
 
 export function townGate(id: TownId, level: number): TownGate {
   const L = Math.max(1, level);
-  switch (id) {
-    case 'hall':
-      return L >= 3 ? { isle: 6, keep: 3 } : { isle: L >= 2 ? 3 : 1 };
-    case 'keep':
-      return { isle: [1, 3, 5][Math.min(2, L - 1)] };
-    case 'market':
-      return { isle: [1, 3, 5][Math.min(2, L - 1)] };
-    case 'guild':
-      return { isle: [2, 3, 5, 7, 9][Math.min(4, L - 1)] };
-    case 'grail':
-      return { isle: 1 };
-    case 'pen':
-      return { isle: L >= 2 ? 4 : 2 };
-    default: {
-      const t = TOWN[id].tier ?? 1;
-      return { isle: Math.min(10, L >= 2 ? t + 1 : t), keep: 1 };
-    }
+  // docs/29: what the tree asks, as the island's level of the hall it asks and the keep's level.
+  if (isTree(id)) {
+    const needs = treeNeeds(id, L);
+    const hall = id === 'hall' ? L - 1 : needs.find(([k]) => k === 'hall')?.[1] ?? 1;
+    const keep = needs.find(([k]) => k === 'keep')?.[1];
+    return { isle: ISLE_OF_HALL[Math.max(1, hall)], ...(keep ? { keep } : {}) };
   }
+  // The pen: the hall at 2, then 3; the Grail wherever the hall stands.
+  if (id === 'pen') return { isle: ISLE_OF_HALL[L >= 2 ? 3 : 2] };
+  return { isle: 1 };
 }
 
 /** A dwelling's men a week on the island (the keep's walls, the week's name). */
-export function isleGrowth(tier: number, keepLevel: number, weekMul = 1): number {
-  return GROWTH[tier] * KEEP_GROWTH[Math.max(0, Math.min(3, keepLevel))] * weekMul;
+export function isleGrowth(tier: number, keepLevel: number, weekMul = 1, dwellLevel = 1): number {
+  return GROWTH[tier] * KEEP_GROWTH[Math.max(0, Math.min(TREE_MAX, keepLevel))] * weekMul * (DWELL_GROWTH[Math.max(1, Math.min(TREE_MAX, dwellLevel))] ?? 1);
 }

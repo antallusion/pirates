@@ -18,7 +18,7 @@ import type { WorldEventView } from '../../../shared/src/protocol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
-import { depthAt, isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
+import { depthAt, isLand, nearHarbour, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { applyDamage } from './combat.ts';
 import { eventsChanged } from './events.ts';
 import { takeItem } from './gear.ts';
@@ -156,7 +156,7 @@ function risingPoint(game: Game, region: RegionId): { x: number; y: number } | n
 function deepWater(game: Game, region: RegionId, x: number, y: number): boolean {
   if (regionAt(game.world, x, y) !== region || !game.inZone(x, y)) return false;
   if (isLand(game.world, x, y) || depthAt(game.world, x, y) < 12) return false;
-  return !game.world.ports.some((p) => dist(p.x, p.y, x, y) < 2500);
+  return !nearHarbour(game.world, x, y, 2500); // (docs/29: a step-9 town keeps a hamlet's harbour)
 }
 
 /** She rises now (the calendar, an admin, a test). Returns her ship, or null with no water for her. */

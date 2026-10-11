@@ -21,6 +21,7 @@ import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { runAdmin } from '../server/src/game/admin.ts';
 import { claimBlock } from '../server/src/game/baseclaim.ts';
+import { rentable } from '../server/src/game/holdings.ts';
 import { citView, isCastellan, stepCitadels } from '../server/src/game/citadels.ts';
 import { act, blowParts, newBattle, quickFinish, reachOf, siegeLeft } from '../server/src/game/tacbattle.ts';
 import type { TacSideInput } from '../server/src/game/tacbattle.ts';
@@ -275,9 +276,10 @@ test('holding a citadel: the tax and the points each hour, men left in its garri
   const row = citView(game, s)!.rows[id];
   assert.equal(row.titan, true);
   for (const x of citGarrison(lv, CIT_OWN)) assert.ok(row.garrison.filter((y) => y.u === x.u).reduce((a, y) => a + y.n, 0) >= x.n, x.u);
-  // Nobody claims or rents its island.
+  // Nobody rents its island; a captain's own base may stand there (docs/29: claims without restrictions, an instance each).
   const isl = game.world.islands[buildCitadels(game.world)[id].island];
-  assert.equal(claimBlock(game, isl, s.accountId), 'A citadel of the Throne war stands on that island.');
+  assert.equal(claimBlock(game, isl, s.accountId), null);
+  assert.equal(rentable(isl), 'A citadel of the Throne war stands on that island.');
 });
 
 test('the Throne war’s season: the guild with the most points are the Masters of the Throne — the Pantheon, the title, the pennant, the ward', () => {

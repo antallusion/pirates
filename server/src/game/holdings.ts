@@ -27,7 +27,7 @@ import type { HoldingView, IslandOffer, SiegeView } from '../../../shared/src/pr
 import { cargoValue, cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
-import type { Island, Port } from '../../../shared/src/world/worldgen.ts';
+import type { Island, Port, World } from '../../../shared/src/world/worldgen.ts';
 import { siegesFor } from './siege.ts';
 import type { Siege } from './siege.ts';
 import { hireTrade } from './crew.ts';
@@ -40,6 +40,7 @@ import { deliver } from './post.ts';
 import { repairCost } from './ports.ts';
 import type { ShipEntity } from './ship.ts';
 import { SPEED_SCALE } from '../../../shared/src/constants.ts';
+import { ISLE_OF_HALL, SHIPYARD_REPAIR, hallOfIsle } from '../../../shared/src/data/isletree.ts';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -91,6 +92,95 @@ export interface Holding {
   yard?: Yard;
   /** Its claim (docs/15 items 6–7): what was paid, the waters' tax, raids and robbers. */
   claim?: IsleClaim;
+  /** docs/29: the tree's version its levels are on (TREE_VERSION). */
+  tv?: number;
+}
+
+// ------------------------------------------------------------------------------------------ one island a captain (docs/29)
+
+/** Where a captain's own island is kept: under her account, so many captains may hold the same island. */
+export const ownKey = (account: number): string => `p${account}`;
+
+const FAR_FUTURE = 4_102_444_800_000;
+
+/** A fresh island of her own: the town hall stands on it from the claim (docs/29), nothing else yet. */
+export function newOwnHolding(isl: { id: number }, owner: { id: number; name: string }, wall: number): Holding {
+  return {
+    island: isl.id, owner: { kind: 'player', id: owner.id, name: owner.name }, since: wall, until: FAR_FUTURE, lastDays: 30, autoRenew: false,
+    treasury: 0, store: {}, buildings: [], lastUpkeep: wall, lastWork: wall, toll: { day: 0, paid: 0 }, warned: false,
+    window: 19, windowNext: null, shieldUntil: FAR_FUTURE, lastSiege: 0, owned: true, level: 1, residents: [], tv: TREE_VERSION,
+    yard: { res: {}, carry: {}, fresh: {}, producers: [], jobs: [], lastYield: wall, seq: 1, ships: [], town: { b: { hall: 1 }, pool: [0, 0, 0, 0, 0, 0, 0, 0], w: -1 } },
+  };
+}
+
+/** The tree's version a holding's levels are on (1: five levels each, the hall carries the island). */
+export const TREE_VERSION = 1;
+
+/** The town's levels before the tree (hall/keep/market three, the dwellings two) on the tree's five: the citadel and the
+ *  exchange are the third level now, the castle and the merchants' guild the fifth, an upgraded dwelling the third (where
+ *  the upgraded kind is had). The hall: what the island's level stood for, or the old hall's level if higher. */
+const OLD_TOWN: Partial<Record<string, number[]>> = {
+  keep: [0, 1, 3, 5], market: [0, 1, 3, 5],
+  dw1: [0, 1, 3], dw2: [0, 1, 3], dw3: [0, 1, 3], dw4: [0, 1, 3], dw5: [0, 1, 3], dw6: [0, 1, 3], dw7: [0, 1, 3],
+};
+
+/** A captain's island raised before the tree, put on its levels (null: nothing to do). */
+export function migrateTree(h: Holding, wall: number): boolean {
+  if (!h.owned || (h.tv ?? 0) >= TREE_VERSION) return false;
+  h.yard ??= { res: {}, carry: {}, fresh: {}, producers: [], jobs: [], lastYield: wall, seq: 1, ships: [] };
+  h.yard.town ??= { b: {}, pool: [0, 0, 0, 0, 0, 0, 0, 0], w: -1 };
+  const t = h.yard.town;
+  t.b ??= {};
+  const map = (id: string, l: number) => {
+    const m = OLD_TOWN[id];
+    return m ? m[Math.max(0, Math.min(m.length - 1, Math.round(l)))] : l;
+  };
+  for (const id of Object.keys(t.b) as (keyof typeof t.b)[]) if (id !== 'hall') t.b[id] = map(id, t.b[id] ?? 0);
+  for (const j of h.yard.jobs ?? []) if (j.what.startsWith('t:') && j.what !== 't:hall') j.level = map(j.what.slice(2), j.level);
+  const oldHall = Math.max(0, Math.round(t.b.hall ?? 0));
+  const hall = Math.max(1, hallOfIsle(h.level ?? 1), oldHall);
+  t.b.hall = hall;
+  h.yard.jobs = (h.yard.jobs ?? []).filter((j) => !(j.what === 't:hall' && j.level <= hall));
+  h.level = Math.max(h.level ?? 1, ISLE_OF_HALL[hall]);
+  h.tv = TREE_VERSION;
+  return true;
+}
+
+/** The holdings put on docs/29's terms (idempotent): each captain keeps one island of her own under her key — the
+ *  greatest of hers if she had several (the rest are given up, their buildings with them) — on the tree's levels. */
+export function migrateHoldings(all: Record<string, Holding>, wall: number): { changed: boolean; dropped: Holding[] } {
+  let changed = false;
+  const dropped: Holding[] = [];
+  const by = new Map<number, string[]>();
+  for (const [k, h] of Object.entries(all)) {
+    if (!h?.owned || h.owner?.kind !== 'player') continue;
+    const list = by.get(h.owner.id) ?? [];
+    list.push(k);
+    by.set(h.owner.id, list);
+  }
+  const worth = (h: Holding) => [h.level ?? 1, h.yard?.town?.b?.hall ?? 0, h.buildings.length + (h.yard?.producers?.length ?? 0), -h.since];
+  const rank = (a: Holding, b: Holding) => {
+    const x = worth(a), y = worth(b);
+    for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return y[i] - x[i];
+    return 0;
+  };
+  for (const [acc, keys] of by) {
+    const want = ownKey(acc);
+    const best = keys.map((k) => all[k]).sort(rank)[0];
+    for (const k of keys) {
+      if (all[k] === best) continue;
+      dropped.push(all[k]);
+      delete all[k];
+      changed = true;
+    }
+    if (all[want] !== best) {
+      for (const k of keys) if (all[k] === best) delete all[k];
+      all[want] = best;
+      changed = true;
+    }
+    if (migrateTree(best, wall)) changed = true;
+  }
+  return { changed, dropped };
 }
 
 export class HoldingsHub {
@@ -101,12 +191,49 @@ export class HoldingsHub {
   private regionFaction = new Map<string, FactionId>();
 
   map(game: Game): Record<string, Holding> {
-    this.all ??= game.db.getKv<Record<string, Holding>>('holdings') ?? {};
+    if (!this.all) {
+      this.all = game.db.getKv<Record<string, Holding>>('holdings') ?? {};
+      // docs/29: one island a captain, kept under her own key (an instance per captain), on the tree's levels.
+      if (migrateHoldings(this.all, game.wallNow()).changed) this.dirty = true;
+    }
     return this.all;
   }
 
-  get(game: Game, island: number): Holding | undefined {
-    return this.map(game)[island];
+  /** The island's holding: a lease or a guild's (exclusive, by the island) — or, given a captain, her own island
+   *  there first (docs/29: many captains may hold the same island, each her own base on it). */
+  get(game: Game, island: number, account?: number): Holding | undefined {
+    const m = this.map(game);
+    if (account !== undefined) {
+      const own = m[ownKey(account)];
+      if (own && own.island === island) return own;
+    }
+    return m[island];
+  }
+
+  /** Her own island (docs/29: exactly one), wherever it is kept. */
+  own(game: Game, account: number): Holding | undefined {
+    const h = this.map(game)[ownKey(account)];
+    return h?.owned && h.owner.kind === 'player' && h.owner.id === account ? h : undefined;
+  }
+
+  /** Every captain's own island on this island (reckoned again when the holdings change). */
+  onIsland(game: Game, island: number): Holding[] {
+    const m = this.map(game);
+    if (!this.byIsle || this.byIsle.rev !== this.rev || this.byIsle.map !== m) {
+      const by = new Map<number, Holding[]>();
+      for (const h of Object.values(m)) if (h.owned && h.owner.kind === 'player') by.set(h.island, [...(by.get(h.island) ?? []), h]);
+      this.byIsle = { rev: this.rev, map: m, by };
+    }
+    return this.byIsle.by.get(island) ?? [];
+  }
+
+  private byIsle: { rev: number; map: object; by: Map<number, Holding[]> } | null = null;
+
+  /** The key a holding is kept under (a captain's own island under hers, the rest under the island). */
+  keyOf(game: Game, h: Holding): string {
+    const m = this.map(game);
+    if (h.owner.kind === 'player' && m[ownKey(h.owner.id)] === h) return ownKey(h.owner.id);
+    return Object.keys(m).find((k) => m[k] === h) ?? String(h.island);
   }
 
   touch(): void {
@@ -177,7 +304,7 @@ export function mayUse(game: Game, h: Holding, accountId: number): boolean {
   return game.guildMember?.(h.owner.id, accountId) ?? false;
 }
 
-export function rentable(isl: Island): string | null {
+export function rentable(isl: Island, _world?: World): string | null {
   if (isl.portId) return 'Port islands are not for rent';
   if (isCitadelIsland(isl)) return 'A citadel of the Throne war stands on that island.'; // docs/19 E4
   const mul = rentZoneMul(isl.region);
@@ -260,7 +387,7 @@ function ownedBy(game: Game, accountId: number): Holding[] {
 export function rentIsland(game: Game, s: PlayerSession, islandId: number, days: number, forGuild = false): string | null {
   const isl = island(game, islandId);
   if (!isl) return 'No such island';
-  const why = rentable(isl);
+  const why = rentable(isl, game.world);
   if (why) return why;
   if (!RENT_DAYS.includes(days as RentDays)) return 'A lease runs 7, 14 or 30 days';
   if (!atHand(game, s, isl)) return `Sail to ${isl.name}, or ask at a harbour office in ${REGIONS[isl.region].name}`;
@@ -272,7 +399,7 @@ export function rentIsland(game: Game, s: PlayerSession, islandId: number, days:
   const guild = forGuild ? guildCanLease(game, s) : null;
   if (typeof guild === 'string') return guild;
   if (!guild && (!cur || !mayUse(game, cur, s.accountId))) {
-    if (ownedBy(game, s.accountId).length >= LIMIT_PERSONAL) return 'A captain may hold one island of their own';
+    if (ownedBy(game, s.accountId).filter((x) => !x.owned).length >= LIMIT_PERSONAL) return 'A captain may hold one island of their own';
   }
   const price = rentPrice(isl, days as RentDays);
   if (guild) {
@@ -305,7 +432,7 @@ export function rentIsland(game: Game, s: PlayerSession, islandId: number, days:
 }
 
 export function setAutoRenew(game: Game, s: PlayerSession, islandId: number, on: boolean): string | null {
-  const h = game.holdings.get(game, islandId);
+  const h = game.holdings.get(game, islandId, s.accountId);
   if (!h || !mayUse(game, h, s.accountId)) return 'Not your island';
   h.autoRenew = !!on;
   game.holdings.touch();
@@ -313,7 +440,7 @@ export function setAutoRenew(game: Game, s: PlayerSession, islandId: number, on:
 }
 
 export function treasuryMove(game: Game, s: PlayerSession, islandId: number, amount: number): string | null {
-  const h = game.holdings.get(game, islandId);
+  const h = game.holdings.get(game, islandId, s.accountId);
   const isl = island(game, islandId);
   if (!h || !isl || !mayUse(game, h, s.accountId)) return 'Not your island';
   if (!atHand(game, s, isl)) return `At ${isl.name}, or a harbour office in its region`;
@@ -336,7 +463,7 @@ export function treasuryMove(game: Game, s: PlayerSession, islandId: number, amo
 // ------------------------------------------------------------------------------------------ building
 
 export function build(game: Game, s: PlayerSession, islandId: number, id: BuildingId): string | null {
-  const h = game.holdings.get(game, islandId);
+  const h = game.holdings.get(game, islandId, s.accountId);
   const isl = island(game, islandId);
   if (!h || !isl || !mayUse(game, h, s.accountId)) return 'Not your island';
   const def = BUILDINGS[id];
@@ -377,7 +504,7 @@ export function build(game: Game, s: PlayerSession, islandId: number, id: Buildi
 }
 
 export function demolish(game: Game, s: PlayerSession, islandId: number, index: number): string | null {
-  const h = game.holdings.get(game, islandId);
+  const h = game.holdings.get(game, islandId, s.accountId);
   if (!h || !mayUse(game, h, s.accountId)) return 'Not your island';
   const b = h.buildings[index];
   if (!b) return 'No such building';
@@ -390,7 +517,7 @@ export function demolish(game: Game, s: PlayerSession, islandId: number, index: 
 // ------------------------------------------------------------------------------------------ the store
 
 export function storeMove(game: Game, s: PlayerSession, islandId: number, good: GoodId, qty: number): string | null {
-  const h = game.holdings.get(game, islandId);
+  const h = game.holdings.get(game, islandId, s.accountId);
   const isl = island(game, islandId);
   if (!h || !isl || !mayUse(game, h, s.accountId)) return 'Not your island';
   const ship = s.ship!;
@@ -423,7 +550,7 @@ export function storeMove(game: Game, s: PlayerSession, islandId: number, good: 
 // ------------------------------------------------------------------------------------------ services
 
 export function islandService(game: Game, s: PlayerSession, islandId: number, what: string, arg: string | number): string | null {
-  const h = game.holdings.get(game, islandId);
+  const h = game.holdings.get(game, islandId, s.accountId);
   const isl = island(game, islandId);
   if (!h || !isl || !mayUse(game, h, s.accountId)) return 'Not your island';
   const ship = s.ship!;
@@ -432,8 +559,10 @@ export function islandService(game: Game, s: PlayerSession, islandId: number, wh
   switch (what) {
     case 'repair': {
       if (!has(h, 'shipyard')) return 'No shipyard here';
-      if (ship.cls.tier > (has(h, 'dry_dock') ? 4 : 3)) return `This yard cannot take a tier ${ship.cls.tier} hull`;
-      const cost = Math.ceil(repairCost(ship) * (has(h, 'dry_dock') ? 0.75 : 1));
+      // docs/29: one's own shipyard by its level — a tier IV hull from its fourth, and a share off the bill at each.
+      const yardLv = h.owned ? Math.max(1, ...h.buildings.filter((b) => b.id === 'shipyard').map((b) => b.level ?? 1)) : 0;
+      if (ship.cls.tier > (has(h, 'dry_dock') || yardLv >= 4 ? 4 : 3)) return `This yard cannot take a tier ${ship.cls.tier} hull`;
+      const cost = Math.ceil(repairCost(ship) * (has(h, 'dry_dock') ? 0.75 : 1) * (1 - (SHIPYARD_REPAIR[yardLv] ?? 0)));
       if (cost <= 0) return 'She is already sound';
       if (p.gold < cost) return `Repairs cost ${cost} silver`;
       p.gold -= cost;
@@ -485,7 +614,7 @@ export function islandService(game: Game, s: PlayerSession, islandId: number, wh
 
 /** A hull laid down at the island's yard uses the shipbuilding code with the island as its port. */
 export function islandYard(game: Game, s: PlayerSession, islandId: number): Port | string {
-  const h = game.holdings.get(game, islandId);
+  const h = game.holdings.get(game, islandId, s.accountId);
   const isl = island(game, islandId);
   if (!h || !isl || !mayUse(game, h, s.accountId)) return 'Not your island';
   if (!has(h, 'shipyard')) return 'No shipyard here';
@@ -495,7 +624,7 @@ export function islandYard(game: Game, s: PlayerSession, islandId: number): Port
 
 /** Owners may choose the daily siege window (UTC hour); a change takes effect in 48 h. */
 export function setWindow(game: Game, s: PlayerSession, islandId: number, hour: number): string | null {
-  const h = game.holdings.get(game, islandId);
+  const h = game.holdings.get(game, islandId, s.accountId);
   if (!h || !mayUse(game, h, s.accountId)) return 'Not your island';
   const hr = Math.trunc(Number(hour));
   if (!(hr >= 16 && hr <= 22)) return 'The window opens between 16:00 and 22:00 UTC';
@@ -540,7 +669,7 @@ export function stepHoldings(game: Game): void {
     }
     // The guns.
     const guns = 8 * strength(h, 'battery') + 24 * strength(h, 'fort');
-    if (guns > 0 && (hub.nextSalvo.get(h.island) ?? 0) <= now) fireShoreGuns(game, h, isl, guns);
+    if (guns > 0 && (hub.nextSalvo.get(salvoKey(h)) ?? 0) <= now) fireShoreGuns(game, h, isl, guns);
     // Whoever fires on the owner's ships near the island is marked for the guns.
     for (const o of owners) {
       for (const [id, t] of o.attackers) {
@@ -562,6 +691,9 @@ export function stepHoldings(game: Game): void {
     hub.save(game);
   }
 }
+
+/** Each holding's guns keep their own time (many captains' islands may share an island: docs/29). */
+const salvoKey = (h: Holding): number => (h.owned && h.owner.kind === 'player' ? -1 - h.owner.id : h.island);
 
 function hostileToIsland(game: Game, h: Holding, o: ShipEntity): boolean {
   if (!o.alive || o.docked) return false;
@@ -587,7 +719,7 @@ function fireShoreGuns(game: Game, h: Holding, isl: Island, guns: number): void 
   const lead = 1.4;
   const v = { x: Math.sin(t.state.heading) * t.state.speed * SPEED_SCALE, y: -Math.cos(t.state.heading) * t.state.speed * SPEED_SCALE };
   game.strikes.push({ at: game.now + lead, x: t.state.x + v.x * lead, y: t.state.y + v.y * lead, radius: Math.max(22, 60 - guns * 1.2), hull: 45, rudder: 0, owner: 0, slow: 0, shells: Math.max(1, Math.round(guns)), fx: 'barrage' });
-  game.holdings.nextSalvo.set(h.island, game.now + 12);
+  game.holdings.nextSalvo.set(salvoKey(h), game.now + 12);
   game.emit({ k: 'fx', fx: 'war_cry', x: Math.round(isl.x), y: Math.round(isl.y), r: 60 }, isl.x, isl.y);
 }
 
@@ -698,6 +830,15 @@ function produce(game: Game, h: Holding, isl: Island, hours: number): void {
 function upkeep(game: Game, h: Holding, isl: Island): void {
   // Income first: the tavern and the village.
   h.treasury += Math.round((200 + game.rng.float() * 400) * strength(h, 'tavern') + 300 * strength(h, 'fishing_village'));
+  // docs/29: one's own island keeps its buildings for what they cost to raise — no daily upkeep, and nothing falls to
+  // ruin; a building weathered by raiders mends a tenth a day.
+  if (h.owned) {
+    for (const b of h.buildings) {
+      b.unpaid = false;
+      b.condition = Math.min(1, Math.max(0.05, b.condition) + 0.1);
+    }
+    return;
+  }
   // A guild base costs its weekly keep; unpaid, it slips a level.
   if (h.owner.kind === 'guild' && (h.base ?? 0) > 0) {
     const keep = baseUpkeepPerDay(game, h.owner.id, h.base!, h.island);
@@ -742,7 +883,7 @@ function forfeit(game: Game, h: Holding, isl: Island): void {
     game.loot.set(id, { id, x: isl.x + Math.sin(a) * (isl.radius + 60), y: isl.y - Math.cos(a) * (isl.radius + 60), cargo: left, gold: 0, expires: game.now + 3600 });
   }
   notify(game, h, `${isl.name} is lost`, `The lease lapsed and the rights went back to the ${game.holdings.factionOf(game, isl.region)}. The buildings are ruins; what was left in the store lies on the beach.`);
-  delete game.holdings.map(game)[h.island];
+  delete game.holdings.map(game)[game.holdings.keyOf(game, h)];
   game.holdings.touch();
 }
 
@@ -774,7 +915,7 @@ export function islandOffer(game: Game, isl: Island): IslandOffer {
   const h = game.holdings.get(game, isl.id);
   return {
     island: isl.id, name: isl.name, region: isl.region, x: Math.round(isl.x), y: Math.round(isl.y), size: islandSize(isl.radius), slots: islandSlots(isl.radius, isl.region), biome: isl.biome,
-    mine: isl.features.includes('mine'), price: { 7: rentPrice(isl, 7), 14: rentPrice(isl, 14), 30: rentPrice(isl, 30) }, held: h ? h.owner.name : null, why: rentable(isl),
+    mine: isl.features.includes('mine'), price: { 7: rentPrice(isl, 7), 14: rentPrice(isl, 14), 30: rentPrice(isl, 30) }, held: h ? h.owner.name : null, why: rentable(isl, game.world),
   };
 }
 

@@ -131,7 +131,7 @@ function holdOf(c: Caravan): number {
 
 function speedOf(game: Game, c: Caravan): number {
   const slowest = Math.min(...c.ships.map((x) => SHIP_CLASSES[x.loadout.classId].maxSpeed));
-  const h = island(game, c.island) ? game.holdings.get(game, c.island) : undefined;
+  const h = island(game, c.island) ? game.holdings.get(game, c.island, c.owner) : undefined;
   const pilot = h?.residents?.some((r) => r.prof === 'pilot') ? 1.1 : 1;
   const nav = c.skipperRec?.traits.includes('navigator') ? SKIPPER_SPEED : 1;
   return slowest * 0.55 * pilot * nav * SPEED_SCALE;
@@ -446,7 +446,7 @@ function rollAttack(game: Game, c: Caravan): void {
   let risk = RISK[REGIONS[region].safety] ?? 0;
   if (c.orders.avoidLawless && REGIONS[region].safety === 'lawless') risk *= 0.3;
   if (c.orders.nightInPort) risk *= 0.6;
-  const h = game.holdings.get(game, c.island);
+  const h = game.holdings.get(game, c.island, c.owner);
   if (h && has(h, 'signal_tower') && island(game, c.island)?.region === region) risk *= 0.67;
   if (c.skipperRec?.traits.includes('wary')) risk *= SKIPPER_RISK;
   if (!S.rng.chance(risk / 60)) return;
@@ -567,7 +567,7 @@ function arriveAt(game: Game, c: Caravan, stop: Stop): void {
     return;
   }
   if (stop.kind === 'isle') {
-    const h = game.holdings.get(game, c.island);
+    const h = game.holdings.get(game, c.island, c.owner);
     if (!h) return;
     for (const [g, n] of Object.entries(c.cargo) as [GoodId, number][]) {
       const free = Math.floor((storeCapacity(h) - cargoVolume(h.store)) / GOODS[g].volume);
@@ -656,7 +656,7 @@ function finish(game: Game, c: Caravan): void {
   if (c.orders.repeat && plan(game, c)) {
     if (c.task === 'sell') {
       // A standing sale takes the island's goods again.
-      const h = game.holdings.get(game, c.island);
+      const h = game.holdings.get(game, c.island, c.owner);
       if (h) for (const g of c.goods.length ? c.goods : (Object.keys(h.store) as GoodId[])) {
         const k = Math.min(h.store[g] ?? 0, Math.floor(room(c) / GOODS[g].volume));
         if (k <= 0) continue;

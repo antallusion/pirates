@@ -11,6 +11,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { dist } from '../../../shared/src/math.ts';
 import type { TradeRunView } from '../../../shared/src/protocol.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
+import { harboursBeforeTowns } from '../../../shared/src/world/worldgen.ts';
 import { applyTrade, midPrice } from './economy.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { Game } from './Game.ts';
@@ -29,7 +30,9 @@ let seq = 1;
 export function makeRun(game: Game, from: Port, leg: number, house = game.rng.int(0, RUN_HOUSES.length - 1), avoid: GoodId[] = []): TradeRun | null {
   const here = game.markets.get(from.id);
   if (!here) return null;
-  const dests = game.world.ports
+  // (docs/29: the houses run between the harbours before step 9 — a hamlet's town is no house's call, and the boards
+  // keep the runs they drew before the towns)
+  const dests = harboursBeforeTowns(game.world)
     .filter((q) => q.id !== from.id && dist(q.x, q.y, from.x, from.y) > 5000 && dist(q.x, q.y, from.x, from.y) < 30000 && game.markets.has(q.id))
     .sort(() => game.rng.float() - 0.5)
     .slice(0, 8);

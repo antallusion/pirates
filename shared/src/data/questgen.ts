@@ -602,6 +602,9 @@ export const PLOTS: Plot[] = [
 // ------------------------------------------------------------------ the generator
 
 const PER_PORT = 85;
+/** docs/29: a harbour town of step 9 keeps a small board (some three hundred towns of eighty-five each would be twenty
+ *  thousand jobs more). */
+const TOWN_JOBS = 12;
 
 /** A plot's size against a quest of the usual size at its level (docs/26): its old reward over the old usual one of its
  *  level (150 + 40 a level) — a letter carried is half a quest, a named pirate trailed and sunk a quest and a half. */
@@ -652,6 +655,7 @@ export function generateQuests(world: World, seed: number): QuestDef[] {
   const full = world;
   world = legacyWorld(world); // docs/18 III: the jobs a saved game knows keep their islands
   const out: QuestDef[] = [];
+  const ids = new Set<string>(); // (a set: the quadratic search of the list took seconds once the ports were three hundred)
   const ports = world.ports;
   const lifeCache = new Map<number, string[]>();
   const sitesOf = (is: Island): string[] => {
@@ -663,21 +667,22 @@ export function generateQuests(world: World, seed: number): QuestDef[] {
     return hit;
   };
   /** A port's jobs, from her own dice: sent to the `near` harbours (the nearest first), rowed to the islands about her. */
-  const jobsOf = (port: Port, near: Port[], home: Island | undefined) => {
+  const jobsOf = (port: Port, near: Port[], home: Island | undefined, per = PER_PORT) => {
     const rng = new Rng((hashString(port.id) ^ (seed * 2654435761)) >>> 0);
     const islandsNear = world.islands.filter((is) => !is.portId && !is.minor && is.id !== home?.id && Math.hypot(is.x - port.x, is.y - port.y) < 26000);
     const plots = PLOTS.filter((pl) => safetyOk(pl, port));
     const levelBase = REGION_LEVEL[REGIONS[port.region].safety] ?? 0;
     let made = 0;
-    for (let round = 0; made < PER_PORT && round < 6; round++) {
+    for (let round = 0; made < per && round < 6; round++) {
       for (const plot of [...plots].sort(() => rng.float() - 0.5)) {
-        if (made >= PER_PORT) break;
+        if (made >= per) break;
         const k = Math.floor(rng.float() * plot.flavors.length);
         const flavor = plot.flavors[k];
         const params = rollParams(rng, plot, flavor, port, near, islandsNear, sitesOf);
         if (!params) continue;
         const id = `g_${port.id}_${plot.id}_${k}_${round}`;
-        if (out.some((q) => q.id === id)) continue;
+        if (ids.has(id)) continue;
+        ids.add(id);
         out.push(build(id, plot, flavor, params, levelBase));
         made++;
       }
@@ -689,7 +694,12 @@ export function generateQuests(world: World, seed: number): QuestDef[] {
   for (const port of ports) jobsOf(port, byDistance(port, ports), world.islands[port.islandId]);
   // Step 8's twenty towns (shared/src/world/newports.ts): as many jobs each, on the same islands, sent to the old
   // harbours and to one another — after every job before, each of which keeps her id and her course.
-  for (const port of full.ports.slice(full.portsFrom ?? full.ports.length)) jobsOf(port, byDistance(port, full.ports), full.islands[port.islandId]);
+  // (sent to the harbours before step 9, so their courses stay as they were: docs/29)
+  const upto = full.townsFrom ?? full.ports.length;
+  const before = full.ports.slice(0, upto);
+  for (const port of full.ports.slice(full.portsFrom ?? upto, upto)) jobsOf(port, byDistance(port, before), full.islands[port.islandId]);
+  // docs/29 step 9's harbour towns (shared/src/world/towns.ts): a small board each, after every job before.
+  for (const port of full.ports.slice(upto)) jobsOf(port, byDistance(port, full.ports), full.islands[port.islandId], TOWN_JOBS);
   return out;
 }
 

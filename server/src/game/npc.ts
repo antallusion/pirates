@@ -21,7 +21,7 @@ import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
-import { depthAt, isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
+import { depthAt, harboursBeforeTowns, isLand, isTownPort, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { clearAt } from '../../../shared/src/world/solids.ts';
 import { laneFoul } from './seaway.ts';
 import { sectorAt } from '../../../shared/src/world/sectors.ts';
@@ -145,7 +145,8 @@ function cruiseSpeed(ship: ShipEntity): number {
 export function planMerchantVoyage(game: Game, ship: ShipEntity, brain: NpcBrain, from: Port): boolean {
   // Counting House caravans trade only between ports their owner has visited.
   const owner = ship.caravanOf !== null ? game.sessionByAccount(ship.caravanOf) : null;
-  const ports = (owner?.profile ? game.world.ports.filter((p) => owner.profile!.regionsSeen.includes(`visited:${p.id}`)) : game.world.ports).filter((p) => game.inZone(p.x, p.y) && !avoidPort(game, p.id));
+  // (docs/29: the sea's merchants trade between the harbours before step 9; a captain's caravan between those she has seen)
+  const ports = (owner?.profile ? game.world.ports.filter((p) => owner.profile!.regionsSeen.includes(`visited:${p.id}`)) : harboursBeforeTowns(game.world)).filter((p) => game.inZone(p.x, p.y) && !avoidPort(game, p.id));
   const route = bestRoute(from, game.markets, ports, () => game.rng.float(), 38000);
   ship.caravanFrom = ship.caravanOf !== null ? from.id : null;
   ship.originPort = from.id;
@@ -165,7 +166,7 @@ export function planMerchantVoyage(game: Game, ship: ShipEntity, brain: NpcBrain
   }
   if (!dest) {
     // No profitable route: sail in ballast to a random port nearby.
-    const near = game.world.ports.filter((p) => p.id !== from.id && Math.hypot(p.x - from.x, p.y - from.y) < 30000 && game.inZone(p.x, p.y) && !avoidPort(game, p.id));
+    const near = harboursBeforeTowns(game.world).filter((p) => p.id !== from.id && Math.hypot(p.x - from.x, p.y - from.y) < 30000 && game.inZone(p.x, p.y) && !avoidPort(game, p.id));
     if (!near.length) return false;
     dest = pick(game, near);
   }
@@ -1087,8 +1088,14 @@ export interface NpcQuota {
 // docs/19 D3: twice the 140/68/40/3 the sea kept.
 export const QUOTA: NpcQuota = { merchants: 280, pirates: 136, fishers: 80, ghosts: 6 };
 
+/** The zone's harbours before step 9 (docs/29: the harbour towns take no part in the sea's traffic). */
+function oldZonePorts(game: Game): Port[] {
+  const old = harboursBeforeTowns(game.world);
+  return game.zone ? old.filter((p) => game.zone!.regions.has(p.region)) : old;
+}
+
 export function spawnMerchant(game: Game): void {
-  const ports = game.zonePorts();
+  const ports = oldZonePorts(game); // (docs/29: put out from the harbours before step 9, as the sea's traffic was weighed)
   const weights = ports.map((p) => [p, p.size * p.size] as const);
   const port = game.rng.weighted(weights);
   // Her level (canon D12) by the port's square of the sea (docs/16 P2), leaning low; the hull to match, flutes most of all.
@@ -1181,7 +1188,7 @@ export function levelNear(game: Game, prey: ShipEntity, region: RegionId, x = pr
 }
 
 export function spawnFisher(game: Game): void {
-  const ports = game.zonePorts().filter((p) => REGIONS[p.region].safety !== 'lawless');
+  const ports = oldZonePorts(game).filter((p) => REGIONS[p.region].safety !== 'lawless');
   if (!ports.length) return;
   const port = game.rng.pick(ports);
   const ship = game.spawnNpcShip('fisher', 'cutter', port.faction === 'crown' ? 'crown' : 'free', port.x, port.y, game.rng.range(0, 6.28));
@@ -1205,7 +1212,7 @@ export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' 
   if (!openSea(game, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500 || !game.inZone(x, y)) return null;
   const region = regionAt(game.world, x, y);
   const safety = REGIONS[region].safety;
-  const port = game.nearestPort(x, y);
+  const port = game.nearestPort(x, y, (p) => !isTownPort(game.world, p)); // (docs/29: the sea's traffic by the harbours before step 9)
   let faction: FactionId;
   if (role === 'merchant') faction = !port || port.faction === 'crown' ? 'league' : port.faction === 'choir' || port.faction === 'confederacy' ? 'free' : port.faction;
   else if (role === 'fisher') faction = port?.faction === 'crown' ? 'crown' : 'free';

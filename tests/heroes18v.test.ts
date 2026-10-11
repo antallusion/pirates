@@ -72,12 +72,16 @@ test('the land\'s resources: the town\'s upgrades ask for them; the store keeps 
   assert.ok(typeof m !== 'string');
   const { h, y } = m;
   const t = townState(y);
-  t.b.keep = 1;
-  t.b.dw2 = 1;
-  for (const g of ['timber', 'coal', 'iron', 'tar', 'gunpowder', 'rum', 'pearls'] as const) y.res[g] = 500;
+  // docs/29: the upgrade is the dwelling's third level on the tree (the hall at 3, the bunkhouse at 3, the keep at 2).
+  t.b.hall = 3;
+  t.b.keep = 2;
+  t.b.dw1 = 3;
+  t.b.dw2 = 2;
+  for (const g of ['timber', 'coal', 'iron', 'tar', 'gunpowder', 'rum', 'pearls'] as const) y.res[g] = 1500;
   (h as unknown as { level: number }).level = 10;
-  assert.deepEqual(townLand('dw2', 2), { shell: 6 });
+  assert.deepEqual(townLand('dw2', 3), { shell: 6 });
   assert.deepEqual(townLand('dw2', 1), {}, 'the first level asks none');
+  assert.deepEqual(townLand('dw2', 2), {}, 'nor the second');
   lairsOf(s.profile!).res.shell = 0;
   assert.match(buildTown(game, s, 'dw2') ?? '', /shell/, 'no shell, no upgrade');
   lairsOf(s.profile!).res.shell = 10;

@@ -720,8 +720,9 @@ function sellableCharts(game: Game, s: PlayerSession, port: Port): Island[] {
 /** Undiscovered islands a cartographer here can sell for a region, closest to the port first. */
 /** A hidden cove keeps its island off every chart sold in port (but its own people know the way). */
 function coveHidden(game: Game, islandId: number, accountId: number): boolean {
-  const h = game.holdings.get(game, islandId);
-  return !!h && h.buildings.some((b) => b.id === 'hidden_cove') && !mayUse(game, h, accountId);
+  // docs/29: any captain's own island here with a cove (her own excepted), or a lease's.
+  const all = [game.holdings.get(game, islandId), ...game.holdings.onIsland(game, islandId)];
+  return !all.some((h) => h && mayUse(game, h, accountId)) && all.some((h) => !!h && h.buildings.some((b) => b.id === 'hidden_cove'));
 }
 
 function chartForRegion(game: Game, s: PlayerSession, port: Port, region: RegionId): Island[] {

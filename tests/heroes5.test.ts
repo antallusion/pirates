@@ -324,7 +324,7 @@ test('the picked men\'s might cap: a ship\'s trained men and upgrades held to he
   const ship = s.ship!;
   const y = yardOf(game, ownIsland(game, s.accountId)!);
   const t = townState(y);
-  t.b = { keep: 1, dw1: 1, dw2: 2 };
+  t.b = { keep: 1, dw1: 1, dw2: 3 }; // docs/29: the upgraded kind from the dwelling's third level
   t.w = thisWeek(game);
   t.pool = [0, 50, 50, 0, 0, 0, 0, 0];
   const M = ship.stats.crewMax;

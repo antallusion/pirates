@@ -13,6 +13,8 @@ import type { IslandBiome } from '../world/regions.ts';
 import { BUILDINGS } from './holdings.ts';
 import type { BuildingId, IslandSize } from './holdings.ts';
 import type { Tr } from './estate.ts';
+import { isTreeBase, treeCost } from './isletree.ts';
+import type { TreeId } from './isletree.ts';
 
 /** The yard's resources, in the order the window shows them. */
 export type BaseRes = 'timber' | 'coal' | 'tar' | 'iron' | 'provisions';
@@ -134,6 +136,8 @@ export const SHIPYARD_FOUND = 20_000;
 
 /** What raising a thing to a level costs (level 1: founding it). */
 export function baseCost(what: string, level: number): BaseCost {
+  // docs/29: the tree's own buildings of the base (the warehouse, the shipyard, the guns) by the tree's costs.
+  if (isTreeBase(what)) return treeCost(what as TreeId, level);
   const kind = producerOf(what);
   const k = levelMul(level);
   if (kind) {

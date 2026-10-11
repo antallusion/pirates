@@ -49,7 +49,9 @@ import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 import { applyTattoos, earnTattoo, offerChoice, sanitizeTattoos, sendTattoos } from './tattoos.ts';
 import { TATTOOS, TATTOO_BY_ID } from '../../../shared/src/data/sidequests.ts';
 import { ownIsland } from './estate.ts';
-import { capOf, grantSpeedups, plotCount, yardOf } from './base.ts';
+import { baseView, capOf, grantSpeedups, plotCount, reckonBase, yardOf } from './base.ts';
+import { newOwnHolding, ownKey } from './holdings.ts';
+import { ISLE_OF_HALL, TREE_TOWN, hallOfIsle } from '../../../shared/src/data/isletree.ts';
 import { groupAnswer, groupInvite, groupOfAccount, lfgPost } from './party.ts';
 import { prefOf } from './boardgroup.ts'; // docs/25 block Е
 import { worldGoalsAdd } from './worldgoals.ts';
@@ -58,7 +60,7 @@ import { sendSignal } from './signals.ts';
 import { foundGuild } from './guilds.ts';
 import { LFG_GOALS, SIGNALS } from '../../../shared/src/data/social.ts';
 import type { LfgGoal, SignalKind } from '../../../shared/src/data/social.ts';
-import { claimOf, isleWorth, raidNow, startIsleRaid, stepIsleClaim } from './baseclaim.ts';
+import { claimFee, claimOf, claimsMade, isleWorth, raidNow, startIsleRaid, stepIsleClaim } from './baseclaim.ts';
 import { fatMark } from '../../../shared/src/data/baseclaim.ts';
 import { OWN_NAMES, OWN_ROLES, OWN_SHIPS_MAX, SHIPYARD_MAX, YARD_SHIP_LEVEL, hullFor, ownXpNext, roleLevels, yardLevelFor } from '../../../shared/src/data/baseships.ts';
 import type { OwnRole } from '../../../shared/src/data/baseships.ts';
@@ -179,7 +181,7 @@ const KIT_BUILD: string[] = [
   'srv_carpenters', 'srv_carpenters', 'srv_carpenters', 'srv_bucket_brigade', 'srv_bucket_brigade', 'srv_iron_hull', 'srv_iron_hull', 'srv_iron_hull',
 ];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] [grapple|hunt] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level|go] · /prim [atk|def|pow|will N|reset] · /skill id [0-3]|offer [n]|clear · /order id|all|clear · /art [id|set regalia|hook|storm|list] · /will [N|full] · /guard [go|beat|weak|board|reset] [kind] [level] · /obj [kind] [go|reset] · /obelisk [n|all|go] · /grail [go|found|reset] · /isle level|type kind|atoll|ridge|small|hidden [reveal]|danger [deadly] · /zone [go] · /turtle [go|up|down|off] · /sandbar · /supply [claim|link|week] · /path [learn page|forget] · /stam [N|full] · /scroll [page|random|clear] [n] · /pathfoe [path] [class] [grapple] · /lair [kind] [go|fight|beat|weak|reset|chain|grotto|guardian|dwell|turtle|sandbar] · /creature [kind] [n] · /egg [kind|hatch|grow] · /landres [n] · /drift [kind|legend|whale|kraken] [go|save|fail|fight|clear] · /tame [kind] [wins N|rank R|hunger S|pen N|slip] · /feed [N|starve] · /tamer [go] · /landecon [fit id rank|cap] · /bestiary [all|clear|kind] · /seamark [drift|wreck|buoy|lantern|bones|floe] [go|done|reset] · /glory [n|xp N|reset] · /mastery [node|branch|all|reset] · /trial [skill] [go|win|lose|reset] · /find [bottle|flyfish|calm|gulls|boat|chest] [go|done|reset] · /haul [reset] · /stack [kind] [go|fight|beat|reset] · /doubloons [N|-N|sample [on|off]] · /zboss [region] [rise|here|leave|kill|announce|reset] · /flag [neutral|faction|pirate] [city] · /noboard on|off · /seal [lv N|kind K|go|win|lose|reset|board] · /titan [kind|grail|reset] · /maw [tier N|win|lose|go|reset|board] · /relic [id|parts id|all|drop [N]|clear] · /invasion [region|start|wave|win|fail|clear] · /cit [go|guild|window|siege|win|own|lose|free|points N|season|reset] [n] · /contract [list|take N|done N|week|reset|go N] · /arena [queue|bot|win|lose|rating N|season|reset] · /mates name [name] · /kit [show|build|charge|facet id 3|5 a|b|clear] · /refund charge_id · /mute name minutes · /castaway [n]';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] [grapple|hunt] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level|go] · /prim [atk|def|pow|will N|reset] · /skill id [0-3]|offer [n]|clear · /order id|all|clear · /art [id|set regalia|hook|storm|list] · /will [N|full] · /guard [go|beat|weak|board|reset] [kind] [level] · /obj [kind] [go|reset] · /obelisk [n|all|go] · /grail [go|found|reset] · /isle level|type kind|atoll|ridge|small|hidden [reveal]|danger [deadly] · /zone [go] · /turtle [go|up|down|off] · /sandbar · /supply [claim|link|week] · /path [learn page|forget] · /stam [N|full] · /scroll [page|random|clear] [n] · /pathfoe [path] [class] [grapple] · /lair [kind] [go|fight|beat|weak|reset|chain|grotto|guardian|dwell|turtle|sandbar] · /creature [kind] [n] · /egg [kind|hatch|grow] · /landres [n] · /drift [kind|legend|whale|kraken] [go|save|fail|fight|clear] · /tame [kind] [wins N|rank R|hunger S|pen N|slip] · /feed [N|starve] · /tamer [go] · /landecon [fit id rank|cap] · /bestiary [all|clear|kind] · /seamark [drift|wreck|buoy|lantern|bones|floe] [go|done|reset] · /glory [n|xp N|reset] · /mastery [node|branch|all|reset] · /trial [skill] [go|win|lose|reset] · /find [bottle|flyfish|calm|gulls|boat|chest] [go|done|reset] · /haul [reset] · /stack [kind] [go|fight|beat|reset] · /doubloons [N|-N|sample [on|off]] · /zboss [region] [rise|here|leave|kill|announce|reset] · /flag [neutral|faction|pirate] [city] · /noboard on|off · /seal [lv N|kind K|go|win|lose|reset|board] · /titan [kind|grail|reset] · /maw [tier N|win|lose|go|reset|board] · /relic [id|parts id|all|drop [N]|clear] · /invasion [region|start|wave|win|fail|clear] · /cit [go|guild|window|siege|win|own|lose|free|points N|season|reset] [n] · /contract [list|take N|done N|week|reset|go N] · /arena [queue|bot|win|lose|rating N|season|reset] · /mates name [name] · /kit [show|build|charge|facet id 3|5 a|b|clear] · /refund charge_id · /mute name minutes · /castaway [n] · /island [free|claims N|go] · /build [finish|tree N]';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -446,24 +448,85 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       // docs/18 III: an island's level and kind, the islands of step 6, the hidden, the dangerous.
       if (['level', 'type', 'atoll', 'ridge', 'small', 'hidden', 'danger'].includes(args[0])) return isle18Admin(game, s, 'isle', args);
       // An island of one's own for play-testing the base (docs/15): /isle [level] — the nearest wild island of a
-      // safe or contested sea is given outright, or one's own raised to that level.
+      // safe or contested sea is given outright, or one's own raised to that level (docs/29: the hall with it).
       let h = ownIsland(game, s.accountId);
       if (!h) {
-        const wild = game.world.islands.filter((i) => !i.portId && BUY_REGIONS.includes(i.region) && i.radius > 150 && !game.holdings.get(game, i.id));
+        const wild = game.world.islands.filter((i) => !i.portId && BUY_REGIONS.includes(i.region) && i.radius > 150);
         const best = wild.sort((a, b) => Math.hypot(a.x - ship.state.x, a.y - ship.state.y) - Math.hypot(b.x - ship.state.x, b.y - ship.state.y))[0];
         if (!best) return 'No wild island to give.';
-        const now = game.wallNow();
-        h = {
-          island: best.id, owner: { kind: 'player', id: s.accountId, name: s.name }, since: now, until: 4_102_444_800_000, lastDays: 30, autoRenew: false,
-          treasury: 0, store: {}, buildings: [], lastUpkeep: now, lastWork: now, toll: { day: 0, paid: 0 }, warned: false,
-          window: 19, windowNext: null, shieldUntil: 4_102_444_800_000, lastSiege: 0, owned: true, level: 1, residents: [],
-        };
-        game.holdings.map(game)[best.id] = h;
+        h = newOwnHolding(best, { id: s.accountId, name: s.name }, game.wallNow());
+        game.holdings.map(game)[ownKey(s.accountId)] = h;
+        s.profile!.isleClaims = Math.max(1, s.profile!.isleClaims ?? 0);
       }
-      if (args[0] !== undefined) h.level = Math.max(1, Math.min(ISLE_MAX, Math.round(num(0, 1))));
+      if (args[0] !== undefined) {
+        h.level = Math.max(1, Math.min(ISLE_MAX, Math.round(num(0, 1))));
+        const t = yardOf(game, h).town ?? (h.yard!.town = { b: {}, pool: [0, 0, 0, 0, 0, 0, 0, 0], w: -1 });
+        t.b.hall = hallOfIsle(h.level);
+      }
       game.holdings.touch();
       game.pushSelf(s, true);
       return `Your island: ${game.world.islands[h.island].name}, level ${h.level ?? 1}.`;
+    }
+    case 'island': {
+      // docs/29: the claim's rules for QA. /island — her island, its hall, the claims made and the next move's fee;
+      // /island free — the next move free again; /island claims N — the claims counted so; /island go — to her island.
+      const p = s.profile!;
+      const h = ownIsland(game, s.accountId);
+      if (args[0] === 'free') p.isleClaims = h ? 1 : 0;
+      else if (args[0] === 'claims') p.isleClaims = Math.max(0, Math.round(num(1, 0)));
+      else if (args[0] === 'go') {
+        if (!h) return 'You have no island of your own.';
+        const isl = game.world.islands[h.island];
+        const why = game.undock(s);
+        if (why) return why;
+        let x = isl.x, y = isl.y - isl.radius - 260;
+        for (let k = 0; k < 24; k++) {
+          const a = (k / 24) * Math.PI * 2;
+          const px = isl.x + Math.sin(a) * (isl.radius + 260), py = isl.y - Math.cos(a) * (isl.radius + 260);
+          if (!isLand(game.world, px, py)) {
+            x = px;
+            y = py;
+            break;
+          }
+        }
+        ship.state = { ...ship.state, x, y, speed: 0, sail: 0 };
+        ship.input = { rudder: 0, sailTarget: 0 };
+        ship.region = isl.region;
+        game.grid.upsert(ship.id, x, y);
+      }
+      game.pushSelf(s, true);
+      const fee = claimFee(game, s);
+      const hall = h ? Math.max(1, h.yard?.town?.b.hall ?? 1) : 0;
+      return `Island: ${h ? game.world.islands[h.island].name : '—'}, hall ${hall}; claims ${claimsMade(game, s)}; the next move: ${fee ? `${fee.silver} silver or ${fee.doubloons} doubloons` : 'free'}.`;
+    }
+    case 'build': {
+      // docs/29: the builders for QA. /build finish — every work on the island done now; /build tree N — every building
+      // of the tree at level N (the hall with them; the warehouse and the shipyard laid on free plots if missing).
+      const h = ownIsland(game, s.accountId);
+      if (!h) return 'You have no island of your own.';
+      const y = yardOf(game, h);
+      if (args[0] === 'tree') {
+        const n = Math.max(1, Math.min(5, Math.round(num(1, 5))));
+        const t = y.town ?? (y.town = { b: {}, pool: [0, 0, 0, 0, 0, 0, 0, 0], w: -1 });
+        for (const id of TREE_TOWN) t.b[id as 'hall'] = n;
+        h.level = Math.max(h.level ?? 1, ISLE_OF_HALL[n]);
+        for (const id of ['warehouse', 'shipyard'] as const) {
+          const b = h.buildings.find((x) => x.id === id);
+          if (b) b.level = n;
+          else h.buildings.push({ id, condition: 1, unpaid: false, level: n });
+        }
+        reckonBase(game, h);
+        game.holdings.touch();
+        game.sendTo(s, { t: 'base', view: baseView(game, s) });
+        return `The tree stands at level ${n}: ${TREE_TOWN.length + 2} buildings.`;
+      }
+      const now = game.wallNow();
+      const jobs = y.jobs.length;
+      for (const j of y.jobs) j.end = Math.min(j.end, now);
+      reckonBase(game, h);
+      game.holdings.touch();
+      game.sendTo(s, { t: 'base', view: baseView(game, s) });
+      return `Builders done: ${jobs}.`;
     }
     case 'yard': {
       // The island's yard filled for play-testing (docs/15): /yard [n] — n of every resource, and ten speed-ups;

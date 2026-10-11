@@ -26,6 +26,9 @@ import type { ShipEntity } from '../server/src/game/ship.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { join, makeGame, onHull } from './helpers.ts';
+import { ISLE_OF_HALL } from '../shared/src/data/isletree.ts';
+import { reckonBase, yardOf } from '../server/src/game/base.ts';
+import { buildTown } from '../server/src/game/town.ts';
 import type { FakeConn } from './helpers.ts';
 
 let clock = 20_000 * 86_400_000;
@@ -83,7 +86,7 @@ test('buying an island outright: for ever, never besieged; a lease bought out co
   assert.ok(h.owned);
   assert.equal(h.level, 1);
   assert.ok(h.until > clock + 50 * 365 * 86_400_000, 'no lease to run out');
-  assert.ok(c.all('toast').some((t) => t.msg.includes('is yours for ever')));
+  assert.ok(c.all('toast').some((t) => t.msg.includes('the town hall stands on it')), 'docs/29: the claim raises the hall');
   assert.ok(slotsOf(home, h) >= ISLE_LEVELS[1].slots && slotsOf(home, h) <= ISLE_LEVELS[1].slots + 2, 'slots by the level and the island size');
   // Another captain would lay siege: no.
   const { s: foe } = captain(game, 'Siege Lord');
@@ -95,7 +98,8 @@ test('buying an island outright: for ever, never besieged; a lease bought out co
   assert.equal(rentIsland(game, b, other.id, 30), null);
   const g0 = b.profile!.gold;
   assert.equal(buyIsland(game, b, other.id), null);
-  assert.ok(g0 - b.profile!.gold < buyPrice(other), 'the lease left counts');
+  assert.equal(g0 - b.profile!.gold, buyPrice(other), 'docs/29: the claim is free (the lease is its own holding)');
+  assert.equal(buyPrice(other), 0);
   // Any wild island now (docs/15 item 6): the lawless seas too, and cheaper (tests/baseclaim.test.ts has the rest).
   const { s: c2, ship: cs } = captain(game, 'Lawless Larry');
   const wild = wildIsland(game, 'ashen_isles');
@@ -107,14 +111,18 @@ test('the island grows a level on its store and treasury; home from a port once 
   const game = world();
   const { s, ship, home } = owner(game);
   const h = ownIsland(game, s.accountId)!;
-  assert.match(isleLevelUp(game, s, home.id)!, /store lacks/);
-  h.store.planks = ISLE_LEVELS[2].goods.planks;
-  h.treasury = ISLE_LEVELS[2].silver - 1;
-  assert.match(isleLevelUp(game, s, home.id)!, /treasury lacks/);
-  h.treasury = 5000;
-  assert.equal(isleLevelUp(game, s, home.id), null);
-  assert.equal(h.level, 2);
-  assert.equal(h.store.planks ?? 0, 0);
+  // docs/29: the island grows with its town hall — the hall's second level, the town round it standing, makes it level 3.
+  assert.equal(isleLevelUp(game, s, home.id), 'The island grows with its town hall.');
+  const y = yardOf(game, h);
+  y.town!.b = { hall: 1, keep: 1, market: 1, dw1: 1, dw2: 1 };
+  for (const g of ['timber', 'coal', 'iron', 'tar']) y.res[g as 'timber'] = 2000;
+  assert.match(buildTown(game, s, 'hall') ?? '', /First raise Warehouse to level 1/);
+  h.buildings.push({ id: 'warehouse', condition: 1, unpaid: false, level: 1 });
+  assert.equal(buildTown(game, s, 'hall'), null);
+  clock += 3 * 3_600_000;
+  reckonBase(game, h);
+  assert.equal(y.town!.b.hall, 2);
+  assert.equal(h.level, ISLE_OF_HALL[2]);
   // Home.
   const port = game.world.ports.find((p) => p.region === 'gravewater')!;
   ship.docked = port.id;

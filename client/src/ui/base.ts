@@ -33,6 +33,14 @@ import { assetUrl } from '../assets.ts';
 import { dec1, esc, fmt, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
 import { bindTown, townTab } from './town.ts';
+import { T29, givesText, needsHtml, pips, treeLabel } from './isletree.ts'; // docs/29
+import { BOARD, ISLE_OF_HALL, TOWN_CELLS, TREE_MAX, isTreeBase } from '../../../shared/src/data/isletree.ts';
+import { TOWN } from '../../../shared/src/data/town.ts';
+import type { TownId } from '../../../shared/src/data/town.ts';
+import type { TownThingView } from '../../../shared/src/h3proto.ts';
+import { maxLevel } from '../../../shared/src/data/base.ts';
+import { LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
+import type { LandRes } from '../../../shared/src/data/bestiary.ts';
 import { EN as H_EN, RU as H_RU } from '../lang/ui/h3.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
 import { chipRow, quickBar, winHead } from './kit/window.ts';
@@ -69,6 +77,19 @@ export function baseArt(what: string, level: number, condition = 1, unpaid = fal
   return (stage ? assetUrl(`icon.${id}_${stage}`) : null) ?? assetUrl(`icon.${id}`);
 }
 
+/** docs/29: a town building's picture at its stage (a frame of beams before it stands, weathered while it is raised). */
+export function townArt(id: TownId, level: number, working: boolean): string | null {
+  const a = `build_${TOWN[id].art}`;
+  const stage = level <= 0 ? 1 : working ? 2 : 0;
+  return (stage ? assetUrl(`icon.${a}_${stage}`) : null) ?? assetUrl(`icon.${a}`);
+}
+
+/** Why a step may not be taken — unless the list of what it asks says it already (a ✗ there). */
+const whyOf = (n: { why: string | null; needs?: { level: number; have: number }[] }): string => (n.why && !(n.needs ?? []).some((x) => x.have < x.level) ? `<p class="muted">${esc(sv(n.why))}</p>` : '');
+
+/** A thing's greatest level on the island (the tree's five; a single-level building's one). */
+const maxOf = (what: string): number => (isTreeBase(what) ? TREE_MAX : maxLevel(what));
+
 export function timeText(secs: number): string {
   const s = Math.max(0, Math.ceil(secs));
   if (s < 60) return L('t_s', { s });
@@ -86,28 +107,35 @@ function spanText(secs: number): string {
 
 const sv = (s: string | null) => (s ? serverText(s) : '');
 
-/** The grid shown: as many rings round the middle as the island has opened, so a young island's few plots stand
- *  large (the ring still shut shows its plots faintly, with the level that opens them). */
-const MID = (GRID - 1) / 2;
-const ringOf = (plot: number) => Math.max(Math.abs(PLOT_CELLS[plot][0] - MID), Math.abs(PLOT_CELLS[plot][1] - MID));
-
-interface Layout { n: number; off: number; tw: number; over: number; h: number }
-function layout(v: BaseView): Layout {
-  let r = 1;
-  for (let k = 0; k < v.plots; k++) r = Math.max(r, ringOf(k));
-  const n = 2 * r + 1;
-  const tw = 1 / n; // a tile's width against the board's
+/** The board (docs/29): the island as a mobile city-builder's plot of land — a 6 × 6 diamond, the town on its two back
+ *  edges (the hall at the back corner, isletree.ts TOWN_CELLS), the base's plots in the 5 × 5 before them (PLOT_CELLS,
+ *  one cell in), the pen and the Grail on two corners of the plots that never open. Every spot shows at once: what is
+ *  not yet built stands as a frame of beams, a plot still shut faintly with the town hall that opens it. */
+interface Layout { n: number; tw: number; over: number; h: number }
+const BOARD_LAYOUT: Layout = (() => {
+  const tw = 1 / BOARD; // a tile's width against the board's
   const over = 0.55 * tw; // room over the back row for the tallest pictures
-  return { n, off: MID - r, tw, over, h: over + 0.5 };
+  return { n: BOARD, tw, over, h: over + 0.5 };
+})();
+function layout(_v: BaseView): Layout {
+  return BOARD_LAYOUT;
 }
 
-/** Where a plot's diamond stands on the board, in per cent of the board's width and height. */
-function tilePos(plot: number, g: Layout): { left: number; top: number; w: number; hh: number; z: number } {
-  const i = PLOT_CELLS[plot][0] - g.off, j = PLOT_CELLS[plot][1] - g.off;
+/** A plot's cell on the board (one cell in from the town's edges). */
+const plotCell = (plot: number): [number, number] => [PLOT_CELLS[plot][0] + 1, PLOT_CELLS[plot][1] + 1];
+/** The pen and the Grail: two corners of the plots that never open (plotsOf stops at 18 of the 25). */
+const EXTRA_PLOTS: Record<'pen' | 'grail', number> = { pen: 23, grail: 24 };
+
+/** Where a cell's diamond stands on the board, in per cent of the board's width and height. */
+function tilePos(cell: [number, number], g: Layout): { left: number; top: number; w: number; hh: number; z: number } {
+  const [i, j] = cell;
   const left = 50 + (i - j) * (g.tw * 50) - g.tw * 50;
   const top = ((g.over + (i + j) * (g.tw / 4)) / g.h) * 100; // a row down is half a tile's height
   return { left, top, w: g.tw * 100, hh: ((g.tw / 2) / g.h) * 100, z: (i + j) * 10 + i + 1 };
 }
+
+/** The hall a plot opens with (from the island level that opens it). */
+const hallFor = (isle: number): number => (isle <= 0 ? 0 : ISLE_OF_HALL.findIndex((l) => l >= isle));
 
 /** A ship's top-down picture laid on its side, bow to the right (the world's own sprites, docs/15 item 4). */
 function shipPic(classId: ShipClassId, cls = 'sy-pic'): string {
@@ -123,6 +151,8 @@ const touchBoard = (): boolean => !!globalThis.document?.body?.classList.contain
 
 export class BaseWindow {
   sel: number | null = null;
+  /** docs/29: the town building whose card is open (the board's town spots), apart from the plots. */
+  selTown: TownId | null = null;
   /** The island's plots, or its shipyard (docs/15 item 4). */
   tab: 'plots' | 'yard' | 'town' | 'supply' = 'plots';
   moving: number | null = null;
@@ -145,6 +175,7 @@ export class BaseWindow {
 
   open(): void {
     this.sel = null;
+    this.selTown = null;
     this.moving = null;
     this.send({ t: 'base', action: 'view' });
     this.send({ t: 'isle18', action: 'supply' }); // docs/18 #32
@@ -192,7 +223,7 @@ export class BaseWindow {
       ? `<div class="modal-body base-body yard-body town-body">${land ? top : ''}${townTab(v, state, this.mk)}</div>`
       : this.tab === 'yard'
       ? `<div class="modal-body base-body yard-body">${land ? top : ''}${this.yard(v, state)}</div>`
-      : `<div class="modal-body base-body${land ? ' base-land' : ''}"><div class="base-stage"><div class="base-board${this.moving !== null ? ' moving' : ''}" style="--ar:${(1 / layout(v).h).toFixed(4)}"${touchBoard() ? ' aria-hidden="true"' : ''}>${this.board(v)}</div></div><div class="base-sheet">${land ? top : ''}${this.sheet(v, state)}</div></div>`;
+      : `<div class="modal-body base-body${land ? ' base-land' : ''}"><div class="base-stage"><div class="base-board${this.moving !== null ? ' moving' : ''}" style="--ar:${(1 / layout(v).h).toFixed(4)}"${touchBoard() ? ' aria-hidden="true"' : ''}>${this.board(v)}</div></div><div class="base-sheet">${land && this.sel === null && !this.selTown ? top : ''}${this.sheet(v, state)}</div></div>`; // (docs/29: a building's card first on a phone on its side — its costs mark what the yard lacks)
     root.innerHTML = `${winHead(L('title'), { crest: 'tab_isles', chips: tabs, sub: `${L('sub', { name: placeName(v.name), level: v.level, title })} · ${L('land', { biome: CO(`biome_${v.biome}` as 'biome_temperate') })}` }).replace('class="modal-head w-head', 'class="modal-head base-head w-head')}
       ${land ? '' : top}${body}`;
     this.bind(root, state);
@@ -201,7 +232,8 @@ export class BaseWindow {
   }
 
   /** The island's buildings as big tiles (docs/23 item 72): its picture, its name, its level — or the work's clock,
-   *  or what it has made — and a free plot's «+»; a tap is the same as a tap on its plot on the board. */
+   *  or what it has made — and a free plot's «+»; a tap is the same as a tap on its spot on the board. docs/29: the
+   *  town's buildings first (the hall, the keep, the market, the guild, the dwellings), then the base's plots. */
   private tiles(v: BaseView): string {
     const now = v.now;
     const tile = (c: BaseCellView) => {
@@ -211,10 +243,22 @@ export class BaseWindow {
       const kind = producerOf(c.what);
       const s = c.job ? `<span class="btime" data-end="${c.job.end}">${esc(timeText((c.job.end - now) / 1000))}</span>`
         : c.fresh > 0 && kind ? `${icon(`good_${PRODUCERS[kind].good}`, '', 'ico-sm')}+${fmt(c.fresh)}`
-        : c.level ? esc(L('lvl', { n: c.level })) : '';
+        : c.level ? esc(T29('lvOf', { n: c.level, max: maxOf(c.what) })) : '';
       return `<button type="button" class="w-tile b-tile${c.fresh > 0 && !c.job ? ' ready' : ''}${c.job ? ' working' : ''}" data-plot="${c.plot}" data-hint="${esc(`${baseName(c.what)}: ${baseText(c.what)}`)}">${art ? `<img class="w-tile-ico" src="${art}" alt="" draggable="false">` : ''}<span class="w-tile-l">${esc(baseName(c.what))}</span><span class="w-tile-s">${s}</span></button>`;
     };
-    return `<div class="w-tiles b-tiles">${v.cells.slice(0, v.plots).map(tile).join('')}</div>`;
+    const town = (t: TownThingView) => {
+      const art = townArt(t.id, t.level, !!t.job);
+      const s = t.job ? `<span class="btime" data-end="${t.job.end}">${esc(timeText((t.job.end - now) / 1000))}</span>` : t.level ? esc(T29('lvOf', { n: t.level, max: t.max })) : esc(T29('notBuilt'));
+      return `<button type="button" class="w-tile b-tile tr-tile${t.level ? '' : ' unbuilt'}${t.job ? ' working' : ''}${this.selTown === t.id ? ' on' : ''}" data-town="${t.id}" data-hint="${esc(`${treeLabel(t.id, Math.max(1, t.level))}: ${TOWN[t.id].text[lang() === 'ru' ? 1 : 0]}`)}">${art ? `<img class="w-tile-ico" src="${art}" alt="" draggable="false">` : ''}<span class="w-tile-l">${esc(treeLabel(t.id, Math.max(1, t.level)))}</span><span class="w-tile-s">${s}</span></button>`;
+    };
+    return `<div class="w-tiles b-tiles">${this.townThings(v).map(town).join('')}${v.cells.slice(0, v.plots).map(tile).join('')}</div>`;
+  }
+
+  /** The town's buildings the board and the tiles show: the tree's eleven, the pen, and the Grail once it is had. */
+  private townThings(v: BaseView): TownThingView[] {
+    const t = v.town;
+    if (!t) return [];
+    return t.things.filter((x) => (x.id in TOWN_CELLS) || x.id === 'pen' || (x.id === 'grail' && (x.level > 0 || !!x.job || !x.next?.why)));
   }
 
   private board(v: BaseView): string {
@@ -222,16 +266,37 @@ export class BaseWindow {
     const g = layout(v);
     const out: string[] = [];
     const over: string[] = [];
-    const nextLevel = v.locked.find((l) => l.level > 0)?.level ?? 0;
-    for (let k = 0; k < PLOT_CELLS.length; k++) {
-      if (ringOf(k) > (g.n - 1) / 2) continue;
-      const pos = tilePos(k, g);
+    const lockHalls = v.locked.map((l) => hallFor(l.level)).filter((n) => n > 0);
+    const nextHall = lockHalls.length ? Math.min(...lockHalls) : 0;
+    const cellBox = (cell: [number, number]) => {
+      const pos = tilePos(cell, g);
       const box = `left:${pos.left.toFixed(2)}%;top:${pos.top.toFixed(2)}%;width:${pos.w.toFixed(2)}%;height:${pos.hh.toFixed(2)}%`;
-      const style = `${box};z-index:${pos.z}`;
+      return { box, style: `${box};z-index:${pos.z}`, z: pos.z };
+    };
+    const timer = (j: { start: number; end: number }) => {
+      const prog = Math.max(0, Math.min(1, (now - j.start) / Math.max(1, j.end - j.start)));
+      return `<span class="btimer"><span class="btime" data-end="${j.end}">${esc(timeText((j.end - now) / 1000))}</span><span class="bprog"><i data-start="${j.start}" data-stop="${j.end}" style="width:${Math.round(prog * 100)}%"></i></span></span>`;
+    };
+    // The town on its edges (and the pen and the Grail on their corners).
+    for (const t of this.townThings(v)) {
+      const cell = TOWN_CELLS[t.id] ?? plotCell(EXTRA_PLOTS[t.id as 'pen' | 'grail']);
+      const { box, style, z } = cellBox(cell);
+      const art = townArt(t.id, t.level, !!t.job);
+      const cls = ['bplot', 'town', t.level > 0 ? 'built' : 'unbuilt', t.id === 'hall' ? 'hall' : '', this.selTown === t.id ? 'sel' : '', t.job ? 'working' : ''].filter(Boolean).join(' ');
+      const label = `${treeLabel(t.id, Math.max(1, t.level))} · ${t.level ? T29('lvOf', { n: t.level, max: t.max }) : T29('notBuilt')}`;
+      out.push(`<div class="${cls}" style="${style}" data-town="${t.id}"${touchBoard() ? '' : ' role="button" tabindex="0"'} aria-label="${esc(label)}"><i class="bground"></i>${art ? `<img class="bart" src="${art}" alt="" draggable="false"><i class="bhit"></i>` : ''}</div>`);
+      const marks = `${t.level && !(t.job && t.level === 0) ? `<span class="blvl">${t.level}</span>` : ''}${t.job ? timer(t.job) : ''}`;
+      if (marks) over.push(`<div class="bover" style="${box};z-index:${500 + z}">${marks}</div>`);
+    }
+    // The base's plots.
+    for (let k = 0; k < PLOT_CELLS.length; k++) {
+      if (k === EXTRA_PLOTS.pen || k === EXTRA_PLOTS.grail) continue;
+      const { box, style, z } = cellBox(plotCell(k));
       if (k >= v.plots) {
         const lock = v.locked.find((l) => l.plot === k);
-        const soon = lock && lock.level === nextLevel && nextLevel > 0;
-        out.push(`<div class="bplot locked${soon ? ' soon' : ''}" style="${style}"${lock?.level ? ` title="${esc(L('locked', { n: lock.level }))}"` : ''}><i class="bground"></i></div>`);
+        const hall = lock ? hallFor(lock.level) : 0;
+        const soon = hall > 0 && hall === nextHall;
+        out.push(`<div class="bplot locked${soon ? ' soon' : ''}${hall ? '' : ' rock'}" style="${style}"${hall ? ` title="${esc(T29('lockedPlot', { n: hall }))}"` : ''}><i class="bground"></i></div>`);
         continue;
       }
       const c = v.cells[k];
@@ -239,14 +304,13 @@ export class BaseWindow {
       const art = c.what ? baseArt(c.what, Math.max(1, c.level), c.condition, c.unpaid, raising) : null;
       const cls = ['bplot', c.what ? 'built' : 'empty', this.sel === k ? 'sel' : '', raising ? 'raising' : '', c.job ? 'working' : '', this.moving !== null && !c.what ? 'target' : '', c.idle ? 'idle' : ''].filter(Boolean).join(' ');
       const label = c.what ? `${baseName(c.what)}${c.level ? ` · ${L('lvl', { n: c.level })}` : ''}` : L('empty');
-      const prog = c.job ? Math.max(0, Math.min(1, (now - c.job.start) / Math.max(1, c.job.end - c.job.start))) : 0;
       // A diamond, not a box: the plot answers on its diamond and its building's body (the square boxes of the grid
       // lie over each other), so it is a role, not a <button>.
       out.push(`<div class="${cls}" style="${style}" data-plot="${k}"${touchBoard() ? '' : ' role="button" tabindex="0"'} aria-label="${esc(`${L('plot', { n: k + 1 })}: ${label}`)}"><i class="bground"></i>
         ${art ? `<img class="bart" src="${art}" alt="" draggable="false"><i class="bhit"></i>` : c.what ? '' : '<span class="bplus">+</span>'}</div>`);
       // Timers, levels and yields ride over every picture, so a building in front never hides them.
-      const marks = `${c.what && c.level && !raising ? `<span class="blvl">${c.level}</span>` : ''}${c.job ? `<span class="btimer"><span class="btime" data-end="${c.job.end}">${esc(timeText((c.job.end - now) / 1000))}</span><span class="bprog"><i data-start="${c.job.start}" data-stop="${c.job.end}" style="width:${Math.round(prog * 100)}%"></i></span></span>` : ''}${c.fresh > 0 && !c.job ? `<span class="bfresh">${icon(`good_${PRODUCERS[producerOf(c.what!)!].good}`, '', 'ico-sm')}+${fmt(c.fresh)}</span>` : ''}`;
-      if (marks) over.push(`<div class="bover" style="${box};z-index:${500 + pos.z}">${marks}</div>`);
+      const marks = `${c.what && c.level && !raising ? `<span class="blvl">${c.level}</span>` : ''}${c.job ? timer(c.job) : ''}${c.fresh > 0 && !c.job ? `<span class="bfresh">${icon(`good_${PRODUCERS[producerOf(c.what!)!].good}`, '', 'ico-sm')}+${fmt(c.fresh)}</span>` : ''}`;
+      if (marks) over.push(`<div class="bover" style="${box};z-index:${500 + z}">${marks}</div>`);
     }
     return out.join('') + over.join('');
   }
@@ -263,16 +327,16 @@ export class BaseWindow {
   private sheet(v: BaseView, state: ClientState): string {
     const gold = state.self?.gold ?? 0;
     const nextPlot = v.locked.find((l) => l.level > 0);
-    const foot = `<p class="muted bfoot">${esc(L('plots', { used: v.cells.filter((c) => c.what).length, total: v.plots }))}${nextPlot ? ` · ${esc(L('locked', { n: nextPlot.level }))}` : ''} · ${esc(L('slots', { used: v.slots.used, total: v.slots.total }))}${v.crews.next ? ` · ${esc(L('crew_next', { n: v.crews.next }))}` : ''}<br>${esc(v.near ? L('hold_pays') : L('store_pays'))}</p>`;
+    const foot = `<p class="muted bfoot">${esc(L('plots', { used: v.cells.filter((c) => c.what).length, total: v.plots }))}${nextPlot ? ` · ${esc(T29('opensAt', { n: hallFor(nextPlot.level) }))}` : ''} · ${esc(L('slots', { used: v.slots.used, total: v.slots.total }))}<br>${esc(v.near ? L('hold_pays') : L('store_pays'))}</p>`;
     if (this.moving !== null) {
       const c = v.cells[this.moving];
       return `<div class="bsheet-h">${c?.what ? this.thumb(c) : ''}<div><b>${esc(c?.what ? baseName(c.what) : '')}</b><p class="muted">${esc(L('moving'))}</p></div></div><button class="btn" data-bcancel>${esc(L('cancel'))}</button>`;
     }
-    if (this.sel === null) {
-      const jobs = v.cells.filter((c) => c.job);
-      return `${this.tiles(v)}${this.levelCard(v)}${this.watersCard(v)}
-        <div class="bsec">${esc(L('work'))}</div>${jobs.map((c) => `<button class="bjob" data-plot="${c.plot}">${this.thumb(c)}<span><b>${esc(baseName(c.what!))}</b><br><span class="muted">${esc(c.job!.level <= 1 ? L('raising') : L('upgrading', { n: c.job!.level }))} · </span><span class="btime" data-end="${c.job!.end}">${esc(timeText((c.job!.end - v.now) / 1000))}</span></span></button>`).join('') || `<p class="muted">${esc(L('no_work'))}</p>`}${foot}`;
-    }
+    const town = this.selTown ? v.town?.things.find((x) => x.id === this.selTown) : undefined;
+    // (on a phone the tiles are the controls: the island's buildings under the card, and the way back over it)
+    const back = `<button type="button" class="btn btn-small tr-back" data-bback>${esc(T29('back'))}</button>`;
+    if (town) return `${back}${this.townSheet(v, town, gold)}${this.tiles(v)}`;
+    if (this.sel === null) return `${this.queueCard(v)}${this.hallCard(v, gold)}${this.tiles(v)}${this.watersCard(v)}${foot}`;
     const c = v.cells[this.sel];
     if (!c.what) {
       const busy = v.crews.busy >= v.crews.n;
@@ -285,24 +349,79 @@ export class BaseWindow {
         const prod = list.filter((x) => isProducer(x.what)), bld = list.filter((x) => !isProducer(x.what));
         return `${prod.length ? `<div class="bsec">${esc(L('producers'))}</div>${prod.map(row).join('')}` : ''}${bld.length ? `<div class="bsec">${esc(L('buildings'))}</div>${bld.map(row).join('')}` : ''}`;
       };
-      return `<div class="bsheet-h"><span class="bthumb bthumb-empty">+</span><div><b>${esc(L('plot', { n: this.sel + 1 }))}</b> <span class="muted">${esc(L('empty'))}</span><p class="${busy ? 'bad' : 'muted'}">${esc(busy ? serverText('All your builders are at work.') : L('can_build'))}</p></div></div>
+      return `${back}<div class="bsheet-h"><span class="bthumb bthumb-empty">+</span><div><b>${esc(L('plot', { n: this.sel + 1 }))}</b> <span class="muted">${esc(L('empty'))}</span><p class="${busy ? 'bad' : 'muted'}">${esc(busy ? serverText('All your builders are at work.') : L('can_build'))}</p></div></div>
         ${group(ok)}${no.length ? `<details class="bno"><summary>${esc(L('cannot', { n: no.length }))}</summary>${group(no)}</details>` : ''}${foot}`;
     }
     const kind = producerOf(c.what);
     const raising = !!c.job && c.job.level <= 1;
     const isl = state.base!;
+    const max = maxOf(c.what);
+    const ctx = { size: v.size, biome: v.biome, isle: v.level };
     const state1 = kind
       ? `<p>${esc(L('yields', { rate: dec1(producerRate(kind as ProducerKind, Math.max(1, c.level), isl.biome)), good: GOODS[PRODUCERS[kind].good].name.toLowerCase() }))}${c.idle ? ` <span class="bad">${esc(L('idle'))}</span>` : ''}</p>`
       : raising ? '' : `<p class="${c.unpaid || c.condition < 0.7 ? 'bad' : 'muted'}">${esc(L('condition', { n: Math.round(c.condition * 100) }))}${c.unpaid ? ` · ${esc(L('unpaid'))}` : ''}</p>`;
-    const job = c.job ? `<div class="bjobcard"><div class="row"><b>${esc(raising ? L('raising') : L('upgrading', { n: c.job.level }))}</b><span>${esc(L('left', { t: '\u0000' })).replace('\u0000', `<span class="btime" data-end="${c.job.end}">${esc(timeText((c.job.end - v.now) / 1000))}</span>`)}</span></div>
-      <span class="bprog big"><i data-start="${c.job.start}" data-stop="${c.job.end}"></i></span>
-      <div class="bspeed"><button class="btn btn-small btn-primary" data-bspeed="silver" data-job="${c.job.id}">${esc(L('finish'))} <span data-price="${c.job.end}">${money(c.job.silver)}</span></button>
-      <button class="btn btn-small" data-bspeed="res" data-job="${c.job.id}">${esc(L('finish'))} ${(Object.entries(c.job.goods) as [GoodId, number][]).map(([g, n]) => `${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}`).join(' ')}</button>
-      <button class="btn btn-small" data-bspeed="token" data-job="${c.job.id}"${v.speedups ? '' : ' disabled'}>⌛ ${esc(L('token', { m: v.tokenSecs / 60 }))} (${v.speedups})</button></div></div>` : '';
-    const up = raising ? '' : c.up ? `<div class="bupcard"><div class="row"><b>${esc(L('upgrade', { n: c.up.level }))}</b></div>${this.costHtml(v, c.up, gold)}${c.up.why ? `<p class="muted">${esc(sv(c.up.why))}</p>` : ''}<button class="btn btn-small btn-primary" data-bup${c.up.why ? ' disabled' : ''}>${esc(L('upgrade', { n: c.up.level }))}</button></div>`
-      : `<p class="muted">${esc(kind || c.level > 1 ? L('max') : L('one_level'))}</p>`;
-    return `<div class="bsheet-h">${this.thumb(c)}<div><b>${esc(baseName(c.what))}</b> <span class="muted">${esc(L('plot', { n: c.plot + 1 }))}${c.level && !raising ? ` · ${esc(L('level', { n: c.level }))}` : ''}</span><p class="muted bdesc">${esc(baseText(c.what))}</p></div></div>
-      ${state1}${job}${up}<div class="row bactions"><button class="btn btn-small" data-bmove>${esc(L('move'))}</button></div>${foot}`;
+    const job = c.job ? this.jobCard(v, c.job, raising ? L('raising') : L('upgrading', { n: c.job.level }), true) : '';
+    const gives = (lv: number) => givesText(c.what!, lv, ctx);
+    const up = raising ? '' : c.up ? `<div class="bupcard tr-card"><div class="row"><b>${esc(T29('gives'))} ${esc(T29('lvOf', { n: c.up.level, max }))}</b></div>${gives(c.up.level) ? `<p class="tr-gives">${esc(gives(c.up.level))}</p>` : ''}${this.costHtml(v, c.up, gold)}${c.up.needs ? needsHtml(c.up.needs) : ''}${whyOf(c.up)}<button class="btn btn-small btn-primary" data-bup${c.up.why ? ' disabled' : ''}>${esc(T29('upgrade'))}</button></div>`
+      : `<p class="muted">${esc(kind || c.level > 1 ? T29('max') : L('one_level'))}</p>`;
+    const now = c.level && !raising && gives(c.level) ? `<p class="tr-now"><span class="muted">${esc(T29('givesNow'))}</span> ${esc(gives(c.level))}</p>` : '';
+    return `${back}<div class="bsheet-h">${this.thumb(c)}<div><b>${esc(baseName(c.what))}</b> <span class="muted">${esc(L('plot', { n: c.plot + 1 }))}${c.level && !raising ? ` · ${esc(T29('lvOf', { n: c.level, max }))}` : ''}</span>${c.level && !raising && max > 1 ? pips(c.level, max) : ''}<p class="muted bdesc">${esc(baseText(c.what))}</p></div></div>
+      ${now}${state1}${job}${up}<div class="row bactions"><button class="btn btn-small" data-bmove>${esc(L('move'))}</button></div>${this.tiles(v)}${foot}`;
+  }
+
+  /** The work under way on a building: its clock, its bar, and finishing it now (silver, provisions, a token). */
+  private jobCard(v: BaseView, j: { id: number; start: number; end: number; silver: number; goods: Partial<Record<GoodId, number>> }, title: string, res: boolean): string {
+    return `<div class="bjobcard"><div class="row"><b>${esc(title)}</b><span>${esc(L('left', { t: '\u0000' })).replace('\u0000', `<span class="btime" data-end="${j.end}">${esc(timeText((j.end - v.now) / 1000))}</span>`)}</span></div>
+      <span class="bprog big"><i data-start="${j.start}" data-stop="${j.end}"></i></span>
+      <div class="bspeed"><button class="btn btn-small btn-primary" data-bspeed="silver" data-job="${j.id}">${esc(L('finish'))} <span data-price="${j.end}">${money(j.silver)}</span></button>
+      ${res ? `<button class="btn btn-small" data-bspeed="res" data-job="${j.id}">${esc(L('finish'))} ${(Object.entries(j.goods) as [GoodId, number][]).map(([g, n]) => `${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}`).join(' ')}</button>` : ''}
+      <button class="btn btn-small" data-bspeed="token" data-job="${j.id}"${v.speedups ? '' : ' disabled'}>⌛ ${esc(L('token', { m: v.tokenSecs / 60 }))} (${v.speedups})</button></div></div>`;
+  }
+
+  /** docs/29: a town building's card — its level i/5, what it gives, what the next level gives, its cost and time,
+   *  what it asks (✓ / ✗), «Улучшить»; a dwelling's men and the recruiting, the market's and the guild's way to the
+   *  town's own tab. */
+  private townSheet(v: BaseView, t: TownThingView, gold: number): string {
+    const d = TOWN[t.id];
+    const ru = lang() === 'ru' ? 1 : 0;
+    const ctx = { size: v.size, biome: v.biome, isle: v.level };
+    const name = treeLabel(t.id, Math.max(1, t.level));
+    const art = townArt(t.id, t.level, !!t.job);
+    const head = `<div class="bsheet-h">${art ? `<img class="bthumb" src="${art}" alt="">` : '<span class="bthumb bthumb-empty">+</span>'}<div><b>${esc(name)}</b> <span class="muted">${esc(t.level ? T29('lvOf', { n: t.level, max: t.max }) : T29('notBuilt'))}</span>${t.max > 1 ? pips(t.level, t.max) : ''}<p class="muted bdesc">${esc(d.text[ru])}</p></div></div>`;
+    const now = t.level > 0 && givesText(t.id, t.level, ctx) ? `<p class="tr-now"><span class="muted">${esc(T29('givesNow'))}</span> ${esc(givesText(t.id, t.level, ctx))}</p>` : '';
+    const pool = d.tier && t.level > 0 ? `<p class="tr-now">${esc(H('town.pool', { n: t.pool ?? 0, g: dec1(t.growth ?? 0).replace(/[.,]0$/, '') }))} <button class="btn btn-small" data-trecruit>${esc(H('town.recruit'))}</button></p>` : '';
+    const job = t.job ? this.jobCard(v, t.job, t.level ? T29('raising', { n: t.job.level }) : T29('founding'), false) : '';
+    const n = t.next;
+    const land = n?.land ? (Object.entries(n.land) as [LandRes, number][]).filter(([, k]) => (k ?? 0) > 0).map(([r, k]) => `<span class="bcost" title="${esc(LAND_RES_DEF[r].name[ru])}">${icon(LAND_RES_DEF[r].icon, '', 'ico-sm')}${fmt(k)}</span>`).join('') : '';
+    const next = !t.job && n ? `<div class="bupcard tr-card"><div class="row"><b>${esc(T29('gives'))} ${esc(treeLabel(t.id, n.level))}${t.max > 1 ? ` · ${esc(T29('lvOf', { n: n.level, max: t.max }))}` : ''}</b></div>${givesText(t.id, n.level, ctx) ? `<p class="tr-gives">${esc(givesText(t.id, n.level, ctx))}</p>` : ''}
+      ${this.costHtml(v, n, gold)}${land ? `<span class="bcosts">${land}</span>` : ''}${n.needs ? needsHtml(n.needs) : ''}${whyOf(n)}
+      <button class="btn btn-small btn-primary" data-tbuild="${t.id}"${n.why ? ' disabled' : ''}>${esc(t.level ? T29('upgrade') : T29('build'))}</button></div>`
+      : !t.job ? `<p class="muted">${esc(T29('max'))}</p>` : '';
+    const more = t.id === 'market' || t.id === 'guild' || t.id === 'pen' ? `<div class="row bactions"><button class="btn btn-small" data-btab="town">${esc(H('tab'))}</button></div>` : '';
+    return `${head}${now}${pool}${job}${next}${more}`;
+  }
+
+  /** docs/29: the build queue — every work under way with its clock, the builders' crews. */
+  private queueCard(v: BaseView): string {
+    const rows = [
+      ...this.townThings(v).filter((t) => t.job).map((t) => ({ attr: `data-town="${t.id}"`, art: townArt(t.id, t.level, true), name: treeLabel(t.id, t.job!.level), lv: t.job!.level, first: t.level === 0, job: t.job! })),
+      ...v.cells.filter((c) => c.job && c.what).map((c) => ({ attr: `data-plot="${c.plot}"`, art: baseArt(c.what!, Math.max(1, c.level), c.condition, c.unpaid, c.job!.level <= 1), name: baseName(c.what!), lv: c.job!.level, first: c.job!.level <= 1, job: c.job! })),
+    ].sort((a, b) => a.job.end - b.job.end);
+    const next = v.crews.next ? ` · ${T29('queueNext', { n: hallFor(v.crews.next) })}` : '';
+    const list = rows.map((r) => `<button type="button" class="bjob tr-q" ${r.attr}>${r.art ? `<img class="bthumb" src="${r.art}" alt="">` : ''}<span class="tr-qm"><b>${esc(r.name)}</b> <span class="muted">${esc(r.first ? T29('founding') : T29('raising', { n: r.lv }))}</span><span class="bprog"><i data-start="${r.job.start}" data-stop="${r.job.end}"></i></span></span><span class="btime" data-end="${r.job.end}">${esc(timeText((r.job.end - v.now) / 1000))}</span></button>`).join('');
+    return `<div class="bupcard tr-queue"><div class="row"><b>${esc(T29('queue'))}</b><span class="muted">${esc(T29('queueN', { busy: v.crews.busy, n: v.crews.n }))}${esc(next)}</span></div>${list || `<p class="muted">${esc(T29('queueNone'))}</p>`}</div>`;
+  }
+
+  /** docs/29: the town hall's card — the tree's root: the island's level by it, and what its next level asks. */
+  private hallCard(v: BaseView, gold: number): string {
+    const t = v.town?.things.find((x) => x.id === 'hall');
+    if (!t) return '';
+    const hall = Math.max(1, t.level);
+    const n = t.next;
+    const body = t.job ? this.jobCard(v, t.job, T29('raising', { n: t.job.level }), false)
+      : n ? `<p class="tr-hn"><b>${esc(T29('gives'))} ${esc(treeLabel('hall', n.level))}</b></p><p class="tr-gives">${esc(givesText('hall', n.level, { size: v.size, biome: v.biome, isle: v.level }))}</p>${needsHtml(n.needs)}${this.costHtml(v, n, gold)}${whyOf(n)}<button class="btn btn-small btn-primary" data-tbuild="hall"${n.why ? ' disabled' : ''}>${esc(T29('upgrade'))}</button>`
+      : `<p class="muted">${esc(T29('hallMax'))}</p>`;
+    return `<div class="bupcard blevel tr-hall"><div class="row"><b>${esc(T29('hall', { n: hall, isle: v.level }))}</b>${pips(hall)}</div><p class="muted">${esc(T29('hallText'))}</p>${body}</div>`;
   }
 
   /** The island's waters, tax and defence under the resources, and a raid under way over everything (docs/15 items 6–7). */
@@ -333,20 +452,10 @@ export class BaseWindow {
     const lines = c.strength > 0
       ? `<p class="${c.worth >= c.fat ? 'bad' : 'muted'}">${esc(L('def_worth', { w: fmt(c.worth), f: fmt(c.fat) }))}</p>${calm}${c.lost > 0 ? `<p class="muted">${esc(L('def_lost', { n: Math.round(c.lost * 100), cap: Math.round(c.lossCap * 100) }))}</p>` : ''}<p class="muted">${esc(L('def_help'))}</p>`
       : `<p class="muted">${esc(L('def_safe'))}</p>`;
-    return `<div class="bupcard bwaters"><div class="row"><b>${esc(L('def_card'))}</b><span class="bdef-w w-${c.waters}">${esc(WATERS[c.waters].name[ru])}</span></div>${lines}
+    // docs/29: other captains' own bases on this island (each her own: nothing of theirs is hers or the other way round).
+    const others = c.others?.length ? `<p class="muted tr-others">${esc(T29('others', { names: c.others.join(', ') }))}</p>` : '';
+    return `<div class="bupcard bwaters"><div class="row"><b>${esc(L('def_card'))}</b><span class="bdef-w w-${c.waters}">${esc(WATERS[c.waters].name[ru])}</span></div>${lines}${others}
       <button class="btn btn-small btn-danger" data-babandon${c.abandonWhy ? ` disabled title="${esc(sv(c.abandonWhy))}"` : ''}>${esc(L('abandon'))}</button>${c.abandonWhy ? `<p class="muted">${esc(sv(c.abandonWhy))}</p>` : ''}</div>`;
-  }
-
-  /** The island's next level (docs/15 item 5): its power, its treasury and its goods, and the step itself. */
-  private levelCard(v: BaseView): string {
-    const ru = lang() === 'ru' ? 1 : 0;
-    const u = v.levelUp;
-    if (!u) return `<p class="muted">${esc(L('isle_max'))}</p>`;
-    const goods = (Object.entries(u.goods) as [GoodId, number][]).map(([g, n]) => `<span class="bcost" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('');
-    return `<div class="bupcard blevel"><div class="row"><b>${esc(L('isle_up', { n: u.level, title: ISLE_LEVELS[u.level]?.name[ru] ?? '' }))}</b>${u.power ? `<span class="${v.power.now >= u.power ? 'good' : 'bad'}">${esc(L('isle_power', { now: v.power.now, need: u.power }))}</span>` : ''}</div>
-      <span class="bcosts"><span class="bcost${u.treasury < u.silver ? ' lack' : ''}">${esc(L('isle_treasury', { have: fmt(u.treasury), need: fmt(u.silver) }))}</span></span>
-      ${goods ? `<span class="bcosts"><span class="muted">${esc(L('isle_goods'))}</span>${goods}</span>` : ''}
-      ${u.why ? `<p class="muted">${esc(sv(u.why))}</p>` : ''}<button class="btn btn-small btn-primary" data-blevel${u.why ? ' disabled' : ''}>${esc(L('isle_raise'))}</button></div>`;
   }
 
   /** The shipyard: her own ships as cards, what the slipway may build, the squadron's berths (docs/15 item 4). */
@@ -398,7 +507,7 @@ export class BaseWindow {
   private bind(root: HTMLElement, state: ClientState): void {
     const v = state.base!;
     const redraw = () => this.render(root, state);
-    root.querySelectorAll<HTMLElement>('.bplot[data-plot]').forEach((el) => (el.onkeydown = (e) => {
+    root.querySelectorAll<HTMLElement>('.bplot[data-plot], .bplot[data-town]').forEach((el) => (el.onkeydown = (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         el.click();
@@ -412,7 +521,16 @@ export class BaseWindow {
         this.sel = k;
         return redraw();
       }
+      this.selTown = null;
       this.sel = this.sel === k && !el.classList.contains('bjob') ? null : k;
+      redraw();
+    }));
+    // docs/29: a town building's spot (or its tile, or its row in the queue) opens its card.
+    root.querySelectorAll<HTMLElement>(touchBoard() ? '[data-town]:not(.bplot)' : '[data-town]').forEach((el) => (el.onclick = () => {
+      const id = el.dataset.town as TownId;
+      this.sel = null;
+      this.moving = null;
+      this.selTown = this.selTown === id && !el.classList.contains('bjob') ? null : id;
       redraw();
     }));
     root.querySelectorAll<HTMLElement>('[data-btab]').forEach((el) => (el.onclick = () => {
@@ -431,11 +549,16 @@ export class BaseWindow {
     bindTown(root, this.send, this.mk, () => this.onRecruit(), redraw);
     bindSupply(root, this.send); // docs/18 #32
     root.querySelector<HTMLElement>('[data-bsail]')?.addEventListener('click', () => this.onSail());
-    root.querySelector<HTMLElement>('[data-babandon]')?.addEventListener('click', () => void ask(L('abandon_confirm', { name: placeName(v.name), refund: fmt(v.claim.refund), h: 72 })).then((ok) => {
+    root.querySelector<HTMLElement>('[data-babandon]')?.addEventListener('click', () => void ask(L('abandon_confirm', { name: placeName(v.name), refund: fmt(v.claim.refund), h: 0 })).then((ok) => {
       if (!ok) return;
       this.send({ t: 'estate', action: 'abandon' });
       this.send({ t: 'base', action: 'view' });
     }));
+    root.querySelector<HTMLElement>('[data-bback]')?.addEventListener('click', () => {
+      this.sel = null;
+      this.selTown = null;
+      redraw();
+    });
     root.querySelector<HTMLElement>('[data-bcancel]')?.addEventListener('click', () => {
       this.moving = null;
       redraw();

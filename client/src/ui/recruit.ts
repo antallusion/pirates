@@ -10,6 +10,7 @@ import type { UnitId } from '../../../shared/src/data/army.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { PICKED_TIER, TOWN, affordable, dwellingOf, portDwellings } from '../../../shared/src/data/town.ts';
+import { DWELL_UP_LEVEL } from '../../../shared/src/data/isletree.ts';
 import { KEY_PORTS } from '../../../shared/src/world/regions.ts';
 import type { Price, TownId } from '../../../shared/src/data/town.ts';
 import { WEEKS } from '../../../shared/src/data/week.ts';
@@ -36,7 +37,7 @@ export function townName(id: TownId, level: number): string {
 /** A dwelling row's name: the port's tavern, or the dwelling (its upgraded name where it trains the upgrade). */
 export function dwellName(r: Pick<DwellRow, 'name' | 'up' | 'label'>): string {
   if (r.label) return r.label[ru()];
-  return r.name === 'tavern' ? L('tavern') : r.name === 'lair' ? '' : townName(r.name, r.up ? 2 : 1);
+  return r.name === 'tavern' ? L('tavern') : r.name === 'lair' ? '' : townName(r.name, r.up ? DWELL_UP_LEVEL : 1);
 }
 
 export function dwellArt(r: Pick<DwellRow, 'name' | 'tier' | 'art'>): string {

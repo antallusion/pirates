@@ -93,7 +93,7 @@ import type { WindSample } from '../../../shared/src/sim/wind.ts';
 import { REGIONS, WORLD_EDGE_MARGIN } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { sectorGrid } from '../../../shared/src/world/sectors.ts';
-import { chunkKey, chunkOf, currentAt, depthAt, reefDepthAt, whirlpoolAt, generateWorld, raiseIsland, regionAt } from '../../../shared/src/world/worldgen.ts';
+import { chunkKey, chunkOf, currentAt, depthAt, reefDepthAt, whirlpoolAt, generateWorld, portOfIsland, raiseIsland, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { hullStep } from './strike.ts';
 import type { Island, Port, RaisedIsland, World } from '../../../shared/src/world/worldgen.ts';
 import type { AuthService } from '../auth.ts';
@@ -1388,8 +1388,10 @@ export class Game {
       ['glut', 'sugar', 0.45, `A glut of sugar in ${port.name}. Prices collapse.`],
       ['yard', 'timber', 2.0, `${port.name}'s yards laid down new keels — timber is gold.`],
     ];
-    const [, good, shock, text] = this.rng.pick(kinds);
-    if (!market.goods[good]) return;
+    // (a kind the port's market trades: with three hundred harbours the pick of one it does not came too often — docs/29)
+    const trades = kinds.filter(([, g]) => market.goods[g]);
+    if (!trades.length) return;
+    const [, good, shock, text] = this.rng.pick(trades);
     this.pendingEvent = { id: this.allocId(), port: port.id, good, shock, text, at: this.now + EVENT_LEAD };
     this.nextWorldEvent = this.now + EVENT_LEAD;
     for (const s of this.sessions) if (s.ship?.docked) this.tavernWhispers(s);
@@ -2748,7 +2750,7 @@ export class Game {
   islandData(is: Island): IslandData {
     let d = this.islandCache.get(is.id);
     if (!d) {
-      d = { id: is.id, name: is.name, region: is.region, biome: is.biome, x: Math.round(is.x), y: Math.round(is.y), r: Math.round(is.radius), poly: is.poly.map((v) => Math.round(v)), features: is.features, portId: is.portId, ...(is.minor ? { minor: true } : {}), ...(is.raft ? { raft: true } : {}), ...isleExtras(this, is) };
+      d = { id: is.id, name: is.name, region: is.region, biome: is.biome, x: Math.round(is.x), y: Math.round(is.y), r: Math.round(is.radius), poly: is.poly.map((v) => Math.round(v)), features: is.features, portId: is.portId, ...((town) => (town ? { town } : {}))(is.portId ? undefined : portOfIsland(this.world, is.id)) /* docs/29: a step-9 harbour town on her coast */, ...(is.minor ? { minor: true } : {}), ...(is.raft ? { raft: true } : {}), ...isleExtras(this, is) };
       this.islandCache.set(is.id, d);
     }
     return d;
@@ -3337,7 +3339,7 @@ export class Game {
           return;
         }
         if (res) return this.sendTo(s, { t: 'hall', view: res });
-        const h = this.holdings.get(this, isl);
+        const h = this.holdings.onIsland(this, isl).find((x) => x.owner.id !== s.accountId) ?? this.holdings.get(this, isl, s.accountId); // docs/29
         if (h) this.sendTo(s, { t: 'hall', view: hallView(this, s, h) });
         return;
       }
@@ -3384,7 +3386,7 @@ export class Game {
           case 'view':
             return done(null);
           case 'buy':
-            return done(buyIsland(this, s, Math.trunc(Number(msg.island))));
+            return done(buyIsland(this, s, Math.trunc(Number(msg.island)), msg.move)); // docs/29: a move's leave and payment
           case 'level': {
             const h = ownIsland(this, s.accountId);
             return done(h ? isleLevelUp(this, s, h.island) : 'You have no island of your own.');

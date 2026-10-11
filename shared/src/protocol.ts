@@ -198,7 +198,7 @@ export type ClientMsg =
   | { t: 'auction'; action: 'sell'; uid: number; reserve: number }
   | { t: 'hearsay'; action: 'buy' | 'forget'; id: string }
   /** One's own island and outposts (docs/12 P7). */
-  | { t: 'estate'; action: 'buy'; island: number }
+  | { t: 'estate'; action: 'buy'; island: number; /** docs/29: a move's leave and its payment. */ move?: 'free' | 'silver' | 'doubloons' }
   | { t: 'estate'; action: 'level' | 'home' | 'hire' | 'view' | 'abandon' }
   | { t: 'estate'; action: 'rob_isle'; island: number }
   | { t: 'estate'; action: 'assign'; id: number; where: string }
@@ -427,6 +427,8 @@ export interface IslandData {
   poly: number[]; // rounded to meters
   features: IslandFeature[];
   portId?: string;
+  /** docs/29 step 9: the harbour town on her coast (its port id) — the island itself stays wild (no `portId`). */
+  town?: string;
   /** A sea stack of the dense sea (docs/16 P3). */
   minor?: boolean;
   /** A floating town's moored hulks (docs/16 P3). */
@@ -1754,6 +1756,7 @@ export type ServerMsg =
   | { t: 'raid'; view: RaidView }
   | { t: 'estate'; view: EstateView }
   | { t: 'base'; view: BaseView | null }
+  | { t: 'isleMove'; view: IsleMoveView }
   | { t: 'caravans'; list: CaravanView[]; slots: number }
   | { t: 'tattoos'; view: TattooView }
   | { t: 'companion'; view: CompanionView | null }
@@ -2185,6 +2188,8 @@ export interface EstateView {
     levelName: string;
     slots: number;
     next: { name: string; silver: number; goods: Partial<Record<GoodId, number>>; power?: number } | null;
+    /** docs/29: the town hall's level (the island's level follows it). */
+    hall?: number;
     /** The island's power (docs/15 item 5). */
     power?: number;
     residents: { id: number; name: string; prof: string; at: string | null; line: string }[];
@@ -2231,6 +2236,31 @@ export interface ClaimTermsView {
   cooldownH: number;
   /** What stands in the way now (null: it may be claimed). */
   why: string | null;
+  /** docs/29: claiming it is a move off her own island; the fee's doubloons; other captains' islands here. */
+  move?: boolean;
+  doubloons?: number;
+  others?: number;
+}
+
+/** docs/29: a move to another island — what it pulls down, what goes with her, and what it costs (the confirm). */
+export interface IsleMoveView {
+  island: number;
+  name: string;
+  /** The island she leaves (-1: none — a paid claim after one given up). */
+  from: number;
+  fromName: string;
+  free: boolean;
+  silver: number;
+  doubloons: number;
+  /** Her purse and her account's doubloons now. */
+  gold: number;
+  balance: number;
+  /** Moves made so far, and how many are free. */
+  moves: number;
+  freeMoves: number;
+  lose: { buildings: number; levels: number; town: number; producers: number; jobs: number; hall: number };
+  keep: { treasury: number; goods: number; residents: number; ships: number };
+  why: string | null;
 }
 
 /** One's own island's waters, tax and defence, and a raid under way (docs/15 items 6–7). */
@@ -2260,6 +2290,11 @@ export interface IsleClaimView {
   raid: { until: number; x: number; y: number; ships: number; alive: number; strength: number } | null;
   refund: number;
   abandonWhy: string | null;
+  /** docs/29: other captains whose own island is this one; the next move's fee (null: free); moves made and free. */
+  others?: string[];
+  fee?: { silver: number; doubloons: number } | null;
+  moves?: number;
+  freeMoves?: number;
 }
 
 /** What a step of the builders' work costs (docs/15): silver from the purse, goods from the yard, seconds of work. */
@@ -2280,7 +2315,7 @@ export interface BaseCellView {
   /** The builders at work here: to what level, when they started and finish (wall ms), and what finishing now costs. */
   job: { id: number; level: number; start: number; end: number; silver: number; goods: Partial<Record<GoodId, number>> } | null;
   /** The next level, or null at the greatest; `why` says what stands in the way. */
-  up: (BaseCostView & { level: number; why: string | null }) | null;
+  up: (BaseCostView & { level: number; why: string | null; /** docs/29: what the tree asks of it. */ needs?: { id: string; level: number; have: number }[] }) | null;
   /** A producer's yield since the last collection; and whether it stands idle (its resource at the yard's cap). */
   fresh: number;
   idle: boolean;
@@ -2304,7 +2339,9 @@ export interface BaseView {
   speedups: number;
   tokenSecs: number;
   /** What an empty plot may take, and what stands in the way of each. */
-  catalog: (BaseCostView & { what: string; why: string | null })[];
+  catalog: (BaseCostView & { what: string; why: string | null; /** docs/29: what the tree asks of it (the hall a building opens at). */ needs?: { id: string; level: number; have: number }[] })[];
+  /** docs/29: the town hall's level (the tree's root: the island's level follows it). */
+  hall?: number;
   slots: { used: number; total: number };
   /** The server's wall clock (ms) when the view was made, for the timers. */
   now: number;

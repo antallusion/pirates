@@ -35,6 +35,7 @@ import { SERVER_RU_B } from '../client/src/lang/server.ru.b.ts';
 import { serverTable } from '../client/src/lang/server.ts';
 import { EN as BASE_EN, RU as BASE_RU } from '../client/src/lang/ui/base.ts';
 import { join, makeGame, onHull, steps } from './helpers.ts';
+import { ISLE_OF_HALL } from '../shared/src/data/isletree.ts';
 
 const MIN = 60_000;
 let clock = 20_000 * 86_400_000;
@@ -329,33 +330,28 @@ test('the merchant adds hold, the scout sight, the fisher nets the shoals she pa
   assert.ok(fi.xp > 0);
 });
 
-test('the island’s power grows with its buildings and its ships; its next level asks for it and opens plots and a crew', () => {
+test('the island’s power grows with its buildings and its ships; the hall carries the island\'s level, its plots and a crew (docs/29)', () => {
   const game = world();
   const { s, h, y } = owner(game);
-  h.level = 2;
-  assert.equal(powerOf(h), 0);
-  const need = ISLE_LEVELS[3];
-  for (const [g, n] of Object.entries(need.goods)) h.store[g as 'planks'] = n ?? 0;
-  h.treasury = need.silver;
-  assert.match(isleLevelUp(game, s, h.island)!, new RegExp(`power is 0 of the ${ISLE_POWER[3]}`));
-  const v0 = baseView(game, s)!;
-  assert.equal(v0.power.need, ISLE_POWER[3]);
-  assert.match(v0.levelUp!.why!, /power/);
+  h.level = 1;
+  assert.equal(powerOf(h), 1, 'the town hall from the claim');
+  // docs/29: the island is not raised on its own any more — its level follows the hall.
+  assert.equal(isleLevelUp(game, s, h.island), 'The island grows with its town hall.');
   // A shipyard (1) and a producer (1)…
   withShipyard(h);
   y.producers.push({ kind: 'lumber', plot: 3, level: 1 });
-  assert.equal(powerOf(h), 2);
-  // …and a ship of her own (three times her level): the island may grow.
+  assert.equal(powerOf(h), 3);
+  // …and a ship of her own (three times her level).
   const w = built(game, s, y, 'war');
-  assert.equal(powerOf(h), 2 + SHIP_POWER * w.level);
+  assert.equal(powerOf(h), 3 + SHIP_POWER * w.level);
   w.level = 2;
-  assert.equal(powerOf(h), 2 + SHIP_POWER * 2);
-  assert.ok(powerOf(h) >= ISLE_POWER[3]);
+  assert.equal(powerOf(h), 3 + SHIP_POWER * 2);
+  // The hall's second level: the island's third, more plots and the second crew.
   const plots = baseView(game, s)!.plots;
-  assert.equal(isleLevelUp(game, s, h.island), null);
-  assert.equal(h.level, 3);
+  y.town!.b.hall = 2;
+  h.level = ISLE_OF_HALL[2];
   assert.ok(baseView(game, s)!.plots > plots, 'more plots');
-  assert.equal(crewsOf(h), crewsAt(3), 'the second crew at level 3');
+  assert.equal(crewsOf(h), crewsAt(3), 'the second crew at the island\'s third level');
   // Great power brings a third crew.
   for (let k = 0; k < 12; k++) y.producers.push({ kind: 'fishery', plot: 10 + k, level: 5 });
   assert.ok(powerOf(h) >= POWER_CREW);

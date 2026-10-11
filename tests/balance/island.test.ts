@@ -8,34 +8,33 @@ import { ISLE_LEVELS, ISLE_MAX } from '../../shared/src/data/estate.ts';
 import { LOSS_DAY_CAP, isleTax } from '../../shared/src/data/baseclaim.ts';
 import { ISLE_POWER, OWN_PARITY, combatWorth, hiredWorth, hullFor, ownParity, roleLevels } from '../../shared/src/data/baseships.ts';
 import type { IslandBiome } from '../../shared/src/world/regions.ts';
+import { STEADY, daysToHall, simulateTree } from './isletree.ts';
 
 const BIOMES: IslandBiome[] = ['temperate', 'mossy', 'volcanic', 'ice', 'ruins', 'bone', 'barren', 'jungle', 'mangrove', 'atoll', 'saltflat', 'blacksand', 'fungal', 'crystal'];
 
-test('island levels come at the pace of the plan: level 3 in a day or two, level 5 in about a week, level 10 in weeks', () => {
-  const r = simulate(NORMAL);
-  const d = (l: number) => daysTo(r, l);
-  assert.ok(d(3) >= 0.5 && d(3) <= 2, `level 3 on day ${d(3).toFixed(1)}`);
-  assert.ok(d(5) >= 5 && d(5) <= 9, `level 5 on day ${d(5).toFixed(1)}`);
-  assert.ok(d(10) >= 28 && d(10) <= 70, `level 10 on day ${d(10).toFixed(1)}`);
-  for (let l = 3; l <= ISLE_MAX; l++) assert.ok(d(l) > d(l - 1), `level ${l} after ${l - 1}`);
-  // Each level asks more than the last: silver, power and planks.
-  for (let l = 3; l <= ISLE_MAX; l++) {
-    assert.ok(ISLE_LEVELS[l].silver > ISLE_LEVELS[l - 1].silver, `silver of level ${l}`);
-    assert.ok((ISLE_LEVELS[l].goods.planks ?? 0) >= (ISLE_LEVELS[l - 1].goods.planks ?? 0), `planks of level ${l}`);
-    assert.ok(ISLE_POWER[l] > ISLE_POWER[l - 1]);
-  }
-  // A poor land and a rich one keep near the same pace (within three days to level 5); light play is slower,
-  // heavy play faster, but neither reaches level 10 inside three weeks.
-  for (const biome of ['bone', 'jungle'] as IslandBiome[]) assert.ok(Math.abs(daysTo(simulate({ ...NORMAL, biome, days: 12 }), 5) - d(5)) <= 3, biome);
-  const light = simulate({ ...NORMAL, hours: 1.5, days: 20 }), heavy = simulate({ ...NORMAL, hours: 5 });
-  assert.ok(daysTo(light, 5) > d(5) && daysTo(heavy, 5) < d(5));
-  assert.ok(daysTo(heavy, 10) >= 21, `heavy play: level 10 on day ${daysTo(heavy, 10).toFixed(1)}`);
+// docs/29 (owner, 2026-10-11): the island's level follows its town hall now, and the hall is raised along the tree —
+// the old pace of the island's ten levels on their own silver and goods (ISLE_LEVELS' steps) is the tree's pace to the
+// hall's five (tests/balance/isletree.ts; the tree's own walk: tests/isletree.test.ts).
+test('the hall comes at the pace of the plan: hall 2 in a few days, hall 3 in about a week, hall 5 in three to four weeks', () => {
+  const r = simulateTree(STEADY);
+  const d = (l: number) => daysToHall(r, l);
+  assert.ok(d(2) >= 1 && d(2) <= 4, `hall 2 on day ${d(2).toFixed(1)}`);
+  assert.ok(d(3) >= 5 && d(3) <= 10, `hall 3 on day ${d(3).toFixed(1)}`);
+  assert.ok(d(5) >= 21 && d(5) <= 30, `hall 5 on day ${d(5).toFixed(1)}`);
+  for (let l = 3; l <= 5; l++) assert.ok(d(l) > d(l - 1), `hall ${l} after ${l - 1}`);
+  // Light play is slower, heavy play faster, but even unlimited silver waits on the builders: no hall 5 in a week.
+  const light = simulateTree({ ...STEADY, hours: 1.5, days: 90 }), heavy = simulateTree({ ...STEADY, hours: 5 });
+  assert.ok(daysToHall(light, 5) > d(5) && daysToHall(heavy, 5) < d(5));
+  const rich = simulateTree({ ...STEADY, hours: 12, share: 1, shipLevel: 10 });
+  assert.ok(daysToHall(rich, 5) >= 9, `rich: hall 5 on day ${daysToHall(rich, 5).toFixed(1)}`);
+  // A poor land keeps near the same pace (its timber bought in port).
+  assert.ok(Math.abs(daysToHall(simulateTree({ ...STEADY, biome: 'bone' }), 5) - d(5)) <= 4);
 });
 
-test('speed-ups save hours, not weeks: the island is paced by silver and goods', () => {
-  const rushed = simulate({ ...NORMAL, rush: true }), plain = simulate(NORMAL);
-  for (let l = 2; l <= ISLE_MAX; l++) assert.ok(Math.abs(daysTo(rushed, l) - daysTo(plain, l)) <= 1.5, `level ${l}: ${daysTo(rushed, l).toFixed(1)} rushed, ${daysTo(plain, l).toFixed(1)} not`);
-  assert.ok(rushed.spent.speedup > 0 && rushed.spent.speedup < rushed.earned * 0.05, `speed-ups ${Math.round(rushed.spent.speedup)} of ${Math.round(rushed.earned)}`);
+test('speed-ups save hours, not weeks: the tree is paced by silver, goods and the builders', () => {
+  const rushed = simulateTree({ ...STEADY, rush: true }), plain = simulateTree(STEADY);
+  for (let l = 2; l <= 5; l++) assert.ok(Math.abs(daysToHall(rushed, l) - daysToHall(plain, l)) <= 2, `hall ${l}: ${daysToHall(rushed, l).toFixed(1)} rushed, ${daysToHall(plain, l).toFixed(1)} not`);
+  assert.ok(rushed.spent.speedup > 0 && rushed.spent.speedup < rushed.earned * 0.06, `speed-ups ${Math.round(rushed.spent.speedup)} of ${Math.round(rushed.earned)}`);
 });
 
 test('the island is a long-term base, not the best money: its best yield by the hour never beats an hour at sea', () => {
@@ -88,11 +87,9 @@ test('a warship of her own is worth about one hired escort of her level, never m
   assert.ok(ownParity('frigate', 8) < 1 && ownParity('brig', 6) === 1);
 });
 
-test('docs/17 H3: the town hall\'s daily silver keeps the island\'s pace — level 5 in about a week, level 10 in weeks', () => {
-  const r = simulate({ ...NORMAL, town: true });
-  assert.ok(daysTo(r, 5) >= 5 && daysTo(r, 5) <= 9, `level 5 on day ${daysTo(r, 5).toFixed(1)}`);
-  assert.ok(daysTo(r, 10) >= 28 && daysTo(r, 10) <= 70, `level 10 on day ${daysTo(r, 10).toFixed(1)}`);
-  assert.ok((r.townIncome ?? 0) > 0 && (r.townIncome ?? 0) < r.earned * 0.15, `the hall brought ${Math.round(r.townIncome ?? 0)} of ${Math.round(r.earned)}`);
-  const heavy = simulate({ ...NORMAL, hours: 5, town: true });
-  assert.ok(daysTo(heavy, 10) >= 21, `heavy play with the hall: level 10 on day ${daysTo(heavy, 10).toFixed(1)}`);
+test('docs/17 H3 on the tree (docs/29): the town hall\'s daily silver is a real but small part of the island\'s money', () => {
+  const r = simulateTree(STEADY);
+  assert.ok(r.hallIncome > 0 && r.hallIncome < (r.earned * STEADY.share) * 0.5, `the hall brought ${Math.round(r.hallIncome)} of ${Math.round(r.earned * STEADY.share)}`);
+  const heavy = simulateTree({ ...STEADY, hours: 5 });
+  assert.ok(daysToHall(heavy, 5) >= 18, `heavy play: hall 5 on day ${daysToHall(heavy, 5).toFixed(1)}`);
 });
