@@ -257,6 +257,16 @@ export function enterDepth(game: Game, s: PlayerSession): string | null {
   return null;
 }
 
+/** «Свиток автобоя» (owner, 2026-10-11): a top seal (SEAL_SCROLL_LV and up) won in time gives one auto-battle scroll,
+ *  once a week a captain. True when it was given. */
+export function sealScroll(game: Game, s: PlayerSession, seal: SealRec, lv: number): boolean {
+  const week = sealWeek(game);
+  if (lv < SEAL_SCROLL_LV || seal.scrollWeek === week) return false;
+  if (grantScrolls(game, s.accountId, 1, 'reward', `seal:${lv}`) === null) return false;
+  seal.scrollWeek = week;
+  return true;
+}
+
 /** The depth is over: the seal moves, the week's best and the table, and — in time — the spoils. */
 function endDepth(game: Game, s: PlayerSession, l: Lair, lv: number, won: boolean, bt: TacBattle): LairLoot | undefined {
   const p = s.profile!;
@@ -295,12 +305,7 @@ function endDepth(game: Game, s: PlayerSession, l: Lair, lv: number, won: boolea
   // docs/19 E12: a relic's part, now and then, from a depth won in time.
   const part = relicPartDrop(game, s, 'seal', sealPartChance(lv));
   if (part && !loot.artifact) loot.artifact = part;
-  // «Свиток автобоя» (owner, 2026-10-11): a top seal won in time gives one auto-battle scroll, once a week.
-  const week = sealWeek(game);
-  if (lv >= SEAL_SCROLL_LV && seal.scrollWeek !== week && grantScrolls(game, s.accountId, 1, 'reward', `seal:${lv}`) !== null) {
-    seal.scrollWeek = week;
-    loot.scrolls = 1;
-  }
+  if (sealScroll(game, s, seal, lv)) loot.scrolls = 1;
   game.toastShip(ship, `Seal ${lv} won in ${rounds} rounds: the seal rises to ${seal.lv} and now opens ${lairName(seal.kind)}.`, 'good');
   if (before < 10 && seal.lv >= 10) chronicle(game, `${s.name} carries a seal of the deep to ${seal.lv}.`);
   return loot;

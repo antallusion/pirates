@@ -18,6 +18,7 @@ import { landTac, startCreatureFight } from '../server/src/game/beastlairs.ts';
 import { premiumMessage } from '../server/src/game/premium.ts';
 import { NO_SCROLL, grantScrolls, helmFallback } from '../server/src/game/autoscroll.ts';
 import { runAdmin } from '../server/src/game/admin.ts';
+import { sealScroll } from '../server/src/game/seals.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { SERVER_RU_ADMIN } from '../client/src/lang/server.ru.admin.ts';
 import { setLang } from '../client/src/i18n.ts';
@@ -205,6 +206,14 @@ test('the admin’s /scrolls N (and −N), its HELP pair command for command; a 
   assert.ok(ru?.includes('/scrolls [N|-N]'), 'the Russian HELP');
   assert.equal(ru.split(' · ').length, help.split(' · ').length, 'command for command');
   assert.ok(SEAL_SCROLL_LV >= 10, 'a top seal only');
+  const seal = { lv: SEAL_SCROLL_LV, kind: 'grotto', runs: 0, timed: 0 } as unknown as Parameters<typeof sealScroll>[2];
+  assert.equal(sealScroll(game, s, seal, SEAL_SCROLL_LV - 1), false, 'below the top: none');
+  assert.equal(sealScroll(game, s, seal, SEAL_SCROLL_LV), true, 'a top seal won in time: one');
+  assert.equal(sealScroll(game, s, seal, SEAL_SCROLL_LV + 2), false, 'once a week');
+  assert.equal(scrolls(game, s), 6);
+  seal.scrollWeek = (seal.scrollWeek ?? 0) - 1; // the next week
+  assert.equal(sealScroll(game, s, seal, SEAL_SCROLL_LV), true);
+  assert.equal(scrolls(game, s), 7);
   setLang('ru');
   try {
     for (const line of [NO_SCROLL, 'Auto-battle scrolls: +5 for 100 doubloons (12 in all).', 'Auto-battle scrolls: 3. Usage: /scrolls N|-N', 'Auto-battle scrolls: 3.']) {
