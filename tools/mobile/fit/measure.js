@@ -1,11 +1,12 @@
 // In-page fit meter (tools/mobile/fit/audit.mjs injects it): does a screen fit a phone held sideways?
-//   globalThis.__fit(rootSelector?) → { scroll, out, cut, small, tiny, share, page }
+//   globalThis.__fit(rootSelector?) → { scroll, out, cut, small, tiny, big, share, page }
 // - scroll: every visible scroll container (overflow auto/scroll) whose content is taller/wider than its box, and
 //   the page itself;
 // - out: visible elements with text or a tap that reach past the viewport (not ones a scroll box hides);
 // - cut: text clipped by its own box (ellipsis, line clamp, overflow hidden) or by an ancestor that hides overflow;
 // - small: tap targets (buttons, links, inputs, anything with a pointer cursor) under 40 px on their short side;
-// - tiny: visible text set under 11 px;
+// - tiny: visible text set under 6 px (the owner's phone minimum, 2026-10-11; 11/10 px before);
+// - big: on a phone (short side 520 px or less), text over 14 px outside a heading;
 // - share: the root's area ÷ the screen's.
 (() => {
   const vis = (e) => {
@@ -52,10 +53,15 @@
   };
   globalThis.__fit = (rootSel) => {
     const W = innerWidth, H = innerHeight;
-    // the limits (owner, 2026-10-10): taps 36 px and words 11 px from a 360 px short side, 32 and 10 px below it (270)
-    const short = Math.min(W, H), minTap = short >= 360 ? 36 : 32, minText = short >= 360 ? 11 : 10;
+    // the limits: taps 36 px from a 360 px short side, 32 px below it (owner, 2026-10-10); words — the owner's new
+    // phone scale (2026-10-11: «я бы сделал 10 шрифт по умолчанию и даже какие-то снижал до 6-8пкс») — never under 6 px
+    // (tiny), and on a phone nothing but a heading over 14 px (big)
+    const short = Math.min(W, H), minTap = short >= 360 ? 36 : 32, minText = 6;
+    const phone = short <= 520;
+    const BIG = 14.5;
+    const heading = (e) => !!e.closest('h1, h2, h3, .w-title, .title, .title-sm, .tree-h, .giver-name, .modal-head h2, .w-head h2');
     const roots = rootSel ? [...document.querySelectorAll(rootSel)].filter(vis) : [document.body];
-    const res = { scroll: [], out: [], cut: [], small: [], under36: 0, underMin: 0, minTap: 0, minText: 0, tiny: [], share: 0, page: null, root: rootSel ?? 'body' };
+    const res = { scroll: [], out: [], cut: [], small: [], under36: 0, underMin: 0, minTap: 0, minText: 0, tiny: [], big: [], share: 0, page: null, root: rootSel ?? 'body' };
     const se = document.scrollingElement;
     if (se.scrollHeight > se.clientHeight + 1 || se.scrollWidth > se.clientWidth + 1) res.page = `${se.scrollWidth}×${se.scrollHeight} > ${se.clientWidth}×${se.clientHeight}`;
     let area = 0;
@@ -125,7 +131,9 @@
             }
           }
           const fs = parseFloat(cs.fontSize);
-          if (fs < minText - 0.5 && fs > 0) res.tiny.push(`${name(e)} ${fs}px «${t.slice(0, 14)}»`);
+          if (fs < minText - 0.25 && fs > 0) res.tiny.push(`${name(e)} ${fs}px «${t.slice(0, 14)}»`);
+          // (a glyph alone — a cross, an arrow, a star — is a picture, not words)
+          if (phone && fs > BIG && /[\p{L}\p{N}]/u.test(t) && !heading(e)) res.big.push(`${name(e)} ${Math.round(fs * 10) / 10}px «${t.slice(0, 14)}»`);
         }
         // 4. small taps
         if (tap && Math.min(r.width, r.height) < 39.5 && !e.matches('input[type=checkbox], input[type=radio], input[type=range]') && !e.disabled) { if (Math.min(r.width, r.height) < 35.5) res.under36++; if (Math.min(r.width, r.height) < minTap - 0.5) res.underMin++; res.small.push(`${name(e)} ${Math.round(r.width)}×${Math.round(r.height)}`); }

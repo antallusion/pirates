@@ -1,6 +1,6 @@
 // docs/23 · mobile fit (owner, 2026-10-10: «должно помещаться без прокрутов всяких»): every screen and window of the
 // game at every size a player holds it, measured — scroll boxes that overflow, things past the screen, cut text, taps
-// under 40 px, text under 11 px, the window's share of the screen.
+// under 40 px, text under 6 px (tiny) and, on a phone, over 14 px outside a heading (big), the window's share of the screen.
 //
 //   PORT=58997 node tools/mobile/fit/audit.mjs --phase before            (all sizes, RU and EN)
 //   node tools/mobile/fit/audit.mjs --phase after --sizes 640x360 --langs ru --only captain,port
@@ -39,9 +39,9 @@ async function measure(p, id, size, lang, root) {
   const r = await p.evaluate((q) => globalThis.__fit(q), root);
   const shot = SHOTS.has(`${size}/${lang}`);
   if (shot) await p.screenshot({ path: `${IMG}/${id.replace(/[:/]/g, '_')}__${size}_${lang}.jpg`, type: 'jpeg', quality: 62 });
-  const row = { screen: id, size, lang, root, scroll: r.scroll, out: r.out, cut: r.cut, small: r.small, under36: r.under36, underMin: r.underMin, minTap: r.minTap, tiny: r.tiny, share: r.share, page: r.page, pages: r.pages ?? null, rotate: r.rotate ?? null };
+  const row = { screen: id, size, lang, root, scroll: r.scroll, out: r.out, cut: r.cut, small: r.small, under36: r.under36, underMin: r.underMin, minTap: r.minTap, tiny: r.tiny, big: r.big ?? [], share: r.share, page: r.page, pages: r.pages ?? null, rotate: r.rotate ?? null };
   rows.push(row);
-  L.log(`${id.padEnd(26)} ${size.padEnd(9)} ${lang}  scroll ${r.scroll.length}${r.page ? '+page' : ''}  out ${r.out.length}  cut ${r.cut.length}  <40 ${r.small.length} (<${r.minTap} ${r.underMin})  tiny ${r.tiny.length}  ${r.share}%${r.pages ? '  pages ' + r.pages : ''}${r.rotate ? '  ROTATE' : ''}`);
+  L.log(`${id.padEnd(26)} ${size.padEnd(9)} ${lang}  scroll ${r.scroll.length}${r.page ? '+page' : ''}  out ${r.out.length}  cut ${r.cut.length}  <40 ${r.small.length} (<${r.minTap} ${r.underMin})  tiny ${r.tiny.length}  big ${(r.big ?? []).length}  ${r.share}%${r.pages ? '  pages ' + r.pages : ''}${r.rotate ? '  ROTATE' : ''}`);
   return row;
 }
 
@@ -104,5 +104,5 @@ writeFileSync(outFile, JSON.stringify({ at: new Date().toISOString(), phase: PHA
 L.log('rows', rows.length, '→', outFile);
 // The table.
 const { table } = await import('./table.mjs');
-writeFileSync(['before', 'after'].includes(PHASE) ? `docs/img/mobilefit/audit-${PHASE}.md` : `${OUTD}/audit-${PHASE}.md`, table(PHASE));
+writeFileSync(['before', 'after'].includes(PHASE) ? `docs/img/mobilefit/audit-${PHASE}.md` : `${OUTD}/audit-${PHASE}.md`, table(PHASE, arg('vs', null)));
 L.log('table → docs/img/mobilefit/audit-' + PHASE + '.md');
