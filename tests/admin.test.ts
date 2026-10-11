@@ -41,3 +41,16 @@ test('admin commands are off unless GRAVETIDE_ADMIN=1; with it they speed the cl
     else process.env.GRAVETIDE_ADMIN = was;
   }
 });
+
+test('admin /speed: the wall clock (build queue, respawns, weeks) runs ahead with the world; at ×1 it is the real one (docs/30)', async () => {
+  const { game } = makeGame();
+  game.start();
+  await new Promise((r) => setTimeout(r, 300));
+  assert.equal(game.wallSkew, 0, 'at ×1 the wall clock is the real clock');
+  game.timeScale = 20;
+  await new Promise((r) => setTimeout(r, 800));
+  game.stop();
+  assert.ok(game.wallSkew > 1500, `ahead by ${game.wallSkew} ms after 0.8 s at ×20`);
+  assert.ok(Math.abs(game.wallNow() - Date.now() - game.wallSkew) < 50, 'wallNow carries the skew');
+  assert.equal(game.db.getKv<number>('wall_skew'), game.wallSkew, 'kept across a restart');
+});

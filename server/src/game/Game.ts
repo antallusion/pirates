@@ -394,8 +394,12 @@ export class Game {
   guildMember?: (guildId: number, accountId: number) => boolean;
   guildNotify?: (guildId: number, subject: string, body: string) => void;
   islandHostile?: (h: Holding, ship: ShipEntity) => boolean;
-  /** Real time in ms, for letters and listings that outlive the process (tests move it). */
-  wallNow: () => number = () => Date.now();
+  /** How far the wall clock has run ahead of the real one under admin /speed (ms; 0 on a normal server, where
+   *  timeScale is always 1). The QA playthrough (docs/30, owner 2026-10-12: «врубить скорость х100»): the build
+   *  queue, the 48 h respawns, the weeks follow the world clock there, so the speed is honest. */
+  wallSkew = 0;
+  /** Real time in ms, for letters and listings that outlive the process (tests move it); ahead by wallSkew under /speed. */
+  wallNow: () => number = () => Date.now() + this.wallSkew;
   metrics = new Metrics();
   prof = new Profiler();
   /** In a multi-zone world: this process's zone (zones/zone.ts); null when one process runs the whole ocean. */
@@ -465,6 +469,7 @@ export class Game {
       this.now = saved.time;
       restoreMarkets(this.markets, saved.markets);
     }
+    this.wallSkew = this.db.getKv<number>('wall_skew') ?? 0; // admin /speed's run-ahead outlives a restart (docs/30)
     this.sites = buildSites(this.world);
     const savedSites = this.db.getKv<Record<string, { stock: number; holder: number | null; holderName: string; until: number }>>('sites');
     if (savedSites) for (const site of this.sites) if (savedSites[site.id]) Object.assign(site, savedSites[site.id]);
@@ -488,7 +493,8 @@ export class Game {
     let acc = 0;
     this.timer = setInterval(() => {
       const t = performance.now();
-      acc += ((t - last) / 1000) * this.timeScale;
+      const realDt = t - last;
+      acc += (realDt / 1000) * this.timeScale;
       last = t;
       let steps = 0;
       const maxSteps = Math.ceil(5 * this.timeScale);
@@ -504,6 +510,8 @@ export class Game {
         acc = 0; // drop time rather than spiral
         this.metrics.overruns++;
       }
+      // Admin /speed: the wall clock runs ahead by the world time simulated beyond the real (what the tick managed).
+      if (this.timeScale > 1) this.wallSkew += Math.max(0, steps * TICK_DT * 1000 - realDt);
     }, 1000 * TICK_DT * 0.5);
   }
 
@@ -4631,6 +4639,7 @@ export class Game {
       const sites = Object.fromEntries(this.sites.map((x) => [x.id, { stock: x.stock, holder: x.holder, holderName: x.holderName, until: x.until }]));
       if (!this.zone) {
         this.db.setKv('world', { time: this.now, markets });
+        if (this.wallSkew) this.db.setKv('wall_skew', this.wallSkew);
         this.db.setKv('orders', this.orders);
         this.db.setKv('econ', { history: this.econHistory, rewardMul: this.econRewardMul });
         this.db.setKv('sites', sites);
