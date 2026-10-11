@@ -382,7 +382,8 @@ export class PortScreen {
         const email = (root.querySelector('#claim-email') as HTMLInputElement).value.trim();
         const password = (root.querySelector('#claim-password') as HTMLInputElement).value;
         const token = localStorage.getItem('gravetide.token') ?? '';
-        fetch('/auth/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, email, password }) })
+        // (the form's guard: honeypot and time since shown, mailguard.ts; her tongue for the letter)
+        fetch('/auth/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, email, password, website: '', t: String(Math.round(performance.now())), lang: lang() }) })
           .then((r) => r.json())
           .then((r: { error?: string }) => tell(r.error ? serverText(r.error) : L('alert.claimSaved')))
           .catch(() => tell(L('alert.claimFail')));

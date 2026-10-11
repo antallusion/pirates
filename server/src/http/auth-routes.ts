@@ -4,11 +4,24 @@
 //   POST /auth/claim {token, email, password}      POST /auth/forgot {email}      POST /auth/reset {token, password}
 //   GET  /auth/verify?token=…                       GET  /auth/providers
 //   GET  /auth/oauth/:id  → provider               GET  /auth/oauth/:id/callback → /#token=…
+//   POST /auth/support {email, message, token?}  → a letter to the support desk, replies to her address
+// Every form that sends a letter carries the honeypot (`website`, empty) and `t` (ms since it was shown), and is held
+// to 3 letters an hour an address and 10 an IP (mailguard.ts; owner, 2026-10-11).
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AuthService } from '../auth.ts';
+import { CHECK_EMAIL, isEmail, mailLocale } from '../auth.ts';
+import { formTrapped, MailGuard } from '../mailguard.ts';
 import type { OAuthFlow } from '../oauth.ts';
 import { clientIp } from '../net/conn.ts';
+
+/** The letters' guard (one per process); tests make their own. */
+let guard = new MailGuard();
+export function resetMailGuard(g: MailGuard = new MailGuard()): void {
+  guard = g;
+}
+export const MAIL_LIMIT = 'Too many letters for now. Try again in an hour.';
+const SUPPORT_TO = process.env.SUPPORT_EMAIL ?? 'support@gravetidegame.com';
 
 const LIMIT = 20; // requests per address per minute
 const hits = new Map<string, { n: number; reset: number }>();
@@ -93,18 +106,70 @@ export async function handleAuth(req: IncomingMessage, res: ServerResponse, auth
     let r: { token?: string; name?: string; accountId?: number; error?: string } | null = null;
     switch (path) {
       case '/auth/register':
-        r = await auth.registerEmail(b.email, b.password, b.name);
+      case '/auth/claim': {
+        // (a form that sends a letter: the trap, then the hour's count — only for an address that could take one)
+        if (formTrapped(b)) {
+          json(res, 400, { error: 'Bad request' });
+          return true;
+        }
+        const email = String(b.email ?? '').trim().toLowerCase();
+        if (isEmail(email) && !guard.take(addr, email)) {
+          json(res, 429, { error: MAIL_LIMIT });
+          return true;
+        }
+        r = path === '/auth/register'
+          ? await auth.registerEmail(b.email, b.password, b.name, mailLocale(b.lang))
+          : await auth.claim(b.token, b.email, b.password, mailLocale(b.lang));
+        if (r && 'error' in r && r.error === CHECK_EMAIL) {
+          json(res, 422, { error: CHECK_EMAIL });
+          return true;
+        }
         break;
+      }
       case '/auth/login':
         r = await auth.loginEmail(b.email, b.password);
         break;
-      case '/auth/claim':
-        r = await auth.claim(b.token, b.email, b.password);
-        break;
-      case '/auth/forgot':
-        await auth.forgot(b.email);
+      case '/auth/forgot': {
+        // Always the same answer (nobody may probe which addresses have accounts); a trapped or over-count ask sends nothing.
+        const email = String(b.email ?? '').trim().toLowerCase();
+        if (!formTrapped(b) && isEmail(email) && guard.take(addr, email)) await auth.forgot(email, mailLocale(b.lang));
         json(res, 200, { ok: true });
         return true;
+      }
+      case '/auth/support': {
+        // The feedback form (owner, 2026-10-11): to the support desk, the reply to her address once it is checked.
+        if (formTrapped(b)) {
+          json(res, 200, { ok: true });
+          return true;
+        }
+        const email = String(b.email ?? '').trim().toLowerCase();
+        const message = String(b.message ?? '').trim();
+        if (!isEmail(email)) {
+          json(res, 400, { error: 'That does not look like an e-mail address.' });
+          return true;
+        }
+        if (message.length < 10 || message.length > 4000) {
+          json(res, 400, { error: 'Write between 10 and 4000 characters.' });
+          return true;
+        }
+        if (!guard.take(addr, `support:${email}`)) {
+          json(res, 429, { error: MAIL_LIMIT });
+          return true;
+        }
+        const who = b.token ? auth.resume(String(b.token)) : null;
+        try {
+          await auth.mailer.send({
+            to: SUPPORT_TO,
+            replyTo: email,
+            subject: `GRAVETIDE · ${message.replace(/\s+/g, ' ').slice(0, 60)}`,
+            text: `${message}\n\n— ${who ? `captain ${who.name} (#${who.accountId})` : 'no captain signed in'} · ${email}`,
+          });
+          json(res, 200, { ok: true });
+        } catch {
+          json(res, 503, { error: 'The letter could not be sent. Try again later.' });
+        }
+        return true;
+      }
       case '/auth/reset':
         r = auth.reset(b.token, b.password);
         break;

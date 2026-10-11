@@ -837,10 +837,17 @@ function titleFilm(ka: HTMLElement, poster: string | null): void {
 if (net.token) net.connect();
 else $('login-name').focus();
 
-async function authPost(path: string, body: Record<string, string>): Promise<{ token?: string; error?: string }> {
+/** The forms' guard on every letter-sending ask (owner, 2026-10-11): the honeypot (filled only by bots), the time since
+ *  the page came (a bot answers at once) and her tongue for the letter. */
+const formGuard = (form: string): Record<string, string> => ({
+  website: (document.querySelector<HTMLInputElement>(`#${form} input.hp`)?.value ?? ''),
+  t: String(Math.round(performance.now())),
+  lang: lang(),
+});
+async function authPost(path: string, body: Record<string, string>): Promise<{ token?: string; error?: string; ok?: boolean }> {
   try {
     const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    return (await res.json()) as { token?: string; error?: string };
+    return (await res.json()) as { token?: string; error?: string; ok?: boolean };
   } catch {
     return { error: L('noAnswer') };
   }
@@ -860,7 +867,7 @@ $('forgot-btn').onclick = async () => {
     $('login-error').textContent = L('emailFirst');
     return;
   }
-  await authPost('/auth/forgot', { email });
+  await authPost('/auth/forgot', { email, ...formGuard('email-form') });
   $('login-error').textContent = L('letterSent');
 };
 ($('email-form') as HTMLFormElement).onsubmit = async (e) => {
@@ -868,7 +875,7 @@ $('forgot-btn').onclick = async () => {
   const email = ($('login-email') as HTMLInputElement).value.trim();
   const password = ($('login-password') as HTMLInputElement).value;
   const r = registering
-    ? await authPost('/auth/register', { email, password, name: ($('register-name') as HTMLInputElement).value.trim() })
+    ? await authPost('/auth/register', { email, password, name: ($('register-name') as HTMLInputElement).value.trim(), ...formGuard('email-form') })
     : await authPost('/auth/login', { email, password });
   if (!r.token) {
     $('login-error').textContent = (r.error ? serverText(r.error) : L('signInFailed'));
@@ -876,6 +883,31 @@ $('forgot-btn').onclick = async () => {
   }
   net.adopt(r.token);
   net.connect();
+};
+// The feedback form (owner, 2026-10-11): a letter to the support desk; the answer comes to her address.
+$('support-btn').onclick = () => {
+  $('email-form').classList.add('hidden');
+  $('support-form').classList.remove('hidden');
+  ($('support-email') as HTMLInputElement).value ||= ($('login-email') as HTMLInputElement).value.trim();
+};
+$('support-back').onclick = () => {
+  $('support-form').classList.add('hidden');
+  $('email-form').classList.remove('hidden');
+};
+($('support-form') as HTMLFormElement).onsubmit = async (e) => {
+  e.preventDefault();
+  const email = ($('support-email') as HTMLInputElement).value.trim();
+  const message = ($('support-message') as HTMLTextAreaElement).value.trim();
+  if (!email) {
+    $('login-error').textContent = L('emailFirst');
+    return;
+  }
+  const r = await authPost('/auth/support', { email, message, token: localStorage.getItem('gravetide.token') ?? '', ...formGuard('support-form') });
+  if (r.ok) {
+    ($('support-message') as HTMLTextAreaElement).value = '';
+    $('support-back').click();
+    $('login-error').textContent = L('supportSent');
+  } else $('login-error').textContent = r.error ? serverText(r.error) : L('noAnswer');
 };
 fetch('/auth/providers').then((r) => r.json()).then((d: { providers: { id: string; name: string }[] }) => {
   $('oauth-buttons').innerHTML = d.providers.map((p) => `<a class="btn btn-small" href="/auth/oauth/${p.id}">${esc(L('signInWith', { name: p.name }))}</a>`).join('');

@@ -5,7 +5,7 @@
 
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import type { Mailer } from './mail.ts';
-import { OutboxMailer } from './mail.ts';
+import { MailRejected, OutboxMailer } from './mail.ts';
 import type { AccountRow, Db } from './persistence/db.ts';
 
 export interface AuthResult {
@@ -22,6 +22,12 @@ export function hashToken(token: string): string {
 
 const NAME_RE = /^[\p{L}\p{N} _'-]{3,20}$/u;
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
+/** The tongue of a letter (the captain's game language). */
+export type MailLocale = 'ru' | 'en';
+export const mailLocale = (v: unknown): MailLocale => (v === 'ru' ? 'ru' : 'en');
+/** A 422 from the mail service: the address is unknown, mistyped or throwaway (owner: «покажи "проверьте email"»). */
+export const CHECK_EMAIL = 'Check the e-mail address: letters cannot be delivered to it.';
+export const isEmail = (v: string): boolean => EMAIL_RE.test(v);
 const VERIFY_TTL = 3 * 86_400_000;
 const RESET_TTL = 3_600_000;
 
@@ -89,16 +95,22 @@ export class AuthService {
     return { accountId: a.id, name: a.name, token };
   }
 
-  async registerEmail(rawEmail: string, password: string, rawName: string): Promise<AuthResult | AuthError> {
+  async registerEmail(rawEmail: string, password: string, rawName: string, locale: MailLocale = 'en'): Promise<AuthResult | AuthError> {
     const email = String(rawEmail ?? '').trim().toLowerCase();
     if (!EMAIL_RE.test(email)) return { error: 'That does not look like an e-mail address.' };
     const bad = passwordProblem(password);
     if (bad) return { error: bad };
     if (this.db.accountByEmail(email)) return { error: 'An account with that e-mail already exists.' };
+    // (the name is checked before a letter goes: a refused name sends nothing)
+    const name = sanitizeName(rawName ?? '');
+    if (!name || this.db.accountByName(name)) return this.register(rawName) as AuthError;
+    // The letter goes first (owner, 2026-10-11): an address the mail service refuses makes no account at all.
+    const raw = randomBytes(24).toString('base64url');
+    if ((await this.mailVerification(email, raw, locale)) === 'invalid') return { error: CHECK_EMAIL };
     const r = this.register(rawName);
     if ('error' in r) return r;
     this.db.setEmail(r.accountId, email, hashPassword(password));
-    await this.sendVerification(r.accountId, email);
+    this.db.putAuthToken(hashToken(raw), r.accountId, 'verify', Date.now() + VERIFY_TTL);
     return r;
   }
 
@@ -109,7 +121,7 @@ export class AuthService {
   }
 
   /** A guest keeps their captain and adds an e-mail and a password. */
-  async claim(gameToken: string, rawEmail: string, password: string): Promise<AuthResult | AuthError> {
+  async claim(gameToken: string, rawEmail: string, password: string, locale: MailLocale = 'en'): Promise<AuthResult | AuthError> {
     const cur = this.resume(gameToken);
     if (!cur) return { error: 'Sign in first.' };
     const email = String(rawEmail ?? '').trim().toLowerCase();
@@ -118,19 +130,30 @@ export class AuthService {
     if (bad) return { error: bad };
     const other = this.db.accountByEmail(email);
     if (other && other.id !== cur.accountId) return { error: 'An account with that e-mail already exists.' };
+    const raw = randomBytes(24).toString('base64url');
+    if ((await this.mailVerification(email, raw, locale)) === 'invalid') return { error: CHECK_EMAIL };
     this.db.setEmail(cur.accountId, email, hashPassword(password));
-    await this.sendVerification(cur.accountId, email);
+    this.db.putAuthToken(hashToken(raw), cur.accountId, 'verify', Date.now() + VERIFY_TTL);
     return cur;
   }
 
-  private async sendVerification(accountId: number, email: string): Promise<void> {
-    const raw = randomBytes(24).toString('base64url');
-    this.db.putAuthToken(hashToken(raw), accountId, 'verify', Date.now() + VERIFY_TTL);
-    await this.mailer.send({
-      to: email,
-      subject: 'GRAVETIDE — confirm your e-mail',
-      text: `Captain,\n\nConfirm this address for your GRAVETIDE account:\n${this.publicUrl}/auth/verify?token=${raw}\n\nThe link is good for three days. If you did not ask for this, ignore the letter.\n\n— The Harbour Master`,
-    }).catch(() => undefined);
+  /** The verification letter (Sendersy's own, in her tongue; plain words for the other mailers): 'invalid' when the
+   *  mail service refuses the address (a 422 — told to her, not retried), 'failed' when it could not be reached. */
+  private async mailVerification(email: string, raw: string, locale: MailLocale): Promise<'ok' | 'invalid' | 'failed'> {
+    const url = `${this.publicUrl}/auth/verify?token=${raw}`;
+    try {
+      await this.mailer.send({
+        to: email,
+        subject: locale === 'ru' ? 'GRAVETIDE — подтвердите почту' : 'GRAVETIDE — confirm your e-mail',
+        text: `Captain,\n\nConfirm this address for your GRAVETIDE account:\n${url}\n\nThe link is good for three days. If you did not ask for this, ignore the letter.\n\n— The Harbour Master`,
+        template: 'sendersy/email-verify--gaming',
+        locale,
+        variables: { verify_url: url },
+      });
+      return 'ok';
+    } catch (e) {
+      return e instanceof MailRejected && e.kind === 'invalid' ? 'invalid' : 'failed';
+    }
   }
 
   verifyEmail(raw: string): boolean {
@@ -141,15 +164,19 @@ export class AuthService {
   }
 
   /** Always answers the same, so nobody can probe which addresses have accounts. */
-  async forgot(rawEmail: string): Promise<void> {
+  async forgot(rawEmail: string, locale: MailLocale = 'en'): Promise<void> {
     const a = this.db.accountByEmail(String(rawEmail ?? '').trim().toLowerCase());
     if (!a || !a.email) return;
     const raw = randomBytes(24).toString('base64url');
     this.db.putAuthToken(hashToken(raw), a.id, 'reset', Date.now() + RESET_TTL);
+    const url = `${this.publicUrl}/#reset=${raw}`;
     await this.mailer.send({
       to: a.email,
-      subject: 'GRAVETIDE — reset your password',
-      text: `Captain ${a.name},\n\nSet a new password here (good for one hour):\n${this.publicUrl}/#reset=${raw}\n\nIf you did not ask for this, ignore the letter; your password stays as it is.\n\n— The Harbour Master`,
+      subject: locale === 'ru' ? 'GRAVETIDE — новый пароль' : 'GRAVETIDE — reset your password',
+      text: `Captain ${a.name},\n\nSet a new password here (good for one hour):\n${url}\n\nIf you did not ask for this, ignore the letter; your password stays as it is.\n\n— The Harbour Master`,
+      template: 'sendersy/password-reset--gaming',
+      locale,
+      variables: { reset_url: url },
     }).catch(() => undefined);
   }
 

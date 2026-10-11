@@ -64,10 +64,21 @@
           <label><span data-i18n="login.email">E-mail</span><input id="login-email" type="email" autocomplete="email" /></label>
           <label><span data-i18n="login.password">Password</span><input id="login-password" type="password" autocomplete="current-password" minlength="8" /></label>
           <label id="register-name-wrap" class="hidden"><span data-i18n="login.name">Captain's name</span><input id="register-name" maxlength="20" autocomplete="off" /></label>
+          <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
           <div class="row" style="gap:6px;flex-wrap:wrap">
             <button class="btn btn-primary" type="submit" data-mode="login" data-i18n="login.signIn">Sign in</button>
             <button class="btn" type="button" id="register-toggle" data-i18n="login.newAccount">New account</button>
             <button class="btn btn-small" type="button" id="forgot-btn" data-i18n="login.forgot">Forgot password</button>
+            <button class="btn btn-small" type="button" id="support-btn" data-i18n="login.support">Support</button>
+          </div>
+        </form>
+        <form id="support-form" class="hidden" onsubmit="return false">
+          <label><span data-i18n="login.email">E-mail</span><input id="support-email" type="email" autocomplete="email" /></label>
+          <label><span data-i18n="login.supportMsg">Your message</span><textarea id="support-message" rows="3" maxlength="4000"></textarea></label>
+          <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+          <div class="row" style="gap:6px;flex-wrap:wrap">
+            <button class="btn btn-primary" type="submit" data-i18n="login.supportSend">Send</button>
+            <button class="btn btn-small" type="button" id="support-back" data-i18n="login.supportBack">Back</button>
           </div>
         </form>
         <div id="oauth-buttons" class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"></div>

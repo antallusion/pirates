@@ -28,6 +28,8 @@ html, body { margin: 0; height: 100%; background: var(--ink); color: var(--bone)
 canvas#world { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; cursor: crosshair; }
 canvas#world-sea, canvas#world-sky { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; pointer-events: none; }
 .hidden { display: none !important; }
+/* The forms' honeypot (owner, 2026-10-11): off the screen for people, filled only by bots. */
+.hp { position: absolute !important; left: -10000px !important; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 button { font-family: var(--sans); }
 
 .panel {
