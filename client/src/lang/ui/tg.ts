@@ -4,6 +4,7 @@
 
 export const EN = {
   'login': 'Sign in with Telegram',
+  'loginShort': 'Telegram',
   'link': 'Link Telegram',
   'linked': 'Telegram linked',
   'wait.title': 'Waiting for Telegram',
@@ -30,6 +31,7 @@ export const EN = {
 
 export const RU: Record<keyof typeof EN, string> = {
   'login': 'Войти через Телеграм',
+  'loginShort': 'Телеграм',
   'link': 'Привязать Телеграм',
   'linked': 'Телеграм привязан',
   'wait.title': 'Ждём Телеграм',

@@ -234,7 +234,7 @@ export function tgStart(net: Net): boolean {
 let waiting: { stop: () => void } | null = null;
 
 /** «Войти через Телеграм» (no token) or «Привязать Телеграм» (the captain's token): the bot's link, the wait. */
-export async function tgDeepLink(o: { net: Net; token?: string | null; onLinked?: (name: string) => void; toast?: (msg: string, kind: string) => void }): Promise<void> {
+export async function tgDeepLink(o: { net?: Net; token?: string | null; onLinked?: (name: string) => void; toast?: (msg: string, kind: string) => void }): Promise<void> {
   waiting?.stop();
   const s = await post<{ nonce?: string; link?: string; expires?: number }>('/auth/tg/start', o.token ? { token: o.token } : {});
   if (!s.nonce || !s.link) {
@@ -290,17 +290,21 @@ export async function tgDeepLink(o: { net: Net; token?: string | null; onLinked?
       fails++;
     }
     if (!card.isConnected) return;
-    if (r.status === 'done' && r.token) {
+    if (r.status === 'done' && r.token && o.net) {
       stop();
       o.net.adopt(r.token);
       if (!o.net.live) o.net.connect();
       return;
     }
     if (r.status === 'linked') {
-      stop();
+      // the card says it, and closes by itself
       linkedCache = Promise.resolve(true);
+      left.textContent = L('linkedToast', { name: r.name ?? '' });
+      left.classList.add('good');
+      card.querySelector('.tgw-open')?.remove();
       o.toast?.(L('linkedToast', { name: r.name ?? '' }), 'good');
       o.onLinked?.(r.name ?? '');
+      timer = setTimeout(stop, 2500) as unknown as number;
       return;
     }
     if (r.status === 'taken') return end(L('wait.taken'));
@@ -316,7 +320,11 @@ export async function tgDeepLink(o: { net: Net; token?: string | null; onLinked?
 export function tgLoginButton(net: Net, onLang: (f: () => void) => void): void {
   const b = document.getElementById('login-tg') as HTMLButtonElement | null;
   if (!b) return;
-  const label = () => (b.innerHTML = `${tgIcon()}<span>${esc(L('login'))}</span>`);
+  // the whole words, and the short one for the smallest phones (tg.css)
+  const label = () => {
+    b.innerHTML = `${tgIcon()}<span class="tgl-long">${esc(L('login'))}</span><span class="tgl-short">${esc(L('loginShort'))}</span>`;
+    b.title = L('login');
+  };
   label();
   onLang(label);
   void tgConfig().then((c) => b.classList.toggle('hidden', !c?.enabled || inTelegram() || onTgHost()));
@@ -330,10 +338,13 @@ export function tgLoginButton(net: Net, onLang: (f: () => void) => void): void {
 // ------------------------------------------------------------------------------------------------ settings
 
 let linkedCache: Promise<boolean | null> | null = null;
+let linkedFor: string | null = null;
 
 /** Whether the captain's account has its Telegram linked (null: no Telegram on the server, or not signed in). */
 export function tgLinked(token: string | null): Promise<boolean | null> {
   if (!token) return Promise.resolve(null);
+  if (linkedFor !== token) linkedCache = null;
+  linkedFor = token;
   linkedCache ??= tgConfig().then((c) => (c?.enabled ? post<{ linked?: boolean }>('/auth/tg/linked', { token }).then((r) => (typeof r.linked === 'boolean' ? r.linked : null)) : null));
   return linkedCache;
 }

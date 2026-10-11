@@ -22,6 +22,7 @@ import { specialName, unitIcon, unitName } from './army.ts';
 import { ask } from './confirm.ts';
 import { esc, fmt, icon } from './dom.ts';
 import { placeName } from './maps.ts';
+import { tgPackButton, tgPayNote, starIcon } from '../tg.ts'; // the packs for Telegram Stars (docs/27)
 
 const L = dict(EN, RU);
 const AL = dict(AEN, ARU);
@@ -98,13 +99,13 @@ function topUp(v: PremiumView): string {
     const n = p.n + p.bonus;
     return `<div class="card pm-pack">${doubloonIcon('ico-lg')}<b class="pm-pack-n">${fmt(n)}</b><span class="pm-pack-w">${esc(dblWord(n))}</span>
       <span class="pm-bonus${p.bonus ? '' : ' none'}">${p.bonus ? esc(L('top.bonus', { n: fmt(p.bonus) })) : '&nbsp;'}</span>
-      <button class="btn btn-small" disabled>${esc(L('top.soon'))}</button></div>`;
+      ${v.pay ? tgPackButton(p.id, p.stars) : `<button class="btn btn-small" disabled>${esc(L('top.soon'))}</button>`}</div>`;
   }).join('');
-  // No payment provider yet (PAYMENTS_OPEN): the packs are shown, none can be bought.
+  // Payments closed (no bot token on the server): the packs are shown, none can be bought; open, each Buys for Stars.
   return `<div class="pm-top"><div class="pm-top-h"><div><h3 class="title-sm">${esc(L('top.title'))}</h3><p class="muted">${esc(L('top.sub'))}</p></div>
       <button class="btn btn-small" data-pmback>${esc(L('top.back'))}</button></div>
     <div class="pm-packs">${packs}</div>
-    ${v.pay ? '' : `<p class="pm-soon">${icon('tab_letters', '', 'ico-sm')}${esc(L('top.note'))}</p>`}</div>`;
+    ${v.pay ? `<p class="pm-paynote">${starIcon()}${esc(tgPayNote())}</p>` : `<p class="pm-soon">${icon('tab_letters', '', 'ico-sm')}${esc(L('top.note'))}</p>`}</div>`;
 }
 
 export class PremiumWindow {
@@ -154,6 +155,12 @@ export class PremiumWindow {
       this.topup = false;
       this.render(root, state);
     });
+    // A pack for Stars: the server makes the invoice and sends its link (src/tg.ts opens it).
+    root.querySelectorAll<HTMLButtonElement>('[data-pmpack]').forEach((b) => (b.onclick = () => {
+      b.disabled = true;
+      setTimeout(() => (b.disabled = false), 4000);
+      this.send({ t: 'premium', action: 'stars', pack: b.dataset.pmpack!, lang: lang() === 'ru' ? 'ru' : 'en' });
+    }));
     root.querySelectorAll<HTMLElement>('[data-pmtab]').forEach((b) => (b.onclick = () => {
       this.tab = b.dataset.pmtab as 'ships' | 'units';
       this.render(root, state);

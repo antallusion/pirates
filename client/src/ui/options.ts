@@ -11,6 +11,7 @@ import { esc, icon } from './dom.ts';
 import { dict } from '../i18n.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
 import { chipRow, winHead } from './kit/window.ts';
+import { tgDeepLink, tgLinked, tgSettingsButton } from '../tg.ts'; // «Привязать Телеграм» (docs/27)
 
 const W = dict(WIN_EN, WIN_RU);
 /** The interface's sizes on the main page (uiScale). */
@@ -27,6 +28,8 @@ export class OptionsScreen {
   /** The binding waiting for a key: action and slot. */
   private listening: { action: Action; slot: 0 | 1 } | null = null;
   private root: HTMLElement | null = null;
+  /** The account's Telegram: linked, not yet, or null (no Telegram on the server) — docs/27. */
+  private tg: boolean | null = null;
   close: () => void = () => {};
 
   constructor() {
@@ -66,6 +69,23 @@ export class OptionsScreen {
       this.listening = null;
       this.render(root);
     }));
+    root.querySelector<HTMLButtonElement>('[data-otg]')?.addEventListener('click', () => {
+      let token: string | null = null;
+      try { token = localStorage.getItem('gravetide.token'); } catch { /* no storage */ }
+      void tgDeepLink({ token, onLinked: () => {
+        this.tg = true;
+        if (this.root?.isConnected) this.render(this.root);
+      } });
+    });
+    if (!this.more) {
+      let token: string | null = null;
+      try { token = localStorage.getItem('gravetide.token'); } catch { /* no storage */ }
+      void tgLinked(token).then((v) => {
+        if (v === this.tg) return;
+        this.tg = v;
+        if (this.root === root && root.isConnected && !this.more) this.render(root);
+      });
+    }
     root.querySelector<HTMLButtonElement>('[data-omore]')?.addEventListener('click', () => {
       this.more = true;
       this.render(root);
@@ -142,7 +162,7 @@ export class OptionsScreen {
       ${row('menu_options', W('opt.size'), seg(UI_SIZES.map((v) => [String(v), `${Math.round(v * 100)}%`, v === near] as [string, string, boolean]), 'osize', W('opt.size')), W('opt.sizeHint'))}
       ${row('menu_map', W('opt.mmTarget'), seg([['hide', W('opt.mmHide'), s.mmTarget === 'hide'], ['show', W('opt.mmShow'), s.mmTarget === 'show']], 'omm', W('opt.mmTarget')), W('opt.mmTargetHint'), 'opt-row--wide')}
     </div>
-    <button type="button" class="k-btn k-btn--secondary k-btn--md opt-more" data-omore>${esc(W('opt.more'))}</button>`;
+    <div class="opt-foot"><button type="button" class="k-btn k-btn--secondary k-btn--md opt-more" data-omore>${esc(W('opt.more'))}</button>${tgSettingsButton(this.tg)}</div>`;
   }
 
   private body(s: Settings): string {
