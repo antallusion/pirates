@@ -199,6 +199,10 @@ export interface TelegramOptions {
   secret?: string;
   /** Telegram user ids allowed the bot's /refund (TELEGRAM_ADMIN_IDS). */
   admins?: number[];
+  /** ux2 (2026-10-11): the bot's Main Mini App is set up in BotFather (TG_MAIN_APP=1): the «Играть» buttons in its messages
+   *  open it by its direct link in fullscreen (`t.me/<bot>?startapp=play&mode=fullscreen`) instead of a web_app button,
+   *  which Telegram opens in its tall mode with its own header (the Mini App then asks for fullscreen itself). */
+  mainApp?: boolean;
   now?: () => number;
   log?: (line: string) => void;
 }
@@ -209,6 +213,7 @@ export class TelegramService {
   readonly secret: string;
   readonly webappUrl: string;
   readonly publicUrl: string;
+  readonly mainApp: boolean;
   private db: Db;
   private auth: AuthService;
   private game: Game;
@@ -229,6 +234,7 @@ export class TelegramService {
     this.secret = webhookSecret(o.token, o.secret);
     this.webappUrl = o.webappUrl;
     this.publicUrl = o.publicUrl.replace(/\/$/, '');
+    this.mainApp = o.mainApp === true;
     this.admins = new Set(o.admins ?? []);
     this.now = o.now ?? Date.now;
     this.log = o.log ?? ((l) => console.log(l));
@@ -252,6 +258,11 @@ export class TelegramService {
         this.log(`[tg] ${m} failed: ${(e as Error).message}`);
       }
     }
+  }
+
+  /** The «Играть» button under a message: the Main Mini App's fullscreen direct link (TG_MAIN_APP), else the web_app. */
+  playButton(l: TgLang): { text: string; url: string } | { text: string; web_app: { url: string } } {
+    return this.mainApp ? { text: tgText('play', l), url: `https://t.me/${this.bot}?startapp=play&mode=fullscreen` } : { text: tgText('play', l), web_app: { url: this.webappUrl } };
   }
 
   private commands(l: TgLang): { command: string; description: string }[] {
@@ -447,7 +458,7 @@ export class TelegramService {
     try {
       await this.api.call('answerCallbackQuery', { callback_query_id: q.id, text: text.slice(0, 190) });
       if (q.message?.chat) {
-        const play = done ? { reply_markup: { inline_keyboard: [[{ text: tgText('play', l), web_app: { url: this.webappUrl } }]] } } : {};
+        const play = done ? { reply_markup: { inline_keyboard: [[this.playButton(l)]] } } : {};
         await this.api.call('editMessageText', { chat_id: q.message.chat.id, message_id: q.message.message_id, text, ...play });
       }
     } catch (e) {
@@ -457,7 +468,7 @@ export class TelegramService {
 
   /** A message to a chat, with the «Играть» web_app button under it when asked. */
   private async say(chatId: number, text: string, play = false, l: TgLang = 'ru'): Promise<void> {
-    const markup = play ? { reply_markup: { inline_keyboard: [[{ text: tgText('play', l), web_app: { url: this.webappUrl } }]] } } : {};
+    const markup = play ? { reply_markup: { inline_keyboard: [[this.playButton(l)]] } } : {};
     try {
       await this.api.call('sendMessage', { chat_id: chatId, text, ...markup });
     } catch (e) {
@@ -598,6 +609,7 @@ export function telegramFromEnv(o: { db: Db; auth: AuthService; game: Game; publ
     bot: env.TELEGRAM_BOT_USERNAME ?? 'gravetide_bot',
     secret: env.TELEGRAM_WEBHOOK_SECRET,
     admins: (env.TELEGRAM_ADMIN_IDS ?? '').split(',').map((x) => Number(x.trim())).filter((x) => Number.isSafeInteger(x) && x > 0),
+    mainApp: env.TG_MAIN_APP === '1',
   });
 }
 

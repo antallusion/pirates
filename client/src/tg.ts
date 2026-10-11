@@ -31,6 +31,8 @@ export interface TgWebApp {
   ready(): void;
   expand?(): void;
   requestFullscreen?(): void;
+  /** Bot API 8.0: whether the Mini App is in fullscreen now. */
+  isFullscreen?: boolean;
   lockOrientation?(): void;
   disableVerticalSwipes?(): void;
   setHeaderColor?(c: string): void;
@@ -38,7 +40,7 @@ export interface TgWebApp {
   setBottomBarColor?(c: string): void;
   safeAreaInset?: Inset;
   contentSafeAreaInset?: Inset;
-  onEvent?(ev: string, cb: () => void): void;
+  onEvent?(ev: string, cb: (e?: { error?: string; isFullscreen?: boolean }) => void): void;
   BackButton?: { show(): void; hide(): void; onClick(cb: () => void): void };
   openInvoice?(url: string, cb?: (status: InvoiceStatus) => void): void;
 }
@@ -128,11 +130,52 @@ function applyInsets(w: TgWebApp): void {
   }
 }
 
+/** ux2 (owner, 2026-10-11: «в телеграм версии не понятно как на весь экран сделать, там прям большая шапка сверху»): the
+ *  Mini App asks Telegram for fullscreen (Bot API 8.0) — after ready(), again a moment later if Telegram has not gone
+ *  there yet, and again on the captain's first tap if it was refused (iOS took the first ask before the view was up);
+ *  what Telegram answers is logged to the console (fullscreenChanged / fullscreenFailed and its reason). Kept on
+ *  `globalThis.__tgFullscreen` for the QA. */
+export const tgFullscreen = { asked: 0, changed: 0, failed: [] as string[], on: false };
+function askFullscreen(w: TgWebApp, why: string): void {
+  if (w.isFullscreen) return;
+  try {
+    tgFullscreen.asked++;
+    console.info(`[tg] requestFullscreen (${why})`);
+    w.requestFullscreen?.();
+  } catch (e) {
+    console.warn('[tg] requestFullscreen threw', e);
+  }
+}
+function watchFullscreen(w: TgWebApp, phone: boolean): void {
+  (globalThis as { __tgFullscreen?: typeof tgFullscreen }).__tgFullscreen = tgFullscreen;
+  w.onEvent?.('fullscreenChanged', function (this: TgWebApp | undefined) {
+    tgFullscreen.changed++;
+    tgFullscreen.on = !!(this ?? w).isFullscreen;
+    console.info(`[tg] fullscreenChanged: ${tgFullscreen.on ? 'fullscreen' : 'not fullscreen'}`);
+  });
+  w.onEvent?.('fullscreenFailed', (e) => {
+    const why = e?.error ?? 'unknown';
+    tgFullscreen.failed.push(why);
+    // ALREADY_FULLSCREEN is no failure; UNSUPPORTED — this Telegram cannot (an old client, a desktop)
+    console.warn(`[tg] fullscreenFailed: ${why}`);
+  });
+  if (!phone) return;
+  setTimeout(() => {
+    if (!w.isFullscreen && !tgFullscreen.failed.includes('UNSUPPORTED')) askFullscreen(w, 'again');
+  }, 700);
+  // the captain's first tap: a user's gesture Telegram does not refuse
+  const tap = () => {
+    if (!w.isFullscreen && !tgFullscreen.failed.includes('UNSUPPORTED')) askFullscreen(w, 'first tap');
+  };
+  addEventListener('pointerup', tap, { once: true, capture: true });
+}
+
 function setupMiniApp(w: TgWebApp): void {
   webApp = w;
   document.documentElement.classList.add('tg-app');
   const at = (v: string) => !!w.isVersionAtLeast?.(v);
-  const phone = /^(android|ios)$/i.test(w.platform ?? '');
+  // (Telegram X on Android says android_x; a phone of an unknown platform is a coarse pointer)
+  const phone = /^(android|android_x|ios)$/i.test(w.platform ?? '') || (!w.platform || w.platform === 'unknown') && matchMedia('(pointer: coarse)').matches;
   try {
     w.ready();
     w.expand?.();
@@ -143,9 +186,12 @@ function setupMiniApp(w: TgWebApp): void {
     }
     if (at('7.10')) w.setBottomBarColor?.('#0b0d10');
     if (at('7.7')) w.disableVerticalSwipes?.();
-    if (at('8.0') && phone) w.requestFullscreen?.();
   } catch {
     /* an older client: what it has */
+  }
+  if (at('8.0')) {
+    watchFullscreen(w, phone);
+    if (phone) askFullscreen(w, 'ready');
   }
   // The game is played sideways: once the phone is turned, the orientation is locked there (Bot API 8 locks the
   // current one; upright, the «turn your phone» veil asks first — with a word on Telegram's auto-rotate).

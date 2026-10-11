@@ -256,3 +256,22 @@ test('settings: «Всегда докупать» off, «Курс к задан�
     assert.deepEqual(v.match(/\{\w+\}/g) ?? [], (UX2_EN as Record<string, string>)[k].match(/\{\w+\}/g) ?? [], `${k}: placeholders`);
   }
 });
+
+test('Telegram: fullscreen asked after ready, again and on the first tap, the answers logged; the Main Mini App link opens it fullscreen', async () => {
+  const tg = src('client/src/tg.ts');
+  assert.ok(/if \(at\('8\.0'\)\) \{\s*watchFullscreen\(w, phone\);\s*if \(phone\) askFullscreen\(w, 'ready'\);/.test(tg), 'after ready()');
+  assert.ok(tg.includes("askFullscreen(w, 'again')") && tg.includes("askFullscreen(w, 'first tap')"), 'again, and on the first tap');
+  assert.ok(tg.includes("'fullscreenChanged'") && tg.includes("'fullscreenFailed'") && tg.includes('console.warn(`[tg] fullscreenFailed: ${why}`)'), 'logged');
+  assert.ok(tg.includes('android_x'), 'Telegram X is a phone');
+  const { TelegramService, fakeBotApi, telegramFromEnv } = await import('../server/src/telegram.ts');
+  const { game, db } = makeGame();
+  const calls: { method: string; params: Record<string, unknown> }[] = [];
+  const mk = (mainApp: boolean) => new TelegramService({ db, auth: game.auth, game, token: '1:t', fetch: fakeBotApi(calls), publicUrl: 'https://gravetidegame.com', webappUrl: 'https://tg.gravetidegame.com', log: () => {}, mainApp });
+  assert.deepEqual(mk(false).playButton('ru'), { text: 'Играть', web_app: { url: 'https://tg.gravetidegame.com' } });
+  assert.deepEqual(mk(true).playButton('en'), { text: 'Play', url: 'https://t.me/gravetide_bot?startapp=play&mode=fullscreen' });
+  await mk(true).handleUpdate({ update_id: 1, message: { message_id: 1, from: { id: 5, first_name: 'Anne', language_code: 'ru' }, chat: { id: 5, type: 'private' }, text: '/start' } } as never);
+  const kb = (calls.findLast((c) => c.method === 'sendMessage')!.params.reply_markup as { inline_keyboard: unknown[][] }).inline_keyboard[0][0];
+  assert.deepEqual(kb, { text: 'Играть', url: 'https://t.me/gravetide_bot?startapp=play&mode=fullscreen' });
+  assert.equal(telegramFromEnv({ db, auth: game.auth, game, publicUrl: 'https://x' }, { TELEGRAM_BOT_TOKEN: '1:t', TELEGRAM_FAKE: '1', TG_MAIN_APP: '1' })?.mainApp, true);
+  assert.ok(src('docs/27_TELEGRAM.md').includes('Configure Mini App') && src('docs/27_TELEGRAM.md').includes('TG_MAIN_APP=1'), 'the owner’s BotFather steps');
+});
