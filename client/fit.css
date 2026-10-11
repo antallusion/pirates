@@ -589,3 +589,7 @@ body.touch #mm-tab:focus-visible .mm-tab-pill { box-shadow: none; }
 @media (max-height: 520px) {
   .depart-panel .dp-always { margin: 0 0 0 auto; min-height: var(--f-tap); align-self: center; font-size: var(--f-fs-s); }
 }
+@media (max-height: 520px) {
+  /* a window's fields on the same scale (the page has maximum-scale=1: iOS does not zoom into a field under 16 px) */
+  #modal-panel :is(input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea) { font-size: var(--f-fs-m); }
+}
