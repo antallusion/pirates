@@ -1,12 +1,11 @@
 // A captain's saga (docs/12 P10 #20) on the server: a chapter noted when she does something worth the telling (the day
 // of her voyages or of the holiday then on, what, where), kept with her; a chapter shared in the chat as a postcard.
 
-import { chatFace } from './chat.ts';
+import { worldSay } from './chat.ts';
 import { SAGA_MAX, SHARE_EVERY_SEC } from '../../../shared/src/data/saga.ts';
 import type { SagaEntry, SagaKind } from '../../../shared/src/data/saga.ts';
 import type { Game } from './Game.ts';
 import { currentHoliday } from './holidays.ts';
-import { ignores } from './friends.ts';
 import type { PlayerSession } from './player.ts';
 import { logNote, voyageDay } from './captainlog.ts';
 
@@ -38,6 +37,6 @@ export function shareSaga(game: Game, s: PlayerSession, id: number): string | nu
   if (game.now - last < SHARE_EVERY_SEC) return 'Wait a little before sharing another chapter.';
   shared.set(s, game.now);
   const card = { name: s.name, entry: e, flag: p.look?.emblem ?? null };
-  for (const o of game.sessions) if (!ignores(o, s.accountId)) game.sendTo(o, { t: 'chat', from: s.name, text: '', card, ...chatFace(s) });
-  return null;
+  // into the world's channel (docs/28): kept in its history, heard in every zone
+  return worldSay(game, s, '', card);
 }

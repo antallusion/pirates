@@ -6,7 +6,8 @@
 //  - Convoy: while the leader flies it, members within 1 500 m of the leader sail at the slowest ship's
 //    speed ×1.05, see 30% farther, and pay 30% less for League insurance.
 
-import { CHAT_TOO_FAST, chatAllowed, chatFace, cleanChat } from './chat.ts';
+// (a group's words: chat.ts — docs/28)
+export { groupSay } from './chat.ts';
 import { GROUP_MAX } from '../../../shared/src/protocol.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
@@ -274,20 +275,6 @@ export function groupConvoy(game: Game, s: PlayerSession, on: boolean): string |
   if (!g.convoy) for (const m of g.members) game.sessionByAccount(m)?.ship?.addEffect({ id: 'convoy', until: 0 }, game.now);
   groupNotice(game, g, g.convoy ? `${s.name} hoists the convoy signal: keep station within ${CONVOY_RANGE} m.` : 'The convoy signal comes down.');
   pushGroup(game, g);
-  return null;
-}
-
-export function groupSay(game: Game, s: PlayerSession, text: string): string | null {
-  const g = groupOfAccount(game, s.accountId);
-  if (!g) return 'You sail alone';
-  const t = cleanChat(text);
-  if (!t) return null;
-  if (!chatAllowed(s, game.now)) return CHAT_TOO_FAST;
-  const who = chatFace(s);
-  for (const m of g.members) {
-    const ms = game.sessionByAccount(m);
-    if (ms && !ignores(ms, s.accountId)) game.sendTo(ms, { t: 'chat', from: s.name, text: t, ch: 'group', ...who });
-  }
   return null;
 }
 

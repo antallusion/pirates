@@ -297,7 +297,13 @@ export type ClientMsg =
   | { t: 'cleanse' }
   | { t: 'chart'; action: 'sell' }
   | { t: 'chart'; action: 'buy'; region: RegionId }
-  | { t: 'chat'; text: string }
+  // ---- docs/28, the chat (owner, 2026-10-11): a channel to speak in (none: the world, with the old commands), a
+  // conversation's whole history, a conversation read, a report on a line.
+  | { t: 'chat'; text: string; ch?: 'world' | 'local' | 'group' | 'guild' | 'dm'; to?: string }
+  | { t: 'chat_hist'; peer?: string }
+  | { t: 'chat_read'; peer: string }
+  | { t: 'chat_report'; name: string; text?: string }
+  // ---- (docs/28 ends)
   /** The list of friends (docs/11 P6); whispers go as chat: "/w Name words", "/r words". */
   | { t: 'friend'; action: 'add' | 'remove' | 'ignore' | 'unignore'; name: string }
   | { t: 'friend'; action: 'list' }
@@ -1804,9 +1810,11 @@ export type ServerMsg =
   /** The crew speaks (docs/16 #16–17): an officer's line on an event (his name, role, portrait), or the men's grumble or
    *  shanty (`who` null); `i` the line of the table, `x` the event's name (a sea, a ship, a beast). */
   | { t: 'crew_say'; who: { name: string; role: OfficerRole; unique?: string } | null; ev: TalkEvent | 'grumble' | 'shanty'; i: number; x?: string }
-  /** `whisper`: to this captain, or (with `to`) their own words to another, echoed back. */
-  /** A chat line; `face` is the speaker's captain (a portrait id), `fac` her flag when sworn, `lv` her level. */
-  | { t: 'chat'; from: string; text: string; ch?: 'group' | 'guild' | 'whisper'; to?: string; card?: SagaCard; face?: string; fac?: 'free' | 'crown'; lv?: number }
+  /** A chat line (docs/28): see ChatLineView. */
+  | ({ t: 'chat' } & ChatLineView)
+  /** docs/28: the chat's history on coming aboard (the channels' last lines and the private conversations), or one
+   *  conversation's whole (`peer`). */
+  | { t: 'chat_hist'; lines: ChatLineView[]; dms: ChatThreadView[]; peer?: string }
   /** The list of friends, and the names of the captains one does not hear. */
   | { t: 'friends'; list: FriendView[]; ignored?: string[] }
   | { t: 'who'; list: WhoView[]; total: number }
@@ -1995,6 +2003,33 @@ export interface ServicePortView {
   payReady: boolean;
   wares: { item: Item; price: number; sold: boolean }[];
 }
+
+// ---- docs/28, the chat
+/** A chat line. `ch`: none for the world, `whisper` a private one (to this captain, or with `to` her own words to
+ *  another, echoed back), `sys` the sea's news. Who speaks: `face` her captain (a portrait id), `fac` her flag when
+ *  sworn, `lv` her level, `g` her guild's tag. `id` is the server's (for dedupe), `at` its time (epoch ms). */
+export interface ChatLineView {
+  from: string;
+  text: string;
+  ch?: 'local' | 'group' | 'guild' | 'whisper' | 'sys';
+  to?: string;
+  card?: SagaCard;
+  face?: string;
+  fac?: 'free' | 'crown';
+  lv?: number;
+  g?: string;
+  id?: string;
+  at?: number;
+}
+/** A private conversation: the other captain (as last seen), the lines not yet read, the last lines. */
+export interface ChatThreadView {
+  peer: string;
+  face?: string;
+  lv?: number;
+  unread: number;
+  lines: ChatLineView[];
+}
+// ---- (docs/28 ends)
 
 /** A chapter of a captain's saga shared in the chat (docs/12 P10 #20): her name, the chapter, her flag. */
 export interface SagaCard {

@@ -2,7 +2,7 @@
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
 import { provisionsPerMinute } from '../../../shared/src/data/voyage.ts';
-import { CHAT_TOO_FAST, chatAllowed, chatFace, cleanChat } from './chat.ts';
+import { chatCommand, chatFromAfar, chatHist, chatIn, chatOnLogin, chatRead, chatReport, cleanChat, guildSay } from './chat.ts'; // docs/28
 import { callOn, drink, hallView, invite, sign } from './guests.ts';
 import { lookOf, setLook, unlockDeed } from './looks.ts';
 import { fatesOnDock, fulfilRequest, stepFates } from './fates.ts';
@@ -108,7 +108,7 @@ import {
   dismissOfficer, hireOfficer, maxRecruits, mutinyCourse, officerOrder, onDockCrew, onFightWon, onMagazineBlast, onSunkCrew, plunderShare, pressGang, recruitPrisoners,
   resolveMutiny, springAmbush, stepCompany, stepSpirit,
 } from './crew.ts';
-import { friendAdd, friendRemove, friendsPresence, ignoreAdd, ignoreCommand, ignoreRemove, ignores, inspectView, pushFriends, whisper, whisperCommand, whoList } from './friends.ts';
+import { friendAdd, friendRemove, friendsPresence, ignoreAdd, ignoreRemove, inspectView, pushFriends, whoList } from './friends.ts';
 import { Social, lfgClear, lfgPost, barterLock, barterOffer, barterPropose, barterReady, cancelBarter, groupAsk, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
 import { Metrics, Profiler } from './metrics.ts';
 import { havenSecond } from './havens.ts';
@@ -420,12 +420,8 @@ export class Game {
     this.auth = opts.auth;
     this.log = opts.log ?? ((m) => console.log(m));
     this.shared = opts.shared ?? null;
-    // Chat from captains in other processes.
-    this.shared?.listenChat((from, text, who) => {
-      const line = cleanChat(text);
-      if (!line) return;
-      for (const o of this.sessions) if (!ignores(o, from)) this.sendTo(o, { t: 'chat', from, text: line, ...(who ?? {}) });
-    });
+    // Chat from captains in other processes (docs/28).
+    this.shared?.listenChatWire((w) => chatFromAfar(this, w));
     this.guildMember = (gid, acct) => this.guilds.of(this, acct)?.id === gid;
     this.guildNotify = (gid, subject, body) => guildNotify(this, gid, subject, body);
     // An island's guns and a guild at war: the owner guild's enemies are its enemies.
@@ -3944,39 +3940,28 @@ export class Game {
             err(rentIsland(this, s, Math.trunc(Number(msg.island)), Math.trunc(Number(msg.days)), true));
             this.sendTo(s, { t: 'holdings', ...holdingsFor(this, s) });
             return done(null);
-          case 'say': {
-            const g = this.guilds.of(this, s.accountId);
-            const text = cleanChat(msg.text);
-            if (!g || !text) return;
-            if (!chatAllowed(s, this.now)) return err(CHAT_TOO_FAST);
-            const who = chatFace(s);
-            for (const m of g.members) {
-              const ms = this.byAccount.get(m.account);
-              if (ms && !ignores(ms, s.accountId)) this.sendTo(ms, { t: 'chat', from: `[${g.tag}] ${s.name}`, text, ch: 'guild', ...who });
-            }
-            return;
-          }
+          case 'say':
+            return err(guildSay(this, s, msg.text)); // docs/28
         }
         return;
       }
+      // ---- docs/28, the chat (server/src/game/chat.ts); the tester's commands stay here
       case 'chat': {
         const text = cleanChat(msg.text);
-        if (!text) return;
-        const w = whisperCommand(text);
-        if (w) return err(chatAllowed(s, this.now) ? whisper(this, s, w.rest, w.reply) : CHAT_TOO_FAST);
-        const deaf = ignoreCommand(text);
-        if (deaf) return err(ignoreAdd(this, s, deaf));
-        if (text.startsWith('/') && adminEnabled()) {
+        if (!msg.ch && text.startsWith('/') && adminEnabled() && !chatCommand(text)) {
           const reply = runAdmin(this, s, text);
           if (reply) this.sendTo(s, { t: 'toast', msg: reply, kind: 'info' });
           return;
         }
-        if (!chatAllowed(s, this.now)) return err(CHAT_TOO_FAST);
-        const who = chatFace(s);
-        for (const o of this.sessions) if (!ignores(o, s.accountId)) this.sendTo(o, { t: 'chat', from: s.name, text, ...who });
-        this.shared?.publishChat(s.name, text, who);
-        return;
+        return err(chatIn(this, s, msg));
       }
+      case 'chat_hist':
+        return chatHist(this, s, typeof msg.peer === 'string' ? msg.peer : undefined);
+      case 'chat_read':
+        return chatRead(this, s, String(msg.peer ?? ''));
+      case 'chat_report':
+        return err(chatReport(this, s, String(msg.name ?? ''), typeof msg.text === 'string' ? msg.text : undefined));
+      // ---- (docs/28 ends)
       default:
         return;
     }
@@ -4149,6 +4134,7 @@ export class Game {
     friendsPresence(this, s, true);
     pushFriends(this, s);
     mailOnLogin(this, s);
+    chatOnLogin(this, s); // docs/28: the chat's history, private words kept while she was away
     this.sendTo(s, { t: 'holdings', ...holdingsFor(this, s) });
     sendRenown(this, s, true);
     sendWorldGoals(this, s); // the sea's goals of the week (docs/16 #32)
