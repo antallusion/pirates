@@ -62,7 +62,7 @@ function guardBlock(g: GuardCard, own: boolean): string {
     ${offer ? `<div class="ac-offer">${esc(offer)}</div>` : ''}
     ${!g.alongside ? `<div class="muted ac-gl ac-come">${esc(L('guard.come'))}</div>` : ''}
     <div class="ac-acts">
-      <button class="btn btn-small${g.offer ? '' : ' btn-primary'}" data-ag="fight" data-id="${g.id}"${g.alongside ? '' : ' disabled'}>${icon('prof_marine', '', 'ico-sm')}${esc(L('guard.fight'))}</button>
+      <button class="btn btn-small${g.offer ? '' : ' btn-primary'}" data-ag="fight" data-id="${g.id}">${icon('prof_marine', '', 'ico-sm')}${esc(L('guard.fight'))}</button>
       ${g.offer === 'join' && g.joinN > 0 ? `<button class="btn btn-small btn-primary" data-ag="join" data-id="${g.id}">${esc(L('guard.join', { n: g.joinN }))}</button>` : ''}
       ${g.offer ? `<button class="btn btn-small${g.offer === 'flee' || !g.joinN ? ' btn-primary' : ''}" data-ag="flee" data-id="${g.id}">${esc(L('guard.let'))}</button>` : ''}
     </div></div>`;
@@ -114,7 +114,7 @@ function lairBlock(c: LairCard, x: boolean): string {
       ${offer ? `<div class="ac-offer">${esc(offer)}</div>` : ''}
       ${!c.reach ? `<div class="muted ac-gl ac-come">${esc(LL('come'))}</div>` : c.why ? `<div class="muted ac-gl ac-come">${esc(serverText(c.why))}</div>` : ''}
       <div class="ac-acts">
-        <button class="btn btn-small${c.offer ? '' : ' btn-primary'}" data-al="fight" data-id="${c.id}"${c.reach && !c.why ? '' : ' disabled'}>${icon('prof_marine', '', 'ico-sm')}${esc(LL('fight'))}</button>
+        <button class="btn btn-small${c.offer ? '' : ' btn-primary'}" data-al="fight" data-id="${c.id}"${!c.why ? '' : ' disabled'}>${icon('prof_marine', '', 'ico-sm')}${esc(LL('fight'))}</button>
         ${c.offer === 'join' && c.joinN > 0 ? `<button class="btn btn-small btn-primary" data-al="join" data-id="${c.id}">${esc(LL('join', { n: c.joinN }))}</button>` : ''}
         ${c.offer ? `<button class="btn btn-small${c.offer === 'flee' || !c.joinN ? ' btn-primary' : ''}" data-al="flee" data-id="${c.id}">${esc(LL('let'))}</button>` : ''}
       </div></div>`
@@ -155,7 +155,7 @@ function driftBlock(c: DriftCard, x: boolean): string {
   } else {
     const ways = c.ways.map((w) => {
       const cost = w.cost ? ` <span class="bcost">${icon(`good_${w.cost.good}`, '', 'ico-sm')}${w.cost.n}</span>` : '';
-      const dis = !c.reach || !!c.why || !!w.why || w.chance <= 0;
+      const dis = !!c.why || !!w.why || w.chance <= 0;
       return `<button class="btn btn-small dw-way${dis ? '' : ' btn-primary'}" data-dway="${w.way}" data-id="${c.id}"${dis ? ' disabled' : ''} title="${esc(w.why ? serverText(w.why) : '')}"><b>${esc(DL(`way.${w.way}` as 'way.cut'))}</b> <span class="dw-p">${pct(w.chance)}</span>${cost}</button>`;
     }).join('');
     body = `<div class="ac-line muted">${esc(DL('ways'))}</div><div class="ac-acts dw-ways">${ways}</div>`;

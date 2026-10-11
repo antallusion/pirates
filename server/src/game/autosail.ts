@@ -46,6 +46,9 @@ export interface AutoSail {
   /** The nearest she has been to her mark, and when (round and round a thing, never nearer: plan afresh). */
   best?: number;
   bestAt?: number;
+  /** Within this of her mark she has arrived (seaux 2026-10-11: a sail-to on tap stops at the thing's own reach, not
+   *  150 m short of it); AUTOSAIL_ARRIVE when unset. */
+  arrive?: number;
 }
 
 const runs = new WeakMap<ShipEntity, AutoSail>();
@@ -134,13 +137,13 @@ function send(game: Game, s: PlayerSession, run: AutoSail | null, why?: Autosail
 }
 
 /** The captain gives the helmsman the wheel for her mark. Null when he has it; else why not. */
-export function startAutosail(game: Game, s: PlayerSession, x: number, y: number, sail?: number): string | null {
+export function startAutosail(game: Game, s: PlayerSession, x: number, y: number, sail?: number, arrive?: number): string | null {
   const ship = s.ship;
   if (!ship || !s.profile) return 'No ship';
   if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0 || x > WORLD_SIZE || y > WORLD_SIZE) return 'That mark is off the chart';
   if (ship.docked) return 'Cast off first: the helmsman sails from open water';
   const d = Math.hypot(x - ship.state.x, y - ship.state.y);
-  if (d <= AUTOSAIL_ARRIVE) return 'You are at your mark already';
+  if (d <= (arrive ?? AUTOSAIL_ARRIVE)) return 'You are at your mark already';
   if (d > AUTOSAIL_MAX_RANGE) return 'That mark is too far for one run: set a nearer one';
   const why = autosailDanger(game, s, ship, game.now);
   if (why) return STOP_WORDS[why];
@@ -149,7 +152,7 @@ export function startAutosail(game: Game, s: PlayerSession, x: number, y: number
   const idx = autosailSail(sail ?? SAIL_STEPS.indexOf(ship.input.sailTarget as never));
   const run: AutoSail = {
     x, y, path, i: 1, sail: idx, since: game.now, tackSide: 1, tackAt: -Infinity, beatAt: -Infinity,
-    stuck: { x: ship.state.x, y: ship.state.y, t: game.now }, replans: 0,
+    stuck: { x: ship.state.x, y: ship.state.y, t: game.now }, replans: 0, ...(arrive !== undefined ? { arrive } : {}),
   };
   runs.set(ship, run);
   ship.input = { rudder: 0, sailTarget: SAIL_STEPS[idx] };
@@ -268,7 +271,8 @@ export function stepAutosail(game: Game): void {
     }
     const d = Math.hypot(run.x - ship.state.x, run.y - ship.state.y);
     const end = run.path[run.path.length - 1];
-    if (d <= AUTOSAIL_ARRIVE || Math.hypot(end[0] - ship.state.x, end[1] - ship.state.y) <= AUTOSAIL_ARRIVE) {
+    const near = run.arrive ?? AUTOSAIL_ARRIVE;
+    if (d <= near || Math.hypot(end[0] - ship.state.x, end[1] - ship.state.y) <= near) {
       stopAutosail(game, s, 'arrived');
       continue;
     }

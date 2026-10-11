@@ -272,7 +272,9 @@ export const DRIFT_FIND = 0.75;
 export const DRIFT_AT: [number, number] = [1300, 2300];
 export const DRIFT_SEE = 3500;
 export const DRIFT_CARD_R = 520;
-export const DRIFT_REACH = 380;
+/** (seaux 2026-10-11: 380 → 220 m — the boats went from where the drift was a speck; the card still shows at 520 m and
+ *  its buttons sail her in, approach.ts) */
+export const DRIFT_REACH = 220;
 
 // ------------------------------------------------------------------------------------------------ 35. the rescue
 

@@ -9,7 +9,7 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
 import {
-  MARK_AGAIN_MS, MARK_CHART_R, MARK_MAP_CHANCE, MARK_OMEN_CHANCE, MARK_SEAL_CHANCE, MARK_SLOW, MARK_SLOW_BREAK, MARK_TIME, isMarkKind, markInReach, markWorth,
+  MARK_CHART_R, MARK_WRECK_AGAIN_MS, markAgainMs, MARK_MAP_CHANCE, MARK_OMEN_CHANCE, MARK_REACH, MARK_SEAL_CHANCE, MARK_SLOW, MARK_SLOW_BREAK, MARK_TIME, isMarkKind, markInReach, markWorth,
 } from '../../../shared/src/data/seamarks.ts';
 import type { MarkKind } from '../../../shared/src/data/seamarks.ts';
 import { dist } from '../../../shared/src/math.ts';
@@ -17,6 +17,7 @@ import { Rng } from '../../../shared/src/rng.ts';
 import { marksNear } from '../../../shared/src/world/worldgen.ts';
 import type { SeaMark } from '../../../shared/src/world/worldgen.ts';
 import { giveGoods } from './director.ts';
+import { approach } from './approach.ts';
 import { sealsOnFloe } from './drifts.ts';
 import { grantMap, makeMap } from './explorefx.ts';
 import type { Game } from './Game.ts';
@@ -54,14 +55,15 @@ export function setMarkRng(game: Game, rng: Rng): void {
 export function marksWorked(game: Game, p: Profile): Record<string, number> {
   const rec = (p.seaMarks ??= {});
   const now = game.wallNow();
-  for (const [k, at] of Object.entries(rec)) if (!(typeof at === 'number' && now - at < MARK_AGAIN_MS)) delete rec[k];
+  for (const [k, at] of Object.entries(rec)) if (!(typeof at === 'number' && now - at < MARK_WRECK_AGAIN_MS)) delete rec[k];
   return rec;
 }
 
 /** Milliseconds before a mark is hers to work again (0: now). */
 export function markAgain(game: Game, p: Profile, id: number): number {
   const at = marksWorked(game, p)[String(id)];
-  return at === undefined ? 0 : Math.max(0, at + MARK_AGAIN_MS - game.wallNow());
+  const m = markById(game, id);
+  return at === undefined ? 0 : Math.max(0, at + markAgainMs(m && isMarkKind(m.kind) ? m.kind : 'buoy') - game.wallNow());
 }
 
 export const markById = (game: Game, id: number): SeaMark | undefined => (Number.isInteger(id) && id >= 0 ? game.world.marks[id] : undefined);
@@ -87,14 +89,16 @@ const WORK_WORD: Record<MarkKind, string> = {
   drift: 'driftwood', wreck: 'wreck field', buoy: 'lane buoy', lantern: 'lantern float', bones: 'floating bones', floe: 'ice floe',
 };
 
+const MARK_FAR = 'Come within a cable of it first.';
+
 /** Why her boats cannot work a mark now (null: they can). */
 function whyNot(game: Game, s: PlayerSession, m: SeaMark | undefined): string | null {
   const ship = s.ship!;
   if (!m || !isMarkKind(m.kind)) return 'Nothing there to work.';
   if (ship.docked || !ship.alive || ship.ghost) return 'Out at sea, alongside a mark.';
-  if (!markInReach(m, ship.state.x, ship.state.y)) return 'Come within a cable of it first.';
+  if (!markInReach(m, ship.state.x, ship.state.y)) return MARK_FAR;
   if (ship.underFire(game.now)) return 'Not under fire.';
-  if (markAgain(game, s.profile!, m.id) > 0) return 'Your boats worked this one today already.';
+  if (markAgain(game, s.profile!, m.id) > 0) return markAgainMs(m.kind) > 86_400_000 ? 'Your boats took this wreckage already: it is yours again two days on.' : 'Your boats worked this one today already.';
   if (ship.state.speed > MARK_SLOW) return 'Shorten sail first: the boats cannot work it at speed.';
   return null;
 }
@@ -104,6 +108,8 @@ export function startMark(game: Game, s: PlayerSession, id: number): string | nu
   if (!s.ship || !s.profile) return 'No captain';
   const m = markById(game, id);
   const why = whyNot(game, s, m);
+  // seaux: out of reach, the helmsman sails her to it and the order is given again there (approach.ts)
+  if (why === MARK_FAR && m) return approach(game, s, { x: m.x, y: m.y, reach: MARK_REACH + m.r, near: () => !!s.ship && markInReach(m, s.ship.state.x, s.ship.state.y) }, why);
   if (why) return why;
   const S = M(game);
   const cur = S.busy.get(s);

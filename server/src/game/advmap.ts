@@ -33,6 +33,7 @@ import { dist } from '../../../shared/src/math.ts';
 import { depthAt, isLand } from '../../../shared/src/world/worldgen.ts';
 import { hashString } from '../../../shared/src/rng.ts';
 import { armyEdge } from './army.ts';
+import { approach } from './approach.ts';
 import { canBoard, startBoarding } from './boarding.ts';
 import { thisWeek, today, weekView } from './calendar.ts';
 import { officerBerths, reconcile } from './crew.ts';
@@ -166,6 +167,8 @@ function save(game: Game): void {
 /** Within reach of the boats for a visit; a guard's card from this far. */
 export const VISIT_R = 260;
 export const GUARD_CARD_R = 650;
+/** seaux (2026-10-11): a guard's men taken or let go alongside them, not from the card's 650 m (approach.ts sails her in). */
+export const GUARD_DEAL_R = 300;
 /** Seen from this far (on the charts for good); a guard is put in the water this near a captain, taken out this far. */
 export const SEE_R = 2600;
 const MAT_R = 3400;
@@ -389,10 +392,13 @@ export function guardChoice(game: Game, s: PlayerSession, id: string, choice: st
   if (!guardUp(game, g)) return 'They are gone';
   if (dist(ship.state.x, ship.state.y, g.x, g.y) > GUARD_CARD_R) return 'Too far';
   if (ship.boarding) return 'Not now';
+  if (choice !== 'fight' && dist(ship.state.x, ship.state.y, g.x, g.y) > GUARD_DEAL_R) return approach(game, s, { x: g.x, y: g.y, reach: GUARD_DEAL_R }, 'Too far');
   if (choice === 'fight') {
     const gs = guardShip(game, g.id) ?? raise(game, g);
     const why = canBoard(game, ship, gs);
-    if (why) return why === 'Too far to throw grapples' ? 'Come alongside first: within the grapples’ reach.' : why;
+    // seaux: out of the grapples' reach the helmsman takes her alongside and the boarding is given there (approach.ts)
+    if (why === 'Too far to throw grapples') return approach(game, s, { x: gs.state.x, y: gs.state.y, reach: 70, where: () => (gs.alive ? gs.state : null), near: () => canBoard(game, ship, gs) !== 'Too far to throw grapples' }, 'Come alongside first: within the grapples’ reach.');
+    if (why) return why;
     startBoarding(game, ship, gs, 'standard');
     return null;
   }
@@ -528,12 +534,14 @@ function chestOf(s: PlayerSession, o: AdvObj): { silver: number; xp: number } {
 /** An altar's lesson for her, once its points are spent. */
 const altarFor = (s: PlayerSession, o: AdvObj): number => xpAt(s.profile!.level, xpLevel(s, o), altarXp(xpLevel(s, o)));
 
+const VISIT_FAR = 'Come within reach of the boats.';
+
 /** Why a visit would not go through now (null: it would). */
 function visitWhy(game: Game, s: PlayerSession, o: AdvObj): string | null {
   const ship = s.ship;
   if (!ship || ship.docked) return 'Put to sea first.';
   if (ship.boarding) return 'Not while grappled.';
-  if (dist(ship.state.x, ship.state.y, o.x, o.y) > VISIT_R + 40) return 'Come within reach of the boats.';
+  if (dist(ship.state.x, ship.state.y, o.x, o.y) > VISIT_R + 40) return VISIT_FAR;
   if (o.guard) {
     const g = adv(game).guardById.get(o.guard);
     if (g && guardUp(game, g)) return 'A guard stands before it: beat them first.';
@@ -596,6 +604,7 @@ export function visit(game: Game, s: PlayerSession, id: string, choice?: string)
   const o = adv(game).objById.get(id);
   if (!o) return 'Nothing here';
   const why = visitWhy(game, s, o);
+  if (why === VISIT_FAR) return approach(game, s, { x: o.x, y: o.y, reach: VISIT_R + 40 }, why); // seaux: sail there first
   if (why) return why;
   const p = s.profile!, ship = s.ship!;
   const name = OBJS[o.kind].name[0];

@@ -148,6 +148,9 @@ export function drawIsleOver(g: G, is: IslandData, c: IsleTypeCtx): void {
   // the keel strikes them too (shared/src/world/solids.ts graveHulks).
   if (is.ty === 'graveyard' && z > 0.15 && !is.raft) {
     for (const h of graveHulks(is)) {
+      // (seaux 2026-10-11: no loose flotsam off a graveyard's shore — it looked like salvage and none could take it;
+      // the hulks and the wreckage the keel strikes stay)
+      if (h.art === 'prop.flotsam') continue;
       const spr = sprite(h.art);
       if (!spr) continue;
       const size = h.size * z;

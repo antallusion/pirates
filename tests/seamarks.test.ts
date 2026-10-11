@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GOODS } from '../shared/src/data/goods.ts';
-import { MARK_AGAIN_MS, MARK_KINDS, MARK_REACH, MARK_SHARE, MARK_TIME, markInReach, markWorth, seaHourOf } from '../shared/src/data/seamarks.ts';
+import { MARK_AGAIN_MS, MARK_WRECK_AGAIN_MS, MARK_KINDS, MARK_REACH, MARK_SHARE, MARK_TIME, markInReach, markWorth, seaHourOf } from '../shared/src/data/seamarks.ts';
 import type { MarkKind } from '../shared/src/data/seamarks.ts';
 import { driftKindsFor } from '../shared/src/data/drifts.ts';
 import { sectorAt } from '../shared/src/world/sectors.ts';
@@ -86,8 +86,9 @@ test('driftwood: planks or timber for about its worth, then not again today; a d
   // (among her latest lines: the sea's own news may come after it in the same second)
   assert.ok(toasts(s).slice(-4).some((t) => /Driftwood hauled aboard/.test(t.msg)), toasts(s).slice(-4).map((t) => t.msg).join(' | '));
   // Once a day a captain a mark.
-  assert.equal(startMark(game, s, m.id), 'Your boats worked this one today already.');
-  assert.ok(markAgain(game, s.profile!, m.id) > 23 * 3_600_000);
+  // (driftwood is wreckage: hers again two days on, seaux 2026-10-11)
+  assert.equal(startMark(game, s, m.id), 'Your boats took this wreckage already: it is yours again two days on.');
+  assert.ok(markAgain(game, s.profile!, m.id) > 47 * 3_600_000);
   const sent = conn(s).last('seamarks') as { done: number[]; busy: unknown } | undefined;
   assert.ok(sent?.done.includes(m.id) && sent.busy === null, 'her sea marks it searched');
   // Another captain may work it the same day.
@@ -98,6 +99,8 @@ test('driftwood: planks or timber for about its worth, then not again today; a d
   // A day on: hers again.
   const real = game.wallNow;
   game.wallNow = () => real() + MARK_AGAIN_MS + 1000;
+  assert.ok(markAgain(game, s.profile!, m.id) > 0, 'a day on, driftwood is not back yet');
+  game.wallNow = () => real() + MARK_WRECK_AGAIN_MS + 1000;
   assert.equal(markAgain(game, s.profile!, m.id), 0);
   assert.equal(startMark(game, s, m.id), null);
   game.wallNow = real;

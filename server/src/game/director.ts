@@ -37,9 +37,13 @@ import { groupOfAccount } from './party.ts';
 import { isBeast } from './beasts.ts';
 import { SEA_MINI_CHANCE, openMinigame, seaMinigame } from './minigames.ts';
 import { inDescent } from './descent.ts';
+import { approach } from './approach.ts';
 
 /** How close a sign must be for its card to open, and how far a captain may leave it before it is gone. */
 export const OPEN_R = 380;
+/** seaux (2026-10-11, owner: «я должен нажать и плыть к цели»): a choice on a sign's card is done alongside it — from
+ *  farther the helmsman sails her there and it is done when she is (approach.ts). */
+export const CHOOSE_R = 170;
 const LOSE_R = 4500;
 const LIFE_SEC = 6 * 60;
 /** No encounters within this of a port. */
@@ -327,7 +331,7 @@ function sendSights(game: Game, s: PlayerSession): void {
   const list: SightView[] = [];
   for (const live of st(game).live.values()) {
     const def = ENCOUNTERS[live.def];
-    if (live.resolved || live.opened || !def.sight) continue;
+    if (live.resolved || !def.sight || (live.opened && !def.choices.length)) continue;
     if (!watchers(game, live).includes(s)) continue;
     list.push({ id: live.id, kind: def.sight as SightKind, x: Math.round(live.x), y: Math.round(live.y) });
   }
@@ -344,6 +348,11 @@ export function chooseEncounter(game: Game, s: PlayerSession, id: number, choice
   if (!watchers(game, live).includes(s)) return 'That moment has passed';
   const def = ENCOUNTERS[live.def];
   if (!def.choices.some((c) => c.id === choice)) return 'No such choice';
+  // (a thing on the water — a raft, a wreck, a sinking merchant — is reached first; one aboard is at hand)
+  const ship = s.ship;
+  if (def.sight && ship && dist(ship.state.x, ship.state.y, live.x, live.y) > CHOOSE_R) {
+    return approach(game, s, { x: live.x, y: live.y, reach: CHOOSE_R, where: () => (live.resolved || !st(game).live.has(live.id) ? null : live) }, 'Come alongside it first.');
+  }
   settle(game, s, live, choice);
   return null;
 }

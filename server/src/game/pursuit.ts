@@ -308,7 +308,9 @@ export function stepPursuit(game: Game): void {
       run.auto = s.autoWeak && weakMark(ship, next) ? { left: 3, next: now + AUTO_WEAK_SEC / 3 } : undefined;
       send(game, s, run);
     }
-    if (run.auto && autoBattle(game, ship, t, run)) continue;
+    // (seaux 2026-10-11: the auto-battle's broadsides only within her guns' reach — before, it settled the weak one
+    // from as far as she could see her, 2.6 km; out of reach the pursuit below sails her in first)
+    if (run.auto && Math.hypot(t.state.x - ship.state.x, t.state.y - ship.state.y) <= autoReach(ship) && autoBattle(game, ship, t, run)) continue;
     // No endless chases (docs/23 item 44): forty seconds and not a hit either way.
     const lastHit = Math.max(run.since, t.attackers.get(ship.id) ?? -Infinity, ship.attackers.get(t.id) ?? -Infinity);
     // (The First Watch's raider never slips away from her pupil nor strikes to her: she is the lesson, QA 2026-10-07.)
@@ -424,6 +426,11 @@ function boardRun(game: Game, s: PlayerSession, ship: ShipEntity, on: boolean): 
     ship.recompute(game.now);
   }
   game.pushSelf(s, true);
+}
+
+/** How near the weak one must be for the auto-battle's broadsides: her guns' reach as loaded (the farther side). */
+export function autoReach(ship: ShipEntity): number {
+  return Math.max(effectiveRange(ship, 'port', ship.ammoSel), effectiveRange(ship, 'starboard', ship.ammoSel));
 }
 
 /** Auto-battle (docs/23 item 46): three broadsides a second apart, and she is beaten — struck to the captain if she is

@@ -29,6 +29,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { sectorAt } from '../../../shared/src/world/sectors.ts';
 import { isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { advQuiet, parkNear } from './advmap.ts';
+import { approach } from './approach.ts';
 import { fightCapture, landFighting, startCreatureFight } from './beastlairs.ts';
 import { giveGoods, quietSea } from './director.ts';
 import type { Game } from './Game.ts';
@@ -291,6 +292,14 @@ function ctxOf(game: Game, s: PlayerSession, d: Drift): RescueCtx {
   };
 }
 
+const DRIFT_FAR = 'Come alongside: within the boats’ reach.';
+/** seaux (2026-10-11): an order at a drift out of the boats' reach — the helmsman sails her to it (it moves: the course
+ *  follows it) and the order is given again alongside (approach.ts). */
+function driftApproach(game: Game, s: PlayerSession, d: Drift, why: string): string | null {
+  const list = D(game).list;
+  return approach(game, s, { x: d.x, y: d.y, reach: DRIFT_REACH, where: () => (list.get(d.id) === d ? d : null) }, why);
+}
+
 /** Why nothing may be done at it now (null: she may). */
 function busyWhy(game: Game, s: PlayerSession, d: Drift): string | null {
   const ship = s.ship;
@@ -299,7 +308,7 @@ function busyWhy(game: Game, s: PlayerSession, d: Drift): string | null {
   if (landFighting(game, s)) return 'Your party is ashore already.';
   if (d.taken !== undefined && d.taken !== s.accountId) return 'Another captain is at it already.';
   if (ship.underFire(game.now)) return 'Not while under fire';
-  if (dist(d.x, d.y, ship.state.x, ship.state.y) > DRIFT_REACH) return 'Come alongside: within the boats’ reach.';
+  if (dist(d.x, d.y, ship.state.x, ship.state.y) > DRIFT_REACH) return DRIFT_FAR;
   if (ship.state.speed > 2.5) return 'Heave to first — the boats cannot be lowered at speed';
   return null;
 }
@@ -327,7 +336,8 @@ function card(game: Game, s: PlayerSession, d: Drift): DriftCard {
   return {
     id: d.id, kind: d.kind, level: d.level, u: def.u, n: d.n, left: Math.max(0, Math.round(d.until - game.now)), reach: dist(d.x, d.y, ship.state.x, ship.state.y) <= DRIFT_REACH,
     ways, room, pen: joins ? Math.min(d.n, penRoom(game, s, def.u)) : 0, gift: driftGift(d.kind, d.level), joins,
-    fightWhy: why ?? (d.mini ? 'Not now' : null), why: d.mini && d.mini.acc === s.accountId ? null : why,
+    // (seaux: distance alone is no «why» — the card's buttons sail her alongside, approach.ts)
+    fightWhy: (why === DRIFT_FAR ? null : why) ?? (d.mini ? 'Not now' : null), why: d.mini && d.mini.acc === s.accountId ? null : why === DRIFT_FAR ? null : why,
     ...(d.mini && d.mini.acc === s.accountId ? { mini: { way: d.mini.way, t0: d.mini.t0, phase: d.mini.phase, taps: [...d.mini.taps], chance: d.mini.chance } } : {}),
     ...(def.legend ? { legend: true } : {}),
   };
@@ -352,6 +362,7 @@ export function startRescue(game: Game, s: PlayerSession, id: number, way: Rescu
   const d = D(game).list.get(id);
   if (!d) return 'They are gone';
   const why = busyWhy(game, s, d);
+  if (why === DRIFT_FAR) return driftApproach(game, s, d, why);
   if (why) return why;
   if (d.mini) return 'Not now';
   if (!(RESCUE_WAYS as string[]).includes(way) || !DRIFTS[d.kind].ways.includes(way)) return 'No such way';
@@ -468,6 +479,7 @@ export function fightDrift(game: Game, s: PlayerSession, id: number, force = fal
   const d = D(game).list.get(id);
   if (!d) return 'They are gone';
   const why = busyWhy(game, s, d);
+  if (why === DRIFT_FAR && !force) return driftApproach(game, s, d, why);
   if (why && !(force && why !== 'Another captain is at it already.')) return why;
   if (d.mini) return 'Not now';
   const def = DRIFTS[d.kind];

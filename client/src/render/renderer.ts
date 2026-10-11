@@ -555,6 +555,7 @@ export class Renderer {
     // Overlays (not affected by darkness).
     if (own && state.you && state.self) this.drawAim(state, own, aim, ships);
     if (own && state.self) this.drawOwnMark(state, own);
+    if (own && state.autosail && !state.self?.dockedAt) this.drawCourse(state.autosail, own); // seaux: the sail-to's course and ring
     // Names from the lowest on the screen up, each stepping above any it would lie on.
     this.labelBoxes = [];
     this.hudBand(); // the HUD's blocks, measured: the names keep out of them
@@ -874,7 +875,8 @@ export class Renderer {
             g.ellipse(x, y, size * 0.4, size * 0.13, m.rot, 0, Math.PI * 2);
             g.fill();
           }
-          for (let k = 0; k < 3; k++) {
+          // (seaux: the planks and casks about a wreck she has worked are taken — none left that looks like loot)
+          for (let k = 0; k < 3 && dim === 1; k++) {
             const a = rnd() * Math.PI * 2, d = (0.45 + rnd() * 0.35) * size;
             spriteAt('prop.flotsam', x + Math.cos(a) * d, y + Math.sin(a) * d, size * (0.22 + rnd() * 0.14), rnd() * 6.28, 0.8);
           }
@@ -882,7 +884,8 @@ export class Renderer {
         }
         case 'drift':
           foam(g, x, y, size * 0.3, t, m.id, 0.1 * dim);
-          for (let k = 0; k < 3; k++) {
+          // (seaux: driftwood she has taken is gone from her sea until it is hers again)
+          for (let k = 0; k < 3 && dim === 1; k++) {
             const a = rnd() * Math.PI * 2, d = rnd() * size * 0.45;
             const px = x + Math.cos(a) * d + Math.sin(t * 0.3 + k) * 2 * z, py = y + Math.sin(a) * d;
             if (!spriteAt(k === 0 ? 'prop.wreckage' : 'prop.flotsam', px, py, size * (k === 0 ? 0.7 : 0.4), rnd() * 6.28 + t * 0.02, 0.85)) {
@@ -2895,6 +2898,35 @@ export class Renderer {
       g.fillText(text, 0 - Math.cos(a) * 26, 0 - Math.sin(a) * 26);
       g.translate(-x, -y);
     }
+    g.restore();
+  }
+
+  /** seaux (2026-10-11, owner: «я должен плыть туда куда нажал»): the helmsman's course on the sea itself — a dashed
+   *  gold line from her to the thing she was sent to, and a ring breathing on it (it was drawn on the chart only). */
+  private drawCourse(to: { x: number; y: number }, own: SailState): void {
+    const g = this.g;
+    const x0 = this.sx(own.x), y0 = this.sy(own.y), x1 = this.sx(to.x), y1 = this.sy(to.y);
+    const r = Math.max(14, Math.min(46, 60 * this.zoom));
+    const len = Math.hypot(x1 - x0, y1 - y0);
+    g.save();
+    if (len > r + 24) {
+      // from clear of her hull to the ring's rim
+      const ux = (x1 - x0) / len, uy = (y1 - y0) / len, from = Math.min(len * 0.4, 28);
+      g.lineCap = 'round';
+      g.setLineDash([7, 7]);
+      g.lineDashOffset = -this.time * 18;
+      g.strokeStyle = 'rgba(5,8,10,0.55)';
+      g.lineWidth = 4;
+      g.beginPath();
+      g.moveTo(x0 + ux * from, y0 + uy * from);
+      g.lineTo(x1 - ux * r, y1 - uy * r);
+      g.stroke();
+      g.strokeStyle = 'rgba(224,184,98,0.9)';
+      g.lineWidth = 2;
+      g.stroke();
+      g.setLineDash([]);
+    }
+    if (x1 > -r && x1 < this.w + r && y1 > -r && y1 < this.h + r) markRing(g, x1, y1, r * (1 + 0.06 * Math.sin(this.time * 3)), '#e0b862', true);
     g.restore();
   }
 

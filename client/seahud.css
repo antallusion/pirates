@@ -167,7 +167,7 @@ body.simple #tc-target .k-target-range[data-range='in'] { color: var(--k-gold); 
     background: var(--ico-range, none) center / 68% no-repeat, radial-gradient(circle, rgba(40, 32, 22, 0.95), rgba(12, 10, 8, 0.95)); box-shadow: inset 0 0 0 1px rgba(138, 153, 165, 0.5); filter: grayscale(0.9) brightness(0.7); }
   body.simple #tc-target .k-target-range[data-range='in'] { box-shadow: inset 0 0 0 1.5px var(--k-gold), 0 0 6px rgba(224, 184, 98, 0.5); filter: none; }
 }
-body.simple #tc-target .k-target-bars { flex: 0 0 56px; }
+body.simple #tc-target .k-target-bars { flex: none; width: 56px; min-width: 0; }
 body.simple:not(.touch) #tc-target .k-target { pointer-events: auto; }
 body.simple.touch #tc-target .k-target { pointer-events: none; }
 /* a world boss: one slim line — its name and its strength (the rest in its card on the chart) */

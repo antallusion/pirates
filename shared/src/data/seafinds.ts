@@ -20,7 +20,9 @@ export const FIND_WEIGHT: Record<FindKind, number> = { bottle: 3, flyfish: 3, ca
 export const FIND_TTL: [number, number] = [150, 240];
 export const FIND_AT: [number, number] = [650, 1200];
 /** Within this of it (metres) she is at it; the fog bank is as wide as its reach. */
-export const FIND_REACH: Record<FindKind, number> = { bottle: 140, flyfish: 0, calm: 360, gulls: 300, boat: 200, chest: 240 };
+/** (seaux 2026-10-11: alongside — the gulls' and the fog's 300–360 m fired from where the thing was a speck; flying fish
+ *  land on her deck: no reach) */
+export const FIND_REACH: Record<FindKind, number> = { bottle: 140, flyfish: 0, calm: 220, gulls: 200, boat: 170, chest: 200 };
 /** Slower than this (m/s) for the boats' work; the gulls and the fish want no stop. */
 export const FIND_SLOW: Record<FindKind, number> = { bottle: 3, flyfish: 99, calm: 3, gulls: 99, boat: 3, chest: 3 };
 /** Seconds of the work (the chest's is the fight). */
