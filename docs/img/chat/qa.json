@@ -1,0 +1,191 @@
+{
+ "dot": "chat-unread dot",
+ "812x375 world": {
+  "scroll": [
+   "#chat-log ↕302/270"
+  ],
+  "out": [],
+  "cut": [],
+  "small": 12,
+  "underMin": 0,
+  "minTap": 36,
+  "tiny": [],
+  "page": null
+ },
+ "covered812": [],
+ "812x375 emotes": {
+  "scroll": [
+   "#chat-log ↕302/270"
+  ],
+  "out": [],
+  "cut": [],
+  "small": 28,
+  "underMin": 0,
+  "minTap": 36,
+  "tiny": [],
+  "page": null
+ },
+ "812x375 autocomplete": {
+  "scroll": [
+   "#chat-log ↕339/223"
+  ],
+  "out": [],
+  "cut": [],
+  "small": 17,
+  "underMin": 0,
+  "minTap": 36,
+  "tiny": [],
+  "page": null
+ },
+ "suggest": [
+  "rose",
+  "rum",
+  "whirl",
+  "keg",
+  "crown"
+ ],
+ "afterSuggest": "за победу :rum: ",
+ "812x375 card": {
+  "scroll": [
+   "#chat-log ↕339/270"
+  ],
+  "out": [],
+  "cut": [],
+  "small": 19,
+  "underMin": 0,
+  "minTap": 36,
+  "tiny": [],
+  "page": null
+ },
+ "812x375 dm": {
+  "scroll": [],
+  "out": [],
+  "cut": [],
+  "small": 9,
+  "underMin": 0,
+  "minTap": 36,
+  "tiny": [],
+  "page": null
+ },
+ "deskBadge": "1",
+ "deskToast": "Аннаxsj Дан, встретимся у Крюка? ",
+ "1500x600 dm": {
+  "scroll": [],
+  "out": [],
+  "cut": [],
+  "small": 12,
+  "underMin": 0,
+  "minTap": 36,
+  "tiny": [],
+  "page": null
+ },
+ "1500x600 world": {
+  "scroll": [
+   "#chat-log ↕372/208"
+  ],
+  "out": [],
+  "cut": [],
+  "small": 18,
+  "underMin": 0,
+  "minTap": 36,
+  "tiny": [],
+  "page": null
+ },
+ "1500x600 dock right": {
+  "scroll": [
+   "#chat-log ↕372/120"
+  ],
+  "out": [],
+  "cut": [],
+  "small": 18,
+  "underMin": 0,
+  "minTap": 36,
+  "tiny": [],
+  "page": null
+ },
+ "480x270 world": {
+  "scroll": [
+   "#chat-log ↕419/177"
+  ],
+  "out": [],
+  "cut": [],
+  "small": 15,
+  "underMin": 0,
+  "minTap": 32,
+  "tiny": [],
+  "page": null
+ },
+ "covered480": [],
+ "480x270 emotes": {
+  "scroll": [
+   "#chat-log ↕419/177"
+  ],
+  "out": [],
+  "cut": [],
+  "small": 31,
+  "underMin": 0,
+  "minTap": 32,
+  "tiny": [],
+  "page": null
+ },
+ "480x270 card": {
+  "scroll": [
+   "#chat-log ↕419/177"
+  ],
+  "out": [],
+  "cut": [],
+  "small": 22,
+  "underMin": 0,
+  "minTap": 32,
+  "tiny": [],
+  "page": null
+ },
+ "480x270 dm": {
+  "scroll": [],
+  "out": [],
+  "cut": [],
+  "small": 9,
+  "underMin": 0,
+  "minTap": 32,
+  "tiny": [],
+  "page": null
+ },
+ "480x270 threads": {
+  "scroll": [],
+  "out": [],
+  "cut": [],
+  "small": 7,
+  "underMin": 0,
+  "minTap": 32,
+  "tiny": [],
+  "page": null
+ },
+ "aDmTab": "1",
+ "swipeClosed": true,
+ "640x360 world (C)": {
+  "scroll": [],
+  "out": [],
+  "cut": [],
+  "small": 7,
+  "underMin": 0,
+  "minTap": 36,
+  "tiny": [],
+  "page": null
+ },
+ "812x375 world (C)": {
+  "scroll": [],
+  "out": [],
+  "cut": [],
+  "small": 7,
+  "underMin": 0,
+  "minTap": 36,
+  "tiny": [],
+  "page": null
+ },
+ "escClosed": true,
+ "errors": {
+  "A": [],
+  "C": [],
+  "D": []
+ }
+}

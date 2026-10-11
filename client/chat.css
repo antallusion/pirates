@@ -207,7 +207,7 @@ body:not(.touch) #hud-chat .cl-name[data-nick]:hover { text-decoration: underlin
   body:not(.touch) #hud-chat > .chat-toast { top: auto; right: auto; left: calc(var(--chat-desk-l) + 58px); bottom: calc(var(--sa-b) + var(--dk-pad, 16px) + 2px); }
   body:not(.touch) #hud-chat > #chat { top: auto; left: calc(var(--sa-l) + 12px); right: auto; bottom: calc(var(--sa-b) + var(--dk-pad, 16px) + var(--stick, 104px) + 52px); width: 360px; height: min(420px, calc(100vh - var(--dk-pad, 16px) - var(--stick, 104px) - 166px)); transform: translateY(16px); }
   body:not(.touch) #hud-chat > #chat.open { transform: none; }
-  body:not(.touch) #hud-chat > #chat[data-dock="right"] { left: auto; right: calc(var(--sa-r) + 12px); bottom: calc(var(--sa-b) + var(--dk-pad, 16px) + var(--dk-fire, 84px) + var(--dk-lock, 44px) + 36px); height: min(420px, calc(100vh - var(--dk-pad, 16px) - var(--dk-fire, 84px) - var(--dk-lock, 44px) - 230px)); }
+  body:not(.touch) #hud-chat > #chat[data-dock="right"] { left: auto; right: calc(var(--sa-r) + 12px); bottom: calc(var(--sa-b) + var(--dk-pad, 16px) + var(--dk-fire, 84px) + var(--dk-lock, 44px) + 36px); height: min(420px, calc(100vh - var(--dk-pad, 16px) - var(--dk-fire, 84px) - var(--dk-lock, 44px) - 200px)); }
   body.touch #hud-chat > .chat-toggle { top: calc(var(--sa-t) + var(--mm, 148px) + 76px); right: calc(var(--sa-r) + 12px); }
   body.touch #hud-chat > #chat { width: 400px; }
   body.touch.chat-open #hud-chat > .chat-toggle { right: calc(var(--sa-r) + 424px); }

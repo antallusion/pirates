@@ -26,7 +26,7 @@ try {
   await L.closeAll(P);
   await P.goto(`http://localhost:${PORT}/?battle`, { waitUntil: 'domcontentloaded' });
   for (let i = 0; i < 60 && !(await P.evaluate(() => !!document.querySelector('#hud:not(.hidden)')).catch(() => false)); i++) { await P.mouse.click(10, 10).catch(() => {}); await sleep(1000); }
-  for (let i = 0; i < 60 && !(await P.evaluate(() => document.body.classList.contains('tac'))); i++) await sleep(1000);
+  for (let i = 0; i < 120 && !(await P.evaluate(() => document.body.classList.contains('tac'))); i++) await sleep(1000);
   console.log('toasts', await L.toasts(P));
   await sleep(3000);
   await L.closeAll(P);

@@ -12,28 +12,30 @@ Measured by `tools/mobile/fit/audit.mjs` (the meter `measure.js` runs in the pag
 
 | size | measurements | scroll | out | cut | taps | tiny | paged | clean |
 |---|---|---|---|---|---|---|---|---|
-| 480x270 | 7 | 5 | 0 | 0 | 0 | 0 | 0 | 2 |
-| 640x360 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 7 |
-| 812x375 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 6 |
-| 1500x600 | 6 | 4 | 0 | 0 | 0 | 0 | 0 | 2 |
+| 480x270 | 8 | 6 | 0 | 0 | 0 | 0 | 0 | 2 |
+| 640x360 | 8 | 6 | 0 | 0 | 0 | 0 | 0 | 2 |
+| 812x375 | 8 | 6 | 0 | 0 | 0 | 0 | 0 | 2 |
+| 1500x600 | 8 | 6 | 0 | 0 | 0 | 0 | 0 | 2 |
 
-**All phones held sideways** (20 measurements): scroll **5** · out **0** · cut **0** · taps **0** · tiny **0** · clean **15**
+**All phones held sideways** (24 measurements): scroll **18** · out **0** · cut **0** · taps **0** · tiny **0** · clean **6**
 
 ## Per screen, phones held sideways (all seven sizes, RU + EN)
 
 | screen | measured | scroll | out | cut | taps | tiny | pages at 640×360 | share at 640×360 |
 |---|---|---|---|---|---|---|---|---|
-| chat | 6 | 2 | 0 | 0 | 0 | 0 | 1 | 100% |
-| chat:card | 6 | 2 | 0 | 0 | 0 | 0 | 1 | 100% |
+| chat | 6 | 6 | 0 | 0 | 0 | 0 | 1 | 100% |
+| chat:emotes | 6 | 6 | 0 | 0 | 0 | 0 | 1 | 100% |
+| chat:card | 6 | 6 | 0 | 0 | 0 | 0 | 1 | 100% |
 | chat:dm | 6 | 0 | 0 | 0 | 0 | 0 | 1 | 100% |
-| chat:emotes | 2 | 1 | 0 | 0 | 0 | 0 | 1 | 100% |
 
 ## What is left at 640x360 (RU)
 
-Nothing.
+- **chat** — scroll: #chat-log ↕336/255
+- **chat:emotes** — scroll: #chat-log ↕336/255
+- **chat:card** — scroll: #chat-log ↕336/255
 
 ## What is left at 480x270 (RU)
 
-- **chat** — scroll: #chat-log ↕285/177
-- **chat:card** — scroll: #chat-log ↕285/177
-- **chat:emotes** — scroll: #chat-log ↕239/177
+- **chat** — scroll: #chat-log ↕372/177
+- **chat:emotes** — scroll: #chat-log ↕372/177
+- **chat:card** — scroll: #chat-log ↕372/177
