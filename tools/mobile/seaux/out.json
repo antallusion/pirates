@@ -1,0 +1,165 @@
+{
+ "480x270": {
+  "capMenu": true,
+  "capMenuRect": {
+   "x": 0,
+   "y": 114.8125,
+   "w": 480,
+   "h": 155.1875,
+   "b": 270,
+   "r": 480
+  },
+  "capTiles": [
+   36,
+   36,
+   36,
+   36,
+   36,
+   36
+  ],
+  "capOptions": true,
+  "plate": {
+   "w": 42,
+   "h": 11,
+   "lines": 1,
+   "plate": 105
+  },
+  "find": {
+   "id": 9,
+   "x": 21000,
+   "y": 69803,
+   "d": 700
+  },
+  "actRow": [
+   {
+    "act": "find",
+    "w": 163,
+    "h": 32,
+    "top": 232
+   }
+  ],
+  "findTapped": true,
+  "findCourse": {
+   "x": 21000,
+   "y": 69803
+  },
+  "findDone": true,
+  "findToasts": [
+   "Автоплавание: метка достигнута. Штурвал у вас.",
+   "Свежий ветер — доброе плавание."
+  ],
+  "cast": {
+   "id": 7,
+   "x": 21382,
+   "y": 69726,
+   "sx": 861.5985373343334,
+   "sy": 47.172979311326344,
+   "crew": 5
+  },
+  "castCourse": {
+   "x": 21382,
+   "y": 69726
+  },
+  "castWhy": {
+   "toasts": [
+    "Автоплавание: штурвал у рулевого. Любое движение руля возвращает его вам.",
+    "Записка в бутылке: потерпевший крушение указывает путь к острову Беллпойнт — 3 км на север. Остров на вашей карте."
+   ],
+   "fight": {
+    "pursuit": null,
+    "combat": false,
+    "hull": 900,
+    "hullMax": 900
+   }
+  },
+  "castAboard": true,
+  "castCrew": 8,
+  "castToasts": [
+   "С обломка мачты подняли потерпевших: 3 — нанимаются юнгами."
+  ],
+  "wreck": {
+   "id": 4512,
+   "x": 20613,
+   "y": 69390,
+   "d": 810,
+   "value": 80,
+   "sx": -731.4057370524454,
+   "sy": -305.83606728785963,
+   "n": 9
+  },
+  "wreckCourse": {
+   "x": 20613,
+   "y": 69390
+  },
+  "wreckTaken": true,
+  "wreckEnd": {
+   "d": 45,
+   "auto": null,
+   "spd": 4.4399999999999995
+  },
+  "wreckToasts": [
+   "Поднято со дна: лес — 5."
+  ],
+  "claim": {
+   "name": "Gallowsreach Holm",
+   "d": 668
+  },
+  "claimActs": [
+   "claim",
+   "look",
+   "attack"
+  ],
+  "claimTapped": true,
+  "claimCourse": null,
+  "claimOpen": false,
+  "scrollIsles": {
+   "found": false
+  },
+  "scroll_journal": {
+   "found": true,
+   "long": true,
+   "sh": 1665,
+   "ch": 233,
+   "top": 1432,
+   "end": true,
+   "lastSeen": true
+  },
+  "scroll_hero": {
+   "found": true,
+   "long": true,
+   "sh": 1383,
+   "ch": 233,
+   "top": 1150,
+   "end": true,
+   "lastSeen": true
+  },
+  "scroll_options": {
+   "found": true,
+   "long": true,
+   "sh": 259,
+   "ch": 233,
+   "top": 26,
+   "end": true,
+   "lastSeen": true
+  },
+  "scroll_news": {
+   "found": true,
+   "long": true,
+   "sh": 241,
+   "ch": 156,
+   "top": 85,
+   "end": true,
+   "lastSeen": true
+  },
+  "scroll_company": {
+   "found": true,
+   "long": true,
+   "sh": 1071,
+   "ch": 196,
+   "top": 875,
+   "end": true,
+   "lastSeen": true
+  },
+  "errors": []
+ }
+}

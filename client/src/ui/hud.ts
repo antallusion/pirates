@@ -68,6 +68,7 @@ import { gloryChip } from './throne.ts'; // docs/19 E1
 import { Toasts } from './kit/toast.ts'; // docs/23 phase 1
 import { faceAttrs } from './kit/faces.ts'; // the rebuild of 2026-10-07
 import { captainDot } from './capmenu.ts'; // seaux: the bead is news not yet seen
+import { drawWrecksMini } from '../render/castaways.ts'; // seaux: her wreckage and castaways on the chart
 
 const L = dict(EN, RU);
 const LSF = dict(SEAF_EN, SEAF_RU); // the quick sea fight (docs/23 phases 3–4)
@@ -1060,6 +1061,7 @@ export class Hud {
     drawAdvMini(g, state, tx, ty, own, range); // the adventure map's guards and things (docs/17 H4)
     drawDriftsMini(g, state, tx, ty, own, range); // drifting creatures and their clocks (docs/18 #34)
     drawFindsMini(g, state, tx, ty, own, range); // the sea's small things (docs/19 D5)
+    drawWrecksMini(g, state.wrecks, state.castaways, tx, ty, own, range); // seaux: her wreckage and castaways
     drawRoamsMini(g, state, tx, ty, own, range); // the creatures roaming the sea (docs/19 D7)
     drawCitadelsMini(g, state, tx, ty, own, range); // the citadels of the Throne war (docs/19 E4)
     // The dense sea's marks (docs/16 P3): a wreck or bones as a dun speck, a buoy red, a lantern gold. docs/19 D6: twice

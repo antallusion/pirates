@@ -28,6 +28,8 @@ interface CS {
   rng: Rng;
   seq: number;
   list: Map<number, Castaway>;
+  /** Each captain's own (by account): what she is looked at against, never the whole sea's. */
+  mine: Map<number, Map<number, Castaway>>;
   /** When the next one is due for a captain (sea seconds). */
   next: Map<number, number>;
   /** The men hauled aboard this hour (from when the hour began). */
@@ -40,7 +42,7 @@ const states = new WeakMap<Game, CS>();
 
 function C(game: Game): CS {
   let c = states.get(game);
-  if (!c) states.set(game, (c = { rng: new Rng(0xca57a7a1), seq: 1, list: new Map(), next: new Map(), hour: new Map(), last: new Map() }));
+  if (!c) states.set(game, (c = { rng: new Rng(0xca57a7a1), seq: 1, list: new Map(), mine: new Map(), next: new Map(), hour: new Map(), last: new Map() }));
   return c;
 }
 
@@ -49,7 +51,14 @@ export function setCastRng(game: Game, rng: Rng): void {
   C(game).rng = rng;
 }
 
-export const castawaysOf = (game: Game, s: PlayerSession): Castaway[] => [...C(game).list.values()].filter((c) => c.owner === s.accountId);
+export const castawaysOf = (game: Game, s: PlayerSession): Castaway[] => [...(C(game).mine.get(s.accountId)?.values() ?? [])];
+
+function drop(S: CS, c: Castaway): void {
+  S.list.delete(c.id);
+  const m = S.mine.get(c.owner);
+  m?.delete(c.id);
+  if (m && !m.size) S.mine.delete(c.owner);
+}
 
 /** Men she may still take from the sea this hour. */
 export function castRoomHour(game: Game, s: PlayerSession): number {
@@ -72,6 +81,9 @@ export function putCastaway(game: Game, s: PlayerSession, at?: { x: number; y: n
   if (!spot) return null;
   const c: Castaway = { id: S.seq++, owner: s.accountId, x: Math.round(spot.x), y: Math.round(spot.y), n: n ?? S.rng.int(CAST_MEN[0], CAST_MEN[1]), until: game.now + CAST_TTL };
   S.list.set(c.id, c);
+  let m = S.mine.get(c.owner);
+  if (!m) S.mine.set(c.owner, (m = new Map()));
+  m.set(c.id, c);
   sendCastaways(game, s, true);
   return c;
 }
@@ -80,7 +92,7 @@ export function putCastaway(game: Game, s: PlayerSession, at?: { x: number; y: n
 export function haulCastaway(game: Game, s: PlayerSession, c: Castaway): number {
   const S = C(game);
   const ship = s.ship!, p = s.profile!;
-  S.list.delete(c.id);
+  drop(S, c);
   const room = Math.max(0, ship.stats.crewMax - ship.crew);
   const k = Math.min(c.n, room, castRoomHour(game, s));
   if (k > 0) {
@@ -115,7 +127,7 @@ export function stepCastaways(game: Game): void {
   const now = game.now;
   for (const c of S.list.values()) {
     if (now < c.until && game.sessionByAccount(c.owner)?.ship) continue;
-    S.list.delete(c.id);
+    drop(S, c);
     const o = game.sessionByAccount(c.owner);
     if (o) sendCastaways(game, o);
   }

@@ -83,6 +83,34 @@ export function drawCastaway(g: G, x: number, y: number, R: number, t: number, i
   g.restore();
 }
 
+/** The minimap's marks (seaux): her castaways a white figure-dot in a gold ring, her wreckage small brown chips — so
+ *  she finds them beyond the screen (a tap there on the chart's long press sails her to them). */
+export function drawWrecksMini(g: G, wrecks: readonly { x: number; y: number }[], casts: readonly { x: number; y: number }[], tx: (x: number) => number, ty: (y: number) => number, own: { x: number; y: number }, range: number): void {
+  g.save();
+  g.lineWidth = 1;
+  for (const w of wrecks) {
+    if (Math.abs(w.x - own.x) > range || Math.abs(w.y - own.y) > range) continue;
+    g.fillStyle = '#a07a4a';
+    g.strokeStyle = 'rgba(0,0,0,0.75)';
+    g.fillRect(tx(w.x) - 2, ty(w.y) - 1.5, 4, 3);
+    g.strokeRect(tx(w.x) - 2, ty(w.y) - 1.5, 4, 3);
+  }
+  for (const c of casts) {
+    if (Math.abs(c.x - own.x) > range || Math.abs(c.y - own.y) > range) continue;
+    const x = tx(c.x), y = ty(c.y);
+    g.strokeStyle = '#e0b862';
+    g.lineWidth = 1.4;
+    g.beginPath();
+    g.arc(x, y, 4.5, 0, Math.PI * 2);
+    g.stroke();
+    g.fillStyle = '#f2e6cc';
+    g.beginPath();
+    g.arc(x, y, 1.8, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.restore();
+}
+
 /** Her castaways on the sea: each group, its gold ring and the clock of their time left. */
 export function drawCastawaysWorld(g: G, list: readonly CastawayView[], since: number, now: number, c: CastCtx): void {
   if (!list.length) return;

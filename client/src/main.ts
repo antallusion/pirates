@@ -411,7 +411,7 @@ function stepClaimRun(): void {
   else if (claimNear(isl, own)) {
     claimRun = null;
     openClaim();
-  } else if (!state.autosail && performance.now() - claimRun.at > 2500) claimRun = null;
+  } else if (performance.now() - claimRun.at > 120_000) claimRun = null; // (the helmsman refused — a sail in sight: she may sail in herself)
 }
 /** The helmsman's course to a spot (and how near he should bring her), drawn with its ring. */
 function sailToSpot(p: { x: number; y: number }, near?: number): void {

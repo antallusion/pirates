@@ -49,7 +49,7 @@ export const wreckId = (cx: number, cy: number, k: number): number => (cy * WREC
 /** Seconds of sailing between two castaways for her: a full crew waits the long end, a thin one the short. */
 export const CAST_EVERY: readonly [number, number] = [150, 330];
 /** Where one turns up: ahead of her, off her course (metres). */
-export const CAST_AT: readonly [number, number] = [450, 900];
+export const CAST_AT: readonly [number, number] = [280, 480];
 /** How long one clings to his spar (seconds) before the sea takes him. */
 export const CAST_TTL = 240;
 /** Within this of him (metres, from her hull's middle) he is hauled aboard as she passes. */
