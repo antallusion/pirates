@@ -1,0 +1,222 @@
+/* GRAVETIDE · the players' chat (docs/28; owner, 2026-10-11: «чат должен на мобилке быть удобный, его надо какой-то
+   иконкой открывать-закрывать, чтобы uix не рушился»). Loaded after fit.css.
+   - A round brass button with the unread (a count for private words, the group and the guild; a dot for the world)
+     opens and closes the sheet; a short line beside it tells private words, the group's and the guild's while it is shut.
+   - A phone held sideways (520 px tall or less): the sheet slides over the right side, the full height, at most 46 % of
+     the width; the helm, the captain and the sea stay to the left; the button rides the sheet's edge while it is open.
+     Taps a finger wide on the fit's --u scale (32 px at 270 px tall, 36–38 px from 360).
+   - A desk: a compact panel docked bottom-left (or right: the dock button), Enter to type, Esc to close.
+   - The boarding battle on a phone: the button stays (top right, clear of the book and the orders in the bottom
+     corners), the sheet over the field's right while it is open. */
+
+body { --chat-w: 380px; }
+#hud-chat { --chat-btn: 44px; --chat-kb: 0px; --chat-tap: 36px; --chat-fs: 12.5px; --chat-fs-s: 11px; --chat-face: 36px; --chat-gap: 6px; }
+
+/* ------------------------------------------------------------------ the button */
+#hud-chat > .chat-toggle { position: absolute; display: block; box-sizing: border-box; width: var(--chat-btn); height: var(--chat-btn); padding: 0; border-radius: 50%; border: 2px solid var(--brass-dim); background: rgba(16, 14, 11, 0.92); color: var(--gold); pointer-events: auto; cursor: pointer; touch-action: manipulation; z-index: 3;
+  right: calc(var(--sa-r) + 8px); top: calc(var(--sa-t) + 120px); transition: right var(--k-dur-2, 200ms) var(--k-ease-out, ease-out), top var(--k-dur-2, 200ms) var(--k-ease-out, ease-out); }
+.skinned #hud-chat > .chat-toggle { border: 0; }
+.skinned #hud-chat > .chat-toggle::after { content: ''; position: absolute; inset: -3px; background: var(--ui-ring) center / contain no-repeat; pointer-events: none; }
+#hud-chat > .chat-toggle .chat-tg-ico { position: absolute; inset: 18%; display: flex; align-items: center; justify-content: center; }
+#hud-chat > .chat-toggle .chat-tg-ico .ico { width: 100%; height: 100%; margin: 0; vertical-align: 0; border-radius: 50%; }
+#hud-chat > .chat-toggle.has-unread { filter: drop-shadow(0 0 6px rgba(232, 196, 106, 0.65)); }
+#hud-chat > .chat-toggle[aria-expanded="true"] { border-color: var(--brass); box-shadow: 0 0 0 2px rgba(232, 196, 106, 0.35); }
+#hud-chat .chat-unread { position: absolute; top: -4px; right: -6px; z-index: 3; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 9px; background: #a8322a; border: 1px solid #f0c9a0; color: #fff; font: 700 11px/16px var(--sans); font-style: normal; text-align: center; pointer-events: none; }
+#hud-chat .chat-unread.dot { min-width: 11px; width: 11px; height: 11px; padding: 0; top: 0; right: 0; background: #c8a04a; border-color: #2a2015; }
+#hud-chat .chat-unread.hidden { display: none; }
+/* (the simple sea HUD put the old button away — seahud.css; the owner wants it back, 2026-10-11) */
+body.simple #hud-chat > #chat-toggle, body.touch #hud-chat > #chat-toggle { display: block !important; }
+
+/* ------------------------------------------------------------------ the toast-line by the button (while shut) */
+#hud-chat > .chat-toast { position: absolute; display: flex; align-items: center; gap: 6px; box-sizing: border-box; max-width: min(360px, 52vw); min-height: var(--chat-btn); padding: 4px 10px 4px 4px; border: 1px solid rgba(140, 107, 58, 0.7); border-radius: 22px; background: rgba(12, 10, 8, 0.93); color: var(--bone); font: 500 var(--chat-fs-s)/1.25 var(--sans); text-align: left; pointer-events: auto; cursor: pointer; z-index: 2;
+  right: calc(var(--sa-r) + 8px + var(--chat-btn) + 8px); top: calc(var(--sa-t) + 120px); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6); }
+#hud-chat > .chat-toast.hidden, body.chat-open #hud-chat > .chat-toast { display: none; }
+#hud-chat > .chat-toast .cl-face { width: 28px; height: 28px; margin: 0; }
+#hud-chat > .chat-toast .chat-toast-t { min-width: 0; overflow-wrap: anywhere; }
+#hud-chat > .chat-toast b { color: var(--gold); font-weight: 600; }
+#hud-chat > .chat-toast.chat-whisper b { color: #e0a8e8; }
+#hud-chat > .chat-toast.chat-group b { color: #8fdc9a; }
+#hud-chat > .chat-toast.chat-guild b { color: #9fc3e8; }
+
+/* ------------------------------------------------------------------ the sheet */
+#hud-chat > #chat { position: absolute; display: flex; flex-direction: column; box-sizing: border-box; z-index: 1; pointer-events: none; visibility: hidden; opacity: 0;
+  right: calc(var(--sa-r) + 8px); left: auto; top: calc(var(--sa-t) + 8px); bottom: calc(max(var(--sa-b), var(--chat-kb)) + 8px); width: min(var(--chat-w), calc(100vw - var(--sa-l) - var(--sa-r) - 16px)); height: auto; max-height: none;
+  padding: 6px 8px 8px; gap: var(--chat-gap); background: linear-gradient(180deg, rgba(14, 12, 10, 0.96), rgba(8, 8, 9, 0.97)); border: 1px solid rgba(140, 107, 58, 0.6); border-radius: 3px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7); font-size: var(--chat-fs);
+  transform: translateX(calc(100% + 24px)); transition: transform var(--k-dur-3, 260ms) var(--k-ease-out, ease-out), opacity var(--k-dur-2, 180ms) linear, visibility 0s linear var(--k-dur-3, 260ms); }
+.skinned #hud-chat > #chat { border: 7px solid transparent; border-image: var(--ui-frame) 70 / 7px round; border-radius: 0; padding: 3px 5px 5px; background: linear-gradient(180deg, rgba(14, 11, 9, 0.93), rgba(8, 8, 9, 0.97)), var(--tex-panel, var(--tex-ebony, none)) center / 260px; background-clip: padding-box; }
+#hud-chat > #chat.open { pointer-events: auto; visibility: visible; opacity: 1; transform: none; transition: transform var(--k-dur-3, 260ms) var(--k-ease-out, ease-out), opacity var(--k-dur-2, 180ms) linear, visibility 0s; }
+body.reduce-motion #hud-chat > #chat, body.reduce-motion #hud-chat > .chat-toggle { transition: none !important; }
+@media (prefers-reduced-motion: reduce) { #hud-chat > #chat, #hud-chat > .chat-toggle { transition: none !important; } }
+
+/* the head: the channels' tabs, the dock (a desk), × */
+#hud-chat .chat-head { display: flex; align-items: center; gap: 4px; flex: none; margin: 0; }
+#hud-chat #chat-tabs { display: flex; flex: 1 1 auto; min-width: 0; gap: 4px; margin: 0; }
+#hud-chat #chat-tabs .ct { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex: 0 1 auto; min-width: var(--chat-tap); min-height: var(--chat-tap); padding: 0 7px; box-sizing: border-box; font: 600 var(--chat-fs-s) var(--sans); color: var(--fog); background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(111, 90, 56, 0.45); border-radius: 3px; cursor: pointer; white-space: nowrap; touch-action: manipulation; }
+#hud-chat #chat-tabs .ct .ico-sm { width: 18px; height: 18px; margin: 0; flex: none; }
+#hud-chat #chat-tabs .ct.on { color: var(--gold); border-color: var(--brass); background: rgba(232, 196, 106, 0.1); }
+#hud-chat #chat-tabs .ct:not(.on) .ct-l { display: none; }
+#hud-chat #chat-tabs .ct-n { position: absolute; top: -6px; right: -5px; min-width: 15px; height: 15px; padding: 0 3px; box-sizing: border-box; border-radius: 8px; background: #a8322a; color: #fff; font: 700 10px/15px var(--sans); font-style: normal; text-align: center; }
+#hud-chat #chat-tabs .ct-dot { position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: #c8a04a; }
+#hud-chat .chat-x { flex: none; display: inline-flex; align-items: center; justify-content: center; width: var(--chat-tap); height: var(--chat-tap); padding: 0; background: none; border: 0; color: var(--fog); font-size: 20px; line-height: 1; cursor: pointer; touch-action: manipulation; }
+#hud-chat .chat-x:hover { color: var(--gold); }
+#hud-chat .chat-dock { font-size: 16px; }
+body.touch #hud-chat .chat-dock { display: none; }
+
+/* a conversation's bar: back to the list, the captain written to */
+#hud-chat #chat-peers { display: flex; align-items: center; gap: 4px; flex: none; min-height: var(--chat-tap); border-bottom: 1px solid rgba(111, 90, 56, 0.35); }
+#hud-chat #chat-peers.hidden { display: none; }
+#hud-chat .chat-back { flex: none; width: var(--chat-tap); height: var(--chat-tap); padding: 0; border: 1px solid rgba(111, 90, 56, 0.45); border-radius: 3px; background: rgba(255, 255, 255, 0.04); color: var(--gold); font: 700 20px/1 var(--sans); cursor: pointer; }
+#hud-chat .chat-peer { display: flex; align-items: center; gap: 6px; flex: 1 1 auto; min-width: 0; min-height: var(--chat-tap); padding: 0 4px; background: none; border: 0; color: #e0a8e8; font: 600 var(--chat-fs) var(--sans); text-align: left; cursor: pointer; }
+#hud-chat .chat-peer .cl-face { width: 24px; height: 24px; margin: 0; }
+#hud-chat .chat-peer b { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+
+/* the middle: the log, and over it the captain's card or the emotes */
+#hud-chat .chat-mid { position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+#hud-chat #chat-log { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; overscroll-behavior: contain; font-size: var(--chat-fs); text-shadow: 0 1px 2px #000; scrollbar-width: thin; scrollbar-color: rgba(140, 107, 58, 0.6) transparent; -webkit-overflow-scrolling: touch; }
+#hud-chat .cl-empty { margin: 10px 4px; color: var(--fog); font: italic var(--chat-fs-s)/1.4 var(--sans); }
+#hud-chat #chat-log .cl { display: flex; gap: 7px; align-items: flex-start; padding: 3px 2px; overflow-wrap: anywhere; }
+#hud-chat #chat-log .cl + .cl { border-top: 1px solid rgba(111, 90, 56, 0.16); }
+#hud-chat .cl-face { position: relative; flex: none; box-sizing: border-box; width: var(--chat-face); height: var(--chat-face); margin: 2px 2px 0; padding: 0; border: 0; border-radius: 50%; background: #15120e 50% 22% / 150% auto no-repeat; box-shadow: 0 0 0 1.5px var(--brass-dim), 0 1px 4px #000; }
+button.cl-face { cursor: pointer; touch-action: manipulation; }
+.skinned #hud-chat .cl-face { box-shadow: 0 1px 4px #000; }
+.skinned #hud-chat .cl-face::after { content: ''; position: absolute; inset: -4px; background: var(--ui-ring) center / contain no-repeat; pointer-events: none; }
+#hud-chat .cl-body { flex: 1 1 auto; min-width: 0; }
+#hud-chat .cl-head { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 5px; row-gap: 0; min-width: 0; line-height: 1.25; }
+#hud-chat .cl-name { min-width: 0; overflow-wrap: anywhere; font: 600 var(--chat-fs) var(--sans); }
+body:not(.touch) #hud-chat .cl-name[data-nick] { cursor: pointer; }
+body:not(.touch) #hud-chat .cl-name[data-nick]:hover { text-decoration: underline; }
+#hud-chat .cl-g { color: #9fc3e8; font: 600 var(--chat-fs-s) var(--sans); }
+#hud-chat .cl-lv, #hud-chat .cl-to { flex: none; font-size: var(--chat-fs-s); font-style: normal; color: var(--fog); white-space: nowrap; }
+#hud-chat .cl-to { color: #e0a8e8; }
+#hud-chat .cl-head time { flex: none; margin-left: auto; font-size: var(--chat-fs-s); color: rgba(216, 210, 196, 0.55); }
+#hud-chat .cl-text { color: var(--bone); font-size: var(--chat-fs); line-height: 1.32; overflow-wrap: anywhere; }
+#hud-chat .chat-local .cl-text { color: #e6dcc0; }
+#hud-chat .chat-group .cl-text { color: #bfe8c4; }
+#hud-chat .chat-guild .cl-text { color: #c4d8ee; }
+#hud-chat .chat-whisper .cl-text { color: #ecc8f0; }
+#hud-chat .cl-own { background: linear-gradient(90deg, rgba(232, 196, 106, 0.07), transparent); }
+#hud-chat .cl-sys { align-items: center; color: #d8c48a; }
+#hud-chat .cl-sys .cl-text { color: #d8c48a; font-style: italic; font-size: var(--chat-fs-s); }
+#hud-chat .cl-sys-ico { flex: none; width: var(--chat-face); text-align: center; }
+#hud-chat .emo { width: 20px; height: 20px; object-fit: contain; vertical-align: -5px; margin: 0 1px; }
+#hud-chat .cl-text .emo { width: 22px; height: 22px; vertical-align: -6px; }
+/* our own domain's link: its tap as tall as a finger, the line's height unchanged */
+#hud-chat .cl-link { display: inline-block; padding: calc(var(--chat-tap) / 2 - 6px) 2px; margin: calc(6px - var(--chat-tap) / 2) 0; color: #e8c46a; text-decoration: underline; }
+
+/* the private tab's list of conversations */
+#hud-chat .ct-thread { display: flex; align-items: center; gap: 8px; width: 100%; min-height: calc(var(--chat-tap) + 8px); padding: 4px 4px; box-sizing: border-box; background: none; border: 0; border-bottom: 1px solid rgba(111, 90, 56, 0.2); color: var(--bone); text-align: left; cursor: pointer; font: 500 var(--chat-fs) var(--sans); }
+#hud-chat .ct-thread:hover { background: rgba(232, 196, 106, 0.06); }
+#hud-chat .ct-th-body { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; gap: 1px; }
+#hud-chat .ct-th-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px; }
+#hud-chat .ct-th-top b { color: #e0a8e8; font-weight: 600; overflow-wrap: anywhere; }
+#hud-chat .ct-th-last { color: var(--fog); font-size: var(--chat-fs-s); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#hud-chat .ct-thread > .ct-n { flex: none; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 9px; background: #a8322a; color: #fff; font: 700 11px/18px var(--sans); font-style: normal; text-align: center; }
+
+/* the captain's card (a tap on a face or a name) */
+#hud-chat #chat-card { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; gap: 6px; padding: 6px; box-sizing: border-box; background: rgba(10, 9, 8, 0.97); border: 1px solid rgba(140, 107, 58, 0.55); border-radius: 3px; overflow: hidden; }
+#hud-chat #chat-card.hidden { display: none; }
+#hud-chat .chat-card-head { display: flex; align-items: center; gap: 8px; flex: none; }
+#hud-chat .chat-card-face { width: 40px; height: 40px; margin: 2px; }
+#hud-chat .chat-card-who { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+#hud-chat .chat-card-who b { color: var(--gold); font: 600 calc(var(--chat-fs) + 1px) var(--sans); overflow-wrap: anywhere; }
+#hud-chat .chat-card-who span { color: var(--fog); font-size: var(--chat-fs-s); }
+#hud-chat .chat-card-acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; align-content: start; min-height: 0; }
+#hud-chat .chat-card-b { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: var(--chat-tap); padding: 2px 8px; box-sizing: border-box; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(111, 90, 56, 0.5); border-radius: 3px; color: var(--bone); font: 600 var(--chat-fs-s)/1.2 var(--sans); text-align: left; cursor: pointer; }
+#hud-chat .chat-card-b:hover { border-color: var(--brass); color: var(--gold); }
+#hud-chat .chat-card-b .ico-sm { width: 18px; height: 18px; margin: 0; flex: none; }
+#hud-chat .chat-card-b span { min-width: 0; overflow-wrap: anywhere; }
+
+/* the emotes: four groups, a grid of the game's icons */
+#hud-chat #chat-emotes { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; display: flex; flex-direction: column; gap: 4px; max-height: 100%; padding: 4px; box-sizing: border-box; background: rgba(10, 9, 8, 0.97); border: 1px solid rgba(111, 90, 56, 0.55); border-radius: 3px; overflow: hidden; }
+#hud-chat #chat-emotes.hidden { display: none; }
+#hud-chat .eg-tabs { display: flex; gap: 4px; flex: none; }
+#hud-chat .eg { display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex: 1 1 0; min-width: 0; min-height: var(--chat-tap); padding: 0 4px; box-sizing: border-box; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(111, 90, 56, 0.4); border-radius: 3px; color: var(--fog); font: 600 var(--chat-fs-s) var(--sans); cursor: pointer; white-space: nowrap; }
+#hud-chat .eg.on { flex: 2 0 auto; color: var(--gold); border-color: var(--brass); background: rgba(232, 196, 106, 0.1); }
+#hud-chat .eg:not(.on) .eg-l { display: none; }
+#hud-chat .eg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--chat-tap), 1fr)); gap: 3px; min-height: 0; overflow: hidden; }
+#hud-chat .eg-grid button, #hud-chat #chat-suggest button { display: inline-flex; align-items: center; justify-content: center; min-width: var(--chat-tap); height: var(--chat-tap); padding: 0; background: rgba(255, 255, 255, 0.03); border: 1px solid transparent; border-radius: 3px; cursor: pointer; touch-action: manipulation; }
+#hud-chat .eg-grid button:hover, #hud-chat #chat-suggest button:hover { border-color: var(--brass-dim); background: rgba(232, 196, 106, 0.08); }
+#hud-chat .eg-grid .emo, #hud-chat #chat-suggest .emo { width: 24px; height: 24px; vertical-align: middle; margin: 0; }
+
+/* the autocomplete after «:» */
+#hud-chat #chat-suggest { display: flex; gap: 3px; flex: none; overflow: hidden; padding: 2px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(111, 90, 56, 0.45); border-radius: 3px; }
+#hud-chat #chat-suggest.hidden { display: none; }
+#hud-chat #chat-suggest button { flex: 0 0 var(--chat-tap); }
+
+/* the field */
+#hud-chat .chat-row { flex: none; display: flex; align-items: center; gap: 4px; margin: 0; }
+#hud-chat #chat-input { display: block; flex: 1 1 auto; min-width: 0; width: auto; height: var(--chat-tap); min-height: var(--chat-tap); margin: 0; padding: 0 8px; box-sizing: border-box; font: 400 max(13px, var(--chat-fs)) var(--sans); }
+#hud-chat .chat-emo-btn { flex: none; width: var(--chat-tap); height: var(--chat-tap); padding: 0; display: inline-flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(111, 90, 56, 0.55); border-radius: 3px; cursor: pointer; }
+#hud-chat .chat-emo-btn .ico-sm { width: 22px; height: 22px; margin: 0; vertical-align: 0; }
+#hud-chat .chat-send { flex: none; height: var(--chat-tap); min-height: var(--chat-tap); padding: 0 10px; white-space: nowrap; font-size: var(--chat-fs-s); }
+
+/* ------------------------------------------------------------------ a phone held sideways */
+@media (max-height: 520px) {
+  body { --chat-w: clamp(250px, 46vw, 400px); }
+  #hud-chat { --chat-btn: 44px; --chat-tap: var(--f-tap, 32px); --chat-fs: var(--f-fs, 11px); --chat-fs-s: var(--f-fs-s, 10px); --chat-face: var(--f-tap, 32px); --chat-gap: calc(3px + 2 * var(--u, 0px)); }
+  /* the button: under the menu's, left of the chart */
+  #hud-chat > .chat-toggle { top: calc(var(--sa-t) + 66px); right: calc(var(--sa-r) + var(--mm, 86px) + 20px); }
+  #hud-chat > .chat-toast { top: calc(var(--sa-t) + 66px); right: calc(var(--sa-r) + var(--mm, 86px) + 20px + var(--chat-btn) + 8px); max-width: min(330px, calc(100vw - var(--mm, 86px) - var(--chat-btn) - 240px)); }
+  /* open: the sheet over the right, the button at its edge, half way down (clear of the captain's frame and the helm) */
+  #hud-chat > #chat { top: calc(var(--sa-t) + 4px); right: calc(var(--sa-r) + 4px); bottom: calc(max(var(--sa-b), var(--chat-kb)) + 4px); width: var(--chat-w); padding: 4px 6px 5px; }
+  .skinned #hud-chat > #chat { border-width: 5px; border-image-width: 5px; padding: 2px 4px 3px; }
+  body.chat-open #hud-chat > .chat-toggle { right: calc(var(--sa-r) + var(--chat-w) + 12px); top: calc(var(--sa-t) + 80px); }
+  /* the sea's main controls in the bottom right (Fire, Set sail, the action) step left of the sheet: the helm keeps the
+     bottom left, so all of them stay a thumb away while she types */
+  body.chat-open #touch > :is(#tc-fire, #tc-ammo, #tc-lock, #tc-special, .tc-act, #tc-cast) { --sa-r: calc(env(safe-area-inset-right, 0px) + var(--chat-w) + 8px); }
+  #hud-chat #chat-tabs { gap: 3px; }
+  #hud-chat #chat-tabs .ct { padding: 0 5px; }
+  /* the field keeps its own size (a phone zooms a field under 16 px only on a tap in portrait; sideways it stays) */
+  #hud-chat #chat-input { font-size: max(13px, var(--chat-fs)); }
+  #hud-chat .chat-send { padding: 0 8px; }
+  /* the top stack steps aside while the sheet is open (it stood under its right half) */
+  body.chat-open #hud-stack { visibility: hidden; }
+  /* the keyboard up: the sheet keeps to what is left above it */
+  #hud-chat.chat-kb > #chat { top: calc(var(--chat-vv-top, 0px) + 2px); }
+  #hud-chat.chat-kb > #chat .chat-head { display: none; }
+}
+/* the narrowest: the send button is its arrow only (the word for the field); beside the sheet only Fire and the helm
+   (the shot's kind, the mark, the special and the action button wait for the sheet to close: they would stand on the
+   helm, or past the screen's left edge) */
+@media (max-height: 520px) and (max-width: 600px) {
+  body.chat-open #touch > :is(#tc-ammo, #tc-lock, #tc-special, .tc-act) { visibility: hidden; }
+  #hud-chat .chat-send span { display: none; }
+  #hud-chat .chat-send::before { content: '➤'; font-size: 15px; line-height: 1; }
+  #hud-chat .chat-send { width: var(--chat-tap); padding: 0; }
+  #hud-chat #chat-suggest button:nth-child(n+7) { display: none; }
+}
+
+/* ------------------------------------------------------------------ a tablet, a phone upright */
+@media (min-height: 521px) and (max-width: 1099px), (min-height: 521px) and (max-height: 599px) {
+  #hud-chat > .chat-toggle { top: calc(var(--sa-t) + var(--mm, 132px) + 76px); right: calc(var(--sa-r) + 12px); }
+  #hud-chat > .chat-toast { top: calc(var(--sa-t) + var(--mm, 132px) + 76px); right: calc(var(--sa-r) + 12px + var(--chat-btn) + 8px); }
+  #hud-chat > #chat { width: min(420px, calc(100vw - 24px)); top: calc(var(--sa-t) + 12px); bottom: calc(max(var(--sa-b), var(--chat-kb)) + 12px); }
+  body.chat-open #hud-chat > .chat-toggle { right: calc(var(--sa-r) + min(420px, calc(100vw - 24px)) + 16px); }
+}
+@media (max-width: 699px) and (min-height: 521px) {
+  /* upright the sheet takes the width: its × folds it, the button steps aside */
+  body.chat-open #hud-chat > .chat-toggle { display: none !important; }
+}
+
+/* ------------------------------------------------------------------ a desk */
+/* the helm and its speed keep the bottom left, «Огонь», the mark and the gun deck the bottom right: the button stands
+   right of the helm's speed, the panel above the helm (docked left) or above «Огонь» (docked right) */
+@media (min-width: 1100px) and (min-height: 600px) {
+  body:not(.touch) #hud-chat { --chat-desk-l: calc(var(--sa-l) + var(--dk-pad, 16px) + var(--stick, 104px) + 80px); }
+  body:not(.touch) #hud-chat > .chat-toggle { top: auto; right: auto; left: var(--chat-desk-l); bottom: calc(var(--sa-b) + var(--dk-pad, 16px)); width: 48px; height: 48px; }
+  body:not(.touch) #hud-chat > .chat-toast { top: auto; right: auto; left: calc(var(--chat-desk-l) + 58px); bottom: calc(var(--sa-b) + var(--dk-pad, 16px) + 2px); }
+  body:not(.touch) #hud-chat > #chat { top: auto; left: calc(var(--sa-l) + 12px); right: auto; bottom: calc(var(--sa-b) + var(--dk-pad, 16px) + var(--stick, 104px) + 52px); width: 360px; height: min(420px, calc(100vh - var(--dk-pad, 16px) - var(--stick, 104px) - 166px)); transform: translateY(16px); }
+  body:not(.touch) #hud-chat > #chat.open { transform: none; }
+  body:not(.touch) #hud-chat > #chat[data-dock="right"] { left: auto; right: calc(var(--sa-r) + 12px); bottom: calc(var(--sa-b) + var(--dk-pad, 16px) + var(--dk-fire, 84px) + var(--dk-lock, 44px) + 36px); height: min(420px, calc(100vh - var(--dk-pad, 16px) - var(--dk-fire, 84px) - var(--dk-lock, 44px) - 230px)); }
+  body.touch #hud-chat > .chat-toggle { top: calc(var(--sa-t) + var(--mm, 148px) + 76px); right: calc(var(--sa-r) + 12px); }
+  body.touch #hud-chat > #chat { width: 400px; }
+  body.touch.chat-open #hud-chat > .chat-toggle { right: calc(var(--sa-r) + 424px); }
+}
+
+/* ------------------------------------------------------------------ the boarding battle */
+/* Over the field (#board-tac stands at 25): the button in the right margin under the foe's chip, clear of the orders
+   (bottom left), the book and the speed (bottom right); the sheet beside that margin, never on its buttons. */
+body.tac #hud-chat { z-index: 26; }
+body.tac #hud-chat > .chat-toggle, body.tac.chat-open #hud-chat > .chat-toggle { top: calc(var(--sa-t) + 64px); right: calc(var(--sa-r) + 8px); left: auto; bottom: auto; width: 40px; height: 40px; }
+body.tac #hud-chat > .chat-toast { top: calc(var(--sa-t) + 64px); right: calc(var(--sa-r) + 56px); left: auto; bottom: auto; }
+body.tac #hud-chat > #chat { top: calc(var(--sa-t) + 4px); bottom: calc(max(var(--sa-b), var(--chat-kb)) + 4px); right: calc(var(--sa-r) + 60px); left: auto; height: auto; }

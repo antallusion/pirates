@@ -422,7 +422,7 @@ export class ChatPanel {
     const shown = CHAT_TABS.filter((t) => (t !== 'group' || c.group.length > 1 || this.tab === 'group' || (this.lines.get('group')?.length ?? 0) > 0) && (t !== 'guild' || c.guild.length > 0 || this.tab === 'guild' || (this.lines.get('guild')?.length ?? 0) > 0));
     this.tabsEl.innerHTML = shown.map((t) => {
       const n = this.unread.get(t) ?? 0;
-      const mark = n && t !== this.tab ? (t === 'world' || t === 'local' ? '<i class="ct-dot" aria-hidden="true"></i>' : `<i class="ct-n">${n > 9 ? '9+' : n}</i>`) : '';
+      const mark = n && (t !== this.tab || (t === 'dm' && !!this.peer)) ? (t === 'world' || t === 'local' ? '<i class="ct-dot" aria-hidden="true"></i>' : `<i class="ct-n">${n > 9 ? '9+' : n}</i>`) : '';
       return `<button type="button" role="tab" aria-selected="${t === this.tab}" class="ct${t === this.tab ? ' on' : ''}" data-ct="${t}" title="${esc(L(`ch_${t}`))}" aria-label="${esc(L(`ch_${t}`))}${n ? `, ${esc(L('unread', { n }))}` : ''}">${icon(TAB_ART[t], '', 'ico-sm')}<span class="ct-l">${esc(L(`ch_${t}`))}</span>${mark}</button>`;
     }).join('');
     this.tabsEl.querySelectorAll<HTMLElement>('[data-ct]').forEach((b) => {
@@ -714,21 +714,24 @@ export class ChatPanel {
 
   /** A swipe toward the sheet's own edge folds it away (right on a phone; the dock's side on a desk). */
   private swipe(): void {
+    // (touch events, not pointer events: the browser takes a sideways drag for a pan and cancels the pointer)
     let x0 = 0, y0 = 0, on = false;
-    this.root.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'mouse') return;
-      x0 = e.clientX;
-      y0 = e.clientY;
-      on = true;
-    });
-    this.root.addEventListener('pointerup', (e) => {
-      if (!on) return;
+    this.root.addEventListener('touchstart', (e) => {
+      const t = e.touches[0];
+      on = e.touches.length === 1 && !!t;
+      if (t) {
+        x0 = t.clientX;
+        y0 = t.clientY;
+      }
+    }, { passive: true });
+    this.root.addEventListener('touchend', (e) => {
+      const t = e.changedTouches[0];
+      if (!on || !t) return;
       on = false;
-      const dx = e.clientX - x0, dy = e.clientY - y0;
-      const toward = this.root.dataset.dock === 'left' && !document.body.classList.contains('touch') ? -1 : 1;
-      if (dx * toward > 70 && Math.abs(dx) > 2 * Math.abs(dy)) this.close();
-    });
-    this.root.addEventListener('pointercancel', () => (on = false));
+      const dx = t.clientX - x0, dy = t.clientY - y0;
+      if (dx > 70 && Math.abs(dx) > 2 * Math.abs(dy)) this.close();
+    }, { passive: true });
+    this.root.addEventListener('touchcancel', () => (on = false), { passive: true });
   }
 
   /** The field stays above a phone's keyboard: the sheet's bottom follows the visual viewport. */
