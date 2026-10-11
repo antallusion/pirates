@@ -902,11 +902,25 @@ export function marksNear(world: World, x: number, y: number, r = 0): SeaMark[] 
   return out;
 }
 
-/** Anchor point `offset` meters beyond the outermost coastline crossing along `heading` from the island centre. */
+/** How far a polygon's farthest vertex lies from (cx, cy): no point beyond it can be inside (kept per polygon). */
+const polyReach = new WeakMap<number[], { cx: number; cy: number; r: number }>();
+function reachOf(poly: number[], cx: number, cy: number): number {
+  const c = polyReach.get(poly);
+  if (c && c.cx === cx && c.cy === cy) return c.r;
+  let r = 0;
+  for (let i = 0; i + 1 < poly.length; i += 2) r = Math.max(r, Math.hypot(poly[i] - cx, poly[i + 1] - cy));
+  polyReach.set(poly, { cx, cy, r });
+  return r;
+}
+
+/** Anchor point `offset` meters beyond the outermost coastline crossing along `heading` from the island centre.
+ *  (The walk stops past the polygon's farthest vertex — nothing beyond it is inside — so the answer is the same as the
+ *  full 4 km walk, a few times quicker: world generation, 2026-10-11.) */
 export function coastAnchor(poly: number[], cx: number, cy: number, heading: number, offset: number): [number, number] {
   const dir = headingVec(heading);
   let lastInside = 0;
-  for (let d = 0; d < 4000; d += 10) {
+  const stop = Math.min(4000, reachOf(poly, cx, cy) + 10);
+  for (let d = 0; d < stop; d += 10) {
     if (pointInPolygon(cx + dir.x * d, cy + dir.y * d, poly)) lastInside = d;
   }
   const d = lastInside + offset;
