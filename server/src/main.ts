@@ -21,6 +21,8 @@ import { SharedState } from './persistence/redis.ts';
 import { handleAuth } from './http/auth-routes.ts';
 import { mailerFromEnv } from './mail.ts';
 import { OAuthFlow, providersFromEnv } from './oauth.ts';
+import { telegramFromEnv } from './telegram.ts';
+import { handleTelegram } from './http/tg-routes.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const PORT = Number(process.env.PORT ?? 8080);
@@ -38,6 +40,8 @@ const oauth = new OAuthFlow(providersFromEnv(), PUBLIC_URL);
 const shared = process.env.REDIS_URL ? await SharedState.open(process.env.REDIS_URL, `world-${process.pid}`) : undefined;
 const game = new Game({ db, auth, shared });
 const serveStatic = createStaticHandler(root);
+// Telegram (docs/27): the Mini App's sign-in, «Войти через Телеграм», the bot's webhook, Stars — null without TELEGRAM_BOT_TOKEN.
+const tg = telegramFromEnv({ db, auth, game, publicUrl: PUBLIC_URL });
 
 const server = createServer(async (req, res) => {
   if (req.url === '/onboarding') {
@@ -75,6 +79,7 @@ const server = createServer(async (req, res) => {
     res.end(JSON.stringify({ ...game.economy(Number.isFinite(w) && w > 0 ? Math.min(w, 30 * 86400) : 3600), history: game.econHistory }));
     return;
   }
+  if (await handleTelegram(req, res, tg)) return;
   if (await handleAuth(req, res, auth, oauth)) return;
   if (await serveStatic(req, res)) return;
   res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');
@@ -114,6 +119,7 @@ if (link) {
 }
 server.listen(PORT, HOST, () => {
   console.log(`[${GAME_NAME}] listening on http://localhost:${PORT}  (protocol v${PROTOCOL_VERSION}, db ${DATABASE_URL ? 'postgresql' : DB_PATH})`);
+  if (tg && process.env.TELEGRAM_FAKE !== '1') void tg.setup();
 });
 
 async function shutdown(): Promise<void> {
