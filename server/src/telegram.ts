@@ -450,6 +450,7 @@ export class TelegramService {
     const bal = creditPremium(this.game, o.accountId, n, 'pay', `tg:${charge}`);
     if (bal === null) return;
     this.db.setKv(key, { account: o.accountId, user: from.id, pack: o.pack.id, stars: p.total_amount, n, at: this.now(), refunded: false } satisfies TgPayment);
+    this.log(`[tg] paid: account ${o.accountId}, ${o.pack.id}, ${p.total_amount} XTR, charge ${charge}`);
     const s = this.game.sessionByAccount(o.accountId);
     if (s) sendPremium(this.game, s);
     await this.say(from.id, tgText('paid', tgLang(from.language_code), { n, name: this.db.accountById(o.accountId)?.name ?? '' }));
