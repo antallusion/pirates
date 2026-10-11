@@ -76,7 +76,7 @@ export function moneySupply(game: Game): EconomyReport['supply'] {
 
 export function economyReport(game: Game, windowSec = 3600, nowMs = Date.now()): EconomyReport {
   // The premium shop's doubloons share the ledger but are not silver (server/src/game/premium.ts): left out.
-  const flows = game.db.ledgerFlows(nowMs - windowSec * 1000).filter((f) => !f.kind.startsWith('doubloons')).map((f) => ({ kind: f.kind, inflow: Number(f.inflow), outflow: Number(f.outflow), n: Number(f.n) }));
+  const flows = game.db.ledgerFlows(nowMs - windowSec * 1000).filter((f) => !f.kind.startsWith('doubloons') && !f.kind.startsWith('autoscroll')).map((f) => ({ kind: f.kind, inflow: Number(f.inflow), outflow: Number(f.outflow), n: Number(f.n) }));
   let faucets = 0, sinks = 0;
   for (const f of flows) {
     faucets += f.inflow;

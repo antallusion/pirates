@@ -6,7 +6,7 @@ import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import type { WsConnection } from '../server/src/net/websocket.ts';
 import type { Port } from '../shared/src/world/worldgen.ts';
-import { FakeConn, join, makeGame, steps } from './helpers.ts';
+import { FakeConn, giveScrolls, join, makeGame, steps } from './helpers.ts';
 import { startMutiny } from '../server/src/game/crew.ts';
 import { quietAdv } from '../server/src/game/advmap.ts';
 import { startBoarding } from '../server/src/game/boarding.ts';
@@ -83,6 +83,7 @@ test('the First Watch (docs/23 item 79): five steps, one action each — sail, �
   assert.ok(ship.boarding?.fight.tac, 'the battle of H1');
   steps(game, 21);
   assert.equal(stage(c), 'board', 'not over until the battle is');
+  giveScrolls(game); // «Свиток автобоя» (owner, 2026-10-11): this quick fight is not the free one (the foe is not clearly the weaker)
   assert.equal(tacAction(game, ship, { a: 'quick' }), null);
   steps(game, 20 * 8);
   assert.ok(!ship.boarding);
@@ -220,6 +221,7 @@ test('the grapples thrown before «Атаковать»: the battle counts for t
   ship.state.speed = 0;
   startBoarding(game, ship, raider, 'standard');
   steps(game, 21);
+  giveScrolls(game); // «Свиток автобоя» (owner, 2026-10-11): this quick fight is not the free one (the foe is not clearly the weaker)
   assert.equal(tacAction(game, ship, { a: 'quick' }), null);
   steps(game, 20 * 8);
   assert.ok(!ship.boarding);

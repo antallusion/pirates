@@ -105,3 +105,10 @@ export function onHull(game: Game, ship: { loadout: { classId: string; level?: n
 export function knowHulls(p: { research?: { xp: Record<string, number>; free: number; done: string[] } }): void {
   p.research = { xp: {}, free: 0, done: [...SHIP_CLASS_IDS] };
 }
+
+/** «Свиток автобоя» (owner, 2026-10-11: «автобой в абордаже только специальной премиум свитками»): a test that fights a
+ *  battle out by «Авто», or by a quick fight that is not the free one against a clearly weaker ship of the sea, gives
+ *  the captain's account (by name; none named: every captain aboard) the scrolls a player would have bought. */
+export function giveScrolls(game: Game, name?: string, n = 50): void {
+  for (const s of game.sessions) if (s.authed && (!name || s.name === name)) game.db.addScrolls(s.accountId, n);
+}

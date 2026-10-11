@@ -30,6 +30,7 @@ import { isCastellan } from './citadels.ts';
 import { contractSpellHp } from './admiralty.ts';
 import { maybeArtifact } from './hero.ts';
 import { killedHp, queueAlly, sharesOf } from './tacbattle.ts';
+import { helmFallback } from './autoscroll.ts'; // the disconnect's fallback, free (owner, 2026-10-11)
 import type { TacBattle, TacSideInput } from './tacbattle.ts';
 import { TAC_XP_SHARE, pickBring, sendTac, sideOf } from './tactical.ts';
 
@@ -222,7 +223,8 @@ export function stepGroup(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattl
       continue;
     }
     const h = bt.allies?.find((t) => t.slot === e.slot && t.side === e.side)?.hero;
-    if (h && h.input.human && !h.auto && ms?.ship?.id !== e.ship) h.auto = true;
+    // Gone from the helm: her stacks play by themselves (free, owner 2026-10-11); back, hers again unless she spent a scroll.
+    if (h && h.input.human && helmFallback(h, ms?.ship?.id !== e.ship || ms.disconnectedAt !== null)) bt.seq++;
   }
   if (bt.over || bt.round + 1 > TAC_GROUP.late || (fight.tacScanAt ?? 0) > game.now) return;
   fight.tacScanAt = game.now + 1;

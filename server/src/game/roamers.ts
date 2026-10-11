@@ -505,7 +505,7 @@ export function adminStack(game: Game, s: PlayerSession, args: string[]): string
   if (order === 'fight') {
     const e = attackRoam(game, s, sp.id);
     if (e) return e;
-    landTac(game, s, { a: 'quick' });
+    landTac(game, s, { a: 'quick' }, true); // the tester's console: no auto-battle scroll asked (owner, 2026-10-11)
     return `The ${ROAM_NAME[sp.kind]} (stack ${sp.id}) fought out at once.`;
   }
   return `The ${ROAM_NAME[sp.kind]} (stack ${sp.id}, ⚓${sp.level}, ${sp.size}): ${roamMen(game, sp)} creatures${roamFighter(game, sp.id) !== null ? ', in battle' : ''}.`;

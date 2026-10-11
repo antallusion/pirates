@@ -129,6 +129,8 @@ export interface SealRec {
   /** Mythic depths fought, and won in time. */
   runs: number;
   timed: number;
+  /** The week a top seal last gave her an auto-battle scroll (SEAL_SCROLL_LV, owner 2026-10-11): once a week. */
+  scrollWeek?: number;
 }
 
 /** A row of the week's table. */

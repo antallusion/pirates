@@ -90,6 +90,8 @@ export interface LairLoot {
   capture?: CaptureOffer;
   /** docs/18 IV: a drift's fight — its silver and lesson (no lair's spoils). */
   drift?: { silver: number; xp: number; legend?: boolean };
+  /** An auto-battle scroll among the spoils (a top seal of the week, owner 2026-10-11). */
+  scrolls?: number;
   /** docs/19 D5: the chest among the sharks — what came up in it. */
   find?: { silver: number; goods: { g: GoodId; n: number }[] };
   /** docs/19 D7: a roaming stack beaten at sea — its lesson (the battle's apart), its silver and spoils, an artifact,

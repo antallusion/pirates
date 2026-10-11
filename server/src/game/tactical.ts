@@ -30,6 +30,7 @@ import { isCastellan, siegeSetup } from './citadels.ts'; // docs/19 E5
 import { contractSpellHp } from './admiralty.ts'; // docs/19 E15
 import { raidSpellHp } from './abyssraid.ts'; // docs/19 E11
 import { arenaResultOf, arenaSettle, arenaSetup, arenaTag, isArenaFight } from './arena.ts'; // docs/19 E14
+import { giveBack, helmFallback, payScroll, scrollView } from './autoscroll.ts'; // «Свиток автобоя» (owner, 2026-10-11)
 import { act, battleLevel, endByRansom, killedHp, lossesOf, newBattle, playSince, sharesOf, sideStrength, stepBattle, viewOf } from './tacbattle.ts';
 
 /** docs/25 item 67: the share of what her side cut down that is the side's own captain's. */
@@ -315,10 +316,14 @@ function takeLosses(game: Game, ship: ShipEntity, other: ShipEntity, stacks: Tac
 export function stepTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
   const fight = a.boarding!.fight;
   const bt = fight.tac!;
-  // A captain gone from the helm: his side fights on by itself.
+  // A captain gone from the helm (her session gone, or her connection lost while her ship lingers): her side fights on
+  // by itself — the disconnect's fallback, fair play and free; back at the helm, the helm is hers again unless she
+  // spent an auto-battle scroll on the battle (owner, 2026-10-11).
   for (const side of [0, 1] as const) {
     const h = bt.heroes[side];
-    if (h.input.human && !h.auto && !game.sessionOf(side ? b : a)) h.auto = true;
+    if (!h.input.human) continue;
+    const ses = game.sessionOf(side ? b : a);
+    if (helmFallback(h, !ses || ses.disconnectedAt !== null)) bt.seq++;
   }
   const seq = bt.seq;
   stepBattle(bt, game.now, rngOf(game, a));
@@ -459,7 +464,15 @@ export function tacAction(game: Game, ship: ShipEntity, action: TacAction): stri
     if (!action || typeof action !== 'object') return 'No such order';
     if (f.e.slot === undefined) return 'You come aboard as the next round opens';
     const seq = bt0.seq;
+    // «Свиток автобоя» (owner, 2026-10-11): her own «Авто» spends her own scroll, once this battle.
+    const h0 = bt0.allies?.find((x) => x.side === f.e.side && x.slot === f.e.slot)?.hero;
+    const pay = h0 && !bt0.over && action.a !== 'quick' ? payScroll(game, f.e.acc, h0, action, false, `board:${f.b.name}`) : { why: null, took: false };
+    if (pay.why) {
+      sendTac(game, f.a, f.b);
+      return pay.why;
+    }
     const why = act(bt0, f.e.side, action, game.now, rngOf(game, f.a), f.e.slot);
+    if (why && pay.took && h0) giveBack(game, f.e.acc, h0, `board:${f.b.name}`);
     settle(game, f.a, f.b, bt0, seq);
     if (why) sendTac(game, f.a, f.b);
     return why;
@@ -486,7 +499,18 @@ export function tacAction(game: Game, ship: ShipEntity, action: TacAction): stri
   if (action.a === 'quick' && noQuick(st.fight, bt)) return 'No quick fight here: this one is fought to the end';
   // Quick combat against the sea; against a captain it hands your side to auto-battle.
   if (action.a === 'quick' && (game.sessionOf(other) || other.isPlayer)) action = { a: 'auto', on: true };
+  // «Свиток автобоя» (owner, 2026-10-11: «автобой в абордаже только специальной премиум свитками»): «Авто», and a quick
+  // fight that is not the free one against a clearly weaker ship of the sea (docs/25 item 49), spend one scroll for
+  // this battle; without one the order is refused.
+  const ses = game.sessionOf(ship);
+  const ref = `board:${other.name}`;
+  const pay = ses && !bt.over ? payScroll(game, ses.accountId, bt.heroes[side], action, !!bt.quick?.[side], ref) : { why: null, took: false };
+  if (pay.why) {
+    sendTac(game, a, b);
+    return pay.why;
+  }
   const why = act(bt, side, action, game.now, rngOf(game, a));
+  if (why && pay.took && ses) giveBack(game, ses.accountId, bt.heroes[side], ref);
   settle(game, a, b, bt, seq);
   if (why) sendTac(game, a, b);
   return why;
@@ -516,7 +540,9 @@ export function sendTac(game: Game, a: ShipEntity, b: ShipEntity | null): void {
     // docs/25 item 49: the quick fight offered at once (in the first round) against a clearly weaker ship of the sea;
     // none at all against a legend, the raid, a citadel, on the sand or in a trial.
     const quick = noQuick(f, bt) ? { noQuick: true } : bt.quick?.[side] && bt.round <= 1 && !bt.over ? { quickNow: true } : {};
-    game.sendTo(ses, { t: 'board_tac', view: viewOf(bt, side, game.now, arena ? false : st.attacker ? !s.hasFlag('no_quarter') : true, { ransom: ransomCost(game, s), ...(result ? { result } : {}), ...(arena ? { canStrike: true, arena } : {}), ...quick }) });
+    // «Свиток автобоя» (owner, 2026-10-11): her scrolls, one spent on this battle, her quick fight free here.
+    const scrolls = scrollView(game, ses.accountId, bt.heroes[side], !noQuick(f, bt) && !!bt.quick?.[side]);
+    game.sendTo(ses, { t: 'board_tac', view: viewOf(bt, side, game.now, arena ? false : st.attacker ? !s.hasFlag('no_quarter') : true, { ransom: ransomCost(game, s), ...(result ? { result } : {}), ...(arena ? { canStrike: true, arena } : {}), ...quick, scrolls }) });
   }
   // docs/25 item 64: her allies see the field as their own side does — their own stacks' turns, their own captain. (A
   // single captain's resend, `b` null, is hers alone.)
@@ -527,7 +553,8 @@ export function sendTac(game: Game, a: ShipEntity, b: ShipEntity | null): void {
     const ses = game.sessionByAccount(e.acc);
     if (!ses || ses.ship?.id !== e.ship) continue;
     const result = bt0.over && e.slot !== undefined ? { lost: lossesOf(bt0, e.side, e.slot), killed: lossesOf(bt0, (1 - e.side) as 0 | 1), xp: e.xp ?? 0, ...groupShares(game, a, e.acc) } : undefined;
-    game.sendTo(ses, { t: 'board_tac', view: viewOf(bt0, e.side, game.now, false, { canStrike: false, ...(result ? { result } : {}), noQuick: true }, e.slot ?? -1) });
+    const h0 = bt0.allies?.find((x) => x.side === e.side && x.slot === e.slot)?.hero;
+    game.sendTo(ses, { t: 'board_tac', view: viewOf(bt0, e.side, game.now, false, { canStrike: false, ...(result ? { result } : {}), noQuick: true, scrolls: scrollView(game, e.acc, h0, false) }, e.slot ?? -1) });
   }
 }
 

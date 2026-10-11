@@ -56,6 +56,8 @@ const ACCOUNT_COLUMNS: [string, string][] = [
   ['pass_hash', 'TEXT'],
   ['email_verified', 'INTEGER NOT NULL DEFAULT 0'],
   ['doubloons', 'INTEGER NOT NULL DEFAULT 0 CHECK (doubloons >= 0)'],
+  // «Свиток автобоя» (owner, 2026-10-11): the account's auto-battle scrolls, bought for doubloons; never below nought.
+  ['autoscrolls', 'INTEGER NOT NULL DEFAULT 0 CHECK (autoscrolls >= 0)'],
 ];
 
 export interface AccountRow {
@@ -95,6 +97,10 @@ export interface Db {
   addDoubloons(accountId: number, delta: number): number | null;
   /** Whether the account's ledger holds a doubloons row of this kind and reference (a payment is credited once). */
   doubloonRef(accountId: number, kind: string, ref: string): boolean;
+  /** The account's auto-battle scrolls (owner, 2026-10-11), and the count moved by `delta` unless it would go below
+   *  nought (checked in the one statement that writes it): the new count, or null when refused. */
+  scrolls(accountId: number): number;
+  addScrolls(accountId: number, delta: number): number | null;
   silverHoldings(): { account_id: number; gold: number; bank: number }[];
   transaction(fn: () => void): void;
   // e-mail and OAuth sign-in
@@ -238,6 +244,18 @@ export class Database implements Db {
     const d = Math.trunc(delta);
     const r = this.db.prepare('UPDATE accounts SET doubloons = doubloons + ? WHERE id = ? AND doubloons + ? >= 0').run(d, accountId, d);
     return Number(r.changes) > 0 ? this.doubloons(accountId) : null;
+  }
+
+  // ---------------------------------------------------------------- auto-battle scrolls
+  scrolls(accountId: number): number {
+    const r = this.db.prepare('SELECT autoscrolls FROM accounts WHERE id = ?').get(accountId) as { autoscrolls: number } | undefined;
+    return Number(r?.autoscrolls ?? 0);
+  }
+
+  addScrolls(accountId: number, delta: number): number | null {
+    const d = Math.trunc(delta);
+    const r = this.db.prepare('UPDATE accounts SET autoscrolls = autoscrolls + ? WHERE id = ? AND autoscrolls + ? >= 0').run(d, accountId, d);
+    return Number(r.changes) > 0 ? this.scrolls(accountId) : null;
   }
 
   doubloonRef(accountId: number, kind: string, ref: string): boolean {

@@ -1660,6 +1660,13 @@ export interface TacAllyView {
   you?: boolean;
 }
 
+/** «Свиток автобоя» on her battle screen (TacView.scrolls). */
+export interface TacScrolls {
+  n: number;
+  paid?: boolean;
+  freeQuick?: boolean;
+}
+
 /** The whole battle as one captain sees it. Side 0 is the boarder, on the left deck. */
 export interface TacView {
   you: 0 | 1;
@@ -1697,6 +1704,10 @@ export interface TacView {
    *  raid, a citadel, the Colosseum, a trial). */
   quickNow?: boolean;
   noQuick?: boolean;
+  /** «Свиток автобоя» (owner, 2026-10-11): her account's auto-battle scrolls, whether one is spent on this battle
+   *  already (her «Авто» is free again in it), and whether her quick fight here is the free one (the foe clearly the
+   *  weaker, docs/25 item 49). Absent: no captain's account behind the view. */
+  scrolls?: TacScrolls;
   canStrike: boolean;
   /** Silver it would cost this captain to pay the other side off (null: not offered). */
   ransom?: number | null;

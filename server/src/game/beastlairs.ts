@@ -50,7 +50,9 @@ import { chronicle } from './renown.ts';
 import { sideOf } from './tactical.ts';
 import { XP_UNITS, battleXp, xpAt } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { haulTake } from './seahaul.ts';
-import { act, killedHp, lossesOf, newBattle, quickFinish, stepBattle, viewOf } from './tacbattle.ts';
+import { act, killedHp, lossesOf, newBattle, quickFinish, sideStrength, stepBattle, viewOf } from './tacbattle.ts';
+import { giveBack, helmFallback, payScroll, scrollView } from './autoscroll.ts'; // «Свиток автобоя» (owner, 2026-10-11)
+import { TAC_LEN } from '../../../shared/src/data/tactical.ts';
 import type { TacArmyEntry, TacBattle, TacSideInput } from './tacbattle.ts';
 import { keepsDeep, townHooks, townLevel, townState } from './town.ts';
 import { captureOffer, captureTake, creaturesWon } from './tame.ts';
@@ -610,6 +612,7 @@ export function startFight(game: Game, s: PlayerSession, id: string, force = fal
   const seed = S.rng.int(1, 1e9);
   const rng = new Rng((seed ^ 0x1a7d) >>> 0);
   const bt = newBattle(a, b, seed, game.now, rng, { land: l.type });
+  freeQuickAshore(bt);
   S.fights.set(s.accountId, { lair: l.id, bt, rng, seq: -1, done: false, closeAt: Infinity, retreat: false, xp: 0 });
   meetCreatures(game, s, men.map((x) => x.u)); // docs/18 #46: the bestiary's first pages
   ship.input = { rudder: 0, sailTarget: 0 };
@@ -620,6 +623,13 @@ export function startFight(game: Game, s: PlayerSession, id: string, force = fal
   sendLairCard(game, s, true);
   sendFight(game, s);
   return null;
+}
+
+/** docs/25 item 49 ashore, as at sea (owner, 2026-10-11): her quick fight is free when her party is clearly the stronger
+ *  (TAC_LEN.quick times the creatures' strength as it lands) — the honest end of a fight won; any other quick fight, and
+ *  «Авто», spend an auto-battle scroll. */
+function freeQuickAshore(bt: TacBattle): void {
+  bt.quick = [sideStrength(bt, 0) >= TAC_LEN.quick * sideStrength(bt, 1), false];
 }
 
 export const landFighting = (game: Game, s: PlayerSession): boolean => all.get(game)?.fights.has(s.accountId) ?? false;
@@ -640,7 +650,7 @@ function sendFight(game: Game, s: PlayerSession): void {
     const l = L(game).byId.get(f.lair)!;
     return { type: l.type, lair: l.kind, island: islandName(game, l), level: l.level };
   })();
-  game.sendTo(s, { t: 'board_tac', view: viewOf(bt, 0, game.now, !bt.over, { ransom: null, ...(result ? { result } : {}), land }) });
+  game.sendTo(s, { t: 'board_tac', view: viewOf(bt, 0, game.now, !bt.over, { ransom: null, ...(result ? { result } : {}), land, scrolls: scrollView(game, s.accountId, bt.heroes[0], !!bt.quick?.[0]) }) });
 }
 
 /** docs/18 IV: a creature fight of another system laid on the battle ashore (its own end), her party against `men`. */
@@ -660,6 +670,7 @@ export function startCreatureFight(game: Game, s: PlayerSession, ext: ExtFight, 
   const seed = S.rng.int(1, 1e9);
   const rng = new Rng((seed ^ 0xd71f) >>> 0);
   const bt = newBattle(a, b, seed, game.now, rng, { land: ext.type });
+  freeQuickAshore(bt);
   S.fights.set(s.accountId, { lair: '', bt, rng, seq: -1, done: false, closeAt: Infinity, retreat: false, xp: 0, ext });
   ext.onStep?.(game, s, bt, rng);
   meetCreatures(game, s, men.map((x) => x.u)); // docs/18 #46
@@ -679,8 +690,9 @@ export function fightCapture(game: Game, s: PlayerSession, choice: 'take' | 'pen
   return why;
 }
 
-/** A captain's order in the battle ashore ('cut': back to the boats). */
-export function landTac(game: Game, s: PlayerSession, action: TacAction | 'cut'): string | null {
+/** A captain's order in the battle ashore ('cut': back to the boats). `free`: the admin's console fights it out without a
+ *  scroll (`/stack fight`). */
+export function landTac(game: Game, s: PlayerSession, action: TacAction | 'cut', free = false): string | null {
   const f = L(game).fights.get(s.accountId);
   if (!f) return 'Nothing to fight';
   const bt = f.bt;
@@ -696,7 +708,15 @@ export function landTac(game: Game, s: PlayerSession, action: TacAction | 'cut')
   }
   if (!action || typeof action !== 'object') return 'No such order';
   if (action.a === 'surrender' || action.a === 'ransom') return 'Fall back to the boats instead';
+  // «Свиток автобоя» (owner, 2026-10-11): «Авто», and a quick fight that is not the free one, spend a scroll.
+  const ref = `land:${f.ext?.kind ?? f.lair}`;
+  const pay = free ? { why: null, took: false } : payScroll(game, s.accountId, bt.heroes[0], action, !!bt.quick?.[0], ref);
+  if (pay.why) {
+    sendFight(game, s);
+    return pay.why;
+  }
   const why = action.a === 'quick' && f.ext?.quick ? (f.ext.quick(bt, f.rng), null) : act(bt, 0, action, game.now, f.rng);
+  if (why && pay.took) giveBack(game, s.accountId, bt.heroes[0], ref);
   if (!bt.over) f.ext?.onStep?.(game, s, bt, f.rng);
   if (bt.over && !f.done) settle(game, s, f);
   sendFight(game, s);
@@ -721,8 +741,8 @@ export function stepLandFights(game: Game): void {
     }
     s.ship.input = { rudder: 0, sailTarget: 0 };
     if (!f.done) {
-      const h = f.bt.heroes[0];
-      if (!h.auto && s.disconnectedAt !== null) h.auto = true;
+      // Her connection lost: her party fights on by itself (free); back, the helm is hers again unless she spent a scroll.
+      if (helmFallback(f.bt.heroes[0], s.disconnectedAt !== null)) f.bt.seq++;
       stepBattle(f.bt, game.now, f.rng);
       if (!f.bt.over) f.ext?.onStep?.(game, s, f.bt, f.rng);
       if (f.bt.over) settle(game, s, f);

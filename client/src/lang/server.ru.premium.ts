@@ -19,4 +19,9 @@ export const SERVER_RU_PREMIUM: Record<string, string> = {
   'No more than {0} at once.': 'Не больше {0} за раз.',
   'Not that many: {0} on the account.': 'Столько нет: на счёте {0}.',
   'Doubloons: {0}.': 'Дублоны: {0}.',
+  // «Свиток автобоя» (owner, 2026-10-11): the scrolls, the shop's packs and the tester's /scrolls.
+  'No auto-battle scroll: buy them for doubloons in the shop.': 'Нет свитка автобоя: купите свитки за дублоны в лавке.',
+  'Auto-battle scrolls: +{0} for {1} doubloons ({2} in all).': 'Свитки автобоя: +{0} за {1} дубл. (всего {2}).',
+  'Auto-battle scrolls: {0}. Usage: /scrolls N|-N': 'Свитки автобоя: {0}. Как: /scrolls N|-N',
+  'Auto-battle scrolls: {0}.': 'Свитки автобоя: {0}.',
 };

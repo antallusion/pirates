@@ -200,6 +200,12 @@ export interface TacHero {
   spells: { id: TacSpellId; ready: number }[];
   cast: number;
   auto: boolean;
+  /** «Свиток автобоя» (owner, 2026-10-11): a scroll is spent on this battle for her — her «Авто» costs nothing more in
+   *  it (taken back and given again); never refunded. */
+  paid?: boolean;
+  /** Her side plays by itself because she is gone from the helm (the disconnect's fallback, free): back at the helm,
+   *  the helm is hers again unless a scroll was spent. */
+  gone?: boolean;
   /** «Ускорить ×2» (docs/23 item 60). */
   fast?: boolean;
   fx: Fx[];
@@ -3043,7 +3049,7 @@ function bonusView(bt: TacBattle, s: TacStack): Partial<TacStackView> {
   return { ...(out.melee || out.shot || out.taken ? { bonus: out } : {}), ...(backs > 0 ? { backs } : {}) };
 }
 
-export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean, extra: Partial<Pick<TacView, 'ransom' | 'result' | 'land' | 'canStrike' | 'arena' | 'quickNow' | 'noQuick'>> = {}, slot = 0): TacView {
+export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean, extra: Partial<Pick<TacView, 'ransom' | 'result' | 'land' | 'canStrike' | 'arena' | 'quickNow' | 'noQuick' | 'scrolls'>> = {}, slot = 0): TacView {
   const act0 = bt.active !== null ? stackById(bt, bt.active) : undefined;
   // docs/25 item 64: an ally sees her own stacks' turns as hers, and her own captain on her side's panel.
   const mine = !!act0 && act0.side === side && (act0.own ?? 0) === slot && !bt.over && !capOf(bt, act0).auto;

@@ -13,7 +13,7 @@ import { JOIN_LOYALTY, joinAs, joinCount, joinKinds, joinShare, joinsFrom, maxRe
 import type { Game } from '../server/src/game/Game.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import type { FakeConn } from './helpers.ts';
-import { join, makeGame, steps } from './helpers.ts';
+import { giveScrolls, join, makeGame, steps } from './helpers.ts';
 
 test('a small share of the beaten: 13% with no Leadership, two hundredths more a rank (10–20% to an expert); never past her hammocks', () => {
   assert.ok(joinShare(0) >= 0.1 && joinShare(0) <= 0.15);
@@ -84,6 +84,7 @@ function boardAndWin(game: Game, name: string, room: number, foeCrew = 80) {
   const bt = ship.boarding!.fight.tac!;
   const fight = ship.boarding!.fight;
   const crew0 = ship.crew;
+  giveScrolls(game); // «Свиток автобоя» (owner, 2026-10-11): this quick fight is not the free one (the foe is not clearly the weaker)
   c.push({ t: 'tac', act: { a: 'quick' } });
   return { c, ship, npc, bt, fight, crew0, s, loyal0 };
 }
@@ -132,6 +133,7 @@ test('never past her hammocks; none to a cruel officer\'s ship or one that gives
     const npc = foeAlongside(game, ship, 80);
     c.push({ t: 'board', target: npc.id, aggression: 'standard' });
     const fight = ship.boarding!.fight;
+    giveScrolls(game); // «Свиток автобоя» (owner, 2026-10-11): this quick fight is not the free one (the foe is not clearly the weaker)
     c.push({ t: 'tac', act: { a: 'quick' } });
     assert.equal(fight.tac!.over?.winner, 0);
     assert.equal(fight.tacJoined, undefined, 'a cruel officer: no turncoats');

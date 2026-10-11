@@ -9,13 +9,14 @@ import { UNITS, isPremiumUnit } from '../../../shared/src/data/army.ts';
 import { isShipBeast } from '../../../shared/src/data/shipbeasts.ts';
 import type { PremiumUnit, UnitId } from '../../../shared/src/data/army.ts';
 import { peopleOf } from '../../../shared/src/data/drifts.ts';
-import { CREDIT_MAX, PAYMENTS_OPEN, PREMIUM_SAMPLE, premiumShips, premiumUnits } from '../../../shared/src/data/premium.ts';
+import { CREDIT_MAX, PAYMENTS_OPEN, PREMIUM_SAMPLE, premiumShips, premiumUnits, scrollPack } from '../../../shared/src/data/premium.ts';
 import { premiumFrom } from '../../../shared/src/data/premiumbeasts.ts';
 import { SHIP_CLASSES, defaultGunFor } from '../../../shared/src/data/ships.ts';
 import type { PremiumShip, ShipClassId } from '../../../shared/src/data/ships.ts';
 import { captainLevelFor, levelRange } from '../../../shared/src/data/shiplevel.ts';
 import type { PremiumClientMsg, PremiumView, PremiumWhy } from '../../../shared/src/premiumproto.ts';
-import { landFighting } from './beastlairs.ts';
+import { landFighting, resendLandFight } from './beastlairs.ts';
+import { resendBoarding } from './boarding.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { refitHolds } from './refit.ts';
@@ -86,9 +87,9 @@ function askInvoice(game: Game, s: PlayerSession, packId: string, lang: 'en' | '
 
 // ------------------------------------------------------------------------------------------------ the balance
 
-/** Her account's doubloons, to her client. */
+/** Her account's doubloons (and auto-battle scrolls, owner 2026-10-11), to her client. */
 export function sendBalance(game: Game, s: PlayerSession): void {
-  if (s.authed) game.sendTo(s, { t: 'doubloons', n: game.db.doubloons(s.accountId) });
+  if (s.authed) game.sendTo(s, { t: 'doubloons', n: game.db.doubloons(s.accountId), scrolls: game.db.scrolls(s.accountId) });
 }
 
 /** The one way doubloons come into an account — the payment provider's webhook will call it with the payment's id as
@@ -283,6 +284,29 @@ export function buyUnit(game: Game, s: PlayerSession, u: UnitId): string | null 
   return null;
 }
 
+/** «Свиток автобоя» (owner, 2026-10-11: «автобой в абордаже только специальной премиум свитками, которую можно за
+ *  дублоны купить»): a pack of auto-battle scrolls for doubloons — the doubloons off and the scrolls on in one
+ *  transaction, each with its ledger row: too few doubloons, nothing moves. Bought anywhere, even mid-battle (the
+ *  battle bar's «Купить»): her battle's screen is sent again with the new count. */
+export function buyScrolls(game: Game, s: PlayerSession, packId: string): string | null {
+  const p = scrollPack(String(packId ?? ''));
+  if (!p) return 'Not for sale';
+  let done = false;
+  game.db.transaction(() => {
+    if (game.db.addDoubloons(s.accountId, -p.price) === null) return;
+    game.db.ledger(s.accountId, 'doubloons_buy', -p.price, `scrolls:${p.n}`);
+    if (game.db.addScrolls(s.accountId, p.n) === null) throw new Error('auto-battle scrolls: no such account');
+    game.db.ledger(s.accountId, 'autoscroll_buy', p.n, p.id);
+    done = true;
+  });
+  if (!done) return whyText(game, s, 'poor');
+  sendBalance(game, s);
+  game.toastShip(s.ship, `Auto-battle scrolls: +${p.n} for ${p.price} doubloons (${game.db.scrolls(s.accountId)} in all).`, 'gold');
+  if (s.ship) resendBoarding(game, s.ship);
+  resendLandFight(game, s);
+  return null;
+}
+
 // ------------------------------------------------------------------------------------------------ the window
 
 export function premiumView(game: Game, s: PlayerSession): PremiumView {
@@ -300,6 +324,7 @@ export function premiumView(game: Game, s: PlayerSession): PremiumView {
     }),
     port: ship.docked ? game.portById(ship.docked)?.name ?? null : null,
     pay: paymentsOpen(game),
+    scrolls: game.db.scrolls(s.accountId),
   };
 }
 
@@ -310,7 +335,7 @@ export function sendPremium(game: Game, s: PlayerSession): void {
 /** Her client's word to the shop: the view, a hull or a kind bought (the view comes back either way). */
 export function premiumMessage(game: Game, s: PlayerSession, msg: PremiumClientMsg): void {
   if (msg.action === 'stars') return askInvoice(game, s, msg.pack, msg.lang === 'ru' ? 'ru' : 'en');
-  const why = msg.action === 'buy_ship' ? buyShip(game, s, msg.id) : msg.action === 'buy_unit' ? buyUnit(game, s, msg.id) : null;
+  const why = msg.action === 'buy_ship' ? buyShip(game, s, msg.id) : msg.action === 'buy_unit' ? buyUnit(game, s, msg.id) : msg.action === 'buy_scrolls' ? buyScrolls(game, s, msg.pack) : null;
   if (why) game.sendTo(s, { t: 'toast', msg: why, kind: 'bad' });
   if (msg.action === 'view') sendBalance(game, s);
   sendPremium(game, s);

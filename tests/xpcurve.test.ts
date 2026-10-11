@@ -20,7 +20,7 @@ import type { QuestDef } from '../shared/src/data/quests.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { EN as HUD_EN, RU as HUD_RU } from '../client/src/lang/ui/hud.ts';
 import { headingVec } from '../shared/src/math.ts';
-import { join, makeGame, steps } from './helpers.ts';
+import { giveScrolls, join, makeGame, steps } from './helpers.ts';
 
 type Credit = { creditKill(k: ShipEntity, v: ShipEntity, how: 'sunk' | 'boarded'): void };
 
@@ -221,6 +221,7 @@ test('the boarding battle on the hexes: its lesson a bonus by the share cut down
   c.push({ t: 'board', target: npc.id, aggression: 'standard' });
   const bt = ship.boarding?.fight.tac;
   assert.ok(bt, 'boarded');
+  giveScrolls(game); // «Свиток автобоя» (owner, 2026-10-11): this quick fight is not the free one (the foe is not clearly the weaker)
   c.push({ t: 'tac', act: { a: 'quick' } });
   assert.equal(bt.over?.winner, 0, 'her brig carries the day');
   // The end is held while its last blows play (TAC_END_WINDOW) and 2.5 s more: a fight ending on a walk and a mark plays

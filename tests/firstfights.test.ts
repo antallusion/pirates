@@ -14,7 +14,7 @@ import { startPursuit } from '../server/src/game/pursuit.ts';
 import { tacAction } from '../server/src/game/tactical.ts';
 import { duelSea, openWater, putSide } from './balance/duel.ts';
 import { LEVEL_HULL, seaCaptain } from './balance/seafight.ts';
-import { steps } from './helpers.ts';
+import { giveScrolls, steps } from './helpers.ts';
 import type { FakeConn } from './helpers.ts';
 
 test('the first three fights of a new captain are short and won; the fourth is not softened', () => {
@@ -70,6 +70,7 @@ test('the first three fights of a new captain are short and won; the fourth is n
       assert.equal(canBoard(game, me, foe), null, `fight ${k + 1}: alongside in ${run} s`);
       startBoarding(game, me, foe, 'standard');
       assert.ok(me.boarding?.fight.tac, 'the hex battle');
+      giveScrolls(game); // «Свиток автобоя» (owner, 2026-10-11): this quick fight is not the free one (the foe is not clearly the weaker)
       assert.equal(tacAction(game, me, { a: 'quick' }), null);
       for (let i = 0; i < 20 * 20 && me.boarding; i++) game.step();
       // The spoils: she is sunk once the hold is emptied (the prize's screen).

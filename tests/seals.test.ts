@@ -25,7 +25,7 @@ import type { TacSideInput } from '../server/src/game/tacbattle.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { depthFight } from './balance/seals.ts';
-import { join, makeGame, onHull, steps } from './helpers.ts';
+import { giveScrolls, join, makeGame, onHull, steps } from './helpers.ts';
 
 // ------------------------------------------------------------------ the rules
 
@@ -161,6 +161,7 @@ test('a mythic depth: entered off its lair through the Throne, fought out, the s
   // The land key opens it (as the Throne's «Enter the depth» does).
   (s as unknown as { conn: { push: (m: unknown) => void } }).conn.push({ t: 'land' });
   assert.ok(landFighting(game, s), 'ashore in the depth by the land key');
+  giveScrolls(game); // «Свиток автобоя» (owner, 2026-10-11): this quick fight is not the free one (the foe is not clearly the weaker)
   landTac(game, s, { a: 'quick' });
   steps(game, 2);
   const tac = connOf(s).last('board_tac')?.view as { over: { winner: number }; land: { lair: string } };

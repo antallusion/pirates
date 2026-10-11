@@ -42,12 +42,16 @@ export interface PremiumView {
   port: string | null;
   /** Whether the top-up takes payments yet (Telegram Stars, once the bot's token is configured on the server). */
   pay: boolean;
+  /** «Свиток автобоя» (owner, 2026-10-11): her account's auto-battle scrolls (their packs: AUTO_SCROLL_PACKS). */
+  scrolls: number;
 }
 
 export type PremiumClientMsg =
   | { t: 'premium'; action: 'view' }
   | { t: 'premium'; action: 'buy_ship'; id: ShipClassId }
   | { t: 'premium'; action: 'buy_unit'; id: UnitId }
+  /** A pack of auto-battle scrolls for doubloons (AUTO_SCROLL_PACKS, owner 2026-10-11). */
+  | { t: 'premium'; action: 'buy_scrolls'; pack: string }
   /** A pack of the top-up for Telegram Stars: the server answers with the invoice's link (owner, 2026-10-11). */
   | { t: 'premium'; action: 'stars'; pack: string; lang?: 'en' | 'ru' };
 
@@ -55,7 +59,7 @@ export type PremiumServerMsg =
   /** The shop as she sees it now. */
   | { t: 'premium'; view: PremiumView }
   /** Her account's doubloons: on coming aboard and after every change. */
-  | { t: 'doubloons'; n: number }
+  | { t: 'doubloons'; n: number; /** Her auto-battle scrolls (owner, 2026-10-11). */ scrolls?: number }
   /** The Telegram Stars invoice for a pack (server/src/telegram.ts): opened in the Mini App by openInvoice, on the
    *  website as a link (it opens Telegram). Null link: it could not be made (a toast says why). */
   | { t: 'premium_invoice'; pack: string; link: string | null };

@@ -17,7 +17,7 @@ import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import { canBoard } from '../server/src/game/boarding.ts';
-import { join, makeGame, steps } from './helpers.ts';
+import { giveScrolls, join, makeGame, steps } from './helpers.ts';
 import type { FakeConn } from './helpers.ts';
 import { captainAt, playerArmy, side, sidesAt } from './balance/boardlen.ts';
 import { allyAt, groupStat, mixedVsSame, playGroup } from './balance/boardgroup.ts';
@@ -354,6 +354,7 @@ test('64 on the ships: mates within 600 m come aboard with the grapples, the oth
   assert.equal(bt.joinQ?.length, 1);
   assert.equal(C.ship.boardAlly, A.ship.id);
   // Dora sails in and is asked... she is not: 750 m.
+  giveScrolls(game); // «Свиток автобоя» (owner, 2026-10-11): «Авто» spends a scroll
   for (const x of [A, B, C]) x.c.push({ t: 'tac', act: { a: 'auto', on: true } });
   for (let i = 0; i < 20 * 400 && !bt.over; i++) game.step();
   assert.ok(bt.over, 'the fight ran to its end');
@@ -381,6 +382,7 @@ test('67 on the ships: each captain\'s losses off her own ship; the lesson and t
   A.c.push({ t: 'board', target: npc.id, aggression: 'standard', risk: true });
   const fight = A.ship.boarding!.fight;
   const bt = fight.tac!;
+  giveScrolls(game); // «Свиток автобоя» (owner, 2026-10-11): «Авто» spends a scroll
   for (const x of [A, B]) x.c.push({ t: 'tac', act: { a: 'auto', on: true } });
   for (let i = 0; i < 20 * 400 && !bt.over; i++) game.step();
   assert.equal(bt.over?.winner, 0, 'the two carry a pirate of sixteen');

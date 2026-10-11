@@ -41,6 +41,44 @@ export function doubloonPack(id: string): DoubloonPack | undefined {
   return DOUBLOON_PACKS.find((p) => p.id === id);
 }
 
+// ------------------------------------------------------------------------------------------------ the auto-battle scroll
+
+/** «Свиток автобоя» (owner, 2026-10-11: «автобой в абордаже только специальной премиум свитками, которую можно за дублоны
+ *  купить»): a consumable of the account, sold only for doubloons. One is spent the moment her «Авто» (or a quick fight
+ *  that is not the free one against a clearly weaker ship of the sea) is first given in a battle: the sea's mind fights
+ *  her side to the end of that battle; she may take the helm back at any time, and «Авто» again in the same battle
+ *  costs nothing more — the scroll is the battle's, never refunded. */
+export interface ScrollPack {
+  id: string;
+  /** Scrolls in the pack. */
+  n: number;
+  /** Its price in doubloons. */
+  price: number;
+}
+
+/** 1 · 5 · 20 scrolls for 25 · 100 · 300 doubloons: 25, 20 and 15 a scroll (the volume's discount a fifth and two
+ *  fifths). Against the top-up: the smallest pack of doubloons (d100, 75 Stars ≈ 100–150 ₽) is exactly five scrolls —
+ *  about 20–30 ₽ a battle a captain does not want to play by hand; twenty for 300 is a quarter of the d1200 pack, about a
+ *  week of evenings at sea for a third of a premium hull's price (900–1400). Priced so a scroll is a convenience, never
+ *  a hull's worth: it wins nothing the captain's own hand would not (the same rules, the same dice). */
+export const AUTO_SCROLL_PACKS: ScrollPack[] = [
+  { id: 'scroll1', n: 1, price: 25 },
+  { id: 'scroll5', n: 5, price: 100 },
+  { id: 'scroll20', n: 20, price: 300 },
+];
+
+/** The pack of scrolls of this id, if there is one. */
+export function scrollPack(id: string): ScrollPack | undefined {
+  return AUTO_SCROLL_PACKS.find((p) => p.id === id);
+}
+
+/** The scroll's picture: the sealed scroll of the order book's letters (an existing icon, no new art). */
+export const AUTO_SCROLL_ICON = 'tab_contracts';
+
+/** The one free source (docs/25 §5, 2026-10-11): a seal of the deep of this level or more won in time gives a single
+ *  scroll, once a week a captain — a top seal's trophy, four or five a month at the very most, never a supply. */
+export const SEAL_SCROLL_LV = 10;
+
 /** Payments are closed by default: the server opens them at run time when a payment desk is wired in — the Telegram
  *  bot's Stars, once TELEGRAM_BOT_TOKEN is configured (server/src/telegram.ts → setPayDesk; the view's `pay`). */
 export const PAYMENTS_OPEN = false;

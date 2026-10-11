@@ -17,7 +17,7 @@ import { headingVec } from '../shared/src/math.ts';
 import { startBoarding } from '../server/src/game/boarding.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
-import { join, makeGame, steps } from './helpers.ts';
+import { giveScrolls, join, makeGame, steps } from './helpers.ts';
 import { battleXp } from '../shared/src/data/xpcurve.ts';
 import { TAC_XP_SHARE } from '../server/src/game/tactical.ts';
 
@@ -295,6 +295,7 @@ test('on the ships: her army as it stands, the fallen off their own stacks, the 
   assert.ok(bt, 'boarded at once, her hull whole');
   const v = c.last('board_tac')!.view!;
   assert.ok(v.stacks.every((s) => s.unit && Array.isArray(s.sp)), 'the kinds of men on the field');
+  giveScrolls(game); // «Свиток автобоя» (owner, 2026-10-11): this quick fight is not the free one (the foe is not clearly the weaker)
   c.push({ t: 'tac', act: { a: 'quick' } });
   assert.ok(bt.over);
   // What each kind lost in the battle came off that kind aboard.

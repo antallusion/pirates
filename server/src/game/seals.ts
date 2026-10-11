@@ -30,6 +30,8 @@ import { contractSeal } from './admiralty.ts'; // docs/19 E15
 import { sealPartChance } from '../../../shared/src/data/artifacts.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { chronicle } from './renown.ts';
+import { grantScrolls } from './autoscroll.ts'; // «Свиток автобоя» (owner, 2026-10-11)
+import { SEAL_SCROLL_LV } from '../../../shared/src/data/premium.ts';
 import { aiAct, buildStacks, checkOver, lossesOf, newBattle, tacHurt, tacPush } from './tacbattle.ts';
 import type { TacBattle, TacSideInput, TacStack } from './tacbattle.ts';
 
@@ -293,6 +295,12 @@ function endDepth(game: Game, s: PlayerSession, l: Lair, lv: number, won: boolea
   // docs/19 E12: a relic's part, now and then, from a depth won in time.
   const part = relicPartDrop(game, s, 'seal', sealPartChance(lv));
   if (part && !loot.artifact) loot.artifact = part;
+  // «Свиток автобоя» (owner, 2026-10-11): a top seal won in time gives one auto-battle scroll, once a week.
+  const week = sealWeek(game);
+  if (lv >= SEAL_SCROLL_LV && seal.scrollWeek !== week && grantScrolls(game, s.accountId, 1, 'reward', `seal:${lv}`) !== null) {
+    seal.scrollWeek = week;
+    loot.scrolls = 1;
+  }
   game.toastShip(ship, `Seal ${lv} won in ${rounds} rounds: the seal rises to ${seal.lv} and now opens ${lairName(seal.kind)}.`, 'good');
   if (before < 10 && seal.lv >= 10) chronicle(game, `${s.name} carries a seal of the deep to ${seal.lv}.`);
   return loot;

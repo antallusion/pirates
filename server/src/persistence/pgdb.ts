@@ -57,6 +57,8 @@ const MIGRATIONS = [
   // The premium shop's doubloons (docs/01 P7): the account's, never below nought.
   `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS doubloons BIGINT NOT NULL DEFAULT 0 CHECK (doubloons >= 0)`,
   `CREATE INDEX IF NOT EXISTS ledger_doubloons ON ledger (account_id) WHERE kind LIKE 'doubloons%'`,
+  // «Свиток автобоя» (owner, 2026-10-11): the account's auto-battle scrolls, never below nought.
+  `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS autoscrolls BIGINT NOT NULL DEFAULT 0 CHECK (autoscrolls >= 0)`,
 ];
 
 const BUCKET_MS = 60_000;
@@ -77,6 +79,8 @@ export class PgDatabase implements Db {
   private authTokens = new Map<string, { account: number; kind: string; expires: number }>();
   /** Each account's doubloons, and the references of its doubloons ledger rows (`account:kind:ref`). */
   private balances = new Map<number, number>();
+  /** Each account's auto-battle scrolls (owner, 2026-10-11). */
+  private scrollCounts = new Map<number, number>();
   private doubloonRefs = new Set<string>();
   private captains = new Map<number, CaptainRow & { gold: number; bank: number }>();
   private kv = new Map<string, string>();
@@ -105,10 +109,11 @@ export class PgDatabase implements Db {
   }
 
   private async preload(): Promise<void> {
-    const acc = await this.client.query('SELECT id, name, token_hash, email, pass_hash, email_verified, doubloons FROM accounts');
+    const acc = await this.client.query('SELECT id, name, token_hash, email, pass_hash, email_verified, doubloons, autoscrolls FROM accounts');
     for (const r of acc.rows) {
       this.indexAccount({ id: Number(r.id), name: String(r.name), token_hash: String(r.token_hash), email: (r.email as string | null) ?? null, pass_hash: (r.pass_hash as string | null) ?? null, email_verified: !!r.email_verified });
       this.balances.set(Number(r.id), Number(r.doubloons ?? 0));
+      this.scrollCounts.set(Number(r.id), Number(r.autoscrolls ?? 0));
     }
     for (const r of (await this.client.query(`SELECT account_id, kind, detail FROM ledger WHERE kind LIKE 'doubloons%'`)).rows) this.doubloonRefs.add(`${r.account_id}:${r.kind}:${r.detail}`);
     for (const r of (await this.client.query('SELECT provider, subject, account_id FROM oauth_links')).rows) this.oauth.set(`${r.provider}:${r.subject}`, Number(r.account_id));
@@ -268,6 +273,7 @@ export class PgDatabase implements Db {
     const now = Date.now();
     this.indexAccount({ id, name, token_hash: tokenHash });
     this.balances.set(id, 0);
+    this.scrollCounts.set(id, 0);
     this.write('INSERT INTO accounts (id, name, token_hash, created_at, last_seen) VALUES ($1, $2, $3, $4, $5)', [id, name, tokenHash, now, now]);
     return id;
   }
@@ -336,6 +342,22 @@ export class PgDatabase implements Db {
     if (next < 0) return null;
     this.balances.set(accountId, next);
     this.write('UPDATE accounts SET doubloons = doubloons + $1 WHERE id = $2', [d, accountId]);
+    return next;
+  }
+
+  // ---------------------------------------------------------------- auto-battle scrolls
+  scrolls(accountId: number): number {
+    return this.scrollCounts.get(accountId) ?? 0;
+  }
+
+  /** As the doubloons: checked against the count held here, the row moved by the delta. */
+  addScrolls(accountId: number, delta: number): number | null {
+    if (!this.accounts.has(accountId)) return null;
+    const d = Math.trunc(delta);
+    const next = (this.scrollCounts.get(accountId) ?? 0) + d;
+    if (next < 0) return null;
+    this.scrollCounts.set(accountId, next);
+    this.write('UPDATE accounts SET autoscrolls = autoscrolls + $1 WHERE id = $2', [d, accountId]);
     return next;
   }
 
