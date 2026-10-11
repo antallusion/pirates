@@ -56,6 +56,7 @@ export const EN = {
   moveFreeGo: 'Move for free',
   claimPaid: 'Claim {name}? You gave up your island and used your free move: this claim costs {silver} silver or {d} doubloons.',
   claimGo: 'Claim',
+  back: '← The island',
   moveCard: 'Move your island to {name}',
   moveCardText: 'You hold an island already: claiming this one moves your base here and pulls everything on the old one down. Others may hold this island too, each captain her own base.',
 };
@@ -113,6 +114,7 @@ export const RU: Record<keyof typeof EN, string> = {
   moveFreeGo: 'Перенести бесплатно',
   claimPaid: 'Занять {name}? Вы оставили свой остров и уже использовали бесплатный перенос: это стоит {silver} серебра или {d} дублонов.',
   claimGo: 'Занять',
+  back: '← К острову',
   moveCard: 'Перенести остров на {name}',
   moveCardText: 'У вас уже есть остров: занять этот — значит перенести базу сюда и снести всё на старом. Этот остров могут занимать и другие, у каждого капитана своя база.',
 };

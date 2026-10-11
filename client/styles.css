@@ -5384,3 +5384,4 @@ body.tac-ph .tb-top { position: absolute; top: calc(env(safe-area-inset-top, 0px
 @media (max-height: 520px) and (min-aspect-ratio: 1/1) {
   .base-land .base-sheet .bdesc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 }
+.tr-back { margin: 0 0 6px; }

@@ -39,6 +39,8 @@ import { TOWN } from '../../../shared/src/data/town.ts';
 import type { TownId } from '../../../shared/src/data/town.ts';
 import type { TownThingView } from '../../../shared/src/h3proto.ts';
 import { maxLevel } from '../../../shared/src/data/base.ts';
+import { LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
+import type { LandRes } from '../../../shared/src/data/bestiary.ts';
 import { EN as H_EN, RU as H_RU } from '../lang/ui/h3.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
 import { chipRow, quickBar, winHead } from './kit/window.ts';
@@ -331,7 +333,9 @@ export class BaseWindow {
       return `<div class="bsheet-h">${c?.what ? this.thumb(c) : ''}<div><b>${esc(c?.what ? baseName(c.what) : '')}</b><p class="muted">${esc(L('moving'))}</p></div></div><button class="btn" data-bcancel>${esc(L('cancel'))}</button>`;
     }
     const town = this.selTown ? v.town?.things.find((x) => x.id === this.selTown) : undefined;
-    if (town) return this.townSheet(v, town, gold);
+    // (on a phone the tiles are the controls: the island's buildings under the card, and the way back over it)
+    const back = `<button type="button" class="btn btn-small tr-back" data-bback>${esc(T29('back'))}</button>`;
+    if (town) return `${back}${this.townSheet(v, town, gold)}${this.tiles(v)}`;
     if (this.sel === null) return `${this.queueCard(v)}${this.hallCard(v, gold)}${this.tiles(v)}${this.watersCard(v)}${foot}`;
     const c = v.cells[this.sel];
     if (!c.what) {
@@ -345,7 +349,7 @@ export class BaseWindow {
         const prod = list.filter((x) => isProducer(x.what)), bld = list.filter((x) => !isProducer(x.what));
         return `${prod.length ? `<div class="bsec">${esc(L('producers'))}</div>${prod.map(row).join('')}` : ''}${bld.length ? `<div class="bsec">${esc(L('buildings'))}</div>${bld.map(row).join('')}` : ''}`;
       };
-      return `<div class="bsheet-h"><span class="bthumb bthumb-empty">+</span><div><b>${esc(L('plot', { n: this.sel + 1 }))}</b> <span class="muted">${esc(L('empty'))}</span><p class="${busy ? 'bad' : 'muted'}">${esc(busy ? serverText('All your builders are at work.') : L('can_build'))}</p></div></div>
+      return `${back}<div class="bsheet-h"><span class="bthumb bthumb-empty">+</span><div><b>${esc(L('plot', { n: this.sel + 1 }))}</b> <span class="muted">${esc(L('empty'))}</span><p class="${busy ? 'bad' : 'muted'}">${esc(busy ? serverText('All your builders are at work.') : L('can_build'))}</p></div></div>
         ${group(ok)}${no.length ? `<details class="bno"><summary>${esc(L('cannot', { n: no.length }))}</summary>${group(no)}</details>` : ''}${foot}`;
     }
     const kind = producerOf(c.what);
@@ -361,8 +365,8 @@ export class BaseWindow {
     const up = raising ? '' : c.up ? `<div class="bupcard tr-card"><div class="row"><b>${esc(T29('gives'))} ${esc(T29('lvOf', { n: c.up.level, max }))}</b></div>${gives(c.up.level) ? `<p class="tr-gives">${esc(gives(c.up.level))}</p>` : ''}${this.costHtml(v, c.up, gold)}${c.up.needs ? needsHtml(c.up.needs) : ''}${whyOf(c.up)}<button class="btn btn-small btn-primary" data-bup${c.up.why ? ' disabled' : ''}>${esc(T29('upgrade'))}</button></div>`
       : `<p class="muted">${esc(kind || c.level > 1 ? T29('max') : L('one_level'))}</p>`;
     const now = c.level && !raising && gives(c.level) ? `<p class="tr-now"><span class="muted">${esc(T29('givesNow'))}</span> ${esc(gives(c.level))}</p>` : '';
-    return `<div class="bsheet-h">${this.thumb(c)}<div><b>${esc(baseName(c.what))}</b> <span class="muted">${esc(L('plot', { n: c.plot + 1 }))}${c.level && !raising ? ` · ${esc(T29('lvOf', { n: c.level, max }))}` : ''}</span>${c.level && !raising && max > 1 ? pips(c.level, max) : ''}<p class="muted bdesc">${esc(baseText(c.what))}</p></div></div>
-      ${now}${state1}${job}${up}<div class="row bactions"><button class="btn btn-small" data-bmove>${esc(L('move'))}</button></div>${foot}`;
+    return `${back}<div class="bsheet-h">${this.thumb(c)}<div><b>${esc(baseName(c.what))}</b> <span class="muted">${esc(L('plot', { n: c.plot + 1 }))}${c.level && !raising ? ` · ${esc(T29('lvOf', { n: c.level, max }))}` : ''}</span>${c.level && !raising && max > 1 ? pips(c.level, max) : ''}<p class="muted bdesc">${esc(baseText(c.what))}</p></div></div>
+      ${now}${state1}${job}${up}<div class="row bactions"><button class="btn btn-small" data-bmove>${esc(L('move'))}</button></div>${this.tiles(v)}${foot}`;
   }
 
   /** The work under way on a building: its clock, its bar, and finishing it now (silver, provisions, a token). */
@@ -388,9 +392,9 @@ export class BaseWindow {
     const pool = d.tier && t.level > 0 ? `<p class="tr-now">${esc(H('town.pool', { n: t.pool ?? 0, g: dec1(t.growth ?? 0).replace(/[.,]0$/, '') }))} <button class="btn btn-small" data-trecruit>${esc(H('town.recruit'))}</button></p>` : '';
     const job = t.job ? this.jobCard(v, t.job, t.level ? T29('raising', { n: t.job.level }) : T29('founding'), false) : '';
     const n = t.next;
-    const land = n?.land ? Object.entries(n.land).filter(([, k]) => (k ?? 0) > 0).map(([r, k]) => `${r} ${k}`).join(', ') : '';
+    const land = n?.land ? (Object.entries(n.land) as [LandRes, number][]).filter(([, k]) => (k ?? 0) > 0).map(([r, k]) => `<span class="bcost" title="${esc(LAND_RES_DEF[r].name[ru])}">${icon(LAND_RES_DEF[r].icon, '', 'ico-sm')}${fmt(k)}</span>`).join('') : '';
     const next = !t.job && n ? `<div class="bupcard tr-card"><div class="row"><b>${esc(T29('gives'))} ${esc(treeLabel(t.id, n.level))}${t.max > 1 ? ` · ${esc(T29('lvOf', { n: n.level, max: t.max }))}` : ''}</b></div>${givesText(t.id, n.level, ctx) ? `<p class="tr-gives">${esc(givesText(t.id, n.level, ctx))}</p>` : ''}
-      ${this.costHtml(v, n, gold)}${land ? `<p class="muted">${esc(land)}</p>` : ''}${n.needs ? needsHtml(n.needs) : ''}${whyOf(n)}
+      ${this.costHtml(v, n, gold)}${land ? `<span class="bcosts">${land}</span>` : ''}${n.needs ? needsHtml(n.needs) : ''}${whyOf(n)}
       <button class="btn btn-small btn-primary" data-tbuild="${t.id}"${n.why ? ' disabled' : ''}>${esc(t.level ? T29('upgrade') : T29('build'))}</button></div>`
       : !t.job ? `<p class="muted">${esc(T29('max'))}</p>` : '';
     const more = t.id === 'market' || t.id === 'guild' || t.id === 'pen' ? `<div class="row bactions"><button class="btn btn-small" data-btab="town">${esc(H('tab'))}</button></div>` : '';
@@ -550,6 +554,11 @@ export class BaseWindow {
       this.send({ t: 'estate', action: 'abandon' });
       this.send({ t: 'base', action: 'view' });
     }));
+    root.querySelector<HTMLElement>('[data-bback]')?.addEventListener('click', () => {
+      this.sel = null;
+      this.selTown = null;
+      redraw();
+    });
     root.querySelector<HTMLElement>('[data-bcancel]')?.addEventListener('click', () => {
       this.moving = null;
       redraw();

@@ -176,6 +176,13 @@ try {
     await sleep(2500);
     note('docked at', await A.evaluate(() => globalThis.gravetide.state.self?.dockedAt), 'town', town.id, town.name);
     await shot(A, '15_town_port_phone_ru');
+    await say(A, '/hurt 40');
+    await sleep(600);
+    const gr0 = await A.evaluate(() => globalThis.gravetide.state.self.gold);
+    await send(A, { t: 'repair', on: true });
+    await sleep(900);
+    const gr1 = await A.evaluate(() => globalThis.gravetide.state.self.gold);
+    note('repaired at the town: silver', gr0, '→', gr1);
     const crew0 = await A.evaluate(() => globalThis.gravetide.state.self?.crew ?? globalThis.gravetide.state.ownShip?.crew);
     await send(A, { t: 'hire_crew', qty: 3 });
     await sleep(800);
