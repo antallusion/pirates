@@ -150,7 +150,7 @@ export class PremiumWindow {
     } else {
       const tabs = (['ships', 'units', 'scrolls'] as const).map((t) => {
         const n = t === 'ships' ? v.ships.length : t === 'units' ? v.units.length : v.scrolls ?? 0;
-        return `<button class="tab${t === this.tab ? ' active' : ''}" data-pmtab="${t}">${icon(t === 'ships' ? 'menu_ship' : t === 'units' ? 'build_kennel' : AUTO_SCROLL_ICON, '', 'ico-sm')}${esc(L(t === 'ships' ? 'tab.ships' : t === 'units' ? 'tab.units' : 'tab.scrolls'))}${n ? ` <span class="pm-count">${n}</span>` : ''}</button>`;
+        return `<button class="tab${t === this.tab ? ' active' : ''}" data-pmtab="${t}">${icon(t === 'ships' ? 'menu_ship' : t === 'units' ? 'build_kennel' : AUTO_SCROLL_ICON, '', 'ico-sm')}<span class="pm-tl">${esc(L(t === 'ships' ? 'tab.ships' : t === 'units' ? 'tab.units' : 'tab.scrolls'))}</span>${n ? ` <span class="pm-count">${n}</span>` : ''}</button>`;
       }).join('');
       // The hulls on their four shelves (docs/02 §1.A.9): the warships, the traders, the runners and the haulers.
       const shelf = (l: string) => v.ships.filter((x) => (SHIP_CLASSES[x.id].list ?? 'combat') === l);
@@ -162,6 +162,13 @@ export class PremiumWindow {
       root.innerHTML = `${head}<div class="modal-body pm-body"><div class="tabs">${tabs}</div>
         ${cards || emptyCard(this.tab === 'ships' ? 'ships' : 'units')}
         <p class="muted pm-rule">${esc(rule)}</p></div>`;
+    }
+    // A phone held sideways: the tabs ride in the window's band (fit.css) left of the purse, however wide it is.
+    const purse = root.querySelector<HTMLElement>('.pm-purse');
+    if (purse) {
+      // From the purse's left edge to the window's right, in the window's own (zoomed) pixels.
+      const box = root.getBoundingClientRect(), k = box.width / Math.max(1, root.offsetWidth);
+      root.style.setProperty('--pm-purse', `${Math.ceil((box.right - purse.getBoundingClientRect().left) / (k || 1))}px`);
     }
     root.querySelector<HTMLElement>('[data-pmtop]')!.onclick = () => {
       this.topup = !this.topup;

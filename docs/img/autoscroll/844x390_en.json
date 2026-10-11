@@ -1,0 +1,326 @@
+{
+ "tag": "844x390_en",
+ "steps": {
+  "locked": {
+   "view": {
+    "round": 1,
+    "over": null,
+    "mine": true,
+    "scrolls": {
+     "n": 0
+    },
+    "auto": false
+   },
+   "m": {
+    "auto": [
+     {
+      "l": 8,
+      "t": 210,
+      "r": 60,
+      "b": 262,
+      "text": "Auto — needs an auto-battle scroll (25 doubloons)",
+      "cut": true
+     }
+    ],
+    "buy": [],
+    "badge": [
+     {
+      "l": 48,
+      "t": 252,
+      "r": 60,
+      "b": 261,
+      "text": "",
+      "cut": false
+     }
+    ],
+    "wheel": [],
+    "cards": [],
+    "have": [],
+    "outside": [],
+    "cut": []
+   }
+  },
+  "wheel": {
+   "auto": [
+    {
+     "l": 8,
+     "t": 210,
+     "r": 60,
+     "b": 262,
+     "text": "Auto — needs an auto-battle scroll (25 doubloons)",
+     "cut": true
+    }
+   ],
+   "buy": [],
+   "badge": [
+    {
+     "l": 48,
+     "t": 252,
+     "r": 60,
+     "b": 261,
+     "text": "",
+     "cut": false
+    }
+   ],
+   "wheel": [
+    {
+     "l": 164,
+     "t": 128,
+     "r": 216,
+     "b": 180,
+     "text": "Auto: a scroll, 25 doubloons",
+     "cut": true
+    },
+    {
+     "l": 246,
+     "t": 210,
+     "r": 298,
+     "b": 262,
+     "text": "Buy scrolls",
+     "cut": true
+    },
+    {
+     "l": 164,
+     "t": 292,
+     "r": 216,
+     "b": 344,
+     "text": "Quick combat: needs a scroll",
+     "cut": true
+    },
+    {
+     "l": 82,
+     "t": 210,
+     "r": 134,
+     "b": 262,
+     "text": "Fall back",
+     "cut": true
+    }
+   ],
+   "cards": [],
+   "have": [],
+   "outside": [],
+   "cut": []
+  },
+  "refused": {
+   "round": 1,
+   "over": null,
+   "mine": true,
+   "scrolls": {
+    "n": 0
+   },
+   "auto": false
+  },
+  "wheelBuy": true,
+  "shop": {
+   "opened": true,
+   "m": {
+    "auto": [
+     {
+      "l": 8,
+      "t": 210,
+      "r": 60,
+      "b": 262,
+      "text": "Auto — needs an auto-battle scroll (25 doubloons)",
+      "cut": true
+     }
+    ],
+    "buy": [],
+    "badge": [
+     {
+      "l": 48,
+      "t": 252,
+      "r": 60,
+      "b": 261,
+      "text": "",
+      "cut": false
+     }
+    ],
+    "wheel": [],
+    "cards": [
+     {
+      "l": 16,
+      "t": 95,
+      "r": 828,
+      "b": 215,
+      "text": "Auto-battle scroll ×125 a scroll\n      25\n    Buy",
+      "cut": false
+     },
+     {
+      "l": 16,
+      "t": 229,
+      "r": 828,
+      "b": 349,
+      "text": "save 20%\n      Auto-battle scroll ×520 a scroll\n      100\n    Buy",
+      "cut": false
+     },
+     {
+      "l": 16,
+      "t": 363,
+      "r": 828,
+      "b": 483,
+      "text": "save 40%\n      Auto-battle scroll ×2015 a scroll\n      300\n    Buy",
+      "cut": false
+     }
+    ],
+    "have": [
+     {
+      "l": 16,
+      "t": 60,
+      "r": 828,
+      "b": 77,
+      "text": "You have: 0",
+      "cut": false
+     }
+    ],
+    "outside": [],
+    "cut": []
+   }
+  },
+  "bought": {
+   "view": {
+    "round": 1,
+    "over": null,
+    "mine": true,
+    "scrolls": {
+     "n": 5
+    },
+    "auto": false
+   },
+   "doubloons": 200,
+   "m": {
+    "auto": [
+     {
+      "l": 8,
+      "t": 210,
+      "r": 60,
+      "b": 262,
+      "text": "Auto: to the end, or a quick fight · Auto-battle scrolls: 5",
+      "cut": true
+     }
+    ],
+    "buy": [],
+    "badge": [
+     {
+      "l": 46,
+      "t": 247,
+      "r": 64,
+      "b": 265,
+      "text": "5",
+      "cut": false
+     }
+    ],
+    "wheel": [],
+    "cards": [
+     {
+      "l": 16,
+      "t": 95,
+      "r": 828,
+      "b": 215,
+      "text": "Auto-battle scroll ×125 a scroll\n      25\n    Buy",
+      "cut": false
+     },
+     {
+      "l": 16,
+      "t": 229,
+      "r": 828,
+      "b": 349,
+      "text": "save 20%\n      Auto-battle scroll ×520 a scroll\n      100\n    Buy",
+      "cut": false
+     },
+     {
+      "l": 16,
+      "t": 363,
+      "r": 828,
+      "b": 483,
+      "text": "save 40%\n      Auto-battle scroll ×2015 a scroll\n      300\n    Buy\n    Not enoug",
+      "cut": false
+     }
+    ],
+    "have": [
+     {
+      "l": 16,
+      "t": 60,
+      "r": 828,
+      "b": 77,
+      "text": "You have: 5",
+      "cut": false
+     }
+    ],
+    "outside": [],
+    "cut": []
+   }
+  },
+  "count": {
+   "view": {
+    "round": 1,
+    "over": null,
+    "mine": true,
+    "scrolls": {
+     "n": 5
+    },
+    "auto": false
+   },
+   "m": {
+    "auto": [
+     {
+      "l": 8,
+      "t": 210,
+      "r": 60,
+      "b": 262,
+      "text": "Auto: to the end, or a quick fight · Auto-battle scrolls: 5",
+      "cut": true
+     }
+    ],
+    "buy": [],
+    "badge": [
+     {
+      "l": 46,
+      "t": 247,
+      "r": 64,
+      "b": 265,
+      "text": "5",
+      "cut": false
+     }
+    ],
+    "wheel": [],
+    "cards": [],
+    "have": [],
+    "outside": [],
+    "cut": []
+   }
+  },
+  "auto": {
+   "view": {
+    "round": 1,
+    "over": null,
+    "mine": false,
+    "scrolls": {
+     "n": 4,
+     "paid": true
+    },
+    "auto": true
+   },
+   "scrolls": 4,
+   "m": {
+    "auto": [
+     {
+      "l": 8,
+      "t": 210,
+      "r": 60,
+      "b": 262,
+      "text": "Take the helm",
+      "cut": true
+     }
+    ],
+    "buy": [],
+    "badge": [],
+    "wheel": [],
+    "cards": [],
+    "have": [],
+    "outside": [],
+    "cut": []
+   }
+  }
+ },
+ "errors": []
+}

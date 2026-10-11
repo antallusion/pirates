@@ -4450,10 +4450,11 @@ img.beast-face.fig { object-fit: cover; object-position: 50% 8%; background: rad
 .pm-buy .btn { min-height: 30px; font-size: 12px; }
 /* «Свиток автобоя» (owner, 2026-10-11): the shop's packs of scrolls — the volume's discount on the picture, her count. */
 .pm-art.pm-sc { position: relative; }
-.pm-off { position: absolute; top: 4px; right: 4px; padding: 1px 5px; border-radius: 8px; background: #5a3a12; color: #ffe2a0; font: 700 11px var(--sans); }
+.pm-off { position: absolute; left: 3px; right: 3px; bottom: 3px; padding: 1px 3px; border-radius: 6px; background: rgba(90, 58, 18, 0.92); color: #ffe2a0; font: 700 10px/14px var(--sans); text-align: center; white-space: nowrap; }
 .pm-sc-have { display: flex; align-items: center; gap: 6px; margin: 2px 0 8px; }
 .gear-scrolls { margin-bottom: 6px; }
 .gear-list .gr.gr-scroll { cursor: default; }
+.gear-list .gr.gr-scroll .gs-sub { white-space: normal; overflow: visible; text-overflow: clip; }
 .pm-price .dbl { font: 700 17px var(--sans); justify-content: center; }
 .pm-price .dbl .ico-sm { width: 20px; height: 20px; }
 .pm-why { font-size: 11px; line-height: 1.25; color: var(--bad); overflow-wrap: anywhere; }

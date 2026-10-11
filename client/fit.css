@@ -358,6 +358,19 @@
   #modal-panel .throne-win > .tabs .tab, #modal-panel .pm-body > .tabs .tab { min-height: var(--f-tap); }
   #modal-panel:has(.throne-win > .tabs) > .modal-head h2, #modal-panel:has(.pm-body > .tabs) > .modal-head h2 { max-width: calc(100vw - 480px); overflow: hidden; }
 }
+@media (max-height: 520px) {
+  /* the shop's three tabs (owner, 2026-10-11: «Свитки») stand left of its purse, whatever its width (premium.ts sets it) */
+  #modal-panel .pm-body > .tabs { right: calc(var(--pm-purse, 230px) + 6px); max-width: calc(100% - 56px - var(--pm-purse, 230px)); }
+}
+@media (max-height: 520px) and (max-width: 900px) {
+  /* the shop's tabs in a narrow band: the lit one says its name, the others their picture and count */
+  #modal-panel .pm-body > .tabs .tab:not(.active) .pm-tl { display: none; }
+}
+@media (max-height: 520px) and (max-width: 560px) {
+  /* the smallest phones: the other tabs their picture alone */
+  #modal-panel .pm-body > .tabs .tab { padding-left: 6px; padding-right: 6px; }
+  #modal-panel .pm-body > .tabs .tab:not(.active) .pm-count { display: none; }
+}
 @media (max-height: 520px) and (max-width: 900px) {
   /* a narrow band: the window's crest stands for its name (the tab that is lit says where she is) */
   #modal-panel:has(.throne-win > .tabs) > .modal-head h2, #modal-panel:has(.pm-body > .tabs) > .modal-head h2 { font-size: 0 !important; max-width: none; padding-left: 4px; padding-right: 4px; border-width: 0; border-image: none; background: none; }

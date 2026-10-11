@@ -1545,11 +1545,11 @@ export class TacticalPanel {
     const sc = v.scrolls;
     const locked = this.scrollLocked(v);
     const out: WheelOption[] = locked
-      ? [{ id: 'auto', label: L('scLocked', { n: AUTO_SCROLL_PACKS[0].price }), icon: art('bt_auto', 'icon.bt_captain'), disabled: true }, { id: 'buy', label: L('scBuy'), icon: `icon.${AUTO_SCROLL_ICON}` }]
+      ? [{ id: 'auto', label: L('scLockedW', { n: AUTO_SCROLL_PACKS[0].price }), icon: art('bt_auto', 'icon.bt_captain'), disabled: true }, { id: 'buy', label: L('scBuy'), icon: `icon.${AUTO_SCROLL_ICON}` }]
       : [{ id: 'auto', label: L('autoEnd'), icon: art('bt_auto', 'icon.bt_captain'), ...(sc && !sc.paid ? { count: sc.n } : {}) }];
     if (!v.noQuick) {
       const free = !sc || !!sc.freeQuick || !!sc.paid;
-      out.push({ id: 'quick', label: free ? L('quick') : locked ? L('scQuickLocked') : L('scQuick'), icon: art('bt_quick', 'icon.bt_charge'), ...(!free && locked ? { disabled: true } : {}) });
+      out.push({ id: 'quick', label: free ? L('quick') : locked ? L('scQuickLockedW') : L('scQuickW'), icon: art('bt_quick', 'icon.bt_charge'), ...(!free && locked ? { disabled: true } : {}) });
     }
     if (v.canCut) out.push({ id: 'cut', label: v.you === 0 ? L('fallBack') : L('cut'), icon: art('bt_retreat', 'icon.bt_colours') });
     if (v.ransom) {
