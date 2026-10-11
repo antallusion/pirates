@@ -177,7 +177,7 @@
   .tb-store, .bk-will .tb-store { font-size: var(--f-fs-s); }
   .tb-chip-men { font-size: var(--f-fs-s); height: 16px; line-height: 16px; }
   .tb-rs i { font-size: var(--f-fs-s); line-height: 14px; }
-  body.simple #touch > #tc-ammo .tc-ammo-n, #touch > .tc-act .tc-act-more { font-size: var(--f-fs-s); }
+  body.simple #touch > #tc-ammo .tc-ammo-n, #touch .tc-act .tc-act-more { font-size: var(--f-fs-s); }
   .tal-main .tier-label, #modal-panel .tier-label { font-size: var(--f-fs-s); }
   .army-slot > i.army-tier { font-size: var(--f-fs-s); }
   #modal-panel label.check { min-height: var(--f-tap); display: flex; align-items: center; gap: 8px; }
@@ -343,7 +343,7 @@
   body.simple { --sea-pad: calc(6px + 4 * var(--u)); --sea-fire: calc(62px + 18 * var(--u)); --sea-btn: calc(38px + 10 * var(--u)); --sea-gap: calc(8px + 6 * var(--u)); --cs-face: calc(36px + 8 * var(--u)); --cs-bar: calc(76px + 24 * var(--u)); --mm: calc(66px + 20 * var(--u)); --stick: calc(88px + 24 * var(--u)); }
   body.simple #tc-target .k-target { height: var(--f-tap); gap: calc(5px + 5 * var(--u)); padding: 0 calc(5px + 5 * var(--u)); }
   body.simple #tc-target .k-target-name { min-width: 0; font-size: var(--f-fs-m); }
-  body.simple #tc-target .k-target-bars { flex: 0 1 calc(32px + 24 * var(--u)); min-width: 24px; }
+  body.simple #tc-target .k-target-bars { flex: none; width: calc(32px + 24 * var(--u)); min-width: 0; }
 }
 @media (max-height: 520px) {
   .skinned .throne-win .tabs:has(.tab:nth-child(8)) .tab { border-left-width: 3px; border-right-width: 3px; border-image-width: 6px 3px 0; }
@@ -386,7 +386,9 @@
 }
 @media (max-height: 520px) {
   /* her mark's name wraps in the line rather than losing its end («Цепь бух…» at every phone size) */
-  body.simple #tc-target .k-target-name { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.08; font-size: var(--f-fs); overflow-wrap: break-word; }
+  body.simple #tc-target .k-target-name { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.08; font-size: var(--f-fs); overflow-wrap: normal; min-width: min-content; }
+  /* seaux 2026-10-11 (owner: «ты переносишь слово застава на две строчки хотя место есть»): the bars a fixed width, so
+     the plate's fitted width is what it lays out at; a name breaks only between its words, and only when there is no room */
 }
 @media (max-height: 520px) {
   /* the Throne's tabs in the band at every phone width: the lit one its picture and word, the others their picture
@@ -480,4 +482,20 @@
 @media (max-height: 520px) {
   /* a mate's offer: the stacks wrap rather than run sideways (480×270 EN) */
   .bo-sts { flex-wrap: wrap; overflow: visible; }
+}
+
+/* ==================================================================== seaux (2026-10-11): every window scrolls
+   Owner: «Там еще где цели у нас открывая эту модалку у нее нет скролла вниз, не понятно какие цели. Никакие из окошек с
+   инфой нельзя вниз пролистнуть». The pager (kit/fit.ts) is no longer installed: on his iPhone its columns cut the
+   windows off. Every window's page, the Journal's and the company's, the sheets (the goals and news, the menu, the
+   captain's), the talents' list scroll up and down with a finger — iOS Safari's momentum, the scroll kept inside the
+   pane — and with the wheel on a desk. Nothing on a scroll area takes the touch from it. */
+#modal-panel .modal-body, #modal-panel #company-body, #modal-panel .tal-main, .k-sheet-root .k-sheet-body, .w-rail {
+  overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: auto; }
+#modal-panel .modal-body, #modal-panel .tal-main, .k-sheet-body { min-height: 0; }
+#modal-panel > .modal-body, .w-frame, .w-pane { min-height: 0; }
+/* the talents' left column (the load and the side) on a phone: it scrolls too rather than being cut at the screen's foot */
+@media (max-height: 520px) {
+  #modal-panel[data-modal="talents"] .modal-body > :not(.tal-main):not(.fit-pager) { min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  #modal-panel .fit-pager { display: none; }
 }

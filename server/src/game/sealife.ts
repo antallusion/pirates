@@ -5,7 +5,6 @@
 
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { headingVec } from '../../../shared/src/math.ts';
-import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { beastsPass } from './beasts.ts';
 import { POD_CHANCE, podJoins } from './omenpod.ts';
 import { quietSea } from './director.ts';
@@ -14,6 +13,7 @@ import { shoalNear } from './fishing.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { haulTake } from './seahaul.ts';
+import { openSea } from './wrecks.ts';
 
 /** Seconds of quiet sailing between two small things (docs/19 D3: twice as often as the 16–26 s it was). */
 export const LIFE_EVERY: [number, number] = [8, 13];
@@ -42,7 +42,7 @@ function flotsam(game: Game, s: PlayerSession): boolean {
     const r = game.rng.range(250, 600);
     const v = headingVec(a);
     const x = ship.state.x + v.x * r, y = ship.state.y + v.y * r;
-    if (isLand(game.world, x, y) || !game.inZone(x, y)) continue;
+    if (!openSea(game, x, y)) continue; // seaux: never on a hulk, a skerry or a floe (no hull comes there)
     const [good, [lo, hi]] = game.rng.weighted(FLOTSAM.map((f) => [f, f[2]] as [typeof f, number]));
     // docs/19 D3: twice as often; past her day's count (shared/src/data/seahaul.ts) half as much.
     const n = game.rng.int(lo, hi);

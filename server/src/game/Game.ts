@@ -178,6 +178,9 @@ import { awayMark, awayReturn, awayTake, renownDistance, renownKill, sendRenown,
 import { sendWorldGoals, stepWorldGoals, worldGoalKill, worldGoalsCollect } from './worldgoals.ts';
 import { sendSignal } from './signals.ts';
 import { autosailInput, startAutosail, stepAutosail, stopAutosail } from './autosail.ts';
+import { cancelApproach, stepApproach } from './approach.ts'; // seaux: sail-to on tap
+import { LootMap, stepWrecks } from './wrecks.ts'; // seaux: wreckage per captain
+import { stepCastaways } from './castaways.ts'; // seaux: castaways
 import { gyardCancel, gyardGive, gyardStart } from './guildyard.ts';
 import { applyIslandNames, applyPantheon, seasonAction, seasonMods, seasonStat, seasonXp, stepSeasons, warKill } from './seasons.ts';
 import { abyssMap, abyssSecond, abyssView, abyssWind, onAbyssKill, raisingRitual, recordEcho, stepAbyssSea } from './abyss.ts';
@@ -280,6 +283,7 @@ export interface Loot {
   claim?: { account: number; until: number }; // the victor and their group have the first 30 s
   task?: number; // a crate of a wreck field, a task of the sea (docs/11 P6)
   items?: Item[]; // gear a sunk ship left in the water (docs/12 P1)
+  placed?: boolean; // seaux: its spot checked for open water a hull can reach (lootSpot)
 }
 
 interface Rumor {
@@ -351,7 +355,8 @@ export class Game {
   /** Boardings with a captain aboard are fought turn by turn on the hexes (docs/16 P4); off, the round-by-round deck
    *  fight of Boarding 2.0 (GRAVETIDE_CLASSIC_BOARDING=1, and the tests of the older rules). */
   tacticalBoarding = process.env.GRAVETIDE_CLASSIC_BOARDING !== '1';
-  loot = new Map<number, Loot>();
+  /** (seaux: a piece put on a hulk, a skerry or the shore's edge is moved out to open water as it is dropped — wrecks.ts) */
+  loot: Map<number, Loot> = new LootMap<Loot>(this);
   markets = new Map<string, Market>();
   tavernCrew = new Map<string, number>();
   taverns = new Map<string, Tavern>();
@@ -610,6 +615,7 @@ export class Game {
       lod.set(id, k);
       if (k > 0) updateNpc(this, ship, brain, dt * k, this.nearestPlayer.get(id) ?? Infinity);
     }
+    stepApproach(this); // seaux: an order at a thing out of reach, given again on arrival (approach.ts)
     stepAutosail(this); // the helmsmen at their captains' wheels (docs/16 #36)
     stepPursuit(this); // and under «Атаковать» (docs/23 item 33)
     stepAutoFire(this); // the captains' gun crews laying on the mark (docs/23 items 34–35)
@@ -950,6 +956,8 @@ export class Game {
     stepCitadels(this); // docs/19 E4–E8: the windows, the hours held, the week, the season, the charts
     stepSeaMarks(this); // the boats at the dense sea's marks
     stepSeaFinds(this); // docs/19 D5: the sea's small things; her time at sea for the day's caps
+    stepWrecks(this); // seaux: her own wreckage (48 h a spot), taken as she passes
+    stepCastaways(this); // seaux: castaways hauled aboard as she passes
     stepRoamers(this); // docs/19 D7: the creatures roaming the sea, as HoMM3's neutral stacks
     stepTame(this); // the creatures of the army: the starving and the unhappy slip away (docs/18 #39)
     for (const s of this.sessions) settleRefugees(this, s);
@@ -2550,6 +2558,17 @@ export class Game {
       l.gold = 0;
     }
     if (got.length) this.toastShip(ship, `Salvaged: ${got.join(', ')}.`, 'gold');
+    // seaux: a full hold still takes it — what will not fit is broken up for half its worth (no piece left afloat that
+    // she can never take)
+    if (Object.keys(l.cargo).length && !l.decoy) {
+      const v = Math.round(cargoValue(l.cargo) * 0.5);
+      l.cargo = {};
+      if (v > 0) {
+        s.profile.gold += v;
+        this.db.ledger(s.accountId, 'loot', v, 'salvage_full');
+        this.toastShip(ship, `The hold is full: the rest of the salvage is broken up for ${v} silver.`, 'gold');
+      }
+    }
     if (l.items?.length) {
       l.items = l.items.filter((it) => !takeItem(this, s, it));
       this.pushSelf(s, true);
@@ -2907,6 +2926,18 @@ export class Game {
 
   /** The order being handled, and whose (an order refused only because shot is flying waits for it to stop). */
   private handling: { s: PlayerSession; msg: ClientMsg } | null = null;
+
+  // ---- seaux (2026-10-11): sail-to on tap (approach.ts) — the order being handled, and the same order given again
+  /** Her order being handled now (null outside her handler). */
+  orderOf(s: PlayerSession): ClientMsg | null {
+    return this.handling?.s === s ? this.handling.msg : null;
+  }
+
+  /** Her order given again (on arrival at the thing it is about). */
+  redo(s: PlayerSession, msg: ClientMsg): void {
+    this.handle(s, msg);
+  }
+  // ---- /seaux
 
   private handle(s: PlayerSession, msg: ClientMsg): void {
     const prev = this.handling;
@@ -3605,8 +3636,9 @@ export class Game {
         return err(heroAction(this, s, msg)); // docs/17 H2
       case 'autosail':
         // The helmsman takes her to her mark, or gives the wheel back (docs/16 #36).
+        cancelApproach(this, s); // seaux: her own mark or the pill's stop drops an order waiting for arrival
         if (msg.stop) return stopAutosail(this, s, 'manual');
-        return err(startAutosail(this, s, Number(msg.x), Number(msg.y), msg.sail === undefined ? undefined : Number(msg.sail)));
+        return err(startAutosail(this, s, Number(msg.x), Number(msg.y), msg.sail === undefined ? undefined : Number(msg.sail), Number.isFinite(Number(msg.near)) && msg.near !== undefined ? Math.max(20, Math.min(150, Number(msg.near))) : undefined));
       case 'wgoals':
         return sendWorldGoals(this, s);
       case 'gyard': {

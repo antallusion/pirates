@@ -15,6 +15,10 @@ export const MARK_SLOW_BREAK = 4.5;
 export const MARK_TIME: Record<MarkKind, number> = { drift: 2, wreck: 4, buoy: 2, lantern: 2, bones: 3, floe: 3 };
 /** A mark is hers to work again a day after (real milliseconds). */
 export const MARK_AGAIN_MS = 24 * 3_600_000;
+/** seaux (2026-10-11, owner: «респаун у них должен быть 48 часов»): the wreckage — a wreck field, driftwood, floating
+ *  bones — is hers again two days after, the rest a day. */
+export const MARK_WRECK_AGAIN_MS = 48 * 3_600_000;
+export const markAgainMs = (k: MarkKind): number => (k === 'wreck' || k === 'drift' || k === 'bones' ? MARK_WRECK_AGAIN_MS : MARK_AGAIN_MS);
 /** The share of an hour at sea a mark gives. */
 export const MARK_SHARE: readonly [number, number] = [0.02, 0.05];
 /** A wreck field's chance of a treasure map. */

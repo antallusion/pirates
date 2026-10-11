@@ -5033,7 +5033,7 @@ body.tq-side #toasts .toast.herald small { font-size: 11px; line-height: 14px; w
    compass, the micro menu, the chart's lines, the fold, the chat's button — is put away on touch (it lives in the wheel,
    the menu's sheet and the news sheet). A target (a fight) puts the counter and the minimap away too. The desktop keeps
    its bar and keys. Sizes: 44 px at least for anything a thumb takes (accessibility), 80 px for «Огонь». */
-body.touch { --sea-pad: 10px; --sea-fire: 80px; --sea-act-h: 52px; }
+body.touch { --sea-pad: 10px; --sea-fire: 80px; --sea-act-h: 36px; } /* (seaux: the action pills 36 px, 52 before) */
 @media (min-width: 700px) and (min-height: 521px) { body.touch { --sea-pad: 16px; --sea-fire: 92px; } }
 
 /* What the phone's sea does without. */
@@ -5092,13 +5092,14 @@ body.touch.sea-target #hud-stack, body.touch.sea-target #hud #hud-stack { left: 
 #touch > .tc-big .tc-ammo-ico { width: 18px; height: 18px; object-fit: contain; }
 
 /* «Действие» over «Огонь», «Особое» beside it, the target's line over them. */
-#touch > .tc-act { position: absolute; right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + 10px); max-width: 210px; pointer-events: auto; animation: ctx-pulse 1.8s ease-in-out infinite; }
-#touch > .tc-act .tc-act-ico { display: inline-flex; flex: none; }
-#touch > .tc-act .tc-act-more { position: absolute; top: -8px; left: -8px; min-width: 22px; height: 20px; padding: 0 5px; box-sizing: border-box; border-radius: var(--k-r-round); background: rgba(10, 11, 13, 0.92); box-shadow: 0 0 0 1px var(--k-brass-dim); color: var(--k-bone); font: 700 10px/20px var(--k-font-sans); text-align: center; pointer-events: none; }
+#touch > .tc-actrow { position: absolute; right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + 10px); max-width: 60vw; pointer-events: none; }
+#touch > .tc-actrow > .tc-act { position: relative; pointer-events: auto; animation: ctx-pulse 1.8s ease-in-out infinite; }
+#touch .tc-act .tc-act-ico { display: inline-flex; flex: none; }
+#touch .tc-act .tc-act-more { position: absolute; top: -8px; left: -8px; min-width: 22px; height: 20px; padding: 0 5px; box-sizing: border-box; border-radius: var(--k-r-round); background: rgba(10, 11, 13, 0.92); box-shadow: 0 0 0 1px var(--k-brass-dim); color: var(--k-bone); font: 700 10px/20px var(--k-font-sans); text-align: center; pointer-events: none; }
 #touch > .tc-special { position: absolute; right: calc(var(--sa-r) + var(--sea-pad) + var(--sea-fire) + 14px); bottom: calc(var(--sa-b) + var(--sea-pad) + 4px); pointer-events: auto; box-shadow: 0 0 12px rgba(224, 184, 98, 0.45); }
 #touch > #tc-target { position: absolute; right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + 10px + var(--sea-act-h) + 8px); width: min(250px, 32vw); pointer-events: auto; }
 #touch > #tc-target .k-target { width: 100%; }
-#touch:not(:has(> .tc-act:not(.hidden))) > #tc-target { bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + 10px); }
+#touch:not(:has(> .tc-actrow:not(.hidden))) > #tc-target { bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + 10px); }
 /* In port: no helm, no guns. */
 body.touch.sea-docked #touch > :is(#tc-stick, .tc-special, #tc-target) { display: none; }
 /* …and the big round button casts off (docs/23 phase 6): gold, no reload ring, no shot. */

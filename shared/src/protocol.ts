@@ -56,6 +56,7 @@ import type { DriftClientMsg, DriftServerMsg } from './driftproto.ts';
 import type { CitServerMsg, ThroneClientMsg } from './throneproto.ts'; // docs/19 E1–E3; E4: the citadels on the charts
 import type { GloryView } from './data/throne.ts';
 import type { FindClientMsg, FindServerMsg } from './findproto.ts';
+import type { CastawayView, WreckView } from './data/wrecks.ts'; // seaux: her own wreckage and castaways
 import type { RoamClientMsg, RoamServerMsg } from './roamproto.ts'; // docs/19 D7
 import type { PremiumClientMsg, PremiumServerMsg } from './premiumproto.ts'; // the premium shop (owner, 2026-10-03)
 import type { IsleType } from './world/archipelago.ts';
@@ -329,7 +330,7 @@ export type ClientMsg =
   /** docs/16 #35: a signal flag to the group, at her own ship. */
   | { t: 'signal'; kind: SignalKind }
   /** docs/16 #36: the helmsman takes her to a mark on the chart (with the sail she will carry), or gives the wheel back. */
-  | { t: 'autosail'; x?: number; y?: number; sail?: number; stop?: boolean }
+  | { t: 'autosail'; x?: number; y?: number; sail?: number; stop?: boolean; near?: number }
   /** docs/16 #32: the sea's goals of the week. */
   | { t: 'wgoals' }
   /** docs/16 #34: the guild's shipyard on the leader's island. */
@@ -1856,6 +1857,9 @@ export type ServerMsg =
   | DriftServerMsg
   /** docs/19 D5: the sea's small things. */
   | FindServerMsg
+  /** seaux (2026-10-11): her own wreckage in sight (48 h each once taken) and her castaways. */
+  | { t: 'wrecks'; list: WreckView[] }
+  | { t: 'castaways'; list: CastawayView[] }
   /** docs/19 D7: the creatures roaming the sea. */
   | RoamServerMsg
   /** The premium shop (owner, 2026-10-03): its view, and her account's doubloons. */

@@ -91,6 +91,9 @@ export interface SeaAct {
   sub?: string;
   /** How many more things there are to do (behind the long press). */
   more: number;
+  /** seaux (2026-10-11, owner: «если там еще какие-то экшены пусть они в ряд стоят, и делай их маленькими»): the next
+   *  things to do, small beside it in one row (their place in the bar's list: `i`). */
+  extra?: { i: number; id: string; icon: string; label: string; sub?: string }[];
 }
 
 /** A painted slot of the desk's gun deck: a shot (1–5) or one of the captain's abilities (Z X C V). */
@@ -218,6 +221,8 @@ export interface SeaHooks {
   fireOptions(): WheelOption[];
   firePick(id: string): void;
   act(): void;
+  /** seaux: one of the small buttons beside «Действие» (its place in the bar's list). */
+  actAt?(i: number): void;
   actOptions(): WheelOption[];
   actPick(id: string): void;
   special(): void;
@@ -307,6 +312,8 @@ export class SeaHud {
   readonly fireEl: HTMLButtonElement;
   readonly castEl: HTMLButtonElement;
   readonly actEl: HTMLButtonElement;
+  /** seaux: the row «Действие» stands in, the next things to do small beside it. */
+  readonly actRowEl: HTMLElement;
   readonly specialEl: HTMLButtonElement;
   readonly ammoEl: HTMLButtonElement;
   readonly lockEl: HTMLButtonElement;
@@ -351,6 +358,12 @@ export class SeaHud {
     this.target = new TargetLine(host);
     this.target.onOpen = () => hooks.target();
     this.actEl = make(`<button type="button" id="tc-act" class="k-btn k-btn--primary k-btn--lg tc-act hidden" aria-label="${esc(L('act'))}"><span class="tc-act-ico"></span><span class="k-btn-l"></span><b class="tc-act-more hidden" aria-hidden="true"></b></button>`) as HTMLButtonElement;
+    this.actRowEl = make('<div id="tc-actrow" class="tc-actrow hidden" role="toolbar"></div>');
+    this.actRowEl.append(this.actEl);
+    this.actRowEl.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('[data-acti]');
+      if (b) hooks.actAt?.(Number(b.dataset.acti));
+    });
     this.specialEl = make(`<button type="button" id="tc-special" class="k-btn k-btn--icon k-btn--lg tc-special sea-round hidden" aria-label=""></button>`) as HTMLButtonElement;
     this.ammoEl = make(`<button type="button" id="tc-ammo" class="k-btn k-btn--icon k-btn--lg tc-ammo sea-round" aria-label="${esc(L('ammoNone'))}"><span class="tc-ammo-pic"></span><b class="tc-ammo-n" aria-hidden="true"></b></button>`) as HTMLButtonElement;
     this.lockEl = make(`<button type="button" id="tc-lock" class="k-btn k-btn--icon k-btn--lg tc-lock sea-round" aria-label="${esc(L('lockNone'))}" title="${esc(L('lockNone'))}">${icon(SEA_ART.lock, '◎', 'k-btn-ico')}<kbd class="kc kc-b" aria-hidden="true"></kbd></button>`) as HTMLButtonElement;
@@ -429,8 +442,15 @@ export class SeaHud {
     body.classList.toggle('sea-docked', v.docked);
     this.castEl.classList.toggle('hidden', !v.docked);
     const a = v.act;
-    this.once('act', a ? JSON.stringify([a.id, a.icon, a.label, a.sub, a.more]) : '', () => {
+    this.once('act', a ? JSON.stringify([a.id, a.icon, a.label, a.sub, a.more, a.extra ?? []]) : '', () => {
       this.actEl.classList.toggle('hidden', !a);
+      this.actRowEl.classList.toggle('hidden', !a);
+      // the small ones first (the row reads left to right toward the thumb's gold one at its end)
+      for (const b of [...this.actRowEl.querySelectorAll('.tc-act2')]) b.remove();
+      for (const x of a?.extra ?? []) {
+        const words = x.sub ? `${x.label}: ${x.sub}` : x.label;
+        this.actEl.insertAdjacentHTML('beforebegin', `<button type="button" class="k-btn k-btn--secondary tc-act2" data-acti="${x.i}" data-act="${esc(x.id)}" aria-label="${esc(words)}" title="${esc(words)}">${icon(x.icon, '•', 'k-btn-ico')}<span class="k-btn-l">${esc(x.label)}</span></button>`);
+      }
       if (!a) return void delete this.actEl.dataset.act;
       this.actEl.dataset.act = a.id;
       this.actEl.querySelector('.tc-act-ico')!.innerHTML = icon(a.icon, '•', 'k-btn-ico');

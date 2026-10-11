@@ -128,7 +128,12 @@ export function wireSheetSwipe(panel: HTMLElement, done: () => void, handles = '
   panel.addEventListener('pointermove', (e) => {
     if (id !== e.pointerId) return;
     dy = e.clientY - y0;
-    if (Math.abs(dy) > 6 && !panel.hasPointerCapture(e.pointerId)) {
+    // (seaux: a stroke up from a list's top is its scroll, never the sheet's drag — the drag only pulls it down)
+    if (dy < -6 && !panel.classList.contains('k-dragging')) {
+      id = null;
+      return;
+    }
+    if (dy > 6 && !panel.hasPointerCapture(e.pointerId)) {
       panel.setPointerCapture(e.pointerId);
       panel.classList.add('k-dragging');
     }

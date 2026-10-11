@@ -6,6 +6,7 @@ import type { SupplyView, TurtleView, ZoneView } from '../../shared/src/isleprot
 import type { LairCard, LairsView } from '../../shared/src/lairproto.ts';
 import type { DriftCard, DriftMark, TameView } from '../../shared/src/driftproto.ts';
 import type { FindView } from '../../shared/src/findproto.ts';
+import type { CastawayView, WreckView } from '../../shared/src/data/wrecks.ts';
 import type { RoamView } from '../../shared/src/roamproto.ts';
 import type { CitMark } from '../../shared/src/data/citadels.ts';
 import { skillSeaMods } from '../../shared/src/data/hero.ts';
@@ -174,6 +175,11 @@ export class ClientState {
   /** docs/19 D5: the sea's small things about her (and when the list came), the one her boats are at. */
   finds: FindView[] = [];
   findsAt = 0;
+  /** seaux (2026-10-11): her own wreckage in sight (each gone for her 48 h once taken) and her castaways, and when
+   *  the castaways' list came (their time left counts from it). */
+  wrecks: WreckView[] = [];
+  castaways: CastawayView[] = [];
+  castawaysAt = 0;
   findBusy: { id: number; until: number; total: number } | null = null;
   /** docs/19 D7: the creatures roaming the sea about her (HoMM3's neutral stacks). */
   roams: RoamView[] = [];
@@ -490,6 +496,13 @@ export class ClientState {
         break;
       case 'roams':
         this.roams = m.list;
+        break;
+      case 'wrecks':
+        this.wrecks = m.list;
+        break;
+      case 'castaways':
+        this.castaways = m.list;
+        this.castawaysAt = this.estServerTime();
         break;
       case 'seafinds':
         this.finds = m.list;

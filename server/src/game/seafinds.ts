@@ -23,6 +23,7 @@ import { Rng, hashString } from '../../../shared/src/rng.ts';
 import { sectorAt } from '../../../shared/src/world/sectors.ts';
 import { isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { advQuiet } from './advmap.ts';
+import { approach } from './approach.ts';
 import { landFighting, startCreatureFight } from './beastlairs.ts';
 import { reconcile } from './crew.ts';
 import { giveGoods, quietSea } from './director.ts';
@@ -209,19 +210,23 @@ function whyNot(game: Game, s: PlayerSession, f: Find | undefined): string | nul
   const ship = s.ship!;
   if (!f || f.owner !== s.accountId) return 'It is gone.';
   if (ship.docked || !ship.alive || ship.ghost) return 'Out at sea, alongside it.';
-  if (f.kind !== 'flyfish' && dist(f.x, f.y, ship.state.x, ship.state.y) > FIND_REACH[f.kind]) return 'Come within a cable of it first.';
+  if (f.kind !== 'flyfish' && dist(f.x, f.y, ship.state.x, ship.state.y) > FIND_REACH[f.kind]) return FIND_FAR;
   if (ship.underFire(game.now)) return 'Not under fire.';
   if (ship.boarding || ship.grappled || ship.landing || landFighting(game, s)) return 'Not now';
   if (ship.state.speed > FIND_SLOW[f.kind]) return 'Shorten sail first: the boats cannot be lowered at speed.';
   return null;
 }
 
-/** Her order at a small thing: the boats away (a few seconds hove to), the fish gathered at once, the fight begun. */
+const FIND_FAR = 'Come within a cable of it first.';
+
+/** Her order at a small thing: the boats away (a few seconds hove to), the fish gathered at once, the fight begun.
+ *  Out of its reach the helmsman sails her to it and the order is given again there (seaux: approach.ts). */
 export function startFind(game: Game, s: PlayerSession, id: number): string | null {
   if (!s.ship || !s.profile) return 'No captain';
   const S = F(game);
   const f = S.list.get(id);
   const why = whyNot(game, s, f);
+  if (why === FIND_FAR && f) return approach(game, s, { x: f.x, y: f.y, reach: FIND_REACH[f.kind], where: () => (S.list.has(f.id) ? f : null), ...(FIND_SLOW[f.kind] < 50 ? { slow: FIND_SLOW[f.kind] - 0.2 } : {}) }, why);
   if (why) return why;
   if (S.busy.get(s)?.id === id) return null;
   if (f!.kind === 'chest') return fightChest(game, s, f!);

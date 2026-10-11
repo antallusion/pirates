@@ -9,7 +9,7 @@ import type { MarkKind } from '../../../shared/src/data/seamarks.ts';
 import { MARK_ICON } from '../../../shared/src/data/seamarks.ts';
 import type { FindKind } from '../../../shared/src/data/seafinds.ts';
 import { FIND_ICON } from '../../../shared/src/data/seafinds.ts';
-import { dict } from '../i18n.ts';
+import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/actbar.ts';
 import { EN as FEN, RU as FRU } from '../lang/ui/seafinds.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/roamers.ts';
@@ -50,7 +50,7 @@ export interface ActFacts {
   ritual?: boolean;
   mark?: { id: number; kind: MarkKind; done?: boolean; busy?: boolean } | null;
   /** docs/19 D5: one of the sea's small things at hand. */
-  find?: { id: number; kind: FindKind; busy?: boolean; n?: number } | null;
+  find?: { id: number; kind: FindKind; busy?: boolean; n?: number; far?: number } | null;
   /** docs/19 D7: a roaming stack within reach, or the one she marked: its name, HoMM3's word and level, a fight on it,
    *  the offer at ×3; `lead` — hers to attack now (marked, or a cable off with no ship of her choosing): its buttons
    *  come first; `far` — beyond a cable (the helmsman sails her in); `running` — he is sailing her in now. */
@@ -127,7 +127,8 @@ export function buildActs(f: ActFacts): Act[] {
   const fd = f.find;
   if (fd && !fd.busy) {
     // (the word under it only where it tells her more: the fish on deck, a cache in the fog, how many sharks)
-    const sub = `s.${fd.kind}` in FEN ? LF(`s.${fd.kind}` as keyof typeof FEN, { n: fd.n ?? 0 }) : '';
+    // (seaux: far off, the word under it is how far — a tap sails her there)
+    const sub = fd.far ? farWords(fd.far) : `s.${fd.kind}` in FEN ? LF(`s.${fd.kind}` as keyof typeof FEN, { n: fd.n ?? 0 }) : '';
     out.push({ id: 'find', icon: FIND_ICON[fd.kind], label: LF(`a.${fd.kind}`), ...(sub ? { sub } : {}), title: LF(`t.${fd.kind}`), key: 'land', arg: String(fd.id) });
   }
   if (!f.roam?.lead) out.push(...roam);
@@ -159,6 +160,11 @@ function roamActs(f: ActFacts): Act[] {
 /** What the land key does at sea, with nothing to land at: the mast, the net, the mark — in the bar's order. */
 export function landKeyAct(acts: Act[]): Act | null {
   return acts.find((a) => a.id === 'land' || a.id === 'cut_mast' || a.id === 'cast' || a.id === 'mark' || a.id === 'find' || a.id === 'roam') ?? null;
+}
+
+/** seaux: «≈ 600 м», «≈ 1,2 км» under a far thing's button. */
+export function farWords(m: number): string {
+  return m >= 1000 ? L('far.km', { n: (Math.round(m / 100) / 10).toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB') }) : L('far.m', { n: Math.round(m / 10) * 10 });
 }
 
 /** Three buttons show at most; with more, two and the «⋯ N more» that opens the rest above them. */

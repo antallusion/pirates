@@ -30,6 +30,7 @@ import { Rng, hashString } from '../../../shared/src/rng.ts';
 import { turtlePos, turtles } from '../../../shared/src/world/drift.ts';
 import { tidalIsles } from '../../../shared/src/world/tidal.ts';
 import { advQuiet, parkNear } from './advmap.ts';
+import { approach } from './approach.ts';
 import { baseView, lyingOff, mine as ownBase } from './base.ts';
 import { kindOfWeek, thisWeek, today, weekNow, weekView } from './calendar.ts';
 import { WEEK_BEAST_LAIR, weekBeastGrowth, weekOfBeast } from '../../../shared/src/data/week.ts';
@@ -326,6 +327,14 @@ function sealHere(game: Game, s: PlayerSession): { at: Lair; lv: number } | null
   return free ? null : { at, lv: seal.lv };
 }
 
+/** seaux (2026-10-11): the flag and the settling at a lair from its shore, as the fight (they went from 1100 m off the
+ *  lair, wherever the shore was): from farther the helmsman sails her in and the order is given there (approach.ts). */
+function lairApproach(game: Game, s: PlayerSession, l: Lair): string | null {
+  const p = lairPos(game, l);
+  return approach(game, s, { x: p.x, y: p.y, reach: LAND_REACH, near: () => !!s.ship && inReach(game, s, l) }, LAIR_FAR);
+}
+const LAIR_FAR = 'Come in to the shore: within the boats’ reach.';
+
 /** The boats can reach the lair's shore from where she lies. */
 function inReach(game: Game, s: PlayerSession, l: Lair): boolean {
   const ship = s.ship!;
@@ -397,6 +406,9 @@ function chainWhy(game: Game, s: PlayerSession, l: Lair): string | null {
   return l.chain === 1 ? 'Clear the shore lair first: the grotto lies beyond it.' : 'Clear the grotto first: the guardian lies at the heart of the island.';
 }
 
+/** seaux: the card's «why» without the distance (its buttons sail her in now, approach.ts). */
+const farless = (w: string | null): string | null => (w === LAIR_FAR ? null : w);
+
 /** Why she cannot land against it now (null: she can). */
 function fightWhy(game: Game, s: PlayerSession, l: Lair, force = false): string | null {
   const ship = s.ship;
@@ -405,7 +417,7 @@ function fightWhy(game: Game, s: PlayerSession, l: Lair, force = false): string 
   if (L(game).fights.has(s.accountId)) return 'Your party is ashore already.';
   if (!lairUp(game, l)) return 'They are gone';
   if (ship.underFire(game.now) && !force) return 'Not while under fire';
-  if (!inReach(game, s, l)) return 'Come in to the shore: within the boats’ reach.';
+  if (!inReach(game, s, l)) return LAIR_FAR;
   if (ship.state.speed > 2.5) return 'Heave to first — the boats cannot be lowered at speed';
   if (ship.crew < 3) return 'Too few hands to spare a landing party';
   return chainWhy(game, s, l);
@@ -443,7 +455,7 @@ function card(game: Game, s: PlayerSession, l: Lair): LairCard {
     ...(seal ? { seal } : {}),
     id: l.id, kind: l.kind, role: l.role, size: l.size, level: l.level, island: islandName(game, l), men: armyMen(men), stacks: men.map((x) => ({ u: x.u, n: x.n })),
     ratio: Math.round(lairRatio(game, s, l) * 10) / 10, party: armyMen(partyOf(game, s)), offer, joinN: offer === 'join' ? armyMen(lairJoiners(game, s, l)) : 0,
-    reach: inReach(game, s, l), why: up ? fightWhy(game, s, l) : null, pay: { silver: pay.silver, xp: xpAt(s.profile!.level, l.level, pay.xp) }, ...(lairWeek(game, l) ? { week: true } : {}),
+    reach: inReach(game, s, l), why: up ? farless(fightWhy(game, s, l)) : null, pay: { silver: pay.silver, xp: xpAt(s.profile!.level, l.level, pay.xp) }, ...(lairWeek(game, l) ? { week: true } : {}),
     ...(p.v[l.id] === week1(game) ? { looted: true } : {}),
     ...(!up && st?.down !== undefined ? { down: Math.max(0, Math.round(st.down + LAIR_RESPAWN[l.role] - game.now)) } : {}),
     ...(chainSteps ? { chain: { step: l.chain!, done: chainSteps } } : {}),
@@ -581,6 +593,7 @@ export function startFight(game: Game, s: PlayerSession, id: string, force = fal
   const l = S.byId.get(id);
   if (!l) return 'Nothing here';
   const why = fightWhy(game, s, l, force);
+  if (why === LAIR_FAR && !force) return lairApproach(game, s, l); // seaux: sail in to its shore first
   if (why) return why;
   const ship = s.ship!;
   const base = sideOf(game, ship, ship, true);
@@ -901,7 +914,7 @@ export function lairChoice(game: Game, s: PlayerSession, id: string, choice: 'jo
   const ship = s.ship;
   if (!l || !ship || ship.docked) return 'Nothing here';
   if (!lairUp(game, l)) return 'They are gone';
-  if (!inReach(game, s, l)) return 'Come in to the shore: within the boats’ reach.';
+  if (!inReach(game, s, l)) return lairApproach(game, s, l);
   const offer = lairOffer(game, s, l);
   if (!offer) return 'They will not yield to you.';
   if (choice === 'join') {
@@ -973,7 +986,7 @@ export function settleDwelling(game: Game, s: PlayerSession, id: string): string
   if (!l || !s.ship) return 'Nothing here';
   const why = settleWhy(game, s, l);
   if (why) return why;
-  if (dist(l.x, l.y, s.ship.state.x, s.ship.state.y) > LAIR_CARD_R + 200) return 'Come in to the shore: within the boats’ reach.';
+  if (!inReach(game, s, l)) return lairApproach(game, s, l);
   const d = S.store.dw[l.id];
   const u = LAIRS[l.kind].mix[0][0];
   dwellPool(game, d, u);
@@ -1005,7 +1018,7 @@ export function flagDwelling(game: Game, s: PlayerSession, id: string): string |
   if (!l || !s.ship) return 'Nothing here';
   const why = flagWhy(game, s, l);
   if (why) return why;
-  if (dist(l.x, l.y, s.ship.state.x, s.ship.state.y) > LAIR_CARD_R + 200) return 'Come in to the shore: within the boats’ reach.';
+  if (!inReach(game, s, l)) return lairApproach(game, s, l);
   const was = S.store.dw[l.id];
   const u = LAIRS[l.kind].mix[0][0];
   S.store.dw[l.id] = { owner: s.accountId, name: s.name, pool: dwellGrowth(u), w: thisWeek(game) };
