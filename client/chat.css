@@ -1,5 +1,5 @@
 /* GRAVETIDE · the players' chat (docs/28; owner, 2026-10-11: «чат должен на мобилке быть удобный, его надо какой-то
-   иконкой открывать-закрывать, чтобы uix не рушился»). Loaded after fit.css.
+   иконкой открывать-закрывать, чтобы uix не рушился»). Loaded just before fit.css (which keeps no chat rules).
    - A round brass button with the unread (a count for private words, the group and the guild; a dot for the world)
      opens and closes the sheet; a short line beside it tells private words, the group's and the guild's while it is shut.
    - A phone held sideways (520 px tall or less): the sheet slides over the right side, the full height, at most 46 % of
@@ -83,7 +83,7 @@ button.cl-face { cursor: pointer; touch-action: manipulation; }
 #hud-chat .cl-body { flex: 1 1 auto; min-width: 0; }
 #hud-chat .cl-head { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 5px; row-gap: 0; min-width: 0; line-height: 1.25; }
 #hud-chat .cl-name { min-width: 0; overflow-wrap: anywhere; font: 600 var(--chat-fs) var(--sans); }
-body:not(.touch) #hud-chat .cl-name[data-nick] { cursor: pointer; }
+body:not(.touch) #hud-chat .cl-name[data-nick] { cursor: pointer; padding: calc(var(--chat-tap) / 2 - 7px) 0; margin: calc(7px - var(--chat-tap) / 2) 0; }
 body:not(.touch) #hud-chat .cl-name[data-nick]:hover { text-decoration: underline; }
 #hud-chat .cl-g { color: #9fc3e8; font: 600 var(--chat-fs-s) var(--sans); }
 #hud-chat .cl-lv, #hud-chat .cl-to { flex: none; font-size: var(--chat-fs-s); font-style: normal; color: var(--fog); white-space: nowrap; }
@@ -130,8 +130,8 @@ body:not(.touch) #hud-chat .cl-name[data-nick]:hover { text-decoration: underlin
 #hud-chat #chat-emotes { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; display: flex; flex-direction: column; gap: 4px; max-height: 100%; padding: 4px; box-sizing: border-box; background: rgba(10, 9, 8, 0.97); border: 1px solid rgba(111, 90, 56, 0.55); border-radius: 3px; overflow: hidden; }
 #hud-chat #chat-emotes.hidden { display: none; }
 #hud-chat .eg-tabs { display: flex; gap: 4px; flex: none; }
-#hud-chat .eg { display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex: 1 1 0; min-width: 0; min-height: var(--chat-tap); padding: 0 4px; box-sizing: border-box; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(111, 90, 56, 0.4); border-radius: 3px; color: var(--fog); font: 600 var(--chat-fs-s) var(--sans); cursor: pointer; white-space: nowrap; }
-#hud-chat .eg.on { flex: 2 0 auto; color: var(--gold); border-color: var(--brass); background: rgba(232, 196, 106, 0.1); }
+#hud-chat .eg { display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex: 1 0 var(--chat-tap); min-width: var(--chat-tap); min-height: var(--chat-tap); padding: 0 4px; box-sizing: border-box; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(111, 90, 56, 0.4); border-radius: 3px; color: var(--fog); font: 600 var(--chat-fs-s) var(--sans); cursor: pointer; white-space: nowrap; }
+#hud-chat .eg.on { flex: 3 0 auto; color: var(--gold); border-color: var(--brass); background: rgba(232, 196, 106, 0.1); }
 #hud-chat .eg:not(.on) .eg-l { display: none; }
 #hud-chat .eg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--chat-tap), 1fr)); gap: 3px; min-height: 0; overflow: hidden; }
 #hud-chat .eg-grid button, #hud-chat #chat-suggest button { display: inline-flex; align-items: center; justify-content: center; min-width: var(--chat-tap); height: var(--chat-tap); padding: 0; background: rgba(255, 255, 255, 0.03); border: 1px solid transparent; border-radius: 3px; cursor: pointer; touch-action: manipulation; }

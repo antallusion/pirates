@@ -173,8 +173,8 @@ export const SCREENS = [
   // the private tab (the world's lines come with the history on coming aboard)
   { id: 'chat', root: '#hud-chat', open: async (p) => { await close(p); await sheetGone(p); await p.evaluate(() => { const c = globalThis.gravetide.hud.chatPanel; c.open(false); c.pick('world'); }); return visible(p, '#chat.open', 3000); },
     after: async (p) => { await click(p, '#chat-close'); } },
-  { id: 'chat:emotes', root: '#hud-chat', open: async (p) => { await close(p); await sheetGone(p); await p.evaluate(() => { const c = globalThis.gravetide.hud.chatPanel; c.open(false); c.pick('world'); }); await click(p, '#chat-emote-btn'); return visible(p, '#chat-emotes', 3000); },
-    after: async (p) => { await click(p, '#chat-emote-btn'); await click(p, '#chat-close'); } },
+  { id: 'chat:emotes', root: '#hud-chat', open: async (p) => { await close(p); await sheetGone(p); await p.evaluate(() => { const c = globalThis.gravetide.hud.chatPanel; c.open(false); c.pick('world'); }); if (await p.evaluate(() => document.getElementById('chat-emotes').classList.contains('hidden'))) await click(p, '#chat-emote-btn'); return visible(p, '#chat-emotes', 3000); },
+    after: async (p) => { await click(p, '#chat-close'); } },
   { id: 'chat:card', root: '#hud-chat', open: async (p) => { await close(p); await sheetGone(p); await p.evaluate(() => { const c = globalThis.gravetide.hud.chatPanel; c.open(false); c.pick('world'); }); if (!(await click(p, '#chat-log button.cl-face'))) return false; return visible(p, '#chat-card', 3000); },
     after: async (p) => { await click(p, '#chat-card [data-act="close"]'); await click(p, '#chat-close'); } },
   { id: 'chat:dm', root: '#hud-chat', open: async (p) => { await close(p); await sheetGone(p); await p.evaluate(() => { const c = globalThis.gravetide.hud.chatPanel; c.open(false); c.pick('dm'); }); return visible(p, '#chat.open', 3000); },
