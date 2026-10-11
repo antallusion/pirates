@@ -22,6 +22,7 @@ import { beatAngle } from './npc.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { onboardingProtected } from './onboarding.ts';
+import { pursuitOf } from './pursuit.ts';
 
 const DEG = Math.PI / 180;
 /** Never 100 m nearer her mark in this many seconds: she is going round something, not to her mark (a beat to
@@ -52,6 +53,62 @@ export interface AutoSail {
 }
 
 const runs = new WeakMap<ShipEntity, AutoSail>();
+
+// ux2 (owner, 2026-10-11: «вообще нужно максимум автоматизировать все»): a course broken off by a fight — a hostile sail
+// in range, a shot, a storm — is not lost. The helmsman keeps her mark and takes the wheel again by himself once the sea
+// has been quiet RESUME_CALM seconds (no hostile sail near, no shot either way, no storm) and her own hand has been off
+// the wheel as long; within RESUME_WINDOW of the break. Her own stop on the pill, a new mark, port, a weak hull or her
+// ship lost drop it.
+/** How long after the break a course may still be taken up again (seconds of the sea's clock). */
+export const RESUME_WINDOW = 300;
+/** The quiet (no danger, her hand off the wheel) before the helmsman takes it again. */
+export const RESUME_CALM = 5;
+/** What she is told when he does (translated on the client). */
+export const RESUME_WORDS = 'The sea is quiet again: the helmsman takes her on to her mark.';
+/** The reasons a course is only broken off, not ended. */
+const RESUMABLE: ReadonlySet<AutosailStop> = new Set(['hostile', 'attack', 'storm']);
+
+interface Paused {
+  x: number;
+  y: number;
+  sail: number;
+  arrive?: number;
+  at: number;
+  calm: number | null;
+}
+const paused = new WeakMap<ShipEntity, Paused>();
+/** When her own hand last turned the wheel with nobody else at it. */
+const helmAt = new WeakMap<ShipEntity, number>();
+
+/** The course broken off by a fight and waiting to be taken up again, if any (tests, the HUD). */
+export function pausedCourse(ship: ShipEntity | null | undefined): { x: number; y: number; at: number } | null {
+  const p = ship ? paused.get(ship) : undefined;
+  return p ? { x: p.x, y: p.y, at: p.at } : null;
+}
+
+/** Each tick for a captain with no helmsman at the wheel: a broken-off course taken up again once the sea is quiet. */
+function stepResume(game: Game, s: PlayerSession, ship: ShipEntity): void {
+  const p = paused.get(ship);
+  if (!p) return;
+  if (!ship.alive || ship.docked || s.disconnectedAt !== null || game.now - p.at > RESUME_WINDOW || pursuitOf(ship)) {
+    paused.delete(ship);
+    return;
+  }
+  // (since RESUME_CALM ago: a shot or a hit in the last seconds is still the fight)
+  const why = autosailDanger(game, s, ship, game.now - RESUME_CALM);
+  if (why === 'hull' || why === 'lost' || why === 'helm' || why === 'port' || why === 'reef') {
+    paused.delete(ship);
+    return;
+  }
+  if (why || game.now - (helmAt.get(ship) ?? -Infinity) < RESUME_CALM) {
+    p.calm = null;
+    return;
+  }
+  p.calm ??= game.now;
+  if (game.now - p.calm < RESUME_CALM) return;
+  paused.delete(ship);
+  if (startAutosail(game, s, p.x, p.y, p.sail, p.arrive) === null) game.sendTo(s, { t: 'toast', msg: RESUME_WORDS, kind: 'info' });
+}
 
 export function autosailOf(ship: ShipEntity | null | undefined): AutoSail | null {
   return ship ? runs.get(ship) ?? null : null;
@@ -155,6 +212,7 @@ export function startAutosail(game: Game, s: PlayerSession, x: number, y: number
     stuck: { x: ship.state.x, y: ship.state.y, t: game.now }, replans: 0, ...(arrive !== undefined ? { arrive } : {}),
   };
   runs.set(ship, run);
+  paused.delete(ship);
   ship.input = { rudder: 0, sailTarget: SAIL_STEPS[idx] };
   send(game, s, run);
   return null;
@@ -163,7 +221,12 @@ export function startAutosail(game: Game, s: PlayerSession, x: number, y: number
 /** The wheel back to the captain, with the reason. */
 export function stopAutosail(game: Game, s: PlayerSession, why: AutosailStop): void {
   const ship = s.ship;
-  if (!ship || !runs.has(ship)) return;
+  if (!ship) return;
+  const run = runs.get(ship);
+  // broken off by a fight: kept to be taken up again (stepResume); any other end drops a course kept so
+  if (run && RESUMABLE.has(why)) paused.set(ship, { x: run.x, y: run.y, sail: run.sail, ...(run.arrive !== undefined ? { arrive: run.arrive } : {}), at: game.now, calm: null });
+  else paused.delete(ship);
+  if (!run) return;
   runs.delete(ship);
   ship.input = { rudder: 0, sailTarget: ship.input.sailTarget };
   send(game, s, null, why);
@@ -173,7 +236,10 @@ export function stopAutosail(game: Game, s: PlayerSession, why: AutosailStop): v
  *  sail) is swallowed; any turn of the wheel or change of sail takes it back. True when the input is swallowed. */
 export function autosailInput(game: Game, s: PlayerSession, rudder: number, sail: number): boolean {
   const run = autosailOf(s.ship);
-  if (!run) return false;
+  if (!run) {
+    if (s.ship && rudder !== 0) helmAt.set(s.ship, game.now);
+    return false;
+  }
   if (rudder === 0 && Math.round(sail) === run.sail) return true;
   stopAutosail(game, s, 'manual');
   return false;
@@ -259,7 +325,11 @@ export function stepAutosail(game: Game): void {
   for (const s of game.sessions) {
     const ship = s.ship;
     const run = autosailOf(ship);
-    if (!ship || !run) continue;
+    if (!ship) continue;
+    if (!run) {
+      stepResume(game, s, ship);
+      continue;
+    }
     if (s.disconnectedAt !== null) {
       stopAutosail(game, s, 'off');
       continue;

@@ -1390,7 +1390,7 @@ export class Hud {
       g.font = '700 11px Inter, sans-serif';
     }
     // The followed quest's goal (docs/11 P6): a gold diamond on the chart, or at the rim toward it.
-    const qp = questPointer(trackedQuest(self?.quests), own.x, own.y, state.region);
+    const qp = questPointer(trackedQuest(self?.quests, own), own.x, own.y, state.region);
     if (qp) {
       const dx = qp.x - own.x, dy = qp.y - own.y;
       const inside = Math.hypot(dx, dy) * k < W / 2 - 8;

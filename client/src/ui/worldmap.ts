@@ -249,6 +249,8 @@ export class WorldMap {
   onAutosail: ((wp: { x: number; y: number }) => void) | null = null;
   /** The Grail's chart (docs/17 H4), once an obelisk is read. */
   onPuzzle: (() => void) | null = null;
+  /** ux2: «Плыть» on a quest or a task of the sea — the course there and on through a quest's steps (main.ts). */
+  onGoal: ((key: string) => void) | null = null;
 
   /** Set by the shell: a message to the server (sharing a quest with the group). */
   send: ((m: ClientMsg) => void) | null = null;
@@ -272,7 +274,7 @@ export class WorldMap {
   }
 
   open(root: HTMLElement, state: ClientState): void {
-    const tracked = trackedQuest(state.self?.quests)?.id;
+    const tracked = trackedQuest(state.self?.quests, state.ownDisplay)?.id;
     const inGroup = (state.party?.members.length ?? 0) > 1;
     // docs/23 item 73: the layers as chips of the band; a tap on the chart puts her mark there (on a port, the port)
     // and «Плыть туда» comes up big under it.
@@ -286,7 +288,7 @@ export class WorldMap {
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas><div class="map-wp-acts">${this.onAutosail ? `<button type="button" class="k-btn k-btn--primary k-btn--lg map-wp-sail${waypoint() && !state.self?.dockedAt ? '' : ' hidden'}" data-hint="${esc(W('map.sailHint'))}" title="${esc(EL('as_goTitle'))}">${icon('stat_sails', '⛵', 'k-btn-ico')}<span class="k-btn-l">${esc(W('map.sail'))}</span><small class="map-wp-name">${esc(this.markLabel())}</small></button>` : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'k-btn-ico')}<span class="k-btn-l">${esc(L('wp.clear'))}</span></button>${this.onPuzzle && ((state.adv?.pieces ?? 0) > 0 || state.adv?.grail === 'held') ? `<button type="button" class="k-btn k-btn--secondary k-btn--md map-pz">${icon('map_treasure', '', 'k-btn-ico')}<span class="k-btn-l">${esc(H4L('puzzle.btn'))}</span></button>` : ''}</div>
       <details class="map-legend"${localStorage.getItem(LEGEND_KEY) === '1' ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span><span><b style="color:#cdb98a;font-weight:400">●</b>&nbsp;${LI('tide.legend')}</span><span><b style="color:#d0503a;font-weight:400">▲</b>&nbsp;${LI('look.legend')}</span><span><b style="color:#f5c77a;font-weight:400">✶</b>&nbsp;${LI('light.legend')}</span><span>${icon('map_treasure', '', 'ico')}${LI('cache.chart')}</span><span><b style="color:#e8ce78;font-weight:400">◆</b>&nbsp;${LROAM('lg')}</span>${socialLegend()}${heroLegend()}${isleLegend()}</div></details></div>
       <div class="map-logs">${zoneHint(state)}${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
-      ${invasionLog(state.self?.invasion)}${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${worldGoalsLog(state)}${lfgLog(state)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
+      ${invasionLog(state.self?.invasion)}${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${worldGoalsLog(state)}${lfgLog(state)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${q.target && this.onGoal ? `<button type="button" class="btn btn-small btn-primary mq-sail" data-qsail="q:${esc(q.id)}" title="${esc(W('map.sailHint'))}">${icon('stat_sails', '', 'ico-sm')}${esc(W('map.sail'))}</button>` : ''}${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
     root.querySelectorAll<HTMLElement>('[data-mlayer]').forEach((b) => (b.onclick = () => {
       this.layers = toggleLayer(this.layers, b.dataset.mlayer as MapLayer);
       try { localStorage.setItem(LAYERS_KEY, JSON.stringify([...this.layers])); } catch { /* no storage */ }
@@ -311,10 +313,13 @@ export class WorldMap {
       root.querySelector('.map-wp-sail')?.classList.toggle('hidden', !!state.self?.dockedAt);
       this.draw(state);
     }));
-    // A task of the sea in the log: the chart turns to its nest.
+    // A task of the sea in the log: the chart turns to its nest; a second tap on it (ux2) — the course there.
     root.querySelectorAll<HTMLElement>('[data-task]').forEach((b) => (b.onclick = () => {
       const t = state.tasks.find((x) => x.id === Number(b.dataset.task));
       if (!t) return;
+      if (b.classList.contains('picked') && !t.done && this.onGoal) return this.onGoal(`t:${t.id}`);
+      root.querySelectorAll('.mq-row.task.picked').forEach((r) => r.classList.remove('picked'));
+      b.classList.add('picked');
       this.cx = t.x;
       this.cy = t.y;
       this.zoom = Math.max(this.zoom, 4);
@@ -329,6 +334,8 @@ export class WorldMap {
       this.zoom = Math.max(this.zoom, 4);
       this.draw(state);
     }));
+    // ux2: «Плыть» on a quest — the course to its place, on through its steps; the chart shuts.
+    root.querySelectorAll<HTMLElement>('[data-qsail]').forEach((b) => (b.onclick = () => this.onGoal?.(b.dataset.qsail!)));
     // Share a quest with the group: each groupmate who may take it is asked.
     root.querySelectorAll<HTMLElement>('[data-share]').forEach((b) => (b.onclick = () => this.send?.({ t: 'quest', action: 'share', id: b.dataset.share! })));
     // docs/19 E16: «Проложить курс» to where the Choir comes — her mark there, and the helmsman takes her.

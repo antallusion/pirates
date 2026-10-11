@@ -158,6 +158,11 @@ export interface Settings {
   autoWeak: boolean;
   /** docs/23 item 42: the expert's hand — held broadsides, the fire order and the chasers by hand. */
   expertGuns: boolean;
+  /** ux2 (owner, 2026-10-11): the depart window's «Докупить всё» remembered — casting off buys what the voyage lacks
+   *  without the window when the purse covers all of it. Off by default (the owner asked for a window, not auto-buy). */
+  autoTopUp: boolean;
+  /** ux2: casting off with a followed quest that has a place, the helmsman sets the course to it by himself. */
+  autoGoal: boolean;
   /** «Подробный интерфейс» (owner, 2026-10-07): the older full HUD — the bar of shots and abilities, the gauges, the
    *  column of round buttons, the compass, the ship's plate, the chart's lines. Off: one simple sea HUD for every input
    *  (body.simple). */
@@ -192,7 +197,7 @@ export function defaults(): Settings {
   return {
     uiScale: 1, density: 'normal', firstHints: true, shipVoices: true, textScale: 1, hudAlpha: 0.65, colorblind: 'off', highContrast: false, plainFont: false, lanternMarks: false,
     reduceFlashes: false, screenShake: true, vibrate: true, lanternFlicker: true, reduceMotion: false, effects: 'auto', webgl: true,
-    plainTerms: false, classicBoarding: false, autoFire: coarse(), autoWeak: true, expertGuns: false, expertHud: false, mmTarget: 'hide', tacConfirm: false, tacFast: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
+    plainTerms: false, classicBoarding: false, autoFire: coarse(), autoWeak: true, autoTopUp: false, autoGoal: true, expertGuns: false, expertHud: false, mmTarget: 'hide', tacConfirm: false, tacFast: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
     keys: structuredClone(CLASSIC),
   };
 }
@@ -225,6 +230,8 @@ export function sanitize(raw: Partial<Settings> | null): Settings {
   s.firstHints = s.firstHints !== false;
   s.shipVoices = s.shipVoices !== false;
   s.vibrate = s.vibrate !== false;
+  s.autoTopUp = s.autoTopUp === true;
+  s.autoGoal = s.autoGoal !== false;
   for (const k of ['master', 'sea', 'combat', 'ui', 'music'] as const) s.volume[k] = Math.min(1, Math.max(0, Number(s.volume[k]) || 0));
   return s;
 }

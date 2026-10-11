@@ -607,6 +607,19 @@ export interface Contract {
   description: string;
 }
 
+/** Where a quest's step points (docs/11 P6) and, ux2 (2026-10-11), what is done there on arrival: a place and how near
+ *  is there (`r`), or a region's heart (there once inside it); `port` — a step done by putting in at that port
+ *  (`act: 'dock'`); `island` — a party landed there (`act: 'land'`). */
+export interface QuestTarget {
+  x: number;
+  y: number;
+  r?: number;
+  region?: RegionId;
+  port?: string;
+  island?: number;
+  act?: 'dock' | 'land';
+}
+
 export interface PrivateState {
   /** The captain as a hero (docs/17 H2). */
   hero?: HeroView;
@@ -670,7 +683,7 @@ export interface PrivateState {
   /** The crew as people (docs/02 §8). */
   company: CompanyView;
   /** Quests under way (Paths, Legends, the Descent). */
-  quests: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; step: number; steps: number; text: string; progress: number; need: number; /** the ship level its fight asks for (canon D12) */ ship?: number; target?: { x: number; y: number; r?: number; region?: RegionId };
+  quests: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; step: number; steps: number; text: string; progress: number; need: number; /** the ship level its fight asks for (canon D12) */ ship?: number; target?: QuestTarget;
     /** For the journal: the giver's words, every step's text, the pay, the giver's face, the job's kind. */
     summary?: string; stepTexts?: string[]; silver?: number; xp?: number; portrait?: string; category?: string;
     /** seconds left to earn the speed bonus */ fastIn?: number;

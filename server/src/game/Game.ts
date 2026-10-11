@@ -68,7 +68,7 @@ import type {
   PrivateState,
 } from '../../../shared/src/protocol.ts';
 import { SF, STATIONS, curseStage } from '../../../shared/src/protocol.ts';
-import type { FrontWarn } from '../../../shared/src/protocol.ts';
+import type { FrontWarn, QuestTarget } from '../../../shared/src/protocol.ts';
 import { buildSites, buyRights, ownSiteNear, siteView, tickSites, warehouseAction } from './resources.ts';
 import type { ResourceSite } from './resources.ts';
 import {
@@ -242,7 +242,7 @@ import { sagaNote, shareSaga } from './saga.ts';
 import { logNote } from './captainlog.ts';
 import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
 import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
-import { installLairHooks, landFighting, landTac, lairMessage, lairPrompt, resendLandFight, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
+import { installLairHooks, landFighting, landTac, lairList, lairMessage, lairPos, lairPrompt, lairUp, resendLandFight, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
 import { installSealHooks, sealView } from './seals.ts'; // docs/19 E9
 import { installTitanHooks } from './titans.ts'; // docs/19 E10
 import { raidView, stepAbyssRaid } from './abyssraid.ts'; // docs/19 E11
@@ -1643,20 +1643,74 @@ export class Game {
     return Object.keys(out).length ? out : undefined;
   }
 
-  private questTargets(p: Profile): Record<string, { x: number; y: number; r?: number; region?: RegionId }> {
-    const out: Record<string, { x: number; y: number; r?: number; region?: RegionId }> = {};
+  /** ux2 (owner, 2026-10-11: «после взятия квеста должна быть метка куда плыть, нажатие на эту метку корабль начинает
+   *  плавание до места»): besides the place, what is done there on arrival — `port` (a step done by putting in: the
+   *  client docks her when the helmsman brings her in) or `island` with `act: 'land'` (a party landed there); a lair's
+   *  step points at its lair (the nearest one standing, when the step names none), a dive at the nearest wreck her
+   *  divers can reach. */
+  questTargets(s: PlayerSession): Record<string, QuestTarget> {
+    const p = s.profile!;
+    const ship = s.ship;
+    const out: Record<string, QuestTarget> = {};
     for (const qs of p.quests.active) {
       const st = QUESTS_BY_ID[qs.id]?.steps[qs.step];
       if (!st) continue;
       let at: { x: number; y: number } | null = null;
       let r = 400;
       let region: RegionId | undefined;
-      if (st.type === 'visit' || st.type === 'deliver' || st.type === 'pickup') at = this.portById(st.port) ?? null;
-      else if (st.type === 'sell_contraband' && st.port) at = this.portById(st.port) ?? null;
+      let port: string | undefined;
+      let island: number | undefined;
+      let act: 'dock' | 'land' | undefined;
+      // a step done by putting in at a port
+      const atPort = (id: string | undefined) => {
+        const pt = id ? this.portById(id) : undefined;
+        if (!pt) return;
+        at = pt;
+        port = pt.id;
+        act = 'dock';
+      };
+      if (st.type === 'visit' || st.type === 'deliver' || st.type === 'pickup' || st.type === 'race' || st.type === 'landres') atPort(st.port);
+      else if (st.type === 'sell_contraband' && st.port) atPort(st.port);
       else if (st.type === 'land') {
         const is = this.world.islands[st.island];
         at = is ?? null;
-        if (is) r = is.radius + 300;
+        if (is) {
+          r = is.radius + 300;
+          island = st.island;
+          act = 'land';
+        }
+      } else if (st.type === 'lair') {
+        // its lair on the island the step names, else the nearest of its kind (or any) still standing
+        const from = ship ? ship.state : this.portById(QUESTS_BY_ID[qs.id].port) ?? null;
+        let best: { x: number; y: number } | null = null, bd = Infinity;
+        for (const l of lairList(this)) {
+          if (st.island !== undefined && l.island !== st.island) continue;
+          if (st.kind && l.kind !== st.kind) continue;
+          if (!lairUp(this, l)) continue;
+          const lp = lairPos(this, l);
+          const d = from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0;
+          if (d < bd) [best, bd] = [lp, d];
+        }
+        if (!best && st.island !== undefined && this.world.islands[st.island]) best = this.world.islands[st.island];
+        if (best) {
+          at = best;
+          r = 260;
+          if (st.island !== undefined) island = st.island;
+        }
+      } else if (st.type === 'dive' && ship) {
+        // the nearest wreck her divers can go down to now; else the nearest not stripped lately (a deeper bell wanted)
+        let best: SunkenWreck | null = null, bd = Infinity, deep: SunkenWreck | null = null, dd = Infinity;
+        for (const w of this.wrecks) {
+          const d = Math.hypot(w.x - ship.state.x, w.y - ship.state.y);
+          if (!canDive(this, s, w)) {
+            if (d < bd) [best, bd] = [w, d];
+          } else if (this.now - (p.explore.dived[w.id] ?? -1e9) >= 7200 && d < dd) [deep, dd] = [w, d];
+        }
+        best ??= deep;
+        if (best) {
+          at = best;
+          r = 120;
+        }
       } else if (st.type === 'sink' && qs.leader !== undefined && this.ships.get(qs.leader)?.alive) {
         // A hunt's leader: the pointer follows his ship.
         const l = this.ships.get(qs.leader)!;
@@ -1674,7 +1728,8 @@ export class Game {
         at = { x, y };
         region = st.region;
       }
-      if (at) out[qs.id] = { x: Math.round(at.x), y: Math.round(at.y), ...(region ? { region } : { r: Math.round(r) }) };
+      const spot = at as { x: number; y: number } | null;
+      if (spot) out[qs.id] = { x: Math.round(spot.x), y: Math.round(spot.y), ...(region ? { region } : { r: Math.round(r) }), ...(port ? { port } : {}), ...(island !== undefined ? { island } : {}), ...(act ? { act } : {}) };
     }
     return out;
   }
@@ -1692,7 +1747,7 @@ export class Game {
       homeIsle: ownIsland(this, s.accountId)?.island ?? null,
       isleRaid: raidPointer(this, s),
       claimIsle: claimPrompt(this, s),
-      questTargets: this.questTargets(p),
+      questTargets: this.questTargets(s),
       questMates: this.questMates(s),
       questXp: Object.fromEntries(p.quests.active.map((a) => [a.id, QUESTS_BY_ID[a.id] ? questXpOf(this, p, QUESTS_BY_ID[a.id]) : 0])),
       common: commonView(this, s.accountId),

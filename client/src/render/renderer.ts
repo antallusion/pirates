@@ -313,6 +313,10 @@ export class Renderer {
   private camBase = { x: 0, y: 0 };
   /** Her mark within the close fight's band (her gun captains fire) or not yet: the word under its ring (main.ts). */
   markRange: 'in' | 'far' | null = null;
+  /** ux2: the goal a course is run to (main.ts, goalrun.ts) — its beacon leads instead of the «Now:» line's. */
+  goal: { x: number; y: number } | null = null;
+  /** Where the goal's beacon or its arrow on the screen's edge was drawn this frame (a tap there sails her to it). */
+  goalMark: { x: number; y: number; r: number } | null = null;
   time = 0;
   mouseX = 0;
   mouseY = 0;
@@ -563,6 +567,7 @@ export class Renderer {
     this.hudBand(); // the HUD's blocks, measured: the names keep out of them
     for (const s of [...ships].filter((x) => !x.own).sort((a, b) => b.y - a.y)) this.drawLabel(s, state, aim.boardTarget === s.id, aim.target === s.id);
     if (own) this.drawThreatMarks(ships, own);
+    this.goalMark = null;
     if (own) this.drawQuestMark(state, own);
     this.drawTexts();
     this.drawVignette(state.fog, night);
@@ -2938,9 +2943,9 @@ export class Renderer {
    *  the way with the range — gone once there (inside the region, or near the port or island). */
   private drawQuestMark(state: ClientState, own: SailState): void {
     // The HUD's «Now:» — the followed quest, a contract's port, the nearest sign: one gold mark leads there.
-    const o = objective(state, own.x, own.y);
-    if (!o || o.x === undefined || o.y === undefined || o.d === undefined || o.d < 150) return;
-    const p = { x: o.x, y: o.y, d: o.d };
+    const og = this.goal ? { x: this.goal.x, y: this.goal.y, d: Math.hypot(this.goal.x - own.x, this.goal.y - own.y) } : objective(state, own.x, own.y);
+    if (!og || og.x === undefined || og.y === undefined || og.d === undefined || og.d < 150) return;
+    const p = { x: og.x, y: og.y, d: og.d };
     const g = this.g;
     const gold = '#d9b25a';
     const px = this.sx(p.x), py = this.sy(p.y);
@@ -2962,6 +2967,7 @@ export class Renderer {
       g.fill();
       this.medallion(px, py, 12, 'icon.goal', gold);
       g.restore();
+      this.goalMark = { x: px, y: py, r: 30 }; // ux2: a finger's width round the beacon
       return;
     }
     // Out of sight: on the screen's edge like the threat marks, clear of the HUD and of them.
@@ -2983,6 +2989,13 @@ export class Renderer {
     g.fillStyle = 'rgba(240,226,190,0.95)';
     g.fillText(label, -Math.cos(a) * 27, -Math.sin(a) * 27);
     g.restore();
+    this.goalMark = { x, y, r: 32 }; // ux2: the arrow on the edge, a finger's width round it
+  }
+
+  /** ux2: a tap on the goal's beacon or its arrow on the screen's edge (screen pixels). */
+  goalHit(px: number, py: number): boolean {
+    const m = this.goalMark;
+    return !!m && Math.hypot(px - m.x, py - m.y) <= m.r;
   }
 
   private drawAim(state: ClientState, own: SailState, aim: { side: 'port' | 'starboard' | null; dist: number; chaser: 'bow' | 'stern' | null; charge?: { side: 'port' | 'starboard'; held: number } | null }, ships: DrawShip[]): void {

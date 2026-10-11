@@ -4,7 +4,8 @@
    было бы взаимодействовать. может просто резиновый дизайн сделать»).
    Loaded last (index.html). A phone held sideways — a screen 520 px tall or less — gets fluid phone sizes: one unit
    --u grows from 0 at a 270 px tall screen to 1 px at 360 px and over, and every size below is a calc() on it — taps
-   32 → 36–38 px, text 10–10.5 → 12.5 px, headings 13.5 → 16.5 px, paddings 4 → 8 px. Windows take the whole screen;
+   32 → 36–38 px, text 9 → 10 px, headings 12 → 13–14 px (ux2, 2026-10-11; 10.5–12.5 and 13.5–16.5 px before), paddings
+   4 → 8 px. Windows take the whole screen;
    what would still scroll is laid out in pages (kit/fit.ts). Measured by tools/mobile/fit/audit.mjs at 480×270 …
    915×412; the desk and the tablet keep their own sizes. */
 
@@ -16,11 +17,20 @@
     --f-btn2: calc(32px + 8 * var(--u));
     --f-tab: calc(36px + 8 * var(--u));
     --f-head: calc(32px + 8 * var(--u));
-    --f-fs: calc(10.5px + 2 * var(--u));
-    --f-fs-s: calc(10px + 1 * var(--u));
-    --f-fs-m: calc(11px + 2 * var(--u));
-    --f-fs-h: calc(13.5px + 3 * var(--u));
-    --f-fs-t: calc(14.5px + 2.5 * var(--u));
+    /* ux2 (owner, 2026-10-11: «нигде не должно быть таких шрифтов на мобиле, все небольшого размера, я бы сделал 10
+       шрифт по умолчанию и даже какие-то снижал до 6-8пкс»): text 9 → 10 px, secondary 8 → 9, tiny labels 7 → 8,
+       a name in a row 9.5 → 11, headings 12 → 13, a window's title 12.5 → 14 (was 10.5–16.5 px) */
+    --f-fs: calc(9px + 1 * var(--u));
+    --f-fs-s: calc(8px + 1 * var(--u));
+    --f-fs-xs: calc(7px + 1 * var(--u));
+    --f-fs-m: calc(9.5px + 1.5 * var(--u));
+    --f-fs-h: calc(12px + 1 * var(--u));
+    --f-fs-t: calc(12.5px + 1.5 * var(--u));
+    /* the kit's own type on the same scale everywhere on a phone (the sea's HUD, the sheets, the cards) */
+    --k-fs-1: var(--f-fs-s);
+    --k-fs-2: var(--f-fs);
+    --k-fs-3: var(--f-fs-m);
+    --k-fs-4: var(--f-fs-h);
     --f-ico: calc(18px + 4 * var(--u));
     --f-gap: calc(3px + 3 * var(--u));
     --f-pad: calc(4px + 4 * var(--u));
@@ -511,4 +521,88 @@
 @media (max-height: 520px) {
   #modal-panel[data-modal="talents"] .modal-body > :not(.tal-main):not(.fit-pager) { min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
   #modal-panel .fit-pager { display: none; }
+}
+
+/* ==================================================================== ux2 (2026-10-11): small type on a phone, taps that land
+   Owner: «в талантах гиганские шрифты, на мобиле просто ничего не видно. нигде не должно быть таких шрифтов на мобиле,
+   все небольшого размера, я бы сделал 10 шрифт по умолчанию и даже какие-то снижал до 6-8пкс»; «полукруглая обводка
+   появляется на кнопках типа ремонт и т.д. их быть не должно». */
+/* iOS (Safari, and Telegram's webview on an iPhone) blows a page's text up when the phone is turned sideways — the
+   talents' 11 px lines came out at some 20 px on the owner's iPhone: the page's own sizes are kept */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* a finger leaves no grey flash and no ring: the focus ring is the keyboard's (a desk's :focus-visible keeps its gold
+   ring); on a touch screen iOS drew it round a button the code had focused (the depart window's, a sheet's first
+   button) — a pill's ring is a half-circle at each end */
+* { -webkit-tap-highlight-color: transparent; }
+body.touch :focus, body.touch :focus-visible { outline: none !important; }
+body.touch #mm-tab:focus-visible .mm-tab-pill { box-shadow: none; }
+@media (hover: none) and (pointer: coarse) {
+  :focus, :focus-visible { outline: none !important; }
+  #mm-tab:focus-visible .mm-tab-pill { box-shadow: none; }
+}
+/* the action pills in the skin's frame: the frame is the border; no capsule ring drawn round it */
+.skinned body.touch #touch > .tc-actrow > .k-btn, body.touch.skinned #touch > .tc-actrow > .k-btn { border-radius: var(--k-r-1, 4px); }
+.skinned body.touch #touch > .tc-actrow > .tc-act2, body.touch.skinned #touch > .tc-actrow > .tc-act2 { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
+/* a window slides up quicker (320 → 120 ms): a tap as it settles lands where the finger saw the tab (a finger aimed at a
+   tab of a window still sliding came down a tab lower — the window had moved on meanwhile) */
+@media (max-height: 520px), (max-width: 699px) {
+  #modal-panel { transition-duration: 120ms; }
+}
+/* a tab is pressed, never selected as text nor held for the system's menu (a long press on iOS took the tap) */
+.w-tab, .w-chip, .tab, [role="tab"] { touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+@media (max-height: 520px) {
+  /* headings of a page and of a card: 12–13 px (15–20 px before) */
+  #modal-panel :is(h3, h4, h5, .card-h, .tree-h, .giver-name), .k-sheet :is(h3, h4, h5, .card-h) { font-size: var(--f-fs-h) !important; line-height: 1.2; }
+  /* an inline size in an older window's markup (its 18–20 px plates and lines) */
+  #modal-panel :is(h2, h3)[style*="font-size"] { font-size: var(--f-fs-h) !important; }
+  #modal-panel :is(p, span, div, b, small)[style*="font-size"] { font-size: var(--f-fs) !important; }
+  /* the names of rows and cards: 9.5–11 px (15–17 px before) */
+  #modal-panel :is(.pm-name, .th-tt > b, .cit-name > b, .fl-t b, .hx-pick-t > b, .sk-head > b, .th-bt > b, .adm-tt > b, .q-t > b, .w-wb-t > b, .lk-name, .talent-top b),
+  .k-sheet :is(.lu-t > b, .w-wb-t > b, .fl-t b) { font-size: var(--f-fs-m) !important; }
+  /* figures once shown big — a pack's doubloons, a medal's count, a rank, a level, the hands of a trade: a heading's size */
+  #modal-panel :is(.pm-pack-n, .th-medal b, .rn-rank, .hx-lv, .prof-n) { font-size: var(--f-fs-h) !important; }
+  #modal-panel .pm-price .dbl { font-size: var(--f-fs-m) !important; }
+  /* the talents' lines and the rules under them: the body's size (they were 11–12 px fixed) */
+  #modal-panel .talent small, #modal-panel .tal-loadout, #modal-panel .tal-loadout .muted, #modal-panel .tal-rules, #modal-panel .tree .motto, #modal-panel .motto { font-size: var(--f-fs-s); }
+  #modal-panel .talent { font-size: var(--f-fs); }
+  /* the prologue's three lines and the title screen's buttons */
+  #prologue p { font-size: var(--f-fs-h); line-height: 1.35; }
+  #screen-login .login-panel #login-form .btn-primary, #screen-login .login-panel .btn { font-size: var(--f-fs-m); }
+  /* the boarding's chips and its end */
+  .tb-rb > i.tb-x2 { font-size: var(--f-fs); }
+  .tb-end .tb-bsc > b, .tb-end.sea .tb-bsc > b, .tb-end.land .tb-bsc > b { font-size: var(--f-fs-t) !important; }
+  .enc-h { font-size: var(--f-fs-m); }
+}
+
+/* ux2: every word of a window's page and of a sheet on the phone's scale — the older windows set their own sizes in px
+   (12–14 px names, 11–13 px lines: 1 800 words over 10.5 px at 844×390): the names and figures 9.5–11 px, the lines 9–10,
+   the small and muted 8–9, a section's label 9.5–11. The fit's own rules for a part (#modal-panel .card p, the talents',
+   the depart window's…) are more particular and stay; the badges, tags, chips and keys keep their sizes. */
+@media (max-height: 520px) {
+  :is(#modal-panel .modal-body, #modal-panel #company-body, .k-sheet-body, #advcard, #lairchest, #board-offer, #encounter, #surrender) :where(span, p, li, label, dd, dt, div, output, td, th, summary):not(.k-badge, .rose-pts, .tag, .chip, .key, .pips, .hx-dot, .tier-label, .k-btn-l, .w-chip-l, .w-tab-l, .money, .dbl) { font-size: var(--f-fs); }
+  :is(#modal-panel .modal-body, #modal-panel #company-body, .k-sheet-body, #advcard, #lairchest, #board-offer, #encounter, #surrender) :where(b, strong, .money, .dbl, .stat-v, .gi-name, .pm-name, .po-name, .xpv):not(.k-badge, .rose-pts, .tag, .chip, .key) { font-size: var(--f-fs-m); }
+  :is(#modal-panel .modal-body, #modal-panel #company-body, .k-sheet-body, #advcard, #lairchest, #board-offer, #encounter, #surrender) :where(small, .muted, .sub, .hint, .hx-note, .w-sub):not(.k-badge, .tag, .chip, .key) { font-size: var(--f-fs-s); }
+  :is(#modal-panel .modal-body, #modal-panel #company-body, .k-sheet-body, #advcard, #lairchest, #board-offer, #encounter, #surrender) :where(.gi-h, .giver-h, .enc-h, .fp-head > b, .bo-h > b):not(.k-badge) { font-size: var(--f-fs-m); }
+  /* the band's line under a window's name, the boarding card's figures */
+  #modal-panel .w-head .w-sub { font-size: var(--f-fs-s); }
+  .tb-cardsh .tb-stats b, .tb-card-h b { font-size: var(--f-fs-m); }
+  /* the menu's tiles, a figure shown big (a rank, a seal, the raid's rounds, a primary skill) */
+  #modal-panel[data-modal="menu"] .menu-tile > span { font-size: var(--f-fs-m); }
+  #modal-panel :is(.th-rt > b, .hx-pv, .th-branch .card-h > span:first-of-type, .adm-board .card-h > span) { font-size: var(--f-fs-h) !important; }
+}
+@media (max-height: 520px) {
+  /* the looks' chips and the toasts' lines on the same scale */
+  #modal-panel .lk-chip { font-size: var(--f-fs); }
+  #toasts .toast, #modal-toasts .toast { font-size: var(--f-fs); }
+}
+/* the depart window's «Всегда докупать»: in its head line, right of the purse's word, a finger tall */
+.depart-panel .dp-always { margin: 4px 0 0; min-height: 32px; display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; font-size: 12px; color: var(--fog, #9aa3a8); cursor: pointer; }
+.depart-panel .dp-always input { width: 16px; height: 16px; margin: 0; flex: none; accent-color: var(--gold, #d8b45c); }
+@media (max-height: 520px) {
+  .depart-panel .dp-always { margin: 0 0 0 auto; min-height: var(--f-tap); align-self: center; font-size: var(--f-fs-s); }
+}
+@media (max-height: 520px) {
+  /* a window's fields on the same scale (the page has maximum-scale=1: iOS does not zoom into a field under 16 px) */
+  #modal-panel :is(input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea) { font-size: var(--f-fs-m); }
 }

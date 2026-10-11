@@ -39,7 +39,7 @@ import type { TalentRanks } from '../../../shared/src/data/talents.ts';
 import { totalPointsSpent } from '../../../shared/src/data/talents.ts';
 import { MAX_LEVEL, talentPointsForLevel, xpForLevel } from '../../../shared/src/constants.ts';
 import { MAX_COUNTED_DEEDS } from '../../../shared/src/data/deeds.ts';
-import type { BoardingResult, ClientMsg, Contract, PrivateState, ResourceSiteView, TradeRunView } from '../../../shared/src/protocol.ts';
+import type { BoardingResult, ClientMsg, Contract, PrivateState, QuestTarget, ResourceSiteView, TradeRunView } from '../../../shared/src/protocol.ts';
 import type { AmmoStock, Cargo, ShipLoadout } from '../../../shared/src/sim/shipstats.ts';
 import type { GameConn } from '../net/conn.ts';
 import type { ShipEntity } from './ship.ts';
@@ -533,7 +533,7 @@ export interface WorldView {
   abyss?: PrivateState['abyss'];
   pvp?: PrivateState['pvp'];
   /** Where each active quest's current step points (a port, an island, a region's middle). */
-  questTargets?: Record<string, { x: number; y: number; r?: number; region?: RegionId }>;
+  questTargets?: Record<string, QuestTarget>;
   /** The sea's common cause today and this captain's part in it (docs/11 P6). */
   common?: PrivateState['common'];
   /** docs/19 E16: the Choir's invasion and the black tides (invasions.ts invasionView). */

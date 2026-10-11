@@ -12,8 +12,10 @@ import { dict } from '../i18n.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
 import { chipRow, winHead } from './kit/window.ts';
 import { tgDeepLink, tgLinked, tgSettingsButton } from '../tg.ts'; // «Привязать Телеграм» (docs/27)
+import { EN as UX2_EN, RU as UX2_RU } from '../lang/ui/ux2.ts';
 
 const W = dict(WIN_EN, WIN_RU);
+const U2 = dict(UX2_EN, UX2_RU);
 /** The interface's sizes on the main page (uiScale). */
 export const UI_SIZES = [0.85, 1, 1.15, 1.3] as const;
 
@@ -91,7 +93,7 @@ export class OptionsScreen {
       this.render(root);
     });
     root.querySelectorAll<HTMLButtonElement>('[data-oswitch]').forEach((b) => (b.onclick = () => {
-      const k = b.dataset.oswitch as 'autoFire' | 'autoWeak';
+      const k = b.dataset.oswitch as 'autoFire' | 'autoWeak' | 'autoTopUp' | 'autoGoal';
       update({ [k]: !settings()[k] } as Partial<Settings>);
       this.render(root);
     }));
@@ -149,7 +151,7 @@ export class OptionsScreen {
   private main(s: Settings): string {
     const row = (ico: string, label: string, ctl: string, hint = '', cls = '') => `<div class="opt-row${cls ? ` ${cls}` : ''}"${hint ? ` data-hint="${esc(hint)}"` : ''}>${icon(ico, '', 'opt-ico')}<span class="opt-name">${esc(label)}</span>${ctl}</div>`;
     const vol = (k: 'master' | 'music', label: string) => `<input type="range" data-vol="${k}" min="0" max="1" step="0.05" value="${s.volume[k]}" aria-label="${esc(label)}"/><output>${Math.round(s.volume[k] * 100)}%</output>`;
-    const sw = (k: 'autoFire' | 'autoWeak', label: string) => `<button type="button" class="w-switch" role="switch" aria-checked="${s[k]}" aria-label="${esc(label)}" data-oswitch="${k}"><i aria-hidden="true"></i><span>${esc(s[k] ? W('opt.on') : W('opt.off'))}</span></button>`;
+    const sw = (k: 'autoFire' | 'autoWeak' | 'autoTopUp' | 'autoGoal', label: string) => `<button type="button" class="w-switch" role="switch" aria-checked="${s[k]}" aria-label="${esc(label)}" data-oswitch="${k}"><i aria-hidden="true"></i><span>${esc(s[k] ? W('opt.on') : W('opt.off'))}</span></button>`;
     // Each language by its own name (a language's name is not translated: the class keeps the checks off it).
     const seg = (items: [string, string, boolean][], attr: string, label: string) => `<span class="w-seg" role="group" aria-label="${esc(label)}">${items.map(([v, l, on]) => `<button type="button" class="w-chip${on ? ' on' : ''}${attr === 'olang' ? ' no-tr' : ''}" aria-pressed="${on}" data-${attr}="${esc(v)}"${attr === 'olang' ? ` lang="${esc(v)}"` : ''}>${esc(l)}</button>`).join('')}</span>`;
     const near = UI_SIZES.reduce((a, b) => (Math.abs(b - s.uiScale) < Math.abs(a - s.uiScale) ? b : a), 1 as number);
@@ -159,6 +161,8 @@ export class OptionsScreen {
       ${row('opt_lang', W('opt.lang'), seg([['ru', 'Русский', lang() === 'ru'], ['en', 'English', lang() === 'en']], 'olang', W('opt.lang')))}
       ${row('fire', W('opt.autofire'), sw('autoFire', W('opt.autofire')), W('opt.autofireHint'))}
       ${row('bt_auto', W('opt.autobattle'), sw('autoWeak', W('opt.autobattle')), W('opt.autobattleHint'))}
+      ${row('goal', U2('opt.autoGoal'), sw('autoGoal', U2('opt.autoGoal')), U2('opt.autoGoalHint'))}
+      ${row('good_provisions', U2('opt.autoTopUp'), sw('autoTopUp', U2('opt.autoTopUp')), U2('opt.autoTopUpHint'))}
       ${row('menu_options', W('opt.size'), seg(UI_SIZES.map((v) => [String(v), `${Math.round(v * 100)}%`, v === near] as [string, string, boolean]), 'osize', W('opt.size')), W('opt.sizeHint'))}
       ${row('menu_map', W('opt.mmTarget'), seg([['hide', W('opt.mmHide'), s.mmTarget === 'hide'], ['show', W('opt.mmShow'), s.mmTarget === 'show']], 'omm', W('opt.mmTarget')), W('opt.mmTargetHint'), 'opt-row--wide')}
     </div>

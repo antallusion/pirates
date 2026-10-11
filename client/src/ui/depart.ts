@@ -21,8 +21,14 @@ import { esc, fmt, icon, money } from './dom.ts';
 import { buttonHtml } from './kit/button.ts';
 import { openSheet } from './kit/sheet.ts';
 import type { SheetHandle } from './kit/sheet.ts';
+import { settings, update } from '../settings.ts';
+import { EN as UX2_EN, RU as UX2_RU } from '../lang/ui/ux2.ts';
 
 const L = dict(EN, RU);
+const U2 = dict(UX2_EN, UX2_RU);
+
+/** ux2 (owner, 2026-10-11): told once the voyage was topped up by itself («Всегда докупать»): main.ts's toast. */
+export const departHooks: { told: (msg: string) => void } = { told: () => {} };
 
 /** The ship as the voyage reckoning wants her, from what the client knows. */
 export function voyageShip(state: ClientState): VoyageShip | null {
@@ -256,6 +262,16 @@ export function departOrAsk(state: ClientState, send: (m: ClientMsg) => void, go
   // The First Watch sails a mile off the quay and is towed home if it goes wrong (docs/23 item 79): no list to read
   // between «Поднять паруса» and the sea — the 2026-10-06 newcomer's run stopped on it.
   if (!ship || !state.portView || !voyageNeeds(ship).length || state.onboarding?.stage) return go();
+  // ux2: «Всегда докупать» — all of it bought by the harbour's own orders and off she goes, when her purse and her hold
+  // cover the whole list; short of that the window asks as before (the owner asked for a window, not a blind buy).
+  if (settings().autoTopUp) {
+    const plan = departPlan(departOffers(state), state.self?.gold ?? 0, holdRoom(state));
+    if (plan.all && plan.buy.length) {
+      for (const o of plan.buy) for (const m of o.msgs) send(m);
+      departHooks.told(U2('goal.toppedUp', { cost: fmt(plan.cost) }));
+      return go();
+    }
+  }
   openSheetHandle?.close('code');
   let offers: Offer[] = [];
   let lastBody = '', lastFoot = '';
@@ -275,7 +291,8 @@ export function departOrAsk(state: ClientState, send: (m: ClientMsg) => void, go
     const plan = departPlan(offers, gold, holdRoom(state));
     // (on a phone held sideways the heading, the lead and the purse's word share one line: the four rows and the foot
     // stand in one screen with nothing to scroll — owner, 2026-10-09)
-    const head = `<div class="dp-head"><h3 id="dp-title" class="dp-title">${icon('stat_sails', '', 'ico-md')}${esc(L('depart.title'))}</h3>${offers.length ? `<p class="dp-lead">${esc(L('depart.lead', { min: VOYAGE_MINUTES }))}</p>` : `<p class="dp-lead dp-ok">${esc(L('depart.ready'))}</p>`}${plan.buy.length && !plan.all ? `<p class="dp-warn">${esc(L('depart.short', { gold: fmt(gold) }))}</p>` : ''}</div>`;
+    const always = offers.length ? `<label class="check dp-always" data-hint="${esc(U2('depart.alwaysHint'))}" title="${esc(U2('depart.alwaysHint'))}"><input type="checkbox" data-dpalways${settings().autoTopUp ? ' checked' : ''}> ${esc(U2('depart.always'))}</label>` : '';
+    const head = `<div class="dp-head"><h3 id="dp-title" class="dp-title">${icon('stat_sails', '', 'ico-md')}${esc(L('depart.title'))}</h3>${offers.length ? `<p class="dp-lead">${esc(L('depart.lead', { min: VOYAGE_MINUTES }))}</p>` : `<p class="dp-lead dp-ok">${esc(L('depart.ready'))}</p>`}${plan.buy.length && !plan.all ? `<p class="dp-warn">${esc(L('depart.short', { gold: fmt(gold) }))}</p>` : ''}${always}</div>`;
     const body = `${head}${offers.length ? `<div class="dp-list">${offers.map((o, i) => rowHtml(o, i, state)).join('')}</div>` : ''}`;
     const foot = `${plan.buy.length ? buttonHtml({ kind: 'primary', size: 'md', label: plan.all ? L('depart.buyAll', { cost: fmt(plan.cost) }) : L('depart.buyFit', { cost: fmt(plan.cost) }), data: { dp: 'all' } }) : ''}${buttonHtml({ kind: offers.length && plan.buy.length ? 'secondary' : 'primary', size: 'md', label: offers.length ? L('depart.sailAnyway') : L('depart.sail'), data: { dp: 'sail' } })}${buttonHtml({ kind: 'secondary', label: L('depart.stay'), data: { dp: 'stay' } })}`;
     if (body !== lastBody) {
@@ -289,6 +306,11 @@ export function departOrAsk(state: ClientState, send: (m: ClientMsg) => void, go
       if (had) sheet.foot!.querySelector<HTMLElement>(`[data-dp="${had}"]`)?.focus({ preventScroll: true });
     }
   };
+  // «Всегда докупать» (ux2): the setting itself, kept for the next harbour
+  sheet.panel.addEventListener('change', (e) => {
+    const c = (e.target as HTMLElement).closest<HTMLInputElement>('[data-dpalways]');
+    if (c) update({ autoTopUp: c.checked });
+  });
   sheet.panel.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-dp]');
     if (!b || (b as HTMLButtonElement).disabled) return;

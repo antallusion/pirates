@@ -56,7 +56,7 @@ test('every captain has a role in a few words for its card (the first sentence o
   }
 });
 
-test('fit.css: one unit from 270 to 360 px tall, every fluid size within the limits (taps 32 → 36, words 10 → 11)', () => {
+test('fit.css: one unit from 270 to 360 px tall, every fluid size within the limits (taps 32 → 36, words 8 → 11 on the owner’s ux2 scale)', () => {
   const css = readFileSync(new URL('../client/fit.css', import.meta.url), 'utf8');
   assert.match(css, /--u:\s*clamp\(0px,\s*\(100dvh - 270px\) \/ 90,\s*1px\)/);
   const tok = (name: string) => {
@@ -69,12 +69,15 @@ test('fit.css: one unit from 270 to 360 px tall, every fluid size within the lim
     const v = tok(t);
     assert.ok(v.at270 >= 32 && v.at360 >= 36 && v.at360 <= 40, `${t} ${JSON.stringify(v)}`);
   }
-  for (const t of ['--f-fs-s', '--f-fs', '--f-fs-m']) {
+  // ux2 (owner, 2026-10-11: «я бы сделал 10 шрифт по умолчанию и даже какие-то снижал до 6-8пкс»): small words 8 → 9 px,
+  // text 9 → 10, a name 9.5 → 11, the tiny labels 7 → 8, headings 12 → 13 (was 10 → 11 and 16–18); never under 6 px
+  for (const t of ['--f-fs-xs', '--f-fs-s', '--f-fs', '--f-fs-m']) {
     const v = tok(t);
-    assert.ok(v.at270 >= 10 && v.at360 >= 11 && v.at360 <= 13.5, `${t} ${JSON.stringify(v)}`);
+    assert.ok(v.at270 >= 6 && v.at360 >= 8 && v.at360 <= 11, `${t} ${JSON.stringify(v)}`);
   }
+  assert.equal(tok('--f-fs').at360, 10, 'the default text 10 px');
   const h = tok('--f-fs-h');
-  assert.ok(h.at360 >= 16 && h.at360 <= 18, `headings ${JSON.stringify(h)}`);
+  assert.ok(h.at270 >= 12 && h.at360 <= 14, `headings ${JSON.stringify(h)}`);
   // the phone's rules stay the phone's: none outside a short-screen query (the desk and the tablet keep their sizes)
   const outside = css.replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '');
   assert.ok(!/#modal-panel\s*\{/.test(outside), 'no window rule outside a phone query');
