@@ -37,6 +37,7 @@ import type { Game } from './Game.ts';
 import type { Holding } from './holdings.ts';
 import type { PlayerSession } from './player.ts';
 import { islePools, isleWeekGrowth, keepsDeep, townHave, townLevel } from './town.ts';
+import { DWELL_UP_LEVEL } from '../../../shared/src/data/isletree.ts';
 
 type Src = 'port' | 'isle';
 
@@ -118,7 +119,7 @@ function here(game: Game, s: PlayerSession, src: Src): Here | string {
   const dwell = new Map<number, boolean>();
   for (let t = 1; t <= 7; t++) {
     const L = townLevel(y, dwellingOf(t));
-    if (L > 0) dwell.set(t, L >= 2);
+    if (L > 0) dwell.set(t, L >= DWELL_UP_LEVEL); // docs/29: the upgraded kind from the dwelling's third level
   }
   const why = lyingOff(game, s, h) ? null : 'Bring your ship to the island to take the men aboard.';
   return { src, place: isl.name, port: null, h, y, dwell, why };

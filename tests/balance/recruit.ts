@@ -72,7 +72,8 @@ export interface MonthPlan {
   cap?: number;
 }
 
-export const MONTH: MonthPlan = { level: 7, crewMax: 220, keep: 3, top: 6, loss: 0.25, hours: 3, share: 0.5, weeksFound: POOL_WEEKS, days: 30 };
+// docs/29: the castle is the keep's fifth level now (KEEP_GROWTH[5] = ×2, as the third was before the tree).
+export const MONTH: MonthPlan = { level: 7, crewMax: 220, keep: 5, top: 6, loss: 0.25, hours: 3, share: 0.5, weeksFound: POOL_WEEKS, days: 30 };
 
 export interface MonthResult {
   /** Her army's might against the ladder's own army of her level and hammocks, each day. */

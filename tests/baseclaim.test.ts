@@ -38,6 +38,7 @@ import { serverTable } from '../client/src/lang/server.ts';
 import { EN as BASE_EN, RU as BASE_RU } from '../client/src/lang/ui/base.ts';
 import { EN as CO_EN, RU as CO_RU } from '../client/src/lang/ui/company.ts';
 import { join, makeGame, onHull } from './helpers.ts';
+import { MOVE_DOUBLOONS, MOVE_SILVER } from '../shared/src/data/isletree.ts';
 import type { FakeConn } from './helpers.ts';
 
 const HOUR = 3_600_000;
@@ -126,115 +127,120 @@ test('the terms by the waters: safe dear and taxed and never raided, contested b
   assert.ok(baseCost('fort', 3).silver > baseCost('battery', 3).silver);
 });
 
-test('any wild island may be claimed — a lawless one, cheap — but not a port’s, another’s, a worked one, the Abyss; one a captain', () => {
+test('docs/29: any island not a port’s is claimed free and at once; many captains hold the same island, each her own base on it', () => {
   const game = world();
   const { c, s, ship, isl, h } = owner(game, 'lawless');
   assert.ok(h.owned && h.claim, 'hers for ever, with its claim kept');
-  assert.equal(h.claim!.paid, buyPrice(isl));
-  assert.equal(buyPrice(isl), claimPrice(islandSize(isl.radius), 'lawless'));
-  assert.ok(c.all('toast').some((t) => t.msg.includes('is yours for ever')));
-  // One a captain.
-  const other = wild(game, (i) => i.id !== isl.id && inWaters('contested')(i));
-  offShore(game, ship, other);
-  assert.equal(buyIsland(game, s, other.id), 'A captain may hold one island of their own');
-  // Another's island.
-  const { s: b, ship: bs } = captain(game, 'Second Claimant');
+  assert.equal(h.claim!.paid, 0, 'free');
+  assert.equal(buyPrice(isl), 0);
+  assert.equal(h.yard?.town?.b.hall, 1, 'the town hall stands from the claim');
+  assert.ok(c.all('toast').some((t) => t.msg.includes('the town hall stands on it')));
+  assert.equal(s.profile!.gold, 3_000_000, 'not a coin taken');
+  // Another captain claims the same island: her own base, beside the first's.
+  const { c: bc, s: b, ship: bs } = captain(game, 'Second Claimant');
   offShore(game, bs, isl);
-  assert.equal(buyIsland(game, b, isl.id), `${isl.name} is held by ${s.name}.`);
-  // A port's island.
+  const v = estateView(game, b);
+  assert.ok(v.claim && v.claim.island === isl.id && v.claim.why === null && v.claim.price === 0 && v.claim.tax === 0 && v.claim.others === 1);
+  assert.deepEqual(claimPrompt(game, b), { island: isl.id, name: isl.name, price: 0, waters: 'lawless' });
+  assert.equal(buyIsland(game, b, isl.id), null);
+  const hb = ownIsland(game, b.accountId)!;
+  assert.ok(hb && hb !== h && hb.island === h.island, 'two holdings on one island');
+  assert.deepEqual(game.holdings.onIsland(game, isl.id).map((x) => x.owner.id).sort(), [s.accountId, b.accountId].sort());
+  assert.ok(bc.all('toast').some((t) => t.msg === '2 captains hold their own island here.'));
+  // Each builds her own: the first's work is not the second's.
+  yardOf(game, h).town!.b.dw1 = 2;
+  assert.equal(yardOf(game, hb).town!.b.dw1 ?? 0, 0);
+  assert.equal(baseView(game, b)!.island, isl.id);
+  assert.equal(claimPrompt(game, b), null, 'no prompt once she has one');
+  // A port's island is not for claiming; a worked one, a lair's and the Abyss are (docs/29: no restrictions).
   const port = game.world.islands.find((i) => i.portId)!;
-  assert.equal(buyIsland(game, b, port.id), 'No such island');
-  // An island an outpost works.
-  const site = wild(game, (i) => i.id !== other.id && inWaters('contested')(i) && OUTPOST_KINDS.some((k) => outpostFits(k, i)));
+  assert.equal(buyIsland(game, b, port.id), 'Port islands are not for claiming.');
+  const { s: d, ship: ds } = captain(game, 'Third Claimant');
+  const site = wild(game, (i) => i.id !== isl.id && inWaters('contested')(i) && OUTPOST_KINDS.some((k) => outpostFits(k, i)));
   offShore(game, ship, site);
   ship.cargo = { ...OUTPOST_BUILD } as never;
-  assert.equal(foundOutpost(game, s, OUTPOST_KINDS.find((k) => outpostFits(k, site))!), null);
-  offShore(game, bs, site);
-  assert.equal(buyIsland(game, b, site.id), 'Someone already works this island.');
-  // The Abyss.
-  const abyss = game.world.islands.find((i) => !i.portId && i.region === 'the_abyss');
-  if (abyss) {
-    offShore(game, bs, abyss);
-    assert.equal(buyIsland(game, b, abyss.id), 'Nobody claims land in the Abyss.');
-  }
-  // The terms off the bow, and the prompt: a claimable island, its price and waters.
-  offShore(game, bs, other);
-  const v = estateView(game, b);
-  assert.ok(v.claim && v.claim.island === other.id && v.claim.waters === 'contested' && v.claim.why === null);
-  assert.equal(v.claim!.price, claimPrice(islandSize(other.radius), 'contested'));
-  assert.equal(v.claim!.tax, WATERS.contested.tax);
-  assert.ok(v.claim!.raidDay > 0 && !v.claim!.robbable);
-  assert.deepEqual(claimPrompt(game, b), { island: other.id, name: other.name, price: v.claim!.price, waters: 'contested' });
-  const g0 = b.profile!.gold;
-  assert.equal(buyIsland(game, b, other.id), null);
-  assert.equal(g0 - b.profile!.gold, claimPrice(islandSize(other.radius), 'contested'), 'paid by size and waters');
-  assert.equal(claimPrompt(game, b), null, 'no prompt once she has one');
-  // A lease bought out counts what is left of it.
-  const { s: l, ship: ls } = captain(game, 'Lease Buyer');
-  const leased = wild(game, (i) => inWaters('safe')(i) && !game.holdings.get(game, i.id) && i.region === 'black_coast' && islandSize(i.radius) !== 'large');
-  offShore(game, ls, leased);
-  assert.equal(rentIsland(game, l, leased.id, 30), null);
-  const t = estateView(game, l).claim!;
-  assert.ok(t.credit > 0 && t.price < claimPrice(islandSize(leased.radius), 'safe'));
+  assert.equal(foundOutpost(game, s, OUTPOST_KINDS.find((k) => outpostFits(k, site))!), null, 'outposts stay as they were');
+  offShore(game, ds, site);
+  assert.equal(buyIsland(game, d, site.id), null, 'an island an outpost works may be claimed too');
+  // Far from it: sail there first.
+  const { s: e } = captain(game, 'Far Claimant');
+  assert.equal(buyIsland(game, e, isl.id), `Sail to ${isl.name} to claim it.`);
 });
 
-test('the week’s tax: from the treasury by the island level in safe and contested water; unpaid, the buildings weather; none in lawless water', () => {
+test('docs/29: no weekly tax and no claim price; the island keeps its treasury', () => {
   const game = world();
-  const { c, s, h } = owner(game, 'contested');
+  const { s, h } = owner(game, 'contested');
   h.level = 3;
   h.buildings.push({ id: 'warehouse', condition: 1, unpaid: false, level: 1 });
   h.treasury = 5000;
-  clock += TAX_DAYS * DAY + HOUR;
-  h.lastUpkeep = clock; // the buildings' own upkeep apart
-  stepIsleClaim(game, h);
-  assert.equal(h.treasury, 5000 - isleTax('contested', 3), 'paid a week');
-  assert.equal(h.claim!.unpaid, 0);
-  const v = baseView(game, s)!;
-  assert.equal(v.claim.waters, 'contested');
-  assert.equal(v.claim.tax, isleTax('contested', 3));
-  assert.ok(v.claim.taxAt > clock);
-  // Unpaid.
-  h.treasury = 10;
-  clock += TAX_DAYS * DAY;
+  clock += 3 * TAX_DAYS * DAY + HOUR;
   h.lastUpkeep = clock;
   stepIsleClaim(game, h);
-  assert.equal(h.treasury, 10, 'nothing taken it could not pay');
-  assert.equal(h.claim!.unpaid, 1);
-  assert.ok(Math.abs(h.buildings[0].condition - (1 - TAX_WEATHER)) < 1e-9, 'weathered');
-  assert.ok(c.all('toast').some((t) => t.msg.endsWith('the week’s tax is unpaid')));
-  // Lawless: none.
-  const { h: lh } = owner(game, 'lawless', 'Free Holder');
-  lh.treasury = 1000;
-  clock += TAX_DAYS * DAY;
-  stepIsleClaim(game, lh);
-  assert.equal(lh.treasury, 1000);
-  assert.equal(lh.claim!.unpaid, 0);
+  assert.equal(h.treasury, 5000, 'nothing taken');
+  assert.equal(h.claim!.unpaid, 0);
+  assert.equal(h.buildings[0].condition, 1, 'nothing weathers for want of a tax');
+  const v = baseView(game, s)!;
+  assert.equal(v.claim.tax, 0);
+  assert.equal(v.claim.refund, 0);
 });
 
-test('moving house: half the price back, the island left behind, another only after the wait; not while raiders lie off it', () => {
+test('docs/29: moving house pulls the old island down — the first move free, then a million silver or 2 600 doubloons', () => {
   const game = world();
-  const { s, ship, isl, h } = owner(game, 'contested');
-  const paid = h.claim!.paid;
-  // Not with her own ship at sea.
-  yardOf(game, h).ships = [{ id: 'o1', role: 'war', classId: 'cutter', level: 2, xp: 0, name: 0, hull: 1, state: 'sea' } as OwnShip];
-  assert.equal(abandonIsland(game, s), 'Bring your own ships home to the island first.');
-  yardOf(game, h).ships = [];
+  const { c, s, ship, isl, h } = owner(game, 'contested');
+  const y = yardOf(game, h);
+  h.buildings.push({ id: 'warehouse', condition: 1, unpaid: false, level: 2, plot: 0 });
+  y.town!.b.keep = 2;
+  y.res.timber = 300;
+  h.treasury = 1234;
+  y.ships = [{ id: 'o1', role: 'war', classId: 'cutter', level: 2, xp: 0, name: 0, hull: 1, state: 'home' } as OwnShip, { id: 'o2', role: 'merchant', classId: 'sloop', level: 1, xp: 0, name: 1, hull: 1, state: 'building' } as OwnShip];
   // Not during a raid.
   assert.equal(startIsleRaid(game, h), null);
-  assert.equal(abandonIsland(game, s), 'Not while raiders lie off the island.');
-  for (const id of h.claim!.raid!.ships) game.removeShip(id);
-  h.claim!.raid = null;
-  const g0 = s.profile!.gold;
-  assert.equal(abandonIsland(game, s), null);
-  assert.equal(s.profile!.gold - g0, Math.round(paid * ABANDON_REFUND));
-  assert.equal(ownIsland(game, s.accountId), undefined);
-  assert.equal(game.holdings.get(game, isl.id), undefined, 'the island is wild again');
-  // The wait.
   const next = wild(game, (i) => i.id !== isl.id && inWaters('lawless')(i));
   offShore(game, ship, next);
-  assert.match(buyIsland(game, s, next.id)!, /^You may claim another island in \d+ h\.$/);
-  clock += ABANDON_COOLDOWN_H * HOUR + 1;
+  assert.equal(buyIsland(game, s, next.id), 'Not while raiders lie off your island.');
+  for (const id of h.claim!.raid!.ships) game.removeShip(id);
+  h.claim!.raid = null;
+  // Without her leave: the confirm comes with what is lost, nothing moves.
   assert.equal(buyIsland(game, s, next.id), null);
+  const ask = c.all('isleMove').pop()!.view;
+  assert.ok(ask.free && ask.from === isl.id && ask.island === next.id && ask.lose.buildings === 1 && ask.lose.levels >= 2 + 1 + 2 && ask.keep.ships === 1 && ask.keep.treasury === 1234);
+  assert.equal(ownIsland(game, s.accountId), h, 'not moved yet');
+  // With it: free, the old island pulled down; the treasury, the goods and her ships afloat go with her.
+  assert.equal(buyIsland(game, s, next.id, 'free'), null);
+  const h2 = ownIsland(game, s.accountId)!;
+  assert.ok(h2 !== h && h2.island === next.id && h2.buildings.length === 0 && (h2.yard!.town!.b.keep ?? 0) === 0 && h2.yard!.town!.b.hall === 1);
+  assert.equal(h2.treasury, 1234);
+  assert.equal(h2.yard!.res.timber, 300);
+  assert.deepEqual(h2.yard!.ships!.map((x) => x.id), ['o1']);
+  assert.equal(game.holdings.onIsland(game, isl.id).length, 0, 'nothing of hers left on the old island');
+  assert.ok(c.all('toast').some((t) => t.msg.startsWith(`Your island moves to ${next.name}`)));
+  // The second move: a fortune — silver or doubloons — and never free.
+  const third = wild(game, (i) => i.id !== isl.id && i.id !== next.id && inWaters('contested')(i));
+  offShore(game, ship, third);
+  assert.equal(buyIsland(game, s, third.id), null);
+  const ask2 = c.all('isleMove').pop()!.view;
+  assert.ok(!ask2.free && ask2.silver === MOVE_SILVER && ask2.doubloons === MOVE_DOUBLOONS && ask2.moves === 1);
+  assert.equal(buyIsland(game, s, third.id, 'free'), `Moving costs ${MOVE_SILVER} silver.`);
+  s.profile!.gold = MOVE_SILVER - 1;
+  assert.equal(buyIsland(game, s, third.id, 'silver'), `Moving costs ${MOVE_SILVER} silver.`);
+  assert.equal(buyIsland(game, s, third.id, 'doubloons'), `Moving costs ${MOVE_DOUBLOONS} doubloons.`);
+  game.db.addDoubloons(s.accountId, MOVE_DOUBLOONS + 5);
+  assert.equal(buyIsland(game, s, third.id, 'doubloons'), null);
+  assert.equal(game.db.doubloons(s.accountId), 5, 'the doubloons spent');
+  assert.equal(ownIsland(game, s.accountId)!.island, third.id);
+  s.profile!.gold = MOVE_SILVER + 10;
+  const fourth = wild(game, (i) => ![isl.id, next.id, third.id].includes(i.id) && inWaters('lawless')(i));
+  offShore(game, ship, fourth);
+  assert.equal(buyIsland(game, s, fourth.id, 'silver'), null);
+  assert.equal(s.profile!.gold, 10, 'a million silver');
+  // Giving it up and claiming again is a move all the same.
+  ownIsland(game, s.accountId)!.yard!.ships = [];
+  assert.equal(abandonIsland(game, s), null);
+  assert.equal(ownIsland(game, s.accountId), undefined);
+  offShore(game, ship, next);
+  assert.equal(buyIsland(game, s, next.id), null);
+  assert.ok(!c.all('isleMove').pop()!.view.free, 'not free after the free move is spent');
+  assert.equal(ownIsland(game, s.accountId), undefined);
 });
 
 test('raids come only for a fat island outside safe water, rarer while the owner is long away, never in the cooldown', () => {

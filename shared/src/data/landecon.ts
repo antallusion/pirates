@@ -28,14 +28,15 @@ export const LAND_RES_CAP = 250;
  *  upgraded dwellings of tiers 2–7 (their level 2), the pen and the great pen, the castle. */
 export function townLand(id: TownId, level: number): LandCost {
   switch (id) {
-    case 'dw2': return level >= 2 ? { shell: 6 } : {};
-    case 'dw3': return level >= 2 ? { bone: 6 } : {};
-    case 'dw4': return level >= 2 ? { shell: 8, bone: 4 } : {};
-    case 'dw5': return level >= 2 ? { bone: 10, venom: 4 } : {};
-    case 'dw6': return level >= 2 ? { shell: 12, venom: 6 } : {};
-    case 'dw7': return level >= 2 ? { bone: 14, venom: 8 } : {};
+    // docs/29: the upgrade is a dwelling's third level now (DWELL_UP_LEVEL), the castle the keep's fifth.
+    case 'dw2': return level === 3 ? { shell: 6 } : {};
+    case 'dw3': return level === 3 ? { bone: 6 } : {};
+    case 'dw4': return level === 3 ? { shell: 8, bone: 4 } : {};
+    case 'dw5': return level === 3 ? { bone: 10, venom: 4 } : {};
+    case 'dw6': return level === 3 ? { shell: 12, venom: 6 } : {};
+    case 'dw7': return level === 3 ? { bone: 14, venom: 8 } : {};
     case 'pen': return level >= 2 ? { shell: 12, bone: 12 } : { bone: 6 };
-    case 'keep': return level >= 3 ? { shell: 20, bone: 10 } : {};
+    case 'keep': return level === 5 ? { shell: 20, bone: 10 } : {};
     default: return {};
   }
 }

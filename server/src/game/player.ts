@@ -227,6 +227,8 @@ export interface Profile {
   speedups?: number;
   /** When she last gave up an island of her own (docs/15 item 6: another is claimed after a wait), wall ms. */
   isleLeftAt?: number;
+  /** docs/29: islands of her own claimed so far (the first is free, the next is a move: one free, then paid). */
+  isleClaims?: number;
   /** The yard's tree of hulls (docs/20): the experience each hull has earned, the free pool, the hulls researched.
    *  Absent in a save from before it (research.ts fills it from what her level already let her buy). */
   research?: ResearchView;

@@ -295,6 +295,21 @@ export function beforePorts(world: World): World {
   return beforePortsOf.get(world) ?? world;
 }
 
+/** docs/29 step 9: the port standing on an island, if any — a port island's own (`portId`) or a harbour town of step 9
+ *  (shared/src/world/towns.ts), whose island keeps no `portId` so that everything placed on the islands stays put. */
+const portByIsle = new WeakMap<World, Map<number, string>>();
+export function portOfIsland(world: World, islandId: number): string | undefined {
+  const own = world.islands[islandId]?.portId;
+  if (own) return own;
+  let m = portByIsle.get(world);
+  if (!m) {
+    m = new Map();
+    for (const p of world.ports) if (p.islandId >= 0 && !world.islands[p.islandId]?.portId) m.set(p.islandId, p.id);
+    portByIsle.set(world, m);
+  }
+  return m.get(islandId);
+}
+
 export function generateWorld(seed: number): World {
   // step 7: the marks twice as many (docs/19 D1); step 8: twenty new ports (owner, 2026-10-03)
   return appendPorts(appendMarks(appendIsles(legacyWorldOf(seed))));

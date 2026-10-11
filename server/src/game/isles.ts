@@ -64,7 +64,10 @@ function islesOf(p: Profile): NonNullable<Profile['isles']> {
 
 /** Whether a lighthouse burns tonight, and whose light it is. */
 export function lightOf(game: Game, is: Island, accountId: number | null): { lit: LightView['lit']; until?: number } {
-  const h = game.holdings.get(game, is.id);
+  // docs/29: her own island's light first, then another captain's or a lease's on the same island.
+  const own = accountId !== null ? game.holdings.get(game, is.id, accountId) : undefined;
+  if (own && own.owner.kind === 'player' && own.owner.id === accountId && strength(own, 'lighthouse') > 0) return { lit: 'own' };
+  const h = game.holdings.get(game, is.id) ?? game.holdings.onIsland(game, is.id).find((x) => strength(x, 'lighthouse') > 0);
   if (h && strength(h, 'lighthouse') > 0) return { lit: h.owner.kind === 'player' && h.owner.id === accountId ? 'own' : 'paid' };
   if (!is.features.includes('lighthouse')) return { lit: null };
   if (REGIONS[is.region].safety === 'safe') return { lit: 'crown' };

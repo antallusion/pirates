@@ -237,20 +237,16 @@ test('the island\'s town: hall, keep, dwellings on the builders\' timers; growth
   const h = ownIsland(game, s.accountId)!;
   const y = yardOf(game, h);
   for (const g of [...RES_GOODS, 'coal']) y.res[g as 'timber'] = 5000;
-  assert.match(buildTown(game, s, 'dw1') ?? '', /Build the keep first/);
-  assert.equal(buildTown(game, s, 'hall'), null);
-  assert.ok(y.jobs.some((j) => j.what === 't:hall' && j.plot === -1), 'a job of the yard with no plot');
+  // docs/29: the hall stands from the claim; the tree asks the bunkhouse before the barracks, the hall before a second level.
+  assert.equal(townState(y).b.hall, 1, 'the hall stands from the claim');
+  assert.match(buildTown(game, s, 'dw2') ?? '', /First raise Bunkhouse to level 1/);
+  assert.equal(buildTown(game, s, 'dw1'), null);
+  assert.ok(y.jobs.some((j) => j.what === 't:dw1' && j.plot === -1), 'a job of the yard with no plot');
   finishAll(game, s);
-  assert.equal(townState(y).b.hall, 1);
   assert.equal(buildTown(game, s, 'keep'), null);
   finishAll(game, s);
-  assert.equal(buildTown(game, s, 'dw1'), null);
-  finishAll(game, s);
-  // Island level 1: the second tier waits for the island.
-  assert.equal(h.level ?? 1, 1);
-  assert.match(buildTown(game, s, 'dw2') ?? '', /Raise the island to level 2/);
-  h.level = 6;
-  assert.equal(buildTown(game, s, 'dw2'), null, 'the second tier at island level 2');
+  assert.match(buildTown(game, s, 'dw1') ?? '', /Raise the town hall to level 2/);
+  assert.equal(buildTown(game, s, 'dw2'), null, 'the second tier after the first');
   finishAll(game, s);
   const t = townState(y);
   assert.equal(t.b.dw1, 1);
@@ -263,10 +259,10 @@ test('the island\'s town: hall, keep, dwellings on the builders\' timers; growth
   stepCalendar(game);
   assert.ok(today(game) > d0);
   assert.equal(h.treasury, before + HALL_INCOME[1] * (today(game) - d0));
-  // The keep's walls: a castle twice the growth.
-  t.b.keep = 3;
+  // The keep's walls: a castle (the keep's fifth level, docs/29) twice the growth.
+  t.b.keep = 5;
   const v = townView(game, s, h, y);
-  assert.equal(v.growthMul, KEEP_GROWTH[3]);
+  assert.equal(v.growthMul, KEEP_GROWTH[5]);
   assert.equal(v.things.find((x) => x.id === 'dw1')!.growth, GROWTH[1] * 2 * weekGrowth(weekNow(game), 1));
   // Next week: the pools grow, and keep no more than two weeks.
   const p0 = t.pool[1];
@@ -287,7 +283,7 @@ test('recruiting from the island: lying off it, into the stacks at their worth; 
   const h = ownIsland(game, s.accountId)!;
   const y = yardOf(game, h);
   const t = townState(y);
-  t.b = { hall: 1, keep: 1, dw1: 2, dw2: 1, dw7: 1 };
+  t.b = { hall: 1, keep: 1, dw1: 3, dw2: 1, dw7: 1 }; // docs/29: the upgraded kind from the dwelling's third level
   t.w = thisWeek(game);
   t.pool = [0, 20, 9, 0, 0, 0, 0, 2];
   s.ship!.setArmy([{ u: 'deckhand', n: 10 }]);

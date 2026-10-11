@@ -5,7 +5,11 @@
 // same timers and speed-ups (their work is a job of the yard with no plot). Paid from the purse and the yard (then the
 // island's store, then the hold of a ship lying off the island).
 
-import { TOWN, TOWN_IDS, HALL_INCOME, KEEP_GROWTH, MARKET_GOODS, POOL_WEEKS, TIER_UNIT, deepAllowed, dwellingOf, isleGrowth, marketBuy, marketSell, townCost, townGate, townOf } from '../../../shared/src/data/town.ts';
+import { TOWN, TOWN_IDS, HALL_INCOME, KEEP_GROWTH, MARKET_GOODS, POOL_WEEKS, TIER_UNIT, deepAllowed, dwellingOf, isleGrowth, marketBuy, marketSell, townCost, townOf } from '../../../shared/src/data/town.ts';
+import { ISLE_OF_HALL, TREE_BASE, TREE_MAX, TREE_TOWN, isTree, isTreeTown, treeNeeds } from '../../../shared/src/data/isletree.ts';
+import type { TreeId } from '../../../shared/src/data/isletree.ts';
+import { BUILDINGS } from '../../../shared/src/data/holdings.ts';
+import type { BuildingId } from '../../../shared/src/data/holdings.ts';
 import type { TownId } from '../../../shared/src/data/town.ts';
 import { speedupGoods, speedupSilver } from '../../../shared/src/data/base.ts';
 import { weekBuy, weekGrowth, weekHall, weekSell } from '../../../shared/src/data/week.ts';
@@ -59,15 +63,16 @@ export function keepsDeep(s: PlayerSession): boolean {
 
 /** A dwelling's men a week on this island now. */
 export function isleWeekGrowth(game: Game, y: Yard, tier: number, week = thisWeek(game)): number {
-  if (townLevel(y, dwellingOf(tier)) <= 0) return 0;
-  return isleGrowth(tier, townLevel(y, 'keep'), weekGrowth(kindOfWeek(game, week), tier)) * grailGrowth(y);
+  const L = townLevel(y, dwellingOf(tier));
+  if (L <= 0) return 0;
+  return isleGrowth(tier, townLevel(y, 'keep'), weekGrowth(kindOfWeek(game, week), tier), L) * grailGrowth(y);
 }
 
 /** The Grail over the town (docs/17 H4): every dwelling grows half as many men again. */
 export const grailGrowth = (y: Yard): number => (townLevel(y, 'grail') > 0 ? GRAIL_GROWTH : 1);
 
 function poolCap(game: Game, y: Yard, tier: number): number {
-  return POOL_WEEKS * isleGrowth(tier, townLevel(y, 'keep'), Math.max(1, weekGrowth(weekNow(game), tier))) * grailGrowth(y);
+  return POOL_WEEKS * isleGrowth(tier, townLevel(y, 'keep'), Math.max(1, weekGrowth(weekNow(game), tier)), Math.max(1, townLevel(y, dwellingOf(tier)))) * grailGrowth(y);
 }
 
 /** The island's pools grown to this week (two weeks' growth at most wait in a dwelling). */
@@ -90,16 +95,48 @@ export function islePools(game: Game, y: Yard): number[] {
 
 // ------------------------------------------------------------------------------------------------ building
 
+/** docs/29: every building of the tree at its level on this island (the town's and the base's: a base building's
+ *  greatest, as the batteries may be several). */
+export function treeLevels(h: Holding, y: Yard): Map<TreeId, number> {
+  const out = new Map<TreeId, number>();
+  for (const id of TREE_TOWN) out.set(id, townLevel(y, id as TownId));
+  for (const id of TREE_BASE) out.set(id, Math.max(0, ...h.buildings.filter((b) => b.id === id).map((b) => Math.max(1, b.level ?? 1))));
+  return out;
+}
+
+/** What the tree asks of level L of a building, each with what stands (for the card's ✓ / ✗). */
+export function treeNeedView(h: Holding, y: Yard, id: TreeId, L: number): { id: TreeId; level: number; have: number }[] {
+  const lv = treeLevels(h, y);
+  return treeNeeds(id, L).map(([k, n]) => ({ id: k, level: n, have: lv.get(k) ?? 0 }));
+}
+
+/** The first thing the tree still asks (null: it all stands). */
+export function treeWhy(h: Holding, y: Yard, id: TreeId, L: number): string | null {
+  if (L > TREE_MAX) return 'It is at its greatest: level 5.';
+  for (const n of treeNeedView(h, y, id, L)) {
+    if (n.have >= n.level) continue;
+    return n.id === 'hall' ? `Raise the town hall to level ${n.level} first.` : `First raise ${treeName(n.id, n.level)} to level ${n.level}.`;
+  }
+  return null;
+}
+
+/** A building of the tree by name (the English the server speaks; the client has the Russian). */
+export function treeName(id: TreeId, level = 1): string {
+  return isTreeTown(id) ? townName(id as TownId, Math.max(1, level)) : BUILDINGS[id as BuildingId].name;
+}
+
 /** Why a town building may not rise a level now (null: it may). */
 export function townWhy(game: Game, s: PlayerSession, h: Holding, y: Yard, id: TownId): string | null {
   const L = townLevel(y, id);
   const def = TOWN[id];
-  if (L >= def.max) return 'It is at its greatest';
+  if (L >= def.max) return isTree(id) ? 'It is at its greatest: level 5.' : 'It is at its greatest';
   if (y.jobs.some((j) => j.what === `t:${id}`)) return 'The builders are already at work there.';
-  const g = townGate(id, L + 1);
-  if ((h.level ?? 1) < g.isle) return `Raise the island to level ${g.isle} first.`;
-  if (g.keep && townLevel(y, 'keep') < g.keep) return g.keep >= 3 ? 'Raise the keep to a castle first.' : 'Build the keep first.';
-  if (id === 'dw7' && !keepsDeep(s)) return 'Only a captain of the Choir or of a cursed ship keeps the drowned.';
+  if (isTree(id)) {
+    const why = treeWhy(h, y, id, L + 1);
+    if (why) return why;
+  } else if (id === 'pen') {
+    if (townLevel(y, 'hall') < (L + 1 >= 2 ? 3 : 2)) return `Raise the town hall to level ${L + 1 >= 2 ? 3 : 2} first.`;
+  }
   if (id === 'grail' && !grailToRaise(s)) return 'Dig up the Grail first: the obelisks’ chart shows where.';
   return crewFree(h, y);
 }
@@ -140,6 +177,8 @@ export function finishTown(game: Game, h: Holding, y: Yard, isl: Island, j: Base
   if (!id) return;
   const t = townState(y);
   t.b[id] = Math.max(townLevel(y, id), j.level);
+  // docs/29: the island grows with its hall (its plots, outposts, caravans, residents and crews).
+  if (id === 'hall') h.level = Math.max(h.level ?? 1, ISLE_OF_HALL[Math.min(TREE_MAX, t.b.hall ?? 1)]);
   // A new dwelling opens with its first week's men, as HoMM3's do.
   const tier = TOWN[id].tier;
   if (tier && j.level <= 1) {
@@ -149,7 +188,7 @@ export function finishTown(game: Game, h: Holding, y: Yard, isl: Island, j: Base
   game.holdings.touch();
   const s = h.owner.kind === 'player' ? game.sessionByAccount(h.owner.id) : undefined;
   if (!s) return;
-  game.sendTo(s, { t: 'toast', msg: `${townName(id, j.level)} rises on ${isl.name}.`, kind: 'good' });
+  game.sendTo(s, { t: 'toast', msg: isTree(id) ? `${townName(id, j.level)} on ${isl.name}: level ${j.level} of 5.` : `${townName(id, j.level)} rises on ${isl.name}.`, kind: 'good' });
 }
 
 // ------------------------------------------------------------------------------------------------ the town hall
@@ -293,7 +332,7 @@ export function townView(game: Game, s: PlayerSession, h: Holding, y: Yard): Tow
     const j = y.jobs.find((x) => x.what === `t:${id}`);
     const left = j ? Math.max(0, (j.end - now) / 1000) : 0;
     const land = level < TOWN[id].max ? townHooks.land?.(id, level + 1) ?? {} : {};
-    const next = level < TOWN[id].max ? { level: level + 1, ...townCost(id, level + 1), why: townWhy(game, s, h, y, id) ?? townHooks.landLack?.(s, land) ?? null, ...(Object.keys(land).length ? { land } : {}) } : null;
+    const next = level < TOWN[id].max ? { level: level + 1, ...townCost(id, level + 1), why: townWhy(game, s, h, y, id) ?? townHooks.landLack?.(s, land) ?? null, ...(Object.keys(land).length ? { land } : {}), ...(isTree(id) ? { needs: treeNeedView(h, y, id, level + 1) } : {}) } : null;
     const tier = TOWN[id].tier;
     return {
       id, level, max: TOWN[id].max, job: j ? { id: j.id, level: j.level, start: j.start, end: j.end, silver: speedupSilver(left), goods: speedupGoods(left) } : null, next,
@@ -318,7 +357,8 @@ export function adminTown(game: Game, s: PlayerSession, level?: number): string 
   if (typeof m === 'string') return m;
   const { h, y } = m;
   const t = townState(y);
-  for (const id of TOWN_IDS) if (id !== 'grail') t.b[id] = Math.min(TOWN[id].max, level ?? TOWN[id].max); // the Grail is dug up, not raised by decree
+  for (const id of TOWN_IDS) if (id !== 'grail') t.b[id] = Math.max(id === 'hall' ? 1 : 0, Math.min(TOWN[id].max, level ?? TOWN[id].max)); // the Grail is dug up, not raised by decree
+  h.level = Math.max(h.level ?? 1, ISLE_OF_HALL[Math.min(TREE_MAX, t.b.hall ?? 1)]);
   islePools(game, y);
   for (let tier = 1; tier <= 7; tier++) t.pool[tier] = poolCap(game, y, tier);
   reckonBase(game, h);

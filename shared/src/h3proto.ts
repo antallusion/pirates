@@ -102,12 +102,19 @@ export interface TownJobView {
   goods: Partial<Record<GoodId, number>>;
 }
 
+/** docs/29: a building the island's tree asks, at a level, and the level it stands at. */
+export interface TreeNeedView {
+  id: string;
+  level: number;
+  have: number;
+}
+
 export interface TownThingView {
   id: TownId;
   level: number;
   max: number;
   job: TownJobView | null;
-  next: { level: number; silver: number; goods: Partial<Record<GoodId, number>>; secs: number; why: string | null; /** docs/18 #43: the land's resources it asks too. */ land?: LandCost } | null;
+  next: { level: number; silver: number; goods: Partial<Record<GoodId, number>>; secs: number; why: string | null; /** docs/18 #43: the land's resources it asks too. */ land?: LandCost; /** docs/29: what the tree asks of it, each with what stands. */ needs?: TreeNeedView[] } | null;
   /** A dwelling's men to recruit now and a week's growth. */
   pool?: number;
   growth?: number;

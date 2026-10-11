@@ -31,7 +31,10 @@ import { ownIsland } from './estate.ts';
 import { has, island, islandNear, slotsOf, slotsUsed } from './holdings.ts';
 import type { Building, Holding } from './holdings.ts';
 import type { PlayerSession, Profile } from './player.ts';
-import { finishTown, townView } from './town.ts';
+import { finishTown, townLevel, townView, treeNeedView, treeWhy } from './town.ts';
+import { BASE_UNLOCK, isTreeBase, producerHall } from '../../../shared/src/data/isletree.ts';
+import type { TreeId } from '../../../shared/src/data/isletree.ts';
+import { TREE_VERSION, migrateTree } from './holdings.ts';
 import type { TownState } from './town.ts';
 import { townOf } from '../../../shared/src/data/town.ts';
 
@@ -78,6 +81,8 @@ export interface Yard {
 // ------------------------------------------------------------------------------------------------ the yard
 
 export function yardOf(game: Game, h: Holding): Yard {
+  // docs/29: an island raised before the tree (or laid by hand in a test) is put on its levels — the hall first.
+  if (h.owned && (h.tv ?? 0) < TREE_VERSION && migrateTree(h, game.wallNow())) game.holdings.touch();
   h.yard ??= { res: {}, carry: {}, fresh: {}, producers: [], jobs: [], lastYield: game.wallNow(), seq: 1 };
   const y = h.yard;
   y.res ??= {};
@@ -298,6 +303,21 @@ function whyNot(h: Holding, y: Yard, isl: Island, what: string): string | null {
   if (def.notSafe && REGIONS[isl.region].safety === 'safe') return 'Not on the Crown’s own coast';
   if (def.feature === 'mine' && !isl.features.includes('mine')) return 'There is no ore in this rock';
   if (def.biomes && !def.biomes.includes(isl.biome)) return 'Nothing like that grows here';
+  // docs/29: the tree — its own buildings by what they ask, the rest by the hall they open at.
+  if (isTreeBase(id)) return treeWhy(h, y, id as TreeId, 1);
+  const unlock = BASE_UNLOCK[id] ?? 1;
+  if (townLevel(y, 'hall') < unlock) return `Raise the town hall to level ${unlock} first.`;
+  return null;
+}
+
+/** docs/29: why a thing on a plot may not rise to `level` by the tree (null: it may) — a producer no higher than the
+ *  hall, the tree's buildings by what they ask. */
+export function treeUpWhy(h: Holding, y: Yard, what: string, level: number): string | null {
+  if (isTreeBase(what)) return treeWhy(h, y, what as TreeId, level);
+  if (producerOf(what)) {
+    const need = producerHall(level);
+    if (townLevel(y, 'hall') < need) return `Raise the town hall to level ${need} first.`;
+  }
   return null;
 }
 
@@ -379,8 +399,8 @@ export function upgradeAt(game: Game, s: PlayerSession, plot: number): string | 
   const level = 'b' in o ? (o.b.level ?? 1) : o.p.level;
   if (y.jobs.some((j) => j.plot === Math.trunc(plot))) return 'The builders are already at work there.';
   if (level >= maxLevel(what)) return 'It is at its greatest';
-  const gate = levelGate(level + 1);
-  if ((h.level ?? 1) < gate) return `Raise the island to level ${gate} first.`;
+  const gate = treeUpWhy(h, y, what, level + 1);
+  if (gate) return gate;
   const busy = crewFree(h, y);
   if (busy) return busy;
   return pay(game, s, h, y, Math.trunc(plot), what, level + 1);
@@ -488,9 +508,8 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
     let up: BaseCellView['up'] = null;
     if (what && o && !('j' in o) && level < maxLevel(what)) {
       const c = baseCost(what, level + 1);
-      const gate = levelGate(level + 1);
-      const why = job ? 'The builders are already at work there.' : lvl < gate ? `Raise the island to level ${gate} first.` : busy;
-      up = { ...c, level: level + 1, why };
+      const why = job ? 'The builders are already at work there.' : treeUpWhy(h, y, what, level + 1) ?? busy;
+      up = { ...c, level: level + 1, why, ...(isTreeBase(what) ? { needs: treeNeedView(h, y, what as TreeId, level + 1) } : producerOf(what) ? { needs: [{ id: 'hall', level: producerHall(level + 1), have: townLevel(y, 'hall') }] } : {}) };
     }
     const kind = what ? producerOf(what) : null;
     cells.push({
@@ -514,8 +533,9 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
     const what = `p:${kind}`;
     catalog.push({ what, ...baseCost(what, 1), why: whyNot(h, y, isl, what) });
   }
+  const unlockNeeds = (id: BuildingId) => (isTreeBase(id) ? treeNeedView(h, y, id as TreeId, 1) : [{ id: 'hall', level: BASE_UNLOCK[id] ?? 1, have: townLevel(y, 'hall') }]);
   // What stands in the way of each thing itself (the crews at work are the window's to show, over the whole list).
-  for (const id of Object.keys(BUILDINGS) as BuildingId[]) catalog.push({ what: id, ...baseCost(id, 1), why: whyNot(h, y, isl, id) });
+  for (const id of Object.keys(BUILDINGS) as BuildingId[]) catalog.push({ what: id, ...baseCost(id, 1), why: whyNot(h, y, isl, id), needs: unlockNeeds(id) });
   return {
     island: h.island, name: isl.name, biome: isl.biome, level: lvl, levelName: ISLE_LEVELS[lvl].name[0], size, plots: n, locked, cells,
     store: BASE_RES.map((g: BaseRes) => ({ good: g, n: Math.floor(y.res[g] ?? 0), cap, rate: Math.round((rates[g] ?? 0) * 10) / 10 })),
@@ -532,6 +552,7 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
     claim: claimView(game, s, h),
     guildYard: game.guilds.of(game, s.accountId) ? gyardView(game, s) : null,
     town: townView(game, s, h, y),
+    hall: Math.max(1, townLevel(y, 'hall')),
   };
 }
 

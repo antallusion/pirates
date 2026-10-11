@@ -259,5 +259,10 @@ export function treePatterns(): Tr[] {
     ['The island’s free: {0}.', 'Остров освобождён: {0}.'],
     ['Builders done: {0}.', 'Стройка завершена: {0}.'],
     ['No work under way.', 'Сейчас ничего не строится.'],
+    ['Island: {0}, hall {1}; claims {2}; the next move: free.', 'Остров: {0}, ратуша {1}; занято островов: {2}; следующий перенос: бесплатно.'],
+    ['Island: {0}, hall {1}; claims {2}; the next move: {3} silver or {4} doubloons.', 'Остров: {0}, ратуша {1}; занято островов: {2}; следующий перенос: {3} серебра или {4} дублонов.'],
+    ['The tree stands at level {0}: {1} buildings.', 'Всё дерево построек — на уровне {0}: зданий {1}.'],
+    ['Bring your own ships home to the island first.', 'Сначала верните свои корабли к острову.'],
+    ['{0} silver or {1} doubloons', '{0} серебра или {1} дублонов'],
   ];
 }

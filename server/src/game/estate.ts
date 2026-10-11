@@ -17,8 +17,7 @@ import {
 } from '../../../shared/src/data/estate.ts';
 import type { Guard, OutpostKind, Profession, TrophyKind } from '../../../shared/src/data/estate.ts';
 import { islandSize } from '../../../shared/src/data/holdings.ts';
-import { claimPrice, isleTax } from '../../../shared/src/data/baseclaim.ts';
-import { claimTerms, claimWhy, leaseCredit, newClaim, robView, stepIsleRobbers, watersOf } from './baseclaim.ts';
+import { claimIsland, claimTerms, claimWhy, robView, stepIsleRobbers } from './baseclaim.ts';
 import type { BuildingId } from '../../../shared/src/data/holdings.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -122,49 +121,14 @@ export function ownIsland(game: Game, account: number): Holding | undefined {
   return ix.by.get(account);
 }
 
-/** The price of an island claimed as one's own: by its size and its waters (docs/15 item 6). */
-export function buyPrice(isl: Island): number {
-  return claimPrice(islandSize(isl.radius), watersOf(isl));
+/** The price of an island claimed as one's own: nothing (docs/29 — the first island is free, a move is apart). */
+export function buyPrice(_isl: Island): number {
+  return 0;
 }
 
-/** Claim an island outright (docs/15 item 6): any wild island that is not a port's, held, worked or a lair — or one's
- *  own leased island bought out (the lease still to run counts against the price); one island of one's own. */
-export function buyIsland(game: Game, s: PlayerSession, islandId: number): string | null {
-  const isl = island(game, islandId);
-  if (!isl || isl.portId) return 'No such island';
-  const ship = s.ship!;
-  const near = ship.docked ? game.portById(ship.docked)?.region === isl.region : islandNear(game, ship)?.id === isl.id;
-  if (!near) return `Sail to ${isl.name}, or ask at a harbour office in ${REGIONS[isl.region].name}`;
-  const p = s.profile!;
-  const cur = game.holdings.get(game, islandId);
-  const why = claimWhy(game, s, isl);
-  if (why) return why;
-  let price = buyPrice(isl);
-  price -= leaseCredit(game, s, isl, price);
-  if (p.gold < price) return `The island costs ${price} silver.`;
-  p.gold -= price;
-  game.db.ledger(s.accountId, 'island_buy', -price, String(isl.id));
-  const now = game.wallNow();
-  const h: Holding = cur ?? {
-    island: isl.id, owner: { kind: 'player', id: s.accountId, name: s.name }, since: now, until: now, lastDays: 30, autoRenew: false,
-    treasury: 0, store: {}, buildings: [], lastUpkeep: now, lastWork: now, toll: { day: 0, paid: 0 }, warned: false,
-    window: 19, windowNext: null, shieldUntil: FAR_FUTURE, lastSiege: 0,
-  };
-  h.owned = true;
-  h.level = Math.max(1, h.level ?? 1);
-  h.until = FAR_FUTURE;
-  h.autoRenew = false;
-  h.shieldUntil = FAR_FUTURE;
-  h.residents ??= [];
-  h.claim = newClaim(game, price);
-  game.holdings.map(game)[isl.id] = h;
-  game.holdings.touch();
-  changeRep(p, game.holdings.factionOf(game, isl.region), 5);
-  game.sendTo(s, { t: 'toast', msg: `${isl.name} is yours for ever. Its upkeep is paid from its treasury, day by day.`, kind: 'gold' });
-  const tax = isleTax(watersOf(isl), 1);
-  if (tax > 0) game.sendTo(s, { t: 'toast', msg: `The harbour office taxes it ${tax} silver a week for each of its levels, from its treasury.`, kind: 'info' });
-  sagaNote(game, s, 'island', [isl.name]); // the saga (docs/12 P10 #20)
-  return null;
+/** Claim an island of her own, or move to it (docs/29: baseclaim.ts claimIsland). */
+export function buyIsland(game: Game, s: PlayerSession, islandId: number, move?: string): string | null {
+  return claimIsland(game, s, islandId, move);
 }
 
 /** An owned island's slots: by its level, and one or two more on a middling or a large island. */
@@ -173,45 +137,15 @@ export function ownedSlots(h: Holding, isl?: Island): number {
   return ISLE_LEVELS[Math.max(1, Math.min(ISLE_MAX, h.level ?? 1))].slots + (size === 'large' ? 2 : size === 'medium' ? 1 : 0);
 }
 
-/** What stands in the way of the island's next level (null: nothing): its power (docs/15 item 5), then the goods of
- *  its store and yard, then the treasury's silver. */
+/** docs/29: the island's level follows its town hall (isletree.ts ISLE_OF_HALL) — it is not raised on its own. */
 export function isleLevelWhy(h: Holding): string | null {
-  const lvl = h.level ?? 1;
-  if (lvl >= ISLE_MAX) return 'Your island is at its greatest.';
-  const need = ISLE_LEVELS[lvl + 1];
-  const power = powerOf(h);
-  if (power < ISLE_POWER[lvl + 1]) return `The island’s power is ${power} of the ${ISLE_POWER[lvl + 1]} its next level asks: raise its buildings and its ships.`;
-  // The store first, then the island's yard (docs/15: its timber and iron count too).
-  const yard = h.yard?.res ?? {};
-  const have = (g: GoodId) => (h.store[g] ?? 0) + (yard[g] ?? 0);
-  const lack = (Object.entries(need.goods) as [GoodId, number][]).filter(([g, n]) => have(g) < n);
-  if (lack.length) return `The island’s store lacks ${lack.map(([g, n]) => `${n - have(g)} ${GOODS[g].name.toLowerCase()}`).join(', ')}.`;
-  if (h.treasury < need.silver) return `The treasury lacks ${need.silver - h.treasury} silver.`;
-  return null;
+  return (h.level ?? 1) >= ISLE_MAX ? 'Your island is at its greatest.' : 'The island grows with its town hall.';
 }
 
-export function isleLevelUp(game: Game, s: PlayerSession, islandId: number): string | null {
-  const h = game.holdings.get(game, islandId);
-  if (!h || !h.owned || !mayUse(game, h, s.accountId)) return 'You have no island of your own.';
-  const lvl = h.level ?? 1;
-  const why = isleLevelWhy(h);
-  if (why) return why;
-  const need = ISLE_LEVELS[lvl + 1];
-  const yard = h.yard?.res ?? {};
-  h.treasury -= need.silver;
-  for (const [g, n] of Object.entries(need.goods) as [GoodId, number][]) {
-    const fromStore = Math.min(n, h.store[g] ?? 0);
-    h.store[g] = (h.store[g] ?? 0) - fromStore;
-    if (!h.store[g]) delete h.store[g];
-    if (n > fromStore) {
-      yard[g] = (yard[g] ?? 0) - (n - fromStore);
-      if (!yard[g]) delete yard[g];
-    }
-  }
-  h.level = lvl + 1;
-  game.holdings.touch();
-  game.sendTo(s, { t: 'toast', msg: `${island(game, islandId)!.name} grows: ${need.name[0]}.`, kind: 'gold' });
-  return null;
+export function isleLevelUp(game: Game, s: PlayerSession, _islandId: number): string | null {
+  const h = ownIsland(game, s.accountId);
+  if (!h) return 'You have no island of your own.';
+  return isleLevelWhy(h);
 }
 
 /** Home from a port to one's own island, once in half an hour, with an empty hold. */
@@ -365,7 +299,9 @@ export function trophyBonus(game: Game, account: number | null, kind: TrophyKind
 
 /** A guest looks round a captain's trophy hall (from off her island). */
 export function visitHall(game: Game, s: PlayerSession, islandId: number): { owner: string; flag: number; skull: number; fish: number } | string {
-  const h = game.holdings.get(game, islandId);
+  // docs/29: many captains may hold this island; the hall shown is another's first (or her own).
+  const all = game.holdings.onIsland(game, islandId).filter((x) => has(x, 'trophy_hall'));
+  const h = all.find((x) => x.owner.id !== s.accountId) ?? all[0];
   if (!h || !h.owned || !has(h, 'trophy_hall') || h.owner.kind !== 'player') return 'No trophy hall there';
   const ship = s.ship!;
   const isl = island(game, islandId)!;
@@ -719,12 +655,12 @@ export function estateView(game: Game, s: PlayerSession): EstateView {
     outposts: outpostsOf(game, s.accountId).map((o) => outpostView(game, o, s.accountId)),
     near,
     homeIn: Math.max(0, Math.ceil(((p.homeAt ?? -1e9) + HOME_COOLDOWN - game.now) / 60)),
-    buy: nearIsle && !h && !claimWhy(game, s, nearIsle) ? { island: nearIsle.id, name: nearIsle.name, price: buyPrice(nearIsle) - leaseCredit(game, s, nearIsle, buyPrice(nearIsle)) } : null,
-    // The terms of the island off the bow (docs/15 item 6): shown whether or not she may claim it now.
-    claim: nearIsle && !h && (!game.holdings.get(game, nearIsle.id) || mayUse(game, game.holdings.get(game, nearIsle.id)!, s.accountId)) ? claimTerms(game, s, nearIsle) : null,
+    buy: null,
+    // The terms of the island off the bow (docs/29: free, or a move off her own): shown whether or not she may claim it now.
+    claim: nearIsle && nearIsle.id !== h?.island ? claimTerms(game, s, nearIsle) : null,
     rob: robView(game, s),
     kinds: nearIsle && !nearIsle.portId && !game.holdings.get(game, nearIsle.id) && !Object.values(outposts(game)).some((o) => o.island === nearIsle.id) ? OUTPOST_KINDS.filter((k) => outpostFits(k, nearIsle)) : [],
-    hall: ((hh) => (hh && hh.owned && hh.owner.kind === 'player' && hh.owner.id !== s.accountId && welcome(game, s, hh) ? { island: hh.island, owner: hh.owner.name } : null))(nearIsle ? game.holdings.get(game, nearIsle.id) : undefined),
+    hall: ((hh) => (hh ? { island: hh.island, owner: hh.owner.name } : null))(nearIsle ? game.holdings.onIsland(game, nearIsle.id).find((x) => x.owner.id !== s.accountId && welcome(game, s, x)) : undefined),
   };
 }
 

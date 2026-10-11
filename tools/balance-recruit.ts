@@ -9,7 +9,7 @@ import { seaHour } from '../tests/balance/island.ts';
 import { generateWorld } from '../shared/src/world/worldgen.ts';
 
 console.log(`A week of the sea's calendar: ${WEEK_HOURS.toFixed(1)} real hours (${WEEKS_A_DAY.toFixed(2)} a real day).`);
-for (const [name, keep, top, up] of [['island, keep, tiers 1–6', 1, 6, false], ['island, keep, tiers 1–7', 1, 7, false], ['island, castle, tiers 1–6', 3, 6, false], ['island, castle, 1–6 upgraded', 3, 6, true]] as const) {
+for (const [name, keep, top, up] of [['island, keep, tiers 1–6', 1, 6, false], ['island, keep, tiers 1–7', 1, 7, false], ['island, castle, tiers 1–6', 5, 6, false], ['island, castle, 1–6 upgraded', 5, 6, true]] as const) {
   const w = isleWeek(keep, top, up);
   console.log(`${name.padEnd(30)} ${String(Math.round(w.men)).padStart(4)} men (${Math.round(w.high)} of tier 4+) worth ${String(Math.round(w.worth)).padStart(6)} a week · ${(w.worth / seaHour(6)).toFixed(2)} sea hours at ⚓6 · ${(w.worth / seaHour(9)).toFixed(2)} at ⚓9`);
 }

@@ -113,6 +113,8 @@ export function landingPoint(isl: Island): { x: number; y: number } {
 export function declareSiege(game: Game, s: PlayerSession, islandId: number): string | null {
   const h = game.holdings.get(game, islandId);
   const isl = island(game, islandId);
+  // docs/29: captains' own islands are kept apart (an instance each) and never besieged.
+  if (!h && isl && game.holdings.onIsland(game, islandId).length) return 'A captain’s own island cannot be besieged.';
   if (!h || !isl) return 'Nobody holds that island';
   const side = sideOf(game, s);
   if (!mayCommand(game, side, s)) return 'Commodores and up lead a guild’s siege';

@@ -28,6 +28,8 @@ import { serverTable, serverText } from '../client/src/lang/server.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { EN as BASE_EN, RU as BASE_RU } from '../client/src/lang/ui/base.ts';
 import { join, makeGame, onHull } from './helpers.ts';
+import { ISLE_OF_HALL, isTreeBase, treeClosure, treeCost } from '../shared/src/data/isletree.ts';
+import type { TreeId } from '../shared/src/data/isletree.ts';
 import type { FakeConn } from './helpers.ts';
 
 const MIN = 60_000;
@@ -140,8 +142,9 @@ test('speed-ups: silver by the time left, provisions, and the free tokens of a q
   assert.equal(g0 - s.profile!.gold, price);
   assert.ok(has(h, 'warehouse'), 'finished at once');
   assert.equal(y.jobs.length, 0);
-  // Upgrade (the warehouse grows) and pay in provisions.
+  // Upgrade (the warehouse grows) and pay in provisions (docs/29: no building above the town hall).
   h.level = 3;
+  y.town!.b.hall = 5;
   assert.equal(upgradeAt(game, s, 1), null);
   const up = y.jobs[0];
   const need = speedupGoods((up.end - clock) / 1000).provisions!;
@@ -215,7 +218,7 @@ test('the yard pays for the work: resources spent, and wanting them the work is 
   const h = ownIsland(game, s.accountId)!;
   const y = yardOf(game, h);
   const cost = baseCost('warehouse', 1);
-  assert.ok(Object.keys(cost.goods).length >= 3, 'timber, stone and tar at the least');
+  assert.ok(Object.keys(cost.goods).length >= 2, 'timber and stone at the least');
   assert.match(startBuild(game, s, 3, 'warehouse')!, /The yard lacks/);
   for (const [g, n] of Object.entries(cost.goods)) y.res[g as 'timber'] = (n ?? 0) + 5;
   assert.equal(startBuild(game, s, 3, 'warehouse'), null);
@@ -229,11 +232,9 @@ test('the yard pays for the work: resources spent, and wanting them the work is 
   assert.equal(startBuild(game, s, 3, 'warehouse'), null);
   assert.equal(y.res.timber ?? 0, 0);
   assert.equal(h.store.timber ?? 0, 0);
-  h.treasury = 10_000;
-  y.res.planks = ISLE_LEVELS[2].goods.planks;
-  assert.equal(isleLevelUp(game, s, h.island), null);
-  assert.equal(h.level, 2);
-  assert.equal(y.res.planks ?? 0, 0, 'the planks came from the yard');
+  // docs/29: the island is not raised on its own any more — it grows with its town hall.
+  assert.equal(isleLevelUp(game, s, h.island), 'The island grows with its town hall.');
+  assert.equal(h.level, 1);
 });
 
 test('one crew of builders; the second comes at the island level the data sets', () => {
@@ -251,12 +252,12 @@ test('one crew of builders; the second comes at the island level the data sets',
   assert.equal(y.jobs.length, 2);
   assert.equal(baseView(game, s)!.crews.busy, 2);
   assert.equal(startBuild(game, s, 2, 'p:quarry'), 'All your builders are at work.');
-  // Levels are gated by the island.
+  // Levels are gated by the town hall (docs/29: a producer rises no higher than the hall).
   clock += 10 * HOUR;
   reckonBase(game, h);
-  h.level = 1;
-  assert.equal(upgradeAt(game, s, 0), 'Raise the island to level 2 first.');
-  h.level = 2;
+  y.town!.b.hall = 1;
+  assert.equal(upgradeAt(game, s, 0), 'Raise the town hall to level 2 first.');
+  y.town!.b.hall = 2;
   assert.equal(upgradeAt(game, s, 0), null);
 });
 
@@ -292,16 +293,20 @@ test('the numbers hold together: plots grow, every cost fits the yard at the lev
   for (const w of whats) {
     for (let l = 1; l <= maxLevel(w); l++) {
       const c = baseCost(w, l);
-      assert.ok(c.secs > 0 && c.secs <= BUILD_MAX_SECS, `${w} ${l} time`);
+      // docs/29: the tree's own buildings take a mobile city-builder's hours (to three days); the rest stay short.
+      const tree = isTreeBase(w);
+      assert.ok(c.secs > 0 && c.secs <= (tree ? 72 * 3600 : BUILD_MAX_SECS), `${w} ${l} time`);
       assert.ok(c.silver > 0 && Number.isFinite(c.silver));
-      // At the island level the step opens, without a warehouse (a warehouse raised to one below for its own steps).
-      const cap = yardCap(l, w === 'warehouse' ? l - 1 : 0);
+      // At the island level the step opens, without a warehouse (a warehouse raised to one below for its own steps);
+      // the tree's at the hall's island level, with the warehouse the tree asks by then.
+      const wh = tree ? treeClosure(w as TreeId, l).get('warehouse') ?? 0 : 0;
+      const cap = tree ? yardCap(ISLE_OF_HALL[l], w === 'warehouse' ? l - 1 : wh) : yardCap(l, w === 'warehouse' ? l - 1 : 0);
       for (const [g, n] of Object.entries(c.goods)) assert.ok((n ?? 0) <= cap, `${w} level ${l}: ${n} ${g} fits a yard of ${cap}`);
     }
   }
   assert.ok(baseCost('p:lumber', 1).silver <= 1000 && Object.keys(baseCost('p:lumber', 1).goods).length === 0, 'the first camp needs no timber');
   assert.ok(baseCost('p:lumber', PRODUCER_MAX).secs > baseCost('p:lumber', 1).secs * 10, 'a level takes longer');
-  assert.ok(BUILDINGS.fort.cost * 0.5 === baseCost('fort', 1).silver);
+  assert.equal(baseCost('fort', 1).silver, treeCost('fort', 1).silver, 'the guns by the tree (docs/29)');
   assert.ok(speedupSilver(3600) < 2000 && speedupSilver(3600) > 300, 'an hour for a few hundred silver');
   for (const k of PRODUCER_KINDS) assert.ok(PRODUCERS[k].rate * 3 < 40, 'no producer floods the sea');
 });

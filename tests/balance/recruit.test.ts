@@ -21,7 +21,7 @@ test('a man costs what the sea reckons him worth; the week is an evening\'s play
 });
 
 test('a week of the island\'s dwellings is worth half an hour at sea at ⚓6 (a castle an hour); it stays a real expense to ⚓9', () => {
-  const keep = isleWeek(1, 6), castle = isleWeek(3, 6);
+  const keep = isleWeek(1, 6), castle = isleWeek(5, 6); // docs/29: the castle is the keep's fifth level
   assert.ok(keep.worth / seaHour(6) >= 0.35 && keep.worth / seaHour(6) <= 0.7, `keep: ${Math.round(keep.worth)} a week, ${(keep.worth / seaHour(6)).toFixed(2)} sea hours`);
   assert.ok(castle.worth / seaHour(6) >= 0.7 && castle.worth / seaHour(6) <= 1.4, `castle: ${(castle.worth / seaHour(6)).toFixed(2)} sea hours`);
   assert.ok(castle.worth / seaHour(9) >= 0.3, 'still worth buying at ⚓9');

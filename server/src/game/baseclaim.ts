@@ -7,7 +7,6 @@
 // island for the owner to fight, then reckoned against the island's batteries, fort and her own ships lying there.
 // A raid lost takes a share of the yard and store (capped a day) and weathers a building; one beaten pays.
 
-import { buildCitadels } from '../../../shared/src/data/citadels.ts'; // docs/19 E4
 import {
   ABANDON_COOLDOWN_H, ABANDON_REFUND, AWAY_H, AWAY_MUL, ISLE_RAID_MIN, LOSS_DAY_CAP, RAID_COOLDOWN_H, RAID_LOSS, RAID_WEATHER, ROB_ISLE_COOLDOWN_H, ROB_ISLE_SEC,
   ROB_ISLE_SHARE, TAX_DAYS, TAX_WEATHER, WATERS, claimPrice, fatMark, isleDefence, isleTax, raidOdds, raidPrize, raidStrength,
@@ -16,9 +15,11 @@ import type { Waters } from '../../../shared/src/data/baseclaim.ts';
 import { nextOwnLevel, ownXpNext } from '../../../shared/src/data/baseships.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { RENT, islandSize } from '../../../shared/src/data/holdings.ts';
+import { islandSize } from '../../../shared/src/data/holdings.ts';
+import { FREE_MOVES, MOVE_DOUBLOONS, MOVE_SILVER } from '../../../shared/src/data/isletree.ts';
+import { portOfIsland } from '../../../shared/src/world/worldgen.ts';
 import { clampLevel, watersBand } from '../../../shared/src/data/shiplevel.ts';
-import type { ClaimTermsView, IsleClaimView, PrivateState } from '../../../shared/src/protocol.ts';
+import type { ClaimTermsView, IsleClaimView, IsleMoveView, PrivateState } from '../../../shared/src/protocol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
@@ -26,16 +27,17 @@ import type { Island } from '../../../shared/src/world/worldgen.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { capOf } from './base.ts';
 import { caravans } from './caravans.ts';
-import { outposts, ownIsland } from './estate.ts';
+import { ownIsland } from './estate.ts';
 import type { Game } from './Game.ts';
-import { has, island, islandNear, mayUse } from './holdings.ts';
+import { has, island, islandNear, newOwnHolding, ownKey } from './holdings.ts';
 import type { Holding } from './holdings.ts';
 import { spawnPirate } from './npc.ts';
 import { changeRep } from './player.ts';
 import type { PlayerSession } from './player.ts';
 import { deliver } from './post.ts';
 import { flying, hasPennant, neutral } from './pvp.ts';
-import { lairIsland } from './wanted.ts';
+import { sendBalance } from './premium.ts';
+import { sagaNote } from './saga.ts';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -71,7 +73,7 @@ export interface IsleClaim {
 
 interface ClaimState {
   rng: Rng;
-  robbing: Map<number, { island: number; until: number }>;
+  robbing: Map<number, { island: number; owner: number; until: number }>;
 }
 
 const states = new WeakMap<Game, ClaimState>();
@@ -109,50 +111,171 @@ export function claimOf(game: Game, h: Holding): IsleClaim {
 
 // ------------------------------------------------------------------------------------------------ claiming
 
-/** Why this island may not be claimed as anyone's own (null: it may) — apart from the captain's own affairs. */
-export function claimBlock(game: Game, isl: Island, account: number): string | null {
-  if (isl.portId) return 'Port islands are not for rent';
-  if (isl.region === 'the_abyss') return 'Nobody claims land in the Abyss.';
-  const cur = game.holdings.get(game, isl.id);
-  if (cur && !mayUse(game, cur, account)) return `${isl.name} is held by ${cur.owner.name}.`;
-  if (cur?.owned) return 'Your island is at its greatest.';
-  if (Object.values(outposts(game)).some((o) => o.island === isl.id)) return 'Someone already works this island.';
-  if (lairIsland(game, isl.id)) return 'A pirate captain keeps his lair on that island.';
-  if (buildCitadels(game.world).some((c) => c.island === isl.id)) return 'A citadel of the Throne war stands on that island.'; // docs/19 E4
+// docs/29 (owner, 2026-10-11): «Занять остров можно сразу и без ограничений и разных цен … Один остров могут занимать
+// разные капитаны … у капитана может быть только 1 активный остров, если он меняет его то все постройки с предыдущего
+// сносятся, но 1 раз это можно сделать бесплатно … далее только за дублоны и очень много». Any island that is not a
+// port's may be claimed at once, free, by any number of captains — each her own base on it. A captain holds one island:
+// claiming another is a move, which pulls down every building on the old one (the first move free, then a million
+// silver or 2 600 doubloons: isletree.ts MOVE_*). Her treasury, her yard's and store's goods, her residents and her own
+// ships go with her; the buildings, the producers, the town and the work under way stay behind as rubble.
+
+/** Why this island may not be claimed by anyone (null: it may). */
+export function claimBlock(game: Game, isl: Island, _account?: number): string | null {
+  if (isl.portId || portOfIsland(game.world, isl.id)) return 'Port islands are not for claiming.';
   return null;
 }
 
-/** Why this captain may not claim it now (null: she may): the island, then her own island and her wait. */
+/** How many islands of her own she has claimed (the saves before docs/29: one, if she held or gave one up). */
+export function claimsMade(game: Game, s: PlayerSession): number {
+  const p = s.profile!;
+  return p.isleClaims ?? (ownIsland(game, s.accountId) || p.isleLeftAt ? 1 : 0);
+}
+
+/** What this claim costs her: nothing for her first island and her first move, then the fortune (null: free). */
+export function claimFee(game: Game, s: PlayerSession): { silver: number; doubloons: number } | null {
+  const made = claimsMade(game, s);
+  return made <= FREE_MOVES ? null : { silver: MOVE_SILVER, doubloons: MOVE_DOUBLOONS };
+}
+
+/** Why this captain may not claim it now (null: she may) — the island, her ship's place, her own island there. */
 export function claimWhy(game: Game, s: PlayerSession, isl: Island): string | null {
   const block = claimBlock(game, isl, s.accountId);
   if (block) return block;
-  const mine = Object.values(game.holdings.map(game)).find((h) => h.owner.kind === 'player' && h.owner.id === s.accountId);
-  if (mine && mine.island !== isl.id) return 'A captain may hold one island of their own';
-  const wait = (s.profile!.isleLeftAt ?? -1e15) + ABANDON_COOLDOWN_H * HOUR - game.wallNow();
-  if (wait > 0) return `You may claim another island in ${Math.ceil(wait / HOUR)} h.`;
+  const own = ownIsland(game, s.accountId);
+  if (own && own.island === isl.id) return 'That is your island already.';
+  if (own) return moveWhy(game, s, own);
   return null;
 }
 
-/** A lease of her own still to run, counted off the price (a lease bought out). */
-export function leaseCredit(game: Game, s: PlayerSession, isl: Island, price: number): number {
-  const cur = game.holdings.get(game, isl.id);
-  if (!cur || cur.owned || !mayUse(game, cur, s.accountId)) return 0;
-  const left = Math.round(Math.max(0, cur.until - game.wallNow()) / DAY / 30 * RENT[islandSize(isl.radius)][30]);
-  return Math.min(Math.round(price * 0.6), left);
+/** What keeps her from moving off her island now (null: nothing). */
+export function moveWhy(game: Game, s: PlayerSession, h: Holding): string | null {
+  if (h.claim?.raid) return 'Not while raiders lie off your island.';
+  if (Object.values(caravans(game)).some((k) => k.owner === s.accountId)) return 'Bring your caravans home and pay them off first.';
+  if (s.profile!.berths.some((b) => b.port === `isle:${h.island}`)) return 'Take the ships berthed at the island away first.';
+  return null;
+}
+
+/** The ship lies off the island (or in a port of its sea, at the harbour office). */
+function atIsland(game: Game, s: PlayerSession, isl: Island): boolean {
+  const ship = s.ship;
+  if (!ship) return false;
+  return ship.docked ? game.portById(ship.docked)?.region === isl.region : islandNear(game, ship)?.id === isl.id;
+}
+
+/** What a move pulls down and what goes with her (for the confirm). */
+export function moveTerms(game: Game, s: PlayerSession, isl: Island): IsleMoveView | null {
+  const h = ownIsland(game, s.accountId);
+  if (!h) return null;
+  const from = island(game, h.island);
+  const town = h.yard?.town?.b ?? {};
+  const fee = claimFee(game, s);
+  return {
+    island: isl.id, name: isl.name, from: h.island, fromName: from?.name ?? '', free: !fee, silver: fee?.silver ?? 0, doubloons: fee?.doubloons ?? 0,
+    gold: Math.floor(s.profile!.gold), balance: game.db.doubloons(s.accountId), moves: Math.max(0, claimsMade(game, s) - 1), freeMoves: FREE_MOVES,
+    lose: {
+      buildings: h.buildings.length, levels: h.buildings.reduce((a, b) => a + (b.level ?? 1), 0) + Object.values(town).reduce((a, n) => a + (n ?? 0), 0),
+      town: Object.values(town).filter((n) => (n ?? 0) > 0).length, producers: h.yard?.producers.length ?? 0, jobs: h.yard?.jobs.length ?? 0,
+      hall: town.hall ?? 1,
+    },
+    keep: { treasury: Math.floor(h.treasury), goods: Math.floor(Object.values(h.yard?.res ?? {}).reduce((a, n) => a + (n ?? 0), 0) + Object.values(h.store).reduce((a, n) => a + (n ?? 0), 0)), residents: h.residents?.length ?? 0, ships: (h.yard?.ships ?? []).filter((x) => x.state !== 'building').length },
+    why: claimWhy(game, s, isl),
+  };
+}
+
+/** Claim an island of her own (docs/29): free and at once — or move to it, when she holds one already: the move asks
+ *  her leave first (`pay` unset: the confirm with what is lost goes to her), then pulls the old island's buildings
+ *  down; the first move is free, every one after it a million silver or 2 600 doubloons. */
+export function claimIsland(game: Game, s: PlayerSession, islandId: number, pay?: string): string | null {
+  const isl = island(game, Math.trunc(islandId));
+  if (!isl) return 'No such island';
+  const block = claimBlock(game, isl);
+  if (block) return block;
+  if (!atIsland(game, s, isl)) return `Sail to ${isl.name} to claim it.`;
+  const why = claimWhy(game, s, isl);
+  if (why) return why;
+  const p = s.profile!;
+  const old = ownIsland(game, s.accountId);
+  const made = claimsMade(game, s);
+  const fee = claimFee(game, s);
+  if (old) {
+    // A move: her leave first, with what it pulls down.
+    if (pay !== 'free' && pay !== 'silver' && pay !== 'doubloons') {
+      const view = moveTerms(game, s, isl);
+      if (view) game.sendTo(s, { t: 'isleMove', view });
+      return null;
+    }
+    if (fee && pay === 'free') return `Moving costs ${fee.silver} silver.`;
+    if (fee && pay === 'silver' && p.gold < fee.silver) return `Moving costs ${fee.silver} silver.`;
+    if (fee && pay === 'doubloons' && game.db.doubloons(s.accountId) < fee.doubloons) return `Moving costs ${fee.doubloons} doubloons.`;
+  }
+  // (a first island after one given up is a move too: the fee, if any, without a confirm of losses)
+  if (!old && fee && pay !== 'silver' && pay !== 'doubloons') {
+    const view = moveTerms(game, s, isl) ?? freshTerms(game, s, isl, fee);
+    game.sendTo(s, { t: 'isleMove', view });
+    return null;
+  }
+  if (fee && pay === 'silver') {
+    if (p.gold < fee.silver) return `Moving costs ${fee.silver} silver.`;
+    p.gold -= fee.silver;
+    game.db.ledger(s.accountId, 'island_move', -fee.silver, String(isl.id));
+  } else if (fee && pay === 'doubloons') {
+    let ok = false;
+    game.db.transaction(() => {
+      const bal = game.db.addDoubloons(s.accountId, -fee.doubloons);
+      if (bal === null) return;
+      game.db.ledger(s.accountId, 'doubloons_buy', -fee.doubloons, `isle_move:${isl.id}`);
+      ok = true;
+    });
+    if (!ok) return `Moving costs ${fee.doubloons} doubloons.`;
+    sendBalance(game, s);
+  }
+  const wall = game.wallNow();
+  const h = newOwnHolding(isl, { id: s.accountId, name: s.name }, wall);
+  h.claim = newClaim(game, 0);
+  if (old) {
+    // What goes with her: the treasury, the goods, the residents (idle on the new island), her own ships afloat.
+    h.treasury = old.treasury;
+    h.store = { ...old.store };
+    h.residents = (old.residents ?? []).map((r) => ({ ...r, at: null }));
+    h.visitors = old.visitors;
+    const y = h.yard!;
+    y.res = { ...(old.yard?.res ?? {}) };
+    y.ships = (old.yard?.ships ?? []).filter((x) => x.state !== 'building').map((x) => ({ ...x, state: x.state === 'refit' ? 'home' : x.state }));
+    delete game.holdings.map(game)[game.holdings.keyOf(game, old)];
+    const was = island(game, old.island);
+    game.sendTo(s, { t: 'toast', msg: `Your island moves to ${isl.name}: everything on ${was?.name ?? ''} is pulled down.`, kind: 'info' });
+  }
+  game.holdings.map(game)[ownKey(s.accountId)] = h;
+  game.holdings.touch();
+  p.isleClaims = made + 1;
+  changeRep(p, game.holdings.factionOf(game, isl.region), old ? 0 : 5);
+  game.sendTo(s, { t: 'toast', msg: `${isl.name} is yours: the town hall stands on it.`, kind: 'gold' });
+  const others = game.holdings.onIsland(game, isl.id).filter((x) => x.owner.id !== s.accountId).length;
+  if (others > 0) game.sendTo(s, { t: 'toast', msg: `${others + 1} captains hold their own island here.`, kind: 'info' });
+  if (!old) sagaNote(game, s, 'island', [isl.name]); // the saga (docs/12 P10 #20)
+  return null;
+}
+
+/** The terms of a paid claim with no island to leave (she gave hers up and has used her free move). */
+function freshTerms(game: Game, s: PlayerSession, isl: Island, fee: { silver: number; doubloons: number }): IsleMoveView {
+  return {
+    island: isl.id, name: isl.name, from: -1, fromName: '', free: false, silver: fee.silver, doubloons: fee.doubloons, gold: Math.floor(s.profile!.gold), balance: game.db.doubloons(s.accountId),
+    moves: Math.max(0, claimsMade(game, s) - 1), freeMoves: FREE_MOVES, lose: { buildings: 0, levels: 0, town: 0, producers: 0, jobs: 0, hall: 0 }, keep: { treasury: 0, goods: 0, residents: 0, ships: 0 }, why: claimWhy(game, s, isl),
+  };
 }
 
 export function claimTerms(game: Game, s: PlayerSession, isl: Island): ClaimTermsView {
   const w = watersOf(isl);
   const t = WATERS[w];
-  const price = claimPrice(islandSize(isl.radius), w);
-  const credit = leaseCredit(game, s, isl, price);
+  const fee = ownIsland(game, s.accountId) || claimsMade(game, s) > 0 ? claimFee(game, s) : null;
   return {
-    island: isl.id, name: isl.name, region: isl.region, waters: w, size: islandSize(isl.radius), price: price - credit, credit, tax: t.tax, faction: game.holdings.factionOf(game, isl.region),
-    raidDay: t.raidDay, raidMul: t.raidMul, raiders: t.raiders, robbable: t.robbable, refund: ABANDON_REFUND, cooldownH: ABANDON_COOLDOWN_H, why: claimWhy(game, s, isl),
+    island: isl.id, name: isl.name, region: isl.region, waters: w, size: islandSize(isl.radius), price: fee?.silver ?? 0, credit: 0, tax: 0, faction: game.holdings.factionOf(game, isl.region),
+    raidDay: t.raidDay, raidMul: t.raidMul, raiders: t.raiders, robbable: t.robbable, refund: 0, cooldownH: 0, why: claimWhy(game, s, isl),
+    move: !!ownIsland(game, s.accountId), doubloons: fee?.doubloons ?? 0, others: game.holdings.onIsland(game, isl.id).filter((x) => x.owner.id !== s.accountId).length,
   };
 }
 
-/** The wild island off her bow she could claim (for the prompt), if she has none of her own. */
+/** The island off her bow she could claim (for the prompt), if she has none of her own. */
 export function claimPrompt(game: Game, s: PlayerSession): PrivateState['claimIsle'] {
   const ship = s.ship;
   if (!ship || ship.docked || ownIsland(game, s.accountId)) return null;
@@ -162,24 +285,21 @@ export function claimPrompt(game: Game, s: PlayerSession): PrivateState['claimIs
   return { island: isl.id, name: isl.name, price: t.price, waters: t.waters };
 }
 
-/** Moving house: the island given up, half its price back, and a wait before the next. */
+/** Giving the island up: everything on it is pulled down (her goods and residents are lost with it); the next island
+ *  she claims counts as a move. */
 export function abandonIsland(game: Game, s: PlayerSession): string | null {
   const h = ownIsland(game, s.accountId);
   if (!h) return 'You have no island of your own.';
-  const c = claimOf(game, h);
-  if (c.raid) return 'Not while raiders lie off the island.';
+  const why = moveWhy(game, s, h);
+  if (why) return why;
   if ((h.yard?.ships ?? []).some((x) => x.state === 'sea')) return 'Bring your own ships home to the island first.';
-  if (Object.values(caravans(game)).some((k) => k.owner === s.accountId)) return 'Bring your caravans home and pay them off first.';
   const p = s.profile!;
-  if (p.berths.some((b) => b.port === `isle:${h.island}`)) return 'Take the ships berthed at the island away first.';
   const isl = island(game, h.island)!;
-  const refund = Math.round(c.paid * ABANDON_REFUND);
-  p.gold += refund;
-  game.db.ledger(s.accountId, 'island_abandon', refund, String(h.island));
-  delete game.holdings.map(game)[h.island];
+  p.isleClaims = claimsMade(game, s);
+  delete game.holdings.map(game)[game.holdings.keyOf(game, h)];
   game.holdings.touch();
   p.isleLeftAt = game.wallNow();
-  game.sendTo(s, { t: 'toast', msg: `${isl.name} is given up: ${refund} silver comes back to you. Another island may be claimed in ${ABANDON_COOLDOWN_H} h.`, kind: 'info' });
+  game.sendTo(s, { t: 'toast', msg: `The island’s free: ${isl.name}.`, kind: 'info' });
   return null;
 }
 
@@ -220,11 +340,13 @@ export function stepIsleClaim(game: Game, h: Holding): void {
   const c = claimOf(game, h);
   const wall = game.wallNow();
   if (game.sessionByAccount(h.owner.id)) c.seen = wall;
-  stepTax(game, h, isl, c, wall);
+  // docs/29: no weekly tax any more (the claim is free and so is keeping it); the week's date only runs on.
+  if (wall >= c.taxAt) c.taxAt = wall + TAX_DAYS * DAY;
   stepRaid(game, h, isl, c, wall);
 }
 
-function stepTax(game: Game, h: Holding, isl: Island, c: IsleClaim, wall: number): void {
+/** The week's tax before docs/29 (kept for the record: nothing calls it now). */
+export function stepTax(game: Game, h: Holding, isl: Island, c: IsleClaim, wall: number): void {
   for (let k = 0; k < 8 && wall >= c.taxAt; k++) {
     c.taxAt += TAX_DAYS * DAY;
     game.holdings.touch();
@@ -407,18 +529,23 @@ function lose(game: Game, h: Holding, isl: Island, c: IsleClaim): void {
 /** A captain flying the black flag in lawless water lands on someone's island: five minutes ashore, the owner
  *  warned, the island's guns on him. */
 export function robIsland(game: Game, s: PlayerSession, islandId: number): string | null {
-  const h = game.holdings.get(game, islandId);
+  const h = robTarget(game, s, islandId);
   const isl = island(game, islandId);
   if (!h || !isl || !h.owned || h.owner.kind !== 'player') return 'No such island';
   const why = robWhy(game, s, h, isl);
   if (why) return why;
   const ship = s.ship!;
-  cs(game).robbing.set(s.accountId, { island: isl.id, until: game.now + ROB_ISLE_SEC });
+  cs(game).robbing.set(s.accountId, { island: isl.id, owner: h.owner.id, until: game.now + ROB_ISLE_SEC });
   let m = game.holdings.aggressors.get(isl.id);
   if (!m) game.holdings.aggressors.set(isl.id, (m = new Map()));
   m.set(ship.id, game.now + 600);
   mail(game, h, `${s.name} has landed on ${isl.name} to rob it!`, `${s.name} flies the black flag and has landed on ${isl.name}. Five minutes and a quarter of the yard is theirs — the island’s guns are on them; come and drive them off.`);
   return null;
+}
+
+/** The captain's island a robber lands on (docs/29: many may stand on one island): the fattest of the others'. */
+function robTarget(game: Game, s: PlayerSession, islandId: number): Holding | undefined {
+  return game.holdings.onIsland(game, islandId).filter((h) => h.owner.id !== s.accountId).sort((a, b) => isleWorth(b) - isleWorth(a))[0];
 }
 
 function robWhy(game: Game, s: PlayerSession, h: Holding, isl: Island): string | null {
@@ -442,9 +569,9 @@ export function stepIsleRobbers(game: Game): void {
   const S = cs(game);
   for (const [acc, r] of [...S.robbing]) {
     const s = game.sessionByAccount(acc);
-    const h = game.holdings.get(game, r.island);
+    const h = game.holdings.own(game, r.owner);
     const ship = s?.ship;
-    if (!s || !ship || !h || !h.owned || !ship.alive || islandNear(game, ship)?.id !== r.island || ship.state.speed > 1.5) {
+    if (!s || !ship || !h || !h.owned || h.island !== r.island || !ship.alive || islandNear(game, ship)?.id !== r.island || ship.state.speed > 1.5) {
       S.robbing.delete(acc);
       continue;
     }
@@ -476,7 +603,7 @@ export function robView(game: Game, s: PlayerSession): { island: number; name: s
   const ship = s.ship;
   if (!ship || ship.docked) return null;
   const isl = islandNear(game, ship);
-  const h = isl ? game.holdings.get(game, isl.id) : undefined;
+  const h = isl ? robTarget(game, s, isl.id) : undefined;
   if (!isl || !h || !h.owned || h.owner.kind !== 'player' || h.owner.id === s.accountId || !WATERS[watersOf(isl)].robbable) return null;
   const r = cs(game).robbing.get(s.accountId);
   return { island: isl.id, name: isl.name, owner: h.owner.name, why: r ? null : robWhy(game, s, h, isl), robbing: r && r.island === isl.id ? Math.max(0, Math.ceil(r.until - game.now)) : null };
@@ -493,17 +620,14 @@ export function claimView(game: Game, s: PlayerSession, h: Holding): IsleClaimVi
   const r = c.raid;
   const strength = r ? r.strength : raidStrength(w, lvl);
   const alive = r ? r.ships.filter((id) => game.ships.get(id)?.alive).length : 0;
-  let abandonWhy: string | null = null;
-  if (r) abandonWhy = 'Not while raiders lie off the island.';
-  else if ((h.yard?.ships ?? []).some((x) => x.state === 'sea')) abandonWhy = 'Bring your own ships home to the island first.';
-  else if (Object.values(caravans(game)).some((k) => k.owner === s.accountId)) abandonWhy = 'Bring your caravans home and pay them off first.';
-  else if (s.profile!.berths.some((b) => b.port === `isle:${h.island}`)) abandonWhy = 'Take the ships berthed at the island away first.';
+  const abandonWhy = moveWhy(game, s, h) ?? ((h.yard?.ships ?? []).some((x) => x.state === 'sea') ? 'Bring your own ships home to the island first.' : null);
   return {
-    waters: w, region: isl.region, faction: game.holdings.factionOf(game, isl.region), tax: isleTax(w, lvl), taxAt: c.taxAt, unpaid: c.unpaid, treasury: h.treasury,
+    waters: w, region: isl.region, faction: game.holdings.factionOf(game, isl.region), tax: 0, taxAt: c.taxAt, unpaid: 0, treasury: h.treasury,
     defence: d.rating, batteries: d.batteries, forts: d.forts, ships: d.ships, strength, odds: strength > 0 ? Math.round(raidOdds(d.rating, strength, r && r.ships.length ? alive / r.ships.length : 1) * 100) / 100 : 1,
     worth: isleWorth(h), fat: fatMark(lvl), calmUntil: c.calmUntil, lost: Math.round(c.lossShare * 100) / 100, lossCap: LOSS_DAY_CAP,
     raid: r ? { until: r.until, x: r.x, y: r.y, ships: r.ships.length, alive, strength: r.strength } : null,
-    refund: Math.round(c.paid * ABANDON_REFUND), abandonWhy,
+    refund: 0, abandonWhy, others: game.holdings.onIsland(game, h.island).filter((x) => x.owner.id !== h.owner.id).map((x) => x.owner.name).slice(0, 8),
+    fee: claimFee(game, s), moves: Math.max(0, claimsMade(game, s) - 1), freeMoves: FREE_MOVES,
   };
 }
 

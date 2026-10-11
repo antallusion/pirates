@@ -3310,7 +3310,7 @@ export class Game {
           return;
         }
         if (res) return this.sendTo(s, { t: 'hall', view: res });
-        const h = this.holdings.get(this, isl);
+        const h = this.holdings.onIsland(this, isl).find((x) => x.owner.id !== s.accountId) ?? this.holdings.get(this, isl, s.accountId); // docs/29
         if (h) this.sendTo(s, { t: 'hall', view: hallView(this, s, h) });
         return;
       }
@@ -3357,7 +3357,7 @@ export class Game {
           case 'view':
             return done(null);
           case 'buy':
-            return done(buyIsland(this, s, Math.trunc(Number(msg.island))));
+            return done(buyIsland(this, s, Math.trunc(Number(msg.island)), msg.move)); // docs/29: a move's leave and payment
           case 'level': {
             const h = ownIsland(this, s.accountId);
             return done(h ? isleLevelUp(this, s, h.island) : 'You have no island of your own.');
