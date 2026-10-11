@@ -15,23 +15,34 @@ import type { PremiumShip, ShipClassId } from './ships.ts';
 /** The doubloon's picture: `icon.doubloon` once it is painted; the silver coins, gilded, stand in for it meanwhile. */
 export const DOUBLOON_ICON = 'doubloon';
 
-/** A pack of the top-up: its doubloons and the bonus on top (its price in money comes with the payment provider). */
+/** A pack of the top-up: its doubloons, the bonus on top and its price in Telegram Stars (XTR, owner 2026-10-11:
+ *  «премиум шоп сделай звездами»). */
 export interface DoubloonPack {
   id: string;
   n: number;
   bonus: number;
+  /** The price in Telegram Stars: ¾ of a star a doubloon (the bonus is on top, free). */
+  stars: number;
 }
 
-/** 100 · 550 · 1200 · 2600 · 7000: the more at once, the larger the bonus (none, a tenth, a fifth, three tenths, two fifths). */
+/** 100 · 550 · 1200 · 2600 · 7000: the more at once, the larger the bonus (none, a tenth, a fifth, three tenths, two
+ *  fifths). Priced 75 · 375 · 750 · 1500 · 3750 stars: a star is about 1.3–2 roubles to a buyer, so 100 doubloons cost
+ *  a hundred-odd roubles and a premium hull (900–1400 doubloons) about a thousand. */
 export const DOUBLOON_PACKS: DoubloonPack[] = [
-  { id: 'd100', n: 100, bonus: 0 },
-  { id: 'd550', n: 500, bonus: 50 },
-  { id: 'd1200', n: 1000, bonus: 200 },
-  { id: 'd2600', n: 2000, bonus: 600 },
-  { id: 'd7000', n: 5000, bonus: 2000 },
+  { id: 'd100', n: 100, bonus: 0, stars: 75 },
+  { id: 'd550', n: 500, bonus: 50, stars: 375 },
+  { id: 'd1200', n: 1000, bonus: 200, stars: 750 },
+  { id: 'd2600', n: 2000, bonus: 600, stars: 1500 },
+  { id: 'd7000', n: 5000, bonus: 2000, stars: 3750 },
 ];
 
-/** No payment provider yet: the top-up lists the packs and says the payments are coming. */
+/** The pack of this id, if there is one. */
+export function doubloonPack(id: string): DoubloonPack | undefined {
+  return DOUBLOON_PACKS.find((p) => p.id === id);
+}
+
+/** Payments are closed by default: the server opens them at run time when a payment desk is wired in — the Telegram
+ *  bot's Stars, once TELEGRAM_BOT_TOKEN is configured (server/src/telegram.ts → setPayDesk; the view's `pay`). */
 export const PAYMENTS_OPEN = false;
 
 /** The most one credit may bring (a slip in a webhook or the console cannot mint a fortune). */

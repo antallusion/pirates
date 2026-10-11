@@ -160,6 +160,8 @@ export const SCREENS = [
   journal('quests'), journal('company', 'group'), journal('company', 'law'), journal('company', 'isles'), journal('guild'), journal('letters'), journal('album', 'album'), journal('album', 'career'),
   simple('menu'), simple('ship'), simple('crew'), simple('help'), simple('research'), simple('look'),
   { id: 'shop', open: async (p) => { await close(p); await p.evaluate(() => globalThis.gravetide.shop()); return visible(p, '#modal-panel[data-modal="shop"]', 4000); } },
+  // the top-up's packs (priced in Telegram Stars when the server has the bot, docs/27)
+  { id: 'shop:topup', open: async (p) => { await close(p); await p.evaluate(() => globalThis.gravetide.shop(true)); return visible(p, '#modal-panel[data-modal="shop"] .pm-packs', 4000); } },
   { id: 'toasts:port', root: '#modal-toasts, #toasts', open: async (p) => { await modal('port')(p); await toastsOn(p); return true; }, settle: 400 },
   // --- the Throne (level 60) while still in port
   { id: 'throne:glory', setup: async (p) => { await admin(p, '/glory 3', 1500); await admin(p, '/mastery all'); await sheetGone(p); }, ...throne('glory') },

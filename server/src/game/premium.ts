@@ -28,6 +28,62 @@ import { keepsDeep } from './town.ts';
  *  `doubloons_<source>`; a purchase's is `doubloons_buy` (the silver report leaves every `doubloons_` row out). */
 export type PremiumSource = 'pay' | 'admin' | 'refund';
 
+// ------------------------------------------------------------------------------------------------ the payment desk
+
+/** The way money comes in (owner, 2026-10-11: «премиум шоп сделай звездами»): the Telegram bot's Stars
+ *  (server/src/telegram.ts), wired in at start when TELEGRAM_BOT_TOKEN is set. Without one the top-up stays shut. */
+export interface PayDesk {
+  /** A Stars invoice link for this pack and account (null: refused — no such pack, or the Bot API said no). */
+  invoice(accountId: number, packId: string, lang: 'en' | 'ru'): Promise<string | null>;
+  /** Stars paid back by the payment's charge id, its doubloons taken back as far as the balance goes: the reply. */
+  refund(chargeId: string): Promise<string>;
+}
+
+const desks = new WeakMap<Game, PayDesk>();
+
+/** The payment desk of this world (null: none). */
+export function setPayDesk(game: Game, desk: PayDesk | null): void {
+  if (desk) desks.set(game, desk);
+  else desks.delete(game);
+}
+
+/** Whether the top-up takes payments: the static switch, or a desk wired in at run time. */
+export function paymentsOpen(game: Game): boolean {
+  return PAYMENTS_OPEN || desks.has(game);
+}
+
+/** A refunded payment's doubloons taken back — as many as are left on the account, up to the pack's (the rest were
+ *  spent): the amount taken, its ledger row `doubloons_chargeback` with the payment's reference. */
+export function chargebackPremium(game: Game, accountId: number, amount: number, ref: string): number {
+  const n = Math.min(Math.max(0, Math.floor(amount)), game.db.doubloons(accountId));
+  if (n > 0 && move(game, accountId, -n, 'doubloons_chargeback', String(ref).slice(0, 120)) === null) return 0;
+  const s = game.sessionByAccount(accountId);
+  if (s) {
+    sendBalance(game, s);
+    sendPremium(game, s);
+  }
+  return n;
+}
+
+/** A Stars invoice for a pack, asked from the shop's top-up: its link to her client (null and a toast: refused). */
+function askInvoice(game: Game, s: PlayerSession, packId: string, lang: 'en' | 'ru'): void {
+  const desk = desks.get(game);
+  if (!desk || !s.authed) {
+    game.sendTo(s, { t: 'toast', msg: 'Payments are not open yet.', kind: 'bad' });
+    return;
+  }
+  void desk.invoice(s.accountId, String(packId ?? ''), lang === 'ru' ? 'ru' : 'en').then(
+    (link) => {
+      if (!link) game.sendTo(s, { t: 'toast', msg: 'The invoice could not be made. Try again in a minute.', kind: 'bad' });
+      game.sendTo(s, { t: 'premium_invoice', pack: String(packId), link });
+    },
+    () => {
+      game.sendTo(s, { t: 'toast', msg: 'The invoice could not be made. Try again in a minute.', kind: 'bad' });
+      game.sendTo(s, { t: 'premium_invoice', pack: String(packId), link: null });
+    },
+  );
+}
+
 // ------------------------------------------------------------------------------------------------ the balance
 
 /** Her account's doubloons, to her client. */
@@ -243,7 +299,7 @@ export function premiumView(game: Game, s: PlayerSession): PremiumView {
       return { id: u, price: o.price, n: o.n, note: o.note, lv: premiumFrom(UNITS[u].tier), why: unitWhy(game, s, u, o, balance) };
     }),
     port: ship.docked ? game.portById(ship.docked)?.name ?? null : null,
-    pay: PAYMENTS_OPEN,
+    pay: paymentsOpen(game),
   };
 }
 
@@ -253,6 +309,7 @@ export function sendPremium(game: Game, s: PlayerSession): void {
 
 /** Her client's word to the shop: the view, a hull or a kind bought (the view comes back either way). */
 export function premiumMessage(game: Game, s: PlayerSession, msg: PremiumClientMsg): void {
+  if (msg.action === 'stars') return askInvoice(game, s, msg.pack, msg.lang === 'ru' ? 'ru' : 'en');
   const why = msg.action === 'buy_ship' ? buyShip(game, s, msg.id) : msg.action === 'buy_unit' ? buyUnit(game, s, msg.id) : null;
   if (why) game.sendTo(s, { t: 'toast', msg: why, kind: 'bad' });
   if (msg.action === 'view') sendBalance(game, s);
@@ -278,4 +335,18 @@ export function adminDoubloons(game: Game, s: PlayerSession, args: string[]): st
   sendBalance(game, s);
   sendPremium(game, s);
   return `Doubloons: ${bal}.`;
+}
+
+/** `/refund charge_id`: the Telegram Stars of that payment paid back (refundStarPayment) and its doubloons taken back
+ *  as far as the balance goes; the answer comes as a toast once the Bot API has replied. */
+export function adminRefund(game: Game, s: PlayerSession, args: string[]): string {
+  const desk = desks.get(game);
+  if (!desk) return 'No payment desk on this server: the bot token is not set.';
+  const charge = String(args[0] ?? '').trim();
+  if (!/^[\w:.-]{4,128}$/.test(charge)) return 'Usage: /refund charge_id';
+  void desk.refund(charge).then(
+    (reply) => game.sendTo(s, { t: 'toast', msg: reply, kind: 'info' }),
+    () => game.sendTo(s, { t: 'toast', msg: 'The refund failed: the Bot API did not answer.', kind: 'bad' }),
+  );
+  return `Refund asked for payment ${charge}.`;
 }
