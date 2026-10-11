@@ -341,7 +341,7 @@ export function adminDoubloons(game: Game, s: PlayerSession, args: string[]): st
  *  as far as the balance goes; the answer comes as a toast once the Bot API has replied. */
 export function adminRefund(game: Game, s: PlayerSession, args: string[]): string {
   const desk = desks.get(game);
-  if (!desk) return 'No payment desk on this server: TELEGRAM_BOT_TOKEN is not set.';
+  if (!desk) return 'No payment desk on this server: the bot token is not set.';
   const charge = String(args[0] ?? '').trim();
   if (!/^[\w:.-]{4,128}$/.test(charge)) return 'Usage: /refund charge_id';
   void desk.refund(charge).then(

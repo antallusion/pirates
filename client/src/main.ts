@@ -121,6 +121,7 @@ import { RecruitWindow } from './ui/recruit.ts';
 import { TameWindow } from './ui/tame.ts'; // docs/18 IV
 import { ThroneWindow } from './ui/throne.ts'; // docs/19 E1–E3, E18
 import { PremiumWindow } from './ui/premium.ts'; // the premium shop (owner, 2026-10-03)
+import { tgInvoices, tgLoginButton, tgStart } from './tg.ts'; // Telegram: the Mini App, «Войти через Телеграм», Stars (docs/27)
 import { ResearchWindow } from './ui/research.ts'; // the yard's tree of hulls (owner, 2026-10-04; docs/20)
 import { AdvCard } from './ui/advcard.ts'; // docs/17 H4
 import { PuzzleWindow } from './ui/puzzle.ts';
@@ -834,8 +835,11 @@ function titleFilm(ka: HTMLElement, poster: string | null): void {
     if (!net.live) net.connect();
   };
 }
-if (net.token) net.connect();
-else $('login-name').focus();
+// Inside Telegram (or on its host) the Mini App signs in by itself (docs/27); else the page's own start.
+if (!tgStart(net)) {
+  if (net.token) net.connect();
+  else $('login-name').focus();
+}
 
 async function authPost(path: string, body: Record<string, string>): Promise<{ token?: string; error?: string }> {
   try {
@@ -880,6 +884,8 @@ $('forgot-btn').onclick = async () => {
 fetch('/auth/providers').then((r) => r.json()).then((d: { providers: { id: string; name: string }[] }) => {
   $('oauth-buttons').innerHTML = d.providers.map((p) => `<a class="btn btn-small" href="/auth/oauth/${p.id}">${esc(L('signInWith', { name: p.name }))}</a>`).join('');
 }).catch(() => undefined);
+tgLoginButton(net, onLang);
+tgInvoices(net, (msg, kind) => hud.toast(msg, kind));
 
 ($('login-form') as HTMLFormElement).onsubmit = (e) => {
   e.preventDefault();
