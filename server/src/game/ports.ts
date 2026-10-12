@@ -124,6 +124,9 @@ function basePriceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0): Pric
   };
 }
 
+/** The most the market's powder and iron move the price of shot (×). */
+export const AMMO_MARKET_CAP = 1.25;
+
 export function ammoPrice(game: Game, port: Port, ammo: AmmoId): number {
   // Cursed shot is cast only where the Crown does not look: black markets and the Choir.
   if (ammo === 'cursed' && !port.blackMarket && port.faction !== 'choir') return 0;
@@ -135,7 +138,9 @@ export function ammoPrice(game: Game, port: Port, ammo: AmmoId): number {
   const iron = m?.goods.iron;
   const pf = powder ? midPrice('gunpowder', powder) / GOODS.gunpowder.basePrice : 1.2;
   const irf = iron ? midPrice('iron', iron) / GOODS.iron.basePrice : 1.1;
-  return Math.max(1, Math.round(AMMO[ammo].price * (0.5 * pf + 0.5 * irf) * 10) / 10);
+  // The market moves the price of shot, but no more than AMMO_MARKET_CAP (docs/30: iron at 3.3× its price in Ironcliff
+  // made the 30 round shot of a sloop's ten broadsides cost 225 — a third of a captain of 7's purse — every voyage).
+  return Math.max(1, Math.round(AMMO[ammo].price * Math.min(AMMO_MARKET_CAP, 0.5 * pf + 0.5 * irf) * 10) / 10);
 }
 
 function shipValue(ship: ShipEntity): number {
@@ -157,7 +162,13 @@ export function repairCost(ship: ShipEntity): number {
   const guns = (ship.gunsDisabled.port * GUNS[ship.loadout.guns.port].price + ship.gunsDisabled.starboard * GUNS[ship.loadout.guns.starboard].price) * 0.3;
   const mast = ship.hasEffect('broken_mast') ? ship.cls.price * 0.03 : 0;
   const patchwork = ship.hasFlag('patchwork_hull') ? 1.5 : 1;
-  return Math.ceil(Math.max(0, ((hull + sails + rudder) * curseMul + guns + mast) * patchwork * yardMul(ship)));
+  return Math.ceil(Math.max(0, ((hull + sails + rudder) * curseMul + guns + mast) * patchwork * yardMul(ship) * repairLowMul(ship.shipLevel)));
+}
+
+/** docs/30: a yard asks less of the small first hulls — ⚓1 ×0.6, ⚓2 ×0.7 … ⚓5 and up the full bill (a sloop of a
+ *  captain of 7 paid 90–160 a call after a shark's bites, as much as the fight earned). */
+export function repairLowMul(shipLevel: number): number {
+  return Math.min(1, 0.5 + 0.1 * Math.max(1, shipLevel));
 }
 
 export function buildPortView(game: Game, s: PlayerSession, port: Port): PortView {

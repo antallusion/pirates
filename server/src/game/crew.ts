@@ -878,7 +878,9 @@ export function tavernOf(game: Game, port: Port): Tavern {
 }
 
 export function recruitCost(game: Game, port: Port, p: Profile, prof: Profession, ship: ShipEntity | null = null): number {
-  const base = 22 + p.level * 1.5 + (port.size >= 3 ? 6 : 0) + (FACTIONS[port.faction].lawful ? 4 : 0);
+  // A green captain's hands come cheaper, the discount gone by level 10 (docs/30: 37 a man at 7, a lost fight's men
+  // cost more than the fight paid).
+  const base = 22 + p.level * 1.5 - Math.max(0, 10 - p.level) * 1.6 + (port.size >= 3 ? 6 : 0) + (FACTIONS[port.faction].lawful ? 4 : 0);
   let mul = PROFESSION_DEFS[prof].hireMul;
   // Press Gang: sailors cheaper; Legend at the Helm: the Confederacy signs for less.
   if (ship && prof === 'sailor') mul *= Math.max(0.3, 1 + tx(ship.stats, 'hireCost'));

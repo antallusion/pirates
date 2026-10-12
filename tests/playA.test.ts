@@ -140,3 +140,28 @@ test('a lair job\'s mark: a lair under a harbour\'s quays is the last pick (the 
   assert.ok(t, 'a mark');
   assert.ok(Math.hypot(t.x - at.x, t.y - at.y) > 10, 'not the harbour\'s own lair while another stands');
 });
+
+test('money at ⚓1–2 (docs/30): shot never past the market cap, a small hull\'s repairs cheaper, a green captain\'s hands cheaper', async () => {
+  const { AMMO } = await import('../shared/src/data/ships.ts');
+  const { AMMO_MARKET_CAP, ammoPrice, repairCost, repairLowMul } = await import('../server/src/game/ports.ts');
+  const { recruitCost } = await import('../server/src/game/crew.ts');
+  const { game } = makeGame();
+  for (const port of game.world.ports) {
+    const r = ammoPrice(game, port, 'round');
+    assert.ok(r <= AMMO.round.price * AMMO_MARKET_CAP + 0.05, `${port.id}: round shot ${r}`);
+  }
+  join(game, 'Purse');
+  const s = game.sessionByName('Purse')!;
+  const ship = s.ship!;
+  ship.hull = ship.stats.hullMax - 300;
+  const lv1 = repairCost(ship);
+  assert.equal(repairLowMul(1), 0.6);
+  assert.equal(repairLowMul(5), 1);
+  assert.ok(lv1 <= 0.6 * 300 * (0.45 + ship.cls.tier * 0.1) + 1, `300 hull on a ⚓1 sloop: ${lv1}`);
+  const port = game.portById(ship.docked!)!;
+  const p = s.profile!;
+  const at = (L: number) => { p.level = L; return recruitCost(game, port, p, 'sailor', ship); };
+  assert.ok(at(1) < at(5) && at(5) < at(10), 'hands dearer as she rises');
+  assert.ok(at(7) <= 32, `a man at 7: ${at(7)}`);
+  assert.equal(at(12) - at(10), 3, 'from 10 on, the old rise of 1.5 a level');
+});
