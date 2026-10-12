@@ -32,7 +32,7 @@ export function near(B, r = 3000) {
     if (o.id === me.id || !o.alive || o.docked) return;
     const d = Math.hypot(o.state.x - me.state.x, o.state.y - me.state.y);
     if (d > r) return;
-    out.push({ id: o.id, d: Math.round(d), name: o.name, cls: o.loadout.classId, lvl: o.shipLevel, role: o.npcRole, fac: o.faction, hostile: B.game.isHostile(o, me), hull: Math.round((o.hull / o.stats.hullMax) * 100), player: o.isPlayer, sinking: !!o.sinkingUntil, struck: o.surrendered });
+    out.push({ id: o.id, d: Math.round(d), name: o.name, cls: o.loadout.classId, lvl: o.shipLevel, role: o.npcRole, fac: o.faction, hostile: B.game.isHostile(o, me), hull: Math.round((o.hull / o.stats.hullMax) * 100), player: o.isPlayer, sinking: !!o.sinkingUntil, struck: o.surrendered, guard: !!o.guardOf });
   });
   return out.sort((a, b) => (/^Reach /.test(b.text) ? 1 : 0) - (/^Reach /.test(a.text) ? 1 : 0) || a.d - b.d);
 }
@@ -56,6 +56,9 @@ export function reflex(B) {
         B.note('tac', `${v.land ? 'ashore' : 'boarding'} ${v.over.winner === v.you ? 'WON' : 'LOST'} (${v.over.why}) round ${v.round}, ${Math.round(now - R.tacStart)} s; lost ${JSON.stringify(v.result?.lost ?? [])} xp ${v.result?.xp ?? 0}`);
       }
       if (v.land && now - R.tacOverAt > 2) { B.send({ t: 'lair', action: 'close' }); B.tac = null; }
+    } else if (!v.land && boardBattle(B)) {
+      // a boarding: her side is played by the battle's own mind, as a captain gone from the helm has it played for
+      // free (a competent captain's hand — the bot's own rules lost fights the engine wins nine in ten)
     } else if (v.mine && v.active != null && (v.seq !== R.tacSeq || now - R.tacAt > 3)) {
       R.tacSeq = v.seq;
       R.tacAt = now;
@@ -258,7 +261,10 @@ export async function refit(B, a = {}) {
     const room = Math.min(Number(a.hire ?? 99), ship.stats.crewMax - ship.crew);
     const want = [['marine', Math.floor(room / 3)], ['gunner', Math.floor(room / 5)]];
     for (const [prof, n] of want) if (n > 0 && B.s.profile.gold > 1500) { B.send({ t: 'hire_crew', qty: n, prof }); await B.run(0.1); }
-    const left = ship.stats.crewMax - ship.crew;
+    // as many as six tenths of her silver buys (the tavern refuses a whole lot she cannot pay; with an empty chest the
+    // volunteers for a share come anyway)
+    const per = B.port?.crewHireCost ?? 45;
+    const left = Math.min(ship.stats.crewMax - ship.crew, Math.max(B.s.profile.gold < per ? 99 : 0, Math.floor((B.s.profile.gold * 0.6) / per)));
     if (left > 0) B.send({ t: 'hire_crew', qty: left });
     out.push(`hire to ${ship.crew}`);
   }
@@ -327,9 +333,10 @@ export async function lair(B, a) {
   // the lair's card, as she reads it before the boats go: her party's might against theirs
   await B.run(2);
   const card = B.views.lair_card?.card;
-  if (card && card.id === l.id && card.ratio < Number(a.ratio ?? 1.3)) {
-    B.note('bot', `lair ${l.id}: the odds are poor (${card.ratio.toFixed(2)} for ${card.party} men against ${card.men}): left alone`);
-    return { lair: l.id, skipped: `ratio ${card.ratio.toFixed(2)}` };
+  if (me.crew < me.stats.crewMax * 0.5) return { lair: l.id, skipped: 'too few hands' };
+  if (!card || card.id !== l.id || card.ratio < Number(a.ratio ?? 1.3)) {
+    B.note('bot', `lair ${l.id}: the odds are poor (${card ? card.ratio.toFixed(2) : 'no card'}): left alone`);
+    return { lair: l.id, skipped: `ratio ${card?.ratio?.toFixed(2) ?? '?'}` };
   }
   for (let i = 0; i < 5 && !B.tac; i++) {
     B.send({ t: 'lair', action: 'fight', id: l.id });
@@ -396,9 +403,9 @@ export async function hunt(B, a) {
   const n = Number(a.n ?? 1);
   const ship = B.s.ship;
   let got = 0, legs = 0;
-  const out = [];
+  const out = [], skipIds = new Set();
   while (got < n && legs <= Number(a.legs ?? 4) && !B.stop && !B.sunk) {
-    if (ship.crew < ship.stats.crewMax * 0.7 || ship.hull < ship.stats.hullMax * 0.6) { out.push('unfit: home'); break; }
+    if (ship.crew < ship.stats.crewMax * 0.5 || ship.hull < ship.stats.hullMax * 0.6) { out.push('unfit: home'); break; }
     // the sea about her for a minute, under way: what shows within sight
     if (ship.docked) { B.send({ t: 'undock' }); await B.run(1); }
     if (ship.state.speed < 1.5 && !B.autosail?.on) {
@@ -407,7 +414,7 @@ export async function hunt(B, a) {
     }
     let mark = null;
     await B.run(Number(a.wait ?? 40), () => {
-      mark = near(B, SIGHT).find((o) => !o.sinking && !o.struck && (want === 'pirate' ? isRaider(o) && o.lvl <= ship.shipLevel + (a.brave ? 1 : 0) && o.lvl >= ship.shipLevel - 1 : o.role === 'beast' && (want === 'beast' || /shark/i.test(o.cls))));
+      mark = near(B, SIGHT).find((o) => !o.sinking && !o.struck && !o.guard && !skipIds.has(o.id) && (want === 'pirate' ? isRaider(o) && o.lvl <= ship.shipLevel + (a.brave ? 1 : 0) && o.lvl >= ship.shipLevel - 1 : o.role === 'beast' && (want === 'beast' || /shark/i.test(o.cls))));
       return !!mark || !!B.tac;
     });
     if (B.tac) { await B.run(600, () => !B.tac); continue; }
@@ -417,6 +424,7 @@ export async function hunt(B, a) {
       const fullCrew = ship.crew >= ship.stats.crewMax * 0.9 && ship.morale >= 50;
       const r = await fight(B, mark.id, want === 'pirate' && fullCrew && a.board ? 'board' : 'guns');
       out.push(`${mark.name}⚓${mark.lvl}: ${r}`);
+      if (r === 'timeout' || r === 'she slipped away') skipIds.add(mark.id);
       if (r === 'sunk her' || r === 'struck') got++;
       if (ship.hull < ship.stats.hullMax * 0.45) { out.push('hurt: home'); break; }
       continue;
@@ -447,9 +455,9 @@ export async function hunt(B, a) {
 function doable(B, q) {
   if (q.blocked || q.category === 'elite' || q.group) return false;
   const st = q.steps.join(' / ');
-  if (/Deliver|Bring|Take on|Take whales|Take fish|customs|Send divers|contraband|Chart islands/i.test(st)) return false;
+  if (/Deliver|Bring|Take on|Take whales|Take fish|customs|Send divers|contraband|Chart islands|Sail into|Fish letters|tribute|Land a fish|Keep the sea|wanted captains|named pirate/i.test(st)) return false;
   if (q.ship && q.ship > B.s.ship.shipLevel + 1) return false;
-  return /Land a party|Beat the|Beat lairs|Kill sharks|Sink pirate ships|Keep the sea|Reach |Return to/i.test(st);
+  return /Land a party|Beat the|Beat lairs|Kill sharks|Sink pirate ships|Take ships by boarding|Reach |Return to/i.test(st);
 }
 
 /** In port: take what is worth taking (jobs she can do, letters, bounties), up to the limits. */
@@ -485,6 +493,7 @@ function nextJobs(B) {
     else if (/^Beat the |^Land a party|^Then land a party/.test(q.text) && t) how = 'step';
     else if (/^Kill sharks/.test(q.text)) how = 'sharks';
     else if (/^Sink pirate ships/.test(q.text)) how = 'pirates';
+    else if (/^Take ships by boarding/.test(q.text)) how = 'prize';
     else if (/^Keep the sea/.test(q.text)) how = 'keep';
     if (how) out.push({ id: q.id, name: q.name, text: q.text, how, d, need: q.need - q.progress, t });
   }
@@ -499,6 +508,8 @@ function nextJobs(B) {
 /** Rounds of a working captain: take work in port, do the nearest thing, come in for her pay and her stores. */
 export async function auto(B, a = {}) {
   const ship = B.s.ship, log = [], skip = new Map();
+  const boards = (globalThis.__boards ??= []);
+  const noDock = (globalThis.__noDock ??= new Set());
   const rounds = Number(a.rounds ?? 10);
   const lv0 = B.s.profile.level;
   for (let i = 0; i < rounds && !B.stop; i++) {
@@ -507,17 +518,33 @@ export async function auto(B, a = {}) {
       // shaken nerves mend ashore (a tavern, a chapel, solid ground): a while in port before she sails again
       if (ship.sanity < 60) { const s0 = ship.sanity; await B.run(1800, () => ship.sanity >= 85); log.push(`ashore: sanity ${Math.round(s0)} → ${Math.round(ship.sanity)}`); }
       await sellLoot(B);
+      const up = await upgrade(B);
+      if (up?.to) log.push(`new hull: ${JSON.stringify(up)}`);
       await refit(B, { food: a.food ?? 18 });
       const took = await takeWork(B);
       if (took.length) log.push(`took: ${took.join('; ')}`);
     }
     const jobs = nextJobs(B).filter((x) => (skip.get(x.id) ?? 0) < 2);
-    if (!jobs.length) { log.push('no work here'); break; }
+    if (!jobs.length) {
+      // nothing to do here: the next harbour's board (the nearest she has not just left, in waters she can sail)
+      const me = ship.state;
+      const pt = B.game.world.ports.filter((q) => q.id !== ship.docked && !boards.includes(q.id) && !q.raft && sectorAt(B.game.world, q.x, q.y).level <= ship.shipLevel + 1)
+        .sort((u, v) => Math.hypot(u.x - me.x, u.y - me.y) - Math.hypot(v.x - me.x, v.y - me.y))[0];
+      if (!pt) { log.push('no work anywhere'); break; }
+      if (ship.docked) boards.push(ship.docked);
+      if (boards.length > 12) boards.shift();
+      const r = await dock(B, { port: pt.id, why: 'for work' });
+      log.push(`to ${pt.name} for work: ${JSON.stringify(r).slice(0, 60)}`);
+      continue;
+    }
     const j = jobs[0];
     let r;
     if ((ship.hull < ship.stats.hullMax * 0.5 || (ship.crew < ship.stats.crewMax * 0.7 && B.s.profile.gold >= 400) || ship.crew < ship.stats.crewMax * 0.4) && !ship.docked) {
-      const pt = B.game.world.ports.slice().sort((u, v) => Math.hypot(u.x - ship.state.x, u.y - ship.state.y) - Math.hypot(v.x - ship.state.x, v.y - ship.state.y))[0];
+      // the nearest yard with hands in its tavern when she is short of men (an empty tavern sends her on)
+      const short = ship.crew < ship.stats.crewMax * 0.6;
+      const pt = B.game.world.ports.filter((q) => !q.raft && !noDock.has(q.id) && (!short || (B.game.tavernCrew.get(q.id) ?? 0) >= 10)).sort((u, v) => Math.hypot(u.x - ship.state.x, u.y - ship.state.y) - Math.hypot(v.x - ship.state.x, v.y - ship.state.y))[0];
       r = await dock(B, { port: pt.id, why: 'hurt: the nearest yard' });
+      if (!ship.docked) { noDock.add(pt.id); log.push(`${pt.name} would not have her: ${B.log.slice(-4).map((l) => l.msg).join(' | ').slice(0, 160)}`); }
       log.push(`hurt → ${pt.name}`);
       continue;
     }
@@ -528,14 +555,51 @@ export async function auto(B, a = {}) {
       case 'cull': if (j.t) await tp(B, j.t.x, j.t.y, `${j.name}: a lair`); r = await lair(B, {}); break;
       case 'sharks': r = await hunt(B, { what: 'shark', n: j.need, ...(j.t ? { x: j.t.x, y: j.t.y } : {}) }); break;
       case 'pirates':
-        if (ship.crew < ship.stats.crewMax * 0.8 || ship.hull < ship.stats.hullMax * 0.8) { r = 'not fit for a hunt'; break; }
+        if (ship.crew < ship.stats.crewMax * 0.55 || ship.hull < ship.stats.hullMax * 0.8) { r = 'not fit for a hunt'; break; }
         r = await hunt(B, { what: 'pirate', n: j.need, ...(j.t ? { x: j.t.x, y: j.t.y } : {}) }); break;
       case 'keep': r = await hunt(B, { what: 'pirate', n: 99, legs: 2, wait: 120, ...(j.t ? { x: j.t.x, y: j.t.y } : {}) }); break;
+      case 'prize':
+        if (ship.crew < ship.stats.crewMax * 0.85 || ship.morale < 50) { r = 'not fit to board'; break; }
+        r = await hunt(B, { what: 'pirate', n: j.need, board: 1 }); break;
     }
     log.push(`${j.how} «${j.name}»: ${JSON.stringify(r)?.slice(0, 160)}`);
     // a job that came to nothing twice is left for later (poor odds ashore, no sharks in sight)
-    if (!r || typeof r === 'string' || r.skipped || r.fight || r.landed === false || (r.got === 0 && r.legs !== undefined)) skip.set(j.id, (skip.get(j.id) ?? 0) + 1);
+    if (!r || typeof r === 'string' || r.skipped || r.fight || r.landed === false || (r.got === 0 && r.legs !== undefined)) {
+      skip.set(j.id, (skip.get(j.id) ?? 0) + 1);
+      // twice for nothing: set aside, its slot for work she can do (a player drops what she cannot finish)
+      if (skip.get(j.id) >= 2 && j.how !== 'letters') { B.send({ t: 'quest', action: 'abandon', id: j.id }); await B.run(0.1); log.push(`set aside «${j.name}»`); }
+    }
     if (Number(a.toLevel) && B.s.profile.level >= Number(a.toLevel)) break;
   }
   return { from: lv0, to: B.s.profile.level, xp: B.s.profile.xp, silver: B.s.profile.gold, log };
+}
+
+/** A better hull at this yard when hers is below her own ⚓ and the price (less her trade-in) leaves a reserve. */
+export async function upgrade(B, a = {}) {
+  const v = B.port, ship = B.s.ship, p = B.s.profile;
+  if (!v?.shipyard) return 'no yard';
+  const { levelRange, captainLevelFor } = await import('../../../shared/src/data/shiplevel.ts');
+  let own = 1;
+  for (let l = 1; l <= 10; l++) if (captainLevelFor(l) <= p.level) own = l;
+  if (ship.shipLevel >= own) return `her ⚓${ship.shipLevel} is her own`;
+  const reserve = Number(a.reserve ?? 1200);
+  const opts = v.shipyard.ships.map((x) => ({ ...x, lo: levelRange(x.classId)[0], net: x.price - (x.tradeIn ?? 0) }))
+    .filter((x) => x.lo > ship.shipLevel && x.lo <= own && x.net <= p.gold - reserve).sort((u, w) => w.lo - u.lo || u.net - w.net);
+  if (!opts.length) return { own, cur: ship.shipLevel, gold: p.gold, cheapest: v.shipyard.ships.map((x) => ({ c: x.classId, lo: levelRange(x.classId)[0], net: x.price - (x.tradeIn ?? 0) })).filter((x) => x.lo > ship.shipLevel && x.lo <= own).sort((u, w) => u.net - w.net)[0] };
+  const pick = opts[0];
+  const g0 = p.gold, c0 = ship.loadout.classId;
+  B.send({ t: 'shipyard', action: 'buy_ship', classId: pick.classId });
+  await B.run(1);
+  return { from: c0, to: ship.loadout.classId, level: ship.shipLevel, paid: g0 - p.gold, heard: B.log.slice(-3).map((l) => l.msg) };
+}
+
+/** Her boarding battle (hers as the grappler, or the one who grappled her), her side handed to the battle's mind. */
+function boardBattle(B) {
+  const b = B.s.ship.boarding;
+  if (!b) return false;
+  const att = b.attacker ? B.s.ship : B.game.ships.get(b.with);
+  const bt = att?.boarding?.fight?.tac;
+  if (!bt) return false;
+  for (const h of bt.heroes) if (h.input.human && h.input.name === B.s.name) h.auto = true;
+  return true;
 }
