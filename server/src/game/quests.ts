@@ -480,7 +480,7 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   // by the same three fights) — the job that names that very lair first, then the first taken.
   const kill = ev.k === 'sink' || ev.k === 'board' || ev.k === 'lair';
   let spent = false;
-  const named = (qs: { id: string; step: number }) => (ev.k === 'lair' && QUESTS_BY_ID[qs.id]?.steps[qs.step]?.island === ev.island ? 1 : 0);
+  const named = (qs: { id: string; step: number }) => (ev.k === 'lair' && (QUESTS_BY_ID[qs.id]?.steps[qs.step] as { island?: number } | undefined)?.island === ev.island ? 1 : 0);
   for (const qs of [...p.quests.active].sort((a, b) => named(b) - named(a))) {
     const q = QUESTS_BY_ID[qs.id];
     if (!q) continue;
