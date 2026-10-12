@@ -941,6 +941,10 @@ export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profes
   const newMorale = scum ? 30 : share ? 45 : ship.hasFlag('legend_at_helm') ? 80 : 62;
   if (share) game.toastShip(ship, `${n} hands sign on for a share of the next spoils.`, 'good');
   ship.morale = (ship.morale * ship.crew + newMorale * n) / (ship.crew + n);
+  // …and they come aboard with clear heads (docs/30, band 2: the one survivor of a lost landing, mad with what he had
+  // seen, made the eleven hands signed on beside him as mad: they seized the helm and steered for the Abyss off Mermaid
+  // Wharf, a safe harbour's mouth).
+  ship.sanity = (ship.sanity * ship.crew + 100 * n) / (ship.crew + n);
   // New hands dilute veterancy and loyalty by their share.
   const total = ship.crew + n;
   c.skill = (c.skill * ship.crew + tav.stars * n) / total;

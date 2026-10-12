@@ -312,3 +312,16 @@ test('a sunk ship: officers wounded or taken; sinking in port-less water is surv
   assert.ok(co.officers.length === 0 || co.officers[0].wound !== null, 'wounded (or lost)');
   assert.equal(poolTotal(co.pools) >= 0, true);
 });
+
+test('new hands come aboard with clear heads: a mad survivor does not make the hired mad (docs/30, band 2)', () => {
+  const { game } = makeGame();
+  const { s, c } = captain(game, 'Clear Heads');
+  const ship = s.ship!;
+  ship.crew = 1;
+  ship.setArmy([{ u: 'deckhand', n: 1 }]);
+  ship.sanity = 4;
+  s.profile!.gold = 50_000;
+  c.push({ t: 'hire_crew', qty: 11 });
+  assert.equal(ship.crew, 12);
+  assert.ok(ship.sanity > 85, `sanity ${ship.sanity.toFixed(1)}: eleven clear heads and one mad`);
+});
