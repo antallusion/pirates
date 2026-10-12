@@ -8,6 +8,7 @@ export const SERVER_RU_H: Record<string, string> = {
   'That mark is too far for one run: set a nearer one': 'Метка слишком далеко для одного перехода: поставьте ближе',
   'No open water leads to that mark': 'К этой метке не ведёт чистая вода',
   'The helm is yours': 'Штурвал снова у вас',
+  'The race is on: {0} min to {1}.': 'Гонка началась: {0} мин до порта {1}.',
   'Your waters teach you nothing more on a level-1 hull: any shipyard raises her to level 2 at the Admiralty’s charge, once.': 'На корабле 1-го уровня ваши воды больше ничему не учат: любая верфь перестроит его до 2-го уровня за счёт Адмиралтейства, один раз.',
   'The cargo of “{0}” is lost: take it on again at {1}.': 'Груз задания «{0}» потерян: возьмите его снова в порту {1}.',
   'The helmsman keeps off her side: the guns fight her instead.': 'Рулевой не идёт к её борту: бой ведут пушки.',

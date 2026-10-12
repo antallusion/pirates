@@ -82,6 +82,9 @@ export function feminineAfter(tpl: string, slot: string): string {
 }
 const NOT_VERBS = new Set(['журнал', 'акул', 'стол', 'пол', 'сигнал', 'канал', 'адмирал', 'генерал', 'металл', 'материал', 'капитал', 'котел', 'ангел', 'узел', 'угол', 'орел', 'орёл', 'посол', 'козел', 'пепел', 'штурвал', 'вал', 'шквал', 'причал', 'футштал']);
 
+/** The pace a race's time is reckoned at (knots). */
+export const RACE_KNOTS = 5;
+
 /** The hold a delivery job may fill: a starter sloop's 30 less her own stores (planks, sailcloth, powder: 12) and a little catch. */
 export const QUEST_HOLD = 15;
 
@@ -753,8 +756,9 @@ function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port
     if (inReg.length) island = rng.pick(inReg);
   }
   const counted = plot.steps.some((s) => s.startsWith('sink') || s === 'board' || s === 'prize' || s === 'dive' || s === 'chart' || s === 'contraband');
-  // A race's time: the straight run at ten knots (at the pace of the sea), and a margin (docs/12 P9).
-  const n = needs('race2') ? Math.max(3, Math.ceil((Math.hypot(port2!.x - port.x, port2!.y - port.y) * 1.4) / (10 * SPEED_SCALE) / 60))
+  // A race's time: the straight run at RACE_KNOTS (a starter sloop's pace — at ten knots no hull of the race's level
+  // could make it; docs/30), and a margin (docs/12 P9).
+  const n = needs('race2') ? Math.max(3, Math.ceil((Math.hypot(port2!.x - port.x, port2!.y - port.y) * 1.4) / (RACE_KNOTS * SPEED_SCALE) / 60))
     : needs('sink_named') || needs('find_letter') ? 1
     : needs('tribute') ? rng.int(1, 2)
     // (no more than a starter sloop carries beside her own stores: 18 of her 30 — «20 planks & pitch» filled 30 and

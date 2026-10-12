@@ -165,3 +165,37 @@ test('money at ⚓1–2 (docs/30): shot never past the market cap, a small hull\
   assert.ok(at(7) <= 32, `a man at 7: ${at(7)}`);
   assert.equal(at(12) - at(10), 3, 'from 10 on, the old rise of 1.5 a level');
 });
+
+test('a race taken in port: its clock starts when she casts off, and its time is a starter sloop’s run (docs/30)', async () => {
+  const { QUESTS_BY_ID } = await import('../shared/src/data/quests.ts');
+  const { RACE_KNOTS } = await import('../shared/src/data/questgen.ts');
+  const { SPEED_SCALE } = await import('../shared/src/constants.ts');
+  const { acceptQuest, questEvent } = await import('../server/src/game/quests.ts');
+  const { buildPortView } = await import('../server/src/game/ports.ts');
+  const { game } = makeGame();
+  const conn = join(game, 'Racer');
+  const s = game.sessionByName('Racer')!;
+  s.profile!.level = 6;
+  let q = null as (typeof QUESTS_BY_ID)[string] | null, from: ReturnType<typeof game.portById> = undefined;
+  for (const port of game.world.ports.filter((x) => x.region === 'black_coast')) {
+    (game as unknown as { refitAndDock(a: unknown, b: unknown, c: unknown): void }).refitAndDock(s, s.ship, port);
+    const offer = buildPortView(game, s, port).questOffers.find((o) => QUESTS_BY_ID[o.id]?.steps[0]?.type === 'race' && !o.blocked);
+    if (offer) { q = QUESTS_BY_ID[offer.id]; from = port; break; }
+  }
+  assert.ok(q && from, 'a race on a board of the Black Coast');
+  const st = q!.steps[0];
+  assert.ok(st.type === 'race');
+  const to = game.portById(st.port)!;
+  const run = Math.hypot(to.x - from!.x, to.y - from!.y) / (RACE_KNOTS * SPEED_SCALE);
+  assert.ok(st.seconds >= run, `${st.seconds} s for a run of ${Math.round(run)} s at ${RACE_KNOTS} kn`);
+  assert.equal(acceptQuest(game, s, from!, q!.id), null);
+  game.now += st.seconds + 100; // a long time buying stores on the quay
+  questEvent(game, s, { k: 'tick', dt: 1 });
+  assert.ok(s.profile!.quests.active.some((a) => a.id === q!.id), 'the clock does not run in port');
+  s.ship!.docked = null;
+  questEvent(game, s, { k: 'tick', dt: 1 });
+  assert.ok(conn.all('toast').some((t) => /The race is on/.test(t.msg)), 'the start said');
+  game.now += st.seconds + 1;
+  questEvent(game, s, { k: 'tick', dt: 1 });
+  assert.ok(!s.profile!.quests.active.some((a) => a.id === q!.id), 'out of time at sea: lost');
+});

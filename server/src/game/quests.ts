@@ -62,6 +62,8 @@ export interface QuestState {
   step: number;
   progress: number;
   startedAt: number;
+  /** A race taken in port: its clock starts when she casts off (docs/30). */
+  raceHold?: boolean;
   /** Done before this (game seconds), a job pays a quarter more (docs/11 P6). */
   fastUntil?: number;
   /** A courier's cargo draws raiders once (docs/11 P6): when, and whether they have come. */
@@ -179,6 +181,9 @@ function startQuest(game: Game, p: Profile, q: QuestDef, s?: PlayerSession, pay?
   const w = q.kind === 'job' ? fastWindow(game, q) : null;
   const chosen = payAllowed(game, q, pay);
   const qs: QuestState = { id: q.id, step: 0, progress: 0, startedAt: game.now, ...(w ? { fastUntil: game.now + w } : {}), ...(chosen ? { pay: chosen } : {}) };
+  // A race's clock does not run while she buys her stores on the quay (docs/30: «Первым на рынок» was lost before she
+  // had cleared the harbour): it starts as she casts off.
+  if (q.steps[0]?.type === 'race' && s?.ship?.docked) qs.raceHold = true;
   // A group contract: the day's flagship, shared by all who hold it.
   if (q.category === 'elite') {
     const flag = ensureElite(game, q);
@@ -491,6 +496,13 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   // A race lost (docs/12 P9): past its time, the quest is abandoned.
   if (ev.k === 'tick') for (const qs of [...p.quests.active]) {
     const st = QUESTS_BY_ID[qs.id]?.steps[qs.step];
+    if (st?.type === 'race' && qs.raceHold) {
+      if (s.ship?.docked) continue;
+      qs.raceHold = undefined;
+      qs.startedAt = game.now;
+      game.sendTo(s, { t: 'toast', msg: `The race is on: ${Math.round(st.seconds / 60)} min to ${game.portById(st.port)?.name ?? st.port}.`, kind: 'info' });
+      continue;
+    }
     if (st?.type === 'race' && game.now - qs.startedAt > st.seconds) {
       p.quests.active = p.quests.active.filter((a) => a.id !== qs.id);
       game.sendTo(s, { t: 'toast', msg: `Too late: ${QUESTS_BY_ID[qs.id].name} is lost.`, kind: 'bad' });
