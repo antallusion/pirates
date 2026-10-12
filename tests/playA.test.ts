@@ -60,3 +60,9 @@ test('every quest giver has a face drawn: a profession of one sex in the art tak
     assert.ok(existsSync(`assets/portraits/${id}.webp`), `${p} / ${who}: ${id}`);
   }
 });
+
+test('Russian typesetting: a server name already in quotes is not quoted twice by the template', async () => {
+  const { typeset } = await import('../client/src/i18n.ts');
+  assert.equal(typeset('Команда ««Чёрный часовой»» обобрала её'), 'Команда «Чёрный часовой» обобрала её');
+  assert.equal(typeset('На месте: «Логова вод «Чёрное побережье»».'), 'На месте: «Логова вод «Чёрное побережье»».', 'quotes in quotes stay');
+});

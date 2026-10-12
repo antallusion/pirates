@@ -66,6 +66,8 @@ export function fill(s: string, vars: Record<string, string | number>): string {
  *  number keeps its unit (44 с, 9 мин, 1,9 км) on its line. */
 export function typeset(s: string): string {
   return s
+    // a name that comes quoted from the server into a template that quotes it: «{by}» gave ««Чёрный часовой»» (docs/30)
+    .replace(/««([^«»]*)»»/g, '«$1»')
     .replace(/ ([—–/])/g, '\u00a0$1')
     .replace(/(?<=^|[\s(«„"])([вВкКсСуУоОиИаАяЯ]) /g, '$1\u00a0')
     .replace(/(\d) (?=(?:с|сек|мин|ч|м|км|т|уз\.|дн\.?|сут\.?|шт\.?|%)(?![А-Яа-яЁё]))/g, '$1\u00a0');
