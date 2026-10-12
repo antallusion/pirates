@@ -982,7 +982,7 @@ function refitCard(r: RefitView, name: string): string {
     <p class="muted refit-note">${esc(L('refit.captain', { n: n.captain }))} · ${esc(L('refit.time', { m: Math.max(1, Math.ceil(n.sec / 60)) }))}</p>
     <p class="muted refit-note">${esc(L('refit.hint'))}</p>
     ${r.blocked ? `<p class="refit-why">${esc(serverText(r.blocked))}</p>` : ''}
-    <button class="btn btn-primary" data-act="refit" ${r.blocked ? 'disabled' : ''}>${esc(L('refit.go', { n: n.to }))} — ${money(n.silver)}</button></div>`;
+    <button class="btn btn-primary" data-act="refit" ${r.blocked ? 'disabled' : ''}>${esc(L('refit.go', { n: n.to }))}${n.silver > 0 ? ` — ${money(n.silver)}` : ''}</button></div>`;
 }
 
 /** The board of the wanted (docs/12 P5): a poster for each named pirate of these waters, the baron on top. */
