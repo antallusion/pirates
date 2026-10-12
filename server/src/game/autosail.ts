@@ -15,6 +15,7 @@ import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { depthAt, isLand, navBlocked } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import { banksUp } from './isles.ts';
+import { beastBrain } from './beasts.ts';
 import { findPath, lineFree, nearestFree } from './nav.ts';
 import { hullWater, laneFoul, nearestWater, runClear, waterAt } from './seaway.ts';
 import type { Path } from './nav.ts';
@@ -151,6 +152,9 @@ export function autosailDanger(game: Game, s: PlayerSession, ship: ShipEntity, s
   game.forShipsNear(ship.state.x, ship.state.y, AUTOSAIL_DANGER_R, (o) => {
     if (hostile || o.id === ship.id || !o.alive || o.docked || o.ghost || o.surrendered || o.prize) return;
     if (Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y) > AUTOSAIL_DANGER_R) return;
+    // A beast of the sea is danger once it comes for her — not every shark of the shoal off a harbour (docs/30: thirteen
+    // sharks round Moon Landing, «Рядом враждебные паруса» every eight seconds, the helmsman never once took the wheel).
+    if (o.npcRole === 'beast' && beastBrain(game, o.id)?.target !== ship.id && !((ship.attackers.get(o.id) ?? -999) > game.now - 30)) return;
     if (game.isHostile(o, ship)) hostile = true;
   });
   return hostile ? 'hostile' : null;

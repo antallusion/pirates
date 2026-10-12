@@ -87,3 +87,20 @@ test('a crew with no heart for boarding: «Атаковать» to board turns t
   assert.ok(msgs.includes(GUNS_INSTEAD), 'and said so');
   assert.ok(msgs.some((m) => /no stomach/.test(m)), 'with the reason');
 });
+
+test('the helmsman sails on past a shoal of sharks that do not come for her; one that does gives the wheel back', async () => {
+  const { autosailDanger } = await import('../server/src/game/autosail.ts');
+  const { beastBrain, spawnBeast } = await import('../server/src/game/beasts.ts');
+  const { duelSea, openWater } = await import('./balance/duel.ts');
+  const { seaCaptain } = await import('./balance/seafight.ts');
+  const game = duelSea();
+  const at = openWater(game, 41);
+  const s = seaCaptain(game, 'sloop', 5, at.x, at.y, 0);
+  const ship = s.ship!;
+  const sharks = [0, 1, 2].map((k) => spawnBeast(game, 'shark', at.x + 300 + k * 120, at.y + 200, 1));
+  const brain = (id: number) => beastBrain(game, id) as { target: number | null };
+  for (const sh of sharks) { brain(sh.id).target = null; game.grid.upsert(sh.id, sh.state.x, sh.state.y); }
+  assert.equal(autosailDanger(game, s, ship, game.now), null, 'a shoal about, none hunting her');
+  brain(sharks[0].id).target = ship.id;
+  assert.equal(autosailDanger(game, s, ship, game.now), 'hostile', 'one comes for her');
+});
