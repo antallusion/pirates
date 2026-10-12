@@ -249,6 +249,9 @@ export function lacking(h: Holding, y: Yard, s: PlayerSession, near: boolean, go
   const lack = (Object.entries(goods) as [GoodId, number][]).filter(([g, n]) => stock(h, y, s, near, g) < n);
   if (!lack.length) return null;
   const [g, n] = lack[0];
+  // Her own hold has it, but she is away: say so (QA playthrough B: «The yard lacks 8 gunpowder» with 10 aboard, and no
+  // word that the hold counts only lying off the island).
+  if (!near && stock(h, y, s, true, g) >= n) return `The yard lacks ${Math.ceil(n - stock(h, y, s, near, g))} ${GOODS[g].name.toLowerCase()}: your hold has it — lie off the island and build from there.`;
   return `The yard lacks ${Math.ceil(n - stock(h, y, s, near, g))} ${GOODS[g].name.toLowerCase()}.`;
 }
 
