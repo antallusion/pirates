@@ -486,13 +486,21 @@ export class Game {
     this.bootPopulation();
     let last = performance.now();
     let acc = 0;
+    // The QA playthrough (owner, 2026-10-12: «врубить скорость х100»): on an admin server the wall clock — the island's
+    // builders, the weeks, the windows, every timer read from wallNow() — runs at the world's speed too.
+    let skew = 0;
+    if (process.env.GRAVETIDE_ADMIN === '1') this.wallNow = () => Date.now() + skew + (performance.now() - last) * (this.timeScale - 1);
     this.timer = setInterval(() => {
       const t = performance.now();
       acc += ((t - last) / 1000) * this.timeScale;
+      skew += (t - last) * (this.timeScale - 1);
       last = t;
       let steps = 0;
       const maxSteps = Math.ceil(5 * this.timeScale);
-      while (acc >= TICK_DT && steps < maxSteps) {
+      // ×100 asks for more ticks than the machine can step: at most 40 ms of stepping per call, so the sockets and the
+      // pages are still served between (it took 1.5 s to answer a page, minutes to load the client, and replies lagged).
+      const budget = t + 40;
+      while (acc >= TICK_DT && steps < maxSteps && (this.timeScale <= 1 || steps === 0 || performance.now() < budget)) {
         const t0 = performance.now();
         this.snapMs = this.secondMs = 0;
         this.step();
@@ -500,7 +508,7 @@ export class Game {
         acc -= TICK_DT;
         steps++;
       }
-      if (steps === maxSteps && acc >= TICK_DT) {
+      if (acc >= TICK_DT) {
         acc = 0; // drop time rather than spiral
         this.metrics.overruns++;
       }

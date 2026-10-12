@@ -41,3 +41,22 @@ test('admin commands are off unless GRAVETIDE_ADMIN=1; with it they speed the cl
     else process.env.GRAVETIDE_ADMIN = was;
   }
 });
+
+test('on an admin server the wall clock (builders, weeks, windows) runs at the world speed', async () => {
+  const was = process.env.GRAVETIDE_ADMIN;
+  process.env.GRAVETIDE_ADMIN = '1';
+  const { game } = makeGame();
+  try {
+    game.start();
+    game.timeScale = 100;
+    const t0 = Date.now();
+    await new Promise((r) => setTimeout(r, 300));
+    const real = Date.now() - t0;
+    const skew = game.wallNow() - Date.now();
+    assert.ok(skew > real * 50, `the wall clock ran ×100: ${skew} ms ahead after ${real} ms`);
+  } finally {
+    game.stop();
+    if (was === undefined) delete process.env.GRAVETIDE_ADMIN;
+    else process.env.GRAVETIDE_ADMIN = was;
+  }
+});
