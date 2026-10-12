@@ -228,7 +228,9 @@ export function stopAutosail(game: Game, s: PlayerSession, why: AutosailStop): v
   else paused.delete(ship);
   if (!run) return;
   runs.delete(ship);
-  ship.input = { rudder: 0, sailTarget: ship.input.sailTarget };
+  // Arrived: the sails are taken in — her mark is mostly by a shore, a quay or a lair, and under full sail she ran on
+  // past it onto the rocks (docs/30: «Удар о скалы −81» a few seconds after «метка достигнута»).
+  ship.input = { rudder: 0, sailTarget: why === 'arrived' ? 0 : ship.input.sailTarget };
   send(game, s, null, why);
 }
 
