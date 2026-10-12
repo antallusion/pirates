@@ -22,6 +22,9 @@ const WHISTLE = ['━', '•', '〰', '▁'];
 const FLAGS = ['#b3322b', '#e0b83a', '#2f5d9e', '#ece6d6', '#18181a'];
 const SWAP_MS = 420;
 
+/** How long a game's outcome stays on the screen before it goes by itself (ms). */
+export const MG_RESULT_MS = 7000;
+
 export class MinigameWindow {
   private el: HTMLElement;
   private send: (m: ClientMsg) => void;
@@ -92,6 +95,8 @@ export class MinigameWindow {
     this.el.querySelectorAll<HTMLElement>('[data-mg]').forEach((b) => (b.onclick = () => this.pick(b.dataset.mg!)));
     this.el.querySelector<HTMLElement>('[data-mg-close]')?.addEventListener('click', () => this.close());
     if (!v.result) this.animate(d, v);
+    // docs/30: told, it goes by itself — the riddle's answer stood over the sea while a pirate came alongside
+    else this.timers.push(window.setTimeout(() => this.close(), MG_RESULT_MS));
   }
 
   private walk(): string {

@@ -682,6 +682,22 @@ const surrenderCard = new SurrenderCard((m) => net.send(m));
 const boardOffer = new BoardOfferCard((m) => net.send(m));
 const lairChest = new LairChestCard();
 const minigameWindow = new MinigameWindow((m) => net.send(m));
+// docs/30: a game's card over the middle of the screen gives way to a fight — a hostile sail or beast near, a chase,
+// a battle — so the helm and «Огонь» are hers again (a riddle's card stood there while a pirate boarded her).
+setInterval(() => {
+  if (minigameWindow.isOpen && (state.boardTac || state.boardFight || state.pursuit || dangerClose())) minigameWindow.close();
+}, 700);
+/** A hostile sail within 900 m, or a beast at her side (300 m): the shoals of sharks off a harbour are no reason. */
+function dangerClose(): boolean {
+  const o = state.ownDisplay;
+  if (!o || state.self?.dockedAt) return false;
+  for (const x of state.ships.values()) {
+    if (x.id === state.entityId || !x.cur || !(x.cur.flags & 64)) continue;
+    const d = Math.hypot(x.cur.x - o.x, x.cur.y - o.y);
+    if (d < (x.info?.npcRole === 'beast' ? 300 : 900)) return true;
+  }
+  return false;
+}
 // The walk across an island (docs/16 #21): its card waits behind an island game's window.
 const trekWindow = new TrekWindow((m) => net.send(m), () => minigameWindow.isOpen);
 const LI = dict(ISLES_EN, ISLES_RU);
