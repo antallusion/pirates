@@ -24,6 +24,7 @@ import type { Game } from '../server/src/game/Game.ts';
 import { FAR_EVERY, FAR_LOD_R } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { runAdmin } from '../server/src/game/admin.ts';
+import { cancelApproach } from '../server/src/game/approach.ts';
 import { DIRECTOR_MUL } from '../server/src/game/director.ts';
 import { QUOTA } from '../server/src/game/npc.ts';
 import { BEAST_JOBS_ON_BOARD, JOBS_ON_BOARD, boardJobs } from '../server/src/game/quests.ts';
@@ -289,8 +290,23 @@ test('D5: within reach and hove to; one of hers at a time in quiet sailing; on t
   game.directorOn = true;
   ship.state.speed = 10;
   ship.input = { rudder: 0.02, sailTarget: 1 };
+  // (kept under way in open water: the wind follows the real clock, and on some days her course ran her aground — a
+  // ship stopped on a shore is no quiet sea, and no find came all the 700 s)
+  // (and the order to shorten sail for the bottle above, still standing, let go — it held her hove to)
+  cancelApproach(game, s);
+  s.whenClear = null;
+  // (and kept from harm: gravewater's ships fell on her some runs, sank her and sent her to port — no sea at all)
+  runAdmin(game, s, '/god on');
+  const x0 = ship.state.x - 900, y0 = ship.state.y, h0 = ship.state.heading;
   let most = 0;
   for (let t = 0; t < 700; t++) {
+    if (ship.state.speed < 3) {
+      ship.state.x = x0;
+      ship.state.y = y0;
+      ship.state.heading = h0;
+      ship.state.speed = 10;
+      ship.input = { rudder: 0.02, sailTarget: 1 };
+    }
     steps(game, 20);
     most = Math.max(most, findsOf(game, s).length);
   }

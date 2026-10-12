@@ -253,7 +253,7 @@
   #modal-panel[data-modal="talents"] .rose-node { position: relative; left: auto; top: auto; width: var(--f-tap); height: var(--f-tap); margin: 0; transform: none; }
   #modal-panel[data-modal="talents"] .rose-node .rose-ico { inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); }
   #modal-panel[data-modal="talents"] .rose-pts { font-size: var(--f-fs-s); min-width: 16px; height: 15px; line-height: 13px; padding: 0 3px; }
-  #modal-panel[data-modal="talents"] .rose-extra { grid-template-columns: 1fr 1fr; margin-top: var(--f-gap); gap: 3px; }
+  #modal-panel[data-modal="talents"] .rose-extra { grid-template-columns: 1fr; margin-top: var(--f-gap); gap: 3px; } /* one under the other: «Легендарные деяния» stood out of its half into the trees (docs/30) */
   #modal-panel[data-modal="talents"] .rose-extra .btn { min-height: var(--f-tap); padding: 0 2px; gap: 2px; font-size: var(--f-fs-s); white-space: normal; line-height: 1.1; }
   #modal-panel[data-modal="talents"] .rose-extra .btn .ico-sm { display: none; }
   #modal-panel[data-modal="talents"] .tal-main.fit-paged { column-count: 2; column-gap: 16px; }
@@ -605,4 +605,15 @@ body.touch #mm-tab:focus-visible .mm-tab-pill { box-shadow: none; }
 @media (max-height: 520px) {
   /* a window's fields on the same scale (the page has maximum-scale=1: iOS does not zoom into a field under 16 px) */
   #modal-panel :is(input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea) { font-size: var(--f-fs-m); }
+}
+
+/* ================================================================== the iPhone's notch, held sideways
+   (owner, 2026-10-12: «из-за айфоновской шторки модалки и окна перекрывают часть текста … центруй все красиво и
+   ограничивай ширину окон»): every window, sheet and screen keeps off the safe areas on BOTH sides by the larger of
+   the two — the notch is on one side only, so equal margins keep the window in the middle of what can be seen — and
+   its width is capped (a window 880 px, a sheet 760 px); the window's own padding no longer carries the safe area. */
+@media (max-height: 520px) {
+  #modal, .k-sheet-root, .screen { --sa-x: max(var(--sa-l, 0px), var(--sa-r, 0px)); box-sizing: border-box; padding-left: var(--sa-x); padding-right: var(--sa-x); }
+  #modal-panel { width: min(100%, 880px) !important; max-width: 880px; margin-inline: auto; }
+  .k-sheet { width: min(100%, 760px); margin-inline: auto; padding-left: var(--f-pad); padding-right: var(--f-pad); }
 }

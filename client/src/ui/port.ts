@@ -55,6 +55,7 @@ import { holidayCard } from './holidays.ts';
 import { bazaarAct, bazaarCard, bindBazaar } from './bazaar.ts';
 import { departOrAsk, voyageOrder, voyageShip } from './depart.ts';
 import { VOYAGE_MINUTES, voyageCrew, voyageNeeds } from '../../../shared/src/data/voyage.ts';
+import { showHint } from './kit/hint.ts';
 import { chipRow, figure, keepFolds, more, quickBar, quickBtn, railTabs, rangeHtml, sec, wasBecomes, winHead } from './kit/window.ts';
 import type { QuickBtn, WinTab } from './kit/window.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
@@ -231,6 +232,8 @@ export class PortScreen {
       root.querySelector<HTMLElement>('.port-body')?.scrollTo({ top: 0 });
     }));
     root.querySelectorAll<HTMLElement>('[data-act]').forEach((el) => (el.onclick = () => this.act(el.dataset, root, state)));
+    // A quest's card or row tapped (not its button): what it asks, the long press's words (docs/30).
+    if (this.tab === 'quests') root.querySelectorAll<HTMLElement>('.q-card[data-hint], .mk-list .w-row[data-hint]').forEach((el) => (el.onclick = (e) => { if (!(e.target as HTMLElement).closest('button')) showHint(el); }));
     bindColours(root, this.send);
     bindContracts(root, this.send, () => {}); // docs/19 E15: the Admiralty's board
     bindBazaar(root);

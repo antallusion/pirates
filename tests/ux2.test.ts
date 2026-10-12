@@ -155,6 +155,13 @@ test('the run to a goal: the course, the next step’s course, putting in, the l
   assert.equal(r4.step(view({ now: 3000, target: t2, own: { x: -5000, y: 0 } })).do, 'none');
   assert.equal(r4.step(view({ now: 4100, target: t2, own: { x: -5000, y: 0 } })).do, 'sail');
   assert.deepEqual(r4.step(view({ now: 7000, target: t2, own: { x: -5000, y: 0 } })), { do: 'end', why: 'helm' });
+  // docs/30: there (a lair on an island), then carried a little off by her way: no new course onto the shore
+  const r5 = new GoalRun('q:near', 0, 420);
+  assert.equal(r5.step(view({ now: 0, target: t2, own: { x: -5000, y: 0 } })).do, 'sail');
+  const at = { x: t2!.x, y: t2!.y + Math.max(150, t2!.r * 0.6) - 10 };
+  assert.equal(r5.step(view({ now: 60000, target: t2, own: at, stop: { why: 'arrived', at: 59000 } })).do, 'arrived');
+  assert.equal(r5.step(view({ now: 70000, target: t2, own: { x: at.x, y: at.y + 120 }, stop: { why: 'arrived', at: 59000 } })).do, 'none', 'drifted a little: no new course');
+  assert.equal(r5.step(view({ now: 90000, target: t2, own: { x: at.x, y: at.y + 3000 }, stop: { why: 'arrived', at: 59000 } })).do, 'sail', 'gone far off: the course again');
 });
 
 /** Open water `d` metres east of her. */

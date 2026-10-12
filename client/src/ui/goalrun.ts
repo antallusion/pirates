@@ -157,6 +157,9 @@ export class GoalRun {
       this.sentTo = null;
       return { do: 'arrived', title: t.title };
     }
+    // There already, and only drifted off a little (the way she carried after the sails came in): no new course — it drove
+    // her back at the lair's island and onto the rocks (docs/30).
+    if (this.arrivedFor === spot && !t.region && t.act !== 'dock' && d <= Math.max(400, t.r * 2)) return { do: 'none' };
     // On the way.
     if (v.autosail) {
       this.judged = true;

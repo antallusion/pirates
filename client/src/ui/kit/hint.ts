@@ -42,6 +42,15 @@ function show(el: HTMLElement): void {
   try { navigator.vibrate?.(10); } catch { /* not allowed */ }
 }
 
+/** The hint of an element shown by a plain tap, where a tap has nothing else to do (a quest's card: what it asks is
+ *  read before it is taken; docs/30 — a newcomer never finds the long press). It goes after a moment. */
+export function showHint(el: HTMLElement): void {
+  show(el);
+  shownFor = null;
+  const t = tip;
+  if (t) setTimeout(() => tip === t && hide(), 4000);
+}
+
 /** Hints on every `[data-hint]` of the page (one listener; call once). */
 export function wireHints(): void {
   addEventListener('pointerdown', (e) => {

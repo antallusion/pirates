@@ -2624,6 +2624,8 @@ body.touch .base-board .bplot { cursor: default; }
 #modal-toasts .toast > span { display: block; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #modal-toasts .toast .ico-toast { width: 16px; height: 16px; flex: none; }
 #modal-toasts .t-count { flex: none; }
+/* a line said aboard on one row over a window: the speaker and his words apart («КомандаПриказы исполняют», docs/30) */
+#modal-toasts .toast.talk .talk-who::after { content: ' · '; color: var(--fog); font-weight: 400; }
 @media (max-width: 699px), (max-height: 520px) {
   #modal-toasts { width: 100%; padding: 0 calc(var(--sa-r) + 2px) calc(var(--sa-b) + 1px) calc(var(--sa-l) + 2px); background: #060607; }
   #modal-toasts .toast:nth-child(n+2):not(.bad) { display: none; }
