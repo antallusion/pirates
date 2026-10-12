@@ -51,11 +51,13 @@ export function pointerTargets(f: PointerFacts): string[] {
  *  room (above «Огонь» it lay over «Действие» and seemed to mean it, QA 2026-10-06); a button at the left edge (the
  *  wheel) gets it from above, pointing down, or from below, pointing up, when there is no room above. Pure. */
 export type PointerDir = 'down' | 'up' | 'right';
-export function pointerSpot(r: { left: number; top: number; width: number; height: number }, size: number, vw: number, vh: number): { x: number; y: number; dir: PointerDir } {
+export function pointerSpot(r: { left: number; top: number; width: number; height: number }, size: number, vw: number, vh: number, covers: (x: number, y: number) => boolean = () => false): { x: number; y: number; dir: PointerDir } {
   const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
   // From the left, pointing right, whenever there is room: above a button in a column or a grid of choices (the
   // prize's five) it lay over the button above and seemed to mean that one (QA 2026-10-07).
-  if (r.left - size - 4 >= 4) return { x: r.left - size - 4, y: Math.max(4, Math.min(vh - size - 4, cy - size / 2)), dir: 'right' };
+  // (Not over another button there: by «В море» it lay over «В гавань» and hid its word, docs/30.)
+  const ly = Math.max(4, Math.min(vh - size - 4, cy - size / 2));
+  if (r.left - size - 4 >= 4 && !covers(r.left - size / 2 - 4, ly + size / 2)) return { x: r.left - size - 4, y: ly, dir: 'right' };
   const x = Math.max(4, Math.min(vw - size - 4, cx - size / 2));
   const above = r.top - size - 4;
   if (above >= 4) return { x, y: above, dir: 'down' };
@@ -106,7 +108,10 @@ export class TutorPointer {
       return;
     }
     const r = t.getBoundingClientRect();
-    const spot = pointerSpot(r, this.size, innerWidth, innerHeight);
+    const spot = pointerSpot(r, this.size, innerWidth, innerHeight, (x, y) => {
+      const under = document.elementFromPoint(x, y)?.closest('button, [role="button"]');
+      return !!under && under !== t && !t.contains(under) && !under.closest('#tut-finger');
+    });
     this.el.classList.remove('hidden');
     this.el.classList.toggle('up', spot.dir === 'up');
     this.el.classList.toggle('right', spot.dir === 'right');

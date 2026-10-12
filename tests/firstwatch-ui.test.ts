@@ -98,3 +98,12 @@ test('the fast start and the safe area (docs/23 items 88–89)', () => {
   assert.match(main, /localStorage\.setItem\(CAPTAIN_KEY, m\.name\)/);
   assert.match(main, /m\.msg === 'Logged in elsewhere\.'/);
 });
+
+test('the finger does not lie over another button: by «В море» it stood over «В гавань» (docs/30)', () => {
+  const W = 844, H = 390;
+  const sea = { left: 745, top: 290, width: 90, height: 90 };
+  const free = pointerSpot(sea, 44, W, H);
+  assert.equal(free.dir, 'right');
+  const busy = pointerSpot(sea, 44, W, H, (x) => x > 620 && x < 740);
+  assert.notEqual(busy.dir, 'right', 'from above or below instead');
+});
