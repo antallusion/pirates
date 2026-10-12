@@ -33,7 +33,7 @@ import type { PursuitMode, PursuitStop } from '../../../shared/src/protocol.ts';
 import { angleDiff, DEG, headingOf } from '../../../shared/src/math.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { stopAutosail, autosailOf } from './autosail.ts';
-import { boardingRangeBetween } from './boarding.ts';
+import { boardingRangeBetween, crewRefuses } from './boarding.ts';
 import { NO_BOARD_HER, NO_BOARD_OWN, boardingOff } from './colours.ts';
 import { applyDamage, damageBlocked, effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
 import type { Game } from './Game.ts';
@@ -55,6 +55,8 @@ export const PURSUIT_RESUME = 1.5;
 export const PURSUIT_SIGHT = 2600;
 /** A mark lost: the nearest ship hostile to her within this is the next (docs/23 item 43). */
 export const RETARGET_R = 1600;
+/** Said when her crew will not board and the pursuit turns to the guns (docs/30). */
+export const GUNS_INSTEAD = 'The helmsman keeps off her side: the guns fight her instead.';
 /** The boarding run starts this near her mark. */
 export const BOARD_RUN_FROM = 1200;
 /** Auto-battle against the weak (docs/23 item 46): a mark this many levels below her own is settled in AUTO_WEAK_SEC. */
@@ -350,6 +352,18 @@ export function stepPursuit(game: Game): void {
       // The boarding run (docs/23 item 36): every hand on the braces and the sweeps while she closes — twice her way,
       // a quick helm, and the wind no matter.
       boardRun(game, s, ship, d < BOARD_RUN_FROM && d > reach * 0.9);
+      // Her own crew will not go over the rail (no heart for it, too few hands): the grapples never fly, and alongside
+      // her hull ground on the mark's until she sank, untold (docs/30: morale 5, two sloops lost so). Said once; the guns
+      // fight her from their reach instead.
+      const unwilling = d < reach * 2 ? crewRefuses(ship) : null;
+      if (unwilling) {
+        game.sendTo(s, { t: 'toast', msg: unwilling, kind: 'bad' });
+        game.sendTo(s, { t: 'toast', msg: GUNS_INSTEAD, kind: 'info' });
+        run.mode = 'guns';
+        boardRun(game, s, ship, false);
+        send(game, s, run);
+        continue;
+      }
       if (d < reach * 1.4) {
         const want = t.state.speed + (d > reach ? BOARD_CLOSE : 0.5);
         ship.input.sailTarget = ship.state.speed > want + 0.6 ? 0.25 : ship.state.speed < want - 0.6 ? 1 : 0.6;

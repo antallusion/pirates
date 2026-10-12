@@ -66,3 +66,24 @@ test('Russian typesetting: a server name already in quotes is not quoted twice b
   assert.equal(typeset('Команда ««Чёрный часовой»» обобрала её'), 'Команда «Чёрный часовой» обобрала её');
   assert.equal(typeset('На месте: «Логова вод «Чёрное побережье»».'), 'На месте: «Логова вод «Чёрное побережье»».', 'quotes in quotes stay');
 });
+
+test('a crew with no heart for boarding: «Атаковать» to board turns to the guns, said, not grinding alongside her', async () => {
+  const { startPursuit, pursuitOf, GUNS_INSTEAD } = await import('../server/src/game/pursuit.ts');
+  const { duelSea, openWater, putSide } = await import('./balance/duel.ts');
+  const { seaCaptain } = await import('./balance/seafight.ts');
+  const game = duelSea();
+  const at = openWater(game, 40);
+  const s = seaCaptain(game, 'sloop', 3, at.x, at.y, 0);
+  const ship = s.ship!;
+  const B = putSide(game, { cls: 'sloop', level: 3, craft: 'bot' }, at.x + 60, at.y, Math.PI);
+  ship.morale = 5;
+  assert.equal(startPursuit(game, s, B.ship.id, 'board'), null);
+  for (let i = 0; i < 60 && pursuitOf(ship)?.mode === 'board'; i++) {
+    ship.morale = 5;
+    game.step();
+  }
+  assert.equal(pursuitOf(ship)?.mode, 'guns', 'the pursuit turned to the guns');
+  const msgs = (s.conn as unknown as FakeConn).all('toast').map((t) => t.msg);
+  assert.ok(msgs.includes(GUNS_INSTEAD), 'and said so');
+  assert.ok(msgs.some((m) => /no stomach/.test(m)), 'with the reason');
+});

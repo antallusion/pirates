@@ -93,6 +93,11 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
     const rammed = a.ramTarget === b.id && a.ramUntil > game.now; // Hull to Hull
     if (relSpeed > BOARD_REL_SPEED * (1 + tx(a.stats, 'matchSpeed')) && !b.surrendered && a.tether?.target !== b.id && !rammed) return 'Match her speed before boarding';
   }
+  return crewRefuses(a);
+}
+
+/** Why her own crew will not board anyone now (too few hands, no nerve), or null. */
+export function crewRefuses(a: ShipEntity): string | null {
   if (a.crew < Math.max(4, a.stats.crewMin * 0.5)) return 'Not enough hands for a boarding party';
   // A crew with no nerve left breaks in the first rush: say so instead of throwing them over the rail.
   if (a.morale < 15 && !a.surrendered) return 'Your crew has no stomach for boarding — raise their morale first';
