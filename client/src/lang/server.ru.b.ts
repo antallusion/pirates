@@ -358,7 +358,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "WORLD: {0} is first ashore on the new island and names her {1}.": "Вести: {0} первым ступает на новый остров и нарекает его {1}.",
   "WORLD: {0} of the Pantheon renames {1} — she is {2} now.": "Вести: {0} из Пантеона переименовывает {1} — отныне это {2}.",
   "WORLD: {0} was slain by {1}.": "Вести: {0} убит. Победитель: {1}.",
-  "Wages are due and the chest is short ({0} silver). The crew remembers.": "Пора платить жалованье, а в сундуке недостача ({0} серебра). Команда это запомнит.",
+  "Wages are due and the chest is {0} silver short. The crew remembers.": "Пора платить жалованье, а в сундуке не хватает {0} серебра. Команда это запомнит.",
   "Wandering Jew": "«Агасфер»",
   "Wanted {0}: {1} ({2}).": "Розыск {0}: {1} ({2}).",
   "War declared on {0} [{1}]": "Объявлена война {0} [{1}]",

@@ -379,7 +379,7 @@ export function stepCompany(game: Game, s: PlayerSession): void {
       c.owed -= due;
       c.unpaid = 0;
     } else if (due > 0) {
-      game.toastShip(ship, `Wages are due and the chest is short (${due} silver). The crew remembers.`, 'bad');
+      game.toastShip(ship, `Wages are due and the chest is ${due} silver short. The crew remembers.`, 'bad');
     }
   }
   if (c.owed >= 1 && p.gold < c.owed) c.unpaid++;
