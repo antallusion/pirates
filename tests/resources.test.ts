@@ -96,7 +96,7 @@ test('warehouse: rent on first deposit, stored goods lose stolen marks, withdraw
   c.push({ t: 'warehouse', good: 'rum', qty: -10 });
   assert.equal(ship.cargo.rum, 15);
   assert.equal(p.warehouses[portId].rum, 5);
-  assert.equal(p.gold, 700, 'rent charged only once');
+  assert.equal(p.gold, 1000 - warehouseRent(p.level), 'rent charged only once');
   c.push({ t: 'warehouse', good: 'rum', qty: 100000 });
   assert.equal(ship.cargo.rum, 15, 'absurd orders refused');
 });
