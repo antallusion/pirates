@@ -484,11 +484,13 @@ export class SeaHud {
       const t = L('ammo', { n: v.ammoN });
       this.ammoEl.setAttribute('aria-label', t);
       this.ammoEl.title = t;
+      this.ammoEl.classList.toggle('empty', v.ammoN <= 0); // playthrough C: an empty shot locker shows on the pill
     });
     const rl = (Math.round(Math.max(0, Math.min(1, v.reload)) * 40) / 40).toFixed(3);
-    this.once('reload', rl, () => {
+    // (no glow with the locker empty: «Огонь» lit at 0 shots looked loaded and did nothing — playthrough C)
+    this.once('reload', `${rl}|${v.ammoN > 0}`, () => {
       this.fireEl.style.setProperty('--rl', rl);
-      this.fireEl.classList.toggle('loaded', v.reload >= 1);
+      this.fireEl.classList.toggle('loaded', v.reload >= 1 && v.ammoN > 0);
     });
     this.once('news', String(v.news), () => {
       setBadge(this.newsEl, v.news);
