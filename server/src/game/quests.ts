@@ -38,7 +38,7 @@ import { eliteById } from '../../../shared/src/data/elite.ts';
 import { titlesDue } from '../../../shared/src/data/questtitles.ts';
 import { nearTask, taskEvent } from './worldtasks.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
-import { captainBand, sectorAt } from '../../../shared/src/world/sectors.ts';
+import { bandOf, captainBand, sectorAt } from '../../../shared/src/world/sectors.ts';
 import { questXpFor } from '../../../shared/src/data/xpcurve.ts';
 import { dailyEvent } from './dailies.ts';
 import { commonEvent } from './commongoal.ts';
@@ -320,7 +320,7 @@ export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string
   const q = QUESTS_BY_ID[id];
   if (!q || q.port !== port.id) return 'Nobody here offers that';
   if (q.category === 'elite' ? q.id !== todaysElite(game, port)?.id : q.kind === 'job' && !boardJobs(p, port, game.now, eventFavor(game, port)).includes(q)) return 'That job is no longer on the board';
-  const why = questBlocked(p, q);
+  const why = questBlocked(p, q) ?? questIsleBlocked(game, p, q);
   if (why) return why;
   if (questsUnderWay(p) >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
   startQuest(game, p, q, s, pay);
@@ -365,7 +365,34 @@ export function questWatersTop(game: Game, q: QuestDef): number {
   // of 11 2800 at Mermaid Wharf and 220 at Gravesend, a calm square's harbour a few miles off.
   const ship = shipLevelOfQuest(q);
   const fight = ship ? (ship >= SHIP_LEVEL_MAX ? MAX_LEVEL : captainLevelFor(ship + 1) - 1) : 0;
-  return Math.max(captainBand(sectorAt(game.world, at.x, at.y).band)[1], fight);
+  // (and so is an island it sends her ashore on)
+  const isle = questLandLevel(game, q);
+  return Math.max(captainBand(sectorAt(game.world, at.x, at.y).band)[1], fight, isle ? captainBand(bandOf(isle))[1] : 0);
+}
+
+/** The highest square a quest sends her ashore in (0: no landing), kept per quest. */
+const landLevels = new WeakMap<QuestDef, number>();
+export function questLandLevel(game: Game, q: QuestDef): number {
+  let lv = landLevels.get(q);
+  if (lv === undefined) {
+    lv = 0;
+    for (const st of q.steps) {
+      const is = st.type === 'land' && st.island >= 0 ? game.world.islands[st.island] : undefined;
+      if (is) lv = Math.max(lv, sectorAt(game.world, is.x, is.y).level);
+    }
+    landLevels.set(q, lv);
+  }
+  return lv;
+}
+
+/** A job that lands her on an island more than a level above her own ⚓ waits for the captain who may go there (docs/30,
+ *  band 2: «The Lost Flock» of Hushreed Key sent a captain of 11 to Lowholt Rock, a ⚓6 island — «what lives there is
+ *  beyond your crew» — and the party was cut down on the beach). */
+export function questIsleBlocked(game: Game, p: Profile, q: QuestDef): string | null {
+  const lv = questLandLevel(game, q);
+  if (lv <= 1) return null;
+  const need = captainLevelFor(lv - 1);
+  return p.level < need ? `Level ${need}` : null;
 }
 
 /** What a quest pays a captain of her level (docs/26): its reward at its own level, at hers within its waters, green

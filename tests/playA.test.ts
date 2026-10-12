@@ -440,3 +440,24 @@ test('a quest\'s fight is the waters it pays by: the same ⚓3 flagship pays ali
   assert.equal(questXpOf(game, p, q), questXpFor(11, q.reward.xp, q.requires.level ?? 1, captainLevelFor(ship + 1) - 1), 'paid as in the fight\'s own waters');
   assert.ok(questXpOf(game, p, q) >= q.reward.xp, 'not the tenth of a green job');
 });
+
+test('a job that lands her on an island two ⚓ above her own waits for a captain who may go there (band 2, docs/30)', async () => {
+  const { JOBS } = await import('../shared/src/data/quests.ts');
+  const { captainLevelFor } = await import('../shared/src/data/shiplevel.ts');
+  const { questIsleBlocked, questLandLevel, questWatersTop } = await import('../server/src/game/quests.ts');
+  const { game } = makeGame();
+  join(game, 'Flock Finder');
+  const p = game.sessionByName('Flock Finder')!.profile!;
+  p.level = 11;
+  // (her own ⚓ at 11 is the third: an island of ⚓5 is two above it)
+  const q = JOBS.find((j) => (j.requires.level ?? 1) <= 11 && questLandLevel(game, j) >= 5)!;
+  assert.ok(q, 'such a job on some board');
+  const lv = questLandLevel(game, q);
+  assert.equal(questIsleBlocked(game, p, q), `Level ${captainLevelFor(lv - 1)}`, `⚓${lv} island for a captain of 11`);
+  p.level = captainLevelFor(lv - 1);
+  assert.equal(questIsleBlocked(game, p, q), null, 'at the level of the island\'s waters she may');
+  assert.ok(questWatersTop(game, q) >= p.level, 'and it pays at her level there');
+  const easy = JOBS.find((j) => questLandLevel(game, j) === 1)!;
+  p.level = 1;
+  assert.equal(questIsleBlocked(game, p, easy), null, 'a calm island bars nobody');
+});
