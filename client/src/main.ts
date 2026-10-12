@@ -63,7 +63,7 @@ import { EN as SEAF_EN, RU as SEAF_RU } from './lang/ui/seafight.ts';
 import type { BoardRisk } from '../../shared/src/protocol.ts';
 import { MARK_SLOW, markInReach } from '../../shared/src/data/seamarks.ts';
 import { EN as EASE_EN, RU as EASE_RU } from './lang/ui/ease.ts';
-import { objective, setTracked, setWaypoint as setMark, trackedQuest, waypoint as markOf } from './ui/track.ts';
+import { objective, setTracked, setWaypoint as setMark, trackedId, trackedQuest, waypoint as markOf } from './ui/track.ts';
 import { Net } from './net.ts';
 import { Renderer, shipHeel } from './render/renderer.ts';
 import { ClientState } from './state.ts';
@@ -535,9 +535,13 @@ function stepGoal(): void {
 }
 /** Off the quay (ux2, «Курс к заданию»): no run yet and a followed quest with a place elsewhere — the course to it. */
 function goalOnCastOff(): void {
-  if (goalRun || !settings().autoGoal || state.onboarding?.stage) return;
+  if (!settings().autoGoal || state.onboarding?.stage) return;
   const own = state.ownDisplay;
   const q = trackedQuest(state.self?.quests, own);
+  // A run left from the last voyage (a lair's island reached) gives way to the quest she picked since (docs/30: «Весточка
+  // другу» followed in the journal, and off the quay the helmsman took her back to the lair, onto its rocks).
+  if (goalRun && (!q || q.id !== trackedId() || goalRun.key === `q:${q.id}`)) return;
+  goalRun = null;
   if (!q?.target || !own || q.target.region === state.region) return;
   if (Math.hypot(q.target.x - own.x, q.target.y - own.y) < PORT_DOCK_RADIUS * 1.5) return;
   startGoal(`q:${q.id}`, true);
