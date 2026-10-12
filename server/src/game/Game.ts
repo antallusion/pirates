@@ -131,6 +131,8 @@ import { menLost, npcArmy } from './army.ts';
  *  a ship carried than from one sent down. */
 export const SINK_LOOT = 0.25;
 export const SINK_PURSE = 0.3;
+/** The longest the loop may run steps back to back under an admin /speed before it lets messages in (ms). */
+const STEP_BUDGET_MS = 150;
 /** docs/19 D6: beyond this (the nearest captain, as the LOD reckons it: never more than 6% over the true distance) an
  *  NPC steps every FAR_EVERY ticks — beyond SNAP_MID, where her snapshots are only every fourth (2.5 Hz) anyway; out of
  *  every captain's snapshots (beyond INTEREST_RADIUS) every second FAR_EVERY. */
@@ -491,14 +493,22 @@ export class Game {
       acc += ((t - last) / 1000) * this.timeScale;
       last = t;
       let steps = 0;
+      // An admin /speed above ×1: never hold the event loop past STEP_BUDGET_MS, so the captains' messages are still
+      // answered at once (×100 on a busy machine held it for seconds); the world runs as fast as the CPU allows.
       const maxSteps = Math.ceil(5 * this.timeScale);
+      const budget = this.timeScale > 1 ? t + STEP_BUDGET_MS : Infinity;
       while (acc >= TICK_DT && steps < maxSteps) {
         const t0 = performance.now();
         this.snapMs = this.secondMs = 0;
         this.step();
-        this.metrics.tick(performance.now() - t0, this.snapMs, this.secondMs);
+        const t1 = performance.now();
+        this.metrics.tick(t1 - t0, this.snapMs, this.secondMs);
         acc -= TICK_DT;
         steps++;
+        if (t1 > budget) {
+          acc = Math.min(acc, TICK_DT * maxSteps); // behind: drop what cannot be caught up, as below
+          break;
+        }
       }
       if (steps === maxSteps && acc >= TICK_DT) {
         acc = 0; // drop time rather than spiral
