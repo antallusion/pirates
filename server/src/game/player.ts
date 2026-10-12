@@ -502,7 +502,8 @@ export function canDock(p: Profile, faction: FactionId): { ok: boolean; reason?:
   const def = FACTIONS[faction];
   if (faction === 'crown' && (p.talents.smg_nobodys_ship ?? 0) > 0) return { ok: false, reason: 'The Crown does not moor a ship with no name and no flag.' };
   if (w > def.dockMaxWanted) return { ok: false, reason: `${def.short} harbour masters refuse ships at Wanted ${w}.` };
-  if ((p.reputation[faction] ?? 0) <= -50) return { ok: false, reason: `The ${def.name} considers you an enemy.` };
+  // (the name carries its own article: «The The Red Tide Confederacy considers you an enemy», docs/30)
+  if ((p.reputation[faction] ?? 0) <= -50) return { ok: false, reason: `${def.name} considers you an enemy.` };
   return { ok: true };
 }
 

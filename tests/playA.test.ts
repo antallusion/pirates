@@ -461,3 +461,15 @@ test('a job that lands her on an island two ⚓ above her own waits for a captai
   p.level = 1;
   assert.equal(questIsleBlocked(game, p, easy), null, 'a calm island bars nobody');
 });
+
+test('a harbour of an enemy faction says so once, the name with its own article (band 2, docs/30)', async () => {
+  const { canDock } = await import('../server/src/game/player.ts');
+  const { FACTIONS } = await import('../shared/src/data/factions.ts');
+  const { game } = makeGame();
+  join(game, 'Enemy Enid');
+  const p = game.sessionByName('Enemy Enid')!.profile!;
+  p.reputation.confederacy = -100;
+  const why = canDock(p, 'confederacy').reason!;
+  assert.equal(why, `${FACTIONS.confederacy.name} considers you an enemy.`);
+  assert.ok(!/^The The /.test(why));
+});
