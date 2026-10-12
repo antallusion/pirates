@@ -481,7 +481,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       else if (args[0] === 'go') {
         if (!h) return 'You have no island of your own.';
         const isl = game.world.islands[h.island];
-        const why = game.undock(s);
+        const why = ship.docked ? game.undock(s) : null; // (at sea already: no «Not in port» — playthrough C)
         if (why) return why;
         let x = isl.x, y = isl.y - isl.radius - 260;
         for (let k = 0; k < 24; k++) {
