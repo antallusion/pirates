@@ -77,6 +77,30 @@ test('in the wild waters a rover comes for her, and the lookout says from where'
   assert.equal(compassPoint(-Math.PI / 4), 'north-west');
 });
 
+test('a captain leaving a wild port is not met by a rover at once: the count starts at sea (playB)', () => {
+  const { game, s, ship } = atSea('Harbour Hank');
+  for (let t = 0; t < 3; t++) {
+    ship.state.speed = 8;
+    stepTraffic(game); // the rovers' clock is set at sea
+    game.now += 1;
+  }
+  ship.docked = 'hollowmere';
+  for (let t = 0; t < HUNT_EVERY[1] * 3; t++) {
+    stepTraffic(game); // a long stay in port
+    game.now += 1;
+  }
+  ship.docked = null;
+  s.profile!.docked = null;
+  let first = -1;
+  for (let t = 0; t < HUNT_EVERY[1] + 30 && first < 0; t++) {
+    ship.state.speed = 8;
+    stepTraffic(game);
+    game.now += 1;
+    if ([...game.npcs.values()].some((b) => b.chase?.id === ship.id)) first = t;
+  }
+  assert.ok(first >= HUNT_EVERY[0] * 0.5 - 1, `the first rover ${first} s after casting off, not at once`);
+});
+
 test('no rover in the Crown’s safe water', () => {
   const { game, ship } = atSea('Safe Sue', 20000, 20000, 'black_coast');
   for (let t = 0; t < HUNT_EVERY[1] + 30; t++) {

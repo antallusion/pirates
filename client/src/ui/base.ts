@@ -183,7 +183,7 @@ export class BaseWindow {
 
   /** The server's wall clock now, by the view's clock and the time since it came. */
   private now(state: ClientState): number {
-    return (state.base?.now ?? Date.now()) + (Date.now() - state.baseAt);
+    return (state.base?.now ?? Date.now()) + (Date.now() - state.baseAt) * state.timeScale; // (an admin /speed: the server's wall clock runs as fast)
   }
 
   render(root: HTMLElement, state: ClientState): void {

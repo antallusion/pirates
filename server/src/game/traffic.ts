@@ -121,6 +121,9 @@ export function stepTraffic(game: Game): void {
   const tick = Math.floor(game.now);
   for (const s of game.sessions) {
     const ship = s.ship;
+    // In port the rovers' count starts again: none is due at the harbour mouth the moment she casts off (it was —
+    // the clock ran on through her stay, and a rover, his pack and a fireship met every captain leaving a wild port).
+    if (ship?.docked || (ship && !ship.alive)) hunts.get(game)?.delete(s.accountId);
     if (!ship || !s.profile || ship.docked || !ship.alive || ship.ghost) continue;
     hunt(game, s);
     hail(game, s);

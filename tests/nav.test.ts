@@ -183,6 +183,7 @@ test('never nearer her mark in a minute (thrown back from water she has no leave
     if (!autosailOf(ship)) why = (c.last('autosail') as { why?: string } | undefined)?.why ?? 'off';
   }
   assert.equal(why, 'stuck', 'the wheel back: no open water leads to that mark');
+  assert.equal(ship.input.sailTarget, 0, 'and he heaves to first: she is not left running on under sail (playB)');
 });
 
 // ------------------------------------------------------------------ 3. the piers as drawn

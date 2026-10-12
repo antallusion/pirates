@@ -126,6 +126,27 @@ test('a merchant run down throws a third of her hold over the side, at most thre
   assert.equal(runLighter(game, far, game.npcs.get(far.id)!, chaser), false, 'no need while the chaser is far');
 });
 
+test('only the chaser hears that a merchant throws her cargo over: a pirate\'s chase in sight is not a toast (playB)', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Onlooker');
+  c.push({ t: 'undock' });
+  const me = [...game.sessions].find((x) => x.name === 'Onlooker')!.ship!;
+  me.state.x = 56000;
+  me.state.y = 70000;
+  game.grid.upsert(me.id, me.state.x, me.state.y);
+  const pirate = npcAt(game, 'pirate', me.state.x + 1500, me.state.y);
+  const m = npcAt(game, 'merchant', me.state.x + 1800, me.state.y);
+  m.cargo = { sugar: 30 };
+  const before = c.all('toast').length;
+  assert.ok(runLighter(game, m, game.npcs.get(m.id)!, pirate));
+  assert.equal(c.all('toast').filter((t) => /run lighter/.test(t.msg)).length, 0, 'no word to the onlooker');
+  assert.equal(c.all('toast').length, before);
+  const m2 = npcAt(game, 'merchant', me.state.x + 500, me.state.y);
+  m2.cargo = { rum: 30 };
+  assert.ok(runLighter(game, m2, game.npcs.get(m2.id)!, me));
+  assert.equal(c.all('toast').filter((t) => /run lighter/.test(t.msg)).length, 1, 'her chaser is told');
+});
+
 test('in darkness an idle pirate lies low and waits; the first broadside from hiding is an ambush', () => {
   const { game } = makeGame();
   let t = game.now;

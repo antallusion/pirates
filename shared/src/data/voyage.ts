@@ -7,8 +7,9 @@ import { HULL_PER_PLANK, SAILS_PER_CLOTH } from './dealings.ts';
 
 /** Provisions 40 hands eat in a minute at sea (docs/30: it was 6 — a starter sloop of 28 ate 252 units, 3 000 silver, an
  *  hour, more than her whole income at levels 1–3 (seaHour 1 920), and half her hold lasted 3½ minutes, so every novice
- *  sailed hungry; now ten minutes of it is 9 units, a third of her hold, some 600 silver an hour). */
-export const FOOD_PER_40 = 1.2;
+ *  sailed hungry; now ten minutes of it is 9 units, a third of her hold, some 600 silver an hour); and 1, not 1.2, so the mid game's warships with full crews feed them ten minutes from half
+ *  their hold (QA playthrough B: a corvette or frigate carried 1.8 minutes of food at 6). */
+export const FOOD_PER_40 = 1;
 
 /** Provisions eaten a minute at sea: FOOD_PER_40 units for every 40 hands, times the ship's appetite (cooks, talents). */
 export function provisionsPerMinute(crew: number, provisionUse = 1): number {

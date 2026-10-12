@@ -26,6 +26,9 @@ export interface Market {
   goods: Partial<Record<GoodId, GoodMarket>>;
 }
 
+/** The share of a port's own provisions it grows itself, whatever its trade (createMarket). */
+export const PROVISIONS_LOCAL = 0.75;
+
 const ALWAYS_TRADED: GoodId[] = ['provisions', 'rum', 'planks', 'sailcloth', 'salt', 'fish', 'prime_fish', 'salted_fish', 'baleen', 'whalebone', 'shark_skin', 'orca_tooth', 'tar', 'smoked_fish'];
 
 export function createMarket(port: Port): Market {
@@ -33,8 +36,11 @@ export function createMarket(port: Port): Market {
   const allowContraband = port.blackMarket;
   for (const id of GOOD_IDS) {
     const def = GOODS[id];
-    const prod = port.profile.produces[id] ?? 0;
     const cons = port.profile.consumes[id] ?? 0;
+    // Every harbour's own farms and fishers put up some food (QA playthrough B, 2026-10-12): a port that only ate
+    // provisions sold its last barrel and stayed at nothing — 218 of 318 ports, Hollowmere among them, had no food to
+    // sell a captain. Three quarters of what it eats keeps a stock about half its mark, the price above the base.
+    const prod = id === 'provisions' ? Math.max(port.profile.produces[id] ?? 0, cons * PROVISIONS_LOCAL) : port.profile.produces[id] ?? 0;
     const traded = prod > 0 || cons > 0 || ALWAYS_TRADED.includes(id) || (def.contraband && allowContraband) || port.size >= 3;
     if (!traded) continue;
     if (def.category === 'rare' && prod === 0 && cons === 0) continue; // rare materials only where they come from

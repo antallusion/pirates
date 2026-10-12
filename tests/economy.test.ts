@@ -43,3 +43,18 @@ test('NPC merchants find profitable arbitrage routes', () => {
   assert.ok(r, 'a route exists');
   assert.ok(r!.margin > 0);
 });
+
+test('every harbour has food to sell after a week of its own trade, the hungry ones too (playB: 218 of 318 had none)', () => {
+  const empty: string[] = [];
+  for (const p of world.ports) {
+    const m = createMarket(p);
+    const gm = m.goods.provisions;
+    assert.ok(gm, `${p.id} trades provisions`);
+    for (let i = 0; i < 24 * 4 * 7; i++) tickMarket(m, 900, false); // a week of «hours» of the market
+    if (gm.stock < 10) empty.push(`${p.id} ${Math.round(gm.stock)}`);
+  }
+  assert.deepEqual(empty, [], 'no port without a barrel of provisions');
+  const h = createMarket(world.ports.find((p) => p.id === 'hollowmere')!);
+  for (let i = 0; i < 24 * 4 * 7; i++) tickMarket(h, 900, false);
+  assert.ok(midPrice('provisions', h.goods.provisions!) > 12, 'a hungry harbour still asks more than the base price');
+});

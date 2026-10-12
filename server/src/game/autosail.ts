@@ -229,8 +229,10 @@ export function stopAutosail(game: Game, s: PlayerSession, why: AutosailStop): v
   if (!run) return;
   runs.delete(ship);
   // Arrived: the sails are taken in — her mark is mostly by a shore, a quay or a lair, and under full sail she ran on
-  // past it onto the rocks (docs/30: «Удар о скалы −81» a few seconds after «метка достигнута»).
-  ship.input = { rudder: 0, sailTarget: why === 'arrived' ? 0 : ship.input.sailTarget };
+  // past it onto the rocks (docs/30: «Удар о скалы −81» a few seconds after «метка достигнута»); and on foul water or
+  // with no way on he heaves to before he gives the wheel back (QA playthrough B: «Struck the rocks −190»).
+  const heave = why === 'arrived' || why === 'reef' || why === 'stuck';
+  ship.input = { rudder: 0, sailTarget: heave ? 0 : ship.input.sailTarget };
   send(game, s, null, why);
 }
 

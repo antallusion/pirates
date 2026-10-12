@@ -300,7 +300,7 @@ export function bindTown(root: HTMLElement, send: (m: ClientMsg) => void, mk: { 
 export function weekChip(state: ClientState): string {
   const w = state.week;
   if (!w) return '';
-  const left = Math.max(0, w.nextIn - (Date.now() - state.weekAt) / 1000);
+  const left = Math.max(0, w.nextIn - ((Date.now() - state.weekAt) / 1000) * state.timeScale);
   const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60);
   const t = h > 0 ? B('t_hm', { h, m: String(m).padStart(2, '0') }) : B('t_m', { m: Math.max(1, m) });
   const d = WEEKS[w.kind];

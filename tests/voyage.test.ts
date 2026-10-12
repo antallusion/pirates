@@ -21,6 +21,11 @@ test('a ship eats FOOD_PER_40 units a minute for every forty hands; a voyage wan
   assert.equal(voyageFood(ready({ crew: 400, holdVolume: 30 })), Math.floor(30 * FOOD_HOLD_SHARE), 'held to half a small hold');
   // docs/30: a starter sloop (28 hands, a hold of 30) takes ten minutes of food in a third of her hold
   assert.ok(voyageFood({ crew: 28, provisionUse: 1, holdVolume: 30, provisionVolume: 1 }) <= 10);
+  // playB: the mid game's warships with full crews feed them ten minutes from half their hold (it was 1.8 minutes).
+  for (const id of ['brig', 'corvette', 'frigate', 'galleon'] as const) {
+    const c = SHIP_CLASSES[id];
+    assert.ok(foodMinutes(c.holdVolume * FOOD_HOLD_SHARE, c.crewMax) >= VOYAGE_MINUTES, `${id}: ${foodMinutes(c.holdVolume * FOOD_HOLD_SHARE, c.crewMax).toFixed(1)} min`);
+  }
   assert.equal(voyageCrew({ crewMin: 8, crewMax: 28 }), 16, 'enough hands to sail at her best');
   assert.equal(voyageCrew({ crewMin: 20, crewMax: 22 }), 20);
 });
