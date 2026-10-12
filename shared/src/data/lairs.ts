@@ -433,8 +433,32 @@ export function buildLairs(world: World): Lair[] {
     if (kinds.length) out.push({ id: `lb${b.id}`, kind: kinds[rng.int(0, kinds.length - 1)], role: 'shore', size: sizeOf(rng), level, island: -1, x: Math.round(b.x), y: Math.round(b.y), type: 'tropical', mul: 1.2, bank: b.id });
   }
   out.push(...deepLairs(world, out));
+  offQuays(world, out);
   cache.set(world, out);
   return out;
+}
+
+/** A lair this near a harbour stands on its island's far side (docs/30). */
+export const LAIR_QUAY_R = 1200;
+
+/** docs/30: a lair on an island beside a harbour stood under its quays — the boats' reach of it was the harbour's own
+ *  water between the piers, ships beached there and ran onto the rocks off the quay. Such a lair is set on the far side
+ *  of its island from the harbour (the same island, the same id; only its place). */
+function offQuays(world: World, lairs: Lair[]): void {
+  for (const l of lairs) {
+    if (l.island < 0 || l.turtle !== undefined || l.bank !== undefined) continue;
+    let near: { x: number; y: number } | null = null, nd = LAIR_QUAY_R;
+    for (const p of world.ports) {
+      const d = Math.hypot(p.x - l.x, p.y - l.y);
+      if (d < nd) [near, nd] = [p, d];
+    }
+    if (!near) continue;
+    const is = world.islands[l.island];
+    if (!is) continue;
+    const away = Math.atan2(is.x - near.x, -(is.y - near.y));
+    const [x, y] = inland(is, away, l.role === 'shore' ? 45 : 0.5);
+    if (Math.hypot(near.x - x, near.y - y) > nd) [l.x, l.y] = [x, y];
+  }
 }
 
 /** docs/19 D2 (owner, 2026-10-02: «увеличь всё ровно в 2 раза»): as many lairs again — on an island with one lair

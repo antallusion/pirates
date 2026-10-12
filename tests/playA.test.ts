@@ -199,3 +199,10 @@ test('a race taken in port: its clock starts when she casts off, and its time is
   questEvent(game, s, { k: 'tick', dt: 1 });
   assert.ok(!s.profile!.quests.active.some((a) => a.id === q!.id), 'out of time at sea: lost');
 });
+
+test('lairs beside a harbour stand on their island\'s far side, not under its quays (docs/30)', async () => {
+  const { lairList } = await import('../server/src/game/beastlairs.ts');
+  const { game } = makeGame();
+  const close = lairList(game).filter((l) => { const q = game.nearestPort(l.x, l.y); return l.island >= 0 && !!q && Math.hypot(q.x - l.x, q.y - l.y) < 300; });
+  assert.ok(close.length < 50, `lairs within 300 m of a harbour: ${close.length} (were 109)`);
+});
