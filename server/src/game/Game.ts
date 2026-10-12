@@ -493,10 +493,6 @@ export class Game {
     this.bootPopulation();
     let last = performance.now();
     let acc = 0;
-    // The QA playthrough (owner, 2026-10-12: «врубить скорость х100»): on an admin server the wall clock — the island's
-    // builders, the weeks, the windows, every timer read from wallNow() — runs at the world's speed too.
-    let skew = 0;
-    if (process.env.GRAVETIDE_ADMIN === '1') this.wallNow = () => Date.now() + skew + (performance.now() - last) * (this.timeScale - 1);
     this.timer = setInterval(() => {
       const t = performance.now();
       const realDt = t - last;

@@ -97,7 +97,10 @@ export function onNpcHit(game: Game, victim: ShipEntity, source: ShipEntity): vo
   }
   if (source.npcRole !== 'pirate' && source.npcRole !== 'ghost') return;
   const old = S.calls.get(victim.id);
-  if (old && old.attacker === source.id && now < old.until) {
+  if (old && now < old.until) {
+    // Her call still stands: a second raider of the pack at her is the same cry, not a new rocket and toast (playthrough
+    // C: «Pirates attack Hungry Tide … she calls for help!» five times in a minute as the pack took turns).
+    old.attacker = source.id;
     old.until = now + CALL_SEC;
     return;
   }
