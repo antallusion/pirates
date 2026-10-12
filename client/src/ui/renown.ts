@@ -21,6 +21,7 @@ import { serverText } from '../lang/server.ts';
 import { EN, RU } from '../lang/ui/renown.ts';
 import type { ClientState } from '../state.ts';
 import { esc, fishIcon, fmt, icon } from './dom.ts';
+import { placeName } from './maps.ts';
 import { BEAST_RES, LAND_RES_DEF, isBeast } from '../../../shared/src/data/bestiary.ts';
 import type { CreatureId, LandRes } from '../../../shared/src/data/bestiary.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
@@ -214,12 +215,12 @@ export function renderAway(root: HTMLElement, v: AwayView, send: (m: ClientMsg) 
   const parts: string[] = [];
   if (v.isle) {
     const goods = `${v.isle.goods >= 0 ? '+' : ''}${fmt(v.isle.goods)}`, tr = `${v.isle.treasury >= 0 ? '+' : ''}${fmt(v.isle.treasury)}`;
-    parts.push(sect('tab_isles', L('awayIsle', { name: v.isle.name }), `<p class="aw-line">${esc(L('awayIsleGoods', { n: goods }))} · ${esc(L('awayIsleTreasury', { n: tr }))}</p>${lines(v.isle.raids)}`));
+    parts.push(sect('tab_isles', L('awayIsle', { name: placeName(v.isle.name) }), `<p class="aw-line">${esc(L('awayIsleGoods', { n: goods }))} · ${esc(L('awayIsleTreasury', { n: tr }))}</p>${lines(v.isle.raids)}`));
   }
   if (v.auction.length) parts.push(sect('tab_market', L('awayAuction'), lines(v.auction)));
   parts.push(sect('tab_letters', L('awayMail'), `<p class="aw-line">${esc(v.letters.n ? L('awayMailText', { n: v.letters.n, u: v.letters.unread, from: v.letters.from.map(sv).join(', ') }) : L('awayMailNone'))}</p>`));
   parts.push(sect('map_monster', L('awayWorld'), v.world.length ? lines(v.world) : `<p class="aw-line muted">${esc(L('awayWorldNone'))}</p>`));
-  parts.push(sect('goal', L('awayWeekly'), v.weekly.map((w) => `<p class="aw-line">${esc(L('awayWeeklyRow', { what: weeklyWhat(w.kind, w.region), place: w.place ? `${L('weeklyPlace', { n: w.place })} (${fmt(w.value)})` : L('awayNoPlace'), leader: w.leader ?? L('awayNobody') }))}</p>`).join('')
+  parts.push(sect('goal', L('awayWeekly'), v.weekly.map((w) => `<p class="aw-line">${esc(L(w.place === 1 ? 'awayWeeklyLead' : 'awayWeeklyRow', { what: weeklyWhat(w.kind, w.region), place: w.place ? `${L('weeklyPlace', { n: w.place })} (${fmt(w.value)})` : L('awayNoPlace'), leader: w.leader ?? L('awayNobody') }))}</p>`).join('')
     + (v.lastWeek.length ? `<div class="giver-h">${esc(L('awayLastWeek'))}</div>${v.lastWeek.map((w) => `<p class="aw-line">${esc(weeklyWhat(w.kind, w.region))}: <b>${esc(w.winner)}</b></p>`).join('')}` : '')));
   const gift = v.gift ? `<div class="card aw-gift"><h4 class="card-h">${icon('coin', '', 'ico-md')}${esc(L('awayGift'))}</h4><p class="aw-line">${esc(L('awayGiftText', { silver: fmt(v.gift.silver), prov: v.gift.provisions, speed: v.gift.speedups ? L('awayGiftSpeed') : '' }))}</p><button class="btn btn-primary" data-aw-take>${esc(L('awayTake'))}</button></div>` : '';
   root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('awayTitle'))}</h2><div class="sub">${esc(L('awaySub', { h: v.hours }))}</div></div></div>
