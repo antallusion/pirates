@@ -406,10 +406,32 @@ test('a landing that meets a lair on the beach and beats it is the landing a job
   QUESTS_BY_ID.t_chapel = { id: 't_chapel', kind: 'job', name: 'A Place for a Chapel', mentor: 'Cato Kell', port: 'saltmarrow', summary: '', requires: {},
     steps: [{ type: 'land', island: l.island, text: 'Land a party.' }, { type: 'visit', port: 'saltmarrow', text: 'Return.' }], reward: { xp: 10, silver: 10 } };
   s.profile!.quests.active.push({ id: 't_chapel', step: 0, progress: 0, startedAt: game.now });
-  conn.push({ t: 'land' });
-  assert.ok(landFighting(game, s), 'the land key went for the lair');
+  conn.push({ t: 'lair', action: 'fight', id: l.id }); // from the lair's card
+  assert.ok(landFighting(game, s), 'the party went for the lair');
   landTac(game, s, { a: 'quick' });
   steps(game, 2);
   assert.equal(s.profile!.quests.active.find((a) => a.id === 't_chapel')?.step, 1, 'the landing step is done');
   delete QUESTS_BY_ID.t_chapel;
+});
+
+test('a job\'s landing on a lair\'s island goes to the job\'s place, not against the lair (docs/30, band 2)', async () => {
+  const { QUESTS_BY_ID } = await import('../shared/src/data/quests.ts');
+  const game = world();
+  const s = captain(game, 'Hamlet Hope');
+  runAdmin(game, s, '/lair crab_beach go');
+  steps(game, 25);
+  stepLairs(game);
+  const conn = (s as unknown as { conn: { last: (t: string) => { card?: unknown } | undefined; push: (m: unknown) => void } }).conn;
+  const l = lairById(game, (conn.last('lair_card')?.card as { id: string }).id)!;
+  QUESTS_BY_ID.t_hamlet = { id: 't_hamlet', kind: 'job', name: 'My Sister', mentor: 'Lark Reeve', port: 'saltmarrow', summary: '', requires: {},
+    steps: [{ type: 'land', island: l.island, text: 'Land a party.' }, { type: 'visit', port: 'saltmarrow', text: 'Return.' }], reward: { xp: 10, silver: 10 } };
+  s.profile!.quests.active.push({ id: 't_hamlet', step: 0, progress: 0, startedAt: game.now });
+  steps(game, 25);
+  assert.notEqual(s.landable?.action, 'lair', 'the land key offers the job\'s landing');
+  conn.push({ t: 'land' });
+  assert.ok(!landFighting(game, s), 'no fight with the lair');
+  assert.ok(s.ship!.landing, 'the boats row for the job\'s place');
+  for (let i = 0; i < 20 * 120 && s.ship!.landing; i++) game.step();
+  assert.equal(s.profile!.quests.active.find((a) => a.id === 't_hamlet')?.step, 1, 'the landing step is done');
+  delete QUESTS_BY_ID.t_hamlet;
 });

@@ -114,7 +114,9 @@ export function findLandable(game: Game, s: PlayerSession): { island: Island; fe
       bd = d;
       continue;
     }
-    for (const f of here) {
+    // The place a job sends her to on this island first (docs/30, band 2: the hamlet a job wanted lay behind the island's
+    // ruins, and the boats rowed for the ruins).
+    for (const f of [...here.filter((x) => questLandsHere(p, is.id, x)), ...here]) {
       if (!LANDABLE.includes(f as LandableFeature)) continue;
       const t = p.explored[exploredKey(is.id, f as LandableFeature)] ?? -Infinity;
       if (game.now - t < RESTOCK_SEC && !questLandsHere(p, is.id, f)) continue;
@@ -194,13 +196,18 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
   // A mine ashore (docs/17 H3): the flag first.
   const flag = startFlag(game, s);
   if (flag !== undefined) return flag;
-  // A great one ashore in reach (shorebosses.ts, 2026-10-03): the boats go ashore against it.
-  const great = shoreBossLanding(game, s);
-  if (great !== undefined) return great;
-  // A lair of the land's creatures in reach (docs/18 II): the boats go ashore against it.
-  const lair = beastLanding(game, s);
-  if (lair !== undefined) return lair;
   const target = findLandable(game, s);
+  // A job's landing here goes before the island's beasts (docs/30, band 2: «Land a party at the fishing hamlet on Hushreed»
+  // sent the boats against the lair on its beach — eleven men lost, and the hamlet never reached).
+  const job = !!target && questLandsHere(s.profile!, target.island.id, target.feature);
+  if (!job) {
+    // A great one ashore in reach (shorebosses.ts, 2026-10-03): the boats go ashore against it.
+    const great = shoreBossLanding(game, s);
+    if (great !== undefined) return great;
+    // A lair of the land's creatures in reach (docs/18 II): the boats go ashore against it.
+    const lair = beastLanding(game, s);
+    if (lair !== undefined) return lair;
+  }
   if (!target) return 'Nothing worth landing for within reach of the boats';
   const party = Math.max(3, Math.min(12, Math.round(ship.crew * 0.3)));
   if (ship.crew - party < ship.stats.crewMin * 0.4) return 'Too few hands to spare a landing party';
