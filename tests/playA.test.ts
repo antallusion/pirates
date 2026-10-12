@@ -366,3 +366,21 @@ test('wages short: the chest pays what it holds, only the rest is owed (docs/30)
   assert.equal(s.profile!.gold, 0, 'the chest emptied into the men');
   assert.ok(c.owed < 32, `owed ${c.owed.toFixed(1)}`);
 });
+
+test('a wounded ship: the helmsman takes her to a harbour whatever her hull, and nowhere else (band 2, docs/30)', async () => {
+  const { autosailDanger, homeward, startAutosail } = await import('../server/src/game/autosail.ts');
+  const { AUTOSAIL_LOW_HULL } = await import('../shared/src/data/autosail.ts');
+  const { duelSea, openWater } = await import('./balance/duel.ts');
+  const { seaCaptain } = await import('./balance/seafight.ts');
+  const game = duelSea();
+  const at = openWater(game, 41);
+  const s = seaCaptain(game, 'sloop', 2, at.x, at.y, 0);
+  const ship = s.ship!;
+  if (s.profile!.tutorial) s.profile!.tutorial.on = false; // past the First Watch, where nothing is lost
+  ship.hull = ship.stats.hullMax * (AUTOSAIL_LOW_HULL - 0.1);
+  const port = game.world.ports.slice().sort((a, b) => Math.hypot(a.x - at.x, a.y - at.y) - Math.hypot(b.x - at.x, b.y - at.y))[0];
+  const sea = [[3000, 0], [-3000, 0], [0, 3000], [0, -3000], [5000, 5000]].map(([dx, dy]) => ({ x: at.x + dx, y: at.y + dy })).find((m) => !homeward(game, m.x, m.y))!;
+  assert.equal(autosailDanger(game, s, ship, game.now, sea), 'hull', 'out to sea: the helm stays hers');
+  assert.equal(autosailDanger(game, s, ship, game.now, { x: port.x, y: port.y }), null, 'to the yard he takes her');
+  if (Math.hypot(port.x - at.x, port.y - at.y) < 60_000) assert.equal(startAutosail(game, s, port.x, port.y), null, 'and the run starts');
+});

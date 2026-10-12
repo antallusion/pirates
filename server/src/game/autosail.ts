@@ -96,7 +96,7 @@ function stepResume(game: Game, s: PlayerSession, ship: ShipEntity): void {
     return;
   }
   // (since RESUME_CALM ago: a shot or a hit in the last seconds is still the fight)
-  const why = autosailDanger(game, s, ship, game.now - RESUME_CALM);
+  const why = autosailDanger(game, s, ship, game.now - RESUME_CALM, p);
   if (why === 'hull' || why === 'lost' || why === 'helm' || why === 'port' || why === 'reef') {
     paused.delete(ship);
     return;
@@ -132,15 +132,27 @@ export function foulWater(game: Game, ship: ShipEntity, x: number, y: number): b
   return false;
 }
 
-/** What stops the helmsman now, if anything (checked every tick while he has the wheel, and before he takes it). */
-export function autosailDanger(game: Game, s: PlayerSession, ship: ShipEntity, since: number): AutosailStop | null {
+/** A mark this near a harbour is a run home: the low hull stops no helmsman taking her there. */
+export const HOMEWARD_R = 800;
+
+/** Whether a mark is a harbour (a run home for the yard). */
+export function homeward(game: Game, x: number, y: number): boolean {
+  return game.world.ports.some((pt) => Math.hypot(pt.x - x, pt.y - y) < HOMEWARD_R);
+}
+
+/** What stops the helmsman now, if anything (checked every tick while he has the wheel, and before he takes it);
+ *  `mark` — where he is to take her. */
+export function autosailDanger(game: Game, s: PlayerSession, ship: ShipEntity, since: number, mark?: { x: number; y: number }): AutosailStop | null {
   if (!ship.alive) return 'lost';
   if (ship.docked) return 'port';
   if (s.profile?.company.mutiny || ship.seizedHelm) return 'helm';
   if (ship.grappled || ship.boarding || ship.landing) return 'attack';
   // (In the First Watch nothing can be lost, and «В порт» after the lesson's battle is the low hull's very cure: the
   // helmsman gave the wheel back at once and the pupil sat a mile off the quay, QA 2026-10-07.)
-  if (ship.hull < ship.stats.hullMax * AUTOSAIL_LOW_HULL && !onboardingProtected(s)) return 'hull';
+  // …but a run to a harbour he takes whatever her hull (docs/30: beaten off by a cutter at a third of her hull, «Корпус
+  // слишком слаб» — the one order a wounded ship wants, and a phone's captain steered her ten kilometres by hand onto the
+  // rocks; a yard short of silver sends her out under the line as well).
+  if (ship.hull < ship.stats.hullMax * AUTOSAIL_LOW_HULL && !onboardingProtected(s) && !(mark && homeward(game, mark.x, mark.y))) return 'hull';
   // Her keel on a reef or a shoal already (a bank the tide bared, a reef the chart did not show).
   if (ship.cls.passive.id !== 'shallow_runner' && depthAt(game.world, ship.state.x, ship.state.y) < draftOf(ship)) return 'reef';
   // A shot at her, or her own guns, since he took the wheel (or in the last seconds before).
@@ -206,7 +218,7 @@ export function startAutosail(game: Game, s: PlayerSession, x: number, y: number
   const d = Math.hypot(x - ship.state.x, y - ship.state.y);
   if (d <= (arrive ?? AUTOSAIL_ARRIVE)) return 'You are at your mark already';
   if (d > AUTOSAIL_MAX_RANGE) return 'That mark is too far for one run: set a nearer one';
-  const why = autosailDanger(game, s, ship, game.now);
+  const why = autosailDanger(game, s, ship, game.now, { x, y });
   if (why) return STOP_WORDS[why];
   const path = plan(game, ship, x, y);
   if (!path || path.length < 2) return 'No open water leads to that mark';
@@ -354,7 +366,7 @@ export function stepAutosail(game: Game): void {
       stopAutosail(game, s, 'arrived');
       continue;
     }
-    const why = autosailDanger(game, s, ship, run.since);
+    const why = autosailDanger(game, s, ship, run.since, run);
     if (why) {
       stopAutosail(game, s, why);
       continue;
