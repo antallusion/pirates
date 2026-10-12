@@ -279,10 +279,11 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
     const levy = levyFor(game, port, quoted); // the governor's hundredth
     const price = quoted + levy;
     if (p.gold < price) return 'Not enough silver';
-    payLevy(game, port, levy);
     const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
     const need = qty * def.volume * (def.contraband ? ship.stats.contrabandVolumeMul : 1);
     if (need > free + 1e-6) return 'Not enough room in the hold';
+    // (the governor's levy only on a sale made: a buy refused for room paid it to his guild out of nothing, docs/30)
+    payLevy(game, port, levy);
     p.gold -= price;
     const prevQty = ship.cargo[good] ?? 0;
     const prevBasis = game.costBasis(s, good);
