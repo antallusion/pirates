@@ -351,13 +351,22 @@ heroWindow.onTalents = () => openModal('talents');
 // docs/23 item 70: the level's «pick one of two» comes up by itself when a level comes — not over a window, a fight
 // or a battle (it waits for them to end); levels that waited before she came aboard stay in the Hero tab.
 let heroSeen = -1;
+/** A hostile sail or beast within 1.5 km, or a chase on: the level's card waits (docs/30: it came up over the helm and
+ *  «Огонь» with four sharks round her). */
+function hostileNear(): boolean {
+  const o = state.ownDisplay;
+  if (!o || state.self?.dockedAt) return false;
+  if (state.pursuit) return true;
+  for (const x of state.ships.values()) if (x.id !== state.entityId && x.cur && x.cur.flags & 64 && Math.hypot(x.cur.x - o.x, x.cur.y - o.y) < 1500) return true;
+  return false;
+}
 setInterval(() => {
   const h = state.self?.hero;
   if (!h || !inGame) return;
   if (heroSeen < 0 || h.pending < heroSeen) heroSeen = h.pending;
   // Not in the First Watch either: at its last step «Новый уровень» covered «В порт», the step's finger stepped aside and
   // the pupil stood (e2e, docs/23 item 90); the choice waits for the watch's end.
-  if (h.pending > heroSeen && h.offer.length && !modal && !state.boardTac && !state.boardFight && !state.onboarding?.stage && !document.body.classList.contains('sea-target') && !levelUpOpen()) {
+  if (h.pending > heroSeen && h.offer.length && !modal && !state.boardTac && !state.boardFight && !state.onboarding?.stage && !document.body.classList.contains('sea-target') && !levelUpOpen() && !hostileNear()) {
     heroSeen = h.pending;
     levelUpSheet(state, (m) => net.send(m));
   }
