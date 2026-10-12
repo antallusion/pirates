@@ -1516,6 +1516,8 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
           const sl = ITEM_BASES[it.base].slot;
           (CAPTAIN_SLOTS as readonly string[]).includes(sl) ? (captainGear[sl] = { ...it, uid: p.itemSeq++ }) : (shipGear[sl] = { ...it, uid: p.itemSeq++ });
         }
+        // What she wore goes to her locker, not overboard (playthrough C: her artifacts and relic parts were lost).
+        for (const it of [...Object.values(p.captainGear ?? {}), ...Object.entries(ship.loadout.gear ?? {}).filter(([sl]) => sl !== 'tackle').map(([, it]) => it)]) if (it) p.stash.push(it as Item);
         ship.loadout.gear = { ...(ship.loadout.gear?.tackle ? { tackle: ship.loadout.gear.tackle } : {}), ...shipGear };
         p.captainGear = captainGear as never;
         ship.worn = Object.values(captainGear);
