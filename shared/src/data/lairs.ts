@@ -440,6 +440,8 @@ export function buildLairs(world: World): Lair[] {
 
 /** A lair this near a harbour stands on its island's far side (docs/30). */
 export const LAIR_QUAY_R = 1200;
+/** The least room between two lairs a lair moved off the quays is set down at. */
+const LAIR_APART = 700;
 
 /** docs/30: a lair on an island beside a harbour stood under its quays — the boats' reach of it was the harbour's own
  *  water between the piers, ships beached there and ran onto the rocks off the quay. Such a lair is set on the far side
@@ -456,8 +458,20 @@ function offQuays(world: World, lairs: Lair[]): void {
     const is = world.islands[l.island];
     if (!is) continue;
     const away = Math.atan2(is.x - near.x, -(is.y - near.y));
-    const [x, y] = inland(is, away, l.role === 'shore' ? 45 : 0.5);
-    if (Math.hypot(near.x - x, near.y - y) > nd) [l.x, l.y] = [x, y];
+    // (not onto another lair of the island: the far side is where its second lair often stood, and the two cards
+    // shadowed each other — a seal's depth at one was hidden under the other's free fight)
+    // The spot round the far side with the most room from both the harbour and the island's other lairs.
+    let best: [number, number] | null = null, score = -1;
+    for (const turn of [0, 0.5, -0.5, 1, -1, 1.5, -1.5]) {
+      const [x, y] = inland(is, away + turn, l.role === 'shore' ? 45 : 0.5);
+      const pd = Math.hypot(near.x - x, near.y - y);
+      if (pd <= nd) continue;
+      let r = Infinity;
+      for (const o of lairs) if (o !== l) r = Math.min(r, Math.hypot(o.x - x, o.y - y));
+      const sc = Math.min(r, LAIR_APART) + Math.min(pd, LAIR_APART);
+      if (sc > score) [best, score] = [[x, y], sc];
+    }
+    if (best) [l.x, l.y] = best;
   }
 }
 

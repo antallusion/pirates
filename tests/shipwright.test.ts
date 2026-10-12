@@ -142,6 +142,7 @@ test('Iron Coffin: a broadside past two thirds of the alpha limit strikes a quar
   game.grid.upsert(gunner.id, gunner.state.x, gunner.state.y);
   gunner.addEffect({ id: 'test', until: 1e9, mods: { gunDamageMul: 5, spreadMul: -0.95 } }, game.now);
   gunner.ammo.round = 100;
+  gunner.attackers.set(ship.id, 1e9); // at war with her (a stray ball of a ship at peace falls short: docs/30)
   let capped = 0;
   const emit = game.emit.bind(game);
   game.emit = (ev, x, y) => {

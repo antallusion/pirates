@@ -296,3 +296,32 @@ test('short of the yard\'s bill, she is mended as far as her silver goes (docs/3
   assert.ok(ship.hull > ship.stats.hullMax * 0.6 && ship.hull < ship.stats.hullMax, "half the bill mends half the harm");
   assert.match(shipyardRepair(game, s) ?? '', /Repairs cost/, 'no silver, no work');
 });
+
+test('a patrol\'s stray ball falls short of a captain it is not at war with; at war, it strikes her (docs/30)', async () => {
+  const { headingOf } = await import('../shared/src/math.ts');
+  const { game } = makeGame();
+  join(game, 'Stray');
+  const s = [...game.sessions].find((x) => x.name === 'Stray')!;
+  game.undock(s);
+  const ship = s.ship!;
+  ship.protectedUntil = 0;
+  ship.state.speed = 0;
+  ship.input = { rudder: 0, sailTarget: 0 };
+  const patrol = game.spawnNpcShip('patrol', 'brig', 'crown', ship.state.x + 150, ship.state.y, 0);
+  patrol.input = { rudder: 0, sailTarget: 0 };
+  const brain = game.npcs.get(patrol.id)!;
+  brain.active = true;
+  brain.area = { x: patrol.state.x, y: patrol.state.y, r: 1500 }; // her beat (one with none is struck off the sea)
+  game.grid.upsert(patrol.id, patrol.state.x, patrol.state.y);
+  const fire = () => game.projectiles.push({ owner: patrol.id, x: patrol.state.x - 20, y: patrol.state.y, heading: headingOf(ship.state.x - patrol.state.x, ship.state.y - patrol.state.y), speed: 300, dist: 400, traveled: 0, ammo: 'round', damage: 60, maxRange: 600, delay: 0 });
+  const hull = ship.hull;
+  fire();
+  steps(game, 20);
+  assert.equal(ship.hull, hull, 'her hull untouched');
+  assert.ok(!ship.attackers.has(patrol.id) && !game.isHostile(patrol, ship), 'no fight begun between them');
+  // At war (she fired on the patrol): the ball strikes.
+  patrol.attackers.set(ship.id, game.now);
+  fire();
+  steps(game, 20);
+  assert.ok(ship.hull < hull, 'struck at war');
+});

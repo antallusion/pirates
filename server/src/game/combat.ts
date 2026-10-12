@@ -567,6 +567,13 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     game.emit({ k: 'hit', x: Math.round(hx), y: Math.round(hy), ship: target.id, dmg: 0, ammo: p.ammo, blocked: true }, hx, hy);
     return;
   }
+  // A stray ball of the sea's ships: a patrol's broadside at a shark or a rover beside a captain struck her too, made them
+  // each other's attackers, and the patrol sank her at Wanted 0 (QA playthrough A, 2026-10-12). It falls short of a
+  // captain it was not fired at; the sea's ships hurt only those they are at war with.
+  if (shooter && shooter.npcRole && shooter.npcRole !== 'beast' && target.isPlayer && !game.isHostile(shooter, target)) {
+    game.emit({ k: 'hit', x: Math.round(hx), y: Math.round(hy), ship: target.id, dmg: 0, ammo: p.ammo, blocked: true }, hx, hy);
+    return;
+  }
   const ammo = AMMO[p.ammo];
   const gd = p.gun ? GUNS[p.gun] : undefined; // the gun's own trade (ships.ts), on a broadside's balls
   if (target.named && shooter?.isPlayer) target.scar = p.ammo === 'incendiary' ? 'fire' : 'cannon'; // the scar he will carry (docs/12 P10 #1)
