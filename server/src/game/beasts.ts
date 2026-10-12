@@ -1003,7 +1003,10 @@ export function beastSlain(game: Game, b: ShipEntity): boolean {
     lt = t;
     killer = o.ownerId !== null ? game.ships.get(o.ownerId) ?? o : o;
   }
-  const c: Carcass = { id: S.seq++, beast: br.beast, level: b.shipLevel, x: b.state.x, y: b.state.y, h: b.state.heading, until: now + CARCASS_LIFE, progress: 0, by: null, freshUntil: now + 60, nextBlood: now + 8, called: 0, killer: killer?.accountId ?? null };
+  // One that came for the blood calls none in its turn (QA playthrough A, 2026-10-13): every shark slain at a carcass
+  // called two more, the ring at Saltmarrow's mouth never thinned, and a ⚓2 sloop at full crew went down in a quarter
+  // of an hour of killing them.
+  const c: Carcass = { id: S.seq++, beast: br.beast, level: b.shipLevel, x: b.state.x, y: b.state.y, h: b.state.heading, until: now + CARCASS_LIFE, progress: 0, by: null, freshUntil: now + 60, nextBlood: now + 8, called: br.blood !== null ? BLOOD_CALLS : 0, killer: killer?.accountId ?? null };
   S.carcasses.set(c.id, c);
   for (const [k, l] of S.lines) if (l.beast === b.id) endLine(game, k, null);
   game.emit({ k: 'sunk', ship: b.id, x: Math.round(b.state.x), y: Math.round(b.state.y), name: b.name }, b.state.x, b.state.y);
@@ -1180,7 +1183,7 @@ function stepCarcasses(game: Game): void {
     }
     // Blood in the water: the sharks — and in the cold seas the orcas — come for it.
     const bleeding = c.by !== null || now < c.freshUntil;
-    if (bleeding && now >= c.nextBlood && c.called < 4 && !bloodCrowded(game, c.x, c.y)) {
+    if (bleeding && now >= c.nextBlood && c.called < BLOOD_CALLS && !bloodCrowded(game, c.x, c.y)) {
       c.nextBlood = now + 10;
       const region = regionAt(game.world, c.x, c.y);
       const cold = BEASTS.orca.regions.includes(region);
@@ -1209,6 +1212,8 @@ function stepCarcasses(game: Game): void {
  *  bled and called sharks, the patrols and the merchants by a harbour slew those, and their carcasses called more —
  *  thirty sharks and orcas ringed Pearl Point and Hollowmere and fell on every ship leaving. */
 export const BLOOD_CROWD = 6;
+/** The most a carcass calls to its blood. */
+export const BLOOD_CALLS = 4;
 export const BLOOD_CROWD_R = 1500;
 export function bloodCrowded(game: Game, x: number, y: number): boolean {
   let n = 0;
