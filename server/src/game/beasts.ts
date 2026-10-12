@@ -274,13 +274,8 @@ function spawnAbout(game: Game): void {
   for (const s of game.sessions) {
     const ship = s.ship;
     if (!ship || ship.docked || !ship.alive || !s.profile) continue;
-    let near = 0;
-    for (const id of S.brains.keys()) {
-      const b = game.ships.get(id);
-      if (b && dist(b.state.x, b.state.y, ship.state.x, ship.state.y) < 5000) near++;
-    }
     const migrating = orcaMigrationIn(game, ship.region);
-    if (near >= (migrating ? 10 : 6)) continue;
+    if (beastsNear(game, ship) >= (migrating ? 10 : NEAR_CAP)) continue;
     if (!S.rng.chance(migrating ? 0.25 : 0.12)) continue;
     const lvl = sectorAt(game.world, ship.state.x, ship.state.y).level; // the beasts of the square (docs/16 P2)
     const kind = pickKind(game, ship.region, lvl, ship.combatLevel);
@@ -305,10 +300,26 @@ function spawnAbout(game: Game): void {
   }
 }
 
-/** Beasts passing within a mile or so of one captain (the sea's small life, sealife.ts); false when none fits. */
+/** The most beasts about a captain at sea (within NEAR_R) the sea adds to. */
+export const NEAR_CAP = 6;
+const NEAR_R = 5000;
+
+/** The beasts within NEAR_R of a ship. */
+function beastsNear(game: Game, ship: ShipEntity): number {
+  let near = 0;
+  for (const id of bs(game).brains.keys()) {
+    const b = game.ships.get(id);
+    if (b && dist(b.state.x, b.state.y, ship.state.x, ship.state.y) < NEAR_R) near++;
+  }
+  return near;
+}
+
+/** Beasts passing within a mile or so of one captain (the sea's small life, sealife.ts); false when none fits — or the
+ *  water about her is full already (QA playthrough A, 2026-10-13: a group passed every minute and a half of sailing and
+ *  stayed till she was 7 km off — ten sharks within a kilometre of a sloop 2 km out of Saltmarrow). */
 export function beastsPass(game: Game, ship: ShipEntity): boolean {
   const S = bs(game);
-  if (S.brains.size >= WORLD_CAP) return false;
+  if (S.brains.size >= WORLD_CAP || beastsNear(game, ship) >= NEAR_CAP) return false;
   const lvl = sectorAt(game.world, ship.state.x, ship.state.y).level; // the beasts of the square (docs/16 P2)
   const kind = pickKind(game, ship.region, lvl, ship.combatLevel);
   if (!kind) return false;

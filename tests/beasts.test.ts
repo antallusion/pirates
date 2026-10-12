@@ -13,7 +13,7 @@ import { JOBS } from '../shared/src/data/quests.ts';
 import { REGIONS } from '../shared/src/world/regions.ts';
 import type { RegionId } from '../shared/src/world/regions.ts';
 import { isLand, regionAt } from '../shared/src/world/worldgen.ts';
-import { beastBrain, beastSecond, beastsAlive, carcassesOf, clearBeasts, huntOrder, huntView, lineOf, spawnBeast, spawnGroup, spawnWhiteOrca, stepBeasts } from '../server/src/game/beasts.ts';
+import { NEAR_CAP, beastBrain, beastSecond, beastsAlive, beastsPass, carcassesOf, clearBeasts, huntOrder, huntView, lineOf, spawnBeast, spawnGroup, spawnWhiteOrca, stepBeasts } from '../server/src/game/beasts.ts';
 import { stepEvents } from '../server/src/game/events.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import { ladderBetween } from '../server/src/game/ladder.ts';
@@ -425,4 +425,14 @@ test('a beast that came for the blood calls none in its turn: killing them thins
     c1.freshUntil = game.now + 10;
   });
   assert.equal(beastsAlive(game).length, 0, 'none came to the blood of a called one');
+});
+
+test('beasts passing a sailing captain stop at the sea\'s cap about her: no shoal of ten sharks off a harbour (playA)', () => {
+  const { game } = makeGame();
+  const { ship } = hunter(game, 'Shoal Sue', 'gravewater', 'sloop', 2);
+  let passed = 0;
+  for (let k = 0; k < 40; k++) if (beastsPass(game, ship)) passed++;
+  assert.ok(passed > 0, 'some passed');
+  const near = beastsAlive(game).filter((b) => Math.hypot(b.state.x - ship.state.x, b.state.y - ship.state.y) < 5000).length;
+  assert.ok(near <= NEAR_CAP + 2, `within 5 km: ${near} (a group may finish the count)`);
 });
