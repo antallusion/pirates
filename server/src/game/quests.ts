@@ -8,7 +8,8 @@ import { SIDE_QUESTS } from '../../../shared/src/data/sidequests.ts';
 import { codeAnywhere } from './raiding.ts';
 import { inGroup } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
-import { questShipLevel } from '../../../shared/src/data/shiplevel.ts';
+import { MAX_LEVEL } from '../../../shared/src/constants.ts';
+import { SHIP_LEVEL_MAX, captainLevelFor, questShipLevel } from '../../../shared/src/data/shiplevel.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { FACTIONS, wantedLevel } from '../../../shared/src/data/factions.ts';
@@ -360,7 +361,11 @@ export function questWatersTop(game: Game, q: QuestDef): number {
   const is = q.island !== undefined ? game.world.islands[q.island] : undefined;
   const at = is ?? game.portById(q.port);
   if (!at) return q.requires.level ?? 1;
-  return captainBand(sectorAt(game.world, at.x, at.y).band)[1];
+  // …and a fight it asks for is the waters it is fought in (docs/30, band 2): the same ⚓3 raiders' flagship paid a captain
+  // of 11 2800 at Mermaid Wharf and 220 at Gravesend, a calm square's harbour a few miles off.
+  const ship = shipLevelOfQuest(q);
+  const fight = ship ? (ship >= SHIP_LEVEL_MAX ? MAX_LEVEL : captainLevelFor(ship + 1) - 1) : 0;
+  return Math.max(captainBand(sectorAt(game.world, at.x, at.y).band)[1], fight);
 }
 
 /** What a quest pays a captain of her level (docs/26): its reward at its own level, at hers within its waters, green

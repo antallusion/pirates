@@ -423,3 +423,20 @@ test('«Атаковать»: the gun captains hold while a ship of the law lies
   stepAutoFire(game);
   assert.ok(ship.reload.starboard > 0 || ship.reload.port > 0, 'a broadside thrown');
 });
+
+test('a quest\'s fight is the waters it pays by: the same ⚓3 flagship pays alike at a calm harbour and a ⚓2 one (band 2, docs/30)', async () => {
+  const { todaysElite } = await import('../server/src/game/elite.ts');
+  const { questXpOf, shipLevelOfQuest } = await import('../server/src/game/quests.ts');
+  const { questXpFor } = await import('../shared/src/data/xpcurve.ts');
+  const { captainLevelFor } = await import('../shared/src/data/shiplevel.ts');
+  const { game } = makeGame();
+  join(game, 'Flag Hunter');
+  const p = game.sessionByName('Flag Hunter')!.profile!;
+  p.level = 11;
+  const q = todaysElite(game, game.portById('gravesend')!)!;
+  assert.ok(q, 'Gravesend has its flagship today');
+  const ship = shipLevelOfQuest(q)!;
+  assert.ok(ship >= 3, `a ⚓${ship} fight`);
+  assert.equal(questXpOf(game, p, q), questXpFor(11, q.reward.xp, q.requires.level ?? 1, captainLevelFor(ship + 1) - 1), 'paid as in the fight\'s own waters');
+  assert.ok(questXpOf(game, p, q) >= q.reward.xp, 'not the tenth of a green job');
+});
