@@ -1166,7 +1166,7 @@ function stepCarcasses(game: Game): void {
     }
     // Blood in the water: the sharks — and in the cold seas the orcas — come for it.
     const bleeding = c.by !== null || now < c.freshUntil;
-    if (bleeding && now >= c.nextBlood && c.called < 4) {
+    if (bleeding && now >= c.nextBlood && c.called < 4 && !bloodCrowded(game, c.x, c.y)) {
       c.nextBlood = now + 10;
       const region = regionAt(game.world, c.x, c.y);
       const cold = BEASTS.orca.regions.includes(region);
@@ -1189,6 +1189,20 @@ function stepCarcasses(game: Game): void {
       }
     }
   }
+}
+
+/** The water round a carcass already full of beasts calls no more (QA playthrough B, 2026-10-12): every beast slain
+ *  bled and called sharks, the patrols and the merchants by a harbour slew those, and their carcasses called more —
+ *  thirty sharks and orcas ringed Pearl Point and Hollowmere and fell on every ship leaving. */
+export const BLOOD_CROWD = 6;
+export const BLOOD_CROWD_R = 1500;
+export function bloodCrowded(game: Game, x: number, y: number): boolean {
+  let n = 0;
+  for (const id of bs(game).brains.keys()) {
+    const b = game.ships.get(id);
+    if (b?.alive && dist(b.state.x, b.state.y, x, y) < BLOOD_CROWD_R && ++n >= BLOOD_CROWD) return true;
+  }
+  return false;
 }
 
 function toastNear(game: Game, x: number, y: number, r: number, msg: string, kind: 'info' | 'bad'): void {
@@ -1238,7 +1252,8 @@ export function beastSecond(game: Game): void {
     if (br.beast === 'white_orca') continue; // her happening sends her away
     if ([...S.lines.values()].some((l) => l.beast === id) || b.inCombat(now) || [...b.attackers.values()].some((t) => t > now - 60)) continue;
     let far = true;
-    for (const s of game.sessions) if (s.ship && dist(s.ship.state.x, s.ship.state.y, b.state.x, b.state.y) < DESPAWN_R) {
+    // (a captain in port does not see the sea: the beasts about her harbour go as from an empty sea, not gather)
+    for (const s of game.sessions) if (s.ship && !s.ship.docked && dist(s.ship.state.x, s.ship.state.y, b.state.x, b.state.y) < DESPAWN_R) {
       far = false;
       break;
     }

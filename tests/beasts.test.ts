@@ -385,3 +385,19 @@ test('beasts keep off the land and its shallows: they turn away from a coast as 
   for (let k = 0; k < 30; k++) beastsPass(game, shark); // spawned about the shark's own place, by the coast
   for (const b of beastsAlive(game)) assert.ok(openWater(game, b.state.x, b.state.y), 'risen in open water');
 });
+
+test('blood in water already crowded with beasts calls no more: no swarm of sharks round a busy harbour (playB)', () => {
+  const { game } = makeGame();
+  const { ship } = hunter(game, 'Crowd Cora', 'gravewater', 'schooner', 4);
+  // six sharks about already
+  for (let i = 0; i < 6; i++) spawnBeast(game, 'shark', ship.state.x + 200 + i * 40, ship.state.y + 300, 3);
+  const before = beastsAlive(game).length;
+  // a carcass bleeding for a long while beside them
+  const whale = spawnBeast(game, 'humpback', ship.state.x + 30, ship.state.y, 4);
+  kill(game, whale, ship);
+  const carc = carcassesOf(game)[0] as unknown as { freshUntil: number };
+  run(game, 200, () => {
+    carc.freshUntil = game.now + 10;
+  });
+  assert.ok(beastsAlive(game).length <= before, `no more called: ${before} → ${beastsAlive(game).length}`);
+});
