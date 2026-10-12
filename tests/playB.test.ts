@@ -46,3 +46,22 @@ test('a lair beaten counts on one job only, the one that names that lair first (
   questEvent(game, s, { k: 'lair', island: at.island + 1, kind: at.kind } as never);
   assert.equal(st(cull.id).progress + st(cull2.id).progress, 1, 'another lair: one cull counts it');
 });
+
+test('a trade-in counts the refits and the guns she paid for (a brig ⚓7 with 18-pounders was worth a bare brig ⚓5)', async () => {
+  const { makeGame, join, onHull } = await import('./helpers.ts');
+  const { shipValue } = await import('../server/src/game/ports.ts');
+  const { refitCost } = await import('../shared/src/data/shiplevel.ts');
+  const { GUNS } = await import('../shared/src/data/ships.ts');
+  const { game } = makeGame();
+  join(game, 'Trade Tam');
+  const ship = game.sessionByName('Trade Tam')!.ship!;
+  onHull(game, ship, 'brig', 5);
+  const bare = shipValue(ship);
+  assert.equal(bare, 12500, 'a bare brig ⚓5 is her class price');
+  ship.loadout.guns = { port: 'heavy_18', starboard: 'heavy_18' };
+  onHull(game, ship, 'brig', 7);
+  const guns = (GUNS.heavy_18.price - GUNS.medium_12.price) * ship.stats.gunsPerSide; // two sides at half
+  const refits = (refitCost(6)!.silver + refitCost(7)!.silver) / 2;
+  assert.equal(shipValue(ship), bare + guns + refits);
+  assert.ok(shipValue(ship) > bare * 3, `worth ${shipValue(ship)} against ${bare}`);
+});
