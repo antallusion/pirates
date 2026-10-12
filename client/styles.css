@@ -109,6 +109,8 @@ button { font-family: var(--sans); }
 .ability { border-left: 2px solid var(--brass-dim); padding: 4px 10px; margin: 8px 0; }
 .ability b { color: var(--bone); }
 .ability .key { display: inline-block; min-width: 20px; text-align: center; border: 1px solid var(--brass-dim); color: var(--gold); font-size: 11px; margin-right: 6px; }
+/* A keyboard's keys mean nothing to a finger (docs/30: Z/X/C/V on the captain's orders on a phone) */
+@media (pointer: coarse) { .ability .key { display: none !important; } }
 .ability.ult { border-left-color: var(--turq); }
 .ability small { display: block; color: var(--fog); font-size: 12px; }
 
