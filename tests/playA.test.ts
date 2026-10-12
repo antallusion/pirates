@@ -121,3 +121,22 @@ test('a job\'s goods lost with the hold: the job goes back to taking them on, an
   assert.equal(s.profile!.quests.active.find((a) => a.id === q.id)!.step, pi, 'back to the pickup');
   assert.ok(conn.all('toast').some((t) => /is lost: take it on again at/.test(t.msg)), 'said where');
 });
+
+test('a lair job\'s mark: a lair under a harbour\'s quays is the last pick (the run ended between the piers, on the rocks)', async () => {
+  const { lairList, lairPos } = await import('../server/src/game/beastlairs.ts');
+  const { QUESTS_BY_ID } = await import('../shared/src/data/quests.ts');
+  const { game } = makeGame();
+  join(game, 'Lairs');
+  const s = game.sessionByName('Lairs')!;
+  const quayside = lairList(game).find((l) => { const q = game.nearestPort(l.x, l.y); return !!q && Math.hypot(q.x - l.x, q.y - l.y) < 700; });
+  assert.ok(quayside, 'a lair under a harbour in this world');
+  const q = Object.values(QUESTS_BY_ID).find((x) => x.steps[0]?.type === 'lair' && x.steps[0].island === undefined && !x.steps[0].kind)!;
+  assert.ok(q, 'a lair job of any island');
+  s.profile!.quests.active.push({ id: q.id, step: 0, progress: 0, startedAt: game.now });
+  const at = lairPos(game, quayside!);
+  s.ship!.docked = null;
+  s.ship!.state = { ...s.ship!.state, x: at.x + 50, y: at.y };
+  const t = game.questTargets(s)[q.id];
+  assert.ok(t, 'a mark');
+  assert.ok(Math.hypot(t.x - at.x, t.y - at.y) > 10, 'not the harbour\'s own lair while another stands');
+});

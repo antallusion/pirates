@@ -320,6 +320,9 @@ const WEATHER_TOAST: Record<string, string> = {
   black_storm: 'A black storm. The crew will not look at the water.',
 }
 
+/** A lair this near a harbour is a quest's last pick for its mark (docs/30). */
+export const LAIR_QUAY_R = 1200;
+
 export class Game {
   readonly db: Db;
   readonly auth: AuthService;
@@ -399,6 +402,8 @@ export class Game {
   /** How far the wall clock has run ahead of the real one under admin /speed (ms; 0 on a normal server, where
    *  timeScale is always 1). The QA playthrough (docs/30, owner 2026-10-12: «врубить скорость х100»): the build
    *  queue, the 48 h respawns, the weeks follow the world clock there, so the speed is honest. */
+  /** Whether each lair lies under a harbour's quays (docs/30), worked out once. */
+  private lairQuay = new Map<string | number, boolean>();
   wallSkew = 0;
   /** Real time in ms, for letters and listings that outlive the process (tests move it); ahead by wallSkew under /speed. */
   wallNow: () => number = () => Date.now() + this.wallSkew;
@@ -1712,7 +1717,16 @@ export class Game {
           if (st.kind && l.kind !== st.kind) continue;
           if (!lairUp(this, l)) continue;
           const lp = lairPos(this, l);
-          const d = from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0;
+          // A lair under a harbour's quays is the last pick (docs/30: Moon Landing's — the run ended between its piers,
+          // the sloop on the beach, and off the quay straight onto the rocks); one out on an island first.
+          let quayside = this.lairQuay.get(l.id);
+          if (quayside === undefined) {
+            const quay = this.nearestPort(l.x, l.y);
+            quayside = !!quay && Math.hypot(quay.x - l.x, quay.y - l.y) < LAIR_QUAY_R;
+            this.lairQuay.set(l.id, quayside);
+          }
+          const byQuay = quayside ? 20_000 : 0;
+          const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay;
           if (d < bd) [best, bd] = [lp, d];
         }
         if (!best && st.island !== undefined && this.world.islands[st.island]) best = this.world.islands[st.island];
