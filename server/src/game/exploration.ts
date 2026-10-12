@@ -108,6 +108,14 @@ export function findLandable(game: Game, s: PlayerSession): { island: Island; fe
     // A named pirate's lair is the first thing on its island (docs/16 #7): the boats go for the camp.
     const here: string[] = lairIsland(game, is.id) ? ['pirate_camp', ...is.features, ...lifeOf(is).map((x) => x.kind)] : [...is.features, ...lifeOf(is).map((x) => x.kind)];
     let found = false;
+    // The site a job of hers sends the boats to comes before all else on its island (QA playthrough B, docs/30: «Land a
+    // party at the pirate camp on Slagvent» — the boats went to whatever stood first, or against the island's creatures).
+    const job = here.find((f) => LANDABLE.includes(f as LandableFeature) && questLandsHere(p, is.id, f));
+    if (job) {
+      best = { island: is, feature: job as LandableFeature };
+      bd = d;
+      continue;
+    }
     // A lookout on her headland (docs/16 #24): climbed first, once in two hours.
     if (lookoutReady(game, s, is.id)) {
       best = { island: is, feature: 'lookout' };
@@ -191,6 +199,11 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
     game.toastShip(ship, `Boats away: ${party} hands row for the back of ${turtleName(turtle)} while she basks (${TIDAL_LANDING_SEC}s).`, 'info');
     return null;
   }
+  // A job's landing on this island goes before the mine's flag, a great one ashore or a lair of its creatures (QA
+  // playthrough B, docs/30: Slagvent, 180 m across, has its pirate camp and an Ape Ridge — the arc's landing at the camp
+  // sent every boat against the apes, five times, until 76 hands were 5).
+  const job = questLanding(game, s);
+  if (job) return landAt(game, s, job);
   // A mine ashore (docs/17 H3): the flag first.
   const flag = startFlag(game, s);
   if (flag !== undefined) return flag;
@@ -202,6 +215,17 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
   if (lair !== undefined) return lair;
   const target = findLandable(game, s);
   if (!target) return 'Nothing worth landing for within reach of the boats';
+  return landAt(game, s, target);
+}
+
+/** The landing a job of hers asks for within the boats' reach (her site on her island), or null. */
+export function questLanding(game: Game, s: PlayerSession): { island: Island; feature: LandableFeature } | null {
+  const t = findLandable(game, s);
+  return t && questLandsHere(s.profile!, t.island.id, t.feature) ? t : null;
+}
+
+function landAt(game: Game, s: PlayerSession, target: { island: Island; feature: LandableFeature }): string | null {
+  const ship = s.ship!;
   const party = Math.max(3, Math.min(12, Math.round(ship.crew * 0.3)));
   if (ship.crew - party < ship.stats.crewMin * 0.4) return 'Too few hands to spare a landing party';
   const dur = DURATION[target.feature];

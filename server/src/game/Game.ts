@@ -151,7 +151,7 @@ export const BOARD_LOSS_PURSE = 0.08;
 export const BOARD_LOSS_SHIELD = 180;
 import { stepBridges } from './bridgefx.ts';
 import { MAX_BERTHS, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
-import { abandonQuest, acceptQuest, answerOffer, questCargoLost, questEvent, questXpOf, shareQuest, swearOath, switchPath } from './quests.ts';
+import { abandonQuest, acceptQuest, answerOffer, questCargoLost, questEvent, questLandsHere, questXpOf, shareQuest, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import { commonCollect, commonView, stepCommon } from './commongoal.ts';
 import { guildGoalCollect } from './guildgoal.ts';
@@ -1167,15 +1167,18 @@ export class Game {
         ? isle
         : land ? { island: land.island.name, feature: featureName(land.island, land.feature) } : null;
       // A mine ashore (docs/17 H3): the flag goes up before the boats row for anything else on its island.
-      const flag = s.ship.docked || s.ship.landing ? null : mineLandable(this, s);
+      // A job of hers that lands here: her landing comes first (QA playthrough B, docs/30; exploration.ts startLanding).
+      const job = !!land && questLandsHere(s.profile, land.island.id, land.feature);
+      const flag = s.ship.docked || s.ship.landing || job ? null : mineLandable(this, s);
       if (flag && (!s.landable || (land && s.landable.island === land.island.name && !s.landable.action))) s.landable = flag;
       // docs/18 #28, #31: an island's level against hers on the prompt; a turtle island's back when nothing else calls.
       if (land && s.landable && s.landable.island === land.island.name && !s.landable.action) s.landable = { ...s.landable, ...landDanger(this, s, land.island) };
       if (!s.landable && !s.ship.docked && !s.ship.landing) s.landable = turtlePrompt(this, s);
-      // A great one ashore within the boats' reach of its shore (shorebosses.ts): the land key lands against it first.
-      if ((!s.landable || (land && s.landable.island === land.island.name && !s.landable.action)) && !s.ship.docked && !s.ship.landing) s.landable = shoreBossPrompt(this, s) ?? s.landable;
+      // A great one ashore within the boats' reach of its shore (shorebosses.ts): the land key lands against it first —
+      // unless a job of hers lands here (above).
+      if ((!s.landable || (land && s.landable.island === land.island.name && !s.landable.action)) && !job && !s.ship.docked && !s.ship.landing) s.landable = shoreBossPrompt(this, s) ?? s.landable;
       // docs/18 II: a lair of the land's creatures within the boats' reach — the land key lands against it.
-      if ((!s.landable || (land && s.landable.island === land.island.name && !s.landable.action)) && !s.ship.docked && !s.ship.landing) s.landable = lairPrompt(this, s) ?? s.landable;
+      if ((!s.landable || (land && s.landable.island === land.island.name && !s.landable.action)) && !job && !s.ship.docked && !s.ship.landing) s.landable = lairPrompt(this, s) ?? s.landable;
       const wNow = this.weatherOf(s.ship);
       const wPrev = this.lastWeather.get(s);
       if (wPrev && wPrev !== wNow) this.sendTo(s, { t: 'toast', msg: WEATHER_TOAST[wNow], kind: wNow === 'storm' || wNow === 'black_storm' ? 'bad' : 'info' });

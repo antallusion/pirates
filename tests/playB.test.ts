@@ -65,3 +65,59 @@ test('a trade-in counts the refits and the guns she paid for (a brig ⚓7 with 1
   assert.equal(shipValue(ship), bare + guns + refits);
   assert.ok(shipValue(ship) > bare * 3, `worth ${shipValue(ship)} against ${bare}`);
 });
+
+test('a job\'s landing goes before the island\'s creatures: the arc\'s pirate camp on Slagvent, not its Ape Ridge', async () => {
+  const { makeGame, join, steps } = await import('./helpers.ts');
+  const { quietAdv } = await import('../server/src/game/advmap.ts');
+  const { QUESTS_BY_ID } = await import('../shared/src/data/quests.ts');
+  const { lairList } = await import('../server/src/game/beastlairs.ts');
+  const { closestOnPolygon } = await import('../shared/src/math.ts');
+  const { isLand } = await import('../shared/src/world/worldgen.ts');
+  const { game } = makeGame();
+  quietAdv(game, false); // the island's creatures awake
+  const c = join(game, 'Camp Cass');
+  const s = game.sessionByName('Camp Cass')!;
+  const p = s.profile!, ship = s.ship!;
+  // Any arc's landing at a pirate camp on an island with a lair of creatures (in the world as generated: Slagvent).
+  const camps = Object.values(QUESTS_BY_ID).filter((x) => x.steps.some((st) => st.type === 'land' && st.site === 'pirate_camp' && lairList(game).some((l) => l.island === st.island)));
+  const isleOf = (x: (typeof camps)[number]) => game.world.islands[(x.steps.find((st) => st.type === 'land') as { island: number }).island];
+  const q = camps.sort((a, b) => isleOf(a).radius - isleOf(b).radius)[0]; // the smallest such island: no shore out of the lair's reach
+  assert.ok(q, 'an arc lands at a camp on a lair\'s island');
+  const step = q.steps.findIndex((st) => st.type === 'land');
+  const st = q.steps[step] as { island: number };
+  p.level = 40;
+  p.quests.active.push({ id: q.id, step, progress: 0, startedAt: game.now });
+  // Off her shore, in reach of the boats.
+  if (ship.docked) c.push({ t: 'undock' });
+  const is = game.world.islands[st.island];
+  let at: [number, number] | null = null;
+  for (let r = 20; r < is.radius + 260 && !at; r += 15) for (let k = 0; k < 36 && !at; k++) {
+    const a = (k / 36) * Math.PI * 2, x = is.x + Math.sin(a) * r, y = is.y - Math.cos(a) * r;
+    const d = Math.sqrt(closestOnPolygon(x, y, is.poly).d2);
+    if (!isLand(game.world, x, y) && d > 40 && d < 150) at = [x, y];
+  }
+  ship.state = { ...ship.state, x: at![0], y: at![1], speed: 0, sail: 0 };
+  ship.region = is.region;
+  game.grid.upsert(ship.id, at![0], at![1]);
+  steps(game, 25);
+  assert.equal(s.landable?.feature, 'pirate camp', `the land key offers her job's site (${JSON.stringify(s.landable)})`);
+  c.push({ t: 'land' });
+  for (let i = 0; i < 200 && !ship.landing; i++) steps(game, 1); // (she heaves to first)
+  assert.equal(ship.landing?.feature, 'pirate_camp', `the boats go for the camp, not the creatures (${JSON.stringify(c.all('toast').slice(-3).map((x) => x.msg))} ${JSON.stringify(ship.landing)})`);
+  assert.ok(!c.all('toast').some((x) => /against the/.test(x.msg)), 'no fight with the creatures ashore');
+  steps(game, 20 * 60);
+  // A named pirate's camp (Slagvent's is): her battery drove the boats off — and said what to do.
+  const { lairsAll, lairAdmin } = await import('../server/src/game/wanted.ts');
+  const lair = lairsAll(game).find((l) => l.island === st.island);
+  if (lair) {
+    assert.ok(c.all('toast').some((x) => /Silence it with your guns first/.test(x.msg)), 'the repulse says what to do');
+    lairAdmin(game, lair.id, 'silence');
+    lairAdmin(game, lair.id, 'sink');
+    c.push({ t: 'land' });
+    for (let i = 0; i < 200 && !ship.landing; i++) steps(game, 1);
+    steps(game, 20 * 60);
+    assert.ok(c.all('toast').some((x) => /is stormed/.test(x.msg)), 'the camp stormed');
+  }
+  const left = p.quests.active.find((a) => a.id === q.id);
+  assert.ok(!left || left.step > step, 'the landing counts for the job');
+});
