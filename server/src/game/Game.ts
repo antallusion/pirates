@@ -2415,20 +2415,23 @@ export class Game {
     loser.boarding = null;
     loser.lootLockedFor = null;
     loser.surrendered = false;
+    // The First Watch loses nothing (docs/30: the lesson's raider threw a novice's boarders back and took her hold, a
+    // tenth of her chest and 22 of her 24 men): the men come back, the hold and the chest stay hers.
+    const lesson = onboardingRescue(this, s);
     // The hold to the victors (a captain's hold takes what fits; the rest goes over the side).
-    const taken = cargoValue(loser.cargo);
+    const taken = lesson ? 0 : cargoValue(loser.cargo);
     const vs = this.sessionOf(victor);
     let free = vs ? victor.stats.holdVolume - cargoVolume(victor.cargo, victor.stats.contrabandVolumeMul, victor.stats.materialVolumeMul, victor.stats.provisionVolumeMul, victor.stats.cursedVolumeMul) : Infinity;
-    for (const id of Object.keys(loser.cargo) as GoodId[]) {
+    for (const id of lesson ? [] : (Object.keys(loser.cargo) as GoodId[])) {
       const n = Math.floor(loser.cargo[id] ?? 0);
       const per = GOODS[id]?.volume ?? 1;
       const k = Math.max(0, Math.min(n, Math.floor((free + 1e-6) / per)));
       if (k > 0) victor.cargo[id] = (victor.cargo[id] ?? 0) + k;
       free -= k * per;
     }
-    loser.cargo = {};
+    if (!lesson) loser.cargo = {};
     // A share of her chest.
-    const silver = Math.min(Math.floor(p.gold), Math.floor(p.gold * BOARD_LOSS_PURSE));
+    const silver = lesson ? 0 : Math.min(Math.floor(p.gold), Math.floor(p.gold * BOARD_LOSS_PURSE));
     if (silver > 0) {
       p.gold -= silver;
       this.db.ledger(s.accountId, 'robbed', -silver, victor.name);
@@ -2456,7 +2459,7 @@ export class Game {
     loser.crew = Math.max(Math.round(loser.stats.crewMin * 0.6), loser.crew);
     loser.morale = Math.max(loser.morale, 40);
     loser.boardShieldUntil = this.now + BOARD_LOSS_SHIELD;
-    this.sendTo(s, { t: 'sunk_self', lost: { cargoValue: taken, crew: Math.max(0, Math.round(crewLost)), repairFee: 0 }, respawnPort: port.id, boarded: { by: victor.name, silver, ...(repelled ? { repelled: true } : {}) } });
+    this.sendTo(s, { t: 'sunk_self', lost: { cargoValue: taken, crew: lesson ? 0 : Math.max(0, Math.round(crewLost)), repairFee: 0 }, respawnPort: port.id, ...(lesson ? { towed: true } : { boarded: { by: victor.name, silver, ...(repelled ? { repelled: true } : {}) } }) }); // the First Watch's soft card
     this.pushSelf(s, true);
     this.saveSession(s);
   }
