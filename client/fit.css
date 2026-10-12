@@ -128,8 +128,12 @@
   .w-chips { gap: calc(2px + 2 * var(--u)); padding: calc(2px + 1 * var(--u)) var(--f-pad); }
   .w-chip { min-height: var(--f-tap); padding: 0 calc(6px + 3 * var(--u)) 0 calc(4px + 2 * var(--u)); font-size: var(--f-fs); gap: 4px; }
   .w-chip-ico { width: var(--f-ico); height: var(--f-ico); }
-  .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:not(.on):has(.w-chip-ico) > .w-chip-l { display: none; }
-  .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:not(.on):has(.w-chip-ico) { padding: 0; min-width: var(--f-tap); justify-content: center; }
+  /* docs/30: a long row keeps every chip's word, small under its picture (the icons alone said nothing to a newcomer:
+     «Гавань», «Владения», «Биржа» were only in the long-press hint); the row scrolls if it must */
+  .w-chips:has(> .w-chip:nth-child(5)) { overflow-x: auto; scrollbar-width: none; }
+  .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:has(.w-chip-ico) { flex: none; flex-direction: column; justify-content: center; gap: 0; padding: 1px calc(2px + 1 * var(--u)); min-width: var(--f-tap); }
+  .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:has(.w-chip-ico) > .w-chip-ico { width: calc(var(--f-ico) * 0.8); height: calc(var(--f-ico) * 0.8); }
+  .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:has(.w-chip-ico) > .w-chip-l { display: block; font-size: var(--f-fs-s); line-height: 1.05; white-space: nowrap; }
   /* the page */
   #modal-panel .modal-body { font-size: var(--f-fs); line-height: 1.33; }
   #modal-panel h3 { font-size: var(--f-fs-h); }
@@ -332,8 +336,7 @@
 /* a phone narrower than 560 px held sideways: a long chip row keeps its pictures only, the lit one too (its border and
    gold say which) — eleven chips and the lit one's word ran 433 px in a 404 px row at 480×270 */
 @media (max-height: 520px) and (max-width: 560px) {
-  .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:has(.w-chip-ico) > .w-chip-l { display: none; }
-  .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:has(.w-chip-ico) { padding: 0; min-width: var(--f-tap); justify-content: center; }
+  .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:has(.w-chip-ico) { padding: 1px 2px; } /* the words stay (docs/30); the row scrolls */
 }
 /* the captain's choice on the smallest phones (270–300 px tall): the epithet is the card's portrait's, the story a
    line tighter, the order's note beside its word */
