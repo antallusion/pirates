@@ -49,3 +49,14 @@ test('the First Watch loses nothing in a boarding thrown back: the hold, the che
   game.boardingLost(ship, foe, 1, true);
   assert.ok(!ship.cargo.rum && s.profile!.gold < gold, 'out of the First Watch the victors take the hold and a share of the chest');
 });
+
+test('every quest giver has a face drawn: a profession of one sex in the art takes the nearest face of the same sex', async () => {
+  const { existsSync } = await import('node:fs');
+  const { giverPortrait } = await import('../shared/src/data/questgen.ts');
+  const profs = ['harbour_master', 'fishwife', 'shipwright', 'priest', 'widow', 'merchant', 'smuggler', 'old_salt', 'apothecary', 'cartographer', 'garrison_captain', 'tavern_keeper', 'pearl_diver', 'fence', 'envoy', 'hermit', 'bosun', 'lighthouse_keeper', 'whaler', 'cultist'] as const;
+  const { GIVER_WOMEN, GIVER_MEN } = await import('../shared/src/data/questgen.ts');
+  for (const p of profs) for (const who of [`${GIVER_WOMEN[0]} X`, `${GIVER_MEN[0]} X`]) {
+    const id = giverPortrait(p, who);
+    assert.ok(existsSync(`assets/portraits/${id}.webp`), `${p} / ${who}: ${id}`);
+  }
+});
