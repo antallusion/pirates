@@ -1965,6 +1965,9 @@ export class Game {
       onLevelUp(this, s);
       kitLevelUp(this, s, s.profile.level - gained); // her abilities' ranks (docs/25 item 37)
       logNote(this, s, 'level', [], s.profile.level);
+      // In port: the tavern's and the yard's prices go by the level — the window is sent again (docs/30: the tavern said
+      // 29 a man, the level-up on the quay made it 31 and the hire took more than the button said).
+      if (s.ship?.docked) this.pushPort(s);
     }
   }
 

@@ -174,7 +174,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     market: marketRows(market, mods),
     ammoPrices,
     crewAvailable: Math.floor(game.tavernCrew.get(port.id) ?? 0),
-    crewHireCost: crewCost(port, p),
+    crewHireCost: recruitCost(game, port, p, 'sailor', ship), // the price the hire takes (Press Gang and all; docs/30)
     tavern: tavernView(game, port, p, ship, s),
     questOffers: questOffers(p, port, game.now, favor, todaysElite(game, port)).map(({ q, blocked }) => ({ id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked, silver: Math.round(q.reward.silver * (q.kind === 'job' ? veteranPay(p.level, q.requires.level ?? 1) : 1)), xp: questXpOf(game, p, q), path: q.reward.path, category: q.category, portrait: q.portrait, ...(q.category === 'arc' ? { chapter: Number(q.id.split('_').pop()) } : {}), ...(favor && q.kind === 'job' && favor(q) ? { urgent: true } : {}), ...((pays) => (pays ? { pays } : {}))(payOptions(game, q)), ...(q.group ? { group: q.group } : {}), ...((ship) => (ship ? { ship } : {}))(shipLevelOfQuest(q)) })),
     captainsHouse: CAPTAINS_HOUSES.includes(port.id),
@@ -247,10 +247,6 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     view.priceIntel = intel.sort((a, b) => b.sell - a.sell).slice(0, 40);
   }
   return view;
-}
-
-function crewCost(port: Port, p: Profile): number {
-  return Math.round(22 + p.level * 1.5 + (port.size >= 3 ? 6 : 0) + (FACTIONS[port.faction].lawful ? 4 : 0));
 }
 
 export function recordIntel(game: Game, s: PlayerSession, port: Port): void {
