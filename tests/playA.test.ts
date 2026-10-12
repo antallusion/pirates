@@ -384,3 +384,42 @@ test('a wounded ship: the helmsman takes her to a harbour whatever her hull, and
   assert.equal(autosailDanger(game, s, ship, game.now, { x: port.x, y: port.y }), null, 'to the yard he takes her');
   if (Math.hypot(port.x - at.x, port.y - at.y) < 60_000) assert.equal(startAutosail(game, s, port.x, port.y), null, 'and the run starts');
 });
+
+test('«Атаковать»: the gun captains hold while a ship of the law lies across the line to the mark (band 2, docs/30)', async () => {
+  const { headingVec } = await import('../shared/src/math.ts');
+  const { fouledLine, startPursuit, stepAutoFire } = await import('../server/src/game/pursuit.ts');
+  const { game } = makeGame();
+  join(game, 'Line Lena');
+  const s = game.sessionByName('Line Lena')!;
+  const ship = s.ship!;
+  ship.docked = null;
+  s.profile!.docked = null;
+  if (s.profile!.tutorial) s.profile!.tutorial.on = false;
+  Object.assign(ship.state, { x: 30000, y: 80000, heading: 0, speed: 0 });
+  ship.protectedUntil = 0;
+  ship.ammo.round = 100;
+  game.grid.upsert(ship.id, 30000, 80000);
+  const beam = headingVec(Math.PI / 2);
+  const put = (role: string, cls: string, faction: string, d: number) => {
+    const o = game.spawnNpcShip(role as never, cls as never, faction as never, 30000 + beam.x * d, 80000 + beam.y * d, 0);
+    o.input = { rudder: 0, sailTarget: 0 };
+    o.state.speed = 0;
+    game.grid.upsert(o.id, o.state.x, o.state.y);
+    return o;
+  };
+  const pirate = put('pirate', 'sloop', 'confederacy', 260);
+  const patrol = put('patrol', 'cutter', 'crown', 130);
+  assert.equal(startPursuit(game, s, pirate.id, 'guns'), null);
+  const lead = { x: pirate.state.x, y: pirate.state.y, d: 260 };
+  assert.ok(fouledLine(game, ship, pirate, lead), 'the patrol is in the line');
+  ship.reload.port = ship.reload.starboard = 0;
+  stepAutoFire(game);
+  assert.equal(ship.reload.starboard, 0, 'held: not a ball thrown');
+  assert.equal(patrol.attackers.has(ship.id), false);
+  // she stands clear: they fire
+  patrol.state.x += 400;
+  game.grid.upsert(patrol.id, patrol.state.x, patrol.state.y);
+  assert.ok(!fouledLine(game, ship, pirate, lead));
+  stepAutoFire(game);
+  assert.ok(ship.reload.starboard > 0 || ship.reload.port > 0, 'a broadside thrown');
+});

@@ -18,6 +18,7 @@ export const SERVER_RU_H: Record<string, string> = {
   'Your waters teach you nothing more on a level-1 hull: any shipyard raises her to level 2 at the Admiralty’s charge, once.': 'На корабле 1-го уровня ваши воды больше ничему не учат: любая верфь перестроит его до 2-го уровня за счёт Адмиралтейства, один раз.',
   'The cargo of “{0}” is lost: take it on again at {1}.': 'Груз задания «{0}» потерян: возьмите его снова в порту {1}.',
   'The helmsman keeps off her side: the guns fight her instead.': 'Рулевой не идёт к её борту: бой ведут пушки.',
+  'The gun captains hold: another ship lies across the line of fire.': 'Канониры ждут: в линии огня чужой корабль.',
   'Hostile sails in range: the helm stays with you': 'Рядом враждебные паруса: штурвал остаётся у вас',
   'Not while there is fighting': 'Не во время боя',
   'Not in a storm: the helm stays with you': 'Не в шторм: штурвал остаётся у вас',
