@@ -350,6 +350,17 @@ heroWindow.onThrone = () => openThrone();
 heroWindow.onTalents = () => openModal('talents');
 // docs/23 item 70: the level's «pick one of two» comes up by itself when a level comes — not over a window, a fight
 // or a battle (it waits for them to end); levels that waited before she came aboard stay in the Hero tab.
+/** The far seas' news on a novice's screen: her own sea's always, the rest once in WORLD_FEED_GAP ms (docs/30). */
+const WORLD_FEED_LEVEL = 15, WORLD_FEED_GAP = 180_000;
+let worldFeedAt = -Infinity;
+function worldFeedShown(msg: string, region: string | null | undefined, level: number, now: number): boolean {
+  const name = region ? REGIONS[region as keyof typeof REGIONS]?.name : undefined;
+  if (name && msg.includes(name)) return true;
+  if (level >= WORLD_FEED_LEVEL) return true;
+  if (now - worldFeedAt < WORLD_FEED_GAP) return false;
+  worldFeedAt = now;
+  return true;
+}
 let heroSeen = -1;
 /** A hostile sail or beast within 1.5 km, or a chase on: the level's card waits (docs/30: it came up over the helm and
  *  «Огонь» with four sharks round her). */
@@ -1312,7 +1323,10 @@ function onMessage(m: ServerMsg): void {
       if (m.kind === 'bad' && refusalAgain(m.msg)) break;
       // World news goes to the feed (owner, 2026-09-29: the sea's news in a corner), the rest to the toasts.
       if (m.msg.startsWith('WORLD: ')) {
-        hud.feed(serverText(m.msg));
+        // docs/30: a captain under 15 sees on the screen only her own sea's news, and the far seas' once in three minutes
+        // (a boss «in Dead Man's Expanse», a legend «in the Ashen Isles» came every half minute to a novice of the Black
+        // Coast); all of it stays in the chat's world tab.
+        if (worldFeedShown(m.msg, state.region, state.self?.level ?? 1, performance.now())) hud.feed(serverText(m.msg));
         hud.chatPanel.system(serverText(m.msg)); // docs/28: the sea's news in the chat's world tab too
       }
       // While her men fight on a deck the sea's news (a fever, a tip) waits for the deck to clear. A refusal and a win
