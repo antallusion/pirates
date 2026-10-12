@@ -228,7 +228,10 @@ export function stopAutosail(game: Game, s: PlayerSession, why: AutosailStop): v
   else paused.delete(ship);
   if (!run) return;
   runs.delete(ship);
-  ship.input = { rudder: 0, sailTarget: ship.input.sailTarget };
+  // Foul water or no way on: he heaves to before he gives the wheel back (he left her under full sail, and she ran on
+  // onto the very rocks he had seen — QA playthrough B: «Struck the rocks −190» after «the helm stays with you»).
+  const heave = why === 'reef' || why === 'stuck';
+  ship.input = { rudder: 0, sailTarget: heave ? 0 : ship.input.sailTarget };
   send(game, s, null, why);
 }
 
