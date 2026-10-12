@@ -14,7 +14,7 @@ import type { Aggression, BoardFightView, BoardingResult, BoardSideView } from '
 import { cargoValue, cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { AmmoStock, Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { damageBlocked } from './combat.ts';
-import { AMMO_IDS, emptyAmmo } from '../../../shared/src/data/ships.ts';
+import { AMMO_IDS, emptyAmmo, magazineOf } from '../../../shared/src/data/ships.ts';
 import { BASIC_TACTICS, CAPTAIN_MOVES, DUEL_EXCHANGES, DUEL_GAP, DUEL_SWEEP, FIRST_ROUND, MAX_ROUNDS, ROUND_WINDOW, TACTICS, counterTo, edgeOf } from '../../../shared/src/data/boarding.ts';
 import type { BasicTactic, BoardTactic } from '../../../shared/src/data/boarding.ts';
 import type { Game } from './Game.ts';
@@ -746,7 +746,12 @@ export function claimPrize(game: Game, a: ShipEntity, b: ShipEntity, lossFrac: n
   }
   b.cargo = cargo;
   const ammo: AmmoStock = emptyAmmo();
-  for (const k of AMMO_IDS) ammo[k] = Math.floor(b.ammo[k] * 0.4);
+  // Her shot comes aboard only as far as the magazine has room (docs/30 B: thousands of balls piled up from the prizes).
+  let room = Math.max(0, magazineOf(a.cls.tier, a.stats.gunsPerSide) - AMMO_IDS.reduce((n, k) => n + (a.ammo[k] ?? 0), 0));
+  for (const k of AMMO_IDS) {
+    ammo[k] = Math.min(room, Math.floor(b.ammo[k] * 0.4));
+    room -= ammo[k];
+  }
   // Victory effects.
   a.morale = Math.min(100, a.morale + 10 + a.stats.moraleOnBoard);
   if (a.hasFlag('blood_tide') && !(a.hasFlag('iron_coffin') && a.inCombat(game.now))) a.hull = Math.min(a.stats.hullMax, a.hull + a.stats.hullMax * 0.15);

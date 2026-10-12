@@ -121,3 +121,33 @@ test('a job\'s landing goes before the island\'s creatures: the arc\'s pirate ca
   const left = p.quests.active.find((a) => a.id === q.id);
   assert.ok(!left || left.step > step, 'the landing counts for the job');
 });
+
+test('plundered shot fills her magazine and no more (8 300 round shot piled up by level 33, a fifth off her way)', async () => {
+  const { makeGame, join, onHull } = await import('./helpers.ts');
+  const { claimPrize } = await import('../server/src/game/boarding.ts');
+  const { magazineOf } = await import('../shared/src/data/ships.ts');
+  const { game } = makeGame();
+  join(game, 'Shot Sal');
+  const s = game.sessionByName('Shot Sal')!;
+  const ship = s.ship!;
+  onHull(game, ship, 'frigate', 6);
+  const cap = magazineOf(ship.cls.tier, ship.stats.gunsPerSide);
+  assert.ok(cap >= 300 && cap <= 1000, `a frigate's magazine ${cap}`);
+  const take = (round: number) => {
+    const b = game.spawnNpcShip('pirate', 'frigate', 'free', ship.state.x + 30, ship.state.y, 0);
+    b.ammo.round = round;
+    b.ammo.chain = round / 4;
+    claimPrize(game, ship, b, 0, 0, 0);
+    const r = s.pendingBoarding!.result;
+    s.pendingBoarding = null;
+    return r.ammo.round + r.ammo.chain;
+  };
+  ship.ammo.round = 100;
+  ship.ammo.chain = 0;
+  ship.ammo.grape = 0;
+  assert.equal(take(400), 200, 'room aboard: two fifths of hers, as before');
+  ship.ammo.round = cap - 30;
+  assert.equal(take(4000), 30, 'the magazine full: only what fits');
+  ship.ammo.round = cap + 500;
+  assert.equal(take(4000), 0, 'over-full (bought): none');
+});
