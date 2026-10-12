@@ -13,12 +13,17 @@ const ready = (o: Partial<VoyageShip> = {}): VoyageShip => ({
   roundShot: 60, gunsPerSide: 3, hull: 100, hullMax: 100, sails: 100, sailsMax: 100, ...o,
 });
 
-test('a ship eats six units a minute for every forty hands; a voyage wants ten minutes of it, never more than half the hold', () => {
-  assert.equal(provisionsPerMinute(40), 6);
-  assert.equal(provisionsPerMinute(20, 0.5), 1.5);
-  assert.equal(foodMinutes(30, 20), 10);
-  assert.equal(voyageFood(ready()), Math.ceil(3 * VOYAGE_MINUTES));
-  assert.equal(voyageFood(ready({ holdVolume: 30 })), Math.floor(30 * FOOD_HOLD_SHARE), 'held to half a small hold');
+test('a ship eats one unit a minute for every forty hands; a voyage wants ten minutes of it, never more than half the hold', () => {
+  assert.equal(provisionsPerMinute(40), 1);
+  assert.equal(provisionsPerMinute(20, 0.5), 0.25);
+  assert.equal(foodMinutes(5, 20), 10);
+  assert.equal(voyageFood(ready()), Math.ceil(0.5 * VOYAGE_MINUTES));
+  assert.equal(voyageFood(ready({ crew: 200, holdVolume: 60 })), Math.floor(60 * FOOD_HOLD_SHARE), 'held to half a small hold');
+  // playB: the mid game's warships with full crews feed them ten minutes from half their hold (it was 1.8 minutes).
+  for (const id of ['brig', 'corvette', 'frigate', 'galleon'] as const) {
+    const c = SHIP_CLASSES[id];
+    assert.ok(foodMinutes(c.holdVolume * FOOD_HOLD_SHARE, c.crewMax) >= VOYAGE_MINUTES, `${id}: ${foodMinutes(c.holdVolume * FOOD_HOLD_SHARE, c.crewMax).toFixed(1)} min`);
+  }
   assert.equal(voyageCrew({ crewMin: 8, crewMax: 28 }), 16, 'enough hands to sail at her best');
   assert.equal(voyageCrew({ crewMin: 20, crewMax: 22 }), 20);
 });
@@ -28,7 +33,7 @@ test('what is short before setting sail: food, hands, shot and repairs, each wit
   const needs = voyageNeeds(ready({ provisions: 0, crew: 10, roundShot: 5, hull: 60 }));
   assert.deepEqual(needs.map((n) => n.kind), ['food', 'crew', 'ammo', 'repair']);
   const food = needs[0];
-  assert.ok(food.kind === 'food' && food.want === 15 && food.buy === 15, JSON.stringify(food));
+  assert.ok(food.kind === 'food' && food.want === 3 && food.buy === 3, JSON.stringify(food));
   const crew = needs[1];
   assert.ok(crew.kind === 'crew' && crew.buy === 6);
   const ammo = needs[2];

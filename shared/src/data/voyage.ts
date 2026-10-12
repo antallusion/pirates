@@ -5,9 +5,14 @@
 
 import { HULL_PER_PLANK, SAILS_PER_CLOTH } from './dealings.ts';
 
-/** Provisions eaten a minute at sea: 6 units for every 40 hands, times the ship's appetite (cooks, talents). */
+/** Provisions eaten a minute at sea for every 40 hands. It was 6: a corvette or a frigate of the mid game (⚓5–6) with
+ *  her full crew then carried 1.8 minutes of food in half her hold, a man-o-war 0.7, and every voyage of the 10 below
+ *  starved (QA playthrough B, 2026-10-12). At 1 a warship's half hold feeds her full crew 10–25 minutes. */
+export const PROVISIONS_PER_40 = 1;
+
+/** Provisions eaten a minute at sea: PROVISIONS_PER_40 for every 40 hands, times the ship's appetite (cooks, talents). */
 export function provisionsPerMinute(crew: number, provisionUse = 1): number {
-  return (Math.max(0, crew) / 40) * 6 * Math.max(0.1, provisionUse);
+  return (Math.max(0, crew) / 40) * PROVISIONS_PER_40 * Math.max(0.1, provisionUse);
 }
 
 /** A normal voyage, port to port with a fight on the way, in real minutes at sea. */
