@@ -25,6 +25,7 @@ export const SERVER_RU_ISLES18: Record<string, string> = {
   'On the turtle’s back': 'На спине черепахи',
   // 32. the supply routes
   '{0} is yours now: link it to your own island for a supply route (My island → Supply).': '{0} теперь ваш: свяжите его со своим островом путём снабжения («Мой остров» → «Снабжение»).',
+  '{0} is yours now: once you hold an island of your own, it can send it supplies.': '{0} теперь ваш: когда у вас будет свой остров, он сможет присылать на него припасы.',
   'You have no island of your own to send it to': 'У вас нет своего острова, куда возить припасы',
   'This is your own island': 'Это ваш собственный остров',
   'Too far from your island for a supply route': 'Слишком далеко от вашего острова для пути снабжения',

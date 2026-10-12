@@ -287,7 +287,8 @@ export function claimLair(game: Game, account: number, islandId: number, kind: S
   saveStore(game);
   const s = game.sessionByAccount(account);
   if (s?.ship) {
-    game.toastShip(s.ship, `${is.name} is yours now: link it to your own island for a supply route (My island → Supply).`, 'good');
+    // (a captain with no island of her own was sent to a «My island» she has not got: docs/30, band 2)
+    game.toastShip(s.ship, ownIsland(game, account) ? `${is.name} is yours now: link it to your own island for a supply route (My island → Supply).` : `${is.name} is yours now: once you hold an island of your own, it can send it supplies.`, 'good');
     sendSupply(game, s, true);
   }
 }

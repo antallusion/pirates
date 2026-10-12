@@ -337,3 +337,13 @@ test('the admin\'s commands of docs/18 III, in HELP in both languages, and every
     setLang('en');
   }
 });
+
+test('#32 a lair island claimed with no island of her own: no «My island» she has not got (docs/30, band 2)', () => {
+  const { game } = makeGame();
+  const s = captain(game, 'Homeless Hana');
+  const lair = game.world.islands.find((i) => !i.portId && !i.minor && !i.hidden)!;
+  claimLair(game, s.accountId, lair.id, 'pirate');
+  const msgs = (s.conn as unknown as { all: (t: string) => { msg: string }[] }).all('toast').map((t) => t.msg);
+  assert.ok(msgs.includes(`${lair.name} is yours now: once you hold an island of your own, it can send it supplies.`), msgs.join(' | '));
+  assert.ok(!msgs.some((m) => m.includes('My island')));
+});
