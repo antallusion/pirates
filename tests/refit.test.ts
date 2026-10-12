@@ -119,3 +119,18 @@ test('the newcomer’s wall (docs/30): her first refit to ⚓2 is the Admiralty�
   assert.ok(p.refit && p.refit.to === 2, 'the yard takes her');
   assert.equal(p.admRefit, true, 'once');
 });
+
+test('the refit card says where a short good is sold: the nearest harbour with it in stock (docs/30)', () => {
+  const { game } = makeGame();
+  join(game, 'Iron Ines');
+  const s = game.sessionByName('Iron Ines')!;
+  const p = s.profile!;
+  p.admRefit = true;
+  p.level = 9;
+  s.ship!.cargo = {};
+  const port = game.portById(s.ship!.docked!)!;
+  const v = refitView(game, s, port);
+  const iron = v.next!.goods.find((g) => g.good === 'iron')!;
+  assert.ok(iron.have < iron.qty);
+  assert.ok(iron.where && game.world.ports.some((x) => x.name === iron.where), `iron at ${iron.where}`);
+});

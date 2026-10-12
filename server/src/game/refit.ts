@@ -48,6 +48,19 @@ export function refitCostFor(p: Profile, to: number): RefitCost | null {
   return { silver: 0, goods: [], sec: c.sec };
 }
 
+/** The nearest harbour to this one whose market has n of a good (its name), or null — the refit card says where the
+ *  iron is (docs/30: the yard asked for iron and no captain of 5 knew which port sold it). */
+function sellerNear(game: Game, from: Port, good: GoodId, n: number): string | null {
+  let best: Port | null = null, bd = Infinity;
+  for (const p of game.world.ports) {
+    const g = game.markets.get(p.id)?.goods[good];
+    if (!g || g.stock < n) continue;
+    const d = Math.hypot(p.x - from.x, p.y - from.y);
+    if (d < bd) [best, bd] = [p, d];
+  }
+  return best ? best.name : null;
+}
+
 /** The yard's page on a refit: the next level, what it costs and whether it can be done here and now. */
 export function refitView(game: Game, s: PlayerSession, port: Port): RefitView {
   const p = s.profile!;
@@ -61,7 +74,7 @@ export function refitView(game: Game, s: PlayerSession, port: Port): RefitView {
   const next = {
     to: level + 1,
     silver: cost.silver,
-    goods: cost.goods.map((g) => ({ good: g.good, qty: g.qty, have: have(s, port, g.good) })),
+    goods: cost.goods.map((g) => { const h = have(s, port, g.good); const where = h < g.qty ? sellerNear(game, port, g.good, g.qty - h) : null; return { good: g.good, qty: g.qty, have: h, ...(where ? { where } : {}) }; }),
     sec: cost.sec,
     captain: captainLevelFor(level + 1),
     ...(cost.hearts ? { hearts: { qty: cost.hearts, have: p.stormHearts ?? 0 } } : {}),
