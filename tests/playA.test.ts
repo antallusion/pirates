@@ -281,3 +281,18 @@ test('an empty chest and too few hands: volunteers sign on for a share, up to 1.
   conn.push({ t: 'hire_crew', qty: 5, prof: 'sailor' } as never);
   assert.equal(ship.crew, Math.ceil(ship.stats.crewMin * SHARE_HANDS), 'no more for nothing');
 });
+
+test('short of the yard\'s bill, she is mended as far as her silver goes (docs/30)', async () => {
+  const { repairCost, shipyardRepair } = await import('../server/src/game/ports.ts');
+  const { game } = makeGame();
+  join(game, 'Patch Pia');
+  const s = game.sessionByName('Patch Pia')!;
+  const ship = s.ship!;
+  ship.hull = ship.stats.hullMax * 0.3;
+  const cost = repairCost(ship);
+  s.profile!.gold = Math.floor(cost / 2);
+  assert.equal(shipyardRepair(game, s), null);
+  assert.equal(s.profile!.gold, 0);
+  assert.ok(ship.hull > ship.stats.hullMax * 0.6 && ship.hull < ship.stats.hullMax, "half the bill mends half the harm");
+  assert.match(shipyardRepair(game, s) ?? '', /Repairs cost/, 'no silver, no work');
+});

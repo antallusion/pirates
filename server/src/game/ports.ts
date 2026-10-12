@@ -385,7 +385,19 @@ export function shipyardRepair(game: Game, s: PlayerSession): string | null {
   const cost = repairCost(ship);
   if (cost <= 0) return 'She is already sound';
   const p = s.profile!;
-  if (p.gold < cost) return `Repairs cost ${cost} silver`;
+  // docs/30: short of the whole bill, the yard mends the hull as far as her silver goes (it sent a captain of 8 out at a
+  // third of her hull with no silver for the yard, and the sharks finished her twice running).
+  if (p.gold < cost) {
+    const pay = Math.floor(p.gold);
+    if (pay <= 0) return `Repairs cost ${cost} silver`;
+    const share = pay / cost;
+    p.gold -= pay;
+    ship.hull = Math.min(ship.stats.hullMax, ship.hull + (ship.stats.hullMax - ship.hull) * share);
+    ship.sails = Math.min(ship.stats.sailHpMax, ship.sails + (ship.stats.sailHpMax - ship.sails) * share);
+    game.db.ledger(s.accountId, 'repair', -pay, `${ship.loadout.classId} part`);
+    game.sendTo(s, { t: 'toast', msg: `The yard mends what your silver pays for: ${Math.round((ship.hull / ship.stats.hullMax) * 100)}% of the hull.`, kind: 'info' });
+    return null;
+  }
   p.gold -= cost;
   ship.hull = ship.stats.hullMax;
   ship.sails = ship.stats.sailHpMax;
