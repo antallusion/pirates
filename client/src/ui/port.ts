@@ -977,7 +977,7 @@ function refitCard(r: RefitView, name: string): string {
   const goods = n.goods.map((g) => `<span class="refit-good${g.have < g.qty ? ' short' : ''}">${icon(`good_${g.good}`, '', 'ico-sm')}${esc(GOODS[g.good].name)} <b>${Math.min(g.have, g.qty)}/${g.qty}</b></span>`).join('')
     + (n.hearts ? `<span class="refit-good${n.hearts.have < n.hearts.qty ? ' short' : ''}">${icon('storm_heart', '', 'ico-sm')}${esc(L('refit.heart'))} <b>${Math.min(n.hearts.have, n.hearts.qty)}/${n.hearts.qty}</b></span>` : '');
   return `<div class="card refit">${head}
-    <p>${esc(L('refit.gain', { n: n.to }))}</p>
+    <p>${esc(L('refit.gain', { n: n.to }))}</p>${n.gift ? `<p class="good">${esc(L('refit.gift'))}</p>` : ''}
     <div class="refit-goods">${goods}</div>
     <p class="muted refit-note">${esc(L('refit.captain', { n: n.captain }))} · ${esc(L('refit.time', { m: Math.max(1, Math.ceil(n.sec / 60)) }))}</p>
     <p class="muted refit-note">${esc(L('refit.hint'))}</p>

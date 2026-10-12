@@ -17,6 +17,7 @@ test('a refit: the captain’s level first, then silver and materials; the yard 
   const c = join(game, 'Refit Rosa');
   const s = game.sessionByName('Refit Rosa')!;
   const p = s.profile!;
+  p.admRefit = true; // the Admiralty's first refit spent: the paid way (docs/30)
   const port = game.portById(s.ship!.docked!)!;
   assert.ok(port.shipyardTier >= 1);
   assert.equal(s.ship!.shipLevel, 1);
@@ -95,4 +96,26 @@ test('the refit lines read in Russian', () => {
   setLang('en');
   assert.deepEqual(lines.filter((l) => /[A-Za-z]{3,}/.test(l.replace(/Salt Wren|Saltmarrow|Galleon|Brig|planks/g, ''))), []);
   assert.ok(levelPatterns().length >= 12);
+});
+
+test('the newcomer’s wall (docs/30): her first refit to ⚓2 is the Admiralty’s — no silver, no goods, once; told at level 5', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Gift Gwen');
+  const s = game.sessionByName('Gift Gwen')!;
+  const p = s.profile!;
+  const port = game.portById(s.ship!.docked!)!;
+  for (let i = 0; i < 40 && p.level < 5; i++) game.grantXp(s, 300, null);
+  assert.ok(p.level >= 5, `level ${p.level}`);
+  assert.ok(c.all('toast').some((t) => /at the Admiralty’s charge/.test(t.msg)), 'told the way on');
+  p.gold = 0;
+  s.ship!.cargo = {};
+  c.push({ t: 'dock', bribe: false });
+  const v = refitView(game, s, port);
+  assert.equal(v.next!.silver, 0);
+  assert.equal(v.next!.goods.length, 0);
+  assert.equal(v.next!.gift, true);
+  assert.equal(v.blocked, null, 'nothing stands in her way');
+  c.push({ t: 'shipyard', action: 'refit' });
+  assert.ok(p.refit && p.refit.to === 2, 'the yard takes her');
+  assert.equal(p.admRefit, true, 'once');
 });

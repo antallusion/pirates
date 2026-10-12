@@ -35,7 +35,7 @@ import { compassPoint, localTraffic, stepTraffic } from './traffic.ts';
 import { callClosed, onNpcHit, raiderSunk } from './npcwars.ts';
 import { buyWare, equip, mendGear, reforgeItem, rollDrop, salvageItem, sellItem, takeItem, temperItem, unequip, wearOnSinking } from './gear.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
-import { orderRefit, refitHolds, stepRefit } from './refit.ts';
+import { ADM_REFIT_HINT, ADM_REFIT_WORDS, orderRefit, refitHolds, stepRefit } from './refit.ts';
 import { clampLevel, ladder, levelRange, npcSkill } from '../../../shared/src/data/shiplevel.ts';
 import { ALPHA_OVER as ALPHA_OVER_RAM, alphaShare, npcSeaScale } from '../../../shared/src/data/seabalance.ts';
 import { RAM_SHARE, volleyShare } from '../../../shared/src/data/seaskill.ts';
@@ -1984,6 +1984,10 @@ export class Game {
       // In port: the tavern's and the yard's prices go by the level — the window is sent again (docs/30: the tavern said
       // 29 a man, the level-up on the quay made it 31 and the hire took more than the button said).
       if (s.ship?.docked) this.pushPort(s);
+      // Her ⚓1 waters have gone grey (docs/26): the way on said once, the Admiralty's refit to ⚓2 (refit.ts, docs/30).
+      if (s.profile.level - gained < ADM_REFIT_HINT && s.profile.level >= ADM_REFIT_HINT && (s.ship?.shipLevel ?? 1) < 2 && !s.profile.admRefit) {
+        this.sendTo(s, { t: 'toast', msg: ADM_REFIT_WORDS, kind: 'good' });
+      }
     }
   }
 

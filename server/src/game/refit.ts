@@ -6,6 +6,7 @@
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { captainLevelFor, levelRange, refitCost } from '../../../shared/src/data/shiplevel.ts';
+import type { RefitCost } from '../../../shared/src/data/shiplevel.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { RefitView } from '../../../shared/src/protocol.ts';
@@ -34,6 +35,19 @@ function have(s: PlayerSession, port: Port, good: GoodId): number {
   return Math.floor((cargo[good] ?? 0) + (s.profile!.warehouses[port.id]?.[good] ?? 0));
 }
 
+/** The newcomer's wall (docs/30): from captain level 5 her ⚓1 waters teach nothing (docs/26: grey pays nothing), and the
+ *  way on — the hull raised to ⚓2 — cost more than a captain of 5 had after one lost fight. The first refit to ⚓2 is the
+ *  Admiralty's gift, once a captain: no silver, no goods, the yard's time only. */
+/** The level her ⚓1 waters go grey at, and what she is told then. */
+export const ADM_REFIT_HINT = 5;
+export const ADM_REFIT_WORDS = 'Your waters teach you nothing more on a level-1 hull: any shipyard raises her to level 2 at the Admiralty’s charge, once.';
+
+export function refitCostFor(p: Profile, to: number): RefitCost | null {
+  const c = refitCost(to);
+  if (!c || to !== 2 || p.admRefit) return c;
+  return { silver: 0, goods: [], sec: c.sec };
+}
+
 /** The yard's page on a refit: the next level, what it costs and whether it can be done here and now. */
 export function refitView(game: Game, s: PlayerSession, port: Port): RefitView {
   const p = s.profile!;
@@ -42,7 +56,8 @@ export function refitView(game: Game, s: PlayerSession, port: Port): RefitView {
   const level = Math.max(lo, Math.min(hi, l.level ?? lo));
   const busy = p.refit && p.refit.until > game.wallNow() ? { to: p.refit.to, left: Math.ceil((p.refit.until - game.wallNow()) / 1000), port: p.refit.port } : null;
   if (level >= hi) return { level, max: hi, next: null, busy, blocked: busy ? null : 'She is at the height of her class: only a bigger hull goes higher' };
-  const cost = refitCost(level + 1)!;
+  const cost = refitCostFor(p, level + 1)!;
+  const gift = level + 1 === 2 && !p.admRefit;
   const next = {
     to: level + 1,
     silver: cost.silver,
@@ -50,6 +65,7 @@ export function refitView(game: Game, s: PlayerSession, port: Port): RefitView {
     sec: cost.sec,
     captain: captainLevelFor(level + 1),
     ...(cost.hearts ? { hearts: { qty: cost.hearts, have: p.stormHearts ?? 0 } } : {}),
+    ...(gift ? { gift: true } : {}),
   };
   return { level, max: hi, next, busy, blocked: busy ? null : refitBlocked(game, s, port) };
 }
@@ -66,7 +82,7 @@ function refitBlocked(game: Game, s: PlayerSession, port: Port): string | null {
   if (l.guild) return 'A guild hull on loan is not yours to rebuild';
   const need = captainLevelFor(level + 1);
   if (p.level < need) return `Captain level ${need} is needed to command her at level ${level + 1}`;
-  const cost = refitCost(level + 1)!;
+  const cost = refitCostFor(p, level + 1)!;
   if (p.gold < cost.silver) return `Needs ${cost.silver} silver`;
   for (const g of cost.goods) if (have(s, port, g.good) < g.qty) return `Needs ${g.qty} ${GOODS[g.good].name.toLowerCase()} (in the hold or your warehouse here)`;
   if (cost.hearts && (p.stormHearts ?? 0) < cost.hearts) return 'Needs a heart of the storm in her keel (caught in the Storm of the Century)';
@@ -80,7 +96,8 @@ export function orderRefit(game: Game, s: PlayerSession, port: Port): string | n
   const p = s.profile!;
   const l = p.loadout;
   const to = Math.max(levelRange(l.classId)[0], l.level ?? 0) + 1;
-  const cost = refitCost(to)!;
+  const cost = refitCostFor(p, to)!;
+  if (to === 2) p.admRefit = true;
   p.gold -= cost.silver;
   game.db.ledger(s.accountId, 'refit', -cost.silver, `${l.classId}:${to}`);
   for (const g of cost.goods) {

@@ -204,6 +204,8 @@ export interface Profile {
   keel: { classId: string; since: number } | null; // Legendary Keel
   /** A yard at work raising her a level (canon D12, refit.ts). */
   refit?: RefitOrder | null;
+  /** The Admiralty's first refit (⚓1→⚓2, docs/30) is spent. */
+  admRefit?: boolean;
   /** The captain's locker, own gear and the next item's number (docs/12 P1, gear.ts). */
   stash: Item[];
   captainGear: Partial<Record<CaptainSlot, Item>>;

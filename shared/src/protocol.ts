@@ -1997,7 +1997,7 @@ export interface QuestPayView {
 export interface RefitView {
   level: number;
   max: number;
-  next: { to: number; silver: number; goods: { good: GoodId; qty: number; have: number }[]; sec: number; captain: number; hearts?: { qty: number; have: number } } | null;
+  next: { to: number; silver: number; goods: { good: GoodId; qty: number; have: number }[]; sec: number; captain: number; hearts?: { qty: number; have: number }; gift?: boolean } | null;
   /** The yard at work on her: to what level, seconds left, in which port. */
   busy: { to: number; left: number; port: string } | null;
   /** Why it cannot be ordered here and now. */
