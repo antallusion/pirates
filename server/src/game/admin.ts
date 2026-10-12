@@ -482,7 +482,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       else if (args[0] === 'go') {
         if (!h) return 'You have no island of your own.';
         const isl = game.world.islands[h.island];
-        const why = game.undock(s);
+        const why = ship.docked ? game.undock(s) : null; // (at sea already: no «Not in port» — playthrough C)
         if (why) return why;
         let x = isl.x, y = isl.y - isl.radius - 260;
         for (let k = 0; k < 24; k++) {
@@ -1517,6 +1517,8 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
           const sl = ITEM_BASES[it.base].slot;
           (CAPTAIN_SLOTS as readonly string[]).includes(sl) ? (captainGear[sl] = { ...it, uid: p.itemSeq++ }) : (shipGear[sl] = { ...it, uid: p.itemSeq++ });
         }
+        // What she wore goes to her locker, not overboard (playthrough C: her artifacts and relic parts were lost).
+        for (const it of [...Object.values(p.captainGear ?? {}), ...Object.entries(ship.loadout.gear ?? {}).filter(([sl]) => sl !== 'tackle').map(([, it]) => it)]) if (it) p.stash.push(it as Item);
         ship.loadout.gear = { ...(ship.loadout.gear?.tackle ? { tackle: ship.loadout.gear.tackle } : {}), ...shipGear };
         p.captainGear = captainGear as never;
         ship.worn = Object.values(captainGear);

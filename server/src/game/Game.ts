@@ -59,7 +59,7 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, CHASER_RELOAD, GUNS, SHIP_CLASSES, defaultGunFor, emptyAmmo } from '../../../shared/src/data/ships.ts';
 import { aimedVolley, pursuitInput, pursuitOf, startPursuit, startRoamRun, stepAutoFire, stepPursuit, stopPursuit } from './pursuit.ts';
-import { boardOdds, boardRisk, isRisky } from './boardodds.ts';
+import { ODDS_BUDGET_MS, ODDS_SIMS, RISK_BUDGET_MS, boardOdds, boardRisk, isRisky } from './boardodds.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { TALENTS_BY_ID, canLearn } from '../../../shared/src/data/talents.ts';
 import { angleDiff, clamp, dist, headingOf, headingVec } from '../../../shared/src/math.ts';
@@ -132,7 +132,7 @@ import { menLost, npcArmy } from './army.ts';
 export const SINK_LOOT = 0.25;
 export const SINK_PURSE = 0.3;
 /** The longest the loop may run steps back to back under an admin /speed before it lets messages in (ms). */
-const STEP_BUDGET_MS = 150;
+const STEP_BUDGET_MS = 40; // (150 still kept a page waiting 1.5 s at ×100: QA playthrough C)
 /** docs/19 D6: beyond this (the nearest captain, as the LOD reckons it: never more than 6% over the true distance) an
  *  NPC steps every FAR_EVERY ticks — beyond SNAP_MID, where her snapshots are only every fourth (2.5 Hz) anyway; out of
  *  every captain's snapshots (beyond INTEREST_RADIUS) every second FAR_EVERY. */
@@ -493,6 +493,10 @@ export class Game {
     this.bootPopulation();
     let last = performance.now();
     let acc = 0;
+    // The QA playthrough (owner, 2026-10-12: «врубить скорость х100»): on an admin server the wall clock — the island's
+    // builders, the weeks, the windows, every timer read from wallNow() — runs at the world's speed too.
+    let skew = 0;
+    if (process.env.GRAVETIDE_ADMIN === '1') this.wallNow = () => Date.now() + skew + (performance.now() - last) * (this.timeScale - 1);
     this.timer = setInterval(() => {
       const t = performance.now();
       const realDt = t - last;
@@ -516,7 +520,7 @@ export class Game {
           break;
         }
       }
-      if (steps === maxSteps && acc >= TICK_DT) {
+      if (acc >= TICK_DT) {
         acc = 0; // drop time rather than spiral
         this.metrics.overruns++;
       }
@@ -3152,7 +3156,7 @@ export class Game {
         const target = this.ships.get(Math.trunc(Number(msg.id)));
         if (!target || !ship.alive || ship.docked || target.npcRole === 'beast' || target.zoneBoss || target.cls.monster || target.bossOf || target.bossPart) return;
         if (Math.hypot(target.state.x - ship.state.x, target.state.y - ship.state.y) > 2600) return;
-        const odds = boardOdds(this, ship, target);
+        const odds = boardOdds(this, ship, target, ODDS_SIMS, ODDS_BUDGET_MS); // (a slice of the battles an ask: playthrough C)
         this.sendTo(s, { t: 'board_odds', id: target.id, chance: Math.round(odds.chance * 100) / 100, risky: isRisky(ship, target, odds.chance) });
         return;
       }
@@ -3263,7 +3267,7 @@ export class Game {
         if (why) return err(why);
         // A senior, or a slim chance (docs/23 items 49–51): the odds first, «Рискнуть» or «Отступить».
         if (msg.risk !== true) {
-          const risk = boardRisk(this, ship, target);
+          const risk = boardRisk(this, ship, target, RISK_BUDGET_MS);
           if (risk.risky) return this.sendTo(s, { t: 'board_risk', risk });
         }
         startBoarding(this, ship, target, agg);
