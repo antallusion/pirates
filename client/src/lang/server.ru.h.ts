@@ -8,6 +8,7 @@ export const SERVER_RU_H: Record<string, string> = {
   'That mark is too far for one run: set a nearer one': 'Метка слишком далеко для одного перехода: поставьте ближе',
   'No open water leads to that mark': 'К этой метке не ведёт чистая вода',
   'The helm is yours': 'Штурвал снова у вас',
+  'The cargo of “{0}” is lost: take it on again at {1}.': 'Груз задания «{0}» потерян: возьмите его снова в порту {1}.',
   'The helmsman keeps off her side: the guns fight her instead.': 'Рулевой не идёт к её борту: бой ведут пушки.',
   'Hostile sails in range: the helm stays with you': 'Рядом враждебные паруса: штурвал остаётся у вас',
   'Not while there is fighting': 'Не во время боя',

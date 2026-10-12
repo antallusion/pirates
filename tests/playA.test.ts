@@ -104,3 +104,20 @@ test('the helmsman sails on past a shoal of sharks that do not come for her; one
   brain(sharks[0].id).target = ship.id;
   assert.equal(autosailDanger(game, s, ship, game.now), 'hostile', 'one comes for her');
 });
+
+test('a job\'s goods lost with the hold: the job goes back to taking them on, and says where', async () => {
+  const { QUESTS_BY_ID } = await import('../shared/src/data/quests.ts');
+  const { questCargoLost } = await import('../server/src/game/quests.ts');
+  const { game } = makeGame();
+  const conn = join(game, 'Courier');
+  const s = game.sessionByName('Courier')!;
+  const q = Object.values(QUESTS_BY_ID).find((x) => x.steps.some((st, i) => st.type === 'deliver' && x.steps.slice(0, i).some((y) => y.type === 'pickup' && y.good === st.good)))!;
+  assert.ok(q, 'a job with goods to take on and deliver');
+  const di = q.steps.findIndex((st) => st.type === 'deliver');
+  const pi = q.steps.findIndex((st) => st.type === 'pickup');
+  s.profile!.quests.active.push({ id: q.id, step: di, progress: 0, startedAt: game.now });
+  s.ship!.cargo = {};
+  questCargoLost(game, s);
+  assert.equal(s.profile!.quests.active.find((a) => a.id === q.id)!.step, pi, 'back to the pickup');
+  assert.ok(conn.all('toast').some((t) => /is lost: take it on again at/.test(t.msg)), 'said where');
+});

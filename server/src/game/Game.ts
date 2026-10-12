@@ -151,7 +151,7 @@ export const BOARD_LOSS_PURSE = 0.08;
 export const BOARD_LOSS_SHIELD = 180;
 import { stepBridges } from './bridgefx.ts';
 import { MAX_BERTHS, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
-import { abandonQuest, acceptQuest, answerOffer, questEvent, questXpOf, shareQuest, swearOath, switchPath } from './quests.ts';
+import { abandonQuest, acceptQuest, answerOffer, questCargoLost, questEvent, questXpOf, shareQuest, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import { commonCollect, commonView, stepCommon } from './commongoal.ts';
 import { guildGoalCollect } from './guildgoal.ts';
@@ -2296,6 +2296,7 @@ export class Game {
     ship.morale = 50;
     this.refitAndDock(s, ship, port);
     this.db.ledger(s.accountId, 'death', -fee, `sunk; cargo ${lostValue}`);
+    questCargoLost(this, s); // a job's goods on the bottom: take them on again (docs/30)
     this.sendTo(s, { t: 'sunk_self', lost: { cargoValue: lostValue, crew: crewLost, repairFee: fee }, respawnPort: port.id });
     this.saveSession(s);
   }
@@ -2445,7 +2446,10 @@ export class Game {
       if (k > 0) victor.cargo[id] = (victor.cargo[id] ?? 0) + k;
       free -= k * per;
     }
-    if (!lesson) loser.cargo = {};
+    if (!lesson) {
+      loser.cargo = {};
+      questCargoLost(this, s);
+    }
     // A share of her chest.
     const silver = lesson ? 0 : Math.min(Math.floor(p.gold), Math.floor(p.gold * BOARD_LOSS_PURSE));
     if (silver > 0) {

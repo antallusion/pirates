@@ -95,6 +95,28 @@ function payAllowed(game: Game, q: QuestDef, pay: QuestPay | undefined): QuestPa
   return o && (pay === 'stores' || o.favour) ? pay : undefined;
 }
 
+/** The hold lost (sunk, robbed): a job whose step is to deliver the goods it gave her goes back to taking them on — the
+ *  same port gives them again (docs/30: «Сундук со снадобьями» stood on «Доставьте лекарства ×6» with the medicine on
+ *  the bottom, and nothing said where to get more). */
+export function questCargoLost(game: Game, s: PlayerSession): void {
+  const p = s.profile, ship = s.ship;
+  if (!p || !ship) return;
+  for (const qs of p.quests.active) {
+    const q = QUESTS_BY_ID[qs.id];
+    const st = q?.steps[qs.step];
+    if (!q || !st || st.type !== 'deliver' || (ship.cargo[st.good] ?? 0) >= st.qty) continue;
+    const back = q.steps.findIndex((x, i) => i < qs.step && x.type === 'pickup' && x.good === st.good);
+    if (back < 0) continue;
+    const pick = q.steps[back];
+    if (pick.type !== 'pickup') continue;
+    qs.step = back;
+    qs.progress = 0;
+    qs.ambushed = undefined;
+    qs.ambushAt = undefined;
+    game.sendTo(s, { t: 'toast', msg: `The cargo of “${q.name}” is lost: take it on again at ${game.portById(pick.port)?.name ?? pick.port}.`, kind: 'info' });
+  }
+}
+
 /** A courier with a quest's cargo aboard, at sea in waters that are not the Crown's peace, meets raiders once:
  *  a minute and a half to four and a half after she puts out (docs/11 P6). */
 function cargoAmbush(game: Game, s: PlayerSession): void {
