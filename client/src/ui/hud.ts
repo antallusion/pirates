@@ -414,7 +414,9 @@ export class Hud {
     // (the chart and the menu stepped up behind their tab with a mark, owner 2026-10-09: the tab is the corner's edge —
     // her mark's name has the menu's room then: «Слабое утешение» was cut to 85 of 116 px at 640×360)
     const peek = body.classList.contains('mm-peek');
-    for (const el of document.querySelectorAll(peek ? '#hud-captain .cs, #mm-tab, #tc-news' : '#hud-captain .cs, #hud-map, #tc-menu, #tc-news')) {
+    // (the chat's round button too: with the chart stepped up it stays in the corner column, and the autosail bar's
+    // «Стоп» lay two thirds under it at 844×390 — QA playthrough B, 15_sea_hud)
+    for (const el of document.querySelectorAll(peek ? '#hud-captain .cs, #mm-tab, #tc-news, #hud-chat > .chat-toggle' : '#hud-captain .cs, #hud-map, #tc-menu, #tc-news, #hud-chat > .chat-toggle')) {
       const r = el.getBoundingClientRect();
       if (!r.width || !r.height || r.top > 80 * z) continue;
       if (r.right < W / 2) left = Math.max(left, r.right + 10 * z);

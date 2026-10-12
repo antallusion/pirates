@@ -1126,6 +1126,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "No free plot on the island.": "На острове нет свободного участка.",
   "That plot is taken.": "Этот участок занят.",
   "The yard lacks {0} {1}.": "На дворе острова не хватает: {1} — {0}.",
+  "The yard lacks {0} {1}: your hold has it — lie off the island and build from there.": "На дворе острова не хватает: {1} — {0}. В вашем трюме это есть — встаньте у острова и стройте оттуда.",
   "Nothing stands there.": "Там ничего не стоит.",
   "The builders are already at work there.": "Строители уже работают там.",
   "Raise the island to level {0} first.": "Сначала поднимите остров до уровня {0}.",

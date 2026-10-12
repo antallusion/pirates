@@ -476,16 +476,19 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   }
   // A ship sunk or taken counts on one quest only, the first taken that wants her (docs/26: five hunts that each want two
   // pirates are not done by two pirates).
-  const kill = ev.k === 'sink' || ev.k === 'board';
+  // So does a lair beaten (QA playthrough B: two «break 3 lairs» jobs of one harbour, and those of the next, all filled
+  // by the same three fights) — the job that names that very lair first, then the first taken.
+  const kill = ev.k === 'sink' || ev.k === 'board' || ev.k === 'lair';
   let spent = false;
-  for (const qs of [...p.quests.active]) {
+  const named = (qs: { id: string; step: number }) => (ev.k === 'lair' && QUESTS_BY_ID[qs.id]?.steps[qs.step]?.island === ev.island ? 1 : 0);
+  for (const qs of [...p.quests.active].sort((a, b) => named(b) - named(a))) {
     const q = QUESTS_BY_ID[qs.id];
     if (!q) continue;
     // Several steps may fall in one go (arriving somewhere with the goods already aboard).
     for (let guard = 0; guard < 4; guard++) {
       const st = q.steps[qs.step];
       if (!st) break;
-      if (kill && spent && (st.type === 'sink' || st.type === 'board' || st.type === 'prize')) break;
+      if (kill && spent && (st.type === 'sink' || st.type === 'board' || st.type === 'prize' || st.type === 'lair')) break;
       // The band's leader sunk: the hunt is won at a stroke.
       const gained = st.type === 'sink' && ev.k === 'sink' && qs.leader !== undefined && ev.victim.id === qs.leader ? Math.max(1, stepCount(st) - qs.progress) : stepGain(game, s, st, ev);
       if (gained <= 0) break;
