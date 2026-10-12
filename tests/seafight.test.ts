@@ -169,7 +169,8 @@ test('boarding a senior: allowed, the window first («Рискнуть» boards,
   assert.ok(risk && risk.risky, 'the window');
   assert.equal(risk.theirLevel - risk.myLevel, 2);
   assert.ok(risk.chance < RISK_CHANCE, `slim: ${risk.chance}`);
-  assert.equal(risk.sims, ODDS_SIMS);
+  // (the window's battles come in a slice of the server's time on top of what the target frame played: playthrough C)
+  assert.ok(risk.sims >= 1 && risk.sims <= ODDS_SIMS, `battles played for the window: ${risk.sims}`);
   assert.ok(risk.xpMul > 1, 'more for a senior');
   assert.ok(!me.boarding, 'no grapples yet');
   c.push({ t: 'board', target: foe.id, aggression: 'standard', risk: true });
@@ -223,4 +224,16 @@ test('the chance is honest: the battles played afresh bear it out within 5%, and
     if (bt.over?.winner === 0) won++;
   }
   assert.ok(Math.abs(odds.chance - won / 200) <= 0.05, `shown ${odds.chance}, played ${won / 200}`);
+});
+
+test('the odds take a slice of the server at a time and go on where they left off: the same chance once all are played (playthrough C: 200 battles at once froze the server 5–24 s at level 40)', () => {
+  const { game, me, foe } = pair(6, 5, 40);
+  const first = boardOdds(game, me, foe, 40, 0);
+  assert.equal(first.sims, 1, 'one battle for a call with no time to spare');
+  let o = first;
+  for (let i = 0; i < 60 && o.sims < 40; i++) o = boardOdds(game, me, foe, 40, 0);
+  assert.equal(o.sims, 40, 'the battles go on from ask to ask');
+  const whole = pair(6, 5, 40);
+  const all = boardOdds(whole.game, whole.me, whole.foe, 40);
+  assert.equal(o.chance, all.chance, 'played in slices or at once, the same dice and the same chance');
 });

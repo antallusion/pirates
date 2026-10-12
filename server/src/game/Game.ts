@@ -59,7 +59,7 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, CHASER_RELOAD, GUNS, SHIP_CLASSES, defaultGunFor, emptyAmmo } from '../../../shared/src/data/ships.ts';
 import { aimedVolley, pursuitInput, pursuitOf, startPursuit, startRoamRun, stepAutoFire, stepPursuit, stopPursuit } from './pursuit.ts';
-import { boardOdds, boardRisk, isRisky } from './boardodds.ts';
+import { ODDS_BUDGET_MS, ODDS_SIMS, RISK_BUDGET_MS, boardOdds, boardRisk, isRisky } from './boardodds.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { TALENTS_BY_ID, canLearn } from '../../../shared/src/data/talents.ts';
 import { angleDiff, clamp, dist, headingOf, headingVec } from '../../../shared/src/math.ts';
@@ -3136,7 +3136,7 @@ export class Game {
         const target = this.ships.get(Math.trunc(Number(msg.id)));
         if (!target || !ship.alive || ship.docked || target.npcRole === 'beast' || target.zoneBoss || target.cls.monster || target.bossOf || target.bossPart) return;
         if (Math.hypot(target.state.x - ship.state.x, target.state.y - ship.state.y) > 2600) return;
-        const odds = boardOdds(this, ship, target);
+        const odds = boardOdds(this, ship, target, ODDS_SIMS, ODDS_BUDGET_MS); // (a slice of the battles an ask: playthrough C)
         this.sendTo(s, { t: 'board_odds', id: target.id, chance: Math.round(odds.chance * 100) / 100, risky: isRisky(ship, target, odds.chance) });
         return;
       }
@@ -3247,7 +3247,7 @@ export class Game {
         if (why) return err(why);
         // A senior, or a slim chance (docs/23 items 49–51): the odds first, «Рискнуть» or «Отступить».
         if (msg.risk !== true) {
-          const risk = boardRisk(this, ship, target);
+          const risk = boardRisk(this, ship, target, RISK_BUDGET_MS);
           if (risk.risky) return this.sendTo(s, { t: 'board_risk', risk });
         }
         startBoarding(this, ship, target, agg);
