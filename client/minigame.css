@@ -31,18 +31,18 @@ body:has(#minigame:not(.hidden)) #hud-goals, body:has(#minigame:not(.hidden)) #h
 #minigame .mg-sym { font-size: 18px; line-height: 1; color: #e8c46a; }
 
 /* Dice. */
-#minigame .mg-dice { display: flex; gap: 6px; justify-content: center; margin: 4px 0 6px; }
+#minigame .mg-dice:not(.mg-card) { display: flex; gap: 6px; justify-content: center; margin: 4px 0 6px; }
 #minigame .mg-die { display: inline-block; font-size: 38px; line-height: 1; color: #efe6d0; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8); }
 #minigame .mg-die-hot { color: #e8c46a; }
 #minigame .mg-die-sm { font-size: 22px; vertical-align: -3px; }
 
 /* The coin. */
-#minigame .mg-coin { display: flex; justify-content: center; margin: 2px 0 6px; }
+#minigame .mg-coin:not(.mg-card) { display: flex; justify-content: center; margin: 2px 0 6px; } /* not the card of the coin game itself (it is .mg-card.mg-coin): its title stood squeezed in a column, docs/30 */
 #minigame .mg-coin-img { width: 54px; height: 54px; animation: mg-spin 2.4s linear infinite; }
 @keyframes mg-spin { 0% { transform: rotateY(0); } 100% { transform: rotateY(360deg); } }
 
 /* Three shells. */
-#minigame .mg-shells { position: relative; height: 74px; margin: 6px 4px 8px; }
+#minigame .mg-shells:not(.mg-card) { position: relative; height: 74px; margin: 6px 4px 8px; }
 #minigame .mg-shell { position: absolute; top: 12px; width: 33.34%; height: 58px; display: flex; justify-content: center; transition: left 0.42s cubic-bezier(0.5, 0, 0.3, 1); cursor: pointer; }
 #minigame .mg-shell::before { content: ''; position: absolute; top: 0; left: 50%; margin-left: -32px; width: 64px; height: 48px; border-radius: 50% 50% 12px 12px / 70% 70% 12px 12px; background: radial-gradient(ellipse at 40% 30%, #e9d9b8, #9a7d56 70%, #5b4631); box-shadow: 0 6px 10px rgba(0, 0, 0, 0.6), inset 0 -6px 10px rgba(0, 0, 0, 0.35); transition: transform 0.3s; z-index: 1; }
 #minigame .mg-pearl { position: absolute; top: 34px; left: 50%; margin-left: -8px; width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff, #d9d4e6 55%, #9a93ad); box-shadow: 0 0 8px rgba(255, 255, 255, 0.5); opacity: 0; transition: opacity 0.2s; }
