@@ -64,7 +64,7 @@ export class TalentScreen {
             <div class="rose">${nodes}<div class="rose-core">${icon(coreArt, '', 'rose-core-ico')}<b>${esc(coreName)}</b><span>${esc(sel === 'deeds' ? String(selPts) : points(selPts))}</span></div></div>
             <div class="rose-extra">
               <button class="btn btn-small ${sel === 'bridges' ? 'btn-primary' : ''}" data-view="bridges">${icon('ab_form_line', '', 'ico-sm')}${esc(L('bridges'))} <b>${TALENTS.filter((x) => x.tree === 'bridge' && (self.talents[x.id] ?? 0) > 0).length}</b></button>
-              <button class="btn btn-small ${sel === 'deeds' ? 'btn-primary' : ''}" data-view="deeds">${icon('goal', '', 'ico-sm')}${esc(L('deeds'))} <b>${self.deeds.length}</b></button>
+              <button class="btn btn-small ${sel === 'deeds' ? 'btn-primary' : ''}" data-view="deeds" title="${esc(L('deeds'))}">${icon('goal', '', 'ico-sm')}${esc(L('deedsShort'))} <b>${self.deeds.length}</b></button>
             </div>
             <p class="muted tal-rules">${esc(L('rules'))}</p>
           </div>
