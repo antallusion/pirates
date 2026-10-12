@@ -155,6 +155,11 @@ test('the call is heard with a bearing: every captain within a few miles, none b
   assert.equal(heard[0][0], near.ship!.id);
   assert.match(heard[0][1], /^Pirates attack .+, 2\.0 km east: she calls for help!$/);
   assert.ok(!heard.some(([id]) => id === far.ship!.id));
+  // The pack takes turns at her (playthrough C): one cry while her call stands, not one a raider.
+  const second = npc(game, 'pirate', x + 2100, y + 300);
+  for (let k = 0; k < 4; k++) applyDamage(game, merchant, { hull: 5 }, k % 2 ? pirate : second);
+  assert.equal(toasts.filter(([, t]) => t.includes('calls for help')).length, 1, 'no new cry while her call stands');
+  assert.equal(callOf(game, merchant.id)?.attacker, pirate.id, 'the call names the raider at her now');
 });
 
 test('the sea stages a raid in a captain’s sight: an idle rover goes for a merchant near her', () => {
