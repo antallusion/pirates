@@ -350,3 +350,19 @@ test('a predator of her level killed: the harbours\' bounty in silver; one too s
     else assert.equal(s.profile!.gold - gold, beastBounty(2), 'the bounty paid');
   }
 });
+
+test('wages short: the chest pays what it holds, only the rest is owed (docs/30)', async () => {
+  const { game } = makeGame();
+  join(game, 'Paymaster');
+  const s = game.sessionByName('Paymaster')!;
+  const ship = s.ship!;
+  ship.docked = null;
+  s.profile!.docked = null;
+  const c = s.profile!.company;
+  c.owed = 50;
+  s.profile!.gold = 20;
+  ship.talentReady.payday = game.now - 1;
+  for (let i = 0; i < 25; i++) game.step();
+  assert.equal(s.profile!.gold, 0, 'the chest emptied into the men');
+  assert.ok(c.owed < 32, `owed ${c.owed.toFixed(1)}`);
+});

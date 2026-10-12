@@ -379,7 +379,15 @@ export function stepCompany(game: Game, s: PlayerSession): void {
       c.owed -= due;
       c.unpaid = 0;
     } else if (due > 0) {
-      game.toastShip(ship, `Wages are due and the chest is ${due} silver short. The crew remembers.`, 'bad');
+      // What the chest holds goes to the men first (docs/30: it paid nothing short of the whole, and a broke crew soured
+      // twice as fast); only the rest is owed.
+      const part = Math.floor(Math.max(0, p.gold));
+      if (part > 0) {
+        p.gold -= part;
+        c.owed -= part;
+        game.db.ledger(s.accountId, 'wages', -part, 'part');
+      }
+      game.toastShip(ship, `Wages are due and the chest is ${due - part} silver short. The crew remembers.`, 'bad');
     }
   }
   if (c.owed >= 1 && p.gold < c.owed) c.unpaid++;
