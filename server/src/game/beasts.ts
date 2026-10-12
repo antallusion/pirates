@@ -164,6 +164,12 @@ export function beastsAlive(game: Game): ShipEntity[] {
 // ------------------------------------------------------------------------------------------------ spawning
 
 /** One beast at a point, at a level (kept within its kind's). */
+/** The harbours' bounty for a predator of ⚓lv (docs/30): 30 at ⚓1, 71 at ⚓2, 225 at ⚓5, 533 at ⚓10 — a sixth of an
+ *  hour at sea's silver at ⚓2 for six of them, a twentieth at ⚓10. */
+export function beastBounty(lv: number): number {
+  return Math.round(30 * Math.max(1, lv) ** 1.25);
+}
+
 export function spawnBeast(game: Game, id: BeastId, x: number, y: number, level: number, pack = 0): ShipEntity {
   const S = bs(game);
   const def = BEASTS[id];
@@ -1019,6 +1025,14 @@ export function beastSlain(game: Game, b: ShipEntity): boolean {
     const xp = targetXp(s.profile.level, c.level, legacyPrizeUnits(def.xp, def.level[0]) * k); // docs/26: by her level
     game.grantXp(s, xp, `Took ${def.name[0]}`, true);
     if (k === 1) game.sendTo(s, { t: 'toast', msg: `${def.name[0]} is dead. Heave to alongside to flense her.`, kind: 'good' });
+    // docs/30: the harbours pay for a predator of the lanes killed — not one too small to teach her (grey pays nothing):
+    // a sloop's shark-hunting cost more in the yard than it brought.
+    if (k === 1 && def.predator && xp > 0) {
+      const pay = beastBounty(c.level);
+      s.profile.gold += pay;
+      game.db.ledger(s.accountId, 'beast_bounty', pay, br.beast);
+      game.sendTo(s, { t: 'toast', msg: `The harbours' bounty for a predator: ${pay} silver.`, kind: 'gold' });
+    }
     const p = s.profile;
     p.beasts ??= {};
     p.beasts[br.beast] = (p.beasts[br.beast] ?? 0) + 1;

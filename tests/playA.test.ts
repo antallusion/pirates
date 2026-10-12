@@ -325,3 +325,28 @@ test('a patrol\'s stray ball falls short of a captain it is not at war with; at 
   steps(game, 20);
   assert.ok(ship.hull < hull, 'struck at war');
 });
+
+test('a predator of her level killed: the harbours\' bounty in silver; one too small to teach her pays nothing (docs/30)', async () => {
+  const { beastBounty, spawnBeast } = await import('../server/src/game/beasts.ts');
+  const { duelSea, openWater } = await import('./balance/duel.ts');
+  const { seaCaptain } = await import('./balance/seafight.ts');
+  assert.equal(beastBounty(1), 30);
+  assert.equal(beastBounty(2), 71);
+  assert.ok(beastBounty(10) < 600, 'no flood of silver at the top');
+  for (const [lvl, grey] of [[7, false], [40, true]] as const) {
+    const game = duelSea();
+    const at = openWater(game, 42);
+    const s = seaCaptain(game, 'sloop', 2, at.x, at.y, 0);
+    s.profile!.level = lvl;
+    const shark = spawnBeast(game, 'shark', at.x + 80, at.y, 2);
+    game.grid.upsert(shark.id, shark.state.x, shark.state.y);
+    const gold = s.profile!.gold;
+    shark.attackers.set(s.ship!.id, game.now);
+    shark.hull = 1;
+    const { applyDamage } = await import('../server/src/game/combat.ts');
+    applyDamage(game, shark, { hull: 50 }, s.ship!);
+    for (let i = 0; i < 40; i++) game.step();
+    if (grey) assert.equal(s.profile!.gold, gold, 'grey: no bounty');
+    else assert.equal(s.profile!.gold - gold, beastBounty(2), 'the bounty paid');
+  }
+});
