@@ -5,9 +5,14 @@
 
 import { HULL_PER_PLANK, SAILS_PER_CLOTH } from './dealings.ts';
 
-/** Provisions eaten a minute at sea: 6 units for every 40 hands, times the ship's appetite (cooks, talents). */
+/** Provisions 40 hands eat in a minute at sea (docs/30: it was 6 — a starter sloop of 28 ate 252 units, 3 000 silver, an
+ *  hour, more than her whole income at levels 1–3 (seaHour 1 920), and half her hold lasted 3½ minutes, so every novice
+ *  sailed hungry; now ten minutes of it is 9 units, a third of her hold, some 600 silver an hour). */
+export const FOOD_PER_40 = 1.2;
+
+/** Provisions eaten a minute at sea: FOOD_PER_40 units for every 40 hands, times the ship's appetite (cooks, talents). */
 export function provisionsPerMinute(crew: number, provisionUse = 1): number {
-  return (Math.max(0, crew) / 40) * 6 * Math.max(0.1, provisionUse);
+  return (Math.max(0, crew) / 40) * FOOD_PER_40 * Math.max(0.1, provisionUse);
 }
 
 /** A normal voyage, port to port with a fight on the way, in real minutes at sea. */

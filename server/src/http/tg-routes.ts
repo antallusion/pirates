@@ -37,6 +37,8 @@ export async function handleTelegram(req: IncomingMessage, res: ServerResponse, 
   const path = (req.url ?? '/').split('?')[0];
   if (!path.startsWith('/auth/tg/') && path !== '/auth/tg' && !path.startsWith('/tg/')) return false;
   if (!tg) {
+    // The config answers «off» rather than a 404, so every page load does not print a red console error (docs/30).
+    if (req.method === 'GET' && path === '/auth/tg/config') return (json(res, 200, { enabled: false }), true);
     json(res, 404, { error: 'Not found' });
     return true;
   }

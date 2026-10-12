@@ -394,8 +394,12 @@ export class Game {
   guildMember?: (guildId: number, accountId: number) => boolean;
   guildNotify?: (guildId: number, subject: string, body: string) => void;
   islandHostile?: (h: Holding, ship: ShipEntity) => boolean;
-  /** Real time in ms, for letters and listings that outlive the process (tests move it). */
-  wallNow: () => number = () => Date.now();
+  /** How far the wall clock has run ahead of the real one under admin /speed (ms; 0 on a normal server, where
+   *  timeScale is always 1). The QA playthrough (docs/30, owner 2026-10-12: «врубить скорость х100»): the build
+   *  queue, the 48 h respawns, the weeks follow the world clock there, so the speed is honest. */
+  wallSkew = 0;
+  /** Real time in ms, for letters and listings that outlive the process (tests move it); ahead by wallSkew under /speed. */
+  wallNow: () => number = () => Date.now() + this.wallSkew;
   metrics = new Metrics();
   prof = new Profiler();
   /** In a multi-zone world: this process's zone (zones/zone.ts); null when one process runs the whole ocean. */
@@ -465,6 +469,7 @@ export class Game {
       this.now = saved.time;
       restoreMarkets(this.markets, saved.markets);
     }
+    this.wallSkew = this.db.getKv<number>('wall_skew') ?? 0; // admin /speed's run-ahead outlives a restart (docs/30)
     this.sites = buildSites(this.world);
     const savedSites = this.db.getKv<Record<string, { stock: number; holder: number | null; holderName: string; until: number }>>('sites');
     if (savedSites) for (const site of this.sites) if (savedSites[site.id]) Object.assign(site, savedSites[site.id]);
@@ -488,7 +493,8 @@ export class Game {
     let acc = 0;
     this.timer = setInterval(() => {
       const t = performance.now();
-      acc += ((t - last) / 1000) * this.timeScale;
+      const realDt = t - last;
+      acc += (realDt / 1000) * this.timeScale;
       last = t;
       let steps = 0;
       const maxSteps = Math.ceil(5 * this.timeScale);
@@ -504,6 +510,8 @@ export class Game {
         acc = 0; // drop time rather than spiral
         this.metrics.overruns++;
       }
+      // Admin /speed: the wall clock runs ahead by the world time simulated beyond the real (what the tick managed).
+      if (this.timeScale > 1) this.wallSkew += Math.max(0, steps * TICK_DT * 1000 - realDt);
     }, 1000 * TICK_DT * 0.5);
   }
 
@@ -1196,7 +1204,7 @@ export class Game {
     ship.morale += clamp(baseline - ship.morale, -1, 1) * st.moraleRegen;
     ship.morale = clamp(ship.morale, 0, 100);
 
-    // Provisions: 6 units feed 40 sailors for a minute, eaten every tenth second of each ship's own. (This runs on the
+    // Provisions: FOOD_PER_40 units feed 40 sailors for a minute (voyage.ts), eaten every tenth second of each ship's own. (This runs on the
     // ship's own tick of each second, so `tick % 200` alone matched only ships whose id is a multiple of 20.)
     if (ship.isPlayer && Math.floor(this.tick / 20) % 10 === 0) {
       const frontier = REGIONS[ship.region].safety === 'lawless' ? Math.max(0.5, 1 - 1.25 * tval(st, 'frontier')) : 1;
@@ -1957,6 +1965,9 @@ export class Game {
       onLevelUp(this, s);
       kitLevelUp(this, s, s.profile.level - gained); // her abilities' ranks (docs/25 item 37)
       logNote(this, s, 'level', [], s.profile.level);
+      // In port: the tavern's and the yard's prices go by the level — the window is sent again (docs/30: the tavern said
+      // 29 a man, the level-up on the quay made it 31 and the hire took more than the button said).
+      if (s.ship?.docked) this.pushPort(s);
     }
   }
 
@@ -2404,20 +2415,23 @@ export class Game {
     loser.boarding = null;
     loser.lootLockedFor = null;
     loser.surrendered = false;
+    // The First Watch loses nothing (docs/30: the lesson's raider threw a novice's boarders back and took her hold, a
+    // tenth of her chest and 22 of her 24 men): the men come back, the hold and the chest stay hers.
+    const lesson = onboardingRescue(this, s);
     // The hold to the victors (a captain's hold takes what fits; the rest goes over the side).
-    const taken = cargoValue(loser.cargo);
+    const taken = lesson ? 0 : cargoValue(loser.cargo);
     const vs = this.sessionOf(victor);
     let free = vs ? victor.stats.holdVolume - cargoVolume(victor.cargo, victor.stats.contrabandVolumeMul, victor.stats.materialVolumeMul, victor.stats.provisionVolumeMul, victor.stats.cursedVolumeMul) : Infinity;
-    for (const id of Object.keys(loser.cargo) as GoodId[]) {
+    for (const id of lesson ? [] : (Object.keys(loser.cargo) as GoodId[])) {
       const n = Math.floor(loser.cargo[id] ?? 0);
       const per = GOODS[id]?.volume ?? 1;
       const k = Math.max(0, Math.min(n, Math.floor((free + 1e-6) / per)));
       if (k > 0) victor.cargo[id] = (victor.cargo[id] ?? 0) + k;
       free -= k * per;
     }
-    loser.cargo = {};
+    if (!lesson) loser.cargo = {};
     // A share of her chest.
-    const silver = Math.min(Math.floor(p.gold), Math.floor(p.gold * BOARD_LOSS_PURSE));
+    const silver = lesson ? 0 : Math.min(Math.floor(p.gold), Math.floor(p.gold * BOARD_LOSS_PURSE));
     if (silver > 0) {
       p.gold -= silver;
       this.db.ledger(s.accountId, 'robbed', -silver, victor.name);
@@ -2445,7 +2459,7 @@ export class Game {
     loser.crew = Math.max(Math.round(loser.stats.crewMin * 0.6), loser.crew);
     loser.morale = Math.max(loser.morale, 40);
     loser.boardShieldUntil = this.now + BOARD_LOSS_SHIELD;
-    this.sendTo(s, { t: 'sunk_self', lost: { cargoValue: taken, crew: Math.max(0, Math.round(crewLost)), repairFee: 0 }, respawnPort: port.id, boarded: { by: victor.name, silver, ...(repelled ? { repelled: true } : {}) } });
+    this.sendTo(s, { t: 'sunk_self', lost: { cargoValue: taken, crew: lesson ? 0 : Math.max(0, Math.round(crewLost)), repairFee: 0 }, respawnPort: port.id, ...(lesson ? { towed: true } : { boarded: { by: victor.name, silver, ...(repelled ? { repelled: true } : {}) } }) }); // the First Watch's soft card
     this.pushSelf(s, true);
     this.saveSession(s);
   }
@@ -4631,6 +4645,7 @@ export class Game {
       const sites = Object.fromEntries(this.sites.map((x) => [x.id, { stock: x.stock, holder: x.holder, holderName: x.holderName, until: x.until }]));
       if (!this.zone) {
         this.db.setKv('world', { time: this.now, markets });
+        if (this.wallSkew) this.db.setKv('wall_skew', this.wallSkew);
         this.db.setKv('orders', this.orders);
         this.db.setKv('econ', { history: this.econHistory, rewardMul: this.econRewardMul });
         this.db.setKv('sites', sites);

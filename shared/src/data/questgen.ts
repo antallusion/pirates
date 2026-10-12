@@ -92,8 +92,15 @@ export type Profession = 'harbour_master' | 'fishwife' | 'shipwright' | 'priest'
 export function giverPortrait(profession: Profession, giver: string): string {
   const first = giver.split(' ')[0];
   const sex = GIVER_WOMEN.includes(first) ? 'f' : GIVER_MEN.includes(first) ? 'm' : PROFESSION_SEX[profession] ?? 'm';
-  return `giver_${profession}_${sex}`;
+  const id = `giver_${profession}_${sex}`;
+  return NO_FACE[id] ?? id;
 }
+
+/** The faces never drawn (docs/30: «Нелл Голт», a whaler, showed an empty square): the nearest face of the same sex. */
+const NO_FACE: Record<string, string> = {
+  giver_whaler_f: 'giver_fishwife_f', giver_bosun_f: 'giver_harbour_master_f', giver_garrison_captain_f: 'giver_envoy_f', giver_old_salt_f: 'giver_widow_f',
+  giver_tavern_keeper_f: 'giver_merchant_f', giver_widow_m: 'giver_old_salt_m', giver_fishwife_m: 'giver_whaler_m',
+};
 
 /** Whom the stories speak of as "she" or "he" (the rest may be either). */
 export const PROFESSION_SEX: Partial<Record<Profession, 'f' | 'm'>> = {
