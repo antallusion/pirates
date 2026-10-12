@@ -9,8 +9,8 @@
 import { bindSupply, supplyTab } from './supply.ts'; // docs/18 #32
 import { EN as I18_EN, RU as I18_RU } from '../lang/ui/isles18.ts';
 import { guildYardCard, wireGuildYard } from './social.ts';
-import { GRID, PLOT_CELLS, PRODUCERS, isProducer, producerOf, producerRate, speedupSilver } from '../../../shared/src/data/base.ts';
-import type { ProducerKind } from '../../../shared/src/data/base.ts';
+import { BARGE, BARGE_MUL, GRID, PLOT_CELLS, PRODUCERS, isProducer, producerOf, producerRate, speedupSilver } from '../../../shared/src/data/base.ts';
+import type { BaseRes, ProducerKind } from '../../../shared/src/data/base.ts';
 import { ISLE_LEVELS } from '../../../shared/src/data/estate.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -211,7 +211,12 @@ export class BaseWindow {
       { id: 'supply', icon: 'build_caravan_office', label: S18('sup.tab'), badge: state.supply?.isles.filter((x) => x.linked).length ?? 0 },
     ], this.tab, 'btab');
     // «Собрать всё» (docs/23 item 72): what every producer holds, in one tap; it heads the island's column.
-    const collect = quickBar([{ label: W('isle.collect'), sub: fresh ? `+${fmt(fresh)}` : esc(W('isle.collectNone')), icon: 'tab_holdings', hint: W('isle.collectHint'), primary: fresh > 0, disabled: !fresh, data: { bcollect: 1 } }], 'b-quick');
+    // docs/30: a barge of building stuff for silver (a small island with no wood or coal of its own wanted ~20 sloop runs)
+    const barge = bargeCostOf(v.store);
+    const collect = quickBar([
+      { label: W('isle.collect'), sub: fresh ? `+${fmt(fresh)}` : esc(W('isle.collectNone')), icon: 'tab_holdings', hint: W('isle.collectHint'), primary: fresh > 0, disabled: !fresh, data: { bcollect: 1 } },
+      { label: W('isle.barge'), sub: money(barge), icon: 'good_timber', hint: W('isle.bargeHint'), disabled: !barge || (state.self?.gold ?? 0) < barge, data: { bbarge: 1 } },
+    ], 'b-quick');
     // A phone on its side (docs/15 item 8): the board fills the left, and the resources, the waters and the sheet
     // scroll together on the right, so the board is not squeezed under three header rows.
     const land = LANDSCAPE.matches;
@@ -546,6 +551,7 @@ export class BaseWindow {
       root.querySelectorAll<HTMLElement>(`[data-${attr}]`).forEach((el) => (el.onclick = () => this.send({ t: 'base', action, ship: el.dataset[attr]! })));
     }
     root.querySelector<HTMLElement>('[data-bcollect]')?.addEventListener('click', () => this.send({ t: 'base', action: 'collect' }));
+    root.querySelector<HTMLElement>('[data-bbarge]')?.addEventListener('click', () => this.send({ t: 'base', action: 'barge' }));
     bindTown(root, this.send, this.mk, () => this.onRecruit(), redraw);
     bindSupply(root, this.send); // docs/18 #32
     root.querySelector<HTMLElement>('[data-bsail]')?.addEventListener('click', () => this.onSail());
@@ -596,4 +602,15 @@ export class BaseWindow {
       this.send({ t: 'base', action: 'view' });
     }
   }
+}
+
+/** What a barge of building stuff costs now, by the yard's room (docs/30; server: base.ts orderBarge). */
+function bargeCostOf(store: { good: string; n: number; cap: number }[]): number {
+  let cost = 0;
+  for (const [g, n] of Object.entries(BARGE) as [BaseRes, number][]) {
+    const row = store.find((x) => x.good === g);
+    const room = row ? Math.max(0, Math.floor(row.cap - row.n)) : n;
+    cost += Math.round(Math.min(n, room) * GOODS[g].basePrice * BARGE_MUL);
+  }
+  return cost;
 }

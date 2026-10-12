@@ -127,6 +127,20 @@ export function buyPrice(_isl: Island): number {
 }
 
 /** Claim an island of her own, or move to it (docs/29: baseclaim.ts claimIsland). */
+/** docs/30: the free islands she could claim within FREE_NEAR_R, nearest first (the island off her bow apart): «Занять»
+ *  took the nearest at once, a small one with nothing to build with, and never showed the others. */
+export const FREE_NEAR_R = 8000;
+export function freeIslesNear(game: Game, s: PlayerSession, x: number, y: number, skip: number): { island: number; name: string; size: ReturnType<typeof islandSize>; d: number }[] {
+  const out: { island: number; name: string; size: ReturnType<typeof islandSize>; d: number }[] = [];
+  for (const is of game.world.islands) {
+    if (is.id === skip || is.portId || is.minor || is.raft || is.slot || is.hidden) continue;
+    const d = Math.hypot(is.x - x, is.y - y);
+    if (d > FREE_NEAR_R || claimWhy(game, s, is)) continue;
+    out.push({ island: is.id, name: is.name, size: islandSize(is.radius), d: Math.round(d) });
+  }
+  return out.sort((a, b) => a.d - b.d).slice(0, 4);
+}
+
 export function buyIsland(game: Game, s: PlayerSession, islandId: number, move?: string): string | null {
   return claimIsland(game, s, islandId, move);
 }
@@ -658,6 +672,7 @@ export function estateView(game: Game, s: PlayerSession): EstateView {
     buy: null,
     // The terms of the island off the bow (docs/29: free, or a move off her own): shown whether or not she may claim it now.
     claim: nearIsle && nearIsle.id !== h?.island ? claimTerms(game, s, nearIsle) : null,
+    ...(!h && ship && !ship.docked ? { freeNear: freeIslesNear(game, s, ship.state.x, ship.state.y, nearIsle?.id ?? -1) } : {}),
     rob: robView(game, s),
     kinds: nearIsle && !nearIsle.portId && !game.holdings.get(game, nearIsle.id) && !Object.values(outposts(game)).some((o) => o.island === nearIsle.id) ? OUTPOST_KINDS.filter((k) => outpostFits(k, nearIsle)) : [],
     hall: ((hh) => (hh ? { island: hh.island, owner: hh.owner.name } : null))(nearIsle ? game.holdings.onIsland(game, nearIsle.id).find((x) => x.owner.id !== s.accountId && welcome(game, s, x)) : undefined),

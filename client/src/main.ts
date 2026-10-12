@@ -419,6 +419,7 @@ advCard.where = (ids) => {
 worldMap.onPuzzle = openPuzzle;
 baseWindow.onRecruit = () => openRecruit('isle');
 companyScreen.onBase = () => openBase();
+companyScreen.onGo = () => closeModal();
 companyScreen.onQuests = () => openModal('journal');
 baseWindow.onSail = () => closeModal();
 baseWindow.onLayout = () => { if (modal === 'base') refreshModal(); };

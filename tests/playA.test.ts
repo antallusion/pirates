@@ -206,3 +206,51 @@ test('lairs beside a harbour stand on their island\'s far side, not under its qu
   const close = lairList(game).filter((l) => { const q = game.nearestPort(l.x, l.y); return l.island >= 0 && !!q && Math.hypot(q.x - l.x, q.y - l.y) < 300; });
   assert.ok(close.length < 50, `lairs within 300 m of a harbour: ${close.length} (were 109)`);
 });
+
+test('a barge of timber, coal and iron to her island\'s yard for silver (a small island without them wanted ~20 sloop runs)', async () => {
+  const { buyIsland, clearOutposts } = await import('../server/src/game/estate.ts');
+  const { orderBarge } = await import('../server/src/game/base.ts');
+  const { yardOf } = await import('../server/src/game/base.ts');
+  const { ownIsland } = await import('../server/src/game/estate.ts');
+  const { BARGE, BARGE_MUL } = await import('../shared/src/data/base.ts');
+  const { GOODS } = await import('../shared/src/data/goods.ts');
+  const { isLand } = await import('../shared/src/world/worldgen.ts');
+  const { game } = makeGame();
+  clearOutposts(game);
+  join(game, 'Isle Ida');
+  const s = game.sessionByName('Isle Ida')!;
+  const is = game.world.islands.find((i) => !i.portId && !i.minor && !i.raft && i.region === 'black_coast' && i.radius > 120 && !game.holdings.get(game, i.id))!;
+  const ship = s.ship!;
+  ship.docked = null;
+  s.profile!.docked = null;
+  for (let k = 0; k < 96; k++) {
+    const a = (k / 96) * Math.PI * 2;
+    const x = is.x + Math.sin(a) * (is.radius + 100), y = is.y - Math.cos(a) * (is.radius + 100);
+    if (!isLand(game.world, x, y)) { ship.state.x = x; ship.state.y = y; break; }
+  }
+  assert.equal(buyIsland(game, s, is.id), null);
+  const h = ownIsland(game, s.accountId)!;
+  const cost = Object.entries(BARGE).reduce((a, [g, n]) => a + Math.round((n ?? 0) * GOODS[g as 'timber'].basePrice * BARGE_MUL), 0);
+  s.profile!.gold = cost - 1;
+  assert.match(orderBarge(game, s) ?? '', /A barge costs/);
+  s.profile!.gold = cost;
+  assert.equal(orderBarge(game, s), null);
+  assert.equal(s.profile!.gold, 0);
+  const y = yardOf(game, h);
+  for (const [g, n] of Object.entries(BARGE)) assert.equal(y.res[g as 'timber'], n, g);
+});
+
+test('«Занять»: the other free islands near are listed with their size, nearest first (docs/30)', async () => {
+  const { freeIslesNear, clearOutposts } = await import('../server/src/game/estate.ts');
+  const { game } = makeGame();
+  clearOutposts(game);
+  join(game, 'Chooser');
+  const s = game.sessionByName('Chooser')!;
+  const port = game.portById(s.ship!.docked!)!;
+  const list = freeIslesNear(game, s, port.x, port.y, -1);
+  assert.ok(list.length >= 2, `free islands near the start: ${list.length}`);
+  assert.ok(list.length <= 4);
+  for (let i = 1; i < list.length; i++) assert.ok(list[i].d >= list[i - 1].d, 'nearest first');
+  assert.ok(list.every((x) => ['small', 'medium', 'large'].includes(x.size)));
+  assert.ok(!freeIslesNear(game, s, port.x, port.y, list[0].island).some((x) => x.island === list[0].island), 'the one off the bow apart');
+});

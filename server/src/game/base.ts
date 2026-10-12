@@ -8,7 +8,7 @@
 // the hold of a ship lying off the island pay for the building.
 
 import {
-  BASE_RES, BIOME_YIELD, PLOT_CELLS, PRODUCERS, TOKEN_MAX, TOKEN_SECS, baseCost, crewsAt, isProducer, levelGate, maxLevel, nextCrewAt, plotsOf, producerFits,
+  BARGE, BARGE_MUL, BASE_RES, BIOME_YIELD, PLOT_CELLS, PRODUCERS, TOKEN_MAX, TOKEN_SECS, baseCost, crewsAt, isProducer, levelGate, maxLevel, nextCrewAt, plotsOf, producerFits,
   producerLimit, producerOf, producerRate, speedupGoods, speedupSilver, yardCap,
 } from '../../../shared/src/data/base.ts';
 import type { BaseRes, ProducerKind } from '../../../shared/src/data/base.ts';
@@ -470,6 +470,39 @@ export function collectYard(game: Game, s: PlayerSession): string | null {
   game.holdings.touch();
   game.sendTo(s, { t: 'toast', msg: n > 0 ? `Into the island’s yard: ${n} units.` : 'Nothing new in the yard yet.', kind: n > 0 ? 'good' : 'info' });
   return null;
+}
+
+/** A barge of building stuff to her island's yard (docs/30): silver for timber, coal and iron, up to the yard's room. */
+export function orderBarge(game: Game, s: PlayerSession): string | null {
+  const m = mine(game, s);
+  if (typeof m === 'string') return m;
+  const { h, y } = m;
+  const cap = capOf(h);
+  const take: Partial<Record<BaseRes, number>> = {};
+  let cost = 0;
+  for (const [g, n] of Object.entries(BARGE) as [BaseRes, number][]) {
+    const k = Math.max(0, Math.min(n, Math.floor(cap - (y.res[g] ?? 0))));
+    if (k <= 0) continue;
+    take[g] = k;
+    cost += Math.round(k * GOODS[g].basePrice * BARGE_MUL);
+  }
+  if (!Object.keys(take).length) return 'The yard is full: no room for a barge.';
+  const p = s.profile!;
+  if (p.gold < cost) return `A barge costs ${cost} silver`;
+  p.gold -= cost;
+  for (const [g, k] of Object.entries(take) as [BaseRes, number][]) y.res[g] = (y.res[g] ?? 0) + k;
+  game.db.ledger(s.accountId, 'barge', -cost, Object.entries(take).map(([g, k]) => `${k} ${g}`).join(', '));
+  game.holdings.touch();
+  game.sendTo(s, { t: 'toast', msg: `A barge of timber, coal and iron puts in at your island for ${cost} silver.`, kind: 'good' });
+  return null;
+}
+
+/** What a barge costs now (0: the yard has no room). */
+export function bargeCost(h: Holding, y: Yard): number {
+  const cap = capOf(h);
+  let cost = 0;
+  for (const [g, n] of Object.entries(BARGE) as [BaseRes, number][]) cost += Math.round(Math.max(0, Math.min(n, Math.floor(cap - (y.res[g] ?? 0)))) * GOODS[g].basePrice * BARGE_MUL);
+  return cost;
 }
 
 // ------------------------------------------------------------------------------------------------ tokens

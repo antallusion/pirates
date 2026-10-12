@@ -78,6 +78,8 @@ export class CompanyScreen {
   onWhisper: (name: string) => void = () => {};
   /** "My Island": one's own island's base (docs/15), opened by main.ts. */
   onBase: () => void = () => {};
+  /** A course set from the window (a free island near): the window gives way to the sea (docs/30). */
+  onGo: () => void = () => {};
   /** The journal's «Задания» tab (main.ts opens the journal's page). */
   onQuests: () => void = () => {};
   /** "Letter" on a friend: the letters tab opens with them as the addressee. */
@@ -385,6 +387,12 @@ export class CompanyScreen {
     body.querySelectorAll<HTMLElement>('[data-rent]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'rent', island: Number(el.dataset.rent), days: Number(el.dataset.days) })));
     // One's own island and outposts (docs/12 P7).
     body.querySelectorAll<HTMLElement>('[data-guests]').forEach((b) => (b.onclick = () => this.send({ t: 'guest', action: 'call', island: Number(b.dataset.guests) })));
+    // docs/30: a free island near — the helmsman takes her there; «Занять» is offered on arrival
+    body.querySelectorAll<HTMLElement>('[data-freego]').forEach((el) => (el.onclick = () => {
+      const isl = state.islands.get(Number(el.dataset.freego));
+      if (isl) this.send({ t: 'autosail', x: Math.round(isl.x), y: Math.round(isl.y) });
+      this.onGo();
+    }));
     body.querySelectorAll<HTMLElement>('[data-est]').forEach((el) => (el.onclick = () => {
       const a = el.dataset.est!;
       if (a === 'buy') return void ask(L('est_confirm_buy', { price: fmt(Number(el.dataset.price)) })).then((ok) => ok && this.send({ t: 'estate', action: 'buy', island: Number(el.dataset.isl) }));
@@ -848,6 +856,8 @@ function estateHtml(state: ClientState): string {
       ${(state.self?.company.memorial ?? []).length ? `<div class="est-h">${esc(L('est_memorial'))}</div>${state.self!.company.memorial.map((m) => `<p class="muted">† ${esc(personName(m.name))} — ${esc(serverText(m.cause))}</p>`).join('')}` : ''}</div>`);
   } else if (!e.claim) parts.push(`<div class="card est-card"><p class="muted">${esc(L('est_none'))}</p></div>`);
   if (e.claim) parts.push(claimCard(e.claim));
+  // docs/30: the other free islands near, with their size — «Занять» took the nearest at once, a small one
+  if (e.freeNear?.length) parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}${esc(L('ct_near'))}</h4><p class="muted">${esc(L('ct_near_note'))}</p>${e.freeNear.map((f) => `<div class="item-row"><div class="item-text"><b>${esc(placeName(f.name))}</b><span class="muted">${esc(L(`size_${f.size}` as 'size_small'))}</span></div><button class="btn btn-small item-btn" data-freego="${f.island}">${esc(L('ct_near_go', { km: (f.d / 1000).toFixed(1) }))}</button></div>`).join('')}</div>`);
   else if (e.buy) parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}${esc(L('est_buy_title', { name: placeName(e.buy.name) }))}</h4><p class="muted">${esc(L('est_buy_text'))}</p><button class="btn btn-primary" data-est="buy" data-isl="${e.buy.island}" data-price="${e.buy.price}">${esc(L('est_buy', { price: fmt(e.buy.price) }))}</button></div>`);
   if (e.outposts.length || e.kinds.length) {
     const rows = e.outposts.map((o) => {

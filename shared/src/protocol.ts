@@ -206,7 +206,7 @@ export type ClientMsg =
   | { t: 'estate'; action: 'outpost'; id: string; order: 'upgrade' | 'workers' | 'guard' | 'haul' | 'renew' | 'auto' | 'rob'; arg?: string }
   | { t: 'estate'; action: 'visit'; island: number }
   /** One's own island as a base (docs/15 items 1–3): plots, the builders' work, the yard. */
-  | { t: 'base'; action: 'view' | 'collect' }
+  | { t: 'base'; action: 'view' | 'collect' | 'barge' }
   | { t: 'base'; action: 'build'; plot: number; what: string }
   | { t: 'base'; action: 'upgrade'; plot: number }
   | { t: 'base'; action: 'move'; plot: number; to: number }
@@ -2229,6 +2229,8 @@ export interface EstateView {
   buy: { island: number; name: string; price: number } | null;
   /** The terms of claiming the island off the bow (docs/15 item 6), whether or not it may be claimed now. */
   claim: ClaimTermsView | null;
+  /** docs/30: other free islands within a few miles she could claim instead, nearest first: their size and the run. */
+  freeNear?: { island: number; name: string; size: IslandSize; d: number }[];
   /** Another captain's island off the bow in lawless water, to rob (docs/15 item 6). */
   rob: { island: number; name: string; owner: string; why: string | null; robbing: number | null } | null;
   kinds: OutpostKind[];

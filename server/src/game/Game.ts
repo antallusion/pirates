@@ -20,7 +20,7 @@ import { companionAction, stepCompanions } from './companion.ts';
 import { nemesisSankYou } from './nemesis.ts';
 import { sendTattoos, setTattoo, stepTattoos, takeChoice, tattooCount } from './tattoos.ts';
 import { caravanOrder, caravanShipLost, claimBerths, launchCaravan, sendCaravans, stepCaravans } from './caravans.ts';
-import { baseView, collectYard, moveTo, speedup, startBuild, upgradeAt } from './base.ts';
+import { baseView, collectYard, moveTo, orderBarge, speedup, startBuild, upgradeAt } from './base.ts';
 import { ownShipsKill, shipBuild, shipLaunch, shipRecall, shipRepair, shipUpgrade, squadronOf, stepOwnShips } from './baseships.ts';
 import { abandonIsland, claimPrompt, raidPointer, robIsland } from './baseclaim.ts';
 import { assignResident, buyIsland, estateView, isleForge, foundOutpost, goHome, hireResident, isleLevelUp, outpostOrder, ownIsland, settleRefugees, stepEstate, visitHall } from './estate.ts';
@@ -3534,6 +3534,8 @@ export class Game {
             return done(null);
           case 'collect':
             return done(collectYard(this, s));
+          case 'barge':
+            return done(orderBarge(this, s));
           case 'build':
             return done(startBuild(this, s, Math.trunc(Number(msg.plot)), String(msg.what)));
           case 'upgrade':

@@ -19,6 +19,12 @@ import type { TreeId } from './isletree.ts';
 /** The yard's resources, in the order the window shows them. */
 export type BaseRes = 'timber' | 'coal' | 'tar' | 'iron' | 'provisions';
 export const BASE_RES: BaseRes[] = ['timber', 'coal', 'tar', 'iron', 'provisions'];
+
+/** docs/30: a barge of building stuff to her island's yard for silver — what a sloop brings in two or three runs (a small
+ *  island with no wood or coal of its own wanted some twenty of them for its hall's second level). Its goods at
+ *  BARGE_MUL of their base price, the freight in it. */
+export const BARGE: Partial<Record<BaseRes, number>> = { timber: 30, coal: 20, iron: 5 };
+export const BARGE_MUL = 1.5;
 /** The quarry's stone is the good coal (docs/15 item 3: no new good without its art). */
 export const STONE: GoodId = 'coal';
 
