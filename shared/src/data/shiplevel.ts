@@ -170,9 +170,12 @@ export interface RefitCost {
   hearts?: number;
 }
 
+// docs/30: the first two refits are a starter hull's (a sloop's hold is 30, a plank takes 1.5): ⚓2 asked 40 planks, 10 iron
+// (70 of hold, three trips and the warehouse) of a captain who has just turned 5 and whose ⚓1 waters teach nothing
+// any more. Now ⚓2 is one load (14 planks, 3 iron: 24 of hold) and ⚓3 two; the silver carries what the goods did.
 const REFIT: Record<number, RefitCost> = {
-  2: { silver: 800, goods: [{ good: 'planks', qty: 40 }, { good: 'iron', qty: 10 }], sec: 120 },
-  3: { silver: 2000, goods: [{ good: 'planks', qty: 80 }, { good: 'iron', qty: 20 }, { good: 'sailcloth', qty: 10 }], sec: 300 },
+  2: { silver: 1200, goods: [{ good: 'planks', qty: 14 }, { good: 'iron', qty: 3 }], sec: 120 },
+  3: { silver: 2800, goods: [{ good: 'planks', qty: 30 }, { good: 'iron', qty: 8 }, { good: 'sailcloth', qty: 6 }], sec: 300 },
   4: { silver: 4500, goods: [{ good: 'planks', qty: 120 }, { good: 'iron', qty: 40 }, { good: 'sailcloth', qty: 20 }], sec: 600 },
   5: { silver: 9000, goods: [{ good: 'planks', qty: 180 }, { good: 'iron', qty: 60 }, { good: 'sailcloth', qty: 30 }], sec: 1200 },
   6: { silver: 18000, goods: [{ good: 'planks', qty: 260 }, { good: 'iron', qty: 90 }, { good: 'sailcloth', qty: 40 }, { good: 'timber', qty: 40 }], sec: 2400 },

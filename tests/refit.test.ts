@@ -30,17 +30,17 @@ test('a refit: the captain’s level first, then silver and materials; the yard 
   p.level = 5;
   p.gold = 5000;
   c.push({ t: 'shipyard', action: 'refit' });
-  assert.match(bad(c).at(-1)!, /^Needs 40 planks/);
-  // Thirty planks in the hold and ten in the warehouse make forty; the iron all in the hold.
-  s.ship!.cargo.planks = 30;
-  s.ship!.cargo.iron = 12;
+  assert.match(bad(c).at(-1)!, /^Needs 14 planks/);
+  // Ten planks in the hold and four from the warehouse make fourteen; the iron all in the hold.
+  s.ship!.cargo.planks = 10;
+  s.ship!.cargo.iron = 5;
   p.warehouses[port.id] = { planks: 15 };
   const hull0 = s.ship!.stats.hullMax;
   c.push({ t: 'shipyard', action: 'refit' });
   const cost = refitCost(2)!;
   assert.equal(p.gold, 5000 - cost.silver);
   assert.equal(s.ship!.cargo.planks, undefined, 'the hold emptied first');
-  assert.equal(p.warehouses[port.id].planks, 5, 'then the warehouse');
+  assert.equal(p.warehouses[port.id].planks, 11, 'then the warehouse');
   assert.equal(s.ship!.cargo.iron, 2);
   assert.ok(p.refit && p.refit.to === 2);
   c.push({ t: 'undock' });
@@ -88,7 +88,7 @@ test('the height of her class stops a refit; a hull above the captain’s level 
 test('the refit lines read in Russian', () => {
   setLang('ru');
   const lines = [
-    'Captain level 4 is needed to command her at level 2', 'Needs 40 planks (in the hold or your warehouse here)', 'The yard is still at work on her: 3 min more',
+    'Captain level 4 is needed to command her at level 2', 'Needs 14 planks (in the hold or your warehouse here)', 'The yard is still at work on her: 3 min more',
     'The yard is already at work on her', 'The yard is done: the Salt Wren is level 2 now.', 'The yard takes the Salt Wren in hand: level 2 in 2 min. She stays in harbour till then.',
     'She is at the height of her class: only a bigger hull goes higher', 'Captain level 19 is needed to command a Brig', 'Saltmarrow cannot take a Galleon in hand',
   ].map((l) => serverText(l));
