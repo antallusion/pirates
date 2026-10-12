@@ -473,3 +473,24 @@ test('a harbour of an enemy faction says so once, the name with its own article 
   assert.equal(why, `${FACTIONS.confederacy.name} considers you an enemy.`);
   assert.ok(!/^The The /.test(why));
 });
+
+test('letters for a harbour that will not let her in are not hers to take (band 2, docs/30)', async () => {
+  const { game } = makeGame();
+  const conn = join(game, 'Letter Lia');
+  const s = game.sessionByName('Letter Lia')!;
+  const port = game.portById(s.ship!.docked!)!;
+  let c = game.contractsAt(port.id).find((x) => x.toPort);
+  for (let i = 0; i < 20 && !c; i++) {
+    game.now += 4000;
+    c = game.contractsAt(port.id).find((x) => x.toPort);
+  }
+  assert.ok(c, 'a contract for another harbour');
+  const dest = game.portById(c!.toPort!)!;
+  s.profile!.reputation[dest.faction] = -100;
+  conn.push({ t: 'contract', action: 'accept', id: c!.id });
+  assert.ok(!s.profile!.contracts.some((x) => x.id === c!.id), 'refused');
+  assert.ok(conn.all('toast').some((t) => /considers you an enemy/.test(t.msg)), 'with the reason');
+  s.profile!.reputation[dest.faction] = 0;
+  conn.push({ t: 'contract', action: 'accept', id: c!.id });
+  assert.ok(s.profile!.contracts.some((x) => x.id === c!.id), 'a friend takes it');
+});

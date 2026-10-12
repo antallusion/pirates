@@ -3701,6 +3701,11 @@ export class Game {
           const c = list.find((x) => x.id === msg.id);
           if (!c) return 'That contract is gone';
           if (c.kind === 'bounty' && !FACTIONS[pt.faction].lawful) return 'Bounties are paid by lawful ports only';
+          // Letters or goods for a harbour that will not let her in (docs/30, band 2: letters for Pyremaw taken by a
+          // captain the Red Tide holds an enemy — she sailed there and lay off its quay for ever).
+          const dest = c.toPort ? this.portById(c.toPort) : undefined;
+          const entry = dest ? canDock(p, dest.faction) : null;
+          if (entry && !entry.ok) return entry.reason ?? 'That harbour will not have you';
           const e = this.contracts.get(pt.id)!;
           e.list = e.list.filter((x) => x.id !== c.id);
           p.contracts.push({ ...c, progress: 0 });
