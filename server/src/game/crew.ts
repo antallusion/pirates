@@ -888,6 +888,9 @@ export function recruitCost(game: Game, port: Port, p: Profile, prof: Profession
   return Math.max(1, Math.round(base * mul));
 }
 
+/** The hands that sign on for a share when her chest is empty: this many times her ship's least crew (docs/30). */
+export const SHARE_HANDS = 1.5;
+
 /** Hire men of a trade. Sailors come from the waterfront; specialists from the tavern's stock. */
 export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profession, qty: number, dregs = false): string | null {
   const ship = s.ship!;
@@ -907,16 +910,28 @@ export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profes
   const tav = tavernOf(game, port);
   const avail = prof === 'sailor' ? Math.floor(game.tavernCrew.get(port.id) ?? 0) : Math.floor(tav.stock[prof] ?? 0);
   const room = ship.stats.crewMax - ship.crew;
-  const n = Math.min(qty, avail, room);
+  let n = Math.min(qty, avail, room);
   if (n <= 0) return room <= 0 ? 'No hammocks left aboard' : `No ${PROFESSION_DEFS[prof].name.toLowerCase()} looking for a berth here`;
   // Press Gang rank 2: the dregs of a lawless port, at half price and morale 30.
   const scum = dregs && prof === 'sailor' && ship.rank('cmd_press_gang') >= 2 && REGIONS[port.region].safety === 'lawless';
   if (dregs && !scum) return 'Only a practised press-gang captain finds the dregs, and only in lawless ports';
-  const cost = Math.round(n * recruitCost(game, port, p, prof, ship) * (scum ? 0.5 : 1));
+  let cost = Math.round(n * recruitCost(game, port, p, prof, ship) * (scum ? 0.5 : 1));
+  // docs/30: a captain with an empty chest and too few hands to fight is never stuck in port — volunteers sign on for a
+  // share of the next spoils, up to SHARE_HANDS × her ship's least crew, at a lower heart than paid men.
+  let share = false;
+  if (p.gold < cost && prof === 'sailor' && !scum) {
+    const k = Math.min(n, Math.ceil(ship.stats.crewMin * SHARE_HANDS) - ship.crew);
+    if (k > 0) {
+      n = k;
+      cost = 0;
+      share = true;
+    }
+  }
   if (p.gold < cost) return 'Not enough silver';
   p.gold -= cost;
   game.db.ledger(s.accountId, 'crew', -cost, `${port.id}:${prof}`);
-  const newMorale = scum ? 30 : ship.hasFlag('legend_at_helm') ? 80 : 62;
+  const newMorale = scum ? 30 : share ? 45 : ship.hasFlag('legend_at_helm') ? 80 : 62;
+  if (share) game.toastShip(ship, `${n} hands sign on for a share of the next spoils.`, 'good');
   ship.morale = (ship.morale * ship.crew + newMorale * n) / (ship.crew + n);
   // New hands dilute veterancy and loyalty by their share.
   const total = ship.crew + n;

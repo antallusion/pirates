@@ -8,6 +8,7 @@ export const SERVER_RU_H: Record<string, string> = {
   'That mark is too far for one run: set a nearer one': 'Метка слишком далеко для одного перехода: поставьте ближе',
   'No open water leads to that mark': 'К этой метке не ведёт чистая вода',
   'The helm is yours': 'Штурвал снова у вас',
+  '{0} hands sign on for a share of the next spoils.': 'Матросы идут за долю в будущей добыче: {0}.',
   'A barge of timber, coal and iron puts in at your island for {0} silver.': 'К вашему острову пришла барка с лесом, углём и железом за {0} серебра.',
   'The yard is full: no room for a barge.': 'Двор острова полон: барку не разгрузить.',
   'A barge costs {0} silver': 'Барка стоит {0} серебра',

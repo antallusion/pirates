@@ -759,8 +759,11 @@ ${orders}${berths}</div>` : ''}`;
     if (this.hire === null || this.hire > max || this.hireMax !== max) this.hire = max;
     this.hireMax = max;
     const why = room <= 0 ? W('tv.full') : view.crewAvailable <= 0 ? W('tv.none') : max <= 0 ? W('tv.poor') : '';
+    // docs/30: an empty chest and too few hands: volunteers for a share of the next spoils (server: crew.ts SHARE_HANDS)
+    const shareN = max <= 0 && room > 0 && view.crewAvailable > 0 ? Math.max(0, Math.min(room, view.crewAvailable, Math.ceil((state.ownStats?.crewMin ?? 0) * 1.5) - self.crew)) : 0;
     const hire = `<div class="card tv-hire"><div class="tv-hire-h">${icon('stat_crew', '', 'ico-md')}<span><b>${esc(W('tv.men'))}</b><small class="muted">${esc(W('tv.room', { n: room, cost: fmt(view.crewHireCost) }))} · ${'★'.repeat(Math.round(tv.stars))}</small></span></div>
       ${why ? `<p class="muted tv-why">${esc(why)}</p>` : rangeHtml({ id: 'tv-hire', min: 0, max, value: this.hire, label: W('tv.men') })}
+      ${shareN > 0 ? quickBtn({ label: W('tv.share', { n: shareN }), sub: esc(W('tv.shareSub')), primary: true, data: { act: 'hire_n', n: shareN } }) : ''}
       ${quickBtn({ label: W('tv.hireN', { n: why ? 0 : this.hire }), sub: money(Math.ceil((why ? 0 : this.hire) * view.crewHireCost)), primary: !why, disabled: !!why || this.hire <= 0, hint: L('tavern.bounty', { cost: view.crewHireCost, stars: '★'.repeat(Math.round(tv.stars)), n: tv.stars, room }), data: { act: 'hire_n', n: this.hire } })}</div>`;
     const officers = tv.officers.map((o) => `<div class="w-row" data-hint="${esc(`${OFFICER_DEFS[o.role].description}${o.story ? ` ${serverText(o.story)}` : ''}`)}">${officerIcon(o)}
         <span class="w-row-t"><b>${esc(personName(o.name))}</b><small>${esc(L('officer.level', { role: lang() === 'ru' ? OFFICER_DEFS[o.role].name.toLowerCase() : OFFICER_DEFS[o.role].name, n: o.level }))} · ${esc(L('officer.loyalty', { n: o.loyalty }))}${o.rep ? esc(L('officer.needs', { n: o.rep })) : ''}</small><span class="tv-traits">${traitChips(o.traits)}</span></span>
