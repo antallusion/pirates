@@ -34,6 +34,12 @@ const HAUL_RANGE = 300;
 export const WAREHOUSE_VOLUME = 120;
 export const WAREHOUSE_RENT = 300;
 
+/** A warehouse's rent for a captain of this level: 60 + 24 a level, the full 300 from level 10 (docs/30: 300 was half a
+ *  captain of 5's purse, and the first sloop refits drew on a warehouse). */
+export function warehouseRent(level: number): number {
+  return Math.min(WAREHOUSE_RENT, 60 + 24 * Math.max(1, level));
+}
+
 export function buildSites(world: World): ResourceSite[] {
   const out: ResourceSite[] = [];
   for (const is of world.islands) out.push(...sitesOfIsland(is));
@@ -142,7 +148,7 @@ export function warehouseAction(game: Game, s: PlayerSession, port: Port, good: 
   if (!GOODS[good] || !Number.isInteger(qty) || qty === 0 || Math.abs(qty) > 1000) return 'Bad order';
   let wh = p.warehouses[port.id];
   if (!wh) {
-    const rent = Math.round(WAREHOUSE_RENT * Math.max(0, 1 + tx(ship.stats, 'dutyMul')));
+    const rent = Math.round(warehouseRent(p.level) * Math.max(0, 1 + tx(ship.stats, 'dutyMul')));
     if (p.gold < rent) return `Renting a warehouse here costs ${rent} silver`;
     p.gold -= rent;
     wh = p.warehouses[port.id] = {};

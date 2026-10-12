@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { moduleCost } from '../shared/src/data/ships.ts';
 import { AuthService } from '../server/src/auth.ts';
 import { Game } from '../server/src/game/Game.ts';
-import { rightsCost, sitesNearPort, tickSites } from '../server/src/game/resources.ts';
+import { rightsCost, sitesNearPort, tickSites, warehouseRent } from '../server/src/game/resources.ts';
 import type { ResourceSite } from '../server/src/game/resources.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import { join, makeGame, steps } from './helpers.ts';
@@ -86,7 +86,7 @@ test('warehouse: rent on first deposit, stored goods lose stolen marks, withdraw
   ship.cargo = { rum: 20 };
   p.stolen.rum = 20;
   c.push({ t: 'warehouse', good: 'rum', qty: 15 });
-  assert.equal(p.gold, 700, 'rent paid');
+  assert.equal(p.gold, 1000 - warehouseRent(p.level), 'rent paid (by her level, docs/30)');
   assert.equal(p.warehouses[portId].rum, 15);
   assert.equal(ship.cargo.rum, 5);
   assert.equal(p.stolen.rum, 5, 'laundered by the warehouse');

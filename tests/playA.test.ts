@@ -254,3 +254,11 @@ test('«Занять»: the other free islands near are listed with their size, 
   assert.ok(list.every((x) => ['small', 'medium', 'large'].includes(x.size)));
   assert.ok(!freeIslesNear(game, s, port.x, port.y, list[0].island).some((x) => x.island === list[0].island), 'the one off the bow apart');
 });
+
+test('a warehouse\'s rent grows with the captain: 84 at 1, 180 at 5, the full 300 from 10 (docs/30)', async () => {
+  const { warehouseRent, WAREHOUSE_RENT } = await import('../server/src/game/resources.ts');
+  assert.equal(warehouseRent(1), 84);
+  assert.equal(warehouseRent(5), 180);
+  assert.equal(warehouseRent(10), WAREHOUSE_RENT);
+  assert.equal(warehouseRent(40), WAREHOUSE_RENT);
+});

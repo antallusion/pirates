@@ -62,7 +62,7 @@ import { dealOfDay, onSale, talentPriceMods } from './tradefx.ts';
 import { portFence } from './smugglefx.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { bankView, forwardOffers, forwardView, hasExchange, insuranceQuotes, orderView } from './finance.ts';
-import { MODULE_MATERIALS, WAREHOUSE_RENT, WAREHOUSE_VOLUME, siteView, sitesNearPort, supplyMaterials } from './resources.ts';
+import { MODULE_MATERIALS, WAREHOUSE_RENT, warehouseRent, WAREHOUSE_VOLUME, siteView, sitesNearPort, supplyMaterials } from './resources.ts';
 import { servicePortView } from './marque.ts';
 import { holidaySale, leagueDayMods, petOffers } from './holidays.ts';
 import { bazaarPortView } from './bazaar.ts';
@@ -232,7 +232,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
       volume: cargoVolume(p.warehouses[port.id] ?? {}),
       capacity: WAREHOUSE_VOLUME,
       rented: !!p.warehouses[port.id],
-      rent: feeFor(ship, WAREHOUSE_RENT),
+      rent: feeFor(ship, warehouseRent(p.level)),
     },
     materialDiscount: MODULE_MATERIALS,
     exchange: hasExchange(port)
