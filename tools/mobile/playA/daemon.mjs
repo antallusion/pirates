@@ -34,7 +34,7 @@ async function mk(w, h, touch = w < 1000) {
 let p = await mk(W, H, true);
 let cdp = await p.ctx.newCDPSession(p);
 const tap = async (x, y) => { await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }] }); await L.sleep(60); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); };
-const shot = async (name, full = false) => { const f = `${SHOTS}/${name}.png`; await p.screenshot({ path: f, fullPage: full }); return f; };
+const shot = async (name, full = false) => { const f = `${SHOTS}/${name}.jpg`; await p.screenshot({ path: f, fullPage: full, type: "jpeg", quality: 72 }); return f; };
 const S = {};
 /** A new page at another size, the same captain, for a key screen check. */
 const resize = async (w, h, touch = w < 1000) => {
