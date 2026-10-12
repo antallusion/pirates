@@ -185,6 +185,10 @@ test('two captains of the cap matched: the draft by their words, the bout on the
   // Below the cap: the door is shut.
   const low = capped(game, 'Sand Low');
   low.profile!.level = 30;
+  // (out of her way: cast off from the same quay, her way carried her into Ann's side and shoved her along — the
+  // ships «stay where they are» failed by a few metres of a third ship's bump)
+  low.ship!.state.x = a.ship!.state.x - 3000;
+  game.grid.upsert(low.ship!.id, low.ship!.state.x, low.ship!.state.y);
   assert.equal(arenaView(game, low), undefined);
   push(low, { t: 'throne', action: 'arena', op: 'queue' });
   assert.equal(arenaLive(game).queue.length, 0);

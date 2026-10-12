@@ -11,6 +11,7 @@ import type { Game } from '../server/src/game/Game.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import type { FakeConn } from './helpers.ts';
 import { join, makeGame } from './helpers.ts';
+import { dailyRollover } from '../server/src/game/dailies.ts';
 
 function setUp(name: string): { game: Game; c: FakeConn; ship: ShipEntity; foe: ShipEntity; gold: number } {
   const { game } = makeGame();
@@ -27,6 +28,10 @@ function setUp(name: string): { game: Game; c: FakeConn; ship: ShipEntity; foe: 
   ship.input = { rudder: 0, sailTarget: 0 };
   s.profile!.level = 60;
   s.profile!.gold = 5000;
+  // The day's orders done beforehand: one the calendar rolls (a Monday's «chart 4 islands», done on her way to port)
+  // paid +490 silver into the robbed chest's count.
+  dailyRollover(game, s);
+  for (const o of s.profile!.daily.orders) o.done = true;
   ship.cargo = { rum: 10, sugar: 6 };
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);
   // A frigate of pirates, many times her men.
@@ -43,8 +48,15 @@ function setUp(name: string): { game: Game; c: FakeConn; ship: ShipEntity; foe: 
 /** Quick combat to the end, then the moment the end is held, then a minute more of the sea. */
 function fightOut(game: Game, c: FakeConn, ship: ShipEntity): number {
   let grapples = 0, was = false;
+  // (the quick fight asked once a battle: asked every tick, the hundreds of asks a real second ran past the socket's
+  // 90-a-second guard, and the «undock» after it was dropped with them — the test passed or not by the machine's speed)
+  let asked: object | null = null;
   for (let i = 0; i < 20 * 120; i++) {
-    if (ship.boarding?.fight.tac && !ship.boarding.fight.tac.over) c.push({ t: 'tac', act: { a: 'quick' } });
+    const bt = ship.boarding?.fight.tac;
+    if (bt && !bt.over && asked !== bt) {
+      asked = bt;
+      c.push({ t: 'tac', act: { a: 'quick' } });
+    }
     game.step();
     if (ship.boarding && !was) grapples++;
     was = !!ship.boarding;

@@ -847,8 +847,14 @@ export class Game {
           a.state.speed *= 0.6;
           b.state.speed *= 0.6;
         } else if (closing > 3) {
-          // The rammer is the ship under Ramming Speed if one is (the pair comes in the order of their ids).
-          if (b.hasEffect('ramming_speed') && !a.hasEffect('ramming_speed')) this.ram(b, a, closing);
+          // The rammer is the ship under Ramming Speed if one is, else the one whose way carried her into the other (the
+          // pair comes in the order of their ids: a merchant running into a captain's side made the captain the rammer —
+          // a Wanted for a bump she never made, and the patrols on her: QA playthrough, 2026-10-12).
+          const ra2 = a.hasEffect('ramming_speed'), rb2 = b.hasEffect('ramming_speed');
+          const intoB = (va.x * nx + va.y * ny) * a.state.speed, intoA = -(vb.x * nx + vb.y * ny) * b.state.speed;
+          if (rb2 && !ra2) this.ram(b, a, closing);
+          else if (ra2 && !rb2) this.ram(a, b, closing);
+          else if (intoA > intoB) this.ram(b, a, closing);
           else this.ram(a, b, closing);
           a.state.speed *= 0.4;
           b.state.speed *= 0.6;
