@@ -219,7 +219,8 @@ function rowHtml(o: Offer, i: number, state: ClientState): string {
       ico = 'good_provisions';
       title = L('depart.food');
       line = n.have <= 0 ? L('depart.foodNone', { want: n.want }) : L('depart.foodLine', { have: n.have, left, want: n.want });
-      none = n.buy <= 0 ? L('depart.foodNoRoom') : L('depart.notSold');
+      // the harbour sells provisions but has none today: «раскуплено», not «не продают» (docs/30)
+      none = n.buy <= 0 ? L('depart.foodNoRoom') : row(state, 'provisions') ? L('depart.soldOut') : L('depart.notSold');
       break;
     }
     case 'crew':
