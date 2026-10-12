@@ -634,8 +634,11 @@ export class PortScreen {
         ${buy}</div>`;
     }).join('');
     const keel = self.talents.shp_legendary_keel ? `<div class="card"><h4 class="card-h">${icon('good_timber', '', 'ico-md')}${esc(L('keel.title'))}</h4><p class="muted">${esc(L('keel.text'))}</p><button class="btn btn-small" data-act="keel" ${self.loadout.keel ? 'disabled' : ''}>${esc(self.loadout.keel ? L('keel.has') : L('keel.lay'))}</button></div>` : '';
-    return `${repair}${this.upgradeCard(view, state)}
-      ${more(W('yd.moreGuns'), `${refitCard(sy.refit, self.loadout.name)}${keel}${guns}${mounts}${modules}`, 'yd-guns')}
+    // The refit up a level on top when her captain may take it (docs/30: at 5 the ⚓1 sloop's waters teach nothing — her
+    // next ⚓ is the way on, and it lay folded under «Пушки и оснастка» below a sidegrade to another ⚓1 hull).
+    const refitTop = !!sy.refit.busy || (!!sy.refit.next && self.level >= sy.refit.next.captain);
+    return `${repair}${refitTop ? refitCard(sy.refit, self.loadout.name) : ''}${this.upgradeCard(view, state)}
+      ${more(W('yd.moreGuns'), `${refitTop ? '' : refitCard(sy.refit, self.loadout.name)}${keel}${guns}${mounts}${modules}`, 'yd-guns')}
       ${more(W('yd.moreShips'), `<div class="hulls-head"><p class="muted" style="margin:0 0 8px">${esc(L('hulls.note'))}</p><button class="btn btn-small" data-research-open title="${esc(RL('openTip'))}">${icon('tab_board', '', 'ico-sm')}${esc(RL('open'))}</button></div><div class="hull-list">${ships}</div><p class="muted">${esc(L('yard.note', { tier: sy.tier }))}</p>`, 'yd-ships')}
       ${more(W('yd.moreBuild'), this.buildCard(view, state), 'yd-build')}`;
   }
