@@ -393,3 +393,23 @@ test('the admin\'s commands of docs/18 II, in HELP in both languages, and every 
   const missing = mine.filter((p) => table[p] === undefined);
   assert.deepEqual(missing, []);
 });
+
+test('a landing that meets a lair on the beach and beats it is the landing a job asked for (docs/30, band 2)', async () => {
+  const { QUESTS_BY_ID } = await import('../shared/src/data/quests.ts');
+  const game = world();
+  const s = captain(game, 'Chapel Kell');
+  runAdmin(game, s, '/lair crab_beach go');
+  steps(game, 25);
+  stepLairs(game);
+  const conn = (s as unknown as { conn: { last: (t: string) => { card?: unknown } | undefined; push: (m: unknown) => void } }).conn;
+  const l = lairById(game, (conn.last('lair_card')?.card as { id: string }).id)!;
+  QUESTS_BY_ID.t_chapel = { id: 't_chapel', kind: 'job', name: 'A Place for a Chapel', mentor: 'Cato Kell', port: 'saltmarrow', summary: '', requires: {},
+    steps: [{ type: 'land', island: l.island, text: 'Land a party.' }, { type: 'visit', port: 'saltmarrow', text: 'Return.' }], reward: { xp: 10, silver: 10 } };
+  s.profile!.quests.active.push({ id: 't_chapel', step: 0, progress: 0, startedAt: game.now });
+  conn.push({ t: 'land' });
+  assert.ok(landFighting(game, s), 'the land key went for the lair');
+  landTac(game, s, { a: 'quick' });
+  steps(game, 2);
+  assert.equal(s.profile!.quests.active.find((a) => a.id === 't_chapel')?.step, 1, 'the landing step is done');
+  delete QUESTS_BY_ID.t_chapel;
+});
