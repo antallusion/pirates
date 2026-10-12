@@ -1072,7 +1072,9 @@ export function runLighter(game: Game, ship: ShipEntity, brain: NpcBrain, danger
   const back = headingVec(ship.state.heading + Math.PI);
   game.dropCrate(ship.state.x + back.x * 40, ship.state.y + back.y * 40, cargo);
   ship.recompute(now);
-  game.toastNear(ship, `${ship.name} throws cargo over the side to run lighter!`);
+  // Only her chaser hears of it (the crates are his to choose): told to every captain for miles, a pirate's chase of a
+  // merchant on the horizon filled the toasts five times a ship (QA playthrough B).
+  game.toastShip(danger, `${ship.name} throws cargo over the side to run lighter!`);
   return true;
 }
 
