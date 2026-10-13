@@ -10,6 +10,11 @@ import { PVE_JUNIOR, PVE_SENIOR, ladder } from '../../shared/src/data/shiplevel.
 import { generateWorld } from '../../shared/src/world/worldgen.ts';
 import { seaHour } from './island.ts';
 import { MONTH, WEEK_HOURS, isleWeek, month, portWeek, winRate } from './recruit.ts';
+import { playBoard, side } from './boardlen.ts';
+import { boardSlots, npcBoardSlots } from '../../shared/src/data/tactical.ts';
+import { battleFit } from '../../server/src/game/tactical.ts';
+import { npcHeroLevel } from '../../shared/src/data/hero.ts';
+import { captainLevelFor } from '../../shared/src/data/shiplevel.ts';
 
 test('a man costs what the sea reckons him worth; the week is an evening\'s play and a pool keeps two weeks', () => {
   for (const u of Object.keys(UNITS) as (keyof typeof UNITS)[]) {
@@ -56,10 +61,19 @@ test('a month refilling a frigate from a castle: a real share of the income, the
   assert.ok(armyWeight(r.army) <= mightCap(L, M, 7) * 1.1, `weight ${Math.round(armyWeight(r.army))} under the cap ${Math.round(mightCap(L, M, 7))}`);
   // Her town is worth having: her crew takes a pirate of her level about four times in five (H3, without the cap:
   // every time); the ladder's own crew is an even fight.
-  const lad = armyForLevel(L, M, 7, 'player');
-  const even = winRate(lad, armyForLevel(L, M, 7, 'pirate'));
+  // (docs/31: measured as a boarding is fought — her stacks as her hull holds them against the pirate folded into his
+  // fewer, PIRATE_CAL weighed so; on seven stacks a side the pirates of the new mix stood out of it)
+  const slots = boardSlots(captainLevelFor(L));
+  const pir = battleFit(armyForLevel(L, M, 7, 'pirate').map((x) => ({ ...x, src: x.u })), npcBoardSlots(npcHeroLevel(L))).map(({ u, n }) => ({ u, n }));
+  const boarded = (mine: typeof pir, n: number) => {
+    let w = 0;
+    for (let i = 0; i < n; i++) if (playBoard(side(mine, undefined, null, true), side(pir, undefined, null, false), i * 37 + 5).winner === 0) w++;
+    return w / n;
+  };
+  const fold = (a: typeof pir) => battleFit(a.map((x) => ({ ...x, src: x.u })), slots).map(({ u, n }) => ({ u, n }));
+  const even = boarded(armyForLevel(L, M, slots, 'player'), 80);
   assert.ok(even >= 0.3 && even <= 0.7, `the ladder's crew against a pirate of her level: ${even}`);
-  const town = winRate(r.army, armyForLevel(L, M, 7, 'pirate'), 80);
+  const town = boarded(fold(r.army), 80);
   assert.ok(town >= 0.7 && town <= 0.95, `the town-bred crew: ${town}`);
   assert.equal(winRate(month({ ...MONTH, cap: 0 }).army, armyForLevel(L, M, 7, 'pirate')), 1, 'without the cap, every boarding won (H3)');
   // Canon D12: two levels up is not boarded at all; one level up under the ladder is hard for a keep's crew.

@@ -5,6 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MAX_LEVEL, killsPerLevel, xpForLevel, xpUnit } from '../shared/src/constants.ts';
+import { armyForLevel } from '../shared/src/data/army.ts';
 import {
   QUEST_FLOOR, XP_UNITS, battleXp, levelPct, prizeXp, questGap, questXpFor, shipBandOf, targetXp, xpGap, xpThreat,
 } from '../shared/src/data/xpcurve.ts';
@@ -207,6 +208,7 @@ test('the boarding battle on the hexes: its lesson a bonus by the share cut down
   ship.recompute(game.now);
   ship.hull = ship.stats.hullMax;
   ship.crew = ship.stats.crewMax;
+  ship.setArmy(armyForLevel(5, ship.crew, ship.armySlots, 'player')); // docs/31: her ⚓5 crew as the ladder makes it
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);
   const v = headingVec(ship.state.heading - Math.PI / 2);
   const npc = game.spawnNpcShip('pirate', 'brig', 'free', ship.state.x + v.x * 18, ship.state.y + v.y * 18, ship.state.heading);

@@ -33,7 +33,7 @@ function atSea(game: Game, name: string): { c: FakeConn; s: PlayerSession; ship:
   Object.assign(ship.state, { x: 30000, y: 80000, heading: 0, speed: 0 });
   ship.protectedUntil = 0;
   ship.input = { rudder: 0, sailTarget: 0 };
-  s.profile!.level = 30;
+  s.profile!.level = 22; // docs/31: a captain of ⚓5's own band (19–25), as the pirate brig of her level is
   ship.loadout.classId = 'brig';
   ship.loadout.level = 5;
   ship.recompute(game.now);

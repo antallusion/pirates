@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { headingVec } from '../shared/src/math.ts';
 import { Rng } from '../shared/src/rng.ts';
-import { TAC_BLOCKING, TAC_CHANCE_PER_POINT, TAC_GAP, TAC_H, TAC_TURN, TAC_W, flankOf, hexDir, hexDist, hexIndex, hexMirror, hexNeighbors } from '../shared/src/data/tactical.ts';
+import { TAC_BLOCKING, TAC_CHANCE_PER_POINT, TAC_RAISE_MAX, TAC_GAP, TAC_H, TAC_TURN, TAC_W, flankOf, hexDir, hexDist, hexIndex, hexMirror, hexNeighbors } from '../shared/src/data/tactical.ts';
 import { act, aiChoice, blow, buildStacks, canShoot, makeField, meleeTargets, moralePoints, newBattle, quickFinish, reachOf, stackById, stepBattle } from '../server/src/game/tacbattle.ts';
 import type { TacBattle, TacSideInput, TacStack } from '../server/src/game/tacbattle.ts';
 import { sideOf } from '../server/src/game/tactical.ts';
@@ -315,7 +315,10 @@ test("on the ships: a captain's boarding opens the battle, the server checks eve
   assert.ok(bt.over, 'quick combat decided it');
   // (the beaten who came over to her as it ended joined it: owner, 2026-10-08, crew.ts beatenJoin)
   const came = (ship.boarding?.fight.tacJoined?.[0] ?? []).reduce((n, x) => n + x.n, 0);
-  assert.equal(ship.crew, crew0 - Math.min(bt.dead[0], crew0 - Math.max(2, Math.round(crew0 * 0.1))) + came, 'the fallen came off the crew');
+  // (docs/31: a won deck's wounded stand again beside First Aid, TAC_WOUNDED — at most TAC_RAISE_MAX of the fallen)
+  const fell = Math.min(bt.dead[0], crew0 - Math.max(2, Math.round(crew0 * 0.1)));
+  const stood = bt.over?.winner === 0 ? Math.ceil(fell * TAC_RAISE_MAX) : Math.ceil(fell * 0.5);
+  assert.ok(ship.crew >= crew0 - fell + came && ship.crew <= crew0 - fell + came + stood, 'the fallen came off the crew');
   assert.ok(npc.crew < foe0, 'and off hers');
   assert.equal(c.last('board_tac')!.view!.over!.winner, bt.over!.winner);
   // Held while its last blows are played (owner, 2026-10-08), then a moment more.
@@ -325,7 +328,9 @@ test("on the ships: a captain's boarding opens the battle, the server checks eve
   assert.equal(bt.over!.winner, 0, 'a full brig carries twenty pirates');
   const r = c.last('boarding')?.result;
   assert.ok(r && r.report?.tac, "the plunder card, with the battle's report");
-  assert.equal(r.crewLost, crew0 - ship.crew + came);
+  // (docs/31: the fallen reported; the wounded among them stood again after, TAC_WOUNDED — at most TAC_RAISE_MAX)
+  const net = crew0 - ship.crew + came;
+  assert.ok(r.crewLost >= net && r.crewLost - net <= Math.ceil(r.crewLost * TAC_RAISE_MAX), `${r.crewLost} fell, ${net} off the crew`);
   assert.equal(npc.lootLockedFor, ship.id, 'she is his to plunder');
 });
 

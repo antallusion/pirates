@@ -198,8 +198,9 @@ test('the chance is honest: the battles played afresh bear it out within 5%, and
   // neither — at ⚓5 she no longer contests an equal ship (her chance 0). With docs/25 item 8 (each volley before the
   // boarding thins her army) on top, ⚓6 against ⚓5 fell to 0.035; a hull two levels above hers is the real contest now
   // (shown 0.50, 1000 battles played 0.47). 2026-10-10 (owner: «чини атаку всем» — the boarding's blows its stacks'
-  // own, no lift against the sea): ⚓7 against ⚓5 is 0.95 now, ⚓6 against ⚓5 the contest (0.35).
-  const { game, me, foe } = pair(6, 5, 40);
+  // own, no lift against the sea): ⚓7 against ⚓5 is 0.95 now, ⚓6 against ⚓5 the contest (0.35). docs/31 (the sea's mix
+  // re-weighed as boarded, Tactics her own): this skill-less captain's ⚓6 against ⚓5 fell to 0.04, ⚓7 against ⚓5 is the contest.
+  const { game, me, foe } = pair(7, 5, 40);
   let calls = 0;
   const rng = game.rng as unknown as Record<string, (...a: unknown[]) => unknown>;
   for (const k of ['float', 'int', 'chance', 'range', 'pick', 'gauss', 'weighted']) {

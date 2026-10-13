@@ -4,6 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { headingVec } from '../shared/src/math.ts';
+import { armyForLevel } from '../shared/src/data/army.ts';
 import { BASIC_TACTICS, CAPTAIN_MOVES, MAX_ROUNDS, ROUND_WINDOW, TACTICS, counterTo, edgeOf } from '../shared/src/data/boarding.ts';
 import { aiPick, strikeScore } from '../server/src/game/boarding.ts';
 import type { Game } from '../server/src/game/Game.ts';
@@ -29,6 +30,9 @@ function atSea(game: Game, name: string, captain: Cap = 'corsair'): { c: FakeCon
   ship.loadout.classId = 'brig';
   ship.recompute(game.now);
   ship.crew = ship.stats.crewMax;
+  // docs/31: her ⚓5 crew as the ladder makes it (a hundred and ten deckhands is the bare crew, and the sea's ⚓5 pirates
+  // as boarded now hold their own against it: the odds window came up in place of the boarding).
+  ship.setArmy(armyForLevel(5, ship.crew, ship.armySlots, 'player'));
   ship.morale = 80;
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);
   return { c, ship };
@@ -239,7 +243,7 @@ test('two captains: the round resolves the moment both have given their orders',
     sh.region = game.regionAt(sh.state.x, sh.state.y);
     game.grid.upsert(sh.id, sh.state.x, sh.state.y);
   }
-  ca.push({ t: 'board', target: b.id, aggression: 'standard' });
+  ca.push({ t: 'board', target: b.id, aggression: 'standard', risk: true }); // (docs/31: two equal crews — the odds window first; she takes the risk)
   assert.ok(a.boarding, 'grappled');
   assert.equal(cb.last('board_fight')!.view!.attacker, false, 'the defender sees the fight too');
   steps(game, 25);

@@ -9,6 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { headingVec } from '../shared/src/math.ts';
 import type { ArmyStack } from '../shared/src/data/army.ts';
+import { TAC_RAISE_MAX } from '../shared/src/data/tactical.ts';
 import { JOIN_LOYALTY, joinAs, joinCount, joinKinds, joinShare, joinsFrom, maxRecruits } from '../server/src/game/crew.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
@@ -99,7 +100,8 @@ test('a boarding won: a share of the beaten come over to her army, shown on the 
   assert.ok(n > 0, 'some come over');
   assert.ok(n <= Math.round(beaten * joinShare(0)), `a small share: ${n} of ${beaten}`);
   const fell = Math.min(bt.dead[0], crew0 - Math.max(2, Math.round(crew0 * 0.1)));
-  assert.equal(ship.crew, crew0 - fell + n, 'into her army');
+  // (docs/31: a won deck's wounded stand again beside First Aid, TAC_WOUNDED — at most TAC_RAISE_MAX of the fallen)
+  assert.ok(ship.crew >= crew0 - fell + n && ship.crew <= crew0 - fell + n + Math.ceil(fell * TAC_RAISE_MAX), 'into her army');
   assert.ok(ship.crew <= ship.stats.crewMax);
   assert.ok(s.profile!.company.loyalty <= Math.max(loyal0, JOIN_LOYALTY) + 1e-9, 'turncoats\' heart');
   // The battle's end tells it.

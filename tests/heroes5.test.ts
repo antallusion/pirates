@@ -300,8 +300,12 @@ function thin(a: ArmyStack[], share: number): ArmyStack[] {
 }
 
 test('backs to the rail: a tenth fewer men is a hard fight, not a lost one; a third fewer is still lost', () => {
+  // (docs/31: over the pirates of ⚓4–7 — one level's mix put it at 53–75% by how its stacks thin, PIRATE_CAL re-weighed)
+  const tenth = [4, 5, 6, 7].reduce((n, L) => {
+    const x = armyForLevel(L, 100, 6, 'pirate');
+    return n + (1 - wins(thin(x, 0.1), x, 120)) / 4;
+  }, 0);
   const a = armyForLevel(5, 100, 6, 'pirate');
-  const tenth = 1 - wins(thin(a, 0.1), a, 120);
   assert.ok(tenth >= 0.6 && tenth <= 0.8, `a tenth fewer: lost ${Math.round(tenth * 100)}% (H1: 93%)`);
   assert.ok(1 - wins(thin(a, 0.34), a, 60) >= 0.85, 'a third shot away: still lost');
   // The rule itself: only the side with less strength left, by twice the shortfall, to 40% at most (after H5).

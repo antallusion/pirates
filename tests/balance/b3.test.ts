@@ -14,11 +14,13 @@ test('B3: after the same cannonade the strength left and the boarding chance sta
   for (const L of [3, 5, 7]) {
     const by = (rule: LossRule) => {
       let w = 0, pc = 0, pp = 0;
-      for (let r = 0; r < 3; r++) {
+      // (docs/31: six cannonades of 120 boardings — with the pirates' new mix three of 60 read ⚓5 56% → 73% on the dice;
+      // 1 200 a cell put the two rules 4–10 points apart at ⚓3–7)
+      for (let r = 0; r < 6; r++) {
         const c = cannonade(L, 'player', rule, 11 + r), p = cannonade(L, 'pirate', rule, 101 + r);
-        w += winRate(c, p, 60) / 3;
-        pc += armyPower(c) / armyPower(armyForLevel(L, 120, 7, 'player')) / 3;
-        pp += armyPower(p) / armyPower(armyForLevel(L, 120, 7, 'pirate')) / 3;
+        w += winRate(c, p, 120) / 6;
+        pc += armyPower(c) / armyPower(armyForLevel(L, 120, 7, 'player')) / 6;
+        pp += armyPower(p) / armyPower(armyForLevel(L, 120, 7, 'pirate')) / 6;
       }
       return { w, pc, pp };
     };
