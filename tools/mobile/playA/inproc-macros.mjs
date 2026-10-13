@@ -171,6 +171,14 @@ export async function tp(B, x, y, why = '') {
   const eat = provisionsPerMinute(ship.crew, ship.stats.provisionUse) * (T / 60);
   const had = ship.cargo.provisions ?? 0;
   ship.cargo.provisions = Math.max(0, had - eat);
+  // (band C: a long passage calls at the harbours on the way for food — what she ate past her stores is bought there,
+  // at a price over the base, and she sails on with what she had)
+  if (B.restockEnRoute) {
+    // she arrives with a voyage of food (half her hold at most), what she ate past her stores bought on the way
+    const want = Math.min((ship.stats.holdVolume * 0.5) / Math.max(0.05, ship.stats.provisionVolumeMul), provisionsPerMinute(ship.crew, ship.stats.provisionUse) * 10);
+    const buy = Math.max(0, Math.ceil(want - ship.cargo.provisions)), cost = Math.round(buy * 14);
+    if (buy > 0 && p.gold >= cost) { p.gold -= cost; B.game.db.ledger(s.accountId, 'food en route', -cost, ''); ship.cargo.provisions += buy; }
+  }
   if (!ship.cargo.provisions) delete ship.cargo.provisions;
   const c = p.company;
   if (c) c.owed += ((wagesPerHour(c) * wageMul(ship)) * T) / 3600;
