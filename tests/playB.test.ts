@@ -222,3 +222,28 @@ test('a broke captain\'s share hands take her past half her hammocks: a frigate 
   game.setNpcLevel(o, 6);
   assert.equal(npcWouldBoard(game, o, ship), false);
 });
+
+test('a pirate sunk for a job her own flag gave costs no standing with that flag (Cinderhold\'s hunts barred her from Cinderhold)', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { JOBS } = await import('../shared/src/data/quests.ts');
+  const { game } = makeGame();
+  join(game, 'Hunt Hob');
+  const s = game.sessionByName('Hunt Hob')!;
+  const p = s.profile!, ship = s.ship!;
+  const job = JOBS.find((q) => q.port === 'cinderhold' && q.steps[0].type === 'sink' && (q.steps[0] as { role?: string }).role === 'pirate')!;
+  assert.ok(job, 'Cinderhold posts a pirate hunt');
+  const st = job.steps[0] as { region?: string };
+  const pirate = () => {
+    const o = game.spawnNpcShip('pirate', 'brig', 'confederacy', ship.state.x + 300, ship.state.y, 0);
+    o.region = (st.region ?? 'ashen_isles') as never;
+    return o;
+  };
+  p.level = 30;
+  p.reputation.confederacy = 0;
+  (game as unknown as { creditKill(a: unknown, b: unknown, how: string): void }).creditKill(ship, pirate(), 'sunk');
+  const r1 = p.reputation.confederacy ?? 0;
+  assert.ok(r1 < 0, `no job: the Brethren remember it (${r1})`);
+  p.quests.active.push({ id: job.id, step: 0, progress: 0, startedAt: game.now });
+  (game as unknown as { creditKill(a: unknown, b: unknown, how: string): void }).creditKill(ship, pirate(), 'sunk');
+  assert.equal(p.reputation.confederacy, r1, 'the job their own harbour gave: no standing lost');
+});
