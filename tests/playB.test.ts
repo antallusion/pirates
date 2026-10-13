@@ -151,3 +151,25 @@ test('plundered shot fills her magazine and no more (8 300 round shot piled up b
   ship.ammo.round = cap + 500;
   assert.equal(take(4000), 0, 'over-full (bought): none');
 });
+
+test('a scouting or rescue job sails to a sea next to her port, never into the Abyss (453 ran 33 km one way on the mean, 63 to the Abyss from level 12)', async () => {
+  const { makeGame } = await import('./helpers.ts');
+  const { JOBS } = await import('../shared/src/data/quests.ts');
+  const { game } = makeGame();
+  const reach = JOBS.filter((q) => q.steps.some((st) => st.type === 'reach'));
+  assert.ok(reach.length > 100, `${reach.length} such jobs`);
+  let far = 0;
+  for (const q of reach) {
+    const st = q.steps.find((x) => x.type === 'reach') as { region: string };
+    assert.notEqual(st.region, 'the_abyss', q.id);
+    const port = game.portById(q.port)!;
+    // the job's sea lies near the port: among the three whose nearest island is nearest (the jobs are drawn on the sea
+    // of their making, a few islets fewer than today's)
+    const d = new Map<string, number>();
+    for (const is of game.world.islands) if (is.region !== port.region && is.region !== 'the_abyss') d.set(is.region, Math.min(d.get(is.region) ?? Infinity, Math.hypot(is.x - port.x, is.y - port.y)));
+    const three = [...d.entries()].sort((a, b) => a[1] - b[1]).slice(0, 3).map(([r]) => r);
+    assert.ok(three.includes(st.region), `${q.id}: ${st.region} not among ${three}`);
+    if ((d.get(st.region) ?? 0) > 30000) far++;
+  }
+  assert.ok(far < reach.length * 0.1, `${far} of ${reach.length} past 30 km`);
+});
