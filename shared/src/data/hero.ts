@@ -175,9 +175,9 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     T('Your stacks take 10% less in a boarding; the ship 6% less at sea.', 'Ваши отряды получают на 10% меньше урона в абордаже; корабль на 6% меньше в море.'),
     T('Your stacks take 15% less in a boarding; the ship 9% less at sea.', 'Ваши отряды получают на 15% меньше урона в абордаже; корабль на 9% меньше в море.')] },
   tactics: { id: 'tactics', name: ['Tactics', 'Тактика'], icon: 'bt_officers', tree: 'command', text: [
-    T('Your line stands a hex nearer the planks (when her captain’s Tactics are lower); the first round +1 initiative.', 'Ваш строй стоит на гекс ближе к сходням (если у её капитана Тактика ниже); в первом раунде инициатива +1.'),
-    T('Your line two hexes nearer the planks; the first round +2 initiative.', 'Ваш строй на два гекса ближе к сходням; в первом раунде инициатива +2.'),
-    T('Your line two hexes nearer the planks; the first round +3 initiative.', 'Ваш строй на два гекса ближе к сходням; в первом раунде инициатива +3.')] },
+    T('Your first blow in a boarding draws no answer; the first round your shooters +1 initiative.', 'Ваш первый удар в абордаже остаётся без ответа; в первом раунде у ваших стрелков инициатива +1.'),
+    T('Your first two blows draw no answer; the first round your shooters +2 initiative.', 'Ваши первые два удара остаются без ответа; в первом раунде у ваших стрелков инициатива +2.'),
+    T('Your first three blows draw no answer; the first round your shooters +3 initiative.', 'Ваши первые три удара остаются без ответа; в первом раунде у ваших стрелков инициатива +3.')] },
   leadership: { id: 'leadership', name: ['Leadership', 'Лидерство'], icon: 'tree_command', tree: 'command', text: [
     T('Morale +1 in a boarding; the crew mends its heart 10% faster; Steel orders +15%.', 'Боевой дух +1 в абордаже; команда быстрее приходит в себя (+10%); приказы Стали +15%.'),
     T('Morale +2 in a boarding; the crew mends its heart 20% faster; Steel orders +30%.', 'Боевой дух +2 в абордаже; команда быстрее приходит в себя (+20%); приказы Стали +30%.'),
@@ -214,7 +214,7 @@ export const GM_TEXT: Record<SkillId, [string, string]> = {
   artillery: T('Guns +14%, reload −10%; shooters in a boarding +32%; Fire orders +60%.', 'Орудия +14%, перезарядка −10%; стрелки в абордаже +32%; приказы Огня +60%.'),
   boarding: T('Melee blows in a boarding +32%; boarding power +17%.', 'Удары в рукопашной +32%; сила абордажа +17%.'),
   armor: T('Your stacks take 16% less in a boarding; the ship 10% less at sea.', 'Ваши отряды получают на 16% меньше урона в абордаже; корабль на 10% меньше в море.'),
-  tactics: T('Even against an expert’s Tactics your line stands two hexes nearer the planks; the first round +3 initiative.', 'Даже против Тактики эксперта ваш строй стоит на два гекса ближе к сходням; в первом раунде инициатива +3.'),
+  tactics: T('Your first four blows draw no answer; the first round your shooters +3 initiative.', 'Ваши первые четыре удара остаются без ответа; в первом раунде у ваших стрелков инициатива +3.'),
   leadership: T('Morale +3 in a boarding; the crew mends its heart 40% faster; Steel orders +60%.', 'Боевой дух +3 в абордаже; команда быстрее приходит в себя (+40%); приказы Стали +60%.'),
   luck: T('Luck +3 in a boarding; treasure finds +40%.', 'Удача +3 в абордаже; находки кладов +40%.'),
   logistics: T('Speed at sea +11%.', 'Ход в море +11%.'),
@@ -474,7 +474,9 @@ export function shrineOrder(islandId: number): OrderId {
 }
 
 /** Hexes her line stands nearer the planks by her Tactics (HoMM3: the higher Tactics has the field, the lower none). */
-export const TACTICS_DEPLOY = [0, 1, 2, 2, 2];
+/** Tactics (balance pass 2026-10-13, docs/31): the blows of hers that draw no answer at a battle's start, by rank
+ *  (basic … grandmaster); her shooters' initiative in round one is `init1`. */
+export const TACTICS_FREE = [0, 1, 2, 3, 4];
 
 // ------------------------------------------------------------------ the hero in the boarding battle
 
