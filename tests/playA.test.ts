@@ -264,7 +264,7 @@ test('a warehouse\'s rent grows with the captain: 84 at 1, 180 at 5, the full 30
 });
 
 test('an empty chest and too few hands: volunteers sign on for a share, up to 1.5× her least crew, never more (docs/30)', async () => {
-  const { SHARE_HANDS } = await import('../server/src/game/crew.ts');
+  const { shareLine } = await import('../shared/src/data/crew.ts');
   const { game } = makeGame();
   const conn = join(game, 'Broke Bea');
   const s = game.sessionByName('Broke Bea')!;
@@ -275,11 +275,11 @@ test('an empty chest and too few hands: volunteers sign on for a share, up to 1.
   const port = game.portById(ship.docked!)!;
   game.tavernCrew.set(port.id, 50);
   conn.push({ t: 'hire_crew', qty: 20, prof: 'sailor' } as never);
-  assert.equal(ship.crew, Math.ceil(ship.stats.crewMin * SHARE_HANDS), 'to the share line');
+  assert.equal(ship.crew, shareLine(ship.stats.crewMin, ship.stats.crewMax), 'to the share line');
   assert.equal(p.gold, 0, 'nothing paid');
   assert.ok(conn.all('toast').some((t) => /for a share of the next spoils/.test(t.msg)));
   conn.push({ t: 'hire_crew', qty: 5, prof: 'sailor' } as never);
-  assert.equal(ship.crew, Math.ceil(ship.stats.crewMin * SHARE_HANDS), 'no more for nothing');
+  assert.equal(ship.crew, shareLine(ship.stats.crewMin, ship.stats.crewMax), 'no more for nothing');
 });
 
 test('short of the yard\'s bill, she is mended as far as her silver goes (docs/30)', async () => {

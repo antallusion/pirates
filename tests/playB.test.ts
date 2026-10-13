@@ -200,3 +200,25 @@ test('a barge is as big as her town hall: hall 3 brings three loads at once (260
   assert.equal(y.res.coal, BARGE.coal! * 3);
   assert.equal(1e6 - s.profile!.gold, cost, 'paid what the card says');
 });
+
+test('a broke captain\'s share hands take her past half her hammocks: a frigate is not left «broken» to every pirate (60 of 220 was 90)', async () => {
+  const { makeGame, join, onHull } = await import('./helpers.ts');
+  const { shareLine } = await import('../shared/src/data/crew.ts');
+  const { npcWouldBoard } = await import('../server/src/game/army.ts');
+  const { game } = makeGame();
+  const conn = join(game, 'Broke Bel');
+  const s = game.sessionByName('Broke Bel')!;
+  const ship = s.ship!;
+  onHull(game, ship, 'frigate', 6);
+  s.profile!.level = 30;
+  s.profile!.gold = 0;
+  ship.setArmy([{ u: 'deckhand', n: 20 }]);
+  game.tavernCrew.set(ship.docked!, 400);
+  conn.push({ t: 'hire_crew', qty: 300, prof: 'sailor' } as never);
+  assert.equal(ship.crew, shareLine(ship.stats.crewMin, ship.stats.crewMax));
+  assert.ok(ship.crew > ship.stats.crewMax * 0.5, `${ship.crew} of ${ship.stats.crewMax}`);
+  // a pirate of her level no stronger than her men does not grapple her as a broken ship
+  const o = game.spawnNpcShip('pirate', 'schooner', 'free', ship.state.x + 200, ship.state.y, 0);
+  game.setNpcLevel(o, 6);
+  assert.equal(npcWouldBoard(game, o, ship), false);
+});

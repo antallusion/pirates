@@ -40,7 +40,7 @@ import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
 import { dec1, esc, fishIcon, fmt, icon, money, officerIcon, quote, xpBadge } from './dom.ts';
 import { keyLabel, settings } from '../settings.ts';
-import { OFFICER_DEFS, PROFESSIONS, PROFESSION_DEFS } from '../../../shared/src/data/crew.ts';
+import { OFFICER_DEFS, PROFESSIONS, PROFESSION_DEFS, shareLine } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
 import { traitChips } from './crew.ts';
 import { dict, lang, plural } from '../i18n.ts';
@@ -759,8 +759,8 @@ ${orders}${berths}</div>` : ''}`;
     if (this.hire === null || this.hire > max || this.hireMax !== max) this.hire = max;
     this.hireMax = max;
     const why = room <= 0 ? W('tv.full') : view.crewAvailable <= 0 ? W('tv.none') : max <= 0 ? W('tv.poor') : '';
-    // docs/30: an empty chest and too few hands: volunteers for a share of the next spoils (server: crew.ts SHARE_HANDS)
-    const shareN = max <= 0 && room > 0 && view.crewAvailable > 0 ? Math.max(0, Math.min(room, view.crewAvailable, Math.ceil((state.ownStats?.crewMin ?? 0) * 1.5) - self.crew)) : 0;
+    // docs/30: an empty chest and too few hands: volunteers for a share of the next spoils (shared/src/data/crew.ts shareLine)
+    const shareN = max <= 0 && room > 0 && view.crewAvailable > 0 ? Math.max(0, Math.min(room, view.crewAvailable, shareLine(state.ownStats?.crewMin ?? 0, state.ownStats?.crewMax ?? 0) - self.crew)) : 0;
     const hire = `<div class="card tv-hire"><div class="tv-hire-h">${icon('stat_crew', '', 'ico-md')}<span><b>${esc(W('tv.men'))}</b><small class="muted">${esc(W('tv.room', { n: room, cost: fmt(view.crewHireCost) }))} · ${'★'.repeat(Math.round(tv.stars))}</small></span></div>
       ${why ? `<p class="muted tv-why">${esc(why)}</p>` : rangeHtml({ id: 'tv-hire', min: 0, max, value: this.hire, label: W('tv.men') })}
       ${shareN > 0 ? quickBtn({ label: W('tv.share'), sub: esc(W('tv.shareSub', { n: shareN })), primary: true, data: { act: 'hire_n', n: shareN } }) : ''}

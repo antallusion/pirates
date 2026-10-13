@@ -24,6 +24,7 @@ import { escortUpkeep } from './fleet.ts';
 import { grantDeed } from './progression.ts';
 import { onboardingProtected } from './onboarding.ts';
 import { PRACTICE_PER_LEVEL, practiceLevel } from '../../../shared/src/data/crewtalk.ts';
+import { shareLine } from '../../../shared/src/data/crew.ts';
 import { logNote } from './captainlog.ts';
 import { UNITS, isPremiumUnit } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
@@ -901,8 +902,7 @@ export function recruitCost(game: Game, port: Port, p: Profile, prof: Profession
   return Math.max(1, Math.round(base * mul));
 }
 
-/** The hands that sign on for a share when her chest is empty: this many times her ship's least crew (docs/30). */
-export const SHARE_HANDS = 1.5;
+export { SHARE_HANDS } from '../../../shared/src/data/crew.ts';
 
 /** Hire men of a trade. Sailors come from the waterfront; specialists from the tavern's stock. */
 export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profession, qty: number, dregs = false): string | null {
@@ -930,10 +930,11 @@ export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profes
   if (dregs && !scum) return 'Only a practised press-gang captain finds the dregs, and only in lawless ports';
   let cost = Math.round(n * recruitCost(game, port, p, prof, ship) * (scum ? 0.5 : 1));
   // docs/30: a captain with an empty chest and too few hands to fight is never stuck in port — volunteers sign on for a
-  // share of the next spoils, up to SHARE_HANDS × her ship's least crew, at a lower heart than paid men.
+  // share of the next spoils, up to the share line (shareLine: half again her least crew, past half her hammocks), at a
+  // lower heart than paid men.
   let share = false;
   if (p.gold < cost && prof === 'sailor' && !scum) {
-    const k = Math.min(n, Math.ceil(ship.stats.crewMin * SHARE_HANDS) - ship.crew);
+    const k = Math.min(n, shareLine(ship.stats.crewMin, ship.stats.crewMax) - ship.crew);
     if (k > 0) {
       n = k;
       cost = 0;
