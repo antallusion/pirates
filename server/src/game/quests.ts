@@ -15,6 +15,7 @@ import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { FACTIONS, wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { ARC_QUESTS, CAPTAINS_HOUSES, ISLAND_JOBS, JOBS, QUESTS, QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
+import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { hashString } from '../../../shared/src/rng.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
@@ -96,6 +97,26 @@ function payAllowed(game: Game, q: QuestDef, pay: QuestPay | undefined): QuestPa
   if (!pay || pay === 'silver' || !QUEST_PAYS.includes(pay)) return undefined;
   const o = payOptions(game, q);
   return o && (pay === 'stores' || o.favour) ? pay : undefined;
+}
+
+/** The goods her jobs carry in the hold: a delivery step under way (a quest's, an Admiralty contract's) and a port
+ *  contract's delivery. The recruiting window and the island's works leave them aboard (playthrough C: the Admiralty's
+ *  forty barrels of powder for Saltshoal went on the musketeers and gunners hired on the way, and she came in with 32 to
+ *  a delivery that asked 40, with no word why). */
+export function jobCargo(p: Profile | null | undefined): Partial<Record<GoodId, number>> {
+  const out: Partial<Record<GoodId, number>> = {};
+  if (!p) return out;
+  for (const qs of p.quests?.active ?? []) {
+    const st = QUESTS_BY_ID[qs.id]?.steps[qs.step];
+    if (st?.type === 'deliver') out[st.good] = (out[st.good] ?? 0) + st.qty;
+  }
+  for (const c of p.contracts ?? []) if (c.kind === 'delivery' && c.good && c.qty) out[c.good] = (out[c.good] ?? 0) + c.qty;
+  return out;
+}
+
+/** What of a good in her hold is hers to spend (what her jobs carry left aside). */
+export function freeCargo(s: PlayerSession, g: GoodId): number {
+  return Math.max(0, (s.ship?.cargo[g] ?? 0) - (jobCargo(s.profile)[g] ?? 0));
 }
 
 /** The hold lost (sunk, robbed): a job whose step is to deliver the goods it gave her goes back to taking them on — the

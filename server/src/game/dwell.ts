@@ -38,6 +38,7 @@ import type { Holding } from './holdings.ts';
 import type { PlayerSession } from './player.ts';
 import { islePools, isleWeekGrowth, keepsDeep, townHave, townLevel } from './town.ts';
 import { DWELL_UP_LEVEL } from '../../../shared/src/data/isletree.ts';
+import { freeCargo, jobCargo } from './quests.ts'; // playthrough C: her jobs' cargo is not hers to spend
 
 type Src = 'port' | 'isle';
 
@@ -160,14 +161,18 @@ function priceOf(game: Game, s: PlayerSession, at: Here, u: UnitId, n: number): 
 function have(game: Game, s: PlayerSession, at: Here): Partial<Record<GoodId, number>> {
   if (at.h && at.y) return townHave(game, s, at.h, at.y);
   const out: Partial<Record<GoodId, number>> = {};
-  for (const [g, n] of Object.entries(s.ship?.cargo ?? {}) as [GoodId, number][]) out[g] = Math.floor(n ?? 0);
+  for (const g of Object.keys(s.ship?.cargo ?? {}) as GoodId[]) out[g] = Math.floor(freeCargo(s, g));
   return out;
 }
 
 function lack(game: Game, s: PlayerSession, at: Here, goods: Partial<Record<GoodId, number>>): string | null {
   if (at.h && at.y) return lacking(at.h, at.y, s, lyingOff(game, s, at.h), goods);
-  const hold = s.ship!.cargo;
-  for (const [g, n] of Object.entries(goods) as [GoodId, number][]) if ((hold[g] ?? 0) < n) return `The hold lacks ${Math.ceil(n - (hold[g] ?? 0))} ${GOODS[g].name.toLowerCase()}.`;
+  const owed = jobCargo(s.profile);
+  for (const [g, n] of Object.entries(goods) as [GoodId, number][]) {
+    if (freeCargo(s, g) >= n) continue;
+    // (what her jobs carry is not hers to spend, and she is told so)
+    return owed[g] ? `The hold lacks ${Math.ceil(n - freeCargo(s, g))} ${GOODS[g].name.toLowerCase()}: ${owed[g]} of it is a job's cargo.` : `The hold lacks ${Math.ceil(n - freeCargo(s, g))} ${GOODS[g].name.toLowerCase()}.`;
+  }
   return null;
 }
 

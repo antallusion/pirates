@@ -47,6 +47,8 @@ export const SERVER_RU_H3: Record<string, string> = {
   'Not in the middle of a boarding': 'Не посреди абордажа',
   'The crew holds the ship: nobody signs on now': 'Корабль в руках команды: сейчас никто не наймётся',
   'The hold lacks {0} {1}.': 'В трюме не хватает: {1} — {0}.',
+  // playthrough C: what her jobs carry is left aboard
+  "The hold lacks {0} {1}: {2} of it is a job's cargo.": 'В трюме не хватает: {1} — {0}. {2} из них — груз задания.',
   'Unknown kind of man': 'Неизвестный вид бойцов',
   'Men of tier {0} serve a ship of level {1} and up.': 'Бойцы {0}-го уровня служат на кораблях от уровня {1}.',
   'silver': 'серебро',

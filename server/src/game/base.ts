@@ -37,6 +37,7 @@ import type { TreeId } from '../../../shared/src/data/isletree.ts';
 import { TREE_VERSION, migrateTree } from './holdings.ts';
 import type { TownState } from './town.ts';
 import { townOf } from '../../../shared/src/data/town.ts';
+import { freeCargo } from './quests.ts'; // playthrough C: her jobs' cargo is not hers to spend
 
 const HOUR = 3_600_000;
 /** Production is reckoned for three days at most at once (the yard is full long before). */
@@ -242,7 +243,7 @@ function freePlot(game: Game, h: Holding, y: Yard): number | null {
 
 /** What is to hand for a cost: the yard, the island's store, and the hold of a ship lying off the island. */
 function stock(h: Holding, y: Yard, s: PlayerSession, near: boolean, g: GoodId): number {
-  return (y.res[g] ?? 0) + (h.store[g] ?? 0) + (near ? (s.ship?.cargo[g] ?? 0) : 0);
+  return (y.res[g] ?? 0) + (h.store[g] ?? 0) + (near ? freeCargo(s, g) : 0); // (her jobs' cargo left aboard, quests.ts jobCargo)
 }
 
 export function lacking(h: Holding, y: Yard, s: PlayerSession, near: boolean, goods: Partial<Record<GoodId, number>>): string | null {
@@ -267,7 +268,14 @@ export function takeGoods(h: Holding, y: Yard, s: PlayerSession, near: boolean, 
     };
     from(y.res);
     if (n > 0) from(h.store);
-    if (n > 0 && near && s.ship) from(s.ship.cargo);
+    if (n > 0 && near && s.ship) {
+      const k = Math.min(n, freeCargo(s, g));
+      if (k > 0) {
+        s.ship.cargo[g] = (s.ship.cargo[g] ?? 0) - k;
+        if (!s.ship.cargo[g]) delete s.ship.cargo[g];
+        n -= k;
+      }
+    }
   }
 }
 

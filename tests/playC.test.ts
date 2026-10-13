@@ -50,3 +50,43 @@ test('hunting the Confederacy\'s pirates never makes her the enemy of the Free H
   for (let i = 0; i < 4; i++) changeRep(p, 'free', -6); // a Free Harbors ship sunk four times over
   assert.ok(!canDock(p, 'free').ok, 'her own deeds make her their enemy');
 });
+
+test('the recruiting window leaves a job\'s cargo aboard: the Admiralty\'s powder is not the musketeers\' (and she is told why)', async () => {
+  const { join } = await import('./helpers.ts');
+  const { recruit } = await import('../server/src/game/dwell.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { applyDataLocale } = await import('../client/src/lang/data.ts');
+  const { game } = makeGame();
+  join(game, 'Powder Keeper');
+  const s = game.sessionByName('Powder Keeper')!;
+  const p = s.profile!, ship = s.ship!;
+  p.level = 40;
+  ship.level = 40;
+  ship.loadout.classId = 'frigate';
+  ship.loadout.level = 7;
+  ship.recompute(game.now);
+  ship.docked = 'slagport';
+  p.docked = 'slagport';
+  p.gold = 50000;
+  ship.setArmy([{ u: 'deckhand', n: 40 }]);
+  ship.cargo = { gunpowder: 41 };
+  p.contracts.push({ id: 'cX', kind: 'delivery', title: 'Deliver 40 Gunpowder', fromPort: 'slagport', toPort: 'cinderhold', good: 'gunpowder', qty: 40, reward: 100, xp: 10, expiresAt: game.now + 9999 } as never);
+  const why = recruit(game, s, 'port', 'musketeer', 14);
+  assert.match(why ?? '', /^The hold lacks 3 gunpowder: 40 of it is a job's cargo\.$/);
+  assert.equal(ship.cargo.gunpowder, 41, 'the powder still aboard');
+  setLang('ru');
+  applyDataLocale('ru');
+  try {
+    const ru = serverText(why!);
+    assert.ok(/груз задания/.test(ru) && /порох/.test(ru), ru);
+    assert.doesNotMatch(ru, /[A-Za-z]/);
+  } finally {
+    setLang('en');
+    applyDataLocale('en');
+  }
+  // her own powder is hers to spend
+  p.contracts.length = 0;
+  assert.equal(recruit(game, s, 'port', 'musketeer', 14), null);
+  assert.ok((ship.cargo.gunpowder ?? 0) < 41);
+});
