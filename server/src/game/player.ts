@@ -481,6 +481,9 @@ export function addXp(p: Profile, amount: number): number {
 
 // ------------------------------------------------------------------ reputation & law
 
+/** How low a faction's friends' (or enemies') standing falls by what she did to it — never as far as their enemy (−50). */
+export const SPILL_FLOOR = -40;
+
 export function changeRep(p: Profile, faction: FactionId, delta: number): void {
   const nobody = (p.talents.smg_nobodys_ship ?? 0) > 0; // Nobody's Ship: standing grows at half speed
   const ledger = (p.talents.smg_black_ledger ?? 0) > 0; // Black Ledger: the League never trusts you
@@ -493,6 +496,11 @@ export function changeRep(p: Profile, faction: FactionId, delta: number): void {
     const cur = p.reputation[f] ?? 0;
     let next = cur + d;
     if (d > 0 && ledger && f === 'league') next = Math.min(next, Math.max(cur, 0)); // never above neutral
+    // Playthrough C: a faction's friends think less of her for what she did to it, but only her own deeds against them
+    // make her their enemy. Each pirate of the Confederacy sunk took 0.54 off the Free Harbors and 0.72 off the Brokers:
+    // a captain of level 42 who had hunted the pirates her quests asked for was refused by 77 of the 107 harbours of the
+    // ⚓6–9 waters (the Free Harbors, the Confederacy and the Brokers all at −98…−100).
+    if (f !== faction && d < 0) next = Math.max(next, Math.min(cur, SPILL_FLOOR));
     p.reputation[f] = Math.max(-100, Math.min(100, next));
   }
 }

@@ -38,3 +38,15 @@ test('a pirate of the wild waters keeps her beat out of the calm square under a 
   assert.ok(planned > 100, `she still finds her beat (${planned}/200)`);
   assert.equal(inCalm, 0, 'no waypoint in the calm square');
 });
+
+test('hunting the Confederacy\'s pirates never makes her the enemy of the Free Harbors or the Brokers; her own deeds against them do', async () => {
+  const { changeRep, canDock, SPILL_FLOOR } = await import('../server/src/game/player.ts');
+  const p = { reputation: {}, talents: {}, infamy: 0 } as never as Parameters<typeof changeRep>[0];
+  for (let i = 0; i < 400; i++) changeRep(p, 'confederacy', -6); // 400 pirates sunk
+  assert.equal(p.reputation.confederacy, -100);
+  assert.ok((p.reputation.free ?? 0) >= SPILL_FLOOR && (p.reputation.brokers ?? 0) >= SPILL_FLOOR, JSON.stringify(p.reputation));
+  assert.ok(canDock(p, 'free').ok && canDock(p, 'brokers').ok, 'their harbours still have her');
+  assert.ok(!canDock(p, 'confederacy').ok, 'the Confederacy\'s do not');
+  for (let i = 0; i < 4; i++) changeRep(p, 'free', -6); // a Free Harbors ship sunk four times over
+  assert.ok(!canDock(p, 'free').ok, 'her own deeds make her their enemy');
+});
