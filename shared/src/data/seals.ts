@@ -55,14 +55,15 @@ export const SEAL_FURY = 0.3;
 export const SEAL_SHIELDS = { cut: 0.35, rounds: 2 } as const;
 export const SEAL_REINFORCE = { rounds: [3, 6] as readonly number[], share: 0.2 } as const;
 
-/** The seal's might: SEAL_BASE times the lair at seal 2, SEAL_GROW times more each level (×24.6 at 20). Playthrough C:
+/** The seal's might: SEAL_BASE times the lair at seal 2, SEAL_GROW times more each level (×4.07 at 20). Playthrough C:
  *  the table was weighed on a captain without her hero (tests/balance/seals.ts), and ashore her hero lays her Attack on
  *  every stack, her skills, artifacts and book — a fresh captain of the cap took seals 2 to 20 in ten depths running, two
- *  or three rounds each (1 + 0.07 a level: seal 20 was ×2.26). Now against the cap's own captain (her level's skills and
- *  artifacts, her man-of-war's crew as the yard fits her): seal 2 always, 10 nine times in ten, 14 one in two, 20 hardly
- *  ever; geared (a fifth more men), 14 four in five and 20 in time one in twenty. */
-export const SEAL_BASE = 3.2;
-export const SEAL_GROW = 1.12;
+ *  or three rounds each (1 + 0.07 a level). Now against the cap's own captain (her level's skills and artifacts, her
+ *  man-of-war's crew as the yard fits her) and the lairs as they stand weighed with her hero (lairs.ts LAIR_CAL): seal 2
+ *  always, 10 nineteen times in twenty, 14 one in two, 20 hardly ever; geared (a fifth more men), 14 four in five and 20
+ *  in time one in fifteen. */
+export const SEAL_BASE = 0.85;
+export const SEAL_GROW = 1.09;
 
 export function clampSeal(lv: number): number {
   return Math.max(SEAL_MIN, Math.min(SEAL_MAX, Math.round(lv) || SEAL_MIN));
