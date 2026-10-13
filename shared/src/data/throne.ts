@@ -125,14 +125,14 @@ export const MASTERY: MasteryNode[] = [
   N('adm_grape', 'admiral', 2, 1, 'ab_admiralty_barrage', T('Grape and canister', 'Картечь и картуши'), T('Shot kills 6% more of her men.', 'Ядра и картечь выбивают на 6% больше людей.'), { sea: { crewKillMul: 0.06 } }),
   N('adm_chain', 'admiral', 2, 1, 'ab_hard_over', T('Chain and bar', 'Книппели'), T('Her canvas takes 6% more.', 'Её паруса получают на 6% больше.'), { sea: { sailDamageMul: 0.06 } }),
   N('adm_squadron', 'admiral', 3, 1, 'bt_officers', T('Squadron', 'Эскадра'), T('Escorts’ upkeep −10%.', 'Содержание конвоя −10%.'), { sea: { fleetLogistics: 0.5 } }),
-  N('adm_line', 'admiral', 3, 1, 'bt_captain', T('Line of battle', 'Линия баталии'), T('Shooters in a boarding +1%; guns +1%.', 'Стрелки в абордаже +1%; орудия +1%.'), { sea: { gunDamageMul: 0.01 }, battle: { shot: 0.01 } }),
+  N('adm_line', 'admiral', 3, 1, 'bt_captain', T('Line of battle', 'Линия баталии'), T('Guns +2%.', 'Орудия +2%.'), { sea: { gunDamageMul: 0.02 } }),
   // Boarder: the stacks in the boarding.
   N('brd_cutlass', 'boarder', 1, 2, 'bt_charge', T('Cutlass drill', 'Выучка абордажной саблей'), T('Melee blows in a boarding +1% a rank.', 'Удары в рукопашной +1% за ранг.'), { battle: { melee: 0.01 } }),
   N('brd_muskets', 'boarder', 1, 2, 'bt_grenades', T('Muskets on the rail', 'Мушкеты у борта'), T('Shooters in a boarding +1% a rank.', 'Стрелки в абордаже +1% за ранг.'), { battle: { shot: 0.01 } }),
-  N('brd_hold', 'boarder', 2, 2, 'ab_smoke_pots', T('Hold the deck', 'Удержать палубу'), T('Your stacks take 1% less a rank.', 'Ваши отряды получают на 1% меньше урона за ранг.'), { battle: { taken: 0.01 } }),
+  N('brd_hold', 'boarder', 2, 1, 'ab_smoke_pots', T('Hold the deck', 'Удержать палубу'), T('Your stacks take 1% less.', 'Ваши отряды получают на 1% меньше урона.'), { battle: { taken: 0.01 } }),
   N('brd_nerve', 'boarder', 2, 1, 'ab_war_cry', T('Iron nerve', 'Железные нервы'), T('Morale +1 in a boarding.', 'Боевой дух +1 в абордаже.'), { battle: { morale: 1 } }),
   N('brd_luck', 'boarder', 2, 1, 'coin', T('Lucky blade', 'Счастливый клинок'), T('Luck +1 in a boarding.', 'Удача +1 в абордаже.'), { battle: { luck: 1 } }),
-  N('brd_first', 'boarder', 3, 1, 'ab_red_hook_boarding', T('First over the rail', 'Первым через борт'), T('Melee blows and shots in a boarding +1%; boarding power +3%.', 'Удары и выстрелы в абордаже +1%; сила абордажа +3%.'), { sea: { boardingPower: 0.03 }, battle: { melee: 0.01, shot: 0.01 } }),
+  N('brd_first', 'boarder', 3, 1, 'ab_red_hook_boarding', T('First over the rail', 'Первым через борт'), T('Shots in a boarding +1%; boarding power +3%.', 'Выстрелы в абордаже +1%; сила абордажа +3%.'), { sea: { boardingPower: 0.03 }, battle: { shot: 0.01 } }),
   N('brd_surgeons', 'boarder', 3, 1, 'prof_surgeon', T('Surgeons below', 'Лекари в трюме'), T('After a boarding 5 in a hundred more of your fallen stand again.', 'После абордажа ещё 5 из сотни павших встают на ноги.'), { battle: { raise: 0.05 } }),
   // Mystic: orders, will and stamina.
   N('mys_well', 'mystic', 1, 2, 'ab_brine_mend', T('Deep well', 'Глубокий колодец'), T('Your store of will +5% a rank.', 'Запас воли +5% за ранг.'), { battle: { will: 0.05 } }),
@@ -194,8 +194,11 @@ export const masteryOther = (m: MasteryRanks): OtherFx => sumFx(m, 'other');
 // ------------------------------------------------------------------ glory and mastery on the hero
 
 /** The endgame's lift of her blows, shots and armour in a boarding is held under this, whatever is stacked
- *  (glory boons, nodes): so the cap and far past it stay one game. */
-export const ENDGAME_CAP = { melee: 0.03, shot: 0.03, taken: 0.02, orders: 0.05 };
+ *  (glory boons, nodes): so the cap and far past it stay one game. Playthrough C: the cap is what the boons and the
+ *  nodes come to together, so no choice is lost under it (it was 3/3/2%: the third boon of Defence and every Boarder
+ *  node of blows, shots and armour added nothing once the boons were taken, from glory 10 on); a captain of glory 100
+ *  with every boon, node and grandmaster still wins 65% against a fresh captain of the cap (tools/balance-glory.ts). */
+export const ENDGAME_CAP = { melee: 0.05, shot: 0.06, taken: 0.04, orders: 0.05 };
 
 /** What glory and mastery add to her hero in the boarding battle, on top of her skills and artifacts. */
 export interface ThroneLift {

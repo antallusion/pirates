@@ -90,3 +90,16 @@ test('the recruiting window leaves a job\'s cargo aboard: the Admiralty\'s powde
   assert.equal(recruit(game, s, 'port', 'musketeer', 14), null);
   assert.ok((ship.cargo.gunpowder ?? 0) < 41);
 });
+
+test('the Throne: every boon of glory and every node of mastery counts in a boarding — the cap is what they come to together', async () => {
+  const { ENDGAME_CAP, GLORY_CAP, GLORY_STEP, MASTERY, throneLift } = await import('../shared/src/data/throne.ts');
+  const all = Object.fromEntries(MASTERY.map((n) => [n.id, n.max]));
+  const picks = { atk: GLORY_CAP, def: GLORY_CAP, pow: GLORY_CAP, will: GLORY_CAP };
+  const lift = throneLift(picks, all);
+  // each line: her three boons of its primary and every node's ranks of it
+  const raw = (k: 'melee' | 'shot' | 'taken' | 'orders') => GLORY_CAP * GLORY_STEP + MASTERY.reduce((a, n) => a + (n.battle?.[k] ?? 0) * n.max, 0);
+  for (const k of ['melee', 'shot', 'taken', 'orders'] as const) {
+    assert.ok(Math.abs(lift[k] - raw(k)) < 1e-9, `${k}: ${lift[k]} of ${raw(k)} — a choice lost under the cap`);
+    assert.ok(lift[k] <= ENDGAME_CAP[k] + 1e-9);
+  }
+});
