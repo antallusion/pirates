@@ -7,17 +7,26 @@ import { HULL_PER_PLANK, SAILS_PER_CLOTH } from './dealings.ts';
 
 /** Provisions 40 hands eat in a minute at sea (docs/30: it was 6 — a starter sloop of 28 ate 252 units, 3 000 silver, an
  *  hour, more than her whole income at levels 1–3 (seaHour 1 920), and half her hold lasted 3½ minutes, so every novice
- *  sailed hungry; now ten minutes of it is 9 units, a third of her hold, some 600 silver an hour); and 1, not 1.2, so the mid game's warships with full crews feed them ten minutes from half
- *  their hold (QA playthrough B: a corvette or frigate carried 1.8 minutes of food at 6). */
-export const FOOD_PER_40 = 1;
+ *  sailed hungry; then 1, so the mid game's warships fed ten minutes from half their hold). Balance pass 2026-10-13
+ *  (docs/31): the quests' legs run 20–40 minutes and a voyage asked ten, so half a frigate's hold (11 minutes) never
+ *  saw a leg through; and the crews grow with the ⚓ faster than the waters' income (a sloop's 28 hands to a
+ *  man-of-war's 600–900), so food ate a quarter of a sloop's hour at sea and four fifths of a man-of-war's (playthrough
+ *  C: 19 000 an hour for 911 hands against seaHour 20 400). Now half the rate, and a great crew's mess feeds a head for
+ *  less (FOOD_MESS): food is a sixth of the hour at sea on a sloop, a fifth on a frigate, a quarter on a man-of-war of
+ *  900 hands. */
+export const FOOD_PER_40 = 0.5;
+/** A crew's mess: what a crew eats grows as its head count to this power (a big ship's galley and purser). */
+export const FOOD_MESS = 0.85;
 
-/** Provisions eaten a minute at sea: FOOD_PER_40 units for every 40 hands, times the ship's appetite (cooks, talents). */
+/** Provisions eaten a minute at sea: FOOD_PER_40 units for forty hands, grown by FOOD_MESS with the crew, times the
+ *  ship's appetite (cooks, talents). */
 export function provisionsPerMinute(crew: number, provisionUse = 1): number {
-  return (Math.max(0, crew) / 40) * FOOD_PER_40 * Math.max(0.1, provisionUse);
+  return Math.pow(Math.max(0, crew) / 40, FOOD_MESS) * FOOD_PER_40 * Math.max(0.1, provisionUse);
 }
 
-/** A normal voyage, port to port with a fight on the way, in real minutes at sea. */
-export const VOYAGE_MINUTES = 10;
+/** A normal voyage, port to port with a fight on the way, in real minutes at sea (docs/31: a quest's leg, 20–40
+ *  minutes; it was ten). */
+export const VOYAGE_MINUTES = 25;
 /** Food never asks for more than this share of the hold (the rest is for cargo). */
 export const FOOD_HOLD_SHARE = 0.5;
 /** Shot for a fight: this many broadsides. */
@@ -55,11 +64,11 @@ export type VoyageNeed =
  *  they ate 15–17 units a minute and half the hold fed them four minutes, the whole of it eight — never a voyage. A hull
  *  whose half hold feeds her crew ten minutes already (the sloop, the frigate, the galleon) keeps a whole cubic metre. */
 export function breadRoom(crewMax: number, holdVolume: number): number {
-  const voyage = (Math.max(0, crewMax) / 40) * FOOD_PER_40 * VOYAGE_MINUTES;
+  const voyage = provisionsPerMinute(crewMax) * VOYAGE_MINUTES;
   return Math.min(1, (Math.max(0, holdVolume) * FOOD_HOLD_SHARE) / Math.max(1, voyage));
 }
 
-/** The provisions a voyage wants: ten minutes of eating, held to half the hold. */
+/** The provisions a voyage wants: VOYAGE_MINUTES of eating, held to half the hold. */
 export function voyageFood(s: Pick<VoyageShip, 'crew' | 'provisionUse' | 'holdVolume' | 'provisionVolume'>): number {
   const want = Math.ceil(provisionsPerMinute(s.crew, s.provisionUse) * VOYAGE_MINUTES);
   return Math.max(1, Math.min(want, Math.floor((s.holdVolume * FOOD_HOLD_SHARE) / Math.max(0.05, s.provisionVolume))));

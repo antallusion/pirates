@@ -7,7 +7,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import type { MarketRow } from '../../../shared/src/protocol.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
-import { FOOD_PER_40, VOYAGE_MINUTES } from '../../../shared/src/data/voyage.ts';
+import { VOYAGE_MINUTES, provisionsPerMinute } from '../../../shared/src/data/voyage.ts';
 
 export const ECON_HOUR = 900; // production/consumption rates are "per 15 real minutes"
 const ELASTICITY = MARKET_ELASTICITY;
@@ -41,7 +41,7 @@ export const VICTUAL_VOYAGES = 1.5;
 /** The provisions mark a port of a square of `level` keeps for the ships of its waters. */
 export function victualTarget(level: number): number {
   const crew = VICTUAL_CREW[Math.max(0, Math.min(10, Math.round(level)))];
-  return (VICTUAL_VOYAGES * (crew / 40) * FOOD_PER_40 * VOYAGE_MINUTES) / 0.56;
+  return (VICTUAL_VOYAGES * provisionsPerMinute(crew) * VOYAGE_MINUTES) / 0.56;
 }
 
 /** A port's market; `level`: the ⚓ of the square it stands in (its provisions are kept for the ships of its waters). */
