@@ -8,7 +8,8 @@
 import { SHORE_BOSSES, SHORE_BOSS_IDS, SHORE_CAL, SHORE_LOSS } from '../../shared/src/data/shorebosses.ts';
 import type { ShoreBossId } from '../../shared/src/data/shorebosses.ts';
 import { simulateShore } from '../../server/src/game/shorebosses.ts';
-import { refParty } from './lairs.ts';
+import { heroLevelOf, refParty } from './lairs.ts';
+import { PATHS, captainAt } from './boardlen.ts';
 
 export interface ShoreFight {
   win: number;
@@ -21,7 +22,8 @@ export interface ShoreFight {
 export function shoreFight(kind: ShoreBossId, L: number, n = 16): ShoreFight {
   let win = 0, loss = 0, rounds = 0;
   for (let i = 0; i < n; i++) {
-    const r = simulateShore(kind, L, refParty(L), 1000 + i * 31);
+    const path = PATHS[i % PATHS.length];
+    const r = simulateShore(kind, L, refParty(L), 1000 + i * 31, captainAt(path, heroLevelOf(L), 11 + i), path);
     if (r.won) {
       win++;
       loss += r.lost;
@@ -45,8 +47,8 @@ export function calibrateShore(kinds: ShoreBossId[] = SHORE_BOSS_IDS, log?: (s: 
     const keep = [...SHORE_CAL[kind]];
     const row = keep.map(() => 0);
     for (const L of shoreLevels(kind)) {
-      let lo = Math.log(0.15), hi = Math.log(8);
-      for (let i = 0; i < 9; i++) {
+      let lo = Math.log(0.15), hi = Math.log(60);
+      for (let i = 0; i < 11; i++) {
         const mid = (lo + hi) / 2;
         SHORE_CAL[kind][L] = Math.exp(mid);
         if (shoreFight(kind, L).loss > SHORE_LOSS) hi = mid;

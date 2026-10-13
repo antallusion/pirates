@@ -139,12 +139,13 @@ export const SHORE_MOVES: Record<ShoreMove, Tr> = {
 /** The great one's multiple at each island level (index ⚓1–10; 0 where it never stands), on its hit points and its
  *  blows alike: what costs the reference captain of that level (tests/balance/lairs.ts's party, played by the sea's
  *  mind, who knows none of the counterplay) about SHORE_LOSS of the men she lands, a lost fight counting as all of them
- *  — rebuilt by bisection on the battle itself (calibrateShore, tests/balance/shore.ts; tests/bosses10.test.ts holds it). */
+ *  — rebuilt by bisection on the battle itself (calibrateShore, tests/balance/shore.ts; tests/bosses10.test.ts holds it).
+ *  Playthrough C: re-weighed with her hero ashore (lairs.ts heroLevelOf) — four to eight times what it stood at. */
 export const SHORE_CAL: Record<ShoreBossId, number[]> = {
-  mire_mother: [0, 0, 0, 0, 0, 0.41, 0.53, 0.96, 1.25, 1.82, 0],
-  cinder_salamander: [0, 0, 0, 0, 0, 0, 0.56, 1.01, 1.38, 1.85, 3.19],
-  drowned_abbess: [0, 0, 0, 0, 0, 0, 0, 1.85, 2.54, 3.93, 6.17],
-  walrus_tyrant: [0, 0, 0, 0, 0, 0.31, 0.45, 0.66, 1.25, 1.77, 0],
+  mire_mother: [0, 0, 0, 0, 0, 1.89, 2.75, 5.16, 8.24, 15.02, 0],
+  cinder_salamander: [0, 0, 0, 0, 0, 0, 2.43, 4.77, 7.66, 15.19, 26],
+  drowned_abbess: [0, 0, 0, 0, 0, 0, 0, 8.39, 12.93, 24.76, 40.48],
+  walrus_tyrant: [0, 0, 0, 0, 0, 1.52, 2.32, 4.16, 6.92, 14.93, 0],
 };
 /** The share of her landed men a great one costs the reference captain of its level, on average. */
 export const SHORE_LOSS = 0.55;

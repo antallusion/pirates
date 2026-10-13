@@ -51,6 +51,8 @@ import { seasonStat } from './seasons.ts';
 import { aiAct, blow, buildStacks, checkOver, isShooter, lossesOf, newBattle, stackById, tacHp, tacHurt, tacPush } from './tacbattle.ts';
 import type { TacBattle, TacSideInput, TacStack } from './tacbattle.ts';
 import { tattooCount } from './tattoos.ts';
+import type { HeroBattle } from '../../../shared/src/data/hero.ts';
+import type { CaptainId } from '../../../shared/src/data/captains.ts';
 
 /** Within this of the great one's spot (and the boats' reach of its island's shore) the land key lands against it. */
 export const SHORE_BOSS_REACH = 1100;
@@ -779,16 +781,17 @@ export function playOut(bt: TacBattle, rng: Rng, now: number): void {
 }
 
 /** A captain's side as the balance reckons it (no hero, no ladder). */
-function captainSide(army: ArmyStack[]): TacSideInput {
-  return { ...beastSide(army), captain: 'corsair', morale: 70, noBook: undefined };
+function captainSide(army: ArmyStack[], hero?: HeroBattle, captain: CaptainId = 'corsair'): TacSideInput {
+  return { ...beastSide(army), captain, morale: 70, noBook: undefined, ...(hero ? { hero } : {}) };
 }
 
 /** One battle ashore of a party against a great one at a level, both sides played by the sea's mind, the great one's
  *  moves by the director: who won, the share of her men she lost, the rounds, the moves played. */
-export function simulateShore(kind: ShoreBossId, level: number, party: ArmyStack[], seed: number): { won: boolean; lost: number; rounds: number; moves: Partial<Record<ShoreMove, number>> } {
+export function simulateShore(kind: ShoreBossId, level: number, party: ArmyStack[], seed: number, hero?: HeroBattle, captain: CaptainId = 'corsair'): { won: boolean; lost: number; rounds: number; moves: Partial<Record<ShoreMove, number>> } {
   const rng = new Rng(seed);
   const def = SHORE_BOSSES[kind];
-  const bt = newBattle(captainSide(party), { ...beastSide(shoreArmy(kind, level)), name: def.name[0] }, seed, 0, rng, { land: def.types[0] });
+  // (playthrough C: with her hero, as a captain lands — tests/balance/lairs.ts heroLevelOf)
+  const bt = newBattle(captainSide(party, hero, captain), { ...beastSide(shoreArmy(kind, level)), name: def.name[0] }, seed, 0, rng, { land: def.types[0] });
   const d = startDuel(bt, kind, level);
   playOut(bt, rng, 0);
   const men = party.reduce((a, x) => a + x.n, 0);
