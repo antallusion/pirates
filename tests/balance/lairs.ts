@@ -13,11 +13,26 @@ import { Rng } from '../../shared/src/rng.ts';
 import { lossesOf, newBattle, quickFinish } from '../../server/src/game/tacbattle.ts';
 import type { TacSideInput } from '../../server/src/game/tacbattle.ts';
 import { refArmy } from './guards.ts';
+import { PATHS, captainAt } from './boardlen.ts';
+import type { HeroBattle } from '../../shared/src/data/hero.ts';
+import type { CaptainId } from '../../shared/src/data/captains.ts';
+import { CAPTAIN_LEVEL_FOR_SHIP } from '../../shared/src/data/shiplevel.ts';
+import { MAX_LEVEL } from '../../shared/src/constants.ts';
 
-const side = (army: ArmyStack[], beasts: boolean): TacSideInput => ({
-  name: beasts ? 'Lair' : 'Captain', ship: beasts ? 'Island' : 'Wake', captain: beasts ? null : 'corsair', hands: 0, marines: 0, gunners: 0, army, officers: [], skill: 3,
+const side = (army: ArmyStack[], beasts: boolean, hero?: HeroBattle, captain: CaptainId = 'corsair'): TacSideInput => ({
+  name: beasts ? 'Lair' : 'Captain', ship: beasts ? 'Island' : 'Wake', captain: beasts ? null : captain, hands: 0, marines: 0, gunners: 0, army, officers: [], skill: 3,
   morale: beasts ? 50 : 70, dealt: 1, power: 1, melee: 1, extraShots: 0, firstRush: 1, nets: 0, blooded: 0, castle: false, struck: false, human: false, ...(beasts ? { noBook: true } : {}),
+  ...(hero ? { hero } : {}),
 });
+
+/** Playthrough C: the captain lands with her hero — her Attack on every stack, her skills, artifacts, book and path —
+ *  and ashore the hero is most of the fight: the lairs were weighed on a party without one, and a captain of ⚓4–10 with
+ *  her hero lost 2–8% of her men where the table asked 30% (a captain of 40 routed them in a round). The hero of the
+ *  middle of the ⚓'s captains (CAPTAIN_LEVEL_FOR_SHIP), her path in turn, in her level's kit (boardlen.ts captainAt). */
+export const heroLevelOf = (L: number): number => {
+  const lo = CAPTAIN_LEVEL_FOR_SHIP[Math.max(1, Math.min(10, L))], hi = L >= 10 ? MAX_LEVEL + 1 : CAPTAIN_LEVEL_FOR_SHIP[L + 1];
+  return Math.round((lo + hi - 1) / 2);
+};
 
 /** The men the captain of ⚓L lands. */
 export const refParty = (L: number): ArmyStack[] => landParty(refArmy(L));
@@ -32,14 +47,15 @@ export interface LairFight {
 }
 
 /** `n` battles ashore of her party against the lair's creatures (quick battle), on its first kind of island. */
-export function landFight(me: ArmyStack[], lair: ArmyStack[], kind: LairKind, n = 24): LairFight {
+export function landFight(me: ArmyStack[], lair: ArmyStack[], kind: LairKind, n = 24, heroL = 0): LairFight {
   let win = 0, lostWin = 0, loss = 0, refill = 0;
   const men = armyMen(me);
   const land = LAIRS[kind].types[0];
   for (let k = 0; k < n; k++) {
     const seed = k * 37 + 11;
     const rng = new Rng(seed);
-    const bt = newBattle(side(me, false), side(lair, true), seed, 0, rng, { land });
+    const path = PATHS[k % PATHS.length];
+    const bt = newBattle(side(me, false, heroL ? captainAt(path, heroL, 11 + k) : undefined, path), side(lair, true), seed, 0, rng, { land });
     quickFinish(bt, 0, rng);
     if (bt.over!.winner === 0) {
       const lost = lossesOf(bt, 0);
@@ -53,7 +69,7 @@ export function landFight(me: ArmyStack[], lair: ArmyStack[], kind: LairKind, n 
   return { win: win / n, lostWin: win ? lostWin / win : 1, loss: loss / n, refill: win ? refill / win : armyCost(me) };
 }
 
-export const lairFight = (kind: LairKind, L: number, size: LairSize, n = 24): LairFight => landFight(refParty(L), lairArmy(kind, L, size), kind, n);
+export const lairFight = (kind: LairKind, L: number, size: LairSize, n = 24): LairFight => landFight(refParty(L), lairArmy(kind, L, size), kind, n, heroLevelOf(L));
 
 /** The levels a kind of lair lives at. */
 export const levelsOf = (kind: LairKind): number[] => {
@@ -76,11 +92,11 @@ export function calibrate(kinds: LairKind[] = LAIR_KINDS, log?: (s: string) => v
       const me = refParty(L), base = lairBaseArmy(kind, L);
       const fixed = LAIRS[kind].role !== 'shore';
       const row = LAIR_SIZES.map((size) => {
-        let lo = Math.log(0.05), hi = Math.log(15);
-        for (let i = 0; i < 10; i++) {
+        let lo = Math.log(0.05), hi = Math.log(80);
+        for (let i = 0; i < 11; i++) {
           const mid = (lo + hi) / 2;
           const g = base.map((s, j) => ({ u: s.u, n: fixed && j === 0 ? s.n : Math.max(1, Math.round(s.n * Math.exp(mid))) }));
-          if (landFight(me, g, kind).loss > LAIR_LOSS[size]) hi = mid;
+          if (landFight(me, g, kind, 24, heroLevelOf(L)).loss > LAIR_LOSS[size]) hi = mid;
           else lo = mid;
         }
         return Math.round(Math.exp((lo + hi) / 2) * 100) / 100;
