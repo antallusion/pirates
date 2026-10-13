@@ -520,7 +520,7 @@ export async function auto(B, a = {}) {
       await sellLoot(B);
       const up = await upgrade(B);
       if (up?.to) log.push(`new hull: ${JSON.stringify(up)}`);
-      await refit(B, { food: a.food ?? 18 });
+      await refit(B, { food: a.food ?? 18, ...(a.round ? { round: a.round } : {}) });
       const took = await takeWork(B);
       if (took.length) log.push(`took: ${took.join('; ')}`);
     }

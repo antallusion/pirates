@@ -24,6 +24,8 @@ const TOK = process.env.TOKFILE ?? 'data/inproc-band2-token.json';
 const LOG = process.env.LOGFILE ?? 'data/inproc-band2-heard.log';
 const BOOK = process.env.BOOK ?? 'data/inproc-band2-book.jsonl';
 const NAME = process.env.NAME ?? 'Anna Shtil';
+// (band C: its own macros on top of these — MACROS=../playC/macros.mjs)
+const MACROS = new URL(process.env.MACROS ?? './inproc-macros.mjs', import.meta.url).href;
 process.env.GRAVETIDE_ADMIN = '1';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -142,7 +144,7 @@ function levelUp(from, to) {
 // ---------------------------------------------------------------- the clock
 let reflexMod = null, reflexAt = 0;
 async function reflexes() {
-  if (!reflexMod || Date.now() - reflexAt > 10000) { reflexMod = await import(new URL('./inproc-macros.mjs', import.meta.url).href + '?' + Date.now()); reflexAt = Date.now(); }
+  if (!reflexMod || Date.now() - reflexAt > 10000) { reflexMod = await import(MACROS + '?' + Date.now()); reflexAt = Date.now(); }
   return reflexMod;
 }
 /** The world on for `sec` seconds of its own time; her reflexes every half second; `until` ends it early. */
@@ -199,7 +201,7 @@ createServer(async (req, res) => {
       }
       case '/book': out = B.book; break;
       case '/run': {
-        const m = await import(new URL('./inproc-macros.mjs', import.meta.url).href + '?' + Date.now());
+        const m = await import(MACROS + '?' + Date.now());
         reflexMod = m;
         const fn = m[q.m];
         if (!fn) { out = `no macro ${q.m}`; break; }
@@ -222,4 +224,4 @@ createServer(async (req, res) => {
   res.setHeader('content-type', 'application/json; charset=utf-8');
   res.end(JSON.stringify(out, null, 1));
 }).listen(CPORT, () => console.log(`inproc on :${CPORT}, pid ${process.pid}`));
-writeFileSync('data/inproc-band2.pid', String(process.pid));
+writeFileSync(process.env.PIDFILE ?? 'data/inproc-band2.pid', String(process.pid));
