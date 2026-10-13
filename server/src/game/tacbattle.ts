@@ -13,7 +13,7 @@ import type { UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import {
   TAC_AI_DELAY, TAC_BLOCKING, TAC_FAST, TAC_BURN, TAC_CHANCE_PER_POINT, TAC_COVER, TAC_FEAR, TAC_FLANK, TAC_GAP, TAC_H, TAC_LONG_SHOT, TAC_MAX_ROUNDS, TAC_ORDER_OF, TAC_SPELLS, TAC_TURN, TAC_UNITS, TAC_W,
   TAC_PLAY_WINDOW, TAC_SIGNATURE, captainSpells, flankOf, hexDir, hexDist, hexIndex, hexMirror, hexNeighbors, hexX, hexY, kindOfUnit, tacSchedule, TAC_DECK_COVER, deckCover, unitResist,
-  SIEGE, insideWalls, isGateCell, siegeCell, siegePart, TAC_LEN, TAC_GROUP, TAC_ROLES, tacBring, tacEcho, tacLevel, tacBankSecs, tacFlagHex, tacTurnSecs,
+  SIEGE, insideWalls, isGateCell, siegeCell, siegePart, TAC_LEN, TAC_GROUP, TAC_ROLES, tacBring, tacEcho, tacLevel, tacBankSecs, tacFlagHex, tacGrit, tacTurnSecs,
 } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacKind, TacOrderId, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import type { TacAction, TacAllyView, TacEvent, TacHeroView, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
@@ -257,6 +257,8 @@ export interface TacBattle {
    *  its blows (owner, 2026-10-10: the tempo, the sea's lift and the opening round's scale are gone). */
   level: number;
   len?: TacLen;
+  /** docs/31: a boarding of two captains alone — her stacks' hit points ×this (tacGrit). */
+  grit?: number;
   /** docs/25 item 48: the turn running on a captain's chess clock — whose, and from when (her clock starts once what
    *  came before her turn is played). */
   clock?: { side: 0 | 1; from: number; slot?: number };
@@ -642,6 +644,18 @@ export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: n
     level, ...(opts.len ? { len: opts.len } : {}),
     ...(board && !land && !opts.arena && level >= TAC_LEN.flag.level ? { flag: { hex: [tacFlagHex(0), tacFlagHex(1)] as [number, number], held: [0, 0] as [number, number], open: [false, false] as [boolean, boolean] } } : {}),
   };
+  // docs/31: two captains alone aboard — their crews' grit (tacGrit), every stack's hit points.
+  const grit = board && !land && !opts.arena && !sg && a.human && b.human && !opts.allies?.length ? tacGrit(level) : 1;
+  if (grit > 1) {
+    bt.grit = grit;
+    for (const s of bt.stacks) {
+      s.hpMax = Math.max(1, Math.round(s.hpMax * grit));
+      s.hpTop = s.hpMax;
+    }
+    for (const [h, side] of [[bt.heroes[0], 0], [bt.heroes[1], 1]] as const) {
+      h.startHp = bt.stacks.filter((s) => s.side === side).reduce((n, s) => n + hpOf(s), 0);
+    }
+  }
   // docs/25 item 48: a captain's chess clock over a boarding (the sea's mind keeps none).
   if (board) for (const [x, h] of [[a, 0], [b, 1]] as const) if (x.human) bt.heroes[h].bank = tacBankSecs(level);
   // The flag's hex is kept clear of what the guns left (a hole or a fire on it).
@@ -743,6 +757,10 @@ export function addAlly(bt: TacBattle, side: 0 | 1, input: TacSideInput, grow: b
   const first = bt.stacks.reduce((n, s) => Math.max(n, s.id), 0) + 1;
   const stacks = buildStacks({ ...input, officers: [] }, side, [...bt.cells], first).slice(0, tacBring(bt.level));
   if (!stacks.length) return 'She brings no men';
+  if (bt.grit) for (const s of stacks) { // docs/31: a captain joining a boarding of captains stands with their grit
+    s.hpMax = Math.max(1, Math.round(s.hpMax * bt.grit));
+    s.hpTop = s.hpMax;
+  }
   if (bt.land) for (const s of stacks) {
     s.sp = s.sp.filter((x) => x !== 'blast');
     s.dmgMul = 1;

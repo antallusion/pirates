@@ -50,13 +50,15 @@ export interface Band {
   r1: [number, number];
   want: { pvp: [number, number]; npc: [number, number]; rounds: [number, number]; r1: [number, number] };
 }
+// docs/31 (2026-10-13): between two captains alone from level 30 their crews' grit (tactical.ts tacGrit, ×1.6 from 40)
+// — 41–60 run 5:13–5:48 and 4.7–5.1 rounds (they were 3:50–4:45, 3.4–4.1), in the owner's 5–10 minutes.
 export const BANDS: Band[] = [
   { lo: 1, hi: 10, pvp: [2, 3], npc: [1, 1.75], rounds: [3.5, 4.5], stacks: [3, 4], r1: [0.2, 0.4], want: { pvp: [1, 1], npc: [0.5, 0.75], rounds: [2, 3], r1: [0.35, 0.35] } },
   { lo: 11, hi: 20, pvp: [2.25, 3.5], npc: [1.25, 2.25], rounds: [3, 4.5], stacks: [4, 5], r1: [0.25, 0.5], want: { pvp: [1.5, 2.5], npc: [1, 1], rounds: [3, 3], r1: [0.25, 0.3] } },
   { lo: 21, hi: 30, pvp: [2.75, 4], npc: [1.75, 2.75], rounds: [3, 4], stacks: [5, 6], r1: [0.2, 0.45], want: { pvp: [2.5, 4], npc: [1, 1.5], rounds: [3, 4], r1: [0.22, 0.27] } },
-  { lo: 31, hi: 40, pvp: [3.25, 4.75], npc: [2, 3], rounds: [3, 4.5], stacks: [6, 7], r1: [0.25, 0.5], want: { pvp: [4, 6], npc: [1.5, 2.5], rounds: [4, 5], r1: [0.19, 0.24] } },
-  { lo: 41, hi: 50, pvp: [3.5, 5], npc: [2, 3], rounds: [3.25, 4.5], stacks: [7, 7], r1: [0.25, 0.5], want: { pvp: [5, 8], npc: [2, 3], rounds: [5, 6], r1: [0.17, 0.21] } },
-  { lo: 51, hi: 60, pvp: [3.5, 5], npc: [2, 3], rounds: [3.25, 4.5], stacks: [7, 7], r1: [0.25, 0.5], want: { pvp: [5, 10], npc: [2.5, 4], rounds: [5, 7], r1: [0.15, 0.18] } },
+  { lo: 31, hi: 40, pvp: [3.25, 5.5], npc: [2, 3], rounds: [3, 5], stacks: [6, 7], r1: [0.25, 0.5], want: { pvp: [4, 6], npc: [1.5, 2.5], rounds: [4, 5], r1: [0.19, 0.24] } },
+  { lo: 41, hi: 50, pvp: [5, 6.5], npc: [2, 3], rounds: [4, 5.5], stacks: [7, 7], r1: [0.25, 0.5], want: { pvp: [5, 8], npc: [2, 3], rounds: [5, 6], r1: [0.17, 0.21] } },
+  { lo: 51, hi: 60, pvp: [5, 7], npc: [2, 3], rounds: [4, 5.5], stacks: [7, 7], r1: [0.25, 0.5], want: { pvp: [5, 10], npc: [2.5, 4], rounds: [5, 7], r1: [0.15, 0.18] } },
 ];
 
 /** The eight battle skills the balance tools give a captain (tools/balance-glory.ts BUILD): a pick a level, rank by

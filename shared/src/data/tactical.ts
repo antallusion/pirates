@@ -110,6 +110,19 @@ export const TAC_AI_DELAY = 0.35;
  *  hour at sea to refill — and the captains of 26–40 spent every level's silver on men (docs/30 B). */
 export const TAC_WOUNDED = 0.35;
 export const TAC_RAISE_MAX = 0.65;
+/** Balance pass 2026-10-13 (docs/31; owner: «на высоких уровнях игрок против игрока — 5–10 минут … решают капитанские
+ *  навыки, группа и умения»): in a boarding between two captains alone, every stack on both decks stands with this many
+ *  times its hit points — the captains' drilled crews, who fight to the last plank — from level 30 (×1) to 40 (×1.6) and
+ *  on. Their blows are their cards' (the stack's card shows the hit points it stands with), and the captains' orders and
+ *  moves are shares of the side's strength, so they keep pace: the fight is longer and the book decides more of it.
+ *  Captain against captain at 41–60 ran 3:50–4:45 (the honest table's 3.5–5) where the owner wants 5–10; a group's
+ *  boarding (2 v 2, 3 v 3: 5:30–6:50 at 51–60) and every fight with the sea, ashore, at a siege or on the sand keep
+ *  their stacks as they are. */
+export const TAC_PVP_GRIT = { from: 30, to: 40, max: 1.6 };
+export function tacGrit(level: number): number {
+  const t = Math.max(0, Math.min(1, (level - TAC_PVP_GRIT.from) / (TAC_PVP_GRIT.to - TAC_PVP_GRIT.from)));
+  return 1 + (TAC_PVP_GRIT.max - 1) * t;
+}
 export const TAC_LEN = {
   npcFewer: 2,
   flag: { level: 40, rounds: 2 },

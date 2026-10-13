@@ -36,8 +36,8 @@ const tag = (r: (typeof rows)[number]) => `${r.b.lo}–${r.b.hi}`;
 
 test('docs/25 §1.2 (honest): rounds against a captain by level band — three to four and a half at every level, as the stacks\' own blows make them', () => {
   for (const r of rows) assert.ok(r.rounds >= r.b.rounds[0] - 0.5 && r.rounds <= r.b.rounds[1] + 0.5, `${tag(r)}: ${r.rounds.toFixed(2)} rounds (table ${r.b.rounds.join('–')})`);
-  // No band decided in two rounds, none dragged past five.
-  for (const r of rows) assert.ok(r.rounds >= 2.75 && r.rounds <= 5, `${tag(r)}: ${r.rounds.toFixed(2)} rounds`);
+  // No band decided in two rounds, none dragged past five and a half (docs/31: the captains' grit from 30).
+  for (const r of rows) assert.ok(r.rounds >= 2.75 && r.rounds <= 5.5, `${tag(r)}: ${r.rounds.toFixed(2)} rounds`);
 });
 
 test('docs/25 §1.2 (honest): modelled minutes by band, against a captain and against the sea (a captain\'s decision 6 s a stack)', () => {
