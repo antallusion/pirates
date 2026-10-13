@@ -7,6 +7,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import type { MarketRow } from '../../../shared/src/protocol.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
+import { FOOD_PER_40, VOYAGE_MINUTES } from '../../../shared/src/data/voyage.ts';
 
 export const ECON_HOUR = 900; // production/consumption rates are "per 15 real minutes"
 const ELASTICITY = MARKET_ELASTICITY;
@@ -31,7 +32,20 @@ export const PROVISIONS_LOCAL = 0.75;
 
 const ALWAYS_TRADED: GoodId[] = ['provisions', 'rum', 'planks', 'sailcloth', 'salt', 'fish', 'prime_fish', 'salted_fish', 'baleen', 'whalebone', 'shark_skin', 'orca_tooth', 'tar', 'smoked_fish'];
 
-export function createMarket(port: Port): Market {
+/** Playthrough C: a harbour victuals the ships of its waters — the hands a warship of each ⚓ carries (the balance tools'
+ *  hammocks), and the voyages of her food its stores keep (VICTUAL_VOYAGES at the stock a port holds, about half its
+ *  mark). The ports' provisions stood at 31–54 whatever the waters: a frigate of ⚓7 (220–320 hands) bought four
+ *  minutes of food, a man-of-war (600) two and a half. */
+export const VICTUAL_CREW = [0, 40, 60, 80, 110, 140, 180, 220, 300, 400, 600];
+export const VICTUAL_VOYAGES = 1.5;
+/** The provisions mark a port of a square of `level` keeps for the ships of its waters. */
+export function victualTarget(level: number): number {
+  const crew = VICTUAL_CREW[Math.max(0, Math.min(10, Math.round(level)))];
+  return (VICTUAL_VOYAGES * (crew / 40) * FOOD_PER_40 * VOYAGE_MINUTES) / 0.56;
+}
+
+/** A port's market; `level`: the ⚓ of the square it stands in (its provisions are kept for the ships of its waters). */
+export function createMarket(port: Port, level = 0): Market {
   const goods: Partial<Record<GoodId, GoodMarket>> = {};
   const allowContraband = port.blackMarket;
   for (const id of GOOD_IDS) {
@@ -52,7 +66,10 @@ export function createMarket(port: Port): Market {
     else target = 18 * size;
     // Producers sit above target (cheap), consumers below (expensive).
     const stock = prod > cons ? target * 1.5 : cons > prod ? target * 0.55 : target;
-    goods[id] = { stock, target, prod, cons, history: [], shock: 1 };
+    // (provisions: the town's own trade and the ships' victualling in one — a port of big ships' waters makes and sells
+    // as much more, at the same balance, so its stock stands at the same share of its mark and its price where it was)
+    const k = id === 'provisions' ? Math.max(1, victualTarget(level) / Math.max(1, target)) : 1;
+    goods[id] = { stock: stock * k, target: target * k, prod: prod * k, cons: cons * k, history: [], shock: 1 };
   }
   return { portId: port.id, goods };
 }

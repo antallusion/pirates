@@ -58,3 +58,24 @@ test('every harbour has food to sell after a week of its own trade, the hungry o
   for (let i = 0; i < 24 * 4 * 7; i++) tickMarket(h, 900, false);
   assert.ok(midPrice('provisions', h.goods.provisions!) > 12, 'a hungry harbour still asks more than the base price');
 });
+
+test('a harbour keeps food for the warships of its waters: a voyage and a half of the square\'s warship, at the price it had (playC: 31–54 whatever the waters)', async () => {
+  const { sectorAt } = await import('../shared/src/world/sectors.ts');
+  const { VICTUAL_CREW } = await import('../server/src/game/economy.ts');
+  const { voyageFood } = await import('../shared/src/data/voyage.ts');
+  const short: string[] = [];
+  for (const p of world.ports) {
+    const L = sectorAt(world, p.x, p.y).level;
+    const m = createMarket(p, L), was = createMarket(p);
+    for (let i = 0; i < 24 * 4 * 7; i++) {
+      tickMarket(m, 900, false);
+      tickMarket(was, 900, false);
+    }
+    const voyage = voyageFood({ crew: VICTUAL_CREW[L], provisionUse: 1, holdVolume: 1e9, provisionVolume: 1 });
+    if (m.goods.provisions!.stock < voyage * 1.4) short.push(`${p.id} ⚓${L}: ${Math.round(m.goods.provisions!.stock)} for a voyage of ${voyage}`);
+    // the price where the town's own trade put it (the same balance, a bigger store)
+    const a = midPrice('provisions', m.goods.provisions!), b = midPrice('provisions', was.goods.provisions!);
+    assert.ok(Math.abs(a - b) / b < 0.15, `${p.id}: ${b.toFixed(1)} → ${a.toFixed(1)}`);
+  }
+  assert.deepEqual(short, []);
+});

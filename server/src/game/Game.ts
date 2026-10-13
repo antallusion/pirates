@@ -92,7 +92,7 @@ import { windAt } from '../../../shared/src/sim/wind.ts';
 import type { WindSample } from '../../../shared/src/sim/wind.ts';
 import { REGIONS, WORLD_EDGE_MARGIN } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
-import { sectorGrid } from '../../../shared/src/world/sectors.ts';
+import { sectorAt, sectorGrid } from '../../../shared/src/world/sectors.ts';
 import { chunkKey, chunkOf, currentAt, depthAt, reefDepthAt, whirlpoolAt, generateWorld, portOfIsland, raiseIsland, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { hullStep } from './strike.ts';
 import type { Island, Port, RaisedIsland, World } from '../../../shared/src/world/worldgen.ts';
@@ -468,7 +468,7 @@ export class Game {
     this.abyss = abyssMap(this.world);
     for (const p of this.world.ports) {
       this.portIndex.set(p.id, p);
-      this.markets.set(p.id, createMarket(p));
+      this.markets.set(p.id, createMarket(p, sectorAt(this.world, p.x, p.y).level));
       this.tavernCrew.set(p.id, 10 + p.size * 12);
     }
     const saved = this.db.getKv<{ time: number; markets: Record<string, Record<string, [number, number]>> }>('world');
