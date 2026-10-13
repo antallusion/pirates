@@ -19,16 +19,32 @@ import type { Game } from '../../server/src/game/Game.ts';
 import { engage } from '../../server/src/game/npc.ts';
 import { rise } from '../../server/src/game/zonebosses.ts';
 import { duelSea, putSide } from './duel.ts';
+import { referenceKit } from '../../shared/src/data/seabalance.ts';
+import { CAPTAIN_SLOTS, ITEM_BASES } from '../../shared/src/data/items.ts';
+import type { Item, ShipSlot } from '../../shared/src/data/items.ts';
 
 /** The average ship of each level (the balance tables' hulls, tests/balance/report.ts). */
 export const AVERAGE_HULL: Record<number, ShipClassId> = { 3: 'schooner', 5: 'brig', 6: 'brig', 7: 'frigate', 8: 'frigate', 9: 'man_o_war', 10: 'man_o_war' };
 
 /** An average ship of a level: her hull and armour as the stats reckon them. */
-export function averageShip(level: number): { cls: ShipClassId; hull: number; armor: number } {
+export function averageShip(level: number, kit = level >= KIT_SEA): { cls: ShipClassId; hull: number; armor: number } {
   const cls = AVERAGE_HULL[level];
   const gun = defaultGunFor(SHIP_CLASSES[cls]);
-  const st = computeShipStats({ classId: cls, name: 'x', guns: { port: gun, starboard: gun }, modules: {}, level }, 'corsair', {});
+  const { gear, worn } = kitOf(level, kit);
+  const st = computeShipStats({ classId: cls, name: 'x', guns: { port: gun, starboard: gun }, modules: {}, level, gear }, 'corsair', {}, [], worn);
   return { cls, hull: st.hullMax, armor: st.armor };
+}
+
+/** Playthrough C: the seas of ⚓9–10 are the cap's — every captain there sails in her level's kit (the yard's reference
+ *  kit, shared/src/data/seabalance.ts referenceKit), and her shot on the boss is twice a bare captain's: three geared
+ *  captains of 60 sank the Abyssal Ark at 89 000 a minute each (ten would have had her in nine minutes, five in
+ *  eighteen). From this ⚓ the squad sim's captain is a geared one. */
+export const KIT_SEA = 9;
+export function kitOf(level: number, kit: boolean): { gear: Partial<Record<ShipSlot, Item>>; worn: Item[] } {
+  if (!kit) return { gear: {}, worn: [] };
+  const all = referenceKit(level);
+  const worn = all.filter((it) => (CAPTAIN_SLOTS as readonly string[]).includes(ITEM_BASES[it.base].slot));
+  return { gear: Object.fromEntries(all.filter((it) => !worn.includes(it)).map((it) => [ITEM_BASES[it.base].slot, it])), worn };
 }
 
 /** The average day at sea: a working wind everywhere, no storm, no fog, no front (the sea's weather swings a
@@ -40,9 +56,10 @@ export function fairWeather(game: Game): void {
 
 /** One average captain's hull off her a second, on the real sea (the mean of `starts` bearings, `sec` seconds each,
  *  counted from his first hit). */
-export function soloDps(region: RegionId, starts = 6, sec = 600): number {
+export function soloDps(region: RegionId, starts = 6, sec = 600, kit = ZONE_BOSSES[region].level >= KIT_SEA): number {
   const def = ZONE_BOSSES[region];
-  const { cls } = averageShip(def.level);
+  const { cls } = averageShip(def.level, kit);
+  const { gear, worn } = kitOf(def.level, kit);
   let dealt = 0, time = 0;
   for (let k = 0; k < starts; k++) {
     const game = duelSea();
@@ -51,6 +68,12 @@ export function soloDps(region: RegionId, starts = 6, sec = 600): number {
     const a = (k / starts) * Math.PI * 2 + 0.4;
     const me = putSide(game, { cls, level: def.level, craft: 'average' }, boss.state.x + Math.sin(a) * 1100, boss.state.y - Math.cos(a) * 1100, a + Math.PI);
     me.ship.accountId = 9000 + k; // a captain: she answers his fire
+    if (kit) {
+      me.ship.loadout.gear = { ...gear };
+      me.ship.worn = worn;
+      me.ship.recompute(game.now);
+      me.ship.hull = me.ship.stats.hullMax;
+    }
     me.ship.god = true; // kept afloat for the measure (her fire on him is the squad sim's)
     const h0 = boss.hull, t0 = game.now;
     let first = -1, next = 0;

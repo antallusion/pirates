@@ -58,8 +58,9 @@ export const ZONE_BOSSES: Record<RegionId, ZoneBossDef> = {
   leviathan_reach: def('leviathan_reach', 6, 34),
   ashen_isles: def('ashen_isles', 7, 52),
   dead_mans_expanse: def('dead_mans_expanse', 8, 59),
-  drowned_crown: def('drowned_crown', 9, 116),
-  the_abyss: def('the_abyss', 10, 132),
+  // (playthrough C: weighed on geared captains of the cap, tests/balance/zonebosses.ts KIT_SEA)
+  drowned_crown: def('drowned_crown', 9, 150),
+  the_abyss: def('the_abyss', 10, 175),
 };
 
 /** The region's place in the calendar. */
