@@ -181,8 +181,12 @@ const REFIT: Record<number, RefitCost> = {
   3: { silver: 2800, goods: [{ good: 'planks', qty: 30 }, { good: 'iron', qty: 8 }, { good: 'sailcloth', qty: 6 }], sec: 300 },
   4: { silver: 3200, goods: [{ good: 'planks', qty: 40 }, { good: 'iron', qty: 12 }, { good: 'sailcloth', qty: 10 }], sec: 600 },
   5: { silver: 6000, goods: [{ good: 'planks', qty: 60 }, { good: 'iron', qty: 20 }, { good: 'sailcloth', qty: 14 }], sec: 1200 },
-  6: { silver: 18000, goods: [{ good: 'planks', qty: 260 }, { good: 'iron', qty: 90 }, { good: 'sailcloth', qty: 40 }, { good: 'timber', qty: 40 }], sec: 2400 },
-  7: { silver: 32000, goods: [{ good: 'planks', qty: 360 }, { good: 'iron', qty: 130 }, { good: 'sailcloth', qty: 60 }, { good: 'timber', qty: 70 }], sec: 3600 },
+  // docs/30, band 3 (QA playthrough B): ⚓6 and ⚓7 asked 600 and 870 of hold — seven brig loads, eight a frigate's,
+  // 260 planks where a port stocks fifty — and 28 000 and 47 000 with the goods: a frigate ⚓6 bought new was 24 000, and
+  // a captain of 33–35 on her frigate ⚓6 never saved the ⚓7 of her band. The same rule as ⚓4–5: two loads of the
+  // smallest hull that refits to it, and two thirds of the new warship of that level (the frigate ⚓6, the razee ⚓7).
+  6: { silver: 12500, goods: [{ good: 'planks', qty: 80 }, { good: 'iron', qty: 30 }, { good: 'sailcloth', qty: 15 }, { good: 'timber', qty: 7 }], sec: 2400 },
+  7: { silver: 30000, goods: [{ good: 'planks', qty: 80 }, { good: 'iron', qty: 35 }, { good: 'sailcloth', qty: 20 }, { good: 'timber', qty: 7 }], sec: 3600 },
   8: { silver: 55000, goods: [{ good: 'planks', qty: 480 }, { good: 'iron', qty: 180 }, { good: 'sailcloth', qty: 80 }, { good: 'leviathan_bone', qty: 10 }], sec: 7200 },
   9: { silver: 90000, goods: [{ good: 'planks', qty: 650 }, { good: 'iron', qty: 250 }, { good: 'sailcloth', qty: 110 }, { good: 'leviathan_bone', qty: 20 }], sec: 10800 },
   10: { silver: 150000, goods: [{ good: 'planks', qty: 900 }, { good: 'iron', qty: 320 }, { good: 'sailcloth', qty: 150 }, { good: 'leviathan_bone', qty: 30 }, { good: 'sulfur_iron', qty: 5 }], sec: 14400, hearts: 1 },
