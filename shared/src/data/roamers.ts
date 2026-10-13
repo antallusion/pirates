@@ -409,7 +409,7 @@ export const ROAM_XP_SHARE = [0, 0.023, 0.024, 0.0275, 0.0303, 0.0303, 0.0275, 0
 /** Its silver, a share of an hour at sea of its waters for an average stack (by size as the lesson): a small purse that
  *  with the creatures' spoils about pays for the men a steady hour of them costs and leaves a little over (calibrated:
  *  tests/balance/roamers.ts holds the hour's net to +0.1…+0.35 of an hour at sea). Index: level 0–10. */
-export const ROAM_SILVER = [0, 0.025, 0.019, 0.026, 0.028, 0.03, 0.028, 0.028, 0.022, 0.022, 0.021];
+export const ROAM_SILVER = [0, 0.025, 0.019, 0.026, 0.028, 0.03, 0.028, 0.028, 0.022, 0.022, 0.024];
 /** The chance its beating turns up an artifact (H2's maybeArtifact, as a guard's), by size. */
 export const ROAM_ART: Record<RoamSize, number> = { weak: 0.008, avg: 0.015, strong: 0.04 };
 /** A group mate near when the stack is beaten has this share of its lesson (the fighter the whole of it); the silver
