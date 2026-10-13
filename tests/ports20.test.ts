@@ -19,6 +19,7 @@ import { WHIRLPOOLS, beforePorts, distanceToCurrents, generateWorld, isLand, isl
 import type { World } from '../shared/src/world/worldgen.ts';
 import { AuthService } from '../server/src/auth.ts';
 import { createMarket } from '../server/src/game/economy.ts';
+import { sectorAt } from '../shared/src/world/sectors.ts';
 import { buildSites } from '../server/src/game/expeditions.ts';
 import { Game } from '../server/src/game/Game.ts';
 import { findPath } from '../server/src/game/nav.ts';
@@ -253,7 +254,7 @@ test('a server on a save from before them opens their markets beside the old one
   for (const p of fresh(again.world)) {
     const m = again.markets.get(p.id);
     assert.ok(m, `${p.id}: a market`);
-    assert.deepEqual(m, createMarket(p), `${p.id}: opened fresh`);
+    assert.deepEqual(m, createMarket(p, sectorAt(again.world, p.x, p.y).level), `${p.id}: opened fresh`); // (victualled for her waters: docs/30 C)
     assert.ok(again.tavernCrew.get(p.id)! > 0, `${p.id}: hands in her tavern`);
     assert.equal(again.portById(p.id), p);
   }
