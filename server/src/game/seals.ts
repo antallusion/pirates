@@ -34,6 +34,8 @@ import { grantScrolls } from './autoscroll.ts'; // «Свиток автобоя
 import { SEAL_SCROLL_LV } from '../../../shared/src/data/premium.ts';
 import { aiAct, buildStacks, checkOver, lossesOf, newBattle, tacHurt, tacPush } from './tacbattle.ts';
 import type { TacBattle, TacSideInput, TacStack } from './tacbattle.ts';
+import type { HeroBattle } from '../../../shared/src/data/hero.ts';
+import type { CaptainId } from '../../../shared/src/data/captains.ts';
 
 const KINDS = new Set<LairKind>(SEAL_KINDS);
 const BOARD_KEY = 'seal_board';
@@ -207,10 +209,11 @@ export function playOut(bt: TacBattle, rng: Rng, now: number): void {
 
 /** One mythic depth of a party against a seal's lair, both sides played by the sea's mind (the balance's): won, the
  *  share of her men lost, the rounds it ran. */
-export function simulateDepth(kind: LairKind, lv: number, week: number, party: ArmyStack[], seed: number): { won: boolean; lost: number; rounds: number } {
+export function simulateDepth(kind: LairKind, lv: number, week: number, party: ArmyStack[], seed: number, hero?: HeroBattle, captain: CaptainId = 'corsair'): { won: boolean; lost: number; rounds: number } {
   const rng = new Rng(seed);
   const base = sealArmy(kind, lv);
-  const bt = newBattle({ ...beastSide(party), captain: 'corsair', morale: 70, noBook: undefined }, { ...beastSide(base), name: LAIRS[kind].name[0] }, seed, 0, rng, { land: 'rocky' });
+  // (playthrough C: with her hero, as a captain of the cap lands — her skills, her artifacts, her book and her path)
+  const bt = newBattle({ ...beastSide(party), captain, morale: 70, noBook: undefined, ...(hero ? { hero } : {}) }, { ...beastSide(base), name: LAIRS[kind].name[0] }, seed, 0, rng, { land: 'rocky' });
   startDepth(bt, lv, sealAffixes(lv, week), base);
   playOut(bt, rng, 0);
   const men = party.reduce((a, x) => a + x.n, 0);

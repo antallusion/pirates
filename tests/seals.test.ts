@@ -97,15 +97,18 @@ test('on the field: the shields over the creatures, the poisoned tide each round
 
 // ------------------------------------------------------------------ balance
 
-test('balance: the reference captain at the cap wins seal 2 nearly always, seal 10 seldom; geared, seal 10 most times and seal 20 in time seldom', () => {
+// Playthrough C: against the cap's own captain, her hero ashore with her (a fresh captain of the cap took seals 2 to 20
+// in ten depths running, two or three rounds each, when the table was weighed on a party without a hero).
+test('balance: the captain at the cap, her hero with her, wins seal 2 always and seal 20 hardly ever; seal 14 is the wall; geared, 14 most times and 20 in time seldom', () => {
   const kinds = SEAL_KINDS.slice(0, 6), weeks = [0, 13];
-  const f2 = depthFight(2, kinds, weeks), f10 = depthFight(10, kinds, weeks);
-  const g10 = depthFight(10, kinds, weeks, 2, 1.5), g20 = depthFight(20, kinds, weeks, 2, 1.5);
-  assert.ok(f2.timed >= 0.85, `seal 2 in time ${f2.timed}`);
-  assert.ok(f2.loss <= 0.5, `seal 2 costs ${f2.loss}`);
-  assert.ok(f10.timed <= 0.45, `seal 10 bare ${f10.timed}`);
-  assert.ok(g10.timed >= 0.6, `seal 10 geared ${g10.timed}`);
-  assert.ok(g20.timed <= 0.2, `seal 20 geared ${g20.timed}`);
+  const f2 = depthFight(2, kinds, weeks), f14 = depthFight(14, kinds, weeks), f20 = depthFight(20, kinds, weeks);
+  const g14 = depthFight(14, kinds, weeks, 2, 1.2), g20 = depthFight(20, kinds, weeks, 2, 1.2);
+  assert.ok(f2.timed >= 0.9, `seal 2 in time ${f2.timed}`);
+  assert.ok(f2.loss <= 0.2, `seal 2 costs ${f2.loss}`);
+  assert.ok(f14.timed >= 0.3 && f14.timed <= 0.8, `seal 14 ${f14.timed}`);
+  assert.ok(f20.timed <= 0.1, `seal 20 ${f20.timed}`);
+  assert.ok(g14.timed >= 0.6, `seal 14 geared ${g14.timed}`);
+  assert.ok(g20.timed <= 0.25, `seal 20 geared ${g20.timed}`);
 });
 
 // ------------------------------------------------------------------ the server
