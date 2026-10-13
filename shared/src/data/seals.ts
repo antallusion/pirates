@@ -64,6 +64,12 @@ export const SEAL_REINFORCE = { rounds: [3, 6] as readonly number[], share: 0.2 
  *  in time one in fifteen. */
 export const SEAL_BASE = 0.85;
 export const SEAL_GROW = 1.09;
+/** Balance pass 2026-10-13 (docs/31; owner: «непроходимое должно быть, но при условии что у тебя есть все что нужно»):
+ *  past seal 12 the might grows SEAL_GROW_TOP a level — the endgame's best build (grandmaster skills, glory 100's boons
+ *  and mastery, her kit, a tenth more men for her relics and keel) won seal 17 28% and seal 20 10% of the time: the top
+ *  of the ladder was a wall even with everything. */
+export const SEAL_KNEE = 12;
+export const SEAL_GROW_TOP = 1.03;
 
 export function clampSeal(lv: number): number {
   return Math.max(SEAL_MIN, Math.min(SEAL_MAX, Math.round(lv) || SEAL_MIN));
@@ -71,7 +77,8 @@ export function clampSeal(lv: number): number {
 
 /** The seal's might over the lair's own army (balance: tests/balance/seals.ts). */
 export function sealMight(lv: number): number {
-  return SEAL_BASE * Math.pow(SEAL_GROW, clampSeal(lv) - SEAL_MIN);
+  const l = clampSeal(lv);
+  return SEAL_BASE * Math.pow(SEAL_GROW, Math.min(l, SEAL_KNEE) - SEAL_MIN) * Math.pow(SEAL_GROW_TOP, Math.max(0, l - SEAL_KNEE));
 }
 
 /** How many of the week's afflictions a seal of this level carries: one at 2, two from 4, three from 7, all from 11. */

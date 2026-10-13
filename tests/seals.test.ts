@@ -99,16 +99,19 @@ test('on the field: the shields over the creatures, the poisoned tide each round
 
 // Playthrough C: against the cap's own captain, her hero ashore with her (a fresh captain of the cap took seals 2 to 20
 // in ten depths running, two or three rounds each, when the table was weighed on a party without a hero).
-test('balance: the captain at the cap, her hero with her, wins seal 2 always and seal 20 hardly ever; seal 14 is the wall; geared, 14 most times and 20 in time seldom', () => {
+// docs/31 (owner: «непроходимое должно быть, но при условии что у тебя есть все что нужно»): past seal 12 the might grows
+// SEAL_GROW_TOP a level — 20 is no wall for a geared captain (it was in time one in fifteen with a fifth more men, one
+// in ten for grandmaster skills, glory 100 and her kit), and still a hard one for the fresh captain of the cap.
+test('balance: the captain at the cap, her hero with her, wins seal 2 always and seal 20 in time a third of the time; geared, 14 nearly always and 20 most times', () => {
   const kinds = SEAL_KINDS.slice(0, 6), weeks = [0, 13];
   const f2 = depthFight(2, kinds, weeks), f14 = depthFight(14, kinds, weeks), f20 = depthFight(20, kinds, weeks);
   const g14 = depthFight(14, kinds, weeks, 2, 1.2), g20 = depthFight(20, kinds, weeks, 2, 1.2);
   assert.ok(f2.timed >= 0.9, `seal 2 in time ${f2.timed}`);
   assert.ok(f2.loss <= 0.2, `seal 2 costs ${f2.loss}`);
-  assert.ok(f14.timed >= 0.3 && f14.timed <= 0.8, `seal 14 ${f14.timed}`);
-  assert.ok(f20.timed <= 0.1, `seal 20 ${f20.timed}`);
+  assert.ok(f14.timed >= 0.3 && f14.timed <= 0.85, `seal 14 ${f14.timed}`);
+  assert.ok(f20.timed <= 0.5, `seal 20 ${f20.timed}`);
   assert.ok(g14.timed >= 0.6, `seal 14 geared ${g14.timed}`);
-  assert.ok(g20.timed <= 0.25, `seal 20 geared ${g20.timed}`);
+  assert.ok(g20.timed >= 0.3 && g20.timed > f20.timed, `seal 20 geared ${g20.timed} (fresh ${f20.timed})`);
 });
 
 // ------------------------------------------------------------------ the server
