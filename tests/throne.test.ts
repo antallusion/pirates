@@ -250,7 +250,8 @@ test('E3: the trial won — grandmaster, the chronicle once, and no plunder', ()
 });
 
 test('E17: glory against might — far past the cap within 15 points of a fresh captain; trials hard but winnable', () => {
-  const g0 = gloryShare(0, 30), g100 = gloryShare(100, 30);
+  // (docs/31: 360 bouts for glory 100 — it stands at the edge by design, 65%, and 180 left it to the dice: 64–67%)
+  const g0 = gloryShare(0, 30), g100 = gloryShare(100, 60);
   assert.ok(Math.abs(g0 - 0.5) <= 0.06, `equal captains of the cap ${g0}`);
   assert.ok(g100 - 0.5 <= 0.15, `glory 100 against a fresh captain ${g100}`);
   assert.ok(g100 >= g0, 'glory is worth something');

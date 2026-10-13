@@ -258,9 +258,10 @@ export const ARENA_SKILLS: SkillId[] = ['boarding', 'armor', 'artillery', 'leade
  *  48–52%, the pairs 42.9–58.1% (the Corsair over the Navigator the highest, a point over the 57 before).
  *  2026-10-10 (owner: «чини атаку всем» — a path's moves land their book's numbers on the sand too, no longer ×0.4 of
  *  level 60's old boarding tempo): `balance-arena.ts 160 --paths 5` and `--paths 4` — the means 48–52%, the worst pair
- *  (the Corsair over the Navigator) 59%. */
+ *  (the Corsair over the Navigator) 59%. 2026-10-13 (docs/31: Tactics her own unanswered blows, the paths re-weighed
+ *  against the sea): `--paths 5` at 200 — the means 49–53%, the worst pair 57% (it was the Corsair over the Navigator 68%). */
 export const ARENA_PATH: Partial<Record<CaptainId, Partial<Prims>>> = {
-  corsair: { atk: 4, def: 0 }, smuggler: { atk: 4, def: 2 }, reaver: { atk: -2, def: -3 }, navigator: { atk: 2, def: 0 }, drowned: { atk: 4, def: -1 }, admiral: { atk: 2, def: -5 },
+  corsair: { atk: 3, def: -1 }, smuggler: { atk: 4, def: 1 }, reaver: { atk: -1, def: -3 }, navigator: { atk: 3, def: 0 }, drowned: { atk: 4, def: -2 }, admiral: { atk: 2, def: -5 },
 };
 
 /** A path's standard primaries at the cap: its start and its odds over the level-ups, whole points by the largest
