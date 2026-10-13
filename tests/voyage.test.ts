@@ -3,9 +3,11 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FOOD_HOLD_SHARE, FOOD_PER_40, VOYAGE_MINUTES, foodMinutes, provisionsPerMinute, voyageCrew, voyageFood, voyageNeeds } from '../shared/src/data/voyage.ts';
+import { FOOD_HOLD_SHARE, FOOD_PER_40, VOYAGE_MINUTES, breadRoom, foodMinutes, provisionsPerMinute, voyageCrew, voyageFood, voyageNeeds } from '../shared/src/data/voyage.ts';
 import type { VoyageShip } from '../shared/src/data/voyage.ts';
-import { SHIP_CLASSES } from '../shared/src/data/ships.ts';
+import { SHIP_CLASSES, defaultGunFor } from '../shared/src/data/ships.ts';
+import type { ShipClassId } from '../shared/src/data/ships.ts';
+import { computeShipStats } from '../shared/src/sim/shipstats.ts';
 import { join, makeGame } from './helpers.ts';
 
 const ready = (o: Partial<VoyageShip> = {}): VoyageShip => ({
@@ -26,6 +28,16 @@ test('a ship eats FOOD_PER_40 units a minute for every forty hands; a voyage wan
     const c = SHIP_CLASSES[id];
     assert.ok(foodMinutes(c.holdVolume * FOOD_HOLD_SHARE, c.crewMax) >= VOYAGE_MINUTES, `${id}: ${foodMinutes(c.holdVolume * FOOD_HOLD_SHARE, c.crewMax).toFixed(1)} min`);
   }
+  // playC: and every warship of ⚓4–10 does, the great ones by their bread room (a man-of-war fed 600 hands four minutes).
+  for (const [id, c] of Object.entries(SHIP_CLASSES)) {
+    if (c.crewMax < 100 || c.holdVolume <= 0) continue;
+    const gun = defaultGunFor(c);
+    const st = computeShipStats({ classId: id as ShipClassId, name: 'Trial', guns: { port: gun, starboard: gun }, modules: {} }, 'corsair', {});
+    const food = (st.holdVolume * FOOD_HOLD_SHARE) / st.provisionVolumeMul;
+    assert.ok(foodMinutes(food, st.crewMax) >= VOYAGE_MINUTES - 1e-6, `${id}: ${foodMinutes(food, st.crewMax).toFixed(1)} min`);
+  }
+  assert.equal(breadRoom(28, 30), 1, 'a sloop keeps her cubic metre');
+  assert.ok(Math.abs(breadRoom(600, 130) - 65 / 150) < 1e-9, 'a man-of-war: half her hold is a voyage');
   assert.equal(voyageCrew({ crewMin: 8, crewMax: 28 }), 16, 'enough hands to sail at her best');
   assert.equal(voyageCrew({ crewMin: 20, crewMax: 22 }), 20);
 });

@@ -49,6 +49,16 @@ export type VoyageNeed =
   | { kind: 'ammo'; have: number; want: number; buy: number }
   | { kind: 'repair'; hull: number; sails: number };
 
+/** Playthrough C: a warship's bread room — what a big crew eats is stowed in her own storerooms as well as the hold, so a
+ *  provision takes this share of a cubic metre in her: half her hold feeds her full crew a voyage. The great warships
+ *  carry crews out of all measure with their holds (a man-of-war 600 hands and 130 m³, a ship of the line 680 and 140):
+ *  they ate 15–17 units a minute and half the hold fed them four minutes, the whole of it eight — never a voyage. A hull
+ *  whose half hold feeds her crew ten minutes already (the sloop, the frigate, the galleon) keeps a whole cubic metre. */
+export function breadRoom(crewMax: number, holdVolume: number): number {
+  const voyage = (Math.max(0, crewMax) / 40) * FOOD_PER_40 * VOYAGE_MINUTES;
+  return Math.min(1, (Math.max(0, holdVolume) * FOOD_HOLD_SHARE) / Math.max(1, voyage));
+}
+
 /** The provisions a voyage wants: ten minutes of eating, held to half the hold. */
 export function voyageFood(s: Pick<VoyageShip, 'crew' | 'provisionUse' | 'holdVolume' | 'provisionVolume'>): number {
   const want = Math.ceil(provisionsPerMinute(s.crew, s.provisionUse) * VOYAGE_MINUTES);

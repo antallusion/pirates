@@ -24,6 +24,7 @@ import { DEG } from '../math.ts';
 import { levelScale, shipLevelOf } from '../data/shiplevel.ts';
 import { giftSource } from '../data/shipgifts.ts';
 import { ARMOR_SEEN, ARMOR_WEIGHT, defRaw, gearDefence, gearOffence, gearReload } from '../data/seabalance.ts';
+import { breadRoom } from '../data/voyage.ts';
 
 export interface ShipLoadout {
   classId: ShipClassId;
@@ -272,7 +273,8 @@ export function computeShipStats(
     sellMul: 1 + Math.min(0.25, m('sellMul') + e('sellMul')),
     contrabandVolumeMul: Math.max(0.4, 1 + m('contrabandVolumeMul') + e('contrabandVolumeMul')),
     materialVolumeMul: Math.max(0.4, 1 + m('materialVolume')),
-    provisionVolumeMul: Math.max(0.4, 1 + m('storesVolume')),
+    // (her bread room by the crew and hold she has: half the hold feeds her full crew a voyage, voyage.ts breadRoom)
+    provisionVolumeMul: Math.max(0.15, breadRoom(cls.crewMax * lv.crew * (1 + crewMul + m('crewMax') + e('crewMax')), cls.holdVolume * lv.hold * (1 + holdMul + m('holdVolume') + e('holdVolume'))) * Math.max(0.4, 1 + m('storesVolume'))),
     cursedVolumeMul: Math.max(0.4, 1 - 0.25 * m('cursedCargo')),
     incomingDamageMul: Math.max(0.2, (1 + m('incomingDamageMul') + e('incomingDamageMul')) / defInc) * Math.max(0.1, 1 + e('skillIncoming')),
     moraleRegen: 0.4 + m('moraleRegen') + e('moraleRegen'),
