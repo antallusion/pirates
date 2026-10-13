@@ -100,6 +100,36 @@ test('a boss that waits for night or storm rises only in its window', () => {
   assert.equal([...game.bosses.fights.values()][0]?.kind, 'storm_widow');
 });
 
+test('a boss that may not rise is never promised: every «rises within five minutes» is followed by its rising (playthrough C: the Lantern Maw)', () => {
+  const { game } = makeGame();
+  let wall = 3_000_000_000_000;
+  game.wallNow = () => wall;
+  const c = join(game, 'Night Watch');
+  const s = game.sessionByName('Night Watch')!;
+  s.ship!.region = 'black_coast';
+  const sc = game.bosses.schedule(game);
+  for (const id of Object.keys(sc.next) as BossId[]) sc.next[id] = wall + 1e12;
+  sc.next.lantern_maw = wall;
+  let risen = 0, warned = 0;
+  // Two days of the sea's clock, half a minute at a time (the world's clock with the wall's), each rising sent away.
+  for (let k = 0; k < 2 * 24 * 120; k++) {
+    wall += 30_000;
+    game.now += 30;
+    game.bosses.second(game);
+    for (const f of [...game.bosses.fights.values()]) {
+      risen++;
+      game.bosses.fights.delete(f.id);
+      game.removeShip(f.id);
+    }
+  }
+  const toasts = c.all('toast').map((t) => t.msg);
+  warned = toasts.filter((m) => /Lantern Maw rises in .* within five minutes/.test(m)).length;
+  const promised = toasts.filter((m) => /Lantern Maw will rise in/.test(m)).length;
+  assert.ok(risen >= 5, `it still rises (${risen} in two days)`);
+  assert.equal(warned, risen, 'a warning for every rising, none for nothing');
+  assert.equal(promised, risen, 'the world news for every rising, none for nothing');
+});
+
 test('Leviathan: it sounds unless harpoon lines hold it; held, its gills open (×2 at the head); the whirlpool bites', () => {
   const { game, f, body, caps } = arena('leviathan', 3);
   const [A, B, C] = caps;

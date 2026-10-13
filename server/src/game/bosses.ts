@@ -158,15 +158,25 @@ export class BossHub {
       const next = sc.next[id] ?? wall;
       const pend = sc.pending[id];
       if (!pend && wall >= next - BOSS_ANNOUNCE * 1000) {
+        // Playthrough C: whether it rises at all is known before a word is said, and a night boss is promised for the
+        // night. The Lantern Maw (every 20 min, a 30% chance, by night) was announced to the whole sea every 20 minutes,
+        // «rises within five minutes!» with it, and seven times in ten nothing rose — by day it was dropped unseen.
+        const at = risingAt(game, def, Math.max(next, wall), wall);
+        if (at === null || !game.rng.chance(def.chance)) {
+          sc.next[id] = Math.max(next, wall) + Math.round(def.every * 1000 * game.rng.range(0.85, 1.15));
+          dirty = true;
+          continue;
+        }
         const spot = id === 'abyss_eye' ? game.abyss.eye : risingPoint(game, def, regions);
         if (!spot) continue;
-        sc.pending[id] = { at: Math.max(next, wall), x: spot.x, y: spot.y };
-        announce(game, def, spot.x, spot.y, Math.max(0, Math.round((next - wall) / 60000)));
+        sc.pending[id] = { at, x: spot.x, y: spot.y };
+        announce(game, def, spot.x, spot.y, Math.max(0, Math.round((at - wall) / 60000)));
         dirty = true;
         continue;
       }
-      // Five minutes before, the whole sea hears it (owner, 2026-09-29: events everyone sails to).
-      if (pend && !pend.warned && wall >= pend.at - 5 * 60_000) {
+      // Five minutes before, the whole sea hears it (owner, 2026-09-29: events everyone sails to) — a storm's boss only
+      // with the storm already up (no one can promise the weather).
+      if (pend && !pend.warned && wall >= pend.at - 5 * 60_000 && (def.window !== 'storm' || windowOpen(game, def, regionAt(game.world, pend.x, pend.y)))) {
         pend.warned = true;
         dirty = true;
         const region = REGIONS[regionAt(game.world, pend.x, pend.y)].name;
@@ -178,7 +188,7 @@ export class BossHub {
         delete sc.pending[id];
         sc.next[id] = wall + Math.round(def.every * 1000 * game.rng.range(0.85, 1.15));
         dirty = true;
-        if (late || !game.rng.chance(def.chance)) continue;
+        if (late) continue;
         summon(game, id, pend.x, pend.y);
         const region = REGIONS[regionAt(game.world, pend.x, pend.y)].name;
         for (const o of game.sessions) game.sendTo(o, { t: 'toast', msg: `WORLD: ${def.name} has risen in ${region}. Every captain who dares, to arms!`, kind: 'bad' });
@@ -222,6 +232,14 @@ function windowOpen(game: Game, def: BossDef, region: RegionId): boolean {
     return k === 'storm' || k === 'black_storm';
   }
   return true;
+}
+
+/** When a boss booked for `from` (wall ms) can rise: then, or for a night boss the first night after it (by the world's
+ *  clock, which keeps the wall's pace) within half its period; null when no night comes in time. */
+export function risingAt(game: Game, def: BossDef, from: number, wall: number): number | null {
+  if (def.window !== 'night') return from;
+  for (let t = from; t <= from + (def.every * 1000) / 2; t += 30_000) if (isNight(game.now + (t - wall) / 1000)) return t;
+  return null;
 }
 
 /** Open deep water in one of the boss's regions, clear of ports (or near its port, for the Mother). */
