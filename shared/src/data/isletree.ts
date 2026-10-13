@@ -143,12 +143,16 @@ const BASE: Record<Exclude<TreeId, 'hall'>, Base> = {
   fort: { silver: 3_500, mins: 60, goods: { timber: 80, coal: 50, iron: 40 }, once: { weapons: 24 } },
 };
 
-/** The hall's levels (its first stands from the claim, free). */
+/** The hall's levels (its first stands from the claim, free). Balance pass 2026-10-13 (docs/31): hall 2 8 000 → 6 000
+ *  and hall 3 22 000 → 15 000 (their goods a quarter less): with a third of her sea income to the island (what the
+ *  army, the ship and the food leave a good captain) hall 2 stood at day 3.4 and hall 3 at day 9.5 of a steady player —
+ *  levels ~20 and ~33, past the ⚓4 and ⚓6 bands they are for (docs/30 B: the bot of 26–40 never raised hall 3). Now
+ *  hall 2 day 2.9 (~18), hall 3 8.2 (~31), hall 4 18 (~44), hall 5 32 (~52) — each in its band. */
 const HALL_COST: TreeCost[] = [
   { silver: 0, goods: {}, secs: 0 },
   { silver: 0, goods: {}, secs: 0 },
-  { silver: 8_000, goods: { timber: 120, coal: 80, iron: 20 }, secs: 2 * 3600 },
-  { silver: 22_000, goods: { timber: 260, coal: 200, iron: 60, tar: 40 }, secs: 8 * 3600 },
+  { silver: 6_000, goods: { timber: 100, coal: 60, iron: 15 }, secs: 2 * 3600 },
+  { silver: 15_000, goods: { timber: 200, coal: 150, iron: 45, tar: 30 }, secs: 8 * 3600 },
   { silver: 48_000, goods: { timber: 480, coal: 380, iron: 140, tar: 90, pearls: 6 }, secs: 20 * 3600 },
   { silver: 95_000, goods: { timber: 800, coal: 640, iron: 260, tar: 160, pearls: 14, rum: 40 }, secs: 40 * 3600 },
 ];
