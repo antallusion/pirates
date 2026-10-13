@@ -14,11 +14,15 @@ import { Rng } from '../../shared/src/rng.ts';
 import { killedHp, lossesOf, newBattle, quickFinish } from '../../server/src/game/tacbattle.ts';
 import type { TacSideInput } from '../../server/src/game/tacbattle.ts';
 import { XP_UNITS, refLevel, xpUnit } from '../../shared/src/data/xpcurve.ts';
-import { refParty } from './lairs.ts';
+import { heroLevelOf, refParty } from './lairs.ts';
+import { PATHS, captainAt } from './boardlen.ts';
+import type { HeroBattle } from '../../shared/src/data/hero.ts';
+import type { CaptainId } from '../../shared/src/data/captains.ts';
 
-const side = (army: ArmyStack[], beasts: boolean): TacSideInput => ({
-  name: beasts ? 'Stack' : 'Captain', ship: beasts ? 'Sea' : 'Wake', captain: beasts ? null : 'corsair', hands: 0, marines: 0, gunners: 0, army, officers: [], skill: 3,
+const side = (army: ArmyStack[], beasts: boolean, hero?: HeroBattle, captain: CaptainId = 'corsair'): TacSideInput => ({
+  name: beasts ? 'Stack' : 'Captain', ship: beasts ? 'Sea' : 'Wake', captain: beasts ? null : captain, hands: 0, marines: 0, gunners: 0, army, officers: [], skill: 3,
   morale: beasts ? 50 : 70, dealt: 1, power: 1, melee: 1, extraShots: 0, firstRush: 1, nets: 0, blooded: 0, castle: false, struck: false, human: false, ...(beasts ? { noBook: true } : {}),
+  ...(hero ? { hero } : {}), // playthrough C: her hero with her (lairs.ts heroLevelOf)
 });
 
 export interface RoamFight {
@@ -34,13 +38,14 @@ export interface RoamFight {
 }
 
 /** `n` battles of her party against a stack (quick battle) on its own field. */
-export function roamFight(me: ArmyStack[], stack: ArmyStack[], kind: RoamKind, n = 24): RoamFight {
+export function roamFight(me: ArmyStack[], stack: ArmyStack[], kind: RoamKind, n = 24, heroL = 0): RoamFight {
   let win = 0, loss = 0, refill = 0, xp = 0, rounds = 0;
   const men = armyMen(me);
   for (let k = 0; k < n; k++) {
     const seed = k * 41 + 5;
     const rng = new Rng(seed);
-    const bt = newBattle(side(me, false), side(stack, true), seed, 0, rng, { land: ROAMS[kind].field });
+    const path = PATHS[k % PATHS.length];
+    const bt = newBattle(side(me, false, heroL ? captainAt(path, heroL, 11 + k) : undefined, path), side(stack, true), seed, 0, rng, { land: ROAMS[kind].field });
     quickFinish(bt, 0, rng);
     rounds += bt.round;
     if (bt.over!.winner === 0) {
@@ -54,7 +59,7 @@ export function roamFight(me: ArmyStack[], stack: ArmyStack[], kind: RoamKind, n
   return { win: win / n, loss: loss / n, refill: win ? refill / win : 0, battleXp: win ? xp / win : 0, rounds: rounds / n };
 }
 
-export const stackFight = (kind: RoamKind, L: number, size: RoamSize, n = 24): RoamFight => roamFight(refParty(L), roamStacks(kind, roamCount(kind, L, size)), kind, n);
+export const stackFight = (kind: RoamKind, L: number, size: RoamSize, n = 24): RoamFight => roamFight(refParty(L), roamStacks(kind, roamCount(kind, L, size)), kind, n, heroLevelOf(L));
 
 /** The reference captain's might against a stack's (as the server reckons the ×3 of HoMM3's offer at her morale 70). */
 export function roamOdds(kind: RoamKind, L: number, size: RoamSize): number {
@@ -80,11 +85,11 @@ export function calibrate(kinds: RoamKind[] = ROAM_KINDS, log?: (s: string) => v
       }
       const me = refParty(L), base = roamBase(kind, L);
       const row = ROAM_SIZES.map((size) => {
-        let lo = Math.log(0.05), hi = Math.log(20);
-        for (let i = 0; i < 10; i++) {
+        let lo = Math.log(0.05), hi = Math.log(80);
+        for (let i = 0; i < 11; i++) {
           const mid = (lo + hi) / 2;
           const n = Math.max(1, Math.round(base * Math.exp(mid)));
-          if (roamFight(me, roamStacks(kind, n), kind).loss > ROAM_LOSS[size]) hi = mid;
+          if (roamFight(me, roamStacks(kind, n), kind, 24, heroLevelOf(L)).loss > ROAM_LOSS[size]) hi = mid;
           else lo = mid;
         }
         return Math.round(Math.exp((lo + hi) / 2) * 100) / 100;
@@ -138,7 +143,7 @@ function mixOf(L: number, fightsEach: number): Mix[] {
     for (const size of ROAM_SIZES) {
       const n = roamCount(kind, L, size);
       const st = roamStacks(kind, n);
-      out.push({ w: ROAMS[kind].weight * ROAM_SIZE_W[size], f: roamFight(refParty(L), st, kind, fightsEach), size, kind, n, st: st.length });
+      out.push({ w: ROAMS[kind].weight * ROAM_SIZE_W[size], f: roamFight(refParty(L), st, kind, fightsEach, heroLevelOf(L)), size, kind, n, st: st.length });
     }
   }
   return out;
@@ -155,7 +160,7 @@ export function xpHour(L: number, gap = ROAM_GAP, fightsEach = 12, pace: FightPa
     const pay = roamPay(L, m.size);
     secs += m.w * (fightSecs(m.f.rounds, me.length, m.st, pace) + sailSecs(gap));
     xp += m.w * m.f.win * (m.f.battleXp * battleLesson(L) * ROAM_BATTLE_XP + pay.xp);
-    silver += m.w * m.f.win * (pay.silver + resWorth(roamRes(m.kind, m.n)));
+    silver += m.w * m.f.win * (pay.silver + resWorth(roamRes(m.kind, m.n, L, m.size)));
     refill += m.w * m.f.refill * m.f.win * (1 - ROAM_RAISE);
     wsum += m.w;
   }
@@ -185,7 +190,7 @@ export function silverFor(L: number, net: number): number {
   const h = xpHour(L);
   let wsum = 0, spoils = 0, sizeMul = 0;
   for (const m of mixOf(L, 12)) {
-    spoils += m.w * m.f.win * resWorth(roamRes(m.kind, m.n));
+    spoils += m.w * m.f.win * resWorth(roamRes(m.kind, m.n, L, m.size));
     sizeMul += m.w * m.f.win * ROAM_XP_SIZE[m.size];
     wsum += m.w;
   }

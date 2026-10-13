@@ -332,25 +332,27 @@ export function roamDown(world: World, id: number, k: number): number {
 /** The share of the reference captain's might a stack is first reckoned at (then the calibration). */
 const ROAM_BASE = 0.4;
 
+// Playthrough C: re-weighed with her hero aboard (tests/balance/roamers.ts, lairs.ts heroLevelOf) — without it the stacks
+// cost a captain of ⚓4–10 a few men where the table asked its ROAM_LOSS.
 /** How many times its first reckoning each kind stands with, by level and size, so that it costs the reference
  *  captain its ROAM_LOSS (node tools/balance-roamers.ts --calibrate, from the battle itself). Index: level 0–10. */
 export const ROAM_CAL: Record<RoamKind, [number, number, number][]> = {
-  gull: [[0, 0, 0], [1, 1.13, 1.42], [0.87, 0.87, 1.22], [0.4, 0.55, 0.77], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
-  seal: [[0, 0, 0], [1.02, 1.02, 1.83], [1.1, 1.1, 1.42], [1.1, 1.1, 1.7], [0.62, 1.07, 1.29], [0.59, 0.89, 1.2], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
-  reef_shark: [[0, 0, 0], [0, 0, 0], [0.05, 0.44, 0.74], [0.28, 0.84, 1.4], [0.37, 0.78, 1.1], [0.32, 0.55, 1.06], [0.26, 0.46, 0.95], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
-  sea_turtle: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1.34, 1.88, 2.41], [1.06, 1.36, 1.97], [0.91, 1.24, 1.74], [0.87, 1.22, 1.69], [0.86, 1.05, 1.49], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
-  marsh_serpent: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1.04, 1.34, 1.63], [0.92, 1.08, 1.75], [0.96, 1.14, 1.6], [0.93, 1.25, 1.64], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
-  lagoon_tentacle: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [1.56, 1.9, 2.05], [1.42, 1.42, 1.8], [1, 1.13, 1.53], [0.84, 1.06, 1.42], [0.86, 1.01, 1.5], [0, 0, 0], [0, 0, 0]],
-  mermaid: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [1.22, 1.91, 2.6], [1.24, 1.62, 2], [0.87, 1.27, 1.94], [1.06, 1.5, 2.01], [1.01, 1.46, 1.91], [0, 0, 0], [0, 0, 0]],
-  surf_drowned: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [1.11, 1.35, 2.1], [0.95, 1.3, 1.81], [1, 1.28, 1.75], [0.99, 1.18, 1.63], [1.03, 1.2, 1.88], [0, 0, 0]],
-  young_serpent: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.72, 1.2, 2.63], [0.39, 1.44, 1.97], [0.44, 1.33, 1.33], [0.59, 0.86, 1.68], [0.44, 0.91, 1.79]],
-  lantern_maw: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [1.97, 2.65, 3.12], [1.79, 2.41, 3.19], [1.48, 1.95, 2.83], [1.48, 2.1, 2.71]],
-  shoal_leviathan: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.05, 1.09, 2.56], [2.79, 3.18, 4.28], [3.03, 3.51, 4.49]],
-  ancient_turtle: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [3.39, 4.04, 4.36], [3.68, 4.08, 4.73]],
-  barracuda: [[0, 0, 0], [0, 0, 0], [0.05, 0.38, 0.64], [0.24, 0.74, 1.22], [0.14, 0.69, 0.96], [0.13, 0.33, 0.63], [0.12, 0.23, 0.48], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
-  albatross: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0.43, 1, 2.13], [0.4, 1.04, 1.53], [0.4, 0.75, 1.19], [0.46, 0.71, 1.02], [0.29, 0.52, 1.06], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
-  moray: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0.6, 1.01, 1.41], [0.57, 1.02, 1.92], [0.43, 0.81, 1.55], [0.39, 0.65, 1.53], [0.36, 0.64, 1.36], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
-  giant_octopus: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.67, 1.04, 1.81], [0.57, 0.99, 1.41], [0.46, 0.81, 1.23], [0.99, 1.09, 1.56], [0.69, 1.11, 1.53]],
+  gull: [[0, 0, 0], [1.13, 1.13, 2.03], [0.52, 0.99, 1.68], [0.55, 0.99, 1.43], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  seal: [[0, 0, 0], [1.02, 1.43, 3.46], [1.1, 1.73, 2.67], [1.3, 2.1, 3.7], [1.52, 1.97, 3.09], [1.69, 2.31, 4.15], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  reef_shark: [[0, 0, 0], [0, 0, 0], [0.44, 0.73, 1.32], [0.84, 1.4, 2.15], [1.1, 1.73, 2.57], [1.29, 2.15, 3.13], [1.75, 2.24, 3.49], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  sea_turtle: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1.88, 2.96, 5.09], [1.66, 2.57, 4.69], [2.07, 3.22, 6.7], [2.26, 4.12, 6.79], [2.45, 4.88, 7.04], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  marsh_serpent: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1.63, 1.93, 3.11], [1.92, 2.42, 3.09], [2.24, 3.43, 4.79], [2.79, 4.07, 5.55], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  lagoon_tentacle: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2.6, 3.28, 4.33], [2.75, 3.89, 7.68], [3.13, 5.26, 8.19], [3.83, 4.84, 7.9], [3.51, 4.84, 7.41], [0, 0, 0], [0, 0, 0]],
+  mermaid: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2.26, 3.64, 6.44], [2.95, 3.71, 8.08], [3.14, 4.47, 8.34], [3.55, 5.38, 10.06], [3.49, 4.57, 9.71], [0, 0, 0], [0, 0, 0]],
+  surf_drowned: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [3.08, 4.06, 6.03], [3.72, 4.59, 7.71], [3.83, 5.08, 7.74], [4.13, 6.06, 8.81], [4, 5.28, 8.78], [0, 0, 0]],
+  young_serpent: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [3.12, 4.56, 7.44], [3.28, 4.6, 7.22], [3.82, 4.52, 7.2], [3.67, 5.04, 8.02], [3.79, 4.86, 7.79]],
+  lantern_maw: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [4.51, 6.35, 8.9], [5.38, 6.48, 9.6], [6.25, 8.65, 15.17], [6.12, 7.74, 15.56]],
+  shoal_leviathan: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [10.58, 12.76, 18.63], [11.01, 12.86, 17.72], [9.78, 13.42, 19.74]],
+  ancient_turtle: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [9.53, 14.37, 22.47], [8.08, 12.67, 25.03]],
+  barracuda: [[0, 0, 0], [0, 0, 0], [0.38, 0.38, 0.9], [0.41, 1.22, 2.04], [0.96, 1.33, 2.06], [1.13, 1.63, 2.69], [1.25, 1.85, 2.81], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  albatross: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0.71, 1.57, 3.28], [1.36, 1.84, 2.97], [1.63, 2.24, 3.82], [1.95, 2.5, 3.49], [1.81, 2.69, 3.9], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  moray: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1.41, 2.22, 3.43], [1.48, 2.15, 3.51], [1.93, 2.66, 4.65], [2.4, 3.01, 4.65], [2.22, 2.99, 4.56], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  giant_octopus: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2.95, 4.09, 6.19], [3.08, 4.22, 7.15], [3.13, 4.69, 6.72], [3.33, 4.52, 8.46], [3.46, 4.65, 9]],
 };
 
 /** A stack's creatures at its first reckoning: ROAM_BASE of the reference captain's might, in creatures (fractional). */
@@ -407,7 +409,7 @@ export const ROAM_XP_SHARE = [0, 0.023, 0.024, 0.0275, 0.0303, 0.0303, 0.0275, 0
 /** Its silver, a share of an hour at sea of its waters for an average stack (by size as the lesson): a small purse that
  *  with the creatures' spoils about pays for the men a steady hour of them costs and leaves a little over (calibrated:
  *  tests/balance/roamers.ts holds the hour's net to +0.1…+0.35 of an hour at sea). Index: level 0–10. */
-export const ROAM_SILVER = [0, 0.025, 0.019, 0.026, 0.028, 0.03, 0.028, 0.028, 0.022, 0.017, 0.012];
+export const ROAM_SILVER = [0, 0.025, 0.019, 0.026, 0.028, 0.03, 0.028, 0.028, 0.022, 0.022, 0.021];
 /** The chance its beating turns up an artifact (H2's maybeArtifact, as a guard's), by size. */
 export const ROAM_ART: Record<RoamSize, number> = { weak: 0.008, avg: 0.015, strong: 0.04 };
 /** A group mate near when the stack is beaten has this share of its lesson (the fighter the whole of it); the silver
@@ -427,12 +429,16 @@ export function roamPay(level: number, size: RoamSize): { silver: number; xp: nu
 export const roamGap = (level: number, theirs: number): number => xpGap(level, theirs);
 
 /** The resources of the creatures beaten (BEAST_RES of the land's kinds; the mermaids leave pearls, the turtles shell). */
-export function roamRes(kind: RoamKind, beaten: number): Partial<Record<LandRes | 'pearls', number>> {
+export function roamRes(kind: RoamKind, beaten: number, level?: number, size?: RoamSize): Partial<Record<LandRes | 'pearls', number>> {
   const u = ROAMS[kind].u;
   const per: Partial<Record<LandRes | 'pearls', number>> = (BEAST_RES as Record<string, Partial<Record<LandRes | 'pearls', number>>>)[u] ?? (u === 'mermaid' ? { pearls: 0.06 } : { shell: 0.3 });
   const out: Partial<Record<LandRes | 'pearls', number>> = {};
+  // Playthrough C: a stack's spoils are reckoned on its first reckoning by its size (roamBase × ROAM_XP_SIZE), the share
+  // of it beaten — not on the head count the calibration stands it at (re-weighed with her hero aboard, the stacks grew
+  // three- and fourfold at ⚓6–10, and so would their shells and hides).
+  const n0 = level !== undefined && size !== undefined ? beaten * ((roamBase(kind, level) * ROAM_XP_SIZE[size]) / Math.max(1, roamCount(kind, level, size))) : beaten;
   for (const [r, k] of Object.entries(per) as [LandRes | 'pearls', number][]) {
-    const n = Math.floor(beaten * k * 0.5);
+    const n = Math.floor(n0 * k * 0.5);
     if (n > 0) out[r] = n;
   }
   return out;

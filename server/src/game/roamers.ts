@@ -402,7 +402,7 @@ function roamEnd(game: Game, s: PlayerSession, sp: RoamSpot, won: boolean, left:
   const where = roamWhere(game, sp);
   const mates = matesNear(game, s, where.x, where.y);
   const pay = roamPay(sp.level, sp.size);
-  const res = roamRes(sp.kind, roamMen(game, sp));
+  const res = roamRes(sp.kind, roamMen(game, sp), sp.level, sp.size);
   roamGone(game, sp);
   const gap = roamGap(s.profile!.level, sp.level);
   const xp = xpAt(s.profile!.level, sp.level, pay.xp);
