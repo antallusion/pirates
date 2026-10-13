@@ -188,20 +188,29 @@ export function setPath(brain: NpcBrain, path: Path): void {
  *  thing by a hull's length (2026-10-08: one put out 30 m off a coast, her head to it, struck it in her first second). */
 export const openSea = (game: Game, x: number, y: number): boolean => !isLand(game.world, x, y) && clearAt(game.world, x, y, 60);
 
-function randomPointIn(game: Game, area: { x: number; y: number; r: number }): [number, number] | null {
+function randomPointIn(game: Game, area: { x: number; y: number; r: number }, level = 0): [number, number] | null {
   for (let i = 0; i < 12; i++) {
     const a = game.rng.float() * Math.PI * 2, r = Math.sqrt(game.rng.float()) * area.r;
     const x = area.x + Math.sin(a) * r, y = area.y - Math.cos(a) * r;
     if (x < 3000 || y < 3000 || x > 93000 || y > 93000) continue;
     // (Not land; near a coast is fine — she is there within 260 m of it, npc.ts followPath, her lead line keeps her off.)
-    if (!isLand(game.world, x, y)) return [x, y];
+    if (isLand(game.world, x, y)) continue;
+    if (level > 0 && !squareFor(game, x, y, level)) continue;
+    return [x, y];
   }
   return null;
 }
 
+/** Playthrough C: a rover of `level` lingers only in a square whose ships she belongs among — one level over its band at
+ *  most, as an ambush is (levelNear). A pirate of a ⚓8–9 square, her 6 km beat about where she put out, sailed into the
+ *  calm under a friendly harbour next door (⚓3–4): 10 of the 54 pirates in such squares stood 3–5 levels over them. */
+export function squareFor(game: Game, x: number, y: number, level: number): boolean {
+  return level <= sectorAt(game.world, x, y).band[1] + 1;
+}
+
 export function planWander(game: Game, ship: ShipEntity, brain: NpcBrain): boolean {
   if (!brain.area) return false;
-  const p = randomPointIn(game, brain.area);
+  const p = randomPointIn(game, brain.area, ship.npcRole === 'pirate' ? ship.shipLevel : 0);
   if (!p) return false;
   const path = findPath(game.world, ship.state.x, ship.state.y, p[0], p[1], 20000);
   if (!path) return false;
