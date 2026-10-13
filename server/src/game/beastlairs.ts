@@ -833,6 +833,9 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
   // docs/18 #36: some of the beaten may follow her (a grotto's and a guardian's never; the Choir's only their own).
   f.capture = captureOffer(game, s, lossesOf(bt, 1), lairRatio(game, s, l), LAIRS[l.kind].join);
   questEvent(game, s, { k: 'lair', island: l.island, kind: l.kind });
+  // The party that beat it stood on the island: a job's «land a party on …» is done by it (docs/30, band 2: «Land a
+  // party on Lanternpoint Isle» met the Iguana Rocks on the beach, won — and the step still asked her to land again).
+  if (l.island >= 0) questEvent(game, s, { k: 'land', island: l.island, feature: 'lair' });
   ship.morale = Math.min(100, ship.morale + 8);
   ship.companyKey = '';
   game.pushSelf(s, true);

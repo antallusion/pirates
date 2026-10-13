@@ -274,13 +274,8 @@ function spawnAbout(game: Game): void {
   for (const s of game.sessions) {
     const ship = s.ship;
     if (!ship || ship.docked || !ship.alive || !s.profile) continue;
-    let near = 0;
-    for (const id of S.brains.keys()) {
-      const b = game.ships.get(id);
-      if (b && dist(b.state.x, b.state.y, ship.state.x, ship.state.y) < 5000) near++;
-    }
     const migrating = orcaMigrationIn(game, ship.region);
-    if (near >= (migrating ? 10 : 6)) continue;
+    if (beastsNear(game, ship) >= (migrating ? 10 : NEAR_CAP)) continue;
     if (!S.rng.chance(migrating ? 0.25 : 0.12)) continue;
     const lvl = sectorAt(game.world, ship.state.x, ship.state.y).level; // the beasts of the square (docs/16 P2)
     const kind = pickKind(game, ship.region, lvl, ship.combatLevel);
@@ -305,10 +300,26 @@ function spawnAbout(game: Game): void {
   }
 }
 
-/** Beasts passing within a mile or so of one captain (the sea's small life, sealife.ts); false when none fits. */
+/** The most beasts about a captain at sea (within NEAR_R) the sea adds to. */
+export const NEAR_CAP = 6;
+const NEAR_R = 5000;
+
+/** The beasts within NEAR_R of a ship. */
+function beastsNear(game: Game, ship: ShipEntity): number {
+  let near = 0;
+  for (const id of bs(game).brains.keys()) {
+    const b = game.ships.get(id);
+    if (b && dist(b.state.x, b.state.y, ship.state.x, ship.state.y) < NEAR_R) near++;
+  }
+  return near;
+}
+
+/** Beasts passing within a mile or so of one captain (the sea's small life, sealife.ts); false when none fits — or the
+ *  water about her is full already (QA playthrough A, 2026-10-13: a group passed every minute and a half of sailing and
+ *  stayed till she was 7 km off — ten sharks within a kilometre of a sloop 2 km out of Saltmarrow). */
 export function beastsPass(game: Game, ship: ShipEntity): boolean {
   const S = bs(game);
-  if (S.brains.size >= WORLD_CAP) return false;
+  if (S.brains.size >= WORLD_CAP || beastsNear(game, ship) >= NEAR_CAP) return false;
   const lvl = sectorAt(game.world, ship.state.x, ship.state.y).level; // the beasts of the square (docs/16 P2)
   const kind = pickKind(game, ship.region, lvl, ship.combatLevel);
   if (!kind) return false;
@@ -1003,7 +1014,10 @@ export function beastSlain(game: Game, b: ShipEntity): boolean {
     lt = t;
     killer = o.ownerId !== null ? game.ships.get(o.ownerId) ?? o : o;
   }
-  const c: Carcass = { id: S.seq++, beast: br.beast, level: b.shipLevel, x: b.state.x, y: b.state.y, h: b.state.heading, until: now + CARCASS_LIFE, progress: 0, by: null, freshUntil: now + 60, nextBlood: now + 8, called: 0, killer: killer?.accountId ?? null };
+  // One that came for the blood calls none in its turn (QA playthrough A, 2026-10-13): every shark slain at a carcass
+  // called two more, the ring at Saltmarrow's mouth never thinned, and a ⚓2 sloop at full crew went down in a quarter
+  // of an hour of killing them.
+  const c: Carcass = { id: S.seq++, beast: br.beast, level: b.shipLevel, x: b.state.x, y: b.state.y, h: b.state.heading, until: now + CARCASS_LIFE, progress: 0, by: null, freshUntil: now + 60, nextBlood: now + 8, called: br.blood !== null ? BLOOD_CALLS : 0, killer: killer?.accountId ?? null };
   S.carcasses.set(c.id, c);
   for (const [k, l] of S.lines) if (l.beast === b.id) endLine(game, k, null);
   game.emit({ k: 'sunk', ship: b.id, x: Math.round(b.state.x), y: Math.round(b.state.y), name: b.name }, b.state.x, b.state.y);
@@ -1180,7 +1194,7 @@ function stepCarcasses(game: Game): void {
     }
     // Blood in the water: the sharks — and in the cold seas the orcas — come for it.
     const bleeding = c.by !== null || now < c.freshUntil;
-    if (bleeding && now >= c.nextBlood && c.called < 4 && !bloodCrowded(game, c.x, c.y)) {
+    if (bleeding && now >= c.nextBlood && c.called < BLOOD_CALLS && !bloodCrowded(game, c.x, c.y)) {
       c.nextBlood = now + 10;
       const region = regionAt(game.world, c.x, c.y);
       const cold = BEASTS.orca.regions.includes(region);
@@ -1209,6 +1223,8 @@ function stepCarcasses(game: Game): void {
  *  bled and called sharks, the patrols and the merchants by a harbour slew those, and their carcasses called more —
  *  thirty sharks and orcas ringed Pearl Point and Hollowmere and fell on every ship leaving. */
 export const BLOOD_CROWD = 6;
+/** The most a carcass calls to its blood. */
+export const BLOOD_CALLS = 4;
 export const BLOOD_CROWD_R = 1500;
 export function bloodCrowded(game: Game, x: number, y: number): boolean {
   let n = 0;

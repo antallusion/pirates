@@ -250,7 +250,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "The yard outdid itself: {0} is Excellent work.": "Верфь превзошла себя: «{0}» — Отличная работа.",
   "The yard shows its plans only to friends (standing {0})": "Верфь показывает чертежи только друзьям (репутация {0})",
   "The yard wants {0} silver": "Верфь просит {0} серебра",
-  "The {0} considers you an enemy.": "{0} считает вас врагом.",
+  "{0} considers you an enemy.": "Вы — враг фракции «{0}».",
   "The {0} has been raised by {1}.": "«{0}» поднят со дна: {1}.",
   "The {0} has returned to the Legendary Reserve.": "«{0}» вернулся в Легендарный резерв.",
   "The {0} has returned to the Legendary Reserve: her captain has not been seen in thirty days. The contest for her begins again at {1}.": "«{0}» вернулся в Легендарный резерв: его капитана не видели тридцать дней. Борьба за него начнётся заново в {1}.",

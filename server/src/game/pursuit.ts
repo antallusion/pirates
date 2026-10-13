@@ -30,6 +30,7 @@ import { AIMED_SPREAD, AUTO_ARC_DEG, BOARD_RUN, CHASE_GIVE_UP, LAY_ARC_DEG, clos
 import { ROAM_REACH } from '../../../shared/src/data/roamers.ts';
 import { AMMO, CHASER_CONE } from '../../../shared/src/data/ships.ts';
 import type { PursuitMode, PursuitStop } from '../../../shared/src/protocol.ts';
+import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { angleDiff, DEG, headingOf } from '../../../shared/src/math.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { stopAutosail, autosailOf } from './autosail.ts';
@@ -509,6 +510,32 @@ function free(ship: ShipEntity): boolean {
   return ship.alive && !ship.docked && !ship.grappled && !ship.boarding && !ship.surrendered && !ship.sinkingUntil;
 }
 
+/** What she is told when they hold (once in 20 s), and when it was last said. */
+export const FOUL_LINE_WORDS = 'The gun captains hold: another ship lies across the line of fire.';
+const foulSaid = new WeakMap<ShipEntity, number>();
+
+/** How wide of the line from her to the mark a bystander's hull still takes a ball (the broadside's spread, half a beam). */
+export const FOUL_LINE_M = 45;
+
+/** A ship she would wrong by a stray ball — of a lawful flag, a captain or a caravan she is not at war with — lying across
+ *  the line from her to the mark, nearer than the mark. */
+export function fouledLine(game: Game, ship: ShipEntity, t: ShipEntity, lead: { x: number; y: number; d: number }): boolean {
+  const dx = lead.x - ship.state.x, dy = lead.y - ship.state.y;
+  const len = Math.max(1, Math.hypot(dx, dy));
+  let foul = false;
+  game.forShipsNear((ship.state.x + lead.x) / 2, (ship.state.y + lead.y) / 2, len / 2 + FOUL_LINE_M + 60, (o) => {
+    if (foul || o.id === ship.id || o.id === t.id || !o.alive || o.docked || o.sinkingUntil || o.surrendered || o.cls.monster) return;
+    if (game.isHostile(ship, o) || game.areAllies(ship, o)) return;
+    const wronged = o.isPlayer || !!o.caravanId || (o.faction !== 'player' && FACTIONS[o.faction]?.lawful);
+    if (!wronged) return;
+    const along = ((o.state.x - ship.state.x) * dx + (o.state.y - ship.state.y) * dy) / len;
+    if (along <= 0 || along >= Math.min(len, lead.d)) return;
+    const off = Math.abs((o.state.x - ship.state.x) * dy - (o.state.y - ship.state.y) * dx) / len;
+    if (off < FOUL_LINE_M + o.stats.beam / 2) foul = true;
+  });
+  return foul;
+}
+
 /** Every tick: the captains' gun crews with auto-fire on lay each loaded side on the mark as it bears; without the
  *  expert's hand the chasers too (docs/23 items 35, 42). */
 export function stepAutoFire(game: Game): void {
@@ -527,6 +554,16 @@ export function stepAutoFire(game: Game): void {
     // PRIZE_HOLD of her hull they hold all but grape (the quick fight's guns would send her down before the grapples).
     if (run?.mode === 'board' && run.target === t.id && ship.ammoSel !== 'grape' && t.hull < t.stats.hullMax * PRIZE_HOLD) continue;
     const lead = leadOn(ship, t);
+    // A ship of the law or a captain she is at peace with between her and the mark: the gun captains hold (docs/30, band
+    // 2: «Атаковать» on a pirate fired through a Crown patrol 150 m off, «Wanted 2 (attacked Lantern Bride)», and the
+    // patrol sank her in four volleys). Her own «Огонь» is her own: it still fires.
+    if (fouledLine(game, ship, t, lead)) {
+      if (game.now - (foulSaid.get(ship) ?? -Infinity) > 20) {
+        foulSaid.set(ship, game.now);
+        game.sendTo(s, { t: 'toast', msg: FOUL_LINE_WORDS, kind: 'info' });
+      }
+      continue;
+    }
     for (const side of ['port', 'starboard'] as const) {
       if (ship.reload[side] > 0) continue;
       const off = Math.abs(angleDiff(sideHeading(ship, side), lead.bearing));

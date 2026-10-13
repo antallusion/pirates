@@ -122,7 +122,9 @@ export function findLandable(game: Game, s: PlayerSession): { island: Island; fe
       bd = d;
       continue;
     }
-    for (const f of here) {
+    // The place a job sends her to on this island first (docs/30, band 2: the hamlet a job wanted lay behind the island's
+    // ruins, and the boats rowed for the ruins).
+    for (const f of [...here.filter((x) => questLandsHere(p, is.id, x)), ...here]) {
       if (!LANDABLE.includes(f as LandableFeature)) continue;
       const t = p.explored[exploredKey(is.id, f as LandableFeature)] ?? -Infinity;
       if (game.now - t < RESTOCK_SEC && !questLandsHere(p, is.id, f)) continue;
@@ -207,6 +209,8 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
   // A mine ashore (docs/17 H3): the flag first.
   const flag = startFlag(game, s);
   if (flag !== undefined) return flag;
+  // (the job's landing went first above — docs/30, band 2 found it too: «Land a party at the fishing hamlet on Hushreed»
+  // sent the boats against the lair on its beach, eleven men lost)
   // A great one ashore in reach (shorebosses.ts, 2026-10-03): the boats go ashore against it.
   const great = shoreBossLanding(game, s);
   if (great !== undefined) return great;

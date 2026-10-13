@@ -366,3 +366,131 @@ test('wages short: the chest pays what it holds, only the rest is owed (docs/30)
   assert.equal(s.profile!.gold, 0, 'the chest emptied into the men');
   assert.ok(c.owed < 32, `owed ${c.owed.toFixed(1)}`);
 });
+
+test('a wounded ship: the helmsman takes her to a harbour whatever her hull, and nowhere else (band 2, docs/30)', async () => {
+  const { autosailDanger, homeward, startAutosail } = await import('../server/src/game/autosail.ts');
+  const { AUTOSAIL_LOW_HULL } = await import('../shared/src/data/autosail.ts');
+  const { duelSea, openWater } = await import('./balance/duel.ts');
+  const { seaCaptain } = await import('./balance/seafight.ts');
+  const game = duelSea();
+  const at = openWater(game, 41);
+  const s = seaCaptain(game, 'sloop', 2, at.x, at.y, 0);
+  const ship = s.ship!;
+  if (s.profile!.tutorial) s.profile!.tutorial.on = false; // past the First Watch, where nothing is lost
+  ship.hull = ship.stats.hullMax * (AUTOSAIL_LOW_HULL - 0.1);
+  const port = game.world.ports.slice().sort((a, b) => Math.hypot(a.x - at.x, a.y - at.y) - Math.hypot(b.x - at.x, b.y - at.y))[0];
+  const sea = [[3000, 0], [-3000, 0], [0, 3000], [0, -3000], [5000, 5000]].map(([dx, dy]) => ({ x: at.x + dx, y: at.y + dy })).find((m) => !homeward(game, m.x, m.y))!;
+  assert.equal(autosailDanger(game, s, ship, game.now, sea), 'hull', 'out to sea: the helm stays hers');
+  assert.equal(autosailDanger(game, s, ship, game.now, { x: port.x, y: port.y }), null, 'to the yard he takes her');
+  if (Math.hypot(port.x - at.x, port.y - at.y) < 60_000) assert.equal(startAutosail(game, s, port.x, port.y), null, 'and the run starts');
+});
+
+test('«Атаковать»: the gun captains hold while a ship of the law lies across the line to the mark (band 2, docs/30)', async () => {
+  const { headingVec } = await import('../shared/src/math.ts');
+  const { fouledLine, startPursuit, stepAutoFire } = await import('../server/src/game/pursuit.ts');
+  const { game } = makeGame();
+  join(game, 'Line Lena');
+  const s = game.sessionByName('Line Lena')!;
+  const ship = s.ship!;
+  ship.docked = null;
+  s.profile!.docked = null;
+  if (s.profile!.tutorial) s.profile!.tutorial.on = false;
+  Object.assign(ship.state, { x: 30000, y: 80000, heading: 0, speed: 0 });
+  ship.protectedUntil = 0;
+  ship.ammo.round = 100;
+  game.grid.upsert(ship.id, 30000, 80000);
+  const beam = headingVec(Math.PI / 2);
+  const put = (role: string, cls: string, faction: string, d: number) => {
+    const o = game.spawnNpcShip(role as never, cls as never, faction as never, 30000 + beam.x * d, 80000 + beam.y * d, 0);
+    o.input = { rudder: 0, sailTarget: 0 };
+    o.state.speed = 0;
+    game.grid.upsert(o.id, o.state.x, o.state.y);
+    return o;
+  };
+  const pirate = put('pirate', 'sloop', 'confederacy', 260);
+  const patrol = put('patrol', 'cutter', 'crown', 130);
+  assert.equal(startPursuit(game, s, pirate.id, 'guns'), null);
+  const lead = { x: pirate.state.x, y: pirate.state.y, d: 260 };
+  assert.ok(fouledLine(game, ship, pirate, lead), 'the patrol is in the line');
+  ship.reload.port = ship.reload.starboard = 0;
+  stepAutoFire(game);
+  assert.equal(ship.reload.starboard, 0, 'held: not a ball thrown');
+  assert.equal(patrol.attackers.has(ship.id), false);
+  // she stands clear: they fire
+  patrol.state.x += 400;
+  game.grid.upsert(patrol.id, patrol.state.x, patrol.state.y);
+  assert.ok(!fouledLine(game, ship, pirate, lead));
+  stepAutoFire(game);
+  assert.ok(ship.reload.starboard > 0 || ship.reload.port > 0, 'a broadside thrown');
+});
+
+test('a quest\'s fight is the waters it pays by: the same ⚓3 flagship pays alike at a calm harbour and a ⚓2 one (band 2, docs/30)', async () => {
+  const { todaysElite } = await import('../server/src/game/elite.ts');
+  const { questXpOf, shipLevelOfQuest } = await import('../server/src/game/quests.ts');
+  const { questXpFor } = await import('../shared/src/data/xpcurve.ts');
+  const { captainLevelFor } = await import('../shared/src/data/shiplevel.ts');
+  const { game } = makeGame();
+  join(game, 'Flag Hunter');
+  const p = game.sessionByName('Flag Hunter')!.profile!;
+  p.level = 11;
+  const q = todaysElite(game, game.portById('gravesend')!)!;
+  assert.ok(q, 'Gravesend has its flagship today');
+  const ship = shipLevelOfQuest(q)!;
+  assert.ok(ship >= 3, `a ⚓${ship} fight`);
+  assert.equal(questXpOf(game, p, q), questXpFor(11, q.reward.xp, q.requires.level ?? 1, captainLevelFor(ship + 1) - 1), 'paid as in the fight\'s own waters');
+  assert.ok(questXpOf(game, p, q) >= q.reward.xp, 'not the tenth of a green job');
+});
+
+test('a job that lands her on an island two ⚓ above her own waits for a captain who may go there (band 2, docs/30)', async () => {
+  const { JOBS } = await import('../shared/src/data/quests.ts');
+  const { captainLevelFor } = await import('../shared/src/data/shiplevel.ts');
+  const { questIsleBlocked, questLandLevel, questWatersTop } = await import('../server/src/game/quests.ts');
+  const { game } = makeGame();
+  join(game, 'Flock Finder');
+  const p = game.sessionByName('Flock Finder')!.profile!;
+  p.level = 11;
+  // (her own ⚓ at 11 is the third: an island of ⚓5 is two above it)
+  const q = JOBS.find((j) => (j.requires.level ?? 1) <= 11 && questLandLevel(game, j) >= 5)!;
+  assert.ok(q, 'such a job on some board');
+  const lv = questLandLevel(game, q);
+  assert.equal(questIsleBlocked(game, p, q), `Level ${captainLevelFor(lv - 1)}`, `⚓${lv} island for a captain of 11`);
+  p.level = captainLevelFor(lv - 1);
+  assert.equal(questIsleBlocked(game, p, q), null, 'at the level of the island\'s waters she may');
+  assert.ok(questWatersTop(game, q) >= p.level, 'and it pays at her level there');
+  const easy = JOBS.find((j) => questLandLevel(game, j) === 1)!;
+  p.level = 1;
+  assert.equal(questIsleBlocked(game, p, easy), null, 'a calm island bars nobody');
+});
+
+test('a harbour of an enemy faction says so once, the name with its own article (band 2, docs/30)', async () => {
+  const { canDock } = await import('../server/src/game/player.ts');
+  const { FACTIONS } = await import('../shared/src/data/factions.ts');
+  const { game } = makeGame();
+  join(game, 'Enemy Enid');
+  const p = game.sessionByName('Enemy Enid')!.profile!;
+  p.reputation.confederacy = -100;
+  const why = canDock(p, 'confederacy').reason!;
+  assert.equal(why, `${FACTIONS.confederacy.name} considers you an enemy.`);
+  assert.ok(!/^The The /.test(why));
+});
+
+test('letters for a harbour that will not let her in are not hers to take (band 2, docs/30)', async () => {
+  const { game } = makeGame();
+  const conn = join(game, 'Letter Lia');
+  const s = game.sessionByName('Letter Lia')!;
+  const port = game.portById(s.ship!.docked!)!;
+  let c = game.contractsAt(port.id).find((x) => x.toPort);
+  for (let i = 0; i < 20 && !c; i++) {
+    game.now += 4000;
+    c = game.contractsAt(port.id).find((x) => x.toPort);
+  }
+  assert.ok(c, 'a contract for another harbour');
+  const dest = game.portById(c!.toPort!)!;
+  s.profile!.reputation[dest.faction] = -100;
+  conn.push({ t: 'contract', action: 'accept', id: c!.id });
+  assert.ok(!s.profile!.contracts.some((x) => x.id === c!.id), 'refused');
+  assert.ok(conn.all('toast').some((t) => /considers you an enemy/.test(t.msg)), 'with the reason');
+  s.profile!.reputation[dest.faction] = 0;
+  conn.push({ t: 'contract', action: 'accept', id: c!.id });
+  assert.ok(s.profile!.contracts.some((x) => x.id === c!.id), 'a friend takes it');
+});
