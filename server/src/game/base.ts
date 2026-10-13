@@ -480,7 +480,9 @@ export function orderBarge(game: Game, s: PlayerSession): string | null {
   const cap = capOf(h);
   const take: Partial<Record<BaseRes, number>> = {};
   let cost = 0;
-  for (const [g, n] of Object.entries(BARGE) as [BaseRes, number][]) {
+  const big = bargeSize(y);
+  for (const [g, n0] of Object.entries(BARGE) as [BaseRes, number][]) {
+    const n = n0 * big;
     const k = Math.max(0, Math.min(n, Math.floor(cap - (y.res[g] ?? 0))));
     if (k <= 0) continue;
     take[g] = k;
@@ -497,11 +499,18 @@ export function orderBarge(game: Game, s: PlayerSession): string | null {
   return null;
 }
 
+/** A barge is as big as her town hall's level (QA playthrough B, docs/30: hall 3 asks 260 timber and 200 coal — ten
+ *  barges of 30 and 20, ten taps — and the yard grows with the hall to hold it). */
+export function bargeSize(y: Yard): number {
+  return Math.max(1, townLevel(y, 'hall'));
+}
+
 /** What a barge costs now (0: the yard has no room). */
 export function bargeCost(h: Holding, y: Yard): number {
   const cap = capOf(h);
+  const big = bargeSize(y);
   let cost = 0;
-  for (const [g, n] of Object.entries(BARGE) as [BaseRes, number][]) cost += Math.round(Math.max(0, Math.min(n, Math.floor(cap - (y.res[g] ?? 0)))) * GOODS[g].basePrice * BARGE_MUL);
+  for (const [g, n] of Object.entries(BARGE) as [BaseRes, number][]) cost += Math.round(Math.max(0, Math.min(n * big, Math.floor(cap - (y.res[g] ?? 0)))) * GOODS[g].basePrice * BARGE_MUL);
   return cost;
 }
 

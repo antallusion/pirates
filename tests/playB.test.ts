@@ -178,3 +178,25 @@ test('the waterfront asks no more for a hand past level 20 (67 a man at 26, 88 a
   assert.equal(at(40), at(HIRE_LEVEL_CAP));
   assert.ok(at(40) <= 62, `${at(40)} a man at 40`);
 });
+
+test('a barge is as big as her town hall: hall 3 brings three loads at once (260 timber for hall 3 was ten barges)', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { orderBarge, yardOf, bargeCost } = await import('../server/src/game/base.ts');
+  const { ownIsland } = await import('../server/src/game/estate.ts');
+  const { runAdmin } = await import('../server/src/game/admin.ts');
+  const { BARGE } = await import('../shared/src/data/base.ts');
+  const { game } = makeGame();
+  join(game, 'Barge Bo');
+  const s = game.sessionByName('Barge Bo')!;
+  runAdmin(game, s, '/isle');
+  runAdmin(game, s, '/build tree 3');
+  const h = ownIsland(game, s.accountId)!;
+  const y = yardOf(game, h);
+  for (const g of Object.keys(BARGE)) y.res[g as 'timber'] = 0;
+  s.profile!.gold = 1e6;
+  const cost = bargeCost(h, y);
+  assert.equal(orderBarge(game, s), null);
+  assert.equal(y.res.timber, BARGE.timber! * 3, 'three loads of timber');
+  assert.equal(y.res.coal, BARGE.coal! * 3);
+  assert.equal(1e6 - s.profile!.gold, cost, 'paid what the card says');
+});

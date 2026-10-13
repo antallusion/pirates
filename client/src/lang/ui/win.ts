@@ -129,7 +129,7 @@ export const EN = {
   // The island and her town (item 72).
   'isle.collect': 'Collect all',
   'isle.barge': 'Order a barge',
-  'isle.bargeHint': 'Timber 30, coal 20 and iron 5 brought to the yard for silver — what a sloop brings in two or three runs.',
+  'isle.bargeHint': 'Timber 30, coal 20 and iron 5 for every level of the town hall (×{n} now) brought to the yard for silver — what a sloop brings in two or three runs.',
   'isle.collectHint': 'Take everything the island has made into her stores',
   'isle.collectNone': 'nothing to collect',
   // The world map (item 73).
@@ -293,7 +293,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'gear.shop': 'Лавка',
   'isle.collect': 'Собрать всё',
   'isle.barge': 'Заказать барку',
-  'isle.bargeHint': 'Лес 30, уголь 20 и железо 5 привезут на двор за серебро — столько шлюп возит за два-три рейса.',
+  'isle.bargeHint': 'Лес 30, уголь 20 и железо 5 на каждый уровень ратуши (сейчас ×{n}) привезут на двор за серебро — столько шлюп возит за два-три рейса.',
   'isle.collectHint': 'Забрать на склад всё, что остров наработал',
   'isle.collectNone': 'собирать нечего',
   'map.ports': 'Порты',
