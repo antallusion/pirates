@@ -20,13 +20,17 @@ import { TAC_AI_DELAY, boardSlots, npcBoardSlots, tacSchedule } from '../../shar
 import { aiAct, battleLevel, capOf, newBattle, tacHp } from '../../server/src/game/tacbattle.ts';
 import type { TacBattle, TacSideInput } from '../../server/src/game/tacbattle.ts';
 import { battleFit } from '../../server/src/game/tactical.ts';
+import { shipBandOf } from '../../shared/src/data/xpcurve.ts';
 
 export const PATHS: CaptainId[] = ['corsair', 'smuggler', 'reaver', 'navigator', 'drowned', 'admiral'];
 /** A captain's thinking over one stack's turn, seconds (the model's assumption, docs/25 §1.2). */
 export const HUMAN_DECIDE = 6;
 /** The ladder's crews by ship level (tools/balance-paths.ts hammocks): men a hull of her waters carries. */
 export const HAMMOCKS = [0, 40, 60, 80, 110, 140, 180, 220, 300, 400, 600];
-export const slOf = (L: number): number => Math.min(10, Math.max(1, Math.ceil(L / 6)));
+/** Her own ⚓ at level L (canon D12: the highest she may command — xpcurve.ts shipBandOf). Balance pass 2026-10-13
+ *  (docs/31): it was ⌈L/6⌉, the old scale, so the model sailed a captain of 8–12 on ⚓2 with 60 men against ⚓2's
+ *  pirates, where the game gives her ⚓3. */
+export const slOf = (L: number): number => shipBandOf(L);
 
 /** docs/25 §1.2 by level band — minutes against a captain and against the sea, rounds (a captain's fight), stacks a side,
  *  the share of an equal army cut in round 1.

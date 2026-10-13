@@ -375,7 +375,7 @@ export function upgradedShare(level: number): number {
  *  boardings at every level (`node tools/balance-h5.ts`; tests/heroes6.test.ts holds it). At ⚓1–2, before the
  *  gunners and the boarders, a pirate's crew is the sea's common one. (Eight kinds folded into seven slots made a
  *  pirate's might jump with a man more or less; one kind a tier keeps it smooth in the head count.) */
-export const PIRATE_CAL: [number, number][] = [[1, 1], [1, 1], [1, 1], [0.6, 1.8], [1.4, 1], [0.5, 1], [0.63, 0.63], [0.76, 0.76], [0.92, 0.92], [0.69, 0.69], [0.69, 0.69]];
+export const PIRATE_CAL: [number, number][] = [[1, 1], [1, 1], [1, 1], [0.25, 0.76], [0.46, 0.33], [0.6, 1.21], [0.79, 0.79], [0.95, 0.95], [1.02, 1.02], [0.62, 0.62], [0.62, 0.62]];
 export const PIRATE_UP_LEVEL = 9;
 
 function pirateShares(level: number): { u: UnitId; x: number }[] {

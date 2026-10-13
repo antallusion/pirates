@@ -10,6 +10,8 @@
 //   node tools/balance-paths.ts 30 --balance [--levels=…] [--state=dir] the controller: every path to 50% at each level
 //   node tools/balance-paths.ts 60 --pairs --levels=L [--state=dir]     the pairings to even by least squares
 //   node tools/balance-paths.ts --repair [--state=dir]                  pages back into 8–25% in their role
+//   node tools/balance-paths.ts 30 --balance --sea [--levels=…]       the same, the six held against the sea in SEA_BOUND (docs/31)
+//   node tools/balance-paths.ts 40 --sea [--levels=…]                  each path against the pirate of her waters
 //   node tools/balance-paths.ts --rates [--levels=30]                what a point of initiative, speed, morale, luck is
 //                                                                    worth against a share of blows (boardskill.ts)
 
@@ -20,7 +22,7 @@ import { heroBattle, npcHeroBattle, primsAtLevel, startingOrders } from '../shar
 import type { HeroBattle } from '../shared/src/data/hero.ts';
 import { MOVE_KNOBS, PATH_KNOBS, POWER_AT, clearPowered, pathBook } from '../shared/src/data/paths.ts';
 import type { PathKnobs } from '../shared/src/data/paths.ts';
-import { HAMMOCKS as LADDER, captainAt, playBoard, sidesAt } from '../tests/balance/boardlen.ts';
+import { HAMMOCKS as LADDER, captainAt, playBoard, sidesAt, slOf } from '../tests/balance/boardlen.ts';
 import { tacHp, tacHurt } from '../server/src/game/tacbattle.ts';
 import type { TacBattle } from '../server/src/game/tacbattle.ts';
 import { BAND_LEVELS, isHomePage, liftOf, movesAt, roleOf } from '../tests/balance/boardskill.ts';
@@ -80,7 +82,7 @@ export function table(level: number, n: number, bare = BARE, salt = 0, withSea =
 
 const pc = (x: number) => `${Math.round(x * 100)}`.padStart(3);
 export function print(t: Table): void {
-  const sl = Math.min(10, Math.ceil(t.level / 6));
+  const sl = slOf(t.level);
   console.log(`\nLevel ${t.level} (⚓${sl}, ${HAMMOCKS[sl]} men): the row path's wins against the column's`);
   console.log(`            ${CAPTAIN_IDS.map((c) => c.slice(0, 8).padStart(9)).join('')}   avg   sea`);
   let lo = 1, hi = 0;
@@ -130,15 +132,15 @@ export const DROWNED_RAISE: [number, number][] = [[1, 0.2], [20, 0.3], [60, 0.48
 export interface Edge { page: number[]; buff: number; move: number[]; mbuff: number; mmend: number[]; order: number[] }
 const ONES = POWER_AT.map(() => 1);
 export const EDGE: Record<CaptainId, Edge> = {
-  corsair: { page: [0.88, 0.87, 1.06, 0.76, 0.76, 1.36, 0.83, 0.88, 1.06, 1.25, 0.63, 0.49, 0.77, 0.54, 0.81, 0.55, 0.5, 0.79, 0.45, 0.71, 0.58, 0.5, 0.84, 0.46, 1.03, 0.63, 0.65, 0.97, 0.97, 0.5, 0.66, 0.62, 0.9, 0.6, 0.93, 0.66, 0.78, 0.88, 0.8, 0.67, 0.67, 0.71, 1.11, 0.86, 0.94, 1.28, 1.12, 1.03, 0.89, 0.85, 0.89, 0.91, 0.89, 0.83, 0.93, 0.93, 0.87, 0.88, 0.91, 0.97], buff: 1, move: [1.16, 1.42, 0.93, 1.16, 1.22, 0.63, 1.21, 1.18, 1.13, 1.12, 0.45, 0.6, 0.51, 0.4, 0.41, 0.4, 0.4, 0.5, 0.4, 0.64, 0.4, 0.4, 0.68, 0.4, 1.03, 0.49, 0.47, 1.07, 1.06, 0.42, 0.49, 0.52, 0.58, 0.53, 0.54, 0.55, 0.61, 0.58, 0.59, 0.63, 0.68, 0.67, 0.57, 0.85, 0.85, 0.51, 0.67, 0.61, 0.58, 0.7, 0.67, 0.52, 0.59, 0.57, 0.55, 0.51, 0.52, 0.6, 0.66, 0.63], mbuff: 1, mmend: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], order: ONES },
-  smuggler: { page: [1.8, 1.8, 1.69, 1.8, 2.2, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.72, 1.8, 1.6, 1.6, 1.72, 1.56, 1.78, 0.5, 0.45, 0.81, 0.45, 0.57, 0.5, 0.55, 0.82, 0.52, 0.6, 0.68, 0.69, 0.8, 0.72, 0.92, 0.91, 0.82, 0.86, 0.87, 0.89, 0.84, 0.93, 1.04, 1.27, 1.15, 1.32, 1.4, 1.02, 1.46, 0.79, 0.92, 0.87, 0.82, 0.79, 0.94, 0.95, 1.32, 0.9, 1.22, 1.01], buff: 0.95, move: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], mbuff: 0.87, mmend: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], order: ONES },
-  reaver: { page: [0.45, 0.53, 0.82, 0.55, 0.6034999999999999, 0.54, 0.45, 0.8, 0.45, 0.45, 0.45, 0.45, 0.76, 0.45, 0.57, 0.48, 0.5, 0.71, 0.57, 1.8, 1.75, 1.38, 1.76, 1.61, 1.78, 1.42, 1.25, 1.2, 1.45, 1.66, 1.32, 1.11, 1.51, 1.28, 1.69, 1.68, 1.56, 1.51, 1.75, 1.7, 1.8, 1.8, 0.92, 1.37, 1.65, 1.8, 1.54, 0.93, 1.65, 1.56, 1.68, 1.71, 1.32, 1.45, 1.61, 1.36, 1.18, 1.21, 0.89, 1.66], buff: 0.87, move: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], mbuff: 1, mmend: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], order: ONES },
-  navigator: { page: [1.73, 0.96, 1.26, 0.95, 1.79, 0.9, 0.93, 1.26, 0.94, 0.83, 1.19, 0.83, 1.72, 1.53, 1.78, 1.02, 1.47, 1.5, 1.27, 0.68, 0.77, 0.62, 0.93, 0.59, 0.83, 0.72, 0.86, 0.93, 0.98, 1.1, 0.84, 0.84, 0.91, 0.78, 0.97, 1.07, 1.1, 0.98, 1.07, 1.15, 1.01, 1.15, 1.25, 1.29, 1.19, 1.57, 1.49, 1.23, 1.45, 1.31, 0.88, 0.93, 0.93, 1.21, 0.87, 0.87, 0.9, 0.9, 0.97, 0.88], buff: 0.87, move: [0.96, 1.09, 1.05, 1.15, 1.03, 1.11, 1.01, 1.08, 1.04, 1.02, 1.07, 1.05, 1.09, 1.12, 0.85, 0.96, 1.01, 1.01, 0.84, 0.72, 0.66, 0.62, 0.59, 0.57, 0.67, 0.7, 0.77, 0.62, 0.69, 0.6, 0.87, 0.85, 0.86, 0.87, 0.95, 0.94, 0.97, 1.02, 0.91, 0.99, 1.01, 0.95, 1.05, 1.09, 1.17, 0.78, 0.95, 0.96, 0.92, 1.09, 0.76, 0.75, 0.68, 1.05, 0.81, 0.78, 0.86, 0.73, 0.95, 1.12], mbuff: 0.87, mmend: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], order: ONES },
-  drowned: { page: [0.83, 0.97, 0.83, 0.9, 1.22, 1.03, 1.3, 1.6, 1.56, 1.53, 1.32, 1.32, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 0.57, 1.8, 1.8, 1.62, 1.8, 1.8, 1.8, 1.8, 1.53, 1.8, 1.8, 1.8, 1.8, 1.47, 1.8, 1.37, 1.38, 1.45, 1.38, 1.44, 1.26, 1.37, 1.41, 1.41, 1.64, 1.37, 1.64, 1.68, 1.32, 1.49, 1.55, 1.7, 1.57, 1.36, 1.49, 1.55, 1.72, 1.44, 1.35, 1.61, 1.78], buff: 1, move: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.04, 1.07, 1.11, 1.14, 1.17, 1.21, 1.24, 1.27, 1.31, 1.35, 1.39, 1.42, 1.45, 1.49, 2.01, 1.55, 1.58, 1.62, 1.65, 1.68, 1.71, 1.75, 1.78, 1.81, 1.84, 1.87, 1.9, 1.94, 1.97, 2.5, 1.93, 1.87, 1.8, 1.74, 1.67, 1.6, 1.53, 1.47, 1.4, 1.33, 1.26, 1.2, 1.13, 1.07, 0.72], mbuff: 0.87, mmend: [0.85, 1.24, 1.19, 1.47, 0.95, 1.71, 1.8, 2, 1.49, 2.09, 1.43, 1.27, 2.5, 2.5, 2.46, 2.5, 2.5, 2.5, 2.5, 0.85, 2.41, 2.5, 2.5, 2.5, 2.5, 2.5, 2.45, 2.5, 2.37, 2.5, 2.31, 2.3, 2.5, 2.5, 2.01, 1.93, 2.01, 2.5, 2.09, 1.94, 1.88, 1.94, 2.37, 1.75, 2.5, 1.4, 1.71, 2.5, 2.05, 1.88, 2.26, 1.91, 2.5, 2.03, 1.93, 2.25, 1.8, 2.5, 1.92, 1.25], order: ONES },
-  admiral: { page: [1.39, 1.7, 1.56, 1.41, 1.56, 1.52, 1.8, 1.8, 1.8, 1.8, 1.79, 1.64, 1.7, 1.36, 1.8, 1.52, 1.51, 1.66, 1.48, 1.25, 0.71, 0.82, 0.67, 0.71, 0.8, 0.75, 0.93, 0.7, 0.72, 0.83, 0.72, 0.73, 0.8, 0.81, 0.85, 0.87, 0.93, 0.88, 0.91, 0.89, 0.93, 0.9, 0.95, 1.07, 1.06, 1.11, 1.12, 0.94, 0.93, 1.11, 0.99, 1.07, 0.91, 0.93, 1.03, 0.99, 0.94, 0.91, 0.93, 0.88], buff: 0.87, move: [2.06, 1.64, 1.98, 1.31, 1.44, 2.09, 2.5, 2.5, 2.5, 2.5, 2.49, 2.1, 1.34, 1.64, 1.83, 1.09, 1.02, 1.19, 1, 1.09, 0.69, 0.47, 0.68, 0.56, 0.82, 0.62, 0.61, 0.67, 0.53, 0.74, 0.55, 0.61, 0.64, 0.45, 0.52, 0.59, 0.55, 0.68, 0.62, 0.62, 0.52, 0.56, 0.6, 0.65, 0.56, 0.48, 0.51, 0.66, 0.49, 0.66, 0.71, 0.6, 0.58, 0.64, 0.65, 0.66, 0.71, 0.69, 0.67, 1.56], mbuff: 0.66, mmend: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], order: ONES },
+  corsair: { page: [0.88, 0.85, 0.99, 0.81, 0.99, 1.62, 0.51, 0.83, 0.66, 0.62, 0.62, 0.45, 0.82, 0.7, 0.79, 0.63, 0.5, 0.89, 0.59, 0.49, 0.5, 0.5, 0.84, 0.45, 0.87, 0.81, 0.77, 0.97, 0.49, 0.57, 0.61, 0.63, 0.9, 0.59, 0.87, 0.58, 0.45, 0.88, 0.45, 0.9, 0.75, 0.8, 1.08, 0.79, 0.85, 0.94, 0.98, 0.92, 0.97, 0.91, 0.86, 0.96, 0.9, 0.88, 0.91, 0.96, 0.92, 0.93, 0.92, 0.89], buff: 1, move: [0.98, 1.38, 0.87, 1.24, 1.21, 0.75, 0.75, 0.91, 0.71, 0.9, 0.44, 0.4, 0.55, 0.52, 0.52, 0.46, 0.4, 0.57, 0.52, 0.47, 0.4, 0.4, 0.68, 0.4, 0.71, 0.62, 0.56, 0.75, 0.54, 0.5, 0.45, 0.53, 0.58, 0.52, 0.58, 0.49, 0.4, 0.58, 0.4, 0.58, 0.77, 0.75, 0.59, 0.79, 0.69, 0.4, 0.59, 0.59, 0.63, 0.75, 0.65, 0.55, 0.6, 0.61, 0.59, 0.53, 0.55, 0.63, 0.67, 0.6], mbuff: 1, mmend: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], order: ONES },
+  smuggler: { page: [1.8, 1.77, 1.8, 2.2, 1.8, 1.8, 0.45, 1.8, 1.8, 1.69, 1.65, 1.79, 1.8, 1.8, 1.88, 1.8, 1.35, 1.8, 1.68, 0.91, 0.45, 0.56, 1.25, 0.45, 0.81, 1.08, 1.15, 1.07, 1.17, 1.03, 0.88, 1.01, 0.89, 0.61, 0.97, 0.84, 0.45, 0.84, 0.45, 1.14, 1.26, 1.35, 1.32, 1.13, 1.22, 0.75, 1.11, 1.14, 1.42, 1.08, 1.32, 0.98, 0.93, 0.94, 1.06, 1.03, 0.88, 1.04, 1.03, 1], buff: 0.95, move: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], mbuff: 0.87, mmend: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], order: ONES },
+  reaver: { page: [0.82, 0.56, 0.79, 0.8, 0.39, 0.45, 0.45, 0.8, 0.58, 1.06, 0.45, 0.5, 1.22, 1.8, 1.86, 1.72, 0.71, 0.71, 1.8, 1.77, 1.05, 1.59, 1.8, 1.8, 1.43, 1.87, 1.36, 1.43, 1.75, 1.48, 1.45, 1.16, 1.47, 1.46, 1.46, 1.35, 0.45, 1.36, 0.51, 1.39, 0.99, 1.16, 0.96, 1.36, 1.26, 0.93, 1.08, 0.98, 1.8, 1.8, 1.58, 1.8, 1.34, 1.35, 1.36, 1.43, 1.2, 1.45, 0.79, 1.11], buff: 0.87, move: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], mbuff: 1, mmend: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], order: ONES },
+  navigator: { page: [1.72, 1, 1.34, 0.86, 1.76, 0.8, 0.83, 1.48, 1.09, 1.13, 1.02, 0.79, 1.8, 1.64, 1.53, 1.01, 1.44, 1.41, 1.74, 0.45, 0.57, 0.53, 0.9, 0.5, 1.05, 0.85, 0.82, 0.99, 0.92, 1.03, 0.58, 0.67, 0.91, 0.51, 0.92, 0.87, 0.48, 0.9, 0.53, 1.2, 1.04, 1.1, 1.16, 1.13, 0.88, 1.26, 1.17, 1.32, 1.4, 1.1, 0.74, 0.83, 0.89, 1.11, 0.9, 0.67, 0.74, 0.87, 0.87, 0.87], buff: 0.87, move: [0.95, 1.13, 1.11, 1.06, 0.94, 0.98, 0.91, 1.27, 1.21, 1.02, 0.92, 1, 1.3, 1.2, 1.08, 0.95, 0.99, 0.95, 1.15, 0.68, 0.49, 0.53, 0.57, 0.48, 0.47, 0.83, 0.73, 0.66, 0.65, 0.57, 0.6, 0.68, 0.86, 0.56, 0.9, 0.76, 0.43, 0.73, 0.45, 0.55, 1.04, 0.91, 0.98, 0.95, 1.1, 0.63, 0.75, 1.03, 0.89, 0.91, 0.64, 0.67, 0.57, 0.97, 0.61, 0.6, 0.7, 0.66, 0.86, 0.67], mbuff: 0.87, mmend: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], order: ONES },
+  drowned: { page: [0.88, 0.89, 0.76, 1.31, 1.34, 1.29, 0.64, 1.8, 1.8, 1.77, 1.8, 1.8, 1.8, 1.8, 1.58, 1.74, 1.62, 1.68, 1.8, 1.8, 1.8, 1.8, 1.57, 1.8, 1.5, 2.14, 1.8, 1.53, 1.6, 1.68, 1.8, 1.8, 1.47, 1.42, 1.37, 1.26, 0.82, 1.22, 0.92, 1.29, 1.27, 1.27, 1.37, 1.38, 1.41, 1.3, 1.39, 1.35, 1.34, 1.46, 1.21, 1.52, 1.28, 1.4, 1.29, 1.37, 1.22, 1.26, 1.3, 1.29], buff: 1, move: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.04, 1.07, 1.11, 1.14, 2.5, 1.21, 1.24, 1.27, 1.31, 1.79, 1.39, 1.42, 1.45, 1.49, 1.91, 1.55, 1.58, 1.62, 1.65, 1.68, 1.71, 1.75, 1.78, 1.81, 1.46, 1.87, 1.9, 1.94, 1.97, 2.34, 1.93, 1.87, 1.8, 1.74, 1.67, 1.6, 1.53, 1.47, 1.4, 0.98, 1.26, 1.2, 1.13, 1.07, 0.72], mbuff: 0.87, mmend: [0.9, 1.13, 1.09, 2.11, 2.01, 2.15, 0.89, 2.5, 2.5, 2.5, 2.43, 2.02, 2.5, 2.5, 2.26, 2.41, 2.26, 2.33, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.3, 2.5, 2.5, 2.5, 2.1, 2.26, 2.5, 2.36, 2.5, 1.97, 2, 1.76, 1.13, 2.21, 1.33, 2.07, 1.74, 1.74, 2.3, 1.47, 2.5, 1.11, 1.42, 2.5, 1.85, 1.78, 1.61, 1.85, 2.5, 1.9, 1.68, 1.79, 1.52, 2.33, 1.55, 2.5], order: ONES },
+  admiral: { page: [1.42, 1.8, 1.72, 1.77, 1.8, 1.73, 0.49, 1.7, 1.37, 1.26, 1.39, 1.22, 1.8, 1.8, 1.41, 1.8, 1.45, 1.69, 1.8, 0.57, 0.62, 0.6, 0.67, 0.56, 0.71, 0.77, 0.71, 0.7, 0.68, 0.65, 0.82, 0.56, 0.73, 0.77, 0.83, 0.72, 0.45, 0.74, 0.45, 0.75, 0.98, 0.91, 0.87, 0.91, 0.93, 0.71, 0.89, 0.75, 0.86, 0.85, 0.81, 0.9, 0.86, 0.89, 1.04, 0.85, 0.74, 0.74, 0.85, 0.73], buff: 0.87, move: [2.1, 1.82, 2.18, 2.37, 2.5, 2.38, 0.68, 2.36, 1.91, 1.61, 1.93, 1.56, 1.82, 2.5, 1.23, 1.34, 0.98, 1.21, 1.22, 0.49, 0.61, 0.4, 0.68, 0.44, 0.71, 0.64, 0.47, 0.69, 0.5, 0.51, 0.63, 0.47, 0.6, 0.43, 0.59, 0.49, 0.4, 0.59, 0.4, 0.61, 0.55, 0.57, 0.6, 0.55, 0.6, 0.4, 0.41, 0.66, 0.45, 0.51, 0.58, 0.5, 0.6, 0.61, 0.6, 0.57, 0.56, 0.6, 0.61, 0.77], mbuff: 0.66, mmend: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], order: ONES },
 };
 /** How far `--balance` may take each figure. */
-const EDGE_BOUNDS = { page: [0.45, 1.8], move: [0.4, 2.5], mmend: [0.5, 2.5], order: [0.35, 3] } as const; // 2026-10-10: pages to 0.45, the Drowned's raising to 2.5 (her own order no longer carries her)
+const EDGE_BOUNDS = { page: [0.35, 2.2], move: [0.4, 2.5], mmend: [0.5, 2.5], order: [0.35, 3] } as const; // 2026-10-10: pages to 0.45, the Drowned's raising to 2.5 (her own order no longer carries her); docs/31: pages to 0.35 (the Reaver of level 5 stood on 0.45)
 /** The edge at each of POWER_AT's levels. */
 const edgeAt = (e: number[], i: number): number => e[i] ?? 1;
 
@@ -196,8 +198,10 @@ export function winsAt(level: number, n: number, salt = 0): Record<CaptainId, nu
 }
 
 /** Her moves in their role at every band (docs/25 item 54): her pages 8–25%, her innate move and ultimate 8% at least. */
+/** The levels her roles are held at: the bands' and those tests/boardskill.test.ts reads the pages that were dead at. */
+export const ROLE_LEVELS = [...new Set([...BAND_LEVELS, 1, 8, 15, 25, 35, 40, 45, 55, 60])].sort((a, b) => a - b);
 export function rolesOk(p: CaptainId): boolean {
-  for (const L of BAND_LEVELS) {
+  for (const L of ROLE_LEVELS) {
     const hb = captainAt(p, L, 11);
     for (const id of movesAt(p, L)) {
       const v = roleOf(p, id, L, 11, hb).v;
@@ -213,7 +217,25 @@ export function rolesOk(p: CaptainId): boolean {
  *  how far she stands from 50% (on a log scale): her own order, her moves' power (the Drowned's raising) and her pages'
  *  power together — her pages only as far as her moves stay 8–25% in their role (rolesOk). Prints the level's figures
  *  as it goes, to be set in EDGE; the matrix on other dice is `--matrix`. */
-function balance(levels: number[], n: number, iters: number, eta: number, salt: number, state?: string): void {
+/** Balance pass 2026-10-13 (docs/31): each path's wins against the pirate of her waters at level L, `n` boardings
+ *  each (her level's best build, boardlen.ts sidesAt). */
+export function seaRates(L: number, n: number, salt = 0): Record<CaptainId, number> {
+  const out = {} as Record<CaptainId, number>;
+  CAPTAIN_IDS.forEach((p, i) => {
+    let w = 0;
+    for (let k = 0; k < n; k++) {
+      const [x, y] = sidesAt(L, false, p, p, k * 17 + i * 3 + salt);
+      if (playBoard(x, y, k * 29 + i * 11 + L + salt).winner === 0) w++;
+    }
+    out[p] = w / n;
+  });
+  return out;
+}
+/** docs/31: the bound the six paths' mean against the sea is held in at every level (the owner, 2026-10-13: the best
+ *  build wins three in four to nine in ten — tight, never trivial), the boardings a path it is read on, and its step. */
+export const SEA_BOUND = { lo: 0.76, hi: 0.9, n: 24, eta: 2.5 };
+
+function balance(levels: number[], n: number, iters: number, eta: number, salt: number, state?: string, sea = false): void {
   fitPower();
   for (const L of levels) {
     const i = POWER_AT.indexOf(L as (typeof POWER_AT)[number]);
@@ -246,6 +268,7 @@ function balance(levels: number[], n: number, iters: number, eta: number, salt: 
         if (rolesOk(p)) return;
       }
     };
+    let seaStep = SEA_BOUND.eta, seaLast = 0;
     for (let it = 0; it <= iters; it++) {
       const t = table(L, n, false, salt, false);
       const w = Object.fromEntries(CAPTAIN_IDS.map((p) => [p, CAPTAIN_IDS.filter((q) => q !== p).reduce((s0, q) => s0 + t.m[p][q], 0) / (CAPTAIN_IDS.length - 1)])) as Record<CaptainId, number>;
@@ -254,7 +277,17 @@ function balance(levels: number[], n: number, iters: number, eta: number, salt: 
         lo = Math.min(lo, t.m[p][q]);
         hi = Math.max(hi, t.m[p][q]);
       }
-      console.log(`L${L} it ${it}: ${CAPTAIN_IDS.map((p) => `${p} ${Math.round(w[p] * 100)}%`).join(' · ')} · pairs ${Math.round(lo * 100)}–${Math.round(hi * 100)}%`);
+      // docs/31: the six together against the sea, held in SEA_BOUND (a step shared by all, on the same log scale).
+      let common = 0, seaTxt = '';
+      if (sea) {
+        const sr = seaRates(L, SEA_BOUND.n, salt);
+        const mean = CAPTAIN_IDS.reduce((a, p) => a + sr[p], 0) / CAPTAIN_IDS.length;
+        common = mean < SEA_BOUND.lo ? mean - SEA_BOUND.lo : mean > SEA_BOUND.hi ? mean - SEA_BOUND.hi : 0;
+        if (common * seaLast < 0) seaStep *= 0.5;
+        seaLast = common || seaLast;
+        seaTxt = ` · sea ${Math.round(mean * 100)}% (${CAPTAIN_IDS.map((p) => Math.round(sr[p] * 100)).join('/')})`;
+      }
+      console.log(`L${L} it ${it}: ${CAPTAIN_IDS.map((p) => `${p} ${Math.round(w[p] * 100)}%`).join(' · ')} · pairs ${Math.round(lo * 100)}–${Math.round(hi * 100)}%${seaTxt}`);
       if (it === iters) break;
       // Each path's own step: halved when she crosses 50%, a fifth longer while she keeps to one side of it.
       for (const p of CAPTAIN_IDS) {
@@ -262,7 +295,7 @@ function balance(levels: number[], n: number, iters: number, eta: number, salt: 
         if (err * last[p] < 0) step[p] *= 0.5;
         else if (last[p] !== 0) step[p] = Math.min(eta, step[p] * 1.2);
         last[p] = err;
-        x[p] -= step[p] * err;
+        x[p] -= step[p] * err + seaStep * common;
         apply(p);
       }
       if (file) writeFileSync(file, JSON.stringify(Object.fromEntries(CAPTAIN_IDS.map((p) => [p, { page: EDGE[p].page[i], move: EDGE[p].move[i], mmend: EDGE[p].mmend[i], order: EDGE[p].order[i] }]))));
@@ -380,7 +413,7 @@ function repair(state?: string): void {
   fitPower();
   for (const p of CAPTAIN_IDS) for (let guard = 0; guard < 400; guard++) {
     let moved = false;
-    for (const L of BAND_LEVELS) {
+    for (const L of ROLE_LEVELS) {
       const hb = captainAt(p, L, 11);
       for (const id of movesAt(p, L)) {
         // Her pages' power moves her blows, drags and heals; her holds' shares are the same at every level. Her innate
@@ -484,7 +517,11 @@ if (import.meta.main ?? process.argv[1]?.endsWith('balance-paths.ts')) {
   else if (process.argv.includes('--rates')) for (const l of arg('levels') ? LEVELS : [30]) rates(l, N);
   else if (process.argv.includes('--repair')) repair(arg('state'));
   else if (process.argv.includes('--pairs')) for (const l of LEVELS) pairs(l, N, Number(arg('iters') ?? 3), Number(arg('salt') ?? 0), Number(arg('mu') ?? 0.02), arg('state'));
-  else if (process.argv.includes('--balance')) balance(arg('levels') ? LEVELS : [5, 15, 30, 45, 60], N, Number(arg('iters') ?? 6), Number(arg('eta') ?? 2), Number(arg('salt') ?? 0), arg('state'));
+  else if (process.argv.includes('--balance')) (arg('seahi') && (SEA_BOUND.hi = Number(arg('seahi')))), balance(arg('levels') ? LEVELS : [5, 15, 30, 45, 60], N, Number(arg('iters') ?? 6), Number(arg('eta') ?? 2), Number(arg('salt') ?? 0), arg('state'), process.argv.includes('--sea'));
+  else if (process.argv.includes('--sea')) for (const l of LEVELS) {
+    const sr = seaRates(l, N, Number(arg('salt') ?? 0));
+    console.log(`L${l} against the sea: ${CAPTAIN_IDS.map((p) => `${p} ${Math.round(sr[p] * 100)}%`).join(' · ')} · mean ${Math.round((CAPTAIN_IDS.reduce((a, p) => a + sr[p], 0) / 6) * 100)}%`);
+  }
   else if (process.argv.includes('--fit')) {
     fitPower();
     const out = (t: Record<CaptainId, PathKnobs>) => CAPTAIN_IDS.map((c) => `  ${c}: { power: [${t[c].power.join(', ')}], mend: [${t[c].mend.join(', ')}], buff: ${t[c].buff}, pts: ${t[c].pts} },`).join('\n');

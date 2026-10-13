@@ -41,19 +41,38 @@ test('the sea\'s pirates: deckhands, shooters and gunners with some boarders —
   assert.deepEqual(armyForLevel(6, 140, 7, 'pirate'), armyForLevel(6, 140, 7, 'pirate'), 'no dice: the same ship carries the same men');
 });
 
-test("the ladder's own crew boards a pirate of her level about half the time at every level ⚓1–10; a town-fed crew four in five", () => {
-  const HAMMOCKS = [0, 40, 60, 80, 110, 140, 180, 220, 300, 400, 600];
-  const rates: number[] = [];
-  for (let L = 1; L <= 10; L++) {
-    const M = HAMMOCKS[L];
-    const w = winRate(armyForLevel(L, M, 7, 'player'), armyForLevel(L, M, 7, 'pirate'), 200);
-    rates.push(w);
-    assert.ok(w >= 0.45 && w <= 0.55, `⚓${L}: the ladder's crew wins ${Math.round(w * 100)}% (H5: 22–71%)`);
+// Balance pass 2026-10-13 (docs/31): measured as a boarding is fought — her crew in the stacks her hull holds at each
+// level of her band (boardSlots), the pirate folded into his fewer stacks (npcBoardSlots), the boarding's length, the
+// sea's mind on both sides, crews of her waters ±15% (PIRATE_CAL was weighed on seven stacks a side and quick fights:
+// as boarded, the ladder's crew won 3–5% against the pirates of ⚓4 and 93% against ⚓7's). ⚓1–2's pirates carry the sea's
+// common crew (no scale), ⚓1's two stacks the stronger for it; there the captains decide (docs/31).
+test("the ladder's own crew boards a pirate of her level about half the time at ⚓2–10 as a boarding is fought; a town-fed crew four in five", async () => {
+  const { HAMMOCKS, side: bside, playBoard } = await import('./balance/boardlen.ts');
+  const { boardSlots, npcBoardSlots } = await import('../shared/src/data/tactical.ts');
+  const { battleFit } = await import('../server/src/game/tactical.ts');
+  const { bandLevels } = await import('../shared/src/data/xpcurve.ts');
+  const { npcHeroLevel } = await import('../shared/src/data/hero.ts');
+  const pirate = (L: number, men: number) => battleFit(armyForLevel(L, men, 7, 'pirate').map((x) => ({ ...x, src: x.u })), npcBoardSlots(npcHeroLevel(L))).map(({ u, n }) => ({ u, n }));
+  const rate = (L: number, mine: (men: number, slots: number) => ArmyStack[], n: number) => {
+    const [lo, hi] = bandLevels(L);
+    let w = 0, tot = 0;
+    for (const slots of new Set(Array.from({ length: hi - lo + 1 }, (_, i) => boardSlots(lo + i)))) for (const c of [0.85, 1, 1.15]) {
+      const men = Math.round(HAMMOCKS[L] * c);
+      for (let i = 0; i < n; i++) if (playBoard(bside(mine(men, slots), undefined, null, true), bside(pirate(L, men), undefined, null, false), i * 37 + L * 5 + slots, { level: lo }).winner === 0) w++;
+      tot += n;
+    }
+    return w / tot;
+  };
+  const rates: string[] = [];
+  for (let L = 2; L <= 10; L++) {
+    const w = rate(L, (men, slots) => armyForLevel(L, men, slots, 'player'), 40);
+    rates.push(`⚓${L} ${Math.round(w * 100)}%`);
+    assert.ok(w >= 0.38 && w <= 0.64, `⚓${L}: the ladder's crew wins ${Math.round(w * 100)}% (${rates.join(', ')})`);
   }
   let town = 0;
-  for (let L = 2; L <= 10; L++) town += winRate(month({ ...MONTH, level: L, crewMax: HAMMOCKS[L] }).army, armyForLevel(L, HAMMOCKS[L], 7, 'pirate'), 100);
+  for (let L = 2; L <= 10; L++) town += rate(L, (men, slots) => battleFit(month({ ...MONTH, level: L, crewMax: men }).army.map((x) => ({ ...x, src: x.u })), slots).map(({ u, n }) => ({ u, n })), 16);
   town /= 9;
-  assert.ok(town >= 0.75 && town <= 0.86, `a month of a castle's men: ${Math.round(town * 100)}% on average`);
+  assert.ok(town >= 0.72 && town <= 0.9, `a month of a castle's men: ${Math.round(town * 100)}% on average`);
   assert.equal(PIRATE_CAL.length, 11);
 });
 

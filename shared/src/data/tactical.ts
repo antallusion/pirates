@@ -6,6 +6,7 @@
 import type { CaptainId } from './captains.ts';
 import type { OfficerRole } from './crew.ts';
 import { UNITS } from './army.ts';
+import { CAPTAIN_LEVEL_FOR_SHIP } from './shiplevel.ts';
 import { BOSS_UNITS } from './bossunits.ts';
 import type { UnitId } from './army.ts';
 import { BOOK_PAGES, BOOK_PAGE_IDS, PATH_PAGES, PATH_PAGE_IDS } from './paths.ts';
@@ -117,10 +118,14 @@ export function tacLevel(pts: readonly (readonly [number, number])[], level: num
   }
   return pts[pts.length - 1][1];
 }
-/** docs/25 §1.2: the stacks a captain brings to a boarding by her level (her hull's slots, as the ships open by level:
- *  3–4 at 1–10, 4–5 at 11–20, 5–6 at 21–30, 6–7 at 31–40, 7 and her officers from 41) — the most of them. */
+/** docs/25 §1.2: the stacks a captain brings to a boarding by her level — her hull's slots (army.ts armySlots: three
+ *  and the hull's tier) as the warships of her own ⚓ give them (canon D12, CAPTAIN_LEVEL_FOR_SHIP): 4 on ⚓1–2, 5 on
+ *  ⚓3–4, 6 on ⚓5–6, 7 from ⚓7 (and her officers). Balance pass 2026-10-13 (docs/31): it stepped at 11, 21 and 31 —
+ *  inside the ⚓ bands — so a captain of 19–20 brought a stack fewer than her brig holds against the pirates of ⚓5. */
 export function boardSlots(level: number): number {
-  return level <= 10 ? 4 : level <= 20 ? 5 : level <= 30 ? 6 : 7;
+  let a = 1;
+  for (let k = 2; k < CAPTAIN_LEVEL_FOR_SHIP.length; k++) if (CAPTAIN_LEVEL_FOR_SHIP[k] <= level) a = k;
+  return a <= 2 ? 4 : a <= 4 ? 5 : a <= 6 ? 6 : 7;
 }
 /** docs/25 item 50: a ship of the sea fights with fewer stacks than a captain of her level — the same men in fewer,
  *  fuller stacks, so the fight with her is quicker and as hard. */

@@ -26,6 +26,7 @@
 import type { ArtTotals, RelicId } from './artifacts.ts';
 import { ART_SETS, artTotals, makeArtifact } from './artifacts.ts';
 import { captainIlvl } from './items.ts';
+import { CAPTAIN_LEVEL_FOR_SHIP, SHIP_LEVEL_MAX } from './shiplevel.ts';
 import type { CaptainId } from './captains.ts';
 import type { StatMods } from './stats.ts';
 import type { TreeId } from './talents.ts';
@@ -114,9 +115,14 @@ export function npcPrims(shipLevel: number): Prims {
   const n = lv - 1;
   return { atk: 2 + Math.round(n * 0.28), def: 2 + Math.round(n * 0.28), pow: 1 + Math.round(n * SEA_POW), will: 1 + Math.round(n * 0.2) };
 }
-/** The captain's level a ship of this level answers to (captain gear runs a level band of six a ship level). */
+/** The captain's level a ship of this level answers to: the first of the captains whose own ships are of her ⚓ (canon
+ *  D12, CAPTAIN_LEVEL_FOR_SHIP) — the captain who has just earned that ⚓. Balance pass 2026-10-13 (docs/31): it stood
+ *  at 6·⚓ − 2, the old scale of a ⚓ every six levels, so the sea's captains of ⚓1–6 stood above the top of their own
+ *  band (⚓3 — 16 against 8–12, ⚓4 — 22 against 13–18, ⚓6 — 34 against 26–32) and a captain met each new ⚓'s pirates
+ *  6–9 levels over herself: the best build won 13–40% of boardings at 14–19. At the band's first level the best build
+ *  of a captain now wins about three in four, at its top nine in ten (tests/balance/fullbuild.test.ts). */
 export function npcHeroLevel(shipLevel: number): number {
-  return Math.max(1, Math.min(60, Math.round(shipLevel) * 6 - 2));
+  return CAPTAIN_LEVEL_FOR_SHIP[Math.max(1, Math.min(SHIP_LEVEL_MAX, Math.round(shipLevel)))];
 }
 
 /** Ten points of will a point of Will (HoMM3's knowledge). */
