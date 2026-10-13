@@ -187,9 +187,15 @@ const REFIT: Record<number, RefitCost> = {
   // smallest hull that refits to it, and two thirds of the new warship of that level (the frigate ⚓6, the razee ⚓7).
   6: { silver: 12500, goods: [{ good: 'planks', qty: 80 }, { good: 'iron', qty: 30 }, { good: 'sailcloth', qty: 15 }, { good: 'timber', qty: 7 }], sec: 2400 },
   7: { silver: 30000, goods: [{ good: 'planks', qty: 80 }, { good: 'iron', qty: 35 }, { good: 'sailcloth', qty: 20 }, { good: 'timber', qty: 7 }], sec: 3600 },
-  8: { silver: 55000, goods: [{ good: 'planks', qty: 480 }, { good: 'iron', qty: 180 }, { good: 'sailcloth', qty: 80 }, { good: 'leviathan_bone', qty: 10 }], sec: 7200 },
-  9: { silver: 90000, goods: [{ good: 'planks', qty: 650 }, { good: 'iron', qty: 250 }, { good: 'sailcloth', qty: 110 }, { good: 'leviathan_bone', qty: 20 }], sec: 10800 },
-  10: { silver: 150000, goods: [{ good: 'planks', qty: 900 }, { good: 'iron', qty: 320 }, { good: 'sailcloth', qty: 150 }, { good: 'leviathan_bone', qty: 30 }, { good: 'sulfur_iron', qty: 5 }], sec: 14400, hearts: 1 },
+  // Balance pass 2026-10-13 (docs/31): ⚓8–10 asked 55 000 / 90 000 / 150 000 and 770–1 400 of hold (480–900 planks,
+  // 10–30 leviathan bone) — five to eleven loads of the frigate, razee or man-of-war that refits to them, and more than
+  // the new hull of that level: no captain of 41–60 on a fully raised ship. The same rule as ⚓4–7: two loads of the
+  // smallest hull that refits to it (frigate ⚓7, razee ⚓8, man-of-war ⚓9) and under three quarters of the new warship
+  // of that level (razee 52 000, man-of-war 90 000, ship of the line 100 000), a little of the great beasts' bone in
+  // the keel: 3–5 hours of her waters' income at sea (seaHour) — a goal of her band, not a wall.
+  8: { silver: 32000, goods: [{ good: 'planks', qty: 90 }, { good: 'iron', qty: 40 }, { good: 'sailcloth', qty: 24 }, { good: 'timber', qty: 8 }, { good: 'leviathan_bone', qty: 4 }], sec: 7200 },
+  9: { silver: 52000, goods: [{ good: 'planks', qty: 86 }, { good: 'iron', qty: 45 }, { good: 'sailcloth', qty: 26 }, { good: 'timber', qty: 10 }, { good: 'leviathan_bone', qty: 8 }], sec: 10800 },
+  10: { silver: 62000, goods: [{ good: 'planks', qty: 90 }, { good: 'iron', qty: 50 }, { good: 'sailcloth', qty: 30 }, { good: 'timber', qty: 10 }, { good: 'leviathan_bone', qty: 12 }, { good: 'sulfur_iron', qty: 5 }], sec: 14400, hearts: 1 },
 };
 
 export function refitCost(toLevel: number): RefitCost | null {
