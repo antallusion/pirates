@@ -5,7 +5,7 @@ import { PROFESSIONS, UNIQUE_OFFICERS } from '../shared/src/data/crew.ts';
 import { REGIONS } from '../shared/src/world/regions.ts';
 import { emptyAmmo } from '../shared/src/data/ships.ts';
 import {
-  companyMods, madnessCheck, onDockCrew, onMagazineBlast, plunderShare, poolTotal, reconcile, resolveMutiny, startMutiny, stepCompany, stepSpirit, tavernOf,
+  DESERT_EVERY, companyMods, madnessCheck, onDockCrew, onMagazineBlast, plunderShare, poolTotal, reconcile, resolveMutiny, startMutiny, stepCompany, stepSpirit, tavernOf,
 } from '../server/src/game/crew.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
@@ -324,4 +324,23 @@ test('new hands come aboard with clear heads: a mad survivor does not make the h
   c.push({ t: 'hire_crew', qty: 11 });
   assert.equal(ship.crew, 12);
   assert.ok(ship.sanity > 85, `sanity ${ship.sanity.toFixed(1)}: eleven clear heads and one mad`);
+});
+
+test('the frightened walk off at the first harbour, not at every quay of a round of harbours (playthrough C)', () => {
+  const { game } = makeGame();
+  const { s } = captain(game, 'Round Of Quays');
+  const ship = s.ship!;
+  ship.recompute(game.now);
+  ship.crew = 400;
+  ship.morale = 25;
+  const [a, b] = game.world.ports;
+  dockAt(s, a.id);
+  onDockCrew(game, s, a);
+  assert.equal(ship.crew, 380, 'a twentieth walks off');
+  dockAt(s, b.id);
+  onDockCrew(game, s, b);
+  assert.equal(ship.crew, 380, 'the next quay a minute later: the rest stay');
+  game.now += DESERT_EVERY;
+  onDockCrew(game, s, a);
+  assert.equal(ship.crew, 361, 'their fear grown again');
 });

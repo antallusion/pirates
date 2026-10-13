@@ -62,7 +62,14 @@ export interface Company {
   /** The wounded below, kept with her between voyages (docs/16 #19), and the fractions of healing, dying, medicine. */
   wounded: number;
   woundAcc: { heal: number; die: number; med: number };
+  /** When the frightened last walked off at a harbour (world seconds; DESERT_EVERY). */
+  desertedAt?: number;
 }
+
+/** Playthrough C: the frightened walk off at the first harbour; those who stay keep aboard this long before the next
+ *  of them goes (a captain on her round of the harbours to fill her hammocks, her morale 15–29, lost 5% of her men at
+ *  every quay — two quays in a minute took 71 of 911). */
+export const DESERT_EVERY = 900;
 
 export const MUTINY_TIMEOUT = 60;
 const PHASE_TIME = 600;
@@ -613,7 +620,8 @@ export function onDockCrew(game: Game, s: PlayerSession, port: Port): void {
     c.course = null;
     c.loyalty = Math.max(c.loyalty, 40);
     game.toastShip(ship, `${gone} mutineers walk down the gangway at ${port.name} and do not look back.`, 'bad');
-  } else if (ship.morale < 30 && ship.morale >= 15) {
+  } else if (ship.morale < 30 && ship.morale >= 15 && now - (c.desertedAt ?? -Infinity) >= DESERT_EVERY) {
+    c.desertedAt = now;
     const gone = Math.max(1, Math.floor(ship.crew * 0.05));
     ship.crew = Math.max(1, ship.crew - gone);
     game.toastShip(ship, `${gone} frightened men desert in ${port.name}.`, 'bad');
