@@ -367,7 +367,7 @@ export function heroFace(game: Game, ship: ShipEntity): string | undefined {
 }
 
 /** After a battle: the will she spent, and the fallen her First Aid patches up. */
-export function afterBattle(game: Game, ship: ShipEntity, left: number, lost: { u: string; n: number }[], raise: number, stamLeft = -1, scrolls: readonly string[] = []): void {
+export function afterBattle(game: Game, ship: ShipEntity, left: number, lost: { u: string; n: number }[], raise: number, stamLeft = -1, scrolls: readonly string[] = [], won = false): void {
   const s = game.sessionOf(ship);
   const p = s?.profile;
   if (!s || !p) return;
@@ -385,7 +385,7 @@ export function afterBattle(game: Game, ship: ShipEntity, left: number, lost: { 
     room -= k;
     n += k;
   }
-  if (n > 0) game.sendTo(s, { t: 'toast', msg: `First aid: ${n} of your fallen stand again.`, kind: 'good' });
+  if (n > 0) game.sendTo(s, { t: 'toast', msg: won ? `The deck is yours: the wounded and First Aid — ${n} of your fallen stand again.` : `First aid: ${n} of your fallen stand again.`, kind: 'good' });
 }
 
 // ------------------------------------------------------------------ artifacts

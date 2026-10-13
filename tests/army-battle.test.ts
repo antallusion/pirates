@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { Rng } from '../shared/src/rng.ts';
 import { armyForLevel, armyMen } from '../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../shared/src/data/army.ts';
-import { TAC_BLOCKING, TAC_BOOK, TAC_W, hexIndex, hexNeighbors } from '../shared/src/data/tactical.ts';
+import { TAC_BLOCKING, TAC_BOOK, TAC_RAISE_MAX, TAC_W, TAC_WOUNDED, hexIndex, hexNeighbors } from '../shared/src/data/tactical.ts';
 import { act, blow, buildStacks, castSpell, killedHp, lossesOf, makeField, moralePoints, newBattle, quickFinish, scarDeck, stackMorale } from '../server/src/game/tacbattle.ts';
 import type { TacBattle, TacSideInput, TacStack } from '../server/src/game/tacbattle.ts';
 import { deckState, sideOf } from '../server/src/game/tactical.ts';
@@ -304,7 +304,9 @@ test('on the ships: her army as it stands, the fallen off their own stacks, the 
   // (the beaten who came over as it ended stand in her stacks too: owner 2026-10-08, crew.ts beatenJoin)
   const came = new Map((ship.boarding?.fight.tacJoined?.[0] ?? []).map((x) => [x.u, x.n]));
   if (bt.dead[0] <= bt.heroes[0].startMen - floor) {
-    for (const x of lost) assert.equal((before.get(x.u) ?? 0) + (came.get(x.u) ?? 0) - (ship.army.find((s) => s.u === x.u)?.n ?? 0), x.n, `${x.u}: ${x.n} fallen`);
+    // docs/31: a won deck's wounded stand again beside her First Aid (TAC_WOUNDED, at most TAC_RAISE_MAX).
+    const raise = Math.min(TAC_RAISE_MAX, (bt.heroes[0].input.hero?.raise ?? 0) + TAC_WOUNDED);
+    for (const x of lost) assert.equal((before.get(x.u) ?? 0) + (came.get(x.u) ?? 0) - (ship.army.find((s) => s.u === x.u)?.n ?? 0), x.n - Math.floor(x.n * raise), `${x.u}: ${x.n} fallen`);
   }
   assert.equal(ship.crew, armyMen(ship.army));
   assert.equal(bt.over!.winner, 0, 'a full brig carries forty pirates');

@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { headingVec } from '../shared/src/math.ts';
 import { Rng } from '../shared/src/rng.ts';
 import type { CaptainId } from '../shared/src/data/captains.ts';
-import { TAC_GROUP, TAC_ROLES, hexX, tacBankSecs, tacBring, tacEcho, tacFlagHex } from '../shared/src/data/tactical.ts';
+import { TAC_GROUP, TAC_RAISE_MAX, TAC_ROLES, hexX, tacBankSecs, tacBring, tacEcho, tacFlagHex } from '../shared/src/data/tactical.ts';
 import { act, addAlly, aiAct, capOf, castSpell, chargeClock, foeGrowth, modsOf, newBattle, queueAlly, rolesOf, sharesOf, sideStrength, stackById, stepBattle, viewOf } from '../server/src/game/tacbattle.ts';
 import type { TacBattle, TacSideInput } from '../server/src/game/tacbattle.ts';
 import { pickBring } from '../server/src/game/tactical.ts';
@@ -389,8 +389,10 @@ test('67 on the ships: each captain\'s losses off her own ship; the lesson and t
   const e = fight.tacAllies![0];
   const lostB = bt.stacks.filter((s) => s.own === 1).reduce((n, s) => n + s.start - s.count, 0);
   const lostA = bt.stacks.filter((s) => s.side === 0 && !s.own).reduce((n, s) => n + s.start - s.count, 0);
-  // (her ship keeps a tenth of her crew to strike the colours, as every ship's does)
-  assert.ok(crewB - B.ship.crew <= lostB && crewB - B.ship.crew >= Math.min(lostB, crewB - Math.max(2, Math.round(crewB * 0.1))), 'her own stacks\' fallen off her ship');
+  // (her ship keeps a tenth of her crew to strike the colours, as every ship's does; docs/31: a won deck's wounded
+  // stand again, TAC_WOUNDED beside her First Aid, at most TAC_RAISE_MAX of them)
+  const stood = Math.ceil(lostB * TAC_RAISE_MAX) + 4;
+  assert.ok(crewB - B.ship.crew <= lostB && crewB - B.ship.crew >= Math.min(lostB, crewB - Math.max(2, Math.round(crewB * 0.1))) - stood, "her own stacks' fallen off her ship");
   assert.ok(crewA - A.ship.crew <= lostA, 'and the boarder\'s off hers');
   const sh = sharesOf(bt, 0);
   assert.ok(Math.abs((sh.get(1) ?? 0) - (e.share ?? -1)) < 1e-9);

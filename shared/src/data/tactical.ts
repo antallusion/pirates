@@ -104,6 +104,12 @@ export const TAC_AI_DELAY = 0.35;
  *  - `flag`: from level `level` the quarterdeck's flag stands on each deck's stern; a stack of hers on the other's for
  *    `rounds` whole rounds takes the ship (item 52).
  *  - `quick`: a quick fight is offered at once when her side is this many times the other's strength (item 49). */
+/** Balance pass 2026-10-13 (docs/31): after a boarding won, this share of her fallen are only wounded and stand again
+ *  (the deck is hers, the surgeon goes round it), on top of her First Aid and artifacts (hero.raise), together no more
+ *  than TAC_RAISE_MAX. A won boarding of the sea's pirate cost the best build 26–78% of her men — 24–47 minutes of her
+ *  hour at sea to refill — and the captains of 26–40 spent every level's silver on men (docs/30 B). */
+export const TAC_WOUNDED = 0.35;
+export const TAC_RAISE_MAX = 0.65;
 export const TAC_LEN = {
   npcFewer: 2,
   flag: { level: 40, rounds: 2 },

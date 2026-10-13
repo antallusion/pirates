@@ -4,6 +4,7 @@
 export const SERVER_RU_HERO: Record<string, string> = {
   '{0} +1 at level {1}.': '{0} +1 на уровне {1}.',
   'First aid: {0} of your fallen stand again.': 'Первая помощь: на ноги встают павших — {0}.',
+  'The deck is yours: the wounded and First Aid — {0} of your fallen stand again.': 'Палуба ваша: раненые и первая помощь — на ноги встают павших: {0}.',
   'Not enough will': 'Не хватает воли',
   'none': 'нет',
   'All eight slots are taken.': 'Все восемь ячеек заняты.',

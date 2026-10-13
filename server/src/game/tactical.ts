@@ -10,7 +10,7 @@ import { deckGift } from './shipgifts.ts'; // the premium hulls' gifts (docs/02 
 import { FIRST_NAMES, LAST_NAMES } from '../../../shared/src/data/crew.ts';
 import type { OfficerRole } from '../../../shared/src/data/crew.ts';
 import { armyCost, hasSpecial, UNITS } from '../../../shared/src/data/army.ts';
-import { TAC_END_WINDOW, TAC_LEN, TAC_RESIST, kindOfUnit, npcBoardSlots } from '../../../shared/src/data/tactical.ts';
+import { TAC_END_WINDOW, TAC_LEN, TAC_RAISE_MAX, TAC_RESIST, TAC_WOUNDED, kindOfUnit, npcBoardSlots } from '../../../shared/src/data/tactical.ts';
 import { npcHeroLevel } from '../../../shared/src/data/hero.ts';
 import type { TacAction } from '../../../shared/src/protocol.ts';
 import { XP_UNITS, battleXp, targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
@@ -365,14 +365,16 @@ function settle(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle, seq: nu
       }
       // The heroes' will spent, First Aid's patched-up men, a guarded ship's artifact (docs/17 H2) — docs/25 item 64:
       // each captain her own (an ally's losses are her own stacks').
+      // docs/31: the side that won the deck has its wounded back (TAC_WOUNDED) beside its First Aid.
+      const mended = (side: 0 | 1, raise: number) => (bt.over!.winner === side && bt.over!.why !== 'ransom' ? Math.min(TAC_RAISE_MAX, raise + TAC_WOUNDED) : raise);
       for (const side of [0, 1] as const) {
         const ship = side ? b : a;
-        afterBattle(game, ship, bt.heroes[side].mana, lossesOf(bt, side, 0), bt.heroes[side].input.hero?.raise ?? 0, bt.heroes[side].stam, bt.heroes[side].scrollsUsed);
+        afterBattle(game, ship, bt.heroes[side].mana, lossesOf(bt, side, 0), mended(side, bt.heroes[side].input.hero?.raise ?? 0), bt.heroes[side].stam, bt.heroes[side].scrollsUsed, bt.over.winner === side);
       }
       for (const e of fight.tacAllies ?? []) {
         const ship = game.ships.get(e.ship);
         const h = bt.allies?.find((x) => x.side === e.side && x.slot === e.slot)?.hero;
-        if (ship && h && e.slot !== undefined) afterBattle(game, ship, h.mana, lossesOf(bt, e.side, e.slot), h.input.hero?.raise ?? 0, h.stam, h.scrollsUsed);
+        if (ship && h && e.slot !== undefined) afterBattle(game, ship, h.mana, lossesOf(bt, e.side, e.slot), mended(e.side, h.input.hero?.raise ?? 0), h.stam, h.scrollsUsed, bt.over.winner === e.side);
       }
       // docs/25 item 67: the chance shared by what each captain cut down (the group's allies have theirs, boardgroup.ts).
       const own0 = bt.allies?.length ? sharesOfMain(bt, bt.over.winner) : 1;
