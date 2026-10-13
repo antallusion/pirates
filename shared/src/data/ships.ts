@@ -1065,6 +1065,15 @@ export function emptyAmmo(): Record<AmmoId, number> {
   return { round: 0, chain: 0, grape: 0, incendiary: 0, heavy: 0, cursed: 0, bar: 0, long_shot: 0, star: 0, salt: 0, stinkpot: 0, drag: 0 };
 }
 
+/** Broadsides a magazine holds by the hull's tier (docs/02 §4: a sloop 30, a brig 45, a frigate 50, a man-o'-war 60). */
+export const MAGAZINE_VOLLEYS = [30, 40, 45, 50, 60];
+/** The shot of every kind her magazine stows: so many broadsides of her battery. Plunder fills it no further (QA
+ *  playthrough B, docs/30: the shot of every ship taken came aboard, 8 300 round shot by level 33 — 415 weight in a
+ *  frigate's hold of 150, a fifth off her way, and nothing to say why). Bought shot is the captain's own choice. */
+export function magazineOf(tier: number, gunsPerSide: number): number {
+  return MAGAZINE_VOLLEYS[Math.max(0, Math.min(MAGAZINE_VOLLEYS.length - 1, tier - 1))] * Math.max(4, gunsPerSide);
+}
+
 /** Bow and stern chasers: long guns that fire along the keel, aimed within a cone. */
 export const CHASER_GUN: GunId = 'long_9';
 export const CHASER_CONE = (35 * Math.PI) / 180;

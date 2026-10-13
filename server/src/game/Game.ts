@@ -1167,14 +1167,15 @@ export class Game {
         ? isle
         : land ? { island: land.island.name, feature: featureName(land.island, land.feature) } : null;
       // A mine ashore (docs/17 H3): the flag goes up before the boats row for anything else on its island.
-      const flag = s.ship.docked || s.ship.landing ? null : mineLandable(this, s);
+      // A job of hers that lands here: her landing comes first (QA playthrough B, docs/30; exploration.ts startLanding).
+      const job = !!land && questLandsHere(s.profile, land.island.id, land.feature);
+      const flag = s.ship.docked || s.ship.landing || job ? null : mineLandable(this, s);
       if (flag && (!s.landable || (land && s.landable.island === land.island.name && !s.landable.action))) s.landable = flag;
       // docs/18 #28, #31: an island's level against hers on the prompt; a turtle island's back when nothing else calls.
       if (land && s.landable && s.landable.island === land.island.name && !s.landable.action) s.landable = { ...s.landable, ...landDanger(this, s, land.island) };
       if (!s.landable && !s.ship.docked && !s.ship.landing) s.landable = turtlePrompt(this, s);
       // A great one ashore within the boats' reach of its shore (shorebosses.ts): the land key lands against it first —
-      // unless a job of hers lands here (startLanding: the job's place before the island's beasts, docs/30).
-      const job = !!land && !!s.profile && questLandsHere(s.profile, land.island.id, land.feature);
+      // unless a job of hers lands here (above).
       if ((!s.landable || (land && s.landable.island === land.island.name && !s.landable.action)) && !job && !s.ship.docked && !s.ship.landing) s.landable = shoreBossPrompt(this, s) ?? s.landable;
       // docs/18 II: a lair of the land's creatures within the boats' reach — the land key lands against it.
       if ((!s.landable || (land && s.landable.island === land.island.name && !s.landable.action)) && !job && !s.ship.docked && !s.ship.landing) s.landable = lairPrompt(this, s) ?? s.landable;

@@ -46,3 +46,108 @@ test('a lair beaten counts on one job only, the one that names that lair first (
   questEvent(game, s, { k: 'lair', island: at.island + 1, kind: at.kind } as never);
   assert.equal(st(cull.id).progress + st(cull2.id).progress, 1, 'another lair: one cull counts it');
 });
+
+test('a trade-in counts the refits and the guns she paid for (a brig ⚓7 with 18-pounders was worth a bare brig ⚓5)', async () => {
+  const { makeGame, join, onHull } = await import('./helpers.ts');
+  const { shipValue } = await import('../server/src/game/ports.ts');
+  const { refitCost } = await import('../shared/src/data/shiplevel.ts');
+  const { GUNS } = await import('../shared/src/data/ships.ts');
+  const { game } = makeGame();
+  join(game, 'Trade Tam');
+  const ship = game.sessionByName('Trade Tam')!.ship!;
+  onHull(game, ship, 'brig', 5);
+  const bare = shipValue(ship);
+  assert.equal(bare, 12500, 'a bare brig ⚓5 is her class price');
+  ship.loadout.guns = { port: 'heavy_18', starboard: 'heavy_18' };
+  onHull(game, ship, 'brig', 7);
+  const guns = (GUNS.heavy_18.price - GUNS.medium_12.price) * ship.stats.gunsPerSide; // two sides at half
+  const refits = (refitCost(6)!.silver + refitCost(7)!.silver) / 2;
+  assert.equal(shipValue(ship), bare + guns + refits);
+  assert.ok(shipValue(ship) > bare * 3, `worth ${shipValue(ship)} against ${bare}`);
+});
+
+test('a job\'s landing goes before the island\'s creatures: the arc\'s pirate camp on Slagvent, not its Ape Ridge', async () => {
+  const { makeGame, join, steps } = await import('./helpers.ts');
+  const { quietAdv } = await import('../server/src/game/advmap.ts');
+  const { QUESTS_BY_ID } = await import('../shared/src/data/quests.ts');
+  const { lairList } = await import('../server/src/game/beastlairs.ts');
+  const { closestOnPolygon } = await import('../shared/src/math.ts');
+  const { isLand } = await import('../shared/src/world/worldgen.ts');
+  const { game } = makeGame();
+  quietAdv(game, false); // the island's creatures awake
+  const c = join(game, 'Camp Cass');
+  const s = game.sessionByName('Camp Cass')!;
+  const p = s.profile!, ship = s.ship!;
+  // Any arc's landing at a pirate camp on an island with a lair of creatures (in the world as generated: Slagvent).
+  const camps = Object.values(QUESTS_BY_ID).filter((x) => x.steps.some((st) => st.type === 'land' && st.site === 'pirate_camp' && lairList(game).some((l) => l.island === st.island)));
+  const isleOf = (x: (typeof camps)[number]) => game.world.islands[(x.steps.find((st) => st.type === 'land') as { island: number }).island];
+  const q = camps.sort((a, b) => isleOf(a).radius - isleOf(b).radius)[0]; // the smallest such island: no shore out of the lair's reach
+  assert.ok(q, 'an arc lands at a camp on a lair\'s island');
+  const step = q.steps.findIndex((st) => st.type === 'land');
+  const st = q.steps[step] as { island: number };
+  p.level = 40;
+  p.quests.active.push({ id: q.id, step, progress: 0, startedAt: game.now });
+  // Off her shore, in reach of the boats.
+  if (ship.docked) c.push({ t: 'undock' });
+  const is = game.world.islands[st.island];
+  let at: [number, number] | null = null;
+  for (let r = 20; r < is.radius + 260 && !at; r += 15) for (let k = 0; k < 36 && !at; k++) {
+    const a = (k / 36) * Math.PI * 2, x = is.x + Math.sin(a) * r, y = is.y - Math.cos(a) * r;
+    const d = Math.sqrt(closestOnPolygon(x, y, is.poly).d2);
+    if (!isLand(game.world, x, y) && d > 40 && d < 150) at = [x, y];
+  }
+  ship.state = { ...ship.state, x: at![0], y: at![1], speed: 0, sail: 0 };
+  ship.region = is.region;
+  game.grid.upsert(ship.id, at![0], at![1]);
+  steps(game, 25);
+  assert.equal(s.landable?.feature, 'pirate camp', `the land key offers her job's site (${JSON.stringify(s.landable)})`);
+  c.push({ t: 'land' });
+  for (let i = 0; i < 200 && !ship.landing; i++) steps(game, 1); // (she heaves to first)
+  assert.equal(ship.landing?.feature, 'pirate_camp', `the boats go for the camp, not the creatures (${JSON.stringify(c.all('toast').slice(-3).map((x) => x.msg))} ${JSON.stringify(ship.landing)})`);
+  assert.ok(!c.all('toast').some((x) => /against the/.test(x.msg)), 'no fight with the creatures ashore');
+  steps(game, 20 * 60);
+  // A named pirate's camp (Slagvent's is): her battery drove the boats off — and said what to do.
+  const { lairsAll, lairAdmin } = await import('../server/src/game/wanted.ts');
+  const lair = lairsAll(game).find((l) => l.island === st.island);
+  if (lair) {
+    assert.ok(c.all('toast').some((x) => /Silence it with your guns first/.test(x.msg)), 'the repulse says what to do');
+    lairAdmin(game, lair.id, 'silence');
+    lairAdmin(game, lair.id, 'sink');
+    c.push({ t: 'land' });
+    for (let i = 0; i < 200 && !ship.landing; i++) steps(game, 1);
+    steps(game, 20 * 60);
+    assert.ok(c.all('toast').some((x) => /is stormed/.test(x.msg)), 'the camp stormed');
+  }
+  const left = p.quests.active.find((a) => a.id === q.id);
+  assert.ok(!left || left.step > step, 'the landing counts for the job');
+});
+
+test('plundered shot fills her magazine and no more (8 300 round shot piled up by level 33, a fifth off her way)', async () => {
+  const { makeGame, join, onHull } = await import('./helpers.ts');
+  const { claimPrize } = await import('../server/src/game/boarding.ts');
+  const { magazineOf } = await import('../shared/src/data/ships.ts');
+  const { game } = makeGame();
+  join(game, 'Shot Sal');
+  const s = game.sessionByName('Shot Sal')!;
+  const ship = s.ship!;
+  onHull(game, ship, 'frigate', 6);
+  const cap = magazineOf(ship.cls.tier, ship.stats.gunsPerSide);
+  assert.ok(cap >= 300 && cap <= 1000, `a frigate's magazine ${cap}`);
+  const take = (round: number) => {
+    const b = game.spawnNpcShip('pirate', 'frigate', 'free', ship.state.x + 30, ship.state.y, 0);
+    b.ammo.round = round;
+    b.ammo.chain = round / 4;
+    claimPrize(game, ship, b, 0, 0, 0);
+    const r = s.pendingBoarding!.result;
+    s.pendingBoarding = null;
+    return r.ammo.round + r.ammo.chain;
+  };
+  ship.ammo.round = 100;
+  ship.ammo.chain = 0;
+  ship.ammo.grape = 0;
+  assert.equal(take(400), 200, 'room aboard: two fifths of hers, as before');
+  ship.ammo.round = cap - 30;
+  assert.equal(take(4000), 30, 'the magazine full: only what fits');
+  ship.ammo.round = cap + 500;
+  assert.equal(take(4000), 0, 'over-full (bought): none');
+});

@@ -287,7 +287,7 @@ export function lairLanding(game: Game, s: PlayerSession, island: Island): boole
     const lost = Math.min(ship.crew - 1, S.rng.int(3, 8));
     ship.crew -= Math.max(0, lost);
     ship.morale = Math.max(0, ship.morale - 10);
-    game.sendTo(s, { t: 'toast', msg: 'The lair’s battery drives your boats off!', kind: 'bad' });
+    game.sendTo(s, { t: 'toast', msg: 'The lair’s battery drives your boats off! Silence it with your guns first.', kind: 'bad' });
     return true;
   }
   if (!r.lairOpenUntil || game.wallNow() > r.lairOpenUntil) {
@@ -328,6 +328,9 @@ export function lairLanding(game: Game, s: PlayerSession, island: Island): boole
   maybeArtifact(game, s, 'guard', 0.5); // docs/17 H2: the garrison guarded an artifact
   maybeScroll(game, s, 'lair'); // docs/18 item 10: a scroll of a page in the lair
   sendWanted(game, s, true);
+  // Her boats did land at the camp: a job that sends her there is done with it (QA playthrough B, docs/30 — the arcs'
+  // «Land a party at the pirate camp on Slagvent» never counted the storm, and the stormed camp is empty after).
+  questEvent(game, s, { k: 'land', island: island.id, feature: 'pirate_camp' });
   return true;
 }
 

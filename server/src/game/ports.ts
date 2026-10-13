@@ -18,7 +18,7 @@ import { tidePrice } from './invasions.ts';
 import { chandlerWares, takeGearBack, wornItems } from './gear.ts';
 import { mendCost } from '../../../shared/src/data/items.ts';
 import { refitHolds, refitView } from './refit.ts';
-import { captainLevelFor, levelRange } from '../../../shared/src/data/shiplevel.ts';
+import { captainLevelFor, levelRange, refitCost } from '../../../shared/src/data/shiplevel.ts';
 import { CONTRACT_LEG, contractFor, contractXp, lumpXp, silverXp, xpUnit } from '../../../shared/src/data/xpcurve.ts';
 import { onEventSale } from './events.ts';
 import { levyFor, noteSale, payLevy, saleMul } from './empires.ts';
@@ -143,12 +143,19 @@ export function ammoPrice(game: Game, port: Port, ammo: AmmoId): number {
   return Math.max(1, Math.round(AMMO[ammo].price * Math.min(AMMO_MARKET_CAP, 0.5 * pf + 0.5 * irf) * 10) / 10);
 }
 
-function shipValue(ship: ShipEntity): number {
+export function shipValue(ship: ShipEntity): number {
   let v = SHIP_CLASSES[ship.loadout.classId].price;
   for (const id of MODULE_IDS) {
     const lvl = ship.loadout.modules[id] ?? 0;
     for (let l = 1; l <= lvl; l++) v += moduleCost(id, l, ship.cls.tier) * 0.5;
   }
+  // The guns bought over the yard's own and the refits paid for are hers too, at the half a swap gives back for guns
+  // (QA playthrough B, docs/30: a brig ⚓7 with 18-pounders — 28 800 of guns, two refits — traded in at 7 500, the same as
+  // a bare brig ⚓5 fresh off the ways).
+  const base = GUNS[defaultGunFor(ship.cls)].price;
+  for (const side of ['port', 'starboard'] as const) v += Math.max(0, GUNS[ship.loadout.guns[side]].price - base) * ship.stats.gunsPerSide * 0.5;
+  const range = levelRange(ship.loadout.classId);
+  for (let l = (range?.[0] ?? 1) + 1; l <= ship.shipLevel; l++) v += (refitCost(l)?.silver ?? 0) * 0.5;
   return v;
 }
 
