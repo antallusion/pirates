@@ -106,18 +106,9 @@ test('a job\'s landing goes before the island\'s creatures: the arc\'s pirate ca
   assert.equal(ship.landing?.feature, 'pirate_camp', `the boats go for the camp, not the creatures (${JSON.stringify(c.all('toast').slice(-3).map((x) => x.msg))} ${JSON.stringify(ship.landing)})`);
   assert.ok(!c.all('toast').some((x) => /against the/.test(x.msg)), 'no fight with the creatures ashore');
   steps(game, 20 * 60);
-  // A named pirate's camp (Slagvent's is): her battery drove the boats off — and said what to do.
-  const { lairsAll, lairAdmin } = await import('../server/src/game/wanted.ts');
-  const lair = lairsAll(game).find((l) => l.island === st.island);
-  if (lair) {
-    assert.ok(c.all('toast').some((x) => /Silence it with your guns first/.test(x.msg)), 'the repulse says what to do');
-    lairAdmin(game, lair.id, 'silence');
-    lairAdmin(game, lair.id, 'sink');
-    c.push({ t: 'land' });
-    for (let i = 0; i < 200 && !ship.landing; i++) steps(game, 1);
-    steps(game, 20 * 60);
-    assert.ok(c.all('toast').some((x) => /is stormed/.test(x.msg)), 'the camp stormed');
-  }
+  // A named pirate's camp (Slagvent's is): the job's party slips past her guns, no storming needed.
+  const { lairsAll } = await import('../server/src/game/wanted.ts');
+  if (lairsAll(game).some((l) => l.island === st.island)) assert.ok(c.all('toast').some((x) => /slips ashore past the lair/.test(x.msg)), 'past the lair’s guns');
   const left = p.quests.active.find((a) => a.id === q.id);
   assert.ok(!left || left.step > step, 'the landing counts for the job');
 });

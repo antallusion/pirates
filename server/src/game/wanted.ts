@@ -9,7 +9,7 @@ import { claimLair } from './isles18.ts';
 import { legacyIslands } from '../../../shared/src/world/worldgen.ts';
 import { hullsFor } from '../../../shared/src/data/shiplevel.ts';
 import { nemesisBonus, nemesisEscaped, nemesisRevenge, nemesisViews, stepNemesis } from './nemesis.ts';
-import { questEvent } from './quests.ts';
+import { questEvent, questLandsHere } from './quests.ts';
 import { trophyBonus } from './estate.ts';
 import {
   BARON_AFTER, CAPTAIN_KILLER, HUNTER_BONUS, HUNTER_BONUS_RANK, HUNTER_PENNANT, HUNTER_PENNANT_RANK, HUNTER_POINTS, HUNTER_RANKS, HUNTER_SIGHT_R,
@@ -282,6 +282,13 @@ export function lairLanding(game: Game, s: PlayerSession, island: Island): boole
   const ship = s.ship!;
   const p = s.profile!;
   const hp = battery(game, lair);
+  // A job's landing (a hostage, a witness, a store to burn) is not a storming of the lair: the party slips ashore to
+  // the camp's far beach past the guns (QA playthrough B, docs/30 — a rescue of 1 500 XP sent a captain of 27 against
+  // a ⚓7 lair's battery and garrison, 12 hands lost a try, and could not be done otherwise).
+  if ((hp > 0 || garrisonAfloat(game, lair).length) && questLandsHere(p, island.id, 'pirate_camp')) {
+    game.sendTo(s, { t: 'toast', msg: 'Your party slips ashore past the lair’s guns to the camp your job names.', kind: 'info' });
+    return false;
+  }
   const r = (S.rec[lair.id] ??= {});
   if (hp > 0) {
     const lost = Math.min(ship.crew - 1, S.rng.int(3, 8));
