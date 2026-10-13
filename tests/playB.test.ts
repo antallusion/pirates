@@ -173,3 +173,17 @@ test('a scouting or rescue job sails to a sea next to her port, never into the A
   }
   assert.ok(far < reach.length * 0.1, `${far} of ${reach.length} past 30 km`);
 });
+
+test('the waterfront asks no more for a hand past level 20 (67 a man at 26, 88 at 40, for a deckhand worth 20)', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { recruitCost, HIRE_LEVEL_CAP } = await import('../server/src/game/crew.ts');
+  const { game } = makeGame();
+  join(game, 'Hire Hal');
+  const s = game.sessionByName('Hire Hal')!;
+  const port = game.portById(s.ship!.docked!)!;
+  const at = (L: number) => { s.profile!.level = L; return recruitCost(game, port, s.profile!, 'sailor', s.ship); };
+  assert.ok(at(10) < at(HIRE_LEVEL_CAP), 'it grows to 20');
+  assert.equal(at(26), at(HIRE_LEVEL_CAP));
+  assert.equal(at(40), at(HIRE_LEVEL_CAP));
+  assert.ok(at(40) <= 62, `${at(40)} a man at 40`);
+});

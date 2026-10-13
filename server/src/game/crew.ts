@@ -885,10 +885,15 @@ export function tavernOf(game: Game, port: Port): Tavern {
   return t;
 }
 
+/** The level past which the waterfront asks no more for a hand. */
+export const HIRE_LEVEL_CAP = 20;
 export function recruitCost(game: Game, port: Port, p: Profile, prof: Profession, ship: ShipEntity | null = null): number {
   // A green captain's hands come cheaper, the discount gone by level 10 (docs/30: 37 a man at 7, a lost fight's men
   // cost more than the fight paid).
-  const base = 22 + p.level * 1.5 - Math.max(0, 10 - p.level) * 1.6 + (port.size >= 3 ? 6 : 0) + (FACTIONS[port.faction].lawful ? 4 : 0);
+  // The waterfront's price grows with her years only to level 20 (QA playthrough B, docs/30: the hands are the first
+  // tier's men — a deckhand is worth 20, a dwelling's marine 60–75 — and a frigate's 230 hammocks at 67 a man at level 26,
+  // 88 at 40, were two hours of her sea's income after every boarding lost).
+  const base = 22 + Math.min(p.level, HIRE_LEVEL_CAP) * 1.5 - Math.max(0, 10 - p.level) * 1.6 + (port.size >= 3 ? 6 : 0) + (FACTIONS[port.faction].lawful ? 4 : 0);
   let mul = PROFESSION_DEFS[prof].hireMul;
   // Press Gang: sailors cheaper; Legend at the Helm: the Confederacy signs for less.
   if (ship && prof === 'sailor') mul *= Math.max(0.3, 1 + tx(ship.stats, 'hireCost'));
