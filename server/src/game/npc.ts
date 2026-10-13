@@ -976,10 +976,20 @@ function inFirstWatch(game: Game, ship: ShipEntity): boolean {
 export const FLANK_SEC = 60;
 export const FLANK_UPWIND_DEG = 45;
 
+/** A captain is run down by one wolf pack at a time (QA playthrough B, docs/30): the packs were made for a sea of 8–10
+ *  ships about her (docs/16 P5); since docs/19 D3 there are 36–40, two thirds of them pirates in lawless water, and every
+ *  pirate that came for her called two more — 91 packs and 35 fireships in 65 fights of a frigate ⚓6 in the Ashen Isles
+ *  and Gravewater, every boarding three crews to her one. Now a pack (and its fireship) once in PACK_EVERY seconds. */
+export const PACK_EVERY = 300;
+const packAt = new WeakMap<Game, Map<number, number>>();
+
 /** A wolf pack: a pirate that goes for a captain calls up to two idle pirates within 3 km; they come round to
  *  her quarters from either side while the first closes from where she is. */
 export function rallyPack(game: Game, ship: ShipEntity, prey: ShipEntity): number {
   const now = game.now;
+  let last = packAt.get(game);
+  if (!last) packAt.set(game, (last = new Map()));
+  if (now - (last.get(prey.id) ?? -Infinity) < PACK_EVERY) return 0;
   const sides = [1.9, -1.9];
   let n = 0;
   game.forShipsNear(ship.state.x, ship.state.y, 3000, (o) => {
@@ -997,7 +1007,8 @@ export function rallyPack(game: Game, ship: ShipEntity, prey: ShipEntity): numbe
   });
   if (n > 0) game.toastShip(prey, 'A pirate pack closes in — sails on both quarters!', 'bad');
   // Outside safe water a pack may send a fireship ahead of it.
-  if (REGIONS[prey.region].safety !== 'safe' && game.rng.chance(0.3)) spawnFireship(game, prey);
+  if (n > 0 && REGIONS[prey.region].safety !== 'safe' && game.rng.chance(0.3)) spawnFireship(game, prey);
+  if (n > 0) last.set(prey.id, now);
   return n;
 }
 

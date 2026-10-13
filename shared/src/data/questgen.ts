@@ -676,6 +676,19 @@ export function generateQuests(world: World, seed: number): QuestDef[] {
     }
     return hit;
   };
+  /** The far waters a port's scouting and rescue jobs send her to: the two seas nearest to her (by their nearest island),
+   *  never the Abyss (QA playthrough B, docs/30: any sea of the map was drawn — 453 such jobs ran 33 km one way to the
+   *  border on the mean, half of them past 30 km, for the pay of a 10-km job, and 63 of them sent captains of 12–18 into
+   *  the Abyss). */
+  const farOf = (port: Port): RegionId[] => {
+    const d = new Map<RegionId, number>();
+    for (const is of world.islands) {
+      if (is.region === port.region || is.region === 'the_abyss') continue;
+      const k = Math.hypot(is.x - port.x, is.y - port.y);
+      if (k < (d.get(is.region) ?? Infinity)) d.set(is.region, k);
+    }
+    return [...d.entries()].sort((a, b) => a[1] - b[1]).slice(0, 2).map(([r]) => r);
+  };
   /** A port's jobs, from her own dice: sent to the `near` harbours (the nearest first), rowed to the islands about her. */
   const jobsOf = (port: Port, near: Port[], home: Island | undefined, per = PER_PORT) => {
     const rng = new Rng((hashString(port.id) ^ (seed * 2654435761)) >>> 0);
@@ -688,7 +701,7 @@ export function generateQuests(world: World, seed: number): QuestDef[] {
         if (made >= per) break;
         const k = Math.floor(rng.float() * plot.flavors.length);
         const flavor = plot.flavors[k];
-        const params = rollParams(rng, plot, flavor, port, near, islandsNear, sitesOf);
+        const params = rollParams(rng, plot, flavor, port, near, islandsNear, sitesOf, farOf(port));
         if (!params) continue;
         const id = `g_${port.id}_${plot.id}_${k}_${round}`;
         if (ids.has(id)) continue;
@@ -713,7 +726,7 @@ export function generateQuests(world: World, seed: number): QuestDef[] {
   return out;
 }
 
-function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port[], islands: Island[], sitesOf: (is: Island) => string[]): GenParams | null {
+function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port[], islands: Island[], sitesOf: (is: Island) => string[], farRegions: RegionId[] = []): GenParams | null {
   const sex = PROFESSION_SEX[flavor.giver];
   const giver = `${rng.pick(sex === 'f' ? GIVER_WOMEN : sex === 'm' ? GIVER_MEN : GIVER_FIRST)} ${rng.pick(GIVER_LAST)}`;
   const reach = near.slice(0, 8);
@@ -749,7 +762,7 @@ function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port
   }
   // A far region for the scouting and rescue plots, the home region for the hunts.
   const far = needs('reach');
-  const region: RegionId = far ? rng.pick(Object.keys(REGIONS).filter((r) => r !== port.region) as RegionId[]) : port.region;
+  const region: RegionId = far ? rng.pick(farRegions.length ? farRegions : (Object.keys(REGIONS).filter((r) => r !== port.region && r !== 'the_abyss') as RegionId[])) : port.region;
   if (far && island) {
     // The island lies in that region.
     const inReg = islands.filter((is) => is.region === region);

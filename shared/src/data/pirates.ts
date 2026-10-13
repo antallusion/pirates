@@ -196,6 +196,7 @@ export function piratePatterns(): [string, string][] {
     ['The lair’s battery on {0} opens fire!', 'Батарея логова на острове {0} открывает огонь!'],
     ['The lair’s battery on {0} is silenced. Land now — the lair is open.', 'Батарея логова на острове {0} замолчала. Высаживайтесь — логово открыто.'],
     ['The lair’s battery drives your boats off! Silence it with your guns first.', 'Батарея логова отгоняет ваши шлюпки! Сначала заставьте её замолчать пушками.'],
+    ['Your party slips ashore past the lair’s guns to the camp your job names.', 'Шлюпки проскальзывают мимо пушек логова к лагерю, куда вас послало задание.'],
     ['The lair of {0} is stormed: {1} silver from its chest, {2} prisoners freed.', 'Логово «{0}» взято штурмом: {1} серебра из сундука, освобождено пленников: {2}.'],
     ['The freed prisoners join your crew.', 'Освобождённые пленники идут к вам в команду.'],
     ['Sank {0}', 'Потоплен: {0}'],

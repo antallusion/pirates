@@ -193,3 +193,21 @@ test('a patrol sails in line: the rest keep station behind their flagship', () =
   steps(game, 20 * 40);
   assert.ok(Math.hypot(ship.state.x - lead.state.x, ship.state.y - lead.state.y) < d0, 'back toward her flagship');
 });
+
+test('one wolf pack at a time (docs/30 B): a second pirate going for her within PACK_EVERY calls no one, and no fireship', async () => {
+  const { PACK_EVERY } = await import('../server/src/game/npc.ts');
+  const { game } = makeGame();
+  const prey = captainAtSea(game, 'Pack Pia');
+  const first = npcAt(game, 'pirate', prey.state.x + 900, prey.state.y);
+  npcAt(game, 'pirate', first.state.x + 1500, first.state.y + 800);
+  npcAt(game, 'pirate', first.state.x - 1200, first.state.y + 1500);
+  assert.equal(rallyPack(game, first, prey), 2, 'the first pack comes');
+  const second = npcAt(game, 'pirate', prey.state.x - 900, prey.state.y);
+  npcAt(game, 'pirate', second.state.x - 1500, second.state.y + 800);
+  npcAt(game, 'pirate', second.state.x + 900, second.state.y - 1500);
+  const ships0 = game.ships.size;
+  for (let k = 0; k < 20; k++) assert.equal(rallyPack(game, second, prey), 0, 'no second pack');
+  assert.equal(game.ships.size, ships0, 'and no fireship sent with it');
+  game.now += PACK_EVERY;
+  assert.equal(rallyPack(game, second, prey), 2, 'five minutes on, a pack again');
+});

@@ -151,7 +151,7 @@ export const BOARD_LOSS_PURSE = 0.08;
 export const BOARD_LOSS_SHIELD = 180;
 import { stepBridges } from './bridgefx.ts';
 import { MAX_BERTHS, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
-import { abandonQuest, acceptQuest, answerOffer, questCargoLost, questEvent, questLandsHere, questXpOf, shareQuest, swearOath, switchPath } from './quests.ts';
+import { abandonQuest, acceptQuest, answerOffer, jobSanctions, questCargoLost, questEvent, questLandsHere, questXpOf, shareQuest, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import { commonCollect, commonView, stepCommon } from './commongoal.ts';
 import { guildGoalCollect } from './guildgoal.ts';
@@ -2156,6 +2156,7 @@ export class Game {
     this.shared?.bump(how === 'sunk' ? 'sunk' : 'boarded', s.accountId, s.name, 1);
     onFightWon(this, s);
     crewOnKill(this, s, victim, how); // an officer's word, the log, the marines' practice (docs/16 #16, 18, 20)
+    const sanctioned = jobSanctions(this, s, victim); // (before the job counts her: her own flag asked for it, docs/30 B)
     questEvent(this, s, how === 'sunk' ? { k: 'sink', victim } : { k: 'board', victim });
     // The taverns talk (owner, 2026-09-29: the ports should know what a captain has done).
     if (!victim.cls.monster || victim.npcRole === 'beast') {
@@ -2214,8 +2215,9 @@ export class Game {
         if (how === 'sunk') this.addInfamy(killer, 12 * (zone === 'safe' ? 2 : zone === 'contested' ? 1 : 0.3), `sank ${victim.name}`);
         changeRep(p, victim.faction, -10);
       } else {
-        changeRep(p, victim.faction, -6);
-        if (victim.faction === 'confederacy') {
+        if (!sanctioned) changeRep(p, victim.faction, -6);
+        // (a feud the Brethren asked her to settle is none of the Crown's: no praise from it to spill back on them)
+        if (victim.faction === 'confederacy' && !sanctioned) {
           changeRep(p, 'crown', 3);
           changeRep(p, 'league', 2);
         }

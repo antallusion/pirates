@@ -600,6 +600,24 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   }
 }
 
+/** A job of hers, given at a port of the victim's own flag, asks for this very ship now (its step wants her sunk,
+ *  boarded or taken): the flag that asked for it does not hold it against her (QA playthrough B, docs/30 — Cinderhold's
+ *  «Sink pirate ships in the Ashen Isles: 3» cost −18 standing with the Confederacy for +5 from the job, and a captain of
+ *  37 who did the harbour's hunts was barred from it as its enemy). */
+export function jobSanctions(game: Game, s: PlayerSession, victim: ShipEntity): boolean {
+  const p = s.profile;
+  if (!p) return false;
+  return p.quests.active.some((a) => {
+    const q = QUESTS_BY_ID[a.id];
+    const st = q?.steps[a.step];
+    if (!q || !st || game.portById(q.port)?.faction !== victim.faction) return false;
+    if (st.type === 'board' || st.type === 'prize') return true;
+    if (st.type !== 'sink') return false;
+    if (st.region && victim.region !== st.region) return false;
+    return !st.role || victim.npcRole === st.role || (st.role === 'patrol' && victim.npcRole === 'hunter');
+  });
+}
+
 function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): number {
   const ship = s.ship!;
   switch (st.type) {

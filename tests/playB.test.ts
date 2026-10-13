@@ -106,18 +106,9 @@ test('a job\'s landing goes before the island\'s creatures: the arc\'s pirate ca
   assert.equal(ship.landing?.feature, 'pirate_camp', `the boats go for the camp, not the creatures (${JSON.stringify(c.all('toast').slice(-3).map((x) => x.msg))} ${JSON.stringify(ship.landing)})`);
   assert.ok(!c.all('toast').some((x) => /against the/.test(x.msg)), 'no fight with the creatures ashore');
   steps(game, 20 * 60);
-  // A named pirate's camp (Slagvent's is): her battery drove the boats off — and said what to do.
-  const { lairsAll, lairAdmin } = await import('../server/src/game/wanted.ts');
-  const lair = lairsAll(game).find((l) => l.island === st.island);
-  if (lair) {
-    assert.ok(c.all('toast').some((x) => /Silence it with your guns first/.test(x.msg)), 'the repulse says what to do');
-    lairAdmin(game, lair.id, 'silence');
-    lairAdmin(game, lair.id, 'sink');
-    c.push({ t: 'land' });
-    for (let i = 0; i < 200 && !ship.landing; i++) steps(game, 1);
-    steps(game, 20 * 60);
-    assert.ok(c.all('toast').some((x) => /is stormed/.test(x.msg)), 'the camp stormed');
-  }
+  // A named pirate's camp (Slagvent's is): the job's party slips past her guns, no storming needed.
+  const { lairsAll } = await import('../server/src/game/wanted.ts');
+  if (lairsAll(game).some((l) => l.island === st.island)) assert.ok(c.all('toast').some((x) => /slips ashore past the lair/.test(x.msg)), 'past the lair’s guns');
   const left = p.quests.active.find((a) => a.id === q.id);
   assert.ok(!left || left.step > step, 'the landing counts for the job');
 });
@@ -150,4 +141,109 @@ test('plundered shot fills her magazine and no more (8 300 round shot piled up b
   assert.equal(take(4000), 30, 'the magazine full: only what fits');
   ship.ammo.round = cap + 500;
   assert.equal(take(4000), 0, 'over-full (bought): none');
+});
+
+test('a scouting or rescue job sails to a sea next to her port, never into the Abyss (453 ran 33 km one way on the mean, 63 to the Abyss from level 12)', async () => {
+  const { makeGame } = await import('./helpers.ts');
+  const { JOBS } = await import('../shared/src/data/quests.ts');
+  const { game } = makeGame();
+  const reach = JOBS.filter((q) => q.steps.some((st) => st.type === 'reach'));
+  assert.ok(reach.length > 100, `${reach.length} such jobs`);
+  let far = 0;
+  for (const q of reach) {
+    const st = q.steps.find((x) => x.type === 'reach') as { region: string };
+    assert.notEqual(st.region, 'the_abyss', q.id);
+    const port = game.portById(q.port)!;
+    // the job's sea lies near the port: among the three whose nearest island is nearest (the jobs are drawn on the sea
+    // of their making, a few islets fewer than today's)
+    const d = new Map<string, number>();
+    for (const is of game.world.islands) if (is.region !== port.region && is.region !== 'the_abyss') d.set(is.region, Math.min(d.get(is.region) ?? Infinity, Math.hypot(is.x - port.x, is.y - port.y)));
+    const three = [...d.entries()].sort((a, b) => a[1] - b[1]).slice(0, 3).map(([r]) => r);
+    assert.ok(three.includes(st.region), `${q.id}: ${st.region} not among ${three}`);
+    if ((d.get(st.region) ?? 0) > 30000) far++;
+  }
+  assert.ok(far < reach.length * 0.1, `${far} of ${reach.length} past 30 km`);
+});
+
+test('the waterfront asks no more for a hand past level 20 (67 a man at 26, 88 at 40, for a deckhand worth 20)', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { recruitCost, HIRE_LEVEL_CAP } = await import('../server/src/game/crew.ts');
+  const { game } = makeGame();
+  join(game, 'Hire Hal');
+  const s = game.sessionByName('Hire Hal')!;
+  const port = game.portById(s.ship!.docked!)!;
+  const at = (L: number) => { s.profile!.level = L; return recruitCost(game, port, s.profile!, 'sailor', s.ship); };
+  assert.ok(at(10) < at(HIRE_LEVEL_CAP), 'it grows to 20');
+  assert.equal(at(26), at(HIRE_LEVEL_CAP));
+  assert.equal(at(40), at(HIRE_LEVEL_CAP));
+  assert.ok(at(40) <= 62, `${at(40)} a man at 40`);
+});
+
+test('a barge is as big as her town hall: hall 3 brings three loads at once (260 timber for hall 3 was ten barges)', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { orderBarge, yardOf, bargeCost } = await import('../server/src/game/base.ts');
+  const { ownIsland } = await import('../server/src/game/estate.ts');
+  const { runAdmin } = await import('../server/src/game/admin.ts');
+  const { BARGE } = await import('../shared/src/data/base.ts');
+  const { game } = makeGame();
+  join(game, 'Barge Bo');
+  const s = game.sessionByName('Barge Bo')!;
+  runAdmin(game, s, '/isle');
+  runAdmin(game, s, '/build tree 3');
+  const h = ownIsland(game, s.accountId)!;
+  const y = yardOf(game, h);
+  for (const g of Object.keys(BARGE)) y.res[g as 'timber'] = 0;
+  s.profile!.gold = 1e6;
+  const cost = bargeCost(h, y);
+  assert.equal(orderBarge(game, s), null);
+  assert.equal(y.res.timber, BARGE.timber! * 3, 'three loads of timber');
+  assert.equal(y.res.coal, BARGE.coal! * 3);
+  assert.equal(1e6 - s.profile!.gold, cost, 'paid what the card says');
+});
+
+test('a broke captain\'s share hands take her past half her hammocks: a frigate is not left «broken» to every pirate (60 of 220 was 90)', async () => {
+  const { makeGame, join, onHull } = await import('./helpers.ts');
+  const { shareLine } = await import('../shared/src/data/crew.ts');
+  const { npcWouldBoard } = await import('../server/src/game/army.ts');
+  const { game } = makeGame();
+  const conn = join(game, 'Broke Bel');
+  const s = game.sessionByName('Broke Bel')!;
+  const ship = s.ship!;
+  onHull(game, ship, 'frigate', 6);
+  s.profile!.level = 30;
+  s.profile!.gold = 0;
+  ship.setArmy([{ u: 'deckhand', n: 20 }]);
+  game.tavernCrew.set(ship.docked!, 400);
+  conn.push({ t: 'hire_crew', qty: 300, prof: 'sailor' } as never);
+  assert.equal(ship.crew, shareLine(ship.stats.crewMin, ship.stats.crewMax));
+  assert.ok(ship.crew > ship.stats.crewMax * 0.5, `${ship.crew} of ${ship.stats.crewMax}`);
+  // a pirate of her level no stronger than her men does not grapple her as a broken ship
+  const o = game.spawnNpcShip('pirate', 'schooner', 'free', ship.state.x + 200, ship.state.y, 0);
+  game.setNpcLevel(o, 6);
+  assert.equal(npcWouldBoard(game, o, ship), false);
+});
+
+test('a pirate sunk for a job her own flag gave costs no standing with that flag (Cinderhold\'s hunts barred her from Cinderhold)', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { JOBS } = await import('../shared/src/data/quests.ts');
+  const { game } = makeGame();
+  join(game, 'Hunt Hob');
+  const s = game.sessionByName('Hunt Hob')!;
+  const p = s.profile!, ship = s.ship!;
+  const job = JOBS.find((q) => q.port === 'cinderhold' && q.steps[0].type === 'sink' && (q.steps[0] as { role?: string }).role === 'pirate')!;
+  assert.ok(job, 'Cinderhold posts a pirate hunt');
+  const st = job.steps[0] as { region?: string };
+  const pirate = () => {
+    const o = game.spawnNpcShip('pirate', 'brig', 'confederacy', ship.state.x + 300, ship.state.y, 0);
+    o.region = (st.region ?? 'ashen_isles') as never;
+    return o;
+  };
+  p.level = 30;
+  p.reputation.confederacy = 0;
+  (game as unknown as { creditKill(a: unknown, b: unknown, how: string): void }).creditKill(ship, pirate(), 'sunk');
+  const r1 = p.reputation.confederacy ?? 0;
+  assert.ok(r1 < 0, `no job: the Brethren remember it (${r1})`);
+  p.quests.active.push({ id: job.id, step: 0, progress: 0, startedAt: game.now });
+  (game as unknown as { creditKill(a: unknown, b: unknown, how: string): void }).creditKill(ship, pirate(), 'sunk');
+  assert.equal(p.reputation.confederacy, r1, 'the job their own harbour gave: no standing lost');
 });

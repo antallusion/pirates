@@ -31,6 +31,16 @@ export const PROFESSION_DEFS: Record<Profession, ProfessionDef> = {
 };
 
 /** Veterancy multiplier: ★1 0.8 · ★2 0.9 · ★3 1.0 · ★4 1.2 · ★5 1.4 (interpolated). */
+/** The hands that sign on for a share when her chest is empty (docs/30 A): half again her least crew — and at least
+ *  past half her hammocks (QA playthrough B, docs/30: a frigate's least crew is 60 of 220, so a broke captain of 30 sailed
+ *  with 90, under the half at which every pirate of the sea grapples a ship as broken, army.ts npcWouldBoard — and lost
+ *  each boarding, and with it the next silver, for ever). */
+export const SHARE_HANDS = 1.5;
+export const SHARE_OF_HAMMOCKS = 0.55;
+export function shareLine(crewMin: number, crewMax: number): number {
+  return Math.min(Math.ceil(crewMax), Math.max(Math.ceil(crewMin * SHARE_HANDS), Math.ceil(crewMax * SHARE_OF_HAMMOCKS)));
+}
+
 export function skillMul(stars: number): number {
   const s = Math.max(1, Math.min(5, stars));
   return s <= 3 ? 0.7 + s * 0.1 : 1 + (s - 3) * 0.2;

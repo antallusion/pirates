@@ -24,6 +24,7 @@ import { escortUpkeep } from './fleet.ts';
 import { grantDeed } from './progression.ts';
 import { onboardingProtected } from './onboarding.ts';
 import { PRACTICE_PER_LEVEL, practiceLevel } from '../../../shared/src/data/crewtalk.ts';
+import { shareLine } from '../../../shared/src/data/crew.ts';
 import { logNote } from './captainlog.ts';
 import { UNITS, isPremiumUnit } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
@@ -893,10 +894,15 @@ export function tavernOf(game: Game, port: Port): Tavern {
   return t;
 }
 
+/** The level past which the waterfront asks no more for a hand. */
+export const HIRE_LEVEL_CAP = 20;
 export function recruitCost(game: Game, port: Port, p: Profile, prof: Profession, ship: ShipEntity | null = null): number {
   // A green captain's hands come cheaper, the discount gone by level 10 (docs/30: 37 a man at 7, a lost fight's men
   // cost more than the fight paid).
-  const base = 22 + p.level * 1.5 - Math.max(0, 10 - p.level) * 1.6 + (port.size >= 3 ? 6 : 0) + (FACTIONS[port.faction].lawful ? 4 : 0);
+  // The waterfront's price grows with her years only to level 20 (QA playthrough B, docs/30: the hands are the first
+  // tier's men — a deckhand is worth 20, a dwelling's marine 60–75 — and a frigate's 230 hammocks at 67 a man at level 26,
+  // 88 at 40, were two hours of her sea's income after every boarding lost).
+  const base = 22 + Math.min(p.level, HIRE_LEVEL_CAP) * 1.5 - Math.max(0, 10 - p.level) * 1.6 + (port.size >= 3 ? 6 : 0) + (FACTIONS[port.faction].lawful ? 4 : 0);
   let mul = PROFESSION_DEFS[prof].hireMul;
   // Press Gang: sailors cheaper; Legend at the Helm: the Confederacy signs for less.
   if (ship && prof === 'sailor') mul *= Math.max(0.3, 1 + tx(ship.stats, 'hireCost'));
@@ -904,8 +910,7 @@ export function recruitCost(game: Game, port: Port, p: Profile, prof: Profession
   return Math.max(1, Math.round(base * mul));
 }
 
-/** The hands that sign on for a share when her chest is empty: this many times her ship's least crew (docs/30). */
-export const SHARE_HANDS = 1.5;
+export { SHARE_HANDS } from '../../../shared/src/data/crew.ts';
 
 /** Hire men of a trade. Sailors come from the waterfront; specialists from the tavern's stock. */
 export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profession, qty: number, dregs = false): string | null {
@@ -933,10 +938,11 @@ export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profes
   if (dregs && !scum) return 'Only a practised press-gang captain finds the dregs, and only in lawless ports';
   let cost = Math.round(n * recruitCost(game, port, p, prof, ship) * (scum ? 0.5 : 1));
   // docs/30: a captain with an empty chest and too few hands to fight is never stuck in port — volunteers sign on for a
-  // share of the next spoils, up to SHARE_HANDS × her ship's least crew, at a lower heart than paid men.
+  // share of the next spoils, up to the share line (shareLine: half again her least crew, past half her hammocks), at a
+  // lower heart than paid men.
   let share = false;
   if (p.gold < cost && prof === 'sailor' && !scum) {
-    const k = Math.min(n, Math.ceil(ship.stats.crewMin * SHARE_HANDS) - ship.crew);
+    const k = Math.min(n, shareLine(ship.stats.crewMin, ship.stats.crewMax) - ship.crew);
     if (k > 0) {
       n = k;
       cost = 0;

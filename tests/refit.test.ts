@@ -135,12 +135,13 @@ test('the refit card says where a short good is sold: the nearest harbour with i
   assert.ok(iron.where && game.world.ports.some((x) => x.name === iron.where), `iron at ${iron.where}`);
 });
 
-test('a refit to ⚓4 and ⚓5 is two loads of the hull she refits and less than the new hull of that level (docs/30, band 2)', async () => {
+test('a refit to ⚓4–⚓7 is two loads of the hull she refits and less than the new hull of that level (docs/30, bands 2 and 3)', async () => {
   const { GOODS } = await import('../shared/src/data/goods.ts');
   const { SHIP_CLASSES } = await import('../shared/src/data/ships.ts');
   const { computeShipStats } = await import('../shared/src/sim/shipstats.ts');
   const hold = (classId: string, level: number) => computeShipStats({ classId, level, name: 'x', guns: { port: 'light_6', starboard: 'light_6' }, modules: {}, gear: {} } as never, 'corsair', {}).holdVolume;
-  for (const [to, from, rival] of [[4, 'schooner', 'brigantine'], [5, 'brigantine', 'brig']] as const) {
+  // (docs/30 B: ⚓6 and ⚓7 by the same rule — from a brig, against a frigate ⚓6 and a razee ⚓7 bought new)
+  for (const [to, from, rival] of [[4, 'schooner', 'brigantine'], [5, 'brigantine', 'brig'], [6, 'brig', 'frigate'], [7, 'brig', 'razee']] as const) {
     const c = refitCost(to)!;
     const vol = c.goods.reduce((a, g) => a + g.qty * GOODS[g.good].volume, 0);
     assert.ok(vol <= 2 * hold(from, to - 1), `⚓${to}: ${vol} of hold, two ${from} loads are ${2 * hold(from, to - 1)}`);
