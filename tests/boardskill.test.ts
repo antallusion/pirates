@@ -157,8 +157,10 @@ test('docs/25 item 58: the Reaver evened out — her innate move two free blows 
   assert.ok(Math.abs(u.self!.melee! - 0.12) < 1e-9);
   const bt = battle(L('reaver', 20), L('corsair', 20));
   bt.round = 2;
+  // (docs/31: her Tactics bring their own unanswered blows from the start, TACTICS_FREE; the ultimate's three on top)
+  const tactics = bt.heroes[0].free;
   assert.equal(castMove(bt, 0, 'ult', undefined, new Rng(2)), null);
-  assert.equal(bt.heroes[0].free, 3);
+  assert.equal(bt.heroes[0].free - tactics, 3);
 });
 
 /** An open deck (no mast, guns, barrels, holes or fires; planks on every row) for the cover and the passes. */

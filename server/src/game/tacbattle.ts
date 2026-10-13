@@ -17,7 +17,7 @@ import {
 } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacKind, TacOrderId, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import type { TacAction, TacAllyView, TacEvent, TacHeroView, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
-import { ORDERS, TACTICS_DEPLOY, homeMul, orderRes } from '../../../shared/src/data/hero.ts';
+import { ORDERS, TACTICS_FREE, homeMul, orderRes } from '../../../shared/src/data/hero.ts';
 import type { HeroBattle, OrderRes } from '../../../shared/src/data/hero.ts';
 import { BOOK_PAGES, CHAIN_FALL, HOME_MUL, INNATE, PATH_PAGES, PATH_SCHOOL, RAISE_CAP, DRAIN_CAP, SICK_TURNS, ULTIMATE, ULT_EARLY, ULT_ROUND, drainCap, isBookPage, isPathPage, moveFx, pathHoldExtra, powHold, powered, raiseCap } from '../../../shared/src/data/paths.ts';
 import type { BtMods, PageFx } from '../../../shared/src/data/paths.ts';
@@ -621,10 +621,13 @@ export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: n
   const cells = sg ? makeSiegeField(seed, sg.type, hp, max) : land ? makeLandField(seed, land) : opts.arena ? makeArenaField(seed) : makeField(seed);
   // Ashore (docs/18 II) the ship's guns are not there: no holes, no fire, no swivels.
   if (!land && !opts.arena) for (const [x, side] of [[a, 0], [b, 1]] as const) if ((x.holes ?? 0) > 0 || x.fire) scarDeck(cells, side, x.holes ?? 0, !!x.fire, seed);
-  // Tactics (docs/17 H2): the higher hand has the field, the lower none — but a garrison keeps within its walls.
-  const ta = a.hero?.tactics ?? 0, tb = b.hero?.tactics ?? 0;
-  const sa = buildStacks(a, 0, cells, 1, ta > tb ? TACTICS_DEPLOY[ta] : 0);
-  const sb = buildStacks(b, 1, cells, sa.length + 1, tb > ta && !sg ? TACTICS_DEPLOY[tb] : 0);
+  // Tactics (docs/17 H2; balance pass 2026-10-13, docs/31): each side's own, not the higher hand's — her first blows
+  // draw no answer (TACTICS_FREE) and her shooters fire first in round one (initOf). The line no longer stands nearer
+  // the planks: on the sea's mind a line brought nearer walked into the other's reach and took the first blows (a
+  // mirror at level 10–30: 20–35% for the captain with Tactics), and a captain whose Tactics passed or met the sea's
+  // swung her boardings by half (level 13 → 14: 78% → 33% against the same pirate).
+  const sa = buildStacks(a, 0, cells, 1);
+  const sb = buildStacks(b, 1, cells, sa.length + 1);
   if (land) for (const s of [...sa, ...sb]) {
     s.sp = s.sp.filter((x) => x !== 'blast');
     s.dmgMul = 1;
@@ -649,6 +652,7 @@ export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: n
   for (const x of [0, 1] as const) if (sideStrength(bt, (1 - x) as 0 | 1) >= ULT_EARLY * sideStrength(bt, x)) for (const h of sideHeroes(bt, x)) h.ultFrom = 1;
   // The ship's broadside before the assault: its balls on the wall, the gate and the towers.
   if (sg) for (let k = 0; k < Math.max(0, Math.min(8, Math.round(sg.bombard ?? 0))); k++) siegeStone(bt, rng, 'gun');
+  for (const [x, h] of [[a, 0], [b, 1]] as const) bt.heroes[h].free += TACTICS_FREE[Math.max(0, Math.min(TACTICS_FREE.length - 1, x.hero?.tactics ?? 0))];
   checkOver(bt);
   if (!bt.over) newRound(bt, now, rng);
   return bt;
@@ -1106,7 +1110,7 @@ function initOf(bt: TacBattle, s: TacStack): number {
   const h = bt.heroes[s.side], e = bt.heroes[1 - s.side];
   const flank = held(h, 'turn_the_flank', bt.round);
   return s.init + (flank ? Math.max(1, Math.round(3 * flank)) : 0) + (has(h, 'all_hands', bt.round) ? 2 : 0) + (has(h, 'following_wind', bt.round) ? 2 : 0)
-    - (has(e, 'head_wind', bt.round) ? 2 : 0) + (bt.round <= 1 ? capOf(bt, s).input.hero?.init1 ?? 0 : 0) + smods(bt, s).init;
+    - (has(e, 'head_wind', bt.round) ? 2 : 0) + (bt.round <= 1 && isShooter(s) ? capOf(bt, s).input.hero?.init1 ?? 0 : 0) + smods(bt, s).init;
 }
 
 /** A hex a stack may stand on: no obstacle (the surf only for a creature that dives, docs/18 II) and nobody there. */

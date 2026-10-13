@@ -11,7 +11,7 @@ import { armyForLevel } from '../shared/src/data/army.ts';
 import type { ArmyStack } from '../shared/src/data/army.ts';
 import type { CaptainId } from '../shared/src/data/captains.ts';
 import {
-  COMMON_SCHOOLS, LEARNABLE, ORDERS, ORDER_IDS, PRIM_BASE, SCHOOLS, SKILLS, SKILL_IDS, TACTICS_DEPLOY, guildOf, heroBattle, heroSeed, npcHeroBattle, orderCost, orderLevelCap, orderMul, primsAtLevel,
+  COMMON_SCHOOLS, LEARNABLE, ORDERS, ORDER_IDS, PRIM_BASE, SCHOOLS, SKILLS, SKILL_IDS, TACTICS_FREE, guildOf, heroBattle, heroSeed, npcHeroBattle, orderCost, orderLevelCap, orderMul, primsAtLevel,
   shrineOrder, skillOffer, skillSeaMods, startingOrders, zeroPrims,
 } from '../shared/src/data/hero.ts';
 import type { HeroBattle, Prims, SkillSlot } from '../shared/src/data/hero.ts';
@@ -185,10 +185,12 @@ test('every skill does something: the sea lines in the talents\' vocabulary, the
   assert.ok(hit(pair([], [{ id: 'armor', r: 3 }]), 'marine', 'melee') < hit(b0, 'marine', 'melee') * 0.9, 'armor: taken −15%');
   assert.equal(moralePoints(pair([{ id: 'leadership', r: 2 }]), 0) - moralePoints(b0, 0), 2, 'leadership: morale +2');
   assert.ok(pair([{ id: 'luck', r: 2 }]).heroes[0].luck > b0.heroes[0].luck, 'luck');
-  // Tactics: her line nearer the planks, the lower hand's none.
+  // Tactics (balance pass 2026-10-13, docs/31): each side's own first blows unanswered, her line where it always
+  // stands (the line brought nearer the planks walked into the other's reach on the sea's mind).
   const col = (bt: TacBattle) => Math.max(...bt.stacks.filter((x) => x.side === 0 && x.unit === 'marine').map((x) => hexX(x.hex)));
-  assert.equal(col(pair([{ id: 'tactics', r: 2 }])) - col(b0), TACTICS_DEPLOY[2], 'tactics: two hexes nearer');
-  assert.equal(col(pair([{ id: 'tactics', r: 1 }], [{ id: 'tactics', r: 2 }])), col(b0), 'the higher tactics has the field');
+  assert.equal(col(pair([{ id: 'tactics', r: 2 }])), col(b0), 'tactics: the line stands where it stands');
+  const tf = pair([{ id: 'tactics', r: 1 }], [{ id: 'tactics', r: 2 }]);
+  assert.deepEqual([tf.heroes[0].free, tf.heroes[1].free], [TACTICS_FREE[1], TACTICS_FREE[2]], 'each side her own unanswered blows');
   // Deep Mysticism: stronger orders, higher levels.
   assert.ok(orderMul(0, 0, 3) > orderMul(0, 0, 0));
   assert.equal(orderLevelCap(1, 0), 2);
