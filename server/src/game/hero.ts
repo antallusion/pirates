@@ -16,7 +16,7 @@ import { ARTIFACTS, ARTIFACT_IDS, RELICS, RELIC_IDS, artMerchantAt, artTotals, a
 import type { ART_WEIGHTS } from '../../../shared/src/data/artifacts.ts';
 import {
   LEARNABLE, ORDERS, PRIM_NAMES, PRIMS, RANK_NAMES, SCHOOL_SKILL, SKILLS, SKILL_MAX, SKILL_SLOTS, WILL_DAY, WILL_PORT, growPrims, guildOf, guildPrice, heroBattle, heroSeed,
-  isOrder, manaMaxOf, npcHeroBattle, orderCost, orderLevelCap, orderMul, primOfLevel, primsAtLevel, rankOf, shrineOrder, skillOffer, skillSeaMods, startingOrders,
+  isOrder, manaMaxOf, npcHeroBattle, orderCost, orderLevelCap, orderMul, primOfLevel, primOffer, primsAtLevel, rankOf, shrineOrder, skillOffer, skillSeaMods, startingOrders,
 } from '../../../shared/src/data/hero.ts';
 import type { HeroBattle, HeroPortView, HeroView, OrderId, Prims, SeaOrderId, SkillPick, SkillSlot } from '../../../shared/src/data/hero.ts';
 import { TREES, pointsInTree } from '../../../shared/src/data/talents.ts';
@@ -61,6 +61,8 @@ export interface HeroRec {
   /** docs/18: her stamina (absent: whole), and the scrolls of pages in her bag. */
   stam?: number;
   scrolls?: Partial<Record<OrderId, number>>;
+  /** docs/31: every skill at expert — the last level whose primary she has settled (chosen or left as drawn). */
+  focus?: number;
 }
 
 /** The hero's own dice (like the auction house's: server/src/game/auction.ts). */
@@ -158,6 +160,33 @@ export function pendingChoices(p: Profile, h = heroOf(p)): number {
   return full ? 0 : Math.max(0, p.level - h.picked);
 }
 
+/** docs/31: every skill at expert — the level-ups whose primary she may still choose (primOffer), from the level of her
+ *  last skill on. */
+export function focusPending(p: Profile, h = heroOf(p)): number {
+  const full = h.skills.length >= SKILL_SLOTS && h.skills.every((x) => x.r >= SKILL_MAX);
+  return full ? Math.max(0, p.level - Math.max(h.focus ?? 0, h.picked)) : 0;
+}
+const focusLevel = (h: HeroRec): number => Math.max(h.focus ?? 0, h.picked) + 1;
+
+/** She takes one of the two primaries offered for her next unsettled level: the drawn one stays, the other swaps it. */
+export function pickFocus(game: Game, s: PlayerSession, i: number): string | null {
+  const p = s.profile!;
+  const h = heroOf(p);
+  if (focusPending(p, h) <= 0) return 'No primary to choose now';
+  const lv = focusLevel(h);
+  const offer = primOffer(p.captain, h.seed, lv);
+  const pick = offer[i];
+  if (!pick) return 'No such choice';
+  if (pick !== offer[0]) {
+    h.prim[offer[0]] = Math.max(0, h.prim[offer[0]] - 1);
+    h.prim[pick]++;
+  }
+  h.focus = lv;
+  applyHero(game, s);
+  game.sendTo(s, { t: 'toast', msg: `Level ${lv}: ${PRIM_NAMES[pick][0]} +1, your choice.`, kind: 'good' });
+  return null;
+}
+
 /** A level-up (progression.ts): a primary grows by her path, and a choice of skill waits. */
 export function heroLevelUp(game: Game, s: PlayerSession): void {
   const p = s.profile!;
@@ -167,6 +196,10 @@ export function heroLevelUp(game: Game, s: PlayerSession): void {
   for (let lv = Math.max(2, before + 1); lv <= h.primLv; lv++) game.sendTo(s, { t: 'toast', msg: `${PRIM_NAMES[primOfLevel(p.captain, h.seed, lv)][0]} +1 at level ${lv}.`, kind: 'good' });
   const offer = currentOffer(p, h);
   if (pendingChoices(p, h) > 0 && offer.length === 2) game.sendTo(s, { t: 'toast', msg: `A new skill to choose: ${SKILLS[offer[0].id].name[0]} or ${SKILLS[offer[1].id].name[0]}.`, kind: 'gold' });
+  else if (focusPending(p, h) > 0) {
+    const lv = focusLevel(h), fo = primOffer(p.captain, h.seed, lv);
+    game.sendTo(s, { t: 'toast', msg: `Level ${lv}: choose its primary — ${PRIM_NAMES[fo[0]][0]} or ${PRIM_NAMES[fo[1]][0]}.`, kind: 'gold' });
+  }
   h.mana = Math.min(willMax(p, h), h.mana + WILL_DAY * willMax(p, h));
 }
 
@@ -447,6 +480,7 @@ export function heroView(p: Profile, army: readonly { u: string; n: number }[] |
   return {
     prim: { ...h.prim }, artPrim: a.prim, will: Math.floor(h.mana), willMax: willMax(p, h), skills: h.skills.map((x) => ({ ...x })),
     pending, offer: pending > 0 ? currentOffer(p, h) : [], orders: [...h.orders], cap: orderLevelCap(p.level, rankOf(h.skills, 'mysticism')),
+    ...(focusPending(p, h) > 0 ? { focus: { lv: focusLevel(h), pending: focusPending(p, h), offer: primOffer(p.captain, h.seed, focusLevel(h)) } } : {}),
     cd: { ...h.cd }, costs, sets: a.sets,
     // docs/19 E12: each relic's parts, worn and in the locker.
     relics: relicRows(p),
@@ -480,6 +514,9 @@ export function heroAction(game: Game, s: PlayerSession, msg: { action?: string;
   switch (msg.action) {
     case 'skill':
       why = pickSkill(game, s, Math.trunc(Number(msg.pick)));
+      break;
+    case 'focus': // docs/31: the level's primary, every skill at expert
+      why = pickFocus(game, s, Math.trunc(Number(msg.pick)));
       break;
     case 'learn':
       why = port ? learnAtGuild(game, s, port, String(msg.id ?? '')) : 'No guild of orders here';

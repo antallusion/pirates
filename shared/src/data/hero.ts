@@ -95,6 +95,17 @@ export function primOfLevel(captain: CaptainId, seed: number, lv: number): PrimI
   return lvRng(seed, lv, 0x51).weighted(PRIMS.map((k) => [k, w[k]] as const));
 }
 
+/** Balance pass 2026-10-13 (docs/31; owner: «навыки … способности» decide, and from level 25 every skill was at expert
+ *  and a level-up gave a random primary and nothing to choose): once her eight skills are expert, each level's
+ *  primary is hers to choose — the one her path's odds drew (primOfLevel, taken if she leaves it) or a second drawn
+ *  by the same odds. A level's point either way: no captain grows faster for it, she grows the way she fights. */
+export function primOffer(captain: CaptainId, seed: number, lv: number): [PrimId, PrimId] {
+  const first = primOfLevel(captain, seed, lv);
+  const w = PRIM_WEIGHTS[captain];
+  const second = lvRng(seed, lv, 0x53).weighted(PRIMS.filter((k) => k !== first).map((k) => [k, w[k]] as const));
+  return [first, second];
+}
+
 /** Her primaries as grown from level `from` + 1 to `to` onto `start` (the migration and each level-up). */
 export function growPrims(start: Prims, captain: CaptainId, seed: number, from: number, to: number): Prims {
   const out = { ...start };
@@ -661,6 +672,9 @@ export interface HeroView {
   /** Level-ups whose skill is still to choose, and the two offered at the first of them. */
   pending: number;
   offer: SkillPick[];
+  /** docs/31: every skill at expert — the level-ups whose primary is still hers to choose, and the two offered at the
+   *  first of them (`lv`). */
+  focus?: { lv: number; pending: number; offer: PrimId[] };
   orders: OrderId[];
   /** The level of order she can learn. */
   cap: number;
@@ -701,6 +715,9 @@ export function heroPatterns(): [string, string][] {
   const out: [string, string][] = [
     ['Level {0}! {1} +1. A new talent point awaits.', 'Уровень {0}! {1} +1. Вас ждёт новое очко таланта.'],
     ['A new skill to choose: {0} or {1}.', 'Выберите навык: {0} или {1}.'],
+    ['Level {0}: choose its primary — {1} or {2}.', 'Уровень {0}: выберите его первичный навык — {1} или {2}.'],
+    ['Level {0}: {1} +1, your choice.', 'Уровень {0}: {1} +1 — ваш выбор.'],
+    ['No primary to choose now', 'Сейчас выбирать первичный навык нечего'],
     ['Learnt: {0}.', 'Выучено: {0}.'],
     ['Skill: {0}, {1}.', 'Навык: {0}, {1}.'],
     ['No skill to choose now', 'Сейчас выбирать нечего'],

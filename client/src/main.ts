@@ -374,11 +374,13 @@ function hostileNear(): boolean {
 setInterval(() => {
   const h = state.self?.hero;
   if (!h || !inGame) return;
-  if (heroSeen < 0 || h.pending < heroSeen) heroSeen = h.pending;
+  // docs/31: a level's primary to choose (every skill at expert) waits as a skill's choice does.
+  const waiting = h.pending + (h.focus?.pending ?? 0);
+  if (heroSeen < 0 || waiting < heroSeen) heroSeen = waiting;
   // Not in the First Watch either: at its last step «Новый уровень» covered «В порт», the step's finger stepped aside and
   // the pupil stood (e2e, docs/23 item 90); the choice waits for the watch's end.
-  if (h.pending > heroSeen && h.offer.length && !modal && !state.boardTac && !state.boardFight && !state.onboarding?.stage && !document.body.classList.contains('sea-target') && !levelUpOpen() && !hostileNear()) {
-    heroSeen = h.pending;
+  if (waiting > heroSeen && (h.offer.length || h.focus) && !modal && !state.boardTac && !state.boardFight && !state.onboarding?.stage && !document.body.classList.contains('sea-target') && !levelUpOpen() && !hostileNear()) {
+    heroSeen = waiting;
     levelUpSheet(state, (m) => net.send(m));
   }
 }, 600);

@@ -11,7 +11,7 @@ import { armyForLevel } from '../shared/src/data/army.ts';
 import type { ArmyStack } from '../shared/src/data/army.ts';
 import type { CaptainId } from '../shared/src/data/captains.ts';
 import {
-  COMMON_SCHOOLS, LEARNABLE, ORDERS, ORDER_IDS, PRIM_BASE, SCHOOLS, SKILLS, SKILL_IDS, TACTICS_FREE, guildOf, heroBattle, heroSeed, npcHeroBattle, orderCost, orderLevelCap, orderMul, primsAtLevel,
+  COMMON_SCHOOLS, LEARNABLE, ORDERS, ORDER_IDS, PRIM_BASE, SCHOOLS, SKILLS, SKILL_IDS, TACTICS_FREE, guildOf, heroBattle, heroSeed, npcHeroBattle, orderCost, orderLevelCap, orderMul, primOfLevel, primOffer, primsAtLevel,
   shrineOrder, skillOffer, skillSeaMods, startingOrders, zeroPrims,
 } from '../shared/src/data/hero.ts';
 import type { HeroBattle, Prims, SkillSlot } from '../shared/src/data/hero.ts';
@@ -22,7 +22,7 @@ import { computeShipStats } from '../shared/src/sim/shipstats.ts';
 import { DAY_LENGTH_SEC } from '../shared/src/constants.ts';
 import { blow, buildStacks, castSpell, makeField, moralePoints, newBattle, quickFinish, viewOf } from '../server/src/game/tacbattle.ts';
 import type { TacBattle, TacSideInput } from '../server/src/game/tacbattle.ts';
-import { afterBattle, artifactFind, buyArtifact, castSea, heroAdmin, heroInput, heroOf, heroPrims, heroSecond, heroView, learnAtGuild, learnOrder, onShrine, onSpring, pendingChoices, pickSkill } from '../server/src/game/hero.ts';
+import { afterBattle, artifactFind, buyArtifact, castSea, focusPending, heroAdmin, heroInput, heroOf, heroPrims, heroSecond, heroView, learnAtGuild, learnOrder, onShrine, onSpring, pendingChoices, pickFocus, pickSkill } from '../server/src/game/hero.ts';
 import { equip } from '../server/src/game/gear.ts';
 import { sanitizeProfile } from '../server/src/game/player.ts';
 import { runAdmin } from '../server/src/game/admin.ts';
@@ -161,6 +161,34 @@ test('choosing a skill: the pick is kept, the choices count down, the ship feels
   const v0 = ship.stats.maxSpeed;
   heroAdmin(game, s, 'skill', ['logistics', '3']);
   assert.ok(ship.stats.maxSpeed > v0 * 1.04, `${v0} → ${ship.stats.maxSpeed} (within the talents' speed cap)`);
+});
+
+test('docs/31: every skill at expert, each level-up’s primary is hers to choose of two — the drawn one stays if she leaves it', () => {
+  const { game } = makeGame();
+  const { s, p } = captain(game, 'Focus');
+  p.level = 40;
+  const h = heroOf(p);
+  h.skills = ['boarding', 'armor', 'artillery', 'leadership', 'tactics', 'luck', 'first_aid', 'mysticism'].map((id) => ({ id: id as SkillSlot['id'], r: 3 as const }));
+  h.picked = 25;
+  assert.equal(pendingChoices(p), 0, 'no skill left to choose');
+  assert.equal(focusPending(p), 15, 'levels 26–40: fifteen primaries to choose');
+  const v = heroView(p);
+  assert.ok(v.focus && v.focus.lv === 26 && v.focus.offer.length === 2 && v.focus.offer[0] !== v.focus.offer[1]);
+  assert.deepEqual(v.focus!.offer, primOffer(p.captain, h.seed, 26));
+  assert.equal(v.focus!.offer[0], primOfLevel(p.captain, h.seed, 26), 'the first is the one her path drew');
+  const sum = (x: typeof h.prim) => x.atk + x.def + x.pow + x.will;
+  const before = { ...h.prim };
+  assert.equal(pickFocus(game, s, 1), null);
+  const [drawn, other] = v.focus!.offer;
+  assert.equal(h.prim[other], before[other] + 1);
+  assert.equal(h.prim[drawn], before[drawn] - 1);
+  assert.equal(sum(h.prim), sum(before), 'a level’s point either way: she grows no faster');
+  assert.equal(focusPending(p), 14);
+  const b2 = { ...h.prim };
+  assert.equal(pickFocus(game, s, 0), null, 'the drawn one taken');
+  assert.deepEqual(h.prim, b2);
+  assert.equal(heroView(p).focus!.lv, 28);
+  assert.equal(pickFocus(game, s, 3), 'No such choice');
 });
 
 test('every skill does something: the sea lines in the talents\' vocabulary, the battle lines in the boarding', () => {

@@ -77,7 +77,7 @@ export type WeatherKind = 'calm' | 'breeze' | 'wind' | 'fog' | 'rain' | 'storm' 
 
 export type ClientMsg =
   /** The captain as a hero (docs/17 H2): a skill chosen of two, an order learnt at a guild, a sea order, an artifact bought, the port's offer. */
-  | { t: 'hero'; action: 'skill' | 'learn' | 'cast' | 'buy' | 'view'; pick?: number; id?: string; index?: number }
+  | { t: 'hero'; action: 'skill' | 'focus' | 'learn' | 'cast' | 'buy' | 'view'; pick?: number; id?: string; index?: number }
   | { t: 'hello'; v: number; token?: string; name?: string }
   | { t: 'create_captain'; captain: CaptainId; shipName: string; tutorial?: boolean } // tutorial: the First Watch (docs/07 §13)
   | { t: 'onboarding'; action: 'skip_stage' | 'skip_all' | 'hide_goals' }

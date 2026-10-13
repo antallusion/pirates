@@ -57,6 +57,13 @@ function primTile(h: HeroView, p: (typeof PRIMS)[number]): string {
   return `<div class="hx-prim" title="${esc(T(PRIM_TEXT[p]))}">${icon(PRIM_ICON[p], '', 'ico-md')}<span class="hx-pn">${esc(T(PRIM_NAMES[p]))}</span><b class="hx-pv">${v}</b>${h.artPrim[p] ? `<small class="hx-pa">${esc(L('fromArt', { n: h.artPrim[p] }))}</small>` : ''}</div>`;
 }
 
+/** docs/31: every skill at expert — the level's primary to choose of two (the drawn one stays if she leaves it). */
+function focusCard(f: NonNullable<HeroView['focus']>, attr: string): string {
+  return `<div class="hx-offer card"><h4 class="card-h">${icon('xp', '', 'ico-md')}${esc(L('focusTitle', { n: f.lv }))}${f.pending > 1 ? `<span class="muted hx-pend">${esc(L('pending', { n: f.pending }))}</span>` : ''}</h4>
+    <p class="muted hx-note">${esc(L('focusNote'))}</p>
+    <div class="hx-picks">${f.offer.map((p, i) => `<div class="hx-pick">${icon(PRIM_ICON[p], '✦', 'ico-lg')}<span class="hx-pick-t"><b>${esc(T(PRIM_NAMES[p]))} +1</b><small>${esc(T(PRIM_TEXT[p]))}</small></span><button class="btn btn-small btn-primary" ${attr}="${i}">${esc(L('take'))}</button></div>`).join('')}</div></div>`;
+}
+
 function pips(r: number): string {
   // docs/19 E2: a grandmaster's fourth rank is a star after the three.
   return `<span class="hx-pips">${[1, 2, 3].map((i) => `<i class="${i <= r ? 'on' : ''}"></i>`).join('')}${r >= GM_RANK ? '<b class="hx-gm">★</b>' : ''}</span>`;
@@ -115,7 +122,7 @@ export class HeroWindow {
     const url = assetUrl(cap.portrait);
     // docs/23 item 70: three big tabs in place of six; each one's own places in the second row.
     const main: WinTab[] = [
-      { id: 'hero', icon: 'bt_captain', label: W('cap.hero'), hint: W('cap.heroHint'), badge: h.pending },
+      { id: 'hero', icon: 'bt_captain', label: W('cap.hero'), hint: W('cap.heroHint'), badge: h.pending + (h.focus?.pending ?? 0) },
       // docs/25 items 37–43: her sea abilities — ranks, the next rank, facets (a badge for a facet waiting).
       { id: 'skills', icon: `ab_${cap.abilities[0].id}`, label: SK('tab'), hint: SK('tabHint'), badge: facetsWaiting(state) },
       { id: 'book', icon: 'bt_book', label: W('cap.book'), hint: W('cap.bookHint') },
@@ -155,6 +162,10 @@ export class HeroWindow {
       this.school = b.dataset.hschool as School;
       redo();
     }));
+    root.querySelectorAll<HTMLButtonElement>('[data-hfocus]').forEach((b) => (b.onclick = () => {
+      root.querySelectorAll<HTMLButtonElement>('[data-hfocus]').forEach((x) => (x.disabled = true)); // one pick per offer
+      this.send({ t: 'hero', action: 'focus', pick: Number(b.dataset.hfocus) });
+    }));
     root.querySelectorAll<HTMLButtonElement>('[data-hpick]').forEach((b) => (b.onclick = () => {
       root.querySelectorAll<HTMLButtonElement>('[data-hpick]').forEach((x) => (x.disabled = true)); // one pick per offer
       this.send({ t: 'hero', action: 'skill', pick: Number(b.dataset.hpick) });
@@ -176,7 +187,9 @@ export class HeroWindow {
           const d = SKILLS[o.id];
           return `<div class="hx-pick">${icon(d.icon, '✦', 'ico-lg')}<span class="hx-pick-t"><b>${esc(T(d.name))}</b><span class="hx-rank">${esc(o.r === 1 ? L('newSkill') : L('raise', { rank: T(RANK_NAMES[o.r - 1]) }))} · ${esc(T(RANK_NAMES[o.r - 1]))}</span>${pips(o.r)}<small>${esc(T(d.text[o.r - 1]))}</small><small class="muted">${esc(L('kin', { tree: TREES[d.tree].name }))}</small></span><button class="btn btn-small btn-primary" data-hpick="${i}">${esc(L('take'))}</button></div>`;
         }).join('')}</div></div>`
-      : `<p class="muted hx-none">${esc(h.skills.length >= SKILL_SLOTS && h.skills.every((x) => x.r >= 3) ? L('allExpert') : L('noPending', { n: level + 1 }))}</p>`;
+      : h.focus
+        ? focusCard(h.focus, 'data-hfocus')
+        : `<p class="muted hx-none">${esc(h.skills.length >= SKILL_SLOTS && h.skills.every((x) => x.r >= 3) ? L('allExpert') : L('noPending', { n: level + 1 }))}</p>`;
     const slots = Array.from({ length: SKILL_SLOTS }, (_, i) => {
       const x = h.skills[i];
       if (!x) return `<div class="hx-slot empty"><span class="hx-sico">＋</span><span class="muted">${esc(L('slotFree'))}</span></div>`;
@@ -188,11 +201,12 @@ export class HeroWindow {
       return `<div class="hx-set${on ? ' on' : ''}"><b>${esc(T(ART_SETS[id].name))}</b><span class="muted">${esc(on ? L('setOn') : ART_SETS[id].pieces.map((p) => T(ARTIFACTS[p].name)).join(' · '))}</span><small>${esc(T(ART_SETS[id].text))}</small></div>`;
     }).join('');
     // A choice waiting (docs/23 item 70): it comes first, its «Взять» in sight on a phone.
-    return `${h.pending && h.offer.length ? offer : ''}<div class="hx-top">
+    const first = (h.pending && h.offer.length) || !!h.focus;
+    return `${first ? offer : ''}<div class="hx-top">
         <div class="hx-face" style="background-image:${portrait ? `url('${portrait}')` : 'none'}"><span class="hx-lv">${level}</span></div>
         <div class="hx-side"><div class="gi-h">${esc(L('prims'))}</div><div class="hx-prims">${PRIMS.map((p) => primTile(h, p)).join('')}</div>${willBar(h)}</div>
       </div>
-      ${h.pending && h.offer.length ? '' : offer}
+      ${first ? '' : offer}
       <div class="gi-h">${esc(L('skills'))} <span class="muted">${h.skills.length}/${SKILL_SLOTS}</span>${throne ? `<button class="btn btn-small hx-throne" data-hthrone>${icon('tattoo_crown', '', 'ico-sm')}${esc(throneLabel())}</button>` : ''}</div>
       <div class="hx-slots">${slots}</div>
       <div class="gi-h">${esc(L('sets'))}</div><div class="hx-sets">${sets}</div>
@@ -268,11 +282,16 @@ export function levelUpSheet(state: ClientState, send: (m: ClientMsg) => void): 
   let last = '';
   const draw = () => {
     const h = state.self?.hero;
-    if (!h || !h.pending || !h.offer.length) return void sheet.close('code');
-    const key = JSON.stringify([lang(), state.self!.level, h.pending, h.offer]);
+    const skill = !!h && h.pending > 0 && h.offer.length > 0;
+    // docs/31: every skill at expert — the level's primary is hers to choose.
+    const focus = !skill && h?.focus ? h.focus : null;
+    if (!h || (!skill && !focus)) return void sheet.close('code');
+    const key = JSON.stringify([lang(), state.self!.level, h.pending, h.offer, focus]);
     if (key === last) return;
     last = key;
-    sheet.body.innerHTML = `<p class="lu-sub">${esc(W('cap.pick'))}${h.pending > 1 ? ` · ${esc(L('pending', { n: h.pending }))}` : ''}</p><div class="lu-picks">${h.offer.map((o, i) => {
+    sheet.body.innerHTML = focus
+      ? `<p class="lu-sub">${esc(L('focusTitle', { n: focus.lv }))}${focus.pending > 1 ? ` · ${esc(L('pending', { n: focus.pending }))}` : ''}</p><div class="lu-picks">${focus.offer.map((p, i) => `<button type="button" class="lu-pick" data-lupick="${i}">${icon(PRIM_ICON[p], '✦', 'lu-ico')}<span class="lu-t"><b>${esc(T(PRIM_NAMES[p]))} +1</b><small>${esc(T(PRIM_TEXT[p]))}</small></span></button>`).join('')}</div>`
+      : `<p class="lu-sub">${esc(W('cap.pick'))}${h.pending > 1 ? ` · ${esc(L('pending', { n: h.pending }))}` : ''}</p><div class="lu-picks">${h.offer.map((o, i) => {
       const d = SKILLS[o.id];
       return `<button type="button" class="lu-pick" data-lupick="${i}">${icon(d.icon, '✦', 'lu-ico')}<span class="lu-t"><b>${esc(T(d.name))}</b><span class="hx-rank">${esc(o.r === 1 ? L('newSkill') : L('raise', { rank: T(RANK_NAMES[o.r - 1]) }))}</span>${pips(o.r)}<small>${esc(T(d.text[o.r - 1]))}</small></span></button>`;
     }).join('')}</div>`;
@@ -284,7 +303,7 @@ export function levelUpSheet(state: ClientState, send: (m: ClientMsg) => void): 
       picked = true;
       b.setAttribute('aria-busy', 'true');
       sheet.body.querySelectorAll<HTMLButtonElement>('[data-lupick]').forEach((x) => (x.disabled = true));
-      send({ t: 'hero', action: 'skill', pick: Number(b.dataset.lupick) });
+      send({ t: 'hero', action: focus ? 'focus' : 'skill', pick: Number(b.dataset.lupick) });
     }));
   };
   const sheet = openSheet({
