@@ -335,6 +335,14 @@ export class Game {
   now = 0; // world time, seconds
   /** World time per real second (admin /speed; 1 on a normal server). */
   timeScale = 1;
+  /** The hex field's clock (owner, 2026-10-15: a captain's TAC_TURN seconds to choose are real seconds): world time
+   *  less what an admin /speed ran it ahead of (or behind) the real one since the process began — the same as `now`
+   *  on a normal server and in the tests, where timeScale is 1. Each step adds its share (never a jump), so a battle's
+   *  clock only ever runs forward. A battle lives in the process (none is saved), so the skew needs no keeping. */
+  tacSkew = 0;
+  tacNow(): number {
+    return this.now - this.tacSkew;
+  }
   tick = 0;
   ships = new Map<number, ShipEntity>();
   npcs = new Map<number, NpcBrain>();
@@ -574,6 +582,7 @@ export class Game {
   step(): void {
     const dt = TICK_DT;
     this.now += dt;
+    if (this.timeScale !== 1 && this.timeScale > 0) this.tacSkew += dt * (1 - 1 / this.timeScale);
     this.tick++;
     const now = this.now;
     const prof = this.prof;

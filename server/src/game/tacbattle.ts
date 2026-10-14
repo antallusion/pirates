@@ -3102,7 +3102,7 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
   const next = alive(bt).sort((x, y) => initOf(bt, y) - initOf(bt, x) || x.id - y.id).map((s) => s.id).slice(0, 6);
   return {
     you: side, round: bt.round, maxRounds: TAC_MAX_ROUNDS, cells: bt.cells.join(''), stacks,
-    order: [...(bt.active !== null ? [bt.active] : []), ...bt.queue.filter((id) => stackById(bt, id))], next, active: bt.active, mine, ends: bt.turnEnds,
+    order: [...(bt.active !== null ? [bt.active] : []), ...bt.queue.filter((id) => stackById(bt, id))], next, active: bt.active, mine, ends: bt.turnEnds, now,
     reach: [...reach.keys()], melee: mine && act0 ? meleeTargets(bt, act0, reach).map((t) => t.id) : [], shoot: mine && act0 && canShoot(bt, act0) ? alive(bt).filter((t) => t.side !== side).map((t) => t.id) : [],
     ...(mine && act0 ? { pv: previewsOf(bt, act0, reach) } : {}),
     heroes: ([0, 1] as const).map((x) => (x === side && slot ? asCaptain(bt, side, slot, () => hero(x)) : hero(x))) as [TacHeroView, TacHeroView], log: bt.log.slice(-12), seq: bt.seq, over: bt.over, canCut, canStrike: side === 1, ...(bt.warn?.length && !bt.over ? { warn: [...bt.warn] } : {}), ...extra,

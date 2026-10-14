@@ -99,8 +99,8 @@ test("owner, 2026-10-10: no lift on a blow by the battle's level, the sea's mind
   assert.ok(Math.abs(mul(60, true, 'long', 9) - base) < 1e-9, 'a long battle the same');
 });
 
-test('docs/25 items 48 and 70: a stack\'s turn by level (10 / 20 / 30 s), a captain\'s chess clock over the fight; spent, her stacks defend', () => {
-  assert.deepEqual([1, 10, 11, 30, 31, 60].map(tacTurnSecs), [10, 10, 20, 20, 30, 30]);
+test('docs/25 items 48 and 70: a stack\'s turn 20 s at every level (owner, 2026-10-15), a captain\'s chess clock over the fight; spent, her stacks defend', () => {
+  assert.deepEqual([0, 1, 10, 11, 30, 31, 60].map(tacTurnSecs), [20, 20, 20, 20, 20, 20, 20]);
   assert.deepEqual([1, 10, 11, 25, 45, 60].map(tacBankSecs), [60, 60, 120, 180, 300, 360]);
   const a = side(playerArmy(8), captainAt('reaver', 8, 1), 'reaver', true);
   const b = side(playerArmy(8), captainAt('admiral', 8, 2), 'admiral', false);
@@ -111,7 +111,7 @@ test('docs/25 items 48 and 70: a stack\'s turn by level (10 / 20 / 30 s), a capt
   // Play to her turn; she thinks eight seconds and defends: they come off her clock.
   let t = 0;
   while (!bt.over && (bt.active === null || stackById(bt, bt.active)!.side !== 0)) stepBattle(bt, (t += 0.5), rng);
-  assert.ok(bt.turnEnds - t <= 10 + 10, 'her turn at most 10 s once the play is done');
+  assert.ok(bt.turnEnds - t <= 20 + 10, 'her turn at most 20 s once the play is done');
   const from = bt.clock!.from;
   t = Math.max(t, from) + 8;
   assert.equal(act(bt, 0, { a: 'defend' }, t, rng), null);

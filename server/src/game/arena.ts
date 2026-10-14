@@ -762,7 +762,7 @@ export function adminArena(game: Game, s: PlayerSession, args: string[]): string
       const fight = s.ship?.boarding?.fight;
       if (b && b.stage === 'fight' && fight?.tac && fights.get(fight) === b) {
         const mine = b.seats[0].acc === s.accountId ? 0 : 1;
-        act(fight.tac, (won ? 1 - mine : mine) as 0 | 1, { a: 'surrender' }, game.now, fight.tacRng ?? ar(game));
+        act(fight.tac, (won ? 1 - mine : mine) as 0 | 1, { a: 'surrender' }, game.tacNow(), fight.tacRng ?? ar(game));
         return won ? 'The other side strikes: the bout is yours.' : 'You strike: the bout is theirs.';
       }
       if (b) return 'Your bout is under way.';

@@ -211,7 +211,7 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
   // docs/25 block Г: a boarding's length by its level; the legends, the raid, the citadels and the trials long by design.
   // A bout of the Colosseum keeps its own short length (a drafted army, template captains, its pairs evened at it): the
   // boarding's reckoning of Attack and Defense, guards and orders (items 45–47), not its clocks or flag.
-  if (arena) fight.tac = newBattle(arena.sides[0], arena.sides[1], seed, game.now, rng, { arena: true, len: 'long' });
+  if (arena) fight.tac = newBattle(arena.sides[0], arena.sides[1], seed, game.tacNow(), rng, { arena: true, len: 'long' });
   else {
     // docs/19 E5: a castellan alongside — the siege before her citadel's walls, its garrison in its own seven stacks.
     const so = siegeSetup(game, a, b);
@@ -225,7 +225,7 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
     const aIn = sideOf(game, a, b, true);
     // docs/25 item 64: the mates of each side's group within reach come aboard with the grapples (or are asked).
     const allies = groupable(fight, a, b) ? alliesAtStart(game, a, b, aIn, bIn, battleLevel(aIn, bIn)) : [];
-    const bt = newBattle(aIn, bIn, seed, game.now, rng, { ...(so ? { siege: so.siege } : {}), len, ...(allies.length ? { allies } : {}) });
+    const bt = newBattle(aIn, bIn, seed, game.tacNow(), rng, { ...(so ? { siege: so.siege } : {}), len, ...(allies.length ? { allies } : {}) });
     fight.tac = bt;
     linkAllies(fight, bt);
     // docs/25 item 49: a captain against a clearly weaker ship of the sea is offered the quick fight at once.
@@ -326,7 +326,7 @@ export function stepTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
     if (helmFallback(h, !ses || ses.disconnectedAt !== null)) bt.seq++;
   }
   const seq = bt.seq;
-  stepBattle(bt, game.now, rngOf(game, a));
+  stepBattle(bt, game.tacNow(), rngOf(game, a));
   stepGroup(game, a, b, bt); // docs/25 item 64: her allies' ships alongside, the mates come within reach
   settle(game, a, b, bt, seq);
 }
@@ -473,7 +473,7 @@ export function tacAction(game: Game, ship: ShipEntity, action: TacAction): stri
       sendTac(game, f.a, f.b);
       return pay.why;
     }
-    const why = act(bt0, f.e.side, action, game.now, rngOf(game, f.a), f.e.slot);
+    const why = act(bt0, f.e.side, action, game.tacNow(), rngOf(game, f.a), f.e.slot);
     if (why && pay.took && h0) giveBack(game, f.e.acc, h0, `board:${f.b.name}`);
     settle(game, f.a, f.b, bt0, seq);
     if (why) sendTac(game, f.a, f.b);
@@ -511,7 +511,7 @@ export function tacAction(game: Game, ship: ShipEntity, action: TacAction): stri
     sendTac(game, a, b);
     return pay.why;
   }
-  const why = act(bt, side, action, game.now, rngOf(game, a));
+  const why = act(bt, side, action, game.tacNow(), rngOf(game, a));
   if (why && pay.took && ses) giveBack(game, ses.accountId, bt.heroes[side], ref);
   settle(game, a, b, bt, seq);
   if (why) sendTac(game, a, b);
@@ -544,7 +544,7 @@ export function sendTac(game: Game, a: ShipEntity, b: ShipEntity | null): void {
     const quick = noQuick(f, bt) ? { noQuick: true } : bt.quick?.[side] && bt.round <= 1 && !bt.over ? { quickNow: true } : {};
     // «Свиток автобоя» (owner, 2026-10-11): her scrolls, one spent on this battle, her quick fight free here.
     const scrolls = scrollView(game, ses.accountId, bt.heroes[side], !noQuick(f, bt) && !!bt.quick?.[side]);
-    game.sendTo(ses, { t: 'board_tac', view: viewOf(bt, side, game.now, arena ? false : st.attacker ? !s.hasFlag('no_quarter') : true, { ransom: ransomCost(game, s), ...(result ? { result } : {}), ...(arena ? { canStrike: true, arena } : {}), ...quick, scrolls }) });
+    game.sendTo(ses, { t: 'board_tac', view: viewOf(bt, side, game.tacNow(), arena ? false : st.attacker ? !s.hasFlag('no_quarter') : true, { ransom: ransomCost(game, s), ...(result ? { result } : {}), ...(arena ? { canStrike: true, arena } : {}), ...quick, scrolls }) });
   }
   // docs/25 item 64: her allies see the field as their own side does — their own stacks' turns, their own captain. (A
   // single captain's resend, `b` null, is hers alone.)
@@ -556,7 +556,7 @@ export function sendTac(game: Game, a: ShipEntity, b: ShipEntity | null): void {
     if (!ses || ses.ship?.id !== e.ship) continue;
     const result = bt0.over && e.slot !== undefined ? { lost: lossesOf(bt0, e.side, e.slot), killed: lossesOf(bt0, (1 - e.side) as 0 | 1), xp: e.xp ?? 0, ...groupShares(game, a, e.acc) } : undefined;
     const h0 = bt0.allies?.find((x) => x.side === e.side && x.slot === e.slot)?.hero;
-    game.sendTo(ses, { t: 'board_tac', view: viewOf(bt0, e.side, game.now, false, { canStrike: false, ...(result ? { result } : {}), noQuick: true, scrolls: scrollView(game, e.acc, h0, false) }, e.slot ?? -1) });
+    game.sendTo(ses, { t: 'board_tac', view: viewOf(bt0, e.side, game.tacNow(), false, { canStrike: false, ...(result ? { result } : {}), noQuick: true, scrolls: scrollView(game, e.acc, h0, false) }, e.slot ?? -1) });
   }
 }
 

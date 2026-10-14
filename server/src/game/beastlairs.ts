@@ -611,7 +611,7 @@ export function startFight(game: Game, s: PlayerSession, id: string, force = fal
   };
   const seed = S.rng.int(1, 1e9);
   const rng = new Rng((seed ^ 0x1a7d) >>> 0);
-  const bt = newBattle(a, b, seed, game.now, rng, { land: l.type });
+  const bt = newBattle(a, b, seed, game.tacNow(), rng, { land: l.type });
   freeQuickAshore(bt);
   S.fights.set(s.accountId, { lair: l.id, bt, rng, seq: -1, done: false, closeAt: Infinity, retreat: false, xp: 0 });
   meetCreatures(game, s, men.map((x) => x.u)); // docs/18 #46: the bestiary's first pages
@@ -650,7 +650,7 @@ function sendFight(game: Game, s: PlayerSession): void {
     const l = L(game).byId.get(f.lair)!;
     return { type: l.type, lair: l.kind, island: islandName(game, l), level: l.level };
   })();
-  game.sendTo(s, { t: 'board_tac', view: viewOf(bt, 0, game.now, !bt.over, { ransom: null, ...(result ? { result } : {}), land, scrolls: scrollView(game, s.accountId, bt.heroes[0], !!bt.quick?.[0]) }) });
+  game.sendTo(s, { t: 'board_tac', view: viewOf(bt, 0, game.tacNow(), !bt.over, { ransom: null, ...(result ? { result } : {}), land, scrolls: scrollView(game, s.accountId, bt.heroes[0], !!bt.quick?.[0]) }) });
 }
 
 /** docs/18 IV: a creature fight of another system laid on the battle ashore (its own end), her party against `men`. */
@@ -669,7 +669,7 @@ export function startCreatureFight(game: Game, s: PlayerSession, ext: ExtFight, 
   };
   const seed = S.rng.int(1, 1e9);
   const rng = new Rng((seed ^ 0xd71f) >>> 0);
-  const bt = newBattle(a, b, seed, game.now, rng, { land: ext.type });
+  const bt = newBattle(a, b, seed, game.tacNow(), rng, { land: ext.type });
   freeQuickAshore(bt);
   S.fights.set(s.accountId, { lair: '', bt, rng, seq: -1, done: false, closeAt: Infinity, retreat: false, xp: 0, ext });
   ext.onStep?.(game, s, bt, rng);
@@ -715,7 +715,7 @@ export function landTac(game: Game, s: PlayerSession, action: TacAction | 'cut',
     sendFight(game, s);
     return pay.why;
   }
-  const why = action.a === 'quick' && f.ext?.quick ? (f.ext.quick(bt, f.rng), null) : act(bt, 0, action, game.now, f.rng);
+  const why = action.a === 'quick' && f.ext?.quick ? (f.ext.quick(bt, f.rng), null) : act(bt, 0, action, game.tacNow(), f.rng);
   if (why && pay.took) giveBack(game, s.accountId, bt.heroes[0], ref);
   if (!bt.over) f.ext?.onStep?.(game, s, bt, f.rng);
   if (bt.over && !f.done) settle(game, s, f);
@@ -733,7 +733,7 @@ export function stepLandFights(game: Game): void {
       // Gone from the sea: the party fights it out by itself.
       if (!f.done && s?.ship && s.profile) {
         if (f.ext?.quick) f.ext.quick(f.bt, f.rng);
-        else quickFinish(f.bt, game.now, f.rng);
+        else quickFinish(f.bt, game.tacNow(), f.rng);
         settle(game, s, f);
       }
       S.fights.delete(acc);
@@ -743,7 +743,7 @@ export function stepLandFights(game: Game): void {
     if (!f.done) {
       // Her connection lost: her party fights on by itself (free); back, the helm is hers again unless she spent a scroll.
       if (helmFallback(f.bt.heroes[0], s.disconnectedAt !== null)) f.bt.seq++;
-      stepBattle(f.bt, game.now, f.rng);
+      stepBattle(f.bt, game.tacNow(), f.rng);
       if (!f.bt.over) f.ext?.onStep?.(game, s, f.bt, f.rng);
       if (f.bt.over) settle(game, s, f);
       if (f.bt.seq !== f.seq) sendFight(game, s);

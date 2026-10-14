@@ -17,17 +17,18 @@ export const TAC_W = 11;
 export const TAC_H = 9;
 /** The water between the hulls; the planks cross it on a few rows. */
 export const TAC_GAP = 5;
-/** Seconds a captain has for each of his stacks' turns at the top (from level 31); then the stack defends. */
-export const TAC_TURN = 30;
-/** docs/25 item 48 (owner, 2026-10-09: «на низких 1 минуты норма»): a stack's turn by the battle's level — 10 s at
- *  levels 1–10, 20 s at 11–30, 30 s from 31. A battle of no level (a test's bare armies) keeps the 30 s. docs/25 item
- *  70: 15 → 10 s at 1–10. The time model's decision (tests/balance/boardlen.ts HUMAN_DECIDE, 6 s a stack) sits inside
- *  it, and a low stack's choice is the smallest of all: four of hers against four, three or four orders and two pages,
- *  no ultimate — some ten choices against sixteen at level 30 and nineteen at 55, so by Hick's law (a + b·log2(n+1))
- *  its decision is a tenth shorter than at level 30, never longer. The modelled mean is the same (its turns are 6 s);
- *  a slow captain's worst is cut by a third. */
-export function tacTurnSecs(level: number): number {
-  return level <= 0 ? TAC_TURN : level <= 10 ? 10 : level <= 30 ? 20 : TAC_TURN;
+/** Seconds a captain has to choose each of her stacks' actions (owner, 2026-10-15: «Выбор на действие 20 секунд
+ *  отводи, это и в пвп надо учесть тоже»): every captain's turn in every fight of the hex field — against the sea, a
+ *  captain, a group, on the sand, ashore — runs out after TAC_TURN real seconds into a defence (tacbattle.ts
+ *  stepBattle). Her chess clock (tacBankSecs) still caps a boarding's whole. */
+export const TAC_TURN = 20;
+/** docs/25 item 48 had a stack's turn by the battle's level (10 s at 1–10, 20 s at 11–30, 30 s from 31). Since the tap
+ *  became a choice (owner, 2026-10-15: a tap selects, a chip confirms) every level has the same TAC_TURN: the time
+ *  model's decision (tests/balance/boardlen.ts HUMAN_DECIDE, 6 s a stack) sits inside it at every level, so the
+ *  modelled lengths are as they were; a slow captain's worst turn is 10 s longer at 1–10 and 10 s shorter from 31, and
+ *  between two captains the chess clock still bounds the whole. Kept as a function of the level for its callers. */
+export function tacTurnSecs(_level: number): number {
+  return TAC_TURN;
 }
 /** docs/25 item 48: each captain's chess clock over a whole boarding — a minute at levels 1–10, a minute more every ten
  *  levels, six at 51–60. A turn's seconds come off it; once it is spent her stacks' turns go to defence. With it no

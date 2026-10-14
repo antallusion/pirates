@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Rng } from '../shared/src/rng.ts';
 import type { ArmyStack } from '../shared/src/data/army.ts';
-import { TAC_AI_DELAY, TAC_FLANK, TAC_PACE, flankOf, hexDir, hexIndex, hexNeighbors, tacSchedule, walkSecs } from '../shared/src/data/tactical.ts';
+import { TAC_AI_DELAY, TAC_FLANK, TAC_PACE, TAC_TURN, flankOf, hexDir, hexIndex, hexNeighbors, tacSchedule, walkSecs } from '../shared/src/data/tactical.ts';
 import { act, aiAct, blowParts, newBattle, previewsOf, reachOf, stackById, stepBattle, viewOf } from '../server/src/game/tacbattle.ts';
 import type { TacBattle, TacSideInput, TacStack } from '../server/src/game/tacbattle.ts';
 import type { TacPreview } from '../shared/src/protocol.ts';
@@ -172,6 +172,6 @@ test('the field\'s pace: a walk 0.35–0.5 s a hex, a blow lunges, lands and its
     stepBattle(bt, t, rng);
     const played = tacSchedule(bt.log.filter((e) => e.i > n0)).total;
     if (!bt.over) assert.ok(Math.abs(bt.aiAt - (t + played + TAC_AI_DELAY)) < 1e-6, `waits for the play: ${bt.aiAt - t} s after ${played} s played`);
-    if (!bt.over) assert.ok(Math.abs(bt.turnEnds - (t + played + 30)) < 1e-6, 'her clock starts once it is played');
+    if (!bt.over) assert.ok(Math.abs(bt.turnEnds - (t + played + TAC_TURN)) < 1e-6, 'her clock starts once it is played');
   }
 });

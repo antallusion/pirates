@@ -1692,8 +1692,12 @@ export interface TacView {
   next: number[];
   active: number | null;
   mine: boolean;
-  /** Server time the active turn runs out. */
+  /** The battle's clock the active turn runs out at (seconds; the server's hex-field clock, Game.tacNow: real seconds
+   *  even under an admin /speed). */
   ends: number;
+  /** The battle's clock as the view was made (owner, 2026-10-15: the 20 s to choose shown as real seconds): the screen
+   *  counts `ends` down from it by its own clock, whatever the world's pace. Absent from an old server. */
+  now?: number;
   /** For my active stack: where it may step, whom it may strike and whom it may shoot. */
   reach: number[];
   melee: number[];

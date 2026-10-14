@@ -222,7 +222,7 @@ test("the captain's clock: a turn left alone for 30 s defends; the sea's side ac
   stepBattle(bt, bt.turnEnds + 0.1, rng);
   assert.ok(bt.log.some((e) => e.k === 'timeout' && e.s === mine.id), 'timed out');
   assert.ok(mine.defending, 'it defends');
-  assert.equal(TAC_TURN, 30);
+  assert.equal(TAC_TURN, 20);
 });
 
 test("the captain's orders: one a round, then a cooldown; the grenades hurt her stack; an officer's word once a fight", () => {
