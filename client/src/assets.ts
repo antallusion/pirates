@@ -16,6 +16,9 @@ interface ManifestEntry {
   rev?: number;
   /** A port painting's slips between its piers: [middle x, width, top y, depth] as shares of the painting. */
   slips?: [number, number, number, number][];
+  /** The island screen's pictures (tools/art/isle_iso.py): the plot diamond's bottom vertex in the file, and its plot. */
+  anchor?: [number, number];
+  foot?: number;
 }
 
 interface Manifest {
@@ -100,8 +103,8 @@ export async function loadAssets(ids: string[] | null, onProgress?: (done: numbe
   } catch {
     return;
   }
-  // The reference art is for reviews, not for the game.
-  const list = (ids ?? Object.keys(manifest.assets).filter((id) => !id.startsWith('art.reference'))).filter((id) => manifest!.assets[id]);
+  // The reference art is for reviews, not for the game; the island screen's pictures load when it opens (islescene.ts).
+  const list = (ids ?? Object.keys(manifest.assets).filter((id) => !id.startsWith('art.reference') && !id.startsWith('isle.'))).filter((id) => manifest!.assets[id]);
   let done = 0;
   await Promise.all(
     list.map(async (id) => {

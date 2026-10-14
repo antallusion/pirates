@@ -33,6 +33,9 @@ export const ISO_CORNERS: Record<IsoMap, { t: Pt; r: Pt; b: Pt; l: Pt }> = {
   jungle: { t: [765, 215], r: [1170, 440], b: [780, 640], l: [405, 430] },
 };
 
+/** One cell of a plot's diamond in the baked pictures, px (tools/art/isle_iso.py UNIT). */
+export const ISO_UNIT = 86;
+
 /** The board: BOARD × BOARD spots (isletree.ts BOARD), each SLOT cells of a plot wide. */
 export const ISO_BOARD = 6;
 export const ISO_SLOT = 4.5;

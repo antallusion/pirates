@@ -88,7 +88,7 @@ export function townArt(id: TownId, level: number, working: boolean): string | n
 const whyOf = (n: { why: string | null; needs?: { level: number; have: number }[] }): string => (n.why && !(n.needs ?? []).some((x) => x.have < x.level) ? `<p class="muted">${esc(sv(n.why))}</p>` : '');
 
 /** A thing's greatest level on the island (the tree's five; a single-level building's one). */
-const maxOf = (what: string): number => (isTreeBase(what) ? TREE_MAX : maxLevel(what));
+export const maxOf = (what: string): number => (isTreeBase(what) ? TREE_MAX : maxLevel(what));
 
 export function timeText(secs: number): string {
   const s = Math.max(0, Math.ceil(secs));
@@ -122,9 +122,9 @@ function layout(_v: BaseView): Layout {
 }
 
 /** A plot's cell on the board (one cell in from the town's edges). */
-const plotCell = (plot: number): [number, number] => [PLOT_CELLS[plot][0] + 1, PLOT_CELLS[plot][1] + 1];
+export const plotCell = (plot: number): [number, number] => [PLOT_CELLS[plot][0] + 1, PLOT_CELLS[plot][1] + 1];
 /** The pen and the Grail: two corners of the plots that never open (plotsOf stops at 18 of the 25). */
-const EXTRA_PLOTS: Record<'pen' | 'grail', number> = { pen: 23, grail: 24 };
+export const EXTRA_PLOTS: Record<'pen' | 'grail', number> = { pen: 23, grail: 24 };
 
 /** Where a cell's diamond stands on the board, in per cent of the board's width and height. */
 function tilePos(cell: [number, number], g: Layout): { left: number; top: number; w: number; hh: number; z: number } {
@@ -135,7 +135,7 @@ function tilePos(cell: [number, number], g: Layout): { left: number; top: number
 }
 
 /** The hall a plot opens with (from the island level that opens it). */
-const hallFor = (isle: number): number => (isle <= 0 ? 0 : ISLE_OF_HALL.findIndex((l) => l >= isle));
+export const hallFor = (isle: number): number => (isle <= 0 ? 0 : ISLE_OF_HALL.findIndex((l) => l >= isle));
 
 /** A ship's top-down picture laid on its side, bow to the right (the world's own sprites, docs/15 item 4). */
 function shipPic(classId: ShipClassId, cls = 'sy-pic'): string {
@@ -260,7 +260,7 @@ export class BaseWindow {
   }
 
   /** The town's buildings the board and the tiles show: the tree's eleven, the pen, and the Grail once it is had. */
-  private townThings(v: BaseView): TownThingView[] {
+  townThings(v: BaseView): TownThingView[] {
     const t = v.town;
     if (!t) return [];
     return t.things.filter((x) => (x.id in TOWN_CELLS) || x.id === 'pen' || (x.id === 'grail' && (x.level > 0 || !!x.job || !x.next?.why)));
@@ -329,25 +329,28 @@ export class BaseWindow {
     return `<span class="bcosts"><span class="bcost${gold < c.silver ? ' lack' : ''}">${money(c.silver)}</span>${goods}<span class="bcost btimec">⏱ ${esc(spanText(c.secs))}</span></span>`;
   }
 
-  private sheet(v: BaseView, state: ClientState): string {
+  /** The card of what is picked; `bare` (the island screen, islescene.ts): the card alone, without the way back, the
+   *  tiles and the foot. */
+  sheet(v: BaseView, state: ClientState, bare = false): string {
     const gold = state.self?.gold ?? 0;
     const nextPlot = v.locked.find((l) => l.level > 0);
-    const foot = `<p class="muted bfoot">${esc(L('plots', { used: v.cells.filter((c) => c.what).length, total: v.plots }))}${nextPlot ? ` · ${esc(T29('opensAt', { n: hallFor(nextPlot.level) }))}` : ''} · ${esc(L('slots', { used: v.slots.used, total: v.slots.total }))}<br>${esc(v.near ? L('hold_pays') : L('store_pays'))}</p>`;
+    const foot = bare ? '' : `<p class="muted bfoot">${esc(L('plots', { used: v.cells.filter((c) => c.what).length, total: v.plots }))}${nextPlot ? ` · ${esc(T29('opensAt', { n: hallFor(nextPlot.level) }))}` : ''} · ${esc(L('slots', { used: v.slots.used, total: v.slots.total }))}<br>${esc(v.near ? L('hold_pays') : L('store_pays'))}</p>`;
     if (this.moving !== null) {
       const c = v.cells[this.moving];
       return `<div class="bsheet-h">${c?.what ? this.thumb(c) : ''}<div><b>${esc(c?.what ? baseName(c.what) : '')}</b><p class="muted">${esc(L('moving'))}</p></div></div><button class="btn" data-bcancel>${esc(L('cancel'))}</button>`;
     }
     const town = this.selTown ? v.town?.things.find((x) => x.id === this.selTown) : undefined;
     // (on a phone the tiles are the controls: the island's buildings under the card, and the way back over it)
-    const back = `<button type="button" class="btn btn-small tr-back" data-bback>${esc(T29('back'))}</button>`;
-    if (town) return `${back}${this.townSheet(v, town, gold)}${this.tiles(v)}`;
+    const back = bare ? '' : `<button type="button" class="btn btn-small tr-back" data-bback>${esc(T29('back'))}</button>`;
+    const tiles = bare ? '' : this.tiles(v);
+    if (town) return `${back}${this.townSheet(v, town, gold)}${tiles}`;
     if (this.sel === null) return `${this.queueCard(v)}${this.hallCard(v, gold)}${this.tiles(v)}${this.watersCard(v)}${foot}`;
     const c = v.cells[this.sel];
     if (!c.what) {
       const busy = v.crews.busy >= v.crews.n;
       const row = (x: BaseView['catalog'][number]) => {
         const art = baseArt(x.what, 1);
-        return `<div class="bopt${x.why ? ' off' : ''}">${art ? `<img class="bopt-art" src="${art}" alt="">` : ''}<div class="bopt-main"><b>${esc(baseName(x.what))}</b><span class="muted bopt-text">${esc(x.why ? sv(x.why) : baseText(x.what))}</span>${this.costHtml(v, x, gold)}</div>${x.why ? '' : `<button class="btn btn-small btn-primary" data-bbuild="${esc(x.what)}"${busy ? ' disabled' : ''}>${esc(L('build'))}</button>`}</div>`;
+        return `<div class="bopt${x.why ? ' off' : ''}" data-what="${esc(x.what)}">${art ? `<img class="bopt-art" src="${art}" alt="">` : ''}<div class="bopt-main"><b>${esc(baseName(x.what))}</b><span class="muted bopt-text">${esc(x.why ? sv(x.why) : baseText(x.what))}</span>${this.costHtml(v, x, gold)}</div>${x.why ? '' : `<button class="btn btn-small btn-primary" data-bbuild="${esc(x.what)}"${busy ? ' disabled' : ''}>${esc(L('build'))}</button>`}</div>`;
       };
       const ok = v.catalog.filter((x) => !x.why), no = v.catalog.filter((x) => x.why);
       const group = (list: BaseView['catalog']) => {
@@ -371,7 +374,7 @@ export class BaseWindow {
       : `<p class="muted">${esc(kind || c.level > 1 ? T29('max') : L('one_level'))}</p>`;
     const now = c.level && !raising && gives(c.level) ? `<p class="tr-now"><span class="muted">${esc(T29('givesNow'))}</span> ${esc(gives(c.level))}</p>` : '';
     return `${back}<div class="bsheet-h">${this.thumb(c)}<div><b>${esc(baseName(c.what))}</b> <span class="muted">${esc(L('plot', { n: c.plot + 1 }))}${c.level && !raising ? ` · ${esc(T29('lvOf', { n: c.level, max }))}` : ''}</span>${c.level && !raising && max > 1 ? pips(c.level, max) : ''}<p class="muted bdesc">${esc(baseText(c.what))}</p></div></div>
-      ${now}${state1}${job}${up}<div class="row bactions"><button class="btn btn-small" data-bmove>${esc(L('move'))}</button></div>${this.tiles(v)}${foot}`;
+      ${now}${state1}${job}${up}<div class="row bactions"><button class="btn btn-small" data-bmove>${esc(L('move'))}</button></div>${tiles}${foot}`;
   }
 
   /** The work under way on a building: its clock, its bar, and finishing it now (silver, provisions, a token). */
@@ -386,7 +389,7 @@ export class BaseWindow {
   /** docs/29: a town building's card — its level i/5, what it gives, what the next level gives, its cost and time,
    *  what it asks (✓ / ✗), «Улучшить»; a dwelling's men and the recruiting, the market's and the guild's way to the
    *  town's own tab. */
-  private townSheet(v: BaseView, t: TownThingView, gold: number): string {
+  townSheet(v: BaseView, t: TownThingView, gold: number): string {
     const d = TOWN[t.id];
     const ru = lang() === 'ru' ? 1 : 0;
     const ctx = { size: v.size, biome: v.biome, isle: v.level };
@@ -407,7 +410,7 @@ export class BaseWindow {
   }
 
   /** docs/29: the build queue — every work under way with its clock, the builders' crews. */
-  private queueCard(v: BaseView): string {
+  queueCard(v: BaseView): string {
     const rows = [
       ...this.townThings(v).filter((t) => t.job).map((t) => ({ attr: `data-town="${t.id}"`, art: townArt(t.id, t.level, true), name: treeLabel(t.id, t.job!.level), lv: t.job!.level, first: t.level === 0, job: t.job! })),
       ...v.cells.filter((c) => c.job && c.what).map((c) => ({ attr: `data-plot="${c.plot}"`, art: baseArt(c.what!, Math.max(1, c.level), c.condition, c.unpaid, c.job!.level <= 1), name: baseName(c.what!), lv: c.job!.level, first: c.job!.level <= 1, job: c.job! })),
@@ -430,7 +433,7 @@ export class BaseWindow {
   }
 
   /** The island's waters, tax and defence under the resources, and a raid under way over everything (docs/15 items 6–7). */
-  private defence(v: BaseView): string {
+  defence(v: BaseView): string {
     const c = v.claim;
     const ru = lang() === 'ru' ? 1 : 0;
     const faction = serverText(FACTIONS[c.faction as keyof typeof FACTIONS]?.name ?? c.faction);
@@ -450,7 +453,7 @@ export class BaseWindow {
   }
 
   /** The waters card on the plots' sheet: what draws raiders, the day's losses, and moving house (docs/15 items 6–7). */
-  private watersCard(v: BaseView): string {
+  watersCard(v: BaseView): string {
     const c = v.claim;
     const ru = lang() === 'ru' ? 1 : 0;
     const calm = c.strength > 0 && c.calmUntil > v.now && !c.raid ? `<p class="muted">${esc(L('def_calm', { t: spanText((c.calmUntil - v.now) / 1000) }))}</p>` : '';
@@ -509,9 +512,9 @@ export class BaseWindow {
     return art ? `<img class="bthumb" src="${art}" alt="">` : '<span class="bthumb bthumb-empty">+</span>';
   }
 
-  private bind(root: HTMLElement, state: ClientState): void {
+  /** The window's buttons (the island screen binds its card with its own redraw). */
+  bind(root: HTMLElement, state: ClientState, redraw: () => void = () => this.render(root, state)): void {
     const v = state.base!;
-    const redraw = () => this.render(root, state);
     root.querySelectorAll<HTMLElement>('.bplot[data-plot], .bplot[data-town]').forEach((el) => (el.onkeydown = (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();

@@ -74,6 +74,9 @@ import { CompanyScreen, renderBarter } from './ui/company.ts';
 import type { CompanyTab } from './ui/company.ts';
 import { LOG_PAGES } from './ui/logbook.ts';
 import { BaseWindow } from './ui/base.ts';
+import { IsleScene } from './ui/islescene.ts'; // the island screen (owner, 2026-10-15)
+import { EN as LIS_EN, RU as LIS_RU } from './lang/ui/islescene.ts';
+import { buttonHtml } from './ui/kit/button.ts';
 import { askMove } from './ui/isletree.ts'; // docs/29: the island's move, its confirm
 import { $, decorateSums, esc, fmt, icon, keepInputs, knots } from './ui/dom.ts';
 import { Hud, TOUCH_FOLDED, releaseModalToasts } from './ui/hud.ts';
@@ -321,6 +324,10 @@ function openHero(tab?: CaptainOpen): void {
 const companyScreen = new CompanyScreen((m) => net.send(m));
 // One's own island as a base (docs/15): from the Company's islands, the captain's cabin, and at sea off the island.
 const baseWindow = new BaseWindow((m) => net.send(m));
+/** The island screen: a scene of its own over the whole screen, the sea stopped under it (ui/islescene.ts). */
+const isleScene = new IsleScene((m) => net.send(m), baseWindow);
+const LIS = dict(LIS_EN, LIS_RU);
+let isleKey = '';
 // The recruit window of the Heroes (docs/17 H3): from a port's tavern and from the island's town.
 const recruitWindow = new RecruitWindow((m) => net.send(m));
 let recruitFrom: 'port' | 'isle' | 'lair' = 'port';
@@ -330,6 +337,7 @@ function openRecruit(src: 'port' | 'isle' | 'lair'): void {
   openModal('recruit');
 }
 portScreen.openDwell = () => openRecruit('port');
+portScreen.openIsle = () => openBase();
 // The adventure map (docs/17 H4): the visit card over the sea, and the Grail's chart.
 const advCard = new AdvCard((m) => net.send(m));
 advCard.now = () => state.estServerTime(); // the drift's mini-game needle (docs/18 #35)
@@ -423,12 +431,54 @@ baseWindow.onRecruit = () => openRecruit('isle');
 companyScreen.onBase = () => openBase();
 companyScreen.onGo = () => closeModal();
 companyScreen.onQuests = () => openModal('journal');
-baseWindow.onSail = () => closeModal();
+baseWindow.onSail = () => {
+  closeModal();
+  leaveIsle(false);
+};
 baseWindow.onLayout = () => { if (modal === 'base') refreshModal(); };
+/** Her island (owner, 2026-10-15: «кнопка входа на остров … отдельное абсолютно новое окно с постройками»): the island
+ *  screen over the whole screen; without an island of her own, the old window says how to have one. */
 function openBase(): void {
-  baseWindow.open();
-  openModal('base');
+  if (state.self?.homeIsle === null || state.self?.homeIsle === undefined) {
+    baseWindow.tab = 'plots';
+    baseWindow.open();
+    openModal('base');
+    return;
+  }
+  if (isleScene.isOpen) {
+    if (modal) closeModal();
+    return;
+  }
+  // the window she came from goes (the harbour comes back when she leaves the island)
+  if (modal) {
+    modal = null;
+    $('modal').classList.add('hidden');
+    releaseModalToasts();
+  }
+  if (hud.chatPanel.isOpen) hud.chatPanel.close();
+  isleKey = selfKeyFor('base');
+  isleScene.enter(state);
 }
+/** Back to the sea from the island screen (into the harbour when she lies in one). */
+function leaveIsle(harbour = true): void {
+  if (!isleScene.isOpen) return;
+  isleScene.exit();
+  baseWindow.tab = 'plots';
+  if (harbour && state.portView && modal === null) {
+    portReturn = true;
+    openModal('port');
+  }
+}
+isleScene.onExit = () => leaveIsle();
+isleScene.onSail = () => {
+  if (modal) closeModal();
+  leaveIsle(false);
+};
+isleScene.onTab = (tab) => {
+  baseWindow.open();
+  baseWindow.tab = tab;
+  openModal('base');
+};
 /** The terms of the island off the bow (docs/15 item 6), on the Company's islands card. */
 function openClaim(): void {
   companyScreen.open('isles');
@@ -676,6 +726,28 @@ const seaHud = new SeaHud($('touch'), {
     seaHud.lend(['hud-target'], 'target');
   },
 });
+// The island screen's way in from the sea (owner, 2026-10-15): «Остров» under the menu while she holds an island.
+const isleBtn = (() => {
+  const t = document.createElement('template');
+  t.innerHTML = buttonHtml({ kind: 'icon', id: 'tc-isle', icon: 'tab_isles', glyph: '⚓', aria: LIS('enterTip'), cls: 'sea-round hidden' }).trim();
+  const b = t.content.firstElementChild as HTMLButtonElement;
+  b.insertAdjacentHTML('beforeend', '<span class="tc-isle-l"></span>');
+  b.addEventListener('click', () => openBase());
+  $('touch').append(b);
+  return b;
+})();
+/** «Остров» shown while she holds an island and no fight is near (its word in her language). */
+function isleBtnFrame(): void {
+  const show = state.self?.homeIsle !== null && state.self?.homeIsle !== undefined;
+  if (isleBtn.classList.contains('hidden') === show) isleBtn.classList.toggle('hidden', !show);
+  const w = LIS('enter');
+  const l = isleBtn.querySelector('.tc-isle-l')!;
+  if (l.textContent !== w) {
+    l.textContent = w;
+    isleBtn.title = LIS('enterTip');
+    isleBtn.setAttribute('aria-label', LIS('enterTip'));
+  }
+}
 const onboarding = new OnboardingUi(state);
 /** The First Watch's finger over the button its step wants (docs/23 item 80). */
 const tutorPointer = new TutorPointer();
@@ -1225,7 +1297,7 @@ function onMessage(m: ServerMsg): void {
     case 'port':
       if (m.view && modal !== 'port') audio.bell();
       // Never steal focus from another open screen (handbook, boarding, shipwreck); they return to port on close.
-      if (m.view && modal === null) openModal('port');
+      if (m.view && modal === null && !isleScene.isOpen) openModal('port');
       else if (!m.view && modal === 'port') closeModal();
       else if (modal === 'port') refreshModal();
       break;
@@ -1235,6 +1307,11 @@ function onMessage(m: ServerMsg): void {
       noteNewQuests(); // ux2: a quest just taken is followed, its mark on the sea
       noteHearsay(state.self); // a whisper just bought becomes her mark (docs/16 #14)
       arenaMoments(); // docs/19 E14: the Colosseum's draft opens its tab, its bout closes the window
+      if (isleScene.isOpen && selfKeyFor('base') !== isleKey) {
+        // her silver over the island screen (only when it changed: a redraw on every beat would lose taps)
+        isleKey = selfKeyFor('base');
+        isleScene.update(state);
+      }
       if (state.self?.company.mutiny && modal !== 'mutiny') openModal('mutiny');
       else if (!state.self?.company.mutiny && modal === 'mutiny') closeModal();
       else if (modal === 'company' || modal === 'base' || modal === 'gear' || modal === 'hero' || modal === 'throne' || modal === 'research') {
@@ -1426,6 +1503,7 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'base':
       if (modal === 'base') refreshModal();
+      if (isleScene.isOpen) isleScene.update(state);
       break;
     case 'isleMove': // docs/29: claiming another island is a move — her leave first
       askMove(m.view, (x) => net.send(x));
@@ -1564,6 +1642,7 @@ function onMessage(m: ServerMsg): void {
 setInterval(() => {
   if (modal === 'dice') tickDice($('modal-panel'), state);
   if (modal === 'base') baseWindow.tick($('modal-panel'), state);
+  if (isleScene.isOpen && modal !== 'base') isleScene.tick(state);
   if (modal === 'puzzle' && (state.puzzle?.digging || state.puzzle?.wait)) refreshModal(); // the dig's seconds (docs/17 H4)
 }, 1000);
 
@@ -1629,6 +1708,11 @@ function closeModal(): void {
   releaseModalToasts();
   // The recruit window opened from the island's town goes back to it (docs/17 H3).
   if (was === 'recruit' && recruitFrom === 'isle') return openBase();
+  // A window over the island screen closes back into it (its card drawn again: the window shared its selection).
+  if (isleScene.isOpen) {
+    isleScene.update(state);
+    return;
+  }
   // While docked, closing another screen returns to the harbour (Esc on the harbour itself hides it; P reopens).
   if (was !== 'port' && state.portView) {
     portReturn = true;
@@ -2028,6 +2112,7 @@ addEventListener('keydown', (e) => {
   }
   const k = keyOf(e);
   if (k === 'escape') {
+    if (!modal && isleScene.isOpen) return leaveIsle();
     if (modal === 'barter') net.send({ t: 'barter', action: 'cancel' });
     else if (modal && modal !== 'boarding' && modal !== 'sunk') closeModal();
     else if (!modal) openModal('options');
@@ -2566,7 +2651,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   facts.cast = !l && !mastWreck() ? castable() : null;
   const home = nearHome();
   if (home) facts.home = { name: placeName(home.name) };
-  facts.homeOpen = modal === 'base';
+  facts.homeOpen = modal === 'base' || isleScene.isOpen;
   const wild = self.claimIsle;
   if (wild) facts.claim = { name: placeName(wild.name), price: fmt(wild.price) };
   facts.claimOpen = modal === 'company';
@@ -3783,6 +3868,15 @@ function step(t: number): void {
     stepPendingFind();
     state.updateRemote();
     const own = state.updateOwn();
+    // The island screen (owner, 2026-10-15): the sea is not drawn under it, nor its HUD — the phone's battery and CPU.
+    // A boarding or a deck fight takes her back to the sea.
+    if (isleScene.isOpen) {
+      if (state.boardTac || state.boardFight || state.self?.company.mutiny) leaveIsle(false);
+      else {
+        if (own) audio.listener = { x: own.x, y: own.y };
+        return;
+      }
+    }
     // Touch has no hovering cursor: no aim arcs follow it (the broadside buttons aim themselves).
     const held = chargeHeld();
     if (held && touch.enabled) touchAim(held.side);
@@ -3809,6 +3903,7 @@ function step(t: number): void {
       }, state.wind[1], own.sail, Math.abs(shipHeel(own.heading, state.wind[0], state.wind[1], own.sail, SHIP_CLASSES[state.self!.loadout.classId].tier, state.you?.water ?? 0, 0)), timeOfDay(state.estServerTime()), !state.self?.dockedAt);
     }
     hud.castKey = touch.enabled ? '' : ` (${keyOfAction('land')})`; // a phone has its button, not a key
+    isleBtnFrame();
     hud.hauling = netHaul.active;
     hud.update(state, prompt);
     autosailPill.draw(state);
@@ -3852,4 +3947,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y) };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, isle: isleScene, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y) };
