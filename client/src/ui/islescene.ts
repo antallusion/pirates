@@ -72,6 +72,7 @@ export class IsleScene {
   private sig = '';
   private queued = false;
   private pointers = new Map<number, { x: number; y: number }>();
+  private tapOk = false;
   private gesture: { x: number; y: number; t: number; moved: boolean; cam: Cam; d0: number; mx: number; my: number } | null = null;
   private send: (m: ClientMsg) => void;
   private base: BaseWindow;
@@ -155,7 +156,6 @@ export class IsleScene {
       if (!b) return;
       const what = b.dataset.iside!;
       if (what === 'collect') this.send({ t: 'base', action: 'collect' });
-      else if (what === 'barge') this.send({ t: 'base', action: 'barge' });
       else if (what === 'raid') this.onSail();
       else if (what === 'defence') this.select(this.pick && 'defence' in this.pick ? null : { defence: true });
       else this.onTab(what as 'yard' | 'town' | 'supply');
@@ -514,7 +514,7 @@ export class IsleScene {
 
   private sMax(): number {
     // the map is painted at 1:1, the buildings at about twice that: closer than this the ground goes soft
-    return Math.max(this.sMin() * 2.6, 1.7);
+    return Math.max(this.sMin() * 1.8, 1.6);
   }
 
   /** The first look: the whole board, its tall back row too, between the bars. */
@@ -623,8 +623,14 @@ export class IsleScene {
       if (this.pointers.size) return start();
       this.world.classList.remove('moving');
       this.gesture = null;
-      if (g && !g.moved && e.type === 'pointerup' && performance.now() - g.t < 700) this.tap(e.clientX, e.clientY);
+      // a tap is answered on its click (answered here, the card drawn under the finger took the click: a ghost tap)
+      this.tapOk = !!g && !g.moved && e.type === 'pointerup' && performance.now() - g.t < 700;
     };
+    el.addEventListener('click', (e) => {
+      if (!this.tapOk) return;
+      this.tapOk = false;
+      this.tap(e.clientX, e.clientY);
+    });
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
     el.addEventListener('wheel', (e) => {
