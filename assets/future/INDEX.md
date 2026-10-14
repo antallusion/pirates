@@ -512,3 +512,6 @@ Data: `shared/src/data/marque.ts SERVICES`. Goes to: letter-of-marque service em
 | `icon.service_crown` | service/service_crown.png | `d4c020f9-b860-4b64-a5cf-68e3a2a5eb90` |
 | `icon.service_league` | service/service_league.png | `578939df-64db-449a-b44b-c8214560c734` |
 | `icon.service_confederacy` | service/service_confederacy.png | `73d1cf7e-4f2b-42ca-8a20-a8a251f3b332` |
+
+## isle_iso — isometric island map + 43 building sheets (ChatGPT, 2026-10-14)
+`assets/future/isle_iso/`: 4 maps (`isle_map_<biome>.png`) and `isle_<id>.png` sheets 4×2 on magenta (plot, half-built, levels 1–5, upgrading). Prompts: `jobs.mjs` / `prompts.json`; preview `overview.jpg`; integration brief `HANDOFF_PROMPT.md`.
