@@ -620,3 +620,16 @@ body.touch #mm-tab:focus-visible .mm-tab-pill { box-shadow: none; }
   #modal-panel { width: min(100%, 880px) !important; max-width: 880px; margin-inline: auto; }
   .k-sheet { width: min(100%, 760px); margin-inline: auto; padding-left: var(--f-pad); padding-right: var(--f-pad); }
 }
+
+/* Tap → choose → act on a phone held sideways (owner, 2026-10-15): the choice's buttons a thumb's tap high (32 → 36 px),
+   their words at 10 px, what a blow would do at 7–8 px. */
+@media (max-height: 520px) {
+  .tb-pick { gap: calc(2px + 2 * var(--u)); padding: 2px; border-radius: calc(18px + 2 * var(--u)); }
+  .tb-pk { height: var(--f-tap); min-width: var(--f-tap); padding: 0 calc(6px + 3 * var(--u)) 0 2px; gap: calc(3px + 2 * var(--u)); border-radius: calc(16px + 2 * var(--u));
+    font-size: 10px; }
+  .tb-pk-i { width: calc(26px + 4 * var(--u)); height: calc(26px + 4 * var(--u)); }
+  .tb-pk em { font-size: var(--f-fs-xs); }
+  .tb-pk.cancel { width: calc(26px + 4 * var(--u)); height: calc(26px + 4 * var(--u)); min-width: 0; }
+  .skinned .tb-pk-x { width: calc(22px + 4 * var(--u)); height: calc(22px + 4 * var(--u)); }
+  .tb-pk.cast b { max-width: calc(80px + 20 * var(--u)); }
+}

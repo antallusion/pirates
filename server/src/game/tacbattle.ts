@@ -2580,10 +2580,9 @@ const parts = blowParts(c, cs, ct, how, at);
  *  beside it she may strike from. */
 export function previewsOf(bt: TacBattle, s: TacStack, reach = reachOf(bt, s)): TacPreview[] {
   const out: TacPreview[] = [];
-  if (canShoot(bt, s)) {
-    for (const t of alive(bt)) if (t.side !== s.side) out.push(previewBlow(bt, s, t, 'shot'));
-    return out;
-  }
+  // A shooter's shots first (the preview under the pointer shows the shot); then, as for every stack, her blows on
+  // those she may walk to and strike — the choice beside a tapped foe offers both (owner, 2026-10-15).
+  if (canShoot(bt, s)) for (const t of alive(bt)) if (t.side !== s.side) out.push(previewBlow(bt, s, t, 'shot'));
   for (const t of meleeTargets(bt, s, reach)) {
     const answers = new Map<string, number>();
     for (const h of hexNeighbors(t.hex)) if (h === s.hex || reach.has(h)) out.push(previewBlow(bt, s, t, 'melee', h, answers));

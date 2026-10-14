@@ -141,6 +141,10 @@ function lootParts(l: LairLoot): { chips: string[]; lines: string[] } {
 /** An order's name and words, from the order book (docs/17 H2) — every page of it, old and new. */
 /** The battle's own painted icons (tools/art/battle_more.py, battle_sheets.py) where they are painted; the older
  *  stand-ins until then. */
+/** The turn's last seconds shown in red (owner, 2026-10-15: a warning before the 20 s run out). */
+const TAC_WARN = 5;
+/** An order of the choice opened beside a tapped hex or stack (owner, 2026-10-15): its key, art, word, what it would do. */
+interface PickOpt { k: string; icon: string; label: string; sub?: string; off?: boolean; tip?: string }
 const btIcon = (id: string, fb: string, cls = 'ico-sm') => icon(assetUrl(`icon.${id}`) ? `icon.${id}` : fb, '', cls);
 const spIcon = (id: TacSpellId, cls = 'ico') => btIcon(`sp_${id}`, TAC_SPELLS[id].icon, cls);
 /** What lies on a stack, as the card shows it: its painted mark and its word. */
@@ -439,7 +443,7 @@ export class TacticalPanel {
   /** The plates of the figures being drawn, laid over them all at the end of the frame. */
   private plates: (() => void)[] | null = null;
   private act = new Map<number, Act[]>();
-  private press: { x: number; y: number; t: number; timer: number; foe?: boolean } | null = null;
+  private press: { x: number; y: number; t: number; timer: number; foe?: boolean; slid?: boolean } | null = null;
   private planks: [HTMLCanvasElement, HTMLCanvasElement] | null = null;
   /** Every stack's name as last seen (the fallen are named in the feed too). */
   private names = new Map<number, string>();
@@ -492,6 +496,18 @@ export class TacticalPanel {
   private endUntil = 0;
   private ptr: { x: number; y: number } | null = null;
   private tipKey = '';
+  /** Tap → choose → act (owner, 2026-10-15: «сейчас ты просто тапаешь и сразу идешь. А я хочу чтобы был тап и выбор
+   *  действия»): a tap only picks — a hex to walk to (`preview`), a foe (`foeArmed`, struck from `armFrom`), her own
+   *  stack whose turn it is (`selfPick`: defend, wait, the officer's word), or the stack an aimed order or path move is
+   *  for (`castOn`) — and the little menu beside it (`.tb-pick`) gives the order; a second tap on the same thing gives
+   *  its first. */
+  private selfPick = false;
+  private castOn: number | null = null;
+  private armFrom: number | undefined = undefined;
+  private pickKey = '';
+  /** When each view came to the screen (performance.now, s): the battle's clock (TacView.now) runs on from there by the
+   *  screen's own — real seconds, whatever an admin /speed does to the world's. */
+  private arrived = new WeakMap<TacView, number>();
 
   // ------------------------------------------------------------------ docs/25 §3: the boarding's looks
   /** The field's clock: the battle's, held through a hit-stop (item 1); the knocks (item 2); the particles. */
@@ -692,6 +708,7 @@ export class TacticalPanel {
 
   render(v: TacView | null): void {
     const root = $('board-tac');
+    if (v && !this.arrived.has(v)) this.arrived.set(v, performance.now() / 1000);
     // A view with more of the battle in it waits while the last is still being played (owner, 2026-10-08: every turn
     // of hers seen whole — who moved, who struck whom, how many fell); one with nothing new comes in at once.
     if (v && this.view && v !== this.view && this.el && this.busy() && v.log.some((e) => e.i > this.seen)) {
@@ -766,7 +783,8 @@ export class TacticalPanel {
         this.spNote = null;
         this.closeSheet();
         this.hideWords();
-        this.foeArmed = null;
+        this.clearPick();
+        this.pickKey = '';
         this.endHidden = false;
       }
       return;
@@ -786,7 +804,7 @@ export class TacticalPanel {
     root.innerHTML = `<div class="tb-root">
       <div class="tb-hero you"></div><div class="tb-mid"></div><div class="tb-hero foe"></div>
       <div class="tb-queue" aria-label="${esc(L('order.label'))}"></div>
-      <div class="tb-stage"><canvas class="tb-board"></canvas><div class="tb-pv hidden" role="status"></div><div class="tb-card hidden"></div><div class="tb-banner hidden"></div></div>
+      <div class="tb-stage"><canvas class="tb-board"></canvas><div class="tb-pv hidden" role="status"></div><div class="tb-pick hidden" role="menu"></div><div class="tb-card hidden"></div><div class="tb-banner hidden"></div></div>
       <div class="tb-feed"><div class="tb-hint"></div><div class="tb-lines"></div></div>
       <div class="tb-spells"></div>
       <div class="tb-acts"></div>
@@ -841,6 +859,13 @@ export class TacticalPanel {
       // close it again.
       if (s || !this.phone) this.showInfo(s?.id ?? null);
     });
+    // The choice beside what was tapped (owner, 2026-10-15): its button gives the order.
+    const pick = root.querySelector<HTMLElement>('.tb-pick')!;
+    pick.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('[data-pk]');
+      if (b && !(b as HTMLButtonElement).disabled) this.pickAct(b.dataset.pk!);
+    });
+    pick.addEventListener('contextmenu', (e) => e.preventDefault());
     root.querySelector('.tb-card')!.addEventListener('click', (e) => {
       // A special's name on the card opens its words there (a finger has no hover for its title); the rest closes it.
       const sp = (e.target as HTMLElement).closest<HTMLElement>('[data-spnote]');
@@ -942,12 +967,16 @@ export class TacticalPanel {
     }
     if (was && v.log.length) this.seen = Math.max(this.seen, v.log[v.log.length - 1].i);
     for (const s of v.stacks) this.names.set(s.id, `${stackName(s)} (${L(s.side === v.you ? 'ours' : 'theirs')})`);
-    if (!v.mine || v.active !== was?.active) {
-      this.preview = null;
+    // A new turn, or anything played since (her stack's second turn, an order given): the choice made for the last is let go.
+    const last = (x: TacView | null) => (x?.log.length ? x.log[x.log.length - 1].i : 0);
+    if (!v.mine || v.active !== was?.active || last(v) !== last(was)) {
+      this.clearPick();
       this.aimFoe = null;
       if (!v.mine) this.targeting = null;
     }
     if (this.preview !== null && !v.reach.includes(this.preview)) this.preview = null;
+    if (this.foeArmed !== null && !v.melee.includes(this.foeArmed) && !v.shoot.includes(this.foeArmed)) this.foeArmed = null;
+    if (this.castOn !== null && !v.stacks.some((s) => s.id === this.castOn)) this.castOn = null;
     this.dom(v);
   }
 
@@ -1935,7 +1964,7 @@ export class TacticalPanel {
     const lead = this.leadHint(v);
     // docs/25 item 64: an ally's stack on its turn (her name), or you come aboard as the next round opens.
     const ally = !v.mine && act && act.side === v.you && (act.own ?? 0) !== Math.max(0, this.mySlot(v)) ? this.capOf(v, act) : undefined;
-    const text = v.over ? '' : lead && !this.targeting && this.preview === null ? lead : this.mySlot(v) < 0 ? L('hint.coming') : !v.mine ? (act && act.side !== v.you ? L('hint.wait') : ally && !ally.auto ? L('hint.ally', { name: personName(ally.name) }) : '') : this.targeting ? L(own ? 'hint.own' : 'hint.target') : this.preview !== null ? L('hint.again') : v.warn?.length ? BL('hint.warn') : v.shoot.length ? L('hint.shoot') : L('hint.move');
+    const text = v.over ? '' : lead && !this.targeting && !this.pickOn() ? lead : this.mySlot(v) < 0 ? L('hint.coming') : !v.mine ? (act && act.side !== v.you ? L('hint.wait') : ally && !ally.auto ? L('hint.ally', { name: personName(ally.name) }) : '') : this.targeting && this.castOn === null ? L(own ? 'hint.own' : 'hint.target') : this.pickOn() ? L('hint.again') : v.warn?.length ? BL('hint.warn') : v.shoot.length ? L('hint.shoot') : L('hint.move');
     h.textContent = text;
     h.classList.toggle('hidden', !text);
   }
@@ -1972,7 +2001,23 @@ export class TacticalPanel {
     const act = v.stacks.find((s) => s.id === v.active);
     if (v.over || !act || act.side !== side || (act.own ?? 0) !== slot || this.capAuto(v, side, slot)) return b;
     const from = v.ends - Math.min(v.turn ?? TAC_TURN, b);
-    return Math.max(0, b - Math.max(0, this.now() - from));
+    return Math.max(0, b - Math.max(0, this.bnow(v) - from));
+  }
+
+  /** The battle's clock now (owner, 2026-10-15: the 20 s to choose are real seconds): the view's `now` run on by the
+   *  screen's own clock since it came; an old server's view, the sea's estimated time. */
+  private bnow(v: TacView): number {
+    const at = this.arrived.get(v);
+    return v.now !== undefined && at !== undefined ? v.now + Math.max(0, performance.now() / 1000 - at) : this.now();
+  }
+
+  /** The turn now running: whether a captain's clock counts it down (hers, an ally's, the other captain's — not the
+   *  sea's mind nor an auto-battle), the seconds left of it and its whole. */
+  private turnClock(v: TacView): { clocked: boolean; left: number; whole: number } {
+    const whole = v.turn ?? TAC_TURN;
+    const act = v.stacks.find((s) => s.id === v.active);
+    const clocked = !v.over && !!act && !this.capAuto(v, act.side, act.own ?? 0);
+    return { clocked, left: Math.min(whole, Math.max(0, v.ends - this.bnow(v))), whole };
   }
 
   /** docs/25 items 48, 49, 52 on a phone: between the two captains at the top, the two chess clocks, the flag's count,
@@ -2355,7 +2400,7 @@ export class TacticalPanel {
         this.dom(v);
       }
     }
-    this.preview = null;
+    this.clearPick();
   }
 
   /** Whom the order or move being aimed is for. */
@@ -2379,6 +2424,7 @@ export class TacticalPanel {
       return;
     }
     this.targeting = this.targeting === kind ? null : kind;
+    this.clearPick();
     this.key = '';
     this.dom(v);
   }
@@ -2392,18 +2438,26 @@ export class TacticalPanel {
       return;
     }
     this.targeting = this.targeting === id ? null : id;
+    this.clearPick();
     this.key = '';
     this.dom(v);
   }
 
-  /** Keys: W wait, D defend, O the officer's word, A auto-battle, 1–4 the captain's orders, Esc lets go. */
+  /** Keys: W wait, D defend, O the officer's word, A auto-battle, 1–4 the captain's orders, Enter (or Space) gives the
+   *  first order of the choice open beside what was clicked (owner, 2026-10-15), Esc lets go. */
   onKey(e: KeyboardEvent): boolean {
     const v = this.view;
     if (!v || e.ctrlKey || e.metaKey || e.altKey) return false;
     const k = e.key.toLowerCase();
     const code = e.code;
+    if ((code === 'Enter' || code === 'NumpadEnter' || code === 'Space') && this.pickOn()) {
+      const first = this.pickOptions(v)[0];
+      if (first) this.pickAct(first.k);
+      return true;
+    }
     if (k === 'escape') {
-      this.targeting = this.preview = this.foeArmed = null;
+      this.targeting = null;
+      this.clearPick();
       this.bookOpen = false;
       this.showInfo(null);
       this.key = '';
@@ -2470,10 +2524,8 @@ export class TacticalPanel {
     if (e.pointerType !== 'mouse' && this.view?.mine && !this.busy()) {
       const h = this.hexAt(e);
       const p = this.onStage(e);
-      const keep = this.foeArmed;
       this.aimAt(h, p.x, p.y);
       foe = !!this.aimFoe;
-      if (!foe && keep !== null) this.aimFoe = null;
     }
     const timer = window.setTimeout(() => {
       // A long press: the stack's card, whatever a tap on it would do (a foe in reach is struck by a tap).
@@ -2488,7 +2540,7 @@ export class TacticalPanel {
         this.showInfo(s.id);
       }
       this.press = null;
-      if (foe && this.foeArmed === null) this.aimFoe = null;
+      if (foe) this.aimFoe = null;
     }, foe ? 800 : 450);
     this.press = { x, y, t: performance.now(), timer, foe };
   }
@@ -2506,6 +2558,11 @@ export class TacticalPanel {
       if (!this.busy()) {
         const p = this.onStage(e);
         this.aimAt(this.hover, p.x, p.y);
+        // Over the foe picked (owner, 2026-10-15): the side the mouse lies on is the side the blow comes from.
+        if (this.foeArmed !== null && this.aimFoe?.t === this.foeArmed && this.aimFoe.from !== undefined && this.armFrom !== this.aimFoe.from) {
+          this.armFrom = this.aimFoe.from;
+          this.pickKey = '';
+        }
       }
       // The attack cursor (owner, 2026-10-07: «при абордаже… при наведении на цель показывать иконку атаки»): over a
       // stack hers may strike, the sabres; one it may shoot, the gun (ui/cursor.ts, seahud.css).
@@ -2527,10 +2584,11 @@ export class TacticalPanel {
         if (Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y) > 12) {
           clearTimeout(this.press.timer); // sliding to choose: no card
           this.press.timer = 0;
+          this.press.slid = true;
         }
       } else {
         this.cancelPress();
-        if (this.foeArmed === null) this.aimFoe = null;
+        this.aimFoe = null;
       }
       return;
     }
@@ -2540,13 +2598,19 @@ export class TacticalPanel {
   private up(e: PointerEvent): void {
     if (!this.press) return;
     const foe = this.press.foe && this.aimFoe ? this.view?.stacks.find((x) => x.id === this.aimFoe!.t)?.hex ?? null : null;
+    const slid = !!this.press.slid;
     this.cancelPress();
     if (e.button === 2) return;
-    // A finger let go on a foe it slid round: the foe it aimed at, from the side it chose.
-    this.tap(foe ?? this.hexAt(e));
+    // A finger let go on a foe it slid round: the foe it aimed at, from the side it chose (picked, not yet struck).
+    this.tap(foe ?? this.hexAt(e), slid);
   }
 
-  private tap(h: number | null): void {
+  /** A tap (or a click) on the field. Owner, 2026-10-15 («сейчас ты просто тапаешь и сразу идешь. А я хочу чтобы был
+   *  тап и выбор действия»): it only picks — a hex she may walk to, a foe she may strike or shoot, her own stack whose
+   *  turn it is, the stack an aimed order is for — and the choice opens beside it (pickDom); the same thing tapped again
+   *  gives the choice's first order. A foe's side to strike from: where the finger lay on it, or a hex beside it tapped
+   *  after (`slid`: a finger slid round the foe to choose its side — that only chooses). */
+  private tap(h: number | null, slid = false): void {
     const v = this.view;
     if (!v) return;
     // On a phone a tap beside the open round only closes it: the finger reaching to put it away must not also march a
@@ -2559,67 +2623,201 @@ export class TacticalPanel {
       return;
     }
     if (this.info !== null) this.showInfo(null);
+    const done = () => {
+      this.pickKey = '';
+      this.refresh();
+    };
     if (h === null) {
-      this.preview = this.foeArmed = null;
+      this.clearPick();
       this.aimFoe = null;
-      return this.refresh();
+      return done();
     }
     const s = this.stackAt(h);
     // The field takes no order while the last turn is still being played (owner, 2026-10-08): a card it may open.
     if (!v.mine || v.over || this.busy()) {
+      this.clearPick();
       if (s) this.showInfo(s.id);
-      return;
+      return done();
     }
-    // One tap is the order (docs/23 item 57); the option «a second tap to be sure» asks it twice on the same hex.
-    const sure = settings().tacConfirm;
-    // An order or a move aimed at one of her own stacks (docs/18).
-    if (s && s.side === v.you && this.targeting && this.targetKind() === 'own') {
-      const t = this.targeting;
-      this.order(t === 'innate' || t === 'ult' ? { a: t, target: s.id } : { a: 'spell', id: t, target: s.id });
-      this.targeting = null;
-      return this.refresh();
+    // An order or a path move being aimed (docs/18): the stack it is for picked, the order given from the choice.
+    if (this.targeting) {
+      const own = this.targetKind() === 'own';
+      if (s && (own ? s.side === v.you : s.side !== v.you)) {
+        if (this.castOn === s.id && !slid) return this.pickAct('cast');
+        this.clearPick();
+        this.castOn = s.id;
+        return done();
+      }
+      this.clearPick();
+      if (s) this.showInfo(s.id);
+      return done();
+    }
+    // Her own stack whose turn it is: defend, wait, the officer's word.
+    if (s && s.id === v.active) {
+      const again = this.selfPick;
+      this.clearPick();
+      this.selfPick = !again;
+      this.aimFoe = null;
+      return done();
     }
     if (s && s.side !== v.you) {
-      if (this.targeting) {
-        const t = this.targeting;
-        this.order(t === 'innate' || t === 'ult' ? { a: t, target: s.id } : { a: 'spell', id: t, target: s.id });
-        this.targeting = null;
-      } else if (v.shoot.includes(s.id) || v.melee.includes(s.id)) {
-        // The side she strikes from: as aimed (the mouse or the finger on the foe, owner 2026-10-08), else the hex
-        // tapped once before, else the hardest blow the preview shows.
-        if (this.aimFoe?.t !== s.id) this.aimAt(s.hex, null, null);
-        if (sure && this.foeArmed !== s.id) {
-          this.foeArmed = s.id;
-          this.key = '';
-          this.dom(v);
-          return this.refresh();
-        }
-        if (v.shoot.includes(s.id)) this.order({ a: 'shoot', target: s.id });
-        else {
-          const from = this.aimFoe?.t === s.id && this.aimFoe.from !== undefined ? this.aimFoe.from : this.preview !== null && hexNeighbors(s.hex).includes(this.preview) ? this.preview : undefined;
-          this.order(from !== undefined ? { a: 'attack', target: s.id, from } : { a: 'attack', target: s.id });
-        }
-        this.aimFoe = null;
-      } else this.showInfo(s.id);
-      this.preview = this.foeArmed = null;
-      return this.refresh();
+      if (!v.shoot.includes(s.id) && !v.melee.includes(s.id)) {
+        this.clearPick();
+        this.showInfo(s.id);
+        return done();
+      }
+      if (this.foeArmed === s.id && !slid) return this.pickAct(v.shoot.includes(s.id) ? 'shoot' : 'attack');
+      // The side she strikes from: where the finger or the mouse lay on the foe, else the hardest blow the preview shows.
+      const from = this.aimFoe?.t === s.id && this.aimFoe.from !== undefined ? this.aimFoe.from : this.strikeFor(v, s, null, null);
+      this.clearPick();
+      this.foeArmed = s.id;
+      this.armFrom = from;
+      this.aimFoe = null;
+      return done();
     }
     if (s) {
+      this.clearPick();
       this.showInfo(s.id);
-      return;
+      return done();
+    }
+    // A hex beside the foe picked that she may strike it from: the blow comes from there (HoMM3: the sword's side).
+    if (this.foeArmed !== null && (v.pv ?? []).some((p) => p.t === this.foeArmed && !p.shot && p.from === h)) {
+      this.armFrom = h;
+      return done();
     }
     if (v.reach.includes(h)) {
-      this.foeArmed = null;
-      if (sure && this.preview !== h) this.preview = h;
-      else {
-        this.preview = null;
-        this.order({ a: 'move', to: h });
-      }
-      return this.refresh();
+      if (this.preview === h) return this.pickAct('move');
+      this.clearPick();
+      this.preview = h;
+      this.aimFoe = null;
+      return done();
     }
-    this.preview = this.foeArmed = null;
-    this.refresh();
+    this.clearPick();
+    this.aimFoe = null;
+    done();
   }
+
+  /** Whether a choice is open beside something tapped. */
+  private pickOn(): boolean {
+    return this.preview !== null || this.foeArmed !== null || this.selfPick || this.castOn !== null;
+  }
+
+  private clearPick(): void {
+    this.preview = this.foeArmed = this.castOn = null;
+    this.selfPick = false;
+    this.armFrom = undefined;
+  }
+
+  /** The orders of the choice open now, the first given by a second tap (or Enter): each with its icon, its word and,
+   *  where the battle reckons it, what it would do (the fallen as a range, HoMM3's attack tooltip). */
+  private pickOptions(v: TacView): PickOpt[] {
+    const out: PickOpt[] = [];
+    if (!v.mine || v.over) return out;
+    const act = v.stacks.find((s) => s.id === v.active);
+    const r = (x: [number, number]) => (x[0] === x[1] ? `${x[0]}` : `${x[0]}–${x[1]}`);
+    const kills = (p: TacPreview | undefined) => (p ? L('pk.kills', { n: r(p.kills) }) : undefined);
+    const tip = (label: string, p: TacPreview | undefined) => (p ? `${label}: ${L('pv.dmg')} ${r(p.dmg)}, ${L('pv.kills').toLowerCase()} ${r(p.kills)}` : label);
+    if (this.castOn !== null && this.targeting) {
+      const t = this.targeting;
+      const me = v.heroes[v.you];
+      const art = t === 'innate' || t === 'ult' ? (me.path ? icon(`icon.${(t === 'innate' ? INNATE : ULTIMATE)[me.path].icon}`, '', 'ico') : '') : spIcon(t);
+      const name = t === 'innate' || t === 'ult' ? (me.path ? moveName(me.path, t === 'ult') : '') : spName(t);
+      out.push({ k: 'cast', icon: art, label: name, tip: name });
+    } else if (this.foeArmed !== null) {
+      const id = this.foeArmed;
+      const pv = v.pv ?? [];
+      if (v.shoot.includes(id)) {
+        const p = pv.find((x) => x.t === id && x.shot);
+        out.push({ k: 'shoot', icon: icon('icon.tattoo_cannon', '', 'ico'), label: L('pk.shoot'), sub: kills(p), tip: tip(L('pk.shoot'), p) });
+      }
+      if (v.melee.includes(id)) {
+        const p = pv.find((x) => x.t === id && !x.shot && x.from === this.armFrom);
+        out.push({ k: 'attack', icon: icon('icon.tattoo_sabres', '', 'ico'), label: L('pk.attack'), sub: kills(p), tip: tip(L('pk.attack'), p) });
+      }
+    } else if (this.preview !== null) {
+      out.push({ k: 'move', icon: icon('icon.item_seaboots', '', 'ico'), label: L('pk.move') });
+    } else if (this.selfPick && act) {
+      out.push({ k: 'defend', icon: btIcon('bt_defend', 'icon.mod_hull_plating', 'ico'), label: L('defend') });
+      out.push({ k: 'wait', icon: btIcon('bt_wait', 'icon.bt_hold', 'ico'), label: L('wait'), off: !!act.waited });
+      if (act.officer?.ready) out.push({ k: 'order', icon: btIcon('bt_order', 'icon.bt_officers', 'ico'), label: L('pk.order'), tip: L('order') });
+    }
+    return out;
+  }
+
+  /** The choice's order given (or the choice let go). */
+  private pickAct(k: string): void {
+    const v = this.view;
+    if (!v) return;
+    const close = () => {
+      this.clearPick();
+      this.aimFoe = null;
+      this.pickKey = '';
+      this.key = '';
+      this.dom(v);
+    };
+    if (k === 'cancel' || !v.mine || v.over || this.busy()) return close();
+    const opt = this.pickOptions(v).find((o) => o.k === k);
+    if (!opt || opt.off) return;
+    if (k === 'move' && this.preview !== null) this.order({ a: 'move', to: this.preview });
+    else if (k === 'shoot' && this.foeArmed !== null) this.order({ a: 'shoot', target: this.foeArmed });
+    else if (k === 'attack' && this.foeArmed !== null) this.order(this.armFrom !== undefined ? { a: 'attack', target: this.foeArmed, from: this.armFrom } : { a: 'attack', target: this.foeArmed });
+    else if (k === 'defend' || k === 'wait' || k === 'order') this.order({ a: k });
+    else if (k === 'cast' && this.castOn !== null && this.targeting) {
+      const t = this.targeting;
+      this.order(t === 'innate' || t === 'ult' ? { a: t, target: this.castOn } : { a: 'spell', id: t, target: this.castOn });
+      this.targeting = null;
+    }
+    close();
+  }
+
+  /** The hex the choice is open beside. */
+  private pickHex(v: TacView): number | null {
+    if (this.preview !== null) return this.preview;
+    const id = this.foeArmed ?? this.castOn ?? (this.selfPick ? v.active : null);
+    return id !== null ? v.stacks.find((s) => s.id === id)?.hex ?? null : null;
+  }
+
+  /** The choice beside what was tapped (owner, 2026-10-15): a row of small buttons — finger-sized, the word on each and
+   *  what it would do — over the stack (under its hex when there is no room above), never on it, kept on the stage
+   *  clear of the corners' round buttons; and a cross to let it go. */
+  private pickDom(v: TacView): void {
+    const el = this.el?.querySelector<HTMLElement>('.tb-pick');
+    if (!el) return;
+    const at = v.mine && !v.over && !this.busy() && !this.bookOpen && this.info === null && this.pickOn() ? this.pickHex(v) : null;
+    const opts = at !== null ? this.pickOptions(v) : [];
+    if (at === null || !opts.length) {
+      if (!el.classList.contains('hidden')) el.classList.add('hidden');
+      this.pickKey = '';
+      return;
+    }
+    const key = JSON.stringify([opts, lang(), this.phone, at]);
+    if (key !== this.pickKey) {
+      this.pickKey = key;
+      const btn = (o: PickOpt) =>
+        `<button class="tb-pk ${o.k}" data-pk="${o.k}" role="menuitem" title="${esc(o.tip ?? o.label)}" aria-label="${esc(o.sub ? `${o.label}: ${o.sub}` : o.label)}"${o.off ? ' disabled' : ''}><span class="tb-pk-i">${o.icon}</span><span class="tb-pk-t"><b>${esc(o.label)}</b>${o.sub ? `<em>${esc(o.sub)}</em>` : ''}</span></button>`;
+      el.innerHTML = `${opts.map(btn).join('')}<button class="tb-pk cancel" data-pk="cancel" role="menuitem" title="${esc(L('pk.cancel'))}" aria-label="${esc(L('pk.cancel'))}"><i class="tb-pk-x" aria-hidden="true"></i></button>`;
+      el.setAttribute('aria-label', L('pk.label'));
+      el.classList.remove('hidden');
+    }
+    const { w, cw, ch } = this.size;
+    const c = this.center(at);
+    const bw = el.offsetWidth, bh = el.offsetHeight;
+    // The figure stands up to ~1.45 hexes over its hex's middle (its plate below it): the menu goes over that, or under
+    // the hex — on the side away from the hex the blow comes from, when both have room.
+    const above = c.y - w * 1.5 - bh, below = c.y + w * 0.62;
+    const from = this.foeArmed !== null && this.armFrom !== undefined ? this.center(this.armFrom) : null;
+    const top = 4 + (this.phone ? this.band.t : 0), bottom = ch - 4 - (this.phone ? this.band.b : 0);
+    const fitsUp = above >= top, fitsDown = below + bh <= bottom;
+    let y = fitsUp && (!fitsDown || !from || from.y >= c.y - 1) ? above : fitsDown ? below : above;
+    // Clear of the corners' round buttons on a phone (they stand in the bands at the stage's sides).
+    const l = 4 + (this.phone ? this.band.l : 0), r = cw - 4 - (this.phone ? this.band.r : 0);
+    let x = c.x - bw / 2;
+    x = r - l >= bw ? Math.max(l, Math.min(r - bw, x)) : Math.max(4, Math.min(cw - bw - 4, x));
+    y = Math.max(4, Math.min(ch - bh - 4, y));
+    const tr = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+    if (el.style.transform !== tr) el.style.transform = tr;
+  }
+
   private refresh(): void {
     if (this.view) this.hint(this.view);
   }
@@ -2628,7 +2826,7 @@ export class TacticalPanel {
 
   /** The preview of the foe aimed at now (under the mouse, under the finger, or tapped once to be sure). */
   private pvOf(v: TacView): TacPreview | null {
-    const a = this.aimFoe;
+    const a = this.aimNow();
     if (!a || !v.pv) return null;
     return v.pv.find((p) => p.t === a.t && (p.shot || p.from === a.from)) ?? null;
   }
@@ -2658,6 +2856,14 @@ export class TacticalPanel {
     const act = v.stacks.find((s) => s.id === v.active);
     const steps = (h: number) => (act ? hexDist(act.hex, h) : 0);
     return [...opts].sort((a, b) => b.fl - a.fl || steps(a.from!) - steps(b.from!) || b.dmg[1] - a.dmg[1])[0].from;
+  }
+
+  /** The foe aimed at now: under a finger sliding round it, else the foe picked (struck from the side chosen), else the
+   *  one under the mouse. */
+  private aimNow(): { t: number; from?: number } | null {
+    if (this.press?.foe && this.aimFoe) return this.aimFoe;
+    if (this.foeArmed !== null) return { t: this.foeArmed, from: this.view?.shoot.includes(this.foeArmed) ? undefined : this.armFrom };
+    return this.aimFoe;
   }
 
   /** Aim at the stack under the pointer (stage px), if it is a foe she may strike or shoot now; else let go. */
@@ -2694,7 +2900,8 @@ export class TacticalPanel {
   private tipDom(v: TacView): void {
     const el = this.el?.querySelector<HTMLElement>('.tb-pv');
     if (!el) return;
-    const p = v.mine && !v.over && !this.busy() && !this.targeting && !this.bookOpen && this.info === null ? this.pvOf(v) : null;
+    // On a phone the foe picked wears its choice over it (the fallen on its buttons, owner 2026-10-15): no preview on it too.
+    const p = v.mine && !v.over && !this.busy() && !this.targeting && !this.bookOpen && this.info === null && !(this.phone && this.foeArmed !== null && !this.press?.foe) ? this.pvOf(v) : null;
     const t = p ? v.stacks.find((s) => s.id === p.t) : undefined;
     if (!p || !t) {
       if (!el.classList.contains('hidden')) el.classList.add('hidden');
@@ -2861,8 +3068,9 @@ export class TacticalPanel {
     if (!v.mine || v.over || this.targeting || this.busy()) return null;
     // A foe aimed at from a hex she must walk to: the walk to it (owner, 2026-10-08: where she would stand to strike).
     const act = v.stacks.find((s) => s.id === v.active);
-    if (this.aimFoe?.from !== undefined && act && this.aimFoe.from !== act.hex) return this.aimFoe.from;
-    if (this.aimFoe) return null;
+    const a = this.aimNow();
+    if (a?.from !== undefined && act && a.from !== act.hex) return a.from;
+    if (a) return null;
     if (this.preview !== null && v.reach.includes(this.preview)) return this.preview;
     return this.hover !== null && v.reach.includes(this.hover) && !this.stackAt(this.hover) ? this.hover : null;
   }
@@ -4152,19 +4360,27 @@ export class TacticalPanel {
     const v = this.view;
     const el = this.el;
     if (!v || !el) return;
-    // Her clock starts once what came before her turn is played (the server's `ends` counts it in): it shows 30 s till then.
-    const whole = v.turn ?? TAC_TURN;
-    const left = Math.min(whole, Math.max(0, v.ends - this.now()));
+    // Her clock starts once what came before her turn is played (the server's `ends` counts it in): it shows the whole
+    // turn till then. Owner, 2026-10-15: TAC_TURN (20 s) real seconds to choose, the other captain's turn counted down on
+    // her screen too (PvP), the last TAC_WARN seconds in red.
+    const { clocked, left, whole } = this.turnClock(v);
+    const low = clocked && left <= TAC_WARN;
     const bar = el.querySelector<HTMLElement>('.tb-timer > i');
     if (bar) bar.style.width = `${v.over ? 0 : Math.min(1, left / whole) * 100}%`;
+    el.querySelector('.tb-timer')?.classList.toggle('low', low);
     this.clocksTick(v);
     const secs = el.querySelector<HTMLElement>('.tb-secs');
-    if (secs) secs.textContent = v.mine && !v.over ? L('secs', { n: Math.ceil(left) }) : '';
-    // A phone's clock: the ring round the turn's face, running down (no number on it).
+    if (secs) {
+      const txt = clocked ? L('secs', { n: Math.ceil(left) }) : '';
+      if (secs.textContent !== txt) secs.textContent = txt;
+      secs.classList.toggle('low', low);
+    }
+    // A phone's clock: the ring round the turn's face, running down (no number on it); red in its last seconds.
     const face = el.querySelector<HTMLElement>('.tb-chip.turn');
     if (face) {
       const k = (v.over ? 0 : Math.min(1, left / whole)).toFixed(3);
       if (face.style.getPropertyValue('--tl') !== k) face.style.setProperty('--tl', k);
+      face.classList.toggle('low', low);
     }
     this.feedDom(v);
     if ((this.strikeArmed && this.strikeArmed < performance.now()) || (this.ransomArmed && this.ransomArmed < performance.now())) {
@@ -4301,6 +4517,33 @@ export class TacticalPanel {
       this.hexPath(g, p.x, p.y, r - 1);
       g.fillStyle = `rgba(224,184,98,${0.18 + 0.12 * pulse})`;
       g.fill();
+      // Her own stack tapped (owner, 2026-10-15): its choice is open — a bright rim.
+      if (this.selfPick && live) {
+        g.strokeStyle = `rgba(255,236,190,${0.75 + 0.25 * pulse})`;
+        g.lineWidth = big ? 4 : 3;
+        g.stroke();
+      }
+      // The turn's clock round the stack whose turn it is (owner, 2026-10-15: «Выбор на действие 20 секунд»): a ring
+      // running down with the turn — hers, an ally's or the other captain's (not the sea's mind, not an auto-battle) —
+      // red and beating in its last TAC_WARN seconds.
+      const tc = this.turnClock(v);
+      if (tc.clocked) {
+        const k = Math.max(0, Math.min(1, tc.left / tc.whole));
+        const low = tc.left <= TAC_WARN;
+        const rr = r * 0.96;
+        g.save();
+        g.lineCap = 'round';
+        g.lineWidth = Math.max(2.5, w * (big ? 0.085 : 0.065));
+        g.strokeStyle = 'rgba(8,6,4,0.5)';
+        g.beginPath();
+        g.arc(p.x, p.y, rr, 0, Math.PI * 2);
+        g.stroke();
+        g.strokeStyle = low ? `rgba(236,78,58,${0.7 + 0.3 * pulse})` : active.side === v.you ? 'rgba(240,206,120,0.95)' : 'rgba(222,96,74,0.9)';
+        g.beginPath();
+        g.arc(p.x, p.y, rr, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2);
+        g.stroke();
+        g.restore();
+      }
     }
     // Whom the active stack may strike or fire on: the hex washed red and ringed, the crosshair for a shot; a foe
     // that will strike back (it has its answer left this round) wears an orange curl at its corner; the foe tapped once
@@ -4317,7 +4560,7 @@ export class TacticalPanel {
           g.fillStyle = `rgba(215,60,40,${0.14 + 0.12 * pulse})`;
           g.fill();
         }
-        const armed = this.foeArmed === s.id;
+        const armed = this.foeArmed === s.id || this.castOn === s.id;
         g.strokeStyle = armed ? `rgba(255,236,190,${0.75 + 0.25 * pulse})` : this.targeting ? `rgba(240,160,60,${0.6 + 0.4 * pulse})` : `rgba(235,75,55,${0.65 + 0.35 * pulse})`;
         g.lineWidth = armed ? 4 : big ? 3.5 : 2.5;
         g.stroke();
@@ -4564,8 +4807,9 @@ export class TacticalPanel {
     }
     // The knocks done let go.
     this.shake.prune(now);
-    // The preview beside the foe aimed at (owner, 2026-10-08).
+    // The preview beside the foe aimed at (owner, 2026-10-08), and the choice beside what was tapped (2026-10-15).
     this.tipDom(v);
+    this.pickDom(v);
   }
 
   /** A path's move drawn over the field (docs/18 items 1 and 5), procedurally: its colour washing over the decks, and

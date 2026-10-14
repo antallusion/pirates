@@ -157,7 +157,6 @@ export const EN = {
   'opt.autoWeak': "Auto-battle against the weak: a mark two levels below settles itself",
   'opt.expertGuns': "Expert gunnery: held broadsides and the chasers by hand",
   'opt.expertHud': "Detailed interface: the bar of shots and abilities, the gauges, the round buttons, the compass",
-  'opt.tacConfirm': "Hex battle: a step or a blow asks a second tap to be sure",
   'opt.readAloud': "Read the open screen aloud: {key}",
   'opt.colorblind': "Colour-blind palette",
   'opt.cb.off': "Off",

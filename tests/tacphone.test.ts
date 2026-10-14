@@ -1,7 +1,7 @@
 // The hex battle on a phone (docs/23 phase 5): the sea's turn waits a short breath once what came before it has been
 // played (owner, 2026-10-08: the pace slowed to be read), and «Ускорить ×2» halves both for both sides' auto-played
 // turns; the order is the captain's own, it touches no die; the view carries it back to her screen; and her battle
-// settings keep one tap as the default.
+// settings keep ×2 off till asked.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -49,8 +49,8 @@ test('«Ускорить ×2» plays the same battle faster: the sea\'s turns co
   assert.ok(quick.t < slow.t * 0.6, `${quick.t.toFixed(1)} s against ${slow.t.toFixed(1)} s`);
 });
 
-test('the battle\'s settings: one tap is the order by default, ×2 off until asked', () => {
+test('the battle\'s settings: ×2 off until asked; the old «second tap» option is gone (a tap always opens the choice, owner 2026-10-15)', () => {
   const d = defaults();
-  assert.equal(d.tacConfirm, false);
+  assert.ok(!('tacConfirm' in d));
   assert.equal(d.tacFast, false);
 });
