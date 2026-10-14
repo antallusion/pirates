@@ -1,7 +1,9 @@
 /* GRAVETIDE · the island screen (client/src/ui/islescene.ts; owner, 2026-10-15: the island as a game of its own). A
    scene over the whole screen: the painted island moved by one transform, the bars over it in the safe areas — the
    yard's goods and «В море» at the top, the island's places down the left, the build queue at the bottom, a building's
-   card on the right. The sea's canvas and HUD are hidden (and not drawn: main.ts) while it is up. Loaded before fit.css. */
+   card on the right. The sea's canvas and HUD are hidden (and not drawn: main.ts) while it is up. The island fills the
+   whole screen, under Telegram's fullscreen header too; the bars keep to --sa-* (src/tg.ts puts Telegram's insets in
+   them). Loaded before fit.css. */
 
 /* the server's word stands under the island's top bar (the top band, never the middle) */
 /* (doubled classes: over the sea HUD's own placing, body.simple.touch and Telegram's html.tg-app) */
@@ -22,7 +24,6 @@ body.isle-on :is(#world, #hud, #hud-chat, #encounter, #surrender, #lairchest, #a
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; font-size: var(--is-fs);
 }
 #isle.hidden { display: none; }
-html.tg-app #isle { top: var(--tg-top, 0px); bottom: var(--tg-bottom, 0px); left: var(--tg-left, 0px); right: var(--tg-right, 0px); --is-top: calc(4px + 38px); }
 #isle .is-view { position: absolute; inset: 0; touch-action: none; cursor: grab; overflow: hidden; }
 #isle .is-view:active { cursor: grabbing; }
 #isle .is-world { position: absolute; left: 0; top: 0; width: 1536px; height: 1024px; transform-origin: 0 0; }
@@ -64,7 +65,6 @@ html.tg-app #isle { top: var(--tg-top, 0px); bottom: var(--tg-bottom, 0px); left
   display: flex; align-items: center; gap: 6px; pointer-events: none;
   background: linear-gradient(rgba(4, 6, 8, 0.9), rgba(4, 6, 8, 0.62) 72%, rgba(4, 6, 8, 0));
 }
-html.tg-app #isle .is-top { padding-top: 4px; }
 #isle .is-top > * { pointer-events: auto; }
 #isle .is-name { display: flex; flex-direction: column; min-width: 0; max-width: 20vw; flex: 0 1 auto; line-height: 1.15; }
 #isle .is-name b { font-family: var(--serif, Georgia, serif); font-size: 13px; color: var(--brass, #c9a46a); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -133,7 +133,6 @@ html.tg-app #isle .is-top { padding-top: 4px; }
 /* ---------------------------------------------------------------- phones */
 @media (max-height: 520px) {
   #isle { --is-fs: var(--f-fs, 10px); --is-fs-s: var(--f-fs-xs, 8px); --is-side: calc(42px + 4 * var(--u, 1px)); --is-top: calc(max(var(--sa-t, 0px), 3px) + 30px + 4 * var(--u, 1px)); }
-  html.tg-app #isle { --is-top: calc(3px + 30px + 4 * var(--u, 1px)); }
   #isle .is-top { padding-top: max(var(--sa-t, 0px), 3px); padding-bottom: 3px; gap: 4px; }
   #isle .is-name b { font-size: var(--f-fs-m, 11px); }
   #isle .is-res { height: calc(20px + 2 * var(--u, 1px)); padding: 0 4px 0 2px; }
