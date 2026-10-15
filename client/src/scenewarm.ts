@@ -9,6 +9,17 @@ import { deckArt } from '../../shared/src/data/fleet.ts';
 import { SF } from '../../shared/src/protocol.ts';
 import { assetIds, loadManifest, prefetchAssets, warmAll, assetUrl } from './assets.ts';
 import type { ClientState } from './state.ts';
+import { filmDue } from './ui/cutscene.ts';
+
+const filmsWarmed = new Set<string>();
+/** A film due at the next moment, fetched into the cache (it starts at once instead of buffering on a slow line). */
+function warmFilm(id: string): void {
+  if (filmsWarmed.has(id) || !filmDue(id)) return;
+  const c = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+  if (c?.saveData || /2g/.test(c?.effectiveType ?? '')) return;
+  filmsWarmed.add(id);
+  fetch(`/assets/video/${id}.mp4`, { priority: 'low' } as RequestInit).then((r) => r.arrayBuffer()).catch(() => undefined);
+}
 
 /** The service worker: on a secure page only (the browsers' rule; localhost counts). */
 export function artStore(): void {
@@ -69,6 +80,9 @@ export function sceneWarm(state: ClientState, t: number): void {
       prefetchAssets(ids);
     }
   }
+  // the films of the next moments: putting to sea from a harbour, the first harbour from the sea
+  if (self.dockedAt) warmFilm('cut_launch');
+  else if (state.ownDisplay && state.ports.some((p) => Math.hypot(p.x - state.ownDisplay!.x, p.y - state.ownDisplay!.y) < 2500)) warmFilm('cut_port');
   // a hostile sail near: the boarding's pictures
   const own = state.ownDisplay;
   if (!own || self.dockedAt || state.boardTac) return;

@@ -27,6 +27,8 @@ interface ManifestEntry {
   rev?: number;
   /** The file's version from the server (its size and time): the address changes with the file. */
   v?: string;
+  /** Its phone's half-size copy's version, when there is one. */
+  m?: string;
   /** A port painting's slips between its piers: [middle x, width, top y, depth] as shares of the painting. */
   slips?: [number, number, number, number][];
   /** The island screen's pictures (tools/art/isle_iso.py): the plot diamond's bottom vertex in the file, and its plot. */
@@ -128,8 +130,12 @@ const failed = new Set<string>();
 let epoch = 0;
 const stats = { loaded: 0, warmed: 0, failed: 0, warmBytes: 0 };
 
-/** A file's address with its version. */
+/** A phone (a touch screen whose canvas is capped small, renderer.ts): the sea's tiles come at half size. */
+const PHONE = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches && Math.max(screen.width, screen.height) * Math.min(1.5, devicePixelRatio || 1) <= 1800;
+
+/** A file's address with its version (a phone's half-size copy when there is one: tools/art/small_tex.py). */
 export function fileUrl(e: ManifestEntry): string {
+  if (e.m && PHONE) return '/assets/' + e.local.replace(/\.webp$/, '.m.webp') + `?v=${e.m}`;
   const v = e.v ?? (e.rev ? String(e.rev) : '');
   return '/assets/' + e.local + (v ? `?v=${v}` : '');
 }
@@ -150,9 +156,12 @@ function loadImage(src: string, high: boolean): Promise<HTMLImageElement> {
 }
 
 function pump(): void {
-  while (live < MAX_LIVE) {
+  // a loading screen's pictures may go past the line's usual share (the browser takes them first: fetchPriority high);
+  // the drawn-and-missing ones keep to it
+  while (live < MAX_LIVE + 4) {
     let job: Job | undefined;
     for (let p = 0; p < 2 && !job; p++) {
+      if (p === 1 && live >= MAX_LIVE) break;
       const q = queues[p];
       while (q.length && !job) {
         const j = q.shift()!;
@@ -163,6 +172,10 @@ function pump(): void {
     run(job);
   }
   // the background: only while no screen waits
+  if (performance.now() < hushUntil) {
+    if (warmQ.length && !hushTimer) hushTimer = setTimeout(() => ((hushTimer = 0), pump()), hushUntil - performance.now() + 20) as unknown as number;
+    return;
+  }
   while (!live && warming.size < MAX_WARM && warmQ.length) {
     const id = warmQ.shift()!;
     if (images.has(id) || jobs.has(id) || warming.has(id) || warmed.has(id)) continue;
@@ -170,9 +183,31 @@ function pump(): void {
   }
 }
 
+let hushUntil = 0;
+let hushTimer = 0;
+/** No background fetching for a while (a loading screen is up: its pictures take the whole line); those in flight are
+ *  called off and asked again later. */
+export function hushWarming(ms: number, after = false): void {
+  // (`after`: a loading screen is done — the quiet ends this long from now, whatever it was asked for)
+  hushUntil = after ? performance.now() + ms : Math.max(hushUntil, performance.now() + ms);
+  if (!after) stopWarming('');
+}
+
+/** The background's fetches in flight can be called off: a screen's own pictures take the whole line. */
+const warmCtl = new Map<string, AbortController>();
+function stopWarming(keep: string): void {
+  for (const [id, c] of warmCtl) {
+    if (id === keep) continue;
+    c.abort();
+    warmQ.unshift(id);
+  }
+}
+
 function warm(id: string): void {
   const e = manifest!.assets[id];
-  const p = fetch(fileUrl(e), { priority: 'low' } as RequestInit).then(async (r) => {
+  const ctl = new AbortController();
+  warmCtl.set(id, ctl);
+  const p = fetch(fileUrl(e), { priority: 'low', signal: ctl.signal } as RequestInit).then(async (r) => {
     if (!r.ok) return;
     const b = await r.arrayBuffer();
     stats.warmed++;
@@ -180,6 +215,7 @@ function warm(id: string): void {
     warmed.add(id);
   }).catch(() => undefined).finally(() => {
     warming.delete(id);
+    warmCtl.delete(id);
     // the next one when the line is quiet
     if (warmQ.length) idle(pump);
   });
@@ -222,6 +258,7 @@ function want(id: string, prio: Prio): Promise<boolean> {
   if (images.has(id)) return Promise.resolve(true);
   if (!manifest?.assets[id] || failed.has(id)) return Promise.resolve(false);
   let j = jobs.get(id);
+  if (prio === 0 && warmCtl.size) stopWarming(id);
   if (!j) {
     let settle!: (ok: boolean) => void;
     const done = new Promise<boolean>((r) => (settle = r));
@@ -342,6 +379,16 @@ export function warmAll(): void {
   const ids = Object.keys(manifest.assets).filter((id) => !id.startsWith('art.reference') && !id.startsWith('isle.'));
   ids.sort((a, b) => rank(a) - rank(b));
   prefetchAssets(ids, false);
+}
+
+/** QA: the pictures loaded, by their kind (`unit`, `icon`, …), and those still asked for. */
+export function assetKinds(): { loaded: Record<string, number>; asked: string[] } {
+  const loaded: Record<string, number> = {};
+  for (const id of images.keys()) {
+    const k = id.split('.')[0];
+    loaded[k] = (loaded[k] ?? 0) + 1;
+  }
+  return { loaded, asked: [...jobs.keys()] };
 }
 
 /** QA: what the loader has done. */

@@ -9,7 +9,7 @@
 //   h.settle();             // and the pictures the renderers asked for while it was up (what is on screen)
 //   await h.done();         // then the scene shows; h.close() drops it unfinished (the scene left)
 
-import { assetUrl, assetsBusy, ensureAssets } from '../assets.ts';
+import { assetStats, assetUrl, assetsBusy, ensureAssets, hushWarming } from '../assets.ts';
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/loader.ts';
 import { settings } from '../settings.ts';
@@ -62,6 +62,8 @@ export interface Handle {
 /** A scene's loading begins: the screen comes up after LOADER_DELAY if it is not all in by then. */
 export function beginLoad(kind: LoadKind, timeout = 10000): Handle {
   const t0 = performance.now();
+  // the background's fetching stands aside while the scene loads
+  hushWarming(timeout);
   const parts: Promise<unknown>[] = [];
   let total = 0, got = 0;
   let shown = false, closed = false, finished = false, timedOut = false, settleOn = false;
@@ -135,9 +137,12 @@ export function beginLoad(kind: LoadKind, timeout = 10000): Handle {
           if (settleOn) {
             // until nothing the screens drew is in flight (two frames running, so a frame's new asks count)
             let quiet = 0;
+            const base = got, l0 = assetStats().loaded;
             while (quiet < 2 && !closed) {
               const busy = assetsBusy();
               if (busy) {
+                // the bar: what came since the settling began, of that and what is still asked for
+                got = base + (assetStats().loaded - l0);
                 total = Math.max(total, got + busy);
                 prog();
                 quiet = 0;
@@ -149,6 +154,7 @@ export function beginLoad(kind: LoadKind, timeout = 10000): Handle {
         })();
         await Promise.race([all, new Promise<void>((r) => setTimeout(() => ((timedOut = true), r()), Math.max(0, timeout - (performance.now() - t0))))]);
         finished = true;
+        if (owner === h || !owner) hushWarming(1500, true);
         got = total;
         prog();
         loadLog.push({ kind, ms: Math.round(performance.now() - t0), shown, timedOut, total });

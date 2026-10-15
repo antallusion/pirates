@@ -100,6 +100,12 @@ export function createStaticHandler(root: string) {
           try {
             const s = await stat(join(assetsDir, e.local));
             rest.v = `${e.rev ? `${e.rev}.` : ''}${s.size.toString(36)}${Math.floor(s.mtimeMs / 1000).toString(36)}`;
+            // a phone's half-size copy beside it (tools/art/small_tex.py): its own version
+            const half = e.local.replace(/\.webp$/, '.m.webp');
+            if (half !== e.local) {
+              const h = await stat(join(assetsDir, half)).catch(() => null);
+              if (h) rest.m = `${h.size.toString(36)}${Math.floor(h.mtimeMs / 1000).toString(36)}`;
+            }
           } catch {
             /* a file not there: its plain address */
           }

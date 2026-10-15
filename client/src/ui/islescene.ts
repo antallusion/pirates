@@ -250,7 +250,9 @@ export class IsleScene {
     this.fed = true;
     const h = this.load;
     if (!h || !this.root) return;
-    h.imgs(this.root).done().then(() => {
+    const ids = [`isle.map.${this.map}`];
+    for (const s of this.spots) if (s.pic && 'id' in s.pic) ids.push(s.pic.id);
+    h.need(ids).imgs(this.root).done().then(() => {
       if (h !== this.load || !this.isOpen) return;
       this.reveal();
     });

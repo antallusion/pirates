@@ -163,9 +163,11 @@ function rubble(g: G, p: P, w: number, seed: number): void {
 
 /** The stone's fill: the painted rock, darkened to dressed stone. */
 function stoneFill(g: G, tone: number): string | CanvasPattern {
-  sprite('tex.rock');
+  const s = sprite('tex.rock');
   const pt = pattern(g, 'tex.rock');
-  if (!pt) return tone > 0.5 ? '#8a8476' : '#6a655b';
+  if (!pt || !s) return tone > 0.5 ? '#8a8476' : '#6a655b';
+  // the stone at the full picture's grain whichever copy came (a phone's is half size: assets.ts)
+  pt.setTransform(new DOMMatrix().scale(1024 / s.img.naturalWidth));
   return pt;
 }
 
