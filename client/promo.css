@@ -12,7 +12,7 @@
 .po-open .sh-ico { width: 24px; height: 24px; }
 .po-open .sh-face { width: 34px; height: 34px; }
 .po-t { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.po-n { font: 600 11px/1.15 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.po-n { font: 600 11px/1.12 var(--sans); overflow-wrap: anywhere; }
 .po-n small { color: var(--fog); font-weight: 500; }
 .po-l { display: flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 11px; }
 .po-was { color: var(--steel-text); font-size: 10px; }

@@ -50,6 +50,8 @@ export class Promos {
   /** Closed here this session (also told to the server, which keeps them). */
   private closed = new Set<string>();
   private seen = new Set<string>();
+  /** A place closed by her: the cards it had then stay away from it (only a new offer shows there again). */
+  private quiet = new Map<PromoPlace, Set<string>>();
   /** The overlay: the entry carousel or one offer's card. */
   private over: HTMLElement | null = null;
   private list: PromoCard[] = [];
@@ -83,7 +85,8 @@ export class Promos {
   cardsFor(where: PromoPlace): PromoCard[] {
     const now = this.now();
     const ctx: Record<PromoPlace, string[]> = { entry: ['isle', 'sea', 'board', 'all'], isle: ['isle'], sea: ['sea', 'board'], port: ['sea', 'board', 'isle', 'all'], board: ['board'] };
-    return (this.view?.cards ?? []).filter((c) => (!c.until || c.until > now) && ctx[where].includes(c.ctx) && !c.closed.includes(where) && !this.closed.has(`${c.id}:${where}`) && !(c.ctx === 'isle' && c.why === 'island'));
+    const quiet = this.quiet.get(where);
+    return (this.view?.cards ?? []).filter((c) => (!c.until || c.until > now) && ctx[where].includes(c.ctx) && !c.closed.includes(where) && !this.closed.has(`${c.id}:${where}`) && !quiet?.has(c.id) && !(c.ctx === 'isle' && c.why === 'island'));
   }
 
   private tell(c: PromoCard, where: PromoPlace): void {
@@ -95,6 +98,8 @@ export class Promos {
 
   private close(c: PromoCard, where: PromoPlace): void {
     this.closed.add(`${c.id}:${where}`);
+    // (not the next card in its stead: the place keeps quiet until a new offer comes — owner: «не надоедать»)
+    if (where !== 'entry') this.quiet.set(where, new Set((this.view?.cards ?? []).map((x) => x.id)));
     this.d.send({ t: 'premium', action: 'promo_close', id: c.id, where });
     this.place();
   }
@@ -190,7 +195,22 @@ export class Promos {
     const hud = document.getElementById('hud');
     const isle = document.getElementById('isle');
     const on = !!this.view && !!hud && !hud.classList.contains('hidden') && !this.d.modal() && !this.d.busy() && !this.d.state.self?.dockedAt && !(isle && !isle.classList.contains('hidden')) && !this.d.state.onboarding?.stage && !this.over;
-    this.chip(el, on ? this.cardsFor('sea').find((c) => c.ctx === 'sea') ?? this.cardsFor('sea')[0] : undefined, 'sea', 'po-sea');
+    let card = on ? this.cardsFor('sea').find((c) => c.ctx === 'sea') ?? this.cardsFor('sea')[0] : undefined;
+    // its place: under the lowest of the HUD's things in the screen's top right (the dial, the round buttons, the chat),
+    // and only if it clears those of the bottom right
+    if (card) {
+      const W = innerWidth, Hh = innerHeight;
+      let top = 0, floor = Hh;
+      for (const o of document.querySelectorAll<HTMLElement>('#hud-map, #touch > *, #hud-chat > .chat-toggle, #hud-region')) {
+        const r = o.getBoundingClientRect();
+        if (!r.width || !r.height || r.right < W - 240 || getComputedStyle(o).visibility === 'hidden' || o.offsetParent === null) continue;
+        if (r.top < Hh * 0.45) top = Math.max(top, r.bottom);
+        else floor = Math.min(floor, r.top);
+      }
+      el.style.top = `${Math.round(top + 6)}px`;
+      if (top + 6 + (el.offsetHeight || 40) > floor - 4) card = undefined;
+    }
+    this.chip(el, card, 'sea', 'po-sea');
   }
 
   /** On the island: its offer in the scene's right column, while no building's card is open there. */
@@ -207,7 +227,10 @@ export class Promos {
   private port(): void {
     const slot = document.querySelector<HTMLElement>('#modal-panel[data-modal="port"] .promo-port-slot');
     if (!slot) return;
-    const c = this.cardsFor('port')[0];
+    // the sea's and the boarding's first, then the island's and the specials, each in turn every eight seconds
+    const rank = (x: PromoCard) => ({ sea: 0, board: 1, isle: 2, all: 3 })[x.ctx];
+    const list = [...this.cardsFor('port')].sort((a, b) => rank(a) - rank(b));
+    const c = list.length ? list[Math.floor(this.now() / 8000) % list.length] : undefined;
     const el = slot.querySelector<HTMLElement>('.po-chip') ?? slot.appendChild(document.createElement('div'));
     this.chip(el, c, 'port', 'po-port');
     slot.classList.toggle('hidden', !c);
@@ -228,7 +251,9 @@ export class Promos {
     const v = this.view;
     if (!v?.carousel || this.over) return;
     const hud = document.getElementById('hud');
-    if (!hud || hud.classList.contains('hidden') || this.d.state.onboarding?.stage || this.d.modal() || this.d.busy() || document.querySelector('.k-sheet-root:not(.hidden) .k-sheet')) return;
+    // (the harbour's window opens by itself on coming aboard in port: the carousel stands over it)
+    const m = this.d.modal();
+    if (!hud || hud.classList.contains('hidden') || this.d.state.onboarding?.stage || (m && m !== 'port') || this.d.busy() || document.querySelector('.k-sheet-root:not(.hidden) .k-sheet')) return;
     const cards = this.cardsFor('entry');
     // the specials first (the first top-up's double, a level's gift, the starter), then her offers; three at most
     const order = (c: PromoCard) => (c.special === 'first' ? 0 : c.special === 'level' ? 1 : c.special === 'starter' ? 2 : c.special ? 5 : 3);
