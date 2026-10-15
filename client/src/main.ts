@@ -587,7 +587,7 @@ function onRoute(m: Extract<ServerMsg, { t: 'route' }>): void {
   if (!m.view) return;
   if (!goalRun || goalRun.key !== m.key) goalRun = new RouteRun(m.key, performance.now(), PORT_DOCK_RADIUS);
   const fresh = goalTap.key === m.key && performance.now() - goalTap.at < 3000;
-  if (fresh && !goalQuiet) hud.toast(RT('set', { name: routeLabel(m.view), d: distWords(m.view.dist) }), m.view.risk === 2 ? 'bad' : 'info');
+  if (fresh && !goalQuiet && !state.self?.dockedAt) hud.toast(RT('set', { name: routeLabel(m.view), d: distWords(m.view.dist) }), m.view.risk === 2 ? 'bad' : 'info');
   if (fresh) goalTap = { key: m.key, at: -1e9 };
 }
 /** Each frame: what the place asks for on arrival — putting in, a landing, the trade's word — and the beacon on it. */

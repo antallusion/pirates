@@ -103,11 +103,19 @@ interface FieldCache {
   field: Float32Array;
 }
 const fields = new WeakMap<PlayerSession, FieldCache>();
+/** One pass of the whole sea per tick at most (the tick's budget, 3 ms at 40 captains): the rest wait on the field they
+ *  have, however old, and the run's looks again (not a tap) on one 5 km / 2 min old. */
+let passTick = -1;
 
-/** Her distances by the water from about where she is (kept 30 s and 1.2 km: a pass is a few tens of ms). */
-function fieldFor(game: Game, s: PlayerSession, x: number, y: number, limit: number): Float32Array {
+/** Her distances by the water from about where she is (kept 30 s and 1.2 km for a tap, 2 min and 5 km while a run
+ *  looks again: a pass is a few tens of ms). Null: none to be had this tick (straight lines then). */
+function fieldFor(game: Game, s: PlayerSession, x: number, y: number, limit: number, again: boolean): Float32Array | null {
   const c = fields.get(s);
-  if (c && game.now - c.at < 30 && Math.hypot(c.x - x, c.y - y) < 1200 && c.limit >= limit) return c.field;
+  const [age, off] = again ? [120, 5000] : [30, 1200];
+  if (c && game.now - c.at < age && Math.hypot(c.x - x, c.y - y) < off && c.limit >= limit) return c.field;
+  const tick = Math.round(game.now * 20);
+  if (again && passTick === tick) return c?.field ?? null;
+  passTick = tick;
   const field = seaField(game.world, x, y, limit);
   fields.set(s, { x, y, at: game.now, limit, field });
   return field;
@@ -136,7 +144,7 @@ export function riskAt(game: Game, s: PlayerSession, x: number, y: number): { le
 
 /** The nearest of the places by the water (a newcomer kept out of lawless water while there is another choice, a ship
  *  out of the reach of hers last). */
-export function pickNearest(game: Game, s: PlayerSession, cands: Cand[]): RouteView | null {
+export function pickNearest(game: Game, s: PlayerSession, cands: Cand[], again = false): RouteView | null {
   const here = hereOf(game, s);
   if (!here || !cands.length) return null;
   const scored = cands.map((c) => ({ c, d: Math.hypot(c.x - here.x, c.y - here.y), k: riskAt(game, s, c.x, c.y) }));
@@ -144,11 +152,11 @@ export function pickNearest(game: Game, s: PlayerSession, cands: Cand[]): RouteV
   scored.sort((a, b) => weigh(a, a.d) - weigh(b, b.d));
   const top = scored.slice(0, ROUTE_CANDS);
   const limit = Math.max(...top.map((o) => o.d)) * 2.5 + 8000;
-  const field = fieldFor(game, s, here.x, here.y, limit);
+  const field = fieldFor(game, s, here.x, here.y, limit, again);
   let best: (typeof top)[number] | null = null, bw = Infinity, bd = 0;
   for (const o of top) {
     // a place within a few hundred metres is there already, whatever the grid says
-    let d = o.d < 600 ? o.d : fieldDist(game.world, field, o.c.x, o.c.y);
+    let d = o.d < 600 || !field ? o.d : fieldDist(game.world, field, o.c.x, o.c.y);
     if (!Number.isFinite(d)) d = o.d * 3; // no way the grid knows (a cove, a lagoon): last, not never
     const w = weigh(o, d);
     if (w < bw) [best, bw, bd] = [o, w, d];
@@ -599,10 +607,10 @@ export function resolveGoal(game: Game, s: PlayerSession, key: string): Resolved
 }
 
 /** The nearest place of a goal now: the place, the goal met, or why none. */
-export function routeFor(game: Game, s: PlayerSession, key: string): RouteView | { done: true } | { none: string } {
+export function routeFor(game: Game, s: PlayerSession, key: string, again = false): RouteView | { done: true } | { none: string } {
   const r = resolveGoal(game, s, key);
   if (!('cands' in r)) return r;
-  return pickNearest(game, s, r.cands) ?? { none: ROUTE_WORDS.none };
+  return pickNearest(game, s, r.cands, again) ?? { none: ROUTE_WORDS.none };
 }
 
 // ------------------------------------------------------------------ the run
@@ -741,7 +749,7 @@ export function stepRoutes(game: Game): void {
     }
     if (game.now < f.checkAt) continue;
     f.checkAt = game.now + ROUTE_CHECK;
-    const r = routeFor(game, s, f.key);
+    const r = routeFor(game, s, f.key, true);
     if ('done' in r) {
       endRoute(game, s, 'done');
       continue;
