@@ -358,6 +358,21 @@ export class Hud {
       } else for (const k of ['--tq-top', '--tq-left', '--tq-w']) document.body.style.removeProperty(k);
     };
     new MutationObserver(() => this.placeStrip()).observe($('advcard'), { attributes: true, attributeFilter: ['class'] });
+    // (the simple HUD's top band follows the captain's plate, the chart and the card unfolded or folded; the toasts the
+    // round buttons under the chart as they come and go)
+    let bandAsked = false;
+    const band = () => {
+      if (bandAsked) return;
+      bandAsked = true;
+      requestAnimationFrame(() => {
+        bandAsked = false;
+        this.placeStrip();
+      });
+    };
+    const ro = new ResizeObserver(band);
+    for (const id of ['hud-captain', 'hud-map', 'advcard']) ro.observe($(id));
+    $('hud-map').addEventListener('transitionend', band); // (back down from behind its tab: its top line once it is there)
+    new MutationObserver((ms) => { if (ms.some((m) => m.target instanceof HTMLElement && /^(tc-news|tc-menu|tc-isle)$/.test(m.target.id))) band(); }).observe($('touch'), { attributes: true, attributeFilter: ['class'], subtree: true });
     // The chart and the menu stepping up or down (seahud.ts mm-peek): the top band takes or gives back their room.
     let peekWas = false;
     new MutationObserver(() => {
@@ -411,38 +426,73 @@ export class Hud {
   private placeTopStrip(z: number): void {
     const body = document.body;
     body.classList.remove('tq-side');
-    const W = innerWidth;
-    // The free row at the top between the captain and the menu with the chart: in the middle when there is room on
-    // both sides, else as wide as the room is (640×360: a column forced to the middle cut her mark's name to «R…»).
+    const W = innerWidth, gap = 10 * z;
+    // The top band (owner, 2026-10-15: «выровнял по высоте четко по верху»): from the chart's top line, between the
+    // captain's plate as it is seen (her portrait's ring, the bars, the coins) and the chart, one gap either side.
     let left = 8 * z, right = W - 8 * z;
+    let bandTop = Infinity, bandBottom = 0;
+    const frame = document.querySelector('#hud-captain .cs-frame');
+    const fr = frame?.getBoundingClientRect();
+    if (fr && fr.width) {
+      const k = fr.width * 0.32; // the ring outside the face (seahud.css .cs-frame::after)
+      left = Math.max(left, fr.right + k + gap);
+      bandTop = fr.top - k;
+      bandBottom = fr.bottom + k;
+    }
+    for (const el of document.querySelectorAll('#hud-captain :is(.cs-row, .cs-silver)')) {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      left = Math.max(left, r.right + gap);
+      bandTop = Math.min(bandTop, r.top);
+      bandBottom = Math.max(bandBottom, r.bottom);
+    }
     // (the chart and the menu stepped up behind their tab with a mark, owner 2026-10-09: the tab is the corner's edge —
     // her mark's name has the menu's room then: «Слабое утешение» was cut to 85 of 116 px at 640×360)
     const peek = body.classList.contains('mm-peek');
-    // (the chat's round button too: with the chart stepped up it stays in the corner column, and the autosail bar's
-    // «Стоп» lay two thirds under it at 844×390 — QA playthrough B, 15_sea_hud)
-    for (const el of document.querySelectorAll(peek ? '#hud-captain .cs, #mm-tab, #tc-news, #hud-chat > .chat-toggle' : '#hud-captain .cs, #hud-map, #tc-menu, #tc-news, #hud-chat > .chat-toggle')) {
-      const r = el.getBoundingClientRect();
-      if (!r.width || !r.height || r.top > 80 * z) continue;
-      if (r.right < W / 2) left = Math.max(left, r.right + 10 * z);
-      else right = Math.min(right, r.left - 10 * z);
+    const chart = document.getElementById(peek ? 'mm-tab' : 'hud-map')?.getBoundingClientRect();
+    if (chart && chart.width) {
+      right = Math.min(right, chart.left - gap);
+      if (!peek) bandTop = chart.top;
     }
-    const half = Math.min(W / 2 - left, right - W / 2, 230 * z);
-    // (in the middle when it is wide enough for a long name with her bars and chips — a phone's middle was 300 px and
-    // cut «Фонарная неве…»; else the whole free row)
-    const mid = half * 2 >= 380 * z || half * 2 >= right - left - 2 * z;
-    const sx = mid ? W / 2 - half : left, sw = Math.max(150 * z, mid ? half * 2 : right - left);
+    if (!Number.isFinite(bandTop)) bandTop = 8 * z;
+    bandBottom = Math.max(bandBottom, bandTop + 40 * z);
+    // the round buttons under the chart (the chat's with the chart stepped up stands under its tab): the band keeps
+    // clear of any that reach into it, the toasts of any beside them
+    const seen = (el: Element) => { const c = getComputedStyle(el); return c.visibility !== 'hidden' && Number(c.opacity) > 0.05; };
+    const corner = [...document.querySelectorAll('#tc-menu, #tc-news, #tc-isle, #hud-chat > .chat-toggle, #hud-chat > .chat-toast')].filter(seen)
+      .map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0 && r.left > W / 2);
+    // (the card unfolded reaches down beside them: clear of them all then)
+    const unfolded = !!document.querySelector('#advcard:not(.hidden) .ac-card.open');
+    for (const r of corner) if (r.top < bandBottom || unfolded) right = Math.min(right, r.left - gap);
+    // The column of the top band (her mark's line, a boss's line, the lesson, the sea's name) in the middle of the free
+    // row, as wide as a long name with her bars and chips wants at most, else the whole row (640×360: a column forced
+    // to the screen's middle cut her mark's name to «R…»).
+    const half = Math.max(0, Math.min((right - left) / 2, 230 * z));
+    const sw = Math.max(150 * z, half * 2), sx = Math.max(8 * z, (left + right) / 2 - sw / 2);
     const set = (k: string, v: number) => body.style.setProperty(k, `${Math.round(v / z)}px`);
     set('--sk-left', sx);
     set('--sk-w', sw);
-    // the toasts under what the column shows now (the lesson, a boss's line, her mark, the sea's name)
-    let top = 8 * z;
-    for (const el of document.querySelectorAll('#hud-stack > :not(.hidden)')) {
+    // the adventure card spans the whole free row, as tall as the plate (seahud.css; it stands outside the HUD's zoom)
+    const raw = (k: string, v: number) => body.style.setProperty(k, `${Math.round(v)}px`);
+    raw('--tb-top', bandTop);
+    raw('--tb-left', left);
+    raw('--tb-w', Math.max(150 * z, right - left));
+    raw('--tb-h', bandBottom - bandTop);
+    // the toasts under what the column shows now (the lesson, a boss's line, her mark, the sea's name, the card)
+    let top = bandTop;
+    for (const el of document.querySelectorAll('#hud-stack > :not(.hidden), #advcard:not(.hidden)')) {
       const r = el.getBoundingClientRect();
       if (r.width > 2 && r.height > 2 && r.top < innerHeight * 0.3) top = Math.max(top, r.bottom + 6 * z);
     }
+    // (clear of the round buttons under the chart, and of the fight's on the right when the card unfolded sends them low)
+    let tr = sx + sw;
+    const fight = [...document.querySelectorAll('#tc-special, #tc-ammo, #tc-lock, #tc-fire, #tc-actrow')].filter(seen)
+      .map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0 && r.left > W / 2 && r.top < top + 70 * z);
+    for (const r of [...corner, ...fight]) if (r.bottom > top && r.left < tr + gap) tr = Math.min(tr, r.left - gap);
+    const tl = Math.min(sx, Math.max(left, tr - sw));
     set('--st-top', top);
-    set('--st-left', sx);
-    set('--st-w', sw);
+    set('--st-left', tl);
+    set('--st-w', Math.max(120 * z, tr - tl));
   }
 
   /** A taller screen: the toasts' band stands over the bottom block, under 30% of the height — unless the block is too

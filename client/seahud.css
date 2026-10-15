@@ -70,6 +70,11 @@ body.simple:not(.touch) .kc.hidden { display: none; }
 
 /* ---------- top left: the captain — her face in the porthole ring, her level on its rim, the bars in brass sheaths */
 body.simple #hud-captain { top: calc(var(--sa-t) + 6px); left: calc(var(--sa-l) + 6px); width: auto; display: block; gap: 0; cursor: pointer; pointer-events: auto; }
+/* one top line (owner, 2026-10-15: «выровнял по высоте четко по верху»): the portrait's ring (0.05 of the face above
+   the plate: its margin 0.27, its ring 0.32) stands at the chart's top, the bars from the same line */
+body.simple #hud-captain { top: calc(var(--sa-t) + 8px + var(--cs-face) * 0.05); }
+body.simple #hud-captain .cs { align-items: flex-start; }
+body.simple #hud-captain .cs-body { padding-top: 0; padding-bottom: 0; }
 body.simple.touch #hud-captain { pointer-events: auto; cursor: pointer; -webkit-tap-highlight-color: transparent; } /* seaux: a tap opens the captain's menu */
 .cs { display: flex; align-items: center; gap: 8px; }
 .cs-frame { position: relative; flex: none; width: var(--cs-face); height: var(--cs-face); margin: calc(var(--cs-face) * 0.27); }
@@ -110,13 +115,33 @@ body.simple:not(.touch) #hud-captain:active .cs-frame { transform: scale(0.97); 
 @media (max-height: 420px) { body.simple .cs-row { height: 12px; } body.simple .cs-bar { height: 12px; } body.simple .cs-body { gap: 2px; } body.simple .cs-silver { line-height: 14px; } }
 @media (max-width: 680px) { body.simple { --cs-bar: 84px; } }
 
-/* ---------- top right: the minimap in its compass ring; the menu and the counter left of it */
+/* ---------- top right: the minimap in its compass ring; under it its round buttons in a small grid (owner,
+   2026-10-15, a Telegram screenshot: «рядом с картой слева иконки… друг на друга налезли, я бы их вниз карты
+   подспустил»): two columns right-aligned to the chart, equal sizes and gaps —
+     a phone or a tablet   the chat · the menu over «Остров» · the news (the news under the chat with no island)
+     a desk (the chat's button is by the helm)   the menu · «Остров» over the news (the news beside the menu with no island)
+   --tr-c is 1 where the chat's button is in the grid; each button's column (--tr-x, 0 the right) and row (--tr-y). */
+body.simple { --tr-b: 44px; --tr-g: 8px; --tr-c: 1; --tr-top: calc(var(--sa-t) + 8px + var(--mm) + 8px); }
+@media (max-height: 520px) { body.simple { --tr-b: calc(36px + 8 * var(--u, 1px)); --tr-g: calc(6px + 2 * var(--u, 1px)); } }
+@media (min-width: 1100px) and (min-height: 600px) { body.simple:not(.touch) { --tr-c: 0; } }
+/* (a desk's key chips hang under the buttons: the rows a chip apart) */
+body.simple:not(.touch) { --tr-gy: 18px; }
 body.simple #hud-map { top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + 8px); width: var(--mm); height: var(--mm); }
-body.simple #touch > #tc-menu { position: absolute; top: calc(var(--sa-t) + 12px); right: calc(var(--sa-r) + var(--mm) + 20px); left: auto; pointer-events: auto; }
-body.simple #touch > #tc-news { position: absolute; top: calc(var(--sa-t) + 12px); right: calc(var(--sa-r) + var(--mm) + 20px + 44px + 16px); left: auto; pointer-events: auto; }
-@media (hover: hover) and (pointer: fine) and (min-height: 521px) {
-  body.simple:not(.touch) #touch > #tc-news { right: calc(var(--sa-r) + var(--mm) + 20px + 44px + 16px); }
+body.simple #hud #touch > :is(#tc-menu, #tc-news, #tc-isle) { position: absolute; left: auto; bottom: auto; width: var(--tr-b); height: var(--tr-b); min-width: 0; min-height: 0; pointer-events: auto;
+  top: calc(var(--tr-top) + var(--tr-y, 0) * (var(--tr-b) + var(--tr-gy, var(--tr-g)))); right: calc(var(--sa-r) + 8px + var(--tr-x, 0) * (var(--tr-b) + var(--tr-g))); }
+body.simple #hud #touch > #tc-menu { --tr-x: var(--tr-c); --tr-y: 0; }
+body.simple #hud #touch > :is(#tc-isle, #tc-news) { --tr-x: calc(1 - var(--tr-c)); --tr-y: var(--tr-c); }
+body.simple:not(.sea-fight):not(.mm-peek):has(#touch > #tc-isle:not(.hidden)) #hud #touch > #tc-news { --tr-x: var(--tr-c); --tr-y: 1; }
+/* the chat's round button at the grid's top right (a desk keeps it by the helm: chat.css); with the chart stepped up
+   behind its tab, under the tab */
+@media (max-width: 1099px), (max-height: 599px) {
+  body.simple:not(.chat-open):not(.tac) #hud-chat > .chat-toggle { top: var(--tr-top); right: calc(var(--sa-r) + 8px); left: auto; bottom: auto; width: var(--tr-b); height: var(--tr-b); }
+  body.simple:not(.chat-open):not(.tac) #hud-chat > .chat-toast { top: var(--tr-top); right: calc(var(--sa-r) + 8px + 2 * (var(--tr-b) + var(--tr-g))); }
 }
+body.simple.touch:not(.chat-open):not(.tac) #hud-chat > .chat-toggle { top: var(--tr-top); right: calc(var(--sa-r) + 8px); left: auto; bottom: auto; width: var(--tr-b); height: var(--tr-b); }
+body.simple.touch:not(.chat-open):not(.tac) #hud-chat > .chat-toast { top: var(--tr-top); right: calc(var(--sa-r) + 8px + 2 * (var(--tr-b) + var(--tr-g))); }
+body.simple.touch.mm-peek:not(.chat-open):not(.tac) #hud-chat > :is(.chat-toggle, .chat-toast) { top: calc(var(--sa-t) + 52px); }
+body.simple.touch.mm-peek:not(.chat-open):not(.tac) #hud-chat > .chat-toast { right: calc(var(--sa-r) + 8px + var(--tr-b) + var(--tr-g)); }
 /* the chart's key on its rim, low on the left */
 #hud-map > .kc-map { left: 15%; bottom: 9%; }
 /* The First Watch's lesson is the news now: the counter waits (seven things to touch at most with its two skips). */
@@ -128,11 +153,13 @@ body.simple.touch.sea-fight #touch > #tc-news { display: none !important; }
    hang from the top edge; a tap on them brings both back down for this mark (seahud.ts minimapMode). One thing to
    touch for the two, so a fight keeps seven. «Мини-карта при цели: всегда показывать» keeps them where they are. */
 body.touch #hud-map, body.touch #touch > #tc-menu { transition: transform var(--k-dur-3, 320ms) var(--k-ease-out, ease-out), opacity var(--k-dur-3, 320ms) var(--k-ease-out, ease-out), visibility 0s; }
-body.touch.mm-peek #hud-map { transform: translateY(calc(-1 * (var(--mm) + var(--sa-t) + 8px) + 13px)); pointer-events: none; }
+/* (the ring's bottom and the tab hang from the safe area's edge: in Telegram's fullscreen under its own buttons) */
+body.touch.mm-peek #hud-map { transform: translateY(calc(-1 * (var(--mm) + 8px) + 13px)); pointer-events: none; }
+body.touch.mm-peek #hud-map { clip-path: inset(calc(var(--mm) - 13px) -20px -20px -20px); }
 body.touch.mm-peek #touch > #tc-menu { transform: translateY(calc(-100% - var(--sa-t) - 20px)); opacity: 0; visibility: hidden; pointer-events: none;
   transition: transform var(--k-dur-3, 320ms) var(--k-ease-out, ease-out), opacity var(--k-dur-2, 200ms) var(--k-ease-out, ease-out), visibility 0s var(--k-dur-3, 320ms); }
 #mm-tab { display: none; }
-body.touch.mm-peek #touch > #mm-tab { display: block; position: absolute; top: 0; right: calc(var(--sa-r) + 8px); width: var(--mm); height: calc(var(--sa-t) + 44px); margin: 0; padding: 0;
+body.touch.mm-peek #touch > #mm-tab { display: block; position: absolute; top: var(--sa-t); right: calc(var(--sa-r) + 8px); width: var(--mm); height: 44px; margin: 0; padding: 0;
   border: 0; background: none; pointer-events: auto; cursor: pointer; -webkit-tap-highlight-color: transparent; animation: mm-tab-in var(--k-dur-3, 320ms) var(--k-ease-out, ease-out); }
 #mm-tab .mm-tab-pill { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 2px;
   width: 54px; height: 27px; border-radius: 0 0 14px 14px;
@@ -205,6 +232,44 @@ body.simple #toasts, body.simple.tq-side #toasts, body.simple.touch #toasts {
   top: var(--st-top, calc(var(--sa-t) + 8px)) !important; bottom: auto !important; left: var(--st-left, 27vw) !important; right: auto !important; transform: none !important;
   width: var(--st-w, min(420px, 46vw)) !important; height: auto !important; max-height: 30vh; flex-flow: column nowrap !important; overflow: hidden; }
 body.simple #toasts > .toast:nth-child(n+3) { display: none; }
+/* ---------- the adventure card in the top band (owner, 2026-10-15, of a lair's card that hung lower than the rest:
+   «рядом с картой и аватаркой одну длину и выровнял по высоте четко по верху, чтобы не было оторвано»): from the
+   chart's top line, between the captain's plate and the chart with one gap either side, as tall as the plate
+   (hud.ts placeTopStrip: --tb-*), its words and its order in the middle of its height; a tap on its head unfolds it
+   downwards (the top line kept). It takes the top column's place while it is up, at every size. */
+body.simple #advcard { top: var(--tb-top, calc(var(--sa-t) + 8px)); left: var(--tb-left, 30vw); right: auto; width: var(--tb-w, 40vw); min-width: 0; max-width: none; transform: none;
+  min-height: var(--tb-h, 0px); box-sizing: border-box; gap: 4px; grid-template-columns: minmax(0, 1fr); overflow-x: hidden; }
+body.simple:has(#advcard:not(.hidden)) #hud-stack { visibility: hidden; }
+body.simple #advcard > .ac-card { box-sizing: border-box; min-width: 0; margin: 0; }
+body.simple #advcard .ac-head { cursor: pointer; }
+body.simple #advcard .ac-head .enc-h::after { content: ''; display: inline-block; width: 6px; height: 6px; margin: 0 0 3px 8px; border: solid var(--gold); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+body.simple #advcard .ac-card.open .ac-head .enc-h::after { transform: rotate(-135deg); margin-bottom: 0; }
+body.simple #advcard > .ac-card:not(.open) > :not(.ac-head):not(.ac-acts):not(.ac-guard), body.simple #advcard > .ac-card:not(.open) .ac-guard > :not(.ac-acts), body.simple #advcard > .ac-card:not(.open) .ac-sub { display: none; }
+/* unfolded and scrolling (a short screen in a fight): its order stays at the foot of what shows */
+body.simple #advcard .ac-card.open .ac-acts { position: sticky; bottom: 0; z-index: 1; padding: 3px 0 2px; background: rgba(10, 12, 16, 0.96); }
+/* folded: one row — its picture, its name, its order, the cross; a narrow band (a phone of 480 px) two — the picture
+   and the name over the order and the cross; the narrowest drops the picture so the name keeps one line */
+body.simple #advcard { container-type: inline-size; }
+body.simple #advcard > .ac-card:not(.open):not(.ac-dcard) { display: flex; flex-wrap: wrap; align-items: center; align-content: center; justify-content: flex-end; gap: 3px 8px; padding: 3px 8px; }
+body.simple #advcard > .ac-card:not(.open):not(.ac-dcard) > .ac-head { display: contents; }
+body.simple #advcard > .ac-card:not(.open):not(.ac-dcard) .ac-art { order: 0; flex: none; }
+body.simple #advcard > .ac-card:not(.open):not(.ac-dcard) .ac-id { order: 1; flex: 1 1 8em; min-width: 0; cursor: pointer; }
+body.simple #advcard > .ac-card:not(.open):not(.ac-dcard) > :is(.ac-guard, .ac-acts) { order: 2; }
+body.simple #advcard > .ac-card:not(.open):not(.ac-dcard) .ac-x { order: 3; flex: none; align-self: center; }
+body.simple #advcard > .ac-card:not(.open) .ac-guard { flex: 0 1 auto; min-width: 0; margin: 0; padding: 0; border: 0; }
+body.simple #advcard > .ac-card:not(.open) .ac-acts { flex: 0 1 auto; flex-wrap: nowrap; min-width: 0; margin: 0; }
+body.simple #advcard > .ac-card:not(.open) .ac-acts .btn { flex: 0 1 auto; min-width: 0; white-space: normal; line-height: 1.15; }
+@container (max-width: 360px) {
+  body.simple #advcard > .ac-card:not(.open):not(.ac-dcard) .ac-id { flex-basis: calc(100% - 48px); }
+  body.simple #advcard > .ac-card:not(.open):not(.ac-dcard) .ac-art { width: 20px; height: 20px; }
+  body.simple #advcard > .ac-card:not(.open):not(.ac-dcard) > :is(.ac-guard, .ac-acts) { flex: 1 1 60%; }
+  body.simple #advcard > .ac-card:not(.open) .ac-acts .btn { flex: 1 1 0; }
+}
+@container (max-width: 240px) {
+  body.simple #advcard > .ac-card:not(.open):not(.ac-dcard) .ac-art { display: none; }
+  body.simple #advcard > .ac-card:not(.open):not(.ac-dcard) .ac-id { flex-basis: 100%; }
+  body.simple #advcard > .ac-card:not(.open) .ac-acts .btn { padding: 2px 4px; font-size: max(10px, var(--f-fs-s, 10px)); }
+}
 @media (max-height: 420px) { body.simple #toasts > .toast:nth-child(n+2) { display: none; } }
 /* in the battle: the battle's own words in its top band, between the two captains (styles.css body.tac-ph) */
 body.simple.tac-ph #toasts { top: calc(var(--sa-t) + 8px) !important; left: 50% !important; transform: translateX(-50%) !important; width: min(56vw, 340px) !important; max-height: 44px; }
