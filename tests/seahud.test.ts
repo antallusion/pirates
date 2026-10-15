@@ -96,7 +96,9 @@ test('the chart with a mark on a touch screen (owner, 2026-10-09): stepped up be
   // No longer hidden outright with a mark or in a fight: it slides (a transform), its tab stays to tap.
   assert.ok(!/sea-(target|fight) #hud-map[^{]*\{ display: none/.test(css + styles), 'not display: none');
   assert.match(css, /body\.touch\.mm-peek #hud-map \{ transform: translateY\(/);
-  assert.match(css, /body\.touch\.mm-peek #touch > #mm-tab \{ display: block;[^}]*height: calc\(var\(--sa-t\) \+ 44px\)/);
+  // (the tab and the ring's sliver hang from the safe area's edge: in Telegram's fullscreen under its own buttons, 2026-10-15)
+  assert.match(css, /body\.touch\.mm-peek #touch > #mm-tab \{ display: block; position: absolute; top: var\(--sa-t\);[^}]*height: 44px/);
+  assert.match(css, /body\.touch\.mm-peek #hud-map \{ clip-path: inset\(calc\(var\(--mm\) - 13px\)/);
   assert.match(css, /transition: transform var\(--k-dur-3/);
   // The setting, its words in both tongues, and the tab's.
   assert.equal(defaults().mmTarget, 'hide');
@@ -179,4 +181,22 @@ test('the fire wheel of twelve at the screen corner is a grid over the finger: o
     for (let i = 0; i < g.items.length; i++) assert.equal(nearestChoice(g.items, g.items[i].x + 6, g.items[i].y - 5, 44 * 0.85), i);
     assert.equal(nearestChoice(g.items, x, y, 44 * 0.85), -1, 'still on the button: nothing taken');
   }
+});
+
+test("the top row (owner, 2026-10-15): the round buttons in a grid under the chart, the card from the chart's top line between the plate and the chart", () => {
+  const css = readFileSync(new URL('../client/seahud.css', import.meta.url), 'utf8');
+  // under the chart, right-aligned to it, two columns (the chat's at the top right on a phone; the menu beside it)
+  assert.ok(css.includes('--tr-top: calc(var(--sa-t) + 8px + var(--mm) + 8px);'));
+  assert.ok(css.includes('body.simple #hud #touch > :is(#tc-menu, #tc-news, #tc-isle) { position: absolute;'));
+  assert.ok(css.includes('body.simple #hud #touch > #tc-menu { --tr-x: var(--tr-c); --tr-y: 0; }'));
+  assert.ok(css.includes('body.simple:not(.chat-open):not(.tac) #hud-chat > .chat-toggle { top: var(--tr-top); right: calc(var(--sa-r) + 8px);'));
+  assert.ok(!/#tc-(menu|news) \{[^}]*right: calc\(var\(--sa-r\) \+ var\(--mm\) \+ 20px/.test(css), 'nothing left of the chart any more');
+  // one top line: the portrait's ring at the chart's top; the card in the band, as tall as the plate
+  assert.ok(css.includes('body.simple #hud-captain { top: calc(var(--sa-t) + 8px + var(--cs-face) * 0.05); }'));
+  assert.ok(css.includes('body.simple #advcard { top: var(--tb-top, calc(var(--sa-t) + 8px)); left: var(--tb-left, 30vw); right: auto; width: var(--tb-w, 40vw);'));
+  assert.ok(css.includes('min-height: var(--tb-h, 0px);'));
+  const hud = readFileSync(new URL('../client/src/ui/hud.ts', import.meta.url), 'utf8');
+  for (const k of ['--tb-top', '--tb-left', '--tb-w', '--tb-h']) assert.ok(hud.includes(`raw('${k}'`), k);
+  const card = readFileSync(new URL('../client/src/ui/advcard.ts', import.meta.url), 'utf8');
+  assert.ok(card.includes("if (document.body.classList.contains('simple') && document.body.style.getPropertyValue('--tb-w')) {"));
 });

@@ -226,6 +226,29 @@ export class AdvCard {
   private baseLeft: number | null = null;
   private fit(): void {
     if (this.el.classList.contains('hidden')) return;
+    // The simple HUD's top band (seahud.css, hud.ts placeTopStrip, owner 2026-10-15: «выровнял по высоте четко по
+    // верху, чтобы не было оторвано»): the card keeps the band's place at every size — never steps aside or down —
+    // folded as tall as the captain's plate, unfolded down to six tenths of a short screen (four of a taller one), scrolling.
+    if (document.body.classList.contains('simple') && document.body.style.getPropertyValue('--tb-w')) {
+      for (const k of ['top', 'left', 'transform'] as const) if (this.el.style[k]) this.el.style[k] = '';
+      const r = this.el.getBoundingClientRect();
+      const bandH = parseFloat(document.body.style.getPropertyValue('--tb-h')) || 0;
+      const open = !!this.el.querySelector('.ac-card.open');
+      // (unfolded, it ends above the fight's round buttons on the right where they stand under it: 480×270)
+      let floor = innerHeight * (innerHeight <= 520 ? 0.6 : 0.4);
+      for (const el of document.querySelectorAll('#tc-special, #tc-ammo, #tc-lock, #tc-fire, #tc-actrow, #tc-cast')) {
+        const b = el.getBoundingClientRect();
+        if (b.width > 0 && b.height > 0 && b.left < r.right && b.right > r.left && b.top > r.top) floor = Math.min(floor, b.top - 6);
+      }
+      const max = open
+        ? Math.max(Math.ceil(bandH), Math.floor(floor - r.top))
+        : Math.max(Math.ceil(bandH), Math.min(this.el.scrollHeight, Math.ceil(bandH * 1.25))); // (a long name on two lines: a little taller, never cut)
+      const m = `${max}px`;
+      if (this.el.style.maxHeight !== m) this.el.style.maxHeight = m;
+      const b = `${Math.round(Math.min(r.top + Math.min(this.el.scrollHeight, max), innerHeight))}px`;
+      if (document.body.style.getPropertyValue('--ac-bottom') !== b) document.body.style.setProperty('--ac-bottom', b);
+      return;
+    }
     const narrow = innerWidth < 1100 || innerHeight <= 520;
     if (narrow && this.baseTop === null) {
       this.el.style.top = '';
