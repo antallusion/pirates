@@ -48,6 +48,7 @@ import { commonCard, dailyCard } from './daily.ts';
 import { invasionCard } from './invasion.ts'; // docs/19 E16
 import { giverDialog } from './giver.ts';
 import { EN, RU } from '../lang/ui/port.ts';
+import { EN as PM_EN, RU as PM_RU } from '../lang/ui/premium.ts'; // the shop's chip (owner, 2026-10-15)
 import { serverText } from '../lang/server.ts';
 import { sendService, serviceCard } from './marque.ts';
 import { captivesCard } from './turncoats.ts';
@@ -71,6 +72,7 @@ const JOB_ICON: Record<string, string> = {
   delivery: 'good_provisions', hunt: 'fire', rescue: 'map_cove', scouting: 'menu_map', smuggling: 'good_dreamleaf', treasure: 'map_treasure',
   diplomacy: 'map_contract', revenge: 'danger', investigation: 'ab_spotters_eye', elite: 'danger',
 };
+const PM = dict(PM_EN, PM_RU);
 const L = dict(EN, RU);
 const RL = dict(REN, RRU); // the yard's tree of hulls (docs/20)
 const LI = dict(ISLES_EN, ISLES_RU);
@@ -208,6 +210,8 @@ export class PortScreen {
       ...(dwellCard(port) || tamerCard(port) ? [{ id: 'army', icon: 'build_barracks', glyph: '⚔', label: W('port.army'), hint: W('port.armyHint') }] : []),
       ...(tv.pets?.length ? [{ id: 'pets', icon: 'menu_crew', label: W('port.pets'), hint: W('port.petsHint') }] : []),
       { id: 'tattoo', icon: 'tattoo_needle', glyph: '✒', label: W('port.tattoo'), hint: W('port.tattooHint'), badge: state.tattoos?.pending.length ?? 0 },
+      // The premium shop at its sea's goods (owner, 2026-10-15): a chip that opens it, not a page of the harbour.
+      { id: 'pshop', icon: 'doubloon', glyph: '◉', label: PM('open'), hint: PM('openTip') },
     ];
     // A new harbour opens on its market (the one-tap bar); the same harbour keeps the place she left it on.
     if (view.portId !== this.lastPort) {
@@ -233,6 +237,7 @@ export class PortScreen {
       if (id === 'sea') return this.act({ act: 'undock' } as DOMStringMap, root, state);
       if (id === 'tattoo') return this.openTattoos?.();
       if (id === 'isle') return this.openIsle?.();
+      if (id === 'pshop') return void dispatchEvent(new CustomEvent('gravetide:shop', { detail: 'sea' }));
       this.tab = id as Tab;
       this.render(root, state);
       root.querySelector<HTMLElement>('.port-body')?.scrollTo({ top: 0 });

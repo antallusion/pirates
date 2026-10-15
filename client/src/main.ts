@@ -396,15 +396,15 @@ hud.onThrone = () => openThrone();
 // The premium shop (owner, 2026-10-03): from the micro menu and the cabin; `topup` opens it at the packs.
 const premiumWindow = new PremiumWindow((m) => net.send(m));
 const researchWindow = new ResearchWindow((m) => net.send(m));
-function openShop(topup = false): void {
-  premiumWindow.open(topup);
+function openShop(topup = false, at?: Parameters<PremiumWindow['open']>[1]): void {
+  premiumWindow.open(topup, at);
   openModal('shop');
 }
-// «Свиток автобоя» (owner, 2026-10-11): «Купить» on the battle bar and in the locker opens the shop at its scrolls.
-addEventListener('gravetide:shop', (e) => {
-  if ((e as CustomEvent).detail === 'scrolls') premiumWindow.tab = 'scrolls';
-  openShop();
-});
+// «Свиток автобоя» (owner, 2026-10-11): «Купить» on the battle bar and in the locker opens the shop at its scrolls;
+// the island's scene at its builders, the harbour at the sea's goods (owner, 2026-10-15: the three tabs).
+const SHOP_AT: Record<string, Parameters<PremiumWindow['open']>[1]> = { scrolls: { tab: 'board', sec: 'battle' }, isle: { tab: 'isle', sec: 'build' }, sea: { tab: 'sea', sec: 'supply' }, board: { tab: 'board', sec: 'recruit' } };
+addEventListener('gravetide:shop', (e) => openShop(false, SHOP_AT[String((e as CustomEvent).detail ?? '')]));
+hud.onShop = () => openShop();
 const puzzleWindow = new PuzzleWindow((m) => net.send(m));
 function openPuzzle(): void {
   puzzleWindow.open();

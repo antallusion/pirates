@@ -21,6 +21,7 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import { assetMeta, assetUrl } from '../assets.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/islescene.ts';
+import { EN as PM_EN, RU as PM_RU } from '../lang/ui/premium.ts'; // the shop's button (owner, 2026-10-15)
 import type { ClientState } from '../state.ts';
 import { BaseWindow, EXTRA_PLOTS, baseName, hallFor, plotCell, timeText, townArt } from './base.ts';
 import { esc, fmt, icon, money } from './dom.ts';
@@ -31,6 +32,7 @@ import { placeName } from './maps.ts';
 import { T29, treeLabel } from './isletree.ts';
 
 const L = dict(EN, RU);
+const PM = dict(PM_EN, PM_RU);
 
 /** A spot of the board as the scene draws it. */
 interface Spot {
@@ -169,6 +171,7 @@ export class IsleScene {
       if (!b) return;
       const what = b.dataset.iside!;
       if (what === 'collect') this.send({ t: 'base', action: 'collect' });
+      else if (what === 'shop') dispatchEvent(new CustomEvent('gravetide:shop', { detail: 'isle' })); // the shop at its builders (owner, 2026-10-15)
       else if (what === 'raid') this.onSail();
       else this.openPanel(what as Panel);
     });
@@ -436,7 +439,7 @@ export class IsleScene {
       `<button type="button" class="is-sb${o.on ? ' on' : ''}${o.cls ? ` ${o.cls}` : ''}" data-iside="${id}"${o.off ? ' disabled' : ''} title="${esc(o.title ?? label)}">${icon(ico, '', 'is-sb-ico')}<span class="is-sb-l">${esc(label)}</span>${o.badge ? `<b class="is-sb-n">${esc(o.badge)}</b>` : ''}</button>`;
     const on = (p: Panel) => !!this.pick && 'panel' in this.pick && this.pick.panel === p;
     const raid = v.claim.raid ? btn('raid', 'build_battery', L('raid'), { cls: 'raid', title: serverWord(state) }) : '';
-    return `${raid}${btn('collect', 'tab_holdings', L('collect'), { badge: fresh ? `+${fmt(fresh)}` : '', off: !fresh })}${btn('yard', 'build_shipyard', L('ships'), { badge: v.shipyard.ships.length ? String(v.shipyard.ships.length) : '', on: on('yard') })}${v.town ? btn('town', 'build_fort', L('town'), { on: on('town') }) : ''}${btn('supply', 'build_caravan_office', L('supply'), { badge: String(state.supply?.isles.filter((x) => x.linked).length || ''), on: on('supply') })}${btn('defence', 'build_battery', L('defence'), { on: on('defence') })}`;
+    return `${raid}${btn('collect', 'tab_holdings', L('collect'), { badge: fresh ? `+${fmt(fresh)}` : '', off: !fresh })}${btn('yard', 'build_shipyard', L('ships'), { badge: v.shipyard.ships.length ? String(v.shipyard.ships.length) : '', on: on('yard') })}${v.town ? btn('town', 'build_fort', L('town'), { on: on('town') }) : ''}${btn('supply', 'build_caravan_office', L('supply'), { badge: String(state.supply?.isles.filter((x) => x.linked).length || ''), on: on('supply') })}${btn('defence', 'build_battery', L('defence'), { on: on('defence') })}${btn('shop', 'doubloon', PM('open'), { cls: 'shop', title: PM('openTip') })}`;
   }
 
   private queueHtml(v: BaseView): string {

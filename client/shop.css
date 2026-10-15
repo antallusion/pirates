@@ -1,0 +1,137 @@
+/* GRAVETIDE · the premium shop (owner, 2026-10-15; client/src/ui/premium.ts, docs/32). The whole screen in the windows'
+   own parts — the band with the doubloons and «Пополнить», the rail of the three tabs (Море, Абордаж, Остров), the chips
+   of a tab's shelves — and the shop's cards: a family's picture in a brass ring, its name and line, its offers side by
+   side as small brass plates (the quantity, the price in doubloons, a gold ribbon with the bonus). Pirate Gothic: dark
+   wood, brass, a little gold; no new art, only the manifest's icons and CSS. Loaded just before fit.css, which stays the last (index.html). */
+
+/* ---------- the window over the whole screen */
+#modal-panel[data-modal="shop"] { width: 100vw; height: 100dvh; max-width: none; max-height: none; border-radius: 0; }
+#modal:has(#modal-panel[data-modal="shop"]) { padding: 0; background: #050607; }
+#modal-panel[data-modal="shop"] .w-frame { padding-left: var(--sa-l, 0px); padding-right: var(--sa-r, 0px); }
+#modal-panel[data-modal="shop"] .w-head { padding-left: max(var(--k-sp-3, 12px), var(--sa-l, 0px)); }
+#modal-panel[data-modal="shop"] .w-figs { gap: 6px; }
+.sh-bal b { font-size: 15px; color: var(--gold); }
+.sh-top { white-space: nowrap; }
+
+/* ---------- the page */
+.sh-body { display: block; padding: 10px 12px 18px; overflow-y: auto; }
+.sh-body > * + * { margin-top: 10px; }
+.sh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 10px; align-items: start; }
+.sh-rule { font-size: 12px; margin: 0; }
+.sh-body .pm-list { margin-top: 12px; }
+
+/* ---------- a family's card */
+.sh-card { position: relative; display: grid; grid-template-columns: 58px minmax(0, 1fr); grid-template-areas: 'art txt' 'offs offs' 'why why'; gap: 8px 10px; margin: 0; padding: 10px;
+  border: 1px solid rgba(176, 141, 87, 0.42); border-radius: 4px; background: linear-gradient(180deg, rgba(32, 27, 22, 0.94), rgba(13, 12, 11, 0.96)); box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.45); }
+.skinned .sh-card { border-color: rgba(176, 141, 87, 0.42); }
+.sh-card.shut { opacity: 0.8; }
+.sh-art, .sh-card > .pm-art { grid-area: art; width: 58px; height: 58px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, rgba(224, 184, 98, 0.2), rgba(10, 9, 8, 0.9) 70%); box-shadow: 0 0 0 1px rgba(176, 141, 87, 0.6), 0 0 0 3px rgba(10, 9, 8, 0.9), 0 0 0 4px rgba(111, 90, 56, 0.55), inset 0 0 12px #000; }
+.sh-ico { width: 42px; height: 42px; object-fit: contain; margin: 0; filter: drop-shadow(0 2px 3px #000); }
+.sh-ico.glyph { display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--gold); }
+.sh-face, .sh-card > .pm-art .pm-face { width: 58px; height: 58px; object-fit: cover; object-position: 50% 10%; border-radius: 50%; margin: 0; }
+.sh-card > .pm-art.pm-fig img { max-width: 52px; max-height: 52px; }
+.sh-txt { grid-area: txt; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.sh-name { font-family: var(--serif); font-weight: 600; font-size: 17px; line-height: 1.15; color: var(--bone); overflow-wrap: anywhere; display: inline-flex; align-items: center; gap: 6px; }
+.sh-note { font-family: var(--serif); font-style: italic; font-size: 14px; line-height: 1.25; color: #d6c39a; }
+.sh-meta { font-size: 11.5px; line-height: 1.3; color: var(--steel-text); display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.sh-meta b { color: var(--bone); font-variant-numeric: tabular-nums; }
+.sh-clock b { color: var(--gold); }
+.sh-why { grid-area: why; margin-top: -2px; font-size: 11.5px; line-height: 1.25; color: var(--bad); }
+
+/* ---------- an offer: a brass plate (the quantity, the price, the ribbon) */
+.sh-offs { grid-area: offs; display: grid; grid-template-columns: repeat(auto-fit, minmax(66px, 1fr)); gap: 6px; align-items: stretch; }
+.sh-off { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 46px; padding: 7px 4px 5px; margin: 0;
+  border: 1px solid rgba(176, 141, 87, 0.55); border-radius: 4px; background: linear-gradient(180deg, #2c2620, #15120e); color: var(--bone); cursor: pointer; touch-action: manipulation;
+  font-family: var(--sans); box-shadow: inset 0 1px 0 rgba(255, 230, 170, 0.08), 0 1px 2px rgba(0, 0, 0, 0.6); transition: transform 0.08s ease-out, border-color 0.15s, box-shadow 0.15s; }
+.sh-off.on:hover { border-color: var(--gold); box-shadow: inset 0 1px 0 rgba(255, 230, 170, 0.12), 0 0 8px rgba(224, 184, 98, 0.25); }
+.sh-off.on:active { transform: scale(0.97); }
+.sh-off:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.sh-off:disabled { cursor: default; opacity: 0.5; filter: saturate(0.4); }
+.sh-off.best, .sh-off.hot { border-color: rgba(224, 184, 98, 0.85); background: linear-gradient(180deg, #3a2f1d, #18130c); box-shadow: inset 0 0 12px rgba(224, 184, 98, 0.14), 0 1px 2px rgba(0, 0, 0, 0.6); }
+.sh-q { font: 600 12.5px/1.15 var(--sans); white-space: nowrap; }
+.sh-p { display: inline-flex; align-items: center; gap: 3px; font: 700 14px/1 var(--sans); color: var(--gold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sh-p .ico-xs, .sh-meta .ico-xs, .sh-jb .ico-xs, .sh-was .ico-xs { width: 14px; height: 14px; object-fit: contain; margin: 0; }
+.sh-p .tg-star { width: 14px; height: 14px; fill: var(--gold); }
+.sh-bonus { position: absolute; z-index: 1; top: -8px; right: -5px; padding: 0 5px; font: 700 10px/15px var(--sans); font-style: normal; color: #1d1409; white-space: nowrap;
+  background: linear-gradient(180deg, #f2d27f, #b9893c); border-radius: 8px; box-shadow: 0 1px 3px #000, inset 0 1px 0 rgba(255, 255, 255, 0.35); pointer-events: none; }
+.sh-lim { font-size: 9.5px; line-height: 1; color: var(--fog); }
+.sh-was { align-self: center; justify-self: start; display: inline-flex; align-items: center; gap: 2px; color: var(--steel-text); font-size: 12px; }
+
+/* ---------- the «Акции» row: the bundles stand out in gold, the deal in a deep red */
+.sh-card.sh-deal, .sh-card.sh-gift, .sh-card.sh-first, .sh-card.sh-hot, .sh-card.sh-starter, .sh-card.sh-sub {
+  border-color: rgba(224, 184, 98, 0.7); box-shadow: inset 0 0 26px rgba(224, 184, 98, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.8), 0 3px 10px rgba(0, 0, 0, 0.55); }
+.sh-card.sh-deal { background: linear-gradient(160deg, rgba(74, 21, 25, 0.75), rgba(16, 12, 11, 0.96) 60%); }
+.sh-card.sh-sub { background: linear-gradient(160deg, rgba(60, 46, 22, 0.75), rgba(16, 13, 10, 0.96) 60%); }
+.sh-card.sh-gift, .sh-card.sh-first { background: linear-gradient(160deg, rgba(58, 48, 20, 0.85), rgba(14, 12, 9, 0.96) 65%); }
+.sh-card.sh-deal .sh-offs, .sh-card.sh-gift .sh-offs, .sh-card.sh-first .sh-offs { grid-template-columns: minmax(96px, 160px) auto; justify-content: start; }
+
+/* ---------- her stores; the builders and the work under way */
+.sh-stores, .sh-work { grid-column: 1 / -1; margin: 0; padding: 8px 10px; border: 1px solid rgba(176, 141, 87, 0.35); border-radius: 4px; background: rgba(10, 10, 11, 0.82); }
+.sh-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.sh-chip { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 0 9px 0 6px; border: 1px solid rgba(140, 107, 58, 0.45); border-radius: 15px; background: rgba(8, 9, 11, 0.7); font-size: 12px; white-space: nowrap; }
+.sh-chip .ico-sm { width: 18px; height: 18px; object-fit: contain; margin: 0; }
+.sh-chip b { color: var(--gold); font-variant-numeric: tabular-nums; }
+.sh-cl { color: var(--fog); }
+.sh-chip .sh-use { min-height: 24px; padding: 0 8px; margin-left: 2px; font-size: 11px; }
+.sh-wh { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.sh-wh .ico-sm { width: 20px; height: 20px; object-fit: contain; margin: 0; }
+.sh-job { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: 'n t s f' 'bar bar s f'; align-items: center; gap: 3px 8px; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(140, 107, 58, 0.22); }
+.sh-jn { grid-area: n; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.sh-jt { grid-area: t; color: var(--gold); font-variant-numeric: tabular-nums; }
+.sh-jbar { grid-area: bar; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.sh-jbar i { display: block; height: 100%; background: linear-gradient(90deg, #8c6b3a, var(--gold)); }
+.sh-jb { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.sh-job .sh-jb:first-of-type { grid-area: s; }
+.sh-job .sh-jb + .sh-jb { grid-area: f; }
+
+/* ---------- the top-up */
+.sh-topup .pm-pack.best { border-color: var(--gold); box-shadow: inset 0 0 18px rgba(224, 184, 98, 0.14); }
+.sh-firstline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 8px 0 0; padding: 7px 10px; border: 1px solid rgba(224, 184, 98, 0.6); border-radius: 4px; background: linear-gradient(90deg, rgba(74, 58, 22, 0.55), rgba(10, 9, 8, 0.4)); }
+.sh-firstline b { color: var(--gold); }
+
+/* ---------- the HUD's doubloons by her silver, the island's side button */
+.cs-purse { display: inline-flex; align-items: center; gap: 4px; justify-self: start; }
+.cs-purse .cs-silver { margin-right: 0; }
+.cs-dbl, .uf-dbl { display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 6px 0 3px; margin: 1px 0 0; border: 1px solid rgba(224, 184, 98, 0.55); border-radius: 10px; background: rgba(28, 22, 12, 0.85);
+  color: var(--gold); font: 700 11px/1 var(--sans); font-variant-numeric: tabular-nums; cursor: pointer; pointer-events: auto; touch-action: manipulation; }
+.cs-dbl .cs-coin, .uf-dbl .cs-coin { width: 14px; height: 14px; object-fit: contain; margin: 0; }
+.cs-dbl i, .uf-dbl i { font-style: normal; margin-left: 1px; padding: 0 3px; border-radius: 6px; background: var(--gold); color: #1a1208; font: 800 10px/12px var(--sans); }
+.uf-dbl { margin-left: 6px; height: 18px; }
+#isle .is-sb.shop { border-color: rgba(224, 184, 98, 0.7); }
+
+/* ---------- a phone held sideways: the fluid sizes of fit.css */
+@media (max-height: 520px) {
+  #modal-panel[data-modal="shop"] { height: 100dvh; }
+  .sh-body { padding: var(--f-pad) calc(var(--f-pad) + 2px) var(--f-pad); }
+  .sh-body > * + * { margin-top: var(--f-gap); }
+  .sh-grid { grid-template-columns: repeat(auto-fill, minmax(calc(210px + 30 * var(--u)), 1fr)); gap: var(--f-gap); }
+  .sh-card { grid-template-columns: calc(34px + 8 * var(--u)) minmax(0, 1fr); gap: calc(3px + 2 * var(--u)) calc(5px + 2 * var(--u)); padding: calc(4px + 3 * var(--u)); margin-bottom: var(--f-gap); }
+  .sh-art, .sh-card > .pm-art { width: calc(34px + 8 * var(--u)); height: calc(34px + 8 * var(--u)); }
+  .sh-ico { width: calc(24px + 6 * var(--u)); height: calc(24px + 6 * var(--u)); }
+  .sh-face, .sh-card > .pm-art .pm-face { width: calc(34px + 8 * var(--u)); height: calc(34px + 8 * var(--u)); }
+  .sh-card > .pm-art.pm-fig img { max-width: calc(30px + 8 * var(--u)); max-height: calc(30px + 8 * var(--u)); }
+  .sh-name { font-size: var(--f-fs-m); gap: 3px; }
+  .sh-note { font-size: var(--f-fs); line-height: 1.2; }
+  .sh-meta, .sh-why, .sh-rule { font-size: var(--f-fs-s); }
+  .sh-offs { grid-template-columns: repeat(auto-fit, minmax(calc(42px + 4 * var(--u)), 1fr)); gap: calc(3px + 2 * var(--u)); }
+  .sh-off { min-height: var(--f-tap); padding: calc(4px + 2 * var(--u)) 2px 2px; gap: 1px; }
+  .sh-q { font-size: var(--f-fs); }
+  .sh-p { font-size: var(--f-fs-m); }
+  .sh-p .ico-xs { width: 11px; height: 11px; }
+  .sh-bonus { top: -6px; right: -3px; padding: 0 3px; font-size: var(--f-fs-xs); line-height: 11px; }
+  .sh-lim { font-size: var(--f-fs-xs); }
+  .sh-stores, .sh-work { padding: var(--f-pad); margin-bottom: var(--f-gap); }
+  .sh-chips { gap: 3px; margin-top: 3px; }
+  .sh-chip { min-height: calc(20px + 4 * var(--u)); padding: 0 5px 0 3px; gap: 3px; font-size: var(--f-fs-s); }
+  .sh-chip .ico-sm { width: 14px; height: 14px; }
+  .sh-chip .sh-use { min-height: calc(18px + 4 * var(--u)); padding: 0 5px; font-size: var(--f-fs-s); }
+  .sh-job { gap: 1px 4px; margin-top: 3px; padding-top: 3px; font-size: var(--f-fs); }
+  .sh-jb { min-height: var(--f-tap); padding: 0 calc(3px + 3 * var(--u)); font-size: var(--f-fs-s); }
+  .sh-bal b { font-size: var(--f-fs-m); }
+  .sh-top { min-height: calc(22px + 6 * var(--u)); padding: 0 calc(4px + 4 * var(--u)); font-size: var(--f-fs); }
+  .sh-body .pm-list { font-size: var(--f-fs-h); margin-top: var(--f-gap); }
+  .sh-firstline { font-size: var(--f-fs); padding: var(--f-pad); }
+  /* paged (kit/fit.ts): the cards stand whole in their columns */
+  .sh-body.fit-paged .sh-card, .sh-body.fit-paged .sh-stores, .sh-body.fit-paged .sh-work { break-inside: avoid; }
+}
