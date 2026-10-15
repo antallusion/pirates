@@ -60,16 +60,17 @@ export type ShopGrant =
   | { k: 'ammo'; ammo: AmmoId; n: number }
   /** Goods into her hold (there must be room for them). */
   | { k: 'cargo'; good: GoodId; n: number }
-  /** Hands signed on (deckhands, into her hammocks). */
+  /** Hands signed on (deckhands), into her free hammocks up to so many. */
   | { k: 'crew'; n: number }
-  /** A stack of a tier's line kind (RECRUIT_KINDS), sold from the ship level a premium kind of that tier is. */
+  /** Fighters of a tier's line kind (RECRUIT_KINDS) into her free hammocks up to so many, sold from the ship level a
+   *  premium kind of that tier is. */
   | { k: 'units'; tier: number; n: number }
   /** Her fallen of the last boarding against the sea stand again (REFILL_*). */
   | { k: 'refill' }
   /** Her infamy struck off to a stranger's (ports.ts pardon, without the port). */
   | { k: 'pardon' }
-  /** A treasure map of her waters' tier. */
-  | { k: 'map' }
+  /** Treasure maps of her waters' tier. */
+  | { k: 'map'; n: number }
   /** Parts of a ship's look not yet hers, drawn at random from the shop's own (never a deed's). */
   | { k: 'looks'; n: number }
   /** The captain's subscription for so many days (SUB_*). */
@@ -121,7 +122,7 @@ export const BOOST_MAX_H = 30 * 24;
  *  scroll; while it runs, one more brigade and +20 % battle experience. */
 export const SUB_DAYS = 30;
 export const SUB_MAX_DAYS = 60;
-export const SUB_DAILY = 50;
+export const SUB_DAILY = 100;
 export const SUB_SCROLLS = 1;
 export const SUB_XP = 0.2;
 /** A level's gift stays on the shelf three days from the level reached. */
@@ -134,212 +135,249 @@ export const FIRST_PAY_CAP = 2600;
  *  line kinds' worth (REFILL_RATE doubloons a thousand silver of men). */
 export const REFILL_MINUTES = 60;
 export const REFILL_RATE = 16;
-/** «Завершить сейчас»: doubloons a minute of work left (36 an hour, two at the least). */
+/** «Завершить сейчас»: doubloons a minute of work left (36 an hour), and never under the shop's least price (owner,
+ *  2026-10-15: «цены должны начинаться от 290 рублей») — 290 finishes up to eight hours, as the 290 speed-ups do. */
 export const FINISH_PER_MIN = 0.6;
-/** A creature of the shop by threes and fives: the discount. */
-export const UNIT_PACKS: { k: number; off: number }[] = [{ k: 1, off: 0 }, { k: 3, off: 0.08 }, { k: 5, off: 0.15 }];
+/** Every price of the shop is between these (owner, 2026-10-15: «от 290 рублей и до 9900 рублей»; a doubloon ≈ 1 ₽). */
+export const PRICE_MIN = 290;
+export const PRICE_MAX = 9900;
+/** The ladder every line climbs, and the bonus each step gives against the line's first (honest: the quantities are
+ *  reckoned from the line's single price and this bonus, offerBonus shows what came of the rounding). */
+export const LADDER = [290, 590, 990, 1990, 4990, 9900];
+export const STEP_BONUS: Record<number, number> = { 290: 0, 590: 0.1, 990: 0.2, 1990: 0.35, 2990: 0.4, 4990: 0.5, 9900: 0.7 };
+/** A premium creature by packs of stacks: the first as many stacks as reach PRICE_MIN, then three and five times
+ *  that, these shares off. */
+export const UNIT_PACK_OFF = [0, 0.08, 0.15];
 /** Buys a captain may send: so many in two seconds, so many a minute (the session's flood guard is far above). */
 export const BUY_BURST = 5;
 export const BUY_MINUTE = 40;
 
 /** Doubloons to finish a work of `secs` now. */
 export function finishPrice(secs: number): number {
-  return Math.max(2, Math.ceil((Math.max(0, secs) / 60) * FINISH_PER_MIN));
+  return Math.min(PRICE_MAX, Math.max(PRICE_MIN, Math.ceil((Math.max(0, secs) / 60) * FINISH_PER_MIN)));
 }
 
-/** A premium creature's pack of `k` stacks: its price. */
-export function unitPackPrice(price: number, k: number): number {
-  const p = UNIT_PACKS.find((x) => x.k === k);
-  return p ? Math.round(price * k * (1 - p.off)) : 0;
+/** A premium creature's packs for a stack of this price: its stacks and the pack's price. */
+export function unitPacks(price: number): { k: number; price: number }[] {
+  const k1 = Math.max(1, Math.ceil(PRICE_MIN / Math.max(1, price)));
+  return [k1, k1 * 3, k1 * 5].map((k, i) => ({ k, price: Math.min(PRICE_MAX, Math.max(PRICE_MIN, Math.round(price * k * (1 - UNIT_PACK_OFF[i])))) }));
 }
 
 /** The line kind of each tier the recruiters sign on (army.ts TIER_BASE). */
 export const RECRUIT_KINDS = ['deckhand', 'marine', 'musketeer', 'gunner', 'boarder', 'guard', 'drowned'] as const;
 /** Their silver worth a man (UNITS[..].cost), kept here so the catalogue is pure. */
 const RECRUIT_COST = [20, 60, 70, 120, 180, 300, 450];
+/** Silver of men a doubloon signs on (a recruit's pack up to so many: 290 → ~11 600 silver of men, an hour or two of
+ *  the waters' income at the middle levels — docs/32). */
+const RECRUIT_SILVER = 40;
+
+/** The single price of each kind of goods (doubloons a unit of its measure): the base the ladders and the bundles'
+ *  worth are reckoned from. */
+export const UNIT_PRICE = {
+  speed: 0.6, // a minute
+  builder: 90, // a day
+  perm: 1990,
+  timber: 0.075, coal: 0.075, provisions: 0.075, tar: 0.09, iron: 0.11, // a unit into the yard
+  prod: 90 / 24, shield: 80 / 24, xp: 30, wind: 20, // an hour
+  move: 2490, charm: 17, kit: 27, scrolls: 20, pages: 26, art: 150, map: 58, looks: 15,
+  crate: 20, crate2: 35, // a crate of shot
+} as const;
+
+/** What a bundle's goods are worth at the single prices (its «Выгода ×N»). */
+export function worthOf(grants: readonly ShopGrant[]): number {
+  let w = 0;
+  for (const g of grants) {
+    switch (g.k) {
+      case 'speed': w += g.min * UNIT_PRICE.speed; break;
+      case 'builder': w += g.days * UNIT_PRICE.builder; break;
+      case 'perm': w += UNIT_PRICE.perm; break;
+      case 'res': w += g.n * UNIT_PRICE[g.good]; break;
+      case 'prod': w += g.hours * UNIT_PRICE.prod; break;
+      case 'shield': w += g.hours * UNIT_PRICE.shield; break;
+      case 'xp': w += g.hours * UNIT_PRICE.xp; break;
+      case 'wind': w += g.hours * UNIT_PRICE.wind; break;
+      case 'move': w += UNIT_PRICE.move; break;
+      case 'charm': w += g.n * UNIT_PRICE.charm; break;
+      case 'kit': w += g.n * UNIT_PRICE.kit; break;
+      case 'scrolls': w += g.n * UNIT_PRICE.scrolls; break;
+      case 'pages': w += g.n * UNIT_PRICE.pages; break;
+      case 'art': w += UNIT_PRICE.art; break;
+      case 'map': w += g.n * UNIT_PRICE.map; break;
+      case 'looks': w += g.n * UNIT_PRICE.looks; break;
+      default: break;
+    }
+  }
+  return Math.round(w);
+}
 
 // ------------------------------------------------------------------------------------------------ the families
 
 const T = (en: string, ru: string): Tr => [en, ru];
 const o = (id: string, price: number, grants: ShopGrant[], extra: Partial<ShopOffer> = {}): ShopOffer => ({ id, price, grants, ...extra });
 const res = (good: BaseRes, n: number): ShopGrant => ({ k: 'res', good, n });
+/** A count rounded as a shop prints it: whole under a hundred, to tens under a thousand, to hundreds above. */
+const nice = (x: number): number => (x < 100 ? Math.max(1, Math.round(x)) : x < 1000 ? Math.round(x / 10) * 10 : Math.round(x / 100) * 100);
+/** A line of the ladder: at each price, the quantity its single price buys and the step's bonus (rounded by `round`),
+ *  the grants made of it; the last step marked the best. */
+const line = (idp: string, prices: number[], unit: number, mk: (q: number) => ShopGrant[], round: (x: number) => number = nice): ShopOffer[] =>
+  prices.map((p, i) => o(`${idp}_${p}`, p, mk(round((p / unit) * (1 + (STEP_BONUS[p] ?? 0)))), i === prices.length - 1 && prices.length > 1 ? { tag: 'best' } : {}));
+const hours = (x: number) => Math.max(1, Math.round(x));
+const days = (x: number) => Math.max(1, Math.round(x));
 
-const RES_NAMES: Record<BaseRes, [Tr, number]> = {
-  timber: [T('Timber', 'Брёвна'), 1],
-  coal: [T('Coal and stone', 'Уголь и камень'), 1],
-  tar: [T('Pine tar', 'Смола'), 1.2],
-  iron: [T('Iron', 'Железо'), 1.5],
-  provisions: [T('Island provisions', 'Провизия острова'), 1],
+const RES_NAMES: Record<BaseRes, Tr> = {
+  timber: T('Timber', 'Брёвна'),
+  coal: T('Coal and stone', 'Уголь и камень'),
+  tar: T('Pine tar', 'Смола'),
+  iron: T('Iron', 'Железо'),
+  provisions: T('Island provisions', 'Провизия острова'),
 };
 
+/** Recruits of a tier: hands of its line kind up to so many, into the free hammocks (as many as there is room for). */
 const recruit = (tier: number): ShopFamily => {
-  const n1 = Math.max(1, Math.round(1000 / RECRUIT_COST[tier - 1]));
+  const prices = tier <= 3 ? [290, 990] : tier <= 5 ? [590, 1990] : [990, 4990];
   return {
     id: `rec${tier}`, tabs: ['board'], sec: 'recruit', icon: `unit:${RECRUIT_KINDS[tier - 1]}`,
     name: T(`Recruits, tier ${tier}`, `Наём: уровень ${tier}`),
-    text: T('A stack of the line kind of this tier signs on at once: a slot and hammocks for them.', 'Отряд линейных бойцов этого уровня встаёт в армию сразу: нужен слот и койки.'),
-    offers: [o(`rec${tier}_s`, 20, [{ k: 'units', tier, n: n1 }]), o(`rec${tier}_m`, 54, [{ k: 'units', tier, n: n1 * 3 }]), o(`rec${tier}_l`, 150, [{ k: 'units', tier, n: n1 * 10 }], { tag: 'best' })],
+    text: T('Fighters of the line kind of this tier fill your free hammocks at once, up to the pack’s number.', 'Линейные бойцы этого уровня сразу занимают свободные койки — до числа в наборе.'),
+    offers: line(`rec${tier}`, prices, RECRUIT_COST[tier - 1] / RECRUIT_SILVER, (n) => [{ k: 'units', tier, n }]),
   };
 };
 
-const resFamily = (good: BaseRes): ShopFamily => {
-  const [name, mul] = RES_NAMES[good];
-  const p = (x: number) => Math.round(x * mul);
-  return {
-    id: `res_${good}`, tabs: ['isle'], sec: 'res', icon: `good_${good}`, name,
-    text: T('Unloaded into your island’s yard at once, past its cap.', 'Выгружается во двор острова сразу, сверх его вместимости.'),
-    offers: [o(`${good}_s`, p(15), [res(good, 200)]), o(`${good}_m`, p(40), [res(good, 600)]), o(`${good}_l`, p(110), [res(good, 2000)], { tag: 'best' })],
-  };
-};
+const resFamily = (good: BaseRes): ShopFamily => ({
+  id: `res_${good}`, tabs: ['isle'], sec: 'res', icon: `good_${good}`, name: RES_NAMES[good],
+  text: T('Unloaded into your island’s yard at once, past its cap.', 'Выгружается во двор острова сразу, сверх его вместимости.'),
+  offers: line(good, [290, 590, 990, 1990], UNIT_PRICE[good], (n) => [res(good, n)]),
+});
 
-const mixed = (n: number): ShopGrant[] => (['timber', 'coal', 'tar', 'iron', 'provisions'] as BaseRes[]).map((g) => res(g, n));
+const ALL_RES = ['timber', 'coal', 'tar', 'iron', 'provisions'] as BaseRes[];
+const mixed = (n: number): ShopGrant[] => ALL_RES.map((g) => res(g, n));
 
 /** A level's gift (LEVEL_OFFER_H hours from the level reached, once). */
-const levelGift = (lv: number, price: number, worth: number, grants: ShopGrant[]): ShopFamily => ({
+const levelGift = (lv: number, price: number, grants: ShopGrant[]): ShopFamily => ({
   id: `lv${lv}`, tabs: ['sea', 'board', 'isle'], sec: 'deals', icon: 'tattoo_star', level: lv,
   name: T(`Level ${lv} gift`, `Подарок к уровню ${lv}`),
   text: T('For reaching the level: three days on the shelf, once.', 'За новый уровень: три дня на прилавке, один раз.'),
-  offers: [o(`lv${lv}`, price, grants, { limit: { n: 1, per: 'ever' }, worth, tag: 'hot' })],
+  offers: [o(`lv${lv}`, price, grants, { limit: { n: 1, per: 'ever' }, worth: worthOf(grants), tag: 'hot' })],
 });
+
+const STARTER: ShopGrant[] = [{ k: 'builder', days: 7 }, { k: 'speed', min: 480 }, { k: 'scrolls', n: 15 }, { k: 'charm', n: 15 }, { k: 'xp', hours: 24 }, { k: 'kit', n: 5 }];
+const WEEKLY: ShopGrant[] = [{ k: 'builder', days: 7 }, { k: 'speed', min: 1080 }, { k: 'scrolls', n: 30 }, { k: 'prod', hours: 72 }, { k: 'shield', hours: 72 }];
 
 export const SHOP: ShopFamily[] = [
   // ---------------------------------------------------------------------------------------------- the «Акции» row
   {
     id: 'starter', tabs: ['sea', 'board', 'isle'], sec: 'deals', icon: 'item_lucky_doubloon',
     name: T('Starter chest', 'Набор новичка'),
-    text: T('Once per account: a hired brigade for three days, two hours of speed-ups, auto-battle scrolls, charms, an elixir and repair kits.', 'Один раз на счёт: наёмная бригада на три дня, два часа ускорений, свитки автобоя, талисманы, эликсир и ремкомплекты.'),
-    offers: [o('starter', 149, [{ k: 'builder', days: 3 }, { k: 'speed', min: 120 }, { k: 'scrolls', n: 5 }, { k: 'charm', n: 5 }, { k: 'xp', hours: 8 }, { k: 'kit', n: 2 }], { limit: { n: 1, per: 'ever' }, worth: 690, tag: 'hot' })],
+    text: T('Once per account: a hired brigade for a week, eight hours of speed-ups, auto-battle scrolls, charms, a day of the elixir and repair kits.', 'Один раз на счёт: наёмная бригада на неделю, восемь часов ускорений, свитки автобоя, талисманы, сутки эликсира и ремкомплекты.'),
+    offers: [o('starter', 290, STARTER, { limit: { n: 1, per: 'ever' }, worth: worthOf(STARTER), tag: 'hot' })],
   },
   {
     id: 'sub', tabs: ['sea', 'board', 'isle'], sec: 'deals', icon: 'tattoo_crown',
     name: T('Captain’s subscription', 'Капитанская подписка'),
     text: T(`30 days: ${SUB_DAILY} doubloons and an auto-battle scroll every day you come aboard, one more builders’ brigade and +20% battle experience.`, `30 дней: ${SUB_DAILY} дублонов и свиток автобоя каждый день, когда вы в игре, ещё одна бригада строителей и +20% опыта за бои.`),
-    offers: [o('sub30', 490, [{ k: 'sub', days: SUB_DAYS }], { worth: 2250, tag: 'best' })],
+    // (its worth: the thirty days' doubloons and scrolls and the brigade's month at the single prices)
+    offers: [o('sub30', 990, [{ k: 'sub', days: SUB_DAYS }], { worth: SUB_DAYS * (SUB_DAILY + SUB_SCROLLS * UNIT_PRICE.scrolls + UNIT_PRICE.builder), tag: 'best' })],
   },
   {
     id: 'weekly', tabs: ['sea', 'board', 'isle'], sec: 'deals', icon: 'tab_holdings',
     name: T('Week’s chest', 'Недельный сундук'),
-    text: T('Once a week: a brigade for three days, three hours of speed-ups, ten auto-battle scrolls, a day of harvest and of the island’s charter.', 'Раз в неделю: бригада на три дня, три часа ускорений, десять свитков автобоя, сутки урожая и охранной грамоты.'),
-    offers: [o('weekly', 290, [{ k: 'builder', days: 3 }, { k: 'speed', min: 180 }, { k: 'scrolls', n: 10 }, { k: 'prod', hours: 24 }, { k: 'shield', hours: 24 }], { limit: { n: 1, per: 'week' }, worth: 690 })],
+    text: T('Once a week: a brigade for a week, eighteen hours of speed-ups, thirty auto-battle scrolls, three days of harvest and of the island’s charter.', 'Раз в неделю: бригада на неделю, восемнадцать часов ускорений, тридцать свитков автобоя, трое суток урожая и охранной грамоты.'),
+    offers: [o('weekly', 590, WEEKLY, { limit: { n: 1, per: 'week' }, worth: worthOf(WEEKLY) })],
   },
-  levelGift(10, 99, 330, [{ k: 'speed', min: 120 }, { k: 'scrolls', n: 5 }, { k: 'charm', n: 5 }, { k: 'pages', n: 2 }]),
-  levelGift(20, 199, 690, [{ k: 'builder', days: 3 }, { k: 'speed', min: 240 }, { k: 'scrolls', n: 10 }, { k: 'xp', hours: 8 }]),
-  levelGift(30, 299, 1050, [{ k: 'builder', days: 7 }, { k: 'speed', min: 480 }, { k: 'scrolls', n: 10 }, { k: 'pages', n: 5 }]),
-  levelGift(40, 399, 1400, [{ k: 'builder', days: 7 }, { k: 'speed', min: 720 }, { k: 'scrolls', n: 20 }, { k: 'art' }, { k: 'xp', hours: 24 }]),
-  levelGift(50, 499, 1750, [{ k: 'builder', days: 7 }, { k: 'speed', min: 1440 }, { k: 'scrolls', n: 20 }, { k: 'art' }, { k: 'charm', n: 15 }]),
-  levelGift(60, 599, 2100, [{ k: 'builder', days: 7 }, { k: 'speed', min: 1440 }, { k: 'scrolls', n: 30 }, { k: 'art' }, { k: 'pages', n: 10 }, { k: 'shield', hours: 72 }]),
+  levelGift(10, 290, [{ k: 'speed', min: 480 }, { k: 'scrolls', n: 15 }, { k: 'charm', n: 10 }, { k: 'pages', n: 5 }]),
+  levelGift(20, 590, [{ k: 'builder', days: 7 }, { k: 'speed', min: 1080 }, { k: 'scrolls', n: 20 }, { k: 'xp', hours: 10 }]),
+  levelGift(30, 990, [{ k: 'builder', days: 13 }, { k: 'speed', min: 1980 }, { k: 'scrolls', n: 30 }, { k: 'pages', n: 10 }]),
+  levelGift(40, 1990, [{ k: 'builder', days: 30 }, { k: 'speed', min: 4500 }, { k: 'scrolls', n: 60 }, { k: 'art' }, { k: 'art' }, { k: 'art' }, { k: 'xp', hours: 40 }]),
+  levelGift(50, 2990, [{ k: 'builder', days: 30 }, { k: 'speed', min: 7200 }, { k: 'scrolls', n: 90 }, { k: 'art' }, { k: 'art' }, { k: 'art' }, { k: 'art' }, { k: 'art' }, { k: 'charm', n: 60 }]),
+  levelGift(60, 4990, [{ k: 'builder', days: 30 }, { k: 'speed', min: 12_480 }, { k: 'scrolls', n: 135 }, { k: 'art' }, { k: 'art' }, { k: 'art' }, { k: 'art' }, { k: 'art' }, { k: 'art' }, { k: 'art' }, { k: 'art' }, { k: 'pages', n: 40 }, { k: 'shield', hours: 168 }]),
 
   // ---------------------------------------------------------------------------------------------- the sea
   {
     id: 'ammo', tabs: ['sea'], sec: 'supply', icon: 'ammo_round',
-    name: T('Crate of shot', 'Ящик ядер'),
-    text: T('Round, chain and grape into your magazine.', 'Ядра, книппели и картечь — в крюйт-камеру.'),
-    offers: [
-      o('ammo_s', 20, [{ k: 'ammo', ammo: 'round', n: 150 }, { k: 'ammo', ammo: 'chain', n: 50 }, { k: 'ammo', ammo: 'grape', n: 50 }]),
-      o('ammo_m', 50, [{ k: 'ammo', ammo: 'round', n: 450 }, { k: 'ammo', ammo: 'chain', n: 150 }, { k: 'ammo', ammo: 'grape', n: 150 }]),
-      o('ammo_l', 150, [{ k: 'ammo', ammo: 'round', n: 1500 }, { k: 'ammo', ammo: 'chain', n: 500 }, { k: 'ammo', ammo: 'grape', n: 500 }], { tag: 'best' }),
-    ],
+    name: T('Crates of shot', 'Ящики ядер'),
+    text: T('Round, chain and grape into your magazine: a crate is 150, 50 and 50.', 'Ядра, книппели и картечь — в крюйт-камеру: в ящике 150, 50 и 50.'),
+    offers: line('ammo', [290, 590, 990], UNIT_PRICE.crate, (n) => [{ k: 'ammo', ammo: 'round', n: 150 * n }, { k: 'ammo', ammo: 'chain', n: 50 * n }, { k: 'ammo', ammo: 'grape', n: 50 * n }]),
   },
   {
     id: 'ammo2', tabs: ['sea'], sec: 'supply', icon: 'ammo_incendiary',
-    name: T('Special shot', 'Особые снаряды'),
-    text: T('Fire shot, heavy shot and long shot.', 'Зажигательные, тяжёлые и дальнобойные снаряды.'),
-    offers: [
-      o('ammo2_s', 35, [{ k: 'ammo', ammo: 'incendiary', n: 40 }, { k: 'ammo', ammo: 'heavy', n: 40 }, { k: 'ammo', ammo: 'long_shot', n: 20 }]),
-      o('ammo2_m', 90, [{ k: 'ammo', ammo: 'incendiary', n: 120 }, { k: 'ammo', ammo: 'heavy', n: 120 }, { k: 'ammo', ammo: 'long_shot', n: 60 }]),
-      o('ammo2_l', 260, [{ k: 'ammo', ammo: 'incendiary', n: 400 }, { k: 'ammo', ammo: 'heavy', n: 400 }, { k: 'ammo', ammo: 'long_shot', n: 200 }], { tag: 'best' }),
-    ],
-  },
-  {
-    id: 'prov', tabs: ['sea'], sec: 'supply', icon: 'good_provisions',
-    name: T('Provisions', 'Провиант'),
-    text: T('Into your hold, if there is room for it.', 'В трюм, если для него есть место.'),
-    offers: [o('prov_s', 12, [{ k: 'cargo', good: 'provisions', n: 100 }]), o('prov_m', 30, [{ k: 'cargo', good: 'provisions', n: 300 }]), o('prov_l', 80, [{ k: 'cargo', good: 'provisions', n: 1000 }], { tag: 'best' })],
-  },
-  {
-    id: 'stores', tabs: ['sea'], sec: 'supply', icon: 'good_planks',
-    name: T('Carpenter’s stores', 'Плотницкий запас'),
-    text: T('Planks and sailcloth for mending at sea.', 'Доски и парусина для ремонта в море.'),
-    offers: [
-      o('stores_s', 20, [{ k: 'cargo', good: 'planks', n: 40 }, { k: 'cargo', good: 'sailcloth', n: 20 }]),
-      o('stores_m', 50, [{ k: 'cargo', good: 'planks', n: 120 }, { k: 'cargo', good: 'sailcloth', n: 60 }]),
-      o('stores_l', 140, [{ k: 'cargo', good: 'planks', n: 400 }, { k: 'cargo', good: 'sailcloth', n: 200 }], { tag: 'best' }),
-    ],
+    name: T('Crates of special shot', 'Ящики особых снарядов'),
+    text: T('Fire shot, heavy shot and long shot: a crate is 40, 40 and 20.', 'Зажигательные, тяжёлые и дальнобойные снаряды: в ящике 40, 40 и 20.'),
+    offers: line('ammo2', [290, 590, 990], UNIT_PRICE.crate2, (n) => [{ k: 'ammo', ammo: 'incendiary', n: 40 * n }, { k: 'ammo', ammo: 'heavy', n: 40 * n }, { k: 'ammo', ammo: 'long_shot', n: 20 * n }]),
   },
   {
     id: 'kit', tabs: ['sea'], sec: 'supply', icon: 'sp_mend_hull',
-    name: T('Repair kit', 'Ремкомплект'),
-    text: T('Kept in store: one makes hull, canvas, rudder and guns whole at once, out of a fight.', 'Хранится в запасе: один чинит корпус, паруса, руль и пушки сразу, вне боя.'),
-    offers: [o('kit_s', 30, [{ k: 'kit', n: 1 }]), o('kit_m', 75, [{ k: 'kit', n: 3 }]), o('kit_l', 200, [{ k: 'kit', n: 10 }], { tag: 'best' })],
+    name: T('Repair kits', 'Ремкомплекты'),
+    text: T('Kept in store: one makes hull, canvas, rudder and guns whole at once, out of a fight.', 'Хранятся в запасе: один чинит корпус, паруса, руль и пушки сразу, вне боя.'),
+    offers: line('kit', [290, 590, 990], UNIT_PRICE.kit, (n) => [{ k: 'kit', n }]),
   },
   {
     id: 'crew', tabs: ['sea'], sec: 'supply', icon: 'prof_sailor',
     name: T('Press of hands', 'Вербовщики'),
-    text: T('Deckhands into your hammocks at once — there must be room for all of them.', 'Матросы встают на ваши койки сразу — места должно хватить всем.'),
-    offers: [o('crew_s', 15, [{ k: 'crew', n: 25 }]), o('crew_m', 50, [{ k: 'crew', n: 100 }]), o('crew_l', 120, [{ k: 'crew', n: 300 }], { tag: 'best' })],
+    text: T('Deckhands fill your free hammocks at once, up to the pack’s number.', 'Матросы сразу занимают свободные койки — до числа в наборе.'),
+    offers: line('crew', [290, 990], RECRUIT_COST[0] / RECRUIT_SILVER, (n) => [{ k: 'crew', n }]),
   },
   {
     id: 'wind', tabs: ['sea'], sec: 'voyage', icon: 'sp_fair_wind',
     name: T('Fair wind', 'Попутный ветер'),
     text: T('+10% speed on a voyage. Falls still while you are under fire.', '+10% к скорости в походе. Стихает, пока по вам стреляют.'),
-    offers: [o('wind_1', 20, [{ k: 'wind', hours: 1 }]), o('wind_3', 50, [{ k: 'wind', hours: 3 }]), o('wind_8', 110, [{ k: 'wind', hours: 8 }]), o('wind_24', 280, [{ k: 'wind', hours: 24 }], { tag: 'best' })],
+    offers: line('wind', [290, 590, 990], UNIT_PRICE.wind, (h) => [{ k: 'wind', hours: h }], hours),
   },
   {
     id: 'pardon', tabs: ['sea'], sec: 'voyage', icon: 'tab_law',
     name: T('Letters of pardon', 'Помилование'),
     text: T('Your infamy struck off, anywhere at sea. Once a day.', 'Ваша дурная слава стёрта — где угодно в море. Раз в день.'),
-    offers: [o('pardon', 90, [{ k: 'pardon' }], { limit: { n: 1, per: 'day' } })],
+    offers: [o('pardon', 290, [{ k: 'pardon' }], { limit: { n: 1, per: 'day' } })],
   },
   {
     id: 'map', tabs: ['sea'], sec: 'voyage', icon: 'map_treasure',
-    name: T('Treasure map', 'Карта сокровищ'),
-    text: T('A map of your waters’ tier into your chest of maps. Three a day.', 'Карта по силам ваших вод — в ларец с картами. Три в день.'),
-    offers: [o('map_1', 60, [{ k: 'map' }], { limit: { n: 3, per: 'day' } })],
+    name: T('Treasure maps', 'Карты сокровищ'),
+    text: T('Five maps of your waters’ tier into your chest of maps (room for them needed). Once a day.', 'Пять карт по силам ваших вод — в ларец с картами (нужно место). Раз в день.'),
+    offers: [o('map_290', 290, [{ k: 'map', n: 5 }], { limit: { n: 1, per: 'day' } })],
   },
   {
     id: 'looks', tabs: ['sea'], sec: 'voyage', icon: 'item_silk_sails',
     name: T('Ship’s finery', 'Облик корабля'),
     text: T('Sails, hull paints, lanterns, colours and flags not yet yours, drawn at random; the deeds’ own are never sold.', 'Паруса, краски корпуса, фонари, цвета и флаги, которых у вас ещё нет, — наугад; знаки подвигов не продаются.'),
-    offers: [o('looks_3', 45, [{ k: 'looks', n: 3 }]), o('looks_10', 120, [{ k: 'looks', n: 10 }], { tag: 'best' })],
+    offers: line('looks', [290, 590], UNIT_PRICE.looks, (n) => [{ k: 'looks', n }]),
   },
 
   // ---------------------------------------------------------------------------------------------- the boarding
   ...[1, 2, 3, 4, 5, 6, 7].map(recruit),
   {
     id: 'ascroll', tabs: ['board'], sec: 'battle', icon: 'tab_contracts',
-    name: T('Auto-battle scroll', 'Свиток автобоя'),
+    name: T('Auto-battle scrolls', 'Свитки автобоя'),
     text: T('One scroll for one battle: «Auto» fights your side to the end.', 'Один свиток — один бой: «Авто» ведёт вашу сторону до конца.'),
-    offers: [o('as1', 25, [{ k: 'scrolls', n: 1 }]), o('as5', 100, [{ k: 'scrolls', n: 5 }]), o('as20', 300, [{ k: 'scrolls', n: 20 }]), o('as50', 650, [{ k: 'scrolls', n: 50 }], { tag: 'best' })],
+    offers: line('as', [290, 590, 990, 1990], UNIT_PRICE.scrolls, (n) => [{ k: 'scrolls', n }]),
   },
   {
     id: 'charm', tabs: ['board'], sec: 'battle', icon: 'item_rabbit_foot',
-    name: T('Lucky charm', 'Талисман удачи'),
+    name: T('Lucky charms', 'Талисманы удачи'),
     text: T('+1 luck and +15 morale for one boarding against the sea’s ships; never against a captain.', '+1 к удаче и +15 к боевому духу на один абордаж с кораблями моря; против капитанов не действует.'),
-    offers: [o('charm_1', 20, [{ k: 'charm', n: 1 }]), o('charm_5', 85, [{ k: 'charm', n: 5 }]), o('charm_15', 220, [{ k: 'charm', n: 15 }], { tag: 'best' })],
+    offers: line('charm', [290, 590, 990, 1990], UNIT_PRICE.charm, (n) => [{ k: 'charm', n }]),
   },
   {
     id: 'refill', tabs: ['board'], sec: 'battle', icon: 'prof_surgeon',
     name: T('Infirmary', 'Лазарет'),
-    text: T('The fallen of your last boarding against the sea stand again, within an hour of it. The price is by their worth.', 'Павшие в последнем абордаже с кораблями моря снова в строю — в течение часа после боя. Цена — по их стоимости.'),
+    text: T('The fallen of your last boarding against the sea stand again, within an hour of it. The price is by their worth, 290 at the least.', 'Павшие в последнем абордаже с кораблями моря снова в строю — в течение часа после боя. Цена — по их стоимости, не меньше 290.'),
     offers: [o('refill', 0, [{ k: 'refill' }])],
   },
   {
     id: 'xp', tabs: ['board'], sec: 'battle', icon: 'xp',
     name: T('Elixir of experience', 'Эликсир опыта'),
     text: T('+50% experience for battles while it lasts.', '+50% опыта за бои, пока действует.'),
-    offers: [o('xp_1', 30, [{ k: 'xp', hours: 1 }]), o('xp_3', 75, [{ k: 'xp', hours: 3 }]), o('xp_8', 160, [{ k: 'xp', hours: 8 }]), o('xp_24', 390, [{ k: 'xp', hours: 24 }], { tag: 'best' })],
+    offers: line('xp', [290, 590, 990, 1990], UNIT_PRICE.xp, (h) => [{ k: 'xp', hours: h }], hours),
   },
   {
     id: 'pages', tabs: ['board'], sec: 'battle', icon: 'bt_book',
     name: T('Scrolls of the path', 'Свитки техник'),
     text: T('Scrolls of your path’s book, drawn for your ship’s level: five of a kind at most.', 'Свитки страниц книги вашего пути — по уровню корабля; не больше пяти одного вида.'),
-    offers: [o('pages_1', 30, [{ k: 'pages', n: 1 }]), o('pages_5', 130, [{ k: 'pages', n: 5 }]), o('pages_15', 330, [{ k: 'pages', n: 15 }], { tag: 'best' })],
+    offers: line('pages', [290, 590, 990], UNIT_PRICE.pages, (n) => [{ k: 'pages', n }]),
   },
   {
     id: 'art', tabs: ['board'], sec: 'battle', icon: 'item_saint_medal',
     name: T('Chest of finds', 'Сундук находок'),
-    text: T('An artifact from a hoard’s table into your locker.', 'Артефакт из таблицы кладов — в ваш сундук снаряжения.'),
-    offers: [o('art_1', 150, [{ k: 'art' }], { limit: { n: 1, per: 'day' } }), o('art_3', 400, [{ k: 'art' }, { k: 'art' }, { k: 'art' }], { limit: { n: 1, per: 'week' } })],
+    text: T('Artifacts from a hoard’s table into your locker.', 'Артефакты из таблицы кладов — в ваш сундук снаряжения.'),
+    offers: [o('art_290', 290, [{ k: 'art' }, { k: 'art' }], { limit: { n: 1, per: 'day' } }), o('art_990', 990, Array.from({ length: 8 }, () => ({ k: 'art' }) as ShopGrant), { limit: { n: 1, per: 'week' }, tag: 'best' })],
   },
 
   // ---------------------------------------------------------------------------------------------- the island
@@ -347,44 +385,44 @@ export const SHOP: ShopFamily[] = [
     id: 'btemp', tabs: ['isle'], sec: 'build', icon: 'prof_carpenter',
     name: T('Hired brigade', 'Наёмная бригада'),
     text: T('One more building goes up at once while it is hired; two hired at most (a third extends the sooner).', 'Пока бригада нанята, ещё одна постройка строится одновременно; нанять можно две (третья продлит ту, что кончается раньше).'),
-    offers: [o('btemp_1', 90, [{ k: 'builder', days: 1 }]), o('btemp_3', 220, [{ k: 'builder', days: 3 }]), o('btemp_7', 420, [{ k: 'builder', days: 7 }], { tag: 'best' })],
+    offers: line('btemp', [290, 590, 990, 1990], UNIT_PRICE.builder, (d) => [{ k: 'builder', days: d }], days),
   },
   {
     id: 'bperm', tabs: ['isle'], sec: 'build', icon: 'build_workshop',
     name: T('Brigade for good', 'Своя бригада'),
     text: T('A builders’ brigade of your own for good: it moves with you to a new island. Two at most.', 'Своя бригада строителей навсегда: переезжает с вами на новый остров. Не больше двух.'),
-    offers: [o('bperm_1', 1200, [{ k: 'perm' }]), o('bperm_2', 2000, [{ k: 'perm' }])],
+    offers: [o('bperm_1', 1990, [{ k: 'perm' }]), o('bperm_2', 2990, [{ k: 'perm' }])],
   },
   {
     id: 'speed', tabs: ['isle', 'sea'], sec: 'build', icon: 'item_storm_glass',
     name: T('Speed-ups', 'Ускорения'),
-    text: T('Minutes into your store of speed-ups: spend them on any work on the island or the yard’s refit, a job at a time — nothing is lost.', 'Минуты в запас ускорений: тратьте на любую стройку острова и перестройку корабля, по одной работе — ничего не сгорает.'),
-    offers: [o('sp_5m', 4, [{ k: 'speed', min: 5 }]), o('sp_1h', 35, [{ k: 'speed', min: 60 }]), o('sp_8h', 240, [{ k: 'speed', min: 480 }]), o('sp_24h', 600, [{ k: 'speed', min: 1440 }], { tag: 'best' })],
+    text: T('Hours into your store of speed-ups: spend them on any work on the island or the yard’s refit, a job at a time — nothing is lost.', 'Часы в запас ускорений: тратьте на любую стройку острова и перестройку корабля, по одной работе — ничего не сгорает.'),
+    offers: line('sp', [290, 590, 990, 1990, 4990], UNIT_PRICE.speed, (m) => [{ k: 'speed', min: m }], (x) => Math.max(60, Math.round(x / 60) * 60)),
   },
-  ...(['timber', 'coal', 'tar', 'iron', 'provisions'] as BaseRes[]).map(resFamily),
+  ...ALL_RES.map(resFamily),
   {
     id: 'resmix', tabs: ['isle'], sec: 'res', icon: 'tab_holdings',
     name: T('Builder’s crate', 'Ящик строителя'),
     text: T('All five of the island’s goods at once, into its yard.', 'Все пять товаров острова сразу — во двор.'),
-    offers: [o('mix_s', 60, mixed(200)), o('mix_m', 160, mixed(600)), o('mix_l', 450, mixed(2000), { tag: 'best' })],
+    offers: line('mix', [290, 590, 990, 1990, 4990], ALL_RES.reduce((a, g) => a + UNIT_PRICE[g], 0), mixed),
   },
   {
     id: 'prod', tabs: ['isle'], sec: 'isle', icon: 'build_farm',
     name: T('Harvest season', 'Урожайный сезон'),
     text: T('+50% from every producer of your island while it lasts.', '+50% к добыче всех промыслов острова, пока действует.'),
-    offers: [o('prod_1', 90, [{ k: 'prod', hours: 24 }]), o('prod_3', 220, [{ k: 'prod', hours: 72 }]), o('prod_7', 450, [{ k: 'prod', hours: 168 }], { tag: 'best' })],
+    offers: line('prod', [290, 590, 990, 1990], UNIT_PRICE.prod * 24, (d) => [{ k: 'prod', hours: d * 24 }], (x) => Math.min(30, days(x))),
   },
   {
     id: 'shield', tabs: ['isle'], sec: 'isle', icon: 'build_fort',
     name: T('Charter of protection', 'Охранная грамота'),
     text: T('No raiders and no robbers land on your island while it holds; two weeks ahead at most.', 'Пока грамота действует, ни налётчики, ни грабители не высадятся на ваш остров; не больше двух недель вперёд.'),
-    offers: [o('shield_1', 80, [{ k: 'shield', hours: 24 }]), o('shield_3', 200, [{ k: 'shield', hours: 72 }]), o('shield_7', 400, [{ k: 'shield', hours: 168 }], { tag: 'best' })],
+    offers: line('shield', [290, 590, 990], UNIT_PRICE.shield * 24, (d) => [{ k: 'shield', hours: d * 24 }], (x) => Math.min(14, Math.max(1, Math.floor(x)))),
   },
   {
     id: 'move', tabs: ['isle'], sec: 'isle', icon: 'tab_isles',
     name: T('Charter of removal', 'Грамота на переезд'),
     text: T('Your island’s next move without its fee (2 600 doubloons when paid at the move).', 'Следующий переезд острова без платы (при переезде — 2 600 дублонов).'),
-    offers: [o('move_1', 2400, [{ k: 'move' }])],
+    offers: [o('move_2490', 2490, [{ k: 'move' }])],
   },
 ];
 
@@ -394,9 +432,9 @@ export const OFFERS: Map<string, { fam: ShopFamily; offer: ShopOffer }> = new Ma
 /** The levels with a gift. */
 export const LEVEL_GIFTS = SHOP.filter((f) => f.level).map((f) => f.level!);
 
-/** What the deal of the day is drawn from: single offers of the shelves (never a bundle, a brigade for good nor the
- *  charter of removal). */
-export const DEAL_POOL = ['btemp_1', 'sp_1h', 'sp_8h', 'xp_3', 'charm_5', 'as5', 'mix_s', 'prod_1', 'shield_1', 'wind_3', 'ammo_m', 'kit_m', 'pages_5', 'iron_m'];
+/** What the deal of the day is drawn from: offers of the shelves dear enough to stay at PRICE_MIN or more after the
+ *  discount (never a bundle, a brigade for good nor the charter of removal). */
+export const DEAL_POOL = ['btemp_590', 'sp_590', 'sp_990', 'xp_590', 'charm_590', 'as_590', 'mix_590', 'prod_590', 'shield_590', 'wind_590', 'ammo_590', 'kit_590', 'pages_590', 'iron_990', 'btemp_990', 'mix_990'];
 
 /** The day (UTC) and the week (from Monday) of a wall time. */
 export const dayOf = (ms: number): number => Math.floor(ms / 86_400_000);
@@ -407,7 +445,7 @@ export function dealOf(day: number): { offer: ShopOffer; price: number } {
   let h = (day * 2654435761) >>> 0;
   h ^= h >>> 15;
   const offer = OFFERS.get(DEAL_POOL[(h >>> 0) % DEAL_POOL.length])!.offer;
-  return { offer, price: Math.max(1, Math.round(offer.price * (1 - DEAL_OFF))) };
+  return { offer, price: Math.max(PRICE_MIN, Math.round(offer.price * (1 - DEAL_OFF))) };
 }
 
 /** How much of the family's measure an offer holds (its first grant's kind, summed). */

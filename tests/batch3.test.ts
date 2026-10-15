@@ -76,7 +76,7 @@ test('eight hulls for doubloons, two a list, at the tiers where her list\'s prem
     assert.equal(mine.length, 2, l);
     for (const c of mine) assert.ok(before[d(c).tier - 1] <= second, `${c}: tier ${d(c).tier} of the ${l} list had ${before[d(c).tier - 1]} premium hulls (${before.join('/')})`);
   }
-  const band: Record<number, [number, number]> = { 1: [300, 600], 2: [600, 1000], 3: [1000, 1800], 4: [2000, 3000], 5: [3000, 5000] };
+  const band: Record<number, [number, number]> = { 1: [990, 1490], 2: [1990, 2790], 3: [2990, 4490], 4: [4990, 6990], 5: [7490, 9900] }; // owner, 2026-10-15: the shop's prices from 290 to 9 900
   for (const c of HULLS) {
     const x = d(c);
     // Never for silver; priced by her tier in doubloons; a gift and a kind of her own; the levels and the role of her tier.

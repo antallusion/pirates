@@ -159,7 +159,8 @@ test('a kind for doubloons joins the army as a tamer\'s do — or is refused wit
     ship.setArmy([{ u: 'deckhand', n: ship.stats.crewMax - 3 }]);
     assert.equal(why(), 'room');
     buy();
-    assert.match(conn.last('toast')!.msg, /No hammocks aboard for 6 more/);
+    // (her least pack: two stacks — the shop's least price is 290, owner 2026-10-15)
+    assert.match(conn.last('toast')!.msg, /No hammocks aboard for 12 more/);
     // Under fire.
     ship.setArmy([{ u: 'deckhand', n: 20 }]);
     ship.lastHitAt = game.now; // under another ship's fire (her own fight is no fire: owner, 2026-10-07)
@@ -169,12 +170,12 @@ test('a kind for doubloons joins the army as a tamer\'s do — or is refused wit
     assert.equal(db.doubloons(s.accountId), 1000, 'every refusal cost nothing');
     ship.lastHitAt = -999;
     buy();
-    assert.equal(has(), 6, 'the whole stack aboard');
-    assert.equal(db.doubloons(s.accountId), 750);
-    assert.equal(conn.last('doubloons')?.n, 750);
-    assert.deepEqual(rows(db, s.accountId).at(-1), { kind: 'doubloons_buy', amount: -250, detail: 'unit:mermaid:6' });
+    assert.equal(has(), 12, 'the whole pack aboard');
+    assert.equal(db.doubloons(s.accountId), 500);
+    assert.equal(conn.last('doubloons')?.n, 500);
+    assert.deepEqual(rows(db, s.accountId).at(-1), { kind: 'doubloons_buy', amount: -500, detail: 'unit:mermaid:12' });
     const saved = JSON.parse(db.loadCaptain(s.accountId)!.data) as { army: { u: string; n: number }[] };
-    assert.ok(saved.army.some((x) => x.u === 'mermaid' && x.n === 6), 'saved with the payment, in one transaction');
+    assert.ok(saved.army.some((x) => x.u === 'mermaid' && x.n === 12), 'saved with the payment, in one transaction');
   });
 });
 
@@ -352,14 +353,14 @@ test('the shop\'s window on the wire: an empty shop says so, the catalogue lists
     assert.deepEqual(premiumUnits().filter((u) => !shelf.includes(u)), ['seal', 'mermaid'], 'the cheapest first');
     const w = premiumView(game, s);
     // A new captain's ⚓1 hull: the fourth tier is sold from ⚓3 (docs/18 VII).
-    assert.deepEqual(w.units.filter((x) => x.id === 'seal' || x.id === 'mermaid').map((x) => [x.id, x.price, x.n, x.why]), [['seal', 90, 10, 'poor'], ['mermaid', 250, 6, 'tier']]);
+    assert.deepEqual(w.units.filter((x) => x.id === 'seal' || x.id === 'mermaid').map((x) => [x.id, x.price, x.n, x.why]), [['seal', 90, 10, 'room'], ['mermaid', 250, 6, 'tier']]); // (the seals' least pack, four stacks for 360, finds no hammocks on her sloop)
     assert.deepEqual(w.ships.filter((x) => x.id === 'xebec').map((x) => [x.id, x.lv, x.why]), [['xebec', captainLevelFor(levelRange('xebec')[0]), 'level']]);
   });
   // A bad id is no sale (and no throw).
   conn.push({ t: 'premium', action: 'buy_unit', id: '__proto__' as UnitId });
   assert.equal(conn.last('toast')?.msg, 'Not for sale');
-  // The packs of the top-up: 100, 550, 1200, 2600 and 7000, the bonus growing.
-  assert.deepEqual(DOUBLOON_PACKS.map((p) => p.n + p.bonus), [100, 550, 1200, 2600, 7000]);
+  // The packs of the top-up (owner, 2026-10-15: 290 to 9 900 roubles), the bonus growing.
+  assert.deepEqual(DOUBLOON_PACKS.map((p) => p.n + p.bonus), [290, 620, 1090, 2390, 6490, 13900]);
   for (let i = 1; i < DOUBLOON_PACKS.length; i++) assert.ok(DOUBLOON_PACKS[i].bonus / DOUBLOON_PACKS[i].n > DOUBLOON_PACKS[i - 1].bonus / DOUBLOON_PACKS[i - 1].n);
 });
 

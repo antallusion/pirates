@@ -324,7 +324,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 110, holdWeight: 130, crewMin: 100, crewMax: 300, gunPortsPerSide: 14, bowChasers: 2, sternChasers: 2,
     sailHp: 230, repairRate: 1.0, detection: 1700, price: 46000, purchasable: false, sprite: 'ship.black_corsair', list: 'combat',
     passive: { id: 'corsair_lines', name: 'Corsair Lines', description: 'Built to run prizes down: +10% acceleration and +15% boarding range.', mods: { accel: 0.1, boardingRange: 0.15 } },
-    premium: { price: 2600, note: ['Fast for a frigate and built to run prizes down; the Black Flag turns her guns red-hot when she is hurt.', 'Быстрая для фрегата, строена догонять призы; Чёрный флаг раскаляет её пушки, когда она ранена.'], beasts: [{ u: 'corsair_phantom', n: 14 }] },
+    premium: { price: 6590, note: ['Fast for a frigate and built to run prizes down; the Black Flag turns her guns red-hot when she is hurt.', 'Быстрая для фрегата, строена догонять призы; Чёрный флаг раскаляет её пушки, когда она ранена.'], beasts: [{ u: 'corsair_phantom', n: 14 }] },
   }),
   dragon_junk: ship({
     id: 'dragon_junk', name: 'Dragon Junk', tier: 3, rig: 'mixed', role: 'An eastern battle junk bristling with fire lances.',
@@ -332,7 +332,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 90, holdWeight: 110, crewMin: 50, crewMax: 160, gunPortsPerSide: 9, bowChasers: 2, sternChasers: 1,
     sailHp: 170, repairRate: 1.0, detection: 1500, price: 18000, purchasable: false, sprite: 'ship.dragon_junk', list: 'combat',
     passive: { id: 'bulkheads', name: 'Watertight Bulkheads', description: 'A junk\'s bulkheads: leaks let in a quarter less water, and never more than two stand open.', mods: { leakInflow: -0.25, bulkheads: 1 } },
-    premium: { price: 1400, note: ['An eastern battle junk: watertight bulkheads, and fire lances that set her enemies alight.', 'Восточная боевая джонка: водонепроницаемые переборки и огненные копья, что поджигают врага.'], beasts: [{ u: 'dragon_lancer', n: 16 }] },
+    premium: { price: 4490, note: ['An eastern battle junk: watertight bulkheads, and fire lances that set her enemies alight.', 'Восточная боевая джонка: водонепроницаемые переборки и огненные копья, что поджигают врага.'], beasts: [{ u: 'dragon_lancer', n: 16 }] },
   }),
   iron_ram: ship({
     id: 'iron_ram', name: 'Iron Ram', tier: 4, rig: 'square', role: 'A heavy ram ship sheathed in black iron from the bow back.',
@@ -340,7 +340,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 100, holdWeight: 150, crewMin: 110, crewMax: 340, gunPortsPerSide: 12, bowChasers: 2, sternChasers: 1,
     sailHp: 220, repairRate: 0.85, detection: 1500, price: 48000, purchasable: false, sprite: 'ship.iron_ram', list: 'combat',
     passive: { id: 'iron_bow', name: 'Iron Bow', description: 'Her iron-sheathed ram strikes 80% harder, and a collision does her half the harm.', mods: { ramDealt: 0.8, ramTaken: -0.5 } },
-    premium: { price: 2500, note: ['Iron from the bow back: a ram that breaks hulls, and marines in iron who come over it.', 'Железо от носа до кормы: таран, что ломает корпуса, и морпехи в железе, что идут через него.'], beasts: [{ u: 'iron_marine', n: 14 }] },
+    premium: { price: 6190, note: ['Iron from the bow back: a ram that breaks hulls, and marines in iron who come over it.', 'Железо от носа до кормы: таран, что ломает корпуса, и морпехи в железе, что идут через него.'], beasts: [{ u: 'iron_marine', n: 14 }] },
   }),
   thunderer: ship({
     id: 'thunderer', name: 'Thunderer', tier: 4, rig: 'square', role: 'A storm frigate with copper rods on every masthead.',
@@ -348,7 +348,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 110, holdWeight: 140, crewMin: 120, crewMax: 360, gunPortsPerSide: 15, bowChasers: 2, sternChasers: 2,
     sailHp: 240, repairRate: 0.9, detection: 1650, price: 50000, purchasable: false, sprite: 'ship.thunderer', list: 'combat',
     passive: { id: 'copper_rods', name: 'Copper Rods', description: 'Copper down every mast to the sea: lightning strikes do 60% less damage.', flags: ['lightning_rod'] },
-    premium: { price: 2700, note: ['Copper rods on every masthead: the storm fights for her.', 'Медные громоотводы на каждой мачте: буря сражается за неё.'], beasts: [{ u: 'storm_caller', n: 12 }] },
+    premium: { price: 6990, note: ['Copper rods on every masthead: the storm fights for her.', 'Медные громоотводы на каждой мачте: буря сражается за неё.'], beasts: [{ u: 'storm_caller', n: 12 }] },
   }),
   wyvern_galleass: ship({
     id: 'wyvern_galleass', name: 'Wyvern Galleass', tier: 5, rig: 'fore_aft', role: 'A great galleass: banks of oars and a heavy battery at the bow.',
@@ -356,7 +356,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 140, holdWeight: 170, crewMin: 220, crewMax: 700, gunPortsPerSide: 18, bowChasers: 4, sternChasers: 2,
     sailHp: 300, repairRate: 0.8, detection: 1650, price: 105000, purchasable: false, sprite: 'ship.wyvern_galleass', list: 'combat',
     passive: { id: 'sweeps', name: 'Banks of Oars', description: '+25% speed in winds under half strength; oars give at least 3 m/s on any heading; her bow battery hits 25% harder.', mods: { chaserDamage: 0.25 } },
-    premium: { price: 4200, note: ['Banks of oars and a heavy bow battery; a wyvern rides in her shadow.', 'Ряды вёсел и тяжёлая носовая батарея; в её тени летит виверна.'], beasts: [{ u: 'sea_wyvern', n: 3 }] },
+    premium: { price: 8890, note: ['Banks of oars and a heavy bow battery; a wyvern rides in her shadow.', 'Ряды вёсел и тяжёлая носовая батарея; в её тени летит виверна.'], beasts: [{ u: 'sea_wyvern', n: 3 }] },
   }),
   kraken_hunter: ship({
     id: 'kraken_hunter', name: 'Kraken Hunter', tier: 5, rig: 'mixed', role: 'A warship-whaler with harpoon guns along both sides.',
@@ -364,7 +364,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 140, holdWeight: 180, crewMin: 200, crewMax: 640, gunPortsPerSide: 20, bowChasers: 2, sternChasers: 2,
     sailHp: 310, repairRate: 0.8, detection: 1800, price: 108000, purchasable: false, sprite: 'ship.kraken_hunter', list: 'combat',
     passive: { id: 'flensing_deck', name: 'Whaler\'s Frames', description: 'Flenses a carcass twice as fast; her line stands a third more strain; shy whales hear her a third less.' },
-    premium: { price: 4400, note: ['A warship-whaler: her harpoons hook ships and monsters alike, and war orcas swim with her.', 'Военный китобой: её гарпуны цепляют и корабли, и чудовищ, а с ней плывут боевые косатки.'], beasts: [{ u: 'war_orca', n: 3 }] },
+    premium: { price: 9190, note: ['A warship-whaler: her harpoons hook ships and monsters alike, and war orcas swim with her.', 'Военный китобой: её гарпуны цепляют и корабли, и чудовищ, а с ней плывут боевые косатки.'], beasts: [{ u: 'war_orca', n: 3 }] },
   }),
   crimson_tide: ship({
     id: 'crimson_tide', name: 'Crimson Tide', tier: 5, rig: 'square', role: 'A three-decker pirate flagship under deep red sails.',
@@ -372,7 +372,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 140, holdWeight: 170, crewMin: 240, crewMax: 720, gunPortsPerSide: 24, bowChasers: 2, sternChasers: 2,
     sailHp: 330, repairRate: 0.7, detection: 1650, price: 120000, purchasable: false, sprite: 'ship.crimson_tide', list: 'combat',
     passive: { id: 'line', name: 'Pirate Flagship', description: 'Immune to raking bonus damage from the bow; her crew loses 15% less morale.', mods: { moraleLoss: -0.15 } },
-    premium: { price: 4800, note: ['The pirate flagship: a hundred guns, a crimson guard, and a crew that fights as one tide.', 'Пиратский флагман: сотня пушек, багровая гвардия и команда, что бьётся единым приливом.'], beasts: [{ u: 'crimson_guard', n: 12 }] },
+    premium: { price: 9890, note: ['The pirate flagship: a hundred guns, a crimson guard, and a crew that fights as one tide.', 'Пиратский флагман: сотня пушек, багровая гвардия и команда, что бьётся единым приливом.'], beasts: [{ u: 'crimson_guard', n: 12 }] },
   }),
   phantom_brig: ship({
     id: 'phantom_brig', name: 'Phantom Brig', tier: 3, rig: 'square', role: 'A pale brig with torn grey sails and mist in her rigging.',
@@ -380,7 +380,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 80, holdWeight: 100, crewMin: 40, crewMax: 140, gunPortsPerSide: 8, bowChasers: 2, sternChasers: 1,
     sailHp: 160, repairRate: 1.2, detection: 1600, price: 16000, purchasable: false, sprite: 'ship.phantom_brig', list: 'combat',
     passive: { id: 'pale_timbers', name: 'Pale Timbers', description: 'Weathered silver-grey wood: her signature is a fifth smaller and her crew loses a tenth less morale.', mods: { signature: -0.2, moraleLoss: -0.1 } },
-    premium: { price: 1300, note: ['A pale brig that is hard to see and harder to finish: she fades into mist.', 'Бледный бриг, которого трудно заметить и ещё труднее добить: она растворяется в тумане.'], beasts: [{ u: 'mist_wraith', n: 10 }] },
+    premium: { price: 3990, note: ['A pale brig that is hard to see and harder to finish: she fades into mist.', 'Бледный бриг, которого трудно заметить и ещё труднее добить: она растворяется в тумане.'], beasts: [{ u: 'mist_wraith', n: 10 }] },
   }),
   storm_reaver: ship({
     id: 'storm_reaver', name: 'Storm Reaver', tier: 4, rig: 'square', role: 'A raider brig with spiked bulwarks and a boarding beak at the bow.',
@@ -388,7 +388,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 100, holdWeight: 130, crewMin: 130, crewMax: 400, gunPortsPerSide: 13, bowChasers: 2, sternChasers: 1,
     sailHp: 230, repairRate: 0.95, detection: 1600, price: 44000, purchasable: false, sprite: 'ship.storm_reaver', list: 'combat',
     passive: { id: 'raider_rig', name: 'Boarding Beak', description: 'Boarding range +10%; changing sail level is 20% faster; her boarders strike 10% harder.', mods: { meleeDamage: 0.1 } },
-    premium: { price: 2500, note: ['A raider made for boarding: her men go over in a fury.', 'Рейдер для абордажа: её люди идут на чужую палубу в ярости.'], beasts: [{ u: 'storm_berserker', n: 16 }] },
+    premium: { price: 6190, note: ['A raider made for boarding: her men go over in a fury.', 'Рейдер для абордажа: её люди идут на чужую палубу в ярости.'], beasts: [{ u: 'storm_berserker', n: 16 }] },
   }),
   sun_galleon: ship({
     id: 'sun_galleon', name: 'Sun Galleon', tier: 5, rig: 'square', role: 'A gilded war galleon of the Crown, her stern carved with golden suns.',
@@ -396,7 +396,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 140, holdWeight: 200, crewMin: 200, crewMax: 620, gunPortsPerSide: 21, bowChasers: 2, sternChasers: 2,
     sailHp: 320, repairRate: 0.75, detection: 1600, price: 115000, purchasable: false, sprite: 'ship.sun_galleon', list: 'combat',
     passive: { id: 'castle', name: 'Castle of Suns', description: 'Defenders gain +25% boarding power.' },
-    premium: { price: 4500, note: ['The Crown\'s gilded war galleon: a castle of suns that mends herself in a fight.', 'Золочёный военный галеон Короны: замок солнц, что чинит себя в бою.'], beasts: [{ u: 'sun_guard', n: 12 }] },
+    premium: { price: 9390, note: ['The Crown\'s gilded war galleon: a castle of suns that mends herself in a fight.', 'Золочёный военный галеон Короны: замок солнц, что чинит себя в бою.'], beasts: [{ u: 'sun_guard', n: 12 }] },
   }),
 
   // The traders.
@@ -455,7 +455,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 360, holdWeight: 420, crewMin: 60, crewMax: 200, gunPortsPerSide: 9, bowChasers: 1, sternChasers: 2,
     sailHp: 220, repairRate: 0.85, detection: 1350, price: 38000, purchasable: false, sprite: 'ship.golden_carrack', list: 'trade',
     passive: { id: 'castle', name: 'Gilded Castles', description: 'Defenders gain +25% boarding power.' },
-    premium: { price: 2400, note: ['Gold leaf from castle to castle: every port pays her more.', 'Сусальное золото от бака до юта: любой порт платит ей больше.'], beasts: [{ u: 'gilded_golem', n: 2 }] },
+    premium: { price: 5790, note: ['Gold leaf from castle to castle: every port pays her more.', 'Сусальное золото от бака до юта: любой порт платит ей больше.'], beasts: [{ u: 'gilded_golem', n: 2 }] },
   }),
   spice_dhow: ship({
     id: 'spice_dhow', name: 'Spice Dhow', tier: 2, rig: 'fore_aft', role: 'An Arabian dhow under saffron lateens, heavy with spice.',
@@ -463,7 +463,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 210, holdWeight: 220, crewMin: 12, crewMax: 40, gunPortsPerSide: 2, bowChasers: 1, sternChasers: 1,
     sailHp: 130, repairRate: 1.1, detection: 1350, price: 6500, purchasable: false, sprite: 'ship.spice_dhow', list: 'trade',
     passive: { id: 'sewn_hull', name: 'Sewn Hull', description: 'A sewn teak hull rides the swell: a heavy sea slows her a quarter less.', mods: { seaPenalty: -0.25 } },
-    premium: { price: 750, note: ['A dhow of the spice road, a djinn of saffron smoke aboard.', 'Доу пряного пути с джинном шафранового дыма на борту.'], beasts: [{ u: 'spice_djinn', n: 1 }] },
+    premium: { price: 2190, note: ['A dhow of the spice road, a djinn of saffron smoke aboard.', 'Доу пряного пути с джинном шафранового дыма на борту.'], beasts: [{ u: 'spice_djinn', n: 1 }] },
   }),
   silk_junk: ship({
     id: 'silk_junk', name: 'Silk Junk', tier: 3, rig: 'mixed', role: 'A trading junk under blue silk, her hold full of bolts of it.',
@@ -471,7 +471,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 300, holdWeight: 320, crewMin: 24, crewMax: 80, gunPortsPerSide: 4, bowChasers: 1, sternChasers: 1,
     sailHp: 180, repairRate: 1.0, detection: 1400, price: 15000, purchasable: false, sprite: 'ship.silk_junk', list: 'trade',
     passive: { id: 'batten_sails', name: 'Batten Sails', description: 'Silk on bamboo battens: +15% sail strength, and storms tear them 30% less.', mods: { sailHpMax: 0.15, stormSailDamage: -0.3 } },
-    premium: { price: 1200, note: ['A junk under blue silk: her silk sells dear and pays no duty.', 'Джонка под синим шёлком: её шёлк дорог и без пошлин.'], beasts: [{ u: 'silk_blade', n: 10 }] },
+    premium: { price: 3490, note: ['A junk under blue silk: her silk sells dear and pays no duty.', 'Джонка под синим шёлком: её шёлк дорог и без пошлин.'], beasts: [{ u: 'silk_blade', n: 10 }] },
   }),
   smugglers_lugger: ship({
     id: 'smugglers_lugger', name: "Smuggler's Lugger", tier: 2, rig: 'fore_aft', role: 'A low black lugger with hidden hatches.',
@@ -479,7 +479,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 210, holdWeight: 200, crewMin: 12, crewMax: 40, gunPortsPerSide: 2, bowChasers: 1, sternChasers: 1,
     sailHp: 120, repairRate: 1.1, detection: 1500, price: 6800, purchasable: false, sprite: 'ship.smugglers_lugger', list: 'trade',
     passive: { id: 'hidden_hatches', name: 'Hidden Hatches', description: 'Contraband takes a quarter less room in her hold.', mods: { contrabandVolumeMul: -0.25 } },
-    premium: { price: 800, note: ['A low black lugger with hidden hatches that vanishes in fog.', 'Низкий чёрный люггер с тайными люками, что исчезает в тумане.'], beasts: [{ u: 'night_smuggler', n: 10 }] },
+    premium: { price: 2390, note: ['A low black lugger with hidden hatches that vanishes in fog.', 'Низкий чёрный люггер с тайными люками, что исчезает в тумане.'], beasts: [{ u: 'night_smuggler', n: 10 }] },
   }),
   pearl_schooner: ship({
     id: 'pearl_schooner', name: 'Pearl Schooner', tier: 3, rig: 'fore_aft', role: 'A pearl-white schooner of the diving grounds.',
@@ -487,7 +487,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 300, holdWeight: 310, crewMin: 20, crewMax: 70, gunPortsPerSide: 4, bowChasers: 1, sternChasers: 1,
     sailHp: 170, repairRate: 1.05, detection: 1500, price: 14500, purchasable: false, sprite: 'ship.pearl_schooner', list: 'trade',
     passive: { id: 'weatherly', name: 'Diver\'s Rig', description: 'Loses 40% less speed when sailing close-hauled.' },
-    premium: { price: 1200, note: ['A pearl-white schooner of the diving grounds, sirens in her wake.', 'Жемчужно-белая шхуна с отмелей ныряльщиков, за кормой — сирены.'], beasts: [{ u: 'pearl_siren', n: 6 }] },
+    premium: { price: 3490, note: ['A pearl-white schooner of the diving grounds, sirens in her wake.', 'Жемчужно-белая шхуна с отмелей ныряльщиков, за кормой — сирены.'], beasts: [{ u: 'pearl_siren', n: 6 }] },
   }),
   floating_bazaar: ship({
     id: 'floating_bazaar', name: 'Floating Bazaar', tier: 4, rig: 'mixed', role: 'A broad barge with a market under striped awnings on her deck.',
@@ -495,7 +495,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 380, holdWeight: 400, crewMin: 40, crewMax: 160, gunPortsPerSide: 6, bowChasers: 1, sternChasers: 1,
     sailHp: 200, repairRate: 0.9, detection: 1300, price: 34000, purchasable: false, sprite: 'ship.floating_bazaar', list: 'trade',
     passive: { id: 'market_deck', name: 'Market Deck', description: 'A broad flat deck of stalls and cookfires: provisions last a tenth longer and her crew\'s morale mends faster.', mods: { provisionUse: -0.1, moraleRegen: 0.1 } },
-    premium: { price: 2200, note: ['A market afloat: she buys cheaper than any trader at sea.', 'Плавучий рынок: покупает дешевле любого торговца в море.'], beasts: [{ u: 'bazaar_monkeys', n: 30 }] },
+    premium: { price: 4990, note: ['A market afloat: she buys cheaper than any trader at sea.', 'Плавучий рынок: покупает дешевле любого торговца в море.'], beasts: [{ u: 'bazaar_monkeys', n: 30 }] },
   }),
   rum_runner: ship({
     id: 'rum_runner', name: 'Rum Runner', tier: 2, rig: 'fore_aft', role: 'A fast schooner loaded with rum under nets.',
@@ -503,7 +503,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 210, holdWeight: 230, crewMin: 12, crewMax: 44, gunPortsPerSide: 3, bowChasers: 1, sternChasers: 1,
     sailHp: 125, repairRate: 1.05, detection: 1400, price: 6800, purchasable: false, sprite: 'ship.rum_runner', list: 'trade',
     passive: { id: 'weatherly', name: 'Schooner Rig', description: 'Loses 40% less speed when sailing close-hauled.' },
-    premium: { price: 700, note: ['A fast schooner of rum and nerve: no port takes duty on her barrels.', 'Быстрая шхуна рома и отваги: ни один порт не берёт пошлину с её бочек.'], beasts: [{ u: 'rum_brawler', n: 12 }] },
+    premium: { price: 1990, note: ['A fast schooner of rum and nerve: no port takes duty on her barrels.', 'Быстрая шхуна рома и отваги: ни один порт не берёт пошлину с её бочек.'], beasts: [{ u: 'rum_brawler', n: 12 }] },
   }),
   ledger_galleon: ship({
     id: 'ledger_galleon', name: 'Ledger Galleon', tier: 4, rig: 'square', role: 'A black and silver galleon of the Brokers, her stern carved as an open ledger.',
@@ -511,7 +511,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 380, holdWeight: 440, crewMin: 60, crewMax: 220, gunPortsPerSide: 10, bowChasers: 2, sternChasers: 2,
     sailHp: 220, repairRate: 0.85, detection: 1400, price: 40000, purchasable: false, sprite: 'ship.ledger_galleon', list: 'trade',
     passive: { id: 'strongboxes', name: 'Chained Strongboxes', description: 'When she sinks, her boats save a fifth of the lawful cargo and fewer of her men are lost.', mods: { lifeboats: 1 } },
-    premium: { price: 2400, note: ['The Brokers\' own galleon: their seal on her hold, no duty anywhere.', 'Собственный галеон Брокеров: их печать на трюме — нигде никаких пошлин.'], beasts: [{ u: 'ledger_enforcer', n: 10 }] },
+    premium: { price: 5790, note: ['The Brokers\' own galleon: their seal on her hold, no duty anywhere.', 'Собственный галеон Брокеров: их печать на трюме — нигде никаких пошлин.'], beasts: [{ u: 'ledger_enforcer', n: 10 }] },
   }),
   tea_clipper: ship({
     id: 'tea_clipper', name: 'Tea Clipper', tier: 3, rig: 'square', role: 'A tall clipper that races the season home with the first of the cargo.',
@@ -519,7 +519,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 300, holdWeight: 300, crewMin: 26, crewMax: 90, gunPortsPerSide: 4, bowChasers: 1, sternChasers: 1,
     sailHp: 190, repairRate: 1.0, detection: 1500, price: 16000, purchasable: false, sprite: 'ship.tea_clipper', list: 'trade',
     passive: { id: 'clipper_bow', name: 'Clipper Bow', description: 'A long sharp bow: a heavy sea slows her a third less.', mods: { seaPenalty: -0.33 } },
-    premium: { price: 1300, note: ['A clipper that races the season home: fast in open water, and her cargo keeps twice as long.', 'Клипер, что обгоняет сезон: быстр в открытом море, а груз её хранится вдвое дольше.'], beasts: [{ u: 'jade_guard', n: 8 }] },
+    premium: { price: 3990, note: ['A clipper that races the season home: fast in open water, and her cargo keeps twice as long.', 'Клипер, что обгоняет сезон: быстр в открытом море, а груз её хранится вдвое дольше.'], beasts: [{ u: 'jade_guard', n: 8 }] },
   }),
   treasure_fluyt: ship({
     id: 'treasure_fluyt', name: 'Treasure Fluyt', tier: 3, rig: 'square', role: 'An iron-bound fluyt with barred hatches over her strongroom.',
@@ -527,7 +527,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 300, holdWeight: 360, crewMin: 24, crewMax: 80, gunPortsPerSide: 4, bowChasers: 0, sternChasers: 2,
     sailHp: 160, repairRate: 0.9, detection: 1250, price: 16000, purchasable: false, sprite: 'ship.treasure_fluyt', list: 'trade',
     passive: { id: 'deep_hold', name: 'Iron-bound Hold', description: 'Cargo is 50% less likely to be destroyed by hull hits.' },
-    premium: { price: 1250, note: ['An iron-bound fluyt with a strongroom that shuts under fire.', 'Окованный флейт с кладовой, что запирается под огнём.'], beasts: [{ u: 'vault_crab', n: 2 }] },
+    premium: { price: 3790, note: ['An iron-bound fluyt with a strongroom that shuts under fire.', 'Окованный флейт с кладовой, что запирается под огнём.'], beasts: [{ u: 'vault_crab', n: 2 }] },
   }),
 
   // The runners.
@@ -572,7 +572,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 75, holdWeight: 85, crewMin: 30, crewMax: 100, gunPortsPerSide: 7, bowChasers: 2, sternChasers: 1,
     sailHp: 165, repairRate: 1.05, detection: 1700, price: 16000, purchasable: false, sprite: 'ship.sea_hawk', list: 'fast',
     passive: { id: 'hunter', name: 'Hawk Eyes', description: '+15% detection radius; targets you damaged are revealed on the minimap for 30s.' },
-    premium: { price: 1400, note: ['A raider with hawk eyes: she sees far, and her shot tears canvas.', 'Рейдер с ястребиным глазом: видит далеко, и её ядра рвут парусину.'], beasts: [{ u: 'giant_hawk', n: 6 }] },
+    premium: { price: 4490, note: ['A raider with hawk eyes: she sees far, and her shot tears canvas.', 'Рейдер с ястребиным глазом: видит далеко, и её ядра рвут парусину.'], beasts: [{ u: 'giant_hawk', n: 6 }] },
   }),
   wind_dancer: ship({
     id: 'wind_dancer', name: 'Wind Dancer', tier: 2, rig: 'fore_aft', role: 'A racing sloop with a huge plan of pale canvas.',
@@ -580,7 +580,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 55, holdWeight: 60, crewMin: 12, crewMax: 40, gunPortsPerSide: 4, bowChasers: 1, sternChasers: 1,
     sailHp: 130, repairRate: 1.1, detection: 1550, price: 6800, purchasable: false, sprite: 'ship.wind_dancer', list: 'fast',
     passive: { id: 'weatherly', name: 'Racing Rig', description: 'Loses 40% less speed when sailing close-hauled.' },
-    premium: { price: 750, note: ['A racing sloop that dances in the lightest airs.', 'Гоночный шлюп, что танцует при самом слабом ветре.'], beasts: [{ u: 'wind_sprite', n: 8 }] },
+    premium: { price: 2190, note: ['A racing sloop that dances in the lightest airs.', 'Гоночный шлюп, что танцует при самом слабом ветре.'], beasts: [{ u: 'wind_sprite', n: 8 }] },
   }),
   shark_cutter: ship({
     id: 'shark_cutter', name: 'Shark Cutter', tier: 2, rig: 'fore_aft', role: 'A lean cutter with a shark\'s jaw carved on her bow.',
@@ -588,7 +588,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 45, holdWeight: 50, crewMin: 12, crewMax: 44, gunPortsPerSide: 4, bowChasers: 2, sternChasers: 0,
     sailHp: 120, repairRate: 1.15, detection: 1600, price: 7000, purchasable: false, sprite: 'ship.shark_cutter', list: 'fast',
     passive: { id: 'dispatch', name: 'Cutter Hull', description: 'Courier contracts pay 20% more; +10% acceleration.' },
-    premium: { price: 850, note: ['A shark-jawed cutter: her shot opens wounds, and great whites follow her.', 'Катер с акульей пастью: её ядра вскрывают раны, а за ней идут большие белые.'], beasts: [{ u: 'great_white', n: 2 }] },
+    premium: { price: 2590, note: ['A shark-jawed cutter: her shot opens wounds, and great whites follow her.', 'Катер с акульей пастью: её ядра вскрывают раны, а за ней идут большие белые.'], beasts: [{ u: 'great_white', n: 2 }] },
   }),
   ghost_clipper: ship({
     id: 'ghost_clipper', name: 'Ghost Clipper', tier: 4, rig: 'square', role: 'A pale clipper whose thin grey sails drift like mist.',
@@ -596,7 +596,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 110, holdWeight: 120, crewMin: 50, crewMax: 170, gunPortsPerSide: 10, bowChasers: 2, sternChasers: 1,
     sailHp: 220, repairRate: 1.15, detection: 1700, price: 40000, purchasable: false, sprite: 'ship.ghost_clipper', list: 'fast',
     passive: { id: 'ghost_timbers', name: 'Ghost Timbers', description: 'Pale timbers that should not float: her crew loses a tenth less morale, and she mends 15% faster.', mods: { moraleLoss: -0.1, repairRate: 0.15 } },
-    premium: { price: 2500, note: ['A pale clipper that owns the night.', 'Бледный клипер, которому принадлежит ночь.'], beasts: [{ u: 'ghost_navigator', n: 12 }] },
+    premium: { price: 6190, note: ['A pale clipper that owns the night.', 'Бледный клипер, которому принадлежит ночь.'], beasts: [{ u: 'ghost_navigator', n: 12 }] },
   }),
   flying_fish: ship({
     id: 'flying_fish', name: 'Flying Fish', tier: 1, rig: 'fore_aft', role: 'A tiny sloop with wing-like sails spread to both sides.',
@@ -604,7 +604,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 26, holdWeight: 26, crewMin: 6, crewMax: 22, gunPortsPerSide: 2, bowChasers: 1, sternChasers: 0,
     sailHp: 95, repairRate: 1.2, detection: 1500, price: 1900, purchasable: false, sprite: 'ship.flying_fish', list: 'fast',
     passive: { id: 'wing_booms', name: 'Wing Booms', description: 'Sails spread to both sides like fins: +15% acceleration.', mods: { accel: 0.15 } },
-    premium: { price: 450, note: ['The smallest of them: a tiny swift sloop that skips out of trouble.', 'Самый маленький из них: крошечный быстрый шлюп, что выпрыгивает из беды.'], beasts: [{ u: 'flying_fish', n: 6 }] },
+    premium: { price: 1290, note: ['The smallest of them: a tiny swift sloop that skips out of trouble.', 'Самый маленький из них: крошечный быстрый шлюп, что выпрыгивает из беды.'], beasts: [{ u: 'flying_fish', n: 6 }] },
   }),
   albatross_xebec: ship({
     id: 'albatross_xebec', name: 'Albatross', tier: 3, rig: 'fore_aft', role: 'A long xebec under three great white lateens.',
@@ -612,7 +612,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 75, holdWeight: 80, crewMin: 30, crewMax: 110, gunPortsPerSide: 7, bowChasers: 2, sternChasers: 1,
     sailHp: 160, repairRate: 1.1, detection: 1600, price: 15000, purchasable: false, sprite: 'ship.albatross_xebec', list: 'fast',
     passive: { id: 'sweeps', name: 'Sweeps', description: '+25% speed in winds under half strength; oars give at least 3 m/s on any heading, even head to wind.' },
-    premium: { price: 1350, note: ['A xebec under albatross wings: a good omen in open water.', 'Шебека на крыльях альбатроса: добрый знак в открытом море.'], beasts: [{ u: 'white_albatross', n: 3 }] },
+    premium: { price: 4290, note: ['A xebec under albatross wings: a good omen in open water.', 'Шебека на крыльях альбатроса: добрый знак в открытом море.'], beasts: [{ u: 'white_albatross', n: 3 }] },
   }),
   silver_arrow: ship({
     id: 'silver_arrow', name: 'Silver Arrow', tier: 4, rig: 'square', role: 'A long silver-sheathed clipper with a needle bow.',
@@ -620,7 +620,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 110, holdWeight: 115, crewMin: 50, crewMax: 160, gunPortsPerSide: 10, bowChasers: 2, sternChasers: 1,
     sailHp: 220, repairRate: 1.05, detection: 1700, price: 42000, purchasable: false, sprite: 'ship.silver_arrow', list: 'fast',
     passive: { id: 'needle_bow', name: 'Needle Bow', description: 'A needle-sharp bow: a heavy sea slows her a third less.', mods: { seaPenalty: -0.33 } },
-    premium: { price: 2600, note: ['The fastest hull at sea: a needle bow, and silver archers aboard.', 'Самый быстрый корпус в море: игольчатый нос и серебряные лучники на борту.'], beasts: [{ u: 'silver_archer', n: 16 }] },
+    premium: { price: 6590, note: ['The fastest hull at sea: a needle bow, and silver archers aboard.', 'Самый быстрый корпус в море: игольчатый нос и серебряные лучники на борту.'], beasts: [{ u: 'silver_archer', n: 16 }] },
   }),
   storm_petrel: ship({
     id: 'storm_petrel', name: 'Storm Petrel', tier: 3, rig: 'mixed', role: 'A brigantine built for storms, under black storm canvas.',
@@ -628,7 +628,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 85, holdWeight: 100, crewMin: 34, crewMax: 110, gunPortsPerSide: 7, bowChasers: 1, sternChasers: 1,
     sailHp: 180, repairRate: 1.0, detection: 1550, price: 15500, purchasable: false, sprite: 'ship.storm_petrel', list: 'fast',
     passive: { id: 'storm_canvas', name: 'Storm Canvas', description: 'Black storm sails: storms tear them 40% less, and a heavy sea slows her a quarter less.', mods: { stormSailDamage: -0.4, seaPenalty: -0.25 } },
-    premium: { price: 1300, note: ['A brigantine built for storms: the worse the weather, the faster she goes.', 'Бригантина для бурь: чем хуже погода, тем быстрее она идёт.'], beasts: [{ u: 'storm_petrels', n: 16 }] },
+    premium: { price: 3990, note: ['A brigantine built for storms: the worse the weather, the faster she goes.', 'Бригантина для бурь: чем хуже погода, тем быстрее она идёт.'], beasts: [{ u: 'storm_petrels', n: 16 }] },
   }),
   mermaid_grace: ship({
     id: 'mermaid_grace', name: "Mermaid's Grace", tier: 2, rig: 'fore_aft', role: 'A sea-green schooner with a mermaid at her bow.',
@@ -636,7 +636,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 60, holdWeight: 62, crewMin: 14, crewMax: 46, gunPortsPerSide: 4, bowChasers: 1, sternChasers: 1,
     sailHp: 125, repairRate: 1.15, detection: 1500, price: 6800, purchasable: false, sprite: 'ship.mermaid_grace', list: 'fast',
     passive: { id: 'sea_blessed', name: 'Shell-set Rails', description: 'A ship the sea likes: her crew\'s morale mends a fifth faster.', mods: { moraleRegen: 0.08 } },
-    premium: { price: 900, note: ['A sea-green schooner the sea loves, with a mermaid queen aboard.', 'Зелёная шхуна, которую любит море, с королевой русалок на борту.'], beasts: [{ u: 'mermaid_queen', n: 1 }] },
+    premium: { price: 2790, note: ['A sea-green schooner the sea loves, with a mermaid queen aboard.', 'Зелёная шхуна, которую любит море, с королевой русалок на борту.'], beasts: [{ u: 'mermaid_queen', n: 1 }] },
   }),
   viper: ship({
     id: 'viper', name: 'Viper', tier: 3, rig: 'fore_aft', role: 'A black galley-raider with a serpent\'s head at the bow.',
@@ -644,7 +644,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 70, holdWeight: 75, crewMin: 40, crewMax: 130, gunPortsPerSide: 6, bowChasers: 2, sternChasers: 0,
     sailHp: 150, repairRate: 1.05, detection: 1550, price: 14500, purchasable: false, sprite: 'ship.viper', list: 'fast',
     passive: { id: 'sweeps', name: 'Serpent Oars', description: '+25% speed in winds under half strength; oars give at least 3 m/s on any heading, even head to wind.' },
-    premium: { price: 1350, note: ['A black serpent-raider on oars: her shot chokes the enemy\'s guns.', 'Чёрный змей-рейдер на вёслах: её ядра душат вражеские пушки.'], beasts: [{ u: 'sea_viper', n: 4 }] },
+    premium: { price: 4290, note: ['A black serpent-raider on oars: her shot chokes the enemy\'s guns.', 'Чёрный змей-рейдер на вёслах: её ядра душат вражеские пушки.'], beasts: [{ u: 'sea_viper', n: 4 }] },
   }),
 
   // The haulers.
@@ -717,7 +717,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 760, holdWeight: 880, crewMin: 120, crewMax: 440, gunPortsPerSide: 12, bowChasers: 2, sternChasers: 2,
     sailHp: 320, repairRate: 0.75, detection: 1350, price: 95000, purchasable: false, sprite: 'ship.leviathan_ark', list: 'hauler',
     passive: { id: 'wet_well', name: 'Sea Pens', description: 'Nets take twice the catch; fish in the hold spoils three times slower.' },
-    premium: { price: 4000, note: ['A colossal ark with pens of sea water, where leviathan calves grow back.', 'Колоссальный ковчег с загонами морской воды, где снова подрастают детёныши левиафана.'], beasts: [{ u: 'leviathan_calf', n: 2 }] },
+    premium: { price: 8490, note: ['A colossal ark with pens of sea water, where leviathan calves grow back.', 'Колоссальный ковчег с загонами морской воды, где снова подрастают детёныши левиафана.'], beasts: [{ u: 'leviathan_calf', n: 2 }] },
   }),
   turtle_barge: ship({
     id: 'turtle_barge', name: 'Turtle Barge', tier: 4, rig: 'mixed', role: 'A barge built on the back of a colossal ancient sea turtle.',
@@ -725,7 +725,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 520, holdWeight: 600, crewMin: 60, crewMax: 220, gunPortsPerSide: 8, bowChasers: 1, sternChasers: 1,
     sailHp: 200, repairRate: 0.9, detection: 1250, price: 42000, purchasable: false, sprite: 'ship.turtle_barge', list: 'hauler',
     passive: { id: 'turtle_shell', name: 'Living Shell', description: 'The shell of an ancient turtle: +10% hull, and leaks let in a third less water.', mods: { hullMax: 0.1, leakInflow: -0.33 } },
-    premium: { price: 2400, note: ['A barge on a living shell: slow, roomy and very hard to break.', 'Баржа на живом панцире: медленная, вместительная и очень крепкая.'], beasts: [{ u: 'turtle_knight', n: 14 }] },
+    premium: { price: 5790, note: ['A barge on a living shell: slow, roomy and very hard to break.', 'Баржа на живом панцире: медленная, вместительная и очень крепкая.'], beasts: [{ u: 'turtle_knight', n: 14 }] },
   }),
   floating_fortress: ship({
     id: 'floating_fortress', name: 'Floating Fortress', tier: 5, rig: 'square', role: 'A square fortress-ship with stone-grey battlements and gun towers.',
@@ -733,7 +733,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 640, holdWeight: 760, crewMin: 160, crewMax: 560, gunPortsPerSide: 18, bowChasers: 3, sternChasers: 3,
     sailHp: 260, repairRate: 0.7, detection: 1500, price: 110000, purchasable: false, sprite: 'ship.floating_fortress', list: 'hauler',
     passive: { id: 'castle', name: 'Battlements', description: 'Defenders gain +25% boarding power.' },
-    premium: { price: 4600, note: ['A fortress afloat: battlements, corner towers and a garrison of gunners.', 'Плавучая крепость: зубцы, угловые башни и гарнизон канониров.'], beasts: [{ u: 'bastion_gunner', n: 20 }] },
+    premium: { price: 9590, note: ['A fortress afloat: battlements, corner towers and a garrison of gunners.', 'Плавучая крепость: зубцы, угловые башни и гарнизон канониров.'], beasts: [{ u: 'bastion_gunner', n: 20 }] },
   }),
   menagerie: ship({
     id: 'menagerie', name: 'Menagerie', tier: 4, rig: 'square', role: 'A big galleon with iron-barred cages along her deck.',
@@ -741,7 +741,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 480, holdWeight: 560, crewMin: 70, crewMax: 260, gunPortsPerSide: 10, bowChasers: 2, sternChasers: 2,
     sailHp: 230, repairRate: 0.8, detection: 1350, price: 40000, purchasable: false, sprite: 'ship.menagerie', list: 'hauler',
     passive: { id: 'feeding_pails', name: 'Feeding Pails', description: 'A ship that feeds a zoo feeds her crew well: provisions last a fifth longer.', mods: { provisionUse: -0.2 } },
-    premium: { price: 2600, note: ['A floating zoo: when the cages open, boarders run.', 'Плавучий зверинец: когда открываются клетки, абордажники бегут.'], beasts: [{ u: 'sea_chimera', n: 1 }] },
+    premium: { price: 6590, note: ['A floating zoo: when the cages open, boarders run.', 'Плавучий зверинец: когда открываются клетки, абордажники бегут.'], beasts: [{ u: 'sea_chimera', n: 1 }] },
   }),
   whale_mother: ship({
     id: 'whale_mother', name: 'Whale Mother', tier: 5, rig: 'mixed', role: 'A whaling mothership with boats on davits all round her.',
@@ -749,7 +749,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 740, holdWeight: 860, crewMin: 140, crewMax: 480, gunPortsPerSide: 12, bowChasers: 2, sternChasers: 2,
     sailHp: 320, repairRate: 0.8, detection: 1700, price: 92000, purchasable: false, sprite: 'ship.whale_mother', list: 'hauler', fixedMount: 'harpoon',
     passive: { id: 'flensing_deck', name: 'Try-works', description: 'Flenses a carcass twice as fast; her line stands a third more strain; shy whales hear her a third less.' },
-    premium: { price: 3600, note: ['A whaling mothership: her try-works, her boats and whale calves of her own.', 'Китобойная матка: салотопки, вельботы и свои китята.'], beasts: [{ u: 'whale_calf', n: 3 }] },
+    premium: { price: 7790, note: ['A whaling mothership: her try-works, her boats and whale calves of her own.', 'Китобойная матка: салотопки, вельботы и свои китята.'], beasts: [{ u: 'whale_calf', n: 3 }] },
   }),
   coral_hulk: ship({
     id: 'coral_hulk', name: 'Coral Hulk', tier: 4, rig: 'square', role: 'A great old hulk overgrown with living coral.',
@@ -757,7 +757,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 540, holdWeight: 620, crewMin: 60, crewMax: 220, gunPortsPerSide: 9, bowChasers: 1, sternChasers: 2,
     sailHp: 210, repairRate: 1.1, detection: 1250, price: 40000, purchasable: false, sprite: 'ship.coral_hulk', list: 'hauler',
     passive: { id: 'coral_skin', name: 'Coral Skin', description: 'Coral grows over every breach: she mends 20% faster.', mods: { repairRate: 0.2 } },
-    premium: { price: 2300, note: ['An old hulk the coral took: it grows over every breach.', 'Старый хольк, которым завладел коралл: он зарастает каждую пробоину.'], beasts: [{ u: 'coral_elemental', n: 2 }] },
+    premium: { price: 5390, note: ['An old hulk the coral took: it grows over every breach.', 'Старый хольк, которым завладел коралл: он зарастает каждую пробоину.'], beasts: [{ u: 'coral_elemental', n: 2 }] },
   }),
   drowned_cathedral: ship({
     id: 'drowned_cathedral', name: 'Drowned Cathedral', tier: 5, rig: 'square', role: 'A ship of the Choir built like a drowned cathedral, bells in her rigging.',
@@ -765,7 +765,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 700, holdWeight: 820, crewMin: 140, crewMax: 500, gunPortsPerSide: 14, bowChasers: 2, sternChasers: 2,
     sailHp: 300, repairRate: 0.8, detection: 1450, price: 98000, purchasable: false, sprite: 'ship.drowned_cathedral', list: 'hauler',
     passive: { id: 'belfry', name: 'Belfry', description: 'Bells of the Choir in her rigging: their toll drowns the Song of the Drowned Whale for every ship within 400 m.', flags: ['choir_bell'] },
-    premium: { price: 4200, note: ['A cathedral of the Choir afloat: her bells break the enemy\'s heart.', 'Собор Хора на плаву: её колокола ломают дух врага.'], beasts: [{ u: 'bell_priest', n: 16 }] },
+    premium: { price: 8890, note: ['A cathedral of the Choir afloat: her bells break the enemy\'s heart.', 'Собор Хора на плаву: её колокола ломают дух врага.'], beasts: [{ u: 'bell_priest', n: 16 }] },
   }),
   treasure_junk: ship({
     id: 'treasure_junk', name: 'Treasure Junk', tier: 4, rig: 'mixed', role: 'A nine-masted treasure junk in red and gold.',
@@ -773,7 +773,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 560, holdWeight: 640, crewMin: 80, crewMax: 280, gunPortsPerSide: 10, bowChasers: 2, sternChasers: 2,
     sailHp: 260, repairRate: 0.85, detection: 1400, price: 44000, purchasable: false, sprite: 'ship.treasure_junk', list: 'hauler',
     passive: { id: 'batten_sails', name: 'Nine Batten Masts', description: '+15% sail strength, and storms tear her sails 30% less.', mods: { sailHpMax: 0.15, stormSailDamage: -0.3 } },
-    premium: { price: 2500, note: ['Nine masts of treasure, and a jade dragon to keep it.', 'Девять мачт сокровищ и нефритовый дракон, что их стережёт.'], beasts: [{ u: 'jade_dragon', n: 1 }] },
+    premium: { price: 6190, note: ['Nine masts of treasure, and a jade dragon to keep it.', 'Девять мачт сокровищ и нефритовый дракон, что их стережёт.'], beasts: [{ u: 'jade_dragon', n: 1 }] },
   }),
   pirate_haven: ship({
     id: 'pirate_haven', name: 'Pirate Haven', tier: 5, rig: 'square', role: 'A floating pirate town on an old hull: shacks, a tavern and rope bridges.',
@@ -781,7 +781,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 720, holdWeight: 840, crewMin: 180, crewMax: 640, gunPortsPerSide: 14, bowChasers: 2, sternChasers: 2,
     sailHp: 300, repairRate: 0.85, detection: 1400, price: 90000, purchasable: false, sprite: 'ship.pirate_haven', list: 'hauler',
     passive: { id: 'tavern', name: 'Tavern Aboard', description: 'A tavern with a crooked chimney: morale stands 8 higher and wages are a tenth less.', mods: { moraleBase: 8, wages: -0.1 } },
-    premium: { price: 4000, note: ['A pirate town afloat: hands sign on at sea, and pirate lords drink in her tavern.', 'Пиратский город на плаву: люди нанимаются прямо в море, а в её таверне пьют пиратские лорды.'], beasts: [{ u: 'pirate_lord', n: 4 }] },
+    premium: { price: 8490, note: ['A pirate town afloat: hands sign on at sea, and pirate lords drink in her tavern.', 'Пиратский город на плаву: люди нанимаются прямо в море, а в её таверне пьют пиратские лорды.'], beasts: [{ u: 'pirate_lord', n: 4 }] },
   }),
   iron_whale: ship({
     id: 'iron_whale', name: 'Iron Whale', tier: 5, rig: 'square', role: 'A colossal whale-shaped hull of riveted iron plates.',
@@ -789,7 +789,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 700, holdWeight: 900, crewMin: 130, crewMax: 460, gunPortsPerSide: 14, bowChasers: 2, sternChasers: 2,
     sailHp: 280, repairRate: 0.7, detection: 1350, price: 100000, purchasable: false, sprite: 'ship.iron_whale', list: 'hauler',
     passive: { id: 'iron_plates', name: 'Riveted Plates', description: 'Iron plates over her timbers: a ram does her half the harm, and her own strikes 50% harder.', mods: { ramTaken: -0.5, ramDealt: 0.5 } },
-    premium: { price: 4300, note: ['A whale of riveted iron: she closes her plates and shrugs off the fire.', 'Кит из клёпаного железа: смыкает плиты и не замечает огня.'], beasts: [{ u: 'bell_diver', n: 16 }] },
+    premium: { price: 8990, note: ['A whale of riveted iron: she closes her plates and shrugs off the fire.', 'Кит из клёпаного железа: смыкает плиты и не замечает огня.'], beasts: [{ u: 'bell_diver', n: 16 }] },
   }),
 
   // ------------------------------------------------------------------ the lines made whole (owner, 2026-10-04)
@@ -868,7 +868,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 24, holdWeight: 32, crewMin: 10, crewMax: 36, gunPortsPerSide: 3, bowChasers: 2, sternChasers: 1,
     sailHp: 100, repairRate: 1.1, detection: 1400, price: 2000, purchasable: false, sprite: 'ship.bulldog', list: 'combat',
     passive: { id: 'spiked_bulwarks', name: 'Spiked Bulwarks', description: 'Iron-bound bulwarks bristling with spikes: boarders find her 20% harder to take.', mods: { boardingNets: 0.2 } },
-    premium: { price: 500, note: ['The smallest warship of them: a stubby gun-sloop, and her war mastiffs go over the rail first.', 'Самый маленький из боевых: коренастый пушечный шлюп, и её боевые мастифы первыми прыгают через борт.'], beasts: [{ u: 'war_mastiff', n: 8 }] },
+    premium: { price: 1490, note: ['The smallest warship of them: a stubby gun-sloop, and her war mastiffs go over the rail first.', 'Самый маленький из боевых: коренастый пушечный шлюп, и её боевые мастифы первыми прыгают через борт.'], beasts: [{ u: 'war_mastiff', n: 8 }] },
   }),
   saint_elmo: ship({
     id: 'saint_elmo', name: 'Saint Elmo', tier: 2, rig: 'square', role: 'A navy brig-sloop with copper-sheathed masts on which the corposant burns blue in every storm.',
@@ -876,7 +876,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 40, holdWeight: 52, crewMin: 30, crewMax: 90, gunPortsPerSide: 7, bowChasers: 2, sternChasers: 1,
     sailHp: 150, repairRate: 1.0, detection: 1550, price: 7600, purchasable: false, sprite: 'ship.saint_elmo', list: 'combat',
     passive: { id: 'copper_masts', name: 'Copper-sheathed Masts', description: 'Copper down her masts and a crew that takes the blue fire for a blessing: storms bite 20% less into her hull, and morale falls 10% slower.', mods: { stormHull: -0.2, moraleLoss: -0.1 } },
-    premium: { price: 800, note: ['A navy brig-sloop that the saint\'s blue fire keeps: when she bleeds, her guns run hot.', 'Флотский бриг-шлюп под защитой голубого огня святого: когда ей худо, её пушки раскаляются.'], beasts: [{ u: 'corposant', n: 8 }] },
+    premium: { price: 2390, note: ['A navy brig-sloop that the saint\'s blue fire keeps: when she bleeds, her guns run hot.', 'Флотский бриг-шлюп под защитой голубого огня святого: когда ей худо, её пушки раскаляются.'], beasts: [{ u: 'corposant', n: 8 }] },
   }),
   lantern_sampan: ship({
     id: 'lantern_sampan', name: 'Lantern Sampan', tier: 1, rig: 'fore_aft', role: 'A small eastern river trader under a batten sail, a woven bamboo cabin hung with red paper lanterns.',
@@ -884,7 +884,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 105, holdWeight: 110, crewMin: 6, crewMax: 20, gunPortsPerSide: 1, bowChasers: 1, sternChasers: 0,
     sailHp: 95, repairRate: 1.15, detection: 1350, price: 1600, purchasable: false, sprite: 'ship.lantern_sampan', list: 'trade',
     passive: { id: 'shallow_runner', name: 'River Keel', description: 'A flat river keel: she crosses reefs and shoals that tear the keel out of bigger ships, and a bowl of rice keeps her crew — provisions last 15% longer.', mods: { provisionUse: -0.15 } },
-    premium: { price: 400, note: ['A river trader of the lanterns, her fishing cormorants on the cabin roof.', 'Речной торговец под фонарями, с ручными бакланами на крыше каюты.'], beasts: [{ u: 'cormorant', n: 6 }] },
+    premium: { price: 990, note: ['A river trader of the lanterns, her fishing cormorants on the cabin roof.', 'Речной торговец под фонарями, с ручными бакланами на крыше каюты.'], beasts: [{ u: 'cormorant', n: 6 }] },
   }),
   golden_lion: ship({
     id: 'golden_lion', name: 'Golden Lion', tier: 5, rig: 'fore_aft', role: 'A gilded great merchant galleass of the lagoon republic, a winged lion at her bow, three lateens and banks of oars.',
@@ -892,7 +892,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 480, holdWeight: 560, crewMin: 120, crewMax: 360, gunPortsPerSide: 12, bowChasers: 3, sternChasers: 2,
     sailHp: 260, repairRate: 0.85, detection: 1450, price: 82000, purchasable: false, sprite: 'ship.golden_lion', list: 'trade',
     passive: { id: 'sweeps', name: 'Free Rowers', description: '+25% speed in winds under half strength; oars give at least 3 m/s on any heading; her rowers are free men of the lagoon, paid 10% less.', mods: { wages: -0.1 } },
-    premium: { price: 3400, note: ['The merchant republic\'s great galleass: every port deals with her on better terms.', 'Великая галеаса торговой республики: каждый порт торгует с ней на лучших условиях.'], beasts: [{ u: 'winged_lion', n: 3 }] },
+    premium: { price: 7490, note: ['The merchant republic\'s great galleass: every port deals with her on better terms.', 'Великая галеаса торговой республики: каждый порт торгует с ней на лучших условиях.'], beasts: [{ u: 'winged_lion', n: 3 }] },
   }),
   dolphin: ship({
     id: 'dolphin', name: 'Dolphin', tier: 1, rig: 'fore_aft', role: 'A slim lateen-rigged felucca with a dolphin carved at her bow and dolphins riding her bow wave.',
@@ -900,7 +900,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 28, holdWeight: 28, crewMin: 8, crewMax: 24, gunPortsPerSide: 2, bowChasers: 1, sternChasers: 1,
     sailHp: 95, repairRate: 1.2, detection: 1500, price: 1700, purchasable: false, sprite: 'ship.dolphin', list: 'fast',
     passive: { id: 'dolphin_lines', name: 'Dolphin Lines', description: 'A hull shaped like a dolphin\'s back: a heavy sea slows her 20% less.', mods: { seaPenalty: -0.2 } },
-    premium: { price: 420, note: ['A slim felucca the dolphins love: in open water they carry her along.', 'Стройная фелука, которую любят дельфины: в открытом море они несут её вперёд.'], beasts: [{ u: 'dolphin_pod', n: 6 }] },
+    premium: { price: 1090, note: ['A slim felucca the dolphins love: in open water they carry her along.', 'Стройная фелука, которую любят дельфины: в открытом море они несут её вперёд.'], beasts: [{ u: 'dolphin_pod', n: 6 }] },
   }),
   sailfish: ship({
     id: 'sailfish', name: 'Sailfish', tier: 5, rig: 'mixed', role: 'A long razor-bowed war frigate under a great fan of a mainsail, built to run down anything that floats.',
@@ -908,7 +908,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 140, holdWeight: 160, crewMin: 120, crewMax: 360, gunPortsPerSide: 15, bowChasers: 2, sternChasers: 2,
     sailHp: 290, repairRate: 1.0, detection: 1750, price: 74000, purchasable: false, sprite: 'ship.sailfish', list: 'fast',
     passive: { id: 'sail_fin', name: 'Sail-fin Rig', description: 'A great fan of a mainsail like a sailfish\'s fin: sails are set and struck 25% faster, and a heavy sea slows her 20% less.', mods: { sailChangeRate: 0.25, seaPenalty: -0.2 } },
-    premium: { price: 3400, note: ['The fastest of the great runners: her balls run a ship through, and blue marlins hunt in her wake.', 'Самый быстрый из больших бегунов: её ядра пронзают корабль, а в её кильватере охотятся синие марлины.'], beasts: [{ u: 'marlin', n: 3 }] },
+    premium: { price: 7490, note: ['The fastest of the great runners: her balls run a ship through, and blue marlins hunt in her wake.', 'Самый быстрый из больших бегунов: её ядра пронзают корабль, а в её кильватере охотятся синие марлины.'], beasts: [{ u: 'marlin', n: 3 }] },
   }),
   mimic_barge: ship({
     id: 'mimic_barge', name: 'Mimic Barge', tier: 2, rig: 'square', role: 'A broad, crooked cargo barge whose hold is full of barrels that are not all barrels.',
@@ -916,7 +916,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 330, holdWeight: 380, crewMin: 14, crewMax: 50, gunPortsPerSide: 3, bowChasers: 0, sternChasers: 1,
     sailHp: 125, repairRate: 0.9, detection: 1150, price: 7400, purchasable: false, sprite: 'ship.mimic_barge', list: 'hauler',
     passive: { id: 'deep_hold', name: 'Hold of Odd Corners', description: 'A crooked hold full of odd corners: cargo is 50% less likely to be destroyed by hull hits, and contraband takes 15% less room.', mods: { contrabandVolumeMul: -0.15 } },
-    premium: { price: 700, note: ['A barge with a living cargo: her cask mimics breed back in the hold.', 'Баржа с живым грузом: её бочки-мимики снова заводятся в трюме.'], beasts: [{ u: 'cask_mimic', n: 6 }] },
+    premium: { price: 1990, note: ['A barge with a living cargo: her cask mimics breed back in the hold.', 'Баржа с живым грузом: её бочки-мимики снова заводятся в трюме.'], beasts: [{ u: 'cask_mimic', n: 6 }] },
   }),
   icebound_hulk: ship({
     id: 'icebound_hulk', name: 'Icebound Hulk', tier: 3, rig: 'square', role: 'A broad northern hulk sheathed in ice that never melts, frost on her rigging and white bears on her deck.',
@@ -924,7 +924,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 400, holdWeight: 460, crewMin: 30, crewMax: 110, gunPortsPerSide: 5, bowChasers: 1, sternChasers: 1,
     sailHp: 170, repairRate: 0.85, detection: 1250, price: 18500, purchasable: false, sprite: 'ship.icebound_hulk', list: 'hauler',
     passive: { id: 'ice_hold', name: 'Ice in the Hold', description: 'Her hold is packed with ice that never melts: perishables spoil 40% slower, and her iced bow takes 20% less from a ram.', mods: { spoilage: -0.4, ramTaken: -0.2 } },
-    premium: { price: 1100, note: ['A hulk of the frozen north: frost falls on every ship that fights her.', 'Халк ледяного севера: на каждый корабль, что бьётся с ней, ложится изморозь.'], beasts: [{ u: 'ice_bear', n: 4 }] },
+    premium: { price: 2990, note: ['A hulk of the frozen north: frost falls on every ship that fights her.', 'Халк ледяного севера: на каждый корабль, что бьётся с ней, ложится изморозь.'], beasts: [{ u: 'ice_bear', n: 4 }] },
   }),
 
   // The zone bosses (owner, 2026-10-04; docs/21): one great warship for each sea, rising every twelve hours by the

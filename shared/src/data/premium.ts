@@ -25,10 +25,17 @@ export interface DoubloonPack {
   stars: number;
 }
 
-/** 100 · 550 · 1200 · 2600 · 7000: the more at once, the larger the bonus (none, a tenth, a fifth, three tenths, two
- *  fifths). Priced 75 · 375 · 750 · 1500 · 3750 stars: a star is about 1.3–2 roubles to a buyer, so 100 doubloons cost
- *  a hundred-odd roubles and a premium hull (900–1400 doubloons) about a thousand. */
-export const DOUBLOON_PACKS: DoubloonPack[] = [
+/** The rate of the top-up (kept from 2026-10-11): ¾ of a star a doubloon of the pack's own (the bonus is on top, free) —
+ *  a star is about 1.3 roubles to a buyer, so a doubloon is about a rouble. */
+export const STARS_PER_DOUBLOON = 0.75;
+const pack = (rub: number, bonus: number): DoubloonPack => ({ id: `d${rub}`, n: rub, bonus, stars: Math.round(rub * STARS_PER_DOUBLOON) });
+
+/** The tiers of the top-up (owner, 2026-10-15: «цены должны начинаться от 290 рублей и до 9900 рублей»): 290 · 590 ·
+ *  990 · 1 990 · 4 990 · 9 900 roubles' worth of doubloons, the bonus growing — none, 5 %, 10 %, 20 %, 30 %, 40 %. */
+export const DOUBLOON_PACKS: DoubloonPack[] = [pack(290, 0), pack(590, 30), pack(990, 100), pack(1990, 400), pack(4990, 1500), pack(9900, 4000)];
+
+/** The packs before 2026-10-15: no longer sold, still honoured for an invoice made before the change and paid after. */
+const LEGACY_PACKS: DoubloonPack[] = [
   { id: 'd100', n: 100, bonus: 0, stars: 75 },
   { id: 'd550', n: 500, bonus: 50, stars: 375 },
   { id: 'd1200', n: 1000, bonus: 200, stars: 750 },
@@ -36,9 +43,9 @@ export const DOUBLOON_PACKS: DoubloonPack[] = [
   { id: 'd7000', n: 5000, bonus: 2000, stars: 3750 },
 ];
 
-/** The pack of this id, if there is one. */
+/** The pack of this id, if there is one (a sold one, or one of an invoice made before the tiers changed). */
 export function doubloonPack(id: string): DoubloonPack | undefined {
-  return DOUBLOON_PACKS.find((p) => p.id === id);
+  return DOUBLOON_PACKS.find((p) => p.id === id) ?? LEGACY_PACKS.find((p) => p.id === id);
 }
 
 // ------------------------------------------------------------------------------------------------ the auto-battle scroll
@@ -56,15 +63,14 @@ export interface ScrollPack {
   price: number;
 }
 
-/** 1 · 5 · 20 scrolls for 25 · 100 · 300 doubloons: 25, 20 and 15 a scroll (the volume's discount a fifth and two
- *  fifths). Against the top-up: the smallest pack of doubloons (d100, 75 Stars ≈ 100–150 ₽) is exactly five scrolls —
- *  about 20–30 ₽ a battle a captain does not want to play by hand; twenty for 300 is a quarter of the d1200 pack, about a
- *  week of evenings at sea for a third of a premium hull's price (900–1400). Priced so a scroll is a convenience, never
- *  a hull's worth: it wins nothing the captain's own hand would not (the same rules, the same dice). */
+/** The scrolls in the shop's ladder (owner, 2026-10-15: from 290): 15 · 32 · 59 · 130 for 290 · 590 · 990 · 1 990 doubloons
+ *  — about 19, 18, 17 and 15 a scroll; the same as the shop's «Свитки автобоя» (shared/src/data/shop.ts). A scroll is a
+ *  convenience, never a hull's worth: it wins nothing the captain's own hand would not (the same rules, the same dice). */
 export const AUTO_SCROLL_PACKS: ScrollPack[] = [
-  { id: 'scroll1', n: 1, price: 25 },
-  { id: 'scroll5', n: 5, price: 100 },
-  { id: 'scroll20', n: 20, price: 300 },
+  { id: 'scroll15', n: 15, price: 290 },
+  { id: 'scroll32', n: 32, price: 590 },
+  { id: 'scroll59', n: 59, price: 990 },
+  { id: 'scroll130', n: 130, price: 1990 },
 ];
 
 /** The pack of scrolls of this id, if there is one. */
@@ -115,8 +121,8 @@ export function premiumLeaks(): string[] {
  *  so the shop's cards can be seen and bought before the real catalogue is filled. The tables themselves stay unmarked. */
 export const PREMIUM_SAMPLE: { ships: Partial<Record<ShipClassId, PremiumShip>>; units: Partial<Record<UnitId, PremiumUnit>> } = {
   ships: {
-    xebec: { price: 900, note: ['Tester’s sample: sweeps that row her through a calm.', 'Образец для теста: вёсла выводят её из штиля.'] },
-    bomb_ketch: { price: 1400, note: ['Tester’s sample: twin mortar wells, and sea turtles aboard.', 'Образец для теста: две мортирные шахты и морские черепахи на борту.'], beasts: [{ u: 'sea_turtle', n: 4 }] },
+    xebec: { price: 2190, note: ['Tester’s sample: sweeps that row her through a calm.', 'Образец для теста: вёсла выводят её из штиля.'] },
+    bomb_ketch: { price: 3490, note: ['Tester’s sample: twin mortar wells, and sea turtles aboard.', 'Образец для теста: две мортирные шахты и морские черепахи на борту.'], beasts: [{ u: 'sea_turtle', n: 4 }] },
   },
   units: {
     sea_turtle: { price: 180, n: 8, note: ['Tester’s sample: a shell that shrugs off shot.', 'Образец для теста: панцирь, которому нипочём картечь.'] },

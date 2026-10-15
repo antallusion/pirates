@@ -12,7 +12,7 @@ import { BASE_RES, crewsAt } from '../shared/src/data/base.ts';
 import { UNITS } from '../shared/src/data/army.ts';
 import type { UnitId } from '../shared/src/data/army.ts';
 import {
-  DEAL_POOL, OFFERS, RECRUIT_KINDS, SHOP, SHOP_TABS, SUB_DAILY, TAB_SECS, dayOf, dealOf, finishPrice, offerBonus, unitPackPrice,
+  DEAL_OFF, DEAL_POOL, OFFERS, PRICE_MAX, PRICE_MIN, RECRUIT_KINDS, SHOP, SHOP_TABS, SUB_DAILY, TAB_SECS, dayOf, dealOf, finishPrice, offerBonus, unitPacks,
 } from '../shared/src/data/shop.ts';
 import { lairIsland } from '../server/src/game/wanted.ts';
 import type { Island } from '../shared/src/world/worldgen.ts';
@@ -33,6 +33,8 @@ import { serverTable, serverText } from '../client/src/lang/server.ts';
 import { EN as P_EN, RU as P_RU } from '../client/src/lang/ui/premium.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { join, makeGame, onHull } from './helpers.ts';
+import { SHIP_CLASSES, SHIP_CLASS_IDS } from '../shared/src/data/ships.ts';
+import { AUTO_SCROLL_PACKS, DOUBLOON_PACKS, STARS_PER_DOUBLOON } from '../shared/src/data/premium.ts';
 
 const DAY = 86_400_000;
 let clock = 20_000 * DAY + 3_600_000;
@@ -106,41 +108,61 @@ test('the catalogue: unique ids, real prices, the packs better the larger, every
     }
   }
   // the island's own: brigades hired and for good, speed-ups of 5 min to 24 h, the five goods and the crate
-  for (const id of ['btemp_1', 'btemp_3', 'btemp_7', 'bperm_1', 'bperm_2', 'sp_5m', 'sp_1h', 'sp_8h', 'sp_24h', 'timber_l', 'iron_s', 'mix_l', 'prod_1', 'shield_7', 'move_1']) assert.ok(OFFERS.has(id), id);
+  for (const id of ['btemp_290', 'btemp_590', 'btemp_990', 'btemp_1990', 'bperm_1', 'bperm_2', 'sp_290', 'sp_590', 'sp_990', 'sp_1990', 'sp_4990', 'timber_1990', 'iron_290', 'mix_4990', 'prod_290', 'shield_990', 'move_2490']) assert.ok(OFFERS.has(id), id);
   // the bundles: once ever, once a week; the subscription
   assert.deepEqual(OFFERS.get('starter')!.offer.limit, { n: 1, per: 'ever' });
   assert.deepEqual(OFFERS.get('weekly')!.offer.limit, { n: 1, per: 'week' });
   assert.ok(offerBonus(OFFERS.get('starter')!.fam, OFFERS.get('starter')!.offer) >= 300, 'the starter is strong value');
   for (const id of DEAL_POOL) assert.ok(OFFERS.has(id), id);
   assert.ok(dealOf(20_001).price < dealOf(20_001).offer.price);
-  assert.equal(finishPrice(3600), 36);
-  assert.equal(unitPackPrice(100, 3), 276);
+  assert.equal(finishPrice(3600), 290, 'never under the least price');
+  assert.equal(finishPrice(10 * 3600), 360);
+  assert.deepEqual(unitPacks(100), [{ k: 3, price: 300 }, { k: 9, price: 828 }, { k: 15, price: 1275 }]);
+});
+
+test('every price from 290 to 9 900 (owner, 2026-10-15): the shelves, the deal after its discount, the creatures\' packs, the hulls, the top-up in roubles', () => {
+  const inRange = (n: number, what: string) => assert.ok(n >= PRICE_MIN && n <= PRICE_MAX, `${what}: ${n}`);
+  for (const f of SHOP) for (const o of f.offers) if (o.id !== 'refill') inRange(o.price, o.id);
+  for (const id of DEAL_POOL) inRange(Math.round(OFFERS.get(id)!.offer.price * (1 - DEAL_OFF)), `deal ${id}`);
+  for (let d = 20_000; d < 20_060; d++) inRange(dealOf(d).price, `deal of day ${d}`);
+  for (const u of Object.keys(UNITS) as UnitId[]) if (UNITS[u].premium) for (const p of unitPacks(UNITS[u].premium!.price)) inRange(p.price, `${u} ×${p.k}`);
+  for (const c of SHIP_CLASS_IDS) if (SHIP_CLASSES[c].premium) inRange(SHIP_CLASSES[c].premium!.price, c);
+  for (const p of AUTO_SCROLL_PACKS) inRange(p.price, p.id);
+  // the top-up: its roubles (a doubloon of the pack's own a rouble) in the range, at the rate of ¾ of a star a doubloon
+  assert.deepEqual(DOUBLOON_PACKS.map((p) => p.n), [290, 590, 990, 1990, 4990, 9900]);
+  for (const p of DOUBLOON_PACKS) {
+    inRange(p.n, p.id);
+    assert.equal(p.stars, Math.round(p.n * STARS_PER_DOUBLOON), p.id);
+  }
+  for (let i = 1; i < DOUBLOON_PACKS.length; i++) assert.ok(DOUBLOON_PACKS[i].bonus / DOUBLOON_PACKS[i].n > DOUBLOON_PACKS[i - 1].bonus / DOUBLOON_PACKS[i - 1].n);
+  assert.equal(finishPrice(1), PRICE_MIN);
+  assert.equal(finishPrice(1e9), PRICE_MAX);
 });
 
 // ------------------------------------------------------------------------------------------------ buying
 
 test('a purchase: the server\'s price, the balance never below nought, nothing charged on a refusal, the same purchase id once', () => {
   const { game, db } = world();
-  const s = captain(game, 'Buyer', 100);
+  const s = captain(game, 'Buyer', 290);
   // unknown offers, bad purchase ids: refused, nothing moves
   assert.equal(buyOffer(game, s, 'nope', pid()), 'Not for sale');
   assert.equal(buyOffer(game, s, '__proto__', pid()), 'Not for sale');
-  assert.equal(buyOffer(game, s, 'as5', 'x'), 'Not for sale');
-  assert.equal(db.doubloons(s.accountId), 100);
+  assert.equal(buyOffer(game, s, 'as_290', 'x'), 'Not for sale');
+  assert.equal(db.doubloons(s.accountId), 290);
   // too poor: refused, nothing charged
-  assert.match(buyOffer(game, s, 'as20', pid())!, /Not enough doubloons/);
-  assert.equal(db.doubloons(s.accountId), 100);
+  assert.match(buyOffer(game, s, 'as_590', pid())!, /Not enough doubloons/);
+  assert.equal(db.doubloons(s.accountId), 290);
   // bought: the price from the table, the scrolls through the account's own count
   const id = pid();
-  assert.equal(buyOffer(game, s, 'as5', id), null);
+  assert.equal(buyOffer(game, s, 'as_290', id), null);
   assert.equal(db.doubloons(s.accountId), 0);
-  assert.equal(db.scrolls(s.accountId), 5);
+  assert.equal(db.scrolls(s.accountId), 15);
   // the same purchase id again (a message sent twice): nothing more
-  assert.equal(buyOffer(game, s, 'as5', id), null);
-  assert.equal(db.scrolls(s.accountId), 5);
-  assert.deepEqual(buys(db, s.accountId), [{ amount: -100, detail: `shop:as5:${id}` }]);
+  assert.equal(buyOffer(game, s, 'as_290', id), null);
+  assert.equal(db.scrolls(s.accountId), 15);
+  assert.deepEqual(buys(db, s.accountId), [{ amount: -290, detail: `shop:as_290:${id}` }]);
   // never below nought
-  assert.match(buyOffer(game, s, 'as1', pid())!, /Not enough doubloons/);
+  assert.match(buyOffer(game, s, 'as_290', pid())!, /Not enough doubloons/);
   assert.equal(db.doubloons(s.accountId), 0);
 });
 
@@ -148,11 +170,11 @@ test('the pace of buys: a burst of messages is cut short by the flood guard of t
   const { game, db } = world();
   const conn = join(game, 'Hasty');
   const s = game.sessionByName('Hasty')!;
-  creditPremium(game, s.accountId, 1000, 'admin', 'test');
-  for (let i = 0; i < 12; i++) conn.push({ t: 'premium', action: 'shop', offer: 'as1', pid: pid() });
-  assert.equal(db.scrolls(s.accountId), 5, 'five in a burst');
+  creditPremium(game, s.accountId, 5000, 'admin', 'test');
+  for (let i = 0; i < 12; i++) conn.push({ t: 'premium', action: 'shop', offer: 'as_290', pid: pid() });
+  assert.equal(db.scrolls(s.accountId), 5 * 15, 'five in a burst');
   assert.ok(conn.all('toast').some((t) => t.msg === 'Slowly: one purchase at a time.'));
-  assert.equal(db.doubloons(s.accountId), 1000 - 5 * 25);
+  assert.equal(db.doubloons(s.accountId), 5000 - 5 * 290);
 });
 
 test('the limits: the starter once ever, the week\'s chest once a week, a pardon once a day', () => {
@@ -161,7 +183,7 @@ test('the limits: the starter once ever, the week\'s chest once a week, a pardon
   assert.equal(buyOffer(game, s, 'starter', pid()), null);
   // the starter's goods: a hired brigade, speed-ups, scrolls, charms, the elixir, kits
   const st = shopState(game, s.accountId);
-  assert.deepEqual([st.temp.length, st.speed, st.charms, st.kits, st.xp, db.scrolls(s.accountId)], [1, 120, 5, 2, clock + 8 * 3_600_000, 5]);
+  assert.deepEqual([st.temp.length, st.speed, st.charms, st.kits, st.xp, db.scrolls(s.accountId)], [1, 480, 15, 5, clock + 24 * 3_600_000, 15]);
   assert.match(buyOffer(game, s, 'starter', pid())!, /as often as it may be/);
   clock += 30 * DAY;
   assert.match(buyOffer(game, s, 'starter', pid())!, /as often as it may be/, 'ever is ever');
@@ -190,14 +212,14 @@ test('an extra brigade: the builders rise by one and two buildings go up at once
   // the island's own builders all at work: a further building is refused
   for (let i = 0; i < base; i++) assert.equal(startBuild(game, s, null, 'p:lumber'), null);
   assert.equal(startBuild(game, s, null, 'p:fishery'), 'All your builders are at work.');
-  // a hired brigade for a day: one more at once
-  assert.equal(buyOffer(game, s, 'btemp_1', pid()), null);
+  // a hired brigade for three days: one more at once
+  assert.equal(buyOffer(game, s, 'btemp_290', pid()), null);
   assert.equal(crewsOf(h, game), base + 1);
   assert.equal(baseView(game, s)!.crews.n, base + 1, 'the island\'s window counts it');
   assert.equal(startBuild(game, s, null, 'p:fishery'), null);
   assert.equal(y.jobs.filter((j) => !j.ship).length, base + 1, 'buildings rising at once');
-  // its day out: the brigade goes
-  clock += DAY + 1000;
+  // its days out: the brigade goes
+  clock += 3 * DAY + 1000;
   assert.equal(crewsOf(h, game), base);
   // for good: the second before the first is refused, two at most
   assert.match(buyOffer(game, s, 'bperm_2', pid())!, /first brigade/);
@@ -206,14 +228,14 @@ test('an extra brigade: the builders rise by one and two buildings go up at once
   assert.equal(buyOffer(game, s, 'bperm_2', pid()), null);
   assert.equal(crewsOf(h, game), base + 2);
   // hired: two at once; a third extends the sooner
-  assert.equal(buyOffer(game, s, 'btemp_1', pid()), null);
-  assert.equal(buyOffer(game, s, 'btemp_3', pid()), null);
+  assert.equal(buyOffer(game, s, 'btemp_290', pid()), null);
+  assert.equal(buyOffer(game, s, 'btemp_590', pid()), null);
   assert.equal(crewsOf(h, game), base + 4);
   const before = [...shopState(game, s.accountId).temp].sort((a, b) => a - b);
-  assert.equal(buyOffer(game, s, 'btemp_1', pid()), null);
+  assert.equal(buyOffer(game, s, 'btemp_290', pid()), null);
   const after = [...shopState(game, s.accountId).temp].sort((a, b) => a - b);
   assert.equal(after.length, 2);
-  assert.equal(after[0], before[0] + DAY, 'the sooner extended');
+  assert.equal(after[0], before[0] + 3 * DAY, 'the sooner extended');
   assert.equal(crewsOf(h, game), base + 4);
   // the brigades are the account's: they survive a reload of her stores
   forgetShop(game);
@@ -230,16 +252,11 @@ test('speed-ups cut a building\'s timer by the minutes it needs; «finish now» 
   j.end = clock + 2 * 3_600_000; // as a long work would be
   const left = j.end - clock;
   assert.equal(useSpeed(game, s, j.id), 'No speed-ups in store: buy them in the shop.');
-  assert.equal(buyOffer(game, s, 'sp_5m', pid()), null);
-  assert.equal(shopState(game, s.accountId).speed, 5);
-  assert.equal(useSpeed(game, s, j.id), null);
-  assert.equal(shopState(game, s.accountId).speed, 0);
-  assert.equal(j.end, clock + left - 5 * 60_000, 'five minutes off');
   // eight hours in store: only what the job needs is spent, the rest kept
-  assert.equal(buyOffer(game, s, 'sp_8h', pid()), null);
-  const need = Math.ceil((j.end - clock) / 60_000);
+  assert.equal(buyOffer(game, s, 'sp_290', pid()), null);
+  assert.equal(shopState(game, s.accountId).speed, 480);
   assert.equal(useSpeed(game, s, j.id), null);
-  assert.equal(shopState(game, s.accountId).speed, 480 - need);
+  assert.equal(shopState(game, s.accountId).speed, 480 - left / 60_000);
   assert.ok(!y.jobs.some((x) => x.id === j.id), 'done');
   assert.equal(y.producers.length, 1, 'the logging camp stands');
   // «finish now» for doubloons, by the time left
@@ -266,46 +283,50 @@ test('a resource pack into the yard (past its cap), a creature pack and a recrui
   const s = captain(game, 'Stocker', 20_000, true);
   const y = yardOf(game, ownIsland(game, s.accountId)!);
   const was = y.res.iron ?? 0;
-  assert.equal(buyOffer(game, s, 'iron_l', pid()), null);
-  assert.equal(y.res.iron, was + 2000);
-  assert.equal(buyOffer(game, s, 'mix_s', pid()), null);
-  for (const g of BASE_RES) assert.ok((y.res[g] ?? 0) >= 10_200, g);
+  assert.equal(buyOffer(game, s, 'iron_1990', pid()), null);
+  assert.equal(y.res.iron, was + (OFFERS.get('iron_1990')!.offer.grants[0] as { n: number }).n);
+  assert.equal(buyOffer(game, s, 'mix_290', pid()), null);
+  for (const g of BASE_RES) assert.ok((y.res[g] ?? 0) >= 10_680, g);
   // no island: the yard's goods are refused
   const t = captain(game, 'Landless', 500);
-  assert.match(buyOffer(game, t, 'timber_s', pid())!, /own island/);
+  assert.match(buyOffer(game, t, 'timber_290', pid())!, /own island/);
   // a recruit pack: the tier's line kind into her army, room checked
   const ship = s.ship!;
   ship.setArmy([{ u: 'deckhand', n: 10 }]);
-  assert.equal(buyOffer(game, s, 'rec2_s', pid()), null);
+  const room0 = ship.stats.crewMax - ship.crew;
+  assert.equal(buyOffer(game, s, 'rec2_290', pid()), null);
   const marines = ship.army.find((x) => x.u === RECRUIT_KINDS[1])!;
-  assert.equal(marines.n, Math.round(1000 / 60));
+  assert.equal(marines.n, Math.min(room0, 190), 'as many as the free hammocks hold, up to the pack');
   // a tier above her ship's level is shut
   onHull(game, ship, 'sloop', 1);
   ship.setArmy([{ u: 'deckhand', n: 10 }]);
-  assert.match(buyOffer(game, s, 'rec7_s', pid())!, /level is too low/);
-  // the press of hands: room for all of them, or refused
-  const room = ship.stats.crewMax - ship.crew;
-  assert.equal(buyOffer(game, s, room >= 25 ? 'crew_s' : 'crew_l', pid()), room >= 25 ? null : 'No room for it: make room first.');
+  assert.match(buyOffer(game, s, 'rec7_990', pid())!, /level is too low/);
+  // the press of hands: the free hammocks filled; none free, refused
+  assert.equal(buyOffer(game, s, 'crew_290', pid()), null);
+  assert.equal(ship.crew, ship.stats.crewMax);
+  assert.equal(buyOffer(game, s, 'crew_290', pid()), 'No room for it: make room first.');
   // a premium creature by three: three stacks' worth, the pack's price
   onHull(game, ship, 'brig', 5);
   ship.setArmy([{ u: 'deckhand', n: 10 }]);
   const kind = (Object.keys(UNITS) as UnitId[]).find((u) => UNITS[u].premium && UNITS[u].tier <= 3)!;
   const o = UNITS[kind].premium!;
   const bal = db.doubloons(s.accountId);
-  assert.equal(premiumMod.buyUnit(game, s, kind, 3, 'unitpack1'), null);
-  assert.equal(premiumMod.buyUnit(game, s, kind, 3, 'unitpack1'), null, 'the same purchase id: once');
-  assert.equal(ship.army.find((x) => x.u === kind)!.n, o.n * 3);
-  assert.equal(db.doubloons(s.accountId), bal - unitPackPrice(o.price, 3));
+  const pk = unitPacks(o.price)[1];
+  assert.equal(premiumMod.buyUnit(game, s, kind, pk.k, 'unitpack1'), null);
+  assert.equal(premiumMod.buyUnit(game, s, kind, pk.k, 'unitpack1'), null, 'the same purchase id: once');
+  assert.equal(ship.army.find((x) => x.u === kind)!.n, o.n * pk.k);
+  assert.equal(db.doubloons(s.accountId), bal - pk.price);
+  if (o.price < PRICE_MIN) assert.equal(premiumMod.buyUnit(game, s, kind, 1, 'unitpack2'), 'Not for sale', 'no pack under the least price');
   // a scroll pack
   const sc = db.scrolls(s.accountId);
-  assert.equal(buyOffer(game, s, 'as20', pid()), null);
-  assert.equal(db.scrolls(s.accountId), sc + 20);
+  assert.equal(buyOffer(game, s, 'as_590', pid()), null);
+  assert.equal(db.scrolls(s.accountId), sc + 32);
 });
 
 
 test('the subscription: its day\'s doubloons and scroll once a day she is aboard, a brigade more and battle experience while it runs', () => {
   const { game, db } = world();
-  const s = captain(game, 'Subscriber', 490, true);
+  const s = captain(game, 'Subscriber', 990, true);
   const h = ownIsland(game, s.accountId)!;
   const base = crewsOf(h, game);
   assert.equal(buyOffer(game, s, 'sub30', pid()), null);
@@ -326,7 +347,7 @@ test('the subscription: its day\'s doubloons and scroll once a day she is aboard
   assert.equal(db.doubloons(s.accountId), 2 * SUB_DAILY);
   assert.equal(crewsOf(h, game), base);
   // sixty days ahead at most
-  creditPremium(game, s.accountId, 2000, 'admin', 'more');
+  creditPremium(game, s.accountId, 2 * 990, 'admin', 'more');
   assert.equal(buyOffer(game, s, 'sub30', pid()), null);
   assert.equal(buyOffer(game, s, 'sub30', pid()), null);
   assert.match(buyOffer(game, s, 'sub30', pid())!, /as much of it/);
@@ -365,18 +386,18 @@ test('the first top-up comes double: its gift claimed in the shop once; a level\
 test('charms only against the sea; the infirmary only for a fight against the sea; the island\'s charter keeps raiders and robbers off; the charter of removal', () => {
   const { game, db } = world();
   const s = captain(game, 'Charmed', 3000, true);
-  assert.equal(buyOffer(game, s, 'charm_5', pid()), null);
+  assert.equal(buyOffer(game, s, 'charm_290', pid()), null);
   const side = (): TacSideInput => ({ morale: 60, hero: { luck: 0 } } as unknown as TacSideInput);
   const foe = game.spawnNpcShip('pirate', 'brig', 'free', s.ship!.state.x + 300, s.ship!.state.y, 0);
   const a = side();
   charmSide(game, s.ship!, foe, a);
   assert.deepEqual([a.morale, a.hero!.luck], [75, 1]);
-  assert.equal(shopState(game, s.accountId).charms, 4);
+  assert.equal(shopState(game, s.accountId).charms, 16);
   const t = captain(game, 'Rival');
   const b = side();
   charmSide(game, s.ship!, t.ship!, b);
   assert.deepEqual([b.morale, b.hero!.luck], [60, 0], 'not against a captain');
-  assert.equal(shopState(game, s.accountId).charms, 4);
+  assert.equal(shopState(game, s.accountId).charms, 16);
   // the infirmary
   s.ship!.setArmy([{ u: 'marine', n: 20 }]);
   noteFallen(game, s, [{ u: 'marine', n: 10 }], 0, true);
@@ -384,22 +405,22 @@ test('charms only against the sea; the infirmary only for a fight against the se
   noteFallen(game, s, [{ u: 'marine', n: 10 }], 0.2, false);
   const v = premiumView(game, s).shop!;
   assert.equal(v.fallen?.n, 8);
-  assert.ok(v.price.refill > 0);
+  assert.equal(v.price.refill, PRICE_MIN, 'eight marines: the least price');
   const bal = db.doubloons(s.accountId);
   assert.equal(buyOffer(game, s, 'refill', pid()), null);
   assert.equal(s.ship!.army.find((x) => x.u === 'marine')!.n, 28);
   assert.equal(db.doubloons(s.accountId), bal - v.price.refill);
   // the island's charter
   const h = ownIsland(game, s.accountId)!;
-  assert.equal(buyOffer(game, s, 'shield_1', pid()), null);
+  assert.equal(buyOffer(game, s, 'shield_290', pid()), null);
   assert.equal(raidChance(game, h, 24), 0);
-  for (let i = 0; i < 4; i++) assert.equal(buyOffer(game, s, 'shield_3', pid()), null);
-  assert.match(buyOffer(game, s, 'shield_3', pid())!, /as much of it/, 'two weeks at most');
+  assert.equal(buyOffer(game, s, 'shield_590', pid()), null);
+  assert.match(buyOffer(game, s, 'shield_590', pid())!, /as much of it/, 'two weeks at most');
   // the charter of removal makes the next move free
   s.profile!.isleClaims = 5;
   assert.ok(claimFee(game, s));
-  creditPremium(game, s.accountId, 2400, 'admin', 'move');
-  assert.equal(buyOffer(game, s, 'move_1', pid()), null);
+  creditPremium(game, s.accountId, 2490, 'admin', 'move');
+  assert.equal(buyOffer(game, s, 'move_2490', pid()), null);
   assert.equal(claimFee(game, s), null);
 });
 

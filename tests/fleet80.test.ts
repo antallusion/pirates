@@ -138,8 +138,8 @@ test('each list keeps its trade, and within a list the hulls grow with their tie
   }
   // The silver hulls cost more a tier up; a yard's new hull is priced among the old ones of her tier.
   for (const l of FLEET_LISTS) grows(l, 'price', (c) => d(c).price);
-  // A premium hull's price in doubloons by her tier (the shop's packs: 100 to 7000), and dearer a tier up.
-  const band: Record<number, [number, number]> = { 1: [300, 600], 2: [600, 1000], 3: [1000, 1800], 4: [2000, 3000], 5: [3000, 5000] };
+  // A premium hull's price in doubloons by her tier (owner, 2026-10-15: the shop's prices from 290 to 9 900), and dearer a tier up.
+  const band: Record<number, [number, number]> = { 1: [990, 1490], 2: [1990, 2790], 3: [2990, 4490], 4: [4990, 6990], 5: [7490, 9900] };
   for (const c of PREMIUM) {
     const p = d(c).premium!.price, [lo, hi] = band[d(c).tier];
     assert.ok(p >= lo && p <= hi, `${c}: ${p} doubloons for tier ${d(c).tier}`);

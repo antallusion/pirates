@@ -109,7 +109,7 @@ function unitCard(c: PremiumUnitCard): string {
   const packs = c.packs ?? [{ k: 1, price: c.price, why: c.why }];
   const why = packs.every((p) => p.why) ? packs[0].why : null;
   const btns = packs.map((p, i) => {
-    const off = i ? Math.round((1 - p.price / (c.price * p.k)) * 100) : 0;
+    const off = i ? Math.round(((c.price * p.k) / p.price - 1) * 100) : 0; // (the honest bonus: what the stacks are worth singly against the pack)
     return `<button type="button" class="sh-off${p.why ? '' : ' on'}${i === packs.length - 1 ? ' best' : ''}" data-pmunit="${c.id}" data-k="${p.k}"${p.why ? ` disabled title="${esc(whyText(p.why, c.lv))}"` : ''}><span class="sh-q">${esc(`×${c.n * p.k}`)}</span><span class="sh-p">${doubloonIcon('ico-xs')}${fmt(p.price)}</span>${off > 0 ? `<i class="sh-bonus">${esc(`+${off}%`)}</i>` : ''}</button>`;
   }).join('');
   return `<div class="card sh-card sh-unit${why ? ' shut' : ''}">${unitArt(c.id)}
@@ -134,7 +134,7 @@ function qtyOf(offer: ShopOffer, fam: ShopFamily): string {
     case 'builder': return L('q.d', { n });
     case 'perm': return L('q.perm', { n: offer.id === 'bperm_2' ? 2 : 1 });
     case 'prod': case 'shield': case 'xp': case 'wind': return n >= 48 && n % 24 === 0 ? L('q.d', { n: n / 24 }) : L('q.h', { n });
-    case 'crew': return `+${n}`;
+    case 'crew': case 'units': return L('q.upto', { n: fmt(n) });
     case 'refill': case 'pardon': case 'move': case 'sub': return L('q.buy');
     default: return `×${fmt(n)}`;
   }
@@ -221,7 +221,7 @@ function topUp(v: PremiumView): string {
   const packs = DOUBLOON_PACKS.map((p) => {
     const n = p.n + p.bonus;
     const pct = p.bonus ? Math.round((p.bonus / p.n) * 100) : 0;
-    return `<div class="card pm-pack${p.id === 'd2600' ? ' best' : ''}">${doubloonIcon('ico-lg')}<b class="pm-pack-n">${fmt(n)}</b><span class="pm-pack-w">${esc(dblWord(n))}</span>
+    return `<div class="card pm-pack${p.id === 'd1990' ? ' best' : ''}">${doubloonIcon('ico-lg')}<b class="pm-pack-n">${fmt(n)}</b><span class="pm-pack-w">${esc(dblWord(n))}</span>
       <span class="pm-bonus${p.bonus ? '' : ' none'}">${p.bonus ? esc(`+${pct}%`) : '&nbsp;'}</span>
       ${v.pay ? tgPackButton(p.id, p.stars) : `<button class="btn btn-small" disabled>${esc(L('top.soon'))}</button>`}</div>`;
   }).join('');

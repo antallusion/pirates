@@ -25,7 +25,10 @@ import { MAX_BERTHS, setShip } from './shipbuilding.ts';
 import { beastsName, creatureRoom, joinCreatures } from './tame.ts';
 import { keepsDeep } from './town.ts';
 import { firstGiftOf, notePay, shopMessage, shopView } from './shop.ts';
-import { UNIT_PACKS, unitPackPrice } from '../../../shared/src/data/shop.ts';
+import { unitPacks } from '../../../shared/src/data/shop.ts';
+
+/** A pack of `k` stacks of a kind at this stack price (null: no such pack — the shop's packs start at its least price). */
+const packOf = (price: number, k: number) => unitPacks(price).find((x) => x.k === k) ?? null;
 
 /** Where doubloons come from: a payment (its webhook), the admin's console, a refund. Their ledger rows are of the kind
  *  `doubloons_<source>`; a purchase's is `doubloons_buy` (the silver report leaves every `doubloons_` row out). */
@@ -181,7 +184,7 @@ function unitWhy(game: Game, s: PlayerSession, u: UnitId, o: PremiumUnit, balanc
   if (ship.shipLevel < premiumFrom(UNITS[u].tier)) return 'tier';
   if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return 'slot';
   if (creatureRoom(ship, u) < o.n * k) return 'room';
-  return balance < unitPackPrice(o.price, k) ? 'poor' : null;
+  return balance < (packOf(o.price, k)?.price ?? Infinity) ? 'poor' : null;
 }
 
 /** A refusal in words (her window says the same in her language). */
@@ -273,16 +276,19 @@ export function buyShip(game: Game, s: PlayerSession, c: ShipClassId): string | 
 }
 
 /** A stack of a kind for doubloons: into her army as a tamer's creatures come, every one of them or none. */
-export function buyUnit(game: Game, s: PlayerSession, u: UnitId, k = 1, pid?: string): string | null {
+export function buyUnit(game: Game, s: PlayerSession, u: UnitId, k = 0, pid?: string): string | null {
   const o = unitOffer(game, u);
-  if (!o || !UNIT_PACKS.some((x) => x.k === k)) return 'Not for sale';
+  if (!o) return 'Not for sale';
+  // (no pack named: the first, the least the shop sells — owner, 2026-10-15: from 290)
+  if (!(k > 0)) k = unitPacks(o.price)[0].k;
+  if (!packOf(o.price, k)) return 'Not for sale';
   // By threes and fives (owner, 2026-10-15): a purchase id of the client's own buys once.
   const tag = pid && /^[A-Za-z0-9_-]{6,40}$/.test(pid) ? `:${pid}` : '';
   const detail = `unit:${u}:${o.n * k}${tag}`;
   if (tag && game.db.doubloonRef(s.accountId, 'doubloons_buy', detail)) return null;
   const why = unitWhy(game, s, u, o, game.db.doubloons(s.accountId), k);
   if (why) return whyText(game, s, why, undefined, why === 'tier' ? UNITS[u].tier : o.n * k);
-  const price = unitPackPrice(o.price, k);
+  const price = packOf(o.price, k)!.price;
   const bal = move(game, s.accountId, -price, 'doubloons_buy', detail, () => {
     joinCreatures(game, s, u, o.n * k);
     game.saveSession(s);
@@ -330,7 +336,7 @@ export function premiumView(game: Game, s: PlayerSession): PremiumView {
     }),
     units: unitList(game).map((u) => {
       const o = unitOffer(game, u)!;
-      return { id: u, price: o.price, n: o.n, note: o.note, lv: premiumFrom(UNITS[u].tier), why: unitWhy(game, s, u, o, balance), packs: UNIT_PACKS.map((x) => ({ k: x.k, price: unitPackPrice(o.price, x.k), why: unitWhy(game, s, u, o, balance, x.k) })) };
+      return { id: u, price: o.price, n: o.n, note: o.note, lv: premiumFrom(UNITS[u].tier), why: unitWhy(game, s, u, o, balance, unitPacks(o.price)[0].k), packs: unitPacks(o.price).map((x) => ({ k: x.k, price: x.price, why: unitWhy(game, s, u, o, balance, x.k) })) };
     }),
     port: ship.docked ? game.portById(ship.docked)?.name ?? null : null,
     pay: paymentsOpen(game),
@@ -348,7 +354,7 @@ export function premiumMessage(game: Game, s: PlayerSession, msg: PremiumClientM
   if (msg.action === 'stars') return askInvoice(game, s, msg.pack, msg.lang === 'ru' ? 'ru' : 'en');
   // The shop's goods (owner, 2026-10-15): shop.ts, with its own pace of buys.
   if (msg.action === 'shop' || msg.action === 'speed' || msg.action === 'finish' || msg.action === 'kit' || msg.action === 'gift') return shopMessage(game, s, msg.action, msg as { offer?: string; pid?: string; job?: number });
-  const why = msg.action === 'buy_ship' ? buyShip(game, s, msg.id) : msg.action === 'buy_unit' ? buyUnit(game, s, msg.id, Math.trunc(Number(msg.k ?? 1)), msg.pid) : msg.action === 'buy_scrolls' ? buyScrolls(game, s, msg.pack) : null;
+  const why = msg.action === 'buy_ship' ? buyShip(game, s, msg.id) : msg.action === 'buy_unit' ? buyUnit(game, s, msg.id, Math.trunc(Number(msg.k ?? 0)), msg.pid) : msg.action === 'buy_scrolls' ? buyScrolls(game, s, msg.pack) : null;
   if (why) game.sendTo(s, { t: 'toast', msg: why, kind: 'bad' });
   if (msg.action === 'view') sendBalance(game, s);
   sendPremium(game, s);

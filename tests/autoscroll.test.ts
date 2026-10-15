@@ -143,28 +143,30 @@ test('ashore the same: «Авто» and a quick fight that is not the free one n
 test('a pack of scrolls for doubloons is one transaction: no doubloons, no scroll; the doubloons spent once; a failure leaves both as they were', () => {
   const { game } = makeGame();
   const { s, c } = atSea(game, 'Buyer Bea');
-  const p5 = scrollPack('scroll5')!;
-  assert.deepEqual(AUTO_SCROLL_PACKS.map((p) => [p.n, p.price]), [[1, 25], [5, 100], [20, 300]], 'the packs and their prices');
-  premiumMessage(game, s, { t: 'premium', action: 'buy_scrolls', pack: 'scroll5' });
+  const p15 = scrollPack('scroll15')!;
+  // (owner, 2026-10-15: the shop's prices from 290 to 9 900)
+  assert.deepEqual(AUTO_SCROLL_PACKS.map((p) => [p.n, p.price]), [[15, 290], [32, 590], [59, 990], [130, 1990]], 'the packs and their prices');
+  premiumMessage(game, s, { t: 'premium', action: 'buy_scrolls', pack: 'scroll15' });
   assert.equal(game.db.doubloons(s.accountId), 0);
   assert.equal(scrolls(game, s), 0, 'no doubloons: no scroll');
   assert.match(c.last('toast')?.msg ?? '', /Not enough doubloons/);
-  game.db.addDoubloons(s.accountId, 150);
-  premiumMessage(game, s, { t: 'premium', action: 'buy_scrolls', pack: 'scroll5' });
-  premiumMessage(game, s, { t: 'premium', action: 'buy_scrolls', pack: 'scroll5' }); // a second tap: 50 left, refused
-  assert.equal(game.db.doubloons(s.accountId), 150 - p5.price, 'spent once');
-  assert.equal(scrolls(game, s), 5);
-  assert.equal(c.last('doubloons')?.scrolls, 5, 'her client told');
-  assert.equal(c.last('premium')?.view.scrolls, 5, 'the shop shows them');
+  game.db.addDoubloons(s.accountId, 450);
+  premiumMessage(game, s, { t: 'premium', action: 'buy_scrolls', pack: 'scroll15' });
+  premiumMessage(game, s, { t: 'premium', action: 'buy_scrolls', pack: 'scroll15' }); // a second tap: 160 left, refused
+  assert.equal(game.db.doubloons(s.accountId), 450 - p15.price, 'spent once');
+  assert.equal(scrolls(game, s), 15);
+  assert.equal(c.last('doubloons')?.scrolls, 15, 'her client told');
+  assert.equal(c.last('premium')?.view.scrolls, 15, 'the shop shows them');
   premiumMessage(game, s, { t: 'premium', action: 'buy_scrolls', pack: 'nope' });
-  assert.equal(scrolls(game, s), 5, 'no such pack');
+  assert.equal(scrolls(game, s), 15, 'no such pack');
   // The scrolls cannot be written: the doubloons come back with them (the transaction rolls back).
+  game.db.addDoubloons(s.accountId, 290);
   const real = game.db.addScrolls.bind(game.db);
   game.db.addScrolls = () => null;
-  assert.throws(() => premiumMessage(game, s, { t: 'premium', action: 'buy_scrolls', pack: 'scroll1' }));
+  assert.throws(() => premiumMessage(game, s, { t: 'premium', action: 'buy_scrolls', pack: 'scroll15' }));
   game.db.addScrolls = real;
-  assert.equal(game.db.doubloons(s.accountId), 50, 'not a doubloon moved');
-  assert.equal(scrolls(game, s), 5);
+  assert.equal(game.db.doubloons(s.accountId), 450, 'not a doubloon moved');
+  assert.equal(scrolls(game, s), 15);
   const buy = game.db.ledgerFlows(0).find((f) => f.kind === 'autoscroll_buy')!;
   assert.equal(Number(buy.n), 1, 'one purchase in the ledger');
 });

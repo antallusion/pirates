@@ -19,7 +19,7 @@ import { premiumFrom } from '../../../shared/src/data/premiumbeasts.ts';
 import { STASH_SIZE } from '../../../shared/src/data/items.ts';
 import {
   BOOST_MAX_H, BUY_BURST, BUY_MINUTE, CHARM_MORALE, FIRST_PAY_CAP, LEVEL_GIFTS, LEVEL_OFFER_H, OFFERS, PERM_MAX, PROD_BOOST, RECRUIT_KINDS, REFILL_MINUTES,
-  REFILL_RATE, SHIELD_MAX_H, SHOP, SUB_DAILY, SUB_MAX_DAYS, SUB_SCROLLS, SUB_XP, TEMP_MAX, WIND_BOOST, XP_BOOST, dayOf, dealOf, finishPrice, weekOf,
+  PRICE_MAX, PRICE_MIN, REFILL_RATE, SHIELD_MAX_H, SHOP, SUB_DAILY, SUB_MAX_DAYS, SUB_SCROLLS, SUB_XP, TEMP_MAX, WIND_BOOST, XP_BOOST, dayOf, dealOf, finishPrice, weekOf,
 } from '../../../shared/src/data/shop.ts';
 import type { ShopGrant, ShopOffer } from '../../../shared/src/data/shop.ts';
 import type { ShopJobView, ShopView, ShopWhy } from '../../../shared/src/premiumproto.ts';
@@ -311,7 +311,7 @@ function fallenNow(game: Game, s: PlayerSession, st: ShopState): { units: { u: U
   }
   const n = units.reduce((a, x) => a + x.n, 0);
   const worth = units.reduce((a, x) => a + x.n * (UNITS[x.u].cost ?? 100), 0);
-  return { units, n, price: Math.max(5, Math.ceil((worth / 1000) * REFILL_RATE)), until: f.at + REFILL_MINUTES * 60_000 };
+  return { units, n, price: Math.min(PRICE_MAX, Math.max(PRICE_MIN, Math.ceil((worth / 1000) * REFILL_RATE))), until: f.at + REFILL_MINUTES * 60_000 };
 }
 
 /** Why one grant cannot be had now (null: it can). */
@@ -344,9 +344,9 @@ function grantWhy(game: Game, s: PlayerSession, st: ShopState, g: ShopGrant, off
     case 'wind':
       return Math.max(wall, st.wind) + g.hours * H > wall + BOOST_MAX_H * H ? 'max' : null;
     case 'charm':
-      return st.charms + g.n > 99 ? 'max' : null;
+      return st.charms + g.n > 999 ? 'max' : null;
     case 'kit':
-      return st.kits + g.n > 99 ? 'max' : null;
+      return st.kits + g.n > 999 ? 'max' : null;
     case 'pages': {
       const n = (count.get('pages') ?? 0) + g.n;
       count.set('pages', n);
@@ -373,7 +373,8 @@ function grantWhy(game: Game, s: PlayerSession, st: ShopState, g: ShopGrant, off
       if (g.k === 'units' && ship!.shipLevel < premiumFrom(g.tier)) return 'tier';
       const room = creatureRoom(ship!, u);
       if (room <= 0 && ship!.army.length >= ship!.armySlots && !ship!.army.some((x) => x.u === u)) return 'slot';
-      return room < g.n ? 'room' : null;
+      // (a pack signs on as many as the free hammocks hold, up to its number: room for one at least)
+      return room < 1 ? 'room' : null;
     }
     case 'refill': {
       if (inFight(game, s)) return 'fight';
@@ -383,7 +384,7 @@ function grantWhy(game: Game, s: PlayerSession, st: ShopState, g: ShopGrant, off
     case 'pardon':
       return p.infamy < 20 ? 'none' : null;
     case 'map':
-      return chestCount(p.explore.maps) >= MAX_MAPS ? 'room' : null;
+      return chestCount(p.explore.maps) + g.n > MAX_MAPS ? 'room' : null;
     case 'looks':
       return looksLeft(s).length ? null : 'none';
     case 'sub':
@@ -515,7 +516,7 @@ function grant(game: Game, s: PlayerSession, st: ShopState, g: ShopGrant, offerI
       p.infamy = Math.min(p.infamy, 10);
       return;
     case 'map':
-      grantMap(game, s, makeMap(game, Math.max(1, Math.min(3, Math.ceil((ship?.shipLevel ?? 1) / 3)))), 'The shop');
+      for (let i = 0; i < g.n; i++) grantMap(game, s, makeMap(game, Math.max(1, Math.min(3, Math.ceil((ship?.shipLevel ?? 1) / 3)))), 'The shop');
       return;
     case 'looks': {
       const left = looksLeft(s);

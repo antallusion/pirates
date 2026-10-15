@@ -6,6 +6,7 @@
 // their names in both languages, their figures' heights and the painted kinds that stand in for them; and the seven
 // new crafts fought out.
 
+import { unitPacks } from '../shared/src/data/shop.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -173,7 +174,8 @@ test('bought in the shop\'s Creatures tab from their tier\'s ship level — and 
   assert.equal(s.ship!.army.find((x) => x.u === 'sea_dragon')?.n, 2, 'a second purchase joins the first');
   assert.equal(game.db.doubloons(s.accountId), 3000 - 2 * UNITS.sea_dragon.premium!.price);
   conn(s).push({ t: 'premium', action: 'buy_unit', id: 'golden_crab' });
-  assert.equal(s.ship!.army.find((x) => x.u === 'golden_crab')?.n, 2);
+  // (a stack of 100 doubloons is sold three at once: the shop's least price is 290 — owner, 2026-10-15)
+  assert.equal(s.ship!.army.find((x) => x.u === 'golden_crab')?.n, UNITS.golden_crab.premium!.n * unitPacks(UNITS.golden_crab.premium!.price)[0].k);
 });
 
 test('the shop\'s creatures stay hers: they never slip away, no tamer buys them back, they do not change hands', () => {
