@@ -1,0 +1,56 @@
+/* The loading screen (client/src/ui/loader.ts): over every scene, under the films. A dark harbour night, the helm
+   turning, the scene's line, a brass bar and a tip. Phone first: the card fits 270 px of height. */
+#gt-load {
+  position: fixed; inset: 0; z-index: 2147481000;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 50% 55%, rgba(16, 22, 28, 0.96), rgba(3, 5, 8, 0.995) 75%);
+  opacity: 1; transition: opacity 0.16s ease;
+  padding: max(var(--sa-t, 0px), 8px) max(var(--sa-r, 0px), 8px) max(var(--sa-b, 0px), 8px) max(var(--sa-l, 0px), 8px);
+  box-sizing: border-box; pointer-events: auto; touch-action: none;
+  animation: gl-in 0.16s ease;
+}
+#gt-load.hidden { display: none; }
+#gt-load.out { opacity: 0; pointer-events: none; }
+@keyframes gl-in { from { opacity: 0; } }
+#gt-load .gl-card {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  width: min(420px, 86vw); text-align: center;
+}
+#gt-load .gl-helm {
+  width: 56px; height: 56px; background: center / contain no-repeat;
+  filter: drop-shadow(0 0 10px rgba(224, 184, 98, 0.25)) saturate(0.85);
+  opacity: 0.9; animation: gl-turn 3.2s linear infinite;
+}
+#gt-load .gl-helm:not([style*="url"]) { border: 2px solid var(--brass-dim, #6f5a38); border-radius: 50%; box-sizing: border-box; width: 40px; height: 40px; }
+@keyframes gl-turn { to { transform: rotate(360deg); } }
+#gt-load .gl-title {
+  font-family: var(--display, serif); font-weight: 400; font-size: 20px; letter-spacing: 0.06em; color: var(--bone, #d8d2c4);
+  text-shadow: 0 1px 0 #000, 0 0 18px rgba(224, 184, 98, 0.18);
+}
+#gt-load .gl-bar {
+  display: block; width: 100%; height: 6px; box-sizing: border-box;
+  border: 1px solid var(--brass-dim, #6f5a38); border-radius: 3px; background: rgba(0, 0, 0, 0.55); overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+#gt-load .gl-bar i {
+  display: block; height: 100%; width: 0; border-radius: 2px;
+  background: linear-gradient(90deg, var(--brass-dim, #6f5a38), var(--gold, #e0b862));
+  transition: width 0.2s ease;
+}
+#gt-load .gl-tip {
+  margin: 0; max-width: 100%; font-family: var(--serif, serif); font-style: italic; font-size: 13px; line-height: 1.3;
+  color: var(--fog, #9aa6b2);
+}
+#gt-load.still, #gt-load.still .gl-helm, #gt-load.still .gl-bar i, body.reduce-motion #gt-load .gl-helm { animation: none; transition: none; }
+@media (max-height: 420px) {
+  #gt-load .gl-card { gap: 5px; }
+  #gt-load .gl-helm { width: 40px; height: 40px; }
+  #gt-load .gl-title { font-size: 16px; }
+  #gt-load .gl-tip { font-size: 11px; }
+}
+@media (max-height: 300px) {
+  #gt-load .gl-helm { width: 30px; height: 30px; }
+  #gt-load .gl-title { font-size: 13px; }
+  #gt-load .gl-bar { height: 4px; }
+  #gt-load .gl-tip { font-size: 10px; }
+}

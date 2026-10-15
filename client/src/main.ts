@@ -34,7 +34,11 @@ import { angleDiff, clamp, dist, toShipLocal } from '../../shared/src/math.ts';
 import type { Aggression, SeaMarkData, ServerMsg, ShipInfo } from '../../shared/src/protocol.ts';
 import { SF, STATIONS } from '../../shared/src/protocol.ts';
 import { REGIONS } from '../../shared/src/world/regions.ts';
-import { assetUrl, loadAssets } from './assets.ts';
+import { assetStats, assetUrl, loadAssets } from './assets.ts';
+import { beginLoad, loadLog } from './ui/loader.ts';
+import { artStore, sceneWarm, startWarm } from './scenewarm.ts';
+import { tacArt } from './ui/tactical.ts';
+import { CURSOR_ART } from './ui/cursor.ts';
 import { tideVeil } from './ui/invasion.ts'; // docs/19 E16
 import { AudioEngine, turnCreakLoad } from './audio.ts';
 import { AutosailPill, FirstTips, autosailRequest, autosailStopText, tipForMsg, tipForState } from './ui/ease.ts';
@@ -865,7 +869,10 @@ onboarding.onEdge = () => {
 
 // ------------------------------------------------------------------ boot
 
-loadAssets(null).then(() => {
+// The title's key art and the cursors' few first (assets.ts: nothing else is asked for until a screen draws it), the
+// service worker that keeps the pictures for the next visit (client/sw.js).
+artStore();
+loadAssets(['art.keyart', 'ui.helm', ...Object.values(CURSOR_ART)]).then(() => {
   applySkin();
   buildMicroMenu();
   hud.artEpoch++;
@@ -1027,8 +1034,9 @@ setFilmGate(() => (modal !== null && !FILM_OVER.has(modal)) || [...document.quer
 /** The title screen: the trailer, silent and looping, over the key art (owner, 2026-10-03) — not for one who asks for
  *  less motion or saves data; it rests while the title screen is hidden. */
 function titleFilm(ka: HTMLElement, poster: string | null): void {
-  const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches || saveData) return;
+  const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+  // (a slow line keeps its bytes for the game: the key art stays still)
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || conn?.saveData || /(^|-)2g|3g/.test(conn?.effectiveType ?? '')) return;
   const v = document.createElement('video');
   v.className = 'keyart-film';
   v.muted = true;
@@ -1208,8 +1216,13 @@ tgInvoices(net, (msg, kind) => hud.toast(msg, kind));
 net.onStatus = (ok) => $('connection').classList.toggle('hidden', ok || !inGame);
 net.on(onMessage);
 
+/** The first look at the sea had its loading screen. */
+let startLoaded = false;
 function onMessage(m: ServerMsg): void {
+  const hadTac = !!state.boardTac;
   state.apply(m);
+  // a boarding opens: its loading screen until the decks, the figures and their poses are in (warmed while she closed in)
+  if (m.t === 'board_tac' && m.view && !hadTac) beginLoad('battle', 7000).need(tacArt(m.view)).settle().done();
   if (inGame) firstTips.offer(tipForMsg(m));
   switch (m.t) {
     case 'pursuit':
@@ -1270,6 +1283,12 @@ function onMessage(m: ServerMsg): void {
       audio.ownId = m.entityId;
       $('screen-captain').classList.add('hidden');
       hud.show(true);
+      // the first look at the sea: a loading screen until what the HUD and the sea draw is in (ui/loader.ts), then
+      // the rest of the pictures slowly into the cache (assets.ts warmAll)
+      if (!startLoaded) {
+        startLoaded = true;
+        requestAnimationFrame(() => beginLoad('start', 12000).imgs($('hud')).imgs(document.getElementById('touch')).settle().done().then(() => startWarm()));
+      }
       if (state.you === null && m.self.dockedAt) openModal('port');
       if (prologuePending) {
         // The First Watch teaches by doing: no handbook up front, the prologue, then the quay.
@@ -3859,6 +3878,8 @@ function step(t: number): void {
     sendInput(t);
     const docked = !!state.self?.dockedAt;
     if (wasDocked && !docked) {
+      // out of the harbour: what the open sea shows now (ships, islands, flags) in before it is seen
+      beginLoad('sea', 6000).settle().done();
       castOffAt = performance.now();
       goalOnCastOff(); // ux2: «Курс к заданию»
     }
@@ -3885,6 +3906,7 @@ function step(t: number): void {
     aimSide = held ? held.side : touch.enabled ? null : sideUnderCursor();
     const prompt = computePrompt();
     const range = markRange();
+    sceneWarm(state, t);
     renderer.render(state, own, dt, { side: aimSide, dist: aimDistance(), boardTarget, chaser: touch.enabled || held ? null : chaserEndUnderCursor(), charge: held, target: state.pursuit?.target ?? targetId, range });
     if (($('hud-target').dataset.range ?? '') !== (range ?? '')) {
       if (range) $('hud-target').dataset.range = range;
@@ -3949,4 +3971,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, isle: isleScene, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y) };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, isle: isleScene, assets: () => ({ ...assetStats(), loads: loadLog.slice() }), open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y) };

@@ -18,7 +18,11 @@ import { TOWN_CELLS } from '../../../shared/src/data/isletree.ts';
 import type { TownId } from '../../../shared/src/data/town.ts';
 import type { BaseView, ClientMsg } from '../../../shared/src/protocol.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
-import { assetMeta, assetUrl } from '../assets.ts';
+import { assetMeta, assetUrl, prefetchAssets } from '../assets.ts';
+import { IsleFx } from './islefx.ts';
+import type { FxSpot } from './islefx.ts';
+import { beginLoad } from './loader.ts';
+import type { Handle } from './loader.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/islescene.ts';
 import type { ClientState } from '../state.ts';
@@ -92,6 +96,14 @@ export class IsleScene {
   private send: (m: ClientMsg) => void;
   private base: BaseWindow;
   private state: ClientState | null = null;
+  /** The scene alive (ui/islefx.ts): the sea, the smoke, the lights, the work. */
+  private fx: IsleFx | null = null;
+  /** The loading screen until every picture of the scene is in (ui/loader.ts), and whether it is shown yet. */
+  private load: Handle | null = null;
+  private fed = false;
+  private revealed = false;
+  /** Which buildings were at work at the last layout (a work done bursts in gold). */
+  private workWas = new Map<string, boolean>();
   /** Back to the sea (main.ts: the sea's loop again, the harbour reopened if she lies in port). */
   onExit: () => void = () => {};
   /** A raid: off to defend it (the scene closes, the HUD points to the raiders). */
@@ -115,6 +127,17 @@ export class IsleScene {
     this.framed = false;
     this.sig = '';
     this.root!.classList.remove('hidden');
+    // nothing shows until its pictures are in: the loading screen if that takes more than a blink (ui/loader.ts)
+    this.root!.classList.add('is-veil');
+    this.revealed = false;
+    this.fed = false;
+    this.workWas.clear();
+    this.load?.close();
+    this.load = beginLoad('isle', 10000);
+    setTimeout(() => {
+      // no view from the server in time: the scene shows as it is
+      if (this.isOpen && !this.fed) this.feed();
+    }, 9000);
     document.body.classList.add('isle-on');
     this.base.open(); // the view and the supply from the server
     this.update(state);
@@ -127,6 +150,9 @@ export class IsleScene {
     this.base.moving = null;
     this.root?.classList.add('hidden');
     document.body.classList.remove('isle-on');
+    this.fx?.stop();
+    this.load?.close();
+    this.load = null;
     this.pointers.clear();
     this.gesture = null;
   }
@@ -155,6 +181,7 @@ export class IsleScene {
     this.cardEl = root.querySelector('.is-card')!;
     this.hintEl = root.querySelector('.is-hint')!;
     this.wireCamera();
+    if (IsleFx.allowed()) this.fx = new IsleFx(this.world);
     addEventListener('resize', () => {
       if (!this.isOpen) return;
       this.clampCam();
@@ -199,6 +226,10 @@ export class IsleScene {
       this.map = map;
       this.mapImg.src = isleUrl(`isle.map.${map}`) ?? '';
       this.sig = '';
+      if (this.revealed && this.fx) {
+        const img = this.mapImg;
+        img.decode().then(() => this.isOpen && this.fx?.setMap(map, img), () => undefined);
+      }
     }
     this.layout(v);
     this.topEl.innerHTML = this.topHtml(v, state);
@@ -211,6 +242,54 @@ export class IsleScene {
     this.hintEl.textContent = this.base.moving !== null ? L('moveHint') : this.pick ? '' : L('hint');
     this.hintEl.classList.toggle('hidden', !!this.pick && this.base.moving === null);
     this.renderCard();
+    if (!this.fed) this.feed();
+  }
+
+  /** The scene's pictures to the loading screen (the map, the buildings, the bars' icons), then the scene. */
+  private feed(): void {
+    this.fed = true;
+    const h = this.load;
+    if (!h || !this.root) return;
+    h.imgs(this.root).done().then(() => {
+      if (h !== this.load || !this.isOpen) return;
+      this.reveal();
+    });
+  }
+
+  private reveal(): void {
+    this.revealed = true;
+    this.root?.classList.remove('is-veil');
+    if (this.fx && this.mapImg.complete && this.mapImg.naturalWidth) {
+      this.fx.setMap(this.map, this.mapImg);
+      this.fx.setSpots(this.fxSpots());
+      this.fx.start();
+    }
+    // the pictures she will want next: each building's next level and its scaffolding, the build list's
+    const v = this.state?.base;
+    if (v) {
+      const ids: string[] = [];
+      for (const s of this.spots) {
+        const m = s.pic && 'id' in s.pic ? /^isle\.(.+)\.(\w+)$/.exec(s.pic.id) : null;
+        if (!m) continue;
+        const lv = /^l(\d)$/.exec(m[2]);
+        ids.push(`isle.${m[1]}.up`, `isle.${m[1]}.s1`);
+        if (lv && Number(lv[1]) < 5) ids.push(`isle.${m[1]}.l${Number(lv[1]) + 1}`);
+      }
+      prefetchAssets(ids);
+    }
+  }
+
+  /** The buildings as the air draws about them. */
+  private fxSpots(): FxSpot[] {
+    const out: FxSpot[] = [];
+    for (const s of this.spots) {
+      const el = this.picEls.get(s.key) as HTMLImageElement | undefined;
+      if (!el || !s.pic || !('id' in s.pic)) continue;
+      const m = /^isle\.(.+)\.(\w+)$/.exec(s.pic.id);
+      if (!m) continue;
+      out.push({ key: s.key, el, sheet: m[1], work: isWork(s) });
+    }
+    return out;
   }
 
   /** Every second: the clocks, the bars, a stage passing half its work (s0 → s1). */
@@ -336,7 +415,7 @@ export class IsleScene {
           img.dataset.k = '';
           top = foot - w + 4;
         }
-        img.className = `is-pic${s.cls ? ` ${s.cls}` : ''}${sel ? ' sel' : ''}`;
+        img.className = `is-pic${s.cls ? ` ${s.cls}` : ''}${sel ? ' sel' : ''}${isWork(s) ? ' work' : ''}`;
       }
       if (s.tag) tags.push(`<div class="is-tag" style="left:${cx.toFixed(1)}px;top:${Math.max(4, top).toFixed(1)}px;z-index:${10 + sp.z}">${s.tag}</div>`);
     }
@@ -348,6 +427,13 @@ export class IsleScene {
     }
     this.svg.innerHTML = ground.join('');
     this.tags.innerHTML = tags.join('');
+    // the air's buildings; a work just done bursts in gold
+    for (const s of spots) {
+      const w = isWork(s);
+      if (this.workWas.get(s.key) && !w && s.pic) this.fx?.celebrate(s.key);
+      this.workWas.set(s.key, w);
+    }
+    if (this.revealed) this.fx?.setSpots(this.fxSpots());
   }
 
   /** The spot under a point of the map: its ground's diamond first (the front one), else the picture over it. */
@@ -700,9 +786,12 @@ export class IsleScene {
 
 /** A baked picture of the island screen by its manifest id (not preloaded with the game: assets.ts). */
 export function isleUrl(id: string): string | null {
-  const e = assetMeta(id);
-  if (!e) return null;
-  return `/assets/${e.local}${e.rev ? `?v=${e.rev}` : ''}`;
+  return assetMeta(id) ? assetUrl(id) : null;
+}
+
+/** A spot at work: its scaffolding (s0, s1, up) or its level dimmed under the work. */
+function isWork(s: Spot): boolean {
+  return !!s.pic && 'id' in s.pic && (/\.(s0|s1|up)$/.test(s.pic.id) || s.cls.split(' ').includes('dim')) && !s.cls.split(' ').includes('ghost');
 }
 
 /** The raid's line for the side button's hint. */
