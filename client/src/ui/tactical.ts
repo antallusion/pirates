@@ -2897,7 +2897,7 @@ export class TacticalPanel {
       p.shot ? `<div class="tb-pv-h">${esc(L('pv.shot'))}</div>` : '',
       `<div class="tb-pv-r"><span>${esc(L('pv.dmg'))}</span><b>${r(p.dmg)}</b>${p.twice ? `<i>×2</i>` : ''}</div>`,
       `<div class="tb-pv-r"><span>${esc(L('pv.kills'))}</span><b>${r(p.kills)}</b></div>`,
-      p.ad ? `<div class="tb-pv-n">${esc(L('pv.ad', { n: `${p.ad > 0 ? '+' : '−'}${Math.abs(p.ad)}` }))}</div>` : '',
+      p.ad && !this.phone ? `<div class="tb-pv-n">${esc(L('pv.ad', { n: `${p.ad > 0 ? '+' : '−'}${Math.abs(p.ad)}` }))}</div>` : '',
       p.fl ? `<div class="tb-pv-fl">${esc(L(p.fl === 2 ? 'fl.rear' : 'fl.side'))}</div>` : '',
       p.far ? `<div class="tb-pv-n">${esc(L('pv.far'))}</div>` : '',
       p.cov ? `<div class="tb-pv-n">${esc(L('pv.cov'))}</div>` : '',
