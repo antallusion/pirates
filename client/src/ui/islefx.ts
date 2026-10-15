@@ -131,11 +131,11 @@ void main(){
   vec4 c=texture2D(uMap,uv);
   if(w>.001){
     float sw=sin(v.x*13.+v.y*21.-uT*.55)*.5+.5;c.rgb*=1.+(sw-.5)*.07*far;
-    float g=n(v*vec2(240.,360.)+vec2(uT*1.2,-uT*.8));float gl=smoothstep(.84,.97,g)*far*uQ;
-    float dy=v.y-uMoon.y;float wid=.012+dy*.07;float path=smoothstep(wid,0.,abs(v.x-uMoon.x+sin(v.y*90.+uT)*.003))*step(0.,dy)*smoothstep(uMoon.z,uMoon.y+(uMoon.z-uMoon.y)*.4,v.y);
+    float dy=v.y-uMoon.y;float near=exp(-abs(v.x-uMoon.x)*7.)*step(0.,dy);float g=n(v*vec2(520.,260.)+vec2(uT*1.4,-uT*.6))*n(v*vec2(150.,90.)-vec2(uT*.3,0.));float gl=smoothstep(.5,.8,g)*far*uQ*(.25+.75*near);
+    float wid=.012+dy*.07;float path=smoothstep(wid,0.,abs(v.x-uMoon.x+sin(v.y*90.+uT)*.003))*step(0.,dy)*smoothstep(uMoon.z,uMoon.y+(uMoon.z-uMoon.y)*.4,v.y);
     float sh=n(vec2(v.x*170.,v.y*520.-uT*2.2));
     float shore=w*(1.-smoothstep(.5,.78,m.g));float lap=pow(sin(uT*1.25-m.g*34.)*.5+.5,3.);float fo=smoothstep(.45,.8,n(v*vec2(280.,420.)+vec2(uT*.15,0.)));
-    c.rgb+=vec3(.72,.8,.88)*(gl*.32+path*smoothstep(.5,.85,sh)*.5*w+shore*lap*fo*.16);
+    c.rgb+=vec3(.72,.8,.88)*(gl*.22+path*smoothstep(.5,.85,sh)*.5*w+shore*lap*fo*.16);
   }
   gl_FragColor=c;
 }`;
@@ -357,7 +357,19 @@ interface Emit {
   w: number;
   h: number;
   look: Look | null;
+  src: string;
   next: number;
+}
+
+/** A building's box from its picture's place (none while its new picture is not in). */
+function boxOf(e: Emit): void {
+  const el = e.el;
+  const k = Number(el.dataset.k) || 0;
+  const ready = el.complete && el.naturalWidth > 0;
+  e.x = parseFloat(el.style.left) || 0;
+  e.y = parseFloat(el.style.top) || 0;
+  e.w = !ready ? 0 : k ? el.naturalWidth * k : parseFloat(el.style.width) || 0;
+  e.h = !ready ? 0 : k ? el.naturalHeight * k : parseFloat(el.style.height) || 0;
 }
 
 // ------------------------------------------------------------------------------------------------ the scene's fx
@@ -428,7 +440,7 @@ export class IsleFx {
       try {
         this.sea ??= SeaGL.make();
         if (this.sea) {
-          this.sea.canvas.className = 'is-sea';
+          this.sea.canvas.className = 'is-water';
           this.sea.setMap(img, this.fx, this.q < 1 ? 0.6 : 1);
           if (!this.sea.canvas.parentElement) img.after(this.sea.canvas);
         }
@@ -461,10 +473,10 @@ export class IsleFx {
     const was = new Map(this.emits.map((e) => [e.key, e]));
     this.emits = spots.map((s) => {
       const old = was.get(s.key);
-      const k = Number(s.el.dataset.k) || 0;
-      const w = k ? s.el.naturalWidth * k : parseFloat(s.el.style.width) || 0;
-      const h = k ? s.el.naturalHeight * k : parseFloat(s.el.style.height) || 0;
-      return { key: s.key, el: s.el, sheet: s.sheet, work: s.work, x: parseFloat(s.el.style.left) || 0, y: parseFloat(s.el.style.top) || 0, w, h, look: old?.el === s.el && old.look ? old.look : null, next: old?.next ?? 0 };
+      const src = s.el.dataset.src ?? s.el.src;
+      const e: Emit = { key: s.key, el: s.el, sheet: s.sheet, work: s.work, x: 0, y: 0, w: 0, h: 0, look: old?.src === src && old.look ? old.look : null, src, next: old?.next ?? 0 };
+      boxOf(e);
+      return e;
     });
     this.relight();
   }
@@ -472,7 +484,7 @@ export class IsleFx {
   /** A work done: a golden burst over the building. */
   celebrate(key: string): void {
     const e = this.emits.find((x) => x.key === key);
-    if (!e || !this.running) return;
+    if (!e || !e.w || !this.running) return;
     this.bursts.push({ x: e.x + e.w / 2, y: e.y + e.h * 0.55, t0: this.time() });
     if (this.bursts.length > 3) this.bursts.shift();
     for (let i = 0; i < 26 * this.q; i++) {
@@ -486,8 +498,8 @@ export class IsleFx {
     this.glows.length = this.fx.lights.length;
     this.pennants.length = 0;
     for (const e of this.emits) {
-      e.look ??= lookOf(e.el);
-      if (!e.look || e.el.classList.contains('ghost')) continue;
+      if (e.w) e.look ??= lookOf(e.el);
+      if (!e.look || !e.w || e.el.classList.contains('ghost')) continue;
       const lit = e.work ? 0.35 : 1;
       for (const [fx, fy] of e.look.lights) this.glows.push({ x: e.x + fx * e.w, y: e.y + fy * e.h, r: Math.max(8, e.w * 0.07), ph: Math.random() * 10, a: 0.42 * lit });
       if (PENNANT.has(e.sheet) && !e.work) this.pennants.push({ x: e.x + e.look.top[0] * e.w, y: e.y + e.look.top[1] * e.h, s: Math.max(10, e.w * 0.09), ph: Math.random() * 6 });
@@ -604,9 +616,10 @@ export class IsleFx {
     const q = this.q;
     // ---- the emitters: smoke, dust and sparks
     for (const e of this.emits) {
-      if (!e.look) {
-        // its picture came in since: looked at now (one a frame)
+      if (!e.look || !e.w) {
+        // its picture came in since: measured and looked at now
         if (e.el.complete && e.el.naturalWidth) {
+          boxOf(e);
           e.look = lookOf(e.el);
           this.relight();
         }
@@ -615,10 +628,10 @@ export class IsleFx {
       if (t < e.next) continue;
       if (e.work) {
         // the work: a puff of dust at the foot, now and then a hammer's sparks
-        spawn(K_DUST, e.x + e.w * (0.22 + Math.random() * 0.56), e.y + e.h * (0.72 + Math.random() * 0.18), (Math.random() - 0.5) * 14, -6 - Math.random() * 8, 1.6 + Math.random(), 12 + Math.random() * 10);
+        spawn(K_DUST, e.x + e.w * (0.22 + Math.random() * 0.56), e.y + e.h * (0.72 + Math.random() * 0.18), (Math.random() - 0.5) * 14, -6 - Math.random() * 8, 1.6 + Math.random(), 16 + Math.random() * 14);
         if (Math.random() < 0.55) {
           const sx = e.x + e.w * (0.3 + Math.random() * 0.4), sy = e.y + e.h * (0.35 + Math.random() * 0.3);
-          for (let i = 0; i < 5 + 4 * q; i++) spawn(K_SPARK, sx, sy, (Math.random() - 0.5) * 70, -30 - Math.random() * 50, 0.35 + Math.random() * 0.35, 1.2 + Math.random());
+          for (let i = 0; i < 5 + 4 * q; i++) spawn(K_SPARK, sx, sy, (Math.random() - 0.5) * 70, -30 - Math.random() * 50, 0.35 + Math.random() * 0.35, 2 + Math.random() * 1.5);
         }
         e.next = t + (0.45 + Math.random() * 0.9) / q;
       } else if (SMOKE.has(e.sheet) && !e.el.classList.contains('ghost')) {
@@ -658,12 +671,12 @@ export class IsleFx {
         pvx[i] += 3 * dt; // the night's breeze
         const sz = psize[i] * (1 + k * 2.6);
         g.globalCompositeOperation = 'source-over';
-        g.globalAlpha = 0.34 * Math.sin(Math.PI * Math.min(1, k * 1.4)) * (1 - k);
+        g.globalAlpha = 0.48 * Math.sin(Math.PI * Math.min(1, k * 1.4)) * (1 - k);
         g.drawImage(this.spr.smoke, px[i] - sz, py[i] - sz, sz * 2, sz * 2);
       } else if (kind === K_DUST) {
         const sz = psize[i] * (0.6 + k);
         g.globalCompositeOperation = 'source-over';
-        g.globalAlpha = 0.3 * (1 - k);
+        g.globalAlpha = 0.5 * (1 - k) * Math.min(1, k * 6);
         g.drawImage(this.spr.dust, px[i] - sz, py[i] - sz * 0.6, sz * 2, sz * 1.2);
       } else if (kind === K_SPARK || kind === K_GOLD) {
         pvy[i] += (kind === K_SPARK ? 160 : 30) * dt;

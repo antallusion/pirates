@@ -205,9 +205,9 @@ body.touch.mm-peek #touch > #tc-isle, body.sea-fight #touch > #tc-isle { display
 #tc-isle .tc-isle-l { position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); font-size: 8px; line-height: 1; white-space: nowrap; color: var(--bone, #e6dccb); text-shadow: 0 1px 2px #000, 0 0 4px #000; pointer-events: none; }
 /* the scene unseen until its pictures are in (ui/loader.ts); alive once shown (ui/islefx.ts) */
 #isle.is-veil .is-view { visibility: hidden; }
-#isle .is-sea { position: absolute; left: 0; top: 0; width: 1536px; height: 1024px; pointer-events: none; }
+#isle .is-water { position: absolute; left: 0; top: 0; width: 1536px; height: 1024px; pointer-events: none; }
 #isle .is-air { position: absolute; left: 0; top: 0; width: 1536px; height: 1024px; z-index: 950; pointer-events: none; }
-#isle .is-sea.hidden, #isle .is-air.hidden { display: none; }
+#isle .is-water.hidden, #isle .is-air.hidden { display: none; }
 #isle .is-pic.work { animation: is-sway 2.8s ease-in-out infinite; }
 @keyframes is-sway { 50% { translate: 0.9px -0.5px; } }
 body.reduce-motion #isle .is-pic.work { animation: none; }
