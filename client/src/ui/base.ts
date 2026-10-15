@@ -144,7 +144,8 @@ function shipPic(classId: ShipClassId, cls = 'sy-pic'): string {
 }
 
 /** A phone lying on its side: the landscape layout of the window (the same query as its styles). */
-const LANDSCAPE = matchMedia('(max-height: 520px) and (min-aspect-ratio: 1/1)');
+// (none outside a browser: the tests import the window's builders in node)
+const LANDSCAPE = typeof matchMedia === 'function' ? matchMedia('(max-height: 520px) and (min-aspect-ratio: 1/1)') : ({ matches: false } as MediaQueryList);
 
 /** A phone's island: the board is its picture, the tiles its controls (the board's diamonds take no finger there). */
 const touchBoard = (): boolean => !!globalThis.document?.body?.classList.contains('touch');
