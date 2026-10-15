@@ -112,14 +112,55 @@ export type PremiumClientMsg =
   | { t: 'premium'; action: 'kit' }
   /** The first top-up's gift claimed. */
   | { t: 'premium'; action: 'gift' }
+  /** Her personal offers (owner, 2026-10-15; server/src/game/promo.ts): the view, the entry carousel seen, one bought at
+   *  its own price, one closed in a place, one seen in a place (the owner's figures). */
+  | { t: 'premium'; action: 'promo_view' | 'promo_carousel' }
+  | { t: 'premium'; action: 'promo_buy'; id: string; pid: string }
+  | { t: 'premium'; action: 'promo_close' | 'promo_seen'; id: string; where: PromoPlace }
   /** A pack of the top-up for Telegram Stars: the server answers with the invoice's link (owner, 2026-10-11). */
   | { t: 'premium'; action: 'stars'; pack: string; lang?: 'en' | 'ru' };
 
 export type PremiumServerMsg =
   /** The shop as she sees it now. */
   | { t: 'premium'; view: PremiumView }
+  /** Her personal offers and the shop's specials for her (owner, 2026-10-15: promo.ts). */
+  | { t: 'promo'; view: PromoView }
   /** Her account's doubloons: on coming aboard and after every change. */
   | { t: 'doubloons'; n: number; /** Her auto-battle scrolls (owner, 2026-10-11). */ scrolls?: number }
   /** The Telegram Stars invoice for a pack (server/src/telegram.ts): opened in the Mini App by openInvoice, on the
    *  website as a link (it opens Telegram). Null link: it could not be made (a toast says why). */
   | { t: 'premium_invoice'; pack: string; link: string | null };
+
+// ------------------------------------------------------------------------------------------------ personal offers
+
+/** Owner, 2026-10-15: «нужно везде продвигать свои пакеты с обратным отсчетом … на острове … для острова, в море - на
+ *  море и абордажные пакеты … с возможностью закрыть офферы. и при входе в игру разворачивать офферы». */
+export type PromoCtx = 'isle' | 'sea' | 'board';
+/** Where a card is shown: the entry carousel, the island's scene, the sea's chip, the harbour's strip, a boarding's end. */
+export type PromoPlace = 'entry' | 'isle' | 'sea' | 'port' | 'board';
+
+export interface PromoCard {
+  /** `po<n>`: a personal offer; `sp:<offer>`: one of the shop's specials (`sp:first`: the first top-up's double). */
+  id: string;
+  /** The shop's offer it sells ('' for the first top-up). */
+  offer: string;
+  ctx: PromoCtx | 'all';
+  /** Its price now, the shop's own before the discount, the discount in percent. */
+  price: number;
+  was: number;
+  off: number;
+  /** Until when (wall ms; 0: no end of its own). */
+  until: number;
+  /** Why it cannot be bought now (the purse aside). */
+  why: ShopWhy | null;
+  /** The places it was closed in (it hides there). */
+  closed: PromoPlace[];
+  special?: 'starter' | 'level' | 'first' | 'weekly' | 'sub';
+}
+
+export interface PromoView {
+  now: number;
+  cards: PromoCard[];
+  /** The entry carousel is due (once a day). */
+  carousel: boolean;
+}

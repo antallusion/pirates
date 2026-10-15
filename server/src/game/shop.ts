@@ -416,6 +416,12 @@ function offerWhy(game: Game, s: PlayerSession, st: ShopState, offer: ShopOffer,
   return game.db.doubloons(s.accountId) < priceOf(game, s, st, offer, deal) ? 'poor' : null;
 }
 
+/** Why an offer of the shelves cannot be had now, the purse aside (null: it can) — for the personal offers (promo.ts). */
+export function offerShut(game: Game, s: PlayerSession, offer: ShopOffer): ShopWhy | null {
+  const why = offerWhy(game, s, shopState(game, s.accountId), offer);
+  return why === 'poor' ? null : why;
+}
+
 // ------------------------------------------------------------------------------------------------ granting
 
 const shopRng = new WeakMap<Game, Rng>();
@@ -592,7 +598,7 @@ export function shopWhyText(why: ShopWhy): string {
 
 /** An offer of the shop bought (or the deal of the day: `deal`): every check, then the doubloons, the ledger's row,
  *  her stores and the goods together. Null: bought (or bought already by this purchase id); else the refusal. */
-export function buyOffer(game: Game, s: PlayerSession, offerId: string, pid: string): string | null {
+export function buyOffer(game: Game, s: PlayerSession, offerId: string, pid: string, promo?: { price: number; tag: string; done: () => void }): string | null {
   if (!s.authed || !s.profile) return 'Not for sale';
   const deal = offerId === 'deal';
   const day = dayOf(game.wallNow());
@@ -600,12 +606,13 @@ export function buyOffer(game: Game, s: PlayerSession, offerId: string, pid: str
   if (!found) return 'Not for sale';
   if (!PID.test(String(pid ?? ''))) return 'Not for sale';
   const offer = found.offer;
-  const detail = `shop:${deal ? `deal${day}` : offer.id}:${pid}`;
+  const detail = `shop:${promo ? promo.tag : deal ? `deal${day}` : offer.id}:${pid}`;
   if (spentPid(game, s, detail)) return null;
   const st = shopState(game, s.accountId);
-  const why = offerWhy(game, s, st, offer, deal);
+  // (a personal offer, promo.ts: its own price — the balance is checked against it, every other check as a buy's)
+  const why = promo ? offerShut(game, s, offer) ?? (game.db.doubloons(s.accountId) < promo.price ? 'poor' : null) : offerWhy(game, s, st, offer, deal);
   if (why) return shopWhyText(why);
-  const price = priceOf(game, s, st, offer, deal);
+  const price = promo ? promo.price : priceOf(game, s, st, offer, deal);
   if (!(price > 0)) return 'Not for sale';
   const wall = game.wallNow();
   let done = false;
@@ -615,6 +622,7 @@ export function buyOffer(game: Game, s: PlayerSession, offerId: string, pid: str
     for (const g of offer.grants) grant(game, s, st, g, offer.id);
     count(st, deal ? 'deal' : offer.id, wall);
     save(game, s.accountId, st);
+    promo?.done();
     game.saveSession(s);
     done = true;
   });

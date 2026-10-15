@@ -25,6 +25,7 @@ import { MAX_BERTHS, setShip } from './shipbuilding.ts';
 import { beastsName, creatureRoom, joinCreatures } from './tame.ts';
 import { keepsDeep } from './town.ts';
 import { firstGiftOf, notePay, shopMessage, shopView } from './shop.ts';
+import { promoMessage, sendPromo } from './promo.ts';
 import { unitPacks } from '../../../shared/src/data/shop.ts';
 
 /** A pack of `k` stacks of a kind at this stack price (null: no such pack — the shop's packs start at its least price). */
@@ -347,12 +348,15 @@ export function premiumView(game: Game, s: PlayerSession): PremiumView {
 
 export function sendPremium(game: Game, s: PlayerSession): void {
   if (s.ship && s.profile) game.sendTo(s, { t: 'premium', view: premiumView(game, s) });
+  sendPromo(game, s); // (a purchase or a refusal may change her offers' cards)
 }
 
 /** Her client's word to the shop: the view, a hull or a kind bought (the view comes back either way). */
 export function premiumMessage(game: Game, s: PlayerSession, msg: PremiumClientMsg): void {
   if (msg.action === 'stars') return askInvoice(game, s, msg.pack, msg.lang === 'ru' ? 'ru' : 'en');
   // The shop's goods (owner, 2026-10-15): shop.ts, with its own pace of buys.
+  // Her personal offers (owner, 2026-10-15): promo.ts.
+  if (msg.action === 'promo_view' || msg.action === 'promo_carousel' || msg.action === 'promo_buy' || msg.action === 'promo_close' || msg.action === 'promo_seen') return promoMessage(game, s, msg as { action: string; id?: string; pid?: string; where?: string });
   if (msg.action === 'shop' || msg.action === 'speed' || msg.action === 'finish' || msg.action === 'kit' || msg.action === 'gift') return shopMessage(game, s, msg.action, msg as { offer?: string; pid?: string; job?: number });
   const why = msg.action === 'buy_ship' ? buyShip(game, s, msg.id) : msg.action === 'buy_unit' ? buyUnit(game, s, msg.id, Math.trunc(Number(msg.k ?? 0)), msg.pid) : msg.action === 'buy_scrolls' ? buyScrolls(game, s, msg.pack) : null;
   if (why) game.sendTo(s, { t: 'toast', msg: why, kind: 'bad' });

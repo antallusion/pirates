@@ -121,7 +121,7 @@ function unitCard(c: PremiumUnitCard): string {
 // ------------------------------------------------------------------------------------------------ the goods
 
 /** An offer's quantity on its button: «1 ч», «×200», «+25», «3 дн.». */
-function qtyOf(offer: ShopOffer, fam: ShopFamily): string {
+export function qtyOf(offer: ShopOffer, fam: ShopFamily): string {
   const g = offer.grants[0];
   if (!g || fam.sec === 'deals') return L('q.buy');
   let n = 0;
@@ -141,7 +141,7 @@ function qtyOf(offer: ShopOffer, fam: ShopFamily): string {
 }
 
 /** A family's picture: an icon of the manifest, or a creature's face. */
-function famArt(art: string): string {
+export function famArt(art: string): string {
   return `<div class="sh-art">${art.startsWith('unit:') ? unitIcon(art.slice(5) as UnitId, 'sh-face') : art === 'doubloon' ? doubloonIcon('sh-ico') : icon(art, '◉', 'sh-ico')}</div>`;
 }
 

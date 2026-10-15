@@ -262,7 +262,8 @@ import { seamarkMessage, stepSeaMarks } from './seamarks.ts'; // the dense sea's
 import { findMessage, stepSeaFinds } from './seafinds.ts'; // docs/19 D5: the sea's small things, and the day's caps
 import { roamMessage, stepRoamers } from './roamers.ts'; // docs/19 D7: the creatures roaming the sea
 import { premiumMessage, sendBalance } from './premium.ts'; // the premium shop (owner, 2026-10-03)
-import { levelGifts, stepShop, xpBoost } from './shop.ts'; // the shop's goods (owner, 2026-10-15)
+import { levelGifts, stepShop, xpBoost } from './shop.ts';
+import { sendPromo, stepPromo } from './promo.ts'; // the shop's goods (owner, 2026-10-15)
 import { creaturesAboard, feedCreatures, stepTame } from './tame.ts'; // docs/18 IV
 import { musterInPort, stepGifts } from './shipgifts.ts'; // the premium hulls' gifts (docs/02 §1.A.9)
 import { silverKin } from '../../../shared/src/data/fleet.ts';
@@ -957,6 +958,7 @@ export class Game {
     for (const s of this.sessions) {
       stepRefit(this, s); // yards finish their work by the wall clock
       stepShop(this, s); // the shop's subscription day and fair wind (owner, 2026-10-15)
+      stepPromo(this, s); // her personal offers rotated (owner, 2026-10-15)
     }
     stepDirector(this); // the sea director: signs on the horizon, things aboard (docs/12 P2)
     stepMinigames(this); // island scenes and mini-games left open lapse
@@ -4308,6 +4310,7 @@ export class Game {
     sendRenown(this, s, true);
     sendWorldGoals(this, s); // the sea's goals of the week (docs/16 #32)
     sendBalance(this, s); // her account's doubloons (the premium shop)
+    sendPromo(this, s); // her personal offers and the entry carousel (owner, 2026-10-15)
     if (away) this.sendTo(s, { t: 'away', view: away });
     // Back at the helm in the middle of a fight (a reload, a dropped line): the fight as it stands, or it went on unseen.
     if (s.ship) resendBoarding(this, s.ship);

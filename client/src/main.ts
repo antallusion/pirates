@@ -134,6 +134,7 @@ import { RecruitWindow } from './ui/recruit.ts';
 import { TameWindow } from './ui/tame.ts'; // docs/18 IV
 import { ThroneWindow } from './ui/throne.ts'; // docs/19 E1–E3, E18
 import { PremiumWindow } from './ui/premium.ts'; // the premium shop (owner, 2026-10-03)
+import { Promos } from './ui/promo.ts'; // her personal offers (owner, 2026-10-15)
 import { tgInvoices, tgLoginButton, tgStart } from './tg.ts'; // Telegram: the Mini App, «Войти через Телеграм», Stars (docs/27)
 import { ResearchWindow } from './ui/research.ts'; // the yard's tree of hulls (owner, 2026-10-04; docs/20)
 import { AdvCard } from './ui/advcard.ts'; // docs/17 H4
@@ -407,8 +408,15 @@ function openShop(topup = false, at?: Parameters<PremiumWindow['open']>[1]): voi
 // «Свиток автобоя» (owner, 2026-10-11): «Купить» on the battle bar and in the locker opens the shop at its scrolls;
 // the island's scene at its builders, the harbour at the sea's goods (owner, 2026-10-15: the three tabs).
 const SHOP_AT: Record<string, Parameters<PremiumWindow['open']>[1]> = { scrolls: { tab: 'board', sec: 'battle' }, isle: { tab: 'isle', sec: 'build' }, sea: { tab: 'sea', sec: 'supply' }, board: { tab: 'board', sec: 'recruit' } };
-addEventListener('gravetide:shop', (e) => openShop(false, SHOP_AT[String((e as CustomEvent).detail ?? '')]));
+addEventListener('gravetide:shop', (e) => {
+  const d = (e as CustomEvent).detail;
+  // (a personal offer's «Подробнее» names its tab and shelf, promo.ts; the top-up: 'topup')
+  if (d === 'topup') return openShop(true);
+  openShop(false, typeof d === 'object' && d ? d : SHOP_AT[String(d ?? '')]);
+});
 hud.onShop = () => openShop();
+// Her personal offers (owner, 2026-10-15): the entry carousel, the sea's chip, the island's card, the harbour's strip.
+const promos = new Promos({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight });
 const puzzleWindow = new PuzzleWindow((m) => net.send(m));
 function openPuzzle(): void {
   puzzleWindow.open();
@@ -3971,4 +3979,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, isle: isleScene, assets: () => ({ ...assetStats(), loads: loadLog.slice(), kinds: assetKinds() }), open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y) };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, isle: isleScene, assets: () => ({ ...assetStats(), loads: loadLog.slice(), kinds: assetKinds() }), open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), promos, hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y) };
