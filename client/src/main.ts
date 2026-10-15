@@ -2004,6 +2004,11 @@ addEventListener('keydown', (e) => {
     e.preventDefault();
     return;
   }
+  // A choice open beside a hex or a stack on the deck (owner, 2026-10-15): Enter gives its first order, not the chat.
+  if (e.key === 'Enter' && !modal && !typing() && tactical.pickOpen() && tactical.onKey(e)) {
+    e.preventDefault();
+    return;
+  }
   if (e.key === 'Enter') {
     // Enter opens the chat and its field; Enter in the field sends (an empty field gives the keys back).
     if (document.activeElement === chatInput) {

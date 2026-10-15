@@ -2697,6 +2697,11 @@ export class TacticalPanel {
     done();
   }
 
+  /** A choice open on her turn (main.ts: Enter gives its first order, not the chat). */
+  pickOpen(): boolean {
+    return !!this.view?.mine && !this.view.over && this.pickOn();
+  }
+
   /** Whether a choice is open beside something tapped. */
   private pickOn(): boolean {
     return this.preview !== null || this.foeArmed !== null || this.selfPick || this.castOn !== null;
