@@ -9,6 +9,7 @@ import { BUILDINGS, islandSize } from '../../../shared/src/data/holdings.ts';
 import type { BuildingId, IslandSize } from '../../../shared/src/data/holdings.ts';
 import { DWELL_GROWTH, DWELL_UP_LEVEL, HALL_DAY, ISLE_OF_HALL, SHIPYARD_REPAIR, TREE_MAX, isTreeTown } from '../../../shared/src/data/isletree.ts';
 import { ISLE_LEVELS } from '../../../shared/src/data/estate.ts';
+import { caravanExtra, chartCopy, coveHide, dockDiscount, forgeReach, levelMul, residentRooms, signalMins, signalRisk, smugglerRoom, trophyCap, workshopYield } from '../../../shared/src/data/baselevels.ts';
 import { PRODUCERS, crewsAt, plotsOf, producerOf, producerRate, yardCap } from '../../../shared/src/data/base.ts';
 import { DEF_BATTERY, DEF_FORT } from '../../../shared/src/data/baseclaim.ts';
 import { YARD_SHIP_LEVEL } from '../../../shared/src/data/baseships.ts';
@@ -78,6 +79,28 @@ export function givesText(id: string, level: number, c: GiveCtx): string {
     case 'pen': return T29('gPen', { n: L >= 2 ? 3 : 1 });
     case 'grail': return T29('gGrail');
   }
+  // docs/29 (2026-10-15): the base's single-level buildings by their own level (shared/src/data/baselevels.ts)
+  const m = levelMul(L);
+  const x = (n: number) => (Math.round(n * 100) / 100).toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-US');
+  const pc = (n: number) => Math.round(n * 100);
+  switch (id) {
+    case 'pier': return T29('gPier', { p: x(5 * m) });
+    case 'chapel': return T29('gChapel', { n: Math.round(30 * m) });
+    case 'lighthouse': return T29('gLight', { p: Math.round(50 * m), t: fmt(Math.round(3000 * m)) });
+    case 'tavern': return T29('gTavern', { n: Math.round(10 * m), m: x(m), h: 20 + 5 * (L - 1) });
+    case 'barracks': return T29('gBarracks', { n: Math.round(60 * m) });
+    case 'signal_tower': return T29('gSignal', { n: signalMins(L), p: pc(1 - signalRisk(L)) });
+    case 'caravan_office': return T29('gCaravan', { n: caravanExtra(L) });
+    case 'residents_house': return T29('gHouse', { n: residentRooms(L) });
+    case 'dry_dock': return T29('gDock', { p: pc(dockDiscount(L)) });
+    case 'chart_house': return T29('gChart', { n: fmt(chartCopy(L)) });
+    case 'forge': return T29('gForge', { n: forgeReach(L) });
+    case 'trophy_hall': return T29('gTrophy', { p: x(trophyCap(L) * 100) });
+    case 'workshop': return T29('gWorkshop', { n: x(workshopYield(L)) });
+    case 'smuggler_store': return T29('gSmuggler', { n: smugglerRoom(L) });
+    case 'hidden_cove': return T29('gCove', { p: pc(coveHide(L)) });
+  }
+  if (id in BUILDINGS) return T29('gMake', { m: x(m) });
   const tier = TOWN[id as TownId]?.tier;
   if (tier) {
     const plain = TIER_UNIT[tier];

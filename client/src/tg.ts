@@ -2,7 +2,7 @@
 // звездами … подключаться к игре на начальном экране не только через почту, но и телеграм»; docs/27_TELEGRAM.md).
 //  - The Mini App (tg.<host>, or opened inside Telegram): telegram-web-app.js loaded only then; ready, expand,
 //    fullscreen and the orientation lock where the Bot API allows (8.0+ on phones), no vertical swipes; Telegram's
-//    safe areas into the HUD's --sa-* insets; its BackButton closes the top window; the theme's colours on the
+//    safe areas into the HUD's --sa-* insets; its BackButton closes the top window (or leaves the island screen); the theme's colours on the
 //    loading screen only; the sign-in by initData (POST /auth/tg/webapp).
 //  - The website: «Войти через Телеграм» on the start screen and «Привязать Телеграм» in settings — a nonce from
 //    POST /auth/tg/start, the bot's link opened, GET /auth/tg/poll every 2 s for at most 5 minutes.
@@ -215,9 +215,11 @@ function setupMiniApp(w: TgWebApp): void {
   const panel = document.getElementById('modal-panel');
   const back = w.BackButton;
   if (modal && back) {
-    const sync = () => (!modal.classList.contains('hidden') && !ANSWER.has(panel?.dataset.modal ?? '') ? back.show() : back.hide());
+    // (and while the island screen is up: back to the sea, islescene.ts)
+    const sync = () => ((!modal.classList.contains('hidden') && !ANSWER.has(panel?.dataset.modal ?? '')) || document.body.classList.contains('isle-on') ? back.show() : back.hide());
     const mo = new MutationObserver(sync);
     mo.observe(modal, { attributes: true, attributeFilter: ['class'] });
+    mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
     if (panel) mo.observe(panel, { attributes: true, attributeFilter: ['data-modal'] });
     back.onClick(() => dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true })));
     sync();

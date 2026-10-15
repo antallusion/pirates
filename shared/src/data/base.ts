@@ -14,6 +14,7 @@ import { BUILDINGS } from './holdings.ts';
 import type { BuildingId, IslandSize } from './holdings.ts';
 import type { Tr } from './estate.ts';
 import { isTreeBase, treeCost } from './isletree.ts';
+import { singleCost } from './baselevels.ts';
 import type { TreeId } from './isletree.ts';
 
 /** The yard's resources, in the order the window shows them. */
@@ -114,7 +115,8 @@ export const BUILDING_MAX = 5;
 
 export function maxLevel(what: string): number {
   if (isProducer(what)) return PRODUCER_MAX;
-  return UPGRADABLE.includes(what as BuildingId) ? BUILDING_MAX : 1;
+  // docs/29 (owner, 2026-10-15): every building of the base rises to five (baselevels.ts)
+  return what in BUILDINGS ? BUILDING_MAX : 1;
 }
 
 /** A level above the first asks the island to be at least that level. */
@@ -127,6 +129,9 @@ export interface BaseCost {
   goods: Partial<Record<GoodId, number>>;
   secs: number;
 }
+
+/** What the island cannot make and a building's founding brings (its later levels never ask it again). */
+const BROUGHT: GoodId[] = ['rum', 'weapons', 'cloth', 'whale_oil', 'gunpowder', 'salt', 'sugar'];
 
 const round50 = (n: number) => Math.max(50, Math.round(n / 50) * 50);
 /** Each level dearer than the last (level 2 ×2.8, level 5 ×11). */
@@ -183,6 +188,8 @@ export function baseCost(what: string, level: number): BaseCost {
       secs: levelTime(Math.round(600 * Math.sqrt(d.cost / 10_000)), level),
     };
   }
+  // docs/29: a single-level building's later levels (baselevels.ts) from its founding's cost.
+  if (level >= 2) return singleCost(baseCost(what, 1), level, BROUGHT) as BaseCost;
   // Half the silver of a leased island's building: the rest is paid in the island's own timber, stone and tar.
   const w = d.cost / 10_000;
   const goods: Partial<Record<GoodId, number>> = {

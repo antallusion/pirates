@@ -56,6 +56,7 @@ import { bazaarAct, bazaarCard, bindBazaar } from './bazaar.ts';
 import { departOrAsk, voyageOrder, voyageShip } from './depart.ts';
 import { VOYAGE_MINUTES, voyageCrew, voyageNeeds } from '../../../shared/src/data/voyage.ts';
 import { showHint } from './kit/hint.ts';
+import { EN as IS_EN, RU as IS_RU } from '../lang/ui/islescene.ts';
 import { chipRow, figure, keepFolds, more, quickBar, quickBtn, railTabs, rangeHtml, sec, wasBecomes, winHead } from './kit/window.ts';
 import type { QuickBtn, WinTab } from './kit/window.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
@@ -64,6 +65,7 @@ import { dwellCard, tamerCard } from './recruit.ts';
 import { FLAGS_TAB, bindColours, coloursCard } from './flags.ts';
 import { admiraltyBoard, bindContracts } from './contracts.ts'; // docs/19 E15
 
+const LIS = dict(IS_EN, IS_RU);
 /** A generated job's picture by its kind (docs/11 P4). */
 const JOB_ICON: Record<string, string> = {
   delivery: 'good_provisions', hunt: 'fire', rescue: 'map_cove', scouting: 'menu_map', smuggling: 'good_dreamleaf', treasure: 'map_treasure',
@@ -162,6 +164,8 @@ export class PortScreen {
   openTattoos: (() => void) | null = null;
   /** Opens the recruit window of the port's dwellings (docs/17 H3). */
   openDwell: (() => void) | null = null;
+  /** Her island's screen (owner, 2026-10-15). */
+  openIsle: (() => void) | null = null;
   constructor(send: (m: ClientMsg) => void, onClose: () => void) {
     this.send = send;
     this.onClose = onClose;
@@ -191,6 +195,7 @@ export class PortScreen {
     ];
     const tv = view.tavern;
     const second: WinTab[] = [
+      ...(self.homeIsle !== null && self.homeIsle !== undefined ? [{ id: 'isle', icon: 'tab_isles', label: LIS('enter'), hint: LIS('enterTip') }] : []),
       { id: 'harbour', icon: TAB_ICON.harbour, label: W('port.harbour'), hint: W('port.harbourHint') },
       // docs/24 C1, D1–D2: the colours and «Абордаж: выкл», hoisted only in port.
       { id: 'colours', icon: 'tab_law', glyph: '⚑', label: FLAGS_TAB.label(), hint: FLAGS_TAB.hint() },
@@ -227,6 +232,7 @@ export class PortScreen {
       const id = el.dataset.ptab!;
       if (id === 'sea') return this.act({ act: 'undock' } as DOMStringMap, root, state);
       if (id === 'tattoo') return this.openTattoos?.();
+      if (id === 'isle') return this.openIsle?.();
       this.tab = id as Tab;
       this.render(root, state);
       root.querySelector<HTMLElement>('.port-body')?.scrollTo({ top: 0 });

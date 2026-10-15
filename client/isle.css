@@ -1,0 +1,205 @@
+/* GRAVETIDE · the island screen (client/src/ui/islescene.ts; owner, 2026-10-15: the island as a game of its own). A
+   scene over the whole screen: the painted island moved by one transform, the bars over it in the safe areas — the
+   yard's goods and «В море» at the top, the island's places down the left, the build queue at the bottom, a building's
+   card on the right. The sea's canvas and HUD are hidden (and not drawn: main.ts) while it is up. The island fills the
+   whole screen, under Telegram's fullscreen header too; the bars keep to --sa-* (src/tg.ts puts Telegram's insets in
+   them). Loaded before fit.css. */
+
+/* the server's word stands under the island's top bar (the top band, never the middle) */
+/* (doubled classes: over the sea HUD's own placing, body.simple.touch and Telegram's html.tg-app) */
+html body.isle-on.isle-on.isle-on.isle-on #toasts { top: calc(max(var(--sa-t, 0px), 4px) + 44px) !important; left: 50% !important; transform: translateX(-50%) !important; width: min(46vw, 420px) !important; }
+@media (max-height: 520px) { html body.isle-on.isle-on.isle-on.isle-on #toasts { top: calc(max(var(--sa-t, 0px), 3px) + 36px + 4 * var(--u, 1px)) !important; } }
+body.isle-on :is(#world, #hud, #hud-chat, #encounter, #surrender, #lairchest, #advcard, #minigame, #trek, #fishfight, #nethaul, #atk-mark, #pad-cursor) { visibility: hidden !important; }
+
+#isle {
+  --is-top: calc(max(var(--sa-t, 0px), 4px) + 38px);
+  --is-pad-l: calc(var(--sa-l, 0px) + 6px);
+  --is-pad-r: calc(var(--sa-r, 0px) + 6px);
+  --is-pad-b: max(var(--sa-b, 0px), 5px);
+  --is-side: 48px;
+  --is-card: clamp(236px, 42vw, 380px);
+  --is-fs: 11px;
+  --is-fs-s: 9.5px;
+  position: fixed; inset: 0; z-index: 28; overflow: hidden; background: #04070a; color: var(--bone, #e6dccb);
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; font-size: var(--is-fs);
+}
+#isle.hidden { display: none; }
+#isle .is-view { position: absolute; inset: 0; touch-action: none; cursor: grab; overflow: hidden; }
+#isle .is-view:active { cursor: grabbing; }
+#isle .is-world { position: absolute; left: 0; top: 0; width: 1536px; height: 1024px; transform-origin: 0 0; }
+#isle .is-world.moving { will-change: transform; }
+#isle .is-map { position: absolute; left: 0; top: 0; width: 1536px; height: 1024px; pointer-events: none; }
+#isle.is-loading .is-world { opacity: 0.35; }
+#isle .is-ground { position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none; overflow: visible; }
+#isle .is-g { fill: none; stroke: none; }
+#isle .is-g.empty { fill: rgba(216, 180, 92, 0.1); stroke: rgba(216, 180, 92, 0.6); stroke-width: 2; stroke-dasharray: 9 6; }
+#isle .is-g.empty.target { fill: rgba(150, 200, 130, 0.18); stroke: rgba(170, 220, 150, 0.85); }
+#isle .is-g.locked { fill: rgba(0, 0, 0, 0.26); stroke: rgba(160, 150, 130, 0.16); stroke-width: 1.5; }
+#isle .is-g.soon { fill: rgba(0, 0, 0, 0.2); stroke: rgba(200, 176, 120, 0.4); stroke-width: 1.5; stroke-dasharray: 4 6; }
+#isle .is-g.ghost { fill: rgba(216, 180, 92, 0.05); stroke: rgba(216, 180, 92, 0.28); stroke-width: 1.5; stroke-dasharray: 6 6; }
+#isle .is-g.sel { fill: rgba(240, 213, 138, 0.2); stroke: #f0d58a; stroke-width: 3; stroke-dasharray: none; }
+#isle .is-pics { position: absolute; inset: 0; pointer-events: none; }
+#isle .is-pic { position: absolute; transform-origin: 0 0; pointer-events: none; max-width: none; }
+#isle .is-pic.ghost { opacity: 0.45; filter: grayscale(0.7) brightness(0.75); }
+#isle .is-pic.ghost.can { opacity: 0.7; filter: grayscale(0.3); }
+#isle .is-pic.dim { filter: brightness(0.6) saturate(0.7); }
+#isle .is-pic.sel { filter: brightness(1.2) drop-shadow(0 0 5px rgba(240, 213, 138, 0.85)); }
+#isle .is-pic.upright { object-fit: contain; filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.75)); }
+#isle .is-pic.upright.grail:not(.ghost) { filter: drop-shadow(0 0 6px rgba(232, 196, 110, 0.85)) drop-shadow(0 6px 4px rgba(0, 0, 0, 0.75)); }
+#isle .is-pic.upright.ghost { opacity: 0.8; filter: grayscale(0.55) brightness(0.85) drop-shadow(0 6px 4px rgba(0, 0, 0, 0.6)); }
+/* the pen's and the Grail's plinth (procedural, in the board's isometry) */
+#isle .is-pl { stroke: rgba(201, 164, 106, 0.35); stroke-width: 1.2; }
+#isle .is-pl.t { fill: #3d3833; }
+#isle .is-pl.l { fill: #26221e; }
+#isle .is-pl.r { fill: #1b1815; }
+#isle .is-pl.t.sel { stroke: #f0d58a; stroke-width: 3; }
+#isle .is-pl.ghost { opacity: 0.8; stroke-dasharray: 5 5; }
+/* the tags ride over the pictures at the screen's own size (--inv undoes the camera's scale) */
+#isle .is-tags { position: absolute; inset: 0; z-index: 1000; pointer-events: none; }
+#isle .is-tag { position: absolute; transform: translate(-50%, -100%) scale(var(--inv, 1)); transform-origin: 50% 100%; white-space: nowrap; }
+#isle .is-t { display: inline-flex; align-items: center; gap: 3px; padding: 2px 5px; border-radius: 9px; background: rgba(9, 11, 13, 0.84); border: 1px solid rgba(201, 164, 106, 0.6); color: #f0e2c0; font: 600 10px/1.1 Inter, system-ui, sans-serif; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+#isle .is-tl { min-width: 18px; height: 18px; padding: 0 4px; justify-content: center; border-radius: 50%; font-size: 10.5px; }
+#isle .is-tj { flex-direction: column; gap: 2px; padding: 2px 6px 3px; border-color: rgba(216, 180, 92, 0.85); }
+#isle .is-tj .bprog { display: block; width: 46px; height: 3px; background: rgba(255, 255, 255, 0.14); border-radius: 2px; overflow: hidden; }
+#isle .is-tj .bprog i { display: block; height: 100%; background: var(--gold, #d8b45c); }
+#isle .is-tp { width: 20px; height: 20px; padding: 0; justify-content: center; border-radius: 50%; color: var(--gold, #d8b45c); font-size: 15px; border-color: rgba(216, 180, 92, 0.8); }
+#isle .is-tk { font-weight: 500; color: #cbbf9f; border-color: rgba(160, 140, 100, 0.5); }
+#isle .is-tf { border-color: rgba(150, 200, 120, 0.75); color: #cfe6bb; }
+#isle .is-tf .ico-sm { width: 13px; height: 13px; }
+
+/* ---------------------------------------------------------------- the top: the island, the yard, the silver, «В море» */
+#isle .is-top {
+  position: absolute; left: 0; right: 0; top: 0; z-index: 10; box-sizing: border-box; height: var(--is-top);
+  padding: max(var(--sa-t, 0px), 4px) var(--is-pad-r) 4px var(--is-pad-l);
+  display: flex; align-items: center; gap: 6px; pointer-events: none;
+  background: linear-gradient(rgba(4, 6, 8, 0.9), rgba(4, 6, 8, 0.62) 72%, rgba(4, 6, 8, 0));
+}
+#isle .is-top > * { pointer-events: auto; }
+#isle .is-name { display: flex; flex-direction: column; min-width: 0; max-width: 20vw; flex: 0 1 auto; line-height: 1.15; }
+#isle .is-name b { font-family: var(--serif, Georgia, serif); font-size: 13px; color: var(--brass, #c9a46a); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#isle .is-name span { font-size: var(--is-fs-s); color: var(--fog, #9aa3a8); white-space: nowrap; }
+#isle .is-store { flex: 1 1 auto; min-width: 0; display: flex; gap: 4px; justify-content: center; overflow: hidden; }
+#isle .is-res { flex: none; display: inline-flex; align-items: center; gap: 2px; height: 24px; box-sizing: border-box; padding: 0 6px 0 4px; border-radius: 12px; background: rgba(10, 12, 14, 0.78); border: 1px solid rgba(201, 164, 106, 0.32); font-size: var(--is-fs); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#isle .is-res b { font-weight: 600; }
+#isle .is-res i { font-style: normal; color: var(--fog, #9aa3a8); font-size: var(--is-fs-s); }
+#isle .is-res.full { border-color: rgba(200, 120, 90, 0.7); }
+#isle .is-res .ico-sm { width: 15px; height: 15px; }
+#isle .is-silver { border-color: rgba(216, 180, 92, 0.55); }
+#isle .is-sea { flex: none; display: inline-flex; align-items: center; gap: 4px; min-height: 30px; height: 30px; padding: 0 12px; white-space: nowrap; font-size: 12px; }
+#isle .is-sea .ico-sm { width: 16px; height: 16px; }
+
+/* ---------------------------------------------------------------- the left: the island's places */
+#isle .is-side { position: absolute; z-index: 10; left: var(--is-pad-l); top: calc(var(--is-top) + 2px); display: flex; flex-direction: column; gap: 4px; }
+#isle .is-sb {
+  position: relative; width: var(--is-side); height: 42px; box-sizing: border-box; padding: 3px 1px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  background: rgba(10, 12, 14, 0.82); border: 1px solid rgba(201, 164, 106, 0.45); border-radius: 8px; color: var(--bone, #e6dccb); cursor: pointer;
+}
+#isle .is-sb:hover:not(:disabled) { border-color: rgba(230, 196, 120, 0.85); }
+#isle .is-sb.on { border-color: #f0d58a; background: rgba(48, 38, 20, 0.9); }
+#isle .is-sb:disabled { opacity: 0.5; cursor: default; }
+#isle .is-sb.raid { border-color: rgba(200, 70, 60, 0.9); background: rgba(70, 18, 14, 0.9); animation: is-pulse 1.4s ease-in-out infinite; }
+@keyframes is-pulse { 50% { box-shadow: 0 0 8px rgba(220, 80, 60, 0.8); } }
+@media (prefers-reduced-motion: reduce) { #isle .is-sb.raid { animation: none; } }
+#isle .is-sb-ico { width: 20px; height: 20px; object-fit: contain; }
+#isle .is-sb-l { font-size: 8px; line-height: 1; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#isle .is-sb-n { position: absolute; top: -4px; right: -4px; min-width: 14px; padding: 1px 3px; border-radius: 7px; background: var(--gold, #d8b45c); color: #1a1408; font: 700 8px/1.2 Inter, system-ui, sans-serif; }
+
+/* ---------------------------------------------------------------- the bottom: the build queue */
+#isle .is-queue { position: absolute; z-index: 10; left: calc(var(--is-pad-l) + var(--is-side) + 6px); right: var(--is-pad-r); bottom: var(--is-pad-b); display: flex; gap: 4px; align-items: flex-end; overflow: hidden; pointer-events: none; }
+#isle.is-carded .is-queue { right: calc(var(--is-pad-r) + var(--is-card) + 6px); }
+#isle .is-queue > * { pointer-events: auto; }
+#isle .is-qh { flex: none; align-self: center; padding: 2px 6px; border-radius: 9px; background: rgba(10, 12, 14, 0.78); font-size: var(--is-fs-s); color: var(--fog, #9aa3a8); white-space: nowrap; }
+#isle .is-q { flex: 0 1 150px; min-width: 70px; height: 36px; box-sizing: border-box; display: flex; align-items: center; gap: 4px; padding: 2px 6px 2px 2px; background: rgba(10, 12, 14, 0.85); border: 1px solid rgba(216, 180, 92, 0.6); border-radius: 8px; color: var(--bone, #e6dccb); cursor: pointer; text-align: left; font: inherit; }
+#isle .is-q img { width: 34px; height: 30px; object-fit: contain; flex: none; }
+#isle .is-q.free { cursor: default; border-style: dashed; border-color: rgba(160, 150, 120, 0.4); color: var(--fog, #9aa3a8); flex-basis: 96px; padding-left: 8px; }
+#isle .is-qm { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 1px; }
+#isle .is-qn { font-size: var(--is-fs-s); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#isle .is-q .btime { font: 600 10.5px/1 Inter, system-ui, sans-serif; color: var(--gold, #d8b45c); font-variant-numeric: tabular-nums; }
+#isle .is-q .bprog { display: block; height: 3px; background: rgba(255, 255, 255, 0.14); border-radius: 2px; overflow: hidden; }
+#isle .is-q .bprog i { display: block; height: 100%; background: var(--gold, #d8b45c); }
+
+#isle .is-hint { position: absolute; z-index: 9; left: 50%; transform: translateX(-50%); bottom: calc(var(--is-pad-b) + 42px); margin: 0; max-width: min(60vw, 520px); text-align: center; font-size: var(--is-fs-s); color: var(--fog, #9aa3a8); text-shadow: 0 1px 2px #000, 0 0 6px #000; pointer-events: none; }
+#isle .is-hint.hidden, #isle .is-hint:empty { display: none; }
+#isle.is-carded .is-hint { left: calc((100% - var(--is-card)) / 2); }
+
+/* ---------------------------------------------------------------- the right: a building's card */
+#isle .is-card {
+  position: absolute; z-index: 12; top: calc(var(--is-top) + 2px); right: var(--is-pad-r); max-height: calc(100% - var(--is-top) - 2px - var(--is-pad-b)); width: var(--is-card); box-sizing: border-box;
+  display: flex; flex-direction: column; background: rgba(13, 15, 17, 0.95); border: 1px solid rgba(201, 164, 106, 0.55); border-radius: 8px; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+  user-select: text; -webkit-user-select: text;
+}
+#isle .is-card.hidden { display: none; }
+/* the island's places (its ships, its town's trade, its supply) as a wider sheet of the same make */
+#isle:has(.is-card.wide:not(.hidden)) { --is-card: clamp(300px, 60vw, 660px); }
+#isle .is-ph { margin: 0 0 4px; padding-right: 26px; font: 600 15px/1.2 var(--serif, Georgia, serif); color: var(--brass, #c9a46a); }
+#isle .is-cb .tw-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+#isle .is-cb .tw-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px; }
+#isle .is-cb .town, #isle .is-cb .sup-body { min-width: 0; }
+#isle .is-x { position: absolute; top: 2px; right: 2px; z-index: 2; width: 28px; height: 28px; padding: 0; border: 0; background: none; color: var(--fog, #9aa3a8); font-size: 20px; line-height: 1; cursor: pointer; }
+#isle .is-x:hover { color: var(--bone, #e6dccb); }
+#isle .is-cb { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px 8px 8px; font-size: 12px; scrollbar-width: thin; }
+#isle .is-cb .bsheet-h { padding-right: 24px; }
+#isle .is-cb .bsheet-h b { font-size: 15px; }
+#isle .is-cb .bthumb { width: 46px; height: 46px; object-fit: contain; }
+/* the card's own button never needs a scroll to be reached: it sticks at the card's foot */
+#isle .is-cb .bupcard > .btn-primary { position: sticky; bottom: 0; z-index: 1; width: 100%; box-shadow: 0 -8px 10px rgba(13, 15, 17, 0.95), 0 4px 0 rgba(13, 15, 17, 0.95); }
+#isle .is-cb :is(.tr-now, .tr-gives, .tr-hn) { font-size: 12px; }
+
+/* ---------------------------------------------------------------- phones */
+@media (max-height: 520px) {
+  #isle { --is-fs: var(--f-fs, 10px); --is-fs-s: var(--f-fs-xs, 8px); --is-side: calc(42px + 4 * var(--u, 1px)); --is-top: calc(max(var(--sa-t, 0px), 3px) + 30px + 4 * var(--u, 1px)); }
+  #isle .is-top { padding-top: max(var(--sa-t, 0px), 3px); padding-bottom: 3px; gap: 4px; }
+  #isle .is-name b { font-size: var(--f-fs-m, 11px); }
+  #isle .is-res { height: calc(20px + 2 * var(--u, 1px)); padding: 0 4px 0 2px; }
+  #isle .is-res .ico-sm { width: 13px; height: 13px; }
+  #isle .is-sea { height: calc(26px + 4 * var(--u, 1px)); min-height: 0; padding: 0 8px; font-size: var(--f-fs, 10px); }
+  #isle .is-sb { height: calc(34px + 6 * var(--u, 1px)); }
+  #isle .is-sb-ico { width: calc(16px + 4 * var(--u, 1px)); height: calc(16px + 4 * var(--u, 1px)); }
+  #isle .is-sb-l { font-size: 7px; letter-spacing: -0.1px; }
+  #isle .is-side { gap: calc(2px + 2 * var(--u, 1px)); }
+  #isle .is-q { height: calc(30px + 4 * var(--u, 1px)); }
+  #isle .is-q img { width: 28px; height: 26px; }
+  #isle .is-cb { font-size: var(--f-fs, 10px); padding: 4px 6px 6px; }
+  #isle .is-cb .bsheet-h b { font-size: var(--f-fs-h, 12px); }
+  #isle .is-ph { font-size: var(--f-fs-h, 12px); }
+  #isle:has(.is-card.wide:not(.hidden)) { --is-card: clamp(280px, 62vw, 560px); }
+  #isle .is-cb .tw-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  #isle .is-cb .bthumb { width: 36px; height: 36px; }
+  #isle .is-cb :is(.bopt-text, .bcosts, .tr-needs li, .bdesc) { font-size: var(--f-fs-s, 9px); }
+  #isle .is-cb :is(.tr-now, .tr-gives, .tr-hn, p) { font-size: var(--f-fs, 10px); line-height: 1.3; }
+  #isle .is-cb .bopt-main b { font-size: var(--f-fs-m, 11px); }
+  #isle .is-cb .bopt-art { width: 34px; height: 34px; }
+  #isle .is-cb :is(.bupcard, .bjobcard) { padding: 5px; margin: 4px 0; }
+  #isle .is-cb .btn-small { min-height: calc(26px + 4 * var(--u, 1px)); font-size: var(--f-fs, 10px); padding: 2px 8px; }
+}
+@media (max-height: 320px) {
+  #isle .is-sb-l { font-size: 6.5px; }
+  #isle .is-hint { display: none; }
+}
+/* narrow: the yard's caps go, the island's name too */
+@media (max-width: 640px) {
+  #isle .is-res i { display: none; }
+  #isle .is-name { max-width: 16vw; }
+}
+@media (max-width: 520px) {
+  #isle .is-name { display: none; }
+  #isle .is-qh { display: none; }
+}
+/* the desk: a little more room */
+@media (min-height: 700px) and (min-width: 1000px) {
+  #isle { --is-fs: 12.5px; --is-fs-s: 10.5px; --is-side: 58px; --is-top: calc(max(var(--sa-t, 0px), 6px) + 44px); }
+  #isle .is-sb { height: 52px; }
+  #isle .is-sb-ico { width: 24px; height: 24px; }
+  #isle .is-sb-l { font-size: 9.5px; }
+  #isle .is-res { height: 28px; }
+  #isle .is-sea { height: 34px; font-size: 13px; }
+  #isle .is-q { height: 42px; flex-basis: 180px; }
+  #isle .is-q img { width: 40px; height: 36px; }
+  #isle .is-name b { font-size: 15px; }
+}
+
+/* ---------------------------------------------------------------- the sea's way in: «Остров» under the menu */
+body.touch #touch > #tc-isle, body.simple #touch > #tc-isle { position: absolute; top: calc(var(--sa-t) + 8px + 44px + 8px); right: calc(var(--sa-r) + var(--mm) + 20px); pointer-events: auto; }
+#tc-isle.hidden { display: none !important; }
+body.touch.mm-peek #touch > #tc-isle, body.sea-fight #touch > #tc-isle { display: none !important; }
+#tc-isle .tc-isle-l { position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); font-size: 8px; line-height: 1; white-space: nowrap; color: var(--bone, #e6dccb); text-shadow: 0 1px 2px #000, 0 0 4px #000; pointer-events: none; }

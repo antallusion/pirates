@@ -40,7 +40,8 @@ import { deliver } from './post.ts';
 import { repairCost } from './ports.ts';
 import type { ShipEntity } from './ship.ts';
 import { SPEED_SCALE } from '../../../shared/src/constants.ts';
-import { ISLE_OF_HALL, SHIPYARD_REPAIR, hallOfIsle } from '../../../shared/src/data/isletree.ts';
+import { ISLE_OF_HALL, SHIPYARD_REPAIR, hallOfIsle, isTreeBase } from '../../../shared/src/data/isletree.ts';
+import { chartCopy, dockDiscount, levelMul, smugglerRoom, workshopYield } from '../../../shared/src/data/baselevels.ts';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -179,6 +180,7 @@ export function migrateHoldings(all: Record<string, Holding>, wall: number): { c
       changed = true;
     }
     if (migrateTree(best, wall)) changed = true;
+    if (migrateLevels(best)) changed = true;
   }
   return { changed, dropped };
 }
@@ -281,8 +283,37 @@ export function has(h: Holding, id: BuildingId): Building | undefined {
 
 /** How well a building works: condition, halved while unpaid. */
 export function strength(h: Holding, id: BuildingId): number {
+  // docs/29 (2026-10-15): a single-level building of the base works harder a level at a time (baselevels.ts; the tree's
+  // own — the warehouse, the shipyard, the guns — reckon their levels apart)
+  const tree = isTreeBase(id);
   const list = h.buildings.filter((b) => b.id === id);
-  return list.reduce((a, b) => a + b.condition * (b.unpaid ? 0.5 : 1), 0);
+  return list.reduce((a, b) => a + b.condition * (b.unpaid ? 0.5 : 1) * (tree ? 1 : levelMul(b.level)), 0);
+}
+
+/** A building's greatest level on the island (0: none stands). */
+export function levelOf(h: Holding, id: BuildingId): number {
+  return h.buildings.reduce((a, b) => (b.id === id ? Math.max(a, b.level ?? 1) : a), 0);
+}
+
+/** A building whose work is whole at one (the pier's mending, the chapel's calm, the lighthouse): its condition to one,
+ *  then its level's strength. */
+export function work(h: Holding, id: BuildingId): number {
+  const raw = h.buildings.filter((b) => b.id === id).reduce((a, b) => a + b.condition * (b.unpaid ? 0.5 : 1), 0);
+  return raw > 0 ? Math.min(1, raw) * levelMul(levelOf(h, id)) : 0;
+}
+
+/** docs/29: the single-level buildings of one's own island stand at a level of their own (1 for those raised before). */
+export function migrateLevels(h: Holding): boolean {
+  if (!h.owned) return false;
+  let changed = false;
+  for (const b of h.buildings) {
+    const l = Math.max(1, Math.min(5, Math.round(b.level ?? 1)));
+    if (b.level !== l) {
+      b.level = l;
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 export function slotsOf(isl: Island, h: Holding | undefined): number {
@@ -291,7 +322,7 @@ export function slotsOf(isl: Island, h: Holding | undefined): number {
 }
 
 export function storeCapacity(h: Holding): number {
-  return ISLAND_CACHE_VOLUME + (has(h, 'warehouse') ? WAREHOUSE_ISLAND_VOLUME : 0);
+  return ISLAND_CACHE_VOLUME + (has(h, 'warehouse') ? WAREHOUSE_ISLAND_VOLUME : 0) + smugglerRoom(levelOf(h, 'smuggler_store'));
 }
 
 export function slotsUsed(h: Holding): number {
@@ -562,7 +593,7 @@ export function islandService(game: Game, s: PlayerSession, islandId: number, wh
       // docs/29: one's own shipyard by its level — a tier IV hull from its fourth, and a share off the bill at each.
       const yardLv = h.owned ? Math.max(1, ...h.buildings.filter((b) => b.id === 'shipyard').map((b) => b.level ?? 1)) : 0;
       if (ship.cls.tier > (has(h, 'dry_dock') || yardLv >= 4 ? 4 : 3)) return `This yard cannot take a tier ${ship.cls.tier} hull`;
-      const cost = Math.ceil(repairCost(ship) * (has(h, 'dry_dock') ? 0.75 : 1) * (1 - (SHIPYARD_REPAIR[yardLv] ?? 0)));
+      const cost = Math.ceil(repairCost(ship) * (has(h, 'dry_dock') ? 1 - dockDiscount(levelOf(h, 'dry_dock')) : 1) * (1 - (SHIPYARD_REPAIR[yardLv] ?? 0)));
       if (cost <= 0) return 'She is already sound';
       if (p.gold < cost) return `Repairs cost ${cost} silver`;
       p.gold -= cost;
@@ -586,7 +617,7 @@ export function islandService(game: Game, s: PlayerSession, islandId: number, wh
       const to: GoodId = arg === 'sailcloth' ? 'sailcloth' : 'planks';
       const pairs = Math.floor((h.store[from] ?? 0) / 2);
       if (pairs <= 0) return `Needs ${GOODS[from].name.toLowerCase()} in the store`;
-      const made = pairs * 3;
+      const made = Math.floor(pairs * workshopYield(levelOf(h, 'workshop')));
       if (cargoVolume(h.store) - pairs * 2 * GOODS[from].volume + made * GOODS[to].volume > storeCapacity(h) + 1e-6) return 'The store is too full';
       h.store[from] = (h.store[from] ?? 0) - pairs * 2;
       if (!h.store[from]) delete h.store[from];
@@ -598,11 +629,12 @@ export function islandService(game: Game, s: PlayerSession, islandId: number, wh
       if (!has(h, 'chart_house')) return 'No chart house here';
       const m = p.explore.maps.find((x) => x.id === String(arg));
       if (!m) return 'No such map';
-      if (p.gold < 500) return 'A copy costs 500 silver';
+      const price = chartCopy(levelOf(h, 'chart_house'));
+      if (p.gold < price) return `A copy costs ${price} silver`;
       if (p.explore.maps.length >= 12) return 'Your chart chest is full';
-      p.gold -= 500;
+      p.gold -= price;
       p.explore.maps.push({ ...m, id: `m${game.allocId()}`, hoard: m.hoard ?? m.id, copy: true, verdict: undefined, sealed: undefined }); // a copy leads to the same chest
-      game.db.ledger(s.accountId, 'chart_copy', -500, m.name);
+      game.db.ledger(s.accountId, 'chart_copy', -price, m.name);
       break;
     }
     default:
@@ -654,13 +686,13 @@ export function stepHoldings(game: Game): void {
     for (const o of owners) {
       const d = dist(o.state.x, o.state.y, isl.x, isl.y) - isl.radius;
       // The lighthouse: 50% farther within 6 km.
-      if (strength(h, 'lighthouse') > 0 && d < 6000) o.addEffect({ id: 'isle_light', until: now + 1.6, mods: { detection: 0.5 * Math.min(1, strength(h, 'lighthouse')) } }, now);
+      if (strength(h, 'lighthouse') > 0 && d < 6000) o.addEffect({ id: 'isle_light', until: now + 1.6, mods: { detection: 0.5 * work(h, 'lighthouse') } }, now);
       if (!moored(game, o, isl)) continue;
       // Moorings: the pier mends, the tavern cheers, the chapel steadies, the cove hides.
-      const pier = Math.min(1, strength(h, 'pier'));
+      const pier = work(h, 'pier');
       if (pier > 0) o.hull = Math.min(o.stats.hullMax, o.hull + o.stats.hullMax * 0.05 / 600 * pier);
-      if (strength(h, 'tavern') > 0) o.addEffect({ id: 'isle_tavern', until: now + 1.6, mods: { moraleBase: 10 } }, now);
-      const chapel = Math.min(1, strength(h, 'chapel'));
+      if (strength(h, 'tavern') > 0) o.addEffect({ id: 'isle_tavern', until: now + 1.6, mods: { moraleBase: Math.round(10 * levelMul(levelOf(h, 'tavern'))) } }, now);
+      const chapel = work(h, 'chapel');
       if (chapel > 0) {
         o.sanity = Math.min(100, o.sanity + (30 / 600) * chapel);
         o.curse = Math.max(0, o.curse - (5 / 600) * chapel);
@@ -682,7 +714,7 @@ export function stepHoldings(game: Game): void {
     // Island taverns keep a few hands looking for a berth.
     if (has(h, 'tavern') && Math.floor(now) % 60 === 0) {
       const k = `isle:${h.island}`;
-      game.tavernCrew.set(k, Math.min(20, (game.tavernCrew.get(k) ?? 0) + 1));
+      game.tavernCrew.set(k, Math.min(20 + 5 * (levelOf(h, 'tavern') - 1), (game.tavernCrew.get(k) ?? 0) + 1));
     }
   }
   if (Math.floor(now) % 10 === 0) for (const h of holdings) stepCalendar(game, h);
@@ -727,16 +759,17 @@ function fireShoreGuns(game: Game, h: Holding, isl: Island, guns: number): void 
 function stepTolls(game: Game, holdings: Holding[]): void {
   const day = Math.floor(game.wallNow() / DAY);
   for (const h of holdings) {
-    const light = Math.min(1, strength(h, 'lighthouse'));
+    const light = work(h, 'lighthouse');
     if (light <= 0) continue;
+    const cap = Math.round(3000 * light);
     const isl = island(game, h.island)!;
     if (h.toll.day !== day) h.toll = { day, paid: 0 };
     game.forShipsNear(isl.x, isl.y, isl.radius + 3000, (o) => {
-      if (o.npcRole !== 'merchant' || !o.alive || h.toll.paid >= 3000) return;
+      if (o.npcRole !== 'merchant' || !o.alive || h.toll.paid >= cap) return;
       const brain = game.npcs.get(o.id);
       if (!brain || brain.tolled === h.island) return;
       brain.tolled = h.island;
-      const fee = Math.min(3000 - h.toll.paid, Math.round(cargoValue(o.cargo) * 0.02 * light));
+      const fee = Math.min(cap - h.toll.paid, Math.round(cargoValue(o.cargo) * 0.02 * light));
       if (fee <= 0) return;
       h.toll.paid += fee;
       h.treasury += fee;

@@ -12,6 +12,8 @@ import {
 } from '../shared/src/data/base.ts';
 import { ISLE_LEVELS, ISLE_MAX } from '../shared/src/data/estate.ts';
 import { BUILDINGS, BUILDING_IDS } from '../shared/src/data/holdings.ts';
+import type { BuildingId } from '../shared/src/data/holdings.ts';
+import { singleHall } from '../shared/src/data/baselevels.ts';
 import { dayOf } from '../shared/src/data/dailies.ts';
 import type { Island } from '../shared/src/world/worldgen.ts';
 import { isLand } from '../shared/src/world/worldgen.ts';
@@ -294,13 +296,16 @@ test('the numbers hold together: plots grow, every cost fits the yard at the lev
     for (let l = 1; l <= maxLevel(w); l++) {
       const c = baseCost(w, l);
       // docs/29: the tree's own buildings take a mobile city-builder's hours (to three days); the rest stay short.
-      const tree = isTreeBase(w);
+      // (2026-10-15: the single-level buildings' later levels too — baselevels.ts, at the hall of their level)
+      const single = l >= 2 && w in BUILDINGS && !isTreeBase(w);
+      const tree = isTreeBase(w) || single;
       assert.ok(c.secs > 0 && c.secs <= (tree ? 72 * 3600 : BUILD_MAX_SECS), `${w} ${l} time`);
       assert.ok(c.silver > 0 && Number.isFinite(c.silver));
       // At the island level the step opens, without a warehouse (a warehouse raised to one below for its own steps);
       // the tree's at the hall's island level, with the warehouse the tree asks by then.
-      const wh = tree ? treeClosure(w as TreeId, l).get('warehouse') ?? 0 : 0;
-      const cap = tree ? yardCap(ISLE_OF_HALL[l], w === 'warehouse' ? l - 1 : wh) : yardCap(l, w === 'warehouse' ? l - 1 : 0);
+      const hall = single ? singleHall(w as BuildingId, l) : l;
+      const wh = single ? Math.max(0, hall - 1) : tree ? treeClosure(w as TreeId, l).get('warehouse') ?? 0 : 0;
+      const cap = tree ? yardCap(ISLE_OF_HALL[hall], w === 'warehouse' ? l - 1 : wh) : yardCap(l, w === 'warehouse' ? l - 1 : 0);
       for (const [g, n] of Object.entries(c.goods)) assert.ok((n ?? 0) <= cap, `${w} level ${l}: ${n} ${g} fits a yard of ${cap}`);
     }
   }

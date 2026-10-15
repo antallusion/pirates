@@ -7,6 +7,7 @@
 // yard up to its caps (the island's level and its warehouse widen them); the yard, then the island's store, then
 // the hold of a ship lying off the island pay for the building.
 
+import { singleHall } from '../../../shared/src/data/baselevels.ts';
 import {
   BARGE, BARGE_MUL, BASE_RES, BIOME_YIELD, PLOT_CELLS, PRODUCERS, TOKEN_MAX, TOKEN_SECS, baseCost, crewsAt, isProducer, levelGate, maxLevel, nextCrewAt, plotsOf, producerFits,
   producerLimit, producerOf, producerRate, speedupGoods, speedupSilver, yardCap,
@@ -329,6 +330,11 @@ export function treeUpWhy(h: Holding, y: Yard, what: string, level: number): str
     const need = producerHall(level);
     if (townLevel(y, 'hall') < need) return `Raise the town hall to level ${need} first.`;
   }
+  // docs/29 (2026-10-15): a single-level building's later levels ask the hall at that level (baselevels.ts)
+  if (level >= 2 && what in BUILDINGS) {
+    const need = singleHall(what as BuildingId, level);
+    if (townLevel(y, 'hall') < need) return `Raise the town hall to level ${need} first.`;
+  }
   return null;
 }
 
@@ -562,7 +568,7 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
     if (what && o && !('j' in o) && level < maxLevel(what)) {
       const c = baseCost(what, level + 1);
       const why = job ? 'The builders are already at work there.' : treeUpWhy(h, y, what, level + 1) ?? busy;
-      up = { ...c, level: level + 1, why, ...(isTreeBase(what) ? { needs: treeNeedView(h, y, what as TreeId, level + 1) } : producerOf(what) ? { needs: [{ id: 'hall', level: producerHall(level + 1), have: townLevel(y, 'hall') }] } : {}) };
+      up = { ...c, level: level + 1, why, ...(isTreeBase(what) ? { needs: treeNeedView(h, y, what as TreeId, level + 1) } : producerOf(what) ? { needs: [{ id: 'hall', level: producerHall(level + 1), have: townLevel(y, 'hall') }] } : what in BUILDINGS ? { needs: [{ id: 'hall', level: singleHall(what as BuildingId, level + 1), have: townLevel(y, 'hall') }] } : {}) };
     }
     const kind = what ? producerOf(what) : null;
     cells.push({
