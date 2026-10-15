@@ -12,7 +12,7 @@ import { OFFICER_DEFS } from '../../../shared/src/data/crew.ts';
 import { TAC_BLOCKING, TAC_END_WINDOW, TAC_H, TAC_PLAY_WINDOW, TAC_SPELLS, TAC_TURN, TAC_W, deckCover, hexDist, hexIndex, hexNeighbors, hexX, hexY, tacSchedule } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import type { ClientMsg, TacAction, TacAllyView, TacEvent, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
-import { assetUrl, sprite } from '../assets.ts';
+import { assetEpoch, assetFor, assetIds, assetUrl, sprite } from '../assets.ts';
 import { dict, lang, plural } from '../i18n.ts';
 import { ORDERS, PRIMS, PRIM_ICON, PRIM_NAMES, SCHOOLS, SCHOOL_ICON, SCHOOL_NAMES } from '../../../shared/src/data/hero.ts';
 import type { School } from '../../../shared/src/data/hero.ts';
@@ -329,6 +329,39 @@ function footX(id: string, img: HTMLImageElement): number {
   return f;
 }
 
+/** Everything a battle shows, for its loading screen (ui/loader.ts; owner, 2026-10-15: no bare pictures): the night sea
+ *  and both sides' decks, or the island's field; every stack's figure in its poses and its face; the captains'
+ *  portraits; the props on the hexes; the missiles, the bursts and the orders' effects. */
+export function tacArt(v: TacView): string[] {
+  const ids: string[] = [...assetIds('part.'), ...assetIds('fx.bt_'), 'bg.spellbook'];
+  const type = v.land?.type ?? v.siege?.type ?? (v.arena ? 'arena' : null);
+  if (type) ids.push(`bg.field_${type === 'arena' ? 'fort' : type}`);
+  else ids.push('bg.battle_sea', ...v.heroes.map((h) => deckArt(h.hull ?? 'brig')));
+  for (const h of v.heroes) {
+    if (h.captain) ids.push(CAPTAINS[h.captain]?.portrait ?? '');
+    if (h.path) ids.push(CAPTAINS[h.path]?.portrait ?? '');
+    if (h.face) ids.push(h.face.includes('.') ? h.face : `portrait.${h.face}`);
+  }
+  for (const s of v.stacks) {
+    const own = `unit.${s.kind === 'officer' || !s.unit ? KIND_FIGURE[s.kind] ?? 'sailor' : s.unit}`;
+    const si = STAND_IN(s.unit);
+    for (const fig of si ? [own, `unit.${si.u}`] : [own]) for (const pose of ['', '_atk', '_b', '_hit']) ids.push(fig + pose);
+    if (s.officer?.unique) ids.push(`portrait.officer_${s.officer.unique}`);
+    if (s.unit) ids.push(unitArt(s.unit));
+  }
+  const land = v.land?.type ?? '';
+  for (const c of new Set(v.cells)) {
+    const p = PROP_OF[c]?.(land);
+    if (p) ids.push(p);
+  }
+  const out = new Set<string>();
+  for (const id of ids) {
+    const a = id ? assetFor(id) : null;
+    if (a) out.add(a);
+  }
+  return [...out];
+}
+
 /** The hulls whose decks are painted (tools/art/battle_more.py): one stands in for a hull not painted yet. */
 const DECK_HULLS = ['brig', 'brigantine', 'frigate', 'sloop', 'schooner', 'cutter', 'galleon', 'man_o_war', 'fluyt', 'xebec', 'ghost_ship', 'bomb_ketch', 'fireship', 'fishing_ketch', 'harpoon_whaler'];
 
@@ -405,6 +438,9 @@ export class TacticalPanel {
   private canvas: HTMLCanvasElement | null = null;
   private bg: HTMLCanvasElement | null = null;
   private bgKey = '';
+  /** The pictures loaded when the background was painted, and when (assets.ts assetEpoch). */
+  private bgEpoch = -1;
+  private bgAt = 0;
   /** The field under the hexes is a painting (a deck or a ground): the marks on it are drawn lighter. */
   private painted = false;
   /** The hex's width, the stage, the board's corner, and its turn: 0 as the decks lie side by side, 1 upright with
@@ -3340,8 +3376,11 @@ export class TacticalPanel {
 
   private paintBackground(v: TacView): HTMLCanvasElement {
     const key = `${v.cells}|${this.size.cw}|${this.size.ch}|${this.size.dpr}|${v.you}|${this.size.rot}|${v.land?.type ?? v.siege?.type ?? (v.arena ? 'arena' : '')}|${v.heroes[0].hull}|${v.heroes[1].hull}|${sprite('bg.battle_sea') ? 1 : 0}`;
-    if (this.bg && key === this.bgKey) return this.bg;
+    // the art that came since it was painted (a battle opened before its pictures were in): painted again, once a second
+    if (this.bg && key === this.bgKey && (this.painted || assetEpoch() === this.bgEpoch || performance.now() - this.bgAt < 1000)) return this.bg;
     this.bgKey = key;
+    this.bgEpoch = assetEpoch();
+    this.bgAt = performance.now();
     const { cw, ch, dpr, w } = this.size;
     const c = (this.bg ??= document.createElement('canvas'));
     c.width = Math.round(cw * dpr);
