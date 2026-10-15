@@ -117,11 +117,18 @@ export function createStaticHandler(root: string) {
   }
 
   // ---- the modules of the game, for index.html's preload list (looked at again at most every ten seconds)
-  let graph: { at: number; list: string[] } | null = null;
+  // The build: one version for all the modules (their times and sizes). The page asks for `main.ts?b=<build>`, and each
+  // module served so has its own imports carried to the same build — every address of a build never changes, so the
+  // browser keeps them for good: a second visit asks the server for no module at all (before: some 420 «not modified»).
+  let graph: { at: number; list: string[]; build: string } | null = null;
   async function moduleList(): Promise<string[]> {
-    if (graph && Date.now() - graph.at < 10_000) return graph.list;
+    return (await moduleGraph()).list;
+  }
+  async function moduleGraph(): Promise<{ list: string[]; build: string }> {
+    if (graph && Date.now() - graph.at < 10_000) return graph;
     const seen = new Set<string>();
     const order: string[] = [];
+    const stamps = new Map<string, string>();
     const walk = async (url: string): Promise<void> => {
       if (seen.has(url)) return;
       seen.add(url);
@@ -133,6 +140,12 @@ export function createStaticHandler(root: string) {
         return;
       }
       order.push(url);
+      try {
+        const st = await stat(file);
+        stamps.set(url, `${st.size}.${Math.floor(st.mtimeMs)}`);
+      } catch {
+        /* gone since */
+      }
       const deps: string[] = [];
       // the static imports and re-exports that stay once the types are stripped (`import type` goes)
       const re = /^\s*(?:import|export)\s+(?!type\s)(?:[^'";]*?\s+from\s+)?['"](\.{1,2}\/[^'"]+\.ts)['"]/gm;
@@ -140,8 +153,9 @@ export function createStaticHandler(root: string) {
       await Promise.all(deps.map(walk));
     };
     await walk('/src/main.ts');
-    graph = { at: Date.now(), list: order };
-    return order;
+    const build = hash(Buffer.from([...stamps.entries()].sort().map(([u, v]) => `${u}=${v}`).join('|'), 'utf8'));
+    graph = { at: Date.now(), list: order, build };
+    return graph;
   }
 
   return async function handle(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
@@ -179,18 +193,33 @@ export function createStaticHandler(root: string) {
       }
       if (path === '/index.html' && !url.searchParams.has('kit')) {
         // every module named up front (the list changes with the code: the page's tag with it)
-        const list = await moduleList().catch(() => [] as string[]);
-        const links = list.map((u) => `<link rel="modulepreload" href="${u}">`).join('');
+        const { list, build } = await moduleGraph().catch(() => ({ list: [] as string[], build: '' }));
+        const bq = build ? `?b=${build}` : '';
+        const links = list.map((u) => `<link rel="modulepreload" href="${u}${bq}">`).join('');
         // the title's key art painted with the page itself, before the game's script is in
         const art = await versionedManifest().then((m) => (JSON.parse(m.body.toString('utf8')) as { assets: Record<string, { local: string; v?: string }> }).assets['art.keyart'], () => undefined);
         const ka = art ? `/assets/${art.local}${art.v ? `?v=${art.v}` : ''}` : '';
         let html = entry.body.toString('utf8').replace('</head>', `${ka ? `<link rel="preload" as="image" href="${ka}" fetchpriority="high">` : ''}${links}\n</head>`);
+        if (bq) html = html.replace("import('/src/main.ts')", `import('/src/main.ts${bq}')`);
         if (ka) html = html.replace('<div class="keyart" data-asset="art.keyart">', `<div class="keyart" data-asset="art.keyart" style="background-image:url('${ka}')">`);
         const body = Buffer.from(html, 'utf8');
         const key = `${file}#pre`;
         let pe = cache.get(key);
         if (!pe || pe.etag !== `W/"i${hash(body)}"`) cache.set(key, (pe = { mtime: entry.mtime, body, etag: `W/"i${hash(body)}"` }));
         return await send(req, res, pe, ext, 'no-cache');
+      }
+      // a module of a build: its imports carried to the same build, kept for good
+      const b = ext === '.ts' ? url.searchParams.get('b') : null;
+      if (b && /^[a-z0-9]{1,24}$/.test(b)) {
+        const key = `${file}?b=${b}`;
+        let be = cache.get(key);
+        if (!be || be.mtime !== entry.mtime) {
+          const body = Buffer.from(withBuild(entry.body.toString('utf8'), b), 'utf8');
+          be = { mtime: entry.mtime, body, etag: `W/"b${b}-${hash(body)}"` };
+          // (only the build of now is kept in memory; an old page's asks are made afresh)
+          if (b === graph?.build) cache.set(key, be);
+        }
+        return await send(req, res, be, ext, 'public, max-age=31536000, immutable');
       }
       // Films are served in ranges (a browser seeks in them, and iOS will not play one served whole).
       const range = ext === '.mp4' ? /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '') : null;
@@ -215,6 +244,12 @@ export function createStaticHandler(root: string) {
       return false;
     }
   };
+}
+
+/** A module's own imports and re-exports carried to a build (`./x.ts` → `./x.ts?b=…`): the static ones, the dynamic
+ *  ones and the bare side-effect ones — the types are stripped already, so only the code's own are left. */
+export function withBuild(js: string, b: string): string {
+  return js.replace(/(\b(?:from|import)\s*\(?\s*)(['"])(\.{1,2}\/[^'"\n]+?\.ts)\2/g, `$1$2$3?b=${b}$2`);
 }
 
 /** Answer with a body: «not modified» to a browser that has it, compressed when it is text. */
