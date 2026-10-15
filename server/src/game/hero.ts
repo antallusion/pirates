@@ -6,6 +6,7 @@
 // Aid's patched-up men, and the artifacts: found on bosses, in hoards and lairs, won from guarded ships, sold by a few
 // ports' merchants. Every roll here is on the hero's own dice (the sea's stream stays as the tests replay it).
 
+import { noteFallen } from './shop.ts'; // the premium shop's infirmary (owner, 2026-10-15)
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import { DAY_LENGTH_SEC } from '../../../shared/src/constants.ts';
@@ -400,10 +401,11 @@ export function heroFace(game: Game, ship: ShipEntity): string | undefined {
 }
 
 /** After a battle: the will she spent, and the fallen her First Aid patches up. */
-export function afterBattle(game: Game, ship: ShipEntity, left: number, lost: { u: string; n: number }[], raise: number, stamLeft = -1, scrolls: readonly string[] = [], won = false): void {
+export function afterBattle(game: Game, ship: ShipEntity, left: number, lost: { u: string; n: number }[], raise: number, stamLeft = -1, scrolls: readonly string[] = [], won = false, pvp = false): void {
   const s = game.sessionOf(ship);
   const p = s?.profile;
   if (!s || !p) return;
+  noteFallen(game, s, lost, raise, pvp); // the shop's infirmary (owner, 2026-10-15): against the sea's ships only
   const h = heroOf(p);
   // The battle's own lift of her will by her talents (docs/18) does not stay in her store.
   if (left >= 0) h.mana = Math.max(0, Math.min(willMax(p, h), left - talentBook(p.talents).will));

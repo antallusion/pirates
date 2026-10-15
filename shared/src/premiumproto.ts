@@ -31,6 +31,8 @@ export interface PremiumUnitCard {
   /** The ship level its tier is sold from. */
   lv: number;
   why: PremiumWhy | null;
+  /** By threes and fives (UNIT_PACKS, owner 2026-10-15): each pack's stacks, price and why it is shut. */
+  packs?: { k: number; price: number; why: PremiumWhy | null }[];
 }
 
 export interface PremiumView {
@@ -44,14 +46,72 @@ export interface PremiumView {
   pay: boolean;
   /** «Свиток автобоя» (owner, 2026-10-11): her account's auto-battle scrolls (their packs: AUTO_SCROLL_PACKS). */
   scrolls: number;
+  /** The shop's goods, bundles and her stores (owner, 2026-10-15; shared/src/data/shop.ts). */
+  shop?: ShopView;
+}
+
+/** Why an offer of the shop is shut: too few doubloons; bought as often as it may be; it needs her island; it needs
+ *  her ship (afloat, out of a fight); no room aboard (slots, hammocks, hold, the map chest, the locker, the bag of
+ *  scrolls); the tier is above her ship's level; at the most there is; nothing to do (no infamy, no fallen, nothing
+ *  left to open); the gift is gone. */
+export type ShopWhy = 'poor' | 'limit' | 'island' | 'fight' | 'slot' | 'room' | 'hold' | 'tier' | 'max' | 'none' | 'gone' | 'order';
+
+export interface ShopJobView {
+  /** The island's job id, or -1 for the yard's refit of her ship. */
+  id: number;
+  /** BuildingId, 'p:<producer>', 't:<town>' — or 'refit', 'ship'. */
+  what: string;
+  level: number;
+  start: number;
+  end: number;
+  /** Doubloons to finish it now. */
+  finish: number;
+}
+
+export interface ShopView {
+  /** The wall clock (ms) the view was made at; the day's end (the deal's countdown). */
+  now: number;
+  dayEnds: number;
+  /** Every offer that is shut, by its id (the rest may be bought); `left`: buys left in its period. */
+  why: Record<string, ShopWhy>;
+  left: Record<string, number>;
+  /** Offers priced by her state (the infirmary). */
+  price: Record<string, number>;
+  /** The deal of the day: the offer and its price, bought or not. */
+  deal: { id: string; price: number; why: ShopWhy | null };
+  /** A level's gift on the shelf now: its family id and when it goes. */
+  gifts: { id: string; until: number }[];
+  /** Her stores: minutes of speed-ups, repair kits, charms, charters of removal. */
+  inv: { speed: number; kits: number; charms: number; moves: number };
+  /** Until when (wall ms; 0: not running): the elixir, the fair wind, the harvest, the island's charter, the subscription. */
+  boosts: { xp: number; wind: number; prod: number; shield: number; sub: number };
+  /** Her builders (null: no island): the island's own, hers for good, hired (their ends), the subscription's. */
+  crews: { base: number; perm: number; temp: number[]; sub: number; n: number; busy: number } | null;
+  /** The work under way on her island, and the yard's refit. */
+  jobs: ShopJobView[];
+  /** The infirmary: her fallen to bring back and until when. */
+  fallen: { n: number; until: number } | null;
+  /** The first top-up for Stars comes double (FIRST_PAY_CAP): not yet paid; its gift waiting to be claimed. */
+  firstPay: boolean;
+  gift: number;
 }
 
 export type PremiumClientMsg =
   | { t: 'premium'; action: 'view' }
   | { t: 'premium'; action: 'buy_ship'; id: ShipClassId }
-  | { t: 'premium'; action: 'buy_unit'; id: UnitId }
   /** A pack of auto-battle scrolls for doubloons (AUTO_SCROLL_PACKS, owner 2026-10-11). */
   | { t: 'premium'; action: 'buy_scrolls'; pack: string }
+  /** The shop's offers (owner, 2026-10-15): bought by its id and a purchase id of the client's own (a second message
+   *  with the same id buys nothing more). */
+  | { t: 'premium'; action: 'shop'; offer: string; pid: string }
+  /** A premium creature by threes and fives (UNIT_PACKS). */
+  | { t: 'premium'; action: 'buy_unit'; id: UnitId; k?: number; pid?: string }
+  /** Her stores used: minutes of speed-ups on a job (-1: the refit), doubloons to finish one now, a repair kit. */
+  | { t: 'premium'; action: 'speed'; job: number }
+  | { t: 'premium'; action: 'finish'; job: number; pid: string }
+  | { t: 'premium'; action: 'kit' }
+  /** The first top-up's gift claimed. */
+  | { t: 'premium'; action: 'gift' }
   /** A pack of the top-up for Telegram Stars: the server answers with the invoice's link (owner, 2026-10-11). */
   | { t: 'premium'; action: 'stars'; pack: string; lang?: 'en' | 'ru' };
 

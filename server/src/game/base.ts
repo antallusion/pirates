@@ -39,6 +39,7 @@ import { TREE_VERSION, migrateTree } from './holdings.ts';
 import type { TownState } from './town.ts';
 import { townOf } from '../../../shared/src/data/town.ts';
 import { freeCargo } from './quests.ts'; // playthrough C: her jobs' cargo is not hers to spend
+import { HARVEST, extraCrews, harvestUntil } from './shop.ts'; // the premium shop's brigades and harvest (owner, 2026-10-15)
 
 const HOUR = 3_600_000;
 /** Production is reckoned for three days at most at once (the yard is full long before). */
@@ -135,23 +136,29 @@ export function capOf(h: Holding): number {
   return yardCap(h.level ?? 1, warehouseLevel(h));
 }
 
-/** The yard's yield by the hour of each resource. */
-export function ratesOf(h: Holding, isl: Island): Partial<Record<GoodId, number>> {
+/** The yard's yield by the hour of each resource (`mul`: the shop's harvest, owner 2026-10-15). */
+export function ratesOf(h: Holding, isl: Island, mul = 1): Partial<Record<GoodId, number>> {
   const out: Partial<Record<GoodId, number>> = {};
   for (const p of h.yard?.producers ?? []) {
     const g = PRODUCERS[p.kind].good;
-    out[g] = (out[g] ?? 0) + producerRate(p.kind, p.level, isl.biome);
+    out[g] = (out[g] ?? 0) + producerRate(p.kind, p.level, isl.biome) * mul;
   }
   return out;
 }
 
-/** The producers at work from the last reckoning to `to`, into the yard up to its cap. */
-function produce(h: Holding, y: Yard, isl: Island, to: number): void {
+/** The producers at work from the last reckoning to `to`, into the yard up to its cap — the shop's harvest
+ *  (`harvest`: its end, wall ms) +HARVEST over its own hours. */
+function produce(h: Holding, y: Yard, isl: Island, to: number, harvest = 0): void {
+  if (harvest > y.lastYield && harvest < to) {
+    produce(h, y, isl, harvest, harvest);
+    return produce(h, y, isl, to, 0);
+  }
+  const mul = harvest >= to && harvest > y.lastYield ? 1 + HARVEST : 1;
   const hours = Math.min(MAX_HOURS, Math.max(0, (to - y.lastYield) / HOUR));
   y.lastYield = Math.max(y.lastYield, to);
   if (hours <= 0) return;
   const cap = capOf(h);
-  for (const [g, rate] of Object.entries(ratesOf(h, isl)) as [GoodId, number][]) {
+  for (const [g, rate] of Object.entries(ratesOf(h, isl, mul)) as [GoodId, number][]) {
     const have = y.res[g] ?? 0;
     if (have >= cap) {
       y.carry[g] = 0;
@@ -177,12 +184,13 @@ export function reckonBase(game: Game, h: Holding): void {
   const now = game.wallNow();
   if (y.lastYield > now) y.lastYield = now; // a clock set back
   const due = y.jobs.filter((j) => j.end <= now).sort((a, b) => a.end - b.end || a.id - b.id);
+  const harvest = h.owner.kind === 'player' ? harvestUntil(game, h.owner.id) : 0;
   for (const j of due) {
-    produce(h, y, isl, Math.max(y.lastYield, j.end));
+    produce(h, y, isl, Math.max(y.lastYield, j.end), harvest);
     finish(game, h, y, isl, j);
   }
   const before = y.lastYield;
-  produce(h, y, isl, now);
+  produce(h, y, isl, now, harvest);
   if (due.length || y.lastYield !== before) game.holdings.touch();
 }
 
@@ -346,9 +354,16 @@ export function powerOf(h: Holding): number {
   return islePower(things, ships);
 }
 
-/** The builders' crews: by the island's level, and one more for an island of great power. */
-export function crewsOf(h: Holding): number {
+/** The island's own builders' crews: by its level, and one more for an island of great power. */
+export function crewsBase(h: Holding): number {
   return crewsAt(h.level ?? 1, powerOf(h) >= POWER_CREW ? 1 : 0);
+}
+
+/** The builders' crews: the island's own, and — with the game — the brigades of the owner's premium shop (hers for
+ *  good, hired, the subscription's: owner 2026-10-15, «нанимать дополнительных рабочих чтобы одновременно строить
+ *  несколько зданий»). */
+export function crewsOf(h: Holding, game?: Game): number {
+  return crewsBase(h) + (game && h.owner.kind === 'player' ? extraCrews(game, h.owner.id) : 0);
 }
 
 /** The builders' work (the shipwrights' on her ships is apart). */
@@ -356,8 +371,8 @@ export function buildersBusy(y: Yard): number {
   return y.jobs.filter((j) => !j.ship).length;
 }
 
-export function crewFree(h: Holding, y: Yard): string | null {
-  return buildersBusy(y) >= crewsOf(h) ? 'All your builders are at work.' : null;
+export function crewFree(h: Holding, y: Yard, game?: Game): string | null {
+  return buildersBusy(y) >= crewsOf(h, game) ? 'All your builders are at work.' : null;
 }
 
 /** Lay a thing on a plot (null: the first free plot). */
@@ -369,7 +384,7 @@ export function startBuild(game: Game, s: PlayerSession, plot: number | null, wh
   const at = plot === null ? freePlot(game, h, y) : Math.trunc(plot);
   if (at === null || !Number.isFinite(at) || at < 0 || at >= plotCount(game, h)) return 'No free plot on the island.';
   if (occupant(h, y, at)) return 'That plot is taken.';
-  const why = whyNot(h, y, isl, what) ?? crewFree(h, y);
+  const why = whyNot(h, y, isl, what) ?? crewFree(h, y, game);
   if (why) return why;
   return pay(game, s, h, y, at, what, 1);
 }
@@ -418,7 +433,7 @@ export function upgradeAt(game: Game, s: PlayerSession, plot: number): string | 
   if (level >= maxLevel(what)) return 'It is at its greatest';
   const gate = treeUpWhy(h, y, what, level + 1);
   if (gate) return gate;
-  const busy = crewFree(h, y);
+  const busy = crewFree(h, y, game);
   if (busy) return busy;
   return pay(game, s, h, y, Math.trunc(plot), what, level + 1);
 }
@@ -551,8 +566,8 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
   const n = plotCount(game, h);
   const now = game.wallNow();
   const cap = capOf(h);
-  const rates = ratesOf(h, isl);
-  const busy = crewFree(h, y);
+  const rates = ratesOf(h, isl, harvestUntil(game, s.accountId) > now ? 1 + HARVEST : 1);
+  const busy = crewFree(h, y, game);
   const power = powerOf(h);
   const jobView = (j: BaseJob) => {
     const left = Math.max(0, (j.end - now) / 1000);
@@ -598,7 +613,7 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
   return {
     island: h.island, name: isl.name, biome: isl.biome, level: lvl, levelName: ISLE_LEVELS[lvl].name[0], size, plots: n, locked, cells,
     store: BASE_RES.map((g: BaseRes) => ({ good: g, n: Math.floor(y.res[g] ?? 0), cap, rate: Math.round((rates[g] ?? 0) * 10) / 10 })),
-    crews: { n: crewsOf(h), busy: buildersBusy(y), next: nextCrewAt(lvl) },
+    crews: { n: crewsOf(h, game), busy: buildersBusy(y), next: nextCrewAt(lvl) },
     speedups: p.speedups ?? 0, tokenSecs: TOKEN_SECS, catalog,
     slots: { used: slotsUsed(h), total: slotsOf(isl, h) },
     now, near: lyingOff(game, s, h),

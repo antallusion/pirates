@@ -262,6 +262,7 @@ import { seamarkMessage, stepSeaMarks } from './seamarks.ts'; // the dense sea's
 import { findMessage, stepSeaFinds } from './seafinds.ts'; // docs/19 D5: the sea's small things, and the day's caps
 import { roamMessage, stepRoamers } from './roamers.ts'; // docs/19 D7: the creatures roaming the sea
 import { premiumMessage, sendBalance } from './premium.ts'; // the premium shop (owner, 2026-10-03)
+import { levelGifts, stepShop, xpBoost } from './shop.ts'; // the shop's goods (owner, 2026-10-15)
 import { creaturesAboard, feedCreatures, stepTame } from './tame.ts'; // docs/18 IV
 import { musterInPort, stepGifts } from './shipgifts.ts'; // the premium hulls' gifts (docs/02 §1.A.9)
 import { silverKin } from '../../../shared/src/data/fleet.ts';
@@ -953,7 +954,10 @@ export class Game {
       this.nearestPlayer.set(id, best * 0.75);
     }
 
-    for (const s of this.sessions) stepRefit(this, s); // yards finish their work by the wall clock
+    for (const s of this.sessions) {
+      stepRefit(this, s); // yards finish their work by the wall clock
+      stepShop(this, s); // the shop's subscription day and fair wind (owner, 2026-10-15)
+    }
     stepDirector(this); // the sea director: signs on the horizon, things aboard (docs/12 P2)
     stepMinigames(this); // island scenes and mini-games left open lapse
     stepTreks(this); // walks across the islands left alone lapse (docs/16 #21)
@@ -1989,6 +1993,8 @@ export class Game {
     if (!s.profile || amount <= 0) return;
     // Frontier Spirit: lawless waters teach more.
     if (s.ship && REGIONS[s.ship.region].safety === 'lawless') amount *= 1 + tval(s.ship.stats, 'frontier');
+    // The shop's elixir and subscription (owner, 2026-10-15): battle experience a share more.
+    if (battle && s.authed) amount *= 1 + xpBoost(this, s.accountId);
     // Rest ashore (docs/11 P6): battle experience comes double while the pool lasts.
     const rest = battle ? Math.min(s.profile.rested ?? 0, amount) : 0;
     if (rest > 0) {
@@ -2005,6 +2011,7 @@ export class Game {
     if (gained > 0) {
       this.sendTo(s, { t: 'toast', msg: `Level ${s.profile.level}! A new talent point awaits.`, kind: 'good' });
       onLevelUp(this, s);
+      levelGifts(this, s, true); // a level's gift in the shop (owner, 2026-10-15)
       kitLevelUp(this, s, s.profile.level - gained); // her abilities' ranks (docs/25 item 37)
       logNote(this, s, 'level', [], s.profile.level);
       // In port: the tavern's and the yard's prices go by the level — the window is sent again (docs/30: the tavern said

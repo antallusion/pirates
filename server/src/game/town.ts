@@ -138,7 +138,7 @@ export function townWhy(game: Game, s: PlayerSession, h: Holding, y: Yard, id: T
     if (townLevel(y, 'hall') < (L + 1 >= 2 ? 3 : 2)) return `Raise the town hall to level ${L + 1 >= 2 ? 3 : 2} first.`;
   }
   if (id === 'grail' && !grailToRaise(s)) return 'Dig up the Grail first: the obelisks’ chart shows where.';
-  return crewFree(h, y);
+  return crewFree(h, y, game);
 }
 
 /** Raise a town building a level (its first: founded). */

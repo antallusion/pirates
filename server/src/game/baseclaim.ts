@@ -7,6 +7,7 @@
 // island for the owner to fight, then reckoned against the island's batteries, fort and her own ships lying there.
 // A raid lost takes a share of the yard and store (capped a day) and weathers a building; one beaten pays.
 
+import { hasMoveCharter, shielded, spendMoveCharter } from './shop.ts'; // the premium shop (owner, 2026-10-15)
 import {
   ABANDON_COOLDOWN_H, ABANDON_REFUND, AWAY_H, AWAY_MUL, ISLE_RAID_MIN, LOSS_DAY_CAP, RAID_COOLDOWN_H, RAID_LOSS, RAID_WEATHER, ROB_ISLE_COOLDOWN_H, ROB_ISLE_SEC,
   ROB_ISLE_SHARE, TAX_DAYS, TAX_WEATHER, WATERS, claimPrice, fatMark, isleDefence, isleTax, raidOdds, raidPrize, raidStrength,
@@ -135,7 +136,8 @@ export function claimsMade(game: Game, s: PlayerSession): number {
 /** What this claim costs her: nothing for her first island and her first move, then the fortune (null: free). */
 export function claimFee(game: Game, s: PlayerSession): { silver: number; doubloons: number } | null {
   const made = claimsMade(game, s);
-  return made <= FREE_MOVES ? null : { silver: MOVE_SILVER, doubloons: MOVE_DOUBLOONS };
+  // A charter of removal bought in the shop (owner, 2026-10-15) makes the move free; claimIsland spends it.
+  return made <= FREE_MOVES || hasMoveCharter(game, s.accountId) ? null : { silver: MOVE_SILVER, doubloons: MOVE_DOUBLOONS };
 }
 
 /** Why this captain may not claim it now (null: she may) — the island, her ship's place, her own island there. */
@@ -248,6 +250,7 @@ export function claimIsland(game: Game, s: PlayerSession, islandId: number, pay?
   }
   game.holdings.map(game)[ownKey(s.accountId)] = h;
   game.holdings.touch();
+  if (!fee && made > FREE_MOVES) spendMoveCharter(game, s.accountId); // the shop's charter of removal paid the move
   p.isleClaims = made + 1;
   changeRep(p, game.holdings.factionOf(game, isl.region), old ? 0 : 5);
   game.sendTo(s, { t: 'toast', msg: `${isl.name} is yours: the town hall stands on it.`, kind: 'gold' });
@@ -375,6 +378,7 @@ export function raidChance(game: Game, h: Holding, hours = 1): number {
   const c = claimOf(game, h);
   const wall = game.wallNow();
   if (!WATERS[w].raidDay || c.raid || wall < c.calmUntil || c.lossShare >= LOSS_DAY_CAP) return 0;
+  if (h.owner.kind === 'player' && shielded(game, h.owner.id)) return 0; // the shop's charter of protection (owner, 2026-10-15)
   const worth = isleWorth(h), mark = fatMark(h.level ?? 1);
   if (worth < mark) return 0;
   const away = wall - c.seen > AWAY_H * HOUR ? AWAY_MUL : 1;
@@ -559,6 +563,7 @@ function robWhy(game: Game, s: PlayerSession, h: Holding, isl: Island): string |
   const owner = game.sessionByAccount(h.owner.id);
   if (owner?.profile && hasPennant(game, owner.profile)) return 'Its captain sails under the Green Pennant.';
   if (owner?.profile && neutral(owner.profile)) return 'Its captain sails under neutral colours.'; // docs/24 D1
+  if (shielded(game, h.owner.id)) return 'Its captain holds a charter of protection: no landing on that island.';
   const ship = s.ship!;
   if (islandNear(game, ship)?.id !== isl.id || ship.state.speed > 1.5) return 'Heave to off the island first.';
   const c = claimOf(game, h);

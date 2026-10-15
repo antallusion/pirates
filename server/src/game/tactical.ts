@@ -5,6 +5,7 @@
 // which goes back through the boarding's own finish (the plunder, the prize, the losses) with the experience the
 // victor's captain learnt from it.
 
+import { charmSide } from './shop.ts'; // the premium shop's charms (owner, 2026-10-15)
 import { creaturesWon, mixedOf, rankArmy } from './tame.ts'; // docs/18 IV
 import { deckGift } from './shipgifts.ts'; // the premium hulls' gifts (docs/02 §1.A.9)
 import { FIRST_NAMES, LAST_NAMES } from '../../../shared/src/data/crew.ts';
@@ -223,6 +224,9 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
     bIn.spellHp ??= contractSpellHp(b) ?? raidSpellHp(b); // docs/19 E15, E11: a legend of the Admiralty or of the Abyss orders as a captain, not as her army
     const len = so ? 'long' : boardLen(a, b);
     const aIn = sideOf(game, a, b, true);
+    // The shop's lucky charms (owner, 2026-10-15): against the sea's ships only, one a boarding.
+    charmSide(game, a, b, aIn);
+    charmSide(game, b, a, bIn);
     // docs/25 item 64: the mates of each side's group within reach come aboard with the grapples (or are asked).
     const allies = groupable(fight, a, b) ? alliesAtStart(game, a, b, aIn, bIn, battleLevel(aIn, bIn)) : [];
     const bt = newBattle(aIn, bIn, seed, game.tacNow(), rng, { ...(so ? { siege: so.siege } : {}), len, ...(allies.length ? { allies } : {}) });
@@ -369,12 +373,12 @@ function settle(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle, seq: nu
       const mended = (side: 0 | 1, raise: number) => (bt.over!.winner === side && bt.over!.why !== 'ransom' ? Math.min(TAC_RAISE_MAX, raise + TAC_WOUNDED) : raise);
       for (const side of [0, 1] as const) {
         const ship = side ? b : a;
-        afterBattle(game, ship, bt.heroes[side].mana, lossesOf(bt, side, 0), mended(side, bt.heroes[side].input.hero?.raise ?? 0), bt.heroes[side].stam, bt.heroes[side].scrollsUsed, bt.over.winner === side);
+        afterBattle(game, ship, bt.heroes[side].mana, lossesOf(bt, side, 0), mended(side, bt.heroes[side].input.hero?.raise ?? 0), bt.heroes[side].stam, bt.heroes[side].scrollsUsed, bt.over.winner === side, !!bt.heroes[side ? 0 : 1].input.human);
       }
       for (const e of fight.tacAllies ?? []) {
         const ship = game.ships.get(e.ship);
         const h = bt.allies?.find((x) => x.side === e.side && x.slot === e.slot)?.hero;
-        if (ship && h && e.slot !== undefined) afterBattle(game, ship, h.mana, lossesOf(bt, e.side, e.slot), mended(e.side, h.input.hero?.raise ?? 0), h.stam, h.scrollsUsed, bt.over.winner === e.side);
+        if (ship && h && e.slot !== undefined) afterBattle(game, ship, h.mana, lossesOf(bt, e.side, e.slot), mended(e.side, h.input.hero?.raise ?? 0), h.stam, h.scrollsUsed, bt.over.winner === e.side, !!bt.heroes[e.side ? 0 : 1].input.human);
       }
       // docs/25 item 67: the chance shared by what each captain cut down (the group's allies have theirs, boardgroup.ts).
       const own0 = bt.allies?.length ? sharesOfMain(bt, bt.over.winner) : 1;
