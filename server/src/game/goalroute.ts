@@ -60,6 +60,7 @@ export const ROUTE_WORDS = {
   duel: 'A duel is fought with another captain: challenge one at a port.',
   retarget: 'The mark is gone: the helmsman takes her on to the next one.',
   afterPort: 'The course is set: the helmsman takes her there once she casts off.',
+  here: 'You are there already: it is done in this port.',
 } as const;
 
 /** The trades' lines shown on arrival (English; translated on the client). */
@@ -671,6 +672,12 @@ export function gotoGoal(game: Game, s: PlayerSession, key: string): string | nu
   if ('none' in r) {
     game.sendTo(s, { t: 'route', key: k, on: false, why: 'none' });
     return r.none;
+  }
+  // in the very port the goal asks for (the board of «Взять контракт», a delivery's quay): nowhere to sail
+  if (s.ship!.docked && r.port === s.ship!.docked) {
+    game.sendTo(s, { t: 'route', key: k, on: false, why: 'none' });
+    game.sendTo(s, { t: 'toast', msg: ROUTE_WORDS.here, kind: 'info' });
+    return null;
   }
   const f: Follow = { key: k, view: r, sentAt: game.now, sent: null, checkAt: game.now + ROUTE_CHECK, reachedAt: null };
   const m = book(game);

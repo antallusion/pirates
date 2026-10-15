@@ -10,6 +10,7 @@ export const SERVER_RU_ROUTE: Record<string, string> = {
   'A duel is fought with another captain: challenge one at a port.': 'Дуэль ведут с другим капитаном: вызовите его в порту.',
   'The mark is gone: the helmsman takes her on to the next one.': 'Цели больше нет: рулевой ведёт корабль к следующей.',
   'The course is set: the helmsman takes her there once she casts off.': 'Курс проложен: рулевой поведёт корабль, как только вы отчалите.',
+  'You are there already: it is done in this port.': 'Вы уже на месте: это делается в этом порту.',
   'Gulls over a shoal: slow down and cast the net.': 'Чайки над косяком: сбавьте ход и забросьте сеть.',
   'Keep a steady pace on open water, far from land: the rod works.': 'Держите ровный ход в открытом море, вдали от берега: так клюёт на удочку.',
   'At night lie still and light the lamp.': 'Ночью остановитесь и зажгите фонарь.',

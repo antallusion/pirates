@@ -165,6 +165,12 @@ test('«Взять контракт с доски порта» (a captain’s go
   s.profile!.tutorial!.goals.active.push('g_talent', 'g_duel');
   assert.deepEqual(routeFor(game, s, 'g:g_talent'), { none: ROUTE_WORDS.noPlace });
   assert.deepEqual(routeFor(game, s, 'g:g_duel'), { none: ROUTE_WORDS.duel });
+  // in the very port it asks for: nowhere to sail, said so
+  const here = game.portById(v.port!)!;
+  s.ship!.docked = here.id;
+  assert.equal(gotoGoal(game, s, 'g:g_contract'), null);
+  assert.equal(routeOf(game, s), null, 'no run from the port it is done in');
+  s.ship!.docked = null;
   // met: done
   s.profile!.tutorial!.goals.active = [];
   s.profile!.tutorial!.goals.done = ['g_contract'];
