@@ -16,7 +16,7 @@ import {
   SIEGE, insideWalls, isGateCell, siegeCell, siegePart, TAC_LEN, TAC_GROUP, TAC_ROLES, tacBring, tacEcho, tacLevel, tacBankSecs, tacFlagHex, tacGrit, tacTurnSecs,
 } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacKind, TacOrderId, TacSpellId } from '../../../shared/src/data/tactical.ts';
-import type { TacAction, TacAllyView, TacEvent, TacHeroView, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
+import type { TacAction, TacAllyView, TacEvent, TacHeroView, TacProc, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
 import { ORDERS, TACTICS_FREE, homeMul, orderRes } from '../../../shared/src/data/hero.ts';
 import type { HeroBattle, OrderRes } from '../../../shared/src/data/hero.ts';
 import { BOOK_PAGES, CHAIN_FALL, HOME_MUL, INNATE, PATH_PAGES, PATH_SCHOOL, RAISE_CAP, DRAIN_CAP, SICK_TURNS, ULTIMATE, ULT_EARLY, ULT_ROUND, drainCap, isBookPage, isPathPage, moveFx, pathHoldExtra, powHold, powered, raiseCap } from '../../../shared/src/data/paths.ts';
@@ -1421,11 +1421,21 @@ function wake(bt: TacBattle, t: TacStack): boolean {
   return slept;
 }
 
-function push(bt: TacBattle, e: Omit<TacEvent, 'i'>): void {
+function push(bt: TacBattle, e: Omit<TacEvent, 'i'>): TacEvent {
   // docs/25 item 64: what an ally gave is told as hers.
-  bt.log.push({ i: ++bt.events, ...e, ...(bt.casting && e.who === undefined ? { who: bt.casting } : {}) });
+  const ev: TacEvent = { i: ++bt.events, ...e, ...(bt.casting && e.who === undefined ? { who: bt.casting } : {}) };
+  bt.log.push(ev);
   if (bt.log.length > 40) bt.log.splice(0, bt.log.length - 40);
   bt.seq++;
+  return ev;
+}
+
+/** Owner, 2026-10-15 («если есть еще какието плюшки то надо еще показываать их эффектами»): what a blow carried beyond
+ *  its harm, on its event for the field to draw (TacEvent.fx). */
+function tag(ev: TacEvent | undefined, x: TacProc): void {
+  if (!ev) return;
+  if (!ev.fx) ev.fx = [];
+  if (!ev.fx.includes(x)) ev.fx.push(x);
 }
 
 /** She turns to face `hex` from `from` (owner, 2026-10-08): the way she walked, struck or fired last. */
@@ -1443,16 +1453,20 @@ function walkTo(bt: TacBattle, s: TacStack, to: number, steps: number): void {
 }
 
 /** One blow and what it leaves. `force`: the harm it does, given (previewBlow tries the answers to each). */
-function oneBlow(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng, k: 'hit' | 'ret', force?: number): void {
+function oneBlow(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng, k: 'hit' | 'ret', force?: number): TacEvent {
   const { dmg, lucky, flank } = force !== undefined ? { dmg: force, lucky: false, flank: 0 as const } : blow(bt, s, t, k === 'ret' ? 'ret' : 'melee', rng);
   if (lucky) push(bt, { k: 'luck', side: s.side, s: s.id });
   const had = hpOf(t);
   const kills = hurt(bt, t, dmg, s.side, s.own ?? 0);
   if (wake(bt, t) && k === 'hit') t.ret = false; // caught asleep: no answer to the blow that wakes her
-  push(bt, { k, side: s.side, s: s.id, t: t.id, dmg, kills, hex: t.hex, ...(flank ? { fl: flank } : {}) });
+  const ev = push(bt, { k, side: s.side, s: s.id, t: t.id, dmg, kills, hex: t.hex, ...(flank ? { fl: flank } : {}) });
   // docs/18 II: a poisonous bite stays in the living — a third of it again as each of her next two turns comes.
-  if (sp(s, 'poison') && t.count > 0 && !sp(t, 'undead')) t.poison = { dmg: Math.max(1, Math.round(dmg * 0.3)), left: 2, by: s.side, ...(s.own ? { who: s.own } : {}) };
-  afterHit(bt, s, t, had - hpOf(t), rng);
+  if (sp(s, 'poison') && t.count > 0 && !sp(t, 'undead')) {
+    t.poison = { dmg: Math.max(1, Math.round(dmg * 0.3)), left: 2, by: s.side, ...(s.own ? { who: s.own } : {}) };
+    tag(ev, 'poison');
+  }
+  afterHit(bt, s, t, had - hpOf(t), rng, ev);
+  return ev;
 }
 
 /** Strength back into one stack, up to what came aboard — its fallen stand again; how much. */
@@ -1469,17 +1483,21 @@ function restore(bt: TacBattle, x: TacStack, amount: number): number {
 
 /** What a blow or a shot (an answer too) leaves beyond its harm (docs/18 VII): the drinker takes back half of what it
  *  did the living; the struck may be bound through its next turn (Siren Song's spell: a blow wakes it) or chilled. */
-function afterHit(bt: TacBattle, s: TacStack, t: TacStack, dealt: number, rng: Rng): void {
+function afterHit(bt: TacBattle, s: TacStack, t: TacStack, dealt: number, rng: Rng, ev?: TacEvent): void {
   if (sp(s, 'drain') && !sp(t, 'undead') && s.count > 0) {
     const n = restore(bt, s, dealt * DRAIN_SHARE);
     if (n > 0) push(bt, { k: 'regen', side: s.side, s: s.id, dmg: n, hex: s.hex, id: 'drain' });
   }
   if (t.count <= 0) return;
   const h = bt.heroes[s.side];
-  if (sp(s, 'bind') && !h.fx.some((f) => f.id === 'bind' && f.on === t.id) && rng.chance(BIND_CHANCE)) h.fx.push({ id: 'bind', until: bt.round + 1, on: t.id, foe: true, mods: { still: true } });
+  if (sp(s, 'bind') && !h.fx.some((f) => f.id === 'bind' && f.on === t.id) && rng.chance(BIND_CHANCE)) {
+    h.fx.push({ id: 'bind', until: bt.round + 1, on: t.id, foe: true, mods: { still: true } });
+    tag(ev, 'bind');
+  }
   if (sp(s, 'chill')) {
     keepFx(h, (f) => !(f.id === 'chill' && f.on === t.id));
     h.fx.push({ id: 'chill', until: bt.round + 1, on: t.id, foe: true, mods: { ...CHILL } });
+    tag(ev, 'chill');
   }
 }
 
@@ -1504,19 +1522,21 @@ function spill(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'shot'): 
  *  her this round she answers; the later ones that round go unanswered (owner, 2026-10-15: «контр атака только после 1
  *  удара по цели в этом ходу»; newRound gives it back). Blows that draw no answer by an ability (a striker none answers,
  *  Blood Harvest, the hook) leave it to the next, as in HoMM3. */
-function retaliate(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng): void {
-  if (t.count <= 0 || s.count <= 0 || !t.ret || sp(s, 'no_retaliation')) return;
-  if (smods(bt, s).noRet || smods(bt, t).noAnswer) return; // docs/18: the hook, knives in the dark
+function retaliate(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng, hit?: TacEvent): void {
+  if (t.count <= 0 || s.count <= 0 || !t.ret) return;
+  if (sp(s, 'no_retaliation') || smods(bt, s).noRet || smods(bt, t).noAnswer) return tag(hit, 'noret'); // docs/18: the hook, knives in the dark
   const hs = bt.heroes[s.side];
   if (hs.free > 0 && !isShooter(s)) {
     hs.free--; // docs/18: Blood Harvest — the first blows unanswered
-    return;
+    return tag(hit, 'noret');
   }
-  if (!sp(t, 'retaliate_all')) t.ret = false;
+  const all = sp(t, 'retaliate_all');
+  if (!all) t.ret = false;
   // She turns on whom she answers, as a HoMM3 stack does: her back is to the others now (draw her answer with one
   // stack, and the next may take her from behind).
   turnTo(t, s.hex, t.hex);
-  oneBlow(bt, t, s, rng, 'ret');
+  const ev = oneBlow(bt, t, s, rng, 'ret');
+  if (all) tag(ev, 'all');
 }
 
 /** A blow in melee: hers, what spills from it, the answer, her second. `answer` the dice of the answer (the preview's
@@ -1524,14 +1544,14 @@ function retaliate(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng): void {
 function strike(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng, answer: Rng = rng, force?: number): void {
   // The deep's spawn sweeps every foe about it, and none of them answers.
   if (sp(s, 'sweep')) {
-    for (const o of [t, ...enemiesAdjacent(bt, s).filter((o) => o !== t)]) if (o.count > 0) oneBlow(bt, s, o, rng, 'hit', o === t ? force : undefined);
+    for (const o of [t, ...enemiesAdjacent(bt, s).filter((o) => o !== t)]) if (o.count > 0) tag(oneBlow(bt, s, o, rng, 'hit', o === t ? force : undefined), 'sweep');
     return;
   }
-  oneBlow(bt, s, t, rng, 'hit', force);
+  const hit = oneBlow(bt, s, t, rng, 'hit', force);
   spill(bt, s, t, 'melee');
-  retaliate(bt, s, t, answer);
+  retaliate(bt, s, t, answer, hit);
   // Double strike: the second blow after her answer, if both still stand.
-  if (sp(s, 'double_strike') && s.count > 0 && t.count > 0) oneBlow(bt, s, t, rng, 'hit');
+  if (sp(s, 'double_strike') && s.count > 0 && t.count > 0) tag(oneBlow(bt, s, t, rng, 'hit'), 'twice');
 }
 
 function shoot(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng): void {
@@ -1543,7 +1563,7 @@ function shoot(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng): void {
   const had = hpOf(t);
   const kills = hurt(bt, t, dmg, s.side, s.own ?? 0);
   wake(bt, t);
-  push(bt, { k: 'shot', side: s.side, s: s.id, t: t.id, dmg, kills, hex: t.hex });
+  const ev = push(bt, { k: 'shot', side: s.side, s: s.id, t: t.id, dmg, kills, hex: t.hex });
   // A swivel gun's burst: the stacks beside the target take half as much.
   for (const o of ring) {
     const b = Math.max(1, Math.round(blow(bt, s, o, 'shot', null).dmg * 0.5));
@@ -1554,7 +1574,7 @@ function shoot(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng): void {
   // docs/18 VII: a venomed dart stays in the living as a bite does; the bolt that leaps on, the toll that binds.
   if (sp(s, 'poison') && t.count > 0 && !sp(t, 'undead')) t.poison = { dmg: Math.max(1, Math.round(dmg * 0.3)), left: 2, by: s.side, ...(s.own ? { who: s.own } : {}) };
   spill(bt, s, t, 'shot');
-  afterHit(bt, s, t, had - hpOf(t), rng);
+  afterHit(bt, s, t, had - hpOf(t), rng, ev);
 }
 
 // ------------------------------------------------------------------ the captains' orders

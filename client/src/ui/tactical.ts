@@ -21,6 +21,8 @@ import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { personName } from '../lang/names.ts';
 import { EN, RU } from '../lang/ui/tactical.ts';
 import { along, glideMs, stepEase, walkPath } from './tacwalk.ts';
+import { PROC_CAP, PROC_MS, drawProc } from './tacprocs.ts';
+import type { Proc, ProcKind } from './tacprocs.ts';
 import { catapultAt, drawCatapult, drawSiegeField } from './tacsiege.ts'; // docs/19 E5
 import { serverText } from '../lang/server.ts';
 import { EN as CEN, RU as CRU } from '../lang/ui/citadels.ts'; // docs/19 E5
@@ -535,6 +537,8 @@ export class TacticalPanel {
   private seaLayer: HTMLCanvasElement | null = null;
   /** Lights of a moment over the field (a muzzle's, a blast's: item 9), and the lanterns of this frame. */
   private lights: { x: number; y: number; t0: number; dur: number; r: number; rgb: string; a: number }[] = [];
+  /** The procs being drawn (ui/tacprocs.ts). */
+  private procs: Proc[] = [];
   private lamps: { x: number; y: number }[] = [];
   /** The marks the fight leaves on the decks (item 7), laid on the deck's painting as their blows land. */
   private decals: { at: number; k: DecalKind; hex: number; dx: number; dy: number; seed: number; done: boolean }[] = [];
@@ -556,7 +560,7 @@ export class TacticalPanel {
   private emit = 0;
   /** What the looks did this fight, for the QA kit: holds, knocks (and the hardest, px), falls (over the side), sparks,
    *  schools, ultimates, footfalls. */
-  private tally = { stops: 0, knocks: 0, maxKnock: 0, falls: 0, overboard: 0, sparks: 0, schools: 0, ults: 0, steps: 0 };
+  private tally = { stops: 0, knocks: 0, maxKnock: 0, falls: 0, overboard: 0, sparks: 0, schools: 0, ults: 0, steps: 0, procs: 0 };
 
   /** Her purse (main.ts): a ransom she cannot pay is shown, and why, but not offered (docs/23 item 93: the wheel
    *  offered «Откуп 340» to an empty purse, the confirm sheet, then nothing). */
@@ -769,6 +773,7 @@ export class TacticalPanel {
         this.shake.clear();
         this.parts.clear();
         this.lights = [];
+        this.procs = [];
         this.decals = [];
         this.rolls.clear();
         this.steps.clear();
@@ -776,7 +781,7 @@ export class TacticalPanel {
         this.intro = this.finale = null;
         this.haze = 0;
         this.seaLayer = null;
-        this.tally = { stops: 0, knocks: 0, maxKnock: 0, falls: 0, overboard: 0, sparks: 0, schools: 0, ults: 0, steps: 0 };
+        this.tally = { stops: 0, knocks: 0, maxKnock: 0, falls: 0, overboard: 0, sparks: 0, schools: 0, ults: 0, steps: 0, procs: 0 };
         this.seen = 0;
         this.preview = this.targeting = this.info = null;
         this.moreOpen = this.sheetOpen = this.bookOpen = false;
@@ -1067,8 +1072,21 @@ export class TacticalPanel {
         // The numbers as it lands: the harm, the fallen under it in red, and a blow into her side or from behind told
         // over it (owner, 2026-10-08) — on a phone by its share alone (the field carries no words there).
         const y0 = c.y - w * 0.15;
+        // Owner, 2026-10-15: the numbers told apart by their kind — a lucky blow's gold and big with its «!», an answer's
+        // orange with its ↺, a plain blow's bone.
+        const lucky = v.log.some((x) => x.k === 'luck' && x.s === e.s && x.i === e.i - 1) || was.log.some((x) => x.k === 'luck' && x.s === e.s && x.i === e.i - 1);
         if (e.kills) this.addFloat({ text: `†${e.kills}`, x: c.x, y: y0, t0: hit, color: '#ff8a6a', size: 1.15 });
-        this.addFloat({ text: `−${e.dmg}`, x: c.x, y: y0, t0: hit, color: '#f3d7a0', size: 1.25 });
+        if (lucky) this.addFloat({ text: `−${e.dmg}!`, x: c.x, y: y0, t0: hit, color: '#ffd34d', size: 1.7 });
+        else if (e.k === 'ret') this.addFloat({ text: `↺−${e.dmg}`, x: c.x, y: y0, t0: hit, color: '#ffab7a', size: 1.1 });
+        else this.addFloat({ text: `−${e.dmg}`, x: c.x, y: y0, t0: hit, color: '#f3d7a0', size: 1.25 });
+        // What the blow carried beyond its harm (TacEvent.fx), drawn on the struck (an answer to all on the answerer).
+        if (lucky) this.proc('luck', c, hit);
+        for (const f of e.fx ?? []) {
+          if (f === 'all') {
+            const me = at(hexOf(e.s));
+            if (me) this.proc('all', me, hit);
+          } else this.proc(f === 'bind' ? 'still' : f, f === 'sweep' && from ? from : c, hit);
+        }
         if (e.fl) this.addFloat({ text: this.phone ? L(e.fl === 2 ? 'fl.rearX' : 'fl.sideX') : L(e.fl === 2 ? 'fl.rear' : 'fl.side'), x: c.x, y: y0, t0: hit, color: '#ffb54a', size: 0.95 });
       }
       if (e.k === 'shot' && e.id === 'blast') {
@@ -1096,13 +1114,22 @@ export class TacticalPanel {
           else for (let j = 0; j < Math.round(5 * this.lv.burst); j++) this.parts.add({ k: 'chip', x: c.x, y: c.y - w * 0.4, vx: (Math.random() - 0.5) * 160, vy: -60 - 90 * Math.random(), g: 420, drag: 0.5, t0: hit, life: 600, size: w * 0.12, rgb: '176,140,96', vr: (Math.random() - 0.5) * 20 });
         }
       } else if (c) this.bursts.push({ id: 'part.splinters', x: c.x, y: c.y, t0: hit, size: w * 0.8 });
+    } else if (e.k === 'defend') {
+      const c = at(hexOf(e.s));
+      if (c) this.proc('shield', c, t);
     } else if (e.k === 'morale') {
       // Owner, 2026-10-15 («один и тот же моб может два раза ударить»): a stack given another turn at once — by high
       // morale or an order — says so over its head on every screen, a phone's too, so the second blow is no riddle.
       const c = at(hexOf(e.s));
-      if (c) this.addFloat({ text: e.k === 'morale' && !this.phone ? `${L('morale')}: ${L('float.again')}` : L('float.again'), x: c.x, y: c.y - w * 0.55, t0: t, color: '#f0cc6a' });
+      if (c) {
+        this.addFloat({ text: e.k === 'morale' && !this.phone ? `${L('morale')}: ${L('float.again')}` : L('float.again'), x: c.x, y: c.y - w * 0.55, t0: t, color: '#f0cc6a' });
+        this.proc('again', c, t);
+        this.light(c.x, c.y - w * 0.5, t, 900, w * 2.2, '255,200,110', 0.5);
+      }
     } else if (e.k === 'luck' || e.k === 'fear') {
       const c = at(hexOf(e.s));
+      // A turn lost to fear, a bind, Fog Madness (owner, 2026-10-15): on every screen, a phone's too, by its look.
+      if (c && e.k === 'fear') this.proc(e.id === 'still' ? 'still' : e.id === 'mad' ? 'mad' : 'fear', c, t);
       // On a phone the field carries no words but the spells' (owner, 2026-10-03): a morale or luck roll shows by its light.
       if (c && !this.phone) this.addFloat({ text: e.k === 'fear' ? (e.id === 'still' || e.id === 'mad' ? L(`float.${e.id}`) : e.id ? L('morale') + ' −' : L('fear.float')) : L(e.k === 'luck' ? 'luck' : 'morale') + ' +', x: c.x, y: c.y - w * 0.55, t0: t, color: e.k === 'fear' ? '#d06a5e' : '#e0b862' });
     } else if (e.k === 'poison' || e.k === 'regen') {
@@ -1110,7 +1137,17 @@ export class TacticalPanel {
       const c = at(e.hex ?? hexOf(e.s));
       if (c) {
         const word = this.phone ? '' : `${L(e.k === 'poison' ? (e.id === 'sick' ? 'float.sick' : 'float.poison') : e.id === 'mend' ? 'float.mend' : e.id === 'drain' ? 'float.drain' : 'float.regen')} `;
-        this.addFloat({ text: e.k === 'poison' ? `${word}−${e.dmg}${e.kills ? ` †${e.kills}` : ''}` : `${word}+${e.dmg}`, x: c.x, y: c.y - w * 0.2, t0: t, color: e.k === 'poison' ? '#9be36a' : '#7fe0b0' });
+        this.addFloat({ text: e.k === 'poison' ? `${word}−${e.dmg}${e.kills ? ` †${e.kills}` : ''}` : `${word}+${e.dmg}`, x: c.x, y: c.y - w * 0.2, t0: t, color: e.k === 'poison' ? '#9be36a' : '#7fe0b0', size: e.k === 'regen' ? 1.15 : 1 });
+        if (e.k === 'poison') this.proc('poison', c, t);
+        else {
+          this.proc('heal', c, t, e.id === 'role' ? { rgb: '240,222,150' } : {});
+          // A drinker's draught: the thread from the one she struck this turn.
+          if (e.id === 'drain') {
+            const last = [...v.log].reverse().find((x) => x.i < e.i && x.s === e.s && (x.k === 'hit' || x.k === 'shot' || x.k === 'ret') && x.t !== undefined);
+            const from = at(last?.hex ?? hexOf(last?.t));
+            if (from) this.proc('drain', c, t, { x2: from.x, y2: from.y });
+          }
+        }
         this.bursts.push({ id: e.k === 'poison' ? (sprite('fx.bt_poison_0') ? 'fx.bt_poison' : 'part.smoke') : sprite('fx.bt_heal_0') ? 'fx.bt_heal' : 'part.splash', x: c.x, y: c.y, t0: t, size: w * 0.9 });
       }
     } else if (e.k === 'spell') {
@@ -1161,7 +1198,10 @@ export class TacticalPanel {
       // docs/25 item 56: the great ones that shrugged it off.
       for (const id of (e.res ?? []).slice(0, 7)) {
         const cc = at(hexOf(id));
-        if (cc) this.addFloat({ text: L('float.resist'), x: cc.x, y: cc.y - w * 0.62, t0: t + 160, color: '#9fc3d8' });
+        if (cc) {
+          this.addFloat({ text: L('float.resist'), x: cc.x, y: cc.y - w * 0.62, t0: t + 160, color: '#9fc3d8' });
+          this.proc('resist', cc, t + 160);
+        }
       }
     } else if (e.k === 'innate' || e.k === 'ult') {
       // docs/18: the path's move — its light over the stacks it fell on, its name over the field and each of them.
@@ -1245,6 +1285,13 @@ export class TacticalPanel {
   }
 
   /** A light of a moment over the field (item 9): softer with «меньше вспышек». */
+  /** A proc's look over a stack (ui/tacprocs.ts), from `t0` for its own time; the oldest let go past the cap. */
+  private proc(k: ProcKind, c: { x: number; y: number }, t0: number, o: Partial<Proc> = {}): void {
+    this.procs.push({ k, x: c.x, y: c.y, t0, dur: PROC_MS[k], ...o });
+    if (this.procs.length > PROC_CAP) this.procs.splice(0, this.procs.length - PROC_CAP);
+    this.tally.procs++;
+  }
+
   private light(x: number, y: number, t0: number, dur: number, r: number, rgb: string, a: number): void {
     this.lights.push({ x, y, t0, dur, r, rgb, a: a * this.mo.flash });
     if (this.lights.length > 40) this.lights.splice(0, this.lights.length - 40);
@@ -4733,6 +4780,9 @@ export class TacticalPanel {
     this.lamps = [];
     this.parts.step(t);
     this.parts.draw(g, t);
+    // What a turn or a blow carried beyond its harm (owner, 2026-10-15), over the stacks.
+    this.procs = this.procs.filter((p) => t - p.t0 < p.dur);
+    for (const p of this.procs) drawProc(g, p, t, w, this.mo.still);
     if (ik >= 0) this.introJump(g, v, ik, w);
     // The paths' moves (docs/18): their light over the field.
     this.pathFx = this.pathFx.filter((f) => t - f.t0 < (f.ult ? PATH_FX_MS.ult : PATH_FX_MS.innate));

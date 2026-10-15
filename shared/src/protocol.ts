@@ -1598,6 +1598,7 @@ export interface TacHeroView {
 }
 
 /** One thing that happened, for the feed and the field's marks. */
+export type TacProc = 'twice' | 'noret' | 'all' | 'sweep' | 'bind' | 'chill' | 'poison';
 export interface TacEvent {
   /** Its number in the battle (the client marks each once). */
   i: number;
@@ -1627,6 +1628,10 @@ export interface TacEvent {
   /** docs/18: the page was read from a scroll; the stacks a move laid itself on (for the marks over them). */
   via?: 'scroll';
   on?: number[];
+  /** Owner, 2026-10-15 («плюшки … показывать их эффектами»): what the blow carried beyond its harm — her second blow
+   *  ('twice'), a blow none answers by an ability ('noret'), the answer of one who answers every blow ('all'), a sweep's
+   *  ('sweep'), a bite that binds, chills or poisons. */
+  fx?: TacProc[];
   /** A blow into her side (1) or from behind (2), owner 2026-10-08. */
   fl?: 1 | 2;
   /** docs/25 item 56: the stacks that shrugged off what a move would lay on them. */
