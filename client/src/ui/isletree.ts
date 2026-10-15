@@ -81,7 +81,7 @@ export function givesText(id: string, level: number, c: GiveCtx): string {
   }
   // docs/29 (2026-10-15): the base's single-level buildings by their own level (shared/src/data/baselevels.ts)
   const m = levelMul(L);
-  const x = (n: number) => dec1(n).replace(/[.,]0$/, '');
+  const x = (n: number) => (Math.round(n * 100) / 100).toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-US');
   const pc = (n: number) => Math.round(n * 100);
   switch (id) {
     case 'pier': return T29('gPier', { p: x(5 * m) });

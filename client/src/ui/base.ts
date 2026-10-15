@@ -163,7 +163,7 @@ export class BaseWindow {
   /** The town's recruit window (docs/17 H3). */
   onRecruit: () => void = () => {};
   /** The market's order being drawn up (docs/17 H3). */
-  private mk: { give: string; get: string; n: number } = { give: 'silver', get: 'timber', n: 100 };
+  mk: { give: string; get: string; n: number } = { give: 'silver', get: 'timber', n: 100 };
 
   /** The layout changed (a phone turned): the window is drawn afresh. */
   onLayout: () => void = () => {};
@@ -467,7 +467,7 @@ export class BaseWindow {
   }
 
   /** The shipyard: her own ships as cards, what the slipway may build, the squadron's berths (docs/15 item 4). */
-  private yard(v: BaseView, state: ClientState): string {
+  yard(v: BaseView, state: ClientState): string {
     const y = v.shipyard;
     const gold = state.self?.gold ?? 0;
     const ru = lang() === 'ru' ? 1 : 0;

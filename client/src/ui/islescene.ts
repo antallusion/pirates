@@ -6,7 +6,7 @@
 // to build on, the plots still shut. A finger drags and pinches the camera, a mouse drags and wheels it; a tap opens a
 // building's card on the right (the island window's own cards, client/src/ui/base.ts, docs/29 §3), an empty plot its
 // build list. The yard's goods and her silver over the top, «В море» back; the build queue at the bottom; the ships, the
-// town's trade, the supply and the defence open the island window's tabs over the scene.
+// town's trade, the supply and the defence open as the scene's own side sheets (the island window's tabs, drawn here).
 //
 // One layer of DOM moved by a transform (the map, the pictures, the plots' diamonds in one SVG, the tags): a drag
 // redraws nothing, the pictures are diffed by spot when the view changes.
@@ -18,12 +18,15 @@ import { TOWN_CELLS } from '../../../shared/src/data/isletree.ts';
 import type { TownId } from '../../../shared/src/data/town.ts';
 import type { BaseView, ClientMsg } from '../../../shared/src/protocol.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
-import { assetMeta } from '../assets.ts';
+import { assetMeta, assetUrl } from '../assets.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/islescene.ts';
 import type { ClientState } from '../state.ts';
 import { BaseWindow, EXTRA_PLOTS, baseName, hallFor, plotCell, timeText, townArt } from './base.ts';
 import { esc, fmt, icon, money } from './dom.ts';
+import { townTab } from './town.ts';
+import { supplyTab } from './supply.ts';
+import { wireGuildYard } from './social.ts';
 import { placeName } from './maps.ts';
 import { T29, treeLabel } from './isletree.ts';
 
@@ -37,21 +40,33 @@ interface Spot {
   town?: TownId;
   cell: [number, number];
   /** The picture: a sheet's cell, or an icon standing upright (the pen, the Grail). */
-  pic: { id: string; foot: number } | { icon: string } | null;
+  pic: { id: string; foot: number } | { icon: string } | { url: string; anchor: [number, number]; dw: number; foot: number } | null;
   cls: string;
   /** The diamond under it: a free plot, a plot shut, a building not yet raised. */
-  ground: '' | 'empty' | 'locked' | 'soon' | 'ghost';
+  ground: '' | 'empty' | 'locked' | 'soon' | 'ghost' | 'plinth' | 'plinth ghost';
   /** Over it: its level, its work's clock, what it made. */
   tag: string;
 }
+
+/** The pen's painted icon (icons/build_kennel.webp, 192 px) as a cell of a sheet: its plate's bottom vertex and width. */
+const PEN_ART = { anchor: [97, 159] as [number, number], dw: 172, foot: 3 };
+/** The Grail's relic on its plinth. */
+const GRAIL_ART = 'icon.good_cursed_relics';
+
+/** The first look's greatest scale (the map's own grain). */
+const DEFAULT_MAX = 1.25;
+
+/** The island's places drawn as the scene's side sheet. */
+type Panel = 'yard' | 'town' | 'supply' | 'defence';
 
 /** The camera: the map's top-left corner on the screen and its scale. */
 interface Cam { x: number; y: number; s: number }
 
 export class IsleScene {
   isOpen = false;
-  /** What a tap opened: a plot, a town building, the defence's card. */
-  private pick: { plot: number } | { town: TownId } | { defence: true } | null = null;
+  /** What a tap opened: a plot, a town building, or one of the island's places (its ships, its town's trade, its supply,
+   *  its defence) as a side sheet. */
+  private pick: { plot: number } | { town: TownId } | { panel: Panel } | null = null;
   private root: HTMLElement | null = null;
   private viewEl!: HTMLElement;
   private world!: HTMLElement;
@@ -79,8 +94,6 @@ export class IsleScene {
   private state: ClientState | null = null;
   /** Back to the sea (main.ts: the sea's loop again, the harbour reopened if she lies in port). */
   onExit: () => void = () => {};
-  /** One of the island window's tabs over the scene (main.ts openModal('base')). */
-  onTab: (tab: 'yard' | 'town' | 'supply') => void = () => {};
   /** A raid: off to defend it (the scene closes, the HUD points to the raiders). */
   onSail: () => void = () => {};
 
@@ -157,8 +170,7 @@ export class IsleScene {
       const what = b.dataset.iside!;
       if (what === 'collect') this.send({ t: 'base', action: 'collect' });
       else if (what === 'raid') this.onSail();
-      else if (what === 'defence') this.select(this.pick && 'defence' in this.pick ? null : { defence: true });
-      else this.onTab(what as 'yard' | 'town' | 'supply');
+      else this.openPanel(what as Panel);
     });
     this.queueEl.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLElement>('[data-qplot], [data-qtown]');
@@ -188,14 +200,14 @@ export class IsleScene {
       this.mapImg.src = isleUrl(`isle.map.${map}`) ?? '';
       this.sig = '';
     }
-    if (!this.framed) {
-      this.frame();
-      this.framed = true;
-    }
     this.layout(v);
     this.topEl.innerHTML = this.topHtml(v, state);
     this.sideEl.innerHTML = this.sideHtml(v, state);
     this.queueEl.innerHTML = this.queueHtml(v);
+    if (!this.framed) {
+      this.frame();
+      this.framed = true;
+    }
     this.hintEl.textContent = this.base.moving !== null ? L('moveHint') : this.pick ? '' : L('hint');
     this.hintEl.classList.toggle('hidden', !!this.pick && this.base.moving === null);
     this.renderCard();
@@ -222,9 +234,14 @@ export class IsleScene {
       const st = isoStage(t.level, t.job, now);
       const ghost = t.level <= 0 && !t.job;
       const can = ghost && !!t.next && !t.next.why;
-      const pic = sheet ? { id: `isle.${sheet}.${ghost ? 's0' : st.stage}`, foot: isoFoot(sheet) } : townArt(t.id, t.level, !!t.job) ? { icon: townArt(t.id, t.level, !!t.job)! } : null;
+      // the pen and the Grail have no sheet. The pen's own painted icon is drawn in isometry on its plate (stood on the
+      // plot like a cell of a sheet: PEN_ART); the Grail — a relic of the deep with the gold of the town about it — on a
+      // stone plinth drawn in the board's isometry.
+      const art = sheet ? null : t.id === 'pen' ? townArt('pen', Math.max(1, t.level), false) : assetUrl(GRAIL_ART) ?? townArt(t.id, 1, false);
+      const pic = sheet ? { id: `isle.${sheet}.${ghost ? 's0' : st.stage}`, foot: isoFoot(sheet) } : !art ? null : t.id === 'pen' ? { url: art, ...PEN_ART } : { icon: art };
       const tag = t.job ? `<span class="is-t is-tj">${timer(t.job)}</span>` : t.level > 0 ? `<span class="is-t is-tl">${t.level}</span>` : can ? '<span class="is-t is-tp" aria-hidden="true">+</span>' : '';
-      out.push({ key: `t:${t.id}`, town: t.id, cell, pic, cls: [ghost ? 'ghost' : '', can ? 'can' : '', !ghost && st.dim ? 'dim' : '', t.id === 'pen' || t.id === 'grail' ? 'upright' : ''].filter(Boolean).join(' '), ground: ghost ? 'ghost' : '', tag });
+      const upright = !sheet && t.id !== 'pen';
+      out.push({ key: `t:${t.id}`, town: t.id, cell, pic, cls: [ghost ? 'ghost' : '', can ? 'can' : '', !ghost && (st.dim || (!sheet && !!t.job)) ? 'dim' : '', upright ? `upright ${t.id}` : ''].filter(Boolean).join(' '), ground: upright ? (ghost ? 'plinth ghost' : 'plinth') : ghost ? 'ghost' : '', tag });
     }
     const lockHalls = v.locked.map((l) => hallFor(l.level)).filter((n) => n > 0);
     const nextHall = lockHalls.length ? Math.min(...lockHalls) : 0;
@@ -259,7 +276,7 @@ export class IsleScene {
   private layout(v: BaseView): void {
     const spots = this.spotsOf(v);
     const selKey = this.pick && 'plot' in this.pick ? `p:${this.pick.plot}` : this.pick && 'town' in this.pick ? `t:${this.pick.town}` : '';
-    const sig = `${this.map}|${selKey}|${this.base.moving}|${spots.map((s) => `${s.key}=${s.pic ? ('id' in s.pic ? s.pic.id : s.pic.icon) : ''}/${s.cls}/${s.ground}/${s.tag.replace(/<span class="btime"[^]*?<\/span>|style="[^"]*"/g, '')}`).join(',')}`;
+    const sig = `${this.map}|${selKey}|${this.base.moving}|${spots.map((s) => `${s.key}=${s.pic ? ('id' in s.pic ? s.pic.id : 'url' in s.pic ? s.pic.url : s.pic.icon) : ''}/${s.cls}/${s.ground}/${s.tag.replace(/<span class="btime"[^]*?<\/span>|style="[^"]*"/g, '')}`).join(',')}`;
     if (sig === this.sig) return;
     this.sig = sig;
     this.spots = spots;
@@ -269,7 +286,17 @@ export class IsleScene {
     for (const s of spots) {
       const sp = isoSpot(this.map, s.cell, s.ground === 'ghost' ? ISO_SLOT - 0.5 : 3.6);
       const sel = s.key === selKey;
-      if (s.ground || sel) ground.push(`<polygon class="is-g ${s.ground}${sel ? ' sel' : ''}${s.cls.includes('target') ? ' target' : ''}" points="${[sp.t, sp.r, sp.b, sp.l].map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ')}"/>`);
+      const pts = (ps: Pt[]) => ps.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+      let plinthTop: number | null = null;
+      if (s.ground.startsWith('plinth')) {
+        // a stone plinth: its top raised a fifth of the diamond's depth, its two front faces shaded
+        const q = isoSpot(this.map, s.cell, 3.2);
+        const h = (q.b[1] - q.t[1]) * 0.2;
+        const up = (p: Pt): Pt => [p[0], p[1] - h];
+        const g = s.ground.includes('ghost') ? ' ghost' : '';
+        ground.push(`<polygon class="is-pl l${g}" points="${pts([up(q.l), up(q.b), q.b, q.l])}"/><polygon class="is-pl r${g}" points="${pts([up(q.b), up(q.r), q.r, q.b])}"/><polygon class="is-pl t${g}${sel ? ' sel' : ''}" points="${pts([up(q.t), up(q.r), up(q.b), up(q.l)])}"/>`);
+        plinthTop = (q.t[1] + q.b[1]) / 2 - h;
+      } else if (s.ground || sel) ground.push(`<polygon class="is-g ${s.ground}${sel ? ' sel' : ''}${s.cls.includes('target') ? ' target' : ''}" points="${[sp.t, sp.r, sp.b, sp.l].map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ')}"/>`);
       let top = (sp.t[1] + sp.b[1]) / 2;
       const cx = (sp.l[0] + sp.r[0]) / 2;
       if (s.pic) {
@@ -284,12 +311,12 @@ export class IsleScene {
           this.picEls.set(s.key, el);
         }
         const img = el as HTMLImageElement;
-        if ('id' in s.pic) {
+        if ('id' in s.pic || 'url' in s.pic) {
           const fp = isoSpot(this.map, s.cell, s.pic.foot);
-          const meta = assetMeta(s.pic.id) as { anchor?: [number, number] } | null;
-          const [ax, ay] = meta?.anchor ?? [0, 0];
-          const k = (fp.r[0] - fp.l[0]) / (s.pic.foot * ISO_UNIT);
-          const url = isleUrl(s.pic.id) ?? '';
+          const meta = 'id' in s.pic ? assetMeta(s.pic.id) as { anchor?: [number, number] } | null : null;
+          const [ax, ay] = 'url' in s.pic ? s.pic.anchor : meta?.anchor ?? [0, 0];
+          const k = (fp.r[0] - fp.l[0]) / ('url' in s.pic ? s.pic.dw : s.pic.foot * ISO_UNIT);
+          const url = 'url' in s.pic ? s.pic.url : isleUrl(s.pic.id) ?? '';
           if (img.dataset.src !== url) {
             img.dataset.src = url;
             img.src = url;
@@ -304,7 +331,7 @@ export class IsleScene {
             img.dataset.src = s.pic.icon;
             img.src = s.pic.icon;
           }
-          const foot = (sp.t[1] + sp.b[1]) / 2 + (sp.b[1] - sp.t[1]) * 0.18;
+          const foot = (plinthTop ?? (sp.t[1] + sp.b[1]) / 2) + (sp.b[1] - sp.t[1]) * 0.1;
           img.style.cssText = `left:${(cx - w / 2).toFixed(1)}px;top:${(foot - w).toFixed(1)}px;width:${w.toFixed(1)}px;height:${w.toFixed(1)}px;z-index:${10 + sp.z}`;
           img.dataset.k = '';
           top = foot - w + 4;
@@ -382,7 +409,7 @@ export class IsleScene {
     this.pick = p && same(p, this.pick) && !show ? null : p;
     this.base.sel = this.pick && 'plot' in this.pick ? this.pick.plot : null;
     this.base.selTown = this.pick && 'town' in this.pick ? this.pick.town : null;
-    if (show && this.pick && !('defence' in this.pick)) {
+    if (show && this.pick && !('panel' in this.pick)) {
       const s = this.spots.find((x) => x.key === ('plot' in this.pick! ? `p:${this.pick.plot}` : `t:${(this.pick as { town: TownId }).town}`));
       if (s) this.lookAt(isoSpot(this.map, s.cell));
     }
@@ -407,8 +434,9 @@ export class IsleScene {
     const fresh = v.cells.reduce((a, c) => a + c.fresh, 0);
     const btn = (id: string, ico: string, label: string, o: { badge?: string; on?: boolean; off?: boolean; cls?: string; title?: string } = {}) =>
       `<button type="button" class="is-sb${o.on ? ' on' : ''}${o.cls ? ` ${o.cls}` : ''}" data-iside="${id}"${o.off ? ' disabled' : ''} title="${esc(o.title ?? label)}">${icon(ico, '', 'is-sb-ico')}<span class="is-sb-l">${esc(label)}</span>${o.badge ? `<b class="is-sb-n">${esc(o.badge)}</b>` : ''}</button>`;
+    const on = (p: Panel) => !!this.pick && 'panel' in this.pick && this.pick.panel === p;
     const raid = v.claim.raid ? btn('raid', 'build_battery', L('raid'), { cls: 'raid', title: serverWord(state) }) : '';
-    return `${raid}${btn('collect', 'tab_holdings', L('collect'), { badge: fresh ? `+${fmt(fresh)}` : '', off: !fresh })}${btn('yard', 'build_shipyard', L('ships'), { badge: v.shipyard.ships.length ? String(v.shipyard.ships.length) : '' })}${v.town ? btn('town', 'build_fort', L('town')) : ''}${btn('supply', 'build_caravan_office', L('supply'))}${btn('defence', 'build_battery', L('defence'), { on: !!this.pick && 'defence' in this.pick })}`;
+    return `${raid}${btn('collect', 'tab_holdings', L('collect'), { badge: fresh ? `+${fmt(fresh)}` : '', off: !fresh })}${btn('yard', 'build_shipyard', L('ships'), { badge: v.shipyard.ships.length ? String(v.shipyard.ships.length) : '', on: on('yard') })}${v.town ? btn('town', 'build_fort', L('town'), { on: on('town') }) : ''}${btn('supply', 'build_caravan_office', L('supply'), { badge: String(state.supply?.isles.filter((x) => x.linked).length || ''), on: on('supply') })}${btn('defence', 'build_battery', L('defence'), { on: on('defence') })}`;
   }
 
   private queueHtml(v: BaseView): string {
@@ -423,10 +451,17 @@ export class IsleScene {
     return `<span class="is-qh" title="${esc(L('queueTip'))}">${esc(T29('queueN', { busy: v.crews.busy, n: v.crews.n }))}</span>${chips.join('')}`;
   }
 
+  /** One of the island's places as the side sheet (again: closed). */
+  private openPanel(p: Panel): void {
+    const open = !!this.pick && 'panel' in this.pick && this.pick.panel === p;
+    if (p === 'supply' && !open) this.send({ t: 'isle18', action: 'supply' });
+    this.select(open ? null : { panel: p });
+  }
+
   /** A spot's picture now (its sheet's cell at its stage). */
   private picOf(key: string): string | null {
     const s = this.spots.find((x) => x.key === key);
-    return s?.pic ? ('id' in s.pic ? isleUrl(s.pic.id) : s.pic.icon) : null;
+    return s?.pic ? ('id' in s.pic ? isleUrl(s.pic.id) : 'url' in s.pic ? s.pic.url : s.pic.icon) : null;
   }
 
   // ------------------------------------------------------------------------------------------------ the card
@@ -443,7 +478,11 @@ export class IsleScene {
     this.base.sel = this.pick && 'plot' in this.pick ? this.pick.plot : null;
     this.base.selTown = this.pick && 'town' in this.pick ? this.pick.town : null;
     let body = '';
-    if (this.pick && 'defence' in this.pick) body = `${this.base.defence(v)}${this.base.watersCard(v)}`;
+    const panel = this.pick && 'panel' in this.pick ? this.pick.panel : null;
+    if (panel === 'defence') body = `${this.base.defence(v)}${this.base.watersCard(v)}`;
+    else if (panel === 'yard') body = `<h3 class="is-ph">${esc(L('ships'))}</h3>${this.base.yard(v, state)}`;
+    else if (panel === 'town') body = v.town ? `<h3 class="is-ph">${esc(L('town'))}</h3>${townTab(v, state, this.base.mk)}` : '';
+    else if (panel === 'supply') body = `<h3 class="is-ph">${esc(L('supply'))}</h3>${supplyTab(state)}`;
     else body = this.base.sheet(v, state, true);
     if (!body) {
       this.cardEl.classList.add('hidden');
@@ -452,6 +491,8 @@ export class IsleScene {
     const keep = this.cardEl.querySelector('.is-cb')?.scrollTop ?? 0;
     this.cardEl.innerHTML = `<button type="button" class="is-x" data-ix aria-label="${esc(L('close'))}" title="${esc(L('close'))}">×</button><div class="is-cb base-sheet">${body}</div>`;
     this.cardEl.classList.remove('hidden');
+    this.cardEl.classList.toggle('wide', panel === 'yard' || panel === 'town' || panel === 'supply');
+    this.cardEl.dataset.panel = panel ?? '';
     this.root?.classList.add('is-carded');
     const cb = this.cardEl.querySelector<HTMLElement>('.is-cb')!;
     cb.scrollTop = keep;
@@ -466,13 +507,24 @@ export class IsleScene {
       if (img && url) img.src = url;
     });
     this.base.bind(this.cardEl, state, () => this.update(state));
+    wireGuildYard(this.cardEl, this.send); // the guild's shipyard on the ships' sheet (docs/16 #34)
     // the window's tabs and its «sail to defend» go out of the scene
-    this.cardEl.querySelectorAll<HTMLElement>('[data-btab]').forEach((el) => (el.onclick = () => this.onTab(el.dataset.btab === 'yard' ? 'yard' : el.dataset.btab === 'supply' ? 'supply' : 'town')));
+    this.cardEl.querySelectorAll<HTMLElement>('[data-btab]').forEach((el) => (el.onclick = () => this.openPanel(el.dataset.btab === 'yard' ? 'yard' : el.dataset.btab === 'supply' ? 'supply' : 'town')));
     this.cardEl.querySelector<HTMLElement>('[data-bsail]')?.addEventListener('click', () => this.onSail());
     this.cardEl.querySelector<HTMLElement>('[data-ix]')!.onclick = () => {
       this.base.moving = null;
       this.select(null);
     };
+    cb.querySelectorAll<HTMLElement>('.tw-card[data-town]').forEach((el) => {
+      const img = el.querySelector<HTMLImageElement>('img.tw-art');
+      const url = this.picOf(`t:${el.dataset.town}`);
+      if (img && url) img.src = url;
+    });
+    // a building's tile on the town's sheet opens its card (its own buttons act in place)
+    this.cardEl.querySelectorAll<HTMLElement>('.tw-card[data-town]').forEach((el) => (el.onclick = (e) => {
+      if ((e.target as HTMLElement).closest('button, select, input, a')) return;
+      this.select({ town: el.dataset.town as TownId }, true);
+    }));
     // a queue row in the card opens its building here too
     this.cardEl.querySelectorAll<HTMLElement>('.bjob[data-plot], .bjob[data-town]').forEach((el) => (el.onclick = () => this.select(el.dataset.plot ? { plot: Number(el.dataset.plot) } : { town: el.dataset.town as TownId }, true)));
     this.base.tick(this.cardEl, state);
@@ -514,16 +566,20 @@ export class IsleScene {
     return Math.max(this.sMin() * 1.8, 1.6);
   }
 
-  /** The first look: the whole board, its tall back row too, between the bars. */
+  /** The first look (coordinator, 2026-10-15: «the buildings are small at the overview»): the plateau across the width
+   *  between the island's places on the left and the right edge, so the buildings read on a phone held sideways; its
+   *  middle a little above the screen's (the back row stands tall), the front corner may run under the queue. No closer
+   *  than DEFAULT_MAX: the map is painted at 1:1 and goes soft past it. */
   private frame(): void {
     const { w, h } = this.size();
     const t = isoSpot(this.map, [0, 0]).t, r = isoSpot(this.map, [5, 0]).r, b = isoSpot(this.map, [5, 5]).b, l = isoSpot(this.map, [0, 5]).l;
-    const bw = r[0] - l[0], bh = b[1] - t[1] + (b[1] - t[1]) * 0.45; // the back row stands tall over its edge
+    const bw = r[0] - l[0], dh = b[1] - t[1];
+    const side = (this.sideEl.offsetWidth || 48) + 10;
     const top = this.topEl.offsetHeight || 34, bottom = this.queueEl.offsetHeight || 34;
-    const s = Math.max(this.sMin(), Math.min(this.sMax(), Math.min((w - 100) / bw, (h - top - bottom - 8) / bh)));
+    const s = Math.max(this.sMin(), Math.min(this.sMax(), DEFAULT_MAX, (w - side - 8) / bw));
     this.cam.s = s;
-    const cx = (l[0] + r[0]) / 2, cy = t[1] - (b[1] - t[1]) * 0.45 + bh / 2;
-    this.cam.x = w / 2 - cx * s;
+    const cx = (l[0] + r[0]) / 2, cy = (t[1] - 0.35 * dh + b[1]) / 2;
+    this.cam.x = side + (w - side) / 2 - cx * s;
     this.cam.y = top + (h - top - bottom) / 2 - cy * s;
     this.clampCam();
     this.apply();

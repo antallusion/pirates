@@ -474,11 +474,7 @@ isleScene.onSail = () => {
   if (modal) closeModal();
   leaveIsle(false);
 };
-isleScene.onTab = (tab) => {
-  baseWindow.open();
-  baseWindow.tab = tab;
-  openModal('base');
-};
+
 /** The terms of the island off the bow (docs/15 item 6), on the Company's islands card. */
 function openClaim(): void {
   companyScreen.open('isles');
@@ -1510,6 +1506,7 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'supply': // docs/18 #32
       if (modal === 'base' && baseWindow.tab === 'supply') refreshModal();
+      if (isleScene.isOpen) isleScene.update(state);
       break;
     case 'dwell':
       if (modal === 'recruit') refreshModal();
