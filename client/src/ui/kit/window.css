@@ -97,6 +97,7 @@
 .w-qsub { display: inline-flex; align-items: center; gap: 4px; font: 600 var(--k-fs-1)/1.2 var(--k-font-sans); color: var(--k-haze); letter-spacing: 0; text-shadow: none; white-space: nowrap; }
 .w-qsub .money { color: var(--k-gold); }
 .w-qbtn .k-btn-ico { width: 28px; height: 28px; }
+.skinned .w-qbtn:has(.w-qsub) { min-height: 50px; } /* (two lines inside the painted frame, not on it: 2026-10-15) */
 
 /* ---------- «Было → стало»: an upgrade in one card, one button */
 .w-wb { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--k-sp-2) var(--k-sp-3); align-items: center; }

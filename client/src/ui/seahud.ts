@@ -42,7 +42,7 @@ const L = dict(EN, RU);
 /** The menu sheet's eight tiles; «Ещё» opens the full cabin menu (talents, company, shop, help, her island…). */
 export const SEA_TILES: { id: MenuItem | 'more'; art: string; glyph: string }[] = [
   { id: 'map', art: 'menu_map', glyph: '🗺' },
-  { id: 'hero', art: 'bt_captain', glyph: '⚔' },
+  { id: 'hero', art: 'set_admiralty', glyph: '⚔' }, // (owner, 2026-10-15: the painted scene was «из другой оперы» among the tiles' cut-out pictures: the bicorne, sabre and glass)
   { id: 'ship', art: 'menu_ship', glyph: '⚓' },
   { id: 'crew', art: 'menu_crew', glyph: '☗' },
   { id: 'journal', art: 'tab_letters', glyph: '📜' },

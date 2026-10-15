@@ -14,7 +14,7 @@ const L = dict(EN, RU);
 
 export type CapItem = 'hero' | 'skills' | 'talents' | 'journal' | 'options' | 'account';
 export const CAP_ITEMS: readonly { id: CapItem; art: string; glyph: string }[] = [
-  { id: 'hero', art: 'bt_captain', glyph: '⚔' },
+  { id: 'hero', art: 'set_admiralty', glyph: '⚔' }, // (owner, 2026-10-15: the painted scene was «из другой оперы» among the tiles' cut-out pictures: the bicorne, sabre and glass)
   { id: 'skills', art: 'ab_mark_target', glyph: '✦' },
   { id: 'talents', art: 'menu_talents', glyph: '✧' },
   { id: 'journal', art: 'tab_letters', glyph: '📜' },

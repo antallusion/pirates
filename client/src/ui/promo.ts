@@ -9,14 +9,16 @@
 //  - a boarding's end: a boarding offer in the top band of the result.
 // A tap opens the offer as one card; ✕ hides it in that place (the server keeps it); every card shown is told once.
 
-import { OFFERS } from '../../../shared/src/data/shop.ts';
+import { OFFERS, SHOP } from '../../../shared/src/data/shop.ts';
+import { AMMO } from '../../../shared/src/data/ships.ts';
+import type { ShopFamily, ShopGrant, ShopOffer } from '../../../shared/src/data/shop.ts';
 import type { PromoCard, PromoPlace, PromoView } from '../../../shared/src/premiumproto.ts';
 import type { ClientMsg, ServerMsg } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/promo.ts';
 import type { ClientState } from '../state.ts';
 import { ask } from './confirm.ts';
-import { esc, fmt } from './dom.ts';
+import { esc, fmt, icon } from './dom.ts';
 import { doubloonIcon, famArt, qtyOf } from './premium.ts';
 
 const L = dict(EN, RU);
@@ -31,6 +33,29 @@ export function countdown(ms: number): string {
   if (d) return `${d}${ru ? ' д' : 'd'} ${h}${ru ? ' ч' : 'h'}`;
   if (h) return `${h}${ru ? ' ч' : 'h'} ${String(m).padStart(2, '0')}${ru ? ' м' : 'm'}`;
   return `${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}`;
+}
+
+/** What an offer holds, each kind of thing once: its picture, its name and how many (the shop's own families say
+ *  which picture and name a kind of grant has). */
+export function insideOf(offerId: string): { art: string; name: string; q: string }[] {
+  const f = OFFERS.get(offerId);
+  if (!f) return [];
+  const key = (g: ShopGrant) => `${g.k}|${'good' in g ? g.good : ''}|${'ammo' in g ? g.ammo : ''}|${'tier' in g ? g.tier : ''}`;
+  const groups = new Map<string, ShopGrant[]>();
+  for (const g of f.offer.grants) groups.set(key(g), [...(groups.get(key(g)) ?? []), g]);
+  const out: { art: string; name: string; q: string }[] = [];
+  for (const [k, gs] of groups) {
+    const fam: ShopFamily | undefined = f.fam.sec !== 'deals' ? f.fam : SHOP.find((x) => x.sec !== 'deals' && x.offers.some((o) => o.grants.length > 0 && o.grants.every((y) => key(y) === k)));
+    const one = { ...f.offer, grants: gs } as ShopOffer;
+    // (shot: each kind its own picture and name — a crate holds three)
+    const g0 = gs[0];
+    if (g0.k === 'ammo') {
+      out.push({ art: `ammo_${g0.ammo}`, name: AMMO[g0.ammo].name, q: `×${fmt(gs.reduce((a, x) => a + ('n' in x ? x.n : 0), 0))}` });
+      continue;
+    }
+    out.push({ art: fam?.icon ?? f.fam.icon, name: fam ? T(fam.name) : T(f.fam.name), q: qtyOf(one, fam ?? { ...f.fam, sec: 'supply' }) });
+  }
+  return out;
 }
 
 export interface PromoDeps {
@@ -152,6 +177,7 @@ export class Promos {
       const t = countdown(left);
       if (el.textContent !== t) el.textContent = t;
       el.classList.toggle('urgent', left < 3_600_000);
+      el.closest('.po-chip')?.classList.toggle('po-urgent', left < 3_600_000);
     });
   }
 
@@ -167,7 +193,9 @@ export class Promos {
     if (el.dataset.po !== key) {
       el.dataset.po = key;
       el.className = `po-chip ${cls}`;
-      el.innerHTML = `<button type="button" class="po-open" data-poopen="${esc(c.id)}" aria-label="${esc(this.nameOf(c))}">${this.artOf(c)}${this.ribbon(c)}<span class="po-t"><span class="po-n">${esc(this.nameOf(c))}${c.special ? '' : ` <small>${esc(this.qtyOf(c))}</small>`}</span><span class="po-l">${this.clock(c)}${this.priceHtml(c)}</span></span></button><button type="button" class="po-x" data-pox aria-label="${esc(L('close'))}" title="${esc(L('close'))}">×</button>`;
+      // (the sea's: a glowing gold frame, the «Успей!» seal in its last hour — the clock's own class says when)
+      const hot = where === 'sea' ? `<b class="po-hot" aria-hidden="true">${esc(L('hot'))}</b>` : '';
+      el.innerHTML = `<button type="button" class="po-open" data-poopen="${esc(c.id)}" aria-label="${esc(this.nameOf(c))}">${this.artOf(c)}${this.ribbon(c)}<span class="po-t"><span class="po-n">${esc(this.nameOf(c))}${c.special ? '' : ` <small>${esc(this.qtyOf(c))}</small>`}</span><span class="po-l">${this.clock(c)}${this.priceHtml(c)}</span></span>${hot}</button><button type="button" class="po-x" data-pox aria-label="${esc(L('close'))}" title="${esc(L('close'))}">×</button>`;
       el.querySelector<HTMLElement>('[data-poopen]')!.onclick = () => this.open([c], where);
       el.querySelector<HTMLElement>('[data-pox]')!.onclick = (e) => {
         e.stopPropagation();
@@ -189,28 +217,27 @@ export class Promos {
     return el;
   }
 
-  /** At sea: a sea offer (or a boarding one) under the chart's dial, out of every fight and window. */
+  /** At sea: a sea offer (or a boarding one), out of every fight and window, in the top band (owner, 2026-10-15: «в
+   *  море я до сих пор не вижу предложений с обратным отсчетом»: it stood under the chart's buttons and stepped out
+   *  whenever it met the fight's buttons below — on a phone with an island in Telegram's layout, always): under the
+   *  captain's plate by her doubloons; where the helm leaves no room there, under the row of round buttons. */
   private sea(): void {
     const el = this.mount('promo-sea', document.body);
     const hud = document.getElementById('hud');
     const isle = document.getElementById('isle');
     const on = !!this.view && !!hud && !hud.classList.contains('hidden') && !this.d.modal() && !this.d.busy() && !this.d.state.self?.dockedAt && !(isle && !isle.classList.contains('hidden')) && !this.d.state.onboarding?.stage && !this.over;
     let card = on ? this.cardsFor('sea').find((c) => c.ctx === 'sea') ?? this.cardsFor('sea')[0] : undefined;
-    // its place: under the lowest of the HUD's things in the screen's top right (the dial, the round buttons, the chat),
-    // and only if it clears those of the bottom right
     if (card) {
-      const W = innerWidth, Hh = innerHeight;
-      let top = 0, floor = Hh;
-      for (const o of document.querySelectorAll<HTMLElement>('#hud-map, #touch > *, #hud-chat > .chat-toggle, #hud-region')) {
-        const r = o.getBoundingClientRect();
-        if (!r.width || !r.height || r.right < W - 240 || getComputedStyle(o).visibility === 'hidden' || o.offsetParent === null) continue;
-        if (r.top < Hh * 0.45) top = Math.max(top, r.bottom);
-        else floor = Math.min(floor, r.top);
-      }
-      el.style.top = `${Math.round(top + 6)}px`;
-      if (top + 6 + (el.offsetHeight || 40) > floor - 4) card = undefined;
+      const spot = seaSpot(el);
+      if (spot) {
+        const l = spot.left === null ? '' : `${spot.left}px`, r = spot.right === null ? '' : `${spot.right}px`, t = `${spot.top}px`;
+        if (el.style.left !== l) el.style.left = l;
+        if (el.style.right !== r) el.style.right = r;
+        if (el.style.top !== t) el.style.top = t;
+      } else card = undefined;
     }
     this.chip(el, card, 'sea', 'po-sea');
+    el.classList.toggle('po-left', !!card && el.style.right === '');
   }
 
   /** On the island: its offer in the scene's right column, while no building's card is open there. */
@@ -246,14 +273,33 @@ export class Promos {
 
   // ---------------------------------------------------------------------------------------------- the carousel
 
-  /** On coming aboard, once a day (the server says when): after the First Watch, out of a fight, no window open. */
+  /** The entry carousel taken down by a window opened over it: shown again once the window closes. */
+  private entryAgain: PromoCard[] | null = null;
+
+  /** A window open (the harbour's too, the journal, a sheet): the carousel waits (2026-10-15: it covered the journal). */
+  private windowUp(): boolean {
+    return !!this.d.modal() || !!document.querySelector('.k-sheet-root.k-open, .k-sheet-root:not(.hidden) .k-sheet');
+  }
+
+  /** On coming aboard, once a day (the server says when): after the First Watch, out of a fight, no window open — it
+   *  waits for the window to close, and steps down if one opens over it (and comes back after). */
   private entry(): void {
-    const v = this.view;
-    if (!v?.carousel || this.over) return;
+    if (this.over && this.overPlace === 'entry' && this.windowUp()) {
+      this.entryAgain = this.list;
+      this.over.remove();
+      this.over = null;
+      return;
+    }
     const hud = document.getElementById('hud');
-    // (the harbour's window opens by itself on coming aboard in port: the carousel stands over it)
-    const m = this.d.modal();
-    if (!hud || hud.classList.contains('hidden') || this.d.state.onboarding?.stage || (m && m !== 'port') || this.d.busy() || document.querySelector('.k-sheet-root:not(.hidden) .k-sheet')) return;
+    const free = !!hud && !hud.classList.contains('hidden') && !this.d.state.onboarding?.stage && !this.d.busy() && !this.windowUp();
+    if (this.entryAgain && !this.over && free) {
+      const again = this.entryAgain.filter((c) => this.cardsFor('entry').some((x) => x.id === c.id));
+      this.entryAgain = null;
+      if (again.length) this.open(again, 'entry');
+      return;
+    }
+    const v = this.view;
+    if (!v?.carousel || this.over || !free) return;
     const cards = this.cardsFor('entry');
     // the specials first (the first top-up's double, a level's gift, the starter), then her offers; three at most
     const order = (c: PromoCard) => (c.special === 'first' ? 0 : c.special === 'level' ? 1 : c.special === 'starter' ? 2 : c.special ? 5 : 3);
@@ -308,17 +354,25 @@ export class Promos {
     const f = OFFERS.get(live.offer);
     const what = live.special === 'first' ? L('firstText') : f ? T(f.fam.text) : '';
     const why = live.why ? `<small class="po-why">${esc(L(live.why === 'poor' ? 'why.poor' : 'why.other'))}</small>` : '';
-    const buy = live.special === 'first' ? L('topup') : L('buy');
+    // «Купить за N»: the price on the button itself (the first top-up's double is bought by a top-up)
+    const buy = live.special === 'first' ? esc(L('topup')) : `${esc(L('buyFor'))} <b class="po-buy-n">${doubloonIcon('ico-xs')}${fmt(live.price)}</b>`;
+    // what is inside, each thing with its picture and how many (a bundle lists them all)
+    const inside = live.special === 'first' ? [] : insideOf(live.offer);
+    const insideHtml = inside.length ? `<div class="po-in"><span class="po-in-h">${esc(L('inside'))}</span><ul>${inside.map((x) => `<li>${icon(x.art, '◉', 'po-in-ico')}<span class="po-in-n">${esc(x.name)}</span><b class="po-in-q">${esc(x.q)}</b></li>`).join('')}</ul></div>` : '';
+    // the value against the price paid: the old price or the shop's own worth of it (docs/32: the server's numbers only)
+    const ratio = live.price > 0 && live.was > live.price ? Math.round((live.was / live.price) * 10) / 10 : 0;
+    const gain = ratio >= 1.1 ? `<i class="po-gain">${esc(L('gain', { n: lang() === 'ru' ? String(ratio).replace('.', ',') : String(ratio) }))}</i>` : '';
     el.innerHTML = `<div class="po-box${many ? ' many' : ''}">
       <header class="po-head"><b>${esc(this.overPlace === 'entry' ? L('title') : L(`ctx.${live.ctx}` as 'ctx.all'))}</b><button type="button" class="po-x po-x-big" data-poshut aria-label="${esc(L('close'))}">×</button></header>
       <div class="po-card">${this.ribbon(live)}${this.artOf(live)}
         <div class="po-body"><span class="po-ctx">${esc(L(`ctx.${live.ctx}` as 'ctx.all'))}</span><b class="po-name">${esc(this.nameOf(live))}${live.special ? '' : ` · ${esc(this.qtyOf(live))}`}</b><p class="po-text">${esc(what)}</p>
           ${live.until ? `<div class="po-hurry">${esc(L('hurry'))} ${this.clock(live)}</div>` : ''}
-          <div class="po-price">${this.priceHtml(live)}</div>${why}</div></div>
+          <div class="po-price">${this.priceHtml(live)}${gain}</div>${why}</div></div>
+      ${insideHtml}
       <div class="po-acts">${many ? `<button type="button" class="btn btn-small po-nav" data-poprev aria-label="${esc(L('prev'))}">‹</button>` : ''}
         <button type="button" class="btn btn-small" data-polater>${esc(this.overPlace === 'entry' ? L('later') : L('close'))}</button>
         ${live.special === 'first' ? '' : `<button type="button" class="btn btn-small" data-pomore>${esc(L('more'))}</button>`}
-        <button type="button" class="btn btn-small btn-primary po-buy" data-pobuy${live.why && live.why !== 'poor' ? ' disabled' : ''}>${esc(buy)}</button>
+        <button type="button" class="btn btn-small btn-primary po-buy" data-pobuy${live.why && live.why !== 'poor' ? ' disabled' : ''}>${buy}</button>
         ${many ? `<button type="button" class="btn btn-small po-nav" data-ponext aria-label="${esc(L('next'))}">›</button>` : ''}</div>
       ${many ? `<div class="po-dots">${this.list.map((_, i) => `<i class="${i === this.idx ? 'on' : ''}"></i>`).join('')}</div>` : ''}</div>`;
     this.tell(live, this.overPlace);
@@ -352,6 +406,35 @@ export class Promos {
       this.shut();
     });
   }
+}
+
+/** The sea chip's place: under the captain's plate at the left (clear of the helm and anything else there), else under
+ *  the row of round buttons at the right (clear of the fight's buttons); null when neither has room. */
+function seaSpot(el: HTMLElement): { left: number | null; right: number | null; top: number } | null {
+  const W = innerWidth, H = innerHeight;
+  const w = el.offsetWidth || Math.min(230, W * 0.36), h = el.offsetHeight || 44;
+  const vis = (o: Element) => {
+    const r = o.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && getComputedStyle(o).visibility !== 'hidden' ? r : null;
+  };
+  const others = [...document.querySelectorAll('#touch > :not(#promo-sea), #hud-chat > .chat-toggle, #hud-chat > .chat-toast, #hud-map, #hud-captain .cs, #advcard:not(.hidden)')].map(vis).filter((r): r is DOMRect => !!r);
+  const free = (l: number, t: number) => t + h <= H - 4 && l >= 0 && l + w <= W && others.every((r) => r.right <= l || r.left >= l + w || r.bottom <= t || r.top >= t + h);
+  // the left: under the plate (its coins), from where the plate begins
+  const plate = document.querySelector('#hud-captain .cs')?.getBoundingClientRect();
+  // (the toasts take that place on a narrow screen with a card up: hud.ts placeTopStrip, body.tq-left)
+  if (plate && plate.height && !document.body.classList.contains('tq-left')) {
+    const l = Math.round(Math.max(4, plate.left + 4)), t = Math.round(plate.bottom + 6);
+    if (free(l, t)) return { left: l, right: null, top: t };
+  }
+  // the right: under the round buttons (and «Остров»'s word under its button)
+  let bottom = 0;
+  for (const o of document.querySelectorAll('#tc-menu, #tc-news, #tc-isle, #hud-chat > .chat-toggle, #hud-map')) {
+    const r = vis(o);
+    if (r && r.left > W / 2 && r.top < H * 0.5) bottom = Math.max(bottom, r.bottom + (o.id === 'tc-isle' ? 14 : 0));
+  }
+  const t = Math.round(bottom + 6);
+  if (bottom && free(W - 8 - w, t)) return { left: null, right: 8, top: t };
+  return null;
 }
 
 /** The harbour window's slot for the strip (port.ts puts it in its pane). */

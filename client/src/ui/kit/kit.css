@@ -98,6 +98,9 @@ body.reduce-motion { --k-dur-1: 0ms; --k-dur-2: 0ms; --k-dur-3: 0ms; }
 .skinned .k-btn--primary, .skinned .k-btn--secondary, .skinned .k-btn--risk { border-style: solid; border-color: transparent; border-width: 8px 12px; border-image: var(--ui-button) 40 fill / 8px 12px stretch; background: none; border-radius: 0; padding: 0 var(--k-sp-2); }
 .skinned .k-btn--risk { filter: sepia(0.4) hue-rotate(-25deg) saturate(1.4); }
 .skinned .k-btn--icon { border: 0; }
+/* (a painted frame's picture keeps a padding inside its border: owner, 2026-10-15 «иконки… не должны залезать на край окантовки») */
+.skinned .k-btn--lg:is(.k-btn--primary, .k-btn--secondary, .k-btn--risk) .k-btn-ico { width: 18px; height: 18px; }
+.skinned .k-btn--sm:is(.k-btn--primary, .k-btn--secondary, .k-btn--risk) { border-width: 6px 10px; border-image-width: 6px 10px; }
 .skinned .k-btn--icon::after { content: ''; position: absolute; inset: -3px; background: var(--ui-ring) center / contain no-repeat; pointer-events: none; }
 
 /* ---------- Bottom sheet: up from the bottom edge, 60–90% high (or its content's height), a grip, a scrim */
