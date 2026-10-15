@@ -183,12 +183,18 @@ test('the fire wheel of twelve at the screen corner is a grid over the finger: o
   }
 });
 
-test("the top row (owner, 2026-10-15): the round buttons in a grid under the chart, the card from the chart's top line between the plate and the chart", () => {
+test("the top row (owner, 2026-10-15): the round buttons in one row under the chart, the card from the chart's top line between the plate and the chart", () => {
   const css = readFileSync(new URL('../client/seahud.css', import.meta.url), 'utf8');
-  // under the chart, right-aligned to it, two columns (the chat's at the top right on a phone; the menu beside it)
+  // under the chart, right-aligned to it, ONE row («в одну линию»): the chat's at the right end on a phone, the menu
+  // beside it, «Остров», the news; one hidden leaves no hole
   assert.ok(css.includes('--tr-top: calc(var(--sa-t) + 8px + var(--mm) + 8px);'));
   assert.ok(css.includes('body.simple #hud #touch > :is(#tc-menu, #tc-news, #tc-isle) { position: absolute;'));
-  assert.ok(css.includes('body.simple #hud #touch > #tc-menu { --tr-x: var(--tr-c); --tr-y: 0; }'));
+  assert.ok(css.includes('body.simple #hud #touch > #tc-menu { --tr-x: var(--tr-c); }'));
+  assert.ok(css.includes('body.simple #hud #touch > :is(#tc-isle, #tc-news) { --tr-x: calc(var(--tr-c) + 1); }'));
+  assert.ok(css.includes('#hud #touch > #tc-news { --tr-x: calc(var(--tr-c) + 2); }'));
+  assert.ok(!css.includes('--tr-y'), 'no second row');
+  // the autosail's line stays in sight under a card on top (the column steps down under it)
+  assert.ok(css.includes('#hud #hud-stack > :not(#hud-autosail) { visibility: hidden !important; }'));
   assert.ok(css.includes('body.simple:not(.chat-open):not(.tac) #hud-chat > .chat-toggle { top: var(--tr-top); right: calc(var(--sa-r) + 8px);'));
   assert.ok(!/#tc-(menu|news) \{[^}]*right: calc\(var\(--sa-r\) \+ var\(--mm\) \+ 20px/.test(css), 'nothing left of the chart any more');
   // one top line: the portrait's ring at the chart's top; the card in the band, as tall as the plate
@@ -199,4 +205,15 @@ test("the top row (owner, 2026-10-15): the round buttons in a grid under the cha
   for (const k of ['--tb-top', '--tb-left', '--tb-w', '--tb-h']) assert.ok(hud.includes(`raw('${k}'`), k);
   const card = readFileSync(new URL('../client/src/ui/advcard.ts', import.meta.url), 'utf8');
   assert.ok(card.includes("if (document.body.classList.contains('simple') && document.body.style.getPropertyValue('--tb-w')) {"));
+});
+
+test("the menu's «Капитан» wears a cut-out picture like its neighbours; a tile's picture and word are one group in its middle", () => {
+  const css = readFileSync(new URL('../client/seahud.css', import.meta.url), 'utf8');
+  for (const f of ['seahud.ts', 'menu.ts', 'capmenu.ts']) {
+    const src = readFileSync(new URL(`../client/src/ui/${f}`, import.meta.url), 'utf8');
+    assert.ok(!/id: 'hero'[^}]*bt_captain/.test(src) && /id: 'hero'[^}]*set_admiralty/.test(src), f);
+  }
+  assert.ok(css.includes('.k-tile, .skinned .k-tile.k-btn { --tile-ico: 32px; flex-direction: column; justify-content: center; align-items: center;'));
+  const styles = readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8');
+  assert.ok(styles.includes('.sea-lent > #hud-world:not(.hidden) { display: flex !important;'), "the sea's goal keeps its row in the news");
 });

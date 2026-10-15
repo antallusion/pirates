@@ -174,7 +174,7 @@
   #modal-panel .card, .k-sheet .card { padding: calc(3px + 3 * var(--u)) calc(5px + 3 * var(--u)); margin-bottom: var(--f-gap); }
   #modal-panel .card h4, .k-sheet .card h4 { font-size: calc(var(--f-fs-h) - 1.5px); margin-bottom: 2px; }
   #modal-panel .card p, .k-sheet .card p { font-size: var(--f-fs-m); line-height: 1.28; margin-bottom: calc(2px + 2 * var(--u)); }
-  #modal-panel .card h4 .ico-md { width: calc(20px + 6 * var(--u)); height: calc(20px + 6 * var(--u)); margin: -2px 6px 2px 0; }
+  #modal-panel .card h4 .ico-md { width: calc(20px + 6 * var(--u)); height: calc(20px + 6 * var(--u)); margin: 0 6px 0 0; } /* (not over the card's edge: 2026-10-15) */
   #modal-panel p { margin-top: 0; margin-bottom: calc(3px + 2 * var(--u)); }
   #modal-panel ul { margin: 2px 0 calc(3px + 3 * var(--u)); padding-left: 16px; }
   #modal-panel .cols { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(5px + 3 * var(--u)); }

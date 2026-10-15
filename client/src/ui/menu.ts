@@ -14,7 +14,7 @@ export const MENU_ITEMS: { id: MenuItem; glyph: string; art?: string }[] = [
   { id: 'journal', glyph: '📜', art: 'tab_letters' },
   { id: 'ship', glyph: '⚓' },
   { id: 'crew', glyph: '☗' },
-  { id: 'hero', glyph: '⚔', art: 'bt_captain' },
+  { id: 'hero', glyph: '⚔', art: 'set_admiralty' },
   { id: 'talents', glyph: '✦' },
   // The premium shop (owner, 2026-10-03): the doubloon's coin.
   { id: 'shop', glyph: '◉', art: 'doubloon' },

@@ -196,3 +196,18 @@ test('/offers: the owner\'s figures and the tester\'s roll, in HELP in both lang
   assert.deepEqual(Object.keys(P_RU).sort(), Object.keys(P_EN).sort());
   for (const k of Object.keys(P_EN) as (keyof typeof P_EN)[]) assert.ok(/[а-яё]/i.test(P_RU[k]), k);
 });
+
+test('the offer card lists what is inside, each shot its own picture; the sea chip stands in the top band; the entry carousel waits for an open window (2026-10-15)', async () => {
+  const { insideOf } = await import('../client/src/ui/promo.ts');
+  const crate = insideOf('ammo2_590');
+  assert.deepEqual(crate.map((x) => x.art), ['ammo_incendiary', 'ammo_heavy', 'ammo_long_shot']);
+  assert.deepEqual(crate.map((x) => x.q), ['×760', '×760', '×380']);
+  assert.ok(insideOf('starter').length >= 3, 'a bundle lists its things');
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../client/src/ui/promo.ts', import.meta.url), 'utf8');
+  assert.ok(src.includes("if (plate && plate.height && !document.body.classList.contains('tq-left')) {"), "under the captain's plate first");
+  assert.ok(src.includes("if (this.over && this.overPlace === 'entry' && this.windowUp()) {"), 'steps down under a window');
+  const css = readFileSync(new URL('../client/promo.css', import.meta.url), 'utf8');
+  assert.ok(css.includes('animation: po-gleam 30s'), 'a gleam every half a minute');
+  assert.ok(css.includes('body.sea-fight .po-sea, body.reduce-motion .po-sea'), 'never in a fight or with less motion');
+});

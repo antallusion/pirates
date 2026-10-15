@@ -5185,6 +5185,13 @@ body.touch.sea-docked #touch > :is(#tc-stick, .tc-special, #tc-target) { display
 /* A sheet that holds HUD blocks lent to it (the news, the target's card): they stand in its flow. */
 .sea-lent { display: flex; flex-direction: column; gap: var(--k-sp-2); padding-bottom: var(--k-sp-2); }
 .sea-lent > :not(.hidden) { position: static !important; display: block !important; width: auto !important; max-width: none !important; transform: none !important; margin: 0 !important; max-height: none !important; overflow: visible !important; }
+/* (owner, 2026-10-15: «ЦЕЛЬ МОРЯ», «ЦЕЛИ КАПИТАНА» had their pictures on the frame's top edge — a block of its own over
+   the words: the sea's goal and her goals keep their own rows in the sheet, the picture beside the words, inside the
+   frame with a padding) */
+.sea-lent > #hud-world:not(.hidden) { display: flex !important; padding: 5px 9px 6px !important; }
+.sea-lent > #hud-goals:not(.hidden) { display: grid !important; padding-top: 6px !important; padding-bottom: 6px !important; }
+.sea-lent > #hud-feed:not(.hidden) { padding-top: 5px !important; padding-bottom: 5px !important; }
+.sea-lent > #hud-goals .ico-goal { align-self: center; }
 /* docs/19 E12: the relics in the hero window (each a card: its face, its parts lit when worn, dim in the locker, dark
    when not found; assembled, it glows as a whole set) and a relic's slots on the paper doll. */
 .hx-relics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }

@@ -20,6 +20,10 @@ export const EN = {
   once: 'once',
   'why.poor': 'Not enough doubloons: top up',
   'why.other': 'Not for you now',
+  hot: 'Hurry!',
+  inside: 'Inside',
+  gain: 'Value ×{n}',
+  buyFor: 'Buy for',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -42,4 +46,8 @@ export const RU: Record<keyof typeof EN, string> = {
   once: 'один раз',
   'why.poor': 'Не хватает дублонов: пополните',
   'why.other': 'Сейчас недоступно',
+  hot: 'Успей!',
+  inside: 'Внутри',
+  gain: 'Выгода ×{n}',
+  buyFor: 'Купить за',
 };

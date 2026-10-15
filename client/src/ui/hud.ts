@@ -370,7 +370,8 @@ export class Hud {
       });
     };
     const ro = new ResizeObserver(band);
-    for (const id of ['hud-captain', 'hud-map', 'advcard']) ro.observe($(id));
+    for (const id of ['hud-captain', 'hud-map', 'advcard', 'encounter', 'surrender', 'lairchest', 'hud-autosail']) ro.observe($(id));
+    for (const id of ['encounter', 'surrender', 'lairchest', 'hud-autosail']) new MutationObserver(band).observe($(id), { attributes: true, attributeFilter: ['class'] });
     $('hud-map').addEventListener('transitionend', band); // (back down from behind its tab: its top line once it is there)
     new MutationObserver((ms) => { if (ms.some((m) => m.target instanceof HTMLElement && /^(tc-news|tc-menu|tc-isle)$/.test(m.target.id))) band(); }).observe($('touch'), { attributes: true, attributeFilter: ['class'], subtree: true });
     // The chart and the menu stepping up or down (seahud.ts mm-peek): the top band takes or gives back their room.
@@ -458,12 +459,24 @@ export class Hud {
     bandBottom = Math.max(bandBottom, bandTop + 40 * z);
     // the round buttons under the chart (the chat's with the chart stepped up stands under its tab): the band keeps
     // clear of any that reach into it, the toasts of any beside them
-    const seen = (el: Element) => { const c = getComputedStyle(el); return c.visibility !== 'hidden' && Number(c.opacity) > 0.05; };
+    const seen = (el: Element) => { const c = getComputedStyle(el); return (c.visibility !== 'hidden' || el.classList.contains('tr-veil')) && Number(c.opacity) > 0.05; };
+    // (each with what hangs under it: «Остров»'s word, a desk's key chip)
     const corner = [...document.querySelectorAll('#tc-menu, #tc-news, #tc-isle, #hud-chat > .chat-toggle, #hud-chat > .chat-toast')].filter(seen)
-      .map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0 && r.left > W / 2);
-    // (the card unfolded reaches down beside them: clear of them all then)
-    const unfolded = !!document.querySelector('#advcard:not(.hidden) .ac-card.open');
-    for (const r of corner) if (r.top < bandBottom || unfolded) right = Math.min(right, r.left - gap);
+      .map((el) => { const r = el.getBoundingClientRect(); return new DOMRect(r.left, r.top, r.width, r.height + (r.height ? 16 * z : 0)); }).filter((r) => r.width > 0 && r.height > 0 && r.left > W / 2);
+    for (const r of corner) if (r.top < bandBottom) right = Math.min(right, r.left - gap);
+    // (the card unfolded reaches down beside the row: clear of it when that leaves the card room, else it stops above
+    // the row — advcard.ts fit)
+    // the row, or a narrow screen's (480×270) row stepping out of sight under the card while it is unfolded
+    let cardRight = right;
+    const rowEls = [...document.querySelectorAll<HTMLElement>('#tc-menu, #tc-news, #tc-isle')];
+    let veil = false;
+    if (document.querySelector('#advcard:not(.hidden) .ac-card.open')) {
+      let r2 = right;
+      for (const r of corner) r2 = Math.min(r2, r.left - gap);
+      if (r2 - left >= 200 * z) cardRight = r2;
+      else veil = true;
+    }
+    for (const el of rowEls) el.classList.toggle('tr-veil', veil && el.getBoundingClientRect().left < right + gap);
     // The column of the top band (her mark's line, a boss's line, the lesson, the sea's name) in the middle of the free
     // row, as wide as a long name with her bars and chips wants at most, else the whole row (640×360: a column forced
     // to the screen's middle cut her mark's name to «R…»).
@@ -476,8 +489,28 @@ export class Hud {
     const raw = (k: string, v: number) => body.style.setProperty(k, `${Math.round(v)}px`);
     raw('--tb-top', bandTop);
     raw('--tb-left', left);
-    raw('--tb-w', Math.max(150 * z, right - left));
+    raw('--tb-w', Math.max(150 * z, cardRight - left));
     raw('--tb-h', bandBottom - bandTop);
+    // The autosail's line stays in sight under a card on top (an event's, the adventure map's, a struck ship's, a lair's
+    // chest — they hide the column: 2026-10-15, «к цели: … · 4,6 км» and its «Стоп» went with it): stacked under the card.
+    const as = document.getElementById('hud-autosail');
+    let shift = 0;
+    body.style.removeProperty('--as-shift');
+    if (as && !as.classList.contains('hidden')) {
+      const ar = as.getBoundingClientRect();
+      for (const c of document.querySelectorAll('#advcard:not(.hidden), #encounter:not(.hidden), #surrender:not(.hidden), #lairchest:not(.hidden)')) {
+        const r = c.getBoundingClientRect();
+        if (!r.width || !r.height || r.top > innerHeight * 0.3 || r.right <= ar.left || r.left >= ar.right) continue;
+        shift = Math.max(shift, r.bottom + 6 * z - ar.top);
+      }
+      if (shift > 0) {
+        set('--as-shift', shift);
+        // (stepped down beside the row of round buttons under the chart: clear of them)
+        let r3 = sx + sw;
+        for (const r of corner) if (r.top < ar.bottom + shift && r.bottom > ar.top + shift) r3 = Math.min(r3, r.left - gap);
+        if (r3 < sx + sw) set('--sk-w', Math.max(150 * z, r3 - sx));
+      }
+    }
     // the toasts under what the column shows now (the lesson, a boss's line, her mark, the sea's name, the card)
     let top = bandTop;
     for (const el of document.querySelectorAll('#hud-stack > :not(.hidden), #advcard:not(.hidden)')) {
@@ -488,8 +521,18 @@ export class Hud {
     let tr = sx + sw;
     const fight = [...document.querySelectorAll('#tc-special, #tc-ammo, #tc-lock, #tc-fire, #tc-actrow')].filter(seen)
       .map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0 && r.left > W / 2 && r.top < top + 70 * z);
-    for (const r of [...corner, ...fight]) if (r.bottom > top && r.left < tr + gap) tr = Math.min(tr, r.left - gap);
-    const tl = Math.min(sx, Math.max(left, tr - sw));
+    // (the band two toasts tall at most: only what reaches into it)
+    const tb = top + 70 * z;
+    for (const r of [...corner, ...fight]) if (r.bottom > top && r.top < tb && r.left < tr + gap) tr = Math.min(tr, r.left - gap);
+    let tl = Math.min(sx, Math.max(left, tr - sw));
+    // too narrow there (a phone of 480 px with a card up): the toasts go under the captain's plate, at the left
+    // (the sea's offer gives that place up to them meanwhile: promo.ts seaSpot reads body.tq-left)
+    const leftward = tr - tl < 150 * z;
+    body.classList.toggle('tq-left', leftward);
+    if (leftward) {
+      tl = 8 * z;
+      top = Math.max(top, bandBottom + 6 * z);
+    }
     set('--st-top', top);
     set('--st-left', tl);
     set('--st-w', Math.max(120 * z, tr - tl));

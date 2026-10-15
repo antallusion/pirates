@@ -132,6 +132,15 @@ function judge(m, W, H, tg) {
     const ox = Math.min(a.r, c.r) - Math.max(a.l, c.l), oy = Math.min(a.b, c.b) - Math.max(a.t, c.t);
     if (ox > 1 && oy > 1) bad.push(`${a.id} × ${c.id} overlap ${Math.round(ox)}×${Math.round(oy)}`);
   }
+  // one row under the chart (owner, 2026-10-15: «в одну линию»): one top, even gaps, its right end at the chart's
+  const row = [...m.btns.filter((x) => !x.id.includes(':')), ...m.extra.filter((x) => x.id === '#hud-chat > .chat-toggle' && m.map && x.t < m.map.b + 60)].sort((a, c) => a.l - c.l);
+  if (row.length > 1 && m.map) {
+    if (Math.max(...row.map((x) => x.t)) - Math.min(...row.map((x) => x.t)) > 1) bad.push(`the row's tops differ ${row.map((x) => x.t)}`);
+    const gaps = row.slice(1).map((x, i) => Math.round((x.l - row[i].r) * 10) / 10);
+    if (Math.max(...gaps) - Math.min(...gaps) > 1) bad.push(`the row's gaps differ ${gaps}`);
+    if (Math.abs(row.at(-1).r - m.map.r) > 1 && !m.peek) bad.push(`the row's right end ${row.at(-1).r} ≠ the chart's ${m.map.r}`);
+    if (row[0].t < m.map.b) bad.push('the row is not under the chart');
+  }
   if (m.btns.length > 1) {
     const s = new Set(m.btns.filter((x) => !x.id.includes(':')).map((x) => x.w));
     if (s.size > 1) bad.push(`button sizes differ ${[...s]}`);
@@ -175,7 +184,7 @@ async function measure(p) {
       for (const s of e.querySelectorAll('.k-badge, .tc-isle-l, .kc')) if (vis(s)) btns.push({ id: `${id}:${s.className.split(' ')[0]}`, ...R(s.getBoundingClientRect()) });
     }
     const extra = [];
-    for (const sel of ['#mm-tab', '#hud-chat > .chat-toggle', '#hud-chat > .chat-toast', '#unread', '#tc-fire', '#tc-ammo', '#tc-lock', '#tc-special', '#tc-actrow', '#tc-cast', '#tc-deck', '#tc-stick', '#toasts > .toast']) { const e = document.querySelector(sel); if (vis(e)) extra.push({ id: sel, ...R(e.getBoundingClientRect()) }); }
+    for (const sel of ['#mm-tab', '#hud-chat > .chat-toggle', '#hud-chat > .chat-toast', '#unread', '#tc-fire', '#tc-ammo', '#tc-lock', '#tc-special', '#tc-actrow', '#tc-cast', '#tc-deck', '#tc-stick', '#toasts > .toast', '#promo-sea']) { const e = document.querySelector(sel); if (vis(e)) extra.push({ id: sel, ...R(e.getBoundingClientRect()) }); }
     const pills = [...document.querySelectorAll('.tg-pill-fake')].map((e, i) => ({ id: 'tgpill' + i, ...R(e.getBoundingClientRect()) }));
     let stack = null;
     for (const e of document.querySelectorAll('#hud-stack > :not(.hidden)')) {
