@@ -30,7 +30,8 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Island, Port } from '../../../shared/src/world/worldgen.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
-import { GRACE_MS, has, island, islandNear, islePort, mayUse, strength } from './holdings.ts';
+import { caravanExtra, coveHide, forgeReach, residentRooms, signalMins, signalRisk, trophyCap } from '../../../shared/src/data/baselevels.ts';
+import { GRACE_MS, has, island, islandNear, islePort, levelOf, mayUse, strength } from './holdings.ts';
 import type { Holding } from './holdings.ts';
 import { spawnPirate } from './npc.ts';
 import { changeRep } from './player.ts';
@@ -197,7 +198,7 @@ export function goHome(game: Game, s: PlayerSession): string | null {
 // ------------------------------------------------------------------------------------------------ residents
 
 export function residentCap(h: Holding): number {
-  return ISLE_LEVELS[Math.max(1, Math.min(ISLE_MAX, h.level ?? 1))].residents + (has(h, 'residents_house') ? 4 : 0);
+  return ISLE_LEVELS[Math.max(1, Math.min(ISLE_MAX, h.level ?? 1))].residents + (has(h, 'residents_house') ? residentRooms(levelOf(h, 'residents_house')) : 0);
 }
 
 function newResident(game: Game, h: Holding, prof?: Profession): Resident {
@@ -285,7 +286,7 @@ export function isleForge(game: Game, s: PlayerSession): Port | null {
   const h = ownIsland(game, s.accountId);
   if (!ship || !h || !has(h, 'forge')) return null;
   const isl = island(game, h.island)!;
-  if (ship.docked || dist(isl.x, isl.y, ship.state.x, ship.state.y) - isl.radius > 400) return null;
+  if (ship.docked || dist(isl.x, isl.y, ship.state.x, ship.state.y) - isl.radius > forgeReach(levelOf(h, 'forge'))) return null;
   const port = islePort(game, h);
   return { ...port, shipyardTier: Math.max(2, port.shipyardTier) };
 }
@@ -308,7 +309,7 @@ export function trophyBonus(game: Game, account: number | null, kind: TrophyKind
   if (!h || !has(h, 'trophy_hall')) return 0;
   const s = game.sessionByAccount(account);
   if (!s?.profile) return 0;
-  return Math.min(TROPHY_MAX, trophies(game, s.profile, s.name)[kind] * TROPHY_STEP);
+  return Math.min(trophyCap(levelOf(h, 'trophy_hall')), trophies(game, s.profile, s.name)[kind] * TROPHY_STEP);
 }
 
 /** A guest looks round a captain's trophy hall (from off her island). */
@@ -606,7 +607,7 @@ function stepRaid(game: Game, o: Outpost, isl: Island): void {
 /** Pirates land at an outpost: ten minutes (fifteen with the island's signal tower) for its owner to come. */
 export function raid(game: Game, o: Outpost, isl: Island): void {
   const h = ownIsland(game, o.owner);
-  const mins = RAID_MIN + (h && has(h, 'signal_tower') ? 5 : 0);
+  const mins = RAID_MIN + (h && has(h, 'signal_tower') ? signalMins(levelOf(h, 'signal_tower')) : 0);
   const ships: number[] = [];
   const a = es(game).rng.float() * Math.PI * 2;
   const x = isl.x + Math.sin(a) * (isl.radius + 350), y = isl.y - Math.cos(a) * (isl.radius + 350);

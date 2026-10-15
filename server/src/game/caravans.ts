@@ -28,7 +28,8 @@ import { applyTrade, bestRoute, midPrice, quoteBuy, quoteSell } from './economy.
 import type { PriceMods } from './economy.ts';
 import { outposts, ownIsland } from './estate.ts';
 import type { Game } from './Game.ts';
-import { has, island, storeCapacity } from './holdings.ts';
+import { caravanExtra, coveHide, forgeReach, residentRooms, signalMins, signalRisk, trophyCap } from '../../../shared/src/data/baselevels.ts';
+import { has, island, levelOf, storeCapacity } from './holdings.ts';
 import { findPath, pointAlong } from './nav.ts';
 import type { Path } from './nav.ts';
 import { sectorLevel, setPath, spawnPirate } from './npc.ts';
@@ -118,7 +119,7 @@ function note(c: Caravan, line: string): void {
 export function caravanSlots(game: Game, s: PlayerSession): number {
   const h = ownIsland(game, s.accountId);
   if (!h) return 0;
-  return ISLE_LEVELS[Math.max(1, Math.min(10, h.level ?? 1))].caravans + (has(h, 'caravan_office') ? 1 : 0) + (s.ship?.hasFlag('counting_house') ? 1 : 0);
+  return ISLE_LEVELS[Math.max(1, Math.min(10, h.level ?? 1))].caravans + (has(h, 'caravan_office') ? caravanExtra(levelOf(h, 'caravan_office')) : 0) + (s.ship?.hasFlag('counting_house') ? 1 : 0);
 }
 
 function level(c: Caravan): number {
@@ -447,7 +448,7 @@ function rollAttack(game: Game, c: Caravan): void {
   if (c.orders.avoidLawless && REGIONS[region].safety === 'lawless') risk *= 0.3;
   if (c.orders.nightInPort) risk *= 0.6;
   const h = game.holdings.get(game, c.island, c.owner);
-  if (h && has(h, 'signal_tower') && island(game, c.island)?.region === region) risk *= 0.67;
+  if (h && has(h, 'signal_tower') && island(game, c.island)?.region === region) risk *= signalRisk(levelOf(h, 'signal_tower'));
   if (c.skipperRec?.traits.includes('wary')) risk *= SKIPPER_RISK;
   if (!S.rng.chance(risk / 60)) return;
   attackNow(game, c);

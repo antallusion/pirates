@@ -22,7 +22,7 @@ import { assetMeta } from '../assets.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/islescene.ts';
 import type { ClientState } from '../state.ts';
-import { BaseWindow, EXTRA_PLOTS, baseName, hallFor, maxOf, plotCell, timeText, townArt } from './base.ts';
+import { BaseWindow, EXTRA_PLOTS, baseName, hallFor, plotCell, timeText, townArt } from './base.ts';
 import { esc, fmt, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
 import { T29, treeLabel } from './isletree.ts';
@@ -214,7 +214,6 @@ export class IsleScene {
   private spotsOf(v: BaseView): Spot[] {
     const now = this.now();
     const out: Spot[] = [];
-    const hall = v.town?.things.find((t) => t.id === 'hall')?.level ?? v.hall ?? 1;
     const timer = (j: { start: number; end: number }) => `<span class="btime" data-end="${j.end}">${esc(timeText((j.end - now) / 1000))}</span><span class="bprog"><i data-start="${j.start}" data-stop="${j.end}" style="width:${Math.round(Math.max(0, Math.min(1, (now - j.start) / Math.max(1, j.end - j.start))) * 100)}%"></i></span>`;
     const things = this.base.townThings(v);
     for (const t of things) {
@@ -245,13 +244,11 @@ export class IsleScene {
         continue;
       }
       const sheet = isoSheet(c.what)!;
-      // A building of a single level shows the look of the town round it (the hall's level) until it has five.
-      const lvl = maxOf(c.what) <= 1 ? Math.max(1, Math.min(5, hall)) : c.level;
-      const st = isoStage(c.job && c.job.level <= 1 ? 0 : lvl, c.job, now);
+      const st = isoStage(c.job && c.job.level <= 1 ? 0 : c.level, c.job, now);
       const kind = producerOf(c.what);
       const tag = c.job ? `<span class="is-t is-tj">${timer(c.job)}</span>`
         : c.fresh > 0 && kind ? `<span class="is-t is-tf">${icon(`good_${PRODUCERS[kind].good}`, '', 'ico-sm')}+${fmt(c.fresh)}</span>`
-        : c.level && maxOf(c.what) > 1 ? `<span class="is-t is-tl">${c.level}</span>` : '';
+        : c.level ? `<span class="is-t is-tl">${c.level}</span>` : '';
       out.push({ key: `p:${k}`, plot: k, cell, pic: { id: `isle.${sheet}.${st.stage}`, foot: isoFoot(sheet) }, cls: [st.dim ? 'dim' : '', c.idle ? 'idle' : ''].filter(Boolean).join(' '), ground: '', tag });
     }
     return out;

@@ -28,7 +28,8 @@ import { capOf } from './base.ts';
 import { caravans } from './caravans.ts';
 import { ownIsland } from './estate.ts';
 import type { Game } from './Game.ts';
-import { has, island, islandNear, newOwnHolding, ownKey } from './holdings.ts';
+import { caravanExtra, coveHide, forgeReach, residentRooms, signalMins, signalRisk, trophyCap } from '../../../shared/src/data/baselevels.ts';
+import { has, island, islandNear, levelOf, newOwnHolding, ownKey } from './holdings.ts';
 import type { Holding } from './holdings.ts';
 import { spawnPirate } from './npc.ts';
 import { changeRep } from './player.ts';
@@ -377,7 +378,9 @@ export function raidChance(game: Game, h: Holding, hours = 1): number {
   const worth = isleWorth(h), mark = fatMark(h.level ?? 1);
   if (worth < mark) return 0;
   const away = wall - c.seen > AWAY_H * HOUR ? AWAY_MUL : 1;
-  return (WATERS[w].raidDay / 24) * hours * Math.min(2, worth / mark) * away;
+  // docs/29: a hidden cove's levels keep the raiders' eyes off the island
+  const cove = has(h, 'hidden_cove') ? 1 - coveHide(levelOf(h, 'hidden_cove')) : 1;
+  return (WATERS[w].raidDay / 24) * hours * Math.min(2, worth / mark) * away * cove;
 }
 
 function stepRaid(game: Game, h: Holding, isl: Island, c: IsleClaim, wall: number): void {
@@ -401,7 +404,7 @@ export function startIsleRaid(game: Game, h: Holding): string | null {
   const c = claimOf(game, h);
   if (c.raid) return 'Raiders already lie off the island.';
   const S = cs(game);
-  const mins = ISLE_RAID_MIN + (has(h, 'signal_tower') ? 5 : 0);
+  const mins = ISLE_RAID_MIN + (has(h, 'signal_tower') ? signalMins(levelOf(h, 'signal_tower')) : 0);
   let x = isl.x, y = isl.y - isl.radius - 400;
   const a0 = S.rng.float() * Math.PI * 2;
   for (let k = 0; k < 24; k++) {

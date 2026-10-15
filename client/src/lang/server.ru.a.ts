@@ -62,7 +62,7 @@ export const SERVER_RU_A: Record<string, string> = {
   "A convoy carries up to {0} m³": "Конвой берёт до {0} м³",
   "A convoy costs {0} from the treasury (hire and wages)": "Конвой стоит {0} из казны (найм и жалованье)",
   "A convoy of {0} {1} sails from {2} for {3}.": "Конвой ({1} × {0}) выходит из {2} в {3}.",
-  "A copy costs 500 silver": "Копия стоит 500 серебра",
+  "A copy costs {0} silver": "Копия стоит {0} серебра",
   "A cursed hoard": "Проклятый клад",
   "A diving party needs at least twenty hands aboard": "Для спуска водолазов нужно не меньше двадцати человек на борту",
   "A draft is for 0 to 100,000 silver": "Вексель — от 0 до 100 000 серебра",
