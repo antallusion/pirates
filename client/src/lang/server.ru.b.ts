@@ -1287,6 +1287,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "The fight is over": "Бой окончен",
   "This boarding is fought turn by turn": "Этот абордаж идёт по ходам",
   "This stack has waited once this round": "Этот отряд уже ждал в этом раунде",
+  "She has marched: strike or defend": "Отряд уже прошёл: атакуйте или защищайтесь",
   "Threw back the boarders of {0}": "Отбит абордаж с {0}",
   "You are not in a boarding battle": "Вы не в абордажном бою",
   "Your axemen try again next round": "Ваши топорщики попробуют снова в следующем раунде",
