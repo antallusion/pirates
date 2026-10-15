@@ -240,3 +240,50 @@ export class RouteCache {
     this.cache.clear();
   }
 }
+
+/** The sea's distances from one point (route, owner 2026-10-15: «вообще все должно меня вести автоматом к ближайшей
+ *  подходящей точке» — the nearest by the water, not straight through an island): Dijkstra over the coarse grid from
+ *  her cell, in metres, to every cell she can reach (Infinity where none leads). One pass serves every candidate; the
+ *  caller keeps it a while (goalroute.ts). `limit`: cells farther than this many metres are left unknown. */
+export function seaField(world: World, sx: number, sy: number, limit = Infinity): Float32Array {
+  const n = world.navSize;
+  const field = new Float32Array(n * n).fill(Infinity);
+  const s = nearestFree(world, Math.floor(sx / NAV_CELL), Math.floor(sy / NAV_CELL));
+  if (!s) return field;
+  const start = s[1] * n + s[0];
+  const closed = new Uint8Array(n * n);
+  const open = new MinHeap();
+  field[start] = Math.hypot(s[0] * NAV_CELL + NAV_CELL / 2 - sx, s[1] * NAV_CELL + NAV_CELL / 2 - sy);
+  open.push(start, field[start]);
+  while (open.size) {
+    const cur = open.pop();
+    if (closed[cur]) continue;
+    closed[cur] = 1;
+    const g0 = field[cur];
+    if (g0 > limit) break;
+    const cx = cur % n, cy = (cur - cx) / n;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const nx = cx + dx, ny = cy + dy;
+        if (navBlocked(world, nx, ny)) continue;
+        if (dx && dy && (navBlocked(world, cx + dx, cy) || navBlocked(world, cx, cy + dy))) continue;
+        const ni = ny * n + nx;
+        const ng = g0 + (dx && dy ? Math.SQRT2 : 1) * NAV_CELL;
+        if (ng < field[ni]) {
+          field[ni] = ng;
+          open.push(ni, ng);
+        }
+      }
+    }
+  }
+  return field;
+}
+
+/** A point's distance by the water on a field of seaField (the cell of open water nearest it, and the last stretch). */
+export function fieldDist(world: World, field: Float32Array, x: number, y: number): number {
+  const c = nearestFree(world, Math.floor(x / NAV_CELL), Math.floor(y / NAV_CELL));
+  if (!c) return Infinity;
+  const v = field[c[1] * world.navSize + c[0]];
+  return v + Math.hypot(c[0] * NAV_CELL + NAV_CELL / 2 - x, c[1] * NAV_CELL + NAV_CELL / 2 - y) * 0.5;
+}

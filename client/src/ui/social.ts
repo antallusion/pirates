@@ -148,7 +148,7 @@ function leftText(sec: number): string {
 function goalRow(g: WorldGoalView, gone: number): string {
   const f = g.progress / Math.max(1, g.target);
   const mine = g.mine > 0 ? (g.mine >= g.min ? L('wg_mine_ok', { n: fmt(g.mine) }) : L('wg_mine', { n: fmt(g.mine), min: fmt(g.min) })) : L('wg_join', { min: fmt(g.min) });
-  return `<div class="wg-row${g.done ? ' done' : ''}">${icon(WORLD_GOAL_DEFS[g.kind].icon, '', 'ico-sm')}<div class="wg-body"><b>${esc(worldGoalText(g))}</b>
+  return `<div class="wg-row${g.done ? ' done' : ''}"${g.done ? '' : ` data-goal="w:${g.id}"`}>${icon(WORLD_GOAL_DEFS[g.kind].icon, '', 'ico-sm')}<div class="wg-body"><b>${esc(worldGoalText(g))}</b>
     <div class="cm-bar${g.done ? ' done' : ''}"><i style="width:${pct(f)}"></i><span>${fmt(g.progress)}/${fmt(g.target)}</span></div>
     <span class="muted wg-meta">${esc(g.done ? L('wg_done') : leftText(Math.max(0, g.endsIn - gone)))} · ${esc(mine)}${g.hands ? ` · ${esc(L('wg_hands', { n: g.hands }))}` : ''}</span>
     ${g.leaders.length ? `<span class="muted wg-lead">${esc(L('wg_lead', { list: g.leaders.map((x) => `${x.name} (${fmt(x.n)})`).join(', ') }))}</span>` : ''}</div></div>`;
@@ -161,11 +161,17 @@ export function worldGoalsLog(state: ClientState): string {
   return `<div class="map-daily wg-log" title="${esc(L('wg_hint'))}"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('wg_title'))}</div>${state.worldGoals.map((g) => goalRow(g, gone)).join('')}</div>`;
 }
 
+/** The goal the HUD's plate shows (the open one nearest its end), or null. */
+export function plateGoal(state: Pick<ClientState, 'worldGoals'>): WorldGoalView | null {
+  const open = state.worldGoals.filter((g) => !g.done);
+  return open.length ? [...open].sort((a, b) => b.progress / b.target - a.progress / a.target)[0] : null;
+}
+
 /** The HUD's plate: the goal nearest its end, one line and a thin bar (the rest in the journal). */
 export function worldGoalPlate(state: ClientState): { key: string; html: string } | null {
   const open = state.worldGoals.filter((g) => !g.done);
-  if (!open.length) return null;
-  const g = [...open].sort((a, b) => b.progress / b.target - a.progress / a.target)[0];
+  const g = plateGoal(state);
+  if (!g) return null;
   const f = g.progress / Math.max(1, g.target);
   const key = `${lang()}|${g.id}|${g.progress}|${g.mine}|${open.length}`;
   const html = `${icon(WORLD_GOAL_DEFS[g.kind].icon, '', 'ico-sm wp-ico')}<span class="wp-body"><span class="wp-top"><b class="wp-lbl">${esc(L('wg_plate'))}</b><span class="wp-t">${esc(worldGoalText(g))}</span><span class="wp-n">${fmt(g.progress)}/${fmt(g.target)}${open.length > 1 ? ` <span class="muted">+${open.length - 1}</span>` : ''}</span></span><span class="fbar wp-bar"><i style="width:${pct(f)}"></i></span></span>`;

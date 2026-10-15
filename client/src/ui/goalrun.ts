@@ -186,3 +186,65 @@ export class GoalRun {
     return { do: 'sail', x: t.x, y: t.y, ...(t.act === 'dock' ? {} : { near: Math.max(30, Math.min(150, Math.round(t.r * 0.4))) }) };
   }
 }
+
+// ---- route (owner, 2026-10-15: «нажимая на цель из журнала я должен плыть к ближайшей точке выполнения … вообще все
+// должно меня вести автоматом к ближайшей подходящей точке»). The server chooses the place (it alone knows where the
+// sea's ships are) and steers there, re-targeted as the sea moves (server/src/game/goalroute.ts); what is left to the
+// client is what the place asks for on arrival — putting in at a port, landing the party — and the word that she is
+// there (the trade's hint: «slow down, cast the net»).
+
+/** The place the server chose (protocol RouteView, the fields the run reads). */
+export interface RoutePlace {
+  x: number;
+  y: number;
+  r: number;
+  act?: 'dock' | 'land';
+  port?: string;
+  region?: string;
+  ship?: number;
+  hint?: string;
+}
+
+/** What the run asks main.ts to do this moment (the course itself is the server's). */
+export type RouteStep = { do: 'none' } | { do: 'dock' } | { do: 'land' } | { do: 'arrived'; hint?: string };
+
+/** The run to a goal's nearest place, kept between frames: its arrival's deeds. */
+export class RouteRun {
+  readonly key: string;
+  private started: number;
+  private dockAt = -1e9;
+  private landedFor = '';
+  private arrivedFor = '';
+  private dockR: number;
+
+  constructor(key: string, now: number, dockR = 420) {
+    this.key = key;
+    this.started = now;
+    this.dockR = dockR;
+  }
+
+  step(v: Omit<GoalView, 'target'> & { place: RoutePlace | null }): RouteStep {
+    const t = v.place;
+    if (!t || v.docked || !v.own) return { do: 'none' };
+    const d = Math.hypot(t.x - v.own.x, t.y - v.own.y);
+    const s = v.stop && v.stop.at >= this.started ? v.stop : null;
+    const cameIn = !v.autosail && !!s && s.why === 'arrived';
+    // a ship it follows moves: its spot is the ship, not the metres
+    const spot = t.ship !== undefined ? `s${t.ship}` : `${Math.round(t.x / 100)},${Math.round(t.y / 100)}`;
+    if (t.act === 'dock' && t.port && (d < this.dockR || (cameIn && d < this.dockR * 2.5))) {
+      if (v.now - this.dockAt < 2500) return { do: 'none' };
+      this.dockAt = v.now;
+      return { do: 'dock' };
+    }
+    if (t.act === 'land' && v.landable && (d <= t.r || cameIn) && this.landedFor !== spot) {
+      this.landedFor = spot;
+      return { do: 'land' };
+    }
+    const there = t.region ? v.region === t.region : t.act !== 'dock' && d <= Math.max(150, t.r);
+    if (there && this.arrivedFor !== spot) {
+      this.arrivedFor = spot;
+      return { do: 'arrived', ...(t.hint ? { hint: t.hint } : {}) };
+    }
+    return { do: 'none' };
+  }
+}

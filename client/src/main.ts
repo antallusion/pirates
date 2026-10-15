@@ -2,7 +2,7 @@
 
 import { EN as I18_EN, RU as I18_RU } from './lang/ui/isles18.ts';
 import { shipLevelOf } from '../../shared/src/data/shiplevel.ts';
-import { liveSignals, signalToast } from './ui/social.ts';
+import { liveSignals, plateGoal, signalToast } from './ui/social.ts';
 import { noteHearsay, repairState } from './ui/dealings.ts';
 import { renderHall } from './ui/hall.ts';
 import { renderLook, resetLookDraft } from './ui/looks.ts';
@@ -11,7 +11,7 @@ import { BEASTS, beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
 import { NetHaulPanel } from './ui/nethaul.ts';
 import { departHooks, departOrAsk } from './ui/depart.ts';
-import { GoalRun, goalTarget } from './ui/goalrun.ts'; // ux2: the course to a quest's place
+import { RouteRun } from './ui/goalrun.ts'; // ux2 / route: the run to a goal's nearest place
 import { EN as UX2_EN, RU as UX2_RU } from './lang/ui/ux2.ts';
 import type { AutosailStop } from '../../shared/src/data/autosail.ts';
 import { EncounterCard } from './ui/encounter.ts';
@@ -41,7 +41,7 @@ import { tacArt } from './ui/tactical.ts';
 import { CURSOR_ART } from './ui/cursor.ts';
 import { tideVeil } from './ui/invasion.ts'; // docs/19 E16
 import { AudioEngine, turnCreakLoad } from './audio.ts';
-import { AutosailPill, FirstTips, autosailRequest, autosailStopText, tipForMsg, tipForState } from './ui/ease.ts';
+import { AutosailPill, FirstTips, autosailRequest, autosailStopText, routeLabel, tipForMsg, tipForState } from './ui/ease.ts';
 import { claimNear, claimSpot, tapTarget } from './ui/sailto.ts'; // seaux: sail-to on tap
 import { toggleCaptainMenu } from './ui/capmenu.ts'; // seaux: the captain's menu on her portrait
 import { ACT_SHOW, actBarHtml, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
@@ -67,6 +67,7 @@ import { EN as SEAF_EN, RU as SEAF_RU } from './lang/ui/seafight.ts';
 import type { BoardRisk } from '../../shared/src/protocol.ts';
 import { MARK_SLOW, markInReach } from '../../shared/src/data/seamarks.ts';
 import { EN as EASE_EN, RU as EASE_RU } from './lang/ui/ease.ts';
+import { EN as ROUTE_EN, RU as ROUTE_RU } from './lang/ui/route.ts';
 import { objective, setTracked, setWaypoint as setMark, trackedId, trackedQuest, waypoint as markOf } from './ui/track.ts';
 import { Net } from './net.ts';
 import { Renderer, shipHeel } from './render/renderer.ts';
@@ -105,7 +106,7 @@ import { HeroWindow, closeLevelUp, drawSeaOrders, levelUpOpen, levelUpSheet } fr
 import type { CaptainOpen } from './ui/hero.ts';
 import { activeTalents } from '../../shared/src/data/talents.ts';
 import { WorldMap } from './ui/worldmap.ts';
-import { Journal } from './ui/journal.ts';
+import { Journal, distWords } from './ui/journal.ts';
 import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
@@ -541,51 +542,65 @@ function sailToTap(px: number, py: number): boolean {
 // ---- ux2 (2026-10-11, owner: «после взятия квеста должна быть метка куда плыть, нажатие на эту метку корабль начинает
 // плавание до места. вообще нужно максимум автоматизировать все»): the course to a quest's place (goalrun.ts)
 const U2 = dict(UX2_EN, UX2_RU);
-/** The run to a goal (a quest's place, a contract's port, a task of the sea), or none. */
-let goalRun: GoalRun | null = null;
+const RT = dict(ROUTE_EN, ROUTE_RU);
+/** The run to a goal (route, 2026-10-15: the nearest place the server chose for any goal of hers), or none. */
+let goalRun: RouteRun | null = null;
 /** Why the helmsman last gave the wheel back, and when (the page's clock). */
 let helmStop: { why: AutosailStop; at: number } | null = null;
 /** The quests she had at the last private state (a new one is followed: its mark shows on the sea). */
 let questsKnown: Set<string> | null = null;
-/** The run to a goal: the helmsman takes her there (in port: as soon as she casts off), and on through a quest's steps. */
+/** The last tap of a goal (one request per tap: a bounced finger sends nothing more). */
+let goalTap = { key: '', at: -1e9 };
+/** A run started without a word (off the quay by itself): its course is not announced. */
+let goalQuiet = false;
+/** The run to a goal: the server finds its nearest place (goalroute.ts) and the helmsman takes her there (in port: as
+ *  soon as she casts off), re-targeted as the sea moves, on through a quest's steps, until the goal is met. */
 function startGoal(key: string, quiet = false): void {
-  const t = goalTarget(state, key);
-  if (!t) return void hud.toast(U2('goal.none'), 'info');
+  const now = performance.now();
+  if (goalTap.key === key && now - goalTap.at < 800) return;
+  goalTap = { key, at: now };
   touch.course = null;
   claimRun = null;
   homeRun = null;
-  setMark(null); // her own old mark would lead the «Now:» line and the beacon instead of the quest
+  setMark(null); // her own old mark would lead the «Now:» line and the beacon instead of the goal
   if (key.startsWith('q:')) setTracked(key.slice(2));
-  goalRun = new GoalRun(key, performance.now(), PORT_DOCK_RADIUS);
+  goalRun = new RouteRun(key, now, PORT_DOCK_RADIUS);
+  goalQuiet = quiet;
   if (modal) closeModal();
-  if (!quiet) hud.toast(U2(state.self?.dockedAt ? 'goal.afterPort' : 'goal.set', { name: sv(t.title) }), 'info');
-  stepGoal();
+  net.send({ t: 'goto', key });
 }
 /** A tap on the beacon: the run to the goal it shows (a quest, a contract's port), else a plain course to it. */
 function tapGoal(): void {
-  if (goalRun && goalTarget(state, goalRun.key)) return; // already on her way there
+  if (goalRun && state.route?.key === goalRun.key) return; // already on her way there
   const own = state.ownDisplay;
   const o = own ? objective(state, own.x, own.y) : null;
   if (o?.key) return startGoal(o.key);
   if (o && o.x !== undefined && o.y !== undefined) sailToSpot({ x: o.x, y: o.y });
 }
-/** Each frame: what the run asks for — the course, putting in, a landing — and the beacon on its goal. */
-function stepGoal(): void {
-  const run = goalRun;
-  if (!run) {
+/** The server's word on the run: its place (said once, when chosen), or its end. */
+function onRoute(m: Extract<ServerMsg, { t: 'route' }>): void {
+  if (!m.on) {
+    if (goalRun?.key === m.key) goalRun = null;
     renderer.goal = null;
     return;
   }
-  const target = goalTarget(state, run.key);
-  renderer.goal = target && !state.self?.dockedAt ? { x: target.x, y: target.y } : null;
+  if (!m.view) return;
+  if (!goalRun || goalRun.key !== m.key) goalRun = new RouteRun(m.key, performance.now(), PORT_DOCK_RADIUS);
+  const fresh = goalTap.key === m.key && performance.now() - goalTap.at < 3000;
+  if (fresh && !goalQuiet) hud.toast(RT('set', { name: routeLabel(m.view), d: distWords(m.view.dist) }), m.view.risk === 2 ? 'bad' : 'info');
+  if (fresh) goalTap = { key: m.key, at: -1e9 };
+}
+/** Each frame: what the place asks for on arrival — putting in, a landing, the trade's word — and the beacon on it. */
+function stepGoal(): void {
+  const rt = state.route;
+  renderer.goal = rt && !state.self?.dockedAt ? { x: rt.view.x, y: rt.view.y } : null;
+  if (rt && (!goalRun || goalRun.key !== rt.key)) goalRun = new RouteRun(rt.key, performance.now(), PORT_DOCK_RADIUS);
+  const run = goalRun;
+  if (!run) return;
   const own = state.ownDisplay;
   const l = state.self?.landable;
-  const r = run.step({ now: performance.now(), docked: state.self?.dockedAt ?? null, own: own ? { x: own.x, y: own.y } : null, region: state.region, autosail: state.autosail, stop: helmStop, landable: !!l && !l.blocked, target });
+  const r = run.step({ now: performance.now(), docked: state.self?.dockedAt ?? null, own: own ? { x: own.x, y: own.y } : null, region: state.region, autosail: state.autosail, stop: helmStop, landable: !!l && !l.blocked, place: rt?.key === run.key ? rt.view : null });
   switch (r.do) {
-    case 'sail':
-      touch.course = null;
-      net.send({ ...autosailRequest(state, r), ...(r.near !== undefined ? { near: r.near } : {}) });
-      break;
     case 'dock':
       requestDock(false);
       break;
@@ -593,16 +608,8 @@ function stepGoal(): void {
       sendLand();
       break;
     case 'arrived':
-      hud.toast(U2('goal.arrived', { name: sv(r.title) }), 'good');
+      hud.toast(r.hint ? sv(r.hint) : U2('goal.arrived', { name: rt ? routeLabel(rt.view) : '' }), 'good');
       break;
-    case 'end': {
-      goalRun = null;
-      renderer.goal = null;
-      // a quest still under way whose next step has no place: said, so she knows why the helmsman let go
-      const q = run.key.startsWith('q:') ? state.self?.quests.find((x) => x.id === run.key.slice(2)) : undefined;
-      if (r.why === 'done' && q) hud.toast(U2('goal.noPlace', { text: sv(q.text) }), 'info');
-      break;
-    }
   }
 }
 /** Off the quay (ux2, «Курс к заданию»): no run yet and a followed quest with a place elsewhere — the course to it. */
@@ -612,7 +619,7 @@ function goalOnCastOff(): void {
   const q = trackedQuest(state.self?.quests, own);
   // A run left from the last voyage (a lair's island reached) gives way to the quest she picked since (docs/30: «Весточка
   // другу» followed in the journal, and off the quay the helmsman took her back to the lair, onto its rocks).
-  if (goalRun && (!q || q.id !== trackedId() || goalRun.key === `q:${q.id}`)) return;
+  if (state.route || (goalRun && (!q || q.id !== trackedId() || goalRun.key === `q:${q.id}`))) return;
   goalRun = null;
   if (!q?.target || !own || q.target.region === state.region) return;
   if (Math.hypot(q.target.x - own.x, q.target.y - own.y) < PORT_DOCK_RADIUS * 1.5) return;
@@ -637,7 +644,18 @@ let whisperPrefill = '';
 // A groupmate's frame on the HUD: their card.
 hud.onPartyTap = (name) => net.send({ t: 'inspect', name });
 hud.onSignal = (kind) => net.send({ t: 'signal', kind }); // docs/16 #35
-hud.onWorldGoal = () => openModal('journal'); // docs/16 #32
+// docs/16 #32; route (owner 2026-10-15): a tap on the sea's goal — the nearest place it is done (the Choir's ships
+// for «Потопить корабли Хора»); with none open, the journal.
+hud.onWorldGoal = () => {
+  const g = plateGoal(state);
+  if (g) startGoal(`w:${g.id}`);
+  else openModal('journal');
+};
+// route: «Промысел» (the fishing plate of «Цели и вести»): a tap off its buttons — the nearest water her tackle works
+$('hud-fish').addEventListener('click', (e) => {
+  if ((e.target as HTMLElement).closest('button')) return;
+  startGoal('f');
+});
 hud.onTargetTap = (name) => net.send({ t: 'inspect', name });
 hud.onFishing = (action) => net.send({ t: 'fishing', action });
 hud.onHunt = (action, id) => net.send(action === 'flense' ? { t: 'hunt', action, id: id ?? 0 } : { t: 'hunt', action });
@@ -808,6 +826,7 @@ function sendLand(): void {
 const fishFight = new FishFightPanel((m) => net.send(m));
 const netHaul = new NetHaulPanel((m) => net.send(m));
 onboarding.send = (action) => net.send({ t: 'onboarding', action });
+onboarding.onGoal = (key) => startGoal(key); // route: a captain's goal — its nearest place
 // Options: applied now and on every change (docs/07 §11).
 let lastZoomKey = '';
 function applySettings(o: Settings): void {
@@ -1240,9 +1259,12 @@ function onMessage(m: ServerMsg): void {
     case 'board_risk':
       void askRisk(m.risk);
       break;
+    case 'route':
+      onRoute(m);
+      break;
     case 'autosail': {
-      // docs/16 #36: the helmsman has the wheel, or has given it back and why.
-      if (m.on) hud.toast(EL('as_on'), 'info');
+      // docs/16 #36: the helmsman has the wheel, or has given it back and why (a run to a goal says its own course).
+      if (m.on && !state.route) hud.toast(EL('as_on'), 'info');
       else {
         helmStop = { why: m.why ?? 'off', at: performance.now() }; // ux2: the run to a goal reads why
         const w = autosailStopText(m.why);

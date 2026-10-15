@@ -181,6 +181,7 @@ import { sendWorldGoals, stepWorldGoals, worldGoalKill, worldGoalsCollect } from
 import { sendSignal } from './signals.ts';
 import { autosailInput, startAutosail, stepAutosail, stopAutosail } from './autosail.ts';
 import { cancelApproach, stepApproach } from './approach.ts'; // seaux: sail-to on tap
+import { cancelRoute, gotoGoal, stepRoutes } from './goalroute.ts'; // route: tap a goal, sail to its nearest place
 import { LootMap, stepWrecks } from './wrecks.ts'; // seaux: wreckage per captain
 import { stepCastaways } from './castaways.ts'; // seaux: castaways
 import { gyardCancel, gyardGive, gyardStart } from './guildyard.ts';
@@ -650,6 +651,7 @@ export class Game {
       if (k > 0) updateNpc(this, ship, brain, dt * k, this.nearestPlayer.get(id) ?? Infinity);
     }
     stepApproach(this); // seaux: an order at a thing out of reach, given again on arrival (approach.ts)
+    stepRoutes(this); // route: the runs to the goals' nearest places, re-targeted (goalroute.ts)
     stepAutosail(this); // the helmsmen at their captains' wheels (docs/16 #36)
     stepPursuit(this); // and under «Атаковать» (docs/23 item 33)
     stepAutoFire(this); // the captains' gun crews laying on the mark (docs/23 items 34–35)
@@ -3776,8 +3778,13 @@ export class Game {
       case 'autosail':
         // The helmsman takes her to her mark, or gives the wheel back (docs/16 #36).
         cancelApproach(this, s); // seaux: her own mark or the pill's stop drops an order waiting for arrival
+        cancelRoute(this, s); // route: and the run to a goal's nearest place
         if (msg.stop) return stopAutosail(this, s, 'manual');
         return err(startAutosail(this, s, Number(msg.x), Number(msg.y), msg.sail === undefined ? undefined : Number(msg.sail), Number.isFinite(Number(msg.near)) && msg.near !== undefined ? Math.max(20, Math.min(150, Number(msg.near))) : undefined));
+      case 'goto':
+        // route (owner 2026-10-15): a goal of hers — the nearest place it is done, and the helmsman takes her there
+        cancelApproach(this, s);
+        return err(gotoGoal(this, s, String(msg.key ?? '')));
       case 'wgoals':
         return sendWorldGoals(this, s);
       case 'gyard': {

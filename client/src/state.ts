@@ -14,7 +14,7 @@ import type { OmenId } from '../../shared/src/data/omens.ts';
 import { regattaSail } from '../../shared/src/data/regatta.ts';
 import { SHIP_CLASSES } from '../../shared/src/data/ships.ts';
 import { setNemeses } from './ui/nemesis.ts';
-import type { IslesView } from '../../shared/src/protocol.ts';
+import type { IslesView, RouteView } from '../../shared/src/protocol.ts';
 import type { DwellView, MineView, WeekView } from '../../shared/src/h3proto.ts';
 import type { AdvCardView, AdvView, PuzzleView } from '../../shared/src/h4proto.ts';
 import type { AppraisalView, CaravanView, CarcassView, BaseView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView, RegattaView, WondersView, DutchmanView, HallView, StormView, DescentView, HolidayView, BazaarShadow } from '../../shared/src/protocol.ts';
@@ -263,6 +263,8 @@ export class ClientState {
   input = { rudder: 0, sail: 2, seq: 0 };
   /** docs/16 #36: the helmsman has the wheel for this mark (the server steers; the prediction follows its rudder). */
   autosail: { x: number; y: number } | null = null;
+  /** Route (2026-10-15): the run to a goal's nearest place the server chose (goalroute.ts), or none. */
+  route: { key: string; view: RouteView } | null = null;
   /** docs/23 item 33: «Атаковать» — the helmsman pursues this mark (the prediction follows his rudder unless the
    *  captain's own hand is on the helm, `helm`). */
   pursuit: { target: number; mode: 'guns' | 'board' } | null = null;
@@ -414,6 +416,9 @@ export class ClientState {
         // The helmsman has the wheel for a mark, or has given it back (docs/16 #36).
         this.autosail = m.on && m.x !== undefined && m.y !== undefined ? { x: m.x, y: m.y } : null;
         if (m.on && m.sail !== undefined) this.input.sail = m.sail;
+        break;
+      case 'route':
+        this.route = m.on && m.view ? { key: m.key, view: m.view } : null;
         break;
       case 'pursuit':
         this.pursuit = m.on && m.target !== undefined && m.roam === undefined ? { target: m.target, mode: m.mode === 'guns' ? 'guns' : 'board' } : null;

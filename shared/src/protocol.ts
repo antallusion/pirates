@@ -331,6 +331,10 @@ export type ClientMsg =
   | { t: 'signal'; kind: SignalKind }
   /** docs/16 #36: the helmsman takes her to a mark on the chart (with the sail she will carry), or gives the wheel back. */
   | { t: 'autosail'; x?: number; y?: number; sail?: number; stop?: boolean; near?: number }
+  /** Route (owner 2026-10-15: «нажимая на цель из журнала я должен плыть к ближайшей точке выполнения»): a goal of hers
+   *  by its key (goalroute.ts GOAL_KEYS) — the server finds the nearest place it is done and the helmsman takes her there,
+   *  re-targeted as the sea moves, until the goal is met. One per tap; the pill's stop ends it. */
+  | { t: 'goto'; key: string }
   /** docs/16 #32: the sea's goals of the week. */
   | { t: 'wgoals' }
   /** docs/16 #34: the guild's shipyard on the leader's island. */
@@ -618,6 +622,29 @@ export interface QuestTarget {
   port?: string;
   island?: number;
   act?: 'dock' | 'land';
+}
+
+/** Route (2026-10-15): the place a goal leads to now — where, how near is there, what is done there, what it is (for
+ *  the chip: `kind` and `name`, an English name or id the client translates), the way there by the water and the
+ *  danger of its waters for her (`level` the square's ship level; `risk` 0 fine, 1 above her, 2 lawless for a newcomer). */
+export interface RouteView {
+  x: number;
+  y: number;
+  r: number;
+  kind: 'port' | 'island' | 'ships' | 'region' | 'shoal' | 'lair' | 'wreck' | 'boss' | 'event' | 'place';
+  name: string;
+  act?: 'dock' | 'land';
+  port?: string;
+  island?: number;
+  region?: RegionId;
+  /** A thing that moves (a ship's id): the place follows it. */
+  ship?: number;
+  /** By the water, metres, from where she was when it was chosen. */
+  dist: number;
+  level: number;
+  risk: 0 | 1 | 2;
+  /** A line to show on arrival (the trade's: «slow down, cast the net»), English. */
+  hint?: string;
 }
 
 export interface PrivateState {
@@ -1865,6 +1892,8 @@ export type ServerMsg =
   | { t: 'signal'; from: string; kind: SignalKind; x: number; y: number }
   /** docs/16 #36: the helmsman has the wheel for a mark, or has given it back and why. */
   | { t: 'autosail'; on: boolean; x?: number; y?: number; sail?: number; why?: AutosailStop }
+  /** Route: the place the server chose for a goal (`on`), or the run's end and why. */
+  | { t: 'route'; key: string; on: boolean; view?: RouteView; why?: 'done' | 'off' | 'none' }
   /** «Атаковать» (docs/23 item 33): the helmsman pursues her mark, or has given the wheel back and why. */
   | { t: 'pursuit'; on: boolean; target?: number; mode?: PursuitMode; why?: PursuitStop; roam?: number }
   /** The odds of a boarding asked before the grapples fly (docs/23 item 49): the window «Скорее всего, вы проиграете». */

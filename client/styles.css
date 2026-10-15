@@ -5314,3 +5314,10 @@ body.tac-ph .tb-top { position: absolute; top: calc(env(safe-area-inset-top, 0px
   .base-land .base-sheet .bdesc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 }
 .tr-back { margin: 0 0 6px; }
+/* route (2026-10-15): the danger of the goal's waters on the auto-sail pill */
+#hud-autosail .as-risk { flex: none; padding: 1px 5px; border: 1px solid rgba(232, 196, 106, 0.6); border-radius: 3px; color: var(--gold); font: 600 10px/1.2 var(--sans); white-space: nowrap; }
+#hud-autosail .as-risk.bad { color: #f0b8a8; border-color: #b0302a; background: rgba(120, 32, 26, 0.45); }
+/* route (2026-10-15): a goal's line is a tap that sails to its nearest place */
+.goal-tap { cursor: pointer; border-radius: 3px; }
+.goal-tap:hover, .goal-tap:focus-visible { background: rgba(232, 196, 106, 0.1); outline: 1px solid rgba(232, 196, 106, 0.35); }
+.goal-tap:not(.dl-row):not(.wg-row):not(.inv-tide):not(.mq-row)::after { content: ' ⛵'; color: var(--gold); opacity: 0.7; font-size: 0.85em; }

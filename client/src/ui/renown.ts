@@ -198,7 +198,7 @@ export function weeklyLog(w: WeeklyView | null | undefined): string {
   const rows = w.challenges.map((c) => {
     const def = WEEKLY[c.kind];
     const top = c.top.length ? `<ol class="wk-top">${c.top.slice(0, 3).map((t) => `<li>${esc(t.name)} <span class="muted">${fmt(t.value)}</span></li>`).join('')}</ol>` : `<p class="jr-fish muted">${esc(L('weeklyNone'))}</p>`;
-    return `<div class="wk-row">${icon(def.icon, '✦', 'ico-md')}<div class="wk-text"><b>${esc(weeklyWhat(c.kind, c.region))}</b>
+    return `<div class="wk-row">${icon(def.icon, '✦', 'ico-md')}<div class="wk-text"><b data-goal="r:${c.kind}:${c.region}">${esc(weeklyWhat(c.kind, c.region))}</b>
       <span class="${c.place && c.place <= 3 ? 'gold' : 'muted'}">${esc(L('weeklyMine', { v: fmt(c.mine), unit: def.unit[ru()] }))}${c.place ? ` · ${esc(L('weeklyPlace', { n: c.place }))}` : ''}</span>${top}</div></div>`;
   }).join('');
   const last = w.last?.filter((c) => c.top.length).map((c) => `<p class="jr-fish muted">${esc(weeklyWhat(c.kind, c.region))}: <b>${esc(c.top[0].name)}</b></p>`).join('') ?? '';

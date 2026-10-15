@@ -38,7 +38,7 @@ type Daily = PrivateState['daily'];
 
 function rows(d: Daily): string {
   const ru = lang() === 'ru' ? 1 : 0;
-  return d.orders.map((o) => `<div class="dl-row${o.done ? ' done' : ''}">${o.done ? '<span class="dl-mark">✓</span>' : icon('goal', '◆', 'ico-sm')}<span class="dl-text">${esc(dailyText(o.kind, o.need, ru))}</span><span class="dl-count">${o.done ? '' : `${o.progress}/${o.need}`}</span>${money(o.silver)}</div>`).join('');
+  return d.orders.map((o) => `<div class="dl-row${o.done ? ' done' : ''}"${o.done ? '' : ` data-goal="d:${esc(o.kind)}"`}>${o.done ? '<span class="dl-mark">✓</span>' : icon('goal', '◆', 'ico-sm')}<span class="dl-text">${esc(dailyText(o.kind, o.need, ru))}</span><span class="dl-count">${o.done ? '' : `${o.progress}/${o.need}`}</span>${money(o.silver)}</div>`).join('');
 }
 
 function foot(d: Daily): string {
@@ -53,7 +53,7 @@ function commonBody(c: Common): string {
   const pct = Math.min(100, (c.progress / Math.max(1, c.target)) * 100);
   const tail = c.done ? esc(L('commonDone')) : `${esc(L('mine', { n: c.mine }))} · ${esc(L('left', { h: Math.floor(c.endsIn / 3600), m: Math.floor((c.endsIn % 3600) / 60) }))}`;
   const lead = c.leaders?.length ? `<div class="cm-leaders muted">${esc(L('leaders'))} ${c.leaders.map((x) => `<b>${esc(x.name)}</b> ${x.n}`).join(' · ')}</div>` : '';
-  return `<div class="cm-text">${esc(commonText(c.kind, c.target, ru))}</div><div class="cm-bar${c.done ? ' done' : ''}"><i style="width:${pct.toFixed(1)}%"></i><span>${c.progress}/${c.target}</span></div><div class="dl-foot muted">${tail}</div>${lead}`;
+  return `<div class="cm-text"${c.done ? '' : ' data-goal="cm"'}>${esc(commonText(c.kind, c.target, ru))}</div><div class="cm-bar${c.done ? ' done' : ''}"><i style="width:${pct.toFixed(1)}%"></i><span>${c.progress}/${c.target}</span></div><div class="dl-foot muted">${tail}</div>${lead}`;
 }
 
 /** The tavern's card for the common cause. */

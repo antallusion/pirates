@@ -32,6 +32,8 @@ export class OnboardingUi {
   private view: OnboardingView | null = null;
   private state: ClientState;
   send: (action: 'skip_stage' | 'skip_all' | 'hide_goals') => void = () => {};
+  /** route (2026-10-15): a tap on a captain's goal — the run to its nearest place (main.ts). */
+  onGoal: (key: string) => void = () => {};
   /** A screen to open (the edge of safe waters). */
   onEdge: () => void = () => {};
 
@@ -111,6 +113,13 @@ export class OnboardingUi {
     const first = `goal.${goals[0]}` as Key;
     el.innerHTML = `${icon('goal', '', 'ico-goal')}<span class="g-lbl">${esc(t('goals.title'))}</span><button class="g-x" title="${esc(t('goals.hide'))}" aria-label="${esc(t('goals.hide'))}">×</button><span class="g-t">${esc(touchless(has(first) ? t(first) : goals[0]))}${goals.length > 1 ? ` <span class="muted">+${goals.length - 1}</span>` : ''}</span>`;
     el.querySelector<HTMLButtonElement>('.g-x')!.onclick = () => this.send('hide_goals');
+    // route (owner 2026-10-15): a tap on the goal — the nearest place it is done (a port's board for «Взять контракт»)
+    const line = el.querySelector<HTMLElement>('.g-t')!;
+    line.dataset.goal = `g:${goals[0]}`;
+    line.onclick = (e) => {
+      e.stopPropagation();
+      this.onGoal(`g:${goals[0]}`);
+    };
   }
 
   /** A moment from the server: a step done, a hint, a goal met, the edge of safe waters. */

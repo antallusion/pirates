@@ -81,6 +81,17 @@ const paused = new WeakMap<ShipEntity, Paused>();
 /** When her own hand last turned the wheel with nobody else at it. */
 const helmAt = new WeakMap<ShipEntity, number>();
 
+/** Why the helmsman last gave the wheel back, and when (route, goalroute.ts: her hand ends a run to a goal, a fight
+ *  only breaks it off). */
+const lastStop = new WeakMap<ShipEntity, { why: AutosailStop; at: number }>();
+export function lastStopOf(ship: ShipEntity): { why: AutosailStop; at: number } | null {
+  return lastStop.get(ship) ?? null;
+}
+/** When her own hand last turned the wheel with nobody else at it (-Infinity: never). */
+export function helmTouched(ship: ShipEntity): number {
+  return helmAt.get(ship) ?? -Infinity;
+}
+
 /** The course broken off by a fight and waiting to be taken up again, if any (tests, the HUD). */
 export function pausedCourse(ship: ShipEntity | null | undefined): { x: number; y: number; at: number } | null {
   const p = ship ? paused.get(ship) : undefined;
@@ -244,6 +255,7 @@ export function stopAutosail(game: Game, s: PlayerSession, why: AutosailStop): v
   else paused.delete(ship);
   if (!run) return;
   runs.delete(ship);
+  lastStop.set(ship, { why, at: game.now });
   // Arrived: the sails are taken in — her mark is mostly by a shore, a quay or a lair, and under full sail she ran on
   // past it onto the rocks (docs/30: «Удар о скалы −81» a few seconds after «метка достигнута»); and on foul water or
   // with no way on he heaves to before he gives the wheel back (QA playthrough B: «Struck the rocks −190»).

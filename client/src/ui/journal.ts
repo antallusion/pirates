@@ -40,6 +40,7 @@ import { sagaButton } from './saga.ts';
 import { LC } from './crewlife.ts';
 import { weeklyLog } from './renown.ts';
 import { worldGoalsLog } from './social.ts';
+import { bindGoalTaps } from './goaltap.ts'; // route: a goal's line sails to its nearest place
 
 const EN = {
   title: 'Quest journal',
@@ -219,6 +220,7 @@ export class Journal {
       setTracked(this.chosen);
       this.onSail(`q:${this.chosen}`);
     });
+    bindGoalTaps(root, (k) => this.onSail(k)); // route: every goal's line — the nearest place it is done
     root.querySelector<HTMLElement>('[data-share]')?.addEventListener('click', () => this.chosen && this.send({ t: 'quest', action: 'share', id: this.chosen }));
     // A group contract: on the board of those looking for a group, by its name.
     root.querySelector<HTMLElement>('[data-lfg]')?.addEventListener('click', () => q && this.send({ t: 'group', action: 'lfg', note: serverText(q.name) }));
@@ -258,7 +260,7 @@ export class Journal {
       ${q.mates?.length ? `<div class="jr-mates"><span class="giver-h">${esc(L('mates'))}</span>${q.mates.map((m) => `<span class="jr-mate">${esc(L('mateStep', { name: m.name, step: m.step }))}</span>`).join('')}</div>` : ''}
       ${q.silver !== undefined ? `<div class="giver-pay"><span class="giver-h">${esc(L('pay'))}</span>${paidHtml(q.silver, q.pay, q.paid)}${xpBadge(q.xp ?? 0)}${q.fastIn ? `<span class="jr-fast">${esc(L('fast', { m: Math.max(1, Math.ceil(q.fastIn / 60)) }))}</span>` : ''}</div>` : ''}
       <div class="jr-acts">
-        ${q.target ? `<button class="btn btn-small btn-primary jr-sail" data-jsail data-hint="${esc(L('sailHint'))}" title="${esc(L('sailHint'))}">${icon('stat_sails', '', 'ico-sm')}${esc(L(docked ? 'sailPort' : 'sail'))}${far !== null && !q.target.region ? ` · ${esc(distWords(far))}` : ''}</button>` : `<span class="muted jr-noplace">${esc(L('noPlace'))}</span>`}
+        <button class="btn btn-small btn-primary jr-sail" data-jsail data-hint="${esc(L('sailHint'))}" title="${esc(L('sailHint'))}">${icon('stat_sails', '', 'ico-sm')}${esc(L(docked ? 'sailPort' : 'sail'))}${far !== null && !q.target?.region ? ` · ${esc(distWords(far))}` : ''}</button>
         <button class="btn btn-small${tracked ? ' on' : ''}" data-follow ${tracked ? 'disabled' : ''}>${esc(L(tracked ? 'following' : 'follow'))}</button>
         ${canShare ? `<button class="btn btn-small" data-share>${esc(L('share'))}</button>` : ''}
         ${q.category === 'elite' && !inGroup ? `<button class="btn btn-small" data-lfg title="${esc(L('lfgHint'))}">${esc(L('lfg'))}</button>` : ''}
@@ -313,7 +315,7 @@ function fishingLog(f: FishingView | undefined): string {
     const c = f.caught[id];
     return `<p class="jr-fish jr-catch${c ? '' : ' muted unknown'}">${fishIcon(id)}${c ? esc(L('fishRow', { fish: FISH[id].name[ru], n: c.n, kg: c.best.toLocaleString(ru ? 'ru-RU' : 'en-GB') })) : `${esc(FISH[id].name[ru])} — ${esc(L('fishUnknown'))}`}</p>`;
   }).join('');
-  return `<div class="jr-fishing"><div class="giver-h">${esc(L('fishing', { n: f.skill, k: Object.keys(f.caught).length, max: kinds.length }))}</div>${rows}</div>`;
+  return `<div class="jr-fishing"><div class="giver-h"${f.method ? ' data-goal="f"' : ''}>${esc(L('fishing', { n: f.skill, k: Object.keys(f.caught).length, max: kinds.length }))}</div>${rows}</div>`;
 }
 
 /** The hunt's tally (docs/12 P4): the beasts taken, by kind. */
@@ -322,7 +324,7 @@ function beastLog(b: Partial<Record<BeastId, number>> | undefined): string {
   if (!kinds.length) return '';
   const ru = lang() === 'ru' ? 1 : 0;
   const total = kinds.reduce((a, id) => a + (b![id] ?? 0), 0);
-  return `<div class="jr-fishing"><div class="giver-h">${esc(L('beasts', { n: total }))}</div>${kinds.map((id) => `<p class="jr-fish">${esc(L('beastRow', { beast: BEASTS[id].name[ru], n: b![id] ?? 0 }))}</p>`).join('')}</div>`;
+  return `<div class="jr-fishing"><div class="giver-h" data-goal="b:any">${esc(L('beasts', { n: total }))}</div>${kinds.map((id) => `<p class="jr-fish">${esc(L('beastRow', { beast: BEASTS[id].name[ru], n: b![id] ?? 0 }))}</p>`).join('')}</div>`;
 }
 
 /** The Hunters' Guild (docs/12 P5): the rank, the heads, each sea's way to its baron, the informant's word. */

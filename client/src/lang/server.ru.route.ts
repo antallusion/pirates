@@ -1,0 +1,21 @@
+// The server's lines of the route to a goal's nearest place (owner, 2026-10-15; server/src/game/goalroute.ts),
+// English → Russian.
+
+export const SERVER_RU_ROUTE: Record<string, string> = {
+  'The goal is met: the helmsman gives you the wheel.': 'Цель выполнена: рулевой отдаёт вам штурвал.',
+  'Nowhere on the sea to work at that goal now.': 'Сейчас в море нет места, где выполнить эту цель.',
+  'That goal is gone from the log.': 'Этой цели больше нет в журнале.',
+  'That goal is not done at sea: see its window.': 'Эта цель выполняется не в море: откройте её окно.',
+  'No fishing tackle aboard: fit a net or a rod at a port.': 'На борту нет снастей: поставьте сеть или удочку в порту.',
+  'A duel is fought with another captain: challenge one at a port.': 'Дуэль ведут с другим капитаном: вызовите его в порту.',
+  'The mark is gone: the helmsman takes her on to the next one.': 'Цели больше нет: рулевой ведёт корабль к следующей.',
+  'The course is set: the helmsman takes her there once she casts off.': 'Курс проложен: рулевой поведёт корабль, как только вы отчалите.',
+  'Gulls over a shoal: slow down and cast the net.': 'Чайки над косяком: сбавьте ход и забросьте сеть.',
+  'Keep a steady pace on open water, far from land: the rod works.': 'Держите ровный ход в открытом море, вдали от берега: так клюёт на удочку.',
+  'At night lie still and light the lamp.': 'Ночью остановитесь и зажгите фонарь.',
+  'Set the traps close by the shore.': 'Ставьте ловушки у самого берега.',
+  'Lie still over deep water and drop the line.': 'Остановитесь над глубиной и опустите леску.',
+  'Heave to over the wreck and send the divers down.': 'Остановитесь над обломками и спустите водолазов.',
+  'Come alongside and board her.': 'Подойдите борт к борту и берите на абордаж.',
+  'Close in and harpoon it.': 'Подойдите ближе и бейте гарпуном.',
+};

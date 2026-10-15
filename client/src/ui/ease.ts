@@ -3,14 +3,39 @@
 
 import { AUTOSAIL_STOPS, autosailSail } from '../../../shared/src/data/autosail.ts';
 import type { AutosailStop } from '../../../shared/src/data/autosail.ts';
-import type { ServerMsg } from '../../../shared/src/protocol.ts';
+import type { RouteView, ServerMsg } from '../../../shared/src/protocol.ts';
+import { BEASTS } from '../../../shared/src/data/beasts.ts';
+import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/ease.ts';
+import { EN as ROUTE_EN, RU as ROUTE_RU } from '../lang/ui/route.ts';
+import { placeName } from './maps.ts';
 import { settings } from '../settings.ts';
 import type { ClientState } from '../state.ts';
 import { $, dec1, esc } from './dom.ts';
 
 const L = dict(EN, RU);
+const RT = dict(ROUTE_EN, ROUTE_RU);
+
+/** Route (2026-10-15): the name of the place a goal leads to, in her language (a port, an island, a sea; the ships of
+ *  the goal; a shoal, a wreck). */
+export function routeLabel(v: Pick<RouteView, 'kind' | 'name'>): string {
+  const n = v.name;
+  if (n.startsWith('beast:')) {
+    const b = BEASTS[n.slice(6) as keyof typeof BEASTS];
+    return b ? b.name[lang() === 'ru' ? 1 : 0] : RT('place.beasts');
+  }
+  const reg = REGIONS[n as keyof typeof REGIONS];
+  if (reg) return placeName(reg.name);
+  if (`ships.${n}` in ROUTE_EN) return RT(`ships.${n}` as 'ships.any');
+  if (`place.${n}` in ROUTE_EN) return RT(`place.${n}` as 'place.place');
+  return placeName(n);
+}
+
+/** The danger of the place's waters for her, or '' (the chip's warning). */
+export function routeRisk(v: Pick<RouteView, 'risk' | 'level'>): string {
+  return v.risk ? RT(v.risk === 2 ? 'risk.2' : 'risk.1', { n: v.level }) : '';
+}
 
 // ------------------------------------------------------------------ 36. auto-sail
 
@@ -32,7 +57,8 @@ function distText(d: number): string {
   return d >= 1000 ? `${dec1(d / 1000)} ${lang() === 'ru' ? 'км' : 'km'}` : `${Math.round(d / 10) * 10} ${lang() === 'ru' ? 'м' : 'm'}`;
 }
 
-/** The pill «Auto-sail · 2.4 km · stop» at the top of the stack while the helmsman has the wheel. */
+/** The pill «Auto-sail · 2.4 km · stop» at the top of the stack while the helmsman has the wheel; with a run to a goal
+ *  (route, 2026-10-15) the place's name and the danger of its waters, and the stop ends the run as well. */
 export class AutosailPill {
   private key = '';
   onStop: () => void = () => {};
@@ -40,18 +66,23 @@ export class AutosailPill {
   draw(state: ClientState): void {
     const el = $('hud-autosail');
     const a = state.autosail;
+    const rt = state.route?.view ?? null;
     const own = state.ownDisplay;
-    const key = a && own ? lang() : '';
+    const risk = rt ? routeRisk(rt) : '';
+    const key = (a || rt) && own ? `${lang()}|${risk}` : '';
     if (key !== this.key) {
       this.key = key;
       el.classList.toggle('hidden', !key);
-      el.innerHTML = key ? `<span class="as-ico" aria-hidden="true">⛵</span><b class="as-lbl">${esc(L('as_pill'))}</b><span class="as-d"></span><button class="as-stop" type="button" title="${esc(L('as_stopTitle'))}">${esc(L('as_stop'))}</button>` : '';
+      el.innerHTML = key ? `<span class="as-ico" aria-hidden="true">⛵</span><b class="as-lbl">${esc(L('as_pill'))}</b><span class="as-d"></span>${risk ? `<span class="as-risk${rt?.risk === 2 ? ' bad' : ''}" title="${esc(risk)}">⚠ ⚓${rt!.level}</span>` : ''}<button class="as-stop" type="button" title="${esc(L('as_stopTitle'))}">${esc(L('as_stop'))}</button>` : '';
       el.querySelector<HTMLElement>('.as-stop')?.addEventListener('click', () => this.onStop());
     }
-    if (a && own) {
+    if ((a || rt) && own) {
       const d = el.querySelector<HTMLElement>('.as-d')!;
-      const text = `· ${L('as_left', { d: distText(Math.hypot(a.x - own.x, a.y - own.y)) })} ·`;
+      const to = rt ?? a!;
+      const left = L('as_left', { d: distText(Math.hypot(to.x - own.x, to.y - own.y)) });
+      const text = rt ? `· ${RT('to', { name: routeLabel(rt) })} · ${left}` : `· ${left} ·`;
       if (d.textContent !== text) d.textContent = text;
+      if (rt && d.title !== text) d.title = text;
     }
   }
 }

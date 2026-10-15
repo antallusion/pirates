@@ -23,11 +23,11 @@ function body(v: InvasionView, course: boolean): string {
     const head = c.stage === 'warn' ? L('inv.warn', { region: region(c.region), m: mins(c.endsIn) }) : L('inv.on', { region: region(c.region), n: c.wave, w: c.waves });
     const tail = c.stage === 'warn' ? '' : `${esc(L('inv.mine', { n: c.mine }))} · ${esc(L('inv.left', { m: mins(c.endsIn) }))}`;
     const lead = c.leaders.length ? `<div class="cm-leaders muted">${c.leaders.map((x) => `<b>${esc(x.name)}</b> ${x.n}`).join(' · ')}</div>` : '';
-    cur = `<div class="inv-cur" title="${esc(L('inv.hint'))}"><div class="cm-text">${esc(head)} <span class="muted">⚓${c.level}</span></div>
+    cur = `<div class="inv-cur" title="${esc(L('inv.hint'))}"><div class="cm-text" data-goal="inv">${esc(head)} <span class="muted">⚓${c.level}</span></div>
       <div class="cm-bar inv-bar"><i style="width:${pct.toFixed(1)}%"></i><span>${esc(L('inv.bar', { n: c.beaten, m: c.total }))}</span></div>
       ${tail ? `<div class="dl-foot muted">${tail}</div>` : ''}${lead}${course ? `<button type="button" class="btn btn-small inv-go" data-invcourse="${c.x},${c.y}">${esc(L('inv.course'))}</button>` : ''}</div>`;
   }
-  const tides = v.tides.map((t) => `<div class="inv-tide"><b>${esc(L('inv.tide', { region: region(t.region) }))}</b><span class="muted">${esc(L('inv.tideText', { h: Math.max(1, Math.ceil(t.endsIn / 3600)) }))}</span></div>`).join('');
+  const tides = v.tides.map((t) => `<div class="inv-tide" data-goal="inv"><b>${esc(L('inv.tide', { region: region(t.region) }))}</b><span class="muted">${esc(L('inv.tideText', { h: Math.max(1, Math.ceil(t.endsIn / 3600)) }))}</span></div>`).join('');
   return cur + tides;
 }
 
