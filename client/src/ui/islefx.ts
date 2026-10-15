@@ -119,23 +119,41 @@ function softSprite(r: number, g: number, b: number, size = 64, core = 0): HTMLC
 // ------------------------------------------------------------------------------------------------ the sea's shader
 
 const VS = `attribute vec2 a;varying vec2 v;void main(){v=vec2(a.x*.5+.5,.5-a.y*.5);gl_Position=vec4(a,0.,1.);}`;
-const FS = `precision mediump float;
-uniform sampler2D uMap,uMask;uniform float uT;uniform vec3 uMoon;uniform vec4 uBoat;uniform float uQ;varying vec2 v;
+const FS = `#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform sampler2D uMap,uMask;uniform float uT;uniform vec3 uMoon;uniform vec4 uBoat;uniform float uQ;uniform float uK;varying vec2 v;
 float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1.,0.)),f.x),mix(h(i+vec2(0.,1.)),h(i+vec2(1.,1.)),f.x),f.y);}
 void main(){
-  vec4 m=texture2D(uMask,v);float w=m.r;float far=smoothstep(.62,.9,m.g)*w;
+  vec4 m=texture2D(uMask,v);float w=m.r;
+  // all the open water moves (right up to the foam), the land and the pier stand still
+  float wv=smoothstep(.15,.6,w)*uK;
   vec2 uv=v;
-  if(far>.001){vec2 p=v*vec2(46.,70.);float a=n(p+vec2(uT*.32,uT*.2));float b=n(p*1.7-vec2(uT*.25,-uT*.29));uv+=(vec2(a,b)-.5)*vec2(.0021,.0032)*far;}
-  if(uBoat.z>0.){vec2 q=(v-uBoat.xy)/uBoat.zw;float inb=step(0.,q.x)*step(q.x,1.)*step(0.,q.y)*step(q.y,1.);float e=min(min(q.x,1.-q.x),min(q.y,1.-q.y));inb*=smoothstep(0.,.18,e);uv.y+=sin(uT*1.6)*.0013*inb;uv.x+=sin(uT*1.05+.7)*.0005*inb;}
+  if(wv>.001){
+    vec2 p=v*vec2(38.,58.);float a=n(p+vec2(uT*.45,uT*.3));float b=n(p*1.6-vec2(uT*.35,-uT*.4));
+    // long rolling waves in the painting's isometry (down-left to up-right) and a choppy ripple on them
+    float roll=sin(v.x*70.+v.y*110.-uT*1.9)*.6+sin(v.x*-48.+v.y*86.-uT*1.3)*.4;
+    uv+=(vec2(a,b)-.5)*vec2(.0042,.0062)*wv+vec2(.0018,.0026)*roll*wv;
+  }
+  if(uBoat.z>0.){vec2 q=(v-uBoat.xy)/uBoat.zw;float inb=step(0.,q.x)*step(q.x,1.)*step(0.,q.y)*step(q.y,1.);float e=min(min(q.x,1.-q.x),min(q.y,1.-q.y));inb*=smoothstep(0.,.18,e);uv.y+=sin(uT*1.6)*.0022*inb*uK;uv.x+=sin(uT*1.05+.7)*.0009*inb*uK;}
   vec4 c=texture2D(uMap,uv);
-  if(w>.001){
-    float sw=sin(v.x*13.+v.y*21.-uT*.55)*.5+.5;c.rgb*=1.+(sw-.5)*.07*far;
-    float dy=v.y-uMoon.y;float near=exp(-abs(v.x-uMoon.x)*7.)*step(0.,dy);float g=n(v*vec2(520.,260.)+vec2(uT*1.4,-uT*.6))*n(v*vec2(150.,90.)-vec2(uT*.3,0.));float gl=smoothstep(.5,.8,g)*far*uQ*(.25+.75*near);
-    float wid=.012+dy*.07;float path=smoothstep(wid,0.,abs(v.x-uMoon.x+sin(v.y*90.+uT)*.003))*step(0.,dy)*smoothstep(uMoon.z,uMoon.y+(uMoon.z-uMoon.y)*.4,v.y);
-    float sh=n(vec2(v.x*170.,v.y*520.-uT*2.2));
-    float shore=w*(1.-smoothstep(.5,.78,m.g));float lap=pow(sin(uT*1.25-m.g*34.)*.5+.5,3.);float fo=smoothstep(.45,.8,n(v*vec2(280.,420.)+vec2(uT*.15,0.)));
-    c.rgb+=vec3(.72,.8,.88)*(gl*.22+path*smoothstep(.5,.85,sh)*.5*w+shore*lap*fo*.16);
+  if(w>.01){
+    // the swell: broad bands of light and shade rolling across the sea
+    float band=sin((v.x*.55+v.y)*26.-uT*1.1)*.65+sin((v.x-v.y*.4)*17.+uT*.7)*.35;
+    c.rgb*=1.+band*.15*w*uK;
+    c.rgb+=vec3(.05,.07,.09)*max(band,0.)*w*uK;
+    // glints over the whole sea, brightest under the moon, travelling
+    float dy=v.y-uMoon.y;float near=exp(-abs(v.x-uMoon.x)*6.)*step(0.,dy);
+    float ph=n(v*vec2(70.,46.)+vec2(uT*.35,-uT*.2))*14.;float g=pow(max(0.,sin(v.x*620.-v.y*260.+uT*3.+ph)),18.)*smoothstep(.62,.9,n(v*vec2(40.,26.)-vec2(uT*.25,0.)))*smoothstep(.3,.7,n(v*vec2(180.,110.)+vec2(0.,uT*.8)));
+    float gl=g*w*(.3+.7*near)*uK;
+    float wid=.016+dy*.08;float path=smoothstep(wid,0.,abs(v.x-uMoon.x+sin(v.y*80.+uT*1.5)*.004))*step(0.,dy)*smoothstep(uMoon.z,uMoon.y+(uMoon.z-uMoon.y)*.35,v.y);
+    float sh=n(vec2(v.x*150.,v.y*460.-uT*3.));
+    // foam lapping the shore: a band coming in and drawing back
+    float shore=w*(1.-smoothstep(.45,.8,m.g));float lap=smoothstep(.35,1.,sin(uT*1.15-m.g*28.));float fo=smoothstep(.35,.75,n(v*vec2(260.,400.)+vec2(uT*.25,uT*.1)));
+    c.rgb+=vec3(.75,.82,.9)*(gl*.3*uQ+path*smoothstep(.45,.8,sh)*.75*w*uK+shore*lap*fo*.42*uK);
   }
   gl_FragColor=c;
 }`;
@@ -183,7 +201,7 @@ class SeaGL {
     const a = gl.getAttribLocation(p, 'a');
     gl.enableVertexAttribArray(a);
     gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-    for (const k of ['uMap', 'uMask', 'uT', 'uMoon', 'uBoat', 'uQ']) this.u[k] = gl.getUniformLocation(p, k);
+    for (const k of ['uMap', 'uMask', 'uT', 'uMoon', 'uBoat', 'uQ', 'uK']) this.u[k] = gl.getUniformLocation(p, k);
     const tex = () => {
       const t = gl.createTexture()!;
       gl.bindTexture(gl.TEXTURE_2D, t);
@@ -222,12 +240,143 @@ class SeaGL {
     gl.uniform3f(this.u.uMoon, fx.moon[0] / ISO_W, fx.moon[1] / ISO_H, fx.moon[2] / ISO_H);
   }
 
-  draw(t: number, q: number): void {
+  draw(t: number, q: number, k = 1): void {
     if (this.lost || !this.fx) return;
     const gl = this.gl;
+    gl.uniform1f(this.u.uK, k);
     gl.uniform1f(this.u.uT, t);
     gl.uniform1f(this.u.uQ, q);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+}
+
+/** The sea without WebGL (a WebView that refuses it, a lost context): the same water in Canvas 2D over the painted map.
+ *  The sea is drawn again from the map in thin rows, each shifted by rolling waves (the painting itself moves); the
+ *  swell's bands of light, the travelling glints and the foam at the shore go over it; and the water's mask keeps all
+ *  of it off the land. Every canvas is made once per map: a frame only draws. */
+class SeaCanvas {
+  canvas: HTMLCanvasElement;
+  lost = false;
+  private g: CanvasRenderingContext2D;
+  private img: HTMLImageElement | null = null;
+  private fx: MapFx | null = null;
+  private mask: HTMLCanvasElement | null = null;
+  private foam: HTMLCanvasElement | null = null;
+  private bands: HTMLCanvasElement;
+  private glints: HTMLCanvasElement;
+  private bandPat: CanvasPattern | null = null;
+  private s = 0.5;
+
+  constructor() {
+    this.canvas = document.createElement('canvas');
+    this.g = this.canvas.getContext('2d')!;
+    // the swell: a tile of soft diagonal bands
+    this.bands = document.createElement('canvas');
+    this.bands.width = 256;
+    this.bands.height = 256;
+    const b = this.bands.getContext('2d')!;
+    for (let y = 0; y < 256; y++) {
+      const k = Math.sin((y / 256) * Math.PI * 4) * 0.5 + 0.5;
+      b.fillStyle = `rgba(150,180,205,${(k * k * 0.5).toFixed(3)})`;
+      b.fillRect(0, y, 256, 1);
+    }
+    this.bandPat = this.g.createPattern(this.bands, 'repeat');
+    // the glints: a tile of sparse bright flecks, long across
+    this.glints = document.createElement('canvas');
+    this.glints.width = 256;
+    this.glints.height = 256;
+    const gg = this.glints.getContext('2d')!;
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < 200; i++) {
+      gg.fillStyle = `rgba(225,235,245,${(0.2 + rnd() * 0.4).toFixed(2)})`;
+      gg.fillRect(rnd() * 256, rnd() * 256, 3 + rnd() * 7, 1);
+    }
+  }
+
+  setMap(img: HTMLImageElement, fx: MapFx, scale: number): void {
+    this.img = img;
+    this.fx = fx;
+    this.s = scale >= 1 ? 0.5 : 0.4;
+    const w = Math.round(ISO_W * this.s), h = Math.round(ISO_H * this.s);
+    this.canvas.width = w;
+    this.canvas.height = h;
+    // the water's mask and the shore's foam band from the sea's mask (R the water, G the distance from the shore)
+    const m = seaMask(fx);
+    const mk = document.createElement('canvas');
+    mk.width = MW;
+    mk.height = MH;
+    const md = mk.getContext('2d')!.createImageData(MW, MH);
+    const fo = document.createElement('canvas');
+    fo.width = MW;
+    fo.height = MH;
+    const fd = fo.getContext('2d')!.createImageData(MW, MH);
+    let seed = 11;
+    for (let i = 0; i < MW * MH; i++) {
+      const r = m[i * 4], gch = m[i * 4 + 1] / 255;
+      md.data[i * 4] = md.data[i * 4 + 1] = md.data[i * 4 + 2] = 255;
+      md.data[i * 4 + 3] = Math.max(0, Math.min(255, (r - 40) * 1.4));
+      const band = (r / 255) * (1 - Math.min(1, Math.max(0, (gch - 0.45) / 0.33)));
+      seed = (seed * 16807) % 2147483647;
+      fd.data[i * 4] = 220;
+      fd.data[i * 4 + 1] = 232;
+      fd.data[i * 4 + 2] = 240;
+      fd.data[i * 4 + 3] = Math.round(band * (0.35 + 0.65 * (seed / 2147483647)) * 255);
+    }
+    mk.getContext('2d')!.putImageData(md, 0, 0);
+    fo.getContext('2d')!.putImageData(fd, 0, 0);
+    this.mask = mk;
+    this.foam = fo;
+  }
+
+  draw(t: number, q: number, k = 1): void {
+    const img = this.img, fx = this.fx;
+    if (!img || !fx || !this.mask || !this.foam) return;
+    const g = this.g, W = this.canvas.width, H = this.canvas.height, s = this.s;
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 1;
+    g.clearRect(0, 0, W, H);
+    // the painting in rows, each rolled sideways and a little up and down by the waves
+    const row = q >= 1 ? 3 : 5;
+    const sy = img.naturalHeight / H, sx = img.naturalWidth / W;
+    for (let y = 0; y < H; y += row) {
+      const dx = (Math.sin(y * 0.11 + t * 1.9) * 2.6 + Math.sin(y * 0.037 - t * 1.2) * 1.6) * k;
+      const dy = Math.sin(y * 0.07 - t * 1.4) * 1.2 * k;
+      g.drawImage(img, 0, Math.max(0, (y + dy) * sy), img.naturalWidth, row * sy, dx, y, W, row);
+    }
+    // the swell rolling over it
+    g.globalCompositeOperation = 'lighter';
+    g.globalAlpha = 0.22 * k;
+    const bx = (t * 22) % 256, by = (t * 34) % 256;
+    g.save();
+    g.translate(-bx, -by);
+    g.rotate(-0.5);
+    if (this.bandPat) g.fillStyle = this.bandPat;
+    if (this.bandPat) g.fillRect(-W, -H, W * 3, H * 3);
+    g.restore();
+    // glints travelling, brighter under the moon
+    g.globalAlpha = 0.5 * k;
+    for (let i = 0; i < 2; i++) {
+      const ox = ((t * (i ? -31 : 47)) % 256 + 256) % 256, oy = ((t * (i ? 13 : -9)) % 256 + 256) % 256;
+      g.globalAlpha = (0.32 + 0.25 * Math.sin(t * 2.3 + i * 2)) * k;
+      for (let x = -ox; x < W; x += 256) for (let y = -oy; y < H; y += 256) g.drawImage(this.glints, x, y);
+    }
+    const mx = fx.moon[0] * s, y0 = fx.moon[1] * s, y1 = fx.moon[2] * s;
+    g.globalAlpha = (0.55 + 0.25 * Math.sin(t * 3.1)) * k;
+    for (let y = y0; y < y1; y += 4) {
+      const wv = 3 + (y - y0) * 0.09;
+      const off = Math.sin(y * 0.3 + t * 4) * wv * 0.5;
+      g.drawImage(this.glints, ((y * 7 + t * 60) % 200 + 200) % 200, (y * 3) % 250, wv * 2, 3, mx - wv + off, y, wv * 2, 3);
+    }
+    // foam lapping the shore: in and out
+    g.globalAlpha = (0.25 + 0.35 * Math.max(0, Math.sin(t * 1.15))) * k;
+    const sw = 1 + 0.012 * Math.sin(t * 1.15);
+    g.drawImage(this.foam, (W - W * sw) / 2, (H - H * sw) / 2, W * sw, H * sw);
+    // only the water keeps any of it
+    g.globalCompositeOperation = 'destination-in';
+    g.globalAlpha = 1;
+    g.drawImage(this.mask, 0, 0, W, H);
+    g.globalCompositeOperation = 'source-over';
   }
 }
 
@@ -372,11 +521,22 @@ function boxOf(e: Emit): void {
   e.h = !ready ? 0 : k ? el.naturalHeight * k : parseFloat(el.style.height) || 0;
 }
 
+/** QA: the island's effects say which way they draw (?fxdebug, or localStorage gravetide.fxdebug). */
+function debugFx(): boolean {
+  try {
+    return /[?&]fxdebug/.test(location.search) || !!localStorage.getItem('gravetide.fxdebug');
+  } catch {
+    return false;
+  }
+}
+
 // ------------------------------------------------------------------------------------------------ the scene's fx
 
 export class IsleFx {
   private world: HTMLElement;
-  private sea: SeaGL | null = null;
+  private sea: SeaGL | SeaCanvas | null = null;
+  /** The water's strength: 1, or gentler for a phone that asks for less motion (it still moves: the owner's wish). */
+  private k = 1;
   private seaFailed = false;
   private air: HTMLCanvasElement;
   private g: CanvasRenderingContext2D;
@@ -399,7 +559,9 @@ export class IsleFx {
   private slow = 0;
   private spr: Record<'smoke' | 'dust' | 'glow' | 'gold' | 'fog' | 'ember' | 'fly', HTMLCanvasElement>;
   /** QA: frames and their times. */
-  stats = { fps: 0, frameMs: 0, particles: 0, q: 1, sea: false };
+  stats = { fps: 0, frameMs: 0, particles: 0, q: 1, sea: false, path: 'off' as 'off' | 'webgl' | 'canvas' };
+  /** Why WebGL was not used (QA, ?fxdebug). */
+  private why = '';
   private fpsN = 0;
   private fpsT = 0;
   private busyMs = 0;
@@ -427,7 +589,9 @@ export class IsleFx {
 
   /** Whether the scene may move at all (a captain who asks for less motion sees it still). */
   static allowed(): boolean {
-    return !settings().reduceMotion && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // only the game's own setting stills it; the phone's «reduce motion» makes it gentler (owner, 2026-10-15: «вода
+    // вокруг острова все равно без движения»)
+    return !settings().reduceMotion;
   }
 
   /** The map under the scene, its picture decoded. */
@@ -436,21 +600,28 @@ export class IsleFx {
     this.fx = MAP_FX[map];
     this.mapImg = img;
     this.setSize();
-    if (!this.seaFailed && settings().webgl !== false) {
+    this.k = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.6 : 1;
+    if (!this.seaFailed && settings().webgl !== false && !(this.sea instanceof SeaCanvas)) {
       try {
         this.sea ??= SeaGL.make();
-        if (this.sea) {
-          this.sea.canvas.className = 'is-water';
-          this.sea.setMap(img, this.fx, this.q < 1 ? 0.6 : 1);
-          if (!this.sea.canvas.parentElement) img.after(this.sea.canvas);
-        }
-      } catch {
+        if (this.sea) this.sea.setMap(img, this.fx, this.q < 1 ? 0.6 : 1);
+      } catch (e) {
+        this.why = String((e as Error)?.message ?? e).slice(0, 120);
         this.seaFailed = true;
         this.sea?.canvas.remove();
         this.sea = null;
       }
     }
-    img.style.visibility = this.sea && this.running ? 'hidden' : '';
+    // no WebGL (refused, failed, switched off): the 2D sea over the painting
+    if (!this.sea) {
+      this.sea = new SeaCanvas();
+      this.sea.setMap(img, this.fx, this.q < 1 ? 0.6 : 1);
+    }
+    this.sea.canvas.className = 'is-water' + (this.running ? '' : ' hidden');
+    if (this.sea.canvas.parentElement !== img.parentElement || this.sea.canvas.previousElementSibling !== img) img.after(this.sea.canvas);
+    img.style.visibility = this.sea instanceof SeaGL && this.running ? 'hidden' : '';
+    this.stats.path = this.sea instanceof SeaGL ? 'webgl' : 'canvas';
+    if (debugFx()) console.info('[islefx]', this.stats.path, 'q', this.q, 'k', this.k, this.why || '');
     if (!this.air.parentElement) this.world.append(this.air);
     // the map's lights and the weather start afresh
     this.glows.length = 0;
@@ -479,6 +650,13 @@ export class IsleFx {
       return e;
     });
     this.relight();
+  }
+
+  /** QA: open water at this point of the map (the sea's mask). */
+  waterAt(x: number, y: number): boolean {
+    const m = seaMask(this.fx);
+    const i = Math.floor((y / ISO_H) * MH) * MW + Math.floor((x / ISO_W) * MW);
+    return i >= 0 && i < MW * MH && m[i * 4] > 230;
   }
 
   /** A work done: a golden burst over the building. */
@@ -534,7 +712,7 @@ export class IsleFx {
     this.air.classList.remove('hidden');
     if (this.sea && this.mapImg) {
       this.sea.canvas.classList.remove('hidden');
-      this.mapImg.style.visibility = 'hidden';
+      if (this.sea instanceof SeaGL) this.mapImg.style.visibility = 'hidden';
     }
     this.last = performance.now();
     if (!document.hidden) this.loop();
@@ -570,7 +748,7 @@ export class IsleFx {
     const t = (now - this.t0) / 1000;
     this.frameN++;
     // the sea at 30 fps (every other frame), the air at the screen's rate (every other frame too when lighter)
-    if (this.sea && !this.sea.lost && (this.frameN & 1) === 0) this.sea.draw(t, this.q);
+    if (this.sea && !this.sea.lost && (this.frameN & 1) === 0) this.sea.draw(t % 3600, this.q, this.k);
     if (this.sea?.lost) this.dropSea();
     if (this.q >= 1 || (this.frameN & 1) === 1) this.drawAir(t, this.q >= 1 ? dt : dt * 2);
     // the frame's cost; a weak phone steps down (and back up when it has room)
@@ -600,10 +778,15 @@ export class IsleFx {
   }
 
   private dropSea(): void {
+    // the WebGL context lost: the 2D sea from now on
     this.sea?.canvas.remove();
     this.sea = null;
     this.seaFailed = true;
-    if (this.mapImg) this.mapImg.style.visibility = '';
+    this.why = 'context lost';
+    if (this.mapImg) {
+      this.mapImg.style.visibility = '';
+      this.setMap(this.map, this.mapImg);
+    }
   }
 
   private drawAir(t: number, dt: number): void {
