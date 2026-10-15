@@ -96,12 +96,18 @@ export function drawProc(g: CanvasRenderingContext2D, p: Proc, t: number, w: num
     case 'fear': {
       // a grey droop: a pall sinking over her, a dim ring tightening
       g.globalCompositeOperation = 'source-over';
-      blob(g, '40,42,48', x, body - w * 0.5 + w * 0.6 * ease(k), w * 0.85, 0.55 * fade, 0.4);
-      ring(g, x, y, w * (0.75 - 0.35 * ease(k)), '150,150,160', 0.7 * fade, Math.max(1.5, w * 0.05), [w * 0.12, w * 0.08]);
-      for (let i = 0; i < 4; i++) {
+      blob(g, '30,32,40', x, body - w * 0.5 + w * 0.6 * ease(k), w * 0.9, 0.6 * fade, 0.4);
+      ring(g, x, y, w * (0.8 - 0.4 * ease(k)), '190,192,205', 0.9 * fade, Math.max(2, w * 0.06), [w * 0.12, w * 0.08]);
+      // grey wisps falling off her, a downturned arc over her head
+      for (let i = 0; i < 5; i++) {
         const xx = x + (h01(i + 2) - 0.5) * w * 0.9;
-        blob(g, '90,92,100', xx, body - w * 0.6 + w * 0.9 * ((k + h01(i + 7) * 0.5) % 1), w * 0.12, 0.6 * fade, 0.5);
+        blob(g, '175,178,192', xx, body - w * 0.7 + w * 1.0 * ((k + h01(i + 7) * 0.5) % 1), w * 0.1, 0.75 * fade, 0.5);
       }
+      g.strokeStyle = `rgba(200,202,215,${0.85 * fade})`;
+      g.lineWidth = Math.max(2, w * 0.06);
+      g.beginPath();
+      g.arc(x, body - w * 0.75 + w * 0.15 * ease(k), w * 0.3, Math.PI * 1.15, Math.PI * 1.85);
+      g.stroke();
       break;
     }
     case 'still': {
