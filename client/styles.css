@@ -4736,26 +4736,26 @@ body.tac-ph .tb-pv-r b { font-size: 12.5px; }
 /* Tap → choose → act (owner, 2026-10-15: «тап и выбор действия»): the choice beside the hex or stack tapped — a row of
    small buttons, each its painted icon in a ring, its word and what it would do (the fallen as a range), and a cross.
    Laid by tactical.ts pickDom over the figure (or under its hex), never on it. The first is the one a second tap gives. */
-.tb-pick { position: absolute; left: 0; top: 0; z-index: 7; display: flex; align-items: center; gap: 4px; padding: 3px; border-radius: 24px;
+.tb-pick { position: absolute; left: 0; top: 0; z-index: 7; display: flex; align-items: center; gap: 6px; padding: 4px; border-radius: 28px;
   background: rgba(14, 11, 8, 0.92); border: 1px solid #7d6238; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(201, 164, 90, 0.14);
   will-change: transform; pointer-events: auto; -webkit-touch-callout: none; user-select: none; }
 .tb-pick.hidden { display: none; }
-.tb-pk { position: relative; display: flex; align-items: center; gap: 5px; height: 40px; min-width: 40px; box-sizing: border-box; padding: 0 11px 0 3px; border-radius: 20px;
+.tb-pk { position: relative; display: flex; align-items: center; gap: 6px; height: 46px; min-width: 46px; box-sizing: border-box; padding: 0 16px 0 4px; border-radius: 23px;
   border: 1px solid rgba(201, 164, 90, 0.42); background: linear-gradient(180deg, #2b2119, #16110c); color: var(--bone); cursor: pointer; touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent; font: 600 12px/1.1 var(--sans); white-space: nowrap; }
-.tb-pk-i { flex: none; position: relative; width: 32px; height: 32px; border-radius: 50%; overflow: hidden; background: radial-gradient(circle, #2a2118 0 52%, #120e0a 74%);
+  -webkit-tap-highlight-color: transparent; font: 600 13.5px/1.1 var(--sans); white-space: nowrap; }
+.tb-pk-i { flex: none; position: relative; width: 36px; height: 36px; border-radius: 50%; overflow: hidden; background: radial-gradient(circle, #2a2118 0 52%, #120e0a 74%);
   box-shadow: inset 0 0 0 1px var(--brass-dim); }
 .tb-pk-i > .ico { position: absolute; inset: 14%; width: 72%; height: 72%; margin: 0; object-fit: contain; border-radius: 14%; }
 .tb-pk-t { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; }
 .tb-pk b { font-weight: 700; color: #fff1d2; letter-spacing: 0.01em; }
-.tb-pk em { font-style: normal; font-weight: 600; font-size: 10.5px; color: #f0b49c; font-variant-numeric: tabular-nums; }
+.tb-pk em { font-style: normal; font-weight: 600; font-size: 11px; color: #f0b49c; font-variant-numeric: tabular-nums; }
 .tb-pk.move { border-color: rgba(90, 245, 215, 0.6); }
 .tb-pk.attack, .tb-pk.shoot { border-color: rgba(222, 92, 66, 0.75); }
 .tb-pk.cast { border-color: rgba(240, 160, 60, 0.75); }
 .tb-pk.cast b { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
 /* the first order (a second tap gives it): a gold rim */
 .tb-pick > .tb-pk:first-child:not(.cancel) { box-shadow: 0 0 0 1px rgba(232, 196, 106, 0.85), 0 0 10px rgba(232, 196, 106, 0.35); }
-.tb-pk.cancel { width: 32px; height: 32px; min-width: 32px; padding: 0; justify-content: center; border-radius: 50%; margin: 0 1px; }
+.tb-pk.cancel { width: 38px; height: 38px; min-width: 38px; padding: 0; justify-content: center; border-radius: 50%; margin: 0 1px; }
 .tb-pk-x { display: block; width: 18px; height: 18px; font-style: normal; color: var(--bone); text-align: center; font: 700 17px/18px var(--sans); }
 .tb-pk-x::before { content: '×'; }
 .skinned .tb-pk.cancel { border: 0; background: transparent; }

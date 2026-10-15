@@ -148,6 +148,10 @@ export interface TacStack {
   surged: boolean;
   /** Turns more she acts this round (docs/18: the Following Squall, the Eye of the Storm). */
   again: number;
+  /** Owner, 2026-10-15 («если нажать на рядом с целью пустую клетку, то я могу сперва подойти и еще действие останется
+   *  для атаки»): the hexes she has walked this turn — a march first, then her blow (or a defence) from what is left of
+   *  her stride; no second march, no shot, no wait after it. 0 (absent) while she has not moved. */
+  stepped?: number;
   /** docs/18 II: a creature's poison in her — the harm it does as her next turns come, how many more, and whose (`sick`:
    *  the Foul Water's sickness, a common page after docs/18). */
   poison?: { dmg: number; left: number; by: 0 | 1; sick?: boolean; who?: number };
@@ -1154,7 +1158,7 @@ export function resistOf(bt: TacBattle, s: TacStack): number {
  *  along the shore (the surf is one water). */
 export function reachOf(bt: TacBattle, s: TacStack): Map<number, number> {
   const out = new Map<number, number>();
-  const spd = speedOf(bt, s);
+  const spd = speedOf(bt, s) - (s.stepped ?? 0);
   const seen = new Map<number, number>([[s.hex, 0]]);
   const fly = sp(s, 'flying'), dive = sp(s, 'diving') && !!bt.land;
   let surfed = false;
@@ -1191,7 +1195,7 @@ const enemiesAdjacent = (bt: TacBattle, s: TacStack, at = s.hex) => alive(bt).fi
 
 /** May the stack shoot: shots loaded and no foe at arm's length. */
 export function canShoot(bt: TacBattle, s: TacStack): boolean {
-  return s.shots > 0 && enemiesAdjacent(bt, s).length === 0 && !smods(bt, s).blind;
+  return s.shots > 0 && !s.stepped && enemiesAdjacent(bt, s).length === 0 && !smods(bt, s).blind;
 }
 
 /** The hex it would strike `t` from: where it stands if alongside, else the nearest reachable one beside her. */
@@ -1496,7 +1500,10 @@ function spill(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'shot'): 
   }
 }
 
-/** Her answer: once a round (every blow for a guard that answers all), by what is left of her. */
+/** Her answer: once a round (every blow for a guard that answers all), by what is left of her — to the first blow on
+ *  her this round she answers; the later ones that round go unanswered (owner, 2026-10-15: «контр атака только после 1
+ *  удара по цели в этом ходу»; newRound gives it back). Blows that draw no answer by an ability (a striker none answers,
+ *  Blood Harvest, the hook) leave it to the next, as in HoMM3. */
 function retaliate(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng): void {
   if (t.count <= 0 || s.count <= 0 || !t.ret || sp(s, 'no_retaliation')) return;
   if (smods(bt, s).noRet || smods(bt, t).noAnswer) return; // docs/18: the hook, knives in the dark
@@ -2237,6 +2244,7 @@ export function playSince(bt: TacBattle, from = bt.beatFrom ?? 0, window = TAC_P
  *  clock — spent, the turn runs out at once and her stack defends. */
 function giveTurn(bt: TacBattle, now: number): void {
   const play = playSince(bt);
+  for (const x of bt.stacks) x.stepped = 0;
   bt.beatFrom = bt.events;
   chargeClock(bt, now);
   const s = bt.active !== null ? stackById(bt, bt.active) : undefined;
@@ -2314,8 +2322,12 @@ function madBlow(bt: TacBattle, s: TacStack, rng: Rng): void {
   checkOver(bt);
 }
 
-/** The turn is done: high morale may give the stack another at once; else the next in the order. */
+/** The turn is done: another at once only by what explicitly gives one — an order (the Following Squall, the Eye of the
+ *  Storm) or high morale (HoMM3's surge, after a march, a blow or a shot, never a defence); the stack wears its mark
+ *  and the field says it (owner, 2026-10-15: «один и тот же моб может два раза ударить» — that was the surge, unmarked
+ *  on the field; kept, as the balance of docs/31 is weighed with it, and shown). Else the next in the order. */
 function endTurn(bt: TacBattle, s: TacStack, now: number, rng: Rng, surgeOk: boolean): void {
+  s.stepped = 0;
   checkOver(bt);
   if (bt.over) {
     bt.active = null;
@@ -2336,6 +2348,17 @@ function endTurn(bt: TacBattle, s: TacStack, now: number, rng: Rng, surgeOk: boo
     return;
   }
   nextTurn(bt, now, rng);
+}
+
+/** Owner, 2026-10-15: she has marched and still has her action — the turn runs on (its clock the same; the walk's play
+ *  on the screens is not hers to pay: her clock and the sea's breath wait as long). */
+function goOn(bt: TacBattle, now: number): void {
+  const play = playSince(bt);
+  bt.beatFrom = bt.events;
+  bt.turnEnds += play;
+  if (bt.clock) bt.clock.from += play;
+  bt.aiAt = now + play + aiDelay(bt);
+  bt.seq++;
 }
 
 export function checkOver(bt: TacBattle): void {
@@ -2419,6 +2442,7 @@ export function act(bt: TacBattle, side: 0 | 1, a: TacAction, now: number, rng: 
   if (a.a === 'innate' || a.a === 'ult') return asCaptain(bt, side, slot, () => castMove(bt, side, a.a as 'innate' | 'ult', a.target, rng));
   if (a.a === 'wait') {
     if (s.waited) return 'This stack has waited once this round';
+    if (s.stepped) return 'She has marched: strike or defend';
     s.waited = true;
     bt.queue.push(s.id);
     push(bt, { k: 'wait', side, s: s.id });
@@ -2439,15 +2463,23 @@ export function act(bt: TacBattle, side: 0 | 1, a: TacAction, now: number, rng: 
   }
   const reach = reachOf(bt, s);
   if (a.a === 'move') {
+    if (s.stepped) return 'She has marched: strike or defend';
     if (!reach.has(a.to)) return 'Out of reach';
-    walkTo(bt, s, a.to, reach.get(a.to)!);
+    const steps = reach.get(a.to)!;
+    walkTo(bt, s, a.to, steps);
+    s.stepped = steps;
+    // Owner, 2026-10-15: a foe within what is left of her stride — her blow is still hers this turn.
+    if (meleeTargets(bt, s).length) {
+      goOn(bt, now);
+      return null;
+    }
     endTurn(bt, s, now, rng, true);
     return null;
   }
   const t = stackById(bt, a.target);
   if (!t || t.side === side) return 'Pick one of her stacks';
   if (a.a === 'shoot') {
-    if (!canShoot(bt, s)) return s.shots > 0 ? 'A foe at arm\'s length: no room to shoot' : 'No shots left';
+    if (!canShoot(bt, s)) return s.stepped && s.shots > 0 ? 'She has marched: strike or defend' : s.shots > 0 ? 'A foe at arm\'s length: no room to shoot' : 'No shots left';
     shoot(bt, s, t, rng);
     endTurn(bt, s, now, rng, true);
     return null;
@@ -3102,7 +3134,8 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
   return {
     you: side, round: bt.round, maxRounds: TAC_MAX_ROUNDS, cells: bt.cells.join(''), stacks,
     order: [...(bt.active !== null ? [bt.active] : []), ...bt.queue.filter((id) => stackById(bt, id))], next, active: bt.active, mine, ends: bt.turnEnds, now,
-    reach: [...reach.keys()], melee: mine && act0 ? meleeTargets(bt, act0, reach).map((t) => t.id) : [], shoot: mine && act0 && canShoot(bt, act0) ? alive(bt).filter((t) => t.side !== side).map((t) => t.id) : [],
+    // Owner, 2026-10-15: marched this turn — no second march; her blow from what is left of her stride (melee, pv).
+    reach: act0?.stepped ? [] : [...reach.keys()], ...(mine && act0?.stepped ? { moved: true } : {}), melee: mine && act0 ? meleeTargets(bt, act0, reach).map((t) => t.id) : [], shoot: mine && act0 && canShoot(bt, act0) ? alive(bt).filter((t) => t.side !== side).map((t) => t.id) : [],
     ...(mine && act0 ? { pv: previewsOf(bt, act0, reach) } : {}),
     heroes: ([0, 1] as const).map((x) => (x === side && slot ? asCaptain(bt, side, slot, () => hero(x)) : hero(x))) as [TacHeroView, TacHeroView], log: bt.log.slice(-12), seq: bt.seq, over: bt.over, canCut, canStrike: side === 1, ...(bt.warn?.length && !bt.over ? { warn: [...bt.warn] } : {}), ...extra,
     ...(bt.siege ? { siege: { type: bt.land ?? 'rocky', hp: [...bt.siege.hp], max: [...bt.siege.max], cat: bt.siege.catapult, ...(bt.siege.name ? { name: bt.siege.name } : {}) } } : {}),

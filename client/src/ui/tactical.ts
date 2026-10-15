@@ -1096,7 +1096,12 @@ export class TacticalPanel {
           else for (let j = 0; j < Math.round(5 * this.lv.burst); j++) this.parts.add({ k: 'chip', x: c.x, y: c.y - w * 0.4, vx: (Math.random() - 0.5) * 160, vy: -60 - 90 * Math.random(), g: 420, drag: 0.5, t0: hit, life: 600, size: w * 0.12, rgb: '176,140,96', vr: (Math.random() - 0.5) * 20 });
         }
       } else if (c) this.bursts.push({ id: 'part.splinters', x: c.x, y: c.y, t0: hit, size: w * 0.8 });
-    } else if (e.k === 'luck' || e.k === 'morale' || e.k === 'fear') {
+    } else if (e.k === 'morale') {
+      // Owner, 2026-10-15 («один и тот же моб может два раза ударить»): a stack given another turn at once — by high
+      // morale or an order — says so over its head on every screen, a phone's too, so the second blow is no riddle.
+      const c = at(hexOf(e.s));
+      if (c) this.addFloat({ text: e.k === 'morale' && !this.phone ? `${L('morale')}: ${L('float.again')}` : L('float.again'), x: c.x, y: c.y - w * 0.55, t0: t, color: '#f0cc6a' });
+    } else if (e.k === 'luck' || e.k === 'fear') {
       const c = at(hexOf(e.s));
       // On a phone the field carries no words but the spells' (owner, 2026-10-03): a morale or luck roll shows by its light.
       if (c && !this.phone) this.addFloat({ text: e.k === 'fear' ? (e.id === 'still' || e.id === 'mad' ? L(`float.${e.id}`) : e.id ? L('morale') + ' −' : L('fear.float')) : L(e.k === 'luck' ? 'luck' : 'morale') + ' +', x: c.x, y: c.y - w * 0.55, t0: t, color: e.k === 'fear' ? '#d06a5e' : '#e0b862' });
@@ -1187,7 +1192,8 @@ export class TacticalPanel {
       }
     } else if (e.k === 'again') {
       const c = at(hexOf(e.s));
-      if (c && !this.phone) this.addFloat({ text: L('float.again'), x: c.x, y: c.y - w * 0.6, t0: t, color: '#9fe0ff' });
+      // (on a phone too, owner 2026-10-15: a second turn at once is never a riddle)
+      if (c) this.addFloat({ text: L('float.again'), x: c.x, y: c.y - w * 0.6, t0: t, color: '#9fe0ff' });
     } else if (e.k === 'order') {
       const c = at(hexOf(e.s));
       if (c && !this.phone) this.addFloat({ text: L(`o.${e.id}` as K), x: c.x, y: c.y - w * 0.6, t0: t, color: '#e0b862' });
@@ -1478,7 +1484,7 @@ export class TacticalPanel {
     const locked = this.scrollLocked(v);
     const autoTip = me.auto ? L('autoOff') : locked ? L('scLocked', { n: AUTO_SCROLL_PACKS[0].price }) : v.scrolls?.paid ? `${L('autoMenu')} · ${L('scPaid')}` : v.scrolls ? `${L('autoMenu')} · ${L('scN', { n: v.scrolls.n })}` : L('autoMenu');
     const left = [
-      rb('data-a="wait"', L('wait'), btIcon('bt_wait', 'icon.bt_hold', 'ico'), '', !v.mine || !!act?.waited),
+      rb('data-a="wait"', L('wait'), btIcon('bt_wait', 'icon.bt_hold', 'ico'), '', !v.mine || !!act?.waited || !!v.moved),
       rb('data-a="defend"', L('defend'), btIcon('bt_defend', 'icon.mod_hull_plating', 'ico'), '', !v.mine),
       rb('data-autow', autoTip, btIcon('bt_auto', 'icon.bt_captain', 'ico') + this.scrollBadge(v), `${me.auto ? ' on' : ''}${locked ? ' locked' : ''}`, !!v.over),
     ].join('');
@@ -1804,7 +1810,7 @@ export class TacticalPanel {
     const ransom = v.ransom ? (poor ? L('ransomShort', { n: v.ransom }) : ransomOn ? L('ransomSure', { n: v.ransom }) : L('ransom', { n: v.ransom })) : '';
     const strike = armed ? L('strikeSure') : L('strike');
     el.querySelector('.tb-acts')!.innerHTML = [
-      `<button class="btn" data-a="wait" ${lab(L('wait'))} ${!v.mine || act?.waited ? 'disabled' : ''}>${btIcon('bt_wait', 'icon.bt_hold')}${word(L('wait'))}</button>`,
+      `<button class="btn" data-a="wait" ${lab(L('wait'))} ${!v.mine || act?.waited || v.moved ? 'disabled' : ''}>${btIcon('bt_wait', 'icon.bt_hold')}${word(L('wait'))}</button>`,
       `<button class="btn" data-a="defend" ${lab(L('defend'))} ${!v.mine ? 'disabled' : ''}>${btIcon('bt_defend', 'icon.mod_hull_plating')}${word(L('defend'))}</button>`,
       officer ? `<button class="btn btn-primary" data-a="order" ${lab(L(`o.${officer.order}` as K), L(`od.${officer.order}` as K))}>${icon(`icon.role_${officer.role}`, '', 'ico-sm')}${word(L(`o.${officer.order}` as K))}</button>` : '',
       `<button class="btn${me.auto ? ' on' : ''}${locked ? ' locked' : ''}" data-a="${locked ? 'buyscroll' : 'auto'}" ${lab(auto, autoTip)}>${btIcon('bt_auto', '')}${word(auto)}${this.scrollBadge(v, true)}</button>`,
@@ -1964,7 +1970,7 @@ export class TacticalPanel {
     const lead = this.leadHint(v);
     // docs/25 item 64: an ally's stack on its turn (her name), or you come aboard as the next round opens.
     const ally = !v.mine && act && act.side === v.you && (act.own ?? 0) !== Math.max(0, this.mySlot(v)) ? this.capOf(v, act) : undefined;
-    const text = v.over ? '' : lead && !this.targeting && !this.pickOn() ? lead : this.mySlot(v) < 0 ? L('hint.coming') : !v.mine ? (act && act.side !== v.you ? L('hint.wait') : ally && !ally.auto ? L('hint.ally', { name: personName(ally.name) }) : '') : this.targeting && this.castOn === null ? L(own ? 'hint.own' : 'hint.target') : this.pickOn() ? L('hint.again') : v.warn?.length ? BL('hint.warn') : v.shoot.length ? L('hint.shoot') : L('hint.move');
+    const text = v.over ? '' : lead && !this.targeting && !this.pickOn() ? lead : this.mySlot(v) < 0 ? L('hint.coming') : !v.mine ? (act && act.side !== v.you ? L('hint.wait') : ally && !ally.auto ? L('hint.ally', { name: personName(ally.name) }) : '') : this.targeting && this.castOn === null ? L(own ? 'hint.own' : 'hint.target') : this.pickOn() ? L('hint.again') : v.moved ? L('pk.moved') : v.warn?.length ? BL('hint.warn') : v.shoot.length ? L('hint.shoot') : L('hint.move');
     h.textContent = text;
     h.classList.toggle('hidden', !text);
   }
@@ -2743,7 +2749,7 @@ export class TacticalPanel {
       out.push({ k: 'move', icon: icon('icon.item_seaboots', '', 'ico'), label: L('pk.move') });
     } else if (this.selfPick && act) {
       out.push({ k: 'defend', icon: btIcon('bt_defend', 'icon.mod_hull_plating', 'ico'), label: L('defend') });
-      out.push({ k: 'wait', icon: btIcon('bt_wait', 'icon.bt_hold', 'ico'), label: L('wait'), off: !!act.waited });
+      out.push({ k: 'wait', icon: btIcon('bt_wait', 'icon.bt_hold', 'ico'), label: L('wait'), off: !!act.waited || !!v.moved });
       if (act.officer?.ready) out.push({ k: 'order', icon: btIcon('bt_order', 'icon.bt_officers', 'ico'), label: L('pk.order'), tip: L('order') });
     }
     return out;
@@ -2782,9 +2788,10 @@ export class TacticalPanel {
     return id !== null ? v.stacks.find((s) => s.id === id)?.hex ?? null : null;
   }
 
-  /** The choice beside what was tapped (owner, 2026-10-15): a row of small buttons — finger-sized, the word on each and
-   *  what it would do — over the stack (under its hex when there is no room above), never on it, kept on the stage
-   *  clear of the corners' round buttons; and a cross to let it go. */
+  /** The choice for what was tapped (owner, 2026-10-15: «если тапнуть на цель, то я сперва могу увидеть сколько текущий
+   *  моб убьет например, и потом внизу кнопка атаковать»): a row of finger-sized buttons in the bottom action band — the
+   *  word on each and what it would do — between the corners' round buttons, and a cross to let it go; at the top when
+   *  what was tapped lies under that band, so it never covers it. The full preview stands over the foe (tipDom). */
   private pickDom(v: TacView): void {
     const el = this.el?.querySelector<HTMLElement>('.tb-pick');
     if (!el) return;
@@ -2807,17 +2814,18 @@ export class TacticalPanel {
     const { w, cw, ch } = this.size;
     const c = this.center(at);
     const bw = el.offsetWidth, bh = el.offsetHeight;
-    // The figure stands up to ~1.45 hexes over its hex's middle (its plate below it): the menu goes over that, or under
-    // the hex — on the side away from the hex the blow comes from, when both have room.
-    const above = c.y - w * 1.5 - bh, below = c.y + w * 0.62;
-    const from = this.foeArmed !== null && this.armFrom !== undefined ? this.center(this.armFrom) : null;
-    const top = 4 + (this.phone ? this.band.t : 0), bottom = ch - 4 - (this.phone ? this.band.b : 0);
-    const fitsUp = above >= top, fitsDown = below + bh <= bottom;
-    let y = fitsUp && (!fitsDown || !from || from.y >= c.y - 1) ? above : fitsDown ? below : above;
-    // Clear of the corners' round buttons on a phone (they stand in the bands at the stage's sides).
     const l = 4 + (this.phone ? this.band.l : 0), r = cw - 4 - (this.phone ? this.band.r : 0);
-    let x = c.x - bw / 2;
+    let x = (l + r) / 2 - bw / 2;
     x = r - l >= bw ? Math.max(l, Math.min(r - bw, x)) : Math.max(4, Math.min(cw - bw - 4, x));
+    // The bottom band (clear of a phone's notch and home bar), unless what was tapped stands in it: then the top's.
+    const safeB = this.phone ? 10 : 8;
+    let y = ch - bh - safeB - (this.phone ? this.band.b : 0);
+    const fig = { l: c.x - w * 0.6, r: c.x + w * 0.6, t: c.y - w * 1.45, b: c.y + w * 0.75 };
+    const hits = (yy: number) => !(x + bw <= fig.l || x >= fig.r || yy + bh <= fig.t || yy >= fig.b);
+    if (hits(y)) {
+      const top = (this.phone ? Math.max(this.band.t, 58) : 8);
+      if (!hits(top)) y = top;
+    }
     y = Math.max(4, Math.min(ch - bh - 4, y));
     const tr = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
     if (el.style.transform !== tr) el.style.transform = tr;
@@ -2889,7 +2897,7 @@ export class TacticalPanel {
       p.shot ? `<div class="tb-pv-h">${esc(L('pv.shot'))}</div>` : '',
       `<div class="tb-pv-r"><span>${esc(L('pv.dmg'))}</span><b>${r(p.dmg)}</b>${p.twice ? `<i>×2</i>` : ''}</div>`,
       `<div class="tb-pv-r"><span>${esc(L('pv.kills'))}</span><b>${r(p.kills)}</b></div>`,
-      p.ad ? `<div class="tb-pv-n">${esc(L('pv.ad', { n: `${p.ad > 0 ? '+' : '−'}${Math.abs(p.ad)}` }))}</div>` : '',
+      p.ad && !this.phone ? `<div class="tb-pv-n">${esc(L('pv.ad', { n: `${p.ad > 0 ? '+' : '−'}${Math.abs(p.ad)}` }))}</div>` : '',
       p.fl ? `<div class="tb-pv-fl">${esc(L(p.fl === 2 ? 'fl.rear' : 'fl.side'))}</div>` : '',
       p.far ? `<div class="tb-pv-n">${esc(L('pv.far'))}</div>` : '',
       p.cov ? `<div class="tb-pv-n">${esc(L('pv.cov'))}</div>` : '',
@@ -2905,8 +2913,7 @@ export class TacticalPanel {
   private tipDom(v: TacView): void {
     const el = this.el?.querySelector<HTMLElement>('.tb-pv');
     if (!el) return;
-    // On a phone the foe picked wears its choice over it (the fallen on its buttons, owner 2026-10-15): no preview on it too.
-    const p = v.mine && !v.over && !this.busy() && !this.targeting && !this.bookOpen && this.info === null && !(this.phone && this.foeArmed !== null && !this.press?.foe) ? this.pvOf(v) : null;
+    const p = v.mine && !v.over && !this.busy() && !this.targeting && !this.bookOpen && this.info === null ? this.pvOf(v) : null;
     const t = p ? v.stacks.find((s) => s.id === p.t) : undefined;
     if (!p || !t) {
       if (!el.classList.contains('hidden')) el.classList.add('hidden');

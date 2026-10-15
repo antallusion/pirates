@@ -1702,6 +1702,9 @@ export interface TacView {
   reach: number[];
   melee: number[];
   shoot: number[];
+  /** Owner, 2026-10-15: my active stack has marched this turn and still has her action (a blow from what is left of
+   *  her stride, or a defence): `reach` is empty then. */
+  moved?: boolean;
   /** For my active stack: what each blow or shot would do (owner, 2026-10-08). */
   pv?: TacPreview[];
   heroes: [TacHeroView, TacHeroView];
