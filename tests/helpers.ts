@@ -1,6 +1,8 @@
 // Test helpers: an in-memory game with fake connections that speak the real protocol.
 
 import { SHIP_CLASS_IDS } from '../shared/src/data/ships.ts';
+import type { ShipClassId } from '../shared/src/data/ships.ts';
+import { LEVEL_RANGE } from '../shared/src/data/shiplevel.ts';
 import { PROTOCOL_VERSION } from '../shared/src/constants.ts';
 import { decodeSnap } from '../shared/src/codec.ts';
 import type { ClientMsg, ServerMsg } from '../shared/src/protocol.ts';
@@ -99,6 +101,14 @@ export function onHull(game: Game, ship: { loadout: { classId: string; level?: n
   ship.recompute(game.now);
   ship.hull = ship.stats.hullMax;
   ship.sails = ship.stats.sailHpMax;
+}
+
+/** Her ship at a ⚓ on a hull whose ladder reaches it, the profile's loadout with it (owner, 2026-10-16: a job is taken
+ *  only by a ship of its band). */
+export function shipAtLevel(game: Game, s: { ship: Parameters<typeof onHull>[1] | null; profile: { loadout: unknown } | null }, level: number): void {
+  const cls = (Object.entries(LEVEL_RANGE) as [ShipClassId, [number, number]][]).find(([, r]) => r[0] <= level && r[1] >= level)![0];
+  onHull(game, s.ship!, cls, level);
+  s.profile!.loadout = s.ship!.loadout;
 }
 
 /** The yard's tree of hulls (docs/20) known whole: for the tests of the yard's other gates. */

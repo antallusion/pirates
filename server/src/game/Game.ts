@@ -151,7 +151,7 @@ export const BOARD_LOSS_PURSE = 0.08;
 export const BOARD_LOSS_SHIELD = 180;
 import { stepBridges } from './bridgefx.ts';
 import { MAX_BERTHS, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
-import { abandonQuest, acceptQuest, answerOffer, jobSanctions, questCargoLost, questEvent, questLandsHere, questXpOf, shareQuest, swearOath, switchPath } from './quests.ts';
+import { abandonQuest, acceptQuest, answerOffer, bandRefusal, portBand, jobSanctions, questCargoLost, questEvent, questLandsHere, questXpOf, shareQuest, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import { commonCollect, commonView, stepCommon } from './commongoal.ts';
 import { guildGoalCollect } from './guildgoal.ts';
@@ -214,7 +214,7 @@ import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import type { Projectile, VolleyRec } from './combat.ts';
 import { ECON_HOUR, createMarket, restoreMarkets, serializeMarkets, tickMarket } from './economy.ts';
 import type { Market } from './economy.ts';
-import { RouteCache } from './nav.ts';
+import { RouteCache, lineFree } from './nav.ts';
 import {
   QUOTA, abstractEncounters, newBrain, npcHostileTo, npcName, planMerchantVoyage, spawnFisher, spawnGhost, spawnHunter, spawnMerchant, spawnPatrols, spawnPirate, updateNpc,
 } from './npc.ts';
@@ -325,6 +325,10 @@ const WEATHER_TOAST: Record<string, string> = {
 
 /** A lair this near a harbour is a quest's last pick for its mark (docs/30). */
 export const LAIR_QUAY_R = 1200;
+
+/** Where she lies after «В море»: this far out of the harbour at least (m), and the farther marks tried first. */
+const UNDOCK_NEAR = 60;
+const UNDOCK_OUT = [170, 130, 95];
 
 export class Game {
   readonly db: Db;
@@ -3375,6 +3379,8 @@ export class Game {
         });
       case 'undock':
         return err(this.undock(s));
+      case 'halt':
+        return this.halt(s);
       case 'trade':
         return portAction((pt) => trade(this, s, pt, msg.good, Math.trunc(Number(msg.qty))));
       case 'buy_ammo':
@@ -3718,6 +3724,9 @@ export class Game {
             p.smuggle.hotRun = null;
             return null;
           }
+          // Owner, 2026-10-16: a port's contracts are for ships of its band (a ⚓1 in the last waters takes none).
+          const band = bandRefusal(p, portBand(this, pt));
+          if (band) return band;
           const slots = 3 + (tval(ship.stats, 'contractBroker') >= 1 ? 1 : 0);
           if (p.contracts.length >= slots) return `You can hold at most ${slots} contracts`;
           const list = this.contractsAt(pt.id);
@@ -4454,6 +4463,24 @@ export class Game {
     this.saveSession(s);
   }
 
+  /** Her island's screen opened (owner, 2026-10-16: «переходя на остров корабль должен останавливаться»): the sails come
+   *  down and she lies still — the helmsman's course, a goal's run, an order waiting for arrival and «Атаковать» are
+   *  dropped. In port, or while the mutineers or a boarding hold her, nothing changes. */
+  halt(s: PlayerSession): void {
+    const ship = s.ship;
+    if (!ship || !ship.alive || ship.docked || ship.boarding || s.pendingBoarding || s.profile?.company.mutiny) return;
+    cancelApproach(this, s);
+    cancelRoute(this, s);
+    stopPursuit(this, s, 'manual');
+    stopAutosail(this, s, 'manual');
+    s.sailHold = null;
+    s.lastSail = 0;
+    ship.input = { rudder: 0, sailTarget: 0 };
+    ship.state.sail = 0;
+    ship.state.speed = 0;
+    ship.state.rudder = 0;
+  }
+
   undock(s: PlayerSession): string | null {
     const ship = s.ship!;
     if (!ship.docked) return 'Not in port';
@@ -4486,7 +4513,11 @@ export class Game {
     if (!catAboard(s.profile)) omenBroken(this, s, 'no_cat'); // the black cat's omen (docs/12 P10 #9)
     s.profile!.docked = null;
     const v = headingVec(away);
-    ship.state = { x: port.x + v.x * 60, y: port.y + v.y * 60, heading: away, speed: 3, sail: 0.5, rudder: 0 };
+    // Out past the harbour's mouth, her head to the sea and some way on (owner, 2026-10-16: «отплытие по кнопкам»): the
+    // farthest of these the water between is clear to, so she clears the quays and is not taken for one coming in.
+    const x0 = port.x + v.x * UNDOCK_NEAR, y0 = port.y + v.y * UNDOCK_NEAR;
+    const off = UNDOCK_OUT.find((d) => lineFree(this.world, x0, y0, port.x + v.x * d, port.y + v.y * d)) ?? UNDOCK_NEAR;
+    ship.state = { x: port.x + v.x * off, y: port.y + v.y * off, heading: away, speed: off > UNDOCK_NEAR ? 4 : 3, sail: 0.5, rudder: 0 };
     ship.input = { rudder: 0, sailTarget: 0.5 };
     ship.protectedUntil = this.now + 20;
     bubbleOnUndock(this, s);

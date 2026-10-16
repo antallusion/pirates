@@ -12,7 +12,12 @@ import { questEvent, sanitizeQuests } from '../server/src/game/quests.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { applyDataLocale } from '../client/src/lang/data.ts';
-import { join, makeGame } from './helpers.ts';
+import { join, makeGame, shipAtLevel } from './helpers.ts';
+import { questBand } from '../server/src/game/quests.ts';
+import type { Game } from '../server/src/game/Game.ts';
+
+/** Her ship of the day's contract's band (owner, 2026-10-16: a job is taken only by a ship of its band). */
+const ofBand = (game: Game, portId: string, ...ss: Parameters<typeof shipAtLevel>[1][]) => { for (const s of ss) shipAtLevel(game, s, questBand(game, eliteContractFor(portId, dayOf(game.wallNow()))!)[0]); };
 
 type Credit = { creditKill(k: unknown, v: unknown, how: string): void };
 
@@ -38,6 +43,7 @@ test('on the board, taken by two captains of a group: one flagship with her esco
   b.push({ t: 'group', action: 'accept', id: b.last('party')!.invites[0].id });
   const port = game.portById(A.ship!.docked!)!;
   const id = `elite_${port.id}_${dayOf(game.wallNow())}`;
+  ofBand(game, port.id, A, B);
   a.push({ t: 'dock', bribe: false });
   const offer = a.last('port')!.view!.questOffers.find((o) => o.id === id);
   assert.ok(offer, 'the day\'s contract is on the board');
@@ -89,6 +95,7 @@ test('a quarry lost to strangers or to time is put to sea again; a saved contrac
   s.profile!.level = 20;
   const port = game.portById(s.ship!.docked!)!;
   const id = `elite_${port.id}_${dayOf(game.wallNow())}`;
+  ofBand(game, port.id, s);
   c.push({ t: 'dock', bribe: false });
   c.push({ t: 'quest', action: 'accept', id });
   const qs = s.profile!.quests.active.find((q) => q.id === id)!;

@@ -9,7 +9,7 @@ import { codeAnywhere } from './raiding.ts';
 import { inGroup } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { MAX_LEVEL } from '../../../shared/src/constants.ts';
-import { SHIP_LEVEL_MAX, captainLevelFor, questShipLevel } from '../../../shared/src/data/shiplevel.ts';
+import { SHIP_LEVEL_MAX, captainLevelFor, questShipLevel, shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { FACTIONS, wantedLevel } from '../../../shared/src/data/factions.ts';
@@ -51,7 +51,11 @@ import type { ShipEntity } from './ship.ts';
 import { admiraltyById, isAdmId } from '../../../shared/src/data/admiralty.ts'; // docs/19 E15
 import { contractDone } from './admiralty.ts';
 
-export const MAX_ACTIVE_QUESTS = 5;
+/** No cap on the quests under way (owner, 2026-10-16: «надо снять ограничение, можно брать сколько угодно, главное своего
+ *  диапазона уровня»): what limits her is the level band of each (questBandBlocked). This is only a ceiling against a
+ *  runaway ledger — far more than all the boards she could stand at offer at once — so the per-second work over her
+ *  quests (questTargets, the tick event) stays bounded. */
+export const MAX_ACTIVE_QUESTS = 60;
 /** A port's board shows this many of its generated jobs at a time, a new set every few hours (docs/19 D4: ten, twice
  *  the five it had), two of the places the port's creature jobs'. */
 export const JOBS_ON_BOARD = 10;
@@ -341,7 +345,7 @@ export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string
   const q = QUESTS_BY_ID[id];
   if (!q || q.port !== port.id) return 'Nobody here offers that';
   if (q.category === 'elite' ? q.id !== todaysElite(game, port)?.id : q.kind === 'job' && !boardJobs(p, port, game.now, eventFavor(game, port)).includes(q)) return 'That job is no longer on the board';
-  const why = questBlocked(p, q) ?? questIsleBlocked(game, p, q);
+  const why = questBlocked(p, q) ?? questIsleBlocked(game, p, q) ?? questBandBlocked(game, p, q);
   if (why) return why;
   if (questsUnderWay(p) >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
   startQuest(game, p, q, s, pay);
@@ -359,6 +363,12 @@ export function islandJobOffer(game: Game, s: PlayerSession, islandId: number): 
   if (!q || p.quests.done.includes(q.id) || p.quests.active.some((a) => a.id === q.id)) return;
   if ((q.requires.level ?? 1) > p.level + 3) {
     game.sendTo(s, { t: 'toast', msg: `${q.mentor} has work, but for a captain with more years at sea (level ${q.requires.level}).`, kind: 'info' });
+    return;
+  }
+  const band = questBandBlocked(game, p, q);
+  if (band) {
+    const b = questBand(game, q);
+    game.sendTo(s, { t: 'toast', msg: `${q.mentor} has work, but not for a ship of yours: ⚓${b[0]}–${b[1]}.`, kind: 'info' });
     return;
   }
   if (questsUnderWay(p) >= MAX_ACTIVE_QUESTS) {
@@ -416,6 +426,65 @@ export function questIsleBlocked(game: Game, p: Profile, q: QuestDef): string | 
   return p.level < need ? `Level ${need}` : null;
 }
 
+/** A quest's ⚓ (owner, 2026-10-16): the ship level of the square it is given in (its port's, its island's), or of the
+ *  fight it asks for, or of the island it sends her ashore on — the highest of them. Kept per quest. */
+const anchors = new WeakMap<QuestDef, number>();
+export function questAnchor(game: Game, q: QuestDef): number {
+  let lv = anchors.get(q);
+  if (lv === undefined) {
+    const is = q.island !== undefined ? game.world.islands[q.island] : undefined;
+    const at = is ?? game.portById(q.port);
+    lv = Math.max(at ? sectorAt(game.world, at.x, at.y).level : 1, shipLevelOfQuest(q) ?? 0, questLandLevel(game, q));
+    anchors.set(q, lv);
+  }
+  return lv;
+}
+
+/** The ⚓ band a quest is for: its ⚓ one either side (the square's own band, docs/26 and shared/src/world/sectors.ts). */
+export function questBand(game: Game, q: QuestDef): [number, number] {
+  return bandOf(questAnchor(game, q));
+}
+
+/** The words of a band refused (the card says them, the client translates them). */
+export const bandWords = (b: [number, number]): string => `Not your level: ⚓${b[0]}–${b[1]}`;
+
+/** A port's ⚓ band (its contracts are for ships of it). */
+export function portBand(game: Game, port: Port): [number, number] {
+  return bandOf(sectorAt(game.world, port.x, port.y).level);
+}
+
+/** Whether her ship is of a band (null) or not (why). */
+export function bandRefusal(p: Profile, b: [number, number]): string | null {
+  const lv = shipLevelOf(p.loadout);
+  return lv < b[0] || lv > b[1] ? bandWords(b) : null;
+}
+
+/** Owner, 2026-10-16: «можно брать сколько угодно, главное своего диапазона уровня. то есть в последних там локациях
+ *  корабль 1 взять ничего не сможет» — a job (the board's, an island's, the day's group contract) outside her ship's
+ *  band is not hers. A Path, a Legend, a story and an arc's chapter keep their own gate (the captain's level and the
+ *  chapters before: the First Descent asks a captain of 25 at a harbour of the ⚓9 waters), and the Admiralty's
+ *  contracts theirs (the cap's captains, docs/19 E15). */
+export function questBandBlocked(game: Game, p: Profile, q: QuestDef): string | null {
+  if (q.kind !== 'job' || isAdmId(q.id)) return null;
+  return bandRefusal(p, questBand(game, q));
+}
+
+/** Where a quest first sends her (a port, an island), for the board's card: «в Солтмарроу · 3,2 км». Null when its
+ *  first places are none (a hunt, a count of deeds) — the giver's port then. */
+export function questDest(game: Game, q: QuestDef): { x: number; y: number; port?: string; island?: number } | null {
+  for (const st of q.steps) {
+    if ((st.type === 'visit' || st.type === 'deliver' || st.type === 'pickup' || st.type === 'race' || st.type === 'landres') && st.port && st.port !== q.port) {
+      const pt = game.portById(st.port);
+      if (pt) return { x: Math.round(pt.x), y: Math.round(pt.y), port: pt.id };
+    }
+    if (st.type === 'land' && st.island >= 0) {
+      const is = game.world.islands[st.island];
+      if (is) return { x: Math.round(is.x), y: Math.round(is.y), island: st.island };
+    }
+  }
+  return null;
+}
+
 /** What a quest pays a captain of her level (docs/26): its reward at its own level, at hers within its waters, green
  *  above them. */
 export function questXpOf(game: Game, p: Profile, q: QuestDef): number {
@@ -443,7 +512,7 @@ export function shareQuest(game: Game, s: PlayerSession, id: string): string | n
     const mp = m?.profile;
     if (!m || !mp) continue;
     if (mp.quests.active.some((a) => a.id === id) || mp.quests.done.includes(id)) continue;
-    if (questBlocked(mp, q) || questsUnderWay(mp) >= MAX_ACTIVE_QUESTS) {
+    if (questBlocked(mp, q) || questBandBlocked(game, mp, q) || questsUnderWay(mp) >= MAX_ACTIVE_QUESTS) {
       game.sendTo(s, { t: 'toast', msg: `${m.name} cannot take it on yet.`, kind: 'info' });
       continue;
     }
@@ -463,6 +532,8 @@ export function answerOffer(game: Game, s: PlayerSession, id: string, take: bool
   const p = s.profile!;
   const q = QUESTS_BY_ID[id];
   if (!q || p.quests.active.some((a) => a.id === id) || p.quests.done.includes(id)) return null;
+  const band = questBandBlocked(game, p, q);
+  if (band) return band;
   if (questsUnderWay(p) >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
   startQuest(game, p, q, s, pay);
   game.sendTo(s, { t: 'toast', msg: `${q.mentor}: “${q.summary}” — ${q.steps[0].text}`, kind: 'info' });

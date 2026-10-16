@@ -134,6 +134,9 @@ export type ClientMsg =
   | { t: 'fence_sell'; good: GoodId; qty: number }
   | { t: 'treasure'; action: 'buy' | 'assemble' | 'merge'; tier?: number }
   | { t: 'undock' }
+  /** Owner, 2026-10-16 («переходя на остров корабль должен останавливаться»): her island's screen is opened — sails
+   *  down, way off, the helmsman's course and a goal's run dropped. */
+  | { t: 'halt' }
   | { t: 'trade'; good: GoodId; qty: number }
   | { t: 'buy_ammo'; ammo: AmmoId; qty: number }
   | { t: 'hire_crew'; qty: number; prof?: Profession; dregs?: boolean }
@@ -609,6 +612,9 @@ export interface Contract {
   units?: number;
   expiresAt: number; // world time sec
   description: string;
+  /** On a port's board (owner, 2026-10-16): the ⚓ band it is for, and why she may not take it (her ship's band). */
+  band?: [number, number];
+  blocked?: string;
 }
 
 /** Where a quest's step points (docs/11 P6) and, ux2 (2026-10-11), what is done there on arrival: a place and how near
@@ -897,7 +903,9 @@ export interface PortView {
   escorts: { classId: ShipClassId; price: number; upkeep: number; available: boolean }[];
   questOffers: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; summary: string; steps: string[]; blocked: string | null; silver: number; xp: number; path?: CaptainId; category?: string; portrait?: string; /** the ship level its fight asks for (canon D12) */ ship?: number; /** an arc's chapter, of three */ chapter?: number; /** asked for by the port's news (an epidemic, a blockade…) */ urgent?: boolean;
     /** The pay to choose from (docs/11 P6). */ pays?: QuestPayView;
-    /** A group contract: the company it is made for. */ group?: number }[];
+    /** A group contract: the company it is made for. */ group?: number;
+    /** Owner, 2026-10-16: the ⚓ band it is for, and where it first sends her (a port, an island). */
+    band?: [number, number]; dest?: { x: number; y: number; port?: string; island?: number } }[];
   captainsHouse: boolean;
   /** The board of the wanted (docs/12 P5). */
   wanted?: WantedPoster[];
