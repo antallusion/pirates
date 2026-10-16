@@ -2215,10 +2215,10 @@ export class Renderer {
     // Damage smoke and fire (frame-rate free: a chance per second): a plume from half her hull, fire from a quarter.
     const dts = Math.min(0.1, this.dtNow);
     if (dmg.smoke > 0 && !hidden && Math.random() < dmg.smoke * 8 * dts) this.fx.smoke(s.x + (Math.random() - 0.5) * cls.beam, s.y + (Math.random() - 0.5) * cls.length * 0.6, 1, 5 + dmg.smoke * 3, true);
-    if (dmg.fire > 0 && !hidden && !sinking && Math.random() < dmg.fire * 14 * dts) {
+    if (dmg.fire > 0 && !hidden && !sinking && Math.random() < dmg.fire * 7 * dts) {
       const v = headingVec(s.h);
       const u = (Math.random() - 0.5) * 0.6;
-      this.fx.add({ kind: 'fire', x: s.x + v.x * cls.length * u + (Math.random() - 0.5) * cls.beam * 0.5, y: s.y + v.y * cls.length * u + (Math.random() - 0.5) * cls.beam * 0.5, vx: (Math.random() - 0.5) * 2, vy: -2.5, life: 0.5 + Math.random() * 0.4, size: 2 + dmg.fire * 2, grow: 4, color: '#ff8a3c' });
+      this.fx.add({ kind: 'fire', x: s.x + v.x * cls.length * u + (Math.random() - 0.5) * cls.beam * 0.5, y: s.y + v.y * cls.length * u + (Math.random() - 0.5) * cls.beam * 0.5, vx: (Math.random() - 0.5) * 2, vy: -2.5, life: 0.5 + Math.random() * 0.4, size: cls.beam * (0.12 + 0.1 * dmg.fire), grow: cls.beam * 0.2, color: '#ff8a3c' });
       if (this.frameNo % 3 === 0) this.fx.light(s.x, s.y, 40 + cls.length, 'rgba(255,140,60,1)', 0.35 + 0.25 * dmg.fire, 0.12);
     }
     // Bow spray at speed: white water thrown off her cutwater to either side (decorative: the particles' caps and LOD).
@@ -2553,7 +2553,7 @@ export class Renderer {
         // a soft bloom about fire and powder flashes (additive; not on the lowest level of detail)
         if ((p.kind === 'fire' || p.kind === 'flash') && this.fx.lod < 2) {
           const b = d * 2.4;
-          g.globalAlpha = a * (p.kind === 'flash' ? 0.5 : 0.28);
+          g.globalAlpha = a * (p.kind === 'flash' ? 0.45 : 0.16);
           g.drawImage(this.bloomDot(), -b / 2, -b / 2, b, b);
         }
         g.restore();

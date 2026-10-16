@@ -29,7 +29,7 @@ try {
     await L.closeAll(p);
     await L.say(p, '/level 12'); await L.say(p, '/god'); await L.sleep(800); await L.closeAll(p);
     await L.send(p, { t: 'undock' }); await L.sleep(2500); await L.closeAll(p);
-    await L.say(p, '/tp 21000 70000'); await L.sleep(3000); await L.closeAll(p);
+    await L.say(p, process.env.SPOT ?? '/tp 21000 70000'); await L.sleep(3000); await L.closeAll(p);
     if (process.env.WEATHER) { await L.say(p, `/weather ${process.env.WEATHER}`); await L.sleep(500); }
     if (process.env.HOUR) { await L.say(p, `/time ${process.env.HOUR}`); await L.sleep(500); }
     // a dozen peaceful sails about her (merchants: none grapples her, so the frame rate is of the sea, not a fight)
