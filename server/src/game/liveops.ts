@@ -250,6 +250,8 @@ const KIND_RE = /^[a-z0-9_:.-]{1,40}$/;
 export class LiveOps {
   readonly db: DatabaseSync;
   private cfg = new Map<string, unknown>();
+  /** The overrides by key prefix (the hot paths ask often: experience, holidays, the shop's view). */
+  private lists = new Map<string, [string, unknown][]>();
   private loadedAt = 0;
   /** The funnel kinds each account has done (read once, then kept; cleared past 20 000 accounts). */
   private firsts = new Map<number, Set<string>>();
@@ -292,6 +294,7 @@ export class LiveOps {
       }
     }
     this.cfg = m;
+    this.lists.clear();
     this.loadedAt = this.clock();
   }
 
@@ -305,9 +308,11 @@ export class LiveOps {
   }
 
   /** Every override whose key starts so, by its key. */
-  list<T>(prefix: string): [string, T][] {
+  list<T>(prefix: string): readonly [string, T][] {
     this.fresh();
-    return [...this.cfg.entries()].filter(([k]) => k.startsWith(prefix)).map(([k, v]) => [k, v as T]);
+    let l = this.lists.get(prefix);
+    if (!l) this.lists.set(prefix, (l = [...this.cfg.entries()].filter(([k]) => k.startsWith(prefix))));
+    return l as [string, T][];
   }
 
   /** An override set (null: removed), written to the audit log with who did it; the cache read again. */
