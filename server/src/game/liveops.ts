@@ -99,7 +99,7 @@ const HOLIDAY_RU: Record<HolidayId, string> = { drowned_night: 'Ночь уто�
 
 /** Every event the panel may schedule: the game's own, and the multipliers. */
 export const EVENT_KINDS: EventKindDef[] = [
-  { kind: 'xp', ru: 'Множитель опыта (×2 — «двойной опыт»)', mode: 'window', mul: true },
+  { kind: 'xp', ru: 'Множитель опыта', mode: 'window', mul: true },
   { kind: 'silver', ru: 'Множитель серебра (добыча и задания)', mode: 'window', mul: true },
   ...(Object.keys(HOLIDAYS) as HolidayId[]).map((h): EventKindDef => ({ kind: `holiday:${h}`, ru: `Праздник: ${HOLIDAY_RU[h] ?? h}`, mode: 'window' })),
   ...HAPPENING_KINDS.filter((k) => k !== 'lost_fleet').map((k): EventKindDef => ({ kind: `happening:${k}`, ru: `Событие: ${HAPPENING_RU[k] ?? k}`, mode: 'trigger' })),

@@ -146,6 +146,7 @@ ssh kz tail /var/log/gravetide-offsite.log
 - **Где смотреть:**
   - `/telemetry/admin` — страница по ключу `TELEMETRY_TOKEN` из `game.env`. Ключ становится HttpOnly-cookie (это HMAC ключа), в URL он не попадает. Если ключа нет — 404.
   - `/telemetry [дни]` — в админ-консоли игры и в боте для `TELEGRAM_ADMIN_IDS`.
+  - Цены, офферы, события, воронка и деньги — панель лайв-опса `/ops/admin` (ключ `OPS_TOKEN`), см. `docs/34_LIVEOPS.md`.
 
 ## 6. Нагрузка
 - **Как гонять.** Только локально, не на проде:

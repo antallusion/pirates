@@ -38,6 +38,8 @@ const fmt = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g
 const pct = (x: number | null, d = 0) => (x === null || !Number.isFinite(x) ? '—' : `${(x * 100).toFixed(d).replace('.', ',')} %`);
 const utc = (ms: number) => new Date(ms).toISOString().slice(0, 16).replace('T', ' ');
 const when = (ms: number) => `<time data-ms="${ms}">${esc(utc(ms))} UTC</time>`;
+/** A cell's bar behind its number (a share of the column's top). */
+const bar = (share: number, gold = false) => ` style="background:linear-gradient(90deg,${gold ? '#4a3d22' : '#2b3a4f'} ${Math.round(Math.min(1, Math.max(0, share)) * 100)}%,transparent 0)"`;
 const famName = (id: string) => {
   const f = OFFERS.get(id);
   return f ? `${f.fam.name[1]}${f.fam.offers.length > 1 ? ` · ${f.offer.price} ₽` : ''}` : id;
@@ -446,7 +448,7 @@ export class OpsPanel {
     };
     return `<p class="seg">Период (по дню регистрации): ${link('7', group, '7 дн.', per === '7')} ${link('30', group, '30 дн.', per === '30')} ${link('90', group, '90 дн.', per === '90')} ${link('all', group, 'все', per === 'all')}</p>
     <h2>Воронка</h2>
-    <table class="t funnel"><tr><th>Шаг</th><th>Аккаунтов</th><th>От шага выше</th><th>От регистрации</th></tr>${f.map((x) => `<tr><td>${esc(x.ru)}</td><td><span class="bar" style="width:${Math.round((x.n / top) * 100)}%"></span>${fmt(x.n)}</td><td>${pct(x.conv, 1)}</td><td>${pct(x.ofFirst, 1)}</td></tr>`).join('')}</table>
+    <table class="t funnel"><tr><th>Шаг</th><th>Аккаунтов</th><th>От шага выше</th><th>От регистрации</th></tr>${f.map((x) => `<tr><td>${esc(x.ru)}</td><td${bar(x.n / top)}>${fmt(x.n)}</td><td>${pct(x.conv, 1)}</td><td>${pct(x.ofFirst, 1)}</td></tr>`).join('')}</table>
     <p class="hint">Пропустили Первую вахту: ${fmt(ops.count('fw_skip', from))}. Аккаунты, созданные до включения воронки, в «Регистрации» не считаются, но их шаги после включения видны в «все».</p>
     <h2>Удержание D1 / D7 / D30</h2>
     <p class="seg">По: ${link(per, 'day', 'дням', group === 'day')} ${link(per, 'week', 'неделям', group === 'week')}</p>
@@ -459,7 +461,7 @@ export class OpsPanel {
       <div class="kpi"><span>Платящие 7 / 30 дн.</span><b>${pct(m7.share, 1)} / ${pct(m30.share, 1)}</b><small>${m7.payers} из ${m7.active} · ${m30.payers} из ${m30.active}</small></div>
     </div>
     <h3>По дням (30 дн.)</h3>
-    <table class="t"><tr><th>День</th><th>Выручка, ₽</th><th>Платежей</th><th>Потрачено дублонов</th><th>Покупок</th><th>В игре</th><th>Регистраций</th></tr>${days.map((d) => `<tr><td>${d.day}</td><td><span class="bar gold" style="width:${Math.round((Math.max(0, d.revenue) / maxRev) * 100)}%"></span>${fmt(d.revenue)}</td><td>${d.payments}</td><td>${fmt(d.spent)}</td><td>${d.buys}</td><td>${fmt(d.dau)}</td><td>${d.regs}</td></tr>`).join('')}</table>
+    <table class="t"><tr><th>День</th><th>Выручка, ₽</th><th>Платежей</th><th>Потрачено дублонов</th><th>Покупок</th><th>В игре</th><th>Регистраций</th></tr>${days.map((d) => `<tr><td>${d.day}</td><td${bar(Math.max(0, d.revenue) / maxRev, true)}>${fmt(d.revenue)}</td><td>${d.payments}</td><td>${fmt(d.spent)}</td><td>${d.buys}</td><td>${fmt(d.dau)}</td><td>${d.regs}</td></tr>`).join('')}</table>
     <p class="hint">Выручка — пополнения за Stars в рублях пакета (дублон ≈ 1 ₽, без бонусных дублонов), за вычетом возвратов.</p>
     <h3>Топ товаров за дублоны (30 дн.)</h3>
     ${buys.length ? `<table class="t"><tr><th>Товар</th><th>Покупок</th><th>Дублонов</th><th>Покупателей</th></tr>${buys.map((b) => `<tr><td>${esc(prod(b.product))}</td><td>${b.n}</td><td>${fmt(b.sum)}</td><td>${b.buyers}</td></tr>`).join('')}</table>` : '<p class="muted">Покупок не было.</p>'}
@@ -505,14 +507,13 @@ a{color:#d4b06a}nav{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 12px;border-b
 .ok,.err{padding:8px 12px;border-radius:6px;margin:8px 0}.ok{background:#1e3324;color:#bfe3c6}.err{background:#3d1f1f;color:#f3c1c1}
 .hint{color:#9a9fa8;font-size:13px;margin:6px 0}.muted{color:#777}
 table.t{border-collapse:collapse;width:100%;margin:6px 0}table.t td,table.t th{border-bottom:1px solid #262a31;padding:6px 8px;text-align:left;vertical-align:top}table.t th{color:#8f98a3;font-weight:600;font-size:12px}
-table.t td{position:relative}.bar{position:absolute;left:0;top:3px;bottom:3px;background:#2b3a4f;z-index:0;border-radius:3px;max-width:100%}.bar.gold{background:#4a3d22}table.t td>*:not(.bar){position:relative}
-table.funnel td:nth-child(2),table.t td{z-index:0}table.funnel td:nth-child(2){min-width:140px}
+table.funnel td:nth-child(2){min-width:140px}table.t form{margin:0}table.t td{vertical-align:middle}
 input,select,button{font:inherit;color:#eee;background:#1d2128;border:1px solid #3a404a;border-radius:6px;padding:6px 8px;min-height:34px}input[type=checkbox]{min-height:auto;width:18px;height:18px}
 button{background:#4a3a1c;border-color:#6b5426;color:#f3e2b5;cursor:pointer;padding:6px 14px}button.sec{background:#23272e;border-color:#3a404a;color:#bbb}button:hover{filter:brightness(1.15)}
-.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#9aa1ab}.f.ck{flex-direction:row;align-items:center;gap:6px;color:#ccc;font-size:13px;padding-top:16px}.f input,.f select{width:100%}
+.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#9aa1ab}.f.ck{flex-direction:row;align-items:center;gap:6px;color:#ccc;font-size:13px;padding-bottom:8px;white-space:nowrap}.f input,.f select{width:100%}
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:end;background:#181b20;border:1px solid #262a31;border-radius:8px;padding:12px}.grid .wide{grid-column:span 2}.bt{display:flex;gap:6px;align-items:end}
 .prices{display:flex;flex-direction:column;gap:6px}.sec{margin:16px 0 2px}h3.sec{border-bottom:1px solid #2c3038;padding-bottom:4px}
-.prow{display:grid;grid-template-columns:minmax(0,2.2fr) 90px 110px 80px 170px 170px auto;gap:8px;align-items:end;background:#181b20;border:1px solid #262a31;border-radius:8px;padding:8px 10px}.prow.focus{border-color:#8a6d32}
+.prow{display:grid;grid-template-columns:minmax(0,2.2fr) 90px 108px 80px 180px 180px auto;gap:8px;align-items:end;background:#181b20;border:1px solid #262a31;border-radius:8px;padding:8px 10px}.prow.focus{border-color:#8a6d32}
 .pn{display:flex;flex-direction:column;gap:2px;min-width:0}.pn small{color:#8f98a3}.pn b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tag{font-style:normal;font-size:11px;padding:1px 6px;border-radius:4px;background:#2a2e35;color:#aaa;width:max-content}.tag.off{background:#3d1f1f;color:#f0b4b4}.tag.sale{background:#1e3324;color:#b8e3c0}.tag.wait{background:#2c2a1b;color:#e3d39a}.tag.own{background:#1f2b3d;color:#b4c9ef}
 .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.kpi{background:#181b20;border:1px solid #262a31;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}.kpi span{color:#9aa1ab;font-size:12px}.kpi b{font-size:20px;color:#f0d999}.kpi small{color:#8f98a3}
@@ -520,8 +521,8 @@ button{background:#4a3a1c;border-color:#6b5426;color:#f3e2b5;cursor:pointer;padd
 #find{width:100%;max-width:420px;margin:6px 0 4px}.login{display:flex;flex-direction:column;gap:10px;max-width:340px;background:#181b20;border:1px solid #262a31;border-radius:8px;padding:14px}.out{margin-top:24px}
 code{font-size:11px;color:#aab;word-break:break-all}table.audit td:nth-child(4),table.audit td:nth-child(5){max-width:280px}[hidden]{display:none!important}
 @media (max-width:900px){.prow{grid-template-columns:repeat(3,minmax(0,1fr))}.prow .pn{grid-column:1/-1}.prow .bt{grid-column:1/-1}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:560px){body{padding:10px 10px 40px}.prow{grid-template-columns:repeat(2,minmax(0,1fr))}.prow .f.ck{padding-top:0}.grid .wide{grid-column:1/-1}.kpis{grid-template-columns:1fr 1fr}.kpi b{font-size:17px}
-  table.t{display:block;overflow-x:auto;white-space:nowrap}nav a{padding:6px 9px}}`;
+@media (max-width:560px){body{padding:10px 10px 40px}.prow{grid-template-columns:repeat(2,minmax(0,1fr))}.prow .f.ck{order:6;padding-bottom:0}.prow .bt{order:7;grid-column:auto;justify-content:flex-end}.grid .wide{grid-column:1/-1}.kpis{grid-template-columns:1fr 1fr}.kpi b{font-size:17px}
+  table.t{display:block;overflow-x:auto;white-space:nowrap;font-size:13px}table.t.funnel{display:table;white-space:normal}table.funnel td:nth-child(2){min-width:72px}table.t td,table.t th{padding:6px 5px}nav a{padding:6px 9px}}`;
 
 const page = (title: string, body: string, nonce: string) => `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>GRAVETIDE · ${esc(title)}</title>
 <style>${CSS}</style></head><body><h1>GRAVETIDE · Лайв-опс · ${esc(title)}</h1>${body}<script nonce="${nonce}">${SCRIPT}</script></body></html>`;
