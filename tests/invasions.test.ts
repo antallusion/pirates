@@ -18,6 +18,8 @@ import { eventViews } from '../server/src/game/events.ts';
 import { invasionView, stepInvasions, tideOn } from '../server/src/game/invasions.ts';
 import { npcHostileTo } from '../server/src/game/npc.ts';
 import { priceMods } from '../server/src/game/ports.ts';
+import { festivalAt } from '../server/src/game/happenings.ts';
+import { leagueDayMods } from '../server/src/game/holidays.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { SERVER_RU_ADMIN } from '../client/src/lang/server.ru.admin.ts';
 import { setLang } from '../client/src/i18n.ts';
@@ -124,10 +126,14 @@ test('the time runs out: the black tide a day — its patrols, its ports dear, t
   const patrols = [...game.ships.values()].filter((x) => x.invader?.tide === region);
   assert.equal(patrols.length, TIDE_PATROLS);
   const port = game.world.ports.find((p) => !p.raft && regionAt(game.world, p.x, p.y) === region)!;
+  // (a festival's or League Day's kind prices may begin or end over the day: taken out of both sides, the tide's own share is left)
+  const fest = (on: boolean) => { const ld = leagueDayMods(game, port) ?? { buy: 1, sell: 1 }; return on ? { buy: 0.9 * ld.buy, sell: 1.05 * ld.sell } : ld; };
+  const f0 = fest(festivalAt(game, port.id));
   const tide = priceMods(s.ship!, port, s.profile!, game.now, game);
   wall.t += TIDE_TIME + 1;
+  const f1 = fest(festivalAt(game, port.id));
   const after = priceMods(s.ship!, port, s.profile!, game.now, game);
-  assert.ok(Math.abs(tide.buyMul / after.buyMul - TIDE_PRICE.buy) < 1e-9 && Math.abs(tide.sellMul / after.sellMul - TIDE_PRICE.sell) < 1e-9);
+  assert.ok(Math.abs(tide.buyMul / f0.buy / (after.buyMul / f1.buy) - TIDE_PRICE.buy) < 1e-9 && Math.abs(tide.sellMul / f0.sell / (after.sellMul / f1.sell) - TIDE_PRICE.sell) < 1e-9);
   wall.t -= TIDE_TIME + 1;
   const ev = eventViews(game).find((e) => e.kind === 'black_tide')!;
   assert.ok(ev && ev.region === region && (ev.sectors?.length ?? 0) > 3);

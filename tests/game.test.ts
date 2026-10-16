@@ -398,6 +398,10 @@ test('curse: the Abyss claims a lingering ship in stages; a Crown yard scrapes i
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);
   s.profile!.gold = 50000;
   s.profile!.infamy = 0;
+  // (no strange sail by the quay: with the sea's busier traffic a passing rover put the docking off till «the firing stops»)
+  for (const o of [...game.ships.values()]) if (o !== ship && !o.isPlayer && Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y) < 4000) game.removeShip(o.id);
+  ship.attackers.clear();
+  ship.lastHitAt = -999; // (and the Abyss's ghosts who fired on her on the way out are behind her)
   c.push({ t: 'dock' });
   assert.equal(ship.docked, 'gravesend');
   c.push({ t: 'cleanse' });

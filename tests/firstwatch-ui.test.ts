@@ -52,8 +52,9 @@ test('«В порт» far from any harbour in the First Watch: the helmsman sail
   const far = buildActs({ homeport: { name: 'Солтмарроу' } });
   assert.equal(far[0]?.id, 'homeport');
   const near = buildActs({ port: { name: 'Солтмарроу' }, homeport: { name: 'Солтмарроу' } });
-  assert.deepEqual(near.map((a) => a.id), ['dock'], 'in the harbour’s reach it is the plain «В порт»');
-  assert.equal(far[0].label, near[0].label, 'one word for both');
+  assert.deepEqual(near.map((a) => a.id), ['dock'], 'in the harbour’s reach it is the mooring button');
+  // (owner, 2026-10-16: a harbour is entered by its own button — «Причалить» in its waters, «В порт» sails there from afar)
+  assert.notEqual(far[0].label, near[0].label, 'the far order sails, the near one moors');
 });
 
 test('vibration: short pulses, spaced, and off with its option (docs/23 item 84)', () => {
