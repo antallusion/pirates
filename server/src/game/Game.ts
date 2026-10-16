@@ -4689,8 +4689,9 @@ export class Game {
       // In a crowd: the distance of the 40th and 100th nearest (selection, not a full sort).
       // A captain in a crowd gets 5 Hz instead of 10: the client draws further in the past to keep it smooth.
       s.snapEvery = cand.length > SNAP_CROWD ? SNAP_CROWD_EVERY : SNAPSHOT_EVERY_TICKS;
-      const nearCut = cand.length > SNAP_RANK_NEAR ? kthSmallest(cand.map((c) => c.d), SNAP_RANK_NEAR) : Infinity;
-      const midCut = cand.length > SNAP_RANK_MID ? kthSmallest(cand.map((c) => c.d), SNAP_RANK_MID) : Infinity;
+      const dists = cand.length > SNAP_RANK_NEAR ? cand.map((c) => c.d) : null;
+      const nearCut = dists ? kthSmallest(dists, SNAP_RANK_NEAR) : Infinity;
+      const midCut = dists && cand.length > SNAP_RANK_MID ? kthSmallest(dists, SNAP_RANK_MID) : Infinity;
       for (const { o, d } of cand) {
         // Distance priority: close ships every snapshot, the middle distance every second, the far every fourth —
         // and in a crowd only the nearest few dozen at full rate.
@@ -4703,12 +4704,18 @@ export class Game {
         const base = this.snapRow(o, frame);
         const hostile = this.isHostile(o, me);
         // Delta: an unchanged row is not sent again (but refreshed every 2 s to keep interpolation fed).
-        const key = hostile ? base.key + 'h' : base.key;
-        if (last && last.key === key && this.now - last.t < 2) continue;
-        s.sentRows.set(o.id, { key, t: this.now });
-        const row = base.row.slice() as ShipRow;
-        if (hostile) row[8] = row[8] | SF.HOSTILE;
-        ships.push(row);
+        // (the record kept and updated in place, the shared row sent as it is unless hostile: load test, docs/33)
+        if (last && last.key === base.key && last.h === hostile && this.now - last.t < 2) continue;
+        if (last) {
+          last.key = base.key;
+          last.h = hostile;
+          last.t = this.now;
+        } else s.sentRows.set(o.id, { key: base.key, h: hostile, t: this.now });
+        if (hostile) {
+          const row = base.row.slice() as ShipRow;
+          row[8] = row[8] | SF.HOSTILE;
+          ships.push(row);
+        } else ships.push(base.row);
       }
       const loot: LootRow[] = [];
       for (const l of this.loot.values()) {

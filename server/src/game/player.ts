@@ -416,7 +416,7 @@ export class PlayerSession {
   ship: ShipEntity | null = null;
   knownEntities = new Set<number>();
   /** Delta snapshots: what this client last received for each entity, and when. */
-  sentRows = new Map<number, { key: string; t: number }>();
+  sentRows = new Map<number, { key: string; t: number; h?: boolean }>();
   /** The snapshot codec's per-connection base (codec v7: rows go out as field deltas against it). */
   snapBase = new SnapState();
   /** The lookout's cries: when each notable ship was last cried (game seconds; not saved). */
