@@ -1,7 +1,7 @@
 // docs/19 E15 on the server: the Admiralty's contracts (shared/src/data/admiralty.ts — the week's three, their words and
 // their pay). Here:
 //  - the board: a captain of the cap takes a contract at an Admiralty board (a great harbour's), into her journal as a
-//    quest of its own (quests.ts carries its steps; the three stand beside the five quests she may hold);
+//    quest of its own (quests.ts carries its steps; the three stand beside the quests she holds, which have no cap since 2026-10-16);
 //  - the legend: within its mark a contract-holder's call brings the rogue legend's ship alongside, grappled at once
 //    (as the Abyss's legends: abyssraid.ts) — her army and hero a tier of the Abyss's, on the legend's own path; what the
 //    captain cuts stays cut for her next boarding all week; struck, the contract is hers and her groupmates' in company
