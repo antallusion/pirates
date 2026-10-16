@@ -373,17 +373,16 @@ test('her yes: the Mini App\'s write access, the bot\'s /start; /notify and «О
   assert.equal(calls.at(-1)!.method, 'answerCallbackQuery');
 });
 
-test('a notice\'s button opened the Mini App: counted once a session (the funnel\'s stub, track.ts)', () => {
+test('a notice\'s button opened the Mini App: counted once a session; the sends and blocks counted by kind', () => {
   const { game } = world();
   const { s, conn } = captain(game, 'Click Cleo');
   noticeLink(game, s.accountId, 9, 'ru', true);
   conn.push({ t: 'premium', action: 'tgn_click', cat: 'daily' });
   conn.push({ t: 'premium', action: 'tgn_click', cat: 'daily' });
   conn.push({ t: 'premium', action: 'tgn_click', cat: 'nonsense' });
-  const day = game.db.getKv<Record<string, number>>(`track:${Math.floor(game.wallNow() / DAY)}`)!;
-  assert.equal(day.tg_notice_click, 1);
-  claimGift(game, s);
-  assert.equal(game.db.getKv<Record<string, number>>(`track:${Math.floor(game.wallNow() / DAY)}`)!.daily_claim, 1);
+  const stats = game.db.getKv<Record<string, Record<string, number>>>('tgn:stats')!;
+  assert.equal(stats.daily.click, 1);
+  assert.equal(stats.nonsense, undefined);
 });
 
 test('every word in both languages: the bot\'s notices, the server\'s lines, the calendar and the settings', () => {

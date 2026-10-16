@@ -167,6 +167,15 @@ export function setNotices(game: Game, acc: number, cat: TgnCat | 'all', on: boo
 
 const nameOf = (game: Game, acc: number): string => game.db.accountById(acc)?.name ?? '';
 
+/** The owner's own figures of the notices (kv `tgn:stats`): sent, tapped, the bot blocked — by kind; the funnel
+ *  (trackEvent) has them by account too. */
+export function tally(game: Game, cat: TgnCat, what: 'sent' | 'click' | 'blocked'): void {
+  const f = game.db.getKv<Record<string, Record<string, number>>>('tgn:stats') ?? {};
+  const r = (f[cat] ??= {});
+  r[what] = (r[what] ?? 0) + 1;
+  game.db.setKv('tgn:stats', f);
+}
+
 /** She is in the game now (a session that is connected: a dropped line's ship lingering at sea does not count). */
 export function aboard(game: Game, acc: number): boolean {
   const s = game.sessionByAccount(acc);
@@ -204,10 +213,14 @@ export async function notify(game: Game, acc: number, cat: TgnCat, vars: Record<
     now2.blocked = true;
     now2.pending = [];
     save(game, acc, now2);
-    trackEvent(game, acc, 'tg_notice_blocked', { cat });
+    trackEvent(game, acc, 'tg_notice_blocked', { product: cat });
+    tally(game, cat, 'blocked');
     return 'drop';
   }
-  if (r === 'ok') trackEvent(game, acc, 'tg_notice_sent', { cat });
+  if (r === 'ok') {
+    trackEvent(game, acc, 'tg_notice_sent', { product: cat });
+    tally(game, cat, 'sent');
+  }
   return 'send';
 }
 
@@ -295,13 +308,29 @@ export function tgnMessage(game: Game, s: PlayerSession, msg: { action: string; 
     const cat = String(msg.cat ?? '') as TgnCat;
     if (TGN_CATS.includes(cat) && !clicked.has(s)) {
       clicked.add(s);
-      trackEvent(game, s.accountId, 'tg_notice_click', { cat });
+      trackEvent(game, s.accountId, 'tg_notice_click', { product: cat });
+      tally(game, cat, 'click');
     }
     return;
   }
   if (msg.action === 'tgn_set') setNotices(game, s.accountId, (msg.cat === 'all' ? 'all' : String(msg.cat)) as TgnCat | 'all', msg.on === true, msg.lang === 'en' || msg.lang === 'ru' ? msg.lang : undefined);
   const view = tgnView(game, s.accountId);
   if (view) game.sendTo(s, { t: 'tgn', view });
+}
+
+/** `/tgn [link|stats]`: a test chat linked to her (QA: no message is sent without the bot), the owner's figures, her count. */
+export function adminTgn(game: Game, s: PlayerSession, args: string[]): string {
+  if (args[0] === 'stats') {
+    const f = game.db.getKv<Record<string, Record<string, number>>>('tgn:stats') ?? {};
+    return `Telegram notices (sent / tapped / blocked): ${TGN_CATS.map((c) => `${c} ${f[c]?.sent ?? 0}/${f[c]?.click ?? 0}/${f[c]?.blocked ?? 0}`).join(' · ')}`;
+  }
+  if (args[0] === 'link') {
+    noticeLink(game, s.accountId, 1, 'ru', true);
+    const view = tgnView(game, s.accountId);
+    if (view) game.sendTo(s, { t: 'tgn', view });
+    return 'A test Telegram chat is linked to this captain: the switches are in the settings.';
+  }
+  return `Telegram notices for this captain: sent today ${tgnView(game, s.accountId)?.sent ?? 0} of ${TGN_CAP}. Usage: /tgn [link|stats]`;
 }
 
 /** The bot's /notify: her notices on or off from the chat (the reply's words). */

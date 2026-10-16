@@ -66,7 +66,7 @@ export function claimGift(game: Game, s: PlayerSession): { got: Gift } | { why: 
   const gift = giftOf(streak, p.level);
   game.db.setKv(key(s.accountId), { last: today, streak, total: st.total + 1 } satisfies GiftState);
   const got = grant(game, s, gift, today);
-  trackEvent(game, s.accountId, 'daily_claim', { streak, day: ((streak - 1) % 7) + 1, total: st.total + 1 });
+  trackEvent(game, s.accountId, 'daily_claim', { amount: streak, product: `day${((streak - 1) % 7) + 1}` });
   return { got };
 }
 
