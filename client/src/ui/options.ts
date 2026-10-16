@@ -71,7 +71,7 @@ export class OptionsScreen {
     // «Уведомления в Телеграме» (owner, 2026-10-16): a tab of its own for a captain with Telegram linked
     const tabs: Tab[] = tgnView() ? ['ui', 'vision', 'sound', 'controls', 'notify'] : ['ui', 'vision', 'sound', 'controls'];
     if (this.tab === 'notify' && !tgnView()) this.tab = 'ui';
-    const chips = this.more ? chipRow([{ id: 'main', icon: 'menu_options', label: W('opt.back') }, ...tabs.map((x) => ({ id: x, icon: TAB_ICON[x], label: x === 'notify' ? G('tgn.title') : t(`opt.tab.${x}` as Key) }))], this.tab, 'otab') : '';
+    const chips = this.more ? chipRow([{ id: 'main', icon: 'menu_options', label: W('opt.back') }, ...tabs.map((x) => ({ id: x, icon: TAB_ICON[x], label: x === 'notify' ? G('tgn.tab') : t(`opt.tab.${x}` as Key) }))], this.tab, 'otab') : '';
     root.innerHTML = `${winHead(W('opt.title'), { crest: 'menu_options', chips })}
       <div class="modal-body w-body options${this.more ? '' : ' opt-main'}">${this.more ? this.body(s) : this.main(s)}</div>`;
     root.querySelectorAll<HTMLButtonElement>('[data-otab]').forEach((b) => (b.onclick = () => {

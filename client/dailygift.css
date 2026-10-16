@@ -29,7 +29,7 @@
 .gf-q { font: 700 12px/1.1 var(--sans); color: var(--gold); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .gf-day.done { opacity: 0.55; }
 .gf-day.done .gf-pic { filter: grayscale(0.6); }
-.gf-tick { position: absolute; top: 2px; right: 4px; font: 800 13px/1 var(--sans); font-style: normal; color: #9fe08a; text-shadow: 0 1px 2px #000; }
+.gf-tick { position: absolute; top: 40%; left: 5px; font: 800 13px/1 var(--sans); font-style: normal; color: #9fe08a; text-shadow: 0 1px 2px #000; }
 .gf-day.today { border-color: var(--gold); background: linear-gradient(180deg, rgba(86, 64, 28, 0.95), rgba(24, 18, 10, 0.95)); box-shadow: 0 0 12px rgba(240, 206, 120, 0.45), inset 0 0 10px rgba(240, 206, 120, 0.15); }
 .gf-day.today .gf-n { color: var(--gold); }
 .gf-day.gf-seven { border-color: rgba(224, 184, 98, 0.85); box-shadow: inset 0 0 0 1px rgba(224, 184, 98, 0.35); }
@@ -82,3 +82,14 @@ body.reduce-motion .gf-day.fresh { animation: none; }
 .tgn-row > span { min-width: 0; font-size: 13px; }
 .tgn-row.off > span { opacity: 0.55; }
 .tgn-sent { font-size: 11px; color: var(--fog); }
+/* a phone held sideways: the kinds in two columns, so the whole list stands on one screen at 480×270 */
+@media (max-height: 420px) {
+  .tgn { gap: 3px; }
+  .tgn-grid { grid-template-columns: 1fr 1fr; gap: 0 10px; }
+  .tgn-row { min-height: 28px; gap: 6px; }
+  .tgn-row > span { font-size: 11px; line-height: 1.15; }
+  .tgn-hint, .tgn-bad { font-size: 10.5px; line-height: 1.25; }
+  .tgn .w-switch { transform: scale(0.88); transform-origin: right center; }
+}
+/* the options' main page: «Настроить» at the row's right end, as the other rows' controls */
+.opt-row [data-otgn] { margin-left: auto; }
