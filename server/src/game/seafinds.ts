@@ -12,7 +12,7 @@ import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import {
-  BOTTLE_COIN, BOTTLE_MAP, BOTTLE_WORTH, CALM_CACHE, CALM_WORTH, CHEST_GOODS, CHEST_WORTH, FIND_AT, FIND_EVERY, FIND_KINDS, FIND_REACH, FIND_SLOW, FIND_TTL, FIND_WEIGHT, FIND_WORK, FISH_SHARE,
+  BOTTLE_COIN, BOTTLE_MAP, BOTTLE_WORTH, CALM_CACHE, CALM_WORTH, CHEST_GOODS, CHEST_WORTH, FIND_AT, FIND_EVERY, FIND_HARBOUR, FIND_MAX, FIND_KINDS, FIND_REACH, FIND_SLOW, FIND_TTL, FIND_WEIGHT, FIND_WORK, FISH_SHARE,
   boatHands, chestSharks, isFindKind,
 } from '../../../shared/src/data/seafinds.ts';
 import type { FindKind } from '../../../shared/src/data/seafinds.ts';
@@ -184,10 +184,10 @@ export function stepSeaFinds(game: Game): void {
       const due = S.next.get(s.accountId);
       if (due === undefined) S.next.set(s.accountId, game.now + S.rng.range(FIND_EVERY[0], FIND_EVERY[1]) * 0.5);
       else if (game.now >= due) {
-        if (!quietSea(game, s)) S.next.set(s.accountId, game.now + 20); // a fight or a harbour puts it off
+        if (!quietSea(game, s, FIND_HARBOUR)) S.next.set(s.accountId, game.now + 20); // a fight or a harbour's mouth puts it off
         else {
           S.next.set(s.accountId, game.now + S.rng.range(FIND_EVERY[0], FIND_EVERY[1]));
-          if (!findsOf(game, s).length) putFind(game, s, pickKind(game, s));
+          if (findsOf(game, s).length < FIND_MAX) putFind(game, s, pickKind(game, s));
         }
       }
     }

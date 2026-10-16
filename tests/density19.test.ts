@@ -12,7 +12,7 @@ import { DRIFT_EVERY, DRIFT_OWN } from '../shared/src/data/drifts.ts';
 import { buildLairs } from '../shared/src/data/lairs.ts';
 import { generateLairJobs } from '../shared/src/data/lairquests.ts';
 import { MINES_LEGACY, MINES_PER_REGION, buildMines } from '../shared/src/data/mines.ts';
-import { FIND_KINDS, FIND_REACH, boatHands, chestSharks } from '../shared/src/data/seafinds.ts';
+import { FIND_KINDS, FIND_MAX, FIND_REACH, boatHands, chestSharks } from '../shared/src/data/seafinds.ts';
 import type { FindKind } from '../shared/src/data/seafinds.ts';
 import { HAUL, HAUL_THIN, haulMul } from '../shared/src/data/seahaul.ts';
 import { MARK_KINDS } from '../shared/src/data/seamarks.ts';
@@ -268,7 +268,7 @@ test('D5: the six small things, each a button at hand and its modest reward on i
   assert.deepEqual(Object.keys(s.profile!.seaFinds ?? {}).sort(), [...FIND_KINDS].sort());
 });
 
-test('D5: within reach and hove to; one of hers at a time in quiet sailing; on the action bar', () => {
+test('D5: within reach and hove to; at most two of hers at a time in quiet sailing (2026-10-16: FIND_MAX); on the action bar', () => {
   const { game } = makeGame();
   const s = captain(game, 'Reach Tester');
   runAdmin(game, s, '/tp gravewater');
@@ -310,7 +310,7 @@ test('D5: within reach and hove to; one of hers at a time in quiet sailing; on t
     steps(game, 20);
     most = Math.max(most, findsOf(game, s).length);
   }
-  assert.equal(most, 1);
+  assert.ok(most >= 1 && most <= FIND_MAX, `${most} at once`);
 });
 
 // ------------------------------------------------------------------------------------------------ words

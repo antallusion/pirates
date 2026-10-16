@@ -28,8 +28,21 @@ const MIX: Record<string, [Role, number][]> = {
   contested: [['merchant', 40], ['fisher', 20], ['patrol', 15], ['pirate', 25], ['hunter', 8]],
   lawless: [['merchant', 25], ['fisher', 10], ['pirate', 65], ['hunter', 7]],
 };
-/** No more local ships than this in the whole sea, whatever the crowd. */
+/** Owner, 2026-10-16 («я щас тут около смоляного причала и вокруг ваще ниче нет … насели прям густо все море всем»):
+ *  the wide ring's 32–40 within 5 km were met by ships flowing past 2–4 km off, and within her chart's nearer reach
+ *  (2.5 km) there were four now and then. So the sea also keeps this many within NEAR_R of her, put out NEAR_SPAWN off
+ *  (beyond her screen: it shows some 300–600 m of the sea), before the wide ring is counted. */
+export const NEAR_R = 2500;
+export const NEAR_WANT: Record<string, number> = { safe: 10, contested: 12, lawless: 12 };
+const NEAR_SPAWN: [number, number] = [1100, 2300];
+/** No more local ships than this in the whole sea, whatever the crowd: CAP, or CAP_EACH a captain at sea in a big
+ *  crowd (per-captain spawning: a crowd spread over the sea has her own ships about each). */
 const CAP = 1800; // docs/19 D3: twice the 900
+const CAP_EACH = 16;
+/** A crowd at sea: past this many captains the wide ring's number about each is cut (as CROWD ÷ captains, never below
+ *  her near reach's number and two), and a ship of the sea is let go at CROWD_GONE_R — the server's tick is shared. */
+export const CROWD = 40;
+const CROWD_GONE_R = 6500;
 type Role = 'merchant' | 'fisher' | 'patrol' | 'pirate' | 'hunter';
 const COUNTED = new Set(['merchant', 'fisher', 'patrol', 'pirate', 'escort', 'hunter', 'ghost']);
 
@@ -101,6 +114,20 @@ function hail(game: Game, s: import('./player.ts').PlayerSession): void {
 export function stepTraffic(game: Game): void {
   if (!game.directorOn) return;
   const mine = localTraffic(game);
+  let atSea = 0;
+  for (const s of game.sessions) if (s.ship && !s.ship.docked && s.ship.alive) atSea++;
+  const goneR = atSea > CROWD ? CROWD_GONE_R : GONE_R;
+  // The captains in cells of goneR: a ship of the sea looks in the nine about her (each against every captain was the
+  // second's spike with a crowd at sea).
+  const cells = new Map<number, { x: number; y: number }[]>();
+  const ck = (x: number, y: number) => Math.floor(y / goneR) * 4096 + Math.floor(x / goneR);
+  for (const s of game.sessions) {
+    if (!s.ship) continue;
+    const k = ck(s.ship.state.x, s.ship.state.y);
+    const c = cells.get(k);
+    if (c) c.push(s.ship.state);
+    else cells.set(k, [s.ship.state]);
+  }
   for (const id of [...mine]) {
     const ship = game.ships.get(id);
     if (!ship || !ship.alive) {
@@ -109,9 +136,12 @@ export function stepTraffic(game: Game): void {
     }
     if (ship.inCombat(game.now) || ship.boarding) continue;
     let near = false;
-    for (const s of game.sessions) if (s.ship && dist(s.ship.state.x, s.ship.state.y, ship.state.x, ship.state.y) < GONE_R) {
-      near = true;
-      break;
+    const x = ship.state.x, y = ship.state.y;
+    for (let dy = -1; dy <= 1 && !near; dy++) for (let dx = -1; dx <= 1 && !near; dx++) {
+      for (const p of cells.get(ck(x + dx * goneR, y + dy * goneR)) ?? []) if (dist(p.x, p.y, x, y) < goneR) {
+        near = true;
+        break;
+      }
     }
     if (!near) {
       mine.delete(id);
@@ -119,6 +149,8 @@ export function stepTraffic(game: Game): void {
     }
   }
   const tick = Math.floor(game.now);
+  const cap = Math.max(CAP, CAP_EACH * atSea);
+  const crowd = atSea > CROWD ? CROWD / atSea : 1;
   for (const s of game.sessions) {
     const ship = s.ship;
     // In port the rovers' count starts again: none is due at the harbour mouth the moment she casts off (it was —
@@ -134,24 +166,30 @@ export function stepTraffic(game: Game): void {
       return p;
     });
     if ((tick + s.accountId) % 3 !== 0) continue;
-    if (mine.size >= CAP) continue;
+    if (mine.size >= cap) continue;
     // In the First Watch the sea is peaceful but not empty: merchants, fishers and patrols, no rovers.
     const novice = onboardingProtected(s);
     const safety = REGIONS[ship.region].safety;
-    let count = 0;
-    game.forShipsNear(ship.state.x, ship.state.y, TRAFFIC_R, (o) => {
-      if (o.npcRole && COUNTED.has(o.npcRole) && o.alive) count++;
+    let count = 0, near = 0;
+    const sx = ship.state.x, sy = ship.state.y;
+    game.forShipsNear(sx, sy, TRAFFIC_R, (o) => {
+      if (!o.npcRole || !COUNTED.has(o.npcRole) || !o.alive) return;
+      count++;
+      if ((o.state.x - sx) ** 2 + (o.state.y - sy) ** 2 < NEAR_R * NEAR_R) near++;
     });
-    const want = TRAFFIC_WANT[safety] ?? 5;
-    if (count >= want) continue;
+    const nearWant = NEAR_WANT[safety] ?? 10;
+    const want = crowd < 1 ? Math.max(nearWant + 2, Math.round((TRAFFIC_WANT[safety] ?? 5) * crowd)) : TRAFFIC_WANT[safety] ?? 5;
+    const close = near < nearWant;
+    if (count >= want && !close) continue;
     const mix = (MIX[safety] ?? MIX.contested).filter(([r]) => !novice || r !== 'pirate');
     // Up to three at a turn while the sea about her is thin, so a new sea fills within a minute.
-    for (let n = Math.min(3, want - count); n > 0; n--) {
+    for (let n = Math.min(3, Math.max(close ? nearWant - near : 0, want - count)); n > 0; n--) {
     const role = game.rng.weighted(mix);
     // Mostly ahead of her or abeam, where she will meet it; now and then astern, overtaking.
     for (let k = 0; k < 6; k++) {
       const a = ship.state.heading + (game.rng.chance(0.8) ? game.rng.range(-1.8, 1.8) : Math.PI + game.rng.range(-0.8, 0.8));
-      const r = game.rng.range(SPAWN_R[0], SPAWN_R[1]);
+      const ring = close ? NEAR_SPAWN : SPAWN_R;
+      const r = game.rng.range(ring[0], ring[1]);
       const v = headingVec(a);
       const out = spawnTraffic(game, role, ship.state.x + v.x * r, ship.state.y + v.y * r, { x: ship.state.x, y: ship.state.y });
       if (out) {

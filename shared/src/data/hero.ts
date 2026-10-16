@@ -618,7 +618,10 @@ export function heroBattle(prim: Prims, skills: readonly SkillSlot[], art: ArtTo
 export function npcHeroBattle(shipLevel: number, path: CaptainId | null): HeroBattle {
   const base = npcPrims(shipLevel);
   const level = npcHeroLevel(shipLevel);
-  const kit = npcKit(level).map((id, i) => makeArtifact(id, i + 1));
+  // Owner, 2026-10-16 («15 юнг убили моих 21»): the sea's captains of ⚓1–2 sail bare-handed — a captain of those levels
+  // has seldom an artifact yet, and a ⚓2 pirate's three (+3 Attack, +2 Defense) decided his deck against a captain of a
+  // level above him. From the ⚓3 (the 8th) they carry their level's kit as before.
+  const kit = (level < NPC_KIT_FROM ? [] : npcKit(level)).map((id, i) => makeArtifact(id, i + 1));
   const art = kit.length ? artTotals(kit) : null;
   const prim = art ? { atk: base.atk + art.prim.atk, def: base.def + art.prim.def, pow: base.pow + art.prim.pow, will: base.will + art.prim.will } : base;
   const skills = npcSkills(level);
@@ -626,6 +629,9 @@ export function npcHeroBattle(shipLevel: number, path: CaptainId | null): HeroBa
   const book = [...startingOrders(path), ...npcBook(shipLevel).filter((id) => !startingOrders(path).includes(id))];
   return heroBattle(prim, skills, art, book, manaMaxOf(prim.will), { path, level });
 }
+
+/** The captain's level from which the sea's captains carry the artifacts of their level (npcKit): the ⚓3's. */
+export const NPC_KIT_FROM = 8;
 
 /** docs/25 item 63: the eight battle skills a captain of the sea learns, a pick a level-up, rank by rank round the
  *  eight (as the balance tools build a captain of a level: tests/balance/boardlen.ts). */

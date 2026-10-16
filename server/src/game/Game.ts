@@ -138,6 +138,8 @@ const STEP_BUDGET_MS = 40; // (150 still kept a page waiting 1.5 s at ×100: QA 
  *  every captain's snapshots (beyond INTEREST_RADIUS) every second FAR_EVERY. */
 export const FAR_LOD_R = SNAP_MID + 200;
 export const FAR_EVERY = 4;
+/** The cells the captains are put in for the sea's ships' nearest captain (LOD): wider than every distance it sets. */
+export const PLAYER_CELL = 6000;
 /** docs/19 D6: within this of a captain an NPC steps every tick (her snapshots carry it every one, 10 Hz, to SNAP_NEAR). */
 export const MID_LOD_R = SNAP_NEAR + 300;
 /** The same refusal to the same captain is told once in this many seconds (Game.refuse). */
@@ -970,13 +972,30 @@ export class Game {
     const players: ShipEntity[] = [];
     for (const s of this.sessions) if (s.ship && !s.ship.docked) players.push(s.ship);
     for (const s of this.byAccount.values()) if (s.disconnectedAt !== null && s.ship && !players.includes(s.ship)) players.push(s.ship);
+    // (2026-10-16, the dense sea: the sea's ships about 200 captains are some 4,000 — each against every captain was
+    // 800,000 sums a second, a spike of its own. The captains in cells of PLAYER_CELL: a ship looks in the nine about
+    // her; none there — every captain is over PLAYER_CELL off, past every rate the distance sets — a far number.)
+    const cells = new Map<number, ShipEntity[]>();
+    const ck = (cx: number, cy: number) => cy * 4096 + cx;
+    for (const p of players) {
+      const k = ck(Math.floor(p.state.x / PLAYER_CELL), Math.floor(p.state.y / PLAYER_CELL));
+      const c = cells.get(k);
+      if (c) c.push(p);
+      else cells.set(k, [p]);
+    }
     for (const [id] of this.npcs) {
       const ship = this.ships.get(id);
       if (!ship) continue;
       let best = Infinity;
-      for (const p of players) {
-        const d = Math.abs(p.state.x - ship.state.x) + Math.abs(p.state.y - ship.state.y);
-        if (d < best) best = d;
+      if (players.length) {
+        const cx = Math.floor(ship.state.x / PLAYER_CELL), cy = Math.floor(ship.state.y / PLAYER_CELL);
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          for (const p of cells.get(ck(cx + dx, cy + dy)) ?? []) {
+            const d = Math.abs(p.state.x - ship.state.x) + Math.abs(p.state.y - ship.state.y);
+            if (d < best) best = d;
+          }
+        }
+        if (best === Infinity) best = PLAYER_CELL * 4; // far from all (finite: «no captain at all» is Infinity)
       }
       this.nearestPlayer.set(id, best * 0.75);
     }

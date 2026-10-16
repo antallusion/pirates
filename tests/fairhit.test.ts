@@ -12,7 +12,7 @@ import { UNITS, UNIT_IDS } from '../shared/src/data/army.ts';
 import type { UnitId } from '../shared/src/data/army.ts';
 import { flankOf, hexNeighbors } from '../shared/src/data/tactical.ts';
 import { npcHeroBattle } from '../shared/src/data/hero.ts';
-import { adMod, blow, newBattle, previewBlow, stackBonus } from '../server/src/game/tacbattle.ts';
+import { adMod, blow, blowParts, newBattle, previewBlow, stackBonus } from '../server/src/game/tacbattle.ts';
 import type { TacBattle, TacStack } from '../server/src/game/tacbattle.ts';
 import { captainAt, side, slOf } from './balance/boardlen.ts';
 
@@ -49,7 +49,8 @@ test('the owner\'s case: a ship of the sea\'s 9 deckhands strike her 20 at level
     const from = frontOf(bt, mine);
     for (let seed = 1; seed <= 40; seed++) {
       const r = blow(bt, sea, mine, 'melee', new Rng(seed), from);
-      const k = r.lucky ? 2 : 1;
+      // (a lucky blow: twice the blow straight on, the flank in it — TAC_LUCK_ALONE)
+      const k = r.lucky ? blowParts(bt, sea, mine, 'melee', from).lucky : 1;
       const lo = Math.round(statDmg(bt, sea, mine, 'min') * k), hi = Math.round(statDmg(bt, sea, mine, 'max') * k);
       assert.ok(r.dmg >= lo - 1 && r.dmg <= hi + 1, `level ${L}, dice ${seed}: ${r.dmg} harm (the stats ${lo}–${hi})`);
       assert.ok(fells(mine, r.dmg) <= Math.ceil(hi / mine.hpMax), `level ${L}: ${fells(mine, r.dmg)} fell`);
@@ -101,7 +102,7 @@ test('the attack preview is the blow: every blow falls inside the preview\'s har
     const pv = previewBlow(bt, s, t, how, from);
     for (let seed = 1; seed <= 25; seed++) {
       const r = blow(bt, s, t, how, new Rng(seed * 3), how === 'melee' ? from : s.hex);
-      const k = r.lucky ? 2 : 1;
+      const k = r.lucky ? blowParts(bt, s, t, how, how === 'melee' ? from : s.hex).lucky : 1;
       assert.ok(r.dmg >= pv.dmg[0] * k - 1 && r.dmg <= pv.dmg[1] * k + 1, `L${L} ${u}→${v}: ${r.dmg} outside ${pv.dmg.join('–')}${r.lucky ? ' ×2' : ''}`);
     }
     // The preview tells the player what the cards say: her Attack against the other's Defense.

@@ -1388,7 +1388,15 @@ export interface BlowParts {
   mul: number;
   luck: number;
   flank: 0 | 1 | 2;
+  /** What a lucky blow multiplies `mul` by (TAC_LUCK_ALONE): twice the blow straight on, the flank's lift in it. */
+  lucky: number;
 }
+
+/** Owner, 2026-10-16 («у нпс корабля противника 15 юнг убили моих 21 … это бред, где баланс-то?»): luck does not stack
+ *  on a blow into the side or from behind (+15/+30%): a lucky blow is twice the blow struck straight on, wherever it
+ *  came from. They multiplied, with a side's backs to the rail too: a desperate side's lucky blow from behind landed
+ *  ×3.6, and a ship of the sea's 14 deckhands felled 11–18 of a captain's 26 in one blow (now at most ×2.8). */
+export const TAC_LUCK_ALONE = true;
 
 /** docs/25 item 45 (HoMM3's own): her Attack over the other's Defense lands TAC_AD.up a point harder, up to TAC_AD.max
  *  more; under it TAC_AD.down a point lighter, down to TAC_AD.min. (Before: to ×3 and down to ×0.3 — the hero's
@@ -1490,8 +1498,9 @@ export function blowParts(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' 
   // side at once) keep the old fifth at the least. Her answer is the same from anywhere.
   // docs/25 item 62: a stack on a plank holds a narrow pass — the water on both sides, no way into her side or back.
   const flank = how === 'melee' && !(onDeck(bt) && bt.cells[t.hex] === '=') ? flankOf(t.face, t.hex, from) : 0;
-  mul *= Math.max(TAC_FLANK[flank], how === 'melee' ? Math.max(sp(t, 'swarm') ? TAC_PINCER : 1, 1 + (TAC_PINCER - 1) * held(h, 'turn_the_flank', r)) : 1);
-  return { mod, mul, luck: Math.max(-TAC_MOVE_POINTS, Math.min(TAC_MOVE_POINTS, luckOf(bt, s.side) + ma.luck)), flank };
+  const flankMul = Math.max(TAC_FLANK[flank], how === 'melee' ? Math.max(sp(t, 'swarm') ? TAC_PINCER : 1, 1 + (TAC_PINCER - 1) * held(h, 'turn_the_flank', r)) : 1);
+  mul *= flankMul;
+  return { mod, mul, luck: Math.max(-TAC_MOVE_POINTS, Math.min(TAC_MOVE_POINTS, luckOf(bt, s.side) + ma.luck)), flank, lucky: Math.max(1, 2 / flankMul) };
 }
 
 /** Turn the Flank's and a swarm's blows: at least this much harder (the old pincer's fifth). */
@@ -1503,7 +1512,7 @@ export function blow(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'sh
   const p = blowParts(bt, s, t, how, from);
   let mul = p.mul;
   const lucky = !!rng && rng.chance(p.luck * TAC_CHANCE_PER_POINT);
-  if (lucky) mul *= 2;
+  if (lucky) mul *= p.lucky;
   return { dmg: Math.max(1, Math.round(rollBase(s, rng) * p.mod * mul)), lucky, flank: p.flank };
 }
 

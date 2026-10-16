@@ -8,7 +8,7 @@ import type { Roster } from '../../../shared/src/data/factionunits.ts';
 import type { ArmyMix, ArmyStack } from '../../../shared/src/data/army.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
-import { ladderBetween } from './ladder.ts';
+import { deckLadder } from './ladder.ts';
 
 /** Whose men a ship of the sea carries. */
 export function npcMixOf(ship: ShipEntity): ArmyMix {
@@ -69,8 +69,8 @@ export function menLost(game: Game, ship: ShipEntity, n: number): void {
 /** The strength of a ship's men against another's, as the boarding battle would reckon it (the ladder of levels on
  *  every blow). */
 export function armyEdge(game: Game, a: ShipEntity, b: ShipEntity): number {
-  const pa = armyPower(a.army) * Math.max(0.1, ladderBetween(game, a, b).dealt || 0.1) * (0.5 + a.morale / 100);
-  const pb = armyPower(b.army) * Math.max(0.1, ladderBetween(game, b, a).dealt || 0.1) * (0.5 + b.morale / 100);
+  const pa = armyPower(a.army) * Math.max(0.1, deckLadder(game, a, b)) * (0.5 + a.morale / 100);
+  const pb = armyPower(b.army) * Math.max(0.1, deckLadder(game, b, a)) * (0.5 + b.morale / 100);
   return pa / Math.max(1, pb);
 }
 
