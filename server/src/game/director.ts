@@ -142,9 +142,9 @@ function busyElsewhere(game: Game, s: PlayerSession): boolean {
 }
 
 /** Whether a captain sails quiet water the sea may stir: under way, out of a fight, a harbour and a boarding. */
-export function quietSea(game: Game, s: PlayerSession): boolean {
+export function quietSea(game: Game, s: PlayerSession, harbour = HARBOUR_R): boolean {
   const ship = s.ship!;
-  return !(ship.inCombat(game.now) || ship.state.speed < 1.5 || nearPort(game, ship.state.x, ship.state.y) || !!ship.boarding || busyElsewhere(game, s));
+  return !(ship.inCombat(game.now) || ship.state.speed < 1.5 || nearHarbour(game.world, ship.state.x, ship.state.y, harbour) || !!ship.boarding || busyElsewhere(game, s));
 }
 
 /** Stolen or contraband goods aboard (for the Crown's patrols). */

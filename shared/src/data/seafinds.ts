@@ -14,7 +14,11 @@ export const FIND_KINDS: FindKind[] = ['bottle', 'flyfish', 'calm', 'gulls', 'bo
 export const isFindKind = (k: unknown): k is FindKind => typeof k === 'string' && (FIND_KINDS as string[]).includes(k);
 
 /** Seconds of quiet sailing between two of them for a captain, and how often each kind is the one. */
-export const FIND_EVERY: [number, number] = [150, 260];
+// Owner, 2026-10-16 («насели прям густо все море всем»): twice as often (was 150–260 s), two at once at most, and from
+// the harbour's mouth on (700 m; the director's 1.5 km of a harbour kept them off the waters a captain sails most).
+export const FIND_EVERY: [number, number] = [75, 130];
+export const FIND_MAX = 2;
+export const FIND_HARBOUR = 700;
 export const FIND_WEIGHT: Record<FindKind, number> = { bottle: 3, flyfish: 3, calm: 1.5, gulls: 3, boat: 2, chest: 1.5 };
 /** How long one stays (seconds), and where it shows (metres off her, ahead or abeam; the fish land aboard). */
 export const FIND_TTL: [number, number] = [150, 240];

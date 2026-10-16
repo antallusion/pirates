@@ -40,6 +40,7 @@ import { hasLicence } from './ports.ts';
 import { questEvent } from './quests.ts';
 import type { ShipEntity } from './ship.ts';
 import { pursuitOf } from './pursuit.ts';
+import { onboardingProtected } from './onboarding.ts';
 import { SPEED_SCALE, TURN_SCALE } from '../../../shared/src/constants.ts';
 
 type Mode = 'roam' | 'hunt' | 'flee' | 'line' | 'spent';
@@ -270,17 +271,23 @@ function openPoint(game: Game, x: number, y: number, r0: number, r1: number, reg
 /** Every five seconds: now and then a group rises within a few miles of a captain at sea. */
 function spawnAbout(game: Game): void {
   const S = bs(game);
-  if (S.brains.size >= WORLD_CAP) return;
+  const cap = worldCap(game);
+  if (S.brains.size >= cap) return;
   for (const s of game.sessions) {
     const ship = s.ship;
     if (!ship || ship.docked || !ship.alive || !s.profile) continue;
+    if (S.brains.size >= cap) break;
     const migrating = orcaMigrationIn(game, ship.region);
-    if (beastsNear(game, ship) >= (migrating ? 10 : NEAR_CAP)) continue;
-    if (!S.rng.chance(migrating ? 0.25 : 0.12)) continue;
+    // Too few within her near reach: a group rises there now, not one time in eight (the wide ring's cap twice as high
+    // for it: the ones risen before swim on out of her near reach and stay within the five kilometres).
+    const close = beastsNear(game, ship, CLOSE_R) < CLOSE_WANT && !onboardingProtected(s);
+    if (beastsNear(game, ship) >= (migrating ? 10 : close ? NEAR_CAP * 2 : NEAR_CAP)) continue;
+    if (!close && !S.rng.chance(migrating ? 0.25 : 0.12)) continue;
     const lvl = sectorAt(game.world, ship.state.x, ship.state.y).level; // the beasts of the square (docs/16 P2)
     const kind = pickKind(game, ship.region, lvl, ship.combatLevel);
     if (!kind) continue;
-    const pt = openPoint(game, ship.state.x, ship.state.y, SPAWN_R[0], SPAWN_R[1], ship.region);
+    const ring = close ? CLOSE_SPAWN : SPAWN_R;
+    const pt = openPoint(game, ship.state.x, ship.state.y, ring[0], ring[1], ship.region);
     if (!pt) continue;
     const d = BEASTS[kind];
     const level = clamp(Math.min(lvl + S.rng.int(-1, 1), ship.combatLevel), d.level[0], d.level[1]);
@@ -304,14 +311,31 @@ function spawnAbout(game: Game): void {
 export const NEAR_CAP = 6;
 const NEAR_R = 5000;
 
-/** The beasts within NEAR_R of a ship. */
-function beastsNear(game: Game, ship: ShipEntity): number {
+/** Owner, 2026-10-16 («вокруг ваще ниче нет, ни кораблей, ни мобов которые должны быть для прокачки»): the beasts rose
+ *  2.5–4 km off one time in eight every five seconds, and a captain had none within her chart's near reach most of the
+ *  time. Within CLOSE_R of her the sea keeps at least CLOSE_WANT of her level's beasts (where her waters keep any),
+ *  risen CLOSE_SPAWN off — beyond her screen, inside her chart. */
+export const CLOSE_R = 2500;
+export const CLOSE_WANT = 3;
+const CLOSE_SPAWN: [number, number] = [1100, 2200];
+/** The world's beasts: WORLD_CAP, or this many a captain at sea in a crowd (each captain's sea her own). */
+const CAP_EACH = 10;
+
+/** The beasts within `r` of a ship (by the grid: the sea's thousands of ships are not walked). */
+function beastsNear(game: Game, ship: ShipEntity, r = NEAR_R): number {
   let near = 0;
-  for (const id of bs(game).brains.keys()) {
-    const b = game.ships.get(id);
-    if (b && dist(b.state.x, b.state.y, ship.state.x, ship.state.y) < NEAR_R) near++;
-  }
+  const x = ship.state.x, y = ship.state.y;
+  game.forShipsNear(x, y, r, (b) => {
+    if (b !== ship && b.alive && isBeast(b) && (b.state.x - x) ** 2 + (b.state.y - y) ** 2 < r * r) near++;
+  });
   return near;
+}
+
+/** The most beasts the world keeps now. */
+function worldCap(game: Game): number {
+  let atSea = 0;
+  for (const s of game.sessions) if (s.ship && !s.ship.docked && s.ship.alive) atSea++;
+  return Math.max(WORLD_CAP, CAP_EACH * atSea);
 }
 
 /** Beasts passing within a mile or so of one captain (the sea's small life, sealife.ts); false when none fits — or the
@@ -319,7 +343,7 @@ function beastsNear(game: Game, ship: ShipEntity): number {
  *  stayed till she was 7 km off — ten sharks within a kilometre of a sloop 2 km out of Saltmarrow). */
 export function beastsPass(game: Game, ship: ShipEntity): boolean {
   const S = bs(game);
-  if (S.brains.size >= WORLD_CAP || beastsNear(game, ship) >= NEAR_CAP) return false;
+  if (S.brains.size >= worldCap(game) || beastsNear(game, ship) >= NEAR_CAP) return false;
   const lvl = sectorAt(game.world, ship.state.x, ship.state.y).level; // the beasts of the square (docs/16 P2)
   const kind = pickKind(game, ship.region, lvl, ship.combatLevel);
   if (!kind) return false;
