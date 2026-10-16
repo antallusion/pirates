@@ -99,7 +99,7 @@ process.exit(fails ? 1 : 0);
 async function dismiss(p) {
   await p.evaluate(() => globalThis.gravetide.open(null));
   for (let i = 0; i < 4; i++) {
-    const n = await p.evaluate(() => { const x = [...document.querySelectorAll('.k-sheet-root.k-open .k-sheet-x')]; x.forEach((b) => b.click()); if (document.body.classList.contains('chat-open')) document.getElementById('chat-toggle')?.click(); return x.length; });
+    const n = await p.evaluate(() => { const x = [...document.querySelectorAll('.k-sheet-root.k-open .k-sheet-x, [data-poshut]')]; x.forEach((b) => b.click()); if (document.body.classList.contains('chat-open')) document.getElementById('chat-toggle')?.click(); return x.length; });
     if (!n) break;
     await L.sleep(400);
   }
@@ -107,7 +107,7 @@ async function dismiss(p) {
 
 function summary(m) {
   const f = (r) => (r ? `${r.l},${r.t} ${r.w}x${r.h}` : '—');
-  return `ring ${f(m.ring)} map ${f(m.map)} card ${f(m.card)} gaps ${m.gapL ?? '—'}/${m.gapR ?? '—'} btns ${m.btns.map((x) => `${x.id}:${f(x)}`).join(' ')}${m.stack ? ` stack ${f(m.stack)} gaps ${m.sgL}/${m.sgR}` : ''}`;
+  return `col ${m.colN}×${m.colB} ring ${f(m.ring)} map ${f(m.map)} card ${f(m.card)} gaps ${m.gapL ?? '—'}/${m.gapR ?? '—'} btns ${m.btns.map((x) => `${x.id}:${f(x)}`).join(' ')}${m.stack ? ` stack ${f(m.stack)} gaps ${m.sgL}/${m.sgR}` : ''}`;
 }
 
 function judge(m, W, H, tg) {
@@ -132,15 +132,20 @@ function judge(m, W, H, tg) {
     const ox = Math.min(a.r, c.r) - Math.max(a.l, c.l), oy = Math.min(a.b, c.b) - Math.max(a.t, c.t);
     if (ox > 1 && oy > 1) bad.push(`${a.id} × ${c.id} overlap ${Math.round(ox)}×${Math.round(oy)}`);
   }
-  // one row under the chart (owner, 2026-10-15: «в одну линию»): one top, even gaps, its right end at the chart's
-  const row = [...m.btns.filter((x) => !x.id.includes(':')), ...m.extra.filter((x) => x.id === '#hud-chat > .chat-toggle' && m.map && x.t < m.map.b + 60)].sort((a, c) => a.l - c.l);
-  if (row.length > 1 && m.map) {
-    if (Math.max(...row.map((x) => x.t)) - Math.min(...row.map((x) => x.t)) > 1) bad.push(`the row's tops differ ${row.map((x) => x.t)}`);
-    const gaps = row.slice(1).map((x, i) => Math.round((x.l - row[i].r) * 10) / 10);
-    if (Math.max(...gaps) - Math.min(...gaps) > 1) bad.push(`the row's gaps differ ${gaps}`);
-    if (Math.abs(row.at(-1).r - m.map.r) > 1 && !m.peek) bad.push(`the row's right end ${row.at(-1).r} ≠ the chart's ${m.map.r}`);
-    if (row[0].t < m.map.b) bad.push('the row is not under the chart');
+  // one COLUMN under the chart (owner, 2026-10-16: «вертикально», after «в одну линию»): one right edge (the chart's),
+  // even gaps, under the chart, in the screen
+  const col = [...m.btns.filter((x) => !x.id.includes(':')), ...m.extra.filter((x) => x.id === '#hud-chat > .chat-toggle' && m.map && x.l > W / 2)].sort((a, c) => a.t - c.t);
+  if (col.length > 1 && m.map) {
+    if (Math.max(...col.map((x) => x.r)) - Math.min(...col.map((x) => x.r)) > 1) bad.push(`the column's right edges differ ${col.map((x) => x.r)}`);
+    const gaps = col.slice(1).map((x, i) => Math.round((x.t - col[i].b) * 10) / 10);
+    if (Math.max(...gaps) - Math.min(...gaps) > 1) bad.push(`the column's gaps differ ${gaps}`);
+    if (Math.min(...gaps) < 2) bad.push(`the column's gap ${Math.min(...gaps)} too small`);
+    if (Math.abs(col[0].r - m.map.r) > 1 && !m.peek) bad.push(`the column's right edge ${col[0].r} ≠ the chart's ${m.map.r}`);
+    if (col[0].t < m.map.b && !m.peek) bad.push('the column is not under the chart');
+    if (col.at(-1).b > H + 0.5) bad.push('the column runs off the screen');
   }
+  m.colN = col.length;
+  m.colB = col.length ? col[0].w : null;
   if (m.btns.length > 1) {
     const s = new Set(m.btns.filter((x) => !x.id.includes(':')).map((x) => x.w));
     if (s.size > 1) bad.push(`button sizes differ ${[...s]}`);
@@ -184,7 +189,8 @@ async function measure(p) {
       for (const s of e.querySelectorAll('.k-badge, .tc-isle-l, .kc')) if (vis(s)) btns.push({ id: `${id}:${s.className.split(' ')[0]}`, ...R(s.getBoundingClientRect()) });
     }
     const extra = [];
-    for (const sel of ['#mm-tab', '#hud-chat > .chat-toggle', '#hud-chat > .chat-toast', '#unread', '#tc-fire', '#tc-ammo', '#tc-lock', '#tc-special', '#tc-actrow', '#tc-cast', '#tc-deck', '#tc-stick', '#toasts > .toast', '#promo-sea']) { const e = document.querySelector(sel); if (vis(e)) extra.push({ id: sel, ...R(e.getBoundingClientRect()) }); }
+    for (const sel of ['#mm-tab', '#hud-chat > .chat-toggle', '#hud-chat > .chat-toast', '#unread', '#tc-fire', '#tc-ammo', '#tc-lock', '#tc-special', '#tc-actrow', '#tc-cast', '#tc-deck', '#tc-stick', '#toasts > .toast', '#promo-sea', '#hud-autosail', '#encounter', '#surrender']) { const e = document.querySelector(sel); if (vis(e) && !e.classList.contains('hidden')) extra.push({ id: sel, ...R(e.getBoundingClientRect()) }); }
+    document.querySelectorAll('#hud-bottom > *').forEach((e, i) => { if (vis(e) && !e.classList.contains('hidden')) extra.push({ id: `#hud-bottom>${i}`, ...R(e.getBoundingClientRect()) }); });
     const pills = [...document.querySelectorAll('.tg-pill-fake')].map((e, i) => ({ id: 'tgpill' + i, ...R(e.getBoundingClientRect()) }));
     let stack = null;
     for (const e of document.querySelectorAll('#hud-stack > :not(.hidden)')) {

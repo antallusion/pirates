@@ -115,32 +115,39 @@ body.simple:not(.touch) #hud-captain:active .cs-frame { transform: scale(0.97); 
 @media (max-height: 420px) { body.simple .cs-row { height: 12px; } body.simple .cs-bar { height: 12px; } body.simple .cs-body { gap: 2px; } body.simple .cs-silver { line-height: 14px; } }
 @media (max-width: 680px) { body.simple { --cs-bar: 84px; } }
 
-/* ---------- top right: the minimap in its compass ring; under it its round buttons in ONE row (owner, 2026-10-15,
-   a Telegram screenshot: «рядом с картой слева иконки… друг на друга налезли, я бы их вниз карты подспустил», then
-   «четыре иконки под картой… должны идти в одну линию»): right-aligned to the chart's right edge, equal sizes and gaps —
-     a phone or a tablet   from the right: the chat · the menu · «Остров» · the news
+/* ---------- top right: the minimap in its compass ring; under it its round buttons in ONE COLUMN (owner, 2026-10-15,
+   a Telegram screenshot: «рядом с картой слева иконки… друг на друга налезли, я бы их вниз карты подспустил»; then «в
+   одну линию»; 2026-10-16 «вертикально»): right-aligned to the chart's right edge, equal sizes and gaps —
+     a phone or a tablet   from the top: the chat · the menu · «Остров» · the news
      a desk (the chat's button is by the helm)   the menu · «Остров» · the news
-   --tr-c is 1 where the chat's button is in the row; each button's place from the right (--tr-x); one hidden leaves
-   no hole (the news moves up beside the menu without an island). */
-body.simple { --tr-b: 44px; --tr-g: 8px; --tr-c: 1; --tr-top: calc(var(--sa-t) + 8px + var(--mm) + 8px); }
-@media (max-height: 520px) { body.simple { --tr-b: calc(36px + 8 * var(--u, 1px)); --tr-g: calc(6px + 2 * var(--u, 1px)); } }
+   --tr-c is 1 where the chat's button is in the column; each button's place from the top (--tr-x); one hidden leaves
+   no hole (the news moves up under the menu without an island). The buttons shrink together when the column would not
+   fit above the bottom's buttons (--tr-foot): 480×270 keeps four of them, smaller, still one above the other. */
+body.simple { --tr-b0: 44px; --tr-g: 8px; --tr-c: 1; --tr-top: calc(var(--sa-t) + 8px + var(--mm) + 8px); --tr-foot: calc(var(--sa-b, 0px) + var(--sea-pad, 10px) + var(--sea-btn, 48px) + 6px);
+  --tr-n: calc(3 + var(--tr-c)); --tr-b: max(24px, min(var(--tr-b0), calc((100dvh - var(--tr-top) - var(--tr-foot) - (var(--tr-n) - 1) * var(--tr-g)) / var(--tr-n)))); }
+@media (max-height: 520px) { body.simple { --tr-b0: calc(36px + 8 * var(--u, 1px)); --tr-g: calc(5px + 3 * var(--u, 1px)); } }
 @media (min-width: 1100px) and (min-height: 600px) { body.simple:not(.touch) { --tr-c: 0; } }
 body.simple #hud-map { top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + 8px); width: var(--mm); height: var(--mm); }
 body.simple #hud #touch > :is(#tc-menu, #tc-news, #tc-isle) { position: absolute; left: auto; bottom: auto; width: var(--tr-b); height: var(--tr-b); min-width: 0; min-height: 0; pointer-events: auto;
-  top: var(--tr-top); right: calc(var(--sa-r) + 8px + var(--tr-x, 0) * (var(--tr-b) + var(--tr-g))); }
+  top: calc(var(--tr-top) + var(--tr-x, 0) * (var(--tr-b) + var(--tr-g))); right: calc(var(--sa-r) + 8px); }
 body.simple #hud #touch > #tc-menu { --tr-x: var(--tr-c); }
 body.simple #hud #touch > :is(#tc-isle, #tc-news) { --tr-x: calc(var(--tr-c) + 1); }
 body.simple:not(.sea-fight):not(.mm-peek):has(#touch > #tc-isle:not(.hidden)) #hud #touch > #tc-news { --tr-x: calc(var(--tr-c) + 2); }
-/* (480×270: the adventure card unfolded has no room beside the row — the buttons under it step out of sight meanwhile) */
+/* the round buttons' own badges and words beside them, not under or over (they would lie on the next one): the count on
+   the top-left corner, «Остров»'s word to the left of its button, a desk's key chip on the menu's top-left corner */
+body.simple #hud #touch > #tc-isle .tc-isle-l { left: auto; right: calc(100% + 5px); top: 50%; bottom: auto; transform: translateY(-50%); font-size: 9px; }
+body.simple #hud #touch > :is(#tc-menu, #tc-news, #tc-isle) .k-badge { top: -3px; right: auto; left: -8px; }
+body.simple:not(.touch) #hud #touch > #tc-menu > .kc-b { left: -6px; top: -6px; bottom: auto; transform: none; }
+/* (480×270: the adventure card unfolded has no room beside the column — the buttons under it step out of sight meanwhile) */
 body.simple #hud #touch > .tr-veil { visibility: hidden; pointer-events: none; }
-/* the chat's round button at the row's right end (a desk keeps it by the helm: chat.css), its line of words under the
-   row; with the chart stepped up behind its tab, under the tab */
+/* the chat's round button at the column's top (a desk keeps it by the helm: chat.css), its line of words to the left of
+   the column; with the chart stepped up behind its tab, under the tab */
 @media (max-width: 1099px), (max-height: 599px) {
   body.simple:not(.chat-open):not(.tac) #hud-chat > .chat-toggle { top: var(--tr-top); right: calc(var(--sa-r) + 8px); left: auto; bottom: auto; width: var(--tr-b); height: var(--tr-b); }
-  body.simple:not(.chat-open):not(.tac) #hud-chat > .chat-toast { top: calc(var(--tr-top) + var(--tr-b) + 16px); right: calc(var(--sa-r) + 8px); }
+  body.simple:not(.chat-open):not(.tac) #hud-chat > .chat-toast { top: var(--tr-top); right: calc(var(--sa-r) + 8px + var(--tr-b) + var(--tr-g)); }
 }
 body.simple.touch:not(.chat-open):not(.tac) #hud-chat > .chat-toggle { top: var(--tr-top); right: calc(var(--sa-r) + 8px); left: auto; bottom: auto; width: var(--tr-b); height: var(--tr-b); }
-body.simple.touch:not(.chat-open):not(.tac) #hud-chat > .chat-toast { top: calc(var(--tr-top) + var(--tr-b) + 16px); right: calc(var(--sa-r) + 8px); }
+body.simple.touch:not(.chat-open):not(.tac) #hud-chat > .chat-toast { top: var(--tr-top); right: calc(var(--sa-r) + 8px + var(--tr-b) + var(--tr-g)); }
 body.simple.touch.mm-peek:not(.chat-open):not(.tac) #hud-chat > :is(.chat-toggle, .chat-toast) { top: calc(var(--sa-t) + 52px); }
 body.simple.touch.mm-peek:not(.chat-open):not(.tac) #hud-chat > .chat-toast { right: calc(var(--sa-r) + 8px + var(--tr-b) + var(--tr-g)); }
 /* the chart's key on its rim, low on the left */

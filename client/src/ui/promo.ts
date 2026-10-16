@@ -429,14 +429,25 @@ function seaSpot(el: HTMLElement): { left: number | null; right: number | null; 
     const l = Math.round(Math.max(4, plate.left + 4)), t = Math.round(plate.bottom + 6);
     if (free(l, t)) return { left: l, right: null, top: t };
   }
-  // the right: under the round buttons (and «Остров»'s word under its button)
-  let bottom = 0;
+  // the right: under the column of round buttons under the chart, else beside it (left of the column and of «Остров»'s
+  // word), from the chart's bottom down (2026-10-16: the column is tall on a short screen)
+  let bottom = 0, colLeft = W, mapBottom = 0;
   for (const o of document.querySelectorAll('#tc-menu, #tc-news, #tc-isle, #hud-chat > .chat-toggle, #hud-map')) {
     const r = vis(o);
-    if (r && r.left > W / 2 && r.top < H * 0.5) bottom = Math.max(bottom, r.bottom + (o.id === 'tc-isle' ? 14 : 0));
+    if (!r || r.left <= W / 2) continue;
+    if (o.id === 'hud-map') { mapBottom = r.bottom; continue; }
+    bottom = Math.max(bottom, r.bottom);
+    colLeft = Math.min(colLeft, r.left);
+    const word = o.querySelector('.tc-isle-l');
+    const q = word ? vis(word) : null;
+    if (q) colLeft = Math.min(colLeft, q.left);
   }
   const t = Math.round(bottom + 6);
   if (bottom && free(W - 8 - w, t)) return { left: null, right: 8, top: t };
+  if (bottom) {
+    const right = Math.round(W - colLeft + 6), top = Math.round(mapBottom + 8);
+    if (free(W - right - w, top)) return { left: null, right, top };
+  }
   return null;
 }
 
