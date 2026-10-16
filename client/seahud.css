@@ -761,3 +761,7 @@ body.tac-ph .tb-qbar:not(.fold) ~ .tb-top { top: calc(env(safe-area-inset-top, 0
 .tb-mid .tb-rpx { width: auto; height: auto; padding: 4px 10px; border-radius: 6px; }
 .tb-notice { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 10px); transform: translateX(-50%); z-index: 9000; max-width: min(520px, 90vw); padding: 6px 14px;
   border-radius: 6px; background: rgba(12, 10, 8, 0.95); border: 1px solid var(--brass-dim); color: var(--bone); font: 600 13px/1.3 var(--k-font-sans, sans-serif); pointer-events: none; }
+/* The deployment's and the replay's line take the order bar's place in the top band (the board keeps clear of it). */
+body.tac-ph .tb-top.tb-band .tb-tline { min-height: 28px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; white-space: nowrap; font-size: 12px; padding: 0 12px; pointer-events: auto; }
+/* A replay asked for stands over the windows that follow a fight (the prize, the loss) till it is put away. */
+#board-tac.rp { z-index: 900; }

@@ -793,6 +793,7 @@ export class TacticalPanel {
     this.view = v;
     document.body.classList.toggle('tac', !!v);
     document.body.classList.toggle('tac-over', !!v?.over);
+    root.classList.toggle('rp', !!v?.replay); // a replay asked for stands over the windows after the fight
     // A phone turned, or a window narrowed under a finger: the field and its buttons laid out afresh.
     const phone = !!v && this.isPhone();
     const tall = phone && innerHeight > innerWidth;
@@ -1592,7 +1593,7 @@ export class TacticalPanel {
     };
     const now = v.order.map((id) => chip(id, false)).join('');
     const later = v.next.map((id) => chip(id, true)).join('');
-    return `${now}${later ? `<span class="tb-qsep" aria-hidden="true"></span>${later}` : ''}`;
+    return `${now}${later ? `${now ? '<span class="tb-qsep" aria-hidden="true"></span>' : ''}${later}` : ''}`;
   }
 
   /** The order bar's faces glide from where they stood to their new places (a stack that waits goes to the end, one
@@ -2179,7 +2180,8 @@ export class TacticalPanel {
   /** Owner, 2026-10-16: the deployment's line — what to do, or that hers are set — and its seconds. */
   private depText(v: TacView): string {
     const t = Math.max(0, Math.ceil((v.deploy?.ends ?? 0) - this.bnow(v)));
-    return L(v.deploy?.ready ? 'dep.wait' : 'dep.hint', { t });
+    // A phone's top band holds the short line (its whole words in its title).
+    return this.phone ? L(v.deploy?.ready ? 'dep.shortWait' : 'dep.short', { t }) : L(v.deploy?.ready ? 'dep.wait' : 'dep.hint', { t });
   }
 
   private hint(v: TacView): void {
@@ -2255,8 +2257,8 @@ export class TacticalPanel {
    *  band, never the field's middle. */
   private topHtml(v: TacView): string {
     if (v.over) return '';
-    if (v.deploy) return `<div class="tb-top"><div class="tb-tline tb-dline">${esc(this.depText(v))}</div></div>`;
-    if (v.replay) return `<div class="tb-top"><div class="tb-tline tb-rpline"><span>${esc(L('replay.title'))} · ${esc(L('round', { n: v.round }))}</span><button class="tb-rpx" data-rpclose title="${esc(L('replay.close'))}" aria-label="${esc(L('replay.close'))}"><i class="tb-pk-x" aria-hidden="true"></i></button></div></div>`;
+    if (v.deploy) return `<div class="tb-top tb-band"><div class="tb-tline tb-dline" title="${esc(L(v.deploy.ready ? 'dep.wait' : 'dep.hint', { t: '' }).replace(/ · s*S*$/, ''))}">${esc(this.depText(v))}</div></div>`;
+    if (v.replay) return `<div class="tb-top tb-band"><div class="tb-tline tb-rpline"><span>${esc(L('replay.title'))} · ${esc(L('round', { n: v.round }))}</span><button class="tb-rpx" data-rpclose title="${esc(L('replay.close'))}" aria-label="${esc(L('replay.close'))}"><i class="tb-pk-x" aria-hidden="true"></i></button></div></div>`;
     const f = v.flag;
     const flag = f
       ? `<span class="tb-flagp" title="${esc(L('flag.tip', { m: f.need }))}" aria-label="${esc(L('flag.tip', { m: f.need }))}">${icon('icon.bt_colours', '', 'ico-xs')}<b>${f.held[v.you]}/${f.need}</b></span>`
@@ -3671,7 +3673,7 @@ export class TacticalPanel {
     if (side) out.l = out.r = Math.max(out.l, out.r);
     // Owner, 2026-10-16: the order bar keeps the top band (the field's top row never under its faces); folded, its one
     // face and chevron stand over the water amidships.
-    const q = this.el.querySelector<HTMLElement>('.tb-pad > .tb-qbar:not(.fold)');
+    const q = this.el.querySelector<HTMLElement>('.tb-pad > .tb-qbar:not(.fold), .tb-pad > .tb-top.tb-band');
     if (q) {
       const r = q.getBoundingClientRect();
       if (r.height >= 1) out.t = Math.max(out.t, r.bottom - s.top + 2);

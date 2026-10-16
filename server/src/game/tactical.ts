@@ -442,7 +442,8 @@ function keepFight(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle): voi
   const fight = a.boarding?.fight;
   if (!fight || !bt.rec || !bt.over) return;
   const pvp = bt.heroes[0].input.human && bt.heroes[1].input.human;
-  if (!(pvp || bt.len === 'long' || !!bt.siege || isArenaFight(fight) || a.elite || b.elite)) return;
+  // (TAC_KEEP_ALL=1: every boarding kept — the QA server's, tools/mobile/fight/tac16.mjs.)
+  if (!(pvp || bt.len === 'long' || !!bt.siege || isArenaFight(fight) || a.elite || b.elite || process.env.TAC_KEEP_ALL === '1')) return;
   const ids: [string | null, string | null] = [null, null];
   for (const side of [0, 1] as const) {
     const ship = side ? b : a, other = side ? a : b;
