@@ -9,9 +9,9 @@ import { AUTO_SCROLL_ICON, AUTO_SCROLL_PACKS } from '../../../shared/src/data/pr
 import { findTitle } from '../render/seafinds.ts'; // docs/19 D5: the chest among the sharks
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { OFFICER_DEFS } from '../../../shared/src/data/crew.ts';
-import { TAC_BLOCKING, TAC_END_WINDOW, TAC_H, TAC_PLAY_WINDOW, TAC_SPELLS, TAC_TURN, TAC_W, deckCover, hexDist, hexIndex, hexNeighbors, hexX, hexY, tacSchedule } from '../../../shared/src/data/tactical.ts';
+import { TAC_BLOCKING, TAC_END_WINDOW, TAC_H, TAC_LONG_SHOT, TAC_PLAY_WINDOW, TAC_SPELLS, TAC_TURN, TAC_W, deckCover, hexDist, hexIndex, hexNeighbors, hexX, hexY, tacSchedule, threatHexes } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacSpellId } from '../../../shared/src/data/tactical.ts';
-import type { ClientMsg, TacAction, TacAllyView, TacEvent, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
+import type { ClientMsg, ServerMsg, TacAction, TacAllyView, TacEvent, TacPreview, TacReplayFrame, TacStackView, TacView, TacWhy } from '../../../shared/src/protocol.ts';
 import { assetEpoch, assetFor, assetIds, assetUrl, sprite } from '../assets.ts';
 import { dict, lang, plural } from '../i18n.ts';
 import { ORDERS, PRIMS, PRIM_ICON, PRIM_NAMES, SCHOOLS, SCHOOL_ICON, SCHOOL_NAMES } from '../../../shared/src/data/hero.ts';
@@ -481,7 +481,7 @@ export class TacticalPanel {
   /** The plates of the figures being drawn, laid over them all at the end of the frame. */
   private plates: (() => void)[] | null = null;
   private act = new Map<number, Act[]>();
-  private press: { x: number; y: number; t: number; timer: number; foe?: boolean; slid?: boolean } | null = null;
+  private press: { x: number; y: number; t: number; timer: number; foe?: boolean; slid?: boolean; drag?: number; from?: number | null } | null = null;
   private planks: [HTMLCanvasElement, HTMLCanvasElement] | null = null;
   /** Every stack's name as last seen (the fallen are named in the feed too). */
   private names = new Map<number, string>();
@@ -546,6 +546,22 @@ export class TacticalPanel {
   /** When each view came to the screen (performance.now, s): the battle's clock (TacView.now) runs on from there by the
    *  screen's own — real seconds, whatever an admin /speed does to the world's. */
   private arrived = new WeakMap<TacView, number>();
+  /** Owner, 2026-10-16: a portrait tapped in the order bar (its stack ringed; a foe's threat shaded). */
+  private qFocus: number | null = null;
+  /** The order bar's chips where they stood (a stack that jumps ahead or waits glides to its new place). */
+  private qRects = new Map<string, number>();
+  /** Deployment (owner, 2026-10-16): her stack picked to be set on a hex. */
+  private dSel: number | null = null;
+  /** The battle log (owner, 2026-10-16: «Журнал боя»): every event of this fight in words, by its number. */
+  private journal = new Map<number, string>();
+  /** The threat zones last reckoned (owner, 2026-10-16), by the view and the stacks asked. */
+  private threatMemo: { key: string; hit: Set<number>; range: Set<number> } | null = null;
+  /** A kept fight played again (owner, 2026-10-16: «Повтор»): its opening view, its steps, the next to show. */
+  private rp: { base: TacView; frames: TacReplayFrame[]; k: number; log: TacEvent[]; seq: number } | null = null;
+  /** The real battle's close held while a replay plays over it. */
+  replaying(): boolean {
+    return !!this.rp;
+  }
 
   // ------------------------------------------------------------------ docs/25 §3: the boarding's looks
   /** The field's clock: the battle's, held through a hit-stop (item 1); the knocks (item 2); the particles. */
@@ -727,6 +743,7 @@ export class TacticalPanel {
   /** The battle's end shown on the field with its last blows played (main.ts plays the victory's or the defeat's film
    *  then, not over the blows still being played): the view, else null. */
   endShown(): TacView | null {
+    if (this.view?.replay) return null; // a replay's end plays no film
     // docs/25 item 20: the end's own moment (the winners' arms up, the loser's colours struck) is seen before the film.
     return this.view?.over && !this.busy() && (this.mo.still || performance.now() > this.busyUntil + 1800) ? this.view : null;
   }
@@ -747,6 +764,11 @@ export class TacticalPanel {
   }
 
   render(v: TacView | null): void {
+    // Owner, 2026-10-16 («Повтор»): a kept fight played over the field — a real fight coming in puts it away.
+    if (this.rp) {
+      if (v && !v.over) this.stopReplay();
+      else v = this.rpView;
+    }
     const root = $('board-tac');
     if (v && !this.arrived.has(v)) this.arrived.set(v, performance.now() / 1000);
     // A view with more of the battle in it waits while the last is still being played (owner, 2026-10-08: every turn
@@ -819,6 +841,10 @@ export class TacticalPanel {
         this.seaLayer = null;
         this.tally = { stops: 0, knocks: 0, maxKnock: 0, falls: 0, overboard: 0, sparks: 0, schools: 0, ults: 0, steps: 0, procs: 0 };
         this.seen = 0;
+        this.journal.clear();
+        this.qFocus = this.dSel = null;
+        this.qRects.clear();
+        this.threatMemo = null;
         this.preview = this.targeting = this.info = null;
         this.moreOpen = this.sheetOpen = this.bookOpen = false;
         this.spNote = null;
@@ -1003,11 +1029,19 @@ export class TacticalPanel {
       // docs/25 item 11: the opening as the battle opens (a tap skips it; none with «меньше движения», none ashore).
       if (!this.mo.still && !v.land && !v.siege && !v.arena && !v.over) this.intro = { t0: performance.now(), dur: this.introMs, dust: false };
       // «Ускорить ×2» is kept from the last battle (docs/23 item 60).
-      if (settings().tacFast && !v.heroes[v.you].fast && !v.over) this.order({ a: 'pace', fast: true });
+      if (settings().tacFast && !v.heroes[v.you].fast && !v.over && !v.replay) this.order({ a: 'pace', fast: true });
       this.seen = v.log.length ? v.log[v.log.length - 1].i : 0;
     }
     if (was && v.log.length) this.seen = Math.max(this.seen, v.log[v.log.length - 1].i);
     for (const s of v.stacks) this.names.set(s.id, `${stackName(s)} (${L(s.side === v.you ? 'ours' : 'theirs')})`);
+    queueMicrotask(() => this.logRefresh());
+    // Owner, 2026-10-16 («Журнал боя»): every event of the fight in words, as it came.
+    for (const e of v.log) {
+      if (this.journal.has(e.i)) continue;
+      const w = e.k === 'move' ? L('log.move', { a: this.names.get(e.s ?? -1) ?? '…' }) : this.words(e, v);
+      if (w) this.journal.set(e.i, w);
+    }
+    if (this.journal.size > 800) for (const k of [...this.journal.keys()].slice(0, this.journal.size - 800)) this.journal.delete(k);
     // A new turn, or anything played since (her stack's second turn, an order given): the choice made for the last is let go.
     const last = (x: TacView | null) => (x?.log.length ? x.log[x.log.length - 1].i : 0);
     if (!v.mine || v.active !== was?.active || last(v) !== last(was)) {
@@ -1532,17 +1566,79 @@ export class TacticalPanel {
     return `<span class="${cls} art"><img class="tb-face-img" src="${esc(url)}" alt="" draggable="false" /></span>`;
   }
 
-  /** The order of the round as a row of faces (each opens its stack's card), then the next round's first few. */
-  private queue(v: TacView): string {
+  /** The order of the round as a row of faces, the active first (each opens its stack's card), then the next round's
+   *  first few. Owner, 2026-10-16: both sides by colour, the one on her turn ringed in gold — a stack given another turn
+   *  by high morale (or an order) wears its «+1» at the front, one that waits an hourglass at the end; a tapped face rings
+   *  its stack on the field (a foe's: where it may strike next turn). `max`: the faces shown at most. */
+  private queue(v: TacView, max = 99): string {
+    const mine = (id: number) => v.stacks.find((x) => x.id === id);
+    const lastOf = (id: number) => [...v.log].reverse().find((e) => e.s === id);
+    const surge = v.active !== null && ['morale', 'again'].includes(lastOf(v.active)?.k ?? '');
+    let n = 0;
+    const seen = new Set<number>();
     const chip = (id: number, next: boolean) => {
-      const s = v.stacks.find((x) => x.id === id);
-      if (!s) return '';
+      const s = mine(id);
+      if (!s || n >= max) return '';
+      n++;
+      const key = `${next ? 'n' : 'o'}${id}${!next && seen.has(id) ? '+' : ''}`;
+      if (!next) seen.add(id);
       // docs/25 item 64: in a group's boarding each chip wears her captain's colour and face, and says whose she is.
       const cap = this.grouped(v, s.side) ? this.capOf(v, s) : undefined;
       const whose = cap ? ` · ${personName(cap.name)}` : '';
-      return `<button class="tb-q ${s.side === v.you ? 'you' : 'foe'}${cap ? ' cap' : ''}${id === v.active && !next ? ' on' : ''}${next ? ' next' : ''}" data-info="${s.id}"${cap ? ` style="--cap:${capCol(v, s.side, cap.slot)}"` : ''} title="${esc(stackName(s) + whose)}" aria-label="${esc(stackName(s) + whose)}">${figureArt(s) ? icon(figureArt(s)!, '', 'ico fig') : icon(stackArt(s), '', 'ico')}<b>${s.count}</b>${cap ? this.capFaceHtml(cap, 'tb-qcap') : ''}</button>`;
+      const on = id === v.active && !next && key === `o${id}`;
+      const up = on && surge, waited = !next && !on && s.waited;
+      const tip = `${stackName(s)} (${L(s.side === v.you ? 'ours' : 'theirs')})${whose}${up ? ` · ${L('q.surge', { a: '' }).replace(/^: /, '')}` : ''}${waited ? ` · ${L('q.waited', { a: '' }).replace(/^: /, '')}` : ''}${next ? ` · ${L('q.next')}` : ''}`;
+      return `<button class="tb-q ${s.side === v.you ? 'you' : 'foe'}${cap ? ' cap' : ''}${on ? ' on' : ''}${up ? ' surge' : ''}${waited ? ' waited' : ''}${this.qFocus === id ? ' focus' : ''}${next ? ' next' : ''}" data-info="${s.id}" data-qk="${key}"${cap ? ` style="--cap:${capCol(v, s.side, cap.slot)}"` : ''} title="${esc(tip)}" aria-label="${esc(tip)}">${figureArt(s) ? icon(figureArt(s)!, '', 'ico fig') : icon(stackArt(s), '', 'ico')}<b>${s.count}</b>${cap ? this.capFaceHtml(cap, 'tb-qcap') : ''}${up ? '<i class="tb-qup" aria-hidden="true">+1</i>' : ''}${waited ? `<i class="tb-qw" aria-hidden="true">${btIcon('bt_wait', 'icon.bt_hold', 'ico-xs')}</i>` : ''}</button>`;
     };
-    return `${v.order.map((id) => chip(id, false)).join('')}<span class="tb-qsep"></span>${v.next.map((id) => chip(id, true)).join('')}`;
+    const now = v.order.map((id) => chip(id, false)).join('');
+    const later = v.next.map((id) => chip(id, true)).join('');
+    return `${now}${later ? `<span class="tb-qsep" aria-hidden="true"></span>${later}` : ''}`;
+  }
+
+  /** The order bar's faces glide from where they stood to their new places (a stack that waits goes to the end, one
+   *  given another turn comes to the front) — FLIP, none under «меньше движения». */
+  private qGlide(box: Element): void {
+    const chips = [...box.querySelectorAll<HTMLElement>('.tb-q[data-qk]')];
+    const calm = this.calm();
+    const was = this.qRects;
+    const now = new Map<string, number>();
+    for (const c of chips) {
+      const k = c.dataset.qk!;
+      const x = c.offsetLeft + c.offsetTop * 1000;
+      now.set(k, x);
+      const old = was.get(k);
+      if (calm || old === undefined || old === x || !c.isConnected) continue;
+      const dx = (old % 1000) - c.offsetLeft, dy = Math.round(old / 1000) - c.offsetTop;
+      if (Math.abs(dx) > 400 || Math.abs(dy) > 200) continue;
+      c.style.transition = 'none';
+      c.style.transform = `translate(${dx}px, ${dy}px)`;
+      requestAnimationFrame(() => {
+        c.style.transition = 'transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1)';
+        c.style.transform = '';
+      });
+    }
+    this.qRects = now;
+  }
+
+  /** The phone's order bar (owner, 2026-10-16): the round's next faces in the top band between the two captains, as many
+   *  as the band holds (eight at most), folded to the face on its turn by its chevron. */
+  private qbarHtml(v: TacView): string {
+    if (v.over || this.tall || v.deploy || v.replay) return '';
+    const fold = settings().tacQueueFold;
+    const room = Math.max(3, Math.min(8, Math.floor((innerWidth - 2 * 64 - 2 * 44 - 36) / 34)));
+    const label = fold ? L('q.open') : L('q.fold');
+    return `<div class="tb-qbar${fold ? ' fold' : ''}"><div class="tb-qrow" role="list" aria-label="${esc(L('order.label'))}">${this.queue(v, fold ? 1 : room)}</div><button class="tb-qfold" data-qfold aria-expanded="${!fold}" title="${esc(label)}" aria-label="${esc(label)}"><i aria-hidden="true"></i></button></div>`;
+  }
+
+  /** A face of the order bar tapped: its stack ringed on the field (a foe's threat shaded); tapped again, its card. */
+  private qTap(id: number): void {
+    if (this.qFocus === id) {
+      this.qFocus = null;
+      this.sheetOpen = false;
+      this.showInfo(id);
+    } else this.qFocus = id;
+    this.key = '';
+    if (this.view) this.dom(this.view);
   }
 
   /** The phone's battle (owner, 2026-10-03: «на телефоне в бою не должно быть ничего кроме игрового поля с существами.
@@ -1570,14 +1666,20 @@ export class TacticalPanel {
     // «Авто» wears her scrolls' count, or a lock while she has none (its wheel offers «Купить свитки» then).
     const locked = this.scrollLocked(v);
     const autoTip = me.auto ? L('autoOff') : locked ? L('scLocked', { n: AUTO_SCROLL_PACKS[0].price }) : v.scrolls?.paid ? `${L('autoMenu')} · ${L('scPaid')}` : v.scrolls ? `${L('autoMenu')} · ${L('scN', { n: v.scrolls.n })}` : L('autoMenu');
-    const left = [
-      rb('data-a="wait"', L('wait'), btIcon('bt_wait', 'icon.bt_hold', 'ico'), '', !v.mine || !!act?.waited || !!v.moved),
-      rb('data-a="defend"', L('defend'), btIcon('bt_defend', 'icon.mod_hull_plating', 'ico'), '', !v.mine),
-      rb('data-autow', autoTip, btIcon('bt_auto', 'icon.bt_captain', 'ico') + this.scrollBadge(v), `${me.auto ? ' on' : ''}${locked ? ' locked' : ''}`, !!v.over),
-    ].join('');
+    const left = v.deploy && !v.over
+      ? [
+          rb('data-ready', L('dep.ready'), btIcon('bt_charge', 'icon.bt_order', 'ico'), ' ready', v.deploy.ready),
+          rb('data-autow', autoTip, btIcon('bt_auto', 'icon.bt_captain', 'ico') + this.scrollBadge(v), `${me.auto ? ' on' : ''}${locked ? ' locked' : ''}`, !!v.over),
+        ].join('')
+      : [
+          rb('data-a="wait"', L('wait'), btIcon('bt_wait', 'icon.bt_hold', 'ico'), '', !v.mine || !!act?.waited || !!v.moved),
+          rb('data-a="defend"', L('defend'), btIcon('bt_defend', 'icon.mod_hull_plating', 'ico'), '', !v.mine),
+          rb('data-autow', autoTip, btIcon('bt_auto', 'icon.bt_captain', 'ico') + this.scrollBadge(v), `${me.auto ? ' on' : ''}${locked ? ' locked' : ''}`, !!v.over),
+        ].join('');
     const t = this.targeting;
     const aimed = !t ? '' : t === 'innate' || t === 'ult' ? (me.path ? icon(`icon.${(t === 'innate' ? INNATE : ULTIMATE)[me.path].icon}`, '', 'ico') : '') : spIcon(t);
-    const hasBook = me.spells.length > 0 || !!me.path || !!act?.officer;
+    // Owner, 2026-10-16: the book holds the battle log and the danger hexes too — always there.
+    const hasBook = true;
     // A gold bead on the book when the officer's word or a path move is ready to be given.
     const bead = officer || pathReady ? '<i class="tb-bead" aria-hidden="true"></i>' : '';
     const book = t
@@ -1609,7 +1711,17 @@ export class TacticalPanel {
       ? `<div class="tb-sheet" role="dialog" aria-label="${esc(L('order.label'))}"><div class="tb-sh-r"><b>${esc(L('round', { n: v.round }))}</b><em>${esc(whose)}</em></div>${captain(v.you)}${captain((1 - v.you) as 0 | 1)}<div class="tb-sh-q">${this.queue(v)}</div>${words.length ? `<div class="tb-sh-feed">${words.map((w) => `<div>${esc(w)}</div>`).join('')}</div>` : ''}</div>`
       : '';
     pad.className = `tb-pad${v.over ? ' over' : ''}`;
-    pad.innerHTML = `${turn}${this.topHtml(v)}${sheet}<div class="tb-pl">${left}</div><div class="tb-pr">${book}${x2}</div>`;
+    pad.innerHTML = `${turn}${this.qbarHtml(v)}${this.topHtml(v)}${sheet}<div class="tb-pl">${left}</div><div class="tb-pr">${book}${x2}</div>`;
+    const qrow = pad.querySelector('.tb-qrow');
+    if (qrow) this.qGlide(qrow);
+    pad.querySelectorAll<HTMLElement>('.tb-qbar .tb-q').forEach((b) => (b.onclick = () => this.qTap(Number(b.dataset.info))));
+    const qf = pad.querySelector<HTMLElement>('[data-qfold]');
+    if (qf) qf.onclick = () => {
+      updateSettings({ tacQueueFold: !settings().tacQueueFold });
+      again();
+    };
+    const rdy = pad.querySelector<HTMLElement>('[data-ready]');
+    if (rdy) rdy.onclick = () => this.order({ a: 'ready' });
     pad.querySelector<HTMLElement>('[data-quicknow]')?.addEventListener('click', () => this.order({ a: 'quick' }));
     const again = () => {
       this.key = '';
@@ -1742,7 +1854,7 @@ export class TacticalPanel {
     // The fight over, the book is put away (it stood over the reckoning on a desk).
     if (v.over) this.bookOpen = false;
     const act = v.stacks.find((s) => s.id === v.active);
-    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.allies, v.coming, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.bookTab, this.bookPage, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result, v.flag, v.quickNow, v.noQuick, v.scrolls, !!v.bank, this.phone, this.tall, this.moreOpen, this.sheetOpen, this.sheetKind, settings().tacFast, this.endHidden, this.foeArmed]);
+    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.allies, v.coming, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.bookTab, this.bookPage, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result, v.flag, v.quickNow, v.noQuick, v.scrolls, !!v.bank, this.phone, this.tall, this.moreOpen, this.sheetOpen, this.sheetKind, settings().tacFast, this.endHidden, this.foeArmed, this.qFocus, this.dSel, v.deploy ? [v.deploy.ready, v.deploy.foeReady] : null, settings().tacDanger, settings().tacQueueFold, v.stacks.map((s) => s.waited), v.next]);
     if (key === this.key) return;
     this.key = key;
     const hero = (x: 0 | 1) => {
@@ -1758,13 +1870,17 @@ export class TacticalPanel {
     };
     // docs/25 item 64: a group's boarding (the top band makes room for the captains beside the faces on a phone).
     el.classList.toggle('tb-grouped', this.grouped(v, 0) || this.grouped(v, 1));
+    el.classList.toggle('tb-rp', !!v.replay);
+    el.classList.toggle('tb-dep', !!v.deploy && !v.over);
     el.querySelector('.tb-hero.you')!.innerHTML = hero(v.you);
     el.querySelector('.tb-hero.foe')!.innerHTML = hero((1 - v.you) as 0 | 1);
     const turn = this.turnWord(v);
-    el.querySelector('.tb-mid')!.innerHTML = `<div class="tb-round">${esc(L('round', { n: v.round }))}</div><div class="tb-turn${v.mine ? ' mine' : ''}">${act ? `<span class="tb-dot ${act.side === v.you ? 'you' : 'foe'}"></span>` : ''}${esc(turn)} <em class="tb-secs"></em></div><div class="tb-timer"><i></i></div>${this.clocksHtml(v)}`;
+    el.querySelector('.tb-mid')!.innerHTML = v.replay ? `<div class="tb-round">${esc(L('replay.title'))}</div><div class="tb-turn">${esc(L('round', { n: v.round }))}</div><button class="btn tb-rpx" data-rpclose>${esc(L('replay.close'))}</button>` : v.deploy && !v.over ? `<div class="tb-round">${esc(L('dep.title'))}</div>` : `<div class="tb-round">${esc(L('round', { n: v.round }))}</div><div class="tb-turn${v.mine ? ' mine' : ''}">${act ? `<span class="tb-dot ${act.side === v.you ? 'you' : 'foe'}"></span>` : ''}${esc(turn)} <em class="tb-secs"></em></div><div class="tb-timer"><i></i></div>${this.clocksHtml(v)}`;
     // The order of the round, then the next round's first few.
-    el.querySelector('.tb-queue')!.innerHTML = this.queue(v);
-    el.querySelectorAll<HTMLElement>('.tb-q').forEach((b) => (b.onclick = () => this.showInfo(Number(b.dataset.info))));
+    const qbox = el.querySelector('.tb-queue')!;
+    qbox.innerHTML = this.queue(v);
+    if (!this.phone) this.qGlide(qbox);
+    qbox.querySelectorAll<HTMLElement>('.tb-q').forEach((b) => (b.onclick = () => this.qTap(Number(b.dataset.info))));
     // The feed: the last three things, in words — each as it is played on the field (owner, 2026-10-08).
     this.feedDom(v);
     // The captain's orders.
@@ -1859,6 +1975,7 @@ export class TacticalPanel {
     }
     // The phone's round buttons (before the bindings below, which are theirs too).
     this.padDom(v);
+    el.querySelectorAll<HTMLElement>('[data-rpclose]').forEach((b) => (b.onclick = () => this.stopReplay()));
     el.querySelectorAll<HTMLElement>('[data-spell]').forEach((b) => (b.onclick = () => {
       this.bookOpen = false;
       this.spell(b.dataset.spell as TacSpellId);
@@ -1896,7 +2013,11 @@ export class TacticalPanel {
     const poor = !!v.ransom && this.purse() < v.ransom;
     const ransom = v.ransom ? (poor ? L('ransomShort', { n: v.ransom }) : ransomOn ? L('ransomSure', { n: v.ransom }) : L('ransom', { n: v.ransom })) : '';
     const strike = armed ? L('strikeSure') : L('strike');
+    const danger = settings().tacDanger;
     el.querySelector('.tb-acts')!.innerHTML = [
+      v.deploy && !v.over ? `<button class="btn btn-primary" data-a="ready" ${lab(L('dep.ready'))} ${v.deploy.ready ? 'disabled' : ''}>${btIcon('bt_charge', 'icon.bt_order')}${word(L('dep.ready'))}</button>` : '',
+      `<button class="btn" data-a="log" ${lab(L('log.title'), L('log.tip'))}>${icon('icon.deed_ledger_partner', '', 'ico-sm')}${word(L('log.title'))}</button>`,
+      v.over ? '' : `<button class="btn${danger ? ' on' : ''}" data-a="danger" aria-pressed="${danger}" ${lab(L('danger'), L('danger.tip'))}>${icon('icon.danger', '', 'ico-sm')}${word(L('danger'))}</button>`,
       `<button class="btn" data-a="wait" ${lab(L('wait'))} ${!v.mine || act?.waited || v.moved ? 'disabled' : ''}>${btIcon('bt_wait', 'icon.bt_hold')}${word(L('wait'))}</button>`,
       `<button class="btn" data-a="defend" ${lab(L('defend'))} ${!v.mine ? 'disabled' : ''}>${btIcon('bt_defend', 'icon.mod_hull_plating')}${word(L('defend'))}</button>`,
       officer ? `<button class="btn btn-primary" data-a="order" ${lab(L(`o.${officer.order}` as K), L(`od.${officer.order}` as K))}>${icon(`icon.role_${officer.role}`, '', 'ico-sm')}${word(L(`o.${officer.order}` as K))}</button>` : '',
@@ -1953,8 +2074,13 @@ export class TacticalPanel {
       banner.className = `tb-banner tb-end ${won ? 'won' : 'lost'}${v.land ? ' land' : ' sea'}${r ? ' tb-result' : ''}`;
       // docs/19 E14: a bout of the Colosseum — its rating under the why.
       const arenaLine = r?.arena ? `<span class="tb-why tb-arena${r.arena.rated ? (r.arena.delta >= 0 ? ' up' : ' down') : ''}">${icon('icon.item_duelling_pistols', '', 'ico-sm')}${esc(arenaEndLine(r.arena))}</span>` : '';
-      banner.innerHTML = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span class="tb-why">${esc(whyText)}</span>${arenaLine}${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${rows}</div><button class="k-btn k-btn--primary k-btn--lg tb-endbtn" data-endbtn>${esc(v.land ? LL('close') : L('next'))}</button>`;
+      // Owner, 2026-10-16: «Почему» (its sheet: each stack's harm, the turning point) and «Повтор» beside the button.
+      const more = `${r?.why ? `<button class="k-btn k-btn--md tb-endx" data-why>${esc(L('why.btn'))}</button>` : ''}${r?.replay && !v.replay ? `<button class="k-btn k-btn--md tb-endx" data-replay="${esc(r.replay)}">${esc(L('replay'))}</button>` : ''}`;
+      banner.innerHTML = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span class="tb-why">${esc(whyText)}</span>${arenaLine}${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${rows}</div><div class="tb-endrow">${more}<button class="k-btn k-btn--primary k-btn--lg tb-endbtn" data-endbtn>${esc(v.replay ? L('replay.close') : v.land ? LL('close') : L('next'))}</button></div>`;
+      banner.querySelector<HTMLElement>('[data-why]')?.addEventListener('click', () => this.openWhy(v));
+      banner.querySelector<HTMLElement>('[data-replay]')?.addEventListener('click', (e) => this.askReplay((e.currentTarget as HTMLElement).dataset.replay!));
       banner.querySelector<HTMLElement>('[data-endbtn]')!.addEventListener('click', () => {
+        if (v.replay) return this.stopReplay();
         if (v.land) this.send({ t: 'lair', action: 'close' });
         else {
           // A battle at sea closes itself a moment later: the button puts the reckoning away now.
@@ -2050,8 +2176,19 @@ export class TacticalPanel {
     }
   }
 
+  /** Owner, 2026-10-16: the deployment's line — what to do, or that hers are set — and its seconds. */
+  private depText(v: TacView): string {
+    const t = Math.max(0, Math.ceil((v.deploy?.ends ?? 0) - this.bnow(v)));
+    return L(v.deploy?.ready ? 'dep.wait' : 'dep.hint', { t });
+  }
+
   private hint(v: TacView): void {
     const h = this.el!.querySelector('.tb-hint')!;
+    if (v.deploy && !v.over) {
+      h.textContent = this.depText(v);
+      h.classList.remove('hidden');
+      return;
+    }
     const act = v.stacks.find((s) => s.id === v.active);
     const own = this.targetKind() === 'own';
     const lead = this.leadHint(v);
@@ -2118,6 +2255,8 @@ export class TacticalPanel {
    *  band, never the field's middle. */
   private topHtml(v: TacView): string {
     if (v.over) return '';
+    if (v.deploy) return `<div class="tb-top"><div class="tb-tline tb-dline">${esc(this.depText(v))}</div></div>`;
+    if (v.replay) return `<div class="tb-top"><div class="tb-tline tb-rpline"><span>${esc(L('replay.title'))} · ${esc(L('round', { n: v.round }))}</span><button class="tb-rpx" data-rpclose title="${esc(L('replay.close'))}" aria-label="${esc(L('replay.close'))}"><i class="tb-pk-x" aria-hidden="true"></i></button></div></div>`;
     const f = v.flag;
     const flag = f
       ? `<span class="tb-flagp" title="${esc(L('flag.tip', { m: f.need }))}" aria-label="${esc(L('flag.tip', { m: f.need }))}">${icon('icon.bt_colours', '', 'ico-xs')}<b>${f.held[v.you]}/${f.need}</b></span>`
@@ -2170,6 +2309,31 @@ export class TacticalPanel {
       c.classList.toggle('run', !v.over && !!act && act.side === x && (act.own ?? 0) === slot && !this.capAuto(v, x, slot));
       c.classList.toggle('low', n >= 0 && n < 15);
     });
+  }
+
+  /** Owner, 2026-10-16 («зоны угрозы»): the foes whose next turn is shown — the one picked (its face in the order bar, a
+   *  tap, a long press, the blow being chosen) and, with «Опасные клетки» on, every one; where each may strike next turn
+   *  (shared threatHexes, from the view as the server reckons it) and a shooter's full range. Null: none shown. */
+  private threatZone(v: TacView): { hit: Set<number>; range: Set<number> } | null {
+    if (v.over || (v.deploy && v.deploy.hidden)) return null;
+    const foe = (id: number | null) => (id !== null ? v.stacks.find((s) => s.id === id && s.side !== v.you) : undefined);
+    const ids = new Set<number>();
+    if (settings().tacDanger) for (const s of v.stacks) if (s.side !== v.you) ids.add(s.id);
+    for (const id of [this.qFocus, this.info, this.foeArmed]) if (foe(id)) ids.add(id!);
+    if (!ids.size) return null;
+    const key = `${v.seq}:${v.you}:${[...ids].sort((a, b) => a - b).join(',')}`;
+    if (this.threatMemo?.key === key) return this.threatMemo;
+    const hit = new Set<number>(), range = new Set<number>();
+    const ship = !v.land && !v.siege && !v.arena;
+    for (const id of ids) {
+      const s = foe(id)!;
+      const occ = new Set(v.stacks.filter((o) => o.id !== s.id).map((o) => o.hex));
+      const z = threatHexes(v.cells, occ, s.hex, { speed: s.speed, fly: s.sp.includes('flying'), dive: s.sp.includes('diving') && !!v.land, gate: s.side === 1 && !!v.siege, fire: ship });
+      for (const h of z.hit) hit.add(h);
+      if (s.sp.includes('shooter') && s.shots > 0) for (let h = 0; h < v.cells.length; h++) if (v.cells[h] !== '#' && hexDist(h, s.hex) <= TAC_LONG_SHOT) range.add(h);
+    }
+    this.threatMemo = { key, hit, range };
+    return this.threatMemo;
   }
 
   /** The stack's card: what it is, its numbers, its officer. A desk's beside the field; a phone's a bottom sheet
@@ -2230,6 +2394,7 @@ export class TacticalPanel {
       ${s.backs ? `<div class="tb-sts"><span class="chip tb-st good">${btIcon('bt_charge', '', 'ico-xs')}${esc(L('sts.backs', { n: s.backs }))}</span></div>` : ''}
       ${s.resist || this.covered(v).has(s.id) ? `<div class="tb-sts">${s.resist ? `<span class="chip tb-st good">${btIcon('st_braced', '', 'ico-xs')}${esc(L('sts.resist', { n: Math.round(s.resist * 100) }))}</span>` : ''}${this.covered(v).has(s.id) ? `<span class="chip tb-st good">${btIcon('bt_defend', '', 'ico-xs')}${esc(L('sts.cover'))}</span>` : ''}</div>` : ''}
       ${s.sp?.length ? `<div class="tb-sps">${s.sp.map((x) => `<button class="chip tb-spc${note === x ? ' on' : ''}" data-spnote="${esc(x)}" title="${esc(specialNote(x))}">${esc(specialName(x))}</button>`).join('')}</div>${note ? `<p class="tb-spn">${esc(specialNote(note))}</p>` : ''}` : ''}
+      ${s.side !== v.you && !v.over ? `<p class="tb-thr">${btIcon('danger', 'icon.danger', 'ico-xs')}${esc(s.sp?.includes('shooter') && s.shots > 0 ? L('thr.shoot', { n: TAC_LONG_SHOT }) : L('thr.melee', { n: s.speed }))}</p>` : ''}
       <p class="muted">${esc(s.kind === 'officer' || !s.unit ? L(`kd.${s.kind}` as K) : unitNote(s.unit))}${o ? ` ${esc(L(`o.${o.order}` as K))}: ${esc(L(`od.${o.order}` as K))}` : ''}</p>`;
   }
 
@@ -2264,6 +2429,10 @@ export class TacticalPanel {
     const card = (data: string, pic: string, name: string, note: string, off: boolean, cls = '') =>
       `<button class="tb-bc${cls}" ${data}${off ? ' disabled' : ''} title="${esc(name)}">${pic}<b>${esc(name)}</b><small>${note}</small></button>`;
     const cards: string[] = [];
+    // Owner, 2026-10-16: the battle log and the danger hexes, first in the book.
+    const danger = settings().tacDanger;
+    cards.push(card('data-bk="log"', icon('icon.deed_ledger_partner', '', 'tb-bc-ico'), L('log.title'), esc(L('log.tip')), false, ' tool'));
+    if (!v.over) cards.push(card('data-bk="danger"', icon('icon.danger', '', 'tb-bc-ico'), L('danger'), esc(`${L(danger ? 'danger.on' : 'danger.off')} · ${L('danger.tip')}`), false, ` tool${danger ? ' on' : ''}`));
     const o = act?.officer;
     if (o && act!.side === v.you) cards.push(card('data-bk="order"', icon(`icon.role_${o.role}`, '', 'tb-bc-ico'), L(`o.${o.order}` as K), esc(o.ready ? L('book.officer') : L('used')), !v.mine || !o.ready, ' officer'));
     for (const kind of ['innate', 'ult'] as const) {
@@ -2300,6 +2469,8 @@ export class TacticalPanel {
       if (!b || b.disabled) return;
       this.closeSheet();
       if (b.dataset.bk === 'order') this.button('order');
+      else if (b.dataset.bk === 'log') this.openLog();
+      else if (b.dataset.bk === 'danger') this.button('danger');
       else if (b.dataset.bkmove) this.move2(b.dataset.bkmove as 'innate' | 'ult');
       else if (b.dataset.bkspell) this.spell(b.dataset.bkspell as TacSpellId);
       this.key = '';
@@ -2336,6 +2507,137 @@ export class TacticalPanel {
     }, true);
     this.key = '';
     this.dom(v);
+  }
+
+  // ------------------------------------------------------------------ the log, the why, the replay (owner, 2026-10-16)
+
+  /** «Журнал боя»: every event of this fight in words, oldest first, the newest in view (its own sheet: it stays open
+   *  while the fight goes on, and is kept up with it). */
+  private logH: SheetHandle | null = null;
+  private logHtml(): string {
+    const lines = [...this.journal.entries()].sort((a, b) => a[0] - b[0]).map(([, w]) => w);
+    if (!lines.length) return `<p class="muted">${esc(L('log.empty'))}</p>`;
+    return `<ol class="tb-log">${lines.map((w) => `<li${/^(Round|Раунд) \d+/.test(w) ? ' class="rnd"' : ''}>${esc(w)}</li>`).join('')}</ol>`;
+  }
+  private openLog(): void {
+    if (this.logH?.open) return this.logH.close('code');
+    this.logH = openSheet({ title: L('log.title'), body: this.logHtml(), height: 0.85, cls: 'tb-sheetk tb-logk', onClose: () => (this.logH = null) });
+    const b = this.logH.body;
+    requestAnimationFrame(() => (b.scrollTop = b.scrollHeight));
+  }
+  private logRefresh(): void {
+    const h = this.logH;
+    if (!h?.open) return;
+    const b = h.body;
+    const end = b.scrollTop + b.clientHeight >= b.scrollHeight - 24;
+    b.innerHTML = this.logHtml();
+    if (end) b.scrollTop = b.scrollHeight;
+  }
+
+  /** «Почему» (owner, 2026-10-16): the reckoning's short why — dealt and taken, the captains' orders, the turning point,
+   *  and each stack's harm dealt, taken and the men it felled; «Повтор» when the fight is kept. */
+  private whyHtml(v: TacView, why: TacWhy, replay?: string): string {
+    const nm = (u: UnitId) => unitName(u);
+    const mine = why.stacks.filter((s) => s.side === v.you), theirs = why.stacks.filter((s) => s.side !== v.you);
+    const sum = (xs: typeof mine, k: 'dealt' | 'taken') => xs.reduce((n, s) => n + s[k], 0);
+    const t = why.turn;
+    const turn = t
+      ? t.k === 'spell' || t.k === 'innate' || t.k === 'ult'
+        ? L('why.turnMove', { r: t.round, a: t.k === 'spell' ? spName(t.id as TacSpellId) : moveName(t.id ?? '', t.k === 'ult'), k: t.kills })
+        : L('why.turn', { r: t.round, a: t.s ? `${nm(t.s)} (${L(t.side === v.you ? 'ours' : 'theirs')})` : '…', b: t.t ? nm(t.t) : '…', k: t.kills })
+      : '';
+    const row = (s: (typeof mine)[number]) =>
+      `<tr${s.left <= 0 ? ' class="dead"' : ''}><td>${unitIcon(s.unit, 'tb-rs-ico')}<span>${esc(nm(s.unit))}</span><small>${s.left}/${s.start}${s.left <= 0 ? ` · ${esc(L('why.fell'))}` : ''}</small></td><td>${s.dealt}</td><td>${s.taken}</td><td>${s.kills}</td></tr>`;
+    const table = (title: K, xs: typeof mine) =>
+      `<h4>${esc(L(title))}</h4><table class="tb-why-t"><thead><tr><th></th><th colspan="3">${esc(L('why.head'))}</th></tr></thead><tbody>${xs.map(row).join('')}</tbody></table>`;
+    return `<p class="tb-why-l"><b>${esc(L('why.total', { a: sum(mine, 'dealt'), b: sum(mine, 'taken') }))}</b></p>
+      ${why.moves[0] || why.moves[1] ? `<p class="tb-why-l">${esc(L('why.moves', { a: why.moves[v.you], b: why.moves[1 - v.you] }))}</p>` : ''}
+      ${turn ? `<p class="tb-why-l tb-why-turn">${esc(turn)}</p>` : ''}
+      ${table('why.you', mine)}${table('why.foe', theirs)}
+      ${replay ? `<button class="k-btn k-btn--primary k-btn--md tb-rpbtn" data-replay="${esc(replay)}">${icon('icon.bt_quick', '', 'ico-sm')}${esc(L('replay'))}</button>` : ''}`;
+  }
+  private whyH: SheetHandle | null = null;
+  private openWhy(v: TacView): void {
+    const r = v.result;
+    if (!r?.why) return;
+    this.whyH?.close('code');
+    this.whyH = openSheet({ title: L('why.title'), body: this.whyHtml(v, r.why, v.replay ? undefined : r.replay), height: 0.85, cls: 'tb-sheetk tb-whyk', onClose: () => (this.whyH = null) });
+    this.whyH.body.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('[data-replay]');
+      if (!b) return;
+      this.whyH?.close('code');
+      this.askReplay(b.dataset.replay!);
+    });
+  }
+
+  /** «Повтор»: the server plays the kept fight again and sends its steps. */
+  private askReplay(id: string): void {
+    this.send({ t: 'tac_replay', id });
+  }
+
+  /** A kept fight's steps came (main.ts): the field laid out afresh as it opened, then played step by step. */
+  onReplay(m: Extract<ServerMsg, { t: 'tac_replay' }>): void {
+    if (m.error || !m.base || !m.frames) {
+      if (m.error) this.notice(serverText(m.error));
+      return;
+    }
+    this.whyH?.close('code');
+    this.logH?.close('code');
+    this.closeSheet();
+    // Whatever is on the field goes at once (the real fight's end, or another replay).
+    this.rp = null;
+    this.endHidden = true;
+    this.busyUntil = this.endUntil = 0;
+    this.render(null);
+    this.endHidden = false;
+    const base: TacView = { ...m.base, replay: true, mine: false, reach: [], melee: [], shoot: [], over: null, log: [], seq: 1 };
+    delete base.pv;
+    delete base.deploy;
+    this.rp = { base, frames: m.frames, k: 0, log: [], seq: 1 };
+    this.rpView = base;
+    this.rpNext = performance.now() + 900;
+  }
+  private rpView: TacView | null = null;
+  private rpNext = 0;
+  /** The next step of the replay once the last is played. */
+  private replayStep(): void {
+    const rp = this.rp;
+    if (!rp || this.busy() || performance.now() < this.rpNext || rp.k >= rp.frames.length) return;
+    const f = rp.frames[rp.k++];
+    rp.log.push(...f.log);
+    if (rp.log.length > 40) rp.log.splice(0, rp.log.length - 40);
+    const at = new Map(f.st.map((x) => [x[0], x]));
+    const stacks = rp.base.stacks.filter((s) => at.has(s.id)).map((s) => {
+      const x = at.get(s.id)!;
+      return { ...s, hex: x[1], count: x[2], hp: x[3], shots: x[4], face: x[5], defending: false };
+    });
+    const men = (x: 0 | 1) => stacks.reduce((n, s) => n + (s.side === x ? s.count : 0), 0);
+    const heroes = rp.base.heroes.map((h, x) => ({ ...h, men: men(x as 0 | 1) })) as TacView['heroes'];
+    this.rpView = {
+      ...rp.base, stacks, heroes, log: rp.log.slice(-TAC_PLAY_WINDOW), round: f.round, active: f.active, over: f.over ?? null, seq: ++rp.seq,
+      order: f.active !== null ? [f.active] : [], next: [], ...(f.over ? { result: rp.base.result } : { result: undefined }),
+    };
+    this.rpNext = performance.now() + (f.log.length ? 120 : 260) / this.speed(this.rpView);
+  }
+  /** The replay put away. */
+  private stopReplay(): void {
+    if (!this.rp) return;
+    this.rp = null;
+    this.rpView = null;
+    this.endHidden = true;
+    this.busyUntil = this.endUntil = 0;
+    this.render(null);
+    this.endHidden = false;
+  }
+
+  /** A word over the field's top band for a moment (the replay that is no longer kept). */
+  private notice(text: string): void {
+    const n = document.createElement('div');
+    n.className = 'tb-notice';
+    n.setAttribute('role', 'status');
+    n.textContent = text;
+    document.body.append(n);
+    setTimeout(() => n.remove(), 2600);
   }
 
   // ------------------------------------------------------------------ an order's whole words
@@ -2469,7 +2771,14 @@ export class TacticalPanel {
   private button(a: string): void {
     const v = this.view;
     if (!v) return;
-    if (a === 'wait' || a === 'defend' || a === 'order') this.order({ a });
+    if (a === 'wait' || a === 'defend' || a === 'order' || a === 'ready') this.order({ a });
+    else if (a === 'log') this.openLog();
+    else if (a === 'danger') {
+      updateSettings({ tacDanger: !settings().tacDanger });
+      this.threatMemo = null;
+      this.key = '';
+      this.dom(v);
+    }
     else if (a === 'auto') this.order({ a: 'auto', on: !v.heroes[v.you].auto });
     else if (a === 'quick') this.order({ a: 'quick' });
     else if (a === 'buyscroll') this.openShop();
@@ -2541,6 +2850,11 @@ export class TacticalPanel {
   onKey(e: KeyboardEvent): boolean {
     const v = this.view;
     if (!v || e.ctrlKey || e.metaKey || e.altKey) return false;
+    // Owner, 2026-10-16: a replay takes no orders; Esc puts it away.
+    if (v.replay) {
+      if (e.key === 'Escape') this.stopReplay();
+      return e.key === 'Escape';
+    }
     const k = e.key.toLowerCase();
     const code = e.code;
     if ((code === 'Enter' || code === 'NumpadEnter' || code === 'Space') && this.pickOn()) {
@@ -2636,6 +2950,16 @@ export class TacticalPanel {
       if (foe) this.aimFoe = null;
     }, foe ? 800 : 450);
     this.press = { x, y, t: performance.now(), timer, foe };
+    // Owner, 2026-10-16: the deployment — a finger (or the mouse) on a stack of hers drags it to a hex of her columns.
+    const dv = this.view;
+    if (dv?.deploy && !dv.deploy.ready && !dv.over) {
+      const h = this.hexAt(e);
+      const s = h !== null ? this.stackAt(h) : undefined;
+      if (s && s.side === dv.you) {
+        this.press.drag = s.id;
+        this.press.from = h;
+      }
+    }
   }
 
   private cancelPress(): void {
@@ -2685,11 +3009,25 @@ export class TacticalPanel {
       }
       return;
     }
-    if (this.press && Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y) > 12) this.cancelPress();
+    if (this.press && Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y) > 12) {
+      if (this.press.drag !== undefined) {
+        clearTimeout(this.press.timer); // dragging a stack: no card
+        this.press.timer = 0;
+        this.press.slid = true;
+      } else this.cancelPress();
+    }
   }
 
   private up(e: PointerEvent): void {
     if (!this.press) return;
+    // Owner, 2026-10-16: a stack of hers dragged in the deployment and let go on another hex.
+    if (this.press.drag !== undefined && this.press.slid) {
+      const id = this.press.drag;
+      this.cancelPress();
+      const h = this.hexAt(e);
+      if (h !== null) this.deployTo(id, h);
+      return;
+    }
     const foe = this.press.foe && this.aimFoe ? this.view?.stacks.find((x) => x.id === this.aimFoe!.t)?.hex ?? null : null;
     const slid = !!this.press.slid;
     this.cancelPress();
@@ -2726,6 +3064,20 @@ export class TacticalPanel {
       return done();
     }
     const s = this.stackAt(h);
+    // Owner, 2026-10-16: the deployment — a stack of hers picked, then a hex of her columns (or another of hers: the two
+    // change places); a foe's card as ever.
+    if (v.deploy && !v.over) {
+      if (!v.deploy.ready && s && s.side === v.you) {
+        if (this.dSel === s.id) this.dSel = null;
+        else if (this.dSel !== null) this.deployTo(this.dSel, h);
+        else this.dSel = s.id;
+      } else if (!v.deploy.ready && this.dSel !== null && v.deploy.zone.includes(h)) this.deployTo(this.dSel, h);
+      else if (s) this.showInfo(s.id);
+      else this.dSel = null;
+      this.key = '';
+      this.dom(v);
+      return done();
+    }
     // The field takes no order while the last turn is still being played (owner, 2026-10-08): a card it may open.
     if (!v.mine || v.over || this.busy()) {
       this.clearPick();
@@ -2788,6 +3140,17 @@ export class TacticalPanel {
     this.clearPick();
     this.aimFoe = null;
     done();
+  }
+
+  /** Owner, 2026-10-16: her stack set on a hex of her own columns (one of hers there takes her place; the server says
+   *  why not, else). */
+  private deployTo(id: number, hex: number): void {
+    const v = this.view;
+    this.dSel = null;
+    if (!v?.deploy || v.deploy.ready || !v.deploy.zone.includes(hex)) return;
+    const s = v.stacks.find((x) => x.id === id);
+    if (!s || s.hex === hex) return;
+    this.order({ a: 'deploy', s: id, hex });
   }
 
   /** A choice open on her turn (main.ts: Enter gives its first order, not the chat). */
@@ -3306,6 +3669,13 @@ export class TacticalPanel {
       else out.b = Math.max(out.b, s.bottom - r.top + 6);
     }
     if (side) out.l = out.r = Math.max(out.l, out.r);
+    // Owner, 2026-10-16: the order bar keeps the top band (the field's top row never under its faces); folded, its one
+    // face and chevron stand over the water amidships.
+    const q = this.el.querySelector<HTMLElement>('.tb-pad > .tb-qbar:not(.fold)');
+    if (q) {
+      const r = q.getBoundingClientRect();
+      if (r.height >= 1) out.t = Math.max(out.t, r.bottom - s.top + 2);
+    }
     return { l: Math.round(out.l), r: Math.round(out.r), t: Math.round(out.t), b: Math.round(out.b) };
   }
 
@@ -4484,6 +4854,14 @@ export class TacticalPanel {
       if (face.style.getPropertyValue('--tl') !== k) face.style.setProperty('--tl', k);
       face.classList.toggle('low', low);
     }
+    // Owner, 2026-10-16: the deployment's seconds, on the hint line (a desk) or in the top band (a phone).
+    if (v.deploy && !v.over) {
+      const txt = this.depText(v);
+      el.querySelectorAll<HTMLElement>('.tb-hint, .tb-dline').forEach((x) => {
+        if (x.textContent !== txt) x.textContent = txt;
+      });
+    }
+    this.replayStep();
     this.feedDom(v);
     if ((this.strikeArmed && this.strikeArmed < performance.now()) || (this.ransomArmed && this.ransomArmed < performance.now())) {
       this.strikeArmed = 0;
@@ -4595,9 +4973,52 @@ export class TacticalPanel {
       g.stroke();
       g.setLineDash([]);
     }
+    // Owner, 2026-10-16 («зоны угрозы»): where the foe picked (a tap, a long press, its face in the order bar) — or, with
+    // «Опасные клетки» on, every foe — may strike next turn: its stride and the hexes beside it in red; a shooter's full
+    // range washed amber (it fires across the whole deck).
+    const big = this.phone;
+    const tz = this.threatZone(v);
+    if (tz) {
+      for (const h of tz.range) {
+        if (tz.hit.has(h)) continue;
+        const p = this.lc(h);
+        this.hexPath(g, p.x, p.y, r - 2);
+        g.fillStyle = 'rgba(232,150,60,0.11)';
+        g.fill();
+      }
+      for (const h of tz.hit) {
+        const p = this.lc(h);
+        this.hexPath(g, p.x, p.y, r - 2);
+        g.fillStyle = 'rgba(205,40,30,0.2)';
+        g.fill();
+        g.strokeStyle = 'rgba(238,86,64,0.55)';
+        g.lineWidth = big ? 1.6 : 1.1;
+        g.stroke();
+      }
+    }
+    // Owner, 2026-10-16: the deployment — her own columns in her colour, the stack she picked ringed in gold.
+    if (v.deploy && !v.deploy.ready && !v.over) {
+      for (const h of v.deploy.zone) {
+        const p = this.lc(h);
+        this.hexPath(g, p.x, p.y, r - 1.5);
+        g.fillStyle = h === this.hover ? 'rgba(127,176,208,0.34)' : 'rgba(127,176,208,0.16)';
+        g.fill();
+        g.strokeStyle = 'rgba(170,210,235,0.6)';
+        g.lineWidth = big ? 1.8 : 1.2;
+        g.stroke();
+      }
+    }
+    for (const id of [this.dSel, this.qFocus]) {
+      const s = id !== null ? v.stacks.find((x) => x.id === id) : undefined;
+      if (!s) continue;
+      const p = this.lc(s.hex);
+      this.hexPath(g, p.x, p.y, r - 1);
+      g.strokeStyle = `rgba(255,226,150,${0.7 + 0.3 * pulse})`;
+      g.lineWidth = big ? 4 : 3;
+      g.stroke();
+    }
     // The reach of the stack whose turn it is (docs/23 item 58: big and plain): a veil and a bright rim on every hex
     // it may step to — on a phone thicker and lighter, so a thumb sees it at arm's length.
-    const big = this.phone;
     // Her turn's marks once what came before it is played (owner, 2026-10-08).
     const live = v.mine && !v.over && !this.busy();
     if (live) {

@@ -917,11 +917,12 @@ onSettings(() => {
   else document.body.classList.toggle('expert-guns', settings().expertGuns);
 });
 document.body.classList.toggle('expert-guns', settings().expertGuns);
-let classicSent = settings().classicBoarding;
+let classicSent = settings().classicBoarding, deploySent = settings().tacDeploy;
 onSettings((s) => {
-  if (s.classicBoarding === classicSent) return;
+  if (s.classicBoarding === classicSent && s.tacDeploy === deploySent) return;
   classicSent = s.classicBoarding;
-  net.send({ t: 'board_pref', classic: s.classicBoarding });
+  deploySent = s.tacDeploy;
+  net.send({ t: 'board_pref', classic: s.classicBoarding, deploy: s.tacDeploy });
 });
 document.documentElement.lang = lang();
 applyDataLocale(lang());
@@ -1318,6 +1319,9 @@ function onMessage(m: ServerMsg): void {
   state.apply(m);
   // a boarding opens: its loading screen until the decks, the figures and their poses are in (warmed while she closed in)
   if (m.t === 'board_tac' && m.view && !hadTac) beginLoad('battle', 7000).need(tacArt(m.view)).settle().done();
+  // Owner, 2026-10-16 («Повтор»): a kept fight played again over the field.
+  if (m.t === 'tac_replay' && m.base) beginLoad('battle', 7000).need(tacArt(m.base)).settle().done();
+  if (m.t === 'tac_replay') tactical.onReplay(m);
   if (inGame) firstTips.offer(tipForMsg(m));
   switch (m.t) {
     case 'pursuit':
@@ -1378,7 +1382,7 @@ function onMessage(m: ServerMsg): void {
       bootMark('init');
       inGame = true;
       // The old round-by-round deck fight, for a captain who asked for it in the options (docs/16 P4).
-      net.send({ t: 'board_pref', classic: settings().classicBoarding });
+      net.send({ t: 'board_pref', classic: settings().classicBoarding, deploy: settings().tacDeploy });
       sendGunnery(); // docs/23 items 35, 42, 46
       audio.ownId = m.entityId;
       $('screen-captain').classList.add('hidden');
