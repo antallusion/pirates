@@ -32,7 +32,8 @@ import { contractSpellHp } from './admiralty.ts'; // docs/19 E15
 import { raidSpellHp } from './abyssraid.ts'; // docs/19 E11
 import { arenaResultOf, arenaSettle, arenaSetup, arenaTag, isArenaFight } from './arena.ts'; // docs/19 E14
 import { giveBack, helmFallback, payScroll, scrollView } from './autoscroll.ts'; // «Свиток автобоя» (owner, 2026-10-11)
-import { act, battleLevel, endByRansom, killedHp, lossesOf, newBattle, playSince, sharesOf, sideStrength, stepBattle, viewOf } from './tacbattle.ts';
+import { act, battleLevel, battleWhy, endByRansom, killedHp, lossesOf, newBattle, playSince, sharesOf, sideStrength, stepBattle, viewOf } from './tacbattle.ts';
+import { keepReplay } from './tacreplay.ts'; // owner, 2026-10-16: «Повтор»
 
 /** docs/25 item 67: the share of what her side cut down that is the side's own captain's. */
 const sharesOfMain = (bt: TacBattle, x: 0 | 1): number => sharesOf(bt, x).get(0) ?? 1;
@@ -212,7 +213,13 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
   // docs/25 block Г: a boarding's length by its level; the legends, the raid, the citadels and the trials long by design.
   // A bout of the Colosseum keeps its own short length (a drafted army, template captains, its pairs evened at it): the
   // boarding's reckoning of Attack and Defense, guards and orders (items 45–47), not its clocks or flag.
-  if (arena) fight.tac = newBattle(arena.sides[0], arena.sides[1], seed, game.tacNow(), rng, { arena: true, len: 'long' });
+  // Owner, 2026-10-16: a captain at the helm with the setting on sets her stacks before round one (HoMM3's tactics
+  // phase; the sea's mind is set at once); every boarding is kept to be played again («Повтор»).
+  const deploy = (x: ShipEntity): boolean => {
+    const ses = game.sessionOf(x);
+    return !!ses && ses.deployStacks && ses.disconnectedAt === null;
+  };
+  if (arena) fight.tac = newBattle(arena.sides[0], arena.sides[1], seed, game.tacNow(), rng, { arena: true, len: 'long', deploy: [deploy(a), deploy(b)], record: true });
   else {
     // docs/19 E5: a castellan alongside — the siege before her citadel's walls, its garrison in its own seven stacks.
     const so = siegeSetup(game, a, b);
@@ -229,7 +236,7 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
     charmSide(game, b, a, bIn);
     // docs/25 item 64: the mates of each side's group within reach come aboard with the grapples (or are asked).
     const allies = groupable(fight, a, b) ? alliesAtStart(game, a, b, aIn, bIn, battleLevel(aIn, bIn)) : [];
-    const bt = newBattle(aIn, bIn, seed, game.tacNow(), rng, { ...(so ? { siege: so.siege } : {}), len, ...(allies.length ? { allies } : {}) });
+    const bt = newBattle(aIn, bIn, seed, game.tacNow(), rng, { ...(so ? { siege: so.siege } : {}), len, ...(allies.length ? { allies } : {}), deploy: [deploy(a), deploy(b)], record: true });
     fight.tac = bt;
     linkAllies(fight, bt);
     // docs/25 item 49: a captain against a clearly weaker ship of the sea is offered the quick fight at once.
@@ -424,8 +431,30 @@ function settle(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle, seq: nu
         }
       }
     }
+    keepFight(game, a, b, bt);
   }
   if (bt.seq !== seq || (bt.over && fight.endsAt !== null)) sendTac(game, a, b);
+}
+
+/** Owner, 2026-10-16 («Повтор»): a fight between two captains, or one that matters (a legend, the raid, a citadel, a trial,
+ *  the Colosseum, an elite ship of the sea), is kept by each captain at the helm among her last twenty. */
+function keepFight(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle): void {
+  const fight = a.boarding?.fight;
+  if (!fight || !bt.rec || !bt.over) return;
+  const pvp = bt.heroes[0].input.human && bt.heroes[1].input.human;
+  if (!(pvp || bt.len === 'long' || !!bt.siege || isArenaFight(fight) || a.elite || b.elite)) return;
+  const ids: [string | null, string | null] = [null, null];
+  for (const side of [0, 1] as const) {
+    const ship = side ? b : a, other = side ? a : b;
+    const ses = game.sessionOf(ship);
+    if (!ses?.authed) continue;
+    try {
+      ids[side] = keepReplay(game, ses.accountId, bt.rec, { side, vs: other.name, won: bt.over.winner === side, pvp });
+    } catch {
+      ids[side] = null; // a fight not kept is no reason to lose its end
+    }
+  }
+  fight.tacReplay = ids;
 }
 
 /** Silver the side of `ship` would pay to buy the other side off (HoMM3's surrender): half what the other side's
@@ -542,7 +571,7 @@ export function sendTac(game: Game, a: ShipEntity, b: ShipEntity | null): void {
     const arena = arenaTag(f);
     const ar = arena ? arenaResultOf(f, side) : undefined;
     // docs/25 item 67: her own losses (an ally's are her own stacks'), and in a group every captain's share of the cut.
-    const result = bt.over ? { lost: lossesOf(bt, side, 0), killed: lossesOf(bt, (1 - side) as 0 | 1), xp: f.tacXp?.[side] ?? 0, ...(f.tacPaid && side === 1 ? { paid: f.tacPaid } : {}), ...(joined?.length ? { joined } : {}), ...(ar ? { arena: ar } : {}), ...groupShares(game, s, ses.accountId) } : undefined;
+    const result = bt.over ? { lost: lossesOf(bt, side, 0), killed: lossesOf(bt, (1 - side) as 0 | 1), xp: f.tacXp?.[side] ?? 0, why: battleWhy(bt), ...(f.tacReplay?.[side] ? { replay: f.tacReplay[side]! } : {}), ...(f.tacPaid && side === 1 ? { paid: f.tacPaid } : {}), ...(joined?.length ? { joined } : {}), ...(ar ? { arena: ar } : {}), ...groupShares(game, s, ses.accountId) } : undefined;
     // docs/25 item 49: the quick fight offered at once (in the first round) against a clearly weaker ship of the sea;
     // none at all against a legend, the raid, a citadel, on the sand or in a trial.
     const quick = noQuick(f, bt) ? { noQuick: true } : bt.quick?.[side] && bt.round <= 1 && !bt.over ? { quickNow: true } : {};

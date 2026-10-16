@@ -169,6 +169,7 @@ import type { DelayedStrike } from './abilities.ts';
 import { canBoard, claimPrize, cutGrapples, resendBoarding, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
 import { assistPref, joinBoarding } from './boardgroup.ts'; // docs/25 block Е
 import { tacAction } from './tactical.ts';
+import { replayList, replayOf } from './tacreplay.ts'; // owner, 2026-10-16: «Повтор»
 import { surrenderBlocked, surrenderClosed } from './struck.ts';
 import { endStreak, onStreakKill, streakAhead } from './streak.ts';
 import { legendsView } from './legends.ts';
@@ -3350,8 +3351,15 @@ export class Game {
       case 'tac':
         if (landFighting(this, s)) return err(landTac(this, s, msg.act)); // the battle ashore (docs/18 II)
         return err(tacAction(this, ship, msg.act));
+      case 'tac_replay':
+        // Owner, 2026-10-16 («Повтор»): a fight of her last twenty played again, or their list.
+        if (!s.authed) return;
+        if (typeof msg.id === 'string' && msg.id) this.sendTo(s, replayOf(this, s.accountId, msg.id.slice(0, 16)));
+        else this.sendTo(s, { t: 'tac_replay', list: replayList(this, s.accountId).map(({ id, at, vs, won, pvp }) => ({ id, at, vs, won, pvp })) });
+        return;
       case 'board_pref':
         s.classicBoarding = msg.classic === true;
+        if (typeof msg.deploy === 'boolean') s.deployStacks = msg.deploy;
         return;
       // docs/25 item 64: come aboard a group mate's boarding; come at once next time (and with what).
       case 'board_join':

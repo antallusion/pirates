@@ -404,6 +404,8 @@ export class PlayerSession {
   name = '';
   /** Would rather fight boardings round by round than turn by turn (docs/16 P4). */
   classicBoarding = false;
+  /** Owner, 2026-10-16: sets her stacks before a boarding's first round (HoMM3's tactics phase); off: as they stand. */
+  deployStacks = true;
   /** The captain's gunnery (docs/23 items 35, 42, 46): her gun captains fire as the mark bears; a mark two levels down
    *  is settled by itself; the expert's hand keeps the held broadsides and the chasers to herself. */
   autoFire = false;

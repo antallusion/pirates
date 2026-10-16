@@ -14,9 +14,10 @@ import {
   TAC_AI_DELAY, TAC_BLOCKING, TAC_FAST, TAC_BURN, TAC_CHANCE_PER_POINT, TAC_COVER, TAC_FEAR, TAC_FLANK, TAC_GAP, TAC_H, TAC_LONG_SHOT, TAC_MAX_ROUNDS, TAC_ORDER_OF, TAC_SPELLS, TAC_TURN, TAC_UNITS, TAC_W,
   TAC_PLAY_WINDOW, TAC_SIGNATURE, captainSpells, flankOf, hexDir, hexDist, hexIndex, hexMirror, hexNeighbors, hexX, hexY, kindOfUnit, tacSchedule, TAC_DECK_COVER, deckCover, unitResist,
   SIEGE, insideWalls, isGateCell, siegeCell, siegePart, TAC_LEN, TAC_GROUP, TAC_ROLES, tacBring, tacEcho, tacLevel, tacBankSecs, tacFlagHex, tacGrit, tacTurnSecs,
+  TAC_DEPLOY, deployZone, threatHexes,
 } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacKind, TacOrderId, TacSpellId } from '../../../shared/src/data/tactical.ts';
-import type { TacAction, TacAllyView, TacEvent, TacHeroView, TacProc, TacPreview, TacStackView, TacView } from '../../../shared/src/protocol.ts';
+import type { TacAction, TacAllyView, TacEvent, TacHeroView, TacProc, TacPreview, TacReplayFrame, TacStackView, TacView, TacWhy } from '../../../shared/src/protocol.ts';
 import { ORDERS, TACTICS_FREE, homeMul, orderRes } from '../../../shared/src/data/hero.ts';
 import type { HeroBattle, OrderRes } from '../../../shared/src/data/hero.ts';
 import { BOOK_PAGES, CHAIN_FALL, HOME_MUL, INNATE, PATH_PAGES, PATH_SCHOOL, RAISE_CAP, DRAIN_CAP, SICK_TURNS, ULTIMATE, ULT_EARLY, ULT_ROUND, drainCap, isBookPage, isPathPage, moveFx, pathHoldExtra, powHold, powered, raiseCap } from '../../../shared/src/data/paths.ts';
@@ -301,6 +302,31 @@ export interface TacBattle {
   siege?: SiegeState;
   /** docs/19 E14: a bout of the Colosseum, on its sand. */
   arena?: true;
+  /** Owner, 2026-10-16 (HoMM3's tactics phase): before round one the captains set their stacks within their own
+   *  deployment columns (`zone`), till the clock (`ends`) or both have said «Готово» (`ready`; the sea's mind at once). */
+  deploy?: { ends: number; ready: [boolean, boolean]; zone: [number[], number[]] };
+  /** Owner, 2026-10-16 («Повтор»): what the battle was laid out from and every hand on it since, in order — played again
+   *  on the same dice it gives the same battle (replayBattle). Absent: not kept (a group's boarding, a land's fight). */
+  rec?: TacRec;
+  /** While a recorded step plays, the steps inside it are its own. */
+  recMute?: boolean;
+  /** Owner, 2026-10-16 («почему»): each stack's harm dealt and taken and the men it felled (by id), and the blow that
+   *  turned the fight most (the most hit points taken off in one). */
+  tally?: Record<number, { dealt: number; taken: number; kills: number }>;
+  swing?: { round: number; s?: number; t?: number; dmg: number; kills: number; side: 0 | 1; k: TacEvent['k']; id?: string };
+}
+
+/** Owner, 2026-10-16: a battle as it can be played again — its two sides, its seed and opts, and the steps: a captain's
+ *  order (0), the sea's mind or her auto-battle playing a turn (1), a turn run out into a defence (2), the deployment's
+ *  clock run out (3), a ransom paid by side (4). */
+export type TacRecStep = [0, 0 | 1, number, TacAction] | [1] | [2] | [3] | [4, 0 | 1];
+export interface TacRec {
+  v: 1;
+  seed: number;
+  a: TacSideInput;
+  b: TacSideInput;
+  opts: { land?: string; siege?: SiegeInput; arena?: boolean; len?: TacLen; level?: number; deploy?: [boolean, boolean] };
+  steps: TacRecStep[];
 }
 
 const sp = (s: TacStack, x: UnitSpecial): boolean => s.sp.includes(x);
@@ -617,7 +643,12 @@ export function battleLevel(a: TacSideInput, b: TacSideInput): number {
 }
 
 /** A battle laid out: the field, what the guns left of each deck, both sides' stacks, round one about to open. */
-export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: number, rng: Rng, opts: { land?: string; siege?: SiegeInput; arena?: boolean; len?: TacLen; level?: number; allies?: { side: 0 | 1; input: TacSideInput; grow?: boolean | number; tag?: number }[] } = {}): TacBattle {
+export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: number, rng: Rng, opts: { land?: string; siege?: SiegeInput; arena?: boolean; len?: TacLen; level?: number; allies?: { side: 0 | 1; input: TacSideInput; grow?: boolean | number; tag?: number }[];
+  /** Owner, 2026-10-16: the sides that set their own stacks before round one (a captain at the helm with the setting on). */
+  deploy?: [boolean, boolean];
+  /** Owner, 2026-10-16: keep what it is laid out from and every hand on it, to be played again («Повтор»). */
+  record?: boolean } = {}): TacBattle {
+  const recIn = opts.record && !opts.allies?.length ? { a: structuredClone(a), b: structuredClone(b) } : null;
   // docs/19 E5: a citadel's siege is fought ashore before its walls.
   const sg = opts.siege;
   const land = sg ? sg.type : opts.land;
@@ -643,7 +674,7 @@ export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: n
   const board = opts.len === 'board';
   const bt: TacBattle = {
     cells, stacks: [...sa, ...sb], heroes: [newHero(a, sa), newHero(b, sb)], round: 0, queue: [], active: null, turnEnds: now, aiAt: now,
-    log: [], events: 0, seq: 0, over: null, dead: [0, 0], hurt: [], broken: [0, 0], ...(land ? { land } : {}), ...(opts.arena ? { arena: true as const } : {}),
+    log: [], events: 0, seq: 0, over: null, dead: [0, 0], hurt: [], broken: [0, 0], tally: {}, ...(land ? { land } : {}), ...(opts.arena ? { arena: true as const } : {}),
     ...(sg ? { siege: { hp, max, catapult: Math.max(0, Math.round(sg.catapult ?? 1)), tower: Math.max(0, sg.tower ?? 0), ...(sg.name ? { name: sg.name } : {}) } } : {}),
     level, ...(opts.len ? { len: opts.len } : {}),
     ...(board && !land && !opts.arena && level >= TAC_LEN.flag.level ? { flag: { hex: [tacFlagHex(0), tacFlagHex(1)] as [number, number], held: [0, 0] as [number, number], open: [false, false] as [boolean, boolean] } } : {}),
@@ -671,9 +702,106 @@ export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: n
   // The ship's broadside before the assault: its balls on the wall, the gate and the towers.
   if (sg) for (let k = 0; k < Math.max(0, Math.min(8, Math.round(sg.bombard ?? 0))); k++) siegeStone(bt, rng, 'gun');
   for (const [x, h] of [[a, 0], [b, 1]] as const) bt.heroes[h].free += TACTICS_FREE[Math.max(0, Math.min(TACTICS_FREE.length - 1, x.hero?.tactics ?? 0))];
+  // Owner, 2026-10-16: deployment only on a ship's deck or the open sand ashore, never in a siege (its walls are laid
+  // out) or a group's boarding (the allies stand where they came aboard).
+  const deploy = opts.deploy && !sg && !opts.allies?.length && (opts.deploy[0] || opts.deploy[1]) ? opts.deploy : undefined;
+  if (recIn) {
+    const o: TacRec['opts'] = {};
+    if (opts.land) o.land = opts.land;
+    if (opts.siege) o.siege = structuredClone(opts.siege);
+    if (opts.arena) o.arena = true;
+    if (opts.len) o.len = opts.len;
+    if (opts.level !== undefined) o.level = opts.level;
+    if (deploy) o.deploy = [deploy[0], deploy[1]];
+    bt.rec = { v: 1, seed, a: recIn.a, b: recIn.b, opts: o, steps: [] };
+  }
   checkOver(bt);
-  if (!bt.over) newRound(bt, now, rng);
+  if (bt.over) return bt;
+  if (deploy) {
+    bt.deploy = { ends: now + TAC_DEPLOY.secs, ready: [!deploy[0], !deploy[1]], zone: [deployZone(bt.cells, 0), deployZone(bt.cells, 1)] };
+    // A stack laid out past the columns (a rail too full) may stay where she stands, or be swapped.
+    for (const s of bt.stacks) if (!bt.deploy.zone[s.side].includes(s.hex)) bt.deploy.zone[s.side].push(s.hex);
+    bt.turnEnds = bt.deploy.ends;
+    bt.seq++;
+  } else newRound(bt, now, rng);
   return bt;
+}
+
+// ------------------------------------------------------------------ deployment (owner, 2026-10-16)
+
+/** Why a captain may not set stack `id` on `hex` now (null: she may): her own stack, in her own deployment columns, a
+ *  hex none of her others stands on — or one of hers, and the two change places. */
+export function deployError(bt: TacBattle, side: 0 | 1, id: number, hex: number, slot = 0): string | null {
+  const d = bt.deploy;
+  if (!d) return 'The battle is already on';
+  if (d.ready[side]) return 'Your stacks are set';
+  const s = stackById(bt, id);
+  if (!s || s.side !== side || (s.own ?? 0) !== slot) return 'Point at one of your stacks';
+  if (!Number.isInteger(hex) || !d.zone[side].includes(hex)) return 'Only within your own columns';
+  const o = bt.stacks.find((x) => x.count > 0 && x.hex === hex && x !== s);
+  if (o && o.side !== side) return 'That hex is taken';
+  return null;
+}
+
+/** Her stack set on `hex` (one of hers there takes her place). */
+function deployMove(bt: TacBattle, id: number, hex: number): void {
+  const s = stackById(bt, id)!;
+  const o = bt.stacks.find((x) => x.count > 0 && x.hex === hex && x !== s);
+  if (o) o.hex = s.hex;
+  s.hex = hex;
+  bt.seq++;
+}
+
+/** The deployment over (both set, or the clock run out): the first round opens. */
+export function endDeploy(bt: TacBattle, now: number, rng: Rng): void {
+  if (!bt.deploy) return;
+  delete bt.deploy;
+  newRound(bt, now, rng);
+}
+
+// ------------------------------------------------------------------ the record (owner, 2026-10-16: «Повтор»)
+
+/** A step of the record taken while `fn` plays (the steps inside it are its own: the sea's turn's own orders, a quick
+ *  fight's turns). */
+function recStep<T>(bt: TacBattle, step: TacRecStep, fn: () => T): T {
+  if (!bt.rec || bt.recMute) return fn();
+  bt.rec.steps.push(step);
+  bt.recMute = true;
+  try {
+    return fn();
+  } finally {
+    bt.recMute = false;
+  }
+}
+
+/** The battle played again from its record on its own dice (the clock aside: a turn run out is a step of its own).
+ *  `start` is shown it as it is laid out, `each` after every step. */
+export function replayBattle(rec: TacRec, each?: (bt: TacBattle, step: TacRecStep, k: number) => void, start?: (bt: TacBattle) => void): TacBattle {
+  const rng = new Rng(rec.seed ^ 0x7ac7);
+  const bt = newBattle(structuredClone(rec.a), structuredClone(rec.b), rec.seed, 0, rng, structuredClone(rec.opts));
+  start?.(bt);
+  rec.steps.forEach((st, k) => {
+    if (st[0] === 0) act(bt, st[1], st[3], 0, rng, st[2]);
+    else if (st[0] === 1) aiAct(bt, 0, rng);
+    else if (st[0] === 2) timeOut(bt, 0, rng);
+    else if (st[0] === 3) endDeploy(bt, 0, rng);
+    else endByRansom(bt, st[1]);
+    each?.(bt, st, k);
+  });
+  return bt;
+}
+
+/** A record as words for the store (Infinity — a balance hero's bottomless will — kept as a string). */
+export function recToJson(rec: TacRec): string {
+  return JSON.stringify(rec, (_k, v) => (v === Infinity ? 'Infinity' : v === -Infinity ? '-Infinity' : v));
+}
+export function recFromJson(text: string): TacRec | null {
+  try {
+    const r = JSON.parse(text, (_k, v) => (v === 'Infinity' ? Infinity : v === '-Infinity' ? -Infinity : v)) as TacRec;
+    return r && r.v === 1 && Array.isArray(r.steps) ? r : null;
+  } catch {
+    return null;
+  }
 }
 
 // ------------------------------------------------------------------ a group aboard (docs/25 block Е)
@@ -757,6 +885,7 @@ function placeAllies(bt: TacBattle, side: 0 | 1, stacks: TacStack[]): void {
 export function addAlly(bt: TacBattle, side: 0 | 1, input: TacSideInput, grow: boolean | number = false, tag?: number): number | string {
   const mine = (bt.allies ?? []).filter((x) => x.side === side);
   if (mine.length + 1 >= TAC_GROUP.side) return 'Three captains a side at the most';
+  delete bt.rec; // a group's boarding is not kept to be played again (its allies came from the sea)
   const slot = mine.length ? Math.max(...mine.map((x) => x.slot)) + 1 : 1;
   const first = bt.stacks.reduce((n, s) => Math.max(n, s.id), 0) + 1;
   const stacks = buildStacks({ ...input, officers: [] }, side, [...bt.cells], first).slice(0, tacBring(bt.level));
@@ -833,6 +962,7 @@ export function queueAlly(bt: TacBattle, side: 0 | 1, input: TacSideInput, grow:
   if (n + 1 >= TAC_GROUP.side) return 'Three captains a side at the most';
   if (tag !== undefined && ((bt.allies ?? []).some((x) => x.tag === tag) || (bt.joinQ ?? []).some((x) => x.tag === tag))) return 'She is aboard already';
   (bt.joinQ ??= []).push({ side, input, grow, ...(tag !== undefined ? { tag } : {}) });
+  delete bt.rec;
   return null;
 }
 
@@ -1427,7 +1557,38 @@ function push(bt: TacBattle, e: Omit<TacEvent, 'i'>): TacEvent {
   bt.log.push(ev);
   if (bt.log.length > 40) bt.log.splice(0, bt.log.length - 40);
   bt.seq++;
+  tallyEvent(bt, ev);
   return ev;
+}
+
+/** Owner, 2026-10-16 («почему»): a blow's harm on both stacks' tallies, the men it felled on the striker's, a captain's
+ *  move's fallen on her side's (−1 the boarders', −2 the other); and the blow that turned the fight most so far (the
+ *  most men's hit points it took off). */
+function tallyEvent(bt: TacBattle, ev: TacEvent): void {
+  const t0 = bt.tally;
+  if (!t0) return;
+  const add = (id: number, k: 'dealt' | 'taken' | 'kills', n: number) => {
+    if (!(n > 0)) return;
+    const r = (t0[id] ??= { dealt: 0, taken: 0, kills: 0 });
+    r[k] += n;
+  };
+  const blowK = ev.k === 'hit' || ev.k === 'shot' || ev.k === 'ret' || ev.k === 'order' || ev.k === 'siege';
+  if (blowK && ev.dmg && ev.t !== undefined) {
+    if (ev.s !== undefined) {
+      add(ev.s, 'dealt', ev.dmg);
+      add(ev.s, 'kills', ev.kills ?? 0);
+    }
+    add(ev.t, 'taken', ev.dmg);
+  }
+  if ((ev.k === 'poison' || ev.k === 'burn') && ev.s !== undefined) add(ev.s, 'taken', ev.dmg ?? 0);
+  const moveK = ev.k === 'spell' || ev.k === 'innate' || ev.k === 'ult';
+  if (moveK) add(-1 - ev.side, 'kills', ev.kills ?? 0);
+  if ((blowK || moveK) && ev.kills) {
+    const t = ev.t !== undefined ? bt.stacks.find((x) => x.id === ev.t) : undefined;
+    const w = ev.kills * (t?.hpMax ?? 1);
+    const was = bt.swing ? bt.swing.kills * (bt.swing.t !== undefined ? bt.stacks.find((x) => x.id === bt.swing!.t)?.hpMax ?? 1 : 1) : 0;
+    if (w > was) bt.swing = { round: bt.round, side: ev.side, k: ev.k, dmg: ev.dmg ?? 0, kills: ev.kills, ...(ev.s !== undefined ? { s: ev.s } : {}), ...(ev.t !== undefined ? { t: ev.t } : {}), ...(ev.id ? { id: ev.id } : {}) };
+  }
 }
 
 /** Owner, 2026-10-15 («если есть еще какието плюшки то надо еще показываать их эффектами»): what a blow carried beyond
@@ -2398,9 +2559,12 @@ export function checkOver(bt: TacBattle): void {
 /** The battle ended by a ransom paid (tactical.ts takes the silver): the side that paid keeps her ship. */
 export function endByRansom(bt: TacBattle, payer: 0 | 1): void {
   if (bt.over) return;
-  bt.over = { winner: (1 - payer) as 0 | 1, why: 'ransom' };
-  bt.active = null;
-  bt.seq++;
+  recStep(bt, [4, payer], () => {
+    delete bt.deploy;
+    bt.over = { winner: (1 - payer) as 0 | 1, why: 'ransom' };
+    bt.active = null;
+    bt.seq++;
+  });
 }
 
 /** The sea's breath over a turn (docs/23 item 60): halved while a captain on the field has asked «Ускорить ×2». */
@@ -2411,8 +2575,59 @@ export function aiDelay(bt: TacBattle): number {
 /** One order from side `side` — from her captain at `slot` (docs/25 item 64: 0 the side's own, else an ally, who plays
  *  her own stacks, gives her own orders and keeps her own clock). Null when done; else why not. */
 export function act(bt: TacBattle, side: 0 | 1, a: TacAction, now: number, rng: Rng, slot = 0): string | null {
+  // Owner, 2026-10-16 («Повтор»): every order kept but the screen's own (a film's hold, the pace: no dice in them).
+  if (!bt.rec || bt.recMute || !a || typeof a !== 'object' || a.a === 'film' || a.a === 'pace') return actNow(bt, side, a, now, rng, slot);
+  const n = bt.rec.steps.length;
+  const why = recStep(bt, [0, side, slot, structuredClone(a)], () => actNow(bt, side, a, now, rng, slot));
+  if (why && bt.rec) bt.rec.steps.length = n; // refused: nothing happened
+  return why;
+}
+
+/** Owner, 2026-10-16: an order while the stacks are being set before round one — a stack set on a hex of her columns
+ *  (`deploy`), «Готово» (`ready`), the auto-battle (she is set as she stands), a quick fight, the colours. */
+function deployAct(bt: TacBattle, side: 0 | 1, a: TacAction, now: number, rng: Rng, slot: number): string | null {
+  const d = bt.deploy!;
+  const done = () => {
+    if (d.ready[0] && d.ready[1]) endDeploy(bt, now, rng);
+  };
+  switch (a.a) {
+    case 'deploy': {
+      const why = deployError(bt, side, Number(a.s), Number(a.hex), slot);
+      if (why) return why;
+      deployMove(bt, Number(a.s), Number(a.hex));
+      return null;
+    }
+    case 'ready':
+      if (slot) return 'Only the captain of the ship decides that';
+      d.ready[side] = true;
+      bt.seq++;
+      done();
+      return null;
+    case 'auto':
+      heroAt(bt, side, slot).auto = a.on;
+      if (a.on) d.ready[side] = true;
+      bt.seq++;
+      done();
+      return null;
+    case 'quick':
+      endDeploy(bt, now, rng);
+      quickFinish(bt, now, rng);
+      return null;
+    case 'surrender':
+    case 'film':
+    case 'pace':
+      return null;
+    default:
+      return 'Set your stacks first';
+  }
+}
+
+function actNow(bt: TacBattle, side: 0 | 1, a: TacAction, now: number, rng: Rng, slot = 0): string | null {
   if (bt.over) return 'The fight is over';
   if (slot && !allyOf(bt, side, slot)) return 'You are not aboard yet';
+  if (!a || typeof a !== 'object') return 'No such order';
+  if (bt.deploy && a.a !== 'surrender' && a.a !== 'film' && a.a !== 'pace') return deployAct(bt, side, a, now, rng, slot);
+  if (a.a === 'deploy' || a.a === 'ready') return 'The battle is already on';
   if (a.a === 'auto') {
     heroAt(bt, side, slot).auto = a.on;
     bt.aiAt = now + aiDelay(bt);
@@ -2431,6 +2646,7 @@ export function act(bt: TacBattle, side: 0 | 1, a: TacAction, now: number, rng: 
   // docs/25 item 64: the colours, the quick fight and the ransom are the captain's who grappled (or was grappled).
   if (slot && (a.a === 'surrender' || a.a === 'quick' || a.a === 'ransom')) return 'Only the captain of the ship decides that';
   if (a.a === 'surrender') {
+    delete bt.deploy;
     bt.over = { winner: (1 - side) as 0 | 1, why: 'struck' };
     bt.active = null;
     bt.seq++;
@@ -2542,7 +2758,7 @@ function trial(bt: TacBattle): TacBattle {
     ...bt,
     stacks: bt.stacks.map((x) => ({ ...x, ...(x.poison ? { poison: { ...x.poison } } : {}), ...(x.officer ? { officer: { ...x.officer } } : {}) })),
     heroes: bt.heroes.map((h) => ({ ...h, fx: h.fx.map((f) => ({ ...f })) })) as [TacHero, TacHero],
-    queue: [...bt.queue], log: [], dead: [bt.dead[0], bt.dead[1]], broken: [bt.broken[0], bt.broken[1]], hurt: [...bt.hurt],
+    queue: [...bt.queue], log: [], dead: [bt.dead[0], bt.dead[1]], broken: [bt.broken[0], bt.broken[1]], hurt: [...bt.hurt], tally: {}, swing: undefined, rec: undefined,
   };
 }
 
@@ -2796,6 +3012,9 @@ export const TAC_ORDER_READ: Partial<Record<TacSpellId, PageFx>> = {
 function aiSpell(bt: TacBattle, side: 0 | 1, rng: Rng): AiOrder | null {
   const h = bt.heroes[side];
   if (h.cast >= bt.round || (h.hush ?? 0) >= bt.round) return null;
+  // Owner, 2026-10-16: on a boarding her captain keeps her will for the next fight while her side stands far the
+  // stronger (TAC_AI_SMART.rich).
+  if (boardRules(bt) && h.mana >= 0 && sideStrength(bt, side) >= TAC_AI_SMART.rich * sideStrength(bt, (1 - side) as 0 | 1)) return null;
   const foes = alive(bt).filter((o) => o.side !== side);
   const own = alive(bt).filter((o) => o.side === side);
   let best: AiOrder | null = null, bv = 0;
@@ -2924,6 +3143,30 @@ export const TAC_FLAG_AI = { defend: 1, take: 0.12 };
 /** docs/25 item 62: the steps of the way a hex in cover from her shooters is worth to the sea's mind as it closes. */
 export const TAC_COVER_STEP = 1.2;
 
+/** Owner, 2026-10-16 («умнее ИИ»): the sea's mind on a boarding — how well she plays by the level of her captain (a
+ *  captain's own auto-battle keeps the mind as it was, 0): `skill(L)` from `lo` at level 1 to 1 at level `full`. What it does with it:
+ *  - `kill`: a blow or a shot that fells the whole stack is worth this share of the stack's threat more, × skill (she
+ *    finishes what she can kill — the most dangerous first, as the threat weighs);
+ *  - `guard` (skill from it): a stack of steel with no foe in reach stands between a shooter of hers and the foe who
+ *    could fall on it next turn;
+ *  - `avoid` (skill from it): while her side out-shoots the other, the steel closing in keeps out of the hexes the other's
+ *    steel could strike next turn when the blows there would cost it `hurt` of its strength (the other side, out-shot,
+ *    must come to her — never both at once);
+ *  - `wounded` (skill from it): a stack cut to `left` of its men, with two others of hers still on deck, leaves a blow that
+ *    would not fell its foe and whose answer would take `answer` of what is left of it — out of reach, or it defends;
+ *  - `rich`: her captain keeps her will while her side stands this many times the other's strength.
+ *  The land's fights keep the mind they were calibrated on. */
+export const TAC_AI_SMART = { lo: 0.35, full: 30, kill: 0.4, guard: 0.6, avoid: 0.75, hurt: 0.35, wounded: 0.5, left: 0.25, answer: 0.5, rich: 4 };
+export function aiSkill(bt: TacBattle, side: 0 | 1): number {
+  const inp = bt.heroes[side].input;
+  if (inp.human) return 0;
+  const L = inp.hero?.level ?? bt.level ?? 0;
+  const A = TAC_AI_SMART;
+  return Math.max(A.lo, Math.min(1, A.lo + ((1 - A.lo) * Math.max(0, L - 1)) / (A.full - 1)));
+}
+/** Her side's shooting: the threat of her shooters with shots left. */
+const shooting = (bt: TacBattle, side: 0 | 1): number => alive(bt).reduce((n, x) => n + (x.side === side && isShooter(x) && x.shots > 0 ? threat(bt, x) : 0), 0);
+
 /** What the sea's mind has the active stack do. */
 export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
   const s = stackById(bt, bt.active ?? -1)!;
@@ -2939,6 +3182,12 @@ export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
       || (o === 'canvas' && foeShoots) || o === 'harpoon') return { a: 'order' };
   }
   const foes = alive(bt).filter((o) => o.side !== s.side);
+  const own = alive(bt).filter((o) => o.side === s.side);
+  // Owner, 2026-10-16: her skill on a boarding (none in the land's fights: their mind as calibrated).
+  const smart = boardRules(bt);
+  const skill = smart ? aiSkill(bt, s.side) : 0;
+  const A = TAC_AI_SMART;
+  const killBonus = (t: TacStack, dmg: number) => (smart && dmg >= hpOf(t) ? threat(bt, t) * A.kill * skill : 0);
   // docs/25 item 62: on a deck, the hexes the mast, a barrel, crates or a gun shield from her shooters.
   const guns = onDeck(bt) ? foes.filter((t) => isShooter(t) && t.shots > 0 && !smods(bt, t).blind) : [];
   const covered = (h: number) => guns.some((t) => coverAt(bt, h, t.hex) >= 0);
@@ -2950,7 +3199,8 @@ export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
   if (canShoot(bt, s)) {
     let best = foes[0], bv = -1;
     for (const t of foes) {
-      const v = valueOf(bt, t, blow(bt, s, t, 'shot', null).dmg) * nap(t) + onFlag(t);
+      const dmg = blow(bt, s, t, 'shot', null).dmg;
+      const v = valueOf(bt, t, dmg) * nap(t) + onFlag(t) + killBonus(t, dmg);
       if (v > bv) {
         bv = v;
         best = t;
@@ -2959,7 +3209,7 @@ export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
     return { a: 'shoot', target: best.id };
   }
   const reach = reachOf(bt, s);
-  let pick: { t: TacStack; from: number } | null = null, pv = -Infinity;
+  let pick: { t: TacStack; from: number; dmg: number; ret: number } | null = null, pv = -Infinity;
   for (const t of foes) {
     for (const h of hexNeighbors(t.hex)) {
       if (h !== s.hex && !reach.has(h)) continue;
@@ -2967,11 +3217,12 @@ export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
       if (bt.siege && s.side === 1 && hexX(h) < SIEGE.wallX && !sp(s, 'flying')) continue;
       const dmg = blow(bt, s, t, 'melee', null, h).dmg * (sp(s, 'double_strike') ? 2 : 1);
       const answered = t.ret && !sp(s, 'no_retaliation') && !sp(s, 'sweep') && dmg < hpOf(t);
-      const v = valueOf(bt, t, dmg) * nap(t) - (answered ? 0.5 * valueOf(bt, s, blow(bt, t, s, 'ret', null).dmg) : 0) - (h === s.hex ? 0 : 0.01 * (reach.get(h) ?? 0)) - (bt.cells[h] === 'F' ? threat(bt, s) * 0.1 : 0)
-        - (bt.siege && bt.cells[h] === 'O' ? threat(bt, s) * 0.05 : 0) + onFlag(t) + (guns.length && covered(h) ? threat(bt, s) * 0.02 : 0);
+      const ret = answered ? blow(bt, t, s, 'ret', null).dmg : 0;
+      const v = valueOf(bt, t, dmg) * nap(t) - (answered ? 0.5 * valueOf(bt, s, ret) : 0) - (h === s.hex ? 0 : 0.01 * (reach.get(h) ?? 0)) - (bt.cells[h] === 'F' ? threat(bt, s) * 0.1 : 0)
+        - (bt.siege && bt.cells[h] === 'O' ? threat(bt, s) * 0.05 : 0) + onFlag(t) + (guns.length && covered(h) ? threat(bt, s) * 0.02 : 0) + killBonus(t, dmg);
       if (v > pv) {
         pv = v;
-        pick = { t, from: h };
+        pick = { t, from: h, dmg, ret };
       }
     }
   }
@@ -2985,8 +3236,44 @@ export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
       if (!pick || worth > pv) return { a: 'move', to: goal };
     }
   }
-  if (pick) return { a: 'attack', target: pick.t.id, from: pick.from };
+  // Owner, 2026-10-16: the other's steel — where each could strike next turn (her shooters threaten the whole deck).
+  let zones: { o: TacStack; hit: Set<number> }[] | null = null;
+  const zonesOf = () => (zones ??= foes.filter((o) => !isShooter(o) || o.shots <= 0).map((o) => ({ o, hit: new Set(threatOf(bt, o).hit) })));
+  // The harm the other's steel could lay on her at `h` next turn, as a share of her strength.
+  const harmAt = (h: number) => zonesOf().reduce((n, z) => n + (z.hit.has(h) ? blow(bt, z.o, s, 'melee', null).dmg : 0), 0) / Math.max(1, hpOf(s));
+  const wounded = smart && skill >= A.wounded && s.count <= s.start * A.left && own.length >= 3 && !bt.siege;
+  if (pick) {
+    // Owner, 2026-10-16: a stack cut to a quarter leaves a blow that fells nothing and whose answer would take half of her.
+    if (wounded && pick.dmg < hpOf(pick.t) && pick.ret >= hpOf(s) * A.answer) {
+      let to: number | null = null, best = harmAt(s.hex);
+      for (const [h] of reach) {
+        const x = harmAt(h);
+        if (x < best - 1e-9) {
+          best = x;
+          to = h;
+        }
+      }
+      return to !== null ? { a: 'move', to } : { a: 'defend' };
+    }
+    return { a: 'attack', target: pick.t.id, from: pick.from };
+  }
   if (bt.siege) return siegeMove(bt, s, reach);
+  // Owner, 2026-10-16: a shooter of hers the other's steel could fall on next turn — her steel steps between.
+  if (smart && skill >= A.guard && !isShooter(s)) {
+    let guard: { to: number; d: number } | null = null;
+    for (const x of own) {
+      if (x === s || !isShooter(x) || x.shots <= 0) continue;
+      for (const z of zonesOf()) {
+        if (!z.hit.has(x.hex)) continue;
+        for (const h of hexNeighbors(x.hex)) {
+          if (h !== s.hex && !reach.has(h)) continue;
+          const d = hexDist(h, z.o.hex) + (h === s.hex ? 0 : 0.01);
+          if (!guard || d < guard.d) guard = { to: h, d };
+        }
+      }
+    }
+    if (guard) return guard.to === s.hex ? { a: 'defend' } : { a: 'move', to: guard.to };
+  }
   // Out of reach: close on the nearest foe (a shooter out of shot waits behind the steel), round the fires. The way is
   // counted round what stands on deck (docs/25, 2026-10-09: by the straight line a stack two hexes from a foe behind the
   // mast and a barrel stood «defending» to the twentieth round, and so did the foe). The land's fights keep the straight
@@ -2994,24 +3281,29 @@ export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
   const way = boardRules(bt) ? siegeDist(bt, s) : null;
   const line = (h: number) => Math.min(...foes.map((t) => hexDist(h, t.hex)));
   const far = (h: number) => (way ? way.get(h) ?? 50 + line(h) : line(h)) + (bt.cells[h] === 'F' ? 1.5 : 0);
+  // Owner, 2026-10-16: out-shooting the other, her steel keeps out of the other steel's reach — let it come to her.
+  const wary = (smart && skill >= A.avoid && shooting(bt, s.side) > shooting(bt, (1 - s.side) as 0 | 1)) || wounded;
+  const risky = (h: number) => wary && harmAt(h) >= A.hurt;
   // docs/25 item 62: of the hexes that bring her nearer, one in cover from her shooters is worth a step of the way.
   const here = far(s.hex);
   let to: number | null = null, td = Infinity, score = Infinity;
   for (const [h] of reach) {
     const d = far(h);
     if (d >= here) continue;
-    const v = d - (guns.length && covered(h) ? TAC_COVER_STEP : 0);
+    const v = d - (guns.length && covered(h) ? TAC_COVER_STEP : 0) + (risky(h) ? 100 : 0);
     if (v < score) {
       score = v;
       td = d;
       to = h;
     }
   }
+  if (to !== null && risky(to) && !risky(s.hex)) return { a: 'defend' };
   if (to === null || td >= here) {
     // Nowhere nearer: out of her shooters' sight behind the mast or a barrel, if a step takes her there.
     if (guns.length && !covered(s.hex)) for (const [h] of reach) if (covered(h) && line(h) <= line(s.hex)) return { a: 'move', to: h };
     return { a: 'defend' };
   }
+  void rng;
   return { a: 'move', to };
 }
 
@@ -3019,6 +3311,10 @@ export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
 export function aiAct(bt: TacBattle, now: number, rng: Rng): void {
   const s = bt.active !== null ? stackById(bt, bt.active) : undefined;
   if (!s || bt.over) return;
+  recStep(bt, [1], () => aiTurn(bt, s, now, rng));
+}
+
+function aiTurn(bt: TacBattle, s: TacStack, now: number, rng: Rng): void {
   // docs/25 item 64: an ally's stack is played as hers — her path move and order from her own book.
   const slot = s.own ?? 0;
   asCaptain(bt, s.side, slot, () => {
@@ -3039,6 +3335,14 @@ export const TAC_FILM_HOLD = 8000;
 
 /** The clock: the sea's side (and auto-battle) acts after a breath; a captain's turn runs out into a defence. */
 export function stepBattle(bt: TacBattle, now: number, rng: Rng): void {
+  // Owner, 2026-10-16: the stacks being set — a captain gone to auto (or from the helm) is set as she stands; both set,
+  // or the deployment's clock run out, the first round opens.
+  const d = bt.deploy;
+  if (d && !bt.over) {
+    for (const x of [0, 1] as const) if (!d.ready[x] && bt.heroes[x].auto) d.ready[x] = true;
+    if ((d.ready[0] && d.ready[1]) || now >= d.ends) recStep(bt, [3], () => endDeploy(bt, now, rng));
+    return;
+  }
   if (bt.over || bt.active === null) return;
   const s = stackById(bt, bt.active);
   if (!s) return nextTurn(bt, now, rng);
@@ -3047,10 +3351,17 @@ export function stepBattle(bt: TacBattle, now: number, rng: Rng): void {
     if (now >= bt.aiAt) aiAct(bt, now, rng);
     return;
   }
-  if (now >= bt.turnEnds) {
+  if (now >= bt.turnEnds) timeOut(bt, now, rng);
+}
+
+/** Her turn run out (TAC_TURN, or her chess clock spent): the stack defends. */
+export function timeOut(bt: TacBattle, now: number, rng: Rng): void {
+  const s = bt.active !== null ? stackById(bt, bt.active) : undefined;
+  if (!s || bt.over) return;
+  recStep(bt, [2], () => {
     push(bt, { k: 'timeout', side: s.side, s: s.id });
     act(bt, s.side, { a: 'defend' }, now, rng, s.own ?? 0);
-  }
+  });
 }
 
 /** docs/25 item 49: a side's strength as the quick fight's offer weighs it — HoMM3's square law over what stands on
@@ -3127,7 +3438,10 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
   // docs/25 item 64: an ally sees her own stacks' turns as hers, and her own captain on her side's panel.
   const mine = !!act0 && act0.side === side && (act0.own ?? 0) === slot && !bt.over && !capOf(bt, act0).auto;
   const reach = mine && act0 ? reachOf(bt, act0) : new Map<number, number>();
-  const stacks: TacStackView[] = bt.stacks.filter((s) => s.count > 0).map((s) => ({
+  // Owner, 2026-10-16: two captains set their stacks at once, each unseen by the other till the first round opens.
+  const dp = bt.deploy;
+  const hide = !!dp && bt.heroes[0].input.human && bt.heroes[1].input.human;
+  const stacks: TacStackView[] = bt.stacks.filter((s) => s.count > 0 && !(hide && s.side !== side)).map((s) => ({
     id: s.id, side: s.side, kind: s.kind, unit: s.unit, sp: s.sp, count: s.count, start: s.start, hp: s.hpTop, hpMax: s.hpMax, hex: s.hex, atk: s.atk, def: s.def, dmg: [s.dmin, s.dmax],
     speed: speedOf(bt, s), init: initOf(bt, s), shots: s.shots, shotsMax: s.shotsMax, ret: s.ret, defending: s.defending, waited: s.waited, face: s.face,
     ...(s.officer ? { officer: { role: s.officer.role, name: s.officer.name, ...(s.officer.unique ? { unique: s.officer.unique } : {}), order: s.officer.order, ready: !s.officer.used } } : {}),
@@ -3176,7 +3490,39 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
       };
     }) } : {}),
     ...(bt.joinQ?.length ? { coming: bt.joinQ.map((q) => ({ side: q.side, name: q.input.name, ...(q.input.hero?.path ? { path: q.input.hero.path } : {}) })) } : {}),
+    ...(dp && !bt.over ? { deploy: { ends: dp.ends, zone: slot ? [] : [...dp.zone[side]], ready: dp.ready[side] || slot > 0, foeReady: dp.ready[1 - side], ...(hide ? { hidden: true } : {}) }, ...(hide ? { next: next.filter((id) => stacks.some((s) => s.id === id)) } : {}) } : {}),
   };
+}
+
+/** Owner, 2026-10-16 («почему»): the reckoning's short why for the end screen — each stack's harm dealt and taken and
+ *  the men it felled (both sides, the fallen stacks too), the men each side's captains' moves felled, and the blow that
+ *  turned the fight. */
+export function battleWhy(bt: TacBattle): TacWhy {
+  const t = bt.tally ?? {};
+  const stacks = bt.stacks.map((s) => ({ id: s.id, side: s.side, unit: s.unit, start: s.start, left: Math.max(0, s.count), dealt: Math.round(t[s.id]?.dealt ?? 0), taken: Math.round(t[s.id]?.taken ?? 0), kills: t[s.id]?.kills ?? 0 }));
+  const w = bt.swing;
+  const unitOf = (id: number | undefined) => (id !== undefined ? bt.stacks.find((x) => x.id === id)?.unit : undefined);
+  const su = unitOf(w?.s), tu = unitOf(w?.t);
+  return {
+    stacks, moves: [t[-1]?.kills ?? 0, t[-2]?.kills ?? 0],
+    ...(w ? { turn: { round: w.round, side: w.side, k: w.k, kills: w.kills, dmg: w.dmg, ...(w.id ? { id: w.id } : {}), ...(su ? { s: su } : {}), ...(tu ? { t: tu } : {}) } } : {}),
+  };
+}
+
+/** Owner, 2026-10-16 («Повтор»): a step of a fight played again as the screen draws it — the events since the last, each
+ *  living stack where she stands (id, hex, men, the foremost's hit points, shots, the way she faces). */
+export function replayFrame(bt: TacBattle, since: number): TacReplayFrame {
+  return {
+    log: bt.log.filter((e) => e.i > since), st: bt.stacks.filter((s) => s.count > 0).map((s) => [s.id, s.hex, s.count, s.hpTop, s.shots, s.face]), round: bt.round, active: bt.active,
+    ...(bt.over ? { over: { ...bt.over } } : {}),
+  };
+}
+
+/** Owner, 2026-10-16 («зоны угрозы»): where stack `s` may go and strike on her next turn (shared threatHexes, her
+ *  whole stride, the other stacks standing as they stand). */
+export function threatOf(bt: TacBattle, s: TacStack): { move: number[]; hit: number[] } {
+  const occ = new Set(alive(bt).filter((o) => o !== s).map((o) => o.hex));
+  return threatHexes(bt.cells, occ, s.hex, { speed: speedOf(bt, s), fly: sp(s, 'flying'), dive: sp(s, 'diving') && !!bt.land, gate: s.side === 1 && !!bt.siege, fire: onDeck(bt) });
 }
 
 // ------------------------------------------------------------------ the great ones ashore

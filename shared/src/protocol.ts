@@ -119,8 +119,10 @@ export type ClientMsg =
   | { t: 'board_duel'; action: 'challenge' | 'accept' | 'decline' | 'strike'; at?: number }
   /** The turn-based boarding battle (docs/16 P4): what the active stack (or the captain) does. */
   | { t: 'tac'; act: TacAction }
+  /** Owner, 2026-10-16 («Повтор»): a fight of her last twenty played again (`id`), or the list of them (no id). */
+  | { t: 'tac_replay'; id?: string }
   /** The captain would rather fight boardings the old way, round by round (Boarding 2.0). */
-  | { t: 'board_pref'; classic: boolean }
+  | { t: 'board_pref'; classic: boolean; /** Owner, 2026-10-16: set her stacks before round one (absent: as before, on) */ deploy?: boolean }
   /** docs/25 item 64: come aboard a group mate's boarding (`with`: the ship that grappled, BoardOffer.with) with the kinds of
    *  her army she chose (none: her strongest); `no`: let it be. */
   | { t: 'board_join'; with: number; bring?: string[]; no?: boolean }
@@ -1511,7 +1513,11 @@ export type TacAction =
    *  once a battle for each side, at most TAC_FILM_HOLD. */
   | { a: 'film'; ms: number }
   /** «Ускорить ×2» (docs/23 item 60): the sea's side and the auto-battle take half their breath over a turn. */
-  | { a: 'pace'; fast: boolean };
+  | { a: 'pace'; fast: boolean }
+  /** Owner, 2026-10-16 (HoMM3's tactics phase): before round one, set her stack `s` on `hex` of her own deployment
+   *  columns (one of hers there takes her place); «Готово» — her stacks are set. */
+  | { a: 'deploy'; s: number; hex: number }
+  | { a: 'ready' };
 
 /** A stack on the field. `hex` its place; `count` men with `hp` left on the foremost; `ret` may still strike back
  *  this round. */
@@ -1779,7 +1785,12 @@ export interface TacView {
     /** docs/25 item 67: a group's boarding — each captain's share of what her side cut down, and what it paid her. */
     shares?: { side: 0 | 1; slot: number; name: string; share: number; xp?: number; silver?: number; you?: boolean }[];
     /** docs/19 E14: a bout of the Colosseum — rated or not, her rating after it and its change. */
-    arena?: import('./data/arena.ts').ArenaResult };
+    arena?: import('./data/arena.ts').ArenaResult;
+    /** Owner, 2026-10-16 («почему»): why it went as it did — each stack's harm dealt and taken and the men it felled, the
+     *  men the captains' moves felled, the blow that turned the fight. */
+    why?: TacWhy;
+    /** Owner, 2026-10-16 («Повтор»): the fight kept to be played again (its id among her last twenty). */
+    replay?: string };
   /** docs/18 II: the battle is fought ashore at a lair of the land's creatures (the kind of island it is drawn as). */
   land?: { type: string; lair: string; island: string; level: number };
   /** The hexes a great one ashore will fall on as the next round opens (shorebosses.ts): step off them. */
@@ -1794,6 +1805,33 @@ export interface TacView {
   slot?: number;
   allies?: TacAllyView[];
   coming?: { side: 0 | 1; name: string; path?: CaptainId }[];
+  /** Owner, 2026-10-16 (HoMM3's tactics phase): the stacks being set before round one — till when, the hexes of her
+   *  own columns, whether she (and the other side) has said «Готово»; `hidden`: the other captain sets hers unseen. */
+  deploy?: { ends: number; zone: number[]; ready: boolean; foeReady: boolean; hidden?: boolean };
+  /** Owner, 2026-10-16: a fight played again («Повтор»): no hand on it. */
+  replay?: boolean;
+}
+
+/** Owner, 2026-10-16 («почему»): the reckoning's short why. `moves`: men each side's captains' moves felled (by side);
+ *  `turn`: the blow (or move) that took the most men's hit points off in one — its round, side, kind and stacks' kinds. */
+export interface TacWhy {
+  stacks: { id: number; side: 0 | 1; unit: UnitId; start: number; left: number; dealt: number; taken: number; kills: number }[];
+  moves: [number, number];
+  turn?: { round: number; side: 0 | 1; k: string; id?: string; s?: UnitId; t?: UnitId; kills: number; dmg: number };
+}
+
+/** Owner, 2026-10-16 («Повтор»): a fight kept to be played again — the field as it opened (`base`, the view of the side
+ *  she fought on, its end's reckoning in it) and each step after: the new events, the stacks as they stood (id, hex,
+ *  men, the foremost's hit points, shots, the way she faces), the round and the active stack. */
+export interface TacReplayFrame {
+  log: TacEvent[];
+  st: [number, number, number, number, number, number][];
+  round: number;
+  active: number | null;
+  over?: TacView['over'];
+}
+export interface TacReplayList {
+  list: { id: string; at: number; vs: string; won: boolean; pvp: boolean }[];
 }
 
 export type ServerMsg =
@@ -1875,6 +1913,8 @@ export type ServerMsg =
   | { t: 'surrender_offer'; offer: SurrenderOffer | null }
   | { t: 'board_fight'; view: BoardFightView | null }
   | { t: 'board_tac'; view: TacView | null }
+  /** Owner, 2026-10-16 («Повтор»): a fight played again — its opening view and its steps; or her last twenty. */
+  | { t: 'tac_replay'; base?: TacView; frames?: TacReplayFrame[]; list?: TacReplayList['list']; error?: string }
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean; /** a boarding lost (owner, 2026-10-05): who took her and the silver they had */ boarded?: { by: string; silver: number; repelled?: boolean } }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }

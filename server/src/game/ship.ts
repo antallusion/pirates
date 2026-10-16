@@ -124,6 +124,8 @@ export interface BoardFight {
   tacSeen?: Map<number, number>;
   tacXp?: [number, number];
   tacPaid?: number;
+  /** Owner, 2026-10-16 («Повтор»): each side's captain's kept record of the battle (its id among her last twenty). */
+  tacReplay?: [string | null, string | null];
   /** The beaten who came over to each side's captain after the battle (owner, 2026-10-08; crew.ts beatenJoin). */
   tacJoined?: [{ u: UnitId; n: number }[], { u: UnitId; n: number }[]];
   /** docs/25 block Е: the allied captains of both sides (`slot` once aboard: the battle's TacAlly), and the mates of the
