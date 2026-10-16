@@ -401,14 +401,116 @@ export const TAC_COVER = 0.75;
 /** docs/25 item 62 (owner, 2026-10-09: «Абордаж должен быть интересный, чтобы капитанские навыки, группа и умения
  *  решали»): on a ship's deck the mast, the barrels, the crates and the guns run in stand between a stack and a shot —
  *  a shot at a stack with one of them beside it, on the shooter's side of it, does this share of its harm. Where she
- *  stands and the way round decide, not the figures alone. */
-export const TAC_DECK_COVER = 0.6;
+ *  stands and the way round decide, not the figures alone. Owner, 2026-10-16 («укрытие: −25%»): a quarter off, beside
+ *  the cover or behind it on the shot's line (it was −40% for the hex beside it alone). */
+export const TAC_DECK_COVER = 0.75;
 export const TAC_COVER_CELLS: ReadonlySet<TacCell> = new Set(['M', 'B', 'K', 'C']);
-/** The hex of what covers a stack on `hex` from a shot out of `from` on a deck (−1: nothing). */
+/** The hex of what covers a stack on `hex` from a shot out of `from` on a deck (−1: nothing): one of them beside her on
+ *  the shooter's side, or one standing on the shot's line between the two (owner, 2026-10-16: «через укрытие»). */
 export function deckCover(cells: ArrayLike<string>, hex: number, from: number): number {
   const d = hexDist(hex, from);
   for (const j of hexNeighbors(hex)) if (TAC_COVER_CELLS.has(cells[j] as TacCell) && hexDist(j, from) < d) return j;
+  const line = hexLine(from, hex);
+  for (let k = 1; k < line.length - 1; k++) if (TAC_COVER_CELLS.has(cells[line[k]] as TacCell)) return line[k];
   return -1;
+}
+
+/** The hexes a straight line from `a` to `b` crosses, both ends among them (a hair off the centres, so a line along
+ *  the seam between two hexes keeps to one side the same way every time). */
+export function hexLine(a: number, b: number): number[] {
+  const cube = (i: number): [number, number] => {
+    const y = hexY(i);
+    return [hexX(i) - (y - (y & 1)) / 2, y];
+  };
+  const [aq, ar] = cube(a), [bq, br] = cube(b);
+  const n = hexDist(a, b);
+  const out: number[] = [];
+  for (let k = 0; k <= n; k++) {
+    const t = n ? k / n : 0;
+    const q = aq + (bq - aq) * t + 1e-6, r = ar + (br - ar) * t + 2e-6, s = -q - r;
+    let rq = Math.round(q), rr = Math.round(r);
+    const rs = Math.round(s);
+    const dq = Math.abs(rq - q), dr = Math.abs(rr - r), ds = Math.abs(rs - s);
+    if (dq > dr && dq > ds) rq = -rr - rs;
+    else if (dr > ds) rr = -rq - rs;
+    const x = rq + (rr - (rr & 1)) / 2;
+    if (!onField(x, rr)) continue;
+    const i = hexIndex(x, rr);
+    if (out[out.length - 1] !== i) out.push(i);
+  }
+  return out;
+}
+
+/** Owner, 2026-10-16 (HoMM3's tactics phase): before the first round a captain may set her stacks anew within her own
+ *  deployment columns — `cols` from her rail — for `secs` real seconds or till she says «Готово»; the sea's mind is set
+ *  at once. */
+export const TAC_DEPLOY = { secs: 20, cols: 3 } as const;
+/** The hexes side `side` may set her stacks on before the first round: her own deployment columns (the first
+ *  TAC_DEPLOY.cols from her rail), ground she may stand on — no hole, no fire, no plank, not the other side's flag. */
+export function deployZone(cells: ArrayLike<string>, side: 0 | 1): number[] {
+  const out: number[] = [];
+  for (let y = 0; y < TAC_H; y++) for (let x = 0; x < TAC_DEPLOY.cols; x++) {
+    const l = hexIndex(x, y);
+    const i = side ? hexMirror(l) : l;
+    const c = cells[i] as TacCell;
+    if (TAC_BLOCKING.has(c) || c === 'F' || c === '=' || i === tacFlagHex((1 - side) as 0 | 1)) continue;
+    out.push(i);
+  }
+  return out.sort((p, q) => p - q);
+}
+
+/** Owner, 2026-10-16 («зоны угрозы»): where a stack may go and strike on her next turn — the hexes her stride reaches
+ *  (round what stands on the field and the other stacks, a flier over them, as the battle's reachOf walks it) and every
+ *  hex beside them or beside her: a stack there may be struck. Shared by the server (its mind, the tests) and the
+ *  field (the red shade). `fire`: a fire on deck bars the way (a ship's deck in a boarding); `gate`: the garrison's own
+ *  gate opens to her; `dive`: a diver ashore goes through the surf. */
+export interface ThreatOpts {
+  speed: number;
+  fly?: boolean;
+  dive?: boolean;
+  gate?: boolean;
+  fire?: boolean;
+}
+export function threatHexes(cells: ArrayLike<string>, occupied: ReadonlySet<number>, from: number, o: ThreatOpts): { move: number[]; hit: number[] } {
+  const ok = (j: number): boolean => {
+    const c = cells[j] as TacCell;
+    if (occupied.has(j)) return false;
+    if (c === 'F' && o.fire) return false;
+    if (c === 'W' && o.dive) return true;
+    if ((c === 'G' || c === 'J') && o.gate) return true;
+    return !TAC_BLOCKING.has(c);
+  };
+  const seen = new Map<number, number>([[from, 0]]);
+  const move = new Set<number>();
+  let frontier = [from];
+  let surfed = false;
+  for (let d = 1; d <= o.speed && frontier.length; d++) {
+    const next: number[] = [];
+    for (const i of frontier) {
+      if (i !== from && !o.fly && cells[i] === 'O') continue;
+      for (const j of hexNeighbors(i)) {
+        if (seen.has(j)) continue;
+        const pass = ok(j);
+        if (!pass && !(o.fly && cells[j] !== '#')) continue;
+        seen.set(j, d);
+        if (pass) move.add(j);
+        next.push(j);
+        if (o.dive && !surfed && pass && cells[j] === 'W') {
+          surfed = true;
+          for (let k = 0; k < cells.length; k++) {
+            if (cells[k] !== 'W' || seen.has(k) || !ok(k)) continue;
+            seen.set(k, d);
+            move.add(k);
+            next.push(k);
+          }
+        }
+      }
+    }
+    frontier = next;
+  }
+  const hit = new Set<number>();
+  for (const i of [from, ...move]) for (const j of hexNeighbors(i)) if (cells[j] !== '#') hit.add(j);
+  return { move: [...move].sort((p, q) => p - q), hit: [...hit].sort((p, q) => p - q) };
 }
 /** docs/25 item 56: the great ones shrug off a share of the captains' orders and path pages — of their harm, and as
  *  often of what they would lay on them (her path's innate move and ultimate pass): a legend of the sea, a titan, a

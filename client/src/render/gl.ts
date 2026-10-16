@@ -38,6 +38,7 @@ uniform vec2 ph; uniform vec2 offA; uniform vec2 offB; uniform vec2 offC; unifor
 uniform vec2 t1; uniform vec2 t2; uniform vec2 t3;
 uniform vec4 wakes[${MAX_WAKES}]; uniform int nwakes;
 uniform sampler2D tex; uniform float hasTex;
+uniform vec2 phB; uniform vec2 offW; uniform vec2 offW2; uniform float live; uniform vec3 sun; uniform vec3 grade; uniform float glph; uniform float glph2;
 ${NOISE}
 // The long swell, in metres from the camera: it only shades the water (a slow roll of moonlight).
 float swell(vec2 l, vec2 d) {
@@ -56,11 +57,21 @@ void main() {
   vec3 moon = normalize(vec3(0.35, -0.55, 0.75));
   float diff = clamp(dot(n, moon), 0.0, 1.0);
   vec3 col;
-  float sparkSrc;
+  // The living sea (2026-10-16, as the island's water: islefx.ts): a choppy ripple refracts the painting and a shorter
+  // swell rolls bands of light and shade across it, both anchored to the world (the phases follow the camera on the
+  // CPU). \`live\` is 0 with «меньше движения» or a weak device's lowest level: the old still water.
+  vec2 rw = vec2(0.0);
+  float band = 0.0;
+  if (live > 0.0) {
+    vec2 pd = vec2(-d.y, d.x);
+    float roll = sin(dot(l, d) * 0.05 + phB.x) * 0.6 + sin(dot(l, pd) * 0.033 + phB.y) * 0.4;
+    rw = (vec2(noise(l * 0.07 + offW), noise(l * 0.07 + offW2)) - 0.5) * 2.6 * live + d * roll * 1.4 * live;
+    band = (sin(dot(l, d) * 0.05 + phB.x) * 0.65 + sin(dot(l, d * 0.55 + pd * 0.8) * 0.031 + phB.y) * 0.35) * live;
+  }
   if (hasTex > 0.5) {
     // Two drifting layers of the painted sea, at different scales and angles, so the tile never shows.
-    vec3 c1 = texture2D(tex, l / 300.0 + t1).rgb;
-    vec3 c2 = texture2D(tex, mat2(0.8, -0.6, 0.6, 0.8) * (l / 190.0) + t2).rgb;
+    vec3 c1 = texture2D(tex, (l + rw) / 300.0 + t1).rgb;
+    vec3 c2 = texture2D(tex, mat2(0.8, -0.6, 0.6, 0.8) * ((l - rw * 0.7) / 190.0) + t2).rgb;
     float m = fbm(l * 0.0025 + offC);
     vec3 base = mix(c1, c2, 0.35 + 0.3 * m);
     // Wind raises the whitecaps the painting already has; a calm lays them down.
@@ -76,10 +87,28 @@ void main() {
     float crest = smoothstep(0.55, 0.95, h * 0.5 + 0.5);
     col += vec3(0.5, 0.55, 0.58) * streak * crest * clamp(s - 0.3, 0.0, 1.0) * 0.35;
   }
+  // The swell's bands of light and shade.
+  col *= 1.0 + band * 0.09;
+  col += vec3(0.03, 0.045, 0.06) * max(band, 0.0);
   // Moonlight glints: tiny sparks on ripples that face the moon, only close enough to see them.
   float rip = noise(l * 0.9 + offE) * noise(l * 1.7 + offF);
   float spark = smoothstep(0.5, 0.72, rip) * smoothstep(0.35, 0.95, diff) * smoothstep(0.8, 2.2, zoom);
   col += vec3(0.6, 0.66, 0.74) * spark * (0.1 + 0.12 * (1.0 - night));
+  // Specular glints of the sun (the moon by night) on the ripples: a broad sheen where the swell faces the light and
+  // the sharp twinkle of single facets in it, travelling with the chop.
+  // (the facets cost the most: not on a weak device's lowest level, live 0.6 there)
+  if (live > 0.7) {
+    vec3 hv = normalize(sun + vec3(0.0, 0.0, 1.0));
+    // (facets: a fine sine ripple across the chop, broken by the noise into sparse travelling sparks, as on the island)
+    float fph = noise(l * 0.07 + offW) * 14.0;
+    float facet = pow(max(0.0, sin(l.x * 1.3 - l.y * 0.55 + glph + fph)), 18.0) * pow(max(0.0, sin(l.x * 0.62 + l.y * 1.45 + glph2 + fph * 0.7)), 10.0);
+    float sp = facet * smoothstep(0.55, 0.85, noise(l * 0.07 + offW2)) * smoothstep(0.3, 0.7, noise(l * 0.21 + offW * 3.0)) * smoothstep(0.2, 0.9, dot(n, hv) + 0.3);
+    float sheen = pow(max(dot(n, hv), 0.0), 8.0);
+    vec3 lc = mix(vec3(1.0, 0.93, 0.78), vec3(0.62, 0.7, 0.82), night);
+    col += lc * (sp * 0.9 + sheen * 0.05) * live * (1.0 - 0.45 * night) * smoothstep(0.5, 1.6, zoom);
+  }
+  // The region's grade (frost, ember, murk), gently.
+  col *= grade;
   // Wakes (positions from the camera): white water by day, the glow of the deep's small lights by night.
   // Each point of a wake spreads as a ring as it ages: together they draw the two arms of the wake running out from
   // her quarters (a Kelvin wake), with the churned water close astern of her — not a pale haze over her (owner,
@@ -261,6 +290,8 @@ export class GlSea extends Layer {
   private runY = 0;
   private ph1 = 0;
   private ph2 = 0;
+  private ph3 = 0;
+  private ph4 = 0;
   private cx = NaN;
   private cy = NaN;
   private last = NaN;
@@ -276,7 +307,7 @@ export class GlSea extends Layer {
     return l ? new GlSea(l.canvas, l.gl, l.prog) : null;
   }
 
-  draw(o: { camX: number; camY: number; zoom: number; time: number; tint: [number, number, number]; wind: [number, number, number]; night: number; wakes: { x: number; y: number; age: number; w: number }[] }): void {
+  draw(o: { camX: number; camY: number; zoom: number; time: number; tint: [number, number, number]; wind: [number, number, number]; night: number; wakes: { x: number; y: number; age: number; w: number }[]; live?: number; sun?: [number, number, number]; grade?: [number, number, number] }): void {
     const gl = this.gl;
     const k = this.begin();
     const dt = Number.isFinite(this.last) ? Math.min(0.1, Math.max(0, o.time - this.last)) : 0;
@@ -297,6 +328,10 @@ export class GlSea extends Layer {
       const mx = o.camX - this.cx, my = o.camY - this.cy;
       this.ph1 = wrap(this.ph1 + 0.018 * (mx * dx + my * dy) - 0.7 * dt, TAU);
       this.ph2 = wrap(this.ph2 + 0.011 * (mx * -dy + my * dx) + 0.45 * dt, TAU);
+      // the short swell (≈125 m and ≈190 m crests) rolling downwind at about 8 m/s
+      this.ph3 = wrap(this.ph3 + 0.05 * (mx * dx + my * dy) - (0.4 + 0.5 * this.s) * dt, TAU);
+      const ex = dx * 0.55 - dy * 0.8, ey = dy * 0.55 + dx * 0.8;
+      this.ph4 = wrap(this.ph4 + 0.031 * (mx * ex + my * ey) - 0.27 * dt, TAU);
     }
     this.cx = o.camX;
     this.cy = o.camY;
@@ -318,6 +353,18 @@ export class GlSea extends Layer {
     const bx = cx / 190, by = cy / 190;
     gl.uniform2f(this.u('t2'), wrap(0.8 * bx + 0.6 * by - rx * 0.009 + 0.37, 1), wrap(-0.6 * bx + 0.8 * by - ry * 0.009 + 0.61, 1));
     gl.uniform2f(this.u('t3'), wrap(cx / 36 + rx * 0.04, 1), wrap(cy / 36 + ry * 0.04, 1));
+    // the chop: anchored to the world (the camera's metres × the noise's scale) and boiling on with time
+    gl.uniform2f(this.u('phB'), this.ph3, this.ph4);
+    gl.uniform2f(this.u('offW'), ...n289(cx * 0.07 + t * 0.21, cy * 0.07 - t * 0.13));
+    gl.uniform2f(this.u('offW2'), ...n289(cx * 0.07 - t * 0.17 + 31, cy * 0.07 + t * 0.19 + 57));
+    gl.uniform1f(this.u('live'), o.live ?? 1);
+    gl.uniform1f(this.u('glph'), wrap(cx * 1.3 - cy * 0.55 + t * 3, TAU));
+    gl.uniform1f(this.u('glph2'), wrap(cx * 0.62 + cy * 1.45 - t * 2.1, TAU));
+    const sun = o.sun ?? [0.35, -0.55, 0.75];
+    const sl = Math.hypot(sun[0], sun[1], sun[2]) || 1;
+    gl.uniform3f(this.u('sun'), sun[0] / sl, sun[1] / sl, sun[2] / sl);
+    const gr = o.grade ?? [1, 1, 1];
+    gl.uniform3f(this.u('grade'), gr[0], gr[1], gr[2]);
     const n = Math.min(MAX_WAKES, o.wakes.length);
     for (let i = 0; i < n; i++) {
       const w = o.wakes[o.wakes.length - n + i];

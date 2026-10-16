@@ -208,9 +208,9 @@ body.reduce-motion { --k-dur-1: 0ms; --k-dur-2: 0ms; --k-dur-3: 0ms; }
 
 /* ---------- Toasts: the kit's top band (the HUD keeps its own band, hud.ts) */
 .k-toasts { position: fixed; z-index: var(--k-z-toast); top: calc(var(--sa-t, 0px) + var(--k-sp-2)); left: 50%; transform: translateX(-50%); width: min(420px, 56vw); display: flex; flex-direction: column; gap: var(--k-sp-1); pointer-events: none; }
-.toast { animation: k-toast-in var(--k-dur-2) var(--k-ease-out); transition: opacity var(--k-dur-1) var(--k-ease-out), transform var(--k-dur-1) var(--k-ease-out); }
+.toast { animation: k-toast-in calc(var(--k-dur-2) + 60ms) var(--k-ease-out); transition: opacity var(--k-dur-1) var(--k-ease-out), transform var(--k-dur-1) var(--k-ease-out); }
 .toast.k-toast-out { opacity: 0; transform: translateY(-4px); }
-@keyframes k-toast-in { from { opacity: 0; transform: translateY(-6px); } }
+@keyframes k-toast-in { from { opacity: 0; transform: translateY(-10px) scale(0.96); } 70% { opacity: 1; transform: translateY(1px) scale(1.01); } }
 .k-toast { border-radius: var(--k-r-1); box-shadow: var(--k-shadow-1); font-size: var(--k-fs-2); line-height: 1.3; color: var(--k-bone); }
 
 /* ---------- Counter icon: a picture and its number; opens a sheet */

@@ -460,9 +460,15 @@ export class Hud {
     // the round buttons under the chart (the chat's with the chart stepped up stands under its tab): the band keeps
     // clear of any that reach into it, the toasts of any beside them
     const seen = (el: Element) => { const c = getComputedStyle(el); return (c.visibility !== 'hidden' || el.classList.contains('tr-veil')) && Number(c.opacity) > 0.05; };
-    // (each with what hangs under it: «Остров»'s word, a desk's key chip)
+    // (each with what hangs beside it: «Остров»'s word to its left, a desk's key chip on its corner — the column under
+    // the chart, 2026-10-16)
     const corner = [...document.querySelectorAll('#tc-menu, #tc-news, #tc-isle, #hud-chat > .chat-toggle, #hud-chat > .chat-toast')].filter(seen)
-      .map((el) => { const r = el.getBoundingClientRect(); return new DOMRect(r.left, r.top, r.width, r.height + (r.height ? 16 * z : 0)); }).filter((r) => r.width > 0 && r.height > 0 && r.left > W / 2);
+      .map((el) => {
+        const r = el.getBoundingClientRect();
+        let l = r.left, t = r.top, rr = r.right, b = r.bottom;
+        if (r.width) for (const c of el.querySelectorAll('.tc-isle-l, .kc')) { const q = c.getBoundingClientRect(); if (q.width && q.height) { l = Math.min(l, q.left); t = Math.min(t, q.top); rr = Math.max(rr, q.right); b = Math.max(b, q.bottom); } }
+        return new DOMRect(l, t, rr - l, b - t);
+      }).filter((r) => r.width > 0 && r.height > 0 && r.left > W / 2);
     for (const r of corner) if (r.top < bandBottom) right = Math.min(right, r.left - gap);
     // (the card unfolded reaches down beside the row: clear of it when that leaves the card room, else it stops above
     // the row — advcard.ts fit)

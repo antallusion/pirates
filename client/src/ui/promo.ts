@@ -272,6 +272,26 @@ export class Promos {
     const end = tac && !tac.classList.contains('hidden') && tac.querySelector('.tb-end');
     const el = this.mount('promo-board', document.body);
     this.chip(el, end ? this.cardsFor('board')[0] : undefined, 'board', 'po-board');
+    if (end && !el.classList.contains('hidden')) this.besideEnd(el, end as HTMLElement, tac!);
+  }
+
+  /** Owner, 2026-10-16: the boarding's offer never over the reckoning — at the top of the screen, or at its foot when the
+   *  reckoning stands at the top; with room for neither (a tall reckoning), it waits till the reckoning is put away. */
+  private besideEnd(el: HTMLElement, end: HTMLElement, tac: HTMLElement): void {
+    const b = end.getBoundingClientRect();
+    const h = el.offsetHeight || 48, w = el.offsetWidth || 220;
+    const x0 = (innerWidth - w) / 2, x1 = x0 + w;
+    const free = (top: number) => top >= 0 && top + h <= innerHeight && (x1 <= b.left || x0 >= b.right || top + h <= b.top - 4 || top >= b.bottom + 4);
+    const sa = (k: string) => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(k)) || 0;
+    const top = sa('--sa-t') + 6, foot = innerHeight - h - 6 - sa('--sa-b');
+    const at = free(top) ? top : free(foot) ? foot : null;
+    el.style.visibility = at === null ? 'hidden' : '';
+    if (at !== null) {
+      el.style.top = `${Math.round(at)}px`;
+      el.style.bottom = 'auto';
+    }
+    // Over the field held after the fight (it stands over the windows that follow), the offer stands over it too.
+    el.style.zIndex = tac.classList.contains('held') ? '901' : '';
   }
 
   // ---------------------------------------------------------------------------------------------- the carousel
@@ -429,14 +449,25 @@ function seaSpot(el: HTMLElement): { left: number | null; right: number | null; 
     const l = Math.round(Math.max(4, plate.left + 4)), t = Math.round(plate.bottom + 6);
     if (free(l, t)) return { left: l, right: null, top: t };
   }
-  // the right: under the round buttons (and «Остров»'s word under its button)
-  let bottom = 0;
+  // the right: under the column of round buttons under the chart, else beside it (left of the column and of «Остров»'s
+  // word), from the chart's bottom down (2026-10-16: the column is tall on a short screen)
+  let bottom = 0, colLeft = W, mapBottom = 0;
   for (const o of document.querySelectorAll('#tc-menu, #tc-news, #tc-isle, #hud-chat > .chat-toggle, #hud-map')) {
     const r = vis(o);
-    if (r && r.left > W / 2 && r.top < H * 0.5) bottom = Math.max(bottom, r.bottom + (o.id === 'tc-isle' ? 14 : 0));
+    if (!r || r.left <= W / 2) continue;
+    if (o.id === 'hud-map') { mapBottom = r.bottom; continue; }
+    bottom = Math.max(bottom, r.bottom);
+    colLeft = Math.min(colLeft, r.left);
+    const word = o.querySelector('.tc-isle-l');
+    const q = word ? vis(word) : null;
+    if (q) colLeft = Math.min(colLeft, q.left);
   }
   const t = Math.round(bottom + 6);
   if (bottom && free(W - 8 - w, t)) return { left: null, right: 8, top: t };
+  if (bottom) {
+    const right = Math.round(W - colLeft + 6), top = Math.round(mapBottom + 8);
+    if (free(W - right - w, top)) return { left: null, right, top };
+  }
   return null;
 }
 

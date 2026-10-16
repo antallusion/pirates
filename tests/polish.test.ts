@@ -126,7 +126,10 @@ test('polish: every control has a pressed, a disabled and a keyboard state; a fi
   assert.match(css, /:where\(\.btn, \.tab, \.act-btn\):disabled[^{]*\{ cursor: not-allowed;/);
   assert.ok(css.includes(':where(button, [role="button"], a[href], .tab, select, input, textarea, [tabindex]:not([tabindex="-1"])):focus-visible { outline: 2px solid var(--gold);'), 'a keyboard ring');
   assert.match(css, /:where\(body\.touch\) :where\(\.btn, \.tab, \.act-btn\)::after \{ content: ''; position: absolute;/);
-  assert.match(css, /#modal:not\(\.hidden\) > #modal-panel \{ animation: pol-win-in 140ms ease-out; \}/);
+  assert.match(css, /#modal:not\(\.hidden\) > #modal-panel \{ animation: pol-win-in 1[0-9]0ms [^;]+; \}/);
+  // (2026-10-16) it goes as softly, deaf to taps, and not at all with less motion
+  assert.match(css, /#modal\.w-out \{ pointer-events: none; animation: pol-win-out 140ms/);
+  assert.match(css, /body\.reduce-motion #modal\.w-out \{ animation: none; \}/);
   const rm = css.match(/@media \(prefers-reduced-motion: reduce\) \{\n  \*, \*::before, \*::after \{[^}]*\}/);
   assert.ok(rm && /animation-duration: 0\.01ms !important/.test(rm[0]) && /transition-duration: 0\.01ms !important/.test(rm[0]), 'reduced motion everywhere');
   assert.match(css, /#hud, #touch, \.tb-root \{ font-variant-numeric: tabular-nums; \}/, 'no jumps as the numbers run');

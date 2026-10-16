@@ -173,6 +173,11 @@ export interface Settings {
   mmTarget: MinimapOnMark;
   /** The hex battle at twice the pace (docs/23 item 60), kept from one battle to the next. */
   tacFast: boolean;
+  /** Owner, 2026-10-16: set her stacks before a boarding's first round (HoMM3's tactics phase); the field's «Опасные
+   *  клетки» (where the other side may strike next turn) shaded at all times; the turn's order folded on a phone. */
+  tacDeploy: boolean;
+  tacDanger: boolean;
+  tacQueueFold: boolean;
   captions: boolean; // sound captions with direction
   mono: boolean;
   volume: { master: number; sea: number; combat: number; ui: number; music: number };
@@ -195,7 +200,7 @@ export function defaults(): Settings {
   return {
     uiScale: 1, density: 'normal', firstHints: true, shipVoices: true, textScale: 1, hudAlpha: 0.65, colorblind: 'off', highContrast: false, plainFont: false, lanternMarks: false,
     reduceFlashes: false, screenShake: true, vibrate: true, lanternFlicker: true, reduceMotion: false, effects: 'auto', webgl: true,
-    plainTerms: false, classicBoarding: false, autoFire: coarse(), autoWeak: true, autoTopUp: false, autoGoal: true, expertGuns: false, expertHud: false, mmTarget: 'hide', tacFast: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
+    plainTerms: false, classicBoarding: false, autoFire: coarse(), autoWeak: true, autoTopUp: false, autoGoal: true, expertGuns: false, expertHud: false, mmTarget: 'hide', tacFast: false, tacDeploy: true, tacDanger: false, tacQueueFold: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
     keys: structuredClone(CLASSIC),
   };
 }
@@ -230,6 +235,9 @@ export function sanitize(raw: Partial<Settings> | null): Settings {
   s.vibrate = s.vibrate !== false;
   s.autoTopUp = s.autoTopUp === true;
   s.autoGoal = s.autoGoal !== false;
+  s.tacDeploy = s.tacDeploy !== false;
+  s.tacDanger = s.tacDanger === true;
+  s.tacQueueFold = s.tacQueueFold === true;
   for (const k of ['master', 'sea', 'combat', 'ui', 'music'] as const) s.volume[k] = Math.min(1, Math.max(0, Number(s.volume[k]) || 0));
   return s;
 }

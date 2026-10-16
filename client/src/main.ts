@@ -403,6 +403,48 @@ setInterval(() => {
     levelUpSheet(state, (m) => net.send(m));
   }
 }, 600);
+// The bottom's line of words on a touch screen («Под защитой — выстрел её снимет», the carpenters' pace) keeps clear of
+// the round buttons and the row of actions (2026-10-16: at 480×270 it lay under the row): from its own place it steps up
+// (and aside) to the first free spot of the bottom band. Four times a second, moved by \`translate\` only.
+const INFO_OBSTACLES = '#tc-actrow:not(.hidden), #tc-fire, #tc-cast:not(.hidden), #tc-ammo, #tc-special, #tc-lock, #tc-stick, #tc-speed, #tc-deck, #tc-act:not(.hidden), #promo-sea, #hud-captain .cs, #toasts > .toast, #hud-chat > .chat-toggle, #tc-menu, #tc-news, #tc-isle, #hud-map, #advcard:not(.hidden), #encounter:not(.hidden), #surrender:not(.hidden)';
+setInterval(() => {
+  const el = document.getElementById('hud-bottom');
+  if (!el) return;
+  const b = document.body;
+  if (!b.classList.contains('touch') || !b.classList.contains('simple') || !el.textContent?.trim()) {
+    if (el.style.translate) el.style.translate = '';
+    return;
+  }
+  const r = el.getBoundingClientRect();
+  if (!r.width || !r.height) return;
+  const [tx, ty] = (el.style.translate || '0px 0px').split(' ').map((v) => parseFloat(v) || 0);
+  const bx = r.left - tx, by = r.top - ty, W = innerWidth, H = innerHeight;
+  const obs: DOMRect[] = [];
+  for (const o of document.querySelectorAll<HTMLElement>(INFO_OBSTACLES)) {
+    const q = o.getBoundingClientRect();
+    const c = getComputedStyle(o);
+    if (q.width > 1 && q.height > 1 && c.visibility !== 'hidden' && c.display !== 'none' && Number(c.opacity) > 0.05) obs.push(q);
+  }
+  const free = (x: number, y: number) => x >= 4 && x + r.width <= W - 4 && y >= H * 0.45 && y + r.height <= H - 2 && obs.every((q) => q.right <= x + 1 || q.left >= x + r.width - 1 || q.bottom <= y + 1 || q.top >= y + r.height - 1);
+  let best: [number, number] | null = null;
+  for (let dy = 0; !best && by + dy >= H * 0.45; dy -= 4) {
+    for (const dx of [0, -30, 30, -60, 60, -90, 90, -120, 120, -160, 160]) if (free(bx + dx, by + dy)) { best = [dx, dy]; break; }
+  }
+  const v = best ? `${best[0]}px ${best[1]}px` : '';
+  if (el.style.translate !== v) el.style.translate = v;
+}, 250);
+
+// The phone in the hand on the captain's own milestones (2026-10-16): a pulse as silver goes on a purchase in port,
+// a longer one on a new level (haptics.ts; «Вибрация» off stills both).
+let buzzLevel = -1, buzzSilver = -1;
+setInterval(() => {
+  const s = state.self;
+  if (!s || !inGame) return;
+  if (buzzLevel >= 0 && s.level > buzzLevel) buzz('level');
+  if (buzzSilver >= 0 && s.dockedAt && s.gold < buzzSilver) buzz('buy');
+  buzzLevel = s.level;
+  buzzSilver = s.gold;
+}, 400);
 hud.onThrone = () => openThrone();
 // The premium shop (owner, 2026-10-03): from the micro menu and the cabin; `topup` opens it at the packs.
 const premiumWindow = new PremiumWindow((m) => net.send(m));
@@ -876,11 +918,12 @@ onSettings(() => {
   else document.body.classList.toggle('expert-guns', settings().expertGuns);
 });
 document.body.classList.toggle('expert-guns', settings().expertGuns);
-let classicSent = settings().classicBoarding;
+let classicSent = settings().classicBoarding, deploySent = settings().tacDeploy;
 onSettings((s) => {
-  if (s.classicBoarding === classicSent) return;
+  if (s.classicBoarding === classicSent && s.tacDeploy === deploySent) return;
   classicSent = s.classicBoarding;
-  net.send({ t: 'board_pref', classic: s.classicBoarding });
+  deploySent = s.tacDeploy;
+  net.send({ t: 'board_pref', classic: s.classicBoarding, deploy: s.tacDeploy });
 });
 document.documentElement.lang = lang();
 applyDataLocale(lang());
@@ -1277,6 +1320,9 @@ function onMessage(m: ServerMsg): void {
   state.apply(m);
   // a boarding opens: its loading screen until the decks, the figures and their poses are in (warmed while she closed in)
   if (m.t === 'board_tac' && m.view && !hadTac) beginLoad('battle', 7000).need(tacArt(m.view)).settle().done();
+  // Owner, 2026-10-16 («Повтор»): a kept fight played again over the field.
+  if (m.t === 'tac_replay' && m.base) beginLoad('battle', 7000).need(tacArt(m.base)).settle().done();
+  if (m.t === 'tac_replay') tactical.onReplay(m);
   if (inGame) firstTips.offer(tipForMsg(m));
   switch (m.t) {
     case 'pursuit':
@@ -1337,7 +1383,7 @@ function onMessage(m: ServerMsg): void {
       bootMark('init');
       inGame = true;
       // The old round-by-round deck fight, for a captain who asked for it in the options (docs/16 P4).
-      net.send({ t: 'board_pref', classic: settings().classicBoarding });
+      net.send({ t: 'board_pref', classic: settings().classicBoarding, deploy: settings().tacDeploy });
       sendGunnery(); // docs/23 items 35, 42, 46
       audio.ownId = m.entityId;
       $('screen-captain').classList.add('hidden');
@@ -1735,6 +1781,25 @@ let modalAt = 0;
 /** A window closing back into the harbour (closeModal): the harbour keeps its place. */
 let portReturn = false;
 
+/** A window closing eases out (2026-10-16): 140 ms of fading while nothing under it waits — the game's state has it
+ *  shut at once, the element only lingers, deaf to taps; a window opened meanwhile cancels it. None with less motion. */
+let modalOutTimer = 0;
+function hideModalEl(): void {
+  const el = $('modal');
+  clearTimeout(modalOutTimer);
+  const calm = document.body.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (calm || el.classList.contains('hidden')) {
+    el.classList.remove('w-out');
+    el.classList.add('hidden');
+    return;
+  }
+  el.classList.add('w-out');
+  modalOutTimer = window.setTimeout(() => {
+    el.classList.remove('w-out');
+    if (modal === null) el.classList.add('hidden');
+  }, 140);
+}
+
 function openModal(m: Modal): void {
   if (m !== 'look') resetLookDraft();
   // The gear is the captain window's third tab (docs/23 item 70).
@@ -1745,7 +1810,11 @@ function openModal(m: Modal): void {
   if (m === null) closeLevelUp();
   const from = modal;
   modal = m;
-  $('modal').classList.toggle('hidden', m === null);
+  if (m === null) hideModalEl();
+  else {
+    clearTimeout(modalOutTimer);
+    $('modal').classList.remove('w-out', 'hidden');
+  }
   // The harbour opened from the sea's HUD starts on its market — the one-tap bar (docs/23 item 66); a window closed
   // back into it keeps the place it was on.
   if (m === 'port' && from === null && !portReturn) portScreen.tab = 'market';
@@ -1785,7 +1854,7 @@ function closeModal(): void {
     state.away.gift = null;
   }
   modal = null;
-  $('modal').classList.add('hidden');
+  hideModalEl();
   document.querySelectorAll('.gear-tip').forEach((e) => e.remove());
   releaseModalToasts();
   // The recruit window opened from the island's town goes back to it (docs/17 H3).
@@ -2515,7 +2584,7 @@ hud.onCaptain = () => {
   if (!self) return;
   if (modal) closeModal();
   toggleCaptainMenu({ name: self.name, level: self.level, pts: self.talentPoints }, {
-    open: (id) => (id === 'hero' || id === 'skills' ? openHero(id) : openModal(id)),
+    open: (id) => (id === 'hero' || id === 'skills' ? openHero(id) : id === 'replays' ? tactical.openReplays() : openModal(id)),
     support: (email, message) => authPost('/auth/support', { email, message, token: localStorage.getItem('gravetide.token') ?? '', website: '', t: String(Math.round(performance.now())), lang: lang() }),
     logout: () => {
       net.forget();

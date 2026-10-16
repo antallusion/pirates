@@ -153,6 +153,7 @@ export const EN = {
   'opt.plainFont': "Simplified font (no serifs or italics)",
   'opt.plainTerms': "Plain terms instead of sea jargon",
   'opt.classicBoarding': "Boarding round by round (the old deck fight) instead of the turn-based battle",
+  'opt.tacDeploy': 'Set my stacks before a boarding battle (20 s)',
   'opt.autoFire': "Auto-fire: the gun crews fire as the mark bears",
   'opt.autoWeak': "Auto-battle against the weak: a mark two levels below settles itself",
   'opt.expertGuns': "Expert gunnery: held broadsides and the chasers by hand",
