@@ -20,7 +20,7 @@ import { Rng } from '../../../shared/src/rng.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
 import type { NpcRole } from './ship.ts';
-import { ladderBetween } from './ladder.ts';
+import { deckLadder } from './ladder.ts';
 import { beatenJoin, joinsFrom, officerFactor, onFightWon, woundOfficer } from './crew.ts';
 import { onCrewKilled } from './mind.ts';
 import { bloodAndSalt, drownedTakeLosses } from './bridgefx.ts';
@@ -179,7 +179,7 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
     name: s?.name ?? ship.captainName, ship: ship.name, hull: ship.loadout.classId, captain: (s ? null : npcPathOf(ship)) ?? ship.captain ?? null,
     hands: count((x) => UNITS[x.u].tier === 1), marines: count((x) => kindOfUnit(x.u) === 'marines'), gunners: count((x) => hasSpecial(x.u, 'shooter')),
     army: fielded, officers, skill, morale: ship.morale,
-    dealt: ladderBetween(game, ship, enemy).dealt || 0.1,
+    dealt: deckLadder(game, ship, enemy),
     power: Math.max(0.3, ship.stats.boardingPower) * (ship.captain === 'reaver' && enemy.crew < enemy.stats.crewMax * 0.5 ? 1.2 : 1),
     melee: 1 + tx(ship.stats, 'meleeDamage'),
     extraShots: (ship.cargo.weapons ?? 0) >= 5 ? 1 : 0,
