@@ -5101,8 +5101,17 @@ body.tq-side #toasts .toast.herald small { font-size: 11px; line-height: 14px; w
 :where(body.touch) :where(label > input[type="checkbox"], label > input[type="radio"]) { position: relative; z-index: 1; } /* the box itself stays on top of the label's wider reach */
 :where(body.touch) :where(#modal-panel select, #modal-panel input[type="range"]) { min-height: 40px; }
 /* A window comes up softly (140 ms, no slide); its tabs change at once. */
-@keyframes pol-win-in { from { opacity: 0; } to { opacity: 1; } }
-#modal:not(.hidden) > #modal-panel { animation: pol-win-in 140ms ease-out; }
+@keyframes pol-win-in { from { opacity: 0; scale: 0.985; } to { opacity: 1; scale: 1; } }
+#modal:not(.hidden) > #modal-panel { animation: pol-win-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+/* …and goes softly (main.ts hideModalEl): it fades and sinks a hair while the sea is already the captain's (2026-10-16) */
+@keyframes pol-win-out { to { opacity: 0; translate: 0 10px; } }
+#modal.w-out { pointer-events: none; animation: pol-win-out 140ms ease-in forwards; }
+#modal.w-out * { pointer-events: none !important; }
+body.reduce-motion #modal.w-out { animation: none; }
+/* a press springs back (the pressed look itself is set above and on each kit's own buttons) */
+:where(.btn, .tab, .act-btn, .menu-tile, .slot) { transition: translate 90ms ease-out, filter 120ms ease-out; }
+:where(.k-btn, .sea-round) { transition: transform 110ms cubic-bezier(0.3, 1.4, 0.5, 1), filter 120ms ease-out; }
+body.reduce-motion :where(.btn, .tab, .act-btn, .menu-tile, .slot, .k-btn, .sea-round) { transition: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }

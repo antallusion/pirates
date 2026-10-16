@@ -1089,10 +1089,14 @@ export class TacticalPanel {
       // held a moment on a heavy one (item 1), steel's sparks where blades meet and an answer's parry (item 10).
       const tgt = e.t !== undefined ? was.stacks.find((x) => x.id === e.t) ?? v.stacks.find((x) => x.id === e.t) : undefined;
       const share = tgt && e.dmg ? e.dmg / this.armyHp(was, tgt.side) : 0;
+      // (2026-10-16: a lucky blow and one that fells men weigh as a heavy one — the knock and a 70 ms hold at least;
+      // the field's clock only, never the turn's timer or the buttons)
+      const heavy = !!e.dmg && (!!e.kills || v.log.some((x) => x.k === 'luck' && x.s === e.s && x.i === e.i - 1) || was.log.some((x) => x.k === 'luck' && x.s === e.s && x.i === e.i - 1));
       if (c) {
-        this.shake.kick(hit, share, from ? c.x - from.x : 1, from ? c.y - from.y : 0);
-        this.clock.stop(hit, stopMs(share));
-        if (stopMs(share) && !this.clock.off) this.tally.stops++;
+        this.shake.kick(hit, heavy ? Math.max(share, 0.06) : share, from ? c.x - from.x : 1, from ? c.y - from.y : 0);
+        const hold = heavy ? Math.max(70, stopMs(share)) : stopMs(share);
+        this.clock.stop(hit, hold);
+        if (hold && !this.clock.off) this.tally.stops++;
         if (share >= 0.002 && !this.shake.off) this.tally.knocks++;
         if (e.k !== 'shot' && !spill) this.steel(c, from, hit, e.k === 'ret' ? t + 90 : null, w);
         // The marks it leaves (item 7): a hat or a sabre where men fell, splinters where a shot bit, rum by the barrels.
@@ -1100,7 +1104,7 @@ export class TacticalPanel {
         if (hex !== undefined) {
           if (e.kills && rnd(e.i * 3) < 0.5) this.decal(hit + 200, rnd(e.i * 5) < 0.5 ? 'hat' : 'blade', hex, e.i * 11);
           else if (e.k === 'shot' && rnd(e.i * 7) < 0.4) this.decal(hit, 'splinter', hex, e.i * 13);
-          if (e.k !== 'shot' && e.kills && rnd(e.i * 17) < 0.35) this.decal(hit, 'blood', hex, e.i * 19);
+          if (e.k !== 'shot' && e.kills && rnd(e.i * 17) < 0.35) this.decal(hit, 'soot', hex, e.i * 19); // (a scuff of the fight: no blood, owner's rule)
           if (this.nearBarrels(v.cells, hex) && rnd(e.i * 23) < 0.6) this.decal(hit, 'rum', hex, e.i * 29);
         }
       }

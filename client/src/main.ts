@@ -402,6 +402,17 @@ setInterval(() => {
     levelUpSheet(state, (m) => net.send(m));
   }
 }, 600);
+// The phone in the hand on the captain's own milestones (2026-10-16): a pulse as silver goes on a purchase in port,
+// a longer one on a new level (haptics.ts; «Вибрация» off stills both).
+let buzzLevel = -1, buzzSilver = -1;
+setInterval(() => {
+  const s = state.self;
+  if (!s || !inGame) return;
+  if (buzzLevel >= 0 && s.level > buzzLevel) buzz('level');
+  if (buzzSilver >= 0 && s.dockedAt && s.gold < buzzSilver) buzz('buy');
+  buzzLevel = s.level;
+  buzzSilver = s.gold;
+}, 400);
 hud.onThrone = () => openThrone();
 // The premium shop (owner, 2026-10-03): from the micro menu and the cabin; `topup` opens it at the packs.
 const premiumWindow = new PremiumWindow((m) => net.send(m));
@@ -1733,6 +1744,25 @@ let modalAt = 0;
 /** A window closing back into the harbour (closeModal): the harbour keeps its place. */
 let portReturn = false;
 
+/** A window closing eases out (2026-10-16): 140 ms of fading while nothing under it waits — the game's state has it
+ *  shut at once, the element only lingers, deaf to taps; a window opened meanwhile cancels it. None with less motion. */
+let modalOutTimer = 0;
+function hideModalEl(): void {
+  const el = $('modal');
+  clearTimeout(modalOutTimer);
+  const calm = document.body.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (calm || el.classList.contains('hidden')) {
+    el.classList.remove('w-out');
+    el.classList.add('hidden');
+    return;
+  }
+  el.classList.add('w-out');
+  modalOutTimer = window.setTimeout(() => {
+    el.classList.remove('w-out');
+    if (modal === null) el.classList.add('hidden');
+  }, 140);
+}
+
 function openModal(m: Modal): void {
   if (m !== 'look') resetLookDraft();
   // The gear is the captain window's third tab (docs/23 item 70).
@@ -1743,7 +1773,11 @@ function openModal(m: Modal): void {
   if (m === null) closeLevelUp();
   const from = modal;
   modal = m;
-  $('modal').classList.toggle('hidden', m === null);
+  if (m === null) hideModalEl();
+  else {
+    clearTimeout(modalOutTimer);
+    $('modal').classList.remove('w-out', 'hidden');
+  }
   // The harbour opened from the sea's HUD starts on its market — the one-tap bar (docs/23 item 66); a window closed
   // back into it keeps the place it was on.
   if (m === 'port' && from === null && !portReturn) portScreen.tab = 'market';
@@ -1783,7 +1817,7 @@ function closeModal(): void {
     state.away.gift = null;
   }
   modal = null;
-  $('modal').classList.add('hidden');
+  hideModalEl();
   document.querySelectorAll('.gear-tip').forEach((e) => e.remove());
   releaseModalToasts();
   // The recruit window opened from the island's town goes back to it (docs/17 H3).

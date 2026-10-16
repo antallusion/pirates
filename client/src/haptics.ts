@@ -5,7 +5,7 @@
 
 import { settings } from './settings.ts';
 
-export type Buzz = 'fire' | 'hit' | 'hurt' | 'board';
+export type Buzz = 'fire' | 'hit' | 'hurt' | 'board' | 'buy' | 'level';
 
 /** Each pulse in milliseconds (pause, pulse… for the patterns). */
 export const BUZZ: Record<Buzz, number | number[]> = {
@@ -13,12 +13,39 @@ export const BUZZ: Record<Buzz, number | number[]> = {
   hit: 8,
   hurt: 32,
   board: [40, 50, 60],
+  buy: 12,
+  level: [40, 60, 50],
 };
 
 /** The least time between two pulses of a kind (ms): a broadside's eight balls landing are one knock. */
-export const BUZZ_GAP: Record<Buzz, number> = { fire: 250, hit: 160, hurt: 220, board: 1500 };
+export const BUZZ_GAP: Record<Buzz, number> = { fire: 250, hit: 160, hurt: 220, board: 1500, buy: 400, level: 3000 };
 
-const last: Record<Buzz, number> = { fire: -1e9, hit: -1e9, hurt: -1e9, board: -1e9 };
+const last: Record<Buzz, number> = { fire: -1e9, hit: -1e9, hurt: -1e9, board: -1e9, buy: -1e9, level: -1e9 };
+
+/** Telegram's own motor (a Mini App on iOS has no `navigator.vibrate`): each kind as its impact or notice. */
+export const TG_BUZZ: Record<Buzz, ['impact', 'light' | 'medium' | 'heavy' | 'rigid' | 'soft'] | ['notice', 'success' | 'warning' | 'error']> = {
+  fire: ['impact', 'medium'],
+  hit: ['impact', 'light'],
+  hurt: ['impact', 'heavy'],
+  board: ['impact', 'rigid'],
+  buy: ['notice', 'success'],
+  level: ['notice', 'success'],
+};
+
+interface TgHaptics {
+  impactOccurred?(style: string): void;
+  notificationOccurred?(type: string): void;
+}
+function tgHaptics(): TgHaptics | null {
+  const tg = (globalThis as { Telegram?: { WebApp?: { HapticFeedback?: TgHaptics; isVersionAtLeast?(v: string): boolean } } }).Telegram?.WebApp;
+  if (!tg?.HapticFeedback) return null;
+  try {
+    if (tg.isVersionAtLeast && !tg.isVersionAtLeast('6.1')) return null;
+  } catch {
+    return null;
+  }
+  return tg.HapticFeedback;
+}
 
 /** Whether a pulse of `kind` may go at `now` (ms): the option on and the kind's gap passed. Pure but for the clock. */
 export function mayBuzz(kind: Buzz, now: number, on: boolean, lastAt: number): boolean {
@@ -31,6 +58,18 @@ export function buzz(kind: Buzz): void {
   last[kind] = now;
   // A fresh hit outranks the light ones: no tick on top of the knock.
   if (kind === 'hurt') last.hit = now;
+  // In Telegram its own haptics (they work where the Vibration API does not: iOS); elsewhere the Vibration API.
+  const tg = tgHaptics();
+  if (tg) {
+    try {
+      const [how, v] = TG_BUZZ[kind];
+      if (how === 'impact') tg.impactOccurred?.(v);
+      else tg.notificationOccurred?.(v);
+      return;
+    } catch {
+      /* an older client: the Vibration API below */
+    }
+  }
   try {
     navigator.vibrate?.(BUZZ[kind]);
   } catch {
