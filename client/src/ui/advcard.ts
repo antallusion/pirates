@@ -237,7 +237,7 @@ export class AdvCard {
       // (unfolded, it ends above the round buttons under the chart and the fight's on the right where they stand under it:
       // 480×270)
       let floor = innerHeight * (innerHeight <= 520 ? 0.6 : 0.4);
-      for (const el of document.querySelectorAll('#tc-special, #tc-ammo, #tc-lock, #tc-fire, #tc-actrow, #tc-cast, #tc-menu, #tc-news, #tc-isle, #hud-chat > .chat-toggle')) {
+      for (const el of document.querySelectorAll('#tc-special, #tc-ammo, #tc-lock, #tc-fire, #tc-actrow, #tc-cast, #tc-menu, #tc-news, #tc-isle, #tc-offer, #hud-chat > .chat-toggle')) {
         const b = el.getBoundingClientRect();
         if (getComputedStyle(el).visibility === 'hidden') continue;
         if (b.width > 0 && b.height > 0 && b.left < r.right && b.right > r.left && b.top > r.top) floor = Math.min(floor, b.top - 6);

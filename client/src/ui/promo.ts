@@ -3,9 +3,11 @@
 // офферы для игрока»; server/src/game/promo.ts decides every card and price). One module, its own DOM:
 //  - the entry carousel: after loading (never in the First Watch, never in a fight), once a day — 1–3 cards, big
 //    countdowns, arrows and swipe, «Купить», «Подробнее», «Позже», ✕;
-//  - the sea's chip under the chart's dial: a sea or boarding offer, out of a fight only;
+//  - the offer's round icon under the captain's plate (owner, 2026-10-16: «спецпредложения не в таверне давать, а
+//    иконкой под аватаркой с обратным отсчетом. в таверне прям в интерфейсе ниче не надо продавать»): at sea and in
+//    port, never in a fight — the soonest to end on it with its live clock, a count when there are more; a tap opens
+//    them all as cards to swipe through. Nothing is sold inside the harbour's windows any more;
 //  - the island scene's card in its right column, under «В море» (hidden while a building's card is open there);
-//  - the harbour's strip (its slot in the port window, client/src/ui/port.ts);
 //  - a boarding's end: a boarding offer in the top band of the result.
 // A tap opens the offer as one card; ✕ hides it in that place (the server keeps it); every card shown is told once.
 
@@ -19,6 +21,7 @@ import { EN, RU } from '../lang/ui/promo.ts';
 import type { ClientState } from '../state.ts';
 import { ask } from './confirm.ts';
 import { esc, fmt, icon } from './dom.ts';
+import { buttonHtml, setBadge } from './kit/button.ts';
 import { doubloonIcon, famArt, qtyOf } from './premium.ts';
 
 const L = dict(EN, RU);
@@ -33,6 +36,20 @@ export function countdown(ms: number): string {
   if (d) return `${d}${ru ? ' д' : 'd'} ${h}${ru ? ' ч' : 'h'}`;
   if (h) return `${h}${ru ? ' ч' : 'h'} ${String(m).padStart(2, '0')}${ru ? ' м' : 'm'}`;
   return `${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}`;
+}
+
+/** The icon's clock (2026-10-16): «42:07», «3:59:12»; a day or more as «2 д 4 ч». */
+export function clockShort(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  if (s >= 86_400) return countdown(ms);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
+  const p = (n: number) => String(n).padStart(2, '0');
+  return h ? `${h}:${p(m)}:${p(x)}` : `${p(m)}:${p(x)}`;
+}
+
+/** The icon's offers in order: the soonest to end first (one with no end last). */
+export function bySoonest<T extends { until?: number | null }>(cards: readonly T[]): T[] {
+  return [...cards].sort((a, b) => (a.until || Infinity) - (b.until || Infinity));
 }
 
 /** What an offer holds, each kind of thing once: its picture, its name and how many (the shop's own families say
@@ -92,9 +109,6 @@ export class Promos {
       this.place();
     });
     setInterval(() => this.place(), 1000);
-    // the harbour's window redraws itself: its slot filled again each time it comes back empty
-    const panel = document.getElementById('modal-panel');
-    if (panel) new MutationObserver(() => this.port()).observe(panel, { childList: true, subtree: true });
   }
 
   /** The server's wall clock now. */
@@ -109,7 +123,7 @@ export class Promos {
   /** The cards for a place: live, not closed there, and (a context's place) of its contexts. */
   cardsFor(where: PromoPlace): PromoCard[] {
     const now = this.now();
-    const ctx: Record<PromoPlace, string[]> = { entry: ['isle', 'sea', 'board', 'all'], isle: ['isle'], sea: ['sea', 'board'], port: ['sea', 'board', 'isle', 'all'], board: ['board'] };
+    const ctx: Record<PromoPlace, string[]> = { entry: ['isle', 'sea', 'board', 'all'], isle: ['isle'], sea: ['sea', 'board', 'isle', 'all'], port: ['sea', 'board', 'isle', 'all'], board: ['board'] };
     const quiet = this.quiet.get(where);
     return (this.view?.cards ?? []).filter((c) => (!c.until || c.until > now) && ctx[where].includes(c.ctx) && !c.closed.includes(where) && !this.closed.has(`${c.id}:${where}`) && !quiet?.has(c.id) && !(c.ctx === 'isle' && c.why === 'island'));
   }
@@ -123,8 +137,9 @@ export class Promos {
 
   private close(c: PromoCard, where: PromoPlace): void {
     this.closed.add(`${c.id}:${where}`);
-    // (not the next card in its stead: the place keeps quiet until a new offer comes — owner: «не надоедать»)
-    if (where !== 'entry') this.quiet.set(where, new Set((this.view?.cards ?? []).map((x) => x.id)));
+    // (not the next card in its stead: the place keeps quiet until a new offer comes — owner: «не надоедать»; the
+    // icon keeps its other offers, each closed by its own ✕)
+    if (where !== 'entry' && where !== 'sea') this.quiet.set(where, new Set((this.view?.cards ?? []).map((x) => x.id)));
     this.d.send({ t: 'premium', action: 'promo_close', id: c.id, where });
     this.place();
   }
@@ -166,15 +181,14 @@ export class Promos {
 
   /** Where each small card goes now, and the countdowns. */
   place(): void {
-    this.sea();
+    this.icon();
     this.isle();
-    this.port();
     this.board();
     this.entry();
     const now = this.now();
     document.querySelectorAll<HTMLElement>('[data-poend]').forEach((el) => {
       const left = Number(el.dataset.poend) - now;
-      const t = countdown(left);
+      const t = el.dataset.pofmt === 'hms' ? clockShort(left) : countdown(left);
       if (el.textContent !== t) el.textContent = t;
       el.classList.toggle('urgent', left < 3_600_000);
       el.closest('.po-chip')?.classList.toggle('po-urgent', left < 3_600_000);
@@ -193,9 +207,7 @@ export class Promos {
     if (el.dataset.po !== key) {
       el.dataset.po = key;
       el.className = `po-chip ${cls}`;
-      // (the sea's: a glowing gold frame, the «Успей!» seal in its last hour — the clock's own class says when)
-      const hot = where === 'sea' ? `<b class="po-hot" aria-hidden="true">${esc(L('hot'))}</b>` : '';
-      el.innerHTML = `<button type="button" class="po-open" data-poopen="${esc(c.id)}" aria-label="${esc(this.nameOf(c))}">${this.artOf(c)}${this.ribbon(c)}<span class="po-t"><span class="po-n">${esc(this.nameOf(c))}${c.special ? '' : ` <small>${esc(this.qtyOf(c))}</small>`}</span><span class="po-l">${this.clock(c)}${this.priceHtml(c)}</span></span>${hot}</button><button type="button" class="po-x" data-pox aria-label="${esc(L('close'))}" title="${esc(L('close'))}">×</button>`;
+      el.innerHTML = `<button type="button" class="po-open" data-poopen="${esc(c.id)}" aria-label="${esc(this.nameOf(c))}">${this.artOf(c)}${this.ribbon(c)}<span class="po-t"><span class="po-n">${esc(this.nameOf(c))}${c.special ? '' : ` <small>${esc(this.qtyOf(c))}</small>`}</span><span class="po-l">${this.clock(c)}${this.priceHtml(c)}</span></span></button><button type="button" class="po-x" data-pox aria-label="${esc(L('close'))}" title="${esc(L('close'))}">×</button>`;
       el.querySelector<HTMLElement>('[data-poopen]')!.onclick = () => this.open([c], where);
       el.querySelector<HTMLElement>('[data-pox]')!.onclick = (e) => {
         e.stopPropagation();
@@ -217,27 +229,54 @@ export class Promos {
     return el;
   }
 
-  /** At sea: a sea offer (or a boarding one), out of every fight and window, in the top band (owner, 2026-10-15: «в
-   *  море я до сих пор не вижу предложений с обратным отсчетом»: it stood under the chart's buttons and stepped out
-   *  whenever it met the fight's buttons below — on a phone with an island in Telegram's layout, always): under the
-   *  captain's plate by her doubloons; where the helm leaves no room there, under the row of round buttons. */
-  private sea(): void {
-    const el = this.mount('promo-sea', document.body);
+  /** The offer's round icon under the captain's plate (seahud.css #tc-offer: the left row with the chat and «Остров»):
+   *  at sea and in port, out of every fight, window and the island's scene; the soonest to end on it, its clock under
+   *  it (red in the last hour), the count of them on its corner. A tap: the cards, the soonest first. */
+  private icon(): void {
+    const host = document.getElementById('touch');
+    if (!host) return;
+    let el = document.getElementById('tc-offer') as HTMLButtonElement | null;
+    if (!el) {
+      const t = document.createElement('template');
+      t.innerHTML = buttonHtml({ kind: 'icon', id: 'tc-offer', glyph: '%', aria: L('title'), cls: 'sea-round tc-offer hidden' }).trim();
+      el = t.content.firstElementChild as HTMLButtonElement;
+      el.addEventListener('click', () => {
+        const list = bySoonest(this.cardsFor('sea'));
+        if (list.length) this.open(list, 'sea');
+      });
+      host.append(el);
+    }
+    const list = this.iconUp() ? bySoonest(this.cardsFor('sea')) : [];
+    const c = list[0];
+    if (!c) {
+      if (!el.classList.contains('hidden')) el.classList.add('hidden');
+      el.dataset.po = '';
+      return;
+    }
+    el.classList.remove('hidden');
+    const left = c.until ? c.until - this.now() : 0;
+    const key = `${c.id}|${c.until ?? 0}|${lang()}|${list.length > 1}`;
+    if (el.dataset.po !== key) {
+      el.dataset.po = key;
+      const f = OFFERS.get(c.offer);
+      const art = c.special === 'first' || !f || f.fam.icon.startsWith('unit:') ? 'doubloon' : f.fam.icon;
+      el.innerHTML = `${icon(art, '%', 'k-btn-ico')}${c.off > 0 && list.length === 1 ? `<i class="tc-offer-off" aria-hidden="true">−${c.off}%</i>` : ''}${c.until ? `<b class="tc-offer-t po-clock" data-poend="${c.until}" data-pofmt="hms" aria-hidden="true">${esc(clockShort(left))}</b>` : ''}`;
+      const words = c.until ? L('iconAria', { name: this.nameOf(c), t: countdown(left) }) : this.nameOf(c);
+      el.setAttribute('aria-label', words);
+      el.title = words;
+    }
+    // the count on its corner when there are several
+    const n = list.length > 1 ? list.length : 0;
+    if ((el.querySelector('.k-badge')?.textContent ?? '') !== (n ? String(Math.min(n, 9)) : '')) setBadge(el, n);
+    for (const x of list) this.tell(x, 'sea');
+  }
+
+  /** The icon is up: the HUD out, no window, no fight (a hostile near, a chase, a boarding, the battle), not on the
+   *  island's scene (it has its own card), not in the First Watch. */
+  private iconUp(): boolean {
     const hud = document.getElementById('hud');
     const isle = document.getElementById('isle');
-    const on = !!this.view && !!hud && !hud.classList.contains('hidden') && !this.d.modal() && !this.d.busy() && !this.d.state.self?.dockedAt && !(isle && !isle.classList.contains('hidden')) && !this.d.state.onboarding?.stage && !this.over;
-    let card = on ? this.cardsFor('sea').find((c) => c.ctx === 'sea') ?? this.cardsFor('sea')[0] : undefined;
-    if (card) {
-      const spot = seaSpot(el);
-      if (spot) {
-        const l = spot.left === null ? '' : `${spot.left}px`, r = spot.right === null ? '' : `${spot.right}px`, t = `${spot.top}px`;
-        if (el.style.left !== l) el.style.left = l;
-        if (el.style.right !== r) el.style.right = r;
-        if (el.style.top !== t) el.style.top = t;
-      } else card = undefined;
-    }
-    this.chip(el, card, 'sea', 'po-sea');
-    el.classList.toggle('po-left', !!card && el.style.right === '');
+    return !!this.view && !!hud && !hud.classList.contains('hidden') && !this.d.modal() && !this.d.busy() && !(isle && !isle.classList.contains('hidden')) && !this.d.state.onboarding?.stage && !document.body.classList.contains('tac');
   }
 
   /** On the island: its offer in the scene's right column, while no building's card is open there. */
@@ -248,22 +287,6 @@ export class Promos {
     const card = scene.querySelector('.is-card');
     const on = !scene.classList.contains('hidden') && !(card && !card.classList.contains('hidden')) && !this.d.modal() && !this.over;
     this.chip(el, on ? this.cardsFor('isle')[0] : undefined, 'isle', 'po-isle');
-  }
-
-  /** The harbour: a strip in its window's slot (a sea or boarding offer first, then the rest). */
-  private port(): void {
-    const slot = document.querySelector<HTMLElement>('#modal-panel[data-modal="port"] .promo-port-slot');
-    if (!slot) return;
-    // the sea's and the boarding's first, then the island's and the specials, each in turn every eight seconds
-    const rank = (x: PromoCard) => ({ sea: 0, board: 1, isle: 2, all: 3 })[x.ctx];
-    const list = [...this.cardsFor('port')].sort((a, b) => rank(a) - rank(b));
-    const c = list.length ? list[Math.floor(this.now() / 8000) % list.length] : undefined;
-    // (its one chip found by its place, not its class: an empty chip has none, and a new one was added for each
-    // look — every addition woke this watch again, and the page hung for good as a captain with no offer came into
-    // a harbour; QA 2026-10-16, the start that «не запускается»)
-    const el = slot.querySelector<HTMLElement>(':scope > div') ?? slot.appendChild(document.createElement('div'));
-    this.chip(el, c, 'port', 'po-port');
-    slot.classList.toggle('hidden', !c);
   }
 
   /** A boarding's end: a boarding offer in the result's top band. */
@@ -401,7 +424,11 @@ export class Promos {
     this.tell(live, this.overPlace);
     el.querySelector<HTMLElement>('[data-poshut]')!.onclick = () => {
       if (this.overPlace !== 'entry') this.close(live, this.overPlace);
-      this.shut();
+      // (the icon's cards: that one closed, the others still to swipe through)
+      const rest = this.overPlace === 'sea' ? this.list.filter((x) => x.id !== live.id) : [];
+      if (!rest.length) return this.shut();
+      this.list = rest;
+      this.go(Math.min(this.idx, rest.length - 1));
     };
     el.querySelector<HTMLElement>('[data-polater]')!.onclick = () => this.shut();
     el.querySelector<HTMLElement>('[data-poprev]')?.addEventListener('click', () => this.go(this.idx - 1));
@@ -430,46 +457,3 @@ export class Promos {
     });
   }
 }
-
-/** The sea chip's place: under the captain's plate at the left (clear of the helm and anything else there), else under
- *  the row of round buttons at the right (clear of the fight's buttons); null when neither has room. */
-function seaSpot(el: HTMLElement): { left: number | null; right: number | null; top: number } | null {
-  const W = innerWidth, H = innerHeight;
-  const w = el.offsetWidth || Math.min(230, W * 0.36), h = el.offsetHeight || 44;
-  const vis = (o: Element) => {
-    const r = o.getBoundingClientRect();
-    return r.width > 0 && r.height > 0 && getComputedStyle(o).visibility !== 'hidden' ? r : null;
-  };
-  const others = [...document.querySelectorAll('#touch > :not(#promo-sea), #hud-chat > .chat-toggle, #hud-chat > .chat-toast, #hud-map, #hud-captain .cs, #advcard:not(.hidden)')].map(vis).filter((r): r is DOMRect => !!r);
-  const free = (l: number, t: number) => t + h <= H - 4 && l >= 0 && l + w <= W && others.every((r) => r.right <= l || r.left >= l + w || r.bottom <= t || r.top >= t + h);
-  // the left: under the plate (its coins), from where the plate begins
-  const plate = document.querySelector('#hud-captain .cs')?.getBoundingClientRect();
-  // (the toasts take that place on a narrow screen with a card up: hud.ts placeTopStrip, body.tq-left)
-  if (plate && plate.height && !document.body.classList.contains('tq-left')) {
-    const l = Math.round(Math.max(4, plate.left + 4)), t = Math.round(plate.bottom + 6);
-    if (free(l, t)) return { left: l, right: null, top: t };
-  }
-  // the right: under the column of round buttons under the chart, else beside it (left of the column and of «Остров»'s
-  // word), from the chart's bottom down (2026-10-16: the column is tall on a short screen)
-  let bottom = 0, colLeft = W, mapBottom = 0;
-  for (const o of document.querySelectorAll('#tc-menu, #tc-news, #tc-isle, #hud-chat > .chat-toggle, #hud-map')) {
-    const r = vis(o);
-    if (!r || r.left <= W / 2) continue;
-    if (o.id === 'hud-map') { mapBottom = r.bottom; continue; }
-    bottom = Math.max(bottom, r.bottom);
-    colLeft = Math.min(colLeft, r.left);
-    const word = o.querySelector('.tc-isle-l');
-    const q = word ? vis(word) : null;
-    if (q) colLeft = Math.min(colLeft, q.left);
-  }
-  const t = Math.round(bottom + 6);
-  if (bottom && free(W - 8 - w, t)) return { left: null, right: 8, top: t };
-  if (bottom) {
-    const right = Math.round(W - colLeft + 6), top = Math.round(mapBottom + 8);
-    if (free(W - right - w, top)) return { left: null, right, top };
-  }
-  return null;
-}
-
-/** The harbour window's slot for the strip (port.ts puts it in its pane). */
-export const PROMO_PORT_SLOT = '<div class="promo-port-slot hidden"></div>';

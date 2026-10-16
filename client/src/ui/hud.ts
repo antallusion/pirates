@@ -456,6 +456,9 @@ export class Hud {
       if (!peek) bandTop = chart.top;
     }
     if (!Number.isFinite(bandTop)) bandTop = 8 * z;
+    // the left row of round buttons (the chat, «Остров», her offer: seahud.css) stands under the plate as it is seen
+    const plateBottom = bandBottom || bandTop + 40 * z;
+    body.style.setProperty('--lr-top', `${Math.round((plateBottom + 8 * z) / z)}px`);
     bandBottom = Math.max(bandBottom, bandTop + 40 * z);
     // the round buttons under the chart (the chat's with the chart stepped up stands under its tab): the band keeps
     // clear of any that reach into it, the toasts of any beside them
@@ -474,7 +477,7 @@ export class Hud {
     // the row — advcard.ts fit)
     // the row, or a narrow screen's (480×270) row stepping out of sight under the card while it is unfolded
     let cardRight = right;
-    const rowEls = [...document.querySelectorAll<HTMLElement>('#tc-menu, #tc-news, #tc-isle')];
+    const rowEls = [...document.querySelectorAll<HTMLElement>('#tc-menu, #tc-news')];
     let veil = false;
     if (document.querySelector('#advcard:not(.hidden) .ac-card.open')) {
       let r2 = right;
@@ -532,12 +535,42 @@ export class Hud {
     for (const r of [...corner, ...fight]) if (r.bottom > top && r.top < tb && r.left < tr + gap) tr = Math.min(tr, r.left - gap);
     let tl = Math.min(sx, Math.max(left, tr - sw));
     // too narrow there (a phone of 480 px with a card up): the toasts go under the captain's plate, at the left
-    // (the sea's offer gives that place up to them meanwhile: promo.ts seaSpot reads body.tq-left)
+    // (under the left row of round buttons: the chat, «Остров», her offer)
     const leftward = tr - tl < 150 * z;
     body.classList.toggle('tq-left', leftward);
     if (leftward) {
       tl = 8 * z;
       top = Math.max(top, bandBottom + 6 * z);
+      // the left row of round buttons (the chat, «Остров», her offer — their words under them included): the toasts
+      // under it, or beside it where under it they would reach the helm (480×270 in Telegram's layout with a boss)
+      let rowT = Infinity, rowB = 0, rowR = 0;
+      for (const el of document.querySelectorAll('#hud-chat > .chat-toggle, #tc-isle, #tc-offer')) {
+        if (!seen(el)) continue;
+        for (const q of [el, ...el.querySelectorAll('.tc-isle-l, .tc-offer-t')]) {
+          const r = q.getBoundingClientRect();
+          if (!r.width || !r.height || r.left >= W / 2) continue;
+          rowT = Math.min(rowT, r.top);
+          rowB = Math.max(rowB, r.bottom);
+          rowR = Math.max(rowR, r.right);
+        }
+      }
+      if (rowR) {
+        let helm = innerHeight;
+        for (const el of document.querySelectorAll('#tc-stick, #tc-sail')) {
+          const r = el.getBoundingClientRect();
+          if (r.width && r.height && r.top > innerHeight / 2) helm = Math.min(helm, r.top);
+        }
+        if (rowB + 6 * z + 46 * z <= helm - 6 * z) top = Math.max(top, rowB + 6 * z);
+        else {
+          tl = rowR + gap;
+          top = Math.max(bandBottom + 6 * z, rowT);
+          // (clear of the top band's column where it reaches down beside them)
+          for (const el of document.querySelectorAll('#hud-stack > :not(.hidden), #advcard:not(.hidden)')) {
+            const r = el.getBoundingClientRect();
+            if (r.width > 2 && r.height > 2 && r.bottom > top && r.left >= tl) tr = Math.min(tr, r.left - gap);
+          }
+        }
+      }
     }
     set('--st-top', top);
     set('--st-left', tl);

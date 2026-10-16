@@ -1,4 +1,4 @@
-// Is the sea's offer chip there for a fresh captain, and if not, why (the view, the cards for the sea, its place).
+// Is the offer's icon (under the captain's plate) there for a fresh captain, and if not, why (the view, the cards for the sea, its place).
 import * as L from '../m0/lib.mjs';
 const [W, H] = (process.env.SIZE ?? '844x390').split('x').map(Number);
 const b = await L.browser();
@@ -23,14 +23,14 @@ for (let i = 0; i < 3; i++) { await p.evaluate(() => { globalThis.gravetide.open
 await L.sleep(2000);
 const r = await p.evaluate(() => {
   const g = globalThis.gravetide, pr = g.promos;
-  const el = document.getElementById('promo-sea');
+  const el = document.getElementById('tc-offer');
   const R = (e) => { const r = e?.getBoundingClientRect(); return r ? [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)] : null; };
   return { rect: R(el), row: ['tc-menu', 'tc-news', 'tc-isle', 'chat-toggle'].map((i) => R(document.getElementById(i))), cards: pr.view?.cards.map((c) => `${c.id}:${c.ctx}:${c.offer}:${c.price}/${c.was} -${c.off}% why=${c.why} closed=${c.closed}`), sea: pr.cardsFor('sea').map((c) => c.id), chip: el ? { cls: el.className, top: el.style.top, h: el.offsetHeight, html: el.innerHTML.slice(0, 120) } : null, modal: g.modal(), docked: g.state.self?.dockedAt ?? null, onb: g.state.onboarding?.stage ?? null };
 });
 console.log(JSON.stringify(r, null, 1));
 const tag = `${W}x${H}_${lang}${tg ? '_tg' + tg : ''}`;
 await p.screenshot({ path: `${process.env.OUT ?? 'assets/raw/audit/promo'}/chip_${tag}.png` });
-await p.evaluate(() => document.querySelector('#promo-sea [data-poopen]')?.click());
+await p.evaluate(() => document.getElementById('tc-offer')?.click());
 await L.sleep(800);
 await p.screenshot({ path: `${process.env.OUT ?? 'assets/raw/audit/promo'}/card_${tag}.png` });
 await b.close();

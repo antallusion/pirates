@@ -24,6 +24,7 @@ export const EN = {
   inside: 'Inside',
   gain: 'Value ×{n}',
   buyFor: 'Buy for',
+  iconAria: 'Special offer: {name}, ends in {t}',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -50,4 +51,5 @@ export const RU: Record<keyof typeof EN, string> = {
   inside: 'Внутри',
   gain: 'Выгода ×{n}',
   buyFor: 'Купить за',
+  iconAria: 'Спецпредложение: {name}, ещё {t}',
 };

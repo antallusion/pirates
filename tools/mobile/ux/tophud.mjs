@@ -1,9 +1,13 @@
 // The sea HUD's top row (owner, 2026-10-15, a Telegram screenshot: «рядом с картой слева иконки… друг на друга
 // налезли, я бы их вниз карты подспустил»; «крабовый пляж… рядом с картой и аватаркой одну длину и выровнял по
 // высоте четко по верху»). A captain with an island of her own sails to a creature lair; the top row is measured:
-//   the portrait's ring, the chart, the adventure card (its top, height, the gaps either side), the round buttons
-//   under the chart (news, menu, «Остров»: sizes, gaps, overlaps, their badges and label inside the screen).
-// States: none (no card), lair (the card, folded), open (the card unfolded), ship (a ship marked), boss.
+//   the portrait's ring, the chart, the adventure card (its top, height, the gaps either side), the round buttons in
+//   their two rows (2026-10-16: «справа два и слева два под аватаркой»): under the chart the news and the menu, under the
+//   captain's plate the chat, «Остров» and her offer (sizes, gaps, rows, overlaps with everything on screen — the helm,
+//   the sail's «−» «+», the fight's buttons, «Действие», the bottom block, the autosail, the cards — their badges, words
+//   and the offer's clock inside the screen).
+// States: none (no card), lair (the card, folded), open (the card unfolded), ship (a ship marked), boss, fight (a
+//   pirate on her: the offer steps out), port (in a harbour, no window: the offer is there as an icon).
 //   GPORT=58994 SIZE=844x390 LANG2=ru TG=25 OUT=assets/raw/audit/tophud node tools/mobile/ux/tophud.mjs
 import * as L from '../m0/lib.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -13,7 +17,7 @@ const langs = (process.env.LANG2 ?? 'ru').split(',');
 const tg = Number(process.env.TG ?? 0);
 const port = Number(process.env.GPORT ?? 58994);
 const OUT = process.env.OUT ?? 'assets/raw/audit/tophud';
-const states = (process.env.STATES ?? 'none,lair,open,boss,ship').split(',');
+const states = (process.env.STATES ?? 'none,lair,open,boss,ship,port,fight').split(',');
 mkdirSync(OUT, { recursive: true });
 
 const b = await L.browser();
@@ -47,11 +51,19 @@ try {
     await L.say(p, '/isle');
     await L.say(p, '/god');
     await L.say(p, '/silver 287');
+    await L.say(p, '/offers roll'); // her offers: the icon under the plate
+    await L.say(p, '/noboard on'); // (no boarding to sit through between the states)
     await L.sleep(800);
-    for (const [W, H] of sizes) {
-      await p.setViewportSize({ width: W, height: H });
-      await L.sleep(500);
-      for (const st of states) {
+    // (the harbour first at every size: she comes into the game in one, docked; then the sea's states)
+    const order = [...(states.includes('port') ? sizes.map((sz) => [sz, 'port']) : []), ...sizes.flatMap((sz) => states.filter((x) => x !== 'port').map((x) => [sz, x]))];
+    let size = '';
+    for (const [[W, H], st] of order) {
+      if (size !== `${W}x${H}`) {
+        size = `${W}x${H}`;
+        await p.setViewportSize({ width: W, height: H });
+        await L.sleep(500);
+      }
+      {
         await L.closeAll(p, 2);
         await dismiss(p);
                 if (st === 'none') { await L.say(p, '/tp black_coast'); await L.sleep(1500); }
@@ -74,6 +86,8 @@ try {
           await p.evaluate(() => { const g = globalThis.gravetide, s = g.state; let best = null, bd = 1e9; for (const x of s.ships.values()) { if (x.id === s.entityId || !x.cur) continue; const d = Math.hypot(x.cur.x - s.ownDisplay.x, x.cur.y - s.ownDisplay.y); if (d < bd) { bd = d; best = x.id; } } if (best !== null) g.target(best); });
         }
         if (st === 'boss') { await L.say(p, '/tp black_coast'); await L.sleep(1200); await L.say(p, '/boss lantern_maw'); }
+        if (st === 'fight') { await L.say(p, '/tp gravewater'); await L.sleep(1200); await L.say(p, '/foe pirate brig 300'); await L.sleep(1500); }
+        if (st === 'port') await L.sleep(800);
         await L.sleep(1500);
         await dismiss(p);
         await L.sleep(400);
@@ -81,6 +95,8 @@ try {
         const name = `${W}x${H}_${lang}${tg ? '_tg' + tg : ''}_${st}`;
         await p.screenshot({ path: `${OUT}/${name}.png` });
         const bad = judge(m, W, H, tg);
+        if (st === 'port' && !(await p.evaluate(() => !!globalThis.gravetide.state.self?.dockedAt))) bad.push('not in a harbour');
+        if (st === 'port' && !m.btns.some((x) => x.id === 'tc-offer')) bad.push('no offer icon in the harbour');
         fails += bad.length;
         rows.push({ name, ...m, bad });
         L.log(`${bad.length ? 'FAIL' : 'ok  '} ${name} ${summary(m)}${bad.length ? '\n     ' + bad.join('\n     ') : ''}`);
@@ -128,28 +144,38 @@ function judge(m, W, H, tg) {
   for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
     const a = all[i], c = all[j];
     if ((a.id === 'portrait' && c.id === 'captain') || (a.id === 'captain' && c.id === 'portrait')) continue;
+    if ([a.id, c.id].sort().join('|') === '#tc-speed|#tc-stick') continue; // (her speed on the wheel's rim, by design)
     if (a.id.startsWith(c.id + ':') || c.id.startsWith(a.id + ':')) continue;
     const ox = Math.min(a.r, c.r) - Math.max(a.l, c.l), oy = Math.min(a.b, c.b) - Math.max(a.t, c.t);
     if (ox > 1 && oy > 1) bad.push(`${a.id} × ${c.id} overlap ${Math.round(ox)}×${Math.round(oy)}`);
   }
-  // one COLUMN under the chart (owner, 2026-10-16: «вертикально», after «в одну линию»): one right edge (the chart's),
-  // even gaps, under the chart, in the screen
-  const col = [...m.btns.filter((x) => !x.id.includes(':')), ...m.extra.filter((x) => x.id === '#hud-chat > .chat-toggle' && m.map && x.l > W / 2)].sort((a, c) => a.t - c.t);
-  if (col.length > 1 && m.map) {
-    if (Math.max(...col.map((x) => x.r)) - Math.min(...col.map((x) => x.r)) > 1) bad.push(`the column's right edges differ ${col.map((x) => x.r)}`);
-    const gaps = col.slice(1).map((x, i) => Math.round((x.t - col[i].b) * 10) / 10);
-    if (Math.max(...gaps) - Math.min(...gaps) > 1) bad.push(`the column's gaps differ ${gaps}`);
-    if (Math.min(...gaps) < 2) bad.push(`the column's gap ${Math.min(...gaps)} too small`);
-    if (Math.abs(col[0].r - m.map.r) > 1 && !m.peek) bad.push(`the column's right edge ${col[0].r} ≠ the chart's ${m.map.r}`);
-    if (col[0].t < m.map.b && !m.peek) bad.push('the column is not under the chart');
-    if (col.at(-1).b > H + 0.5) bad.push('the column runs off the screen');
+  // TWO ROWS (owner, 2026-10-16: «справа два и слева два под аватаркой»): under the chart, right-aligned to it, the
+  // news and the menu; under the captain's plate, from the left, the chat, «Остров», her offer — one top line each,
+  // even gaps, one size for all
+  const own = (x) => !x.id.includes(':');
+  const right = m.btns.filter((x) => own(x) && x.l > W / 2).sort((a, c) => a.l - c.l);
+  const left = [...m.btns.filter((x) => own(x) && x.l < W / 2), ...m.extra.filter((x) => x.id === '#hud-chat > .chat-toggle' && x.l < W / 2 && x.t < H / 2)].sort((a, c) => a.l - c.l);
+  const row = (xs, name) => {
+    if (!xs.length) return;
+    if (Math.max(...xs.map((x) => x.t)) - Math.min(...xs.map((x) => x.t)) > 1) bad.push(`the ${name} row's tops differ ${xs.map((x) => x.t)}`);
+    const gaps = xs.slice(1).map((x, i) => Math.round((x.l - xs[i].r) * 10) / 10);
+    if (gaps.length && Math.max(...gaps) - Math.min(...gaps) > 1) bad.push(`the ${name} row's gaps differ ${gaps}`);
+    if (gaps.length && Math.min(...gaps) < 2) bad.push(`the ${name} row's gap ${Math.min(...gaps)} too small`);
+  };
+  row(right, 'right');
+  row(left, 'left');
+  if (right.length && m.map && !m.peek) {
+    if (Math.abs(right.at(-1).r - m.map.r) > 1) bad.push(`the right row's edge ${right.at(-1).r} ≠ the chart's ${m.map.r}`);
+    if (right[0].t < m.map.b) bad.push('the right row is not under the chart');
   }
-  m.colN = col.length;
-  m.colB = col.length ? col[0].w : null;
-  if (m.btns.length > 1) {
-    const s = new Set(m.btns.filter((x) => !x.id.includes(':')).map((x) => x.w));
-    if (s.size > 1) bad.push(`button sizes differ ${[...s]}`);
-  }
+  if (left.length && m.cap && left[0].t < m.cap.b) bad.push(`the left row ${left[0].t} is not under the plate (${m.cap.b})`);
+  if (left.length && left[0].l > 16) bad.push(`the left row starts at ${left[0].l}`);
+  if (left.length + right.length > 5) bad.push(`${left.length + right.length} round buttons`);
+  m.colN = `${left.length}+${right.length}`;
+  m.colB = [...left, ...right][0]?.w ?? null;
+  const all2 = [...left, ...right];
+  if (all2.length > 1 && new Set(all2.map((x) => x.w)).size > 1) bad.push(`button sizes differ ${[...new Set(all2.map((x) => x.w))]}`);
+  if (m.sail) for (const x of m.sail) if (x.btn && (x.w < 32 || x.h < 32)) bad.push(`${x.id} ${x.w}×${x.h} too small for a finger`);
   return bad;
 }
 
@@ -182,14 +208,16 @@ async function measure(p) {
       if (btn) { cta = R(btn.getBoundingClientRect()); { const rg = document.createRange(); rg.selectNodeContents(btn); const t = rg.getBoundingClientRect(), o = btn.getBoundingClientRect(); ctaScroll = t.left < o.left - 0.5 || t.right > o.right + 0.5 || t.top < o.top - 0.5 || t.bottom > o.bottom + 0.5 ? `text ${Math.round(t.left)}..${Math.round(t.right)}×${Math.round(t.top)}..${Math.round(t.bottom)} in ${Math.round(o.left)}..${Math.round(o.right)}×${Math.round(o.top)}..${Math.round(o.bottom)}` : false; } }
     }
     const btns = [];
-    for (const id of ['tc-news', 'tc-menu', 'tc-isle']) {
+    for (const id of ['tc-news', 'tc-menu', 'tc-isle', 'tc-offer']) {
       const e = document.getElementById(id);
-      if (!vis(e)) continue;
+      if (!vis(e) || e.classList.contains('hidden')) continue;
       btns.push({ id, ...R(e.getBoundingClientRect()) });
-      for (const s of e.querySelectorAll('.k-badge, .tc-isle-l, .kc')) if (vis(s)) btns.push({ id: `${id}:${s.className.split(' ')[0]}`, ...R(s.getBoundingClientRect()) });
+      for (const s of e.querySelectorAll('.k-badge, .tc-isle-l, .kc, .tc-offer-t, .tc-offer-off')) if (vis(s)) btns.push({ id: `${id}:${s.className.split(' ')[0]}`, ...R(s.getBoundingClientRect()) });
     }
+    // the sail's «−» «+» by the helm, their pips
+    const sail = [...document.querySelectorAll('#tc-sail > *')].filter(vis).map((e, i) => ({ id: `#tc-sail>${i}`, btn: e.tagName === 'BUTTON', ...R(e.getBoundingClientRect()) }));
     const extra = [];
-    for (const sel of ['#mm-tab', '#hud-chat > .chat-toggle', '#hud-chat > .chat-toast', '#unread', '#tc-fire', '#tc-ammo', '#tc-lock', '#tc-special', '#tc-actrow', '#tc-cast', '#tc-deck', '#tc-stick', '#toasts > .toast', '#promo-sea', '#hud-autosail', '#encounter', '#surrender']) { const e = document.querySelector(sel); if (vis(e) && !e.classList.contains('hidden')) extra.push({ id: sel, ...R(e.getBoundingClientRect()) }); }
+    for (const sel of ['#mm-tab', '#hud-chat > .chat-toggle', '#hud-chat > .chat-toast', '#unread', '#tc-fire', '#tc-ammo', '#tc-lock', '#tc-special', '#tc-actrow', '#tc-cast', '#tc-deck', '#tc-stick', '#tc-speed', '#toasts > .toast', '#hud-autosail', '#lairchest', '#encounter', '#surrender']) { const e = document.querySelector(sel); if (vis(e) && !e.classList.contains('hidden')) extra.push({ id: sel, ...R(e.getBoundingClientRect()) }); }
     document.querySelectorAll('#hud-bottom > *').forEach((e, i) => { if (vis(e) && !e.classList.contains('hidden')) extra.push({ id: `#hud-bottom>${i}`, ...R(e.getBoundingClientRect()) }); });
     const pills = [...document.querySelectorAll('.tg-pill-fake')].map((e, i) => ({ id: 'tgpill' + i, ...R(e.getBoundingClientRect()) }));
     let stack = null;
@@ -206,6 +234,6 @@ async function measure(p) {
     const rowH = cap ? cap.h : null;
     const sgL = stack && cap ? Math.round((stack.l - cap.r) * 10) / 10 : null, sgR = stack && chartL !== undefined ? Math.round((chartL - stack.r) * 10) / 10 : null;
     const peek = document.body.classList.contains('mm-peek');
-    return { sgL, sgR, peek, ring, cap, map: peek ? null : map, card, cta, ctaScroll, open, btns, extra, pills, stack, gapL, gapR, rowH };
+    return { sgL, sgR, peek, ring, cap, map: peek ? null : map, card, cta, ctaScroll, open, btns, extra: [...extra, ...sail], sail, pills, stack, gapL, gapR, rowH };
   });
 }

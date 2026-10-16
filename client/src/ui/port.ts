@@ -48,8 +48,6 @@ import { commonCard, dailyCard } from './daily.ts';
 import { invasionCard } from './invasion.ts'; // docs/19 E16
 import { giverDialog } from './giver.ts';
 import { EN, RU } from '../lang/ui/port.ts';
-import { EN as PM_EN, RU as PM_RU } from '../lang/ui/premium.ts'; // the shop's chip (owner, 2026-10-15)
-import { PROMO_PORT_SLOT } from './promo.ts'; // her personal offers' strip (owner, 2026-10-15)
 import { serverText } from '../lang/server.ts';
 import { sendService, serviceCard } from './marque.ts';
 import { captivesCard } from './turncoats.ts';
@@ -78,7 +76,6 @@ const JOB_ICON: Record<string, string> = {
   delivery: 'good_provisions', hunt: 'fire', rescue: 'map_cove', scouting: 'menu_map', smuggling: 'good_dreamleaf', treasure: 'map_treasure',
   diplomacy: 'map_contract', revenge: 'danger', investigation: 'ab_spotters_eye', elite: 'danger',
 };
-const PM = dict(PM_EN, PM_RU);
 const L = dict(EN, RU);
 const RL = dict(REN, RRU); // the yard's tree of hulls (docs/20)
 const LI = dict(ISLES_EN, ISLES_RU);
@@ -220,8 +217,8 @@ export class PortScreen {
       ...(dwellCard(port) || tamerCard(port) ? [{ id: 'army', icon: 'build_barracks', glyph: '⚔', label: W('port.army'), hint: W('port.armyHint') }] : []),
       ...(tv.pets?.length ? [{ id: 'pets', icon: 'menu_crew', label: W('port.pets'), hint: W('port.petsHint') }] : []),
       { id: 'tattoo', icon: 'tattoo_needle', glyph: '✒', label: W('port.tattoo'), hint: W('port.tattooHint'), badge: state.tattoos?.pending.length ?? 0 },
-      // The premium shop at its sea's goods (owner, 2026-10-15): a chip that opens it, not a page of the harbour.
-      { id: 'pshop', icon: 'doubloon', glyph: '◉', label: PM('open'), hint: PM('openTip') },
+      // (nothing sold for doubloons in the harbour's windows — owner, 2026-10-16: «в таверне прям в интерфейсе ниче не
+      // надо продавать»; her offers are the round icon under the captain's plate, the shop is the menu's)
     ];
     // A new harbour opens on its market (the one-tap bar); the same harbour keeps the place she left it on.
     if (view.portId !== this.lastPort) {
@@ -235,7 +232,7 @@ export class PortScreen {
     const events = state.events.filter((e) => e.port === port.id).map((e) => `${serverText(e.title)}${e.kind === 'blockade' || e.kind === 'armada' ? L('head.blockade') : e.kind === 'epidemic' ? L('head.epidemic') : ''}`);
     const figures = `${events.length ? `<span class="w-fig bad" data-hint="${esc(W('port.event', { what: events.join(' · ') }))}" title="${esc(events.join(' · '))}">⚑</span>` : ''}${figure('coin', fmt(self.gold), W('port.purse'), 'gold')}${figure('tab_market', `${vol.toFixed(0)}/${holdMax.toFixed(0)}`, W('port.hold', { vol: vol.toFixed(0), max: holdMax.toFixed(0) }))}${figure('stat_crew', String(self.crew), W('port.crew', { n: self.crew }))}`;
     const html = `${winHead(placeName(port.name), { crest: `faction_${port.faction}`, sub: `${faction.name} · ${REGIONS[port.region].name}`, figures })}
-      <div class="w-frame">${railTabs(main, this.tab, 'ptab')}<div class="w-pane">${chipRow(second, this.tab, 'ptab')}${PROMO_PORT_SLOT}${this.tab === 'quests' ? boardSwitches(view, state, this.qchip) : ''}
+      <div class="w-frame">${railTabs(main, this.tab, 'ptab')}<div class="w-pane">${chipRow(second, this.tab, 'ptab')}${this.tab === 'quests' ? boardSwitches(view, state, this.qchip) : ''}
       <div class="modal-body w-body port-body" data-page="${this.tab}">${this.body(view, state)}</div></div></div>`;
     // The harbour pushes its view every second: an unchanged page is not redrawn (no flicker, no button pulled
     // from under a finger, no lost hover or selection).
@@ -247,7 +244,6 @@ export class PortScreen {
       if (id === 'sea') return this.act({ act: 'undock' } as DOMStringMap, root, state);
       if (id === 'tattoo') return this.openTattoos?.();
       if (id === 'isle') return this.openIsle?.();
-      if (id === 'pshop') return void dispatchEvent(new CustomEvent('gravetide:shop', { detail: 'sea' }));
       this.tab = id as Tab;
       this.render(root, state);
       root.querySelector<HTMLElement>('.port-body')?.scrollTo({ top: 0 });

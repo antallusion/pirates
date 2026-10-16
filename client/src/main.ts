@@ -406,7 +406,7 @@ setInterval(() => {
 // The bottom's line of words on a touch screen («Под защитой — выстрел её снимет», the carpenters' pace) keeps clear of
 // the round buttons and the row of actions (2026-10-16: at 480×270 it lay under the row): from its own place it steps up
 // (and aside) to the first free spot of the bottom band. Four times a second, moved by \`translate\` only.
-const INFO_OBSTACLES = '#tc-actrow:not(.hidden), #tc-fire, #tc-cast:not(.hidden), #tc-ammo, #tc-special, #tc-lock, #tc-stick, #tc-speed, #tc-deck, #tc-act:not(.hidden), #promo-sea, #hud-captain .cs, #toasts > .toast, #hud-chat > .chat-toggle, #tc-menu, #tc-news, #tc-isle, #hud-map, #advcard:not(.hidden), #encounter:not(.hidden), #surrender:not(.hidden)';
+const INFO_OBSTACLES = '#tc-actrow:not(.hidden), #tc-fire, #tc-cast:not(.hidden), #tc-ammo, #tc-special, #tc-lock, #tc-stick, #tc-speed, #tc-deck, #tc-act:not(.hidden), #tc-offer:not(.hidden), #tc-sail, #hud-captain .cs, #toasts > .toast, #hud-chat > .chat-toggle, #tc-menu, #tc-news, #tc-isle, #hud-map, #advcard:not(.hidden), #encounter:not(.hidden), #surrender:not(.hidden)';
 setInterval(() => {
   const el = document.getElementById('hud-bottom');
   if (!el) return;
@@ -3390,7 +3390,7 @@ function hudKeepOut(): TmRect[] {
   if (now - hudBoxesAt < 250) return hudBoxes;
   hudBoxesAt = now;
   hudBoxes = [];
-  for (const el of document.querySelectorAll<HTMLElement>('#hud-captain .cs, #hud-map, #tc-menu, #tc-news, #tc-target, #hud-boss, #hud-watch, #tc-stick, #tc-speed, #tc-fire, #tc-cast, #tc-ammo, #tc-lock, #tc-special, #tc-act, #tc-deck, #hud-bottom > *, #toasts > .toast')) {
+  for (const el of document.querySelectorAll<HTMLElement>('#hud-captain .cs, #hud-map, #tc-menu, #tc-news, #tc-isle, #tc-offer, #hud-chat > .chat-toggle, #tc-target, #hud-boss, #hud-watch, #tc-stick, #tc-sail, #tc-speed, #tc-fire, #tc-cast, #tc-ammo, #tc-lock, #tc-special, #tc-act, #tc-deck, #hud-bottom > *, #toasts > .toast')) {
     const r = el.getBoundingClientRect();
     if (r.width > 2 && r.height > 2 && el.getClientRects().length) hudBoxes.push({ left: r.left - 6, top: r.top - 6, right: r.right + 6, bottom: r.bottom + 6 });
   }

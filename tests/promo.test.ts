@@ -197,7 +197,7 @@ test('/offers: the owner\'s figures and the tester\'s roll, in HELP in both lang
   for (const k of Object.keys(P_EN) as (keyof typeof P_EN)[]) assert.ok(/[а-яё]/i.test(P_RU[k]), k);
 });
 
-test('the offer card lists what is inside, each shot its own picture; the sea chip stands in the top band; the entry carousel waits for an open window (2026-10-15)', async () => {
+test('the offer card lists what is inside, each shot its own picture; the entry carousel waits for an open window (2026-10-15)', async () => {
   const { insideOf } = await import('../client/src/ui/promo.ts');
   const crate = insideOf('ammo2_590');
   assert.deepEqual(crate.map((x) => x.art), ['ammo_incendiary', 'ammo_heavy', 'ammo_long_shot']);
@@ -205,9 +205,48 @@ test('the offer card lists what is inside, each shot its own picture; the sea ch
   assert.ok(insideOf('starter').length >= 3, 'a bundle lists its things');
   const { readFileSync } = await import('node:fs');
   const src = readFileSync(new URL('../client/src/ui/promo.ts', import.meta.url), 'utf8');
-  assert.ok(src.includes("if (plate && plate.height && !document.body.classList.contains('tq-left')) {"), "under the captain's plate first");
   assert.ok(src.includes("if (this.over && this.overPlace === 'entry' && this.windowUp()) {"), 'steps down under a window');
-  const css = readFileSync(new URL('../client/promo.css', import.meta.url), 'utf8');
-  assert.ok(css.includes('animation: po-gleam 30s'), 'a gleam every half a minute');
-  assert.ok(css.includes('body.sea-fight .po-sea, body.reduce-motion .po-sea'), 'never in a fight or with less motion');
+});
+
+test("the offers are an icon under the captain's plate with a live clock, never sold inside the harbour's windows (owner, 2026-10-16)", async () => {
+  const { bySoonest, clockShort } = await import('../client/src/ui/promo.ts');
+  // the clock: mm:ss, h:mm:ss, a day or more in days and hours
+  assert.equal(clockShort(42 * 60_000 + 7_000), '42:07');
+  assert.equal(clockShort(3 * 3_600_000 + 59 * 60_000 + 12_000), '3:59:12');
+  assert.equal(clockShort(-5), '00:00');
+  assert.match(clockShort(2 * 86_400_000 + 4 * 3_600_000), /^2\s?(d|д) 4\s?(h|ч)$/);
+  // the icon shows the soonest to end; one with no end last
+  assert.deepEqual(bySoonest([{ id: 'a', until: 9_000 }, { id: 'b', until: 0 }, { id: 'c', until: 3_000 }]).map((x) => x.id), ['c', 'a', 'b']);
+  const { readFileSync } = await import('node:fs');
+  const read = (f: string) => readFileSync(new URL(`../client/${f}`, import.meta.url), 'utf8');
+  const src = read('src/ui/promo.ts');
+  // the icon: in the HUD's own layer (#touch), every context's offers, out of every fight, window and the island's scene
+  assert.ok(src.includes("id: 'tc-offer'"), 'the round icon');
+  assert.ok(src.includes("sea: ['sea', 'board', 'isle', 'all']"), 'every offer on the icon');
+  assert.ok(/!this\.d\.modal\(\) && !this\.d\.busy\(\)/.test(src), 'never over a window or in a fight');
+  assert.ok(src.includes("data-pofmt=\"hms\""), 'its clock ticks as mm:ss / h:mm:ss');
+  // no chip at sea any more, no strip in the harbour
+  assert.ok(!/promo-sea|promo-port|PROMO_PORT_SLOT|seaSpot/.test(src), 'the sea chip and the harbour strip are gone');
+  const port = read('src/ui/port.ts');
+  assert.ok(!/promo|PROMO|pshop|gravetide:shop/.test(port), "nothing sold in the harbour's window");
+  // its place: the left row under the plate (the chat, «Остров», the offer), red in the last hour
+  const css = read('seahud.css');
+  assert.ok(css.includes('body.simple #hud #touch > #tc-offer { --lr-x: calc(var(--tr-c) + var(--lr-i)); }'), 'after «Остров» in the left row');
+  assert.ok(read('promo.css').includes('.po-clock.urgent'), 'the clock red in its last hour');
+  assert.ok(!read('promo.css').includes('.promo-port-slot'), 'no harbour strip styles');
+});
+
+test("the round buttons in two rows (two under the chart, the rest under the plate) and the sail's «−» «+» by the helm (owner, 2026-10-16)", async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(new URL('../client/seahud.css', import.meta.url), 'utf8');
+  assert.ok(css.includes('body.simple #hud #touch > :is(#tc-menu, #tc-news) { left: auto; top: var(--tr-top);'), 'the menu and the news under the chart, one row');
+  assert.ok(css.includes('body.simple #hud #touch > :is(#tc-isle, #tc-offer) { right: auto; top: var(--lr-top);'), '«Остров» and the offer under the plate');
+  assert.ok(css.includes('body.simple.touch:not(.chat-open):not(.tac) #hud-chat > .chat-toggle { top: var(--lr-top); left: calc(var(--sa-l) + 8px);'), 'the chat heads the left row');
+  assert.ok(css.includes('body.simple.touch:not(.sea-docked) #touch > #tc-sail'), 'the sail buttons on a touch screen at sea');
+  const touch = readFileSync(new URL('../client/src/touch.ts', import.meta.url), 'utf8');
+  assert.ok(touch.includes('this.hooks.sail(want);'), 'the same input as the wheel and the keys');
+  const { EN, RU } = await import('../client/src/lang/ui/seahud.ts');
+  for (const k of ['sailUp', 'sailDown'] as const) {
+    assert.ok(EN[k] && RU[k] && /[а-яё]/i.test(RU[k]) && !/[a-z]/i.test(RU[k].replace(/\{[a-z]+\}/g, '')), k);
+  }
 });

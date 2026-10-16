@@ -5,6 +5,9 @@
 //   the stick   pull the way she should go (she turns to that course and holds it); the farther from the middle,
 //               the more sail (1–4 steps); let go and she keeps both. Hold the middle still to take all sail in;
 //               a double tap is the dash (every hand on the braces).
+//   − / +       beside the wheel on a touch screen (owner, 2026-10-16: «на мобиле нужна кнопка сбавить и добавить
+//               скорость»): a step of sail less or more (0 · ¼ · ½ · ¾ · full), the same input as the keys; the four
+//               pips between them are her sail now.
 //   the sea     a tap aims (a ship tapped becomes the target); two fingers pinch the zoom.
 // Shown on coarse pointers or after the first touch.
 
@@ -52,11 +55,22 @@ export class TouchControls {
   private pinch = new Map<number, { x: number; y: number }>();
   private pinchDist = 0;
   private hooks: TouchHooks;
+  /** The «−» / «+» of the sail beside the wheel and the sail they last showed. */
+  private sailBox: HTMLElement;
+  private sailNow = -1;
 
   constructor(hooks: TouchHooks) {
     this.hooks = hooks;
     this.stick = $('tc-stick');
     this.knob = $('tc-knob');
+    this.sailBox = sailButtons((d) => {
+      const want = Math.max(0, Math.min(4, Math.max(0, this.sailNow) + d));
+      if (want === this.sailNow) return;
+      this.hooks.sail(want);
+      this.showSail(want);
+      try { navigator.vibrate?.(8); } catch { /* not allowed */ }
+    });
+    $('touch').append(this.sailBox);
     if (matchMedia('(pointer: coarse)').matches) this.enable();
     addEventListener('touchstart', () => this.enable(), { once: true, passive: true });
     this.bindStick();
@@ -89,10 +103,26 @@ export class TouchControls {
     mark.classList.toggle('hidden', this.course === null);
     if (this.course !== null) mark.style.transform = `rotate(${this.course}rad)`;
     if (this.stick.dataset.sail !== String(sail)) this.stick.dataset.sail = String(sail);
+    this.showSail(sail);
     const cd = Math.max(0, Math.min(1, dashLeft)).toFixed(2);
     if (this.stick.style.getPropertyValue('--cd') !== cd) {
       this.stick.style.setProperty('--cd', cd);
       this.stick.classList.toggle('cooling', dashLeft > 0);
+    }
+  }
+
+  /** The sail's pips and the two buttons' names and limits (none less than furled, none more than full). */
+  private showSail(sail: number): void {
+    if (sail === this.sailNow) return;
+    this.sailNow = sail;
+    this.sailBox.dataset.sail = String(sail);
+    const [down, up] = [this.sailBox.querySelector<HTMLButtonElement>('[data-sail="-1"]')!, this.sailBox.querySelector<HTMLButtonElement>('[data-sail="1"]')!];
+    down.disabled = sail <= 0;
+    up.disabled = sail >= 4;
+    for (const [b, k] of [[down, 'sailDown'], [up, 'sailUp']] as const) {
+      const w = seaWord(k, { s: sail });
+      b.setAttribute('aria-label', w);
+      b.title = w;
     }
   }
 
@@ -233,4 +263,26 @@ export class TouchControls {
     const [a, b] = [...this.pinch.values()];
     return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
   }
+}
+
+/** «+» over the four pips over «−», beside the wheel (seahud.css #tc-sail). A press acts at once
+ *  (pointerdown, not the click's lift: a thumb on a rolling deck), one step a press. */
+function sailButtons(step: (d: 1 | -1) => void): HTMLElement {
+  const box = document.createElement('div');
+  box.id = 'tc-sail';
+  box.setAttribute('role', 'group');
+  const b = (d: 1 | -1, glyph: string) => `<button type="button" class="k-btn k-btn--icon sea-round tc-sail-b" data-sail="${d}"><span class="tc-sail-g" aria-hidden="true">${glyph}</span></button>`;
+  box.innerHTML = `${b(1, '+')}<span class="tc-sail-pips" aria-hidden="true"><i></i><i></i><i></i><i></i></span>${b(-1, '−')}`;
+  for (const el of box.querySelectorAll<HTMLButtonElement>('button')) {
+    el.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!el.disabled) step(Number(el.dataset.sail) as 1 | -1);
+    });
+    // (a keyboard's Enter or Space: the click with no pointer before it)
+    el.addEventListener('click', (e) => {
+      if (e.detail === 0 && !el.disabled) step(Number(el.dataset.sail) as 1 | -1);
+    });
+  }
+  return box;
 }

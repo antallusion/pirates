@@ -185,17 +185,17 @@ test('the fire wheel of twelve at the screen corner is a grid over the finger: o
 
 test("the top row (owner, 2026-10-15): the round buttons in one row under the chart, the card from the chart's top line between the plate and the chart", () => {
   const css = readFileSync(new URL('../client/seahud.css', import.meta.url), 'utf8');
-  // under the chart, right-aligned to it, ONE row («в одну линию»): the chat's at the right end on a phone, the menu
-  // beside it, «Остров», the news; one hidden leaves no hole
+  // (2026-10-16: «справа два и слева два под аватаркой») under the chart, right-aligned to it, one row: the menu on the
+  // edge, the news beside it; under the captain's plate one row: the chat, «Остров», her offer; one hidden leaves no hole
   assert.ok(css.includes('--tr-top: calc(var(--sa-t) + 8px + var(--mm) + 8px);'));
-  assert.ok(css.includes('body.simple #hud #touch > :is(#tc-menu, #tc-news, #tc-isle) { position: absolute;'));
-  assert.ok(css.includes('body.simple #hud #touch > #tc-menu { --tr-x: var(--tr-c); }'));
-  assert.ok(css.includes('body.simple #hud #touch > :is(#tc-isle, #tc-news) { --tr-x: calc(var(--tr-c) + 1); }'));
-  assert.ok(css.includes('#hud #touch > #tc-news { --tr-x: calc(var(--tr-c) + 2); }'));
+  assert.ok(css.includes('body.simple #hud #touch > :is(#tc-menu, #tc-news, #tc-isle, #tc-offer) { position: absolute;'));
+  assert.ok(css.includes('body.simple #hud #touch > #tc-news { --tr-x: 1; }'));
+  assert.ok(css.includes('body.simple #hud #touch > #tc-isle { --lr-x: var(--tr-c); }'));
+  assert.ok(css.includes('body.simple:has(#touch > #tc-isle:not(.hidden)) { --lr-i: 1; }'));
   assert.ok(!css.includes('--tr-y'), 'no second row');
   // the autosail's line stays in sight under a card on top (the column steps down under it)
   assert.ok(css.includes('#hud #hud-stack > :not(#hud-autosail) { visibility: hidden !important; }'));
-  assert.ok(css.includes('body.simple:not(.chat-open):not(.tac) #hud-chat > .chat-toggle { top: var(--tr-top); right: calc(var(--sa-r) + 8px);'));
+  assert.ok(css.includes('body.simple:not(.chat-open):not(.tac) #hud-chat > .chat-toggle { top: var(--lr-top); left: calc(var(--sa-l) + 8px);'));
   assert.ok(!/#tc-(menu|news) \{[^}]*right: calc\(var\(--sa-r\) \+ var\(--mm\) \+ 20px/.test(css), 'nothing left of the chart any more');
   // one top line: the portrait's ring at the chart's top; the card in the band, as tall as the plate
   assert.ok(css.includes('body.simple #hud-captain { top: calc(var(--sa-t) + 8px + var(--cs-face) * 0.05); }'));
