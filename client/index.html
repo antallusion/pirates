@@ -71,6 +71,7 @@
       };
       window.__bootFail = function (e) {
         var msg = String((e && e.message) || e);
+        B.failed = true;
         window.__bootMark('FAILED ' + msg.slice(0, 200));
         send('fail');
         // once, by itself: a module that did not come is asked for afresh
@@ -101,9 +102,9 @@
           }).observe({ type: 'resource', buffered: true });
         } catch (e) {}
         setTimeout(function () { if (!B.ready) shell(true); }, 700);
-        setTimeout(function () { if (!B.ready) { window.__bootMark('slow'); shell(true, T.slow, true); } }, 20000);
-        setTimeout(function () { if (!B.ready) send('stalled 30s'); }, 30000);
-        setTimeout(function () { if (!B.ready) send('stalled 90s'); }, 90000);
+        setTimeout(function () { if (!B.ready && !B.failed) { window.__bootMark('slow'); shell(true, T.slow, true); } }, 20000);
+        setTimeout(function () { if (!B.ready && !B.failed) send('stalled 30s'); }, 30000);
+        setTimeout(function () { if (!B.ready && !B.failed) send('stalled 90s'); }, 90000);
       });
       addEventListener('load', function () { window.__bootMark('load'); });
     })();
