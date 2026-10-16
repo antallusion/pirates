@@ -110,7 +110,9 @@ export function buildActs(f: ActFacts): Act[] {
     }
     out.push({ id: 'attack_stop', icon: 'item_ship_wheel', label: LS('a.stop'), title: LS('a.stopTitle') });
   }
-  if (f.port) out.push({ id: 'dock', icon: 'map_port', label: L('a.dock'), sub: f.port.name, title: `${L('a.dock')}: ${f.port.name}`, key: 'dock' });
+  // In a harbour's waters: «Причалить» — the only way into it (owner, 2026-10-16: «причаливание и отплытие по кнопкам
+  // только сделать, чтобы с территории меня автоматом в гавань не портовало»); far off, «В порт» sails her there.
+  if (f.port) out.push({ id: 'dock', icon: 'map_port', label: L('a.moor'), sub: f.port.name, title: `${L('a.moor')}: ${f.port.name}`, key: 'dock' });
   else if (f.homeport) out.push({ id: 'homeport', icon: 'map_port', label: L('a.dock'), sub: f.homeport.name, title: `${L('a.dock')}: ${f.homeport.name}` });
   const l = f.landable;
   if (l && !l.blocked) {
@@ -135,7 +137,7 @@ export function buildActs(f: ActFacts): Act[] {
   for (const k of f.looks ?? []) out.push({ id: 'look', icon: LOOK_ICON[k.kind], label: L('a.look'), sub: k.name, title: L('a.lookTitle', { name: k.name }), arg: k.kind });
   const r = f.repair;
   if (r && (r.repairing || (!r.combat && r.hurt && !r.short))) out.push({ id: 'repair', icon: 'prof_carpenter', label: L(r.repairing ? 'a.repairStop' : 'a.repair'), title: L(r.repairing ? 'a.repairStop' : 'a.repair'), key: 'repair' });
-  if (f.watchHome && !f.grabbed) {
+  if ((f.watchHome || (f.port && !f.board && !at && !f.roam?.lead)) && !f.grabbed) {
     const i = out.findIndex((a) => a.id === 'dock' || a.id === 'homeport');
     if (i > 0) out.unshift(...out.splice(i, 1));
   }

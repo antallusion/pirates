@@ -452,6 +452,7 @@ baseWindow.onLayout = () => { if (modal === 'base') refreshModal(); };
 /** Her island (owner, 2026-10-15: «кнопка входа на остров … отдельное абсолютно новое окно с постройками»): the island
  *  screen over the whole screen; without an island of her own, the old window says how to have one. */
 function openBase(): void {
+  if (!isleScene.isOpen) haltForIsle();
   if (state.self?.homeIsle === null || state.self?.homeIsle === undefined) {
     baseWindow.tab = 'plots';
     baseWindow.open();
@@ -471,6 +472,20 @@ function openBase(): void {
   if (hud.chatPanel.isOpen) hud.chatPanel.close();
   isleKey = selfKeyFor('base');
   isleScene.enter(state);
+}
+/** Owner, 2026-10-16 («переходя на остров корабль должен останавливаться»): going onto her island stops her at sea —
+ *  sails down, no way on, the helmsman's course, a goal's run, «В порт» and a landing's run dropped; the server does it
+ *  (Game.halt) and her helm here keeps the sails down. */
+function haltForIsle(): void {
+  if (!inGame || state.self?.dockedAt || !state.ownDisplay) return;
+  touch.course = null;
+  goalRun = null;
+  homeRun = null;
+  claimRun = null;
+  pendingDock = null;
+  setMark(null);
+  state.input.sail = 0;
+  net.send({ t: 'halt' });
 }
 /** Back to the sea from the island screen (into the harbour when she lies in one). */
 function leaveIsle(harbour = true): void {
@@ -601,9 +616,12 @@ function stepGoal(): void {
   const l = state.self?.landable;
   const r = run.step({ now: performance.now(), docked: state.self?.dockedAt ?? null, own: own ? { x: own.x, y: own.y } : null, region: state.region, autosail: state.autosail, stop: helmStop, landable: !!l && !l.blocked, place: rt?.key === run.key ? rt.view : null });
   switch (r.do) {
-    case 'dock':
-      requestDock(false);
+    case 'atport': {
+      // Not put in by herself (owner, 2026-10-16): the harbour's «Причалить» is hers to press.
+      const p = state.ports.find((x) => x.id === r.port);
+      hud.toast(U2('goal.atPort', { port: sv(p?.name ?? '') }), 'good');
       break;
+    }
     case 'land':
       sendLand();
       break;
@@ -3582,6 +3600,8 @@ function requestDock(bribe: boolean, refused = false): void {
 let homeport: ClientState['ports'][number] | null = null;
 /** When she last cast off (the page's clock), and how long «В порт» keeps quiet after it (ms). */
 let castOffAt = -1e9, wasDocked = false;
+/** The open sea drawn once in this page (its pictures are in: a cast-off after it needs no loading screen). */
+let seaSeen = false;
 const CAST_OFF_QUIET = 30_000;
 let homeRun: string | null = null, homeRunAt = 0;
 function stepPendingDock(): void {
@@ -3908,12 +3928,15 @@ function step(t: number): void {
     sendInput(t);
     const docked = !!state.self?.dockedAt;
     if (wasDocked && !docked) {
-      // out of the harbour: what the open sea shows now (ships, islands, flags) in before it is seen
-      beginLoad('sea', 6000).settle().done();
+      // out of the harbour: what the open sea shows now (ships, islands, flags) in before it is seen — the first time in
+      // this page only (owner, 2026-10-16: «есть лаги когда я захожу в порт и пытаюсь отплыть»: every «В море» put the
+      // loading screen up for 0.6–6 s over a sea whose pictures were all in already)
+      if (!seaSeen) beginLoad('sea', 6000).settle().done();
       castOffAt = performance.now();
       goalOnCastOff(); // ux2: «Курс к заданию»
     }
     wasDocked = docked;
+    if (!docked && state.ownDisplay) seaSeen = true;
     stepPendingDock();
     stepGoal(); // ux2: the run to a quest's place
     stepClaimRun();

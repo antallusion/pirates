@@ -205,14 +205,16 @@ export interface RoutePlace {
   hint?: string;
 }
 
-/** What the run asks main.ts to do this moment (the course itself is the server's). */
-export type RouteStep = { do: 'none' } | { do: 'dock' } | { do: 'land' } | { do: 'arrived'; hint?: string };
+/** What the run asks main.ts to do this moment (the course itself is the server's). `atport`: she has come into the
+ *  harbour's waters of a step done in port — the «Причалить» button is hers to press (owner, 2026-10-16: «причаливание
+ *  и отплытие по кнопкам только сделать, чтобы с территории меня автоматом в гавань не портовало»); said once. */
+export type RouteStep = { do: 'none' } | { do: 'atport'; port: string } | { do: 'land' } | { do: 'arrived'; hint?: string };
 
 /** The run to a goal's nearest place, kept between frames: its arrival's deeds. */
 export class RouteRun {
   readonly key: string;
   private started: number;
-  private dockAt = -1e9;
+  private toldFor = '';
   private landedFor = '';
   private arrivedFor = '';
   private dockR: number;
@@ -232,9 +234,9 @@ export class RouteRun {
     // a ship it follows moves: its spot is the ship, not the metres
     const spot = t.ship !== undefined ? `s${t.ship}` : `${Math.round(t.x / 100)},${Math.round(t.y / 100)}`;
     if (t.act === 'dock' && t.port && (d < this.dockR || (cameIn && d < this.dockR * 2.5))) {
-      if (v.now - this.dockAt < 2500) return { do: 'none' };
-      this.dockAt = v.now;
-      return { do: 'dock' };
+      if (this.toldFor === t.port) return { do: 'none' };
+      this.toldFor = t.port;
+      return { do: 'atport', port: t.port };
     }
     if (t.act === 'land' && v.landable && (d <= t.r || cameIn) && this.landedFor !== spot) {
       this.landedFor = spot;

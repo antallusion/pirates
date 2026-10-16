@@ -283,7 +283,9 @@ test('the client: on arrival it puts in at a port, lands at an island, says the 
   assert.deepEqual(r.step({ ...base, own: { x: 1050, y: 1000 }, place: shoal }), { do: 'arrived', hint: ROUTE_HINTS.net });
   assert.deepEqual(r.step({ ...base, own: { x: 1050, y: 1000 }, place: shoal }), { do: 'none' }, 'said once');
   const port = new RouteRun('g:g_contract', 0, 420);
-  assert.equal(port.step({ ...base, own: { x: 1200, y: 1000 }, place: { x: 1000, y: 1000, r: 400, act: 'dock', port: 'p' } }).do, 'dock');
+  // owner, 2026-10-16: never put in by herself — in the harbour's waters she is told to press «Причалить», once
+  assert.deepEqual(port.step({ ...base, own: { x: 1200, y: 1000 }, place: { x: 1000, y: 1000, r: 400, act: 'dock', port: 'p' } }), { do: 'atport', port: 'p' });
+  assert.equal(port.step({ ...base, now: 9000, own: { x: 1100, y: 1000 }, place: { x: 1000, y: 1000, r: 400, act: 'dock', port: 'p' } }).do, 'none');
   const land = new RouteRun('d:land', 0, 420);
   assert.equal(land.step({ ...base, landable: true, own: { x: 1200, y: 1000 }, place: { x: 1000, y: 1000, r: 600, act: 'land' } }).do, 'land');
 });
