@@ -376,8 +376,8 @@ export function upgradedShare(level: number): number {
  *  gunners and the boarders, a pirate's crew is the sea's common one. (Eight kinds folded into seven slots made a
  *  pirate's might jump with a man more or less; one kind a tier keeps it smooth in the head count.) Owner, 2026-10-16: the
  *  deck's cover (−25%, beside it or behind it on the shot's line) and the sea's mind by her level moved ⚓5, ⚓8 and ⚓9
- *  off even (37%, 65%, 38% for the ladder's crew): ⚓5 0.6/1.21 → 0.52/1.05, ⚓8 1.02 → 1.12, ⚓9 0.62 → 0.55. */
-export const PIRATE_CAL: [number, number][] = [[1, 1], [1, 1], [1, 1], [0.25, 0.76], [0.46, 0.33], [0.52, 1.05], [0.79, 0.79], [0.95, 0.95], [1.12, 1.12], [0.55, 0.55], [0.62, 0.62]];
+ *  off even (37%, 65%, 38% for the ladder's crew): ⚓5 0.6/1.21 → 0.52/1.05, ⚓8 1.02 → 1.12, ⚓9 0.62 → 0.59. */
+export const PIRATE_CAL: [number, number][] = [[1, 1], [1, 1], [1, 1], [0.25, 0.76], [0.46, 0.33], [0.52, 1.05], [0.79, 0.79], [0.95, 0.95], [1.12, 1.12], [0.59, 0.59], [0.62, 0.62]];
 export const PIRATE_UP_LEVEL = 9;
 
 function pirateShares(level: number): { u: UnitId; x: number }[] {
