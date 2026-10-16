@@ -23,12 +23,14 @@ export function looksLikeProse(s: string): boolean {
   const bare = s.replace(/\{\d+\}/g, '').trim();
   if (bare.length < 4 || !/[a-z]/.test(bare)) return false;
   if (/^\[/.test(bare) || /^[a-z_]+(\.[a-z_]+)*$/.test(bare) || /^[a-z]+[A-Z]\w*$/.test(bare)) return false; // log tags, ids, camelCase
-  if (/^(SELECT|INSERT|UPDATE|DELETE|CREATE)\b/.test(bare)) return false;
+  if (/^(SELECT|INSERT|UPDATE|DELETE|CREATE|PRAGMA)\b/.test(bare)) return false;
   if (/^[\w-]+$/.test(bare) && !/^[A-Z]/.test(bare)) return false; // a single lower-case token
   // A word between the holes of a sentence ("{0} rises! {1}", "+{0} XP — {1}") is prose too.
   if (/\{\d+\}.*\{\d+\}/.test(s) && /[A-Za-z]{2,}[.!?]?/.test(bare) && /\s/.test(s.replace(/\{\d+\}/g, 'x'))) return true;
   return /\s/.test(bare) || /^[A-Z][a-z]+[.!?]?$/.test(bare);
 }
+
+const OWNER_PAGES = new Set(['telemetry.ts', 'ops.ts']);
 
 export function extract(root = 'server/src'): string[] {
   const found = new Set<string>();
@@ -36,8 +38,9 @@ export function extract(root = 'server/src'): string[] {
   const walk = (d: string) => {
     for (const f of readdirSync(d, { withFileTypes: true })) {
       if (f.isDirectory()) walk(join(d, f.name));
-      // The admin console speaks the tester's language too (the owner plays with it).
-      else if (f.name.endsWith('.ts')) files.push(join(d, f.name));
+      // The admin console speaks the tester's language too (the owner plays with it). The owner's own web pages
+      // (http/telemetry.ts, http/ops.ts: Russian only, never shown to a player) are not the game's sentences.
+      else if (f.name.endsWith('.ts') && !(d.endsWith('http') && OWNER_PAGES.has(f.name))) files.push(join(d, f.name));
     }
   };
   walk(root);
