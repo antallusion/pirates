@@ -7,7 +7,7 @@
 import { ISO_MAP_OF, isoSheet } from '../../shared/src/data/isleiso.ts';
 import { deckArt } from '../../shared/src/data/fleet.ts';
 import { SF } from '../../shared/src/protocol.ts';
-import { assetIds, loadManifest, prefetchAssets, warmAll, assetUrl } from './assets.ts';
+import { assetIds, keepUrls, loadManifest, prefetchAssets, warmAll, assetUrl } from './assets.ts';
 import type { ClientState } from './state.ts';
 import { filmDue } from './ui/cutscene.ts';
 
@@ -39,9 +39,8 @@ export function startWarm(): void {
     void loadManifest().then(() => {
       const sw = (navigator as Navigator & { serviceWorker?: ServiceWorkerContainer }).serviceWorker?.controller;
       if (!sw) return;
-      const keep: string[] = [];
-      for (const p of ['', 'isle.']) for (const id of assetIds(p)) if (p || !id.startsWith('isle.')) keep.push(assetUrl(id)!);
-      sw.postMessage({ t: 'prune', keep });
+      // (every picture's address as this browser asks for it — its AVIF twin, its sheet: docs/33)
+      sw.postMessage({ t: 'prune', keep: keepUrls() });
     });
   }, 90000);
 }

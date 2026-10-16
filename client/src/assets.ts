@@ -29,6 +29,13 @@ interface ManifestEntry {
   v?: string;
   /** Its phone's half-size copy's version, when there is one. */
   m?: string;
+  /** Its AVIF twin's version (tools/art/pack_assets.py), and the half-size copy's: asked for when the browser decodes
+   *  AVIF (docs/33). */
+  a?: string;
+  ma?: string;
+  /** Packed in a sheet (tools/art/pack_assets.py): [sheet, x, y, w, h] — a canvas's sprite comes cut from the sheet; an
+   *  <img> still asks for its own file. */
+  s?: [string, number, number, number, number];
   /** A port painting's slips between its piers: [middle x, width, top y, depth] as shares of the painting. */
   slips?: [number, number, number, number][];
   /** The island screen's pictures (tools/art/isle_iso.py): the plot diamond's bottom vertex in the file, and its plot. */
@@ -38,7 +45,10 @@ interface ManifestEntry {
 
 interface Manifest {
   cdn?: string;
+  /** Where the pictures are served from (ASSET_ORIGIN on the server: a CDN's host), '' for this page's own. */
+  origin?: string;
   assets: Record<string, ManifestEntry>;
+  sheets?: Record<string, { file: string; v?: string; a?: string; w: number; h: number }>;
 }
 
 export interface Sprite {
@@ -120,8 +130,17 @@ const queues: [Job[], Job[]] = [[], []];
 const warmQ: string[] = [];
 const warming = new Map<string, Promise<void>>();
 const warmed = new Set<string>();
-/** At most this many pictures in flight at once (HTTP/1.1's six to a host; a phone gains nothing from more). */
-const MAX_LIVE = 6;
+/** At most this many pictures in flight at once: HTTP/1.1's six to a host; over HTTP/2 or 3 (one connection, the requests
+ *  side by side: gravetidegame.com's nginx) sixteen — on a slow line each picture's round trip was waited out six at a
+ *  time (docs/33). */
+const MAX_LIVE = (() => {
+  try {
+    const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    return /^h[23]/.test(nav?.nextHopProtocol ?? '') ? 16 : 6;
+  } catch {
+    return 6;
+  }
+})();
 /** The background's share: two, and only while no screen is waiting for a picture. */
 const MAX_WARM = 2;
 let live = 0;
@@ -133,17 +152,49 @@ const stats = { loaded: 0, warmed: 0, failed: 0, warmBytes: 0 };
 /** A phone (a touch screen whose canvas is capped small, renderer.ts): the sea's tiles come at half size. */
 const PHONE = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches && Math.max(screen.width, screen.height) * Math.min(1.5, devicePixelRatio || 1) <= 1800;
 
-/** A file's address with its version (a phone's half-size copy when there is one: tools/art/small_tex.py). */
+/** The browser decodes AVIF (a one-pixel picture tried once, before the manifest is read): the AVIF twins are asked for. */
+let AVIF = false;
+const avifProbe: Promise<void> = typeof Image === 'undefined' ? Promise.resolve() : new Promise<void>((done) => {
+  const img = new Image();
+  const t = setTimeout(done, 1500);
+  img.onload = () => {
+    AVIF = img.naturalWidth > 0;
+    clearTimeout(t);
+    done();
+  };
+  img.onerror = () => {
+    clearTimeout(t);
+    done();
+  };
+  img.src = 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADrbWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAAAAAAAOcGl0bQAAAAAAAQAAAB5pbG9jAAAAAEQAAAEAAQAAAAEAAAETAAAAKAAAAChpaW5mAAAAAAABAAAAGmluZmUCAAAAAAEAAGF2MDFDb2xvcgAAAABqaXBycAAAAEtpcGNvAAAAFGlzcGUAAAAAAAAAAQAAAAEAAAAQcGl4aQAAAAADCAgIAAAADGF2MUOBAAwAAAAAE2NvbHJuY2x4AAEADQAGgAAAABdpcG1hAAAAAAAAAAEAAQQBAoMEAAAAMG1kYXQSAAoIGAAGiAhoNCAyGhlHh4Yhh5555oAAAJBAyRxhSytNj1FFTqSg'; // (1×1, Pillow's AVIF)
+});
+
+/** The pictures' host: ASSET_ORIGIN's (a CDN) or this page's. */
+const origin = () => manifest?.origin ?? '';
+
+/** A file's address with its version: its AVIF twin when the browser takes AVIF (docs/33), a phone's half-size copy
+ *  when there is one (tools/art/small_tex.py). */
 export function fileUrl(e: ManifestEntry): string {
-  if (e.m && PHONE) return '/assets/' + e.local.replace(/\.webp$/, '.m.webp') + `?v=${e.m}`;
+  const o = origin();
+  if (e.m && PHONE) return o + '/assets/' + (AVIF && e.ma ? e.local.replace(/\.webp$/, '.m.avif') + `?v=${e.ma}` : e.local.replace(/\.webp$/, '.m.webp') + `?v=${e.m}`);
+  if (AVIF && e.a) return o + '/assets/' + e.local.replace(/\.(webp|png|jpg)$/, '.avif') + `?v=${e.a}`;
   const v = e.v ?? (e.rev ? String(e.rev) : '');
-  return '/assets/' + e.local + (v ? `?v=${v}` : '');
+  return o + '/assets/' + e.local + (v ? `?v=${v}` : '');
+}
+
+/** A sheet's address (its AVIF twin when the browser takes AVIF). */
+function sheetUrl(name: string): string | null {
+  const sh = manifest?.sheets?.[name];
+  if (!sh) return null;
+  return origin() + '/assets/' + (AVIF && sh.a ? sh.file.replace(/\.webp$/, '.avif') + `?v=${sh.a}` : sh.file + (sh.v ? `?v=${sh.v}` : ''));
 }
 
 function loadImage(src: string, high: boolean): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.decoding = 'async';
+    // (from a CDN's host: asked with CORS, so the canvas that measures and cuts it is not tainted)
+    if (origin()) img.crossOrigin = 'anonymous';
     if (high) (img as HTMLImageElement & { fetchPriority?: string }).fetchPriority = 'high';
     img.onload = () => {
       // decoded off the main thread before it is first drawn (no hitch on the frame that shows it)
@@ -205,9 +256,12 @@ function stopWarming(keep: string): void {
 
 function warm(id: string): void {
   const e = manifest!.assets[id];
+  // a sheet's picture: the sheet is fetched (once for all its pictures)
+  const url = (e.s && sheetUrl(e.s[0])) || fileUrl(e);
+  if (e.s) for (const [k, x] of Object.entries(manifest!.assets)) if (x.s?.[0] === e.s[0] && k !== id) warmed.add(k);
   const ctl = new AbortController();
   warmCtl.set(id, ctl);
-  const p = fetch(fileUrl(e), { priority: 'low', signal: ctl.signal } as RequestInit).then(async (r) => {
+  const p = fetch(url, { priority: 'low', signal: ctl.signal, ...(origin() ? { mode: 'cors' } : {}) } as RequestInit).then(async (r) => {
     if (!r.ok) return;
     const b = await r.arrayBuffer();
     stats.warmed++;
@@ -235,6 +289,24 @@ function run(job: Job): void {
     pump();
   };
   if (!e) return finish(false);
+  if (e.s && manifest?.sheets?.[e.s[0]]) {
+    // packed in a sheet: the sheet once, every picture of it cut out (a canvas the size of the picture)
+    fromSheet(e.s[0], job.prio === 0).then((ok) => {
+      if (ok && images.has(job.id)) return finish(true);
+      // the sheet failed (or lacks it): the picture's own file
+      loadImage(fileUrl(e), job.prio === 0).then((img) => {
+        images.set(job.id, new Pic(img));
+        stats.loaded++;
+        epoch++;
+        finish(true);
+      }, () => {
+        failed.add(job.id);
+        stats.failed++;
+        finish(false);
+      });
+    });
+    return;
+  }
   const src = fileUrl(e);
   // being fetched into the cache already: a cache hit once that is in
   const before = warming.get(job.id) ?? Promise.resolve();
@@ -251,6 +323,36 @@ function run(job: Job): void {
     stats.failed++;
     finish(false);
   });
+}
+
+const sheetsIn = new Map<string, Promise<boolean>>();
+/** A sheet loaded and cut into its pictures (each a canvas that stands for an <img>: naturalWidth/Height as the image
+ *  had — the renderers draw and measure it unchanged). */
+function fromSheet(name: string, high: boolean): Promise<boolean> {
+  let p = sheetsIn.get(name);
+  if (p) return p;
+  const url = sheetUrl(name)!;
+  p = loadImage(url, high).catch(() => loadImage(url, high)).then((sheet) => {
+    for (const [id, e] of Object.entries(manifest!.assets)) {
+      if (e.s?.[0] !== name || images.has(id)) continue;
+      const [, x, y, w, h] = e.s;
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      c.getContext('2d')!.drawImage(sheet, x, y, w, h, 0, 0, w, h);
+      Object.defineProperties(c, { naturalWidth: { value: w }, naturalHeight: { value: h }, complete: { value: true } });
+      images.set(id, new Pic(c as unknown as HTMLImageElement));
+      patterns.delete(id);
+      stats.loaded++;
+    }
+    epoch++;
+    return true;
+  }, () => {
+    sheetsIn.delete(name); // (asked again next time; the pictures' own files meanwhile)
+    return false;
+  });
+  sheetsIn.set(name, p);
+  return p;
 }
 
 /** Ask for a picture at a priority (a higher ask moves a waiting one up). */
@@ -283,6 +385,7 @@ export function loadManifest(): Promise<boolean> {
         const r = await fetch(url);
         if (!r.ok) continue;
         manifest = (await r.json()) as Manifest;
+        await avifProbe;
         return true;
       } catch {
         /* the next */
@@ -444,6 +547,14 @@ export function assetFor(id: string): string | null {
   const si = STAND_IN[id];
   if (si) return assetFor(si);
   return figurePose(id);
+}
+
+/** Every address the pictures may be asked by now (the service worker keeps these and drops the rest: scenewarm.ts). */
+export function keepUrls(): string[] {
+  if (!manifest) return [];
+  const out = Object.values(manifest.assets).map(fileUrl);
+  for (const name of Object.keys(manifest.sheets ?? {})) out.push(sheetUrl(name)!);
+  return out;
 }
 
 /** The asset's address (an <img> or a CSS background loads it itself) — the stand-in's for one not painted. */

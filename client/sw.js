@@ -1,7 +1,8 @@
 // GRAVETIDE's service worker (owner, 2026-10-15: «все должно подгружаться быстро»): the game's pictures kept on the
 // phone, so a second visit shows them at once.
 //  - Only the versioned pictures (`/assets/…?v=…`, client/src/assets.ts) are kept: an address that never changes, so
-//    they are served from the store first and never go stale. A reworked picture is a new address.
+//    they are served from the store first and never go stale. A reworked picture is a new address. That takes in the
+//    AVIF twins and the sheets (docs/33: tools/art/pack_assets.py), and a CDN's host when ASSET_ORIGIN sets one.
 //  - Never the page, the code, the styles, the manifest, the films (asked in ranges), the API or the socket: those go
 //    to the network as they would without this worker (the server's ETag answers «not modified»).
 //  - Its store has a version: a new worker drops the stores of the old ones; the page sends the manifest's addresses
@@ -18,13 +19,15 @@ self.addEventListener('activate', (e) => {
   })());
 });
 
-const KEEP = /\.(webp|png|jpg)$/;
+const KEEP = /\.(webp|png|jpg|avif)$/;
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin || !url.pathname.startsWith('/assets/') || !url.searchParams.has('v') || !KEEP.test(url.pathname)) return;
+  // (this page's host, or the pictures' CDN — ASSET_ORIGIN, docs/33: asked with CORS, so its answers can be kept)
+  if (!url.pathname.startsWith('/assets/') || !url.searchParams.has('v') || !KEEP.test(url.pathname)) return;
+  if (url.origin !== self.location.origin && req.mode !== 'cors') return;
   e.respondWith((async () => {
     const store = await caches.open(STORE);
     const hit = await store.match(url.href);

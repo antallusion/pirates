@@ -29,6 +29,7 @@ const MIME: Record<string, string> = {
   '.png': 'image/png',
   '.webp': 'image/webp',
   '.jpg': 'image/jpeg',
+  '.avif': 'image/avif',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
@@ -72,6 +73,19 @@ async function encoded(e: Entry, req: IncomingMessage): Promise<{ body: Buffer; 
   return { body: e.body, enc: null };
 }
 
+/** tools/art/pack_assets.py's map: id → [sheet, x, y, w, h]. */
+interface SheetIndex {
+  sheets: Record<string, { file: string; w: number; h: number }>;
+  ids: Record<string, [string, number, number, number, number]>;
+}
+
+/** A file's version: its size and its time. */
+const ver = (s: { size: number; mtimeMs: number }) => `${s.size.toString(36)}${Math.floor(s.mtimeMs / 1000).toString(36)}`;
+
+/** Where the pictures are served from (docs/33 §CDN): ASSET_ORIGIN=https://cdn.example.com puts a CDN's host in the
+ *  versioned manifest — the client asks it for every /assets/… picture (with CORS); unset, this server's own. */
+const ASSET_ORIGIN = (process.env.ASSET_ORIGIN ?? '').trim().replace(/\/+$/, '');
+
 export function createStaticHandler(root: string) {
   const mounts: Mount[] = [
     { prefix: '/shared/', dir: resolve(root, 'shared') },
@@ -92,7 +106,8 @@ export function createStaticHandler(root: string) {
     vmanBusy ??= (async () => {
       try {
         const m = JSON.parse(await readFile(file, 'utf8')) as { assets: Record<string, { local: string; rev?: number }> };
-        const out: { assets: Record<string, unknown> } = { assets: {} };
+        const sheets = await readFile(join(assetsDir, 'sheets', 'index.json'), 'utf8').then((t) => JSON.parse(t) as SheetIndex, () => null);
+        const out: { assets: Record<string, unknown>; sheets?: Record<string, unknown>; origin?: string } = { assets: {} };
         await Promise.all(Object.entries(m.assets).map(async ([id, e]) => {
           // what the client reads only (the painter's job ids and the dead CDN's addresses stay home)
           const rest: Record<string, unknown> = { local: e.local };
@@ -104,13 +119,34 @@ export function createStaticHandler(root: string) {
             const half = e.local.replace(/\.webp$/, '.m.webp');
             if (half !== e.local) {
               const h = await stat(join(assetsDir, half)).catch(() => null);
-              if (h) rest.m = `${h.size.toString(36)}${Math.floor(h.mtimeMs / 1000).toString(36)}`;
+              if (h) rest.m = ver(h);
+              const ha = h ? await stat(join(assetsDir, e.local.replace(/\.webp$/, '.m.avif'))).catch(() => null) : null;
+              if (ha) rest.ma = ver(ha);
             }
+            // its AVIF twin (tools/art/pack_assets.py, docs/33): the client asks for it when the browser takes AVIF
+            const av = await stat(join(assetsDir, e.local.replace(/\.(webp|png|jpg)$/, '.avif'))).catch(() => null);
+            if (av && /\.(webp|png|jpg)$/.test(e.local)) rest.a = ver(av);
+            const sh = sheets?.ids[id];
+            if (sh) rest.s = sh;
           } catch {
             /* a file not there: its plain address */
           }
           out.assets[id] = rest;
         }));
+        // the sheets (tools/art/pack_assets.py): a canvas's sprites come cut from them (client/src/assets.ts)
+        if (sheets) {
+          const list: Record<string, unknown> = {};
+          await Promise.all(Object.entries(sheets.sheets).map(async ([name, sh]) => {
+            const st2 = await stat(join(assetsDir, sh.file)).catch(() => null);
+            if (!st2) return;
+            const av = await stat(join(assetsDir, sh.file.replace(/\.webp$/, '.avif'))).catch(() => null);
+            list[name] = { file: sh.file, w: sh.w, h: sh.h, v: ver(st2), ...(av ? { a: ver(av) } : {}) };
+          }));
+          out.sheets = list;
+          // (a picture whose sheet is not on disk keeps its own file)
+          for (const a of Object.values(out.assets) as { s?: [string] }[]) if (a.s && !list[a.s[0]]) delete a.s;
+        }
+        if (ASSET_ORIGIN) out.origin = ASSET_ORIGIN;
         const body = Buffer.from(JSON.stringify(out), 'utf8');
         const entry: Entry = { mtime: st.mtimeMs, body, etag: `W/"m${hash(body)}"` };
         vman = { at: Date.now(), mtime: st.mtimeMs, entry };
@@ -204,7 +240,7 @@ export function createStaticHandler(root: string) {
         const links = list.map((u) => `<link rel="modulepreload" href="${u}${bq}">`).join('');
         // the title's key art painted with the page itself, before the game's script is in
         const art = await versionedManifest().then((m) => (JSON.parse(m.body.toString('utf8')) as { assets: Record<string, { local: string; v?: string }> }).assets['art.keyart'], () => undefined);
-        const ka = art ? `/assets/${art.local}${art.v ? `?v=${art.v}` : ''}` : '';
+        const ka = art ? `${ASSET_ORIGIN}/assets/${art.local}${art.v ? `?v=${art.v}` : ''}` : '';
         let html = entry.body.toString('utf8').replace('</head>', `${ka ? `<link rel="preload" as="image" href="${ka}" fetchpriority="high">` : ''}${links}\n</head>`);
         if (bq) html = html.replace("import('/src/main.ts')", `import('/src/main.ts${bq}')`);
         if (ka) html = html.replace('<div class="keyart" data-asset="art.keyart">', `<div class="keyart" data-asset="art.keyart" style="background-image:url('${ka}')">`);
@@ -243,7 +279,7 @@ export function createStaticHandler(root: string) {
         return true;
       }
       // a versioned asset (the manifest's `?v=`) never changes at its address; the rest is asked again each time
-      const picture = ext === '.png' || ext === '.webp' || ext === '.jpg' || ext === '.mp4';
+      const picture = ext === '.png' || ext === '.webp' || ext === '.jpg' || ext === '.avif' || ext === '.mp4';
       const cc = mount.prefix === '/assets/' && url.searchParams.has('v') ? 'public, max-age=31536000, immutable' : picture ? 'public, max-age=86400' : 'no-cache';
       return await send(req, res, entry, ext, cc);
     } catch {
@@ -266,6 +302,8 @@ async function send(req: IncomingMessage, res: ServerResponse, entry: Entry, ext
     ETag: entry.etag,
   };
   if (ext === '.mp4') head['Accept-Ranges'] = 'bytes';
+  // the pictures may be drawn on a canvas from a CDN's host (docs/33: ASSET_ORIGIN): any page may read them
+  if (ext === '.webp' || ext === '.avif' || ext === '.png' || ext === '.jpg') head['Access-Control-Allow-Origin'] = '*';
   if (TEXT.has(ext)) head['Vary'] = 'Accept-Encoding';
   const inm = req.headers['if-none-match'];
   if (inm && inm.split(/\s*,\s*/).includes(entry.etag)) {
