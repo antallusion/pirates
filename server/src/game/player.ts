@@ -1,5 +1,6 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
+import { SnapState } from '../../../shared/src/codec.ts';
 import { streakView } from './streak.ts';
 import { seaRepairView } from './searepair.ts';
 import type { Look } from '../../../shared/src/data/looks.ts';
@@ -416,6 +417,8 @@ export class PlayerSession {
   knownEntities = new Set<number>();
   /** Delta snapshots: what this client last received for each entity, and when. */
   sentRows = new Map<number, { key: string; t: number }>();
+  /** The snapshot codec's per-connection base (codec v7: rows go out as field deltas against it). */
+  snapBase = new SnapState();
   snapCount = 0;
   /** Ticks between this captain's snapshots: 2 (10 Hz), or 4 in a crowd; and the last tick of events sent. */
   snapEvery = 2;

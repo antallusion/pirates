@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { PROTOCOL_VERSION } from '../shared/src/constants.ts';
-import { decodeSnap } from '../shared/src/codec.ts';
+import { decodeSnap, MissingBase, SnapState } from '../shared/src/codec.ts';
 import { Gateway, parseZones, passThrough } from '../server/src/net/gateway.ts';
 import { F, frame, FrameReader, LinkServer, closePayload, readClose } from '../server/src/net/link.ts';
 import { makeGame } from './helpers.ts';
@@ -40,6 +40,7 @@ class Client {
   texts: { t: string; [k: string]: unknown }[] = [];
   bins = 0;
   lastSnap: ReturnType<typeof decodeSnap> | null = null;
+  snapBase = new SnapState();
   closeCode: number | null = null;
   constructor(url: string) {
     this.ws = new WebSocket(url);
@@ -47,8 +48,16 @@ class Client {
     this.ws.onmessage = (ev) => {
       if (ev.data instanceof ArrayBuffer) {
         this.bins++;
-        this.lastSnap = decodeSnap(ev.data);
-      } else this.texts.push(JSON.parse(String(ev.data)));
+        try {
+          this.lastSnap = decodeSnap(ev.data, this.snapBase);
+        } catch (e) {
+          if (!(e instanceof MissingBase)) throw e; // (a stray one across a handoff is dropped, as the client does)
+        }
+      } else {
+        const m = JSON.parse(String(ev.data));
+        if (m.t === 'init') this.snapBase.reset();
+        this.texts.push(m);
+      }
     };
     this.ws.onclose = (ev) => (this.closeCode = ev.code);
   }

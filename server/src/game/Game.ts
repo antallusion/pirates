@@ -334,6 +334,9 @@ export const MAX_CONTRACTS = 60;
 export const brokerPay = (rank: number): number => 1 + 0.1 * Math.max(0, Math.min(2, rank));
 const UNDOCK_OUT = [170, 130, 95];
 
+/** pushSelf's change test: fractions to 1e-4 (the patch itself still carries the exact values). */
+const selfKey = (_k: string, x: unknown) => (typeof x === 'number' && !Number.isInteger(x) ? Math.round(x * 1e4) / 1e4 : x);
+
 export class Game {
   readonly db: Db;
   readonly auth: AuthService;
@@ -3003,7 +3006,7 @@ export class Game {
   /** Snapshots are the hot path: binary frames (shared/src/codec.ts). */
   private sendSnap(s: PlayerSession, msg: Extract<ServerMsg, { t: 'snap' }>): void {
     if (s.conn.closed || s.disconnectedAt !== null) return;
-    const bytes = encodeSnap(msg);
+    const bytes = encodeSnap(msg, s.snapBase); // (field deltas against what this client holds: codec v7)
     this.metrics.bytesBinary += bytes.byteLength;
     s.conn.sendBinary(bytes);
   }
@@ -4309,6 +4312,7 @@ export class Game {
     }));
     s.knownEntities.clear();
     s.sentRows.clear();
+    s.snapBase.reset(); // (the client starts its own anew at 'init')
     s.knownChunks.clear();
     this.lastSelf.delete(s); // the init carries the whole private state
     this.sendTo(s, {
@@ -4551,12 +4555,14 @@ export class Game {
     if (port) this.sendTo(s, { t: 'port', view: buildPortView(this, s, port) });
   }
 
+  /** A field of the private state counts as changed only by what a screen can show (docs/33 §Сеть: the odometer — shown
+   *  in whole km — and the company's mods drifting in the sixth decimal sent `stats` and `effects` every second). */
   pushSelf(s: PlayerSession, force = false): void {
     if (!s.profile) return;
     const state = toPrivateState(s, this.now, this.worldView(s));
     const prev = this.lastSelf.get(s);
     const fields = new Map<string, string>();
-    for (const [k, v] of Object.entries(state)) fields.set(k, JSON.stringify(v) ?? 'null');
+    for (const [k, v] of Object.entries(state)) fields.set(k, JSON.stringify(k === 'stats' ? { ...(v as PrivateState['stats']), distance: Math.floor((v as PrivateState['stats']).distance / 1000) } : v, selfKey) ?? 'null');
     this.lastSelf.set(s, fields);
     if (!prev) return this.sendTo(s, { t: 'self', self: state });
     // Only the fields that changed (a forced push always goes out, to let the screens refresh).
@@ -4692,6 +4698,7 @@ export class Game {
       for (const id of gone) {
         s.knownEntities.delete(id);
         s.sentRows.delete(id);
+        s.snapBase.ships.delete(id);
       }
       if (infos.length) this.sendTo(s, { t: 'info', list: infos });
       if (gone.length) this.sendTo(s, { t: 'gone', ids: gone });

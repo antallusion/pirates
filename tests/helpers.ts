@@ -4,7 +4,7 @@ import { SHIP_CLASS_IDS } from '../shared/src/data/ships.ts';
 import type { ShipClassId } from '../shared/src/data/ships.ts';
 import { LEVEL_RANGE } from '../shared/src/data/shiplevel.ts';
 import { PROTOCOL_VERSION } from '../shared/src/constants.ts';
-import { decodeSnap } from '../shared/src/codec.ts';
+import { decodeSnap, SnapState } from '../shared/src/codec.ts';
 import type { ClientMsg, ServerMsg } from '../shared/src/protocol.ts';
 import { AuthService } from '../server/src/auth.ts';
 import { Game } from '../server/src/game/Game.ts';
@@ -21,8 +21,11 @@ export class FakeConn {
   bytesOut = 0;
   buffered = 0;
   inbox: ServerMsg[] = [];
+  /** The snapshot codec's base, as the client keeps it (codec v7). */
+  snapBase = new SnapState();
   send(text: string): void {
     const m = JSON.parse(text) as ServerMsg;
+    if (m.t === 'init') this.snapBase.reset();
     // Like the client: a patch is merged into the private state it holds.
     if (m.t === 'self_patch') {
       const base = this.last('self')?.self ?? this.last('init')?.self;
@@ -33,7 +36,7 @@ export class FakeConn {
   }
   sendBinary(bytes: Uint8Array): void {
     this.bytesOut += bytes.byteLength;
-    this.inbox.push(decodeSnap(bytes));
+    this.inbox.push(decodeSnap(bytes, this.snapBase));
   }
   close(): void {
     if (this.closed) return;

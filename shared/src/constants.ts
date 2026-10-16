@@ -2,7 +2,7 @@
 // simulation requires bumping PROTOCOL_VERSION so stale clients are rejected.
 
 export const GAME_NAME = 'GRAVETIDE';
-export const PROTOCOL_VERSION = 29;
+export const PROTOCOL_VERSION = 30; // 30: snapshot codec v7 (field deltas, 2026-10-16)
 
 export const TICK_RATE = 20; // server simulation Hz
 export const TICK_DT = 1 / TICK_RATE;

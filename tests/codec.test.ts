@@ -55,3 +55,37 @@ test('the snapshot carries an admin time scale without growing, and none in norm
   assert.equal(decodeSnap(encodeSnap({ ...base, k: 0.25 })).k, 0.25);
   assert.equal(encodeSnap({ ...base, k: 5 }).byteLength, encodeSnap(base).byteLength);
 });
+
+test('codec v7: field deltas against the connection\'s base round-trip exactly, and a moving crowd costs about half', async () => {
+  const { encodeSnap, decodeSnap, SnapState, MissingBase } = await import('../shared/src/codec.ts');
+  const tx = new SnapState(), rx = new SnapState();
+  let m = sample(20);
+  let whole = 0, delta = 0;
+  for (let k = 0; k < 30; k++) {
+    // every ship moves a little and turns; one of them jumps far (a whole row again), one has her hull struck
+    m = { ...m, tick: m.tick + 2, you: { ...m.you!, x: m.you!.x + 1.3, h: m.you!.h + 0.01, reload: { ...m.you!.reload, port: (k % 10) / 10 } },
+      ships: m.ships.map((r, i) => [r[0], r[1] + 1.37 + (i === 3 && k === 17 ? 9000 : 0), r[2] - 0.71, r[3] + 0.02, r[4], r[5], i === 5 ? 0.9 - k / 100 : r[6], r[7], r[8], r[9]] as ShipRow) };
+    const plain = decodeSnap(encodeSnap(m));
+    const bytes = encodeSnap(m, tx);
+    whole += encodeSnap(m).byteLength;
+    delta += bytes.byteLength;
+    assert.deepEqual(decodeSnap(bytes, rx), plain, `snapshot ${k} decodes as the whole one does`);
+  }
+  assert.ok(delta < whole * 0.6, `deltas ${delta} B vs whole ${whole} B`);
+  // A delta for a ship this end never held: refused whole, and the base is left as it was.
+  const fresh = new SnapState();
+  assert.throws(() => decodeSnap(encodeSnap(m, tx), fresh), MissingBase);
+  assert.equal(fresh.ships.size, 0);
+  assert.equal(fresh.self, null);
+});
+
+test('codec v7: an unchanged row costs its id and one byte; ids beyond 2^31 survive the varint', async () => {
+  const { encodeSnap, decodeSnap, SnapState } = await import('../shared/src/codec.ts');
+  const tx = new SnapState(), rx = new SnapState();
+  const m = { ...sample(1), you: null };
+  m.ships[0][0] = 4_000_000_000;
+  decodeSnap(encodeSnap(m, tx), rx);
+  const again = encodeSnap(m, tx);
+  assert.equal(again.byteLength, 24 + 2 + 5 + 1 + 2 + 12);
+  assert.equal(decodeSnap(again, rx).ships[0][0], 4_000_000_000);
+});

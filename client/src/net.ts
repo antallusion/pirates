@@ -1,7 +1,7 @@
 // WebSocket connection with token persistence and automatic reconnect.
 
 import { PROTOCOL_VERSION } from '../../shared/src/constants.ts';
-import { decodeSnap } from '../../shared/src/codec.ts';
+import { decodeSnap, MissingBase, SnapState } from '../../shared/src/codec.ts';
 import type { ClientMsg, ServerMsg } from '../../shared/src/protocol.ts';
 
 const TOKEN_KEY = 'gravetide.token';
@@ -56,15 +56,24 @@ export class Net {
       this.send({ t: 'hello', v: PROTOCOL_VERSION, token: token ?? undefined, name: this.pendingName ?? undefined });
     };
     ws.binaryType = 'arraybuffer';
+    // The snapshot codec's base for this socket (codec v7: rows come as deltas against what we hold; the server
+    // starts its own anew with every 'init', and so do we).
+    const snapBase = new SnapState();
     ws.onmessage = (ev) => {
       let m: ServerMsg;
       if (ev.data instanceof ArrayBuffer) {
         this.bytesIn += ev.data.byteLength;
-        m = decodeSnap(ev.data);
+        try {
+          m = decodeSnap(ev.data, snapBase);
+        } catch (e) {
+          if (e instanceof MissingBase) return; // a stray one across a zone's handoff: the next full rows follow
+          throw e;
+        }
       } else {
         const text = String(ev.data);
         this.bytesIn += text.length;
         m = JSON.parse(text) as ServerMsg;
+        if (m.t === 'init') snapBase.reset();
       }
       if (m.t === 'welcome') {
         store(m.token);

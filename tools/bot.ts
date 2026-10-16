@@ -3,7 +3,7 @@
 // Useful for load tests (run many) and for verifying the server loop without a browser.
 
 import { PROTOCOL_VERSION } from '../shared/src/constants.ts';
-import { decodeSnap } from '../shared/src/codec.ts';
+import { decodeSnap, SnapState } from '../shared/src/codec.ts';
 import type { ClientMsg, ServerMsg } from '../shared/src/protocol.ts';
 
 const url = process.argv[2] ?? 'ws://localhost:8080/ws';
@@ -22,9 +22,11 @@ const toasts: string[] = [];
 ws.onopen = () => send({ t: 'hello', v: PROTOCOL_VERSION, name });
 ws.binaryType = 'arraybuffer';
 let bytesIn = 0;
+const snapBase = new SnapState();
 ws.onmessage = (ev) => {
   bytesIn += ev.data instanceof ArrayBuffer ? ev.data.byteLength : String(ev.data).length;
-  const m = (ev.data instanceof ArrayBuffer ? decodeSnap(ev.data) : JSON.parse(String(ev.data))) as ServerMsg;
+  const m = (ev.data instanceof ArrayBuffer ? decodeSnap(ev.data, snapBase) : JSON.parse(String(ev.data))) as ServerMsg;
+  if (m.t === 'init') snapBase.reset();
   counts[m.t] = (counts[m.t] ?? 0) + 1;
   switch (m.t) {
     case 'welcome':

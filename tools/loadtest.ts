@@ -10,7 +10,7 @@
 
 import { readFileSync } from 'node:fs';
 import { PROTOCOL_VERSION } from '../shared/src/constants.ts';
-import { decodeSnap } from '../shared/src/codec.ts';
+import { decodeSnap, SnapState } from '../shared/src/codec.ts';
 import type { ClientMsg, ServerMsg } from '../shared/src/protocol.ts';
 
 const args = new Map<string, string>();
@@ -50,6 +50,7 @@ const errs = new Map<string, number>();
 function spawn(i: number): void {
   const ws = new WebSocket(URL_WS);
   ws.binaryType = 'arraybuffer';
+  const snapBase = new SnapState();
   const b: Bot = { i, ws, open: false, inGame: false, bytes: 0, snaps: 0, rtts: [], closed: false, errors: 0, seq: 0, rudder: 0 };
   bots.push(b);
   const send = (m: ClientMsg) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(m));
@@ -66,7 +67,7 @@ function spawn(i: number): void {
     b.bytes += bin ? (ev.data as ArrayBuffer).byteLength : String(ev.data).length;
     if (bin) {
       b.snaps++;
-      decodeSnap(ev.data as ArrayBuffer); // the client's own cost: every bot decodes like a browser would
+      decodeSnap(ev.data as ArrayBuffer, snapBase); // the client's own cost: every bot decodes like a browser would
       return;
     }
     const m = JSON.parse(String(ev.data)) as ServerMsg;
@@ -75,6 +76,7 @@ function spawn(i: number): void {
         if (!m.hasCaptain) send({ t: 'create_captain', captain: CAPTAINS[i % CAPTAINS.length], shipName: `Wake ${i}` });
         break;
       case 'init':
+        snapBase.reset();
         b.inGame = true;
         if (m.self.dockedAt) send({ t: 'undock' });
         break;
