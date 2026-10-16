@@ -331,7 +331,7 @@ test('/ops in the admin console, its HELP pair and its line in Russian', () => {
     const line = runAdmin(game, s, '/ops')!;
     assert.match(line, /^Live ops today: 1 sign-ups, 1 aboard/);
     const ru = serverText(line);
-    assert.match(ru, /^Лайв-опс, сегодня: регистраций 1/);
+    assert.match(ru, /^Управление игрой, сегодня: регистраций 1/);
     const help = runAdmin(game, s, '/help')!;
     assert.match(help, /\/ops$/);
     assert.ok(SERVER_RU_ADMIN[help]?.endsWith('/ops'), 'the Russian HELP');

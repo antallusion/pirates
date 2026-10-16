@@ -205,8 +205,8 @@ export const SERVER_RU_ADMIN: Record<string, string> = {
   'Telemetry is off on this server.': 'Телеметрия на этом сервере выключена.',
   // the live ops (docs/34)
   'Live ops are off on this server.': 'Лайв-опс на этом сервере выключен.',
-  'Live ops today: {0} sign-ups, {1} aboard, {2} payments for {3} ₽. 7 days: revenue {4} ₽, {5} payers ({6}%), ARPPU {7} ₽. Running: {8} sales, {9} off the shelves, {10} global offers, {11} events. The panel: /ops/admin':
-    'Лайв-опс, сегодня: регистраций {0}, в игре {1}, платежей {2} на {3} ₽. За 7 дн.: выручка {4} ₽, платящих {5} ({6} %), ARPPU {7} ₽. Идут: скидок {8}, снято товаров {9}, глобальных офферов {10}, событий {11}. Панель: /ops/admin',
+  'Live ops today: {0} sign-ups, {1} aboard, {2} payments for {3} ₽. {4} days: revenue {5} ₽, {6} payers ({7}%), ARPPU {8} ₽. Running: {9} sales, {10} off the shelves, {11} global offers, {12} events. The panel: /ops/admin':
+    'Управление игрой, сегодня: регистраций {0}, в игре {1}, платежей {2} на {3} ₽. За {4} дн.: выручка {5} ₽, платящих {6} ({7} %), средний чек платящего {8} ₽. Идут: скидок {9}, снято товаров {10}, глобальных офферов {11}, событий {12}. Подробно — на панели управления (адрес в docs/34).',
   'Telemetry for {0} d: {1} reports from {2} devices; at sea {3} fps typical, {4} in the worst {5}%; start {6} s; {7} JS errors. The page: /telemetry/admin':
     'Телеметрия за {0} дн.: отчётов {1}, устройств {2}; в море обычно {3} кадр/с, в худших {5}% — {4}; запуск {6} с; ошибок JS: {7}. Подробно — на странице телеметрии (её адрес в docs/33).',
 };
