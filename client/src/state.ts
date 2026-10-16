@@ -183,6 +183,8 @@ export class ClientState {
   findBusy: { id: number; until: number; total: number } | null = null;
   /** docs/19 D7: the creatures roaming the sea about her (HoMM3's neutral stacks). */
   roams: RoamView[] = [];
+  /** When the list of the stacks came (performance.now ms): her rests (`back`) count down from it. */
+  roamsAt = 0;
   driftCard: DriftCard | null = null;
   /** The dense sea's marks she has worked today, and the one her boats are at (world seconds). */
   markDone = new Set<number>();
@@ -503,6 +505,7 @@ export class ClientState {
         break;
       case 'roams':
         this.roams = m.list;
+        this.roamsAt = performance.now();
         break;
       case 'wrecks':
         this.wrecks = m.list;

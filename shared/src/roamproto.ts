@@ -23,6 +23,9 @@ export interface RoamView {
   joinN?: number;
   /** Her landing party's might against its, rounded to a tenth (only for the near ones). */
   ratio?: number;
+  /** Her own rest from it (docs/19 D7, owner 2026-10-16): seconds until she may fight it again — she beat it lately
+   *  (the others may already); the client counts it down from the list's coming. */
+  back?: number;
 }
 
 export type RoamClientMsg = { t: 'roam'; action: 'attack' | 'join' | 'flee'; id: number };

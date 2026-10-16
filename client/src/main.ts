@@ -53,7 +53,7 @@ import type { BossId } from '../../shared/src/data/bosses.ts';
 import { isShoreBoss } from '../../shared/src/data/shorebosses.ts'; // the great ones ashore (2026-10-03)
 import type { RoamView } from '../../shared/src/roamproto.ts';
 import { UNITS as ROAM_UNITS } from '../../shared/src/data/army.ts';
-import { roamName, roamNow } from './render/roamers.ts';
+import { backClock, roamBackLeft, roamName, roamNow } from './render/roamers.ts';
 import { openRoamCard } from './ui/roamcard.ts';
 import { strengthWord as roamWord } from './ui/army.ts';
 import { EN as ROAM_EN, RU as ROAM_RU } from './lang/ui/roamers.ts';
@@ -2744,8 +2744,10 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const roamLead = !!focus && !targetPinned && !state.pursuit;
   if (rm) {
     const name = roamName(rm.kind);
-    facts.roam = { id: rm.id, icon: ROAM_UNITS[ROAMS[rm.kind].u as keyof typeof ROAM_UNITS].art, name, word: roamWord(rm.n).word, lv: rm.level, ...(rm.fight ? { fight: rm.fight } : {}), ...(rm.offer ? { offer: rm.offer } : {}), ...(rm.joinN ? { joinN: rm.joinN } : {}), ...(roamLead ? { lead: true } : {}), ...(focus.far ? { far: true } : {}), ...(state.roamRun === rm.id ? { running: true } : {}) };
+    const back = roamBackLeft(state, rm);
+    facts.roam = { id: rm.id, icon: ROAM_UNITS[ROAMS[rm.kind].u as keyof typeof ROAM_UNITS].art, name, word: roamWord(rm.n).word, lv: rm.level, ...(rm.fight ? { fight: rm.fight } : {}), ...(back ? { back } : {}), ...(rm.offer ? { offer: rm.offer } : {}), ...(rm.joinN ? { joinN: rm.joinN } : {}), ...(roamLead ? { lead: true } : {}), ...(focus.far ? { far: true } : {}), ...(state.roamRun === rm.id ? { running: true } : {}) };
     if (rm.fight) info.push(esc(LROAM(rm.fight === 'mate' ? 'i.mate' : 'i.fight', { what: name })));
+    else if (back) info.push(esc(LROAM('i.back', { what: name, t: backClock(back) })));
     else if (rm.offer === 'flee' && rm.ratio !== undefined) info.push(esc(LROAM('i.flee', { r: rm.ratio })));
   }
   // «Атаковать» (docs/23 item 33): the target frame's ship, or the pursuit under way.
@@ -3183,7 +3185,10 @@ function attackUnder(px: number, py: number): AttackKind | null {
     return ship ? attackKind({ ship }) : null;
   }
   const rm = roamAtScreen(px, py);
-  if (rm !== null) return attackKind({ stack: state.roams.find((v) => v.id === rm)?.fight !== 'other' });
+  if (rm !== null) {
+    const v = state.roams.find((x) => x.id === rm);
+    return attackKind({ stack: v?.fight !== 'other' && !(v && roamBackLeft(state, v)) });
+  }
   // a lair of the land's creatures, standing and not hers; a pirate fort (its battery still firing: the guns)
   for (const m of state.lairs?.list ?? []) {
     if (m.down || m.flag === 'own' || m.turtle !== undefined) continue;
@@ -3247,7 +3252,7 @@ function targetChoices(about: string): { choices: TmChoice[]; name: string; x: n
     if (d > ROAM_REACH && worldMap.onAutosail) choices.push({ id: 'pursue', art: 'talent_nav_wake_rider', label: seaWord('tm.pursue'), title: seaWord('tm.pursueStack') });
     // the boats go (or the helmsman runs her in first): not under fire, nor with too few hands, nor while another
     // fight holds her (roamers.ts fightWhy — the server's «Не под огнём» never answers a choice offered here)
-    if (!v.fight && !you.combat && you.crew >= 3 && !(you.flags & SF.BOARDING) && !self.landing) choices.push({ id: 'fight', art: 'bt_charge', label: seaWord('tm.fight'), title: seaWord('tm.fightStack') });
+    if (!v.fight && !roamBackLeft(state, v) && !you.combat && you.crew >= 3 && !(you.flags & SF.BOARDING) && !self.landing) choices.push({ id: 'fight', art: 'bt_charge', label: seaWord('tm.fight'), title: seaWord('tm.fightStack') });
     return { name: roamName(v.kind), x: renderer.sx(p.x), y: renderer.sy(p.y), r: Math.max(14, Math.min(22, 19 * renderer.zoom)) * 1.3, choices };
   }
   return null;

@@ -10,7 +10,7 @@ import { xpAt } from '../../../shared/src/data/xpcurve.ts';
 import type { RoamView } from '../../../shared/src/roamproto.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/roamers.ts';
-import { roamName } from '../render/roamers.ts';
+import { backClock, roamBackLeft, roamName } from '../render/roamers.ts';
 import type { ClientState } from '../state.ts';
 import { specialName, strengthWord, unitIcon } from './army.ts';
 import { askHtml } from './confirm.ts';
@@ -39,12 +39,21 @@ export function roamCardHtml(state: ClientState, v: RoamView): string {
   if (v.offer === 'join' && v.joinN) lines.push(`<div class="ac-offer">${esc(L('c.join', { n: v.joinN }))}</div>`);
   if (v.offer === 'flee') lines.push(`<div class="ac-offer">${esc(L('c.flee'))} <button class="btn btn-small" data-roam-flee>${esc(L('c.let'))}</button></div>`);
   if (v.fight) lines.push(`<div class="ac-offer">${esc(L(v.fight === 'mate' ? 'i.mate' : 'i.fight', { what: roamName(v.kind) }))}</div>`);
+  // her own rest from it: the clock, counting down while the card is open
+  const back = roamBackLeft(state, v);
+  if (back > 0 && !v.fight) lines.push(`<div class="ac-offer rc-back" data-roam-back="${v.id}">${esc(L('c.back', { t: backClock(back) }))}</div>`);
   return `<div class="roam-card" id="confirm-text">${lines.join('')}</div>`;
 }
 
 /** The card over the sea; «Атаковать» sends the fight, «Отпустить» the HoMM3 flight. */
 export async function openRoamCard(state: ClientState, v: RoamView, send: (action: 'attack' | 'flee', id: number) => void): Promise<void> {
-  const p = askHtml(roamCardHtml(state, v), v.fight ? L('c.close') : L('a.attack'), v.fight ? null : L('c.close'), 'roam-panel');
+  const shut = !!v.fight || roamBackLeft(state, v) > 0;
+  const p = askHtml(roamCardHtml(state, v), shut ? L('c.close') : L('a.attack'), shut ? null : L('c.close'), 'roam-panel');
+  const clock = document.querySelector<HTMLElement>('#confirm [data-roam-back]');
+  const tick = clock ? setInterval(() => {
+    if (!clock.isConnected) return clearInterval(tick);
+    clock.textContent = L('c.back', { t: backClock(roamBackLeft(state, v)) });
+  }, 1000) : 0;
   const flee = document.querySelector<HTMLButtonElement>('#confirm [data-roam-flee]');
   let fled = false;
   flee?.addEventListener('click', () => {
@@ -53,5 +62,6 @@ export async function openRoamCard(state: ClientState, v: RoamView, send: (actio
     document.querySelector<HTMLButtonElement>('#confirm [data-no]')?.click();
   });
   const ok = await p;
-  if (ok && !fled && !v.fight) send('attack', v.id);
+  clearInterval(tick);
+  if (ok && !fled && !shut) send('attack', v.id);
 }

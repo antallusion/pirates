@@ -35,6 +35,19 @@ export interface RoamCtx {
 
 export const roamName = (k: RoamKind): string => L(`k.${k}`);
 
+/** Her rest from a stack (owner, 2026-10-16: 30 minutes after she beat it): seconds left now, counted down from the
+ *  list's coming (0: hers to fight). */
+export function roamBackLeft(state: ClientState, v: RoamView): number {
+  if (!v.back) return 0;
+  return Math.max(0, Math.ceil(v.back - (performance.now() - state.roamsAt) / 1000));
+}
+
+/** «23:15». */
+export function backClock(sec: number): string {
+  const s = Math.max(0, Math.ceil(sec));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
 /** Where a stack is now (its wander round its spot by the world's clock). */
 export function roamNow(state: ClientState, v: RoamView): { x: number; y: number } {
   return roamPos(v.seed, v.x, v.y, state.estServerTime());
@@ -63,6 +76,10 @@ const AROUND: Partial<Record<RoamKind, { id: string; air: boolean; k: number }>>
   giant_octopus: { id: 'monster.kraken_tentacle', air: false, k: 1 },
   shoal_leviathan: { id: 'creature.leviathan', air: false, k: 1 },
   lantern_maw: { id: 'monster.lantern_maw', air: false, k: 0.9 },
+  crab_queen: { id: 'creature.crab', air: false, k: 0.55 },
+  storm_roc: { id: 'creature.gull', air: true, k: 1.15 },
+  cliff_harpy: { id: 'creature.gull', air: true, k: 0.75 },
+  plumed_serpent: { id: 'monster.young_serpent', air: false, k: 1 },
 };
 
 /** The water about it: the white water where the stack breaks the swell (the painted spray, not a drawn ring), and —
@@ -98,7 +115,7 @@ function face(u: UnitId, grey: boolean): (g: G, cx: number, cy: number, r: numbe
  *  art is in, a plain disc and ring stand in. */
 function token(g: G, x: number, y: number, R: number, v: RoamView, col: string, t: number): void {
   const u = ROAMS[v.kind].u as UnitId;
-  const grey = !!v.fight;
+  const grey = !!v.fight || !!v.back;
   const c = tokenStamp(`roam|${u}`, R, face(u, grey), grey);
   if (c) put(g, c, x, y);
   else {
@@ -127,7 +144,7 @@ export function drawRoamsWorld(g: G, state: ClientState, c: RoamCtx): void {
     g.save();
     if (small) {
       // Far out: a mark, not a token (the sea stays readable).
-      g.fillStyle = v.fight ? 'rgba(170,170,160,0.8)' : col;
+      g.fillStyle = v.fight || roamBackLeft(state, v) ? 'rgba(170,170,160,0.8)' : col;
       g.strokeStyle = 'rgba(0,0,0,0.8)';
       g.lineWidth = 1.2;
       g.beginPath();
@@ -147,7 +164,11 @@ export function drawRoamsWorld(g: G, state: ClientState, c: RoamCtx): void {
       markRing(g, x, y, R * 1.6, col, near, near ? 1 : 0.85 + 0.15 * Math.sin(c.time * 2.4));
     }
     const big = c.zoom > 0.45 ? 12 : 11;
-    if (v.fight) {
+    const back = roamBackLeft(state, v);
+    if (back > 0 && !v.fight) {
+      // Her own rest from it (she beat it lately): «Вернётся через 23:15» under the grey token.
+      word(g, L('back', { t: backClock(back) }), x, y + R * 1.2 + 9, '#c9c3b4', big);
+    } else if (v.fight) {
       // «в бою» under it (her ship's own name rides over the fight), the kind beside it.
       word(g, c.zoom > 0.5 ? `${L('fight')} · ${roamName(v.kind)}` : L('fight'), x, y + R * 1.2 + 9, '#f0a890', big);
     } else {
@@ -220,5 +241,6 @@ export function roamTip(state: ClientState, x: number, y: number, slack: number)
     if (d < bd) [best, bd] = [v, d];
   }
   if (!best) return null;
-  return esc(best.fight ? L('tipFight', { what: roamName(best.kind) }) : L('tip', { what: roamName(best.kind), word: strengthWord(best.n).word, lv: best.level }));
+  const back = roamBackLeft(state, best);
+  return esc(best.fight ? L('tipFight', { what: roamName(best.kind) }) : back ? L('tipBack', { what: roamName(best.kind), t: backClock(back) }) : L('tip', { what: roamName(best.kind), word: strengthWord(best.n).word, lv: best.level }));
 }

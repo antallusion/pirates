@@ -54,7 +54,7 @@ export interface ActFacts {
   /** docs/19 D7: a roaming stack within reach, or the one she marked: its name, HoMM3's word and level, a fight on it,
    *  the offer at ×3; `lead` — hers to attack now (marked, or a cable off with no ship of her choosing): its buttons
    *  come first; `far` — beyond a cable (the helmsman sails her in); `running` — he is sailing her in now. */
-  roam?: { id: number; icon: string; name: string; word: string; lv: number; fight?: 'other' | 'mate'; offer?: 'join' | 'flee'; joinN?: number; lead?: boolean; far?: boolean; running?: boolean } | null;
+  roam?: { id: number; icon: string; name: string; word: string; lv: number; fight?: 'other' | 'mate'; back?: number; offer?: 'join' | 'flee'; joinN?: number; lead?: boolean; far?: boolean; running?: boolean } | null;
   looks?: { kind: LookKind; name: string }[];
   repair?: { repairing: boolean; combat: boolean; hurt: boolean; short?: boolean } | null;
   /** docs/23 item 33: a mark to attack, or the pursuit under way (and how); `gunsOnly`: no grapple takes her (a beast, a
@@ -148,7 +148,7 @@ function roamActs(f: ActFacts): Act[] {
   const out: Act[] = [];
   const rm = f.roam;
   if (!rm) return out;
-  if (!rm.fight) {
+  if (!rm.fight && !rm.back) {
     if (rm.running) out.push({ id: 'attack_stop', icon: 'item_ship_wheel', label: LS('a.stop'), sub: rm.name, title: LS('a.stopTitle') });
     else out.push({ id: 'roam', icon: 'prof_marine', label: LR('a.attack'), sub: `${rm.word} · ⚓${rm.lv}`, title: LR(rm.far ? 't.attackFar' : 't.attack', { what: rm.name, word: rm.word, lv: rm.lv }), key: 'land', arg: String(rm.id) });
     if (rm.offer === 'join' && (rm.joinN ?? 0) > 0 && !rm.far) out.push({ id: 'roam_join', icon: 'stat_crew', label: LR('a.join'), sub: `×${rm.joinN}`, title: LR('t.join', { n: rm.joinN ?? 0 }), arg: String(rm.id) });

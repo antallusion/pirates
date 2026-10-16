@@ -18,7 +18,7 @@ import { LAND_RES } from '../../../shared/src/data/bestiary.ts';
 import type { LandRes } from '../../../shared/src/data/bestiary.ts';
 import { landParty } from '../../../shared/src/data/lairs.ts';
 import {
-  ROAMS, ROAM_ART, ROAM_BATTLE_XP, ROAM_HEAL, ROAM_MATE_XP, ROAM_RAISE, ROAM_REACH, ROAM_SEE, ROAM_SHARE_R, ROAM_SHIFT, ROAM_WANDER,
+  ROAMS, ROAM_ART, ROAM_BATTLE_XP, ROAM_HEAL, ROAM_REST_MAX, ROAM_REST_MS, ROAM_MATE_XP, ROAM_RAISE, ROAM_REACH, ROAM_SEE, ROAM_SHARE_R, ROAM_SHIFT, ROAM_WANDER,
   buildRoamers, isRoamKind, roamDown, roamGap, roamPay, roamPos, roamRes, roamShift, roamStacks, roamersNear,
 } from '../../../shared/src/data/roamers.ts';
 import type { RoamIndex, RoamKind, RoamSpot } from '../../../shared/src/data/roamers.ts';
@@ -133,6 +133,39 @@ function roamGone(game: Game, sp: RoamSpot): void {
   S.dirty = true;
 }
 
+// ------------------------------------------------------------------------------------------------ her own rest
+
+/** Her rests (stack id → wall ms), the past ones let go. */
+function restsOf(game: Game, s: PlayerSession): Record<string, number> {
+  const p = s.profile!;
+  const rec = (p.roamRest ??= {});
+  const now = game.wallNow();
+  for (const [k, at] of Object.entries(rec)) if (!(typeof at === 'number' && at > now)) delete rec[k];
+  return rec;
+}
+
+/** Seconds until she may fight this stack again (0: now). */
+export function roamRestLeft(game: Game, s: PlayerSession, id: number): number {
+  if (!s.profile) return 0;
+  const at = s.profile.roamRest?.[String(id)];
+  if (at === undefined) return 0;
+  const left = (at - game.wallNow()) / 1000;
+  return left > 0 ? Math.ceil(left) : 0;
+}
+
+/** She has done with a stack (beaten, signed on, let go): hers to fight again ROAM_REST_MS later. */
+export function roamRest(game: Game, s: PlayerSession, id: number): void {
+  if (!s.profile) return;
+  const rec = restsOf(game, s);
+  rec[String(id)] = game.wallNow() + ROAM_REST_MS;
+  const keys = Object.keys(rec);
+  if (keys.length > ROAM_REST_MAX) {
+    keys.sort((a, b) => rec[a] - rec[b]);
+    for (const k of keys.slice(0, keys.length - ROAM_REST_MAX)) delete rec[k];
+  }
+  R(game).dirty = true;
+}
+
 /** The stacks standing about a point (their wander and shift allowed for). */
 export function roamersAbout(game: Game, x: number, y: number, r: number): RoamSpot[] {
   return roamersNear(R(game).idx, x, y, r + ROAM_WANDER + ROAM_SHIFT).filter((sp) => roamUp(game, sp.id));
@@ -156,8 +189,8 @@ export function roamRatio(game: Game, s: PlayerSession, sp: RoamSpot, party = pa
  *  else they flee; the drowned only with the Choir's and the cursed, the leviathans and the ancient turtles never. */
 export function roamOffer(game: Game, s: PlayerSession, sp: RoamSpot, ratio = roamRatio(game, s, sp)): 'join' | 'flee' | null {
   if (ratio < 3) return null;
-  if (sp.kind === 'shoal_leviathan' || sp.kind === 'ancient_turtle') return 'flee';
-  if (sp.kind === 'surf_drowned' && !keepsDeep(s)) return 'flee';
+  if (sp.kind === 'shoal_leviathan' || sp.kind === 'ancient_turtle' || sp.kind === 'wreck_titan' || sp.kind === 'storm_roc') return 'flee';
+  if ((sp.kind === 'surf_drowned' || sp.kind === 'banshee') && !keepsDeep(s)) return 'flee';
   const k = R(game).st.get(sp.id)?.k ?? 0;
   return ((sp.seed + k * 7) % 10) < 4 ? 'join' : 'flee';
 }
@@ -179,10 +212,12 @@ function viewOf(game: Game, s: PlayerSession, sp: RoamSpot, party: (() => ArmySt
   const b = roamBase(game, sp);
   const st = S.st.get(sp.id);
   const v: RoamView = { id: sp.id, kind: sp.kind, level: sp.level, size: sp.size, n: roamMen(game, sp), x: b.x, y: b.y, seed: sp.seed };
+  const back = roamRestLeft(game, s, sp.id);
+  if (back > 0) v.back = back;
   if (st?.fighter !== undefined) {
     const mate = st.fighter === s.accountId || sameGroup(game, st.fighter, s.accountId);
     v.fight = mate ? 'mate' : 'other';
-  } else if (party) {
+  } else if (party && !back) {
     const ratio = roamRatio(game, s, sp, party());
     v.ratio = Math.round(ratio * 10) / 10;
     const offer = roamOffer(game, s, sp, ratio);
@@ -218,7 +253,8 @@ export function roamsFor(game: Game, s: PlayerSession): RoamView[] {
 export function sendRoams(game: Game, s: PlayerSession, force: boolean): void {
   const S = R(game);
   const list = roamsFor(game, s);
-  const key = list.map((v) => `${v.id}:${v.n}:${v.x}:${v.y}:${v.fight ?? ''}:${v.offer ?? ''}:${v.joinN ?? ''}:${v.ratio ?? ''}`).join('|');
+  // (her rest in the key by the half minute: the client counts it down itself, the list is not sent every second for it)
+  const key = list.map((v) => `${v.id}:${v.n}:${v.x}:${v.y}:${v.fight ?? ''}:${v.offer ?? ''}:${v.joinN ?? ''}:${v.ratio ?? ''}:${v.back ? Math.ceil(v.back / 30) : ''}`).join('|');
   if (!force && S.sent.get(s) === key) return;
   S.sent.set(s, key);
   game.sendTo(s, { t: 'roams', list });
@@ -294,6 +330,7 @@ function fightWhy(game: Game, s: PlayerSession, sp: RoamSpot | undefined, reach 
   const ship = s.ship;
   if (!ship || ship.docked || !ship.alive || ship.ghost) return 'Put to sea first.';
   if (!sp || !roamUp(game, sp.id)) return 'They are gone';
+  if (roamRestLeft(game, s, sp.id) > 0) return 'You beat them lately: they come back for you half an hour after the fight.';
   const f = roamFighter(game, sp.id);
   if (f !== null) return f === s.accountId ? 'Your party is at them already.' : sameGroup(game, f, s.accountId) ? 'Your group mate is fighting them: the spoils will be shared.' : 'Another captain is fighting them.';
   const p = roamWhere(game, sp);
@@ -313,6 +350,7 @@ export const ROAM_NAME: Record<RoamKind, string> = {
   lagoon_tentacle: 'Tentacles from the Deep', mermaid: 'Mermaids', surf_drowned: 'The Drowned Adrift', young_serpent: 'Young Serpents', lantern_maw: 'Lantern Maws',
   shoal_leviathan: 'A Leviathan', ancient_turtle: 'Ancient Turtles',
   barracuda: 'Barracudas in a Shoal', albatross: 'Albatrosses in the Wake', moray: 'Morays of the Reef', giant_octopus: 'Giant Octopuses',
+  cliff_harpy: 'Harpies over the Waves', crab_queen: 'A Crab Queen on Her Wreck', banshee: 'Banshees in the Fog', storm_roc: 'Storm Rocs', plumed_serpent: 'Plumed Serpents', wreck_titan: 'A Wreck Titan',
 };
 
 /** «Атаковать»: her party against the stack, on its kind's field of the battle at sea. */
@@ -404,6 +442,8 @@ function roamEnd(game: Game, s: PlayerSession, sp: RoamSpot, won: boolean, left:
   const pay = roamPay(sp.level, sp.size);
   const res = roamRes(sp.kind, roamMen(game, sp), sp.level, sp.size);
   roamGone(game, sp);
+  roamRest(game, s, sp.id);
+  for (const m of mates) roamRest(game, m, sp.id);
   const gap = roamGap(s.profile!.level, sp.level);
   const xp = xpAt(s.profile!.level, sp.level, pay.xp);
   if (xp > 0) game.grantXp(s, xp, `Roaming stack beaten: ${ROAM_NAME[sp.kind]}`, true);
@@ -443,9 +483,11 @@ export function roamChoice(game: Game, s: PlayerSession, id: number, choice: 'jo
     for (const x of men) ship.addMen(x.u, x.n);
     ship.companyKey = '';
     roamGone(game, sp!);
+    roamRest(game, s, sp!.id);
     game.toastShip(ship, `${n} of the ${ROAM_NAME[sp!.kind]} follow your ship; the rest scatter.`, 'good');
   } else {
     roamGone(game, sp!);
+    roamRest(game, s, sp!.id);
     game.toastShip(ship, `The ${ROAM_NAME[sp!.kind]} see your strength and scatter.`, 'good');
   }
   sendRoams(game, s, true);
@@ -475,6 +517,7 @@ export function adminStack(game: Game, s: PlayerSession, args: string[]): string
     S.dirty = true;
     const h = s.profile?.seaHaul;
     if (h) h.n.roam = 0;
+    if (s.profile) s.profile.roamRest = {};
     sendRoams(game, s, true);
     return 'Every roaming stack stands again, whole; the day’s count of yours is forgotten.';
   }
@@ -482,7 +525,7 @@ export function adminStack(game: Game, s: PlayerSession, args: string[]): string
     let best: RoamSpot | null = null, bd = Infinity;
     for (const sp of S.idx.list) {
       if (kind && sp.kind !== kind) continue;
-      if (!roamUp(game, sp.id) || roamFighter(game, sp.id) !== null) continue;
+      if (!roamUp(game, sp.id) || roamFighter(game, sp.id) !== null || roamRestLeft(game, s, sp.id) > 0) continue;
       const d = Math.abs(sp.x - ship.state.x) + Math.abs(sp.y - ship.state.y);
       if (d < bd) [best, bd] = [sp, d];
     }
@@ -499,6 +542,7 @@ export function adminStack(game: Game, s: PlayerSession, args: string[]): string
   if (!sp) return 'No roaming stack within reach.';
   if (order === 'beat') {
     roamGone(game, sp);
+    roamRest(game, s, sp.id);
     sendRoams(game, s, true);
     return `The ${ROAM_NAME[sp.kind]} (stack ${sp.id}) are beaten: they stand again in ${Math.round((S.st.get(sp.id)!.down! - game.now))} s.`;
   }
