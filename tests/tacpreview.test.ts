@@ -61,7 +61,11 @@ test('the preview holds the real blow: its harm, its fallen and the answer\'s, o
           checked++;
           if (x.lucky) {
             lucky++;
-            assert.ok(x.hit.dmg! >= p.dmg[0] * 2 - 1 && x.hit.dmg! <= p.dmg[1] * 2 + 1, `a lucky blow is twice: ${x.hit.dmg} against ${p.dmg}`);
+            // (TAC_LUCK_ALONE: twice the blow straight on — from a side or behind less than twice the shown harm; the
+            // preview shows what luck deals)
+            assert.ok(p.lucky, 'the lucky harm shown');
+            assert.ok(x.hit.dmg! >= p.lucky![0] - 1 && x.hit.dmg! <= p.lucky![1] + 1, `a lucky blow as shown: ${x.hit.dmg} against ${p.lucky}`);
+            assert.ok(p.lucky![1] <= p.dmg[1] * 2 + 1 && p.lucky![0] >= p.dmg[0], 'never more than twice, never less than the blow');
             continue;
           }
           assert.ok(x.hit.dmg! >= p.dmg[0] && x.hit.dmg! <= p.dmg[1], `harm ${x.hit.dmg} within ${p.dmg} (${JSON.stringify(p)})`);

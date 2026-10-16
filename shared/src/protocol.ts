@@ -1588,6 +1588,9 @@ export interface TacPreview {
   kills: [number, number];
   ret?: [number, number];
   luck?: number;
+  /** The harm of a lucky blow (TAC_LUCK_ALONE: twice the blow struck straight on — into a side or from behind less
+   *  than twice what the preview's `dmg` shows), when she has luck. */
+  lucky?: [number, number];
   /** She strikes twice (the second after the answer); she sweeps every foe about her (none answers); a shot past the
    *  long range (half its harm, as shown). */
   twice?: boolean;

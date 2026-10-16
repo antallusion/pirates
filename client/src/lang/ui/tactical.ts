@@ -236,7 +236,7 @@ export const EN = {
   'sts.backs': 'Backs to the rail: blows +{n}%',
   'pv.twice': 'strikes twice',
   'pv.sweep': 'hits all around',
-  'pv.luck': 'luck {n}%: double',
+  'pv.luck': 'luck {n}%: {a}–{b}',
   // A blow into a stack's side or from behind (owner, 2026-10-08).
   'fl.side': 'flank +15%',
   'fl.rear': 'from behind +30%',
@@ -534,7 +534,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'sts.backs': 'Спиной к борту: удары +{n}%',
   'pv.twice': 'бьёт дважды',
   'pv.sweep': 'бьёт всех вокруг',
-  'pv.luck': 'удача {n}%: вдвое',
+  'pv.luck': 'удача {n}%: {a}–{b}',
   'fl.side': 'с фланга +15%',
   'fl.rear': 'с тыла +30%',
   'fl.sideX': '×1,15',

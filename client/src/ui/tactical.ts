@@ -3396,7 +3396,7 @@ export class TacticalPanel {
       p.cov ? `<div class="tb-pv-n">${esc(L('pv.cov'))}</div>` : '',
       p.sweep ? `<div class="tb-pv-n">${esc(L('pv.sweep'))}</div>` : '',
       p.shot || p.sweep ? '' : p.ret ? `<div class="tb-pv-ret"><span>${esc(L('pv.ret'))}:</span><b>${p.ret[0] > 0 ? '−' : ''}${r(p.ret)}</b></div>` : `<div class="tb-pv-ret none">${esc(L('pv.noRet'))}</div>`,
-      p.luck && !this.phone ? `<div class="tb-pv-n">${esc(L('pv.luck', { n: p.luck }))}</div>` : '',
+      p.luck && !this.phone ? `<div class="tb-pv-n">${esc(L('pv.luck', { n: p.luck, a: p.lucky?.[0] ?? p.dmg[0] * 2, b: p.lucky?.[1] ?? p.dmg[1] * 2 }))}</div>` : '',
     ];
     return rows.join('');
   }

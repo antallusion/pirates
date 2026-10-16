@@ -2841,7 +2841,10 @@ export function previewBlow(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee
 const parts = blowParts(c, cs, ct, how, at);
   const luck = parts.luck;
   const out: TacPreview = { t: t.id, ...(how === 'melee' ? { from } : { shot: true }), fl: lo.flank, dmg: [lo.dmg, hi.dmg], kills: [t.count - countAfter(t, lo.dmg), t.count - countAfter(t, hi.dmg)], ad: Math.round((parts.mod - 1) * 100) };
-  if (luck > 0) out.luck = Math.round(luck * TAC_CHANCE_PER_POINT * 100);
+  if (luck > 0) {
+    out.luck = Math.round(luck * TAC_CHANCE_PER_POINT * 100);
+    out.lucky = [Math.max(1, Math.round(lo.dmg * parts.lucky)), Math.max(1, Math.round(hi.dmg * parts.lucky))];
+  }
   if (how === 'melee' && sp(s, 'double_strike')) out.twice = true;
   if (how === 'melee' && sp(s, 'sweep')) out.sweep = true;
   if (how === 'shot' && hexDist(at, t.hex) > TAC_LONG_SHOT && !sp(s, 'no_penalty')) out.far = true;
