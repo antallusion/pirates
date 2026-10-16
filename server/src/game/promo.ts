@@ -179,6 +179,17 @@ export function promoView(game: Game, s: PlayerSession): PromoView {
   return { now, cards, carousel: PROMO_CAROUSEL === 'session' ? !seenNow.get(s)?.has('carousel') : PROMO_CAROUSEL === 'day' && st.carousel < today };
 }
 
+/** Her personal offer that ends within `within` ms of `now` (the soonest), for the Telegram notice of its last hour. */
+export function promoEnding(game: Game, acc: number, now: number, within: number): { id: string; off: number; until: number } | null {
+  const st = stateOf(game, acc);
+  let best: PromoOffer | null = null;
+  for (const ctx of PROMO_CTXS) {
+    const o = st.slots[ctx].o;
+    if (o && o.until > now && o.until - now <= within && (!best || o.until < best.until)) best = o;
+  }
+  return best ? { id: best.id, off: best.off, until: best.until } : null;
+}
+
 export function sendPromo(game: Game, s: PlayerSession): void {
   if (s.authed && s.profile) game.sendTo(s, { t: 'promo', view: promoView(game, s) });
 }

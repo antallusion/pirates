@@ -7,6 +7,7 @@
 // yard up to its caps (the island's level and its warehouse widen them); the yard, then the island's store, then
 // the hold of a ship lying off the island pay for the building.
 
+import { notifyAway } from './tgnotify.ts'; // the Telegram notices (owner, 2026-10-16)
 import { singleHall } from '../../../shared/src/data/baselevels.ts';
 import {
   BARGE, BARGE_MUL, BASE_RES, BIOME_YIELD, PLOT_CELLS, PRODUCERS, TOKEN_MAX, TOKEN_SECS, baseCost, crewsAt, isProducer, levelGate, maxLevel, nextCrewAt, plotsOf, producerFits,
@@ -216,7 +217,10 @@ function finish(game: Game, h: Holding, y: Yard, isl: Island, j: BaseJob): void 
   }
   game.holdings.touch();
   const s = h.owner.kind === 'player' ? game.sessionByAccount(h.owner.id) : undefined;
-  if (!s) return;
+  if (!s) {
+    if (h.owner.kind === 'player') notifyAway(game, h.owner.id, 'build'); // the bot tells her (owner, 2026-10-16)
+    return;
+  }
   if (j.level <= 1) game.sendTo(s, { t: 'toast', msg: `The ${name.toLowerCase()} on ${isl.name} is finished.`, kind: 'good' });
   else game.sendTo(s, { t: 'toast', msg: `${name} on ${isl.name}: level ${j.level}.`, kind: 'good' });
   game.sendTo(s, { t: 'base', view: baseView(game, s) });

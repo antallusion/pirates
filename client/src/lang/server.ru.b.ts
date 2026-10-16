@@ -1048,7 +1048,6 @@ export const SERVER_RU_B: Record<string, string> = {
   "Ride out the storm at sea: the sea pays back those who stay.": "Переждите шторм в море: море вознаграждает тех, кто остался.",
   "Rode out the storm": "Пережили шторм",
   "Your share of {0}'s purse: {1} silver.": "Ваша доля из кошеля «{0}»: {1} серебра.",
-  "Day {0} at sea in a row: the harbour-master pays you {1} silver.": "{0}-й день в море подряд: начальник порта платит вам {1} серебра.",
   "Fish of the day: {0} — twice the catch.": "Рыба дня: {0} — улов вдвое.",
   " Inside: {0} silver.": " Внутри: {0} серебра.",
   "A bottle in the waves! A note from {0}.{1}": "Бутылка в волнах! Записка от {0}.{1}",
