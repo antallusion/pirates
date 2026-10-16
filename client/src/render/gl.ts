@@ -96,7 +96,8 @@ void main() {
   col += vec3(0.6, 0.66, 0.74) * spark * (0.1 + 0.12 * (1.0 - night));
   // Specular glints of the sun (the moon by night) on the ripples: a broad sheen where the swell faces the light and
   // the sharp twinkle of single facets in it, travelling with the chop.
-  if (live > 0.0) {
+  // (the facets cost the most: not on a weak device's lowest level, live 0.6 there)
+  if (live > 0.7) {
     vec3 hv = normalize(sun + vec3(0.0, 0.0, 1.0));
     // (facets: a fine sine ripple across the chop, broken by the noise into sparse travelling sparks, as on the island)
     float fph = noise(l * 0.07 + offW) * 14.0;

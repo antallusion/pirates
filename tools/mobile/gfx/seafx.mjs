@@ -66,6 +66,10 @@ try {
       for (let i = 0; i < 30; i++) { const v = await p.evaluate(() => Math.abs(globalThis.gravetide.state.ownDisplay?.speed ?? 0)); if (v < 0.02) break; await L.sleep(1000); }
       await L.sleep(1500);
       await dismiss(p);
+      // the water alone: the shader sea's own layer (WebGL), or the world canvas without the HUD (2D)
+      await p.evaluate(() => { const st = document.createElement('style'); st.id = 'gfx-only-sea'; st.textContent = document.getElementById('world-sea') ? 'body * { visibility: hidden !important; } #world-sea { visibility: visible !important; }' : '#hud, #touch, #toasts, #hud-chat, .k-sheet-root { visibility: hidden !important; }'; document.head.append(st); });
+      await L.sleep(300);
+      const speed = await p.evaluate(() => +(globalThis.gravetide.state.ownDisplay?.speed ?? 0).toFixed(3));
       const a = await grab(); await L.sleep(1000); const c = await grab();
       const diff = await p.evaluate(async ([x, y]) => {
         const load = (d) => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.src = 'data:image/png;base64,' + d; });
@@ -81,8 +85,9 @@ try {
         }
         return { changed: +(n / tot * 100).toFixed(1), meanDelta: +(sum / tot).toFixed(2) };
       }, [a, c]);
-      rows.push({ tag: TAG, gl: !noGl, diff });
-      L.log('sea diff 1 s', JSON.stringify(diff));
+      await p.evaluate(() => document.getElementById('gfx-only-sea')?.remove());
+      rows.push({ tag: TAG, gl: !noGl, diff, speed });
+      L.log('sea diff 1 s', JSON.stringify(diff), 'her speed', speed);
       writeFileSync(`${OUT}/diff_${TAG}${noGl ? '_2d' : ''}_a.png`, Buffer.from(a, 'base64'));
       writeFileSync(`${OUT}/diff_${TAG}${noGl ? '_2d' : ''}_b.png`, Buffer.from(c, 'base64'));
     }
