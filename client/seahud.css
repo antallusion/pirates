@@ -765,3 +765,18 @@ body.tac-ph .tb-qbar:not(.fold) ~ .tb-top { top: calc(env(safe-area-inset-top, 0
 body.tac-ph .tb-top.tb-band .tb-tline { min-height: 28px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; white-space: nowrap; font-size: 12px; padding: 0 12px; pointer-events: auto; }
 /* A replay asked for stands over the windows that follow a fight (the prize, the loss) till it is put away. */
 #board-tac.rp { z-index: 900; }
+/* Owner, 2026-10-16: the reckoning held till she puts it away — over the windows that follow the fight; its cross. */
+#board-tac.held { z-index: 900; }
+.tb-endx2 { position: relative; flex: none; width: 32px; height: 32px; padding: 0; border-radius: 50%; border: 1px solid var(--brass-dim); background: #16110d; cursor: pointer; pointer-events: auto; }
+.tb-endx2 .tb-pk-x { position: absolute; inset: 0; }
+/* «Повторы»: her last twenty, each a row — the result, the opponent, when and how long. */
+.tb-rps { display: flex; flex-direction: column; gap: 6px; }
+.tb-rps-row { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 10px; border: 1px solid var(--k-brass-dim, #6b5a3a); border-radius: 6px; background: linear-gradient(180deg, #241d16, #15110c);
+  color: var(--k-bone, #e8dcc0); text-align: left; cursor: pointer; touch-action: manipulation; }
+.tb-rps-res { flex: none; min-width: 84px; font: 700 13px/1.2 var(--k-font-sans, sans-serif); }
+.tb-rps-res.won { color: #a8dca2; }
+.tb-rps-res.lost { color: #e3998a; }
+.tb-rps-vs { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.tb-rps-vs b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-rps-vs small { color: var(--fog); font-size: 12px; }
+.tb-rps-row .ico-sm { flex: none; width: 22px; height: 22px; margin: 0; }

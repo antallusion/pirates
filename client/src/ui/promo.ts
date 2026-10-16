@@ -272,6 +272,26 @@ export class Promos {
     const end = tac && !tac.classList.contains('hidden') && tac.querySelector('.tb-end');
     const el = this.mount('promo-board', document.body);
     this.chip(el, end ? this.cardsFor('board')[0] : undefined, 'board', 'po-board');
+    if (end && !el.classList.contains('hidden')) this.besideEnd(el, end as HTMLElement, tac!);
+  }
+
+  /** Owner, 2026-10-16: the boarding's offer never over the reckoning — at the top of the screen, or at its foot when the
+   *  reckoning stands at the top; with room for neither (a tall reckoning), it waits till the reckoning is put away. */
+  private besideEnd(el: HTMLElement, end: HTMLElement, tac: HTMLElement): void {
+    const b = end.getBoundingClientRect();
+    const h = el.offsetHeight || 48, w = el.offsetWidth || 220;
+    const x0 = (innerWidth - w) / 2, x1 = x0 + w;
+    const free = (top: number) => top >= 0 && top + h <= innerHeight && (x1 <= b.left || x0 >= b.right || top + h <= b.top - 4 || top >= b.bottom + 4);
+    const sa = (k: string) => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(k)) || 0;
+    const top = sa('--sa-t') + 6, foot = innerHeight - h - 6 - sa('--sa-b');
+    const at = free(top) ? top : free(foot) ? foot : null;
+    el.style.visibility = at === null ? 'hidden' : '';
+    if (at !== null) {
+      el.style.top = `${Math.round(at)}px`;
+      el.style.bottom = 'auto';
+    }
+    // Over the field held after the fight (it stands over the windows that follow), the offer stands over it too.
+    el.style.zIndex = tac.classList.contains('held') ? '901' : '';
   }
 
   // ---------------------------------------------------------------------------------------------- the carousel

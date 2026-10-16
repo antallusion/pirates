@@ -1831,7 +1831,7 @@ export interface TacReplayFrame {
   over?: TacView['over'];
 }
 export interface TacReplayList {
-  list: { id: string; at: number; vs: string; won: boolean; pvp: boolean }[];
+  list: { id: string; at: number; vs: string; won: boolean; pvp: boolean; rounds?: number }[];
 }
 
 export type ServerMsg =

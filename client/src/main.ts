@@ -2582,7 +2582,7 @@ hud.onCaptain = () => {
   if (!self) return;
   if (modal) closeModal();
   toggleCaptainMenu({ name: self.name, level: self.level, pts: self.talentPoints }, {
-    open: (id) => (id === 'hero' || id === 'skills' ? openHero(id) : openModal(id)),
+    open: (id) => (id === 'hero' || id === 'skills' ? openHero(id) : id === 'replays' ? tactical.openReplays() : openModal(id)),
     support: (email, message) => authPost('/auth/support', { email, message, token: localStorage.getItem('gravetide.token') ?? '', website: '', t: String(Math.round(performance.now())), lang: lang() }),
     logout: () => {
       net.forget();

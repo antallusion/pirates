@@ -450,7 +450,7 @@ function keepFight(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle): voi
     const ses = game.sessionOf(ship);
     if (!ses?.authed) continue;
     try {
-      ids[side] = keepReplay(game, ses.accountId, bt.rec, { side, vs: other.name, won: bt.over.winner === side, pvp });
+      ids[side] = keepReplay(game, ses.accountId, bt.rec, { side, vs: other.name, won: bt.over.winner === side, pvp, rounds: bt.round });
     } catch {
       ids[side] = null; // a fight not kept is no reason to lose its end
     }

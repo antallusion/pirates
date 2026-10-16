@@ -780,15 +780,22 @@ export class TacticalPanel {
     }
     // The battle's end closed by the sea while it is still being played (or just shown, or under the victory's film):
     // it stays till then and a moment more, so the reckoning is seen.
-    if (!v && this.view?.over && this.el && !this.endHidden) {
-      const film = !!document.querySelector('.film');
-      if (film) this.endUntil = Math.max(this.endUntil, performance.now() + 2200);
-      if (film || performance.now() < Math.max(this.busyUntil, this.endUntil)) {
-        this.tick();
-        this.draw();
-        return;
-      }
+    // Owner, 2026-10-16: the reckoning stays till she puts it away (its button, its cross, Esc) — «Почему» and «Повтор»
+    // must be there to tap — standing over the windows that follow the fight (the prize, the loss) once the film is
+    // done; a new fight coming in puts it away at once.
+    if (v && !v.over && this.view?.over && !this.view.replay && this.el) {
+      this.endHidden = true;
+      this.busyUntil = this.endUntil = 0;
+      this.render(null);
     }
+    if (!v && this.view?.over && this.el && !this.endHidden && !this.view.replay) {
+      const film = !!document.querySelector('.film');
+      root.classList.toggle('held', !film && performance.now() >= this.busyUntil);
+      this.tick();
+      this.draw();
+      return;
+    }
+    root.classList.remove('held');
     const was = this.view;
     this.view = v;
     document.body.classList.toggle('tac', !!v);
@@ -2077,11 +2084,13 @@ export class TacticalPanel {
       const arenaLine = r?.arena ? `<span class="tb-why tb-arena${r.arena.rated ? (r.arena.delta >= 0 ? ' up' : ' down') : ''}">${icon('icon.item_duelling_pistols', '', 'ico-sm')}${esc(arenaEndLine(r.arena))}</span>` : '';
       // Owner, 2026-10-16: «Почему» (its sheet: each stack's harm, the turning point) and «Повтор» beside the button.
       const more = `${r?.why ? `<button class="k-btn k-btn--md tb-endx" data-why>${esc(L('why.btn'))}</button>` : ''}${r?.replay && !v.replay ? `<button class="k-btn k-btn--md tb-endx" data-replay="${esc(r.replay)}">${esc(L('replay'))}</button>` : ''}`;
-      banner.innerHTML = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span class="tb-why">${esc(whyText)}</span>${arenaLine}${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${rows}</div><div class="tb-endrow">${more}<button class="k-btn k-btn--primary k-btn--lg tb-endbtn" data-endbtn>${esc(v.replay ? L('replay.close') : v.land ? LL('close') : L('next'))}</button></div>`;
+      banner.innerHTML = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span class="tb-why">${esc(whyText)}</span>${arenaLine}${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${rows}</div><div class="tb-endrow">${more}<button class="k-btn k-btn--primary k-btn--lg tb-endbtn" data-endbtn>${esc(v.replay ? L('replay.close') : v.land ? LL('close') : L('next'))}</button><button class="tb-endx2" data-endx title="${esc(L('close.x'))}" aria-label="${esc(L('close.x'))}"><i class="tb-pk-x" aria-hidden="true"></i></button></div>`;
+      banner.querySelector<HTMLElement>('[data-endx]')?.addEventListener('click', () => banner.querySelector<HTMLElement>('[data-endbtn]')?.click());
       banner.querySelector<HTMLElement>('[data-why]')?.addEventListener('click', () => this.openWhy(v));
       banner.querySelector<HTMLElement>('[data-replay]')?.addEventListener('click', (e) => this.askReplay((e.currentTarget as HTMLElement).dataset.replay!));
       banner.querySelector<HTMLElement>('[data-endbtn]')!.addEventListener('click', () => {
         if (v.replay) return this.stopReplay();
+        this.endHidden = true;
         if (v.land) this.send({ t: 'lair', action: 'close' });
         else {
           // A battle at sea closes itself a moment later: the button puts the reckoning away now.
@@ -2577,8 +2586,36 @@ export class TacticalPanel {
     this.send({ t: 'tac_replay', id });
   }
 
+  /** Owner, 2026-10-16 («Повторы»): her last twenty kept fights out of battle — the captain's menu asks for the list. */
+  private rpsH: SheetHandle | null = null;
+  private rpsWanted = false;
+  openReplays(): void {
+    this.rpsWanted = true;
+    this.send({ t: 'tac_replay' });
+  }
+  private showReplays(list: NonNullable<Extract<ServerMsg, { t: 'tac_replay' }>['list']>): void {
+    this.rpsH?.close('code');
+    const when = (at: number) => new Date(at).toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const row = (x: (typeof list)[number]) => `<button type="button" class="tb-rps-row" data-rp="${esc(x.id)}"><span class="tb-rps-res ${x.won ? 'won' : 'lost'}">${esc(L(x.won ? 'rps.won' : 'rps.lost'))}</span><span class="tb-rps-vs"><b>${esc(L('rps.vs', { name: personName(x.vs) }))}</b><small>${esc(when(x.at))}${x.rounds ? ` · ${x.rounds} ${esc(plural(x.rounds, L('rps.r1'), L('rps.r2'), L('rps.r5')))}` : ''}${x.pvp ? ` · ${esc(L('rps.pvp'))}` : ''}</small></span>${icon('icon.bt_quick', '', 'ico-sm')}</button>`;
+    const body = list.length ? `<div class="tb-rps">${list.map(row).join('')}</div>` : `<p class="muted">${esc(L('rps.empty'))}</p>`;
+    this.rpsH = openSheet({ title: L('rps.title'), body, height: 'auto', cls: 'tb-sheetk tb-rpsk', onClose: () => (this.rpsH = null) });
+    this.rpsH.body.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('[data-rp]');
+      if (!b) return;
+      this.rpsH?.close('code');
+      this.askReplay(b.dataset.rp!);
+    });
+  }
+
   /** A kept fight's steps came (main.ts): the field laid out afresh as it opened, then played step by step. */
   onReplay(m: Extract<ServerMsg, { t: 'tac_replay' }>): void {
+    if (m.list) {
+      if (this.rpsWanted) this.showReplays(m.list);
+      this.rpsWanted = false;
+      return;
+    }
+    // Never over a fight being fought.
+    if (this.view && !this.view.over && !this.view.replay) return;
     if (m.error || !m.base || !m.frames) {
       if (m.error) this.notice(serverText(m.error));
       return;
@@ -2862,6 +2899,10 @@ export class TacticalPanel {
     if ((code === 'Enter' || code === 'NumpadEnter' || code === 'Space') && this.pickOn()) {
       const first = this.pickOptions(v)[0];
       if (first) this.pickAct(first.k);
+      return true;
+    }
+    if (k === 'escape' && v.over && !this.endHidden) {
+      this.el?.querySelector<HTMLElement>('.tb-banner [data-endbtn]')?.click();
       return true;
     }
     if (k === 'escape') {

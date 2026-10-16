@@ -123,8 +123,17 @@ try {
   for (let i = 0; i < 150 && !(await P.evaluate(() => !!globalThis.gravetide.tactical.view?.over)); i++) await sleep(1000);
   await sleep(1500);
   await shot(P, '8_end');
-  const end = await boxes(P, '.tb-banner [data-why], .tb-banner [data-replay], .tb-banner [data-endbtn]');
+  const end = await boxes(P, '.tb-banner [data-why], .tb-banner [data-replay], .tb-banner [data-endbtn], .tb-banner [data-endx]');
   console.log('end buttons', JSON.stringify(end));
+  // The reckoning held after the sea closes the fight, and the offer never over its buttons.
+  for (let i = 0; i < 20 && (await P.evaluate(() => !!globalThis.gravetide.state.boardTac)); i++) await sleep(1000);
+  await sleep(1500);
+  const held = await boxes(P, '.tb-banner [data-endbtn]');
+  const promo = await boxes(P, '#promo-board');
+  console.log('server closed:', !(await P.evaluate(() => !!globalThis.gravetide.state.boardTac)), 'end still shown', held.length, 'promo', JSON.stringify(promo));
+  if (!held.length) problems.push('the reckoning went before she closed it');
+  for (const pr of promo) for (const e of await boxes(P, '.tb-banner button, .tb-banner')) if (overlap(pr.b, e.b)) problems.push(`promo over ${e.k}`);
+  await shot(P, '8b_held');
   const why = await P.evaluate(() => globalThis.gravetide.tactical.view?.result?.why ? true : false);
   if (!why) problems.push('no why in the result');
   await P.evaluate(() => globalThis.gravetide.tactical.openWhy(globalThis.gravetide.tactical.view));
@@ -133,7 +142,21 @@ try {
   const rid = await P.evaluate(() => globalThis.gravetide.tactical.view?.result?.replay ?? null);
   console.log('replay id', rid);
   const id = rid ?? (await P.evaluate(() => new Promise((res) => { const n = globalThis.gravetide.net; const off = n.on((m) => { if (m.t === 'tac_replay' && m.list) { res(m.list[0]?.id ?? null); } }); n.send({ t: 'tac_replay' }); setTimeout(() => res(null), 3000); void off; })));
-  if (id) {
+  // «Повторы» out of battle: the list, then a tap on its first.
+  await P.evaluate(() => globalThis.gravetide.tactical.el?.querySelector('.tb-banner [data-endbtn]')?.click());
+  await sleep(1200);
+  const gone = await P.evaluate(() => !document.body.classList.contains('tac'));
+  console.log('closed by its button', gone);
+  if (!gone) problems.push('the reckoning did not close');
+  await L.closeAll(P);
+  await P.evaluate(() => globalThis.gravetide.tactical.openReplays());
+  await sleep(1500);
+  const rows = await boxes(P, '.tb-rps-row');
+  console.log('replays list', rows.length);
+  await shot(P, '9b_replays');
+  if (!rows.length) problems.push('no replays in the list');
+  if (rows.length) { await P.click('.tb-rps-row'); await sleep(5000); await shot(P, '10b_replay_from_list'); console.log('replay from list', await P.evaluate(() => globalThis.gravetide.tactical.replaying())); }
+  if (id && !rows.length) {
     await P.evaluate((x) => globalThis.gravetide.tactical.askReplay(x), id);
     await sleep(6000);
     await shot(P, '10_replay');

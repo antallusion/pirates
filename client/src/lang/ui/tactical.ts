@@ -302,6 +302,16 @@ export const EN = {
   'replay.title': "Replay of the battle",
   'replay.close': "End the replay",
   'replay.none': "This fight was not kept",
+  'rps.title': "Replays",
+  'rps.empty': "No fight kept yet: fights between captains and those that matter (a legend, a citadel, the Colosseum, an elite ship) are kept here, the last twenty.",
+  'rps.won': "Victory",
+  'rps.lost': "Defeat",
+  'rps.vs': "against {name}",
+  'rps.r1': "round",
+  'rps.r2': "rounds",
+  'rps.r5': "rounds",
+  'rps.pvp': "a captain",
+  'close.x': "Close",
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -585,4 +595,14 @@ export const RU: Record<keyof typeof EN, string> = {
   'replay.title': "Повтор боя",
   'replay.close': "Закончить повтор",
   'replay.none': "Этот бой не сохранён",
+  'rps.title': "Повторы",
+  'rps.empty': "Пока ни одного боя: здесь хранятся двадцать последних боёв с капитанами и важных боёв (легенда, цитадель, Колизей, элитный корабль).",
+  'rps.won': "Победа",
+  'rps.lost': "Поражение",
+  'rps.vs': "против {name}",
+  'rps.r1': "раунд",
+  'rps.r2': "раунда",
+  'rps.r5': "раундов",
+  'rps.pvp': "капитан",
+  'close.x': "Закрыть",
 };

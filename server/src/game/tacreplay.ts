@@ -22,6 +22,8 @@ export interface ReplayMeta {
   won: boolean;
   pvp: boolean;
   side: 0 | 1;
+  /** Rounds it ran. */
+  rounds?: number;
 }
 interface ReplayIndex {
   n: number;
@@ -38,7 +40,7 @@ export function replayList(game: Game, acc: number): ReplayMeta[] {
 
 /** Keep a battle's record for captain `acc` (who fought on `side`): its id, or null when it is too long to keep. The
  *  oldest of her twenty gives up its place. */
-export function keepReplay(game: Game, acc: number, rec: TacRec, meta: { side: 0 | 1; vs: string; won: boolean; pvp: boolean }): string | null {
+export function keepReplay(game: Game, acc: number, rec: TacRec, meta: { side: 0 | 1; vs: string; won: boolean; pvp: boolean; rounds?: number }): string | null {
   const text = recToJson(rec);
   if (text.length > REPLAY_MAX) return null;
   const idx = game.db.getKv<ReplayIndex>(indexKey(acc)) ?? { n: 0, list: [] };
@@ -47,7 +49,7 @@ export function keepReplay(game: Game, acc: number, rec: TacRec, meta: { side: 0
   const id = String(n);
   game.db.setKv(itemKey(acc, slot), text);
   const list = idx.list.filter((x) => x.slot !== slot);
-  list.push({ id, slot, at: game.wallNow(), vs: meta.vs, won: meta.won, pvp: meta.pvp, side: meta.side });
+  list.push({ id, slot, at: game.wallNow(), vs: meta.vs, won: meta.won, pvp: meta.pvp, side: meta.side, ...(meta.rounds ? { rounds: meta.rounds } : {}) });
   game.db.setKv(indexKey(acc), { n, list: list.slice(-REPLAY_KEEP) });
   return id;
 }

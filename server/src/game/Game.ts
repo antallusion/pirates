@@ -3355,7 +3355,7 @@ export class Game {
         // Owner, 2026-10-16 («Повтор»): a fight of her last twenty played again, or their list.
         if (!s.authed) return;
         if (typeof msg.id === 'string' && msg.id) this.sendTo(s, replayOf(this, s.accountId, msg.id.slice(0, 16)));
-        else this.sendTo(s, { t: 'tac_replay', list: replayList(this, s.accountId).map(({ id, at, vs, won, pvp }) => ({ id, at, vs, won, pvp })) });
+        else this.sendTo(s, { t: 'tac_replay', list: replayList(this, s.accountId).map(({ id, at, vs, won, pvp, rounds }) => ({ id, at, vs, won, pvp, ...(rounds ? { rounds } : {}) })) });
         return;
       case 'board_pref':
         s.classicBoarding = msg.classic === true;
