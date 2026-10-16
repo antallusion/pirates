@@ -145,6 +145,7 @@ import { flagLine, flagsCss, lawlessHere, lawlessWords, shipColours } from './ui
 import { EN as FLAGS_EN, RU as FLAGS_RU } from './lang/ui/flags.ts';
 import { citiesHostile } from '../../shared/src/data/colours.ts';
 import { bootMark, settleViewport, watchViewport } from './viewport.ts'; // a start that always goes on (owner, 2026-10-16)
+import { startTelemetry, telemetryBoot } from './telemetry.ts'; // real-device telemetry (docs/33)
 
 const L = dict(MAIN_EN, MAIN_RU);
 /** The captain last aboard on this device (docs/23 item 88: «Продолжить: …» on the title screen). */
@@ -1350,6 +1351,7 @@ function onMessage(m: ServerMsg): void {
         settleViewport('init');
         requestAnimationFrame(() => beginLoad('start', 12000).imgs($('hud')).imgs(document.getElementById('touch')).settle().done().then(() => {
           bootMark('start loaded');
+          telemetryBoot();
           startWarm();
         }));
       }
@@ -4042,6 +4044,8 @@ function step(t: number): void {
   }
 }
 requestAnimationFrame(frame);
+// Real-device telemetry (docs/33): what the player looks at, for the frame rate's histogram.
+startTelemetry(() => (!inGame ? 'menu' : tactical.open ? 'battle' : isleScene.isOpen ? 'isle' : state.self?.dockedAt ? 'port' : 'sea'));
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.

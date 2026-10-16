@@ -9,6 +9,7 @@
 // signs in or makes a guest captain named from the first name. The bot token lives only in the server's environment:
 // it is never logged, never sent to a client, and a Bot API error is reported by its code and a cleaned description.
 
+import { telemetry } from './http/telemetry.ts';
 import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import type { AuthResult, AuthService } from './auth.ts';
 import type { Db } from './persistence/db.ts';
@@ -444,6 +445,16 @@ export class TelegramService {
       case 'refund':
         if (!this.admins.has(m.from.id)) return this.say(m.chat.id, tgText('help', l));
         return this.say(m.chat.id, await this.refund(arg));
+      case 'telemetry': {
+        // docs/33: the owner's look at the players' devices from the bot (the page: /telemetry/admin)
+        if (!this.admins.has(m.from.id)) return this.say(m.chat.id, tgText('help', l));
+        const t = telemetry();
+        if (!t) return this.say(m.chat.id, 'Телеметрия выключена.');
+        const days = Math.max(1, Math.min(60, Math.trunc(Number(arg)) || 1));
+        const x = t.line(days);
+        return this.say(m.chat.id, `Телеметрия за ${days} дн.: отчётов ${x.reports}, устройств ${x.devices}; в море обычно ${x.p50} кадр/с, в худших 5% — ${x.p95}; запуск ${x.boot} с; ошибок JS: ${x.errors}.
+${this.publicUrl}/telemetry/admin`);
+      }
       default:
         return this.say(m.chat.id, tgText('help', l));
     }
