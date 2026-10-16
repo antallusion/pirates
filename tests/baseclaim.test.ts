@@ -401,7 +401,8 @@ test('a robber in lawless water: under the black flag, five minutes ashore, a qu
 
 test('both languages: every word of the claim, the tax and the raids in English and Russian', () => {
   const table = { ...serverTable(), ...SERVER_RU_B };
-  const said = extract().filter((p) => /raider|Raiders|tax|claim another|Abyss|lair|given up|rob|black flag|island watch|Green Pennant|stripped lately|berthed at the island|caravans home/.test(p));
+  // (markup is no sentence: the owner's telemetry page says «robots» in its head)
+  const said = extract().filter((p) => !p.startsWith('<') && /raider|Raiders|tax|claim another|Abyss|lair|given up|rob|black flag|island watch|Green Pennant|stripped lately|berthed at the island|caravans home/.test(p));
   assert.ok(said.length > 25, `the sentences: ${said.length}`);
   for (const p of said) assert.ok(table[p], `Russian for ${JSON.stringify(p)}`);
   for (const k of Object.keys(BASE_EN).filter((k) => /^(w_|def_|raid_|abandon)/.test(k))) assert.ok((BASE_RU as Record<string, string>)[k], k);

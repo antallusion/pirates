@@ -197,6 +197,6 @@ export const SERVER_RU_ADMIN: Record<string, string> = {
   'Offers: {0}. Usage: /offers [stats|roll|carousel]': 'Офферы: {0}. Как: /offers [stats|roll|carousel]',
   // real-device telemetry (docs/33)
   'Telemetry is off on this server.': 'Телеметрия на этом сервере выключена.',
-  'Telemetry for {0} d: {1} reports from {2} devices; at sea {3} fps typical, {4} in the worst 5%; start {5} s; {6} JS errors. The page: /telemetry/admin':
-    'Телеметрия за {0} дн.: отчётов {1}, устройств {2}; в море обычно {3} кадр/с, в худших 5% — {4}; запуск {5} с; ошибок JS: {6}. Страница: /telemetry/admin',
+  'Telemetry for {0} d: {1} reports from {2} devices; at sea {3} fps typical, {4} in the worst {5}%; start {6} s; {7} JS errors. The page: /telemetry/admin':
+    'Телеметрия за {0} дн.: отчётов {1}, устройств {2}; в море обычно {3} кадр/с, в худших {5}% — {4}; запуск {6} с; ошибок JS: {7}. Подробно — на странице телеметрии (её адрес в docs/33).',
 };
