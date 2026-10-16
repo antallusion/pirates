@@ -161,6 +161,8 @@ export class Fx {
 
   splash(x: number, y: number, big = false): void {
     this.add({ kind: 'splash', x, y, life: big ? 1.6 : 0.9, size: big ? 6 : 2, grow: big ? 22 : 14, color: '#c9d6de' });
+    // the ring it leaves on the water, spreading (a miss reads as a miss: 2026-10-16)
+    if (this.lod < 2 && this.admit(x, y)) this.particles.push({ kind: 'ring', x, y, vx: 0, vy: 0, t: 0, life: big ? 1.8 : 1.2, size: 1.5, grow: big ? 16 : 10, color: '#b9ccd6' });
     for (let i = 0; i < (big ? 14 : 5); i++) {
       const a = Math.random() * Math.PI * 2, s = 3 + Math.random() * (big ? 10 : 5);
       this.add({ kind: 'foam', x, y, vx: Math.sin(a) * s, vy: -Math.cos(a) * s, life: 0.6 + Math.random() * 0.6, size: 1 + Math.random() * 1.5, color: '#dfe8ee' });

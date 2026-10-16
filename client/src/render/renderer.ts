@@ -27,7 +27,9 @@ import type { Threat } from '../../../shared/src/data/shiplevel.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GUNS, SHIP_CLASSES, AMMO, CHASER_CONE, isZoneBossClass } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
-import { nightFactor, SPEED_SCALE } from '../../../shared/src/constants.ts';
+import { nightFactor, SPEED_SCALE, timeOfDay } from '../../../shared/src/constants.ts';
+import { duskOf, gradeOf, lightDir, liveness } from './grade.ts';
+import { damageLook, sway, tornSails } from './shipfx.ts';
 import { clamp, headingVec } from '../../../shared/src/math.ts';
 import { placeName } from '../ui/maps.ts';
 import { serverText } from '../lang/server.ts';
@@ -336,7 +338,7 @@ export class Renderer {
   /** The camera's look ahead of her bow, eased on its own so a turn does not swing her across the screen. */
   private lead = { x: 0, y: 0 };
   private shipCache = new Map<string, { canvas: HTMLCanvasElement; extentY: number; cx: number; cy: number }>();
-  private wakes = new Map<number, { x: number; y: number; t: number; w: number }[]>();
+  private wakes = new Map<number, { x: number; y: number; t: number; w: number; life: number }[]>();
 
   /** WebGL layers: the shader sea below, the fog and lightning above (null: the 2D fallback draws them). */
   sea: GlSea | null;
@@ -426,9 +428,12 @@ export class Renderer {
 
   /** Main frame. */
   private frameNo = 0;
+  /** This frame's step (s): the effects that spawn by the second read it. */
+  private dtNow = 1 / 60;
 
   render(state: ClientState, own: SailState | null, dt: number, aim: { side: 'port' | 'starboard' | null; dist: number; boardTarget: number | null; chaser: 'bow' | 'stern' | null; charge?: { side: 'port' | 'starboard'; held: number } | null; target?: number | null; range?: 'in' | 'far' | null }): void {
     this.time += dt;
+    this.dtNow = dt;
     this.markRange = aim.range ?? null;
     this.frameNo++;
     // An elite, a boss, a zone boss or one of the deep's great ones: her broadside numbers bigger (docs/25 item 11).
@@ -609,12 +614,14 @@ export class Renderer {
         if (f) this.sky.setTexture(f.img);
       }
       const wakes: { x: number; y: number; age: number; w: number }[] = [];
-      for (const w of this.wakes.values()) for (let i = Math.max(0, w.length - 12); i < w.length; i++) wakes.push({ x: w[i].x, y: w[i].y, age: this.time - w[i].t, w: w[i].w * (1 + (this.time - w[i].t) * 0.35) });
+      // (each point's age on the shader's 7 s scale: a fast ship's wake lives longer, a slow one's fades sooner)
+      for (const w of this.wakes.values()) for (let i = Math.max(0, w.length - 12); i < w.length; i++) wakes.push({ x: w[i].x, y: w[i].y, age: ((this.time - w[i].t) * 7) / w[i].life, w: w[i].w * (1 + (this.time - w[i].t) * 0.35) });
       wakes.sort((a, b) => b.age - a.age);
       const wv = headingVec(state.wind[0]);
       this.sea.draw({
         camX: this.camX, camY: this.camY, zoom: this.zoom, time: this.time, tint: hexRgb(tint), wind: [wv.x, wv.y, clamp(state.wind[1], 0, 1.4)],
         night: nightFactor(state.estServerTime()), wakes,
+        live: liveness(settings().reduceMotion, this.fx.lod, settings().effects === 'low'), sun: lightDir(timeOfDay(state.estServerTime()), nightFactor(state.estServerTime())), grade: gradeOf(state.region).mul,
       });
       this.drawStreaks(state);
       return;
@@ -660,8 +667,63 @@ export class Renderer {
     grd.addColorStop(clamp(t + 0.25, 0, 1), 'rgba(120,150,180,0)');
     g.fillStyle = grd;
     g.fillRect(0, 0, this.w, this.h);
+    this.drawSwell2d(state);
 
     this.drawStreaks(state);
+  }
+
+  /** The 2D sea alive (2026-10-16, without WebGL): the swell's bands of light and shade rolling downwind, anchored to
+   *  the world, and the sun's (the moon's) glints twinkling on the chop — one gradient and a few hundred pixels. */
+  private drawSwell2d(state: ClientState): void {
+    const opt = settings();
+    const live = liveness(opt.reduceMotion, this.fx.lod, opt.effects === 'low');
+    if (!live) return;
+    const g = this.g;
+    const d = headingVec(state.wind[0]);
+    const lam = 125; // metres between crests
+    const L = Math.hypot(this.w, this.h);
+    const cx = this.w / 2, cy = this.h / 2;
+    const grd = g.createLinearGradient(cx - (d.x * L) / 2, cy - (d.y * L) / 2, cx + (d.x * L) / 2, cy + (d.y * L) / 2);
+    const s0 = this.camX * d.x + this.camY * d.y - L / 2 / this.zoom;
+    const span = L / this.zoom;
+    const run = this.time * (5 + 4 * clamp(state.wind[1], 0, 1.4)); // metres the crests have rolled
+    // the first crest at or before the screen's start
+    const first = Math.floor((s0 - run) / lam) * lam + run;
+    const a = 0.07 * live;
+    for (let c = first; c < s0 + span + lam; c += lam) {
+      for (const [off, col] of [[0, `rgba(150,180,205,${a})`], [lam * 0.25, 'rgba(0,0,0,0)'], [lam * 0.5, `rgba(0,0,0,${a * 1.3})`], [lam * 0.75, 'rgba(0,0,0,0)']] as const) {
+        const u = (c + off - s0) / span;
+        if (u >= 0 && u <= 1) grd.addColorStop(u, col);
+      }
+    }
+    g.fillStyle = grd;
+    g.fillRect(0, 0, this.w, this.h);
+    // glints: one candidate a cell of 12 m, a few of them lit at a time
+    if (this.zoom < 0.8) return;
+    // (a wide view takes bigger cells: never more than about 2500 a frame)
+    const cell = Math.max(12, Math.sqrt((this.w * this.h) / (this.zoom * this.zoom) / 2500));
+    const x0 = Math.floor((this.camX - this.w / 2 / this.zoom) / cell), x1 = Math.ceil((this.camX + this.w / 2 / this.zoom) / cell);
+    const y0 = Math.floor((this.camY - this.h / 2 / this.zoom) / cell), y1 = Math.ceil((this.camY + this.h / 2 / this.zoom) / cell);
+    const night = this.nightNow;
+    g.fillStyle = night > 0.5 ? 'rgba(190,210,235,0.75)' : 'rgba(255,240,205,0.8)';
+    const t = this.time;
+    for (let i = x0; i <= x1; i++) {
+      for (let j = y0; j <= y1; j++) {
+        let h = (i * 374761393 + j * 668265263) | 0;
+        h = Math.imul(h ^ (h >>> 13), 1274126177);
+        const r = ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+        if (r > 0.22) continue;
+        const tw = Math.sin(t * (2.2 + r * 9) + r * 80);
+        if (tw < 0.86) continue;
+        const k = (tw - 0.86) / 0.14;
+        const x = this.sx((i + r * 4) * cell), y = this.sy((j + ((r * 7) % 1)) * cell);
+        const sz = (1 + k * 1.5) * Math.min(2, this.zoom * 0.8);
+        g.globalAlpha = k * live;
+        g.fillRect(x - sz, y - 0.5, sz * 2, 1);
+        g.fillRect(x - 0.5, y - sz * 0.5, 1, sz);
+      }
+    }
+    g.globalAlpha = 1;
   }
 
   /** Wind streaks: short pale dashes drifting downwind (readability of wind direction). */
@@ -1729,6 +1791,8 @@ export class Renderer {
       if (x < -size || y < -size || x > this.w + size || y > this.h + size) continue;
       // A live volcano breathes: a slow column of dark smoke drifts off its crater.
       if (f === 'volcano' && Math.random() < 0.08) this.fx.smoke(p.x + (Math.random() - 0.5) * 8, p.y + (Math.random() - 0.5) * 8, 1, 14, true);
+      // …and its crater glows, the lava's light breathing (2026-10-16: the bloom of lanterns, fires and lava).
+      if (f === 'volcano') this.fx.light(p.x, p.y, 120, 'rgba(255,110,40,1)', 0.45 + 0.15 * Math.sin(this.time * 1.3 + is.id), 0.05);
       if (spr) {
         g.save();
         g.translate(x, y);
@@ -1970,9 +2034,11 @@ export class Renderer {
     const cls = SHIP_CLASSES[s.classId];
     if (s.spd > 0.8 && (!last || Math.hypot(last.x - s.x, last.y - s.y) > 4)) {
       const back = headingVec(s.h + Math.PI);
-      w.push({ x: s.x + back.x * cls.length * 0.45, y: s.y + back.y * cls.length * 0.45, t: this.time, w: cls.beam * (0.6 + s.spd / 20) });
+      // The wake's length by her speed (2026-10-16): a ship under full sail trails a long one, a drifting one a short.
+      const k = clamp(s.spd / Math.max(1, cls.maxSpeed), 0, 1.3);
+      w.push({ x: s.x + back.x * cls.length * 0.45, y: s.y + back.y * cls.length * 0.45, t: this.time, w: cls.beam * (0.6 + s.spd / 20), life: 2.5 + 5.5 * k });
     }
-    while (w.length && this.time - w[0].t > 7) w.shift();
+    while (w.length && this.time - w[0].t > w[0].life) w.shift();
     void dt;
   }
 
@@ -1993,7 +2059,7 @@ export class Renderer {
       }
       for (let i = 1; i < w.length; i++) {
         const a = w[i - 1], b = w[i];
-        const age = this.time - b.t;
+        const age = ((this.time - b.t) * 7) / b.life;
         const alpha = clamp(0.16 * (1 - age / 7), 0, 0.16);
         const spread = b.w * (1 + age * 0.35);
         const dx = b.x - a.x, dy = b.y - a.y;
@@ -2110,9 +2176,13 @@ export class Renderer {
       g.restore();
     }
 
-    g.rotate(s.h + (sinking ? sinkF * 0.35 : 0));
+    // Her roll and pitch on the swell and her canvas breathing (shipfx.ts): a hair's turn and squeeze, her own phase.
+    const opt = settings();
+    const live = sinking || hidden ? 0 : liveness(opt.reduceMotion, this.fx.lod, opt.effects === 'low');
+    const sw = sway(s.id, this.time, live, s.sail, state.wind[1], s.spd / Math.max(1, cls.maxSpeed));
+    g.rotate(s.h + (sinking ? sinkF * 0.35 : 0) + sw.turn);
     const scale = 1 - sinkF * 0.25;
-    g.scale(scale, scale);
+    g.scale(scale * sw.sx, scale * sw.sy);
     // Seen from above, a heeled ship shows less deck and her masts lean out to leeward.
     if (heel) {
       g.translate(heel * beam * 0.18, 0);
@@ -2129,16 +2199,37 @@ export class Renderer {
     const a = this.atlas.get(`${art}|${stage}|${hullImg.canvas.width}x${hullImg.canvas.height}`, () => hullImg.canvas, this.sailKey(s), this.lookPaint(s, state));
     if (Math.max(imgW, imgH) * this.dpr > CELL) g.drawImage(a.full, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
     else g.drawImage(a.page, a.sx, a.sy, a.sw, a.sh, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
-    this.drawPennant(s, len, beam, state);
-    // Sail damage tint (torn canvas reads as darker patches).
-    if (s.sails < 0.6) {
-      g.fillStyle = `rgba(10,10,10,${(0.6 - s.sails) * 0.5})`;
-      g.fillRect(-beam * 0.9, -len * 0.3, beam * 1.8, len * 0.5);
+    // Torn sails (2026-10-16): the cloth of her own picture scorched and holed, by the damage (shipfx.ts).
+    const dmg = damageLook(s.hull, s.sails);
+    if (dmg.torn > 0 && !sinking) {
+      const t = tornSails(hullImg.canvas);
+      if (t) {
+        g.globalAlpha *= 0.35 + 0.6 * dmg.torn;
+        g.drawImage(t, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
+      }
     }
+    g.globalAlpha = (hidden ? 0.45 : 1) * (1 - sinkF * 0.85);
+    this.drawPennant(s, len, beam, state);
     g.restore();
 
-    // Damage smoke and fire.
-    if (s.hull < 0.5 && Math.random() < (0.5 - s.hull) * 0.5) this.fx.smoke(s.x + (Math.random() - 0.5) * cls.beam, s.y + (Math.random() - 0.5) * cls.length * 0.6, 1, 5, true);
+    // Damage smoke and fire (frame-rate free: a chance per second): a plume from half her hull, fire from a quarter.
+    const dts = Math.min(0.1, this.dtNow);
+    if (dmg.smoke > 0 && !hidden && Math.random() < dmg.smoke * 8 * dts) this.fx.smoke(s.x + (Math.random() - 0.5) * cls.beam, s.y + (Math.random() - 0.5) * cls.length * 0.6, 1, 5 + dmg.smoke * 3, true);
+    if (dmg.fire > 0 && !hidden && !sinking && Math.random() < dmg.fire * 14 * dts) {
+      const v = headingVec(s.h);
+      const u = (Math.random() - 0.5) * 0.6;
+      this.fx.add({ kind: 'fire', x: s.x + v.x * cls.length * u + (Math.random() - 0.5) * cls.beam * 0.5, y: s.y + v.y * cls.length * u + (Math.random() - 0.5) * cls.beam * 0.5, vx: (Math.random() - 0.5) * 2, vy: -2.5, life: 0.5 + Math.random() * 0.4, size: 2 + dmg.fire * 2, grow: 4, color: '#ff8a3c' });
+      if (this.frameNo % 3 === 0) this.fx.light(s.x, s.y, 40 + cls.length, 'rgba(255,140,60,1)', 0.35 + 0.25 * dmg.fire, 0.12);
+    }
+    // Bow spray at speed: white water thrown off her cutwater to either side (decorative: the particles' caps and LOD).
+    const sk = s.spd / Math.max(1, cls.maxSpeed);
+    if (live && sk > 0.55 && Math.random() < (sk - 0.5) * 18 * dts) {
+      const v = headingVec(s.h);
+      const side = Math.random() < 0.5 ? -1 : 1;
+      const bx = s.x + v.x * cls.length * 0.48, by = s.y + v.y * cls.length * 0.48;
+      const sp = 4 + Math.random() * 5 * sk;
+      this.fx.add({ kind: 'foam', x: bx, y: by, vx: -v.y * side * sp + v.x * s.spd * SPEED_SCALE * 0.6, vy: v.x * side * sp + v.y * s.spd * SPEED_SCALE * 0.6, life: 0.45 + Math.random() * 0.35, size: 0.8 + Math.random() * 1.2, color: '#e6eef2' });
+    }
     if ((s.flags & SF.FIRE) && Math.random() < 0.6) {
       this.fx.add({ kind: 'fire', x: s.x + (Math.random() - 0.5) * cls.beam, y: s.y + (Math.random() - 0.5) * cls.length * 0.5, vy: -2, life: 0.6, size: 3, grow: 4, color: '#ff8a3c' });
       this.fx.light(s.x, s.y, 60, 'rgba(255,140,60,1)', 0.5, 0.1);
@@ -2423,6 +2514,22 @@ export class Renderer {
     }
   }
 
+  private bloom: HTMLCanvasElement | null = null;
+  /** A warm soft dot, made once: the bloom laid about fires, flashes and lanterns. */
+  private bloomDot(): HTMLCanvasElement {
+    if (this.bloom) return this.bloom;
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const x = c.getContext('2d')!;
+    const grd = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grd.addColorStop(0, 'rgba(255,190,110,0.9)');
+    grd.addColorStop(0.35, 'rgba(255,140,60,0.35)');
+    grd.addColorStop(1, 'rgba(255,120,40,0)');
+    x.fillStyle = grd;
+    x.fillRect(0, 0, 64, 64);
+    return (this.bloom = c);
+  }
+
   private drawParticles(emissive: boolean): void {
     const g = this.g;
     // Painted particles (Higgsfield `part.*`) where they exist; the drawn shapes otherwise.
@@ -2443,6 +2550,12 @@ export class Renderer {
         g.rotate(spin);
         // Powder smoke is grey and thin, never a white cloud: a darkened copy made once.
         g.drawImage(art === smokeArt ? this.greySmoke(art.img) : art.img, -d / 2, -d / 2, d, d);
+        // a soft bloom about fire and powder flashes (additive; not on the lowest level of detail)
+        if ((p.kind === 'fire' || p.kind === 'flash') && this.fx.lod < 2) {
+          const b = d * 2.4;
+          g.globalAlpha = a * (p.kind === 'flash' ? 0.5 : 0.28);
+          g.drawImage(this.bloomDot(), -b / 2, -b / 2, b, b);
+        }
         g.restore();
         continue;
       }
@@ -2658,6 +2771,13 @@ export class Renderer {
       g.beginPath();
       g.arc(x, y, r, 0, Math.PI * 2);
       g.fill();
+      // the bloom: a wide faint halo about the light, stronger by night (2026-10-16)
+      if (this.fx.lod < 2 && r > 3 && /^(#[c-f]|rgba\(2[0-5]\d)/i.test(gl.color)) {
+        const R = r * 2.6;
+        g.globalAlpha = Math.min(1, gl.a * (0.25 + night * 0.55));
+        g.drawImage(this.bloomDot(), x - R, y - R, R * 2, R * 2);
+        g.globalAlpha = 1;
+      }
     }
     g.globalCompositeOperation = 'source-over';
     if (marks.length) {
@@ -2675,6 +2795,18 @@ export class Renderer {
     g.fillStyle = `rgba(40,70,110,${0.04 + night * 0.05})`;
     g.globalCompositeOperation = 'soft-light';
     g.fillRect(0, 0, this.w, this.h);
+    // The time of day's warmth (2026-10-16): an amber hour at dawn and at dusk over the cold of the night.
+    const dusk = duskOf(timeOfDay(state.estServerTime()));
+    if (dusk > 0.02) {
+      g.fillStyle = `rgba(235,150,80,${0.12 * dusk})`;
+      g.fillRect(0, 0, this.w, this.h);
+    }
+    // The sea's own grade: frost blue in the ice, ember among the volcanoes, a green murk in the Abyss and the fogs.
+    const gr = gradeOf(state.region);
+    if (gr.a > 0) {
+      g.fillStyle = `rgba(${gr.wash[0]},${gr.wash[1]},${gr.wash[2]},${gr.a})`;
+      g.fillRect(0, 0, this.w, this.h);
+    }
     g.globalCompositeOperation = 'source-over';
   }
 
@@ -2716,6 +2848,24 @@ export class Renderer {
         g.lineTo(x + wind.x * 6, y + 14 * r.s);
       }
       g.stroke();
+      // the rain on the water: small rings opening and fading where the drops strike (none with less motion)
+      const opt = settings();
+      if (!opt.reduceMotion && this.fx.lod < 2 && this.zoom > 0.7) {
+        g.strokeStyle = 'rgba(190,205,215,1)';
+        const nr = heavy ? 36 : 20;
+        g.beginPath();
+        for (let i = 0; i < nr; i++) {
+          const r = this.rain[i];
+          const ph = (this.time * 1.7 + r.s * 3 + i * 0.37) % 1;
+          const x = ((r.x * 7.3 + Math.floor(this.time * 1.7 + r.s * 3 + i * 0.37) * 0.618) % 1) * this.w, y = ((r.y * 5.1 + Math.floor(this.time * 1.7 + r.s * 3 + i * 0.37) * 0.382) % 1) * this.h;
+          const rr = (1 + ph * 5) * Math.min(1.6, this.zoom);
+          g.moveTo(x + rr, y);
+          g.ellipse(x, y, rr, rr * 0.6, 0, 0, Math.PI * 2);
+        }
+        g.globalAlpha = 0.18;
+        g.stroke();
+        g.globalAlpha = 1;
+      }
       if (heavy) {
         this.nextLightning -= dt;
         if (this.nextLightning <= 0) {
