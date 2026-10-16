@@ -17,12 +17,16 @@ export class Net {
 
   /** Take a token issued over HTTP (e-mail or OAuth sign-in). */
   adopt(token: string): void {
-    localStorage.setItem(TOKEN_KEY, token);
+    store(token);
     this.pendingName = null;
   }
 
   get token(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
+    try {
+      return localStorage.getItem(TOKEN_KEY) ?? memToken;
+    } catch {
+      return memToken;
+    }
   }
 
   on(fn: (m: ServerMsg) => void): void {
@@ -39,7 +43,13 @@ export class Net {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const ws = new WebSocket(`${proto}://${location.host}/ws`);
     this.ws = ws;
+    // A socket that never opens (a phone's network changing under it, a turn of the screen in Telegram's view): given
+    // up after 10 s, and the usual retry follows (it stayed «connecting» for ever, and the start with it).
+    const stuck = setTimeout(() => {
+      if (this.ws === ws && ws.readyState === WebSocket.CONNECTING) ws.close();
+    }, 10_000);
     ws.onopen = () => {
+      clearTimeout(stuck);
       this.retry = 0;
       this.onStatus(true);
       const token = this.token;
@@ -57,13 +67,16 @@ export class Net {
         m = JSON.parse(text) as ServerMsg;
       }
       if (m.t === 'welcome') {
-        localStorage.setItem(TOKEN_KEY, m.token);
+        store(m.token);
         this.pendingName = null;
       }
       if (m.t === 'pong') this.rtt = performance.now() - m.c;
       for (const h of this.handlers) h(m);
     };
     ws.onclose = (ev) => {
+      clearTimeout(stuck);
+      // (an old socket's close, after a newer one took its place, retries nothing)
+      if (this.ws !== ws) return;
       this.onStatus(false);
       if (ev.code === 4000) return; // replaced by another login
       // Out of date (a tab kept open across a deploy, docs/23 item 96): the new client is a reload away. Once a minute
@@ -87,6 +100,22 @@ export class Net {
   }
 
   forget(): void {
-    localStorage.removeItem(TOKEN_KEY);
+    memToken = null;
+    try {
+      localStorage.removeItem(TOKEN_KEY);
+    } catch {
+      /* no storage */
+    }
+  }
+}
+
+/** The token where the page can keep it (a view without storage keeps it for the visit). */
+let memToken: string | null = null;
+function store(token: string): void {
+  memToken = token;
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    /* no storage: kept for the visit */
   }
 }

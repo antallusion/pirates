@@ -339,8 +339,8 @@ export class Renderer {
   private wakes = new Map<number, { x: number; y: number; t: number; w: number }[]>();
 
   /** WebGL layers: the shader sea below, the fog and lightning above (null: the 2D fallback draws them). */
-  readonly sea: GlSea | null;
-  readonly sky: GlSky | null;
+  sea: GlSea | null;
+  sky: GlSky | null;
   private bolt: [number, number][] | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -350,6 +350,18 @@ export class Renderer {
     this.sky = this.sea ? GlSky.create() : null;
     if (this.sea) canvas.before(this.sea.canvas);
     if (this.sky) canvas.after(this.sky.canvas);
+    // A phone takes a WebGL context back when it is short of memory (iOS does, with the page turned or put aside): the
+    // shader layers go and the 2D sea draws on — a lost context drew nothing at all, a black sea.
+    for (const l of [this.sea, this.sky]) {
+      l?.canvas.addEventListener('webglcontextlost', (e) => {
+        e.preventDefault();
+        console.warn('[gl] context lost: the 2D sea from now on');
+        this.sea?.canvas.remove();
+        this.sky?.canvas.remove();
+        this.sea = null;
+        this.sky = null;
+      });
+    }
     // Over a shader sea the world canvas is transparent where there is only water.
     this.g = canvas.getContext('2d', { alpha: !!this.sea })!;
     this.dark = document.createElement('canvas');

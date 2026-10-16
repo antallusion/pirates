@@ -8,6 +8,7 @@ import { convoyFoe, raidEscort } from './raiding.ts';
 import { joinedRaid } from './npcwars.ts';
 import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import { eliteShipLevel, hullsFor, npcSkill, shipLevelForCaptain, watersBand } from '../../../shared/src/data/shiplevel.ts';
+import { trafficHulls } from '../../../shared/src/data/traffichulls.ts';
 import type { NpcSkill } from '../../../shared/src/data/shiplevel.ts';
 import { NPC_ACTIVE_RADIUS, SPEED_SCALE, isNight } from '../../../shared/src/constants.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
@@ -1251,8 +1252,8 @@ export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' 
   }
   // Her level by the square she puts out in (docs/16 P2); the law a level above it.
   const level = role === 'patrol' ? Math.min(10, sectorLevel(game, x, y) + 1) : sectorLevel(game, x, y, role !== 'pirate');
-  const hulls = role === 'fisher' ? (['cutter'] as ShipClassId[]) : role === 'hunter' && level <= 5 ? (['harpoon_whaler'] as ShipClassId[]) : hullsFor(role, level);
-  const cls: ShipClassId = role === 'merchant' && hulls.includes('fluyt') && game.rng.chance(0.5) ? 'fluyt' : game.rng.pick(hulls);
+  // (2026-10-16: the fleet's other hulls too, by the role, the level and the waters — shared/src/data/traffichulls.ts)
+  const cls: ShipClassId = game.rng.weighted(trafficHulls(role, level, region));
   const h = headingOf(past.x - x, past.y - y);
   const ship = game.spawnNpcShip(role, cls, faction, x, y, h);
   game.setNpcLevel(ship, level);

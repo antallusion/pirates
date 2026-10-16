@@ -138,7 +138,7 @@ export function beginLoad(kind: LoadKind, timeout = 10000): Handle {
             // until nothing the screens drew is in flight (two frames running, so a frame's new asks count)
             let quiet = 0;
             const base = got, l0 = assetStats().loaded;
-            while (quiet < 2 && !closed) {
+            while (quiet < 2 && !closed && !finished) {
               const busy = assetsBusy();
               if (busy) {
                 // the bar: what came since the settling began, of that and what is still asked for

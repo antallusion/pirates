@@ -44,9 +44,12 @@ export interface RoamDef {
 
 export type RoamKind = 'gull' | 'seal' | 'reef_shark' | 'sea_turtle' | 'marsh_serpent' | 'lagoon_tentacle' | 'mermaid' | 'surf_drowned' | 'young_serpent' | 'lantern_maw' | 'shoal_leviathan' | 'ancient_turtle'
   // The wild beasts of the sea (owner, 2026-10-03).
-  | 'barracuda' | 'albatross' | 'moray' | 'giant_octopus';
+  | 'barracuda' | 'albatross' | 'moray' | 'giant_octopus'
+  // More of them by the seas (owner, 2026-10-16: «чуть больше разных … существ надо добавить, особенно существ в море»).
+  | 'cliff_harpy' | 'crab_queen' | 'banshee' | 'storm_roc' | 'plumed_serpent' | 'wreck_titan';
 export const ROAM_KINDS: RoamKind[] = ['gull', 'seal', 'reef_shark', 'sea_turtle', 'marsh_serpent', 'lagoon_tentacle', 'mermaid', 'surf_drowned', 'young_serpent', 'lantern_maw', 'shoal_leviathan', 'ancient_turtle',
-  'barracuda', 'albatross', 'moray', 'giant_octopus'];
+  'barracuda', 'albatross', 'moray', 'giant_octopus',
+  'cliff_harpy', 'crab_queen', 'banshee', 'storm_roc', 'plumed_serpent', 'wreck_titan'];
 export const isRoamKind = (k: unknown): k is RoamKind => typeof k === 'string' && (ROAM_KINDS as string[]).includes(k);
 
 /** The cold waters (the seals' rookeries) and the strange ones (the drowned and the lantern maws). */
@@ -54,6 +57,15 @@ const COLD: RegionId[] = ['black_coast', 'leviathan_reach', 'whispering', 'grave
 const STRANGE: RegionId[] = ['gravewater', 'dead_mans_expanse', 'drowned_crown', 'whispering', 'leviathan_reach', 'ashen_isles', 'the_abyss'];
 /** The reef waters (the morays' holes): the islets' fog, the atolls, the drowned spires. */
 const REEF: RegionId[] = ['whispering', 'gravewater', 'dead_mans_expanse', 'drowned_crown'];
+/** The cliffs' and the fire's seas (the harpies), the storm seas (the rocs), the fog (the banshees), the warm and the
+ *  wreck-strewn seas (the crab queens on their wrecks), the hot and the haunted ones (the plumed serpents), the
+ *  graveyards of ships (the titans). */
+const CLIFFS: RegionId[] = ['ashen_isles', 'black_coast', 'leviathan_reach'];
+const STORMS: RegionId[] = ['leviathan_reach', 'dead_mans_expanse', 'the_abyss', 'ashen_isles', 'drowned_crown'];
+const FOG: RegionId[] = ['whispering', 'drowned_crown', 'gravewater'];
+const WRECKS: RegionId[] = ['gravewater', 'whispering', 'dead_mans_expanse', 'black_coast'];
+const HOT: RegionId[] = ['ashen_isles', 'whispering', 'dead_mans_expanse', 'drowned_crown'];
+const GRAVES: RegionId[] = ['dead_mans_expanse', 'drowned_crown', 'the_abyss'];
 
 export const ROAMS: Record<RoamKind, RoamDef> = {
   gull: { u: 'gull', lv: [1, 3], weight: 3, field: 'rocky' },
@@ -74,6 +86,15 @@ export const ROAMS: Record<RoamKind, RoamDef> = {
   albatross: { u: 'albatross', lv: [3, 7], weight: 2, field: 'rocky' },
   moray: { u: 'moray', lv: [3, 7], regions: REEF, weight: 2, field: 'rocky' },
   giant_octopus: { u: 'giant_octopus', lv: [6, 10], weight: 1, field: 'graveyard' },
+  // 2026-10-16: harpies off the cliffs over the waves, a crab queen
+  // on her wreck, banshees wailing in the fog, storm rocs riding the gales, plumed serpents of the warm seas, and a wreck
+  // titan walking the ship graveyards for the oldest.
+  cliff_harpy: { u: 'cliff_harpy', lv: [5, 8], regions: CLIFFS, weight: 1.5, field: 'volcanic' },
+  crab_queen: { u: 'crab_queen', lv: [5, 8], regions: WRECKS, weight: 1.2, field: 'graveyard' },
+  banshee: { u: 'banshee', lv: [6, 9], regions: FOG, weight: 1.5, field: 'dead' },
+  storm_roc: { u: 'storm_roc', lv: [7, 10], regions: STORMS, weight: 1.5, field: 'rocky' },
+  plumed_serpent: { u: 'plumed_serpent', lv: [7, 10], regions: HOT, weight: 1.2, field: 'tropical' },
+  wreck_titan: { u: 'wreck_titan', lv: [8, 10], regions: GRAVES, weight: 1, field: 'graveyard' },
 };
 
 /** The kinds a square of ⚓L in a sea keeps, with their weights (never a premium kind: the shop's alone). */
@@ -108,6 +129,16 @@ export const ROAM_MINI = 2600;
 /** A beaten stack stands again this many seconds later (world seconds), a little way off (metres). */
 export const ROAM_RESPAWN: [number, number] = [180, 360];
 export const ROAM_SHIFT = 380;
+/** Her own rest from a stack (owner, 2026-10-16: «у существ кулдаун 30 минут должен быть, то есть каждые 30 минут я
+ *  могу нападать на них снова»): a stack she has beaten (or that signed on to her or fled her) is hers to fight again
+ *  this long after — wall-clock milliseconds, kept on her profile, so a logout or a restart does not shorten it (and
+ *  admin /speed runs it as it runs the world's other wall-clock rests). The world's own respawn above is untouched:
+ *  the others see the stack stand again 3–6 minutes later as they always did; her group mates who shared in it rest
+ *  as she does. */
+export const ROAM_REST_MS = 30 * 60_000;
+/** The most rests a profile keeps (the oldest let go first). */
+export const ROAM_REST_MAX = 400;
+
 /** A stack that threw her back keeps what is left of it this long before it is whole again. */
 export const ROAM_HEAL = 360;
 /** Group mates within this of the stack when it is beaten share in it. */
@@ -353,6 +384,12 @@ export const ROAM_CAL: Record<RoamKind, [number, number, number][]> = {
   albatross: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0.71, 1.57, 3], [0.88, 1.52, 3.6], [1.01, 1.63, 4], [1.21, 1.76, 4.16], [1.3, 1.91, 4.76], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
   moray: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1.01, 1.81, 4.22], [1.02, 2.61, 4.88], [1.18, 3.04, 5.4], [1.52, 2.57, 4.65], [1.55, 2.22, 4.98], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
   giant_octopus: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2.57, 4.09, 7.33], [2.24, 3.18, 6.51], [2.43, 3.49, 7.15], [3.66, 5.55, 9.43], [3.76, 6.14, 10.32]],
+  cliff_harpy: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.96, 2.03, 6.32], [1.28, 2.03, 4.44], [1.28, 1.94, 4.33], [1.25, 2.2, 5.26], [0, 0, 0], [0, 0, 0]],
+  crab_queen: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [4.39, 6.23, 9.92], [3.74, 6.97, 12.49], [3.46, 9, 11.83], [3.67, 8.22, 11.01], [0, 0, 0], [0, 0, 0]],
+  banshee: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2.9, 3.68, 9.1], [2.02, 3.29, 9.03], [1.93, 3.51, 8.53], [2.38, 4.51, 11.92], [0, 0, 0]],
+  storm_roc: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [1.24, 2.07, 2.89], [1.4, 1.95, 6.44], [0.72, 1.86, 5.57], [1.21, 3.8, 5.09]],
+  plumed_serpent: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [3.02, 5.61, 10.78], [2.04, 4.95, 11.92], [2.23, 5.51, 12.67], [1.45, 5.7, 13.23]],
+  wreck_titan: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [9.13, 15.9, 20.68], [6.75, 16.78, 26.14], [12.67, 20.31, 27.69]],
 };
 
 /** A stack's creatures at its first reckoning: ROAM_BASE of the reference captain's might, in creatures (fractional). */
@@ -409,7 +446,7 @@ export const ROAM_XP_SHARE = [0, 0.023, 0.024, 0.0275, 0.0303, 0.0303, 0.0275, 0
 /** Its silver, a share of an hour at sea of its waters for an average stack (by size as the lesson): a small purse that
  *  with the creatures' spoils about pays for the men a steady hour of them costs and leaves a little over (calibrated:
  *  tests/balance/roamers.ts holds the hour's net to +0.1…+0.35 of an hour at sea). Index: level 0–10. */
-export const ROAM_SILVER = [0, 0.025, 0.019, 0.026, 0.028, 0.03, 0.028, 0.028, 0.022, 0.022, 0.024];
+export const ROAM_SILVER = [0, 0.025, 0.019, 0.026, 0.028, 0.03, 0.028, 0.028, 0.022, 0.024, 0.027];
 /** The chance its beating turns up an artifact (H2's maybeArtifact, as a guard's), by size. */
 export const ROAM_ART: Record<RoamSize, number> = { weak: 0.008, avg: 0.015, strong: 0.04 };
 /** A group mate near when the stack is beaten has this share of its lesson (the fighter the whole of it); the silver

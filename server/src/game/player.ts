@@ -322,6 +322,8 @@ export interface Profile {
   seaFinds?: Partial<Record<string, number>>;
   /** docs/19 D7: the roaming stacks she has beaten (for her log and the tests). */
   roamWins?: number;
+  /** Her rest from the stacks she beat (owner, 2026-10-16): a stack's id → the wall-clock ms she may fight it again. */
+  roamRest?: Record<string, number>;
 }
 
 export interface Dealings {

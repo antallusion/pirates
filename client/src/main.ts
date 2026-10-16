@@ -53,7 +53,7 @@ import type { BossId } from '../../shared/src/data/bosses.ts';
 import { isShoreBoss } from '../../shared/src/data/shorebosses.ts'; // the great ones ashore (2026-10-03)
 import type { RoamView } from '../../shared/src/roamproto.ts';
 import { UNITS as ROAM_UNITS } from '../../shared/src/data/army.ts';
-import { roamName, roamNow } from './render/roamers.ts';
+import { backClock, roamBackLeft, roamName, roamNow } from './render/roamers.ts';
 import { openRoamCard } from './ui/roamcard.ts';
 import { strengthWord as roamWord } from './ui/army.ts';
 import { EN as ROAM_EN, RU as ROAM_RU } from './lang/ui/roamers.ts';
@@ -144,6 +144,7 @@ import { crewSayParts, renderLog } from './ui/crewlife.ts';
 import { flagLine, flagsCss, lawlessHere, lawlessWords, shipColours } from './ui/flags.ts'; // docs/24 C1, D1–D3
 import { EN as FLAGS_EN, RU as FLAGS_RU } from './lang/ui/flags.ts';
 import { citiesHostile } from '../../shared/src/data/colours.ts';
+import { bootMark, settleViewport, watchViewport } from './viewport.ts'; // a start that always goes on (owner, 2026-10-16)
 
 const L = dict(MAIN_EN, MAIN_RU);
 /** The captain last aboard on this device (docs/23 item 88: «Продолжить: …» on the title screen). */
@@ -153,6 +154,8 @@ const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverTex
 
 type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | 'hero' | 'puzzle' | 'tame' | 'throne' | 'shop' | 'research' | null;
 
+bootMark('main');
+watchViewport();
 const net = new Net();
 const state = new ClientState();
 const renderer = new Renderer($('world') as HTMLCanvasElement);
@@ -1253,13 +1256,17 @@ tgInvoices(net, (msg, kind) => hud.toast(msg, kind));
 {
   const early = globalThis as { __gtReady?: boolean; __earlySubmit?: string };
   early.__gtReady = true;
+  bootMark('ready');
   if (early.__earlySubmit === 'login' && !net.live) {
     delete early.__earlySubmit;
     ($('login-form') as HTMLFormElement).requestSubmit();
   }
 }
 
-net.onStatus = (ok) => $('connection').classList.toggle('hidden', ok || !inGame);
+net.onStatus = (ok) => {
+  $('connection').classList.toggle('hidden', ok || !inGame);
+  bootMark(ok ? 'ws open' : 'ws closed');
+};
 net.on(onMessage);
 
 /** The first look at the sea had its loading screen. */
@@ -1316,6 +1323,7 @@ function onMessage(m: ServerMsg): void {
       else hud.toast(serverText(m.msg), 'bad');
       break;
     case 'welcome':
+      bootMark(m.hasCaptain ? 'welcome' : 'welcome: no captain');
       $('screen-login').classList.add('hidden');
       try { localStorage.setItem(CAPTAIN_KEY, m.name); } catch { /* no storage */ }
       $('login-error').textContent = '';
@@ -1325,6 +1333,7 @@ function onMessage(m: ServerMsg): void {
       });
       break;
     case 'init':
+      bootMark('init');
       inGame = true;
       // The old round-by-round deck fight, for a captain who asked for it in the options (docs/16 P4).
       net.send({ t: 'board_pref', classic: settings().classicBoarding });
@@ -1336,7 +1345,13 @@ function onMessage(m: ServerMsg): void {
       // the rest of the pictures slowly into the cache (assets.ts warmAll)
       if (!startLoaded) {
         startLoaded = true;
-        requestAnimationFrame(() => beginLoad('start', 12000).imgs($('hud')).imgs(document.getElementById('touch')).settle().done().then(() => startWarm()));
+        // (the size is looked at again first: an init that came while the phone was upright or turning laid out a size
+        // the screen no longer has)
+        settleViewport('init');
+        requestAnimationFrame(() => beginLoad('start', 12000).imgs($('hud')).imgs(document.getElementById('touch')).settle().done().then(() => {
+          bootMark('start loaded');
+          startWarm();
+        }));
       }
       if (state.you === null && m.self.dockedAt) openModal('port');
       if (prologuePending) {
@@ -2748,8 +2763,10 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const roamLead = !!focus && !targetPinned && !state.pursuit;
   if (rm) {
     const name = roamName(rm.kind);
-    facts.roam = { id: rm.id, icon: ROAM_UNITS[ROAMS[rm.kind].u as keyof typeof ROAM_UNITS].art, name, word: roamWord(rm.n).word, lv: rm.level, ...(rm.fight ? { fight: rm.fight } : {}), ...(rm.offer ? { offer: rm.offer } : {}), ...(rm.joinN ? { joinN: rm.joinN } : {}), ...(roamLead ? { lead: true } : {}), ...(focus.far ? { far: true } : {}), ...(state.roamRun === rm.id ? { running: true } : {}) };
+    const back = roamBackLeft(state, rm);
+    facts.roam = { id: rm.id, icon: ROAM_UNITS[ROAMS[rm.kind].u as keyof typeof ROAM_UNITS].art, name, word: roamWord(rm.n).word, lv: rm.level, ...(rm.fight ? { fight: rm.fight } : {}), ...(back ? { back } : {}), ...(rm.offer ? { offer: rm.offer } : {}), ...(rm.joinN ? { joinN: rm.joinN } : {}), ...(roamLead ? { lead: true } : {}), ...(focus.far ? { far: true } : {}), ...(state.roamRun === rm.id ? { running: true } : {}) };
     if (rm.fight) info.push(esc(LROAM(rm.fight === 'mate' ? 'i.mate' : 'i.fight', { what: name })));
+    else if (back) info.push(esc(LROAM('i.back', { what: name, t: backClock(back) })));
     else if (rm.offer === 'flee' && rm.ratio !== undefined) info.push(esc(LROAM('i.flee', { r: rm.ratio })));
   }
   // «Атаковать» (docs/23 item 33): the target frame's ship, or the pursuit under way.
@@ -3187,7 +3204,10 @@ function attackUnder(px: number, py: number): AttackKind | null {
     return ship ? attackKind({ ship }) : null;
   }
   const rm = roamAtScreen(px, py);
-  if (rm !== null) return attackKind({ stack: state.roams.find((v) => v.id === rm)?.fight !== 'other' });
+  if (rm !== null) {
+    const v = state.roams.find((x) => x.id === rm);
+    return attackKind({ stack: v?.fight !== 'other' && !(v && roamBackLeft(state, v)) });
+  }
   // a lair of the land's creatures, standing and not hers; a pirate fort (its battery still firing: the guns)
   for (const m of state.lairs?.list ?? []) {
     if (m.down || m.flag === 'own' || m.turtle !== undefined) continue;
@@ -3251,7 +3271,7 @@ function targetChoices(about: string): { choices: TmChoice[]; name: string; x: n
     if (d > ROAM_REACH && worldMap.onAutosail) choices.push({ id: 'pursue', art: 'talent_nav_wake_rider', label: seaWord('tm.pursue'), title: seaWord('tm.pursueStack') });
     // the boats go (or the helmsman runs her in first): not under fire, nor with too few hands, nor while another
     // fight holds her (roamers.ts fightWhy — the server's «Не под огнём» never answers a choice offered here)
-    if (!v.fight && !you.combat && you.crew >= 3 && !(you.flags & SF.BOARDING) && !self.landing) choices.push({ id: 'fight', art: 'bt_charge', label: seaWord('tm.fight'), title: seaWord('tm.fightStack') });
+    if (!v.fight && !roamBackLeft(state, v) && !you.combat && you.crew >= 3 && !(you.flags & SF.BOARDING) && !self.landing) choices.push({ id: 'fight', art: 'bt_charge', label: seaWord('tm.fight'), title: seaWord('tm.fightStack') });
     return { name: roamName(v.kind), x: renderer.sx(p.x), y: renderer.sy(p.y), r: Math.max(14, Math.min(22, 19 * renderer.zoom)) * 1.3, choices };
   }
   return null;

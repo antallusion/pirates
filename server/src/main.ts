@@ -19,6 +19,7 @@ import type { Db } from './persistence/db.ts';
 import { PgDatabase } from './persistence/pgdb.ts';
 import { SharedState } from './persistence/redis.ts';
 import { handleAuth } from './http/auth-routes.ts';
+import { handleBootReport } from './http/boot-report.ts';
 import { mailerFromEnv } from './mail.ts';
 import { OAuthFlow, providersFromEnv } from './oauth.ts';
 import { telegramFromEnv } from './telegram.ts';
@@ -79,6 +80,7 @@ const server = createServer(async (req, res) => {
     res.end(JSON.stringify({ ...game.economy(Number.isFinite(w) && w > 0 ? Math.min(w, 30 * 86400) : 3600), history: game.econHistory }));
     return;
   }
+  if (await handleBootReport(req, res)) return;
   if (await handleTelegram(req, res, tg)) return;
   if (await handleAuth(req, res, auth, oauth)) return;
   if (await serveStatic(req, res)) return;

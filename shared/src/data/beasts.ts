@@ -58,7 +58,8 @@ const OPEN: RegionId[] = ['dead_mans_expanse', 'gravewater', 'drowned_crown', 'l
 export const BEASTS: Record<BeastId, BeastDef> = {
   orca: {
     id: 'orca', cls: 'orca', name: ['Orca', 'Касатка'], many: ['a pod of orcas', 'стая касаток'], group: 'orca', temper: 'pack', predator: true,
-    regions: COLD, level: [3, 8], pack: [3, 6], bite: 33, every: 6, stamina: 40, pull: 0.55, spookRange: 0,
+    // (2026-10-16: the pods follow the open ocean's currents too)
+    regions: [...COLD, 'dead_mans_expanse'], level: [3, 8], pack: [3, 6], bite: 33, every: 6, stamina: 40, pull: 0.55, spookRange: 0,
     yields: { whale_oil: [3, 5], orca_tooth: [1, 3], whalebone: [1, 2] }, flense: 30, xp: 70, weight: 6,
   },
   white_orca: {
@@ -68,17 +69,17 @@ export const BEASTS: Record<BeastId, BeastDef> = {
   },
   humpback: {
     id: 'humpback', cls: 'humpback', name: ['Humpback Whale', 'Горбатый кит'], many: ['humpbacks', 'горбатые киты'], group: 'whale', temper: 'shy', predator: false,
-    regions: WARM, level: [4, 6], pack: [1, 2], bite: 60, every: 10, stamina: 70, pull: 0.7, spookRange: 700,
+    regions: [...WARM, 'dead_mans_expanse', 'drowned_crown'], level: [4, 6], pack: [1, 2], bite: 60, every: 10, stamina: 70, pull: 0.7, spookRange: 700,
     yields: { whale_oil: [4, 5], baleen: [2, 3] }, flense: 45, xp: 140, weight: 5,
   },
   sperm_whale: {
     id: 'sperm_whale', cls: 'sperm_whale', name: ['Sperm Whale', 'Кашалот'], many: ['sperm whales', 'кашалоты'], group: 'whale', temper: 'ram', predator: false,
-    regions: OPEN, level: [6, 9], pack: [1, 1], bite: 220, every: 15, stamina: 100, pull: 0.95, spookRange: 600,
+    regions: [...OPEN, 'the_abyss'], level: [6, 9], pack: [1, 1], bite: 220, every: 15, stamina: 100, pull: 0.95, spookRange: 600,
     yields: { whale_oil: [10, 14], whalebone: [3, 5], orca_tooth: [1, 2] }, rare: { good: 'ambergris', chance: 0.08 }, flense: 60, xp: 260, weight: 3,
   },
   narwhal: {
     id: 'narwhal', cls: 'narwhal', name: ['Narwhal', 'Нарвал'], many: ['narwhals', 'нарвалы'], group: 'whale', temper: 'tusk', predator: false,
-    regions: ['leviathan_reach'], level: [5, 7], pack: [2, 4], bite: 40, every: 6, stamina: 30, pull: 0.4, spookRange: 500,
+    regions: ['leviathan_reach', 'gravewater'], level: [5, 7], pack: [2, 4], bite: 40, every: 6, stamina: 30, pull: 0.4, spookRange: 500,
     yields: { narwhal_tusk: [1, 1], whale_oil: [1, 2] }, flense: 20, xp: 110, weight: 3,
   },
   shark: {
@@ -88,7 +89,7 @@ export const BEASTS: Record<BeastId, BeastDef> = {
   },
   young_serpent: {
     id: 'young_serpent', cls: 'young_serpent', name: ['Young Sea Serpent', 'Морской змей-подросток'], many: ['a young serpent', 'молодой змей'], group: 'any', temper: 'coil', predator: true,
-    regions: ['whispering', 'the_abyss'], level: [7, 9], pack: [1, 1], bite: 160, every: 2, stamina: 80, pull: 0.85, spookRange: 0,
+    regions: ['whispering', 'the_abyss', 'drowned_crown', 'ashen_isles'], level: [7, 9], pack: [1, 1], bite: 160, every: 2, stamina: 80, pull: 0.85, spookRange: 0,
     yields: { serpent_scale: [2, 4] }, flense: 40, xp: 420, weight: 1,
   },
 };

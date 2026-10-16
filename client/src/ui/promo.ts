@@ -258,7 +258,10 @@ export class Promos {
     const rank = (x: PromoCard) => ({ sea: 0, board: 1, isle: 2, all: 3 })[x.ctx];
     const list = [...this.cardsFor('port')].sort((a, b) => rank(a) - rank(b));
     const c = list.length ? list[Math.floor(this.now() / 8000) % list.length] : undefined;
-    const el = slot.querySelector<HTMLElement>('.po-chip') ?? slot.appendChild(document.createElement('div'));
+    // (its one chip found by its place, not its class: an empty chip has none, and a new one was added for each
+    // look — every addition woke this watch again, and the page hung for good as a captain with no offer came into
+    // a harbour; QA 2026-10-16, the start that «не запускается»)
+    const el = slot.querySelector<HTMLElement>(':scope > div') ?? slot.appendChild(document.createElement('div'));
     this.chip(el, c, 'port', 'po-port');
     slot.classList.toggle('hidden', !c);
   }
