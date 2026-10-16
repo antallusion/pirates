@@ -344,6 +344,7 @@ function openRecruit(src: 'port' | 'isle' | 'lair'): void {
 }
 portScreen.openDwell = () => openRecruit('port');
 portScreen.openIsle = () => openBase();
+portScreen.onGoal = (key) => startGoal(key); // «Плыть» on a card of the port's «Задания» (owner, 2026-10-16)
 // The adventure map (docs/17 H4): the visit card over the sea, and the Grail's chart.
 const advCard = new AdvCard((m) => net.send(m));
 advCard.now = () => state.estServerTime(); // the drift's mini-game needle (docs/18 #35)

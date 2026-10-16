@@ -1642,9 +1642,16 @@ body.touch .center-card .btn { min-height: 44px; padding-inline: 18px; }
 .jr-mark.now { color: var(--gold); }
 .jr-count { color: var(--gold); font-variant-numeric: tabular-nums; }
 .jr-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+/* A row and its «Плыть» (owner, 2026-10-16): the sail a finger's width beside the quest. */
+.jr-item { display: flex; gap: 4px; align-items: stretch; }
+.jr-item > .jr-row { flex: 1 1 auto; min-width: 0; }
+.jr-go { flex: none; display: grid; place-items: center; min-width: 40px; padding: 0 6px; border: 1px solid rgba(217, 178, 90, 0.55); background: rgba(217, 178, 90, 0.1); color: var(--gold); cursor: pointer; }
+.jr-go:hover { border-color: var(--gold); }
+.jr-go .ico-sm { margin: 0; }
 @media (max-width: 699px) {
+  /* one column: the list first (the chosen one's card under it) — the card on top hid every quest but one below the
+     fold, the journal looked empty (owner, 2026-10-16: «в журнале у меня нет заданий вообще») */
   .journal { grid-template-columns: minmax(0, 1fr); }
-  .jr-detail { order: -1; }
 }
 /* The guild's members on a phone: the name and rank on a line, the orders for them below (no sideways scroll). */
 @media (max-width: 520px) {
@@ -1652,6 +1659,24 @@ body.touch .center-card .btn { min-height: 44px; padding-inline: 18px; }
   table.g-members td { border-bottom: 0; }
   table.g-members td:nth-child(3) { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; padding-top: 0; }
   table.g-members td:nth-child(3):empty { display: none; }
+}
+/* The port's «Задания» (owner, 2026-10-16): the switches over the page, a card's band in its danger's colour, why it is
+   not hers, what she has taken (a gold edge and «Плыть»). */
+.q-seg { flex: none; }
+.q-seg .w-chips { border-bottom: 1px solid rgba(140, 107, 58, 0.3); }
+.q-row .w-row-t > small.q-why { color: #e08a7a; white-space: normal; }
+.q-row.q-off .w-row-ico, .q-row.q-off .w-row-t > b, .q-row.q-off .q-pay { opacity: 0.55; }
+.q-row.q-taken { box-shadow: inset 3px 0 0 var(--k-gold, #e0b862); }
+.q-row .q-band { font-weight: 600; }
+.q-row .q-danger { color: var(--k-haze, #9a9488); }
+.q-pay { gap: 1px; }
+.q-pay .q-or { font-size: 10px; color: var(--k-haze, #9a9488); }
+.q-sail .ico-sm { margin-right: 4px; }
+.q-count { margin: 2px 0 4px; }
+/* A short screen: on «Задания» the switches are the page's row — the harbour's second row of places steps aside (the rail
+   and every other place still lead to it), so three cards and more stand in a 270-px-high phone. */
+@media (max-height: 420px) {
+  .w-pane:has(> .q-seg) > .w-chips { display: none; }
 }
 /* A job the port's news asks for (an epidemic, a blockade): a small red seal on the notice. */
 .q-urgent { margin-left: 6px; padding: 0 5px; border: 1px solid rgba(178, 58, 58, 0.7); color: #e08a7a; font: 600 10px/16px var(--sans); letter-spacing: 0.06em; text-transform: uppercase; font-style: normal; }

@@ -66,6 +66,11 @@ import { auctionCard, bindDealings, dealingsAct, hearsayCard, repairCompare, run
 import { dwellCard, tamerCard } from './recruit.ts';
 import { FLAGS_TAB, bindColours, coloursCard } from './flags.ts';
 import { admiraltyBoard, bindContracts } from './contracts.ts'; // docs/19 E15
+import { boardHtml, boardItems, boardSwitches } from './board.ts'; // the port's «Задания» (owner, 2026-10-16)
+import type { BoardChip } from './board.ts';
+import { weeklyLog } from './renown.ts';
+import { worldGoalsLog } from './social.ts';
+import { bindGoalTaps } from './goaltap.ts';
 
 const LIS = dict(IS_EN, IS_RU);
 /** A generated job's picture by its kind (docs/11 P4). */
@@ -153,6 +158,10 @@ export function bestOffers(view: PortView, state: ClientState): Offer[] {
 
 export class PortScreen {
   tab: Tab = 'market';
+  /** The switch of «Задания» (board.ts). */
+  qchip: BoardChip = 'all';
+  /** «Плыть» on a card of «Задания»: the run to its place, set off as she casts off (main.ts startGoal). */
+  onGoal: ((key: string) => void) | null = null;
   qty = 5;
   /** The tavern's slider: how many hands, and the most it could take when it was last drawn (docs/23 item 68). */
   hire: number | null = null;
@@ -193,7 +202,7 @@ export class PortScreen {
       { id: 'market', icon: TAB_ICON.market, label: W('port.market'), hint: W('port.marketHint') },
       { id: 'shipyard', icon: TAB_ICON.shipyard, label: W('port.yard'), hint: W('port.yardHint'), badge: yardBadge },
       { id: 'tavern', icon: TAB_ICON.tavern, label: W('port.tavern'), hint: W('port.tavernHint'), badge: crewShort },
-      { id: 'quests', icon: TAB_ICON.quests, label: W('port.quests'), hint: W('port.questsHint') },
+      { id: 'quests', icon: TAB_ICON.quests, label: W('port.quests'), hint: W('port.questsHint'), badge: boardItems(view, state).filter((x) => !x.taken && !x.blocked).length },
       { id: 'sea', icon: 'stat_sails', label: W('port.sea'), hint: W('port.seaHint'), primary: true },
     ];
     const tv = view.tavern;
@@ -226,7 +235,7 @@ export class PortScreen {
     const events = state.events.filter((e) => e.port === port.id).map((e) => `${serverText(e.title)}${e.kind === 'blockade' || e.kind === 'armada' ? L('head.blockade') : e.kind === 'epidemic' ? L('head.epidemic') : ''}`);
     const figures = `${events.length ? `<span class="w-fig bad" data-hint="${esc(W('port.event', { what: events.join(' · ') }))}" title="${esc(events.join(' · '))}">⚑</span>` : ''}${figure('coin', fmt(self.gold), W('port.purse'), 'gold')}${figure('tab_market', `${vol.toFixed(0)}/${holdMax.toFixed(0)}`, W('port.hold', { vol: vol.toFixed(0), max: holdMax.toFixed(0) }))}${figure('stat_crew', String(self.crew), W('port.crew', { n: self.crew }))}`;
     const html = `${winHead(placeName(port.name), { crest: `faction_${port.faction}`, sub: `${faction.name} · ${REGIONS[port.region].name}`, figures })}
-      <div class="w-frame">${railTabs(main, this.tab, 'ptab')}<div class="w-pane">${chipRow(second, this.tab, 'ptab')}${PROMO_PORT_SLOT}
+      <div class="w-frame">${railTabs(main, this.tab, 'ptab')}<div class="w-pane">${chipRow(second, this.tab, 'ptab')}${PROMO_PORT_SLOT}${this.tab === 'quests' ? boardSwitches(view, state, this.qchip) : ''}
       <div class="modal-body w-body port-body" data-page="${this.tab}">${this.body(view, state)}</div></div></div>`;
     // The harbour pushes its view every second: an unchanged page is not redrawn (no flicker, no button pulled
     // from under a finger, no lost hover or selection).
@@ -245,7 +254,15 @@ export class PortScreen {
     }));
     root.querySelectorAll<HTMLElement>('[data-act]').forEach((el) => (el.onclick = () => this.act(el.dataset, root, state)));
     // A quest's card or row tapped (not its button): what it asks, the long press's words (docs/30).
-    if (this.tab === 'quests') root.querySelectorAll<HTMLElement>('.q-card[data-hint], .mk-list .w-row[data-hint]').forEach((el) => (el.onclick = (e) => { if (!(e.target as HTMLElement).closest('button')) showHint(el); }));
+    if (this.tab === 'quests') {
+      root.querySelectorAll<HTMLElement>('.q-card[data-hint], .mk-list .w-row[data-hint]').forEach((el) => (el.onclick = (e) => { if (!(e.target as HTMLElement).closest('button')) showHint(el); }));
+      root.querySelectorAll<HTMLElement>('[data-qchip]').forEach((el) => (el.onclick = () => {
+        this.qchip = el.dataset.qchip as BoardChip;
+        this.render(root, state);
+        root.querySelector<HTMLElement>('.port-body')?.scrollTo({ top: 0 });
+      }));
+      bindGoalTaps(root, (k) => this.onGoal?.(k)); // the day's orders, the sea's goals: a tap sails there
+    }
     bindColours(root, this.send);
     bindContracts(root, this.send, () => {}); // docs/19 E15: the Admiralty's board
     bindBazaar(root);
@@ -306,6 +323,9 @@ export class PortScreen {
           this.send({ t: 'undock' });
           this.onClose();
         });
+        return;
+      case 'goal':
+        if (d.key) this.onGoal?.(d.key);
         return;
       case 'buyn':
         return this.send({ t: 'trade', good: d.good as never, qty: Number(d.n) });
@@ -789,30 +809,15 @@ ${orders}${berths}</div>` : ''}`;
       ${more(W('tv.more'), `${sec(L('tavern.tradesmen'))}<div class="mk-list">${trades}</div>${rough}`, 'tv-more')}`;
   }
 
-  /** docs/23 item 69: three «best for you» on top — the board's contracts and quests, weighed by their pay against
-   *  her level, a quest for her ship's level and an urgent one first — then the rest, then what is underway. */
+  /** «Задания» (owner, 2026-10-16: «все что можно взять по заданиям в одном месте с внутреними переключателями»): the
+   *  switches and their cards (board.ts) — the board's jobs and story, the port's contracts with the merchants' runs,
+   *  the Admiralty's board and the wanted, the urgent, the day's orders and the sea's goals, the guild's week and a
+   *  power's service, and everything she has taken with «Плыть». */
   private quests(view: PortView, state: ClientState): string {
     const self = state.self!;
-    const portName = (id?: string) => placeName(state.ports.find((p) => p.id === id)?.name ?? '');
-    const best = bestOffers(view, state);
-    const top = best.slice(0, 3), rest = best.slice(3);
-    const card = (o: Offer) => {
-      const btn = o.kind === 'contract'
-        ? quickBtn({ label: W('q.take'), primary: true, data: { act: 'contract', mode: 'accept', id: o.id } })
-        : o.blocked ? `<span class="muted q-blocked">${esc(L('quest.needs', { x: serverText(o.blocked) }))}</span>` : quickBtn({ label: W('q.take'), primary: true, data: { act: 'quest_accept', id: o.id } });
-      return `<div class="card q-card" data-hint="${esc(o.text)}">${icon(o.art, '', 'q-ico')}<div class="q-t"><b>${esc(o.title)}</b><small class="muted">${esc([o.kind === 'contract' ? W('q.contract') : W('q.quest'), o.to ? W('q.to', { port: portName(o.to) }) : '', o.ship ? W('q.level', { n: o.ship }) : ''].filter(Boolean).join(' · '))}${o.urgent ? ` <span class="q-urgent">${esc(L('quest.urgent'))}</span>` : ''}</small><span class="reward">${money(o.silver)}${xpBadge(o.xp)}</span></div>${btn}</div>`;
-    };
-    const row = (o: Offer) => `<div class="w-row" data-hint="${esc(o.text)}">${icon(o.art, '', 'w-row-ico')}<span class="w-row-t"><b>${esc(o.title)}</b><small>${esc([o.kind === 'contract' ? W('q.contract') : W('q.quest'), o.to ? W('q.to', { port: portName(o.to) }) : ''].filter(Boolean).join(' · '))}</small></span><span class="w-row-n">${money(o.silver)}</span>
-      <span class="w-row-b">${o.blocked ? '' : `<button type="button" class="k-btn k-btn--secondary k-btn--md" ${o.kind === 'contract' ? `data-act="contract" data-mode="accept" data-id="${esc(o.id)}"` : `data-act="quest_accept" data-id="${esc(o.id)}"`}>${esc(W('q.take'))}</button>`}</span></div>`;
-    const mine = [
-      ...self.contracts.map((c) => `<div class="w-row" data-hint="${esc(serverText(c.description))}">${icon(contractArt(c), '', 'w-row-ico')}<span class="w-row-t"><b>${esc(serverText(c.title))}</b><small>${esc(c.kind === 'bounty' ? `${c.progress ?? 0}/${c.kills}` : W('q.to', { port: portName(c.toPort) }))}</small></span><span class="w-row-n">${money(c.reward)}</span><span class="w-row-b"><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="contract" data-mode="abandon" data-id="${c.id}">${esc(L('btn.abandon'))}</button></span></div>`),
-      ...self.quests.map((q) => `<div class="w-row">${icon('goal', '', 'w-row-ico')}<span class="w-row-t"><b>${esc(serverText(q.name))}</b><small>${q.step}/${q.steps}: ${esc(serverText(q.text))}${q.need > 1 ? ` (${q.progress}/${q.need})` : ''}</small></span><span class="w-row-b"><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="quest_abandon" data-id="${q.id}">${esc(L('quest.setAside'))}</button></span></div>`),
-    ].join('');
-    // docs/19 E15: a great harbour's Admiralty board heads the quests for a captain of the cap.
-    return `${admiraltyBoard(state, view.portId)}${sec(W('q.best'))}${top.length ? `<div class="q-best">${top.map(card).join('')}</div>` : `<p class="muted">${esc(W('q.none'))}</p>`}
-      ${rest.length ? `${sec(W('q.rest'))}<div class="mk-list">${rest.map(row).join('')}</div>` : ''}
-      ${mine ? `${sec(W('q.mine'), `${self.contracts.length}/${3 + ((self.talents.trd_contract_broker ?? 0) > 0 ? 1 : 0)}`)}<div class="mk-list">${mine}</div>` : ''}
-      ${more(W('more'), `${runsCard(view, state)}${dailyCard(self.daily)}${commonCard(self.common)}${invasionCard(self.invasion)}`, 'q-more')}`;
+    const contracts = `${runsCard(view, state)}${view.wanted ? wantedBoardHtml(view.wanted) : ''}`;
+    const daily = `${dailyCard(self.daily)}${commonCard(self.common)}${weeklyLog(state.renown?.weekly)}${worldGoalsLog(state)}${invasionCard(self.invasion)}`;
+    return boardHtml(view, state, this.qchip, { adm: admiraltyBoard(state, view.portId), contracts, daily, service: serviceCard(state, view.service) });
   }
 
   /** The tavern's talk (the second row's «Слухи»): omens, rumours and whispers, the wanted and the tips, the bard. */

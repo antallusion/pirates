@@ -19,6 +19,7 @@ mkdirSync(OUT, { recursive: true });
 // The screens: each opened from a clean sea (or harbour) and measured.
 const SCREENS = [
   { id: 'port', at: 'port', open: (p) => p.evaluate(() => globalThis.gravetide.open('port')) },
+  { id: 'port-quests', at: 'port', open: async (p) => { await p.evaluate(() => globalThis.gravetide.open('port')); await L.sleep(400); await p.evaluate(() => document.querySelector('[data-ptab="quests"]')?.click()); } },
   { id: 'port-hud', at: 'port', open: async () => {} },
   { id: 'sea', at: 'sea', open: async () => {} },
   { id: 'menu', at: 'sea', open: (p) => p.evaluate(() => document.getElementById('tc-menu')?.click()) },
