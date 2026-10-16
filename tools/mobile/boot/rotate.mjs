@@ -94,11 +94,13 @@ async function playable(p) {
     for (let k = 0; k < 20 && (await p.evaluate(() => !!globalThis.gravetide.state.self?.dockedAt)); k++) await sleep(300);
     await sleep(1200);
   }
-  const t0 = await p.evaluate(() => globalThis.gravetide.renderer.time);
+  // (frames counted, not the renderer's clock: a frame's step is capped, and a slow software GPU runs few)
+  await p.evaluate(() => { globalThis.__fr = 0; const f = () => { globalThis.__fr++; requestAnimationFrame(f); }; requestAnimationFrame(f); });
+  const t0 = 0;
   const s0 = await p.evaluate(() => { const o = globalThis.gravetide.state.ownDisplay; return o ? { x: o.x, y: o.y } : null; });
   await p.evaluate(() => { globalThis.gravetide.open(null); globalThis.gravetide.state.input.sail = 3; });
   await sleep(3500);
-  const t1 = await p.evaluate(() => globalThis.gravetide.renderer.time);
+  const t1 = await p.evaluate(() => globalThis.__fr) - 2;
   const s1 = await p.evaluate(() => { const o = globalThis.gravetide.state.ownDisplay; return o ? { x: o.x, y: o.y, docked: !!globalThis.gravetide.state.self?.dockedAt } : null; });
   const moved = s0 && s1 ? Math.hypot(s1.x - s0.x, s1.y - s0.y) : 0;
   const stickOk = await p.evaluate(() => { const r = document.getElementById('tc-stick')?.getBoundingClientRect(); return !!r && r.width > 0 && r.left >= -1 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1 && r.top >= 0; });
