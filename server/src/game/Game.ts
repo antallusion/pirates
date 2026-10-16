@@ -593,7 +593,19 @@ export class Game {
   }
 
   /** One fixed simulation step. Public for tests. */
+  /** One step of the world. Every captain's socket is corked for the step and uncorked after it (load test, docs/33:
+   *  the chores' messages went out one write — one system call — each): one write per socket per step. */
   step(): void {
+    const corked: PlayerSession[] = [];
+    for (const s of this.sessions) if (s.conn.cork && !s.conn.closed) { s.conn.cork(); corked.push(s); }
+    try {
+      this.stepWorld();
+    } finally {
+      for (const s of corked) s.conn.uncork?.();
+    }
+  }
+
+  private stepWorld(): void {
     const dt = TICK_DT;
     this.now += dt;
     if (this.timeScale !== 1 && this.timeScale > 0) this.tacSkew += dt * (1 - 1 / this.timeScale);
@@ -2782,16 +2794,37 @@ export class Game {
       }
     }
     const range = Math.min(INTEREST_RADIUS, ship.stats.detection);
+    // (load test, docs/33: with more than 25 notables in view the log of 25 thrashed — every one of them evicted and
+    // logged anew, a toast each, every second for every captain: a fifth of the server's time at 200 captains in one
+    // harbour. Now: the 25 nearest; a known one's mark moved only when she has gone 500 m or a minute has passed; the
+    // lookout's cry once per ship per ten minutes, and one cry a second at most.)
+    const near: { o: ShipEntity; kind: string; d: number }[] = [];
     for (const { o, kind } of this.notables) {
-      if (o.id === ship.id || o.docked || o.hasFlag('hidden') || dist(o.state.x, o.state.y, ship.state.x, ship.state.y) > range) continue;
+      if (o.id === ship.id || o.docked || o.hasFlag('hidden')) continue;
+      const d = dist(o.state.x, o.state.y, ship.state.x, ship.state.y);
+      if (d <= range) near.push({ o, kind, d });
+    }
+    if (!near.length) return;
+    if (near.length > 25) near.sort((a, b) => a.d - b.d).length = 25;
+    let cried = false;
+    for (const { o, kind } of near) {
       const name = o.isPlayer ? `${o.captainName} (${o.name})` : o.name;
       const rec = { name, kind, x: Math.round(o.state.x), y: Math.round(o.state.y), t: Math.round(this.now) };
       const i = p.sightings.findIndex((q) => q.name === name);
-      if (i >= 0) p.sightings[i] = rec;
-      else {
+      if (i >= 0) {
+        const q = p.sightings[i];
+        if (this.now - q.t < 60 && Math.hypot(q.x - rec.x, q.y - rec.y) < 500) continue;
+        p.sightings[i] = rec;
+      } else {
         p.sightings.push(rec);
-        this.sendTo(s, { t: 'toast', msg: kind === 'ghost' ? `Lookout: a ship with no lights… ${o.name}.` : `Lookout: ${name} sighted.`, kind: 'info' });
         if (p.sightings.length > 25) p.sightings.shift();
+        const last = s.sightCries.get(name);
+        if (!cried && (last === undefined || this.now - last > 600)) {
+          cried = true;
+          if (s.sightCries.size > 200) s.sightCries.clear();
+          s.sightCries.set(name, this.now);
+          this.sendTo(s, { t: 'toast', msg: kind === 'ghost' ? `Lookout: a ship with no lights… ${o.name}.` : `Lookout: ${name} sighted.`, kind: 'info' });
+        }
       }
     }
   }

@@ -419,6 +419,8 @@ export class PlayerSession {
   sentRows = new Map<number, { key: string; t: number }>();
   /** The snapshot codec's per-connection base (codec v7: rows go out as field deltas against it). */
   snapBase = new SnapState();
+  /** The lookout's cries: when each notable ship was last cried (game seconds; not saved). */
+  sightCries = new Map<string, number>();
   snapCount = 0;
   /** Ticks between this captain's snapshots: 2 (10 Hz), or 4 in a crowd; and the last tick of events sent. */
   snapEvery = 2;
