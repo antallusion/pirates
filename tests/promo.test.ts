@@ -240,7 +240,7 @@ test("the round buttons in two rows (two under the chart, the rest under the pla
   const { readFileSync } = await import('node:fs');
   const css = readFileSync(new URL('../client/seahud.css', import.meta.url), 'utf8');
   assert.ok(css.includes('body.simple #hud #touch > :is(#tc-menu, #tc-news) { left: auto; top: var(--tr-top);'), 'the menu and the news under the chart, one row');
-  assert.ok(css.includes('body.simple #hud #touch > :is(#tc-isle, #tc-offer) { right: auto; top: var(--lr-top);'), '«Остров» and the offer under the plate');
+  assert.ok(css.includes('body.simple #hud #touch > :is(#tc-isle, #tc-offer, #tc-daily) { right: auto; top: var(--lr-top);'), '«Остров» and the offer under the plate');
   assert.ok(css.includes('body.simple.touch:not(.chat-open):not(.tac) #hud-chat > .chat-toggle { top: var(--lr-top); left: calc(var(--sa-l) + 8px);'), 'the chat heads the left row');
   assert.ok(css.includes('body.simple.touch:not(.sea-docked) #touch > #tc-sail'), 'the sail buttons on a touch screen at sea');
   const touch = readFileSync(new URL('../client/src/touch.ts', import.meta.url), 'utf8');

@@ -112,6 +112,7 @@ import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { TutorPointer } from './ui/pointer.ts';
 import { buzz, guardVibrate } from './haptics.ts';
+import { cue, setCuePlayer } from './sfx.ts'; // the sound pass (owner, 2026-10-16): the cues the UI asks for
 import { filmDue, filmExists, loadFilms, playFilm, setFilmGate } from './ui/cutscene.ts';
 import { OptionsScreen } from './ui/options.ts';
 import { actionFor, applyToDocument, keyLabel, keyOf, onSettings, settings, update } from './settings.ts';
@@ -136,6 +137,8 @@ import { TameWindow } from './ui/tame.ts'; // docs/18 IV
 import { ThroneWindow } from './ui/throne.ts'; // docs/19 E1–E3, E18
 import { PremiumWindow } from './ui/premium.ts'; // the premium shop (owner, 2026-10-03)
 import { Promos } from './ui/promo.ts'; // her personal offers (owner, 2026-10-15)
+import { DailyGift } from './ui/dailygift.ts'; // the daily login gift (owner, 2026-10-16)
+import { initTgNotices } from './ui/tgnotices.ts'; // «Уведомления в Телеграме» (owner, 2026-10-16)
 import { tgInvoices, tgLoginButton, tgStart } from './tg.ts'; // Telegram: the Mini App, «Войти через Телеграм», Stars (docs/27)
 import { ResearchWindow } from './ui/research.ts'; // the yard's tree of hulls (owner, 2026-10-04; docs/20)
 import { AdvCard } from './ui/advcard.ts'; // docs/17 H4
@@ -164,6 +167,29 @@ const hud = new Hud();
 const audio = new AudioEngine();
 renderer.onLightning = () => audio.thunder();
 for (const ev of ['keydown', 'mousedown', 'touchstart'] as const) addEventListener(ev, () => audio.unlock(), { passive: true });
+// The sound pass (owner, 2026-10-16): the UI's cues through the engine; a button's tick; the sound asleep while the page is
+// hidden (another tab, the phone locked, the Mini App sent to Telegram's background) and awake on its return.
+setCuePlayer((k, d) => audio.cue(k, d));
+addEventListener('click', (e) => {
+  const b = (e.target as Element | null)?.closest?.('button, .btn, [role="button"], [role="switch"], .w-chip');
+  if (b && !(b as HTMLButtonElement).disabled && !b.closest('#world')) cue('click');
+}, { capture: true, passive: true });
+document.addEventListener('visibilitychange', () => audio.setHidden(document.hidden));
+{
+  const hook = (): boolean => {
+    const w = (globalThis as { Telegram?: { WebApp?: { onEvent?: (e: string, f: () => void) => void } } }).Telegram?.WebApp;
+    if (!w?.onEvent) return false;
+    w.onEvent('deactivated', () => audio.setHidden(true));
+    w.onEvent('activated', () => audio.setHidden(document.hidden));
+    return true;
+  };
+  if (!hook()) {
+    let n = 0;
+    const id = setInterval(() => {
+      if (hook() || ++n > 30) clearInterval(id);
+    }, 1000);
+  }
+}
 const worldMap = new WorldMap();
 const journal = new Journal((m) => net.send(m));
 // (No film at a window: owner, 2026-10-05 — films only at the sea's own moments, filmMoments.)
@@ -436,15 +462,25 @@ setInterval(() => {
 
 // The phone in the hand on the captain's own milestones (2026-10-16): a pulse as silver goes on a purchase in port,
 // a longer one on a new level (haptics.ts; «Вибрация» off stills both).
-let buzzLevel = -1, buzzSilver = -1;
+let buzzLevel = -1, buzzSilver = -1, pipeDocked: boolean | null = null;
 setInterval(() => {
   const s = state.self;
   if (!s || !inGame) return;
-  if (buzzLevel >= 0 && s.level > buzzLevel) buzz('level');
-  if (buzzSilver >= 0 && s.dockedAt && s.gold < buzzSilver) buzz('buy');
+  // (and heard: the sound pass, 2026-10-16 — a level's arpeggio, a purchase's coins, the bosun's pipe on leaving port)
+  if (buzzLevel >= 0 && s.level > buzzLevel) {
+    buzz('level');
+    cue('level');
+  }
+  if (buzzSilver >= 0 && s.dockedAt && s.gold < buzzSilver) {
+    buzz('buy');
+    cue('buy');
+  }
+  if (pipeDocked === true && !s.dockedAt) cue('undock');
+  pipeDocked = !!s.dockedAt;
   buzzLevel = s.level;
   buzzSilver = s.gold;
 }, 400);
+let lastDoubloons = -1;
 hud.onThrone = () => openThrone();
 // The premium shop (owner, 2026-10-03): from the micro menu and the cabin; `topup` opens it at the packs.
 const premiumWindow = new PremiumWindow((m) => net.send(m));
@@ -464,7 +500,10 @@ addEventListener('gravetide:shop', (e) => {
 });
 hud.onShop = () => openShop();
 // Her personal offers (owner, 2026-10-15): the entry carousel, the sea's chip, the island's card, the harbour's strip.
-const promos = new Promos({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight });
+// The daily login gift (owner, 2026-10-16): its calendar comes first on entry, the offers' carousel after it.
+const dailyGift = new DailyGift({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight });
+initTgNotices((m) => net.send(m), (f) => net.on(f));
+const promos = new Promos({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight, held: () => dailyGift.holding() });
 const puzzleWindow = new PuzzleWindow((m) => net.send(m));
 function openPuzzle(): void {
   puzzleWindow.open();
@@ -1559,6 +1598,10 @@ function onMessage(m: ServerMsg): void {
       else hud.toast(serverText(m.msg), m.kind);
       if (m.kind === 'gold') audio.coins();
       if (/a pirate is coming for you/.test(m.msg)) audio.bell(); // the lookout's alarm
+      // the island's work finished (base.ts finish): the hammer and the chime
+      if (m.kind === 'good' && (/ is finished\.$/.test(m.msg) || / on .+: level \d+\.$/.test(m.msg))) cue('built');
+      // the sea's news shown in the feed: a soft two-tone
+      if (m.msg.startsWith('WORLD: ')) cue('notice');
       // A reward floats up over her: the experience and the silver of it.
       {
         const own = state.ownDisplay;
@@ -1657,6 +1700,11 @@ function onMessage(m: ServerMsg): void {
     case 'premium':
     case 'doubloons':
       if (modal === 'shop') refreshModal();
+      // a premium purchase heard (the balance down: the doubloons spent)
+      if (m.t === 'doubloons') {
+        if (lastDoubloons >= 0 && m.n < lastDoubloons) cue('buy');
+        lastDoubloons = m.n;
+      }
       break;
     case 'lairs':
       if (modal === 'map') worldMap.draw(state);
@@ -4069,6 +4117,8 @@ function step(t: number): void {
         weather: state.weather,
         region: state.region,
         anomaly: state.bosses.some((b) => dist(b.x, b.y, own.x, own.y) < 3000),
+        isle: !document.getElementById('isle')?.classList.contains('hidden') && !!document.getElementById('isle'),
+        tactical: !!state.boardTac,
       }, state.wind[1], own.sail, Math.abs(shipHeel(own.heading, state.wind[0], state.wind[1], own.sail, SHIP_CLASSES[state.self!.loadout.classId].tier, state.you?.water ?? 0, 0)), timeOfDay(state.estServerTime()), !state.self?.dockedAt);
     }
     hud.castKey = touch.enabled ? '' : ` (${keyOfAction('land')})`; // a phone has its button, not a key
@@ -4118,4 +4168,4 @@ startTelemetry(() => (!inGame ? 'menu' : tactical.open ? 'battle' : isleScene.is
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, isle: isleScene, assets: () => ({ ...assetStats(), loads: loadLog.slice(), kinds: assetKinds() }), open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), promos, hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y) };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, isle: isleScene, assets: () => ({ ...assetStats(), loads: loadLog.slice(), kinds: assetKinds() }), open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), promos, dailyGift, hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y) };

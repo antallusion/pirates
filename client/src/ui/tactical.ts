@@ -5,6 +5,7 @@
 // the order (a second tap on a lit hex moves there; a tap on a foe strikes or fires), a long press shows a stack.
 
 import { SEAL_MOVES } from '../../../shared/src/data/seals.ts';
+import { cue } from '../sfx.ts'; // the sound pass (owner, 2026-10-16): the blows, the shots and the procs heard
 import { AUTO_SCROLL_ICON, AUTO_SCROLL_PACKS } from '../../../shared/src/data/premium.ts'; // «Свиток автобоя» (owner, 2026-10-11)
 import { findTitle } from '../render/seafinds.ts'; // docs/19 D5: the chest among the sharks
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
@@ -591,6 +592,8 @@ export class TacticalPanel {
   private lights: { x: number; y: number; t0: number; dur: number; r: number; rgb: string; a: number }[] = [];
   /** The procs being drawn (ui/tacprocs.ts). */
   private procs: Proc[] = [];
+  /** The battle's end heard (its fanfare or its fall), once a fight. */
+  private endHeard = false;
   private lamps: { x: number; y: number }[] = [];
   /** The marks the fight leaves on the decks (item 7), laid on the deck's painting as their blows land. */
   private decals: { at: number; k: DecalKind; hex: number; dx: number; dy: number; seed: number; done: boolean }[] = [];
@@ -1116,6 +1119,15 @@ export class TacticalPanel {
     const hexOf = (id?: number) => (id === undefined ? undefined : (v.stacks.find((s) => s.id === id) ?? was.stacks.find((s) => s.id === id))?.hex);
     const at = (hex?: number) => (hex === undefined ? null : this.center(hex));
     const w = this.size.w || 30;
+    // The sound pass (owner, 2026-10-16): each thing heard as it lands (the cue keeps a least gap a kind: a sweep's six
+    // blows are one sound).
+    const ahead = (x: number) => x - performance.now();
+    if (e.k === 'hit' || e.k === 'ret') cue('blow', ahead(hit));
+    else if (e.k === 'shot') cue('shot', ahead(t + 40));
+    else if (e.k === 'morale') cue('rally', ahead(t));
+    else if (e.k === 'fear') cue('fear', ahead(t));
+    else if (e.k === 'regen') cue('heal', ahead(t));
+    else if (e.k === 'spell') cue('spell', ahead(t));
     if (e.k === 'hit' || e.k === 'shot' || e.k === 'ret') {
       const c = at(e.hex ?? hexOf(e.t));
       // The figures: the striker winds up and lunges, at full stretch as the blow lands (a shooter's piece kicks back
@@ -1162,7 +1174,10 @@ export class TacticalPanel {
         else if (e.k === 'ret') this.addFloat({ text: `↺−${e.dmg}`, x: c.x, y: y0, t0: hit, color: '#ffab7a', size: 1.1 });
         else this.addFloat({ text: `−${e.dmg}`, x: c.x, y: y0, t0: hit, color: '#f3d7a0', size: 1.25 });
         // What the blow carried beyond its harm (TacEvent.fx), drawn on the struck (an answer to all on the answerer).
-        if (lucky) this.proc('luck', c, hit);
+        if (lucky) {
+          this.proc('luck', c, hit);
+          cue('luck', ahead(hit));
+        }
         for (const f of e.fx ?? []) {
           if (f === 'all') {
             const me = at(hexOf(e.s));
@@ -2051,8 +2066,12 @@ export class TacticalPanel {
     // beaten who would follow her when they would, and one button.
     const banner = el.querySelector<HTMLElement>('.tb-banner')!;
     banner.classList.toggle('hidden', !v.over || this.endHidden);
+    if (!v.over) this.endHeard = false;
     if (v.over) {
       const won = v.over.winner === v.you;
+      // the end heard once: a fanfare, or two falling notes (not on a replay)
+      if (!this.endHeard && !v.replay) cue(won ? 'win' : 'lose');
+      this.endHeard = true;
       const why = v.over.why === 'rout' ? (won ? 'why.rout' : 'why.routLost') : v.over.why === 'struck' ? (won ? 'why.struck' : 'why.struckYou') : v.over.why === 'ransom' ? (won ? 'why.ransomThem' : 'why.ransomYou') : v.over.why === 'flag' ? (won ? 'why.flag' : 'why.flagLost') : 'why.rounds';
       // docs/18 II: ashore, the lair is broken, or the party thrown back or fallen back to the boats.
       const whyText = v.land && isShoreBoss(v.land.lair) ? BL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : roamOf(v.land?.lair) ? RL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land?.lair === 'find_chest' ? FL(won ? 'why.chest' : v.over.why === 'struck' ? 'why.chestBack' : 'why.chestLost') : v.land && isDriftKind(v.land.lair) ? DL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land ? LL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : L(why as K);

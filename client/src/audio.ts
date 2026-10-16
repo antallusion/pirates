@@ -4,6 +4,8 @@
 
 import type { GameEvent, WeatherKind } from '../../shared/src/protocol.ts';
 import { MusicDirector } from './music.ts';
+import { CUES } from './sfx.ts';
+import type { SoundCue } from './sfx.ts';
 import type { MusicInput } from './music.ts';
 
 const HEARING = 1600; // meters beyond which a cannon is not heard
@@ -70,6 +72,8 @@ export class AudioEngine {
   private watch = -1;
   private lastCry = 0;
   private lastTurnCreak = 0;
+  /** The page hidden: no cue, the context suspended (setHidden). */
+  private hidden = false;
 
   /** Must be called from a user gesture (browser autoplay policy). */
   unlock(): void {
@@ -458,6 +462,174 @@ export class AudioEngine {
     if (!v) return;
     this.tone(v.out, v.at, 92, 3, 0.6, 'sine', 61);
     this.tone(v.out, v.at + 0.2, 138.6, 2.5, 0.3, 'sine', 90);
+  }
+
+  // ---------------------------------------------------------------------------------------------- the cues (sfx.ts)
+  // The sound pass (owner, 2026-10-16): the events that were silent — the hex fight's blows and procs, the interface,
+  // a purchase, a level, the island's work, the daily gift, a notice, the battle's end. All synthesized here, short
+  // and on their bus, so the options' sliders and the mute rule them.
+
+  /** A cue by its name (sfx.ts CUES), `delay` seconds from now. */
+  cue(kind: SoundCue, delay = 0): void {
+    if (!this.ctx || this.hidden) return;
+    const f = (this as unknown as Record<string, (d: number) => void>)[CUES[kind].recipe];
+    if (typeof f === 'function') f.call(this, delay);
+  }
+
+  /** The page hidden (another tab, the Mini App in Telegram's background): the sound stops, and resumes on return. */
+  setHidden(hidden: boolean): void {
+    this.hidden = hidden;
+    const ctx = this.ctx;
+    if (!ctx) return;
+    if (hidden && ctx.state === 'running') void ctx.suspend().catch(() => {});
+    else if (!hidden && ctx.state === 'suspended') void ctx.resume().catch(() => {});
+  }
+
+  /** Steel on steel on the deck, and the knock of the blow (the hex fight). */
+  blow(delay = 0): void {
+    const v = this.voice(0.26, (Math.random() - 0.5) * 0.4, delay, 'combat');
+    if (!v) return;
+    const f = 2100 + Math.random() * 900;
+    this.tone(v.out, v.at, f, 0.16, 0.22, 'triangle');
+    this.tone(v.out, v.at, f * 1.47, 0.11, 0.1, 'sine');
+    this.noiseBurst(v.out, v.at, 0.06, 'highpass', 3200, 0.8, 0.35);
+    this.noiseBurst(v.out, v.at + 0.01, 0.14, 'bandpass', 420, 1.2, 0.9);
+    this.tone(v.out, v.at, 120, 0.12, 0.25, 'sine', 70);
+  }
+
+  /** A musket or a pistol on the deck. */
+  tacShot(delay = 0): void {
+    const v = this.voice(0.24, (Math.random() - 0.5) * 0.4, delay, 'combat');
+    if (!v) return;
+    this.noiseBurst(v.out, v.at, 0.03, 'highpass', 2400, 0.7, 0.6);
+    this.noiseBurst(v.out, v.at + 0.004, 0.22, 'bandpass', 700, 1, 1.4);
+    this.tone(v.out, v.at, 140, 0.12, 0.25, 'square', 60);
+  }
+
+  /** A lucky blow: a bright two-note glint over it. */
+  luck(delay = 0): void {
+    const v = this.voice(0.16, 0, delay, 'combat');
+    if (!v) return;
+    this.tone(v.out, v.at, 1568, 0.25, 0.4, 'triangle');
+    this.tone(v.out, v.at + 0.07, 2349, 0.35, 0.35, 'triangle');
+    this.noiseBurst(v.out, v.at, 0.2, 'highpass', 6000, 0.7, 0.15);
+  }
+
+  /** High morale, another turn: a short rising call of three notes. */
+  rally(delay = 0): void {
+    const v = this.voice(0.15, 0, delay, 'combat');
+    if (!v) return;
+    [293.66, 369.99, 440].forEach((f, i) => this.tone(v.out, v.at + i * 0.09, f, 0.3 + i * 0.08, 0.4, 'sawtooth'));
+  }
+
+  /** A heal, a regrowth, a raise: a soft rising shimmer. */
+  heal(delay = 0): void {
+    const v = this.voice(0.12, 0, delay, 'combat');
+    if (!v) return;
+    for (let i = 0; i < 4; i++) this.tone(v.out, v.at + i * 0.06, 880 * Math.pow(1.26, i), 0.4, 0.25, 'sine');
+  }
+
+  /** A turn lost to fear: a low falling moan. */
+  fear(delay = 0): void {
+    const v = this.voice(0.14, 0, delay, 'combat');
+    if (!v) return;
+    this.tone(v.out, v.at, 220, 0.7, 0.4, 'sine', 110);
+    this.tone(v.out, v.at + 0.05, 233, 0.6, 0.18, 'triangle', 116);
+  }
+
+  /** An order cast: the air drawn in, then let go. */
+  spell(delay = 0): void {
+    const ctx = this.ctx;
+    const v = this.voice(0.16, 0, delay, 'combat');
+    if (!ctx || !v || !this.noise) return;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 3;
+    bp.frequency.setValueAtTime(400, v.at);
+    bp.frequency.exponentialRampToValueAtTime(2400, v.at + 0.35);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, v.at);
+    env.gain.linearRampToValueAtTime(0.9, v.at + 0.3);
+    env.gain.exponentialRampToValueAtTime(0.001, v.at + 0.6);
+    src.connect(bp).connect(env).connect(v.out);
+    src.start(v.at, Math.random());
+    src.stop(v.at + 0.65);
+  }
+
+  /** The battle won: a short brass fanfare in D. */
+  victory(delay = 0): void {
+    const v = this.voice(0.2, 0, delay, 'music');
+    if (!v) return;
+    const notes: [number, number][] = [[293.66, 0.18], [369.99, 0.18], [440, 0.18], [587.33, 0.7]];
+    let t = v.at;
+    for (const [f, d] of notes) {
+      this.tone(v.out, t, f, d + 0.1, 0.35, 'sawtooth');
+      this.tone(v.out, t, f / 2, d + 0.1, 0.2, 'triangle');
+      t += d;
+    }
+  }
+
+  /** The battle lost: two low falling notes. */
+  defeat(delay = 0): void {
+    const v = this.voice(0.2, 0, delay, 'music');
+    if (!v) return;
+    this.tone(v.out, v.at, 196, 0.6, 0.35, 'sawtooth', 185);
+    this.tone(v.out, v.at + 0.55, 146.83, 1.4, 0.35, 'sawtooth', 130);
+  }
+
+  /** A button pressed: a dry wooden tick, very short and quiet. */
+  click(delay = 0): void {
+    const v = this.voice(0.08, 0, delay, 'ui');
+    if (!v) return;
+    this.noiseBurst(v.out, v.at, 0.025, 'bandpass', 2600, 2.5, 0.8);
+    this.tone(v.out, v.at, 520, 0.04, 0.2, 'triangle', 380);
+  }
+
+  /** A purchase: the coins counted out and the till's bell. */
+  purchase(delay = 0): void {
+    const v = this.voice(0.18, 0, delay, 'ui');
+    if (!v) return;
+    for (let i = 0; i < 5; i++) this.tone(v.out, v.at + i * 0.04, 2400 + Math.random() * 1100, 0.12, 0.28, 'triangle');
+    this.tone(v.out, v.at + 0.24, 1318.5, 0.6, 0.25, 'sine');
+    this.tone(v.out, v.at + 0.24, 1975.5, 0.45, 0.1, 'sine');
+  }
+
+  /** A new level: an arpeggio rising to the octave, the bell under it. */
+  levelUp(delay = 0): void {
+    const v = this.voice(0.18, 0, delay, 'ui');
+    if (!v) return;
+    [293.66, 369.99, 440, 587.33, 739.99].forEach((f, i) => this.tone(v.out, v.at + i * 0.08, f, 0.5 + i * 0.1, 0.35, 'triangle'));
+    this.tone(v.out, v.at + 0.4, 146.83, 1.2, 0.25, 'sine');
+  }
+
+  /** The island's work finished: three hammer knocks and a chime. */
+  built(delay = 0): void {
+    const v = this.voice(0.18, 0, delay, 'ui');
+    if (!v) return;
+    for (let i = 0; i < 3; i++) {
+      this.noiseBurst(v.out, v.at + i * 0.14, 0.06, 'bandpass', 900, 3, 0.9);
+      this.tone(v.out, v.at + i * 0.14, 260, 0.08, 0.3, 'triangle', 180);
+    }
+    this.tone(v.out, v.at + 0.45, 1046.5, 0.7, 0.3, 'sine');
+    this.tone(v.out, v.at + 0.52, 1568, 0.6, 0.2, 'sine');
+  }
+
+  /** The daily gift: a chest's chime arpeggio and the coins. */
+  gift(delay = 0): void {
+    const v = this.voice(0.2, 0, delay, 'ui');
+    if (!v) return;
+    [587.33, 739.99, 880, 1174.66].forEach((f, i) => this.tone(v.out, v.at + i * 0.07, f, 0.6, 0.3, 'triangle'));
+    for (let i = 0; i < 6; i++) this.tone(v.out, v.at + 0.3 + i * 0.045, 2500 + Math.random() * 1000, 0.12, 0.22, 'triangle');
+  }
+
+  /** A notice: a soft two-tone. */
+  notice(delay = 0): void {
+    const v = this.voice(0.09, 0, delay, 'ui');
+    if (!v) return;
+    this.tone(v.out, v.at, 880, 0.25, 0.35, 'sine');
+    this.tone(v.out, v.at + 0.11, 1174.66, 0.35, 0.3, 'sine');
   }
 
   /** A caption for a sound that matters, with where it came from (at most one of a kind every 2 s). */

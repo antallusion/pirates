@@ -4408,8 +4408,8 @@ export class Game {
     sendRenown(this, s, true);
     sendWorldGoals(this, s); // the sea's goals of the week (docs/16 #32)
     sendBalance(this, s); // her account's doubloons (the premium shop)
+    sendGift(this, s); // her daily login calendar (owner, 2026-10-16): first, the offers' carousel waits for it
     sendPromo(this, s); // her personal offers and the entry carousel (owner, 2026-10-15)
-    sendGift(this, s); // her daily login calendar (owner, 2026-10-16)
     noticesAboard(this, s); // her Telegram notices' switches; «давно не заходили» may come again
     if (away) this.sendTo(s, { t: 'away', view: away });
     // Back at the helm in the middle of a fight (a reload, a dropped line): the fight as it stands, or it went on unseen.

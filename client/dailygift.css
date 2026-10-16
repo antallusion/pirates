@@ -1,0 +1,84 @@
+/* GRAVETIDE · the daily login gift (owner, 2026-10-16; client/src/ui/dailygift.ts): the calendar in the middle (a window,
+   allowed there; it comes before the offers' carousel and never with it) — seven days in a row of dark wood and brass,
+   the taken ones ticked and dimmed, today's lit in gold, the seventh framed; the week of four as pips on the head.
+   Sized for a phone held sideways first: at 480×270 the whole calendar fits with no scrolling. The round icon is in
+   seahud.css (#tc-daily). Loaded before fit.css, which stays the last (index.html). */
+
+#gift-over { position: fixed; inset: 0; z-index: 39; display: flex; align-items: center; justify-content: center;
+  padding: max(var(--sa-t, 0px), 8px) max(var(--sa-r, 0px), 8px) max(var(--sa-b, 0px), 8px) max(var(--sa-l, 0px), 8px); background: rgba(3, 4, 6, 0.72); }
+.gf-box { position: relative; width: min(620px, 100%); max-height: 100%; overflow: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px;
+  border: 1px solid var(--brass, #b08d57); border-radius: 6px; background: linear-gradient(170deg, #2a2117, #0f0d0b 65%);
+  box-shadow: 0 0 0 1px #000, 0 12px 40px rgba(0, 0, 0, 0.8), inset 0 0 30px rgba(224, 184, 98, 0.07); color: var(--bone); font-family: var(--sans); }
+.gf-head { display: flex; align-items: center; gap: 10px; }
+.gf-title { flex: 1 1 auto; min-width: 0; font: 400 20px/1.1 var(--display); color: var(--gold); letter-spacing: 0.03em; }
+.gf-week { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fog); white-space: nowrap; }
+.gf-pips { display: inline-flex; gap: 4px; }
+.gf-pips i { width: 8px; height: 8px; border-radius: 50%; background: rgba(224, 184, 98, 0.22); box-shadow: inset 0 0 0 1px rgba(224, 184, 98, 0.4); }
+.gf-pips i.past { background: rgba(224, 184, 98, 0.55); }
+.gf-pips i.on { background: var(--gold); box-shadow: 0 0 6px rgba(240, 206, 120, 0.7); }
+.gf-x { flex: none; }
+
+.gf-days { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.gf-day { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; padding: 6px 2px 5px; border-radius: 5px;
+  border: 1px solid rgba(176, 141, 87, 0.45); background: linear-gradient(180deg, rgba(48, 38, 26, 0.9), rgba(16, 13, 10, 0.92)); }
+.gf-n { font: 600 10px/1.1 var(--sans); letter-spacing: 0.04em; color: var(--fog); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.gf-pic { position: relative; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; }
+.gf-ico { width: 34px; height: 34px; object-fit: contain; margin: 0; }
+.gf-pic .glyph { font-size: 22px; color: var(--gold); }
+.gf-more { position: absolute; right: -6px; bottom: -2px; padding: 0 3px; border-radius: 5px; font: 700 9px/12px var(--sans); color: var(--bone); background: rgba(10, 9, 7, 0.9); box-shadow: inset 0 0 0 1px rgba(224, 184, 98, 0.5); }
+.gf-q { font: 700 12px/1.1 var(--sans); color: var(--gold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gf-day.done { opacity: 0.55; }
+.gf-day.done .gf-pic { filter: grayscale(0.6); }
+.gf-tick { position: absolute; top: 2px; right: 4px; font: 800 13px/1 var(--sans); font-style: normal; color: #9fe08a; text-shadow: 0 1px 2px #000; }
+.gf-day.today { border-color: var(--gold); background: linear-gradient(180deg, rgba(86, 64, 28, 0.95), rgba(24, 18, 10, 0.95)); box-shadow: 0 0 12px rgba(240, 206, 120, 0.45), inset 0 0 10px rgba(240, 206, 120, 0.15); }
+.gf-day.today .gf-n { color: var(--gold); }
+.gf-day.gf-seven { border-color: rgba(224, 184, 98, 0.85); box-shadow: inset 0 0 0 1px rgba(224, 184, 98, 0.35); }
+.gf-day.fresh { animation: gf-pop 0.6s ease-out 1; opacity: 1; }
+@keyframes gf-pop { 0% { transform: scale(1); } 40% { transform: scale(1.12); box-shadow: 0 0 18px rgba(240, 206, 120, 0.9); } 100% { transform: scale(1); } }
+body.reduce-motion .gf-day.fresh { animation: none; }
+@media (prefers-reduced-motion: reduce) { .gf-day.fresh { animation: none; } }
+
+.gf-got { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 13px; color: var(--bone); }
+.gf-got > span:first-child { color: var(--fog); }
+.gf-gi { display: inline-flex; align-items: center; gap: 3px; color: var(--gold); font-weight: 700; }
+.gf-ico-s { width: 18px; height: 18px; object-fit: contain; margin: 0; }
+.gf-note { margin: 0; font-size: 12px; line-height: 1.3; color: var(--fog); }
+.gf-note b { color: var(--bone); font-weight: 600; }
+.gf-acts { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.gf-acts .btn { min-height: 36px; min-width: 96px; }
+.gf-claim { min-width: 130px; }
+.gf-next { flex: 1 1 auto; font-size: 12px; color: var(--fog); }
+
+/* a phone held sideways: smaller, the whole calendar on one screen */
+@media (max-height: 420px) {
+  .gf-box { gap: 6px; padding: 8px 10px; }
+  .gf-title { font-size: 17px; }
+  .gf-days { gap: 4px; }
+  .gf-day { padding: 4px 1px 3px; gap: 2px; }
+  .gf-pic { width: 32px; height: 32px; }
+  .gf-ico { width: 28px; height: 28px; }
+  .gf-note { font-size: 11px; }
+  .gf-acts .btn { min-height: 32px; }
+}
+@media (max-height: 300px) {
+  .gf-box { gap: 4px; padding: 6px 8px; }
+  .gf-title { font-size: 15px; }
+  .gf-head .po-x-big { width: 30px; height: 30px; font-size: 17px; }
+  .gf-pic { width: 26px; height: 26px; }
+  .gf-ico { width: 22px; height: 22px; }
+  .gf-n { font-size: 9px; }
+  .gf-q { font-size: 11px; }
+  .gf-note { font-size: 10px; }
+  .gf-got { font-size: 11px; }
+  .gf-acts .btn { min-height: 30px; min-width: 84px; }
+}
+
+/* ---------- the Telegram notices' switches (options.ts, «Уведомления в Телеграме») */
+.tgn { display: flex; flex-direction: column; gap: 6px; }
+.tgn-hint { margin: 0; font-size: 12px; color: var(--fog); }
+.tgn-bad { margin: 0; font-size: 12px; color: var(--bad); }
+.tgn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 4px 12px; }
+.tgn-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; }
+.tgn-row > span { min-width: 0; font-size: 13px; }
+.tgn-row.off > span { opacity: 0.55; }
+.tgn-sent { font-size: 11px; color: var(--fog); }

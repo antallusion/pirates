@@ -5,7 +5,7 @@
 // Changes fade over 2–4 s and come no oftener than every 20 s, so a sail on the horizon does not jerk it about.
 // Also the ship's own voice: rigging that creaks with the wind and the heel, and the bells of the watch every half hour.
 
-export type MusicState = 'calm' | 'fog' | 'chase' | 'battle' | 'storm' | 'anomaly' | 'port' | 'abyss';
+export type MusicState = 'calm' | 'fog' | 'chase' | 'battle' | 'storm' | 'anomaly' | 'port' | 'abyss' | 'isle';
 
 export interface MusicInput {
   docked: boolean;
@@ -14,10 +14,16 @@ export interface MusicInput {
   weather: string;
   region: string;
   anomaly: boolean; // a boss, a whirlpool's eye, a black storm
+  /** Her island's scene open (the sound pass, 2026-10-16: a lute of its own). */
+  isle?: boolean;
+  /** A fight on the hexes (boarding, a lair): the drums, as a battle at sea. */
+  tactical?: boolean;
 }
 
 /** What the scene calls for (pure; the director adds the 20 s hysteresis). */
 export function wantedState(i: MusicInput): MusicState {
+  if (i.tactical) return 'battle';
+  if (i.isle) return 'isle';
   if (i.docked) return 'port';
   if (i.region === 'the_abyss') return 'abyss';
   if (i.anomaly) return 'anomaly';
@@ -42,9 +48,20 @@ export function bellsAt(timeOfDay01: number): number {
   return (halfHours % 8) || 8;
 }
 
-// D dorian: the sea's own mode.
-const SCALE = [0, 2, 3, 5, 7, 9, 10];
-const ROOT = 146.83; // D3
+// D dorian: the sea's own mode — and each sea its own colour of it (the sound pass, 2026-10-16: «музыка по контексту»):
+// the same voices and patterns, the mode and the key moved a little, so a sea is told by ear without a new track.
+export const REGION_THEME: Record<string, { scale: number[]; shift: number }> = {
+  black_coast: { scale: [0, 2, 3, 5, 7, 9, 10], shift: 0 }, // dorian: home waters
+  gravewater: { scale: [0, 2, 4, 5, 7, 9, 10], shift: 3 }, // mixolydian: the warm south
+  whispering: { scale: [0, 2, 3, 5, 7, 8, 10], shift: -2 }, // aeolian: the mists
+  ashen_isles: { scale: [0, 1, 3, 5, 7, 8, 10], shift: -1 }, // phrygian: fire and ash
+  leviathan_reach: { scale: [0, 2, 3, 5, 7, 8, 11], shift: 2 }, // harmonic minor: the ice
+  dead_mans_expanse: { scale: [0, 1, 4, 5, 7, 8, 10], shift: -3 }, // phrygian dominant: the empty sea
+  drowned_crown: { scale: [0, 1, 3, 5, 6, 8, 10], shift: 1 }, // locrian: the drowned court
+  the_abyss: { scale: [0, 1, 3, 5, 6, 8, 10], shift: -4 },
+};
+let SCALE = REGION_THEME.black_coast.scale;
+let ROOT = 146.83; // D3
 const note = (deg: number, oct = 0) => ROOT * Math.pow(2, (SCALE[((deg % 7) + 7) % 7] + 12 * (oct + Math.floor(deg / 7))) / 12);
 
 export class MusicDirector {
@@ -58,6 +75,9 @@ export class MusicDirector {
   private step = 0;
   private lastBell = -1;
   private creakAt = 0;
+  private region = '';
+  /** A change of state dips the music for a moment before the new one rises (the crossfade). */
+  private dipUntil = 0;
 
   attach(ctx: AudioContext, out: GainNode, noise: AudioBuffer): void {
     this.ctx = ctx;
@@ -79,10 +99,18 @@ export class MusicDirector {
       this.state = want;
       this.since = 0;
       this.step = 0;
+      this.dipUntil = ctx.currentTime + 1.2;
     }
-    // The level of each state; the fade takes about three seconds.
-    const level = { calm: 0.5, fog: 0.25, chase: 0.6, battle: 0.8, storm: 0.08, anomaly: 0.45, port: 0.45, abyss: 0.12 }[this.state];
-    out.gain.setTargetAtTime(level, ctx.currentTime, 1);
+    // Each sea its colour: the key and mode follow her sea (heard from the next notes on).
+    if (input.region !== this.region) {
+      this.region = input.region;
+      const th = REGION_THEME[input.region] ?? REGION_THEME.black_coast;
+      SCALE = th.scale;
+      ROOT = 146.83 * Math.pow(2, th.shift / 12);
+    }
+    // The level of each state; the old one dips over a second, the new one rises over about three.
+    const level = { calm: 0.5, fog: 0.25, chase: 0.6, battle: 0.8, storm: 0.08, anomaly: 0.45, port: 0.45, abyss: 0.12, isle: 0.42 }[this.state];
+    out.gain.setTargetAtTime(ctx.currentTime < this.dipUntil ? level * 0.2 : level, ctx.currentTime, ctx.currentTime < this.dipUntil ? 0.35 : 1);
     while (this.next < ctx.currentTime + 0.25) this.schedule(this.next);
   }
 
@@ -133,6 +161,14 @@ export class MusicDirector {
         if (s === 'anomaly') for (const d of [0, 1, 4]) this.pad(at + 1, note(d, 1), 7, 0.018);
         this.next = at + (s === 'abyss' ? 14 : 8);
         break;
+      case 'isle': {
+        // Her island: a lute plucked over a slow drone, the sea's own mode in a pentatonic walk.
+        const walk = [0, 2, 4, 1, 3, 4, 2, 0, 4, 3, 1, 0];
+        if (this.step % 8 === 1) this.pad(at, note(0, -1), 6, 0.04);
+        this.pluck(at, note(walk[this.step % walk.length], 1), 0.06);
+        this.next = at + (this.step % 4 === 3 ? 0.9 : 0.45);
+        break;
+      }
       case 'port': {
         // A tavern fiddle: a jig in 6/8.
         const tune = [0, 2, 4, 4, 2, 0, 1, 3, 5, 4, 2, 1];
@@ -188,6 +224,17 @@ export class MusicDirector {
     bp.Q.value = 1.2;
     bp.connect(this.env(at, 0.02, dur, peak));
     this.osc('sawtooth', f, at, dur, bp);
+  }
+
+  /** A lute's string: a bright attack and a quick decay. */
+  private pluck(at: number, f: number, peak: number): void {
+    const lp = this.ctx!.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(f * 6, at);
+    lp.frequency.exponentialRampToValueAtTime(f * 1.5, at + 0.5);
+    lp.connect(this.env(at, 0.004, 1.1, peak));
+    this.osc('triangle', f, at, 1.1, lp);
+    this.osc('sawtooth', f * 2, at, 0.3, lp, 4);
   }
 
   private drum(at: number, peak: number, f: number): void {
