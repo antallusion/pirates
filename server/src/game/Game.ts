@@ -1705,6 +1705,9 @@ export class Game {
     const p = s.profile!;
     const ship = s.ship;
     const out: Record<string, QuestTarget> = {};
+    // The nearest lair of a kind is looked for once a call (owner, 2026-10-16: no cap on her quests — thirty at a lair's
+    // step cost 2 ms a push, the same search thirty times).
+    const lairMemo = new Map<string, { x: number; y: number } | null>();
     for (const qs of p.quests.active) {
       const st = QUESTS_BY_ID[qs.id]?.steps[qs.step];
       if (!st) continue;
@@ -1735,8 +1738,14 @@ export class Game {
       } else if (st.type === 'lair') {
         // its lair on the island the step names, else the nearest of its kind (or any) still standing
         const from = ship ? ship.state : this.portById(QUESTS_BY_ID[qs.id].port) ?? null;
+        const memoKey = `${st.island ?? ''}|${st.kind ?? ''}|${from ? `${Math.round(from.x)},${Math.round(from.y)}` : ''}`;
         let best: { x: number; y: number } | null = null, bd = Infinity;
-        for (const l of lairList(this)) {
+        const memo = lairMemo.get(memoKey);
+        if (memo !== undefined) {
+          best = memo;
+          bd = -1;
+        }
+        if (bd !== -1) for (const l of lairList(this)) {
           if (st.island !== undefined && l.island !== st.island) continue;
           if (st.kind && l.kind !== st.kind) continue;
           if (!lairUp(this, l)) continue;
@@ -1753,6 +1762,7 @@ export class Game {
           const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay;
           if (d < bd) [best, bd] = [lp, d];
         }
+        if (bd !== -1) lairMemo.set(memoKey, best);
         if (!best && st.island !== undefined && this.world.islands[st.island]) best = this.world.islands[st.island];
         if (best) {
           at = best;
