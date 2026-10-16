@@ -125,13 +125,14 @@ body.simple:not(.touch) #hud-captain:active .cs-frame { transform: scale(0.97); 
    Equal sizes and gaps in both; each row one button tall, so the fight's buttons and the helm below keep clear of it
    on every screen. --lr-top is the plate's bottom (hud.ts placeTopStrip writes it); --tr-c is 1 where the chat is in
    the left row; --lr-i, --lr-o 1 while «Остров» and the offer are out (the next one moves up, no hole). */
-body.simple { --tr-b: 44px; --tr-g: 8px; --tr-c: 1; --lr-i: 0; --lr-o: 0; --tr-top: calc(var(--sa-t) + 8px + var(--mm) + 8px); --lr-top: calc(var(--sa-t) + 92px); }
+body.simple { --tr-b: 44px; --tr-g: 8px; --tr-c: 1; --lr-i: 0; --lr-o: 0; --lr-d: 0; --tr-top: calc(var(--sa-t) + 8px + var(--mm) + 8px); --lr-top: calc(var(--sa-t) + 92px); }
 @media (max-height: 520px) { body.simple { --tr-b: calc(36px + 8 * var(--u, 1px)); --tr-g: calc(5px + 3 * var(--u, 1px)); } }
 @media (min-width: 1100px) and (min-height: 600px) { body.simple:not(.touch) { --tr-c: 0; } }
 body.simple:has(#touch > #tc-isle:not(.hidden)) { --lr-i: 1; }
 body.simple:has(#touch > #tc-offer:not(.hidden)) { --lr-o: 1; }
+body.simple:has(#touch > #tc-daily:not(.hidden)) { --lr-d: 1; }
 body.simple #hud-map { top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + 8px); width: var(--mm); height: var(--mm); }
-body.simple #hud #touch > :is(#tc-menu, #tc-news, #tc-isle, #tc-offer) { position: absolute; bottom: auto; width: var(--tr-b); height: var(--tr-b); min-width: 0; min-height: 0; pointer-events: auto; }
+body.simple #hud #touch > :is(#tc-menu, #tc-news, #tc-isle, #tc-offer, #tc-daily) { position: absolute; bottom: auto; width: var(--tr-b); height: var(--tr-b); min-width: 0; min-height: 0; pointer-events: auto; }
 /* the right row */
 body.simple #hud #touch > :is(#tc-menu, #tc-news) { left: auto; top: var(--tr-top); right: calc(var(--sa-r) + 8px + var(--tr-x, 0) * (var(--tr-b) + var(--tr-g))); }
 body.simple #hud #touch > #tc-news { --tr-x: 1; }
@@ -139,10 +140,14 @@ body.simple.mm-peek #hud #touch > #tc-news { --tr-x: 0; }
 body.simple #hud #touch > :is(#tc-menu, #tc-news) .k-badge { top: -3px; right: auto; left: -8px; }
 body.simple:not(.touch) #hud #touch > #tc-menu > .kc-b { left: -6px; top: -6px; bottom: auto; transform: none; }
 /* the left row */
-body.simple #hud #touch > :is(#tc-isle, #tc-offer) { right: auto; top: var(--lr-top); left: calc(var(--sa-l) + 8px + var(--lr-x, 0) * (var(--tr-b) + var(--tr-g))); }
+body.simple #hud #touch > :is(#tc-isle, #tc-offer, #tc-daily) { right: auto; top: var(--lr-top); left: calc(var(--sa-l) + 8px + var(--lr-x, 0) * (var(--tr-b) + var(--tr-g))); }
 body.simple #hud #touch > #tc-isle { --lr-x: var(--tr-c); }
 body.simple #hud #touch > #tc-offer { --lr-x: calc(var(--tr-c) + var(--lr-i)); }
-body.simple #hud #touch > :is(#tc-isle, #tc-offer) .k-badge { top: -4px; right: -6px; left: auto; }
+/* the daily gift (owner, 2026-10-16; dailygift.ts) after the offer while today's gift waits: a «!» on its corner */
+body.simple #hud #touch > #tc-daily { --lr-x: calc(var(--tr-c) + var(--lr-i) + var(--lr-o)); color: var(--k-gold); }
+body.simple #hud #touch > #tc-daily.hidden { display: none; }
+body.simple #hud #touch > #tc-daily .tc-daily-b { background: linear-gradient(180deg, #c0392b, #7d1d14); color: #fff; }
+body.simple #hud #touch > :is(#tc-isle, #tc-offer, #tc-daily) .k-badge { top: -4px; right: -6px; left: auto; }
 /* the words under the left row's buttons: «Остров», the offer's clock */
 body.simple #hud #touch > #tc-isle .tc-isle-l { left: 50%; right: auto; top: calc(100% + 3px); bottom: auto; transform: translateX(-50%); font-size: 9px; }
 /* (480×270: the adventure card unfolded has no room beside the right row — its buttons step out of sight meanwhile) */
@@ -151,10 +156,10 @@ body.simple #hud #touch > .tr-veil { visibility: hidden; pointer-events: none; }
    of the row */
 @media (max-width: 1099px), (max-height: 599px) {
   body.simple:not(.chat-open):not(.tac) #hud-chat > .chat-toggle { top: var(--lr-top); left: calc(var(--sa-l) + 8px); right: auto; bottom: auto; width: var(--tr-b); height: var(--tr-b); }
-  body.simple:not(.chat-open):not(.tac) #hud-chat > .chat-toast { top: var(--lr-top); left: calc(var(--sa-l) + 8px + (var(--tr-c) + var(--lr-i) + var(--lr-o)) * (var(--tr-b) + var(--tr-g))); right: auto; }
+  body.simple:not(.chat-open):not(.tac) #hud-chat > .chat-toast { top: var(--lr-top); left: calc(var(--sa-l) + 8px + (var(--tr-c) + var(--lr-i) + var(--lr-o) + var(--lr-d)) * (var(--tr-b) + var(--tr-g))); right: auto; }
 }
 body.simple.touch:not(.chat-open):not(.tac) #hud-chat > .chat-toggle { top: var(--lr-top); left: calc(var(--sa-l) + 8px); right: auto; bottom: auto; width: var(--tr-b); height: var(--tr-b); }
-body.simple.touch:not(.chat-open):not(.tac) #hud-chat > .chat-toast { top: var(--lr-top); left: calc(var(--sa-l) + 8px + (var(--tr-c) + var(--lr-i) + var(--lr-o)) * (var(--tr-b) + var(--tr-g))); right: auto; }
+body.simple.touch:not(.chat-open):not(.tac) #hud-chat > .chat-toast { top: var(--lr-top); left: calc(var(--sa-l) + 8px + (var(--tr-c) + var(--lr-i) + var(--lr-o) + var(--lr-d)) * (var(--tr-b) + var(--tr-g))); right: auto; }
 /* her offer (promo.ts icon): the offer's picture in the ring, a soft gold glow, its ribbon on the top-left (one offer; several: their count on the top-right instead), the clock
    under it (red in the last hour: .urgent), the count of offers on the top-right */
 body.simple #hud #touch > #tc-offer { color: var(--k-gold); filter: drop-shadow(0 0 5px rgba(232, 196, 106, 0.55)); animation: tc-offer-glow 2.8s ease-in-out infinite; }

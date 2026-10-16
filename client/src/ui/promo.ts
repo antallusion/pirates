@@ -83,6 +83,8 @@ export interface PromoDeps {
   modal: () => string | null;
   /** Hostile ships near, a chase, a boarding: no promo then. */
   busy: () => boolean;
+  /** Something comes first on entry (owner, 2026-10-16: the daily gift's calendar, dailygift.ts): the carousel waits. */
+  held?: () => boolean;
 }
 
 export class Promos {
@@ -337,7 +339,7 @@ export class Promos {
       return;
     }
     const hud = document.getElementById('hud');
-    const free = !!hud && !hud.classList.contains('hidden') && !this.d.state.onboarding?.stage && !this.d.busy() && !this.windowUp();
+    const free = !!hud && !hud.classList.contains('hidden') && !this.d.state.onboarding?.stage && !this.d.busy() && !this.windowUp() && !this.d.held?.() && !document.getElementById('gift-over');
     if (this.entryAgain && !this.over && free) {
       const again = this.entryAgain.filter((c) => this.cardsFor('entry').some((x) => x.id === c.id));
       this.entryAgain = null;

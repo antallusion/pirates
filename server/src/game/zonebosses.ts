@@ -6,6 +6,7 @@
 // piece; experience and silver by the part. A slain slot is kept (kv `zboss:<region>`) so a restart cannot raise her
 // twice. The model is bosses.ts (BossHub), called beside it in Game.everySecond.
 
+import { notifySea } from './tgnotify.ts'; // the Telegram notices (owner, 2026-10-16)
 import { xpAt } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { ZB_GRUDGE, ZB_LIFE, ZB_MIN_SHARE, ZB_REACH, ZB_ROAM, ZB_WARN, ZONE_BOSSES, zbSlot, zbSlotStart } from '../../../shared/src/data/zonebosses.ts';
 import type { ZoneBossDef } from '../../../shared/src/data/zonebosses.ts';
@@ -196,6 +197,7 @@ export function rise(game: Game, region: RegionId, slot: number, endsAt: number,
   }
   game.emit({ k: 'fx', fx: 'boss_roar', x: Math.round(spot.x), y: Math.round(spot.y), r: 400 }, spot.x, spot.y);
   eventsChanged(game);
+  notifySea(game, region); // the bot tells the captains away whose sea it is, who asked for it (owner, 2026-10-16)
   game.log(`[zboss] ${region} rose at ${Math.round(spot.x)},${Math.round(spot.y)} (slot ${slot})`);
   return ship;
 }

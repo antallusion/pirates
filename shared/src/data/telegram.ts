@@ -23,7 +23,7 @@ export const TG_TEXTS = {
     'Terms: doubloons are the game\'s premium currency, bought with Telegram Stars only and never earned at sea. They belong to your account, buy premium ships and creatures in the game\'s shop, and cannot be exchanged back for Stars or money. A purchase can be refunded through /paysupport while its doubloons are unspent.',
     'Условия: дублоны — премиальная валюта игры, покупаются только за звёзды Telegram и не добываются в море. Они принадлежат вашему аккаунту, покупают премиальные корабли и существ в лавке игры и не обмениваются обратно на звёзды или деньги. Покупку можно вернуть через /paysupport, пока её дублоны не потрачены.',
   ],
-  help: ['/start — play · /paysupport — payment support · /terms — terms of purchase', '/start — играть · /paysupport — поддержка по оплатам · /terms — условия покупки'],
+  help: ['/start — play · /paysupport — payment support · /terms — terms of purchase · /notify — notices on or off', '/start — играть · /paysupport — поддержка по оплатам · /terms — условия покупки · /notify — уведомления вкл. или выкл.'],
   paid: ['{n} doubloons credited to captain {name}. Fair winds!', 'Капитану {name} зачислено дублонов: {n}. Попутного ветра!'],
   badPayment: ['This invoice is no longer valid. Open the shop in the game and try again.', 'Этот счёт больше не действует. Откройте лавку в игре и попробуйте ещё раз.'],
   confirmLogin: ['Sign-in to GRAVETIDE: choose the code shown on your screen.', 'Вход в GRAVETIDE: выберите код, который показан на вашем экране.'],
@@ -38,9 +38,40 @@ export const TG_TEXTS = {
   cmdStart: ['Play GRAVETIDE', 'Играть в GRAVETIDE'],
   cmdPaysupport: ['Payment support', 'Поддержка по оплатам'],
   cmdTerms: ['Terms of purchase', 'Условия покупки'],
+  // The notices (owner, 2026-10-16; server/src/game/tgnotify.ts): one line each, the «Играть» button and «Отключить» under it.
+  'n.build': ['Captain {name}, the work on your island is finished: the builders wait for new orders.', 'Капитан {name}, стройка на вашем острове закончена: бригады ждут новых приказов.'],
+  'n.daily': ['Captain {name}, your daily gift is waiting: day {day} of the week. Miss two days and the track starts again.', 'Капитан {name}, вас ждёт награда за вход: {day}-й день недели. Пропустите два дня — и счёт начнётся заново.'],
+  'n.offer': ['Captain {name}, your personal offer ends in an hour: −{off}% while it lasts.', 'Капитан {name}, ваше личное предложение закончится через час: скидка {off}%, пока оно действует.'],
+  'n.raid': ['Captain {name}, pirates are making for your island! {mins} minutes before they land.', 'Капитан {name}, пираты идут к вашему острову! До высадки {mins} мин.'],
+  'n.rob': ['Captain {name}, robbers have landed on your island.', 'Капитан {name}, на ваш остров высадились грабители.'],
+  'n.boss': ['Captain {name}, a zone boss rises in your sea: an hour to hunt her down.', 'Капитан {name}, в вашем море поднялся босс зоны: на охоту — час.'],
+  'n.idle': ['The sea misses you, captain {name}: your ship waits, and so does your daily gift.', 'Море скучает, капитан {name}: корабль ждёт, а награда за вход — тоже.'],
+  'n.offBtn': ['Turn off notices', 'Отключить уведомления'],
+  'n.off': ['Notices are off. Turn them on again in the game: Settings → Telegram notices.', 'Уведомления отключены. Включить снова можно в игре: Настройки → Уведомления в Телеграме.'],
+  cmdNotify: ['Notices on or off', 'Уведомления: вкл. или выкл.'],
+  'n.on': ['Notices are on: up to three a day, never between 23:00 and 09:00 Moscow time. /notify turns them off.', 'Уведомления включены: не больше трёх в день и никогда с 23:00 до 09:00 по Москве. /notify — отключить.'],
 } as const satisfies Record<string, readonly [string, string]>;
 
 export type TgTextKey = keyof typeof TG_TEXTS;
+
+/** The kinds of notice the bot sends (owner, 2026-10-16): the island's work finished, the daily gift ready, a personal
+ *  offer's last hour, the island raided, a zone boss in her sea, and «давно не заходили» once after three days. */
+export type TgnCat = 'build' | 'daily' | 'offer' | 'raid' | 'boss' | 'idle';
+export const TGN_CATS: TgnCat[] = ['build', 'daily', 'offer', 'raid', 'boss', 'idle'];
+/** Each kind on or off by default once she has said yes (the zone boss is optional: off). */
+export const TGN_DEFAULT: Record<TgnCat, boolean> = { build: true, daily: true, offer: true, raid: true, boss: false, idle: true };
+
+/** Her switches as the settings show them. */
+export interface TgnView {
+  /** All notices on (she said yes: in the settings, the bot's /start, or the Mini App's write access). */
+  on: boolean;
+  cats: Record<TgnCat, boolean>;
+  /** The bot was blocked: notices stopped until she turns them on again. */
+  blocked: boolean;
+  /** Sent today (Moscow day) and the day's cap. */
+  sent: number;
+  cap: number;
+}
 
 /** The language of a Telegram user's client: Russian for ru/uk/be, English otherwise. */
 export function tgLang(code: string | undefined | null): TgLang {

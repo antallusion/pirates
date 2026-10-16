@@ -19,7 +19,8 @@ import type { Game } from './game/Game.ts';
 import { chargebackPremium, creditPremium, sendPremium, setPayDesk } from './game/premium.ts';
 import { doubloonPack } from '../../shared/src/data/premium.ts';
 import { tgDevice, tgLang, tgText, tgTime } from '../../shared/src/data/telegram.ts';
-import type { TgLang } from '../../shared/src/data/telegram.ts';
+import type { TgLang, TgnCat } from '../../shared/src/data/telegram.ts';
+import { noticeLink, notifyCommand, setNoticeDesk, setNotices } from './game/tgnotify.ts';
 
 export interface TgUser {
   id: number;
@@ -27,6 +28,8 @@ export interface TgUser {
   last_name?: string;
   username?: string;
   language_code?: string;
+  /** The Mini App's user: she let the bot write to her (Bot API 6.9+). */
+  allows_write_to_pm?: boolean;
 }
 
 /** The fetch the Bot API is called with: the global one, or a test's stub. */
@@ -242,6 +245,7 @@ export class TelegramService {
     this.now = o.now ?? Date.now;
     this.log = o.log ?? ((l) => console.log(l));
     setPayDesk(o.game, { invoice: (a, p, l) => this.invoice(a, p, l), refund: (c) => this.refund(c) });
+    setNoticeDesk(o.game, { send: (chat, cat, text, l) => this.notice(chat, cat, text, l) });
   }
 
   /** On start: the webhook (message and pre_checkout_query only), the menu button «Играть» → the Mini App, the
@@ -264,8 +268,34 @@ export class TelegramService {
   }
 
   /** The «Играть» button under a message: the Main Mini App's fullscreen direct link (TG_MAIN_APP), else the web_app. */
-  playButton(l: TgLang): { text: string; url: string } | { text: string; web_app: { url: string } } {
-    return this.mainApp ? { text: tgText('play', l), url: `https://t.me/${this.bot}?startapp=play&mode=fullscreen` } : { text: tgText('play', l), web_app: { url: this.webappUrl } };
+  playButton(l: TgLang, cat?: TgnCat): { text: string; url: string } | { text: string; web_app: { url: string } } {
+    // A notice's button carries its kind (`n_<kind>`: the start parameter, or `?n=` on the web_app's address), so the
+    // Mini App opened from it is counted (tgnotify.ts tgn_click).
+    if (this.mainApp) return { text: tgText('play', l), url: `https://t.me/${this.bot}?startapp=${cat ? `n_${cat}` : 'play'}&mode=fullscreen` };
+    let url = this.webappUrl;
+    if (cat) {
+      try {
+        const u = new URL(this.webappUrl);
+        u.searchParams.set('n', cat);
+        url = u.toString();
+      } catch {
+        url = this.webappUrl;
+      }
+    }
+    return { text: tgText('play', l), web_app: { url } };
+  }
+
+  /** A notice (tgnotify.ts): its line, the «Играть» button with its kind and «Отключить уведомления». A 403 (the bot
+   *  blocked, the chat gone) comes back as 'blocked' — the notices then stop; nothing else is retried. */
+  async notice(chat: number, cat: TgnCat, text: string, l: TgLang): Promise<'ok' | 'blocked' | 'error'> {
+    try {
+      await this.api.call('sendMessage', { chat_id: chat, text, reply_markup: { inline_keyboard: [[this.playButton(l, cat)], [{ text: tgText('n.offBtn', l), callback_data: 'tgn:off' }]] } });
+      return 'ok';
+    } catch (e) {
+      const code = (e as TgApiError).code ?? 0;
+      this.log(`[tg] notice ${cat}: ${code}`);
+      return code === 403 ? 'blocked' : 'error';
+    }
   }
 
   private commands(l: TgLang): { command: string; description: string }[] {
@@ -273,6 +303,7 @@ export class TelegramService {
       { command: 'start', description: tgText('cmdStart', l) },
       { command: 'paysupport', description: tgText('cmdPaysupport', l) },
       { command: 'terms', description: tgText('cmdTerms', l) },
+      { command: 'notify', description: tgText('cmdNotify', l) },
     ];
   }
 
@@ -300,17 +331,22 @@ export class TelegramService {
   webappLogin(initData: string, gameToken?: string): AuthResult | { error: string } {
     const v = checkInitData(initData, this.token, Math.floor(this.now() / 1000));
     if (!v) return { error: 'Telegram sign-in failed: open the game from the bot again.' };
-    return this.signIn(v.user, gameToken);
+    return this.signIn(v.user, gameToken, v.user.allows_write_to_pm === true);
   }
 
-  private signIn(user: TgUser, gameToken?: string): AuthResult {
+  /** Signed in as this Telegram user; `consent`: Telegram says the bot may write to her (the notices' yes). */
+  private signIn(user: TgUser, gameToken?: string, consent = false): AuthResult {
     const linked = this.db.accountByOAuth(PROVIDER, String(user.id));
     if (linked && gameToken) {
       const cur = this.auth.resume(gameToken);
-      if (cur && cur.accountId === linked.id) return cur;
+      if (cur && cur.accountId === linked.id) {
+        noticeLink(this.game, cur.accountId, user.id, tgLang(user.language_code), consent);
+        return cur;
+      }
     }
     const r = this.auth.oauthLogin(PROVIDER, String(user.id), null, user.first_name || user.username || 'Captain');
     this.db.setKv(`tglink:${r.accountId}`, user.id);
+    noticeLink(this.game, r.accountId, user.id, tgLang(user.language_code), consent);
     return r;
   }
 
@@ -353,7 +389,7 @@ export class TelegramService {
     this.pending.delete(nonce);
     if (p.taken) return { status: 'taken' };
     if (p.link !== undefined) return { status: 'linked', name: this.db.accountById(p.link)?.name ?? '' };
-    return { status: 'done', ...this.signIn(p.user) };
+    return { status: 'done', ...this.signIn(p.user, undefined, true) }; // (she wrote to the bot: it may write back)
   }
 
   /** The bot's `/start login_<nonce>`: nothing bound yet — the question «choose the code shown on your screen» with
@@ -401,6 +437,7 @@ export class TelegramService {
     }
     this.db.linkOAuth(PROVIDER, String(user.id), p.link);
     this.db.setKv(`tglink:${p.link}`, user.id);
+    noticeLink(this.game, p.link, user.id, l, true);
     return tgText('linkDone', l, { name: this.db.accountById(p.link)?.name ?? '' });
   }
 
@@ -438,12 +475,22 @@ export class TelegramService {
       case 'start': {
         const login = /^login_([\w-]{16,48})$/.exec(arg);
         if (login) return this.ask(m.chat.id, login[1], m.from, l);
+        // She wrote to the bot: it may write to her captain's notices (once she has one; tgnotify.ts).
+        const acc = this.db.accountByOAuth(PROVIDER, String(m.from.id));
+        if (acc) noticeLink(this.game, acc.id, m.from.id, l, true);
         return this.say(m.chat.id, tgText('welcome', l, { name: m.from.first_name || 'captain' }), true, l);
       }
       case 'paysupport':
         return this.say(m.chat.id, tgText('paysupport', l));
       case 'terms':
         return this.say(m.chat.id, tgText('terms', l));
+      case 'notify': {
+        // The notices on or off from the chat (tgnotify.ts); a Telegram user with no captain gets the help.
+        const acc = this.db.accountByOAuth(PROVIDER, String(m.from.id));
+        if (!acc) return this.say(m.chat.id, tgText('help', l));
+        noticeLink(this.game, acc.id, m.from.id, l, false);
+        return this.say(m.chat.id, notifyCommand(this.game, acc.id, l));
+      }
       case 'refund':
         if (!this.admins.has(m.from.id)) return this.say(m.chat.id, tgText('help', l));
         return this.say(m.chat.id, await this.refund(arg));
@@ -472,6 +519,7 @@ ${this.publicUrl}/telemetry/admin`);
   /** A button of the code question pressed: answered (the small notice) and the question replaced by the outcome. */
   private async callback(q: NonNullable<TgUpdate['callback_query']>): Promise<void> {
     const l = tgLang(q.from?.language_code);
+    if (q.data === 'tgn:off') return this.noticesOff(q, l);
     const m = /^tgc:([\w-]{16,48}):(\d{3})$/.exec(String(q.data ?? ''));
     const text = m && q.from ? this.pick(m[1], m[2], q.from, l) : tgText('loginExpired', l);
     const done = this.pending.get(m?.[1] ?? '')?.user !== undefined;
@@ -481,6 +529,17 @@ ${this.publicUrl}/telemetry/admin`);
         const play = done ? { reply_markup: { inline_keyboard: [[this.playButton(l)]] } } : {};
         await this.api.call('editMessageText', { chat_id: q.message.chat.id, message_id: q.message.message_id, text, ...play });
       }
+    } catch (e) {
+      this.log(`[tg] ${(e as Error).message}`);
+    }
+  }
+
+  /** A notice's «Отключить уведомления»: her notices off, the button's answer says so (the notice itself stays). */
+  private async noticesOff(q: NonNullable<TgUpdate['callback_query']>, l: TgLang): Promise<void> {
+    const acc = q.from ? this.db.accountByOAuth(PROVIDER, String(q.from.id)) : undefined;
+    if (acc) setNotices(this.game, acc.id, 'all', false);
+    try {
+      await this.api.call('answerCallbackQuery', { callback_query_id: q.id, text: tgText('n.off', l).slice(0, 190), show_alert: true });
     } catch (e) {
       this.log(`[tg] ${(e as Error).message}`);
     }

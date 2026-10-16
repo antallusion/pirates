@@ -208,7 +208,7 @@ async function measure(p) {
       if (btn) { cta = R(btn.getBoundingClientRect()); { const rg = document.createRange(); rg.selectNodeContents(btn); const t = rg.getBoundingClientRect(), o = btn.getBoundingClientRect(); ctaScroll = t.left < o.left - 0.5 || t.right > o.right + 0.5 || t.top < o.top - 0.5 || t.bottom > o.bottom + 0.5 ? `text ${Math.round(t.left)}..${Math.round(t.right)}×${Math.round(t.top)}..${Math.round(t.bottom)} in ${Math.round(o.left)}..${Math.round(o.right)}×${Math.round(o.top)}..${Math.round(o.bottom)}` : false; } }
     }
     const btns = [];
-    for (const id of ['tc-news', 'tc-menu', 'tc-isle', 'tc-offer']) {
+    for (const id of ['tc-news', 'tc-menu', 'tc-isle', 'tc-offer', 'tc-daily']) {
       const e = document.getElementById(id);
       if (!vis(e) || e.classList.contains('hidden')) continue;
       btns.push({ id, ...R(e.getBoundingClientRect()) });

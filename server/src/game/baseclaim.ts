@@ -7,6 +7,7 @@
 // island for the owner to fight, then reckoned against the island's batteries, fort and her own ships lying there.
 // A raid lost takes a share of the yard and store (capped a day) and weathers a building; one beaten pays.
 
+import { notifyAway } from './tgnotify.ts'; // the Telegram notices (owner, 2026-10-16)
 import { hasMoveCharter, shielded, spendMoveCharter } from './shop.ts'; // the premium shop (owner, 2026-10-15)
 import {
   ABANDON_COOLDOWN_H, ABANDON_REFUND, AWAY_H, AWAY_MUL, ISLE_RAID_MIN, LOSS_DAY_CAP, RAID_COOLDOWN_H, RAID_LOSS, RAID_WEATHER, ROB_ISLE_COOLDOWN_H, ROB_ISLE_SEC,
@@ -445,6 +446,7 @@ export function startIsleRaid(game: Game, h: Holding): string | null {
   const wall = game.wallNow();
   c.raid = { until: wall + mins * 60_000, start: wall, ships, x: Math.round(x), y: Math.round(y), strength: raidStrength(w, h.level ?? 1) };
   game.holdings.touch();
+  if (!owner) notifyAway(game, h.owner.id, 'raid', { mins }); // the bot tells her (owner, 2026-10-16)
   mail(game, h, `Pirates are making for ${isl.name} — ${mins} minutes before they land!`, `The watch has sighted raiders standing in for ${isl.name}: its yard and store are worth their while. Sail and fight them within ${mins} minutes, or the island’s batteries, fort and your own ships lying there must hold them off.`);
   if (owner) game.pushSelf(owner, true);
   return null;
@@ -602,6 +604,7 @@ export function stepIsleRobbers(game: Game): void {
     game.holdings.touch();
     const isl = island(game, r.island)!;
     game.sendTo(s, { t: 'toast', msg: `The yard of ${h.owner.name}’s island is yours: ${n} units.`, kind: 'gold' });
+    notifyAway(game, h.owner.id, 'raid', {}, 'n.rob'); // the bot tells her (owner, 2026-10-16)
     mail(game, h, `${s.name} robbed ${isl.name}: ${n} units of the yard are gone.`, `${s.name} stayed ashore their five minutes and carried off ${n} units of the yard of ${isl.name}.`);
   }
 }

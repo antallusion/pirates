@@ -188,7 +188,7 @@ test("the top row (owner, 2026-10-15): the round buttons in one row under the ch
   // (2026-10-16: «справа два и слева два под аватаркой») under the chart, right-aligned to it, one row: the menu on the
   // edge, the news beside it; under the captain's plate one row: the chat, «Остров», her offer; one hidden leaves no hole
   assert.ok(css.includes('--tr-top: calc(var(--sa-t) + 8px + var(--mm) + 8px);'));
-  assert.ok(css.includes('body.simple #hud #touch > :is(#tc-menu, #tc-news, #tc-isle, #tc-offer) { position: absolute;'));
+  assert.ok(css.includes('body.simple #hud #touch > :is(#tc-menu, #tc-news, #tc-isle, #tc-offer, #tc-daily) { position: absolute;'));
   assert.ok(css.includes('body.simple #hud #touch > #tc-news { --tr-x: 1; }'));
   assert.ok(css.includes('body.simple #hud #touch > #tc-isle { --lr-x: var(--tr-c); }'));
   assert.ok(css.includes('body.simple:has(#touch > #tc-isle:not(.hidden)) { --lr-i: 1; }'));

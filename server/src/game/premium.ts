@@ -26,6 +26,8 @@ import { beastsName, creatureRoom, joinCreatures } from './tame.ts';
 import { keepsDeep } from './town.ts';
 import { firstGiftOf, notePay, shopMessage, shopView } from './shop.ts';
 import { promoMessage, sendPromo } from './promo.ts';
+import { giftMessage } from './dailygift.ts';
+import { tgnMessage } from './tgnotify.ts';
 import { unitPacks } from '../../../shared/src/data/shop.ts';
 import { trackEvent } from './liveops.ts'; // docs/34: the funnel's purchases
 
@@ -34,7 +36,7 @@ const packOf = (price: number, k: number) => unitPacks(price).find((x) => x.k ==
 
 /** Where doubloons come from: a payment (its webhook), the admin's console, a refund. Their ledger rows are of the kind
  *  `doubloons_<source>`; a purchase's is `doubloons_buy` (the silver report leaves every `doubloons_` row out). */
-export type PremiumSource = 'pay' | 'admin' | 'refund' | 'sub' | 'bonus';
+export type PremiumSource = 'pay' | 'admin' | 'refund' | 'sub' | 'bonus' | 'gift';
 
 // ------------------------------------------------------------------------------------------------ the payment desk
 
@@ -109,7 +111,7 @@ export function creditPremium(game: Game, accountId: number, amount: number, sou
   if (!(n > 0) || n > CREDIT_MAX || !game.db.accountById(accountId)) return null;
   const kind = `doubloons_${source}`;
   const detail = String(ref ?? '').slice(0, 120);
-  if ((source === 'pay' || source === 'sub' || source === 'bonus') && game.db.doubloonRef(accountId, kind, detail)) return game.db.doubloons(accountId);
+  if ((source === 'pay' || source === 'sub' || source === 'bonus' || source === 'gift') && game.db.doubloonRef(accountId, kind, detail)) return game.db.doubloons(accountId);
   const bal = move(game, accountId, n, kind, detail);
   // The first top-up for Stars comes double (owner, 2026-10-15): its gift waits in the shop to be claimed (shop.ts).
   if (bal !== null && source === 'pay') notePay(game, accountId, n, detail);
@@ -360,6 +362,9 @@ export function premiumMessage(game: Game, s: PlayerSession, msg: PremiumClientM
   if (msg.action === 'stars') return askInvoice(game, s, msg.pack, msg.lang === 'ru' ? 'ru' : 'en');
   // The shop's goods (owner, 2026-10-15): shop.ts, with its own pace of buys.
   // Her personal offers (owner, 2026-10-15): promo.ts.
+  // The daily login gift and the Telegram notices (owner, 2026-10-16): dailygift.ts, tgnotify.ts.
+  if (msg.action === 'gift_view' || msg.action === 'gift_claim') return giftMessage(game, s, msg.action);
+  if (msg.action === 'tgn_set' || msg.action === 'tgn_view' || msg.action === 'tgn_click') return tgnMessage(game, s, msg);
   if (msg.action === 'promo_view' || msg.action === 'promo_carousel' || msg.action === 'promo_buy' || msg.action === 'promo_close' || msg.action === 'promo_seen') return promoMessage(game, s, msg as { action: string; id?: string; pid?: string; where?: string });
   if (msg.action === 'shop' || msg.action === 'speed' || msg.action === 'finish' || msg.action === 'kit' || msg.action === 'gift') return shopMessage(game, s, msg.action, msg as { offer?: string; pid?: string; job?: number });
   const why = msg.action === 'buy_ship' ? buyShip(game, s, msg.id) : msg.action === 'buy_unit' ? buyUnit(game, s, msg.id, Math.trunc(Number(msg.k ?? 0)), msg.pid) : msg.action === 'buy_scrolls' ? buyScrolls(game, s, msg.pack) : null;

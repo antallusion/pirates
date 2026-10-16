@@ -269,6 +269,8 @@ import { premiumMessage, sendBalance } from './premium.ts'; // the premium shop 
 import { levelGifts, stepShop, xpBoost } from './shop.ts';
 import { sendPromo, stepPromo } from './promo.ts'; // the shop's goods (owner, 2026-10-15)
 import { opsSilverMul, opsXpMul, stepLiveOps, trackEvent } from './liveops.ts'; // the live ops' panel and funnel (docs/34)
+import { sendGift, stepGift } from './dailygift.ts'; // the daily login gift (owner, 2026-10-16)
+import { noticesAboard, noticesAway, stepNotices } from './tgnotify.ts'; // the Telegram notices (owner, 2026-10-16)
 import { creaturesAboard, feedCreatures, stepTame } from './tame.ts'; // docs/18 IV
 import { musterInPort, stepGifts } from './shipgifts.ts'; // the premium hulls' gifts (docs/02 §1.A.9)
 import { silverKin } from '../../../shared/src/data/fleet.ts';
@@ -1006,7 +1008,9 @@ export class Game {
       stepRefit(this, s); // yards finish their work by the wall clock
       stepShop(this, s); // the shop's subscription day and fair wind (owner, 2026-10-15)
       stepPromo(this, s); // her personal offers rotated (owner, 2026-10-15)
+      stepGift(this, s); // a new day: her daily gift ready (owner, 2026-10-16)
     }
+    stepNotices(this); // the Telegram notices to captains away (owner, 2026-10-16): once a minute, only with a bot
     stepDirector(this); // the sea director: signs on the horizon, things aboard (docs/12 P2)
     stepMinigames(this); // island scenes and mini-games left open lapse
     stepTreks(this); // walks across the islands left alone lapse (docs/16 #21)
@@ -4411,7 +4415,9 @@ export class Game {
     sendRenown(this, s, true);
     sendWorldGoals(this, s); // the sea's goals of the week (docs/16 #32)
     sendBalance(this, s); // her account's doubloons (the premium shop)
+    sendGift(this, s); // her daily login calendar (owner, 2026-10-16): first, the offers' carousel waits for it
     sendPromo(this, s); // her personal offers and the entry carousel (owner, 2026-10-15)
+    noticesAboard(this, s); // her Telegram notices' switches; «давно не заходили» may come again
     if (away) this.sendTo(s, { t: 'away', view: away });
     // Back at the helm in the middle of a fight (a reload, a dropped line): the fight as it stands, or it went on unseen.
     if (s.ship) resendBoarding(this, s.ship);
@@ -4426,6 +4432,7 @@ export class Game {
     if (s.profile) {
       s.profile.ashoreAt = this.wallNow();
       awayMark(this, s); // what happens while she is away is told when she is back (docs/16 #30)
+      noticesAway(this, s); // the Telegram notices know she is away from now (owner, 2026-10-16)
       s.profile.ashoreInPort = !!s.ship?.docked;
     }
     const barter = this.social.barters.get(s.accountId);

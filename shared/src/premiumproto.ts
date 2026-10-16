@@ -1,6 +1,8 @@
 // The wire of the premium shop (owner, 2026-10-03; docs/01 P7): her account's doubloons — bought with money only —
 // and the hulls and creatures they buy. Kept apart from protocol.ts, which only takes these unions in.
 
+import type { Gift, GiftView } from './data/dailygift.ts';
+import type { TgnCat, TgnView } from './data/telegram.ts';
 import type { UnitId } from './data/army.ts';
 import type { ShipClassId } from './data/ships.ts';
 
@@ -120,13 +122,24 @@ export type PremiumClientMsg =
   | { t: 'premium'; action: 'promo_buy'; id: string; pid: string }
   | { t: 'premium'; action: 'promo_close' | 'promo_seen'; id: string; where: PromoPlace }
   /** A pack of the top-up for Telegram Stars: the server answers with the invoice's link (owner, 2026-10-11). */
-  | { t: 'premium'; action: 'stars'; pack: string; lang?: 'en' | 'ru' };
+  | { t: 'premium'; action: 'stars'; pack: string; lang?: 'en' | 'ru' }
+  /** The daily login gift (owner, 2026-10-16; server/src/game/dailygift.ts): her calendar asked for, today's gift taken. */
+  | { t: 'premium'; action: 'gift_view' | 'gift_claim' }
+  /** Her Telegram notices (server/src/game/tgnotify.ts): all of them or one kind on or off; a notice's button tapped
+   *  (the Mini App opened from it). */
+  | { t: 'premium'; action: 'tgn_set'; cat: TgnCat | 'all'; on: boolean; lang?: 'en' | 'ru' }
+  | { t: 'premium'; action: 'tgn_view' }
+  | { t: 'premium'; action: 'tgn_click'; cat: string };
 
 export type PremiumServerMsg =
   /** The shop as she sees it now. */
   | { t: 'premium'; view: PremiumView }
   /** Her personal offers and the shop's specials for her (owner, 2026-10-15: promo.ts). */
   | { t: 'promo'; view: PromoView }
+  /** Her daily login calendar (owner, 2026-10-16): on coming aboard, at a new day and after a claim. */
+  | { t: 'gift'; view: GiftView; /** what the claim just handed over */ got?: Gift }
+  /** Her Telegram notices' switches (only for a captain with Telegram linked). */
+  | { t: 'tgn'; view: TgnView }
   /** Her account's doubloons: on coming aboard and after every change. */
   | { t: 'doubloons'; n: number; /** Her auto-battle scrolls (owner, 2026-10-11). */ scrolls?: number }
   /** The Telegram Stars invoice for a pack (server/src/telegram.ts): opened in the Mini App by openInvoice, on the

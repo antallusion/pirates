@@ -13,15 +13,18 @@ import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
 import { chipRow, winHead } from './kit/window.ts';
 import { tgDeepLink, tgLinked, tgSettingsButton } from '../tg.ts'; // «Привязать Телеграм» (docs/27)
 import { EN as UX2_EN, RU as UX2_RU } from '../lang/ui/ux2.ts';
+import { EN as GIFT_EN, RU as GIFT_RU } from '../lang/ui/dailygift.ts';
+import { tgnHtml, tgnView, wireTgn } from './tgnotices.ts'; // «Уведомления в Телеграме» (owner, 2026-10-16)
 
 const W = dict(WIN_EN, WIN_RU);
 const U2 = dict(UX2_EN, UX2_RU);
+const G = dict(GIFT_EN, GIFT_RU);
 /** The interface's sizes on the main page (uiScale). */
 export const UI_SIZES = [0.85, 1, 1.15, 1.3] as const;
 
-const TAB_ICON: Record<string, string> = { ui: 'menu_options', vision: 'ab_spotters_eye', sound: 'opt_sound', controls: 'opt_controls' };
+const TAB_ICON: Record<string, string> = { ui: 'menu_options', vision: 'ab_spotters_eye', sound: 'opt_sound', controls: 'opt_controls', notify: 'tab_letters' };
 
-type Tab = 'ui' | 'vision' | 'sound' | 'controls';
+type Tab = 'ui' | 'vision' | 'sound' | 'controls' | 'notify';
 
 export class OptionsScreen {
   private tab: Tab = 'ui';
@@ -51,6 +54,10 @@ export class OptionsScreen {
       },
       true,
     );
+    // her Telegram notices' switches came (or changed): the screen shows them at once
+    addEventListener('gravetide:tgn', () => {
+      if (this.root?.isConnected && !this.listening) this.render(this.root);
+    });
   }
 
   /** Whether a key press belongs to this screen (rebinding). */
@@ -61,8 +68,10 @@ export class OptionsScreen {
   render(root: HTMLElement): void {
     this.root = root;
     const s = settings();
-    const tabs: Tab[] = ['ui', 'vision', 'sound', 'controls'];
-    const chips = this.more ? chipRow([{ id: 'main', icon: 'menu_options', label: W('opt.back') }, ...tabs.map((x) => ({ id: x, icon: TAB_ICON[x], label: t(`opt.tab.${x}` as Key) }))], this.tab, 'otab') : '';
+    // «Уведомления в Телеграме» (owner, 2026-10-16): a tab of its own for a captain with Telegram linked
+    const tabs: Tab[] = tgnView() ? ['ui', 'vision', 'sound', 'controls', 'notify'] : ['ui', 'vision', 'sound', 'controls'];
+    if (this.tab === 'notify' && !tgnView()) this.tab = 'ui';
+    const chips = this.more ? chipRow([{ id: 'main', icon: 'menu_options', label: W('opt.back') }, ...tabs.map((x) => ({ id: x, icon: TAB_ICON[x], label: x === 'notify' ? G('tgn.tab') : t(`opt.tab.${x}` as Key) }))], this.tab, 'otab') : '';
     root.innerHTML = `${winHead(W('opt.title'), { crest: 'menu_options', chips })}
       <div class="modal-body w-body options${this.more ? '' : ' opt-main'}">${this.more ? this.body(s) : this.main(s)}</div>`;
     root.querySelectorAll<HTMLButtonElement>('[data-otab]').forEach((b) => (b.onclick = () => {
@@ -92,6 +101,12 @@ export class OptionsScreen {
       this.more = true;
       this.render(root);
     });
+    root.querySelector<HTMLButtonElement>('[data-otgn]')?.addEventListener('click', () => {
+      this.more = true;
+      this.tab = 'notify';
+      this.render(root);
+    });
+    wireTgn(root, () => this.render(root));
     root.querySelectorAll<HTMLButtonElement>('[data-oswitch]').forEach((b) => (b.onclick = () => {
       const k = b.dataset.oswitch as 'autoFire' | 'autoWeak' | 'autoTopUp' | 'autoGoal';
       update({ [k]: !settings()[k] } as Partial<Settings>);
@@ -165,6 +180,7 @@ export class OptionsScreen {
       ${row('good_provisions', U2('opt.autoTopUp'), sw('autoTopUp', U2('opt.autoTopUp')), U2('opt.autoTopUpHint'))}
       ${row('menu_options', W('opt.size'), seg(UI_SIZES.map((v) => [String(v), `${Math.round(v * 100)}%`, v === near] as [string, string, boolean]), 'osize', W('opt.size')), W('opt.sizeHint'))}
       ${row('menu_map', W('opt.mmTarget'), seg([['hide', W('opt.mmHide'), s.mmTarget === 'hide'], ['show', W('opt.mmShow'), s.mmTarget === 'show']], 'omm', W('opt.mmTarget')), W('opt.mmTargetHint'), 'opt-row--wide')}
+      ${tgnView() ? row('tab_letters', G('tgn.title'), `<button type="button" class="k-btn k-btn--secondary k-btn--sm" data-otgn>${esc(G('tgn.open'))}</button>`, G('tgn.hint'), 'opt-row--wide') : ''}
     </div>
     <div class="opt-foot"><button type="button" class="k-btn k-btn--secondary k-btn--md opt-more" data-omore>${esc(W('opt.more'))}</button>${tgSettingsButton(this.tg)}</div>`;
   }
@@ -187,6 +203,8 @@ export class OptionsScreen {
           ${check('lanternMarks', 'opt.lanternMarks')}${check('reduceFlashes', 'opt.reduceFlashes')}${check('screenShake', 'opt.screenShake')}${check('vibrate', 'opt.vibrate')}${check('lanternFlicker', 'opt.lanternFlicker')}${check('reduceMotion', 'opt.reduceMotion')}
           <label class="opt-range sel"><span class="opt-l">${esc(t('opt.effects'))}</span><select data-sel="effects" class="field"><option value="auto" ${s.effects === 'auto' ? 'selected' : ''}>${esc(t('opt.effects.auto'))}</option><option value="low" ${s.effects === 'low' ? 'selected' : ''}>${esc(t('opt.effects.low'))}</option></select></label>
           ${check('webgl', 'opt.webgl')}`;
+      case 'notify':
+        return tgnHtml();
       case 'sound':
         return `${vol('master', 'opt.master')}${vol('sea', 'opt.sea')}${vol('combat', 'opt.combat')}${vol('ui', 'opt.uiVol')}${vol('music', 'opt.music')}${check('shipVoices', 'opt.shipVoices')}${check('mono', 'opt.mono')}${check('captions', 'opt.captions')}`;
       case 'controls': {

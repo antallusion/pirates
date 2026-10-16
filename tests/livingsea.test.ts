@@ -110,7 +110,7 @@ test('no rover in the Crown’s safe water', () => {
   assert.ok(![...game.npcs.values()].some((b) => b.chase?.id === ship.id));
 });
 
-test('each day at sea is welcomed, more for days in a row', () => {
+test('each day at sea is welcomed: the days in a row counted (the silver is the daily gift now)', () => {
   const { game, c, s } = atSea('Daily Dee');
   const today = dayOf(game.wallNow());
   s.profile!.daily.day = today - 1;
@@ -118,10 +118,8 @@ test('each day at sea is welcomed, more for days in a row', () => {
   const g0 = s.profile!.gold;
   assert.equal(dailyRollover(game, s), true);
   assert.equal(s.profile!.daily.login!.streak, 3);
-  assert.ok(s.profile!.gold > g0, 'silver for the day');
-  assert.ok(c.all('toast').some((m) => /Day 3 at sea in a row/.test(m.msg)));
-  // Twice the same day pays once.
-  const g1 = s.profile!.gold;
+  // (owner, 2026-10-16: the harbour-master's silver moved into the calendar she claims — dailygift.ts — not paid twice)
+  assert.equal(s.profile!.gold, g0, 'no silver of its own');
+  assert.ok(c.all('toast').some((m) => /Fish of the day/.test(m.msg)));
   assert.equal(dailyRollover(game, s), false);
-  assert.equal(s.profile!.gold, g1);
 });
