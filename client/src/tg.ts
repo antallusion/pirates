@@ -15,6 +15,7 @@ import type { Net } from './net.ts';
 import type { ServerMsg } from '../../shared/src/protocol.ts';
 import { esc, fmt } from './ui/dom.ts';
 import { ask } from './ui/confirm.ts';
+import { bootMark, settleViewport } from './viewport.ts';
 
 const L = dict(EN, RU);
 
@@ -106,12 +107,17 @@ export function tgConfig(): Promise<{ enabled: boolean; bot: string; webapp: str
   return config;
 }
 
-async function post<T>(path: string, body: Record<string, unknown>): Promise<T & { error?: string }> {
+async function post<T>(path: string, body: Record<string, unknown>, timeout = 15_000): Promise<T & { error?: string }> {
+  // (a request that never answers — a phone's network changing under it — is given up, never waited on for ever)
+  const ac = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = setTimeout(() => ac?.abort(), timeout);
   try {
-    const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ac?.signal });
     return (await r.json()) as T & { error?: string };
   } catch {
     return { error: L('wait.failed') } as T & { error?: string };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -209,7 +215,13 @@ function setupMiniApp(w: TgWebApp): void {
   const veil = document.querySelector('#rotate-lock small');
   if (veil && !document.querySelector('#rotate-lock .tg-rot')) veil.insertAdjacentHTML('afterend', `<small class="tg-rot">${esc(L('rotateTg'))}</small>`);
   applyInsets(w);
-  for (const ev of ['safeAreaChanged', 'contentSafeAreaChanged', 'fullscreenChanged', 'viewportChanged']) w.onEvent?.(ev, () => applyInsets(w));
+  // Telegram's own turn, fullscreen and bars: the insets, and the size looked at again (its view reports the turn late)
+  for (const ev of ['safeAreaChanged', 'contentSafeAreaChanged', 'fullscreenChanged', 'viewportChanged']) {
+    w.onEvent?.(ev, () => {
+      applyInsets(w);
+      settleViewport(`tg ${ev}`);
+    });
+  }
   // The BackButton: shown while a window is up (not one that must be answered), it closes it as Esc does.
   const modal = document.getElementById('modal');
   const panel = document.getElementById('modal-panel');
@@ -241,9 +253,23 @@ function bootScreen(w: TgWebApp | null, text: string, failed = false): void {
   if (th.button_color) el.style.setProperty('--tgb-accent', th.button_color);
   el.innerHTML = `<div class="tgb-card">${failed ? '' : '<i class="tgb-spin" aria-hidden="true"></i>'}<b class="tgb-name">GRAVETIDE</b><p>${esc(text)}</p></div>`;
   el.classList.toggle('failed', failed);
+  // The sign-in never holds the game for ever: past 15 s a word and «Попробовать снова» (the page afresh), and the
+  // waiting goes on under it.
+  clearTimeout(bootSlow);
+  if (!failed) {
+    bootSlow = setTimeout(() => {
+      const card = document.querySelector('#tg-boot .tgb-card');
+      if (!card || card.querySelector('.tgb-retry')) return;
+      bootMark('tg slow');
+      card.insertAdjacentHTML('beforeend', `<small class="tgb-slow">${esc(L('bootSlow'))}</small><button type="button" class="btn tgb-retry">${esc(L('bootRetry'))}</button>`);
+      card.querySelector<HTMLButtonElement>('.tgb-retry')!.onclick = () => location.reload();
+    }, 15_000) as unknown as number;
+  }
 }
+let bootSlow = 0;
 
 function bootDone(): void {
+  clearTimeout(bootSlow);
   document.getElementById('tg-boot')?.remove();
 }
 
@@ -256,6 +282,7 @@ export function tgStart(net: Net): boolean {
   });
   void (async () => {
     const w = await loadWebApp();
+    bootMark(w ? `tg webapp ${w.version ?? '?'} ${w.platform ?? '?'}` : 'tg no webapp');
     const initData = w?.initData || LAUNCH || '';
     if (!w || !initData) {
       // the Telegram host opened in a browser: the website's own start
@@ -265,7 +292,10 @@ export function tgStart(net: Net): boolean {
     }
     setupMiniApp(w);
     bootScreen(w, L('boot'));
-    const r = await post<{ token?: string }>('/auth/tg/webapp', { initData, token: net.token ?? undefined });
+    let r = await post<{ token?: string }>('/auth/tg/webapp', { initData, token: net.token ?? undefined });
+    // once more after a failed ask that was no refusal (a network's moment)
+    if (!r.token && r.error === L('wait.failed')) r = await post<{ token?: string }>('/auth/tg/webapp', { initData, token: net.token ?? undefined });
+    bootMark(r.token ? 'tg signed in' : `tg sign-in failed: ${r.error ?? ''}`);
     if (!r.token) {
       bootScreen(w, L('bootFailed'), true);
       setTimeout(bootDone, 5000);

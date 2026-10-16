@@ -26,7 +26,102 @@
         if (e.target && e.target.id === 'login-form' && !window.__gtReady) window.__earlySubmit = 'login';
       }, true);
     })();
+    // The start that always goes on (owner, 2026-10-16: «игра просто не запускается вообще»): the start's stages kept in
+    // __boot (client/src/viewport.ts adds the game's), a screen with the progress while the game's code comes in (only
+    // when it takes longer than a blink), «Перезагрузить» if it fails or takes too long (a module lost on the way fails
+    // the whole import: the page then reloads by itself once), and a stalled start's log sent to the server.
+    // ?bootdebug shows the log on screen and sends it at the start's main stages.
+    (function () {
+      var debug = /[?&]bootdebug\b/.test(location.search);
+      var B = window.__boot = { t0: Date.now(), log: [], ready: false, debug: debug, sent: 0 };
+      var ru = document.documentElement.lang === 'ru';
+      var T = ru
+        ? { load: 'Загрузка…', slow: 'Связь медленная — игра ещё грузится.', fail: 'Игра не загрузилась.', retry: 'Перезагрузить' }
+        : { load: 'Loading…', slow: 'The connection is slow — still loading.', fail: 'The game did not load.', retry: 'Reload' };
+      function el(id) { return document.getElementById(id); }
+      function send(why) {
+        if (B.sent > 8) return;
+        B.sent++;
+        try {
+          var body = JSON.stringify({ why: why, log: B.log.slice(-80), w: innerWidth, h: innerHeight, dpr: devicePixelRatio, ua: navigator.userAgent, path: location.pathname + location.search, tg: !!(window.Telegram && window.Telegram.WebApp) || /^tg\./.test(location.hostname) });
+          if (!(navigator.sendBeacon && navigator.sendBeacon('/boot-report', new Blob([body], { type: 'application/json' })))) fetch('/boot-report', { method: 'POST', body: body, keepalive: true, headers: { 'Content-Type': 'application/json' } }).catch(function () {});
+        } catch (e) {}
+      }
+      function paint() {
+        var pre = el('boot-log');
+        if (!pre || !debug) return;
+        pre.hidden = false;
+        pre.textContent = B.log.slice(-14).join('\n');
+      }
+      function shell(on, text, retry) {
+        var b = el('boot');
+        if (!b) return;
+        b.classList.toggle('on', !!on);
+        if (text) b.querySelector('.bt-text').textContent = text;
+        var r = b.querySelector('.bt-retry');
+        if (retry) { r.textContent = T.retry; r.hidden = false; }
+      }
+      window.__bootMark = function (s) {
+        var line = (Date.now() - B.t0) + 'ms ' + s;
+        B.log.push(line);
+        if (B.log.length > 300) B.log.splice(0, 100);
+        if (debug) { try { console.info('[boot] ' + line); } catch (e) {} paint(); }
+        if (s === 'ready') { B.ready = true; shell(false); }
+        if (debug && (s === 'ready' || s === 'init' || s === 'start loaded')) send(s);
+      };
+      window.__bootFail = function (e) {
+        var msg = String((e && e.message) || e);
+        window.__bootMark('FAILED ' + msg.slice(0, 200));
+        send('fail');
+        // once, by itself: a module that did not come is asked for afresh
+        var last = 0;
+        try { last = +(sessionStorage.getItem('gt.bootRetry') || 0); } catch (x) {}
+        if (Date.now() - last > 120000) {
+          try { sessionStorage.setItem('gt.bootRetry', String(Date.now())); } catch (x) {}
+          setTimeout(function () { location.reload(); }, 600);
+        }
+        shell(true, T.fail, true);
+      };
+      addEventListener('error', function (e) { if (!B.ready) window.__bootMark('error ' + (e.message || (e.target && (e.target.src || e.target.href)) || '?')); }, true);
+      addEventListener('unhandledrejection', function (e) { if (!B.ready) window.__bootMark('rejection ' + ((e.reason && e.reason.message) || e.reason)); });
+      window.__bootMark('page ' + innerWidth + 'x' + innerHeight + (matchMedia('(orientation: portrait)').matches ? ' portrait' : ' landscape'));
+      document.addEventListener('DOMContentLoaded', function () {
+        window.__bootMark('dom');
+        var b = el('boot');
+        if (!b) return;
+        b.querySelector('.bt-text').textContent = T.load;
+        b.querySelector('.bt-retry').onclick = function () { location.reload(); };
+        if (debug) paint();
+        // the progress: the game's modules in, of those the page names
+        var total = document.querySelectorAll('link[rel=modulepreload]').length, got = 0, bar = b.querySelector('.bt-bar i');
+        try {
+          new PerformanceObserver(function (l) {
+            l.getEntries().forEach(function (x) { if (x.name.indexOf('/src/') >= 0) got++; });
+            if (total) bar.style.width = Math.min(100, Math.round(got / total * 100)) + '%';
+          }).observe({ type: 'resource', buffered: true });
+        } catch (e) {}
+        setTimeout(function () { if (!B.ready) shell(true); }, 700);
+        setTimeout(function () { if (!B.ready) { window.__bootMark('slow'); shell(true, T.slow, true); } }, 20000);
+        setTimeout(function () { if (!B.ready) send('stalled 30s'); }, 30000);
+        setTimeout(function () { if (!B.ready) send('stalled 90s'); }, 90000);
+      });
+      addEventListener('load', function () { window.__bootMark('load'); });
+    })();
   </script>
+  <style>
+    /* the start's own screen (above): drawn before any stylesheet comes */
+    #boot { position: fixed; inset: 0; z-index: 2147483200; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 45%, #141a20 0%, #07090b 75%); color: #d8d2c4; font: 14px/1.35 system-ui, sans-serif; text-align: center; }
+    #boot.on { display: flex; }
+    #boot .bt-card { display: flex; flex-direction: column; align-items: center; gap: 10px; width: min(360px, 80vw); }
+    #boot .bt-name { font: 600 26px/1 Georgia, serif; letter-spacing: 0.12em; color: #c9a46a; }
+    #boot .bt-bar { display: block; width: 100%; height: 5px; border: 1px solid #6f5a38; border-radius: 3px; overflow: hidden; background: rgba(0, 0, 0, 0.5); }
+    #boot .bt-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #6f5a38, #e0b862); transition: width 0.2s; }
+    #boot .bt-text { opacity: 0.8; }
+    #boot .bt-retry { min-height: 40px; padding: 0 20px; border: 1px solid #c9a46a; border-radius: 6px; background: #2a2116; color: #f0e2c0; font: 600 14px system-ui, sans-serif; }
+    #boot .bt-retry[hidden] { display: none; }
+    #boot-log { position: fixed; left: 4px; bottom: 4px; z-index: 2147483300; max-width: 70vw; margin: 0; padding: 4px 6px; background: rgba(0, 0, 0, 0.75); color: #9fe0a0; font: 10px/1.25 ui-monospace, monospace; white-space: pre-wrap; pointer-events: none; }
+    #boot-log[hidden] { display: none; }
+  </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IM+Fell+English+SC&family=Inter:wght@400;500;600&display=swap" />
   <link rel="stylesheet" href="/styles.css" />
@@ -46,6 +141,8 @@
   <link rel="stylesheet" href="/fit.css" />
 </head>
 <body>
+  <div id="boot" role="status" aria-live="polite"><div class="bt-card"><b class="bt-name">GRAVETIDE</b><span class="bt-bar"><i></i></span><small class="bt-text"></small><button class="bt-retry" type="button" hidden></button></div></div>
+  <pre id="boot-log" hidden></pre>
   <canvas id="world"></canvas>
 
   <!-- Title / login -->
@@ -215,8 +312,8 @@
 
   <!-- /?kit: the interface kit's page (docs/23 phase 1: every component at 812×375 for QA) in place of the game. -->
   <script type="module">
-    if (new URLSearchParams(location.search).has('kit')) import('/src/ui/kit/demo.ts');
-    else import('/src/main.ts');
+    if (new URLSearchParams(location.search).has('kit')) import('/src/ui/kit/demo.ts').then(() => window.__bootMark('ready'), (e) => window.__bootFail(e));
+    else import('/src/main.ts').catch((e) => window.__bootFail(e));
   </script>
 </body>
 </html>

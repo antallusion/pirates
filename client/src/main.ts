@@ -144,6 +144,7 @@ import { crewSayParts, renderLog } from './ui/crewlife.ts';
 import { flagLine, flagsCss, lawlessHere, lawlessWords, shipColours } from './ui/flags.ts'; // docs/24 C1, D1–D3
 import { EN as FLAGS_EN, RU as FLAGS_RU } from './lang/ui/flags.ts';
 import { citiesHostile } from '../../shared/src/data/colours.ts';
+import { bootMark, settleViewport, watchViewport } from './viewport.ts'; // a start that always goes on (owner, 2026-10-16)
 
 const L = dict(MAIN_EN, MAIN_RU);
 /** The captain last aboard on this device (docs/23 item 88: «Продолжить: …» on the title screen). */
@@ -153,6 +154,8 @@ const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverTex
 
 type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | 'hero' | 'puzzle' | 'tame' | 'throne' | 'shop' | 'research' | null;
 
+bootMark('main');
+watchViewport();
 const net = new Net();
 const state = new ClientState();
 const renderer = new Renderer($('world') as HTMLCanvasElement);
@@ -1234,13 +1237,17 @@ tgInvoices(net, (msg, kind) => hud.toast(msg, kind));
 {
   const early = globalThis as { __gtReady?: boolean; __earlySubmit?: string };
   early.__gtReady = true;
+  bootMark('ready');
   if (early.__earlySubmit === 'login' && !net.live) {
     delete early.__earlySubmit;
     ($('login-form') as HTMLFormElement).requestSubmit();
   }
 }
 
-net.onStatus = (ok) => $('connection').classList.toggle('hidden', ok || !inGame);
+net.onStatus = (ok) => {
+  $('connection').classList.toggle('hidden', ok || !inGame);
+  bootMark(ok ? 'ws open' : 'ws closed');
+};
 net.on(onMessage);
 
 /** The first look at the sea had its loading screen. */
@@ -1297,6 +1304,7 @@ function onMessage(m: ServerMsg): void {
       else hud.toast(serverText(m.msg), 'bad');
       break;
     case 'welcome':
+      bootMark(m.hasCaptain ? 'welcome' : 'welcome: no captain');
       $('screen-login').classList.add('hidden');
       try { localStorage.setItem(CAPTAIN_KEY, m.name); } catch { /* no storage */ }
       $('login-error').textContent = '';
@@ -1306,6 +1314,7 @@ function onMessage(m: ServerMsg): void {
       });
       break;
     case 'init':
+      bootMark('init');
       inGame = true;
       // The old round-by-round deck fight, for a captain who asked for it in the options (docs/16 P4).
       net.send({ t: 'board_pref', classic: settings().classicBoarding });
@@ -1317,7 +1326,13 @@ function onMessage(m: ServerMsg): void {
       // the rest of the pictures slowly into the cache (assets.ts warmAll)
       if (!startLoaded) {
         startLoaded = true;
-        requestAnimationFrame(() => beginLoad('start', 12000).imgs($('hud')).imgs(document.getElementById('touch')).settle().done().then(() => startWarm()));
+        // (the size is looked at again first: an init that came while the phone was upright or turning laid out a size
+        // the screen no longer has)
+        settleViewport('init');
+        requestAnimationFrame(() => beginLoad('start', 12000).imgs($('hud')).imgs(document.getElementById('touch')).settle().done().then(() => {
+          bootMark('start loaded');
+          startWarm();
+        }));
       }
       if (state.you === null && m.self.dockedAt) openModal('port');
       if (prologuePending) {

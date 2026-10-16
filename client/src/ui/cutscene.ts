@@ -163,4 +163,17 @@ function show(id: string, done?: () => void): void {
   });
   // A film that never starts does not hold the game.
   setTimeout(() => { if (!over && v.currentTime === 0) end(); }, 8000);
+  // Nor one that stops on the way (a phone's network gone mid-film, the view turned under it): six seconds without a
+  // frame and the game goes on.
+  let seenAt = -1, still = 0;
+  const watch = setInterval(() => {
+    if (over) return clearInterval(watch);
+    if (v.currentTime !== seenAt) {
+      seenAt = v.currentTime;
+      still = 0;
+    } else if (++still >= 6) {
+      clearInterval(watch);
+      end();
+    }
+  }, 1000);
 }

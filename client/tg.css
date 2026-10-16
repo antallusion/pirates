@@ -75,6 +75,8 @@
 #tg-boot p { margin: 0; font-size: 14px; opacity: 0.85; }
 #tg-boot .tgb-spin { width: 28px; height: 28px; border-radius: 50%; border: 3px solid color-mix(in srgb, var(--tgb-accent, #c9a46a) 25%, transparent); border-top-color: var(--tgb-accent, #c9a46a); animation: tgb-spin 0.9s linear infinite; }
 @keyframes tgb-spin { to { transform: rotate(360deg); } }
+#tg-boot .tgb-slow { font-size: 13px; opacity: 0.75; max-width: 300px; line-height: 1.35; }
+#tg-boot .tgb-retry { min-height: 40px; padding: 0 18px; font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { #tg-boot .tgb-spin { animation: none; } }
 /* the «turn your phone» veil's word on Telegram's auto-rotate */
 #rotate-lock .tg-rot { display: none; }
