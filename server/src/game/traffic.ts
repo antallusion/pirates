@@ -38,7 +38,11 @@ const NEAR_SPAWN: [number, number] = [1100, 2300];
 /** No more local ships than this in the whole sea, whatever the crowd: CAP, or CAP_EACH a captain at sea in a big
  *  crowd (per-captain spawning: a crowd spread over the sea has her own ships about each). */
 const CAP = 1800; // docs/19 D3: twice the 900
-const CAP_EACH = 24;
+const CAP_EACH = 16;
+/** A crowd at sea: past this many captains the wide ring's number about each is cut (as CROWD ÷ captains, never below
+ *  her near reach's number and two), and a ship of the sea is let go at CROWD_GONE_R — the server's tick is shared. */
+export const CROWD = 40;
+const CROWD_GONE_R = 6500;
 type Role = 'merchant' | 'fisher' | 'patrol' | 'pirate' | 'hunter';
 const COUNTED = new Set(['merchant', 'fisher', 'patrol', 'pirate', 'escort', 'hunter', 'ghost']);
 
@@ -110,6 +114,20 @@ function hail(game: Game, s: import('./player.ts').PlayerSession): void {
 export function stepTraffic(game: Game): void {
   if (!game.directorOn) return;
   const mine = localTraffic(game);
+  let atSea = 0;
+  for (const s of game.sessions) if (s.ship && !s.ship.docked && s.ship.alive) atSea++;
+  const goneR = atSea > CROWD ? CROWD_GONE_R : GONE_R;
+  // The captains in cells of goneR: a ship of the sea looks in the nine about her (each against every captain was the
+  // second's spike with a crowd at sea).
+  const cells = new Map<number, { x: number; y: number }[]>();
+  const ck = (x: number, y: number) => Math.floor(y / goneR) * 4096 + Math.floor(x / goneR);
+  for (const s of game.sessions) {
+    if (!s.ship) continue;
+    const k = ck(s.ship.state.x, s.ship.state.y);
+    const c = cells.get(k);
+    if (c) c.push(s.ship.state);
+    else cells.set(k, [s.ship.state]);
+  }
   for (const id of [...mine]) {
     const ship = game.ships.get(id);
     if (!ship || !ship.alive) {
@@ -118,9 +136,12 @@ export function stepTraffic(game: Game): void {
     }
     if (ship.inCombat(game.now) || ship.boarding) continue;
     let near = false;
-    for (const s of game.sessions) if (s.ship && dist(s.ship.state.x, s.ship.state.y, ship.state.x, ship.state.y) < GONE_R) {
-      near = true;
-      break;
+    const x = ship.state.x, y = ship.state.y;
+    for (let dy = -1; dy <= 1 && !near; dy++) for (let dx = -1; dx <= 1 && !near; dx++) {
+      for (const p of cells.get(ck(x + dx * goneR, y + dy * goneR)) ?? []) if (dist(p.x, p.y, x, y) < goneR) {
+        near = true;
+        break;
+      }
     }
     if (!near) {
       mine.delete(id);
@@ -128,9 +149,8 @@ export function stepTraffic(game: Game): void {
     }
   }
   const tick = Math.floor(game.now);
-  let atSea = 0;
-  for (const s of game.sessions) if (s.ship && !s.ship.docked && s.ship.alive) atSea++;
   const cap = Math.max(CAP, CAP_EACH * atSea);
+  const crowd = atSea > CROWD ? CROWD / atSea : 1;
   for (const s of game.sessions) {
     const ship = s.ship;
     // In port the rovers' count starts again: none is due at the harbour mouth the moment she casts off (it was —
@@ -157,8 +177,8 @@ export function stepTraffic(game: Game): void {
       count++;
       if ((o.state.x - sx) ** 2 + (o.state.y - sy) ** 2 < NEAR_R * NEAR_R) near++;
     });
-    const want = TRAFFIC_WANT[safety] ?? 5;
     const nearWant = NEAR_WANT[safety] ?? 10;
+    const want = crowd < 1 ? Math.max(nearWant + 2, Math.round((TRAFFIC_WANT[safety] ?? 5) * crowd)) : TRAFFIC_WANT[safety] ?? 5;
     const close = near < nearWant;
     if (count >= want && !close) continue;
     const mix = (MIX[safety] ?? MIX.contested).filter(([r]) => !novice || r !== 'pirate');

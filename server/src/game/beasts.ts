@@ -126,13 +126,15 @@ interface BeastState {
   sentCarc: Map<number, string>;
   sentHunt: Map<number, string>;
   paused: Set<number>;
+  /** Each beast's nearest captain at sea (metres), reckoned each second for the tick's LOD (none: at the full rate). */
+  far: Map<number, number>;
 }
 
 const states = new WeakMap<Game, BeastState>();
 
 function bs(game: Game): BeastState {
   let s = states.get(game);
-  if (!s) states.set(game, (s = { brains: new Map(), packs: new Map(), lines: new Map(), carcasses: new Map(), seq: 1, rng: new Rng(game.world.seed ^ 0xbea5), sentCarc: new Map(), sentHunt: new Map(), paused: new Set() }));
+  if (!s) states.set(game, (s = { brains: new Map(), packs: new Map(), lines: new Map(), carcasses: new Map(), seq: 1, rng: new Rng(game.world.seed ^ 0xbea5), sentCarc: new Map(), sentHunt: new Map(), paused: new Set(), far: new Map() }));
   return s;
 }
 
@@ -273,15 +275,17 @@ function spawnAbout(game: Game): void {
   const S = bs(game);
   const cap = worldCap(game);
   if (S.brains.size >= cap) return;
+  const sec = Math.floor(game.now);
   for (const s of game.sessions) {
     const ship = s.ship;
     if (!ship || ship.docked || !ship.alive || !s.profile) continue;
+    if ((sec + s.accountId) % 5 !== 0) continue; // (a crowd's captains spread over the five seconds, not all on one)
     if (S.brains.size >= cap) break;
     const migrating = orcaMigrationIn(game, ship.region);
-    // Too few within her near reach: a group rises there now, not one time in eight (the wide ring's cap twice as high
+    // Too few within her near reach: a group rises there now, not one time in eight (the wide ring's cap three higher
     // for it: the ones risen before swim on out of her near reach and stay within the five kilometres).
     const close = beastsNear(game, ship, CLOSE_R) < CLOSE_WANT && !onboardingProtected(s);
-    if (beastsNear(game, ship) >= (migrating ? 10 : close ? NEAR_CAP * 2 : NEAR_CAP)) continue;
+    if (beastsNear(game, ship) >= (migrating ? 10 : close ? NEAR_CAP + 3 : NEAR_CAP)) continue;
     if (!close && !S.rng.chance(migrating ? 0.25 : 0.12)) continue;
     const lvl = sectorAt(game.world, ship.state.x, ship.state.y).level; // the beasts of the square (docs/16 P2)
     const kind = pickKind(game, ship.region, lvl, ship.combatLevel);
@@ -318,8 +322,13 @@ const NEAR_R = 5000;
 export const CLOSE_R = 2500;
 export const CLOSE_WANT = 3;
 const CLOSE_SPAWN: [number, number] = [1100, 2200];
+/** A beast farther than this from every captain at sea thinks every BEAST_LOD_EVERY ticks (her screen and a margin). */
+export const BEAST_LOD_R = 1500;
+const BEAST_LOD_EVERY = 4;
+const BEAST_LOD_CELL = 2000;
+
 /** The world's beasts: WORLD_CAP, or this many a captain at sea in a crowd (each captain's sea her own). */
-const CAP_EACH = 10;
+const CAP_EACH = 6;
 
 /** The beasts within `r` of a ship (by the grid: the sea's thousands of ships are not walked). */
 function beastsNear(game: Game, ship: ShipEntity, r = NEAR_R): number {
@@ -425,14 +434,21 @@ export function stepBeasts(game: Game, dt: number): void {
   const S = bs(game);
   if (!S.brains.size && !S.lines.size) return;
   const now = game.now;
+  const tick = Math.round(now / dt);
   for (const [id, br] of S.brains) {
     const b = game.ships.get(id);
     if (!b || !b.alive) {
       if (!b) S.brains.delete(id);
       continue;
     }
+    // (out of every captain's sight and out of a fight: its four ticks at once, as the sea's ships — docs/19 D6)
+    let k = 1;
+    if ((S.far.get(id) ?? 0) > BEAST_LOD_R && br.mode !== 'line' && br.mode !== 'spent' && !b.inCombat(now) && br.beast !== 'white_orca') {
+      if ((tick + id) % BEAST_LOD_EVERY !== 0) continue;
+      k = BEAST_LOD_EVERY;
+    }
     b.region = regionAt(game.world, b.state.x, b.state.y);
-    think(game, b, br, dt, now);
+    think(game, b, br, dt * k, now);
   }
   stepLines(game, dt);
 }
@@ -1294,8 +1310,30 @@ function flensed(game: Game, s: PlayerSession, c: Carcass): void {
 export function beastSecond(game: Game): void {
   const S = bs(game);
   const now = game.now;
-  if (game.directorOn && Math.floor(now) % 5 === 0) spawnAbout(game); // the living sea's own (off in most tests)
+  if (game.directorOn) spawnAbout(game); // the living sea's own (off in most tests): each captain's every five seconds
   markSaviors(game);
+  // Each one's nearest captain at sea, for the tick's LOD (the captains in cells: a crowd's thousand beasts).
+  S.far.clear();
+  if (S.brains.size) {
+    const cells = new Map<number, ShipEntity[]>();
+    const ck = (x: number, y: number) => Math.floor(y / BEAST_LOD_CELL) * 4096 + Math.floor(x / BEAST_LOD_CELL);
+    for (const s of game.sessions) if (s.ship && !s.ship.docked) {
+      const k = ck(s.ship.state.x, s.ship.state.y);
+      const c = cells.get(k);
+      if (c) c.push(s.ship);
+      else cells.set(k, [s.ship]);
+    }
+    // (no captain at sea at all: nothing to save, every beast at the full rate)
+    if (cells.size) for (const id of S.brains.keys()) {
+      const b = game.ships.get(id);
+      if (!b) continue;
+      let best = Infinity;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        for (const p of cells.get(ck(b.state.x + dx * BEAST_LOD_CELL, b.state.y + dy * BEAST_LOD_CELL)) ?? []) best = Math.min(best, dist(p.state.x, p.state.y, b.state.x, b.state.y));
+      }
+      S.far.set(id, best);
+    }
+  }
   // Out of every captain's sight: gone (not a beast on a line, nor one fighting).
   for (const [id, br] of S.brains) {
     const b = game.ships.get(id);
