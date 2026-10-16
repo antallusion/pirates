@@ -216,7 +216,7 @@ export const DATA_RU_TALENTS: Record<string, string> = {
   "talents.TALENTS.106.name": "Двойное дно",
   "talents.TALENTS.106.description": "Контрабанда занимает на 30% меньше места в трюме.",
   "talents.TALENTS.107.name": "Контрактный маклер",
-  "talents.TALENTS.107.description": "Ранг 1: ещё одна ячейка контракта. Ранг 2: награды за контракты +10%.",
+  "talents.TALENTS.107.description": "Награды за контракты +10% за ранг (+20% на ранге 2).",
   "talents.TALENTS.108.name": "Холодный трюм",
   "talents.TALENTS.108.description": "Скоропортящийся груз портится на 25% медленнее за ранг.",
   "talents.TALENTS.109.name": "Оценщик",

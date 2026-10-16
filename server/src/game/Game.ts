@@ -328,6 +328,10 @@ export const LAIR_QUAY_R = 1200;
 
 /** Where she lies after «В море»: this far out of the harbour at least (m), and the farther marks tried first. */
 const UNDOCK_NEAR = 60;
+/** Port contracts held at once: no cap (owner, 2026-10-16) — only a ceiling, as for quests. */
+export const MAX_CONTRACTS = 60;
+/** Contract Broker's pay: +10% a rank (it gave a fourth slot while there were three). */
+export const brokerPay = (rank: number): number => 1 + 0.1 * Math.max(0, Math.min(2, rank));
 const UNDOCK_OUT = [170, 130, 95];
 
 export class Game {
@@ -2954,8 +2958,8 @@ export class Game {
     const c = p.contracts.find((x) => x.id === id);
     if (!c) return;
     p.contracts = p.contracts.filter((x) => x.id !== id);
-    // Contract Broker rank 2: +10%.
-    if (s.ship && tval(s.ship.stats, 'contractBroker') >= 2) c.reward = Math.round(c.reward * 1.1);
+    // Contract Broker (owner, 2026-10-16: no cap on contracts, so no slot to give): +10% a rank.
+    c.reward = Math.round(c.reward * brokerPay(s.ship ? tval(s.ship.stats, 'contractBroker') : 0));
     p.gold += c.reward;
     if (c.fromPort === 'harpoon_rest') {
       p.stats.harpoonContracts++;
@@ -3737,8 +3741,8 @@ export class Game {
           // Owner, 2026-10-16: a port's contracts are for ships of its band (a ⚓1 in the last waters takes none).
           const band = bandRefusal(p, portBand(this, pt));
           if (band) return band;
-          const slots = 3 + (tval(ship.stats, 'contractBroker') >= 1 ? 1 : 0);
-          if (p.contracts.length >= slots) return `You can hold at most ${slots} contracts`;
+          // Owner, 2026-10-16 («можно брать сколько угодно»): no cap but the band; a ceiling against a runaway ledger.
+          if (p.contracts.length >= MAX_CONTRACTS) return `You can hold at most ${MAX_CONTRACTS} contracts`;
           const list = this.contractsAt(pt.id);
           const c = list.find((x) => x.id === msg.id);
           if (!c) return 'That contract is gone';

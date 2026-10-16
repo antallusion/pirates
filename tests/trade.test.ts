@@ -88,7 +88,7 @@ test('Contract Broker, Cold Hold, Heavy Hauler, Honest Merchant, Appraiser', () 
   const ok = game.contractsAt(port.id).find((x) => x.kind !== 'bounty');
   if (ok) {
     c.push({ t: 'contract', action: 'accept', id: ok.id });
-    assert.equal(p.contracts.length, 4, 'fourth slot');
+    assert.equal(p.contracts.length, 4, 'no cap of three (owner, 2026-10-16)');
   }
   // Heavy Hauler: a full hold costs less speed.
   const cargo = { iron: 60 };

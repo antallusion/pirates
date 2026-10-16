@@ -15,7 +15,7 @@ export const TRADE: TalentDef[] = [
   // T2
   t({ id: 'trd_market_sense', name: 'Market Sense', tier: 2, maxRank: 1, keystone: false, description: 'See price trends of every port you have visited on the world map.', flags: ['market_sense'] }),
   t({ id: 'trd_false_bottom', name: 'False Bottom', tier: 2, maxRank: 1, keystone: false, description: 'Contraband uses 30% less hold volume.', fixed: { contrabandVolumeMul: -0.3 }, flags: ['false_bottom'] }),
-  t({ id: 'trd_contract_broker', name: 'Contract Broker', tier: 2, maxRank: 2, keystone: false, description: 'Rank 1: one more contract slot. Rank 2: contract rewards +10%.', perRank: { contractBroker: 1 } }),
+  t({ id: 'trd_contract_broker', name: 'Contract Broker', tier: 2, maxRank: 2, keystone: false, description: 'Contract rewards +10% a rank (+20% at rank 2).', perRank: { contractBroker: 1 } }),
   t({ id: 'trd_cold_hold', name: 'Cold Hold', tier: 2, maxRank: 2, keystone: false, description: 'Perishable cargo spoils 25% slower per rank.', perRank: { spoilage: -0.25 } }),
   t({ id: 'trd_appraiser', name: 'Appraiser', tier: 2, maxRank: 1, keystone: false, description: 'You see what plunder and cargo are worth at the best port you know, and your charts sell for 15% more.', flags: ['appraiser'] }),
   // T3

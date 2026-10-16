@@ -210,8 +210,7 @@ function takenList(state: ClientState): string {
     ...self.contracts.map((c) => `<div class="w-row q-row q-taken" data-hint="${esc(serverText(c.description))}">${icon(contractArt(c), '', 'w-row-ico')}<span class="w-row-t"><b>${esc(serverText(c.title))}</b><small>${esc(c.kind === 'bounty' ? `${c.progress ?? 0}/${c.kills}` : W('q.to', { port: placeName(port(c.toPort)?.name ?? '') }))}</small></span><span class="w-row-n">${money(c.reward)}</span>
       <span class="w-row-b">${c.toPort ? sail(`c:${c.id}`) : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="contract" data-mode="abandon" data-id="${esc(c.id)}">${esc(L('abandon'))}</button></span></div>`),
   ].join('');
-  const cap = 3 + ((self.talents.trd_contract_broker ?? 0) > 0 ? 1 : 0);
-  return rows ? `<p class="muted q-count">${esc(L('takenCount', { n: self.quests.length + self.contracts.length }))} · ${esc(L('contractsCap', { n: self.contracts.length, max: cap }))}</p><div class="mk-list">${rows}</div>` : `<p class="muted">${esc(L('takenNone'))}</p>`;
+  return rows ? `<p class="muted q-count">${esc(L('takenCount', { n: self.quests.length + self.contracts.length }))}</p><div class="mk-list">${rows}</div>` : `<p class="muted">${esc(L('takenNone'))}</p>`;
 }
 
 /** The extra cards of a switch the port draws itself (the Admiralty's board, the runs, the wanted; the day's orders and

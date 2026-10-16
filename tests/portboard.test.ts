@@ -150,3 +150,18 @@ test('the island screen stops her: sails down, no way on, the helmsman\'s course
   c.push({ t: 'halt' });
   assert.equal(ship.docked, port.id);
 });
+
+test('no cap of three contracts: a captain holds every contract of her band she takes; the Broker pays +10% a rank', async () => {
+  const { MAX_CONTRACTS, brokerPay } = await import('../server/src/game/Game.ts');
+  const { game } = makeGame();
+  const { c, s, p } = captain(game, 'Courier');
+  for (const id of lowPorts(game)) {
+    const port = dockAt(game, s, id);
+    for (const k of buildPortView(game, s, port).contracts) if (!k.blocked) c.push({ t: 'contract', action: 'accept', id: k.id });
+    if (p.contracts.length >= 6) break;
+  }
+  assert.ok(p.contracts.length >= 6, `held ${p.contracts.length}`);
+  assert.ok(!c.all('toast').some((t) => /at most \d+ contracts/.test(t.msg)));
+  assert.ok(MAX_CONTRACTS >= 50);
+  assert.deepEqual([brokerPay(0), brokerPay(1), brokerPay(2)].map((x) => Math.round(x * 100)), [100, 110, 120]);
+});
