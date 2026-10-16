@@ -441,6 +441,12 @@ export function invasionEvents(game: Game): WorldEventView[] {
   return out;
 }
 
+/** The live ops' panel (docs/34): an invasion told of now — in this region, or one of the Choir's — unless one is on. */
+export function opsInvasion(game: Game, region?: RegionId): boolean {
+  if (data(game).cur) return false;
+  return !!announce(game, region);
+}
+
 // ------------------------------------------------------------------ the tester's console
 
 /** `/invasion [region|start|wave|win|fail|clear]`: the calendar at a glance; an invasion told of in a region; one

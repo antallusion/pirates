@@ -27,6 +27,7 @@ import { keepsDeep } from './town.ts';
 import { firstGiftOf, notePay, shopMessage, shopView } from './shop.ts';
 import { promoMessage, sendPromo } from './promo.ts';
 import { unitPacks } from '../../../shared/src/data/shop.ts';
+import { trackEvent } from './liveops.ts'; // docs/34: the funnel's purchases
 
 /** A pack of `k` stacks of a kind at this stack price (null: no such pack — the shop's packs start at its least price). */
 const packOf = (price: number, k: number) => unitPacks(price).find((x) => x.k === k) ?? null;
@@ -268,6 +269,7 @@ export function buyShip(game: Game, s: PlayerSession, c: ShipClassId): string | 
     undo();
     return whyText(game, s, 'poor');
   }
+  trackEvent(game, s.accountId, 'buy', { amount: o.price, product: `ship:${c}` });
   sendBalance(game, s);
   game.toastShip(ship, `The ${cls.name} is yours for ${o.price} doubloons. Your old ship is berthed here.`, 'gold');
   if (paid > 0) game.toastShip(ship, `${paid} hands are paid off at the quay to make room for her own.`, 'info');
@@ -295,6 +297,7 @@ export function buyUnit(game: Game, s: PlayerSession, u: UnitId, k = 0, pid?: st
     game.saveSession(s);
   });
   if (bal === null) return whyText(game, s, 'poor');
+  trackEvent(game, s.accountId, 'buy', { amount: price, product: `unit:${u}` });
   sendBalance(game, s);
   game.toastShip(s.ship, `${o.n * k} ${beastsName(u)} join your army for ${price} doubloons.`, 'good');
   game.pushSelf(s, true);
@@ -317,6 +320,7 @@ export function buyScrolls(game: Game, s: PlayerSession, packId: string): string
     done = true;
   });
   if (!done) return whyText(game, s, 'poor');
+  trackEvent(game, s.accountId, 'buy', { amount: p.price, product: `scrolls:${p.id}` });
   sendBalance(game, s);
   game.toastShip(s.ship, `Auto-battle scrolls: +${p.n} for ${p.price} doubloons (${game.db.scrolls(s.accountId)} in all).`, 'gold');
   if (s.ship) resendBoarding(game, s.ship);

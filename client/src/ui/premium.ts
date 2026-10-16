@@ -148,22 +148,27 @@ export function famArt(art: string): string {
 /** An offer's button: its quantity, its price, its bonus — shut with the reason. */
 function offerBtn(fam: ShopFamily, offer: ShopOffer, sv: ShopView, o: { price?: number; why?: ShopWhy | null; attr?: string; ribbon?: string } = {}): string {
   const why = o.why !== undefined ? o.why : sv.why[offer.id] ?? null;
-  const price = o.price ?? (offer.id === 'refill' ? sv.price.refill ?? 0 : offer.price);
+  // (the server's price when it sends one: the infirmary's, the live ops' own or a sale's — docs/34)
+  const price = o.price ?? sv.price[offer.id] ?? (offer.id === 'refill' ? 0 : offer.price);
+  const sale = o.price === undefined ? sv.sale?.[offer.id] : undefined;
   const bonus = offerBonus(fam, offer);
   const times = offer.worth ? Math.round((offer.worth / Math.max(1, price)) * 10) / 10 : 0;
-  const ribbon = o.ribbon ?? (times ? L('worth', { n: lang() === 'ru' ? String(times).replace('.', ',') : String(times) }) : bonus > 0 ? `+${bonus}%` : '');
+  const ribbon = o.ribbon ?? (sale ? `−${sale.pct}%` : times ? L('worth', { n: lang() === 'ru' ? String(times).replace('.', ',') : String(times) }) : bonus > 0 ? `+${bonus}%` : '');
   const left = sv.left[offer.id];
   return `<button type="button" class="sh-off${why ? '' : ' on'}${offer.tag ? ` ${offer.tag}` : ''}" ${o.attr ?? `data-shbuy="${offer.id}"`}${why ? ` disabled title="${esc(L(`sw.${why}`))}"` : ''}><span class="sh-q">${esc(qtyOf(offer, fam))}</span><span class="sh-p">${doubloonIcon('ico-xs')}${price > 0 ? fmt(price) : '—'}</span>${ribbon ? `<i class="sh-bonus">${esc(ribbon)}</i>` : ''}${offer.limit && left !== undefined && left > 0 && offer.limit.per !== 'ever' ? `<small class="sh-lim">${esc(L(`per.${offer.limit.per}`))}</small>` : ''}</button>`;
 }
 
 /** A family's card: its picture, name and line, its offers side by side (the reason under them when all are shut). */
 function famCard(fam: ShopFamily, sv: ShopView, o: { cls?: string; meta?: string } = {}): string {
-  const whys = fam.offers.map((x) => sv.why[x.id] ?? null);
+  // (an offer the live ops' panel took off the shelves is not shown; a family with none left, neither — docs/34)
+  const offers = fam.level ? fam.offers : fam.offers.filter((x) => sv.why[x.id] !== 'gone');
+  if (!offers.length) return '';
+  const whys = offers.map((x) => sv.why[x.id] ?? null);
   const shut = whys.every(Boolean);
   const meta = o.meta ?? (fam.id === 'refill' && sv.fallen ? `<span class="sh-meta sh-clock">${esc(L('fallen', { n: sv.fallen.n, t: '' }))}<b data-shend="${sv.fallen.until}"></b></span>` : fam.icon.startsWith('unit:') ? `<span class="sh-meta"><b>${esc(unitName(fam.icon.slice(5) as UnitId))}</b></span>` : '');
   return `<div class="card sh-card${shut ? ' shut' : ''}${o.cls ? ` ${o.cls}` : ''}" data-fam="${fam.id}">${famArt(fam.icon)}
     <div class="sh-txt"><b class="sh-name">${esc(T(fam.name))}</b><span class="sh-note">${esc(T(fam.text))}</span>${meta}</div>
-    <div class="sh-offs">${fam.offers.map((x) => offerBtn(fam, x, sv)).join('')}</div>${shut ? `<small class="sh-why">${esc(L(`sw.${whys[0]!}`))}</small>` : ''}</div>`;
+    <div class="sh-offs">${offers.map((x) => offerBtn(fam, x, sv)).join('')}</div>${shut ? `<small class="sh-why">${esc(L(`sw.${whys[0]!}`))}</small>` : ''}</div>`;
 }
 
 /** «Акции»: her stores, the first top-up's double (or its gift to claim), the deal of the day, the level's gift, the
@@ -364,7 +369,7 @@ export class PremiumWindow {
       const sv = v?.shop;
       const found = id === 'deal' && sv ? OFFERS.get(sv.deal.id) : OFFERS.get(id);
       if (!found || !sv) return;
-      const price = id === 'deal' ? sv.deal.price : id === 'refill' ? sv.price.refill ?? 0 : found.offer.price;
+      const price = id === 'deal' ? sv.deal.price : sv.price[id] ?? (id === 'refill' ? 0 : found.offer.price);
       const name = id === 'deal' ? `${L('deal.title')}: ${T(found.fam.name)}` : T(found.fam.name);
       const ticket = pid();
       void ask(L('ask.offer', { name, q: qtyOf(found.offer, found.fam), n: fmt(price) })).then((ok) => {

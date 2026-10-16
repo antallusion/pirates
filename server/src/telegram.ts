@@ -10,6 +10,8 @@
 // it is never logged, never sent to a client, and a Bot API error is reported by its code and a cleaned description.
 
 import { telemetry } from './http/telemetry.ts';
+import { opsLineRu } from './http/ops.ts';
+import { opsOf, trackEvent } from './game/liveops.ts';
 import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import type { AuthResult, AuthService } from './auth.ts';
 import type { Db } from './persistence/db.ts';
@@ -455,6 +457,13 @@ export class TelegramService {
         return this.say(m.chat.id, `Телеметрия за ${days} дн.: отчётов ${x.reports}, устройств ${x.devices}; в море обычно ${x.p50} кадр/с, в худших 5% — ${x.p95}; запуск ${x.boot} с; ошибок JS: ${x.errors}.
 ${this.publicUrl}/telemetry/admin`);
       }
+      case 'ops': {
+        // docs/34: the live ops' day from the bot (the panel: /ops/admin)
+        if (!this.admins.has(m.from.id)) return this.say(m.chat.id, tgText('help', l));
+        const ops = opsOf(this.game);
+        if (!ops) return this.say(m.chat.id, 'Лайв-опс выключен.');
+        return this.say(m.chat.id, opsLineRu(this.game, ops, this.publicUrl));
+      }
       default:
         return this.say(m.chat.id, tgText('help', l));
     }
@@ -555,6 +564,8 @@ ${this.publicUrl}/telemetry/admin`);
     if (bal === null) return;
     this.db.setKv(key, { account: o.accountId, user: from.id, pack: o.pack.id, stars: p.total_amount, n, at: this.now(), refunded: false } satisfies TgPayment);
     this.log(`[tg] paid: account ${o.accountId}, ${o.pack.id}, ${p.total_amount} XTR, charge ${charge}`);
+    // docs/34: the revenue — the pack's roubles (its doubloons before the bonus; a doubloon ≈ 1 ₽)
+    trackEvent(this.game, o.accountId, 'topup', { amount: o.pack.n, product: o.pack.id });
     const s = this.game.sessionByAccount(o.accountId);
     if (s) sendPremium(this.game, s);
     await this.say(from.id, tgText('paid', tgLang(from.language_code), { n, name: this.db.accountById(o.accountId)?.name ?? '' }));
@@ -567,6 +578,8 @@ ${this.publicUrl}/telemetry/admin`);
     if (!rec || rec.refunded) return null;
     const n = chargebackPremium(this.game, rec.account, rec.n, `tg:${charge}`);
     this.db.setKv(key, { ...rec, refunded: true });
+    // docs/34: the revenue given back (the pack's roubles: its id is d<roubles>)
+    trackEvent(this.game, rec.account, 'refund', { amount: Number(/^d(\d+)$/.exec(rec.pack)?.[1] ?? 0), product: rec.pack });
     return n;
   }
 

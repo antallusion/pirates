@@ -28,6 +28,7 @@ import type { PlayerSession } from './player.ts';
 import { deliver } from './post.ts';
 import type { ShipEntity } from './ship.ts';
 import { sagaNote } from './saga.ts';
+import { opsHoliday } from './liveops.ts';
 
 interface Scores {
   key: string;
@@ -51,6 +52,8 @@ function hs(game: Game): HolidayState {
 
 /** The holiday on now: an admin's (for play-testing) or the calendar's. */
 export function currentHoliday(game: Game): { id: HolidayId; start: number; end: number } | null {
+  const ops = opsHoliday(game); // docs/34: one the live ops' panel scheduled
+  if (ops) return ops;
   const f = game.db.getKv<{ id: HolidayId; until: number }>('holiday_force');
   if (f && f.until > game.wallNow() && HOLIDAYS[f.id]) return { id: f.id, start: f.until - 2 * 86_400_000, end: f.until };
   return holidayAt(game.wallNow());

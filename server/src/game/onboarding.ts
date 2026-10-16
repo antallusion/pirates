@@ -5,6 +5,7 @@
 // item 83: tattoos, dice, the auction and the guilds open after it).
 // Every text lives on the client under the ids sent from here, so the words can be localized.
 
+import { trackEvent } from './liveops.ts'; // docs/34: the funnel
 import { XP_UNITS, lumpXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
@@ -444,11 +445,13 @@ function advance(game: Game, s: PlayerSession, how: 'done' | 'skip'): void {
     if (lv) game.sendTo(s, { t: 'toast', msg: `Level ${p.level}!`, kind: 'xp' });
   }
   game.sendTo(s, { t: 'onb', kind: how === 'done' ? 'stage' : 'skip', id: STAGES[t.stage].id });
+  trackEvent(game, s.accountId, how === 'done' ? `fw_${STAGES[t.stage].id}` : 'fw_skip'); // docs/34: the funnel
   t.stage++;
   t.at = game.wallNow();
   if (t.stage >= STAGES.length) {
     t.on = false;
     m.finished++;
+    trackEvent(game, s.accountId, 'fw_done');
     fillGoals(p);
   } else {
     t.base = STAGES[t.stage].mark?.(p) ?? 0;
@@ -632,6 +635,7 @@ export function onboardingStart(game: Game, s: PlayerSession, tutorial: boolean)
   m.cohort[s.accountId] = { created: game.wallNow(), last: game.wallNow(), skipped: !tutorial };
   saveMetrics(game, m);
   if (!tutorial) fillGoals(p);
+  if (!tutorial) trackEvent(game, s.accountId, 'fw_skip'); // docs/34: «I know the sea»
 }
 
 /** A captain comes aboard: the retention record. */

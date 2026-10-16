@@ -268,6 +268,7 @@ import { roamMessage, stepRoamers } from './roamers.ts'; // docs/19 D7: the crea
 import { premiumMessage, sendBalance } from './premium.ts'; // the premium shop (owner, 2026-10-03)
 import { levelGifts, stepShop, xpBoost } from './shop.ts';
 import { sendPromo, stepPromo } from './promo.ts'; // the shop's goods (owner, 2026-10-15)
+import { opsSilverMul, opsXpMul, stepLiveOps, trackEvent } from './liveops.ts'; // the live ops' panel and funnel (docs/34)
 import { creaturesAboard, feedCreatures, stepTame } from './tame.ts'; // docs/18 IV
 import { musterInPort, stepGifts } from './shipgifts.ts'; // the premium hulls' gifts (docs/02 §1.A.9)
 import { silverKin } from '../../../shared/src/data/fleet.ts';
@@ -958,6 +959,7 @@ export class Game {
     stepInvasions(this); // docs/19 E16: the Choir's invasions, the black tides
     stepShoreBosses(this); // the great ones ashore: their calendar (2026-10-03)
     stepEvents(this);
+    stepLiveOps(this); // docs/34: the panel's scheduled events, the funnel's look at each captain
     expeditionsSecond(this);
     digNoise(this);
     stepSeasons(this);
@@ -2052,6 +2054,8 @@ export class Game {
     if (s.ship && REGIONS[s.ship.region].safety === 'lawless') amount *= 1 + tval(s.ship.stats, 'frontier');
     // The shop's elixir and subscription (owner, 2026-10-15): battle experience a share more.
     if (battle && s.authed) amount *= 1 + xpBoost(this, s.accountId);
+    // The live ops' «double experience» (docs/34): ×1 with none scheduled.
+    amount *= opsXpMul(this);
     // Rest ashore (docs/11 P6): battle experience comes double while the pool lasts.
     const rest = battle ? Math.min(s.profile.rested ?? 0, amount) : 0;
     if (rest > 0) {
@@ -2631,6 +2635,8 @@ export class Game {
     }
     if (!target.isPlayer) mapChance(this, s, target.npcRole === 'pirate' ? 0.1 : 0.05, target.npcRole === 'pirate' ? 2 : 1, "In her captain's cabin");
     let kept = plunderShare(this, s, pend.result.gold);
+    // The live ops' silver event (docs/34): the sea's purses only, never another captain's (×1 with none scheduled).
+    if (!target.isPlayer && kept > 0) kept = Math.round(kept * opsSilverMul(this));
     // A group shares the purse (owner, 2026-09-29): the mates within convoy range each get an equal part.
     const g = groupOfAccount(this, s.accountId);
     const mates: PlayerSession[] = [];
@@ -4308,6 +4314,7 @@ export class Game {
     const port = this.portById(START_PORT)!;
     s.profile = newProfile(captain, shipName, port.id, this.now);
     onboardingStart(this, s, tutorial);
+    trackEvent(this, s.accountId, 'captain'); // docs/34: the funnel
     this.spawnPlayerShip(s, port.x, port.y, 0);
     this.saveSession(s);
     this.sendInit(s);

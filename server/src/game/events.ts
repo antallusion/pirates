@@ -147,6 +147,16 @@ function regionLoad(game: Game, region: RegionId): number {
   return game.worldEvents.active(game).filter((e) => e.region === region && MAJOR.includes(e.kind)).length;
 }
 
+/** The live ops' panel (docs/34): a happening of happenings.ts due now (its calendar's next set to this moment; it
+ *  starts at the next look, as its own rules allow — a star by night, the herring by day). */
+export function opsHappening(game: Game, kind: string): boolean {
+  if (!(HAPPENING_KINDS as string[]).includes(kind)) return false;
+  const st = game.worldEvents.data(game);
+  st.next[kind] = game.wallNow();
+  game.worldEvents.save(game);
+  return true;
+}
+
 /** Starts a world event (the shorter ones of happenings.ts too). */
 export function startEvent(game: Game, e: Omit<WorldEvent, 'id' | 'started'>, text: string): WorldEvent | null {
   return start(game, e, text);

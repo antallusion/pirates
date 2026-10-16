@@ -1,6 +1,7 @@
 // Path and Legend quests (docs/00 D1, docs/02 §7): mentors in their ports, step objectives driven by what the
 // captain does at sea, Path unlocks and switching at a Captain's House, the First Descent, and faction oaths.
 
+import { opsSilverMul } from './liveops.ts'; // docs/34: the silver event
 import { givePet } from './pets.ts';
 import { giveCalf } from './companion.ts';
 import { earnTattoo, offerChoice } from './tattoos.ts';
@@ -849,7 +850,7 @@ export function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   const mentors = mentorsNear(game, s);
   // A job pays a veteran more (docs/16 P2); a story pays what it pays.
   const vet = q.kind === 'job' ? veteranPay(p.level, q.requires.level ?? 1) : 1;
-  const silver = Math.round(pay.silver * vet * k * (fast ? 1 + FAST_BONUS : 1)), xp = Math.round(questXpOf(game, p, q) * k * (mentors.length ? 1 + MENTOR_XP : 1));
+  const silver = Math.round(pay.silver * vet * k * (fast ? 1 + FAST_BONUS : 1) * opsSilverMul(game)), xp = Math.round(questXpOf(game, p, q) * k * (mentors.length ? 1 + MENTOR_XP : 1));
   p.gold += silver;
   game.db.ledger(s.accountId, 'quest', silver, q.id);
   game.grantXp(s, xp, null);

@@ -555,6 +555,14 @@ export function adminZoneBoss(game: Game, s: PlayerSession, args: string[]): str
   }
 }
 
+/** The live ops' panel (docs/34): a sea's boss raised now for her hour (unless she is at sea, or the sea is another
+ *  zone's). */
+export function opsZoneBoss(game: Game, region: RegionId): boolean {
+  if (game.zoneBosses.live.has(region) || (game.zone && !game.zone.regions.has(region))) return false;
+  const wall = game.wallNow();
+  return !!rise(game, region, zbSlot(wall, region), wall + ZB_LIFE);
+}
+
 /** When she next rises after `wall` (the calendar's next slot, past one she was slain or sent away in). */
 function zbNextRiseAfter(game: Game, region: RegionId, wall: number): number {
   const slot = zbSlot(wall, region);

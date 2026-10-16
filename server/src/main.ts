@@ -21,6 +21,9 @@ import { SharedState } from './persistence/redis.ts';
 import { handleAuth } from './http/auth-routes.ts';
 import { handleBootReport } from './http/boot-report.ts';
 import { Telemetry, setTelemetry } from './http/telemetry.ts';
+import { OpsPanel } from './http/ops.ts';
+import { LiveOps, attachLiveOps } from './game/liveops.ts';
+import { wireLiveOps } from './game/liveopsfire.ts';
 import { mailerFromEnv } from './mail.ts';
 import { OAuthFlow, providersFromEnv } from './oauth.ts';
 import { telegramFromEnv } from './telegram.ts';
@@ -45,6 +48,11 @@ const serveStatic = createStaticHandler(root);
 // Real-device telemetry (docs/33): daily aggregates in their own SQLite file next to the game's database.
 const telemetry = new Telemetry(process.env.TELEMETRY_DB_PATH ?? (DB_PATH === ':memory:' ? ':memory:' : resolve(dirname(DB_PATH), 'telemetry.db')));
 setTelemetry(telemetry);
+// Live ops (docs/34): the panel's prices, offers and events, the funnel — in their own SQLite file too.
+const liveops = new LiveOps(process.env.LIVEOPS_DB_PATH ?? (DB_PATH === ':memory:' ? ':memory:' : resolve(dirname(DB_PATH), 'liveops.db')));
+attachLiveOps(game, liveops);
+wireLiveOps();
+const opsPanel = new OpsPanel(game, liveops);
 // Telegram (docs/27): the Mini App's sign-in, «Войти через Телеграм», the bot's webhook, Stars — null without TELEGRAM_BOT_TOKEN.
 const tg = telegramFromEnv({ db, auth, game, publicUrl: PUBLIC_URL });
 
@@ -86,6 +94,7 @@ const server = createServer(async (req, res) => {
   }
   if (await handleBootReport(req, res)) return;
   if (req.url?.startsWith('/telemetry') && (await telemetry.handle(req, res))) return;
+  if (req.url?.startsWith('/ops') && (await opsPanel.handle(req, res))) return;
   if (await handleTelegram(req, res, tg)) return;
   if (await handleAuth(req, res, auth, oauth)) return;
   if (await serveStatic(req, res)) return;
@@ -136,6 +145,7 @@ async function shutdown(): Promise<void> {
   zone?.stop();
   await db.close();
   telemetry.close();
+  liveops.close();
   await shared?.close();
   process.exit(0);
 }

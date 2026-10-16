@@ -39,6 +39,7 @@ import type { ShipEntity } from './ship.ts';
 import type { TacSideInput } from './tacbattle.ts';
 import { creatureRoom, joinCreatures } from './tame.ts';
 import { sanitizeLooks } from './looks.ts';
+import { opsPrice, opsShut, saleOf, trackEvent } from './liveops.ts'; // docs/34: the panel's prices, the funnel
 
 const H = 3_600_000;
 const D = 86_400_000;
@@ -396,13 +397,14 @@ function grantWhy(game: Game, s: PlayerSession, st: ShopState, g: ShopGrant, off
 function priceOf(game: Game, s: PlayerSession, st: ShopState, offer: ShopOffer, deal = false): number {
   if (deal) return dealOf(dayOf(game.wallNow())).price;
   if (offer.id === 'refill') return fallenNow(game, s, st)?.price ?? 0;
-  return offer.price;
+  return opsPrice(game, offer); // (the catalog's, unless the live ops' panel set its own or a sale runs: docs/34)
 }
 
 /** Why an offer cannot be bought now (null: it can). */
 function offerWhy(game: Game, s: PlayerSession, st: ShopState, offer: ShopOffer, deal = false): ShopWhy | null {
   const wall = game.wallNow();
   const fam = OFFERS.get(offer.id)!.fam;
+  if (opsShut(game, offer.id)) return 'gone'; // taken off the shelves by the live ops' panel (docs/34)
   if (fam.level) {
     const at = st.gifts[fam.level];
     if (at === undefined || at < 0 || wall > at + LEVEL_OFFER_H * H) return 'gone';
@@ -628,6 +630,7 @@ export function buyOffer(game: Game, s: PlayerSession, offerId: string, pid: str
   });
   if (!done) return shopWhyText('poor');
   afterBuy(game, s, offer);
+  trackEvent(game, s.accountId, 'buy', { amount: price, product: promo ? `${promo.tag.split(':')[0]}:${offer.id}` : deal ? `deal:${offer.id}` : offer.id }); // docs/34
   game.sendTo(s, { t: 'toast', msg: `Bought for ${price} doubloons.`, kind: 'gold' });
   return null;
 }
@@ -712,6 +715,7 @@ export function finishNow(game: Game, s: PlayerSession, jobId: number, pid: stri
     done = true;
   });
   if (!done) return shopWhyText('poor');
+  trackEvent(game, s.accountId, 'buy', { amount: price, product: 'finish' }); // docs/34
   after();
   sendBalance(game, s);
   return null;
@@ -750,7 +754,13 @@ export function shopView(game: Game, s: PlayerSession): ShopView {
   const why: Record<string, ShopWhy> = {};
   const left: Record<string, number> = {};
   const price: Record<string, number> = {};
+  const sale: NonNullable<ShopView['sale']> = {};
   for (const fam of SHOP) for (const offer of fam.offers) {
+    // (the live ops' panel: its own price and a sale running — docs/34; none: nothing sent, the catalog's stands)
+    const p = opsPrice(game, offer);
+    if (p !== offer.price) price[offer.id] = p;
+    const sl = saleOf(game, offer);
+    if (sl) sale[offer.id] = sl;
     const w = offerWhy(game, s, st, offer);
     if (w) why[offer.id] = w;
     const l = leftOf(st, offer, wall);
@@ -775,7 +785,7 @@ export function shopView(game: Game, s: PlayerSession): ShopView {
   if (r && r.until > wall) jobs.push({ id: -1, what: 'refit', level: r.to, start: wall, end: r.until, finish: finishPrice((r.until - wall) / 1000) });
   jobs.sort((a, b) => a.end - b.end);
   return {
-    now: wall, dayEnds: (day + 1) * D, why, left, price,
+    now: wall, dayEnds: (day + 1) * D, why, left, price, ...(Object.keys(sale).length ? { sale } : {}),
     deal: { id: d.offer.id, price: d.price, why: offerWhy(game, s, st, d.offer, true) },
     gifts: LEVEL_GIFTS.filter((l) => (st.gifts[l] ?? -1) >= 0 && wall <= st.gifts[l] + LEVEL_OFFER_H * H && why[`lv${l}`] !== 'limit').map((l) => ({ id: `lv${l}`, until: st.gifts[l] + LEVEL_OFFER_H * H })),
     inv: { speed: st.speed, kits: st.kits, charms: st.charms, moves: st.moves },

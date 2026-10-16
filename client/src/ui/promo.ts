@@ -451,7 +451,7 @@ export class Promos {
     const ticket = pid();
     void ask(L('ask', { name: this.nameOf(c), q: this.qtyOf(c), n: fmt(c.price) })).then((ok) => {
       if (!ok) return;
-      if (c.special) this.d.send({ t: 'premium', action: 'shop', offer: c.offer, pid: ticket });
+      if (c.special && c.special !== 'global') this.d.send({ t: 'premium', action: 'shop', offer: c.offer, pid: ticket });
       else this.d.send({ t: 'premium', action: 'promo_buy', id: c.id, pid: ticket });
       this.shut();
     });

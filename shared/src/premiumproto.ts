@@ -75,8 +75,10 @@ export interface ShopView {
   /** Every offer that is shut, by its id (the rest may be bought); `left`: buys left in its period. */
   why: Record<string, ShopWhy>;
   left: Record<string, number>;
-  /** Offers priced by her state (the infirmary). */
+  /** Offers priced by her state (the infirmary), or by the live ops' panel (docs/34: its own price, a sale). */
   price: Record<string, number>;
+  /** A sale of the live ops' panel on an offer: its share off, its end (wall ms), the price before it. */
+  sale?: Record<string, { pct: number; until: number; was: number }>;
   /** The deal of the day: the offer and its price, bought or not. */
   deal: { id: string; price: number; why: ShopWhy | null };
   /** A level's gift on the shelf now: its family id and when it goes. */
@@ -155,7 +157,8 @@ export interface PromoCard {
   why: ShopWhy | null;
   /** The places it was closed in (it hides there). */
   closed: PromoPlace[];
-  special?: 'starter' | 'level' | 'first' | 'weekly' | 'sub';
+  /** `global`: a limited-time offer of the live ops' panel for every captain (id `gl:<id>`; docs/34). */
+  special?: 'starter' | 'level' | 'first' | 'weekly' | 'sub' | 'global';
 }
 
 export interface PromoView {

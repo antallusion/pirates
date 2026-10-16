@@ -62,6 +62,8 @@ export class AuthService {
   readonly mailer: Mailer;
   /** Public address of the game, for the links in letters. */
   publicUrl: string;
+  /** Told of every account made (the live ops' funnel counts the registrations: game/liveops.ts). */
+  onCreated: ((accountId: number) => void) | null = null;
 
   constructor(db: Db, mailer: Mailer = new OutboxMailer(() => {}), publicUrl = 'http://localhost:8080') {
     this.db = db;
@@ -84,6 +86,11 @@ export class AuthService {
     if (this.db.accountByName(name)) return { error: 'That name is already sailing these waters.' };
     const token = randomBytes(24).toString('base64url');
     const accountId = this.db.createAccount(name, hashToken(token));
+    try {
+      this.onCreated?.(accountId);
+    } catch {
+      /* the funnel never stops a registration */
+    }
     return { accountId, name, token };
   }
 
