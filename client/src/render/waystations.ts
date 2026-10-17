@@ -1,5 +1,6 @@
-// docs/35: the floating waystations on the sea, the minimap and the chart — strictly from above and from the art
-// already in assets/ (no generation): a raft tavern (a plank raft under the fisher's hut with its smoke, crates and
+// docs/35: the floating waystations on the sea, the minimap and the chart — strictly from above. On the sea, the owner's
+// own painting of each (2026-10-17, props/way_*.webp); before it is in, one made of the art already in assets/: a raft
+// tavern (a plank raft under the fisher's hut with its smoke, crates and
 // a boat alongside, a lantern's warm light), a hulk chapel (an old hulk at anchor, the shrine's bell on her deck, the
 // candles' glow), a floating market (a raft under a sailcloth stall, crates, boats moored round it). On the minimap a
 // small warm lozenge; on the chart the same, close in. A fog of war may hide any of them (setWayFog).
@@ -10,6 +11,10 @@ import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/waystation.ts';
 import type { ClientState } from '../state.ts';
 import { drawArt, foam } from './seaart.ts';
+import { sprite } from '../assets.ts';
+
+/** The painted waystation's length beside WAY_SIZE (its longest side, from above): the hulk is a long narrow hull. */
+const WAY_ART: Record<WayData['kind'], number> = { tavern: 1.2, chapel: 1.3, market: 1.25 };
 
 type G = CanvasRenderingContext2D;
 const L = dict(EN, RU);
@@ -98,7 +103,19 @@ export function drawWaysWorld(g: G, state: ClientState, c: WayCtx): void {
     g.save();
     g.translate(x, y);
     g.rotate(w.rot + bob);
-    if (w.kind === 'chapel') {
+    // The owner's painted waystation (2026-10-17, props/way_*.webp: the raft tavern, the hulk chapel, the floating market,
+    // strictly from above) over a soft shadow on the water, its lanterns breathing; until it is in, the old one made of
+    // the island's props below.
+    const art = `prop.way_${w.kind}`;
+    if (sprite(art)) {
+      const long = S * WAY_ART[w.kind];
+      g.fillStyle = 'rgba(3,8,11,0.32)';
+      g.beginPath();
+      g.ellipse(S * 0.03, S * 0.05, long * (w.kind === 'chapel' ? 0.2 : 0.4), long * 0.5, 0, 0, Math.PI * 2);
+      g.fill();
+      drawArt(g, art, 0, 0, long, 0, 1);
+      glow(g, 0, 0, long * 0.38, 0.1 + 0.06 * Math.sin(c.time * 2.4 + w.id), '255,200,120');
+    } else if (w.kind === 'chapel') {
       // An old hulk at her moorings, a raft of planks alongside, the shrine's bell on her waist and the candles lit.
       g.fillStyle = 'rgba(3,8,11,0.35)';
       g.beginPath();
@@ -141,8 +158,8 @@ export function drawWaysWorld(g: G, state: ClientState, c: WayCtx): void {
       g.strokeStyle = 'rgba(0,0,0,0.75)';
       g.fillStyle = 'rgba(240,222,180,0.95)';
       const t = wayName(w.kind);
-      g.strokeText(t, x, y - S * 0.62);
-      g.fillText(t, x, y - S * 0.62);
+      g.strokeText(t, x, y - S * 0.74);
+      g.fillText(t, x, y - S * 0.74);
     }
     if (w.id === near) {
       g.strokeStyle = 'rgba(232,196,106,0.7)';

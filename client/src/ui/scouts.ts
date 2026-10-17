@@ -50,7 +50,8 @@ export function scoutsCard(state: ClientState): string {
   if (!v || !v.home) return '';
   const at = state.scoutsAt;
   const pct = Math.round((v.seen / Math.max(1, v.cells)) * 1000) / 10;
-  const url = assetUrl(SHIP_CLASSES[SCOUT_HULL as ShipClassId]?.sprite ?? '');
+  // the scouts' own painted cutter (2026-10-17); the cutter hull's sprite while it is not in the manifest
+  const url = assetUrl('ship.scout_cutter') ?? assetUrl(SHIP_CLASSES[SCOUT_HULL as ShipClassId]?.sprite ?? '');
   const pic = `<span class="sy-pic sy-pic-sm sc-pic">${url ? `<img src="${url}" alt="" draggable="false">` : ''}</span>`;
   const rows = v.list.map((sc) => {
     const st = stateNow(v, sc, at);

@@ -93,7 +93,7 @@ export function buildActs(f: ActFacts): Act[] {
   if (f.grabbed) out.push({ id: 'axes', icon: 'item_boarding_axe', label: L('a.axes'), title: L('a.axes'), key: 'board' });
   if (f.docked) {
     // In port the harbour's screen is the bar; closed, the button brings it back.
-    if (!f.harbourOpen) out.push({ id: 'harbour', icon: 'anchor', label: L('a.harbour'), title: L('a.harbour'), key: 'harbour' });
+    if (!f.harbourOpen) out.push({ id: 'harbour', icon: 'ui_anchor', label: L('a.harbour'), title: L('a.harbour'), key: 'harbour' });
     return out;
   }
   // A creature stack hers to attack (marked, or a cable off with no ship of her choosing): its «Атаковать» is the gold
@@ -101,7 +101,7 @@ export function buildActs(f: ActFacts): Act[] {
   // 2026-10-07).
   const roam = roamActs(f);
   if (f.roam?.lead) out.push(...roam);
-  if (f.board) out.push({ id: 'board', icon: 'tab_board', label: L('a.board'), sub: f.board.name, title: L('a.boardTitle', { name: f.board.name }), key: 'board' });
+  if (f.board) out.push({ id: 'board', icon: 'ui_cutlasses', label: L('a.board'), sub: f.board.name, title: L('a.boardTitle', { name: f.board.name }), key: 'board' });
   // «Атаковать» (docs/23 item 33): one tap and the ship does the rest; under way, the other way to fight her and the
   // helm back.
   const at = f.attack;
@@ -109,7 +109,7 @@ export function buildActs(f: ActFacts): Act[] {
   if (at && at.pursuing) {
     if (!at.gunsOnly) {
       out.push(at.mode === 'board'
-        ? { id: 'attack_mode', icon: 'fire', label: LS('a.guns'), sub: at.name, title: LS('a.gunsTitle') }
+        ? { id: 'attack_mode', icon: 'ui_cannon', label: LS('a.guns'), sub: at.name, title: LS('a.gunsTitle') }
         : { id: 'attack_mode', icon: 'ab_red_hook_boarding', label: LS('a.close'), sub: at.name, title: LS('a.closeTitle') });
     }
     out.push({ id: 'attack_stop', icon: 'item_ship_wheel', label: LS('a.stop'), title: LS('a.stopTitle') });

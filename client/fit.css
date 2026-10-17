@@ -635,3 +635,66 @@ body.touch #mm-tab:focus-visible .mm-tab-pill { box-shadow: none; }
   .skinned .tb-pk-x { width: calc(22px + 4 * var(--u)); height: calc(22px + 4 * var(--u)); }
   .tb-pk.cast b { max-width: calc(80px + 20 * var(--u)); }
 }
+
+/* ================================================================== the title screen (the owner's pack, 2026-10-17)
+   The painting under it is chosen by the page (index.html): the wide one on a desk, its darker top for the logo; the
+   captain at the wheel on a phone on its side, its darker right two-thirds for the logo and the form. The painted logo
+   (ui/logo_*) stands outside the form's panel: over the form on a desk, beside it on a phone. A scrim keeps the form and
+   the words readable over the painting. */
+#screen-login .keyart { filter: none; }
+#screen-login .keyart::after {
+  background:
+    radial-gradient(ellipse 46% 40% at 50% 24%, rgba(3, 5, 8, 0.42), rgba(3, 5, 8, 0) 100%),
+    linear-gradient(180deg, rgba(3, 5, 8, 0) 45%, rgba(3, 5, 8, 0.6) 100%),
+    radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.55) 100%);
+}
+#screen-login .login-brand { position: relative; z-index: 1; flex: none; text-align: center; pointer-events: none; }
+#screen-login .login-logo { margin: 0; font-size: 0; line-height: 0; letter-spacing: 0; text-shadow: none; }
+#screen-login .login-logo img { display: inline-block; width: auto; height: clamp(140px, 33vh, 330px); max-width: 92vw; object-fit: contain; filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.8)); }
+#screen-login .login-brand .subtitle { margin: 2px auto 0; max-width: 34em; color: var(--bone, #d8d2c4); font-family: var(--serif, serif); font-style: italic; font-size: 15px; text-shadow: 0 1px 2px #000, 0 0 14px rgba(0, 0, 0, 0.9); }
+@media (min-height: 521px) {
+  #screen-login { flex-direction: column; align-items: center; justify-content: flex-start; }
+  #screen-login .login-brand { margin: auto 0 0; padding-top: max(12px, 2vh); }
+  #screen-login > .login-panel { margin: 1.4vh auto auto; }
+  #screen-login > .login-panel .hint { margin-top: 10px; }
+}
+@media (max-height: 520px) {
+  #screen-login .keyart::after {
+    background:
+      linear-gradient(90deg, rgba(3, 5, 8, 0) 22%, rgba(3, 5, 8, 0.38) 48%, rgba(3, 5, 8, 0.55) 100%),
+      radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.45) 100%);
+  }
+  #screen-login { flex-direction: row; align-items: center; justify-content: flex-end; gap: 1.6vw; padding-right: max(var(--sa-x, 0px), 2vw); }
+  #screen-login .login-brand { width: 30vw; margin: auto 0; }
+  #screen-login .login-logo img { width: 100%; height: auto; max-height: 64dvh; }
+  #screen-login .login-brand .subtitle { display: inline-block; font-size: var(--f-fs-s, 11px); line-height: 1.25; margin-top: 0; padding: 2px 8px; border-radius: 6px; background: rgba(3, 5, 8, 0.62); box-shadow: 0 0 12px 4px rgba(3, 5, 8, 0.5); }
+  #screen-login > .login-panel, #screen-login > .login-panel:has(#login-account[open]) {
+    display: block; width: min(36vw, 340px); margin: auto 0; max-height: calc(100dvh - 8px); overflow-y: auto; overscroll-behavior: contain;
+    padding: calc(6px + 4 * var(--u)) calc(8px + 6 * var(--u));
+  }
+  #screen-login > .login-panel .lang-switch { justify-content: flex-end; margin-bottom: 2px; }
+  #screen-login > .login-panel label { margin-bottom: 4px; }
+  #screen-login > .login-panel #login-account { margin-top: 4px; }
+  #screen-login > .login-panel .hint { margin: 4px 0 0; }
+}
+@media (max-height: 520px) and (max-width: 599px) {
+  /* the smallest phones: the captain's third is given to the form */
+  #screen-login .login-brand { width: 33vw; }
+  #screen-login > .login-panel, #screen-login > .login-panel:has(#login-account[open]) { width: 58vw; }
+}
+/* the account's drawer opened: it takes the guest form's place on a desk too, the logo steps down, its line goes; on the
+   lowest phones the form takes the whole width (its buttons stay on the screen, nothing to scroll to) */
+#screen-login:has(#login-account[open]) .login-brand .subtitle { display: none; }
+@media (min-height: 521px) {
+  #screen-login:has(#login-account[open]) .login-logo img { height: clamp(90px, 17vh, 200px); }
+  #screen-login .login-panel:has(#login-account[open]) #login-form { display: none; }
+}
+@media (max-height: 340px) {
+  #screen-login:has(#login-account[open]) .login-brand { display: none; }
+  #screen-login > .login-panel:has(#login-account[open]) { width: min(94vw, 560px); margin: auto; }
+  #screen-login > .login-panel:has(#login-account[open]) .lang-switch { position: absolute; z-index: 1; top: calc(6px + 4 * var(--u)); right: calc(8px + 6 * var(--u)); margin: 0; }
+  #screen-login > .login-panel:has(#login-account[open]) #login-account { margin-top: 0; }
+}
+@media (max-height: 520px) {
+  #screen-login > .login-panel:has(#login-account[open]) .login-account form .row { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 4px !important; }
+}

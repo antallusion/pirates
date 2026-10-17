@@ -9,6 +9,7 @@
 // RU and EN: client/src/lang/ui/dailygift.ts. The gift's sound: sfx.ts 'gift'.
 
 import type { Gift, GiftView } from '../../../shared/src/data/dailygift.ts';
+import { AUTO_SCROLL_ICON } from '../../../shared/src/data/premium.ts';
 import type { ClientMsg, ServerMsg } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/dailygift.ts';
@@ -26,10 +27,10 @@ export function giftParts(g: Gift): { art: string; name: string; q: string }[] {
   const out: { art: string; name: string; q: string }[] = [];
   const ru = lang() === 'ru';
   if (g.doubloons) out.push({ art: 'doubloon', name: L('g.doubloons'), q: `×${g.doubloons}` });
-  if (g.scrolls) out.push({ art: 'tab_contracts', name: L('g.scrolls'), q: `×${g.scrolls}` });
+  if (g.scrolls) out.push({ art: AUTO_SCROLL_ICON, name: L('g.scrolls'), q: `×${g.scrolls}` });
   if (g.speed) {
     const min = g.speed * 15;
-    out.push({ art: 'item_storm_glass', name: L('g.speed'), q: min >= 60 && min % 60 === 0 ? `${min / 60}${ru ? ' ч' : 'h'}` : `${min}${ru ? ' м' : 'm'}` });
+    out.push({ art: 'ui_hourglass', name: L('g.speed'), q: min >= 60 && min % 60 === 0 ? `${min / 60}${ru ? ' ч' : 'h'}` : `${min}${ru ? ' м' : 'm'}` });
   }
   if (g.res) out.push({ art: 'good_timber', name: L('g.res'), q: `×${fmt(Object.values(g.res).reduce((a, n) => a + (n ?? 0), 0))}` });
   if (g.silver) out.push({ art: 'coin', name: L('g.silver'), q: fmt(g.silver) });
@@ -122,7 +123,7 @@ export class DailyGift {
     let el = document.getElementById('tc-daily') as HTMLButtonElement | null;
     if (!el) {
       const t = document.createElement('template');
-      t.innerHTML = buttonHtml({ kind: 'icon', id: 'tc-daily', icon: 'tab_holdings', glyph: '✦', aria: L('iconAria'), cls: 'sea-round tc-daily hidden' }).trim();
+      t.innerHTML = buttonHtml({ kind: 'icon', id: 'tc-daily', icon: 'ui_gift', glyph: '✦', aria: L('iconAria'), cls: 'sea-round tc-daily hidden' }).trim();
       el = t.content.firstElementChild as HTMLButtonElement;
       el.insertAdjacentHTML('beforeend', '<b class="k-badge tc-daily-b" aria-hidden="true">!</b>');
       el.addEventListener('click', () => this.open());

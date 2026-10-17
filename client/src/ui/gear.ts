@@ -61,7 +61,7 @@ export function gearChips(state: ClientState): WinTab[] {
   const out: WinTab[] = [
     { id: 'captain', icon: 'bt_captain', label: W('gear.captain') },
     { id: 'ship', icon: 'menu_ship', label: W('gear.ship') },
-    { id: 'locker', icon: 'tab_holdings', label: `${W('gear.locker')} ${self.stash.length}/${STASH_SIZE}` },
+    { id: 'locker', icon: 'ui_chest', label: `${W('gear.locker')} ${self.stash.length}/${STASH_SIZE}` },
   ];
   if (self.dockedAt) out.push({ id: 'shop', icon: 'tab_market', label: W('gear.shop') });
   return out;

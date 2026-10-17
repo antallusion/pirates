@@ -66,7 +66,7 @@ export class WayWindow {
       root.innerHTML = `<div class="modal-head way-head"><div class="way-ht">${icon(art, '', 'way-art')}<div><h2>${esc(title)}</h2></div></div></div><div class="modal-body"><p class="muted">${esc(L('none'))}</p></div>`;
       return;
     }
-    const chips = `<div class="way-chips"><span class="ph-chip gold">${money(v.gold)}</span><span class="ph-chip">${doubloons(v.balance)}</span>${v.scrolls > 0 ? `<span class="ph-chip">${icon('talent_srv_ships_surgeon', '', 'ico-sm')}${esc(L('scrolls', { n: v.scrolls }))}</span>` : ''}</div>`;
+    const chips = `<div class="way-chips"><span class="ph-chip gold">${money(v.gold)}</span><span class="ph-chip">${doubloons(v.balance)}</span>${v.scrolls > 0 ? `<span class="ph-chip">${icon('ui_phial', '', 'ico-sm')}${esc(L('scrolls', { n: v.scrolls }))}</span>` : ''}</div>`;
     const sub = way ? L('sub.way', { n: v.fallen }) : L('sub.res', { n: v.fallen });
     const head = `<div class="modal-head way-head"><div class="way-ht">${icon(art, '', 'way-art')}<div><h2>${esc(title)}</h2><div class="sub">${esc(sub)}</div></div></div>${chips}</div>`;
     const rows = v.rows.map((r) => {
@@ -76,7 +76,7 @@ export class WayWindow {
       return `<div class="way-row${r.room <= 0 ? ' off' : ''}">${unitIcon(r.u, 'way-face')}
         <div class="way-rt"><b>${esc(unitName(r.u))} <span class="way-n">×${fmt(r.n)}</span></b>${r.room < r.n ? `<span class="muted">${esc(r.room > 0 ? L('room', { k: r.room, n: r.n }) : why)}</span>` : ''}</div>
         <span class="way-price">${priceHtml(r)}</span>
-        <span class="way-btns">${scroll ? `<button class="btn btn-small" data-wscroll="${r.u}" title="${esc(L('scroll'))}">${icon('talent_srv_ships_surgeon', '', 'ico-sm')}</button>` : ''}<button class="btn btn-small${ok ? ' btn-primary' : ''}" data-wres="${r.u}"${ok ? '' : ' disabled'}>${esc(L('res'))}</button></span></div>`;
+        <span class="way-btns">${scroll ? `<button class="btn btn-small" data-wscroll="${r.u}" title="${esc(L('scroll'))}">${icon('ui_phial', '', 'ico-sm')}</button>` : ''}<button class="btn btn-small${ok ? ' btn-primary' : ''}" data-wres="${r.u}"${ok ? '' : ' disabled'}>${esc(L('res'))}</button></span></div>`;
     }).join('');
     const now = Date.now();
     const notes = [
@@ -85,7 +85,7 @@ export class WayWindow {
       v.rows.some((r) => r.prem) ? L('note.prem') : '',
       v.until > 0 ? L('note.keep', { t: keepLeft(v.until, now) }) : '',
     ].filter(Boolean);
-    const offer = v.offer ? `<div class="card way-offer">${icon('talent_srv_ships_surgeon', '', 'ico-md')}<div><b>${esc(L('offer.h'))}</b><span class="muted">${esc(L('offer.t'))}</span></div><button class="btn btn-small" data-wshop>${esc(L('offer.btn'))}</button></div>` : '';
+    const offer = v.offer ? `<div class="card way-offer">${icon('ui_phial', '', 'ico-md')}<div><b>${esc(L('offer.h'))}</b><span class="muted">${esc(L('offer.t'))}</span></div><button class="btn btn-small" data-wshop>${esc(L('offer.btn'))}</button></div>` : '';
     const body = v.rows.length
       ? `<div class="way-list">${rows}</div>${notes.length ? `<p class="muted way-note">${notes.map((n) => esc(n)).join(' ')}</p>` : ''}${offer}`
       : `<p class="muted way-empty">${esc(L('none'))}</p>`;

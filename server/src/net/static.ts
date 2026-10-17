@@ -238,12 +238,13 @@ export function createStaticHandler(root: string) {
         const { list, build } = await moduleGraph().catch(() => ({ list: [] as string[], build: '' }));
         const bq = build ? `?b=${build}` : '';
         const links = list.map((u) => `<link rel="modulepreload" href="${u}${bq}">`).join('');
-        // the title's key art painted with the page itself, before the game's script is in
-        const art = await versionedManifest().then((m) => (JSON.parse(m.body.toString('utf8')) as { assets: Record<string, { local: string; v?: string }> }).assets['art.keyart'], () => undefined);
-        const ka = art ? `${ASSET_ORIGIN}/assets/${art.local}${art.v ? `?v=${art.v}` : ''}` : '';
-        let html = entry.body.toString('utf8').replace('</head>', `${ka ? `<link rel="preload" as="image" href="${ka}" fetchpriority="high">` : ''}${links}\n</head>`);
+        let html = entry.body.toString('utf8').replace('</head>', `${links}\n</head>`);
         if (bq) html = html.replace("import('/src/main.ts')", `import('/src/main.ts${bq}')`);
-        if (ka) html = html.replace('<div class="keyart" data-asset="art.keyart">', `<div class="keyart" data-asset="art.keyart" style="background-image:url('${ka}')">`);
+        // The page's own pictures (the title's painting and logo, the first start's loading screen, painted with the page
+        // before the game's script is in): each /assets/ address carried to its version — the very address the game's
+        // script asks for later (client/src/assets.ts fileUrl), so the preloaded one is the one drawn — and to the CDN.
+        const vm = await versionedManifest().then((m) => JSON.parse(m.body.toString('utf8')) as { assets: Record<string, PageAsset> }, () => null);
+        html = versionPage(html, vm?.assets ?? {}, ASSET_ORIGIN);
         const body = Buffer.from(html, 'utf8');
         const key = `${file}#pre`;
         let pe = cache.get(key);
@@ -286,6 +287,28 @@ export function createStaticHandler(root: string) {
       return false;
     }
   };
+}
+
+/** A versioned manifest's entry, as index.html's addresses need it: the file's version, its AVIF twin's, its phone copy's
+ *  and that copy's AVIF twin's. */
+interface PageAsset {
+  local: string;
+  v?: string;
+  a?: string;
+  m?: string;
+  ma?: string;
+}
+
+/** index.html's /assets/ addresses (in its attributes, its srcsets and its style's url()s) carried to their versions. */
+export function versionPage(html: string, assets: Record<string, PageAsset>, origin = ''): string {
+  const vers = new Map<string, string>();
+  for (const e of Object.values(assets)) {
+    if (e.v) vers.set(e.local, e.v);
+    if (e.a) vers.set(e.local.replace(/\.(webp|png|jpg)$/, '.avif'), e.a);
+    if (e.m) vers.set(e.local.replace(/\.webp$/, '.m.webp'), e.m);
+    if (e.ma) vers.set(e.local.replace(/\.webp$/, '.m.avif'), e.ma);
+  }
+  return html.replace(/(["'(, ])\/assets\/([\w./-]+\.(?:webp|avif|png|jpg))(?=["') ,])/g, (_, q: string, p: string) => `${q}${origin}/assets/${p}${vers.has(p) ? `?v=${vers.get(p)}` : ''}`);
 }
 
 /** A module's own imports and re-exports carried to a build (`./x.ts` → `./x.ts?b=…`): the static ones, the dynamic

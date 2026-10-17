@@ -121,7 +121,7 @@ import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { TutorPointer } from './ui/pointer.ts';
 import { buzz, guardVibrate } from './haptics.ts';
 import { cue, setCuePlayer } from './sfx.ts'; // the sound pass (owner, 2026-10-16): the cues the UI asks for
-import { filmDue, filmExists, loadFilms, playFilm, setFilmGate } from './ui/cutscene.ts';
+import { filmDue, loadFilms, playFilm, setFilmGate } from './ui/cutscene.ts';
 import { OptionsScreen } from './ui/options.ts';
 import { actionFor, applyToDocument, keyLabel, keyOf, onSettings, settings, update } from './settings.ts';
 import { BTN, dead, HOLD, padAimPoint, PadInput, radialSector, rumble } from './gamepad.ts';
@@ -909,7 +909,7 @@ const seaHud = new SeaHud($('touch'), {
 // The island screen's way in from the sea (owner, 2026-10-15): «Остров» under the menu while she holds an island.
 const isleBtn = (() => {
   const t = document.createElement('template');
-  t.innerHTML = buttonHtml({ kind: 'icon', id: 'tc-isle', icon: 'tab_isles', glyph: '⚓', aria: LIS('enterTip'), cls: 'sea-round hidden' }).trim();
+  t.innerHTML = buttonHtml({ kind: 'icon', id: 'tc-isle', icon: 'ui_lighthouse', glyph: '⚓', aria: LIS('enterTip'), cls: 'sea-round hidden' }).trim();
   const b = t.content.firstElementChild as HTMLButtonElement;
   b.insertAdjacentHTML('beforeend', '<span class="tc-isle-l"></span>');
   b.addEventListener('click', () => openBase());
@@ -1072,10 +1072,10 @@ onboarding.onEdge = () => {
 
 // ------------------------------------------------------------------ boot
 
-// The title's key art and the cursors' few first (assets.ts: nothing else is asked for until a screen draws it), the
-// service worker that keeps the pictures for the next visit (client/sw.js).
+// The cursors' few first (assets.ts: nothing else is asked for until a screen draws it; the title's painting and logo come
+// with the page itself, index.html), the service worker that keeps the pictures for the next visit (client/sw.js).
 artStore();
-loadAssets(['art.keyart', 'ui.helm', ...Object.values(CURSOR_ART)]).then(() => {
+loadAssets(['ui.helm', 'ui.loader_wheel', ...Object.values(CURSOR_ART)]).then(() => {
   applySkin();
   buildMicroMenu();
   hud.artEpoch++;
@@ -1083,10 +1083,6 @@ loadAssets(['art.keyart', 'ui.helm', ...Object.values(CURSOR_ART)]).then(() => {
   buildCursors(); // the attack cursor from the tattoo set's sabres, hook and gun
   hud.chatPanel.art();
   hud.chatPanel.tabs();
-  const url = assetUrl('art.keyart');
-  const ka = document.querySelector<HTMLElement>('.keyart');
-  if (ka && url) ka.style.backgroundImage = `url('${url}')`;
-  if (ka) titleFilm(ka, url);
 });
 
 /** The game's films at their moments (ui/cutscene.ts): the first boarding (a lair's fight ashore), the first win and
@@ -1233,40 +1229,6 @@ void loadFilms();
 const FILM_OVER = new Set<Modal>(['port', 'boarding', 'sunk']);
 // (a question up is one on screen: the «turn the phone» lock stays in the page, unseen, in landscape)
 setFilmGate(() => (modal !== null && !FILM_OVER.has(modal)) || [...document.querySelectorAll('[role="alertdialog"][aria-modal="true"]')].some((e) => e.getClientRects().length > 0));
-
-/** The title screen: the trailer, silent and looping, over the key art (owner, 2026-10-03) — not for one who asks for
- *  less motion or saves data; it rests while the title screen is hidden. */
-function titleFilm(ka: HTMLElement, poster: string | null): void {
-  const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
-  // (a slow line keeps its bytes for the game: the key art stays still)
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches || conn?.saveData || /(^|-)2g|3g/.test(conn?.effectiveType ?? '')) return;
-  const v = document.createElement('video');
-  v.className = 'keyart-film';
-  v.muted = true;
-  v.playsInline = true;
-  // No autoplay attribute: a page opened already signed in hides the title screen from the start, and the film would
-  // run unseen under the game (QA, 2026-10-04) — it plays only by go(), on the title screen.
-  v.preload = 'auto';
-  v.setAttribute('aria-hidden', 'true');
-  if (poster) v.poster = poster;
-  // The trailer and, once it is cut, the raids' trailer in turn (tools/art/cut_trailer.py).
-  let reel = 0;
-  v.src = '/assets/video/trailer.mp4';
-  v.addEventListener('ended', () => {
-    const reels = ['trailer', ...(filmExists('trailer_raids') ? ['trailer_raids'] : [])];
-    reel = (reel + 1) % reels.length;
-    v.src = `/assets/video/${reels[reel]}.mp4`;
-    go();
-  });
-  v.addEventListener('playing', () => v.classList.add('on'));
-  ka.appendChild(v);
-  // Autoplay is a request, not a promise: ask again once it can play, on the title screen only.
-  const go = () => { if (!$('screen-login').classList.contains('hidden')) void v.play().catch(() => {}); };
-  v.addEventListener('canplay', go, { once: true });
-  go();
-  const login = $('screen-login');
-  new MutationObserver(() => (login.classList.contains('hidden') ? v.pause() : void v.play().catch(() => {}))).observe(login, { attributes: true, attributeFilter: ['class'] });
-}
 
 // Links back from letters and OAuth: #token=… (signed in), #reset=… (new password), #verified, #auth-error=….
 {

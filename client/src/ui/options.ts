@@ -22,7 +22,7 @@ const G = dict(GIFT_EN, GIFT_RU);
 /** The interface's sizes on the main page (uiScale). */
 export const UI_SIZES = [0.85, 1, 1.15, 1.3] as const;
 
-const TAB_ICON: Record<string, string> = { ui: 'menu_options', vision: 'ab_spotters_eye', sound: 'opt_sound', controls: 'opt_controls', notify: 'tab_letters' };
+const TAB_ICON: Record<string, string> = { ui: 'menu_options', vision: 'ab_spotters_eye', sound: 'opt_sound', controls: 'opt_controls', notify: 'ui_bell' };
 
 type Tab = 'ui' | 'vision' | 'sound' | 'controls' | 'notify';
 
@@ -180,7 +180,7 @@ export class OptionsScreen {
       ${row('good_provisions', U2('opt.autoTopUp'), sw('autoTopUp', U2('opt.autoTopUp')), U2('opt.autoTopUpHint'))}
       ${row('menu_options', W('opt.size'), seg(UI_SIZES.map((v) => [String(v), `${Math.round(v * 100)}%`, v === near] as [string, string, boolean]), 'osize', W('opt.size')), W('opt.sizeHint'))}
       ${row('menu_map', W('opt.mmTarget'), seg([['hide', W('opt.mmHide'), s.mmTarget === 'hide'], ['show', W('opt.mmShow'), s.mmTarget === 'show']], 'omm', W('opt.mmTarget')), W('opt.mmTargetHint'), 'opt-row--wide')}
-      ${tgnView() ? row('tab_letters', G('tgn.title'), `<button type="button" class="k-btn k-btn--secondary k-btn--sm" data-otgn>${esc(G('tgn.open'))}</button>`, G('tgn.hint'), 'opt-row--wide') : ''}
+      ${tgnView() ? row('ui_bell', G('tgn.title'), `<button type="button" class="k-btn k-btn--secondary k-btn--sm" data-otgn>${esc(G('tgn.open'))}</button>`, G('tgn.hint'), 'opt-row--wide') : ''}
     </div>
     <div class="opt-foot"><button type="button" class="k-btn k-btn--secondary k-btn--md opt-more" data-omore>${esc(W('opt.more'))}</button>${tgSettingsButton(this.tg)}</div>`;
   }

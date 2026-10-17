@@ -78,8 +78,9 @@ export function scrollPack(id: string): ScrollPack | undefined {
   return AUTO_SCROLL_PACKS.find((p) => p.id === id);
 }
 
-/** The scroll's picture: the sealed scroll of the order book's letters (an existing icon, no new art). */
-export const AUTO_SCROLL_ICON = 'tab_contracts';
+/** The scroll's picture: the sealed scroll of the owner's UI pack (2026-10-17; before, the order book's letters, which the
+ *  quests show too). */
+export const AUTO_SCROLL_ICON = 'ui_scroll';
 
 /** The one free source (docs/25 §5, 2026-10-11): a seal of the deep of this level or more won in time gives a single
  *  scroll, once a week a captain — a top seal's trophy, four or five a month at the very most, never a supply. */

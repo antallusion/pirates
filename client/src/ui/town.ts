@@ -160,7 +160,7 @@ function card(v: BaseView, t: TownThingView, gold: number, have: Partial<Record<
   const job = j ? `<div class="tw-job"><span class="muted">${esc(L('town.building'))}</span> <span class="btime" data-end="${j.end}">${esc(timeText((j.end - now) / 1000))}</span>
       <span class="bprog"><i data-start="${j.start}" data-stop="${j.end}" style="width:0%"></i></span>
       <div class="bspeed"><button class="btn btn-small btn-primary" data-bspeed="silver" data-job="${j.id}">${esc(B('finish'))} <span data-price="${j.end}">${money(j.silver)}</span></button>
-      <button class="btn btn-small" data-bspeed="token" data-job="${j.id}"${v.speedups ? '' : ' disabled'}>⌛ ${esc(B('token', { m: v.tokenSecs / 60 }))} (${v.speedups})</button></div></div>` : '';
+      <button class="btn btn-small" data-bspeed="token" data-job="${j.id}"${v.speedups ? '' : ' disabled'}>${icon('ui_hourglass', '⌛', 'ico-xs')} ${esc(B('token', { m: v.tokenSecs / 60 }))} (${v.speedups})</button></div></div>` : '';
   const n = t.next;
   const next = !j && n ? `<div class="tw-next"><b class="tw-nn">${esc(t.level > 0 ? `${L('town.up')}: ${townName(t.id, n.level)}` : townName(t.id, 1))}</b>${costLine({ silver: n.silver, goods: n.goods }, gold, have)}${landLine(n.land, land)}<span class="bcost btimec">⏱ ${esc(timeText(n.secs))}</span>
       ${n.why ? `<p class="muted tw-why">${esc(serverText(n.why))}</p>` : ''}<button class="btn btn-small${t.level ? '' : ' btn-primary'}" data-tbuild="${t.id}"${n.why ? ' disabled' : ''}>${esc(t.level > 0 ? L('town.up') : L('town.build'))}</button></div>`

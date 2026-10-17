@@ -551,7 +551,7 @@ export class IsleScene {
       `<button type="button" class="is-sb${o.on ? ' on' : ''}${o.cls ? ` ${o.cls}` : ''}" data-iside="${id}"${o.off ? ' disabled' : ''} title="${esc(o.title ?? label)}">${icon(ico, '', 'is-sb-ico')}<span class="is-sb-l">${esc(label)}</span>${o.badge ? `<b class="is-sb-n">${esc(o.badge)}</b>` : ''}</button>`;
     const on = (p: Panel) => !!this.pick && 'panel' in this.pick && this.pick.panel === p;
     const raid = v.claim.raid ? btn('raid', 'build_battery', L('raid'), { cls: 'raid', title: serverWord(state) }) : '';
-    return `${raid}${btn('collect', 'tab_holdings', L('collect'), { badge: fresh ? `+${fmt(fresh)}` : '', off: !fresh })}${btn('yard', 'build_shipyard', L('ships'), { badge: v.shipyard.ships.length ? String(v.shipyard.ships.length) : '', on: on('yard') })}${v.town ? btn('town', 'build_fort', L('town'), { on: on('town') }) : ''}${btn('supply', 'build_caravan_office', L('supply'), { badge: String(state.supply?.isles.filter((x) => x.linked).length || ''), on: on('supply') })}${btn('defence', 'build_battery', L('defence'), { on: on('defence') })}${btn('shop', 'doubloon', PM('open'), { cls: 'shop', title: PM('openTip') })}`;
+    return `${raid}${btn('collect', 'ui_chest', L('collect'), { badge: fresh ? `+${fmt(fresh)}` : '', off: !fresh })}${btn('yard', 'build_shipyard', L('ships'), { badge: v.shipyard.ships.length ? String(v.shipyard.ships.length) : '', on: on('yard') })}${v.town ? btn('town', 'build_fort', L('town'), { on: on('town') }) : ''}${btn('supply', 'build_caravan_office', L('supply'), { badge: String(state.supply?.isles.filter((x) => x.linked).length || ''), on: on('supply') })}${btn('defence', 'build_battery', L('defence'), { on: on('defence') })}${btn('shop', 'doubloon', PM('open'), { cls: 'shop', title: PM('openTip') })}`;
   }
 
   private queueHtml(v: BaseView): string {
@@ -712,7 +712,7 @@ export class IsleScene {
     const top = plan.steps[0];
     const job = jobOf(v, top.job) ?? jobOf(v, plan.steps.find((x) => x.job !== null)?.job ?? null) ?? soonestJob(v);
     const left = job ? Math.max(0, (job.end - this.now()) / 1000) : 0;
-    const speed = `<div class="pr-sp"><b class="pr-spt">${icon('item_storm_glass', '', 'ico-sm')} ${esc(L('spTitle'))}</b>`
+    const speed = `<div class="pr-sp"><b class="pr-spt">${icon('ui_hourglass', '', 'ico-sm')} ${esc(L('spTitle'))}</b>`
       + `<p>${stockMin > 0 ? esc(L('spStock', { m: fmt(sp.min), t: sp.tokens, k: sp.tokenSecs / 60 })) : esc(L('spNone'))}</p>`
       + (stockMin > 0 ? `<p class="muted">${esc(L('spCover', { c: spanText(Math.min(stockMin * 60, top.secs)), n: spanText(top.secs) }))}</p>` : '')
       + (job ? `<div class="pr-spj"><span>${esc(L('spNow', { name: job.name, t: spanText(left) }))}</span><button type="button" class="btn btn-small btn-primary" data-prspeed="${job.id}"${stockMin > 0 && left > 0 ? '' : ' disabled'}>${esc(L('spBtn'))}</button></div>` : '')

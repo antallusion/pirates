@@ -495,7 +495,7 @@ export class WorldMap {
   private pickBar(state: ClientState): string {
     const sc = this.scoutPick ? state.scouts?.list.find((x) => x.id === this.scoutPick) : null;
     if (!sc || !state.scouts) return '';
-    return `<div class="map-pick" role="status"><span>${esc(LF('pickHint', { name: scoutName(sc), km: Math.round(state.scouts.range / 1000) }))}</span><button type="button" class="btn btn-small" data-scpick-x>${esc(LF('cancel'))}</button></div>`;
+    return `<div class="map-pick" role="status">${icon('ui_spyglass', '', 'ico-sm')}<span>${esc(LF('pickHint', { name: scoutName(sc), km: Math.round(state.scouts.range / 1000) }))}</span><button type="button" class="btn btn-small" data-scpick-x>${esc(LF('cancel'))}</button></div>`;
   }
 
   private scale(): number {

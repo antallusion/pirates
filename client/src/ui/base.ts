@@ -204,8 +204,8 @@ export class BaseWindow {
     const res = v.store.map((r) => `<span class="bres${r.n >= r.cap ? ' full' : ''}" style="--fill:${Math.round(Math.min(1, r.n / Math.max(1, r.cap)) * 100)}%" title="${esc(L('res_tip', { good: GOODS[r.good].name, n: r.n, cap: r.cap, rate: dec1(r.rate) }))}"><span class="bres-top">${icon(`good_${r.good}`, '', 'ico-sm')}<b>${fmt(r.n)}</b><i>/${fmt(r.cap)}</i></span><span class="bfill"><i style="width:${Math.round(Math.min(1, r.n / Math.max(1, r.cap)) * 100)}%"></i></span><em>${r.rate > 0 ? esc(L('per_h', { n: dec1(r.rate).replace(/[.,]0$/, '') })) : '—'}</em></span>`).join('');
     const fresh = v.cells.reduce((a, c) => a + c.fresh, 0);
     const bar = `<div class="base-bar"><div class="base-res">${res}</div>
-      <div class="base-meta"><span class="bmeta" title="${esc(`${L('crews')}${v.crews.next ? ` · ${L('crew_next', { n: v.crews.next })}` : ''}`)}">${icon('menu_crew', '', 'ico-sm')}<span class="bm-w">${esc(L('crews'))}</span> ${v.crews.busy}/${v.crews.n}</span>
-      <span class="bmeta" title="${esc(`${L('tokens')} · ${L('tokens_tip', { m: v.tokenSecs / 60 })}`)}">⌛<span class="bm-w">${esc(L('tokens'))}:</span> ${v.speedups}</span>
+      <div class="base-meta"><span class="bmeta" title="${esc(`${L('crews')}${v.crews.next ? ` · ${L('crew_next', { n: v.crews.next })}` : ''}`)}">${icon('ui_brigade', '', 'ico-sm')}<span class="bm-w">${esc(L('crews'))}</span> ${v.crews.busy}/${v.crews.n}</span>
+      <span class="bmeta" title="${esc(`${L('tokens')} · ${L('tokens_tip', { m: v.tokenSecs / 60 })}`)}">${icon('ui_hourglass', '⌛', 'ico-sm')}<span class="bm-w">${esc(L('tokens'))}:</span> ${v.speedups}</span>
       <span class="bmeta bpower" title="${esc(L('power_tip', { now: v.power.now, need: v.power.need ?? '—', crew: v.power.crew }))}">${icon('tab_isles', '', 'ico-sm')}<span class="bm-w">${esc(L('power'))}</span> ${v.power.now}${v.power.need ? `/${v.power.need}` : ''}</span>
       <span class="bmeta">${money(state.self?.gold ?? 0)}</span></div></div>`;
     const sy = v.shipyard;
@@ -220,7 +220,7 @@ export class BaseWindow {
     // docs/30: a barge of building stuff for silver (a small island with no wood or coal of its own wanted ~20 sloop runs)
     const barge = bargeCostOf(v.store, Math.max(1, v.hall ?? 1));
     const collect = quickBar([
-      { label: W('isle.collect'), sub: fresh ? `+${fmt(fresh)}` : esc(W('isle.collectNone')), icon: 'tab_holdings', hint: W('isle.collectHint'), primary: fresh > 0, disabled: !fresh, data: { bcollect: 1 } },
+      { label: W('isle.collect'), sub: fresh ? `+${fmt(fresh)}` : esc(W('isle.collectNone')), icon: 'ui_chest', hint: W('isle.collectHint'), primary: fresh > 0, disabled: !fresh, data: { bcollect: 1 } },
       { label: W('isle.barge'), sub: money(barge), icon: 'good_timber', hint: W('isle.bargeHint').replace('{n}', String(Math.max(1, v.hall ?? 1))), disabled: !barge || (state.self?.gold ?? 0) < barge, data: { bbarge: 1 } },
     ], 'b-quick');
     // A phone on its side (docs/15 item 8): the board fills the left, and the resources, the waters and the sheet
@@ -389,7 +389,7 @@ export class BaseWindow {
       <span class="bprog big"><i data-start="${j.start}" data-stop="${j.end}"></i></span>
       <div class="bspeed"><button class="btn btn-small btn-primary" data-bspeed="silver" data-job="${j.id}">${esc(L('finish'))} <span data-price="${j.end}">${money(j.silver)}</span></button>
       ${res ? `<button class="btn btn-small" data-bspeed="res" data-job="${j.id}">${esc(L('finish'))} ${(Object.entries(j.goods) as [GoodId, number][]).map(([g, n]) => `${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}`).join(' ')}</button>` : ''}
-      <button class="btn btn-small" data-bspeed="token" data-job="${j.id}"${v.speedups ? '' : ' disabled'}>⌛ ${esc(L('token', { m: v.tokenSecs / 60 }))} (${v.speedups})</button></div></div>`;
+      <button class="btn btn-small" data-bspeed="token" data-job="${j.id}"${v.speedups ? '' : ' disabled'}>${icon('ui_hourglass', '⌛', 'ico-xs')} ${esc(L('token', { m: v.tokenSecs / 60 }))} (${v.speedups})</button></div></div>`;
   }
 
   /** docs/29: a town building's card — its level i/5, what it gives, what the next level gives, its cost and time,
@@ -498,7 +498,7 @@ export class BaseWindow {
       <span class="bprog big"><i data-start="${j.start}" data-stop="${j.end}"></i></span>
       <div class="bspeed"><button class="btn btn-small btn-primary" data-bspeed="silver" data-job="${j.id}">${esc(L('finish'))} <span data-price="${j.end}">${money(j.silver)}</span></button>
       <button class="btn btn-small" data-bspeed="res" data-job="${j.id}">${esc(L('finish'))} ${(Object.entries(j.goods) as [GoodId, number][]).map(([g, n]) => `${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}`).join(' ')}</button>
-      <button class="btn btn-small" data-bspeed="token" data-job="${j.id}"${v.speedups ? '' : ' disabled'}>⌛ ${esc(L('token', { m: v.tokenSecs / 60 }))} (${v.speedups})</button></div></div>` : '';
+      <button class="btn btn-small" data-bspeed="token" data-job="${j.id}"${v.speedups ? '' : ' disabled'}>${icon('ui_hourglass', '⌛', 'ico-xs')} ${esc(L('token', { m: v.tokenSecs / 60 }))} (${v.speedups})</button></div></div>` : '';
     const acts: string[] = [];
     if (x.state === 'sea') acts.push(`<button class="btn btn-small" data-syrecall="${esc(x.id)}"${x.recallWhy ? ` disabled title="${esc(sv(x.recallWhy))}"` : ''}>${esc(L('sy_recall'))}</button>`);
     else if (x.state === 'home') acts.push(`<button class="btn btn-small btn-primary" data-sylaunch="${esc(x.id)}"${x.launchWhy ? ' disabled' : ''}>${esc(L('sy_launch'))}</button>`);

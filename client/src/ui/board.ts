@@ -28,12 +28,12 @@ const W = dict(WIN_EN, WIN_RU);
 export type BoardChip = 'all' | 'jobs' | 'story' | 'contracts' | 'urgent' | 'daily' | 'guild' | 'mine';
 export const BOARD_CHIPS: readonly BoardChip[] = ['all', 'jobs', 'story', 'contracts', 'urgent', 'daily', 'guild', 'mine'];
 const CHIP_ICON: Record<BoardChip, string> = {
-  all: 'tab_contracts', jobs: 'goal', story: 'tab_legends', contracts: 'map_contract', urgent: 'danger', daily: 'coin', guild: 'tab_guild', mine: 'stat_sails',
+  all: 'ui_quill', jobs: 'goal', story: 'tab_legends', contracts: 'map_contract', urgent: 'danger', daily: 'coin', guild: 'tab_guild', mine: 'stat_sails',
 };
 
 /** A generated job's picture by its kind (docs/11 P4). */
 const JOB_ICON: Record<string, string> = {
-  delivery: 'good_provisions', hunt: 'fire', rescue: 'map_cove', scouting: 'menu_map', smuggling: 'good_dreamleaf', treasure: 'map_treasure',
+  delivery: 'good_provisions', hunt: 'fire', rescue: 'map_cove', scouting: 'ui_spyglass', smuggling: 'good_dreamleaf', treasure: 'map_treasure',
   diplomacy: 'map_contract', revenge: 'danger', investigation: 'ab_spotters_eye', elite: 'danger',
 };
 

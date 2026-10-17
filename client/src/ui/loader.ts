@@ -9,7 +9,7 @@
 //   h.settle();             // and the pictures the renderers asked for while it was up (what is on screen)
 //   await h.done();         // then the scene shows; h.close() drops it unfinished (the scene left)
 
-import { assetStats, assetUrl, assetsBusy, ensureAssets, hushWarming } from '../assets.ts';
+import { assetStats, assetUrl, assetsBusy, ensureAssets, hushWarming, prefetchAssets } from '../assets.ts';
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/loader.ts';
 import { settings } from '../settings.ts';
@@ -21,6 +21,11 @@ export type LoadKind = 'start' | 'isle' | 'sea' | 'battle';
 /** Shorter than this, the scene simply shows (no flash of a loading screen). */
 export const LOADER_DELAY = 150;
 const TIPS = 8;
+
+/** Each screen's painting (the owner's pack, 2026-10-17: art/load_*.webp, a phone's 1024 px copy beside each, AVIF
+ *  twins; the start's comes with the page, index.html): a captain's cabin for the first start, the shore for an island,
+ *  a boarding for a fight, the open sea for leaving port. Its bottom fifth is darker: the progress stands there. */
+const ART: Record<LoadKind, string> = { start: 'art.load_start', isle: 'art.load_isle', battle: 'art.load_battle', sea: 'art.load_sea' };
 
 let root: HTMLElement | null = null;
 let barEl: HTMLElement | null = null;
@@ -38,7 +43,7 @@ function build(): void {
   root.className = 'hidden';
   root.setAttribute('role', 'status');
   root.setAttribute('aria-live', 'polite');
-  root.innerHTML = '<div class="gl-card"><i class="gl-helm" aria-hidden="true"></i><b class="gl-title"></b><span class="gl-bar"><i></i></span><p class="gl-tip"></p></div>';
+  root.innerHTML = '<div class="gl-art" aria-hidden="true"></div><img class="gl-logo" alt="" aria-hidden="true" draggable="false"><div class="gl-card"><i class="gl-helm" aria-hidden="true"></i><div class="gl-body"><b class="gl-title"></b><span class="gl-bar"><i></i></span><p class="gl-tip"></p></div></div>';
   document.body.append(root);
   barEl = root.querySelector('.gl-bar i');
   titleEl = root.querySelector('.gl-title');
@@ -79,7 +84,15 @@ export function beginLoad(kind: LoadKind, timeout = 10000): Handle {
     titleEl!.textContent = L(kind);
     tipN = (tipN + 1) % TIPS;
     tipEl!.textContent = L(`tip${tipN}` as keyof typeof EN);
-    const helm = assetUrl('ui.helm');
+    root!.dataset.kind = kind;
+    const art = assetUrl(ART[kind]);
+    root!.querySelector<HTMLElement>('.gl-art')!.style.backgroundImage = art ? `url("${art}")` : '';
+    const logo = root!.querySelector<HTMLImageElement>('.gl-logo')!;
+    const lu = assetUrl('ui.logo');
+    if (lu && logo.getAttribute('src') !== lu) logo.src = lu;
+    logo.hidden = !lu;
+    // the ship's wheel turning (ui/loader_wheel: the pack's brass wheel, toned to the game's brass)
+    const helm = assetUrl('ui.loader_wheel') ?? assetUrl('ui.helm');
     root!.querySelector<HTMLElement>('.gl-helm')!.style.backgroundImage = helm ? `url("${helm}")` : '';
     root!.classList.toggle('still', settings().reduceMotion);
     root!.classList.remove('hidden', 'out');
@@ -158,6 +171,8 @@ export function beginLoad(kind: LoadKind, timeout = 10000): Handle {
         got = total;
         prog();
         loadLog.push({ kind, ms: Math.round(performance.now() - t0), shown, timedOut, total });
+        // the other screens' paintings into the cache, so the next one stands at once
+        if (kind === 'start') prefetchAssets(Object.values(ART).filter((id) => id !== ART.start));
         if (loadLog.length > 40) loadLog.shift();
         hide();
       })();

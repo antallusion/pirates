@@ -11,7 +11,7 @@ import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 
-export const ISLE_LOOT_ICON = { speed: 'item_storm_glass', prod: 'build_farm', builder: 'prof_carpenter' } as const;
+export const ISLE_LOOT_ICON = { speed: 'ui_hourglass', prod: 'build_farm', builder: 'ui_brigade' } as const;
 
 const mins = (m: number) => (m >= 60 ? L('hour', { n: m / 60 }) : L('min', { n: m }));
 const pct = (p: number) => {

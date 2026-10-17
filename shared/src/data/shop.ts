@@ -283,7 +283,7 @@ export const SHOP: ShopFamily[] = [
     offers: [o('sub30', 990, [{ k: 'sub', days: SUB_DAYS }], { worth: SUB_DAYS * (SUB_DAILY + SUB_SCROLLS * UNIT_PRICE.scrolls + UNIT_PRICE.builder), tag: 'best' })],
   },
   {
-    id: 'weekly', tabs: ['sea', 'board', 'isle'], sec: 'deals', icon: 'tab_holdings',
+    id: 'weekly', tabs: ['sea', 'board', 'isle'], sec: 'deals', icon: 'ui_chest',
     name: T('Week’s chest', 'Недельный сундук'),
     text: T('Once a week: a brigade for a week, eighteen hours of speed-ups, thirty auto-battle scrolls, three days of harvest and of the island’s charter.', 'Раз в неделю: бригада на неделю, восемнадцать часов ускорений, тридцать свитков автобоя, трое суток урожая и охранной грамоты.'),
     offers: [o('weekly', 590, WEEKLY, { limit: { n: 1, per: 'week' }, worth: worthOf(WEEKLY) })],
@@ -360,14 +360,14 @@ export const SHOP: ShopFamily[] = [
     offers: line('charm', [290, 590, 990, 1990], UNIT_PRICE.charm, (n) => [{ k: 'charm', n }]),
   },
   {
-    id: 'refill', tabs: ['board'], sec: 'battle', icon: 'prof_surgeon',
+    id: 'refill', tabs: ['board'], sec: 'battle', icon: 'ui_phial',
     name: T('Infirmary: at once', 'Лазарет: мгновенно'),
     text: T('Your fallen of the last day stand again at once, anywhere at sea, with no waystation or port. The price is by their worth, 290 at the least.', 'Павшие за последние сутки сразу снова в строю — где угодно в море, без плавучего дома и порта. Цена — по их стоимости, не меньше 290.'),
     offers: [o('refill', 0, [{ k: 'refill' }])],
   },
   {
     // docs/35: a scroll raises one stack of the line kinds anywhere out of a fight (the shop's creatures: doubloons only).
-    id: 'rscroll', tabs: ['board'], sec: 'battle', icon: 'talent_srv_ships_surgeon',
+    id: 'rscroll', tabs: ['board'], sec: 'battle', icon: 'ui_phial',
     name: T('Scrolls of resurrection', 'Свитки воскрешения'),
     text: T('One scroll raises one stack of your fallen in full, anywhere out of a fight. Not for the shop’s creatures.', 'Один свиток поднимает один отряд павших целиком — где угодно вне боя. Кроме существ из магазина.'),
     offers: line('rs', [290, 590, 990, 1990, 4990, 9900], UNIT_PRICE.rscroll, (n) => [{ k: 'rscroll', n }]),
@@ -393,7 +393,7 @@ export const SHOP: ShopFamily[] = [
 
   // ---------------------------------------------------------------------------------------------- the island
   {
-    id: 'btemp', tabs: ['isle'], sec: 'build', icon: 'prof_carpenter',
+    id: 'btemp', tabs: ['isle'], sec: 'build', icon: 'ui_brigade',
     name: T('Hired brigade', 'Наёмная бригада'),
     text: T('One more building goes up at once while it is hired; two hired at most (a third extends the sooner).', 'Пока бригада нанята, ещё одна постройка строится одновременно; нанять можно две (третья продлит ту, что кончается раньше).'),
     offers: line('btemp', [290, 590, 990, 1990], UNIT_PRICE.builder, (d) => [{ k: 'builder', days: d }], days),
@@ -405,7 +405,7 @@ export const SHOP: ShopFamily[] = [
     offers: [o('bperm_1', 1990, [{ k: 'perm' }]), o('bperm_2', 2990, [{ k: 'perm' }])],
   },
   {
-    id: 'speed', tabs: ['isle', 'sea'], sec: 'build', icon: 'item_storm_glass',
+    id: 'speed', tabs: ['isle', 'sea'], sec: 'build', icon: 'ui_hourglass',
     name: T('Speed-ups', 'Ускорения'),
     text: T('Hours into your store of speed-ups: spend them on any work on the island or the yard’s refit, a job at a time — nothing is lost.', 'Часы в запас ускорений: тратьте на любую стройку острова и перестройку корабля, по одной работе — ничего не сгорает.'),
     offers: line('sp', [290, 590, 990, 1990, 4990], UNIT_PRICE.speed, (m) => [{ k: 'speed', min: m }], (x) => Math.max(60, Math.round(x / 60) * 60)),

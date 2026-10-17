@@ -5,8 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0b0d10" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <!-- The tab's mark: the painted anchor (the login screen asked for a /favicon.ico that was never there — a 404). -->
-  <link rel="icon" type="image/webp" href="/assets/icons/anchor.webp" />
+  <!-- The game's marks (the owner's pack, 2026-10-17: the brass wheel and the anchor on a stormy circle; tools/art/ui_pack.py):
+       the tab's, the home screen's, and the link's picture where the page is shared. -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <meta name="description" content="GRAVETIDE — a Pirate Gothic MMORPG: the ocean is the world, the ship is the character, the captain is the build." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="GRAVETIDE" />
+  <meta property="og:title" content="GRAVETIDE — a Pirate Gothic MMORPG" />
+  <meta property="og:description" content="The ocean is the world. The ship is the character. The captain is the build." />
+  <meta property="og:image" content="https://gravetidegame.com/assets/brand/og_image.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://gravetidegame.com/assets/brand/og_image.jpg" />
+  <!-- The title's painting (the wide one on a desk, the captain at the wheel on a phone on its side) and the first
+       start's loading screen, asked for with the page: the server carries each /assets/ address here to its version. -->
+  <link rel="preload" as="image" href="/assets/art/title_mobile.avif" type="image/avif" media="(max-height: 520px)" fetchpriority="high" />
+  <link rel="preload" as="image" href="/assets/art/title_wide.avif" type="image/avif" media="(min-height: 521px)" fetchpriority="high" />
+  <link rel="preload" as="image" href="/assets/art/load_start.m.avif" type="image/avif" media="(pointer: coarse) and (max-width: 1200px)" fetchpriority="low" />
+  <link rel="preload" as="image" href="/assets/art/load_start.avif" type="image/avif" media="not all and (pointer: coarse), (min-width: 1201px)" fetchpriority="low" />
+  <style>
+    #screen-login .keyart { background-image: url("/assets/art/title_wide.webp"); background-image: image-set(url("/assets/art/title_wide.avif") type("image/avif"), url("/assets/art/title_wide.webp") type("image/webp")); }
+    @media (max-height: 520px) {
+      #screen-login .keyart { background-image: url("/assets/art/title_mobile.webp"); background-image: image-set(url("/assets/art/title_mobile.avif") type("image/avif"), url("/assets/art/title_mobile.webp") type("image/webp")); }
+    }
+  </style>
   <title data-i18n="doc.title">GRAVETIDE — a Pirate Gothic MMORPG</title>
   <!-- A Russian reader never sees the English words the page is written in: the title turns before the first
        paint and the translated texts stay hidden until the game's own script has put them in Russian. -->
@@ -115,6 +140,7 @@
     #boot.on { display: flex; }
     #boot .bt-card { display: flex; flex-direction: column; align-items: center; gap: 10px; width: min(360px, 80vw); }
     #boot .bt-name { font: 600 26px/1 Georgia, serif; letter-spacing: 0.12em; color: #c9a46a; }
+    #boot .bt-name img { display: block; width: auto; height: min(42vh, 260px); max-width: 80vw; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.7)); }
     #boot .bt-bar { display: block; width: 100%; height: 5px; border: 1px solid #6f5a38; border-radius: 3px; overflow: hidden; background: rgba(0, 0, 0, 0.5); }
     #boot .bt-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #6f5a38, #e0b862); transition: width 0.2s; }
     #boot .bt-text { opacity: 0.8; }
@@ -144,21 +170,22 @@
   <link rel="stylesheet" href="/fit.css" />
 </head>
 <body>
-  <div id="boot" role="status" aria-live="polite"><div class="bt-card"><b class="bt-name">GRAVETIDE</b><span class="bt-bar"><i></i></span><small class="bt-text"></small><button class="bt-retry" type="button" hidden></button></div></div>
+  <div id="boot" role="status" aria-live="polite"><div class="bt-card"><b class="bt-name"><picture><source type="image/avif" srcset="/assets/ui/logo_256.avif 256w, /assets/ui/logo_512.avif 512w, /assets/ui/logo_1024.avif 1024w" sizes="(max-height: 520px) 34vw, 40vh" /><img src="/assets/ui/logo_512.webp" srcset="/assets/ui/logo_256.webp 256w, /assets/ui/logo_512.webp 512w, /assets/ui/logo_1024.webp 1024w" sizes="(max-height: 520px) 34vw, 40vh" width="512" height="476" alt="GRAVETIDE" /></picture></b><span class="bt-bar"><i></i></span><small class="bt-text"></small><button class="bt-retry" type="button" hidden></button></div></div>
   <pre id="boot-log" hidden></pre>
   <canvas id="world"></canvas>
 
   <!-- Title / login -->
   <section id="screen-login" class="screen">
-    <div class="keyart" data-asset="art.keyart"></div>
+    <div class="keyart" aria-hidden="true"></div>
+    <!-- The painted logo over the painting's darker top (a desk) or beside the form (a phone on its side): ui/logo_*. -->
+    <div class="login-brand">
+      <h1 class="title login-logo"><picture><source type="image/avif" srcset="/assets/ui/logo_256.avif 256w, /assets/ui/logo_512.avif 512w, /assets/ui/logo_1024.avif 1024w" sizes="(max-height: 520px) 34vw, 40vh" /><img src="/assets/ui/logo_512.webp" srcset="/assets/ui/logo_256.webp 256w, /assets/ui/logo_512.webp 512w, /assets/ui/logo_1024.webp 1024w" sizes="(max-height: 520px) 34vw, 40vh" width="512" height="476" alt="GRAVETIDE" fetchpriority="high" /></picture></h1>
+      <p class="subtitle" data-i18n="login.subtitle">The ocean is the world. The ship is the character. The captain is the build.</p>
+    </div>
     <div class="login-panel panel">
       <div class="row lang-switch" style="gap:6px;justify-content:flex-end">
         <button class="btn btn-small" type="button" data-lang="en" title="English">EN</button>
         <button class="btn btn-small" type="button" data-lang="ru" title="Русский">RU</button>
-      </div>
-      <div class="login-brand">
-        <h1 class="title">GRAVETIDE</h1>
-        <p class="subtitle" data-i18n="login.subtitle">The ocean is the world. The ship is the character. The captain is the build.</p>
       </div>
       <button id="login-continue" class="btn btn-primary hidden" type="button"></button>
       <form id="login-form" onsubmit="return false">

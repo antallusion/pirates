@@ -128,7 +128,7 @@ export function chestCard(state: ClientState): string {
   const self = state.self;
   if (!self || self.dockedAt) return '';
   const goods = Object.entries(self.cargo).filter(([, n]) => (n ?? 0) >= 1);
-  return `<div class="card cmp-card chest-card"><h4 class="card-h">${icon('map_treasure', '', 'ico-md')}${esc(L('chest'))}</h4><p class="muted">${esc(L('chestText'))}</p>
+  return `<div class="card cmp-card chest-card"><h4 class="card-h">${icon('ui_chest', '', 'ico-md')}${esc(L('chest'))}</h4><p class="muted">${esc(L('chestText'))}</p>
     <textarea class="field" data-criddle maxlength="200" rows="2" placeholder="${esc(L('chestRiddle'))}" aria-label="${esc(L('chestRiddle'))}"></textarea>
     <div class="cmp-name bottle-row"><label class="bottle-silver"><span class="muted">${esc(L('chestSilver'))}</span><input class="field" data-csilver type="number" min="100" max="20000" value="500"></label></div>
     ${goods.length ? `<div class="cmp-name bottle-row"><select class="field" data-cgood aria-label="${esc(L('chestGood'))}"><option value="">${esc(L('chestNoGood'))}</option>${goods.map(([g]) => `<option value="${g}">${esc(GOODS[g as GoodId].name)}</option>`).join('')}</select><input class="field" data-cqty type="number" min="0" value="0" style="width:80px" aria-label="${esc(L('chestQty'))}"></div>` : ''}

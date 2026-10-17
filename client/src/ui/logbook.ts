@@ -30,7 +30,7 @@ export function logTabOf(page: string): LogTab {
 
 export function logRail(active: LogTab, state: ClientState): string {
   const tabs: WinTab[] = [
-    { id: 'quests', icon: 'tab_contracts', label: W('jr.quests'), hint: W('jr.questsHint') },
+    { id: 'quests', icon: 'ui_quill', label: W('jr.quests'), hint: W('jr.questsHint') },
     { id: 'company', icon: 'tab_group', label: W('jr.company'), hint: W('jr.companyHint'), badge: state.self?.pvp.challenges.length ?? 0 },
     { id: 'guild', icon: 'tab_guild', label: W('jr.guild'), hint: W('jr.guildHint'), badge: state.guildInvites.length },
     { id: 'letters', icon: 'tab_letters', label: W('jr.letters'), hint: W('jr.lettersHint'), badge: state.unread },

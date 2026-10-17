@@ -13,6 +13,7 @@ import { WORLD_SIZE } from '../../../shared/src/constants.ts';
 import { FOG_CELL, FOG_SIDE, courseAt, fogHas, fogSeen } from '../../../shared/src/data/fog.ts';
 import type { ScoutView, ScoutsView } from '../../../shared/src/fogproto.ts';
 import type { FarCtx, FarLayer } from './farsea.ts';
+import { sprite } from '../assets.ts';
 
 /** A view of the world on a canvas: a world point (x, y) stands at ((x − x0)·k, (y − y0)·k) in the canvas's units, the
  *  view `w` × `h` of them. `time` in seconds drifts the mist (0: still); `alpha` the fog's weight (1: the sea's). */
@@ -279,7 +280,7 @@ export function scoutNow(v: ScoutsView, sc: ScoutView, at: number, nowMs = perfo
   return { ...p, home: d >= (sc.back ?? 0), d };
 }
 
-/** Her scouts on a chart: what is left of each course dashed, the turn a small ring, the scout a little pale sail. */
+/** Her scouts on a chart: what is left of each course dashed, the turn a small ring, the scout her painted cutter. */
 export function drawScouts(g: CanvasRenderingContext2D, v: ScoutsView | null, at: number, tx: (x: number) => number, ty: (y: number) => number, size: number, route = true): void {
   if (!v) return;
   for (const sc of v.list) {
@@ -309,10 +310,23 @@ export function drawScouts(g: CanvasRenderingContext2D, v: ScoutsView | null, at
         g.stroke();
       }
     }
-    // the sail: a small pale lateen, dark-edged, turned to her heading
+    // the scout: the owner's painted cutter from above (2026-10-17, ships/scout_cutter.webp, bow up), turned to her
+    // heading over a pale halo so she reads on the dark chart; until it is in, a small pale lateen, dark-edged
     g.save();
     g.translate(tx(now.x), ty(now.y));
     g.rotate(now.heading);
+    const art = sprite('ship.scout_cutter');
+    if (art) {
+      const len = Math.max(16, size * 2.2);
+      const w = (len * art.img.naturalWidth) / art.img.naturalHeight;
+      g.fillStyle = 'rgba(150,215,225,0.22)';
+      g.beginPath();
+      g.ellipse(0, 0, Math.max(w * 0.75, len * 0.32), len * 0.6, 0, 0, Math.PI * 2);
+      g.fill();
+      g.drawImage(art.img, -w / 2, -len / 2, w, len);
+      g.restore();
+      continue;
+    }
     const s = Math.max(4, size * 0.5);
     g.fillStyle = '#cfeef2';
     g.strokeStyle = 'rgba(0,0,0,0.85)';

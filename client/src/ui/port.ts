@@ -74,7 +74,7 @@ import { bindGoalTaps } from './goaltap.ts';
 const LIS = dict(IS_EN, IS_RU);
 /** A generated job's picture by its kind (docs/11 P4). */
 const JOB_ICON: Record<string, string> = {
-  delivery: 'good_provisions', hunt: 'fire', rescue: 'map_cove', scouting: 'menu_map', smuggling: 'good_dreamleaf', treasure: 'map_treasure',
+  delivery: 'good_provisions', hunt: 'fire', rescue: 'map_cove', scouting: 'ui_spyglass', smuggling: 'good_dreamleaf', treasure: 'map_treasure',
   diplomacy: 'map_contract', revenge: 'danger', investigation: 'ab_spotters_eye', elite: 'danger',
 };
 const L = dict(EN, RU);
@@ -90,7 +90,7 @@ type Tab = 'market' | 'shipyard' | 'tavern' | 'quests' | 'harbour' | 'colours' |
 
 /** The harbour's places by their icons. */
 const TAB_ICON = {
-  market: 'tab_market', shipyard: 'menu_ship', tavern: 'tab_tavern', quests: 'tab_contracts', harbour: 'anchor', holdings: 'tab_holdings', exchange: 'tab_exchange',
+  market: 'tab_market', shipyard: 'menu_ship', tavern: 'tab_tavern', quests: 'ui_quill', harbour: 'ui_anchor', holdings: 'tab_holdings', exchange: 'tab_exchange',
 } as const;
 
 /** The biggest single order the harbour takes (server/src/game/ports.ts refuses |qty| > 500). */

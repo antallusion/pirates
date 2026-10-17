@@ -290,7 +290,7 @@ function tapOrHold(el: HTMLElement, tap: () => void, hold: () => void): void {
 }
 
 /** The art of the controls that are not a shot or an ability (their glyphs stand in while it loads). */
-export const SEA_ART = { fire: 'fire', cast: 'stat_sails', lock: 'item_ranging_glass', menu: 'menu_cabin', news: 'goal', dash: 'dash', dashAlt: 'ab_hard_over' } as const;
+export const SEA_ART = { fire: 'fire', cast: 'stat_sails', lock: 'item_ranging_glass', menu: 'menu_cabin', news: 'ui_bell', dash: 'dash', dashAlt: 'ab_hard_over' } as const;
 
 /** A key's words fit for a chip: none for a key bound to nothing. */
 export const chipKey = (k: string | undefined): string => (!k || k === '—' ? '' : k);
@@ -352,7 +352,7 @@ export class SeaHud {
     this.menuEl = make(buttonHtml({ kind: 'icon', id: 'tc-menu', icon: SEA_ART.menu, glyph: '☰', aria: L('menu'), cls: 'sea-round' })) as HTMLButtonElement;
     // The chart's tab (owner, 2026-10-09): the bottom of its compass ring and a brass tab hanging from the top edge; a tap
     // brings the chart and the menu back down for this mark.
-    this.mmTabEl = make(`<button type="button" id="mm-tab" class="mm-tab hidden" aria-label="${esc(L('mmShow'))}" title="${esc(L('mmShow'))}"><span class="mm-tab-pill">${icon('menu_map', '', 'mm-tab-ico')}<i class="mm-tab-chev" aria-hidden="true"></i></span></button>`) as HTMLButtonElement;
+    this.mmTabEl = make(`<button type="button" id="mm-tab" class="mm-tab hidden" aria-label="${esc(L('mmShow'))}" title="${esc(L('mmShow'))}"><span class="mm-tab-pill">${icon('ui_compass', '', 'mm-tab-ico')}<i class="mm-tab-chev" aria-hidden="true"></i></span></button>`) as HTMLButtonElement;
     this.mmTabEl.addEventListener('click', () => {
       this.mmOut = true;
       this.applyMinimap();
@@ -574,7 +574,7 @@ export class SeaHud {
     swap(this.newsEl, '.k-btn-ico', SEA_ART.news, '!', 'k-btn-ico');
     swap(this.lockEl, '.k-btn-ico', SEA_ART.lock, '◎', 'k-btn-ico');
     const pill = this.mmTabEl.querySelector('.mm-tab-pill');
-    if (pill) pill.innerHTML = `${icon('menu_map', '', 'mm-tab-ico')}<i class="mm-tab-chev" aria-hidden="true"></i>`;
+    if (pill) pill.innerHTML = `${icon('ui_compass', '', 'mm-tab-ico')}<i class="mm-tab-chev" aria-hidden="true"></i>`;
     // the target line's «в дальности» on a narrow screen: the gun's picture (seahud.css)
     const gun = assetUrl(`icon.${SEA_ART.fire}`);
     if (gun) document.documentElement.style.setProperty('--ico-range', `url('${gun}')`);

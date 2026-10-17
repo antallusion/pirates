@@ -200,7 +200,7 @@ function storesCard(sv: ShopView, v: PremiumView): string {
   const chip = (ico: string, label: string, val: string, extra = '') => `<span class="sh-chip">${icon(ico, '', 'ico-sm')}<span class="sh-cl">${esc(label)}</span>${val ? `<b>${val}</b>` : ''}${extra}</span>`;
   const b = sv.boosts;
   const boost = (k: keyof ShopView['boosts'], ico: string) => (b[k] ? chip(ico, L(`b.${k}`), '', `<b data-shend="${b[k]}"></b>`) : '');
-  return `<div class="card sh-stores"><b class="sh-name">${esc(L('inv.title'))}</b><div class="sh-chips">${chip('item_storm_glass', L('inv.speed'), esc(dur(sv.inv.speed * 60_000)))}${chip('sp_mend_hull', L('inv.kits'), String(sv.inv.kits), sv.inv.kits ? `<button type="button" class="btn btn-small sh-use" data-shkit>${esc(L('inv.use'))}</button>` : '')}${chip('item_rabbit_foot', L('inv.charms'), String(sv.inv.charms))}${chip(AUTO_SCROLL_ICON, L('inv.scrolls'), String(v.scrolls ?? 0))}${sv.inv.moves ? chip('tab_isles', L('inv.moves'), String(sv.inv.moves)) : ''}${sv.inv.rs ? chip('talent_srv_ships_surgeon', L('inv.rs'), String(sv.inv.rs)) : ''}${boost('sub', 'tattoo_crown')}${boost('xp', 'xp')}${boost('wind', 'sp_fair_wind')}${boost('prod', 'build_farm')}${boost('shield', 'build_fort')}</div></div>`;
+  return `<div class="card sh-stores"><b class="sh-name">${esc(L('inv.title'))}</b><div class="sh-chips">${chip('ui_hourglass', L('inv.speed'), esc(dur(sv.inv.speed * 60_000)))}${chip('sp_mend_hull', L('inv.kits'), String(sv.inv.kits), sv.inv.kits ? `<button type="button" class="btn btn-small sh-use" data-shkit>${esc(L('inv.use'))}</button>` : '')}${chip('item_rabbit_foot', L('inv.charms'), String(sv.inv.charms))}${chip(AUTO_SCROLL_ICON, L('inv.scrolls'), String(v.scrolls ?? 0))}${sv.inv.moves ? chip('tab_isles', L('inv.moves'), String(sv.inv.moves)) : ''}${sv.inv.rs ? chip('ui_phial', L('inv.rs'), String(sv.inv.rs)) : ''}${boost('sub', 'tattoo_crown')}${boost('xp', 'xp')}${boost('wind', 'sp_fair_wind')}${boost('prod', 'build_farm')}${boost('shield', 'build_fort')}</div></div>`;
 }
 
 /** The builders and the work under way: each job its clock, «Ускорить» from her store and «Завершить» for doubloons
@@ -213,11 +213,11 @@ function workCard(sv: ShopView, refit = false): string {
   const rows = jobs.map((j) => {
     const done = Math.round(Math.min(1, Math.max(0, (sv.now - j.start) / Math.max(1, j.end - j.start))) * 100);
     return `<div class="sh-job"><span class="sh-jn">${esc(name(j))}</span><b class="sh-jt" data-shend="${j.end}"></b><span class="sh-jbar"><i style="width:${done}%"></i></span>
-      <button type="button" class="btn btn-small sh-jb" data-shspeed="${j.id}"${sv.inv.speed > 0 ? '' : ' disabled'} title="${esc(`${L('inv.speed')}: ${dur(sv.inv.speed * 60_000)}`)}">${icon('item_storm_glass', '', 'ico-xs')}${esc(L('job.speed'))}</button><button type="button" class="btn btn-small btn-primary sh-jb" data-shfin="${j.id}" data-n="${j.finish}">${esc(L('job.finish'))} ${doubloonIcon('ico-xs')}${fmt(j.finish)}</button></div>`;
+      <button type="button" class="btn btn-small sh-jb" data-shspeed="${j.id}"${sv.inv.speed > 0 ? '' : ' disabled'} title="${esc(`${L('inv.speed')}: ${dur(sv.inv.speed * 60_000)}`)}">${icon('ui_hourglass', '', 'ico-xs')}${esc(L('job.speed'))}</button><button type="button" class="btn btn-small btn-primary sh-jb" data-shfin="${j.id}" data-n="${j.finish}">${esc(L('job.finish'))} ${doubloonIcon('ico-xs')}${fmt(j.finish)}</button></div>`;
   }).join('');
   const head = refit || !c
     ? `<b class="sh-name">${esc(L('job.title'))}</b>${!refit ? `<span class="sh-meta">${esc(L('cr.none'))}</span>` : ''}`
-    : `<b class="sh-name">${icon('prof_carpenter', '', 'ico-sm')}${esc(L('cr.title', { busy: c.busy, n: c.n }))}</b><span class="sh-meta">${esc(L('cr.parts', { a: c.base, b: c.perm, c: c.temp.length, d: c.sub }))}</span>${c.temp.map((t) => `<span class="sh-meta sh-clock">${icon('prof_carpenter', '', 'ico-xs')}<b data-shend="${t}"></b></span>`).join('')}`;
+    : `<b class="sh-name">${icon('ui_brigade', '', 'ico-sm')}${esc(L('cr.title', { busy: c.busy, n: c.n }))}</b><span class="sh-meta">${esc(L('cr.parts', { a: c.base, b: c.perm, c: c.temp.length, d: c.sub }))}</span>${c.temp.map((t) => `<span class="sh-meta sh-clock">${icon('ui_brigade', '', 'ico-xs')}<b data-shend="${t}"></b></span>`).join('')}`;
   return `<div class="card sh-work"><div class="sh-wh">${head}</div>${rows || (refit ? '' : `<p class="sh-meta">${esc(L('job.none'))}</p>`)}</div>`;
 }
 
@@ -238,8 +238,8 @@ function topUp(v: PremiumView): string {
     ${v.pay ? `<p class="pm-paynote">${starIcon()}${esc(tgPayNote())}</p>` : `<p class="pm-soon">${icon('tab_letters', '', 'ico-sm')}${esc(L('top.note'))}</p>`}</div>`;
 }
 
-const TAB_ICON: Record<ShopTab, string> = { sea: 'menu_ship', board: 'bt_charge', isle: 'tab_isles' };
-const SEC_ICON: Record<ShopSec, string> = { deals: 'tattoo_star', ships: 'menu_ship', supply: 'ammo_round', voyage: 'sp_fair_wind', units: 'build_kennel', recruit: 'build_barracks', battle: 'tab_contracts', build: 'prof_carpenter', res: 'good_timber', isle: 'build_fort' };
+const TAB_ICON: Record<ShopTab, string> = { sea: 'menu_ship', board: 'ui_cutlasses', isle: 'tab_isles' };
+const SEC_ICON: Record<ShopSec, string> = { deals: 'tattoo_star', ships: 'menu_ship', supply: 'ammo_round', voyage: 'sp_fair_wind', units: 'build_kennel', recruit: 'build_barracks', battle: AUTO_SCROLL_ICON, build: 'ui_brigade', res: 'good_timber', isle: 'build_fort' };
 
 /** The families on a shelf of a tab (a family of several tabs stands on its own shelf in its first tab, on the last
  *  shelf of the others: the speed-ups under the sea's «Поход», for the yard's refit). */
