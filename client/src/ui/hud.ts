@@ -1315,7 +1315,7 @@ export class Hud {
     }
     // The fog of war (owner, 2026-10-17): what she has not seen lies under it — islands, ports, lairs, the sea's things;
     // ships, her marks and her scouts over it.
-    drawFog(g, state.seen, state.seenVer, { x0: own.x - range, y0: own.y - range, k, w: W, h: H, time: settings().reduceMotion ? 0 : performance.now() / 1000, q: 1 });
+    drawFog(g, state.seen, state.seenVer, { x0: own.x - range, y0: own.y - range, k, w: W, h: H, time: settings().reduceMotion ? 0 : performance.now() / 1000, q: 1, tone: 1 });
     drawScouts(g, state.scouts, state.scoutsAt, tx, ty, 9);
     // Ships by shape (§11.2): circle a friend, square a neutral, diamond an enemy, notched diamond a bounty.
     const cb = settings().colorblind;

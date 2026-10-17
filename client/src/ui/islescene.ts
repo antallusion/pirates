@@ -513,6 +513,11 @@ export class IsleScene {
     this.select(s.plot !== undefined ? { plot: s.plot } : { town: s.town! });
   }
 
+  /** The ships' sheet open (a scout sent from the chart comes back to it: the fog of war, owner 2026-10-17). */
+  openYard(): void {
+    if (!(this.pick && 'panel' in this.pick && this.pick.panel === 'yard')) this.select({ panel: 'yard' });
+  }
+
   /** Open a spot's card (null: close it); `show` brings the spot into the view. */
   private select(p: IsleScene['pick'], show = false): void {
     const same = (a: IsleScene['pick'], b: IsleScene['pick']) => JSON.stringify(a) === JSON.stringify(b);

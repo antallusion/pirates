@@ -3,7 +3,7 @@
 // projectiles & particles → darkness/light pass → fog/rain → screen-space overlays.
 // Art rules: docs/06_ART_DIRECTION.md (near-black water, warm lanterns vs cold ocean, turquoise ≤ 8%).
 
-import { drawFog } from './fog.ts'; // the fog of war (owner, 2026-10-17)
+import { drawFog, underFog } from './fog.ts'; // the fog of war (owner, 2026-10-17)
 import { LFG_GOAL_DEFS, parseLfgTag } from '../../../shared/src/data/social.ts';
 import { lfgLabel } from '../ui/social.ts';
 import { HULLS, LAMPS, LOOK_COLORS, decodeLook } from '../../../shared/src/data/looks.ts';
@@ -1352,7 +1352,7 @@ export class Renderer {
     // Name label when zoomed out enough to matter or discovered.
     const known = state.discovered.has(is.id);
     // A village's island goes by the village's name, and the port writes it already.
-    if (known && is.r > 180 && this.zoom < 2.2 && !is.portId && !is.town) {
+    if (known && is.r > 180 && this.zoom < 2.2 && !is.portId && !is.town && !underFog(state.seen, is.x, is.y)) {
       g.font = `italic ${Math.round(clamp(is.r * this.zoom * 0.08, 11, 18))}px "Cormorant Garamond", Georgia, serif`;
       g.fillStyle = 'rgba(216,210,196,0.55)';
       g.textAlign = 'center';
@@ -1908,7 +1908,7 @@ export class Renderer {
       g.font = `${Math.round(clamp(14 * this.zoom, 12, 22))}px "IM Fell English SC", Georgia, serif`;
       g.textAlign = 'center';
       g.fillStyle = 'rgba(0,0,0,0.6)';
-      const name = placeName(p.name);
+      const name = underFog(state.seen, p.x, p.y) ? '' : placeName(p.name); // (no name under the fog of war)
       g.fillText(name, this.sx(p.x) + 1, this.sy(p.y) - 40 * this.zoom + 1);
       g.fillStyle = FACTIONS[p.faction].lantern;
       g.fillText(name, this.sx(p.x), this.sy(p.y) - 40 * this.zoom);

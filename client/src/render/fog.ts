@@ -25,6 +25,8 @@ export interface FogView {
   alpha?: number;
   /** The GL canvas's pixels per unit of the view (1 for a small dial; ½ for a screen — the fog is soft anyway). */
   q?: number;
+  /** The mist's tone: 0 the sea's dark murk; 1 a paler grey cloud (the minimap's dial is near black under it). */
+  tone?: number;
 }
 
 /** What of a list of the chart's things she may see: those in squares she has seen (all of them before her fog came). */
@@ -58,6 +60,7 @@ let maskVer = -1;
 const lum = new Uint8Array(FOG_SIDE * FOG_SIDE);
 let canvas2d: HTMLCanvasElement | null = null;
 let canvas2dVer = -1;
+let canvas2dTone = 0;
 
 /** The mask (255 under the fog) for this version of the bits. */
 function mask(bits: Uint8Array, ver: number): Uint8Array {
@@ -77,11 +80,11 @@ precision highp float;
 #else
 precision mediump float;
 #endif
-uniform sampler2D mask; uniform vec2 org; uniform vec2 span; uniform vec2 res; uniform float t; uniform float a; uniform float blur;
+uniform sampler2D mask; uniform vec2 org; uniform vec2 span; uniform vec2 res; uniform float t; uniform float a; uniform float blur; uniform float tone; uniform float oct;
 float hash(vec2 p) { p = mod(p, 289.0); vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 float noise(vec2 p) { vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y); }
-float fbm(vec2 p) { float v = 0.0, w = 0.5; for (int i = 0; i < 4; i++) { v += w * noise(p); p = p * 2.03 + vec2(17.0, 9.0); w *= 0.5; } return v; }
+float fbm(vec2 p) { float v = 0.0, w = 0.5, s = 0.0; for (int i = 0; i < 4; i++) { if (float(i) >= oct) break; v += w * noise(p); s += w; p = p * 2.03 + vec2(17.0, 9.0); w *= 0.5; } return v / s * 0.9375; }
 float m(vec2 p) { if (p.x < 0.0 || p.y < 0.0 || p.x > 1.0 || p.y > 1.0) return 1.0; return texture2D(mask, p).r; }
 void main() {
   vec2 uv = gl_FragCoord.xy / res;
@@ -89,12 +92,12 @@ void main() {
   float c = blur;
   float f = m(p) * 0.36 + (m(p + vec2(c, 0.0)) + m(p - vec2(c, 0.0)) + m(p + vec2(0.0, c)) + m(p - vec2(0.0, c))) * 0.12
     + (m(p + vec2(c, c)) + m(p - vec2(c, c)) + m(p + vec2(c, -c)) + m(p + vec2(-c, c))) * 0.04;
-  vec2 q = p * 40.0;
-  float n = fbm(q + vec2(t * 0.045, t * 0.028));
-  float n2 = fbm(q * 2.3 + vec2(-t * 0.06, t * 0.035) + 5.2);
+  vec2 q = p * 16.0;
+  float n = fbm(q + vec2(t * 0.018, t * 0.011));
+  float n2 = fbm(q * 2.6 + vec2(-t * 0.026, t * 0.015) + 5.2);
   float d = smoothstep(0.26, 0.74, f + (n - 0.5) * 0.55);
-  vec3 col = mix(vec3(0.028, 0.038, 0.048), vec3(0.19, 0.21, 0.24), clamp(n2 * n2 * 1.5, 0.0, 1.0));
-  float al = d * a * (0.86 + 0.14 * n2);
+  vec3 col = mix(mix(vec3(0.028, 0.038, 0.048), vec3(0.15, 0.17, 0.19), tone), mix(vec3(0.19, 0.21, 0.24), vec3(0.36, 0.39, 0.42), tone), clamp(n2 * n2 * 1.5, 0.0, 1.0));
+  float al = d * a * (0.93 + 0.07 * n2);
   gl_FragColor = vec4(col * al, al);
 }`;
 
@@ -138,7 +141,7 @@ class FogGl {
     const at = gl.getAttribLocation(prog, 'p');
     gl.enableVertexAttribArray(at);
     gl.vertexAttribPointer(at, 2, gl.FLOAT, false, 0, 0);
-    for (const n of ['mask', 'org', 'span', 'res', 't', 'a', 'blur']) this.u[n] = gl.getUniformLocation(prog, n);
+    for (const n of ['mask', 'org', 'span', 'res', 't', 'a', 'blur', 'tone', 'oct']) this.u[n] = gl.getUniformLocation(prog, n);
     this.tex = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -174,6 +177,10 @@ class FogGl {
     gl.uniform1f(this.u.t, v.time % 4000);
     gl.uniform1f(this.u.a, v.alpha ?? 1);
     gl.uniform1f(this.u.blur, 0.62 / FOG_SIDE);
+    gl.uniform1f(this.u.tone, v.tone ?? 0);
+    // the mist's finer octaves only where they are bigger than a few pixels (no static on a far chart)
+    const unit = (WORLD_SIZE / 16) * v.k * (pw / v.w);
+    gl.uniform1f(this.u.oct, Math.max(1, Math.min(4, Math.floor(Math.log2(Math.max(1, unit / 6))) + 1)));
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     return true;
   }
@@ -214,14 +221,16 @@ function draw2d(g: CanvasRenderingContext2D, bits: Uint8Array, ver: number, v: F
     canvas2d = document.createElement('canvas');
     canvas2d.width = canvas2d.height = FOG_SIDE;
   }
-  if (canvas2dVer !== ver || maskOf !== bits) {
+  const tone = v.tone ?? 0;
+  if (canvas2dVer !== ver || maskOf !== bits || canvas2dTone !== tone) {
+    canvas2dTone = tone;
     const m = mask(bits, ver);
     const cg = canvas2d.getContext('2d')!;
     const img = cg.createImageData(FOG_SIDE, FOG_SIDE);
     for (let i = 0; i < m.length; i++) {
-      img.data[i * 4] = 8;
-      img.data[i * 4 + 1] = 11;
-      img.data[i * 4 + 2] = 15;
+      img.data[i * 4] = 8 + tone * 50;
+      img.data[i * 4 + 1] = 11 + tone * 54;
+      img.data[i * 4 + 2] = 15 + tone * 56;
       img.data[i * 4 + 3] = m[i] ? 236 : 0;
     }
     cg.putImageData(img, 0, 0);

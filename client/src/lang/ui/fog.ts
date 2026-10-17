@@ -18,7 +18,7 @@ export const EN = {
   auto: 'Auto — nearest fog',
   pick: 'Pick on the map',
   recall: 'Recall',
-  pickHint: 'Tap the fog on the map: {name} sails there and back ({km} km from the island at most).',
+  pickHint: 'Tap the fog: {name} sails there and back (up to {km} km from the island).',
   cancel: 'Cancel',
   legend: 'your scout',
 };
@@ -40,7 +40,7 @@ export const RU: Record<keyof typeof EN, string> = {
   auto: 'Авто — ближайший туман',
   pick: 'Выбрать на карте',
   recall: 'Отозвать',
-  pickHint: 'Нажмите на туман на карте: «{name}» сходит туда и обратно (не дальше {km} км от острова).',
+  pickHint: 'Нажмите на туман: «{name}» сходит туда и обратно (до {km} км от острова).',
   cancel: 'Отмена',
   legend: 'ваш разведчик',
 };

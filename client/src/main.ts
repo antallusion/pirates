@@ -217,7 +217,11 @@ worldMap.onGoal = (key) => startGoal(key);
 worldMap.onScoutSend = (id, x, y) => {
   net.send({ t: 'scout', action: 'send', id, x: Math.round(x), y: Math.round(y) });
   worldMap.scoutPick = null;
-  closeModal();
+  // (a beat later: the tap's own click must not land on the island under the chart and shut the ships' sheet)
+  setTimeout(() => {
+    if (modal === 'map') closeModal();
+    if (isleScene.isOpen) isleScene.openYard();
+  }, 220);
 };
 // docs/16 #36: the helmsman takes her to her mark; the pill at the top of the stack stops him.
 const EL = dict(EASE_EN, EASE_RU);
