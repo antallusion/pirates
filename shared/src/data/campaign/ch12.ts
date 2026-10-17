@@ -19,8 +19,8 @@ export const CHAPTER: ChapterSrc = {
     {
       t: ['Cold Try-Works', 'Остывшие салотопни'],
       b: [
-        'At {hub} the boats lie keel-up on the shingle, and the harpoons are rusting in their racks. Gunnar Teal will not talk to a southerner until she has taken a whale in these waters. He says it as a dare.',
-        'В порту {hub} лодки лежат на гальке кверху килем, гарпуны ржавеют в стойках. Гуннар Тил не станет говорить с южанкой, пока та не добудет кита в здешних водах. Он говорит это как вызов.',
+        'At {hub} the boats lie keel-up on the shingle, and the harpoons are rusting in their racks. Gunnar Teal will not talk to a captain from the south until that captain has taken a whale in these waters. He says it as a dare.',
+        'В порту {hub} лодки лежат на гальке кверху килем, гарпуны ржавеют в стойках. Гуннар Тил не станет говорить с пришлым капитаном с юга, пока тот не добудет кита в здешних водах. Он говорит это как вызов.',
       ],
       d: [
         'Gunnar runs his hand over the whale’s flank: old scars like rope burns, and every one of them faces north.',

@@ -5303,6 +5303,8 @@ body.touch.sea-docked #touch > :is(#tc-stick, .tc-special, #tc-target) { display
 .gs-kind.gs-k-side { color: #b8a6d8; }
 .gs-kind.gs-k-job, .gs-kind.gs-k-contract { color: #9ab8c8; }
 .gs-cdone { color: #8fc07a; }
+.gs-h .gs-aside { margin-left: auto; font: 600 12px/1 var(--sans); letter-spacing: 0; color: var(--fog, #9a958a); font-variant-numeric: tabular-nums; }
+@media (max-height: 420px) { .gs-cprog { display: none; } }
 /* docs/36: the port's «Кампания» — where she stands, the quest now, the next ones locked */
 .q-cmp-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; margin: 2px 0 8px; }
 .q-cmp-head b { color: var(--bone); overflow-wrap: anywhere; }

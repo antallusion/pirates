@@ -131,8 +131,8 @@ function row(x: GoalLine, portName: (id: string) => string, where = ''): string 
   return `<div class="gs-row gs-${x.kind}${x.done ? ' done' : ''}" data-gkey="${esc(x.key)}">${icon(art, '◆', 'gs-ico')}<span class="gs-t"><b>${tag}${esc(title)}</b><small>${esc(sub)}</small>${bar(x.progress, x.need, x.done)}</span>${pay}${sail}</div>`;
 }
 
-function section(cls: string, title: string, art: string, body: string): string {
-  return `<section class="gs-sec ${cls}"><h3 class="gs-h">${icon(art, '', 'ico-sm')}<span>${esc(title)}</span></h3>${body}</section>`;
+function section(cls: string, title: string, art: string, body: string, aside = ''): string {
+  return `<section class="gs-sec ${cls}"><h3 class="gs-h">${icon(art, '', 'ico-sm')}<span>${esc(title)}</span>${aside ? `<small class="gs-aside">${esc(aside)}</small>` : ''}</h3>${body}</section>`;
 }
 
 const empty = (k: 'campaignNone' | 'activeNone' | 'dailyNone') => `<p class="muted gs-empty">${esc(L(k))}</p>`;
@@ -159,7 +159,7 @@ export function campaignHtml(v: GoalSheetView, portName: (id: string) => string)
   }).join('') || empty('campaignNone');
   const pct = Math.min(100, (c.at / Math.max(1, c.total)) * 100);
   const foot = `<p class="gs-foot gs-cprog"><span>${esc(L('progress', { n: c.at, of: c.total }))}</span><span class="gs-bar" aria-hidden="true"><i style="width:${pct.toFixed(1)}%"></i></span></p>`;
-  return section('gs-campaign', L('campaign'), 'tab_legends', body + foot);
+  return section('gs-campaign', L('campaign'), 'tab_legends', body + foot, `${c.at}/${c.total}`);
 }
 
 /** The quests and contracts taken, and the day's orders (the scrolling part above the lent blocks). */

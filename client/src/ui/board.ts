@@ -20,7 +20,8 @@ import { esc, icon, money, xpBadge } from './dom.ts';
 import { placeName } from './maps.ts';
 import { distWords } from './journal.ts';
 import type { WinTab } from './kit/window.ts';
-import { classSwitch, questClass } from './questclass.ts';
+import { classSwitch, classWord, questClass } from './questclass.ts';
+import type { QuestClass } from './questclass.ts';
 import type { QuestKind } from '../../../shared/src/data/questclass.ts';
 import { chipRow } from './kit/window.ts';
 
@@ -65,6 +66,9 @@ export interface BoardItem {
   stores: boolean;
   /** Taken already (a card of hers, «Плыть»). */
   taken: boolean;
+  /** docs/36 §1: a quest's class (its word on the card), and a campaign quest's place (the chapter, the quest in it). */
+  cls?: QuestClass;
+  cmp?: { ch: number; k: number; size: number };
   chips: BoardChip[];
   score: number;
 }
@@ -123,6 +127,7 @@ export function boardItems(view: PortView, state: ClientState): BoardItem[] {
     const where = d ? (d.port ? placeName(port(d.port)?.name ?? '') : d.island !== undefined ? placeName(state.islands.get(d.island)?.name ?? '') : '') : '';
     out.push({ kind: 'quest', id: q.id, title: serverText(q.name), text: `${serverText(q.summary)} ${q.steps.map((t, i) => `${i + 1}. ${serverText(t)}`).join(' ')}`, art, silver: q.silver, xp: q.xp,
       ...(q.band ? { band: q.band } : {}), dest: d ? { x: d.x, y: d.y, name: where } : null, blocked: q.blocked, urgent: !!q.urgent, group: !!q.group, path: !!q.path, stores: !!q.pays?.stores, taken: false,
+      cls: questClass(q), ...(q.cmp ? { cmp: { ch: q.cmp.ch, k: q.cmp.k, size: q.cmp.size } } : {}), ...(q.cmp?.label ? { title: `${serverText(q.cmp.label)}: ${serverText(q.name)}` } : {}),
       chips: chipsOfQuest(q.kind, q.category, !!q.urgent),
       score: (q.silver + q.xp * 3) * fit(q.band) * (q.urgent ? 1.4 : 1) * (q.blocked ? 0.05 : 1) });
   }
@@ -133,7 +138,7 @@ export function boardItems(view: PortView, state: ClientState): BoardItem[] {
     if (!visit.offered.has(`q:${q.id}`)) continue;
     const t = q.target;
     taken.push({ kind: 'quest', id: q.id, title: serverText(q.name), text: serverText(q.text), art: 'goal', silver: q.silver ?? 0, xp: q.xp ?? 0, dest: t && !t.region ? { x: t.x, y: t.y, name: placeName(port(t.port)?.name ?? '') } : null,
-      blocked: null, urgent: false, group: false, path: false, stores: false, taken: true, chips: chipsOfQuest(q.kind, q.category, false), score: 0 });
+      blocked: null, urgent: false, group: false, path: false, stores: false, taken: true, chips: chipsOfQuest(q.kind, q.category, false), score: 0, cls: questClass(q) });
   }
   for (const c of self?.contracts ?? []) {
     if (!visit.offered.has(`c:${c.id}`)) continue;
@@ -168,7 +173,8 @@ export function boardChips(items: BoardItem[], state: ClientState, view: PortVie
 
 /** The meta line of a card: what it is, the band in its danger's colour and the word for it, where and how far. */
 function meta(x: BoardItem, state: ClientState, mine: number): string {
-  const parts: string[] = [esc(x.kind === 'contract' ? W('q.contract') : W('q.quest'))];
+  const parts: string[] = [esc(x.kind === 'contract' ? W('q.contract') : x.cls ? classWord(x.cls) : W('q.quest'))];
+  if (x.cmp) parts.push(esc(L('cmpWhere', { ch: x.cmp.ch, n: x.cmp.k + 1, of: x.cmp.size })));
   if (x.band) {
     const t = bandThreat(x.band, mine);
     const b = x.band[0] === x.band[1] ? L('bandOne', { lo: x.band[0] }) : L('band', { lo: x.band[0], hi: x.band[1] });
@@ -209,7 +215,7 @@ function campaignPage(items: BoardItem[], state: ClientState, mine: number): str
   const now = [...itemsOf(items, 'campaign')];
   // her quest under way, wherever she took it: its card with «Плыть»
   const act = c.active ? state.self?.quests.find((q) => q.id === c.active) : undefined;
-  if (act && !now.some((x) => x.id === act.id)) now.unshift({ kind: 'quest', id: act.id, title: serverText(act.name), text: serverText(act.text), art: 'tab_legends', silver: act.silver ?? 0, xp: act.xp ?? 0, dest: null, blocked: null, urgent: false, group: false, path: false, stores: false, taken: true, chips: ['campaign'], score: 0 });
+  if (act && !now.some((x) => x.id === act.id)) now.unshift({ kind: 'quest', id: act.id, title: serverText(act.name), text: serverText(act.text), art: 'tab_legends', silver: act.silver ?? 0, xp: act.xp ?? 0, dest: null, blocked: null, urgent: false, group: false, path: false, stores: false, taken: true, chips: ['campaign'], score: 0, cls: 'campaign', cmp: { ch: c.ch, k: c.k, size: c.size } });
   const list = now.length ? `<div class="mk-list q-list">${now.map((x) => row(x, state, mine)).join('')}</div>` : '';
   const next = c.next.length ? `<div class="q-cmp-next"><div class="giver-h">${esc(L('cmpNext'))}</div>${c.next.map((x) => `<div class="w-row q-row q-off q-locked">${icon('tab_legends', '', 'w-row-ico')}<span class="w-row-t"><b>${esc(serverText(x.name))}</b><small>${esc(L('cmpWhere', { ch: x.ch, n: x.k + 1, of: x.size }))}</small></span><span class="w-row-b"><small class="q-why">${esc(serverText(`Level ${x.gate}`))}</small></span></div>`).join('')}</div>` : '';
   return `${head}${list || (c.done ? '' : `<p class="muted">${esc(L('cmpNone'))}</p>`)}${next}`;
