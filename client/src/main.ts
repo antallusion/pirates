@@ -132,7 +132,7 @@ import { EN as HUD_EN, RU as HUD_RU } from './lang/ui/hud.ts';
 const HUD_L = dict(HUD_EN, HUD_RU);
 import { applyDataLocale, NAME_RU } from './lang/data.ts';
 import { personName } from './lang/names.ts';
-import { loadCampaignWords, serverText } from './lang/server.ts';
+import { campaignWordsReady, loadCampaignWords, serverText } from './lang/server.ts';
 import { FACTIONS } from '../../shared/src/data/factions.ts';
 import { placeName } from './ui/maps.ts';
 import type { Key } from './i18n.ts';
@@ -1039,8 +1039,9 @@ onSettings((s) => {
 });
 document.documentElement.lang = lang();
 applyDataLocale(lang());
-// docs/36: the campaign's 720 quests' words come after the first screen (a module of their own)
-setTimeout(() => void loadCampaignWords().then(() => modal && refreshModal()), 1500);
+// docs/36: the campaign's 720 quests' words, a module of their own, asked for at once (they come while she logs in); till
+// then its lines show an ellipsis (cmpText) and its toasts wait for them — never English
+void loadCampaignWords().then(() => modal && refreshModal());
 flagsCss(); // the colours' stylesheet (docs/24; index.html is the sea HUD's)
 translateDom();
 markLang();
@@ -1392,6 +1393,11 @@ net.on(onMessage);
 /** The first look at the sea had its loading screen. */
 let startLoaded = false;
 function onMessage(m: ServerMsg): void {
+  // docs/36: a word of the campaign before its words are in waits for them (a moment) rather than show English
+  if (lang() === 'ru' && !campaignWordsReady() && (m.t === 'toast' || m.t === 'quest_done') && /[A-Za-z]/.test(serverText(m.t === 'toast' ? m.msg : m.name))) {
+    void loadCampaignWords().then(() => onMessage(m));
+    return;
+  }
   const hadTac = !!state.boardTac;
   state.apply(m);
   // a boarding opens: its loading screen until the decks, the figures and their poses are in (warmed while she closed in)

@@ -16,7 +16,7 @@ import type { QuestKind } from '../../../shared/src/data/questclass.ts';
 import type { CampaignView } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/goalsheet.ts';
-import { serverText } from '../lang/server.ts';
+import { cmpText, serverText } from '../lang/server.ts';
 import { esc, icon, money } from './dom.ts';
 import { classWord, questClass } from './questclass.ts';
 import type { QuestClass } from './questclass.ts';
@@ -121,9 +121,10 @@ function row(x: GoalLine, portName: (id: string) => string, where = ''): string 
     sub = x.bounty ? L('sunk', { n: x.progress, need: x.need }) : x.toPort ? L('to', { port: portName(x.toPort) }) : '';
     art = x.bounty ? 'wanted' : x.good ? `good_${x.good}` : 'map_contract';
   } else {
-    title = serverText(x.title);
+    const tr = x.kind === 'campaign' ? cmpText : serverText; // (the campaign's words: never English while they load)
+    title = tr(x.title);
     const steps = (x.steps ?? 1) > 1 ? `${L('step', { n: x.step ?? 1, of: x.steps ?? 1 })} · ` : '';
-    sub = `${where}${steps}${serverText(x.text)}${x.need > 1 ? ` (${x.progress}/${x.need})` : ''}`;
+    sub = `${where}${steps}${tr(x.text)}${x.need > 1 ? ` (${x.progress}/${x.need})` : ''}`;
   }
   const tag = x.kind === 'daily' ? '' : `<em class="gs-kind gs-k-${x.kind}">${esc(classWord(x.kind))}</em>`;
   const pay = `<span class="gs-pay">${x.silver ? money(x.silver) : ''}</span>`;
@@ -154,8 +155,8 @@ export function campaignHtml(v: GoalSheetView, portName: (id: string) => string)
     const btn = c.blocked
       ? `<span class="gs-wait">${esc(serverText(c.blocked))}</span>`
       : `<button type="button" class="btn btn-small btn-primary gs-take" data-gtake="${esc(t.id)}">${esc(L('take'))}</button>`;
-    const label = t.label ? `${serverText(t.label)}: ` : '';
-    return `<div class="gs-row gs-campaign-take" data-gkey="q:${esc(t.id)}">${icon('tab_legends', '◆', 'gs-ico')}<span class="gs-t"><b><em class="gs-kind gs-k-campaign">${esc(classWord('campaign'))}</em>${esc(label + serverText(t.name))}</b><small>${esc(where + serverText(t.text))}</small></span><span class="gs-pay"></span>${btn}</div>`;
+    const label = t.label ? `${cmpText(t.label)}: ` : '';
+    return `<div class="gs-row gs-campaign-take" data-gkey="q:${esc(t.id)}">${icon('tab_legends', '◆', 'gs-ico')}<span class="gs-t"><b><em class="gs-kind gs-k-campaign">${esc(classWord('campaign'))}</em>${esc(label + cmpText(t.name))}</b><small>${esc(where + cmpText(t.text))}</small></span><span class="gs-pay"></span>${btn}</div>`;
   }).join('') || empty('campaignNone');
   const pct = Math.min(100, (c.at / Math.max(1, c.total)) * 100);
   const foot = `<p class="gs-foot gs-cprog"><span>${esc(L('progress', { n: c.at, of: c.total }))}</span><span class="gs-bar" aria-hidden="true"><i style="width:${pct.toFixed(1)}%"></i></span></p>`;

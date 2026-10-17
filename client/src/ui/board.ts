@@ -15,7 +15,10 @@ import type { ClientState } from '../state.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/board.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
-import { serverText } from '../lang/server.ts';
+import { cmpText, serverText } from '../lang/server.ts';
+
+/** A quest's words: the campaign's never in English while they load (docs/36). */
+const qtext = (kind: string, s: string): string => (kind === 'campaign' ? cmpText(s) : serverText(s));
 import { esc, icon, money, xpBadge } from './dom.ts';
 import { placeName } from './maps.ts';
 import { distWords } from './journal.ts';
@@ -125,9 +128,9 @@ export function boardItems(view: PortView, state: ClientState): BoardItem[] {
     const art = q.portrait ? `portrait.${q.portrait}` : q.kind === 'legend' ? 'tab_legends' : q.kind === 'path' ? 'menu_crew' : q.kind === 'job' ? JOB_ICON[q.category ?? ''] ?? 'goal' : q.category === 'arc' ? 'tab_legends' : 'goal';
     const d = q.dest;
     const where = d ? (d.port ? placeName(port(d.port)?.name ?? '') : d.island !== undefined ? placeName(state.islands.get(d.island)?.name ?? '') : '') : '';
-    out.push({ kind: 'quest', id: q.id, title: serverText(q.name), text: `${serverText(q.summary)} ${q.steps.map((t, i) => `${i + 1}. ${serverText(t)}`).join(' ')}`, art, silver: q.silver, xp: q.xp,
+    out.push({ kind: 'quest', id: q.id, title: qtext(q.kind, q.name), text: `${qtext(q.kind, q.summary)} ${q.steps.map((t, i) => `${i + 1}. ${qtext(q.kind, t)}`).join(' ')}`, art, silver: q.silver, xp: q.xp,
       ...(q.band ? { band: q.band } : {}), dest: d ? { x: d.x, y: d.y, name: where } : null, blocked: q.blocked, urgent: !!q.urgent, group: !!q.group, path: !!q.path, stores: !!q.pays?.stores, taken: false,
-      cls: questClass(q), ...(q.cmp ? { cmp: { ch: q.cmp.ch, k: q.cmp.k, size: q.cmp.size } } : {}), ...(q.cmp?.label ? { title: `${serverText(q.cmp.label)}: ${serverText(q.name)}` } : {}),
+      cls: questClass(q), ...(q.cmp ? { cmp: { ch: q.cmp.ch, k: q.cmp.k, size: q.cmp.size } } : {}), ...(q.cmp?.label ? { title: `${cmpText(q.cmp.label)}: ${qtext(q.kind, q.name)}` } : {}),
       chips: chipsOfQuest(q.kind, q.category, !!q.urgent),
       score: (q.silver + q.xp * 3) * fit(q.band) * (q.urgent ? 1.4 : 1) * (q.blocked ? 0.05 : 1) });
   }
@@ -137,7 +140,7 @@ export function boardItems(view: PortView, state: ClientState): BoardItem[] {
   for (const q of self?.quests ?? []) {
     if (!visit.offered.has(`q:${q.id}`)) continue;
     const t = q.target;
-    taken.push({ kind: 'quest', id: q.id, title: serverText(q.name), text: serverText(q.text), art: 'goal', silver: q.silver ?? 0, xp: q.xp ?? 0, dest: t && !t.region ? { x: t.x, y: t.y, name: placeName(port(t.port)?.name ?? '') } : null,
+    taken.push({ kind: 'quest', id: q.id, title: qtext(q.kind, q.name), text: qtext(q.kind, q.text), art: 'goal', silver: q.silver ?? 0, xp: q.xp ?? 0, dest: t && !t.region ? { x: t.x, y: t.y, name: placeName(port(t.port)?.name ?? '') } : null,
       blocked: null, urgent: false, group: false, path: false, stores: false, taken: true, chips: chipsOfQuest(q.kind, q.category, false), score: 0, cls: questClass(q) });
   }
   for (const c of self?.contracts ?? []) {
@@ -215,9 +218,9 @@ function campaignPage(items: BoardItem[], state: ClientState, mine: number): str
   const now = [...itemsOf(items, 'campaign')];
   // her quest under way, wherever she took it: its card with «Плыть»
   const act = c.active ? state.self?.quests.find((q) => q.id === c.active) : undefined;
-  if (act && !now.some((x) => x.id === act.id)) now.unshift({ kind: 'quest', id: act.id, title: serverText(act.name), text: serverText(act.text), art: 'tab_legends', silver: act.silver ?? 0, xp: act.xp ?? 0, dest: null, blocked: null, urgent: false, group: false, path: false, stores: false, taken: true, chips: ['campaign'], score: 0, cls: 'campaign', cmp: { ch: c.ch, k: c.k, size: c.size } });
+  if (act && !now.some((x) => x.id === act.id)) now.unshift({ kind: 'quest', id: act.id, title: cmpText(act.name), text: cmpText(act.text), art: 'tab_legends', silver: act.silver ?? 0, xp: act.xp ?? 0, dest: null, blocked: null, urgent: false, group: false, path: false, stores: false, taken: true, chips: ['campaign'], score: 0, cls: 'campaign', cmp: { ch: c.ch, k: c.k, size: c.size } });
   const list = now.length ? `<div class="mk-list q-list">${now.map((x) => row(x, state, mine)).join('')}</div>` : '';
-  const next = c.next.length ? `<div class="q-cmp-next"><div class="giver-h">${esc(L('cmpNext'))}</div>${c.next.map((x) => `<div class="w-row q-row q-off q-locked">${icon('tab_legends', '', 'w-row-ico')}<span class="w-row-t"><b>${esc(serverText(x.name))}</b><small>${esc(L('cmpWhere', { ch: x.ch, n: x.k + 1, of: x.size }))}</small></span><span class="w-row-b"><small class="q-why">${esc(serverText(`Level ${x.gate}`))}</small></span></div>`).join('')}</div>` : '';
+  const next = c.next.length ? `<div class="q-cmp-next"><div class="giver-h">${esc(L('cmpNext'))}</div>${c.next.map((x) => `<div class="w-row q-row q-off q-locked">${icon('tab_legends', '', 'w-row-ico')}<span class="w-row-t"><b>${esc(cmpText(x.name))}</b><small>${esc(L('cmpWhere', { ch: x.ch, n: x.k + 1, of: x.size }))}</small></span><span class="w-row-b"><small class="q-why">${esc(serverText(`Level ${x.gate}`))}</small></span></div>`).join('')}</div>` : '';
   return `${head}${list || (c.done ? '' : `<p class="muted">${esc(L('cmpNone'))}</p>`)}${next}`;
 }
 
@@ -237,7 +240,7 @@ function takenList(state: ClientState): string {
   const port = (id?: string) => (id ? state.ports.find((p) => p.id === id) : undefined);
   const sail = (key: string) => `<button type="button" class="k-btn k-btn--primary k-btn--md q-sail" data-act="goal" data-key="${esc(key)}" title="${esc(L(docked ? 'sailHint' : 'sail'))}">${icon('stat_sails', '', 'ico-sm')}${esc(L('sail'))}</button>`;
   const rows = [
-    ...self.quests.map((q) => `<div class="w-row q-row q-taken" data-hint="${esc(serverText(q.text))}">${icon('goal', '', 'w-row-ico')}<span class="w-row-t"><b>${esc(serverText(q.name))}</b><small>${q.step}/${q.steps}: ${esc(serverText(q.text))}${q.need > 1 ? ` (${q.progress}/${q.need})` : ''}</small></span>
+    ...self.quests.map((q) => `<div class="w-row q-row q-taken" data-hint="${esc(qtext(q.kind, q.text))}">${icon('goal', '', 'w-row-ico')}<span class="w-row-t"><b>${esc(qtext(q.kind, q.name))}</b><small>${q.step}/${q.steps}: ${esc(qtext(q.kind, q.text))}${q.need > 1 ? ` (${q.progress}/${q.need})` : ''}</small></span>
       <span class="w-row-b">${q.target ? sail(`q:${q.id}`) : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="quest_abandon" data-id="${esc(q.id)}">${esc(L('setAside'))}</button></span></div>`),
     ...self.contracts.map((c) => `<div class="w-row q-row q-taken" data-hint="${esc(serverText(c.description))}">${icon(contractArt(c), '', 'w-row-ico')}<span class="w-row-t"><b>${esc(serverText(c.title))}</b><small>${esc(c.kind === 'bounty' ? `${c.progress ?? 0}/${c.kills}` : W('q.to', { port: placeName(port(c.toPort)?.name ?? '') }))}</small></span><span class="w-row-n">${money(c.reward)}</span>
       <span class="w-row-b">${c.toPort ? sail(`c:${c.id}`) : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="contract" data-mode="abandon" data-id="${esc(c.id)}">${esc(L('abandon'))}</button></span></div>`),

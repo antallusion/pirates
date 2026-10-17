@@ -109,8 +109,18 @@ export function loadCampaignWords(): Promise<void> {
     for (const [en, ru] of m.campaignPatterns()) if (TABLE[en] === undefined) TABLE[en] = ru;
     templates = null;
     exact.clear();
+    campaignReady = true;
   });
   return campaignLoad;
+}
+let campaignReady = false;
+export const campaignWordsReady = (): boolean => campaignReady;
+
+/** A campaign quest's words (docs/36): in Russian once its words are in; before that an ellipsis, never English. */
+export function cmpText(s: string): string {
+  if (lang() !== 'ru' || campaignReady || !s) return serverText(s);
+  const ru = serverText(s);
+  return /[A-Za-z]/.test(ru) ? '…' : ru;
 }
 
 /** The whole English → Russian table of the server's lines: the static ones and every pattern generator's. */

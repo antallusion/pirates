@@ -24,7 +24,8 @@ import type { ClientMsg, FishingView } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
 import { SEA_LETTERS } from '../../../shared/src/data/encounters.ts';
 import { FISH, FISH_IDS } from '../../../shared/src/data/fishing.ts';
-import { serverText } from '../lang/server.ts';
+import { cmpText, serverText } from '../lang/server.ts';
+const serverTextOf = serverText;
 import type { ClientState } from '../state.ts';
 import { ask } from './confirm.ts';
 import { commonLog, dailyLog } from './daily.ts';
@@ -297,7 +298,7 @@ export class Journal {
   private row(q: Quest, on: boolean, tracked: boolean): string {
     const count = q.need > 1 ? ` · ${q.progress}/${q.need}` : '';
     return `<div class="jr-item"><button class="jr-row${on ? ' on' : ''}${tracked ? ' tracked' : ''}" data-jq="${esc(q.id)}">
-      <b>${tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}${q.ship ? ` ${levelChip(q.ship)}` : ''}</b>
+      <b>${tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc((q.kind === 'campaign' ? cmpText : serverText)(q.name))}${q.ship ? ` ${levelChip(q.ship)}` : ''}</b>
       <span class="muted">${esc(classWord(questClass(q)))} · ${q.step}/${q.steps}${count}${q.mates?.length ? ` · ${icon('tab_group', '⚑', 'ico-sm')}${q.mates.length}` : ''}</span></button>${q.target ? this.goBtn(`q:${q.id}`) : ''}</div>`;
   }
 
@@ -330,6 +331,7 @@ export class Journal {
   }
 
   private detail(q: Quest, tracked: boolean, inGroup: boolean, state: ClientState): string {
+    const serverText = q.kind === 'campaign' ? cmpText : serverTextOf; // docs/36: never English while the campaign's words load
     const own = state.ownDisplay;
     const docked = !!state.self?.dockedAt;
     const far = q.target && own ? Math.hypot(q.target.x - own.x, q.target.y - own.y) : null;
