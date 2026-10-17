@@ -14,7 +14,8 @@ import { legacyWorld } from '../world/worldgen.ts';
 import { islandLife } from '../world/islandlife.ts';
 import type { QuestDef, QuestStep } from './quests.ts';
 import { SPEED_SCALE } from '../constants.ts';
-import { legacyQuestSize, questXp } from './xpcurve.ts';
+import { legacyQuestSize, questXp, shipBandOf } from './xpcurve.ts';
+import { jobSilver } from './silverpay.ts';
 
 // ------------------------------------------------------------------ the people who give the jobs
 
@@ -795,11 +796,11 @@ function build(id: string, plot: Plot, flavor: Flavor, p: GenParams, levelBase: 
   };
   const steps: QuestStep[] = plot.steps.map((k) => stepOf(k, p, fill(STEP_TEXT[k][0], v)));
   const level = Math.max(1, plot.level + levelBase);
-  const scale = 1 + level / 10; // (the silver's; the experience is the curve's, docs/26)
+  // The silver by the job's waters (docs/31 §9: was pay × (1 + level/10)); the experience is the curve's (docs/26).
   return {
     id, kind: 'job', name: fill(flavor.name[0], v), mentor: `${p.giver}, ${PROFESSIONS[p.profession][0]}`, port: p.port.id,
     summary: fill(flavor.summary[0], v), requires: { level },
-    steps, reward: { xp: questXp(level, plotSize(plot)), silver: Math.round(plot.pay * scale) },
+    steps, reward: { xp: questXp(level, plotSize(plot)), silver: jobSilver(plot.pay, shipBandOf(level)) },
     category: plot.category, template: `${plot.id}.${plot.flavors.indexOf(flavor)}`, portrait: giverPortrait(p.profession, p.giver),
   };
 }

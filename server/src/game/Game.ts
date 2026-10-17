@@ -40,7 +40,8 @@ import { ADM_REFIT_HINT, ADM_REFIT_WORDS, orderRefit, refitHolds, stepRefit } fr
 import { clampLevel, ladder, levelRange, npcSkill } from '../../../shared/src/data/shiplevel.ts';
 import { ALPHA_OVER as ALPHA_OVER_RAM, alphaShare, npcSeaScale } from '../../../shared/src/data/seabalance.ts';
 import { RAM_SHARE, volleyShare } from '../../../shared/src/data/seaskill.ts';
-import { XP_UNITS, contractPay, pointsXp, prizeXp, xpGap } from '../../../shared/src/data/xpcurve.ts';
+import { XP_UNITS, contractPay, hourSilver, pointsXp, prizeXp, xpGap } from '../../../shared/src/data/xpcurve.ts';
+import { WRECK_SHARE } from '../../../shared/src/data/silverpay.ts';
 import { generateIslandJobs, generateQuests } from '../../../shared/src/data/questgen.ts';
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
 import { generateLairJobs } from '../../../shared/src/data/lairquests.ts';
@@ -2205,7 +2206,7 @@ export class Game {
     // The hull itself breaks up into salvage.
     for (const [g, n] of Object.entries(wreckSalvage(ship))) cargo[g as GoodId] = (cargo[g as GoodId] ?? 0) + (n ?? 0);
     // A ship of the sea always leaves some silver in the water, by her size (none is a waste of a broadside).
-    let gold = ship.isPlayer ? 0 : Math.max(Math.floor(ship.purse * SINK_PURSE), frac > 0 ? 25 * ship.cls.tier + (ship.id % 20) : 0);
+    let gold = ship.isPlayer ? 0 : Math.max(Math.floor(ship.purse * SINK_PURSE), frac > 0 ? Math.round(hourSilver(ship.shipLevel) * WRECK_SHARE) + (ship.id % 20) : 0); // (by her waters, docs/31 §9: was 25 a hull's tier)
     if (ship.isPlayer) {
       const p = this.profileOf(ship);
       if (p) {

@@ -180,8 +180,8 @@ export interface Hour {
   kills: number;
 }
 
-const cycleSink = (v: number): number => PACE.seek(v) + PACE.approach + PACE.sinkFight + PACE.afterSink + PACE.portSec / PACE.portEvery;
-const cycleBoard = (v: number): number => PACE.seek(v) + PACE.approach + PACE.boardBattle(v) + PACE.afterBoard + PACE.portSec / PACE.portEvery;
+export const cycleSink = (v: number): number => PACE.seek(v) + PACE.approach + PACE.sinkFight + PACE.afterSink + PACE.portSec / PACE.portEvery;
+export const cycleBoard = (v: number): number => PACE.seek(v) + PACE.approach + PACE.boardBattle(v) + PACE.afterBoard + PACE.portSec / PACE.portEvery;
 /** The mean streak bonus over a run between two ports. */
 export function streakAvg(): number {
   let s = 0;
@@ -202,7 +202,7 @@ export function boardHour(R: Rules, L: number): Hour {
 }
 
 /** Seconds a step of a quest takes (beside the legs) and the ships it sinks or takes. */
-function stepCost(k: StepKind, v: number): { sec: number; leg: number; sink: number; board: number } {
+export function stepCost(k: StepKind, v: number): { sec: number; leg: number; sink: number; board: number } {
   const sink = cycleSink(v) - PACE.portSec / PACE.portEvery, board = cycleBoard(v) - PACE.portSec / PACE.portEvery;
   switch (k) {
     case 'visit2': case 'visit3': case 'deliver2': case 'deliver3': case 'home': case 'back': case 'race2': return { sec: 15, leg: 1, sink: 0, board: 0 };

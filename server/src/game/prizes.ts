@@ -6,6 +6,7 @@ import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
+import { PRIZE_COURT } from '../../../shared/src/data/silverpay.ts';
 import { dist } from '../../../shared/src/math.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
@@ -31,9 +32,10 @@ export function prizeCrewNeeded(a: ShipEntity, b: ShipEntity): number | null {
   return Math.max(2, Math.ceil(b.cls.crewMin * 0.5 * Math.max(0.2, 1 - tx(a.stats, 'prizeCrew'))));
 }
 
-/** What a prize court pays: a quarter of her value by condition, plus her hold at half price. */
+/** What a prize court pays: PRIZE_COURT of her value by condition (a quarter before docs/31 §9), plus her hold at half
+ *  price. */
 export function prizeValue(prize: ShipEntity, owner: ShipEntity | null): number {
-  let v = SHIP_CLASSES[prize.loadout.classId].price * 0.25 * Math.max(0.2, prize.hull / prize.stats.hullMax);
+  let v = SHIP_CLASSES[prize.loadout.classId].price * PRIZE_COURT * Math.max(0.2, prize.hull / prize.stats.hullMax);
   for (const id in prize.cargo) v += (prize.cargo[id as GoodId] ?? 0) * GOODS[id as GoodId].basePrice * 0.5;
   const broker = owner?.rank('trd_prize_broker') ? 1.15 : 1;
   return Math.round(v * broker);

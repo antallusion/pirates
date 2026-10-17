@@ -443,10 +443,13 @@ export const ROAM_XP_SIZE: Record<RoamSize, number> = { weak: 0.6, avg: 1, stron
 /** An average stack's own lesson at ⚓L, a share of a captain's level of its waters (calibrated: tests/balance/roamers.ts
  *  holds the hour's whole lesson to 0.6–0.8 of seaHourXp). Index: level 0–10. */
 export const ROAM_XP_SHARE = [0, 0.0151, 0.0151, 0.0165, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018]; // recalibrated with the hunting hour of 23 units (docs/26 §11, 2026-10-17; was 0.023–0.0303)
+/** The net of a steady hour of the stacks (silver and spoils less the men they cost) the purses are set for, in hours at
+ *  sea: 0.2 until 2026-10-17, now 0.12 (docs/31 §9: the stacks farmed back to back were a fat loop). */
+export const ROAM_NET = 0.12;
 /** Its silver, a share of an hour at sea of its waters for an average stack (by size as the lesson): a small purse that
  *  with the creatures' spoils about pays for the men a steady hour of them costs and leaves a little over (calibrated:
- *  tests/balance/roamers.ts holds the hour's net to +0.1…+0.35 of an hour at sea). Index: level 0–10. */
-export const ROAM_SILVER = [0, 0.025, 0.019, 0.026, 0.028, 0.03, 0.028, 0.028, 0.022, 0.024, 0.027];
+ *  tests/balance/roamers.ts holds the hour's net to +0.03…+0.15 of an hour at sea, ROAM_NET). Index: level 0–10. */
+export const ROAM_SILVER = [0, 0.017, 0.014, 0.019, 0.024, 0.026, 0.024, 0.026, 0.022, 0.024, 0.027]; // for ROAM_NET, never above the old (docs/31 §9; was 0.025, 0.019, 0.026, 0.028, 0.03, 0.028, 0.028, 0.022, 0.024, 0.027)
 /** The chance its beating turns up an artifact (H2's maybeArtifact, as a guard's), by size. */
 export const ROAM_ART: Record<RoamSize, number> = { weak: 0.008, avg: 0.015, strong: 0.04 };
 /** A group mate near when the stack is beaten has this share of its lesson (the fighter the whole of it); the silver

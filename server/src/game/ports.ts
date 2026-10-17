@@ -19,7 +19,9 @@ import { chandlerWares, takeGearBack, wornItems } from './gear.ts';
 import { mendCost } from '../../../shared/src/data/items.ts';
 import { refitHolds, refitView } from './refit.ts';
 import { captainLevelFor, levelRange, refitCost } from '../../../shared/src/data/shiplevel.ts';
-import { CONTRACT_LEG, contractFor, contractXp, lumpXp, silverXp, xpUnit } from '../../../shared/src/data/xpcurve.ts';
+import { CONTRACT_LEG, contractFor, contractXp, hourSilver, lumpXp, silverXp, xpUnit } from '../../../shared/src/data/xpcurve.ts';
+import { URGENT_BOUNTY_SHARE, bountyPay } from '../../../shared/src/data/silverpay.ts';
+import { sectorAt } from '../../../shared/src/world/sectors.ts';
 import { onEventSale } from './events.ts';
 import { levyFor, noteSale, payLevy, saleMul } from './empires.ts';
 import { seasonStat, shanty } from './seasons.ts';
@@ -659,6 +661,12 @@ function contractUnits(kind: 'courier' | 'delivery' | 'bounty', n: number): { xp
   return { xp: lumpXp(1, units), units };
 }
 
+/** The ⚓ of a port's waters (the middle of its square's band): what its bounties pay by (docs/31 §9). */
+function watersShip(game: Game, port: Port): number {
+  const b = sectorAt(game.world, port.x, port.y).band;
+  return Math.round((b[0] + b[1]) / 2);
+}
+
 export function generateContracts(game: Game, port: Port): Contract[] {
   const out: Contract[] = [];
   const rng = game.rng;
@@ -671,7 +679,7 @@ export function generateContracts(game: Game, port: Port): Contract[] {
       const kills = rng.int(1, 3);
       out.push({
         id: `c${contractSeq++}`, kind, title: `Bounty: ${kills} pirate ship${kills > 1 ? 's' : ''}`, fromPort: port.id, targetFaction: 'confederacy', kills, progress: 0,
-        reward: Math.round((320 * kills + rng.int(0, 150)) * game.econRewardMul), ...contractUnits('bounty', kills), expiresAt: now + 3600,
+        reward: Math.round(bountyPay(watersShip(game, port), kills, rng.float()) * game.econRewardMul), ...contractUnits('bounty', kills), expiresAt: now + 3600, // the bounty by the port's waters (docs/31 §9: was 320 a ship)
         description: `The ${FACTIONS[port.faction].short} pays for every Red Tide hull sunk or taken. Bring proof — or don't come back.`,
       });
       continue;
@@ -712,7 +720,7 @@ export function generateContracts(game: Game, port: Port): Contract[] {
   if (REGIONS[port.region].safety !== 'safe') {
     out.push({
       id: `c${contractSeq++}`, kind: 'bounty', title: 'Urgent bounty: 1 pirate ship', fromPort: port.id, targetFaction: 'confederacy', kills: 1, progress: 0,
-      reward: Math.round((520 + rng.int(0, 120)) * game.econRewardMul), ...contractUnits('bounty', 2), expiresAt: now + 600,
+      reward: Math.round(hourSilver(watersShip(game, port)) * (URGENT_BOUNTY_SHARE + 0.02 * rng.float()) * game.econRewardMul), ...contractUnits('bounty', 2), expiresAt: now + 600, // (docs/31 §9: was 520–640)
       description: 'A rover was sighted off the harbour mouth. Sink or take her within ten minutes.',
     });
   }

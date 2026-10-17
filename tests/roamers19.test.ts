@@ -252,7 +252,8 @@ test('D7: an hour of steady fighting teaches 0.6–0.8 of the game\'s usual hour
     assert.ok(h.share >= 0.6 && h.share <= 0.8, `⚓${L}: ${Math.round(h.share * 100)}% of ${Math.round(seaHourXp(L))}`);
     assert.ok(h.fights >= 15, `⚓${L}: ${h.fights} fights an hour`);
     const net = h.silver - h.refill;
-    assert.ok(net >= 0.05 && net <= 0.4, `⚓${L}: net ${net.toFixed(2)} h at sea`);
+    // docs/31 §9 (2026-10-17): the purses set for a net of ROAM_NET 0.12 (was 0.2; ⚓1 netted 0.2–0.3): 0.09–0.13 now.
+    assert.ok(net >= 0.05 && net <= 0.2, `⚓${L}: net ${net.toFixed(2)} h at sea`);
   }
   // The lesson grows with the waters and the size.
   for (let L = 2; L <= 10; L++) assert.ok(roamPay(L, 'avg').xp >= 5);

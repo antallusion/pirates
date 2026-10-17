@@ -351,7 +351,7 @@ export function needleAt(t: number, phase: number): number {
 export function driftWorth(kind: DriftKind, level: number): { silver: number; xp: number } {
   const L = Math.max(1, Math.min(10, level));
   const legend = !!DRIFTS[kind].legend;
-  return { silver: Math.round((advHour(L) * (legend ? 2 : 0.12)) / 10) * 10, xp: Math.max(10, Math.round((advLevelXp(L) * (legend ? 0.25 : 0.03)) / 10) * 10) };
+  return { silver: Math.round((advHour(L) * (legend ? 2 : 0.07)) / 10) * 10, xp: Math.max(10, Math.round((advLevelXp(L) * (legend ? 0.25 : 0.03)) / 10) * 10) }; // (silver 0.12 before docs/31 §9)
 }
 
 /** The gift as she gets it: its good, how many, and the silver for the rest. */
@@ -367,7 +367,7 @@ export function driftGift(kind: DriftKind, level: number): { good: GoodId; n: nu
 export function driftFightPay(kind: DriftKind, level: number): { silver: number; xp: number } {
   const L = Math.max(1, Math.min(10, level));
   const legend = !!DRIFTS[kind].legend;
-  return { silver: Math.round((advHour(L) * (legend ? 3 : 0.1)) / 10) * 10, xp: Math.max(10, Math.round((advLevelXp(L) * (legend ? 0.5 : 0.04)) / 10) * 10) };
+  return { silver: Math.round((advHour(L) * (legend ? 3 : 0.06)) / 10) * 10, xp: Math.max(10, Math.round((advLevelXp(L) * (legend ? 0.5 : 0.04)) / 10) * 10) }; // (silver 0.1 before docs/31 §9)
 }
 
 // ------------------------------------------------------------------------------------------------ 36. the capture

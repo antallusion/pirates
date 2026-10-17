@@ -4,7 +4,7 @@
 // --calibrate rebuilds ROAM_CAL from the battle; --xp prints ROAM_XP_SHARE for the target share.
 
 import { advLevelXp } from '../shared/src/data/advmap.ts';
-import { ROAM_KINDS, ROAM_LOSS, ROAM_SIZES, ROAM_XP_TARGET, roamCount, seaHourXp } from '../shared/src/data/roamers.ts';
+import { ROAM_KINDS, ROAM_LOSS, ROAM_NET, ROAM_SIZES, ROAM_XP_TARGET, roamCount, seaHourXp } from '../shared/src/data/roamers.ts';
 import type { RoamKind } from '../shared/src/data/roamers.ts';
 import { calibrate, lessonFor, roamLevels, roamOdds, silverFor, stackFight, xpHour } from '../tests/balance/roamers.ts';
 
@@ -17,7 +17,7 @@ if (args.includes('--calibrate')) {
 }
 if (args.includes('--silver')) {
   const out = [0];
-  for (let L = 1; L <= 10; L++) out.push(Math.round(silverFor(L, 0.2) * 1000) / 1000);
+  for (let L = 1; L <= 10; L++) out.push(Math.round(silverFor(L, ROAM_NET) * 1000) / 1000);
   console.log(`ROAM_SILVER = [${out.join(', ')}]`);
   process.exit(0);
 }
