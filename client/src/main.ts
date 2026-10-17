@@ -87,6 +87,7 @@ import { $, decorateSums, esc, fmt, icon, keepInputs, knots } from './ui/dom.ts'
 import { Hud, TOUCH_FOLDED, releaseModalToasts } from './ui/hud.ts';
 import { SeaHud, bestSpecial, seaWord } from './ui/seahud.ts'; // docs/23 phase 2: the sea and five buttons
 import type { DeckSlot, SeaKeys } from './ui/seahud.ts';
+import { goalCount, goalSheetView } from './ui/goalsheet.ts'; // «Цели и вести»: the campaign, the quests taken, the orders
 import { attackKind, buildCursors, cursorUrl } from './ui/cursor.ts'; // the attack cursor (owner, 2026-10-07)
 import type { AttackKind } from './ui/cursor.ts';
 import { TargetMenu } from './ui/targetmenu.ts'; // «Захват цели», «Преследовать», «Бой» beside a target
@@ -811,6 +812,11 @@ const touch = new TouchControls({
 // sheet, the news counter, the target line.
 const seaHud = new SeaHud($('touch'), {
   folded: TOUCH_FOLDED,
+  goals: {
+    view: () => goalSheetView(state.self),
+    portName: (id) => placeName(state.ports.find((p) => p.id === id)?.name ?? id),
+    go: (key) => startGoal(key),
+  },
   fire: () => seaFire(),
   fireOptions: () => fireWheel(),
   firePick: (id) => pickFireWheel(id),
@@ -3228,10 +3234,11 @@ function seaFrame(): void {
   if (!self || !you) return;
   advCard.autoFold = true; // the adventure map's card waits on «Действие» (its «Осмотреть»)
   const a = curActs[0];
+  // (owner, 2026-10-17) the counter counts her quests, contracts and the orders not yet done too: the sheet lists them
   const news = TOUCH_FOLDED.filter((id) => {
     const e = document.getElementById(id);
     return !!e && !e.classList.contains('hidden');
-  }).length;
+  }).length + goalCount(goalSheetView(self));
   const unread = (Number($('chat-unread').textContent) || 0) + (Number(($('unread').textContent ?? '').replace(/\D/g, '')) || 0);
   // A fight on or near: her mark (picked, or the nearest foe within a mile), her guns busy, the helmsman after one.
   const fight = !self.dockedAt && (targetId !== null || !!state.pursuit || !!you.combat);

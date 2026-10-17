@@ -35,6 +35,8 @@ import type { SheetHandle } from './kit/sheet.ts';
 import { TargetLine } from './kit/targetline.ts';
 import type { TargetInfo } from './kit/targetline.ts';
 import { menuLabel } from './menu.ts';
+import { campaignHtml, goalsListHtml, seaHeadHtml, seaNoneText } from './goalsheet.ts';
+import type { GoalSheetView } from './goalsheet.ts';
 import type { MenuItem } from './menu.ts';
 
 const L = dict(EN, RU);
@@ -239,6 +241,9 @@ export interface SeaHooks {
   target(): void;
   /** The blocks that fold into the news sheet, by id (hud.ts FOLDED). */
   folded: readonly string[];
+  /** «Цели и вести» (owner, 2026-10-17): the campaign, the quests and contracts taken, the day's orders (goalsheet.ts);
+   *  `go` the run to a goal ({t:'goto', key}). */
+  goals?: { view(): GoalSheetView; portName(id: string): string; go(key: string): void };
 }
 
 /** A press held this long is a long press (the card behind «Цель»). */
@@ -629,11 +634,54 @@ export class SeaHud {
    *  their buttons and go on updating), given back to the HUD's stack when it goes. */
   openNews(): void {
     if (this.newsSheet?.open) return;
-    this.newsSheet = this.lend(this.hooks.folded, 'news');
+    const g = this.hooks.goals;
+    if (!g) {
+      this.newsSheet = this.lend(this.hooks.folded, 'news');
+      return;
+    }
+    // (owner, 2026-10-17) on top, never scrolled away: the campaign; under it one scrolling list — the quests and the
+    // contracts taken, the day's orders, then the HUD's lent blocks (the sea's goals, the trade, the captain's, the news)
+    const top = document.createElement('div');
+    top.className = 'gs-top';
+    const list = document.createElement('div');
+    list.className = 'gs-scroll k-sheet-scroll';
+    const mine = document.createElement('div');
+    mine.className = 'gs-mine';
+    const head = document.createElement('div');
+    head.innerHTML = seaHeadHtml();
+    const box = document.createElement('div');
+    box.className = 'gs-wrap';
+    let key = '';
+    const draw = () => {
+      const v = g.view();
+      const a = campaignHtml(v, g.portName), b = goalsListHtml(v, g.portName);
+      if (a + b === key) return;
+      key = a + b;
+      top.innerHTML = a;
+      mine.innerHTML = b;
+      for (const el of [top, mine]) el.querySelectorAll<HTMLElement>('[data-gsail]').forEach((btn) => btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.newsSheet?.close('button');
+        g.go(btn.dataset.gsail!);
+      }));
+    };
+    draw();
+    const lent = this.lendInto(this.hooks.folded);
+    if (!lent.items.length) lent.box.innerHTML = `<p class="muted gs-empty">${esc(seaNoneText())}</p>`;
+    list.append(mine, head.firstElementChild!, lent.box);
+    box.append(top, list);
+    const timer = setInterval(() => (this.newsSheet?.open ? draw() : clearInterval(timer)), 1000);
+    this.newsSheet = openSheet({
+      title: L('news'), body: box, height: 0.85, cls: 'sea-lent-sheet gs-sheet',
+      onClose: () => {
+        clearInterval(timer);
+        lent.back();
+      },
+    });
   }
 
-  /** HUD blocks (by id) shown in a sheet: moved in while it is up, put back where they stood when it goes. */
-  lend(ids: readonly string[], title: 'news' | 'target'): SheetHandle {
+  /** HUD blocks (by id) moved into a box while a sheet is up; `back` puts them where they stood. */
+  private lendInto(ids: readonly string[]): { box: HTMLElement; items: HTMLElement[]; back: () => void } {
     const box = document.createElement('div');
     box.className = 'sea-lent';
     const lent: { el: HTMLElement; mark: Comment }[] = [];
@@ -645,10 +693,16 @@ export class SeaHud {
       box.append(el);
       lent.push({ el, mark });
     }
-    if (!lent.length) box.innerHTML = `<p class="muted">${esc(L('newsEmpty'))}</p>`;
+    return { box, items: lent.map((x) => x.el), back: () => { for (const x of lent) x.mark.replaceWith(x.el); } };
+  }
+
+  /** HUD blocks (by id) shown in a sheet: moved in while it is up, put back where they stood when it goes. */
+  lend(ids: readonly string[], title: 'news' | 'target'): SheetHandle {
+    const { box, items, back } = this.lendInto(ids);
+    if (!items.length) box.innerHTML = `<p class="muted">${esc(L('newsEmpty'))}</p>`;
     return openSheet({
       title: L(title), body: box, height: title === 'target' ? 'auto' : 0.75, cls: 'sea-lent-sheet',
-      onClose: () => { for (const x of lent) x.mark.replaceWith(x.el); },
+      onClose: () => back(),
     });
   }
 }

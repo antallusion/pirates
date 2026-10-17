@@ -119,6 +119,9 @@ export function wireSheetSwipe(panel: HTMLElement, done: () => void, handles = '
     if (!allow() || t.closest('button, a, input, select, textarea, [data-no-swipe]')) return;
     const body = bodySel ? t.closest<HTMLElement>(bodySel) : null;
     if (body && body.scrollTop > 0) return;
+    // (a list scrolling inside the body under a fixed block — «Цели и вести»: its own scroll, not the sheet's drag)
+    const inner = t.closest<HTMLElement>('.k-sheet-scroll');
+    if (inner && inner.scrollTop > 0) return;
     if (!t.closest(handles) && !body) return;
     id = e.pointerId;
     y0 = lastY = e.clientY;

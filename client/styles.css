@@ -5226,6 +5226,47 @@ body.touch.sea-docked #touch > :is(#tc-stick, .tc-special, #tc-target) { display
 .sea-lent > #hud-goals:not(.hidden) { display: grid !important; padding-top: 6px !important; padding-bottom: 6px !important; }
 .sea-lent > #hud-feed:not(.hidden) { padding-top: 5px !important; padding-bottom: 5px !important; }
 .sea-lent > #hud-goals .ico-goal { align-self: center; }
+/* «Цели и вести» (owner, 2026-10-17): the campaign on top, never scrolled away; under it one list that scrolls — the
+   quests and contracts taken, the day's orders, then the lent blocks. Every picture and word inside its frame. */
+.k-sheet.gs-sheet .k-sheet-body { display: flex; flex-direction: column; overflow: hidden; }
+.gs-wrap { display: flex; flex-direction: column; gap: var(--k-sp-2); flex: 1 1 auto; min-height: 0; }
+.gs-top { flex: none; max-height: 42%; overflow-y: auto; overscroll-behavior: contain; padding: 6px 8px; border: 1px solid var(--k-brass, #b08d57); border-radius: 6px; background: linear-gradient(180deg, rgba(64, 48, 26, 0.55), rgba(18, 16, 13, 0.55)); box-shadow: inset 0 0 10px rgba(224, 184, 98, 0.12); }
+.gs-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; display: flex; flex-direction: column; gap: var(--k-sp-2); padding-bottom: var(--k-sp-2); }
+.gs-mine { display: flex; flex-direction: column; gap: var(--k-sp-2); }
+.gs-sec { padding: 4px 8px 6px; border: 1px solid rgba(111, 90, 56, 0.45); border-radius: 6px; background: rgba(10, 12, 16, 0.35); }
+.gs-top .gs-sec { padding: 0; border: 0; background: none; }
+.gs-h { display: flex; align-items: center; gap: 6px; margin: 2px 0 4px; font: 400 15px/1.2 var(--k-font-display); letter-spacing: 0.04em; color: var(--gold, #e0b862); }
+.gs-campaign > .gs-h { font-size: 17px; }
+.gs-h .ico-sm { flex: none; width: 18px; height: 18px; object-fit: contain; }
+.gs-h > span { font: inherit; letter-spacing: inherit; color: inherit; }
+.gs-seah { margin: 2px 2px 0; }
+.gs-row { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid rgba(111, 90, 56, 0.25); }
+.gs-h + .gs-row { border-top: 0; }
+.gs-row .gs-ico { width: 26px; height: 26px; object-fit: contain; border-radius: 4px; }
+.gs-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gs-t b { color: var(--k-bone); overflow-wrap: anywhere; line-height: 1.25; }
+.gs-t small { color: var(--fog, #9a958a); line-height: 1.3; overflow-wrap: anywhere; }
+.gs-kind { font-style: normal; color: var(--gold, #e0b862); margin-right: 6px; font-weight: 400; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.05em; }
+.gs-bar { display: block; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.gs-bar > i { display: block; height: 100%; background: linear-gradient(90deg, #8a6a32, #e0b862); }
+.gs-bar.done > i { background: #6f9a5a; }
+.gs-pay { white-space: nowrap; font-size: 12px; min-width: 52px; text-align: right; }
+.gs-sail { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 3px 10px; white-space: nowrap; }
+.gs-sail .ico-sm { width: 16px; height: 16px; }
+.gs-done { color: #8fc07a; font-weight: 700; padding: 0 8px; }
+.gs-row.done .gs-t b { color: var(--fog, #9a958a); text-decoration: line-through rgba(201, 162, 90, 0.5); }
+.gs-empty { margin: 2px 0 4px; line-height: 1.35; }
+.gs-foot { margin: 4px 0 0; }
+.gs-scroll > .sea-lent { padding-bottom: 0; }
+/* a short phone (≤ 420 px high): the rows tighter, the pay under «Плыть»'s column dropped beside the words */
+@media (max-height: 420px) {
+  .gs-top { max-height: 40%; padding: 4px 6px; }
+  .gs-h { margin: 0 0 2px; font-size: 14px; }
+  .gs-campaign > .gs-h { font-size: 15px; }
+  .gs-row { grid-template-columns: 22px minmax(0, 1fr) auto auto; gap: 6px; padding: 2px 0; }
+  .gs-row .gs-ico { width: 22px; height: 22px; }
+  .gs-sail { min-height: 28px; padding: 2px 8px; }
+}
 /* docs/19 E12: the relics in the hero window (each a card: its face, its parts lit when worn, dim in the locker, dark
    when not found; assembled, it glows as a whole set) and a relic's slots on the paper doll. */
 .hx-relics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
