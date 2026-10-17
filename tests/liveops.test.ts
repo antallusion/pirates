@@ -333,8 +333,8 @@ test('/ops in the admin console, its HELP pair and its line in Russian', () => {
     const ru = serverText(line);
     assert.match(ru, /^Управление игрой, сегодня: регистраций 1/);
     const help = runAdmin(game, s, '/help')!;
-    assert.match(help, /\/ops$/);
-    assert.ok(SERVER_RU_ADMIN[help]?.endsWith('/ops'), 'the Russian HELP');
+    assert.match(help, /\/ops( ·|$)/); // (the later commands — /way, /fog — come after it)
+    assert.ok(/\/ops( ·|$)/.test(SERVER_RU_ADMIN[help] ?? ''), 'the Russian HELP');
   } finally {
     process.env.GRAVETIDE_ADMIN = old;
     ops.close();
