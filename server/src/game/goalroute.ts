@@ -28,7 +28,7 @@ import { autosailOf, helmTouched, lastStopOf, pausedCourse, startAutosail, stopA
 import { beastsAlive } from './beasts.ts';
 import { commonView } from './commongoal.ts';
 import { canDive } from './explorefx.ts';
-import { fishingView, shoalsOf } from './fishing.ts';
+import { ensurePortShoals, fishingView, shoalsOf } from './fishing.ts';
 import type { Game } from './Game.ts';
 import { fieldDist, seaField } from './nav.ts';
 import { onboardingProtected } from './onboarding.ts';
@@ -40,6 +40,9 @@ import { campaignFoes } from './campaign.ts'; // docs/36
 import { castawaysOf } from './castaways.ts';
 import { liveNamed } from './wanted.ts';
 import { activeTasks } from './worldtasks.ts';
+import { ensureDailyQuarry, ensureQuarry, localHomeOf, nearHome } from './questlocal.ts'; // owner, 2026-10-18
+import type { Home } from './questlocal.ts';
+import { openSea } from './wrecks.ts';
 
 /** The live ships of a goal looked for within this of her (her lookout's reach on a clear day, about). */
 export const ROUTE_VIEW = 6000;
@@ -347,8 +350,55 @@ function openWater(game: Game, x: number, y: number): boolean {
 
 // ------------------------------------------------------------------ the goals
 
-/** A quest's step: where it is done. */
+// ------------------------------------------------------------------ near the port (questlocal.ts)
+
+/** A port's goal's places kept near the port (owner, 2026-10-18: «все что берется в портах, должно делаться недалеко
+ *  от них, в районе 1,5км максимум»): the ones within LOCAL_R of it; none there — what is fought or caught put out
+ *  there (`make`); nothing to be had there either — the nearest of them to the port, not to her. */
+function localize(game: Game, home: Home, cands: Cand[], make: () => Cand[]): Cand[] {
+  const inside = cands.filter((c) => c.kind !== 'region' && nearHome(home, c.x, c.y, c.r));
+  if (inside.length) return inside;
+  const made = make();
+  if (made.length) return made;
+  const by = (c: Cand) => Math.hypot(c.x - home.x, c.y - home.y);
+  return [...cands].sort((a, b) => by(a) - by(b)).slice(0, 3);
+}
+
+const shipCand = (o: ShipEntity, hint?: string): Cand => (o.npcRole === 'beast'
+  ? { x: o.state.x, y: o.state.y, r: 300, kind: 'ships', name: `beast:${beastOfClass(o.loadout.classId as never) ?? 'shark'}`, ship: o.id, hint: ROUTE_HINTS.beast }
+  : { x: o.state.x, y: o.state.y, r: 250, kind: 'ships', name: o.npcRole === 'merchant' ? 'merchants' : o.npcRole === 'ghost' ? 'ghosts' : 'pirates', ship: o.id, ...(hint ? { hint } : {}) });
+
+/** Her trade's place near a port: the harbour's own shoals for a net, its water for a rod or a lamp, its shore for pots. */
+function localFishing(game: Game, s: PlayerSession, home: Home): Cand[] {
+  const m = fishingView(s.profile!).method;
+  if (!m) return [];
+  if (m === 'net') {
+    const id = home.port ?? `isle:${home.island ?? 0}`;
+    return ensurePortShoals(game, { id, x: home.x, y: home.y }).map((sh) => ({ x: sh.x, y: sh.y, r: Math.max(60, sh.r * 0.6), kind: 'shoal' as const, name: 'shoal', hint: ROUTE_HINTS.net }));
+  }
+  for (let k = 0; k < 24; k++) {
+    const a = (k * Math.PI) / 4 + (k >> 3) * 0.4, d = 700 + (k >> 3) * 250;
+    const x = home.x + Math.cos(a) * d, y = home.y + Math.sin(a) * d;
+    if (!openSea(game, x, y)) continue;
+    return [{ x, y, r: 300, kind: 'place', name: m === 'trap' ? 'coast' : 'open_sea', hint: ROUTE_HINTS[m === 'deep' ? 'deep' : m === 'lamp' ? 'lamp' : m === 'trap' ? 'trap' : 'rod'] }];
+  }
+  return [];
+}
+
+/** A quest's step: where it is done — a port's quest's step done anywhere, near its port. */
 function questPlaces(game: Game, s: PlayerSession, id: string): Resolved {
+  const res = questPlacesAnywhere(game, s, id);
+  const qs = s.profile!.quests.active.find((q) => q.id === id);
+  if (!qs || !('cands' in res)) return res;
+  const home = localHomeOf(game, qs);
+  if (!home) return res;
+  const st = QUESTS_BY_ID[id].steps[qs.step];
+  const hint = st.type === 'board' || st.type === 'prize' ? ROUTE_HINTS.board : undefined;
+  return { cands: localize(game, home, res.cands, () => (st.type === 'catch' ? localFishing(game, s, home) : ensureQuarry(game, s, qs, true).map((o) => shipCand(o, hint)))) };
+}
+
+/** A quest's step: where it is done, anywhere on the sea. */
+function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved {
   const p = s.profile!;
   const qs = p.quests.active.find((q) => q.id === id);
   // docs/36: a campaign quest behind her is done (the campaign keeps its place, not a list of ids)
@@ -436,7 +486,14 @@ function contractPlaces(game: Game, s: PlayerSession, id: string): Resolved {
   const c = s.profile!.contracts.find((x) => x.id === id);
   if (!c) return { done: true };
   const ship = s.ship!;
-  if (c.kind === 'bounty') return { cands: hunt(game, s, c.targetFaction === 'confederacy' ? 'confederacy' : 'pirates') };
+  if (c.kind === 'bounty') {
+    // a port's bounty: about its port (questlocal.ts), its raider put out there when none is
+    const cands = hunt(game, s, c.targetFaction === 'confederacy' ? 'confederacy' : 'pirates');
+    const pt = game.portById(c.fromPort);
+    if (!pt) return { cands };
+    const home: Home = { x: pt.x, y: pt.y, port: pt.id };
+    return { cands: localize(game, home, cands, () => ensureDailyQuarry(game, s, `c:${c.id}`, Math.max(1, (c.kills ?? 1) - (c.progress ?? 0)), home).map((o) => shipCand(o))) };
+  }
   const to = c.toPort ? game.portById(c.toPort) : undefined;
   const from = game.portById(c.fromPort);
   if (c.kind === 'delivery' && c.good && (ship.cargo[c.good] ?? 0) < (c.qty ?? 1) && from) return { cands: [portCand(from)] };
@@ -444,7 +501,20 @@ function contractPlaces(game: Game, s: PlayerSession, id: string): Resolved {
   return from ? { cands: [portCand(from)] } : { none: ROUTE_WORDS.none };
 }
 
+/** A day's order: about the port nearest her (owner, 2026-10-18 — the day's work near a harbour, not across the sea). */
 function dailyPlaces(game: Game, s: PlayerSession, kind: string): Resolved {
+  const res = dailyPlacesAnywhere(game, s, kind);
+  const o = s.profile!.daily.orders.find((x) => x.kind === kind);
+  const here = hereOf(game, s);
+  if (!o || !here || !('cands' in res) || kind === 'ports' || kind === 'contraband' || kind === 'chart' || kind === 'land') return res;
+  const pt = game.nearestPort(here.x, here.y, (p) => !p.raft);
+  if (!pt) return res;
+  const home: Home = { x: pt.x, y: pt.y, port: pt.id };
+  const hint = kind === 'board' || kind === 'prize' ? ROUTE_HINTS.board : undefined;
+  return { cands: localize(game, home, res.cands, () => (kind === 'fish' ? localFishing(game, s, home) : ensureDailyQuarry(game, s, kind, Math.max(1, o.need - (o.progress ?? 0)), home).map((x) => shipCand(x, hint)))) };
+}
+
+function dailyPlacesAnywhere(game: Game, s: PlayerSession, kind: string): Resolved {
   const p = s.profile!;
   const o = p.daily.orders.find((x) => x.kind === kind);
   if (!o || o.done) return { done: true };

@@ -52,6 +52,7 @@ import type { ShipEntity } from './ship.ts';
 import { admiraltyById, isAdmId } from '../../../shared/src/data/admiralty.ts'; // docs/19 E15
 import { contractDone } from './admiralty.ts';
 import { campaignDone, campaignTick } from './campaign.ts'; // docs/36, the main campaign
+import { LOCAL_R, localTick, questHome } from './questlocal.ts';
 import { ownIsland } from './estate.ts';
 import { xpThreat } from '../../../shared/src/data/xpcurve.ts';
 
@@ -225,7 +226,9 @@ export function startQuest(game: Game, p: Profile, q: QuestDef, s?: PlayerSessio
   // A hunt of pirates in a region: the band has a leader, and word of him comes with the job.
   const hunt = q.kind === 'job' ? q.steps.find((st) => st.type === 'sink' && st.region && st.role === 'pirate') : undefined;
   if (hunt && hunt.type === 'sink' && hunt.region && p.level >= 8) {
-    const leader = spawnPackLeader(game, hunt.region, p.level);
+    // (about its port, owner 2026-10-18: «все что берется в портах, должно делаться недалеко от них»)
+    const home = questHome(game, q);
+    const leader = spawnPackLeader(game, hunt.region, p.level, home ? { x: home.x, y: home.y, r: LOCAL_R } : undefined);
     if (leader) {
       qs.leader = leader.id;
       if (s) game.sendTo(s, { t: 'toast', msg: `${leader.captainName} leads them in the ${leader.name}: sink that ship and the rest will scatter.`, kind: 'info' });
@@ -625,6 +628,7 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
     cargoAmbush(game, s);
     eliteAtSea(game, s);
     campaignTick(game, s); // docs/36: the campaign's fight comes to her
+    localTick(game, s); // a port's quest: its quarry about its port (owner, 2026-10-18)
   }
   dailyEvent(game, s, ev);
   commonEvent(game, s, ev);

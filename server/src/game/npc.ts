@@ -16,7 +16,7 @@ import type { FactionId } from '../../../shared/src/data/factions.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { AmmoId, Rig, ShipClassId } from '../../../shared/src/data/ships.ts';
-import { CHASER_CONE } from '../../../shared/src/data/ships.ts';
+import { CHASER_CONE, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { angleDiff, clamp, DEG, dist, headingOf, headingVec, wrapAngle } from '../../../shared/src/math.ts';
 import { polarEfficiency, relWindDeg, sailFloor, windPush } from '../../../shared/src/sim/sailing.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
@@ -1409,10 +1409,11 @@ export function spawnCampaignFoe(game: Game, prey: ShipEntity, accountId: number
 
 /** A hunt's quarry (docs/11 P6): the band's leader, a named captain on a heavier ship somewhere in the region's open
  *  water, roaming it for an hour. Null when no open water was found. */
-export function spawnPackLeader(game: Game, region: RegionId, level: number): ShipEntity | null {
-  const [cx, cy] = REGIONS[region].center;
+export function spawnPackLeader(game: Game, region: RegionId, level: number, near?: { x: number; y: number; r: number }): ShipEntity | null {
+  // A port's hunt (owner, 2026-10-18: «все что берется в портах, должно делаться недалеко от них»): about its port.
+  const [cx, cy] = near ? [near.x, near.y] : REGIONS[region].center;
   for (let k = 0; k < 20; k++) {
-    const a = game.rng.float() * Math.PI * 2, r = 1500 + game.rng.float() * 6000;
+    const a = game.rng.float() * Math.PI * 2, r = near ? near.r * (0.35 + game.rng.float() * 0.5) : 1500 + game.rng.float() * 6000;
     const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
     if (!openSea(game, x, y) || regionAt(game.world, x, y) !== region || !game.inZone(x, y)) continue;
     // The leader sails a level above the captains the hunt is written for (canon D12).
@@ -1420,10 +1421,44 @@ export function spawnPackLeader(game: Game, region: RegionId, level: number): Sh
     const ship = game.spawnNpcShip('pirate', game.rng.pick(hullsFor('pirate', lv)), 'confederacy', x, y, game.rng.float() * Math.PI * 2);
     game.setNpcLevel(ship, lv);
     const brain = game.npcs.get(ship.id)!;
-    brain.area = { x: cx, y: cy, r: 8000 };
+    brain.area = { x: cx, y: cy, r: near ? near.r : 8000 };
     brain.expiresAt = game.now + 3600;
     ship.purse = (ship.purse ?? 0) + 300 + level * 20;
     planWander(game, ship, brain);
+    return ship;
+  }
+  return null;
+}
+
+/** A port-taken quest's quarry (owner, 2026-10-18: «все что берется в портах, должно делаться недалеко от них, в районе
+ *  1,5км максимум»): a raider — a ghost of the drowned seas, a merchantman for a tribute — put out on open water 500 m to
+ *  `r` × 0.85 off the port and kept within `r` of it for a quarter of an hour. Of the quest's ⚓ (`level`), a hull of
+ *  `minTier` or above when the step asks it. Null when no open water was found. */
+export function spawnQuestFoe(game: Game, at: { x: number; y: number }, role: 'pirate' | 'ghost' | 'merchant', level: number, r: number, minTier = 0, region?: RegionId): ShipEntity | null {
+  for (let k = 0; k < 16; k++) {
+    const a = game.rng.float() * Math.PI * 2, d = 500 + game.rng.float() * Math.max(100, r * 0.85 - 500);
+    const x = at.x + Math.cos(a) * d, y = at.y + Math.sin(a) * d;
+    if (!openSea(game, x, y) || !game.inZone(x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500) continue;
+    if (region && regionAt(game.world, x, y) !== region) continue; // a hunt of a sea's: in that sea
+    const lv = Math.max(1, Math.min(10, Math.round(level)));
+    let hulls = hullsFor(role === 'ghost' ? 'pirate' : role, lv);
+    if (minTier) {
+      const big = hulls.filter((c) => SHIP_CLASSES[c].tier >= minTier);
+      // (none of her ⚓: the least of the role's hulls of that rate, from the levels above)
+      for (let up = lv + 1; !big.length && up <= 10; up++) big.push(...hullsFor(role === 'ghost' ? 'pirate' : role, up).filter((c) => SHIP_CLASSES[c].tier >= minTier));
+      if (big.length) hulls = big;
+    }
+    const h = game.rng.float() * Math.PI * 2;
+    const ship = role === 'ghost' ? game.spawnNpcShip('ghost', game.rng.pick(hulls), 'choir', x, y, h)
+      : role === 'merchant' ? game.spawnNpcShip('merchant', game.rng.pick(hulls), 'league', x, y, h)
+      : game.spawnNpcShip('pirate', game.rng.pick(hulls), 'confederacy', x, y, h);
+    game.setNpcLevel(ship, lv);
+    const brain = game.npcs.get(ship.id);
+    if (brain) {
+      brain.area = { x: at.x, y: at.y, r };
+      brain.expiresAt = game.now + 900;
+      planWander(game, ship, brain);
+    }
     return ship;
   }
   return null;
