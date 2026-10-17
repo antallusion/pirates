@@ -8,7 +8,8 @@
 //   − / +       beside the wheel on a touch screen (owner, 2026-10-16: «на мобиле нужна кнопка сбавить и добавить
 //               скорость»): a step of sail less or more (0 · ¼ · ½ · ¾ · full), the same input as the keys; the four
 //               pips between them are her sail now.
-//   the sea     a tap aims (a ship tapped becomes the target); two fingers pinch the zoom.
+//   the sea     a tap aims (a ship tapped becomes the target); a finger dragged looks about, two pinch the zoom
+//               (freecam.ts: the far view and the free look, owner 2026-10-17).
 // Shown on coarse pointers or after the first touch.
 
 import { STICK_DOUBLE_MS, STICK_REEF_MS, seaWord, stickSail } from './ui/seahud.ts';
@@ -16,6 +17,7 @@ import { STICK_DOUBLE_MS, STICK_REEF_MS, seaWord, stickSail } from './ui/seahud.
 /** A press held still this long steers (a quicker one may be a tap of the dash). */
 export const STICK_STEER_MS = 140;
 import { $ } from './ui/dom.ts';
+import { SeaGesture } from './render/freecam.ts';
 
 export interface TouchHooks {
   /** Set the sail to a step (0–4): the stick's pull, or the middle held. */
@@ -25,6 +27,8 @@ export interface TouchHooks {
   /** Aim the "cursor" at a screen point (abilities and the mount aim where you last touched the sea). */
   aim(px: number, py: number): void;
   zoom(factor: number): void;
+  /** The view dragged by (dx, dy) px: the free look (freecam.ts). */
+  pan?(dx: number, dy: number): void;
 }
 
 /** Angle difference a − b wrapped into −π…π. */
@@ -52,8 +56,8 @@ export class TouchControls {
   private stick: HTMLElement;
   private knob: HTMLElement;
   private stickId: number | null = null;
-  private pinch = new Map<number, { x: number; y: number }>();
-  private pinchDist = 0;
+  /** The sea's fingers: taps, drags and pinches (freecam.ts). */
+  private sea = new SeaGesture();
   private hooks: TouchHooks;
   /** The «−» / «+» of the sail beside the wheel and the sail they last showed. */
   private sailBox: HTMLElement;
@@ -234,34 +238,33 @@ export class TouchControls {
     s.addEventListener('pointercancel', up);
   }
 
+  /** The sea under the fingers (freecam.ts SeaGesture): a tap aims (and sails to a thing), a finger dragged looks
+   *  about (owner, 2026-10-17: «просто возить пальцем и просматривать где что»), two pinch the zoom and drag the view.
+   *  A mouse drags the view too (its click stays main.ts's). */
   private bindCanvas(): void {
     const c = $('world');
     c.addEventListener('pointerdown', (e) => {
-      if (e.pointerType !== 'touch') return;
-      this.pinch.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (this.pinch.size === 2) this.pinchDist = this.spread();
-      else this.hooks.aim(e.clientX, e.clientY);
-    });
-    c.addEventListener('pointermove', (e) => {
-      if (!this.pinch.has(e.pointerId)) return;
-      this.pinch.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (this.pinch.size === 2) {
-        const d = this.spread();
-        if (this.pinchDist > 0 && d > 0) this.hooks.zoom(d / this.pinchDist);
-        this.pinchDist = d;
+      const mouse = e.pointerType === 'mouse';
+      // (a mouse drags with its middle button, or its left one in the simple HUD — the detailed one fires on a click)
+      if (mouse && e.button !== 1 && !(e.button === 0 && document.body.classList.contains('simple'))) return;
+      this.sea.down(e.pointerId, e.clientX, e.clientY);
+      if (mouse) {
+        if (e.button === 1) e.preventDefault(); // (no autoscroll)
+        try { c.setPointerCapture(e.pointerId); } catch { /* not tracked */ }
       }
     });
+    c.addEventListener('pointermove', (e) => {
+      const o = this.sea.move(e.pointerId, e.clientX, e.clientY);
+      if (o.zoom) this.hooks.zoom(o.zoom);
+      if (o.pan && (o.pan[0] || o.pan[1])) this.hooks.pan?.(o.pan[0], o.pan[1]);
+    });
     const end = (e: PointerEvent) => {
-      this.pinch.delete(e.pointerId);
-      if (this.pinch.size < 2) this.pinchDist = 0;
+      const o = this.sea.up(e.pointerId, e.clientX, e.clientY, e.type === 'pointercancel');
+      // (a mouse's click is main.ts's own: its tap aims nothing here)
+      if (o.tap && e.pointerType !== 'mouse') this.hooks.aim(o.tap[0], o.tap[1]);
     };
     c.addEventListener('pointerup', end);
     c.addEventListener('pointercancel', end);
-  }
-
-  private spread(): number {
-    const [a, b] = [...this.pinch.values()];
-    return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
   }
 }
 

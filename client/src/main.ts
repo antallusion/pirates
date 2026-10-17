@@ -87,6 +87,8 @@ import { BaseWindow } from './ui/base.ts';
 import { IsleScene } from './ui/islescene.ts'; // the island screen (owner, 2026-10-15)
 import { EN as LIS_EN, RU as LIS_RU } from './lang/ui/islescene.ts';
 import { buttonHtml } from './ui/kit/button.ts';
+import { ZOOM_NEAR_MIN, clampZoom } from './render/freecam.ts'; // the far view and the free look (owner, 2026-10-17)
+import { EN as FC_EN, RU as FC_RU } from './lang/ui/freecam.ts';
 import { askMove } from './ui/isletree.ts'; // docs/29: the island's move, its confirm
 import { $, decorateSums, esc, fmt, icon, keepInputs, knots } from './ui/dom.ts';
 import { Hud, TOUCH_FOLDED, releaseModalToasts } from './ui/hud.ts';
@@ -386,6 +388,7 @@ baseWindow.onScoutPick = (id) => {
 /** The island screen: a scene of its own over the whole screen, the sea stopped under it (ui/islescene.ts). */
 const isleScene = new IsleScene((m) => net.send(m), baseWindow);
 const LIS = dict(LIS_EN, LIS_RU);
+const LFC = dict(FC_EN, FC_RU); // freecam: «К кораблю»
 let isleKey = '';
 // The recruit window of the Heroes (docs/17 H3): from a port's tavern and from the island's town.
 const recruitWindow = new RecruitWindow((m) => net.send(m));
@@ -840,7 +843,12 @@ const touch = new TouchControls({
   },
   zoom: (f) => {
     renderer.userZoomed = true;
-    renderer.targetZoom = clamp(renderer.targetZoom * f, 0.35, 4);
+    renderer.targetZoom = clampZoom(renderer.targetZoom * f); // far out (freecam.ts, owner 2026-10-17)
+  },
+  // a finger dragged over the sea looks about; she sails on as ordered (freecam.ts)
+  pan: (dx, dy) => {
+    if (!inGame || state.self?.dockedAt) return;
+    renderer.panBy(dx, dy, state.ownDisplay);
   },
 });
 // The sea HUD on a phone (docs/23 phase 2): «Огонь» and its wheel, «Действие» and its wheel, «Особое», the menu's
@@ -907,6 +915,27 @@ const isleBtn = (() => {
   $('touch').append(b);
   return b;
 })();
+// «К кораблю» (owner, 2026-10-17: «вернуть камеру к кораблю»): under the chart's row while the view looks away from her
+// — parked by a finger's drag, or drawn out past the old farthest (freecam.ts); a tap brings it home.
+const homeBtn = (() => {
+  const t = document.createElement('template');
+  t.innerHTML = buttonHtml({ kind: 'icon', id: 'tc-home', icon: 'map_ship', glyph: '⌖', aria: LFC('homeAria'), cls: 'sea-round hidden' }).trim();
+  const b = t.content.firstElementChild as HTMLButtonElement;
+  b.insertAdjacentHTML('beforeend', '<span class="tc-home-l"></span>');
+  b.addEventListener('click', () => renderer.recentre());
+  $('touch').append(b);
+  return b;
+})();
+function homeBtnFrame(): void {
+  const show = renderer.looking && !state.self?.dockedAt;
+  if (homeBtn.classList.contains('hidden') === show) homeBtn.classList.toggle('hidden', !show);
+  const l = homeBtn.querySelector('.tc-home-l')!;
+  if (l.textContent !== LFC('home')) {
+    l.textContent = LFC('home');
+    homeBtn.title = LFC('homeAria');
+    homeBtn.setAttribute('aria-label', LFC('homeAria'));
+  }
+}
 /** «Остров» shown while she holds an island and no fight is near (its word in her language). */
 function isleBtnFrame(): void {
   const show = state.self?.homeIsle !== null && state.self?.homeIsle !== undefined;
@@ -2587,7 +2616,13 @@ canvas.addEventListener('mouseleave', () => {
 });
 canvas.addEventListener('wheel', (e) => {
   renderer.userZoomed = true;
-  renderer.targetZoom = clamp(renderer.targetZoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12), 0.35, 4);
+  // (a far view steps out quicker: from the old farthest to the chart's in a dozen notches, freecam.ts)
+  const step = renderer.targetZoom < ZOOM_NEAR_MIN ? 1.25 : 1.12;
+  renderer.targetZoom = clampZoom(renderer.targetZoom * (e.deltaY < 0 ? step : 1 / step));
+});
+// (the view home from the far look by a key too: Home — the button is the simple HUD's)
+addEventListener('keydown', (e) => {
+  if (e.key === 'Home' && inGame && !typing() && renderer.looking) renderer.recentre();
 });
 /** A finger's tap brings the browser's mouse events after it: on a phone every tap on the sea came down here too and
  *  fired the broadside under the finger — at a ship it marked, at a creature stack, at the open sea — and her own volley
@@ -4222,6 +4257,7 @@ function step(t: number): void {
     }
     hud.castKey = touch.enabled ? '' : ` (${keyOfAction('land')})`; // a phone has its button, not a key
     isleBtnFrame();
+    homeBtnFrame();
     hud.hauling = netHaul.active;
     hud.update(state, prompt);
     autosailPill.draw(state);

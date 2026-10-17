@@ -25,7 +25,7 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--ink); color: var(--bone); font-family: var(--sans); font-size: 13px; overflow: hidden; }
-canvas#world { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; cursor: crosshair; }
+canvas#world { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; cursor: crosshair; touch-action: none; } /* (a finger dragged looks about: freecam.ts) */
 canvas#world-sea, canvas#world-sky { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; pointer-events: none; }
 .hidden { display: none !important; }
 /* The forms' honeypot (owner, 2026-10-11): off the screen for people, filled only by bots. */
@@ -4912,6 +4912,10 @@ body.tac-ph #toasts { top: calc(var(--sa-t) + 8px); left: 50%; transform: transl
 @media (max-width: 660px) { #encounter .enc-choices .btn { font-size: 10.5px; } } /* «(Лидерство)» whole in a third of 640 px */
 /* A window open: the sea's cards wait under it (an encounter's card stood over the boarding's spoils). */
 body:has(#modal:not(.hidden)) #encounter, body:has(#modal:not(.hidden)) #surrender { visibility: hidden; }
+/* (a ship striking her colours with an encounter's card up: on a desk both stand in the top middle — her terms first, the
+   encounter waits under them; a phone has the terms at the bottom, feel.css) */
+body:not(.touch):has(#surrender:not(.hidden)) #encounter { visibility: hidden; }
+@media (min-width: 1100px) and (min-height: 521px) { body.touch:has(#surrender:not(.hidden)) #encounter { visibility: hidden; } }
 /* The terms of a struck ship and a stormed lair's chest, placed as an encounter's card: in the top band on a desk (the
    top stack steps aside while they are up), in the top-left corner over the captain's plate on a short screen. The
    terms keep to their head, a line of words and the four choices in one row (what each gives in its tooltip); «Later»

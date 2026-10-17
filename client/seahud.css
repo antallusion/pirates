@@ -118,8 +118,8 @@ body.simple:not(.touch) #hud-captain:active .cs-frame { transform: scale(0.97); 
 /* ---------- the round buttons in two short rows (owner, 2026-10-16, Telegram on a phone: «эти иконки которые 4 в ряд
    они заходят за кнопку нижнюю. короче надо справа два и слева два под аватаркой»; a column of four under the chart
    ran into «Цель» and «Действие» at the bottom right):
-     right, under the chart, right-aligned to its right edge   the news · the menu (the menu on the edge: the news
-                                                                 comes and goes beside it without a hole)
+     right, under the chart, centred on its middle             the news · the menu (the menu on the right: the news
+                                                                 comes and goes beside it, the row centred again)
      left, under the captain's plate, from the screen's edge  the chat (a phone or a tablet; a desk keeps it by the
                                                                  helm: chat.css) · «Остров» · her offer (promo.ts)
    Equal sizes and gaps in both; each row one button tall, so the fight's buttons and the helm below keep clear of it
@@ -129,13 +129,35 @@ body.simple { --tr-b: 44px; --tr-g: 8px; --tr-c: 1; --lr-i: 0; --lr-o: 0; --lr-d
 @media (max-height: 520px) { body.simple { --tr-b: calc(36px + 8 * var(--u, 1px)); --tr-g: calc(5px + 3 * var(--u, 1px)); } }
 @media (min-width: 1100px) and (min-height: 600px) { body.simple:not(.touch) { --tr-c: 0; } }
 body.simple:has(#touch > #tc-isle:not(.hidden)) { --lr-i: 1; }
+/* («Остров» steps out in a fight and with the chart stepped up, isle.css: the offer moves up, no hole) */
+body.simple:is(.sea-fight, .touch.mm-peek):has(#touch > #tc-isle) { --lr-i: 0; }
 body.simple:has(#touch > #tc-offer:not(.hidden)) { --lr-o: 1; }
 body.simple:has(#touch > #tc-daily:not(.hidden)) { --lr-d: 1; }
 body.simple #hud-map { top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + 8px); width: var(--mm); height: var(--mm); }
 body.simple #hud #touch > :is(#tc-menu, #tc-news, #tc-isle, #tc-offer, #tc-daily) { position: absolute; bottom: auto; width: var(--tr-b); height: var(--tr-b); min-width: 0; min-height: 0; pointer-events: auto; }
 /* the right row */
-body.simple #hud #touch > :is(#tc-menu, #tc-news) { left: auto; top: var(--tr-top); right: calc(var(--sa-r) + 8px + var(--tr-x, 0) * (var(--tr-b) + var(--tr-g))); }
+/* (centred under the chart, owner 2026-10-17: «выровняй иконки внизу по центру относительно этой карты»: --tr-n is how
+   many stand in the row now — the news comes and goes, the menu steps up with the chart in a fight — and the row is
+   centred on the chart's middle, one gap between) */
+body.simple { --tr-n: 2; }
+body.simple:is(:has(#touch > #tc-news.hidden), :has(#hud-watch:not(.hidden):not(.tut-hidden)), .touch:has(#hud-watch:not(.hidden)), .touch.sea-fight, .touch.sea-target, .mm-peek) { --tr-n: 1; }
+body.simple #hud #touch > :is(#tc-menu, #tc-news) { left: auto; top: var(--tr-top);
+  right: calc(var(--sa-r) + 8px + (var(--mm) - var(--tr-n) * var(--tr-b) - (var(--tr-n) - 1) * var(--tr-g)) / 2 + var(--tr-x, 0) * (var(--tr-b) + var(--tr-g))); }
 body.simple #hud #touch > #tc-news { --tr-x: 1; }
+/* «К кораблю» (freecam.ts, owner 2026-10-17): while the view looks away from her, one row lower, centred under the
+   chart as well, its word under it */
+#tc-home { display: none; }
+body.simple #hud #touch > #tc-home { display: block; position: absolute; left: auto; bottom: auto; top: calc(var(--tr-top) + var(--tr-b) + var(--tr-g));
+  right: calc(var(--sa-r) + 8px + (var(--mm) - var(--tr-b)) / 2); width: var(--tr-b); height: var(--tr-b); min-width: 0; min-height: 0; pointer-events: auto; }
+body.simple #hud #touch > #tc-home.hidden { display: none; }
+/* (a fight on a touch screen: the chart and the menu stepped up behind their tab, «К кораблю» right under the tab — the
+   fight's «Цель» stands high on a short screen; the chart brought back by her tap — the menu in the row, the fight's
+   buttons below — it waits: a pinch brings the view in) */
+body.simple.touch.sea-fight.mm-peek #hud #touch > #tc-home { top: calc(var(--sa-t) + 52px); }
+body.simple.touch.sea-fight.mm-peek #hud #touch > #tc-home .tc-home-l { display: none; }
+body.simple.touch.sea-fight:not(.mm-peek) #hud #touch > #tc-home { display: none; }
+body.simple #hud #touch > #tc-home .tc-home-l { position: absolute; left: 50%; top: calc(100% + 3px); transform: translateX(-50%); font-size: 9px; line-height: 1; white-space: nowrap;
+  color: var(--bone, #e6dccb); text-shadow: 0 1px 2px #000, 0 0 4px #000; pointer-events: none; }
 body.simple.mm-peek #hud #touch > #tc-news { --tr-x: 0; }
 body.simple #hud #touch > :is(#tc-menu, #tc-news) .k-badge { top: -3px; right: auto; left: -8px; }
 body.simple:not(.touch) #hud #touch > #tc-menu > .kc-b { left: -6px; top: -6px; bottom: auto; transform: none; }
