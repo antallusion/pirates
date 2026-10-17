@@ -1,6 +1,7 @@
 // Naval combat: broadsides, ballistics, hit resolution with angle-of-impact and subsystem damage,
 // crimes and kill credit. All numbers come from shared data; nothing here trusts the client.
 
+import { recordShot } from './waystations.ts'; // docs/35: the record of the fallen
 import { regattaBlocked } from './regatta.ts';
 import { tributeBroken } from './raiding.ts';
 import { lairImpact } from './wanted.ts';
@@ -985,10 +986,14 @@ export function killMen(game: Game, target: ShipEntity, killed: number, source: 
   killed = Math.max(0, Math.min(Math.floor(killed), target.crew));
   if (!killed || cap < 1) return 0;
   const before = target.crew;
-  target.shotMen(killed, cap);
+  const fell = target.shotMen(killed, cap);
   killed = before - target.crew;
   if (!killed) return 0;
-  target.wounded += woundedOf(game, target, killed);
+  const wounded = woundedOf(game, target, killed);
+  target.wounded += wounded;
+  // docs/35: a captain's dead to the guns go on her record of the fallen (the wounded below come back by themselves;
+  // the Drowned's crew rises by itself).
+  if (target.isPlayer && !target.hasFlag('crew_of_drowned')) recordShot(game, game.sessionOf(target), fell, wounded);
   onCrewKilled(game, target, killed, source);
   onOwnCrewKilled(target, killed, game.now);
   // Crew of the Drowned: the fallen rise; the crew never drops under 40%.

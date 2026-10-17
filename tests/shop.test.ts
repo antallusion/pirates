@@ -383,7 +383,7 @@ test('the first top-up comes double: its gift claimed in the shop once; a level\
   assert.equal(premiumView(game, s).shop!.why.lv30, 'gone');
 });
 
-test('charms only against the sea; the infirmary only for a fight against the sea; the island\'s charter keeps raiders and robbers off; the charter of removal', () => {
+test('charms only against the sea; the infirmary raises the record of the fallen (docs/35); the island\'s charter keeps raiders and robbers off; the charter of removal', () => {
   const { game, db } = world();
   const s = captain(game, 'Charmed', 3000, true);
   assert.equal(buyOffer(game, s, 'charm_290', pid()), null);
@@ -398,10 +398,9 @@ test('charms only against the sea; the infirmary only for a fight against the se
   charmSide(game, s.ship!, t.ship!, b);
   assert.deepEqual([b.morale, b.hero!.luck], [60, 0], 'not against a captain');
   assert.equal(shopState(game, s.accountId).charms, 16);
-  // the infirmary
+  // the infirmary (docs/35: her record of the fallen — a captain's fight too, raised only after it)
   s.ship!.setArmy([{ u: 'marine', n: 20 }]);
-  noteFallen(game, s, [{ u: 'marine', n: 10 }], 0, true);
-  assert.equal(premiumView(game, s).shop!.why.refill, 'none', 'a captain\'s fight: nothing');
+  assert.equal(premiumView(game, s).shop!.why.refill, 'none', 'nobody fallen: nothing');
   noteFallen(game, s, [{ u: 'marine', n: 10 }], 0.2, false);
   const v = premiumView(game, s).shop!;
   assert.equal(v.fallen?.n, 8);

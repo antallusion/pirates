@@ -41,6 +41,8 @@ import type { TacSideInput } from './tacbattle.ts';
 import { creatureRoom, joinCreatures } from './tame.ts';
 import { sanitizeLooks } from './looks.ts';
 import { opsPrice, opsShut, saleOf, trackEvent } from './liveops.ts'; // docs/34: the panel's prices, the funnel
+import { raiseInstant, recordFallen, resInstant, setScrollStore } from './waystations.ts'; // docs/35: the fallen, the scrolls
+import { RSCROLL_MAX } from '../../../shared/src/data/resurrect.ts';
 
 const H = 3_600_000;
 const D = 86_400_000;
@@ -80,8 +82,8 @@ export interface ShopState {
    *  back with that payment's refund. */
   firstPay: boolean;
   firstGift?: { ref: string; n: number; claimed: boolean };
-  /** The infirmary's roll: her fallen of the last boarding against the sea, and when. */
-  fallen?: { at: number; units: { u: UnitId; n: number }[] };
+  /** docs/35: scrolls of resurrection (one raises a stack of the line kinds, anywhere out of a fight). */
+  rscrolls?: number;
 }
 
 const fresh = (): ShopState => ({ buys: {}, perm: 0, temp: [], speed: 0, kits: 0, charms: 0, moves: 0, xp: 0, wind: 0, prod: 0, shield: 0, sub: 0, subDay: -1, gifts: {}, firstPay: false });
@@ -170,16 +172,23 @@ export function charmSide(game: Game, ship: ShipEntity, enemy: ShipEntity, side:
   game.sendTo(s, { t: 'toast', msg: `A lucky charm: +1 luck and +${CHARM_MORALE} morale for this boarding (${st.charms} left).`, kind: 'gold' });
 }
 
-/** After a boarding: her fallen (those First Aid and the wounded did not bring back) on the infirmary's roll — only
- *  of a fight against the sea's ships, never another captain's. */
-export function noteFallen(game: Game, s: PlayerSession, lost: readonly { u: string; n: number }[], raise: number, pvp: boolean): void {
-  if (!s.authed) return;
-  const st = shopState(game, s.accountId);
-  const units = pvp ? [] : lost.map((x) => ({ u: x.u as UnitId, n: Math.max(0, x.n - Math.floor(x.n * Math.max(0, raise))) })).filter((x) => x.n > 0 && UNITS[x.u]);
-  if (!units.length && !st.fallen) return;
-  st.fallen = units.length ? { at: game.wallNow(), units } : undefined;
-  save(game, s.accountId, st);
+/** After a battle: her fallen (those First Aid and the wounded did not bring back) on her record of the fallen —
+ *  docs/35 (waystations.ts): a captain's fight too, raised only after it. Kept for the tests' old word. */
+export function noteFallen(game: Game, s: PlayerSession, lost: readonly { u: string; n: number }[], raise: number, _pvp: boolean): void {
+  const raised = new Map<string, number>();
+  for (const x of lost) raised.set(x.u, (raised.get(x.u) ?? 0) + Math.floor(x.n * Math.max(0, raise)));
+  recordFallen(game, s, lost, raised);
 }
+
+// docs/35: the scrolls of resurrection are kept in her shop's store; the waystations spend them.
+setScrollStore({
+  scrollsOf: (game, acc) => Math.max(0, Math.floor(shopState(game, acc).rscrolls ?? 0)),
+  spend: (game, acc) => {
+    const st = shopState(game, acc);
+    st.rscrolls = Math.max(0, (st.rscrolls ?? 0) - 1);
+    save(game, acc, st);
+  },
+});
 
 /** A payment credited (premium.ts creditPremium): the first of the account lays its gift in the shop — as many
  *  doubloons again, up to FIRST_PAY_CAP — to be claimed there («Забрать»). */
@@ -294,26 +303,10 @@ function looksLeft(s: PlayerSession): string[] {
   return SHOP_LOOKS.filter((k) => !unlocks.includes(k));
 }
 
-/** The infirmary's roll as it stands (null: nothing to bring back), what comes aboard and its price. */
-function fallenNow(game: Game, s: PlayerSession, st: ShopState): { units: { u: UnitId; n: number }[]; n: number; price: number; until: number } | null {
-  const f = st.fallen;
-  const ship = s.ship;
-  if (!f || !ship || game.wallNow() > f.at + REFILL_MINUTES * 60_000) return null;
-  let room = Math.max(0, ship.stats.crewMax - ship.crew);
-  let slots = ship.armySlots - ship.army.length;
-  const units: { u: UnitId; n: number }[] = [];
-  for (const x of f.units) {
-    const own = ship.army.some((a) => a.u === x.u);
-    if (!own && slots <= 0) continue;
-    const k = Math.min(room, x.n);
-    if (k <= 0) continue;
-    if (!own) slots--;
-    room -= k;
-    units.push({ u: x.u, n: k });
-  }
-  const n = units.reduce((a, x) => a + x.n, 0);
-  const worth = units.reduce((a, x) => a + x.n * (UNITS[x.u].cost ?? 100), 0);
-  return { units, n, price: Math.min(PRICE_MAX, Math.max(PRICE_MIN, Math.ceil((worth / 1000) * REFILL_RATE))), until: f.at + REFILL_MINUTES * 60_000 };
+/** The infirmary as it stands (null: nothing to bring back), what comes aboard and its price: her record of the
+ *  fallen's line kinds, at once and anywhere (docs/35, waystations.ts resInstant). */
+function fallenNow(game: Game, s: PlayerSession, _st: ShopState): { units: { u: UnitId; n: number }[]; n: number; price: number; until: number } | null {
+  return resInstant(game, s);
 }
 
 /** Why one grant cannot be had now (null: it can). */
@@ -349,6 +342,8 @@ function grantWhy(game: Game, s: PlayerSession, st: ShopState, g: ShopGrant, off
       return st.charms + g.n > 999 ? 'max' : null;
     case 'kit':
       return st.kits + g.n > 999 ? 'max' : null;
+    case 'rscroll':
+      return (st.rscrolls ?? 0) + g.n > RSCROLL_MAX ? 'max' : null;
     case 'pages': {
       const n = (count.get('pages') ?? 0) + g.n;
       count.set('pages', n);
@@ -517,10 +512,12 @@ function grant(game: Game, s: PlayerSession, st: ShopState, g: ShopGrant, offerI
       return;
     case 'refill': {
       const f = fallenNow(game, s, st);
-      for (const x of f?.units ?? []) joinCreatures(game, s, x.u, x.n);
-      st.fallen = undefined;
+      raiseInstant(game, s, f?.units ?? []);
       return;
     }
+    case 'rscroll':
+      st.rscrolls = Math.min(RSCROLL_MAX, (st.rscrolls ?? 0) + g.n);
+      return;
     case 'pardon':
       p.infamy = Math.min(p.infamy, 10);
       return;
@@ -835,7 +832,7 @@ export function shopView(game: Game, s: PlayerSession): ShopView {
     now: wall, dayEnds: (day + 1) * D, why, left, price, ...(Object.keys(sale).length ? { sale } : {}),
     deal: { id: d.offer.id, price: d.price, why: offerWhy(game, s, st, d.offer, true) },
     gifts: LEVEL_GIFTS.filter((l) => (st.gifts[l] ?? -1) >= 0 && wall <= st.gifts[l] + LEVEL_OFFER_H * H && why[`lv${l}`] !== 'limit').map((l) => ({ id: `lv${l}`, until: st.gifts[l] + LEVEL_OFFER_H * H })),
-    inv: { speed: st.speed, kits: st.kits, charms: st.charms, moves: st.moves },
+    inv: { speed: st.speed, kits: st.kits, charms: st.charms, moves: st.moves, rs: Math.floor(st.rscrolls ?? 0) },
     boosts: { xp: st.xp > wall ? st.xp : 0, wind: st.wind > wall ? st.wind : 0, prod: st.prod > wall ? st.prod : 0, shield: st.shield > wall ? st.shield : 0, sub: st.sub > wall ? st.sub : 0 },
     crews, jobs,
     fallen: f && f.n > 0 ? { n: f.n, until: f.until } : null,

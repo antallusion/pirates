@@ -6,6 +6,7 @@ import type { TownId } from '../../../shared/src/data/town.ts';
 import type { H3ClientMsg } from '../../../shared/src/h3proto.ts';
 import { baseView } from './base.ts';
 import { stepCalendar } from './calendar.ts';
+import { wayDwellView, wayRecruit } from './waystations.ts'; // docs/35: the waystation's hire
 import { dwellView, recruit, saveDwellings, train } from './dwell.ts';
 import type { Game } from './Game.ts';
 import { minesView } from './mines.ts';
@@ -21,11 +22,11 @@ export function h3Message(game: Game, s: PlayerSession, msg: H3ClientMsg): void 
   const err = (e: string | null) => {
     if (e) game.sendTo(s, { t: 'toast', msg: e, kind: 'bad' });
   };
-  const src = (x: unknown): 'port' | 'isle' | 'lair' => (x === 'isle' ? 'isle' : x === 'lair' ? 'lair' : 'port');
-  const view = (where: 'port' | 'isle' | 'lair') => (where === 'lair' ? lairDwellView(game, s) : dwellView(game, s, where));
-  const refresh = (where: 'port' | 'isle' | 'lair' | null) => {
+  const src = (x: unknown): 'port' | 'isle' | 'lair' | 'way' => (x === 'isle' ? 'isle' : x === 'lair' ? 'lair' : x === 'way' ? 'way' : 'port');
+  const view = (where: 'port' | 'isle' | 'lair' | 'way') => (where === 'lair' ? lairDwellView(game, s) : where === 'way' ? wayDwellView(game, s) : dwellView(game, s, where));
+  const refresh = (where: 'port' | 'isle' | 'lair' | 'way' | null) => {
     if (where) game.sendTo(s, { t: 'dwell', view: view(where) });
-    if (where !== 'port') game.sendTo(s, { t: 'base', view: baseView(game, s) });
+    if (where !== 'port' && where !== 'way') game.sendTo(s, { t: 'base', view: baseView(game, s) });
     if (s.ship?.docked) game.pushPort(s);
     game.pushSelf(s, true);
   };
@@ -35,12 +36,12 @@ export function h3Message(game: Game, s: PlayerSession, msg: H3ClientMsg): void 
     case 'recruit': {
       // docs/18 II: the creatures of a dwelling flagged over a lair, and of the town's pen.
       const where = src(msg.src), u = String(msg.u) as UnitId, n = Math.trunc(Number(msg.n));
-      err(where === 'lair' ? lairRecruit(game, s, u, n) : where === 'isle' && isTitan(u) ? titanRecruit(game, s, u) : where === 'isle' && isBeast(u) ? penRecruit(game, s, u, n) : where === 'port' ? recruit(game, s, 'port', u, n) : recruit(game, s, 'isle', u, n));
+      err(where === 'way' ? wayRecruit(game, s, u, n) : where === 'lair' ? lairRecruit(game, s, u, n) : where === 'isle' && isTitan(u) ? titanRecruit(game, s, u) : where === 'isle' && isBeast(u) ? penRecruit(game, s, u, n) : where === 'port' ? recruit(game, s, 'port', u, n) : recruit(game, s, 'isle', u, n));
       return refresh(where);
     }
     case 'train': {
       const where = src(msg.src);
-      if (where === 'lair') return refresh(where);
+      if (where === 'lair' || where === 'way') return refresh(where);
       err(train(game, s, where, String(msg.u) as UnitId, Math.trunc(Number(msg.n))));
       return refresh(where);
     }

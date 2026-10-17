@@ -65,8 +65,10 @@ export type ShopGrant =
   /** Fighters of a tier's line kind (RECRUIT_KINDS) into her free hammocks up to so many, sold from the ship level a
    *  premium kind of that tier is. */
   | { k: 'units'; tier: number; n: number }
-  /** Her fallen of the last boarding against the sea stand again (REFILL_*). */
+  /** Her fallen stand again at once, anywhere out of a fight (REFILL_RATE; docs/35, her record of the fallen). */
   | { k: 'refill' }
+  /** docs/35: scrolls of resurrection — one raises a stack of the line kinds, anywhere out of a fight. */
+  | { k: 'rscroll'; n: number }
   /** Her infamy struck off to a stranger's (ports.ts pardon, without the port). */
   | { k: 'pardon' }
   /** Treasure maps of her waters' tier. */
@@ -181,6 +183,7 @@ export const UNIT_PRICE = {
   prod: 90 / 24, shield: 80 / 24, xp: 30, wind: 20, // an hour
   move: 2490, charm: 17, kit: 27, scrolls: 20, pages: 26, art: 150, map: 58, looks: 15,
   crate: 20, crate2: 35, // a crate of shot
+  rscroll: 95, // docs/35: a scroll of resurrection (shared/src/data/resurrect.ts RSCROLL_PRICE)
 } as const;
 
 /** What a bundle's goods are worth at the single prices (its «Выгода ×N»). */
@@ -199,6 +202,7 @@ export function worthOf(grants: readonly ShopGrant[]): number {
       case 'move': w += UNIT_PRICE.move; break;
       case 'charm': w += g.n * UNIT_PRICE.charm; break;
       case 'kit': w += g.n * UNIT_PRICE.kit; break;
+      case 'rscroll': w += g.n * UNIT_PRICE.rscroll; break;
       case 'scrolls': w += g.n * UNIT_PRICE.scrolls; break;
       case 'pages': w += g.n * UNIT_PRICE.pages; break;
       case 'art': w += UNIT_PRICE.art; break;
@@ -357,9 +361,16 @@ export const SHOP: ShopFamily[] = [
   },
   {
     id: 'refill', tabs: ['board'], sec: 'battle', icon: 'prof_surgeon',
-    name: T('Infirmary', 'Лазарет'),
-    text: T('The fallen of your last boarding against the sea stand again, within an hour of it. The price is by their worth, 290 at the least.', 'Павшие в последнем абордаже с кораблями моря снова в строю — в течение часа после боя. Цена — по их стоимости, не меньше 290.'),
+    name: T('Infirmary: at once', 'Лазарет: мгновенно'),
+    text: T('Your fallen of the last day stand again at once, anywhere at sea, with no waystation or port. The price is by their worth, 290 at the least.', 'Павшие за последние сутки сразу снова в строю — где угодно в море, без плавучего дома и порта. Цена — по их стоимости, не меньше 290.'),
     offers: [o('refill', 0, [{ k: 'refill' }])],
+  },
+  {
+    // docs/35: a scroll raises one stack of the line kinds anywhere out of a fight (the shop's creatures: doubloons only).
+    id: 'rscroll', tabs: ['board'], sec: 'battle', icon: 'talent_srv_ships_surgeon',
+    name: T('Scrolls of resurrection', 'Свитки воскрешения'),
+    text: T('One scroll raises one stack of your fallen in full, anywhere out of a fight. Not for the shop’s creatures.', 'Один свиток поднимает один отряд павших целиком — где угодно вне боя. Кроме существ из магазина.'),
+    offers: line('rs', [290, 590, 990, 1990, 4990, 9900], UNIT_PRICE.rscroll, (n) => [{ k: 'rscroll', n }]),
   },
   {
     id: 'xp', tabs: ['board'], sec: 'battle', icon: 'xp',

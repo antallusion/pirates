@@ -59,6 +59,7 @@ import type { FindClientMsg, FindServerMsg } from './findproto.ts';
 import type { CastawayView, WreckView } from './data/wrecks.ts'; // seaux: her own wreckage and castaways
 import type { RoamClientMsg, RoamServerMsg } from './roamproto.ts'; // docs/19 D7
 import type { PremiumClientMsg, PremiumServerMsg } from './premiumproto.ts'; // the premium shop (owner, 2026-10-03)
+import type { WayClientMsg, WayData, WayServerMsg } from './wayproto.ts'; // docs/35: the floating waystations, the resurrection
 import type { IsleType } from './world/archipelago.ts';
 import type { CommonKind } from './data/commongoal.ts';
 import type { InvasionView } from './data/invasions.ts';
@@ -359,6 +360,8 @@ export type ClientMsg =
   | RoamClientMsg
   /** The premium shop (owner, 2026-10-03): its view, a hull or a kind bought for doubloons. */
   | PremiumClientMsg
+  /** docs/35: the floating waystations and the resurrection of the fallen. */
+  | WayClientMsg
   /** The dense sea's marks (driftwood, wrecks, buoys…): work the one within reach, or leave off. */
   | { t: 'seamark'; action: 'work'; id: number }
   | { t: 'seamark'; action: 'cancel' }
@@ -1852,7 +1855,7 @@ export type ServerMsg =
   /** `warn`: a storm front that will cross her course (docs/16 #10) — which, in how many seconds, from which bearing. */
   | { t: 'fronts'; list: FrontData[]; forecast: boolean; warn?: FrontWarn | null }
   | { t: 'lairchest'; view: LairChestView }
-  | { t: 'chunk'; key: number; islands: IslandData[]; reefs?: ReefData[]; marks?: SeaMarkData[] }
+  | { t: 'chunk'; key: number; islands: IslandData[]; reefs?: ReefData[]; marks?: SeaMarkData[]; /** docs/35 */ ways?: WayData[] }
   | { t: 'snap'; tick: number; time: number; ack: number; you: SelfRow | null; ships: ShipRow[]; loot: LootRow[]; wind: [number, number]; weather: WeatherKind; region: RegionId; fog: number; /** world time per real second, when an admin has changed it */ k?: number }
   | { t: 'info'; list: EntityInfo[] }
   | { t: 'boss'; list: BossView[] }
@@ -1983,6 +1986,8 @@ export type ServerMsg =
   | RoamServerMsg
   /** The premium shop (owner, 2026-10-03): its view, and her account's doubloons. */
   | PremiumServerMsg
+  /** docs/35: the waystation's window, her fallen and their price. */
+  | WayServerMsg
   /** The marks she has worked (no more today) and the one her boats are at now (world seconds). */
   | { t: 'seamarks'; done: number[]; busy: { id: number; until: number; total: number } | null }
   | { t: 'pong'; c: number; s: number };
