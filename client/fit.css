@@ -651,7 +651,7 @@ body.touch #mm-tab:focus-visible .mm-tab-pill { box-shadow: none; }
 #screen-login .login-brand { position: relative; z-index: 1; flex: none; text-align: center; pointer-events: none; }
 #screen-login .login-logo { margin: 0; font-size: 0; line-height: 0; letter-spacing: 0; text-shadow: none; }
 #screen-login .login-logo img { display: inline-block; width: auto; height: clamp(140px, 33vh, 330px); max-width: 92vw; object-fit: contain; filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.8)); }
-#screen-login .login-brand .subtitle { margin: 2px auto 0; max-width: 34em; color: var(--bone, #d8d2c4); font-family: var(--serif, serif); font-style: italic; font-size: 15px; text-shadow: 0 1px 2px #000, 0 0 14px rgba(0, 0, 0, 0.9); }
+#screen-login .login-brand .subtitle { margin: 10px auto 0; max-width: 34em; color: var(--bone, #d8d2c4); font-family: var(--serif, serif); font-style: italic; font-size: 15px; text-shadow: 0 1px 2px #000, 0 0 14px rgba(0, 0, 0, 0.9); }
 @media (min-height: 521px) {
   #screen-login { flex-direction: column; align-items: center; justify-content: flex-start; }
   #screen-login .login-brand { margin: auto 0 0; padding-top: max(12px, 2vh); }
@@ -666,8 +666,8 @@ body.touch #mm-tab:focus-visible .mm-tab-pill { box-shadow: none; }
   }
   #screen-login { flex-direction: row; align-items: center; justify-content: flex-end; gap: 1.6vw; padding-right: max(var(--sa-x, 0px), 2vw); }
   #screen-login .login-brand { width: 30vw; margin: auto 0; }
-  #screen-login .login-logo img { width: 100%; height: auto; max-height: 64dvh; }
-  #screen-login .login-brand .subtitle { display: inline-block; font-size: var(--f-fs-s, 11px); line-height: 1.25; margin-top: 0; padding: 2px 8px; border-radius: 6px; background: rgba(3, 5, 8, 0.62); box-shadow: 0 0 12px 4px rgba(3, 5, 8, 0.5); }
+  #screen-login .login-logo img { width: 100%; height: auto; max-height: 58dvh; }
+  #screen-login .login-brand .subtitle { display: inline-block; font-size: var(--f-fs-s, 11px); line-height: 1.25; margin-top: 8px; padding: 2px 8px; border-radius: 6px; background: rgba(3, 5, 8, 0.62); box-shadow: 0 0 8px 2px rgba(3, 5, 8, 0.45); }
   #screen-login > .login-panel, #screen-login > .login-panel:has(#login-account[open]) {
     display: block; width: min(36vw, 340px); margin: auto 0; max-height: calc(100dvh - 8px); overflow-y: auto; overscroll-behavior: contain;
     padding: calc(6px + 4 * var(--u)) calc(8px + 6 * var(--u));
