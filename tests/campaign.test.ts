@@ -29,7 +29,7 @@ import { chipsOfQuest } from '../client/src/ui/board.ts';
 import { goalSheetView } from '../client/src/ui/goalsheet.ts';
 import { classWord } from '../client/src/ui/questclass.ts';
 import { abyssCleared } from '../server/src/game/abyss.ts';
-import { campaignActive, campaignOf } from '../server/src/game/campaign.ts';
+import { campaignActive, campaignFoes, campaignOf } from '../server/src/game/campaign.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import { resolveGoal } from '../server/src/game/goalroute.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
@@ -262,6 +262,8 @@ test('the island’s yard and the dwellings send their events: works laid on her
   assert.equal(claimIsland(game, s, isl.id), null);
   const q = fake([{ type: 'build', count: 1, text: 'a' }]);
   onStep(s, q);
+  // the builders' timber from her hold (she lies off her island)
+  Object.assign(s.ship!.cargo, { timber: 300, planks: 300, iron: 300, coal: 300, sailcloth: 300 });
   const base = await import('../server/src/game/base.ts');
   const { BUILDINGS } = await import('../shared/src/data/holdings.ts');
   let laid = false;
@@ -271,8 +273,21 @@ test('the island’s yard and the dwellings send their events: works laid on her
       break;
     }
   }
-  if (laid) assert.equal(s.profile!.quests.active.length, 0, 'a work laid on her island is the step');
-  else assert.equal(s.profile!.quests.active.length, 1);
+  assert.ok(laid, 'a work laid');
+  assert.equal(s.profile!.quests.active.length, 0, 'a work laid on her island is the step');
+  // men signed on at a port's tavern (the dwellings' recruit) count too
+  const dwell = await import('../server/src/game/dwell.ts');
+  const rq = fake([{ type: 'recruit', count: 1, text: 'b' }]);
+  onStep(s, rq);
+  const port = game.portById('saltmarrow')!;
+  s.ship!.docked = port.id;
+  s.profile!.docked = port.id;
+  s.ship!.state.x = port.x;
+  s.ship!.state.y = port.y;
+  s.ship!.crew = Math.min(s.ship!.crew, 5); // hammocks free
+  const why = dwell.recruit(game, s, 'port', s.ship!.army[0].u, 3); // more of the kind she has (a slot of her army)
+  assert.equal(why, null, `signed on: ${why}`);
+  assert.equal(s.profile!.quests.active.length, 0, 'men signed on are the step');
 });
 
 // ------------------------------------------------------------------ routes
@@ -459,4 +474,26 @@ test('the campaign quest is taken anywhere, offered at every port, waits for its
   const view = c.last('self')!.self.campaign!;
   assert.equal(view.blocked, `Level ${campaignOf(game).bySlot.get(400)!.gate}`);
   assert.equal(view.next.length, 3);
+});
+
+test('the campaign’s fight comes to her: on a boarding step at sea, foes of the quest’s level put out near her, two at most', () => {
+  const { game } = makeGame();
+  const { s } = captain(game, 'Hunted', 3);
+  const q = campaignOf(game).bySlot.get(2)!.a; // «Tallow and Lanterns»: board one, then report
+  assert.equal(q.steps[0].type, 'board');
+  s.profile!.campaign!.at = 2;
+  onStep(s, q);
+  atSea(game, s, 20000, 84000); // the Crown's quiet waters off Saltmarrow: no raiders of their own
+  for (let t = 0; t < 120; t++) {
+    game.now += 1;
+    questEvent(game, s, { k: 'tick', dt: 1 });
+  }
+  const foes = campaignFoes(game, s).map((id) => game.ships.get(id)!);
+  assert.ok(foes.length >= 1 && foes.length <= 2, `${foes.length} foes`);
+  for (const f of foes) {
+    assert.equal(f.npcRole, 'pirate');
+    assert.ok(Math.hypot(f.state.x - 20000, f.state.y - 84000) < 3000, 'put out near her');
+  }
+  questEvent(game, s, { k: 'board', victim: foes[0] });
+  assert.equal(s.profile!.quests.active[0].step, 1, 'boarding one of them is the step');
 });
