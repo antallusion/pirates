@@ -1,5 +1,6 @@
 // Boarding plunder, shipwreck, ship/cargo and help dialogs.
 
+import { mountFallen } from './waystation.ts'; // docs/35
 import { bindCompanion, bottleCard, chestCard, companionCard, petsCard } from './companion.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { ask } from './confirm.ts';
@@ -92,6 +93,7 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
         <p class="${used > holdMax ? 'up' : 'muted'}">${esc(L('board.hold', { used: dec1(used), max: holdMax.toFixed(0) }))}</p>
         ${Object.keys(r.destroyed).length ? `<p class="muted">${esc(L('board.destroyed', { list: Object.entries(r.destroyed).map(([g, n]) => `${lang() === 'ru' ? GOODS[g as GoodId].name.toLowerCase() : GOODS[g as GoodId].name} × ${n}`).join(' · ') }))}</p>` : ''}
       </div><div>
+        <div data-fallen-slot></div>
         <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${esc(L('board.coin'))}</h4><div class="spoils">${money(r.gold)}${AMMO_IDS.filter((a) => r.ammo[a] > 0).map((a) => `<span class="ammo-chip" title="${esc(AMMO[a].name)}">${icon(`ammo_${a}`, '', 'ico-md')}<b>${r.ammo[a]}</b></span>`).join('')}</div></div>
         ${r.joined?.length || r.recruits > 0 ? `<div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('board.prisoners'))}</h4>${r.joined?.length ? `<p class="good">${esc(L('board.joined', { n: r.joined.reduce((a, x) => a + x.n, 0) }))}</p>` : ''}${r.recruits > 0 ? `<p>${esc(L(r.recruits === 1 ? 'board.prisonersOne' : 'board.prisonersText', { n: r.recruits }))}</p><div class="loot-row"><span>${esc(L('board.signOn'))}</span><b>${recruit}</b><input type="range" min="0" max="${r.recruits}" value="${recruit}" id="recruit" /></div>` : ''}</div>` : ''}
         <div class="card"><h4 class="card-h">${icon('tree_boarding', '', 'ico-md')}${esc(L('board.fate'))}</h4>
@@ -118,6 +120,7 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
       send({ t: 'loot_take', take, fate: el.dataset.fate as 'sink' | 'prize', recruit });
       close();
     }));
+    mountFallen(root, state, send); // docs/35: the quick «Воскресить» of her fallen
   };
   draw();
 }

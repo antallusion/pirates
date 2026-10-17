@@ -14,6 +14,7 @@ import { EN, RU } from '../lang/ui/actbar.ts';
 import { EN as FEN, RU as FRU } from '../lang/ui/seafinds.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/roamers.ts';
 import { EN as SEN, RU as SRU } from '../lang/ui/seafight.ts';
+import { EN as WEN, RU as WRU } from '../lang/ui/waystation.ts';
 import type { Action } from '../settings.ts';
 import { esc, icon } from './dom.ts';
 
@@ -21,8 +22,9 @@ const L = dict(EN, RU);
 const LF = dict(FEN, FRU);
 const LR = dict(REN, RRU);
 const LS = dict(SEN, SRU);
+const LW = dict(WEN, WRU);
 
-export type ActId = 'attack' | 'attack_stop' | 'attack_mode' | 'axes' | 'harbour' | 'board' | 'dock' | 'homeport' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'roam' | 'roam_join' | 'roam_look' | 'look' | 'repair';
+export type ActId = 'attack' | 'attack_stop' | 'attack_mode' | 'axes' | 'harbour' | 'board' | 'dock' | 'moor_way' | 'homeport' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'roam' | 'roam_join' | 'roam_look' | 'look' | 'repair';
 export type LandAction = 'land' | 'dig' | 'raise' | 'expedition' | 'descent' | 'keeper' | 'escort' | 'dive' | 'lair';
 export type LookKind = 'obj' | 'guard' | 'lair' | 'drift' | 'struck';
 
@@ -34,6 +36,8 @@ export interface ActFacts {
   harbourOpen?: boolean;
   board?: { name: string } | null;
   port?: { name: string } | null;
+  /** docs/35: a floating waystation within mooring reach (her own tap moors her, never by herself). */
+  way?: { id: number; name: string } | null;
   /** docs/23 item 79: the First Watch's «В порт» far from any harbour — the helmsman sails her to the nearest one. */
   homeport?: { name: string } | null;
   /** The First Watch's last step, «В порт», is under way: the harbour's button leads (QA 2026-10-09: a pirate outpost a
@@ -113,7 +117,8 @@ export function buildActs(f: ActFacts): Act[] {
   // In a harbour's waters: «Причалить» — the only way into it (owner, 2026-10-16: «причаливание и отплытие по кнопкам
   // только сделать, чтобы с территории меня автоматом в гавань не портовало»); far off, «В порт» sails her there.
   if (f.port) out.push({ id: 'dock', icon: 'map_port', label: L('a.moor'), sub: f.port.name, title: `${L('a.moor')}: ${f.port.name}`, key: 'dock' });
-  else if (f.homeport) out.push({ id: 'homeport', icon: 'map_port', label: L('a.dock'), sub: f.homeport.name, title: `${L('a.dock')}: ${f.homeport.name}` });
+  if (f.way && !f.port) out.push({ id: 'moor_way', icon: 'build_tavern', label: L('a.moor'), sub: LW('a.moorSub'), title: LW('a.moorTitle', { name: f.way.name }), key: 'dock', arg: String(f.way.id) });
+  if (!f.port && f.homeport) out.push({ id: 'homeport', icon: 'map_port', label: L('a.dock'), sub: f.homeport.name, title: `${L('a.dock')}: ${f.homeport.name}` });
   const l = f.landable;
   if (l && !l.blocked) {
     const sub = l.action === 'raise' || l.action === 'dive' || l.action === 'lair' ? l.feature : l.action === 'descent' ? '' : l.island;
@@ -137,8 +142,8 @@ export function buildActs(f: ActFacts): Act[] {
   for (const k of f.looks ?? []) out.push({ id: 'look', icon: LOOK_ICON[k.kind], label: L('a.look'), sub: k.name, title: L('a.lookTitle', { name: k.name }), arg: k.kind });
   const r = f.repair;
   if (r && (r.repairing || (!r.combat && r.hurt && !r.short))) out.push({ id: 'repair', icon: 'prof_carpenter', label: L(r.repairing ? 'a.repairStop' : 'a.repair'), title: L(r.repairing ? 'a.repairStop' : 'a.repair'), key: 'repair' });
-  if ((f.watchHome || (f.port && !f.board && !at && !f.roam?.lead)) && !f.grabbed) {
-    const i = out.findIndex((a) => a.id === 'dock' || a.id === 'homeport');
+  if ((f.watchHome || ((f.port || f.way) && !f.board && !at && !f.roam?.lead)) && !f.grabbed) {
+    const i = out.findIndex((a) => a.id === 'dock' || a.id === 'homeport' || a.id === 'moor_way');
     if (i > 0) out.unshift(...out.splice(i, 1));
   }
   return out;

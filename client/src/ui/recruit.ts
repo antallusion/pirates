@@ -3,6 +3,8 @@
 // the store, the hammocks and the stacks allow, "Max", the cost line, "Recruit". Under it the stacks aboard that the
 // upgraded dwellings here train up for the difference in price. The army's row of slots on top, as it will stand.
 
+import { wayName } from '../render/waystations.ts'; // docs/35: the waystation's hire
+import type { WayKind } from '../../../shared/src/world/waystations.ts';
 import { hasTamer } from '../../../shared/src/data/drifts.ts';
 import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
@@ -91,7 +93,7 @@ export class RecruitWindow {
     this.send = send;
   }
 
-  open(src: 'port' | 'isle' | 'lair'): void {
+  open(src: 'port' | 'isle' | 'lair' | 'way'): void {
     this.sel = null;
     this.n = 0;
     this.send({ t: 'h3', action: 'dwell', src });
@@ -122,7 +124,7 @@ export class RecruitWindow {
       this.n = 0;
     }
     const men = v.army.reduce((a, s) => a + s.n, 0);
-    const head = `<div class="modal-head rc-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L(v.src === 'port' ? 'sub.port' : v.src === 'lair' ? 'sub.lair' : 'sub.isle', { place: placeName(v.place) }))} · ${esc(weekLine(v.week))}</div></div>
+    const head = `<div class="modal-head rc-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(v.src === 'way' ? L('sub.way', { place: wayName(v.place as WayKind) }) : L(v.src === 'port' ? 'sub.port' : v.src === 'lair' ? 'sub.lair' : 'sub.isle', { place: placeName(v.place) }))} · ${esc(weekLine(v.week))}</div></div>
       <div class="rc-chips"><span class="ph-chip gold">${money(v.gold)}</span><span class="ph-chip">${icon('stat_crew', '', 'ico-sm')}${esc(L('room', { n: men, max: v.crewMax }))}</span><span class="ph-chip">${esc(L('slots', { n: v.army.length, max: v.slots }))}</span><span class="ph-chip" title="${esc(L('picked.tip'))}">${esc(L('picked', { n: v.pickedMax - v.picked, max: v.pickedMax }))}</span>${v.mightMax ? `<span class="ph-chip${(v.might ?? 0) >= v.mightMax ? ' warn' : ''}" title="${esc(L('might.tip'))}">${esc(L('might', { n: v.might ?? 0, max: v.mightMax }))}</span>` : ''}</div></div>`;
     const cards = v.rows.map((r) => {
       const units = r.units.map((x) => {

@@ -40,6 +40,7 @@ import type { PlayerSession } from './player.ts';
 import { repairLowMul, yardMul } from './ports.ts';
 import { sendBalance } from './premium.ts';
 import { joinCreatures } from './tame.ts';
+import { rscrollsOf, spendRScroll } from './shop.ts';
 import { weekView } from './calendar.ts';
 import { keepsDeep } from './town.ts';
 
@@ -293,6 +294,8 @@ export function raiseInstant(game: Game, s: PlayerSession, units: readonly { u: 
     takeOff(rec, x.u, k);
     n += k;
   }
+  if (n > 0) trackEvent(game, s.accountId, 'resurrect', { product: 'instant' });
+  dirty.add(s); // (her fallen told at the next second)
   return n;
 }
 
@@ -382,8 +385,7 @@ export function resurrect(game: Game, s: PlayerSession, u: UnitId | undefined, v
   if (raised <= 0) return short ?? plan.find((x) => x.why)?.why ?? 'No hammocks left aboard';
   rec.done.push(rid);
   if (paidS > 0) trackEvent(game, s.accountId, 'resurrect', { amount: paidS, product: `silver:${place}` });
-  const words = [paidS > 0 ? `${paidS} silver` : '', paidD > 0 ? `${paidD} doubloons` : ''].filter(Boolean).join(' and ');
-  game.toastShip(s.ship, `${raised} of your fallen stand again for ${words || 'nothing'}.`, 'good');
+  game.toastShip(s.ship, paidS > 0 && paidD > 0 ? `${raised} of your fallen stand again for ${paidS} silver and ${paidD} doubloons.` : paidD > 0 ? `${raised} of your fallen stand again for ${paidD} doubloons.` : `${raised} of your fallen stand again for ${paidS} silver.`, 'good');
   if (paidD > 0) sendBalance(game, s);
   return done(game, s);
 }
@@ -400,14 +402,8 @@ function done(game: Game, s: PlayerSession): null {
 // ------------------------------------------------------------------------------------------------ the scrolls
 
 /** Her scrolls of resurrection (the shop's store, shop.ts `rscroll`). */
-type ScrollStore = { scrollsOf: (game: Game, acc: number) => number; spend: (game: Game, acc: number) => void };
-let scrollStore: ScrollStore | null = null;
-/** shop.ts lends its store (the scrolls are bought there; set at its load, no cycle of imports). */
-export function setScrollStore(st: ScrollStore): void {
-  scrollStore = st;
-}
-const scrollsOf = (game: Game, s: PlayerSession): number => Math.min(RSCROLL_MAX, scrollStore?.scrollsOf(game, s.accountId) ?? 0);
-const spendScroll = (game: Game, s: PlayerSession): void => scrollStore?.spend(game, s.accountId);
+const scrollsOf = (game: Game, s: PlayerSession): number => Math.min(RSCROLL_MAX, rscrollsOf(game, s.accountId));
+const spendScroll = (game: Game, s: PlayerSession): void => spendRScroll(game, s.accountId);
 
 // ------------------------------------------------------------------------------------------------ the waystation
 
@@ -539,7 +535,7 @@ export function wayDwellView(game: Game, s: PlayerSession): DwellView | null {
     };
   });
   return {
-    src: 'way', place: WAY_LABEL[w.kind][0], rows, ups: [], army: ship.army.map((x) => ({ ...x })), slots: ship.armySlots, crew: ship.crew, crewMax: ship.stats.crewMax,
+    src: 'way', place: w.kind, rows, ups: [], army: ship.army.map((x) => ({ ...x })), slots: ship.armySlots, crew: ship.crew, crewMax: ship.stats.crewMax,
     gold: Math.floor(s.profile!.gold), have: {}, why: resBusy(game, s), week: weekView(game), picked: pickedRoom(s), pickedMax: pickedMax(s),
     might: Math.round(armyWeight(ship.army)), mightMax: Math.round(mightCap(ship.shipLevel, ship.stats.crewMax, ship.armySlots)),
   };
@@ -568,7 +564,7 @@ export function wayRecruit(game: Game, s: PlayerSession, u: UnitId, want: number
   const per = hirePer(u);
   const n = Math.min(Math.floor(Number(want)), hirePool(game, w, u), ship.stats.crewMax - ship.crew, picked, might, Math.floor(s.profile!.gold / per));
   if (!Number.isFinite(n) || n <= 0) {
-    if (hirePool(game, w, u) <= 0) return 'Nobody waiting in that dwelling this week.';
+    if (hirePool(game, w, u) <= 0) return 'Nobody left for hire here today.';
     if (ship.crew >= ship.stats.crewMax) return 'No hammocks left aboard';
     if (picked <= 0) return `A ship of level ${ship.shipLevel} berths ${pickedMax(s)} picked men (tier 4 and up) at most.`;
     if (might <= 0) return `Your crew is as strong as a ship of level ${ship.shipLevel} carries: raise her level for better men.`;
@@ -635,7 +631,7 @@ export function adminWay(game: Game, s: PlayerSession, args: string[]): string {
     ship.state.x = w.x - 120;
     ship.state.y = w.y + 40;
     ship.state.speed = 0;
-    return `At the ${WAY_LABEL[w.kind][0].toLowerCase()} #${w.id}, a cable off.`;
+    return `At waystation #${w.id}, a cable off.`;
   }
   if (sub === 'fallen') {
     const u = (args[1] && Object.hasOwn(UNITS, args[1]) ? args[1] : null) as UnitId | null;

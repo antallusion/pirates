@@ -62,6 +62,7 @@ import type { QuickBtn, WinTab } from './kit/window.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
 import { auctionCard, bindDealings, dealingsAct, hearsayCard, repairCompare, runsCard } from './dealings.ts';
 import { dwellCard, tamerCard } from './recruit.ts';
+import { surgeonCard } from './waystation.ts'; // docs/35
 import { FLAGS_TAB, bindColours, coloursCard } from './flags.ts';
 import { admiraltyBoard, bindContracts } from './contracts.ts'; // docs/19 E15
 import { boardHtml, boardItems, boardSwitches } from './board.ts'; // the port's «Задания» (owner, 2026-10-16)
@@ -173,6 +174,8 @@ export class PortScreen {
   openTattoos: (() => void) | null = null;
   /** Opens the recruit window of the port's dwellings (docs/17 H3). */
   openDwell: (() => void) | null = null;
+  /** docs/35: the surgeon's window (her fallen raised for silver in port). */
+  openSurgeon: (() => void) | null = null;
   /** Her island's screen (owner, 2026-10-15). */
   openIsle: (() => void) | null = null;
   constructor(send: (m: ClientMsg) => void, onClose: () => void) {
@@ -264,6 +267,7 @@ export class PortScreen {
     bindBazaar(root);
     bindDealings(root);
     root.querySelector<HTMLElement>('[data-dwell]')?.addEventListener('click', () => this.openDwell?.());
+    root.querySelector<HTMLElement>('[data-surgeon]')?.addEventListener('click', () => this.openSurgeon?.());
     root.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-build]').forEach((el) => (el.onchange = () => {
       const k = el.dataset.build!;
       const v = el instanceof HTMLInputElement && el.type === 'checkbox' ? el.checked : el.value;
@@ -542,7 +546,7 @@ export class PortScreen {
         return this.charts(view, state);
       case 'army': {
         const port = state.ports.find((p) => p.id === view.portId)!;
-        return `${dwellCard(port)}${tamerCard(port)}`;
+        return `${surgeonCard(state.fallen)}${dwellCard(port)}${tamerCard(port)}`; // docs/35: the surgeon first
       }
       case 'pets':
         return this.pets(view, state);

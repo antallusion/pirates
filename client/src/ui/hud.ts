@@ -62,6 +62,7 @@ import { GUARDS } from '../../../shared/src/data/advmap.ts';
 import { guardOfEntity } from '../render/advmap.ts';
 import { drawDriftsMini } from '../render/drifts.ts';
 import { drawFindsMini } from '../render/seafinds.ts';
+import { drawWaysMini } from '../render/waystations.ts'; // docs/35
 import { drawRoamsMini } from '../render/roamers.ts';
 import { drawCitadelsMini } from '../render/citadels.ts'; // docs/19 E4 // docs/19 D7
 import { armyGlance } from './army.ts';
@@ -1199,6 +1200,7 @@ export class Hud {
     drawAdvMini(g, state, tx, ty, own, range); // the adventure map's guards and things (docs/17 H4)
     drawDriftsMini(g, state, tx, ty, own, range); // drifting creatures and their clocks (docs/18 #34)
     drawFindsMini(g, state, tx, ty, own, range); // the sea's small things (docs/19 D5)
+    drawWaysMini(g, state, tx, ty, own, range); // docs/35: the floating waystations
     drawWrecksMini(g, state.wrecks, state.castaways, tx, ty, own, range); // seaux: her wreckage and castaways
     drawRoamsMini(g, state, tx, ty, own, range); // the creatures roaming the sea (docs/19 D7)
     drawCitadelsMini(g, state, tx, ty, own, range); // the citadels of the Throne war (docs/19 E4)

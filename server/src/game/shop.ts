@@ -41,7 +41,7 @@ import type { TacSideInput } from './tacbattle.ts';
 import { creatureRoom, joinCreatures } from './tame.ts';
 import { sanitizeLooks } from './looks.ts';
 import { opsPrice, opsShut, saleOf, trackEvent } from './liveops.ts'; // docs/34: the panel's prices, the funnel
-import { raiseInstant, recordFallen, resInstant, setScrollStore } from './waystations.ts'; // docs/35: the fallen, the scrolls
+import { raiseInstant, recordFallen, resInstant } from './waystations.ts'; // docs/35: the fallen, the scrolls
 import { RSCROLL_MAX } from '../../../shared/src/data/resurrect.ts';
 
 const H = 3_600_000;
@@ -180,15 +180,15 @@ export function noteFallen(game: Game, s: PlayerSession, lost: readonly { u: str
   recordFallen(game, s, lost, raised);
 }
 
-// docs/35: the scrolls of resurrection are kept in her shop's store; the waystations spend them.
-setScrollStore({
-  scrollsOf: (game, acc) => Math.max(0, Math.floor(shopState(game, acc).rscrolls ?? 0)),
-  spend: (game, acc) => {
-    const st = shopState(game, acc);
-    st.rscrolls = Math.max(0, (st.rscrolls ?? 0) - 1);
-    save(game, acc, st);
-  },
-});
+/** docs/35: her scrolls of resurrection (kept in her shop's store), and one spent by the waystations. */
+export function rscrollsOf(game: Game, acc: number): number {
+  return Math.max(0, Math.floor(shopState(game, acc).rscrolls ?? 0));
+}
+export function spendRScroll(game: Game, acc: number): void {
+  const st = shopState(game, acc);
+  st.rscrolls = Math.max(0, (st.rscrolls ?? 0) - 1);
+  save(game, acc, st);
+}
 
 /** A payment credited (premium.ts creditPremium): the first of the account lays its gift in the shop — as many
  *  doubloons again, up to FIRST_PAY_CAP — to be claimed there («Забрать»). */
