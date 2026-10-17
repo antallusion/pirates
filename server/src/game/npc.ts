@@ -8,6 +8,7 @@ import { convoyFoe, raidEscort } from './raiding.ts';
 import { joinedRaid } from './npcwars.ts';
 import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import { eliteShipLevel, hullsFor, npcSkill, shipLevelForCaptain, watersBand } from '../../../shared/src/data/shiplevel.ts';
+import { seaPurse } from '../../../shared/src/data/silverpay.ts';
 import { trafficHulls } from '../../../shared/src/data/traffichulls.ts';
 import type { NpcSkill } from '../../../shared/src/data/shiplevel.ts';
 import { NPC_ACTIVE_RADIUS, SPEED_SCALE, isNight } from '../../../shared/src/constants.ts';
@@ -453,7 +454,7 @@ function arrive(game: Game, ship: ShipEntity, brain: NpcBrain): void {
         if (n > 0 && market.goods[g]) applyTrade(market, g, n);
         delete ship.cargo[g];
       }
-      ship.purse = Math.min(3000, ship.purse + 80 + game.rng.int(0, 200));
+      ship.purse = Math.min(2 * seaPurse('merchant', ship.shipLevel, 0.5), ship.purse + Math.round(seaPurse('merchant', ship.shipLevel, game.rng.float()) * 0.3)); // docs/31 §9
       ship.hull = ship.stats.hullMax;
       ship.sails = ship.stats.sailHpMax;
       ship.crew = Math.max(ship.crew, Math.round(ship.stats.crewMax * 0.6));
@@ -1129,7 +1130,7 @@ export function spawnMerchant(game: Game): void {
   const faction: FactionId = port.faction === 'crown' ? 'league' : port.faction === 'choir' ? 'free' : port.faction === 'confederacy' ? 'free' : port.faction;
   const ship = game.spawnNpcShip('merchant', cls, faction, port.x, port.y, game.rng.range(0, Math.PI * 2));
   game.setNpcLevel(ship, level);
-  ship.purse = 150 + game.rng.int(0, 500) * ship.cls.tier;
+  ship.purse = seaPurse('merchant', ship.shipLevel, game.rng.float()); // docs/31 §9: by her waters
   const brain = game.npcs.get(ship.id)!;
   if (!planMerchantVoyage(game, ship, brain, port)) game.removeShip(ship.id);
   else {
@@ -1163,9 +1164,9 @@ export function spawnPirate(game: Game, near?: ShipEntity): ShipEntity | null {
   const cls: ShipClassId = game.rng.pick(hullsFor('pirate', level));
   const ship = game.spawnNpcShip('pirate', cls, 'confederacy', x, y, game.rng.range(0, Math.PI * 2));
   game.setNpcLevel(ship, level);
-  ship.purse = 100 + game.rng.int(0, 400) * ship.cls.tier;
+  ship.purse = seaPurse('pirate', ship.shipLevel, game.rng.float()); // docs/31 §9: by her waters
   const loot: GoodId[] = ['rum', 'gunpowder', 'weapons', 'tobacco', 'spices', 'dreamleaf'];
-  ship.cargo[game.rng.pick(loot)] = game.rng.int(3, 8 + ship.cls.tier * 4);
+  ship.cargo[game.rng.pick(loot)] = game.rng.int(2, 3 + ship.cls.tier * 2); // a rover's plunder, not a trader's hold (docs/31 §9: was 3 … 8 + 4 a tier)
   const brain = game.npcs.get(ship.id)!;
   brain.area = { x, y, r: 7000 };
   if (near) {
@@ -1217,7 +1218,7 @@ export function spawnFisher(game: Game): void {
   const ship = game.spawnNpcShip('fisher', 'cutter', port.faction === 'crown' ? 'crown' : 'free', port.x, port.y, game.rng.range(0, 6.28));
   game.setNpcLevel(ship, sectorLevel(game, port.x, port.y, true));
   ship.cargo = { provisions: game.rng.int(4, 12), salt: game.rng.int(0, 5) };
-  ship.purse = 30 + game.rng.int(0, 60);
+  ship.purse = seaPurse('fisher', ship.shipLevel, game.rng.float()); // docs/31 §9
   const brain = game.npcs.get(ship.id)!;
   brain.area = { x: port.x, y: port.y, r: 4500 };
   if (!planWander(game, ship, brain)) game.removeShip(ship.id);
@@ -1260,7 +1261,7 @@ export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' 
   game.grid.upsert(ship.id, x, y); // counted about her at once, not a tick later
   const brain = game.npcs.get(ship.id)!;
   if (role === 'merchant') {
-    ship.purse = 150 + game.rng.int(0, 500) * ship.cls.tier;
+    ship.purse = seaPurse('merchant', ship.shipLevel, game.rng.float()); // docs/31 §9: by her waters
     ship.cargo[game.rng.pick(TRAFFIC_GOODS)] = game.rng.int(6, 12 + ship.cls.tier * 6);
     // Across her track: to a point as far beyond her as the merchant is before her, a little to one side.
     const dx = past.x - x, dy = past.y - y, l = Math.hypot(dx, dy) || 1;
@@ -1277,19 +1278,19 @@ export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' 
   }
   if (role === 'fisher') {
     ship.cargo = { provisions: game.rng.int(4, 12), fish: game.rng.int(2, 10) };
-    ship.purse = 30 + game.rng.int(0, 60);
+    ship.purse = seaPurse('fisher', ship.shipLevel, game.rng.float()); // docs/31 §9
     brain.area = { x, y, r: 2500 };
   } else if (role === 'patrol') {
-    ship.purse = 200 + game.rng.int(0, 300);
+    ship.purse = seaPurse('patrol', ship.shipLevel, game.rng.float()); // docs/31 §9
     brain.area = { x: past.x, y: past.y, r: 5000 };
   } else if (role === 'hunter') {
-    ship.purse = 150 + game.rng.int(0, 250);
+    ship.purse = seaPurse('hunter', ship.shipLevel, game.rng.float()); // docs/31 §9
     ship.cargo = { whale_oil: game.rng.int(2, 8) };
     brain.area = { x, y, r: 5000 };
   } else {
-    ship.purse = 100 + game.rng.int(0, 400) * ship.cls.tier;
+    ship.purse = seaPurse('pirate', ship.shipLevel, game.rng.float()); // docs/31 §9: by her waters
     const loot: GoodId[] = ['rum', 'gunpowder', 'weapons', 'tobacco', 'spices'];
-    ship.cargo[game.rng.pick(loot)] = game.rng.int(3, 8 + ship.cls.tier * 4);
+    ship.cargo[game.rng.pick(loot)] = game.rng.int(2, 3 + ship.cls.tier * 2); // a rover's plunder, not a trader's hold (docs/31 §9: was 3 … 8 + 4 a tier)
     brain.area = { x, y, r: 6000 };
   }
   if (!planWander(game, ship, brain)) {
@@ -1309,7 +1310,7 @@ export function spawnPatrols(game: Game): void {
       const cls: ShipClassId = port.size >= 3 && i === 0 ? 'frigate' : i === 1 ? 'brig' : 'brigantine';
       const ship = game.spawnNpcShip('patrol', cls, port.faction, port.x, port.y, game.rng.range(0, 6.28));
       game.setNpcLevel(ship, Math.min(10, sectorLevel(game, port.x, port.y) + 1)); // the law sails a level above the waters
-      ship.purse = 200 + game.rng.int(0, 300);
+      ship.purse = seaPurse('patrol', ship.shipLevel, game.rng.float()); // docs/31 §9
       const brain = game.npcs.get(ship.id)!;
       brain.area = { x: port.x, y: port.y, r: port.size >= 3 ? 11000 : 8000 };
       brain.destPort = null;

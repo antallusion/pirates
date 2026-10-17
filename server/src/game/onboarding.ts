@@ -6,7 +6,7 @@
 // Every text lives on the client under the ids sent from here, so the words can be localized.
 
 import { trackEvent } from './liveops.ts'; // docs/34: the funnel
-import { XP_UNITS, lumpXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
+import { XP_UNITS, lumpXp, tutorialStageXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -438,7 +438,7 @@ function advance(game: Game, s: PlayerSession, how: 'done' | 'skip'): void {
   m.stageDone[t.stage] = (m.stageDone[t.stage] ?? 0) + 1;
   if (how === 'skip') m.stageSkipped[t.stage] = (m.stageSkipped[t.stage] ?? 0) + 1;
   if (how === 'done') {
-    const lv = addXp(p, lumpXp(p.level, XP_UNITS.tutorialStage * (1 + 0.25 * t.stage)));
+    const lv = addXp(p, tutorialStageXp(p.level, t.stage)); // docs/26 §11
     ship.level = p.level;
     p.gold += 50;
     game.db.ledger(s.accountId, 'tutorial', 50, STAGES[t.stage].id);

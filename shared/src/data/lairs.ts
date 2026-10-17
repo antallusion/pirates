@@ -275,7 +275,7 @@ export interface LairPay {
   res: Partial<Record<LandRes | 'pearls', number>>;
 }
 
-export const LAIR_HOURS: Record<LairSize, number> = { weak: 0.2, avg: 0.25, strong: 0.3 };
+export const LAIR_HOURS: Record<LairSize, number> = { weak: 0.12, avg: 0.15, strong: 0.18 }; // ×0.6 (docs/31 §9, 2026-10-17: was 0.2 / 0.25 / 0.3)
 /** The chance a lair's loot holds an artifact (H2's maybeArtifact), by size; a guardian's half as much again. */
 export const LAIR_ART: Record<LairSize, number> = { weak: 0.05, avg: 0.12, strong: 0.25 };
 /** Of a lair's worth: the H3 resource of its island, and the land's resources of its creatures (the rest silver). */
@@ -311,11 +311,11 @@ export function payWorth(p: LairPay): number {
   return v;
 }
 
-/** The island's chest for the whole chain (docs/18 #22): half an hour at sea and a fifth of a level of experience;
- *  an artifact one time in two. */
+/** The island's chest for the whole chain (docs/18 #22): 0.3 of an hour at sea (half an hour before docs/31 §9) and a
+ *  fifth of a level of experience; an artifact one time in two. */
 export function chainChest(level: number): { silver: number; xp: number; art: number } {
   const L = Math.max(1, Math.min(10, level));
-  return { silver: Math.round((advHour(L) * 0.5) / 50) * 50, xp: Math.round((advLevelXp(L) * 0.2) / 10) * 10, art: 0.5 };
+  return { silver: Math.round((advHour(L) * 0.3) / 50) * 50, xp: Math.round((advLevelXp(L) * 0.2) / 10) * 10, art: 0.5 };
 }
 
 // ------------------------------------------------------------------------------------------------ 18–20. the times

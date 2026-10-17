@@ -180,8 +180,8 @@ export interface Hour {
   kills: number;
 }
 
-const cycleSink = (v: number): number => PACE.seek(v) + PACE.approach + PACE.sinkFight + PACE.afterSink + PACE.portSec / PACE.portEvery;
-const cycleBoard = (v: number): number => PACE.seek(v) + PACE.approach + PACE.boardBattle(v) + PACE.afterBoard + PACE.portSec / PACE.portEvery;
+export const cycleSink = (v: number): number => PACE.seek(v) + PACE.approach + PACE.sinkFight + PACE.afterSink + PACE.portSec / PACE.portEvery;
+export const cycleBoard = (v: number): number => PACE.seek(v) + PACE.approach + PACE.boardBattle(v) + PACE.afterBoard + PACE.portSec / PACE.portEvery;
 /** The mean streak bonus over a run between two ports. */
 export function streakAvg(): number {
   let s = 0;
@@ -202,7 +202,7 @@ export function boardHour(R: Rules, L: number): Hour {
 }
 
 /** Seconds a step of a quest takes (beside the legs) and the ships it sinks or takes. */
-function stepCost(k: StepKind, v: number): { sec: number; leg: number; sink: number; board: number } {
+export function stepCost(k: StepKind, v: number): { sec: number; leg: number; sink: number; board: number } {
   const sink = cycleSink(v) - PACE.portSec / PACE.portEvery, board = cycleBoard(v) - PACE.portSec / PACE.portEvery;
   switch (k) {
     case 'visit2': case 'visit3': case 'deliver2': case 'deliver3': case 'home': case 'back': case 'race2': return { sec: 15, leg: 1, sink: 0, board: 0 };
@@ -373,10 +373,16 @@ export function firstHour(R: Rules): { onceXp: number; level: number } {
     onceXp += a;
     add(a);
   } else {
-    // The same deeds in units at her level as she grows (shared/src/data/xpcurve.ts XP_UNITS, XP_POINT).
-    const units = [2, 2.5, 3, 3.5, 4, 1.5, 1.5, 1.5, 140 / 80, 140 / 80, 140 / 80, 186 / 80, 4];
-    for (const u of units) {
-      const a = X.lumpXp(level, u);
+    // The same deeds at her level as she grows (shared/src/data/xpcurve.ts): the watch's five stages, three goals, three
+    // ports and a sea (old points / XP_POINT), the deed of the first prize (held to a share of her level, docs/26 §11).
+    const steps: (() => number)[] = [
+      ...X.TUTORIAL_STAGE_UNITS.map((u) => () => X.lumpXp(level, u)),
+      ...[1, 1, 1].map(() => () => X.lumpXp(level, X.XP_UNITS.tutorialGoal)),
+      ...[140, 140, 140, 186].map((pt) => () => X.pointsXp(level, pt)),
+      () => X.deedXp(level),
+    ];
+    for (const f of steps) {
+      const a = f();
       onceXp += a;
       add(a);
     }

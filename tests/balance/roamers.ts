@@ -124,6 +124,8 @@ export interface XpHour {
   /** Silver and resources an hour, and the refill of the men lost, both in hours at sea. */
   silver: number;
   refill: number;
+  /** Of the silver, the stacks' purses alone (tests/balance/silver.ts weighs the old ROAM_SILVER by it). */
+  purse: number;
   fights: number;
 }
 
@@ -155,9 +157,10 @@ export const battleLesson = (L: number): number => XP_UNITS.creatures * xpUnit(r
 /** An hour of steady fighting at ⚓L against the stacks of its waters (their kinds and sizes as the sea mixes them). */
 export function xpHour(L: number, gap = ROAM_GAP, fightsEach = 12, pace: FightPace = 'steady'): XpHour {
   const me = refParty(L);
-  let wsum = 0, secs = 0, xp = 0, silver = 0, refill = 0;
+  let wsum = 0, secs = 0, xp = 0, silver = 0, refill = 0, purse = 0;
   for (const m of mixOf(L, fightsEach)) {
     const pay = roamPay(L, m.size);
+    purse += m.w * m.f.win * pay.silver;
     secs += m.w * (fightSecs(m.f.rounds, me.length, m.st, pace) + sailSecs(gap));
     xp += m.w * m.f.win * (m.f.battleXp * battleLesson(L) * ROAM_BATTLE_XP + pay.xp);
     silver += m.w * m.f.win * (pay.silver + resWorth(roamRes(m.kind, m.n, L, m.size)));
@@ -166,7 +169,7 @@ export function xpHour(L: number, gap = ROAM_GAP, fightsEach = 12, pace: FightPa
   }
   const fights = 3600 / (secs / wsum);
   const xpH = (xp / wsum) * fights;
-  return { level: L, xp: Math.round(xpH), share: xpH / seaHourXp(L), silver: ((silver / wsum) * fights) / advHour(L), refill: ((refill / wsum) * fights) / advHour(L), fights: Math.round(fights) };
+  return { level: L, xp: Math.round(xpH), share: xpH / seaHourXp(L), silver: ((silver / wsum) * fights) / advHour(L), refill: ((refill / wsum) * fights) / advHour(L), purse: ((purse / wsum) * fights) / advHour(L), fights: Math.round(fights) };
 }
 
 /** What an average stack's own lesson must be at ⚓L for the hour to come to `target` of seaHourXp: the battle's part

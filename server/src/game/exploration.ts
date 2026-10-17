@@ -35,6 +35,7 @@ import { hearsayCacheBonus } from './hearsay.ts';
 import { onShrine, onSpring } from './hero.ts';
 import { HAUNT_NAMES, islandHaunt } from '../../../shared/src/data/minigames.ts';
 import type { HauntId } from '../../../shared/src/data/minigames.ts';
+import { LANDING_SILVER } from '../../../shared/src/data/silverpay.ts';
 
 /** An island feature, or one of the island's people or beasts (living islands, docs/11 P3), or an island's haunt
  * with its mini-games (2026-09-30: 'scene', on every island with nothing else ashore). */
@@ -505,7 +506,7 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
     got.push(...h.got);
     xp = Math.round(xp * 1.5);
   }
-  silver = Math.round(silver * share);
+  silver = Math.round(silver * share * LANDING_SILVER); // docs/31 §9: a landing's silver cut by two fifths
   if (silver) {
     p.gold += silver;
     got.push(`${silver} silver`);

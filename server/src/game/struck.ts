@@ -4,6 +4,7 @@
 // (for the court, or to keep her as a trophy, docs/16 #5). The terms go through the boarding's own result
 // (claimPrize → onBoardingWon → the loot), so a surrender is a ship taken like any other.
 
+import { seaRansom } from '../../../shared/src/data/silverpay.ts';
 import type { SurrenderOffer } from '../../../shared/src/protocol.ts';
 import { dist } from '../../../shared/src/math.ts';
 import type { Game } from './Game.ts';
@@ -97,7 +98,7 @@ export function surrenderOffer(game: Game, s: PlayerSession, ship: ShipEntity): 
   const brain = game.npcs.get(ship.id);
   return {
     id: ship.id, name: ship.name, classId: ship.loadout.classId, faction: ship.faction, role: ship.npcRole, captain: ship.captainName,
-    ransom: Math.round(150 + cargoValue(ship.cargo) * 0.08 + ship.cls.tier * 120), cargo: units, gold: ship.purse,
+    ransom: seaRansom(ship.shipLevel, cargoValue(ship.cargo)), cargo: units, gold: ship.purse, // the ransom by her waters (docs/31 §9)
     prize: crew !== null ? { crew, value: prizeValue(ship, me) } : null,
     trophy: crew !== null && (s.profile?.berths.length ?? MAX_BERTHS) < MAX_BERTHS,
     range: SURRENDER_RANGE, until: (brain?.surrenderedAt || game.now) + SURRENDER_WAIT,

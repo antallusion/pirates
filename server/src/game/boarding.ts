@@ -15,6 +15,7 @@ import { cargoValue, cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { AmmoStock, Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { damageBlocked } from './combat.ts';
 import { AMMO_IDS, emptyAmmo, magazineOf } from '../../../shared/src/data/ships.ts';
+import { seaRansom } from '../../../shared/src/data/silverpay.ts';
 import { BASIC_TACTICS, CAPTAIN_MOVES, DUEL_EXCHANGES, DUEL_GAP, DUEL_SWEEP, FIRST_ROUND, MAX_ROUNDS, ROUND_WINDOW, TACTICS, counterTo, edgeOf } from '../../../shared/src/data/boarding.ts';
 import type { BasicTactic, BoardTactic } from '../../../shared/src/data/boarding.ts';
 import type { Game } from './Game.ts';
@@ -778,7 +779,7 @@ export function claimPrize(game: Game, a: ShipEntity, b: ShipEntity, lossFrac: n
     ammo,
     crewLost: lost,
     enemyCrewLost: killed,
-    ransom: b.isPlayer ? 0 : Math.round(150 + cargoValue(cargo) * 0.08 + b.cls.tier * 120),
+    ransom: b.isPlayer ? 0 : seaRansom(b.shipLevel, cargoValue(cargo)), // docs/31 §9: by her waters
     holdFree: Math.max(0, a.stats.holdVolume - cargoVolume(a.cargo, a.stats.contrabandVolumeMul, a.stats.materialVolumeMul, a.stats.provisionVolumeMul, a.stats.cursedVolumeMul)),
     npc: !b.isPlayer,
     prize: null,

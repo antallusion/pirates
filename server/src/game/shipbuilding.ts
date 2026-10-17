@@ -11,6 +11,7 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { SHIP_CLASSES, defaultGunFor } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
+import { PRIZE_COURT } from '../../../shared/src/data/silverpay.ts';
 import {
   BUILD_TIME, FIGUREHEADS, buildMaterials, carvedAt, PLAN_LINES, PLAN_REP, PLAN_USES, RARES, VARIANTS, WOODS, YARD_FACTIONS_WITH_PLANS,
 } from '../../../shared/src/data/shipbuild.ts';
@@ -182,7 +183,8 @@ export function swapBerth(game: Game, s: PlayerSession, port: Port, index: numbe
   return null;
 }
 
-/** Sell a berthed hull to the yard for 40% of her class price. */
+/** Sell a berthed hull to the yard for 40% of her class price; a trophy taken by boarding at the prize court's rate
+ *  (docs/31 §9: a frigate taken and sold out of her berth paid 0.8 of an hour at sea, past the court and the crew's share). */
 export function sellBerth(game: Game, s: PlayerSession, port: Port, index: number): string | null {
   const p = s.profile!;
   const b = p.berths[index];
@@ -192,7 +194,7 @@ export function sellBerth(game: Game, s: PlayerSession, port: Port, index: numbe
   if (SHIP_CLASSES[b.loadout.classId]?.premium) return 'No yard buys a hull bought with doubloons';
   const back = takeGearBack(p, b.loadout); // her gear comes ashore first
   if (back) return back;
-  const v = Math.round(SHIP_CLASSES[b.loadout.classId].price * 0.4 * Math.max(0.3, b.hull));
+  const v = Math.round(SHIP_CLASSES[b.loadout.classId].price * (b.loadout.trophy ? PRIZE_COURT : 0.4) * Math.max(0.3, b.hull));
   p.gold += v;
   game.db.ledger(s.accountId, 'ship_sold', v, b.loadout.classId);
   p.berths.splice(index, 1);
