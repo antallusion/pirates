@@ -16,6 +16,8 @@ import { CAMPAIGN_SIZE, PLAN, WALL_CHAPTER } from '../shared/src/data/campaign/p
 import { FIRST_SLOT, migrateCampaign, sanitizeCampaign } from '../shared/src/data/campaign/progress.ts';
 import { campaignPatterns } from '../shared/src/data/campaign/patterns.ts';
 import { questClass } from '../shared/src/data/questclass.ts';
+import { QUEST_PAY_MEAN, jobSilver } from '../shared/src/data/silverpay.ts';
+import { shipBandOf } from '../shared/src/data/xpcurve.ts';
 import type { QuestDef, QuestStep } from '../shared/src/data/quests.ts';
 import { CAMPAIGN_QUESTS, QUESTS_BY_ID } from '../shared/src/data/quests.ts';
 import { BEAST_IDS, BEASTS } from '../shared/src/data/beasts.ts';
@@ -95,8 +97,8 @@ test('the experience: the whole road to the 60th exactly, each quest at its leve
   const perLevel = (l: number) => paces.filter((p) => p.gate === l).length;
   assert.ok(perLevel(1) <= 8 && perLevel(59) >= 13, `${perLevel(1)} at the 1st, ${perLevel(59)} at the 59th`);
   assert.ok(paces[CAMPAIGN_SIZE - 1].xp > paces[0].xp * 100);
-  // modest silver: never more than a board job of its level pays (about 500 + 40·L)
-  for (const p of paces) assert.ok(p.silver <= 30 + 10 * p.gate, `silver ${p.silver} at ${p.gate}`);
+  // the sea's silver (docs/26 §11): a job of the usual size of its waters, no more
+  for (const p of paces) assert.equal(p.silver, jobSilver(QUEST_PAY_MEAN, shipBandOf(p.gate)), `silver at ${p.gate}`);
 });
 
 // ------------------------------------------------------------------ the one taxonomy
@@ -496,4 +498,46 @@ test('the campaign’s fight comes to her: on a boarding step at sea, foes of th
   }
   questEvent(game, s, { k: 'board', victim: foes[0] });
   assert.equal(s.profile!.quests.active[0].step, 1, 'boarding one of them is the step');
+});
+
+test('an «arrive at» step is done by arriving after the quest is taken: not by the port she lies in when it comes', () => {
+  const { game } = makeGame();
+  const { s, c } = captain(game, 'Arriver', 5);
+  const p = s.profile!;
+  // a campaign quest whose first step is the very port she lies in (the seam of chapters 2 and 3)
+  const q = fake([{ type: 'visit', port: 'gallowsmouth', text: 'a' }, { type: 'visit', port: 'saltmarrow', text: 'b' }]);
+  const port = game.portById('gallowsmouth')!;
+  s.ship!.docked = port.id;
+  p.docked = port.id;
+  s.ship!.state.x = port.x;
+  s.ship!.state.y = port.y;
+  p.campaign!.at = 5;
+  q.campaign!.slot = 5;
+  p.campaign!.started = true;
+  c.push({ t: 'quest', action: 'accept', id: q.id });
+  assert.equal(campaignActive(p)?.id, q.id, 'taken where she lies');
+  assert.equal(campaignActive(p)?.step, 0, 'not done by the port she was already in');
+  // «Плыть» says so: cast off and put in again
+  c.push({ t: 'goto', key: `q:${q.id}` });
+  assert.ok(c.all('toast').some((t) => t.msg.startsWith('You are in that port already')));
+  // she casts off and comes back in: done
+  s.ship!.docked = null;
+  questEvent(game, s, { k: 'tick', dt: 1 });
+  s.ship!.docked = port.id;
+  questEvent(game, s, { k: 'dock', port });
+  assert.equal(campaignActive(p)?.step, 1, 'arriving after it was taken makes the step');
+});
+
+test('the cargo steps are still done in the port she lies in: a delivery handed over at once', () => {
+  const { game } = makeGame();
+  const { s } = captain(game, 'Carrier', 5);
+  const q = fake([{ type: 'deliver', port: 'saltmarrow', good: 'rum', qty: 2, text: 'a' }, { type: 'visit', port: 'saltmarrow', text: 'b' }]);
+  onStep(s, q);
+  const port = game.portById('saltmarrow')!;
+  s.ship!.docked = port.id;
+  s.ship!.cargo.rum = 5;
+  questEvent(game, s, { k: 'dock', port, fresh: true });
+  assert.equal(s.profile!.quests.active[0].step, 1, 'the rum handed over');
+  questEvent(game, s, { k: 'dock', port });
+  assert.equal(s.profile!.quests.active.length, 0, 'and reported on a real arrival');
 });

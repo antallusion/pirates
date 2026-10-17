@@ -5,11 +5,13 @@
 // (each is worth more ships of her level). A quest's experience is the curve's between its two points, so the sum is
 // the curve's whole road exactly; its level is the level she stands at when she comes to it — the gate, monotonic.
 //
-// The silver is modest (docs/36 §4, beside the board's jobs: another hand trims the sea's silver — docs/26 §11): the
-// campaign pays its road in experience; a little silver for the powder, more at a chapter's end.
+// The silver is the sea's (docs/26 §11, shared/src/data/silverpay.ts): a quest of the usual size of its waters, as the
+// boards' jobs pay; a chapter's end four of them.
 
 import { MAX_LEVEL, xpForLevel } from '../../constants.ts';
 import { CAMPAIGN_SIZE } from './plan.ts';
+import { QUEST_PAY_MEAN, jobSilver } from '../silverpay.ts';
+import { shipBandOf } from '../xpcurve.ts';
 
 export const CAMPAIGN_GAMMA = 0.85;
 
@@ -58,9 +60,10 @@ export function campaignPaces(n = CAMPAIGN_SIZE): SlotPace[] {
   return out;
 }
 
-/** A campaign quest's silver at its level: some shot and wages, no fortune (a board's job of the level pays several times it). */
+/** A campaign quest's silver at its level — the shared contract (docs/26 §11, silverpay.ts): a job of the usual size of
+ *  its waters, about 12% of an hour at sea at the ⚓ its captain commands. */
 export function campaignSilver(level: number): number {
-  return Math.round((30 + 9 * level) / 5) * 5;
+  return jobSilver(QUEST_PAY_MEAN, shipBandOf(level));
 }
 
 /** A chapter's end: a purse a few quests' worth. */

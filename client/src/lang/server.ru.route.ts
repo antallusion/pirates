@@ -2,6 +2,7 @@
 // English → Russian.
 
 export const SERVER_RU_ROUTE: Record<string, string> = {
+  'You are in that port already: cast off and put in again to make the step.': 'Вы уже в этом порту: отчальте и зайдите снова, чтобы выполнить шаг.',
   'The goal is met: the helmsman gives you the wheel.': 'Цель выполнена: рулевой отдаёт вам штурвал.',
   'Nowhere on the sea to work at that goal now.': 'Сейчас в море нет места, где выполнить эту цель.',
   'That goal is gone from the log.': 'Этой цели больше нет в журнале.',

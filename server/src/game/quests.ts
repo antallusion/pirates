@@ -259,7 +259,9 @@ export type QuestEvent =
   | { k: 'tribute' }
   | { k: 'letter' }
   | { k: 'rescue'; n: number }
-  | { k: 'dock'; port: Port }
+  /** `fresh`: the quest was taken (or came) while she lay in this port — a step that asks her to arrive here is not done by
+   *  it (owner's QA, 2026-10-18: a campaign quest was done the instant it came, its port the one she stood in). */
+  | { k: 'dock'; port: Port; fresh?: boolean }
   | { k: 'land'; island: number; feature: string }
   /** docs/18 #23: a lair of the land's creatures beaten. */
   | { k: 'lair'; island: number; kind: string }
@@ -358,8 +360,9 @@ export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string
   startQuest(game, p, q, s, pay);
   game.sendTo(s, { t: 'toast', msg: `${q.mentor}: “${q.summary}” — ${q.steps[0].text}`, kind: 'info' });
   newsHint(game, s, 'journal');
-  // A first step that is already satisfied (being in the right port) completes at once.
-  questEvent(game, s, { k: 'dock', port });
+  // A first step that is already satisfied in this port (the cargo to take on, the goods to hand over) is done at once; a
+  // step that asks her to arrive here waits for her to put in again.
+  questEvent(game, s, { k: 'dock', port, fresh: true });
   return null;
 }
 
@@ -705,7 +708,7 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
   const ship = s.ship!;
   switch (st.type) {
     case 'visit':
-      return ev.k === 'dock' && ev.port.id === st.port ? 1 : 0;
+      return ev.k === 'dock' && !ev.fresh && ev.port.id === st.port ? 1 : 0;
     case 'deliver': {
       if (ev.k !== 'dock' || ev.port.id !== st.port) return 0;
       if ((ship.cargo[st.good] ?? 0) < st.qty) {

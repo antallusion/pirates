@@ -81,7 +81,7 @@ function begin(game: Game, s: PlayerSession, q: QuestDef, auto: boolean): void {
   game.sendTo(s, { t: 'toast', msg: `${q.mentor}: “${q.summary}” — ${q.steps[0].text}`, kind: 'info' });
   // a first step done where she is (in the right port) is done at once
   const port = s.ship?.docked ? game.portById(s.ship.docked) : undefined;
-  if (port) questEvent(game, s, { k: 'dock', port });
+  if (port) questEvent(game, s, { k: 'dock', port, fresh: true }); // (an «arrive at» step waits for her to put in again)
 }
 
 /** The next quest comes to her by itself (the campaign begun, none under way, her level enough, not a branch: a choice

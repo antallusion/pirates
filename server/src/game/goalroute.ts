@@ -64,6 +64,7 @@ export const ROUTE_WORDS = {
   retarget: 'The mark is gone: the helmsman takes her on to the next one.',
   afterPort: 'The course is set: the helmsman takes her there once she casts off.',
   here: 'You are there already: it is done in this port.',
+  again: 'You are in that port already: cast off and put in again to make the step.',
 } as const;
 
 /** The trades' lines shown on arrival (English; translated on the client). */
@@ -710,7 +711,10 @@ export function gotoGoal(game: Game, s: PlayerSession, key: string): string | nu
   // in the very port the goal asks for (the board of «Взять контракт», a delivery's quay): nowhere to sail
   if (s.ship!.docked && r.port === s.ship!.docked) {
     game.sendTo(s, { t: 'route', key: k, on: false, why: 'none' });
-    game.sendTo(s, { t: 'toast', msg: ROUTE_WORDS.here, kind: 'info' });
+    // a quest's «arrive at» step taken in this very port: she must put in again (quests.ts, the fresh dock)
+    const qs = k.startsWith('q:') ? s.profile!.quests.active.find((a) => a.id === k.slice(2)) : undefined;
+    const st = qs ? QUESTS_BY_ID[qs.id]?.steps[qs.step] : undefined;
+    game.sendTo(s, { t: 'toast', msg: st?.type === 'visit' ? ROUTE_WORDS.again : ROUTE_WORDS.here, kind: 'info' });
     return null;
   }
   const f: Follow = { key: k, view: r, sentAt: game.now, sent: null, checkAt: game.now + ROUTE_CHECK, reachedAt: null };
