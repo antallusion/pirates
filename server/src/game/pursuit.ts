@@ -34,7 +34,7 @@ import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { angleDiff, DEG, headingOf } from '../../../shared/src/math.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { stopAutosail, autosailOf } from './autosail.ts';
-import { boardingRangeBetween, captainsShip, crewRefuses } from './boarding.ts';
+import { boardingRangeBetween, canBoard, captainsShip, crewRefuses, startBoarding } from './boarding.ts';
 import { NO_BOARD_HER, NO_BOARD_OWN, boardingOff } from './colours.ts';
 import { applyDamage, damageBlocked, effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
 import type { Game } from './Game.ts';
@@ -105,6 +105,8 @@ export interface Pursuit {
   auto?: { left: number; next: number };
   /** The guns' fight: running in bow on to the close band (true), or lying broadside on in it. */
   closing?: boolean;
+  /** The odds taken («Рискнуть»), and she out of reach by then: the grapples fly as soon as she is alongside. */
+  grapple?: boolean;
   /** Held fast: the planner's route to her mark, its next point, when planned and to where. */
   way?: { path: Path; i: number; at: number; tx: number; ty: number } | null;
   /** Held fast: since when (under a knot), how many times running, when last under way; sailed round by the route
@@ -365,6 +367,11 @@ export function stepPursuit(game: Game): void {
         run.mode = 'guns';
         boardRun(game, s, ship, false);
         send(game, s, run);
+        continue;
+      }
+      if (run.grapple && d <= reach && canBoard(game, ship, t) === null) {
+        stopPursuit(game, s, 'board');
+        startBoarding(game, ship, t, 'standard');
         continue;
       }
       if (d < reach * 1.4) {

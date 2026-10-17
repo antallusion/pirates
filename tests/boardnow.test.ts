@@ -84,3 +84,24 @@ test('«На абордаж» on a full-strength pirate: the odds window when it
   assert.ok(ship.boarding, 'grappled at once');
   assert.equal(ship.boarding!.with, npc.id);
 });
+
+test('«Рискнуть» after the ships drew apart reading the odds: the helmsman takes her alongside and the grapples fly there', async () => {
+  const { pursuitOf, attackBlocked } = await import('../server/src/game/pursuit.ts');
+  const { game } = makeGame();
+  const { c, ship } = atSea(game, 'Grapple Gil');
+  const npc = alongside(game, ship, 'pirate', 160);
+  const brain = game.npcs.get(npc.id)!;
+  brain.area = { x: npc.state.x, y: npc.state.y, r: 300 }; // her waters (a ship of the sea's has them)
+  brain.keep = true;
+  assert.match(String(canBoard(game, ship, npc)), /Too far/);
+  c.push({ t: 'board', target: npc.id, aggression: 'standard', risk: true });
+  assert.ok(pursuitOf(ship)?.grapple, 'the run alongside, the grapples to fly');
+  assert.equal(attackBlocked(game, ship, npc), null);
+  const trace: string[] = [];
+  for (let i = 0; i < 600 && !ship.boarding; i++) {
+    game.step();
+    if (i % 60 === 0) trace.push(`${Math.round(Math.hypot(npc.state.x - ship.state.x, npc.state.y - ship.state.y))}:${pursuitOf(ship)?.mode ?? '-'}:${canBoard(game, ship, npc)}`);
+  }
+  assert.ok(ship.boarding, `grappled once alongside: ${trace.join(' ')} ${JSON.stringify(c.all('pursuit'))} ${c.all('toast').map((t) => t.msg).join('|')}`);
+  assert.equal(ship.boarding!.with, npc.id);
+});
