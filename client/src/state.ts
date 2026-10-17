@@ -3,6 +3,8 @@
 // ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
 
 import type { SupplyView, TurtleView, ZoneView } from '../../shared/src/isleproto.ts';
+import type { ScoutsView } from '../../shared/src/fogproto.ts';
+import { fogDecode, fogSet } from '../../shared/src/data/fog.ts';
 import type { LairCard, LairsView } from '../../shared/src/lairproto.ts';
 import type { DriftCard, DriftMark, TameView } from '../../shared/src/driftproto.ts';
 import type { FindView } from '../../shared/src/findproto.ts';
@@ -103,6 +105,13 @@ export class ClientState {
   frontsAt = 0;
   forecast = false;
   discovered = new Set<number>();
+  /** The fog of war (owner, 2026-10-17): the squares of the sea she has seen (null until the server's word), and a
+   *  number that changes with them (render/fog.ts rebuilds its mask then). Her island's scouts, and when their view
+   *  came (performance.now ms: where they are is reckoned on from it). */
+  seen: Uint8Array | null = null;
+  seenVer = 0;
+  scouts: ScoutsView | null = null;
+  scoutsAt = 0;
   /** Batch E of docs/16: lighthouses, lookouts, the banks the tide bares, her caches. */
   isles: IslesView | null = null;
 
@@ -336,6 +345,15 @@ export class ClientState {
         break;
       case 'isles':
         this.isles = m.view;
+        break;
+      case 'fog':
+        if (m.all !== undefined) this.seen = fogDecode(m.all);
+        if (m.add && this.seen) for (const i of m.add) fogSet(this.seen, i);
+        this.seenVer++;
+        break;
+      case 'scouts':
+        this.scouts = m.view;
+        this.scoutsAt = performance.now();
         break;
       case 'chunk':
         for (const is of m.islands) {

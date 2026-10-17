@@ -3,6 +3,7 @@
 // projectiles & particles → darkness/light pass → fog/rain → screen-space overlays.
 // Art rules: docs/06_ART_DIRECTION.md (near-black water, warm lanterns vs cold ocean, turquoise ≤ 8%).
 
+import { drawFog } from './fog.ts'; // the fog of war (owner, 2026-10-17)
 import { LFG_GOAL_DEFS, parseLfgTag } from '../../../shared/src/data/social.ts';
 import { lfgLabel } from '../ui/social.ts';
 import { HULLS, LAMPS, LOOK_COLORS, decodeLook } from '../../../shared/src/data/looks.ts';
@@ -574,6 +575,9 @@ export class Renderer {
     drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, true);
     this.drawParticles(true);
     this.drawWeather(state, dt);
+    // The fog of war (owner, 2026-10-17; render/fog.ts): the sea she has not seen under a slow mist — over the world,
+    // under her own marks, names and goals.
+    drawFog(g, state.seen, state.seenVer, { x0: this.camX - this.w / 2 / this.zoom, y0: this.camY - this.h / 2 / this.zoom, k: this.zoom, w: this.w, h: this.h, time: opt.reduceMotion ? 0 : this.time, q: 0.5 });
 
     // Overlays (not affected by darkness).
     if (own && state.you && state.self) this.drawAim(state, own, aim, ships);

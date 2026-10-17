@@ -491,3 +491,39 @@ export function stepScoutNotices(game: Game): void {
   }
   if (changed) game.db.setKv(DUE, all);
 }
+
+// ------------------------------------------------------------------------------------------------ the tester's /fog
+
+/** /fog all: the whole sea seen; /fog reset: only her port's waters (as a new captain); /fog home: her scouts home now. */
+export function fogAdmin(game: Game, s: PlayerSession, arg: string): string {
+  const p = s.profile!;
+  if (arg === 'all') {
+    const st = fogState(game, s);
+    st.bits.fill(255);
+    p.fog = fogEncode(st.bits);
+    game.sendTo(s, { t: 'fog', all: p.fog });
+    return 'The fog has lifted from the whole sea.';
+  }
+  if (arg === 'reset') {
+    const port = game.portById(p.lastPort);
+    const bits = newFog();
+    if (port) fogDisc(bits, port.x, port.y, START_SIGHT);
+    p.fog = fogEncode(bits);
+    fogReset(s);
+    const st = fogState(game, s);
+    game.sendTo(s, { t: 'fog', all: fogEncode(st.bits) });
+    pushScouts(game, s);
+    return `The fog is back: only the waters about ${port?.name ?? '?'} are seen.`;
+  }
+  if (arg === 'home') {
+    for (const x of scoutsOf(s)) {
+      if (x.route && x.t0 !== undefined) x.t0 = game.wallNow() - ((x.total ?? 0) / SCOUT_SPEED) * 1000 - 1;
+      x.ready = Math.min(x.ready, game.wallNow());
+    }
+    stepScouts(game, s, true);
+    fogFlush(game, s);
+    pushScouts(game, s);
+    return 'Your scouts are home.';
+  }
+  return 'Usage: /fog all|reset|home';
+}

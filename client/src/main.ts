@@ -212,6 +212,13 @@ worldMap.onAutosail = (wp) => {
 // ux2: «Плыть» on a quest of the journal or the chart — the course to its place and on through its steps.
 journal.onSail = (key) => startGoal(key);
 worldMap.onGoal = (key) => startGoal(key);
+// The fog of war's scouts (owner, 2026-10-17): «Выбрать на карте» on the shipyard's card opens the chart to take a tap
+// on the fog; the tap sends her and the chart closes back onto the island.
+worldMap.onScoutSend = (id, x, y) => {
+  net.send({ t: 'scout', action: 'send', id, x: Math.round(x), y: Math.round(y) });
+  worldMap.scoutPick = null;
+  closeModal();
+};
 // docs/16 #36: the helmsman takes her to her mark; the pill at the top of the stack stops him.
 const EL = dict(EASE_EN, EASE_RU);
 const LSF = dict(SEAF_EN, SEAF_RU); // the quick sea fight (docs/23 phases 3–4)
@@ -361,6 +368,10 @@ function openHero(tab?: CaptainOpen): void {
 const companyScreen = new CompanyScreen((m) => net.send(m));
 // One's own island as a base (docs/15): from the Company's islands, the captain's cabin, and at sea off the island.
 const baseWindow = new BaseWindow((m) => net.send(m));
+baseWindow.onScoutPick = (id) => {
+  worldMap.scoutPick = id;
+  openModal('map');
+};
 /** The island screen: a scene of its own over the whole screen, the sea stopped under it (ui/islescene.ts). */
 const isleScene = new IsleScene((m) => net.send(m), baseWindow);
 const LIS = dict(LIS_EN, LIS_RU);
@@ -1688,6 +1699,11 @@ function onMessage(m: ServerMsg): void {
       if (modal === 'base' && baseWindow.tab === 'supply') refreshModal();
       if (isleScene.isOpen) isleScene.update(state);
       break;
+    case 'scouts': // the island's scouts (owner, 2026-10-17)
+      if (modal === 'base' && baseWindow.tab === 'yard') refreshModal();
+      if (isleScene.isOpen && modal !== 'map') isleScene.update(state);
+      if (modal === 'map') worldMap.draw(state);
+      break;
     case 'dwell':
       if (modal === 'recruit') refreshModal();
       break;
@@ -1902,6 +1918,7 @@ function arenaMoments(): void {
 
 function closeModal(): void {
   const was = modal;
+  if (was === 'map') worldMap.scoutPick = null; // a scout's pick left untaken
   // The welcome gift is never lost by closing its window (docs/16 #30).
   if (was === 'away' && state.away?.gift) {
     net.send({ t: 'away', action: 'take' });

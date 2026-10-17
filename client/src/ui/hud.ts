@@ -1,6 +1,7 @@
 // In-game HUD: captain, ship condition, combat (ammo, reloads, abilities), navigation (wind, sails),
 // minimap, prompts, toasts, banners and chat.
 
+import { drawFog, drawScouts } from '../render/fog.ts'; // the fog of war (owner, 2026-10-17)
 import { drawIslesMini, isleFill, wireMiniTip } from './islemap.ts'; // docs/18 III
 import { EN as SEAF_EN, RU as SEAF_RU } from '../lang/ui/seafight.ts';
 import { drawLfgFlag, drawSignalFlag, liveSignals, signalBar, worldGoalPlate } from './social.ts';
@@ -1312,6 +1313,10 @@ export class Hud {
       g.fillStyle = '#e0b862';
       g.fillRect(tx(p.x) - 3, ty(p.y) - 3, 6, 6);
     }
+    // The fog of war (owner, 2026-10-17): what she has not seen lies under it — islands, ports, lairs, the sea's things;
+    // ships, her marks and her scouts over it.
+    drawFog(g, state.seen, state.seenVer, { x0: own.x - range, y0: own.y - range, k, w: W, h: H, time: settings().reduceMotion ? 0 : performance.now() / 1000, q: 1 });
+    drawScouts(g, state.scouts, state.scoutsAt, tx, ty, 9);
     // Ships by shape (§11.2): circle a friend, square a neutral, diamond an enemy, notched diamond a bounty.
     const cb = settings().colorblind;
     for (const s of state.ships.values()) {

@@ -1,5 +1,7 @@
 // World map: a dark nautical chart. Only what the captain has charted is drawn — information is a resource.
 
+import { drawFog, drawScouts, underFog, visibleOnChart } from '../render/fog.ts'; // the fog of war (owner, 2026-10-17)
+import { LF, scoutName } from './scouts.ts';
 import { drawIslesChart, drawSupplyRoutes, isleFill, isleLegend, zoneHint } from './islemap.ts'; // docs/18 III
 import { socialLegend, drawLfgFlag, drawSignalFlag, lfgLabel, lfgLog, liveSignals, signalName, wireLfgRows, worldGoalsLog } from './social.ts';
 import { icon } from './dom.ts';
@@ -255,6 +257,9 @@ export class WorldMap {
 
   /** Set by the shell: a message to the server (sharing a quest with the group). */
   send: ((m: ClientMsg) => void) | null = null;
+  /** The fog of war (owner, 2026-10-17): a scout waiting for her point — the next tap on the chart sends her there. */
+  scoutPick: string | null = null;
+  onScoutSend: ((id: string, x: number, y: number) => void) | null = null;
 
   /** The layers shown (docs/23 item 73); kept between visits. */
   layers: Set<MapLayer> = (() => {
@@ -286,8 +291,8 @@ export class WorldMap {
       { id: 'all', icon: 'menu_map', label: W('map.all') },
     ].map((x) => ({ ...x, hint: W('map.layersHint') })), [...this.layers], 'mlayer');
     root.innerHTML = `${winHead(L('title'), { crest: 'menu_map', chips, sub: L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` }) })}
-      <div class="map-wrap"><canvas id="worldmap-canvas"></canvas><div class="map-wp-acts">${this.onAutosail ? `<button type="button" class="k-btn k-btn--primary k-btn--lg map-wp-sail${waypoint() && !state.self?.dockedAt ? '' : ' hidden'}" data-hint="${esc(W('map.sailHint'))}" title="${esc(EL('as_goTitle'))}">${icon('stat_sails', '⛵', 'k-btn-ico')}<span class="k-btn-l">${esc(W('map.sail'))}</span><small class="map-wp-name">${esc(this.markLabel())}</small></button>` : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'k-btn-ico')}<span class="k-btn-l">${esc(L('wp.clear'))}</span></button>${this.onPuzzle && ((state.adv?.pieces ?? 0) > 0 || state.adv?.grail === 'held') ? `<button type="button" class="k-btn k-btn--secondary k-btn--md map-pz">${icon('map_treasure', '', 'k-btn-ico')}<span class="k-btn-l">${esc(H4L('puzzle.btn'))}</span></button>` : ''}</div>
-      <details class="map-legend"${localStorage.getItem(LEGEND_KEY) === '1' ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span><span><b style="color:#cdb98a;font-weight:400">●</b>&nbsp;${LI('tide.legend')}</span><span><b style="color:#d0503a;font-weight:400">▲</b>&nbsp;${LI('look.legend')}</span><span><b style="color:#f5c77a;font-weight:400">✶</b>&nbsp;${LI('light.legend')}</span><span>${icon('map_treasure', '', 'ico')}${LI('cache.chart')}</span><span><b style="color:#e8ce78;font-weight:400">◆</b>&nbsp;${LROAM('lg')}</span>${socialLegend()}${heroLegend()}${isleLegend()}</div></details></div>
+      <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>${this.pickBar(state)}<div class="map-wp-acts">${this.onAutosail ? `<button type="button" class="k-btn k-btn--primary k-btn--lg map-wp-sail${waypoint() && !state.self?.dockedAt ? '' : ' hidden'}" data-hint="${esc(W('map.sailHint'))}" title="${esc(EL('as_goTitle'))}">${icon('stat_sails', '⛵', 'k-btn-ico')}<span class="k-btn-l">${esc(W('map.sail'))}</span><small class="map-wp-name">${esc(this.markLabel())}</small></button>` : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'k-btn-ico')}<span class="k-btn-l">${esc(L('wp.clear'))}</span></button>${this.onPuzzle && ((state.adv?.pieces ?? 0) > 0 || state.adv?.grail === 'held') ? `<button type="button" class="k-btn k-btn--secondary k-btn--md map-pz">${icon('map_treasure', '', 'k-btn-ico')}<span class="k-btn-l">${esc(H4L('puzzle.btn'))}</span></button>` : ''}</div>
+      <details class="map-legend"${localStorage.getItem(LEGEND_KEY) === '1' ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span><span><b style="color:#cdb98a;font-weight:400">●</b>&nbsp;${LI('tide.legend')}</span><span><b style="color:#d0503a;font-weight:400">▲</b>&nbsp;${LI('look.legend')}</span><span><b style="color:#f5c77a;font-weight:400">✶</b>&nbsp;${LI('light.legend')}</span><span>${icon('map_treasure', '', 'ico')}${LI('cache.chart')}</span><span><b style="color:#e8ce78;font-weight:400">◆</b>&nbsp;${LROAM('lg')}</span><span><b style="color:#cfeef2;font-weight:400">▲</b>&nbsp;${LF('legend')}</span>${socialLegend()}${heroLegend()}${isleLegend()}</div></details></div>
       <div class="map-logs">${zoneHint(state)}${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
       ${invasionLog(state.self?.invasion)}${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${worldGoalsLog(state)}${lfgLog(state)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${this.onGoal ? `<button type="button" class="btn btn-small btn-primary mq-sail" data-qsail="q:${esc(q.id)}" title="${esc(W('map.sailHint'))}">${icon('stat_sails', '', 'ico-sm')}${esc(W('map.sail'))}</button>` : ''}${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
     root.querySelectorAll<HTMLElement>('[data-mlayer]').forEach((b) => (b.onclick = () => {
@@ -370,6 +375,18 @@ export class WorldMap {
       this.zoom = 3;
       this.centred = true;
     }
+    // A scout's pick: the chart on her island, her whole reach in view.
+    const home = this.scoutPick ? state.scouts?.home : null;
+    if (home && state.scouts) {
+      this.cx = home.x;
+      this.cy = home.y;
+      this.zoom = Math.max(1, Math.min(6, WORLD_SIZE / (state.scouts.range * 2.3)));
+    }
+    root.querySelector<HTMLElement>('[data-scpick-x]')?.addEventListener('click', () => {
+      this.scoutPick = null;
+      root.querySelector('.map-pick')?.remove();
+      this.draw(state);
+    });
     c.onwheel = (e) => {
       e.preventDefault();
       this.zoom = Math.max(1, Math.min(14, this.zoom * (e.deltaY < 0 ? 1.2 : 1 / 1.2)));
@@ -457,11 +474,13 @@ export class WorldMap {
     const x = this.cx + (clientX - r.left - c.clientWidth / 2) / k;
     const y = this.cy + (clientY - r.top - c.clientHeight / 2) / k;
     if (x < 0 || y < 0 || x > WORLD_SIZE || y > WORLD_SIZE) return;
+    // A scout's pick takes the tap: she sails there (the server says if it is too far or no water leads there).
+    if (this.scoutPick && this.onScoutSend) return this.onScoutSend(this.scoutPick, x, y);
     const cur = waypoint();
     const hit = Math.max(18, Math.min(30, 12 + this.zoom * 2)) / k; // the mark's own size on the screen, in metres
     // A tap on a port's crest takes the port (a finger is wider than the crest: 24 px about it).
     const port = this.layers.has('all') || this.layers.has('ports')
-      ? state.ports.map((p) => ({ p, d: Math.hypot(p.x - x, p.y - y) })).filter((e) => e.d * k <= 24).sort((a, b) => a.d - b.d)[0]?.p
+      ? visibleOnChart(state.seen, state.ports).map((p) => ({ p, d: Math.hypot(p.x - x, p.y - y) })).filter((e) => e.d * k <= 24).sort((a, b) => a.d - b.d)[0]?.p
       : undefined;
     const off = !!cur && Math.hypot(cur.x - x, cur.y - y) < hit;
     this.markName = off ? '' : port ? placeName(port.name) : '';
@@ -469,6 +488,13 @@ export class WorldMap {
     setWaypoint(this.markAt);
     after();
     this.draw(state);
+  }
+
+  /** The bar over the chart while a scout waits for her point: what to do, and «Отмена». */
+  private pickBar(state: ClientState): string {
+    const sc = this.scoutPick ? state.scouts?.list.find((x) => x.id === this.scoutPick) : null;
+    if (!sc || !state.scouts) return '';
+    return `<div class="map-pick" role="status"><span>${esc(LF('pickHint', { name: scoutName(sc), km: Math.round(state.scouts.range / 1000) }))}</span><button type="button" class="btn btn-small" data-scpick-x>${esc(LF('cancel'))}</button></div>`;
   }
 
   private scale(): number {
@@ -512,9 +538,12 @@ export class WorldMap {
     // would cover an earlier waits for a closer zoom. They are gathered and laid down over all the marks at the end —
     // the tides' and lookouts' long lines were drawn before the ports and took their names' places (QA, 2026-10-04).
     const queued: { text: string; x: number; y: number; color: string; font: string; align: CanvasTextAlign; prio: number }[] = [];
+    // (the fog laid: the names after it are of her goals, over it; a name before it under the fog is not laid at all)
+    let fogged = false;
     const label = (text: string, x: number, y: number, color = 'rgba(240,230,200,0.85)', prio = 1) => {
       // One whose mark is off the chart is not drawn at all (it would stand at the edge with nothing under it).
       if (x < -4 || x > W + 4) return;
+      if (!fogged && underFog(state.seen, this.cx + (x - W / 2) / k, this.cy + (y - H / 2) / k)) return;
       queued.push({ text, x, y, color, font: g.font, align: g.textAlign, prio });
     };
     const layLabels = () => {
@@ -698,7 +727,7 @@ export class WorldMap {
     // Charted islands.
     for (const id of state.discovered) {
       const is = state.islands.get(id);
-      if (!is) continue;
+      if (!is || underFog(state.seen, is.x, is.y)) continue;
       g.beginPath();
       for (let i = 0; i < is.poly.length; i += 2) {
         if (i === 0) g.moveTo(tx(is.poly[i]), ty(is.poly[i + 1]));
@@ -725,7 +754,7 @@ export class WorldMap {
     // Ports: key ports are on every chart; villages only once found.
     // (docs/29: the harbour towns of step 9 — ids `<sea>_t<n>` — are found as the villages are)
     const found = new Set([...state.discovered].map((id) => state.islands.get(id)?.portId ?? state.islands.get(id)?.town));
-    for (const p of on('ports') ? state.ports : []) {
+    for (const p of on('ports') ? visibleOnChart(state.seen, state.ports) : []) {
       const known = (!p.id.includes('_v') && !/_t[0-9]+$/.test(p.id)) || found.has(p.id);
       if (!known) continue;
       if (!mark(`icon.faction_${p.faction}`, tx(p.x), ty(p.y), ms * 0.95)) {
@@ -1004,6 +1033,27 @@ export class WorldMap {
       }
       label(placeName(c.name), tx(c.x), ty(c.y) - ms * 0.55, '#8fd0a8');
     }
+    if (on('all')) drawMines(g, state, tx, ty, this.zoom, ms, mark, label); // the mines and their flags (docs/17 H3)
+    if (on('all') || on('goals')) drawCitadelsChart(g, state, tx, ty, this.zoom, ms, mark, label); // the citadels and their holders (docs/19 E4)
+    if (on('all')) drawHeroSites(g, state, tx, ty, this.zoom, ms, mark, label); // guilds, artifact merchants, drowned shrines (docs/17 H5)
+    if (on('lairs')) drawAdvChart(g, state, tx, ty, this.zoom, ms, mark, label); // the guards and the things on the map (docs/17 H4)
+    // The fog of war (owner, 2026-10-17; render/fog.ts): the sea she has not seen lies under a slow mist — its islands,
+    // ports, lairs and the sea's things with it (their names too: laid down later, they are dropped there). Her goals,
+    // her group, her mark, her scouts and her ship stand over it: a quest into the fog still leads there.
+    drawFog(g, state.seen, state.seenVer, { x0: this.cx - W / 2 / k, y0: this.cy - H / 2 / k, k, w: W, h: H, time: performance.now() / 1000 });
+    fogged = true;
+    drawScouts(g, state.scouts, state.scoutsAt, tx, ty, ms * 0.7);
+    // A scout's pick: her reach from the island, a dashed ring.
+    if (this.scoutPick && state.scouts?.home) {
+      g.save();
+      g.setLineDash([6, 6]);
+      g.strokeStyle = 'rgba(150,215,225,0.75)';
+      g.lineWidth = 1.6;
+      g.beginPath();
+      g.arc(tx(state.scouts.home.x), ty(state.scouts.home.y), state.scouts.range * k, 0, Math.PI * 2);
+      g.stroke();
+      g.restore();
+    }
     // Tasks of the sea: the nest's reach in orange, and its name, time and tally.
     const gone = (performance.now() - state.tasksAt) / 1000;
     for (const t of on('goals') ? state.tasks : []) {
@@ -1056,10 +1106,6 @@ export class WorldMap {
       g.fillRect(tx(h.x) - 1, ty(h.y) - 12, 2, 12);
       label(placeName(h.name), tx(h.x), ty(h.y) + 12, '#e0b862');
     }
-    if (on('all')) drawMines(g, state, tx, ty, this.zoom, ms, mark, label); // the mines and their flags (docs/17 H3)
-    if (on('all') || on('goals')) drawCitadelsChart(g, state, tx, ty, this.zoom, ms, mark, label); // the citadels and their holders (docs/19 E4)
-    if (on('all')) drawHeroSites(g, state, tx, ty, this.zoom, ms, mark, label); // guilds, artifact merchants, drowned shrines (docs/17 H5)
-    if (on('lairs')) drawAdvChart(g, state, tx, ty, this.zoom, ms, mark, label); // the guards and the things on the map (docs/17 H4)
     // Your group.
     g.font = '12px serif';
     for (const m of state.party?.members ?? []) {

@@ -7,6 +7,7 @@
 // tiles (a tap is a tap on its plot), and «Собрать всё» takes what the island made in one tap.
 
 import { bindSupply, supplyTab } from './supply.ts'; // docs/18 #32
+import { bindScouts, scoutsCard, tickScouts } from './scouts.ts'; // the fog of war's scouts (owner, 2026-10-17)
 import { EN as I18_EN, RU as I18_RU } from '../lang/ui/isles18.ts';
 import { guildYardCard, wireGuildYard } from './social.ts';
 import { BARGE, BARGE_MUL, GRID, PLOT_CELLS, PRODUCERS, isProducer, producerOf, producerRate, speedupSilver } from '../../../shared/src/data/base.ts';
@@ -163,6 +164,9 @@ export class BaseWindow {
   onSail: () => void = () => {};
   /** The town's recruit window (docs/17 H3). */
   onRecruit: () => void = () => {};
+  /** The fog of war's «Выбрать на карте»: the world map takes a tap on the fog for this scout (owner, 2026-10-17). */
+  onScoutPick: (id: string) => void = () => {};
+  private scAsked = 0;
   /** The market's order being drawn up (docs/17 H3). */
   mk: { give: string; get: string; n: number } = { give: 'silver', get: 'timber', n: 100 };
 
@@ -180,6 +184,7 @@ export class BaseWindow {
     this.moving = null;
     this.send({ t: 'base', action: 'view' });
     this.send({ t: 'isle18', action: 'supply' }); // docs/18 #32
+    this.send({ t: 'scout', action: 'view' }); // the shipyard's scouts (owner, 2026-10-17)
   }
 
   /** The server's wall clock now, by the view's clock and the time since it came. */
@@ -480,7 +485,7 @@ export class BaseWindow {
     const offers = y.level && y.ships.length < y.max
       ? `<div class="bsec">${esc(L('sy_new', { n: y.ships.length, max: y.max }))}</div><div class="sy-offers">${y.offers.map((o) => `<div class="bopt sy-offer${o.why ? ' off' : ''}">${shipPic(o.classId, 'sy-pic sy-pic-sm')}<div class="bopt-main"><b>${esc(OWN_ROLE_DEFS[o.role].name[ru])} <span class="muted sy-cls">${esc(SHIP_CLASSES[o.classId].name)}</span></b><span class="muted bopt-text">${esc(o.why ? sv(o.why) : OWN_ROLE_DEFS[o.role].text[ru])}</span>${this.costHtml(v, o, gold)}</div>${o.why ? '' : `<button class="btn btn-small btn-primary" data-sybuild="${o.role}">${esc(L('sy_build'))}</button>`}</div>`).join('')}</div>`
       : '';
-    return `${head}${sq}${cards ? `<div class="sy-cards">${cards}</div>` : ''}${offers}${guildYardCard(v.guildYard)}`;
+    return `${scoutsCard(state)}${head}${sq}${cards ? `<div class="sy-cards">${cards}</div>` : ''}${offers}${guildYardCard(v.guildYard)}`;
   }
 
   private shipCard(v: BaseView, x: OwnShipView, gold: number, ru: number): string {
@@ -555,6 +560,7 @@ export class BaseWindow {
       root.querySelectorAll<HTMLElement>(`[data-${attr}]`).forEach((el) => (el.onclick = () => this.send({ t: 'base', action, ship: el.dataset[attr]! })));
     }
     root.querySelector<HTMLElement>('[data-bcollect]')?.addEventListener('click', () => this.send({ t: 'base', action: 'collect' }));
+    bindScouts(root, this.send, (id) => this.onScoutPick(id)); // the shipyard's «Разведка» (owner, 2026-10-17)
     root.querySelector<HTMLElement>('[data-bbarge]')?.addEventListener('click', () => this.send({ t: 'base', action: 'barge' }));
     bindTown(root, this.send, this.mk, () => this.onRecruit(), redraw);
     bindSupply(root, this.send); // docs/18 #32
@@ -604,6 +610,10 @@ export class BaseWindow {
     if (due && Date.now() - this.asked > 2500) {
       this.asked = Date.now();
       this.send({ t: 'base', action: 'view' });
+    }
+    if (tickScouts(root, state) && Date.now() - this.scAsked > 2500) {
+      this.scAsked = Date.now();
+      this.send({ t: 'scout', action: 'view' });
     }
   }
 }

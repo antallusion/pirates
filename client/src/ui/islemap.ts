@@ -3,6 +3,7 @@
 // islands' kinds and levels, the zones of one level, the hidden islands found, the turtle islands and the banks under
 // water with their timers, and the «where is my level» hint under the chart.
 
+import { underFog } from '../render/fog.ts';
 import { THREAT_COLOR, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
 import { TIDAL_NAMES, TIDE_SEC } from '../../../shared/src/data/isles.ts';
 import type { IslandData, TidalView } from '../../../shared/src/protocol.ts';
@@ -94,7 +95,8 @@ export function wireMiniTip(canvas: HTMLCanvasElement, view: () => MiniView | nu
     const r = canvas.getBoundingClientRect();
     const k = r.width / (v.range * 2);
     const wx = v.x + (cx - r.left - r.width / 2) / k, wy = v.y + (cy - r.top - r.height / 2) / k;
-    const text = tipAt(state, wx, wy, (finger ? 22 : 12) / k);
+    // (under the fog of war nothing is named: owner, 2026-10-17)
+    const text = underFog(state.seen, wx, wy) ? '' : tipAt(state, wx, wy, (finger ? 22 : 12) / k);
     if (!text) return false;
     tip.innerHTML = text;
     tip.classList.remove('hidden');

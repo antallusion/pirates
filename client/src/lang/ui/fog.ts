@@ -1,0 +1,46 @@
+// Words of the fog of war and the island's scouts (owner, 2026-10-17: «туман войны … разведовательные корабли …
+// разведку надо сделать беслпатной»): the shipyard's «Разведка» card, the chart's pick, the legend.
+
+export const EN = {
+  title: 'Scouting',
+  lead: 'Scouts clear the fog from your chart. They cost nothing: no silver, no goods, no builders.',
+  seen: 'Charted: {pct}% of the sea',
+  slots: 'Scouts {n}/{max}',
+  build: 'Build a scout — free',
+  more: 'A shipyard of level {lv} keeps one more scout.',
+  hull: 'Fast and unarmed: no one hunts a scout.',
+  building: 'On the slipway',
+  home: 'In harbour',
+  out: 'Exploring',
+  back: 'Coming home',
+  left: '{t} left',
+  found: '{n} squares cleared',
+  auto: 'Auto — nearest fog',
+  pick: 'Pick on the map',
+  recall: 'Recall',
+  pickHint: 'Tap the fog on the map: {name} sails there and back ({km} km from the island at most).',
+  cancel: 'Cancel',
+  legend: 'your scout',
+};
+
+export const RU: Record<keyof typeof EN, string> = {
+  title: 'Разведка',
+  lead: 'Разведчики снимают туман с вашей карты. Они ничего не стоят: ни серебра, ни товаров, ни бригад.',
+  seen: 'Разведано: {pct}% моря',
+  slots: 'Разведчики {n}/{max}',
+  build: 'Построить разведчика — бесплатно',
+  more: 'Верфь {lv}-го уровня держит ещё одного разведчика.',
+  hull: 'Быстрый и без пушек: на разведчиков никто не охотится.',
+  building: 'На стапеле',
+  home: 'В гавани',
+  out: 'В разведке',
+  back: 'Возвращается',
+  left: 'осталось {t}',
+  found: 'открыто квадратов: {n}',
+  auto: 'Авто — ближайший туман',
+  pick: 'Выбрать на карте',
+  recall: 'Отозвать',
+  pickHint: 'Нажмите на туман на карте: «{name}» сходит туда и обратно (не дальше {km} км от острова).',
+  cancel: 'Отмена',
+  legend: 'ваш разведчик',
+};
