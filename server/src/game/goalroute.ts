@@ -387,6 +387,9 @@ function questPlaces(game: Game, s: PlayerSession, id: string): Resolved {
       const cast = castawaysOf(game, s).map((c): Cand => ({ x: c.x, y: c.y, r: 80, kind: 'place', name: 'castaway' }));
       return { cands: cast.length ? cast : squares(game, () => true, 'sea', 1.3) };
     }
+    case 'tribute':
+      // a merchant to stop and make pay (the Brethren's raid, docs/12 P6)
+      return { cands: hunt(game, s, 'merchants') };
     case 'claim':
       // docs/36: an island of her own — the nearest she may claim
       return { cands: islands(game, (i) => !i.portId, 'land') };
