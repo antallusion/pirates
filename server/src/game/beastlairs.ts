@@ -635,6 +635,8 @@ function freeQuickAshore(bt: TacBattle): void {
 }
 
 export const landFighting = (game: Game, s: PlayerSession): boolean => all.get(game)?.fights.has(s.accountId) ?? false;
+/** docs/35: her fight ashore still being fought (its end shown on the screen is no fight: the fallen may be raised). */
+export const landFightOn = (game: Game, s: PlayerSession): boolean => { const f = all.get(game)?.fights.get(s.accountId); return !!f && !f.done; };
 
 /** Her fight ashore as it stands, for a captain back at the helm mid-fight (the login sent none: QA, 2026-10-04). */
 export function resendLandFight(game: Game, s: PlayerSession): void {

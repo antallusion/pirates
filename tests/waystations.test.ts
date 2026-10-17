@@ -408,3 +408,32 @@ test('the economy: raising a won boarding\'s dead at a waystation is 5–30 % of
     assert.ok(per * FIELD_MUL / (hour / KILLS_HOUR) < 2.5, `L${L}: the field price against a kill's income`);
   }
 });
+
+test('a fight ashore\'s end: her fallen on the record, the quick «Воскресить» alive on its result (no longer a fight), refused while it is fought', async () => {
+  const { runAdmin } = await import('../server/src/game/admin.ts');
+  const { landFightOn, landFighting, landTac, closeFight } = await import('../server/src/game/beastlairs.ts');
+  const { giveScrolls, steps } = await import('./helpers.ts');
+  const { game } = makeGame();
+  const { s } = seaCaptain(game, 'Ashore', 50_000);
+  s.ship!.setArmy([{ u: 'marine', n: 30 }, { u: 'deckhand', n: 40 }]);
+  giveScrolls(game, 'Ashore');
+  runAdmin(game, s, '/lair crab_beach go');
+  runAdmin(game, s, '/lair crab_beach fight');
+  assert.ok(landFighting(game, s), 'the fight ashore opens');
+  recordFallen(game, s, [{ u: 'deckhand', n: 2 }]);
+  assert.match(resurrect(game, s, undefined, 'silver', 'ashore-rid-0')!, /ashore/, 'never while it is fought');
+  landTac(game, s, { a: 'quick' });
+  for (let i = 0; i < 200 && landFightOn(game, s); i++) steps(game, 1);
+  assert.ok(landFighting(game, s) && !landFightOn(game, s), 'its end on the screen, the fight over');
+  const v = resView(game, s);
+  assert.equal(v.why, null, 'the result\'s «Воскресить» is alive');
+  assert.ok(v.fallen >= 2, `${v.fallen} fallen on the record`);
+  if (v.place === 'none') assert.ok(v.instant >= 290, 'far from everything: the infirmary at once');
+  else {
+    assert.equal(v.place, 'field');
+    const before = s.ship!.crew;
+    assert.equal(resurrect(game, s, undefined, 'silver', 'ashore-rid-1'), null);
+    assert.ok(s.ship!.crew > before, 'raised on the result');
+  }
+  closeFight(game, s);
+});

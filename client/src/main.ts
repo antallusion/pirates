@@ -786,6 +786,7 @@ companyScreen.onWhisper = (name) => hud.chatPanel.openDm(name);
 const divePanel = new DivePanel((m) => net.send(m));
 const boardFight = new BoardFightPanel((m) => net.send(m), () => state.estServerTime());
 const tactical = new TacticalPanel((m) => net.send(m), () => state.estServerTime());
+tactical.onFallenSlot = (root) => mountFallen(root, state, (m) => net.send(m)); // docs/35: the quick «Воскресить» ashore
 tactical.purse = () => state.self?.gold ?? 0;
 // docs/25 item 16: the boarding under the sea's own weather and hour (rain, fog, a storm's lightning, night).
 tactical.sky = () => ({ weather: state.weather, fog: state.fog, wind: state.wind, night: nightFactor(state.estServerTime()) });
@@ -1554,6 +1555,10 @@ function onMessage(m: ServerMsg): void {
       if (modal === 'way') refreshModal();
       else if (modal === 'boarding') mountFallen($('modal-panel'), state, (x) => net.send(x));
       else if (modal === 'port' && portScreen.tab === 'army') refreshModal();
+      {
+        const tb = document.querySelector<HTMLElement>('#board-tac .tb-banner.tb-end:not(.hidden)');
+        if (tb) mountFallen(tb, state, (x) => net.send(x));
+      }
       break;
     case 'sunk_self':
       lastSunk = { lost: m.lost, port: placeName(state.ports.find((p) => p.id === m.respawnPort)?.name ?? '') || L('port'), towed: !!m.towed, ...(m.boarded ? { boarded: { by: sv(m.boarded.by), silver: m.boarded.silver, repelled: !!m.boarded.repelled } } : {}) };

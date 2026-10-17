@@ -89,10 +89,10 @@ const roamOf = (lair: string | undefined): RoamKind | null => { const k = lair?.
 /** docs/18 #36: the beaten who would follow her — how many, and her choice: aboard, home to the pen, let go. */
 function captureBlock(c: CaptureOffer): string {
   const head = `<small>${esc(DL('cap.title'))}</small><div class="tb-lline">${unitIcon(c.u, 'ico-sm')} ${esc(unitName(c.u))} — ${esc(DL('cap.text', { n: c.n, p: Math.round(c.share * 100) }))}</div>`;
-  if (c.done) return `<div class="tb-loot tb-cap">${head}<div class="tb-lline good">${esc(DL(`cap.done.${c.done}` as 'cap.done.take'))}</div></div>`;
+  if (c.done) return `<div class="tb-loot tb-capoffer">${head}<div class="tb-lline good">${esc(DL(`cap.done.${c.done}` as 'cap.done.take'))}</div></div>`;
   const take = c.room > 0 ? `<button class="btn btn-small btn-primary" data-cap="take">${esc(DL('cap.take', { n: Math.min(c.n, c.room) }))}</button>` : '';
   const pen = c.pen > 0 ? `<button class="btn btn-small" data-cap="pen">${esc(DL('cap.pen', { n: Math.min(c.n, c.pen) }))}</button>` : '';
-  return `<div class="tb-loot tb-cap">${head}${!take && !pen ? `<div class="tb-lline muted">${esc(DL('cap.noroom'))}</div>` : ''}<div class="tb-capacts">${take}${pen}<button class="btn btn-small" data-cap="free">${esc(DL('cap.free'))}</button></div></div>`;
+  return `<div class="tb-loot tb-capoffer">${head}${!take && !pen ? `<div class="tb-lline muted">${esc(DL('cap.noroom'))}</div>` : ''}<div class="tb-capacts">${take}${pen}<button class="btn btn-small" data-cap="free">${esc(DL('cap.free'))}</button></div></div>`;
 }
 
 /** docs/18 II: what a lair left her, on the battle's reckoning — silver, experience, the island's resource, the land's
@@ -437,6 +437,8 @@ function plankTexture(dark: boolean): HTMLCanvasElement {
 export class TacticalPanel {
   private view: TacView | null = null;
   private send: (m: ClientMsg) => void;
+  /** docs/35: fills the fallen's slot on a fight ashore's end (main.ts: the waystation's card). */
+  onFallenSlot: ((root: HTMLElement) => void) | null = null;
   private now: () => number;
   private el: HTMLElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
@@ -2106,7 +2108,7 @@ export class TacticalPanel {
       const arenaLine = r?.arena ? `<span class="tb-why tb-arena${r.arena.rated ? (r.arena.delta >= 0 ? ' up' : ' down') : ''}">${icon('icon.item_duelling_pistols', '', 'ico-sm')}${esc(arenaEndLine(r.arena))}</span>` : '';
       // Owner, 2026-10-16: «Почему» (its sheet: each stack's harm, the turning point) and «Повтор» beside the button.
       const more = `${r?.why ? `<button class="k-btn k-btn--md tb-endx" data-why>${esc(L('why.btn'))}</button>` : ''}${r?.replay && !v.replay ? `<button class="k-btn k-btn--md tb-endx" data-replay="${esc(r.replay)}">${esc(L('replay'))}</button>` : ''}`;
-      banner.innerHTML = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span class="tb-why">${esc(whyText)}</span>${arenaLine}${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${rows}</div><div class="tb-endrow">${more}<button class="k-btn k-btn--primary k-btn--lg tb-endbtn" data-endbtn>${esc(v.replay ? L('replay.close') : v.land ? LL('close') : L('next'))}</button><button class="tb-endx2" data-endx title="${esc(L('close.x'))}" aria-label="${esc(L('close.x'))}"><i class="tb-pk-x" aria-hidden="true"></i></button></div>`;
+      banner.innerHTML = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span class="tb-why">${esc(whyText)}</span>${arenaLine}${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${rows}${v.land && !v.replay ? '<div data-fallen-slot class="tb-fallen"></div>' : ''}</div><div class="tb-endrow">${more}<button class="k-btn k-btn--primary k-btn--lg tb-endbtn" data-endbtn>${esc(v.replay ? L('replay.close') : v.land ? LL('close') : L('next'))}</button><button class="tb-endx2" data-endx title="${esc(L('close.x'))}" aria-label="${esc(L('close.x'))}"><i class="tb-pk-x" aria-hidden="true"></i></button></div>`;
       banner.querySelector<HTMLElement>('[data-endx]')?.addEventListener('click', () => banner.querySelector<HTMLElement>('[data-endbtn]')?.click());
       banner.querySelector<HTMLElement>('[data-why]')?.addEventListener('click', () => this.openWhy(v));
       banner.querySelector<HTMLElement>('[data-replay]')?.addEventListener('click', (e) => this.askReplay((e.currentTarget as HTMLElement).dataset.replay!));
@@ -2121,6 +2123,8 @@ export class TacticalPanel {
         }
       });
       banner.querySelectorAll<HTMLElement>('[data-cap]').forEach((b) => (b.onclick = () => this.send({ t: 'drift', action: 'capture', choice: b.dataset.cap as 'take' })));
+      // docs/35: a fight ashore over — her fallen and the quick «Воскресить», as on a boarding's result.
+      if (v.land && !v.replay) this.onFallenSlot?.(banner);
     }
     // The phone's book follows the battle while it is open (the will spent, a page ready again).
     if (this.sheetKind === 'book' && this.sheetH?.open) {

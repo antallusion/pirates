@@ -31,7 +31,7 @@ import { WAY_LEAVE_RANGE, WAY_MOOR_RANGE, wayNear, waysOfChunk, waystations } fr
 import type { Waystation } from '../../../shared/src/world/waystations.ts';
 import type { ResRow, ResView, WayClientMsg, WayData, WayView } from '../../../shared/src/wayproto.ts';
 import { Rng } from '../../../shared/src/rng.ts';
-import { landFighting } from './beastlairs.ts';
+import { landFightOn } from './beastlairs.ts';
 import { reconcile } from './crew.ts';
 import { pickedMax, pickedRoom } from './dwell.ts';
 import type { Game } from './Game.ts';
@@ -124,7 +124,7 @@ export function resBusy(game: Game, s: PlayerSession): string | null {
   if (!ship || !ship.alive) return 'Not now';
   if (ship.boarding || ship.grappled) return 'Not in the middle of a boarding';
   if (!ship.docked && ship.underFire(game.now)) return 'Not while under fire';
-  if (landFighting(game, s)) return 'Your party is ashore already.';
+  if (landFightOn(game, s)) return 'Your party is ashore already.';
   return null;
 }
 

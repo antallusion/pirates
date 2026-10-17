@@ -65,3 +65,7 @@
   .way-row .way-price { font-size: 12px; }
 }
 .way-card .way-why { color: var(--bad, #c86a50); }
+/* docs/35: the card on a fight ashore's end (the battle's banner): one line, under the losses. */
+.tb-fallen:empty { display: none; }
+.tb-fallen .way-card { margin: 6px 0 0; padding: 4px 8px; background: rgba(15, 17, 20, 0.85); text-align: left; }
+.tb-fallen .way-card .wc-t b { font-size: 13px; }
