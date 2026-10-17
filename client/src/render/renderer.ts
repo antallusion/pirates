@@ -684,6 +684,7 @@ export class Renderer {
   private drawFarOnly(state: ClientState, own: SailState | null): void {
     const g = this.g;
     g.clearRect(-20, -20, this.w + 40, this.h + 40);
+    hot.length = 0; // (no tokens on the screen for the hover's aim to keep off: the chart has none)
     drawFarChart(g, state, this.farCtx(own, 1), this.farLayers);
     this.labelBoxes = [];
     if (own && state.autosail && !state.self?.dockedAt) this.drawCourse(state.autosail, own);
