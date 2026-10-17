@@ -91,20 +91,25 @@ export function xpGap(level: number, ship: number | null): number {
 
 // ------------------------------------------------------------------------------------------------ what each source is worth
 
-/** Every source in units of her own level's ship sunk (docs/26 §3). */
+/** Every source in units of her own level's ship sunk (docs/26 §3).
+ *
+ *  Owner, 2026-10-17 («взял на абордаж корабль 1 и получил сразу 2 уровня… это у тебя такой баланс по опыту?»), docs/26
+ *  §11: the main campaign (docs/36) now carries the road, the fights are its side. A ship sunk teaches half the unit she
+ *  is named by, a prize one (was 1 and 2); the boarding battle's lesson, boarders thrown back and a lair's creatures are
+ *  halved with them. The curve itself (xpForLevel) is unchanged: the same road, its fights a smaller share of it. */
 export const XP_UNITS = {
   /** A ship of her level sunk; taken by boarding (the fight and the prize). */
-  sunk: 1,
-  boarded: 2,
+  sunk: 0.5,
+  boarded: 1,
   /** The boarding battle's own lesson (HoMM3's killed creatures), a bonus by the share of the enemy cut down. */
-  battle: 0.2,
+  battle: 0.1,
   /** Boarders thrown back. */
-  repelled: 1,
+  repelled: 0.5,
   /** A captain of her group near when she takes a prize: this share of it. */
   mate: 0.4,
   /** A fight ashore or at sea against a lair's creatures (the fight is the lesson), by the share cut down. */
-  creatures: 1,
-  /** A quest of her level of the usual size (docs/26: the main steady source). */
+  creatures: 0.5,
+  /** A quest of her level of the usual size (docs/26: the main steady source; the campaign's quests pay the same). */
   quest: 5,
   /** A port's contract: letters, a delivery (each of the usual length), a bounty for each ship (beside her prize). */
   courier: 1.5,
@@ -112,16 +117,26 @@ export const XP_UNITS = {
   bounty: 0.4,
   /** A day's order (by its size, the order's legacy weight / 40) and the chest of all three. */
   dailyChest: 7,
-  /** A deed of legend. */
+  /** A deed of legend (never more than DEED_LEVEL_SHARE of her level: the first deeds come at the first levels). */
   deed: 4,
   /** A shared goal of the sea, the guild or the world, a task of an island's people. */
   goal: 5,
   task: 5,
-  /** A tutorial goal, and the first of the First Watch's five stages (each next a quarter more): its first three bring
-   *  the second level before its boarding, which is weighed for a hero of the second level (docs/23 item 81). */
-  tutorialGoal: 1.5,
+  /** A captain's goal after the First Watch (was 1.5: the goal «take a prize» paid more than the prize). */
+  tutorialGoal: 1,
+  /** The First Watch's first stage; each next a quarter more up to the boarding (its first three bring the second
+   *  level before its boarding, which is weighed for a hero of the second level, docs/23 item 81). */
   tutorialStage: 2,
 } as const;
+
+/** The First Watch's five stages in units at her level (docs/26 §11): sail, «Атаковать», «Огонь» bring the second
+ *  level before the boarding; the boarding and the port pay a unit each (were 3.5 and 4: with the prize and the deed
+ *  the lesson's boarding gave the third level at once). */
+export const TUTORIAL_STAGE_UNITS = [2, 2.5, 3, 1, 1];
+
+/** A deed of legend pays at most this share of her level (the deed of the first prize at the first level paid two
+ *  thirds of it: with the prize, «два уровня за один абордаж»). */
+export const DEED_LEVEL_SHARE = 0.05;
 
 /** The small finds of the sea keep their old proportions: this many of their old points make one unit at her level. */
 export const XP_POINT = 80;
@@ -142,14 +157,25 @@ export const SILVER_UNITS = 10;
 export const QUEST_FLOOR = 0.1;
 
 /** The usual hour at sea of a captain who hunts ships of her level (tests/balance/xp.ts, the hunting hour): units. The
- *  roaming stacks are held to a share of it (ROAM_XP_TARGET). */
-export const HUNT_HOUR_UNITS = 42;
+ *  roaming stacks are held to a share of it (ROAM_XP_TARGET). 42 until 2026-10-17; the kills halved (docs/26 §11), the
+ *  hunting hour is 0.56 of what it was: 23. */
+export const HUNT_HOUR_UNITS = 23;
 
 // ------------------------------------------------------------------------------------------------ the reckonings
 
 /** `units` of her own level's ship, to a captain of this level. */
 export function lumpXp(level: number, units: number): number {
   return Math.max(0, Math.round(units * xpUnit(level)));
+}
+
+/** A deed of legend to a captain of this level: XP_UNITS.deed, held to DEED_LEVEL_SHARE of her level. */
+export function deedXp(level: number): number {
+  return Math.min(lumpXp(level, XP_UNITS.deed), Math.round(xpForLevel(level) * DEED_LEVEL_SHARE));
+}
+
+/** A stage of the First Watch done (0-based) to a captain of this level. */
+export function tutorialStageXp(level: number, stage: number): number {
+  return lumpXp(level, TUTORIAL_STAGE_UNITS[Math.max(0, Math.min(TUTORIAL_STAGE_UNITS.length - 1, stage))]);
 }
 
 /** `units` against a target of ⚓`ship` (null: off the ladder), by its colour: nothing for a grey one. */

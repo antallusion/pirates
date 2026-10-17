@@ -373,10 +373,16 @@ export function firstHour(R: Rules): { onceXp: number; level: number } {
     onceXp += a;
     add(a);
   } else {
-    // The same deeds in units at her level as she grows (shared/src/data/xpcurve.ts XP_UNITS, XP_POINT).
-    const units = [2, 2.5, 3, 3.5, 4, 1.5, 1.5, 1.5, 140 / 80, 140 / 80, 140 / 80, 186 / 80, 4];
-    for (const u of units) {
-      const a = X.lumpXp(level, u);
+    // The same deeds at her level as she grows (shared/src/data/xpcurve.ts): the watch's five stages, three goals, three
+    // ports and a sea (old points / XP_POINT), the deed of the first prize (held to a share of her level, docs/26 §11).
+    const steps: (() => number)[] = [
+      ...X.TUTORIAL_STAGE_UNITS.map((u) => () => X.lumpXp(level, u)),
+      ...[1, 1, 1].map(() => () => X.lumpXp(level, X.XP_UNITS.tutorialGoal)),
+      ...[140, 140, 140, 186].map((pt) => () => X.pointsXp(level, pt)),
+      () => X.deedXp(level),
+    ];
+    for (const f of steps) {
+      const a = f();
       onceXp += a;
       add(a);
     }

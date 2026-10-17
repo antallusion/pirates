@@ -2236,7 +2236,10 @@ export class Game {
     const vLevel = victim.onLadder ? victim.combatLevel : null;
     // A streak of ships without making port swells it (docs/16 #4).
     const streak = onStreakKill(this, s, killer, victim);
-    const xp = prizeXp(p.level, vLevel, how);
+    // A prize taken and then scuttled was paid for as taken (creditKill 'boarded'): her sinking pays no second prize,
+    // no mate's share and no bounty (owner, 2026-10-17: the first prize of a new captain paid «Took» and «Sank» both).
+    const paid = how === 'sunk' && this.boardedDown.has(victim.id);
+    const xp = paid ? 0 : prizeXp(p.level, vLevel, how);
     if (how === 'sunk') p.stats.sunk++;
     else p.stats.boarded++;
     this.shared?.bump(how === 'sunk' ? 'sunk' : 'boarded', s.accountId, s.name, 1);
@@ -2292,7 +2295,7 @@ export class Game {
     }
     checkStatDeeds(this, s);
     this.grantXp(s, xp * streak, `${how === 'sunk' ? 'Sank' : 'Took'} ${victim.name}`, true);
-    for (const ms of mates) this.grantXp(ms, prizeXp(ms.profile!.level, vLevel, how) * XP_UNITS.mate, `${s.name} ${how === 'sunk' ? 'sank' : 'took'} ${victim.name}`, true);
+    if (!paid) for (const ms of mates) this.grantXp(ms, prizeXp(ms.profile!.level, vLevel, how) * XP_UNITS.mate, `${s.name} ${how === 'sunk' ? 'sank' : 'took'} ${victim.name}`, true);
     // Law and reputation (monsters and hulks answer to nobody).
     if (victim.faction !== 'player' && !victim.cls.monster) {
       const f = FACTIONS[victim.faction];
@@ -2316,7 +2319,7 @@ export class Game {
       onWarKill(this, killer, victim, how);
     }
     // Contracts: a ship counts on one bounty only, and a grey one on none (docs/26: no prize paid twice).
-    const bounty = xpGap(p.level, vLevel) > 0 ? p.contracts.find((c) => c.kind === 'bounty' && victim.faction === c.targetFaction && (c.progress ?? 0) < (c.kills ?? 1)) : undefined;
+    const bounty = !paid && xpGap(p.level, vLevel) > 0 ? p.contracts.find((c) => c.kind === 'bounty' && victim.faction === c.targetFaction && (c.progress ?? 0) < (c.kills ?? 1)) : undefined;
     if (bounty) {
       bounty.progress = (bounty.progress ?? 0) + 1;
       if ((bounty.progress ?? 0) >= (bounty.kills ?? 1)) this.completeContract(s, bounty.id);

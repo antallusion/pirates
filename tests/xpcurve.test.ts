@@ -46,27 +46,36 @@ test('the curve grows steadily: every level dearer, no step, the ships to a leve
 });
 
 test('the ships a level asks: five at the first, thirty at the tenth, eighty at the thirtieth, a hundred and more past fifty', () => {
-  const k = (L: number) => simKills(CURRENT, L);
+  // The curve in its unit (xpUnit, «a ship of her level sunk» as docs/26 named it) is unchanged…
+  const k = (L: number) => xpForLevel(L) / xpUnit(L);
   assert.ok(k(1) >= 4 && k(1) <= 6, `L1: ${k(1)}`);
   assert.ok(k(10) >= 25 && k(10) <= 35, `L10: ${k(10)}`);
   assert.ok(k(30) >= 60 && k(30) <= 80, `L30: ${k(30)}`);
   for (let L = 50; L < MAX_LEVEL; L++) assert.ok(k(L) >= 100, `L${L}: ${k(L)}`);
+  // …but since 2026-10-17 (docs/26 §11: the campaign carries the road) a ship sunk pays half of it: twice the ships.
+  assert.ok(simKills(CURRENT, 1) >= 10 && simKills(CURRENT, 1) <= 13, `L1: ${simKills(CURRENT, 1)} ships sunk`);
+  assert.ok(Math.abs(simKills(CURRENT, 30) / k(30) - 2) < 0.01);
   // Before docs/26 a level-1 captain needed two ships and a half; and a hunting hour then was a hundred ships' worth.
   assert.ok(simKills(LEGACY, 1) < 3);
   assert.ok(styleHour(LEGACY, 'hunt', 1).xp / LEGACY.sink(1, 1) > 90);
 });
 
-test('the road in hours of mixed play: 1→2 five to eight minutes, 1→10 two to three hours, 10→20 six to eight, 20→30 about twelve, 1→60 150–250', () => {
+// docs/26 §11 (owner, 2026-10-17: «получил сразу 2 уровня… бред»): the fights halved, the road of the model's mixed play
+// (its quests the stand-in for the campaign's) is a fifth longer: 1→2 eight minutes (was six), 1→10 3.2 h (2.6),
+// 10→20 8.7 h (7.1), 20→30 15 h (12), 1→60 ~215 h (171) — still in the owner's 150–250.
+test('the road in hours of mixed play: 1→2 six to ten minutes, 1→10 2.5 to 4 hours, 10→20 seven to ten, 20→30 twelve to seventeen, 1→60 150–250', () => {
   const m12 = hoursBetween(CURRENT, 1, 2) * 60, h10 = hoursBetween(CURRENT, 1, 10), h20 = hoursBetween(CURRENT, 10, 20), h30 = hoursBetween(CURRENT, 20, 30), all = hoursBetween(CURRENT, 1, 60);
-  assert.ok(m12 >= 5 && m12 <= 8, `1→2: ${m12.toFixed(1)} min`);
-  assert.ok(h10 >= 2 && h10 <= 3, `1→10: ${h10.toFixed(2)} h`);
-  assert.ok(h20 >= 6 && h20 <= 8, `10→20: ${h20.toFixed(2)} h`);
-  assert.ok(h30 >= 10 && h30 <= 14, `20→30: ${h30.toFixed(2)} h`);
+  assert.ok(m12 >= 6 && m12 <= 10, `1→2: ${m12.toFixed(1)} min`);
+  assert.ok(h10 >= 2.5 && h10 <= 4, `1→10: ${h10.toFixed(2)} h`);
+  assert.ok(h20 >= 7 && h20 <= 10, `10→20: ${h20.toFixed(2)} h`);
+  assert.ok(h30 >= 12 && h30 <= 17, `20→30: ${h30.toFixed(2)} h`);
   assert.ok(all >= 150 && all <= 250, `1→60: ${all.toFixed(0)} h`);
-  // Every way of playing makes its way, none ten times another's (the stacks and the explorer slower, by design).
+  // Every way of playing makes its way, none ten times another's (the stacks and the explorer slower, by design). Since
+  // the fights were halved (docs/26 §11) and the quests — the campaign's stand-in — were not, the quest boards of the
+  // third level run 4.2 times the stacks' hour (was under 4).
   for (const L of LEVELS) {
     const hs = STYLES.map((s) => styleHour(CURRENT, s, L).xp);
-    assert.ok(Math.max(...hs) / Math.min(...hs) < 4, `L${L}: ${hs.map(Math.round).join(' / ')}`);
+    assert.ok(Math.max(...hs) / Math.min(...hs) < 5, `L${L}: ${hs.map(Math.round).join(' / ')}`);
   }
 });
 
@@ -108,8 +117,9 @@ test('the colours of the prize: grey gives nothing, green less, her own ⚓ yell
   assert.ok(questXpFor(20, 600, 5, 12) < questXpFor(12, 600, 5, 12));
 });
 
-test('one kill, one prize: sunk 1, taken 2 of her level\'s ship; the battle a bonus of a tenth; a grey ship nothing — no streak, no bounty', () => {
-  assert.equal(XP_SUNK, 1);
+// docs/26 §11 (2026-10-17): a ship sunk half the unit, taken one (were 1 and 2); the proportions kept.
+test('one kill, one prize: sunk ½, taken 1 of her level\'s unit; the battle a bonus of a tenth; a grey ship nothing — no streak, no bounty', () => {
+  assert.equal(XP_SUNK, 0.5);
   assert.ok(XP_BOARDED >= XP_SUNK * 2, 'a ship carried teaches twice a ship sunk');
   assert.ok(TAC_XP_SHARE <= 0.1 * 2 * XP_BOARDED && TAC_XP_SHARE > 0, 'the battle\'s own lesson a small bonus on the prize');
   const L = 22, u = xpUnit(L);
@@ -142,8 +152,8 @@ test('one kill, one prize: sunk 1, taken 2 of her level\'s ship; the battle a bo
     return p.xp + cumulative(p.level) - before;
   };
   const v = shipBandOf(L);
-  assert.equal(credit(pirate(v), 'sunk'), u, 'one unit for a pirate of her level sunk');
-  assert.equal(credit(pirate(v), 'boarded'), 2 * u, 'two for one taken');
+  assert.equal(credit(pirate(v), 'sunk'), Math.round(0.5 * u), 'half a unit for a pirate of her level sunk');
+  assert.equal(credit(pirate(v), 'boarded'), u, 'one for one taken');
   const streak = p.streak ?? 0;
   p.contracts.push({ id: 'b1', kind: 'bounty', title: 'Bounty: 1 pirate ship', fromPort: 'gravesend', targetFaction: 'confederacy', kills: 1, progress: 0, reward: 300, xp: 0, units: 0.6, expiresAt: game.now + 3600, description: '' });
   const grey = pirate(2);
@@ -189,7 +199,7 @@ test('a ship sunk counts on one quest only: two hunts that each want a pirate ar
   for (const id of ['t_hunt_a', 't_hunt_b']) delete QUESTS_BY_ID[id];
 });
 
-test('the boarding battle on the hexes: its lesson a bonus by the share cut down, then the prize — one kill, about 2.2 of her level\'s ship', () => {
+test('the boarding battle on the hexes: its lesson a bonus by the share cut down, then the prize — one kill, about 1.1 of her level\'s unit', () => {
   const { game } = makeGame();
   game.tacticalBoarding = true;
   const c = join(game, 'Hex Helga', 'corsair');
@@ -240,8 +250,8 @@ test('the boarding battle on the hexes: its lesson a bonus by the share cut down
   const battle = amount(/^Won the boarding battle/);
   assert.ok(battle > 0 && battle <= Math.round(TAC_XP_SHARE * u), `the battle: ${battle} (${toasts.join(' | ')})`);
   const prize = amount(/^Took /);
-  assert.equal(prize, 2 * u, `the prize: two of her level's ship (${toasts.join(' | ')})`);
-  assert.ok(battle + prize <= 2.2 * u + 1, 'one kill: about 2.2 units, never two prizes');
+  assert.equal(prize, u, `the prize: one of her level's unit (${toasts.join(' | ')})`);
+  assert.ok(battle + prize <= 1.1 * u + 1, 'one kill: about 1.1 units, never two prizes');
 });
 
 test('glory past the cap: a rank at first about half the last level, rank 100 twice that; ranks 1–100 about six and a half roads', () => {
