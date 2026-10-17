@@ -8,7 +8,7 @@ export const CHAPTER: ChapterSrc = {
   region: 'drowned_crown',
   more: ['ashen_isles'],
   hub: 'tidehallow',
-  title: ['Tidehallow', 'Приливная Лощина'],
+  title: ['Tidehallow', 'Приливная Обитель'],
   blurb: [
     'At the edge of the drowned sea the Crown’s squadron and the Code’s raiders anchor in one bay and eye each other over their guns. Admiral Dray has one order for them both: follow her flag.',
     'На краю утонувшего моря эскадра Короны и рейдеры Кодекса стоят в одной бухте и косятся друг на друга поверх пушек. У адмирала Дрея для всех один приказ: идти за вашим флагом.',

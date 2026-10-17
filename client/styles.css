@@ -5296,6 +5296,43 @@ body.touch.sea-docked #touch > :is(#tc-stick, .tc-special, #tc-target) { display
 .gs-empty { margin: 2px 0 4px; line-height: 1.35; }
 .gs-foot { margin: 4px 0 0; }
 .gs-scroll > .sea-lent { padding-bottom: 0; }
+/* docs/36: the campaign in «Цели и вести» — «Взять» where she is, why it waits, how far along of 720; the classes' tags */
+.gs-take { min-height: 30px; padding: 3px 12px; white-space: nowrap; }
+.gs-wait { font-size: 12px; color: #e08a7a; white-space: nowrap; padding: 0 4px; }
+.gs-cprog { display: grid; grid-template-columns: auto minmax(40px, 1fr); align-items: center; gap: 8px; font-size: 12px; color: var(--fog, #9a958a); }
+.gs-kind.gs-k-side { color: #b8a6d8; }
+.gs-kind.gs-k-job, .gs-kind.gs-k-contract { color: #9ab8c8; }
+.gs-cdone { color: #8fc07a; }
+/* docs/36: the port's «Кампания» — where she stands, the quest now, the next ones locked */
+.q-cmp-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; margin: 2px 0 8px; }
+.q-cmp-head b { color: var(--bone); overflow-wrap: anywhere; }
+.q-cmp-head .q-cmp-prog { font-size: 12px; color: var(--fog); white-space: nowrap; }
+.q-cmp-head .cm-bar { grid-column: 1 / -1; height: 6px; }
+.q-cmp-next { margin-top: 10px; }
+.q-cmp-next .q-locked { opacity: 0.62; }
+.q-cmp-next .q-locked .w-row-ico { filter: grayscale(1); }
+/* docs/36: the journal's «Кампания» page — the chapters as a book */
+.campaign-book { display: flex; flex-direction: column; gap: 6px; }
+.cb-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+.cb-head .cm-bar { height: 6px; }
+.cb-ch { border: 1px solid rgba(111, 90, 56, 0.45); border-radius: 6px; background: rgba(10, 12, 16, 0.35); padding: 4px 8px; }
+.cb-ch > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; cursor: pointer; list-style: none; min-height: 32px; }
+.cb-ch > summary::-webkit-details-marker { display: none; }
+.cb-ch > summary b { color: var(--bone); overflow-wrap: anywhere; flex: 1 1 auto; min-width: 0; }
+.cb-ch .cb-meta { font-size: 12px; color: var(--fog); white-space: nowrap; }
+.cb-ch.cb-done > summary b { color: var(--steel-text); }
+.cb-ch.cb-now { border-color: var(--brass); box-shadow: inset 0 0 10px rgba(224, 184, 98, 0.12); }
+.cb-ch.cb-ahead { opacity: 0.75; }
+.cb-blurb { margin: 2px 0 4px; font-size: 13px; line-height: 1.35; color: var(--fog); }
+.cb-quests { list-style: none; margin: 0; padding: 0; }
+.cb-quests li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 6px; margin: 2px 0; line-height: 1.3; }
+.cb-quests li.done { color: var(--steel-text); }
+.cb-quests li.now { color: var(--bone); font-weight: 600; }
+.cb-quests li.ahead { color: var(--fog); }
+@media (max-width: 420px) {
+  .cb-ch .cb-meta { white-space: normal; }
+  .q-cmp-head { grid-template-columns: 1fr; }
+}
 /* a short phone (≤ 420 px high): the rows tighter, the pay under «Плыть»'s column dropped beside the words */
 @media (max-height: 420px) {
   .gs-top { max-height: 40%; padding: 4px 6px; }

@@ -13,7 +13,7 @@ export const CHAPTER: ChapterSrc = {
     'Beyond the Maelstrom Wall the wind is dead, the stars lie, and lighthouses stand on lonely islands with their lenses turned down into the sea. Somewhere ahead is the Widow, and far below, a light.',
     'За Стеной Мальстрима ветер мёртв, звёзды лгут, а на одиноких островах стоят маяки, чьи линзы повёрнуты вниз, в море. Где-то впереди Вдова, а глубоко внизу — свет.',
   ],
-  giver: ['Aurora Sayle, Master of the Order of the Last Light', 'Аврора Сейл, магистр Ордена Последнего света'],
+  giver: ['Aurora Sayle, Master of the Order of the Last Light', 'Аврора Сейл, магистр Ордена Последнего Огня'],
   portrait: 'giver_lighthouse_keeper_f',
   reward: { ammo: true },
   quests: [
@@ -21,7 +21,7 @@ export const CHAPTER: ChapterSrc = {
       t: ['The First Watch Beyond', 'Первая вахта за Стеной'],
       b: [
         'Aurora Sayle has kept the lamp of Last Light for thirty years and never once sailed past the Wall. “Go in, come back, and tell me what you saw,” she says. “Leave nothing out, even what you think is madness.”',
-        'Аврора Сейл тридцать лет хранит огонь Последнего света и ни разу не ходила за Стену. «Войдите, вернитесь и расскажите, что видели, — говорит она. — Ничего не упускайте, даже то, что покажется безумием».',
+        'Аврора Сейл тридцать лет хранит огонь Последнего Огня и ни разу не ходила за Стену. «Войдите, вернитесь и расскажите, что видели, — говорит она. — Ничего не упускайте, даже то, что покажется безумием».',
       ],
       d: [
         'The compass needles turn slowly round and round. The stars mirrored in the water are not the stars overhead.',
@@ -201,7 +201,7 @@ export const CHAPTER: ChapterSrc = {
       t: ['The Lost Fleet Passes', 'Мимо проходит пропавший флот'],
       b: [
         'At the turn of the night a whole fleet comes up out of the water: the Crown squadron that sailed for the Wall a hundred years ago and vanished. Their guns are run out, and they are steering for Last Light.',
-        'На повороте ночи из воды поднимается целый флот: эскадра Короны, что сто лет назад ушла к Стене и пропала. Пушки выкачены, и курс у них на Последний свет.',
+        'На повороте ночи из воды поднимается целый флот: эскадра Короны, что сто лет назад ушла к Стене и пропала. Пушки выкачены, и курс у них на Последний Огонь.',
       ],
       d: [
         'The echoes sink back one by one. The last of them dips its colours to you before it goes.',

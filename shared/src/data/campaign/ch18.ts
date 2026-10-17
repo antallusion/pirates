@@ -60,7 +60,7 @@ export const CHAPTER: ChapterSrc = {
       ],
       d: [
         'Letters to the last admiral of the Drowned Crown, in the same woman’s hand as the wreckers’ ledger — and dated more than a century ago.',
-        'Письма последнему адмиралу Утонувшей короны, написанные той же женской рукой, что и счётная книга мародёров, — и датированные больше чем столетием назад.',
+        'Письма последнему адмиралу Утонувшей Короны, написанные той же женской рукой, что и счётная книга мародёров, — и датированные больше чем столетием назад.',
       ],
       s: ['at:fogmouth', 'hub'],
     },
@@ -228,7 +228,7 @@ export const CHAPTER: ChapterSrc = {
       ],
       d: [
         'She will ring the Gravetide, raise the Drowned Crown and drown the living coasts. The envoy does not deny a word of it.',
-        'Она прозвонит Гробовой прилив, поднимет Утонувшую корону и утопит живые берега. Посланник не отрицает ни слова.',
+        'Она прозвонит Гробовой прилив, поднимет Утонувшую Корону и утопит живые берега. Посланник не отрицает ни слова.',
       ],
       s: ['port', 'escort'],
     },

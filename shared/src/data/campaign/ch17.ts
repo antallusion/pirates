@@ -7,7 +7,7 @@ export const CHAPTER: ChapterSrc = {
   n: 17,
   region: 'dead_mans_expanse',
   hub: 'saltglass',
-  title: ['Saltglass', 'Солёное Стекло'],
+  title: ['Saltglass', 'Соляное Стекло'],
   blurb: [
     'Salt pans white as sails, glassworks that never sleep, and lenses of black glass that hum when the drowned bells ring. Someone has been buying them by the crate.',
     'Солеварни, белые, как паруса, стекловарни, что не гаснут ни днём ни ночью, и линзы из чёрного стекла, которые гудят, когда звонят утонувшие колокола. Кто-то скупает их ящиками.',
@@ -200,7 +200,7 @@ export const CHAPTER: ChapterSrc = {
       t: ['Lighthouse Turned Downward', 'Маяк, смотрящий вниз'],
       b: [
         'Ottilie has heard of an old lighthouse of the Drowned Crown standing in ruins on {isle}, its lenses still in their frames. She wants to know how the old makers ground them.',
-        'Оттилия слышала о старом маяке Утонувшей короны, что стоит в руинах на острове {isle}, и линзы его до сих пор в своих рамах. Она хочет знать, как их шлифовали старые мастера.',
+        'Оттилия слышала о старом маяке Утонувшей Короны, что стоит в руинах на острове {isle}, и линзы его до сих пор в своих рамах. Она хочет знать, как их шлифовали старые мастера.',
       ],
       d: [
         'The lenses are of black glass, and they were set facing down — into the sea, toward the bells.',

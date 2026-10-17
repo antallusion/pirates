@@ -7,7 +7,7 @@ export const CHAPTER: ChapterSrc = {
   n: 24,
   region: 'drowned_crown',
   hub: 'saint_maw',
-  title: ['Saint Maw', 'Святая Пасть'],
+  title: ['Saint Maw', 'Сент-Мо'],
   blurb: [
     'The Choir’s own city, where green lanterns burn on every tower and no warship is let in. A disgraced bell-ringer has sent for you — and somewhere on a rock out at sea an old pilot is still alive.',
     'Город самого Хора: на каждой башне горят зелёные фонари, и ни один военный корабль сюда не пускают. Вас позвал опальный звонарь, а где-то в море, на голой скале, всё ещё жив старый лоцман.',

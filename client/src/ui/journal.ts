@@ -41,6 +41,8 @@ import { LC } from './crewlife.ts';
 import { weeklyLog } from './renown.ts';
 import { worldGoalsLog } from './social.ts';
 import { bindGoalTaps } from './goaltap.ts'; // route: a goal's line sails to its nearest place
+import { classWord, questClass } from './questclass.ts'; // docs/36 §1: the one taxonomy's words
+import { bookChapters, bookWord, campaignBookHtml } from './campaignbook.ts'; // docs/36: the «Кампания» page
 
 const EN = {
   title: 'Quest journal',
@@ -80,10 +82,6 @@ const EN = {
   share: 'Share with the group',
   abandon: 'Set aside',
   confirmAbandon: 'Set this quest aside? Its progress is lost.',
-  kind_path: 'Path',
-  kind_legend: 'Legend',
-  kind_story: 'Story',
-  kind_job: 'Job',
   fast: 'A quarter more if done within {m} min',
   done: 'Quests done: {n}',
   lfg: 'Look for a group',
@@ -141,10 +139,6 @@ const RU: typeof EN = {
   share: 'Поделиться с группой',
   abandon: 'Отложить',
   confirmAbandon: 'Отложить это задание? Сделанное по нему пропадёт.',
-  kind_path: 'Путь',
-  kind_legend: 'Легенда',
-  kind_story: 'Сюжет',
-  kind_job: 'Поручение',
   fast: 'На четверть больше, если управитесь за {m} мин',
   done: 'Выполнено заданий: {n}',
   lfg: 'Искать отряд',
@@ -172,8 +166,16 @@ export const distWords = (d: number): string => (d >= 1000 ? RL('dist.km', { n: 
 type Quest = NonNullable<ClientState['self']>['quests'][number];
 type Contract = NonNullable<ClientState['self']>['contracts'][number];
 
+/** A campaign quest's chapter and place in it, from its id (`c03_05`). */
+export function campaignPlace(id: string): { ch: number; k: number } | null {
+  const m = /^c(\d{2})_(\d{2})b?$/.exec(id);
+  return m ? { ch: Number(m[1]), k: Number(m[2]) - 1 } : null;
+}
+
 export class Journal {
   private chosen: string | null = null;
+  /** docs/36: the «Кампания» page shown instead of the quests. */
+  private book = false;
   /** Opens the tattoos window (docs/12 P9). */
   openTattoos: (() => void) | null = null;
   /** Opens her saga (docs/12 P10 #20). */
@@ -203,10 +205,16 @@ export class Journal {
     const inGroup = (state.party?.members.length ?? 0) > 1;
     // The saga, the day's log and the tattoos: chips that open their own windows.
     const chips = [
+      { id: 'cmp', icon: 'tab_legends', label: bookWord('tab'), hint: bookWord('tabHint') },
       { id: 'log', icon: 'tab_letters', label: LC('logButton'), hint: LC('log'), badge: self?.log?.length ? self.log.filter((e) => e.day === self.log!.at(-1)!.day).length : 0 },
       { id: 'saga', icon: 'tab_legends', label: sagaButton(), badge: self?.saga?.length ?? 0 },
       { id: 'tattoos', icon: 'tattoo_needle', label: L('tattoos'), badge: state.tattoos?.pending.length ?? 0 },
     ];
+    if (this.book) {
+      root.innerHTML = logFrame('quests', state, chips, 'cmp', campaignBookHtml(self?.campaign, bookChapters(() => this.book && this.render(root, state))));
+      this.bindChips(root);
+      return;
+    }
     root.innerHTML = logFrame('quests', state, chips, '', `<div class="journal">
         <div class="jr-side">
           <div class="jr-list">${quests.length || contracts.length ? `${quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('')}${contracts.map((c) => this.contractRow(c, `c:${c.id}` === this.chosen, state)).join('')}` : `<p class="muted">${esc(L('none'))}</p>`}</div>
@@ -215,10 +223,7 @@ export class Journal {
         </div>
         <div class="jr-detail">${q ? this.detail(q, q.id === tracked, inGroup, state) : ct ? this.contractDetail(ct, state) : ''}</div>
       </div>`);
-    root.querySelectorAll<HTMLElement>('[data-jtab]').forEach((b) => (b.onclick = () => b.dataset.jtab !== 'quests' && this.onTab(b.dataset.jtab as Exclude<LogTab, 'quests'>)));
-    root.querySelector<HTMLElement>('[data-jchip="log"]')?.addEventListener('click', () => this.openLog?.());
-    root.querySelector<HTMLElement>('[data-jchip="saga"]')?.addEventListener('click', () => this.openSaga?.());
-    root.querySelector<HTMLElement>('[data-jchip="tattoos"]')?.addEventListener('click', () => this.openTattoos?.());
+    this.bindChips(root, state);
     root.querySelectorAll<HTMLElement>('[data-jq]').forEach((b) => (b.onclick = () => {
       this.chosen = b.dataset.jq!;
       this.render(root, state);
@@ -260,11 +265,40 @@ export class Journal {
     });
   }
 
+  /** The rail's tabs and the second row's chips: the campaign's page (a toggle), the log, the saga, the tattoos. */
+  private bindChips(root: HTMLElement, state?: ClientState): void {
+    root.querySelectorAll<HTMLElement>('[data-jtab]').forEach((b) => (b.onclick = () => {
+      if (b.dataset.jtab === 'quests') {
+        if (this.book && state) {
+          this.book = false;
+          this.render(root, state);
+        }
+        return;
+      }
+      this.onTab(b.dataset.jtab as Exclude<LogTab, 'quests'>);
+    }));
+    root.querySelector<HTMLElement>('[data-jchip="cmp"]')?.addEventListener('click', () => {
+      this.book = !this.book;
+      this.onBook?.();
+    });
+    root.querySelector<HTMLElement>('[data-jchip="log"]')?.addEventListener('click', () => this.openLog?.());
+    root.querySelector<HTMLElement>('[data-jchip="saga"]')?.addEventListener('click', () => this.openSaga?.());
+    root.querySelector<HTMLElement>('[data-jchip="tattoos"]')?.addEventListener('click', () => this.openTattoos?.());
+  }
+
+  /** Draw again (main.ts: the journal's own redraw, with the state of now). */
+  onBook: (() => void) | null = null;
+
+  /** Open on the campaign's page (a tap on the campaign's block elsewhere). */
+  showBook(on = true): void {
+    this.book = on;
+  }
+
   private row(q: Quest, on: boolean, tracked: boolean): string {
     const count = q.need > 1 ? ` · ${q.progress}/${q.need}` : '';
     return `<div class="jr-item"><button class="jr-row${on ? ' on' : ''}${tracked ? ' tracked' : ''}" data-jq="${esc(q.id)}">
       <b>${tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}${q.ship ? ` ${levelChip(q.ship)}` : ''}</b>
-      <span class="muted">${esc(L(`kind_${q.kind}` as 'kind_job'))} · ${q.step}/${q.steps}${count}${q.mates?.length ? ` · ${icon('tab_group', '⚑', 'ico-sm')}${q.mates.length}` : ''}</span></button>${q.target ? this.goBtn(`q:${q.id}`) : ''}</div>`;
+      <span class="muted">${esc(classWord(questClass(q)))} · ${q.step}/${q.steps}${count}${q.mates?.length ? ` · ${icon('tab_group', '⚑', 'ico-sm')}${q.mates.length}` : ''}</span></button>${q.target ? this.goBtn(`q:${q.id}`) : ''}</div>`;
   }
 
   /** «Плыть» beside a row: a finger-sized sail. */
@@ -313,6 +347,7 @@ export class Journal {
         <div class="giver-words">
           <h3 class="giver-name">${esc(serverText(q.name))}</h3>
           <div class="giver-who muted">${esc(serverText(q.mentor))}</div>
+          <div class="giver-who jr-class">${esc(classWord(questClass(q)))}${((p) => (p ? ` · ${esc(bookWord('where', { ch: p.ch, n: p.k + 1, of: state.self?.campaign?.size ?? 0 }))}` : ''))(q.kind === 'campaign' ? campaignPlace(q.id) : null)}</div>
           ${q.summary ? `<p class="giver-say">«${esc(serverText(q.summary))}»</p>` : ''}
         </div></div>
       <div class="giver-steps"><div class="giver-h">${esc(L('steps'))}</div><ol class="jr-steps">${steps}</ol></div>
@@ -323,7 +358,7 @@ export class Journal {
         <button class="btn btn-small${tracked ? ' on' : ''}" data-follow ${tracked ? 'disabled' : ''}>${esc(L(tracked ? 'following' : 'follow'))}</button>
         ${canShare ? `<button class="btn btn-small" data-share>${esc(L('share'))}</button>` : ''}
         ${q.category === 'elite' && !inGroup ? `<button class="btn btn-small" data-lfg title="${esc(L('lfgHint'))}">${esc(L('lfg'))}</button>` : ''}
-        ${q.kind === 'job' || q.kind === 'story' ? `<button class="btn btn-small btn-danger" data-abandon>${esc(L('abandon'))}</button>` : ''}
+        ${q.kind === 'job' || q.kind === 'story' || q.kind === 'campaign' ? `<button class="btn btn-small btn-danger" data-abandon>${esc(L('abandon'))}</button>` : ''}
       </div>`;
   }
 }

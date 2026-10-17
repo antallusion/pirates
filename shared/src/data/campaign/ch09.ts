@@ -65,10 +65,10 @@ export const CHAPTER: ChapterSrc = {
       s: ['bring:whale_oil'],
     },
     {
-      t: ['Bells of the Drowned Crown', 'Колокола Утонувшей короны'],
+      t: ['Bells of the Drowned Crown', 'Колокола Утонувшей Короны'],
       b: [
         'To be sure, Wren needs the old founders’ rolls of the Drowned Crown, and a copy is kept by a glass-burner’s widow at {port}. She sells nothing to strangers. Go anyway.',
-        'Чтобы увериться, Рену нужны старые литейные списки Утонувшей короны, а их копию хранит вдова стекольщика в порту {port}. Чужим она ничего не продаёт. Всё равно сходите.',
+        'Чтобы увериться, Рену нужны старые литейные списки Утонувшей Короны, а их копию хранит вдова стекольщика в порту {port}. Чужим она ничего не продаёт. Всё равно сходите.',
       ],
       d: [
         'The rolls match the chart mark for mark. Every sign on it is a bell of the old Crown, sunk where its ship went down.',

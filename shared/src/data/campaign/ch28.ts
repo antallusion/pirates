@@ -8,12 +8,12 @@ export const CHAPTER: ChapterSrc = {
   region: 'drowned_crown',
   more: ['the_abyss'],
   hub: 'last_light',
-  title: ['The Last Light', 'Последний свет'],
+  title: ['The Last Light', 'Последний Огонь'],
   blurb: [
     'At the edge of the deep stands a fortress-lighthouse whose lenses look not out to sea but down into it. Its knights trust no pirate, and they guard a secret older than the Choir: the Drowned Grail.',
     'На краю глубины стоит маяк-крепость, чьи линзы смотрят не в море, а вниз, в его толщу. Его рыцари не доверяют пиратам и хранят тайну старше самого Хора — Грааль Утонувших.',
   ],
-  giver: ['Aurora Sayle, Master of the Order of the Last Light', 'Аврора Сейл, магистр Ордена Последнего света'],
+  giver: ['Aurora Sayle, Master of the Order of the Last Light', 'Аврора Сейл, магистр Ордена Последнего Огня'],
   portrait: 'giver_lighthouse_keeper_f',
   reward: { ammo: true },
   quests: [

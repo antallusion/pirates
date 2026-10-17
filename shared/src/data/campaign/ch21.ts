@@ -7,7 +7,7 @@ export const CHAPTER: ChapterSrc = {
   n: 21,
   region: 'dead_mans_expanse',
   hub: 'wreckhold',
-  title: ['Wreckhold', 'Обломная Твердь'],
+  title: ['Wreckhold', 'Обломная Крепь'],
   blurb: [
     'A town built of the ships the reef took, and a bosun who swears he can build them back. The Code needs a fleet, and these waters are full of hulls that only look dead.',
     'Город, выстроенный из кораблей, что забрал риф, и боцман, который клянётся, что сумеет отстроить их заново. Кодексу нужен флот, а эти воды полны корпусов, которые лишь кажутся погибшими.',

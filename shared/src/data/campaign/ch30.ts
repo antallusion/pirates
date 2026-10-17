@@ -10,7 +10,7 @@ export const CHAPTER: ChapterSrc = {
   title: ['The Singing Reef', 'Поющий риф'],
   blurb: [
     'Off Marrowdeep a reef has begun to sing, and the Widow’s fleet waits there for the one night the Maelstrom Wall breathes out. An old reader of wrecks keeps the last page of a voyage no one came back from.',
-    'У Марроудипа запел риф, и флот Вдовы ждёт там единственной ночи, когда Стена Мальстрима делает выдох. Старый чтец крушений хранит последнюю страницу плавания, из которого никто не вернулся.',
+    'У края Бездны запел риф, и флот Вдовы ждёт там единственной ночи, когда Стена Мальстрима делает выдох. Старый чтец крушений хранит последнюю страницу плавания, из которого никто не вернулся.',
   ],
   giver: ['Tobias Wren, reader of wrecks', 'Тобиас Рен, чтец крушений'],
   portrait: 'giver_cartographer_m',
@@ -20,7 +20,7 @@ export const CHAPTER: ChapterSrc = {
       t: ['The Reader of Wrecks', 'Чтец крушений'],
       b: [
         'Tobias Wren has come down from Wrecktide on a fishing smack, a satchel of wet charts under his arm. “The reef off {isle} has started to sing,” he says. “Go and listen before you believe me.”',
-        'Тобиас Рен спустился из Ректайда на рыбацком смэке, с сумкой мокрых карт под мышкой. «Риф у острова {isle} запел, — говорит он. — Сходите послушайте, прежде чем мне верить».',
+        'Тобиас Рен спустился из Рэктайда на рыбацком смэке, с сумкой мокрых карт под мышкой. «Риф у острова {isle} запел, — говорит он. — Сходите послушайте, прежде чем мне верить».',
       ],
       d: [
         'The reef hums one low note, and the crew falls silent: it is the note that rang under the water at Saltmarrow.',
@@ -152,7 +152,7 @@ export const CHAPTER: ChapterSrc = {
       t: ['Light to Read By', 'Свет, чтобы прочесть'],
       b: [
         'Only a lens of abyssal glass will bring up ink that was written beyond the Wall, and the nearest one burns at Last Light. Carry the page to Aurora Sayle and ask her to lend you her lamp for an hour.',
-        'Чернила, написанные за Стеной, проявит только линза из абиссального стекла, а ближайшая горит в Последнем свете. Отвезите страницу Авроре Сейл и попросите одолжить вам её огонь на час.',
+        'Чернила, написанные за Стеной, проявит только линза из абиссального стекла, а ближайшая горит в Последнем Огне. Отвезите страницу Авроре Сейл и попросите одолжить вам её огонь на час.',
       ],
       d: [
         'Under Aurora’s lens the page fills with soundings in a dead captain’s hand: a crooked passage through the Wall, and beside it the words “Last Leaf”.',
@@ -176,7 +176,7 @@ export const CHAPTER: ChapterSrc = {
       t: ['Powder for the Fireships', 'Порох для брандеров'],
       b: [
         'The Order of the Last Light is fitting out fireships at {port2} to break the Widow’s anchorage before the Wall opens. They have hulls and pitch. They need powder, and they need it before the moon is full.',
-        'Орден Последнего света снаряжает брандеры в порту {port2}, чтобы разбить стоянку Вдовы до того, как откроется Стена. Корпуса и смола у них есть. Нужен порох, и нужен до полнолуния.',
+        'Орден Последнего Огня снаряжает брандеры в порту {port2}, чтобы разбить стоянку Вдовы до того, как откроется Стена. Корпуса и смола у них есть. Нужен порох, и нужен до полнолуния.',
       ],
       d: [
         'Six fireships lie ready, their holds stacked to the beams. The brothers bless them as if they were boats going fishing.',

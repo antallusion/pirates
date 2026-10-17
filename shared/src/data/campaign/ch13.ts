@@ -11,7 +11,7 @@ export const CHAPTER: ChapterSrc = {
   title: ['The Belfry Under the Ice', 'Колокольня подо льдом'],
   blurb: [
     'A walled town in the fjord where the try-works never go out and the ice never quite lets go. Under that ice stands a church of the Drowned Crown, and someone is sawing his way down to its bell.',
-    'Город за стенами во фьорде, где салотопни не гаснут, а лёд никогда до конца не отпускает. Подо льдом стоит церковь Утонувшей короны, и кто-то пропиливает себе путь к её колоколу.',
+    'Город за стенами во фьорде, где салотопни не гаснут, а лёд никогда до конца не отпускает. Подо льдом стоит церковь Утонувшей Короны, и кто-то пропиливает себе путь к её колоколу.',
   ],
   giver: ['Ingrid Holm, envoy of the northern clans', 'Ингрид Хольм, посланница северных кланов'],
   portrait: 'giver_envoy_f',
@@ -129,7 +129,7 @@ export const CHAPTER: ChapterSrc = {
       t: ['The Chapel on the Shore', 'Часовня на берегу'],
       b: [
         'Every church of the Drowned Crown had a chapel on the nearest shore, where the bell was blessed before it was hung. Ingrid thinks the twin of this one stands on {isle}. Land and read the walls.',
-        'У каждой церкви Утонувшей короны была часовня на ближнем берегу, где колокол освящали, прежде чем повесить. Ингрид думает, что близнец этой стоит на острове {isle}. Высадитесь и прочтите стены.',
+        'У каждой церкви Утонувшей Короны была часовня на ближнем берегу, где колокол освящали, прежде чем повесить. Ингрид думает, что близнец этой стоит на острове {isle}. Высадитесь и прочтите стены.',
       ],
       d: [
         'The bell’s name is carved by the door: “The Long Winter”. Beneath it someone has scratched a fresh grey bell.',

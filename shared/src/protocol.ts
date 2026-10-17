@@ -678,7 +678,7 @@ export interface CampaignView {
   blocked?: string | null;
   ways?: { id: string; name: string; label?: string; summary: string; steps: string[]; xp: number; silver: number }[];
   active?: string;
-  next: { name: string; gate: number; ch: number; k: number }[];
+  next: { name: string; gate: number; ch: number; k: number; size: number }[];
   picks: Record<string, 'a' | 'b'>;
 }
 

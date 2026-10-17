@@ -117,7 +117,7 @@ export const CHAPTER: ChapterSrc = {
       t: ['Ansel’s Doubt', 'Сомнение Ансельма'],
       b: [
         'Halfway through, Ansel loses his nerve: what if a bell rung backward sends the drowned further away, for ever? He asks to go back to his old cell at Saint Maw, where a book of the Choir’s first ringers is hidden.',
-        'На полпути Ансельм теряет решимость: а что, если колокол, прозвоненный задом наперёд, уведёт утонувших ещё дальше — навсегда? Он просит отвезти его в старую келью в Святой Пасти, где спрятана книга первых звонарей Хора.',
+        'На полпути Ансельм теряет решимость: а что, если колокол, прозвоненный задом наперёд, уведёт утонувших ещё дальше — навсегда? Он просит отвезти его в старую келью в Сент-Мо, где спрятана книга первых звонарей Хора.',
       ],
       d: [
         'The book says only: “The tide rung to sleep keeps what it holds, and holds it gently.” Ansel reads it twice and puts on his gloves.',

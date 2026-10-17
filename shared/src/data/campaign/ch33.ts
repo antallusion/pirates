@@ -13,7 +13,7 @@ export const CHAPTER: ChapterSrc = {
     'The oldest things in the sea live beyond the Wall, and they sing. The Choir has learned to drive them with bells. Ilse Harrow has learned to listen, and what she hears is a map.',
     'За Стеной живут самые древние существа моря, и они поют. Хор научился гнать их колоколами. Ильзе Харроу научилась слушать, и то, что она слышит, — карта.',
   ],
-  giver: ['Ilse Harrow, the Listener of Saint Maw', 'Ильзе Харроу, Слушающая из Святой Пасти'],
+  giver: ['Ilse Harrow, the Listener of Saint Maw', 'Ильзе Харроу, Слушающая из Сент-Мо'],
   portrait: 'giver_hermit_f',
   reward: { map: 3 },
   quests: [
@@ -21,7 +21,7 @@ export const CHAPTER: ChapterSrc = {
       t: ['A Song Through the Wall', 'Песня сквозь Стену'],
       b: [
         'Ilse Harrow has heard singing in her sleep since the Wall opened, all the way from Saint Maw, and she has come to {hub} to be nearer to it. Take her through the Wall. She wants to hear it awake.',
-        'С тех пор как открылась Стена, Ильзе Харроу слышит во сне пение, даже в Святой Пасти, и она приехала в порт {hub}, чтобы быть ближе к нему. Отвезите её за Стену. Она хочет услышать его наяву.',
+        'С тех пор как открылась Стена, Ильзе Харроу слышит во сне пение, даже в Сент-Мо, и она приехала в порт {hub}, чтобы быть ближе к нему. Отвезите её за Стену. Она хочет услышать его наяву.',
       ],
       d: [
         'Beyond the Wall Ilse stands at the rail with her eyes shut for an hour. “Not bells,” she says at last. “Voices. Very old ones.”',

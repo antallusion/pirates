@@ -218,7 +218,7 @@ export function campaignView(game: Game, p: Profile): CampaignView {
     at: c.at, total, ch, k, size, started: c.started, done: c.at >= total, from: c.from,
     ...(slot ? { gate: slot.gate, blocked: active ? null : slot.gate > p.level ? `Level ${slot.gate}` : null, ways: [way(slot.a), ...(slot.b ? [way(slot.b)] : [])] } : {}),
     ...(active ? { active: active.id } : {}),
-    next: nextSlots(game, c.at + 1, 3).map((x) => ({ name: x.a.name, gate: x.gate, ch: x.ch, k: x.k })),
+    next: nextSlots(game, c.at + 1, 3).map((x) => ({ name: x.a.name, gate: x.gate, ch: x.ch, k: x.k, size: chapterOfSlot(x.slot).size })),
     picks: c.picks,
   };
 }

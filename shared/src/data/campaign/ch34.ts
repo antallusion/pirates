@@ -13,7 +13,7 @@ export const CHAPTER: ChapterSrc = {
     'The way to the Eye is known at last, and so is the Widow’s plan: put out the Islands of Light one by one until nothing keeps watch on the deep. Her fleet waits at the rim, and her husband’s ship still sails among the echoes.',
     'Путь к Оку наконец известен, а с ним и замысел Вдовы: гасить Острова Света один за другим, пока за глубиной никто не будет присматривать. Её флот ждёт на краю, а среди эха всё ещё ходит корабль её мужа.',
   ],
-  giver: ['Aurora Sayle, Master of the Order of the Last Light', 'Аврора Сейл, магистр Ордена Последнего света'],
+  giver: ['Aurora Sayle, Master of the Order of the Last Light', 'Аврора Сейл, магистр Ордена Последнего Огня'],
   portrait: 'giver_lighthouse_keeper_f',
   reward: { ammo: true },
   quests: [
@@ -165,7 +165,7 @@ export const CHAPTER: ChapterSrc = {
       t: ['False Stars', 'Ложные звёзды'],
       b: [
         'Above {isle} hang stars that were not there yesterday: lanterns on kites, flown by the Widow’s ships to draw a navigator onto the reefs. It is the oldest trick on the Black Coast. Put them out the old way.',
-        'Над островом {isle} висят звёзды, которых вчера не было: фонари на воздушных змеях, их запускают корабли Вдовы, чтобы заманить штурмана на рифы. Это старейший трюк Чёрного берега. Погасите их по-старому.',
+        'Над островом {isle} висят звёзды, которых вчера не было: фонари на воздушных змеях, их запускают корабли Вдовы, чтобы заманить штурмана на рифы. Это старейший трюк Чёрного побережья. Погасите их по-старому.',
       ],
       d: [
         'One by one the false stars fall into the sea. Jory says it is like being home, and nobody can tell if he is joking.',

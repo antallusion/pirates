@@ -132,7 +132,7 @@ import { EN as HUD_EN, RU as HUD_RU } from './lang/ui/hud.ts';
 const HUD_L = dict(HUD_EN, HUD_RU);
 import { applyDataLocale, NAME_RU } from './lang/data.ts';
 import { personName } from './lang/names.ts';
-import { serverText } from './lang/server.ts';
+import { loadCampaignWords, serverText } from './lang/server.ts';
 import { FACTIONS } from '../../shared/src/data/factions.ts';
 import { placeName } from './ui/maps.ts';
 import type { Key } from './i18n.ts';
@@ -207,6 +207,7 @@ const journal = new Journal((m) => net.send(m));
 journal.openTattoos = () => openModal('tattoos');
 journal.openSaga = () => openModal('saga');
 journal.openLog = () => openModal('log');
+journal.onBook = () => refreshModal(); // docs/36: the journal's «Кампания» page
 // docs/23 item 74: «Журнал» — the quests are the journal's page, the company, guild, letters and album the company's.
 journal.onTab = (t) => {
   companyScreen.open(LOG_PAGES[t][0] as CompanyTab);
@@ -1038,6 +1039,8 @@ onSettings((s) => {
 });
 document.documentElement.lang = lang();
 applyDataLocale(lang());
+// docs/36: the campaign's 720 quests' words come after the first screen (a module of their own)
+setTimeout(() => void loadCampaignWords().then(() => modal && refreshModal()), 1500);
 flagsCss(); // the colours' stylesheet (docs/24; index.html is the sea HUD's)
 translateDom();
 markLang();
@@ -1594,7 +1597,9 @@ function onMessage(m: ServerMsg): void {
       if (m.stores) parts.push(L('questStores', { h: m.stores.heavy, f: m.stores.incendiary }));
       if (m.mentor) parts.push(L('questMentor', { name: m.mentor }));
       // The herald of a job paid.
-      hud.banner(L('questDone'), `${serverText(m.name)} — ${parts.join(' · ')}`);
+      // docs/36: a campaign quest — the chapter and its place in it on the herald, its completion line as the crew's word
+      hud.banner(m.campaign ? L('campaignDone', { ch: m.campaign.ch, n: m.campaign.k + 1, of: m.campaign.size }) : L('questDone'), `${serverText(m.name)} — ${parts.join(' · ')}`);
+      if (m.line) hud.toast(serverText(m.line), 'info');
       audio.bell();
       audio.coins();
       break;

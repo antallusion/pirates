@@ -7,7 +7,7 @@ export const CHAPTER: ChapterSrc = {
   n: 20,
   region: 'ashen_isles',
   hub: 'slagport',
-  title: ['Slagport', 'Шлаковый порт'],
+  title: ['Slagport', 'Шлаковый Порт'],
   blurb: [
     'Foundries on black sand, powder mills under the smoking cone, and a saboteur of the Choir on every third shift. The Code’s war will be fought with what is made here — if anything is left of it.',
     'Литейные на чёрном песке, пороховые мельницы под дымящимся конусом и диверсант Хора в каждой третьей смене. Войну Кодекса будут вести тем, что сделано здесь, — если отсюда хоть что-нибудь останется.',

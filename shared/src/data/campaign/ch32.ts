@@ -238,7 +238,7 @@ export const CHAPTER: ChapterSrc = {
       t: ['The Back of the Chart', 'Оборотная сторона карты'],
       b: [
         'Isolde has turned the Black Chart over at last. On its back, in faded ink, runs a list of the bells in the order they were first rung, a century ago. She thinks Brother Ansel can read what it means. He is at Saint Maw.',
-        'Изольда наконец перевернула Чёрную карту. На обороте выцветшими чернилами написан список колоколов в том порядке, в каком их впервые прозвонили сто лет назад. Она думает, что брат Ансельм сумеет понять, что это значит. Он в Святой Пасти.',
+        'Изольда наконец перевернула Чёрную карту. На обороте выцветшими чернилами написан список колоколов в том порядке, в каком их впервые прозвонили сто лет назад. Она думает, что брат Ансельм сумеет понять, что это значит. Он в Сент-Мо.',
       ],
       d: [
         'Ansel reads the list and laughs, and then weeps a little. “Backwards,” he says. “Ring them backwards, and the tide will sleep.”',

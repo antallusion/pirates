@@ -7,7 +7,7 @@ export const CHAPTER: ChapterSrc = {
   n: 29,
   region: 'drowned_crown',
   hub: 'crownfall',
-  title: ['Fallen Crown', 'Павшая корона'],
+  title: ['Fallen Crown', 'Павшая Корона'],
   blurb: [
     'The capital of the drowned empire lies a few fathoms under the keel, its streets still straight, its churches still standing. Isolde Marrow lays the Black Chart over it and sees at last what it always was: a plan of the city.',
     'Столица утонувшей империи лежит в нескольких саженях под килем: улицы всё так же прямы, церкви всё так же стоят. Изольда Марроу кладёт на неё Чёрную карту и наконец видит, чем та была всегда, — планом города.',
