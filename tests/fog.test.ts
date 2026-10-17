@@ -449,3 +449,20 @@ test('every new line in both languages', () => {
 });
 
 void FOG_CELL;
+
+test('the waystations under the fog are hidden (setWayFog: the sea, the minimap, the chart, the tooltip)', async () => {
+  const { setWayFog, wayPois, wayTip } = await import('../client/src/render/waystations.ts');
+  const { underFog } = await import('../client/src/render/fog.ts');
+  const bits = newFog();
+  fogDisc(bits, 10_500, 10_500, 1500);
+  const state = { seen: bits, ways: new Map([[1, { id: 1, kind: 'buoy', x: 10_400, y: 10_600, rot: 0 }], [2, { id: 2, kind: 'buoy', x: 40_000, y: 40_000, rot: 0 }]]) } as never;
+  setWayFog((x, y) => underFog(bits, x, y));
+  try {
+    assert.deepEqual(wayPois(state).map((w) => w.id), [1]);
+    assert.equal(wayTip(state, 40_000, 40_000, 50), null);
+    fogDisc(bits, 40_000, 40_000, 500);
+    assert.deepEqual(wayPois(state).map((w) => w.id), [1, 2]);
+  } finally {
+    setWayFog(null);
+  }
+});

@@ -33,6 +33,8 @@ const SCREENS = [
   { id: 'options', at: 'sea', open: (p) => p.evaluate(() => globalThis.gravetide.open('options')) },
   { id: 'company', at: 'sea', open: (p) => p.evaluate(() => globalThis.gravetide.open('company')) },
   { id: 'base', at: 'sea', open: (p) => p.evaluate(() => globalThis.gravetide.open('base')) },
+  // docs/35: the floating waystation's window, moored, with her fallen listed.
+  { id: 'way', at: 'sea', open: async (p) => { await L.say(p, '/way go'); await L.sleep(1800); await shut(p); await p.evaluate(() => document.querySelector('.act-moor_way')?.click()); await L.sleep(1200); await L.say(p, '/way fallen'); } },
   { id: 'lair', at: 'lair', open: async () => {} },
 ];
 

@@ -2,6 +2,7 @@
 // streamed islands, charted islands, private captain state. Remote ships are interpolated
 // ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
 
+import type { ResView, WayData, WayView } from '../../shared/src/wayproto.ts'; // docs/35
 import type { SupplyView, TurtleView, ZoneView } from '../../shared/src/isleproto.ts';
 import type { ScoutsView } from '../../shared/src/fogproto.ts';
 import { fogDecode, fogSet } from '../../shared/src/data/fog.ts';
@@ -94,6 +95,10 @@ export class ClientState {
   reefs = new Map<number, ReefData>();
   /** The dense sea's marks that are not land (docs/16 P3). */
   seaMarks = new Map<number, SeaMarkData>();
+  /** docs/35: the floating waystations streamed with the chunks; the one she is moored at; her fallen and their price. */
+  ways = new Map<number, WayData>();
+  wayView: WayView | null = null;
+  fallen: ResView | null = null;
   /** The squares of the sea and their ship levels (docs/16 P2), row by row. */
   sectors: SectorData[] = [];
   ports: PortPublic[] = [];
@@ -362,6 +367,15 @@ export class ClientState {
         }
         for (const rf of m.reefs ?? []) this.reefs.set(rf.id, rf);
         for (const mk of m.marks ?? []) this.seaMarks.set(mk.id, mk);
+        for (const w of m.ways ?? []) this.ways.set(w.id, w);
+        break;
+      case 'way':
+        this.wayView = m.view;
+        if (m.view) this.fallen = m.view.res;
+        break;
+      case 'fallen':
+        this.fallen = m.view;
+        if (this.wayView) this.wayView = { ...this.wayView, res: m.view };
         break;
       case 'info':
         for (const i of m.list) this.infos.set(i.id, i);

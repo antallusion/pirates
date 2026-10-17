@@ -1,0 +1,71 @@
+/* docs/35: the floating waystation's window, the port's surgeon, the field surgeon's card on a boarding's result.
+   The head, the list (it scrolls) and the foot of buttons (never scrolled away: the owner's rule for the phone held
+   sideways). */
+
+#modal-panel[data-modal="way"] { width: min(760px, 95vw); height: min(560px, 92vh); }
+.way-head { gap: 12px; flex-wrap: nowrap; }
+.way-ht { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.way-ht h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.way-art { width: 44px; height: 44px; flex: none; border-radius: 4px; border: 1px solid var(--brass-dim, #5c4a33); object-fit: cover; }
+.way-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; flex: none; }
+.way-body { padding-top: 8px; padding-bottom: 6px; }
+.way-list { display: flex; flex-direction: column; gap: 4px; }
+.way-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 4px 8px; border: 1px solid rgba(92, 74, 51, 0.55); background: rgba(15, 17, 20, 0.85); }
+.way-row.off { opacity: 0.62; }
+.way-face { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid #5c4a33; }
+.way-rt { display: flex; flex-direction: column; min-width: 0; }
+.way-rt b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.way-rt .muted { font-size: 12px; line-height: 1.2; }
+.way-n { color: var(--gold); font-variant-numeric: tabular-nums; }
+.way-price { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.way-btns { display: flex; gap: 4px; }
+.way-btns .btn { white-space: nowrap; }
+.way-note { margin: 8px 0 0; font-size: 12px; line-height: 1.35; }
+.way-empty { margin: 18px 0; text-align: center; }
+.way-offer { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; margin: 8px 0 0; }
+.way-offer > div { display: flex; flex-direction: column; min-width: 0; }
+.way-offer .muted { font-size: 12px; }
+.way-foot { display: flex; gap: 8px; padding: 8px 18px 12px; border-top: 1px solid rgba(111, 90, 56, 0.4); flex: none; }
+.way-foot .btn { flex: 1 1 0; min-width: 0; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.way-foot .way-all { flex-grow: 1.7; }
+.way-foot .ico-sm { flex: none; }
+.way-sum { font-variant-numeric: tabular-nums; opacity: 0.95; }
+.way-all .ch-short { display: none; }
+.way-card { display: flex; align-items: center; gap: 10px; }
+.way-card > .ico-md { flex: none; margin: 0; }
+.way-card .wc-t { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.way-card .wc-t b { white-space: nowrap; }
+.way-card .wc-t span { font-size: 12px; line-height: 1.2; }
+.way-card > .btn { flex: none; white-space: nowrap; }
+
+/* The phone held sideways (844×390 down to 480×270): a slimmer head, the chips on the title's line, the foot's words
+   cut to their short forms. */
+@media (max-height: 520px) {
+  .way-card { padding: 4px 8px; gap: 8px; }
+  .way-card > .ico-md { width: 26px; height: 26px; }
+  #modal-panel[data-modal="way"] { width: 96vw; height: 94vh; }
+  .way-head { padding: 6px 48px 4px 10px; min-height: 0; }
+  .way-head h2 { font-size: 20px; }
+  .way-head .sub { font-size: 12px; }
+  .way-art { width: 30px; height: 30px; }
+  .way-chips .ph-chip { padding: 1px 6px; font-size: 11px; }
+  .way-body { padding: 6px 10px 4px; }
+  .way-row { grid-template-columns: 30px minmax(0, 1fr) auto auto; padding: 2px 6px; gap: 6px; }
+  .way-face { width: 28px; height: 28px; }
+  .way-rt b { font-size: 13px; }
+  .way-foot { padding: 5px 10px 6px; gap: 6px; }
+  .way-foot .btn { padding: 5px 6px; font-size: 12px; min-height: 30px; }
+  .way-note { margin-top: 4px; font-size: 11px; }
+  .way-offer { padding: 4px 8px; }
+}
+@media (max-width: 560px) {
+  .way-all .ch-long { display: none; }
+  .way-all .ch-short { display: inline; }
+  .way-chips .ph-chip:nth-child(n + 3) { display: none; }
+  .way-row .way-price { font-size: 12px; }
+}
+.way-card .way-why { color: var(--bad, #c86a50); }
+/* docs/35: the card on a fight ashore's end (the battle's banner): one line, under the losses. */
+.tb-fallen:empty { display: none; }
+.tb-fallen .way-card { margin: 6px 0 0; padding: 4px 8px; background: rgba(15, 17, 20, 0.85); text-align: left; }
+.tb-fallen .way-card .wc-t b { font-size: 13px; }

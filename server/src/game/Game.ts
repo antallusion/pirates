@@ -198,6 +198,7 @@ import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onU
 import { adminEnabled, mend, runAdmin } from './admin.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
 import { ZoneBossHub, stepZoneBosses, zoneBossSinking } from './zonebosses.ts';
+import { wayMessage, waySecond, waysForChunk } from './waystations.ts'; // docs/35
 import { applyDamage, cutMastWreck, damageBlocked, killMen, dash, fireBroadside, fireChaser, holdAim, reloadTime, seaReload, stepProjectiles } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
@@ -1156,6 +1157,7 @@ export class Game {
       stepHearsay(this, s); // where the tavern's whispers led (docs/16 #14)
       discoverCoves(this, s);
       havenSecond(this, s);
+      waySecond(this, s); // docs/35: a moored captain drifted off; her fallen told
       islesSecond(this, s); // lighthouses, lookouts, bared banks, her caches (docs/16 #22–25)
       isle18Second(this, s); // the zones, the turtle islands, the supply routes (docs/18 III)
       stepExplorer(this, s);
@@ -2958,7 +2960,8 @@ export class Game {
           const m = this.world.marks[id];
           return { id: m.id, kind: m.kind, x: Math.round(m.x), y: Math.round(m.y), r: Math.round(m.r), rot: Math.round(m.rot * 100) / 100, seed: m.seed };
         });
-        this.sendTo(s, { t: 'chunk', key: k, islands: list.map((id) => islandFor(this, s, this.world.islands[id])), reefs, ...(marks.length ? { marks } : {}) });
+        const ways = waysForChunk(this, k); // docs/35: the floating waystations
+        this.sendTo(s, { t: 'chunk', key: k, islands: list.map((id) => islandFor(this, s, this.world.islands[id])), reefs, ...(marks.length ? { marks } : {}), ...(ways.length ? { ways } : {}) });
       }
     }
   }
@@ -3231,6 +3234,7 @@ export class Game {
     if (msg.t === 'roam') return roamMessage(this, s, msg); // docs/19 D7
     if (msg.t === 'premium') return premiumMessage(this, s, msg); // the premium shop (owner, 2026-10-03)
     if (msg.t === 'scout') return scoutMessage(this, s, msg); // the island's scouts (owner, 2026-10-17)
+    if (msg.t === 'way') return wayMessage(this, s, msg); // docs/35: the floating waystations, the resurrection
     switch (msg.t) {
       case 'onboarding':
         if (msg.action === 'skip_stage' || msg.action === 'skip_all' || msg.action === 'hide_goals') onboardingAction(this, s, msg.action);

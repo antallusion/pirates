@@ -12,6 +12,7 @@ import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import { bandOf, SECTOR_SIZE, SECTORS_PER_SIDE } from '../../../shared/src/world/sectors.ts';
 import { THREAT_COLOR, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
 import { drawRoamsChart } from '../render/roamers.ts'; // docs/19 D7
+import { drawWaysChart } from '../render/waystations.ts'; // docs/35
 import { EN as ROAM_EN, RU as ROAM_RU } from '../lang/ui/roamers.ts';
 /** The chart's key open or folded, as the captain left it. */
 const LEGEND_KEY = 'gravetide.mapLegend';
@@ -724,6 +725,7 @@ export class WorldMap {
     // docs/19 D7: the roaming stacks about her, close in only (a small diamond in the ladder's colour; the map stays
     // readable from afar).
     if (on('lairs') && this.zoom >= 2) drawRoamsChart(g, state, tx, ty);
+    if (on('ports')) drawWaysChart(g, state, tx, ty, this.zoom); // docs/35: the floating waystations about her, close in
     // Charted islands.
     for (const id of state.discovered) {
       const is = state.islands.get(id);

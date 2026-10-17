@@ -3872,7 +3872,7 @@ img.beast-tok { outline: 2px solid #a8894e; outline-offset: -2px; }
 #advcard .dm-tap.miss { background: var(--bad); border-color: var(--bad); }
 #advcard .dm-go { min-width: 110px; justify-content: center; }
 @media (max-height: 520px) { #advcard .dw-ways { flex-wrap: wrap; } #advcard .dw-way { padding: 2px 6px; } #advcard .dm-mini { padding: 4px 6px; } #advcard .dm-h { margin-bottom: 3px; font-size: 11.5px; } #advcard .dw-out { font-size: 11px; } }
-.tb-cap { border-top: 1px solid rgba(110, 215, 205, 0.3); padding-top: 6px; }
+.tb-capoffer { border-top: 1px solid rgba(110, 215, 205, 0.3); padding-top: 6px; } /* (the drift's offer; .tb-cap is a captain's face, seahud.css) */
 .tb-capacts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
 .army-tame { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
 .army-card .card-h { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
@@ -4713,9 +4713,9 @@ body.tac-ph .tb-pl .tb-rb { width: 52px; height: 52px; }
 .tb-lc.bad { color: #e3998a; }
 .tb-lc.tb-lw { color: var(--gold); white-space: normal; max-width: 100%; box-sizing: border-box; line-height: 1.3; }
 /* The beaten who would follow her: the words and the buttons on one line where they fit. */
-.tb-end .tb-cap { flex-flow: row wrap; align-items: center; column-gap: 10px; }
-.tb-end .tb-cap > small { flex-basis: 100%; }
-.tb-end .tb-cap .tb-lline { flex: 1 1 260px; }
+.tb-end .tb-capoffer { flex-flow: row wrap; align-items: center; column-gap: 10px; }
+.tb-end .tb-capoffer > small { flex-basis: 100%; }
+.tb-end .tb-capoffer .tb-lline { flex: 1 1 260px; }
 .tb-lc.tb-lw .ico-sm { border-radius: 50%; }
 .tb-endbtn { flex: none; align-self: center; min-width: 200px; }
 /* Ashore: a screen of its own, waiting for its button. */

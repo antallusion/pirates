@@ -52,6 +52,7 @@ import { drawLairsWorld } from './beastlairs.ts'; // docs/18 II
 import { drawCitadelsWorld } from './citadels.ts'; // docs/19 E4
 import { drawDriftsWorld } from './drifts.ts'; // docs/18 IV
 import { drawFindsWorld } from './seafinds.ts'; // docs/19 D5
+import { drawWaysWorld } from './waystations.ts'; // docs/35
 import { drawRoamsWorld } from './roamers.ts'; // docs/19 D7
 import { drawCastawaysWorld } from './castaways.ts'; // seaux: castaways on a spar, drawn by hand
 import { addHot, brassRing, drawArt, drawPiece, foam, hot, icePlate, inHot, markRing, piece, shipWater } from './seaart.ts'; // the tokens on the screen: the hover aim keeps off them (owner, 2026-10-07)
@@ -520,6 +521,7 @@ export class Renderer {
     drawCitadelsWorld(g, state, this.advCtx()); // the citadels of the Throne war on their islands (docs/19 E4)
     drawDriftsWorld(g, state, this.advCtx()); // drifting creatures and the season's legend (docs/18 IV)
     drawFindsWorld(g, state, this.advCtx()); // the sea's small things (docs/19 D5)
+    drawWaysWorld(g, state, this.advCtx()); // docs/35: the floating waystations
     drawCastawaysWorld(g, state.castaways, state.castawaysAt, state.estServerTime(), { sx: (x) => this.sx(x), sy: (y) => this.sy(y), zoom: this.zoom, time: settings().reduceMotion ? 0 : this.time, w: this.w, h: this.h }); // seaux
     drawRoamsWorld(g, state, this.advCtx()); // the creatures roaming the sea (docs/19 D7)
     // The pirate lairs near her (docs/16 #7): the fort, its guns on the shore, the camp.

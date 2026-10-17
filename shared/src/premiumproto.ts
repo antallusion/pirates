@@ -86,7 +86,7 @@ export interface ShopView {
   /** A level's gift on the shelf now: its family id and when it goes. */
   gifts: { id: string; until: number }[];
   /** Her stores: minutes of speed-ups, repair kits, charms, charters of removal. */
-  inv: { speed: number; kits: number; charms: number; moves: number };
+  inv: { speed: number; kits: number; charms: number; moves: number; /** docs/35: scrolls of resurrection */ rs?: number };
   /** Until when (wall ms; 0: not running): the elixir, the fair wind, the harvest, the island's charter, the subscription. */
   boosts: { xp: number; wind: number; prod: number; shield: number; sub: number };
   /** Her builders (null: no island): the island's own, hers for good, hired (their ends), the subscription's. */

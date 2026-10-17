@@ -1,0 +1,32 @@
+// docs/35: the floating waystations and the resurrection of the fallen (server/src/game/waystations.ts), English →
+// Russian.
+
+export const SERVER_RU_WAY: Record<string, string> = {
+  'Raft tavern': 'Плот-таверна',
+  'Hulk chapel': 'Часовня на остове',
+  'Floating market': 'Плавучий рынок',
+  'None of your fallen to raise.': 'Некого воскрешать: павших нет.',
+  'A scroll raises one stack: choose it.': 'Свиток поднимает один отряд: выберите его.',
+  'The shop’s creatures stand again for doubloons only.': 'Существа из магазина воскрешаются только за дублоны.',
+  'No scrolls of resurrection: the shop sells them.': 'Нет свитков воскрешения: их продают в магазине.',
+  'A scroll of resurrection: {0} of your fallen stand again.': 'Свиток воскрешения: павших снова в строю — {0}.',
+  'Bring her to a floating waystation or a port, or raise them at once for doubloons.': 'Подведите корабль к плавучему дому или к порту — или воскресите мгновенно за дублоны.',
+  'Needs {0} doubloons': 'Нужно дублонов: {0}',
+  '{0} of your fallen stand again for {1} silver.': 'Павших снова в строю: {0} — за {1} серебра.',
+  '{0} of your fallen stand again for {1} doubloons.': 'Павших снова в строю: {0} — за {1} дублонов.',
+  '{0} of your fallen stand again for {1} silver and {2} doubloons.': 'Павших снова в строю: {0} — за {1} серебра и {2} дублонов.',
+  'The waystation’s carpenters mend no further: a yard does the rest.': 'Плотники плавучего дома дальше не чинят: остальное сделает верфь.',
+  'The waystation’s carpenters patch her up for {0} silver.': 'Плотники плавучего дома подлатали корабль за {0} серебра.',
+  'Sail closer to the waystation to moor.': 'Подойдите ближе к плавучему дому, чтобы причалить.',
+  'No waystation there': 'Там нет плавучего дома',
+  'Cast off from the waystation.': 'Вы отчалили от плавучего дома.',
+  'Moor at a floating waystation first.': 'Сначала причальте к плавучему дому.',
+  'Nobody of that kind waits here today.': 'Таких бойцов здесь сегодня нет.',
+  'Nobody left for hire here today.': 'Сегодня здесь больше некого нанять.',
+  '{0} men sign on at the waystation for {1} silver.': 'В плавучем доме нанято бойцов: {0} — за {1} серебра.',
+  'No waystation within 6 km.': 'В пределах 6 км нет плавучего дома.',
+  'At waystation #{0}, a cable off.': 'У плавучего дома №{0}, в кабельтове от него.',
+  '{0} fallen on the record.': 'Павших в списке: {0}.',
+  'The record of the fallen cleared.': 'Список павших очищен.',
+  '{0} fallen on the record; {1} may stand again here for {2} silver and {3} doubloons.': 'Павших в списке: {0}; здесь можно воскресить {1} — за {2} серебра и {3} дублонов.',
+};

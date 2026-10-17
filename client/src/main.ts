@@ -1,5 +1,10 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
+import { WayWindow, mountFallen, resRid } from './ui/waystation.ts'; // docs/35
+import { setWayFog, wayName } from './render/waystations.ts'; // docs/35
+import { underFog } from './render/fog.ts'; // the fog of war (owner, 2026-10-17)
+import { WAY_MOOR_RANGE } from '../../shared/src/world/waystations.ts'; // docs/35
+import type { WayData } from '../../shared/src/wayproto.ts'; // docs/35
 import { EN as I18_EN, RU as I18_RU } from './lang/ui/isles18.ts';
 import { shipLevelOf } from '../../shared/src/data/shiplevel.ts';
 import { liveSignals, plateGoal, signalToast } from './ui/social.ts';
@@ -157,12 +162,14 @@ const CAPTAIN_KEY = 'gravetide.captain';
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | 'hero' | 'puzzle' | 'tame' | 'throne' | 'shop' | 'research' | null;
+type Modal = 'port' | 'way' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | 'hero' | 'puzzle' | 'tame' | 'throne' | 'shop' | 'research' | null;
 
 bootMark('main');
 watchViewport();
 const net = new Net();
 const state = new ClientState();
+// The waystations under the fog of war are drawn nowhere (the sea, the minimap, the chart, their tooltip).
+setWayFog((x, y) => underFog(state.seen, x, y));
 const renderer = new Renderer($('world') as HTMLCanvasElement);
 const hud = new Hud();
 const audio = new AudioEngine();
@@ -382,13 +389,25 @@ const LIS = dict(LIS_EN, LIS_RU);
 let isleKey = '';
 // The recruit window of the Heroes (docs/17 H3): from a port's tavern and from the island's town.
 const recruitWindow = new RecruitWindow((m) => net.send(m));
-let recruitFrom: 'port' | 'isle' | 'lair' = 'port';
-function openRecruit(src: 'port' | 'isle' | 'lair'): void {
+let recruitFrom: 'port' | 'isle' | 'lair' | 'way' = 'port';
+function openRecruit(src: 'port' | 'isle' | 'lair' | 'way'): void {
   recruitFrom = src;
   recruitWindow.open(src);
   openModal('recruit');
 }
 portScreen.openDwell = () => openRecruit('port');
+// docs/35: the floating waystation's window (moored), the port's surgeon — one window over her fallen.
+const wayWindow = new WayWindow({
+  send: (m) => net.send(m),
+  close: () => closeModal(),
+  hire: () => openRecruit('way'),
+  shop: () => openShop(false, SHOP_AT.scrolls),
+  instant: () => net.send({ t: 'premium', action: 'shop', offer: 'refill', pid: resRid() }),
+});
+portScreen.openSurgeon = () => {
+  net.send({ t: 'way', action: 'view' });
+  openModal('way');
+};
 portScreen.openIsle = () => openBase();
 portScreen.onGoal = (key) => startGoal(key); // «Плыть» on a card of the port's «Задания» (owner, 2026-10-16)
 // The adventure map (docs/17 H4): the visit card over the sea, and the Grail's chart.
@@ -785,6 +804,7 @@ companyScreen.onWhisper = (name) => hud.chatPanel.openDm(name);
 const divePanel = new DivePanel((m) => net.send(m));
 const boardFight = new BoardFightPanel((m) => net.send(m), () => state.estServerTime());
 const tactical = new TacticalPanel((m) => net.send(m), () => state.estServerTime());
+tactical.onFallenSlot = (root) => mountFallen(root, state, (m) => net.send(m)); // docs/35: the quick «Воскресить» ashore
 tactical.purse = () => state.self?.gold ?? 0;
 // docs/25 item 16: the boarding under the sea's own weather and hour (rain, fog, a storm's lightning, night).
 tactical.sky = () => ({ weather: state.weather, fog: state.fog, wind: state.wind, night: nightFactor(state.estServerTime()) });
@@ -1542,6 +1562,22 @@ function onMessage(m: ServerMsg): void {
       if (m.result) openModal('boarding');
       else if (modal === 'boarding') closeModal();
       break;
+    // docs/35: moored at a floating waystation (its window), cast off (shut); her fallen and their price.
+    case 'way':
+      if (m.view && modal !== 'way' && modal !== 'recruit') openModal('way');
+      else if (!m.view && modal === 'way') closeModal();
+      else if (!m.view && modal === 'recruit' && recruitFrom === 'way') closeModal();
+      else if (modal === 'way') refreshModal();
+      break;
+    case 'fallen':
+      if (modal === 'way') refreshModal();
+      else if (modal === 'boarding') mountFallen($('modal-panel'), state, (x) => net.send(x));
+      else if (modal === 'port' && portScreen.tab === 'army') refreshModal();
+      {
+        const tb = document.querySelector<HTMLElement>('#board-tac .tb-banner.tb-end:not(.hidden)');
+        if (tb) mountFallen(tb, state, (x) => net.send(x));
+      }
+      break;
     case 'sunk_self':
       lastSunk = { lost: m.lost, port: placeName(state.ports.find((p) => p.id === m.respawnPort)?.name ?? '') || L('port'), towed: !!m.towed, ...(m.boarded ? { boarded: { by: sv(m.boarded.by), silver: m.boarded.silver, repelled: !!m.boarded.repelled } } : {}) };
       openModal('sunk');
@@ -1934,6 +1970,12 @@ function closeModal(): void {
   releaseModalToasts();
   // The recruit window opened from the island's town goes back to it (docs/17 H3).
   if (was === 'recruit' && recruitFrom === 'isle') return openBase();
+  // docs/35: the hire at a waystation goes back to its window; the waystation's window shut is «В море».
+  if (was === 'recruit' && recruitFrom === 'way' && state.wayView) return openModal('way');
+  if (was === 'way' && state.wayView) {
+    net.send({ t: 'way', action: 'leave' });
+    state.wayView = null;
+  }
   // A window over the island screen closes back into it (its card drawn again: the window shared its selection).
   if (isleScene.isOpen) {
     isleScene.update(state);
@@ -2097,6 +2139,9 @@ function renderModal(root: HTMLElement): void {
       break;
     case 'recruit':
       recruitWindow.render(root, state);
+      break;
+    case 'way':
+      wayWindow.render(root, state);
       break;
     case 'puzzle':
       puzzleWindow.render(root, state);
@@ -2457,10 +2502,15 @@ addEventListener('keydown', (e) => {
     case 'repair':
       net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) });
       break;
-    case 'dock':
-      if (docked) departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' }));
+    case 'dock': {
+      // docs/35: off a floating waystation the same key moors her there.
+      const own = state.ownDisplay;
+      const way = !docked && own && !state.wayView && !state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS) ? wayAtHand(own) : null;
+      if (way) net.send({ t: 'way', action: 'moor', id: way.id });
+      else if (docked) departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' }));
       else requestDock(e.shiftKey);
       break;
+    }
     case 'map':
       toggle('map');
       break;
@@ -2782,6 +2832,20 @@ function roamFocus(): { v: RoamView; marked: boolean; far: boolean } | null {
   return v ? { v, marked: false, far: false } : null;
 }
 
+/** docs/35: the nearest floating waystation within mooring reach of her. */
+function wayAtHand(own: { x: number; y: number }): WayData | null {
+  let best: WayData | null = null, bd = WAY_MOOR_RANGE;
+  for (const w of state.ways.values()) {
+    if (Math.abs(w.x - own.x) > WAY_MOOR_RANGE || Math.abs(w.y - own.y) > WAY_MOOR_RANGE) continue;
+    const d = dist(w.x, w.y, own.x, own.y);
+    if (d <= bd) {
+      bd = d;
+      best = w;
+    }
+  }
+  return best;
+}
+
 /** The nearest of the dense sea's marks within the boats' reach of her. */
 function markAtHand(): SeaMarkData | null {
   const own = state.ownDisplay;
@@ -2856,6 +2920,10 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   // newcomer's run cast off, saw «В порт» as the one thing to press and put straight back in — 190 times in 15 minutes.
   const watchHome = state.onboarding?.stage === 'port';
   if (port && (watchHome || !(performance.now() - castOffAt < CAST_OFF_QUIET && you.hull >= you.hullMax * 0.5))) facts.port = { name: sv(port.name) };
+  // docs/35: a floating waystation within mooring reach (not while moored there already).
+  // Moored with her window shut (another window over it): the same button brings it back.
+  const way = !port ? (state.wayView ? (modal === 'way' ? null : state.ways.get(state.wayView.id) ?? null) : wayAtHand(own)) : null;
+  if (way) facts.way = { id: way.id, name: wayName(way.kind) };
   if (watchHome) facts.watchHome = true;
   const ab = self.abyss;
   facts.ritual = !!ab && ab.shards >= 3 && dist(own.x, own.y, ab.eye.x, ab.eye.y) < 1500;
@@ -2971,6 +3039,9 @@ function runAct(a: Act): void {
       return void (boardTarget !== null ? net.send({ t: 'board', target: boardTarget, aggression: 'standard' }) : hud.toast(noBoardWhy ?? L('noCrippled'), 'bad'));
     case 'dock':
       return requestDock(false);
+    case 'moor_way':
+      if (state.wayView?.id === Number(a.arg)) return openModal('way');
+      return void net.send({ t: 'way', action: 'moor', id: Number(a.arg) });
     case 'homeport':
       if (!homeport) return;
       // Already on her way there: a second tap sends nothing (each one said «Автоплавание: штурвал у рулевого…» again,

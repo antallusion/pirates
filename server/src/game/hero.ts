@@ -6,7 +6,7 @@
 // Aid's patched-up men, and the artifacts: found on bosses, in hoards and lairs, won from guarded ships, sold by a few
 // ports' merchants. Every roll here is on the hero's own dice (the sea's stream stays as the tests replay it).
 
-import { noteFallen } from './shop.ts'; // the premium shop's infirmary (owner, 2026-10-15)
+import { recordFallen } from './waystations.ts'; // docs/35: the record of the fallen
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import { DAY_LENGTH_SEC } from '../../../shared/src/constants.ts';
@@ -405,21 +405,29 @@ export function afterBattle(game: Game, ship: ShipEntity, left: number, lost: { 
   const s = game.sessionOf(ship);
   const p = s?.profile;
   if (!s || !p) return;
-  noteFallen(game, s, lost, raise, pvp); // the shop's infirmary (owner, 2026-10-15): against the sea's ships only
   const h = heroOf(p);
   // The battle's own lift of her will by her talents (docs/18) does not stay in her store.
   if (left >= 0) h.mana = Math.max(0, Math.min(willMax(p, h), left - talentBook(p.talents).will));
   if (stamLeft >= 0) h.stam = Math.max(0, Math.min(stamMax(p, h), stamLeft));
   spendScrolls(h, scrolls);
-  if (raise <= 0 || !ship.alive) return;
+  // docs/35: the battle's dead past those who stand again go on her record of the fallen (a captain's fight too: raised
+  // only after it, never in it).
+  const raised = new Map<string, number>();
+  if (raise <= 0 || !ship.alive) {
+    recordFallen(game, s, lost, raised);
+    void pvp;
+    return;
+  }
   let room = Math.max(0, ship.stats.crewMax - ship.crew), n = 0;
   for (const x of lost) {
     const k = Math.min(room, Math.floor(x.n * raise));
     if (k <= 0) continue;
     ship.addMen(x.u as never, k);
+    raised.set(x.u, (raised.get(x.u) ?? 0) + k);
     room -= k;
     n += k;
   }
+  recordFallen(game, s, lost, raised);
   if (n > 0) game.sendTo(s, { t: 'toast', msg: won ? `The deck is yours: the wounded and First Aid — ${n} of your fallen stand again.` : `First aid: ${n} of your fallen stand again.`, kind: 'good' });
 }
 
