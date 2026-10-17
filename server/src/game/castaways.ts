@@ -14,6 +14,7 @@ import { reconcile } from './crew.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { openSea } from './wrecks.ts';
+import { questEvent } from './quests.ts';
 
 export interface Castaway {
   id: number;
@@ -110,6 +111,7 @@ export function haulCastaway(game: Game, s: PlayerSession, c: Castaway): number 
     ship.morale = Math.min(100, ship.morale + 1);
     game.toastShip(ship, 'No hammocks for the castaways: you give them water and a course for the nearest port.', 'info');
   }
+  questEvent(game, s, { k: 'rescue', n: Math.max(1, c.n) }); // docs/36: souls saved from the sea (the quests' «rescue»)
   sendCastaways(game, s, true);
   return k;
 }

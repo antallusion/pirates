@@ -21,7 +21,7 @@ export const GIVER_FACES = ['giver_apothecary_f', 'giver_apothecary_m', 'giver_b
 export const FIXED_PORTS = new Set([...KEY_PORTS.map((p) => p.id), ...NEW_PORTS.map((p) => p.id)]);
 
 const GRAVE_EN = /\b(blood\w*|bloody|skulls?|bones?|bony|skeletons?|corpses?|gore)\b/i;
-const GRAVE_RU = /(кров[ьиаяоую]|кровав|кровь|череп|скелет|кост[ьиейяхм]|костляв|труп|мертвец)/i;
+const GRAVE_RU = /(?<![а-яё])(кров(ь|и|ью|ав|ян|оточ)|череп(?!ах)|скелет|кост(ь|и|ей|ям|ями|ях|ян|ляв)|труп|мертвец)/i;
 
 /** The placeholders of a text, sorted (a repeated one counted once). */
 export const holesOf = (s: string): string[] => [...new Set([...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]))].sort();

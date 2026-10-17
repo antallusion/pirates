@@ -38,7 +38,7 @@ import type { Holding } from './holdings.ts';
 import type { PlayerSession } from './player.ts';
 import { islePools, isleWeekGrowth, keepsDeep, townHave, townLevel } from './town.ts';
 import { DWELL_UP_LEVEL } from '../../../shared/src/data/isletree.ts';
-import { freeCargo, jobCargo } from './quests.ts'; // playthrough C: her jobs' cargo is not hers to spend
+import { freeCargo, jobCargo, questEvent } from './quests.ts'; // playthrough C: her jobs' cargo is not hers to spend
 
 type Src = 'port' | 'isle';
 
@@ -253,6 +253,7 @@ export function recruit(game: Game, s: PlayerSession, src: Src, u: UnitId, want:
   }
   signOn(game, s, u, n);
   game.toastShip(ship, `${n} ${plural(u, n)} sign on for ${price.silver} silver.`, 'good');
+  questEvent(game, s, { k: 'recruit', n }); // docs/36: men signed on (the campaign's step)
   return null;
 }
 

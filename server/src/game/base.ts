@@ -39,7 +39,7 @@ import type { TreeId } from '../../../shared/src/data/isletree.ts';
 import { TREE_VERSION, migrateTree } from './holdings.ts';
 import type { TownState } from './town.ts';
 import { townOf } from '../../../shared/src/data/town.ts';
-import { freeCargo } from './quests.ts'; // playthrough C: her jobs' cargo is not hers to spend
+import { freeCargo, questEvent } from './quests.ts'; // playthrough C: her jobs' cargo is not hers to spend
 import { HARVEST, extraCrews, harvestUntil } from './shop.ts';
 import { planView } from './isleplan.ts'; // docs/29 §8: what to build next (owner, 2026-10-17) // the premium shop's brigades and harvest (owner, 2026-10-15)
 
@@ -407,6 +407,7 @@ function pay(game: Game, s: PlayerSession, h: Holding, y: Yard, plot: number, wh
   const now = game.wallNow();
   y.jobs.push({ id: y.seq++, plot, what, level, start: now, end: now + cost.secs * 1000 });
   game.holdings.touch();
+  questEvent(game, s, { k: 'build' }); // docs/36: works laid on her island (the campaign's step)
   return null;
 }
 

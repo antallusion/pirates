@@ -243,7 +243,7 @@ export interface SeaHooks {
   folded: readonly string[];
   /** «Цели и вести» (owner, 2026-10-17): the campaign, the quests and contracts taken, the day's orders (goalsheet.ts);
    *  `go` the run to a goal ({t:'goto', key}). */
-  goals?: { view(): GoalSheetView; portName(id: string): string; go(key: string): void };
+  goals?: { view(): GoalSheetView; portName(id: string): string; go(key: string): void; /** docs/36: take the campaign's quest (anywhere) */ take?(id: string): void };
 }
 
 /** A press held this long is a long press (the card behind «Цель»). */
@@ -663,6 +663,12 @@ export class SeaHud {
         e.stopPropagation();
         this.newsSheet?.close('button');
         g.go(btn.dataset.gsail!);
+      }));
+      // docs/36: «Взять» on the campaign's quest — taken where she is; the sheet stays, the row turns to «Плыть»
+      top.querySelectorAll<HTMLElement>('[data-gtake]').forEach((btn) => btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        btn.setAttribute('disabled', '');
+        g.take?.(btn.dataset.gtake!);
       }));
     };
     draw();

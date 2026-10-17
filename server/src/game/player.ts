@@ -58,6 +58,8 @@ import type { Profession } from '../../../shared/src/data/crew.ts';
 import { escortUpkeep, newFleet } from './fleet.ts';
 import type { Fleet } from './fleet.ts';
 import { newQuestLog, sanitizeQuests, shipLevelOfQuest, stepProgress } from './quests.ts';
+import { newCampaignState, sanitizeCampaign } from '../../../shared/src/data/campaign/progress.ts';
+import type { CampaignState } from '../../../shared/src/data/campaign/progress.ts';
 import { contractFor } from '../../../shared/src/data/xpcurve.ts';
 import { dailyView, newDaily, sanitizeDaily } from './dailies.ts';
 import type { DailyState } from '../../../shared/src/data/dailies.ts';
@@ -115,6 +117,8 @@ export interface Profile {
   company: Company;
   fleet: Fleet;
   quests: QuestLog;
+  /** docs/36: her place in the main campaign (sanitizeProfile fills it: a save of before it is migrated by her level). */
+  campaign?: CampaignState;
   /** Today's three orders and the days in a row (docs/11 P6). */
   daily: DailyState;
   /** The list of friends (docs/11 P6): account and name as last seen. */
@@ -399,7 +403,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
   if (captain === 'admiral') reputation.crown = -25;
   return {
     version: 1, captain, pvp: newPvp(), shipName, level: 1, xp: 0, talents: {}, gold: c.start.gold, infamy: 0, reputation, loadout,
-    cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80, sanity: 100, company: newCompany(captain, c.start.crew), crewAmbush: 0, fleet: newFleet(), exotic: {}, salvageDay: -1, builds: [], plans: [], berths: [], figureheads: [], stash: [], captainGear: {}, itemSeq: 2, fishing: { skill: 1, xp: 0, caught: {}, traps: [], netGiven: true }, hunter: { points: 0, captains: 0, seas: {} }, piracy: { fame: 0, honour: 0, tributes: 0, convoys: 0 }, quests: newQuestLog(), daily: newDaily(), paths: [captain], pathSwitchAt: -1e9, oath: null,
+    cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80, sanity: 100, company: newCompany(captain, c.start.crew), crewAmbush: 0, fleet: newFleet(), exotic: {}, salvageDay: -1, builds: [], plans: [], berths: [], figureheads: [], stash: [], captainGear: {}, itemSeq: 2, fishing: { skill: 1, xp: 0, caught: {}, traps: [], netGiven: true }, hunter: { points: 0, captains: 0, seas: {} }, piracy: { fame: 0, honour: 0, tributes: 0, convoys: 0 }, quests: newQuestLog(), campaign: newCampaignState(), daily: newDaily(), paths: [captain], pathSwitchAt: -1e9, oath: null,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
     contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0, sold: 0, fogContraband: 0, harpoonContracts: 0 }, cooldowns: {},
     insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], deeds: [], deedState: { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] }, tokens: 0, tokenLevels: [], cleanSlates: [], loadouts: [{}], activeLoadout: 0, loadoutSwitchAt: 0, talentCooldowns: {}, captives: [], blueprints: [], trophies: [], bossKills: {}, bossLocks: {}, pressure: 0, ritualShards: 0, chapters: [], season: { id: -1, xp: 0, level: 0, stats: {} }, titles: [], title: null, pennants: [], pennant: null, nameRights: 0, pantheon: [], tutorial: newTutorial(false, 0), explore: { maps: [], fragments: 0, dived: {}, rumorDay: -1, tavernDeals: [], hoardAboard: false }, keel: null, trade: newTradeState(), smuggle: { stamped: {}, coves: [], brokerPassUsed: false, hotRun: null }, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
@@ -536,6 +540,8 @@ export function pardonCost(p: Profile): number {
 }
 
 export interface WorldView {
+  /** docs/36: her place in the main campaign (campaign.ts campaignView). */
+  campaign?: import('../../../shared/src/protocol.ts').CampaignView;
   /** docs/19 E9: her seal of the deep, for the Throne's tab (seals.ts sealView). */
   seal?: SealView;
   /** docs/19 E11: her raid of the Abyss, for the Throne's tab (abyssraid.ts raidView). */
@@ -641,6 +647,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
       };
     }),
     questsDone: p.quests.done,
+    ...(world.campaign ? { campaign: world.campaign } : {}),
     questsRecent: p.quests.done.slice(-10).reverse().map((id) => QUESTS_BY_ID[id]?.name).filter((n): n is string => !!n),
     daily: dailyView(p),
     common: world.common ?? null,
@@ -759,6 +766,7 @@ export function sanitizeProfile(raw: Profile): Profile {
   sanitizeCompany(p);
   p.fleet ??= newFleet();
   p.exotic ??= {};
+  p.campaign = sanitizeCampaign(p.campaign, p.level ?? 1, p.quests?.done ?? []); // docs/36 (before the quests: a stale one is let go)
   sanitizeQuests(p);
   sanitizeDaily(p);
   p.friends = (p.friends ?? []).filter((f) => f && typeof f.id === 'number' && typeof f.name === 'string').slice(0, 50);

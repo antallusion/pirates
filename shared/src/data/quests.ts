@@ -9,15 +9,17 @@ import type { GoodId } from './goods.ts';
 import type { RegionId } from '../world/regions.ts';
 import type { TreeId } from './talents.ts';
 import { legacyQuestSize, questXp } from './xpcurve.ts';
+import type { QuestKind } from './questclass.ts';
+export type { QuestKind } from './questclass.ts';
 
 export type QuestStep =
   | { type: 'visit'; port: string; text: string }
   | { type: 'deliver'; port: string; good: GoodId; qty: number; text: string }
-  | { type: 'sink'; count: number; /** 'elite': only the contract's flagship counts (docs/11 P6) */ role?: 'pirate' | 'patrol' | 'merchant' | 'ghost' | 'hunter' | 'elite'; minTier?: number; region?: RegionId; text: string }
+  | { type: 'sink'; count: number; /** 'elite': only the contract's flagship counts (docs/11 P6) */ role?: 'pirate' | 'patrol' | 'merchant' | 'ghost' | 'hunter' | 'elite'; minTier?: number; region?: RegionId; /** docs/36: only ships of this ⚓ or above count (the campaign's fights are of its level) */ minShip?: number; text: string }
   /** Generated quests (docs/11 P4): take a cargo aboard at a port; land a party on an island (at one of its sites). */
   | { type: 'pickup'; port: string; good: GoodId; qty: number; text: string }
   | { type: 'land'; island: number; site?: string; text: string }
-  | { type: 'board'; count: number; text: string }
+  | { type: 'board'; count: number; /** docs/36: only ships of this ⚓ or above count */ minShip?: number; text: string }
   | { type: 'prize'; count: number; text: string }
   | { type: 'sell_contraband'; qty: number; port?: string; text: string }
   | { type: 'customs'; text: string }
@@ -47,11 +49,32 @@ export type QuestStep =
    *  in her guild's garrison, an assault, a citadel taken or held). */
   | { type: 'legend'; count: number; text: string }
   | { type: 'seal'; count: number; minLv: number; text: string }
-  | { type: 'citadel'; count: number; text: string };
+  | { type: 'citadel'; count: number; text: string }
+  /** docs/36, the main campaign (owner, 2026-10-17: «один из шагов должен быть в сюжетке это посещение острова»): sail into
+   *  the waters of an island (no landing); hold an island of one's own; lay works on it (a building, a producer, a level);
+   *  sign on men for the ship's army. */
+  | { type: 'isle'; island: number; text: string }
+  | { type: 'claim'; text: string }
+  | { type: 'build'; count: number; text: string }
+  | { type: 'recruit'; count: number; text: string };
+
+/** A campaign quest's place in the campaign (docs/36). */
+export interface CampaignMeta {
+  /** Its place in the whole campaign (0-based) and its chapter (1-based) and place in it (0-based). */
+  slot: number;
+  ch: number;
+  k: number;
+  /** The completion line (English, filled). */
+  done: string;
+  /** A branch: its key and which way this is ('a' the first, 'b' the second), and the way's label. */
+  key?: string;
+  way?: 'a' | 'b';
+  label?: string;
+}
 
 export interface QuestDef {
   id: string;
-  kind: 'path' | 'legend' | 'story' | 'job';
+  kind: QuestKind;
   name: string;
   mentor: string;
   port: string; // where it is offered and where it ends
@@ -70,6 +93,8 @@ export interface QuestDef {
   group?: number;
   /** A hidden quest (docs/12 P9): begun by a deed, never offered. */
   hidden?: boolean;
+  /** The main campaign's (docs/36). */
+  campaign?: CampaignMeta;
 }
 
 export const QUESTS: QuestDef[] = [
@@ -184,6 +209,14 @@ export const ARC_QUESTS: QuestDef[] = [];
 export function registerArcs(list: QuestDef[]): void {
   ARC_QUESTS.length = 0;
   ARC_QUESTS.push(...list);
+  for (const q of list) QUESTS_BY_ID[q.id] = q;
+}
+
+/** The main campaign's quests, both ways of every branch (docs/36; the server registers them at start). */
+export const CAMPAIGN_QUESTS: QuestDef[] = [];
+export function registerCampaign(list: QuestDef[]): void {
+  CAMPAIGN_QUESTS.length = 0;
+  CAMPAIGN_QUESTS.push(...list);
   for (const q of list) QUESTS_BY_ID[q.id] = q;
 }
 

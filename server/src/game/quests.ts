@@ -51,6 +51,9 @@ import { grantMap, makeMap } from './explorefx.ts';
 import type { ShipEntity } from './ship.ts';
 import { admiraltyById, isAdmId } from '../../../shared/src/data/admiralty.ts'; // docs/19 E15
 import { contractDone } from './admiralty.ts';
+import { campaignDone, campaignTick } from './campaign.ts'; // docs/36, the main campaign
+import { ownIsland } from './estate.ts';
+import { xpThreat } from '../../../shared/src/data/xpcurve.ts';
 
 /** No cap on the quests under way (owner, 2026-10-16: «надо снять ограничение, можно брать сколько угодно, главное своего
  *  диапазона уровня»): what limits her is the level band of each (questBandBlocked). This is only a ceiling against a
@@ -192,7 +195,7 @@ export function fastWindow(game: Game, q: QuestDef): number | null {
   for (const st of q.steps) {
     let at: { x: number; y: number } | null = null;
     if (st.type === 'visit' || st.type === 'deliver' || st.type === 'pickup') at = game.portById(st.port) ?? null;
-    else if (st.type === 'land') at = game.world.islands[st.island] ?? null;
+    else if (st.type === 'land' || st.type === 'isle') at = game.world.islands[st.island] ?? null;
     else return null; // a step with no place: no race against the clock
     if (!at) continue;
     d += Math.hypot(at.x - x, at.y - y);
@@ -204,7 +207,7 @@ export function fastWindow(game: Game, q: QuestDef): number | null {
   return Math.round(240 + (d / 7) * 1.35); // some 7 m/s under way, a third to spare, four minutes in port
 }
 
-function startQuest(game: Game, p: Profile, q: QuestDef, s?: PlayerSession, pay?: QuestPay): void {
+export function startQuest(game: Game, p: Profile, q: QuestDef, s?: PlayerSession, pay?: QuestPay): void {
   const w = q.kind === 'job' ? fastWindow(game, q) : null;
   const chosen = payAllowed(game, q, pay);
   const qs: QuestState = { id: q.id, step: 0, progress: 0, startedAt: game.now, ...(w ? { fastUntil: game.now + w } : {}), ...(chosen ? { pay: chosen } : {}) };
@@ -263,7 +266,10 @@ export type QuestEvent =
   /** docs/19 E15: the Admiralty's legend made to strike; a seal's mythic depth won in time; watches on the citadels' walls. */
   | { k: 'legend' }
   | { k: 'seal'; lv: number }
-  | { k: 'citadel'; n: number };
+  | { k: 'citadel'; n: number }
+  /** docs/36: works laid on her own island (base.ts startBuild, upgradeAt); men signed on for the army (dwell.ts recruit). */
+  | { k: 'build' }
+  | { k: 'recruit'; n: number };
 
 export function newQuestLog(): QuestLog {
   return { active: [], done: [] };
@@ -478,7 +484,7 @@ export function questDest(game: Game, q: QuestDef): { x: number; y: number; port
       const pt = game.portById(st.port);
       if (pt) return { x: Math.round(pt.x), y: Math.round(pt.y), port: pt.id };
     }
-    if (st.type === 'land' && st.island >= 0) {
+    if ((st.type === 'land' || st.type === 'isle') && st.island >= 0) {
       const is = game.world.islands[st.island];
       if (is) return { x: Math.round(is.x), y: Math.round(is.y), island: st.island };
     }
@@ -489,6 +495,7 @@ export function questDest(game: Game, q: QuestDef): { x: number; y: number; port
 /** What a quest pays a captain of her level (docs/26): its reward at its own level, at hers within its waters, green
  *  above them. */
 export function questXpOf(game: Game, p: Profile, q: QuestDef): number {
+  if (q.kind === 'campaign') return q.reward.xp; // docs/36: exact, the road's own
   return questXpFor(p.level, q.reward.xp, q.requires.level ?? 1, questWatersTop(game, q));
 }
 
@@ -503,6 +510,7 @@ export function shareQuest(game: Game, s: PlayerSession, id: string): string | n
   const q = QUESTS_BY_ID[id];
   if (!q || !s.profile!.quests.active.some((a) => a.id === id)) return 'You are not on that quest';
   if (q.kind === 'path' || q.kind === 'legend') return 'A Path or a Legend is walked alone';
+  if (q.kind === 'campaign') return 'The campaign is walked alone'; // docs/36
   if (isAdmId(id)) return 'The Admiralty gives its contracts at its own boards'; // docs/19 E15
   const g = groupOfAccount(game, s.accountId);
   if (!g) return 'You sail in no group';
@@ -576,6 +584,8 @@ function stepCount(st: QuestStep): number {
     case 'legend':
     case 'seal':
     case 'citadel':
+    case 'build':
+    case 'recruit':
       return st.count;
     case 'sell_contraband':
       return st.qty;
@@ -610,6 +620,7 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   if (ev.k === 'tick') {
     cargoAmbush(game, s);
     eliteAtSea(game, s);
+    campaignTick(game, s); // docs/36: the campaign's fight comes to her
   }
   dailyEvent(game, s, ev);
   commonEvent(game, s, ev);
@@ -682,7 +693,7 @@ export function jobSanctions(game: Game, s: PlayerSession, victim: ShipEntity): 
   return p.quests.active.some((a) => {
     const q = QUESTS_BY_ID[a.id];
     const st = q?.steps[a.step];
-    if (!q || !st || game.portById(q.port)?.faction !== victim.faction) return false;
+    if (!q || !st || q.kind === 'campaign' || game.portById(q.port)?.faction !== victim.faction) return false;
     if (st.type === 'board' || st.type === 'prize') return true;
     if (st.type !== 'sink') return false;
     if (st.region && victim.region !== st.region) return false;
@@ -722,9 +733,23 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
       if (st.region && ev.victim.region !== st.region) return 0;
       if (st.role && ev.victim.npcRole !== st.role && !(st.role === 'patrol' && ev.victim.npcRole === 'hunter')) return 0;
       if (st.minTier && ev.victim.cls.tier < st.minTier) return 0;
+      if (st.minShip && !fairFight(s, ev.victim, st.minShip)) return 0;
       return 1;
     case 'board':
-      return ev.k === 'board' ? 1 : 0;
+      if (ev.k !== 'board') return 0;
+      return st.minShip && !fairFight(s, ev.victim, st.minShip) ? 0 : 1;
+    // docs/36, the campaign: an island's waters reached at sea; an island of her own; works laid on it; men signed on.
+    case 'isle': {
+      if (ev.k !== 'tick' || ship.docked) return 0;
+      const is = game.world.islands[st.island];
+      return is && Math.hypot(ship.state.x - is.x, ship.state.y - is.y) <= is.radius + ISLE_REACH ? 1 : 0;
+    }
+    case 'claim':
+      return (ev.k === 'tick' || ev.k === 'dock' || ev.k === 'land') && !!ownIsland(game, s.accountId) ? 1 : 0;
+    case 'build':
+      return ev.k === 'build' ? 1 : 0;
+    case 'recruit':
+      return ev.k === 'recruit' ? ev.n : 0;
     case 'prize':
       return ev.k === 'prize' ? 1 : 0;
     case 'sell_contraband':
@@ -783,6 +808,16 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
   }
 }
 
+/** docs/36: how near an island's shore her ship must come for its waters to count as reached (metres past its radius). */
+export const ISLE_REACH = 900;
+
+/** A campaign fight's ship counts if she is of the quest's ⚓ or above, or not grey to the captain (docs/26: a captain
+ *  above the quest's waters may fight there what still teaches her). A monster, a hulk, a boss: off the ladder, counts. */
+function fairFight(s: PlayerSession, victim: ShipEntity, minShip: number): boolean {
+  if (!victim.onLadder) return true;
+  return victim.combatLevel >= minShip || xpThreat(s.profile?.level ?? 1, victim.combatLevel) !== 'trivial';
+}
+
 /** Groupmates at sea within convoy range of the captain (docs/11 P6): a quest done in company pays more. */
 function matesNear(game: Game, s: PlayerSession): number {
   const g = groupOfAccount(game, s.accountId);
@@ -832,6 +867,7 @@ function mentorsNear(game: Game, s: PlayerSession): PlayerSession[] {
 
 export function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   const p = s.profile!;
+  if (q.kind === 'campaign') return campaignDone(game, s, q); // docs/36: the campaign pays as the campaign pays
   // docs/19 E15: an Admiralty's contract pays as the Admiralty pays (silver, glory and a relic's part).
   if (q.category === 'admiralty') {
     p.quests.active = p.quests.active.filter((a) => a.id !== q.id);
@@ -966,6 +1002,11 @@ export function sanitizeQuests(p: Profile): void {
     else eliteById(q.id);
   }
   p.quests.active = p.quests.active.filter((q) => QUESTS_BY_ID[q.id]);
+  // docs/36: a campaign quest not of her place now (a save of before a migration, a slot moved) is let go
+  p.quests.active = p.quests.active.filter((q) => {
+    const m = QUESTS_BY_ID[q.id].campaign;
+    return !m || m.slot === (p.campaign?.at ?? -1);
+  });
   p.paths ??= [p.captain];
   if (!p.paths.includes(p.captain)) p.paths.push(p.captain);
   p.pathSwitchAt ??= -1e9;

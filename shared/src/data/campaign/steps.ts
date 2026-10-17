@@ -58,6 +58,7 @@ export function parseStep(code: string): StepSpec | string {
       return out;
     case 'sink': {
       if (rest.length > 2) return `too many parts in «${code}»`;
+      if (rest.length === 1 && (SINK_ROLES as readonly string[]).includes(rest[0])) rest.unshift(''); // sink:<role>
       const n = num(rest[0]);
       if (typeof n === 'string') return n;
       out.n = n;

@@ -1381,6 +1381,31 @@ export function spawnCargoAmbush(game: Game, prey: ShipEntity, accountId: number
   return made;
 }
 
+/** The campaign's fight comes to her (docs/36): a ship of the quest's ⚓ — a raider, or a ghost of the drowned seas —
+ *  put out a couple of kilometres off and set on her, for a quarter of an hour. The Crown's quiet waters have no pirates
+ *  of their own (traffic.ts MIX), so the campaign's boardings of the Black Coast would have nothing to board. Null when
+ *  no open water was found. */
+export function spawnCampaignFoe(game: Game, prey: ShipEntity, accountId: number, level: number, ghost: boolean): ShipEntity | null {
+  for (let k = 0; k < 8; k++) {
+    const a = game.rng.float() * Math.PI * 2;
+    const x = prey.state.x + Math.sin(a) * 2200, y = prey.state.y - Math.cos(a) * 2200;
+    if (!openSea(game, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500 || !game.inZone(x, y)) continue;
+    const lv = Math.max(1, Math.min(10, Math.round(level)));
+    const h = headingOf(prey.state.x - x, prey.state.y - y);
+    const ship = ghost ? game.spawnNpcShip('ghost', game.rng.pick(hullsFor('pirate', lv)), 'choir', x, y, h) : game.spawnNpcShip('pirate', game.rng.pick(hullsFor('pirate', lv)), 'confederacy', x, y, h);
+    game.setNpcLevel(ship, lv);
+    const brain = game.npcs.get(ship.id);
+    if (brain) {
+      brain.huntAccount = accountId;
+      brain.area = { x: prey.state.x, y: prey.state.y, r: 7000 };
+      brain.expiresAt = game.now + 900;
+      planWander(game, ship, brain);
+    }
+    return ship;
+  }
+  return null;
+}
+
 /** A hunt's quarry (docs/11 P6): the band's leader, a named captain on a heavier ship somewhere in the region's open
  *  water, roaming it for an hour. Null when no open water was found. */
 export function spawnPackLeader(game: Game, region: RegionId, level: number): ShipEntity | null {

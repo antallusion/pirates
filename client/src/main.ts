@@ -860,6 +860,7 @@ const seaHud = new SeaHud($('touch'), {
     view: () => goalSheetView(state.self),
     portName: (id) => placeName(state.ports.find((p) => p.id === id)?.name ?? id),
     go: (key) => startGoal(key),
+    take: (id) => net.send({ t: 'quest', action: 'accept', id }), // docs/36: the campaign's quest, taken anywhere
   },
   fire: () => seaFire(),
   fireOptions: () => fireWheel(),

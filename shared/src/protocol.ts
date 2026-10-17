@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { QuestKind } from './data/questclass.ts';
 import type { RequestKind } from './data/fates.ts';
 import type { OmenId } from './data/omens.ts';
 import type { CareerId, SetId, WeeklyKind } from './data/renown.ts';
@@ -661,6 +662,26 @@ export interface RouteView {
   hint?: string;
 }
 
+/** docs/36: a captain's place in the main campaign — the quests behind her of all, the chapter and the quest in it, the
+ *  quest now (its ways at a branch; why it waits), the one under way, the next few, the ways chosen. */
+export interface CampaignView {
+  at: number;
+  total: number;
+  ch: number;
+  k: number;
+  size: number;
+  started: boolean;
+  done: boolean;
+  /** Where it began for her (a migrated captain's chapter). */
+  from: number;
+  gate?: number;
+  blocked?: string | null;
+  ways?: { id: string; name: string; label?: string; summary: string; steps: string[]; xp: number; silver: number }[];
+  active?: string;
+  next: { name: string; gate: number; ch: number; k: number }[];
+  picks: Record<string, 'a' | 'b'>;
+}
+
 export interface PrivateState {
   /** The captain as a hero (docs/17 H2). */
   hero?: HeroView;
@@ -724,13 +745,15 @@ export interface PrivateState {
   /** The crew as people (docs/02 §8). */
   company: CompanyView;
   /** Quests under way (Paths, Legends, the Descent). */
-  quests: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; step: number; steps: number; text: string; progress: number; need: number; /** the ship level its fight asks for (canon D12) */ ship?: number; target?: QuestTarget;
+  quests: { id: string; name: string; kind: QuestKind; mentor: string; step: number; steps: number; text: string; progress: number; need: number; /** the ship level its fight asks for (canon D12) */ ship?: number; target?: QuestTarget;
     /** For the journal: the giver's words, every step's text, the pay, the giver's face, the job's kind. */
     summary?: string; stepTexts?: string[]; silver?: number; xp?: number; portrait?: string; category?: string;
     /** seconds left to earn the speed bonus */ fastIn?: number;
     /** The pay chosen on taking it, when not all in silver, and what it comes to. */ pay?: QuestPay; paid?: { silver: number; heavy: number; incendiary: number; rep: number };
     /** Groupmates on the same quest (docs/11 P6), and the step each is on. */ mates?: { name: string; step: number }[] }[];
   questsDone: string[];
+  /** docs/36: her place in the main campaign. */
+  campaign?: CampaignView;
   /** The names of the last ten quests done, the latest first (docs/11 P6). */
   questsRecent: string[];
   /** Today's orders (docs/11 P6): each with its pay, the days in a row and the chest. */
@@ -909,11 +932,14 @@ export interface PortView {
   crewHireCost: number;
   tavern: TavernView;
   escorts: { classId: ShipClassId; price: number; upkeep: number; available: boolean }[];
-  questOffers: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; summary: string; steps: string[]; blocked: string | null; silver: number; xp: number; path?: CaptainId; category?: string; portrait?: string; /** the ship level its fight asks for (canon D12) */ ship?: number; /** an arc's chapter, of three */ chapter?: number; /** asked for by the port's news (an epidemic, a blockade…) */ urgent?: boolean;
+  questOffers: { id: string; name: string; kind: QuestKind; mentor: string; summary: string; steps: string[]; blocked: string | null; silver: number; xp: number; path?: CaptainId; category?: string; portrait?: string; /** the ship level its fight asks for (canon D12) */ ship?: number; /** an arc's chapter, of three */ chapter?: number; /** asked for by the port's news (an epidemic, a blockade…) */ urgent?: boolean;
     /** The pay to choose from (docs/11 P6). */ pays?: QuestPayView;
     /** A group contract: the company it is made for. */ group?: number;
     /** Owner, 2026-10-16: the ⚓ band it is for, and where it first sends her (a port, an island). */
-    band?: [number, number]; dest?: { x: number; y: number; port?: string; island?: number } }[];
+    band?: [number, number]; dest?: { x: number; y: number; port?: string; island?: number };
+    /** docs/36: a campaign quest's place — its chapter (1-based), its place in it (0-based) of the chapter's size, its level,
+     *  and at a branch the way's label. */
+    cmp?: { ch: number; k: number; size: number; gate: number; label?: string } }[];
   captainsHouse: boolean;
   /** The board of the wanted (docs/12 P5). */
   wanted?: WantedPoster[];
@@ -1852,7 +1878,9 @@ export type ServerMsg =
   /** A quest done: its name and all it paid (docs/11 P6). */
   | { t: 'quest_done'; name: string; silver: number; xp: number; /** done within the speed window */ fast?: boolean; /** groupmates in company (each a tenth more) */ company?: number; rep?: { faction: FactionId; n: number }; extra?: 'map' | 'supplies';
       /** fine shot put aboard, when the pay was taken partly in it */ stores?: { heavy: number; incendiary: number };
-      /** a veteran groupmate in company who guided it (a tenth more experience) */ mentor?: string }
+      /** a veteran groupmate in company who guided it (a tenth more experience) */ mentor?: string;
+      /** docs/36: a campaign quest's completion line, and its place (the chapter, the quest in it of its size, the campaign's
+       *  quests done of all) */ line?: string; campaign?: { ch: number; k: number; size: number; at: number; total: number } }
   | { t: 'welcome'; v: number; token: string; accountId: number; name: string; hasCaptain: boolean; worldSize: number; time: number }
   | { t: 'init'; self: PrivateState; ports: PortPublic[]; currents: CurrentData[]; whirlpools: WhirlpoolData[]; discovered: number[]; time: number; entityId: number; sectors?: SectorData[] }
   /** `warn`: a storm front that will cross her course (docs/16 #10) — which, in how many seconds, from which bearing. */

@@ -8,34 +8,56 @@ import { campaignHtml, goalCount, goalSheetView, goalsListHtml } from '../client
 import type { GoalSelf } from '../client/src/ui/goalsheet.ts';
 import { EN, RU } from '../client/src/lang/ui/goalsheet.ts';
 import { setLang } from '../client/src/i18n.ts';
+import { EN as QEN, RU as QRU } from '../client/src/lang/ui/questclass.ts';
+import type { QuestKind } from '../shared/src/data/questclass.ts';
+import type { CampaignView } from '../shared/src/protocol.ts';
 
-const q = (id: string, kind: 'path' | 'legend' | 'story' | 'job', step = 0, steps = 3) => ({ id, name: `Quest ${id}`, kind, step, steps, text: 'Sink pirates', progress: 1, need: 3 });
+const q = (id: string, kind: QuestKind, step = 1, steps = 3) => ({ id, name: `Quest ${id}`, kind, step, steps, text: 'Sink pirates', progress: 1, need: 3 });
+
+const campaign: CampaignView = { at: 4, total: 720, ch: 1, k: 4, size: 22, started: true, done: false, from: 0, gate: 1, blocked: null, ways: [{ id: 'c01_05', name: 'Grey Sails', summary: 'Small boats', steps: ['Take ships by boarding: 1.'], xp: 60, silver: 40 }], active: 'c01_05', next: [], picks: {} };
 
 const self: GoalSelf = {
-  quests: [q('job_a', 'job'), q('a_north_wreckers_2', 'story', 1), q('side_mika_1', 'story', 0, 2), q('job_b', 'job', 0, 1), q('q_path_corsair', 'path', 2, 4), q('q_legend_drowned', 'legend')],
+  quests: [q('job_a', 'job'), q('a_north_wreckers_2', 'story', 2), q('side_mika_1', 'story', 1, 2), q('job_b', 'job', 1, 1), q('q_path_corsair', 'path', 3, 4), q('q_legend_drowned', 'legend'), q('c01_05', 'campaign', 1, 2)],
   contracts: [
     { id: 'c2', kind: 'bounty', title: 'Bounty', kills: 4, progress: 1, reward: 300, expiresAt: 900 },
     { id: 'c1', kind: 'delivery', title: 'Deliver rum', toPort: 'gravesend', good: 'rum', reward: 200, expiresAt: 500 },
   ],
   daily: { orders: [{ kind: 'sink' as const, need: 3, progress: 1, done: false, silver: 100 }, { kind: 'ports' as const, need: 2, progress: 2, done: true, silver: 80 }, { kind: 'land' as const, need: 1, progress: 0, done: false, silver: 60 }], streak: 2, chest: false, chestSilver: 500 },
+  campaign,
 };
 
-test('the campaign first: the Path, a Legend, the story — then the quests and contracts taken, then the orders', () => {
+test('the campaign first (its quest only) — then every other quest and contract taken, tagged by the one taxonomy, then the orders', () => {
   const v = goalSheetView(self);
-  assert.deepEqual(v.campaign.map((x) => x.key), ['q:q_path_corsair', 'q:q_legend_drowned', 'q:a_north_wreckers_2']);
-  assert.equal(v.campaign[2].chapter, 2, "an arc's chapter");
-  assert.deepEqual(v.active.map((x) => x.key), ['q:job_a', 'q:side_mika_1', 'q:job_b', 'c:c1', 'c:c2'], 'every quest taken (a side story too) and every contract (the soonest to lapse first)');
-  assert.equal(v.active[1].kind, 'side');
+  assert.equal(v.campaign?.line?.key, 'q:c01_05', 'the campaign quest under way');
+  assert.equal(v.campaign?.take.length, 0, 'nothing to take while one is under way');
+  assert.deepEqual(v.active.map((x) => x.key), ['q:job_a', 'q:a_north_wreckers_2', 'q:side_mika_1', 'q:job_b', 'q:q_path_corsair', 'q:q_legend_drowned', 'c:c1', 'c:c2'], 'every other quest taken and every contract (the soonest to lapse first)');
+  // owner, 2026-10-17: «сети мики числится как побочное» — the side chains, the arcs, the Paths and the Legends are side
+  // quests on every screen; the board's jobs are jobs
+  assert.deepEqual(v.active.map((x) => x.kind), ['job', 'side', 'side', 'job', 'side', 'side', 'contract', 'contract']);
   assert.deepEqual(v.daily.map((x) => x.key), ['d:sink', 'd:ports', 'd:land']);
   assert.equal(v.daily[1].done, true);
   assert.deepEqual(v.chest, { open: false, silver: 500, streak: 2 });
-  // the counter on «Цели и вести»: 3 campaign + 5 taken + 2 orders not done
-  assert.equal(goalCount(v), 10);
+  // the counter on «Цели и вести»: the campaign's quest + 8 taken + 2 orders not done
+  assert.equal(goalCount(v), 11);
+});
+
+test('the campaign quest to take: «Взять» anywhere, both ways at a branch, or why it waits', () => {
+  const two: CampaignView = { ...campaign, active: undefined, ways: [{ id: 'c01_17', name: 'Silence the Clerk', label: 'Watch him', summary: '', steps: ['Hold the waters'], xp: 1, silver: 1 }, { id: 'c01_17b', name: 'Frighten the Clerk', label: 'Frighten him', summary: '', steps: ['Board'], xp: 1, silver: 1 }] };
+  const v = goalSheetView({ quests: [], campaign: two });
+  assert.deepEqual(v.campaign?.take.map((x) => x.id), ['c01_17', 'c01_17b']);
+  const html = campaignHtml(v, (id) => id);
+  assert.ok(html.includes('data-gtake="c01_17"') && html.includes('data-gtake="c01_17b"'), '«Взять» on each way');
+  assert.equal(goalCount(v), 1);
+  const wait = goalSheetView({ quests: [], campaign: { ...two, blocked: 'Level 12' } });
+  const w = campaignHtml(wait, (id) => id);
+  assert.ok(!w.includes('data-gtake') && w.includes('gs-wait'), 'a quest above her level waits, said why');
+  assert.equal(goalCount(wait), 0);
 });
 
 test('nothing taken: empty lists and their hints, in both languages', () => {
   const v = goalSheetView({ quests: [] });
-  assert.equal(v.campaign.length + v.active.length + v.daily.length, 0);
+  assert.equal(v.campaign, null);
+  assert.equal(v.active.length + v.daily.length, 0);
   assert.equal(goalCount(v), 0);
   assert.equal(goalSheetView(null).active.length, 0);
   for (const l of ['ru', 'en'] as const) {
@@ -46,21 +68,25 @@ test('nothing taken: empty lists and their hints, in both languages', () => {
   }
 });
 
-test('the rows: the campaign block on top, «Плыть» with the goal keys, progress, RU and EN', () => {
+test('the rows: the campaign block on top, «Плыть» with the goal keys, progress, the class words, RU and EN', () => {
   const v = goalSheetView(self);
   for (const l of ['ru', 'en'] as const) {
     setLang(l);
     const D = l === 'ru' ? RU : EN;
+    const W = l === 'ru' ? QRU : QEN;
     const top = campaignHtml(v, () => 'Gravesend').replace(/ /g, ' ');
     const list = goalsListHtml(v, () => 'Gravesend').replace(/ /g, ' '); // (the Russian typesetting's no-break spaces)
     assert.ok(top.includes('gs-campaign') && top.includes(D.campaign));
-    assert.ok(top.indexOf('q:q_path_corsair') < top.indexOf('q:a_north_wreckers_2'));
-    assert.ok(top.includes(D.chapter.replace('{n}', '2')));
-    assert.ok(!top.includes('q:job_a'), 'a job is not the campaign');
+    assert.ok(top.includes('data-gsail="q:c01_05"'), '«Плыть» on the campaign quest');
+    assert.ok(top.includes(D.where.replace('{ch}', '1').replace('{n}', '5').replace('{of}', '22')), 'the chapter and the quest in it');
+    assert.ok(top.includes(D.progress.replace('{n}', '4').replace('{of}', '720')), 'N of 720');
+    assert.ok(top.includes(W['one.campaign']));
+    assert.ok(!top.includes('q:job_a') && !top.includes('q:side_mika_1'), 'a job, a side story are not the campaign');
+    assert.ok(list.includes(W['one.side']) && list.includes(W['one.job']), 'the side stories and the jobs, by their words');
     assert.ok(list.indexOf(D.active) < list.indexOf(D.daily), 'the quests before the orders');
     for (const k of ['q:job_a', 'q:side_mika_1', 'c:c1', 'c:c2', 'd:sink', 'd:land']) assert.ok(list.includes(`data-gsail="${k}"`), `«${D.sail}» on ${k}`);
     assert.ok(!list.includes('data-gsail="d:ports"'), 'an order done has no «Плыть»');
-    assert.ok(top.includes(D.step.replace('{n}', '3').replace('{of}', '4')), 'the Path: step 3 of 4');
+    assert.ok(list.includes(D.step.replace('{n}', '3').replace('{of}', '4')), 'the Path: step 3 of 4');
     assert.ok(list.includes(D.to.replace('{port}', 'Gravesend')));
     assert.ok(list.includes(D.sunk.replace('{n}', '1').replace('{need}', '4')));
     assert.ok(list.includes('gs-bar'), 'progress bars');

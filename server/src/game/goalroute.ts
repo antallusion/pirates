@@ -36,6 +36,9 @@ import type { PlayerSession } from './player.ts';
 import { findsOf } from './seafinds.ts';
 import type { ShipEntity } from './ship.ts';
 import { worldGoals } from './worldgoals.ts';
+import { campaignFoes } from './campaign.ts'; // docs/36
+import { castawaysOf } from './castaways.ts';
+import { liveNamed } from './wanted.ts';
 import { activeTasks } from './worldtasks.ts';
 
 /** The live ships of a goal looked for within this of her (her lookout's reach on a clear day, about). */
@@ -347,20 +350,48 @@ function openWater(game: Game, x: number, y: number): boolean {
 function questPlaces(game: Game, s: PlayerSession, id: string): Resolved {
   const p = s.profile!;
   const qs = p.quests.active.find((q) => q.id === id);
-  if (!qs) return p.quests.done.includes(id) ? { done: true } : { none: ROUTE_WORDS.unknown };
+  // docs/36: a campaign quest behind her is done (the campaign keeps its place, not a list of ids)
+  const cmp = QUESTS_BY_ID[id]?.campaign;
+  if (!qs) return p.quests.done.includes(id) || (cmp && cmp.slot < (p.campaign?.at ?? 0)) ? { done: true } : { none: ROUTE_WORDS.unknown };
   const st = QUESTS_BY_ID[id]?.steps[qs.step];
   if (!st) return { done: true };
   const ship = s.ship!;
   const t = game.questTargets(s)[id];
   switch (st.type) {
     case 'sink': {
+      if (cmp) {
+        const foes = campaignFoes(game, s).map((fid) => game.ships.get(fid)!).map((o): Cand => ({ x: o.state.x, y: o.state.y, r: 250, kind: 'ships', name: 'pirates', ship: o.id, w: 0.7 }));
+        if (foes.length) return { cands: foes };
+      }
       if (t && !st.region) return { cands: [{ x: t.x, y: t.y, r: t.r ?? 250, kind: 'ships', name: 'leader', ...(qs.leader !== undefined ? { ship: qs.leader } : {}) }] };
       const k: ShipKind = st.role === 'pirate' ? 'pirates' : st.role === 'ghost' ? 'ghosts' : st.role === 'merchant' ? 'merchants' : st.role === 'patrol' ? 'patrols' : st.role === 'hunter' ? 'hunters' : 'hostile';
       return { cands: hunt(game, s, k, st.region, st.minTier ? (o) => o.cls.tier >= st.minTier! : undefined) };
     }
     case 'board':
-    case 'prize':
-      return { cands: [...hunt(game, s, 'pirates'), ...liveShips(game, s, 'merchants').map((c) => ({ ...c, w: 1.4, hint: ROUTE_HINTS.board }))] };
+    case 'prize': {
+      // docs/36: the campaign's own foes first (they come for her)
+      const foes = st.type === 'board' && cmp ? campaignFoes(game, s).map((fid) => game.ships.get(fid)!).map((o): Cand => ({ x: o.state.x, y: o.state.y, r: 250, kind: 'ships', name: 'pirates', ship: o.id, hint: ROUTE_HINTS.board, w: 0.7 })) : [];
+      return { cands: [...foes, ...hunt(game, s, 'pirates'), ...liveShips(game, s, 'merchants').map((c) => ({ ...c, w: 1.4, hint: ROUTE_HINTS.board }))] };
+    }
+    case 'named': {
+      // a wanted captain at sea (the Hunters' Guild's), else the pirates' waters
+      const out: Cand[] = [];
+      for (const n of liveNamed(game)) {
+        const o = game.ships.get(n.ship);
+        if (o?.alive) out.push({ x: o.state.x, y: o.state.y, r: 250, kind: 'ships', name: 'pirates', ship: o.id });
+      }
+      return { cands: out.length ? out : hunt(game, s, 'pirates') };
+    }
+    case 'rescue': {
+      // a castaway on a spar of hers, else the open water where they are met
+      const cast = castawaysOf(game, s).map((c): Cand => ({ x: c.x, y: c.y, r: 80, kind: 'place', name: 'castaway' }));
+      return { cands: cast.length ? cast : squares(game, () => true, 'sea', 1.3) };
+    }
+    case 'claim':
+      // docs/36: an island of her own — the nearest she may claim
+      return { cands: islands(game, (i) => !i.portId, 'land') };
+    case 'recruit':
+      return { cands: ports(game) };
     case 'deliver': {
       const port = game.portById(st.port);
       if (!port) break;

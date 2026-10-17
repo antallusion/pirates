@@ -45,6 +45,7 @@ import { generateIslandJobs, generateQuests } from '../../../shared/src/data/que
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
 import { generateLairJobs } from '../../../shared/src/data/lairquests.ts';
 import { generateArcs } from '../../../shared/src/data/questarcs.ts';
+import { acceptCampaign, campaignLevelUp, campaignNext, campaignView, initCampaign } from './campaign.ts'; // docs/36
 import { registerElitePorts } from '../../../shared/src/data/elite.ts';
 import { restAfter } from '../../../shared/src/data/rested.ts';
 import { pushTasks, stepTasks, taskSalvage } from './worldtasks.ts';
@@ -154,7 +155,7 @@ export const BOARD_LOSS_PURSE = 0.08;
 export const BOARD_LOSS_SHIELD = 180;
 import { stepBridges } from './bridgefx.ts';
 import { MAX_BERTHS, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
-import { abandonQuest, acceptQuest, answerOffer, bandRefusal, portBand, jobSanctions, questCargoLost, questEvent, questLandsHere, questXpOf, shareQuest, swearOath, switchPath } from './quests.ts';
+import { ISLE_REACH, abandonQuest, acceptQuest, answerOffer, bandRefusal, portBand, jobSanctions, questCargoLost, questEvent, questLandsHere, questXpOf, shareQuest, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import { commonCollect, commonView, stepCommon } from './commongoal.ts';
 import { guildGoalCollect } from './guildgoal.ts';
@@ -489,6 +490,7 @@ export class Game {
     installSealHooks(); // docs/19 E9: a seal's mythic depth on its lair's card
     installLandHooks(); // the land's resources in the town (docs/18 #43)
     registerArcs(generateArcs(this.world, seed)); // five written arcs a region, three chapters each
+    initCampaign(this, seed); // docs/36: the main campaign, 720 quests laid on the world
     registerIslandJobs(generateIslandJobs(this.world, seed)); // the islands' people
     registerElitePorts(this.world.ports); // the ports' group contracts, one a day each
     registerAdmiralty(this.world); // docs/19 E15: the Admiralty's contracts of the week
@@ -1785,6 +1787,23 @@ export class Game {
           island = st.island;
           act = 'land';
         }
+      } else if (st.type === 'isle') {
+        // docs/36: an island's waters to reach (no landing)
+        const is = this.world.islands[st.island];
+        at = is ?? null;
+        if (is) {
+          r = is.radius + ISLE_REACH * 0.7;
+          island = st.island;
+        }
+      } else if (st.type === 'build') {
+        // docs/36: works on her own island — the island
+        const home = ownIsland(this, s.accountId);
+        const is = home ? this.world.islands[home.island] : undefined;
+        if (is) {
+          at = is;
+          r = is.radius + 300;
+          island = is.id;
+        }
       } else if (st.type === 'lair') {
         // its lair on the island the step names, else the nearest of its kind (or any) still standing
         const from = ship ? ship.state : this.portById(QUESTS_BY_ID[qs.id].port) ?? null;
@@ -1870,6 +1889,7 @@ export class Game {
       isleRaid: raidPointer(this, s),
       claimIsle: claimPrompt(this, s),
       questTargets: this.questTargets(s),
+      campaign: campaignView(this, p), // docs/36
       questMates: this.questMates(s),
       questXp: Object.fromEntries(p.quests.active.map((a) => [a.id, QUESTS_BY_ID[a.id] ? questXpOf(this, p, QUESTS_BY_ID[a.id]) : 0])),
       common: commonView(this, s.accountId),
@@ -2057,14 +2077,15 @@ export class Game {
     this.db.ledger(ship.accountId!, 'spend', -amount, reason);
   }
 
-  grantXp(s: PlayerSession, amount: number, reason: string | null, battle = false): void {
+  grantXp(s: PlayerSession, amount: number, reason: string | null, battle = false, exact = false): void {
     if (!s.profile || amount <= 0) return;
+    // (docs/36: the campaign's experience is exact — the road to the 60th is its own, no bonus moves it)
     // Frontier Spirit: lawless waters teach more.
-    if (s.ship && REGIONS[s.ship.region].safety === 'lawless') amount *= 1 + tval(s.ship.stats, 'frontier');
+    if (!exact && s.ship && REGIONS[s.ship.region].safety === 'lawless') amount *= 1 + tval(s.ship.stats, 'frontier');
     // The shop's elixir and subscription (owner, 2026-10-15): battle experience a share more.
     if (battle && s.authed) amount *= 1 + xpBoost(this, s.accountId);
     // The live ops' «double experience» (docs/34): ×1 with none scheduled.
-    amount *= opsXpMul(this);
+    if (!exact) amount *= opsXpMul(this);
     // Rest ashore (docs/11 P6): battle experience comes double while the pool lasts.
     const rest = battle ? Math.min(s.profile.rested ?? 0, amount) : 0;
     if (rest > 0) {
@@ -2082,6 +2103,7 @@ export class Game {
       this.sendTo(s, { t: 'toast', msg: `Level ${s.profile.level}! A new talent point awaits.`, kind: 'good' });
       onLevelUp(this, s);
       levelGifts(this, s, true); // a level's gift in the shop (owner, 2026-10-15)
+      campaignLevelUp(this, s); // docs/36: the campaign begins at the second level; its quest waiting for the level comes
       kitLevelUp(this, s, s.profile.level - gained); // her abilities' ranks (docs/25 item 37)
       logNote(this, s, 'level', [], s.profile.level);
       // In port: the tavern's and the yard's prices go by the level — the window is sent again (docs/30: the tavern said
@@ -3366,6 +3388,13 @@ export class Game {
         }
         if (msg.action === 'share') return err(shareQuest(this, s, String(msg.id)));
         if (msg.action === 'decline') return;
+        // docs/36: the campaign's quest is taken anywhere — a port's «Кампания», «Цели и вести» at sea
+        if (msg.action === 'accept' && QUESTS_BY_ID[String(msg.id)]?.kind === 'campaign') {
+          err(acceptCampaign(this, s, String(msg.id)));
+          if (s.ship?.docked) this.pushPort(s);
+          this.pushSelf(s, true);
+          return;
+        }
         if (msg.action === 'accept') return portAction((pt) => acceptQuest(this, s, pt, String(msg.id), msg.pay));
         if (msg.action === 'abandon') {
           err(abandonQuest(this, s, String(msg.id)));
@@ -4320,6 +4349,7 @@ export class Game {
     if (s.profile) claimAuction(this, s); // and what the auction house holds for her (docs/16 #13)
     this.sendTo(s, { t: 'welcome', v: PROTOCOL_VERSION, token: auth.token, accountId: s.accountId, name: s.name, hasCaptain: !!s.profile, worldSize: WORLD_SIZE, time: this.now });
     if (s.profile) this.sendInit(s);
+    if (s.profile && s.ship) campaignNext(this, s); // docs/36: the campaign's quest comes aboard with her (a migrated captain's too)
   }
 
   private onCreateCaptain(s: PlayerSession, captain: CaptainId, rawShipName: string, tutorial = false): void {

@@ -2,35 +2,42 @@
 // поручения. причем нужно сперва показывать вверху основные цели кампании»). The sheet only ever lent the HUD's folded
 // blocks (hud.ts TOUCH_FOLDED: the hint, the trade, the sea's goal, the captain's goals, the news), and none of them is
 // the quests taken, the port's contracts or the day's orders — so those were never there. Now, in this order:
-//   (a) on top, always in sight: the campaign — the Path, the Legend, the story's chapters under way, step and progress;
-//   (b) the quests and the port's contracts taken, with progress and «Плыть» (the run to the goal, {t:'goto', key});
+//   (a) on top, always in sight: the main campaign (docs/36) — its quest under way with its step and «Плыть», or the one
+//       to take (both ways at a branch) with «Взять», or why it waits; the chapter, the quest in it, «N/720»;
+//   (b) the quests and the port's contracts taken — the side stories («Побочное») and the jobs («Поручение»), each
+//       tagged by the one taxonomy (shared/src/data/questclass.ts, owner: «сети мики числится как побочное») — with
+//       progress and «Плыть» (the run to the goal, {t:'goto', key});
 //   (c) the day's orders with progress;
 //   (d) the sea's goals, the week, the trade, the captain's goals and the news — the lent blocks, as before.
 
 import { dailyText } from '../../../shared/src/data/dailies.ts';
 import type { DailyKind } from '../../../shared/src/data/dailies.ts';
+import type { QuestKind } from '../../../shared/src/data/questclass.ts';
+import type { CampaignView } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/goalsheet.ts';
 import { serverText } from '../lang/server.ts';
 import { esc, icon, money } from './dom.ts';
+import { classWord, questClass } from './questclass.ts';
+import type { QuestClass } from './questclass.ts';
 
 const L = dict(EN, RU);
-
-type QuestKind = 'path' | 'legend' | 'story' | 'job';
 
 /** What the sheet reads of the captain (PrivateState's part, or a test's). */
 export interface GoalSelf {
   quests: { id: string; name: string; kind: QuestKind; step: number; steps: number; text: string; progress: number; need: number }[];
   contracts?: { id: string; kind: 'delivery' | 'bounty' | 'courier'; title: string; toPort?: string; good?: string; kills?: number; progress?: number; reward: number; expiresAt: number }[];
   daily?: { orders: { kind: DailyKind; need: number; progress: number; done: boolean; silver: number }[]; streak: number; chest: boolean; chestSilver: number };
+  campaign?: CampaignView;
 }
 
 /** One line of the sheet. `key` is the goal's (goalroute.ts GOAL_KEYS): `q:` a quest, `c:` a contract, `d:` an order. */
 export interface GoalLine {
   key: string;
-  kind: QuestKind | 'side' | 'contract' | 'daily';
-  /** An arc's chapter (of three). */
-  chapter?: number;
+  /** Its class (the one taxonomy), a contract or a day's order. */
+  kind: QuestClass | 'contract' | 'daily';
+  /** The quest's own kind (its picture). */
+  qkind?: QuestKind;
   /** Server words (a quest's name and step, a contract's title) or, for an order, its kind. */
   title: string;
   text: string;
@@ -46,44 +53,54 @@ export interface GoalLine {
   bounty?: boolean;
 }
 
+/** The campaign's block: the quest under way, or the ways to take now, and where she stands in it. */
+export interface CampaignBlock {
+  /** Its quest under way (a line with «Плыть»). */
+  line: GoalLine | null;
+  /** The ways to take now (one; two at a branch), when none is under way. */
+  take: { id: string; name: string; label?: string; text: string }[];
+  /** Why the one to take waits (server words: «Level 12»), or null. */
+  blocked: string | null;
+  ch: number;
+  k: number;
+  size: number;
+  at: number;
+  total: number;
+  done: boolean;
+}
+
 export interface GoalSheetView {
-  campaign: GoalLine[];
+  campaign: CampaignBlock | null;
   active: GoalLine[];
   daily: GoalLine[];
   chest: { open: boolean; silver: number; streak: number } | null;
 }
 
-/** The campaign's order: the captain's Path, a Legend, then the story's chapters. */
-const CAMPAIGN: Record<QuestKind, number> = { path: 0, legend: 1, story: 2, job: 9 };
-
-/** A port's side quest (shared/src/data/sidequests.ts, `side_…`): a story of its own, not the campaign's. */
-const isSide = (q: { id: string; kind: QuestKind }): boolean => q.kind === 'story' && q.id.startsWith('side_');
-
-/** The campaign: the Paths, the Legends, the main story and the regions' arcs (questarcs.ts, `a_<region>_<arc>_<n>`). */
-export const inCampaign = (q: { id: string; kind: QuestKind }): boolean => q.kind !== 'job' && !isSide(q);
-
-/** An arc's chapter, from its id. */
-const chapterOf = (id: string): number | null => {
-  const m = /^a_.+_(\d+)$/.exec(id);
-  return m ? Number(m[1]) : null;
-};
-
 /** The sheet's lines: the campaign first, then the quests and contracts taken, then the day's orders. */
 export function goalSheetView(self: GoalSelf | null | undefined): GoalSheetView {
   const quests = self?.quests ?? [];
-  const line = (q: GoalSelf['quests'][number]): GoalLine => ({ key: `q:${q.id}`, kind: isSide(q) ? 'side' : q.kind, title: q.name, text: q.text, step: q.step, steps: q.steps, progress: q.progress, need: q.need, done: false, ...(chapterOf(q.id) ? { chapter: chapterOf(q.id)! } : {}) });
-  const campaign = quests.filter(inCampaign).sort((a, b) => CAMPAIGN[a.kind] - CAMPAIGN[b.kind]).map(line);
+  const line = (q: GoalSelf['quests'][number]): GoalLine => ({ key: `q:${q.id}`, kind: questClass(q), qkind: q.kind, title: q.name, text: q.text, step: q.step, steps: q.steps, progress: q.progress, need: q.need, done: false });
+  const c = self?.campaign;
+  const mine = quests.find((q) => questClass(q) === 'campaign');
+  const campaign: CampaignBlock | null = c
+    ? {
+      line: mine ? line(mine) : null,
+      take: mine || c.done ? [] : (c.ways ?? []).map((w) => ({ id: w.id, name: w.name, ...(w.label ? { label: w.label } : {}), text: w.steps[0] ?? '' })),
+      blocked: mine ? null : c.blocked ?? null,
+      ch: c.ch, k: c.k, size: c.size, at: c.at, total: c.total, done: c.done,
+    }
+    : mine ? { line: line(mine), take: [], blocked: null, ch: 1, k: 0, size: 1, at: 0, total: 1, done: false } : null;
   const contracts = [...(self?.contracts ?? [])].sort((a, b) => a.expiresAt - b.expiresAt).map((c): GoalLine => ({
     key: `c:${c.id}`, kind: 'contract', title: c.title, text: '', progress: c.progress ?? 0, need: c.kind === 'bounty' ? c.kills ?? 1 : 0, done: false, silver: c.reward,
     ...(c.toPort ? { toPort: c.toPort } : {}), ...(c.good ? { good: c.good } : {}), ...(c.kind === 'bounty' ? { bounty: true } : {}),
   }));
-  const active = [...quests.filter((q) => !inCampaign(q)).map(line), ...contracts];
+  const active = [...quests.filter((q) => questClass(q) !== 'campaign').map(line), ...contracts];
   const d = self?.daily;
   const daily = (d?.orders ?? []).map((o): GoalLine => ({ key: `d:${o.kind}`, kind: 'daily', title: o.kind, text: '', progress: o.progress, need: o.need, done: o.done, silver: o.silver }));
   return { campaign, active, daily, chest: d && d.orders.length ? { open: d.chest, silver: d.chestSilver, streak: d.streak } : null };
 }
 
-const KIND_ICON: Record<GoalLine['kind'], string> = { path: 'tab_legends', legend: 'tab_legends', story: 'tab_letters', side: 'tab_letters', job: 'goal', contract: 'map_contract', daily: 'goal' };
+const KIND_ICON: Record<QuestKind, string> = { path: 'tab_legends', legend: 'tab_legends', story: 'tab_letters', job: 'goal', campaign: 'tab_legends' };
 
 function bar(progress: number, need: number, done: boolean): string {
   if (need <= 1 && !done) return '';
@@ -91,26 +108,26 @@ function bar(progress: number, need: number, done: boolean): string {
   return `<span class="gs-bar${done ? ' done' : ''}" aria-hidden="true"><i style="width:${pct.toFixed(1)}%"></i></span>`;
 }
 
-function row(x: GoalLine, portName: (id: string) => string): string {
+const sailBtn = (key: string) => `<button type="button" class="btn btn-small btn-primary gs-sail" data-gsail="${esc(key)}" title="${esc(L('sailHint'))}">${icon('stat_sails', '', 'ico-sm')}<span>${esc(L('sail'))}</span></button>`;
+
+function row(x: GoalLine, portName: (id: string) => string, where = ''): string {
   const ru = lang() === 'ru' ? 1 : 0;
-  let title: string, sub: string, art = KIND_ICON[x.kind];
+  let title: string, sub: string, art = x.qkind ? KIND_ICON[x.qkind] : 'goal';
   if (x.kind === 'daily') {
     title = dailyText(x.title as DailyKind, x.need, ru);
     sub = x.done ? L('doneMark') : `${x.progress}/${x.need}`;
   } else if (x.kind === 'contract') {
     title = serverText(x.title);
     sub = x.bounty ? L('sunk', { n: x.progress, need: x.need }) : x.toPort ? L('to', { port: portName(x.toPort) }) : '';
-    if (x.bounty) art = 'wanted';
-    else if (x.good) art = `good_${x.good}`;
+    art = x.bounty ? 'wanted' : x.good ? `good_${x.good}` : 'map_contract';
   } else {
     title = serverText(x.title);
-    const steps = (x.steps ?? 1) > 1 ? `${L('step', { n: (x.step ?? 0) + 1, of: x.steps ?? 1 })} · ` : '';
-    const ch = x.chapter ? `${L('chapter', { n: x.chapter })} · ` : '';
-    sub = `${ch}${steps}${serverText(x.text)}${x.need > 1 ? ` (${x.progress}/${x.need})` : ''}`;
+    const steps = (x.steps ?? 1) > 1 ? `${L('step', { n: x.step ?? 1, of: x.steps ?? 1 })} · ` : '';
+    sub = `${where}${steps}${serverText(x.text)}${x.need > 1 ? ` (${x.progress}/${x.need})` : ''}`;
   }
-  const tag = x.kind === 'daily' ? '' : `<em class="gs-kind">${esc(L(`k.${x.kind}` as 'k.job'))}</em>`;
+  const tag = x.kind === 'daily' ? '' : `<em class="gs-kind gs-k-${x.kind}">${esc(classWord(x.kind))}</em>`;
   const pay = `<span class="gs-pay">${x.silver ? money(x.silver) : ''}</span>`;
-  const sail = x.done ? '<span class="gs-done" aria-hidden="true">✓</span>' : `<button type="button" class="btn btn-small btn-primary gs-sail" data-gsail="${esc(x.key)}" title="${esc(L('sailHint'))}">${icon('stat_sails', '', 'ico-sm')}<span>${esc(L('sail'))}</span></button>`;
+  const sail = x.done ? '<span class="gs-done" aria-hidden="true">✓</span>' : sailBtn(x.key);
   return `<div class="gs-row gs-${x.kind}${x.done ? ' done' : ''}" data-gkey="${esc(x.key)}">${icon(art, '◆', 'gs-ico')}<span class="gs-t"><b>${tag}${esc(title)}</b><small>${esc(sub)}</small>${bar(x.progress, x.need, x.done)}</span>${pay}${sail}</div>`;
 }
 
@@ -120,9 +137,29 @@ function section(cls: string, title: string, art: string, body: string): string 
 
 const empty = (k: 'campaignNone' | 'activeNone' | 'dailyNone') => `<p class="muted gs-empty">${esc(L(k))}</p>`;
 
+/** «Глава 3 · задание 5 из 19»: where the quest stands in its chapter. */
+export function chapterWords(ch: number, k: number, size: number): string {
+  return L('where', { ch, n: k + 1, of: size });
+}
+
 /** The campaign's block (always in sight on top). */
 export function campaignHtml(v: GoalSheetView, portName: (id: string) => string): string {
-  return section('gs-campaign', L('campaign'), 'tab_legends', v.campaign.length ? v.campaign.map((x) => row(x, portName)).join('') : empty('campaignNone'));
+  const c = v.campaign;
+  if (!c) return section('gs-campaign', L('campaign'), 'tab_legends', empty('campaignNone'));
+  const where = `${chapterWords(c.ch, c.k, c.size)} · `;
+  let body = '';
+  if (c.done) body = `<p class="gs-empty gs-cdone">${esc(L('campaignDone'))}</p>`;
+  else if (c.line) body = row(c.line, portName, where);
+  else body = c.take.map((t) => {
+    const btn = c.blocked
+      ? `<span class="gs-wait">${esc(serverText(c.blocked))}</span>`
+      : `<button type="button" class="btn btn-small btn-primary gs-take" data-gtake="${esc(t.id)}">${esc(L('take'))}</button>`;
+    const label = t.label ? `${serverText(t.label)}: ` : '';
+    return `<div class="gs-row gs-campaign-take" data-gkey="q:${esc(t.id)}">${icon('tab_legends', '◆', 'gs-ico')}<span class="gs-t"><b><em class="gs-kind gs-k-campaign">${esc(classWord('campaign'))}</em>${esc(label + serverText(t.name))}</b><small>${esc(where + serverText(t.text))}</small></span><span class="gs-pay"></span>${btn}</div>`;
+  }).join('') || empty('campaignNone');
+  const pct = Math.min(100, (c.at / Math.max(1, c.total)) * 100);
+  const foot = `<p class="gs-foot gs-cprog"><span>${esc(L('progress', { n: c.at, of: c.total }))}</span><span class="gs-bar" aria-hidden="true"><i style="width:${pct.toFixed(1)}%"></i></span></p>`;
+  return section('gs-campaign', L('campaign'), 'tab_legends', body + foot);
 }
 
 /** The quests and contracts taken, and the day's orders (the scrolling part above the lent blocks). */
@@ -139,7 +176,10 @@ export function seaHeadHtml(): string {
 
 export const seaNoneText = (): string => L('seaNone');
 
-/** How many lines the counter adds for her: the quests and contracts taken and the orders not yet done. */
+/** How many lines the counter adds for her: the campaign's quest (under way, or to take now), the quests and contracts
+ *  taken, the orders not yet done. */
 export function goalCount(v: GoalSheetView): number {
-  return v.campaign.length + v.active.length + v.daily.filter((x) => !x.done).length;
+  const c = v.campaign;
+  const cmp = c && !c.done && (c.line || (c.take.length && !c.blocked)) ? 1 : 0;
+  return cmp + v.active.length + v.daily.filter((x) => !x.done).length;
 }

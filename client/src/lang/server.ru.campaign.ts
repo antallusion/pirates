@@ -1,0 +1,18 @@
+// The main campaign's own lines (docs/36, server/src/game/campaign.ts), English → Russian. The campaign's quests
+// themselves (titles, briefings, steps, completion lines) are patterns of shared/src/data/campaign/patterns.ts.
+
+export const SERVER_RU_CAMPAIGN: Record<string, string> = {
+  'Campaign, chapter {0}: {1}': 'Кампания, глава {0}: {1}',
+  'Chapter {0} is done: {1}.': 'Глава {0} пройдена: «{1}».',
+  'The campaign is done. The tide sleeps.': 'Кампания пройдена. Прилив спит.',
+  'The next campaign quest waits for level {0}.': 'Следующее задание кампании ждёт {0}-го уровня.',
+  'That is not the campaign’s quest now': 'Сейчас кампания ждёт другого задания',
+  'The campaign’s quest is under way': 'Задание кампании уже взято',
+  'The campaign is done': 'Кампания пройдена',
+  'Level {0}': 'Уровень {0}',
+  'A purse for the chapter: {0} silver.': 'Награда за главу: {0} серебра.',
+  'Shot for the guns: the chapter’s stores are aboard.': 'Ядра для пушек: припасы главы погружены на борт.',
+  'The campaign is walked alone': 'Кампанию проходят в одиночку',
+  'Enemy sails close in: the campaign’s fight comes to you.': 'Вражеские паруса идут на сближение: бой кампании сам идёт к вам.',
+  'Nobody here offers that': 'Здесь такого не предлагают',
+};

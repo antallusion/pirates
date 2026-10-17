@@ -18,6 +18,7 @@ import { isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
 import type { World } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import { groupOfAccount } from './party.ts';
+import { campaignWall } from './campaign.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { seasonStat } from './seasons.ts';
@@ -74,6 +75,7 @@ export function abyssCleared(game: Game, s: PlayerSession): boolean {
   const p = s.profile;
   if (!p) return false;
   if (p.level >= ABYSS_LEVEL && p.quests.done.includes('q_last_leaf')) return true;
+  if (campaignWall(p)) return true; // docs/36: the campaign's road leads past the Wall (Wren's passage, chapter 30)
   const g = groupOfAccount(game, s.accountId);
   const me = s.ship;
   if (!g || !me) return false;
