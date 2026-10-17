@@ -59,6 +59,9 @@ test("the owner's UI pack (2026-10-17): the page asks for its title paintings, l
     for (const k of ['start', 'isle', 'battle', 'sea']) assert.ok(m.assets[`art.load_${k}`]?.m && m.assets[`art.load_${k}`].ma, k);
     assert.ok(html.includes(`/assets/art/load_start.m.avif?v=${m.assets['art.load_start'].ma}`));
     assert.ok(html.includes(`/assets/art/load_start.avif?v=${m.assets['art.load_start'].a}`));
+    // a phone held upright (the start, Telegram's sign-in, «turn the phone»): the small portrait painting, preloaded
+    const pt = m.assets['art.portrait'];
+    assert.ok(pt?.a && html.includes(`/assets/art/portrait.avif?v=${pt.a}`) && html.includes('id="rotate-lock"') && html.includes('class="rl-logo"'));
     for (const f of ['/favicon-32.png', '/icon-192.png', '/apple-touch-icon.png', '/assets/brand/og_image.jpg']) assert.equal((await fetch(`${s.base}${f}`)).status, 200, f);
   } finally {
     s.close();

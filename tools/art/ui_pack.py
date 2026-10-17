@@ -8,6 +8,8 @@ writes is kept in git. Nothing is generated: each picture is keyed, cut, graded 
   logo    gt_logo.png (magenta)          -> ui/logo_{1024,512,256}.webp       keyed, despilled, trimmed
   title   gt_title_{wide,mobile}.png     -> art/title_{wide,mobile}.webp (+ AVIF)
   load    gt_load_{start,island,battle,sea}.png -> art/load_{start,isle,battle,sea}.webp (+ a phone's .m.webp, + AVIF)
+  portrait gt_title_wide.png (its lighthouse side) -> art/portrait.webp (576 x 1024, + AVIF; each under 60 KB): behind
+          the screens a phone shows upright (the start's, Telegram's sign-in, «turn the phone»)
   wheel   gt_loader_wheel.png (magenta)  -> ui/loader_wheel.webp               keyed, toned down to the game's brass
   icon    gt_icon.png                    -> client/favicon-32.png, icon-192/512.png, apple-touch-icon.png,
                                             assets/brand/bot_avatar_512.png
@@ -187,6 +189,16 @@ def load(m: dict) -> None:
         reg(m, f'art.load_{kind}', rel, 'opaque:1536')
 
 
+def portrait(m: dict) -> None:
+    im = src('gt_title_wide.png').convert('RGB').crop((960, 0, 1536, 1024))
+    for q in (72, 66, 60, 54):
+        rel = save(im, 'art/portrait.webp', q)
+        if os.path.getsize(os.path.join(A, rel)) <= 60_000:
+            break
+    reg(m, 'art.portrait', rel, 'opaque:1024')
+    avif_twin(im, rel, 44)
+
+
 def wheel(m: dict) -> None:
     k = grade(specks(keyed('gt_loader_wheel.png')), 0.5, 0.86, 1.1)
     im = trim(Image.fromarray(k), 2)
@@ -326,7 +338,7 @@ def avif(m: dict) -> None:
                 os.remove(out)
 
 
-STEPS = {'logo': logo, 'title': title, 'load': load, 'wheel': wheel, 'icon': icon, 'icons': icons, 'way': way, 'scout': scout, 'titans': titans, 'avif': avif}
+STEPS = {'logo': logo, 'title': title, 'portrait': portrait, 'load': load, 'wheel': wheel, 'icon': icon, 'icons': icons, 'way': way, 'scout': scout, 'titans': titans, 'avif': avif}
 
 
 def main(argv: list) -> None:

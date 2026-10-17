@@ -71,6 +71,12 @@
   background: var(--tgb-bg, #0b0d10); color: var(--tgb-fg, #e6dccb); text-align: center;
 }
 #tg-boot .tgb-card { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px; max-width: 360px; }
+/* dressed (the owner's pack, 2026-10-17): the painting behind (index.html), the logo, the pack's wheel, the game's own ink
+   rather than the theme's; clear of the notch and Telegram's bar */
+#tg-boot { color: #e6dccb; box-sizing: border-box; padding: calc(env(safe-area-inset-top, 0px) + var(--tg-top, 0px)) 0 calc(env(safe-area-inset-bottom, 0px) + var(--tg-bottom, 0px)); }
+#tg-boot .tgb-logo { display: block; line-height: 0; }
+#tg-boot .tgb-logo img { width: min(64vw, 300px, 38vh); height: auto; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.85)); }
+#tg-boot p, #tg-boot .tgb-slow { text-shadow: 0 1px 2px #000, 0 0 10px rgba(0, 0, 0, 0.9); }
 #tg-boot .tgb-name { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 28px; letter-spacing: 0.08em; }
 #tg-boot p { margin: 0; font-size: 14px; opacity: 0.85; }
 #tg-boot .tgb-spin { width: 28px; height: 28px; border-radius: 50%; border: 3px solid color-mix(in srgb, var(--tgb-accent, #c9a46a) 25%, transparent); border-top-color: var(--tgb-accent, #c9a46a); animation: tgb-spin 0.9s linear infinite; }
@@ -78,6 +84,7 @@
 #tg-boot .tgb-slow { font-size: 13px; opacity: 0.75; max-width: 300px; line-height: 1.35; }
 #tg-boot .tgb-retry { min-height: 40px; padding: 0 18px; font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { #tg-boot .tgb-spin { animation: none; } }
+#tg-boot .tgb-name:has(.tgb-logo) { font-size: 0; }
 /* the «turn your phone» veil's word on Telegram's auto-rotate */
 #rotate-lock .tg-rot { display: none; }
 .tg-app #rotate-lock .tg-rot { display: block; font-size: 13px; opacity: 0.7; max-width: 280px; }

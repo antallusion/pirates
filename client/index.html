@@ -24,6 +24,11 @@
        start's loading screen, asked for with the page: the server carries each /assets/ address here to its version. -->
   <link rel="preload" as="image" href="/assets/art/title_mobile.avif" type="image/avif" media="(max-height: 520px)" fetchpriority="high" />
   <link rel="preload" as="image" href="/assets/art/title_wide.avif" type="image/avif" media="(min-height: 521px)" fetchpriority="high" />
+  <!-- a phone held upright (the start, Telegram's sign-in, «turn the phone»): the lighthouse side of the title's
+       painting, 576 × 1024, and the logo at 512 — small, so these screens are dressed from their first frame -->
+  <link rel="preload" as="image" href="/assets/art/portrait.avif" type="image/avif" media="(orientation: portrait)" fetchpriority="high" />
+  <link rel="preload" as="image" href="/assets/ui/logo_512.avif" type="image/avif" media="(orientation: portrait)" fetchpriority="high" />
+  <link rel="preload" as="image" href="/assets/ui/loader_wheel.avif" type="image/avif" />
   <link rel="preload" as="image" href="/assets/art/load_start.m.avif" type="image/avif" media="(pointer: coarse) and (max-width: 1200px)" fetchpriority="low" />
   <link rel="preload" as="image" href="/assets/art/load_start.avif" type="image/avif" media="not all and (pointer: coarse), (min-width: 1201px)" fetchpriority="low" />
   <style>
@@ -31,6 +36,18 @@
     @media (max-height: 520px) {
       #screen-login .keyart { background-image: url("/assets/art/title_mobile.webp"); background-image: image-set(url("/assets/art/title_mobile.avif") type("image/avif"), url("/assets/art/title_mobile.webp") type("image/webp")); }
     }
+    /* the start's screen, Telegram's sign-in and «turn the phone»: the painting under a dark scrim, the pack's wheel */
+    html #boot, html #tg-boot, html #rotate-lock { background-color: #05070a; background-position: center; background-size: cover; background-repeat: no-repeat; }
+    html #boot, html #tg-boot, html #rotate-lock { background-image: linear-gradient(180deg, rgba(3, 5, 8, 0.6) 0%, rgba(3, 5, 8, 0.38) 38%, rgba(3, 5, 8, 0.82) 100%), url("/assets/art/title_wide.webp"); background-image: linear-gradient(180deg, rgba(3, 5, 8, 0.6) 0%, rgba(3, 5, 8, 0.38) 38%, rgba(3, 5, 8, 0.82) 100%), image-set(url("/assets/art/title_wide.avif") type("image/avif"), url("/assets/art/title_wide.webp") type("image/webp")); }
+    @media (max-height: 520px) {
+      html #boot, html #tg-boot, html #rotate-lock { background-image: linear-gradient(180deg, rgba(3, 5, 8, 0.6) 0%, rgba(3, 5, 8, 0.38) 38%, rgba(3, 5, 8, 0.82) 100%), url("/assets/art/title_mobile.webp"); background-image: linear-gradient(180deg, rgba(3, 5, 8, 0.6) 0%, rgba(3, 5, 8, 0.38) 38%, rgba(3, 5, 8, 0.82) 100%), image-set(url("/assets/art/title_mobile.avif") type("image/avif"), url("/assets/art/title_mobile.webp") type("image/webp")); }
+    }
+    @media (orientation: portrait) {
+      html #boot, html #tg-boot, html #rotate-lock { background-image: linear-gradient(180deg, rgba(3, 5, 8, 0.6) 0%, rgba(3, 5, 8, 0.38) 38%, rgba(3, 5, 8, 0.82) 100%), url("/assets/art/portrait.webp"); background-image: linear-gradient(180deg, rgba(3, 5, 8, 0.6) 0%, rgba(3, 5, 8, 0.38) 38%, rgba(3, 5, 8, 0.82) 100%), image-set(url("/assets/art/portrait.avif") type("image/avif"), url("/assets/art/portrait.webp") type("image/webp")); }
+    }
+    .gt-wheel { display: block; flex: none; width: 44px; height: 44px; background: center / contain no-repeat url("/assets/ui/loader_wheel.webp"); background-image: image-set(url("/assets/ui/loader_wheel.avif") type("image/avif"), url("/assets/ui/loader_wheel.webp") type("image/webp")); filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.9)); animation: gt-turn 3.2s linear infinite; }
+    @keyframes gt-turn { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .gt-wheel { animation: none; } }
   </style>
   <title data-i18n="doc.title">GRAVETIDE — a Pirate Gothic MMORPG</title>
   <!-- A Russian reader never sees the English words the page is written in: the title turns before the first
@@ -136,14 +153,16 @@
   </script>
   <style>
     /* the start's own screen (above): drawn before any stylesheet comes */
-    #boot { position: fixed; inset: 0; z-index: 2147483200; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 45%, #141a20 0%, #07090b 75%); color: #d8d2c4; font: 14px/1.35 system-ui, sans-serif; text-align: center; }
+    #boot { position: fixed; inset: 0; z-index: 2147483200; display: none; align-items: center; justify-content: center; color: #d8d2c4; font: 14px/1.35 system-ui, sans-serif; text-align: center; }
     #boot.on { display: flex; }
     #boot .bt-card { display: flex; flex-direction: column; align-items: center; gap: 10px; width: min(360px, 80vw); }
     #boot .bt-name { font: 600 26px/1 Georgia, serif; letter-spacing: 0.12em; color: #c9a46a; }
     #boot .bt-name img { display: block; width: auto; height: min(42vh, 260px); max-width: 80vw; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.7)); }
     #boot .bt-bar { display: block; width: 100%; height: 5px; border: 1px solid #6f5a38; border-radius: 3px; overflow: hidden; background: rgba(0, 0, 0, 0.5); }
     #boot .bt-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #6f5a38, #e0b862); transition: width 0.2s; }
-    #boot .bt-text { opacity: 0.8; }
+    #boot .bt-text { opacity: 0.9; text-shadow: 0 1px 2px #000, 0 0 10px rgba(0, 0, 0, 0.9); }
+    #boot { padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); box-sizing: border-box; }
+    @media (orientation: portrait) { #boot .bt-name img { height: auto; width: min(68vw, 320px); } }
     #boot .bt-retry { min-height: 40px; padding: 0 20px; border: 1px solid #c9a46a; border-radius: 6px; background: #2a2116; color: #f0e2c0; font: 600 14px system-ui, sans-serif; }
     #boot .bt-retry[hidden] { display: none; }
     #boot-log { position: fixed; left: 4px; bottom: 4px; z-index: 2147483300; max-width: 70vw; margin: 0; padding: 4px 6px; background: rgba(0, 0, 0, 0.75); color: #9fe0a0; font: 10px/1.25 ui-monospace, monospace; white-space: pre-wrap; pointer-events: none; }
@@ -170,7 +189,7 @@
   <link rel="stylesheet" href="/fit.css" />
 </head>
 <body>
-  <div id="boot" role="status" aria-live="polite"><div class="bt-card"><b class="bt-name"><picture><source type="image/avif" srcset="/assets/ui/logo_256.avif 256w, /assets/ui/logo_512.avif 512w, /assets/ui/logo_1024.avif 1024w" sizes="(max-height: 520px) 34vw, 40vh" /><img src="/assets/ui/logo_512.webp" srcset="/assets/ui/logo_256.webp 256w, /assets/ui/logo_512.webp 512w, /assets/ui/logo_1024.webp 1024w" sizes="(max-height: 520px) 34vw, 40vh" width="512" height="476" alt="GRAVETIDE" /></picture></b><span class="bt-bar"><i></i></span><small class="bt-text"></small><button class="bt-retry" type="button" hidden></button></div></div>
+  <div id="boot" role="status" aria-live="polite"><div class="bt-card"><b class="bt-name"><picture><source type="image/avif" srcset="/assets/ui/logo_256.avif 256w, /assets/ui/logo_512.avif 512w, /assets/ui/logo_1024.avif 1024w" sizes="(max-height: 520px) 34vw, 40vh" /><img src="/assets/ui/logo_512.webp" srcset="/assets/ui/logo_256.webp 256w, /assets/ui/logo_512.webp 512w, /assets/ui/logo_1024.webp 1024w" sizes="(max-height: 520px) 34vw, 40vh" width="512" height="476" alt="GRAVETIDE" /></picture></b><i class="gt-wheel bt-wheel" aria-hidden="true"></i><span class="bt-bar"><i></i></span><small class="bt-text"></small><button class="bt-retry" type="button" hidden></button></div></div>
   <pre id="boot-log" hidden></pre>
   <canvas id="world"></canvas>
 
@@ -335,6 +354,7 @@
 
   <!-- A phone held upright: the game is played sideways only, so the whole screen asks to turn it (styles.css). -->
   <div id="rotate-lock" role="alertdialog" aria-modal="true" aria-labelledby="rotate-lock-title">
+    <picture class="rl-logo"><source type="image/avif" srcset="/assets/ui/logo_512.avif" /><img src="/assets/ui/logo_512.webp" width="512" height="476" alt="GRAVETIDE" /></picture>
     <div class="rl-phone" aria-hidden="true"><i></i></div>
     <b id="rotate-lock-title" data-i18n="rotate.title">Turn your phone sideways</b>
     <small data-i18n="rotate.text">GRAVETIDE is played in landscape.</small>

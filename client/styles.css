@@ -4406,6 +4406,19 @@ body.touch .act-btn { --h: 38px; }
   }
   #rotate-lock .rl-phone i { position: absolute; left: 50%; bottom: 5px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--brass); }
 }
+/* dressed (the owner's pack, 2026-10-17): the logo over the phone, the painting behind (index.html), clear of the notch and
+   of Telegram's bar */
+#rotate-lock .rl-logo { display: none; }
+@media (orientation: portrait) and (pointer: coarse) and (max-width: 600px) {
+  #rotate-lock {
+    gap: 12px; box-sizing: border-box;
+    padding: max(24px, calc(env(safe-area-inset-top, 0px) + var(--tg-top, 0px) + 12px)) max(20px, env(safe-area-inset-right, 0px)) max(24px, calc(env(safe-area-inset-bottom, 0px) + var(--tg-bottom, 0px) + 12px)) max(20px, env(safe-area-inset-left, 0px));
+  }
+  #rotate-lock .rl-logo { display: block; line-height: 0; }
+  #rotate-lock .rl-logo img { width: min(64vw, 300px, 34vh); height: auto; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.85)); }
+  #rotate-lock b, #rotate-lock small { text-shadow: 0 1px 2px #000, 0 0 12px rgba(0, 0, 0, 0.95); }
+  #rotate-lock small { opacity: 0.92; }
+}
 @keyframes rl-turn { 0%, 20% { transform: rotate(0); } 50%, 75% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
 
 /* The title screen on a phone on its side (the only way a phone plays, 2026-10-02): the name on the left, the form on

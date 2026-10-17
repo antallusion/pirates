@@ -3377,6 +3377,7 @@
     "unit.titan_wrecks":                       { "local": "units/titan_wrecks.webp", "remote": "hf_20261017_200102_gpt-anim_titans_2.png", "job": "gpt-anim_titans_2", "fit": "sheet:anim_titans_2.0", "rev": 20261017200102},
     "unit.titan_wrecks_b":                     { "local": "units/titan_wrecks_b.webp", "remote": "hf_20261017_200102_gpt-anim_titans_2.png", "job": "gpt-anim_titans_2", "fit": "sheet:anim_titans_2.1", "rev": 20261017200102},
     "unit.titan_wrecks_atk":                   { "local": "units/titan_wrecks_atk.webp", "remote": "hf_20261017_200102_gpt-anim_titans_2.png", "job": "gpt-anim_titans_2", "fit": "sheet:anim_titans_2.2", "rev": 20261017200102},
-    "unit.titan_wrecks_hit":                   { "local": "units/titan_wrecks_hit.webp", "remote": "hf_20261017_200102_gpt-anim_titans_2.png", "job": "gpt-anim_titans_2", "fit": "sheet:anim_titans_2.3", "rev": 20261017200102}
+    "unit.titan_wrecks_hit":                   { "local": "units/titan_wrecks_hit.webp", "remote": "hf_20261017_200102_gpt-anim_titans_2.png", "job": "gpt-anim_titans_2", "fit": "sheet:anim_titans_2.3", "rev": 20261017200102},
+    "art.portrait":                            { "local": "art/portrait.webp", "remote": "gt_ui_pack.png", "job": "gpt-ui_pack", "fit": "opaque:1024", "rev": 20261017200000}
   }
 }

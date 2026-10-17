@@ -238,7 +238,7 @@ function setupMiniApp(w: TgWebApp): void {
   }
 }
 
-/** The loading screen of the Mini App's sign-in, in Telegram's theme colours. */
+/** The loading screen of the Mini App's sign-in: the title's painting, the logo, the wheel (the owner's pack). */
 function bootScreen(w: TgWebApp | null, text: string, failed = false): void {
   let el = document.getElementById('tg-boot');
   if (!el) {
@@ -251,7 +251,9 @@ function bootScreen(w: TgWebApp | null, text: string, failed = false): void {
   if (th.bg_color) el.style.setProperty('--tgb-bg', th.bg_color);
   if (th.text_color) el.style.setProperty('--tgb-fg', th.text_color);
   if (th.button_color) el.style.setProperty('--tgb-accent', th.button_color);
-  el.innerHTML = `<div class="tgb-card">${failed ? '' : '<i class="tgb-spin" aria-hidden="true"></i>'}<b class="tgb-name">GRAVETIDE</b><p>${esc(text)}</p></div>`;
+  // The logo (the page's own versioned picture, index.html's «turn the phone») and the pack's wheel over the painting.
+  const logo = document.querySelector('#rotate-lock .rl-logo')?.innerHTML;
+  el.innerHTML = `<div class="tgb-card"><b class="tgb-name">${logo ? `<picture class="tgb-logo">${logo}</picture>` : 'GRAVETIDE'}</b>${failed ? '' : '<i class="gt-wheel" aria-hidden="true"></i>'}<p>${esc(text)}</p></div>`;
   el.classList.toggle('failed', failed);
   // The sign-in never holds the game for ever: past 15 s a word and «Попробовать снова» (the page afresh), and the
   // waiting goes on under it.
