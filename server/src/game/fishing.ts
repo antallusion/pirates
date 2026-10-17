@@ -49,6 +49,11 @@ export interface Shoal {
   vy: number;
   until: number;
   region: RegionId;
+  /** A harbour's own shoal (owner, 2026-10-18: «добавь косяки рыб побольше и все завяжи рядышком»): the port it keeps to,
+   *  drifting within PORT_SHOAL_R of it. */
+  port?: string;
+  hx?: number;
+  hy?: number;
 }
 
 interface Fight {
@@ -119,8 +124,15 @@ export function sanitizeFishing(p: Profile): void {
   }
 }
 
-/** Shoals kept in each sea: more near the busy coasts. */
-const SHOALS_PER_REGION = 9;
+/** Shoals kept on each sea's open water and coasts (2026-10-18: 14, was 9 — a starter's nearest shoal lay 12 km off). */
+export const SHOALS_PER_REGION = 14;
+/** A harbour's own shoals (owner, 2026-10-18: «все что берется в портах, должно делаться недалеко от них, в районе 1,5км
+ *  максимум»): about every port a captain sails near, PORT_SHOALS of them within PORT_SHOAL_R of it, worked by a plain
+ *  net — the harbour's jobs to fill a net are done in sight of its quays. Kept only by the ports a captain is within
+ *  PORT_SHOAL_WATCH of (the tick's budget: the rest lapse with their time). */
+export const PORT_SHOALS = 3;
+export const PORT_SHOAL_R = 1500;
+const PORT_SHOAL_WATCH = 6000;
 const SHOAL_LIFE = 20 * 60;
 const SHOAL_VIEW = 4500;
 
@@ -196,7 +208,60 @@ function spawnShoal(game: Game, region: RegionId, force?: FishId, stockMul = 1):
   return null;
 }
 
-/** Every shoal afloat (for the tests and the admin). */
+/** A harbour's shoal: on the water 300–1100 m off its quays, of a kind a plain net takes there if any. */
+function spawnPortShoal(game: Game, port: { id: string; x: number; y: number }): Shoal | null {
+  const S = fs(game);
+  const rng = S.rng;
+  for (let k = 0; k < 16; k++) {
+    const a = rng.float() * Math.PI * 2, r = rng.range(300, 1100);
+    const x = port.x + Math.cos(a) * r, y = port.y + Math.sin(a) * r;
+    if (isLand(game.world, x, y) || !game.inZone(x, y) || x < 500 || y < 500 || x > 95_500 || y > 95_500) continue;
+    // in sight of the quays: open water on the way out to it (not round the island's far side)
+    if ([0.35, 0.55, 0.75].some((f) => isLand(game.world, port.x + (x - port.x) * f, port.y + (y - port.y) * f))) continue;
+    const region = regionAt(game.world, x, y);
+    if (redTideIn(game, region)) return null;
+    const fish = pickFish(game, x, y, 'net', 1) ?? pickFish(game, x, y, 'net', SKILL_MAX) ?? 'mackerel';
+    const max = rng.int(35, 70);
+    const sh: Shoal = { id: S.seq++, fish, x, y, r: rng.range(110, 190), stock: max, max, vx: rng.range(-0.3, 0.3), vy: rng.range(-0.3, 0.3), until: game.now + SHOAL_LIFE, region, port: port.id, hx: port.x, hy: port.y };
+    S.shoals.set(sh.id, sh);
+    return sh;
+  }
+  return null;
+}
+
+/** A harbour's shoals within PORT_SHOAL_R of it now. */
+export function portShoals(game: Game, portId: string): Shoal[] {
+  const out: Shoal[] = [];
+  for (const sh of fs(game).shoals.values()) if (sh.port === portId && sh.stock > 0) out.push(sh);
+  return out;
+}
+
+/** A harbour's shoals made up to `n` (PORT_SHOALS): the ones there now. */
+export function ensurePortShoals(game: Game, port: { id: string; x: number; y: number }, n = PORT_SHOALS): Shoal[] {
+  const have = portShoals(game, port.id);
+  for (let k = have.length; k < n; k++) {
+    const sh = spawnPortShoal(game, port);
+    if (!sh) break;
+    have.push(sh);
+  }
+  return have;
+}
+
+/** The harbours a captain at sea or in port lies within PORT_SHOAL_WATCH of: their shoals kept up. */
+function keepPortShoals(game: Game): void {
+  const ports = game.world.ports;
+  const near = new Set<number>();
+  for (const s of game.sessions) {
+    const ship = s.ship;
+    if (!ship || !ship.alive) continue;
+    for (let i = 0; i < ports.length; i++) {
+      const p = ports[i];
+      if (Math.abs(p.x - ship.state.x) < PORT_SHOAL_WATCH && Math.abs(p.y - ship.state.y) < PORT_SHOAL_WATCH && Math.hypot(p.x - ship.state.x, p.y - ship.state.y) < PORT_SHOAL_WATCH) near.add(i);
+    }
+  }
+  for (const i of near) ensurePortShoals(game, ports[i]);
+}
+
 /** A small shoal breaking the surface near a point, for a few minutes (the sea's small life, sealife.ts). */
 export function shoalNear(game: Game, x: number, y: number, region: RegionId): boolean {
   const S = fs(game);
@@ -352,6 +417,13 @@ export function stepFishing(game: Game): void {
   for (const sh of [...S.shoals.values()]) {
     sh.x += sh.vx;
     sh.y += sh.vy;
+    // a harbour's shoal turns back short of its bounds (or off the shore it drifted onto)
+    if (sh.hx !== undefined && sh.hy !== undefined && Math.hypot(sh.x - sh.hx, sh.y - sh.hy) > PORT_SHOAL_R - sh.r) {
+      sh.vx = -sh.vx;
+      sh.vy = -sh.vy;
+      sh.x += sh.vx * 2;
+      sh.y += sh.vy * 2;
+    }
     if (now > sh.until || sh.stock <= 0 || isLand(game.world, sh.x, sh.y)) S.shoals.delete(sh.id);
   }
   if (Math.floor(now) % 10 === 0) {
@@ -359,11 +431,12 @@ export function stepFishing(game: Game): void {
     const events = game.worldEvents.active(game);
     for (const r of regions) {
       if (redTideIn(game, r)) continue;
-      const here = [...S.shoals.values()].filter((x) => x.region === r);
+      const here = [...S.shoals.values()].filter((x) => x.region === r && !x.port);
       if (here.length < SHOALS_PER_REGION) spawnShoal(game, r);
       // A herring run keeps its coasts thick with herring while it lasts.
       if (events.some((e) => e.kind === 'herring_run' && e.region === r) && here.filter((x) => x.fish === 'herring').length < 8) spawnShoal(game, r, 'herring', 2.5);
     }
+    keepPortShoals(game);
     npcFishers(game);
   }
   for (const s of game.sessions) {

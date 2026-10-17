@@ -937,6 +937,9 @@ export interface PortView {
     /** A group contract: the company it is made for. */ group?: number;
     /** Owner, 2026-10-16: the ⚓ band it is for, and where it first sends her (a port, an island). */
     band?: [number, number]; dest?: { x: number; y: number; port?: string; island?: number };
+    /** Owner, 2026-10-18: a voyage past 1.5 km of the port (a delivery, a far sea, a contract of the Admiralty…) — how
+     *  far it sends her, in metres; the card says «Дальний рейс · N км». None: done near the port. */
+    far?: number;
     /** docs/36: a campaign quest's place — its chapter (1-based), its place in it (0-based) of the chapter's size, its level,
      *  and at a branch the way's label. */
     cmp?: { ch: number; k: number; size: number; gate: number; label?: string } }[];

@@ -1669,6 +1669,7 @@ body.touch .center-card .btn { min-height: 44px; padding-inline: 18px; }
 .q-row.q-taken { box-shadow: inset 3px 0 0 var(--k-gold, #e0b862); }
 .q-row .q-band { font-weight: 600; }
 .q-row .q-danger { color: var(--k-haze, #9a9488); }
+.q-row .q-far { color: #e0b765; white-space: nowrap; }
 .q-pay { gap: 1px; }
 .q-pay .q-or { font-size: 10px; color: var(--k-haze, #9a9488); }
 .q-sail .ico-sm { margin-right: 4px; }

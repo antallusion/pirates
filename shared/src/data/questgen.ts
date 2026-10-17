@@ -85,6 +85,22 @@ const NOT_VERBS = new Set(['журнал', 'акул', 'стол', 'пол', 'с
 
 /** The pace a race's time is reckoned at (knots). */
 export const RACE_KNOTS = 5;
+/** How far from its port a port's quest is done (owner, 2026-10-18: «все что берется в портах, должно делаться недалеко
+ *  от них, в районе 1,5км максимум»): its islands to land on lie within this of the port's quays (shore to quays), the
+ *  rest is put near it on the server (server/src/game/questlocal.ts). A voyage between ports goes where it names. */
+export const QUEST_LOCAL_R = 1500;
+
+/** Of a list of places, the ones within QUEST_LOCAL_R of a point (by `gap`), else the nearest one alone. */
+export function nearFirst<T>(list: T[], gap: (t: T) => number): T[] {
+  const near = list.filter((t) => gap(t) <= QUEST_LOCAL_R);
+  if (near.length) return near;
+  let best: T | undefined, bd = Infinity;
+  for (const t of list) {
+    const d = gap(t);
+    if (d < bd) [best, bd] = [t, d];
+  }
+  return best === undefined ? [] : [best];
+}
 
 /** The hold a delivery job may fill: a starter sloop's 30 less her own stores (planks, sailcloth, powder: 12) and a little catch. */
 export const QUEST_HOLD = 15;
@@ -693,7 +709,9 @@ export function generateQuests(world: World, seed: number): QuestDef[] {
   /** A port's jobs, from her own dice: sent to the `near` harbours (the nearest first), rowed to the islands about her. */
   const jobsOf = (port: Port, near: Port[], home: Island | undefined, per = PER_PORT) => {
     const rng = new Rng((hashString(port.id) ^ (seed * 2654435761)) >>> 0);
-    const islandsNear = world.islands.filter((is) => !is.portId && !is.minor && is.id !== home?.id && Math.hypot(is.x - port.x, is.y - port.y) < 26000);
+    // (every island of the world, not the old ones only: the near ones first, owner 2026-10-18 — an island id is the same
+    // in both, the world's islands only ever added after them)
+    const islandsNear = full.islands.filter((is) => !is.portId && !is.minor && !is.raft && !is.hidden && !is.slot && is.id !== home?.id && Math.hypot(is.x - port.x, is.y - port.y) < 26000);
     const plots = PLOTS.filter((pl) => safetyOk(pl, port));
     const levelBase = REGION_LEVEL[REGIONS[port.region].safety] ?? 0;
     let made = 0;
@@ -738,6 +756,8 @@ function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port
   if ((needs('visit2') || needs('deliver2') || needs('contraband') || needs('race2')) && !port2) return null;
   if ((needs('visit3') || needs('deliver3')) && !port3) return null;
   let island: Island | undefined, island2: Island | undefined, site: string | undefined;
+  // Near its port (QUEST_LOCAL_R, shore to quays), else the nearest (one draw of the dice either way, as before).
+  const shore = (is: Island) => Math.hypot(is.x - port.x, is.y - port.y) - is.radius;
   if (needs('land_site')) {
     const want = plot.site;
     const fits = (is: Island): string | undefined => {
@@ -747,17 +767,17 @@ function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port
       if (want === 'ruins') return here.find((f) => f === 'ruins' || f === 'shrine' || f === 'bell');
       return here.find((f) => f === want);
     };
-    const cands = islands.filter((is) => fits(is));
+    const cands = nearFirst(islands.filter((is) => fits(is)), shore);
     if (!cands.length) return null;
     island = rng.pick(cands);
     site = fits(island);
   } else if (needs('land_any')) {
-    const cands = islands.filter((is) => is.features.some((f) => f !== 'port') || sitesOf(is).some((s) => s !== 'gulls'));
+    const cands = nearFirst(islands.filter((is) => is.features.some((f) => f !== 'port') || sitesOf(is).some((s) => s !== 'gulls')), shore);
     if (!cands.length) return null;
     island = rng.pick(cands);
   }
   if (needs('land_any2')) {
-    const cands = islands.filter((is) => is !== island && (is.features.some((f) => f !== 'port') || sitesOf(is).some((s) => s !== 'gulls')));
+    const cands = nearFirst(islands.filter((is) => is !== island && (is.features.some((f) => f !== 'port') || sitesOf(is).some((s) => s !== 'gulls'))), shore);
     if (!cands.length) return null;
     island2 = rng.pick(cands);
   }

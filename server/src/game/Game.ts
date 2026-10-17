@@ -171,7 +171,7 @@ import { playMinigame, stepMinigames } from './minigames.ts';
 import { playTrek, stepTreks } from './trek.ts';
 import { islesPrompt, islesSecond, payKeeper, recallLookouts, sendIsles } from './isles.ts';
 import type { DelayedStrike } from './abilities.ts';
-import { canBoard, claimPrize, cutGrapples, resendBoarding, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
+import { boardingRangeBetween, canBoard, claimPrize, cutGrapples, resendBoarding, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
 import { assistPref, joinBoarding } from './boardgroup.ts'; // docs/25 block Е
 import { tacAction } from './tactical.ts';
 import { replayList, replayOf } from './tacreplay.ts'; // owner, 2026-10-16: «Повтор»
@@ -3450,7 +3450,16 @@ export class Game {
         if (monster !== undefined) return err(monster);
         const agg = msg.aggression === 'careful' || msg.aggression === 'brutal' ? msg.aggression : 'standard';
         const why = canBoard(this, ship, target);
-        if (why) return err(why);
+        if (why) {
+          // The odds taken («Рискнуть») while the ships drew apart: the helmsman takes her alongside and the grapples
+          // fly there (owner, 2026-10-18: «на нпс сразу можно было абордажить»), not «too far» and a second press.
+          if (why === 'Too far to throw grapples' && msg.risk === true && Math.hypot(target.state.x - ship.state.x, target.state.y - ship.state.y) < boardingRangeBetween(ship, target) * 8 && startPursuit(this, s, target.id, 'board') === null) {
+            const run = pursuitOf(ship);
+            if (run) run.grapple = true;
+            return;
+          }
+          return err(why);
+        }
         // A senior, or a slim chance (docs/23 items 49–51): the odds first, «Рискнуть» or «Отступить».
         if (msg.risk !== true) {
           const risk = boardRisk(this, ship, target, RISK_BUDGET_MS);

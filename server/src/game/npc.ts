@@ -16,7 +16,7 @@ import type { FactionId } from '../../../shared/src/data/factions.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { AmmoId, Rig, ShipClassId } from '../../../shared/src/data/ships.ts';
-import { CHASER_CONE } from '../../../shared/src/data/ships.ts';
+import { CHASER_CONE, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { angleDiff, clamp, DEG, dist, headingOf, headingVec, wrapAngle } from '../../../shared/src/math.ts';
 import { polarEfficiency, relWindDeg, sailFloor, windPush } from '../../../shared/src/sim/sailing.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
@@ -75,6 +75,10 @@ export interface NpcBrain {
   struck?: boolean;
   expiresAt: number;
   huntAccount: number | null;
+  /** A ship put out for a captain to fight (a port quest's quarry, the admin's /foe): when no new leg is to be had
+   *  (a harbour's water, a square above her) she lies to and looks again a little later, not struck off the sea. */
+  keep?: boolean;
+  holdUntil?: number;
   chase: { id: number; until: number } | null; // spotted from the crow's nest: pursue beyond detection range
   spared: Map<number, number>; // ship id -> until: plundered victims are left alone
   stuckCheck: { x: number; y: number; t: number };
@@ -441,6 +445,7 @@ function abstractStep(game: Game, ship: ShipEntity, brain: NpcBrain, dt: number)
 /** Arrival at the end of a path: merchants trade and re-plan, others pick a new leg. */
 function arrive(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   if (ship.caravanId) return; // a captain's caravan keeps its own route (caravans.ts)
+  if (brain.keep && (brain.holdUntil ?? 0) > game.now) return; // lying to a while
   if (ship.convoyOf && brain.destPort === ship.convoyOf.to) return convoyArrived(game, ship);
   if (brain.destPort) {
     const port = game.portById(brain.destPort);
@@ -462,7 +467,10 @@ function arrive(game: Game, ship: ShipEntity, brain: NpcBrain): void {
       if (planMerchantVoyage(game, ship, brain, port)) return;
     }
   }
-  if (!replan(game, ship, brain)) game.removeShip(ship.id);
+  if (replan(game, ship, brain)) return;
+  if (!brain.keep) return game.removeShip(ship.id);
+  brain.holdUntil = game.now + 6;
+  ship.input = { rudder: 0, sailTarget: 0.15 };
 }
 
 function replan(game: Game, ship: ShipEntity, brain: NpcBrain): boolean {
@@ -1411,10 +1419,11 @@ export function spawnCampaignFoe(game: Game, prey: ShipEntity, accountId: number
 
 /** A hunt's quarry (docs/11 P6): the band's leader, a named captain on a heavier ship somewhere in the region's open
  *  water, roaming it for an hour. Null when no open water was found. */
-export function spawnPackLeader(game: Game, region: RegionId, level: number): ShipEntity | null {
-  const [cx, cy] = REGIONS[region].center;
+export function spawnPackLeader(game: Game, region: RegionId, level: number, near?: { x: number; y: number; r: number }): ShipEntity | null {
+  // A port's hunt (owner, 2026-10-18: «все что берется в портах, должно делаться недалеко от них»): about its port.
+  const [cx, cy] = near ? [near.x, near.y] : REGIONS[region].center;
   for (let k = 0; k < 20; k++) {
-    const a = game.rng.float() * Math.PI * 2, r = 1500 + game.rng.float() * 6000;
+    const a = game.rng.float() * Math.PI * 2, r = near ? near.r * (0.35 + game.rng.float() * 0.5) : 1500 + game.rng.float() * 6000;
     const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
     if (!openSea(game, x, y) || regionAt(game.world, x, y) !== region || !game.inZone(x, y)) continue;
     // The leader sails a level above the captains the hunt is written for (canon D12).
@@ -1422,10 +1431,46 @@ export function spawnPackLeader(game: Game, region: RegionId, level: number): Sh
     const ship = game.spawnNpcShip('pirate', game.rng.pick(hullsFor('pirate', lv)), 'confederacy', x, y, game.rng.float() * Math.PI * 2);
     game.setNpcLevel(ship, lv);
     const brain = game.npcs.get(ship.id)!;
-    brain.area = { x: cx, y: cy, r: 8000 };
+    brain.area = { x: cx, y: cy, r: near ? near.r : 8000 };
+    if (near) brain.keep = true; // (off a harbour: she lies to when no leg is to be had)
     brain.expiresAt = game.now + 3600;
     ship.purse = (ship.purse ?? 0) + 300 + level * 20;
     planWander(game, ship, brain);
+    return ship;
+  }
+  return null;
+}
+
+/** A port-taken quest's quarry (owner, 2026-10-18: «все что берется в портах, должно делаться недалеко от них, в районе
+ *  1,5км максимум»): a raider — a ghost of the drowned seas, a merchantman for a tribute — put out on open water 500 m to
+ *  `r` × 0.85 off the port and kept within `r` of it for a quarter of an hour. Of the quest's ⚓ (`level`), a hull of
+ *  `minTier` or above when the step asks it. Null when no open water was found. */
+export function spawnQuestFoe(game: Game, at: { x: number; y: number }, role: 'pirate' | 'ghost' | 'merchant', level: number, r: number, minTier = 0, region?: RegionId): ShipEntity | null {
+  for (let k = 0; k < 16; k++) {
+    const a = game.rng.float() * Math.PI * 2, d = 500 + game.rng.float() * Math.max(100, r * 0.85 - 500);
+    const x = at.x + Math.cos(a) * d, y = at.y + Math.sin(a) * d;
+    if (!openSea(game, x, y) || !game.inZone(x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500) continue;
+    if (region && regionAt(game.world, x, y) !== region) continue; // a hunt of a sea's: in that sea
+    const lv = Math.max(1, Math.min(10, Math.round(level)));
+    let hulls = hullsFor(role === 'ghost' ? 'pirate' : role, lv);
+    if (minTier) {
+      const big = hulls.filter((c) => SHIP_CLASSES[c].tier >= minTier);
+      // (none of her ⚓: the least of the role's hulls of that rate, from the levels above)
+      for (let up = lv + 1; !big.length && up <= 10; up++) big.push(...hullsFor(role === 'ghost' ? 'pirate' : role, up).filter((c) => SHIP_CLASSES[c].tier >= minTier));
+      if (big.length) hulls = big;
+    }
+    const h = game.rng.float() * Math.PI * 2;
+    const ship = role === 'ghost' ? game.spawnNpcShip('ghost', game.rng.pick(hulls), 'choir', x, y, h)
+      : role === 'merchant' ? game.spawnNpcShip('merchant', game.rng.pick(hulls), 'league', x, y, h)
+      : game.spawnNpcShip('pirate', game.rng.pick(hulls), 'confederacy', x, y, h);
+    game.setNpcLevel(ship, lv);
+    const brain = game.npcs.get(ship.id);
+    if (brain) {
+      brain.area = { x: at.x, y: at.y, r };
+      brain.expiresAt = game.now + 900;
+      brain.keep = true;
+      planWander(game, ship, brain);
+    }
     return ship;
   }
   return null;

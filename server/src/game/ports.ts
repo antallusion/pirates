@@ -47,7 +47,8 @@ import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
 import { hireTrade, recruitCost, tavernOf } from './crew.ts';
 import { ESCORT_OFFERS } from './fleet.ts';
-import { bandRefusal, eventFavor, payOptions, portBand, questBand, questBandBlocked, questDest, questIsleBlocked, questOffers, questXpOf, shipLevelOfQuest } from './quests.ts';
+import { farVoyage } from './questlocal.ts';
+import { bandRefusal, eventFavor, farOf, payOptions, portBand, questBand, questBandBlocked, questDest, questIsleBlocked, questOffers, questXpOf, shipLevelOfQuest } from './quests.ts';
 import { todaysElite } from './elite.ts';
 import { MAX_BERTHS, woodAvailable } from './shipbuilding.ts';
 import { PLAN_REP, WOODS, YARD_FACTIONS_WITH_PLANS, carvedAt } from '../../../shared/src/data/shipbuild.ts';
@@ -196,7 +197,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     crewAvailable: Math.floor(game.tavernCrew.get(port.id) ?? 0),
     crewHireCost: recruitCost(game, port, p, 'sailor', ship), // the price the hire takes (Press Gang and all; docs/30)
     tavern: tavernView(game, port, p, ship, s),
-    questOffers: questOffers(p, port, game.now, favor, todaysElite(game, port)).map(({ q, blocked }) => ({ q, blocked: blocked ?? questIsleBlocked(game, p, q) ?? questBandBlocked(game, p, q) })).map(({ q, blocked }) => ({ id: q.id, band: questBand(game, q), ...((d) => (d ? { dest: d } : {}))(questDest(game, q)), name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked, silver: Math.round(q.reward.silver * (q.kind === 'job' ? veteranPay(p.level, q.requires.level ?? 1) : 1)), xp: questXpOf(game, p, q), path: q.reward.path, category: q.category, portrait: q.portrait, ...(q.category === 'arc' ? { chapter: Number(q.id.split('_').pop()) } : {}), ...(favor && q.kind === 'job' && favor(q) ? { urgent: true } : {}), ...((pays) => (pays ? { pays } : {}))(payOptions(game, q)), ...(q.group ? { group: q.group } : {}), ...((ship) => (ship ? { ship } : {}))(shipLevelOfQuest(q)) })),
+    questOffers: questOffers(p, port, game.now, favor, todaysElite(game, port), farOf(game)).map(({ q, blocked }) => ({ q, blocked: blocked ?? questIsleBlocked(game, p, q) ?? questBandBlocked(game, p, q) })).map(({ q, blocked }) => ({ id: q.id, band: questBand(game, q), ...((d) => (d ? { dest: d } : {}))(questDest(game, q)), ...((f) => (f ? { far: f } : {}))(farVoyage(game, q)), name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked, silver: Math.round(q.reward.silver * (q.kind === 'job' ? veteranPay(p.level, q.requires.level ?? 1) : 1)), xp: questXpOf(game, p, q), path: q.reward.path, category: q.category, portrait: q.portrait, ...(q.category === 'arc' ? { chapter: Number(q.id.split('_').pop()) } : {}), ...(favor && q.kind === 'job' && favor(q) ? { urgent: true } : {}), ...((pays) => (pays ? { pays } : {}))(payOptions(game, q)), ...(q.group ? { group: q.group } : {}), ...((ship) => (ship ? { ship } : {}))(shipLevelOfQuest(q)) })),
     captainsHouse: CAPTAINS_HOUSES.includes(port.id),
     fishRecords: Object.entries(fishRecords(game)).map(([fish, r]) => ({ fish: fish as FishId, name: r.name, kg: r.kg })),
     wanted: wantedBoard(game, p, port),

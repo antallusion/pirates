@@ -2906,8 +2906,9 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     // no second button for it (QA, 2026-10-04).
     if (held || state.bosses.some((b) => b.noBoard?.includes(s.id))) continue;
     // Boarding off on her ship or on yours (docs/24 C1): guns only, no «На абордаж» (the key says why, once a press).
-    if ((c.flags | (you.flags ?? 0)) & SF.NO_BOARD) {
-      noBoardWhy = LFL(you.flags & SF.NO_BOARD ? 'fl.offYou' : 'fl.offHer');
+    // (Her own switch keeps her off captains only: the sea's own she boards at once, owner 2026-10-18.)
+    if (c.flags & SF.NO_BOARD || ((you.flags ?? 0) & SF.NO_BOARD && captainSide(s.info))) {
+      noBoardWhy = LFL(!(c.flags & SF.NO_BOARD) ? 'fl.offYou' : 'fl.offHer');
       continue;
     }
     const d = dist(own.x, own.y, c.x, c.y);
@@ -3144,13 +3145,18 @@ function fairCaptain(flags: number, info: ShipInfo): boolean {
   return !!them.city && citiesHostile(me.city, them.city);
 }
 
+/** A captain's ship or one sailing with a captain (an escort): «Абордаж: выкл» on hers keeps her grapples off these only. */
+function captainSide(info: { isPlayer?: boolean; npcRole?: string }): boolean {
+  return !!info.isPlayer || info.npcRole === 'escort';
+}
+
 /** A ship no grapple takes (a beast of the sea, a monster, a zone boss, a great one's body or limb): «Атаковать» on her
  *  is the guns' fight, and «Сблизиться» is not offered (the server makes it so: pursuit.ts unboardable). */
 function unboardableMark(id: number): boolean {
   const info = state.ships.get(id)?.info;
   if (!info) return false;
   // …nor one with boarding off, or from hers (docs/24 C1).
-  const nb = ((state.ships.get(id)?.cur.flags ?? 0) | (state.you?.flags ?? 0)) & SF.NO_BOARD;
+  const nb = ((state.ships.get(id)?.cur.flags ?? 0) & SF.NO_BOARD) || ((state.you?.flags ?? 0) & SF.NO_BOARD && captainSide(info));
   return !!nb || info.npcRole === 'beast' || !!beastOfClass(info.classId) || !!SHIP_CLASSES[info.classId]?.monster || isZoneBossClass(info.classId) || state.bosses.some((b) => b.noBoard?.includes(id));
 }
 

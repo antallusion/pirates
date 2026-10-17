@@ -34,7 +34,7 @@ import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { angleDiff, DEG, headingOf } from '../../../shared/src/math.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { stopAutosail, autosailOf } from './autosail.ts';
-import { boardingRangeBetween, crewRefuses } from './boarding.ts';
+import { boardingRangeBetween, canBoard, captainsShip, crewRefuses, startBoarding } from './boarding.ts';
 import { NO_BOARD_HER, NO_BOARD_OWN, boardingOff } from './colours.ts';
 import { applyDamage, damageBlocked, effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
 import type { Game } from './Game.ts';
@@ -105,6 +105,8 @@ export interface Pursuit {
   auto?: { left: number; next: number };
   /** The guns' fight: running in bow on to the close band (true), or lying broadside on in it. */
   closing?: boolean;
+  /** The odds taken («Рискнуть»), and she out of reach by then: the grapples fly as soon as she is alongside. */
+  grapple?: boolean;
   /** Held fast: the planner's route to her mark, its next point, when planned and to where. */
   way?: { path: Path; i: number; at: number; tx: number; ty: number } | null;
   /** Held fast: since when (under a knot), how many times running, when last under way; sailed round by the route
@@ -161,9 +163,11 @@ export function startPursuit(game: Game, s: PlayerSession, id: number, mode: Pur
   if (autosailOf(ship)) stopAutosail(game, s, 'manual');
   if (mode === 'board' && unboardable(target!)) mode = 'guns';
   // «Абордаж: выкл» on either ship (docs/24 C1): the guns' fight, and why, once (at the order, not every tick).
-  if (mode === 'board' && (boardingOff(game, ship) || boardingOff(game, target!))) {
+  // (Her own switch keeps her off captains only: the sea's own she boards at once, owner 2026-10-18.)
+  const ownOff = boardingOff(game, ship) && captainsShip(game, target!);
+  if (mode === 'board' && (ownOff || boardingOff(game, target!))) {
     mode = 'guns';
-    game.sendTo(s, { t: 'toast', msg: boardingOff(game, ship) ? NO_BOARD_OWN : NO_BOARD_HER, kind: 'info' });
+    game.sendTo(s, { t: 'toast', msg: ownOff ? NO_BOARD_OWN : NO_BOARD_HER, kind: 'info' });
   }
   const prev = runs.get(ship);
   const run: Pursuit = prev && prev.target === id && prev.roam === undefined
@@ -363,6 +367,11 @@ export function stepPursuit(game: Game): void {
         run.mode = 'guns';
         boardRun(game, s, ship, false);
         send(game, s, run);
+        continue;
+      }
+      if (run.grapple && d <= reach && canBoard(game, ship, t) === null) {
+        stopPursuit(game, s, 'board');
+        startBoarding(game, ship, t, 'standard');
         continue;
       }
       if (d < reach * 1.4) {

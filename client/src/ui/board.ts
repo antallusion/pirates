@@ -62,6 +62,8 @@ export interface BoardItem {
   band?: [number, number];
   /** Where it first sends her (a port's or an island's name and place); none: it is done about the sea, or here. */
   dest?: { x: number; y: number; name: string } | null;
+  /** A voyage past 1.5 km of the port (owner, 2026-10-18): how far, in metres — «Дальний рейс · N км». */
+  far?: number;
   /** Why she may not take it (server words), or null. */
   blocked: string | null;
   urgent: boolean;
@@ -99,6 +101,9 @@ export const chipsOfQuest = (kind: QuestKind, category: string | undefined, urge
   return urgent ? ['urgent', 'jobs'] : ['jobs'];
 };
 
+/** A voyage past this from the port is a far one (server/src/game/questlocal.ts LOCAL_R). */
+const FAR_VOYAGE = 1500;
+
 /** The offers seen on this port's board while she lies here (a new harbour, a new memory): what she takes of them keeps
  *  its card at the head of the list, «Взять» turned «Плыть». */
 const visit = { port: '', offered: new Set<string>() };
@@ -121,9 +126,11 @@ export function boardItems(view: PortView, state: ClientState): BoardItem[] {
   for (const c of view.contracts) {
     const to = port(c.toPort);
     const ease = c.kind === 'courier' ? 1.15 : c.kind === 'bounty' ? 0.9 : 1;
+    const here = port(view.portId);
+    const far = to && here ? Math.hypot(to.x - here.x, to.y - here.y) : 0;
     const blocked = c.blocked ?? null;
     out.push({ kind: 'contract', id: c.id, title: serverText(c.title), text: serverText(c.description), art: contractArt(c), silver: c.reward, xp: c.xp, ...(c.band ? { band: c.band } : {}),
-      dest: to ? { x: to.x, y: to.y, name: placeName(to.name) } : null, blocked, urgent: false, group: false, path: false, stores: false, taken: false, chips: ['contracts'],
+      dest: to ? { x: to.x, y: to.y, name: placeName(to.name) } : null, ...(far > FAR_VOYAGE ? { far } : {}), blocked, urgent: false, group: false, path: false, stores: false, taken: false, chips: ['contracts'],
       score: (c.reward + c.xp * 3) * ease * fit(c.band) * (blocked ? 0.05 : 1) });
   }
   for (const q of view.questOffers) {
@@ -131,7 +138,7 @@ export function boardItems(view: PortView, state: ClientState): BoardItem[] {
     const d = q.dest;
     const where = d ? (d.port ? placeName(port(d.port)?.name ?? '') : d.island !== undefined ? placeName(state.islands.get(d.island)?.name ?? '') : '') : '';
     out.push({ kind: 'quest', id: q.id, title: qtext(q.kind, q.name), text: `${qtext(q.kind, q.summary)} ${q.steps.map((t, i) => `${i + 1}. ${qtext(q.kind, t)}`).join(' ')}`, art, silver: q.silver, xp: q.xp,
-      ...(q.band ? { band: q.band } : {}), dest: d ? { x: d.x, y: d.y, name: where } : null, blocked: q.blocked, urgent: !!q.urgent, group: !!q.group, path: !!q.path, stores: !!q.pays?.stores, taken: false,
+      ...(q.band ? { band: q.band } : {}), dest: d ? { x: d.x, y: d.y, name: where } : null, ...(q.far ? { far: q.far } : {}), blocked: q.blocked, urgent: !!q.urgent, group: !!q.group, path: !!q.path, stores: !!q.pays?.stores, taken: false,
       cls: questClass(q), ...(q.cmp ? { cmp: { ch: q.cmp.ch, k: q.cmp.k, size: q.cmp.size } } : {}), ...(q.cmp?.label ? { title: `${cmpText(q.cmp.label)}: ${qtext(q.kind, q.name)}` } : {}),
       chips: chipsOfQuest(q.kind, q.category, !!q.urgent),
       score: (q.silver + q.xp * 3) * fit(q.band) * (q.urgent ? 1.4 : 1) * (q.blocked ? 0.05 : 1) });
@@ -186,7 +193,10 @@ function meta(x: BoardItem, state: ClientState, mine: number): string {
     parts.push(`<span class="q-band lvl-${t}" style="color:${THREAT_COLOR[t]}">${esc(b)}</span> <span class="q-danger">${esc(L(`d.${t}`))}</span>`);
   }
   const own = state.ports.find((p) => p.id === state.portView?.portId) ?? null;
-  if (x.dest && x.dest.name) {
+  if (x.far) {
+    // a voyage: «Дальний рейс · Солтмарроу · 3,2 км» (owner, 2026-10-18: near the port all else)
+    parts.push(`<span class="q-far">${esc(x.dest?.name ? L('farTo', { where: x.dest.name, d: distWords(x.far) }) : L('far', { d: distWords(x.far) }))}</span>`);
+  } else if (x.dest && x.dest.name) {
     const d = own ? Math.hypot(x.dest.x - own.x, x.dest.y - own.y) : 0;
     parts.push(esc(d < 600 ? `→ ${L('here')}` : L('to', { where: x.dest.name, d: distWords(d) })));
   }
