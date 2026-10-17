@@ -106,6 +106,182 @@
 кампании («ваш путь: …»). Дальше текст от выбора не зависит, так что обе дороги доходят до конца. Каждая глава кончается
 кошельком в четыре задания своего уровня и своей наградой.
 
+## 2а. Локации — кампания идёт по миру по очереди
+
+Владелец, 2026-10-18: «чтобы я проходя ее побывал во всех локациях по очереди, условно там 5 квестов в одной, потом
+еще в другой и еще и еще… все завяжи рядышком… делай логичнее все».
+
+- **Локация** — порт и его воды. В Бездне, где портов нет, — остров Бездны и его воды.
+- **Задания главы идут серией по 4–6** (обычно по 5); вся серия делается в одной локации:
+  - всё, что серия называет, лежит не дальше **1,5 км** от локации: её порт; ближайшие к ней острова (от якорной
+    стоянки или от берега острова самого порта);
+  - бой кампании выходит в её водах (`near` у шагов «абордаж», «потопить», «звери»; спавн врагов и зверей — там же и
+    только когда игрок подошёл);
+  - логово — рядом с ней;
+  - для водолазов в её отмелях положено отдельное затонувшее судно, глубина до 8 м (`campaignPlaces`, дописывается в
+    конец `game.wrecks`);
+  - дозор («продержитесь в водах») — в её водах;
+  - доставка — между её портом и ближайшим соседним (в среднем 3,1 км, не дальше 5,3).
+- **Первое задание серии — плавание** в новую локацию; это единственный длинный переход, в среднем 14,6 км.
+- **Порядок локаций.**
+  - Глава начинается в порту своего наставника.
+  - Дальше — ближайший ещё не пройденный порт морей главы того уровня (⚓), на котором идёт серия. Порт выбирается
+    только если в его водах есть острова.
+  - Если задание серии называет порт (`at:`), серия идёт там, если вокруг него есть острова.
+  - Последняя серия — дома, в Солтмарроу.
+  - Моря идут в порядке уровней: Чёрное побережье → Грейвуотер → Шепчущий архипелаг → Простор Мертвеца → Предел
+    Левиафана → Пепельные острова → Утонувшая Корона → Бездна.
+- **Итог:** **138 локаций** (серии: 11 по 4, 86 по 5, 41 по 6), **94 разных порта** и 7 островов самой Бездны. Остальные
+  главы Бездны идут в гаванях её края, потому что их задания называют гавань. Исключения из 1,5 км: порты наставников
+  без островов рядом (Солтмарроу, Порт-Грейвсенд, Сент-Мо) берут два ближайших острова не дальше 2,5 км.
+- **Сохранения игроков.** Место игрока — номер задания, а задание при старте строится заново, уже в новой локации, на
+  том же шаге.
+- **Плавание по главам** (тест «капитан, проходящий только кампанию»): за главу 30–160 км, из них 17–130 — переходы
+  между локациями, а внутри локаций 1–2,5 км на задание.
+
+Таблица локаций (`node tools/campaign-sim.ts --locs`, мир 1337; названия — английские имена мира):
+
+| № | Глава | Локация | Море | Задания | Ур. | Плавание до неё, км |
+|---|---|---|---|---|---|---|
+| 1 | 1 | Saltmarrow | black_coast | 1–6 | 1–1 | — |
+| 2 | 1 | Kelp Landing | black_coast | 7–12 | 2–2 | 6.2 |
+| 3 | 1 | Cod Bay | black_coast | 13–17 | 2–3 | 3.9 |
+| 4 | 1 | Cod Port | black_coast | 18–22 | 3–3 | 5.0 |
+| 5 | 2 | Port Gravesend | black_coast | 23–27 | 4–4 | 10.3 |
+| 6 | 2 | Ravenholm | black_coast | 28–32 | 4–5 | 5.3 |
+| 7 | 2 | Bellhaven | black_coast | 33–36 | 5–5 | 5.0 |
+| 8 | 2 | Pearl Port | black_coast | 37–40 | 5–5 | 4.4 |
+| 9 | 3 | Gallowsmouth | black_coast | 41–45 | 6–6 | 15.6 |
+| 10 | 3 | Lucky Creek | black_coast | 46–50 | 6–7 | 5.5 |
+| 11 | 3 | Port Gravesend | black_coast | 51–55 | 7–7 | 10.4 |
+| 12 | 3 | Herring Creek | black_coast | 56–59 | 7–7 | 6.4 |
+| 13 | 4 | Tidewrack | gravewater | 60–65 | 8–8 | 55.4 |
+| 14 | 4 | Old Haven | gravewater | 66–71 | 8–9 | 4.2 |
+| 15 | 4 | Gale Cove | gravewater | 72–76 | 9–9 | 3.2 |
+| 16 | 5 | Hushwater | whispering | 77–82 | 9–10 | 48.2 |
+| 17 | 5 | Mermaid Watch | whispering | 83–88 | 10–10 | 1.0 |
+| 18 | 5 | Mirrorfen | whispering | 89–93 | 10–11 | 20.8 |
+| 19 | 6 | Port Gravesend | black_coast | 94–98 | 11–11 | 37.5 |
+| 20 | 6 | Sail Backwater | gravewater | 99–103 | 11–12 | 23.5 |
+| 21 | 6 | Gale Bay | gravewater | 104–107 | 12–12 | 21.2 |
+| 22 | 6 | Gale Bay | gravewater | 108–111 | 12–12 | 0.0 |
+| 23 | 7 | Hollowmere | gravewater | 112–117 | 13–13 | 14.1 |
+| 24 | 7 | Shell Watch | gravewater | 118–123 | 13–14 | 3.3 |
+| 25 | 7 | Anchor Wharf | gravewater | 124–128 | 14–14 | 10.9 |
+| 26 | 8 | Mirrorfen | whispering | 129–134 | 14–15 | 54.7 |
+| 27 | 8 | Hushwater | whispering | 135–140 | 15–15 | 20.6 |
+| 28 | 8 | Rope Pier | whispering | 141–145 | 15–16 | 2.3 |
+| 29 | 9 | Wrecktide | dead_mans_expanse | 146–151 | 16–16 | 38.1 |
+| 30 | 9 | Wreckhold | dead_mans_expanse | 152–157 | 16–17 | 16.9 |
+| 31 | 9 | Gale Landing | dead_mans_expanse | 158–162 | 17–17 | 11.3 |
+| 32 | 10 | Sugarloaf | gravewater | 163–168 | 17–18 | 21.4 |
+| 33 | 10 | Hollowmere | gravewater | 169–174 | 18–18 | 14.0 |
+| 34 | 10 | Bellwick Isle | gravewater | 175–179 | 18–18 | 11.0 |
+| 35 | 11 | Mirrorfen | whispering | 180–185 | 19–19 | 39.4 |
+| 36 | 11 | Hushwater | whispering | 186–190 | 19–19 | 20.6 |
+| 37 | 11 | Copper Backwater | whispering | 191–195 | 20–20 | 7.8 |
+| 38 | 11 | Pearl Pier | whispering | 196–200 | 20–20 | 4.7 |
+| 39 | 12 | Harpoon's Rest | leviathan_reach | 201–206 | 20–21 | 39.5 |
+| 40 | 12 | Frostgate | leviathan_reach | 207–211 | 21–21 | 14.0 |
+| 41 | 12 | Cod Moorings | leviathan_reach | 212–216 | 21–22 | 5.3 |
+| 42 | 12 | Iron Rest | leviathan_reach | 217–221 | 22–22 | 10.8 |
+| 43 | 13 | Frostgate | leviathan_reach | 222–227 | 22–23 | 16.1 |
+| 44 | 13 | Lantern Wharf | leviathan_reach | 228–232 | 23–23 | 7.4 |
+| 45 | 13 | Bell Landing | leviathan_reach | 233–237 | 23–23 | 9.6 |
+| 46 | 13 | Brine Backwater | leviathan_reach | 238–242 | 23–24 | 6.5 |
+| 47 | 14 | Lotus Anchorage | dead_mans_expanse | 243–248 | 24–24 | 68.4 |
+| 48 | 14 | Fog Wharf | gravewater | 249–253 | 24–25 | 14.1 |
+| 49 | 14 | Whale Sound | gravewater | 254–258 | 25–25 | 2.7 |
+| 50 | 14 | Tar Point | gravewater | 259–263 | 25–25 | 3.8 |
+| 51 | 15 | Sealhold | leviathan_reach | 264–269 | 26–26 | 58.0 |
+| 52 | 15 | Harpoon's Rest | leviathan_reach | 270–275 | 26–26 | 20.4 |
+| 53 | 15 | Frostgate | leviathan_reach | 276–280 | 27–27 | 14.0 |
+| 54 | 15 | Coal Creek | leviathan_reach | 281–285 | 27–27 | 8.9 |
+| 55 | 16 | Frostgate | leviathan_reach | 286–291 | 27–28 | 8.9 |
+| 56 | 16 | Anchor Roads | leviathan_reach | 292–297 | 28–28 | 12.6 |
+| 57 | 16 | Harpoon's Rest | leviathan_reach | 298–302 | 28–29 | 26.2 |
+| 58 | 16 | Moon Point | leviathan_reach | 303–307 | 29–29 | 8.5 |
+| 59 | 17 | Saltglass | dead_mans_expanse | 308–313 | 29–29 | 48.1 |
+| 60 | 17 | Oyster Roads | dead_mans_expanse | 314–319 | 30–30 | 18.7 |
+| 61 | 17 | Lotus Anchorage | dead_mans_expanse | 320–324 | 30–30 | 34.6 |
+| 62 | 17 | Wreckhold | dead_mans_expanse | 325–329 | 30–31 | 29.7 |
+| 63 | 18 | Fogmouth | whispering | 330–335 | 31–31 | 19.4 |
+| 64 | 18 | Copper Sound | whispering | 336–341 | 31–32 | 13.1 |
+| 65 | 18 | Lantern Tavern | whispering | 342–346 | 32–32 | 3.7 |
+| 66 | 18 | Widow's Wick | whispering | 347–351 | 32–32 | 26.3 |
+| 67 | 19 | Cinderhold | ashen_isles | 352–357 | 33–33 | 81.8 |
+| 68 | 19 | Crooked Town | ashen_isles | 358–362 | 33–33 | 5.5 |
+| 69 | 19 | Slagport | ashen_isles | 363–367 | 33–34 | 11.0 |
+| 70 | 19 | Slagport | ashen_isles | 368–372 | 34–34 | 0.0 |
+| 71 | 20 | Slagport | ashen_isles | 373–378 | 34–35 | 0.0 |
+| 72 | 20 | Barrel Stockade | ashen_isles | 379–383 | 35–35 | 4.9 |
+| 73 | 20 | Pearl Stockade | ashen_isles | 384–388 | 35–35 | 4.5 |
+| 74 | 20 | Crooked Landing | ashen_isles | 389–393 | 35–36 | 3.3 |
+| 75 | 21 | Wreckhold | dead_mans_expanse | 394–399 | 36–36 | 56.8 |
+| 76 | 21 | Wrecktide | dead_mans_expanse | 400–404 | 36–37 | 16.9 |
+| 77 | 21 | Shell Roads | dead_mans_expanse | 405–409 | 37–37 | 4.2 |
+| 78 | 21 | Crab Sound | dead_mans_expanse | 410–414 | 37–37 | 6.6 |
+| 79 | 22 | Slagport | ashen_isles | 415–420 | 37–38 | 45.6 |
+| 80 | 22 | Herring Tavern | ashen_isles | 421–425 | 38–38 | 14.5 |
+| 81 | 22 | Rum Tavern | ashen_isles | 426–430 | 38–38 | 2.9 |
+| 82 | 22 | Fog Pier | ashen_isles | 431–435 | 39–39 | 2.4 |
+| 83 | 23 | Tidehallow | drowned_crown | 436–441 | 39–39 | 39.0 |
+| 84 | 23 | Copper Point | drowned_crown | 442–446 | 39–40 | 3.4 |
+| 85 | 23 | Last Pier | drowned_crown | 447–451 | 40–40 | 2.9 |
+| 86 | 23 | Quiet Quarter | drowned_crown | 452–456 | 40–40 | 4.3 |
+| 87 | 24 | Saint Maw | drowned_crown | 457–462 | 41–41 | 11.5 |
+| 88 | 24 | Grey Landing | drowned_crown | 463–468 | 41–41 | 2.7 |
+| 89 | 24 | Tidehallow | drowned_crown | 469–473 | 41–42 | 7.5 |
+| 90 | 24 | Hollowchapel | drowned_crown | 474–478 | 42–42 | 8.2 |
+| 91 | 25 | Steeplewater | drowned_crown | 479–484 | 42–43 | 27.2 |
+| 92 | 25 | Pearl Tavern | drowned_crown | 485–490 | 43–43 | 4.7 |
+| 93 | 25 | Barrel Port | drowned_crown | 491–495 | 43–43 | 5.6 |
+| 94 | 25 | Tallow Roads | drowned_crown | 496–500 | 43–44 | 4.2 |
+| 95 | 26 | Saint Maw | drowned_crown | 501–506 | 44–44 | 18.2 |
+| 96 | 26 | Anchor Landing | drowned_crown | 507–512 | 44–45 | 3.4 |
+| 97 | 26 | Cannon Bay | drowned_crown | 513–517 | 45–45 | 10.4 |
+| 98 | 26 | Last Light | drowned_crown | 518–522 | 45–45 | 5.3 |
+| 99 | 27 | Brimstone Bay | ashen_isles | 523–528 | 45–46 | 35.5 |
+| 100 | 27 | Gull Landing | ashen_isles | 529–534 | 46–46 | 5.3 |
+| 101 | 27 | Widows Roads | ashen_isles | 535–539 | 46–47 | 2.6 |
+| 102 | 27 | Cinderheap | ashen_isles | 540–544 | 47–47 | 6.2 |
+| 103 | 28 | Tidehallow | drowned_crown | 545–550 | 47–47 | 28.9 |
+| 104 | 28 | Widows Town | drowned_crown | 551–555 | 47–48 | 13.1 |
+| 105 | 28 | Gold Point | drowned_crown | 556–560 | 48–48 | 5.6 |
+| 106 | 28 | Cannon Tavern | drowned_crown | 561–565 | 48–48 | 5.3 |
+| 107 | 29 | Crownfall | drowned_crown | 566–570 | 49–49 | 8.1 |
+| 108 | 29 | Oyster Rest | drowned_crown | 571–575 | 49–49 | 2.4 |
+| 109 | 29 | Marrowdeep | drowned_crown | 576–580 | 49–50 | 4.7 |
+| 110 | 29 | Last Light | drowned_crown | 581–585 | 50–50 | 9.3 |
+| 111 | 30 | Marrowdeep | drowned_crown | 586–590 | 50–50 | 9.3 |
+| 112 | 30 | Silver Creek | drowned_crown | 591–595 | 50–51 | 5.2 |
+| 113 | 30 | Last Light | drowned_crown | 596–600 | 51–51 | 7.9 |
+| 114 | 30 | Last Light | drowned_crown | 601–605 | 51–51 | 0.0 |
+| 115 | 31 | Ribpit (остров) | the_abyss | 606–609 | 51–52 | 6.6 |
+| 116 | 31 | Mermaid Roads | drowned_crown | 610–614 | 52–52 | 2.6 |
+| 117 | 31 | Iron Point | drowned_crown | 615–619 | 52–52 | 4.5 |
+| 118 | 31 | Raven Haven | drowned_crown | 620–625 | 52–53 | 13.2 |
+| 119 | 32 | Crownfall | drowned_crown | 626–630 | 53–53 | 20.9 |
+| 120 | 32 | Saintsteps | drowned_crown | 631–635 | 53–53 | 6.8 |
+| 121 | 32 | Kelp Port | drowned_crown | 636–640 | 54–54 | 3.0 |
+| 122 | 32 | Cod Wharf | drowned_crown | 641–644 | 54–54 | 9.1 |
+| 123 | 33 | Marrowdeep | drowned_crown | 645–648 | 54–54 | 12.5 |
+| 124 | 33 | Lightlesspit Key (остров) | the_abyss | 649–653 | 54–55 | 6.7 |
+| 125 | 33 | Barrel Rest | drowned_crown | 654–658 | 55–55 | 26.5 |
+| 126 | 33 | Hollowvault (остров) | the_abyss | 659–663 | 55–55 | 15.6 |
+| 127 | 34 | Silentspine (остров) | the_abyss | 664–667 | 56–56 | 1.1 |
+| 128 | 34 | Raven Haven | drowned_crown | 668–672 | 56–56 | 3.4 |
+| 129 | 34 | Hollowossuary (остров) | the_abyss | 673–677 | 56–56 | 1.9 |
+| 130 | 34 | Ribjaw (остров) | the_abyss | 678–682 | 56–57 | 3.7 |
+| 131 | 35 | Marrowdeep | drowned_crown | 683–686 | 57–57 | 20.3 |
+| 132 | 35 | Oyster Rest | drowned_crown | 687–691 | 57–57 | 4.7 |
+| 133 | 35 | Silver Creek | drowned_crown | 692–696 | 57–58 | 5.1 |
+| 134 | 35 | Deepvault Rock (остров) | the_abyss | 697–701 | 58–58 | 11.4 |
+| 135 | 36 | Last Light | drowned_crown | 702–705 | 58–58 | 10.0 |
+| 136 | 36 | Iron Point | drowned_crown | 706–710 | 58–59 | 6.3 |
+| 137 | 36 | Mermaid Roads | drowned_crown | 711–715 | 59–59 | 4.5 |
+| 138 | 36 | Saltmarrow | black_coast | 716–720 | 59–59 | 100.7 |
+
 ## 3. Как устроено
 
 **Данные** — `shared/src/data/campaign/`:
@@ -123,13 +299,12 @@
 - `progress.ts` — место игрока и миграция;
 - `chapters.ts` генерирует `node tools/campaign-check.ts --index`.
 
-**Сборка на мир.** Сервер строит кампанию при старте (`initCampaign`, около 0,2 с): 729 заданий: 720 мест, у 9 развилок
-по две дороги.
-- Порт наставника фиксирован.
-- Порты и острова для каждого задания берутся из морей главы, из квадратов по уровню задания: свой ⚓ или на один ниже.
-  Если таких нет, круг расширяется.
-- Площадки высадки подбираются по острову.
-- Острова не повторяются пять заданий подряд.
+**Сборка на мир.** Сервер строит кампанию при старте (`initCampaign`, около 0,15 с): 729 заданий: 720 мест, у 9
+развилок по две дороги. Места каждого задания берутся из его локации (§2а).
+- Локации серий выбираются из морей главы по уровню серии (свой ⚓ или на один ниже), от ближайшего к прошлой локации.
+- Острова серии берутся по кругу из ближних к локации, площадки высадки — из них же; если площадки нет, высадка
+  просто на остров.
+- Водолазам — одно погружение на шаг, к своему судну.
 - Количества (абордажей, потоплений и т. п.) растут с уровнем.
 - Всё детерминировано, а место игрока — просто номер `campaign.at`.
 

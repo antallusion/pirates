@@ -12,6 +12,20 @@ import { PLAN } from '../shared/src/data/campaign/plan.ts';
 import { generateWorld } from '../shared/src/world/worldgen.ts';
 
 const md = process.argv.includes('--md');
+if (process.argv.includes('--locs')) {
+  // the locations, in order (docs/36 §2a): the run there, its levels, the voyage to it
+  const w0 = generateWorld(1337);
+  const c0 = buildCampaign(w0, 1337, CHAPTERS);
+  const pc = campaignPaces();
+  console.log('| № | Глава | Локация | Море | Задания | Ур. | Плавание до неё, км |');
+  console.log('|---|---|---|---|---|---|---|');
+  c0.locations.forEach((l, i) => {
+    const prev = c0.locations[i - 1];
+    const km = prev ? (Math.hypot(l.x - prev.x, l.y - prev.y) / 1000).toFixed(1) : '—';
+    console.log(`| ${i + 1} | ${l.ch} | ${l.name}${l.kind === 'isle' ? ' (остров)' : ''} | ${l.region} | ${l.from + 1}–${l.from + l.size} | ${pc[l.from].gate}–${pc[l.from + l.size - 1].gate} | ${km} |`);
+  });
+  process.exit(0);
+}
 const world = generateWorld(1337);
 const c = buildCampaign(world, 1337, CHAPTERS);
 const paces = campaignPaces();
