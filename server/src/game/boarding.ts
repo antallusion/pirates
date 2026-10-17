@@ -65,8 +65,9 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   if (inDuel(game, a) || inDuel(game, b)) return 'No boarding in a duel';
   if (a.ghost || b.ghost) return 'She is across the line of these waters — close in first';
   if (a.npcRole === 'beast' || b.npcRole === 'beast') return 'There are no decks to board on a creature of the deep';
-  // «Абордаж: выкл» (docs/24 C1): she boards nobody and nobody boards her — captains and the sea's own alike.
-  if (boardingOff(game, a)) return NO_BOARD_OWN;
+  // «Абордаж: выкл» (docs/24 C1): nobody boards her — captains and the sea's own alike; and she boards no captain. The
+  // sea's own ships she may board at once whatever the switch (owner, 2026-10-18: «на нпс сразу можно было абордажить»).
+  if (boardingOff(game, a) && captainsShip(game, b)) return NO_BOARD_OWN;
   if (boardingOff(game, b)) return NO_BOARD_HER;
   const zb = zbBoardBlocked(b) ?? zbBoardBlocked(a); // a zone boss: guns only (docs/21)
   if (zb) return zb;
@@ -97,10 +98,24 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   return crewRefuses(a);
 }
 
-/** Why her own crew will not board anyone now (too few hands, no nerve), or null. */
+/** The hands a captain's boarding party needs at the least (a party of three is no party). */
+export const BOARD_MIN_HANDS = 4;
+
+/** A captain's ship, or one of hers (an escort, a prize): «Абордаж: выкл» keeps her off these, not off the sea's own. */
+export function captainsShip(game: Game, b: ShipEntity): boolean {
+  if (b.accountId !== null) return true;
+  const owner = b.ownerId !== null ? game.ships.get(b.ownerId) : undefined;
+  return !!owner && owner.accountId !== null;
+}
+
+/** Why her own crew will not board anyone now, or null. A captain's crew goes over the rail at once whatever the odds
+ *  (owner, 2026-10-18: «на нпс сразу можно было абордажить»; the odds window, boardodds.ts, warns of a bad fight and
+ *  does not bar it): only a party too small to be one stays aboard. The sea's own captains keep their caution — too
+ *  few hands for her rate, or no nerve left. */
 export function crewRefuses(a: ShipEntity): string | null {
-  if (a.crew < Math.max(4, a.stats.crewMin * 0.5)) return 'Not enough hands for a boarding party';
-  // A crew with no nerve left breaks in the first rush: say so instead of throwing them over the rail.
+  if (a.isPlayer) return a.crew < BOARD_MIN_HANDS ? 'Not enough hands for a boarding party' : null;
+  if (a.crew < Math.max(BOARD_MIN_HANDS, a.stats.crewMin * 0.5)) return 'Not enough hands for a boarding party';
+  // A crew with no nerve left breaks in the first rush.
   if (a.morale < 15 && !a.surrendered) return 'Your crew has no stomach for boarding — raise their morale first';
   return null;
 }

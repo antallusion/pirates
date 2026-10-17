@@ -298,6 +298,8 @@ test('boarding off, both ways: she boards nobody and nobody boards her — capta
   A.ship!.hull = A.ship!.stats.hullMax * 0.3; // broken: a pirate would board her at once
   const brain = game.npcs.get(pirate.id)!;
   assert.match(String(canBoard(game, pirate, A.ship!)), /off on her ship/);
+  // …and her own switch keeps her off captains only: the sea's own she may board at once (owner, 2026-10-18).
+  assert.doesNotMatch(String(canBoard(game, A.ship!, pirate)), /off on/);
   engage(game, pirate, brain, A.ship!, 15);
   assert.equal(A.ship!.boarding, null, 'not boarded');
   assert.equal(pirate.ammoSel, 'round', 'round shot to sink her, not grape for a boarding');
