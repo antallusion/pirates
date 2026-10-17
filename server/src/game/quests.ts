@@ -2,6 +2,7 @@
 // captain does at sea, Path unlocks and switching at a Captain's House, the First Descent, and faction oaths.
 
 import { opsSilverMul } from './liveops.ts'; // docs/34: the silver event
+import { isCampaignId } from '../../../shared/src/data/questclass.ts';
 import { givePet } from './pets.ts';
 import { giveCalf } from './companion.ts';
 import { earnTattoo, offerChoice } from './tattoos.ts';
@@ -89,7 +90,8 @@ export interface QuestState {
 
 /** The quests that count against MAX_ACTIVE_QUESTS: the Admiralty's contracts of the week stand beside them (docs/19
  *  E15 — three at the most, and the week's own). */
-export const questsUnderWay = (p: Profile): number => p.quests.active.filter((a) => !isAdmId(a.id)).length;
+// (the campaign's quest, always under way, takes no place among them: docs/36)
+export const questsUnderWay = (p: Profile): number => p.quests.active.filter((a) => !isAdmId(a.id) && !isCampaignId(a.id)).length;
 
 /** The pay a job offers to choose from (docs/11 P6): jobs and arcs of some worth; favour where there is a port. */
 export function payOptions(game: Game, q: QuestDef): QuestPayView | undefined {

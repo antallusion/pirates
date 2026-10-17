@@ -35,6 +35,7 @@ import { EN as UI_EN, RU as UI_RU } from '../client/src/lang/ui/contracts.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { applyDataLocale } from '../client/src/lang/data.ts';
 import { join, makeGame, onHull, steps } from './helpers.ts';
+import { isCampaignId } from '../shared/src/data/questclass.ts';
 
 /** A Monday noon of the Admiralty's calendar, the clock held (the week's dice and the week's end are the test's). */
 const T0 = Date.UTC(2026, 9, 5, 12);
@@ -308,7 +309,11 @@ test('the cargo run: taken on at the depot, the raiders’ bands at her level on
   (game as unknown as { now: number }).now += 400;
   stepContracts(game, s);
   assert.equal([...game.ships.values()].filter((x) => x.alive && game.npcs.get(x.id)?.huntAccount === s.accountId).length, raiders.length, 'no more than its bands');
-  // Delivered: fulfilled.
+  // Delivered: fulfilled. (The campaign's quest, always under way, set aside here: a step of it in this very port paid
+  // beside the contract and the purse no longer told the contract's silver alone.)
+  s.profile!.quests.active = s.profile!.quests.active.filter((a) => !isCampaignId(a.id));
+  // (and the day's orders done beforehand: the calendar's «put in at 3 ports» paid +560 on some days)
+  for (const o of s.profile!.daily?.orders ?? []) o.done = true;
   const gold = s.profile!.gold;
   docked(game, s, d.to);
   assert.ok(s.profile!.quests.done.includes(c.id), 'fulfilled');
