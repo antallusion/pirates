@@ -40,7 +40,8 @@ import { TREE_VERSION, migrateTree } from './holdings.ts';
 import type { TownState } from './town.ts';
 import { townOf } from '../../../shared/src/data/town.ts';
 import { freeCargo } from './quests.ts'; // playthrough C: her jobs' cargo is not hers to spend
-import { HARVEST, extraCrews, harvestUntil } from './shop.ts'; // the premium shop's brigades and harvest (owner, 2026-10-15)
+import { HARVEST, extraCrews, harvestUntil } from './shop.ts';
+import { planView } from './isleplan.ts'; // docs/29 §8: what to build next (owner, 2026-10-17) // the premium shop's brigades and harvest (owner, 2026-10-15)
 
 const HOUR = 3_600_000;
 /** Production is reckoned for three days at most at once (the yard is full long before). */
@@ -246,7 +247,7 @@ function whatOf(o: Occupant): string | null {
   return o.j.what;
 }
 
-function freePlot(game: Game, h: Holding, y: Yard): number | null {
+export function freePlot(game: Game, h: Holding, y: Yard): number | null {
   const n = plotCount(game, h);
   for (let k = 0; k < n; k++) if (!occupant(h, y, k)) return k;
   return null;
@@ -255,7 +256,7 @@ function freePlot(game: Game, h: Holding, y: Yard): number | null {
 // ------------------------------------------------------------------------------------------------ paying
 
 /** What is to hand for a cost: the yard, the island's store, and the hold of a ship lying off the island. */
-function stock(h: Holding, y: Yard, s: PlayerSession, near: boolean, g: GoodId): number {
+export function stock(h: Holding, y: Yard, s: PlayerSession, near: boolean, g: GoodId): number {
   return (y.res[g] ?? 0) + (h.store[g] ?? 0) + (near ? freeCargo(s, g) : 0); // (her jobs' cargo left aboard, quests.ts jobCargo)
 }
 
@@ -629,6 +630,7 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
     guildYard: game.guilds.of(game, s.accountId) ? gyardView(game, s) : null,
     town: townView(game, s, h, y),
     hall: Math.max(1, townLevel(y, 'hall')),
+    plan: planView(game, s, h, y, isl),
   };
 }
 

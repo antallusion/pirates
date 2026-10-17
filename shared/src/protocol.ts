@@ -2476,6 +2476,36 @@ export interface BaseView {
   claim: IsleClaimView;
   /** docs/16 #34: the guild's shipyard here, when she leads a guild. */
   guildYard?: GuildYardView | null;
+  /** docs/29 §8: what to build next (the planner's first steps) and her speed-ups. */
+  plan?: IslePlanView;
+}
+
+/** One step the island's planner recommends (docs/29 §8, shared/src/data/isleplan.ts). */
+export interface IslePlanStepView {
+  /** A tree building ('hall', 'warehouse') or a producer ('p:lumber'). */
+  what: string;
+  level: number;
+  silver: number;
+  goods: Partial<Record<GoodId, number>>;
+  secs: number;
+  why: 'prod' | 'hall' | 'crew' | 'store' | 'gate' | 'army' | 'path' | 'town' | 'guns';
+  /** The plot it stands on, or the free plot it would take (null: a town building, or no free plot). */
+  plot: number | null;
+  /** ready: may start now; lack: resources or silver short; busy: every crew at work; wait: what it asks is still being
+   *  built; plot: no free plot; need: the land's resources (the lairs') short. */
+  state: 'ready' | 'lack' | 'busy' | 'wait' | 'plot' | 'need';
+  lack: { good: GoodId; n: number }[];
+  silverLack: number;
+  /** The work to speed up first (its job id): what it waits for, or the crew to free soonest. */
+  job: number | null;
+}
+
+export interface IslePlanView {
+  steps: IslePlanStepView[];
+  /** Steps left to the whole island at level 5. */
+  left: number;
+  /** Her speed-ups: the minutes in store (the shop's, the creatures' loot) and the free tokens of TOKEN_SECS each. */
+  speed: { min: number; tokens: number; tokenSecs: number };
 }
 
 /** One of the captain's own ships (docs/15 item 4). */
