@@ -20,6 +20,13 @@ import type { CampaignView } from '../../../shared/src/protocol.ts';
 import { grantMap, makeMap } from './explorefx.ts';
 import type { Game } from './Game.ts';
 import { spawnCampaignFoe } from './npc.ts';
+import type { ShipEntity } from './ship.ts';
+import { BEASTS, BEAST_IDS, inGroup } from '../../../shared/src/data/beasts.ts';
+import { openWater as beastWater, spawnBeast } from './beasts.ts';
+import { lairList } from './beastlairs.ts';
+import { beforePorts, depthAt, isLand } from '../../../shared/src/world/worldgen.ts';
+import { REGIONS } from '../../../shared/src/world/regions.ts';
+import { hashString } from '../../../shared/src/rng.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { QuestState } from './quests.ts';
 import { questEvent, startQuest } from './quests.ts';
@@ -34,6 +41,45 @@ export function initCampaign(game: Game, seed: number): Campaign {
   registerCampaign(c.quests);
   return c;
 }
+
+/** The places the world lays for the campaign once its wrecks and lairs stand (Game's constructor, after buildWrecks): a
+ *  wreck for each dive step in its location's shallows (her divers' depth: 8 m at most where the sea allows), and a lair
+ *  step's water widened to the nearest lair when none lies within it. Appended: the old wrecks keep their ids. */
+export function campaignPlaces(game: Game): void {
+  const c = campaignOf(game);
+  const floor = beforePorts(game.world);
+  const lairs = lairList(game);
+  for (const q of c.quests) for (const st of q.steps) {
+    if (st.type === 'dive' && st.near && st.wreck === undefined) {
+      let best: { x: number; y: number; depth: number } | null = null;
+      // the shallows: off the shores of the islands about the location first, then its open water
+      const shores = game.world.islands.filter((i) => !i.minor && !i.hidden && !i.slot && Math.hypot(i.x - st.near!.x, i.y - st.near!.y) - i.radius < st.near!.r - 300);
+      for (let k = 0; k < 160; k++) {
+        const h = hashString(`${q.id}:wreck:${k}`);
+        const a = ((h % 3600) / 3600) * Math.PI * 2;
+        const isl = k < 100 && shores.length ? shores[k % shores.length] : null;
+        const d = isl ? isl.radius + 60 + ((h >>> 12) % 300) : 300 + ((h >>> 12) % 1100);
+        const x = (isl?.x ?? st.near.x) + Math.sin(a) * d, y = (isl?.y ?? st.near.y) - Math.cos(a) * d;
+        if (Math.hypot(x - st.near.x, y - st.near.y) > st.near.r - 100) continue;
+        if (isLand(game.world, x, y)) continue;
+        const depth = depthAt(floor, x, y);
+        if (depth < 3) continue;
+        if (!best || (depth <= 8 && best.depth > 8) || (depth <= 8) === (best.depth <= 8) && Math.abs(depth - 6) < Math.abs(best.depth - 6)) best = { x, y, depth };
+        if (best.depth <= 8) break;
+      }
+      if (!best) continue;
+      const region = REGIONS[game.regionAt(best.x, best.y)];
+      st.wreck = game.wrecks.length;
+      game.wrecks.push({ id: st.wreck, name: `wreck of the ${WRECK_NAMES[st.wreck % WRECK_NAMES.length]}`, x: Math.round(best.x), y: Math.round(best.y), depth: Math.max(3, Math.min(8, Math.round(best.depth))), tier: region.safety === 'lawless' ? 3 : region.safety === 'contested' ? 2 : 1 }); // (in the shallows: a plain diver's reach)
+    }
+    if (st.type === 'lair' && st.near) {
+      let d = Infinity;
+      for (const l of lairs) d = Math.min(d, Math.hypot(l.x - st.near.x, l.y - st.near.y));
+      if (d > st.near.r && Number.isFinite(d)) st.near = { ...st.near, r: Math.ceil(d + 300) };
+    }
+  }
+}
+const WRECK_NAMES = ['Saint Brendan', 'Gloria Regis', 'Merciful Anne', 'Black Tithe', 'Silver Hind', 'Grey Widow', 'Constance', 'Lamentation', 'Ninth Hour', 'Iron Psalm', 'Tidecaller', 'Wandering Jew'];
 
 export function campaignOf(game: Game): Campaign {
   return built.get(game) ?? initCampaign(game, game.world.seed);
@@ -169,10 +215,13 @@ export function campaignWall(p: Profile): boolean {
 
 // ------------------------------------------------------------------ the fights that come to her
 
+/** How near the location's waters she must come for its fight to put out. */
+export const FOE_COME = 2500;
+
 /** A campaign fight's foes about her at once, how often another puts out, and how far they are counted. */
 export const FOE_MAX = 2;
 export const FOE_EVERY = 35;
-const FOE_R = 7000;
+const FOE_R = 9000;
 
 interface FoeWatch {
   next: number;
@@ -189,8 +238,11 @@ export function campaignTick(game: Game, s: PlayerSession): void {
   const qs = campaignActive(p);
   const q = qs ? QUESTS_BY_ID[qs.id] : undefined;
   const st = q?.steps[qs!.step];
-  if (!qs || !st || (st.type !== 'sink' && st.type !== 'board')) return;
+  if (!qs || !st || (st.type !== 'sink' && st.type !== 'board' && st.type !== 'beast')) return;
   if (st.type === 'sink' && st.role && st.role !== 'pirate' && st.role !== 'ghost') return; // patrols and merchants sail the sea anyway
+  // docs/36: the fight is the location's — it puts out in its waters once she comes near them
+  const near = st.near;
+  if (near && Math.hypot(ship.state.x - near.x, ship.state.y - near.y) > near.r + FOE_COME) return;
   const key = `${qs.id}:${qs.step}`;
   let w = watches.get(s);
   if (!w || w.step !== key) {
@@ -203,7 +255,18 @@ export function campaignTick(game: Game, s: PlayerSession): void {
   });
   if (game.now < w.next || w.ids.length >= FOE_MAX || ship.inCombat(game.now)) return;
   w.next = game.now + FOE_EVERY;
-  const foe = spawnCampaignFoe(game, ship, s.accountId, shipBandOf(q!.requires.level ?? 1), st.type === 'sink' && st.role === 'ghost');
+  const band = shipBandOf(q!.requires.level ?? 1);
+  let foe: ShipEntity | null = null;
+  if (st.type === 'beast') {
+    // a beast of the hunt's kind, in the location's waters
+    const kinds = BEAST_IDS.filter((id) => inGroup(id, st.group) && BEASTS[id].group !== undefined && id !== 'white_orca');
+    const id = kinds[Math.floor(game.rng.float() * kinds.length)] ?? 'shark';
+    for (let k = 0; k < 12 && !foe; k++) {
+      const a = game.rng.float() * Math.PI * 2, d = (near?.r ?? 1500) * (0.3 + 0.6 * game.rng.float());
+      const x = (near?.x ?? ship.state.x) + Math.sin(a) * d, y = (near?.y ?? ship.state.y) - Math.cos(a) * d;
+      if (beastWater(game, x, y)) foe = spawnBeast(game, id, x, y, band);
+    }
+  } else foe = spawnCampaignFoe(game, ship, s.accountId, band, st.type === 'sink' && st.role === 'ghost', near);
   if (!foe) return;
   w.ids.push(foe.id);
   if (!w.told) game.sendTo(s, { t: 'toast', msg: 'Enemy sails close in: the campaign’s fight comes to you.', kind: 'bad' });

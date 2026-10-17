@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MAX_LEVEL, xpForLevel } from '../shared/src/constants.ts';
-import { buildCampaign } from '../shared/src/data/campaign/build.ts';
+import { LOCAL_R, buildCampaign, locDist } from '../shared/src/data/campaign/build.ts';
 import { CHAPTERS } from '../shared/src/data/campaign/chapters.ts';
 import { checkChapter } from '../shared/src/data/campaign/check.ts';
 import { campaignPaces, roadXp } from '../shared/src/data/campaign/pacing.ts';
@@ -315,19 +315,42 @@ test('«Плыть» has a place for every step of every campaign quest', async 
 
 // ------------------------------------------------------------------ a captain who does only the campaign
 
+/** The sea she sails in the sim, by session (straight lines from place to place). */
+const logbook = new WeakMap<PlayerSession, { x: number; y: number; km: number }>();
+function sailed(s: PlayerSession, x: number, y: number): void {
+  const b = logbook.get(s) ?? { x: s.ship!.state.x, y: s.ship!.state.y, km: 0 };
+  b.km += Math.hypot(x - b.x, y - b.y) / 1000;
+  b.x = x;
+  b.y = y;
+  logbook.set(s, b);
+}
+const kmSailed = (s: PlayerSession): number => logbook.get(s)?.km ?? 0;
+
 /** The events that do a step, as the game sends them (the dock, the tick at sea, a ship boarded or sunk…). */
 function doStep(game: Game, s: PlayerSession, st: QuestStep): void {
   const ship = s.ship!;
   const dock = (id: string) => {
     const port = game.portById(id)!;
+    sailed(s, port.x, port.y);
+    if (ship.docked === port.id) { ship.docked = null; questEvent(game, s, { k: 'tick', dt: 1 }); } // (she puts out and comes in again)
     ship.docked = port.id;
     s.profile!.docked = port.id;
     ship.state.x = port.x;
     ship.state.y = port.y;
     questEvent(game, s, { k: 'dock', port });
   };
+  // (a step of a location is done in its waters: she sails there — the trip is the sim's count of the sea sailed)
+  const there = (n: { x: number; y: number } | undefined) => {
+    if (!n) return;
+    sailed(s, n.x, n.y);
+    ship.docked = null;
+    ship.state.x = n.x;
+    ship.state.y = n.y;
+  };
+  const near = 'near' in st ? (st as { near?: { x: number; y: number; r: number } }).near : undefined;
+  there(near);
   const foe = (role: 'pirate' | 'ghost' | 'patrol' | 'merchant' | 'hunter', lv: number) => {
-    const v = game.spawnNpcShip(role, hullsFor('pirate', lv)[0], role === 'ghost' ? 'choir' : role === 'patrol' ? 'crown' : 'confederacy', 0, 0, 0);
+    const v = game.spawnNpcShip(role, hullsFor('pirate', lv)[0], role === 'ghost' ? 'choir' : role === 'patrol' ? 'crown' : 'confederacy', near?.x ?? 0, near?.y ?? 0, 0);
     game.setNpcLevel(v, lv);
     return v;
   };
@@ -342,12 +365,18 @@ function doStep(game: Game, s: PlayerSession, st: QuestStep): void {
     case 'isle': {
       const is = game.world.islands[st.island];
       ship.docked = null;
+      sailed(s, is.x + is.radius + 200, is.y);
       ship.state.x = is.x + is.radius + 200;
       ship.state.y = is.y;
       return questEvent(game, s, { k: 'tick', dt: 1 });
     }
-    case 'land':
+    case 'land': {
+      const is = game.world.islands[st.island];
+      sailed(s, is.x + is.radius + 200, is.y);
+      ship.state.x = is.x + is.radius + 200;
+      ship.state.y = is.y;
       return questEvent(game, s, { k: 'land', island: st.island, feature: st.site ?? 'beach' });
+    }
     case 'board':
       for (let i = 0; i < st.count; i++) questEvent(game, s, { k: 'board', victim: foe('pirate', Math.min(10, (st.minShip ?? 1) + 1)) });
       return;
@@ -380,9 +409,12 @@ function doStep(game: Game, s: PlayerSession, st: QuestStep): void {
     case 'time_in':
     case 'reach': {
       ship.docked = null;
-      const [x, y] = REGIONS[st.region].center;
-      ship.state.x = x;
-      ship.state.y = y;
+      if (!near) {
+        const [x, y] = REGIONS[st.region].center;
+        sailed(s, x, y);
+        ship.state.x = x;
+        ship.state.y = y;
+      }
       ship.region = st.region;
       return questEvent(game, s, { k: 'tick', dt: st.type === 'time_in' ? st.seconds : 1 });
     }
@@ -410,12 +442,13 @@ test('a captain who does only the campaign: every quest taken and done by the ga
   const { claimIsland } = await import('../server/src/game/baseclaim.ts');
   claimIsland(game, s, isl.id); // the island of chapter 6 (claimed early here: the step then is done at once)
   const camp = campaignOf(game);
-  const pace: { ch: number; from: number; to: number }[] = [];
+  const pace: { ch: number; from: number; to: number; km0: number; km: number; legs: number }[] = [];
   let guard = 0, picks = 0;
   while (p.campaign!.at < CAMPAIGN_SIZE && guard++ < 5000) {
     const slot = camp.bySlot.get(p.campaign!.at)!;
     assert.ok(p.level >= slot.gate, `slot ${slot.slot}: level ${p.level} below its gate ${slot.gate}`);
-    if (slot.k === 0) pace.push({ ch: slot.ch, from: p.level, to: p.level });
+    if (slot.k === 0) pace.push({ ch: slot.ch, from: p.level, to: p.level, km0: kmSailed(s), km: 0, legs: 0 });
+    const before0 = kmSailed(s);
     if (!campaignActive(p)) {
       // a branch is hers to choose (both ways in turn); the rest come by themselves after the first
       const way = slot.b && picks++ % 2 ? slot.b : slot.a;
@@ -433,6 +466,9 @@ test('a captain who does only the campaign: every quest taken and done by the ga
     // (one done, or more: a next quest whose first place is where she stands is done as it comes)
     assert.ok(p.campaign!.at > before, `${q.id} done (${q.steps.map((x) => x.type).join(',')})`);
     pace[pace.length - 1].to = p.level;
+    const cur = pace[pace.length - 1];
+    if (slot.travel) cur.legs += kmSailed(s) - before0;
+    cur.km = kmSailed(s) - cur.km0;
     if (p.campaign!.at === FIRST_SLOT[WALL_CHAPTER - 1]) assert.ok(abyssCleared(game, s), 'the Wall lets her through at the Abyss’s chapters');
   }
   assert.equal(p.campaign!.at, CAMPAIGN_SIZE, 'the whole campaign');
@@ -441,7 +477,10 @@ test('a captain who does only the campaign: every quest taken and done by the ga
   assert.ok(c.all('toast').some((t) => t.msg === 'The campaign is done. The tide sleeps.'));
   // the pace (docs/36 §4): the chapters' levels rise with the plan
   for (let i = 1; i < pace.length; i++) assert.ok(pace[i].from >= pace[i - 1].from, `chapter ${pace[i].ch}`);
-  if (process.env.CAMPAIGN_PACE) console.log(pace.map((x) => `ch${x.ch}: ${x.from}→${x.to}`).join('  '));
+  // the sea sailed: the voyages between locations, and a little in each location's waters
+  const local = pace.map((x) => x.km - x.legs);
+  for (const [i, x] of pace.entries()) assert.ok(local[i] / 20 < 6, `chapter ${x.ch}: ${local[i].toFixed(0)} km about its locations (a modest few a quest)`);
+  console.log(pace.map((x) => `ch${x.ch}: L${x.from}→${x.to} ${x.km.toFixed(0)} km (voyages ${x.legs.toFixed(0)})`).join(' | '));
 });
 
 test('the campaign is never taken: its first quest is under way from the first level, never on a board, the next comes at once', () => {
@@ -523,7 +562,8 @@ test('the campaign’s fight comes to her: on a boarding step at sea, foes of th
   assert.equal(q.steps[0].type, 'board');
   s.profile!.campaign!.at = 2;
   onStep(s, q);
-  atSea(game, s, 20000, 84000); // the Crown's quiet waters off Saltmarrow: no raiders of their own
+  const near = (q.steps[0] as Extract<QuestStep, { type: 'board' }>).near!;
+  atSea(game, s, near.x + 600, near.y); // the Crown's quiet waters of the location: no raiders of their own
   for (let t = 0; t < 120; t++) {
     game.now += 1;
     questEvent(game, s, { k: 'tick', dt: 1 });
@@ -532,7 +572,7 @@ test('the campaign’s fight comes to her: on a boarding step at sea, foes of th
   assert.ok(foes.length >= 1 && foes.length <= 2, `${foes.length} foes`);
   for (const f of foes) {
     assert.equal(f.npcRole, 'pirate');
-    assert.ok(Math.hypot(f.state.x - 20000, f.state.y - 84000) < 3000, 'put out near her');
+    assert.ok(Math.hypot(f.state.x - near.x, f.state.y - near.y) <= near.r, 'put out in the location’s waters');
   }
   questEvent(game, s, { k: 'board', victim: foes[0] });
   assert.equal(s.profile!.quests.active[0].step, 1, 'boarding one of them is the step');
@@ -579,4 +619,98 @@ test('the cargo steps are still done in the port she lies in: a delivery handed 
   assert.equal(s.profile!.quests.active[0].step, 1, 'the rum handed over');
   questEvent(game, s, { k: 'dock', port });
   assert.equal(s.profile!.quests.active.length, 0, 'and reported on a real arrival');
+});
+
+// ------------------------------------------------------------------ location by location (owner, 2026-10-18)
+
+test('location by location: runs of 4–6 quests, each done within 1.5 km of its location; the voyage is the run’s first quest', () => {
+  const locs = built.locations;
+  assert.ok(locs.length >= 130 && locs.length <= 150, `${locs.length} locations`);
+  for (const l of locs) assert.ok(l.size >= 4 && l.size <= 6, `${l.name}: a run of ${l.size}`);
+  assert.equal(locs.reduce((a, l) => a + l.size, 0), CAMPAIGN_SIZE);
+  const far: string[] = [];
+  let checked = 0;
+  for (const sl of built.slots) {
+    const L = locs[sl.loc];
+    assert.equal(sl.travel, sl.slot === L.from && L.i > 0, `${sl.a.id}: the voyage is the first of its run`);
+    // (a chapter's mentor's port, and the home-coming at the end, are held where the story puts them)
+    const fixedHub = L.from === built.firstOf[L.ch - 1] || L.i === built.locations.length - 1;
+    for (const q of [sl.a, ...(sl.b ? [sl.b] : [])]) {
+      const pick = q.steps.some((x) => x.type === 'pickup');
+      for (const st of q.steps) {
+        let d = 0;
+        if (st.type === 'visit' || st.type === 'pickup' || (st.type === 'deliver' && !pick)) {
+          const p = world.ports.find((x) => x.id === st.port)!;
+          d = Math.hypot(p.x - L.x, p.y - L.y);
+        } else if (st.type === 'isle' || st.type === 'land') d = locDist(world, L, world.islands[st.island]);
+        else if ('near' in st && st.near) d = Math.hypot(st.near.x - L.x, st.near.y - L.y);
+        else continue;
+        checked++;
+        // (a mentor's port with no island within reach keeps its two nearest, at most 2.5 km off)
+        if (d > LOCAL_R + 50 && !(fixedHub && d <= 2500)) far.push(`${q.id} ${st.type} ${Math.round(d)} m from ${L.name}`);
+      }
+    }
+  }
+  assert.ok(checked > 1000, `${checked} places`);
+  assert.deepEqual(far.slice(0, 5), [], `${far.length} places farther than 1.5 km`);
+  // a delivery between the location's port and the nearest other harbour: a short run along the coast
+  for (const q of built.quests) for (const st of q.steps) if (st.type === 'deliver' && q.steps.some((x) => x.type === 'pickup')) {
+    const L = locs[q.campaign!.loc!];
+    const p = world.ports.find((x) => x.id === st.port)!;
+    assert.ok(Math.hypot(p.x - L.x, p.y - L.y) < 8000, `${q.id}: a delivery to the next harbour`);
+  }
+});
+
+test('the locations go through all the seas in the order of their levels, and through most of the harbours', () => {
+  const order: string[] = [];
+  for (const l of built.locations) if (!order.includes(l.region)) order.push(l.region);
+  assert.deepEqual(order, ['black_coast', 'gravewater', 'whispering', 'dead_mans_expanse', 'leviathan_reach', 'ashen_isles', 'drowned_crown', 'the_abyss'], 'every sea, first come to in the order of its levels');
+  const ports = new Set(built.locations.filter((l) => l.kind === 'port').map((l) => l.id));
+  assert.ok(ports.size >= 80, `${ports.size} harbours`);
+  assert.ok(built.locations.some((l) => l.kind === 'isle' && l.region === 'the_abyss'), 'islands of the Abyss itself');
+  // the voyages: a modest leg from one location to the next (the home-coming at the end the longest)
+  const legs = built.locations.slice(1).map((l, i) => Math.hypot(l.x - built.locations[i].x, l.y - built.locations[i].y));
+  assert.ok(legs.reduce((a, b) => a + b, 0) / legs.length < 20000, 'about 15 km a voyage');
+});
+
+test('a location’s fight puts out in its waters, and only there', () => {
+  const { game } = makeGame();
+  const { s } = captain(game, 'Local', 10);
+  const sl = campaignOf(game).slots.find((x) => x.a.steps[0].type === 'board' && x.gate <= 10)!;
+  const st = sl.a.steps[0] as Extract<QuestStep, { type: 'board' }>;
+  s.profile!.campaign!.at = sl.slot;
+  onStep(s, sl.a);
+  atSea(game, s, st.near!.x + 9000, st.near!.y); // far from its waters: nothing comes
+  for (let t = 0; t < 60; t++) {
+    game.now += 1;
+    questEvent(game, s, { k: 'tick', dt: 1 });
+  }
+  assert.equal(campaignFoes(game, s).length, 0, 'no fight far from the location');
+  atSea(game, s, st.near!.x + 1000, st.near!.y);
+  for (let t = 0; t < 60; t++) {
+    game.now += 1;
+    questEvent(game, s, { k: 'tick', dt: 1 });
+  }
+  const foes = campaignFoes(game, s).map((id) => game.ships.get(id)!);
+  assert.ok(foes.length >= 1);
+  for (const f of foes) assert.ok(Math.hypot(f.state.x - st.near!.x, f.state.y - st.near!.y) <= st.near!.r, 'in the location’s waters');
+  // a ship boarded far away does not count for it
+  const v = game.spawnNpcShip('pirate', hullsFor('pirate', st.minShip! + 1)[0], 'confederacy', st.near!.x + 20000, st.near!.y, 0);
+  game.setNpcLevel(v, st.minShip! + 1);
+  questEvent(game, s, { k: 'board', victim: v });
+  assert.equal(s.profile!.quests.active[0].progress, 0);
+  questEvent(game, s, { k: 'board', victim: foes[0] });
+  assert.ok(s.profile!.quests.active[0].progress >= 1 || s.profile!.quests.active[0].step >= 1);
+});
+
+test('a dive of the campaign has its wreck laid in its location’s shallows', () => {
+  const { game } = makeGame();
+  const dives = campaignOf(game).quests.flatMap((q) => q.steps).filter((x): x is Extract<QuestStep, { type: 'dive' }> => x.type === 'dive');
+  assert.ok(dives.length > 30);
+  for (const d of dives) {
+    const w = game.wrecks[d.wreck!];
+    assert.ok(w, 'a wreck laid');
+    assert.ok(Math.hypot(w.x - d.near!.x, w.y - d.near!.y) <= LOCAL_R, 'in the location’s waters');
+  }
+  assert.ok(dives.filter((d) => game.wrecks[d.wreck!].depth <= 8).length / dives.length > 0.8, 'most within a plain diver’s reach');
 });

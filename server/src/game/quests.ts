@@ -739,9 +739,11 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
       if (st.role && ev.victim.npcRole !== st.role && !(st.role === 'patrol' && ev.victim.npcRole === 'hunter')) return 0;
       if (st.minTier && ev.victim.cls.tier < st.minTier) return 0;
       if (st.minShip && !fairFight(s, ev.victim, st.minShip)) return 0;
+      if (st.near && !inWater(st.near, ev.victim.state.x, ev.victim.state.y, NEAR_FIGHT)) return 0;
       return 1;
     case 'board':
       if (ev.k !== 'board') return 0;
+      if (st.near && !inWater(st.near, ev.victim.state.x, ev.victim.state.y, NEAR_FIGHT)) return 0;
       return st.minShip && !fairFight(s, ev.victim, st.minShip) ? 0 : 1;
     // docs/36, the campaign: an island's waters reached at sea; an island of her own; works laid on it; men signed on.
     case 'isle': {
@@ -766,9 +768,9 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
     case 'fleet_win':
       return ev.k === 'fleet_win' ? 1 : 0;
     case 'dive':
-      return ev.k === 'dive' ? 1 : 0;
+      return ev.k === 'dive' && (!st.near || inWater(st.near, ship.state.x, ship.state.y, 400)) ? 1 : 0;
     case 'beast':
-      return ev.k === 'beast' && inGroup(ev.beast, st.group) ? 1 : 0;
+      return ev.k === 'beast' && inGroup(ev.beast, st.group) && (!st.near || inWater(st.near, ship.state.x, ship.state.y, NEAR_FIGHT)) ? 1 : 0;
     case 'named':
       return ev.k === 'named' ? 1 : 0;
     case 'tribute':
@@ -786,7 +788,7 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
     case 'die_in':
       return ev.k === 'die' && ev.region === st.region ? 1 : 0;
     case 'lair':
-      return ev.k === 'lair' && (st.island === undefined || st.island === ev.island) && (!st.kind || st.kind === ev.kind) ? 1 : 0;
+      return ev.k === 'lair' && (st.island === undefined || st.island === ev.island) && (!st.kind || st.kind === ev.kind) && (!st.near || inWater(st.near, ship.state.x, ship.state.y, NEAR_FIGHT)) ? 1 : 0;
     // docs/19 E15: the Admiralty's contracts.
     case 'legend':
       return ev.k === 'legend' ? 1 : 0;
@@ -807,11 +809,18 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
     case 'reach':
       return ev.k === 'tick' && !ship.docked && ship.region === st.region && (st.north === undefined || ship.state.y < st.north) ? 1 : 0;
     case 'time_in':
-      if (ev.k !== 'tick' || ship.docked || ship.region !== st.region) return 0;
+      if (ev.k !== 'tick' || ship.docked) return 0;
+      // docs/36: a campaign's watch is kept in its location's waters; another's in its sea
+      if (st.near ? !inWater(st.near, ship.state.x, ship.state.y, 500) : ship.region !== st.region) return 0;
       if (st.weather && game.weatherOf(ship) !== st.weather) return 0;
       return ev.dt;
   }
 }
+
+/** docs/36: a campaign step's location water — within its radius and this much more (a fight drifts, a lair's ship
+ *  lies off). */
+export const NEAR_FIGHT = 1500;
+export const inWater = (n: { x: number; y: number; r: number }, x: number, y: number, extra = 0): boolean => Math.hypot(x - n.x, y - n.y) <= n.r + extra;
 
 /** docs/36: how near an island's shore her ship must come for its waters to count as reached (metres past its radius). */
 export const ISLE_REACH = 900;

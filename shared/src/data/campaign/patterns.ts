@@ -21,7 +21,7 @@ function chapterPairs(ch: ChapterSrc): T[] {
   }
   // the default wordings, the mentor of this chapter put in (only the hub's name him)
   for (const [kind, words] of Object.entries(STEP_WORDS)) {
-    if (kind !== 'hub' && kind !== 'at') continue;
+    if (kind !== 'hub' && kind !== 'at' && kind !== 'hub_isle') continue;
     for (const w of words) out.push(g(w));
   }
   return out;
@@ -32,7 +32,7 @@ export function campaignPatterns(chapters: ChapterSrc[] = CHAPTERS): [string, st
   const out: [string, string][] = [];
   for (const ch of chapters) out.push(...chapterPairs(ch));
   for (const [kind, words] of Object.entries(STEP_WORDS)) {
-    if (kind === 'hub') continue;
+    if (kind === 'hub' || kind === 'hub_isle') continue;
     for (const w of words) out.push(numberedPattern(w[0], w[1]));
   }
   return out;
