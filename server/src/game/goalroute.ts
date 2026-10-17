@@ -23,6 +23,7 @@ import type { RouteView } from '../../../shared/src/protocol.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import type { RegionId, Safety } from '../../../shared/src/world/regions.ts';
 import { SECTOR_SIZE, sectorAt, sectorGrid } from '../../../shared/src/world/sectors.ts';
+import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { AUTOSAIL_ARRIVE } from '../../../shared/src/data/autosail.ts';
 import { autosailOf, helmTouched, lastStopOf, pausedCourse, startAutosail, stopAutosail } from './autosail.ts';
 import { beastsAlive } from './beasts.ts';
@@ -164,7 +165,9 @@ export function pickNearest(game: Game, s: PlayerSession, cands: Cand[], again =
   let best: (typeof top)[number] | null = null, bw = Infinity, bd = 0;
   for (const o of top) {
     // a place within a few hundred metres is there already, whatever the grid says
-    let d = o.d < 600 || !field ? o.d : fieldDist(game.world, field, o.c.x, o.c.y);
+    // (and one in sight over open water within a mile or so: the coarse grid's 400 m cells reckon a harbour's own water
+    // two and three times over — a shoal 500 m off the quays came out at 2.5 km)
+    let d = o.d < 600 || !field || (o.d < NEAR_SIGHT && openWay(game, here.x, here.y, o.c.x, o.c.y, s.ship?.docked ? 0.35 : 0.05)) ? o.d : fieldDist(game.world, field, o.c.x, o.c.y);
     if (!Number.isFinite(d)) d = o.d * 3; // no way the grid knows (a cove, a lagoon): last, not never
     const w = weigh(o, d);
     if (w < bw) [best, bw, bd] = [o, w, d];
@@ -176,6 +179,16 @@ export function pickNearest(game: Game, s: PlayerSession, cands: Cand[], again =
     ...(c.act ? { act: c.act } : {}), ...(c.port ? { port: c.port } : {}), ...(c.island !== undefined ? { island: c.island } : {}),
     ...(c.region ? { region: c.region } : {}), ...(c.ship !== undefined ? { ship: c.ship } : {}), ...(c.hint ? { hint: c.hint } : {}),
   };
+}
+
+/** Within this a place seen over open water is reckoned straight (m). */
+const NEAR_SIGHT = 1800;
+
+/** Open water on the way from a point to another, from `from` of the way on (in port: past her own quay and the
+ *  harbour's mouth). */
+function openWay(game: Game, x0: number, y0: number, x1: number, y1: number, from: number): boolean {
+  for (let f = from; f <= 1.001; f += 0.05) if (isLand(game.world, x0 + (x1 - x0) * f, y0 + (y1 - y0) * f)) return false;
+  return true;
 }
 
 // ------------------------------------------------------------------ the places
@@ -356,7 +369,8 @@ function openWater(game: Game, x: number, y: number): boolean {
  *  от них, в районе 1,5км максимум»): the ones within LOCAL_R of it; none there — what is fought or caught put out
  *  there (`make`); nothing to be had there either — the nearest of them to the port, not to her. */
 function localize(game: Game, home: Home, cands: Cand[], make: () => Cand[]): Cand[] {
-  const inside = cands.filter((c) => c.kind !== 'region' && nearHome(home, c.x, c.y, c.r));
+  // (not the sea's hunting grounds, nor «the coasts the shoals keep to» when no shoal is afloat: a place, not a guess)
+  const inside = cands.filter((c) => c.kind !== 'region' && c.name !== 'coast' && nearHome(home, c.x, c.y, c.r));
   if (inside.length) return inside;
   const made = make();
   if (made.length) return made;
