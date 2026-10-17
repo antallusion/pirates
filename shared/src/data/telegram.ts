@@ -43,6 +43,7 @@ export const TG_TEXTS = {
   'n.daily': ['Captain {name}, your daily gift is waiting: day {day} of the week. Miss two days and the track starts again.', 'Капитан {name}, вас ждёт награда за вход: {day}-й день недели. Пропустите два дня — и счёт начнётся заново.'],
   'n.offer': ['Captain {name}, your personal offer ends in an hour: −{off}% while it lasts.', 'Капитан {name}, ваше личное предложение закончится через час: скидка {off}%, пока оно действует.'],
   'n.raid': ['Captain {name}, pirates are making for your island! {mins} minutes before they land.', 'Капитан {name}, пираты идут к вашему острову! До высадки {mins} мин.'],
+  'n.scout': ['Captain {name}, your scout is home: the fog has lifted from new waters on your chart.', 'Капитан {name}, разведчик вернулся: на вашей карте рассеялся туман над новыми водами.'],
   'n.rob': ['Captain {name}, robbers have landed on your island.', 'Капитан {name}, на ваш остров высадились грабители.'],
   'n.boss': ['Captain {name}, a zone boss rises in your sea: an hour to hunt her down.', 'Капитан {name}, в вашем море поднялся босс зоны: на охоту — час.'],
   'n.idle': ['The sea misses you, captain {name}: your ship waits, and so does your daily gift.', 'Море скучает, капитан {name}: корабль ждёт, а награда за вход — тоже.'],

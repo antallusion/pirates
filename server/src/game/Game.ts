@@ -21,6 +21,7 @@ import { nemesisSankYou } from './nemesis.ts';
 import { sendTattoos, setTattoo, stepTattoos, takeChoice, tattooCount } from './tattoos.ts';
 import { caravanOrder, caravanShipLost, claimBerths, launchCaravan, sendCaravans, stepCaravans } from './caravans.ts';
 import { baseView, collectYard, moveTo, orderBarge, speedup, startBuild, upgradeAt } from './base.ts';
+import { fogFlush, fogInit, fogReveal, fogSecond, scoutMessage, stepScoutNotices } from './fog.ts'; // the fog of war and the scouts (owner, 2026-10-17)
 import { ownShipsKill, shipBuild, shipLaunch, shipRecall, shipRepair, shipUpgrade, squadronOf, stepOwnShips } from './baseships.ts';
 import { abandonIsland, claimPrompt, raidPointer, robIsland } from './baseclaim.ts';
 import { assignResident, buyIsland, estateView, isleForge, foundOutpost, goHome, hireResident, isleLevelUp, outpostOrder, ownIsland, settleRefugees, stepEstate, visitHall } from './estate.ts';
@@ -1011,6 +1012,7 @@ export class Game {
       stepGift(this, s); // a new day: her daily gift ready (owner, 2026-10-16)
     }
     stepNotices(this); // the Telegram notices to captains away (owner, 2026-10-16): once a minute, only with a bot
+    stepScoutNotices(this); // a scout home while her captain is away: the bot's word (owner, 2026-10-17)
     stepDirector(this); // the sea director: signs on the horizon, things aboard (docs/12 P2)
     stepMinigames(this); // island scenes and mini-games left open lapse
     stepTreks(this); // walks across the islands left alone lapse (docs/16 #21)
@@ -1145,6 +1147,7 @@ export class Game {
       }
       this.streamChunks(s);
       this.discover(s);
+      fogSecond(this, s); // the fog of war: her lookouts, her island's reach, her scouts (owner, 2026-10-17)
       this.recordSightings(s);
       if (s.ship.landing) stepLanding(this, s.ship);
       expireForwards(this, s);
@@ -2897,6 +2900,7 @@ export class Game {
     if (s.discovered.has(is.id)) return;
     s.discovered.add(is.id);
     s.profile!.discovered.push(is.id);
+    fogReveal(this, s, is.x, is.y, is.radius + 800); // a charted island's waters are out of the fog
     this.sendIslands(s, [is.id]);
     this.sendTo(s, { t: 'ev', list: [{ k: 'discover', islandId: is.id, name: is.name, region: is.region, quiet: true }] });
     if (is.hidden) onHiddenCharted(this, s, is); // docs/18 #30
@@ -2905,6 +2909,7 @@ export class Game {
   markDiscovered(s: PlayerSession, is: Island): void {
     s.discovered.add(is.id);
     s.profile!.discovered.push(is.id);
+    fogReveal(this, s, is.x, is.y, is.radius + 800); // a charted island's waters are out of the fog
     questEvent(this, s, { k: 'chart' });
     this.shared?.bump('charted', s.accountId, s.name, 1);
     const strange = REGIONS[is.region].strangeness;
@@ -2924,6 +2929,7 @@ export class Game {
     const s = this.sessionOf(ship);
     if (!s) return 0;
     let n = 0;
+    fogReveal(this, s, ship.state.x, ship.state.y, r); // the star fix's sea out of the fog
     for (const is of this.world.islands) {
       if (s.discovered.has(is.id) || is.minor || is.hidden) continue;
       if (dist(is.x, is.y, ship.state.x, ship.state.y) > r) continue;
@@ -3224,6 +3230,7 @@ export class Game {
     if (msg.t === 'seafind') return findMessage(this, s, msg);
     if (msg.t === 'roam') return roamMessage(this, s, msg); // docs/19 D7
     if (msg.t === 'premium') return premiumMessage(this, s, msg); // the premium shop (owner, 2026-10-03)
+    if (msg.t === 'scout') return scoutMessage(this, s, msg); // the island's scouts (owner, 2026-10-17)
     switch (msg.t) {
       case 'onboarding':
         if (msg.action === 'skip_stage' || msg.action === 'skip_all' || msg.action === 'hide_goals') onboardingAction(this, s, msg.action);
@@ -4393,6 +4400,7 @@ export class Game {
     // Islands the captain has charted are sent up front so the world map is complete.
     this.sendIslands(s, [...s.discovered]);
     recallLookouts(this, s); // the waters her lookouts charted (docs/16 #24)
+    fogInit(this, s); // her fog of war and her scouts (owner, 2026-10-17)
     if (s.ship && !s.ship.docked) sendIsles(this, s, true);
     this.streamChunks(s);
     if (s.ship && !s.ship.docked) this.sendFronts(s);
@@ -4823,6 +4831,7 @@ export class Game {
 
   saveSession(s: PlayerSession): void {
     if (!s.profile || !s.authed) return;
+    fogFlush(this, s); // her fog's newest squares in the profile
     const p = s.profile;
     const ship = s.ship;
     if (ship) {

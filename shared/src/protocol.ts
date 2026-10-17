@@ -51,6 +51,7 @@ import type { DailyKind } from './data/dailies.ts';
 import type { H3ClientMsg, H3ServerMsg, TownView } from './h3proto.ts';
 import type { H4ClientMsg, H4ServerMsg } from './h4proto.ts';
 import type { IsleClientMsg, IsleServerMsg } from './isleproto.ts';
+import type { FogClientMsg, FogServerMsg } from './fogproto.ts';
 import type { LairClientMsg, LairServerMsg } from './lairproto.ts';
 import type { DriftClientMsg, DriftServerMsg } from './driftproto.ts';
 import type { CitServerMsg, ThroneClientMsg } from './throneproto.ts'; // docs/19 E1–E3; E4: the citadels on the charts
@@ -350,6 +351,8 @@ export type ClientMsg =
   | H4ClientMsg
   /** docs/18 #32: the supply routes. */
   | IsleClientMsg
+  /** The fog of war's scouts (owner, 2026-10-17). */
+  | FogClientMsg
   | LairClientMsg
   | DriftClientMsg
   | ThroneClientMsg
@@ -1972,6 +1975,8 @@ export type ServerMsg =
   | H4ServerMsg
   /** docs/18 III: the zones of one level, the turtle islands, the supply routes. */
   | IsleServerMsg
+  /** The fog of war and her scouts (owner, 2026-10-17). */
+  | FogServerMsg
   | LairServerMsg
   | DriftServerMsg
   /** docs/19 D5: the sea's small things. */

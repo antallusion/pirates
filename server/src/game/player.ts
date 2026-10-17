@@ -7,6 +7,7 @@ import type { Look } from '../../../shared/src/data/looks.ts';
 import { HAUNT_NAMES, islandHaunt } from '../../../shared/src/data/minigames.ts';
 import { STARTING_UNLOCKS, encodeLook } from '../../../shared/src/data/looks.ts';
 import type { CompanionRec } from './companion.ts';
+import type { ScoutRec } from './fog.ts';
 import type { PetId } from '../../../shared/src/data/companions.ts';
 import type { NemesisRec } from './nemesis.ts';
 import type { TattooProfile } from './tattoos.ts';
@@ -146,6 +147,12 @@ export interface Profile {
   docked: string | null;
   contracts: Contract[];
   discovered: number[];
+  /** The fog of war (owner, 2026-10-17; fog.ts): the sea's kilometre squares she has seen, base64 bits. Absent in a save
+   *  from before it: made from what she knew at her next start. */
+  fog?: string;
+  /** Her island's scouts (fog.ts) and the last scout's number. */
+  scouts?: ScoutRec[];
+  scoutSeq?: number;
   regionsSeen: string[];
   stats: { sunk: number; boarded: number; tradeProfit: number; distance: number; sold: number; fogContraband: number; harpoonContracts: number; /** captains guided through quests (docs/11 P6) */ mentored?: number; /** men signed on at a tavern or a dwelling (docs/17 H5: the First Watch) */ recruited?: number };
   cooldowns: Record<string, number>;
@@ -739,6 +746,8 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.contracts ??= [];
   p.discovered ??= [];
   p.regionsSeen ??= [];
+  if (typeof p.fog !== 'string') delete p.fog;
+  p.scouts = Array.isArray(p.scouts) ? p.scouts.filter((x) => x && typeof x.id === 'string' && typeof x.ready === 'number' && (!x.route || (Array.isArray(x.route) && x.route.length >= 4))).slice(0, 3) : [];
   p.cooldowns ??= {};
   p.priceIntel ??= {};
   p.costBasis ??= {};

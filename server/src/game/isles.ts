@@ -29,6 +29,7 @@ import { giveGoods, loseHands, purse } from './director.ts';
 import { islandScene } from './exploration.ts';
 import { mapChance } from './explorefx.ts';
 import type { Game } from './Game.ts';
+import { fogReveal } from './fog.ts';
 import { takeItem } from './gear.ts';
 import { lighthouseIslands } from './havens.ts';
 import { strength } from './holdings.ts';
@@ -183,6 +184,7 @@ export function climbLookout(game: Game, s: PlayerSession, is: Island, share: nu
 
 /** The reefs and the marks of the sea about a point, sent to her chart. */
 function sendSea(game: Game, s: PlayerSession, x: number, y: number, r: number) {
+  fogReveal(game, s, x, y, r); // a lookout's waters are out of the fog (owner, 2026-10-17)
   const w = game.world;
   const reefs = w.reefs.filter((rf) => dist(rf.x, rf.y, x, y) < r + rf.radius).map((rf) => ({ id: rf.id, x: Math.round(rf.x), y: Math.round(rf.y), r: Math.round(rf.radius), poly: rf.poly.map((v) => Math.round(v)), depth: rf.depth }));
   const marks = w.marks.filter((m) => dist(m.x, m.y, x, y) < r).map((m) => ({ id: m.id, kind: m.kind, x: Math.round(m.x), y: Math.round(m.y), r: Math.round(m.r), rot: Math.round(m.rot * 100) / 100, seed: m.seed }));

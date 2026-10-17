@@ -39,6 +39,7 @@ import { thisWeek, today, weekView } from './calendar.ts';
 import { officerBerths, reconcile } from './crew.ts';
 import { giveGoods } from './director.ts';
 import type { Game } from './Game.ts';
+import { fogReveal } from './fog.ts';
 import { mineState } from './mines.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { seasonId } from './seasons.ts';
@@ -696,6 +697,7 @@ export function visit(game: Game, s: PlayerSession, id: string, choice?: string)
  *  map there on her charts. The islands newly charted. */
 export function revealAdv(game: Game, s: PlayerSession, x: number, y: number, r: number, islands = false): number {
   let n = 0;
+  fogReveal(game, s, x, y, r); // a watchtower's sea is out of the fog (owner, 2026-10-17)
   if (islands) {
     for (const is of game.world.islands) {
       if (is.minor || s.discovered.has(is.id) || dist(is.x, is.y, x, y) > r + is.radius * 0.5) continue;
