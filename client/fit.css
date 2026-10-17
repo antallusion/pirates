@@ -351,9 +351,11 @@
 
 /* ================================================================== the sea's HUD below 360 px tall (seahud.css) */
 /* At 360 px and over it is as it was (phase 2's sizes); below, the helm, «Огонь», the buttons, the captain's frame and
-   the chart shrink with the screen (they covered half the sea at 480×270), and her mark's line gives its bars room. */
+   the chart shrink with the screen (they covered half the sea at 480×270), and her mark's line gives its bars room.
+   The chart (owner, 2026-10-17: «сделай карту на мобиле больше… она щас маленькая очень»): 140 px from 360 px tall
+   (it was 86), 92 px at 270 (it was 66: the adventure card keeps its 150 px between the plate and the chart). */
 @media (max-height: 520px) {
-  body.simple { --sea-pad: calc(6px + 4 * var(--u)); --sea-fire: calc(62px + 18 * var(--u)); --sea-btn: calc(38px + 10 * var(--u)); --sea-gap: calc(8px + 6 * var(--u)); --cs-face: calc(36px + 8 * var(--u)); --cs-bar: calc(76px + 24 * var(--u)); --mm: calc(66px + 20 * var(--u)); --stick: calc(88px + 24 * var(--u)); }
+  body.simple { --sea-pad: calc(6px + 4 * var(--u)); --sea-fire: calc(62px + 18 * var(--u)); --sea-btn: calc(38px + 10 * var(--u)); --sea-gap: calc(8px + 6 * var(--u)); --cs-face: calc(36px + 8 * var(--u)); --cs-bar: calc(76px + 24 * var(--u)); --mm: calc(92px + 48 * var(--u)); --stick: calc(88px + 24 * var(--u)); }
   body.simple #tc-target .k-target { height: var(--f-tap); gap: calc(5px + 5 * var(--u)); padding: 0 calc(5px + 5 * var(--u)); }
   body.simple #tc-target .k-target-name { min-width: 0; font-size: var(--f-fs-m); }
   body.simple #tc-target .k-target-bars { flex: none; width: calc(32px + 24 * var(--u)); min-width: 0; }

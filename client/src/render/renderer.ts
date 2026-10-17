@@ -44,6 +44,9 @@ import { assetMeta, pattern, sprite } from '../assets.ts';
 import type { ClientState, RemoteShip } from '../state.ts';
 import { Fx } from './fx.ts';
 import { FightView, HitShake, fightShare } from './camfight.ts';
+import { ZOOM_NEAR_MIN, chartMix, clampLook, clampZoom, panLook } from './freecam.ts'; // the far view and the free look (owner, 2026-10-17)
+import { drawFarChart } from './farsea.ts';
+import type { FarCtx, FarLayer } from './farsea.ts';
 import type { CritPart } from './fx.ts';
 import { drawBossZones, drawMonster, drawPveSites } from './monsters.ts';
 import { drawAdvWorld, drawGuardShip, guardTag } from './advmap.ts'; // docs/17 H4
@@ -313,6 +316,21 @@ export class Renderer {
   private seenZoom = 2.6;
   /** Where the camera looks before the knock and the jitter (the ease runs on this; camX/camY are drawn). */
   private camBase = { x: 0, y: 0 };
+  /** The free look (freecam.ts): the camera parked at this point of the sea by a finger's drag, or null — it follows
+   *  her. She sails on as ordered meanwhile; recentre() (the «К кораблю» button, a fight's first sign) lets go. */
+  free: { x: number; y: number } | null = null;
+  /** Flying back to her after the free look (the long-way cut does not apply). */
+  private homing = false;
+  /** Her zoom before she drew it out past the old farthest (the recentre brings it back). */
+  private nearZoom = 0;
+  /** The zoom asked for and since when (the near zoom is one held a second). */
+  private zoomHeld = { z: 0, at: 0 };
+  /** A sign of a fight last frame (its first one brings the view home). */
+  private signWas = false;
+  /** The far view's chart layers over the land, under the live marks (farsea.ts): the fog of war's slot. */
+  readonly farLayers: FarLayer[] = [];
+  /** How much of the far chart showed last frame (0 none, 1 all). */
+  farMix = 0;
   /** Her mark within the close fight's band (her gun captains fire) or not yet: the word under its ring (main.ts). */
   markRange: 'in' | 'far' | null = null;
   /** ux2: the goal a course is run to (main.ts, goalrun.ts) — its beacon leads instead of the «Now:» line's. */
@@ -422,6 +440,26 @@ export class Renderer {
   sy(y: number): number {
     return (y - this.camY) * this.zoom + this.h / 2;
   }
+  /** The view dragged by (dx, dy) px: the free look parks the camera off her (freecam.ts). */
+  panBy(dx: number, dy: number, own: { x: number; y: number } | null): void {
+    const from = this.free ?? this.camBase;
+    this.free = panLook(from, dx, dy, this.zoom, own);
+    this.homing = false;
+  }
+
+  /** The view looking away from her: parked off her, or drawn out past the old farthest. */
+  get looking(): boolean {
+    return this.free !== null || this.targetZoom < ZOOM_NEAR_MIN;
+  }
+
+  /** Back to her (owner, 2026-10-17: «вернуть камеру к кораблю»): the free look lets go, and a far view comes back in
+   *  to her zoom before it. */
+  recentre(): void {
+    if (this.free) this.homing = true;
+    this.free = null;
+    if (this.targetZoom < ZOOM_NEAR_MIN) this.targetZoom = clampZoom(Math.max(ZOOM_NEAR_MIN, this.nearZoom || ZOOM_NEAR_MIN));
+  }
+
   toWorld(px: number, py: number): { x: number; y: number } {
     return { x: (px - this.w / 2) / this.zoom + this.camX, y: (py - this.h / 2) / this.zoom + this.camY };
   }
@@ -445,13 +483,24 @@ export class Renderer {
     // docs/23 (owner, 2026-10-09): the sea fight's view (camfight.ts). The wheel (or a pinch) since the last frame turns
     // the zoom on the screen, and the view is the captain's till the fight ends.
     if (this.targetZoom !== this.seenZoom) {
-      this.targetZoom = clamp(this.fight.wheel(this.seenZoom, this.targetZoom, fightShare(this.seenZoom, this.w, this.h)), 0.35, 4);
+      this.targetZoom = clampZoom(this.fight.wheel(this.seenZoom, this.targetZoom, fightShare(this.seenZoom, this.w, this.h)));
       this.seenZoom = this.targetZoom;
     }
     // Signs of a fight: her mark hostile in the close band, «Атаковать», a shot of hers, a ball on her hull. On a desk the
     // view steps back to keep a broadside's band round her in sight; a phone keeps its own (it spans the band already).
     const sign = !!own && !state.self?.dockedAt && (aim.range === 'in' || !!state.pursuit || this.fx.fought);
     this.fx.fought = false;
+    // A fight begins, or she comes into port: the view comes home (freecam.ts).
+    // (her own «in combat» counts too: a pirate's ball, her guns — the HUD's fight buttons come out with it)
+    const fighting = sign || !!state.you?.combat;
+    if ((fighting && !this.signWas) || state.self?.dockedAt || !own) {
+      if (this.looking) this.recentre();
+    }
+    this.signWas = fighting;
+    // her zoom before a far view: one she has held a second (not one passed through on the way out)
+    if (this.targetZoom >= ZOOM_NEAR_MIN && this.targetZoom === this.zoomHeld.z) {
+      if (this.time - this.zoomHeld.at > 1) this.nearZoom = this.targetZoom;
+    } else this.zoomHeld = { z: this.targetZoom, at: this.time };
     this.fight.step(dt, sign, !globalThis.document?.body.classList.contains('touch'));
     this.fightShare = fightShare(this.targetZoom, this.w, this.h);
     this.zoom += (this.fight.zoom(this.targetZoom, this.fightShare) - this.zoom) * Math.min(1, dt * 8);
@@ -463,14 +512,27 @@ export class Renderer {
       // fight half as far: she turns about her mark, and the band round her is what matters.
       const v = headingVec(own.heading);
       const reach = Math.min(own.speed * SPEED_SCALE * 0.8, (Math.min(this.w, this.h) * 0.18) / Math.max(0.1, this.zoom)) * (1 - 0.5 * this.fight.w);
-      // A long way off (the first frame, a respawn, a teleport): cut straight to her instead of flying the chart.
-      const far = Math.hypot(own.x - cam.x, own.y - cam.y) > 1500;
+      // A long way off (the first frame, a respawn, a teleport): cut straight to her instead of flying the chart — but
+      // home from the free look it flies (quicker the farther out the view is).
+      const gone = Math.hypot(own.x - cam.x, own.y - cam.y);
+      const far = gone > (this.homing ? 30_000 : 1500);
       const kl = far ? 1 : Math.min(1, dt * 0.8);
       this.lead.x += (v.x * reach - this.lead.x) * kl;
       this.lead.y += (v.y * reach - this.lead.y) * kl;
-      const k = far ? 1 : Math.min(1, dt * 6);
-      cam.x += (own.x + this.lead.x + this.look.x - cam.x) * k;
-      cam.y += (own.y + this.lead.y + this.look.y - cam.y) * k;
+      if (this.free) {
+        // the free look: where the finger left it, kept within reach of her as she sails
+        const f = (this.free = clampLook(this.free, own));
+        cam.x = f.x;
+        cam.y = f.y;
+      } else {
+        const k = far ? 1 : Math.min(1, dt * (this.homing ? 5 : 6));
+        cam.x += (own.x + this.lead.x + this.look.x - cam.x) * k;
+        cam.y += (own.y + this.lead.y + this.look.y - cam.y) * k;
+        if (this.homing && Math.hypot(own.x + this.lead.x - cam.x, own.y + this.lead.y - cam.y) < 40) this.homing = false;
+      }
+    } else if (this.free) {
+      cam.x = this.free.x;
+      cam.y = this.free.y;
     }
     // A ball on her hull knocks the whole view away from it, by its share of her hull; a blast near her jitters it as
     // before. Both move the camera, the shader sea with the ships (the jitter moved the 2D canvas alone, the sea stood
@@ -497,6 +559,10 @@ export class Renderer {
     this.nightNow = night;
     const opt0 = settings();
     const region = REGIONS[state.region];
+    // The far view (freecam.ts): all chart below CHART_FULL — the painted sea, the shader layers and every sprite rest.
+    const mix = (this.farMix = chartMix(this.zoom));
+    this.showGl(mix < 1);
+    if (mix >= 1) return this.drawFarOnly(state, own);
     this.drawOcean(state, region.waterTint);
     this.drawCurrents(state);
     const islands = this.visibleIslands(state);
@@ -575,6 +641,8 @@ export class Renderer {
     this.drawParticles(true);
     this.drawWeather(state, dt);
 
+    // The far view's chart fading in over the sea (freecam.ts CHART_FROM…CHART_FULL).
+    if (mix > 0) drawFarChart(g, state, this.farCtx(own, mix), this.farLayers);
     // Overlays (not affected by darkness).
     if (own && state.you && state.self) this.drawAim(state, own, aim, ships);
     if (own && state.self) this.drawOwnMark(state, own);
@@ -582,7 +650,8 @@ export class Renderer {
     // Names from the lowest on the screen up, each stepping above any it would lie on.
     this.labelBoxes = [];
     this.hudBand(); // the HUD's blocks, measured: the names keep out of them
-    for (const s of [...ships].filter((x) => !x.own).sort((a, b) => b.y - a.y)) this.drawLabel(s, state, aim.boardTarget === s.id, aim.target === s.id);
+    // (the names go as the chart comes: its darts are the ships then)
+    if (mix < 0.35) for (const s of [...ships].filter((x) => !x.own).sort((a, b) => b.y - a.y)) this.drawLabel(s, state, aim.boardTarget === s.id, aim.target === s.id);
     if (own) this.drawThreatMarks(ships, own);
     this.goalMark = null;
     if (own) this.drawQuestMark(state, own);
@@ -594,6 +663,34 @@ export class Renderer {
       // Lightning lights the sea for an instant; it must not wash the whole screen white.
       g.fillStyle = `rgba(210,225,255,${this.fx.flash * (opt.reduceFlashes ? 0.08 : 0.22)})`;
       g.fillRect(0, 0, this.w, this.h);
+    }
+  }
+
+  // ------------------------------------------------------------------ the far view (freecam.ts, farsea.ts)
+
+  private farCtx(own: SailState | null, mix: number): FarCtx {
+    return { sx: (x) => this.sx(x), sy: (y) => this.sy(y), zoom: this.zoom, w: this.w, h: this.h, camX: this.camX, camY: this.camY, mix, own: own ? { x: own.x, y: own.y, heading: own.heading } : null };
+  }
+
+  /** The shader sea and sky shown or put away (the far chart covers the screen: they are not drawn under it). */
+  private glShown = true;
+  private showGl(on: boolean): void {
+    if (on === this.glShown) return;
+    this.glShown = on;
+    for (const l of [this.sea, this.sky]) if (l) l.canvas.style.visibility = on ? '' : 'hidden';
+  }
+
+  /** The chart alone: the islands, the ports, what her lookouts see as marks; her course and her goal's beacon. */
+  private drawFarOnly(state: ClientState, own: SailState | null): void {
+    const g = this.g;
+    g.clearRect(-20, -20, this.w + 40, this.h + 40);
+    drawFarChart(g, state, this.farCtx(own, 1), this.farLayers);
+    this.labelBoxes = [];
+    if (own && state.autosail && !state.self?.dockedAt) this.drawCourse(state.autosail, own);
+    this.goalMark = null;
+    if (own) {
+      this.hudBand();
+      this.drawQuestMark(state, own);
     }
   }
 

@@ -99,6 +99,10 @@ body.lock-tattoos [data-jchip="tattoos"] { display: none !important; }
      clear of the arc, and the attack button waits while her terms are up: the terms are the act, «Позже» brings it back) */
   body.touch #surrender { top: auto; bottom: calc(var(--sa-b) + 8px); left: calc(var(--sa-l) + var(--stick) + 34px); right: auto; transform: none;
     width: min(460px, calc(100vw - var(--sa-l) - var(--sa-r) - var(--stick) - 206px)); min-width: 0; }
+  /* (2026-10-17: right of the sail's «+» «−» by the wheel too — they came after this card and lay under it at 640×360
+     and 480×270 — and left of «Снаряд» beside «Огонь», the fight's buttons' own sizes) */
+  body.simple.touch #surrender { left: calc(var(--helm-w) + 2px);
+    width: min(460px, calc(100vw - var(--helm-w) - 2px - var(--sa-r) - var(--sea-pad) - 4px - var(--sea-fire) - var(--sea-gap) - var(--sea-btn) * 1.11 - 6px)); }
   body.touch:has(#surrender:not(.hidden)) #tc-actrow { visibility: hidden; }
   body.touch:has(#surrender:not(.hidden)) #hud-captain, body.touch:has(#surrender:not(.hidden)) #hud-stack { visibility: visible; }
   body.touch #surrender .enc-card { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 4px; padding: 5px 6px 6px; align-items: stretch; }
@@ -112,4 +116,18 @@ body.lock-tattoos [data-jchip="tattoos"] { display: none !important; }
   body.touch #surrender .sur-choice .choice-ico, body.touch #surrender .sur-choice small { display: none; }
   body.touch #surrender .sur-choice b { font-size: 11px; line-height: 1.15; white-space: normal; }
   body.touch #surrender .sur-foot .btn { grid-column: 5; grid-row: 2; min-height: 44px; margin: 0; padding: 2px 8px; align-self: stretch; }
+}
+/* a narrow phone (640×360: the card 290 px between the helm and the guns, 480×270: 200 px): the four choices take the
+   whole row, «Позже» goes up beside the title in place of the distance (the choices wait, greyed, till she is alongside) */
+@media (max-width: 699px) and (max-height: 520px) {
+  body.simple.touch #surrender .enc-card { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  body.simple.touch #surrender .sur-head { grid-column: 1 / 4; }
+  body.simple.touch #surrender .sur-dist { display: none; }
+  body.simple.touch #surrender .sur-foot .btn { grid-column: 4; grid-row: 1; min-height: 26px; padding: 0 6px; font-size: 11px; justify-self: end; }
+}
+@media (max-width: 560px) and (max-height: 520px) {
+  /* (480×270: each choice 42 px, 26 inside its painted frame: its picture, not its word — the word is its title and its
+     name) */
+  body.simple.touch #surrender .sur-choice .choice-ico { display: block; width: 24px; height: 24px; margin: 0 auto; }
+  body.simple.touch #surrender .sur-choice > span { display: none; }
 }

@@ -22,6 +22,10 @@ const SCREENS = [
   { id: 'port-quests', at: 'port', open: async (p) => { await p.evaluate(() => globalThis.gravetide.open('port')); await L.sleep(400); await p.evaluate(() => document.querySelector('[data-ptab="quests"]')?.click()); } },
   { id: 'port-hud', at: 'port', open: async () => {} },
   { id: 'sea', at: 'sea', open: async () => {} },
+  // the far view and the free look (freecam.ts): the chart, «К кораблю» under the chart's row
+  { id: 'far', at: 'sea', open: (p) => p.evaluate(() => { const r = globalThis.gravetide.renderer; r.targetZoom = 0.06; r.panBy(-150, 80, globalThis.gravetide.state.ownDisplay); }) },
+  // a ship striking her colours: the terms' card and its painted choices
+  { id: 'strike', at: 'sea', open: async (p) => { await L.say(p, '/strike'); await L.sleep(2000); } },
   { id: 'menu', at: 'sea', open: (p) => p.evaluate(() => document.getElementById('tc-menu')?.click()) },
   { id: 'news', at: 'sea', open: (p) => p.evaluate(() => globalThis.gravetide.seaHud.openNews()) },
   { id: 'capmenu', at: 'sea', open: (p) => p.evaluate(() => document.getElementById('hud-captain')?.click()) },
@@ -102,7 +106,9 @@ async function shut(p) {
   for (let i = 0; i < 3; i++) {
     await p.evaluate(() => {
       globalThis.gravetide.open(null);
+      globalThis.gravetide.renderer.recentre?.();
       document.querySelector('#promo-over [data-polater]')?.click();
+      document.querySelector('[data-gflater]')?.click();
       document.querySelector('#isle:not(.hidden) .is-sea')?.click();
       for (const x of document.querySelectorAll('.k-sheet-root.k-open .k-sheet-x')) x.click();
       if (document.body.classList.contains('chat-open')) document.getElementById('chat-toggle')?.click();
