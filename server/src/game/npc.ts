@@ -75,6 +75,10 @@ export interface NpcBrain {
   struck?: boolean;
   expiresAt: number;
   huntAccount: number | null;
+  /** A ship put out for a captain to fight (a port quest's quarry, the admin's /foe): when no new leg is to be had
+   *  (a harbour's water, a square above her) she lies to and looks again a little later, not struck off the sea. */
+  keep?: boolean;
+  holdUntil?: number;
   chase: { id: number; until: number } | null; // spotted from the crow's nest: pursue beyond detection range
   spared: Map<number, number>; // ship id -> until: plundered victims are left alone
   stuckCheck: { x: number; y: number; t: number };
@@ -441,6 +445,7 @@ function abstractStep(game: Game, ship: ShipEntity, brain: NpcBrain, dt: number)
 /** Arrival at the end of a path: merchants trade and re-plan, others pick a new leg. */
 function arrive(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   if (ship.caravanId) return; // a captain's caravan keeps its own route (caravans.ts)
+  if (brain.keep && (brain.holdUntil ?? 0) > game.now) return; // lying to a while
   if (ship.convoyOf && brain.destPort === ship.convoyOf.to) return convoyArrived(game, ship);
   if (brain.destPort) {
     const port = game.portById(brain.destPort);
@@ -462,7 +467,10 @@ function arrive(game: Game, ship: ShipEntity, brain: NpcBrain): void {
       if (planMerchantVoyage(game, ship, brain, port)) return;
     }
   }
-  if (!replan(game, ship, brain)) game.removeShip(ship.id);
+  if (replan(game, ship, brain)) return;
+  if (!brain.keep) return game.removeShip(ship.id);
+  brain.holdUntil = game.now + 6;
+  ship.input = { rudder: 0, sailTarget: 0.15 };
 }
 
 function replan(game: Game, ship: ShipEntity, brain: NpcBrain): boolean {
@@ -1422,6 +1430,7 @@ export function spawnPackLeader(game: Game, region: RegionId, level: number, nea
     game.setNpcLevel(ship, lv);
     const brain = game.npcs.get(ship.id)!;
     brain.area = { x: cx, y: cy, r: near ? near.r : 8000 };
+    if (near) brain.keep = true; // (off a harbour: she lies to when no leg is to be had)
     brain.expiresAt = game.now + 3600;
     ship.purse = (ship.purse ?? 0) + 300 + level * 20;
     planWander(game, ship, brain);
@@ -1457,6 +1466,7 @@ export function spawnQuestFoe(game: Game, at: { x: number; y: number }, role: 'p
     if (brain) {
       brain.area = { x: at.x, y: at.y, r };
       brain.expiresAt = game.now + 900;
+      brain.keep = true;
       planWander(game, ship, brain);
     }
     return ship;

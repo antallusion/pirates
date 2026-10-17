@@ -1153,6 +1153,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
         // Her waters about the captain: without them she had no leg to sail and was struck off the sea the same second
         // wherever she would not go for the captain (a safe sea — the Black Coast, where the QA runs start).
         brain.area ??= { x: o.state.x, y: o.state.y, r: 500 }; // and close by: she is the captain's to try
+        brain.keep = true; // (off a harbour no leg is to be had: she lies to, not struck off the sea at once)
         // `/foe … hunt`: she comes for the captain, safe water or not (a fight to try, not a ship to run down).
         if (args.includes('hunt')) brain.huntFor = ship.id;
       }

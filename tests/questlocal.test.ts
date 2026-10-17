@@ -13,7 +13,7 @@ import { routeFor } from '../server/src/game/goalroute.ts';
 import { PORT_SHOAL_R, shoalsOf, stepFishing } from '../server/src/game/fishing.ts';
 import { acceptQuest } from '../server/src/game/quests.ts';
 import { buildPortView } from '../server/src/game/ports.ts';
-import { LOCAL_R, anywhereStep, callLeaderIn, farVoyage, localTick, questHome, questOrigin, stepFar } from '../server/src/game/questlocal.ts';
+import { LOCAL_R, anywhereStep, callLeaderIn, farVoyage, localQuarry, localTick, questHome, questOrigin, stepFar } from '../server/src/game/questlocal.ts';
 import { spawnPackLeader } from '../server/src/game/npc.ts';
 import { join, makeGame, onHull } from './helpers.ts';
 
@@ -106,8 +106,14 @@ test('a port job done anywhere — sink pirates, board, tribute, beasts — send
     if (st.type === 'beast') assert.equal(o.npcRole, 'beast');
     if (st.type === 'sink' && st.role === 'ghost') assert.equal(o.npcRole, 'ghost');
   });
+  // the quarry stays on the sea about the port (no leg to be had off a harbour does not strike her off it)
+  const ids = steps.map((_, i) => localQuarry(game, s, `ql_${i}`).map((o) => o.id)).flat();
+  const roles = new Map(ids.map((id) => [id, game.ships.get(id)!.npcRole]));
+  s.ship!.docked = null; // (a captain in port does not see the sea: the beasts about her harbour go)
+  for (let k = 0; k < 100; k++) game.step();
+  const still = ids.filter((id) => game.ships.get(id)?.alive);
+  assert.equal(still.length, ids.length, `${still.length} of ${ids.length} still at sea: gone ${ids.filter((id) => !game.ships.get(id)?.alive).map((id) => roles.get(id)).join(',')} of ${ids.map((id) => game.ships.get(id)?.npcRole ?? '?').join(',')}`);
   // at sea about the port, the quarry keeps coming (two at a time at most)
-  s.ship!.docked = null;
   for (let k = 0; k < 400; k++) {
     game.tick++;
     game.now += 0.05;
