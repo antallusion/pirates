@@ -9,6 +9,9 @@
 /* (doubled classes: over the sea HUD's own placing, body.simple.touch and Telegram's html.tg-app) */
 html body.isle-on.isle-on.isle-on.isle-on #toasts { top: calc(max(var(--sa-t, 0px), 4px) + 44px) !important; left: 50% !important; transform: translateX(-50%) !important; width: min(46vw, 420px) !important; }
 @media (max-height: 520px) { html body.isle-on.isle-on.isle-on.isle-on #toasts { top: calc(max(var(--sa-t, 0px), 3px) + 36px + 4 * var(--u, 1px)) !important; } }
+/* a side sheet or a card open: the words in the strip between the island's places and it, never over it (islescene.ts
+   toastRoom measures the strip) */
+html body.isle-on.isle-carded.isle-carded.isle-carded #toasts { left: calc((var(--isle-free-l, 0px) + var(--isle-free-r, 100vw)) / 2) !important; width: min(420px, calc(var(--isle-free-r, 100vw) - var(--isle-free-l, 0px))) !important; }
 body.isle-on :is(#world, #hud, #hud-chat, #encounter, #surrender, #lairchest, #advcard, #minigame, #trek, #fishfight, #nethaul, #atk-mark, #pad-cursor) { visibility: hidden !important; }
 
 #isle {

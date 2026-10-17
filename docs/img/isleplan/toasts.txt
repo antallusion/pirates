@@ -1,0 +1,16 @@
+844x390 advice: {"card":true,"toasts":1,"overCard":0,"overSide":0,"toast":[58,478,22],"cardL":484}
+844x390 building: {"card":true,"toasts":1,"overCard":0,"overSide":0,"toast":[58,478,22],"cardL":484}
+844x390 ships: {"card":true,"toasts":1,"overCard":0,"overSide":0,"toast":[58,309,35],"cardL":315}
+844x390 town: {"card":true,"toasts":1,"overCard":0,"overSide":0,"toast":[58,309,35],"cardL":315}
+844x390 supply: {"card":true,"toasts":1,"overCard":0,"overSide":0,"toast":[58,309,35],"cardL":315}
+480x270 advice: {"card":true,"toasts":1,"overCard":0,"overSide":0,"toast":[54,232,48],"cardL":238}
+480x270 building: {"card":true,"toasts":1,"overCard":0,"overSide":0,"toast":[54,232,48],"cardL":238}
+480x270 ships: {"card":true,"toasts":1,"overCard":0,"overSide":0,"toast":[54,170,43],"cardL":176}
+480x270 town: {"card":true,"toasts":1,"overCard":0,"overSide":0,"toast":[54,170,43],"cardL":176}
+480x270 supply: {"card":true,"toasts":1,"overCard":0,"overSide":0,"toast":[54,170,43],"cardL":176}
+1440x900 advice: {"card":true,"toasts":1,"overCard":0,"overSide":0,"toast":[349,769,30],"cardL":1054}
+1440x900 building: {"card":true,"toasts":1,"overCard":0,"overSide":0,"toast":[349,769,30],"cardL":1054}
+1440x900 ships: {"card":true,"toasts":1,"overCard":0,"overSide":0,"toast":[209,629,30],"cardL":774}
+1440x900 town: {"card":true,"toasts":1,"overCard":0,"overSide":0,"toast":[209,629,30],"cardL":774}
+1440x900 supply: {"card":true,"toasts":1,"overCard":0,"overSide":0,"toast":[209,629,30],"cardL":774}
+bad 0

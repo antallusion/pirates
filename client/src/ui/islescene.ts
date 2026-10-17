@@ -154,7 +154,7 @@ export class IsleScene {
     this.pick = null;
     this.base.moving = null;
     this.root?.classList.add('hidden');
-    document.body.classList.remove('isle-on');
+    document.body.classList.remove('isle-on', 'isle-carded');
     this.fx?.stop();
     this.load?.close();
     this.load = null;
@@ -193,6 +193,7 @@ export class IsleScene {
       if (!this.isOpen) return;
       this.clampCam();
       this.apply();
+      this.toastRoom();
     });
     this.topEl.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLElement>('[data-isea]');
@@ -581,6 +582,7 @@ export class IsleScene {
     if (!state || !v || (!this.pick && this.base.moving === null)) {
       this.cardEl.classList.add('hidden');
       this.root?.classList.remove('is-carded');
+      this.toastRoom();
       return;
     }
     // the island window shares the selection (a window over the scene may have moved it)
@@ -596,6 +598,7 @@ export class IsleScene {
     else body = this.base.sheet(v, state, true);
     if (!body) {
       this.cardEl.classList.add('hidden');
+      this.toastRoom();
       return;
     }
     const keep = this.cardEl.querySelector('.is-cb')?.scrollTop ?? 0;
@@ -604,6 +607,7 @@ export class IsleScene {
     this.cardEl.classList.toggle('wide', panel === 'yard' || panel === 'town' || panel === 'supply');
     this.cardEl.dataset.panel = panel ?? '';
     this.root?.classList.add('is-carded');
+    this.toastRoom();
     const cb = this.cardEl.querySelector<HTMLElement>('.is-cb')!;
     cb.scrollTop = keep;
     // the island's own isometric pictures in the card: the building's head, the build list's rows
@@ -639,6 +643,19 @@ export class IsleScene {
     this.cardEl.querySelectorAll<HTMLElement>('.bjob[data-plot], .bjob[data-town]').forEach((el) => (el.onclick = () => this.select(el.dataset.plot ? { plot: Number(el.dataset.plot) } : { town: el.dataset.town as TownId }, true)));
     if (panel === 'plan') this.bindPlan(v);
     this.base.tick(this.cardEl, state);
+  }
+
+  /** The server's words (#toasts) keep off an open side sheet or card (coordinator, 2026-10-17: a toast lay over «Что
+   *  строить дальше»'s title): the strip between the island's places on the left and the card is theirs (isle.css). */
+  private toastRoom(): void {
+    const b = document.body;
+    const open = this.isOpen && !this.cardEl.classList.contains('hidden');
+    b.classList.toggle('isle-carded', open);
+    if (!open) return;
+    const l = Math.round(this.sideEl.getBoundingClientRect().right + 6);
+    const r = Math.round(this.cardEl.getBoundingClientRect().left - 6);
+    b.style.setProperty('--isle-free-l', `${l}px`);
+    b.style.setProperty('--isle-free-r', `${Math.max(l + 1, r)}px`);
   }
 
   // ------------------------------------------------------------------------------------------------ the advice
