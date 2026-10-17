@@ -466,3 +466,29 @@ test('the waystations under the fog are hidden (setWayFog: the sea, the minimap,
     setWayFog(null);
   }
 });
+
+test('the far view’s chart: fogged islands, ports and their names are not drawn; the fog is its layer', async () => {
+  const { drawFarChart } = await import('../client/src/render/farsea.ts');
+  const { fogFarLayer } = await import('../client/src/render/fog.ts');
+  const texts: string[] = [];
+  let arcs = 0;
+  const g = new Proxy({}, {
+    get: (_t, k) => (k === 'fillText' ? (t: string) => texts.push(t) : k === 'measureText' ? () => ({ width: 40 }) : k === 'arc' ? () => arcs++ : () => {}),
+    set: () => true,
+  }) as unknown as CanvasRenderingContext2D;
+  const bits = newFog();
+  fogDisc(bits, 20_500, 20_500, 2000);
+  const isle = (id: number, x: number, name: string, portId?: string) => ({ id, x, y: 20_500, r: 400, name, poly: [], portId, features: [], region: 'gravewater', biome: 'temperate' });
+  const state = {
+    seen: bits, seenVer: 1, scouts: null, scoutsAt: 0, discovered: new Set([1, 2]), ships: new Map(), roams: [], drifts: [],
+    islands: new Map([[1, isle(1, 20_500, 'Seen Isle')], [2, isle(2, 30_500, 'Fogged Isle')], [3, isle(3, 21_000, 'Seen Port', 'p1')], [4, isle(4, 31_000, 'Fogged Port', 'p2')]]),
+    ports: [{ id: 'p1', x: 21_000, y: 20_500, name: 'Seen Port' }, { id: 'p2', x: 31_000, y: 20_500, name: 'Fogged Port' }],
+  };
+  let layered = 0;
+  const c = { sx: (x: number) => (x - 25_000) * 0.08 + 600, sy: (y: number) => (y - 20_500) * 0.08 + 200, zoom: 0.08, w: 1200, h: 400, camX: 25_000, camY: 20_500, mix: 1, own: null };
+  drawFarChart(g, state as never, c, [() => layered++]);
+  assert.equal(layered, 1, 'the fog’s slot is drawn');
+  assert.ok(texts.includes('Seen Port'), texts.join(','));
+  assert.ok(!texts.some((t) => /Fogged/.test(t)), 'no fogged name on the far chart');
+  assert.equal(typeof fogFarLayer(state as never), 'function');
+});

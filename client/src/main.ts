@@ -2,7 +2,7 @@
 
 import { WayWindow, mountFallen, resRid } from './ui/waystation.ts'; // docs/35
 import { setWayFog, wayName } from './render/waystations.ts'; // docs/35
-import { underFog } from './render/fog.ts'; // the fog of war (owner, 2026-10-17)
+import { fogFarLayer, underFog } from './render/fog.ts'; // the fog of war (owner, 2026-10-17)
 import { WAY_MOOR_RANGE } from '../../shared/src/world/waystations.ts'; // docs/35
 import type { WayData } from '../../shared/src/wayproto.ts'; // docs/35
 import { EN as I18_EN, RU as I18_RU } from './lang/ui/isles18.ts';
@@ -173,6 +173,7 @@ const state = new ClientState();
 // The waystations under the fog of war are drawn nowhere (the sea, the minimap, the chart, their tooltip).
 setWayFog((x, y) => underFog(state.seen, x, y));
 const renderer = new Renderer($('world') as HTMLCanvasElement);
+renderer.farLayers.push(fogFarLayer(state, () => settings().reduceMotion)); // the fog of war on the far view's chart
 const hud = new Hud();
 const audio = new AudioEngine();
 renderer.onLightning = () => audio.thunder();

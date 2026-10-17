@@ -12,6 +12,7 @@
 import { WORLD_SIZE } from '../../../shared/src/constants.ts';
 import { FOG_CELL, FOG_SIDE, courseAt, fogHas, fogSeen } from '../../../shared/src/data/fog.ts';
 import type { ScoutView, ScoutsView } from '../../../shared/src/fogproto.ts';
+import type { FarCtx, FarLayer } from './farsea.ts';
 
 /** A view of the world on a canvas: a world point (x, y) stands at ((x − x0)·k, (y − y0)·k) in the canvas's units, the
  *  view `w` × `h` of them. `time` in seconds drifts the mist (0: still); `alpha` the fog's weight (1: the sea's). */
@@ -254,6 +255,17 @@ function draw2d(g: CanvasRenderingContext2D, bits: Uint8Array, ver: number, v: F
   if (wy0 + ws < v.h) g.fillRect(0, wy0 + ws, v.w, v.h - wy0 - ws);
   g.drawImage(canvas2d, wx0, wy0, ws, ws);
   g.restore();
+}
+
+// ------------------------------------------------------------------------------------------------ the far view
+
+/** The fog as the far view's chart layer (renderer.farLayers, farsea.ts): over its land, under its live marks, in its
+ *  own transform; as strong as the chart is (the near sea's fog under it already). Her scouts on it too. */
+export function fogFarLayer(state: { seen: Uint8Array | null; seenVer: number; scouts: ScoutsView | null; scoutsAt: number }, still = () => false): FarLayer {
+  return (g: CanvasRenderingContext2D, c: FarCtx) => {
+    drawFog(g, state.seen, state.seenVer, { x0: c.camX - c.w / 2 / c.zoom, y0: c.camY - c.h / 2 / c.zoom, k: c.zoom, w: c.w, h: c.h, time: still() ? 0 : performance.now() / 1000, alpha: c.mix, q: 0.5 });
+    drawScouts(g, state.scouts, state.scoutsAt, c.sx, c.sy, 12);
+  };
 }
 
 // ------------------------------------------------------------------------------------------------ the scouts on a chart

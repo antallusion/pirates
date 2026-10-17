@@ -22,6 +22,7 @@ import { EN, RU } from '../lang/ui/freecam.ts';
 import { RELATION_COLOR, relationOf } from './relation.ts';
 import { drawRoamsMini } from './roamers.ts';
 import { drawDriftsMini } from './drifts.ts';
+import { underFog, visibleOnChart } from './fog.ts';
 
 const L = dict(EN, RU);
 
@@ -94,6 +95,7 @@ export function drawFarChart(g: CanvasRenderingContext2D, state: ClientState, c:
   const labels: { x: number; y: number; text: string; port: boolean }[] = [];
   for (const is of state.islands.values()) {
     if (is.x + is.r < x0 || is.x - is.r > x1 || is.y + is.r < y0 || is.y - is.r > y1) continue;
+    if (underFog(state.seen, is.x, is.y)) continue; // the fog of war hides her and her name (pirates-board)
     if (is.portId) ports.add(is.portId);
     const r = is.r * zoom;
     if (is.mist) {
@@ -126,7 +128,7 @@ export function drawFarChart(g: CanvasRenderingContext2D, state: ClientState, c:
     if (!is.portId && !is.town && state.discovered.has(is.id) && r > 14) labels.push({ x: sx(is.x), y: sy(is.y), text: is.name, port: false });
   }
   for (const p of state.ports) {
-    if (!ports.has(p.id) || p.x < x0 || p.x > x1 || p.y < y0 || p.y > y1) continue;
+    if (!ports.has(p.id) || p.x < x0 || p.x > x1 || p.y < y0 || p.y > y1 || underFog(state.seen, p.x, p.y)) continue;
     const px = sx(p.x), py = sy(p.y);
     g.fillStyle = '#e0b862';
     g.strokeStyle = 'rgba(0,0,0,0.8)';
@@ -189,8 +191,10 @@ export function drawFarChart(g: CanvasRenderingContext2D, state: ClientState, c:
   }
   // what moves: the beasts and stacks as the chart draws them; the ships as darts
   const view = { x: c.camX, y: c.camY }, range = Math.max(hw, hh);
-  drawDriftsMini(g, state, sx, sy, view, range);
-  drawRoamsMini(g, state, sx, sy, view, range);
+  // (the fog of war hides the creatures in it as it hides the land: only those in seen water)
+  const seen = state.seen ? Object.assign(Object.create(state) as ClientState, { drifts: visibleOnChart(state.seen, state.drifts), roams: visibleOnChart(state.seen, state.roams) }) : state;
+  drawDriftsMini(g, seen, sx, sy, view, range);
+  drawRoamsMini(g, seen, sx, sy, view, range);
   g.globalAlpha = mix;
   for (const s of state.ships.values()) {
     const p = s.cur;
