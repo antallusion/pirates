@@ -23,6 +23,8 @@ import { ladder } from '../../../shared/src/data/shiplevel.ts';
 import { PICKED_TIER, TIER_SHIP_LEVEL, mightCap, mightRoom } from '../../../shared/src/data/town.ts';
 import type { DwellRow, DwellView } from '../../../shared/src/h3proto.ts';
 import type { LairCard, LairClientMsg, LairLoot, LairMark, LairsView } from '../../../shared/src/lairproto.ts';
+import { lootChances } from '../../../shared/src/data/isleloot.ts';
+import { islandLoot } from './isleloot.ts'; // docs/29 §9 (owner, 2026-10-17)
 import type { TacAction } from '../../../shared/src/protocol.ts';
 import { closestOnPolygon, dist, pointInPolygon } from '../../../shared/src/math.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
@@ -457,7 +459,7 @@ function card(game: Game, s: PlayerSession, l: Lair): LairCard {
     ...(seal ? { seal } : {}),
     id: l.id, kind: l.kind, role: l.role, size: l.size, level: l.level, island: islandName(game, l), men: armyMen(men), stacks: men.map((x) => ({ u: x.u, n: x.n })),
     ratio: Math.round(lairRatio(game, s, l) * 10) / 10, party: armyMen(partyOf(game, s)), offer, joinN: offer === 'join' ? armyMen(lairJoiners(game, s, l)) : 0,
-    reach: inReach(game, s, l), why: up ? farless(fightWhy(game, s, l)) : null, pay: { silver: pay.silver, xp: xpAt(s.profile!.level, l.level, pay.xp) }, ...(lairWeek(game, l) ? { week: true } : {}),
+    reach: inReach(game, s, l), why: up ? farless(fightWhy(game, s, l)) : null, pay: { silver: pay.silver, xp: xpAt(s.profile!.level, l.level, pay.xp) }, isle: lootChances({ src: 'lair', size: l.size, role: l.role, level: l.level }), ...(lairWeek(game, l) ? { week: true } : {}),
     ...(p.v[l.id] === week1(game) ? { looted: true } : {}),
     ...(!up && st?.down !== undefined ? { down: Math.max(0, Math.round(st.down + LAIR_RESPAWN[l.role] - game.now)) } : {}),
     ...(chainSteps ? { chain: { step: l.chain!, done: chainSteps } } : {}),
@@ -897,6 +899,9 @@ function lootLair(game: Game, s: PlayerSession, l: Lair): LairLoot {
       loot.egg = u;
       game.toastShip(ship, `The party brings back a young one of the ${beastsName(u)}: lay it in the pen of your island's town.`, 'gold');
     }
+    // docs/29 §9: the island's loot of the islands' creatures (speed-ups, the yard's goods, the harvest, a brigade)
+    const isle = islandLoot(game, s, { src: 'lair', size: l.size, role: l.role, level: l.level }, thin);
+    if (isle.length) loot.isle = isle;
     game.toastShip(ship, `The ${lairName(l)} is beaten: ${pay.silver} silver and the land's spoils.`, 'gold');
     // The island's chain (docs/18 #22): the shore lair, the grotto and the guardian this week — the island's chest.
     if (l.chain === 2 && lp.v[`l${l.island}s`] === w && lp.v[`l${l.island}g`] === w && lp.chest[l.island] !== w) {

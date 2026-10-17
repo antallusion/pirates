@@ -25,7 +25,8 @@ import type { ShopGrant, ShopOffer } from '../../../shared/src/data/shop.ts';
 import type { ShopJobView, ShopView, ShopWhy } from '../../../shared/src/premiumproto.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { Rng } from '../../../shared/src/rng.ts';
-import { baseView, buildersBusy, crewsBase, mine, reckonBase, yardOf } from './base.ts';
+import { baseView, buildersBusy, capOf, crewsBase, mine, reckonBase, yardOf } from './base.ts';
+import type { IsleDrop } from '../../../shared/src/data/isleloot.ts';
 import { landFighting } from './beastlairs.ts';
 import { ownIsland } from './estate.ts';
 import { MAX_MAPS, chestCount, grantMap, makeMap } from './explorefx.ts';
@@ -643,6 +644,52 @@ function afterBuy(game: Game, s: PlayerSession, offer?: ShopOffer): void {
     const v = baseView(game, s);
     if (v) game.sendTo(s, { t: 'base', view: v });
   }
+}
+
+// ------------------------------------------------------------------------------------------------ the creatures' loot
+
+/** docs/29 §9 (owner, 2026-10-17): a drop of the island's loot from a creature of the islands, into the same stores as
+ *  the shop's goods — the minutes of speed-ups, a day's brigade, the harvest, the yard. False: nothing to put it in (no
+ *  island for the yard's goods, the harvest or a brigade; the yard full). */
+export function isleLootGrant(game: Game, s: PlayerSession, d: IsleDrop): boolean {
+  const st = shopState(game, s.accountId);
+  const wall = game.wallNow();
+  const h = ownIsland(game, s.accountId);
+  switch (d.k) {
+    case 'speed':
+      st.speed += d.min;
+      break;
+    case 'builder': {
+      if (!h) return false;
+      const live = tempLive(st, wall);
+      if (live.length < TEMP_MAX) live.push(wall + d.hours * H);
+      else {
+        const i = live.indexOf(Math.min(...live));
+        live[i] += d.hours * H;
+      }
+      st.temp = live;
+      break;
+    }
+    case 'prod':
+      if (!h) return false;
+      reckonBase(game, h);
+      st.prod = Math.min(wall + BOOST_MAX_H * H, Math.max(wall, st.prod) + d.hours * H);
+      break;
+    case 'res': {
+      if (!h) return false;
+      reckonBase(game, h);
+      const y = yardOf(game, h);
+      const room = Math.max(0, Math.floor(capOf(h) - (y.res[d.good] ?? 0)));
+      const k = Math.min(room, d.n);
+      if (k <= 0) return false;
+      y.res[d.good] = (y.res[d.good] ?? 0) + k;
+      d.n = k;
+      game.holdings.touch();
+      break;
+    }
+  }
+  save(game, s.accountId, st);
+  return true;
 }
 
 /** Minutes of her speed-ups spent on a job (-1: the yard's refit of her ship), as many as it needs. */

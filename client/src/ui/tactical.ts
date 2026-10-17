@@ -28,6 +28,7 @@ import { catapultAt, drawCatapult, drawSiegeField } from './tacsiege.ts'; // doc
 import { serverText } from '../lang/server.ts';
 import { EN as CEN, RU as CRU } from '../lang/ui/citadels.ts'; // docs/19 E5
 import { EN as LEN, RU as LRU } from '../lang/ui/lairs.ts';
+import { isleDropChip } from './isleloot.ts'; // docs/29 §9
 import type { LairLoot } from '../../../shared/src/lairproto.ts';
 import { LAIRS } from '../../../shared/src/data/lairs.ts';
 import type { LairKind } from '../../../shared/src/data/lairs.ts';
@@ -128,6 +129,8 @@ function lootParts(l: LairLoot): { chips: string[]; lines: string[] } {
     const name = r === 'pearls' ? GOODS.pearls.name : LAND_RES_DEF[r].name[ru];
     chips.push(`<span class="tb-lc" title="${esc(name)}">${icon(r === 'pearls' ? 'icon.good_pearls' : `icon.${LAND_RES_DEF[r].icon}`, '', 'ico-sm')}${esc(name)} ${n}</span>`);
   }
+  // docs/29 §9: the island's loot of a creature of the islands (speed-ups, the yard's goods, the harvest, a brigade).
+  for (const d of l.isle ?? []) chips.push(isleDropChip(d));
   // «Свиток автобоя» (owner, 2026-10-11): a top seal's weekly scroll.
   if (l.scrolls) chips.push(`<span class="tb-lc" title="${esc(L('scLoot', { n: l.scrolls }))}">${icon(AUTO_SCROLL_ICON, '', 'ico-sm')}×${l.scrolls}</span>`);
   const lines: string[] = [];

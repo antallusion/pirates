@@ -5362,3 +5362,18 @@ body.tac-ph .tb-top { position: absolute; top: calc(env(safe-area-inset-top, 0px
 .goal-tap { cursor: pointer; border-radius: 3px; }
 .goal-tap:hover, .goal-tap:focus-visible { background: rgba(232, 196, 106, 0.1); outline: 1px solid rgba(232, 196, 106, 0.35); }
 .goal-tap:not(.dl-row):not(.wg-row):not(.inv-tide):not(.mq-row)::after { content: ' ⛵'; color: var(--gold); opacity: 0.7; font-size: 0.85em; }
+
+/* docs/29 §9: the island's loot of the islands' creatures — the lair card's «Возможная добыча», the battle's chips */
+.ac-isle { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; margin: 3px 0 1px; font-size: 11.5px; }
+.ac-ilh { flex-basis: 100%; font-size: 11px; }
+.ac-il { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; color: var(--bone, #e6dccb); }
+.ac-il b { color: var(--gold, #d8b45c); font-weight: 600; }
+.ac-il .ico-sm { width: 16px; height: 16px; }
+.tb-lc.tb-isle { border-color: rgba(150, 190, 220, 0.55); }
+@media (max-height: 520px) {
+  #advcard .ac-isle { gap: 1px 6px; margin: 1px 0; font-size: 10.5px; }
+  #advcard .ac-ilh { display: none; }
+  #advcard .ac-il { font-size: 0; }
+  #advcard .ac-il b { font-size: 10.5px; }
+  #advcard .ac-il .ico-sm { width: 14px; height: 14px; }
+}

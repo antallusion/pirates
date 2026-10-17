@@ -65,6 +65,8 @@ export interface LairCard {
   };
   /** docs/18 #45: this week is named for its kind (a quarter more of them, and of its loot). */
   week?: boolean;
+  /** docs/29 §9: «Возможная добыча» — the island's loot it may drop, and each chance. */
+  isle?: ReturnType<typeof import('./data/isleloot.ts').lootChances>;
   /** docs/19 E9: her seal's mythic depth — its level, its lair's kind (in her boats' reach, whichever lair is carded),
    *  and why not now (null: it may be entered). */
   seal?: { lv: number; kind: LairKind; why: string | null };
@@ -92,6 +94,8 @@ export interface LairLoot {
   drift?: { silver: number; xp: number; legend?: boolean };
   /** An auto-battle scroll among the spoils (a top seal of the week, owner 2026-10-11). */
   scrolls?: number;
+  /** docs/29 §9: the island's loot of a creature of the islands (speed-ups, the yard's goods, the harvest, a brigade). */
+  isle?: import('./data/isleloot.ts').IsleDrop[];
   /** docs/19 D5: the chest among the sharks — what came up in it. */
   find?: { silver: number; goods: { g: GoodId; n: number }[] };
   /** docs/19 D7: a roaming stack beaten at sea — its lesson (the battle's apart), its silver and spoils, an artifact,

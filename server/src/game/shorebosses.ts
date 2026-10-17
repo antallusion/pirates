@@ -19,6 +19,7 @@
 // half its strength, the Abbess's at two fifths); when the great one falls its kin scatter and the fight is won.
 // `direct` is pure but for the dice it is handed, so the tests and the balance play the same fight (`simulateShore`).
 
+import { islandLoot } from './isleloot.ts'; // docs/29 §9 (owner, 2026-10-17)
 import { xpAt } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { isNight } from '../../../shared/src/constants.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
@@ -327,6 +328,9 @@ function shoreEnd(game: Game, s: PlayerSession, r: Rising, won: boolean, bt: Tac
     if (it?.art) loot.artifact = it.art;
   }
   maybeScroll(game, s, 'boss');
+  // docs/29 §9: the island's loot of a great one ashore (a speed-up always, the rest by chance)
+  const isle = islandLoot(game, s, { src: 'shore', level: r.level });
+  if (isle.length) loot.isle = isle;
   p.bossKills[lock] = (p.bossKills[lock] ?? 0) + 1;
   tattooCount(game, s, 'boss');
   seasonStat(game, s, 'monsters', 40);
