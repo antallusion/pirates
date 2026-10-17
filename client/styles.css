@@ -5373,7 +5373,6 @@ body.tac-ph .tb-top { position: absolute; top: calc(env(safe-area-inset-top, 0px
 @media (max-height: 520px) {
   #advcard .ac-isle { gap: 1px 6px; margin: 1px 0; font-size: 10.5px; }
   #advcard .ac-ilh { display: none; }
-  #advcard .ac-il { font-size: 0; }
-  #advcard .ac-il b { font-size: 10.5px; }
+  #advcard .ac-ilt { display: none; }
   #advcard .ac-il .ico-sm { width: 14px; height: 14px; }
 }

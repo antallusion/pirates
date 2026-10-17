@@ -1,0 +1,72 @@
+844x390-ru lair card folded: 0,0 Возможная добыча для островаУскоритель 5 мин/15 мин/1 ч/3 ч 20%Товары во двор ×20 25%Урожай +50% · 2 ч 3%Бригада · 24 ч 0,5%
+844x390-ru lair card open: {"overlaps":[],"frames":[],"offscreen":[]}
+844x390-ru battle end: {"over":{"winner":0,"why":"rout"},"loot":{"silver":310,"xp":43,"goods":[{"g":"gunpowder","n":3}],"res":{"shell":3,"bone":1},"isle":[{"k":"res","good":"timber","n":20}],"dwell":true}}
+844x390-ru lair won (try 1): island drops — Лес · Во двор вашего острова
+844x390-ru ribbon: ★ДалееЛесоповал 1 · marker rings 1 stars 1
+844x390-ru overview audit: {"overlaps":[],"frames":[],"offscreen":[]}
+844x390-ru advice: ★ Лесоповал, уровень 1 [Можно строить.] / Каменоломня, уровень 1 [Можно строить.] / Склад, уровень 1 [Не хватает: 2020]
+844x390-ru advice audit: {"overlaps":[],"frames":[],"offscreen":["pr-shop Лавка"]}
+844x390-ru «Строить» pressed: true; works under way: 1
+844x390-ru speed-ups: УскорителиВ запасе: 0 мин и жетонов 3 (по 15 мин)Хватит на 5 мин из 5 мин этой стройки.Строится: Лесоповал, осталось 3 минУскоритьЕщё ускорители: добыча с существ на островах и ежедневный подарок. Лавка · button live: true
+844x390-ru «Ускорить»: {"min":0,"tokens":3,"tokenSecs":900} → {"speed":{"min":0,"tokens":2,"tokenSecs":900},"q":0}
+844x390-ru after audit: {"overlaps":[],"frames":[],"offscreen":[]}
+480x270-ru lair card folded: 0,0 Возможная добыча для островаУскоритель 5 мин/15 мин/1 ч/3 ч 20%Товары во двор ×20 25%Урожай +50% · 2 ч 3%Бригада · 24 ч 0,5%
+480x270-ru lair card open: {"overlaps":[],"frames":[],"offscreen":[]}
+480x270-ru battle end: {"over":{"winner":0,"why":"rout"},"loot":{"silver":310,"xp":36,"goods":[{"g":"gunpowder","n":3}],"res":{"shell":3,"bone":1},"isle":[{"k":"res","good":"iron","n":20}],"dwell":true}}
+480x270-ru lair won (try 1): island drops — Железо · Во двор вашего острова
+480x270-ru ribbon: ★ДалееЛесоповал 1 · marker rings 1 stars 1
+480x270-ru overview audit: {"overlaps":[],"frames":[],"offscreen":[]}
+480x270-ru advice: ★ Лесоповал, уровень 1 [Можно строить.] / Каменоломня, уровень 1 [Не хватает: 20] / Склад, уровень 1 [Не хватает: 4020]
+480x270-ru advice audit: {"overlaps":[],"frames":[],"offscreen":["btn btn-small Почему нет?","pr-shop Лавка"]}
+480x270-ru «Строить» pressed: true; works under way: 1
+480x270-ru speed-ups: УскорителиВ запасе: 0 мин и жетонов 2 (по 15 мин)Хватит на 5 мин из 5 мин этой стройки.Строится: Лесоповал, осталось 3 минУскоритьЕщё ускорители: добыча с существ на островах и ежедневный подарок. Лавка · button live: true
+480x270-ru «Ускорить»: {"min":0,"tokens":2,"tokenSecs":900} → {"speed":{"min":0,"tokens":1,"tokenSecs":900},"q":0}
+480x270-ru after audit: {"overlaps":[],"frames":[],"offscreen":[]}
+1440x900-ru lair card folded: 0,0 Возможная добыча для островаУскоритель 5 мин/15 мин/1 ч/3 ч 20%Товары во двор ×20 25%Урожай +50% · 2 ч 3%Бригада · 24 ч 0,5%
+1440x900-ru lair card open: {"overlaps":[],"frames":[],"offscreen":[]}
+1440x900-ru battle end: {"over":{"winner":0,"why":"rout"},"loot":{"silver":310,"xp":36,"goods":[{"g":"gunpowder","n":3}],"res":{"shell":3,"bone":1},"dwell":true}}
+1440x900-ru lair won (try 5): island drops — Ускоритель стройки: 15 мин в запас ускорителей
+1440x900-ru ribbon: ★ДалееЛесоповал 1 · marker rings 1 stars 1
+1440x900-ru overview audit: {"overlaps":[],"frames":[],"offscreen":[]}
+1440x900-ru advice: ★ Лесоповал, уровень 1 [Можно строить.] / Каменоломня, уровень 1 [Не хватает: 20] / Склад, уровень 1 [Не хватает: 4020]
+1440x900-ru advice audit: {"overlaps":[],"frames":[],"offscreen":[]}
+1440x900-ru «Строить» pressed: true; works under way: 1
+1440x900-ru speed-ups: УскорителиВ запасе: 15 мин и жетонов 3 (по 15 мин)Хватит на 5 мин из 5 мин этой стройки.Строится: Лесоповал, осталось 3 минУскоритьЕщё ускорители: добыча с существ на островах и ежедневный подарок. Лавка · button live: true
+1440x900-ru «Ускорить»: {"min":15,"tokens":3,"tokenSecs":900} → {"speed":{"min":12,"tokens":3,"tokenSecs":900},"q":0}
+1440x900-ru after audit: {"overlaps":[],"frames":[],"offscreen":[]}
+844x390-en lair card folded: 0,0 Possible loot for your islandSpeed-up 5 min/15 min/1 h/3 h 20%Goods for the yard ×20 25%Harvest +50% · 2 h 3%Brigade · 24 h 0.5%
+844x390-en lair card open: {"overlaps":[],"frames":[],"offscreen":[]}
+844x390-en battle end: {"over":{"winner":0,"why":"rout"},"loot":{"silver":310,"xp":36,"goods":[{"g":"gunpowder","n":3}],"res":{"shell":3,"bone":1},"dwell":true}}
+844x390-en lair won (try 2): island drops — Coal · Into your island’s yard
+844x390-en ribbon: ★NextLogging Camp 1 · marker rings 1 stars 1
+844x390-en overview audit: {"overlaps":[],"frames":[],"offscreen":[]}
+844x390-en advice: ★ Logging Camp, level 1 [Ready to build.] / Quarry, level 1 [Short of: 20] / Warehouse, level 1 [Short of: 40]
+844x390-en advice audit: {"overlaps":[],"frames":[],"offscreen":["pr-shop Shop"]}
+844x390-en «Строить» pressed: true; works under way: 1
+844x390-en speed-ups: Speed-upsIn store: 0 min and 3 tokens of 15 minEnough for 5 min of this build’s 5 min.Under way: Logging Camp, 3 min leftSpeed upMore speed-ups: the loot of the creatures on the islands and the daily gift. Shop · button live: true
+844x390-en «Ускорить»: {"min":0,"tokens":3,"tokenSecs":900} → {"speed":{"min":0,"tokens":2,"tokenSecs":900},"q":0}
+844x390-en after audit: {"overlaps":[],"frames":[],"offscreen":["pr-shop Shop"]}
+480x270-en lair card folded: 0,0 Possible loot for your islandSpeed-up 5 min/15 min/1 h/3 h 20%Goods for the yard ×20 25%Harvest +50% · 2 h 3%Brigade · 24 h 0.5%
+480x270-en lair card open: {"overlaps":[],"frames":[],"offscreen":[]}
+480x270-en battle end: {"over":{"winner":0,"why":"rout"},"loot":{"silver":310,"xp":36,"goods":[{"g":"gunpowder","n":3}],"res":{"shell":3,"bone":1},"isle":[{"k":"res","good":"iron","n":20}],"dwell":true}}
+480x270-en lair won (try 1): island drops — Iron · Into your island’s yard
+480x270-en ribbon: ★NextLogging Camp 1 · marker rings 1 stars 1
+480x270-en overview audit: {"overlaps":[],"frames":[],"offscreen":[]}
+480x270-en advice: ★ Logging Camp, level 1 [Ready to build.] / Quarry, level 1 [Short of: 20] / Warehouse, level 1 [Short of: 4020]
+480x270-en advice audit: {"overlaps":[],"frames":[],"offscreen":["btn btn-small Why not?","pr-shop Shop"]}
+480x270-en «Строить» pressed: true; works under way: 1
+480x270-en speed-ups: Speed-upsIn store: 0 min and 2 tokens of 15 minEnough for 5 min of this build’s 5 min.Under way: Logging Camp, 3 min leftSpeed upMore speed-ups: the loot of the creatures on the islands and the daily gift. Shop · button live: true
+480x270-en «Ускорить»: {"min":0,"tokens":2,"tokenSecs":900} → {"speed":{"min":0,"tokens":1,"tokenSecs":900},"q":0}
+480x270-en after audit: {"overlaps":[],"frames":[],"offscreen":[]}
+1440x900-en lair card folded: 0,0 Possible loot for your islandSpeed-up 5 min/15 min/1 h/3 h 20%Goods for the yard ×15 25%Harvest +50% · 2 h 3%Brigade · 24 h 0.5%
+1440x900-en lair card open: {"overlaps":[],"frames":[],"offscreen":[]}
+1440x900-en battle end: {"over":{"winner":0,"why":"rout"},"loot":{"silver":310,"xp":36,"goods":[{"g":"gunpowder","n":3}],"res":{"shell":3,"bone":1},"dwell":true}}
+1440x900-en lair won (try 2): island drops — The island’s producers yield 50% more for 2 hours
+1440x900-en ribbon: ★NextLogging Camp 1 · marker rings 1 stars 1
+1440x900-en overview audit: {"overlaps":[],"frames":[],"offscreen":[]}
+1440x900-en advice: ★ Logging Camp, level 1 [Ready to build.] / Quarry, level 1 [Short of: 20] / Warehouse, level 1 [Short of: 4020]
+1440x900-en advice audit: {"overlaps":[],"frames":[],"offscreen":[]}
+1440x900-en «Строить» pressed: true; works under way: 1
+1440x900-en speed-ups: Speed-upsIn store: 0 min and 2 tokens of 15 minEnough for 5 min of this build’s 5 min.Under way: Logging Camp, 3 min leftSpeed upMore speed-ups: the loot of the creatures on the islands and the daily gift. Shop · button live: true
+1440x900-en «Ускорить»: {"min":0,"tokens":2,"tokenSecs":900} → {"speed":{"min":0,"tokens":1,"tokenSecs":900},"q":0}
+1440x900-en after audit: {"overlaps":[],"frames":[],"offscreen":[]}

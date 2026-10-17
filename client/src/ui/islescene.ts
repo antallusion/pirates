@@ -28,7 +28,7 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/islescene.ts';
 import { EN as PM_EN, RU as PM_RU } from '../lang/ui/premium.ts'; // the shop's button (owner, 2026-10-15)
 import type { ClientState } from '../state.ts';
-import { BaseWindow, EXTRA_PLOTS, baseName, hallFor, plotCell, timeText, townArt } from './base.ts';
+import { BaseWindow, EXTRA_PLOTS, baseName, hallFor, plotCell, spanText, timeText, townArt } from './base.ts';
 import { esc, fmt, icon, money } from './dom.ts';
 import { townTab } from './town.ts';
 import { supplyTab } from './supply.ts';
@@ -674,7 +674,7 @@ export class IsleScene {
     if (!plan || !plan.steps.length) return '';
     const gold = state.self?.gold ?? 0;
     const cost = (st: IslePlanStepView) => `<span class="bcosts"><span class="bcost${gold < st.silver ? ' lack' : ''}">${money(st.silver)}</span>${(Object.entries(st.goods) as [GoodId, number][]).map(([g, n]) =>
-      `<span class="bcost${st.lack.some((x) => x.good === g) ? ' lack' : ''}" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('')}<span class="bcost btimec">⏱ ${esc(timeText(st.secs))}</span></span>`;
+      `<span class="bcost${st.lack.some((x) => x.good === g) ? ' lack' : ''}" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('')}<span class="bcost btimec">⏱ ${esc(spanText(st.secs))}</span></span>`;
     const rows = plan.steps.map((st, i) => {
       const key = recKey(st);
       const art = key ? this.picOf(key) : null;
@@ -692,8 +692,8 @@ export class IsleScene {
     const left = job ? Math.max(0, (job.end - this.now()) / 1000) : 0;
     const speed = `<div class="pr-sp"><b class="pr-spt">${icon('item_storm_glass', '', 'ico-sm')} ${esc(L('spTitle'))}</b>`
       + `<p>${stockMin > 0 ? esc(L('spStock', { m: fmt(sp.min), t: sp.tokens, k: sp.tokenSecs / 60 })) : esc(L('spNone'))}</p>`
-      + (stockMin > 0 ? `<p class="muted">${esc(L('spCover', { c: timeText(Math.min(stockMin * 60, top.secs)), n: timeText(top.secs) }))}</p>` : '')
-      + (job ? `<div class="pr-spj"><span>${esc(L('spNow', { name: job.name, t: timeText(left) }))}</span><button type="button" class="btn btn-small btn-primary" data-prspeed="${job.id}"${stockMin > 0 && left > 0 ? '' : ' disabled'}>${esc(L('spBtn'))}</button></div>` : '')
+      + (stockMin > 0 ? `<p class="muted">${esc(L('spCover', { c: spanText(Math.min(stockMin * 60, top.secs)), n: spanText(top.secs) }))}</p>` : '')
+      + (job ? `<div class="pr-spj"><span>${esc(L('spNow', { name: job.name, t: spanText(left) }))}</span><button type="button" class="btn btn-small btn-primary" data-prspeed="${job.id}"${stockMin > 0 && left > 0 ? '' : ' disabled'}>${esc(L('spBtn'))}</button></div>` : '')
       + `<p class="muted pr-more">${esc(L('spWhere'))} <button type="button" class="pr-shop" data-prshop>${esc(L('spShop'))}</button></p></div>`;
     return `<h3 class="is-ph">${esc(L('recTitle'))}</h3><div class="pr-list">${rows}</div>${speed}<p class="muted pr-left">${esc(L('recLeft', { n: plan.left }))}</p>`;
   }

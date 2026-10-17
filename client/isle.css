@@ -215,12 +215,15 @@ body.reduce-motion #isle .is-pic.work { animation: none; }
 @media (prefers-reduced-motion: reduce) { #isle .is-pic.work { animation: none; } }
 
 /* ---------------------------------------------------------------- docs/29 §8: the advice (what to build next) */
+/* the ribbon closes the bottom row, at the queue's right end (the top right is the shop's offer chip's) */
+#isle { --is-rec-w: 176px; --is-rec-h: 36px; }
 #isle .is-rec {
-  position: absolute; z-index: 10; top: calc(var(--is-top) + 2px); right: var(--is-pad-r); max-width: min(42vw, 260px); box-sizing: border-box;
-  display: flex; align-items: center; gap: 5px; height: 34px; padding: 2px 8px 2px 6px; font: inherit; text-align: left; cursor: pointer;
-  background: rgba(30, 24, 12, 0.9); border: 1px solid rgba(232, 196, 110, 0.85); border-radius: 8px; color: var(--bone, #e6dccb);
+  position: absolute; z-index: 10; bottom: var(--is-pad-b); right: var(--is-pad-r); width: var(--is-rec-w); height: var(--is-rec-h); box-sizing: border-box;
+  display: flex; align-items: center; gap: 5px; padding: 2px 8px 2px 6px; font: inherit; text-align: left; cursor: pointer;
+  background: rgba(30, 24, 12, 0.92); border: 1px solid rgba(232, 196, 110, 0.85); border-radius: 8px; color: var(--bone, #e6dccb);
   box-shadow: 0 0 8px rgba(232, 196, 110, 0.35);
 }
+#isle:not(.is-carded):has(.is-rec:not(.hidden)) .is-queue { right: calc(var(--is-pad-r) + var(--is-rec-w) + 6px); }
 #isle .is-rec.hidden, #isle.is-carded .is-rec { display: none; }
 #isle .is-rec-s { color: var(--gold, #d8b45c); font-size: 15px; flex: none; }
 #isle .is-rec-m { min-width: 0; display: flex; flex-direction: column; line-height: 1.1; }
@@ -257,10 +260,13 @@ body.reduce-motion #isle :is(.is-g.rec, .is-pl.t.rec, .is-trec) { animation: non
 #isle .pr-shop { padding: 0; border: 0; background: none; color: var(--fog, #9aa3a8); text-decoration: underline; font: inherit; cursor: pointer; }
 #isle .pr-left { margin: 5px 0 0; font-size: 10.5px; }
 @media (max-height: 520px) {
-  #isle .is-rec { height: calc(28px + 4 * var(--u, 1px)); padding: 1px 6px 1px 4px; gap: 4px; max-width: min(36vw, 200px); }
+  #isle { --is-rec-w: calc(132px + 12 * var(--u, 1px)); --is-rec-h: calc(30px + 4 * var(--u, 1px)); }
+  #isle .is-rec { padding: 1px 6px 1px 4px; gap: 4px; }
   #isle .is-rec-s { font-size: 13px; }
   #isle .pr-art { width: 30px; height: 26px; }
   #isle .pr-m b { font-size: var(--f-fs-m, 11px); }
   #isle :is(.pr-why, .pr-st, .pr-sp p, .pr-spj, .pr-left) { font-size: var(--f-fs-s, 9px); }
   #isle .pr-row { padding: 4px 5px; }
 }
+@media (max-width: 520px) { #isle { --is-rec-w: 112px; } }
+@media (min-height: 700px) and (min-width: 1000px) { #isle { --is-rec-w: 220px; --is-rec-h: 42px; } #isle .is-rec-s { font-size: 18px; } }

@@ -36,10 +36,10 @@ export function isleChancesHtml(list: ReturnType<typeof lootChances> | undefined
   if (!list?.length) return '';
   const rows = list.filter((x) => x.p > 0).map((x) => {
     switch (x.k) {
-      case 'speed': return `<span class="ac-il" title="${esc(L('speedTip', { m: (x.min ?? []).map(mins).join(' / ') }))}">${icon(ISLE_LOOT_ICON.speed, '', 'ico-sm')}${esc(L('speedAny', { list: (x.min ?? []).map(mins).join('/') }))} <b>${pct(x.p)}</b></span>`;
-      case 'res': return `<span class="ac-il" title="${esc(L('resTip'))}">${icon('good_timber', '', 'ico-sm')}${esc(L('resAny', { n: x.n ?? 0 }))} <b>${pct(x.p)}</b></span>`;
-      case 'prod': return `<span class="ac-il" title="${esc(L('prodTip', { p: Math.round(PROD_BOOST * 100), h: x.hours ?? 0 }))}">${icon(ISLE_LOOT_ICON.prod, '', 'ico-sm')}${esc(L('prod', { p: Math.round(PROD_BOOST * 100), h: x.hours ?? 0 }))} <b>${pct(x.p)}</b></span>`;
-      default: return `<span class="ac-il" title="${esc(L('builderTip', { h: x.hours ?? 0 }))}">${icon(ISLE_LOOT_ICON.builder, '', 'ico-sm')}${esc(L('builder', { h: x.hours ?? 0 }))} <b>${pct(x.p)}</b></span>`;
+      case 'speed': return `<span class="ac-il" title="${esc(L('speedTip', { m: (x.min ?? []).map(mins).join(' / ') }))}">${icon(ISLE_LOOT_ICON.speed, '', 'ico-sm')}<span class="ac-ilt">${esc(L('speedAny', { list: (x.min ?? []).map(mins).join('/') }))}</span> <b>${pct(x.p)}</b></span>`;
+      case 'res': return `<span class="ac-il" title="${esc(L('resTip'))}">${icon('good_timber', '', 'ico-sm')}<span class="ac-ilt">${esc(L('resAny', { n: x.n ?? 0 }))}</span> <b>${pct(x.p)}</b></span>`;
+      case 'prod': return `<span class="ac-il" title="${esc(L('prodTip', { p: Math.round(PROD_BOOST * 100), h: x.hours ?? 0 }))}">${icon(ISLE_LOOT_ICON.prod, '', 'ico-sm')}<span class="ac-ilt">${esc(L('prod', { p: Math.round(PROD_BOOST * 100), h: x.hours ?? 0 }))}</span> <b>${pct(x.p)}</b></span>`;
+      default: return `<span class="ac-il" title="${esc(L('builderTip', { h: x.hours ?? 0 }))}">${icon(ISLE_LOOT_ICON.builder, '', 'ico-sm')}<span class="ac-ilt">${esc(L('builder', { h: x.hours ?? 0 }))}</span> <b>${pct(x.p)}</b></span>`;
     }
   });
   return `<div class="ac-isle"><span class="muted ac-ilh">${esc(L('maybe'))}</span>${rows.join('')}</div>`;
