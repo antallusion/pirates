@@ -14,10 +14,11 @@
 import { ISO_H, ISO_MAP_OF, ISO_SLOT, ISO_UNIT, ISO_W, isoFoot, isoSheet, isoSpot, isoStage } from '../../../shared/src/data/isleiso.ts';
 import type { IsoMap, Pt } from '../../../shared/src/data/isleiso.ts';
 import { PLOT_CELLS, PRODUCERS, producerOf } from '../../../shared/src/data/base.ts';
-import { TOWN_CELLS } from '../../../shared/src/data/isletree.ts';
+import { TOWN_CELLS, isTreeTown } from '../../../shared/src/data/isletree.ts';
 import type { TownId } from '../../../shared/src/data/town.ts';
-import type { BaseView, ClientMsg } from '../../../shared/src/protocol.ts';
+import type { BaseView, ClientMsg, IslePlanStepView } from '../../../shared/src/protocol.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
+import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { assetMeta, assetUrl, prefetchAssets } from '../assets.ts';
 import { IsleFx } from './islefx.ts';
 import type { FxSpot } from './islefx.ts';
@@ -27,7 +28,7 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/islescene.ts';
 import { EN as PM_EN, RU as PM_RU } from '../lang/ui/premium.ts'; // the shop's button (owner, 2026-10-15)
 import type { ClientState } from '../state.ts';
-import { BaseWindow, EXTRA_PLOTS, baseName, hallFor, plotCell, timeText, townArt } from './base.ts';
+import { BaseWindow, EXTRA_PLOTS, baseName, hallFor, plotCell, spanText, timeText, townArt } from './base.ts';
 import { esc, fmt, icon, money } from './dom.ts';
 import { townTab } from './town.ts';
 import { supplyTab } from './supply.ts';
@@ -63,7 +64,7 @@ const GRAIL_ART = 'icon.good_cursed_relics';
 const DEFAULT_MAX = 1.25;
 
 /** The island's places drawn as the scene's side sheet. */
-type Panel = 'yard' | 'town' | 'supply' | 'defence';
+type Panel = 'yard' | 'town' | 'supply' | 'defence' | 'plan';
 
 /** The camera: the map's top-left corner on the screen and its scale. */
 interface Cam { x: number; y: number; s: number }
@@ -85,6 +86,8 @@ export class IsleScene {
   private queueEl!: HTMLElement;
   private cardEl!: HTMLElement;
   private hintEl!: HTMLElement;
+  /** docs/29 §8: the advice's ribbon (what to build next). */
+  private recEl!: HTMLElement;
   private map: IsoMap = 'temperate';
   private cam: Cam = { x: 0, y: 0, s: 1 };
   private framed = false;
@@ -151,7 +154,7 @@ export class IsleScene {
     this.pick = null;
     this.base.moving = null;
     this.root?.classList.add('hidden');
-    document.body.classList.remove('isle-on');
+    document.body.classList.remove('isle-on', 'isle-carded');
     this.fx?.stop();
     this.load?.close();
     this.load = null;
@@ -167,7 +170,7 @@ export class IsleScene {
     root.className = 'hidden';
     root.setAttribute('role', 'application');
     root.innerHTML = `<div class="is-view"><div class="is-world"><img class="is-map" alt="" draggable="false"><svg class="is-ground" viewBox="0 0 ${ISO_W} ${ISO_H}" width="${ISO_W}" height="${ISO_H}" aria-hidden="true"></svg><div class="is-pics"></div><div class="is-tags"></div></div></div>
-      <header class="is-top"></header><nav class="is-side"></nav><div class="is-queue" role="list"></div><p class="is-hint" role="status"></p>
+      <header class="is-top"></header><nav class="is-side"></nav><div class="is-queue" role="list"></div><p class="is-hint" role="status"></p><button type="button" class="is-rec hidden" data-irec></button>
       <aside class="is-card hidden" aria-live="polite"></aside>`;
     document.body.append(root);
     this.root = root;
@@ -182,12 +185,15 @@ export class IsleScene {
     this.queueEl = root.querySelector('.is-queue')!;
     this.cardEl = root.querySelector('.is-card')!;
     this.hintEl = root.querySelector('.is-hint')!;
+    this.recEl = root.querySelector('.is-rec')!;
+    this.recEl.addEventListener('click', () => this.openPanel('plan'));
     this.wireCamera();
     if (IsleFx.allowed()) this.fx = new IsleFx(this.world);
     addEventListener('resize', () => {
       if (!this.isOpen) return;
       this.clampCam();
       this.apply();
+      this.toastRoom();
     });
     this.topEl.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLElement>('[data-isea]');
@@ -220,6 +226,7 @@ export class IsleScene {
       this.topEl.innerHTML = this.topHtml(null, state);
       this.sideEl.innerHTML = '';
       this.queueEl.innerHTML = '';
+      this.recEl.classList.add('hidden');
       this.hintEl.textContent = state.baseAt ? L('none') : L('loading');
       this.cardEl.classList.add('hidden');
       return;
@@ -238,6 +245,9 @@ export class IsleScene {
     this.topEl.innerHTML = this.topHtml(v, state);
     this.sideEl.innerHTML = this.sideHtml(v, state);
     this.queueEl.innerHTML = this.queueHtml(v);
+    this.recEl.innerHTML = this.recHtml(v);
+    this.recEl.classList.toggle('hidden', !v.plan?.steps.length);
+    this.recEl.title = L('recTip');
     if (!this.framed) {
       this.frame();
       this.framed = true;
@@ -310,6 +320,15 @@ export class IsleScene {
   private spotsOf(v: BaseView): Spot[] {
     const now = this.now();
     const out: Spot[] = [];
+    // docs/29 §8: the advice's first step pulses on the map
+    const rec = recKey(v.plan?.steps[0]);
+    const mark = (sp: Spot): Spot => {
+      if (sp.key !== rec) return sp;
+      sp.cls = `${sp.cls} rec`.trim();
+      sp.tag = `<span class="is-t is-trec" title="${esc(L('recTip'))}">★</span>${sp.tag}`;
+      if (!sp.ground) sp.ground = 'empty';
+      return sp;
+    };
     const timer = (j: { start: number; end: number }) => `<span class="btime" data-end="${j.end}">${esc(timeText((j.end - now) / 1000))}</span><span class="bprog"><i data-start="${j.start}" data-stop="${j.end}" style="width:${Math.round(Math.max(0, Math.min(1, (now - j.start) / Math.max(1, j.end - j.start))) * 100)}%"></i></span>`;
     const things = this.base.townThings(v);
     for (const t of things) {
@@ -325,7 +344,7 @@ export class IsleScene {
       const pic = sheet ? { id: `isle.${sheet}.${ghost ? 's0' : st.stage}`, foot: isoFoot(sheet) } : !art ? null : t.id === 'pen' ? { url: art, ...PEN_ART } : { icon: art };
       const tag = t.job ? `<span class="is-t is-tj">${timer(t.job)}</span>` : t.level > 0 ? `<span class="is-t is-tl">${t.level}</span>` : can ? '<span class="is-t is-tp" aria-hidden="true">+</span>' : '';
       const upright = !sheet && t.id !== 'pen';
-      out.push({ key: `t:${t.id}`, town: t.id, cell, pic, cls: [ghost ? 'ghost' : '', can ? 'can' : '', !ghost && (st.dim || (!sheet && !!t.job)) ? 'dim' : '', upright ? `upright ${t.id}` : ''].filter(Boolean).join(' '), ground: upright ? (ghost ? 'plinth ghost' : 'plinth') : ghost ? 'ghost' : '', tag });
+      out.push(mark({ key: `t:${t.id}`, town: t.id, cell, pic, cls: [ghost ? 'ghost' : '', can ? 'can' : '', !ghost && (st.dim || (!sheet && !!t.job)) ? 'dim' : '', upright ? `upright ${t.id}` : ''].filter(Boolean).join(' '), ground: upright ? (ghost ? 'plinth ghost' : 'plinth') : ghost ? 'ghost' : '', tag }));
     }
     const lockHalls = v.locked.map((l) => hallFor(l.level)).filter((n) => n > 0);
     const nextHall = lockHalls.length ? Math.min(...lockHalls) : 0;
@@ -341,7 +360,7 @@ export class IsleScene {
       }
       const c = v.cells[k];
       if (!c?.what) {
-        out.push({ key: `p:${k}`, plot: k, cell, pic: null, cls: this.base.moving !== null ? 'target' : '', ground: 'empty', tag: '<span class="is-t is-tp" aria-hidden="true">+</span>' });
+        out.push(mark({ key: `p:${k}`, plot: k, cell, pic: null, cls: this.base.moving !== null ? 'target' : '', ground: 'empty', tag: '<span class="is-t is-tp" aria-hidden="true">+</span>' }));
         continue;
       }
       const sheet = isoSheet(c.what)!;
@@ -350,7 +369,7 @@ export class IsleScene {
       const tag = c.job ? `<span class="is-t is-tj">${timer(c.job)}</span>`
         : c.fresh > 0 && kind ? `<span class="is-t is-tf">${icon(`good_${PRODUCERS[kind].good}`, '', 'ico-sm')}+${fmt(c.fresh)}</span>`
         : c.level ? `<span class="is-t is-tl">${c.level}</span>` : '';
-      out.push({ key: `p:${k}`, plot: k, cell, pic: { id: `isle.${sheet}.${st.stage}`, foot: isoFoot(sheet) }, cls: [st.dim ? 'dim' : '', c.idle ? 'idle' : ''].filter(Boolean).join(' '), ground: '', tag });
+      out.push(mark({ key: `p:${k}`, plot: k, cell, pic: { id: `isle.${sheet}.${st.stage}`, foot: isoFoot(sheet) }, cls: [st.dim ? 'dim' : '', c.idle ? 'idle' : ''].filter(Boolean).join(' '), ground: '', tag }));
     }
     return out;
   }
@@ -378,9 +397,9 @@ export class IsleScene {
         const h = (q.b[1] - q.t[1]) * 0.2;
         const up = (p: Pt): Pt => [p[0], p[1] - h];
         const g = s.ground.includes('ghost') ? ' ghost' : '';
-        ground.push(`<polygon class="is-pl l${g}" points="${pts([up(q.l), up(q.b), q.b, q.l])}"/><polygon class="is-pl r${g}" points="${pts([up(q.b), up(q.r), q.r, q.b])}"/><polygon class="is-pl t${g}${sel ? ' sel' : ''}" points="${pts([up(q.t), up(q.r), up(q.b), up(q.l)])}"/>`);
+        ground.push(`<polygon class="is-pl l${g}" points="${pts([up(q.l), up(q.b), q.b, q.l])}"/><polygon class="is-pl r${g}" points="${pts([up(q.b), up(q.r), q.r, q.b])}"/><polygon class="is-pl t${g}${sel ? ' sel' : ''}${s.cls.split(' ').includes('rec') ? ' rec' : ''}" points="${pts([up(q.t), up(q.r), up(q.b), up(q.l)])}"/>`);
         plinthTop = (q.t[1] + q.b[1]) / 2 - h;
-      } else if (s.ground || sel) ground.push(`<polygon class="is-g ${s.ground}${sel ? ' sel' : ''}${s.cls.includes('target') ? ' target' : ''}" points="${[sp.t, sp.r, sp.b, sp.l].map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ')}"/>`);
+      } else if (s.ground || sel) ground.push(`<polygon class="is-g ${s.ground}${sel ? ' sel' : ''}${s.cls.includes('target') ? ' target' : ''}${s.cls.split(' ').includes('rec') ? ' rec' : ''}" points="${[sp.t, sp.r, sp.b, sp.l].map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ')}"/>`);
       let top = (sp.t[1] + sp.b[1]) / 2;
       const cx = (sp.l[0] + sp.r[0]) / 2;
       if (s.pic) {
@@ -563,6 +582,7 @@ export class IsleScene {
     if (!state || !v || (!this.pick && this.base.moving === null)) {
       this.cardEl.classList.add('hidden');
       this.root?.classList.remove('is-carded');
+      this.toastRoom();
       return;
     }
     // the island window shares the selection (a window over the scene may have moved it)
@@ -574,9 +594,11 @@ export class IsleScene {
     else if (panel === 'yard') body = `<h3 class="is-ph">${esc(L('ships'))}</h3>${this.base.yard(v, state)}`;
     else if (panel === 'town') body = v.town ? `<h3 class="is-ph">${esc(L('town'))}</h3>${townTab(v, state, this.base.mk)}` : '';
     else if (panel === 'supply') body = `<h3 class="is-ph">${esc(L('supply'))}</h3>${supplyTab(state)}`;
+    else if (panel === 'plan') body = this.planHtml(v, state);
     else body = this.base.sheet(v, state, true);
     if (!body) {
       this.cardEl.classList.add('hidden');
+      this.toastRoom();
       return;
     }
     const keep = this.cardEl.querySelector('.is-cb')?.scrollTop ?? 0;
@@ -585,6 +607,7 @@ export class IsleScene {
     this.cardEl.classList.toggle('wide', panel === 'yard' || panel === 'town' || panel === 'supply');
     this.cardEl.dataset.panel = panel ?? '';
     this.root?.classList.add('is-carded');
+    this.toastRoom();
     const cb = this.cardEl.querySelector<HTMLElement>('.is-cb')!;
     cb.scrollTop = keep;
     // the island's own isometric pictures in the card: the building's head, the build list's rows
@@ -618,7 +641,103 @@ export class IsleScene {
     }));
     // a queue row in the card opens its building here too
     this.cardEl.querySelectorAll<HTMLElement>('.bjob[data-plot], .bjob[data-town]').forEach((el) => (el.onclick = () => this.select(el.dataset.plot ? { plot: Number(el.dataset.plot) } : { town: el.dataset.town as TownId }, true)));
+    if (panel === 'plan') this.bindPlan(v);
     this.base.tick(this.cardEl, state);
+  }
+
+  /** The server's words (#toasts) keep off an open side sheet or card (coordinator, 2026-10-17: a toast lay over «Что
+   *  строить дальше»'s title): the strip between the island's places on the left and the card is theirs (isle.css). */
+  private toastRoom(): void {
+    const b = document.body;
+    const open = this.isOpen && !this.cardEl.classList.contains('hidden');
+    b.classList.toggle('isle-carded', open);
+    if (!open) return;
+    const l = Math.round(this.sideEl.getBoundingClientRect().right + 6);
+    const r = Math.round(this.cardEl.getBoundingClientRect().left - 6);
+    b.style.setProperty('--isle-free-l', `${l}px`);
+    b.style.setProperty('--isle-free-r', `${Math.max(l + 1, r)}px`);
+  }
+
+  // ------------------------------------------------------------------------------------------------ the advice
+
+  /** The ribbon: the planner's next step and whether it may start now. */
+  private recHtml(v: BaseView): string {
+    const st = v.plan?.steps[0];
+    if (!st) return '';
+    return `<span class="is-rec-s" aria-hidden="true">★</span><span class="is-rec-m"><span class="is-rec-h">${esc(L('recNext'))}</span><b>${esc(treeLabel(st.what, st.level))} ${st.level}</b></span><span class="is-rec-d ${st.state === 'ready' ? 'ok' : 'no'}" aria-hidden="true"></span>`;
+  }
+
+  /** A step's line of what stands in its way. */
+  private stateHtml(v: BaseView, st: IslePlanStepView): string {
+    switch (st.state) {
+      case 'ready': return `<p class="pr-st ok">${esc(L('st_ready'))}</p>`;
+      case 'lack': {
+        const goods = st.lack.map((x) => `<span class="bcost lack" title="${esc(GOODS[x.good].name)}">${icon(`good_${x.good}`, '', 'ico-sm')}${fmt(x.n)}</span>`).join('');
+        return `${goods ? `<p class="pr-st">${esc(L('st_lack'))} <span class="bcosts">${goods}</span></p>` : ''}${st.silverLack > 0 ? `<p class="pr-st">${esc(L('st_silver', { n: fmt(st.silverLack) }))}</p>` : ''}${goods ? `<p class="pr-st muted pr-where">${esc(L('st_lackWhere'))}</p>` : ''}`;
+      }
+      case 'busy': return `<p class="pr-st">${esc(L('st_busy'))}</p>`;
+      case 'wait': {
+        const j = jobOf(v, st.job);
+        return `<p class="pr-st">${esc(L('st_wait', { name: j ? j.name : treeLabel(st.what, st.level) }))}</p>`;
+      }
+      case 'plot': return `<p class="pr-st">${esc(L('st_plot'))}</p>`;
+      default: return `<p class="pr-st">${esc(L('st_need'))}</p>`;
+    }
+  }
+
+  /** The advice's sheet: the next three steps and the speed-ups. */
+  private planHtml(v: BaseView, state: ClientState): string {
+    const plan = v.plan;
+    if (!plan || !plan.steps.length) return '';
+    const gold = state.self?.gold ?? 0;
+    const cost = (st: IslePlanStepView) => `<span class="bcosts"><span class="bcost${gold < st.silver ? ' lack' : ''}">${money(st.silver)}</span>${(Object.entries(st.goods) as [GoodId, number][]).map(([g, n]) =>
+      `<span class="bcost${st.lack.some((x) => x.good === g) ? ' lack' : ''}" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('')}<span class="bcost btimec">⏱ ${esc(spanText(st.secs))}</span></span>`;
+    const rows = plan.steps.map((st, i) => {
+      const key = recKey(st);
+      const art = key ? this.picOf(key) : null;
+      const go = key ? ` data-prgo="${esc(key)}"` : '';
+      const btn = st.state === 'ready'
+        ? `<button type="button" class="btn btn-small btn-primary" data-prbuild="${i}">${esc(L('recBuild'))}</button>`
+        : `<button type="button" class="btn btn-small" data-prwhy="${i}">${esc(L('recWhere'))}</button>`;
+      return `<div class="pr-row${i === 0 ? ' top' : ''}${st.state === 'ready' ? ' ok' : ''}"><div class="pr-h"${go}>${art ? `<img class="pr-art" src="${art}" alt="">` : ''}<div class="pr-m"><b>${i === 0 ? '★ ' : ''}${esc(L('recLv', { name: treeLabel(st.what, st.level), n: st.level }))}</b><span class="muted pr-why">${esc(L(`why_${st.why}` as 'why_prod'))}</span></div>${btn}</div>${cost(st)}${this.stateHtml(v, st)}</div>`;
+    }).join('');
+    // the speed-ups: her stock, how much of the top step it covers, the work to speed up now
+    const sp = plan.speed;
+    const stockMin = sp.min + (sp.tokens * sp.tokenSecs) / 60;
+    const top = plan.steps[0];
+    const job = jobOf(v, top.job) ?? jobOf(v, plan.steps.find((x) => x.job !== null)?.job ?? null) ?? soonestJob(v);
+    const left = job ? Math.max(0, (job.end - this.now()) / 1000) : 0;
+    const speed = `<div class="pr-sp"><b class="pr-spt">${icon('item_storm_glass', '', 'ico-sm')} ${esc(L('spTitle'))}</b>`
+      + `<p>${stockMin > 0 ? esc(L('spStock', { m: fmt(sp.min), t: sp.tokens, k: sp.tokenSecs / 60 })) : esc(L('spNone'))}</p>`
+      + (stockMin > 0 ? `<p class="muted">${esc(L('spCover', { c: spanText(Math.min(stockMin * 60, top.secs)), n: spanText(top.secs) }))}</p>` : '')
+      + (job ? `<div class="pr-spj"><span>${esc(L('spNow', { name: job.name, t: spanText(left) }))}</span><button type="button" class="btn btn-small btn-primary" data-prspeed="${job.id}"${stockMin > 0 && left > 0 ? '' : ' disabled'}>${esc(L('spBtn'))}</button></div>` : '')
+      + `<p class="muted pr-more">${esc(L('spWhere'))} <button type="button" class="pr-shop" data-prshop>${esc(L('spShop'))}</button></p></div>`;
+    return `<h3 class="is-ph">${esc(L('recTitle'))}</h3><div class="pr-list">${rows}</div>${speed}<p class="muted pr-left">${esc(L('recLeft', { n: plan.left }))}</p>`;
+  }
+
+  private bindPlan(v: BaseView): void {
+    const plan = v.plan;
+    if (!plan) return;
+    this.cardEl.querySelectorAll<HTMLElement>('[data-prbuild]').forEach((b) => (b.onclick = () => {
+      const st = plan.steps[Number(b.dataset.prbuild)];
+      if (!st) return;
+      if (isTreeTown(st.what)) this.send({ t: 'h3', action: 'build', id: st.what as TownId });
+      else if (st.plot !== null && st.level > 1) this.send({ t: 'base', action: 'upgrade', plot: st.plot });
+      else if (st.plot !== null) this.send({ t: 'base', action: 'build', plot: st.plot, what: st.what });
+      this.send({ t: 'base', action: 'view' });
+    }));
+    this.cardEl.querySelectorAll<HTMLElement>('[data-prwhy]').forEach((b) => (b.onclick = () => b.closest('.pr-row')?.classList.toggle('open')));
+    this.cardEl.querySelectorAll<HTMLElement>('[data-prgo]').forEach((el) => (el.onclick = () => {
+      const s = this.spots.find((x) => x.key === el.dataset.prgo);
+      if (s) this.lookAt(isoSpot(this.map, s.cell));
+    }));
+    this.cardEl.querySelector<HTMLElement>('[data-prspeed]')?.addEventListener('click', (e) => {
+      const id = Number((e.currentTarget as HTMLElement).dataset.prspeed);
+      // the store of minutes first (as many as the work needs), else a free token: the server checks both
+      if (plan.speed.min > 0) this.send({ t: 'premium', action: 'speed', job: id });
+      else this.send({ t: 'base', action: 'speedup', job: id, pay: 'token' });
+    });
+    this.cardEl.querySelector<HTMLElement>('[data-prshop]')?.addEventListener('click', () => dispatchEvent(new CustomEvent('gravetide:shop', { detail: 'isle' })));
   }
 
   // ------------------------------------------------------------------------------------------------ the camera
@@ -797,6 +916,29 @@ export function isleUrl(id: string): string | null {
 /** A spot at work: its scaffolding (s0, s1, up) or its level dimmed under the work. */
 function isWork(s: Spot): boolean {
   return !!s.pic && 'id' in s.pic && (/\.(s0|s1|up)$/.test(s.pic.id) || s.cls.split(' ').includes('dim')) && !s.cls.split(' ').includes('ghost');
+}
+
+/** The spot a step stands on (a town building, or its plot). */
+function recKey(st: IslePlanStepView | undefined): string {
+  if (!st) return '';
+  if (isTreeTown(st.what)) return `t:${st.what}`;
+  return st.plot !== null ? `p:${st.plot}` : '';
+}
+
+type JobRef = { id: number; name: string; end: number };
+
+/** A work under way by its id: its name and end. */
+function jobOf(v: BaseView, id: number | null): JobRef | null {
+  if (id === null) return null;
+  for (const t of v.town?.things ?? []) if (t.job?.id === id) return { id, name: treeLabel(t.id, t.job.level), end: t.job.end };
+  for (const c of v.cells) if (c.job?.id === id && c.what) return { id, name: baseName(c.what), end: c.job.end };
+  return null;
+}
+
+/** The work under way that ends first. */
+function soonestJob(v: BaseView): JobRef | null {
+  const ids = [...(v.town?.things ?? []).map((t) => t.job?.id), ...v.cells.map((c) => c.job?.id)].filter((x): x is number => x !== undefined);
+  return ids.map((id) => jobOf(v, id)).filter((x): x is JobRef => !!x).sort((a, b) => a.end - b.end)[0] ?? null;
 }
 
 /** The raid's line for the side button's hint. */

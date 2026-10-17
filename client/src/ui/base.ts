@@ -98,7 +98,7 @@ export function timeText(secs: number): string {
   return L('t_hm', { h: Math.floor(m / 60), m: String(m % 60).padStart(2, '0') });
 }
 
-function spanText(secs: number): string {
+export function spanText(secs: number): string {
   const m = Math.round(secs / 60);
   if (m < 1) return L('t_s', { s: Math.round(secs) });
   if (m < 60) return L('t_m', { m });

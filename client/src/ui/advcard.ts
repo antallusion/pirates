@@ -26,6 +26,7 @@ import { DRIFTS, MINI_BAND, MINI_HIT, MINI_MISS, MINI_TAPS, needleAt } from '../
 import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
 import { personName } from '../lang/names.ts';
 import { serverText } from '../lang/server.ts';
+import { isleChancesHtml } from './isleloot.ts'; // docs/29 §9
 import { strengthWord, unitIcon, unitName } from './army.ts';
 import { esc, fmt, icon, money, portraitUrl, xpBadge } from './dom.ts';
 import { placeName } from './maps.ts';
@@ -110,6 +111,7 @@ function lairBlock(c: LairCard, x: boolean): string {
       <div class="ac-gw"><b class="ac-word">${esc(w.word)}</b> <span class="muted">${esc(w.range)}</span><span class="tg-army-faces">${faces}</span></div>
       <div class="muted ac-gl">${esc(LL('vs', { n: c.party, r: ratio }))}</div>
       <div class="muted ac-gl ac-pay">${esc(c.looted ? LL('looted') : LL('pay', { s: fmt(c.pay.silver), x: fmt(c.pay.xp) }))}</div>
+      ${c.looted ? '' : isleChancesHtml(c.isle)}
       ${c.week ? `<div class="ac-gl ac-week good">${esc(VL('lair.week'))}</div>` : ''}
       ${offer ? `<div class="ac-offer">${esc(offer)}</div>` : ''}
       ${!c.reach ? `<div class="muted ac-gl ac-come">${esc(LL('come'))}</div>` : c.why ? `<div class="muted ac-gl ac-come">${esc(serverText(c.why))}</div>` : ''}

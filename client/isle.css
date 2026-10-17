@@ -9,6 +9,9 @@
 /* (doubled classes: over the sea HUD's own placing, body.simple.touch and Telegram's html.tg-app) */
 html body.isle-on.isle-on.isle-on.isle-on #toasts { top: calc(max(var(--sa-t, 0px), 4px) + 44px) !important; left: 50% !important; transform: translateX(-50%) !important; width: min(46vw, 420px) !important; }
 @media (max-height: 520px) { html body.isle-on.isle-on.isle-on.isle-on #toasts { top: calc(max(var(--sa-t, 0px), 3px) + 36px + 4 * var(--u, 1px)) !important; } }
+/* a side sheet or a card open: the words in the strip between the island's places and it, never over it (islescene.ts
+   toastRoom measures the strip) */
+html body.isle-on.isle-carded.isle-carded.isle-carded #toasts { left: calc((var(--isle-free-l, 0px) + var(--isle-free-r, 100vw)) / 2) !important; width: min(420px, calc(var(--isle-free-r, 100vw) - var(--isle-free-l, 0px))) !important; }
 body.isle-on :is(#world, #hud, #hud-chat, #encounter, #surrender, #lairchest, #advcard, #minigame, #trek, #fishfight, #nethaul, #atk-mark, #pad-cursor) { visibility: hidden !important; }
 
 #isle {
@@ -213,3 +216,60 @@ body.touch.mm-peek #touch > #tc-isle, body.sea-fight #touch > #tc-isle { display
 @keyframes is-sway { 50% { translate: 0.9px -0.5px; } }
 body.reduce-motion #isle .is-pic.work { animation: none; }
 @media (prefers-reduced-motion: reduce) { #isle .is-pic.work { animation: none; } }
+
+/* ---------------------------------------------------------------- docs/29 §8: the advice (what to build next) */
+/* the ribbon closes the bottom row, at the queue's right end (the top right is the shop's offer chip's) */
+#isle { --is-rec-w: 176px; --is-rec-h: 36px; }
+#isle .is-rec {
+  position: absolute; z-index: 10; bottom: var(--is-pad-b); right: var(--is-pad-r); width: var(--is-rec-w); height: var(--is-rec-h); box-sizing: border-box;
+  display: flex; align-items: center; gap: 5px; padding: 2px 8px 2px 6px; font: inherit; text-align: left; cursor: pointer;
+  background: rgba(30, 24, 12, 0.92); border: 1px solid rgba(232, 196, 110, 0.85); border-radius: 8px; color: var(--bone, #e6dccb);
+  box-shadow: 0 0 8px rgba(232, 196, 110, 0.35);
+}
+#isle:not(.is-carded):has(.is-rec:not(.hidden)) .is-queue { right: calc(var(--is-pad-r) + var(--is-rec-w) + 6px); }
+#isle .is-rec.hidden, #isle.is-carded .is-rec { display: none; }
+#isle .is-rec-s { color: var(--gold, #d8b45c); font-size: 15px; flex: none; }
+#isle .is-rec-m { min-width: 0; display: flex; flex-direction: column; line-height: 1.1; }
+#isle .is-rec-h { font-size: var(--is-fs-s); color: var(--fog, #9aa3a8); }
+#isle .is-rec-m b { font-size: var(--is-fs); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#isle .is-rec-d { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #8a7f6a; }
+#isle .is-rec-d.ok { background: #8fd06a; box-shadow: 0 0 5px rgba(143, 208, 106, 0.8); }
+#isle .is-g.rec, #isle .is-pl.t.rec { stroke: #f4d27a; stroke-width: 3.5; stroke-dasharray: none; fill: rgba(244, 210, 122, 0.16); animation: is-recp 1.6s ease-in-out infinite; }
+@keyframes is-recp { 50% { stroke-opacity: 0.35; fill-opacity: 0.35; } }
+#isle .is-trec { color: #1a1408; background: var(--gold, #d8b45c); border-color: #f4d27a; width: 18px; height: 18px; padding: 0; justify-content: center; border-radius: 50%; animation: is-recb 1.6s ease-in-out infinite; }
+@keyframes is-recb { 50% { box-shadow: 0 0 9px 2px rgba(244, 210, 122, 0.9); } }
+body.reduce-motion #isle :is(.is-g.rec, .is-pl.t.rec, .is-trec) { animation: none; }
+@media (prefers-reduced-motion: reduce) { #isle :is(.is-g.rec, .is-pl.t.rec, .is-trec) { animation: none; } }
+#isle .pr-list { display: flex; flex-direction: column; gap: 5px; }
+#isle .pr-row { padding: 5px 6px; border: 1px solid rgba(201, 164, 106, 0.3); border-radius: 7px; background: rgba(255, 255, 255, 0.03); }
+#isle .pr-row.top { border-color: rgba(232, 196, 110, 0.8); background: rgba(60, 46, 18, 0.35); }
+#isle .pr-h { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+#isle .pr-art { width: 38px; height: 34px; object-fit: contain; flex: none; }
+#isle .pr-m { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+#isle .pr-m b { font-size: 12.5px; }
+#isle .pr-why { font-size: 11px; line-height: 1.25; }
+#isle .pr-h .btn { flex: none; }
+#isle .pr-row .bcosts { display: flex; flex-wrap: wrap; gap: 3px 6px; margin-top: 3px; }
+#isle .pr-st { margin: 3px 0 0; font-size: 11px; line-height: 1.3; }
+#isle .pr-st.ok { color: #a6d98a; }
+#isle .pr-row .pr-where { display: none; }
+#isle .pr-row.open .pr-where { display: block; }
+#isle .pr-sp { margin-top: 7px; padding: 6px; border: 1px solid rgba(150, 180, 210, 0.35); border-radius: 7px; background: rgba(20, 30, 40, 0.35); }
+#isle .pr-sp p { margin: 3px 0 0; font-size: 11px; line-height: 1.3; }
+#isle .pr-spt { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+#isle .pr-spj { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 11px; }
+#isle .pr-spj span { flex: 1; min-width: 0; }
+#isle .pr-spj .btn { flex: none; }
+#isle .pr-shop { padding: 0; border: 0; background: none; color: var(--fog, #9aa3a8); text-decoration: underline; font: inherit; cursor: pointer; }
+#isle .pr-left { margin: 5px 0 0; font-size: 10.5px; }
+@media (max-height: 520px) {
+  #isle { --is-rec-w: calc(132px + 12 * var(--u, 1px)); --is-rec-h: calc(30px + 4 * var(--u, 1px)); }
+  #isle .is-rec { padding: 1px 6px 1px 4px; gap: 4px; }
+  #isle .is-rec-s { font-size: 13px; }
+  #isle .pr-art { width: 30px; height: 26px; }
+  #isle .pr-m b { font-size: var(--f-fs-m, 11px); }
+  #isle :is(.pr-why, .pr-st, .pr-sp p, .pr-spj, .pr-left) { font-size: var(--f-fs-s, 9px); }
+  #isle .pr-row { padding: 4px 5px; }
+}
+@media (max-width: 520px) { #isle { --is-rec-w: 112px; } }
+@media (min-height: 700px) and (min-width: 1000px) { #isle { --is-rec-w: 220px; --is-rec-h: 42px; } #isle .is-rec-s { font-size: 18px; } }
