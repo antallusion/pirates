@@ -99,19 +99,25 @@ export function drawWaysWorld(g: G, state: ClientState, c: WayCtx): void {
     g.translate(x, y);
     g.rotate(w.rot + bob);
     if (w.kind === 'chapel') {
+      // An old hulk at her moorings, a raft of planks alongside, the shrine's bell on her waist and the candles lit.
       g.fillStyle = 'rgba(3,8,11,0.35)';
       g.beginPath();
-      g.ellipse(0, 0, S * 0.24, S * 0.56, 0, 0, Math.PI * 2);
+      g.ellipse(0, 0, S * 0.3, S * 0.58, 0, 0, Math.PI * 2);
       g.fill();
-      if (!drawArt(g, 'ship.hulk', 0, 0, S * 1.05, 0, 0.95)) {
+      g.save();
+      g.translate(S * 0.3, S * 0.05);
+      raft(g, S * 0.42, rnd);
+      g.restore();
+      if (!drawArt(g, 'ship.hulk', -S * 0.06, 0, S * 1.05, 0, 0.9)) {
         g.fillStyle = '#2d2219';
         g.beginPath();
-        g.ellipse(0, 0, S * 0.16, S * 0.48, 0, 0, Math.PI * 2);
+        g.ellipse(-S * 0.06, 0, S * 0.16, S * 0.48, 0, 0, Math.PI * 2);
         g.fill();
       }
-      drawArt(g, 'prop.shrine', 0, -S * 0.06, S * 0.3, 0, 0.92);
-      drawArt(g, 'prop.life_boat', S * 0.3, S * 0.18, S * 0.3, 0.3, 0.9);
-      glow(g, 0, -S * 0.06, S * 0.34, 0.22 + 0.06 * Math.sin(c.time * 2.3 + w.id), '255,214,150');
+      glow(g, -S * 0.06, -S * 0.04, S * 0.42, 0.3 + 0.08 * Math.sin(c.time * 2.3 + w.id), '255,214,150');
+      drawArt(g, 'prop.shrine', -S * 0.06, -S * 0.04, S * 0.4, 0, 0.97);
+      drawArt(g, 'prop.life_boat', S * 0.32, S * 0.38, S * 0.28, 0.3, 0.9);
+      for (const [cx, cy] of [[S * 0.22, -S * 0.02], [S * 0.36, S * 0.1], [S * 0.26, S * 0.16]]) glow(g, cx, cy, S * 0.06, 0.7, '255,200,120');
     } else if (w.kind === 'tavern') {
       raft(g, S * 0.86, rnd);
       drawArt(g, 'prop.life_hut', -S * 0.1, -S * 0.02, S * 0.5, 0, 0.96);

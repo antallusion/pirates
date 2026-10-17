@@ -250,8 +250,14 @@ export function resView(game: Game, s: PlayerSession): ResView {
 /** Her fallen sent (the result screen, the waystation's and the port's windows keep it). */
 export function pushFallen(game: Game, s: PlayerSession): void {
   if (!s.ship || !s.profile) return;
-  game.sendTo(s, { t: 'fallen', view: resView(game, s) });
+  const v = resView(game, s);
+  told.set(s, `${v.why}|${v.place}`);
+  game.sendTo(s, { t: 'fallen', view: v });
 }
+
+/** What her last view said of the fight and the place: told again when it changes (the boarding over, the result's
+ *  «Воскресить» comes alive; she sailed off the waystations' waters). */
+const told = new WeakMap<PlayerSession, string>();
 
 // ------------------------------------------------------------------------------------------------ raising
 
@@ -468,7 +474,7 @@ export function waySecond(game: Game, s: PlayerSession): void {
   if (dirty.has(s)) {
     dirty.delete(s);
     pushFallen(game, s);
-  }
+  } else if (told.has(s) && s.profile && ((s.profile as unknown as WithFallen).fallen?.list.length ?? 0) > 0 && told.get(s) !== `${resBusy(game, s)}|${resPlace(game, s)}`) pushFallen(game, s);
   const w = mooredAt(game, s);
   const ship = s.ship;
   if (!w || !ship) return;

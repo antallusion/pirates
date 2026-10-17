@@ -135,7 +135,11 @@ export function fallenCard(v: ResView | null): string {
   const btn = v.place !== 'none'
     ? `<button class="btn btn-small btn-primary" data-fres${can ? '' : ' disabled'}>${esc(L('board.btn'))}${quick ? ` <span class="way-sum">${quick}</span>` : ''}</button>`
     : v.instant > 0 ? `<button class="btn btn-small btn-primary" data-finstant>${esc(L('instant'))} <span class="way-sum">${doubloons(v.instant)}</span></button>` : '';
-  return `<div class="card way-card"><h4 class="card-h">${icon('prof_surgeon', '', 'ico-md')}${esc(L('board.h'))}</h4><p class="muted">${esc(L('board.t', { n: v.fallen }))}${v.place === 'field' ? ` ${esc(L('note.field'))}` : ''}</p>${btn ? `<div class="way-cbtns">${btn}</div>` : ''}</div>`;
+  // (one line on the result: its fates stay where they were on a phone held sideways)
+  const why = v.why ? serverText(v.why) : v.n <= 0 ? serverText(v.rows.find((r) => r.why)?.why ?? '') : v.n < v.fallen ? L('room', { k: v.n, n: v.fallen }) : '';
+  const note = [why, v.place === 'field' ? L('note.fieldShort') : ''].filter(Boolean).join(' · ');
+  const tip = [L('board.t', { n: v.fallen }), v.place === 'field' ? L('note.field') : v.place === 'none' ? L('note.none') : ''].filter(Boolean).join(' ');
+  return `<div class="card way-card" title="${esc(tip)}">${icon('prof_surgeon', '', 'ico-md')}<div class="wc-t"><b>${esc(L('board.h'))}: ${fmt(v.fallen)}</b>${note ? `<span class="${why && v.n <= 0 ? 'way-why' : 'muted'}">${esc(note)}</span>` : ''}</div>${btn}</div>`;
 }
 
 /** The card put into its slot on the boarding's result (`[data-fallen-slot]`) and its buttons bound — again when her
@@ -159,7 +163,7 @@ export function mountFallen(root: HTMLElement, state: ClientState, send: (m: Cli
 /** The port's tavern card: the surgeon. */
 export function surgeonCard(v: ResView | null): string {
   const n = v?.fallen ?? 0;
-  return `<div class="card way-card"><h4 class="card-h">${icon('prof_surgeon', '', 'ico-md')}${esc(L('port.h'))}</h4><p class="muted">${esc(L('port.t'))}${n > 0 ? ` ${esc(L('sub.res', { n }))}.` : ''}</p><button class="btn btn-small${n > 0 ? ' btn-primary' : ''}" data-surgeon>${esc(L('port.btn'))}</button></div>`;
+  return `<div class="card way-surgeon"><h4 class="card-h">${icon('prof_surgeon', '', 'ico-md')}${esc(L('port.h'))}</h4><p class="muted">${esc(L('port.t'))}${n > 0 ? ` ${esc(L('sub.res', { n }))}.` : ''}</p><button class="btn btn-small${n > 0 ? ' btn-primary' : ''}" data-surgeon>${esc(L('port.btn'))}</button></div>`;
 }
 
 export const wayL = L;

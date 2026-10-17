@@ -2892,7 +2892,8 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const watchHome = state.onboarding?.stage === 'port';
   if (port && (watchHome || !(performance.now() - castOffAt < CAST_OFF_QUIET && you.hull >= you.hullMax * 0.5))) facts.port = { name: sv(port.name) };
   // docs/35: a floating waystation within mooring reach (not while moored there already).
-  const way = !port && !state.wayView ? wayAtHand(own) : null;
+  // Moored with her window shut (another window over it): the same button brings it back.
+  const way = !port ? (state.wayView ? (modal === 'way' ? null : state.ways.get(state.wayView.id) ?? null) : wayAtHand(own)) : null;
   if (way) facts.way = { id: way.id, name: wayName(way.kind) };
   if (watchHome) facts.watchHome = true;
   const ab = self.abyss;
@@ -3010,6 +3011,7 @@ function runAct(a: Act): void {
     case 'dock':
       return requestDock(false);
     case 'moor_way':
+      if (state.wayView?.id === Number(a.arg)) return openModal('way');
       return void net.send({ t: 'way', action: 'moor', id: Number(a.arg) });
     case 'homeport':
       if (!homeport) return;
