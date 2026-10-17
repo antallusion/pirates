@@ -1386,10 +1386,12 @@ export function spawnCargoAmbush(game: Game, prey: ShipEntity, accountId: number
  *  put out a couple of kilometres off and set on her, for a quarter of an hour. The Crown's quiet waters have no pirates
  *  of their own (traffic.ts MIX), so the campaign's boardings of the Black Coast would have nothing to board. Null when
  *  no open water was found. */
-export function spawnCampaignFoe(game: Game, prey: ShipEntity, accountId: number, level: number, ghost: boolean): ShipEntity | null {
-  for (let k = 0; k < 8; k++) {
+export function spawnCampaignFoe(game: Game, prey: ShipEntity, accountId: number, level: number, ghost: boolean, at?: { x: number; y: number; r: number }): ShipEntity | null {
+  for (let k = 0; k < 12; k++) {
     const a = game.rng.float() * Math.PI * 2;
-    const x = prey.state.x + Math.sin(a) * 2200, y = prey.state.y - Math.cos(a) * 2200;
+    // in the location's waters (docs/36: its fights are fought there), else a couple of kilometres off her
+    const d = at ? at.r * (0.3 + 0.6 * game.rng.float()) : 2200;
+    const x = (at?.x ?? prey.state.x) + Math.sin(a) * d, y = (at?.y ?? prey.state.y) - Math.cos(a) * d;
     if (!openSea(game, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500 || !game.inZone(x, y)) continue;
     const lv = Math.max(1, Math.min(10, Math.round(level)));
     const h = headingOf(prey.state.x - x, prey.state.y - y);

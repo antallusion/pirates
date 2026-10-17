@@ -363,6 +363,7 @@ function questPlaces(game: Game, s: PlayerSession, id: string): Resolved {
       if (cmp) {
         const foes = campaignFoes(game, s).map((fid) => game.ships.get(fid)!).map((o): Cand => ({ x: o.state.x, y: o.state.y, r: 250, kind: 'ships', name: 'pirates', ship: o.id, w: 0.7 }));
         if (foes.length) return { cands: foes };
+        if (st.near) return { cands: [{ x: st.near.x, y: st.near.y, r: Math.round(st.near.r * 0.6), kind: 'region', name: 'campaign' }] };
       }
       if (t && !st.region) return { cands: [{ x: t.x, y: t.y, r: t.r ?? 250, kind: 'ships', name: 'leader', ...(qs.leader !== undefined ? { ship: qs.leader } : {}) }] };
       const k: ShipKind = st.role === 'pirate' ? 'pirates' : st.role === 'ghost' ? 'ghosts' : st.role === 'merchant' ? 'merchants' : st.role === 'patrol' ? 'patrols' : st.role === 'hunter' ? 'hunters' : 'hostile';
@@ -372,6 +373,8 @@ function questPlaces(game: Game, s: PlayerSession, id: string): Resolved {
     case 'prize': {
       // docs/36: the campaign's own foes first (they come for her)
       const foes = st.type === 'board' && cmp ? campaignFoes(game, s).map((fid) => game.ships.get(fid)!).map((o): Cand => ({ x: o.state.x, y: o.state.y, r: 250, kind: 'ships', name: 'pirates', ship: o.id, hint: ROUTE_HINTS.board, w: 0.7 })) : [];
+      // docs/36: the location's waters, where its fight puts out
+      if (st.type === 'board' && st.near) return { cands: foes.length ? foes : [{ x: st.near.x, y: st.near.y, r: Math.round(st.near.r * 0.6), kind: 'region', name: 'campaign' }] };
       return { cands: [...foes, ...hunt(game, s, 'pirates'), ...liveShips(game, s, 'merchants').map((c) => ({ ...c, w: 1.4, hint: ROUTE_HINTS.board }))] };
     }
     case 'named': {
@@ -408,10 +411,19 @@ function questPlaces(game: Game, s: PlayerSession, id: string): Resolved {
       return { cands: islands(game, (i) => !p.discovered.includes(i.id)) };
     case 'catch':
       return fishing(game, s);
-    case 'beast':
+    case 'beast': {
+      if (st.near) {
+        const n = st.near;
+        const here = beasts(game, st.group as BeastGroup | 'any').filter((c) => c.ship !== undefined && Math.hypot(c.x - n.x, c.y - n.y) <= n.r + 1500);
+        return { cands: here.length ? here : [{ x: n.x, y: n.y, r: Math.round(n.r * 0.6), kind: 'region', name: 'beasts' }] };
+      }
       return { cands: beasts(game, st.group as BeastGroup | 'any') };
-    case 'dive':
+    }
+    case 'dive': {
+      const w = st.wreck !== undefined ? game.wrecks[st.wreck] : undefined;
+      if (w) return { cands: [{ x: w.x, y: w.y, r: 120, kind: 'wreck', name: 'wreck', hint: ROUTE_HINTS.dive }] };
       return { cands: wrecks(game, s) };
+    }
     case 'sell_contraband':
       if (!st.port) return { cands: ports(game, (pt) => pt.blackMarket) };
       break;

@@ -46,7 +46,7 @@ import { generateIslandJobs, generateQuests } from '../../../shared/src/data/que
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
 import { generateLairJobs } from '../../../shared/src/data/lairquests.ts';
 import { generateArcs } from '../../../shared/src/data/questarcs.ts';
-import { acceptCampaign, campaignLevelUp, campaignNext, campaignView, initCampaign } from './campaign.ts'; // docs/36
+import { acceptCampaign, campaignLevelUp, campaignNext, campaignPlaces, campaignView, initCampaign } from './campaign.ts'; // docs/36
 import { registerElitePorts } from '../../../shared/src/data/elite.ts';
 import { restAfter } from '../../../shared/src/data/rested.ts';
 import { pushTasks, stepTasks, taskSalvage } from './worldtasks.ts';
@@ -516,6 +516,7 @@ export class Game {
     this.orders = this.db.getKv<BuyOrder[]>('orders') ?? [];
     this.coves = buildCoves(this);
     this.wrecks = buildWrecks(this);
+    campaignPlaces(this); // docs/36: the campaign's wrecks in its locations' shallows (appended), its lairs' waters
     const econ = this.db.getKv<{ history: IndexPoint[]; rewardMul: number }>('econ');
     if (econ) {
       this.econHistory = econ.history ?? [];
@@ -1805,9 +1806,17 @@ export class Game {
           r = is.radius + 300;
           island = is.id;
         }
+      } else if ((st.type === 'sink' || st.type === 'board' || st.type === 'beast' || st.type === 'time_in') && st.near) {
+        // docs/36: a campaign step's location waters
+        at = st.near;
+        r = st.near.r;
+      } else if (st.type === 'dive' && st.wreck !== undefined && this.wrecks[st.wreck]) {
+        at = this.wrecks[st.wreck];
+        r = 120;
       } else if (st.type === 'lair') {
-        // its lair on the island the step names, else the nearest of its kind (or any) still standing
-        const from = ship ? ship.state : this.portById(QUESTS_BY_ID[qs.id].port) ?? null;
+        // its lair on the island the step names, else the nearest of its kind (or any) still standing (a campaign's: to its
+        // location)
+        const from = st.near ?? (ship ? ship.state : this.portById(QUESTS_BY_ID[qs.id].port) ?? null);
         const memoKey = `${st.island ?? ''}|${st.kind ?? ''}|${from ? `${Math.round(from.x)},${Math.round(from.y)}` : ''}`;
         let best: { x: number; y: number } | null = null, bd = Infinity;
         const memo = lairMemo.get(memoKey);

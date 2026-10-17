@@ -10,29 +10,36 @@ import type { RegionId } from '../world/regions.ts';
 import type { TreeId } from './talents.ts';
 import { legacyQuestSize, questXp } from './xpcurve.ts';
 import type { QuestKind } from './questclass.ts';
+
+/** docs/36: the water a campaign step is done in — its location (a point and a radius in metres). */
+export interface Near {
+  x: number;
+  y: number;
+  r: number;
+}
 export type { QuestKind } from './questclass.ts';
 
 export type QuestStep =
   | { type: 'visit'; port: string; text: string }
   | { type: 'deliver'; port: string; good: GoodId; qty: number; text: string }
-  | { type: 'sink'; count: number; /** 'elite': only the contract's flagship counts (docs/11 P6) */ role?: 'pirate' | 'patrol' | 'merchant' | 'ghost' | 'hunter' | 'elite'; minTier?: number; region?: RegionId; /** docs/36: only ships of this ⚓ or above count (the campaign's fights are of its level) */ minShip?: number; text: string }
+  | { type: 'sink'; count: number; /** 'elite': only the contract's flagship counts (docs/11 P6) */ role?: 'pirate' | 'patrol' | 'merchant' | 'ghost' | 'hunter' | 'elite'; minTier?: number; region?: RegionId; /** docs/36: only ships of this ⚓ or above count (the campaign's fights are of its level) */ minShip?: number; near?: Near; text: string }
   /** Generated quests (docs/11 P4): take a cargo aboard at a port; land a party on an island (at one of its sites). */
   | { type: 'pickup'; port: string; good: GoodId; qty: number; text: string }
   | { type: 'land'; island: number; site?: string; text: string }
-  | { type: 'board'; count: number; /** docs/36: only ships of this ⚓ or above count */ minShip?: number; text: string }
+  | { type: 'board'; count: number; /** docs/36: only ships of this ⚓ or above count */ minShip?: number; near?: Near; text: string }
   | { type: 'prize'; count: number; text: string }
   | { type: 'sell_contraband'; qty: number; port?: string; text: string }
   | { type: 'customs'; text: string }
   | { type: 'chart'; count: number; text: string }
   | { type: 'reach'; region: RegionId; north?: number; text: string }
-  | { type: 'time_in'; region: RegionId; seconds: number; weather?: 'black_storm'; text: string }
+  | { type: 'time_in'; region: RegionId; seconds: number; weather?: 'black_storm'; near?: Near; text: string }
   | { type: 'fleet_win'; count: number; text: string }
   | { type: 'die_in'; region: RegionId; text: string }
-  | { type: 'dive'; count: number; text: string }
+  | { type: 'dive'; count: number; near?: Near; /** docs/36: the wreck laid for it (the server's) */ wreck?: number; text: string }
   /** Fish taken (docs/12 P3): any catch counted, or one fish on the line of at least `minKg`. */
   | { type: 'catch'; count: number; minKg?: number; text: string }
   /** Beasts of the sea taken (docs/12 P4): of a group — whales, orcas, sharks — or any. */
-  | { type: 'beast'; count: number; group: BeastGroup; text: string }
+  | { type: 'beast'; count: number; group: BeastGroup; near?: Near; text: string }
   /** Side quests (docs/12 P9): named pirates sunk; tribute taken; letters of the sea found; a race to a port against
    *  the clock from the moment the quest is taken; souls saved from the sea. */
   | { type: 'named'; count: number; text: string }
@@ -42,7 +49,7 @@ export type QuestStep =
   | { type: 'rescue'; count: number; text: string }
   /** docs/18 #23: lairs of the land's creatures beaten (on an island, of a kind, or any), and the land's resources
    *  brought to a port. */
-  | { type: 'lair'; count: number; island?: number; kind?: string; text: string }
+  | { type: 'lair'; count: number; island?: number; kind?: string; near?: Near; text: string }
   | { type: 'landres'; port: string; res: 'shell' | 'bone' | 'venom'; qty: number; text: string }
   /** docs/19 E15, the Admiralty's contracts (shared/src/data/admiralty.ts): the week's rogue legend made to strike; mythic
    *  depths of a seal of `minLv` or higher won within their rounds; watches on the citadels' walls (an hour of her men
@@ -66,6 +73,9 @@ export interface CampaignMeta {
   k: number;
   /** The completion line (English, filled). */
   done: string;
+  /** Its location (build.ts Campaign.locations), and whether it is the voyage there. */
+  loc?: number;
+  travel?: boolean;
   /** A branch: its key and which way this is ('a' the first, 'b' the second), and the way's label. */
   key?: string;
   way?: 'a' | 'b';

@@ -147,6 +147,10 @@ export const STEP_WORDS: Record<string, T[]> = {
     ['Sail to {at}.', 'Плывите в порт {at}.'],
     ['Put in at {at}.', 'Зайдите в порт {at}.'],
   ],
+  hub_isle: [
+    ['Return to the anchorage off {isle}: {giver} is waiting.', 'Вернитесь к стоянке у острова {isle}: вас ждёт {giver}.'],
+    ['Bring the news to {giver}, whose ship rides at anchor off {isle}.', 'Отвезите вести: {giver} ждёт на якоре у острова {isle}.'],
+  ],
   port: [
     ['Put in at {port}.', 'Зайдите в порт {port}.'],
     ['Make for {port} and ask along the quays.', 'Идите в порт {port} и расспросите на причалах.'],
