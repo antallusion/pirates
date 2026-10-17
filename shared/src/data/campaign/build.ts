@@ -209,7 +209,58 @@ function runsOf(ch: ChapterSrc, first: number, size: number): Run[] {
 /** Every run's location, through the seas in order: a run at its chapter's mentor's port first (or the port its quests
  *  name), then the nearest port of the chapter's seas at the run's ⚓ not yet visited (an island of the Abyss for a run
  *  of the Abyss that names no harbour). */
+/** A newcomer's chapters (before the eighth level): their free runs' harbours chosen as a path from the mentor's port to
+ *  the next chapter's, the longest leg as short as the coast allows (owner's QA, 2026-10-18: a new captain must not sail
+ *  far before she has learned the sea — under 5 km where it may be). */
+function earlyPaths(pl: Places, runs: Run[]): Map<Run, Port> {
+  const out = new Map<Run, Port>();
+  const byId = (id: string) => pl.ports.find((p) => p.id === id);
+  const chs = [...new Set(runs.map((r) => r.ch.n))];
+  const taken = new Set<string>();
+  for (const n of chs) {
+    const group = runs.filter((r) => r.ch.n === n);
+    if (group[0].gate >= 8 || group.some((r) => r.island || r.at)) continue;
+    const start = byId(group[0].ch.hub)!;
+    const nextRun = runs[runs.indexOf(group[group.length - 1]) + 1];
+    const end = nextRun ? byId(nextRun.ch.hub) : undefined;
+    const free = group.slice(1);
+    if (!free.length) continue;
+    const band = shipBandOf(free[0].gate);
+    const seas: RegionId[] = [group[0].ch.region, ...(group[0].ch.more ?? [])];
+    const isles = (p: Port) => islandsNear(pl, { kind: 'port', id: p.id, x: p.x, y: p.y }, LOCAL_R).length;
+    let cands = pl.ports.filter((p) => seas.includes(p.region) && (pl.level.get(p.id) ?? 1) <= band && p.id !== start.id && p.id !== end?.id && !taken.has(p.id) && isles(p) >= 1);
+    const mid = end ? { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 } : start;
+    cands = cands.sort((a, b) => Math.hypot(a.x - mid.x, a.y - mid.y) - Math.hypot(b.x - mid.x, b.y - mid.y)).slice(0, 16);
+    let best: { cost: number; path: Port[] } | null = null;
+    const walk = (path: Port[], from: Port, max: number, sum: number) => {
+      if (path.length === free.length) {
+        const last = end ? Math.hypot(end.x - from.x, end.y - from.y) : 0;
+        const m = Math.max(max, last), cost = m * 10 + sum + last + path.reduce((a, p) => a + (isles(p) === 1 ? 3000 : 0), 0);
+        if (!best || cost < best.cost) best = { cost, path: [...path] };
+        return;
+      }
+      for (const c of cands) {
+        if (path.includes(c)) continue;
+        const leg = Math.hypot(c.x - from.x, c.y - from.y);
+        if (best && Math.max(max, leg) * 10 > best.cost) continue;
+        path.push(c);
+        walk(path, c, Math.max(max, leg), sum + leg);
+        path.pop();
+      }
+    };
+    walk([], start, 0, 0);
+    const found = best as { cost: number; path: Port[] } | null;
+    if (found) found.path.forEach((p, i) => {
+      out.set(free[i], p);
+      taken.add(p.id);
+    });
+  }
+  return out;
+}
+
 function placeRuns(pl: Places, runs: Run[]): CampaignLoc[] {
+  const byIdOf = (id: string) => pl.ports.find((p) => p.id === id);
+  const early = earlyPaths(pl, runs);
   const used = new Map<string | number, number>();
   const out: CampaignLoc[] = [];
   let prev: { x: number; y: number } | null = null;
@@ -219,8 +270,16 @@ function placeRuns(pl: Places, runs: Run[]): CampaignLoc[] {
     const band = shipBandOf(run.gate);
     const seas: RegionId[] = [ch.region, ...(ch.more ?? [])];
     const lv = (k: string | number) => pl.level.get(k) ?? 1;
-    const score = (k: string | number, x: number, y: number, nearIsles: number) =>
-      (used.get(k) ?? 0) * 1e6 + (prev ? Math.hypot(x - prev.x, y - prev.y) : 0) + (nearIsles === 0 ? 60000 : nearIsles === 1 ? 15000 : 0) - Math.min(3, nearIsles) * 2500;
+    // (a newcomer's legs short — under 5 km before the fifth level — and each chapter's runs drift toward the next
+    // chapter's mentor's port, so the voyage there is short too)
+    const ri = runs.indexOf(run);
+    const nextCh = runs.slice(ri + 1).find((x) => x.ch.n !== ch.n);
+    const nextHub = nextCh ? byIdOf(nextCh.ch.hub) : undefined;
+    const score = (k: string | number, x: number, y: number, nearIsles: number) => {
+      const leg = prev ? Math.hypot(x - prev.x, y - prev.y) : 0;
+      return (used.get(k) ?? 0) * 1e6 + leg + (run.gate < 5 && leg > 5000 ? 40000 : 0) + (nextHub ? (run.gate < 6 ? 2 : 0.6) * Math.hypot(x - nextHub.x, y - nextHub.y) : 0)
+        + (nearIsles === 0 ? 60000 : nearIsles === 1 ? 15000 : 0) - Math.min(3, nearIsles) * 2500;
+    };
     let loc: CampaignLoc | null = null;
     const byId = (id: string) => pl.ports.find((p) => p.id === id);
     // a run whose quests name a port is held there when its waters have islands enough (or it is the campaign's last: home);
@@ -229,7 +288,9 @@ function placeRuns(pl: Places, runs: Run[]): CampaignLoc[] {
     const roomy = (p: Port | undefined) => !!p && islandsNear(pl, { kind: 'port', id: p.id, x: p.x, y: p.y }, LOCAL_R).length >= 2;
     const last = run === runs[runs.length - 1];
     const fixed = atPort && (roomy(atPort) || last) ? atPort : ch.n !== lastCh ? byId(ch.hub) : undefined;
-    if (fixed && !run.island) loc = { i: out.length, kind: 'port', id: fixed.id, name: fixed.name, x: fixed.x, y: fixed.y, region: fixed.region, ch: ch.n, from: run.from, size: run.size };
+    const planned = early.get(run);
+    if (planned && !fixed) loc = { i: out.length, kind: 'port', id: planned.id, name: planned.name, x: planned.x, y: planned.y, region: planned.region, ch: ch.n, from: run.from, size: run.size };
+    else if (fixed && !run.island) loc = { i: out.length, kind: 'port', id: fixed.id, name: fixed.name, x: fixed.x, y: fixed.y, region: fixed.region, ch: ch.n, from: run.from, size: run.size };
     else if (run.island) {
       const pool = pl.islands.filter((i) => i.region === 'the_abyss');
       const tiers = [(i: Island) => lv(i.id) <= band && lv(i.id) >= band - 1, () => true];

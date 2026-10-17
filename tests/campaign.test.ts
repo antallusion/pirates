@@ -714,3 +714,16 @@ test('a dive of the campaign has its wreck laid in its location’s shallows', (
   }
   assert.ok(dives.filter((d) => game.wrecks[d.wreck!].depth <= 8).length / dives.length > 0.8, 'most within a plain diver’s reach');
 });
+
+test('a newcomer starts where she starts: chapter 1 at Saltmarrow and its waters, short legs before the fifth level', () => {
+  const first = built.locations[0];
+  assert.equal(first.id, 'saltmarrow', 'the first location is the start port');
+  for (const sl of built.slots.filter((x) => x.loc === 0)) {
+    for (const st of sl.a.steps) {
+      if (st.type === 'isle' || st.type === 'land') assert.ok(locDist(world, first, world.islands[st.island]) <= 2500, `${sl.a.id}: an island off Saltmarrow`);
+      if (st.type === 'visit') assert.equal(st.port, 'saltmarrow');
+    }
+  }
+  const legs = built.locations.slice(1).map((l, i) => ({ l, d: Math.hypot(l.x - built.locations[i].x, l.y - built.locations[i].y) })).filter((x) => campaignPaces()[x.l.from].gate < 5);
+  for (const x of legs) assert.ok(x.d <= 6500, `${x.l.name}: ${(x.d / 1000).toFixed(1)} km before the fifth level`);
+});
