@@ -20,6 +20,7 @@ import type { BeastGroup, BeastId } from '../../../shared/src/data/beasts.ts';
 import { isAdmId } from '../../../shared/src/data/admiralty.ts';
 import type { QuestDef, QuestStep } from '../../../shared/src/data/quests.ts';
 import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
+import { QUEST_LOCAL_R } from '../../../shared/src/data/questgen.ts';
 import { shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { spawnBeast } from './beasts.ts';
@@ -33,7 +34,7 @@ import type { ShipEntity } from './ship.ts';
 import { openSea } from './wrecks.ts';
 
 /** How far from its port a port-taken quest is done (m). */
-export const LOCAL_R = 1500;
+export const LOCAL_R = QUEST_LOCAL_R;
 /** Its quarry is put out while she is within this of the port (at sea, or in it). */
 export const LOCAL_WATCH = 4000;
 /** Of a quest's quarry, at most this many at once; another after this many seconds. */

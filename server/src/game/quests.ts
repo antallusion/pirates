@@ -52,7 +52,7 @@ import type { ShipEntity } from './ship.ts';
 import { admiraltyById, isAdmId } from '../../../shared/src/data/admiralty.ts'; // docs/19 E15
 import { contractDone } from './admiralty.ts';
 import { campaignDone, campaignTick } from './campaign.ts'; // docs/36, the main campaign
-import { LOCAL_R, localTick, questHome } from './questlocal.ts';
+import { LOCAL_R, farVoyage, localTick, questHome } from './questlocal.ts';
 import { ownIsland } from './estate.ts';
 import { xpThreat } from '../../../shared/src/data/xpcurve.ts';
 
@@ -315,25 +315,32 @@ export function eventFavor(game: Game, port: Port): BoardFavor {
     || (kinds.has('storm_century') && q.category === 'rescue');
 }
 
-export function questOffers(p: Profile, port: Port, now = 0, favor: BoardFavor = null, elite: QuestDef | null = null): { q: QuestDef; blocked: string | null }[] {
+export function questOffers(p: Profile, port: Port, now = 0, favor: BoardFavor = null, elite: QuestDef | null = null, far: FarOf = null): { q: QuestDef; blocked: string | null }[] {
   // An arc's chapter is offered once the chapter before it is done.
   const story = [...QUESTS, ...ARC_QUESTS, ...SIDE_QUESTS].filter((q) => q.port === port.id && !p.quests.done.includes(q.id) && !p.quests.active.some((a) => a.id === q.id) && (q.requires.done ?? []).every((d) => p.quests.done.includes(d)));
   // The day's group contract heads the jobs (docs/11 P6).
   const contract = elite && !p.quests.done.includes(elite.id) && !p.quests.active.some((a) => a.id === elite.id) ? [elite] : [];
-  return [...story, ...contract, ...boardJobs(p, port, now, favor)]
+  return [...story, ...contract, ...boardJobs(p, port, now, favor, far)]
     .map((q) => ({ q, blocked: questBlocked(p, q) }))
     .filter((o) => o.blocked !== 'You already walk this Path' && o.blocked !== 'The deep already knows you');
 }
 
 /** The generated jobs a port's board shows now: a few of its seventy, new every four hours, suited to the
  *  captain's level first (the ones she is not yet fit for may show, greyed). */
-export function boardJobs(p: Profile, port: Port, now: number, favor: BoardFavor = null): QuestDef[] {
+/** A game's judge of a far job (the board's order). */
+export const farOf = (game: Game): FarOf => (q) => farVoyage(game, q) !== null;
+
+/** Whether a job sails far from its port (questlocal.ts farVoyage): the board shows the near ones first. */
+export type FarOf = ((q: QuestDef) => boolean) | null;
+
+export function boardJobs(p: Profile, port: Port, now: number, favor: BoardFavor = null, far: FarOf = null): QuestDef[] {
   const mine = JOBS.filter((q) => q.port === port.id && !p.quests.done.includes(q.id) && !p.quests.active.some((a) => a.id === q.id));
   if (!mine.length) return [];
   const window = Math.floor(now / JOB_ROTATION_SEC);
   // The news of the port puts its jobs first (two at most), the rest turn as ever.
   // Jobs a captain can take come first; a few above her level show what lies ahead; none far above.
-  const scored = mine.map((q) => ({ q, k: ((hashString(q.id) ^ (window * 2654435761)) >>> 0) / 2 + ((q.requires.level ?? 1) > p.level ? 2 ** 31 : 0) + ((q.requires.level ?? 1) > p.level + 5 ? 2 ** 32 : 0) }));
+  // The jobs done near the port before the voyages (owner, 2026-10-18: «все завяжи рядышком»).
+  const scored = mine.map((q) => ({ q, k: ((hashString(q.id) ^ (window * 2654435761)) >>> 0) / 4 + (far?.(q) ? 2 ** 30 : 0) + ((q.requires.level ?? 1) > p.level ? 2 ** 31 : 0) + ((q.requires.level ?? 1) > p.level + 5 ? 2 ** 32 : 0) }));
   if (favor) {
     let lifted = 0;
     for (const x of [...scored].sort((a, b) => a.k - b.k)) {
@@ -356,7 +363,7 @@ export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string
   const p = s.profile!;
   const q = QUESTS_BY_ID[id];
   if (!q || q.port !== port.id) return 'Nobody here offers that';
-  if (q.category === 'elite' ? q.id !== todaysElite(game, port)?.id : q.kind === 'job' && !boardJobs(p, port, game.now, eventFavor(game, port)).includes(q)) return 'That job is no longer on the board';
+  if (q.category === 'elite' ? q.id !== todaysElite(game, port)?.id : q.kind === 'job' && !boardJobs(p, port, game.now, eventFavor(game, port), farOf(game)).includes(q)) return 'That job is no longer on the board';
   const why = questBlocked(p, q) ?? questIsleBlocked(game, p, q) ?? questBandBlocked(game, p, q);
   if (why) return why;
   if (questsUnderWay(p) >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;

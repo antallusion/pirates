@@ -8,7 +8,7 @@ import { BEAST_PLURAL, LAND_RES_DEF } from './bestiary.ts';
 import type { LandRes } from './bestiary.ts';
 import { LAIRS, buildLairs } from './lairs.ts';
 import type { Lair } from './lairs.ts';
-import { GIVER_MEN, GIVER_WOMEN, GIVER_LAST, PROFESSIONS, fill, giverPortrait, numberedPattern } from './questgen.ts';
+import { GIVER_MEN, GIVER_WOMEN, GIVER_LAST, PROFESSIONS, fill, giverPortrait, nearFirst, numberedPattern } from './questgen.ts';
 import type { Profession } from './questgen.ts';
 import type { QuestDef } from './quests.ts';
 import { captainLevelFor } from './shiplevel.ts';
@@ -65,11 +65,13 @@ export function generateLairJobs(world: World, seed: number): QuestDef[] {
   for (const port of world.ports) {
     if (port.raft) continue;
     const by = (a: Lair, b: Lair) => Math.hypot(a.x - port.x, a.y - port.y) - Math.hypot(b.x - port.x, b.y - port.y);
-    const near0 = legacy.filter((l) => Math.hypot(l.x - port.x, l.y - port.y) < 24000).sort(by);
+    // Near its port (owner, 2026-10-18: QUEST_LOCAL_R of the quays), else the nearest of them.
+    const gap = (l: Lair) => Math.hypot(l.x - port.x, l.y - port.y);
+    const near0 = nearFirst(legacy.filter((l) => gap(l) < 24000), gap).sort(by);
     if (!near0.length) continue;
     const rng0 = new Rng((hashString(`lairjobs:${port.id}`) ^ (seed * 2246822519)) >>> 0);
     const first: Lair = near0[rng0.int(0, Math.min(near0.length, 6) - 1)];
-    const near1 = lairs.filter((l) => l !== first && Math.hypot(l.x - port.x, l.y - port.y) < 24000).sort(by);
+    const near1 = nearFirst(lairs.filter((l) => l !== first && gap(l) < 24000), gap).sort(by);
     const rng1 = new Rng((hashString(`lairjobs2:${port.id}`) ^ (seed * 2246822519)) >>> 0);
     for (const [pick, rng, tag] of [[first, rng0, ''], ...(near1.length ? [[near1[rng1.int(0, Math.min(near1.length, 8) - 1)], rng1, '_2']] : [])] as [Lair, Rng, string][]) {
       const level = pick.level;
