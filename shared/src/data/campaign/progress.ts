@@ -18,7 +18,7 @@ export interface CampaignState {
 }
 
 export function newCampaignState(): CampaignState {
-  return { at: 0, picks: {}, started: false, from: 0 };
+  return { at: 0, picks: {}, started: true, from: 0 };
 }
 
 /** The first slot of each chapter (by chapter − 1). */
@@ -65,7 +65,7 @@ export function migrateCampaign(level: number, done: readonly string[]): Campaig
     for (let i = c + 1; i < PLAN.length; i++) if (PLAN[i].region === (sea as RegionId) && gateOf(FIRST_SLOT[i]) <= level + 3) c = i;
   }
   const at = level <= 1 && c === 0 ? 0 : FIRST_SLOT[c];
-  return { at, picks: {}, started: level >= 2, from: at };
+  return { at, picks: {}, started: true, from: at };
 }
 
 /** A saved place made sound (a save of before the campaign is migrated). */
@@ -74,5 +74,5 @@ export function sanitizeCampaign(raw: CampaignState | undefined, level: number, 
   const at = Math.max(0, Math.min(CAMPAIGN_SIZE, Math.floor(raw.at)));
   const picks: Record<string, 'a' | 'b'> = {};
   for (const [k, v] of Object.entries(raw.picks ?? {})) if (v === 'a' || v === 'b') picks[k] = v;
-  return { at, picks, started: !!raw.started, from: Math.max(0, Math.min(at, Math.floor(raw.from ?? 0))) };
+  return { at, picks, started: true, from: Math.max(0, Math.min(at, Math.floor(raw.from ?? 0))) };
 }

@@ -202,7 +202,7 @@ test('skipping the whole watch counts in the funnel; hints stop for the old hand
   assert.equal(r.skippedMidway, 1);
   assert.equal(r.funnel[0].skipped, 1);
   for (let i = 0; i < 6; i++) onboardingVolley(game, s.ship!, 0);
-  assert.ok(!c.all('onb').some((m) => m.kind === 'hint'));
+  assert.ok(!c.all('onb').some((m) => m.kind === 'hint'), JSON.stringify(c.all('onb').filter((m) => m.kind === 'hint')));
 });
 
 test('the grapples thrown before «Атаковать»: the battle counts for the steps before it, the watch goes on to «В порт»', () => {

@@ -72,7 +72,7 @@ test('the band: a ⚓1 ship in the last waters can take nothing there, and the c
   for (const k of v.contracts) assert.match(k.blocked ?? '', /^Not your level: ⚓/);
   const job = v.questOffers.find((x) => QUESTS_BY_ID[x.id]?.kind === 'job')!;
   c.push({ t: 'quest', action: 'accept', id: job.id });
-  assert.equal(p.quests.active.length, 0);
+  assert.equal(p.quests.active.filter((x) => QUESTS_BY_ID[x.id]?.kind !== 'campaign').length, 0, 'no job taken (the campaign goes on by itself beside)');
   if (v.contracts[0]) {
     c.push({ t: 'contract', action: 'accept', id: v.contracts[0].id });
     assert.equal(p.contracts.length, 0, 'nor a contract of the port');

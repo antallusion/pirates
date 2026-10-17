@@ -5314,6 +5314,12 @@ body.touch.sea-docked #touch > :is(#tc-stick, .tc-special, #tc-target) { display
 .q-cmp-next .q-locked { opacity: 0.62; }
 .q-cmp-next .q-locked .w-row-ico { filter: grayscale(1); }
 /* docs/36: the journal's «Кампания» page — the chapters as a book */
+.jr-cmp { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 6px; padding: 6px 8px; border: 1px solid var(--brass); border-radius: 6px; background: rgba(64, 48, 26, 0.35); }
+.jr-cmp b { color: var(--gold, #e0b862); flex: 1 1 100%; }
+.cn-fork { display: flex; flex-direction: column; gap: 8px; }
+.cn-way { padding: 6px 8px; border: 1px solid rgba(111, 90, 56, 0.6); border-radius: 6px; background: rgba(10, 12, 16, 0.35); }
+.cn-way b { color: var(--gold, #e0b862); }
+.cn-way p { margin: 4px 0 6px; line-height: 1.35; overflow-wrap: anywhere; }
 .campaign-book { display: flex; flex-direction: column; gap: 6px; }
 .cb-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
 .cb-head .cm-bar { height: 6px; }

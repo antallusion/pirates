@@ -31,7 +31,7 @@ import { chipsOfQuest } from '../client/src/ui/board.ts';
 import { goalSheetView } from '../client/src/ui/goalsheet.ts';
 import { classWord } from '../client/src/ui/questclass.ts';
 import { abyssCleared } from '../server/src/game/abyss.ts';
-import { campaignActive, campaignFoes, campaignOf } from '../server/src/game/campaign.ts';
+import { campaignActive, campaignFoes, campaignNext, campaignOf } from '../server/src/game/campaign.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import { resolveGoal } from '../server/src/game/goalroute.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
@@ -109,7 +109,7 @@ test('one taxonomy on every screen: «Сети Мики» is a side quest everyw
   const first = built.slots[0].a;
   // the port's switch
   assert.deepEqual(chipsOfQuest(mika.kind, undefined, false), ['side']);
-  assert.deepEqual(chipsOfQuest(first.kind, first.category, false), ['campaign']);
+  assert.deepEqual(chipsOfQuest(first.kind, first.category, false), [], 'the campaign is on no board (it goes on by itself, owner 2026-10-18)');
   assert.deepEqual(chipsOfQuest('path', undefined, false), ['side'], 'a Path is a side story');
   assert.deepEqual(chipsOfQuest('job', 'delivery', false), ['jobs']);
   // «Цели и вести»
@@ -150,7 +150,7 @@ test('every word of the campaign reads in Russian, with no Latin; the patterns k
 
 test('the captains of before: their chapter by their level (a sea’s old arcs may carry them on), begun; a new captain at the beginning', () => {
   const fresh = migrateCampaign(1, []);
-  assert.deepEqual(fresh, { at: 0, picks: {}, started: false, from: 0 });
+  assert.deepEqual(fresh, { at: 0, picks: {}, started: true, from: 0 });
   const mid = migrateCampaign(20, []);
   const ch = PLAN.findIndex((p, i) => FIRST_SLOT[i] === mid.at);
   assert.ok(ch >= 0, 'a chapter’s first quest');
@@ -444,38 +444,76 @@ test('a captain who does only the campaign: every quest taken and done by the ga
   if (process.env.CAMPAIGN_PACE) console.log(pace.map((x) => `ch${x.ch}: ${x.from}→${x.to}`).join('  '));
 });
 
-test('the campaign quest is taken anywhere, offered at every port, waits for its level, and the next comes by itself', () => {
+test('the campaign is never taken: its first quest is under way from the first level, never on a board, the next comes at once', () => {
   const { game } = makeGame();
   const { s, c } = captain(game, 'Newcomer', 1);
   const p = s.profile!;
   const first = campaignOf(game).bySlot.get(0)!.a;
-  // offered on the board of a port that is not its mentor's
+  assert.equal(campaignActive(p)?.id, first.id, 'under way from the first level, untaken');
+  assert.ok(c.all('campaign_new').some((m) => m.id === first.id && !m.choice), 'a toast and a card: «Новое задание кампании»');
+  // not on any port's board
   const port = game.portById('gravesend')!;
   s.ship!.docked = port.id;
   p.docked = port.id;
-  c.push({ t: 'quest', action: 'decline', id: 'x' });
   game.pushPort(s);
-  const offers = c.last('port')!.view!.questOffers;
-  const o = offers.find((x) => x.id === first.id);
-  assert.ok(o && o.kind === 'campaign' && o.blocked === null && o.cmp?.ch === 1 && o.cmp.k === 0, 'the campaign’s first quest on another port’s board');
-  // taken at sea (from «Цели и вести»)
+  assert.ok(!c.last('port')!.view!.questOffers.some((o) => o.kind === 'campaign'), 'no campaign on a board');
+  // not set aside
+  c.push({ t: 'quest', action: 'abandon', id: first.id });
+  assert.equal(campaignActive(p)?.id, first.id, 'the campaign is not set aside');
+  // done: the next under way at once, and told
   atSea(game, s, 30000, 80000);
-  c.push({ t: 'quest', action: 'accept', id: first.id });
-  assert.equal(campaignActive(p)?.id, first.id, 'taken at sea');
-  // a quest not of her place is refused
-  c.push({ t: 'quest', action: 'accept', id: campaignOf(game).bySlot.get(5)!.a.id });
-  assert.equal(p.quests.active.length, 1);
-  // done: the next comes by itself
   for (const st of first.steps) doStep(game, s, st);
   assert.equal(p.campaign!.at, 1);
-  assert.equal(campaignActive(p)?.id, campaignOf(game).bySlot.get(1)!.a.id, 'the next quest under way at once');
-  // a captain below a quest's level: it waits and says why
+  const second = campaignOf(game).bySlot.get(1)!.a;
+  assert.equal(campaignActive(p)?.id, second.id, 'the next quest under way at once');
+  assert.ok(c.all('campaign_new').some((m) => m.id === second.id));
+});
+
+test('the next waits for its level («следующее с уровня N») and comes by itself on reaching it', () => {
+  const { game } = makeGame();
+  const { s, c } = captain(game, 'Waiter', 1);
+  const p = s.profile!;
+  const slot = campaignOf(game).bySlot.get(400)!;
   p.campaign!.at = 400;
   p.quests.active = [];
+  p.level = slot.gate - 1;
+  campaignNext(game, s, true);
+  assert.equal(campaignActive(p), undefined, 'not yet: her level is below its gate');
   game.pushSelf(s, true);
   const view = c.last('self')!.self.campaign!;
-  assert.equal(view.blocked, `Level ${campaignOf(game).bySlot.get(400)!.gate}`);
-  assert.equal(view.next.length, 3);
+  assert.equal(view.blocked, `Level ${slot.gate}`);
+  assert.equal(view.gate, slot.gate);
+  // the level reached: it comes by itself
+  p.xp = 0;
+  game.grantXp(s, xpForLevel(p.level), null, false, true);
+  assert.equal(p.level, slot.gate);
+  assert.equal(campaignActive(p)?.id, slot.a.id, 'under way at its level');
+  // migrated captains of before: their quest under way on coming aboard
+  const { s: v } = captain(game, 'Veteranx', 1);
+  v.profile!.quests.active = [];
+  v.profile!.campaign = migrateCampaign(25, []);
+  v.profile!.level = 25;
+  campaignNext(game, v);
+  assert.equal(campaignActive(v.profile!)?.id, campaignOf(game).bySlot.get(v.profile!.campaign!.at)!.a.id, 'a migrated captain’s quest under way');
+});
+
+test('a fork: its two ways put before her (a card and a popup), none under way till she chooses; the choice is kept', () => {
+  const { game } = makeGame();
+  const { s, c } = captain(game, 'Forker', 60);
+  const p = s.profile!;
+  const fork = campaignOf(game).slots.find((x) => x.b)!;
+  p.campaign!.at = fork.slot;
+  p.quests.active = [];
+  campaignNext(game, s);
+  assert.equal(campaignActive(p), undefined, 'a fork waits for her choice');
+  const news = c.all('campaign_new').at(-1)!;
+  assert.deepEqual(news.choice?.map((w) => w.id), [fork.a.id, fork.b!.id], 'both ways offered');
+  game.pushSelf(s, true);
+  assert.equal(c.last('self')!.self.campaign!.ways!.length, 2, 'the card in the journal and «Цели и вести»');
+  c.push({ t: 'quest', action: 'accept', id: fork.b!.id });
+  assert.equal(campaignActive(p)?.id, fork.b!.id, 'her way under way');
+  for (const st of fork.b!.steps) doStep(game, s, st);
+  assert.equal(p.campaign!.picks[fork.b!.campaign!.key!], 'b', 'the choice kept');
 });
 
 test('the campaign’s fight comes to her: on a boarding step at sea, foes of the quest’s level put out near her, two at most', () => {
@@ -511,6 +549,7 @@ test('an «arrive at» step is done by arriving after the quest is taken: not by
   p.docked = port.id;
   s.ship!.state.x = port.x;
   s.ship!.state.y = port.y;
+  p.quests.active = []; // (the campaign's own quest, under way from the start, set by)
   p.campaign!.at = 5;
   q.campaign!.slot = 5;
   p.campaign!.started = true;

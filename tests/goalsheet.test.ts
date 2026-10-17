@@ -41,16 +41,19 @@ test('the campaign first (its quest only) — then every other quest and contrac
   assert.equal(goalCount(v), 11);
 });
 
-test('the campaign quest to take: «Взять» anywhere, both ways at a branch, or why it waits', () => {
+test('the campaign is never taken: only a fork’s two ways are chosen; the next waits for its level, said so', () => {
   const two: CampaignView = { ...campaign, active: undefined, ways: [{ id: 'c01_17', name: 'Silence the Clerk', label: 'Watch him', summary: '', steps: ['Hold the waters'], xp: 1, silver: 1 }, { id: 'c01_17b', name: 'Frighten the Clerk', label: 'Frighten him', summary: '', steps: ['Board'], xp: 1, silver: 1 }] };
   const v = goalSheetView({ quests: [], campaign: two });
   assert.deepEqual(v.campaign?.take.map((x) => x.id), ['c01_17', 'c01_17b']);
   const html = campaignHtml(v, (id) => id);
-  assert.ok(html.includes('data-gtake="c01_17"') && html.includes('data-gtake="c01_17b"'), '«Взять» on each way');
+  assert.ok(html.includes('data-gtake="c01_17"') && html.includes('data-gtake="c01_17b"'), '«Выбрать» on each way of the fork');
   assert.equal(goalCount(v), 1);
+  // one way (no fork) not yet under way: no button at all — it comes by itself
+  const one = goalSheetView({ quests: [], campaign: { ...two, ways: [two.ways![0]] } });
+  assert.ok(!campaignHtml(one, (id) => id).includes('data-gtake'), 'no «Взять» for the campaign');
   const wait = goalSheetView({ quests: [], campaign: { ...two, blocked: 'Level 12' } });
   const w = campaignHtml(wait, (id) => id);
-  assert.ok(!w.includes('data-gtake') && w.includes('gs-wait'), 'a quest above her level waits, said why');
+  assert.ok(!w.includes('data-gtake') && w.includes('gs-wait') && w.includes('12'), 'the next waits for its level, said so («следующее с уровня 12»)');
   assert.equal(goalCount(wait), 0);
 });
 

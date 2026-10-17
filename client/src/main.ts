@@ -133,6 +133,7 @@ const HUD_L = dict(HUD_EN, HUD_RU);
 import { applyDataLocale, NAME_RU } from './lang/data.ts';
 import { personName } from './lang/names.ts';
 import { campaignWordsReady, loadCampaignWords, serverText } from './lang/server.ts';
+import { campaignNews } from './ui/campaignnews.ts'; // docs/36: the campaign's next quest comes by itself
 import { FACTIONS } from '../../shared/src/data/factions.ts';
 import { placeName } from './ui/maps.ts';
 import type { Key } from './i18n.ts';
@@ -1394,7 +1395,7 @@ net.on(onMessage);
 let startLoaded = false;
 function onMessage(m: ServerMsg): void {
   // docs/36: a word of the campaign before its words are in waits for them (a moment) rather than show English
-  if (lang() === 'ru' && !campaignWordsReady() && (m.t === 'toast' || m.t === 'quest_done') && /[A-Za-z]/.test(serverText(m.t === 'toast' ? m.msg : m.name))) {
+  if (lang() === 'ru' && !campaignWordsReady() && (m.t === 'toast' || m.t === 'quest_done' || m.t === 'campaign_new') && /[A-Za-z]/.test(serverText(m.t === 'toast' ? m.msg : m.name))) {
     void loadCampaignWords().then(() => onMessage(m));
     return;
   }
@@ -1592,6 +1593,15 @@ function onMessage(m: ServerMsg): void {
       // An island's people offer their job on the beach, or a groupmate shares theirs: the giver's window, then the
       // captain's answer.
       void giverDialog(m.offer, m.from).then((pay) => net.send({ t: 'quest', action: pay ? 'accept' : 'decline', id: m.offer.id, ...(pay && pay !== 'silver' ? { pay } : {}) }));
+      break;
+    case 'campaign_new':
+      // docs/36: the campaign's next quest came by itself (or a fork's ways) — a toast and a card, held while she fights
+      campaignNews(m, {
+        busy: () => !!state.boardTac,
+        toast: (text) => hud.toast(text, 'gold'),
+        card: (title, text) => hud.banner(title, text),
+        choose: (id) => net.send({ t: 'quest', action: 'accept', id }),
+      });
       break;
     case 'quest_done': {
       // The herald: the quest's name and all it paid.

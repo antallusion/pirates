@@ -14,6 +14,7 @@ function captain(game: Game, name: string, cap: CaptainId, level = 30) {
   const s = [...game.sessions].find((x) => x.name === name)!;
   s.profile!.level = level;
   s.profile!.gold = 1e5;
+  s.profile!.quests.active = []; // (the campaign's own quest, always under way — docs/36 — set by: these are the Paths')
   return { c, s, ship: s.ship!, p: s.profile! };
 }
 

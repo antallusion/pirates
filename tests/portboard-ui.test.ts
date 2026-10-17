@@ -46,7 +46,7 @@ test('the board: every switch, the cards in theirs, what she may not take last w
   setLang('en');
   const st = state();
   const items = boardItems(st.portView!, st);
-  assert.deepEqual(BOARD_CHIPS, ['all', 'campaign', 'side', 'jobs', 'contracts', 'urgent', 'daily', 'guild', 'mine']);
+  assert.deepEqual(BOARD_CHIPS, ['all', 'side', 'jobs', 'contracts', 'urgent', 'daily', 'guild', 'mine'], 'no «Кампания» on a board: it goes on by itself');
   assert.deepEqual(itemsOf(items, 'side').map((x) => x.id), ['arc1'], 'an arc is a side story (docs/36 §1)');
   assert.ok(itemsOf(items, 'urgent').some((x) => x.id === 'hot') && itemsOf(items, 'urgent').some((x) => x.id === 'elite'));
   assert.deepEqual(itemsOf(items, 'contracts').map((x) => x.id).sort(), ['c1', 'c2', 'elite']);

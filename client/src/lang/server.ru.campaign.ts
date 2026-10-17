@@ -15,4 +15,5 @@ export const SERVER_RU_CAMPAIGN: Record<string, string> = {
   'The campaign is walked alone': 'Кампанию проходят в одиночку',
   'Enemy sails close in: the campaign’s fight comes to you.': 'Вражеские паруса идут на сближение: бой кампании сам идёт к вам.',
   'Nobody here offers that': 'Здесь такого не предлагают',
+  'The campaign’s quest is not set aside: it goes on by itself': 'Задание кампании не откладывается: она идёт сама',
 };

@@ -59,8 +59,10 @@ export interface CampaignBlock {
   line: GoalLine | null;
   /** The ways to take now (one; two at a branch), when none is under way. */
   take: { id: string; name: string; label?: string; text: string }[];
-  /** Why the one to take waits (server words: «Level 12»), or null. */
+  /** Why the next waits (server words: «Level 12»), or null. */
   blocked: string | null;
+  /** A fork: its two ways are hers to choose (the only choice the campaign asks). */
+  fork: boolean;
   ch: number;
   k: number;
   size: number;
@@ -85,11 +87,13 @@ export function goalSheetView(self: GoalSelf | null | undefined): GoalSheetView 
   const campaign: CampaignBlock | null = c
     ? {
       line: mine ? line(mine) : null,
+      // (owner, 2026-10-18: the campaign is never taken — it goes on by itself; only a fork's two ways are hers to choose)
       take: mine || c.done ? [] : (c.ways ?? []).map((w) => ({ id: w.id, name: w.name, ...(w.label ? { label: w.label } : {}), text: w.steps[0] ?? '' })),
+      fork: !mine && (c.ways?.length ?? 0) > 1,
       blocked: mine ? null : c.blocked ?? null,
       ch: c.ch, k: c.k, size: c.size, at: c.at, total: c.total, done: c.done,
     }
-    : mine ? { line: line(mine), take: [], blocked: null, ch: 1, k: 0, size: 1, at: 0, total: 1, done: false } : null;
+    : mine ? { line: line(mine), take: [], blocked: null, fork: false, ch: 1, k: 0, size: 1, at: 0, total: 1, done: false } : null;
   const contracts = [...(self?.contracts ?? [])].sort((a, b) => a.expiresAt - b.expiresAt).map((c): GoalLine => ({
     key: `c:${c.id}`, kind: 'contract', title: c.title, text: '', progress: c.progress ?? 0, need: c.kind === 'bounty' ? c.kills ?? 1 : 0, done: false, silver: c.reward,
     ...(c.toPort ? { toPort: c.toPort } : {}), ...(c.good ? { good: c.good } : {}), ...(c.kind === 'bounty' ? { bounty: true } : {}),
@@ -152,9 +156,10 @@ export function campaignHtml(v: GoalSheetView, portName: (id: string) => string)
   if (c.done) body = `<p class="gs-empty gs-cdone">${esc(L('campaignDone'))}</p>`;
   else if (c.line) body = row(c.line, portName, where);
   else body = c.take.map((t) => {
+    // the next with its level to come («следующее с уровня N»), a fork's way to choose, or one on its way in
     const btn = c.blocked
-      ? `<span class="gs-wait">${esc(serverText(c.blocked))}</span>`
-      : `<button type="button" class="btn btn-small btn-primary gs-take" data-gtake="${esc(t.id)}">${esc(L('take'))}</button>`;
+      ? `<span class="gs-wait">${esc(L('nextAt', { n: Number(/\d+/.exec(c.blocked)?.[0] ?? 0) }))}</span>`
+      : c.fork ? `<button type="button" class="btn btn-small btn-primary gs-take" data-gtake="${esc(t.id)}">${esc(L('choose'))}</button>` : '';
     const label = t.label ? `${cmpText(t.label)}: ` : '';
     return `<div class="gs-row gs-campaign-take" data-gkey="q:${esc(t.id)}">${icon('tab_legends', '◆', 'gs-ico')}<span class="gs-t"><b><em class="gs-kind gs-k-campaign">${esc(classWord('campaign'))}</em>${esc(label + cmpText(t.name))}</b><small>${esc(where + cmpText(t.text))}</small></span><span class="gs-pay"></span>${btn}</div>`;
   }).join('') || empty('campaignNone');
@@ -181,6 +186,6 @@ export const seaNoneText = (): string => L('seaNone');
  *  taken, the orders not yet done. */
 export function goalCount(v: GoalSheetView): number {
   const c = v.campaign;
-  const cmp = c && !c.done && (c.line || (c.take.length && !c.blocked)) ? 1 : 0;
+  const cmp = c && !c.done && (c.line || (c.fork && !c.blocked)) ? 1 : 0;
   return cmp + v.active.length + v.daily.filter((x) => !x.done).length;
 }

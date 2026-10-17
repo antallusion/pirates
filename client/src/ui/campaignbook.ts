@@ -28,7 +28,7 @@ export function bookChapters(then: () => void): ChapterSrc[] | null {
 
 /** The page. */
 /** The words of the page (the journal's chip). */
-export const bookWord = (k: 'tab' | 'tabHint' | 'where', vars?: Record<string, number>): string => L(k, vars);
+export const bookWord = (k: 'tab' | 'tabHint' | 'where' | 'nextAt', vars?: Record<string, number>): string => L(k, vars);
 
 export function campaignBookHtml(c: CampaignView | undefined, list: ChapterSrc[] | null): string {
   if (!list) return `<p class="muted">${esc(L('loading'))}</p>`;

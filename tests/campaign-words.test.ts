@@ -29,5 +29,5 @@ test('the client asks for them at once and holds a campaign toast till they come
   const main = readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8');
   assert.ok(main.includes('void loadCampaignWords().then(() => modal && refreshModal());'), 'loaded at once, not after a delay');
   assert.ok(!/setTimeout\(\(\) => void loadCampaignWords/.test(main));
-  assert.ok(main.includes("!campaignWordsReady() && (m.t === 'toast' || m.t === 'quest_done')"), 'a toast with English waits for the words');
+  assert.ok(main.includes("!campaignWordsReady() && (m.t === 'toast' || m.t === 'quest_done' || m.t === 'campaign_new')"), 'a toast with English waits for the words');
 });

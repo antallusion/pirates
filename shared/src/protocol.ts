@@ -1874,6 +1874,8 @@ export type ServerMsg =
   | { t: 'hero_port'; view: HeroPortView | null }
   /** A job offered (docs/11 P6) by an island's people on the beach, or shared by a groupmate (`from`): the captain
    *  may take it or leave it. */
+  /** docs/36: the campaign's next quest has come (a toast and a short card), or its fork's two ways to choose. */
+  | { t: 'campaign_new'; id: string; name: string; ch: number; k: number; size: number; text: string; choice?: { id: string; name: string; label: string; text: string }[] }
   | { t: 'quest_offer'; offer: PortView['questOffers'][number]; island?: number; from?: string }
   /** A quest done: its name and all it paid (docs/11 P6). */
   | { t: 'quest_done'; name: string; silver: number; xp: number; /** done within the speed window */ fast?: boolean; /** groupmates in company (each a tenth more) */ company?: number; rep?: { faction: FactionId; n: number }; extra?: 'map' | 'supplies';

@@ -35,10 +35,12 @@ const W = dict(WIN_EN, WIN_RU);
 // побочное»): «Кампания» — the main campaign only; «Побочные» — the side chains, the regions' arcs, the Paths and the
 // Legends (they were all «Сюжет» here, and «Побочное» at sea); «Поручения» — the boards' jobs. The words are the
 // taxonomy's own (questclass.ts), the same at sea and in the journal.
-export type BoardChip = 'all' | 'campaign' | 'side' | 'jobs' | 'contracts' | 'urgent' | 'daily' | 'guild' | 'mine';
-export const BOARD_CHIPS: readonly BoardChip[] = ['all', 'campaign', 'side', 'jobs', 'contracts', 'urgent', 'daily', 'guild', 'mine'];
+// (owner, 2026-10-18: «кампанию брать не надо в портах, она сама должна идти и идти … пусть она всегда будет в журнале»:
+// the campaign is never on a board — it goes on by itself, in the journal and in «Цели и вести».)
+export type BoardChip = 'all' | 'side' | 'jobs' | 'contracts' | 'urgent' | 'daily' | 'guild' | 'mine';
+export const BOARD_CHIPS: readonly BoardChip[] = ['all', 'side', 'jobs', 'contracts', 'urgent', 'daily', 'guild', 'mine'];
 const CHIP_ICON: Record<BoardChip, string> = {
-  all: 'ui_quill', campaign: 'tab_legends', side: 'tab_letters', jobs: 'goal', contracts: 'map_contract', urgent: 'danger', daily: 'coin', guild: 'tab_guild', mine: 'stat_sails',
+  all: 'ui_quill', side: 'tab_letters', jobs: 'goal', contracts: 'map_contract', urgent: 'danger', daily: 'coin', guild: 'tab_guild', mine: 'stat_sails',
 };
 
 /** A generated job's picture by its kind (docs/11 P4). */
@@ -91,7 +93,7 @@ export function bandThreat(b: [number, number], mine: number): Threat {
 /** A quest's switches, by its class (questclass.ts). */
 export const chipsOfQuest = (kind: QuestKind, category: string | undefined, urgent: boolean): BoardChip[] => {
   const c = questClass({ kind });
-  if (c === 'campaign') return ['campaign'];
+  if (c === 'campaign') return []; // never on a board (it goes on by itself)
   if (c === 'side') return ['side'];
   if (category === 'elite') return ['urgent', 'contracts'];
   return urgent ? ['urgent', 'jobs'] : ['jobs'];
@@ -168,9 +170,9 @@ export function boardChips(items: BoardItem[], state: ClientState, view: PortVie
   const daily = (self?.daily?.orders ?? []).filter((o) => !o.done).length;
   const mine = (self?.quests.length ?? 0) + (self?.contracts.length ?? 0);
   const n: Record<BoardChip, number> = {
-    all: open('all'), campaign: open('campaign'), side: open('side'), jobs: open('jobs'), contracts: open('contracts') + (view.runs?.offers.length ?? 0), urgent: open('urgent'), daily, guild: view.service?.offer && !self?.service ? 1 : 0, mine,
+    all: open('all'), side: open('side'), jobs: open('jobs'), contracts: open('contracts') + (view.runs?.offers.length ?? 0), urgent: open('urgent'), daily, guild: view.service?.offer && !self?.service ? 1 : 0, mine,
   };
-  const word = (c: BoardChip) => (c === 'campaign' || c === 'side' ? classSwitch(c) : c === 'jobs' ? classSwitch('job') : c === 'daily' ? classSwitch('daily') : L(`c.${c}`));
+  const word = (c: BoardChip) => (c === 'side' ? classSwitch(c) : c === 'jobs' ? classSwitch('job') : c === 'daily' ? classSwitch('daily') : L(`c.${c}`));
   return BOARD_CHIPS.map((c) => ({ id: c, icon: CHIP_ICON[c], label: word(c), hint: L(`c.${c}Hint` as 'c.allHint'), badge: n[c] }));
 }
 
@@ -208,22 +210,6 @@ function row(x: BoardItem, state: ClientState, mine: number): string {
     <span class="w-row-t"><b>${esc(x.title)}</b><small>${meta(x, state, mine)}</small>${why}</span><span class="w-row-n q-pay">${pay}</span><span class="w-row-b">${btn}</span></div>`;
 }
 
-/** docs/36: the campaign's page — where she stands (the chapter, the quest in it, N/720), its quest now (to take here, or
- *  taken: «Плыть»; both ways at a branch; why it waits), and the next few, locked till their level. */
-function campaignPage(items: BoardItem[], state: ClientState, mine: number): string {
-  const c = state.self?.campaign;
-  if (!c) return `<p class="muted">${esc(L('noneHere'))}</p>`;
-  const head = `<div class="q-cmp-head"><b>${esc(c.done ? L('cmpDone') : L('cmpWhere', { ch: c.ch, n: c.k + 1, of: c.size }))}</b><span class="q-cmp-prog">${esc(L('cmpProgress', { n: c.at, of: c.total }))}</span>
-    <span class="cm-bar"><i style="width:${Math.min(100, (c.at / Math.max(1, c.total)) * 100).toFixed(1)}%"></i></span></div>`;
-  const now = [...itemsOf(items, 'campaign')];
-  // her quest under way, wherever she took it: its card with «Плыть»
-  const act = c.active ? state.self?.quests.find((q) => q.id === c.active) : undefined;
-  if (act && !now.some((x) => x.id === act.id)) now.unshift({ kind: 'quest', id: act.id, title: cmpText(act.name), text: cmpText(act.text), art: 'tab_legends', silver: act.silver ?? 0, xp: act.xp ?? 0, dest: null, blocked: null, urgent: false, group: false, path: false, stores: false, taken: true, chips: ['campaign'], score: 0, cls: 'campaign', cmp: { ch: c.ch, k: c.k, size: c.size } });
-  const list = now.length ? `<div class="mk-list q-list">${now.map((x) => row(x, state, mine)).join('')}</div>` : '';
-  const next = c.next.length ? `<div class="q-cmp-next"><div class="giver-h">${esc(L('cmpNext'))}</div>${c.next.map((x) => `<div class="w-row q-row q-off q-locked">${icon('tab_legends', '', 'w-row-ico')}<span class="w-row-t"><b>${esc(cmpText(x.name))}</b><small>${esc(L('cmpWhere', { ch: x.ch, n: x.k + 1, of: x.size }))}</small></span><span class="w-row-b"><small class="q-why">${esc(serverText(`Level ${x.gate}`))}</small></span></div>`).join('')}</div>` : '';
-  return `${head}${list || (c.done ? '' : `<p class="muted">${esc(L('cmpNone'))}</p>`)}${next}`;
-}
-
 /** The guild's order of the week (docs/11 P6), the bar the members fill. */
 function guildCard(state: ClientState): string {
   const w = state.guild?.weekly;
@@ -241,7 +227,7 @@ function takenList(state: ClientState): string {
   const sail = (key: string) => `<button type="button" class="k-btn k-btn--primary k-btn--md q-sail" data-act="goal" data-key="${esc(key)}" title="${esc(L(docked ? 'sailHint' : 'sail'))}">${icon('stat_sails', '', 'ico-sm')}${esc(L('sail'))}</button>`;
   const rows = [
     ...self.quests.map((q) => `<div class="w-row q-row q-taken" data-hint="${esc(qtext(q.kind, q.text))}">${icon('goal', '', 'w-row-ico')}<span class="w-row-t"><b>${esc(qtext(q.kind, q.name))}</b><small>${q.step}/${q.steps}: ${esc(qtext(q.kind, q.text))}${q.need > 1 ? ` (${q.progress}/${q.need})` : ''}</small></span>
-      <span class="w-row-b">${q.target ? sail(`q:${q.id}`) : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="quest_abandon" data-id="${esc(q.id)}">${esc(L('setAside'))}</button></span></div>`),
+      <span class="w-row-b">${q.target ? sail(`q:${q.id}`) : ''}${q.kind === 'campaign' ? '' : `<button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="quest_abandon" data-id="${esc(q.id)}">${esc(L('setAside'))}</button>`}</span></div>`),
     ...self.contracts.map((c) => `<div class="w-row q-row q-taken" data-hint="${esc(serverText(c.description))}">${icon(contractArt(c), '', 'w-row-ico')}<span class="w-row-t"><b>${esc(serverText(c.title))}</b><small>${esc(c.kind === 'bounty' ? `${c.progress ?? 0}/${c.kills}` : W('q.to', { port: placeName(port(c.toPort)?.name ?? '') }))}</small></span><span class="w-row-n">${money(c.reward)}</span>
       <span class="w-row-b">${c.toPort ? sail(`c:${c.id}`) : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="contract" data-mode="abandon" data-id="${esc(c.id)}">${esc(L('abandon'))}</button></span></div>`),
   ].join('');
@@ -270,9 +256,6 @@ export function boardHtml(view: PortView, state: ClientState, chip: BoardChip, e
   const list = (xs: BoardItem[]) => (xs.length ? `<div class="mk-list q-list">${xs.map((x) => row(x, state, mine)).join('')}</div>` : '');
   let body = '';
   switch (chip) {
-    case 'campaign':
-      body = campaignPage(items, state, mine);
-      break;
     case 'all':
     case 'jobs':
     case 'side':

@@ -4367,6 +4367,7 @@ export class Game {
     this.spawnPlayerShip(s, port.x, port.y, 0);
     this.saveSession(s);
     this.sendInit(s);
+    campaignNext(this, s); // docs/36: the campaign's first quest under way from the first level (owner, 2026-10-18)
     this.log(`[account] ${s.name} became ${CAPTAINS[captain].archetype}`);
   }
 

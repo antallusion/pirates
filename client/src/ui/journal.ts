@@ -194,7 +194,8 @@ export class Journal {
 
   render(root: HTMLElement, state: ClientState): void {
     const self = state.self;
-    const quests = self?.quests ?? [];
+    // docs/36 (owner, 2026-10-18: «пусть она всегда будет в журнале»): the campaign's quest heads the list
+    const quests = [...(self?.quests ?? [])].sort((a, b) => Number(b.kind === 'campaign') - Number(a.kind === 'campaign'));
     // Owner, 2026-10-16 («в журнале у меня нет заданий вообще»): the port's contracts are hers too — they stand in the
     // list beside the quests (they never did: only the quests were listed).
     const contracts = self?.contracts ?? [];
@@ -218,7 +219,7 @@ export class Journal {
     }
     root.innerHTML = logFrame('quests', state, chips, '', `<div class="journal">
         <div class="jr-side">
-          <div class="jr-list">${quests.length || contracts.length ? `${quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('')}${contracts.map((c) => this.contractRow(c, `c:${c.id}` === this.chosen, state)).join('')}` : `<p class="muted">${esc(L('none'))}</p>`}</div>
+          ${this.campaignTop(state)}<div class="jr-list">${quests.length || contracts.length ? `${quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('')}${contracts.map((c) => this.contractRow(c, `c:${c.id}` === this.chosen, state)).join('')}` : `<p class="muted">${esc(L('none'))}</p>`}</div>
           <div class="jr-day">${dailyLog(self?.daily)}${weeklyLog(state.renown?.weekly)}${commonLog(self?.common)}${invasionLog(self?.invasion, false)}${worldGoalsLog(state)}${tasksLog(state, false)}${omenLog(state.omen)}${dutchmanLog(state.dutchman)}${wondersLog(state.wonders)}${nemesisLog(state.wanted?.nemeses, state.wanted?.heads ?? 0)}${hunterLog(state.wanted)}${brethrenLog(state.raid)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
           ${self?.questsDone.length ? `<details class="jr-done"><summary>${esc(L('done', { n: self.questsDone.length }))}</summary><ol>${(self.questsRecent ?? []).map((n) => `<li>${esc(serverText(n))}</li>`).join('')}</ol></details>` : ''}
         </div>
@@ -256,7 +257,9 @@ export class Journal {
       const id = ct?.id;
       if (id) void ask(L('confirmContract')).then((ok) => ok && this.send({ t: 'contract', action: 'abandon', id }));
     });
-    bindGoalTaps(root, (k) => this.onSail(k)); // route: every goal's line — the nearest place it is done
+    bindGoalTaps(root, (k) => this.onSail(k));
+    // a fork of the campaign: her way chosen (the only choice it asks)
+    root.querySelectorAll<HTMLElement>('[data-jtake]').forEach((b) => (b.onclick = () => this.send({ t: 'quest', action: 'accept', id: b.dataset.jtake! }))); // route: every goal's line — the nearest place it is done
     root.querySelector<HTMLElement>('[data-share]')?.addEventListener('click', () => this.chosen && this.send({ t: 'quest', action: 'share', id: this.chosen }));
     // A group contract: on the board of those looking for a group, by its name.
     root.querySelector<HTMLElement>('[data-lfg]')?.addEventListener('click', () => q && this.send({ t: 'group', action: 'lfg', note: serverText(q.name) }));
@@ -300,6 +303,16 @@ export class Journal {
     return `<div class="jr-item"><button class="jr-row${on ? ' on' : ''}${tracked ? ' tracked' : ''}" data-jq="${esc(q.id)}">
       <b>${tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc((q.kind === 'campaign' ? cmpText : serverText)(q.name))}${q.ship ? ` ${levelChip(q.ship)}` : ''}</b>
       <span class="muted">${esc(classWord(questClass(q)))} · ${q.step}/${q.steps}${count}${q.mates?.length ? ` · ${icon('tab_group', '⚑', 'ico-sm')}${q.mates.length}` : ''}</span></button>${q.target ? this.goBtn(`q:${q.id}`) : ''}</div>`;
+  }
+
+  /** The campaign when its quest is not under way: the next with its level to come, or a fork's two ways to choose. */
+  private campaignTop(state: ClientState): string {
+    const c = state.self?.campaign;
+    if (!c || c.done || c.active || !c.ways?.length) return '';
+    const where = bookWord('where', { ch: c.ch, n: c.k + 1, of: c.size });
+    if (c.blocked) return `<div class="jr-cmp"><b>${esc(classWord('campaign'))}</b><span class="muted">${esc(where)} · ${esc(cmpText(c.ways[0].name))} — ${esc(bookWord('nextAt', { n: c.gate ?? 0 }))}</span></div>`;
+    if (c.ways.length < 2) return '';
+    return `<div class="jr-cmp"><b>${esc(classWord('campaign'))} · ${esc(where)}</b>${c.ways.map((w) => `<button type="button" class="btn btn-small btn-primary" data-jtake="${esc(w.id)}">${esc(cmpText(w.label ?? w.name))}</button>`).join('')}</div>`;
   }
 
   /** «Плыть» beside a row: a finger-sized sail. */
@@ -360,7 +373,7 @@ export class Journal {
         <button class="btn btn-small${tracked ? ' on' : ''}" data-follow ${tracked ? 'disabled' : ''}>${esc(L(tracked ? 'following' : 'follow'))}</button>
         ${canShare ? `<button class="btn btn-small" data-share>${esc(L('share'))}</button>` : ''}
         ${q.category === 'elite' && !inGroup ? `<button class="btn btn-small" data-lfg title="${esc(L('lfgHint'))}">${esc(L('lfg'))}</button>` : ''}
-        ${q.kind === 'job' || q.kind === 'story' || q.kind === 'campaign' ? `<button class="btn btn-small btn-danger" data-abandon>${esc(L('abandon'))}</button>` : ''}
+        ${q.kind === 'job' || q.kind === 'story' ? `<button class="btn btn-small btn-danger" data-abandon>${esc(L('abandon'))}</button>` : ''}
       </div>`;
   }
 }

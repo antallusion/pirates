@@ -13,6 +13,10 @@ export const EN = {
   done: 'The campaign is done: the tide sleeps.',
   way: 'your way: {w}',
   where: 'Chapter {ch} · quest {n} of {of}',
+  nextAt: 'the next from level {n}',
+  newQuest: 'A new campaign quest: {name}',
+  fork: 'The campaign: choose your way',
+  choose: 'Choose',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -28,4 +32,8 @@ export const RU: Record<keyof typeof EN, string> = {
   done: 'Кампания пройдена: прилив спит.',
   way: 'ваш путь: {w}',
   where: 'Глава {ch} · задание {n} из {of}',
+  nextAt: 'следующее с уровня {n}',
+  newQuest: 'Новое задание кампании: {name}',
+  fork: 'Кампания: выберите путь',
+  choose: 'Выбрать',
 };

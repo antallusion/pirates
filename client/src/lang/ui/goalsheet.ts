@@ -3,11 +3,13 @@
 
 export const EN = {
   'campaign': 'Campaign',
-  'campaignNone': 'The campaign waits for you: a port’s «Quests», the «Campaign» switch.',
+  'campaignNone': 'The campaign goes on by itself: its quest comes to you.',
   'campaignDone': 'The campaign is done: the tide sleeps.',
   'where': 'Chapter {ch} · quest {n} of {of}',
   'progress': 'Campaign: {n} of {of}',
   'take': 'Take',
+  'choose': 'Choose',
+  'nextAt': 'next from level {n}',
   'active': 'Quests and contracts',
   'activeNone': 'Nothing taken: a port’s «Quests» has work for your ship.',
   'daily': 'Daily orders',
@@ -26,11 +28,13 @@ export const EN = {
 
 export const RU: Record<keyof typeof EN, string> = {
   'campaign': 'Кампания',
-  'campaignNone': 'Кампания ждёт вас: в порту — «Задания», вкладка «Кампания».',
+  'campaignNone': 'Кампания идёт сама: её задание придёт к вам.',
   'campaignDone': 'Кампания пройдена: прилив спит.',
   'where': 'Глава {ch} · задание {n} из {of}',
   'progress': 'Кампания: {n} из {of}',
   'take': 'Взять',
+  'choose': 'Выбрать',
+  'nextAt': 'следующее с уровня {n}',
   'active': 'Задания и контракты',
   'activeNone': 'Ничего не взято: работа для вашего корабля — в порту, вкладка «Задания».',
   'daily': 'Поручения дня',

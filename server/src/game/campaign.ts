@@ -61,7 +61,8 @@ export function campaignBlocked(p: Profile, q: QuestDef): string | null {
   return null;
 }
 
-/** She takes the campaign's quest (anywhere: the campaign comes by letter as well as by word on the quay). */
+/** Her choice at a branch (owner, 2026-10-18: «кампанию брать не надо в портах, она сама должна идти и идти»): the one
+ *  thing of the campaign she picks — the way of its fork; the rest come by themselves. */
 export function acceptCampaign(game: Game, s: PlayerSession, id: string): string | null {
   const p = s.profile!;
   const q = QUESTS_BY_ID[id];
@@ -72,27 +73,39 @@ export function acceptCampaign(game: Game, s: PlayerSession, id: string): string
   return null;
 }
 
-function begin(game: Game, s: PlayerSession, q: QuestDef, auto: boolean): void {
+function begin(game: Game, s: PlayerSession, q: QuestDef, _auto: boolean): void {
   const p = s.profile!;
   p.campaign!.started = true;
   startQuest(game, p, q, s);
   const meta = q.campaign!;
-  if (auto) game.sendTo(s, { t: 'toast', msg: `Campaign, chapter ${meta.ch}: ${q.name}`, kind: 'gold' });
-  game.sendTo(s, { t: 'toast', msg: `${q.mentor}: “${q.summary}” — ${q.steps[0].text}`, kind: 'info' });
+  // «Новое задание кампании: …» — a toast and a short card (the client holds them while she fights)
+  game.sendTo(s, { t: 'campaign_new', id: q.id, name: q.name, ch: meta.ch, k: meta.k, size: chapterOfSlot(meta.slot).size, text: q.steps[0].text });
   // a first step done where she is (in the right port) is done at once
   const port = s.ship?.docked ? game.portById(s.ship.docked) : undefined;
   if (port) questEvent(game, s, { k: 'dock', port, fresh: true }); // (an «arrive at» step waits for her to put in again)
 }
 
-/** The next quest comes to her by itself (the campaign begun, none under way, her level enough, not a branch: a choice
- *  is hers to make at a port's «Кампания» or in «Цели и вести»). `say`: a word when her level is not yet enough. */
+/** Choices put before her, by session (a fork asked once a place, again on coming aboard). */
+const asked = new WeakMap<PlayerSession, number>();
+
+/** The next quest comes to her by itself — always under way, never taken (owner, 2026-10-18): from the first level, the
+ *  moment the one before is done, on coming aboard, at the level its gate asks. A fork puts its two ways before her (the
+ *  card in the journal, in «Цели и вести» and a popup). `say`: a word when her level is not yet enough. */
 export function campaignNext(game: Game, s: PlayerSession, say = false): void {
   const p = s.profile;
-  if (!p?.campaign?.started || campaignActive(p)) return;
+  if (!p?.campaign || campaignActive(p)) return;
+  p.campaign.started = true;
   const slot = campaignSlot(game, p);
-  if (!slot || slot.b) return;
+  if (!slot) return;
   if (p.level < slot.gate) {
     if (say) game.sendTo(s, { t: 'toast', msg: `The next campaign quest waits for level ${slot.gate}.`, kind: 'info' });
+    return;
+  }
+  if (slot.b) {
+    if (asked.get(s) === slot.slot) return;
+    asked.set(s, slot.slot);
+    const way = (q: QuestDef) => ({ id: q.id, name: q.name, label: q.campaign?.label ?? '', text: q.summary });
+    game.sendTo(s, { t: 'campaign_new', id: slot.a.id, name: slot.a.name, ch: slot.ch, k: slot.k, size: chapterOfSlot(slot.slot).size, text: '', choice: [way(slot.a), way(slot.b)] });
     return;
   }
   begin(game, s, slot.a, true);
@@ -103,7 +116,6 @@ export function campaignNext(game: Game, s: PlayerSession, say = false): void {
 export function campaignLevelUp(game: Game, s: PlayerSession): void {
   const p = s.profile;
   if (!p?.campaign) return;
-  if (!p.campaign.started && p.level >= 2) p.campaign.started = true;
   campaignNext(game, s);
 }
 

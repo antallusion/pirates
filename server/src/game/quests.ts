@@ -563,6 +563,7 @@ export function questLandsHere(p: Profile, islandId: number, feature: string): b
 
 export function abandonQuest(game: Game, s: PlayerSession, id: string): string | null {
   const p = s.profile!;
+  if (QUESTS_BY_ID[id]?.kind === 'campaign') return 'The campaign’s quest is not set aside: it goes on by itself'; // docs/36
   if (!p.quests.active.some((a) => a.id === id)) return 'Not under way';
   p.quests.active = p.quests.active.filter((a) => a.id !== id);
   game.sendTo(s, { t: 'toast', msg: `You set aside “${QUESTS_BY_ID[id]?.name ?? id}”.`, kind: 'info' });
@@ -613,7 +614,7 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   const ship = s.ship;
   if (!p || !ship) return;
   // The day's orders and the sea's common cause move on with the same deeds.
-  if (ev.k === 'dock') {
+  if (ev.k === 'dock' && !ev.fresh) {
     newsHint(game, s, 'daily');
     // A captain of some years, putting in alone: the sea's company (docs/11 P6).
     if (p.level >= 3 && !groupOfAccount(game, s.accountId)) newsHint(game, s, 'social');
@@ -661,11 +662,12 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
     for (let guard = 0; guard < 4; guard++) {
       const st = q.steps[qs.step];
       if (!st) break;
-      if (kill && spent && (st.type === 'sink' || st.type === 'board' || st.type === 'prize' || st.type === 'lair')) break;
+      // (the campaign's quest, always under way, counts beside the rest: it takes no ship from a job — docs/36)
+      if (kill && spent && q.kind !== 'campaign' && (st.type === 'sink' || st.type === 'board' || st.type === 'prize' || st.type === 'lair')) break;
       // The band's leader sunk: the hunt is won at a stroke.
       const gained = st.type === 'sink' && ev.k === 'sink' && qs.leader !== undefined && ev.victim.id === qs.leader ? Math.max(1, stepCount(st) - qs.progress) : stepGain(game, s, st, ev);
       if (gained <= 0) break;
-      if (kill) spent = true;
+      if (kill && q.kind !== 'campaign') spent = true;
       qs.progress += gained;
       if (qs.progress + 1e-9 < stepCount(st)) break;
       qs.step++;
