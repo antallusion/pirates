@@ -90,7 +90,9 @@ test('on the field: the shields over the creatures, the poisoned tide each round
   assert.ok(seen.has('seal_shields'), 'the shields said');
   assert.equal(seen.get('seal_tide'), 2, 'the tide bit as round 2 opened');
   if (bt.round >= 3) assert.ok(bt.stacks.length > n0 && seen.has('seal_reinforce'), 'a fresh pack in round 3');
-  const halved = bt.stacks.some((x) => x.side === 1 && x.count <= x.start / 2);
+  // (a stack cut below half and still standing: one felled outright in a blow is never «halved» — owner 2026-10-18, the
+  // creatures' abilities: the marsh serpents' miasma ends the fight in other ways than it did)
+  const halved = bt.stacks.some((x) => x.side === 1 && x.count > 0 && x.count <= x.start / 2);
   if (halved) assert.ok(seen.has('seal_fury') && bt.heroes[1].fx.some((f) => f.id === 'seal_fury'), 'the fury of the halved');
   if (bt.round > sealRounds(12)) assert.ok(seen.has('seal_late'), 'the seal fades past its rounds');
 });

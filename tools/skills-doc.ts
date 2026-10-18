@@ -6,10 +6,23 @@ import type { UnitId } from '../shared/src/data/army.ts';
 import { MAGIC_SHOTS, RANGED_KINDS, SKILLS, SKILL_IDS, UNIT_SKILL, shotOf, skillVars } from '../shared/src/data/creatureskills.ts';
 import type { SkillId } from '../shared/src/data/creatureskills.ts';
 import { RU as ARMY_RU } from '../client/src/lang/ui/army.ts';
+import { BOSS_UNIT_NAMES, isBossUnit } from '../shared/src/data/bossunits.ts';
+import { TITAN_NAMES, isTitan } from '../shared/src/data/titans.ts';
+import { FACTION_NAMES } from '../shared/src/data/factionunits.ts';
+import type { FactionKindId } from '../shared/src/data/factionunits.ts';
+import { PREMIUM_NAMES, isPremiumBeast } from '../shared/src/data/premiumbeasts.ts';
+import { SHIP_BEAST_NAMES, isShipBeast } from '../shared/src/data/shipbeasts.ts';
 import { RU as SK } from '../client/src/lang/ui/skills.ts';
 
 const fill = (s: string, v: Record<string, number>) => s.replace(/\{(\w+)\}/g, (_, k) => String(v[k] ?? `{${k}}`));
-const name = (u: UnitId) => (ARMY_RU as Record<string, string>)[`u.${u}`] ?? u;
+const name = (u: UnitId): string => {
+  if (isBossUnit(u)) return BOSS_UNIT_NAMES[u].name[1];
+  if (isTitan(u)) return TITAN_NAMES[u].name[1];
+  if (UNITS[u]?.roster) return FACTION_NAMES[u as FactionKindId][1];
+  if (isPremiumBeast(u)) return PREMIUM_NAMES[u][1];
+  if (isShipBeast(u)) return SHIP_BEAST_NAMES[u][1];
+  return (ARMY_RU as Record<string, string>)[`u.${u}`] ?? u;
+};
 const who = (u: UnitId) => {
   const d = UNITS[u];
   return d.roster ?? (d.titan ? 'титан' : d.legend ? 'легенда' : d.premium ? 'магазин' : d.beast ? 'существо' : 'люди');
