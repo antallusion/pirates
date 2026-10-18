@@ -40,7 +40,25 @@ const SCREENS = [
   // docs/35: the floating waystation's window, moored, with her fallen listed.
   { id: 'way', at: 'sea', open: async (p) => { await L.say(p, '/way go'); await L.sleep(1800); await shut(p); await p.evaluate(() => document.querySelector('.act-moor_way')?.click()); await L.sleep(1200); await L.say(p, '/way fallen'); } },
   { id: 'lair', at: 'lair', open: async () => {} },
+  // (owner, 2026-10-18: «нельзя скрывать ничего»): a sea fight with everything at hand — a roaming stack, the gulls, a
+  // castaway, the mast over the side, a pirate on her — every button of the action row in sight; then twelve (the
+  // ceasefire's and whatever comes after: copies of the small ones)
+  { id: 'acts', at: 'sea', open: (p) => manyActs(p, 0) },
+  { id: 'acts12', at: 'sea', open: (p) => manyActs(p, 12) },
 ];
+
+async function manyActs(p, n) {
+  for (const c of ['/noboard on', '/stack go', '/find gulls', '/castaway 2', '/mast', '/foe pirate brig 250']) { await L.say(p, c); await L.sleep(1200); }
+  await shut(p);
+  await L.sleep(1200);
+  if (n) await p.evaluate((n) => {
+    const row = document.getElementById('tc-actrow');
+    const src = row.querySelector('.tc-act2');
+    const words = ['Перемирие', 'Сдаться', 'Переговоры', 'Отступить', 'Осмотреть', 'Причалить', 'Высадка', 'Ремонт'];
+    for (let i = row.querySelectorAll('.k-btn').length; src && i < n; i++) { const c = src.cloneNode(true); c.dataset.act = 'syn' + i; c.querySelector('.k-btn-l').textContent = words[i % words.length]; row.append(c); }
+    globalThis.gravetide.seaHud.fitActs();
+  }, n);
+}
 
 const b = await L.browser();
 const rows = [];

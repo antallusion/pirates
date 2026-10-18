@@ -205,7 +205,8 @@ body.isle-on :is(#world, #hud, #hud-chat, #encounter, #surrender, #lairchest, #a
 /* ---------------------------------------------------------------- the sea's way in: «Остров» under the menu */
 body.touch #touch > #tc-isle, body.simple #touch > #tc-isle { position: absolute; top: calc(var(--sa-t) + 8px + 44px + 8px); right: calc(var(--sa-r) + var(--mm) + 20px); pointer-events: auto; }
 #tc-isle.hidden { display: none !important; }
-body.touch.mm-peek #touch > #tc-isle, body.sea-fight #touch > #tc-isle { display: none !important; }
+/* (never put away at sea — sailing, a fight, a mark, the chart up behind its tab: owner 2026-10-18, «иконки слева под
+   картой не должны исчезать никогда») */
 #tc-isle .tc-isle-l { position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); font-size: 8px; line-height: 1; white-space: nowrap; color: var(--bone, #e6dccb); text-shadow: 0 1px 2px #000, 0 0 4px #000; pointer-events: none; }
 /* the scene unseen until its pictures are in (ui/loader.ts); alive once shown (ui/islefx.ts) */
 #isle.is-veil .is-view { visibility: hidden; }

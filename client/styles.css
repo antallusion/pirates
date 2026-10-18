@@ -1801,8 +1801,9 @@ body.touch .center-card .btn { min-height: 44px; padding-inline: 18px; }
 #encounter.hidden { display: none; }
 /* An encounter's card is read first: the captain's goals under it step aside rather than peep from its edge. */
 body:has(#encounter:not(.hidden)) #hud-goals, body:has(#encounter:not(.hidden)) #hud-stack { visibility: hidden; }
-/* On a phone the card spans the screen: the menu button under its edge waits until it is answered. */
-@media (max-width: 699px) { body:has(#encounter:not(.hidden)) #tc-menu, body:has(#encounter:not(.hidden)) #hud-menu { visibility: hidden; } }
+/* On a phone the card spans the screen: the old HUD's menu button under its edge waits until it is answered (the sea
+   HUD's round buttons never go: owner 2026-10-18 — the card keeps clear of them, hud.ts placeTopStrip). */
+@media (max-width: 699px) { body:has(#encounter:not(.hidden)) #hud-menu { visibility: hidden; } }
 /* Tablets: the card opens below the region's lines under the chart, not across them. */
 @media (min-width: 700px) and (max-width: 1099px) and (min-height: 521px) { #encounter { top: calc(var(--sa-t, 0px) + var(--mm) + 56px); } }
 #encounter .enc-card { background: rgba(10, 12, 16, 0.94); border: 1px solid rgba(232, 196, 106, 0.55); border-radius: 6px; padding: 10px 12px 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
@@ -1977,7 +1978,7 @@ body.pb-1 #hud-feed .feed-h, body.pb-1 #hud-boss .bparts, body.pb-1 #hud-boss .b
 body.pb-1 #hud-feed { padding-top: 1px !important; padding-bottom: 2px !important; }
 body.pb-1 #hud-feed .feed-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 body.pb-1 #hud-feed .feed-line::before { content: '⚑ '; color: var(--brass); }
-body.pb-1 #hud-tip .tp-t { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+body.pb-1 #hud-tip .tp-t { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 body.pb-2 #hud-tip .tp-t { -webkit-line-clamp: 1; line-clamp: 1; }
 body.pb-2 #hud-stack > #hud-feed { display: none !important; }
 body.pb-3 #hud-stack > #hud-tip { display: none !important; }
@@ -2374,7 +2375,7 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
    --hud-a is the options' "Panel opacity" (0.3–1, 0.65 by default). */
 :root { --hud-a: 0.65; }
 .toast { background: rgba(8, 9, 11, calc(var(--hud-a) * 0.85)); padding: 4px 8px; font-size: 11.5px; line-height: 1.3; }
-.toast > span { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.toast > span { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .skinned .hud-block, .skinned #hud-goals, .skinned .uf-body {
   background: linear-gradient(180deg, rgba(14, 11, 9, calc(var(--hud-a) * 0.8)), rgba(8, 8, 9, calc(var(--hud-a) * 0.95))), var(--tex-panel, var(--tex-ebony, none)) center / 260px;
   background-clip: padding-box;
@@ -2662,35 +2663,37 @@ body.touch .base-board .bplot { cursor: default; }
   #modal-panel[data-modal="base"]:has(.base-raid) { --base-h: min(480px, 38vh); }
 }
 
-/* ---------- Toasts while a window is open (docs/15 item 8): not over the window, but in a strip of their own under
-   it — in the margin below the window on a large screen, else a line the window gives up while a toast shows —
-   one line each, the newest (and a bad one) only on a phone. */
+/* ---------- Toasts while a window is open (docs/15 item 8; owner, 2026-10-18: «изучаю навык… под книжкой изучения
+   появляется что-то темное и я не вижу… попадает под общие модалки а должно быть поверх» — the strip of its own under
+   the window was a dark line half off a phone's bottom): over the window, in the top layer (a body-level layer above the
+   windows, the kit's sheets and its wheel: --k-z-toast), in the bottom band — never the middle — a readable card each,
+   three lines at most, the newest (and a bad one) only on a short screen. No scrim over it. */
 #modal { flex-direction: column; }
 #modal-panel { flex: 0 1 auto; min-height: 0; }
-#modal-toasts { flex: none; display: flex; flex-direction: column; gap: 2px; width: min(1100px, 95vw); padding: 3px 0 2px; pointer-events: none; zoom: var(--ui-scale); font-size: calc(1em * var(--text-scale)); }
-#modal-toasts:empty { display: none; }
-#modal-toasts .toast { padding: 2px 8px; font-size: 12px; line-height: 18px; background: rgba(8, 9, 11, 0.94); }
-#modal-toasts .toast > span { display: block; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#modal-toasts .toast .ico-toast { width: 16px; height: 16px; flex: none; }
+#modal-toasts { position: fixed; z-index: var(--k-z-toast, 76); left: 50%; bottom: calc(var(--sa-b, 0px) + 10px); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px;
+  width: min(560px, calc(100vw - 24px)); padding: 0; pointer-events: none; zoom: var(--ui-scale); font-size: calc(1em * var(--text-scale)); }
+#modal-toasts:empty, body:not(:has(#modal:not(.hidden))) #modal-toasts { display: none; }
+#modal-toasts .toast { max-width: 100%; padding: 6px 12px; font-size: 13px; line-height: 17px; color: var(--bone); background: rgba(16, 14, 11, 0.97);
+  border: 1px solid rgba(176, 141, 87, 0.75); border-left-width: 3px; border-radius: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(0, 0, 0, 0.6); }
+#modal-toasts .toast.good { border-left-color: var(--good); }
+#modal-toasts .toast.bad { border-left-color: var(--bad); }
+#modal-toasts .toast.gold { border-left-color: var(--gold); color: #f0d9a0; }
+#modal-toasts .toast.xp { border-left-color: var(--xp); color: #cfe0f2; }
+#modal-toasts .toast > span { display: -webkit-box; flex: 1; min-width: 0; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+#modal-toasts .toast .ico-toast { width: 18px; height: 18px; flex: none; }
 #modal-toasts .t-count { flex: none; }
 /* a line said aboard on one row over a window: the speaker and his words apart («КомандаПриказы исполняют», docs/30) */
 #modal-toasts .toast.talk .talk-who::after { content: ' · '; color: var(--fog); font-weight: 400; }
 @media (max-width: 699px), (max-height: 520px) {
-  #modal-toasts { width: 100%; padding: 0 calc(var(--sa-r) + 2px) calc(var(--sa-b) + 1px) calc(var(--sa-l) + 2px); background: #060607; }
+  #modal-toasts { bottom: calc(var(--sa-b, 0px) + 6px); width: min(480px, calc(100vw - 16px)); }
   #modal-toasts .toast:nth-child(n+2):not(.bad) { display: none; }
-  #modal-toasts .toast { font-size: 11.5px; }
-}
-@media (min-width: 700px) and (min-height: 890px) {
-  #modal-toasts { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); padding: 0; }
+  #modal-toasts .toast { padding: 5px 10px; font-size: 12.5px; line-height: 16px; }
 }
 
 /* The column's toasts wait under an open window (the strip takes the new ones); they come back when it closes. */
 body:has(#modal:not(.hidden)) #toasts { display: none; }
-#modal-toasts { overflow: hidden; }
+
 #modal-toasts .toast { box-sizing: border-box; max-width: 100%; min-width: 0; overflow: hidden; }
-@media (max-width: 699px), (max-height: 520px) {
-  #modal:has(#modal-toasts:not(:empty)) { background: #060607; }
-}
 /* Before setting sail (owner, 2026-09-30; 2026-10-09: a window of what to buy, nothing bought by itself): what is short
    for the voyage, each with how many, its price and a button; «Докупить всё», «Отплыть так», «Остаться». */
 .confirm-panel.depart-panel { width: min(580px, 100%); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; text-align: left; }
@@ -2780,10 +2783,10 @@ body.touch .depart-panel .dp-buy { min-height: 44px; }
 #hud-stack .fp-acts { margin-top: 3px; }
 #hud-stack .fp-acts .btn { padding: 2px 8px; font-size: 11px; }
 #hud-goals .g-lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-#hud-goals .g-t { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#hud-goals .g-t { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 #hud-goals .ico-goal { width: 20px; height: 20px; }
 #hud-feed .feed-h { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px; }
-#hud-feed .feed-line { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#hud-feed .feed-line { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 #hud-holiday .hol-line { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #hud-boss .bname { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #hud-watch .w-head b { font-size: 15px; }
@@ -2929,7 +2932,7 @@ body.tac.tac-over #toasts { display: none; }
   .tb-acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: end; }
   .tb-acts .btn { min-height: 40px; font-size: clamp(11px, 0.9vw, 13px); white-space: normal; line-height: 1.1; padding: 4px 3px; letter-spacing: 0; }
   .tb-acts .btn-danger { grid-column: span 2; }
-  .tb-spell small { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .tb-spell small { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .tb-feed { font-size: 13px; justify-content: flex-end; }
   .tb-round { font-size: 22px; }
   .tb-turn { font-size: 13px; }
@@ -3291,6 +3294,10 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 #hud-autosail .as-d { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--fog); font-variant-numeric: tabular-nums; }
 #hud-autosail .as-stop { flex: none; min-height: 28px; min-width: 52px; padding: 2px 10px; background: rgba(120, 32, 26, 0.55); border: 1px solid #b0302a; border-radius: 3px; color: var(--bone); font: 600 11px/1 var(--sans); text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; }
 #hud-autosail .as-stop:hover, #hud-autosail .as-stop:focus-visible { background: rgba(176, 48, 42, 0.7); }
+/* (a narrow chip — 480×270 with the menu and the news in their row under the chart's tab, 2026-10-18: «Стоп» ran out of
+   its frame by 43 px): the sail's picture says what it is, the word steps aside, «Стоп» keeps inside the frame */
+#hud-autosail { container: as / inline-size; }
+@container as (max-width: 210px) { #hud-autosail .as-lbl, #hud-autosail .as-to { display: none; } #hud-autosail .as-stop { min-width: 44px; padding: 2px 6px; } }
 /* #37 the first-time hint: one compact line in the plates' width. */
 #hud-stack > #hud-tip { order: -2; }
 #hud-tip { display: flex; align-items: flex-start; gap: 6px; padding: 3px 3px 3px 7px !important; font: 11.5px/1.3 var(--sans); color: var(--bone); border-color: var(--brass); }
@@ -5198,7 +5205,6 @@ body.touch #hud-captain .fbar > span { display: none; }
 /* The top row: the news counter after the portrait; the menu left of the minimap. */
 body.touch #touch > .tc-news { position: absolute; top: calc(var(--sa-t) + 8px); left: calc(var(--sa-l) + 172px); pointer-events: auto; }
 body.touch #touch > #tc-menu { position: absolute; top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + var(--mm) + 20px); pointer-events: auto; }
-body.touch.sea-target #touch > .tc-news { display: none !important; } /* (the chart steps up behind its tab: seahud.css mm-peek) */
 body.touch #hud-stack, body.touch #hud #hud-stack { left: calc(var(--sa-l) + 228px); right: calc(var(--sa-r) + var(--mm) + 76px); top: calc(var(--sa-t) + 8px); transform: none; width: auto; min-width: 0; }
 /* (the menu keeps its place in a fight: the stack stops short of it, docs/23 item 97 — a hunt's card lay under it) */
 body.touch.sea-target #hud-stack, body.touch.sea-target #hud #hud-stack { left: calc(var(--sa-l) + 172px); right: calc(var(--sa-r) + var(--mm) + 76px); }
@@ -5238,7 +5244,6 @@ body.touch.sea-target #hud-stack, body.touch.sea-target #hud #hud-stack { left: 
 #touch > .tc-actrow { position: absolute; right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + 10px); max-width: 60vw; pointer-events: none; }
 #touch > .tc-actrow > .tc-act { position: relative; pointer-events: auto; animation: ctx-pulse 1.8s ease-in-out infinite; }
 #touch .tc-act .tc-act-ico { display: inline-flex; flex: none; }
-#touch .tc-act .tc-act-more { position: absolute; top: -8px; left: -8px; min-width: 22px; height: 20px; padding: 0 5px; box-sizing: border-box; border-radius: var(--k-r-round); background: rgba(10, 11, 13, 0.92); box-shadow: 0 0 0 1px var(--k-brass-dim); color: var(--k-bone); font: 700 10px/20px var(--k-font-sans); text-align: center; pointer-events: none; }
 #touch > .tc-special { position: absolute; right: calc(var(--sa-r) + var(--sea-pad) + var(--sea-fire) + 14px); bottom: calc(var(--sa-b) + var(--sea-pad) + 4px); pointer-events: auto; box-shadow: 0 0 12px rgba(224, 184, 98, 0.45); }
 #touch > #tc-target { position: absolute; right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + 10px + var(--sea-act-h) + 8px); width: min(250px, 32vw); pointer-events: auto; }
 #touch > #tc-target .k-target { width: 100%; }

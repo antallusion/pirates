@@ -1,11 +1,11 @@
 // The context action bar over the guns (owner, 2026-10-02): every thing at hand a button in one order — the first the
-// one the gamepad's A does (padContext, which runs the bar's first) — three at most with «⋯ N more», no key chips on
+// one the gamepad's A does (padContext, which runs the bar's first) — every one in sight (2026-10-18), no key chips on
 // touch, the land key's share of the mast, the net and the sea marks, and «Look…» for a card closed by hand.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ACT_SHOW, actBarHtml, buildActs, landKeyAct, markInfo } from '../client/src/ui/actbar.ts';
+import { actBarHtml, buildActs, landKeyAct, markInfo } from '../client/src/ui/actbar.ts';
 import type { ActFacts, ActId, LandAction } from '../client/src/ui/actbar.ts';
 import { EN, RU } from '../client/src/lang/ui/actbar.ts';
 import { EN as EASE_EN, RU as EASE_RU } from '../client/src/lang/ui/ease.ts';
@@ -131,29 +131,26 @@ test('the land key takes the mast, the net, the sea mark in the bar\'s order', (
   assert.equal(landKeyAct(buildActs({ board: { name: 'X' } })), null);
 });
 
-test('three buttons at most, the rest behind «⋯ N more»; one height of button; no key chips on touch', () => {
+test('every button in sight at once, none behind «⋯ N more» (owner, 2026-10-18); one gold one; no key chips on touch', () => {
   setLang('ru');
   try {
     const acts = buildActs(ALL);
-    const shut = actBarHtml(acts, ['Защищены — выстрел снимет защиту'], (a) => a.toUpperCase(), false);
+    assert.ok(acts.length >= 10, `${acts.length}`);
+    const all = actBarHtml(acts, ['Защищены — выстрел снимет защиту'], (a) => a.toUpperCase());
     const btns = (h: string) => (h.match(/<button /g) ?? []).length;
-    assert.equal(btns(shut), ACT_SHOW, 'two and the toggle');
-    assert.match(shut, /⋯ ещё 9/);
-    assert.match(shut, /act-btn act-axes primary" data-act="0"/);
-    assert.equal((shut.match(/ primary/g) ?? []).length, 1, 'one gold button');
-    assert.match(shut, /<div class="act-info">Защищены/);
-    assert.match(shut, /<kbd class="act-k">BOARD<\/kbd>/);
-    const open = actBarHtml(acts, [], (a) => a, true);
-    assert.equal(btns(open), acts.length + 1);
-    assert.match(open, /⋯ свернуть/);
-    assert.ok(open.indexOf('act-more-row') < open.indexOf('data-act="0"'), 'the rest open above');
-    const touch = actBarHtml(acts, [], null, false);
+    assert.equal(btns(all), acts.length, 'every one');
+    assert.ok(!/data-act-more|⋯|act-more-row/.test(all), 'no toggle, no hidden row');
+    acts.forEach((_, i) => assert.ok(all.includes(`data-act="${i}"`), `#${i}`));
+    assert.match(all, /act-btn act-axes primary" data-act="0"/);
+    assert.equal((all.match(/ primary/g) ?? []).length, 1, 'one gold button');
+    assert.match(all, /<div class="act-info">Защищены/);
+    assert.match(all, /<kbd class="act-k">BOARD<\/kbd>/);
+    assert.match(all, /class="act-row act-many"/);
+    const touch = actBarHtml(acts, [], null);
     assert.ok(!/<kbd/.test(touch), 'no keys on touch');
-    // Three exactly: no toggle.
-    const three = actBarHtml(buildActs({ board: { name: 'B' }, port: { name: 'P' }, cast: 'net' }), [], null, false);
+    const three = actBarHtml(buildActs({ board: { name: 'B' }, port: { name: 'P' }, cast: 'net' }), [], null);
     assert.equal(btns(three), 3);
-    assert.ok(!/data-act-more/.test(three));
-    assert.equal(actBarHtml([], [], null, false), '');
+    assert.equal(actBarHtml([], [], null), '');
     assert.match(markInfo('wreck', 'done'), /^Поле обломков: на сегодня всё$/);
     assert.match(markInfo('drift', 'busy', 2.2), /Плавник: шлюпки за работой… 3[\s ]с/);
     // Every word in Russian.

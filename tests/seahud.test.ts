@@ -51,9 +51,9 @@ test('«Особое»: the ultimate when it is ready, else the strongest stroke
   assert.equal(bestSpecial([a('z', false, 30), a('v', false, 150, 'ultimate')]), null);
 });
 
-test('seven things to touch at most on a touch screen’s sea, in every state of the HUD (eight in a fight only when she brings the chart back herself); a desk’s drawn controls nine at most', () => {
+test('the things to touch on a touch screen’s sea in every state of the HUD — the menu and the news never put away (owner, 2026-10-18), nine at most; a desk’s drawn controls nine at most', () => {
   const tg = { name: 'Covenant', level: 1, hull: 1, crew: 0.7, chance: 0.6 };
-  for (const touch of [true, false, undefined]) for (const docked of [false, true]) for (const fight of [false, true, undefined]) for (const act of [null, { id: 'attack', icon: 'x', label: 'Атаковать', more: 3 }]) for (const special of [null, { id: 'v', icon: 'ab_v', name: 'V' }]) for (const target of [null, tg]) for (const news of [0, 5]) for (const mm of ['default', 'tapped', 'setting'] as const) {
+  for (const touch of [true, false, undefined]) for (const docked of [false, true]) for (const fight of [false, true, undefined]) for (const act of [null, { id: 'attack', icon: 'x', label: 'Атаковать', extra: [{ i: 1, id: 'board', icon: 'y', label: 'Абордаж' }, { i: 2, id: 'look', icon: 'z', label: 'Осмотреть' }, { i: 3, id: 'dock', icon: 'w', label: 'Причалить' }] }]) for (const special of [null, { id: 'v', icon: 'ab_v', name: 'V' }]) for (const target of [null, tg]) for (const news of [0, 5]) for (const mm of ['default', 'tapped', 'setting'] as const) {
     const v: SeaView = { docked, touch, fight: fight === undefined ? undefined : fight || !!target, act, special, target, ammo: 'round', ammoN: 60, reload: 1, news, unread: 2, markId: target ? 7 : null, ...(mm === 'tapped' ? { mmOut: true } : mm === 'setting' ? { mmShow: true } : {}) };
     const t = seaTargets(v);
     const mode = minimapMode(v);
@@ -68,15 +68,15 @@ test('seven things to touch at most on a touch screen’s sea, in every state of
       continue;
     }
     const inFight = !docked && (v.fight ?? !!target);
-    // The default (owner, 2026-10-09): seven at most, the chart's tab one of them; she may ask for the chart back (the
-    // tab's tap, the setting): eight then.
-    assert.ok(t.length <= (mm === 'default' || !inFight ? 7 : 8), `${JSON.stringify(v)} → ${t.join(',')}`);
+    // (owner, 2026-10-18: «не должны исчезать никогда»: the menu always, the counter whenever it counts — nine at most)
+    assert.ok(t.length <= 9, `${JSON.stringify(v)} → ${t.join(',')}`);
+    assert.ok(t.includes('menu'), 'the menu in every state');
+    assert.equal(t.includes('news'), news > 0, 'the counter whenever there is news, a fight too');
     if (inFight) {
-      assert.ok(!t.includes('news'), 'a fight puts the counter away');
       assert.ok(t.includes('fire') && t.includes('stick') && t.includes('ammo') && t.includes('lock'), 'a fight: «Огонь», «Снаряд», «Цель» and the helm');
       if (mm === 'default') {
         assert.equal(mode, 'peek');
-        assert.ok(t.includes('mmtab') && !t.includes('minimap') && !t.includes('menu'), 'the chart and the menu up behind one tab');
+        assert.ok(t.includes('mmtab') && !t.includes('minimap'), 'the chart up behind its tab, the menu stays');
       } else {
         assert.equal(mode, 'out');
         assert.ok(t.includes('minimap') && t.includes('menu') && !t.includes('mmtab'), 'the chart and the menu back');

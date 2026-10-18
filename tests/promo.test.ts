@@ -220,10 +220,11 @@ test("the offers are an icon under the captain's plate with a live clock, never 
   const { readFileSync } = await import('node:fs');
   const read = (f: string) => readFileSync(new URL(`../client/${f}`, import.meta.url), 'utf8');
   const src = read('src/ui/promo.ts');
-  // the icon: in the HUD's own layer (#touch), every context's offers, out of every fight, window and the island's scene
+  // the icon: in the HUD's own layer (#touch), every context's offers, never over a window, a boarding or the island's
+  // scene — and up in a fight at sea (owner, 2026-10-18: seaicons.test.ts)
   assert.ok(src.includes("id: 'tc-offer'"), 'the round icon');
   assert.ok(src.includes("sea: ['sea', 'board', 'isle', 'all']"), 'every offer on the icon');
-  assert.ok(/!this\.d\.modal\(\) && !this\.d\.busy\(\)/.test(src), 'never over a window or in a fight');
+  assert.ok(src.includes('seaIconUp(this.d.modal(), this.d.state)'), 'never over a window or a boarding');
   assert.ok(src.includes("data-pofmt=\"hms\""), 'its clock ticks as mm:ss / h:mm:ss');
   // no chip at sea any more, no strip in the harbour
   assert.ok(!/promo-sea|promo-port|PROMO_PORT_SLOT|seaSpot/.test(src), 'the sea chip and the harbour strip are gone');

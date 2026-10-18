@@ -81,8 +81,12 @@ export class AutosailPill {
       const to = rt ?? a!;
       const left = L('as_left', { d: distText(Math.hypot(to.x - own.x, to.y - own.y)) });
       const text = rt ? `· ${RT('to', { name: routeLabel(rt) })} · ${left}` : `· ${left} ·`;
-      if (d.textContent !== text) d.textContent = text;
-      if (rt && d.title !== text) d.title = text;
+      // (the place's name and the way left apart: a narrow chip keeps the way left, its name in the title — styles.css)
+      if (d.dataset.t !== text) {
+        d.dataset.t = text;
+        d.innerHTML = rt ? `<span class="as-to">· ${esc(RT('to', { name: routeLabel(rt) }))} </span><span class="as-left">· ${esc(left)}</span>` : `<span class="as-left">· ${esc(left)} ·</span>`;
+      }
+      if (d.title !== text) d.title = text;
     }
   }
 }

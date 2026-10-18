@@ -87,6 +87,18 @@ export interface PromoDeps {
   held?: () => boolean;
 }
 
+/** A round icon of the left row under the captain's plate (her offer, the daily gift) is up: the sea HUD out, no window
+ *  over it, no boarding (its own screen), not the island's scene, not the First Watch. A hostile near, a chase or a
+ *  fight at sea never puts it away (owner, 2026-10-18: «иконки слева… не должны исчезать никогда, сейчас они исчезают
+ *  когда я плыву» — they went with every hostile sail within a mile). */
+export function seaIconUp(modal: unknown, state: Pick<ClientState, 'boardTac' | 'boardFight' | 'onboarding'>, doc: Pick<Document, 'getElementById' | 'body'> | undefined = globalThis.document): boolean {
+  if (modal || state.boardTac || state.boardFight || state.onboarding?.stage) return false;
+  if (!doc) return true;
+  const hud = doc.getElementById('hud');
+  const isle = doc.getElementById('isle');
+  return !!hud && !hud.classList.contains('hidden') && !(isle && !isle.classList.contains('hidden')) && !doc.body.classList.contains('tac');
+}
+
 export class Promos {
   view: PromoView | null = null;
   private at = 0;
@@ -273,12 +285,10 @@ export class Promos {
     for (const x of list) this.tell(x, 'sea');
   }
 
-  /** The icon is up: the HUD out, no window, no fight (a hostile near, a chase, a boarding, the battle), not on the
-   *  island's scene (it has its own card), not in the First Watch. */
+  /** The icon is up (seaIconUp): the HUD out at sea or in port — sailing, a hostile near, a chase, a fight at sea — not
+   *  under a window, a boarding, the island's scene (it has its own card) or the First Watch. */
   private iconUp(): boolean {
-    const hud = document.getElementById('hud');
-    const isle = document.getElementById('isle');
-    return !!this.view && !!hud && !hud.classList.contains('hidden') && !this.d.modal() && !this.d.busy() && !(isle && !isle.classList.contains('hidden')) && !this.d.state.onboarding?.stage && !document.body.classList.contains('tac');
+    return !!this.view && seaIconUp(this.d.modal(), this.d.state);
   }
 
   /** On the island: its offer in the scene's right column, while no building's card is open there. */
