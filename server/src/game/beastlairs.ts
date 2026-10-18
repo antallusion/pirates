@@ -784,7 +784,7 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
   const before = ship.army.map((x) => ({ ...x }));
   // Her landed men: the fallen off their own stacks.
   for (const st of bt.stacks) {
-    if (st.side !== 0) continue;
+    if (st.side !== 0 || st.summoned) continue;
     const d = st.start - st.count;
     if (d > 0) ship.loseFrom(st.src, d);
   }
@@ -796,7 +796,7 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
   if (!f.ext) p.landed = (p.landed ?? 0) + 1;
   const won = bt.over!.winner === 0 && !f.retreat;
   // docs/18 #39: her creatures that fought and won, fed, have a win more.
-  if (won) creaturesWon(game, ship, bt.stacks.filter((x) => x.side === 0).map((x) => x.src));
+  if (won) creaturesWon(game, ship, bt.stacks.filter((x) => x.side === 0 && !x.summoned).map((x) => x.src));
   if (f.ext) {
     // docs/18 IV: another system's fight — its own end.
     if (won) {
@@ -816,7 +816,7 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
   }
   if (!won) {
     // The creatures keep what is left of them until the lair is whole again.
-    const left = bt.stacks.filter((x) => x.side === 1 && x.count > 0).map((x) => ({ u: x.unit, n: x.count }));
+    const left = bt.stacks.filter((x) => x.side === 1 && x.count > 0 && !x.summoned).map((x) => ({ u: x.unit, n: x.count }));
     S.store.st[l.id] = { army: left, at: game.now };
     save(game);
     game.toastShip(ship, f.retreat ? `The party falls back to the boats from the ${lairName(l)}.` : `The ${lairName(l)} throws your party back into the surf.`, 'bad');

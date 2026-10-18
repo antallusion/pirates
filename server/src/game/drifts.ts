@@ -506,7 +506,7 @@ function fightEnd(game: Game, s: PlayerSession, d: Drift, won: boolean, bt: TacB
   delete d.taken;
   if (!won) {
     // What is left of them stays adrift.
-    const left = bt.stacks.filter((x) => x.side === 1 && x.count > 0).reduce((a, x) => a + x.count, 0);
+    const left = bt.stacks.filter((x) => x.side === 1 && x.count > 0 && !x.summoned).reduce((a, x) => a + x.count, 0);
     if (left > 0) d.n = left;
     game.toastShip(ship, `The ${driftName(d.kind)} throw your boats back.`, 'bad');
     return undefined;

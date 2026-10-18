@@ -194,6 +194,10 @@ export const TAC_PACE = {
   idle: 0.25,
   round: 0.35,
   boss: 1,
+  /** Owner, 2026-10-18: a creature's ability (creatureskills.ts) — its wind-up and its missile or wave in flight; what it
+   *  lays on the stacks lands at `skillHit` of it, all at once. */
+  skill: 1.05,
+  skillHit: 0.5,
 } as const;
 
 /** The most of a turn's events the screens play (the view carries the last dozen of the log); and of the battle's last
@@ -238,7 +242,9 @@ export function tacSchedule(events: readonly TacBeatEvent[], speed = 1): { beats
     return b;
   };
   for (const e of events) {
-    const rides = (e.k === 'hit' || e.k === 'shot') && (e.id === 'breath' || e.id === 'chain' || e.id === 'blast');
+    // Owner, 2026-10-18: what a creature's ability lays on the stacks (its blows, heals, rot and the turns it takes) lands
+    // with it (id 'sk'); a stack it moves glides on a beat of its own.
+    const rides = ((e.k === 'hit' || e.k === 'shot') && (e.id === 'breath' || e.id === 'chain' || e.id === 'blast')) || (e.id === 'sk' && e.k !== 'move');
     if (rides && last) {
       const impact = last.impact + 0.12 * k;
       for (const i of held.splice(0)) beats[i] = { at: impact, dur: 0, impact };
@@ -304,6 +310,9 @@ export function tacSchedule(events: readonly TacBeatEvent[], speed = 1): { beats
         break;
       case 'boss':
         last = put(at, P.boss * k, at + P.boss * 0.4 * k);
+        break;
+      case 'skill':
+        last = put(at, P.skill * k, at + P.skill * P.skillHit * k);
         break;
       default:
         // A wait, a defence, the clock run out.

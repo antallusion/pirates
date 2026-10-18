@@ -13,6 +13,7 @@ import type { PremiumBeastId } from './premiumbeasts.ts';
 import { SHIP_BEASTS, type ShipBeastId } from './shipbeasts.ts'; // the premium hulls' own kinds (owner, 2026-10-03)
 import { BOSS_UNITS, type BossUnitId } from './bossunits.ts'; // the great ones ashore (2026-10-03), never hired
 import { TITANS, type TitanId } from './titans.ts'; // docs/19 E10: the eighth tier, hired at the Grail
+import { RANGED_KINDS, skillWorth } from './creatureskills.ts'; // owner, 2026-10-18: the creatures' abilities and ranged
 
 /** Every kind of fighting man: seven tiers, a plain and an upgraded kind of each — and the land's creatures beside
  *  them (docs/18 II, shared/src/data/bestiary.ts), the world's armies, the shop's creatures (premiumbeasts.ts), the
@@ -172,6 +173,21 @@ function factionUnits(): Record<FactionKindId, UnitDef> {
 }
 
 export const UNITS: Record<UnitId, UnitDef> = { ...BASE_UNITS, ...factionUnits(), ...PREMIUM_BEASTS, ...SHIP_BEASTS, ...BOSS_UNITS, ...TITANS };
+
+/** Owner, 2026-10-18 (shared/src/data/creatureskills.ts): the kinds made to fire from afar take their charges and their
+ *  shooter's special; a kind with an ability is as much dearer in silver as the ability is worth (`cost`, the sea's
+ *  reckoning; its might in armyPower and armyWeight). Laid on copies, once. */
+for (const id of Object.keys(UNITS) as UnitId[]) {
+  const r = RANGED_KINDS[id], w = skillWorth(id);
+  if (!r && !w) continue;
+  const d = { ...UNITS[id], specials: [...UNITS[id].specials] };
+  if (r) {
+    d.shots = Math.max(d.shots, r.shots);
+    for (const x of ['shooter' as UnitSpecial, ...(r.add ?? [])]) if (!d.specials.includes(x)) d.specials.push(x);
+  }
+  if (w) d.cost = Math.round((d.cost * (1 + w)) / 5) * 5;
+  UNITS[id] = d;
+}
 
 export const hasSpecial = (u: UnitId, s: UnitSpecial): boolean => UNITS[u].specials.includes(s);
 
@@ -437,7 +453,7 @@ export function armyPower(army: readonly ArmyStack[]): number {
   let p = 0;
   for (const s of army) {
     const d = UNITS[s.u];
-    p += s.n * d.hp * ((d.dmin + d.dmax) / 2) * (1 + 0.05 * (d.atk + d.def) / 2) * (d.shots ? 1.15 : 1);
+    p += s.n * d.hp * ((d.dmin + d.dmax) / 2) * (1 + 0.05 * (d.atk + d.def) / 2) * (d.shots ? 1.15 : 1) * (1 + skillWorth(s.u));
   }
   return p;
 }
@@ -450,7 +466,7 @@ export function armyWeight(army: readonly ArmyStack[]): number {
   for (const s of army) {
     const d = UNITS[s.u];
     const k = 1 + 0.05 * (d.atk + d.def) / 2;
-    blows += s.n * ((d.dmin + d.dmax) / 2) * k * (d.shots ? 1.15 : 1) * (d.specials.includes('double_strike') ? 1.5 : 1);
+    blows += s.n * ((d.dmin + d.dmax) / 2) * k * (d.shots ? 1.15 : 1) * (d.specials.includes('double_strike') ? 1.5 : 1) * (1 + skillWorth(s.u));
     hp += s.n * d.hp * k;
   }
   const one = UNITS.deckhand;
