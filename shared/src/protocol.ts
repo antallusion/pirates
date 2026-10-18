@@ -33,6 +33,7 @@ import type { LogEntry } from './data/captainlog.ts';
 import type { TalkEvent } from './data/crewtalk.ts';
 import type { OfficerRole, Profession, TraitId } from './data/crew.ts';
 import type { FigureheadId, PlanQuality, RareSlot, VariantId, WoodId } from './data/shipbuild.ts';
+import type { SkillId } from './data/creatureskills.ts';
 import type { ResearchView } from './data/research.ts';
 import type { BuildingId, IslandSize } from './data/holdings.ts';
 import type { CaptainId } from './data/captains.ts';
@@ -1563,7 +1564,10 @@ export type TacAction =
   /** Owner, 2026-10-16 (HoMM3's tactics phase): before round one, set her stack `s` on `hex` of her own deployment
    *  columns (one of hers there takes her place); «Готово» — her stacks are set. */
   | { a: 'deploy'; s: number; hex: number }
-  | { a: 'ready' };
+  | { a: 'ready' }
+  /** Owner, 2026-10-18 (shared/src/data/creatureskills.ts): the active stack's own ability, once a battle — pointed at a
+   *  stack (`target`), a hex (`hex`) or nothing, as its kind says. */
+  | { a: 'skill'; target?: number; hex?: number };
 
 /** A stack on the field. `hex` its place; `count` men with `hp` left on the foremost; `ret` may still strike back
  *  this round. */
@@ -1616,6 +1620,12 @@ export interface TacStackView {
    *  men's dice and Attack against Defense (server/src/game/tacbattle.ts stackBonus: her ship's boarding power and gear,
    *  the ladder between the ships, her captain's skills, artifacts and armour), in percent; absent when all are 0. */
   bonus?: { melee: number; shot: number; taken: number };
+  /** Owner, 2026-10-18 (shared/src/data/creatureskills.ts): her kind's ability and whether it is still hers to give
+   *  (`ready`); `skip` the turns she will lose (a fear, a stun); `held` the abilities' holds on her now (for her card and
+   *  the field's marks). */
+  skill?: { id: SkillId; ready: boolean };
+  skip?: number;
+  held?: SkillId[];
   /** docs/17 H5, shown since 2026-10-10: her side's backs to the rail — her blows and shots this much harder (percent,
    *  in `bonus` too) while her side has less of its strength left on deck than the other's. */
   backs?: number;
@@ -1706,7 +1716,10 @@ export interface TacEvent {
     /** docs/25 item 52: `side` held the other's quarterdeck flag (on `hex`) the rounds it takes, and took the ship. */
     | 'flag'
     /** docs/25 item 64: an allied captain (`n` her slot) came aboard side `side` with her stacks `on`. */
-    | 'join';
+    | 'join'
+    /** Owner, 2026-10-18: a stack `s` gives its ability `id` (creatureskills.ts) — at `t` (on `hex`), the stacks it fell
+     *  on `on`, those who shrugged it off `res`; its harm and heals come after it as hits and regens with id 'sk'. */
+    | 'skill';
   side: 0 | 1;
   s?: number;
   t?: number;
@@ -1802,6 +1815,9 @@ export interface TacView {
   moved?: boolean;
   /** For my active stack: what each blow or shot would do (owner, 2026-10-08). */
   pv?: TacPreview[];
+  /** Owner, 2026-10-18: for my active stack with her ability ready — the stacks (or, for a leap or a summons, the hexes)
+   *  it may be pointed at; empty when it needs no aim; absent when it cannot be given now. */
+  skillAim?: number[];
   heroes: [TacHeroView, TacHeroView];
   log: TacEvent[];
   seq: number;

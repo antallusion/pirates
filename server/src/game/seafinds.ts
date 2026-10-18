@@ -381,7 +381,7 @@ function fightChest(game: Game, s: PlayerSession, f: Find): string | null {
   f.until = Math.max(f.until, game.now + 60);
   const e = startCreatureFight(game, s, {
     type: 'tropical', kind: 'find_chest', place: 'Sharks round a Chest', level: f.level,
-    onEnd: (g, ss, won, bt) => chestEnd(g, ss, f, won, bt.stacks.filter((x) => x.side === 1 && x.count > 0).reduce((a, x) => a + x.count, 0)),
+    onEnd: (g, ss, won, bt) => chestEnd(g, ss, f, won, bt.stacks.filter((x) => x.side === 1 && x.count > 0 && !x.summoned).reduce((a, x) => a + x.count, 0)),
   }, 'Sharks round a Chest', men, 'monster.shark', f.level);
   if (e) {
     f.fighting = false;

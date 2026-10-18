@@ -388,7 +388,7 @@ export function assaultOver(game: Game, a: ShipEntity, b: ShipEntity, attackerWi
   const side = cas === b ? 1 : 0;
   // docs/25 item 66: a garrison grown against a group keeps its own share of what is left.
   const k = bt?.boost?.[side] ?? 1;
-  const left = won ? [] : bt ? bt.stacks.filter((x) => x.side === side && x.count > 0).map((x) => ({ u: x.unit, n: Math.max(1, Math.round(x.count / k)) })) : L.before;
+  const left = won ? [] : bt ? bt.stacks.filter((x) => x.side === side && x.count > 0 && !x.summoned).map((x) => ({ u: x.unit, n: Math.max(1, Math.round(x.count / k)) })) : L.before;
   const cut = Math.max(0, hpOf(L.before) - hpOf(left));
   rec.garrison = left;
   const walls = bt ? siegeLeft(bt) : null;

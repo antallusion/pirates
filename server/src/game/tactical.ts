@@ -269,7 +269,7 @@ function sync(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle): void {
     const st = ship.boarding!, ot = other.boarding!;
     ship.morale = bt.heroes[side].morale;
     synced[side] = bt.dead[side];
-    const r = takeLosses(game, ship, other, bt.stacks.filter((s) => s.side === side && !s.own), seen, bt.boost?.[side] ?? 1, st.startCrew);
+    const r = takeLosses(game, ship, other, bt.stacks.filter((s) => s.side === side && !s.own && !s.summoned), seen, bt.boost?.[side] ?? 1, st.startCrew);
     st.lost = Math.max(0, st.lost + r);
     ot.killed = Math.max(0, ot.killed + r);
   }
@@ -278,7 +278,7 @@ function sync(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle): void {
     const ship = game.ships.get(e.ship);
     if (!ship?.alive) continue;
     const other = e.side ? a : b;
-    const r = takeLosses(game, ship, other, bt.stacks.filter((s) => s.side === e.side && s.own === e.slot), seen, 1, e.startCrew);
+    const r = takeLosses(game, ship, other, bt.stacks.filter((s) => s.side === e.side && s.own === e.slot && !s.summoned), seen, 1, e.startCrew);
     e.lost = Math.max(0, e.lost + r);
     other.boarding!.killed = Math.max(0, other.boarding!.killed + r);
   }
@@ -406,14 +406,14 @@ function settle(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle, seq: nu
         const all = wSide === 0 && !loser.isPlayer;
         // docs/25 item 66: the men a side was grown by against a group are no ship's: they do not come over.
         const k = bt.boost?.[lSide] ?? 1;
-        const beaten = bt.stacks.filter((x) => x.side === lSide).map((x) => ({ u: x.src, n: all ? x.start - (x.boost ?? 0) : Math.round((x.start - x.count) / k) }));
+        const beaten = bt.stacks.filter((x) => x.side === lSide && !x.summoned).map((x) => ({ u: x.src, n: all ? x.start - (x.boost ?? 0) : Math.round((x.start - x.count) / k) }));
         const came = beatenJoin(game, winner, beaten, all ? loser : undefined);
         if (came.length) {
           fight.tacJoined = [[], []];
           fight.tacJoined[wSide] = came;
         }
       }
-      creaturesWon(game, winner, bt.stacks.filter((x) => x.side === wSide && !x.own).map((x) => x.src)); // docs/18 #39
+      creaturesWon(game, winner, bt.stacks.filter((x) => x.side === wSide && !x.own && !x.summoned).map((x) => x.src)); // docs/18 #39
       const ws = game.sessionOf(winner);
       const lost = winner === a ? b : a;
       // docs/25 item 67: in a group, each captain learns by her share of what her side cut down (of the foe as it came,
@@ -468,7 +468,7 @@ export function ransomCost(game: Game, ship: ShipEntity): number | null {
   if (!st || !bt || st.attacker || bt.over || isArenaFight(st.fight)) return null; // docs/19 E14: no silver on the sand
   const s = game.sessionOf(ship);
   if (!s?.profile) return null;
-  const foe = bt.stacks.filter((x) => x.side === 0 && x.count > 0).map((x) => ({ u: x.unit, n: x.count }));
+  const foe = bt.stacks.filter((x) => x.side === 0 && x.count > 0 && !x.summoned).map((x) => ({ u: x.unit, n: x.count }));
   return Math.max(100, Math.round(armyCost(foe) * TAC_RANSOM_SHARE));
 }
 

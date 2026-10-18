@@ -140,11 +140,13 @@ export const SHORE_MOVES: Record<ShoreMove, Tr> = {
  *  blows alike: what costs the reference captain of that level (tests/balance/lairs.ts's party, played by the sea's
  *  mind, who knows none of the counterplay) about SHORE_LOSS of the men she lands, a lost fight counting as all of them
  *  — rebuilt by bisection on the battle itself (calibrateShore, tests/balance/shore.ts; tests/bosses10.test.ts holds it).
- *  Playthrough C: re-weighed with her hero ashore (lairs.ts heroLevelOf) — four to eight times what it stood at. */
+ *  Playthrough C: re-weighed with her hero ashore (lairs.ts heroLevelOf) — four to eight times what it stood at.
+ *  Owner, 2026-10-18: the Mire Mother's toads, the salamander's Greek fire and the abbess's Call of the Drowned
+ *  (creatureskills.ts) re-weighed so (calibrateShore). */
 export const SHORE_CAL: Record<ShoreBossId, number[]> = {
-  mire_mother: [0, 0, 0, 0, 0, 1.89, 2.75, 5.16, 8.24, 15.02, 0],
-  cinder_salamander: [0, 0, 0, 0, 0, 0, 2.43, 4.77, 7.66, 15.19, 26],
-  drowned_abbess: [0, 0, 0, 0, 0, 0, 0, 8.39, 12.93, 24.76, 40.48],
+  mire_mother: [0, 0, 0, 0, 0, 1.9, 2.7, 4.83, 7.44, 15.02, 0],
+  cinder_salamander: [0, 0, 0, 0, 0, 0, 2.81, 4.95, 8.22, 15.51, 26.18],
+  drowned_abbess: [0, 0, 0, 0, 0, 0, 0, 8.29, 13.55, 25.42, 40.13],
   walrus_tyrant: [0, 0, 0, 0, 0, 1.52, 2.32, 4.16, 6.92, 14.93, 0],
 };
 /** The share of her landed men a great one costs the reference captain of its level, on average. */

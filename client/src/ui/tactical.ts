@@ -24,6 +24,11 @@ import { personName } from '../lang/names.ts';
 import { EN, RU } from '../lang/ui/tactical.ts';
 import { along, glideMs, stepEase, walkPath } from './tacwalk.ts';
 import { PROC_CAP, PROC_MS, drawProc } from './tacprocs.ts';
+import { SKFX_CAP, SKFX_MS, drawMagicHit, drawMagicShot, drawSkFx } from './tacskillfx.ts'; // owner, 2026-10-18: the creatures' abilities
+import type { SkFx } from './tacskillfx.ts';
+import { MAGIC_SHOTS, SKILLS, shotOf, skillVars } from '../../../shared/src/data/creatureskills.ts';
+import type { ShotKind, SkillId } from '../../../shared/src/data/creatureskills.ts';
+import { EN as SKEN, RU as SKRU } from '../lang/ui/skills.ts';
 import type { Proc, ProcKind } from './tacprocs.ts';
 import { catapultAt, drawCatapult, drawSiegeField } from './tacsiege.ts'; // docs/19 E5
 import { serverText } from '../lang/server.ts';
@@ -76,6 +81,11 @@ import { Parts, blob, drawDecal, drawThing, fog as fogBanks, lantern, night as n
 import type { DecalKind, Part } from './tacvfx.ts';
 
 const L = dict(EN, RU);
+const SL = dict(SKEN, SKRU); // owner, 2026-10-18: the creatures' abilities
+/** An ability's name and its line with its numbers. */
+export const skName = (id: SkillId): string => SL(`n.${id}` as keyof typeof SKEN);
+export const skText = (id: SkillId): string => SL(`d.${id}` as keyof typeof SKEN, skillVars(id));
+const skIcon = (id: SkillId, cls = 'ico'): string => icon(SKILLS[id].icon, '', cls);
 const CL = dict(CEN, CRU); // docs/19 E5: the siege's words
 const LL = dict(LEN, LRU);
 const DL = dict(DEN, DRU);
@@ -230,6 +240,13 @@ const MISSILE_OF: Record<string, string> = {
   // The second dozen (2026-10-04).
   rime_witch: 'part.ms_brine', line_harpooner: 'part.ms_harpoon', hunt_master: 'part.ms_harpoon', fog_chemist: 'part.ms_flask', mask_archer: 'part.ms_arrow',
   ghost_bomber: 'part.ms_grenade',
+  // Owner, 2026-10-18: the kinds made ranged (creatureskills.ts RANGED_KINDS) that throw (the magic ones are drawn by hand).
+  island_ape: 'part.ms_stone', cliff_harpy: 'part.ms_stone', sea_naga: 'part.ms_dart', giant_toad: 'part.ms_dart',
+};
+/** Owner, 2026-10-18: the painted burst an ability lands with, beside its own drawn look (tacskillfx.ts). */
+const SK_BURST: Partial<Record<SkillId, string>> = {
+  fireball: 'part.explosion', firepot: 'part.explosion', death_blast: 'part.explosion', mend: 'fx.bt_heal', mass_mend: 'fx.bt_heal', raise: 'fx.bt_heal',
+  cleanse: 'part.splash', tidal: 'part.splash', rot: 'fx.bt_poison', miasma: 'fx.bt_poison', summon: 'fx.bt_deep', stun: 'part.muzzle',
 };
 const THROWN = new Set(['part.ms_grenade', 'part.ms_stone', 'part.ms_spear', 'part.ms_flask', 'part.ms_net', 'part.ms_smokebomb', 'part.ms_cannonball']);
 
@@ -478,7 +495,12 @@ export class TacticalPanel {
   private size = { w: 0, cw: 0, ch: 0, ox: 0, oy: 0, dpr: 1, rot: 0 as 0 | 1 | -1, bw: 0, bh: 0 };
   private key = '';
   private preview: number | null = null;
-  private targeting: TacSpellId | 'innate' | 'ult' | null = null;
+  private targeting: TacSpellId | 'innate' | 'ult' | 'skill' | null = null;
+  /** Owner, 2026-10-18: the creatures' abilities being played (tacskillfx.ts), the magic shots in flight and landing,
+   *  and the hex a leap or a summons is aimed at. */
+  private skfx: SkFx[] = [];
+  private magic: { kind: ShotKind; x0: number; y0: number; x1: number; y1: number; t0: number; dur: number; seed: number }[] = [];
+  private castHex: number | null = null;
   /** The paths' moves being drawn over the field (docs/18). */
   private pathFx: PathFx[] = [];
   /** The order book open over the field (docs/17 H2: more pages than the panel holds). */
@@ -865,6 +887,8 @@ export class TacticalPanel {
         this.floats = [];
         this.bursts = [];
         this.missiles = [];
+        this.skfx = [];
+        this.magic = [];
         this.pathFx = [];
         // docs/25 §3: the looks of this fight let go.
         this.clock.clear();
@@ -1013,7 +1037,7 @@ export class TacticalPanel {
       if (e.k === 'move' && e.s !== undefined && e.hex !== undefined) {
         const from = at.get(e.s) ?? this.pos.get(e.s)?.hex ?? e.hex;
         const s = known.get(e.s);
-        const fly = e.id === 'fly' || !!s?.sp.includes('flying');
+        const fly = e.id === 'fly' || e.id === 'sk' || !!s?.sp.includes('flying');
         const stand = [...at].map(([id, hex]) => ({ id, hex, count: cnt.get(id) ?? 0 }));
         const path = fly || calm ? null : walkPath(v.cells, stand, e.s, from, e.hex, !!s?.sp.includes('diving'), s?.side === 1);
         this.pos.set(e.s, { hex: e.hex, path: path ?? [from, e.hex], t0: ms(b.at), dur: calm ? 0 : b.dur * 1000, fly: fly && !calm });
@@ -1029,7 +1053,7 @@ export class TacticalPanel {
         drops.set(struck, list);
       }
       if (e.k === 'die' && e.s !== undefined) died.set(e.s, ms(b.impact));
-      if (e.k === 'spell' || e.k === 'innate' || e.k === 'ult' || e.k === 'boss') lastSpell = ms(b.impact);
+      if (e.k === 'spell' || e.k === 'innate' || e.k === 'ult' || e.k === 'boss' || e.k === 'skill') lastSpell = ms(b.impact);
       this.eventAt.set(e.i, ms(e.k === 'hit' || e.k === 'shot' || e.k === 'ret' || e.k === 'siege' ? b.impact : b.at));
       if (was) this.mark(e, v, was, ms(b.at), ms(b.impact));
       else if (e.k === 'siege') this.siegeMark(e, v, ms(b.at), ms(b.impact));
@@ -1091,7 +1115,7 @@ export class TacticalPanel {
     }
     if (this.preview !== null && !v.reach.includes(this.preview)) this.preview = null;
     if (this.foeArmed !== null && !v.melee.includes(this.foeArmed) && !v.shoot.includes(this.foeArmed)) this.foeArmed = null;
-    if (this.castOn !== null && !v.stacks.some((s) => s.id === this.castOn)) this.castOn = null;
+    if (this.castOn !== null && !(this.skillHexAim(v) ? (v.skillAim ?? []).includes(this.castOn) : v.stacks.some((s) => s.id === this.castOn))) this.castOn = null;
     this.dom(v);
   }
 
@@ -1156,13 +1180,13 @@ export class TacticalPanel {
     else if (e.k === 'morale') cue('rally', ahead(t));
     else if (e.k === 'fear') cue('fear', ahead(t));
     else if (e.k === 'regen') cue('heal', ahead(t));
-    else if (e.k === 'spell') cue('spell', ahead(t));
+    else if (e.k === 'spell' || e.k === 'skill') cue('spell', ahead(t));
     if (e.k === 'hit' || e.k === 'shot' || e.k === 'ret') {
       const c = at(e.hex ?? hexOf(e.t));
       // The figures: the striker winds up and lunges, at full stretch as the blow lands (a shooter's piece kicks back
       // as it fires); the struck flashes and flinches as it lands.
       const from = at(hexOf(e.s));
-      const spill = e.id === 'breath' || e.id === 'chain' || e.id === 'blast';
+      const spill = e.id === 'breath' || e.id === 'chain' || e.id === 'blast' || e.id === 'sk';
       if (from && c && e.s !== undefined && !spill) {
         const len = Math.hypot(c.x - from.x, c.y - from.y) || 1;
         this.addAct(e.s, { k: e.k === 'shot' ? 'shot' : 'atk', t0: t, hit, dx: (c.x - from.x) / len, dy: (c.y - from.y) / len });
@@ -1224,7 +1248,14 @@ export class TacticalPanel {
         const s = at(hexOf(e.s));
         const shooter = (v.stacks.find((x) => x.id === e.s) ?? was.stacks.find((x) => x.id === e.s))?.unit ?? '';
         const ms = MISSILE_OF[shooter] ?? (isShipBeast(shooter) ? SHIP_BEAST_DEFS[shooter].missile : undefined) ?? 'part.ms_ball';
-        const fly = s && c && sprite(ms) ? Math.max(120, hit - t - 80) : 0;
+        // Owner, 2026-10-18: the magic kinds' shots are drawn by hand (a hex bolt, ghost fire, a spark, lightning, a fire bolt).
+        const mk = shooter ? shotOf(shooter as UnitId) : 'ball';
+        const magic = MAGIC_SHOTS.has(mk) && !!s && !!c;
+        if (magic) {
+          this.magic.push({ kind: mk, x0: s!.x, y0: s!.y - w * 0.55, x1: c!.x, y1: c!.y - w * 0.45, t0: t + 60, dur: Math.max(140, hit - t - 60), seed: e.i * 13 });
+          if (this.magic.length > 8) this.magic.splice(0, this.magic.length - 8);
+        }
+        const fly = !magic && s && c && sprite(ms) ? Math.max(120, hit - t - 80) : 0;
         if (fly) this.missiles.push({ id: ms, x0: s!.x, y0: s!.y - w * 0.55, x1: c!.x, y1: c!.y - w * 0.4, t0: t + 80, dur: fly, arc: THROWN.has(ms) ? Math.hypot(c!.x - s!.x, c!.y - s!.y) * 0.25 : 0 });
         if (s) {
           const mx = s.x + (c && c.x < s.x ? -w * 0.45 : w * 0.45), my = s.y - w * 0.55;
@@ -1256,8 +1287,9 @@ export class TacticalPanel {
       const c = at(hexOf(e.s));
       // A turn lost to fear, a bind, Fog Madness (owner, 2026-10-15): on every screen, a phone's too, by its look.
       if (c && e.k === 'fear') this.proc(e.id === 'still' ? 'still' : e.id === 'mad' ? 'mad' : 'fear', c, t);
+      if (c && e.k === 'fear' && e.id === 'skip') this.addFloat({ text: SL('float.skip'), x: c.x, y: c.y - w * 0.55, t0: t, color: '#c9c3d6' });
       // On a phone the field carries no words but the spells' (owner, 2026-10-03): a morale or luck roll shows by its light.
-      if (c && !this.phone) this.addFloat({ text: e.k === 'fear' ? (e.id === 'still' || e.id === 'mad' ? L(`float.${e.id}`) : e.id ? L('morale') + ' −' : L('fear.float')) : L(e.k === 'luck' ? 'luck' : 'morale') + ' +', x: c.x, y: c.y - w * 0.55, t0: t, color: e.k === 'fear' ? '#d06a5e' : '#e0b862' });
+      if (c && !this.phone && e.id !== 'skip') this.addFloat({ text: e.k === 'fear' ? (e.id === 'still' || e.id === 'mad' ? L(`float.${e.id}`) : e.id ? L('morale') + ' −' : L('fear.float')) : L(e.k === 'luck' ? 'luck' : 'morale') + ' +', x: c.x, y: c.y - w * 0.55, t0: t, color: e.k === 'fear' ? '#d06a5e' : '#e0b862' });
     } else if (e.k === 'poison' || e.k === 'regen') {
       // docs/18 II: the poison in a stack, a creature growing back.
       const c = at(e.hex ?? hexOf(e.s));
@@ -1329,6 +1361,10 @@ export class TacticalPanel {
           this.proc('resist', cc, t + 160);
         }
       }
+    } else if (e.k === 'skill') {
+      // Owner, 2026-10-18: a creature's ability — its own look from the caster to what it falls on (tacskillfx.ts), its
+      // name over the field and over the caster, «Не подействовало» over those who shrugged it off.
+      this.skillMark(e, v, was, t, hit);
     } else if (e.k === 'innate' || e.k === 'ult') {
       // docs/18: the path's move — its light over the stacks it fell on, its name over the field and each of them.
       const ult = e.k === 'ult';
@@ -1411,6 +1447,50 @@ export class TacticalPanel {
   }
 
   /** A light of a moment over the field (item 9): softer with «меньше вспышек». */
+  /** Owner, 2026-10-18: a creature's ability on the field — its look (tacskillfx.ts) from the caster to its mark and over
+   *  every stack it fell on, its name big over the field and small over the caster, the shrugged-off told. */
+  private skillMark(e: TacEvent, v: TacView, was: TacView, t: number, hit: number): void {
+    const w = this.size.w || 30;
+    const id = e.id as SkillId;
+    if (!SKILLS[id]) return;
+    const hexOf = (sid?: number) => (sid === undefined ? undefined : (v.stacks.find((s) => s.id === sid) ?? was.stacks.find((s) => s.id === sid))?.hex);
+    const caster = hexOf(e.s);
+    const from = caster !== undefined ? this.center(caster) : this.center(e.hex ?? 0);
+    const toHex = e.t !== undefined ? hexOf(e.t) ?? e.hex : e.hex;
+    const to = toHex !== undefined ? this.center(toHex) : from;
+    // (a summons' new stack is in the view only: its hex is the event's)
+    const pts = (e.on ?? []).map((sid) => hexOf(sid)).filter((h): h is number => h !== undefined).map((h) => this.center(h));
+    const end = id === 'pierce' && e.n !== undefined ? this.center(e.n) : id === 'summon' && e.hex !== undefined ? this.center(e.hex) : undefined;
+    const caster0 = v.stacks.find((s) => s.id === e.s) ?? was.stacks.find((s) => s.id === e.s);
+    this.skfx.push({ id, t0: t, hit, dur: Math.max(SKFX_MS, hit - t + 700), from, to, pts, ...(end ? { end } : {}), mine: (caster0?.side ?? e.side) === v.you, seed: e.i * 7 });
+    if (this.skfx.length > SKFX_CAP) this.skfx.splice(0, this.skfx.length - SKFX_CAP);
+    // the caster lunges toward its mark as it gives it (a shot's kick for a shooter)
+    if (e.s !== undefined && to !== from && id !== 'blink') {
+      const len = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+      this.addAct(e.s, { k: caster0?.sp.includes('shooter') ? 'shot' : 'atk', t0: t, hit, dx: (to.x - from.x) / len, dy: (to.y - from.y) / len });
+    }
+    this.light(from.x, from.y - w * 0.5, t, 600, w * 2, '255,220,160', 0.35);
+    // (on a phone below the top band: the captains' chips, the order of turns and the clock stand there)
+    this.addFloat({ text: skName(id), x: this.size.cw / 2, y: this.phone ? Math.max(this.size.ch * 0.27, 100) : this.size.ch * 0.18, t0: t, color: e.side === v.you ? YOU : FOE, big: true });
+    if (!this.phone) this.addFloat({ text: skName(id), x: from.x, y: from.y - w * 0.62, t0: t + 80, color: '#e0b862' });
+    for (const sid of (e.res ?? []).slice(0, 7)) {
+      const h = hexOf(sid);
+      if (h === undefined) continue;
+      const cc = this.center(h);
+      this.addFloat({ text: SL('float.immune'), x: cc.x, y: cc.y - w * 0.62, t0: hit, color: '#9fc3d8' });
+      this.proc('resist', cc, hit);
+    }
+    // the painted bursts the field already has, where it lands (a blast's fire, a heal's light, poison, the deep's water)
+    const burst = SK_BURST[id];
+    if (burst && (!burst.startsWith('fx.') || sprite(`${burst}_0`))) {
+      const at = id === 'death_blast' ? [from, ...pts] : pts.length ? pts : [to];
+      at.slice(0, 6).forEach((c, i) => this.bursts.push({ id: burst, x: c.x, y: c.y - w * 0.3, t0: hit + i * 40, size: w * (i ? 1 : 1.4) }));
+    }
+    // the field's knock on a blast or a wave
+    if (id === 'death_blast' || id === 'fireball' || id === 'tidal' || id === 'firepot') this.shake.kick(hit, 0.05, to.x - from.x || 1, to.y - from.y);
+    this.tally.procs++;
+  }
+
   /** A proc's look over a stack (ui/tacprocs.ts), from `t0` for its own time; the oldest let go past the cap. */
   private proc(k: ProcKind, c: { x: number; y: number }, t0: number, o: Partial<Proc> = {}): void {
     this.procs.push({ k, x: c.x, y: c.y, t0, dur: PROC_MS[k], ...o });
@@ -1724,18 +1804,19 @@ export class TacticalPanel {
           rb('data-autow', autoTip, btIcon('bt_auto', 'icon.bt_captain', 'ico') + this.scrollBadge(v), `${me.auto ? ' on' : ''}${locked ? ' locked' : ''}`, !!v.over),
         ].join('')
       : [
+          ...(act?.skill && act.side === v.you && SKILLS[act.skill.id].aim !== 'death' ? [rb('data-a="skill"', `${skName(act.skill.id)}: ${skText(act.skill.id)}`, skIcon(act.skill.id), ` skill${this.targeting === 'skill' ? ' on' : ''}`, !v.mine || !v.skillAim)] : []),
           rb('data-a="wait"', L('wait'), btIcon('bt_wait', 'icon.bt_hold', 'ico'), '', !v.mine || !!act?.waited || !!v.moved),
           rb('data-a="defend"', L('defend'), btIcon('bt_defend', 'icon.mod_hull_plating', 'ico'), '', !v.mine),
           rb('data-autow', autoTip, btIcon('bt_auto', 'icon.bt_captain', 'ico') + this.scrollBadge(v), `${me.auto ? ' on' : ''}${locked ? ' locked' : ''}`, !!v.over),
         ].join('');
     const t = this.targeting;
-    const aimed = !t ? '' : t === 'innate' || t === 'ult' ? (me.path ? icon(`icon.${(t === 'innate' ? INNATE : ULTIMATE)[me.path].icon}`, '', 'ico') : '') : spIcon(t);
+    const aimed = !t ? '' : this.aimArt(v, t);
     // Owner, 2026-10-16: the book holds the battle log and the danger hexes too — always there.
     const hasBook = true;
     // A gold bead on the book when the officer's word or a path move is ready to be given.
     const bead = officer || pathReady ? '<i class="tb-bead" aria-hidden="true"></i>' : '';
     const book = t
-      ? rb('data-cancel', `${L('cancel')}: ${t === 'innate' || t === 'ult' ? (me.path ? moveName(me.path, t === 'ult') : '') : spName(t)}`, `${aimed}<i class="tb-x"></i>`, ' book aim')
+      ? rb('data-cancel', `${L('cancel')}: ${this.aimName(v, t)}`, `${aimed}<i class="tb-x"></i>`, ' book aim')
       : hasBook ? rb('data-book', L('book'), `${btIcon('bt_book', 'icon.bt_captain', 'ico')}${bead}`, ` book${this.sheetKind === 'book' ? ' on' : ''}`) : '';
     // The turn's face, and the round behind it.
     const whose = this.turnWord(v);
@@ -2073,6 +2154,7 @@ export class TacticalPanel {
       `<button class="btn" data-a="wait" ${lab(L('wait'))} ${!v.mine || act?.waited || v.moved ? 'disabled' : ''}>${btIcon('bt_wait', 'icon.bt_hold')}${word(L('wait'))}</button>`,
       `<button class="btn" data-a="defend" ${lab(L('defend'))} ${!v.mine ? 'disabled' : ''}>${btIcon('bt_defend', 'icon.mod_hull_plating')}${word(L('defend'))}</button>`,
       officer ? `<button class="btn btn-primary" data-a="order" ${lab(L(`o.${officer.order}` as K), L(`od.${officer.order}` as K))}>${icon(`icon.role_${officer.role}`, '', 'ico-sm')}${word(L(`o.${officer.order}` as K))}</button>` : '',
+      act?.skill && act.side === v.you && SKILLS[act.skill.id].aim !== 'death' ? `<button class="btn btn-primary tb-skill${this.targeting === 'skill' ? ' on' : ''}" data-a="skill" ${lab(skName(act.skill.id), `${skName(act.skill.id)} (F): ${skText(act.skill.id)}`)} ${!v.mine || !v.skillAim ? 'disabled' : ''}>${skIcon(act.skill.id, 'ico-sm')}${word(skName(act.skill.id))}</button>` : '',
       `<button class="btn${me.auto ? ' on' : ''}${locked ? ' locked' : ''}" data-a="${locked ? 'buyscroll' : 'auto'}" ${lab(auto, autoTip)}>${btIcon('bt_auto', '')}${word(auto)}${this.scrollBadge(v, true)}</button>`,
       locked ? `<button class="btn btn-primary tb-scbuy" data-a="buyscroll" ${lab(L('scBuy'))}>${icon(AUTO_SCROLL_ICON, '', 'ico-sm')}${word(L('scBuy'))}</button>` : '',
       v.noQuick ? '' : `<button class="btn${v.quickNow ? ' btn-primary tb-quicknow' : ''}${!quickFree && locked ? ' locked' : ''}" data-a="${!quickFree && locked ? 'buyscroll' : 'quick'}" ${lab(L('quick'), v.quickNow ? L('quickNow') : quickFree ? undefined : locked ? L('scQuickLocked') : L('scQuick'))} ${v.over ? 'disabled' : ''}>${btIcon('bt_quick', '')}${word(L('quick'))}</button>`,
@@ -2198,6 +2280,9 @@ export class TacticalPanel {
         const by = v.allies?.find((a) => a.side === e.side && a.slot === (e.n ?? 0));
         return L('log.join', { name: personName(by?.name ?? '…'), n: e.on?.length ?? 0 });
       }
+      case 'skill':
+        // Owner, 2026-10-18: «Банши: Ледяные оковы».
+        return SL('log', { a: name(e.s), b: skName(e.id as SkillId) });
       case 'again':
         return L('log.again', { a: name(e.s) });
       case 'boss': {
@@ -2255,7 +2340,7 @@ export class TacticalPanel {
     const lead = this.leadHint(v);
     // docs/25 item 64: an ally's stack on its turn (her name), or you come aboard as the next round opens.
     const ally = !v.mine && act && act.side === v.you && (act.own ?? 0) !== Math.max(0, this.mySlot(v)) ? this.capOf(v, act) : undefined;
-    const text = v.over ? '' : lead && !this.targeting && !this.pickOn() ? lead : this.mySlot(v) < 0 ? L('hint.coming') : !v.mine ? (act && act.side !== v.you ? L('hint.wait') : ally && !ally.auto ? L('hint.ally', { name: personName(ally.name) }) : '') : this.targeting && this.castOn === null ? L(own ? 'hint.own' : 'hint.target') : this.pickOn() ? L('hint.again') : v.moved ? L('pk.moved') : v.warn?.length ? BL('hint.warn') : v.shoot.length ? L('hint.shoot') : L('hint.move');
+    const text = v.over ? '' : lead && !this.targeting && !this.pickOn() ? lead : this.mySlot(v) < 0 ? L('hint.coming') : !v.mine ? (act && act.side !== v.you ? L('hint.wait') : ally && !ally.auto ? L('hint.ally', { name: personName(ally.name) }) : '') : this.targeting === 'skill' && this.castOn === null ? SL(this.skillHexAim(v) ? 'aim.hex' : own ? 'aim.own' : 'aim.enemy') : this.targeting && this.castOn === null ? L(own ? 'hint.own' : 'hint.target') : this.pickOn() ? L('hint.again') : v.moved ? L('pk.moved') : v.warn?.length ? BL('hint.warn') : v.shoot.length ? L('hint.shoot') : L('hint.move');
     h.textContent = text;
     h.classList.toggle('hidden', !text);
   }
@@ -2456,7 +2541,22 @@ export class TacticalPanel {
       ${s.resist || this.covered(v).has(s.id) ? `<div class="tb-sts">${s.resist ? `<span class="chip tb-st good">${btIcon('st_braced', '', 'ico-xs')}${esc(L('sts.resist', { n: Math.round(s.resist * 100) }))}</span>` : ''}${this.covered(v).has(s.id) ? `<span class="chip tb-st good">${btIcon('bt_defend', '', 'ico-xs')}${esc(L('sts.cover'))}</span>` : ''}</div>` : ''}
       ${s.sp?.length ? `<div class="tb-sps">${s.sp.map((x) => `<button class="chip tb-spc${note === x ? ' on' : ''}" data-spnote="${esc(x)}" title="${esc(specialNote(x))}">${esc(specialName(x))}</button>`).join('')}</div>${note ? `<p class="tb-spn">${esc(specialNote(note))}</p>` : ''}` : ''}
       ${s.side !== v.you && !v.over ? `<p class="tb-thr">${btIcon('danger', 'icon.danger', 'ico-xs')}${esc(s.sp?.includes('shooter') && s.shots > 0 ? L('thr.shoot', { n: TAC_LONG_SHOT }) : L('thr.melee', { n: s.speed }))}</p>` : ''}
+      ${this.skillCard(s)}
       <p class="muted">${esc(s.kind === 'officer' || !s.unit ? L(`kd.${s.kind}` as K) : unitNote(s.unit))}${o ? ` ${esc(L(`o.${o.order}` as K))}: ${esc(L(`od.${o.order}` as K))}` : ''}</p>`;
+  }
+
+  /** Owner, 2026-10-18: the card's lines for a creature's ability (its name, whether it is still hers, its numbers), its
+   *  ranged shot (what it fires, its charges) and the abilities' holds on it now. */
+  private skillCard(s: TacStackView): string {
+    const out: string[] = [];
+    if (s.skill) {
+      const d = SKILLS[s.skill.id];
+      const state = d.aim === 'death' ? SL('passive') : s.skill.ready ? SL('ready') : SL('used');
+      out.push(`<p class="tb-skc${s.skill.ready ? '' : ' used'}">${skIcon(s.skill.id, 'ico-xs')}<b>${esc(skName(s.skill.id))}</b> <small>(${esc(state)})</small> ${esc(skText(s.skill.id))}</p>`);
+    }
+    if (s.unit && s.sp?.includes('shooter') && s.shotsMax) out.push(`<p class="tb-skc">${icon('icon.item_powder_horn', '', 'ico-xs')}${esc(SL('ranged', { kind: SL(`sh.${shotOf(s.unit)}` as keyof typeof SKEN), n: s.shotsMax }))}</p>`);
+    if (s.held?.length) out.push(`<p class="tb-skc">${esc(SL('held', { list: s.held.map(skName).join(', ') }))}</p>`);
+    return out.join('');
   }
 
   /** The phone's sheet put away (a card or the book). */
@@ -2495,6 +2595,8 @@ export class TacticalPanel {
     cards.push(card('data-bk="log"', icon('icon.deed_ledger_partner', '', 'tb-bc-ico'), L('log.title'), esc(L('log.tip')), false, ' tool'));
     if (!v.over) cards.push(card('data-bk="danger"', icon('icon.danger', '', 'tb-bc-ico'), L('danger'), esc(`${L(danger ? 'danger.on' : 'danger.off')} · ${L('danger.tip')}`), false, ` tool${danger ? ' on' : ''}`));
     const o = act?.officer;
+    const sk = act?.skill;
+    if (sk && act!.side === v.you && SKILLS[sk.id].aim !== 'death') cards.push(card('data-bk="skill"', skIcon(sk.id, 'tb-bc-ico'), skName(sk.id), esc(sk.ready ? `${SL('ready')} · ${skText(sk.id)}` : SL('used')), !v.mine || !v.skillAim, ' officer'));
     if (o && act!.side === v.you) cards.push(card('data-bk="order"', icon(`icon.role_${o.role}`, '', 'tb-bc-ico'), L(`o.${o.order}` as K), esc(o.ready ? L('book.officer') : L('used')), !v.mine || !o.ready, ' officer'));
     for (const kind of ['innate', 'ult'] as const) {
       const st = kind === 'innate' ? me.innate : me.ult;
@@ -2530,6 +2632,7 @@ export class TacticalPanel {
       if (!b || b.disabled) return;
       this.closeSheet();
       if (b.dataset.bk === 'order') this.button('order');
+      else if (b.dataset.bk === 'skill') this.skill();
       else if (b.dataset.bk === 'log') this.openLog();
       else if (b.dataset.bk === 'danger') this.button('danger');
       else if (b.dataset.bkmove) this.move2(b.dataset.bkmove as 'innate' | 'ult');
@@ -2861,6 +2964,7 @@ export class TacticalPanel {
     const v = this.view;
     if (!v) return;
     if (a === 'wait' || a === 'defend' || a === 'order' || a === 'ready') this.order({ a });
+    else if (a === 'skill') this.skill();
     else if (a === 'log') this.openLog();
     else if (a === 'danger') {
       updateSettings({ tacDanger: !settings().tacDanger });
@@ -2900,7 +3004,55 @@ export class TacticalPanel {
     const me = this.view?.heroes[this.view.you];
     if (!t) return 'none';
     if (t === 'innate' || t === 'ult') return me?.path ? (t === 'innate' ? INNATE : ULTIMATE)[me.path].fx.target : 'none';
+    if (t === 'skill') {
+      const act = this.view?.stacks.find((s) => s.id === this.view?.active);
+      const aim = act?.skill ? SKILLS[act.skill.id].aim : 'none';
+      return aim === 'enemy' ? 'enemy' : aim === 'own' ? 'own' : 'none';
+    }
     return TAC_SPELLS[t].target;
+  }
+
+  /** Owner, 2026-10-18: a creature's ability aimed at a hex (a leap, a summons) is being aimed now. */
+  private skillHexAim(v: TacView): boolean {
+    if (this.targeting !== 'skill') return false;
+    const act = v.stacks.find((s) => s.id === v.active);
+    return !!act?.skill && SKILLS[act.skill.id].aim === 'hex';
+  }
+
+  /** The picture and the name of what is being aimed (an order, a path move, a creature's ability). */
+  private aimArt(v: TacView, t: TacSpellId | 'innate' | 'ult' | 'skill'): string {
+    const me = v.heroes[v.you];
+    if (t === 'skill') {
+      const act = v.stacks.find((s) => s.id === v.active);
+      return act?.skill ? skIcon(act.skill.id) : '';
+    }
+    return t === 'innate' || t === 'ult' ? (me.path ? icon(`icon.${(t === 'innate' ? INNATE : ULTIMATE)[me.path].icon}`, '', 'ico') : '') : spIcon(t);
+  }
+  private aimName(v: TacView, t: TacSpellId | 'innate' | 'ult' | 'skill'): string {
+    const me = v.heroes[v.you];
+    if (t === 'skill') {
+      const act = v.stacks.find((s) => s.id === v.active);
+      return act?.skill ? skName(act.skill.id) : '';
+    }
+    return t === 'innate' || t === 'ult' ? (me.path ? moveName(me.path, t === 'ult') : '') : spName(t);
+  }
+
+  /** Owner, 2026-10-18: the active stack's own ability — given at once when it needs no aim, else aimed (a tap on a
+   *  stack it may fall on, or on a free hex for a leap or a summons). */
+  private skill(): void {
+    const v = this.view;
+    const act = v?.stacks.find((s) => s.id === v.active);
+    if (!v?.mine || !act?.skill || !v.skillAim) return;
+    const aim = SKILLS[act.skill.id].aim;
+    if (aim === 'none' || aim === 'self' || !v.skillAim.length) {
+      this.targeting = null;
+      this.order({ a: 'skill' });
+      return;
+    }
+    this.targeting = this.targeting === 'skill' ? null : 'skill';
+    this.clearPick();
+    this.key = '';
+    this.dom(v);
   }
 
   /** Her path's innate move or ultimate (docs/18): at once, or aimed at a stack. */
@@ -2967,6 +3119,7 @@ export class TacticalPanel {
     if (code === 'KeyW') this.order({ a: 'wait' });
     else if (code === 'KeyD') this.order({ a: 'defend' });
     else if (code === 'KeyO') this.order({ a: 'order' });
+    else if (code === 'KeyF') this.skill();
     else if (code === 'KeyA') {
       if (!v.heroes[v.you].auto && this.scrollLocked(v)) this.openShop();
       else this.order({ a: 'auto', on: !v.heroes[v.you].auto });
@@ -3177,6 +3330,22 @@ export class TacticalPanel {
       if (s) this.showInfo(s.id);
       return done();
     }
+    // Owner, 2026-10-18: a creature's ability being aimed — at a stack the server allows, or (a leap, a summons) a hex.
+    if (this.targeting === 'skill') {
+      const aim = v.skillAim ?? [];
+      const act = v.stacks.find((x) => x.id === v.active);
+      const hexAim = !!act?.skill && SKILLS[act.skill.id].aim === 'hex';
+      const pick = hexAim ? (aim.includes(h) ? h : null) : s && aim.includes(s.id) ? s.id : null;
+      if (pick !== null) {
+        if (this.castOn === pick && !slid) return this.pickAct('cast');
+        this.clearPick();
+        this.castOn = pick;
+        return done();
+      }
+      this.clearPick();
+      if (s) this.showInfo(s.id);
+      return done();
+    }
     // An order or a path move being aimed (docs/18): the stack it is for picked, the order given from the choice.
     if (this.targeting) {
       const own = this.targetKind() === 'own';
@@ -3274,8 +3443,9 @@ export class TacticalPanel {
     if (this.castOn !== null && this.targeting) {
       const t = this.targeting;
       const me = v.heroes[v.you];
-      const art = t === 'innate' || t === 'ult' ? (me.path ? icon(`icon.${(t === 'innate' ? INNATE : ULTIMATE)[me.path].icon}`, '', 'ico') : '') : spIcon(t);
-      const name = t === 'innate' || t === 'ult' ? (me.path ? moveName(me.path, t === 'ult') : '') : spName(t);
+      void me;
+      const art = this.aimArt(v, t);
+      const name = this.aimName(v, t);
       out.push({ k: 'cast', icon: art, label: name, tip: name });
     } else if (this.foeArmed !== null) {
       const id = this.foeArmed;
@@ -3294,6 +3464,7 @@ export class TacticalPanel {
       out.push({ k: 'defend', icon: btIcon('bt_defend', 'icon.mod_hull_plating', 'ico'), label: L('defend') });
       out.push({ k: 'wait', icon: btIcon('bt_wait', 'icon.bt_hold', 'ico'), label: L('wait'), off: !!act.waited || !!v.moved });
       if (act.officer?.ready) out.push({ k: 'order', icon: btIcon('bt_order', 'icon.bt_officers', 'ico'), label: L('pk.order'), tip: L('order') });
+      if (act.skill?.ready && v.skillAim) out.push({ k: 'skill', icon: skIcon(act.skill.id), label: skName(act.skill.id), tip: skText(act.skill.id) });
     }
     return out;
   }
@@ -3318,15 +3489,18 @@ export class TacticalPanel {
     else if (k === 'defend' || k === 'wait' || k === 'order') this.order({ a: k });
     else if (k === 'cast' && this.castOn !== null && this.targeting) {
       const t = this.targeting;
-      this.order(t === 'innate' || t === 'ult' ? { a: t, target: this.castOn } : { a: 'spell', id: t, target: this.castOn });
+      const act = v.stacks.find((s) => s.id === v.active);
+      const hexAim = t === 'skill' && !!act?.skill && SKILLS[act.skill.id].aim === 'hex';
+      this.order(t === 'skill' ? (hexAim ? { a: 'skill', hex: this.castOn } : { a: 'skill', target: this.castOn }) : t === 'innate' || t === 'ult' ? { a: t, target: this.castOn } : { a: 'spell', id: t, target: this.castOn });
       this.targeting = null;
-    }
+    } else if (k === 'skill') this.skill();
     close();
   }
 
   /** The hex the choice is open beside. */
   private pickHex(v: TacView): number | null {
     if (this.preview !== null) return this.preview;
+    if (this.castOn !== null && this.skillHexAim(v)) return this.castOn;
     const id = this.foeArmed ?? this.castOn ?? (this.selfPick ? v.active : null);
     return id !== null ? v.stacks.find((s) => s.id === id)?.hex ?? null : null;
   }
@@ -5157,9 +5331,21 @@ export class TacticalPanel {
     // (with «a second tap to be sure») a bright ring.
     if (live) {
       const aimOwn = this.targetKind() === 'own';
+      const skAim = this.targeting === 'skill' ? v.skillAim ?? [] : null;
+      const skHex = this.skillHexAim(v);
+      // Owner, 2026-10-18: a leap's or a summons' hexes, washed in the ability's light.
+      if (skAim && skHex) for (const h of skAim) {
+        const p = this.lc(h);
+        this.hexPath(g, p.x, p.y, r - 1);
+        g.fillStyle = this.castOn === h ? `rgba(200,150,255,${0.35 + 0.2 * pulse})` : `rgba(170,120,240,${0.12 + 0.1 * pulse})`;
+        g.fill();
+        g.strokeStyle = `rgba(200,160,255,${0.5 + 0.4 * pulse})`;
+        g.lineWidth = this.castOn === h ? 3 : 1.5;
+        g.stroke();
+      }
       for (const s of v.stacks) {
         const shoot = v.shoot.includes(s.id), melee = v.melee.includes(s.id);
-        const aimed = !!this.targeting && (aimOwn ? s.side === v.you : s.side !== v.you);
+        const aimed = skAim ? !skHex && skAim.includes(s.id) : !!this.targeting && (aimOwn ? s.side === v.you : s.side !== v.you);
         if (!shoot && !melee && !aimed) continue;
         const p = this.lc(s.hex);
         this.hexPath(g, p.x, p.y, r - 1);
@@ -5338,6 +5524,16 @@ export class TacticalPanel {
     // What a turn or a blow carried beyond its harm (owner, 2026-10-15), over the stacks.
     this.procs = this.procs.filter((p) => t - p.t0 < p.dur);
     for (const p of this.procs) drawProc(g, p, t, w, this.mo.still);
+    // Owner, 2026-10-18: the creatures' abilities and the magic shots.
+    this.skfx = this.skfx.filter((f) => t - f.t0 < f.dur);
+    for (const f of this.skfx) drawSkFx(g, f, t, w, this.mo.still);
+    this.magic = this.magic.filter((m) => t - m.t0 < m.dur + 420);
+    for (const m of this.magic) {
+      const k = (t - m.t0) / m.dur;
+      if (k < 0) continue;
+      if (k < 1) drawMagicShot(g, m.kind, { x: m.x0, y: m.y0 }, { x: m.x1, y: m.y1 }, k, w, t, m.seed);
+      else drawMagicHit(g, m.kind, { x: m.x1, y: m.y1 }, (t - m.t0 - m.dur) / 420, w, m.seed);
+    }
     if (ik >= 0) this.introJump(g, v, ik, w);
     // The paths' moves (docs/18): their light over the field.
     this.pathFx = this.pathFx.filter((f) => t - f.t0 < (f.ult ? PATH_FX_MS.ult : PATH_FX_MS.innate));

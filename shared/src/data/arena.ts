@@ -56,11 +56,13 @@ export const ARENA_POINT = 14.15;
  *  about half the bouts. */
 // docs/25 block Г (2026-10-09): re-set by `balance-arena.ts 1200 --calibrate 3` under the boarding's reckoning of Attack and
 // Defense, guards and orders (items 45–47): the shooters weigh more, the life guard's and the titans' walls less.
+// Owner, 2026-10-18 (creatureskills.ts): re-set by `balance-arena.ts 1200 --calibrate 3` once the harpies threw stones and
+// the spiders, the cultists and the hydras' kin took their abilities (the harpy's pick won 66%; now the worst kind 54%).
 export const ARENA_CAL: Partial<Record<UnitId, number>> = {
-  deckhand: 0.71, sailor: 0.77, marine: 0.82, sea_guard: 0.9, musketeer: 1.1, sharpshooter: 1.33, gunner: 1.07,
-  bombardier: 1, boarder: 0.96, cutthroat: 0.96, guard: 1.12, life_guard: 0.99, drowned: 0.97, deep_spawn: 1.21,
-  bilge_rat: 0.99, cave_bat: 0.88, giant_centipede: 0.94, jungle_spider: 1.09, cliff_harpy: 0.81, cultist: 1.13,
-  mangrove_hydra: 1.11, wreck_titan: 0.88,
+  deckhand: 0.7, sailor: 0.78, marine: 0.81, sea_guard: 0.93, musketeer: 0.97, sharpshooter: 1.38, gunner: 1.03,
+  bombardier: 0.97, boarder: 1.03, cutthroat: 0.86, guard: 1.04, life_guard: 0.9, drowned: 0.98, deep_spawn: 1.17,
+  bilge_rat: 0.97, cave_bat: 0.73, giant_centipede: 1.03, jungle_spider: 1.06, cliff_harpy: 1.33, cultist: 1.11, mangrove_hydra: 1.03,
+  wreck_titan: 0.97,
 };
 
 /** One man of a kind's battle weight in plain deckhands (armyWeight's square law). */
@@ -259,9 +261,11 @@ export const ARENA_SKILLS: SkillId[] = ['boarding', 'armor', 'artillery', 'leade
  *  2026-10-10 (owner: «чини атаку всем» — a path's moves land their book's numbers on the sand too, no longer ×0.4 of
  *  level 60's old boarding tempo): `balance-arena.ts 160 --paths 5` and `--paths 4` — the means 48–52%, the worst pair
  *  (the Corsair over the Navigator) 59%. 2026-10-13 (docs/31: Tactics her own unanswered blows, the paths re-weighed
- *  against the sea): `--paths 5` at 200 — the means 49–53%, the worst pair 57% (it was the Corsair over the Navigator 68%). */
+ *  against the sea): `--paths 5` at 200 — the means 49–53%, the worst pair 57% (it was the Corsair over the Navigator 68%).
+ *  Owner, 2026-10-18 (the creatures' abilities, ARENA_CAL re-set): `--paths 4` at 200 — the means 48–51%, the worst pair
+ *  the Navigator over the Reaver 60% (it was 65%). */
 export const ARENA_PATH: Partial<Record<CaptainId, Partial<Prims>>> = {
-  corsair: { atk: 3, def: -1 }, smuggler: { atk: 4, def: 1 }, reaver: { atk: -1, def: -3 }, navigator: { atk: 3, def: 0 }, drowned: { atk: 4, def: -2 }, admiral: { atk: 2, def: -5 },
+  corsair: { atk: 4, def: -1 }, smuggler: { atk: 4, def: 0 }, reaver: { atk: 0, def: -3 }, navigator: { atk: 3, def: -1 }, drowned: { atk: 4, def: -2 }, admiral: { atk: 3, def: -5 },
 };
 
 /** A path's standard primaries at the cap: its start and its odds over the level-ups, whole points by the largest

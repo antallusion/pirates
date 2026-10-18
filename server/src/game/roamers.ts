@@ -364,7 +364,7 @@ export function attackRoam(game: Game, s: PlayerSession, id: number): string | n
   const n = roamMen(game, sp!);
   const e = startCreatureFight(game, s, {
     type: ROAMS[sp!.kind].field, kind: `roam_${sp!.kind}`, place: ROAM_NAME[sp!.kind], level: sp!.level, xpMul: ROAM_BATTLE_XP,
-    onEnd: (g, ss, won, bt) => roamEnd(g, ss, sp!, won, bt.stacks.filter((x) => x.side === 1 && x.count > 0).reduce((a, x) => a + x.count, 0), bt),
+    onEnd: (g, ss, won, bt) => roamEnd(g, ss, sp!, won, bt.stacks.filter((x) => x.side === 1 && x.count > 0 && !x.summoned).reduce((a, x) => a + x.count, 0), bt),
   }, ROAM_NAME[sp!.kind], roamStacks(sp!.kind, n), UNITS[ROAMS[sp!.kind].u as ArmyStack['u']].art, sp!.level);
   if (e) return e;
   stateOf(S, sp!.id).fighter = s.accountId;
@@ -428,7 +428,7 @@ function roamEnd(game: Game, s: PlayerSession, sp: RoamSpot, won: boolean, left:
   // Most of her fallen are hauled back out of the water.
   let room = Math.max(0, ship.stats.crewMax - ship.crew), raised = 0;
   for (const st0 of bt.stacks) {
-    if (st0.side !== 0) continue;
+    if (st0.side !== 0 || st0.summoned) continue;
     const d = st0.start - st0.count;
     const k = Math.min(room, Math.floor(d * ROAM_RAISE));
     if (k <= 0) continue;

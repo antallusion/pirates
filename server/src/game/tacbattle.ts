@@ -25,6 +25,9 @@ import type { BtMods, PageFx } from '../../../shared/src/data/paths.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { FAV_BONUS } from '../../../shared/src/data/drifts.ts';
 import { deckTheme, dressDeck, layDeck, plankRuns } from '../../../shared/src/data/tacprops.ts';
+import { SK, skillOf } from '../../../shared/src/data/creatureskills.ts';
+import type { SkillId } from '../../../shared/src/data/creatureskills.ts';
+import { aiSkillChoice, castSkill, deathBlast, skillError, skillReady, skillTargets } from './tacskills.ts';
 import type { DeckTheme, TacProp } from '../../../shared/src/data/tacprops.ts';
 
 /** One stack of a ship's army as it comes to the battle; `src` the ship's own stack its men are drawn from (the
@@ -170,6 +173,12 @@ export interface TacStack {
   extra?: number;
   /** docs/25 item 66: men a group's foe was grown by (not her ship's: the reckoning takes her losses back by it). */
   boost?: number;
+  /** Owner, 2026-10-18 (creatureskills.ts, tacskills.ts): her kind's ability and whether it is given (once a battle);
+   *  the turns she will lose to a fear or a stun; called up by a summons (no ship's men: her losses are nobody's). */
+  skill?: SkillId;
+  skillUsed?: boolean;
+  skip?: number;
+  summoned?: boolean;
 }
 
 /** docs/25 item 64: an allied captain on a side — a mate of the group of the captain who grappled (or was grappled):
@@ -198,6 +207,8 @@ interface Fx {
   res?: number[];
   /** docs/25 item 65: the captain of the side who laid it (her ally slot; absent: the side's own captain). */
   by?: number;
+  /** Owner, 2026-10-18: the stack whose ability laid it (a taunt's: whom the taunted must strike). */
+  src?: number;
 }
 
 export interface TacHero {
@@ -530,6 +541,7 @@ export function buildStacks(input: TacSideInput, side: 0 | 1, cells: TacCell[], 
         id: id++, side, kind: kindOfUnit(e.u), unit: e.u, sp: [...d.specials], src: e.src ?? e.u, count: Math.floor(e.n), start: Math.floor(e.n), hpTop: hpM, hpMax: hpM, hex: -1,
         atk: r1(d.atk * rk * fk), def: r1(d.def * rk * fk), dmin: d.dmin, dmax: d.dmax, speed: d.speed, init: d.init, shots, shotsMax: shots, dmgMul: blast ? 1 - 0.5 * gunsOut : 1,
         ret: true, defending: false, waited: false, surged: false, again: 0, face: side ? 3 : 0,
+        ...(skillOf(e.u) ? { skill: skillOf(e.u) } : {}),
       });
     }
     // Each officer leads one of the melee stacks, the strongest first: his word once a fight, his craft in its blows.
@@ -1369,12 +1381,16 @@ function rollBase(s: TacStack, rng: Rng | null): number {
 export const TAC_DESPERATION = 2;
 export const TAC_DESPERATION_MAX = 0.4;
 
+/** Owner, 2026-10-18: the share of a summoned stack's strength that counts in desperation (tacskills.ts summon). */
+export const TAC_SUMMON_BACKS = 0.5;
 export function desperation(bt: TacBattle, side: 0 | 1): number {
   let mine = 0, foe = 0;
   for (const o of bt.stacks) {
     if (o.count <= 0) continue;
-    if (o.side === side) mine += hpOf(o);
-    else foe += hpOf(o);
+    // (a summons' minions stand at half their strength here: called up, they lift the other's backs to the rail less)
+    const hp = hpOf(o) * (o.summoned ? TAC_SUMMON_BACKS : 1);
+    if (o.side === side) mine += hp;
+    else foe += hp;
   }
   if (mine >= foe || foe <= 0) return 1;
   return 1 + Math.min(TAC_DESPERATION_MAX, TAC_DESPERATION * (1 - mine / foe));
@@ -1462,6 +1478,8 @@ export function blowParts(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' 
   mul *= 1 + 0.15 * held(h, 'iron_discipline', r);
   mul *= Math.max(0.1, 1 - 0.5 * held(e, 'smoke_and_knives', r));
   if (h.fx.some((f) => f.id === 'mark_target' && f.on === t.id && f.until >= r)) mul *= 1.3;
+  // Owner, 2026-10-18: a taunted stack's blows on anyone but the one who taunted her land lighter (tacskills.ts).
+  if (how !== 'ret' && bt.heroes[1 - s.side].fx.some((f) => f.id === 'sk_taunt' && f.on === s.id && f.until >= r && f.src !== t.id)) mul *= 1 + SK.taunt.other;
   // Fury on the melee.
   if (how !== 'shot' && has(h, 'fury', r)) mul *= 1.3;
   // The paths' moves on both (docs/18): her blows and shots, what the other takes.
@@ -1535,7 +1553,8 @@ function hurt(bt: TacBattle, t: TacStack, dmg: number, by: 0 | 1, who = bt.casti
     t.hpTop = left - (t.count - 1) * t.hpMax;
   }
   const kills = before - t.count;
-  if (kills > 0) {
+  // (a summons' minions are nobody's men: their fall shakes no crew's heart nor counts among her dead)
+  if (kills > 0 && !t.summoned) {
     bt.dead[t.side] += kills;
     heroAt(bt, by, who).kills += kills;
     const h = bt.heroes[t.side], k = bt.heroes[by];
@@ -1543,9 +1562,11 @@ function hurt(bt: TacBattle, t: TacStack, dmg: number, by: 0 | 1, who = bt.casti
     k.morale = Math.min(100, k.morale + (kills / Math.max(1, h.startMen)) * 15);
   }
   if (t.count === 0) {
-    bt.broken[t.side]++;
+    if (!t.summoned) bt.broken[t.side]++;
     push(bt, { k: 'die', side: t.side, s: t.id, hex: t.hex });
     if (t.officer) bt.hurt.push({ id: t.officer.id, side: t.side, heavy: true });
+    // Owner, 2026-10-18: a powder cask, a boiler, a petard goes off as its stack falls (tacskills.ts).
+    if (t.skill === 'death_blast' && !t.skillUsed) deathBlast(bt, t);
   } else if (t.officer && t.count <= t.start / 2 && !bt.hurt.some((x) => x.id === t.officer!.id)) bt.hurt.push({ id: t.officer.id, side: t.side, heavy: false });
   return kills;
 }
@@ -1701,7 +1722,7 @@ function retaliate(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng, hit?: TacE
     hs.free--; // docs/18: Blood Harvest — the first blows unanswered
     return tag(hit, 'noret');
   }
-  const all = sp(t, 'retaliate_all');
+  const all = sp(t, 'retaliate_all') || bt.heroes[t.side].fx.some((f) => f.id === 'sk_bulwark' && f.on === t.id && f.until >= bt.round);
   if (!all) t.ret = false;
   // She turns on whom she answers, as a HoMM3 stack does: her back is to the others now (draw her answer with one
   // stack, and the next may take her from behind).
@@ -2378,6 +2399,12 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
       }
       if (s.count <= 0) continue;
     }
+    // Owner, 2026-10-18 (tacskills.ts): a creature's fear or stun — the turn is lost.
+    if (s.skip && s.skip > 0) {
+      s.skip--;
+      push(bt, { k: 'fear', side: s.side, s: s.id, id: 'skip' });
+      continue;
+    }
     // The common pages after docs/18: the Siren Song holds her spellbound; Fog Madness turns her on her own.
     const held = smods(bt, s);
     if (held.still) {
@@ -2387,6 +2414,8 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
     }
     if (held.mad) {
       madBlow(bt, s, rng);
+      // A siren's song holds one turn (tacskills.ts).
+      keepFx(bt.heroes[1 - s.side], (f) => !(f.id === 'sk_siren' && f.on === s.id));
       if (bt.over) {
         bt.active = null;
         return;
@@ -2699,6 +2728,14 @@ function actNow(bt: TacBattle, side: 0 | 1, a: TacAction, now: number, rng: Rng,
     s.defending = true;
     push(bt, { k: 'defend', side, s: s.id });
     endTurn(bt, s, now, rng, false);
+    return null;
+  }
+  if (a.a === 'skill') {
+    // Owner, 2026-10-18: her kind's own ability, once a battle (tacskills.ts); a free one leaves her the rest of her turn.
+    const why = skillError(bt, s, a);
+    if (why) return why;
+    if (castSkill(bt, s, a, rng)) goOn(bt, now);
+    else endTurn(bt, s, now, rng, true);
     return null;
   }
   if (a.a === 'order') {
@@ -3183,6 +3220,9 @@ const shooting = (bt: TacBattle, side: 0 | 1): number => alive(bt).reduce((n, x)
 /** What the sea's mind has the active stack do. */
 export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
   const s = stackById(bt, bt.active ?? -1)!;
+  // Owner, 2026-10-18: her kind's ability when it is worth her blow (tacskills.ts aiSkillChoice).
+  const sk = skillReady(bt, s) ? aiSkillChoice(bt, s) : null;
+  if (sk) return sk;
   if (s.officer && !s.officer.used) {
     const o = s.officer.order;
     const h = bt.heroes[s.side];
@@ -3338,6 +3378,11 @@ function aiTurn(bt: TacBattle, s: TacStack, now: number, rng: Rng): void {
     if (spl) castSpell(bt, s.side, spl.id, spl.target, rng);
   });
   if (bt.over) return;
+  // Owner, 2026-10-18: a powder keg of the other side gone off under her captain's order may have felled her.
+  if (s.count <= 0 || bt.active !== s.id) {
+    if (bt.active === s.id || bt.active === null || !stackById(bt, bt.active)) nextTurn(bt, now, rng);
+    return;
+  }
   const choice = aiChoice(bt, rng);
   if (act(bt, s.side, choice, now, rng, slot) !== null) act(bt, s.side, { a: 'defend' }, now, rng, slot);
 }
@@ -3408,7 +3453,7 @@ export function quickFinish(bt: TacBattle, now: number, rng: Rng): void {
 export function lossesOf(bt: TacBattle, side: 0 | 1, slot?: number): { u: UnitId; n: number }[] {
   const by = new Map<UnitId, number>();
   // docs/25 item 67: one captain's own (`slot`; 0 the side's own captain), or the whole side's.
-  for (const s of bt.stacks) if (s.side === side && s.start > s.count && (slot === undefined || (s.own ?? 0) === slot)) by.set(s.unit, (by.get(s.unit) ?? 0) + s.start - s.count);
+  for (const s of bt.stacks) if (s.side === side && !s.summoned && s.start > s.count && (slot === undefined || (s.own ?? 0) === slot)) by.set(s.unit, (by.get(s.unit) ?? 0) + s.start - s.count);
   return [...by].map(([u, n]) => ({ u, n }));
 }
 
@@ -3416,7 +3461,7 @@ export function lossesOf(bt: TacBattle, side: 0 | 1, slot?: number): { u: UnitId
  *  hero's experience so). */
 export function killedHp(bt: TacBattle, side: 0 | 1): number {
   let hp = 0;
-  for (const s of bt.stacks) if (s.side !== side) hp += Math.max(0, s.start - s.count) * s.hpMax;
+  for (const s of bt.stacks) if (s.side !== side && !s.summoned) hp += Math.max(0, s.start - s.count) * s.hpMax;
   return hp;
 }
 
@@ -3435,6 +3480,16 @@ function flagsOf(bt: TacBattle, s: TacStack): Partial<TacStackView> {
   if (m.still) out.still = true;
   if (m.mad) out.mad = true;
   return out;
+}
+
+/** Owner, 2026-10-18: the abilities' holds on a stack now (her card and the field's marks): either side's. */
+function heldOf(bt: TacBattle, s: TacStack): Partial<TacStackView> {
+  const ids = new Set<SkillId>();
+  for (const h of bt.heroes) for (const f of h.fx) if (f.id.startsWith('sk_') && f.until >= bt.round && (f.on === s.id || (f.on === undefined && (!!f.foe) !== (h === bt.heroes[s.side])))) {
+    const id = f.id.slice(3);
+    if (id !== 'taunt_self') ids.add(id as SkillId);
+  }
+  return ids.size ? { held: [...ids] } : {};
 }
 
 /** Owner, 2026-10-10: the stack card's lift on her blows, shots and what she takes (stackBonus), percent. */
@@ -3462,6 +3517,9 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
     ...flagsOf(bt, s),
     ...(resistOf(bt, s) > 0 ? { resist: Math.round(resistOf(bt, s) * 100) / 100 } : {}),
     ...(s.own ? { own: s.own } : {}),
+    ...(s.skill ? { skill: { id: s.skill, ready: !s.skillUsed } } : {}),
+    ...(s.skip ? { skip: s.skip } : {}),
+    ...heldOf(bt, s),
     ...bonusView(bt, s),
   }));
   const hero = (x: 0 | 1): TacHeroView => {
@@ -3484,6 +3542,10 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
     // Owner, 2026-10-15: marched this turn — no second march; her blow from what is left of her stride (melee, pv).
     reach: act0?.stepped ? [] : [...reach.keys()], ...(mine && act0?.stepped ? { moved: true } : {}), melee: mine && act0 ? meleeTargets(bt, act0, reach).map((t) => t.id) : [], shoot: mine && act0 && canShoot(bt, act0) ? alive(bt).filter((t) => t.side !== side).map((t) => t.id) : [],
     ...(mine && act0 ? { pv: previewsOf(bt, act0, reach) } : {}),
+    ...(mine && act0 && act0.skill ? (() => {
+      const aim = skillTargets(bt, act0);
+      return aim ? { skillAim: aim } : {};
+    })() : {}),
     heroes: ([0, 1] as const).map((x) => (x === side && slot ? asCaptain(bt, side, slot, () => hero(x)) : hero(x))) as [TacHeroView, TacHeroView], log: bt.log.slice(-12), seq: bt.seq, over: bt.over, canCut, canStrike: side === 1, ...(bt.warn?.length && !bt.over ? { warn: [...bt.warn] } : {}), ...extra,
     ...(bt.props ? { props: bt.props } : {}), ...(bt.planks ? { planks: bt.planks } : {}),
     ...(bt.siege ? { siege: { type: bt.land ?? 'rocky', hp: [...bt.siege.hp], max: [...bt.siege.max], cat: bt.siege.catapult, ...(bt.siege.name ? { name: bt.siege.name } : {}) } } : {}),
@@ -3545,5 +3607,7 @@ export function threatOf(bt: TacBattle, s: TacStack): { move: number[]; hit: num
  *  shorebosses.ts, owner 2026-10-03): harm laid on a stack and its fallen counted as a blow's are, an event told to the
  *  captain, a stack's strength in hit points. */
 export const tacHurt = hurt;
+/** Owner, 2026-10-18: the battle's own hand for the creatures' abilities (tacskills.ts). */
+export const TK = { hurt, push, restore, wake, alive, threat, valueOf, keepFx, passable, smods, turnTo, checkOver, hpOf };
 export const tacPush = push;
 export const tacHp = hpOf;
