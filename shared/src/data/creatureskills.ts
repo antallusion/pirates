@@ -179,18 +179,19 @@ export const summonOf = (u: UnitId): UnitId => SUMMON_OF[u] ?? 'crab';
 export const skillOf = (u: UnitId): SkillId | undefined => UNIT_SKILL[u];
 
 /** The eleven kinds made to fire from afar (owner: «часть должны быть рдд, бить там магией или снарядами»): their
- *  charges and what they add to their specials. A ghost's fire, a witch's hex, a giant's lightning, an eel's spark, a
- *  phoenix's fire bolt (and its splash), a cardsharp's cards, a chief's spears, a naga's venom. */
+ *  charges and what they add to their specials. A ghost's fire, an angler's hex, a toad's and a naga's venom, an eel's spark, a
+ *  phoenix's fire bolt (and its splash), the stones of the harpies and the apes. None of the peoples'
+ *  kinds (a people's kind keeps the place it takes among the pirates' numbers, factionunits.ts). */
 export const RANGED_KINDS: Partial<Record<UnitId, { shots: number; add?: UnitSpecial[] }>> = {
-  banshee: { shots: 3 }, lantern_wraith: { shots: 3 }, mist_wraith: { shots: 3 }, corposant: { shots: 3 }, storm_giant: { shots: 3 },
-  electric_eel: { shots: 3 }, abyssal_angler: { shots: 3 }, ember_phoenix: { shots: 3, add: ['blast'] }, fog_cardsharp: { shots: 4 },
-  island_chief: { shots: 4 }, sea_naga: { shots: 3 },
+  banshee: { shots: 3 }, lantern_maw: { shots: 3 }, mist_wraith: { shots: 3 }, corposant: { shots: 3 }, giant_toad: { shots: 3 },
+  electric_eel: { shots: 3 }, abyssal_angler: { shots: 3 }, ember_phoenix: { shots: 3, add: ['blast'] }, island_ape: { shots: 4 },
+  cliff_harpy: { shots: 4 }, sea_naga: { shots: 3 },
 };
 
 /** What a shooter's charge is, for the field (client MAGIC_OF draws the magic, the rest are painted missiles), and the
  *  docs' table: 'ball' a musket's, 'shell' a gun's, 'bomb' a grenade or a pot, 'harpoon', 'arrow', 'dart', 'spear', and
  *  the magic: 'hex' a witch's bolt, 'ghost' ghost fire, 'spark', 'bolt' lightning, 'fire' a fire bolt, 'brine', 'bell'. */
-export type ShotKind = 'ball' | 'shell' | 'bomb' | 'harpoon' | 'arrow' | 'dart' | 'spear' | 'net' | 'hex' | 'ghost' | 'spark' | 'bolt' | 'fire' | 'brine' | 'bell';
+export type ShotKind = 'ball' | 'shell' | 'bomb' | 'harpoon' | 'arrow' | 'dart' | 'spear' | 'net' | 'stone' | 'hex' | 'ghost' | 'spark' | 'bolt' | 'fire' | 'brine' | 'bell';
 export const MAGIC_SHOTS: ReadonlySet<ShotKind> = new Set(['hex', 'ghost', 'spark', 'bolt', 'fire']);
 export const SHOT_OF: Partial<Record<UnitId, ShotKind>> = {
   gunner: 'shell', bombardier: 'bomb', hermit: 'harpoon', cultist: 'hex', mermaid: 'spear', harpooner: 'harpoon', master_harpooner: 'harpoon', harpoon_gunner: 'harpoon',
@@ -198,8 +199,8 @@ export const SHOT_OF: Partial<Record<UnitId, ShotKind>> = {
   blowgun_hunter: 'dart', alchemist: 'bomb', fog_thief: 'bomb', island_archer: 'arrow', net_thrower: 'net', net_master: 'net', phantom_gunner: 'shell',
   storm_witch: 'bolt', tide_shaman: 'brine', tide_caller: 'brine', company_cannoneer: 'shell', petardier: 'bomb', fog_viper: 'dart', choir_toller: 'bell',
   thunderbird: 'bolt', rime_witch: 'hex', line_harpooner: 'harpoon', hunt_master: 'harpoon', fog_chemist: 'bomb', mask_archer: 'arrow', ghost_bomber: 'bomb',
-  banshee: 'ghost', lantern_wraith: 'ghost', mist_wraith: 'ghost', corposant: 'ghost', storm_giant: 'bolt', electric_eel: 'spark', abyssal_angler: 'hex',
-  ember_phoenix: 'fire', fog_cardsharp: 'dart', island_chief: 'spear', sea_naga: 'dart', storm_caller: 'bolt', ghost_navigator: 'ghost', spice_djinn: 'fire',
+  banshee: 'ghost', lantern_maw: 'ghost', mist_wraith: 'ghost', corposant: 'ghost', giant_toad: 'dart', storm_giant: 'bolt', electric_eel: 'spark', abyssal_angler: 'hex',
+  ember_phoenix: 'fire', island_ape: 'stone', cliff_harpy: 'stone', sea_naga: 'dart', storm_caller: 'bolt', ghost_navigator: 'ghost', spice_djinn: 'fire',
   bell_priest: 'bell', silver_archer: 'arrow', dragon_lancer: 'harpoon', pearl_siren: 'brine', mermaid_queen: 'brine', bell_diver: 'bell', night_smuggler: 'bomb',
   bastion_gunner: 'shell', ledger_enforcer: 'ball',
 };

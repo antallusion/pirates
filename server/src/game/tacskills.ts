@@ -484,7 +484,9 @@ function worthOf(bt: TacBattle, s: TacStack, x: number | undefined): number {
     case 'bulwark':
       return near(bt, s, s.hex).length ? thr(s) * 0.5 : 0;
     case 'haste':
-      return t === s && !meleeTargets(bt, s).length && !canShoot(bt, s) ? thr(s) * 0.5 : t && t !== s && !isShooter(t) ? thr(t) * 0.2 : 0;
+      // her own steel that cannot reach a foe yet, early in the fight
+      if (!t || isShooter(t) || near(bt, t, t.hex).length) return 0;
+      return t === s ? (!meleeTargets(bt, s).length ? thr(s) * 0.5 : 0) : bt.round <= 2 ? thr(t) * 0.5 : thr(t) * 0.2;
     case 'rally':
     case 'toast':
       return ownOf(bt, s).reduce((n, o) => n + thr(o), 0) * (bt.round <= 2 ? 0.14 : 0.05);
@@ -505,10 +507,11 @@ function worthOf(bt: TacBattle, s: TacStack, x: number | undefined): number {
     case 'entangle': {
       if (!t) return 0;
       const xs = id === 'entangle' ? [t] : [t, ...near(bt, s, t.hex)];
-      return xs.reduce((n, o) => n + (immune(bt, id, o) ? 0 : thr(o) * (id === 'ink' ? (isShooter(o) && o.shots > 0 ? 0.6 : 0.2) : isShooter(o) ? 0.05 : 0.3)) + (d.blowK ? dmgV(o, o === t ? d.blowK : d.ringK ?? d.blowK) : 0), 0);
+      return xs.reduce((n, o) => n + (immune(bt, id, o) ? 0 : thr(o) * (id === 'ink' ? (isShooter(o) && o.shots > 0 ? 0.6 : 0.2) : isShooter(o) ? 0.05 : 0.45)) + (d.blowK ? dmgV(o, o === t ? d.blowK : d.ringK ?? d.blowK) : 0), 0);
     }
     case 'taunt':
-      return ownOf(bt, s).some((o) => isShooter(o) && o.shots > 0) ? near(bt, s, s.hex, d.range ?? 3).reduce((n, o) => n + thr(o) * 0.3, 0) : 0;
+      // the foes about her held on her, off her shooters and her weaker stacks
+      return near(bt, s, s.hex, d.range ?? 3).reduce((n, o) => n + thr(o) * (ownOf(bt, s).some((x) => isShooter(x) && x.shots > 0) ? 0.4 : 0.25), 0);
     case 'toll':
       return near(bt, s, s.hex, d.range ?? 2).reduce((n, o) => n + dmgV(o, d.blowK!) + thr(o) * 0.1, 0);
     case 'rot':
@@ -558,6 +561,10 @@ function worthOf(bt: TacBattle, s: TacStack, x: number | undefined): number {
   }
 }
 
+/** The abilities whose worth is a hold or a turn (not harm at once): given against a lesser share of her blow, as an
+ *  order is — what they do lasts. */
+const HOLDS: ReadonlySet<SkillId> = new Set(['haste', 'rally', 'toast', 'ward', 'bulwark', 'taunt', 'entangle', 'slow', 'curse', 'mark', 'ink', 'fear', 'freeze', 'siren', 'toll', 'stun', 'summon', 'cleanse']);
+
 /** Owner, 2026-10-18: the sea's mind (and a captain's auto-battle) gives a stack's ability when it is worth her blow —
  *  the heal when her stacks are cut, the fear on the most dangerous foe, the fireball where they stand close, the leap
  *  when no foe is in reach — and a free one (a fury, a leap, a hook) whenever it helps her blow. */
@@ -577,7 +584,7 @@ export function aiSkillChoice(bt: TacBattle, s: TacStack): TacAction | null {
   const blowV = bestBlow(bt, s);
   // A free one costs her nothing of her turn; the rest are given when worth most of her best blow (a heal, a hold or a
   // spell weighed as her blows are), or whenever she has no blow to give.
-  if (!d.free && blowV > 0 && bv < blowV * 0.9) return null;
+  if (!d.free && blowV > 0 && bv < blowV * (d.blowK && !HOLDS.has(s.skill!) ? 0.9 : 0.6)) return null;
   const act: TacAction = { a: 'skill' };
   if (d.aim === 'hex') act.hex = best;
   else if (best !== undefined) act.target = best;

@@ -3373,6 +3373,11 @@ function aiTurn(bt: TacBattle, s: TacStack, now: number, rng: Rng): void {
     if (spl) castSpell(bt, s.side, spl.id, spl.target, rng);
   });
   if (bt.over) return;
+  // Owner, 2026-10-18: a powder keg of the other side gone off under her captain's order may have felled her.
+  if (s.count <= 0 || bt.active !== s.id) {
+    if (bt.active === s.id || bt.active === null || !stackById(bt, bt.active)) nextTurn(bt, now, rng);
+    return;
+  }
   const choice = aiChoice(bt, rng);
   if (act(bt, s.side, choice, now, rng, slot) !== null) act(bt, s.side, { a: 'defend' }, now, rng, slot);
 }

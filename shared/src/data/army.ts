@@ -174,11 +174,16 @@ function factionUnits(): Record<FactionKindId, UnitDef> {
 
 export const UNITS: Record<UnitId, UnitDef> = { ...BASE_UNITS, ...factionUnits(), ...PREMIUM_BEASTS, ...SHIP_BEASTS, ...BOSS_UNITS, ...TITANS };
 
+/** Owner, 2026-10-18 (creatureskills.ts): what a kind's ability is worth in the sea's reckoning of an army — none for a
+ *  people's kind, which keeps the worth of the place it takes among the pirates' numbers (factionunits.ts: its ships
+ *  carry it in that place; the elites are worth no more than it). */
+export const worthOf = (u: UnitId): number => (UNITS[u]?.roster ? 0 : skillWorth(u));
+
 /** Owner, 2026-10-18 (shared/src/data/creatureskills.ts): the kinds made to fire from afar take their charges and their
  *  shooter's special; a kind with an ability is as much dearer in silver as the ability is worth (`cost`, the sea's
  *  reckoning; its might in armyPower and armyWeight). Laid on copies, once. */
 for (const id of Object.keys(UNITS) as UnitId[]) {
-  const r = RANGED_KINDS[id], w = skillWorth(id);
+  const r = RANGED_KINDS[id], w = UNITS[id].roster ? 0 : skillWorth(id);
   if (!r && !w) continue;
   const d = { ...UNITS[id], specials: [...UNITS[id].specials] };
   if (r) {
@@ -453,7 +458,7 @@ export function armyPower(army: readonly ArmyStack[]): number {
   let p = 0;
   for (const s of army) {
     const d = UNITS[s.u];
-    p += s.n * d.hp * ((d.dmin + d.dmax) / 2) * (1 + 0.05 * (d.atk + d.def) / 2) * (d.shots ? 1.15 : 1) * (1 + skillWorth(s.u));
+    p += s.n * d.hp * ((d.dmin + d.dmax) / 2) * (1 + 0.05 * (d.atk + d.def) / 2) * (d.shots ? 1.15 : 1) * (1 + worthOf(s.u));
   }
   return p;
 }
@@ -466,7 +471,7 @@ export function armyWeight(army: readonly ArmyStack[]): number {
   for (const s of army) {
     const d = UNITS[s.u];
     const k = 1 + 0.05 * (d.atk + d.def) / 2;
-    blows += s.n * ((d.dmin + d.dmax) / 2) * k * (d.shots ? 1.15 : 1) * (d.specials.includes('double_strike') ? 1.5 : 1) * (1 + skillWorth(s.u));
+    blows += s.n * ((d.dmin + d.dmax) / 2) * k * (d.shots ? 1.15 : 1) * (d.specials.includes('double_strike') ? 1.5 : 1) * (1 + worthOf(s.u));
     hp += s.n * d.hp * k;
   }
   const one = UNITS.deckhand;

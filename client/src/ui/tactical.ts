@@ -241,7 +241,7 @@ const MISSILE_OF: Record<string, string> = {
   rime_witch: 'part.ms_brine', line_harpooner: 'part.ms_harpoon', hunt_master: 'part.ms_harpoon', fog_chemist: 'part.ms_flask', mask_archer: 'part.ms_arrow',
   ghost_bomber: 'part.ms_grenade',
   // Owner, 2026-10-18: the kinds made ranged (creatureskills.ts RANGED_KINDS) that throw (the magic ones are drawn by hand).
-  fog_cardsharp: 'part.ms_dart', island_chief: 'part.ms_spear', sea_naga: 'part.ms_dart',
+  island_ape: 'part.ms_stone', cliff_harpy: 'part.ms_stone', sea_naga: 'part.ms_dart', giant_toad: 'part.ms_dart',
 };
 const THROWN = new Set(['part.ms_grenade', 'part.ms_stone', 'part.ms_spear', 'part.ms_flask', 'part.ms_net', 'part.ms_smokebomb', 'part.ms_cannonball']);
 
