@@ -106,14 +106,14 @@ export const SKILLS: Record<SkillId, SkillDef> = {
   pierce: D('pierce', 'enemy', 0.1, 'gun_whaling_gun', { blowK: 1, ringK: 0.8 }),
   volley: D('volley', 'none', 0.07, 'ab_double_shot', { shot: true, blowK: 0.7, n: 3 }),
   aimed: D('aimed', 'enemy', 0.07, 'ab_spotters_eye', { shot: true, blowK: 1.8 }),
-  drain: D('drain', 'enemy', 0.08, 'boon_drowned_hands', { range: 5, blowK: 1 }),
+  drain: D('drain', 'enemy', 0.08, 'boon_drowned_hands', { range: 4, blowK: 0.8, healK: 0.6 }),
   devour: D('devour', 'enemy', 0.08, 'ab_maw_of_the_deep', { range: 1, blowK: 1.6, healK: 0.3 }),
   toll: D('toll', 'none', 0.07, 'harness_bell', { range: 2, blowK: 0.5, rounds: 1 }),
   grapple: D('grapple', 'enemy', 0.06, 'ab_red_hook_boarding', { range: 4, free: true, control: true, blowK: 0.4 }),
   tidal: D('tidal', 'enemy', 0.06, 'ab_undertow', { range: 4, control: true, blowK: 0.6, ringK: 0.6 }),
   blink: D('blink', 'hex', 0.04, 'ab_vanish_into_fog', { range: 6, free: true }),
   frenzy: D('frenzy', 'self', 0.05, 'boon_salt_fury', { free: true, rounds: 1 }),
-  summon: D('summon', 'hex', 0.1, 'ab_call_escort', { range: 1, healK: 0.35 }),
+  summon: D('summon', 'hex', 0.1, 'ab_call_escort', { range: 1, healK: 0.15 }),
   death_blast: D('death_blast', 'death', 0.06, 'good_gunpowder', { blowK: 0.6 }),
 };
 export const SKILL_IDS = Object.keys(SKILLS) as SkillId[];
@@ -140,7 +140,7 @@ export const SK = {
   freeze: { speed: -2, init: -3 },
 } as const;
 
-/** Who holds which (owner: «где-то для 30% существ»): 83 of the 271 kinds (31%), spread over the land's creatures, the seven
+/** Who holds which (owner: «где-то для 30% существ»): 84 of the 271 kinds (31%), spread over the land's creatures, the seven
  *  peoples, the shop's and the great ones; none of the men's fourteen (the ladder's own crew and the sea's pirates the
  *  whole balance of docs/31 is weighed on). Each fits its name. */
 export const UNIT_SKILL: Partial<Record<UnitId, SkillId>> = {
@@ -163,16 +163,16 @@ export const UNIT_SKILL: Partial<Record<UnitId, SkillId>> = {
   // The free isles.
   island_elder: 'mass_mend', tide_shaman: 'tidal', tide_caller: 'haste', blowgun_hunter: 'rot', shark_dancer: 'blink', basalt_guardian: 'bulwark',
   // The Dutchman's dead.
-  ghost_bosun: 'fear', lantern_wraith: 'drain', ghost_commodore: 'summon', frostbound: 'freeze', ghost_marksman: 'aimed',
+  ghost_bosun: 'fear', lantern_wraith: 'drain', ghost_commodore: 'rally', frostbound: 'freeze', ghost_marksman: 'aimed',
   // The shop's (premiumbeasts.ts).
   golden_crab: 'toast', coral_basilisk: 'stun', abyssal_angler: 'siren', nautilus_knight: 'bulwark', lava_drake: 'fireball', sea_dragon: 'cone',
   thunderbird: 'chain', abyss_knight: 'drain', walrus_bull: 'taunt', brass_automaton: 'death_blast', storm_giant: 'stun', ember_phoenix: 'raise',
   megalodon: 'devour', marid: 'mass_mend', ice_wyvern: 'freeze', flying_squid: 'ink', selkie: 'cleanse', crimson_guard: 'taunt', storm_berserker: 'frenzy',
-  spice_djinn: 'haste', pirate_lord: 'rally', silver_archer: 'volley', dragon_lancer: 'pierce', cask_mimic: 'death_blast', corposant: 'blink', sea_viper: 'slow',
+  spice_djinn: 'haste', pirate_lord: 'rally', silver_archer: 'volley', dragon_lancer: 'pierce', cask_mimic: 'death_blast', corposant: 'blink', sea_viper: 'slow', coral_colossus: 'summon',
 };
 
 /** What a summoner calls up (the `summon` ability): a stack of these, as many as `healK` of her own strength. */
-export const SUMMON_OF: Partial<Record<UnitId, UnitId>> = { crab_queen: 'crab', mire_mother: 'giant_toad', ghost_commodore: 'ghost_sailor' };
+export const SUMMON_OF: Partial<Record<UnitId, UnitId>> = { crab_queen: 'crab', mire_mother: 'poison_frog', coral_colossus: 'ghost_crab' };
 export const summonOf = (u: UnitId): UnitId => SUMMON_OF[u] ?? 'crab';
 
 /** A kind's ability (none: undefined). */

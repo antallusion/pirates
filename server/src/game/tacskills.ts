@@ -5,7 +5,7 @@
 
 import { SKILLS, SK, summonOf } from '../../../shared/src/data/creatureskills.ts';
 import type { SkillDef, SkillId } from '../../../shared/src/data/creatureskills.ts';
-import { UNITS } from '../../../shared/src/data/army.ts';
+import { UNITS, armyWeight } from '../../../shared/src/data/army.ts';
 import type { BtMods } from '../../../shared/src/data/paths.ts';
 import { TAC_H, TAC_W, hexDir, hexDist, hexIndex, hexNeighbors, hexX, hexY, kindOfUnit, unitResist } from '../../../shared/src/data/tactical.ts';
 import type { TacAction } from '../../../shared/src/protocol.ts';
@@ -190,6 +190,13 @@ function volleyOf(bt: TacBattle, s: TacStack, n: number): TacStack[] {
   return foesOf(bt, s).map((t) => ({ t, v: TK.valueOf(bt, t, skBlow(bt, s, t, SKILLS.volley.blowK!, null)) })).sort((p, q) => q.v - p.v || p.t.id - q.t.id).slice(0, n).map((x) => x.t);
 }
 
+/** The heads a summons calls up: `healK` of the summoner's living might as the sea reckons an army (armyPower: hit points
+ *  by blows, HoMM3's square law: armyWeight), in heads of her kin. */
+export function summonCount(s: TacStack): number {
+  const u = summonOf(s.unit);
+  return Math.max(1, Math.round((SKILLS.summon.healK! * armyWeight([{ u: s.unit, n: s.count }])) / Math.max(0.01, armyWeight([{ u, n: 1 }]))));
+}
+
 /** Give stack `s`'s ability (the action checked first: skillError). Returns whether her turn goes on (a free one). */
 export function castSkill(bt: TacBattle, s: TacStack, a: Extract<TacAction, { a: 'skill' }>, rng: Rng): boolean {
   const id = s.skill!, d = SKILLS[id];
@@ -369,7 +376,7 @@ export function castSkill(bt: TacBattle, s: TacStack, a: Extract<TacAction, { a:
       on.push(t!.id);
       tell();
       const dealt = hit(bt, s, t!, skBlow(bt, s, t!, d.blowK!, rng));
-      if (!undead(t!)) mendOne(bt, s, s, dealt * (id === 'drain' ? 1 : d.healK!));
+      if (!undead(t!)) mendOne(bt, s, s, dealt * d.healK!);
       break;
     }
     case 'grapple': {
@@ -413,7 +420,7 @@ export function castSkill(bt: TacBattle, s: TacStack, a: Extract<TacAction, { a:
     }
     case 'summon': {
       const u = summonOf(s.unit), def = UNITS[u];
-      const n = Math.max(1, Math.round((d.healK! * TK.hpOf(s)) / def.hp));
+      const n = summonCount(s);
       const id2 = Math.max(...bt.stacks.map((x) => x.id)) + 1;
       const st: TacStack = {
         id: id2, side: s.side, kind: kindOfUnit(u), unit: u, sp: [...def.specials], src: u, count: n, start: n, hpTop: def.hp, hpMax: def.hp, hex: a.hex!,
@@ -554,8 +561,12 @@ function worthOf(bt: TacBattle, s: TacStack, x: number | undefined): number {
       const by = foesOf(bt, s).filter((o) => hexNeighbors(x).includes(o.hex));
       return by.length ? Math.max(...by.map(thr)) * 0.5 : 0;
     }
-    case 'summon':
-      return thr(s) * d.healK! * (bt.round <= 3 ? 1 : 0.6);
+    case 'summon': {
+      // the stack it calls up, weighed as the battle weighs a stack's threat, for the rounds it will fight
+      const m = UNITS[summonOf(s.unit)];
+      const n = summonCount(s);
+      return ((n * (m.dmin + m.dmax)) / 2) * (m.atk / 5) * (m.specials.includes('shooter') ? 1.4 : 1) * (bt.round <= 3 ? 1.6 : 1);
+    }
     default:
       return 0;
   }
@@ -563,7 +574,7 @@ function worthOf(bt: TacBattle, s: TacStack, x: number | undefined): number {
 
 /** The abilities whose worth is a hold or a turn (not harm at once): given against a lesser share of her blow, as an
  *  order is — what they do lasts. */
-const HOLDS: ReadonlySet<SkillId> = new Set(['haste', 'rally', 'toast', 'ward', 'bulwark', 'taunt', 'entangle', 'slow', 'curse', 'mark', 'ink', 'fear', 'freeze', 'siren', 'toll', 'stun', 'summon', 'cleanse']);
+const HOLDS: ReadonlySet<SkillId> = new Set(['mend', 'mass_mend', 'raise', 'haste', 'rally', 'toast', 'ward', 'bulwark', 'taunt', 'entangle', 'slow', 'curse', 'mark', 'ink', 'fear', 'freeze', 'siren', 'toll', 'stun', 'cleanse']);
 
 /** Owner, 2026-10-18: the sea's mind (and a captain's auto-battle) gives a stack's ability when it is worth her blow —
  *  the heal when her stacks are cut, the fear on the most dangerous foe, the fireball where they stand close, the leap
@@ -584,7 +595,10 @@ export function aiSkillChoice(bt: TacBattle, s: TacStack): TacAction | null {
   const blowV = bestBlow(bt, s);
   // A free one costs her nothing of her turn; the rest are given when worth most of her best blow (a heal, a hold or a
   // spell weighed as her blows are), or whenever she has no blow to give.
-  if (!d.free && blowV > 0 && bv < blowV * (d.blowK && !HOLDS.has(s.skill!) ? 0.9 : 0.6)) return null;
+  if (!d.free && blowV > 0 && bv < blowV * (HOLDS.has(s.skill!) ? 0.6 : 0.9)) return null;
+  // No blow in reach: steel that could march on the foe instead gives it only when it is worth a good share of her own
+  // threat (the march it costs her).
+  if (!d.free && blowV <= 0 && !isShooter(s) && reachOf(bt, s).size > 0 && bv < TK.threat(bt, s) * 0.3) return null;
   const act: TacAction = { a: 'skill' };
   if (d.aim === 'hex') act.hex = best;
   else if (best !== undefined) act.target = best;

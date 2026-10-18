@@ -1381,12 +1381,16 @@ function rollBase(s: TacStack, rng: Rng | null): number {
 export const TAC_DESPERATION = 2;
 export const TAC_DESPERATION_MAX = 0.4;
 
+/** Owner, 2026-10-18: the share of a summoned stack's strength that counts in desperation (tacskills.ts summon). */
+export const TAC_SUMMON_BACKS = 0.5;
 export function desperation(bt: TacBattle, side: 0 | 1): number {
   let mine = 0, foe = 0;
   for (const o of bt.stacks) {
     if (o.count <= 0) continue;
-    if (o.side === side) mine += hpOf(o);
-    else foe += hpOf(o);
+    // (a summons' minions stand at half their strength here: called up, they lift the other's backs to the rail less)
+    const hp = hpOf(o) * (o.summoned ? TAC_SUMMON_BACKS : 1);
+    if (o.side === side) mine += hp;
+    else foe += hp;
   }
   if (mine >= foe || foe <= 0) return 1;
   return 1 + Math.min(TAC_DESPERATION_MAX, TAC_DESPERATION * (1 - mine / foe));
@@ -1549,7 +1553,8 @@ function hurt(bt: TacBattle, t: TacStack, dmg: number, by: 0 | 1, who = bt.casti
     t.hpTop = left - (t.count - 1) * t.hpMax;
   }
   const kills = before - t.count;
-  if (kills > 0) {
+  // (a summons' minions are nobody's men: their fall shakes no crew's heart nor counts among her dead)
+  if (kills > 0 && !t.summoned) {
     bt.dead[t.side] += kills;
     heroAt(bt, by, who).kills += kills;
     const h = bt.heroes[t.side], k = bt.heroes[by];
@@ -1557,7 +1562,7 @@ function hurt(bt: TacBattle, t: TacStack, dmg: number, by: 0 | 1, who = bt.casti
     k.morale = Math.min(100, k.morale + (kills / Math.max(1, h.startMen)) * 15);
   }
   if (t.count === 0) {
-    bt.broken[t.side]++;
+    if (!t.summoned) bt.broken[t.side]++;
     push(bt, { k: 'die', side: t.side, s: t.id, hex: t.hex });
     if (t.officer) bt.hurt.push({ id: t.officer.id, side: t.side, heavy: true });
     // Owner, 2026-10-18: a powder cask, a boiler, a petard goes off as its stack falls (tacskills.ts).
