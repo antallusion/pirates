@@ -22,6 +22,30 @@
     burger.setAttribute('aria-expanded', String(open));
   });
 
+  // The features' banners: each one sticks to the top and the next slides over it; the one beneath sinks back
+  // (--p: how far the next has come over it) and a banner's art settles as it rises into view (--e).
+  const bnrs = [...d.querySelectorAll('.bnr')];
+  if (bnrs.length && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const cards = bnrs.map((b) => b.querySelector('.bnr-card'));
+    let queued = false;
+    const frame = () => {
+      queued = false;
+      const h = innerHeight;
+      bnrs.forEach((b, i) => {
+        const top = b.getBoundingClientRect().top;
+        const e = Math.min(1, Math.max(0, 1 - top / h));
+        const next = bnrs[i + 1];
+        const p = next ? Math.min(1, Math.max(0, 1 - next.getBoundingClientRect().top / h)) : 0;
+        cards[i].style.setProperty('--p', p.toFixed(3));
+        cards[i].style.setProperty('--e', e.toFixed(3));
+      });
+    };
+    const ask = () => { if (!queued) { queued = true; requestAnimationFrame(frame); } };
+    addEventListener('scroll', ask, { passive: true });
+    addEventListener('resize', ask);
+    frame();
+  }
+
   // The bestiary: a group chip, a name and any tiers pressed.
   const grid = d.getElementById('cgrid');
   if (grid) {
