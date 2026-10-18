@@ -179,10 +179,10 @@ p { margin: 0 0 1em; }
 .stats .stat { padding: 14px 16px; background: var(--card); }
 .stat span { display: block; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ice); }
 .stat b { display: block; font: 700 24px/1.2 var(--display); color: #f2e6c8; margin-top: 2px; }
-.stats.mini { grid-template-columns: repeat(5, 1fr); margin: 14px 0; border-radius: 12px; }
+.stats.mini { grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 14px 0; border-radius: 12px; }
 .stats.mini .stat { padding: 8px 10px; }
 .stats.mini .stat b { font-size: 18px; }
-.stats.mini .stat span { font-size: 9px; letter-spacing: 0.12em; }
+.stats.mini .stat span { font-size: 9px; letter-spacing: 0.08em; line-height: 1.25; min-height: 2.5em; }
 .cdet-info h3, .capcard h3 { margin: 26px 0 12px; font-size: 26px; }
 .abil { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .abil li { position: relative; padding: 12px 16px 12px 20px; border-radius: 14px; background: rgba(14, 19, 32, 0.8); border: 1px solid var(--line); }
@@ -218,16 +218,18 @@ p { margin: 0 0 1em; }
 .passive span { color: #c4bdae; font-size: 15px; }
 
 /* ---- the fleet */
-.ships { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px; }
-.ship { display: grid; grid-template-columns: 120px 1fr; gap: 18px; padding: 18px; transition: transform 0.3s var(--ease), border-color 0.3s; }
+.ships { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+.ship { display: flex; flex-direction: column; overflow: hidden; transition: transform 0.3s var(--ease), border-color 0.3s; }
 .ship:hover { transform: translateY(-3px); border-color: rgba(245, 196, 81, 0.3); }
 .ship.prem { border-color: rgba(245, 196, 81, 0.28); box-shadow: 0 0 30px rgba(245, 196, 81, 0.07); }
-.ship-art { display: grid; place-items: center; border-radius: 14px; background: radial-gradient(circle at 50% 50%, #12233a, #070b14); border: 1px solid var(--line); min-height: 170px; }
-.ship-art img { max-height: 160px; width: auto; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.8)); }
+.ship-art { position: relative; height: 150px; overflow: hidden; border-bottom: 1px solid var(--line); background: radial-gradient(120% 90% at 50% 50%, #15304a, #070b14 75%), url(/site/img/tex/wood.webp) 0 0 / 300px; }
+.ship-art img { position: absolute; left: 50%; top: 50%; height: 560px; width: auto; max-width: none; transform: translate(-50%, -50%) rotate(90deg) scale(0.44); transform-origin: center; filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.85)); transition: transform 0.6s var(--ease); }
+.ship:hover .ship-art img { transform: translate(-47%, -50%) rotate(90deg) scale(0.46); }
+.ship-txt { padding: 16px 18px 18px; min-width: 0; }
 .ship h3 { font-size: 24px; }
 .ship .muted { font-size: 14px; margin: 6px 0 0; }
-.trait { display: flex; gap: 8px; align-items: baseline; font-size: 14px; color: #c4bdae; margin: 0; }
-.trait img { width: 18px; height: 18px; align-self: center; }
+.trait { font-size: 14px; color: #c4bdae; margin: 0; }
+.trait img { display: inline-block; width: 18px; height: 18px; vertical-align: -3px; margin-right: 6px; }
 .trait b { color: var(--gold1); }
 .badge { display: inline-block; vertical-align: middle; padding: 3px 10px; border-radius: 999px; font: 600 10px var(--sans); letter-spacing: 0.16em; text-transform: uppercase; }
 .badge.gold { background: var(--gold); color: #2a1a06; }
@@ -300,7 +302,6 @@ p { margin: 0 0 1em; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .stats.mini { grid-template-columns: repeat(3, 1fr); }
   .ships { grid-template-columns: 1fr; }
-  .ship { grid-template-columns: 90px 1fr; }
   .capcard { padding: 20px; }
   .capcard-art { min-height: 300px; }
 }
