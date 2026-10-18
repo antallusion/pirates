@@ -14,6 +14,7 @@ import { autosailOf, pausedCourse } from '../../server/src/game/autosail.ts';
 import { touches } from '../../server/src/game/strike.ts';
 import { makeGame } from '../../tests/helpers.ts';
 import type { FakeConn } from '../../tests/helpers.ts';
+import type { PlayerSession } from '../../server/src/game/player.ts';
 import { openAt, quietAround, retire, sceneWind, seaCaptainAt } from './harness.ts';
 
 const arg = (k: string, d: string) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
@@ -90,9 +91,14 @@ let ms = 0, ticks = 0;
 const tick = game.step.bind(game);
 /** The captain's phone as it is: its helm resent every 250 ms — no rudder, the sail the request set (autosailRequest:
  *  the client's own sail is the helmsman's, 4 here) — swallowed while the helmsman has the wheel, hers after. */
-let phone: FakeConn | null = null, seq = 0;
+let phone: FakeConn | null = null, phoneS: PlayerSession | null = null, seq = 0;
 const step = () => {
-  if (phone && ticks % 5 === 0) phone.push({ t: 'input', seq: ++seq, rudder: 0, sail: 4 });
+  if (phone && ticks % 5 === 0) {
+    // (four a second of the sea's clock, not of the machine's: the flood guard counts by the wall clock, and the sim's
+    // second passes in a few milliseconds)
+    if (phoneS) phoneS.msgCount = 0;
+    phone.push({ t: 'input', seq: ++seq, rudder: 0, sail: 4 });
+  }
   ticks++;
   tick();
 };
@@ -110,6 +116,7 @@ for (let k = 0; rs.length < N; k++) {
   const { s, c, ship } = seaCaptainAt(game, cls, f.x, f.y, rnd() * Math.PI * 2);
   ship.state.speed = 0;
   phone = c;
+  phoneS = s;
   if (LIVE) ship.protectedUntil = game.now + 1e6;
   let breaks = 0;
   const t0v = touches.get(ship) ?? { touch: 0, blow: 0 };
@@ -168,7 +175,9 @@ for (let k = 0; rs.length < N; k++) {
   if (V || r.touches || r.blows || r.reef || r.tail) console.log(JSON.stringify({ ...r, from: [Math.round(f.x), Math.round(f.y)], to: [Math.round(to.x), Math.round(to.y)] }));
   if (autosailOf(ship)) c.push({ t: 'autosail', stop: true });
   phone = null;
+  phoneS = null;
   retire(game, s, c);
+  game.dropSession(s); // (out of the sea: two hundred captains left lying about slowed every tick sixfold)
   calm();
   void headingOf;
 }
