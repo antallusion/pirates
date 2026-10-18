@@ -90,6 +90,12 @@ export const RACE_KNOTS = 5;
  *  rest is put near it on the server (server/src/game/questlocal.ts). A voyage between ports goes where it names. */
 export const QUEST_LOCAL_R = 1500;
 
+/** Of a list of places, the ones within QUEST_LOCAL_R of a point (by `gap`) — none when none is (owner, 2026-10-18: a
+ *  harbour with no island within reach of its quay gives no landing; its board fills with other work). */
+export function nearOnly<T>(list: T[], gap: (t: T) => number): T[] {
+  return list.filter((t) => gap(t) <= QUEST_LOCAL_R);
+}
+
 /** Of a list of places, the ones within QUEST_LOCAL_R of a point (by `gap`), else the nearest one alone. */
 export function nearFirst<T>(list: T[], gap: (t: T) => number): T[] {
   const near = list.filter((t) => gap(t) <= QUEST_LOCAL_R);
@@ -756,8 +762,10 @@ function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port
   if ((needs('visit2') || needs('deliver2') || needs('contraband') || needs('race2')) && !port2) return null;
   if ((needs('visit3') || needs('deliver3')) && !port3) return null;
   let island: Island | undefined, island2: Island | undefined, site: string | undefined;
-  // Near its port (QUEST_LOCAL_R, shore to quays), else the nearest (one draw of the dice either way, as before).
+  // Near its port (QUEST_LOCAL_R, shore to quays) — and none farther: a harbour with no island within reach of its quay has
+  // no landing on its board (owner, 2026-10-18: «чтобы все было недалеко»); a scouting of a far sea goes where it names.
   const shore = (is: Island) => Math.hypot(is.x - port.x, is.y - port.y) - is.radius;
+  const pickNear = needs('reach') ? nearFirst : nearOnly;
   if (needs('land_site')) {
     const want = plot.site;
     const fits = (is: Island): string | undefined => {
@@ -767,17 +775,17 @@ function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port
       if (want === 'ruins') return here.find((f) => f === 'ruins' || f === 'shrine' || f === 'bell');
       return here.find((f) => f === want);
     };
-    const cands = nearFirst(islands.filter((is) => fits(is)), shore);
+    const cands = pickNear(islands.filter((is) => fits(is)), shore);
     if (!cands.length) return null;
     island = rng.pick(cands);
     site = fits(island);
   } else if (needs('land_any')) {
-    const cands = nearFirst(islands.filter((is) => is.features.some((f) => f !== 'port') || sitesOf(is).some((s) => s !== 'gulls')), shore);
+    const cands = pickNear(islands.filter((is) => is.features.some((f) => f !== 'port') || sitesOf(is).some((s) => s !== 'gulls')), shore);
     if (!cands.length) return null;
     island = rng.pick(cands);
   }
   if (needs('land_any2')) {
-    const cands = nearFirst(islands.filter((is) => is !== island && (is.features.some((f) => f !== 'port') || sitesOf(is).some((s) => s !== 'gulls'))), shore);
+    const cands = pickNear(islands.filter((is) => is !== island && (is.features.some((f) => f !== 'port') || sitesOf(is).some((s) => s !== 'gulls'))), shore);
     if (!cands.length) return null;
     island2 = rng.pick(cands);
   }

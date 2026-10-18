@@ -188,3 +188,26 @@ test('migration: a hunt’s leader put out far off (a save from before) is calle
   const lead = spawnPackLeader(game, port.region, 10, { x: port.x, y: port.y, r: LOCAL_R });
   if (lead) assert.ok(Math.hypot(lead.state.x - port.x, lead.state.y - port.y) <= LOCAL_R);
 });
+
+test('a harbour with no island within 1.5 km of its quay: no landing on its board, no creature jobs from far lairs (owner, 2026-10-18)', async () => {
+  const { generateWorld } = await import('../shared/src/world/worldgen.ts');
+  const { generateQuests, QUEST_LOCAL_R } = await import('../shared/src/data/questgen.ts');
+  const { generateLairJobs } = await import('../shared/src/data/lairquests.ts');
+  const w = generateWorld(1337);
+  const sail = w.islands.filter((i) => !i.portId && !i.minor && !i.raft && !i.hidden && !i.slot);
+  const shore = (i: { x: number; y: number; radius: number }, p: { x: number; y: number }) => Math.hypot(i.x - p.x, i.y - p.y) - i.radius;
+  const bare = w.ports.filter((p) => !p.raft && !sail.some((i) => shore(i, p) <= QUEST_LOCAL_R));
+  assert.ok(bare.some((p) => p.id === 'saltmarrow') && bare.some((p) => p.id === 'gravesend'), 'Saltmarrow and Gravesend are such harbours');
+  const far: string[] = [];
+  for (const q of [...generateQuests(w, 1337), ...generateLairJobs(w, 1337)]) {
+    const port = w.ports.find((p) => p.id === q.port)!;
+    if (q.steps.some((s) => s.type === 'reach')) continue; // a scouting of a far sea: a voyage, and its card says so
+    for (const s of q.steps) {
+      if ((s.type === 'land' || s.type === 'lair') && s.island !== undefined && s.island >= 0 && shore(w.islands[s.island], port) > QUEST_LOCAL_R + 1) far.push(`${q.id}: ${s.type} ${Math.round(shore(w.islands[s.island], port))} m`);
+    }
+  }
+  assert.deepEqual(far.slice(0, 5), [], `${far.length} landings far from their quay`);
+  // and the boards of those harbours still fill with other work
+  const jobs = generateQuests(w, 1337);
+  for (const p of bare.slice(0, 10)) assert.ok(jobs.filter((q) => q.port === p.id).length >= 5, `${p.id}: a board of work`);
+});
