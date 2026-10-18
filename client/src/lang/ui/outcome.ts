@@ -32,6 +32,7 @@ export const EN = {
   'cf.paid': 'Paid: {silver} silver and goods worth {cargo}.',
   'cf.truce': 'truce',
   'cf.none': 'Nobody is firing on you now.',
+  'cf.paidSilver': 'Paid: {silver} silver.',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -66,4 +67,5 @@ export const RU: Record<keyof typeof EN, string> = {
   'cf.paid': 'Отдано: {silver} серебра и товара на {cargo}.',
   'cf.truce': 'перемирие',
   'cf.none': 'Сейчас по вам никто не стреляет.',
+  'cf.paidSilver': 'Отдано: {silver} серебра.',
 };

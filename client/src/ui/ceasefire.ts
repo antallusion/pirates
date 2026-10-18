@@ -99,12 +99,15 @@ export class CeasefireCard {
       return `<div class="cf-row${s.id === v.focus ? ' focus' : ''}"><span class="cf-name">${icon(s.ok ? 'menu_ship' : 'stat_hull', '', 'ico-sm')}<b>${esc(placeName(s.name))}</b>${state || note}</span>`
         + `<button class="btn btn-small" data-cf-one="${s.id}"${!s.ok || wait > 0 ? ' disabled' : ''}>${esc(L('cf.one', { price: fmt(s.price) }))}</button></div>`;
     }).join('');
-    const answeredLine = (v.result ?? []).filter((r) => !r.agreed && r.why).map((r) => `<p class="cf-line bad">${esc(placeName(r.name))}: ${esc(serverText(r.why!))}</p>`).join('');
+    // Who answered and is no longer in the list (agreed: under a white flag now): her name and her answer.
+    const listed = new Set(v.ships.map((s) => s.id));
+    const gone = (v.result ?? []).filter((r) => !listed.has(r.id)).map((r) => `<div class="cf-row cf-done"><span class="cf-name">${icon(r.agreed ? 'faction_free' : 'stat_hull', '', 'ico-sm')}<b>${esc(placeName(r.name))}</b><span class="${r.agreed ? 'good' : 'bad'}">${esc(L(r.agreed ? 'cf.agreed' : 'cf.refused'))}</span></span></div>`).join('');
+    const answeredLine = gone + (v.result ?? []).filter((r) => !r.agreed && r.why).map((r) => `<p class="cf-line bad">${esc(placeName(r.name))}: ${esc(serverText(r.why!))}</p>`).join('');
     this.el.innerHTML = `<div class="enc-card cf-card">
       <div class="cf-head"><div class="enc-h">${icon('faction_free', '', 'ico-md')}${esc(L('cf.title'))}</div><button class="btn btn-small cf-x" data-cf-close aria-label="${esc(L('cf.close'))}">×</button></div>
-      <p class="cf-line muted">${esc(L('cf.text', { pct: Math.round(TRUCE_SHARE * 100), price: fmt(price) }))} ${esc(L('cf.carry', { silver: fmt(v.silver), cargo: fmt(v.cargo) }))}</p>
+      <p class="cf-line muted">${price ? `${esc(L('cf.text', { pct: Math.round(TRUCE_SHARE * 100), price: fmt(price) }))} ` : ''}${esc(L('cf.carry', { silver: fmt(v.silver), cargo: fmt(v.cargo) }))}</p>
       <div class="cf-rows">${rows || `<p class="cf-line muted">${esc(L('cf.none'))}</p>`}</div>
-      ${answeredLine}${v.paid && (v.paid.silver || v.paid.cargo) ? `<p class="cf-line good">${esc(L('cf.paid', { silver: fmt(v.paid.silver), cargo: fmt(v.paid.cargo) }))}</p>` : ''}
+      ${answeredLine}${v.paid && (v.paid.silver || v.paid.cargo) ? `<p class="cf-line good">${esc(v.paid.cargo ? L('cf.paid', { silver: fmt(v.paid.silver), cargo: fmt(v.paid.cargo) }) : L('cf.paidSilver', { silver: fmt(v.paid.silver) }))}</p>` : ''}
       <div class="cf-pay"><span class="cf-seg"><button class="btn btn-small${this.pay === 'silver' ? ' on' : ''}" data-cf-pay="silver">${icon('coin', '', 'ico-sm')}${esc(L('cf.paySilver'))}</button><button class="btn btn-small${this.pay === 'cargo' ? ' on' : ''}" data-cf-pay="cargo"${held.length ? '' : ' disabled'}>${icon('tab_market', '', 'ico-sm')}${esc(L('cf.payCargo'))}</button></span>
         <button class="btn btn-primary btn-small cf-all" data-cf-all${okIds.length && wait <= 0 ? '' : ' disabled'}>${esc(L('cf.all', { total: fmt(v.total) }))}</button></div>
       ${this.pay === 'cargo' ? `<div class="cf-goods"><span class="muted">${esc(L(held.length ? 'cf.goods' : 'cf.noGoods'))}</span>${held.map((g) => `<button class="btn btn-small cf-good${this.goods.has(g) ? ' on' : ''}" data-cf-good="${g}" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}<b>${cargo[g]}</b></button>`).join('')}</div>` : ''}
