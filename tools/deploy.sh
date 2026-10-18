@@ -19,7 +19,7 @@ fi
 SHA=$(git rev-parse --short HEAD)
 [ -z "$(git status --porcelain -- client server shared assets package.json)" ] || echo "note: uncommitted changes are NOT shipped (the archive is of $SHA)"
 TMP=$(mktemp -d)
-git archive --format=tar.gz -o "$TMP/gravetide-$SHA.tgz" HEAD client server shared assets package.json tsconfig.json
+git archive --format=tar.gz -o "$TMP/gravetide-$SHA.tgz" HEAD client server shared assets site package.json tsconfig.json
 scp -q "$TMP/gravetide-$SHA.tgz" "$HOST:/opt/gravetide/releases/"
 rm -rf "$TMP"
 # (a consistent snapshot of the live database before the restart — VACUUM INTO takes the WAL in too; the last ten kept)

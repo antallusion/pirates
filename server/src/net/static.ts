@@ -90,6 +90,8 @@ export function createStaticHandler(root: string) {
   const mounts: Mount[] = [
     { prefix: '/shared/', dir: resolve(root, 'shared') },
     { prefix: '/assets/', dir: resolve(root, 'assets') },
+    // The game's website and forum (tools/site/build.ts writes its pages; the forum's API is server/src/http).
+    { prefix: '/site/', dir: resolve(root, 'site') },
     { prefix: '/', dir: resolve(root, 'client') },
   ];
   const clientDir = resolve(root, 'client');
@@ -205,6 +207,13 @@ export function createStaticHandler(root: string) {
     const url = new URL(req.url ?? '/', 'http://x');
     let path = decodeURIComponent(url.pathname);
     if (path === '/') path = '/index.html';
+    // The website's short addresses: /site, /forum and /wiki lead into it; its folders answer with their index.html.
+    const short: Record<string, string> = { '/site': '/site/', '/forum': '/site/forum/', '/forum/': '/site/forum/', '/wiki': '/site/', '/wiki/': '/site/' };
+    if (short[path]) {
+      res.writeHead(301, { Location: short[path] + url.search }).end();
+      return true;
+    }
+    if (path.startsWith('/site/') && path.endsWith('/')) path += 'index.html';
     if (path === '/assets/manifest.v.json') {
       try {
         return await send(req, res, await versionedManifest(), '.json', 'no-cache');
