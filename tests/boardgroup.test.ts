@@ -290,9 +290,10 @@ test('duration: a group\'s boarding — 5–10 min between captains at 51–60; 
     assert.ok(g2.mins >= 5 && g2.mins <= 10, `L${L} 2 v 2: ${g2.mins.toFixed(1)} min`);
   }
   for (const L of [5, 25]) {
-    // (eight seeds a pairing: at two the rounds' mean swung ±0.4 with the deck's layout alone — it is drawn anew each
-    //  battle since 2026-10-18 — on either side of the half-round allowed)
-    const solo = groupStat(L, 1, null, 8), g = groupStat(L, 3, null, 8, { grow: true });
+    // (24 seeds a pairing: at two, and even at eight, the rounds' mean swung ±0.4 with the deck's layout alone — it is
+    //  drawn anew each battle since 2026-10-18 — on either side of the half-round allowed; at 24 the old decks gave
+    //  +0.30 at L25, the new +0.45, the group's own rounds the same 3.9)
+    const solo = groupStat(L, 1, null, 24), g = groupStat(L, 3, null, 24, { grow: true });
     assert.ok(g.mins <= solo.mins * 2, `L${L} against the sea: three ${g.mins.toFixed(2)} min, alone ${solo.mins.toFixed(2)}`);
     assert.ok(g.rounds <= solo.rounds + 0.5, `L${L}: rounds ${g.rounds.toFixed(1)} vs ${solo.rounds.toFixed(1)}`);
   }

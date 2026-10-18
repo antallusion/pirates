@@ -193,7 +193,7 @@ test('the threshold: a chance under 35% or a mark two levels up', () => {
   assert.ok(isRisky(up.me, up.foe, 0.9), 'two levels up: always the window');
 });
 
-test('the chance is honest: the battles played afresh bear it out within 5%, and asking moves no die of the sea', () => {
+test('the chance is honest: the battles played afresh bear it out within two errors, and asking moves no die of the sea', () => {
   // docs/25 item 63 (2026-10-09): the sea's captains have their level's skills and kit now, and this test's captain has
   // neither — at ⚓5 she no longer contests an equal ship (her chance 0). With docs/25 item 8 (each volley before the
   // boarding thins her army) on top, ⚓6 against ⚓5 fell to 0.035; a hull two levels above hers is the real contest now
@@ -213,18 +213,21 @@ test('the chance is honest: the battles played afresh bear it out within 5%, and
   const odds = boardOdds(game, me, foe);
   assert.equal(calls, 0, 'the sea’s dice untouched');
   assert.ok(odds.chance > 0.05 && odds.chance < 0.95, `a real contest: ${odds.chance}`);
-  // 200 battles more, on dice the estimate never used (seeded as a real boarding seeds its own).
+  // 600 battles more, on dice the estimate never used (seeded as a real boarding seeds its own). The shown chance is 200
+  // battles of its own: the two differ by ~4 points as one error (5% held as before by luck: since 2026-10-18 each
+  // battle's decks are laid anew from its seed, and one draw of them read 0.60 shown, 0.51 played on 200) — held to 8.
   const sa = sideOf(game, me, foe, true), sb = sideOf(game, foe, me, false);
   const seeds = new Rng(4242);
   let won = 0;
-  for (let k = 0; k < 200; k++) {
+  const N = 600;
+  for (let k = 0; k < N; k++) {
     const seed = seeds.int(1, 1e9);
     const r = new Rng(seed ^ 0x7ac7);
     const bt = newBattle(structuredClone(sa), structuredClone(sb), seed, game.now, r, { len: boardLen(me, foe) }); // docs/25: a boarding's own length, as the game fights it
     quickFinish(bt, game.now, r);
     if (bt.over?.winner === 0) won++;
   }
-  assert.ok(Math.abs(odds.chance - won / 200) <= 0.05, `shown ${odds.chance}, played ${won / 200}`);
+  assert.ok(Math.abs(odds.chance - won / N) <= 0.08, `shown ${odds.chance}, played ${won / N}`);
 });
 
 test('the odds take a slice of the server at a time and go on where they left off: the same chance once all are played (playthrough C: 200 battles at once froze the server 5–24 s at level 40)', () => {

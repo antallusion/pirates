@@ -30,11 +30,13 @@ export interface TacProp {
  *  clutter on each deck (its own; `most` things a deck beside her mast, the guns among them), and how open the deck
  *  must stay. */
 export const DECK_PROPS = {
-  items: [1, 3] as const,
+  // (1–2 as the barrels and crates were before: the decks block as much as they did — a third thing on a deck took the
+  //  Smugglers' boardings at level 15 from 48% to 42–45% against all paths, tests/balance/paths-balance)
+  items: [1, 2] as const,
   decor: [1, 2] as const,
   most: 6,
   /** Of the items: the share that is cover ('Q', 'B', 'K'), the rest obstacles ('L'). */
-  cover: 0.65,
+  cover: 0.7,
   /** The hexes of a side's deployment columns left open at the least (TAC_DEPLOY: 3 columns of 9). */
   deployMin: 22,
 } as const;
@@ -74,11 +76,11 @@ export const DECK_ART: Record<'Q' | 'B' | 'K' | 'L' | 'C' | 'd', Record<DeckThem
     war: ['bt_cannon'], cargo: ['bt_cannon'], rich: ['bt_cannon'], cursed: ['bd_sunk_gun', 'bt_cannon'], plain: ['bt_cannon'],
   },
   d: {
-    war: ['bd_rope', 'bd_bucket', 'bd_grate', 'bd_blocks', 'bd_shot'],
+    war: ['bd_rope', 'bd_bucket', 'bd_blocks', 'bd_shot'],
     cargo: ['bd_rope', 'bd_tar', 'bd_blocks', 'bd_hammocks', 'bd_staves', 'bd_grate'],
-    rich: ['bd_rope', 'bd_bucket', 'bd_grate', 'bd_hammocks'],
+    rich: ['bd_rope', 'bd_bucket', 'bd_hammocks', 'bd_tar'],
     cursed: ['bd_chain', 'bd_staves', 'bd_nets', 'bd_rope'],
-    plain: ['bd_rope', 'bd_bucket', 'bd_nets', 'bd_tar', 'bd_chain', 'bd_grate'],
+    plain: ['bd_rope', 'bd_bucket', 'bd_nets', 'bd_tar', 'bd_chain'],
   },
 };
 
@@ -120,7 +122,7 @@ function open(cells: readonly string[]): boolean {
 const STANDS = new Set(['M', 'C', 'B', 'K', 'Q', 'L']);
 
 /** The things on both decks (the left's, mirrored onto the right): the mast amidships two hexes in from the rail, the
- *  guns at the bow and the stern, DECK_PROPS.items more — cover or obstacles — in the waist (the third and fourth columns),
+ *  guns at the bow and the stern, DECK_PROPS.items more — cover or obstacles — in the waist (the fourth column from the rail),
  *  none beside a plank or beside another (a way round each), every hex still reaching the planks and the deployment
  *  columns left open. `cells` holds the water and the planks already. */
 export function layDeck(cells: TacCell[], rng: Rng): void {
@@ -135,7 +137,10 @@ export function layDeck(cells: TacCell[], rng: Rng): void {
   set(hexIndex(2, TAC_H - 1), 'C');
   let n = rng.int(DECK_PROPS.items[0], DECK_PROPS.items[1]);
   for (let tries = 0; n > 0 && tries < 60; tries++) {
-    const i = hexIndex(rng.int(2, 3), rng.int(0, TAC_H - 1));
+    // (the waist — the fourth column from the rail, between the bow's and the stern's rows — where the barrels and the
+    //  crates always stood: anywhere in the second and third columns took the Smugglers' boardings against the Reavers
+    //  at level 15 from 38% to 31% in tools/balance-paths.ts --check)
+    const i = hexIndex(3, rng.int(1, TAC_H - 2));
     const kind: TacCell = rng.chance(DECK_PROPS.cover) ? rng.pick(['Q', 'Q', 'B', 'K'] as const) : 'L';
     if (cells[i] !== '.' || hexNeighbors(i).some((j) => cells[j] === '=' || STANDS.has(cells[j]))) continue;
     set(i, kind);
@@ -187,8 +192,10 @@ export const PLANKS: readonly { a: string; r: number }[] = [
   { a: 'plank_l5', r: 4.49 }, { a: 'plank_l6', r: 4.56 }, { a: 'plank_l7', r: 3.82 },
 ];
 /** A gangway as drawn: from 0.45 of a hex onto one deck, across `span` hexes of water, to 0.45 onto the other; its width
- *  across the row. Shared by the field (client/src/ui/tactical.ts) and the choice below. */
-export const PLANK_DRAW = { over: 0.45, width: 0.52, minWidth: 0.42, maxWidth: 0.62 } as const;
+ *  across the row (the picture's own at that length, a little taller — `stretch` — and held within `minWidth`–`maxWidth`
+ *  of a hex: the boards themselves are about two thirds of a picture's height, the rest its hooks, ropes and weed). Shared
+ *  by the field (client/src/ui/tactical.ts) and the choice below. */
+export const PLANK_DRAW = { over: 0.45, width: 0.52, stretch: 1.15, minWidth: 0.5, maxWidth: 0.72 } as const;
 /** The length over the width a gangway of `span` water hexes is drawn at. */
 export function plankWant(span: number): number {
   return (span + PLANK_DRAW.over * 2) / PLANK_DRAW.width;
