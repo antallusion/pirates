@@ -27,8 +27,10 @@ import { giftLine } from './premium.ts'; // a premium hull's gift (docs/02 §1.A
 import { TREE, isResearched, researchParents, researchQuote } from '../../../shared/src/data/research.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/research.ts';
 import { EN as CEN, RU as CRU } from '../lang/ui/colours.ts';
+import { EN as OEN, RU as ORU } from '../lang/ui/outcome.ts';
 
 const LC = dict(CEN, CRU);
+const LO = dict(OEN, ORU); // the two choices (owner, 2026-10-18)
 
 const L = dict(EN, RU);
 const RL = dict(REN, RRU); // the yard's tree of hulls (docs/20)
@@ -66,7 +68,36 @@ const portName = (id: string) => placeName(KEY_PORTS.find((p) => p.id === id)?.n
  *  window's foot, the prize's line in five rows). */
 const two = (long: string, short: string) => `<span class="ch-long">${esc(long)}</span><span class="ch-short">${esc(short)}</span>`;
 
+/** A ship of the sea beaten (owner, 2026-10-18: «только два выбора»): one compact card — what she had, and the two
+ *  choices with their numbers: (A) take all and sink her (her wreck at once, yours alone, with her timber), (B) take her
+ *  crew and let her go (gone at once). The server does the rest (Game.npcOutcome). */
+function renderOutcome(root: HTMLElement, r: BoardingResult, state: ClientState, send: (m: ClientMsg) => void, close: () => void): void {
+  const o = r.outcome!;
+  const goods = (Object.keys(r.cargo) as GoodId[]).filter((g) => (r.cargo[g] ?? 0) > 0);
+  const units = goods.reduce((n, g) => n + (r.cargo[g] ?? 0), 0);
+  const report = r.report ? [L(r.report.tac ? 'board.reportTac' : 'board.report', { rounds: r.report.rounds, won: r.report.won, lost: r.report.lost }), r.report.duel === 'won' ? L('board.duelWon') : ''].filter(Boolean).join(' · ') : '';
+  const choice = (fate: 'sink' | 'release', cls: string, ico: string, title: string, short: string, sub: string) =>
+    `<button class="btn choice out-choice ${cls}" data-fate="${fate}" title="${esc(title)}" aria-label="${esc(title)}">${icon(ico, '', 'choice-ico')}<span><b>${two(title, short)}</b><small>${esc(sub)}</small></span></button>`;
+  root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('board.title', { name: placeName(r.targetName) }))}</h2><div class="sub">${esc(L('board.sub', { cls: SHIP_CLASSES[r.targetClass].name, ours: r.crewLost, theirs: r.enemyCrewLost }))}${report ? ` · ${esc(report)}` : ''}</div>${r.struck ? `<div class="sub board-report">${esc(LC('board.struck'))}</div>` : ''}</div></div>
+    <div class="modal-body out-body">
+      <div class="out-hold">${goods.slice(0, 8).map((g) => `<span class="out-good" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}<b>${r.cargo[g]}</b></span>`).join('')}<span class="muted">${esc(units ? LO('out.hold', { n: units }) : LO('out.holdEmpty'))}</span><span class="out-good">${icon('coin', '', 'ico-sm')}<b>${fmt(r.gold)}</b></span>${AMMO_IDS.filter((a) => r.ammo[a] > 0).map((a) => `<span class="out-good" title="${esc(AMMO[a].name)}">${icon(`ammo_${a}`, '', 'ico-sm')}<b>${r.ammo[a]}</b></span>`).join('')}</div>
+      ${r.joined?.length ? `<p class="good out-line">${esc(L('board.joined', { n: r.joined.reduce((a, x) => a + x.n, 0) }))}</p>` : ''}
+      ${r.noQuarter ? `<p class="bad out-line">${esc(L('board.noQuarter', { talent: talentName('brd_no_quarter') }))}</p>` : `<p class="muted out-line out-text">${esc(LO('out.text'))}</p>`}
+      ${!r.noQuarter && o.sink.crew <= 0 && o.release.crew <= 0 ? `<p class="muted out-line">${esc(LO('out.noRoom'))}</p>` : ''}
+      <div data-fallen-slot></div>
+      <div class="out-choices${r.noQuarter ? ' one' : ''}">
+        ${choice('sink', 'btn-danger', 'fire', LO('out.sink'), LO('out.sinkShort'), LO('out.sinkSub', { silver: fmt(o.sink.silver), take: o.sink.take, crew: o.sink.crew, timber: o.sink.timber }) + (o.sink.left > 0 ? LO('out.sinkLeft', { n: o.sink.left }) : ''))}
+        ${r.noQuarter ? '' : choice('release', 'btn-primary', 'stat_crew', LO('out.release'), LO('out.releaseShort'), LO('out.releaseSub', { crew: o.release.crew, silver: fmt(o.release.silver) }))}
+      </div></div>`;
+  root.querySelectorAll<HTMLElement>('[data-fate]').forEach((el) => (el.onclick = () => {
+    send({ t: 'loot_take', take: {}, fate: el.dataset.fate as 'sink' | 'release' });
+    close();
+  }));
+  mountFallen(root, state, send); // docs/35: the quick «Воскресить» of her fallen
+}
+
 export function renderBoarding(root: HTMLElement, r: BoardingResult, state: ClientState, send: (m: ClientMsg) => void, close: () => void): void {
+  if (r.npc && r.outcome) return renderOutcome(root, r, state, send, close);
   const take: Cargo = {};
   let recruit = r.recruits;
   const mul = state.ownStats?.contrabandVolumeMul ?? 1;

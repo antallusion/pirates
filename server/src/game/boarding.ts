@@ -25,6 +25,7 @@ import { onCrewKilled, onGrapple } from './mind.ts';
 import { beatenJoin, joinsFrom, moraleLossMul } from './crew.ts';
 import { bloodAndSalt, drownedBoardersRise, drownedTakeLosses } from './bridgefx.ts';
 import { closeTac, resendAlly, sendTac, startTactical, stepTactical, wantsTactical } from './tactical.ts';
+import { truceBoarded } from './ceasefire.ts';
 import { releaseAllies, sharesByAcc } from './boardgroup.ts'; // docs/25 block Е
 import { guardBeaten } from './advmap.ts';
 import { isTrialShip, trialOver } from './throne.ts'; // docs/19 E3
@@ -134,6 +135,7 @@ export function startBoarding(game: Game, a: ShipEntity, b: ShipEntity, aggressi
     game.toastShip(a, ZB_NO_BOARD, 'bad');
     return;
   }
+  truceBoarded(game, a, b); // grappling a ship under her white flag breaks the truce (owner, 2026-10-18)
   softenFoe(game, a, b); // a novice's first three fights (docs/23 item 81): before the men are counted
   const now = game.now;
   a.boardShieldUntil = 0; // she grapples another: her own respite is over

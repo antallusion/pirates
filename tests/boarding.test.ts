@@ -62,30 +62,22 @@ test('opening moves: Pistol Volley drops men, Boarding Axes cut sails, Match Spe
   assert.ok(npc.sails <= sails0 - npc.stats.sailHpMax * 0.19, 'axes in the rigging');
 });
 
-test('prize: sail her home under a prize crew and sell her to the prize court; captives ransomed', () => {
+test('a ship of the sea taken: two choices only, no prize crew; sinking her takes her captain in irons (Ransom), ransomed ashore', () => {
   const { game } = makeGame();
   const { c, s, ship } = atSea(game, 'Privateer', { brd_prize_crew: 2, brd_ransom: 1 });
   const npc = crippled(game, ship, 18);
   c.push({ t: 'board', target: npc.id, aggression: 'careful' });
   steps(game, 20 * 30);
   const r = c.last('boarding')!.result!;
-  assert.ok(r.prize && r.prize.crew >= 2 && r.captive);
-  const crew0 = ship.crew;
+  assert.ok(r.prize === null && r.outcome && r.captive, 'no prize crew offered: the two choices');
   c.push({ t: 'loot_take', take: { rum: 5 }, fate: 'prize' });
-  assert.ok(npc.prize && npc.ownerId === ship.id, 'she is our prize');
-  assert.equal(ship.crew, crew0 - r.prize!.crew);
+  assert.match(c.last('toast')!.msg, /Two choices only/);
+  assert.ok(!npc.prize && s.pendingBoarding, 'refused, the card still open');
+  c.push({ t: 'loot_take', take: {}, fate: 'sink' });
   assert.equal(s.profile!.captives.length, 1, 'captain in irons');
-  assert.ok(ship.transferUntil > game.now, 'plunder takes time to sway across');
-  steps(game, 20 * 20);
-  assert.ok(Math.hypot(npc.state.x - ship.state.x, npc.state.y - ship.state.y) < 700, 'the prize keeps station');
-  // Make port: the court buys her.
+  assert.ok(npc.sinkingUntil > 0, 'she goes down');
   const port = game.world.ports.find((p) => p.shipyardTier >= 1)!;
-  npc.state.x = port.x + 500;
-  npc.state.y = port.y;
-  const gold0 = s.profile!.gold;
   (game as unknown as { dockShip(s: PlayerSession, p: typeof port): void }).dockShip(s, port);
-  assert.ok(s.profile!.gold > gold0, 'prize money');
-  assert.ok(!game.ships.has(npc.id));
   const g1 = s.profile!.gold;
   c.push({ t: 'captive', index: 0, mode: 'ransom' });
   assert.ok(s.profile!.gold > g1);

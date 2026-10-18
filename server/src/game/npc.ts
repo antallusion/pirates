@@ -81,6 +81,10 @@ export interface NpcBrain {
   holdUntil?: number;
   chase: { id: number; until: number } | null; // spotted from the crow's nest: pursue beyond detection range
   spared: Map<number, number>; // ship id -> until: plundered victims are left alone
+  /** A ceasefire bought from her (ceasefire.ts): captain's ship id -> until. She does not take that captain for a foe. */
+  truce?: Map<number, number>;
+  /** …and turns away from her for a while after she agreed. */
+  truceAway?: { id: number; until: number };
   stuckCheck: { x: number; y: number; t: number };
   /** The First Watch's practice raider: she comes for this one novice even in safe water. */
   practice?: number;
@@ -229,6 +233,8 @@ export function planWander(game: Game, ship: ShipEntity, brain: NpcBrain): boole
 
 export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): boolean {
   if (npc.id === other.id || !other.alive || other.docked) return false;
+  // A ceasefire bought from her (owner, 2026-10-18): that captain is no foe of hers until it lapses or she fires.
+  if (npc.truceUntil > game.now && (game.npcs.get(npc.id)?.truce?.get(other.id) ?? 0) > game.now) return false;
   // The adventure map's guards (docs/17 H4): they bar a captain's way; the sea's own ships leave them be.
   if (npc.guardOf || other.guardOf) return !!npc.guardOf && other.isPlayer;
   // The First Watch's raider is her pupil's lesson, and a ship boarded and being looted is her captor's: the sea's
@@ -554,6 +560,8 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
 
   // Ships lashed in a boarding are out of the fight until it is over: no one hunts them or flees from them.
   if (prey && (prey as ShipEntity).grappled && ship.boarding?.with !== (prey as ShipEntity).id) prey = null;
+  // Under a white flag to her (ceasefire.ts): never her prey, whatever brought her (a hunt, a chase, a pack's call).
+  if (prey && ship.truceUntil > now && (brain.truce?.get((prey as ShipEntity).id) ?? 0) > now) prey = null;
   if (threat && (threat as ShipEntity).grappled) threat = null;
 
   if (brain.fireship !== undefined) {
@@ -570,6 +578,16 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
       steer(game, ship, brain, headingOf(px - ship.state.x, py - ship.state.y), d > 400 ? 1 : d > 250 ? 0.75 : 0.25);
     }
     return;
+  }
+  // A ceasefire just agreed: she turns away from the captain who paid, before she goes her own way.
+  if (brain.truceAway && brain.truceAway.until > now) {
+    const o = game.ships.get(brain.truceAway.id);
+    if (o && o.alive && !o.docked) {
+      brain.target = null;
+      steer(game, ship, brain, headingOf(ship.state.x - o.state.x, ship.state.y - o.state.y), 0.8);
+      return;
+    }
+    brain.truceAway = undefined;
   }
   const peaceful = role === 'merchant' || role === 'fisher';
   if (peaceful) {
