@@ -34,7 +34,7 @@ body::before { content: ''; position: fixed; inset: 0; z-index: -1; background: 
 img { max-width: 100%; display: block; }
 a { color: var(--ice); text-decoration: none; }
 a:hover { color: #c6e3f7; }
-h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: 1.05; margin: 0; letter-spacing: 0.02em; }
+h1, h2, h3 { font-variant-numeric: lining-nums; font-family: var(--display); font-weight: 700; line-height: 1.05; margin: 0; letter-spacing: 0.02em; }
 h2 { font-size: clamp(30px, 4vw, 52px); color: #efe4c8; }
 h3 { font-size: clamp(22px, 2.4vw, 30px); color: #efe4c8; }
 p { margin: 0 0 1em; }
@@ -104,7 +104,7 @@ p { margin: 0 0 1em; }
 .statbar { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; margin-top: -10px; border-radius: var(--r-lg); overflow: hidden; border: 1px solid rgba(245, 196, 81, 0.18); background: linear-gradient(180deg, rgba(14, 19, 32, 0.9), rgba(9, 12, 20, 0.95)), url(/site/img/tex/wood.webp) 0 0 / 360px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
 .statbar-i { padding: 22px 12px; text-align: center; border-left: 1px solid var(--line); }
 .statbar-i:first-child { border-left: 0; }
-.statbar-i b { display: block; font: 700 clamp(28px, 3.2vw, 44px)/1 var(--display); background: var(--gold); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.statbar-i b { font-variant-numeric: lining-nums; display: block; font: 700 clamp(28px, 3.2vw, 44px)/1 var(--display); background: var(--gold); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .statbar-i span { display: block; margin-top: 6px; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ice); }
 
 /* ---- features */
@@ -136,7 +136,7 @@ p { margin: 0 0 1em; }
 .ccard-art { position: relative; aspect-ratio: 1; display: grid; place-items: end center; padding: 12px 10px 0; background: radial-gradient(70% 60% at 50% 70%, color-mix(in srgb, var(--tint) 30%, transparent), transparent 70%), linear-gradient(180deg, #111829, #0a0e18); }
 .ccard-art img { position: absolute; left: 6%; right: 6%; bottom: 0; width: 88%; height: 92%; object-fit: contain; object-position: bottom; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.7)); transition: transform 0.45s var(--ease); }
 .ccard:hover .ccard-art img { transform: scale(1.06); }
-.tier-coin { position: absolute; z-index: 2; top: 10px; left: 10px; width: 44px; height: 44px; font-size: 20px !important; display: grid; place-items: center; background: url(/site/img/ui/coin.webp) center / contain no-repeat; color: #2a1a06; font: 700 16px/1 var(--display); text-shadow: 0 1px 0 rgba(255, 235, 190, 0.6); }
+.tier-coin { position: absolute; z-index: 2; top: 10px; left: 10px; width: 46px; height: 46px; display: grid; place-items: center; padding: 0 0 1px 1px; background: url(/site/img/ui/coin.webp) center / contain no-repeat; color: #2a1a06; font: 700 19px/1 var(--sans); font-variant-numeric: lining-nums tabular-nums; text-shadow: 0 1px 0 rgba(255, 235, 190, 0.65); filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.6)); }
 .ccard-body { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px 14px; border-top: 1px solid var(--line); background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent); }
 .ccard-name { font: 700 19px/1.15 var(--display); color: var(--gold1); }
 .ccard-grp { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
@@ -156,7 +156,7 @@ p { margin: 0 0 1em; }
 .search input { flex: 1; background: none; border: 0; color: var(--text); font: 400 15px var(--sans); outline: none; min-width: 0; }
 .search:focus-within { border-color: rgba(245, 196, 81, 0.5); box-shadow: 0 0 0 4px rgba(245, 196, 81, 0.08); }
 .tiers { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
-.coinbtn { width: 44px; height: 44px; border: 0; cursor: pointer; background: url(/site/img/ui/coin_iron.webp) center / contain no-repeat; color: #d9d0bc; font: 700 17px var(--display); transition: transform 0.2s; }
+.coinbtn { display: inline-grid; place-items: center; width: 46px; height: 46px; padding: 0 0 1px 1px; border: 0; cursor: pointer; background: url(/site/img/ui/coin_iron.webp) center / contain no-repeat; color: #e6dcc6; font: 700 17px/1 var(--sans); font-variant-numeric: lining-nums tabular-nums; text-shadow: 0 1px 2px #000; transition: transform 0.2s; }
 .coinbtn:hover { transform: scale(1.08); }
 .coinbtn[aria-pressed='true'] { background-image: url(/site/img/ui/coin_hot.webp); color: #2a1a06; }
 .empty { text-align: center; color: var(--muted); padding: 40px 0; }
@@ -178,7 +178,7 @@ p { margin: 0 0 1em; }
 .stats .stat { box-shadow: 0 0 0 1px var(--line); }
 .stats .stat { padding: 14px 16px; background: var(--card); }
 .stat span { display: block; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ice); }
-.stat b { display: block; font: 700 24px/1.2 var(--display); color: #f2e6c8; margin-top: 2px; }
+.stat b { font-variant-numeric: lining-nums; display: block; font: 700 24px/1.2 var(--display); color: #f2e6c8; margin-top: 2px; }
 .stats.mini { grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 14px 0; border-radius: 12px; }
 .stats.mini .stat { padding: 8px 10px; }
 .stats.mini .stat b { font-size: 18px; }
