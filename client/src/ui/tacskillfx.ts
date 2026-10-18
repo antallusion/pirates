@@ -232,17 +232,30 @@ export function drawSkFx(g: CanvasRenderingContext2D, f: SkFx, t: number, w: num
       break;
     }
     case 'fear': {
-      // a grey pall flows from her to the foe; over it two pale eyes open and a dark shroud sinks
+      // a pale wisp of dread flies from her to the foe; over it a ghostly pall with two glowing eyes rises, a dark shroud
+      // sinks round it and a grey ring draws tight (no skull: the owner's rule)
       if (!landed) {
-        g.globalCompositeOperation = 'source-over';
-        const q = lerp(src, dst, ease(fly));
-        blob(g, '40,40,52', q.x, q.y, w * 0.5, 0.7, 0.4);
+        g.globalCompositeOperation = 'lighter';
+        orb(g, src, dst, ease(fly), w * 0.5, w, '190,180,235', 0.24);
         break;
       }
-      blob(g, '20,20,30', dst.x, dst.y - w * 0.2 + w * 0.5 * after, w * 1.1, 0.6 * fade, 0.4);
+      g.globalCompositeOperation = 'source-over';
+      blob(g, '12,10,22', dst.x, dst.y + w * 0.1, w * 1.2, 0.55 * fade, 0.45);
       g.globalCompositeOperation = 'lighter';
-      for (const sx of [-1, 1]) blob(g, '200,210,240', dst.x + sx * w * 0.18, dst.y - w * 0.55, w * 0.09 * (0.5 + Math.sin(Math.min(1, after * 3) * Math.PI)), 0.95 * fade, 0.5);
-      ring(g, f.to.x, f.to.y, w * (0.9 - 0.45 * ease(after)), '180,180,200', 0.9 * fade, Math.max(2, w * 0.06), [w * 0.1, w * 0.08]);
+      const rise = w * 0.5 * ease(Math.min(1, after * 1.5));
+      const hy = dst.y - w * 0.35 - rise * 0.4; // (kept low: a stack on the top row stands under the phone's top band)
+      blob(g, '170,165,215', dst.x, hy, w * 0.75, 0.55 * fade, 0.35);
+      for (const sx of [-1, 1]) {
+        const open = Math.sin(Math.min(1, after * 2.5) * Math.PI * 0.5);
+        blob(g, '235,240,255', dst.x + sx * w * 0.2, hy - w * 0.05, w * 0.13 * open, fade, 0.6);
+        blob(g, '150,200,255', dst.x + sx * w * 0.2, hy - w * 0.05, w * 0.22 * open, 0.6 * fade, 0.3);
+      }
+      g.strokeStyle = `rgba(220,215,250,${0.85 * fade})`;
+      g.lineWidth = Math.max(1.5, w * 0.05);
+      g.beginPath();
+      g.arc(dst.x, hy + w * 0.32, w * 0.18, Math.PI * 1.15, Math.PI * 1.85);
+      g.stroke();
+      ring(g, f.to.x, f.to.y, w * (1.0 - 0.5 * ease(after)), '200,195,235', 0.95 * fade, Math.max(2, w * 0.07), [w * 0.12, w * 0.08]);
       break;
     }
     case 'stun': {

@@ -243,6 +243,11 @@ const MISSILE_OF: Record<string, string> = {
   // Owner, 2026-10-18: the kinds made ranged (creatureskills.ts RANGED_KINDS) that throw (the magic ones are drawn by hand).
   island_ape: 'part.ms_stone', cliff_harpy: 'part.ms_stone', sea_naga: 'part.ms_dart', giant_toad: 'part.ms_dart',
 };
+/** Owner, 2026-10-18: the painted burst an ability lands with, beside its own drawn look (tacskillfx.ts). */
+const SK_BURST: Partial<Record<SkillId, string>> = {
+  fireball: 'part.explosion', firepot: 'part.explosion', death_blast: 'part.explosion', mend: 'fx.bt_heal', mass_mend: 'fx.bt_heal', raise: 'fx.bt_heal',
+  cleanse: 'part.splash', tidal: 'part.splash', rot: 'fx.bt_poison', miasma: 'fx.bt_poison', summon: 'fx.bt_deep', stun: 'part.muzzle',
+};
 const THROWN = new Set(['part.ms_grenade', 'part.ms_stone', 'part.ms_spear', 'part.ms_flask', 'part.ms_net', 'part.ms_smokebomb', 'part.ms_cannonball']);
 
 /** A path's move drawn over the field (docs/18 items 1, 5): the innate small, the ultimate over the whole board. */
@@ -1465,7 +1470,8 @@ export class TacticalPanel {
       this.addAct(e.s, { k: caster0?.sp.includes('shooter') ? 'shot' : 'atk', t0: t, hit, dx: (to.x - from.x) / len, dy: (to.y - from.y) / len });
     }
     this.light(from.x, from.y - w * 0.5, t, 600, w * 2, '255,220,160', 0.35);
-    this.addFloat({ text: skName(id), x: this.size.cw / 2, y: this.size.ch * 0.18, t0: t, color: e.side === v.you ? YOU : FOE, big: true });
+    // (on a phone below the top band: the captains' chips, the order of turns and the clock stand there)
+    this.addFloat({ text: skName(id), x: this.size.cw / 2, y: this.phone ? Math.max(this.size.ch * 0.27, 100) : this.size.ch * 0.18, t0: t, color: e.side === v.you ? YOU : FOE, big: true });
     if (!this.phone) this.addFloat({ text: skName(id), x: from.x, y: from.y - w * 0.62, t0: t + 80, color: '#e0b862' });
     for (const sid of (e.res ?? []).slice(0, 7)) {
       const h = hexOf(sid);
@@ -1473,6 +1479,12 @@ export class TacticalPanel {
       const cc = this.center(h);
       this.addFloat({ text: SL('float.immune'), x: cc.x, y: cc.y - w * 0.62, t0: hit, color: '#9fc3d8' });
       this.proc('resist', cc, hit);
+    }
+    // the painted bursts the field already has, where it lands (a blast's fire, a heal's light, poison, the deep's water)
+    const burst = SK_BURST[id];
+    if (burst && (!burst.startsWith('fx.') || sprite(`${burst}_0`))) {
+      const at = id === 'death_blast' ? [from, ...pts] : pts.length ? pts : [to];
+      at.slice(0, 6).forEach((c, i) => this.bursts.push({ id: burst, x: c.x, y: c.y - w * 0.3, t0: hit + i * 40, size: w * (i ? 1 : 1.4) }));
     }
     // the field's knock on a blast or a wave
     if (id === 'death_blast' || id === 'fireball' || id === 'tidal' || id === 'firepot') this.shake.kick(hit, 0.05, to.x - from.x || 1, to.y - from.y);
