@@ -46,6 +46,30 @@
     frame();
   }
 
+  // The creature strips turn by themselves, a card every few seconds, back to the first after the last; a hand on
+  // them (a hover, a touch, a scroll of their own) holds them a while. Swiping stays the browser's own.
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    for (const s of d.querySelectorAll('.strip[data-auto]')) {
+      let holdUntil = 0;
+      const hold = (ms) => { holdUntil = Date.now() + ms; };
+      s.addEventListener('pointerenter', () => hold(1e9));
+      s.addEventListener('pointerleave', () => hold(2500));
+      s.addEventListener('touchstart', () => hold(6000), { passive: true });
+      s.addEventListener('wheel', () => hold(6000), { passive: true });
+      s.addEventListener('focusin', () => hold(1e9));
+      s.addEventListener('focusout', () => hold(2500));
+      setInterval(() => {
+        if (Date.now() < holdUntil || d.hidden) return;
+        const r = s.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > innerHeight) return;
+        const card = s.firstElementChild;
+        const step = card ? card.getBoundingClientRect().width + parseFloat(getComputedStyle(s).columnGap || '0') : s.clientWidth;
+        const atEnd = s.scrollLeft + s.clientWidth >= s.scrollWidth - 4;
+        s.scrollTo({ left: atEnd ? 0 : s.scrollLeft + step, behavior: 'smooth' });
+      }, 3200);
+    }
+  }
+
   // The bestiary: a group chip, a name and any tiers pressed.
   const grid = d.getElementById('cgrid');
   if (grid) {

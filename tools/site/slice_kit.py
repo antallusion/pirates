@@ -31,6 +31,7 @@ SHEETS = {
     'w_medals': (4, 4, 'medal', 200, ['kraken', 'ship', 'cannon', 'chest', 'compass', 'wave', 'storm', 'lighthouse',
                                        'island', 'coins', 'cutlass', 'flag', 'chart', 'bell', 'pearl', 'crown']),
 }
+SQUARE = {'ico', 'rank', 'medal'}
 OPAQUE = {'w_tex_wood': ('tex', 'wood', 512), 'w_tex_parchment': ('tex', 'parchment', 512),
           'w_hero_forum': ('hero', 'forum', 1920), 'gt_title_wide': ('hero', 'home', 1920), 'gt_title_mobile': ('hero', 'home_m', 1600),
           'gt_load_sea': ('hero', 'sea', 1920), 'gt_load_island': ('hero', 'island', 1920), 'gt_load_battle': ('hero', 'battle', 1920),
@@ -100,6 +101,12 @@ def main(src: str) -> None:
                     q[..., ch] = np.where(pink, v, q[..., ch])
                 piece = Image.fromarray(q.clip(0, 255).astype(np.uint8), 'RGBA')
             piece.thumbnail((px, px), Image.LANCZOS)
+            if group in SQUARE:
+                # icons, ranks and medals go into square boxes on the page: centred on a square canvas, never squashed
+                side = max(piece.size)
+                sq = Image.new('RGBA', (side, side), (0, 0, 0, 0))
+                sq.paste(piece, ((side - piece.width) // 2, (side - piece.height) // 2))
+                piece = sq
             piece.save(os.path.join(OUT, group, pid + '.webp'), 'WEBP', quality=88, method=6)
         print(name, len(ids))
     for name, (group, pid, px) in OPAQUE.items():

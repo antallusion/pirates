@@ -209,9 +209,9 @@ function home(lang: Lang): string {
 <section class="wrap sec feats-head">${sectionHead(lang === 'ru' ? 'Чем живёт море' : 'What the sea is made of', lang === 'ru' ? 'Heroes of Might and Magic, только пиратская' : 'Heroes of Might and Magic, gone pirate', lang)}</section>
 <section class="stack" aria-label="${lang === 'ru' ? 'Особенности игры' : 'Game features'}">${FEATURES.map((f, i) => `<article class="bnr${i % 2 ? ' flip' : ''}" style="z-index:${i + 1}"><div class="bnr-card"><img class="bnr-art" src="${f.art}" alt="" loading="${i ? 'lazy' : 'eager'}" decoding="async"><span class="bnr-shade"></span>
 <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
-<div class="wrap bnr-txt"><p class="kicker"><img src="${K(f.icon)}" alt="" width="28" height="28">${String(i + 1).padStart(2, '0')} / ${String(FEATURES.length).padStart(2, '0')}</p><h3>${T(L(lang, f.title), lang)}</h3><p>${T(L(lang, f.text), lang)}</p></div></div></article>`).join('')}</section>
+<div class="wrap bnr-txt"><div class="bnr-in"><p class="kicker"><img src="${K(f.icon)}" alt="" width="28" height="28">${String(i + 1).padStart(2, '0')} / ${String(FEATURES.length).padStart(2, '0')}</p><h3>${T(L(lang, f.title), lang)}</h3><p>${T(L(lang, f.text), lang)}</p></div></div></div></article>`).join('')}</section>
 <section class="sec band"><div class="wrap">${sectionHead(lang === 'ru' ? 'Бестиарий' : 'Bestiary', lang === 'ru' ? 'Кто ходит в вашем трюме' : 'Who sails in your hold', lang)}
-<div class="strip">${teaser.map((c) => creatureCard(c, lang, `${root(lang)}creatures/${c.id}.html`)).join('')}</div>
+<div class="strip" data-auto>${teaser.map((c) => creatureCard(c, lang, `${root(lang)}creatures/${c.id}.html`)).join('')}</div>
 <p class="center reveal"><a class="btn-oak" href="${root(lang)}creatures/">${lang === 'ru' ? `Все ${NC(CREATURES.length)}` : `All ${CREATURES.length} creatures`}</a></p></div></section>
 <section class="wrap sec">${sectionHead(lang === 'ru' ? 'Капитаны' : 'Captains', lang === 'ru' ? 'Выберите, кто встанет у штурвала' : 'Choose who takes the wheel', lang)}
 <div class="capstrip">${CAPTAIN_IDS.map((id) => capMini(id, lang)).join('')}</div></section>
