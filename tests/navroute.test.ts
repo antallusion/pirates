@@ -6,8 +6,9 @@
 //     solid things by the hull's margin; the grid's string-pulling never keeps a leg over a thin neck of land; a mark
 //     on land ends on safe water by it.
 //  2. The helmsman: a plan gone stale (a leg over an island) is planned afresh, not sailed; arrived, she stays hove to
-//     though her phone resends its sail (it ran her on onto the shore: tools/nav/autosail-sim.ts, 3 runs in the
-//     first 26), and is kept off a coast until her own hand takes the wheel.
+//     though her phone resends its sail (it ran her on onto the shore), and is kept off a coast until her own hand
+//     takes the wheel. tools/nav/autosail-sim.ts, 200 random runs with the phone's helm: 35 run aground before (34 of
+//     them after the wheel came back), 0 after; the live sea (its ships, its weather), 60 runs: 13 before, 0 after.
 //  3. The line: every run sends its planned way (a tap's, a goal's — the campaign's —, a new plan), and a goal's place
 //     waiting in port has its way too; the client draws it from where she is and reckons the km by it.
 
@@ -172,10 +173,15 @@ test('a mark on land (an island\'s middle, a lair ashore, a point of the coast) 
 
 // ------------------------------------------------------------------ 2. the helmsman
 
-/** Her phone: no rudder, the helmsman's sail, four times a second. */
-function phone(game: Game, c: ReturnType<typeof seaCaptainAt>['c'], sec: number, sail = 4, each?: () => void): void {
+/** Her phone: no rudder, the helmsman's sail, four times a second (of the sea's clock: the flood guard counts by the
+ *  wall clock, and a test's second passes in milliseconds). */
+function phone(game: Game, cap: Pick<ReturnType<typeof seaCaptainAt>, 'c' | 's'>, sec: number, sail = 4, each?: () => void): void {
+  const { c, s } = cap;
   for (let i = 0; i < sec * 20; i++) {
-    if (i % 5 === 0) c.push({ t: 'input', seq: 1000 + i, rudder: 0, sail });
+    if (i % 5 === 0) {
+      s.msgCount = 0;
+      c.push({ t: 'input', seq: 1000 + i, rudder: 0, sail });
+    }
     game.step();
     each?.();
   }
@@ -199,7 +205,7 @@ test('a plan gone stale (a leg straight over an island) is planned afresh from w
   run.plannedAt = -1e9;
   const t0 = touches.get(ship)?.touch ?? 0;
   let replanned = false, why = '';
-  phone(game, c, 300, 4, () => {
+  phone(game, { c, s }, 300, 4, () => {
     const r = autosailOf(ship);
     if (r && r.path.length > 2) replanned = true;
     if (!why && !r) why = (c.last('autosail') as { why?: string } | undefined)?.why ?? 'off';
@@ -224,7 +230,7 @@ test('arrived by a shore: she stays hove to though her phone resends the sail, a
   assert.equal(startAutosail(game, s, is.x, is.y, 4, 60), null);
   let arrived = -1;
   const t0 = touches.get(ship)?.touch ?? 0;
-  phone(game, c, 400, 4, () => {
+  phone(game, { c, s }, 400, 4, () => {
     if (arrived < 0 && !autosailOf(ship)) arrived = game.now;
   });
   calm();
@@ -234,6 +240,7 @@ test('arrived by a shore: she stays hove to though her phone resends the sail, a
   assert.equal(ship.input.sailTarget, 0, 'the sail the phone resends is held off');
   assert.equal((touches.get(ship)?.touch ?? 0) - t0, 0, 'not a touch on the island');
   // her own sail set: hers again
+  s.msgCount = 0;
   c.push({ t: 'input', seq: 99_000, rudder: 0, sail: 2 });
   assert.ok(ship.input.sailTarget > 0, 'a new sail of hers is set');
   void guardOf;
@@ -255,7 +262,7 @@ test('broken off by a shot near a coast: the lead line keeps her off it until sh
   const t0 = touches.get(ship)?.touch ?? 0;
   let broke = false;
   const t1 = game.now;
-  phone(game, c, 60, 4, () => {
+  phone(game, { c, s }, 60, 4, () => {
     if (!autosailOf(ship)) broke = true;
     if (game.now - t1 < 20) ship.lastCombat = game.now; // (the fight goes on a while: no course taken up again)
   });
