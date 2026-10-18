@@ -18,7 +18,7 @@ import type { ClientState } from '../state.ts';
 import { esc, fmt, icon } from './dom.ts';
 import { buttonHtml } from './kit/button.ts';
 import { doubloonIcon } from './premium.ts';
-import { countdown } from './promo.ts';
+import { countdown, seaIconUp } from './promo.ts';
 
 const L = dict(EN, RU);
 
@@ -59,6 +59,8 @@ export class DailyGift {
   /** What the last claim handed over (shown in the calendar until it closes). */
   private got: Gift | null = null;
   private born = performance.now();
+  /** The calendar was opened by her tap on the icon. */
+  private byHand = false;
 
   constructor(d: GiftDeps) {
     this.d = d;
@@ -103,7 +105,7 @@ export class DailyGift {
     this.icon();
     if (this.over) {
       // a window opened over it (the harbour, a fight): it steps down, the icon stays
-      if (this.d.modal() || this.d.busy()) this.close();
+      if (this.d.modal() || (this.d.busy() && !this.byHand)) this.close();
       else {
         const el = this.over.querySelector<HTMLElement>('[data-gfnext]');
         if (el && this.view) el.textContent = L('next', { t: countdown(this.view.next - this.now()) });
@@ -126,12 +128,11 @@ export class DailyGift {
       t.innerHTML = buttonHtml({ kind: 'icon', id: 'tc-daily', icon: 'ui_gift', glyph: '✦', aria: L('iconAria'), cls: 'sea-round tc-daily hidden' }).trim();
       el = t.content.firstElementChild as HTMLButtonElement;
       el.insertAdjacentHTML('beforeend', '<b class="k-badge tc-daily-b" aria-hidden="true">!</b>');
-      el.addEventListener('click', () => this.open());
+      el.addEventListener('click', () => this.open(true));
       host.append(el);
     }
-    const hud = document.getElementById('hud');
-    const isle = document.getElementById('isle');
-    const up = !!this.view?.can && !!hud && !hud.classList.contains('hidden') && !this.d.modal() && !this.d.busy() && !(isle && !isle.classList.contains('hidden')) && !this.d.state.onboarding?.stage && !document.body.classList.contains('tac');
+    // (a hostile near or a fight at sea never puts it away: promo.ts seaIconUp)
+    const up = !!this.view?.can && seaIconUp(this.d.modal(), this.d.state);
     if (el.classList.contains('hidden') === up) el.classList.toggle('hidden', !up);
     const words = L('iconAria');
     if (el.getAttribute('aria-label') !== words) {
@@ -140,8 +141,10 @@ export class DailyGift {
     }
   }
 
-  open(): void {
+  /** byHand: her tap on the icon (a fight near does not send it away then; the one that came by itself steps down). */
+  open(byHand = false): void {
     if (!this.view) return;
+    this.byHand = byHand;
     this.over?.remove();
     const el = document.createElement('div');
     el.id = 'gift-over';

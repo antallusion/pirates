@@ -129,8 +129,6 @@ body.simple { --tr-b: 44px; --tr-g: 8px; --tr-c: 1; --lr-i: 0; --lr-o: 0; --lr-d
 @media (max-height: 520px) { body.simple { --tr-b: calc(36px + 8 * var(--u, 1px)); --tr-g: calc(5px + 3 * var(--u, 1px)); } }
 @media (min-width: 1100px) and (min-height: 600px) { body.simple:not(.touch) { --tr-c: 0; } }
 body.simple:has(#touch > #tc-isle:not(.hidden)) { --lr-i: 1; }
-/* («Остров» steps out in a fight and with the chart stepped up, isle.css: the offer moves up, no hole) */
-body.simple:is(.sea-fight, .touch.mm-peek):has(#touch > #tc-isle) { --lr-i: 0; }
 body.simple:has(#touch > #tc-offer:not(.hidden)) { --lr-o: 1; }
 body.simple:has(#touch > #tc-daily:not(.hidden)) { --lr-d: 1; }
 body.simple #hud-map { top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + 8px); width: var(--mm); height: var(--mm); }
@@ -140,7 +138,7 @@ body.simple #hud #touch > :is(#tc-menu, #tc-news, #tc-isle, #tc-offer, #tc-daily
    many stand in the row now — the news comes and goes, the menu steps up with the chart in a fight — and the row is
    centred on the chart's middle, one gap between) */
 body.simple { --tr-n: 2; }
-body.simple:is(:has(#touch > #tc-news.hidden), :has(#hud-watch:not(.hidden):not(.tut-hidden)), .touch:has(#hud-watch:not(.hidden)), .touch.sea-fight, .touch.sea-target, .mm-peek) { --tr-n: 1; }
+body.simple:is(:has(#touch > #tc-news.hidden), :has(#hud-watch:not(.hidden):not(.tut-hidden)), .touch:has(#hud-watch:not(.hidden))) { --tr-n: 1; }
 body.simple #hud #touch > :is(#tc-menu, #tc-news) { left: auto; top: var(--tr-top);
   right: calc(var(--sa-r) + 8px + (var(--mm) - var(--tr-n) * var(--tr-b) - (var(--tr-n) - 1) * var(--tr-g)) / 2 + var(--tr-x, 0) * (var(--tr-b) + var(--tr-g))); }
 body.simple #hud #touch > #tc-news { --tr-x: 1; }
@@ -150,15 +148,11 @@ body.simple #hud #touch > #tc-news { --tr-x: 1; }
 body.simple #hud #touch > #tc-home { display: block; position: absolute; left: auto; bottom: auto; top: calc(var(--tr-top) + var(--tr-b) + var(--tr-g));
   right: calc(var(--sa-r) + 8px + (var(--mm) - var(--tr-b)) / 2); width: var(--tr-b); height: var(--tr-b); min-width: 0; min-height: 0; pointer-events: auto; }
 body.simple #hud #touch > #tc-home.hidden { display: none; }
-/* (a fight on a touch screen: the chart and the menu stepped up behind their tab, «К кораблю» right under the tab — the
-   fight's «Цель» stands high on a short screen; the chart brought back by her tap — the menu in the row, the fight's
-   buttons below — it waits: a pinch brings the view in) */
-body.simple.touch.sea-fight.mm-peek #hud #touch > #tc-home { top: calc(var(--sa-t) + 52px); }
-body.simple.touch.sea-fight.mm-peek #hud #touch > #tc-home .tc-home-l { display: none; }
+/* (a fight on a touch screen with the chart brought back by her tap — the menu in the row, the fight's buttons below —
+   it waits: a pinch brings the view in; with the chart up behind its tab it stands under the row, as ever) */
 body.simple.touch.sea-fight:not(.mm-peek) #hud #touch > #tc-home { display: none; }
 body.simple #hud #touch > #tc-home .tc-home-l { position: absolute; left: 50%; top: calc(100% + 3px); transform: translateX(-50%); font-size: 9px; line-height: 1; white-space: nowrap;
   color: var(--bone, #e6dccb); text-shadow: 0 1px 2px #000, 0 0 4px #000; pointer-events: none; }
-body.simple.mm-peek #hud #touch > #tc-news { --tr-x: 0; }
 body.simple #hud #touch > :is(#tc-menu, #tc-news) .k-badge { top: -3px; right: auto; left: -8px; }
 body.simple:not(.touch) #hud #touch > #tc-menu > .kc-b { left: -6px; top: -6px; bottom: auto; transform: none; }
 /* the left row */
@@ -172,8 +166,6 @@ body.simple #hud #touch > #tc-daily .tc-daily-b { background: linear-gradient(18
 body.simple #hud #touch > :is(#tc-isle, #tc-offer, #tc-daily) .k-badge { top: -4px; right: -6px; left: auto; }
 /* the words under the left row's buttons: «Остров», the offer's clock */
 body.simple #hud #touch > #tc-isle .tc-isle-l { left: 50%; right: auto; top: calc(100% + 3px); bottom: auto; transform: translateX(-50%); font-size: 9px; }
-/* (480×270: the adventure card unfolded has no room beside the right row — its buttons step out of sight meanwhile) */
-body.simple #hud #touch > .tr-veil { visibility: hidden; pointer-events: none; }
 /* the chat's round button heads the left row (a desk keeps it by the helm: chat.css), its line of words to the right
    of the row */
 @media (max-width: 1099px), (max-height: 599px) {
@@ -191,24 +183,25 @@ body.simple #hud #touch > #tc-offer .tc-offer-off { position: absolute; top: -5p
 body.simple #hud #touch > #tc-offer .tc-offer-t { position: absolute; z-index: 3; left: 50%; top: calc(100% + 2px); transform: translateX(-50%); padding: 0 4px; border-radius: var(--k-r-round);
   background: linear-gradient(180deg, rgba(30, 24, 17, 0.94), rgba(10, 9, 7, 0.94)); box-shadow: inset 0 0 0 1px rgba(224, 184, 98, 0.6), 0 1px 3px rgba(0, 0, 0, 0.8);
   font: 700 9.5px/13px var(--k-font-sans); white-space: nowrap; pointer-events: none; }
+/* (a short screen: «Остров» stays in the row in a fight now, 2026-10-18 — the clock under the offer a size smaller, clear
+   of its word: 480×270 ran them 1 px into each other) */
+@media (max-height: 520px) { body.simple #hud #touch > #tc-offer .tc-offer-t { padding: 0 3px; font-size: 8.5px; line-height: 12px; } }
 @keyframes tc-offer-glow { 0%, 100% { filter: drop-shadow(0 0 3px rgba(232, 196, 106, 0.35)); } 50% { filter: drop-shadow(0 0 8px rgba(240, 206, 120, 0.75)); } }
 body.reduce-motion #hud #touch > #tc-offer { animation: none; }
 @media (prefers-reduced-motion: reduce) { body.simple #hud #touch > #tc-offer { animation: none; } }
 #hud-map > .kc-map { left: 15%; bottom: 9%; }
 /* The First Watch's lesson is the news now: the counter waits (seven things to touch at most with its two skips). */
 body.simple:has(#hud-watch:not(.hidden):not(.tut-hidden)) #touch > #tc-news { display: none !important; }
-/* A fight on a touch screen: the counter steps aside (seven things to touch at most). */
-body.simple.touch.sea-fight #touch > #tc-news { display: none !important; }
 /* …and the chart with the menu step up out of the corner (owner, 2026-10-09: «по-умолчанию пусть скрывается немного,
    типа вверх или вбок заезжает, но если тапнуть то можно вернуть»): the bottom of the compass ring and a brass tab
-   hang from the top edge; a tap on them brings both back down for this mark (seahud.ts minimapMode). One thing to
-   touch for the two, so a fight keeps seven. «Мини-карта при цели: всегда показывать» keeps them where they are. */
-body.touch #hud-map, body.touch #touch > #tc-menu { transition: transform var(--k-dur-3, 320ms) var(--k-ease-out, ease-out), opacity var(--k-dur-3, 320ms) var(--k-ease-out, ease-out), visibility 0s; }
+   hang from the top edge; a tap on them brings it back down for this mark (seahud.ts minimapMode). «Мини-карта при
+   цели: всегда показывать» keeps it where it is. The round buttons under it never go (owner, 2026-10-18: «иконки…
+   не должны исчезать никогда»): the menu and the news step up under the tab with it, the same row, centred on it. */
+body.touch #hud-map { transition: transform var(--k-dur-3, 320ms) var(--k-ease-out, ease-out), opacity var(--k-dur-3, 320ms) var(--k-ease-out, ease-out), visibility 0s; }
 /* (the ring's bottom and the tab hang from the safe area's edge: in Telegram's fullscreen under its own buttons) */
 body.touch.mm-peek #hud-map { transform: translateY(calc(-1 * (var(--mm) + 8px) + 13px)); pointer-events: none; }
 body.touch.mm-peek #hud-map { clip-path: inset(calc(var(--mm) - 13px) -20px -20px -20px); }
-body.touch.mm-peek #touch > #tc-menu { transform: translateY(calc(-100% - var(--sa-t) - 20px)); opacity: 0; visibility: hidden; pointer-events: none;
-  transition: transform var(--k-dur-3, 320ms) var(--k-ease-out, ease-out), opacity var(--k-dur-2, 200ms) var(--k-ease-out, ease-out), visibility 0s var(--k-dur-3, 320ms); }
+body.simple.touch.mm-peek { --tr-top: calc(var(--sa-t) + 46px); }
 #mm-tab { display: none; }
 body.touch.mm-peek #touch > #mm-tab { display: block; position: absolute; top: var(--sa-t); right: calc(var(--sa-r) + 8px); width: var(--mm); height: 44px; margin: 0; padding: 0;
   border: 0; background: none; pointer-events: auto; cursor: pointer; -webkit-tap-highlight-color: transparent; animation: mm-tab-in var(--k-dur-3, 320ms) var(--k-ease-out, ease-out); }
@@ -221,8 +214,8 @@ body.touch.mm-peek #touch > #mm-tab { display: block; position: absolute; top: v
 #mm-tab:focus-visible .mm-tab-pill { box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.75), 0 0 0 2px var(--k-gold, #e0b862); }
 #mm-tab .k-badge { top: auto; bottom: 18px; right: calc(50% - 34px); }
 @keyframes mm-tab-in { from { transform: translateY(-14px); opacity: 0; } to { transform: none; opacity: 1; } }
-body.reduce-motion :is(#hud-map, #touch > #tc-menu, #touch > #mm-tab) { transition: none !important; animation: none !important; }
-@media (prefers-reduced-motion: reduce) { body.touch :is(#hud-map, #touch > #tc-menu, #touch > #mm-tab) { transition: none !important; animation: none !important; } }
+body.reduce-motion :is(#hud-map, #touch > #tc-menu, #touch > #tc-news, #touch > #mm-tab) { transition: none !important; animation: none !important; }
+@media (prefers-reduced-motion: reduce) { body.touch :is(#hud-map, #touch > #tc-menu, #touch > #tc-news, #touch > #mm-tab) { transition: none !important; animation: none !important; } }
 
 /* ---------- top middle: one column — her mark, a boss's line, the lesson, the sea's name — and the toasts under it */
 body.simple #hud-stack, body.simple #hud #hud-stack, body.simple.touch #hud-stack, body.simple.touch #hud #hud-stack, body.simple.touch.sea-target #hud #hud-stack {
@@ -714,9 +707,13 @@ body.tac-ph .tb-grouped .tb-top { left: calc(env(safe-area-inset-left, 0px) + 12
    стоят, и делай их маленькими». On a touch screen «Действие» was one 52 px gold slab; now it and the next two things to
    do stand in one row of compact pills — a picture and a short word — the gold one at the row's end under the thumb, the
    rest behind its long press («+N»). Sized with --u (fit.css): 32 px tall at 270 px, 36 px at 360 px and over. */
-body.touch #touch > .tc-actrow { display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: calc(4px + 2 * var(--u, 1px)); }
+/* every thing to do in sight at once (owner, 2026-10-18: «нельзя скрывать ничего»): the gold one first in the markup at
+   the row's right end, the small ones leftward from it and, where one row cannot hold them, on up in rows above it
+   (row-reverse, wrap-reverse); seahud.ts fitActs sets .tc-icons — the small ones their picture only — where their
+   words do not fit in one row */
+body.touch #touch > .tc-actrow { display: flex; flex-direction: row-reverse; flex-wrap: wrap-reverse; align-items: center; align-content: flex-start; justify-content: flex-start; gap: calc(4px + 2 * var(--u, 1px)); }
 body.touch #touch > .tc-actrow.hidden { display: none; }
-body.touch #touch > .tc-actrow > .k-btn { flex: 0 1 auto; min-width: 0; height: var(--f-tap, 36px); min-height: var(--f-tap, 36px); padding: 0 calc(8px + 3 * var(--u, 1px)); gap: calc(3px + 2 * var(--u, 1px));
+body.touch #touch > .tc-actrow > .k-btn { flex: none; min-width: 0; height: var(--f-tap, 36px); min-height: var(--f-tap, 36px); padding: 0 calc(8px + 3 * var(--u, 1px)); gap: calc(3px + 2 * var(--u, 1px));
   font-size: var(--f-fs, 12.5px); line-height: 1; white-space: nowrap; text-wrap: nowrap; border-radius: var(--k-r-round); pointer-events: auto; }
 body.touch #touch > .tc-actrow > .k-btn .k-btn-ico, body.touch #touch > .tc-actrow .tc-act-ico img { width: var(--f-ico, 20px); height: var(--f-ico, 20px); flex: none; margin: 0; }
 body.touch #touch > .tc-actrow > .k-btn .k-btn-l { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -727,13 +724,11 @@ body.touch #touch > .tc-actrow > .tc-act2 { max-width: 30vw; background: rgba(11
    border now, and the picture keeps a 3 px padding inside it, in the middle of the pill's height with its word) */
 .skinned #touch > .tc-actrow > .k-btn.k-btn--primary, .skinned #touch > .tc-actrow > .k-btn.k-btn--secondary { border-width: 6px 9px; border-image-width: 6px 9px; }
 #touch > .tc-actrow > .k-btn .k-btn-ico, #touch > .tc-actrow .tc-act-ico img, body.touch #touch > .tc-actrow > .k-btn .k-btn-ico, body.touch #touch > .tc-actrow .tc-act-ico img { width: calc(var(--f-tap, 36px) - 18px); height: calc(var(--f-tap, 36px) - 18px); }
-/* a narrow phone: the small ones their picture only (the word is their label for the screen reader and the title); a
-   phone of 740 px held sideways too, where the row keeps between the fight's buttons and the helm's «−» «+» */
-@media (max-width: 560px), (max-width: 740px) and (max-height: 520px) {
-  body.touch #touch > .tc-actrow > .tc-act2 { width: var(--f-tap, 36px); padding: 0; justify-content: center; }
-  .skinned body.touch #touch > .tc-actrow > .tc-act2, body.touch.skinned #touch > .tc-actrow > .tc-act2 { border-width: 6px; border-image-width: 6px; } /* (its picture inside the frame) */
-  body.touch #touch > .tc-actrow > .tc-act2 .k-btn-l { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-}
+/* no room for their words in one row (seahud.ts fitActs): the small ones their picture only — the word is their label
+   for the screen reader, the title and the long press's hint — squares wrapping upward */
+body.touch #touch > .tc-actrow.tc-icons > .tc-act2 { width: var(--f-tap, 36px); padding: 0; justify-content: center; }
+.skinned body.touch #touch > .tc-actrow.tc-icons > .tc-act2, body.touch.skinned #touch > .tc-actrow.tc-icons > .tc-act2 { border-width: 6px; border-image-width: 6px; } /* (its picture inside the frame) */
+body.touch #touch > .tc-actrow.tc-icons > .tc-act2 .k-btn-l { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 /* the desk's context row a little smaller too (one row already) */
 body.simple:not(.touch) #hud-prompt .act-btn { --h: 30px; font-size: 12px; }
 

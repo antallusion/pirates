@@ -17,7 +17,7 @@ const langs = (process.env.LANG2 ?? 'ru').split(',');
 const tg = Number(process.env.TG ?? 0);
 const port = Number(process.env.GPORT ?? 58994);
 const OUT = process.env.OUT ?? 'assets/raw/audit/tophud';
-const states = (process.env.STATES ?? 'none,far,enc,sail,lair,open,boss,ship,port,strike,fight,farfight').split(',');
+const states = (process.env.STATES ?? 'none,far,enc,sail,sailing,sailfight,lair,open,boss,ship,port,strike,fight,farfight').split(',');
 mkdirSync(OUT, { recursive: true });
 
 const b = await L.browser();
@@ -99,6 +99,17 @@ try {
         if (st === 'strike') { await L.say(p, '/tp black_coast'); await L.sleep(1500); await L.say(p, '/strike'); await L.sleep(2500); }
         // an encounter's card (the top band)
         if (st === 'enc') { await L.say(p, '/tp black_coast'); await L.sleep(1500); await L.say(p, '/enc raft'); await L.sleep(2500); }
+        // (owner, 2026-10-18: «исчезают когда я плыву»): under full sail by her own hand with pirates about, and the
+        // helmsman's course with a pirate coming on — the two rows of round buttons in sight all the while
+        if (st === 'sailing' || st === 'sailfight') {
+          await L.say(p, '/tp gravewater');
+          await L.sleep(1200);
+          await L.say(p, '/foe pirate brig 300');
+          await L.sleep(800);
+          if (st === 'sailing') await p.evaluate(() => { globalThis.gravetide.net.send({ t: 'autosail', stop: true }); const s = globalThis.gravetide.state; s.input.sail = 3; });
+          else await p.evaluate(() => { const g = globalThis.gravetide, o = g.state.ownDisplay; g.net.send({ t: 'autosail', x: Math.round(o.x - 1500), y: Math.round(o.y + 1500) }); });
+          await L.sleep(2500);
+        }
         // the autosail's chip: a course to a spot 2 km off
         if (st === 'sail') {
           await L.say(p, '/tp black_coast');
@@ -108,13 +119,19 @@ try {
         }
         await L.sleep(1500);
         await dismiss(p);
-        await L.sleep(400);
+        await L.sleep(1100); // (the offer's icon comes back on its half-second tick after a window closed: the edge's)
         const m = await measure(p);
         const name = `${W}x${H}_${lang}${tg ? '_tg' + tg : ''}_${st}`;
         await p.screenshot({ path: `${OUT}/${name}.png` });
         const bad = judge(m, W, H, tg);
         if (st === 'port' && !(await p.evaluate(() => !!globalThis.gravetide.state.self?.dockedAt))) bad.push('not in a harbour');
         if (st === 'port' && !m.btns.some((x) => x.id === 'tc-offer')) bad.push('no offer icon in the harbour');
+        // ALWAYS IN SIGHT (owner, 2026-10-18: «иконки… не должны исчезать никогда»): every round button that is out (not
+        // .hidden: the news with none, the gift taken) is seen; her island's, her offer's, the menu and the chat always
+        for (const id of m.gone) bad.push(`${id} out but not seen`);
+        for (const id of ['tc-isle', 'tc-offer', 'tc-menu']) if (!m.btns.some((x) => x.id === id) && !m.gone.includes(id)) bad.push(`${id} missing`);
+        if (!m.extra.some((x) => x.id === '#hud-chat > .chat-toggle')) bad.push('the chat missing');
+        m.moving = await p.evaluate(() => { const s = globalThis.gravetide.state; return { v: Math.round((s.you?.spd ?? 0) * 10) / 10, auto: !!s.autosail, fight: document.body.classList.contains('sea-fight'), peek: document.body.classList.contains('mm-peek') }; });
         fails += bad.length;
         rows.push({ name, ...m, bad });
         L.log(`${bad.length ? 'FAIL' : 'ok  '} ${name} ${summary(m)}${bad.length ? '\n     ' + bad.join('\n     ') : ''}`);
@@ -141,7 +158,7 @@ async function dismiss(p) {
 
 function summary(m) {
   const f = (r) => (r ? `${r.l},${r.t} ${r.w}x${r.h}` : '—');
-  return `col ${m.colN}×${m.colB}${m.rowMid !== undefined ? ` mid ${m.rowMid}` : ''} ring ${f(m.ring)} map ${f(m.map)} card ${f(m.card)} gaps ${m.gapL ?? '—'}/${m.gapR ?? '—'} btns ${m.btns.map((x) => `${x.id}:${f(x)}`).join(' ')}${m.stack ? ` stack ${f(m.stack)} gaps ${m.sgL}/${m.sgR}` : ''}`;
+  return `${m.moving ? `[v ${m.moving.v}${m.moving.auto ? ' auto' : ''}${m.moving.fight ? ' fight' : ''}${m.moving.peek ? ' peek' : ''}] ` : ''}col ${m.colN}×${m.colB}${m.rowMid !== undefined ? ` mid ${m.rowMid}` : ''} ring ${f(m.ring)} map ${f(m.map)} card ${f(m.card)} gaps ${m.gapL ?? '—'}/${m.gapR ?? '—'} btns ${m.btns.map((x) => `${x.id}:${f(x)}`).join(' ')}${m.stack ? ` stack ${f(m.stack)} gaps ${m.sgL}/${m.sgR}` : ''}`;
 }
 
 function judge(m, W, H, tg) {
@@ -229,9 +246,10 @@ async function measure(p) {
       const btn = [...cardEl.querySelectorAll('.ac-acts .btn')].find(vis);
       if (btn) { cta = R(btn.getBoundingClientRect()); { const rg = document.createRange(); rg.selectNodeContents(btn); const t = rg.getBoundingClientRect(), o = btn.getBoundingClientRect(); ctaScroll = t.left < o.left - 0.5 || t.right > o.right + 0.5 || t.top < o.top - 0.5 || t.bottom > o.bottom + 0.5 ? `text ${Math.round(t.left)}..${Math.round(t.right)}×${Math.round(t.top)}..${Math.round(t.bottom)} in ${Math.round(o.left)}..${Math.round(o.right)}×${Math.round(o.top)}..${Math.round(o.bottom)}` : false; } }
     }
-    const btns = [];
+    const btns = [], gone = [];
     for (const id of ['tc-news', 'tc-menu', 'tc-isle', 'tc-offer', 'tc-daily']) {
       const e = document.getElementById(id);
+      if (e && !e.classList.contains('hidden') && !vis(e)) gone.push(id);
       if (!vis(e) || e.classList.contains('hidden')) continue;
       btns.push({ id, ...R(e.getBoundingClientRect()) });
       for (const s of e.querySelectorAll('.k-badge, .tc-isle-l, .kc, .tc-offer-t, .tc-offer-off')) if (vis(s)) btns.push({ id: `${id}:${s.className.split(' ')[0]}`, ...R(s.getBoundingClientRect()) });
@@ -256,6 +274,6 @@ async function measure(p) {
     const rowH = cap ? cap.h : null;
     const sgL = stack && cap ? Math.round((stack.l - cap.r) * 10) / 10 : null, sgR = stack && chartL !== undefined ? Math.round((chartL - stack.r) * 10) / 10 : null;
     const peek = document.body.classList.contains('mm-peek');
-    return { sgL, sgR, peek, ring, cap, map: peek ? null : map, card, cta, ctaScroll, open, btns, extra: [...extra, ...sail], sail, pills, stack, gapL, gapR, rowH };
+    return { gone, sgL, sgR, peek, ring, cap, map: peek ? null : map, card, cta, ctaScroll, open, btns, extra: [...extra, ...sail], sail, pills, stack, gapL, gapR, rowH };
   });
 }
