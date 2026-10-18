@@ -108,6 +108,18 @@ const CREATURES: Creature[] = (Object.keys(UNITS) as string[]).map((id) => {
   };
 });
 const BY_ID = new Map(CREATURES.map((c) => [c.id, c]));
+/** A creature ability's picture: the game paints none of its own, so each takes the nearest of the game's icons. */
+const SPECIAL_ICON: Record<string, string> = {
+  shooter: 'sp_musket_storm', no_penalty: 'talent_gun_steady_aim', blast: 'sp_powder_keg', double_strike: 'talent_brd_cutlass_drill',
+  no_retaliation: 'sp_sm_knives', retaliate_all: 'sp_rv_butcher', leader: 'talent_cmd_inspiring_presence', steady: 'sp_iron_discipline',
+  undead: 'sp_dr_brine_kiss', fear: 'sp_dread', sweep: 'talent_brd_boarding_axes', shield_wall: 'sp_shield_wall', shell: 'talent_srv_iron_hull',
+  poison: 'sp_foul_water', swarm: 'sp_red_harvest', regen: 'sp_tide_returns', terror: 'talent_brd_terror', flying: 'sp_following_wind',
+  diving: 'sp_dr_undertow', mend: 'sp_brine_mend', bind: 'sp_dr_anchor_chain', chill: 'sp_rain_squall', drain: 'sp_dr_drowning_grip',
+  breath: 'sp_st_elmos_fire', chain: 'sp_forked_lightning', fortune: 'talent_smg_smugglers_luck',
+};
+/** An ability's line with its icon in a brass frame. */
+const abil = (ico: string | null, name: string, text: string, lang: Lang) =>
+  `<li${ico ? ' class="ico"' : ''}>${ico ? `<span class="abil-ico"><img src="${ico}" alt="" loading="lazy" decoding="async" width="48" height="48"></span>` : ''}<span class="abil-tx"><b>${esc(name)}</b><span>${T(text, lang)}</span></span></li>`;
 const specialName = (s: string): Tr => [(ARMY_EN as Record<string, string>)[`sp.${s}`] ?? s, (ARMY_RU as Record<string, string>)[`sp.${s}`] ?? s];
 const specialNote = (s: string): Tr => [(ARMY_EN as Record<string, string>)[`spd.${s}`] ?? '', (ARMY_RU as Record<string, string>)[`spd.${s}`] ?? ''];
 
@@ -255,7 +267,7 @@ ${c.poses.length > 2 ? `<div class="poses"><span>${u('poses', lang)}</span>${c.p
 <div class="cdet-info reveal"><p class="kicker"><img src="${K(g.icon)}" alt="" width="18" height="18"> ${esc(c.roster ? L(lang, rosterName(c.roster)) : L(lang, g.name))}</p>
 ${L(lang, c.note) ? `<p class="lore">${T(L(lang, c.note), lang)}</p>` : ''}
 <div class="stats panel">${stat('tier', c.u.tier, lang)}${stat('atk', c.u.atk, lang)}${stat('def', c.u.def, lang)}${stat('dmg', `${c.u.dmin}–${c.u.dmax}`, lang)}${stat('hp', c.u.hp, lang)}${stat('speed', c.u.speed, lang)}${stat('init', c.u.init, lang)}${c.u.shots ? stat('shots', c.u.shots, lang) : ''}${stat('cost', prem ? `${prem.price} ${u('doubloons', lang)}` : `${c.u.cost} ${u('silver', lang)}`, lang)}</div>
-${c.u.specials.length ? `<h3>${u('abilities', lang)}</h3><ul class="abil">${c.u.specials.map((s) => `<li><b>${esc(L(lang, specialName(s)))}</b><span>${T(L(lang, specialNote(s)), lang)}</span></li>`).join('')}</ul>` : ''}
+${c.u.specials.length ? `<h3>${u('abilities', lang)}</h3><ul class="abil">${c.u.specials.map((s) => abil(SPECIAL_ICON[s] ? asset(`icon.${SPECIAL_ICON[s]}`) : null, L(lang, specialName(s)), L(lang, specialNote(s)), lang)).join('')}</ul>` : ''}
 ${c.lairs.length ? `<h3>${u('found', lang)}</h3><p class="tags">${c.lairs.map((l) => `<span class="tag">${esc(L(lang, l))}</span>`).join('')}</p>` : ''}
 ${up ? `<h3>${u('upgrade', lang)}</h3><p>${up}</p>` : ''}${base ? `<h3>${u('from', lang)}</h3><p>${base}</p>` : ''}
 <p class="back"><a class="btn-oak sm" href="./">${u('back', lang)}</a></p></div></div></section>`;
@@ -278,8 +290,8 @@ function captains(lang: Lang): string {
     return `<article class="capcard panel reveal${i % 2 ? ' flip' : ''}" id="${id}"><div class="capcard-art">${img(asset(`unit.hero_${id}`) ?? asset(`portrait.${id}`), c.name, 'fig')}<span class="cap-ring big">${img(asset(`portrait.${id}`), c.name)}</span></div>
 <div class="capcard-txt"><p class="kicker">${esc(tr('archetype', c.archetype))}${c.premium ? ` · <span class="gold">${u('premium', lang)}</span>` : ''}</p><h2>${esc(tr('name', c.name))}</h2>${c.epithet ? `<p class="epithet">«${esc(tr('epithet', c.epithet))}»</p>` : ''}
 <p>${T(tr('bio', c.bio), lang)}</p><p class="muted">${T(tr('playstyle', c.playstyle), lang)}</p>
-<div class="passive"><img src="${K('ico/star')}" alt="" width="28" height="28"><div><b>${esc(tr('passive.name', c.passive.name))}</b><span>${T(tr('passive.description', c.passive.description), lang)}</span></div></div>
-<ul class="abil">${c.abilities.map((a, k) => `<li><b>${esc(tr(`abilities.${k}.name`, a.name))}</b><span>${T(tr(`abilities.${k}.description`, a.description), lang)}</span></li>`).join('')}</ul></div></article>`;
+<div class="passive"><span class="abil-ico"><img src="${asset(`icon.school_${id}`) ?? K('ico/star')}" alt="" width="48" height="48"></span><div><b>${esc(tr('passive.name', c.passive.name))}</b><span>${T(tr('passive.description', c.passive.description), lang)}</span></div></div>
+<ul class="abil">${c.abilities.map((a, k) => abil(asset(`icon.ab_${(a as { id?: string }).id}`), tr(`abilities.${k}.name`, a.name), tr(`abilities.${k}.description`, a.description), lang)).join('')}</ul></div></article>`;
   }).join('')}</section>`;
   return page(lang, {
     path: 'captains/', active: 'captains', title: lang === 'ru' ? 'Капитаны GRAVETIDE' : 'GRAVETIDE Captains', desc: lang === 'ru' ? 'Шесть капитанов: история, особенность и способности каждого.' : 'Six captains: the story, the trait and the abilities of each.',
