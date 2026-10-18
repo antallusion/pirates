@@ -213,6 +213,9 @@ export function createStaticHandler(root: string) {
       res.writeHead(301, { Location: short[path] + url.search }).end();
       return true;
     }
+    // The forum is one page (docs/32_FORUM.md): its every address without a file's extension is that page.
+    const fm = /^\/site\/(en\/)?forum(\/.*)?$/.exec(path);
+    if (fm && !/\.[a-z0-9]{2,5}$/i.test(fm[2] ?? '')) path = `/site/${fm[1] ?? ''}forum/index.html`;
     if (path.startsWith('/site/') && path.endsWith('/')) path += 'index.html';
     if (path === '/assets/manifest.v.json') {
       try {
