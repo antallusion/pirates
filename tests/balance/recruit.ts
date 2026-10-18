@@ -138,15 +138,16 @@ export function month(plan: MonthPlan): MonthResult {
 
 /** The boarding battle fought out (quick battle, both sides the same captain, `dealt` the ladder's weight on each
  *  side's blows): how often the first army wins. */
-export function winRate(a: ArmyStack[], b: ArmyStack[], n = 40, dealtA = 1, dealtB = 1): number {
+/** `salt`: another set of seeds (each battle's decks are laid from its seed, 2026-10-18). */
+export function winRate(a: ArmyStack[], b: ArmyStack[], n = 40, dealtA = 1, dealtB = 1, salt = 0): number {
   const side = (army: ArmyStack[], dealt: number): TacSideInput => ({
     name: 'Captain', ship: 'Wake', captain: 'corsair', hands: 0, marines: 0, gunners: 0, army, officers: [], skill: 3, morale: 70, dealt, power: 1, melee: 1,
     extraShots: 0, firstRush: 1, nets: 0, blooded: 0, castle: false, struck: false, human: false,
   });
   let w = 0;
   for (let k = 0; k < n; k++) {
-    const rng = new Rng(k * 31 + 7);
-    const bt = newBattle(side(a, dealtA), side(b, dealtB), k * 31 + 7, 0, rng);
+    const rng = new Rng(k * 31 + 7 + salt);
+    const bt = newBattle(side(a, dealtA), side(b, dealtB), k * 31 + 7 + salt, 0, rng);
     quickFinish(bt, 0, rng);
     if (bt.over!.winner === 0) w++;
   }

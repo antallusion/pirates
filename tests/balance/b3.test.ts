@@ -18,7 +18,10 @@ test('B3: after the same cannonade the strength left and the boarding chance sta
       // 1 200 a cell put the two rules 4–10 points apart at ⚓3–7)
       for (let r = 0; r < 6; r++) {
         const c = cannonade(L, 'player', rule, 11 + r), p = cannonade(L, 'pirate', rule, 101 + r);
-        w += winRate(c, p, 120) / 6;
+        // (each cannonade on its own 120 seeds: a boarding's decks are laid from its seed since 2026-10-18, and one set of
+        //  120 decks for all six read ⚓7 40% → 28% where three sets read a 6–12 point gap, 9 on the mean — the old decks
+        //  the same 6–12, 9)
+        w += winRate(c, p, 120, 1, 1, r * 5000) / 6;
         pc += armyPower(c) / armyPower(armyForLevel(L, 120, 7, 'player')) / 6;
         pp += armyPower(p) / armyPower(armyForLevel(L, 120, 7, 'pirate')) / 6;
       }
