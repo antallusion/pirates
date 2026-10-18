@@ -4017,14 +4017,15 @@ export class TacticalPanel {
 
   /** One gangway, STRAIGHT from end to end (owner, 2026-10-18: «Мостик в бою прогибается дугой. надо сделать наверное
    *  чтобы был ровный по клеткам и растянуть их по высоте немного если потребуется»): the boarding pack's plank laid
-   *  along the row over exactly its hexes and a rail's width onto each deck — stretched to the length, and across the row
-   *  no thinner than PLANK_DRAW.minWidth of a hex (a long narrow plank a little widened) nor wider than maxWidth; the
+   *  along the row over exactly its hexes and a rail's width onto each deck — stretched to the length, a little taller
+   *  across the row (PLANK_DRAW.stretch), no thinner than minWidth of a hex (a long narrow plank widened) nor wider than
+   *  maxWidth; the
    *  boards drawn by hand without one. Its shadow `drop` px below it on the water. */
   private gangway(g: CanvasRenderingContext2D, xL: number, yL: number, xR: number, yR: number, w: number, img: HTMLImageElement | null, drop: number): void {
     const len = Math.hypot(xR - xL, yR - yL);
     if (len < 1) return;
     const r = w / SQ3;
-    const H = img ? Math.max(w * PLANK_DRAW.minWidth, Math.min(w * PLANK_DRAW.maxWidth, (len * img.naturalHeight) / img.naturalWidth)) : r * 0.9;
+    const H = img ? Math.max(w * PLANK_DRAW.minWidth, Math.min(w * PLANK_DRAW.maxWidth, (PLANK_DRAW.stretch * len * img.naturalHeight) / img.naturalWidth)) : r * 0.9;
     g.save();
     g.translate(xL, yL);
     g.rotate(Math.atan2(yR - yL, xR - xL));

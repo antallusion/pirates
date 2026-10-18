@@ -406,7 +406,8 @@ export const TAC_COVER = 0.75;
  *  решали»): on a ship's deck the mast, the barrels, the crates and the guns run in stand between a stack and a shot —
  *  a shot at a stack with one of them beside it, on the shooter's side of it, does this share of its harm. Where she
  *  stands and the way round decide, not the figures alone. Owner, 2026-10-16 («укрытие: −25%»): a quarter off, beside
- *  the cover or behind it on the shot's line (it was −40% for the hex beside it alone). */
+ *  the cover or behind it on the shot's line (it was −40% for the hex beside it alone). Owner, 2026-10-18: the boarding
+ *  pack's barricades ('Q') cover so too; its obstacles ('L') bar the way and cover nothing (tacprops.ts). */
 export const TAC_DECK_COVER = 0.75;
 export const TAC_COVER_CELLS: ReadonlySet<TacCell> = new Set(['M', 'B', 'K', 'C', 'Q']);
 /** The hex of what covers a stack on `hex` from a shot out of `from` on a deck (−1: nothing): one of them beside her on
