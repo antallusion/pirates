@@ -102,12 +102,21 @@ const step = () => {
   ticks++;
   tick();
 };
-for (let k = 0; rs.length < N; k++) {
+/** One run only (`--only k`): the others' scenes drawn and passed over, so the dice fall as in the whole. */
+const ONLY = arg('only', '');
+/** The run's course every 10 s (with --only). */
+const TRACE = process.argv.includes('--trace');
+let made = 0;
+for (let k = 0; ONLY ? made <= Number(ONLY) && k <= Number(ONLY) : rs.length < N; k++) {
   const kind = KINDS[k % KINDS.length];
   const f = startAt();
   const to = markFor(kind, f);
   if (!to) continue;
-  const cls = HULLS[rs.length % HULLS.length];
+  const cls = HULLS[made++ % HULLS.length];
+  if (ONLY && k !== Number(ONLY)) {
+    rnd();
+    continue;
+  }
   if (!LIVE) {
     quietAround(game, f.x, f.y);
     quietAround(game, to.x, to.y);
@@ -136,6 +145,10 @@ for (let k = 0; rs.length < N; k++) {
         quietAround(game, ship.state.x, ship.state.y);
       }
       if (LIVE) ship.hull = ship.stats.hullMax;
+      if (TRACE && ticks % 200 === 0) {
+        const r0 = autosailOf(ship);
+        console.log('trace', Math.round(game.now - t0), Math.round(ship.state.x), Math.round(ship.state.y), ship.state.speed.toFixed(1), (ship.state.heading * 57.3).toFixed(0), r0 ? `i${r0.i}/${r0.path.length} re${r0.replans} pl${Math.round(game.now - (r0.plannedAt ?? 0))} ${JSON.stringify(r0.path.slice(r0.i, r0.i + 2).map((q) => q.map(Math.round)))}` : '-');
+      }
       const a = performance.now();
       step();
       ms += performance.now() - a;

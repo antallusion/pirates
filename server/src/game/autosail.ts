@@ -13,11 +13,12 @@ import { angleDiff, clamp, headingOf, headingVec, pointInPolygon, wrapAngle } fr
 import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { depthAt, isLand, navBlocked } from '../../../shared/src/world/worldgen.ts';
+import { WORLD_EDGE_MARGIN } from '../../../shared/src/world/regions.ts';
 import type { Game } from './Game.ts';
 import { banksUp } from './isles.ts';
 import { beastBrain } from './beasts.ts';
 import { findPath, lineFree, nearestFree } from './nav.ts';
-import { hullWater, laneFoul, nearestWater, runClear, waterAt } from './seaway.ts';
+import { hullWater, keelOf, laneFoul, nearestWater, runClear, waterAt } from './seaway.ts';
 import type { HullWater } from './seaway.ts';
 import type { Path } from './nav.ts';
 import { beatAngle } from './npc.ts';
@@ -206,7 +207,10 @@ export function planWater(ship: ShipEntity): HullWater {
  *  (a quay's, a hulk's, the shore's off a mark on land — never the land: the run ends in water clear by the planner's
  *  margin), else the grid's nearest open cell. */
 function endWater(game: Game, ship: ShipEntity, x: number, y: number, hw: HullWater): [number, number] | null {
-  const ok = (px: number, py: number) => !foulWater(game, ship, px, py);
+  // (a fathom under her keel besides: a great hull's mark in a coast's shallows had her keel on the shoal as she came
+  // up to it — «foul water», the wheel back, and her way ran her on — tools/nav/autosail-sim.ts)
+  const deep = keelOf(ship).shallow ? 0 : keelOf(ship).draft + 1.2;
+  const ok = (px: number, py: number) => !foulWater(game, ship, px, py) && (deep <= 0 || depthAt(game.world, px, py) >= deep);
   if (!foulWater(game, ship, x, y) && waterAt(game.world, x, y, hw)) return [x, y];
   const w = nearestWater(game.world, x, y, hw, 450, ok);
   if (w) return w;
@@ -230,9 +234,9 @@ export function planFrom(game: Game, ship: ShipEntity, sx: number, sy: number, x
     if (!end) continue;
     const [tx, ty] = end;
     // Open water all the way: straight there (the grid's coarse cells would only bend a clear line).
-    if (lineFree(game.world, sx, sy, tx, ty) && !probeLine(game, ship, sx, sy, tx, ty) && runClear(game.world, sx, sy, tx, ty, hw)) return [[sx, sy], [tx, ty]];
+    if (runFree(game, ship, sx, sy, tx, ty, hw)) return [[sx, sy], [tx, ty]];
     const p = findPath(game.world, sx, sy, tx, ty, 80_000, hw);
-    if (p && p.length >= 2 && (hw === bare || pathClear(game, p, hw))) return p;
+    if (p && p.length >= 2 && (hw === bare || pathClear(game, p, hw))) return pullTight(game, ship, p, hw);
   }
   return null;
 }
@@ -398,10 +402,39 @@ export const STOP_WORDS: Record<AutosailStop, string> = {
   off: 'The helm is yours',
 };
 
-/** A straight run she may sail as it lies: the grid's open water, no foul water on it, and clear for her hull with the
- *  planner's margin (planWater). */
+/** A straight run she may sail as it lies, sounded as it is (not by the coarse grid's 400 m cells: a cell is shut a
+ *  whole 290 m round a reef, and a mark by one read as walled off from a few hundred metres — she turned back for the
+ *  grid's next cell and round again, 2026-10-18): out of the maelstroms' eyes and inside the wall, no foul water on it
+ *  (every 60 m), clear for her hull and keel by `hw` (the planner's margin by default). */
+export function runFree(game: Game, ship: ShipEntity, x0: number, y0: number, x1: number, y1: number, hw: HullWater = planWater(ship)): boolean {
+  const m = WORLD_EDGE_MARGIN;
+  if (x1 < m || y1 < m || x1 > WORLD_SIZE - m || y1 > WORLD_SIZE - m) return false;
+  for (const w of game.world.whirlpools) {
+    const ex = x1 - x0, ey = y1 - y0, l2 = ex * ex + ey * ey;
+    const t = l2 > 0 ? clamp(((w.x - x0) * ex + (w.y - y0) * ey) / l2, 0, 1) : 0;
+    if (Math.hypot(x0 + ex * t - w.x, y0 + ey * t - w.y) < w.radius * 0.6) return false;
+  }
+  return !probeLine(game, ship, x0, y0, x1, y1) && runClear(game.world, x0, y0, x1, y1, hw);
+}
+
+/** A straight run she may sail as it lies, by the planner's margin (runFree). */
 export function sightClear(game: Game, ship: ShipEntity, x0: number, y0: number, x1: number, y1: number): boolean {
-  return lineFree(game.world, x0, y0, x1, y1) && !probeLine(game, ship, x0, y0, x1, y1) && runClear(game.world, x0, y0, x1, y1, planWater(ship));
+  return runFree(game, ship, x0, y0, x1, y1);
+}
+
+/** A plan pulled tight as the water really lies (runFree by `hw`): from each point on to the farthest of the next ones
+ *  in clear sight of it, one pass forward (the grid's own pulling knows only its coarse cells). */
+function pullTight(game: Game, ship: ShipEntity, p: Path, hw: HullWater): Path {
+  if (p.length <= 2) return p;
+  const out: Path = [p[0]];
+  let a = 0;
+  while (a < p.length - 1) {
+    let j = a + 1;
+    while (j + 1 < p.length && runFree(game, ship, p[a][0], p[a][1], p[j + 1][0], p[j + 1][1], hw)) j++;
+    out.push(p[j]);
+    a = j;
+  }
+  return out;
 }
 
 /** Steering for her route's next point: beats to windward on the better tack, feels ahead for foul water. Returns the
@@ -529,6 +562,12 @@ export function stepAutosail(game: Game): void {
       if (offRoute(game, ship, run) && game.now - (run.plannedAt ?? -Infinity) >= REPLAN_GAP) replan(game, ship, run);
     }
     let h = autosailHeading(game, ship, run);
+    // No clear water ahead in the last stretch to a mark by a shore (a great hull's lead line reaches past her mark onto
+    // the coast beyond it): she is as near as she safely comes — arrived, hove to, not «foul water ahead».
+    if (h === null && Math.hypot(end[0] - ship.state.x, end[1] - ship.state.y) <= Math.max(near * 3, ship.stats.length * 2 + 60)) {
+      stopAutosail(game, s, 'arrived');
+      continue;
+    }
     // No clear water ahead at all: a new plan from where she lies before the wheel is given back.
     if (h === null && game.now - (run.plannedAt ?? -Infinity) >= 2 && (run.blocked = (run.blocked ?? 0) + 1) <= AUTOSAIL_REPLANS && replan(game, ship, run)) h = autosailHeading(game, ship, run);
     if (h === null) {
@@ -560,7 +599,7 @@ function replan(game: Game, ship: ShipEntity, run: AutoSail): boolean {
 function offRoute(game: Game, ship: ShipEntity, run: AutoSail): boolean {
   const a = run.path[Math.max(0, run.i - 1)], b = run.path[run.i];
   const { x, y } = ship.state;
-  if (!lineFree(game.world, x, y, b[0], b[1]) || probeLine(game, ship, x, y, b[0], b[1]) || !runClear(game.world, x, y, b[0], b[1], hullWater(ship))) return true;
+  if (!runFree(game, ship, x, y, b[0], b[1], hullWater(ship))) return true;
   const ex = b[0] - a[0], ey = b[1] - a[1], l2 = ex * ex + ey * ey;
   const t = l2 > 0 ? clamp(((x - a[0]) * ex + (y - a[1]) * ey) / l2, 0, 1) : 0;
   const off = Math.hypot(a[0] + ex * t - x, a[1] + ey * t - y);
