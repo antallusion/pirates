@@ -547,7 +547,7 @@ body.touch #mm-tab:focus-visible .mm-tab-pill { box-shadow: none; }
 }
 /* the action pills in the skin's frame: the frame is the border; no capsule ring drawn round it */
 .skinned body.touch #touch > .tc-actrow > .k-btn, body.touch.skinned #touch > .tc-actrow > .k-btn { border-radius: var(--k-r-1, 4px); }
-.skinned body.touch #touch > .tc-actrow > .tc-act2, body.touch.skinned #touch > .tc-actrow > .tc-act2 { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
+/* (the action buttons' shadow and the gold one's glow: seahud.css .tc-actb, one design for all of them) */
 /* a window slides up quicker (320 → 120 ms): a tap as it settles lands where the finger saw the tab (a finger aimed at a
    tab of a window still sliding came down a tab lower — the window had moved on meanwhile) */
 @media (max-height: 520px), (max-width: 699px) {

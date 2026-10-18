@@ -103,6 +103,14 @@ export interface SeaAct {
  *  only (a square, the word on its long press and to the screen reader), in as many rows as they need. `rows`: how
  *  many rows the row takes then. */
 export const ACT_WORD_ROWS = 2;
+
+/** One action button for every thing to do (owner, 2026-10-18: «кнопки осмотреть, штурм и так далее отличаются от
+ *  кнопки атаковать, надо все эти кнопки внизу справа одного дизайна делать»): the same frame, ground, height, words,
+ *  picture box and padding (`tc-actb`, seahud.css), the gold one only its colour and glow (`tc-actb--primary`). The
+ *  same markup either way: the picture in its `tc-act-ico` box, then the word. */
+export function actBtnClass(primary: boolean): string {
+  return `k-btn k-btn--secondary tc-actb ${primary ? 'tc-actb--primary tc-act' : 'tc-act2'}`;
+}
 export function actRowFit(primary: number, pills: number[], square: number, gap: number, avail: number): { mode: 'words' | 'icons'; rows: number } {
   // (as the browser's flex wrap lays them: each in the row it still fits in, else the start of the next)
   const pack = (ws: number[]) => {
@@ -386,7 +394,7 @@ export class SeaHud {
     document.getElementById('hud-stack')?.prepend(host);
     this.target = new TargetLine(host);
     this.target.onOpen = () => hooks.target();
-    this.actEl = make(`<button type="button" id="tc-act" class="k-btn k-btn--primary k-btn--lg tc-act hidden" aria-label="${esc(L('act'))}"><span class="tc-act-ico"></span><span class="k-btn-l"></span></button>`) as HTMLButtonElement;
+    this.actEl = make(`<button type="button" id="tc-act" class="${actBtnClass(true)} hidden" aria-label="${esc(L('act'))}"><span class="tc-act-ico"></span><span class="k-btn-l"></span></button>`) as HTMLButtonElement;
     this.actRowEl = make('<div id="tc-actrow" class="tc-actrow hidden" role="toolbar"></div>');
     this.actRowEl.append(this.actEl);
     this.actRowEl.addEventListener('click', (e) => {
@@ -480,7 +488,7 @@ export class SeaHud {
       for (const b of [...this.actRowEl.querySelectorAll('.tc-act2')]) b.remove();
       for (const x of a?.extra ?? []) {
         const words = x.sub ? `${x.label}: ${x.sub}` : x.label;
-        this.actRowEl.insertAdjacentHTML('beforeend', `<button type="button" class="k-btn k-btn--secondary tc-act2" data-acti="${x.i}" data-act="${esc(x.id)}" aria-label="${esc(words)}" title="${esc(words)}" data-hint="${esc(words)}">${icon(x.icon, '•', 'k-btn-ico')}<span class="k-btn-l">${esc(x.label)}</span></button>`);
+        this.actRowEl.insertAdjacentHTML('beforeend', `<button type="button" class="${actBtnClass(false)}" data-acti="${x.i}" data-act="${esc(x.id)}" aria-label="${esc(words)}" title="${esc(words)}" data-hint="${esc(words)}"><span class="tc-act-ico">${icon(x.icon, '•', 'k-btn-ico')}</span><span class="k-btn-l">${esc(x.label)}</span></button>`);
       }
       if (!a) return void delete this.actEl.dataset.act;
       this.actEl.dataset.act = a.id;

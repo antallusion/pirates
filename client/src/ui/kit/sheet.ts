@@ -6,7 +6,7 @@
 
 import { dict } from '../../i18n.ts';
 import { EN, RU } from '../../lang/ui/kit.ts';
-import { esc } from '../dom.ts';
+import { esc, glyphSvg } from '../dom.ts';
 import { popLayer, pushLayer } from './layer.ts';
 import type { Layer } from './layer.ts';
 import { dur } from './tokens.ts';
@@ -76,7 +76,7 @@ export function openSheet(o: SheetOpts): SheetHandle {
   root.innerHTML = `<div class="k-scrim"></div>
     <section class="k-sheet panel${o.cls ? ` ${o.cls}` : ''}${o.height === 'auto' ? ' k-sheet--auto' : ''}" role="${o.role ?? 'dialog'}" aria-modal="true"${o.title ? ` aria-labelledby="${titleId}"` : o.labelledBy ? ` aria-labelledby="${esc(o.labelledBy)}"` : ''}>
       <div class="k-sheet-grip" title="${esc(L('sheet.grip'))}"><i aria-hidden="true"></i></div>
-      ${o.title || !o.noClose ? `<header class="k-sheet-head">${o.title ? `<h2 id="${titleId}" class="k-sheet-title">${esc(o.title)}</h2>` : '<span></span>'}${o.noClose ? '' : `<button type="button" class="k-btn k-btn--icon k-btn--md k-sheet-x" aria-label="${esc(L('close'))}" title="${esc(L('close'))}"><span aria-hidden="true">✕</span></button>`}</header>` : ''}
+      ${o.title || !o.noClose ? `<header class="k-sheet-head">${o.title ? `<h2 id="${titleId}" class="k-sheet-title">${esc(o.title)}</h2>` : '<span></span>'}${o.noClose ? '' : `<button type="button" class="k-btn k-btn--icon k-btn--md k-sheet-x" aria-label="${esc(L('close'))}" title="${esc(L('close'))}">${glyphSvg('close')}</button>`}</header>` : ''}
       <div class="k-sheet-body"></div>
       ${o.foot !== undefined ? `<footer class="k-sheet-foot">${o.foot}</footer>` : ''}
     </section>`;

@@ -15,7 +15,7 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/dailygift.ts';
 import { cue } from '../sfx.ts';
 import type { ClientState } from '../state.ts';
-import { esc, fmt, icon } from './dom.ts';
+import { esc, fmt, icon, glyphSvg } from './dom.ts';
 import { buttonHtml } from './kit/button.ts';
 import { doubloonIcon } from './premium.ts';
 import { countdown, seaIconUp } from './promo.ts';
@@ -187,7 +187,7 @@ export class DailyGift {
     const note = v.kept ? L('kept') : v.reset ? L('reset') : L('grace');
     const got = this.got && !v.can ? `<p class="gf-got"><span>${esc(L('got'))}:</span> ${giftParts(this.got).map((x) => `<span class="gf-gi">${pic(x.art, 'gf-ico-s')}${esc(x.q)}</span>`).join('')}</p>` : '';
     el.innerHTML = `<div class="gf-box">
-      <header class="gf-head"><b class="gf-title">${esc(L('title'))}</b><span class="gf-week">${esc(L('week', { n: v.week + 1 }))}<span class="gf-pips" aria-hidden="true">${pips}</span></span><button type="button" class="po-x po-x-big gf-x" data-gfx aria-label="${esc(L('close'))}">×</button></header>
+      <header class="gf-head"><b class="gf-title">${esc(L('title'))}</b><span class="gf-week">${esc(L('week', { n: v.week + 1 }))}<span class="gf-pips" aria-hidden="true">${pips}</span></span><button type="button" class="po-x po-x-big gf-x g-only" data-gfx aria-label="${esc(L('close'))}">${glyphSvg('close')}</button></header>
       <ol class="gf-days">${days}</ol>
       ${got}
       <p class="gf-note"><b>${esc(L('streak', { n: v.streak }))}</b> · ${esc(note)}</p>

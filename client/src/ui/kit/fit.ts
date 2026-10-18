@@ -4,6 +4,8 @@
 // wheel). Nothing scrolls; every window stays the height of the screen. The windows themselves are not touched: the
 // pager watches the panes they draw (PAGED) and follows their redraws, keeping the page she was on.
 
+import { glyphSvg } from '../dom.ts';
+
 /** The panes that turn into pages when they would scroll: a window's page, a sheet's, and the inner lists a window
  *  keeps beside a part that stays (the talents' tree beside the rose). */
 export const PAGED = [
@@ -65,7 +67,7 @@ function drawBar(p: Pane): void {
     p.bar = document.createElement('div');
     p.bar.className = 'fit-pager';
     p.bar.setAttribute('role', 'navigation');
-    p.bar.innerHTML = '<button type="button" class="fit-pg-b" data-fitpg="-1" aria-label="‹">‹</button><span class="fit-pg-n" aria-live="polite"></span><button type="button" class="fit-pg-b" data-fitpg="1" aria-label="›">›</button>';
+    p.bar.innerHTML = `<button type="button" class="fit-pg-b" data-fitpg="-1" aria-label="‹">${glyphSvg('prev')}</button><span class="fit-pg-n" aria-live="polite"></span><button type="button" class="fit-pg-b" data-fitpg="1" aria-label="›">${glyphSvg('next')}</button>`;
     p.bar.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLElement>('[data-fitpg]');
       if (b) turn(p, p.page + Number(b.dataset.fitpg));

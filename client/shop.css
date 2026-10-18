@@ -41,7 +41,7 @@
 
 /* ---------- an offer: a brass plate (the quantity, the price, the ribbon) */
 .sh-offs { grid-area: offs; display: grid; grid-template-columns: repeat(auto-fit, minmax(66px, 1fr)); gap: 6px; align-items: stretch; }
-.sh-off { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 46px; padding: 7px 4px 5px; margin: 0;
+.sh-off { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 46px; padding: 5px 4px; margin: 0;
   border: 1px solid rgba(176, 141, 87, 0.55); border-radius: 4px; background: linear-gradient(180deg, #2c2620, #15120e); color: var(--bone); cursor: pointer; touch-action: manipulation;
   font-family: var(--sans); box-shadow: inset 0 1px 0 rgba(255, 230, 170, 0.08), 0 1px 2px rgba(0, 0, 0, 0.6); transition: transform 0.08s ease-out, border-color 0.15s, box-shadow 0.15s; }
 .sh-off.on:hover { border-color: var(--gold); box-shadow: inset 0 1px 0 rgba(255, 230, 170, 0.12), 0 0 8px rgba(224, 184, 98, 0.25); }
@@ -115,7 +115,7 @@
   .sh-note { font-size: var(--f-fs); line-height: 1.2; }
   .sh-meta, .sh-why, .sh-rule { font-size: var(--f-fs-s); }
   .sh-offs { grid-template-columns: repeat(auto-fit, minmax(calc(42px + 4 * var(--u)), 1fr)); gap: calc(3px + 2 * var(--u)); }
-  .sh-off { min-height: var(--f-tap); padding: calc(4px + 2 * var(--u)) 2px 2px; gap: 1px; }
+  .sh-off { min-height: var(--f-tap); padding: calc(2px + 1 * var(--u)) 2px; gap: 1px; }
   .sh-q { font-size: var(--f-fs); }
   .sh-p { font-size: var(--f-fs-m); }
   .sh-p .ico-xs { width: 11px; height: 11px; }
@@ -135,3 +135,20 @@
   /* paged (kit/fit.ts): the cards stand whole in their columns */
   .sh-body.fit-paged .sh-card, .sh-body.fit-paged .sh-stores, .sh-body.fit-paged .sh-work { break-inside: avoid; }
 }
+
+/* A price in real money first (owner, 2026-10-18: «все предложения в магазине должны иметь в первую очередь цену в рублях
+   или в звездах и только рядом цену в дублонах»; ui/price.ts priceHtml): «290 ₽» or «⭐218» bold and gold, the
+   doubloons beside it a size smaller and quieter; an old price struck through before it. */
+.rp { display: inline-flex; align-items: center; gap: 0.4em; white-space: nowrap; font-variant-numeric: tabular-nums; line-height: 1; }
+.rp-real { display: inline-flex; align-items: center; gap: 2px; color: var(--gold); font-weight: 700; }
+.rp-real .tg-star { width: 1em; height: 1em; fill: var(--gold); }
+.rp-dbl { display: inline-flex; align-items: center; gap: 2px; font-size: 0.78em; font-weight: 600; color: var(--steel-text, #a99f8c); }
+.rp .rp-dbl .ico-xs { width: 1.1em; height: 1.1em; margin: 0; object-fit: contain; opacity: 0.9; }
+.rp-was { font-size: 0.8em; font-weight: 400; color: var(--steel-text, #a99f8c); }
+.po-buy-n.rp .rp-real, .btn-primary .rp .rp-real { color: inherit; }
+.btn-primary .rp .rp-dbl { color: inherit; opacity: 0.75; }
+.pm-pack-real { font: 700 13px/1 var(--sans); color: var(--bone, #e6dccb); font-variant-numeric: tabular-nums; }
+.rp-was { display: inline-flex; align-items: center; gap: 1px; }
+.rp-was .tg-star { width: 0.95em; height: 0.95em; fill: currentColor; filter: none; }
+.rp-was { display: inline-flex; align-items: center; gap: 1px; }
+.rp-was .tg-star { width: 0.95em; height: 0.95em; fill: currentColor; filter: none; }

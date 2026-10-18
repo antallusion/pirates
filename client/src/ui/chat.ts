@@ -12,7 +12,7 @@
 //  - Emotes from the game's own icons: a picker in four groups and `:code:` with an autocomplete after «:».
 //  - Everything escaped; links stay words, but our own domain's.
 
-import { esc, faceOf, icon, portraitUrl } from './dom.ts';
+import { esc, faceOf, icon, portraitUrl, glyphSvg } from './dom.ts';
 import { sagaCardHtml } from './saga.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/chat.ts';
@@ -530,7 +530,7 @@ export class ChatPanel {
     const p = this.peers.get(this.peer!);
     const name = p?.name ?? this.peer!;
     const face = this.faceUrl(p?.face, name);
-    this.peersBar.innerHTML = `<button type="button" class="chat-back" data-back aria-label="${esc(L('back'))}" title="${esc(L('back'))}">‹</button><button type="button" class="chat-peer" data-nick="${esc(name)}"><span class="cl-face"${face ? ` style="background-image:url('${esc(face)}')"` : ''}></span><b>${esc(name)}</b>${p?.lv ? `<span class="cl-lv">${esc(L('lv', { n: p.lv }))}</span>` : ''}</button>`;
+    this.peersBar.innerHTML = `<button type="button" class="chat-back g-only" data-back aria-label="${esc(L('back'))}" title="${esc(L('back'))}">${glyphSvg('prev')}</button><button type="button" class="chat-peer" data-nick="${esc(name)}"><span class="cl-face"${face ? ` style="background-image:url('${esc(face)}')"` : ''}></span><b>${esc(name)}</b>${p?.lv ? `<span class="cl-lv">${esc(L('lv', { n: p.lv }))}</span>` : ''}</button>`;
   }
 
   private drawBadge(): void {
@@ -600,7 +600,7 @@ export class ChatPanel {
     const friend = c.friends.includes(name);
     const inGroup = c.group.includes(name);
     const btn = (act: string, art: string, word: string) => `<button type="button" class="chat-card-b" data-act="${act}">${icon(art, '', 'ico-sm')}<span>${esc(word)}</span></button>`;
-    this.card.innerHTML = `<div class="chat-card-head"><span class="cl-face chat-card-face"${face ? ` style="background-image:url('${esc(face)}')"` : ''}></span><div class="chat-card-who"><b>${esc(name)}</b><span>${last?.g ? `[${esc(last.g)}] ` : ''}${lv ? esc(L('lv', { n: lv })) : ''}</span></div><button type="button" class="chat-x" data-act="close" aria-label="${esc(L('card_close'))}">×</button></div>`
+    this.card.innerHTML = `<div class="chat-card-head"><span class="cl-face chat-card-face"${face ? ` style="background-image:url('${esc(face)}')"` : ''}></span><div class="chat-card-who"><b>${esc(name)}</b><span>${last?.g ? `[${esc(last.g)}] ` : ''}${lv ? esc(L('lv', { n: lv })) : ''}</span></div><button type="button" class="chat-x g-only" data-act="close" aria-label="${esc(L('card_close'))}">${glyphSvg('close')}</button></div>`
       + `<div class="chat-card-acts">${btn('dm', 'tab_letters', L('card_dm'))}${inGroup ? '' : btn('invite', 'tab_group', L('card_invite'))}${friend ? '' : btn('friend', 'menu_company', L('card_friend'))}${btn('mute', 'weather_fog', muted ? L('card_unmute') : L('card_mute'))}${btn('block', 'bt_defend', blocked ? L('card_unblock') : L('card_block'))}${btn('report', 'tab_law', L('card_report'))}</div>`;
     this.card.classList.remove('hidden');
     this.emotes.classList.add('hidden');

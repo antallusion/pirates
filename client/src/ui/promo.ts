@@ -20,9 +20,10 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/promo.ts';
 import type { ClientState } from '../state.ts';
 import { ask } from './confirm.ts';
-import { esc, fmt, icon } from './dom.ts';
+import { esc, fmt, icon, glyphSvg } from './dom.ts';
 import { buttonHtml, setBadge } from './kit/button.ts';
 import { doubloonIcon, famArt, qtyOf } from './premium.ts';
+import { priceHtml, priceText, topUpThenBuy } from './price.ts';
 
 const L = dict(EN, RU);
 const T = (x: readonly [string, string]) => x[lang() === 'ru' ? 1 : 0];
@@ -175,10 +176,11 @@ export class Promos {
     return famArt(c.special === 'first' ? 'doubloon' : OFFERS.get(c.offer)?.fam.icon ?? 'doubloon');
   }
 
-  /** The price: the old one struck through, the new one in gold, the ribbon. */
+  /** The price: the real money first (roubles, or Stars in Telegram), the doubloons beside it (owner, 2026-10-18); the
+   *  old one struck through before it. */
   private priceHtml(c: PromoCard): string {
     if (c.special === 'first') return `<span class="po-new">${doubloonIcon('ico-xs')}×2</span>`;
-    return `${c.off > 0 && c.was > c.price ? `<s class="po-was">${fmt(c.was)}</s>` : ''}<span class="po-new">${doubloonIcon('ico-xs')}${fmt(c.price)}</span>`;
+    return priceHtml(c.price, { cls: 'po-new', was: c.off > 0 && c.was > c.price ? c.was : undefined });
   }
 
   private clock(c: PromoCard): string {
@@ -221,7 +223,7 @@ export class Promos {
     if (el.dataset.po !== key) {
       el.dataset.po = key;
       el.className = `po-chip ${cls}`;
-      el.innerHTML = `<button type="button" class="po-open" data-poopen="${esc(c.id)}" aria-label="${esc(this.nameOf(c))}">${this.artOf(c)}${this.ribbon(c)}<span class="po-t"><span class="po-n">${esc(this.nameOf(c))}${c.special ? '' : ` <small>${esc(this.qtyOf(c))}</small>`}</span><span class="po-l">${this.clock(c)}${this.priceHtml(c)}</span></span></button><button type="button" class="po-x" data-pox aria-label="${esc(L('close'))}" title="${esc(L('close'))}">×</button>`;
+      el.innerHTML = `<button type="button" class="po-open" data-poopen="${esc(c.id)}" aria-label="${esc(this.nameOf(c))}">${this.artOf(c)}${this.ribbon(c)}<span class="po-t"><span class="po-n">${esc(this.nameOf(c))}${c.special ? '' : ` <small>${esc(this.qtyOf(c))}</small>`}</span><span class="po-l">${this.clock(c)}${this.priceHtml(c)}</span></span></button><button type="button" class="po-x g-only" data-pox aria-label="${esc(L('close'))}" title="${esc(L('close'))}">${glyphSvg('close')}</button>`;
       el.querySelector<HTMLElement>('[data-poopen]')!.onclick = () => this.open([c], where);
       el.querySelector<HTMLElement>('[data-pox]')!.onclick = (e) => {
         e.stopPropagation();
@@ -413,7 +415,7 @@ export class Promos {
     const what = live.special === 'first' ? L('firstText') : f ? T(f.fam.text) : '';
     const why = live.why ? `<small class="po-why">${esc(L(live.why === 'poor' ? 'why.poor' : 'why.other'))}</small>` : '';
     // «Купить за N»: the price on the button itself (the first top-up's double is bought by a top-up)
-    const buy = live.special === 'first' ? esc(L('topup')) : `${esc(L('buyFor'))} <b class="po-buy-n">${doubloonIcon('ico-xs')}${fmt(live.price)}</b>`;
+    const buy = live.special === 'first' ? esc(L('topup')) : `${esc(L('buyFor'))} ${priceHtml(live.price, { cls: 'po-buy-n' })}`;
     // what is inside, each thing with its picture and how many (a bundle lists them all)
     const inside = live.special === 'first' ? [] : insideOf(live.offer);
     const insideHtml = inside.length ? `<div class="po-in"><span class="po-in-h">${esc(L('inside'))}</span><ul>${inside.map((x) => `<li>${icon(x.art, '◉', 'po-in-ico')}<span class="po-in-n">${esc(x.name)}</span><b class="po-in-q">${esc(x.q)}</b></li>`).join('')}</ul></div>` : '';
@@ -421,17 +423,17 @@ export class Promos {
     const ratio = live.price > 0 && live.was > live.price ? Math.round((live.was / live.price) * 10) / 10 : 0;
     const gain = ratio >= 1.1 ? `<i class="po-gain">${esc(L('gain', { n: lang() === 'ru' ? String(ratio).replace('.', ',') : String(ratio) }))}</i>` : '';
     el.innerHTML = `<div class="po-box${many ? ' many' : ''}">
-      <header class="po-head"><b>${esc(this.overPlace === 'entry' ? L('title') : L(`ctx.${live.ctx}` as 'ctx.all'))}</b><button type="button" class="po-x po-x-big" data-poshut aria-label="${esc(L('close'))}">×</button></header>
+      <header class="po-head"><b>${esc(this.overPlace === 'entry' ? L('title') : L(`ctx.${live.ctx}` as 'ctx.all'))}</b><button type="button" class="po-x po-x-big g-only" data-poshut aria-label="${esc(L('close'))}">${glyphSvg('close')}</button></header>
       <div class="po-card">${this.ribbon(live)}${this.artOf(live)}
         <div class="po-body"><span class="po-ctx">${esc(L(`ctx.${live.ctx}` as 'ctx.all'))}</span><b class="po-name">${esc(this.nameOf(live))}${live.special ? '' : ` · ${esc(this.qtyOf(live))}`}</b><p class="po-text">${esc(what)}</p>
           ${live.until ? `<div class="po-hurry">${esc(L('hurry'))} ${this.clock(live)}</div>` : ''}
           <div class="po-price">${this.priceHtml(live)}${gain}</div>${why}</div></div>
       ${insideHtml}
-      <div class="po-acts">${many ? `<button type="button" class="btn btn-small po-nav" data-poprev aria-label="${esc(L('prev'))}">‹</button>` : ''}
+      <div class="po-acts">${many ? `<button type="button" class="btn btn-small po-nav g-only" data-poprev aria-label="${esc(L('prev'))}">${glyphSvg('prev')}</button>` : ''}
         <button type="button" class="btn btn-small" data-polater>${esc(this.overPlace === 'entry' ? L('later') : L('close'))}</button>
         ${live.special === 'first' ? '' : `<button type="button" class="btn btn-small" data-pomore>${esc(L('more'))}</button>`}
         <button type="button" class="btn btn-small btn-primary po-buy" data-pobuy${live.why && live.why !== 'poor' ? ' disabled' : ''}>${buy}</button>
-        ${many ? `<button type="button" class="btn btn-small po-nav" data-ponext aria-label="${esc(L('next'))}">›</button>` : ''}</div>
+        ${many ? `<button type="button" class="btn btn-small po-nav g-only" data-ponext aria-label="${esc(L('next'))}">${glyphSvg('next')}</button>` : ''}</div>
       ${many ? `<div class="po-dots">${this.list.map((_, i) => `<i class="${i === this.idx ? 'on' : ''}"></i>`).join('')}</div>` : ''}</div>`;
     this.tell(live, this.overPlace);
     el.querySelector<HTMLElement>('[data-poshut]')!.onclick = () => {
@@ -455,16 +457,26 @@ export class Promos {
 
   /** «Купить»: a personal offer at its own price, a special at the shop's, the first top-up's packs. */
   private buy(c: PromoCard): void {
-    if (c.special === 'first' || c.why === 'poor') {
+    const topup = () => dispatchEvent(new CustomEvent('gravetide:shop', { detail: 'topup' }));
+    if (c.special === 'first') {
       this.shut();
-      dispatchEvent(new CustomEvent('gravetide:shop', { detail: 'topup' }));
+      topup();
       return;
     }
     const ticket = pid();
-    void ask(L('ask', { name: this.nameOf(c), q: this.qtyOf(c), n: fmt(c.price) })).then((ok) => {
+    const msg: ClientMsg = c.special && c.special !== 'global' ? { t: 'premium', action: 'shop', offer: c.offer, pid: ticket } : { t: 'premium', action: 'promo_buy', id: c.id, pid: ticket };
+    // short of doubloons: the tier that covers it, then the purchase by itself (price.ts); payments' state unknown here
+    // (the shop's view not asked yet) — the top-up's page
+    const st = this.d.state;
+    const balance = st.premium?.balance ?? st.doubloons;
+    if (balance < c.price) {
+      this.shut();
+      void topUpThenBuy({ price: c.price, balance, name: this.nameOf(c), msg, pay: !!st.premium?.pay, send: this.d.send, openTopup: topup });
+      return;
+    }
+    void ask(L('ask', { name: this.nameOf(c), q: this.qtyOf(c), n: priceText(c.price) })).then((ok) => {
       if (!ok) return;
-      if (c.special && c.special !== 'global') this.d.send({ t: 'premium', action: 'shop', offer: c.offer, pid: ticket });
-      else this.d.send({ t: 'premium', action: 'promo_buy', id: c.id, pid: ticket });
+      this.d.send(msg);
       this.shut();
     });
   }

@@ -7,7 +7,7 @@ import type { HudBlock, OnboardingView } from '../../../shared/src/protocol.ts';
 import { has, lang, onLang, t } from '../i18n.ts';
 import type { Key } from '../i18n.ts';
 import type { ClientState } from '../state.ts';
-import { $, esc, icon } from './dom.ts';
+import { $, esc, icon, glyphSvg } from './dom.ts';
 import { glossaryHtml } from './terms.ts';
 
 /** Which DOM block shows which part of the HUD. */
@@ -111,7 +111,7 @@ export class OnboardingUi {
     }
     el.classList.remove('hidden');
     const first = `goal.${goals[0]}` as Key;
-    el.innerHTML = `${icon('goal', '', 'ico-goal')}<span class="g-lbl">${esc(t('goals.title'))}</span><button class="g-x" title="${esc(t('goals.hide'))}" aria-label="${esc(t('goals.hide'))}">×</button><span class="g-t">${esc(touchless(has(first) ? t(first) : goals[0]))}${goals.length > 1 ? ` <span class="muted">+${goals.length - 1}</span>` : ''}</span>`;
+    el.innerHTML = `${icon('goal', '', 'ico-goal')}<span class="g-lbl">${esc(t('goals.title'))}</span><button class="g-x g-only" title="${esc(t('goals.hide'))}" aria-label="${esc(t('goals.hide'))}">${glyphSvg('close')}</button><span class="g-t">${esc(touchless(has(first) ? t(first) : goals[0]))}${goals.length > 1 ? ` <span class="muted">+${goals.length - 1}</span>` : ''}</span>`;
     el.querySelector<HTMLButtonElement>('.g-x')!.onclick = () => this.send('hide_goals');
     // route (owner 2026-10-15): a tap on the goal — the nearest place it is done (a port's board for «Взять контракт»)
     const line = el.querySelector<HTMLElement>('.g-t')!;

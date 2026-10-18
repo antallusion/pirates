@@ -13,7 +13,7 @@ import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/outcome.ts';
 import { serverText } from '../lang/server.ts';
 import type { ClientState } from '../state.ts';
-import { esc, fmt, icon } from './dom.ts';
+import { esc, fmt, icon, glyphSvg } from './dom.ts';
 import { placeName } from './maps.ts';
 
 const L = dict(EN, RU);
@@ -104,7 +104,7 @@ export class CeasefireCard {
     const gone = (v.result ?? []).filter((r) => !listed.has(r.id)).map((r) => `<div class="cf-row cf-done"><span class="cf-name">${icon(r.agreed ? 'faction_free' : 'stat_hull', '', 'ico-sm')}<b>${esc(placeName(r.name))}</b><span class="${r.agreed ? 'good' : 'bad'}">${esc(L(r.agreed ? 'cf.agreed' : 'cf.refused'))}</span></span></div>`).join('');
     const answeredLine = gone + (v.result ?? []).filter((r) => !r.agreed && r.why).map((r) => `<p class="cf-line bad">${esc(placeName(r.name))}: ${esc(serverText(r.why!))}</p>`).join('');
     this.el.innerHTML = `<div class="enc-card cf-card">
-      <div class="cf-head"><div class="enc-h">${icon('faction_free', '', 'ico-md')}${esc(L('cf.title'))}</div><button class="btn btn-small cf-x" data-cf-close aria-label="${esc(L('cf.close'))}">×</button></div>
+      <div class="cf-head"><div class="enc-h">${icon('faction_free', '', 'ico-md')}${esc(L('cf.title'))}</div><button class="btn btn-small cf-x g-only" data-cf-close aria-label="${esc(L('cf.close'))}">${glyphSvg('close')}</button></div>
       <p class="cf-line muted">${price ? `${esc(L('cf.text', { pct: Math.round(TRUCE_SHARE * 100), price: fmt(price) }))} ` : ''}${esc(L('cf.carry', { silver: fmt(v.silver), cargo: fmt(v.cargo) }))}</p>
       <div class="cf-rows">${rows || `<p class="cf-line muted">${esc(L('cf.none'))}</p>`}</div>
       ${answeredLine}${v.paid && (v.paid.silver || v.paid.cargo) ? `<p class="cf-line good">${esc(v.paid.cargo ? L('cf.paid', { silver: fmt(v.paid.silver), cargo: fmt(v.paid.cargo) }) : L('cf.paidSilver', { silver: fmt(v.paid.silver) }))}</p>` : ''}
