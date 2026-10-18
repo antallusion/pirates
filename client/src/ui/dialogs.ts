@@ -28,6 +28,7 @@ import { TREE, isResearched, researchParents, researchQuote } from '../../../sha
 import { EN as REN, RU as RRU } from '../lang/ui/research.ts';
 import { EN as CEN, RU as CRU } from '../lang/ui/colours.ts';
 import { EN as OEN, RU as ORU } from '../lang/ui/outcome.ts';
+import { outcomeNote } from '../../../shared/src/data/outcome.ts';
 
 const LC = dict(CEN, CRU);
 const LO = dict(OEN, ORU); // the two choices (owner, 2026-10-18)
@@ -83,7 +84,7 @@ function renderOutcome(root: HTMLElement, r: BoardingResult, state: ClientState,
       <div class="out-hold">${goods.slice(0, 8).map((g) => `<span class="out-good" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}<b>${r.cargo[g]}</b></span>`).join('')}<span class="muted">${esc(units ? LO('out.hold', { n: units }) : LO('out.holdEmpty'))}</span><span class="out-good">${icon('coin', '', 'ico-sm')}<b>${fmt(r.gold)}</b></span>${AMMO_IDS.filter((a) => r.ammo[a] > 0).map((a) => `<span class="out-good" title="${esc(AMMO[a].name)}">${icon(`ammo_${a}`, '', 'ico-sm')}<b>${r.ammo[a]}</b></span>`).join('')}</div>
       ${r.joined?.length ? `<p class="good out-line">${esc(L('board.joined', { n: r.joined.reduce((a, x) => a + x.n, 0) }))}</p>` : ''}
       ${r.noQuarter ? `<p class="bad out-line">${esc(L('board.noQuarter', { talent: talentName('brd_no_quarter') }))}</p>` : `<p class="muted out-line out-text">${esc(LO('out.text'))}</p>`}
-      ${!r.noQuarter && o.sink.crew <= 0 && o.release.crew <= 0 ? `<p class="muted out-line">${esc(LO('out.noRoom'))}</p>` : ''}
+      ${!r.noQuarter && outcomeNote(o) ? `<p class="muted out-line">${esc(LO(outcomeNote(o) === 'noRoom' ? 'out.noRoom' : 'out.noMen'))}</p>` : ''}
       <div data-fallen-slot></div>
       <div class="out-choices${r.noQuarter ? ' one' : ''}">
         ${choice('sink', 'btn-danger', 'fire', LO('out.sink'), LO('out.sinkShort'), LO('out.sinkSub', { silver: fmt(o.sink.silver), take: o.sink.take, crew: o.sink.crew, timber: o.sink.timber }) + (o.sink.left > 0 ? LO('out.sinkLeft', { n: o.sink.left }) : ''))}

@@ -2798,6 +2798,8 @@ export class Game {
     return {
       sink: { silver: gold, take, left: units - take, timber: wreckTimber(b.cls.tier), crew: outcomeCrew(b.crew, SINK_CREW, room, cruel) },
       release: { silver: releaseSilver(gold), crew: outcomeCrew(b.crew, RELEASE_CREW, room, cruel) },
+      room: Math.max(0, Math.floor(room)),
+      survivors: Math.max(0, Math.floor(b.crew)),
     };
   }
 

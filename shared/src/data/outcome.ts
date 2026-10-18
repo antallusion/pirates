@@ -44,4 +44,16 @@ export interface OutcomeNums {
   sink: { silver: number; take: number; left: number; timber: number; crew: number };
   /** (B): the men and the silver. */
   release: { silver: number; crew: number };
+  /** Hammocks free aboard hers: her bunks less the living crew and army aboard (the fallen awaiting a raising, docs/35,
+   *  take none), and the men of the beaten ship still standing. */
+  room: number;
+  survivors: number;
+}
+
+/** Why no man joins either way, for the card: no hammock free aboard hers, or nobody of hers left standing (a turn-by-turn
+ *  fight often leaves two or three: their 15–30 % rounds to none — QA 2026-10-18, the card said «no hammocks» with ten
+ *  free). Null when someone joins one way or the other. */
+export function outcomeNote(o: OutcomeNums): 'noRoom' | 'noMen' | null {
+  if (o.sink.crew > 0 || o.release.crew > 0) return null;
+  return o.room <= 0 ? 'noRoom' : 'noMen';
 }

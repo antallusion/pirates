@@ -134,7 +134,7 @@ export class SurrenderCard {
     const choice = (fate: SurrenderFate, ico: string, title: string, short: string, sub: string, cls: string) =>
       `<button class="btn choice sur-choice ${cls}" data-sur="${fate}" data-off="0" title="${esc(`${title}: ${sub}`)}" aria-label="${esc(title)}"${!near ? ' disabled' : ''}>${icon(ico, '', 'choice-ico')}<span><b>${esc(title)}</b><i class="sur-short">${esc(short)}</i><small>${esc(sub)}</small></span></button>`;
     // The two choices (owner, 2026-10-18): take all and sink her, or take her crew and let her go.
-    const n = o.outcome ?? { sink: { silver: o.gold, take: o.cargo, left: 0, timber: 0, crew: 0 }, release: { silver: 0, crew: 0 } };
+    const n = o.outcome ?? { sink: { silver: o.gold, take: o.cargo, left: 0, timber: 0, crew: 0 }, release: { silver: 0, crew: 0 }, room: 0, survivors: 0 };
     this.el.innerHTML = `<div class="enc-card sur-card sur-two">
       <div class="sur-head">${art ? `<img class="sur-ship" src="${art}" alt="" draggable="false" />` : ''}<div><div class="enc-h">${icon('talent_brd_surrender_terms', '', 'ico-md')}${esc(L('sur.title', { name: shipName(o.name) }))}</div>
       <div class="sur-sub muted">${esc(L('sur.sub', { cls: cls.name, faction: o.faction === 'player' ? '' : factionName(o.faction), role: roleName(o.role), captain: captainName(o.captain) }))}</div></div></div>

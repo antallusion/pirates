@@ -392,3 +392,47 @@ test('paid in goods she picks (the rest in silver); the price on the server, nev
   const r = negotiate(game, s, [b.id], 'cargo', ['gold_bars' as never, 'rum']);
   assert.equal(typeof r, 'string');
 });
+
+test('QA 2026-10-18: after a turn-by-turn boarding won, bunks free are her bunks less the living aboard (the fallen take none); no men because none of hers stand, not «no hammocks»', async () => {
+  const { tacAction } = await import('../server/src/game/tactical.ts');
+  const { outcomeNote } = await import('../shared/src/data/outcome.ts');
+  const { steps } = await import('./helpers.ts');
+  const { game } = makeGame();
+  game.tacticalBoarding = true;
+  const c = join(game, 'Bunk Counter', 'reaver');
+  c.push({ t: 'undock' });
+  const s = [...game.sessions].find((x) => x.name === 'Bunk Counter')!;
+  const ship = s.ship!;
+  Object.assign(ship.state, { x: 30000, y: 80000, heading: 0, speed: 0 });
+  ship.protectedUntil = 0;
+  s.profile!.level = 30;
+  ship.recompute(game.now);
+  ship.crew = ship.stats.crewMax; // every hammock full before the fight: the ones freed are the fallen's
+  game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+  const npc = game.spawnNpcShip('merchant', 'fluyt', 'league', ship.state.x, ship.state.y + 18, 0);
+  game.npcs.get(npc.id)!.active = true;
+  npc.input = { rudder: 0, sailTarget: 0 };
+  npc.state.speed = 0;
+  npc.crew = 17;
+  game.grid.upsert(npc.id, npc.state.x, npc.state.y);
+  c.push({ t: 'board', target: npc.id, aggression: 'standard' });
+  for (let i = 0; i < 20 * 120 && !s.pendingBoarding; i++) {
+    if (ship.boarding) tacAction(game, ship, { a: 'quick' });
+    steps(game, 1);
+  }
+  const r = s.pendingBoarding!.result;
+  const o = r.outcome!;
+  const fallen = ((s.profile as unknown as { fallen?: { list: { n: number }[] } }).fallen?.list ?? []).reduce((n, x) => n + x.n, 0);
+  const living = ship.army.reduce((n, x) => n + x.n, 0);
+  assert.equal(living, ship.crew, 'the army is the crew aboard');
+  assert.equal(o.room, ship.stats.crewMax - ship.crew, 'free bunks: her bunks less the living aboard');
+  assert.ok(fallen > 0, `some fell (${fallen})`);
+  assert.equal(ship.crew, ship.stats.crewMax - fallen + (r.joined ?? []).reduce((n, x) => n + x.n, 0), 'the living aboard: the fallen are off her books, the beaten who came over on them');
+  assert.ok(o.room > 0, `the fallen freed their bunks (${o.room})`);
+  assert.equal(o.survivors, npc.crew);
+  assert.equal(o.sink.crew + o.release.crew, 0, 'too few of hers stand to join');
+  assert.equal(outcomeNote(o), 'noMen', 'the card says why: not «no hammocks»');
+  // And the exact numbers of the QA card: ten free, none of hers standing.
+  assert.equal(outcomeNote({ sink: { silver: 0, take: 0, left: 0, timber: 4, crew: 0 }, release: { silver: 0, crew: 0 }, room: 10, survivors: 0 }), 'noMen');
+  assert.equal(outcomeNote({ sink: { silver: 0, take: 0, left: 0, timber: 4, crew: 0 }, release: { silver: 0, crew: 0 }, room: 0, survivors: 20 }), 'noRoom');
+});
