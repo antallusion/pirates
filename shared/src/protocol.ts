@@ -3,6 +3,8 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { OutcomeNums } from './data/outcome.ts';
+import type { CeasefireView } from './data/ceasefire.ts';
 import type { QuestKind } from './data/questclass.ts';
 import type { RequestKind } from './data/fates.ts';
 import type { OmenId } from './data/omens.ts';
@@ -116,6 +118,7 @@ export type ClientMsg =
   /** A struck ship's surrender taken on the captain's terms (docs/16 #3): released for her ransom, her hold opened, or
    *  taken as a prize for the court — or as a trophy to keep (docs/16 #5). */
   | { t: 'surrender'; id: number; fate: SurrenderFate }
+  | { t: 'ceasefire'; op: 'quote'; id?: number } | { t: 'ceasefire'; op: 'pay'; ids: number[]; pay: 'silver' | 'cargo'; goods?: GoodId[] } // a ceasefire bought (owner, 2026-10-18)
   | { t: 'board_cut' }
   /** Boarding 2.0: this round's tactic; the captains' duel (challenge, answer, a strike at server time `at`). */
   | { t: 'board_tactic'; tactic: BoardTactic }
@@ -1074,6 +1077,7 @@ export const SF = {
   GUARDED: 1 << 24, // a merchant under a friend's guns (docs/12 P6)
   NO_BOARD: 1 << 25, // «Абордаж: выкл» (docs/24 C1): she boards nobody and is boarded by nobody, guns only
   GREEN_PENNANT: 1 << 26, // a young captain under the Green Pennant: neutral to captains in contested water (docs/24)
+  TRUCE: 1 << 27, // a ship of the sea under a white flag: a ceasefire bought from her holds (owner, 2026-10-18)
 } as const;
 
 /**
@@ -1401,7 +1405,8 @@ export type GameEvent =
   | { k: 'discover'; islandId: number; name: string; region: RegionId; quiet?: boolean }
   | { k: 'region'; region: RegionId; safety: string };
 
-export type SurrenderFate = 'ransom' | 'cargo' | 'prize' | 'trophy';
+/** A struck ship of the sea: the two choices (owner, 2026-10-18; shared/src/data/outcome.ts). */
+export type SurrenderFate = 'sink' | 'release';
 
 /** A ship that struck her colours to a captain (docs/16 #3), as the choice card shows her. */
 export interface SurrenderOffer {
@@ -1422,6 +1427,8 @@ export interface SurrenderOffer {
   trophy: boolean;
   /** How close the captain must come to take the surrender (metres). */
   range: number;
+  /** The two choices' numbers (owner, 2026-10-18). */
+  outcome?: OutcomeNums;
   /** When she will think better of it (server time). */
   until: number;
 }
@@ -1477,6 +1484,8 @@ export interface BoardingResult {
   struck?: boolean;
   /** A berth is free to keep her as a trophy (docs/16 #5). */
   trophy?: boolean;
+  /** A ship of the sea: the two choices' numbers (owner, 2026-10-18: no ransom, prize or trophy for her any more). */
+  outcome?: OutcomeNums;
   /** How the deck fight went: rounds fought, won and lost, the captains' duel. */
   report?: { rounds: number; won: number; lost: number; duel: 'won' | 'lost' | null; moves: number; /** fought turn by turn (docs/16 P4): won/lost count stacks broken */ tac?: boolean };
 }
@@ -1957,6 +1966,7 @@ export type ServerMsg =
   | { t: 'boarding'; result: BoardingResult | null }
   /** A ship has struck her colours to you (docs/16 #3): the choice card, or null when the offer is gone. */
   | { t: 'surrender_offer'; offer: SurrenderOffer | null }
+  | { t: 'ceasefire'; view: CeasefireView | null } // owner, 2026-10-18: the talk with the ships attacking her
   | { t: 'board_fight'; view: BoardFightView | null }
   | { t: 'board_tac'; view: TacView | null }
   /** Owner, 2026-10-16 («Повтор»): a fight played again — its opening view and its steps; or her last twenty. */

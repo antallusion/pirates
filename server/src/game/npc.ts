@@ -81,6 +81,10 @@ export interface NpcBrain {
   holdUntil?: number;
   chase: { id: number; until: number } | null; // spotted from the crow's nest: pursue beyond detection range
   spared: Map<number, number>; // ship id -> until: plundered victims are left alone
+  /** A ceasefire bought from her (ceasefire.ts): captain's ship id -> until. She does not take that captain for a foe. */
+  truce?: Map<number, number>;
+  /** …and turns away from her for a while after she agreed. */
+  truceAway?: { id: number; until: number };
   stuckCheck: { x: number; y: number; t: number };
   /** The First Watch's practice raider: she comes for this one novice even in safe water. */
   practice?: number;
@@ -229,6 +233,8 @@ export function planWander(game: Game, ship: ShipEntity, brain: NpcBrain): boole
 
 export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): boolean {
   if (npc.id === other.id || !other.alive || other.docked) return false;
+  // A ceasefire bought from her (owner, 2026-10-18): that captain is no foe of hers until it lapses or she fires.
+  if (npc.truceUntil > game.now && (game.npcs.get(npc.id)?.truce?.get(other.id) ?? 0) > game.now) return false;
   // The adventure map's guards (docs/17 H4): they bar a captain's way; the sea's own ships leave them be.
   if (npc.guardOf || other.guardOf) return !!npc.guardOf && other.isPlayer;
   // The First Watch's raider is her pupil's lesson, and a ship boarded and being looted is her captor's: the sea's
@@ -554,6 +560,8 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
 
   // Ships lashed in a boarding are out of the fight until it is over: no one hunts them or flees from them.
   if (prey && (prey as ShipEntity).grappled && ship.boarding?.with !== (prey as ShipEntity).id) prey = null;
+  // Under a white flag to her (ceasefire.ts): never her prey, whatever brought her (a hunt, a chase, a pack's call).
+  if (prey && ship.truceUntil > now && (brain.truce?.get((prey as ShipEntity).id) ?? 0) > now) prey = null;
   if (threat && (threat as ShipEntity).grappled) threat = null;
 
   if (brain.fireship !== undefined) {
@@ -570,6 +578,16 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
       steer(game, ship, brain, headingOf(px - ship.state.x, py - ship.state.y), d > 400 ? 1 : d > 250 ? 0.75 : 0.25);
     }
     return;
+  }
+  // A ceasefire just agreed: she turns away from the captain who paid, before she goes her own way.
+  if (brain.truceAway && brain.truceAway.until > now) {
+    const o = game.ships.get(brain.truceAway.id);
+    if (o && o.alive && !o.docked) {
+      brain.target = null;
+      steer(game, ship, brain, headingOf(ship.state.x - o.state.x, ship.state.y - o.state.y), 0.8);
+      return;
+    }
+    brain.truceAway = undefined;
   }
   const peaceful = role === 'merchant' || role === 'fisher';
   if (peaceful) {
@@ -1126,8 +1144,13 @@ function oldZonePorts(game: Game): Port[] {
   return game.zone ? old.filter((p) => game.zone!.regions.has(p.region)) : old;
 }
 
-export function spawnMerchant(game: Game): void {
-  const ports = oldZonePorts(game); // (docs/29: put out from the harbours before step 9, as the sea's traffic was weighed)
+export function spawnMerchant(game: Game, region?: RegionId): void {
+  let ports = oldZonePorts(game); // (docs/29: put out from the harbours before step 9, as the sea's traffic was weighed)
+  // (owner, 2026-10-18, density.ts: the director's top-up goes to the region furthest under its share)
+  if (region) {
+    const here = ports.filter((p) => p.region === region);
+    if (here.length) ports = here;
+  }
   const weights = ports.map((p) => [p, p.size * p.size] as const);
   const port = game.rng.weighted(weights);
   // Her level (canon D12) by the port's square of the sea (docs/16 P2), leaning low; the hull to match, flutes most of all.
@@ -1149,7 +1172,7 @@ export function spawnMerchant(game: Game): void {
 
 const PIRATE_REGIONS: RegionId[] = ['gravewater', 'whispering', 'ashen_isles', 'dead_mans_expanse', 'leviathan_reach', 'drowned_crown'];
 
-export function spawnPirate(game: Game, near?: ShipEntity): ShipEntity | null {
+export function spawnPirate(game: Game, near?: ShipEntity, only?: RegionId): ShipEntity | null {
   let x: number, y: number, region: RegionId;
   if (near) {
     // Just beyond the horizon of interest and to windward — attackers want the weather gauge.
@@ -1161,7 +1184,7 @@ export function spawnPirate(game: Game, near?: ShipEntity): ShipEntity | null {
   } else {
     const regions = game.zone ? PIRATE_REGIONS.filter((r) => game.zone!.regions.has(r)) : PIRATE_REGIONS;
     if (!regions.length) return null;
-    region = game.rng.pick(regions);
+    region = only && regions.includes(only) ? only : game.rng.pick(regions); // (density.ts: the region under its share)
     [x, y] = REGIONS[region].center;
     x += game.rng.range(-9000, 9000);
     y += game.rng.range(-9000, 9000);
@@ -1219,8 +1242,9 @@ export function levelNear(game: Game, prey: ShipEntity, region: RegionId, x = pr
   return Math.max(1, Math.min(10, Math.max(lo, Math.min(hi + 1, prey.combatLevel + d))));
 }
 
-export function spawnFisher(game: Game): void {
-  const ports = oldZonePorts(game).filter((p) => REGIONS[p.region].safety !== 'lawless');
+export function spawnFisher(game: Game, region?: RegionId): void {
+  let ports = oldZonePorts(game).filter((p) => REGIONS[p.region].safety !== 'lawless');
+  if (region && ports.some((p) => p.region === region)) ports = ports.filter((p) => p.region === region); // (density.ts)
   if (!ports.length) return;
   const port = game.rng.pick(ports);
   const ship = game.spawnNpcShip('fisher', 'cutter', port.faction === 'crown' ? 'crown' : 'free', port.x, port.y, game.rng.range(0, 6.28));
@@ -1240,7 +1264,7 @@ const TRAFFIC_GOODS: GoodId[] = ['provisions', 'rum', 'sugar', 'tobacco', 'timbe
  * sailing the sea's own ways — a merchant crossing her track toward the far side, a fisher working the water, a patrol
  * on its beat, a rover looking for prey. Null when the spot is land or the role has no place here.
  */
-export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' | 'pirate' | 'hunter', x: number, y: number, past: { x: number; y: number }): ShipEntity | null {
+export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' | 'pirate' | 'hunter', x: number, y: number, past: { x: number; y: number }, law?: FactionId): ShipEntity | null {
   if (!openSea(game, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500 || !game.inZone(x, y)) return null;
   const region = regionAt(game.world, x, y);
   const safety = REGIONS[region].safety;
@@ -1249,8 +1273,10 @@ export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' 
   if (role === 'merchant') faction = !port || port.faction === 'crown' ? 'league' : port.faction === 'choir' || port.faction === 'confederacy' ? 'free' : port.faction;
   else if (role === 'fisher') faction = port?.faction === 'crown' ? 'crown' : 'free';
   else if (role === 'patrol') {
-    if (!port || safety === 'lawless' || (port.faction !== 'crown' && port.faction !== 'league' && port.faction !== 'harpoon')) return null;
-    faction = port.faction;
+    // (`law`: a patrol put back where one was beaten, density.ts — her own flag when no law's harbour is nearest)
+    const lawful = !!port && (port.faction === 'crown' || port.faction === 'league' || port.faction === 'harpoon');
+    if (safety === 'lawless' || (!lawful && !law)) return null;
+    faction = lawful ? port!.faction : law!;
   } else if (role === 'hunter') {
     // The Harpoon's whalers work the wild waters for the beasts (docs/16 P1).
     if (safety === 'safe') return null;

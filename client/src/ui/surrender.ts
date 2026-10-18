@@ -1,5 +1,5 @@
-// A ship strikes her colours to you (docs/16 #3): the choice card over the sea, without stopping it — let her go for
-// her ransom, open her hold, take her as a prize for the court, or keep her as a trophy (docs/16 #5). It tells how
+// A ship strikes her colours to you (docs/16 #3): the choice card over the sea, without stopping it — since 2026-10-18
+// (the owner: «только два выбора») the two choices only: take all and sink her, or take her crew and let her go. It tells how
 // close you must come and how long she will wait; it closes by itself when she is gone or thinks better of it.
 // Also here: the words of a trophy ship's story, for the ship card and the berths.
 
@@ -13,6 +13,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/colours.ts';
+import { EN as OEN, RU as ORU } from '../lang/ui/outcome.ts';
 import { personName, personNameRu } from '../lang/names.ts';
 import { serverText } from '../lang/server.ts';
 
@@ -24,6 +25,7 @@ import { esc, fmt, icon } from './dom.ts';
 import { placeName } from './maps.ts';
 
 const L = dict(EN, RU);
+const LO = dict(OEN, ORU); // the two choices (owner, 2026-10-18)
 
 /** A ship's name as it reads: in Russian within «», once. */
 const shipName = (n: string) => {
@@ -129,17 +131,17 @@ export class SurrenderCard {
     }
     const cls = SHIP_CLASSES[o.classId];
     const art = assetUrl(cls.sprite);
-    const choice = (fate: SurrenderFate, ico: string, title: string, sub: string, off = false, primary = false) =>
-      `<button class="btn choice sur-choice${primary ? ' btn-primary' : ''}" data-sur="${fate}" data-off="${off ? 1 : 0}" title="${esc(`${title}: ${sub}`)}" aria-label="${esc(title)}"${!near || off ? ' disabled' : ''}>${icon(ico, '', 'choice-ico')}<span><b>${esc(title)}</b><i class="sur-short">${esc(L(`sur.${fate}Short` as 'sur.ransomShort'))}</i><small>${esc(sub)}</small></span></button>`;
-    this.el.innerHTML = `<div class="enc-card sur-card">
+    const choice = (fate: SurrenderFate, ico: string, title: string, short: string, sub: string, cls: string) =>
+      `<button class="btn choice sur-choice ${cls}" data-sur="${fate}" data-off="0" title="${esc(`${title}: ${sub}`)}" aria-label="${esc(title)}"${!near ? ' disabled' : ''}>${icon(ico, '', 'choice-ico')}<span><b>${esc(title)}</b><i class="sur-short">${esc(short)}</i><small>${esc(sub)}</small></span></button>`;
+    // The two choices (owner, 2026-10-18): take all and sink her, or take her crew and let her go.
+    const n = o.outcome ?? { sink: { silver: o.gold, take: o.cargo, left: 0, timber: 0, crew: 0 }, release: { silver: 0, crew: 0 }, room: 0, survivors: 0 };
+    this.el.innerHTML = `<div class="enc-card sur-card sur-two">
       <div class="sur-head">${art ? `<img class="sur-ship" src="${art}" alt="" draggable="false" />` : ''}<div><div class="enc-h">${icon('talent_brd_surrender_terms', '', 'ico-md')}${esc(L('sur.title', { name: shipName(o.name) }))}</div>
       <div class="sur-sub muted">${esc(L('sur.sub', { cls: cls.name, faction: o.faction === 'player' ? '' : factionName(o.faction), role: roleName(o.role), captain: captainName(o.captain) }))}</div></div></div>
       <p class="enc-text">${esc(L('sur.text'))} <span class="muted">${esc(o.cargo ? L('sur.hold', { n: o.cargo, gold: fmt(o.gold) }) : L('sur.holdEmpty', { gold: fmt(o.gold) }))}</span></p>
-      <div class="sur-choices">
-        ${choice('ransom', 'coin', L('sur.ransom'), L('sur.ransomSub', { sum: fmt(o.ransom) }), false, true)}
-        ${choice('cargo', 'tab_market', L('sur.cargo'), L('sur.cargoSub'))}
-        ${choice('prize', 'talent_brd_prize_crew', L('sur.prize'), o.prize ? L('sur.prizeSub', { crew: o.prize.crew, value: fmt(o.prize.value) }) : L('sur.noPrize'), !o.prize)}
-        ${choice('trophy', 'build_trophy_hall', L('sur.trophy'), !o.prize ? L('sur.noPrize') : o.trophy ? L('sur.trophySub') : L('sur.noBerth'), !o.prize || !o.trophy)}
+      <div class="sur-choices two">
+        ${choice('sink', 'fire', LO('out.sink'), LO('out.sinkShort'), LO('out.sinkSub', { silver: fmt(n.sink.silver), take: n.sink.take, crew: n.sink.crew, timber: n.sink.timber }) + (n.sink.left > 0 ? LO('out.sinkLeft', { n: n.sink.left }) : ''), 'btn-danger')}
+        ${choice('release', 'stat_crew', LO('out.release'), LO('out.releaseShort'), LO('out.releaseSub', { crew: n.release.crew, silver: fmt(n.release.silver) }), 'btn-primary')}
       </div>
       <div class="sur-foot"><span class="sur-dist ${near ? 'good' : 'warn'}">${esc(near ? L('sur.near', { n: d }) : L('sur.far', { range: o.range, n: d }))}</span><span class="sur-left muted">${esc(L('sur.left', { n: left }))}</span><button class="btn btn-small" data-sur-later>${esc(L('sur.later'))}</button></div>
     </div>`;

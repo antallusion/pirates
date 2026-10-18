@@ -1,7 +1,7 @@
 // The context action bar over the guns (owner, 2026-10-02: "sailing up to things there should be buttons at the
 // bottom for what to do next; now nothing shows, so there is no telling what to press"). Everything to do at hand is
 // a button — its icon, a short word, its key on a keyboard — in one order: the first is the gold one, the very thing
-// the gamepad's A (and the touch context) does; three at most show, the rest behind «⋯ N more». What stops her, the
+// the gamepad's A (and the touch context) does; every one shows at once (owner, 2026-10-18). What stops her, the
 // protection, the party ashore, the carpenters' pace: one muted line above. The facts are gathered by main.ts; this
 // file only orders and draws them (and the tests check the order against the pad's).
 
@@ -174,24 +174,17 @@ export function farWords(m: number): string {
   return m >= 1000 ? L('far.km', { n: (Math.round(m / 100) / 10).toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB') }) : L('far.m', { n: Math.round(m / 10) * 10 });
 }
 
-/** Three buttons show at most; with more, two and the «⋯ N more» that opens the rest above them. */
-export const ACT_SHOW = 3;
-
-/** The bar's HTML: the info line, the buttons (`keyOf` names an action's key; null on touch), the toggle. */
-export function actBarHtml(acts: Act[], info: string[], keyOf: ((a: Action) => string) | null, open: boolean, show = ACT_SHOW): string {
-  const ACT_SHOW = Math.max(2, show); // (the simple HUD on a desk shows two: the first and «⋯ N more»)
+/** The bar's HTML: the info line and every button at once (owner, 2026-10-18: «нельзя скрывать ничего, они должны
+ *  быть видны все действия сразу» — no «⋯ N more» any longer; the row wraps onto a second line where it must).
+ *  `keyOf` names an action's key; null on touch. */
+export function actBarHtml(acts: Act[], info: string[], keyOf: ((a: Action) => string) | null): string {
   const btn = (a: Act, i: number) => {
     const k = keyOf && a.key ? keyOf(a.key) : '';
     return `<button type="button" class="act-btn act-${a.id}${i === 0 ? ' primary' : ''}" data-act="${i}" title="${esc(a.title)}" aria-label="${esc(a.sub ? `${a.label}: ${a.sub}` : a.label)}">${icon(a.icon, '•', 'act-ico')}<span class="act-l">${esc(a.label)}</span>${a.sub ? `<span class="act-s">${esc(a.sub)}</span>` : ''}${k ? `<kbd class="act-k">${esc(k)}</kbd>` : ''}</button>`;
   };
-  const many = acts.length > ACT_SHOW;
-  const shown = many ? acts.slice(0, ACT_SHOW - 1) : acts;
-  const rest = many ? acts.slice(ACT_SHOW - 1) : [];
   const line = info.length ? `<div class="act-info">${info.join(' · ')}</div>` : '';
-  const extra = many && open ? `<div class="act-row act-more-row">${rest.map((a, j) => btn(a, ACT_SHOW - 1 + j)).join('')}</div>` : '';
-  const toggle = many ? `<button type="button" class="act-btn act-toggle" data-act-more aria-expanded="${open}">${esc(open ? L('a.less') : L('a.more', { n: rest.length }))}</button>` : '';
-  const row = acts.length ? `<div class="act-row">${shown.map(btn).join('')}${toggle}</div>` : '';
-  return line || row ? `${line}${extra}${row}` : '';
+  const row = acts.length ? `<div class="act-row${acts.length > 3 ? ' act-many' : ''}">${acts.map(btn).join('')}</div>` : '';
+  return line || row ? `${line}${row}` : '';
 }
 
 /** The muted line of a sea mark's state (searched today, the boats at it). */

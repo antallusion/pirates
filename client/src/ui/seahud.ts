@@ -91,11 +91,34 @@ export interface SeaAct {
   icon: string;
   label: string;
   sub?: string;
-  /** How many more things there are to do (behind the long press). */
-  more: number;
-  /** seaux (2026-10-11, owner: «если там еще какие-то экшены пусть они в ряд стоят, и делай их маленькими»): the next
-   *  things to do, small beside it in one row (their place in the bar's list: `i`). */
+  /** seaux (2026-10-11, owner: «если там еще какие-то экшены пусть они в ряд стоят, и делай их маленькими»): every other
+   *  thing to do, small beside it (their place in the bar's list: `i`) — all of them, none behind a «+N» (owner,
+   *  2026-10-18: «нельзя скрывать ничего они должны быть видны все действия сразу»). */
   extra?: { i: number; id: string; icon: string; label: string; sub?: string }[];
+}
+
+/** The action row's shape (owner, 2026-10-18): every button in sight, in the band between the helm and the fight's
+ *  buttons, the gold one first and the rest after it, wrapping onto rows above the first where one cannot hold them.
+ *  `words`: the small ones with their word (pills), in two rows at most; else `icons` — the small ones their picture
+ *  only (a square, the word on its long press and to the screen reader), in as many rows as they need. `rows`: how
+ *  many rows the row takes then. */
+export const ACT_WORD_ROWS = 2;
+export function actRowFit(primary: number, pills: number[], square: number, gap: number, avail: number): { mode: 'words' | 'icons'; rows: number } {
+  // (as the browser's flex wrap lays them: each in the row it still fits in, else the start of the next)
+  const pack = (ws: number[]) => {
+    let rows = 1, x = primary;
+    for (const w of ws) {
+      if (x + gap + w <= avail - 0.05) x += gap + w; // (a hair short: the browser's sub-pixel layout wraps at the edge)
+      else {
+        rows++;
+        x = w;
+      }
+    }
+    return rows;
+  };
+  const words = pack(pills);
+  if (words <= ACT_WORD_ROWS) return { mode: 'words', rows: words };
+  return { mode: 'icons', rows: pack(pills.map(() => square)) };
 }
 
 /** A painted slot of the desk's gun deck: a shot (1–5) or one of the captain's abilities (Z X C V). */
@@ -184,8 +207,9 @@ export function minimapMode(v: SeaView): 'shown' | 'peek' | 'out' {
   return v.mmShow || v.mmOut ? 'out' : 'peek';
 }
 
-/** The things to touch the sea HUD shows for a view (seven at most on a touch screen: docs/23 item 32, owner
- *  2026-10-07 — eight in a fight only when she brings the chart and the menu back herself, by the tab or the setting).
+/** The things to touch the sea HUD shows for a view (docs/23 item 32, owner 2026-10-07: seven at most on a touch screen;
+ *  since 2026-10-18 nothing of hers is put away for it — «не должны исчезать никогда»: the menu and the news counter
+ *  stay in a fight, the chart's tab beside them; nine at most then).
  *  The stick counts as one; the target's line on a touch screen is words, not a button (its card is
  *  «Цель»'s long press). A desk is played by its keys and shows what they drive (owner, 2026-10-07: «возвращай
  *  управление… штурвал»): the captain's frame, the menu, her mark's line, the chart and the counter, and at sea the
@@ -210,11 +234,11 @@ export function seaTargets(v: SeaView): string[] {
   }
   if (v.act) out.push('act');
   if (v.special && fight) out.push('special');
-  // A fight: the chart and the menu stepped up behind their tab, or back by her own choice (the tab's tap, the setting).
+  // A fight: the chart stepped up behind its tab, or back by her own choice (the tab's tap, the setting); the menu and
+  // the news counter in their row under it either way (owner, 2026-10-18: «не должны исчезать никогда»).
   const mm = minimapMode(v);
-  if (mm === 'peek') out.push('mmtab');
-  else out.push('menu', 'minimap');
-  if (!fight && v.news > 0) out.push('news');
+  out.push('menu', mm === 'peek' ? 'mmtab' : 'minimap');
+  if (v.news > 0) out.push('news');
   return out;
 }
 
@@ -362,7 +386,7 @@ export class SeaHud {
     document.getElementById('hud-stack')?.prepend(host);
     this.target = new TargetLine(host);
     this.target.onOpen = () => hooks.target();
-    this.actEl = make(`<button type="button" id="tc-act" class="k-btn k-btn--primary k-btn--lg tc-act hidden" aria-label="${esc(L('act'))}"><span class="tc-act-ico"></span><span class="k-btn-l"></span><b class="tc-act-more hidden" aria-hidden="true"></b></button>`) as HTMLButtonElement;
+    this.actEl = make(`<button type="button" id="tc-act" class="k-btn k-btn--primary k-btn--lg tc-act hidden" aria-label="${esc(L('act'))}"><span class="tc-act-ico"></span><span class="k-btn-l"></span></button>`) as HTMLButtonElement;
     this.actRowEl = make('<div id="tc-actrow" class="tc-actrow hidden" role="toolbar"></div>');
     this.actRowEl.append(this.actEl);
     this.actRowEl.addEventListener('click', (e) => {
@@ -447,26 +471,27 @@ export class SeaHud {
     body.classList.toggle('sea-docked', v.docked);
     this.castEl.classList.toggle('hidden', !v.docked);
     const a = v.act;
-    this.once('act', a ? JSON.stringify([a.id, a.icon, a.label, a.sub, a.more, a.extra ?? []]) : '', () => {
+    const actKey = a ? JSON.stringify([a.id, a.icon, a.label, a.sub, a.extra ?? []]) : '';
+    this.once('act', actKey, () => {
       this.actEl.classList.toggle('hidden', !a);
       this.actRowEl.classList.toggle('hidden', !a);
-      // the small ones first (the row reads left to right toward the thumb's gold one at its end)
+      // the gold one at the thumb's end of the row, the small ones beside it leftward and on up (seahud.css: the row runs
+      // right to left and wraps upward), every one of them
       for (const b of [...this.actRowEl.querySelectorAll('.tc-act2')]) b.remove();
       for (const x of a?.extra ?? []) {
         const words = x.sub ? `${x.label}: ${x.sub}` : x.label;
-        this.actEl.insertAdjacentHTML('beforebegin', `<button type="button" class="k-btn k-btn--secondary tc-act2" data-acti="${x.i}" data-act="${esc(x.id)}" aria-label="${esc(words)}" title="${esc(words)}">${icon(x.icon, '•', 'k-btn-ico')}<span class="k-btn-l">${esc(x.label)}</span></button>`);
+        this.actRowEl.insertAdjacentHTML('beforeend', `<button type="button" class="k-btn k-btn--secondary tc-act2" data-acti="${x.i}" data-act="${esc(x.id)}" aria-label="${esc(words)}" title="${esc(words)}" data-hint="${esc(words)}">${icon(x.icon, '•', 'k-btn-ico')}<span class="k-btn-l">${esc(x.label)}</span></button>`);
       }
       if (!a) return void delete this.actEl.dataset.act;
       this.actEl.dataset.act = a.id;
       this.actEl.querySelector('.tc-act-ico')!.innerHTML = icon(a.icon, '•', 'k-btn-ico');
       this.actEl.querySelector('.k-btn-l')!.textContent = a.label;
       const words = a.sub ? `${a.label}: ${a.sub}` : a.label;
-      this.actEl.setAttribute('aria-label', a.more ? `${words}. ${L('actMore', { n: a.more })}` : words);
-      this.actEl.title = this.actEl.getAttribute('aria-label')!;
-      const more = this.actEl.querySelector<HTMLElement>('.tc-act-more')!;
-      more.classList.toggle('hidden', !a.more);
-      more.textContent = a.more ? `+${a.more}` : '';
+      this.actEl.setAttribute('aria-label', words);
+      this.actEl.title = words;
     });
+    // its shape for the room it has now (the room changes with a fight, a harbour, the screen's size)
+    this.once('actfit', `${actKey}|${innerWidth}x${innerHeight}|${fight}|${v.docked}|${lg}`, () => this.fitActs());
     const sp = v.special;
     this.once('special', sp ? `${sp.id}|${sp.name}` : '', () => {
       this.specialEl.classList.toggle('hidden', !sp);
@@ -506,6 +531,25 @@ export class SeaHud {
       setBadge(this.mmTabEl, v.unread); // (the menu's letters on its tab while it is up)
     });
     this.drawDeck(v.touch === false && !v.docked ? v.deck ?? null : null);
+  }
+
+  /** The action row's shape for its room (actRowFit): the small ones with their words where one row holds them all,
+   *  else their pictures only, wrapping upward. Measured with the words on, in the row's own pixels (unzoomed). */
+  private fitActs(): void {
+    const row = this.actRowEl;
+    if (row.classList.contains('hidden')) return;
+    row.classList.remove('tc-icons');
+    const cs = getComputedStyle(row);
+    const avail = parseFloat(cs.maxWidth);
+    if (!Number.isFinite(avail) || !this.actEl.offsetWidth || !row.offsetWidth) return;
+    const k = row.getBoundingClientRect().width / row.offsetWidth || 1; // (a zoomed HUD)
+    const w = (el: HTMLElement) => el.getBoundingClientRect().width / k;
+    const gap = parseFloat(cs.columnGap) || 0;
+    const pills = [...row.querySelectorAll<HTMLElement>('.tc-act2')].map(w);
+    const square = this.actEl.getBoundingClientRect().height / k;
+    const fit = actRowFit(w(this.actEl), pills, square, gap, avail);
+    row.classList.toggle('tc-icons', fit.mode === 'icons');
+    row.dataset.rows = String(fit.rows);
   }
 
   /** The chart's place as the view and her tap say (body.mm-peek: stepped up behind its tab; body.mm-out: back). */

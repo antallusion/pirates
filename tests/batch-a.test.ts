@@ -12,7 +12,7 @@ import type { ShipEntity } from '../server/src/game/ship.ts';
 import { fireBroadside, shotDrift, stepProjectiles } from '../server/src/game/combat.ts';
 import { SURRENDER_RANGE, canStrike, strikeColours, struck, wouldStrike } from '../server/src/game/struck.ts';
 import { streakAhead, streakCounts, streakMul } from '../server/src/game/streak.ts';
-import { sellPrizes } from '../server/src/game/prizes.ts';
+import { sellPrizes, takePrize } from '../server/src/game/prizes.ts';
 import type { NpcBrain } from '../server/src/game/npc.ts';
 import type { FakeConn } from './helpers.ts';
 import { join, makeGame, onHull } from './helpers.ts';
@@ -222,7 +222,7 @@ test('a warship strikes her colours only battered and outgunned by a captain on 
   assert.equal(strikeColours(game, beaten.npc, beaten.brain, ship), false);
 });
 
-test('the captain she strikes to gets the card: ransom, her hold or her as a prize; taken only alongside', () => {
+test('the captain she strikes to gets the card: the two choices; taken only alongside', () => {
   const { game } = makeGame();
   const { c, ship } = atSea(game, 'Quarter');
   const s = [...game.sessions].find((x) => x.name === 'Quarter')!;
@@ -237,50 +237,40 @@ test('the captain she strikes to gets the card: ransom, her hold or her as a pri
   assert.ok(offer, 'the card');
   assert.equal(offer!.id, npc.id);
   assert.equal(offer!.cargo, 6);
-  assert.ok(offer!.ransom > 0 && offer!.prize && offer!.prize.crew > 0);
+  assert.ok(offer!.outcome && offer!.outcome.release.silver > 0 && offer!.outcome.sink.silver === 120, 'the numbers of the two choices');
   assert.equal(offer!.range, SURRENDER_RANGE);
   // Too far: she waits for you to come alongside.
-  c.push({ t: 'surrender', id: npc.id, fate: 'ransom' });
+  c.push({ t: 'surrender', id: npc.id, fate: 'release' });
   assert.match(c.last('toast')!.msg, /Come within 400 m/);
   assert.ok(npc.surrendered);
-  // Alongside: released for her ransom. Her purse and the ransom come aboard; she sails home; the card goes.
+  // The old terms are gone (owner, 2026-10-18).
+  c.push({ t: 'surrender', id: npc.id, fate: 'ransom' as never });
+  assert.match(c.last('toast')!.msg, /Two choices only/);
+  // Alongside: her crew and a little of her purse; she is gone at once; the card goes.
   npc.state.x = ship.state.x + 250;
   npc.state.y = ship.state.y;
   game.grid.upsert(npc.id, npc.state.x, npc.state.y);
   const gold = s.profile!.gold;
-  c.push({ t: 'surrender', id: npc.id, fate: 'ransom' });
-  assert.ok(s.profile!.gold > gold + offer!.ransom * 0.5, 'the ransom paid');
-  assert.equal(npc.surrendered, false, 'released');
-  assert.ok(npc.protectedUntil > game.now, 'she goes in peace');
+  c.push({ t: 'surrender', id: npc.id, fate: 'release' });
+  assert.ok(s.profile!.gold > gold, 'a little silver');
+  assert.ok(!game.ships.has(npc.id), 'gone at once');
   assert.equal(c.last('surrender_offer')?.offer, null, 'the card closes');
   assert.equal(s.pendingBoarding, null, 'nothing left alongside');
 });
 
-test('her cargo: the hold opens as after a boarding, nothing lost; a prize: a prize crew aboard', () => {
+test('take all and sink her: her hold in yours (nothing lost to a fight that never was), her wreck yours alone with her timber', () => {
   const { game } = makeGame();
   const { c, ship } = atSea(game, 'Plunder');
   const s = [...game.sessions].find((x) => x.name === 'Plunder')!;
   const m = foe(game, ship, 'merchant', 200, 0.3);
   m.npc.cargo = { rum: 10, sugar: 4 };
   struck(game, m.npc, m.brain, ship);
-  c.push({ t: 'surrender', id: m.npc.id, fate: 'cargo' });
-  const r = c.last('boarding')?.result;
-  assert.ok(r && r.struck, 'the plunder card, marked as struck');
-  assert.deepEqual(r!.destroyed, {}, 'nothing lost in a fight that never was');
-  assert.equal(r!.cargo.rum, 10);
-  c.push({ t: 'loot_take', take: { rum: 10 }, fate: 'release' });
-  assert.equal(s.ship!.cargo.rum, 10);
-  // A pirate taken as a prize.
-  const p = foe(game, ship, 'pirate', 220, 0.15);
-  p.npc.state.y -= 300;
-  game.grid.upsert(p.npc.id, p.npc.state.x, p.npc.state.y);
-  struck(game, p.npc, p.brain, ship);
-  const was = p.npc.name;
-  c.push({ t: 'surrender', id: p.npc.id, fate: 'prize' });
-  assert.ok(p.npc.prize, 'a prize crew aboard');
-  assert.equal(p.npc.ownerId, ship.id);
-  assert.equal(p.npc.name, `Prize ${was}`, 'for the court');
-  assert.ok(!p.npc.trophy);
+  c.push({ t: 'surrender', id: m.npc.id, fate: 'sink' });
+  assert.equal(s.ship!.cargo.rum, 10, 'all her rum');
+  assert.equal(s.ship!.cargo.sugar, 4, 'and her sugar');
+  assert.ok(m.npc.sinkingUntil > 0, 'she goes down');
+  const wreck = [...game.loot.values()].find((l) => l.ownerOnly === s.accountId && Math.hypot(l.x - m.npc.state.x, l.y - m.npc.state.y) < 1);
+  assert.ok(wreck && (wreck.cargo.timber ?? 0) > 0 && (wreck.cargo.planks ?? 0) > 0, 'her wreck, hers alone, with timber');
 });
 
 // ------------------------------------------------------------------ 4. the win streak
@@ -338,8 +328,10 @@ test('a grey ship far below her does not count toward a streak; the streak swell
   const m = foe(game, ship, 'merchant', 200, 0.3);
   m.npc.purse = 1000;
   struck(game, m.npc, m.brain, ship);
-  assert.equal(game.acceptSurrender(s, m.npc.id, 'cargo'), null);
-  assert.equal(s.pendingBoarding!.result.gold, 1300, 'the fifth ship: ×1.3 on her purse');
+  let purse = 0;
+  (game as unknown as { npcOutcome: (x: typeof s) => null }).npcOutcome = (x) => ((purse = x.pendingBoarding!.result.gold), null);
+  assert.equal(game.acceptSurrender(s, m.npc.id, 'sink'), null);
+  assert.equal(purse, 1300, 'the fifth ship: ×1.3 on her purse');
 });
 
 // ------------------------------------------------------------------ 5. the named trophy
@@ -351,8 +343,9 @@ test('a trophy keeps her name and her story, and goes to a berth at the next por
   const { npc, brain } = foe(game, ship, 'pirate', 200, 0.15);
   const name = npc.name, captain = npc.captainName;
   struck(game, npc, brain, ship);
-  assert.equal(c.last('surrender_offer')!.offer!.trophy, true, 'a berth is free');
-  c.push({ t: 'surrender', id: npc.id, fate: 'trophy' });
+  // (a ship of the sea is no trophy by the card any more, owner 2026-10-18: the berth's rules stand for a prize put aboard)
+  void c;
+  assert.equal(takePrize(game, s, npc, 'struck'), null);
   assert.ok(npc.prize && npc.trophy, 'taken to be kept');
   assert.equal(npc.name, name, 'she keeps her name');
   assert.equal(npc.trophy!.was, name);
@@ -384,7 +377,7 @@ test('a trophy with every berth taken goes to the prize court after all; the sto
   const s = [...game.sessions].find((x) => x.name === 'Full')!;
   const { npc, brain } = foe(game, ship, 'pirate', 200, 0.15);
   struck(game, npc, brain, ship);
-  assert.equal(game.acceptSurrender(s, npc.id, 'trophy'), null);
+  assert.equal(takePrize(game, s, npc, 'struck'), null);
   assert.ok(npc.trophy);
   for (let i = 0; i < 3; i++) s.profile!.berths.push({ port: 'saltmarrow', loadout: { ...s.profile!.loadout, name: `Spare ${i}` }, hull: 1 });
   const port = game.portById('saltmarrow')!;

@@ -216,6 +216,8 @@ export class ShipEntity {
   docked: string | null = null;
   sinkingUntil = 0;
   surrendered = false;
+  /** A ceasefire bought from her holds until (the white flag, ceasefire.ts; the latest of her truces). */
+  truceUntil = 0;
   boarding: BoardingState | null = null;
   /** docs/25 item 64: she fights another's boarding as an ally of her group — the ship that grappled (the fight's key). */
   boardAlly: number | null = null;
@@ -554,6 +556,7 @@ export class ShipEntity {
     if (this.hasFlag('hidden')) f |= SF.HIDDEN;
     if (this.hasEffect('marked')) f |= SF.MARKED;
     if (this.surrendered) f |= SF.SURRENDERED;
+    if (this.truceUntil > now) f |= SF.TRUCE;
     if (this.docked) f |= SF.DOCKED;
     if (hostile) f |= SF.HOSTILE;
     if (this.repairing) f |= SF.REPAIRING;

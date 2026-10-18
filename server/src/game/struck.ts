@@ -102,6 +102,7 @@ export function surrenderOffer(game: Game, s: PlayerSession, ship: ShipEntity): 
     prize: crew !== null ? { crew, value: prizeValue(ship, me) } : null,
     trophy: crew !== null && (s.profile?.berths.length ?? MAX_BERTHS) < MAX_BERTHS,
     range: SURRENDER_RANGE, until: (brain?.surrenderedAt || game.now) + SURRENDER_WAIT,
+    outcome: game.outcomeNums(s, me, ship, ship.purse), // the two choices (owner, 2026-10-18)
   };
 }
 

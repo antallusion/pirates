@@ -464,7 +464,7 @@ export class Hud {
     bandBottom = Math.max(bandBottom, bandTop + 40 * z);
     // the round buttons under the chart (the chat's with the chart stepped up stands under its tab): the band keeps
     // clear of any that reach into it, the toasts of any beside them
-    const seen = (el: Element) => { const c = getComputedStyle(el); return (c.visibility !== 'hidden' || el.classList.contains('tr-veil')) && Number(c.opacity) > 0.05; };
+    const seen = (el: Element) => { const c = getComputedStyle(el); return c.visibility !== 'hidden' && Number(c.opacity) > 0.05; };
     // (each with what hangs beside it: «Остров»'s word to its left, a desk's key chip on its corner — the column under
     // the chart, 2026-10-16)
     const corner = [...document.querySelectorAll('#tc-menu, #tc-news, #tc-isle, #hud-chat > .chat-toggle, #hud-chat > .chat-toast')].filter(seen)
@@ -476,18 +476,13 @@ export class Hud {
       }).filter((r) => r.width > 0 && r.height > 0 && r.left > W / 2);
     for (const r of corner) if (r.top < bandBottom) right = Math.min(right, r.left - gap);
     // (the card unfolded reaches down beside the row: clear of it when that leaves the card room, else it stops above
-    // the row — advcard.ts fit)
-    // the row, or a narrow screen's (480×270) row stepping out of sight under the card while it is unfolded
+    // the row — advcard.ts fit; the row never steps out of sight under it, owner 2026-10-18: «не должны исчезать никогда»)
     let cardRight = right;
-    const rowEls = [...document.querySelectorAll<HTMLElement>('#tc-menu, #tc-news')];
-    let veil = false;
     if (document.querySelector('#advcard:not(.hidden) .ac-card.open')) {
       let r2 = right;
       for (const r of corner) r2 = Math.min(r2, r.left - gap);
-      if (r2 - left >= 200 * z) cardRight = r2;
-      else veil = true;
+      if (r2 - left >= 150 * z) cardRight = r2;
     }
-    for (const el of rowEls) el.classList.toggle('tr-veil', veil && el.getBoundingClientRect().left < right + gap);
     // The column of the top band (her mark's line, a boss's line, the lesson, the sea's name) in the middle of the free
     // row, as wide as a long name with her bars and chips wants at most, else the whole row (640×360: a column forced
     // to the screen's middle cut her mark's name to «R…»).
@@ -566,11 +561,17 @@ export class Hud {
         else {
           tl = rowR + gap;
           top = Math.max(bandBottom + 6 * z, rowT);
-          // (clear of the top band's column where it reaches down beside them)
+          // (clear of the top band's column where it reaches down beside them: left of it, or — the row of four under
+          // the plate leaving too little beside it at 480×270, a boss's line down to there, 2026-10-18 — under it)
+          let tr2 = tr, under = top;
           for (const el of document.querySelectorAll('#hud-stack > :not(.hidden), #advcard:not(.hidden)')) {
             const r = el.getBoundingClientRect();
-            if (r.width > 2 && r.height > 2 && r.bottom > top && r.left >= tl) tr = Math.min(tr, r.left - gap);
+            if (!(r.width > 2 && r.height > 2 && r.bottom > top && r.right > tl && r.left < tr)) continue;
+            if (r.left >= tl) tr2 = Math.min(tr2, r.left - gap);
+            under = Math.max(under, r.bottom + 6 * z);
           }
+          if (tr2 - tl >= 150 * z) tr = tr2;
+          else top = under;
         }
       }
     }

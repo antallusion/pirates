@@ -1,0 +1,31 @@
+// The two choices after a ship of the sea is beaten and the ceasefire talks (owner, 2026-10-18; server/src/game/Game.ts
+// npcOutcome, server/src/game/ceasefire.ts), English → Russian.
+
+export const SERVER_RU_TRUCE: Record<string, string> = {
+  'Two choices only: take all and sink her, or take her crew and let her go': 'Только два выбора: забрать всё и затопить или забрать экипаж и отпустить',
+  'You let {0} go: {1} of her men sign on with you, and {2} silver. She is gone over the horizon.': 'Вы отпустили {0}: к вам перешло людей — {1}, серебра — {2}. Корабль скрылся за горизонтом.',
+  '{0} goes down with {1} units of her cargo in your hold and {2} of her men in your crew. Her wreck lies on the water for you.': '{0} идёт ко дну: в вашем трюме {1} ед. её груза, к вам перешло людей — {2}. Её обломки ждут вас на воде.',
+  'The great ones of the sea do not bargain': 'Великие моря не торгуются',
+  'A beast of the deep does not bargain': 'Зверь глубин не торгуется',
+  'The dead do not bargain': 'Мёртвые не торгуются',
+  'He has sworn to sink you: no terms': 'Он поклялся потопить вас: никаких условий',
+  'An escort answers to her own captain': 'Конвой подчиняется своему капитану',
+  'She was sent for you: no terms': 'Её послали за вами: никаких условий',
+  'She refused you: she will not talk again so soon': 'Она вам отказала и так скоро говорить не станет',
+  'She is under a white flag to you already': 'Она уже держит перед вами белый флаг',
+  '{0} is under a white flag to you already': '{0} уже держит перед вами белый флаг',
+  'She is not firing on you': 'Она по вам не стреляет',
+  'Your herald was answered only now: talk again in {0} s': 'Вашему глашатаю только что ответили: новые переговоры через {0} с',
+  'Choose a ship to talk to': 'Выберите корабль для переговоров',
+  'She is too far off to hail': 'Она слишком далеко: не докричаться',
+  '{0} refused you: she will not talk again so soon': '{0}: вам отказали, так скоро говорить не станут',
+  'Choose the goods to pay with': 'Выберите товар для оплаты',
+  'Not enough to pay: {0} silver asked, you have {1} silver': 'Нечем заплатить: просят {0} серебра, у вас {1} серебра',
+  'Not enough to pay: {0} silver asked, you have {1} silver and {2} in goods': 'Нечем заплатить: просят {0} серебра, у вас {1} серебра и товара на {2}',
+  'She laughs at your herald and runs out her guns': 'Она смеётся над вашим глашатаем и выкатывает пушки',
+  '{0} hoists a white flag and turns away.': '{0} поднимает белый флаг и отворачивает.',
+  '{0} ships hoist white flags and turn away.': 'Кораблей подняли белый флаг и отвернули: {0}.',
+  '{0} refuses your terms.': '{0} отвергает ваши условия.',
+  '{0} ships refuse your terms.': 'Кораблей отвергли ваши условия: {0}.',
+  'You fired on {0} under her white flag: the truce is broken, and what you paid is gone.': 'Вы открыли огонь по {0} под белым флагом: перемирие нарушено, уплаченное не вернуть.',
+};

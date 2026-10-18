@@ -83,8 +83,10 @@ import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { islandLife } from '../../../shared/src/world/islandlife.ts';
 import type { LifeSite } from '../../../shared/src/world/islandlife.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
+import { EN as OUT_EN, RU as OUT_RU } from '../lang/ui/outcome.ts';
 
 const L = dict(REN, RRU);
+const LOUT = dict(OUT_EN, OUT_RU); // the white flag's word (owner, 2026-10-18)
 const LF = dict(FL_EN, FL_RU); // docs/24: a captain's colours
 const hasRole = (r: string): r is 'merchant' => `role.${r}` in REN;
 import { cbColor, settings } from '../settings.ts';
@@ -4327,7 +4329,23 @@ export class Renderer {
       ? `${col?.label ? ` · ${col.label}` : ''}${col?.noBoard ? ` · ${LF('mark.noBoard')}` : ''}${s.flags & SF.SHAME ? L('shame') : ''}${s.flags & SF.BOUNTY ? L('bounty') : ''}${s.flags & SF.DUEL ? L('duel') : ''}${s.flags & SF.GUARDED ? L('guarded') : ''}`
       : '';
     if (s.flags & SF.SHAME) g.fillStyle = 'rgba(224,119,107,0.9)';
-    g.fillText(tag + marks + (s.flags & SF.SURRENDERED ? L('struck') : ''), x, y + 11);
+    g.fillText(tag + marks + (s.flags & SF.SURRENDERED ? L('struck') : '') + (s.flags & SF.TRUCE ? ` · ${LOUT('cf.truce')}` : ''), x, y + 11);
+    // A ceasefire bought from her (owner, 2026-10-18): a white flag over her name, on its staff.
+    if (s.flags & SF.TRUCE) {
+      const fx = x + 30, fy = y - 2;
+      g.fillStyle = 'rgba(30,24,18,0.9)';
+      g.fillRect(fx, fy - 16, 2, 18);
+      g.fillStyle = '#f4f1e8';
+      g.beginPath();
+      g.moveTo(fx + 2, fy - 16);
+      g.lineTo(fx + 15, fy - 13);
+      g.lineTo(fx + 12, fy - 10);
+      g.lineTo(fx + 15, fy - 7);
+      g.lineTo(fx + 2, fy - 7);
+      g.closePath();
+      g.fill();
+      g.fillStyle = 'rgba(180,180,180,0.8)';
+    }
     // Hull and sails bars.
     const w = 46;
     g.fillStyle = 'rgba(0,0,0,0.7)';

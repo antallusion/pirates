@@ -21,6 +21,8 @@ import { EN as UX2_EN, RU as UX2_RU } from './lang/ui/ux2.ts';
 import type { AutosailStop } from '../../shared/src/data/autosail.ts';
 import { EncounterCard } from './ui/encounter.ts';
 import { SurrenderCard } from './ui/surrender.ts';
+import { CeasefireCard } from './ui/ceasefire.ts'; // owner, 2026-10-18: the ceasefire talks
+import { EN as OUT_EN, RU as OUT_RU } from './lang/ui/outcome.ts';
 import { BoardOfferCard } from './ui/boardoffer.ts'; // docs/25 item 64: a group mate's boarding within reach
 import { LairChestCard } from './ui/lairchest.ts';
 import { MinigameWindow } from './ui/minigame.ts';
@@ -49,7 +51,7 @@ import { AudioEngine, turnCreakLoad } from './audio.ts';
 import { AutosailPill, FirstTips, autosailRequest, autosailStopText, routeLabel, tipForMsg, tipForState } from './ui/ease.ts';
 import { claimNear, claimSpot, tapTarget } from './ui/sailto.ts'; // seaux: sail-to on tap
 import { toggleCaptainMenu } from './ui/capmenu.ts'; // seaux: the captain's menu on her portrait
-import { ACT_SHOW, actBarHtml, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
+import { actBarHtml, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
 import { FIND_REACH, FIND_SLOW } from '../../shared/src/data/seafinds.ts';
 import type { FindView } from '../../shared/src/findproto.ts';
 import { ROAMS, ROAM_REACH, ROAM_SEE } from '../../shared/src/data/roamers.ts'; // docs/19 D7
@@ -473,7 +475,8 @@ setInterval(() => {
 // The bottom's line of words on a touch screen («Под защитой — выстрел её снимет», the carpenters' pace) keeps clear of
 // the round buttons and the row of actions (2026-10-16: at 480×270 it lay under the row): from its own place it steps up
 // (and aside) to the first free spot of the bottom band. Four times a second, moved by \`translate\` only.
-const INFO_OBSTACLES = '#tc-actrow:not(.hidden), #tc-fire, #tc-cast:not(.hidden), #tc-ammo, #tc-special, #tc-lock, #tc-stick, #tc-speed, #tc-deck, #tc-act:not(.hidden), #tc-offer:not(.hidden), #tc-sail, #hud-captain .cs, #toasts > .toast, #hud-chat > .chat-toggle, #tc-menu, #tc-news, #tc-isle, #hud-map, #advcard:not(.hidden), #encounter:not(.hidden), #surrender:not(.hidden)';
+// (the row's own buttons, not its box: with every thing to do in sight it wraps upward, its rows of unequal length)
+const INFO_OBSTACLES = '#tc-actrow:not(.hidden) > .k-btn, #tc-fire, #tc-cast:not(.hidden), #tc-ammo, #tc-special, #tc-lock, #tc-stick, #tc-speed, #tc-deck, #tc-act:not(.hidden), #tc-offer:not(.hidden), #tc-sail, #hud-captain .cs, #toasts > .toast, #hud-chat > .chat-toggle, #tc-menu, #tc-news, #tc-isle, #hud-map, #advcard:not(.hidden), #encounter:not(.hidden), #surrender:not(.hidden)';
 setInterval(() => {
   const el = document.getElementById('hud-bottom');
   if (!el) return;
@@ -495,7 +498,7 @@ setInterval(() => {
   const free = (x: number, y: number) => x >= 4 && x + r.width <= W - 4 && y >= H * 0.45 && y + r.height <= H - 2 && obs.every((q) => q.right <= x + 1 || q.left >= x + r.width - 1 || q.bottom <= y + 1 || q.top >= y + r.height - 1);
   let best: [number, number] | null = null;
   for (let dy = 0; !best && by + dy >= H * 0.45; dy -= 4) {
-    for (const dx of [0, -30, 30, -60, 60, -90, 90, -120, 120, -160, 160]) if (free(bx + dx, by + dy)) { best = [dx, dy]; break; }
+    for (const dx of [0, -30, 30, -60, 60, -90, 90, -120, 120, -160, 160, -200, 200]) if (free(bx + dx, by + dy)) { best = [dx, dy]; break; }
   }
   const v = best ? `${best[0]}px ${best[1]}px` : '';
   if (el.style.translate !== v) el.style.translate = v;
@@ -958,6 +961,8 @@ const tutorPointer = new TutorPointer();
 guardVibrate(); // «Вибрация» off stills every pulse (docs/23 item 84)
 const encounterCard = new EncounterCard((m) => net.send(m));
 const surrenderCard = new SurrenderCard((m) => net.send(m));
+const ceasefireCard = new CeasefireCard((m) => net.send(m));
+const LOUT = dict(OUT_EN, OUT_RU);
 const boardOffer = new BoardOfferCard((m) => net.send(m));
 const lairChest = new LairChestCard();
 const minigameWindow = new MinigameWindow((m) => net.send(m));
@@ -1552,6 +1557,9 @@ function onMessage(m: ServerMsg): void {
     case 'film':
       // The server's own moments: a zone boss's first rising in her sea (a sea event, not a window: owner, 2026-10-05).
       if (m.id.startsWith('cut_zboss_')) playFilm(m.id);
+      break;
+    case 'ceasefire':
+      ceasefireCard.show(m.view); // the talks: who asks what, who agreed (owner, 2026-10-18)
       break;
     case 'surrender_offer':
       // A ship strikes her colours to you (docs/16 #3): the choice card over the sea.
@@ -2308,17 +2316,13 @@ hud.onMiniMark = (x, y) => {
   worldMap.onAutosail(wp);
   return true;
 };
-// The action bar (owner, 2026-10-02): a button does what its key does; «⋯ more» opens the rest. A press never takes
-// the focus (Space and Enter stay the ship's).
+// The action bar (owner, 2026-10-02): a button does what its key does, every one in sight (2026-10-18). A press never
+// takes the focus (Space and Enter stay the ship's).
 $('hud-prompt').addEventListener('mousedown', (e) => {
   if ((e.target as HTMLElement).closest('button')) e.preventDefault();
 });
 $('hud-prompt').addEventListener('click', (e) => {
   const el = e.target as HTMLElement;
-  if (el.closest('[data-act-more]')) {
-    actsMore = !actsMore;
-    return;
-  }
   const b = el.closest<HTMLElement>('[data-act]');
   const a = b ? curActs[Number(b.dataset.act)] : undefined;
   if (a) runAct(a);
@@ -2792,7 +2796,6 @@ let lastDescentTier = -1;
 let curActs: Act[] = [];
 /** The «Действие» wheel's list as it was when the wheel opened. */
 let wheelActs: Act[] = [];
-let actsMore = false;
 let actTipOffered = false;
 let pendingMark: { id: number; until: number } | null = null;
 /** docs/19 D5: the small thing her boats will go to once she has slowed. */
@@ -3038,15 +3041,12 @@ function landTagText(l: NonNullable<NonNullable<typeof state.self>['landable']>)
 function computePrompt(): string {
   const { acts, info } = gatherActs();
   curActs = acts;
-  // The simple HUD on a desk keeps the context row to the first thing to do and «⋯ N more» (seven things on the
-  // screen at most: a boss, a roaming stack and a gull's flock made three buttons there).
-  const show = simpleHud() && !touch.enabled ? 2 : ACT_SHOW;
-  if (acts.length <= show) actsMore = false;
+  // Every thing to do at once (owner, 2026-10-18: «нельзя скрывать ничего»): no «⋯ N more».
   if (acts.length && !actTipOffered) {
     actTipOffered = true;
     firstTips.offer('actions', true);
   }
-  return actBarHtml(acts, info, touch.enabled ? null : keyOfAction, actsMore, show);
+  return actBarHtml(acts, info, touch.enabled ? null : keyOfAction);
 }
 
 /** A button of the bar (or its key, or the pad's A) does its thing. */
@@ -3369,8 +3369,8 @@ function seaFrame(): void {
     deck: touch.enabled ? null : deckView(),
     keys: touch.enabled ? null : deskKeys(),
     fight,
-    // (seaux: the next two small beside it in one row; the rest behind its long press, its badge counting them)
-    act: a ? { id: a.id, icon: a.icon, label: a.label, ...(a.sub ? { sub: a.sub } : {}), more: Math.max(0, curActs.length - 3), extra: curActs.slice(1, 3).map((x, j) => ({ i: j + 1, id: x.id, icon: x.icon, label: x.label, ...(x.sub ? { sub: x.sub } : {}) })) } : null,
+    // (every other thing to do small beside it, none behind a «+N»: owner, 2026-10-18 — «должны быть видны все действия сразу»)
+    act: a ? { id: a.id, icon: a.icon, label: a.label, ...(a.sub ? { sub: a.sub } : {}), extra: curActs.slice(1).map((x, j) => ({ i: j + 1, id: x.id, icon: x.icon, label: x.label, ...(x.sub ? { sub: x.sub } : {}) })) } : null,
     special: specialNow(),
     target: self.dockedAt ? null : seaTarget(),
     ammo: you.ammoSel,
@@ -3501,6 +3501,8 @@ function targetChoices(about: string): { choices: TmChoice[]; name: string; x: n
         { id: 'lock', art: 'item_ranging_glass', label: seaWord('tm.lock'), title: seaWord('tm.lockT'), on: targetPinned && targetId === id },
         { id: 'pursue', art: 'talent_nav_wake_rider', label: seaWord('tm.pursue'), title: seaWord(f.boardable ? 'tm.pursueT' : 'tm.pursueGuns'), on: state.pursuit?.target === id },
         { id: 'fight', art: board ? 'ab_red_hook_boarding' : 'talent_gun_rolling_broadside', label: seaWord('tm.fight'), title: seaWord(board ? 'tm.fightBoard' : 'tm.fightGuns') },
+        // A ship of the sea firing on her: the talks (owner, 2026-10-18; the server says who will not bargain).
+        ...(!s.info.isPlayer && s.info.npcRole && s.info.npcRole !== 'beast' && s.cur.flags & SF.HOSTILE ? [{ id: 'talk' as const, art: 'faction_free', label: LOUT('cf.tm'), title: LOUT('cf.tmT') }] : []),
       ],
     };
   }
@@ -3526,6 +3528,7 @@ function pickTargetChoice(id: TmId, about: string): void {
   const [kind, sid] = about.split(':');
   const n = Number(sid);
   if (kind === 'ship') {
+    if (id === 'talk') return ceasefireCard.ask(n);
     pinTarget(n); // the pursuit and the fight are about her: she is the mark too
     if (id === 'pursue') net.send({ t: 'attack', target: n, mode: unboardableMark(n) ? 'guns' : 'board' });
     else if (id === 'fight') {
@@ -4281,6 +4284,7 @@ function step(t: number): void {
     tutorPointer.frame();
     encounterCard.frame();
     surrenderCard.frame(state);
+    ceasefireCard.frame(state);
     fishFight.frame();
     netHaul.frame();
     // The chart once a second; four times while a signal flag pulses on it (docs/16 #35).
