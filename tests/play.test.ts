@@ -122,8 +122,16 @@ test('a boarded ship\'s fates in a word on a narrow phone, whole on a wider scre
     assert.ok(EN[k] && RU[k], k);
     assert.ok(RU[k].replace(/\{\w+\}/g, '').trim().split(/\s+/).length <= 2, `${k}: a word (and its sum)`);
   }
+  // A ship of the sea beaten has two fates only (owner, 2026-10-18): «Затопить всё» and «Экипаж, отпустить» in a word too.
+  const { EN: OEN, RU: ORU } = await import('../client/src/lang/ui/outcome.ts');
+  for (const k of ['out.sinkShort', 'out.releaseShort'] as const) {
+    assert.ok(OEN[k] && ORU[k], k);
+    assert.ok(ORU[k].trim().split(/\s+/).length <= 2, `${k}: a word or two`);
+  }
   const src = read('client/src/ui/dialogs.ts');
-  assert.equal((src.match(/\$\{two\(/g) ?? []).length, 5, 'every fate has its word');
+  // five for a captain's ship (PvP keeps its card), one for a ship of the sea's (both of her choices go through it)
+  assert.equal((src.match(/\$\{two\(/g) ?? []).length, 6, 'every fate has its word');
+  assert.match(src, /two\(title, short\)/, 'the two choices go through the same word');
   const css = read('client/styles.css');
   assert.match(css, /\.choice \.ch-short \{ display: none; \}\r?\n@media \(max-width: 699px\) \{\r?\n  #modal-panel\[data-modal="boarding"\] \.choice \.ch-long \{ display: none; \}/);
 });
