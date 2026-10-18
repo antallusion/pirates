@@ -347,3 +347,20 @@ p { margin: 0 0 1em; }
 
 /* kit pictures keep their proportions in any box */
 img[src*="/site/img/ico/"], img[src*="/site/img/rank/"], img[src*="/site/img/medal/"] { object-fit: contain; }
+
+/* ---- the captains' page: two columns of upright cards (owner: «в два ряда») */
+.caps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; align-items: stretch; }
+.capcard, .capcard.flip { grid-template-columns: 1fr; gap: 0; padding: 0; overflow: hidden; }
+.capcard.flip .capcard-art { order: 0; }
+.capcard-art { min-height: 0; height: 340px; border-radius: 0; border: 0; border-bottom: 1px solid rgba(245, 196, 81, 0.18); background: radial-gradient(55% 70% at 50% 85%, rgba(245, 196, 81, 0.2), transparent 70%), linear-gradient(180deg, #121a2c, #0a0e18); }
+.capcard-art .fig { inset: 6% 10% 0; width: 80%; height: 94%; }
+.capcard .cap-ring.big { width: 120px; left: 20px; bottom: -14px; z-index: 2; }
+.capcard-txt { padding: 30px 28px 28px; }
+.capcard h2 { font-size: clamp(30px, 2.8vw, 42px); }
+.capcard .abil { gap: 8px; }
+@media (max-width: 900px) {
+  .caps { grid-template-columns: 1fr; }
+  .capcard-art { height: 300px; }
+  .capcard .cap-ring.big { width: 100px; }
+  .capcard-txt { padding: 26px 18px 20px; }
+}
