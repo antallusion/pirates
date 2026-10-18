@@ -136,7 +136,7 @@ function header(lang: Lang, active: string, path: string): string {
   const other = lang === 'ru' ? `/site/en/${path}` : `/site/${path}`;
   return `<header class="hdr"><div class="hdr-pill">
 <a class="hdr-logo" href="${r}" aria-label="GRAVETIDE"><img src="${K('brand/logo')}" alt="GRAVETIDE" width="120" height="96"></a>
-<nav class="hdr-nav" id="nav">${nav.map(([href, k, ic]) => `<a href="${k === 'forum' ? '/site/forum/' : r + href}"${active === k ? ' class="on" aria-current="page"' : ''}><img src="${K(ic)}" alt="" width="22" height="22">${u(k, lang)}</a>`).join('')}</nav>
+<nav class="hdr-nav" id="nav">${nav.map(([href, k, ic]) => `<a href="${r + href}"${active === k ? ' class="on" aria-current="page"' : ''}><img src="${K(ic)}" alt="" width="22" height="22">${u(k, lang)}</a>`).join('')}</nav>
 <div class="hdr-end"><a class="hdr-lang" href="${other}" hreflang="${lang === 'ru' ? 'en' : 'ru'}">${lang === 'ru' ? 'EN' : 'RU'}</a>
 <a class="hdr-soc" href="https://t.me/gravetide_bot" target="_blank" rel="noopener" aria-label="Telegram"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M21.9 4.3 18.7 19.4c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.5 13.2 1.8 11.7c-1-.3-1-1 .2-1.5L20.5 3c.9-.3 1.6.2 1.4 1.3z"/></svg></a>
 <a class="btn-gold sm" href="/play">${u('play', lang)}</a>
@@ -150,20 +150,20 @@ function heroBlock(h: Hero, lang: Lang): string {
 ${h.cta ? `<div class="hero-cta"><a class="btn-gold lg" href="/play">${u('playFree', lang)}</a><a class="btn-oak" href="https://t.me/gravetide_bot" target="_blank" rel="noopener">${u('tg', lang)}</a></div>` : ''}</div></section>`;
 }
 
-function page(lang: Lang, o: { path: string; active: string; title: string; desc: string; hero: Hero; body: string }): string {
+function page(lang: Lang, o: { path: string; active: string; title: string; desc: string; hero: Hero; body: string; css?: string; script?: string }): string {
   const r = root(lang);
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(o.title)}</title><meta name="description" content="${esc(o.desc)}"><meta name="theme-color" content="#07090f">
 <meta property="og:title" content="${esc(o.title)}"><meta property="og:description" content="${esc(o.desc)}"><meta property="og:image" content="${o.hero.img}">
 <link rel="icon" href="${K('brand/icon')}"><link rel="alternate" hreflang="ru" href="/site/${o.path}"><link rel="alternate" hreflang="en" href="/site/en/${o.path}">
 <link rel="preload" href="/site/fonts/cormorantsc-700-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/site/css/fonts.css"><link rel="stylesheet" href="/site/css/site.css"></head>
+<link rel="stylesheet" href="/site/css/fonts.css"><link rel="stylesheet" href="/site/css/site.css">${o.css ? `<link rel="stylesheet" href="${o.css}">` : ''}</head>
 <body class="pg-${o.active}">${header(lang, o.active, o.path)}
 <main>${heroBlock(o.hero, lang)}${o.body}</main>
 <footer class="ftr"><div class="wrap ftr-in"><img src="${K('brand/logo')}" alt="GRAVETIDE" width="110" height="88" loading="lazy">
-<p>${T(u('footer', lang), lang)}</p><nav><a href="${r}creatures/">${u('creatures', lang)}</a><a href="${r}captains/">${u('captains', lang)}</a><a href="${r}ships/">${u('ships', lang)}</a><a href="/site/forum/">${u('forum', lang)}</a><a href="/play">${u('play', lang)}</a></nav>
+<p>${T(u('footer', lang), lang)}</p><nav><a href="${r}creatures/">${u('creatures', lang)}</a><a href="${r}captains/">${u('captains', lang)}</a><a href="${r}ships/">${u('ships', lang)}</a><a href="${r}forum/">${u('forum', lang)}</a><a href="/play">${u('play', lang)}</a></nav>
 <small>© GRAVETIDE · gravetidegame.com</small></div></footer>
-<script src="/site/js/site.js" defer></script></body></html>`;
+<script src="/site/js/site.js" defer></script>${o.script ? `<script type="module" src="${o.script}"></script>` : ''}</body></html>`;
 }
 
 const sectionHead = (kicker: string, title: string, lang: Lang, lead = '') =>
@@ -310,6 +310,19 @@ ${s.passive ? `<p class="trait"><img src="${K('ico/star')}" alt="" width="18" he
   });
 }
 
+// ------------------------------------------------------------------------------------------------ the forum's shell
+
+/** The forum (docs/32_FORUM.md) is one page: the site's header, hero and footer around #forum, which
+ *  client/src/forum/main.ts fills by the address (the server answers every /site/forum/… with this page). */
+function forum(lang: Lang): string {
+  return page(lang, {
+    path: 'forum/', active: 'forum', title: lang === 'ru' ? 'Форум GRAVETIDE' : 'GRAVETIDE Forum',
+    desc: lang === 'ru' ? 'Форум капитанов GRAVETIDE: новости, гайды, обсуждения, торговля и ошибки.' : 'The GRAVETIDE captains’ forum: news, guides, discussions, trade and bug reports.',
+    hero: { img: K('hero/forum'), kicker: lang === 'ru' ? 'Таверна капитанов' : 'The captains’ tavern', title: lang === 'ru' ? 'Форум GRAVETIDE' : 'GRAVETIDE Forum', mini: true },
+    body: '<div id="forum" class="wrap f-root"></div>', css: '/site/css/forum.css', script: '/src/forum/main.ts',
+  });
+}
+
 // ------------------------------------------------------------------------------------------------ write
 
 function write(rel: string, html: string): void {
@@ -325,6 +338,7 @@ for (const lang of ['ru', 'en'] as Lang[]) {
   write(`${base}creatures/index.html`, bestiary(lang));
   write(`${base}captains/index.html`, captains(lang));
   write(`${base}ships/index.html`, ships(lang));
+  write(`${base}forum/index.html`, forum(lang));
   for (const c of CREATURES) write(`${base}creatures/${c.id}.html`, creaturePage(c, lang));
   n += 4 + CREATURES.length;
 }

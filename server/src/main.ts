@@ -28,6 +28,11 @@ import { mailerFromEnv } from './mail.ts';
 import { OAuthFlow, providersFromEnv } from './oauth.ts';
 import { telegramFromEnv } from './telegram.ts';
 import { handleTelegram } from './http/tg-routes.ts';
+import { readFileSync } from 'node:fs';
+import { ForumStore } from './forum/store.ts';
+import { ForumService } from './forum/service.ts';
+import { gameLink } from './forum/gamelink.ts';
+import { forumRoutes } from './http/forum-routes.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const PORT = Number(process.env.PORT ?? 8080);
@@ -55,6 +60,23 @@ wireLiveOps();
 const opsPanel = new OpsPanel(game, liveops);
 // Telegram (docs/27): the Mini App's sign-in, «Войти через Телеграм», the bot's webhook, Stars — null without TELEGRAM_BOT_TOKEN.
 const tg = telegramFromEnv({ db, auth, game, publicUrl: PUBLIC_URL });
+// The community forum (docs/32_FORUM.md): its own SQLite file and uploads folder beside the game's database.
+const forumDir = DB_PATH === ':memory:' ? null : dirname(DB_PATH);
+const ids = (v: string | undefined) => (v ?? '').split(',').map((x) => Number(x.trim())).filter((x) => Number.isInteger(x) && x > 0);
+const portraits = (() => {
+  try {
+    const m = JSON.parse(readFileSync(resolve(root, 'assets/manifest.json'), 'utf8')) as { assets: Record<string, { local: string }> };
+    return Object.keys(m.assets).filter((k) => k.startsWith('portrait.') && !k.startsWith('portrait.baron_')).map((k) => k.slice('portrait.'.length));
+  } catch {
+    return undefined;
+  }
+})();
+const forum = new ForumService({
+  store: new ForumStore(process.env.FORUM_DB_PATH ?? (forumDir ? resolve(forumDir, 'forum.db') : ':memory:')),
+  link: gameLink(game, db), admins: ids(process.env.FORUM_ADMINS), mods: ids(process.env.FORUM_MODS),
+  uploadsDir: forumDir ? resolve(forumDir, 'forum-uploads') : null, avatars: portraits,
+});
+const handleForum = forumRoutes(forum, auth);
 
 const server = createServer(async (req, res) => {
   if (req.url === '/onboarding') {
@@ -97,6 +119,7 @@ const server = createServer(async (req, res) => {
   if (req.url?.startsWith('/ops') && (await opsPanel.handle(req, res))) return;
   if (await handleTelegram(req, res, tg)) return;
   if (await handleAuth(req, res, auth, oauth)) return;
+  if (req.url?.startsWith('/api/forum/') && (await handleForum(req, res))) return;
   if (await serveStatic(req, res)) return;
   res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');
 });
@@ -146,6 +169,7 @@ async function shutdown(): Promise<void> {
   await db.close();
   telemetry.close();
   liveops.close();
+  forum.store.close();
   await shared?.close();
   process.exit(0);
 }
