@@ -163,11 +163,19 @@ test('65: the roles — each path among a side\'s captains lays its role once on
   assert.ok(m.melee >= (TAC_ROLES.corsair.self!.melee ?? 0), 'the corsair strikes');
   assert.ok(modsOf(same, 0).taken > 2 * (TAC_ROLES.admiral.self!.taken ?? 0), 'three admirals hold it once');
   // The drowned raise as each round opens.
-  const { bt, rng } = field(30, 'drowned', ['corsair']);
-  const hurt = bt.stacks.find((s) => s.side === 0 && s.count > 5)!;
-  hurt.count = Math.floor(hurt.count / 2);
-  for (let i = 0; i < 400 && bt.round < 2 && !bt.over; i++) aiAct(bt, 0, rng);
-  assert.ok(bt.log.some((e) => e.k === 'regen' && e.id === 'role'), 'the fallen rise');
+  // (a stack cut down to the last man in round one has nobody to rise: the decks are laid anew each battle, owner
+  //  2026-10-18, so the first seed whose hurt stack lives to round two is the one read)
+  let rose = 0;
+  for (const seed of [3, 4, 5, 6, 7]) {
+    const { bt, rng } = field(30, 'drowned', ['corsair'], null, true, seed);
+    const hurt = bt.stacks.find((s) => s.side === 0 && s.count > 5)!;
+    hurt.count = Math.floor(hurt.count / 2);
+    for (let i = 0; i < 400 && bt.round < 2 && !bt.over; i++) aiAct(bt, 0, rng);
+    if (hurt.count <= 0 || bt.round < 2) continue;
+    assert.ok(bt.log.some((e) => e.k === 'regen' && e.id === 'role'), 'the fallen rise');
+    rose++;
+  }
+  assert.ok(rose > 0);
 });
 
 test('65: the echo — a second captain of one path gives her page at ×0.6 in its round, and what she lays renews it rather than doubling', () => {
@@ -282,7 +290,9 @@ test('duration: a group\'s boarding — 5–10 min between captains at 51–60; 
     assert.ok(g2.mins >= 5 && g2.mins <= 10, `L${L} 2 v 2: ${g2.mins.toFixed(1)} min`);
   }
   for (const L of [5, 25]) {
-    const solo = groupStat(L, 1, null, 2), g = groupStat(L, 3, null, 2, { grow: true });
+    // (eight seeds a pairing: at two the rounds' mean swung ±0.4 with the deck's layout alone — it is drawn anew each
+    //  battle since 2026-10-18 — on either side of the half-round allowed)
+    const solo = groupStat(L, 1, null, 8), g = groupStat(L, 3, null, 8, { grow: true });
     assert.ok(g.mins <= solo.mins * 2, `L${L} against the sea: three ${g.mins.toFixed(2)} min, alone ${solo.mins.toFixed(2)}`);
     assert.ok(g.rounds <= solo.rounds + 0.5, `L${L}: rounds ${g.rounds.toFixed(1)} vs ${solo.rounds.toFixed(1)}`);
   }

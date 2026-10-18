@@ -12,6 +12,7 @@ import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { OFFICER_DEFS } from '../../../shared/src/data/crew.ts';
 import { TAC_BLOCKING, TAC_END_WINDOW, TAC_H, TAC_LONG_SHOT, TAC_PLAY_WINDOW, TAC_SPELLS, TAC_TURN, TAC_W, deckCover, hexDist, hexIndex, hexNeighbors, hexX, hexY, tacSchedule, threatHexes } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacSpellId } from '../../../shared/src/data/tactical.ts';
+import { DECOR_SIZE, PLANK_DRAW, PROP_SIZE, plankSpan } from '../../../shared/src/data/tacprops.ts'; // owner, 2026-10-18: the boarding pack
 import type { ClientMsg, ServerMsg, TacAction, TacAllyView, TacEvent, TacPreview, TacReplayFrame, TacStackView, TacView, TacWhy } from '../../../shared/src/protocol.ts';
 import { assetEpoch, assetFor, assetIds, assetUrl, sprite } from '../assets.ts';
 import { dict, lang, plural } from '../i18n.ts';
@@ -358,6 +359,8 @@ export function tacArt(v: TacView): string[] {
     const p = PROP_OF[c]?.(land);
     if (p) ids.push(p);
   }
+  // Owner, 2026-10-18: a boarding's own deck props and gangplanks (shared/src/data/tacprops.ts).
+  for (const p of [...(v.props ?? []), ...(v.planks ?? [])]) ids.push(`prop.${p.a}`);
   const out = new Set<string>();
   for (const id of ids) {
     const a = id ? assetFor(id) : null;
@@ -378,6 +381,8 @@ function cover(g: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y:
 /** What stands on a hex as a painted three-quarter prop (owner, 2026-10-02: the battle as in Heroes), by the ground. */
 const PROP_OF: Record<string, (land: string) => string> = {
   M: () => 'prop.bt_mast', C: () => 'prop.bt_cannon', B: () => 'prop.bt_barrels', K: () => 'prop.bt_crates',
+  // Owner, 2026-10-18: a barricade and an obstacle without their own picture in the view (an old server's) stand in so.
+  Q: () => 'prop.bd_barrel_wall', L: () => 'prop.bd_capstan',
   R: (l) => (l === 'volcanic' ? 'prop.bt_lava' : l === 'graveyard' ? 'prop.bt_graves' : 'prop.bt_boulder'),
   P: (l) => (l === 'swamp' ? 'prop.bt_mangrove' : l === 'volcanic' || l === 'graveyard' || l === 'dead' ? 'prop.bt_deadtree' : 'prop.bt_palm'),
 };
@@ -390,6 +395,25 @@ const PROP_BOX: Record<string, [number, number]> = {
 function propArt(cell: string, land: string): string | null {
   const id = PROP_OF[cell]?.(land);
   return id && sprite(id) ? id : null;
+}
+/** Owner, 2026-10-18: a boarding's props by hex (the view's `props`: what stands, each deck her own pictures, and the
+ *  clutter on open hexes); kept for the view it was made from. */
+const propsByHex = new WeakMap<object, Map<number, string>>();
+function propsOf(v: TacView): Map<number, string> {
+  const key = v.props ?? EMPTY_PROPS;
+  let m = propsByHex.get(key);
+  if (!m) {
+    m = new Map((v.props ?? []).map((p) => [p.h, `prop.${p.a}`]));
+    propsByHex.set(key, m);
+  }
+  return m;
+}
+const EMPTY_PROPS: { h: number; a: string }[] = [];
+/** The picture standing on hex `i`: the deck's own (if loaded), else the kind's. */
+function propAtHex(v: TacView, i: number, land: string): string | null {
+  const c = v.cells[i];
+  const own = !v.land && !v.siege && !v.arena && TAC_BLOCKING.has(c as TacCell) ? propsOf(v).get(i) : undefined;
+  return own && sprite(own) ? own : propArt(c, land);
 }
 
 /** The wood of a deck, drawn once: planks along the ship, seams, grain and nails. */
@@ -3477,19 +3501,16 @@ export class TacticalPanel {
     const { w } = this.size;
     const h = (w * 2) / SQ3;
     const x = hexX(i), y = hexY(i);
-    // docs/25 item 3: a hex rides its deck's rise and fall (the gangway's between them, sagging); in the opening the
+    // docs/25 item 3: a hex rides its deck's rise and fall (the gangway's between them); in the opening the
     // boarded deck slides in as the grapples bite (item 11). The painting's cache is laid level.
-    const dy = this.level ? 0 : x < 5 ? this.roll[0] : x > 5 ? this.roll[1] : (this.roll[0] + this.roll[1]) / 2 + this.sag();
+    // Owner, 2026-10-18 («Мостик в бою прогибается дугой … ровный по клеткам»): the gangway's hex lies on the straight
+    // line between its two ends, no sag.
+    const dy = this.level ? 0 : x < 5 ? this.roll[0] : x > 5 ? this.roll[1] : (this.roll[0] + this.roll[1]) / 2;
     const dx = this.level || x <= 5 ? 0 : this.slide;
     return { x: w * (x + 0.5 + (y & 1 ? 0.5 : 0)) + dx, y: h / 2 + y * h * 0.75 + dy };
   }
   /** The hexes laid level (the background's cache is drawn so). */
   private level = false;
-  /** The gangway's sag at its middle (board px): more as the decks part. */
-  private sag(): number {
-    const w = this.size.w || 30;
-    return this.mo.still ? 0 : w * 0.035 + Math.abs(this.roll[0] - this.roll[1]) * 0.35;
-  }
 
   /** The board's turn onto the screen: screen = (a·x + c·y + e, b·x + d·y + f). */
   private xf(): [number, number, number, number, number, number] {
@@ -3907,7 +3928,7 @@ export class TacticalPanel {
         g.stroke();
       }
       // The gangways are drawn live over the water (they bend as the decks part, and fall in the opening).
-      if (!this.boxes[0] || !this.boxes[1]) this.boardingPlanks(g, cells, w, r);
+      if (!this.boxes[0] || !this.boxes[1]) this.boardingPlanks(g, cells, w, r, v);
       this.deckThings(g, cells, w, true);
       return c;
     }
@@ -3973,43 +3994,68 @@ export class TacticalPanel {
         g.stroke();
       }
     }
-    this.boardingPlanks(g, cells, w, r);
+    this.boardingPlanks(g, cells, w, r, v);
     this.deckThings(g, cells, w, false);
     return c;
   }
 
-  /** The planks across the water, lashed with the grapple lines. */
-  private boardingPlanks(g: CanvasRenderingContext2D, cells: string, w: number, r: number): void {
+  /** The planks across the water (laid level, for the painting's cache): each run of plank hexes one gangway. */
+  private boardingPlanks(g: CanvasRenderingContext2D, cells: string, w: number, _r: number, v: TacView | null = this.view): void {
     for (let i = 0; i < cells.length; i++) {
-      if (cells[i] !== '=') continue;
-      const p = this.lc(i);
-      g.save();
-      g.translate(p.x, p.y);
-      g.fillStyle = 'rgba(0,0,0,0.35)';
-      g.fillRect(-w * 0.95, -r * 0.42 + 3, w * 1.9, r * 0.84);
-      const pg = g.createLinearGradient(0, -r * 0.45, 0, r * 0.45);
+      if (cells[i] !== '=' || (hexX(i) > 0 && cells[i - 1] === '=')) continue;
+      const span = plankSpan(cells, i);
+      const p = this.lc(i), q = this.lc(i + span - 1);
+      this.gangway(g, p.x - w * (0.5 + PLANK_DRAW.over), p.y, q.x + w * (0.5 + PLANK_DRAW.over), q.y, w, this.plankArt(v, i), 3);
+    }
+  }
+
+  /** The picture of the gangway whose run starts at `first` (the view's `planks`), if it is loaded. */
+  private plankArt(v: TacView | null, first: number): HTMLImageElement | null {
+    const a = v?.planks?.find((p) => p.h === first)?.a;
+    return a ? sprite(`prop.${a}`)?.img ?? null : null;
+  }
+
+  /** One gangway, STRAIGHT from end to end (owner, 2026-10-18: «Мостик в бою прогибается дугой. надо сделать наверное
+   *  чтобы был ровный по клеткам и растянуть их по высоте немного если потребуется»): the boarding pack's plank laid
+   *  along the row over exactly its hexes and a rail's width onto each deck — stretched to the length, and across the row
+   *  no thinner than PLANK_DRAW.minWidth of a hex (a long narrow plank a little widened) nor wider than maxWidth; the
+   *  boards drawn by hand without one. Its shadow `drop` px below it on the water. */
+  private gangway(g: CanvasRenderingContext2D, xL: number, yL: number, xR: number, yR: number, w: number, img: HTMLImageElement | null, drop: number): void {
+    const len = Math.hypot(xR - xL, yR - yL);
+    if (len < 1) return;
+    const r = w / SQ3;
+    const H = img ? Math.max(w * PLANK_DRAW.minWidth, Math.min(w * PLANK_DRAW.maxWidth, (len * img.naturalHeight) / img.naturalWidth)) : r * 0.9;
+    g.save();
+    g.translate(xL, yL);
+    g.rotate(Math.atan2(yR - yL, xR - xL));
+    g.fillStyle = 'rgba(0,0,0,0.35)';
+    g.fillRect(len * 0.02, -H * 0.4 + drop, len * 0.96, H * 0.84);
+    if (img) g.drawImage(img, 0, -H / 2, len, H);
+    else {
+      const pg = g.createLinearGradient(0, -H / 2, 0, H / 2);
       pg.addColorStop(0, '#9a7446');
       pg.addColorStop(1, '#6b4b2b');
       g.fillStyle = pg;
-      g.fillRect(-w * 0.95, -r * 0.45, w * 1.9, r * 0.9);
+      g.fillRect(0, -H / 2, len, H);
       g.strokeStyle = 'rgba(20,10,4,0.7)';
       g.lineWidth = 1;
-      for (const yy of [-r * 0.15, r * 0.15]) {
-        g.beginPath();
-        g.moveTo(-w * 0.95, yy);
-        g.lineTo(w * 0.95, yy);
-        g.stroke();
+      g.beginPath();
+      for (const yy of [-H / 6, H / 6]) {
+        g.moveTo(0, yy);
+        g.lineTo(len, yy);
       }
+      g.stroke();
+      // The lashings: the grapple lines along both edges.
       g.strokeStyle = '#c9b48a';
       g.lineWidth = Math.max(1, w * 0.035);
-      for (const s of [-1, 1]) {
-        g.beginPath();
-        g.moveTo(-w * 0.9, s * r * 0.5);
-        g.quadraticCurveTo(0, s * r * 0.95, w * 0.9, s * r * 0.5);
-        g.stroke();
+      g.beginPath();
+      for (const sd of [-1, 1]) {
+        g.moveTo(w * 0.05, sd * H * 0.55);
+        g.lineTo(len - w * 0.05, sd * H * 0.55);
       }
-      g.restore();
+      g.stroke();
     }
+    g.restore();
   }
 
   /** What stands on deck: drawn from above, unless it is painted as a prop (then it stands among the figures). */
@@ -4022,7 +4068,8 @@ export class TacticalPanel {
       if (c0 === 'M') this.mast(g, p.x, p.y, w);
       else if (c0 === 'C') this.cannon(g, p.x, p.y, w, hexY(i) === 0 ? -1 : 1);
       else if (c0 === 'B') this.barrel(g, p.x, p.y, w);
-      else if (c0 === 'K') this.crates(g, p.x, p.y, w);
+      else if (c0 === 'K' || c0 === 'Q') this.crates(g, p.x, p.y, w);
+      else if (c0 === 'L') this.barrel(g, p.x, p.y, w);
       else if (c0 === 'H') this.hole(g, p.x, p.y, w, i);
     }
   }
@@ -4507,11 +4554,11 @@ export class TacticalPanel {
     g.restore();
   }
 
-  /** The gangways across the water, live (item 3): each end on its deck as it rolls, the middle sagging; in the opening
+  /** The gangways across the water, live (item 3): each end on its deck as it rolls, straight between; in the opening
    *  they fall from the boarders' rail (item 11). Board px, the camera on. */
   private livePlanks(g: CanvasRenderingContext2D, v: TacView, t: number, ik: number): void {
     if (!this.boxes[0] || !this.boxes[1]) return;
-    const w = this.size.w, r = w / SQ3;
+    const w = this.size.w;
     const fall = ik < 0 ? 1 : Math.max(0, Math.min(1, (ik - 0.42) / 0.3));
     if (fall <= 0) return;
     // A fall with a little bounce as it lands.
@@ -4519,50 +4566,17 @@ export class TacticalPanel {
     const bounce = ik >= 0 && fall >= 1 ? Math.max(0, 1 - (ik - 0.72) / 0.12) * Math.sin(((ik - 0.72) / 0.12) * Math.PI * 2) * w * 0.04 : 0;
     const [r0, r1] = this.roll;
     for (let i = 0; i < v.cells.length; i++) {
-      if (v.cells[i] !== '=') continue;
+      if (v.cells[i] !== '=' || (hexX(i) > 0 && v.cells[i - 1] === '=')) continue;
+      const span = plankSpan(v.cells, i);
       this.level = true;
-      const p = this.lc(i);
+      const p = this.lc(i), pe = this.lc(i + span - 1);
       this.level = false;
-      const xL = p.x - w * 0.95, xR0 = p.x + w * 0.95 + this.slide;
+      // Each end on its own deck as it rolls; a straight plank between them (owner, 2026-10-18: no sag, no arc).
+      const xL = p.x - w * (0.5 + PLANK_DRAW.over), xR0 = pe.x + w * (0.5 + PLANK_DRAW.over) + this.slide;
       const xR = xL + (xR0 - xL) * lenK;
-      const yL = p.y + r0, yR = p.y + (lenK >= 1 ? r1 : r0) + bounce, mid = p.y + (r0 + r1) / 2 + this.sag() + bounce;
-      const cy = (4 * mid - yL - yR) / 2, xm = (xL + xR) / 2;
-      const h = r * 0.45;
-      const band = (dy: number, hh: number) => {
-        g.beginPath();
-        g.moveTo(xL, yL - hh + dy);
-        g.quadraticCurveTo(xm, cy - hh + dy, xR, yR - hh + dy);
-        g.lineTo(xR, yR + hh + dy);
-        g.quadraticCurveTo(xm, cy + hh + dy, xL, yL + hh + dy);
-        g.closePath();
-      };
-      // Its shadow on the water (further below it as it falls).
-      g.fillStyle = 'rgba(0,0,0,0.35)';
-      band(3 + (1 - fall) * w * 0.6, h * 0.95);
-      g.fill();
-      const pg = g.createLinearGradient(0, mid - h, 0, mid + h);
-      pg.addColorStop(0, '#9a7446');
-      pg.addColorStop(1, '#6b4b2b');
-      g.fillStyle = pg;
-      band(0, h);
-      g.fill();
-      g.strokeStyle = 'rgba(20,10,4,0.7)';
-      g.lineWidth = 1;
-      g.beginPath();
-      for (const yy of [-r * 0.15, r * 0.15]) {
-        g.moveTo(xL, yL + yy);
-        g.quadraticCurveTo(xm, cy + yy, xR, yR + yy);
-      }
-      g.stroke();
-      // The lashings: the grapple lines along both edges, slacker than the plank.
-      g.strokeStyle = '#c9b48a';
-      g.lineWidth = Math.max(1, w * 0.035);
-      g.beginPath();
-      for (const sd of [-1, 1]) {
-        g.moveTo(xL + w * 0.05, yL + sd * r * 0.5);
-        g.quadraticCurveTo(xm, cy + sd * r * 0.95 + this.sag() * 0.6, xR - w * 0.05, yR + sd * r * 0.5);
-      }
-      g.stroke();
+      const yL = p.y + r0, yR = pe.y + (lenK >= 1 ? r1 : r0) + bounce;
+      // Its shadow on the water further below it as it falls.
+      this.gangway(g, xL, yL, xR, yR, w, this.plankArt(v, i), 3 + (1 - fall) * w * 0.6);
       // Landed in the opening: a puff of dust and splinters, a knock.
       if (ik >= 0 && fall >= 1 && this.intro && !this.intro.dust) {
         this.intro.dust = true;
@@ -5261,8 +5275,15 @@ export class TacticalPanel {
     if (v.flag) for (const x of [0, 1] as const) placed.push({ flag: x, p: this.center(v.flag.hex[x]) });
     const walking = placed.some((x) => x.p.walking);
     for (let i = 0; i < v.cells.length; i++) {
-      const prop = propArt(v.cells[i], v.land?.type ?? v.siege?.type ?? (v.arena ? 'arena' : ''));
+      const prop = propAtHex(v, i, v.land?.type ?? v.siege?.type ?? (v.arena ? 'arena' : ''));
       if (prop) placed.push({ prop, i, p: this.center(i) });
+    }
+    // Owner, 2026-10-18: a deck's clutter on its open hexes (a coil of rope, a bucket, a grate), under everyone — a stack
+    // stands on it; gone where a hole or a fire took the hex.
+    if (!v.land && !v.siege && !v.arena) for (const [h, id] of propsOf(v)) {
+      if (v.cells[h] !== '.' || !sprite(id)) continue;
+      const c = this.center(h);
+      this.prop(g, id, c.x, c.y, w, hexX(h) > 5, -1, null, t, now, DECOR_SIZE);
     }
     // In one row the bigger first: a giant stands no nearer than the man beside it, so it must not cover him.
     const bulk = (x: (typeof placed)[number]): number => (x.s ? figureSize(x.s) : 1);
@@ -5576,9 +5597,9 @@ export class TacticalPanel {
   }
 
   /** A painted prop standing on its hex: its foot at the hex's foot, a shadow under it; the right deck's mirrored. */
-  private prop(g: CanvasRenderingContext2D, id: string, x: number, y: number, w: number, flip: boolean, i = -1, v: TacView | null = null, t = 0, now = 0): void {
+  private prop(g: CanvasRenderingContext2D, id: string, x: number, y: number, w: number, flip: boolean, i = -1, v: TacView | null = null, t = 0, now = 0, box?: readonly [number, number]): void {
     const img = sprite(id)!.img;
-    const [bw, bh] = PROP_BOX[id] ?? [1.1, 1.2];
+    const [bw, bh] = box ?? PROP_BOX[id] ?? PROP_SIZE[id.slice(5)] ?? [1.1, 1.2];
     const k = Math.min((bw * w) / img.naturalWidth, (bh * w) / img.naturalHeight);
     const W = img.naturalWidth * k, H = img.naturalHeight * k;
     const fy = y + (w / SQ3) * 0.45;

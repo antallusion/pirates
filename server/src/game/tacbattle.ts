@@ -24,6 +24,8 @@ import { BOOK_PAGES, CHAIN_FALL, HOME_MUL, INNATE, PATH_PAGES, PATH_SCHOOL, RAIS
 import type { BtMods, PageFx } from '../../../shared/src/data/paths.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { FAV_BONUS } from '../../../shared/src/data/drifts.ts';
+import { deckTheme, dressDeck, layDeck, plankRuns } from '../../../shared/src/data/tacprops.ts';
+import type { DeckTheme, TacProp } from '../../../shared/src/data/tacprops.ts';
 
 /** One stack of a ship's army as it comes to the battle; `src` the ship's own stack its men are drawn from (the
  *  Marines talent drills hands into marines for the fight only). */
@@ -43,6 +45,8 @@ export interface TacSideInput {
   ship: string;
   /** Her hull's class: the deck she fights on is painted for it (owner, 2026-10-02). */
   hull?: string;
+  /** Owner, 2026-10-18: how her deck is dressed (shared/src/data/tacprops.ts; absent: by her hull). */
+  deck?: DeckTheme;
   captain: CaptainId | null;
   /** Men by the stacks they make (the old reckoning, when no army is given; the other trades fight among the hands). */
   hands: number;
@@ -264,6 +268,10 @@ export interface TacBattle {
   len?: TacLen;
   /** docs/31: a boarding of two captains alone — her stacks' hit points ×this (tacGrit). */
   grit?: number;
+  /** Owner, 2026-10-18 (shared/src/data/tacprops.ts): a boarding's decks — the picture of each thing on them and the
+   *  clutter on open hexes; the gangplanks' pictures, a run's first hex each. Absent ashore, in a siege, on the sand. */
+  props?: TacProp[];
+  planks?: TacProp[];
   /** docs/25 item 48: the turn running on a captain's chess clock — whose, and from when (her clock starts once what
    *  came before her turn is played). */
   clock?: { side: 0 | 1; from: number; slot?: number };
@@ -352,21 +360,9 @@ export function makeField(seed: number): TacCell[] {
   }
   // Three planks where the grapples bit: amidships, and one fore and one aft.
   for (const rows of [[0, 2], [4], [6, 8]]) cells[hexIndex(TAC_GAP, rng.pick(rows))] = '=';
-  // The left deck: its mast, the guns run in at the bow and stern, a barrel or crates in the waist; the right the same.
-  const set = (i: number, c: TacCell) => {
-    cells[i] = c;
-    cells[hexMirror(i)] = c;
-  };
-  set(hexIndex(2, rng.pick([3, 4, 5])), 'M');
-  set(hexIndex(2, 0), 'C');
-  set(hexIndex(2, TAC_H - 1), 'C');
-  let n = 1 + rng.int(0, 1);
-  for (let tries = 0; n > 0 && tries < 20; tries++) {
-    const i = hexIndex(3, rng.int(1, TAC_H - 2));
-    if (cells[i] !== '.' || hexNeighbors(i).some((j) => cells[j] === '=')) continue;
-    set(i, rng.chance(0.5) ? 'B' : 'K');
-    n--;
-  }
+  // The left deck: her mast, a gun at the bow or the stern and a few things more, drawn anew each battle (owner,
+  // 2026-10-18; shared/src/data/tacprops.ts layDeck); the right the same.
+  layDeck(cells, rng);
   return cells;
 }
 
@@ -695,6 +691,11 @@ export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: n
   if (board) for (const [x, h] of [[a, 0], [b, 1]] as const) if (x.human) bt.heroes[h].bank = tacBankSecs(level);
   // The flag's hex is kept clear of what the guns left (a hole or a fire on it).
   if (bt.flag) for (const i of bt.flag.hex) if (bt.cells[i] === 'H' || bt.cells[i] === 'F') bt.cells[i] = '.';
+  // Owner, 2026-10-18: what each deck shows, by her ship, and the gangplanks — from the seed, the same for both sides.
+  if (!land && !opts.arena) {
+    bt.props = dressDeck(bt.cells, seed, [a.deck ?? deckTheme(a.hull), b.deck ?? deckTheme(b.hull)]);
+    bt.planks = plankRuns(bt.cells, seed);
+  }
   // docs/25 item 64: the allies of each side who came with the grapples (her group's mates within TAC_GROUP.range).
   for (const x of opts.allies ?? []) addAlly(bt, x.side, x.input, x.grow ?? false, x.tag);
   // docs/25 item 55: against an army half as large again as hers, her ultimate from the first round.
@@ -3484,6 +3485,7 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
     reach: act0?.stepped ? [] : [...reach.keys()], ...(mine && act0?.stepped ? { moved: true } : {}), melee: mine && act0 ? meleeTargets(bt, act0, reach).map((t) => t.id) : [], shoot: mine && act0 && canShoot(bt, act0) ? alive(bt).filter((t) => t.side !== side).map((t) => t.id) : [],
     ...(mine && act0 ? { pv: previewsOf(bt, act0, reach) } : {}),
     heroes: ([0, 1] as const).map((x) => (x === side && slot ? asCaptain(bt, side, slot, () => hero(x)) : hero(x))) as [TacHeroView, TacHeroView], log: bt.log.slice(-12), seq: bt.seq, over: bt.over, canCut, canStrike: side === 1, ...(bt.warn?.length && !bt.over ? { warn: [...bt.warn] } : {}), ...extra,
+    ...(bt.props ? { props: bt.props } : {}), ...(bt.planks ? { planks: bt.planks } : {}),
     ...(bt.siege ? { siege: { type: bt.land ?? 'rocky', hp: [...bt.siege.hp], max: [...bt.siege.max], cat: bt.siege.catapult, ...(bt.siege.name ? { name: bt.siege.name } : {}) } } : {}),
     // docs/25 block Г: the level, the turn's seconds, the chess clocks, the flags.
     level: bt.level, turn: tacTurnSecs(bt.level),

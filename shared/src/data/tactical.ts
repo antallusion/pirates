@@ -359,8 +359,12 @@ export type TacCell = '.' | '~' | '=' | 'M' | 'C' | 'B' | 'K' | '#' | 'H' | 'F'
    *  the defenders' way out, nobody else's), an arrow tower whole, cracked and silenced ('T', 'U', 'V'), the rubble of
    *  what fell ('r', ground again), the moat ('O': a stack that steps in stops there) and the causeway before the gate
    *  ('D', ground). */
-  | 'X' | 'Y' | 'G' | 'J' | 'T' | 'U' | 'V' | 'r' | 'O' | 'D';
-export const TAC_BLOCKING: ReadonlySet<TacCell> = new Set(['~', 'M', 'C', 'B', 'K', '#', 'H', 'R', 'P', 'W', 'X', 'Y', 'G', 'J', 'T', 'U', 'V']);
+  | 'X' | 'Y' | 'G' | 'J' | 'T' | 'U' | 'V' | 'r' | 'O' | 'D'
+  /** Owner, 2026-10-18 (the boarding pack, shared/src/data/tacprops.ts): a barricade on deck — sandbags, shields, an
+   *  overturned table, a wall of barrels ('Q': no way through, cover as the barrels are) — and an obstacle that is no
+   *  cover ('L': a capstan, a wheel, a stove, a rowboat …). */
+  | 'Q' | 'L';
+export const TAC_BLOCKING: ReadonlySet<TacCell> = new Set(['~', 'M', 'C', 'B', 'K', '#', 'H', 'R', 'P', 'W', 'X', 'Y', 'G', 'J', 'T', 'U', 'V', 'Q', 'L']);
 
 /** docs/19 E5: the siege of a citadel on the same hexes (as HoMM3's castle battle). The wall line stands down the
  *  column `wallX` (it bars the field from edge to edge: no hex steps across a whole column), the gate in its middle row,
@@ -404,7 +408,7 @@ export const TAC_COVER = 0.75;
  *  stands and the way round decide, not the figures alone. Owner, 2026-10-16 («укрытие: −25%»): a quarter off, beside
  *  the cover or behind it on the shot's line (it was −40% for the hex beside it alone). */
 export const TAC_DECK_COVER = 0.75;
-export const TAC_COVER_CELLS: ReadonlySet<TacCell> = new Set(['M', 'B', 'K', 'C']);
+export const TAC_COVER_CELLS: ReadonlySet<TacCell> = new Set(['M', 'B', 'K', 'C', 'Q']);
 /** The hex of what covers a stack on `hex` from a shot out of `from` on a deck (−1: nothing): one of them beside her on
  *  the shooter's side, or one standing on the shot's line between the two (owner, 2026-10-16: «через укрытие»). */
 export function deckCover(cells: ArrayLike<string>, hex: number, from: number): number {

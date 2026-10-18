@@ -7,6 +7,7 @@
 
 import { charmSide } from './shop.ts'; // the premium shop's charms (owner, 2026-10-15)
 import { creaturesWon, mixedOf, rankArmy } from './tame.ts'; // docs/18 IV
+import { deckTheme } from '../../../shared/src/data/tacprops.ts'; // owner, 2026-10-18: her deck's dressing
 import { deckGift } from './shipgifts.ts'; // the premium hulls' gifts (docs/02 §1.A.9)
 import { FIRST_NAMES, LAST_NAMES } from '../../../shared/src/data/crew.ts';
 import type { OfficerRole } from '../../../shared/src/data/crew.ts';
@@ -176,7 +177,7 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
   // docs/25 item 50: a ship of the sea brings a stack or two fewer than a captain of her level (not a legend's).
   const fielded = s || longFoe(ship) ? army : battleFit(army, npcBoardSlots(hero?.level ?? npcHeroLevel(ship.shipLevel)));
   return {
-    name: s?.name ?? ship.captainName, ship: ship.name, hull: ship.loadout.classId, captain: (s ? null : npcPathOf(ship)) ?? ship.captain ?? null,
+    name: s?.name ?? ship.captainName, ship: ship.name, hull: ship.loadout.classId, deck: deckTheme(ship.loadout.classId, s ? null : ship.npcRole), captain: (s ? null : npcPathOf(ship)) ?? ship.captain ?? null,
     hands: count((x) => UNITS[x.u].tier === 1), marines: count((x) => kindOfUnit(x.u) === 'marines'), gunners: count((x) => hasSpecial(x.u, 'shooter')),
     army: fielded, officers, skill, morale: ship.morale,
     dealt: deckLadder(game, ship, enemy),

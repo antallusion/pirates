@@ -51,15 +51,20 @@ test('polish: the First Watch\'s guns never strip the raider below seven tenths,
   const { newBattle, aiAct } = await import('../server/src/game/tacbattle.ts');
   const { Rng } = await import('../shared/src/rng.ts');
   const side = (army: { u: string; n: number }[]) => ({ name: 'C', ship: 'W', captain: 'corsair', hands: 0, marines: 0, gunners: 0, army, officers: [], skill: 3, morale: 70, dealt: 1, power: 1, melee: 1, extraShots: 0, firstRush: 1, nets: 0, blooded: 0, castle: false, struck: false, human: false }) as never;
-  let rounds = 0, wins = 0;
+  let rounds = 0, wins = 0, quick = 0;
   for (let k = 0; k < 20; k++) {
     const rng = new Rng(k * 31 + 7);
     const bt = newBattle(side([{ u: 'deckhand', n: 24 }]), side([{ u: 'marine', n: 1 }, { u: 'deckhand', n: Math.ceil(14 * PRACTICE_FLOOR) - 1 }]), k * 31 + 7, 0, rng);
     for (let i = 0; i < 3000 && !bt.over && bt.active !== null; i++) aiAct(bt, 0, rng);
     rounds += bt.round;
+    if (bt.round <= 1) quick++;
     if (bt.over?.winner === 0) wins++;
   }
-  assert.ok(rounds / 20 >= 2.8, `a few rounds (${(rounds / 20).toFixed(1)})`);
+  // (the mean is lifted by the odd stand at a plank's mouth that runs ten rounds and more: 2.9 on the old fixed decks,
+  //  2.5 on the decks laid anew each battle, owner 2026-10-18 — the fight itself two rounds or more in both; what the
+  //  lesson needs is that it is never over at the first blow)
+  assert.ok(rounds / 20 >= 2.3, `a few rounds (${(rounds / 20).toFixed(1)})`);
+  assert.ok(quick <= 3, `over in one round: ${quick}/20`);
   assert.ok(wins >= 19, `the pupil wins (${wins}/20)`);
 });
 

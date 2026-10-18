@@ -1848,6 +1848,10 @@ export interface TacView {
   deploy?: { ends: number; zone: number[]; ready: boolean; foeReady: boolean; hidden?: boolean };
   /** Owner, 2026-10-16: a fight played again («Повтор»): no hand on it. */
   replay?: boolean;
+  /** Owner, 2026-10-18 (shared/src/data/tacprops.ts): a boarding's decks — the picture of each thing standing on them
+   *  and the clutter on open hexes (`a` under `prop.`); the gangplanks' pictures, each run's first hex. */
+  props?: { h: number; a: string }[];
+  planks?: { h: number; a: string }[];
 }
 
 /** Owner, 2026-10-16 («почему»): the reckoning's short why. `moves`: men each side's captains' moves felled (by side);

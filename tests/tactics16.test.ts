@@ -83,7 +83,7 @@ test('the deck\'s cover: −25% beside it or behind it on the shot\'s line, and 
   const { bt } = pvp(5);
   const s = bt.stacks.find((x) => x.side === 0 && x.shots > 0)!;
   const t = bt.stacks.find((x) => x.side === 1)!;
-  for (let i = 0; i < bt.cells.length; i++) if ('MBKC'.includes(bt.cells[i])) bt.cells[i] = '.';
+  for (let i = 0; i < bt.cells.length; i++) if ('MBKCQL'.includes(bt.cells[i])) bt.cells[i] = '.';
   s.hex = hexIndex(1, 4);
   t.hex = hexIndex(8, 4);
   const bare = blowParts(bt, s, t, 'shot').mul;
