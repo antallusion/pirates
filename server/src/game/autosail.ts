@@ -12,7 +12,7 @@ import { NAV_CELL, SAIL_STEPS, SPEED_SCALE, WORLD_SIZE } from '../../../shared/s
 import { angleDiff, clamp, headingOf, headingVec, pointInPolygon, wrapAngle } from '../../../shared/src/math.ts';
 import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
-import { depthAt, isLand, navBlocked } from '../../../shared/src/world/worldgen.ts';
+import { depthAt, isLand, navBlocked, reefDepthAt } from '../../../shared/src/world/worldgen.ts';
 import { WORLD_EDGE_MARGIN } from '../../../shared/src/world/regions.ts';
 import type { Game } from './Game.ts';
 import { banksUp } from './isles.ts';
@@ -59,6 +59,8 @@ export interface AutoSail {
   plannedAt?: number;
   /** When she last looked along the route for a point in clear sight. */
   seeAt?: number;
+  /** The end of her first plan (the water by her mark): every new plan ends there too. */
+  end?: [number, number];
   /** When she last looked how far off her route she is. */
   offAt?: number;
   /** The new plans made for no clear water ahead. */
@@ -295,7 +297,7 @@ export function startAutosail(game: Game, s: PlayerSession, x: number, y: number
   const idx = autosailSail(sail ?? SAIL_STEPS.indexOf(ship.input.sailTarget as never));
   const run: AutoSail = {
     x, y, path, i: 1, sail: idx, since: game.now, tackSide: 1, tackAt: -Infinity, beatAt: -Infinity,
-    stuck: { x: ship.state.x, y: ship.state.y, t: game.now }, replans: 0, plannedAt: game.now, ...(arrive !== undefined ? { arrive } : {}),
+    stuck: { x: ship.state.x, y: ship.state.y, t: game.now }, replans: 0, plannedAt: game.now, end: path[path.length - 1], ...(arrive !== undefined ? { arrive } : {}),
   };
   runs.set(ship, run);
   paused.delete(ship);
@@ -406,7 +408,7 @@ export const STOP_WORDS: Record<AutosailStop, string> = {
  *  whole 290 m round a reef, and a mark by one read as walled off from a few hundred metres — she turned back for the
  *  grid's next cell and round again, 2026-10-18): out of the maelstroms' eyes and inside the wall, no foul water on it
  *  (every 60 m), clear for her hull and keel by `hw` (the planner's margin by default). */
-export function runFree(game: Game, ship: ShipEntity, x0: number, y0: number, x1: number, y1: number, hw: HullWater = planWater(ship)): boolean {
+export function runFree(game: Game, ship: ShipEntity, x0: number, y0: number, x1: number, y1: number, hw: HullWater = planWater(ship), lead = true): boolean {
   const m = WORLD_EDGE_MARGIN;
   if (x1 < m || y1 < m || x1 > WORLD_SIZE - m || y1 > WORLD_SIZE - m) return false;
   for (const w of game.world.whirlpools) {
@@ -414,7 +416,7 @@ export function runFree(game: Game, ship: ShipEntity, x0: number, y0: number, x1
     const t = l2 > 0 ? clamp(((w.x - x0) * ex + (w.y - y0) * ey) / l2, 0, 1) : 0;
     if (Math.hypot(x0 + ex * t - w.x, y0 + ey * t - w.y) < w.radius * 0.6) return false;
   }
-  return !probeLine(game, ship, x0, y0, x1, y1) && runClear(game.world, x0, y0, x1, y1, hw);
+  return (!lead || !probeLine(game, ship, x0, y0, x1, y1)) && runClear(game.world, x0, y0, x1, y1, hw);
 }
 
 /** A straight run she may sail as it lies, by the planner's margin (runFree). */
@@ -528,9 +530,12 @@ export function stepAutosail(game: Game): void {
       stopAutosail(game, s, 'arrived');
       continue;
     }
+    // the last stretch to her end (a mark by a shore): as near as she safely comes
+    const last = Math.hypot(end[0] - ship.state.x, end[1] - ship.state.y) <= Math.max(near * 3, ship.stats.length * 2 + 60);
     const why = autosailDanger(game, s, ship, run.since, run);
     if (why) {
-      stopAutosail(game, s, why);
+      // (a coast's own shallows under her keel there, no reef: arrived, hove to — not «foul water», the wheel back)
+      stopAutosail(game, s, why === 'reef' && last && reefDepthAt(game.world, ship.state.x, ship.state.y) >= draftOf(ship) ? 'arrived' : why);
       continue;
     }
     // Stuck (a headland the grid did not see, a dead calm), or going round and round (2026-10-09: never 100 m nearer
@@ -564,7 +569,7 @@ export function stepAutosail(game: Game): void {
     let h = autosailHeading(game, ship, run);
     // No clear water ahead in the last stretch to a mark by a shore (a great hull's lead line reaches past her mark onto
     // the coast beyond it): she is as near as she safely comes — arrived, hove to, not «foul water ahead».
-    if (h === null && Math.hypot(end[0] - ship.state.x, end[1] - ship.state.y) <= Math.max(near * 3, ship.stats.length * 2 + 60)) {
+    if (h === null && last) {
       stopAutosail(game, s, 'arrived');
       continue;
     }
@@ -586,7 +591,10 @@ export const REPLAN_GAP = 4;
 /** A new plan from where she is to her mark (kept when none is found). True when there is one. */
 function replan(game: Game, ship: ShipEntity, run: AutoSail): boolean {
   run.plannedAt = game.now;
-  const p = plan(game, ship, run.x, run.y);
+  // (to the same end as the first plan: a mark ashore re-read from each new place gave a new end each time, and she
+  // chased them round a bay)
+  const e = run.end ?? [run.x, run.y];
+  const p = plan(game, ship, e[0], e[1]);
   if (!p || p.length < 2) return false;
   run.path = p;
   run.i = 1;
@@ -599,7 +607,8 @@ function replan(game: Game, ship: ShipEntity, run: AutoSail): boolean {
 function offRoute(game: Game, ship: ShipEntity, run: AutoSail): boolean {
   const a = run.path[Math.max(0, run.i - 1)], b = run.path[run.i];
   const { x, y } = ship.state;
-  if (!runFree(game, ship, x, y, b[0], b[1], hullWater(ship))) return true;
+  // (blocked: what the plan itself was sounded for — her hull and keel, the reefs; a coast's shallows only steer her)
+  if (!runFree(game, ship, x, y, b[0], b[1], hullWater(ship), false)) return true;
   const ex = b[0] - a[0], ey = b[1] - a[1], l2 = ex * ex + ey * ey;
   const t = l2 > 0 ? clamp(((x - a[0]) * ex + (y - a[1]) * ey) / l2, 0, 1) : 0;
   const off = Math.hypot(a[0] + ex * t - x, a[1] + ey * t - y);

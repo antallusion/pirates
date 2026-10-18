@@ -147,7 +147,7 @@ for (let k = 0; ONLY ? made <= Number(ONLY) && k <= Number(ONLY) : rs.length < N
       if (LIVE) ship.hull = ship.stats.hullMax;
       if (TRACE && ticks % 200 === 0) {
         const r0 = autosailOf(ship);
-        console.log('trace', Math.round(game.now - t0), Math.round(ship.state.x), Math.round(ship.state.y), ship.state.speed.toFixed(1), (ship.state.heading * 57.3).toFixed(0), r0 ? `i${r0.i}/${r0.path.length} re${r0.replans} pl${Math.round(game.now - (r0.plannedAt ?? 0))} ${JSON.stringify(r0.path.slice(r0.i, r0.i + 2).map((q) => q.map(Math.round)))}` : '-');
+        console.log('trace', Math.round(game.now - t0), Math.round(ship.state.x), Math.round(ship.state.y), ship.state.speed.toFixed(1), (ship.state.heading * 57.3).toFixed(0), r0 ? `i${r0.i}/${r0.path.length} re${r0.replans} pl${Math.round(game.now - (r0.plannedAt ?? 0))} ${JSON.stringify(r0.path.slice(r0.i).map((q) => q.map(Math.round)))} end ${r0.end?.map(Math.round)}` : '-');
       }
       const a = performance.now();
       step();
