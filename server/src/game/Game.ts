@@ -44,7 +44,7 @@ import { XP_UNITS, contractPay, hourSilver, pointsXp, prizeXp, xpGap } from '../
 import { WRECK_SHARE } from '../../../shared/src/data/silverpay.ts';
 import { RELEASE_CREW, SCUTTLE_SINK_SEC, SINK_CREW, outcomeCrew, releaseSilver, wreckTimber } from '../../../shared/src/data/outcome.ts';
 import type { OutcomeFate, OutcomeNums } from '../../../shared/src/data/outcome.ts';
-import { replaceDefeated } from './density.ts'; // owner, 2026-10-18: the sea's density kept whatever is sunk
+import { owedByRole, payOwed, regionCounts, replaceDefeated, underRegion } from './density.ts'; // owner, 2026-10-18: the sea's density kept whatever is sunk
 import { ceasefireMessage } from './ceasefire.ts'; // owner, 2026-10-18: a ceasefire bought
 import { generateIslandJobs, generateQuests } from '../../../shared/src/data/questgen.ts';
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
@@ -1458,12 +1458,16 @@ export class Game {
     const counts: Record<NpcRole, number> = { merchant: 0, patrol: 0, pirate: 0, hunter: 0, fisher: 0, ghost: 0, escort: 0, boss: 0, beast: 0 };
     const local = localTraffic(this); // the traffic about captains is not the world's quota
     // The living only (owner, 2026-10-18): a ship going down is replaced at once (density.ts), and is not counted twice.
+    payOwed(this); // a ship beaten whose region had no spot out of sight a moment ago (density.ts)
     for (const b of this.npcs.values()) if (!local.has(b.id) && !this.ships.get(b.id)?.sinkingUntil) counts[b.role]++;
-    for (let i = 0; counts.merchant + i < this.quota(QUOTA.merchants) && i < 3; i++) spawnMerchant(this);
+    for (const [r, n] of Object.entries(owedByRole(this))) counts[r as NpcRole] += n; // owed to their regions: not twice
+    // Each top-up to the region furthest under its share (density.ts): the zone's density kept by area, not only in sum.
+    const byRegion = regionCounts(this);
+    for (let i = 0; counts.merchant + i < this.quota(QUOTA.merchants) && i < 3; i++) spawnMerchant(this, underRegion(this, 'merchant', byRegion));
     const mods = seasonMods(this);
     // Whatever a replacement's spot left short, three a pass (was one: a crowd of captains sank them faster).
-    for (let i = 0; counts.pirate + i < this.quota(Math.round(QUOTA.pirates * mods.pirateMul)) && i < 3; i++) spawnPirate(this);
-    for (let i = 0; counts.fisher + i < this.quota(QUOTA.fishers) && i < 3; i++) spawnFisher(this);
+    for (let i = 0; counts.pirate + i < this.quota(Math.round(QUOTA.pirates * mods.pirateMul)) && i < 3; i++) spawnPirate(this, undefined, underRegion(this, 'pirate', byRegion));
+    for (let i = 0; counts.fisher + i < this.quota(QUOTA.fishers) && i < 3; i++) spawnFisher(this, underRegion(this, 'fisher', byRegion));
     if (counts.ghost < this.quota(QUOTA.ghosts * mods.ghostMul) && this.rng.chance(0.02 * mods.ghostMul)) spawnGhost(this, mods.ghostsEverywhere);
     if (counts.patrol < 10 && now - this.patrolsSpawnedAt > 300) {
       spawnPatrols(this);

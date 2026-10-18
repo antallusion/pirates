@@ -1144,8 +1144,13 @@ function oldZonePorts(game: Game): Port[] {
   return game.zone ? old.filter((p) => game.zone!.regions.has(p.region)) : old;
 }
 
-export function spawnMerchant(game: Game): void {
-  const ports = oldZonePorts(game); // (docs/29: put out from the harbours before step 9, as the sea's traffic was weighed)
+export function spawnMerchant(game: Game, region?: RegionId): void {
+  let ports = oldZonePorts(game); // (docs/29: put out from the harbours before step 9, as the sea's traffic was weighed)
+  // (owner, 2026-10-18, density.ts: the director's top-up goes to the region furthest under its share)
+  if (region) {
+    const here = ports.filter((p) => p.region === region);
+    if (here.length) ports = here;
+  }
   const weights = ports.map((p) => [p, p.size * p.size] as const);
   const port = game.rng.weighted(weights);
   // Her level (canon D12) by the port's square of the sea (docs/16 P2), leaning low; the hull to match, flutes most of all.
@@ -1167,7 +1172,7 @@ export function spawnMerchant(game: Game): void {
 
 const PIRATE_REGIONS: RegionId[] = ['gravewater', 'whispering', 'ashen_isles', 'dead_mans_expanse', 'leviathan_reach', 'drowned_crown'];
 
-export function spawnPirate(game: Game, near?: ShipEntity): ShipEntity | null {
+export function spawnPirate(game: Game, near?: ShipEntity, only?: RegionId): ShipEntity | null {
   let x: number, y: number, region: RegionId;
   if (near) {
     // Just beyond the horizon of interest and to windward — attackers want the weather gauge.
@@ -1179,7 +1184,7 @@ export function spawnPirate(game: Game, near?: ShipEntity): ShipEntity | null {
   } else {
     const regions = game.zone ? PIRATE_REGIONS.filter((r) => game.zone!.regions.has(r)) : PIRATE_REGIONS;
     if (!regions.length) return null;
-    region = game.rng.pick(regions);
+    region = only && regions.includes(only) ? only : game.rng.pick(regions); // (density.ts: the region under its share)
     [x, y] = REGIONS[region].center;
     x += game.rng.range(-9000, 9000);
     y += game.rng.range(-9000, 9000);
@@ -1237,8 +1242,9 @@ export function levelNear(game: Game, prey: ShipEntity, region: RegionId, x = pr
   return Math.max(1, Math.min(10, Math.max(lo, Math.min(hi + 1, prey.combatLevel + d))));
 }
 
-export function spawnFisher(game: Game): void {
-  const ports = oldZonePorts(game).filter((p) => REGIONS[p.region].safety !== 'lawless');
+export function spawnFisher(game: Game, region?: RegionId): void {
+  let ports = oldZonePorts(game).filter((p) => REGIONS[p.region].safety !== 'lawless');
+  if (region && ports.some((p) => p.region === region)) ports = ports.filter((p) => p.region === region); // (density.ts)
   if (!ports.length) return;
   const port = game.rng.pick(ports);
   const ship = game.spawnNpcShip('fisher', 'cutter', port.faction === 'crown' ? 'crown' : 'free', port.x, port.y, game.rng.range(0, 6.28));
@@ -1258,7 +1264,7 @@ const TRAFFIC_GOODS: GoodId[] = ['provisions', 'rum', 'sugar', 'tobacco', 'timbe
  * sailing the sea's own ways — a merchant crossing her track toward the far side, a fisher working the water, a patrol
  * on its beat, a rover looking for prey. Null when the spot is land or the role has no place here.
  */
-export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' | 'pirate' | 'hunter', x: number, y: number, past: { x: number; y: number }): ShipEntity | null {
+export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' | 'pirate' | 'hunter', x: number, y: number, past: { x: number; y: number }, law?: FactionId): ShipEntity | null {
   if (!openSea(game, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500 || !game.inZone(x, y)) return null;
   const region = regionAt(game.world, x, y);
   const safety = REGIONS[region].safety;
@@ -1267,8 +1273,10 @@ export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' 
   if (role === 'merchant') faction = !port || port.faction === 'crown' ? 'league' : port.faction === 'choir' || port.faction === 'confederacy' ? 'free' : port.faction;
   else if (role === 'fisher') faction = port?.faction === 'crown' ? 'crown' : 'free';
   else if (role === 'patrol') {
-    if (!port || safety === 'lawless' || (port.faction !== 'crown' && port.faction !== 'league' && port.faction !== 'harpoon')) return null;
-    faction = port.faction;
+    // (`law`: a patrol put back where one was beaten, density.ts — her own flag when no law's harbour is nearest)
+    const lawful = !!port && (port.faction === 'crown' || port.faction === 'league' || port.faction === 'harpoon');
+    if (safety === 'lawless' || (!lawful && !law)) return null;
+    faction = lawful ? port!.faction : law!;
   } else if (role === 'hunter') {
     // The Harpoon's whalers work the wild waters for the beasts (docs/16 P1).
     if (safety === 'safe') return null;

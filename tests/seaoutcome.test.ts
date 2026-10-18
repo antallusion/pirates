@@ -12,10 +12,10 @@ import { REGIONS } from '../shared/src/world/regions.ts';
 import { isLand, nearHarbour, regionAt } from '../shared/src/world/worldgen.ts';
 import { claimPrize, startBoarding } from '../server/src/game/boarding.ts';
 import { applyDamage } from '../server/src/game/combat.ts';
-import { HARBOUR_CLEAR, RING_SIGHT_R, WORLD_SIGHT_R, replaceDefeated, replaced } from '../server/src/game/density.ts';
+import { HARBOUR_CLEAR, WORLD_SIGHT_R, replaceDefeated, replaced } from '../server/src/game/density.ts';
 import { attackersOf, negotiate, quote, resetTalks, truceHolds } from '../server/src/game/ceasefire.ts';
 import { npcHostileTo } from '../server/src/game/npc.ts';
-import { NEAR_R, localTraffic } from '../server/src/game/traffic.ts';
+import { NEAR_R, localTraffic, stepTraffic } from '../server/src/game/traffic.ts';
 import { TWO_CHOICES } from '../server/src/game/Game.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
@@ -193,7 +193,7 @@ test('one like her put back at once: a ship of the zone in her own region out of
   assert.ok(!localTraffic(game).has(r.id), 'a ship of the zone, as she was');
 });
 
-test('a captain\'s traffic beaten is put back on her near ring, beyond every screen; sunk by the guns too; not the named, not with the director still', () => {
+test('a captain\'s traffic beaten (sunk by the guns too) is put back by her ring on the next second, her role and level, if the ring is short; not the named, not with the director still', () => {
   const { game } = makeGame();
   game.directorOn = true;
   const at = water(game, REGIONS.gravewater.center[0], REGIONS.gravewater.center[1]);
@@ -201,15 +201,18 @@ test('a captain\'s traffic beaten is put back on her near ring, beyond every scr
   const npc = npcAt(game, 'merchant', at.x + 300, at.y, 3);
   localTraffic(game).add(npc.id);
   npc.attackers.set(ship.id, game.now);
+  game.setNpcLevel(npc, 3);
   const ids = new Set(game.ships.keys());
   game.beginSinking(npc);
-  const fresh = [...game.ships.values()].filter((o) => !ids.has(o.id) && o.npcRole);
-  assert.equal(fresh.length, 1);
+  assert.equal([...game.ships.values()].filter((o) => !ids.has(o.id) && o.npcRole).length, 0, 'nothing on top of the ring' + "'" + 's own');
+  stepTraffic(game); // the next second, whatever her turn
+  const fresh = [...game.ships.values()].filter((o) => !ids.has(o.id) && o.npcRole && localTraffic(game).has(o.id));
+  assert.ok(fresh.length >= 1, 'her ring, short, tops up at once');
   const r = fresh[0];
   const d = Math.hypot(r.state.x - ship.state.x, r.state.y - ship.state.y);
-  assert.ok(d >= RING_SIGHT_R && d <= NEAR_R, `on her near ring (${Math.round(d)} m)`);
-  assert.ok(localTraffic(game).has(r.id), 'her traffic');
-  assert.equal(r.npcRole, 'merchant');
+  assert.ok(d >= 1000 && d <= NEAR_R, `on her near ring, beyond her screen (${Math.round(d)} m)`);
+  assert.equal(r.npcRole, 'merchant', 'one like her');
+  assert.ok(Math.abs(r.shipLevel - 3) <= 1, `her level (${r.shipLevel})`);
   // The named are their own; a still director puts back nothing.
   const named = npcAt(game, 'pirate', at.x + 400, at.y);
   named.named = 'nemesis';
