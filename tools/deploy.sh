@@ -26,7 +26,8 @@ rm -rf "$TMP"
 ssh "$HOST" "set -e; cd /opt/gravetide/releases; mkdir -p $SHA; tar -xzf gravetide-$SHA.tgz -C $SHA; rm gravetide-$SHA.tgz;
   mkdir -p /opt/gravetide/data/backups; B=/opt/gravetide/data/backups/gravetide-\$(date +%Y%m%d-%H%M%S)-$SHA.db;
   node --disable-warning=ExperimentalWarning -e \"new (require('node:sqlite').DatabaseSync)('/opt/gravetide/data/gravetide.db').exec(\\\"VACUUM INTO '\$B'\\\")\";
-  chown gravetide:gravetide \$B; echo \"backup \$(basename \$B) \$(du -h \$B | cut -f1)\"; ls -1t /opt/gravetide/data/backups/*.db | tail -n +11 | xargs -r rm -f;
+  chown gravetide:gravetide \$B; echo \"backup \$(basename \$B) \$(du -h \$B | cut -f1)\"; ls -1t /opt/gravetide/data/backups/gravetide-*.db | tail -n +11 | xargs -r rm -f;
+  if [ -f /opt/gravetide/data/forum.db ]; then F=/opt/gravetide/data/backups/forum-\$(date +%Y%m%d-%H%M%S)-$SHA.db; node --disable-warning=ExperimentalWarning -e \"new (require('node:sqlite').DatabaseSync)('/opt/gravetide/data/forum.db').exec(\\\"VACUUM INTO '\$F'\\\")\"; chown gravetide:gravetide \$F; echo \"backup \$(basename \$F)\"; ls -1t /opt/gravetide/data/backups/forum-*.db | tail -n +11 | xargs -r rm -f; fi;
   ln -sfn /opt/gravetide/releases/$SHA /opt/gravetide/current; systemctl restart gravetide; sleep 8;
   systemctl is-active gravetide; curl -s -o /dev/null -w 'local HTTP %{http_code}\n' http://127.0.0.1:58521/;
   ls -1dt */ | tail -n +6 | xargs -r rm -rf"
