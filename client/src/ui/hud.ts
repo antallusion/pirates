@@ -47,6 +47,7 @@ import type { ClientState } from '../state.ts';
 import { $, bar, dec1, decorateSums, esc, fmt, glyphSvg, icon, knots, pct } from './dom.ts';
 import { flagChip, shipColours } from './flags.ts'; // docs/24 D2: her colours on the target card
 import { compassKey, objective, questPointer, trackedQuest, waypoint, waypointHooks } from './track.ts';
+import { courseAhead, courseOf } from './course.ts';
 import { DAILY_DEFS } from '../../../shared/src/data/dailies.ts';
 import { EN, RU } from '../lang/ui/hud.ts';
 import { EN as PM_EN, RU as PM_RU } from '../lang/ui/premium.ts'; // the shop's button (owner, 2026-10-15)
@@ -1439,6 +1440,24 @@ export class Hud {
       } else if (!t.done && d < 20000 && (!near || d < near.d)) near = { x: t.x, y: t.y, d };
     }
     if (near) rim(Math.atan2(near.x - own.x, -(near.y - own.y)), '#e88c40');
+    // The helmsman's course (2026-10-18): the planned way round the land, dashed gold, from her to its end.
+    const course = courseOf(state);
+    if (course) {
+      const pts = courseAhead(course, own.x, own.y).pts;
+      g.save();
+      g.globalAlpha = course.paused ? 0.5 : 1;
+      g.setLineDash([3, 3]);
+      g.lineJoin = 'round';
+      g.beginPath();
+      pts.forEach(([x, y], i) => (i ? g.lineTo(tx(x), ty(y)) : g.moveTo(tx(x), ty(y))));
+      g.strokeStyle = 'rgba(0,0,0,0.75)';
+      g.lineWidth = 3;
+      g.stroke();
+      g.strokeStyle = '#e8c46a';
+      g.lineWidth = 1.5;
+      g.stroke();
+      g.restore();
+    }
     // Her own mark (set on the chart): a gold diamond in view, a gold tick on the rim beyond it.
     const wp = waypoint();
     if (wp) {

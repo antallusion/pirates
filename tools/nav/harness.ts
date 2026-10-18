@@ -259,7 +259,7 @@ export function sceneWind(game: Game, of: string): () => void {
 }
 
 /** Clears the sea about a scene of the sea's own ships (they would join in) and steadies the weather. */
-function quietAround(game: Game, x: number, y: number): void {
+export function quietAround(game: Game, x: number, y: number): void {
   for (const o of [...game.ships.values()]) if (!o.isPlayer && Math.hypot(o.state.x - x, o.state.y - y) < 6000) game.removeShip(o.id);
   if (!Object.getOwnPropertyDescriptor(game, 'fronts')?.get) Object.defineProperty(game, 'fronts', { get: () => [], set: () => {}, configurable: true });
   for (const w of Object.values(game.weather)) {
@@ -291,7 +291,7 @@ export function seaCaptainAt(game: Game, cls: ShipClassId, x: number, y: number,
 }
 
 /** Done with a captain: out of the way and quiet. */
-function retire(game: Game, s: PlayerSession, c: FakeConn): void {
+export function retire(game: Game, s: PlayerSession, c: FakeConn): void {
   const ship = s.ship!;
   ship.state.x = 2000 + names * 40;
   ship.state.y = 2000;

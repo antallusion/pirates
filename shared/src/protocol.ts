@@ -663,6 +663,8 @@ export interface RouteView {
   risk: 0 | 1 | 2;
   /** A line to show on arrival (the trade's: «slow down, cast the net»), English. */
   hint?: string;
+  /** The way there by the water (whole metres) while no helmsman sails it yet (in port, a refusal): the line on the sea. */
+  path?: [number, number][];
 }
 
 /** docs/36: a captain's place in the main campaign — the quests behind her of all, the chapter and the quest in it, the
@@ -1995,7 +1997,9 @@ export type ServerMsg =
   /** docs/16 #35: a groupmate's signal flag. */
   | { t: 'signal'; from: string; kind: SignalKind; x: number; y: number }
   /** docs/16 #36: the helmsman has the wheel for a mark, or has given it back and why. */
-  | { t: 'autosail'; on: boolean; x?: number; y?: number; sail?: number; why?: AutosailStop }
+  | { t: 'autosail'; on: boolean; x?: number; y?: number; sail?: number; why?: AutosailStop;
+      /** The planned way round the land (owner, 2026-10-18: «всегда должно быть показано направление линией и путь»): her
+       *  place when it was planned, its turns, the end; whole metres. Sent again on every new plan. */ path?: [number, number][] }
   /** Route: the place the server chose for a goal (`on`), or the run's end and why. */
   | { t: 'route'; key: string; on: boolean; view?: RouteView; why?: 'done' | 'off' | 'none' }
   /** «Атаковать» (docs/23 item 33): the helmsman pursues her mark, or has given the wheel back and why. */

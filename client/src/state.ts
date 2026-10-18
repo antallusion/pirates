@@ -278,7 +278,12 @@ export class ClientState {
 
   input = { rudder: 0, sail: 2, seq: 0 };
   /** docs/16 #36: the helmsman has the wheel for this mark (the server steers; the prediction follows its rudder). */
-  autosail: { x: number; y: number } | null = null;
+  autosail: { x: number; y: number; path?: [number, number][] } | null = null;
+  /** A course broken off by a fight or a storm, kept to be taken up again (autosail.ts stepResume): its line stays on
+   *  the sea, dimmed (owner, 2026-10-18: «всегда должно быть показано направление линией и путь»). */
+  pausedCourse: { x: number; y: number; path?: [number, number][] } | null = null;
+  /** The last planned way the helmsman was given (a run to a goal keeps it while he waits). */
+  lastPath: [number, number][] | null = null;
   /** Route (2026-10-15): the run to a goal's nearest place the server chose (goalroute.ts), or none. */
   route: { key: string; view: RouteView } | null = null;
   /** docs/23 item 33: «Атаковать» — the helmsman pursues this mark (the prediction follows his rudder unless the
@@ -448,11 +453,25 @@ export class ClientState {
         break;
       case 'autosail':
         // The helmsman has the wheel for a mark, or has given it back (docs/16 #36).
-        this.autosail = m.on && m.x !== undefined && m.y !== undefined ? { x: m.x, y: m.y } : null;
+        {
+          const was = this.autosail;
+          this.autosail = m.on && m.x !== undefined && m.y !== undefined ? { x: m.x, y: m.y, ...(m.path && m.path.length >= 2 ? { path: m.path } : {}) } : null;
+          if (this.autosail?.path) this.lastPath = this.autosail.path;
+          // broken off by a fight or a storm: the course is kept (dimmed) until it is taken up again or dropped
+          const resumable = !m.on && (m.why === 'hostile' || m.why === 'attack' || m.why === 'storm');
+          if (m.on) this.pausedCourse = null;
+          else if (resumable && was) this.pausedCourse = { ...was };
+          else this.pausedCourse = null;
+          if (!m.on && !resumable && !this.route) this.lastPath = null;
+          // Arrived, foul water, no way through: he heaves to before giving the wheel back, and her sails stay in
+          // (the server holds the old sail off too: her helm would set it again).
+          if (!m.on && (m.why === 'arrived' || m.why === 'reef' || m.why === 'stuck')) this.input.sail = 0;
+        }
         if (m.on && m.sail !== undefined) this.input.sail = m.sail;
         break;
       case 'route':
         this.route = m.on && m.view ? { key: m.key, view: m.view } : null;
+        if (!this.route && !this.autosail) this.lastPath = null;
         break;
       case 'pursuit':
         this.pursuit = m.on && m.target !== undefined && m.roam === undefined ? { target: m.target, mode: m.mode === 'guns' ? 'guns' : 'board' } : null;
