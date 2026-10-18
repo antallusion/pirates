@@ -127,9 +127,10 @@ test('boarding a crippled ship: fight, cargo loss, plunder and fate', () => {
   assert.ok(result, 'boarding result delivered');
   const total = (result.cargo.sugar ?? 0) + (result.cargo.rum ?? 0) + (result.destroyed.sugar ?? 0) + (result.destroyed.rum ?? 0);
   assert.equal(total, 40, 'cargo is either plundered or destroyed');
-  c.push({ t: 'loot_take', take: { rum: 5 }, fate: 'release' });
-  assert.equal(ship.cargo.rum, 5);
-  assert.equal(npc.surrendered, false, 'released prize sails on');
+  // A ship of the sea: take all and sink her (owner, 2026-10-18) — her hold into yours as it fits, she goes down at once.
+  c.push({ t: 'loot_take', take: {}, fate: 'sink' });
+  assert.ok((ship.cargo.rum ?? 0) + (ship.cargo.sugar ?? 0) > 0, 'her cargo in the hold');
+  assert.ok(npc.sinkingUntil > 0 && npc.sinkingUntil <= game.now + 1, 'she goes down at once');
 });
 
 test('being sunk costs cargo and a fee, never the ship or the level', () => {

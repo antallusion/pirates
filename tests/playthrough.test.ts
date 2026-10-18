@@ -168,6 +168,7 @@ test('playthrough: she lies to beside her prize while the spoils are open — th
   npc.cargo = { rum: 10 };
   npc.hull = npc.stats.hullMax * 0.4;
   npc.crew = 4;
+  npc.purse = 300;
   game.grid.upsert(npc.id, npc.state.x, npc.state.y);
   c.push({ t: 'board', target: npc.id, aggression: 'standard' });
   for (let i = 0; i < 20 * 120 && !s.pendingBoarding; i++) {
@@ -183,9 +184,9 @@ test('playthrough: she lies to beside her prize while the spoils are open — th
   const d = Math.hypot(npc.state.x - ship.state.x, npc.state.y - ship.state.y);
   assert.ok(d < 400, `still by her prize: ${Math.round(d)} m`);
   const gold = s.profile!.gold;
-  c.push({ t: 'loot_take', take: { rum: 5 }, fate: 'ransom' });
+  c.push({ t: 'loot_take', take: {}, fate: 'release' }); // the two choices (owner, 2026-10-18): her crew and a little silver
   assert.ok(!c.all('toast').some((m) => /drifted too far|slipped away/.test(m.msg)));
-  assert.ok(s.profile!.gold > gold, 'the purse and the ransom paid');
+  assert.ok(s.profile!.gold > gold, 'a little of her purse paid');
   // Settled: the helm is hers again.
   c.push({ t: 'input', seq: 200, rudder: 0, sail: 3 });
   assert.ok(ship.input.sailTarget > 0);

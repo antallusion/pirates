@@ -42,6 +42,10 @@ import { ALPHA_OVER as ALPHA_OVER_RAM, alphaShare, npcSeaScale } from '../../../
 import { RAM_SHARE, volleyShare } from '../../../shared/src/data/seaskill.ts';
 import { XP_UNITS, contractPay, hourSilver, pointsXp, prizeXp, xpGap } from '../../../shared/src/data/xpcurve.ts';
 import { WRECK_SHARE } from '../../../shared/src/data/silverpay.ts';
+import { RELEASE_CREW, SCUTTLE_SINK_SEC, SINK_CREW, outcomeCrew, releaseSilver, wreckTimber } from '../../../shared/src/data/outcome.ts';
+import type { OutcomeFate, OutcomeNums } from '../../../shared/src/data/outcome.ts';
+import { owedByRole, payOwed, regionCounts, replaceDefeated, underRegion } from './density.ts'; // owner, 2026-10-18: the sea's density kept whatever is sunk
+import { ceasefireMessage } from './ceasefire.ts'; // owner, 2026-10-18: a ceasefire bought
 import { generateIslandJobs, generateQuests } from '../../../shared/src/data/questgen.ts';
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
 import { generateLairJobs } from '../../../shared/src/data/lairquests.ts';
@@ -134,6 +138,8 @@ import { menLost, npcArmy } from './army.ts';
  *  a ship carried than from one sent down. */
 export const SINK_LOOT = 0.25;
 export const SINK_PURSE = 0.3;
+/** A ship of the sea beaten: the two choices only (owner, 2026-10-18; shared/src/data/outcome.ts). */
+export const TWO_CHOICES = 'Two choices only: take all and sink her, or take her crew and let her go';
 /** The longest the loop may run steps back to back under an admin /speed before it lets messages in (ms). */
 const STEP_BUDGET_MS = 40; // (150 still kept a page waiting 1.5 s at ×100: QA playthrough C)
 /** docs/19 D6: beyond this (the nearest captain, as the LOD reckons it: never more than 6% over the true distance) an
@@ -380,6 +386,8 @@ export class Game {
   invasions = new InvasionHub();
   /** A ship taken by boarding as she goes down (her captain's gear is given; no ship gear on top: docs/21 §5). */
   private boardedDown = new Set<number>();
+  /** A ship of the sea sunk by her captor's choice (npcOutcome): her wreck is laid already, the sinking lays none. */
+  private wreckLaid = new Set<number>();
   worldEvents = new EventHub();
   empires = new EmpireHub();
   expeditions: ExpeditionHub;
@@ -1444,15 +1452,22 @@ export class Game {
     }
   }
 
-  private director(): void {
+  /** The zone's own ships kept to its quota (every two seconds; public for the density tests). */
+  director(): void {
     const now = this.now;
     const counts: Record<NpcRole, number> = { merchant: 0, patrol: 0, pirate: 0, hunter: 0, fisher: 0, ghost: 0, escort: 0, boss: 0, beast: 0 };
     const local = localTraffic(this); // the traffic about captains is not the world's quota
-    for (const b of this.npcs.values()) if (!local.has(b.id)) counts[b.role]++;
-    for (let i = 0; counts.merchant + i < this.quota(QUOTA.merchants) && i < 2; i++) spawnMerchant(this);
+    // The living only (owner, 2026-10-18): a ship going down is replaced at once (density.ts), and is not counted twice.
+    payOwed(this); // a ship beaten whose region had no spot out of sight a moment ago (density.ts)
+    for (const b of this.npcs.values()) if (!local.has(b.id) && !this.ships.get(b.id)?.sinkingUntil) counts[b.role]++;
+    for (const [r, n] of Object.entries(owedByRole(this))) counts[r as NpcRole] += n; // owed to their regions: not twice
+    // Each top-up to the region furthest under its share (density.ts): the zone's density kept by area, not only in sum.
+    const byRegion = regionCounts(this);
+    for (let i = 0; counts.merchant + i < this.quota(QUOTA.merchants) && i < 3; i++) spawnMerchant(this, underRegion(this, 'merchant', byRegion));
     const mods = seasonMods(this);
-    if (counts.pirate < this.quota(Math.round(QUOTA.pirates * mods.pirateMul))) spawnPirate(this);
-    if (counts.fisher < this.quota(QUOTA.fishers)) spawnFisher(this);
+    // Whatever a replacement's spot left short, three a pass (was one: a crowd of captains sank them faster).
+    for (let i = 0; counts.pirate + i < this.quota(Math.round(QUOTA.pirates * mods.pirateMul)) && i < 3; i++) spawnPirate(this, undefined, underRegion(this, 'pirate', byRegion));
+    for (let i = 0; counts.fisher + i < this.quota(QUOTA.fishers) && i < 3; i++) spawnFisher(this, underRegion(this, 'fisher', byRegion));
     if (counts.ghost < this.quota(QUOTA.ghosts * mods.ghostMul) && this.rng.chance(0.02 * mods.ghostMul)) spawnGhost(this, mods.ghostsEverywhere);
     if (counts.patrol < 10 && now - this.patrolsSpawnedAt > 300) {
       spawnPatrols(this);
@@ -2205,7 +2220,8 @@ export class Game {
     const victor = killer ? (killer.accountId ?? (killer.ownerId !== null ? this.ships.get(killer.ownerId)?.accountId ?? null : null)) : null;
     // Boarding is the way to take a ship (docs/17 H1): sunk by the guns, a ship of the sea gives up a quarter of her
     // hold and little of her purse (a captain's ship still spills her two-fifths).
-    if (!onboardingProtected(this.sessionOf(ship))) this.dropWreckage(ship, (ship.isPlayer ? 0.4 : SINK_LOOT) * lootMul(this, killer, ship) * streakAhead(this, killer, ship), victor); // the First Watch loses nothing
+    if (!onboardingProtected(this.sessionOf(ship)) && !this.wreckLaid.has(ship.id)) this.dropWreckage(ship, (ship.isPlayer ? 0.4 : SINK_LOOT) * lootMul(this, killer, ship) * streakAhead(this, killer, ship), victor); // the First Watch loses nothing
+    if (!ship.isPlayer) replaceDefeated(this, ship); // one like her puts out elsewhere in these waters (density.ts)
     onShipSunk(this, ship, killer);
     if (ship.dutchman) dutchmanSunk(this, ship, killer); // the Flying Dutchman laid to rest (docs/12 P10 #10)
     if (ship.isPlayer && killer && (killer.named || killer.namedMate)) nemesisSankYou(this, ship, killer); // he will remember her (docs/12 P10 #1)
@@ -2483,7 +2499,7 @@ export class Game {
     const why = surrenderBlocked(this, s, target);
     if (why) return why;
     const t = target!;
-    if ((fate === 'prize' || fate === 'trophy') && prizeCrewNeeded(s.ship!, t) === null) return 'She cannot be taken as a prize';
+    if (fate !== 'sink' && fate !== 'release') return TWO_CHOICES;
     surrenderClosed(this, t);
     this.surrenderTaking = fate;
     try {
@@ -2491,8 +2507,8 @@ export class Game {
     } finally {
       this.surrenderTaking = null;
     }
-    if (fate === 'cargo' || !s.pendingBoarding) return null;
-    const err = this.resolveLoot(s, {}, fate === 'ransom' ? 'ransom' : fate);
+    if (!s.pendingBoarding) return null;
+    const err = this.resolveLoot(s, {}, fate);
     this.pushSelf(s, true);
     return err;
   }
@@ -2517,6 +2533,13 @@ export class Game {
       result.captive = !a.hasFlag('no_quarter') && !b.isPlayer && b.npcRole !== 'ghost' && !b.cls.monster && (a.hasFlag('ransom') || this.rng.chance(0.5));
       if (result.captive) seizeCaptain(b);
       result.recruits = !b.isPlayer && sa.profile ? maxRecruits(a, b, sa.profile.company) : 0;
+      // A ship of the sea: the two choices only (owner, 2026-10-18) — no ransom, no prize crew, no trophy for her.
+      if (!b.isPlayer && sa.profile) {
+        result.prize = null;
+        result.trophy = false;
+        result.ransom = 0;
+        result.outcome = this.outcomeNums(sa, a, b, result.gold);
+      }
       // No Quarter in contested waters: the whole sea hears of it.
       if (a.hasFlag('no_quarter') && REGIONS[a.region].safety === 'contested' && sa.profile) {
         const lvl = wantedLevel(sa.profile.infamy);
@@ -2529,7 +2552,7 @@ export class Game {
       const loser = this.sessionOf(b);
       if (loser?.profile) stealMaps(this, sa, loser); // the captain's chest goes with the ship
       // A surrender on terms settled at once shows no card of the hold (docs/16 #3).
-      if (this.surrenderTaking === null || this.surrenderTaking === 'cargo') this.sendTo(sa, { t: 'boarding', result });
+      if (this.surrenderTaking === null) this.sendTo(sa, { t: 'boarding', result });
       this.creditKill(a, b, 'boarded');
       const sb = this.sessionOf(b);
       if (sb) this.sendTo(sb, { t: 'toast', msg: `${a.captainName} has taken your ship! Pray for mercy.`, kind: 'bad' });
@@ -2639,6 +2662,11 @@ export class Game {
     const pend = s.pendingBoarding;
     const ship = s.ship;
     if (!pend || !ship || !s.profile) return 'Nothing to loot';
+    // A ship of the sea: the two choices only (owner, 2026-10-18).
+    if (pend.result.npc) {
+      if (fate !== 'sink' && fate !== 'release') return TWO_CHOICES;
+      return this.npcOutcome(s, fate);
+    }
     s.pendingBoarding = null;
     const target = this.ships.get(pend.targetId);
     if (!target || target.lootLockedFor !== ship.id) return 'The prize slipped away';
@@ -2683,29 +2711,7 @@ export class Game {
       for (const o of s.profile.company.officers) if (o.traits.includes('cruel')) o.loyalty = Math.max(0, o.loyalty - 10);
     }
     if (!target.isPlayer) mapChance(this, s, target.npcRole === 'pirate' ? 0.1 : 0.05, target.npcRole === 'pirate' ? 2 : 1, "In her captain's cabin");
-    let kept = plunderShare(this, s, pend.result.gold);
-    // The live ops' silver event (docs/34): the sea's purses only, never another captain's (×1 with none scheduled).
-    if (!target.isPlayer && kept > 0) kept = Math.round(kept * opsSilverMul(this));
-    // A group shares the purse (owner, 2026-09-29): the mates within convoy range each get an equal part.
-    const g = groupOfAccount(this, s.accountId);
-    const mates: PlayerSession[] = [];
-    for (const acc of g?.members ?? []) {
-      if (acc === s.accountId) continue;
-      const ms = this.sessionByAccount(acc);
-      if (ms?.ship && ms.profile && ms.ship.alive && dist(ms.ship.state.x, ms.ship.state.y, target.state.x, target.state.y) <= CONVOY_RANGE) mates.push(ms);
-    }
-    if (mates.length && kept > 0) {
-      const part = Math.floor(kept / (mates.length + 1));
-      for (const ms of mates) {
-        ms.profile!.gold += part;
-        this.db.ledger(ms.accountId, 'plunder', part, target.name);
-        this.sendTo(ms, { t: 'toast', msg: `Your share of ${target.name}'s purse: ${part} silver.`, kind: 'gold' });
-        this.pushSelf(ms, true);
-      }
-      kept -= part * mates.length;
-    }
-    s.profile.gold += kept;
-    if (pend.result.gold) this.db.ledger(s.accountId, 'plunder', kept, target.name);
+    this.sharePurse(s, target, pend.result.gold);
     if (!target.isPlayer) target.purse = 0;
     target.lootLockedFor = null;
     const f = target.faction !== 'player' ? target.faction : null;
@@ -2739,6 +2745,146 @@ export class Game {
       this.releasePrize(target);
       this.toastShip(ship, `You let ${target.name} limp away. The sea remembers mercy.`, 'info');
     }
+    return null;
+  }
+
+  /** Her purse to the captain who took her: the crew's share off it, the live ops' silver event on it, a group's mates
+   *  within convoy range an equal part each (owner, 2026-09-29). What the captain keeps. */
+  private sharePurse(s: PlayerSession, target: ShipEntity, gold: number): number {
+    let kept = plunderShare(this, s, gold);
+    // The live ops' silver event (docs/34): the sea's purses only, never another captain's (×1 with none scheduled).
+    if (!target.isPlayer && kept > 0) kept = Math.round(kept * opsSilverMul(this));
+    const g = groupOfAccount(this, s.accountId);
+    const mates: PlayerSession[] = [];
+    for (const acc of g?.members ?? []) {
+      if (acc === s.accountId) continue;
+      const ms = this.sessionByAccount(acc);
+      if (ms?.ship && ms.profile && ms.ship.alive && dist(ms.ship.state.x, ms.ship.state.y, target.state.x, target.state.y) <= CONVOY_RANGE) mates.push(ms);
+    }
+    if (mates.length && kept > 0) {
+      const part = Math.floor(kept / (mates.length + 1));
+      for (const ms of mates) {
+        ms.profile!.gold += part;
+        this.db.ledger(ms.accountId, 'plunder', part, target.name);
+        this.sendTo(ms, { t: 'toast', msg: `Your share of ${target.name}'s purse: ${part} silver.`, kind: 'gold' });
+        this.pushSelf(ms, true);
+      }
+      kept -= part * mates.length;
+    }
+    s.profile!.gold += kept;
+    if (gold) this.db.ledger(s.accountId, 'plunder', kept, target.name);
+    return kept;
+  }
+
+  /** The goods of `from` that fit `ship`'s hold, the best silver for the room first (the card's default, docs/16). */
+  private holdFit(ship: ShipEntity, from: Cargo): Cargo {
+    let free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
+    const out: Cargo = {};
+    const goods = (Object.keys(from) as GoodId[]).filter((g) => GOODS[g] && (from[g] ?? 0) > 0);
+    goods.sort((a, b) => GOODS[b].basePrice / GOODS[b].volume - GOODS[a].basePrice / GOODS[a].volume);
+    for (const g of goods) {
+      const per = GOODS[g].volume * (GOODS[g].contraband ? ship.stats.contrabandVolumeMul : 1);
+      const n = Math.min(Math.floor(from[g] ?? 0), Math.floor((free + 1e-6) / per));
+      if (n <= 0) continue;
+      out[g] = n;
+      free -= n * per;
+    }
+    return out;
+  }
+
+  /** The two choices' numbers for a ship of the sea beaten (owner, 2026-10-18; shared/src/data/outcome.ts). */
+  outcomeNums(s: PlayerSession, a: ShipEntity, b: ShipEntity, gold: number): OutcomeNums {
+    const room = a.stats.crewMax - a.crew;
+    const cruel = !!s.profile?.company.officers.some((o) => o.traits.includes('cruel'));
+    let units = 0;
+    for (const g in b.cargo) units += Math.floor(b.cargo[g as GoodId] ?? 0);
+    let take = 0;
+    for (const n of Object.values(this.holdFit(a, b.cargo))) take += n ?? 0;
+    return {
+      sink: { silver: gold, take, left: units - take, timber: wreckTimber(b.cls.tier), crew: outcomeCrew(b.crew, SINK_CREW, room, cruel) },
+      release: { silver: releaseSilver(gold), crew: outcomeCrew(b.crew, RELEASE_CREW, room, cruel) },
+      room: Math.max(0, Math.floor(room)),
+      survivors: Math.max(0, Math.floor(b.crew)),
+    };
+  }
+
+  /** A ship of the sea beaten, and the captain's choice (owner, 2026-10-18: «только два выбора»):
+   *  (A) 'sink' — all of her: her hold as far as yours goes, her purse, her captain's gear and a part of her men; she goes
+   *  down at once and her wreck lies on the water at once, yours alone: her timbers and what did not fit.
+   *  (B) 'release' — her men (a larger part) and a little of her purse; she is let go and gone at once.
+   *  Either way a ship like her puts out elsewhere in these waters (density.ts). */
+  private npcOutcome(s: PlayerSession, fate: OutcomeFate): string | null {
+    const pend = s.pendingBoarding!;
+    const ship = s.ship!;
+    const p = s.profile!;
+    s.pendingBoarding = null;
+    const target = this.ships.get(pend.targetId);
+    if (!target || target.lootLockedFor !== ship.id) return 'The prize slipped away';
+    if (dist(ship.state.x, ship.state.y, target.state.x, target.state.y) > 400) return 'The prize drifted too far';
+    const f = target.faction !== 'player' ? target.faction : null;
+    const cruel = p.company.officers.some((o) => o.traits.includes('cruel'));
+    // Her men: a part signs on (as far as the hammocks go; none to a cruel officer).
+    const want = outcomeCrew(target.crew, fate === 'sink' ? SINK_CREW : RELEASE_CREW, ship.stats.crewMax - ship.crew, cruel);
+    const men = want > 0 ? recruitPrisoners(this, s, target, want) : 0;
+    if (fate === 'release') {
+      const silver = releaseSilver(pend.result.gold);
+      const kept = silver > 0 ? this.sharePurse(s, target, silver) : 0;
+      target.purse = 0;
+      target.lootLockedFor = null;
+      // A cruel officer resents letting them go; the sea remembers mercy.
+      if (cruel) for (const o of p.company.officers) if (o.traits.includes('cruel')) o.loyalty = Math.max(0, o.loyalty - 10);
+      if (f) changeRep(p, f, 2);
+      p.infamy = Math.max(0, p.infamy - 3);
+      raidFate(this, s, target, 'release');
+      questEvent(this, s, { k: 'prize' }); // a ship taken (the prize court is gone for the sea's ships)
+      this.toastShip(ship, `You let ${target.name} go: ${men} of her men sign on with you, and ${kept} silver. She is gone over the horizon.`, 'good');
+      // Gone at once (no sailing off), and one like her puts out elsewhere in these waters.
+      surrenderClosed(this, target);
+      replaceDefeated(this, target);
+      this.removeShip(target.id);
+      return null;
+    }
+    // (A) Her hold into yours as far as it goes, the best silver for the room first.
+    const fit = this.holdFit(ship, target.cargo);
+    let moved = 0;
+    for (const id in fit) {
+      const g = id as GoodId;
+      const n = fit[g] ?? 0;
+      target.cargo[g] = (target.cargo[g] ?? 0) - n;
+      if (!target.cargo[g]) delete target.cargo[g];
+      const prev = ship.cargo[g] ?? 0;
+      ship.cargo[g] = prev + n;
+      p.stolen[g] = (p.stolen[g] ?? 0) + n;
+      // Plunder has no purchase cost; keep the basis low so selling it rewards less XP than honest profit.
+      this.setCostBasis(s, g, (this.costBasis(s, g) * prev + GOODS[g].basePrice * 0.6 * n) / Math.max(1, prev + n));
+      moved += n;
+    }
+    for (const a of AMMO_IDS) ship.ammo[a] += pend.result.ammo[a];
+    target.ammo = emptyAmmo();
+    takeCaptive(this, s, target);
+    mapChance(this, s, target.npcRole === 'pirate' ? 0.1 : 0.05, target.npcRole === 'pirate' ? 2 : 1, "In her captain's cabin");
+    this.sharePurse(s, target, pend.result.gold);
+    target.purse = 0;
+    target.lootLockedFor = null;
+    raidFate(this, s, target, 'sink');
+    questEvent(this, s, { k: 'prize' });
+    // Her wreck on the water at once, hers alone to pick up (as Quick Dump's casks): her timbers, the timber she was built
+    // of, what of her hold did not fit, her captain's gear, the wreck's silver (docs/31 §9).
+    const cargo: Cargo = { ...target.cargo };
+    for (const [g, n] of Object.entries(wreckSalvage(target))) cargo[g as GoodId] = (cargo[g as GoodId] ?? 0) + (n ?? 0);
+    cargo.timber = (cargo.timber ?? 0) + wreckTimber(target.cls.tier);
+    const item = rollDrop(this, target, 'boarded');
+    const id = this.allocId();
+    this.loot.set(id, { id, x: target.state.x, y: target.state.y, cargo, gold: Math.round(hourSilver(target.shipLevel) * WRECK_SHARE) + (target.id % 20), expires: this.now + LOOT_LIFETIME_SEC, ownerOnly: s.accountId, wreck: target.region, monster: isMonster(target), ...(item ? { items: [item] } : {}) });
+    target.cargo = {};
+    target.attackers.set(ship.id, this.now);
+    this.boardedDown.add(target.id);
+    this.wreckLaid.add(target.id);
+    this.beginSinking(target);
+    this.boardedDown.delete(target.id);
+    this.wreckLaid.delete(target.id);
+    if (target.sinkingUntil) target.sinkingUntil = Math.min(target.sinkingUntil, this.now + SCUTTLE_SINK_SEC);
+    this.toastShip(ship, `${target.name} goes down with ${moved} units of her cargo in your hold and ${men} of her men in your crew. Her wreck lies on the water for you.`, 'good');
     return null;
   }
 
@@ -3504,8 +3650,11 @@ export class Game {
         // Ransomed, handed over — or turned into an officer or a caravan skipper (docs/12 P10 #16).
         if (msg.mode === 'officer' || msg.mode === 'skipper') return portAction(() => turnCaptive(this, s, Math.trunc(Number(msg.index)), msg.mode as 'officer'));
         return portAction((pt) => captiveAction(this, s, pt, Math.trunc(Number(msg.index)), msg.mode === 'hand_over' ? 'hand_over' : 'ransom'));
+      case 'ceasefire':
+        ceasefireMessage(this, s, msg);
+        return;
       case 'surrender':
-        err(this.acceptSurrender(s, Math.trunc(Number(msg.id)), msg.fate === 'ransom' || msg.fate === 'prize' || msg.fate === 'trophy' ? msg.fate : 'cargo'));
+        err(msg.fate === 'sink' || msg.fate === 'release' ? this.acceptSurrender(s, Math.trunc(Number(msg.id)), msg.fate) : TWO_CHOICES);
         this.pushSelf(s, true);
         return;
       case 'loot_take':

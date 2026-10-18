@@ -1,0 +1,73 @@
+/* The two choices after a ship of the sea is beaten, and the ceasefire talks (owner, 2026-10-18). Before fit.css. */
+
+/* ---- the boarding's card for a ship of the sea: her hold in a row of chips, the two choices side by side ---- */
+#modal-panel .out-body { display: flex; flex-direction: column; gap: 8px; }
+.out-hold { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.out-good { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.out-line { margin: 0; line-height: 1.35; }
+.out-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.out-choices.one { grid-template-columns: 1fr; }
+.out-choice { display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 6px 10px; text-align: left; white-space: normal; }
+.out-choice > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.out-choice b { line-height: 1.2; }
+.out-choice small { font-size: 12px; line-height: 1.3; opacity: 0.9; overflow-wrap: anywhere; }
+@media (max-height: 520px), (max-width: 699px) {
+  #modal-panel .out-body { gap: 5px; }
+  .out-text { display: none; }
+  .out-choice { min-height: 48px; padding: 4px 8px; gap: 6px; }
+  .out-choice .choice-ico { width: 22px; height: 22px; }
+  .out-choice small { font-size: 11px; }
+}
+@media (max-width: 420px) {
+  .out-choices { grid-template-columns: 1fr; gap: 5px; }
+}
+
+/* ---- the struck ship's card: two choices take the row the four took (styles.css, feel.css) ---- */
+#surrender .sur-choices.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#surrender .sur-two .sur-choice small { display: block; font-size: 11px; line-height: 1.25; }
+body.touch #surrender .sur-two .sur-choice:nth-child(1) { grid-column: 1 / 3; }
+body.touch #surrender .sur-two .sur-choice:nth-child(2) { grid-column: 3 / 5; }
+@media (max-width: 699px), (max-height: 520px) {
+  #surrender .sur-two .sur-choice small { display: none; }
+}
+
+/* ---- the ceasefire talks ---- */
+#ceasefire { position: fixed; left: 50%; top: calc(var(--sa-t, 0px) + 70px); transform: translateX(-50%); width: min(430px, calc(100vw - 16px)); max-height: calc(100vh - var(--sa-t, 0px) - 80px); overflow-y: auto; z-index: 42; pointer-events: auto; }
+#ceasefire.hidden { display: none; }
+#ceasefire .cf-card { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; background: rgba(10, 12, 16, 0.95); border: 1px solid rgba(240, 234, 220, 0.6); border-radius: 6px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
+#ceasefire .cf-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#ceasefire .cf-x { min-width: 32px; min-height: 32px; padding: 0 8px; }
+#ceasefire .cf-line { margin: 0; font-size: 12.5px; line-height: 1.35; }
+#ceasefire .cf-rows { display: flex; flex-direction: column; gap: 4px; }
+#ceasefire .cf-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 4px; border-radius: 4px; }
+#ceasefire .cf-row.focus { background: rgba(232, 220, 192, 0.08); }
+#ceasefire .cf-name { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-width: 0; font-size: 12.5px; }
+#ceasefire .cf-name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+#ceasefire .cf-row .btn { flex: none; min-height: 32px; white-space: nowrap; }
+#ceasefire .cf-pay { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+#ceasefire .cf-seg { display: inline-flex; gap: 4px; }
+#ceasefire .cf-seg .btn.on, #ceasefire .cf-good.on { outline: 2px solid var(--brass, #c9a227); }
+#ceasefire .cf-all { min-height: 34px; white-space: nowrap; }
+#ceasefire .cf-goods { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+#ceasefire .cf-good { display: inline-flex; align-items: center; gap: 3px; min-height: 30px; padding: 2px 6px; }
+#ceasefire .warn { color: #e0b25a; }
+@media (max-width: 699px), (max-height: 520px) {
+  #ceasefire { top: calc(var(--sa-t, 0px) + 6px); left: calc(var(--sa-l, 0px) + 8px); transform: none; width: min(400px, calc(100vw - 16px - var(--sa-l, 0px) - var(--sa-r, 0px))); max-height: calc(100vh - var(--sa-t, 0px) - 12px); }
+  body:has(#ceasefire:not(.hidden)) #hud-captain { visibility: hidden; }
+  #ceasefire .cf-card { gap: 4px; padding: 6px 8px; }
+  #ceasefire .cf-line { font-size: 11.5px; }
+  #ceasefire .cf-name { font-size: 11.5px; }
+  #ceasefire .cf-row .btn, #ceasefire .cf-all { min-height: 30px; padding: 2px 8px; }
+}
+@media (max-width: 300px) {
+  #ceasefire .cf-row { flex-wrap: wrap; }
+  #ceasefire .cf-pay { flex-direction: column; align-items: stretch; }
+}
+/* a narrow phone (480×270): four choices were pictures only; two have the room for their word beside the picture */
+@media (max-width: 560px) and (max-height: 520px) {
+  body.simple.touch #surrender .sur-two .sur-choice { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 4px; }
+  body.simple.touch #surrender .sur-two .sur-choice .choice-ico { width: 20px; height: 20px; margin: 0; flex: none; }
+  body.simple.touch #surrender .sur-two .sur-choice > span { display: block; min-width: 0; }
+  body.simple.touch #surrender .sur-two .sur-choice b { display: none; }
+  body.simple.touch #surrender .sur-two .sur-choice .sur-short { display: block; font-size: 11px; line-height: 1.1; white-space: normal; }
+}

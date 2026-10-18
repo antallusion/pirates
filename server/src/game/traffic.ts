@@ -12,6 +12,8 @@ import { neutralSpared, pirateSworn } from './colours.ts';
 import { quietSea } from './director.ts';
 import { stirWars } from './npcwars.ts';
 import type { Game } from './Game.ts';
+import type { ShipEntity } from './ship.ts';
+import { sectorAt } from '../../../shared/src/world/sectors.ts';
 
 /** How near counts as about her, and how far off a new ship is put out (beyond her screen, inside her chart). */
 // Owner, 2026-09-30: four times the ships to meet. A wider ring about her, and many more in it.
@@ -47,6 +49,23 @@ type Role = 'merchant' | 'fisher' | 'patrol' | 'pirate' | 'hunter';
 const COUNTED = new Set(['merchant', 'fisher', 'patrol', 'pirate', 'escort', 'hunter', 'ghost']);
 
 const local = new WeakMap<Game, Set<number>>();
+/** Owner, 2026-10-18 (density.ts): a ship of a captain's traffic beaten — the captains about her are looked at on the next
+ *  second, not their every third, and the one nearest her puts out one like her (her role, her level) if her ring is short
+ *  now. Only a short ring is topped up: the beaten ship is put back once, never on top of the ring's own top-up. */
+const ringDue = new WeakMap<Game, Map<number, { role: Role; level: number }[]>>();
+
+/** The captains within NEAR_R of a ship of their traffic beaten at (x, y): looked at on the next second; `nearest` puts out
+ *  one like her. */
+export function ringAsk(game: Game, x: number, y: number, nearest: number | null, role: string, level: number): void {
+  let due = ringDue.get(game);
+  if (!due) ringDue.set(game, (due = new Map()));
+  game.forShipsNear(x, y, NEAR_R, (o) => {
+    if (!o.isPlayer || o.accountId === null || Math.hypot(o.state.x - x, o.state.y - y) > NEAR_R) return;
+    const q = due!.get(o.accountId) ?? [];
+    if (o.accountId === nearest && (MIX.lawless.some(([r]) => r === role) || MIX.safe.some(([r]) => r === role))) q.push({ role: role as Role, level });
+    due!.set(o.accountId, q);
+  });
+}
 /** When each captain is next hunted (wild waters only). */
 const hunts = new WeakMap<Game, Map<number, number>>();
 /** Seconds between two rovers put out after a captain in contested and lawless waters. */
@@ -83,6 +102,12 @@ function hunt(game: Game, s: import('./player.ts').PlayerSession): void {
   const a = Math.atan2(p.state.x - ship.state.x, -(p.state.y - ship.state.y));
   const km = (dist(p.state.x, p.state.y, ship.state.x, ship.state.y) / 1000).toFixed(1);
   game.toastShip(ship, `Sail to the ${compassPoint(a)}, ${km} km off: a pirate is coming for you!`, 'bad');
+}
+
+/** One put out like a ship beaten: her level, within the band of the square she puts out in (the law a level above). */
+function likeLevel(game: Game, out: ShipEntity, level: number): void {
+  const [lo, hi] = sectorAt(game.world, out.state.x, out.state.y).band;
+  game.setNpcLevel(out, Math.max(1, Math.min(10, Math.max(lo, Math.min(hi + (out.npcRole === 'patrol' ? 1 : 0), level)))));
 }
 
 export function localTraffic(game: Game): Set<number> {
@@ -165,7 +190,9 @@ export function stepTraffic(game: Game): void {
       if (p) mine.add(p.id);
       return p;
     });
-    if ((tick + s.accountId) % 3 !== 0) continue;
+    const asked = ringDue.get(game)?.get(s.accountId);
+    if ((tick + s.accountId) % 3 !== 0 && !asked) continue;
+    if (asked) ringDue.get(game)!.delete(s.accountId);
     if (mine.size >= cap) continue;
     // In the First Watch the sea is peaceful but not empty: merchants, fishers and patrols, no rovers.
     const novice = onboardingProtected(s);
@@ -184,7 +211,9 @@ export function stepTraffic(game: Game): void {
     const mix = (MIX[safety] ?? MIX.contested).filter(([r]) => !novice || r !== 'pirate');
     // Up to three at a turn while the sea about her is thin, so a new sea fills within a minute.
     for (let n = Math.min(3, Math.max(close ? nearWant - near : 0, want - count)); n > 0; n--) {
-    const role = game.rng.weighted(mix);
+    // One like a ship of hers beaten (density.ts), if her waters keep her kind; else the waters' mix.
+    const like = asked?.shift();
+    const role = like && mix.some(([r]) => r === like.role) ? like.role : game.rng.weighted(mix);
     // Mostly ahead of her or abeam, where she will meet it; now and then astern, overtaking.
     for (let k = 0; k < 6; k++) {
       const a = ship.state.heading + (game.rng.chance(0.8) ? game.rng.range(-1.8, 1.8) : Math.PI + game.rng.range(-0.8, 0.8));
@@ -194,6 +223,7 @@ export function stepTraffic(game: Game): void {
       const out = spawnTraffic(game, role, ship.state.x + v.x * r, ship.state.y + v.y * r, { x: ship.state.x, y: ship.state.y });
       if (out) {
         mine.add(out.id);
+        if (like && like.role === role) likeLevel(game, out, like.level);
         // Now and then a rich one, deep in the water: a prize worth the chase, and the lookout says so.
         if (role === 'merchant' && !novice && game.rng.chance(0.15)) {
           out.purse *= 4;

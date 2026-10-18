@@ -49,6 +49,7 @@ import { killFactor, menLost, wallsOf } from './army.ts';
 import { giftOnHit } from './shipgifts.ts';
 import { kitCrit, passiveNums, skillNumber, volleyKit } from './seaskill.ts';
 import type { VolleyKit } from './seaskill.ts';
+import { truceHit } from './ceasefire.ts'; // owner, 2026-10-18
 
 /** A broadside laid on a mark by her gun captains (auto-aim, the sea's own gunners): the balls converge on `aimAt`. */
 export interface Lay {
@@ -894,6 +895,9 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     const pv = pvpBlocked(game, source, target);
     if (pv && pv !== 'duel_ok') return 0;
   }
+  // A ceasefire bought (owner, 2026-10-18): her balls do the captain she agreed with no harm (in the air or not); the
+  // captain's on her break it (ceasefire.ts).
+  if (source && source !== target && (source.truceUntil > now || target.truceUntil > now) && truceHit(game, source, target)) return 0;
   if (source) {
     registerAggression(game, source, target);
     source.lastCombat = now;

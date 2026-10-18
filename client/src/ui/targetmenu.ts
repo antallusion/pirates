@@ -15,7 +15,7 @@ import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 
-export type TmId = 'lock' | 'pursue' | 'fight';
+export type TmId = 'lock' | 'pursue' | 'fight' | 'talk';
 
 export interface TmChoice {
   id: TmId;
