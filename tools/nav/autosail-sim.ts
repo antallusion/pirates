@@ -169,7 +169,6 @@ for (let k = 0; rs.length < N; k++) {
   if (autosailOf(ship)) c.push({ t: 'autosail', stop: true });
   phone = null;
   retire(game, s, c);
-  game.dropSession(s); // (out of the sea: two hundred captains left lying about slowed every tick sixfold)
   calm();
   void headingOf;
 }
