@@ -35,7 +35,10 @@ test('a lair beaten counts on one job only, the one that names that lair first (
   join(game, 'Lair Lu');
   const s = game.sessionByName('Lair Lu')!;
   const p = s.profile!;
-  const cull = QUESTS_BY_ID['lj_hollowmere_cull'], cull2 = QUESTS_BY_ID['lj_hollowmere_cull_2'], clear = QUESTS_BY_ID['lj_hollowmere_clear'];
+  // (a harbour with two lairs within reach of its quay: Hollowmere has none since a harbour posts only its own waters'
+  // creature jobs — docs/36, owner 2026-10-18)
+  const home = game.world.ports.find((pt) => QUESTS_BY_ID[`lj_${pt.id}_cull`] && QUESTS_BY_ID[`lj_${pt.id}_cull_2`] && QUESTS_BY_ID[`lj_${pt.id}_clear`])!.id;
+  const cull = QUESTS_BY_ID[`lj_${home}_cull`], cull2 = QUESTS_BY_ID[`lj_${home}_cull_2`], clear = QUESTS_BY_ID[`lj_${home}_clear`];
   assert.ok(cull && cull2 && clear, 'the harbour posts two culls and a clearing');
   const at = clear.steps[0] as { island: number; kind: string };
   p.quests.active.push({ id: cull.id, step: 0, progress: 0, startedAt: game.now }, { id: cull2.id, step: 0, progress: 0, startedAt: game.now }, { id: clear.id, step: 0, progress: 0, startedAt: game.now });

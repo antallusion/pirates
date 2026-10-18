@@ -21,11 +21,28 @@ test('the three pays: all silver; seven tenths and fine shot worth more than the
   assert.equal(fav.rep, questRep(30) * 2 + 2);
 });
 
+/** A harbour of the first waters whose board has a job worth the choice (≥ 200 silver) for a new captain. Since the sea's
+ *  silver was cut (docs/26 §11, silverpay.ts) and a harbour with no island within reach of its quay posts no landing
+ *  (docs/36, owner 2026-10-18), the start harbour's board holds only small jobs (90–130 silver: no choice of pay); the
+ *  choice is on the boards about it. */
+function payingBoard(game: ReturnType<typeof makeGame>['game'], s: NonNullable<ReturnType<ReturnType<typeof makeGame>['game']['sessionByName']>>, c: ReturnType<typeof join>, need: (o: { kind: string; category?: string; silver: number; pays?: unknown; blocked: string | null; id: string }) => boolean) {
+  for (const port of game.world.ports.filter((p) => !p.raft && p.region === 'black_coast')) {
+    s.ship!.docked = port.id;
+    s.profile!.docked = port.id;
+    s.ship!.state.x = port.x;
+    s.ship!.state.y = port.y;
+    game.pushPort(s);
+    if (c.last('port')?.view?.questOffers.some(need)) return port;
+  }
+  return null;
+}
+
 test('the board offers the choice; the pay chosen is kept with the job and paid on the deed', () => {
   const { game } = makeGame();
   const c = join(game, 'Paid Right');
   const s = game.sessionByName('Paid Right')!;
-  const port = game.portById(s.ship!.docked!)!;
+  const port = payingBoard(game, s, c, (o) => o.kind === 'job' && o.category !== 'elite' && o.silver >= 200 && !!o.pays)!;
+  assert.ok(port, 'a harbour of the first waters with a job worth the choice');
   const offer = c.last('port')!.view!.questOffers.find((o) => o.kind === 'job' && o.category !== 'elite' && o.silver >= 200);
   assert.ok(offer?.pays, 'a job on the board offers the pay to choose');
   assert.equal(offer!.pays!.faction, port.faction);
@@ -70,6 +87,7 @@ test('taking a job at the board with a pay: the journal shows it; a pay the job 
   const { game } = makeGame();
   const c = join(game, 'Board Pay');
   const s = game.sessionByName('Board Pay')!;
+  payingBoard(game, s, c, (o) => o.kind === 'job' && o.category !== 'elite' && !!o.pays && !o.blocked && (JOBS.find((q) => q.id === o.id)?.steps[0].type ?? 'visit') !== 'visit' && JOBS.find((q) => q.id === o.id)?.steps[0].type !== 'pickup');
   // A job that sends the captain elsewhere (so it is not done on the spot).
   const offers = c.last('port')!.view!.questOffers.filter((o) => o.kind === 'job' && o.category !== 'elite' && o.pays && !o.blocked);
   const job = offers.map((o) => JOBS.find((q) => q.id === o.id)!).find((q) => q && q.steps[0].type !== 'visit' && q.steps[0].type !== 'pickup')!;

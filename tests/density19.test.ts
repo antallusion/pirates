@@ -128,7 +128,10 @@ test('D4: the mines twelve a region (the first six where they stood), the hidden
   assert.equal(veiled.length, hidden.length - veiled.length, 'as many again');
   const jobs = generateLairJobs(world, WORLD_SEED);
   const first = jobs.filter((q) => !q.id.endsWith('_2')), second = jobs.filter((q) => q.id.endsWith('_2'));
-  assert.ok(second.length >= first.length * 0.95 && second.length <= first.length, `${first.length} → ${jobs.length} creature jobs`);
+  // (a harbour posts its creature jobs only of lairs within reach of its quay — docs/36, owner 2026-10-18 — so a harbour
+  // with one such lair has no second set: fewer second sets than first, each a distinct id, no duplicates)
+  assert.ok(second.length >= first.length * 0.85 && second.length <= first.length, `${first.length} → ${jobs.length} creature jobs`);
+  assert.equal(new Set(jobs.map((q) => q.id)).size, jobs.length, 'no job twice');
   assert.equal(JOBS_ON_BOARD, 10);
   assert.equal(BEAST_JOBS_ON_BOARD, 2);
   const { game } = makeGame();
