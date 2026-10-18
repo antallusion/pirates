@@ -62,6 +62,9 @@ export type QuestStep =
    *  sign on men for the ship's army. */
   | { type: 'isle'; island: number; text: string }
   | { type: 'claim'; text: string }
+  /** docs/36: a marked place of a harbour's own island's coast (a cove, a spit) to come to — for a harbour with no island
+   *  within reach of its quay. */
+  | { type: 'spot'; x: number; y: number; r: number; island?: number; text: string }
   | { type: 'build'; count: number; text: string }
   | { type: 'recruit'; count: number; text: string };
 

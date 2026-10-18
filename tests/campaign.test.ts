@@ -418,6 +418,12 @@ function doStep(game: Game, s: PlayerSession, st: QuestStep): void {
       ship.region = st.region;
       return questEvent(game, s, { k: 'tick', dt: st.type === 'time_in' ? st.seconds : 1 });
     }
+    case 'spot':
+      sailed(s, st.x, st.y);
+      ship.docked = null;
+      ship.state.x = st.x;
+      ship.state.y = st.y;
+      return questEvent(game, s, { k: 'tick', dt: 1 });
     case 'claim':
       return questEvent(game, s, { k: 'tick', dt: 1 });
     case 'build':
@@ -623,18 +629,16 @@ test('the cargo steps are still done in the port she lies in: a delivery handed 
 
 // ------------------------------------------------------------------ location by location (owner, 2026-10-18)
 
-test('location by location: runs of 4–6 quests, each done within 1.5 km of its location; the voyage is the run’s first quest', () => {
+test('location by location: small runs (2–6 quests), each done within 1.5 km of its location; the voyage is the run’s first quest', () => {
   const locs = built.locations;
-  assert.ok(locs.length >= 130 && locs.length <= 150, `${locs.length} locations`);
-  for (const l of locs) assert.ok(l.size >= 4 && l.size <= 6, `${l.name}: a run of ${l.size}`);
+  assert.ok(locs.length >= 140 && locs.length <= 260, `${locs.length} locations`);
+  for (const l of locs) assert.ok(l.size >= 2 && l.size <= 6, `${l.name}: a run of ${l.size}`);
   assert.equal(locs.reduce((a, l) => a + l.size, 0), CAMPAIGN_SIZE);
   const far: string[] = [];
   let checked = 0;
   for (const sl of built.slots) {
     const L = locs[sl.loc];
     assert.equal(sl.travel, sl.slot === L.from && L.i > 0, `${sl.a.id}: the voyage is the first of its run`);
-    // (a chapter's mentor's port, and the home-coming at the end, are held where the story puts them)
-    const fixedHub = L.from === built.firstOf[L.ch - 1] || L.i === built.locations.length - 1;
     for (const q of [sl.a, ...(sl.b ? [sl.b] : [])]) {
       const pick = q.steps.some((x) => x.type === 'pickup');
       for (const st of q.steps) {
@@ -643,11 +647,11 @@ test('location by location: runs of 4–6 quests, each done within 1.5 km of its
           const p = world.ports.find((x) => x.id === st.port)!;
           d = Math.hypot(p.x - L.x, p.y - L.y);
         } else if (st.type === 'isle' || st.type === 'land') d = locDist(world, L, world.islands[st.island]);
+        else if (st.type === 'spot') d = Math.hypot(st.x - L.x, st.y - L.y);
         else if ('near' in st && st.near) d = Math.hypot(st.near.x - L.x, st.near.y - L.y);
         else continue;
         checked++;
-        // (a mentor's port with no island within reach keeps its two nearest, at most 2.5 km off)
-        if (d > LOCAL_R + 50 && !(fixedHub && d <= 2500)) far.push(`${q.id} ${st.type} ${Math.round(d)} m from ${L.name}`);
+        if (d > LOCAL_R + 50) far.push(`${q.id} ${st.type} ${Math.round(d)} m from ${L.name}`);
       }
     }
   }
@@ -661,16 +665,44 @@ test('location by location: runs of 4–6 quests, each done within 1.5 km of its
   }
 });
 
-test('the locations go through all the seas in the order of their levels, and through most of the harbours', () => {
-  const order: string[] = [];
-  for (const l of built.locations) if (!order.includes(l.region)) order.push(l.region);
-  assert.deepEqual(order, ['black_coast', 'gravewater', 'whispering', 'dead_mans_expanse', 'leviathan_reach', 'ashen_isles', 'drowned_crown', 'the_abyss'], 'every sea, first come to in the order of its levels');
+test('a harbour with no island within reach of its quay: no island steps there — its own island’s coves and spits instead', () => {
+  const sail = world.islands.filter((i) => !i.minor && !i.raft && !i.hidden && !i.slot && !i.portId);
+  const bare = built.locations.filter((l) => l.kind === 'port' && !sail.some((i) => locDist(world, l, i) <= LOCAL_R));
+  assert.ok(bare.some((l) => l.id === 'saltmarrow'), 'Saltmarrow is such a harbour');
+  let spots = 0;
+  for (const sl of built.slots) {
+    if (!bare.includes(built.locations[sl.loc])) continue;
+    for (const q of [sl.a, ...(sl.b ? [sl.b] : [])]) for (const st of q.steps) {
+      assert.ok(st.type !== 'isle' && st.type !== 'land', `${q.id}: no island steps at ${built.locations[sl.loc].name}`);
+      if (st.type === 'spot') spots++;
+    }
+  }
+  assert.ok(spots > 5, `${spots} coves and spits`);
+});
+
+test('the voyages: no leg over about 6 km before the eighth level, short everywhere the coast allows', () => {
+  const paces = campaignPaces();
+  const legs = built.locations.slice(1).map((l, i) => ({ l, from: built.locations[i], d: Math.hypot(l.x - built.locations[i].x, l.y - built.locations[i].y) }));
+  for (const x of legs) if (paces[x.l.from].gate < 8) assert.ok(x.d <= 6500, `${x.from.name} → ${x.l.name}: ${(x.d / 1000).toFixed(1)} km before the eighth level`);
+  const avg = legs.reduce((a, x) => a + x.d, 0) / legs.length;
+  assert.ok(avg < 7000, `${(avg / 1000).toFixed(1)} km a voyage`);
+  const long = legs.filter((x) => x.d > 8000);
+  assert.ok(long.length <= 30, `${long.length} legs over 8 km`);
+  if (process.env.CAMPAIGN_PACE) console.log(long.map((x) => `ch${x.l.ch} ${x.from.name} → ${x.l.name} ${(x.d / 1000).toFixed(1)} km`).join(' | '));
+});
+
+test('the locations go through all the seas, the start and the end at home, the seas first come to as their levels rise', () => {
+  const firsts = new Map<string, number>();
+  for (const l of built.locations) if (!firsts.has(l.region)) firsts.set(l.region, campaignPaces()[l.from].gate);
+  assert.equal(firsts.size, 8, 'every sea');
+  assert.equal(built.locations[0].region, 'black_coast');
+  assert.equal(built.locations.at(-1)!.id, 'saltmarrow', 'home at the end');
+  const gates = [...firsts.values()];
+  for (let i = 1; i < gates.length; i++) assert.ok(gates[i] >= gates[i - 1], 'each sea first come to no earlier than the one before');
+  assert.equal([...firsts.keys()].at(-1), 'the_abyss');
   const ports = new Set(built.locations.filter((l) => l.kind === 'port').map((l) => l.id));
   assert.ok(ports.size >= 80, `${ports.size} harbours`);
   assert.ok(built.locations.some((l) => l.kind === 'isle' && l.region === 'the_abyss'), 'islands of the Abyss itself');
-  // the voyages: a modest leg from one location to the next (the home-coming at the end the longest)
-  const legs = built.locations.slice(1).map((l, i) => Math.hypot(l.x - built.locations[i].x, l.y - built.locations[i].y));
-  assert.ok(legs.reduce((a, b) => a + b, 0) / legs.length < 20000, 'about 15 km a voyage');
 });
 
 test('a location’s fight puts out in its waters, and only there', () => {

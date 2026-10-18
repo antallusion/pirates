@@ -1797,6 +1797,11 @@ export class Game {
           r = is.radius + ISLE_REACH * 0.7;
           island = st.island;
         }
+      } else if (st.type === 'spot') {
+        // docs/36: a cove or a spit of a harbour's own island
+        at = { x: st.x, y: st.y };
+        r = st.r;
+        if (st.island !== undefined) island = st.island;
       } else if (st.type === 'build') {
         // docs/36: works on her own island — the island
         const home = ownIsland(this, s.accountId);

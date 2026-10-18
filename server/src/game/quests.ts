@@ -764,6 +764,8 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
       const is = game.world.islands[st.island];
       return is && Math.hypot(ship.state.x - is.x, ship.state.y - is.y) <= is.radius + ISLE_REACH ? 1 : 0;
     }
+    case 'spot':
+      return ev.k === 'tick' && !ship.docked && Math.hypot(ship.state.x - st.x, ship.state.y - st.y) <= st.r ? 1 : 0;
     case 'claim':
       return (ev.k === 'tick' || ev.k === 'dock' || ev.k === 'land') && !!ownIsland(game, s.accountId) ? 1 : 0;
     case 'build':
