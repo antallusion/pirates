@@ -305,3 +305,39 @@ test('the words: every ability named and told in RU and EN, its numbers filled',
   }
   void TAC_H;
 });
+
+test('the field draws every ability by hand, each its own look, cheaply (a few hundred strokes a frame at most)', async () => {
+  let calls = 0;
+  const g = new Proxy({}, {
+    get: (_t, k) => (typeof k === 'string' && /^(fillStyle|strokeStyle|lineWidth|globalAlpha|globalCompositeOperation|lineCap|lineJoin|lineDashOffset)$/.test(k) ? undefined : () => {
+      calls++;
+      return { addColorStop() {} };
+    }),
+    set: () => true,
+  }) as unknown as CanvasRenderingContext2D;
+  (globalThis as { document?: unknown }).document ??= { createElement: () => ({ width: 0, height: 0, getContext: () => g }) };
+  const { drawSkFx, drawMagicShot, drawMagicHit, SKFX_MS } = await import('../client/src/ui/tacskillfx.ts');
+  const per = new Map<string, number>();
+  for (const id of SKILL_IDS) {
+    const f = { id, t0: 0, hit: 520, dur: SKFX_MS, from: { x: 100, y: 200 }, to: { x: 260, y: 210 }, pts: [{ x: 260, y: 210 }, { x: 300, y: 230 }, { x: 330, y: 180 }], end: { x: 600, y: 210 }, mine: true, seed: 7 };
+    let most = 0;
+    for (const t of [60, 300, 600, 900, 1300]) {
+      const c0 = calls;
+      drawSkFx(g, f, t, 40, false);
+      most = Math.max(most, calls - c0);
+    }
+    assert.ok(most > 3, `${id}: drawn`);
+    assert.ok(most < 400, `${id}: ${most} calls in a frame`);
+    per.set(id, most);
+    // reduced motion: a glow only
+    const c1 = calls;
+    drawSkFx(g, f, 300, 40, true);
+    assert.ok(calls - c1 < 40, `${id}: still`);
+  }
+  for (const k of ['hex', 'ghost', 'spark', 'bolt', 'fire'] as const) {
+    const c0 = calls;
+    drawMagicShot(g, k, { x: 0, y: 0 }, { x: 200, y: 50 }, 0.5, 40, 100, 3);
+    drawMagicHit(g, k, { x: 200, y: 50 }, 0.3, 40, 3);
+    assert.ok(calls - c0 > 3 && calls - c0 < 200, `${k} shot`);
+  }
+});

@@ -598,6 +598,35 @@ export function drawSkFx(g: CanvasRenderingContext2D, f: SkFx, t: number, w: num
       if (landed) for (const [i, p] of f.pts.slice(0, 7).entries()) motes(g, { x: p.x, y: p.y - w * 0.5 }, after, 7, w * 0.8, '200,235,255', 1, f.seed + i * 19, w * 0.4, 0.06, w);
       break;
     }
+    case 'entangle': {
+      // a snare: a green line whips out to the foe, then vines coil round its legs and draw tight
+      if (!landed) {
+        const tip = lerp(src, dst, ease(fly));
+        g.strokeStyle = `rgba(${rgb},0.95)`;
+        g.lineWidth = Math.max(1.5, w * 0.045);
+        g.beginPath();
+        g.moveTo(src.x, src.y);
+        g.quadraticCurveTo((src.x + tip.x) / 2, Math.min(src.y, tip.y) - w * 0.5, tip.x, tip.y);
+        g.stroke();
+        break;
+      }
+      const q = ease(Math.min(1, after * 2));
+      g.strokeStyle = `rgba(${rgb},${0.95 * fade})`;
+      g.lineWidth = Math.max(2, w * 0.06);
+      for (let v = 0; v < 3; v++) {
+        g.beginPath();
+        for (let i = 0; i <= 18; i++) {
+          const s2 = i / 18, a = s2 * Math.PI * 3 * q + v * 2.1, r = w * (0.55 - 0.15 * q);
+          const x = f.to.x + Math.cos(a) * r, y = f.to.y - w * 0.9 * s2 * q + Math.sin(a) * r * 0.35;
+          if (i) g.lineTo(x, y);
+          else g.moveTo(x, y);
+        }
+        g.stroke();
+      }
+      g.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 5; i++) blob(g, '170,230,120', f.to.x + (h01(f.seed + i) - 0.5) * w * 0.9, f.to.y - w * 0.8 * h01(i * 7 + f.seed) * q, w * 0.06, 0.9 * fade, 0.5);
+      break;
+    }
     case 'blink': {
       // a violet vortex where she was and where she comes out
       g.globalCompositeOperation = 'lighter';
