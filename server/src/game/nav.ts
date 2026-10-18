@@ -173,7 +173,8 @@ export function soundPath(world: World, out: Path, at: number[], cells: [number,
     for (const [j, c] of steps.entries()) {
       const p = made[made.length - 1];
       if (!runClear(world, p[0], p[1], c[0], c[1], hull)) {
-        const way = fineDetour(world, p[0], p[1], c[0], c[1], hull);
+        // (a wider window when the near one holds no way round: a headland longer than a cable, 2026-10-18)
+        const way = fineDetour(world, p[0], p[1], c[0], c[1], hull) ?? fineDetour(world, p[0], p[1], c[0], c[1], hull, 30, 700);
         if (way) for (let i = 1; i < way.length - 1; i++) made.push(way[i]);
         else if (k === out.length - 1 && j === steps.length - 1) {
           // Her mark's water is a pocket she cannot sail into (a slip too narrow for her between two piers): the run

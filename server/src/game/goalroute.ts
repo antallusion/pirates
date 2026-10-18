@@ -25,7 +25,7 @@ import type { RegionId, Safety } from '../../../shared/src/world/regions.ts';
 import { SECTOR_SIZE, sectorAt, sectorGrid } from '../../../shared/src/world/sectors.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { AUTOSAIL_ARRIVE } from '../../../shared/src/data/autosail.ts';
-import { autosailOf, helmTouched, lastStopOf, pausedCourse, startAutosail, stopAutosail } from './autosail.ts';
+import { autosailOf, helmTouched, lastStopOf, pathView, pausedCourse, planFrom, startAutosail, stopAutosail } from './autosail.ts';
 import { beastsAlive } from './beasts.ts';
 import { commonView } from './commongoal.ts';
 import { canDive } from './explorefx.ts';
@@ -779,6 +779,21 @@ function arriveOf(v: RouteView): number {
   return Math.max(30, Math.min(AUTOSAIL_ARRIVE, Math.round(v.r * 0.4)));
 }
 
+/** The place said to her screen (owner, 2026-10-18: «всегда должно быть показано направление линией и путь»): while
+ *  no helmsman sails for it (in port, refused a moment, a course broken off) with the way there by the water — the
+ *  helmsman's own run sends his plan itself. */
+function sendView(game: Game, s: PlayerSession, f: Follow): void {
+  const ship = s.ship;
+  const run = autosailOf(ship);
+  let view = f.view;
+  if (ship && !(run && Math.hypot(run.x - view.x, run.y - view.y) < 60)) {
+    const here = hereOf(game, s);
+    const p = here ? planFrom(game, ship, here.x, here.y, view.x, view.y) : null;
+    if (p && p.length >= 2) view = { ...view, path: pathView(p) };
+  }
+  game.sendTo(s, { t: 'route', key: f.key, on: true, view });
+}
+
 /** Gives the helmsman the course (null when he has it, else why not). */
 function steer(game: Game, s: PlayerSession, f: Follow): string | null {
   const e = startAutosail(game, s, f.view.x, f.view.y, undefined, arriveOf(f.view));
@@ -816,14 +831,16 @@ export function gotoGoal(game: Game, s: PlayerSession, key: string): string | nu
   const f: Follow = { key: k, view: r, sentAt: game.now, sent: null, checkAt: game.now + ROUTE_CHECK, reachedAt: null };
   const m = book(game);
   m.set(s, f);
-  game.sendTo(s, { t: 'route', key: k, on: true, view: r });
   const ship = s.ship!;
   if (ship.docked) {
+    sendView(game, s, f); // (the way from her harbour)
     game.sendTo(s, { t: 'toast', msg: ROUTE_WORDS.afterPort, kind: 'info' });
     return null;
   }
+  game.sendTo(s, { t: 'route', key: k, on: true, view: r });
   if (Math.hypot(r.x - ship.state.x, r.y - ship.state.y) <= arriveOf(r) + 20) return null; // there already
   const e = steer(game, s, f);
+  if (e) sendView(game, s, f); // refused a moment (a hostile sail, a weak hull): the way is drawn all the same
   // (refused — a hostile sail, a weak hull: the run stays and the course is set once he can; she is told why)
   return e;
 }
@@ -884,7 +901,7 @@ export function stepRoutes(game: Game): void {
         if (Math.hypot(o.state.x - f.view.x, o.state.y - f.view.y) > 150) {
           f.view = { ...f.view, x: Math.round(o.state.x), y: Math.round(o.state.y) };
           if (run && f.sent) steer(game, s, f);
-          game.sendTo(s, { t: 'route', key: f.key, on: true, view: f.view });
+          sendView(game, s, f);
         }
       } else f.checkAt = game.now; // sunk or gone: the next one now
     }
@@ -904,16 +921,14 @@ export function stepRoutes(game: Game): void {
     const gone = f.view.ship !== undefined && !game.ships.get(f.view.ship)?.alive;
     if (moved) {
       f.view = r;
-      game.sendTo(s, { t: 'route', key: f.key, on: true, view: r });
+      if (run && !ship.docked && Math.hypot(r.x - ship.state.x, r.y - ship.state.y) > arriveOf(r) + 20) steer(game, s, f); // (his plan is the line)
+      sendView(game, s, f);
       if (gone) game.sendTo(s, { t: 'toast', msg: ROUTE_WORDS.retarget, kind: 'info' });
     }
     if (ship.docked) continue;
     const d = Math.hypot(f.view.x - ship.state.x, f.view.y - ship.state.y);
     const near = arriveOf(f.view) + 20;
-    if (run) {
-      if (moved && d > near) steer(game, s, f);
-      continue;
-    }
+    if (run) continue; // (a new place was steered for above, as it was said)
     // No course on: after a port (cast off), after a fight, after a ship of the goal reached and dealt with — the next
     // place is sailed for once the sea is quiet and her hand is off the wheel; never a place she is at.
     if (pausedCourse(ship)) continue; // the helmsman takes up the broken-off course himself

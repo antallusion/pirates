@@ -10,6 +10,7 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/ease.ts';
 import { EN as ROUTE_EN, RU as ROUTE_RU } from '../lang/ui/route.ts';
 import { placeName } from './maps.ts';
+import { courseAhead, courseName, courseOf } from './course.ts';
 import { settings } from '../settings.ts';
 import type { ClientState } from '../state.ts';
 import { $, dec1, esc } from './dom.ts';
@@ -65,26 +66,30 @@ export class AutosailPill {
 
   draw(state: ClientState): void {
     const el = $('hud-autosail');
-    const a = state.autosail;
     const rt = state.route?.view ?? null;
     const own = state.ownDisplay;
+    // every run (owner, 2026-10-18: «всегда должно быть показано … сколько плыть»): the helmsman's, a goal's, one a
+    // fight broke off — where to, and how far by the planned way
+    const c = courseOf(state);
     const risk = rt ? routeRisk(rt) : '';
-    const key = (a || rt) && own ? `${lang()}|${risk}` : '';
+    const key = c && own ? `${lang()}|${risk}` : '';
     if (key !== this.key) {
       this.key = key;
       el.classList.toggle('hidden', !key);
       el.innerHTML = key ? `<span class="as-ico" aria-hidden="true">⛵</span><b class="as-lbl">${esc(L('as_pill'))}</b><span class="as-d"></span>${risk ? `<span class="as-risk${rt?.risk === 2 ? ' bad' : ''}" title="${esc(risk)}">⚠ ⚓${rt!.level}</span>` : ''}<button class="as-stop" type="button" title="${esc(L('as_stopTitle'))}">${esc(L('as_stop'))}</button>` : '';
       el.querySelector<HTMLElement>('.as-stop')?.addEventListener('click', () => this.onStop());
     }
-    if ((a || rt) && own) {
+    if (c && own) {
       const d = el.querySelector<HTMLElement>('.as-d')!;
-      const to = rt ?? a!;
-      const left = L('as_left', { d: distText(Math.hypot(to.x - own.x, to.y - own.y)) });
-      const text = rt ? `· ${RT('to', { name: routeLabel(rt) })} · ${left}` : `· ${left} ·`;
+      const left = L('as_left', { d: distText(courseAhead(c, own.x, own.y).left) });
+      const named = rt ? null : courseName(state, c.to);
+      const to = rt ? RT('to', { name: routeLabel(rt) }) : named ? L('as_to', { name: placeName(named) }) : L('as_mark');
+      const pause = c.paused ? ` · ${L('as_paused')}` : '';
+      const text = `· ${to} · ${left}${pause}`;
       // (the place's name and the way left apart: a narrow chip keeps the way left, its name in the title — styles.css)
       if (d.dataset.t !== text) {
         d.dataset.t = text;
-        d.innerHTML = rt ? `<span class="as-to">· ${esc(RT('to', { name: routeLabel(rt) }))} </span><span class="as-left">· ${esc(left)}</span>` : `<span class="as-left">· ${esc(left)} ·</span>`;
+        d.innerHTML = `<span class="as-to">· ${esc(to)} </span><span class="as-left">· ${esc(left)}${esc(pause)}</span>`;
       }
       if (d.title !== text) d.title = text;
     }
