@@ -554,10 +554,13 @@ function replan(game: Game, ship: ShipEntity, run: AutoSail): boolean {
   return true;
 }
 
-/** Off her route: farther from the leg she sails than her lead line reaches, and the way back to its point not clear. */
+/** Off her route, or her route blocked: the straight way to the point she steers for runs over something her hull
+ *  strikes (a plan gone stale, a bank the tide has bared since), or she is farther from her leg than her lead line
+ *  reaches and the way back to its point is not clear by the planner's margin. */
 function offRoute(game: Game, ship: ShipEntity, run: AutoSail): boolean {
   const a = run.path[Math.max(0, run.i - 1)], b = run.path[run.i];
   const { x, y } = ship.state;
+  if (!lineFree(game.world, x, y, b[0], b[1]) || probeLine(game, ship, x, y, b[0], b[1]) || !runClear(game.world, x, y, b[0], b[1], hullWater(ship))) return true;
   const ex = b[0] - a[0], ey = b[1] - a[1], l2 = ex * ex + ey * ey;
   const t = l2 > 0 ? clamp(((x - a[0]) * ex + (y - a[1]) * ey) / l2, 0, 1) : 0;
   const off = Math.hypot(a[0] + ex * t - x, a[1] + ey * t - y);
