@@ -73,7 +73,7 @@ export async function handleAuth(req: IncomingMessage, res: ServerResponse, auth
     }
     if (req.method === 'GET' && path === '/auth/verify') {
       const ok = auth.verifyEmail(url.searchParams.get('token') ?? '');
-      res.writeHead(302, { Location: ok ? '/#verified' : '/#verify-failed' });
+      res.writeHead(302, { Location: ok ? '/play#verified' : '/play#verify-failed' });
       res.end();
       return true;
     }
@@ -91,9 +91,9 @@ export async function handleAuth(req: IncomingMessage, res: ServerResponse, auth
       try {
         const prof = await oauth.finish(m[1], url.searchParams.get('code') ?? '', url.searchParams.get('state') ?? '');
         const r = auth.oauthLogin(m[1], prof.subject, prof.email, prof.name);
-        res.writeHead(302, { Location: `/#token=${encodeURIComponent(r.token)}` });
+        res.writeHead(302, { Location: `/play#token=${encodeURIComponent(r.token)}` });
       } catch (e) {
-        res.writeHead(302, { Location: `/#auth-error=${encodeURIComponent((e as Error).message)}` });
+        res.writeHead(302, { Location: `/play#auth-error=${encodeURIComponent((e as Error).message)}` });
       }
       res.end();
       return true;

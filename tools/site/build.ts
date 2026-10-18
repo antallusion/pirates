@@ -139,7 +139,7 @@ function header(lang: Lang, active: string, path: string): string {
 <nav class="hdr-nav" id="nav">${nav.map(([href, k, ic]) => `<a href="${k === 'forum' ? '/site/forum/' : r + href}"${active === k ? ' class="on" aria-current="page"' : ''}><img src="${K(ic)}" alt="" width="22" height="22">${u(k, lang)}</a>`).join('')}</nav>
 <div class="hdr-end"><a class="hdr-lang" href="${other}" hreflang="${lang === 'ru' ? 'en' : 'ru'}">${lang === 'ru' ? 'EN' : 'RU'}</a>
 <a class="hdr-soc" href="https://t.me/gravetide_bot" target="_blank" rel="noopener" aria-label="Telegram"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M21.9 4.3 18.7 19.4c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.5 13.2 1.8 11.7c-1-.3-1-1 .2-1.5L20.5 3c.9-.3 1.6.2 1.4 1.3z"/></svg></a>
-<a class="btn-gold sm" href="/">${u('play', lang)}</a>
+<a class="btn-gold sm" href="/play">${u('play', lang)}</a>
 <button class="hdr-burger" aria-label="Menu" aria-controls="nav" aria-expanded="false"><span></span><span></span><span></span></button></div>
 </div></header>`;
 }
@@ -147,7 +147,7 @@ function header(lang: Lang, active: string, path: string): string {
 function heroBlock(h: Hero, lang: Lang): string {
   return `<section class="hero${h.tall ? ' tall' : ''}${h.mini ? ' mini' : ''}"><picture class="hero-art">${h.imgM ? `<source media="(max-width: 700px)" srcset="${h.imgM}">` : ''}<img src="${h.img}" alt="" fetchpriority="high"></picture>
 <div class="hero-in wrap"><p class="kicker">${T(h.kicker, lang)}</p><h1>${T(h.title, lang)}</h1>${h.lead ? `<p class="lead">${T(h.lead, lang)}</p>` : ''}
-${h.cta ? `<div class="hero-cta"><a class="btn-gold lg" href="/">${u('playFree', lang)}</a><a class="btn-oak" href="https://t.me/gravetide_bot" target="_blank" rel="noopener">${u('tg', lang)}</a></div>` : ''}</div></section>`;
+${h.cta ? `<div class="hero-cta"><a class="btn-gold lg" href="/play">${u('playFree', lang)}</a><a class="btn-oak" href="https://t.me/gravetide_bot" target="_blank" rel="noopener">${u('tg', lang)}</a></div>` : ''}</div></section>`;
 }
 
 function page(lang: Lang, o: { path: string; active: string; title: string; desc: string; hero: Hero; body: string }): string {
@@ -161,7 +161,7 @@ function page(lang: Lang, o: { path: string; active: string; title: string; desc
 <body class="pg-${o.active}">${header(lang, o.active, o.path)}
 <main>${heroBlock(o.hero, lang)}${o.body}</main>
 <footer class="ftr"><div class="wrap ftr-in"><img src="${K('brand/logo')}" alt="GRAVETIDE" width="110" height="88" loading="lazy">
-<p>${T(u('footer', lang), lang)}</p><nav><a href="${r}creatures/">${u('creatures', lang)}</a><a href="${r}captains/">${u('captains', lang)}</a><a href="${r}ships/">${u('ships', lang)}</a><a href="/site/forum/">${u('forum', lang)}</a><a href="/">${u('play', lang)}</a></nav>
+<p>${T(u('footer', lang), lang)}</p><nav><a href="${r}creatures/">${u('creatures', lang)}</a><a href="${r}captains/">${u('captains', lang)}</a><a href="${r}ships/">${u('ships', lang)}</a><a href="/site/forum/">${u('forum', lang)}</a><a href="/play">${u('play', lang)}</a></nav>
 <small>© GRAVETIDE · gravetidegame.com</small></div></footer>
 <script src="/site/js/site.js" defer></script></body></html>`;
 }
@@ -215,7 +215,7 @@ function home(lang: Lang): string {
 <section class="wrap sec">${sectionHead(lang === 'ru' ? 'Капитаны' : 'Captains', lang === 'ru' ? 'Выберите, кто встанет у штурвала' : 'Choose who takes the wheel', lang)}
 <div class="capstrip">${CAPTAIN_IDS.map((id) => capMini(id, lang)).join('')}</div></section>
 <section class="cta-band reveal"><div class="wrap cta-in"><img src="${K('brand/wheel')}" alt="" width="120" height="120" class="spin" loading="lazy"><div><h2>${T(lang === 'ru' ? 'Поднимайте якорь' : 'Weigh anchor', lang)}</h2><p>${T(lang === 'ru' ? 'Играйте в браузере на компьютере и телефоне или прямо в Telegram — без установки.' : 'Play in the browser on a computer or a phone, or right inside Telegram — nothing to install.', lang)}</p></div>
-<div class="hero-cta"><a class="btn-gold lg" href="/">${u('playFree', lang)}</a><a class="btn-oak" href="/site/forum/">${u('forum', lang)}</a></div></div></section>`;
+<div class="hero-cta"><a class="btn-gold lg" href="/play">${u('playFree', lang)}</a><a class="btn-oak" href="/site/forum/">${u('forum', lang)}</a></div></div></section>`;
   return page(lang, {
     path: '', active: 'home', title: lang === 'ru' ? 'GRAVETIDE — пиратские «Герои» в море Pirate Gothic' : 'GRAVETIDE — pirate Heroes on a Pirate Gothic sea',
     desc: lang === 'ru' ? 'Онлайн-песочница про пиратов: корабль — армия, капитан — герой, абордаж — пошаговая битва на гексах.' : 'An online pirate sandbox: a ship is an army, a captain is a hero, boarding is a turn-based hex battle.',

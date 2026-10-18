@@ -114,7 +114,7 @@ test('HTTP: register, sign in, verify link, providers and the rate limit', async
     const v = linkToken(mail.sent[0].text, /verify\?token=([\w-]+)/);
     const vr = await fetch(`${base}/auth/verify?token=${v}`, { redirect: 'manual' });
     assert.equal(vr.status, 302);
-    assert.equal(vr.headers.get('location'), '/#verified');
+    assert.equal(vr.headers.get('location'), '/play#verified');
     assert.deepEqual(await (await fetch(base + '/auth/providers')).json(), { providers: [] });
     let limited = false;
     for (let i = 0; i < 25 && !limited; i++) limited = (await post('/auth/login', { email: 'x@y.zz', password: 'nnnnnnnn' })).status === 429;

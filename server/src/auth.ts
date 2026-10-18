@@ -176,7 +176,7 @@ export class AuthService {
     if (!a || !a.email) return;
     const raw = randomBytes(24).toString('base64url');
     this.db.putAuthToken(hashToken(raw), a.id, 'reset', Date.now() + RESET_TTL);
-    const url = `${this.publicUrl}/#reset=${raw}`;
+    const url = `${this.publicUrl}/play#reset=${raw}`;
     await this.mailer.send({
       to: a.email,
       subject: locale === 'ru' ? 'GRAVETIDE — новый пароль' : 'GRAVETIDE — reset your password',

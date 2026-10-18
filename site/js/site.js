@@ -1,6 +1,8 @@
 // GRAVETIDE website: the reveal on scroll, the phone menu and the bestiary's filters. No libraries.
 (() => {
   const d = document;
+  // An old link into the game at the root (a reset, a verified address, a login token, Telegram's data) goes on to /play.
+  if ((location.pathname === '/' || location.pathname === '/site/') && location.hash.length > 1) { location.replace('/play' + location.search + location.hash); return; }
   d.documentElement.classList.add('js');
 
   // Blocks rise into view as they are scrolled to (the stylesheet keeps them still under reduced motion).

@@ -86,6 +86,9 @@ const ver = (s: { size: number; mtimeMs: number }) => `${s.size.toString(36)}${M
  *  versioned manifest — the client asks it for every /assets/… picture (with CORS); unset, this server's own. */
 const ASSET_ORIGIN = (process.env.ASSET_ORIGIN ?? '').trim().replace(/\/+$/, '');
 
+/** The hosts whose root is the website, not the game (SITE_HOSTS=a,b to change them). */
+const SITE_HOSTS = new Set((process.env.SITE_HOSTS ?? 'gravetidegame.com,www.gravetidegame.com').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean));
+
 export function createStaticHandler(root: string) {
   const mounts: Mount[] = [
     { prefix: '/shared/', dir: resolve(root, 'shared') },
@@ -206,7 +209,11 @@ export function createStaticHandler(root: string) {
     if (req.method !== 'GET' && req.method !== 'HEAD') return false;
     const url = new URL(req.url ?? '/', 'http://x');
     let path = decodeURIComponent(url.pathname);
-    if (path === '/') path = '/index.html';
+    // The website stands at the root of the public domain (owner, 2026-10-18: «да, переноси»); the game is at /play.
+    // The Telegram host, a local server and a root with a query (/?battle, /?boss=…) keep the game at the root.
+    const host = (req.headers.host ?? '').split(':')[0].toLowerCase();
+    if (path === '/play' || path === '/play/') path = '/index.html';
+    else if (path === '/') path = SITE_HOSTS.has(host) && !url.search ? '/site/index.html' : '/index.html';
     // The website's short addresses: /site, /forum and /wiki lead into it; its folders answer with their index.html.
     const short: Record<string, string> = { '/site': '/site/', '/forum': '/site/forum/', '/forum/': '/site/forum/', '/wiki': '/site/', '/wiki/': '/site/' };
     if (short[path]) {

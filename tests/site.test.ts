@@ -44,3 +44,30 @@ test('the site kit is there', () => {
   assert.ok(readdirSync(join(SITE, 'img', 'ico')).length >= 40);
   assert.ok(existsSync(join(SITE, 'img', 'brand', 'logo.webp')));
 });
+
+test('the root of the public domain is the website, /play and the Telegram host are the game', async () => {
+  const { createServer } = await import('node:http');
+  const { createStaticHandler } = await import('../server/src/net/static.ts');
+  const handle = createStaticHandler(join(import.meta.dirname, '..'));
+  const srv = createServer((req, res) => { handle(req, res).then((ok) => { if (!ok) res.writeHead(404).end(); }); });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  const port = (srv.address() as { port: number }).port;
+  const get = async (path: string, host: string) => {
+    const { request } = await import('node:http');
+    return new Promise<string>((ok, bad) => {
+      const rq = request({ host: '127.0.0.1', port, path, headers: { host } }, (rs) => { let b = ''; rs.setEncoding('utf8'); rs.on('data', (c) => (b += c)); rs.on('end', () => ok(b)); });
+      rq.on('error', bad);
+      rq.end();
+    });
+  };
+  try {
+    const site = /class="pg-home"/;
+    assert.match(await get('/', 'gravetidegame.com'), site);
+    assert.doesNotMatch(await get('/play', 'gravetidegame.com'), site);
+    assert.doesNotMatch(await get('/', 'tg.gravetidegame.com'), site);
+    assert.doesNotMatch(await get('/?battle', 'gravetidegame.com'), site);
+    assert.doesNotMatch(await get('/', 'localhost'), site);
+  } finally {
+    srv.close();
+  }
+});
