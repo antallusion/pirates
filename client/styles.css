@@ -4608,6 +4608,15 @@ body.tac-ph .tb-pad { display: block; position: absolute; inset: 0; z-index: 4; 
 .tb-rb.armed { animation: tb-armed 0.9s ease-in-out infinite; }
 @keyframes tb-armed { 0%, 100% { box-shadow: 0 0 0 2px #d0503e, 0 0 8px rgba(208, 80, 62, 0.6); } 50% { box-shadow: 0 0 0 4px #d0503e, 0 0 20px rgba(208, 80, 62, 0.95); } }
 .tb-rb.book { width: 56px; height: 56px; }
+/* Owner, 2026-10-18: a creature's ability, once a battle — a violet ring while it is hers to give. */
+.tb-rb.skill:not(:disabled) { box-shadow: 0 0 0 2px #a58be8, 0 0 12px rgba(165, 139, 232, 0.75); }
+.tb-rb.skill.on { box-shadow: 0 0 0 3px #d9c8ff, 0 0 18px rgba(200, 170, 255, 0.95); }
+.btn.tb-skill.on { box-shadow: 0 0 0 2px #d9c8ff; }
+.tb-skc { margin: 4px 0; font-size: 12px; line-height: 1.35; color: var(--bone); }
+.tb-skc b { color: #cdb8ff; font-weight: 600; }
+.tb-skc small { color: var(--fog); }
+.tb-skc.used { opacity: 0.6; }
+.tb-skc .ico-xs { width: 16px; height: 16px; margin: 0 4px -3px 0; border-radius: 3px; }
 /* An order aimed: the book's button shows it, with the painted cross that lets it go. */
 .tb-rb.aim { box-shadow: 0 0 0 2px #f0a03c, 0 0 14px rgba(240, 160, 60, 0.8); }
 .tb-x { position: absolute; right: -4px; top: -4px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--brass-dim); background: #16110d; color: var(--bone);

@@ -210,3 +210,30 @@ export function skillWorth(u: UnitId): number {
   const s = UNIT_SKILL[u];
   return s ? SKILLS[s].worth : 0;
 }
+
+/** An ability's numbers as its line reads them (client/src/lang/ui/skills.ts, docs/37): `k` and `ring` her blow's
+ *  share in percent, `heal` and `cap` in percent, `range` hexes, `n` hops, foes or turns, `r` the rounds a hold lasts,
+ *  `a` and `b` its hold's two numbers (percent or points). */
+export function skillVars(id: SkillId): Record<string, number> {
+  const d = SKILLS[id];
+  const pc = (x: number) => Math.round(Math.abs(x) * 100);
+  const out: Record<string, number> = {};
+  if (d.blowK) out.k = pc(d.blowK);
+  if (d.ringK) out.ring = pc(d.ringK);
+  if (d.healK) out.heal = pc(d.healK);
+  if (d.cap) out.cap = pc(d.cap);
+  if (d.range) out.range = d.range;
+  if (d.n) out.n = d.n;
+  out.r = (d.rounds ?? 1) + 1;
+  const ab: Partial<Record<SkillId, [number, number]>> = {
+    ward: [pc(SK.ward), 0], bulwark: [pc(SK.bulwark), 0], haste: [SK.haste.speed, SK.haste.init], rally: [SK.rally.init, SK.rally.morale], toast: [SK.toast.luck, SK.toast.morale],
+    slow: [-SK.slow.speed, -SK.slow.init], freeze: [-SK.freeze.speed, -SK.freeze.init], curse: [pc(SK.curse), 0], mark: [pc(SK.mark), 0], ink: [pc(SK.ink.shot), pc(SK.ink.melee)],
+    taunt: [pc(SK.taunt.other), pc(SK.taunt.taken)], toll: [pc(SK.toll), 0], frenzy: [pc(SK.frenzy.melee), pc(SK.frenzy.taken)],
+  };
+  const x = ab[id];
+  if (x) {
+    out.a = x[0];
+    out.b = x[1];
+  }
+  return out;
+}
