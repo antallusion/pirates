@@ -48,7 +48,10 @@ test('her offer’s and the daily gift’s icons: up at sea whatever sails near;
   // the old «busy» (a hostile within a mile, a chase) is no question of theirs any more
   for (const f of ['promo.ts', 'dailygift.ts']) {
     const src = readFileSync(new URL(`../client/src/ui/${f}`, import.meta.url), 'utf8');
-    const icon = src.slice(src.indexOf(f === 'promo.ts' ? 'private iconUp()' : 'private icon()'));
-    assert.ok(!icon.slice(0, icon.indexOf('\n  }\n')).includes('busy()'), f);
+    // (the method's body to its closing brace at two spaces, whatever the line ends — CRLF in a merged checkout)
+    const src2 = src.replace(/\r\n/g, '\n');
+    const at = src2.indexOf(f === 'promo.ts' ? 'private iconUp()' : 'private icon()');
+    const body = at < 0 ? '' : src2.slice(at, src2.indexOf('\n  }\n', at));
+    assert.ok(body.includes('seaIconUp(') && !body.includes('busy()'), f);
   }
 });
