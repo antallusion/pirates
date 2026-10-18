@@ -61,9 +61,9 @@ body.simple .sea-round:focus-visible, body.simple #touch > .tc-big:focus-visible
 
 /* ---------- the keys on the rims (a desk): small enamel chips with a brass edge — the keys' help, no line of words */
 .kc { display: none; }
-body.simple:not(.touch) .kc { position: absolute; z-index: 3; display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box;
+body.simple:not(.touch) .kc { position: absolute; z-index: 3; display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 2px 5px 0; box-sizing: border-box; /* (2 px over: the capital on the middle — align.mjs) */
   border-radius: 4px; background: linear-gradient(180deg, #33291d, #120e0a); box-shadow: inset 0 0 0 1px rgba(196, 160, 102, 0.9), inset 0 1px 0 rgba(255, 228, 170, 0.18), 0 2px 4px rgba(0, 0, 0, 0.85);
-  color: #efe6d2; font: 700 10.5px/1 var(--k-font-sans); letter-spacing: 0.02em; text-shadow: 0 1px 1px #000; white-space: nowrap; pointer-events: none; font-variant-numeric: tabular-nums; }
+  color: #efe6d2; font: 700 10.5px/1 var(--k-font-sans); letter-spacing: 0.02em; text-shadow: 0 1px 1px #000; white-space: nowrap; pointer-events: none; font-variant-numeric: proportional-nums; } /* (a tabular «1» stood 1.5 px left of the chip's middle) */
 body.simple:not(.touch) .kc.hidden { display: none; }
 .kc-b { left: 50%; bottom: -10px; transform: translateX(-50%); }
 .kc-tl { left: -6px; top: -6px; }
@@ -717,8 +717,19 @@ body.touch #touch > .tc-actrow > .k-btn { flex: none; min-width: 0; height: var(
   font-size: var(--f-fs, 12.5px); line-height: 1; white-space: nowrap; text-wrap: nowrap; border-radius: var(--k-r-round); pointer-events: auto; }
 body.touch #touch > .tc-actrow > .k-btn .k-btn-ico, body.touch #touch > .tc-actrow .tc-act-ico img { width: var(--f-ico, 20px); height: var(--f-ico, 20px); flex: none; margin: 0; }
 body.touch #touch > .tc-actrow > .k-btn .k-btn-l { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-body.touch #touch > .tc-actrow > .tc-act { flex-shrink: 0; max-width: 46vw; }
-body.touch #touch > .tc-actrow > .tc-act2 { max-width: 30vw; background: rgba(11, 13, 16, 0.82); box-shadow: 0 0 0 1px var(--k-brass-dim), 0 2px 8px rgba(0, 0, 0, 0.6); }
+/* ONE action button (owner, 2026-10-18: «кнопки осмотреть, штурм и так далее отличаются от кнопки атаковать, надо все эти
+   кнопки внизу справа одного дизайна делать»; seahud.ts actBtnClass): «Атаковать», «Осмотреть», «Штурм», «Отметить
+   косяк», «Срубить обломки», «Переговоры», «Причалить» — the same frame, ground, height, font, picture box and padding;
+   the gold one (tc-actb--primary) differs only in its words' colour, its frame's warmth and its glow */
+#touch > .tc-actrow > .tc-actb { --actb-glow: 0 0 0 transparent; font-weight: 600; letter-spacing: 0.02em; color: var(--k-bone); text-shadow: var(--k-shadow-1);
+  background: rgba(11, 13, 16, 0.82); box-shadow: 0 0 0 1px var(--k-brass-dim), var(--actb-glow), 0 2px 8px rgba(0, 0, 0, 0.6); max-width: 30vw; pointer-events: auto; }
+#touch > .tc-actrow > .tc-actb .tc-act-ico { display: inline-flex; align-items: center; justify-content: center; flex: none; width: calc(var(--f-tap, 36px) - 18px); height: calc(var(--f-tap, 36px) - 18px); }
+#touch > .tc-actrow > .tc-actb .tc-act-ico > .k-btn-ico { width: 100%; height: 100%; margin: 0; object-fit: contain; }
+#touch > .tc-actrow > .tc-actb .tc-act-ico > .glyph { font-size: inherit; line-height: 1; }
+#touch > .tc-actrow > .tc-actb .k-btn-l { line-height: 1; }
+#touch > .tc-actrow > .tc-actb--primary { --actb-glow: 0 0 10px rgba(224, 184, 98, 0.38); color: var(--k-gold); text-shadow: 0 0 8px rgba(224, 184, 98, 0.35), var(--k-shadow-1);
+  box-shadow: 0 0 0 1px var(--k-brass), var(--actb-glow), 0 2px 8px rgba(0, 0, 0, 0.6); flex-shrink: 0; max-width: 46vw; }
+.skinned #touch > .tc-actrow > .tc-actb, body.skinned #touch > .tc-actrow > .tc-actb { background: none; box-shadow: var(--actb-glow), 0 2px 8px rgba(0, 0, 0, 0.6); }
 .skinned body.touch #touch > .tc-actrow > .k-btn, body.touch.skinned #touch > .tc-actrow > .k-btn { border-image-width: 6px 9px; }
 /* (owner, 2026-10-15: the pictures on «Мой остров», «Ремонт», «Штурм» touched the frame — the painted border is the
    border now, and the picture keeps a 3 px padding inside it, in the middle of the pill's height with its word) */
@@ -839,3 +850,4 @@ body.tac-ph .tb-top.tb-band .tb-tline { min-height: 28px; box-sizing: border-box
 .tb-rps-vs b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tb-rps-vs small { color: var(--fog); font-size: 12px; }
 .tb-rps-row .ico-sm { flex: none; width: 22px; height: 22px; margin: 0; }
+body.simple #tc-sail .tc-sail-g .g-svg { width: 20px; height: 20px; stroke-width: 2.8; } /* (the «+» «−» drawn, dom.ts glyphSvg) */

@@ -44,7 +44,7 @@ import { bandOf, captainBand, SECTOR_SIZE, sectorIndex } from '../../../shared/s
 import type { SectorData } from '../../../shared/src/protocol.ts';
 import { assetUrl, sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
-import { $, bar, dec1, decorateSums, esc, fmt, icon, knots, pct } from './dom.ts';
+import { $, bar, dec1, decorateSums, esc, fmt, glyphSvg, icon, knots, pct } from './dom.ts';
 import { flagChip, shipColours } from './flags.ts'; // docs/24 D2: her colours on the target card
 import { compassKey, objective, questPointer, trackedQuest, waypoint, waypointHooks } from './track.ts';
 import { DAILY_DEFS } from '../../../shared/src/data/dailies.ts';
@@ -2271,5 +2271,5 @@ export function streakBadge(st: { n: number; mul: number }): string {
 /** The premium shop's button by her silver (owner, 2026-10-15): the doubloon, the balance and a «+». */
 function shopChip(n: number, cls: string): string {
   const P = dict(PM_EN, PM_RU);
-  return `<button type="button" class="${cls}" data-hudshop title="${esc(P('openTip'))}" aria-label="${esc(P('openTip'))}">${icon('doubloon', '◉', 'cs-coin')}<b>${fmt(n)}</b><i aria-hidden="true">+</i></button>`;
+  return `<button type="button" class="${cls}" data-hudshop title="${esc(P('openTip'))}" aria-label="${esc(P('openTip'))}">${icon('doubloon', '◉', 'cs-coin')}<b>${fmt(n)}</b><i aria-hidden="true">${glyphSvg('plus')}</i></button>`;
 }

@@ -16,7 +16,8 @@ import { STICK_DOUBLE_MS, STICK_REEF_MS, seaWord, stickSail } from './ui/seahud.
 
 /** A press held still this long steers (a quicker one may be a tap of the dash). */
 export const STICK_STEER_MS = 140;
-import { $ } from './ui/dom.ts';
+import { $, glyphSvg } from './ui/dom.ts';
+import type { GlyphKind } from './ui/dom.ts';
 import { SeaGesture } from './render/freecam.ts';
 
 export interface TouchHooks {
@@ -274,8 +275,9 @@ function sailButtons(step: (d: 1 | -1) => void): HTMLElement {
   const box = document.createElement('div');
   box.id = 'tc-sail';
   box.setAttribute('role', 'group');
-  const b = (d: 1 | -1, glyph: string) => `<button type="button" class="k-btn k-btn--icon sea-round tc-sail-b" data-sail="${d}"><span class="tc-sail-g" aria-hidden="true">${glyph}</span></button>`;
-  box.innerHTML = `${b(1, '+')}<span class="tc-sail-pips" aria-hidden="true"><i></i><i></i><i></i><i></i></span>${b(-1, '−')}`;
+  // (the signs drawn: a «+» set in letters sat 1.5 px low in its ring — owner, 2026-10-18)
+  const b = (d: 1 | -1, glyph: GlyphKind) => `<button type="button" class="k-btn k-btn--icon sea-round tc-sail-b" data-sail="${d}"><span class="tc-sail-g" aria-hidden="true">${glyphSvg(glyph)}</span></button>`;
+  box.innerHTML = `${b(1, 'plus')}<span class="tc-sail-pips" aria-hidden="true"><i></i><i></i><i></i><i></i></span>${b(-1, 'minus')}`;
   for (const el of box.querySelectorAll<HTMLButtonElement>('button')) {
     el.addEventListener('pointerdown', (e) => {
       e.preventDefault();

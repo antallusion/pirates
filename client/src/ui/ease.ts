@@ -12,7 +12,7 @@ import { EN as ROUTE_EN, RU as ROUTE_RU } from '../lang/ui/route.ts';
 import { placeName } from './maps.ts';
 import { settings } from '../settings.ts';
 import type { ClientState } from '../state.ts';
-import { $, dec1, esc } from './dom.ts';
+import { $, dec1, esc, glyphSvg } from './dom.ts';
 
 const L = dict(EN, RU);
 const RT = dict(ROUTE_EN, ROUTE_RU);
@@ -201,7 +201,7 @@ export class FirstTips {
     if (key === this.key) return;
     this.key = key;
     el.classList.toggle('hidden', !this.showing);
-    el.innerHTML = this.showing ? `<b class="tp-lbl">${esc(L('tip_lbl'))}</b><span class="tp-t">${esc(L(`tip.${this.showing.id}`))}</span><button class="tp-x" type="button" title="${esc(L('tip_close'))}" aria-label="${esc(L('tip_close'))}">×</button>` : '';
+    el.innerHTML = this.showing ? `<b class="tp-lbl">${esc(L('tip_lbl'))}</b><span class="tp-t">${esc(L(`tip.${this.showing.id}`))}</span><button class="tp-x g-only" type="button" title="${esc(L('tip_close'))}" aria-label="${esc(L('tip_close'))}">${glyphSvg('close')}</button>` : '';
     el.querySelector<HTMLElement>('.tp-x')?.addEventListener('click', () => this.dismiss(performance.now()));
   }
 

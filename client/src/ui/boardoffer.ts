@@ -8,7 +8,7 @@ import type { UnitId } from '../../../shared/src/data/army.ts';
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/boardgroup.ts';
 import { personName } from '../lang/names.ts';
-import { esc, icon } from './dom.ts';
+import { esc, icon, glyphSvg } from './dom.ts';
 import { placeName } from './maps.ts';
 import { unitIcon, unitName } from './army.ts';
 
@@ -63,7 +63,7 @@ export class BoardOfferCard {
     this.el.className = '';
     this.el.setAttribute('aria-label', title);
     this.el.innerHTML = `<div class="bo-card">
-      <div class="bo-h">${icon('icon.bt_charge', '', 'ico-sm')}<b>${esc(title)}</b><button class="bo-x" data-no title="${esc(L('no'))}" aria-label="${esc(L('no'))}">✕</button></div>
+      <div class="bo-h">${icon('icon.bt_charge', '', 'ico-sm')}<b>${esc(title)}</b><button class="bo-x g-only" data-no title="${esc(L('no'))}" aria-label="${esc(L('no'))}">${glyphSvg('close')}</button></div>
       <div class="bo-sub">${esc(sub)}</div>
       <div class="bo-row"><div class="bo-sts">${chips}</div>
       <label class="bo-auto" title="${esc(L('auto'))}"><input type="checkbox" data-auto${o.auto ? ' checked' : ''} /><span class="bo-al">${esc(L('auto'))}</span><span class="bo-as">${esc(L('autoShort'))}</span></label>

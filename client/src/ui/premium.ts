@@ -32,16 +32,14 @@ import { placeName } from './maps.ts';
 import { chipRow, railTabs, winHead } from './kit/window.ts';
 import type { WinTab } from './kit/window.ts';
 import { tgPackButton, tgPayNote, starIcon } from '../tg.ts'; // the packs for Telegram Stars (docs/27)
+import { doubloonIcon, packPrice, payIn, priceHtml, priceText, realHtml, topUpThenBuy } from './price.ts';
+
+export { doubloonIcon };
 
 const L = dict(EN, RU);
 const AL = dict(AEN, ARU);
 const FL = dict(FEN, FRU);
 const T = (x: readonly [string, string]) => x[lang() === 'ru' ? 1 : 0];
-
-/** The doubloon: its own picture once painted, the silver coins gilded meanwhile. */
-export function doubloonIcon(cls = 'ico-sm'): string {
-  return assetUrl('icon.doubloon') ? icon('doubloon', '◉', cls) : icon('coin', '◉', `${cls} dbl-gild`);
-}
 
 /** A sum of doubloons as the window shows it: the gold coin and the number. */
 export function doubloons(n: number): string {
@@ -79,9 +77,12 @@ function unitArt(u: UnitId): string {
   return `<div class="pm-art pm-fig">${fig ? `<img src="${fig}" alt="" draggable="false" />` : unitIcon(u, 'pm-face')}</div>`;
 }
 
+/** A hull's price and Buy: the real money first, the doubloons beside it (owner, 2026-10-18); short of doubloons the
+ *  Buy stays open — it tops up first (topUpThenBuy). */
 function buyBox(price: number, why: PremiumWhy | null, lv: number, attr: string): string {
-  return `<div class="pm-buy"><span class="pm-price">${doubloons(price)}</span>
-    <button class="btn btn-small${why ? '' : ' btn-primary'}" ${attr} ${why ? `disabled title="${esc(whyText(why, lv))}"` : ''}>${esc(L('buy'))}</button>
+  const shut = why && why !== 'poor';
+  return `<div class="pm-buy">${priceHtml(price, { cls: 'pm-price' })}
+    <button class="btn btn-small${shut ? '' : ' btn-primary'}${why === 'poor' ? ' short' : ''}" ${attr} ${shut ? `disabled title="${esc(whyText(why, lv))}"` : `title="${esc(why === 'poor' ? `${whyText(why, lv)} — ${L('short.buy')}` : priceText(price))}"`}>${esc(L(why === 'poor' ? 'short.buy' : 'buy'))}</button>
     ${why ? `<small class="pm-why">${esc(whyText(why, lv))}</small>` : ''}</div>`;
 }
 
@@ -107,10 +108,11 @@ function unitCard(c: PremiumUnitCard): string {
   const d = UNITS[c.id];
   const sp = d.specials.length ? ` · ${d.specials.map(specialName).join(', ')}` : '';
   const packs = c.packs ?? [{ k: 1, price: c.price, why: c.why }];
-  const why = packs.every((p) => p.why) ? packs[0].why : null;
+  const why = packs.every((p) => p.why && p.why !== 'poor') ? packs[0].why : null;
   const btns = packs.map((p, i) => {
     const off = i ? Math.round(((c.price * p.k) / p.price - 1) * 100) : 0; // (the honest bonus: what the stacks are worth singly against the pack)
-    return `<button type="button" class="sh-off${p.why ? '' : ' on'}${i === packs.length - 1 ? ' best' : ''}" data-pmunit="${c.id}" data-k="${p.k}"${p.why ? ` disabled title="${esc(whyText(p.why, c.lv))}"` : ''}><span class="sh-q">${esc(`×${c.n * p.k}`)}</span><span class="sh-p">${doubloonIcon('ico-xs')}${fmt(p.price)}</span>${off > 0 ? `<i class="sh-bonus">${esc(`+${off}%`)}</i>` : ''}</button>`;
+    const shut = p.why && p.why !== 'poor';
+    return `<button type="button" class="sh-off${shut ? '' : ' on'}${p.why === 'poor' ? ' short' : ''}${i === packs.length - 1 ? ' best' : ''}" data-pmunit="${c.id}" data-k="${p.k}"${shut ? ` disabled title="${esc(whyText(p.why!, c.lv))}"` : ` title="${esc(priceText(p.price))}"`}><span class="sh-q">${esc(`×${c.n * p.k}`)}</span>${priceHtml(p.price, { cls: 'sh-p' })}${off > 0 ? `<i class="sh-bonus">${esc(`+${off}%`)}</i>` : ''}</button>`;
   }).join('');
   return `<div class="card sh-card sh-unit${why ? ' shut' : ''}">${unitArt(c.id)}
     <div class="sh-txt"><b class="sh-name">${esc(unitName(c.id))}</b><span class="sh-note">${esc(T(c.note))}</span>
@@ -146,7 +148,7 @@ export function famArt(art: string): string {
 }
 
 /** An offer's button: its quantity, its price, its bonus — shut with the reason. */
-function offerBtn(fam: ShopFamily, offer: ShopOffer, sv: ShopView, o: { price?: number; why?: ShopWhy | null; attr?: string; ribbon?: string } = {}): string {
+export function offerBtn(fam: ShopFamily, offer: ShopOffer, sv: ShopView, o: { price?: number; why?: ShopWhy | null; attr?: string; ribbon?: string } = {}): string {
   const why = o.why !== undefined ? o.why : sv.why[offer.id] ?? null;
   // (the server's price when it sends one: the infirmary's, the live ops' own or a sale's — docs/34)
   const price = o.price ?? sv.price[offer.id] ?? (offer.id === 'refill' ? 0 : offer.price);
@@ -155,7 +157,9 @@ function offerBtn(fam: ShopFamily, offer: ShopOffer, sv: ShopView, o: { price?: 
   const times = offer.worth ? Math.round((offer.worth / Math.max(1, price)) * 10) / 10 : 0;
   const ribbon = o.ribbon ?? (sale ? `−${sale.pct}%` : times ? L('worth', { n: lang() === 'ru' ? String(times).replace('.', ',') : String(times) }) : bonus > 0 ? `+${bonus}%` : '');
   const left = sv.left[offer.id];
-  return `<button type="button" class="sh-off${why ? '' : ' on'}${offer.tag ? ` ${offer.tag}` : ''}" ${o.attr ?? `data-shbuy="${offer.id}"`}${why ? ` disabled title="${esc(L(`sw.${why}`))}"` : ''}><span class="sh-q">${esc(qtyOf(offer, fam))}</span><span class="sh-p">${doubloonIcon('ico-xs')}${price > 0 ? fmt(price) : '—'}</span>${ribbon ? `<i class="sh-bonus">${esc(ribbon)}</i>` : ''}${offer.limit && left !== undefined && left > 0 && offer.limit.per !== 'ever' ? `<small class="sh-lim">${esc(L(`per.${offer.limit.per}`))}</small>` : ''}</button>`;
+  // (short of doubloons the offer stays open: its tap tops up first — topUpThenBuy)
+  const shut = why && why !== 'poor';
+  return `<button type="button" class="sh-off${shut ? '' : ' on'}${why === 'poor' ? ' short' : ''}${offer.tag ? ` ${offer.tag}` : ''}" ${o.attr ?? `data-shbuy="${offer.id}"`}${shut ? ` disabled title="${esc(L(`sw.${why}`))}"` : price > 0 ? ` title="${esc(priceText(price))}"` : ''}><span class="sh-q">${esc(qtyOf(offer, fam))}</span>${price > 0 ? priceHtml(price, { cls: 'sh-p' }) : '<span class="sh-p">—</span>'}${ribbon ? `<i class="sh-bonus">${esc(ribbon)}</i>` : ''}${offer.limit && left !== undefined && left > 0 && offer.limit.per !== 'ever' ? `<small class="sh-lim">${esc(L(`per.${offer.limit.per}`))}</small>` : ''}</button>`;
 }
 
 /** A family's card: its picture, name and line, its offers side by side (the reason under them when all are shut). */
@@ -164,7 +168,7 @@ function famCard(fam: ShopFamily, sv: ShopView, o: { cls?: string; meta?: string
   const offers = fam.level ? fam.offers : fam.offers.filter((x) => sv.why[x.id] !== 'gone');
   if (!offers.length) return '';
   const whys = offers.map((x) => sv.why[x.id] ?? null);
-  const shut = whys.every(Boolean);
+  const shut = whys.every((w) => w && w !== 'poor');
   const meta = o.meta ?? (fam.id === 'refill' && sv.fallen ? `<span class="sh-meta sh-clock">${esc(L('fallen', { n: sv.fallen.n, t: '' }))}<b data-shend="${sv.fallen.until}"></b></span>` : fam.icon.startsWith('unit:') ? `<span class="sh-meta"><b>${esc(unitName(fam.icon.slice(5) as UnitId))}</b></span>` : '');
   return `<div class="card sh-card${shut ? ' shut' : ''}${o.cls ? ` ${o.cls}` : ''}" data-fam="${fam.id}">${famArt(fam.icon)}
     <div class="sh-txt"><b class="sh-name">${esc(T(fam.name))}</b><span class="sh-note">${esc(T(fam.text))}</span>${meta}</div>
@@ -181,8 +185,8 @@ function dealsShelf(sv: ShopView, v: PremiumView): string {
     <div class="sh-offs"><button type="button" class="sh-off on hot" data-pmtop><span class="sh-q">${esc(L('topup'))}</span><span class="sh-p">${starIcon()}</span></button></div></div>`);
   const d = OFFERS.get(sv.deal.id);
   if (d) {
-    out.push(`<div class="card sh-card sh-deal${sv.deal.why ? ' shut' : ''}">${famArt(d.fam.icon)}<div class="sh-txt"><b class="sh-name">${esc(L('deal.title'))}: ${esc(T(d.fam.name))}</b><span class="sh-note">${esc(L('deal.text', { n: Math.round(DEAL_OFF * 100) }))}</span><span class="sh-meta sh-clock">${esc(L('deal.ends', { t: '' }))}<b data-shend="${sv.dayEnds}"></b></span></div>
-      <div class="sh-offs">${offerBtn(d.fam, d.offer, sv, { price: sv.deal.price, why: sv.deal.why, attr: 'data-shbuy="deal"', ribbon: `−${Math.round(DEAL_OFF * 100)}%` })}<s class="sh-was">${doubloonIcon('ico-xs')}${fmt(d.offer.price)}</s></div>${sv.deal.why ? `<small class="sh-why">${esc(L(`sw.${sv.deal.why}`))}</small>` : ''}</div>`);
+    out.push(`<div class="card sh-card sh-deal${sv.deal.why && sv.deal.why !== 'poor' ? ' shut' : ''}">${famArt(d.fam.icon)}<div class="sh-txt"><b class="sh-name">${esc(L('deal.title'))}: ${esc(T(d.fam.name))}</b><span class="sh-note">${esc(L('deal.text', { n: Math.round(DEAL_OFF * 100) }))}</span><span class="sh-meta sh-clock">${esc(L('deal.ends', { t: '' }))}<b data-shend="${sv.dayEnds}"></b></span></div>
+      <div class="sh-offs">${offerBtn(d.fam, d.offer, sv, { price: sv.deal.price, why: sv.deal.why, attr: 'data-shbuy="deal"', ribbon: `−${Math.round(DEAL_OFF * 100)}%` })}<s class="sh-was rp-was" title="${esc(priceText(d.offer.price))}">${realHtml(d.offer.price)}</s></div>${sv.deal.why && sv.deal.why !== 'poor' ? `<small class="sh-why">${esc(L(`sw.${sv.deal.why}`))}</small>` : ''}</div>`);
   }
   for (const g of sv.gifts) {
     const fam = SHOP.find((f) => f.id === g.id);
@@ -213,7 +217,7 @@ function workCard(sv: ShopView, refit = false): string {
   const rows = jobs.map((j) => {
     const done = Math.round(Math.min(1, Math.max(0, (sv.now - j.start) / Math.max(1, j.end - j.start))) * 100);
     return `<div class="sh-job"><span class="sh-jn">${esc(name(j))}</span><b class="sh-jt" data-shend="${j.end}"></b><span class="sh-jbar"><i style="width:${done}%"></i></span>
-      <button type="button" class="btn btn-small sh-jb" data-shspeed="${j.id}"${sv.inv.speed > 0 ? '' : ' disabled'} title="${esc(`${L('inv.speed')}: ${dur(sv.inv.speed * 60_000)}`)}">${icon('ui_hourglass', '', 'ico-xs')}${esc(L('job.speed'))}</button><button type="button" class="btn btn-small btn-primary sh-jb" data-shfin="${j.id}" data-n="${j.finish}">${esc(L('job.finish'))} ${doubloonIcon('ico-xs')}${fmt(j.finish)}</button></div>`;
+      <button type="button" class="btn btn-small sh-jb" data-shspeed="${j.id}"${sv.inv.speed > 0 ? '' : ' disabled'} title="${esc(`${L('inv.speed')}: ${dur(sv.inv.speed * 60_000)}`)}">${icon('ui_hourglass', '', 'ico-xs')}${esc(L('job.speed'))}</button><button type="button" class="btn btn-small btn-primary sh-jb" data-shfin="${j.id}" data-n="${j.finish}">${esc(L('job.finish'))} ${priceHtml(j.finish)}</button></div>`;
   }).join('');
   const head = refit || !c
     ? `<b class="sh-name">${esc(L('job.title'))}</b>${!refit ? `<span class="sh-meta">${esc(L('cr.none'))}</span>` : ''}`
@@ -227,7 +231,7 @@ function topUp(v: PremiumView): string {
     const n = p.n + p.bonus;
     const pct = p.bonus ? Math.round((p.bonus / p.n) * 100) : 0;
     return `<div class="card pm-pack${p.id === 'd1990' ? ' best' : ''}">${doubloonIcon('ico-lg')}<b class="pm-pack-n">${fmt(n)}</b><span class="pm-pack-w">${esc(dblWord(n))}</span>
-      <span class="pm-bonus${p.bonus ? '' : ' none'}">${p.bonus ? esc(`+${pct}%`) : '&nbsp;'}</span>
+      <span class="pm-bonus${p.bonus ? '' : ' none'}">${p.bonus ? esc(`+${pct}%`) : '&nbsp;'}</span>${payIn() === 'rub' ? `<b class="pm-pack-real">${esc(packPrice(p, 'rub'))}</b>` : ''}
       ${v.pay ? tgPackButton(p.id, p.stars) : `<button class="btn btn-small" disabled>${esc(L('top.soon'))}</button>`}</div>`;
   }).join('');
   const first = v.shop?.firstPay ? `<p class="sh-firstline">${doubloonIcon('ico-sm')}<b>${esc(L('first.title'))}</b><span>${esc(L('first.text'))}</span></p>` : '';
@@ -327,6 +331,23 @@ export class PremiumWindow {
 
   private wire(root: HTMLElement, state: ClientState, v: PremiumView | null): void {
     const redraw = () => this.render(root, state);
+    // Bought with doubloons as ever; short of them, the top-up's tier that covers it first, the purchase after it
+    // (owner, 2026-10-18) — else the question, then the message.
+    const balance = v?.balance ?? state.doubloons;
+    const buy = (price: number, name: string, question: string, msg: ClientMsg, b?: HTMLButtonElement) => {
+      if (balance < price) {
+        void topUpThenBuy({ price, balance, name, msg, pay: !!v?.pay, send: this.send, openTopup: () => {
+          this.topup = true;
+          redraw();
+        } });
+        return;
+      }
+      void ask(question).then((ok) => {
+        if (!ok) return;
+        if (b) b.disabled = true;
+        this.send(msg);
+      });
+    };
     root.querySelectorAll<HTMLElement>('[data-pmtop]').forEach((b) => (b.onclick = () => {
       this.topup = !this.topup;
       redraw();
@@ -353,7 +374,7 @@ export class PremiumWindow {
     root.querySelectorAll<HTMLButtonElement>('[data-pmship]').forEach((b) => (b.onclick = () => {
       const c = b.dataset.pmship as ShipClassId;
       const card = v?.ships.find((x) => x.id === c);
-      if (card) void ask(L('ask.ship', { name: SHIP_CLASSES[c].name, n: fmt(card.price) })).then((ok) => ok && this.send({ t: 'premium', action: 'buy_ship', id: c }));
+      if (card) buy(card.price, SHIP_CLASSES[c].name, L('ask.ship', { name: SHIP_CLASSES[c].name, n: priceText(card.price) }), { t: 'premium', action: 'buy_ship', id: c });
     }));
     root.querySelectorAll<HTMLButtonElement>('[data-pmunit]').forEach((b) => (b.onclick = () => {
       const u = b.dataset.pmunit as UnitId;
@@ -361,7 +382,7 @@ export class PremiumWindow {
       const card = v?.units.find((x) => x.id === u);
       const pack = card?.packs?.find((p) => p.k === k) ?? (card ? { k: 1, price: card.price } : null);
       const ticket = pid();
-      if (card && pack) void ask(L('ask.unit', { name: unitName(u), k: card.n * k, n: fmt(pack.price) })).then((ok) => ok && this.send({ t: 'premium', action: 'buy_unit', id: u, k, pid: ticket }));
+      if (card && pack) buy(pack.price, `${unitName(u)} ×${card.n * k}`, L('ask.unit', { name: unitName(u), k: card.n * k, n: priceText(pack.price) }), { t: 'premium', action: 'buy_unit', id: u, k, pid: ticket });
     }));
     // The shop's goods: asked once more, then bought by the offer's id and a purchase id of its own.
     root.querySelectorAll<HTMLButtonElement>('[data-shbuy]').forEach((b) => (b.onclick = () => {
@@ -372,18 +393,14 @@ export class PremiumWindow {
       const price = id === 'deal' ? sv.deal.price : sv.price[id] ?? (id === 'refill' ? 0 : found.offer.price);
       const name = id === 'deal' ? `${L('deal.title')}: ${T(found.fam.name)}` : T(found.fam.name);
       const ticket = pid();
-      void ask(L('ask.offer', { name, q: qtyOf(found.offer, found.fam), n: fmt(price) })).then((ok) => {
-        if (!ok) return;
-        b.disabled = true;
-        this.send({ t: 'premium', action: 'shop', offer: id, pid: ticket });
-      });
+      buy(price, name, L('ask.offer', { name, q: qtyOf(found.offer, found.fam), n: priceText(price) }), { t: 'premium', action: 'shop', offer: id, pid: ticket }, b);
     }));
     root.querySelector<HTMLElement>('[data-shgift]')?.addEventListener('click', () => this.send({ t: 'premium', action: 'gift' }));
     root.querySelector<HTMLElement>('[data-shkit]')?.addEventListener('click', () => this.send({ t: 'premium', action: 'kit' }));
     root.querySelectorAll<HTMLButtonElement>('[data-shspeed]').forEach((b) => (b.onclick = () => this.send({ t: 'premium', action: 'speed', job: Number(b.dataset.shspeed) })));
     root.querySelectorAll<HTMLButtonElement>('[data-shfin]').forEach((b) => (b.onclick = () => {
       const ticket = pid();
-      void ask(L('ask.finish', { n: fmt(Number(b.dataset.n)) })).then((ok) => ok && this.send({ t: 'premium', action: 'finish', job: Number(b.dataset.shfin), pid: ticket }));
+      buy(Number(b.dataset.n), L('job.finish'), L('ask.finish', { n: priceText(Number(b.dataset.n)) }), { t: 'premium', action: 'finish', job: Number(b.dataset.shfin), pid: ticket });
     }));
   }
 }

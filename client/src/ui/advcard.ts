@@ -28,7 +28,7 @@ import { personName } from '../lang/names.ts';
 import { serverText } from '../lang/server.ts';
 import { isleChancesHtml } from './isleloot.ts'; // docs/29 §9
 import { strengthWord, unitIcon, unitName } from './army.ts';
-import { esc, fmt, icon, money, portraitUrl, xpBadge } from './dom.ts';
+import { esc, fmt, icon, money, portraitUrl, xpBadge, glyphSvg } from './dom.ts';
 import { placeName } from './maps.ts';
 
 const L = dict(EN, RU);
@@ -123,7 +123,7 @@ function lairBlock(c: LairCard, x: boolean): string {
     : `<div class="ac-line muted">${esc(LL('down', { t: timeWords(c.down ?? 0) }))}</div>`;
   return `<div class="enc-card ac-card ac-gcard ac-lcard" data-lair="${c.kind}">
     <div class="ac-head">${art ? `<img class="ac-art${tint ? ' beast-tok' : ''}${face.fig ? ' fig' : ''}" src="${art}" alt="" draggable="false"${tint ? ` style="filter:${tint}"` : ''} />` : ''}<div class="ac-id"><div class="enc-h">${esc(w.word)} · ${esc(def.name[ru()])} <span class="ac-lvl">⚓${c.level}</span></div>
-    <div class="ac-sub muted">${esc(LL(`role.${c.role}` as 'role.shore'))} · ${esc(placeName(c.island))}</div></div>${x ? `<button class="ac-x" data-ax title="${esc(L('close'))}">×</button>` : ''}</div>
+    <div class="ac-sub muted">${esc(LL(`role.${c.role}` as 'role.shore'))} · ${esc(placeName(c.island))}</div></div>${x ? `<button class="ac-x g-only" data-ax title="${esc(L('close'))}" aria-label="${esc(L('close'))}">${glyphSvg('close')}</button>` : ''}</div>
     <p class="ac-text muted">${esc(def.text[ru()])}</p>
     ${chain}
     ${fight}
@@ -165,7 +165,7 @@ function driftBlock(c: DriftCard, x: boolean): string {
   const why = !c.reach ? DL('come') : c.why ? serverText(c.why) : '';
   return `<div class="enc-card ac-card ac-gcard ac-dcard${c.legend ? ' legend' : ''}" data-drift="${c.kind}">
     <div class="ac-head">${art ? `<img class="ac-art${tint ? ' beast-tok' : ''}${face.fig ? ' fig' : ''}" src="${art}" alt="" draggable="false"${tint ? ` style="filter:${tint}"` : ''} />` : ''}<div class="ac-id"><div class="enc-h">${esc(def.name[ru()])} <span class="ac-lvl">⚓${c.level}</span></div>
-    <div class="ac-sub muted">${c.legend ? `<b class="dw-leg">${esc(DL('legend'))}</b> · ` : ''}<span class="army-mini">${unitIcon(c.u, 'army-face-xs')}<i class="ac-n">${c.n}</i></span> ${esc(unitName(c.u))} · ${esc(DL('left', { t: timeWords(c.left) }))}</div></div>${x ? `<button class="ac-x" data-ax title="${esc(L('close'))}">×</button>` : ''}</div>
+    <div class="ac-sub muted">${c.legend ? `<b class="dw-leg">${esc(DL('legend'))}</b> · ` : ''}<span class="army-mini">${unitIcon(c.u, 'army-face-xs')}<i class="ac-n">${c.n}</i></span> ${esc(unitName(c.u))} · ${esc(DL('left', { t: timeWords(c.left) }))}</div></div>${x ? `<button class="ac-x g-only" data-ax title="${esc(L('close'))}" aria-label="${esc(L('close'))}">${glyphSvg('close')}</button>` : ''}</div>
     <p class="ac-text muted">${esc(def.text[ru()])}</p>
     ${why ? `<div class="muted ac-gl ac-come">${esc(why)}</div>` : ''}
     ${body}
@@ -419,7 +419,7 @@ export class AdvCard {
       const art = assetUrl(def.art);
       html = `<div class="enc-card ac-card" data-kind="${o.kind}">
         <div class="ac-head">${art ? `<img class="ac-art${o.kind === 'obelisk' ? ' ac-obelisk' : ''}" src="${art}" alt="" draggable="false" />` : ''}<div class="ac-id"><div class="enc-h">${esc(def.name[ru()])} <span class="ac-lvl">⚓${o.level}</span></div>
-        <div class="ac-sub muted">${esc(statusLine(o))} · ${esc(placeName(o.island))}</div></div><button class="ac-x" data-ax title="${esc(L('close'))}">×</button></div>
+        <div class="ac-sub muted">${esc(statusLine(o))} · ${esc(placeName(o.island))}</div></div><button class="ac-x g-only" data-ax title="${esc(L('close'))}" aria-label="${esc(L('close'))}">${glyphSvg('close')}</button></div>
         <p class="ac-text muted">${esc(def.text[ru()])}</p>
         ${o.guard ? `<div class="ac-line ac-warn">${esc(L('guarded'))}</div>${guardBlock(o.guard, true)}` : objBody(o)}
         ${o.why && !o.guard && o.ready ? `<div class="ac-line muted ac-why">${esc(serverText(o.why))}</div>` : ''}
@@ -431,7 +431,7 @@ export class AdvCard {
       const w = strengthWord(gg.men);
       html += `<div class="enc-card ac-card ac-gcard" data-guard="${gg.kind}">
         <div class="ac-head">${art ? `<img class="ac-art" src="${art}" alt="" draggable="false" />` : ''}<div class="ac-id"><div class="enc-h">${esc(w.word)} · ${esc(guardName(gg.kind))} <span class="ac-lvl">⚓${gg.level}</span></div>
-        <div class="ac-sub muted">${esc(GUARDS[gg.kind].text[ru()])}</div></div>${o ? '' : `<button class="ac-x" data-ax title="${esc(L('close'))}">×</button>`}</div>
+        <div class="ac-sub muted">${esc(GUARDS[gg.kind].text[ru()])}</div></div>${o ? '' : `<button class="ac-x g-only" data-ax title="${esc(L('close'))}" aria-label="${esc(L('close'))}">${glyphSvg('close')}</button>`}</div>
         ${guardBlock(gg, false)}
       </div>`;
     }

@@ -464,6 +464,8 @@ export function tgInvoices(net: Net, toast: (msg: string, kind: string) => void)
     const w = webApp ?? g.Telegram?.WebApp;
     if (w?.openInvoice && w.initData) {
       w.openInvoice(link, (status) => {
+        // (a purchase waiting for this top-up stops waiting when the invoice is closed unpaid — ui/price.ts)
+        dispatchEvent(new CustomEvent('gravetide:pay', { detail: status }));
         if (status === 'paid') toast(L('paid'), 'good');
         else if (status === 'cancelled') toast(L('payCancelled'), 'info');
         else if (status === 'failed') toast(L('payFailed'), 'bad');

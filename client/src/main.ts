@@ -147,6 +147,7 @@ import { RecruitWindow } from './ui/recruit.ts';
 import { TameWindow } from './ui/tame.ts'; // docs/18 IV
 import { ThroneWindow } from './ui/throne.ts'; // docs/19 E1–E3, E18
 import { PremiumWindow } from './ui/premium.ts'; // the premium shop (owner, 2026-10-03)
+import { heardDoubloons } from './ui/price.ts'; // a purchase waiting for its top-up (owner, 2026-10-18)
 import { Promos } from './ui/promo.ts'; // her personal offers (owner, 2026-10-15)
 import { DailyGift } from './ui/dailygift.ts'; // the daily login gift (owner, 2026-10-16)
 import { initTgNotices } from './ui/tgnotices.ts'; // «Уведомления в Телеграме» (owner, 2026-10-16)
@@ -1091,6 +1092,14 @@ loadAssets(['ui.helm', 'ui.loader_wheel', ...Object.values(CURSOR_ART)]).then(()
   buildMicroMenu();
   hud.artEpoch++;
   seaHud.dress();
+  // «Остров» and «К кораблю» in their painted pictures, not the letters standing in before the art came (a «⌖» or «⚓» set
+  // in a phone's own font sat low in the ring — owner, 2026-10-18)
+  for (const [b, art] of [[isleBtn, 'ui_lighthouse'], [homeBtn, 'map_ship']] as const) {
+    const g = b.querySelector('.k-btn-ico.glyph');
+    const t = document.createElement('template');
+    t.innerHTML = icon(art, '', 'k-btn-ico');
+    if (g && t.content.firstElementChild) g.replaceWith(t.content.firstElementChild);
+  }
   buildCursors(); // the attack cursor from the tattoo set's sabres, hook and gun
   hud.chatPanel.art();
   hud.chatPanel.tabs();
@@ -1788,6 +1797,8 @@ function onMessage(m: ServerMsg): void {
       if (m.t === 'doubloons') {
         if (lastDoubloons >= 0 && m.n < lastDoubloons) cue('buy');
         lastDoubloons = m.n;
+        // the top-up came in: the purchase it was for goes now (price.ts topUpThenBuy)
+        heardDoubloons(m.n, (x) => net.send(x), (msg, kind) => hud.toast(msg, kind));
       }
       break;
     case 'lairs':

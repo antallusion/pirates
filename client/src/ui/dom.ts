@@ -122,6 +122,26 @@ export function portraitUrl(id: string): string | null {
  *  lantern with red eyes, on every refusal toast and the chart's lairs — the red sky at morning (the sailor's own warning) stands in. */
 export const NO_SKULL: Record<string, string> = { danger: 'omen_red_sky' };
 
+/** The small signs of the buttons drawn, not set in letters (owner, 2026-10-18: «иконка +- и к кораблю не выровнены по
+ *  вертикали, они все чуть вниз смещены, надо на всем поправить»): a letter sits where its font puts it — its ascent
+ *  over its descent, a «+» on the maths axis, a «×» on the x-height — a hair or two below the middle and differently on
+ *  every phone; a stroke drawn in a 24-unit box is on its middle (12, 12) everywhere. Gold (currentColor), rounded
+ *  ends; `g-svg` is 1em square (styles.css). */
+export type GlyphKind = 'plus' | 'minus' | 'close' | 'prev' | 'next' | 'up' | 'down' | 'aim';
+const GLYPH_D: Record<GlyphKind, string> = {
+  plus: 'M12 5v14M5 12h14',
+  minus: 'M5 12h14',
+  close: 'M6.5 6.5l11 11M17.5 6.5l-11 11',
+  prev: 'M15.25 5.5L8.75 12l6.5 6.5',
+  next: 'M8.75 5.5l6.5 6.5-6.5 6.5',
+  up: 'M5.5 15.25L12 8.75l6.5 6.5',
+  down: 'M5.5 8.75l6.5 6.5 6.5-6.5',
+  aim: 'M12 3.5v4M12 16.5v4M3.5 12h4M16.5 12h4M12 7.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 1 1 0-9z',
+};
+export function glyphSvg(kind: GlyphKind, cls = ''): string {
+  return `<svg class="g-svg g-${kind}${cls ? ` ${cls}` : ''}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${GLYPH_D[kind]}"/></svg>`;
+}
+
 export function icon(id: string, glyph = '', cls = 'ico'): string {
   id = NO_SKULL[id] ?? id;
   const url =(id.startsWith('portrait.') ? portraitUrl(id.slice(9)) : assetUrl(id.includes('.') ? id : `icon.${id}`)) ?? (STAND_IN[id] ? assetUrl(`icon.${STAND_IN[id]}`) : null) ?? (id.startsWith('good_') ? assetUrl('icon.good_provisions') : null);

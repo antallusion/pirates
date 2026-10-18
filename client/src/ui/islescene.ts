@@ -29,7 +29,7 @@ import { EN, RU } from '../lang/ui/islescene.ts';
 import { EN as PM_EN, RU as PM_RU } from '../lang/ui/premium.ts'; // the shop's button (owner, 2026-10-15)
 import type { ClientState } from '../state.ts';
 import { BaseWindow, EXTRA_PLOTS, baseName, hallFor, plotCell, spanText, timeText, townArt } from './base.ts';
-import { esc, fmt, icon, money } from './dom.ts';
+import { esc, fmt, icon, money, glyphSvg } from './dom.ts';
 import { townTab } from './town.ts';
 import { supplyTab } from './supply.ts';
 import { wireGuildYard } from './social.ts';
@@ -607,7 +607,7 @@ export class IsleScene {
       return;
     }
     const keep = this.cardEl.querySelector('.is-cb')?.scrollTop ?? 0;
-    this.cardEl.innerHTML = `<button type="button" class="is-x" data-ix aria-label="${esc(L('close'))}" title="${esc(L('close'))}">×</button><div class="is-cb base-sheet">${body}</div>`;
+    this.cardEl.innerHTML = `<button type="button" class="is-x g-only" data-ix aria-label="${esc(L('close'))}" title="${esc(L('close'))}">${glyphSvg('close')}</button><div class="is-cb base-sheet">${body}</div>`;
     this.cardEl.classList.remove('hidden');
     this.cardEl.classList.toggle('wide', panel === 'yard' || panel === 'town' || panel === 'supply');
     this.cardEl.dataset.panel = panel ?? '';
