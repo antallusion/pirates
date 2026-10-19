@@ -10,6 +10,7 @@ function inkOf(src: string): Promise<{ x: number; y: number; w: number; h: numbe
   let p = inks.get(src);
   if (!p) {
     p = new Promise((done) => {
+      if (typeof Image === 'undefined') return done(null); // (no pictures where there is no page)
       const im = new Image();
       im.onload = () => {
         try {
