@@ -43,7 +43,7 @@
   const GROUPS = ['pack', 'captain', 'bundle', 'offer'];
   const card = (x) => {
     const why = captain && captain.unavailable[x.id];
-    const label = why ? t[why] || t.owned : busy === x.id ? t.paying : `${t.buy} · ${nf.format(x.rub)} ${t.rub}`;
+    const label = why ? esc(t[why] || t.owned) : busy === x.id ? esc(t.paying) : `<span class="w">${esc(t.buy)} · </span>${esc(nf.format(x.rub))}&nbsp;${esc(t.rub)}`;
     const art = data.art[x.art];
     const isFace = x.kind === 'captain';
     const ribbon = x.tag ? `<span class="shop-tag ${x.tag}">${esc(t[x.tag])}</span>` : '';
@@ -53,7 +53,7 @@
     return `<article class="shop-card${why ? ' owned' : ''}${x.tag ? ` tag-${x.tag}` : ''}" data-kind="${x.kind}">
 <div class="shop-art${isFace ? ' face' : ''}">${art ? `<img src="${esc(art)}" alt="" loading="lazy" decoding="async">` : ''}${ribbon}</div>
 <div class="shop-body">${n}<h3>${esc(L(x.name))}</h3><p>${esc(L(x.text))}</p>${bonus}${until}${x.once && !why ? `<span class="shop-once">${esc(t.once)}</span>` : ''}</div>
-<button type="button" class="btn-gold sm shop-buy" data-buy="${esc(x.id)}"${why || busy ? ' disabled' : ''}>${esc(label)}</button></article>`;
+<button type="button" class="btn-gold sm shop-buy" data-buy="${esc(x.id)}"${why || busy ? ' disabled' : ''}>${label}</button></article>`;
   };
   const drawCatalog = () => {
     if (!shop) return;

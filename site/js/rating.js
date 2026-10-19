@@ -28,8 +28,10 @@
     const words = title && cos.titles[title];
     if (!words) return '';
     const p = cos.plates[plateId || 'driftwood'] || cos.plates.driftwood;
-    const pad = p ? `padding:0 ${(p.span[0] * 100).toFixed(0)}% 0 ${(p.span[0] * 100).toFixed(0)}%` : '';
-    return `<span class="rt-plate" style="${p && p.url ? `background-image:url(${esc(p.url)});` : ''}color:${esc(p ? p.ink : '#f3e6c8')};--halo:${esc(p ? p.halo : '#000')};${pad}">${esc(words)}</span>`;
+    // (the words keep to the plate's calm middle, as the game draws it: its ends as wide as span[0] of the whole)
+    const k = p ? p.span[0] / (p.span[1] - p.span[0]) : 0.3;
+    const pad = Math.max(1.2, k * words.length * 0.56).toFixed(2);
+    return `<span class="rt-plate" style="${p && p.url ? `background-image:url(${esc(p.url)});` : ''}color:${esc(p ? p.ink : '#f3e6c8')};--halo:${esc(p ? p.halo : '#000')};padding:1px ${pad}em 0">${esc(words)}</span>`;
   };
   const board = () => tabs.find((b) => b.classList.contains('on'))?.dataset.board || 'level';
   const meta = (b) => data.boards.find((x) => x.id === b) || data.boards[0];
@@ -53,6 +55,7 @@
 
   const show = (b, v) => {
     unitEl.textContent = meta(b).unit;
+    root.querySelector('.rt-col').textContent = b === 'guilds' ? t.colGuild : t.colCap;
     const rows = v.rows || [];
     list.innerHTML = rows.map((r) => (b === 'guilds' ? guildHtml(r) : rowHtml(b, r))).join('');
     empty.hidden = rows.length > 0;
@@ -79,6 +82,9 @@
   };
   const pick = (b) => {
     tabs.forEach((x) => { const on = x.dataset.board === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', String(on)); });
+    // (on a phone the tabs scroll sideways: the chosen one brought into sight, the page itself not moved)
+    const on = tabs.find((x) => x.dataset.board === b), bar = on?.parentElement;
+    if (on && bar && bar.scrollWidth > bar.clientWidth) bar.scrollLeft = Math.max(0, on.offsetLeft - bar.offsetLeft - (bar.clientWidth - on.offsetWidth) / 2);
     const u = new URL(location.href);
     u.searchParams.set('board', b);
     history.replaceState(null, '', u);

@@ -1,5 +1,6 @@
 /* The shop (/site/shop/), its legal pages and the test mode's checkout: the site's wood and brass, the game's art. */
 .shop { padding-top: 24px; max-width: 1100px; }
+.shop [hidden], .testpay [hidden] { display: none !important; }
 .shop-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 26px; }
 .shop-step { padding: 26px 30px; }
 .shop-step:not(.panel) { padding: 0; }
@@ -46,7 +47,7 @@
 .shop-group + .shop-group { margin-top: 30px; }
 .shop-gh { font-size: 24px; margin: 0 0 14px; color: var(--ice); font-family: var(--display); }
 .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
-.shop-grid.packs { grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); }
+.shop-grid.packs { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
 .shop-card { position: relative; display: flex; flex-direction: column; border-radius: var(--r); overflow: hidden; background: linear-gradient(180deg, rgba(18, 25, 40, 0.96), rgba(10, 14, 23, 0.98)), url(/site/img/tex/wood.webp) 0 0 / 300px; border: 1px solid var(--line); transition: transform 0.3s var(--ease), border-color 0.3s, box-shadow 0.3s; }
 .shop-card:hover { transform: translateY(-3px); border-color: rgba(245, 196, 81, 0.35); box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45), 0 0 24px rgba(245, 196, 81, 0.08); }
 .shop-card.tag-best { border-color: rgba(245, 196, 81, 0.4); }
@@ -70,7 +71,9 @@
 .shop-bonus { background: rgba(143, 179, 106, 0.15); color: #b9dc8f; border: 1px solid rgba(143, 179, 106, 0.35); }
 .shop-until { background: rgba(224, 112, 63, 0.14); color: #f0b393; border: 1px solid rgba(224, 112, 63, 0.35); }
 .shop-once { background: rgba(140, 195, 232, 0.08); color: var(--ice); border: 1px solid rgba(140, 195, 232, 0.2); }
-.shop-buy { margin: 6px 14px 16px; min-height: 44px; }
+.shop-buy { margin: 6px 12px 16px; min-height: 44px; padding: 0 6px; font-size: 13px; letter-spacing: 0.06em; white-space: nowrap; border-width: 0 20px; border-image-width: 0 20px; }
+/* (on the narrow cards the word goes, the price stays: the button is «buy» anyway) */
+.shop-grid.packs .shop-buy .w { display: none; }
 .shop-buy[disabled] { filter: grayscale(0.85) brightness(0.8); cursor: default; transform: none; }
 .shop-legal { margin: 0; font-size: 14px; }
 
@@ -115,11 +118,26 @@ mark.todo { background: rgba(224, 112, 63, 0.18); color: #ffcfae; border: 1px da
   .shop-body h3 { font-size: 18px; }
   .shop-body p { font-size: 13px; }
   .shop-n { font-size: 24px; }
-  .shop-buy { margin: 4px 10px 12px; padding: 0 12px; font-size: 12px; letter-spacing: 0.06em; white-space: normal; text-align: center; line-height: 1.15; }
+  .shop-buy { margin: 4px 10px 12px; padding: 0 4px; font-size: 12px; letter-spacing: 0.04em; }
+  .shop-grid .shop-buy .w { display: none; }
   .legal { padding: 22px 18px; }
   .legal .reqs { grid-template-columns: 1fr; gap: 2px; }
   .legal .reqs dd { margin-bottom: 8px; }
 }
 @media (max-width: 400px) {
   .shop-grid:not(.packs) { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .shop-who { display: grid; grid-template-columns: auto minmax(0, 1fr); }
+  .shop-who .btn-oak { grid-column: 1 / -1; justify-self: start; margin-left: 0; }
+}
+/* the test checkout on a phone held sideways: everything, the buttons too, on one screen */
+@media (max-height: 520px) {
+  .testpay { min-height: 0; padding: 10px 0; }
+  .testpay-card { padding: 14px 18px; width: min(640px, 100%); }
+  .testpay-logo { display: none; }
+  .testpay-warn { margin-bottom: 8px; padding: 8px 10px; font-size: 13px; }
+  .testpay h1 { font-size: 26px; margin-bottom: 8px; }
+  .testpay dl { margin-bottom: 10px; gap: 4px 14px; }
+  .testpay-act .btn-gold, .testpay-act .btn-oak { min-height: 44px; }
 }

@@ -363,7 +363,7 @@ const RATING_T: Record<string, Tr> = {
   empty: ['Nobody here yet: the sea waits for its first captains.', 'Пока пусто: море ждёт первых капитанов.'],
   at: ['Updated', 'Обновлено'], err: ['The rating could not be loaded. Try again later.', 'Не удалось загрузить рейтинг. Попробуйте позже.'],
   rate: ['Too many searches: wait a minute.', 'Слишком часто: подождите минуту.'], short: ['At least two letters.', 'Хотя бы две буквы.'],
-  close: ['Close', 'Закрыть'], you: ['Found', 'Найден'],
+  close: ['Close', 'Закрыть'], you: ['Found', 'Найден'], colCap: ['Captain', 'Капитан'], colGuild: ['Guild', 'Гильдия'],
 };
 
 function rating(lang: Lang): string {
@@ -372,7 +372,7 @@ function rating(lang: Lang): string {
 <div class="rt-tabs" role="tablist" aria-label="${lang === 'ru' ? 'Таблицы' : 'Boards'}">${BOARD_UI.map((b, i) => `<button class="chip${i ? '' : ' on'}" role="tab" aria-selected="${i ? 'false' : 'true'}" data-board="${b.id}"><img src="${K(b.icon)}" alt="" width="18" height="18">${L(lang, b.name)}</button>`).join('')}</div>
 <form class="rt-find" role="search"><label class="search"><img src="${K('ico/search')}" alt="" width="22" height="22"><input name="name" type="search" maxlength="24" autocomplete="off" placeholder="${esc(L(lang, RATING_T.ph))}" aria-label="${esc(L(lang, RATING_T.ph))}"></label><button class="btn-gold sm" type="submit">${L(lang, RATING_T.find)}</button></form>
 <div class="rt-found" hidden aria-live="polite"></div>
-<div class="rt-board panel"><div class="rt-head"><span>#</span><span>${lang === 'ru' ? 'Капитан' : 'Captain'}</span><span class="rt-unit"></span></div><ol class="rt-list" aria-live="polite"></ol><p class="rt-empty muted" hidden></p></div>
+<div class="rt-board panel"><div class="rt-head"><span>#</span><span class="rt-col">${L(lang, RATING_T.colCap)}</span><span class="rt-unit"></span></div><ol class="rt-list" aria-live="polite"></ol><p class="rt-empty muted" hidden></p></div>
 <p class="rt-at muted"></p></section>
 ${dataTag('rt-data', { lang, api: '/api/site/rating', t: tr(RATING_T), boards: BOARD_UI.map((b) => ({ id: b.id, name: L(lang, b.name), unit: L(lang, b.unit) })), cos: cosData(lang) })}`;
   return page(lang, {

@@ -1,5 +1,6 @@
 /* The captains' rating (/site/rating/): the site's dark wood and brass; the portraits, plates and frames are the game's. */
 .rt { padding-top: 24px; }
+.rt [hidden] { display: none !important; }
 .rt-tabs { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
 .rt-find { display: flex; gap: 12px; justify-content: center; align-items: center; margin: 0 auto 26px; max-width: 560px; }
 .rt-find .search { flex: 1; width: auto; }
@@ -48,11 +49,12 @@
 .rt-av { position: relative; display: inline-block; width: var(--av); height: var(--av); flex: none; }
 .rt-face { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 50%; background: #0a0e18; box-shadow: 0 0 0 2px rgba(245, 196, 81, 0.35), 0 4px 10px rgba(0, 0, 0, 0.6); }
 .rt-av.framed .rt-face { box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6); }
-.rt-ring { position: absolute; left: 50%; top: 50%; width: calc(var(--av) * var(--k, 1.4)); height: calc(var(--av) * var(--k, 1.4)); max-width: none; transform: translate(-50%, -50%); object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6)); }
-.rt-row .rt-av { margin: 0 8px; }
+.rt-ring { position: absolute; left: 50%; top: 50%; width: calc(var(--av) * min(var(--k, 1.4), var(--kmax, 1.5))); height: calc(var(--av) * min(var(--k, 1.4), var(--kmax, 1.5))); max-width: none; transform: translate(-50%, -50%); object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6)); }
+.rt-row .rt-av { margin: 0 6px; }
+.rt-card .rt-av { --kmax: 1.45; margin: 6px 10px; }
 
 /* ---- the title on its plate */
-.rt-plate { display: inline-flex; align-items: center; justify-content: center; height: 26px; min-width: 120px; max-width: 100%; background: center / 100% 100% no-repeat; font: 700 13px/1 var(--display); letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 2px var(--halo), 0 0 2px var(--halo), 0 1px 1px var(--halo); }
+.rt-plate { display: inline-flex; align-items: center; justify-content: center; height: 30px; max-width: 100%; background: center / 100% 100% no-repeat; font: 700 15px/1 var(--display); letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 2px var(--halo), 0 0 3px var(--halo), 0 1px 1px var(--halo); }
 
 /* ---- guilds */
 .rt-gtag { display: grid; place-items: center; min-width: 64px; height: 40px; padding: 0 8px; margin: 0 4px; border-radius: 10px; font: 700 15px/1 var(--sans); letter-spacing: 0.08em; color: #2a1a06; background: var(--gold); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5); }
@@ -68,7 +70,7 @@
   .rt-rank { width: 34px; height: 34px; font-size: 15px; }
   .rt-row .rt-av { --av: 40px !important; margin: 0 4px; }
   .rt-name { font-size: 17px; }
-  .rt-plate { height: 22px; min-width: 96px; font-size: 11px; }
+  .rt-plate { height: 25px; font-size: 13px; }
   .rt-val b { font-size: 21px; }
   .rt-cap { font-size: 12px; }
   .rt-card { grid-template-columns: auto 1fr; padding: 18px 16px; gap: 6px 14px; }
@@ -77,5 +79,5 @@
   .rt-gtag { min-width: 50px; height: 34px; font-size: 13px; }
 }
 @media (max-width: 400px) {
-  .rt-row .rt-cap { display: none; }
+  .rt-row:not(.guild) .rt-cap { display: none; }
 }
