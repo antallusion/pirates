@@ -30,6 +30,10 @@ const SCREENS = [
   { id: 'news', at: 'sea', open: (p) => p.evaluate(() => globalThis.gravetide.seaHud.openNews()) },
   { id: 'capmenu', at: 'sea', open: (p) => p.evaluate(() => document.getElementById('hud-captain')?.click()) },
   { id: 'shop', at: 'sea', open: (p) => p.evaluate(() => globalThis.gravetide.shop()) },
+  // docs/32 §12: the cosmetics' tab (its titles, its bundles) and the wardrobe
+  { id: 'cos', at: 'sea', open: (p) => p.evaluate(() => globalThis.gravetide.cos.shop('cos_titles')) },
+  { id: 'cos-sets', at: 'sea', open: (p) => p.evaluate(() => globalThis.gravetide.cos.shop('cos_sets')) },
+  { id: 'wardrobe', at: 'sea', open: (p) => p.evaluate(() => globalThis.gravetide.cos.wardrobe()) },
   { id: 'hero', at: 'sea', open: (p) => p.evaluate(() => globalThis.gravetide.hero()) },
   { id: 'ship', at: 'sea', open: (p) => p.evaluate(() => globalThis.gravetide.open('ship')) },
   { id: 'crew', at: 'sea', open: (p) => p.evaluate(() => globalThis.gravetide.open('crew')) },

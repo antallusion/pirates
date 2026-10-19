@@ -24,6 +24,7 @@ import { TrailPool, drawWavingFlag, flagCloth, plateCanvas } from '../render/cos
 import { esc, fmt, icon } from './dom.ts';
 import { faceAttrs } from './kit/faces.ts';
 import { offerBtn } from './premium.ts';
+import { chipRow } from './kit/window.ts';
 import { priceHtml } from './price.ts';
 
 const L = dict(EN, RU);
@@ -116,7 +117,7 @@ function previewShip(c: HTMLCanvasElement, state: ClientState, dt: number): void
     st.x += cls.maxSpeed * 0.8 * dt;
     st.pool.emit(1, d.trail, st.x, 0, Math.PI / 2, 0.85, cls.length, cls.beam, dt, false);
     st.pool.step(dt);
-    st.pool.draw(g, (x) => cx + (x - st!.x) * k, (y) => cy + y * k, k, w, h);
+    st.pool.draw(g, (x) => cx + (x - st!.x) * k, (y) => cy + y * k, k, w, h, 0.32);
   }
   const spr = sprite(cls.sprite);
   g.save();
@@ -130,7 +131,9 @@ function previewShip(c: HTMLCanvasElement, state: ClientState, dt: number): void
   if (d.emblem) {
     const cloth = flagCloth(d.emblem, d.cloth ?? 'black');
     if (cloth) {
-      const fw = cls.beam * k * 0.62 * 1.6, fh = fw * 0.66; // a touch larger than at sea: a preview
+      // (larger than at sea — a preview: the emblem must read on the shop's card)
+      const big = d.big === '1';
+      const fw = Math.min(h * (big ? 0.8 : 0.5), cls.beam * k * 0.62 * (big ? 3.2 : 1.8)), fh = fw * 0.66;
       g.translate(0, -len * 0.18);
       g.rotate(Math.PI / 2 + Math.sin(st.t * 3) * 0.06);
       drawWavingFlag(g, cloth, fw, fh, st.t, 1);
@@ -227,8 +230,8 @@ function foot(x: CosItem, v: CosView, sv: ShopView, offerId: string): string {
 
 const tierCls = (x: { tier: number }) => `cos-t${x.tier}`;
 
-function card(x: CosItem, preview: string, v: CosView, sv: ShopView, offerId: string, extra = ''): string {
-  return `<div class="cos-card ${tierCls(x)}${statusOf(x, v) === 'worn' ? ' worn' : ''}" data-cos="${esc(cosKey(x))}"><div class="cos-prev">${preview}</div>
+function card(x: CosItem, preview: string, v: CosView, sv: ShopView, offerId: string, extra = '', prevCls = ''): string {
+  return `<div class="cos-card ${tierCls(x)}${statusOf(x, v) === 'worn' ? ' worn' : ''}" data-cos="${esc(cosKey(x))}"><div class="cos-prev${prevCls ? ` ${prevCls}` : ''}">${preview}</div>
     <div class="cos-txt"><b class="cos-name">${esc(T(x.name))}</b><small class="cos-tier">${esc(L(`tier${Math.min(4, x.tier)}` as 'tier0'))}${extra}</small></div>
     <div class="cos-foot">${foot(x, v, sv, offerId)}</div></div>`;
 }
@@ -237,9 +240,9 @@ function card(x: CosItem, preview: string, v: CosView, sv: ShopView, offerId: st
 const herTitle = (v: CosView) => v.eq.title ?? 'seawolf';
 const herPlate = (v: CosView) => v.eq.plate ?? 'driftwood';
 
-function shipPrev(o: { emblem?: string | null; cloth?: string | null; trail?: string | null; plate?: string | null; title?: string | null }, cls = 'cos-ship'): string {
+function shipPrev(o: { emblem?: string | null; cloth?: string | null; trail?: string | null; plate?: string | null; title?: string | null; big?: boolean }, cls = 'cos-ship'): string {
   const a = (k: string, x?: string | null) => (x ? ` data-${k}="${esc(x)}"` : '');
-  return `<canvas class="${cls}" data-cosprev${a('emblem', o.emblem)}${a('cloth', o.cloth)}${a('trail', o.trail)}${a('plate', o.plate)}${a('title', o.title)}></canvas>`;
+  return `<canvas class="${cls}" data-cosprev${a('emblem', o.emblem)}${a('cloth', o.cloth)}${a('trail', o.trail)}${a('plate', o.plate)}${a('title', o.title)}${o.big ? ' data-big="1"' : ''}></canvas>`;
 }
 
 function emoteImg(e: EmoteDef, cls = 'cos-emo'): string {
@@ -257,9 +260,9 @@ export function cosShelf(sec: ShopSec, state: ClientState, sv: ShopView): string
     case 'cos_titles':
       return `${lead}${head('g.titles')}${grid(TITLES.map((t) => card(t, plateBox(herPlate(v), t.id), v, sv, `cos_title_${t.id}`)))}${head('g.plates')}${grid(PLATES.map((p) => card(p, plateBox(p.id, herTitle(v)), v, sv, `cos_plate_${p.id}`)))}`;
     case 'cos_frames':
-      return `${lead}${grid(FRAMES.map((f) => card(f, framedFace(ownFace(state), f.id, 52, 1.9), v, sv, `cos_frame_${f.id}`)))}`;
+      return `${lead}${grid(FRAMES.map((f) => card(f, framedFace(ownFace(state), f.id, 38, 1.9), v, sv, `cos_frame_${f.id}`, '', 'cos-prev-fr')))}`;
     case 'cos_flags':
-      return `${lead}${head('g.emblems')}${grid(EMBLEMS.map((e) => card(e, shipPrev({ emblem: e.id, cloth: v.eq.cloth ?? 'black' }), v, sv, `cos_emblem_${e.id}`)))}${head('g.cloths')}${grid(CLOTHS.map((c) => card(c, shipPrev({ emblem: v.eq.emblem ?? 'anchor', cloth: c.id }), v, sv, `cos_cloth_${c.id}`, ` · <i class="cos-sw" style="background:${c.rgb}"></i>`)))}`;
+      return `${lead}${head('g.emblems')}${grid(EMBLEMS.map((e) => card(e, shipPrev({ emblem: e.id, cloth: v.eq.cloth ?? 'black', big: true }), v, sv, `cos_emblem_${e.id}`)))}${head('g.cloths')}${grid(CLOTHS.map((c) => card(c, shipPrev({ emblem: v.eq.emblem ?? 'anchor', cloth: c.id, big: true }), v, sv, `cos_cloth_${c.id}`, ` · <i class="cos-sw" style="background:${c.rgb}"></i>`)))}`;
     case 'cos_trails':
       return `${lead}${grid(TRAILS.map((t) => card(t, shipPrev({ trail: t.id, emblem: v.eq.emblem, cloth: v.eq.cloth }), v, sv, `cos_trail_${t.id}`)))}`;
     case 'cos_emotes': {
@@ -323,10 +326,11 @@ export function wardrobe(state: ClientState): string {
   if (!v) return '<p class="muted">…</p>';
   const eq = v.eq;
   const slots: WSlot[] = ['title', 'plate', 'frame', 'emblem', 'cloth', 'trail', 'emotes'];
-  const chips = slots.map((s) => `<button type="button" class="w-chip${s === wslot ? ' on' : ''}" data-cosslot="${s}">${esc(L(`sl.${s}` as 'sl.title'))}</button>`).join('');
+  const SLOT_ICON: Record<WSlot, string> = { title: 'cos_titles', plate: 'cos_titles', frame: 'cos_frames', emblem: 'cos_flags', cloth: 'cos_flags', trail: 'cos_trails', emotes: 'cos_emotes' };
+  const chips = chipRow(slots.map((s) => ({ id: s, icon: SLOT_ICON[s], label: L(`sl.${s}` as 'sl.title') })), wslot, 'cosslot');
   const owned = <X extends CosItem>(list: readonly X[]) => list.filter((x) => v.own.includes(cosKey(x)));
   const opt = (slot: keyof CosEquip, x: CosItem, inner: string) => `<button type="button" class="cos-opt${eq[slot] === x.id ? ' on' : ''}" data-coswear="${slot}" data-id="${esc(x.id)}" title="${esc(T(x.name))}">${inner}<small>${esc(T(x.name))}</small></button>`;
-  const offBtn = (slot: keyof CosEquip) => `<button type="button" class="cos-opt cos-none${eq[slot] ? '' : ' on'}" data-cosoff="${slot}"><span class="cos-none-i">∅</span><small>${esc(L('none'))}</small></button>`;
+  const offBtn = (slot: keyof CosEquip) => `<button type="button" class="cos-opt cos-none${eq[slot] ? '' : ' on'}" data-cosoff="${slot}"><svg class="cos-none-i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6.5 17.5 17.5 6.5" stroke="currentColor" stroke-width="2"/></svg><small>${esc(L('none'))}</small></button>`;
   let list = '';
   switch (wslot) {
     case 'title': list = offBtn('title') + owned(TITLES).map((t) => opt('title', t, plateBox(eq.plate ?? 'driftwood', t.id, 'cos-plate cos-plate-sm'))).join(''); break;
@@ -341,7 +345,7 @@ export function wardrobe(state: ClientState): string {
   return `<div class="cos-wr">
     <div class="cos-wr-look">${shipPrev({ emblem: eq.emblem, cloth: eq.cloth, trail: eq.trail, plate: eq.plate, title: eq.title }, 'cos-ship cos-ship-lg')}
       <div class="cos-wr-me">${framedFace(ownFace(state), eq.frame, 46, 1.9)}<span><b>${esc(state.self?.name ?? '')}</b><small class="muted">${esc(t ? T(t.name) : L('wardrobe.sub'))}</small></span></div></div>
-    <div class="cos-wr-pick"><div class="w-chips cos-wr-chips">${chips}</div><p class="muted cos-tip">${esc(L('tip'))}</p><div class="cos-opts">${list}</div></div>
+    <div class="cos-wr-pick"><div class="cos-wr-chips">${chips}</div><p class="muted cos-tip">${esc(L('tip'))}</p><div class="cos-opts">${list}</div></div>
   </div>`;
 }
 
@@ -399,11 +403,17 @@ export function mountQuickEmotes(state: ClientState, send: (m: ClientMsg) => voi
   panel.className = 'cos-qpanel hidden';
   host.append(btn, panel);
   const face = () => {
-    btn.innerHTML = icon('cos.emote_parrot', '☺', 'cos-qbtn-i');
+    const url = assetUrl('cos.emote_parrot');
+    btn.innerHTML = url ? `<img class="cos-qbtn-i" src="${url}" alt="" draggable="false" />` : '';
     btn.setAttribute('aria-label', L('quick'));
     btn.title = L('quick');
   };
   face();
+  // (the manifest may come after the HUD: the button's picture once it does)
+  const wait = setInterval(() => {
+    if (btn.querySelector('img')) return clearInterval(wait);
+    face();
+  }, 1000);
   let cool = 0;
   const close = () => {
     panel.classList.add('hidden');

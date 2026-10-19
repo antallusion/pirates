@@ -240,3 +240,35 @@ export function cosMessage(game: Game, s: PlayerSession, msg: { action?: string;
   if (why) game.sendTo(s, { t: 'toast', msg: why, kind: 'bad' });
   sendCos(game, s);
 }
+
+// ------------------------------------------------------------------------------------------------ the admin
+
+/** `/cos`: what she has and wears; `all`: every thing hers; `wear slot id`; `reset`: all forgotten. */
+export function adminCos(game: Game, s: PlayerSession, args: string[]): string {
+  const st = cosState(game, s.accountId);
+  switch (args[0]) {
+    case undefined: {
+      const worn = EQUIP_SLOTS.filter((k) => st.eq[k]).map((k) => `${k} ${st.eq[k]}`).join(', ') || '—';
+      return `Cosmetics: ${ownedSet(game, s.accountId).size} yours; worn: ${worn}.`;
+    }
+    case 'all':
+      st.own = COS_KINDS.flatMap((k) => COS_TABLES[k].map(cosKey)).filter((k) => !FREE_KEYS.includes(k));
+      save(game, s.accountId, st);
+      sendCos(game, s);
+      return 'Every cosmetic is yours.';
+    case 'wear': {
+      const why = equipCos(game, s, String(args[1] ?? ''), args[2] && args[2] !== 'off' ? String(args[2]) : null);
+      sendCos(game, s);
+      return why ?? `Cosmetics: ${ownedSet(game, s.accountId).size} yours; worn: ${EQUIP_SLOTS.filter((k) => st.eq[k]).map((k) => `${k} ${st.eq[k]}`).join(', ') || '—'}.`;
+    }
+    case 'reset':
+      st.own = [];
+      st.eq = { ...NO_EQUIP };
+      save(game, s.accountId, st);
+      dressShip(game, s);
+      sendCos(game, s);
+      return 'Your cosmetics are forgotten.';
+    default:
+      return 'Usage: /cos [all|wear slot id|reset]';
+  }
+}

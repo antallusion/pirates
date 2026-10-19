@@ -38,6 +38,10 @@ const SCREENS = [
   // the offers' cards (‹ › ×) and the shop's window (its ✕, its tabs)
   { id: 'offers', at: 'sea', open: (p) => p.evaluate(() => document.getElementById('tc-offer')?.click()) },
   { id: 'shop', at: 'sea', open: (p) => p.evaluate(() => globalThis.gravetide.shop()) },
+  // docs/32 §12: the cosmetics' tab, the wardrobe, the quick emotes' button and its panel
+  { id: 'cos', at: 'sea', open: (p) => p.evaluate(() => globalThis.gravetide.cos.shop('cos_titles')) },
+  { id: 'wardrobe', at: 'sea', open: (p) => p.evaluate(() => globalThis.gravetide.cos.wardrobe()) },
+  { id: 'cosq', at: 'sea', open: (p) => p.evaluate(() => document.getElementById('cos-qbtn')?.click()) },
 ];
 
 const b = await L.browser();

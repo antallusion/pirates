@@ -2536,9 +2536,9 @@ export class Renderer {
       const cls = SHIP_CLASSES[s.classId];
       const look = emoteLook(this.time - em.at, EMOTE_SHOW_S);
       const size = 44 * look.s;
-      // beside her hull, up and to the right: her name and plate stay readable
-      const x = this.sx(s.x) + Math.max(14, cls.beam * this.zoom * 0.7) + size * 0.35;
-      const y = this.sy(s.y) - Math.max(20, cls.length * this.zoom * 0.4) - size * 0.5 + look.dy;
+      // beside her hull at her own height, to the right: her name and plate above her stay readable
+      const x = this.sx(s.x) + Math.max(22, cls.beam * this.zoom * 0.9) + size * 0.5;
+      const y = this.sy(s.y) + look.dy;
       g.save();
       g.globalAlpha = look.a;
       g.fillStyle = 'rgba(8,10,14,0.55)';

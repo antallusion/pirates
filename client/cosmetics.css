@@ -144,3 +144,36 @@ body.chat-open #hud-chat > .cos-qbtn, body.chat-open #hud-chat > .cos-qpanel, bo
   .cos-qe-row { grid-template-columns: repeat(4, 40px); max-height: 172px; }
   .cos-qe-b { width: 40px; height: 40px; }
 }
+
+/* (after the phone's rules: these win at every size) */
+.cos-prev.cos-prev-fr { height: 84px; overflow: visible; }
+.cos-prev-fr .cos-av { --av: 38px !important; }
+.cos-wr-me .cos-av { margin: 20px 22px; }
+.cos-opt .cos-av.cos-fr { margin: 12px 0 10px; }
+@media (max-height: 520px) {
+  .cos-grid.cos-sets { grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+  .cos-prev.cos-prev-fr { height: 70px; }
+  .cos-prev-fr .cos-av { --av: 32px !important; }
+  .cos-wr-me .cos-av { margin: 14px 16px; }
+}
+.cos-was, .cos-was * { text-decoration: line-through; text-decoration-color: rgba(200, 80, 70, 0.8); }
+
+/* the quick emotes' button where the chat's own button stands: a phone's simple HUD — the next place in the left
+   row after its last button (the chat's line of words one place further on); a desk — beside the chat's button by
+   the helm. Its panel opens under (a phone) or over (a desk) it. */
+@media (max-width: 1099px), (max-height: 599px) {
+  body.simple:not(.chat-open):not(.tac) #hud-chat > .cos-qbtn { top: var(--lr-top); right: auto; left: calc(var(--sa-l) + 8px + (var(--tr-c) + var(--lr-i) + var(--lr-o) + var(--lr-d)) * (var(--tr-b) + var(--tr-g))); width: var(--tr-b); height: var(--tr-b); }
+  body.simple:not(.chat-open):not(.tac) #hud-chat > .chat-toast { left: calc(var(--sa-l) + 8px + (var(--tr-c) + var(--lr-i) + var(--lr-o) + var(--lr-d) + 1) * (var(--tr-b) + var(--tr-g))); }
+  body.simple:not(.chat-open):not(.tac) #hud-chat > .cos-qpanel { top: calc(var(--lr-top) + var(--tr-b) + 18px); right: auto; left: calc(var(--sa-l) + 8px); }
+}
+@media (min-width: 1100px) and (min-height: 600px) {
+  body:not(.touch) #hud-chat > .cos-qbtn { top: auto; right: auto; left: calc(var(--chat-desk-l) + 58px); bottom: calc(var(--sa-b) + var(--dk-pad, 16px) + 2px); width: 44px; height: 44px; }
+  body:not(.touch) #hud-chat > .chat-toast { left: calc(var(--chat-desk-l) + 112px); }
+  body:not(.touch) #hud-chat > .cos-qpanel { top: auto; right: auto; left: calc(var(--chat-desk-l) + 58px); bottom: calc(var(--sa-b) + var(--dk-pad, 16px) + 54px); }
+}
+/* (the measured centring, align.mjs: a caption's ink ends at its baseline — the line's room under it is given back) */
+.cos-opt small { position: relative; top: 2px; }
+.cos-opt .cos-none-i { width: 26px; height: 26px; color: var(--steel-text); }
+.cos-wr-chips .w-chips { flex-wrap: wrap; }
+.cos-opt.cos-none small { top: 0; }
+.cos-opt.cos-none .cos-none-i { transform: translateY(-2px); }

@@ -35,7 +35,8 @@ export function plateCanvas(plateId: string, words: string, dpr: number, h = PLA
   const spr = sprite(`cos.plate_${p.id}`);
   if (!spr) return null;
   const k = Math.max(1, Math.min(3, Math.round(dpr * 2) / 2));
-  const key = `${p.id}|${words}|${k}|${h}`;
+  // (drawn again once the web fonts are in: the first, in a fallback face, is kept until then)
+  const key = `${p.id}|${words}|${k}|${h}|${fontsIn() ? 1 : 0}`;
   const hit = plates.get(key);
   if (hit) return hit;
   const c = document.createElement('canvas');
@@ -73,10 +74,8 @@ export function plateCanvas(plateId: string, words: string, dpr: number, h = PLA
   g.strokeText(words, cx, cy, maxW);
   g.fillStyle = p.ink;
   g.fillText(words, cx, cy, maxW);
-  if (fontsIn()) {
-    if (plates.size > 160) plates.clear();
-    plates.set(key, c);
-  }
+  if (plates.size > 160) plates.clear();
+  plates.set(key, c);
   return c;
 }
 
@@ -160,7 +159,7 @@ export function drawWavingFlag(g: CanvasRenderingContext2D, cloth: HTMLCanvasEle
 /** The pool's motes, every ship's together; the ships that may emit at once; a ship's motes a second at full speed. */
 export const TRAIL_MAX = 720;
 export const TRAIL_SHIPS = 16;
-const RATE = 16;
+const RATE = 22;
 
 const dots = new Map<string, HTMLCanvasElement>();
 
@@ -221,6 +220,7 @@ export class TrailPool {
       this.size[i] = t.size * (0.7 + Math.random() * 0.6);
       this.kind[i] = ki;
     }
+    if (this.debt.size > 256) this.debt.clear(); // (ships long gone: their crumbs of a mote forgotten)
     this.debt.set(id, d);
   }
 
@@ -246,8 +246,9 @@ export class TrailPool {
     this.live = n;
   }
 
-  /** Every mote on the canvas (`sx`, `sy` world → screen; `k` px a world unit; `w`, `h` the screen). */
-  draw(g: CanvasRenderingContext2D, sx: (x: number) => number, sy: (y: number) => number, k: number, w: number, h: number): void {
+  /** Every mote on the canvas (`sx`, `sy` world → screen; `k` px a world unit; `w`, `h` the screen; `dot` the motes'
+   *  size against the sea's — a shop's close preview draws them smaller, or they melt into one glow). */
+  draw(g: CanvasRenderingContext2D, sx: (x: number) => number, sy: (y: number) => number, k: number, w: number, h: number, dot = 1): void {
     if (!this.live) return;
     g.save();
     for (let kk = 0; kk < KINDS.length; kk++) {
@@ -261,10 +262,11 @@ export class TrailPool {
           g.globalCompositeOperation = t.glow ? 'lighter' : 'source-over';
         }
         const a = this.age[i] / this.life[i];
-        const r = this.size[i] * k * (t.id === 'mist' || t.id === 'ink' ? 0.6 + a * 1.6 : t.id === 'fire' ? 1.1 - a * 0.7 : 1) + 0.6;
+        // (never under ~2.5 px: a phone's sea is drawn at half scale, and a mote smaller than that is a speck)
+        const r = Math.max(2.4, this.size[i] * k * 1.4 * dot) * (t.id === 'mist' || t.id === 'ink' ? 0.7 + a * 1.4 : t.id === 'fire' ? 1.15 - a * 0.6 : 1);
         const px = sx(this.x[i]), py = sy(this.y[i]);
         if (px < -r || py < -r || px > w + r || py > h + r) continue;
-        g.globalAlpha = (1 - a) * (a < 0.12 ? a / 0.12 : 1) * (t.glow ? 0.85 : 0.55);
+        g.globalAlpha = (1 - a) * (a < 0.12 ? a / 0.12 : 1) * (t.glow ? 0.85 : 0.55) * (dot < 1 ? 0.7 : 1);
         g.drawImage(dotOf(t), px - r, py - r, r * 2, r * 2);
       }
     }
