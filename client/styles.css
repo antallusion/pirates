@@ -101,6 +101,14 @@ button { font-family: var(--sans); }
 .captain-card .arch { font-family: var(--display); font-size: 17px; }
 .captain-card .nm { color: var(--fog); font-size: 12px; font-family: var(--serif); font-style: italic; }
 .premium { color: var(--turq); font-size: 10px; letter-spacing: 0.12em; }
+/* a premium captain not yet bought (owner, 2026-10-19): the padlock and the price, the real money first */
+.captain-card .cc-lock { display: flex; align-items: center; flex-wrap: wrap; gap: 3px 5px; color: var(--gold); }
+.captain-card .cc-lock-i { width: 1.15em; height: 1.15em; flex: none; }
+.captain-card .cc-price { font-size: 12px; letter-spacing: 0; }
+.captain-card.cc-shut .portrait { filter: grayscale(0.45) brightness(0.82); }
+.captain-detail .cc-buy { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.captain-detail .cc-why { margin: 6px 0 0; color: var(--bone); font: 500 12px/1.3 var(--sans); }
+.captain-detail .cc-why:empty { display: none; }
 .captain-detail { display: grid; grid-template-columns: 300px 1fr; gap: 20px; overflow-y: auto; }
 .captain-detail .big-portrait { width: 300px; height: 400px; background: #0c0c0c center / cover; border: 1px solid var(--brass-dim); box-shadow: inset 0 0 60px rgba(0,0,0,0.8); }
 .captain-detail h3 { font-family: var(--display); font-size: 28px; margin: 0; font-weight: 400; }

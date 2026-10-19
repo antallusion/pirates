@@ -79,7 +79,7 @@ import { objective, setTracked, setWaypoint as setMark, trackedId, trackedQuest,
 import { Net } from './net.ts';
 import { Renderer, shipHeel } from './render/renderer.ts';
 import { ClientState } from './state.ts';
-import { showCaptainSelect } from './ui/captain.ts';
+import { captainBalance, captainShopHeard, showCaptainSelect } from './ui/captain.ts';
 import { renderBoarding, renderHelp, renderShip, renderSunk } from './ui/dialogs.ts';
 import { renderCrew, renderMutiny } from './ui/crew.ts';
 import { CompanyScreen, renderBarter } from './ui/company.ts';
@@ -1459,6 +1459,11 @@ function onMessage(m: ServerMsg): void {
           btn.textContent = L('continueAs', { name: localStorage.getItem(CAPTAIN_KEY)! });
           btn.classList.remove('hidden');
         }
+      } else if (!inGame && m.msg === 'That captain is sold for doubloons') {
+        // (a premium captain refused at the choice: the screen back, the reason under its button)
+        $('screen-captain').classList.remove('hidden');
+        const why = document.getElementById('captain-why');
+        if (why) why.textContent = serverText(m.msg);
       } else if (!inGame) $('login-error').textContent = serverText(m.msg);
       // The glass asks by itself every few seconds (askGlass): its «too far» is no refusal of hers to tell.
       else if (GLASS_QUIET.has(m.msg)) break;
@@ -1474,7 +1479,7 @@ function onMessage(m: ServerMsg): void {
       if (!m.hasCaptain) showCaptainSelect((captain, shipName, tutorial) => {
         prologuePending = tutorial;
         net.send({ t: 'create_captain', captain, shipName, tutorial });
-      });
+      }, (x) => net.send(x));
       break;
     case 'init':
       bootMark('init');
@@ -1790,11 +1795,15 @@ function onMessage(m: ServerMsg): void {
     case 'tame':
       if (modal === 'tame') refreshModal();
       break;
+    case 'captain_shop': // the premium captains on the choice screen (owner, 2026-10-19)
+      captainShopHeard(m);
+      break;
     case 'premium':
     case 'doubloons':
       if (modal === 'shop') refreshModal();
       // a premium purchase heard (the balance down: the doubloons spent)
       if (m.t === 'doubloons') {
+        captainBalance(m.n);
         if (lastDoubloons >= 0 && m.n < lastDoubloons) cue('buy');
         lastDoubloons = m.n;
         // the top-up came in: the purchase it was for goes now (price.ts topUpThenBuy)

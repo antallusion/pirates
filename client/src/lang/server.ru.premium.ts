@@ -3,6 +3,10 @@
 
 export const SERVER_RU_PREMIUM: Record<string, string> = {
   'Doubloons credited to your account: {0}.': 'Зачислено дублонов на ваш счёт: {0}.',
+  // The premium captains are bought (owner, 2026-10-19; server/src/game/captainshop.ts).
+  'That captain is sold for doubloons': 'Этого капитана нужно сначала купить за дублоны',
+  'That captain is free to choose': 'Этого капитана можно выбрать бесплатно',
+  'That captain is yours already': 'Этот капитан уже ваш',
   'Not enough doubloons: top up your account first.': 'Не хватает дублонов: сначала пополните счёт.',
   'A hull is delivered in port: make port first.': 'Корабль передают только в порту: сначала зайдите в гавань.',
   'The yard has her on the ways.': 'Корабль сейчас на стапеле верфи.',

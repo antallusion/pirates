@@ -24,6 +24,7 @@ import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import type { WsConnection } from '../server/src/net/websocket.ts';
 import { makeGame } from '../tests/helpers.ts';
+import { grantCaptain } from '../server/src/game/captainshop.ts';
 
 const BLOCKS = Math.max(1, Number(process.argv[2] ?? 3));
 const TICKS = Math.max(100, Number(process.argv[3] ?? 600));
@@ -66,9 +67,10 @@ function build(live: boolean): Scene {
   const caps: Scene['caps'] = [];
   for (let i = 0; i < N; i++) {
     const conn = new CountConn();
-    game.attach(conn as unknown as WsConnection);
+    const sess = game.attach(conn as unknown as WsConnection);
     const name = `Endgame ${i}`;
     conn.push({ t: 'hello', v: PROTOCOL_VERSION, name });
+    if (i % 6 >= 4) grantCaptain(game, sess.accountId, i % 6 === 4 ? 'drowned' : 'admiral'); // premium captains are bought (2026-10-19)
     conn.push({ t: 'create_captain', captain: (['corsair', 'reaver', 'smuggler', 'navigator', 'drowned', 'admiral'] as const)[i % 6], shipName: `Wake ${i}` });
     const s = game.sessionByName(name)!;
     if (s.profile?.tutorial) s.profile.tutorial.on = false;

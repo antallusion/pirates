@@ -125,7 +125,7 @@ export function creditPremium(game: Game, accountId: number, amount: number, sou
 
 /** The balance moved and its ledger row written together, and whatever the purchase hands over with them (null: it
  *  would go below nought — nothing written, nothing handed over). */
-function move(game: Game, accountId: number, delta: number, kind: string, detail: string, then?: () => void): number | null {
+export function move(game: Game, accountId: number, delta: number, kind: string, detail: string, then?: () => void): number | null {
   let bal = null as number | null;
   game.db.transaction(() => {
     bal = game.db.addDoubloons(accountId, delta);

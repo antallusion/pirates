@@ -13,6 +13,7 @@
 //  - Everything escaped; links stay words, but our own domain's.
 
 import { esc, faceOf, icon, portraitUrl, glyphSvg } from './dom.ts';
+import { faceCrop } from './kit/faces.ts';
 import { sagaCardHtml } from './saga.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/chat.ts';
@@ -482,8 +483,16 @@ export class ChatPanel {
     if (stick || this.isOwn(m)) this.log.scrollTop = this.log.scrollHeight;
   }
 
-  private faceUrl(face: string | undefined, name: string): string | null {
-    return (face && portraitUrl(face)) || portraitUrl(faceOf(name));
+  /** The face's attributes: the portrait with its head set in the middle of the round frame (kit/faces.ts; owner,
+   *  2026-10-19: «аватарка в чате — там лицо капитана не отцентровано»). A captain's own portrait, else the stand-in
+   *  face of her name (those are 448×560). */
+  private faceStyle(face: string | undefined, name: string): string {
+    const own = face ? portraitUrl(face) : null;
+    const id = own ? face! : faceOf(name);
+    const url = own ?? portraitUrl(id);
+    if (!url) return '';
+    const c = faceCrop(id, /^pirate_/.test(id) ? 560 / 448 : 560 / 422);
+    return ` data-crop="face" data-face="${c.face}" style="background-image:url('${esc(url)}');background-size:${c.size};background-position:${c.pos}"`;
   }
 
   private time(at: number | undefined): string {
@@ -498,9 +507,9 @@ export class ChatPanel {
     const rel = chatRel(m, c);
     const own = rel === 'self';
     const name = m.from.replace(/^\[[^\]]*\]\s*/, '');
-    const face = this.faceUrl(m.face, name);
+    const face = this.faceStyle(m.face, name);
     const nick = own ? '' : ` data-nick="${esc(name)}"`;
-    const faceEl = `<${own ? 'span' : 'button type="button"'} class="cl-face"${nick}${face ? ` style="background-image:url('${esc(face)}')"` : ''} aria-label="${esc(name)}"></${own ? 'span' : 'button'}>`;
+    const faceEl = `<${own ? 'span' : 'button type="button"'} class="cl-face"${nick}${face} aria-label="${esc(name)}"></${own ? 'span' : 'button'}>`;
     const tag = m.g ? `<span class="cl-g">[${esc(m.g)}]</span>` : '';
     const lv = m.lv ? `<span class="cl-lv">${esc(L('lv', { n: m.lv }))}</span>` : '';
     const to = m.ch === 'whisper' && m.to ? `<span class="cl-to">${esc(L('to', { name: m.to }))}</span>` : '';
@@ -516,9 +525,9 @@ export class ChatPanel {
     }
     this.log.innerHTML = list.map(([k, p]) => {
       const last = (this.lines.get(`dm:${k}`) ?? []).at(-1);
-      const face = this.faceUrl(p.face, p.name);
+      const face = this.faceStyle(p.face, p.name);
       const said = last ? `${this.isOwn(last) ? `${esc(L('you'))}: ` : ''}${chatBody(last.text)}` : '';
-      return `<button type="button" class="ct-thread" data-peer="${esc(k)}"><span class="cl-face"${face ? ` style="background-image:url('${esc(face)}')"` : ''}></span><span class="ct-th-body"><span class="ct-th-top"><b>${esc(p.name)}</b>${p.lv ? `<span class="cl-lv">${esc(L('lv', { n: p.lv }))}</span>` : ''}</span><span class="ct-th-last">${said}</span></span>${p.unread ? `<i class="ct-n">${p.unread > 9 ? '9+' : p.unread}</i>` : ''}</button>`;
+      return `<button type="button" class="ct-thread" data-peer="${esc(k)}"><span class="cl-face"${face}></span><span class="ct-th-body"><span class="ct-th-top"><b>${esc(p.name)}</b>${p.lv ? `<span class="cl-lv">${esc(L('lv', { n: p.lv }))}</span>` : ''}</span><span class="ct-th-last">${said}</span></span>${p.unread ? `<i class="ct-n">${p.unread > 9 ? '9+' : p.unread}</i>` : ''}</button>`;
     }).join('');
   }
 
@@ -529,8 +538,8 @@ export class ChatPanel {
     if (!on) return;
     const p = this.peers.get(this.peer!);
     const name = p?.name ?? this.peer!;
-    const face = this.faceUrl(p?.face, name);
-    this.peersBar.innerHTML = `<button type="button" class="chat-back g-only" data-back aria-label="${esc(L('back'))}" title="${esc(L('back'))}">${glyphSvg('prev')}</button><button type="button" class="chat-peer" data-nick="${esc(name)}"><span class="cl-face"${face ? ` style="background-image:url('${esc(face)}')"` : ''}></span><b>${esc(name)}</b>${p?.lv ? `<span class="cl-lv">${esc(L('lv', { n: p.lv }))}</span>` : ''}</button>`;
+    const face = this.faceStyle(p?.face, name);
+    this.peersBar.innerHTML = `<button type="button" class="chat-back g-only" data-back aria-label="${esc(L('back'))}" title="${esc(L('back'))}">${glyphSvg('prev')}</button><button type="button" class="chat-peer" data-nick="${esc(name)}"><span class="cl-face"${face}></span><b>${esc(name)}</b>${p?.lv ? `<span class="cl-lv">${esc(L('lv', { n: p.lv }))}</span>` : ''}</button>`;
   }
 
   private drawBadge(): void {
@@ -569,8 +578,8 @@ export class ChatPanel {
 
   private showToast(m: ChatLine, tab: ChatTab, peer?: string): void {
     const words = m.text.length > 44 ? `${m.text.slice(0, 43)}…` : m.text;
-    const face = this.faceUrl(m.face, m.from);
-    this.toastEl.innerHTML = `<span class="cl-face"${face ? ` style="background-image:url('${esc(face)}')"` : ''}></span><span class="chat-toast-t"><b>${esc(m.from)}</b> ${chatBody(words)}</span>`;
+    const face = this.faceStyle(m.face, m.from);
+    this.toastEl.innerHTML = `<span class="cl-face"${face}></span><span class="chat-toast-t"><b>${esc(m.from)}</b> ${chatBody(words)}</span>`;
     this.toastEl.dataset.tab = tab;
     if (peer) this.toastEl.dataset.peer = peer;
     else delete this.toastEl.dataset.peer;
@@ -593,14 +602,14 @@ export class ChatPanel {
     const last = [...(this.lines.get('world') ?? []), ...(this.lines.get('local') ?? []), ...(this.lines.get('group') ?? []), ...(this.lines.get('guild') ?? []), ...(this.lines.get(`dm:${k}`) ?? [])]
       .filter((m) => low(m.from) === k).sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).at(-1);
     const p = this.peers.get(k);
-    const face = this.faceUrl(last?.face ?? p?.face, name);
+    const face = this.faceStyle(last?.face ?? p?.face, name);
     const lv = last?.lv ?? p?.lv;
     const blocked = (c.ignored ?? []).some((x) => low(x) === k);
     const muted = this.muted.has(k);
     const friend = c.friends.includes(name);
     const inGroup = c.group.includes(name);
     const btn = (act: string, art: string, word: string) => `<button type="button" class="chat-card-b" data-act="${act}">${icon(art, '', 'ico-sm')}<span>${esc(word)}</span></button>`;
-    this.card.innerHTML = `<div class="chat-card-head"><span class="cl-face chat-card-face"${face ? ` style="background-image:url('${esc(face)}')"` : ''}></span><div class="chat-card-who"><b>${esc(name)}</b><span>${last?.g ? `[${esc(last.g)}] ` : ''}${lv ? esc(L('lv', { n: lv })) : ''}</span></div><button type="button" class="chat-x g-only" data-act="close" aria-label="${esc(L('card_close'))}">${glyphSvg('close')}</button></div>`
+    this.card.innerHTML = `<div class="chat-card-head"><span class="cl-face chat-card-face"${face}></span><div class="chat-card-who"><b>${esc(name)}</b><span>${last?.g ? `[${esc(last.g)}] ` : ''}${lv ? esc(L('lv', { n: lv })) : ''}</span></div><button type="button" class="chat-x g-only" data-act="close" aria-label="${esc(L('card_close'))}">${glyphSvg('close')}</button></div>`
       + `<div class="chat-card-acts">${btn('dm', 'tab_letters', L('card_dm'))}${inGroup ? '' : btn('invite', 'tab_group', L('card_invite'))}${friend ? '' : btn('friend', 'menu_company', L('card_friend'))}${btn('mute', 'weather_fog', muted ? L('card_unmute') : L('card_mute'))}${btn('block', 'bt_defend', blocked ? L('card_unblock') : L('card_block'))}${btn('report', 'tab_law', L('card_report'))}</div>`;
     this.card.classList.remove('hidden');
     this.emotes.classList.add('hidden');
