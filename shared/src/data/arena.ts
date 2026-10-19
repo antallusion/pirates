@@ -377,6 +377,9 @@ export interface ArenaRow {
   bouts: number;
   wins: number;
   you?: boolean;
+  /** docs/32 §12: her portrait (a captain's id) and her avatar frame (cosmetics.ts), when worn. */
+  face?: string;
+  fr?: string;
 }
 
 export interface ArenaView {

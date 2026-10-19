@@ -24,6 +24,15 @@ import type { ClientState } from '../state.ts';
 import { specialName, unitIcon, unitName } from './army.ts';
 import { dec1, esc, fmt, icon } from './dom.ts';
 import type { ThroneTab } from './throne.ts';
+import { framedFace } from './cosmetics.ts'; // docs/32 §12: the table's faces in their frames
+import type { CaptainId } from '../../../shared/src/data/captains.ts';
+import { assetUrl as cosAsset } from '../assets.ts';
+
+/** A row's face in her frame (docs/32 §12): her captain's portrait, small. */
+function tableFace(face: string | undefined, fr: string | undefined): string {
+  const cap = face ? CAPTAINS[face as CaptainId] : undefined;
+  return cap ? `<span class="ar-face">${framedFace({ id: cap.portrait, url: cosAsset(cap.portrait) }, fr, 20, 1.75)}</span>` : '';
+}
 
 const L = dict(EN, RU);
 const TL = dict(TEN, TRU);
@@ -69,7 +78,7 @@ function lobby(v: ArenaView, state: ClientState): string {
        <button class="btn btn-small btn-primary" data-arop="queue" ${why ? 'disabled' : ''} title="${esc(why)}">${esc(L('queueBtn'))}</button>
        <button class="btn btn-small" data-arop="practice" ${why ? 'disabled' : ''} title="${esc(why)}">${esc(L('practiceBtn'))}</button>`;
   const table = v.table.length
-    ? `<ol class="ar-table">${v.table.map((r, i) => `<li class="${r.you ? 'you' : ''}"><i>${r.you && i >= 10 ? v.place : i + 1}</i><b>${esc(personName(r.name))}</b><span>${esc(L('tableRow', { r: r.rating, w: r.wins, n: r.bouts }))}</span></li>`).join('')}</ol>`
+    ? `<ol class="ar-table">${v.table.map((r, i) => `<li class="${r.you ? 'you' : ''}"><i>${r.you && i >= 10 ? v.place : i + 1}</i>${tableFace(r.face, r.fr)}<b>${esc(personName(r.name))}</b><span>${esc(L('tableRow', { r: r.rating, w: r.wins, n: r.bouts }))}</span></li>`).join('')}</ol>`
     : `<p class="muted hx-none">${esc(L('tableNone'))}</p>`;
   return `<div class="th-head">
       <div class="th-medal ar-medal" title="${esc(L('rating'))}"><span>${icon('item_duelling_pistols', '⚔', 'ico-sm')}</span><b>${v.rating}</b></div>

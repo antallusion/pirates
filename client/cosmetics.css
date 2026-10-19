@@ -1,0 +1,146 @@
+/* GRAVETIDE · the cosmetics (docs/32 §12; client/src/ui/cosmetics.ts): the shop's «Косметика» tab, the wardrobe, the
+   frames round the portraits everywhere, the quick emotes by the chat's button, an emote in a chat line. The shop's own
+   look (shop.css: the brass plates of the offers, the dark cards) is kept; a card's colour line tells its tier. */
+
+/* ------------------------------------------------------------------ a frame round a portrait (anywhere) */
+.cos-ring { position: absolute; left: 50%; top: 50%; z-index: 2; width: calc(100% * var(--k, 2)); height: calc(100% * var(--k, 2)); max-width: none; margin: 0; transform: translate(-50%, -50%); pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)); }
+.cos-fr::after { display: none !important; }
+.cos-av { position: relative; display: inline-block; flex: none; width: var(--av); height: var(--av); vertical-align: middle; }
+.cos-av-face { position: absolute; inset: 0; border-radius: 50%; background: #15120e 50% 22% / cover no-repeat; box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.7); }
+.cs-frame.cos-fr .cos-ring, .uf-portrait.cos-fr .cos-ring { z-index: 1; }
+#hud-chat .cl-face.cos-fr { box-shadow: none; overflow: visible; }
+.insp-framed { display: flex; align-items: center; justify-content: center; width: 120px; height: 150px; }
+@media (max-height: 480px) { .insp-framed { width: 92px; height: 115px; } }
+.ar-face { display: inline-flex; width: 26px; justify-content: center; margin-right: 4px; }
+
+/* ------------------------------------------------------------------ the tab */
+.cos-body { padding-bottom: 14px; }
+.cos-lead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 6px; }
+.cos-lead p { margin: 0; font-size: 12px; line-height: 1.3; }
+.cos-wbtn { flex: none; display: inline-flex; align-items: center; gap: 5px; }
+.cos-wbtn .ico-sm { width: 18px; height: 18px; margin: 0; }
+.cos-h { margin: 10px 0 6px; font: 600 14px/1.2 var(--serif); color: var(--gold); letter-spacing: 0.02em; }
+.cos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(154px, 1fr)); gap: 8px; align-items: stretch; }
+.cos-card { position: relative; display: flex; flex-direction: column; gap: 5px; min-width: 0; margin: 0; padding: 7px 7px 8px; border: 1px solid rgba(176, 141, 87, 0.42); border-top: 2px solid var(--tier, rgba(176, 141, 87, 0.6)); border-radius: 4px;
+  background: linear-gradient(180deg, rgba(32, 27, 22, 0.94), rgba(13, 12, 11, 0.96)); box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4); }
+.cos-card.worn { border-color: rgba(224, 184, 98, 0.85); box-shadow: inset 0 0 14px rgba(224, 184, 98, 0.12), 0 0 0 1px rgba(224, 184, 98, 0.35); }
+.cos-card.shut { opacity: 0.7; }
+.cos-t0 { --tier: #8a8172; } .cos-t1 { --tier: #6f9a6a; } .cos-t2 { --tier: #4f86b8; } .cos-t3 { --tier: #9a5cc4; } .cos-t4 { --tier: #e0a640; }
+.cos-prev { display: flex; align-items: center; justify-content: center; height: 64px; border-radius: 3px; background: radial-gradient(circle at 50% 45%, rgba(224, 184, 98, 0.1), rgba(6, 8, 10, 0.85) 75%); overflow: hidden; }
+.cos-prev .cos-plate { width: 100%; max-width: 150px; height: auto; }
+.cos-prev .cos-av { --av: 40px; }
+.cos-ship { display: block; width: 100%; height: 64px; }
+.cos-emo { width: 34px; height: 34px; margin: 0 1px; object-fit: contain; }
+.cos-emo-lg { width: 56px; height: 56px; margin: 0; object-fit: contain; }
+.cos-emos { gap: 2px; }
+.cos-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.cos-name { font: 600 14px/1.15 var(--serif); color: var(--bone); overflow-wrap: anywhere; }
+.cos-tier { font-size: 11px; line-height: 1.2; color: var(--tier); display: inline-flex; align-items: center; gap: 4px; }
+.cos-note { font: italic 12.5px/1.25 var(--serif); color: #d6c39a; }
+.cos-sw { display: inline-block; width: 11px; height: 11px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(232, 220, 192, 0.55); vertical-align: -1px; }
+.cos-sw-lg { width: 30px; height: 30px; border-radius: 50%; }
+.cos-trail-sw { box-shadow: 0 0 0 1px rgba(176, 141, 87, 0.5); background-color: #071015 !important; }
+.cos-foot { margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; }
+.cos-foot .sh-off { flex: 1 1 auto; min-height: 38px; }
+.cos-foot .btn { width: 100%; }
+.cos-own { font: 600 12px/1.2 var(--sans); color: #9fd49a; }
+.cos-worn { border-color: rgba(224, 184, 98, 0.9) !important; color: var(--gold) !important; }
+.cos-only { font-size: 11px; line-height: 1.25; color: #c9b27c; text-align: center; }
+.cos-earn { display: flex; flex-direction: column; gap: 3px; width: 100%; font-size: 11px; line-height: 1.25; color: var(--steel-text); text-align: center; }
+.cos-bar { display: block; height: 4px; border-radius: 2px; background: rgba(0, 0, 0, 0.6); box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.35); overflow: hidden; }
+.cos-bar b { display: block; height: 100%; background: linear-gradient(90deg, #8c6b3a, #e0b862); }
+.cos-was { font-size: 11px; color: var(--steel-text); }
+.cos-was .rp-dbl { display: none; }
+
+/* the bundles */
+.cos-sets { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.cos-set { display: grid; grid-template-columns: 76px minmax(0, 1fr); grid-template-areas: 'ico txt' 'foot foot'; gap: 6px 10px; }
+.cos-set-i { grid-area: ico; width: 76px; height: 76px; margin: 0; object-fit: contain; filter: drop-shadow(0 2px 4px #000); }
+.cos-set .cos-txt { grid-area: txt; gap: 3px; }
+.cos-set .cos-foot { grid-area: foot; justify-content: flex-start; }
+.cos-set .cos-foot .sh-off { flex: 0 1 160px; }
+.cos-ths { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
+.cos-th { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 3px; background: rgba(6, 8, 10, 0.8); box-shadow: 0 0 0 1px rgba(176, 141, 87, 0.35); }
+.cos-th.own { box-shadow: 0 0 0 1px rgba(159, 212, 154, 0.7); }
+.cos-th-i { width: 22px; height: 22px; margin: 0; object-fit: contain; }
+.cos-th.emb .cos-th-i { width: 18px; height: 18px; }
+.cos-clock { font-size: 11.5px; color: var(--steel-text); }
+.cos-clock b { color: var(--gold); font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------------ the wardrobe */
+.cos-wr-head { display: flex; align-items: center; gap: 10px; }
+.cos-wr-head .muted { font-size: 12px; }
+.cos-wr { display: grid; grid-template-columns: minmax(200px, 38%) minmax(0, 1fr); gap: 12px; align-items: start; }
+.cos-wr-look { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 0; }
+.cos-ship-lg { height: 150px; border-radius: 4px; box-shadow: 0 0 0 1px rgba(176, 141, 87, 0.4), inset 0 0 18px #000; }
+.cos-wr-me { display: flex; align-items: center; gap: 12px; padding: 4px 10px; }
+.cos-wr-me > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.cos-wr-me b { font: 600 15px/1.2 var(--serif); color: var(--bone); }
+.cos-wr-me small { font-size: 11.5px; }
+.cos-wr-pick { min-width: 0; }
+.cos-wr-chips { flex-wrap: wrap; }
+.cos-tip { margin: 4px 0 6px; font-size: 11.5px; }
+.cos-opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+.cos-opt { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 64px; padding: 5px 4px; margin: 0; border: 1px solid rgba(176, 141, 87, 0.45); border-radius: 4px;
+  background: linear-gradient(180deg, #221d18, #110f0c); color: var(--bone); cursor: pointer; touch-action: manipulation; }
+.cos-opt.on { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(224, 184, 98, 0.5), inset 0 0 10px rgba(224, 184, 98, 0.15); }
+.cos-opt small { font-size: 10.5px; line-height: 1.15; text-align: center; overflow-wrap: anywhere; color: #d8cbae; }
+.cos-opt .cos-plate-sm { width: 100%; max-width: 110px; height: auto; }
+.cos-opt .cos-av { --av: 30px; margin: 6px 0; }
+.cos-none-i { font-size: 22px; line-height: 30px; color: var(--steel-text); }
+.cos-embl { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 26px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(232, 220, 192, 0.4); }
+.cos-embl-i { width: 22px; height: 22px; margin: 0; }
+.cos-emo-own { cursor: default; }
+.cos-emo-own .cos-emo { width: 40px; height: 40px; }
+.cos-plate-card { display: block; width: 150px; max-width: 100%; height: auto; margin: 2px 0 4px; }
+
+/* ------------------------------------------------------------------ the quick emotes (by the chat's button) */
+#hud-chat > .cos-qbtn { position: absolute; display: block; box-sizing: border-box; width: calc(var(--chat-btn) * 0.86); height: calc(var(--chat-btn) * 0.86); padding: 0; border-radius: 50%; border: 2px solid var(--brass-dim);
+  background: rgba(16, 14, 11, 0.92); pointer-events: auto; cursor: pointer; touch-action: manipulation; z-index: 3;
+  right: calc(var(--sa-r) + 8px + var(--chat-btn) * 0.07); top: calc(var(--sa-t) + 120px + var(--chat-btn) + 8px); }
+#hud-chat > .cos-qbtn .cos-qbtn-i { position: absolute; inset: 8%; width: 84%; height: 84%; margin: 0; object-fit: contain; }
+#hud-chat > .cos-qbtn[aria-expanded="true"] { border-color: var(--brass); box-shadow: 0 0 0 2px rgba(232, 196, 106, 0.35); }
+body.chat-open #hud-chat > .cos-qbtn, body.chat-open #hud-chat > .cos-qpanel, body.tac #hud-chat > .cos-qbtn, body.tac #hud-chat > .cos-qpanel { display: none; }
+#hud-chat > .cos-qpanel { position: absolute; z-index: 4; pointer-events: auto; right: calc(var(--sa-r) + 8px + var(--chat-btn) + 8px); top: calc(var(--sa-t) + 120px + var(--chat-btn) - 4px);
+  padding: 6px; border: 1px solid rgba(140, 107, 58, 0.75); border-radius: 8px; background: rgba(12, 10, 8, 0.95); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6); }
+#hud-chat > .cos-qpanel.hidden { display: none; }
+.cos-qe { display: flex; flex-direction: column; gap: 6px; }
+.cos-qe-row { display: grid; grid-template-columns: repeat(4, 44px); gap: 4px; max-height: 196px; overflow-y: auto; }
+.cos-qe-b { width: 44px; height: 44px; padding: 2px; margin: 0; border: 1px solid rgba(176, 141, 87, 0.35); border-radius: 6px; background: rgba(30, 25, 20, 0.9); cursor: pointer; touch-action: manipulation; }
+.cos-qe-b:active { transform: scale(0.94); }
+.cos-qe-i { width: 100%; height: 100%; margin: 0; object-fit: contain; }
+.cos-qe-more { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+
+/* an emote in a chat line, and the picker's tab of them */
+#hud-chat .cl-cosemo { display: inline-flex; align-items: center; gap: 6px; }
+#hud-chat .cl-cosemo-i { width: 40px; height: 40px; margin: 0; object-fit: contain; }
+#hud-chat .cl-cosemo small { font-size: var(--chat-fs-s); color: #c9b98f; font-style: italic; }
+#hud-chat .eg-grid-cos button { width: auto; height: auto; }
+#hud-chat .eg-grid-cos .emo-cos { width: 34px; height: 34px; }
+
+/* ------------------------------------------------------------------ a phone held sideways */
+@media (max-height: 520px) {
+  .cos-lead p { font-size: var(--f-fs-s, 11px); }
+  .cos-grid { grid-template-columns: repeat(auto-fill, minmax(calc(118px + 12 * var(--u, 1px)), 1fr)); gap: var(--f-gap, 6px); }
+  .cos-card { padding: 5px 5px 6px; gap: 3px; }
+  .cos-prev { height: 50px; }
+  .cos-ship { height: 50px; }
+  .cos-prev .cos-av { --av: 30px; }
+  .cos-emo { width: 26px; height: 26px; }
+  .cos-emo-lg { width: 44px; height: 44px; }
+  .cos-name { font-size: var(--f-fs-m, 13px); }
+  .cos-tier, .cos-only, .cos-earn, .cos-clock { font-size: var(--f-fs-xs, 10px); }
+  .cos-note { font-size: var(--f-fs-s, 11px); }
+  .cos-foot { min-height: var(--f-tap, 32px); }
+  .cos-foot .sh-off { min-height: var(--f-tap, 32px); }
+  .cos-h { margin: 6px 0 4px; font-size: 13px; }
+  .cos-set { grid-template-columns: 56px minmax(0, 1fr); }
+  .cos-set-i { width: 56px; height: 56px; }
+  .cos-wr { grid-template-columns: minmax(170px, 36%) minmax(0, 1fr); gap: 8px; }
+  .cos-ship-lg { height: 112px; }
+  .cos-wr-me { padding: 2px 4px; gap: 8px; }
+  .cos-opts { grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 4px; }
+  .cos-opt { min-height: 54px; padding: 3px; }
+  .cos-qe-row { grid-template-columns: repeat(4, 40px); max-height: 172px; }
+  .cos-qe-b { width: 40px; height: 40px; }
+}

@@ -12,6 +12,7 @@ import { serverText } from '../lang/server.ts';
 import { askHtml } from './confirm.ts';
 import { esc } from './dom.ts';
 import { placeName } from './maps.ts';
+import { drawPlatesIn, framedFace, plateHtml } from './cosmetics.ts'; // docs/32 §12
 
 const EN = {
   level: 'Level {n} · {path}',
@@ -61,9 +62,10 @@ export function inspectDialog(v: InspectView, acts: InspectActs, opts: { friend:
   const face = cap ? assetUrl(cap.portrait) : null;
   const stat = (k: keyof typeof EN, n: number | string) => `<div class="insp-stat"><span class="muted">${esc(L(k))}</span><b>${esc(String(n))}</b></div>`;
   const body = `<div class="giver insp">
-      ${face ? `<div class="giver-face" style="background-image:url('${face}')"></div>` : ''}
+      ${v.frame && cap ? `<div class="insp-framed">${framedFace({ id: cap.portrait, url: face }, v.frame, 84, 1.8)}</div>` : face ? `<div class="giver-face" style="background-image:url('${face}')"></div>` : ''}
       <div class="giver-words">
         <h3 id="confirm-text" class="giver-name">${esc(v.name)}</h3>
+        ${v.cosTitle && v.plate ? plateHtml(v.plate, v.cosTitle) : ''}
         ${v.title ? `<div class="giver-who muted">${esc(serverText(v.title))}</div>` : ''}
         ${v.guild ? `<div class="insp-guild">[${esc(v.guild.tag)}] ${esc(v.guild.name)}</div>` : ''}
         <p class="insp-line">${esc(L('level', { n: v.level, path: cap ? serverText(cap.archetype) : v.captain }))}</p>
@@ -75,6 +77,7 @@ export function inspectDialog(v: InspectView, acts: InspectActs, opts: { friend:
     <div class="insp-acts">${opts.canInvite ? `<button class="btn btn-small" data-insp-invite>${esc(L('invite'))}</button>` : ''}${opts.friend ? '' : `<button class="btn btn-small" data-insp-friend>${esc(L('befriend'))}</button>`}</div>`;
   void askHtml(body, L('whisper'), L('close'), 'giver-panel').then((ok) => ok && acts.whisper(v.name));
   const root = document.getElementById('confirm');
+  if (root) drawPlatesIn(root);
   root?.querySelector<HTMLElement>('[data-insp-invite]')?.addEventListener('click', (e) => {
     acts.invite(v.name);
     (e.currentTarget as HTMLElement).remove();

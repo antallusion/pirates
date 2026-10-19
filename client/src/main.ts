@@ -148,6 +148,7 @@ import { RecruitWindow } from './ui/recruit.ts';
 import { TameWindow } from './ui/tame.ts'; // docs/18 IV
 import { ThroneWindow } from './ui/throne.ts'; // docs/19 E1–E3, E18
 import { PremiumWindow } from './ui/premium.ts'; // the premium shop (owner, 2026-10-03)
+import { mountQuickEmotes, ownEmotes } from './ui/cosmetics.ts'; // docs/32 §12: the cosmetics
 import { heardDoubloons } from './ui/price.ts'; // a purchase waiting for its top-up (owner, 2026-10-18)
 import { Promos } from './ui/promo.ts'; // her personal offers (owner, 2026-10-15)
 import { DailyGift } from './ui/dailygift.ts'; // the daily login gift (owner, 2026-10-16)
@@ -438,6 +439,7 @@ function openThrone(tab?: string): void {
 }
 heroWindow.onThrone = () => openThrone();
 heroWindow.onTalents = () => openModal('talents');
+heroWindow.onWardrobe = () => openWardrobe(); // docs/32 §12
 // docs/23 item 70: the level's «pick one of two» comes up by itself when a level comes — not over a window, a fight
 // or a battle (it waits for them to end); levels that waited before she came aboard stay in the Hero tab.
 /** The far seas' news on a novice's screen: her own sea's always, the rest once in WORLD_FEED_GAP ms (docs/30). */
@@ -535,6 +537,10 @@ function openShop(topup = false, at?: Parameters<PremiumWindow['open']>[1]): voi
   premiumWindow.open(topup, at);
   openModal('shop');
 }
+// docs/32 §12: the cosmetics — the quick emotes by the chat's button, the chat picker's own tab, the wardrobe
+mountQuickEmotes(state, (m) => net.send(m), () => openShop(false, { tab: 'cos', sec: 'cos_emotes' }));
+hud.chatPanel.cosEmotes = () => ownEmotes(state).map((e) => ({ id: e.id, name: e.name[lang() === 'ru' ? 1 : 0] }));
+const openWardrobe = (): void => openShop(false, { tab: 'cos', wardrobe: true });
 // «Свиток автобоя» (owner, 2026-10-11): «Купить» on the battle bar and in the locker opens the shop at its scrolls;
 // the island's scene at its builders, the harbour at the sea's goods (owner, 2026-10-15: the three tabs).
 const SHOP_AT: Record<string, Parameters<PremiumWindow['open']>[1]> = { scrolls: { tab: 'board', sec: 'battle' }, isle: { tab: 'isle', sec: 'build' }, sea: { tab: 'sea', sec: 'supply' }, board: { tab: 'board', sec: 'recruit' } };
@@ -1860,6 +1866,10 @@ function onMessage(m: ServerMsg): void {
     case 'captain_shop': // the premium captains on the choice screen (owner, 2026-10-19)
       captainShopHeard(m);
       break;
+    case 'cos': // docs/32 §12: her wardrobe — the shop's tab, her frame on the HUD
+      if (modal === 'shop') refreshModal();
+      hud.redrawCaptain();
+      break;
     case 'premium':
     case 'doubloons':
       if (modal === 'shop') refreshModal();
@@ -1951,6 +1961,7 @@ function onMessage(m: ServerMsg): void {
     case 'ev':
       for (const e of m.list) {
         renderer.fx.onEvent(e, state.entityId);
+        if (e.k === 'emote') renderer.addEmote(e.ship, e.e); // docs/32 §12: over her ship for ~3 s
         // Rumble: a hit on our hull a short knock in both motors; something under the keel a long low hum.
         if (e.k === 'hit' && e.ship === state.entityId && e.dmg > 0) rumble(activePad(), 0.5, 0.5, 120);
         // The phone in the hand (docs/23 item 84): her broadside, a ball on her mark, one on her hull, the grapples.

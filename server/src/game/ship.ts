@@ -331,6 +331,8 @@ export class ShipEntity {
   lfg: string | null = null;
   /** Her look, encoded (docs/12 P10 #12). */
   look: string | null = null;
+  /** What she wears that others see (docs/32 §12, cosmetics.ts encodeCos), or null. */
+  cos: string | null = null;
   /** The Graveyard Captain of this graveyard (expeditions.ts). */
   yardOf = '';
   /** An elite ⚔ built for a company (group contracts, barons): hull ×2.5, guns ×1.5 (canon D12). */
@@ -591,7 +593,7 @@ export class ShipEntity {
       id: this.id, kind: 'ship', name: this.name, classId: this.loadout.classId, faction: this.faction,
       captainName: this.captainName, captainId: this.isPlayer ? this.captain : undefined, npcRole: this.npcRole ?? undefined,
       isPlayer: this.isPlayer, level: this.level, wanted: this.wantedCache, guild: this.guildTag ?? undefined, city: this.city ?? undefined, shipLevel: this.onLadder ? this.shipLevel : undefined, elite: this.elite || undefined, named: this.named ?? this.namedMate,
-      title: this.title ?? undefined, pennant: this.pennant ?? undefined, look: this.look ?? undefined, lfg: this.lfg ?? undefined,
+      title: this.title ?? undefined, pennant: this.pennant ?? undefined, look: this.look ?? undefined, lfg: this.lfg ?? undefined, cos: this.cos ?? undefined,
       ...(this.cls.monster || this.npcRole === 'beast' ? {} : { crewMax: this.guardOf ? Math.max(this.stats.crewMax, this._men) : this.stats.crewMax, units: this._army.map((s) => s.u) }),
       // The broadside table's ship (docs/25 item 12): what the target card's «≈ N залпов» is reckoned from.
       ...(this.onLadder && this.npcRole !== 'beast' && !this.zoneBoss && !this.cls.monster ? { hullMax: this.stats.hullMax, armor: Math.round(this.stats.armor * 1000) / 1000, inc: Math.round(this.stats.incomingDamageMul * 1000) / 1000 } : {}),

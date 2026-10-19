@@ -93,6 +93,10 @@ import { cbColor, settings } from '../settings.ts';
 import { courseAhead, courseOf } from '../ui/course.ts';
 import type { Course } from '../ui/course.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
+import { CLOTHS, EMOTE_SHOW_S, NO_EQUIP, decodeCos, titleOf } from '../../../shared/src/data/cosmetics.ts';
+import type { CosEquip } from '../../../shared/src/data/cosmetics.ts';
+import { TRAIL_SHIPS, TrailPool, drawWavingFlag, emoteLook, flagCloth, plateCanvas } from './cosdraw.ts';
+import type { ShipEmote } from './cosdraw.ts';
 
 const BIOME_TINT: Record<IslandBiome, string> = {
   temperate: 'rgba(40,52,40,0.35)',
@@ -363,6 +367,12 @@ export class Renderer {
   private lead = { x: 0, y: 0 };
   private shipCache = new Map<string, { canvas: HTMLCanvasElement; extentY: number; cx: number; cy: number }>();
   private wakes = new Map<number, { x: number; y: number; t: number; w: number; life: number }[]>();
+  /** docs/32 §12: the trails' one pool, the emotes up over ships, each card's cosmetics read once. */
+  readonly trails = new TrailPool();
+  private emotes: ShipEmote[] = [];
+  private cosCache = new WeakMap<object, CosEquip>();
+  /** The plates drawn this frame (the measure's count). */
+  platesDrawn = 0;
 
   /** WebGL layers: the shader sea below, the fog and lightning above (null: the 2D fallback draws them). */
   sea: GlSea | null;
@@ -614,6 +624,7 @@ export class Renderer {
     ships.push(...stalls.map((x) => x.ship));
     for (const s of ships) this.updateWake(s, dt);
     this.drawWakes();
+    this.stepTrails(ships, state, dt); // docs/32 §12: the cosmetic trails, under the hulls
     this.drawLoot(state);
     drawShoals(g, state.shoals, state.self?.fishing?.traps ?? [], (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, this.w, this.h);
     this.drawCarcasses(state);
@@ -661,7 +672,10 @@ export class Renderer {
     this.labelBoxes = [];
     this.hudBand(); // the HUD's blocks, measured: the names keep out of them
     // (the names go as the chart comes: its darts are the ships then)
+    this.platesDrawn = 0;
     if (mix < 0.35) for (const s of [...ships].filter((x) => !x.own).sort((a, b) => b.y - a.y)) this.drawLabel(s, state, aim.boardTarget === s.id, aim.target === s.id);
+    if (mix < 0.35) { const me = ships.find((x) => x.own); if (me) this.drawOwnPlate(me, state); } // docs/32 §12
+    this.drawEmotes(ships); // docs/32 §12: an emote over a ship, ~3 s
     if (own) this.drawThreatMarks(ships, own);
     this.goalMark = null;
     if (own) this.drawQuestMark(state, own);
@@ -2469,6 +2483,99 @@ export class Renderer {
     return c;
   }
 
+  // ------------------------------------------------------------------ cosmetics (docs/32 §12)
+
+  /** What a ship wears that others see (her own from her wardrobe; another's from her card), read once a card. */
+  private cosOf(s: DrawShip, state: ClientState): CosEquip | null {
+    if (s.own) return state.cos?.eq ?? null;
+    const info = s.info;
+    if (!info?.isPlayer || !info.cos) return null;
+    let c = this.cosCache.get(info);
+    if (!c) this.cosCache.set(info, (c = decodeCos(info.cos) ?? NO_EQUIP));
+    return c;
+  }
+
+  /** Her plate with its words for this screen (null: none worn, not drawn at this distance, or not in yet). */
+  private plateFor(s: DrawShip, state: ClientState): { c: HTMLCanvasElement; k: number } | null {
+    if (this.zoom < 0.42) return null; // far out: the plates go before the names do
+    const cos = this.cosOf(s, state);
+    const t = titleOf(cos?.title);
+    if (!cos?.plate || !t) return null;
+    const c = plateCanvas(cos.plate, t.name[lang() === 'ru' ? 1 : 0], this.dpr);
+    return c ? { c, k: Math.max(1, Math.min(3, Math.round(this.dpr * 2) / 2)) } : null;
+  }
+
+  /** Her own plate over her own ship (she has no name drawn there): above her hull, clear of the HUD. */
+  private drawOwnPlate(s: DrawShip, state: ClientState): void {
+    const plate = this.plateFor(s, state);
+    if (!plate) return;
+    const cls = SHIP_CLASSES[s.classId];
+    const pw = plate.c.width / plate.k, ph = plate.c.height / plate.k;
+    const x = this.sx(s.x), y = this.sy(s.y) - (cls.length * this.zoom) / 2 - 10 - ph;
+    if (!this.clearOfHudBox(x - pw / 2, x + pw / 2, y, y + ph)) return;
+    this.g.drawImage(plate.c, x - pw / 2, y, pw, ph);
+    this.labelBoxes.push({ l: x - pw / 2, r: x + pw / 2, t: y, b: y + ph });
+    this.platesDrawn++;
+  }
+
+  /** An emote heard (the server's `emote` event): over that ship for EMOTE_SHOW_S seconds, one a ship at a time. */
+  addEmote(ship: number, e: string): void {
+    this.emotes = this.emotes.filter((x) => x.ship !== ship);
+    this.emotes.push({ ship, e, at: this.time });
+    if (this.emotes.length > 24) this.emotes.shift();
+  }
+
+  private drawEmotes(ships: DrawShip[]): void {
+    if (!this.emotes.length) return;
+    const g = this.g;
+    this.emotes = this.emotes.filter((x) => this.time - x.at < EMOTE_SHOW_S);
+    for (const em of this.emotes) {
+      const s = ships.find((x) => x.id === em.ship);
+      const spr = sprite(`cos.emote_${em.e}`);
+      if (!s || !spr || (s.flags & SF.HIDDEN)) continue;
+      const cls = SHIP_CLASSES[s.classId];
+      const look = emoteLook(this.time - em.at, EMOTE_SHOW_S);
+      const size = 44 * look.s;
+      // beside her hull, up and to the right: her name and plate stay readable
+      const x = this.sx(s.x) + Math.max(14, cls.beam * this.zoom * 0.7) + size * 0.35;
+      const y = this.sy(s.y) - Math.max(20, cls.length * this.zoom * 0.4) - size * 0.5 + look.dy;
+      g.save();
+      g.globalAlpha = look.a;
+      g.fillStyle = 'rgba(8,10,14,0.55)';
+      g.beginPath();
+      g.arc(x, y, size * 0.56, 0, Math.PI * 2);
+      g.fill();
+      g.drawImage(spr.img, x - size / 2, y - size / 2, size, size);
+      g.restore();
+    }
+  }
+
+  /** The cosmetic trails: the nearest ships under way on screen emit (TRAIL_SHIPS at most), the pool moves and is
+   *  drawn under the hulls. Far out (the chart's zoom) no ship emits; the motes left fade. */
+  private stepTrails(ships: DrawShip[], state: ClientState, dt: number): void {
+    const low = settings().effects === 'low' || this.fx.lod > 0;
+    if (this.zoom >= 0.3) {
+      const m = 120;
+      const cand: { s: DrawShip; t: string; d: number }[] = [];
+      for (const s of ships) {
+        if (s.sinkT > 0 || (s.flags & (SF.HIDDEN | SF.SINKING | SF.SUBMERGED))) continue;
+        const t = this.cosOf(s, state)?.trail;
+        if (!t) continue;
+        const px = this.sx(s.x), py = this.sy(s.y);
+        if (px < -m || py < -m || px > this.w + m || py > this.h + m) continue;
+        cand.push({ s, t, d: (px - this.w / 2) ** 2 + (py - this.h / 2) ** 2 });
+      }
+      cand.sort((a, b) => a.d - b.d);
+      for (let i = 0; i < cand.length && i < TRAIL_SHIPS; i++) {
+        const { s, t } = cand[i];
+        const cls = SHIP_CLASSES[s.classId];
+        this.trails.emit(s.id, t, s.x, s.y, s.h, s.spd / Math.max(1, cls.maxSpeed), cls.length, cls.beam, dt, low);
+      }
+    }
+    this.trails.step(Math.min(0.1, dt));
+    this.trails.draw(this.g, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.w, this.h);
+  }
+
   private drawPennant(s: DrawShip, len: number, beam: number, state: ClientState): void {
     const g = this.g;
     // A captain's colours (docs/24 D1): the pirate flag black, neutral colours white, the Green Pennant green, her city's
@@ -2477,6 +2584,27 @@ export class Renderer {
     const season = s.own ? state.self?.pennant : s.info?.pennant;
     // Her own flag (docs/12 P10 #12), unless she flies the Black Flag or the Green Pennant.
     const lookKey = s.own ? state.self?.look : s.info?.look;
+    // docs/32 §12: her cosmetic flag — the emblem on its cloth, waving — over her look's, under the colours of war
+    const cos = player && !(s.flags & (SF.BLACK_FLAG | SF.NEUTRAL | SF.GREEN_PENNANT)) ? this.cosOf(s, state) : null;
+    if (cos?.emblem) {
+      const cloth = flagCloth(cos.emblem, cos.cloth ?? CLOTHS[0].id);
+      if (cloth) {
+        const flow = state.wind[0] - s.h - Math.PI / 2;
+        const w = beam * 0.62, h = w * 0.66; // small, as every flag at the masthead (owner: ~0.6 of the hull's width)
+        const t = settings().reduceMotion ? 0 : this.time;
+        g.save();
+        g.translate(0, -len * 0.18);
+        g.rotate(flow + Math.sin(t * 3 + s.id) * 0.06);
+        g.globalAlpha *= 0.35;
+        g.drawImage(cloth, 1, 1 - h / 2, w, h); // its shadow on the deck and the sea
+        g.globalAlpha /= 0.35;
+        drawWavingFlag(g, cloth, w, h, t, s.id, this.zoom < 0.6 ? 4 : 6);
+        g.fillStyle = 'rgba(30,22,14,0.9)';
+        g.fillRect(-0.6, -h * 0.6, 1.2, h * 1.2); // the staff
+        g.restore();
+        return;
+      }
+    }
     const look = player && !(s.flags & (SF.BLACK_FLAG | SF.NEUTRAL | SF.GREEN_PENNANT)) ? decodeLook(lookKey) : null;
     if (look && lookKey && (look.field || look.emblem || look.c1 || look.c2 !== 1 || look.c3 !== 2)) {
       const flow = state.wind[0] - s.h - Math.PI / 2;
@@ -4297,12 +4425,15 @@ export class Renderer {
     g.font = '10px Inter, sans-serif';
     const lfText = info.isPlayer ? lfgLabel(info.lfg) : null;
     const lfW = lfText ? g.measureText(lfText).width + 16 : 0; // her pennant for company (docs/16 #31)
-    const half = Math.max(nameW, g.measureText(tag).width, lfW) / 2 + 6;
+    // docs/32 §12: her title on its plate floats over the name (over her pennant for company, when she flies one)
+    const plate = info.isPlayer ? this.plateFor(s, state) : null;
+    const plateH = plate ? plate.c.height / plate.k + 2 : 0;
+    const half = Math.max(nameW, g.measureText(tag).width, lfW, plate ? plate.c.width / plate.k : 0) / 2 + 6;
     g.font = '600 11px Inter, sans-serif';
     x = clamp(x, half, Math.max(half, this.w - half));
     // Never on another ship's name: step up above it (the Admiral's Eye line makes a taller box).
     const tall = state.self?.inspect.some((i) => i.id === s.id) ? 36 : 24;
-    const over = info.isPlayer && info.lfg ? 12 : 0; // her pennant for company rides over the name (docs/16 #31)
+    const over = (info.isPlayer && info.lfg ? 12 : 0) + plateH; // her pennant for company rides over the name (docs/16 #31)
     for (let k = 0; k < 4; k++) {
       const hit = this.labelBoxes.find((b) => x - half < b.r && x + half > b.l && y - 12 - over < b.b && y + tall > b.t);
       if (!hit) break;
@@ -4320,6 +4451,11 @@ export class Renderer {
       y = below;
     }
     this.labelBoxes.push({ l: x - half, r: x + half, t: y - 12 - over, b: y + tall });
+    if (plate) {
+      const pw = plate.c.width / plate.k, ph = plate.c.height / plate.k;
+      g.drawImage(plate.c, x - pw / 2, y - 12 - over, pw, ph);
+      this.platesDrawn++;
+    }
     const lx = x + (badgeW - flagW) / 2;
     if (badge) {
       const px = x - nameW / 2, py = y - 10, ph = 13;

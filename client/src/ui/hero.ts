@@ -111,6 +111,8 @@ export class HeroWindow {
 
   /** The talent trees (a chip of the hero's row): main.ts opens their window. */
   onTalents: () => void = () => {};
+  /** docs/32 §12: the wardrobe (the shop's «Косметика» tab): main.ts opens it. */
+  onWardrobe: () => void = () => {};
 
   render(root: HTMLElement, state: ClientState): void {
     const self = state.self;
@@ -129,7 +131,8 @@ export class HeroWindow {
       { id: 'gear', icon: 'item_tricorne', label: W('cap.gear'), hint: W('cap.gearHint') },
     ];
     let chips = '';
-    if (this.tab === 'hero') chips = chipRow([{ id: 'talents', icon: 'menu_talents', label: W('cap.talents'), hint: W('cap.talentsHint') }], '', 'cchip');
+    // (docs/32 §12: her wardrobe — the cosmetics others see on her — beside the talents)
+    if (this.tab === 'hero') chips = chipRow([{ id: 'talents', icon: 'menu_talents', label: W('cap.talents'), hint: W('cap.talentsHint') }, { id: 'wardrobe', icon: 'cos_frames', label: W('cap.wardrobe'), hint: W('cap.wardrobeHint') }], '', 'cchip');
     else if (this.tab === 'book') {
       const pages: WinTab[] = [{ id: 'orders', icon: 'bt_order', label: W('cap.orders') }, { id: 'path', icon: `school_${self.captain}`, label: W('cap.path') }];
       if (docked) pages.push({ id: 'guild', icon: 'tab_guild', label: W('cap.guild'), hint: W('cap.guildHint') });
@@ -151,7 +154,7 @@ export class HeroWindow {
     }));
     root.querySelectorAll<HTMLElement>('[data-cchip]').forEach((b) => (b.onclick = () => {
       const id = b.dataset.cchip!;
-      if (this.tab === 'hero') return void (id === 'talents' && this.onTalents());
+      if (this.tab === 'hero') return void (id === 'talents' ? this.onTalents() : id === 'wardrobe' && this.onWardrobe());
       if (this.tab === 'book') {
         this.page = id as BookPage;
         if (this.page === 'guild') this.send({ t: 'hero', action: 'view' });

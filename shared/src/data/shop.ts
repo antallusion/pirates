@@ -12,18 +12,22 @@
 import type { AmmoId } from './ships.ts';
 import type { BaseRes } from './base.ts';
 import type { GoodId } from './goods.ts';
+import { cosFamilies } from './cosmetics.ts';
 
 type Tr = [string, string];
 
-export type ShopTab = 'sea' | 'board' | 'isle';
-export const SHOP_TABS: ShopTab[] = ['sea', 'board', 'isle'];
+export type ShopTab = 'sea' | 'board' | 'isle' | 'cos';
+export const SHOP_TABS: ShopTab[] = ['sea', 'board', 'isle', 'cos'];
 
 /** The shelves of a tab, in their order (`deals` — the «Акции» row on top of every tab). */
-export type ShopSec = 'deals' | 'ships' | 'supply' | 'voyage' | 'units' | 'recruit' | 'battle' | 'build' | 'res' | 'isle';
+export type ShopSec = 'deals' | 'ships' | 'supply' | 'voyage' | 'units' | 'recruit' | 'battle' | 'build' | 'res' | 'isle'
+  | 'cos_titles' | 'cos_frames' | 'cos_flags' | 'cos_trails' | 'cos_emotes' | 'cos_sets';
 export const TAB_SECS: Record<ShopTab, ShopSec[]> = {
   sea: ['ships', 'supply', 'voyage'],
   board: ['units', 'recruit', 'battle'],
   isle: ['build', 'res', 'isle'],
+  // docs/32 §12: cosmetics other captains see (shared/src/data/cosmetics.ts) — no «Акции» row on this tab
+  cos: ['cos_titles', 'cos_frames', 'cos_flags', 'cos_trails', 'cos_emotes', 'cos_sets'],
 };
 
 /** What an offer hands over (server/src/game/shop.ts grants it through the game's own systems). */
@@ -76,7 +80,9 @@ export type ShopGrant =
   /** Parts of a ship's look not yet hers, drawn at random from the shop's own (never a deed's). */
   | { k: 'looks'; n: number }
   /** The captain's subscription for so many days (SUB_*). */
-  | { k: 'sub'; days: number };
+  | { k: 'sub'; days: number }
+  /** Cosmetics (docs/32 §12): ownership keys `kind:id` (`pack:<id>` an emote pack's four), the account's for good. */
+  | { k: 'cos'; keys: string[] };
 
 export interface ShopOffer {
   id: string;
@@ -89,6 +95,9 @@ export interface ShopOffer {
   worth?: number;
   /** The card's ribbon. */
   tag?: 'best' | 'hot';
+  /** A seasonal offer: on the shelf only between these (wall ms, UTC); its card counts down to `until`. */
+  from?: number;
+  until?: number;
 }
 
 export interface ShopFamily {
@@ -435,6 +444,8 @@ export const SHOP: ShopFamily[] = [
     text: T('Your island’s next move without its fee (2 600 doubloons when paid at the move).', 'Следующий переезд острова без платы (при переезде — 2 600 дублонов).'),
     offers: [o('move_2490', 2490, [{ k: 'move' }])],
   },
+  // ---------------------------------------------------------------------------------------------- cosmetics (docs/32 §12)
+  ...cosFamilies(),
 ];
 
 /** Every offer by its id, with its family. */

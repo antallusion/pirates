@@ -20,6 +20,7 @@ import { ignoreAdd, ignoreCommand, ignores, whisperCommand } from './friends.ts'
 import { groupOfAccount } from './party.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
+import { frameOf } from './cosmetics.ts';
 
 export { CHAT_MAX };
 
@@ -32,11 +33,12 @@ export function cleanChat(raw: unknown): string {
 
 /** Who speaks: the captain's portrait id, her level, her flag when sworn (the Code's free men or the Crown's marque),
  *  her guild's tag. */
-export function chatFace(s: PlayerSession, game?: Game): { face?: string; fac?: 'free' | 'crown'; lv?: number; g?: string } {
+export function chatFace(s: PlayerSession, game?: Game): { face?: string; fac?: 'free' | 'crown'; lv?: number; g?: string; fr?: string } {
   const p = s.profile;
   if (!p) return {};
   const tag = game?.guilds.of(game, s.accountId)?.tag;
-  return { face: p.captain, lv: p.level, ...(p.oath === 'code' ? { fac: 'free' as const } : p.oath === 'marque' ? { fac: 'crown' as const } : {}), ...(tag ? { g: tag } : {}) };
+  const fr = game ? frameOf(game, s.accountId) : undefined; // docs/32 §12: her avatar frame
+  return { face: p.captain, lv: p.level, ...(p.oath === 'code' ? { fac: 'free' as const } : p.oath === 'marque' ? { fac: 'crown' as const } : {}), ...(tag ? { g: tag } : {}), ...(fr ? { fr } : {}) };
 }
 
 // ------------------------------------------------------------------------------------------ the hub
@@ -214,6 +216,21 @@ export function localSay(game: Game, s: PlayerSession, text: string): string | n
     if (o.profile && p && inSight(at, p) && !ignores(o, s.accountId)) game.sendTo(o, { t: 'chat', ...line });
   }
   return null;
+}
+
+/** docs/32 §12: an emote into the local chat (the ships in sight), at the emotes' own pace (cosmetics.ts) — a
+ *  silenced captain sends none. */
+export function emoteSay(game: Game, s: PlayerSession, id: string): void {
+  const at = placeOf(s);
+  if (!at) return;
+  const wall = adminMutes(game)[String(s.accountId)] ?? 0;
+  if (wall > game.wallNow() || rateOf(game, s.accountId).until > game.now) return;
+  const line = stamp(game, { from: s.name, text: '', ch: 'local', emo: id, ...chatFace(s, game) });
+  keep(hub(game).local, { line, ...at });
+  for (const o of game.sessions) {
+    const p = placeOf(o);
+    if (o.profile && p && inSight(at, p) && !ignores(o, s.accountId)) game.sendTo(o, { t: 'chat', ...line });
+  }
 }
 
 /** The group (party.ts): its members, here (a group does not cross zones: prepareHandoff). */

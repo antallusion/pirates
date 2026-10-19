@@ -5,6 +5,7 @@ import { provisionsPerMinute } from '../../../shared/src/data/voyage.ts';
 import { chatCommand, chatFromAfar, chatHist, chatIn, chatOnLogin, chatRead, chatReport, cleanChat, guildSay } from './chat.ts'; // docs/28
 import { callOn, drink, hallView, invite, sign } from './guests.ts';
 import { lookOf, setLook, unlockDeed } from './looks.ts';
+import { cosMessage, cosWire, sendCos, stepCosmetics } from './cosmetics.ts'; // docs/32 §12
 import { fatesOnDock, fulfilRequest, stepFates } from './fates.ts';
 import { dutchmanSunk, stepDutchman } from './dutchman.ts';
 import { nailCoin, omenBroken, omenKept, sendOmen, stepOmens } from './omens.ts';
@@ -1031,6 +1032,7 @@ export class Game {
     for (const s of this.sessions) {
       stepRefit(this, s); // yards finish their work by the wall clock
       stepShop(this, s); // the shop's subscription day and fair wind (owner, 2026-10-15)
+      stepCosmetics(this, s); // docs/32 §12: the earned cosmetics
       stepPromo(this, s); // her personal offers rotated (owner, 2026-10-15)
       stepGift(this, s); // a new day: her daily gift ready (owner, 2026-10-16)
     }
@@ -3447,6 +3449,7 @@ export class Game {
     if (msg.t === 'seafind') return findMessage(this, s, msg);
     if (msg.t === 'roam') return roamMessage(this, s, msg); // docs/19 D7
     if (msg.t === 'premium') return premiumMessage(this, s, msg); // the premium shop (owner, 2026-10-03)
+    if (msg.t === 'cos') return cosMessage(this, s, msg); // docs/32 §12: the cosmetics
     if (msg.t === 'scout') return scoutMessage(this, s, msg); // the island's scouts (owner, 2026-10-17)
     if (msg.t === 'way') return wayMessage(this, s, msg); // docs/35: the floating waystations, the resurrection
     switch (msg.t) {
@@ -4608,6 +4611,7 @@ export class Game {
     ship.title = p.title;
     ship.pennant = p.pennant;
     ship.look = lookOf(p); // her colours (docs/12 P10 #12)
+    ship.cos = cosWire(this, s.accountId); // docs/32 §12: what she wears
     ship.hull = p.hull < 0 ? ship.stats.hullMax : Math.max(1, Math.min(p.hull, ship.stats.hullMax));
     ship.sails = p.sails < 0 ? ship.stats.sailHpMax : Math.min(p.sails, ship.stats.sailHpMax);
     ship.rudderHp = p.rudderHp;
@@ -4679,6 +4683,7 @@ export class Game {
     sendBalance(this, s); // her account's doubloons (the premium shop)
     sendGift(this, s); // her daily login calendar (owner, 2026-10-16): first, the offers' carousel waits for it
     sendPromo(this, s); // her personal offers and the entry carousel (owner, 2026-10-15)
+    sendCos(this, s); // docs/32 §12: her wardrobe
     noticesAboard(this, s); // her Telegram notices' switches; «давно не заходили» may come again
     if (away) this.sendTo(s, { t: 'away', view: away });
     // Back at the helm in the middle of a fight (a reload, a dropped line): the fight as it stands, or it went on unseen.

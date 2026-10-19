@@ -11,6 +11,7 @@ import { wantedLevel } from '../../../shared/src/data/factions.ts';
 import { groupOfAccount } from './party.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
+import { cosState } from './cosmetics.ts'; // docs/32 §12
 
 /** A captain aboard in this world (come aboard and not yet gone ashore). */
 function aboard(game: Game, id: number): PlayerSession | null {
@@ -162,7 +163,13 @@ export function inspectView(game: Game, s: PlayerSession, name: string): Inspect
     questsDone: p.quests.done.length, contracts: p.quests.done.filter((id) => id.startsWith('elite_')).length, mentored: p.stats.mentored ?? 0,
     rating: Math.round(p.pvp.rating ?? 0), wanted: wantedLevel(p.infamy),
     gear: wornItems(p),
+    ...cardCos(game, o.accountId), // docs/32 §12: her frame and her title on its plate
   };
+}
+
+function cardCos(game: Game, acc: number): Pick<InspectView, 'frame' | 'cosTitle' | 'plate'> {
+  const eq = cosState(game, acc).eq;
+  return { ...(eq.frame ? { frame: eq.frame } : {}), ...(eq.title && eq.plate ? { cosTitle: eq.title, plate: eq.plate } : {}) };
 }
 
 /** A chat line that is a whisper ("/w", "/r" and their Russian twins): the words after it, and whether a reply. */

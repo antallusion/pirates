@@ -214,7 +214,8 @@ def around_hole(cell: np.ndarray, px: int) -> tuple:
     """A frame: the square centred on its hole (the clear region round the cell's middle), wide enough for all of the
     frame; and the hole's radius as a share of the square's side (the avatar is drawn inside it)."""
     a = cell[:, :, 3]
-    clear = a < 16
+    # (the hole: what is mostly clear — a ghost's thin wisps over it do not close it)
+    clear = a < 100
     h, w = a.shape
     lab, _ = ndimage.label(clear)
     mid = lab[h // 2, w // 2]
@@ -222,6 +223,8 @@ def around_hole(cell: np.ndarray, px: int) -> tuple:
     ys, xs = np.nonzero(hole)
     cy, cx = ys.mean(), xs.mean()
     seen = np.nonzero(a > 8)
+    ys, xs = np.nonzero(hole & ndimage.binary_erosion(hole, iterations=2))
+    cy, cx = ys.mean(), xs.mean()
     half = max(np.abs(seen[0] - cy).max(), np.abs(seen[1] - cx).max()) + 3
     r_in = ndimage.distance_transform_edt(hole)[int(round(cy)), int(round(cx))]
     im = Image.fromarray(cell)

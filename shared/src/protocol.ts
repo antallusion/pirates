@@ -65,6 +65,7 @@ import type { CastawayView, WreckView } from './data/wrecks.ts'; // seaux: her o
 import type { RoamClientMsg, RoamServerMsg } from './roamproto.ts'; // docs/19 D7
 import type { PremiumClientMsg, PremiumServerMsg } from './premiumproto.ts'; // the premium shop (owner, 2026-10-03)
 import type { WayClientMsg, WayData, WayServerMsg } from './wayproto.ts'; // docs/35: the floating waystations, the resurrection
+import type { CosClientMsg, CosServerMsg } from './cosproto.ts'; // docs/32 §12: the cosmetics
 import type { IsleType } from './world/archipelago.ts';
 import type { CommonKind } from './data/commongoal.ts';
 import type { InvasionView } from './data/invasions.ts';
@@ -371,6 +372,7 @@ export type ClientMsg =
   | RoamClientMsg
   /** The premium shop (owner, 2026-10-03): its view, a hull or a kind bought for doubloons. */
   | PremiumClientMsg
+  | CosClientMsg
   /** docs/35: the floating waystations and the resurrection of the fallen. */
   | WayClientMsg
   /** The dense sea's marks (driftwood, wrecks, buoys…): work the one within reach, or leave off. */
@@ -1026,6 +1028,9 @@ export interface ShipInfo {
   lfg?: string;
   /** A captain's look, encoded (docs/12 P10 #12). */
   look?: string;
+  /** What she wears that others see (docs/32 §12): her title on its plate, her frame, her flag, her trail —
+   *  shared/src/data/cosmetics.ts encodeCos (six small indices, at most 17 characters). */
+  cos?: string;
   /** Her level ⚓1–⚓10 (canon D12); absent for monsters and wreck hulks, which stand outside the ladder. */
   shipLevel?: number;
   /** A strong ship built for a company (group contracts, barons): the gold frame of an elite. */
@@ -1398,6 +1403,8 @@ export type GameEvent =
   /** A round of a deck fight: the tactics of the attacker (a) and the defender (b), and the dead on each side. */
   | { k: 'board_round'; a: number; b: number; x: number; y: number; ta: BoardTactic; tb: BoardTactic; ka: number; kb: number }
   | { k: 'ability'; ship: number; id: string; x?: number; y?: number }
+  /** docs/32 §12: an emote over her ship for EMOTE_SHOW_S seconds. */
+  | { k: 'emote'; ship: number; e: string }
   /** A captain's ability at work on a ship (docs/25 items 13–41): the hull it took (dmg), the men, the hull mended (heal)
    *  over her; or a combo's cue over the caster (combo: the combo's first ability). */
   | { k: 'skill'; ship: number; id: string; x: number; y: number; dmg?: number; men?: number; heal?: number; combo?: true }
@@ -2062,6 +2069,7 @@ export type ServerMsg =
   | RoamServerMsg
   /** The premium shop (owner, 2026-10-03): its view, and her account's doubloons. */
   | PremiumServerMsg
+  | CosServerMsg
   /** docs/35: the waystation's window, her fallen and their price. */
   | WayServerMsg
   /** The marks she has worked (no more today) and the one her boats are at now (world seconds). */
@@ -2218,6 +2226,9 @@ export interface ChatLineView {
   ch?: 'local' | 'group' | 'guild' | 'whisper' | 'sys';
   to?: string;
   card?: SagaCard;
+  /** docs/32 §12: an emote sent (its id: the line shows its picture), and her avatar frame's id. */
+  emo?: string;
+  fr?: string;
   face?: string;
   fac?: 'free' | 'crown';
   lv?: number;
@@ -3114,6 +3125,10 @@ export interface InspectView {
   name: string;
   level: number;
   captain: CaptainId;
+  /** docs/32 §12: her avatar frame and her title on its plate (ids of shared/src/data/cosmetics.ts). */
+  frame?: string;
+  cosTitle?: string;
+  plate?: string;
   title: string | null;
   guild: { name: string; tag: string } | null;
   ship: { name: string; classId: ShipClassId; level?: number };

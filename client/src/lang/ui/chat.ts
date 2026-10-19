@@ -42,6 +42,7 @@ export const EN = {
   eg_sea: 'Sea',
   eg_battle: 'Battle',
   eg_loot: 'Loot',
+  eg_cos: 'Over your ship',
   sys: 'News',
   unread: '{n} unread',
 };
@@ -88,6 +89,7 @@ export const RU: Record<keyof typeof EN, string> = {
   eg_sea: 'Море',
   eg_battle: 'Бой',
   eg_loot: 'Добыча',
+  eg_cos: 'Над кораблём',
   sys: 'Вести',
   unread: 'Непрочитано: {n}',
 };

@@ -15,6 +15,7 @@
 import { esc, faceOf, icon, portraitUrl, glyphSvg } from './dom.ts';
 import { faceCentred } from './kit/faces.ts';
 import { sagaCardHtml } from './saga.ts';
+import { emoteName, ringHtml } from './cosmetics.ts'; // docs/32 §12: frames round the faces, the captains' emotes
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/chat.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
@@ -133,7 +134,9 @@ export class ChatPanel {
   private tab: ChatTab = 'world';
   /** the conversation open in the private tab (lowered name), or null for the list */
   private peer: string | null = null;
-  private group: EmoteGroup = 'mood';
+  private group: EmoteGroup | 'cos' = 'cos';
+  /** docs/32 §12: her own cosmetic emotes (the shell's: her wardrobe), sent over her ship from the picker's first tab. */
+  cosEmotes: () => { id: string; name: string }[] = () => [];
   private muted = new Set<string>();
   private toastTimer = 0;
   private lastSys = new Map<string, number>();
@@ -509,11 +512,12 @@ export class ChatPanel {
     const name = m.from.replace(/^\[[^\]]*\]\s*/, '');
     const face = this.faceStyle(m.face, name);
     const nick = own ? '' : ` data-nick="${esc(name)}"`;
-    const faceEl = `<${own ? 'span' : 'button type="button"'} class="cl-face"${nick}${face} aria-label="${esc(name)}"></${own ? 'span' : 'button'}>`;
+    const ring = ringHtml(m.fr, 1.75); // docs/32 §12: her avatar frame
+    const faceEl = `<${own ? 'span' : 'button type="button"'} class="cl-face${ring ? ' cos-fr' : ''}"${nick}${face} aria-label="${esc(name)}">${ring}</${own ? 'span' : 'button'}>`;
     const tag = m.g ? `<span class="cl-g">[${esc(m.g)}]</span>` : '';
     const lv = m.lv ? `<span class="cl-lv">${esc(L('lv', { n: m.lv }))}</span>` : '';
     const to = m.ch === 'whisper' && m.to ? `<span class="cl-to">${esc(L('to', { name: m.to }))}</span>` : '';
-    return `<div class="cl${m.ch ? ` chat-${m.ch}` : ''}${own ? ' cl-own' : ''}">${faceEl}<div class="cl-body"><div class="cl-head"><b class="cl-name"${nick} style="color:${REL_COLOR[rel]}">${esc(name)}</b>${tag}${lv}${to}<time>${this.time(m.at)}</time></div><div class="cl-text">${m.card ? sagaCardHtml(m.card) : chatBody(m.text)}</div></div></div>`;
+    return `<div class="cl${m.ch ? ` chat-${m.ch}` : ''}${own ? ' cl-own' : ''}">${faceEl}<div class="cl-body"><div class="cl-head"><b class="cl-name"${nick} style="color:${REL_COLOR[rel]}">${esc(name)}</b>${tag}${lv}${to}<time>${this.time(m.at)}</time></div><div class="cl-text">${m.card ? sagaCardHtml(m.card) : m.emo ? `<span class="cl-cosemo">${icon(`cos.emote_${m.emo}`, '☺', 'cl-cosemo-i')}<small>${esc(emoteName(m.emo))}</small></span>` : chatBody(m.text)}</div></div></div>`;
   }
 
   /** The private tab without a conversation open: the conversations, the newest first. */
@@ -603,13 +607,14 @@ export class ChatPanel {
       .filter((m) => low(m.from) === k).sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).at(-1);
     const p = this.peers.get(k);
     const face = this.faceStyle(last?.face ?? p?.face, name);
+    const ring = ringHtml(last?.fr, 1.75); // docs/32 §12
     const lv = last?.lv ?? p?.lv;
     const blocked = (c.ignored ?? []).some((x) => low(x) === k);
     const muted = this.muted.has(k);
     const friend = c.friends.includes(name);
     const inGroup = c.group.includes(name);
     const btn = (act: string, art: string, word: string) => `<button type="button" class="chat-card-b" data-act="${act}">${icon(art, '', 'ico-sm')}<span>${esc(word)}</span></button>`;
-    this.card.innerHTML = `<div class="chat-card-head"><span class="cl-face chat-card-face"${face}></span><div class="chat-card-who"><b>${esc(name)}</b><span>${last?.g ? `[${esc(last.g)}] ` : ''}${lv ? esc(L('lv', { n: lv })) : ''}</span></div><button type="button" class="chat-x g-only" data-act="close" aria-label="${esc(L('card_close'))}">${glyphSvg('close')}</button></div>`
+    this.card.innerHTML = `<div class="chat-card-head"><span class="cl-face chat-card-face${ring ? ' cos-fr' : ''}"${face}>${ring}</span><div class="chat-card-who"><b>${esc(name)}</b><span>${last?.g ? `[${esc(last.g)}] ` : ''}${lv ? esc(L('lv', { n: lv })) : ''}</span></div><button type="button" class="chat-x g-only" data-act="close" aria-label="${esc(L('card_close'))}">${glyphSvg('close')}</button></div>`
       + `<div class="chat-card-acts">${btn('dm', 'tab_letters', L('card_dm'))}${inGroup ? '' : btn('invite', 'tab_group', L('card_invite'))}${friend ? '' : btn('friend', 'menu_company', L('card_friend'))}${btn('mute', 'weather_fog', muted ? L('card_unmute') : L('card_mute'))}${btn('block', 'bt_defend', blocked ? L('card_unblock') : L('card_block'))}${btn('report', 'tab_law', L('card_report'))}</div>`;
     this.card.classList.remove('hidden');
     this.emotes.classList.add('hidden');
@@ -645,13 +650,23 @@ export class ChatPanel {
   }
 
   private drawPicker(): void {
-    const tabs = EMOTE_GROUPS.map((g) => `<button type="button" class="eg${g === this.group ? ' on' : ''}" data-eg="${g}" title="${esc(L(`eg_${g}`))}" aria-label="${esc(L(`eg_${g}`))}">${icon(GROUP_ART[g], '', 'emo')}<span class="eg-l">${esc(L(`eg_${g}`))}</span></button>`).join('');
+    const own = this.cosEmotes();
+    const cosTab = own.length ? `<button type="button" class="eg${this.group === 'cos' ? ' on' : ''}" data-eg="cos" title="${esc(L('eg_cos'))}" aria-label="${esc(L('eg_cos'))}">${icon('cos_emotes', '', 'emo')}<span class="eg-l">${esc(L('eg_cos'))}</span></button>` : '';
+    if (!own.length && this.group === 'cos') this.group = 'mood';
+    const tabs = cosTab + EMOTE_GROUPS.map((g) => `<button type="button" class="eg${g === this.group ? ' on' : ''}" data-eg="${g}" title="${esc(L(`eg_${g}`))}" aria-label="${esc(L(`eg_${g}`))}">${icon(GROUP_ART[g], '', 'emo')}<span class="eg-l">${esc(L(`eg_${g}`))}</span></button>`).join('');
     const ru = lang() === 'ru';
-    const cells = EMOTES.filter((e) => e.group === this.group).map((e) => `<button type="button" data-emo="${e.code}" title=":${e.code}:${ru ? ` — ${esc(e.ru)}` : ''}" aria-label="${esc(ru ? e.ru : e.code)}">${icon(e.art, `:${e.code}:`, 'emo')}</button>`).join('');
-    this.emotes.innerHTML = `<div class="eg-tabs">${tabs}</div><div class="eg-grid">${cells}</div>`;
+    // (docs/32 §12: the captains' emotes go over her ship and into the local chat at once — not into the field)
+    const cells = this.group === 'cos'
+      ? own.map((e) => `<button type="button" class="eg-cos" data-cosemo="${e.id}" title="${esc(e.name)}" aria-label="${esc(e.name)}">${icon(`cos.emote_${e.id}`, '☺', 'emo emo-cos')}</button>`).join('')
+      : EMOTES.filter((e) => e.group === this.group).map((e) => `<button type="button" data-emo="${e.code}" title=":${e.code}:${ru ? ` — ${esc(e.ru)}` : ''}" aria-label="${esc(ru ? e.ru : e.code)}">${icon(e.art, `:${e.code}:`, 'emo')}</button>`).join('');
+    this.emotes.innerHTML = `<div class="eg-tabs">${tabs}</div><div class="eg-grid${this.group === 'cos' ? ' eg-grid-cos' : ''}">${cells}</div>`;
+    this.emotes.querySelectorAll<HTMLElement>('[data-cosemo]').forEach((b) => b.addEventListener('click', () => {
+      this.hooks.send({ t: 'cos', action: 'emote', id: b.dataset.cosemo! });
+      this.emotes.classList.add('hidden');
+    }));
     this.emotes.querySelectorAll<HTMLElement>('button').forEach((b) => b.addEventListener('pointerdown', (e) => e.preventDefault()));
     this.emotes.querySelectorAll<HTMLElement>('[data-eg]').forEach((b) => b.addEventListener('click', () => {
-      this.group = b.dataset.eg as EmoteGroup;
+      this.group = b.dataset.eg as EmoteGroup | 'cos';
       this.drawPicker();
     }));
     this.emotes.querySelectorAll<HTMLElement>('[data-emo]').forEach((b) => b.addEventListener('click', () => this.insert(`:${b.dataset.emo}:`)));

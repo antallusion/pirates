@@ -43,6 +43,7 @@ import { sanitizeLooks } from './looks.ts';
 import { opsPrice, opsShut, saleOf, trackEvent } from './liveops.ts'; // docs/34: the panel's prices, the funnel
 import { raiseInstant, recordFallen, resInstant } from './waystations.ts'; // docs/35: the fallen, the scrolls
 import { RSCROLL_MAX } from '../../../shared/src/data/resurrect.ts';
+import { afterCosBuy, cosWhy, grantCos } from './cosmetics.ts'; // docs/32 §12
 
 const H = 3_600_000;
 const D = 86_400_000;
@@ -386,6 +387,8 @@ function grantWhy(game: Game, s: PlayerSession, st: ShopState, g: ShopGrant, off
       return looksLeft(s).length ? null : 'none';
     case 'sub':
       return Math.max(wall, st.sub) + g.days * D > wall + SUB_MAX_DAYS * D ? 'max' : null;
+    case 'cos':
+      return cosWhy(game, s.accountId, g.keys); // docs/32 §12: all of it hers already
   }
 }
 
@@ -401,6 +404,7 @@ function offerWhy(game: Game, s: PlayerSession, st: ShopState, offer: ShopOffer,
   const wall = game.wallNow();
   const fam = OFFERS.get(offer.id)!.fam;
   if (opsShut(game, offer.id)) return 'gone'; // taken off the shelves by the live ops' panel (docs/34)
+  if ((offer.from !== undefined && wall < offer.from) || (offer.until !== undefined && wall >= offer.until)) return 'gone'; // a season's bundle (docs/32 §12)
   if (fam.level) {
     const at = st.gifts[fam.level];
     if (at === undefined || at < 0 || wall > at + LEVEL_OFFER_H * H) return 'gone';
@@ -533,6 +537,9 @@ function grant(game: Game, s: PlayerSession, st: ShopState, g: ShopGrant, offerI
     case 'sub':
       st.sub = Math.max(wall, st.sub) + g.days * D;
       return;
+    case 'cos':
+      grantCos(game, s, g.keys);
+      return;
   }
 }
 
@@ -636,6 +643,7 @@ export function buyOffer(game: Game, s: PlayerSession, offerId: string, pid: str
 /** After a purchase: her balance, her ship, her island's window, the battle's screen (the scrolls). */
 function afterBuy(game: Game, s: PlayerSession, offer?: ShopOffer): void {
   sendBalance(game, s);
+  if (offer?.grants.some((g) => g.k === 'cos')) afterCosBuy(game, s); // docs/32 §12: her wardrobe
   game.pushSelf(s, true);
   if (offer?.grants.some((g) => g.k === 'res' || g.k === 'builder' || g.k === 'perm' || g.k === 'prod' || g.k === 'sub' || g.k === 'speed')) {
     const v = baseView(game, s);

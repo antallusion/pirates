@@ -40,6 +40,7 @@ import { chronicle } from './renown.ts';
 import { seasonId } from './seasons.ts';
 import type { BoardFight, BoardingState, ShipEntity } from './ship.ts';
 import { act } from './tacbattle.ts';
+import { frameOf } from './cosmetics.ts'; // docs/32 §12
 import type { TacSideInput } from './tacbattle.ts';
 import { startTactical } from './tactical.ts';
 
@@ -160,6 +161,13 @@ export const isArenaFight = (fight: BoardFight | null | undefined): boolean => !
 export const isArenaLegend = (ship: ShipEntity): boolean => legends.has(ship);
 
 const rowOf = (S: Store, acc: number): Row | undefined => S.rows[acc];
+/** For the tests: the table forgotten (the next look reads the kv table again). */
+export const forgetArena = (game: Game): void => void stores.delete(game);
+/** Her best rating this season (0: never on the table) — docs/32 §12's earned cosmetics read it. */
+export const arenaBest = (game: Game, acc: number): number => {
+  const r = store(game).rows[acc];
+  return r ? Math.max(r.best ?? 0, r.r) : 0;
+};
 const ratingOf = (S: Store, acc: number): number => S.rows[acc]?.r ?? ARENA_START;
 
 // ------------------------------------------------------------------ who may come
@@ -691,8 +699,10 @@ export function arenaView(game: Game, s: PlayerSession): ArenaView | undefined {
   const rows = tableOf(game, S);
   const at = rows.findIndex(([k]) => Number(k) === s.accountId);
   const me = S.rows[s.accountId];
-  const table = rows.slice(0, 10).map(([k, r]) => ({ name: r.name, rating: r.r, bouts: r.n, wins: r.w, ...(Number(k) === s.accountId ? { you: true } : {}) }));
-  if (at >= 10 && me) table.push({ name: me.name, rating: me.r, bouts: me.n, wins: me.w, you: true });
+  // (docs/32 §12: each row's portrait and avatar frame)
+  const face = (k: string | number, r: Row) => { const fr = frameOf(game, Number(k)); return { face: r.path, ...(fr ? { fr } : {}) }; };
+  const table = rows.slice(0, 10).map(([k, r]) => ({ name: r.name, rating: r.r, bouts: r.n, wins: r.w, ...face(k, r), ...(Number(k) === s.accountId ? { you: true } : {}) }));
+  if (at >= 10 && me) table.push({ name: me.name, rating: me.r, bouts: me.n, wins: me.w, ...face(s.accountId, me), you: true });
   const b = L.of.get(s.accountId);
   const q = L.queue.get(s.accountId);
   const why = L.queue.has(s.accountId) ? 'You are in the queue already.' : whyNot(game, s);

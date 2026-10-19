@@ -41,6 +41,7 @@ import { currentAt } from '../../shared/src/world/worldgen.ts';
 import { placeName } from './ui/maps.ts';
 import type { RegionId } from '../../shared/src/world/regions.ts';
 import type { PremiumView } from '../../shared/src/premiumproto.ts';
+import type { CosView } from '../../shared/src/cosproto.ts';
 
 export interface ShipSample {
   t: number;
@@ -209,6 +210,8 @@ export class ClientState {
   /** «Свиток автобоя» (owner, 2026-10-11): her account's auto-battle scrolls. */
   scrolls = 0;
   premium: PremiumView | null = null;
+  /** docs/32 §12: her wardrobe — what she owns and wears of the cosmetics. */
+  cos: CosView | null = null;
   puzzle: PuzzleView | null = null;
   puzzleAt = 0;
   /** One's own caravans (docs/12 P8). */
@@ -589,6 +592,9 @@ export class ClientState {
           this.scrolls = m.scrolls;
           if (this.premium) this.premium.scrolls = m.scrolls;
         }
+        break;
+      case 'cos':
+        this.cos = m.view;
         break;
       case 'premium':
         this.premium = m.view;
