@@ -19,7 +19,7 @@
 //
 // Ranged (same order): a share of the creatures fire from afar — the land's gunners, harpooners, archers and the
 // voodoo and ghost kinds with magic — HoMM3's way, as the men's musketeers do (army.ts 'shooter': no answer to a shot,
-// half the blow in melee, shots counted). RANGED_KINDS turns eleven more kinds into shooters (65 of 271, 24%), with
+// half the blow in melee, shots counted). RANGED_KINDS turns nine more kinds into shooters (63 of 271, 23%; a premium hull's own kind keeps its two specials), with
 // their charges; the field draws each one's missile (client MISSILE_OF) or its magic (MAGIC_OF): a hex bolt, ghost fire,
 // a spark, a fire bolt, lightning.
 
@@ -183,7 +183,7 @@ export const skillOf = (u: UnitId): SkillId | undefined => UNIT_SKILL[u];
  *  phoenix's fire bolt (and its splash), the stones of the harpies and the apes. None of the peoples'
  *  kinds (a people's kind keeps the place it takes among the pirates' numbers, factionunits.ts). */
 export const RANGED_KINDS: Partial<Record<UnitId, { shots: number; add?: UnitSpecial[] }>> = {
-  banshee: { shots: 3 }, lantern_maw: { shots: 3 }, mist_wraith: { shots: 3 }, corposant: { shots: 3 }, giant_toad: { shots: 3 },
+  banshee: { shots: 3 }, lantern_maw: { shots: 3 }, giant_toad: { shots: 3 },
   electric_eel: { shots: 3 }, abyssal_angler: { shots: 3 }, ember_phoenix: { shots: 3, add: ['blast'] }, island_ape: { shots: 4 },
   cliff_harpy: { shots: 4 }, sea_naga: { shots: 3 },
 };
@@ -199,7 +199,7 @@ export const SHOT_OF: Partial<Record<UnitId, ShotKind>> = {
   blowgun_hunter: 'dart', alchemist: 'bomb', fog_thief: 'bomb', island_archer: 'arrow', net_thrower: 'net', net_master: 'net', phantom_gunner: 'shell',
   storm_witch: 'bolt', tide_shaman: 'brine', tide_caller: 'brine', company_cannoneer: 'shell', petardier: 'bomb', fog_viper: 'dart', choir_toller: 'bell',
   thunderbird: 'bolt', rime_witch: 'hex', line_harpooner: 'harpoon', hunt_master: 'harpoon', fog_chemist: 'bomb', mask_archer: 'arrow', ghost_bomber: 'bomb',
-  banshee: 'ghost', lantern_maw: 'ghost', mist_wraith: 'ghost', corposant: 'ghost', giant_toad: 'dart', storm_giant: 'bolt', electric_eel: 'spark', abyssal_angler: 'hex',
+  banshee: 'ghost', lantern_maw: 'ghost', giant_toad: 'dart', storm_giant: 'bolt', electric_eel: 'spark', abyssal_angler: 'hex',
   ember_phoenix: 'fire', island_ape: 'stone', cliff_harpy: 'stone', sea_naga: 'dart', storm_caller: 'bolt', ghost_navigator: 'ghost', spice_djinn: 'fire',
   bell_priest: 'bell', silver_archer: 'arrow', dragon_lancer: 'harpoon', pearl_siren: 'brine', mermaid_queen: 'brine', bell_diver: 'bell', night_smuggler: 'bomb',
   bastion_gunner: 'shell', ledger_enforcer: 'ball',
