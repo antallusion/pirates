@@ -75,6 +75,17 @@ button { font-family: var(--sans); }
 .bar.sanity > i { background: linear-gradient(90deg, #3a2c3e, #8e7aa0); }
 .bar.dread > i { background: linear-gradient(90deg, #06302b, #2ee6c8); }
 .bar.xp > i { background: linear-gradient(90deg, #2b4660, #8fb3d9); }
+.bar.hold > i { background: linear-gradient(90deg, #4a3b26, #9a7b4c); }
+/* what fills the hold (owner, 2026-10-19: «не понимаю как я забиваю корабль и чем»): chips by the room each good takes */
+.hold-mix { display: flex; flex-wrap: wrap; gap: 3px 6px; margin: 0 0 6px; font-size: 11px; line-height: 1; }
+.hold-mix .hm-chip { display: inline-flex; align-items: center; gap: 2px; color: var(--bone, #e6dccb); white-space: nowrap; }
+.hold-mix .hm-chip > i { font-style: normal; color: var(--fog, #8f9aa3); font-size: 10px; }
+.hold-fill { display: flex; height: 8px; margin: 2px 0 8px; background: #15181c; border: 1px solid #000; border-radius: 2px; overflow: hidden; }
+.hold-fill > i { display: block; height: 100%; background: #6d5a3a; border-right: 1px solid rgba(0, 0, 0, 0.6); }
+.hold-fill > i:nth-child(2n) { background: #4f5e66; }
+.hold-fill > i:nth-child(3n) { background: #5d4652; }
+.hold-fill > i.hf-provisions { background: #7a6a3a; }
+.mk-hold { margin: 2px 0 6px; font-size: 11px; line-height: 1.3; }
 .sail-steps { display: flex; gap: 3px; margin-top: 4px; }
 .sail-steps span { flex: 1; height: 10px; border: 1px solid var(--brass-dim); background: #111; border-radius: 2px; }
 .sail-steps span.on { background: var(--silver); }

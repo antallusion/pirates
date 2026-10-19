@@ -193,7 +193,10 @@ export function repairState(self: PrivateState, you: { hull: number; hullMax: nu
   const r = self.seaRepair;
   if (!r || self.dockedAt) return null;
   const hurt = you.hull < you.hullMax * 0.97 || you.sails < you.sailsMax * 0.95;
-  const short = r.havePlanks < Math.min(1, r.planks) && r.haveCloth < Math.min(1, r.cloth);
+  // short: nothing of her harm the carpenters can mend with what is aboard (the hull and rudder want planks, the sails
+  // sailcloth — 2026-10-19: the sails alone torn with no bolt aboard read as «not short», and «Ремонт» did nothing)
+  const hullHurt = you.hull < you.hullMax * 0.97, sailsHurt = you.sails < you.sailsMax * 0.95;
+  const short = !(hullHurt && r.havePlanks >= 1) && !(sailsHurt && r.haveCloth >= 1);
   let line = '';
   if (repairing) line = esc(L('rep.working', { rate: num1(r.hullPerMin), min: r.minutes, planks: r.havePlanks, cloth: r.haveCloth }));
   else if (hurt && short && !you.combat) line = esc(L('rep.short', { planks: r.havePlanks, need: r.planks, cloth: r.haveCloth, needc: r.cloth }));

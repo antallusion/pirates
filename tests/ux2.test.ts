@@ -209,12 +209,16 @@ test('a course broken off by a fight is taken up again once the sea is quiet; he
   assert.equal(pausedCourse(ship), null, 'the pill’s stop drops it');
   steps(game, (RESUME_CALM * 2 + 1) * tps);
   assert.equal(autosailOf(ship), null);
-  // a weak hull, port, her ship lost: dropped too
+  // port, her ship lost: dropped too (a weak hull no longer: owner, 2026-10-19 — «работало всегда и везде»)
   startAutosail(game, s, to.x, to.y);
   stopAutosail(game, s, 'storm');
   ship.hull = ship.stats.hullMax * 0.1;
   game.step();
-  assert.equal(pausedCourse(ship), null, 'a weak hull is not left to the helmsman');
+  assert.ok(pausedCourse(ship), 'a weak hull keeps the course');
+  ship.docked = 'x';
+  game.step();
+  assert.equal(pausedCourse(ship), null, 'in port it is dropped');
+  ship.docked = null;
   assert.equal(SERVER_RU_H[RESUME_WORDS], 'Бой позади: рулевой снова ведёт корабль к метке.');
 });
 

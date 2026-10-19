@@ -41,7 +41,7 @@ function oldPad(f: ActFacts): ActId | null {
   if (f.home) return 'base';
   if (f.claim) return 'claim';
   const r = f.repair;
-  if (r && (r.repairing || (!r.combat && r.hurt && !r.short))) return 'repair';
+  if (r && (r.repairing || (!r.combat && r.hurt))) return 'repair';
   return null;
 }
 
@@ -67,7 +67,8 @@ test('every thing at hand is a button, each with its icon, word, title and key',
   // The carpenters: not while fighting, not with nothing to mend, not short of planks; always to stop them.
   assert.deepEqual(buildActs({ repair: { repairing: false, combat: true, hurt: true } }), []);
   assert.deepEqual(buildActs({ repair: { repairing: false, combat: false, hurt: false } }), []);
-  assert.deepEqual(buildActs({ repair: { repairing: false, combat: false, hurt: true, short: true } }), []);
+  // short of planks or sailcloth: the button stays, its press says what is wanted (owner, 2026-10-19)
+  assert.equal(buildActs({ repair: { repairing: false, combat: false, hurt: true, short: true } })[0].id, 'repair');
   assert.equal(buildActs({ repair: { repairing: true, combat: true, hurt: true } })[0].id, 'repair');
   // Each mark kind its own word and icon; worked today or at work: no button (the info line says so).
   for (const k of MARK_KINDS) {
@@ -121,7 +122,7 @@ test('the gold button is the one the pad\'s A always took, and padContext runs t
   assert.match(pad, /gatherActs\(\)\.acts\[0\]/);
   assert.match(pad, /runAct\(first\)/);
   assert.match(main, /landKeyAct\(gatherActs\(\)\.acts\)/, 'the land key');
-  assert.match(main, /const a = b \? curActs\[Number\(b\.dataset\.act\)\] : undefined;\r?\n {2}if \(a\) runAct\(a\);/, 'a click');
+  assert.match(main, /const a = b \? curActs\[Number\(b\.dataset\.act\)\] : down && performance\.now\(\) - down\.at < 800 \? curActs\.find\(\(x\) => x\.id === down\.id\) : undefined;\r?\n {2}if \(a\) runAct\(a\);/, 'a click (the pressed button kept across a redraw)');
 });
 
 test('the land key takes the mast, the net, the sea mark in the bar\'s order', () => {
@@ -169,4 +170,22 @@ test('the first time the bar shows something, a hint says what it is', () => {
   assert.ok(EASE_EN['tip.actions'] && EASE_RU['tip.actions']);
   const main = readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8');
   assert.match(main, /firstTips\.offer\('actions', true\)/);
+});
+
+test('«Атаковать» only for her own mark or a foe within her guns\' reach; the row pops up and sinks away (owner, 2026-10-19)', async () => {
+  const { attackRelevant } = await import('../client/src/ui/actbar.ts');
+  // no target of hers, the frame's nearest foe out of reach: no button (it was lit with no target at all)
+  assert.equal(attackRelevant(false, 'far'), false);
+  assert.equal(attackRelevant(false, null), false);
+  // her own mark (a tap, the lock, the target key), however far; the frame's foe once within the guns' reach
+  assert.equal(attackRelevant(true, 'far'), true);
+  assert.equal(attackRelevant(false, 'in'), true);
+  const { readFileSync } = await import('node:fs');
+  const main = readFileSync('client/src/main.ts', 'utf8');
+  assert.ok(main.includes('attackable(targetId) && !roamLead && attackRelevant(targetPinned, markRange())'), 'the bar asks it');
+  const hud = readFileSync('client/src/ui/seahud.ts', 'utf8'), css = readFileSync('client/seahud.css', 'utf8');
+  assert.ok(hud.includes("' tc-pop'") && hud.includes("classList.add('tc-out')"), 'a new button pops up, an empty row sinks away');
+  assert.ok(/@keyframes tc-pop/.test(css) && /@keyframes tc-out/.test(css) && /prefers-reduced-motion: reduce\) \{ #touch > \.tc-actrow/.test(css));
+  // the unified design kept: the same class for every button
+  assert.ok(hud.includes('class="${actBtnClass(false)}${was.has(x.id)'));
 });

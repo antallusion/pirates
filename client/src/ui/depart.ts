@@ -10,7 +10,7 @@
 
 import { GOODS, walkBuyCost } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { VOYAGE_MINUTES, foodMinutes, voyageNeeds, voyageStores } from '../../../shared/src/data/voyage.ts';
+import { HOLD_KEEP_FREE, VOYAGE_MINUTES, buyRoom, foodMinutes, voyageNeeds, voyageStores } from '../../../shared/src/data/voyage.ts';
 import type { VoyageNeed, VoyageShip } from '../../../shared/src/data/voyage.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
 import { cargoVolume, tx } from '../../../shared/src/sim/shipstats.ts';
@@ -40,6 +40,7 @@ export function voyageShip(state: ClientState): VoyageShip | null {
     holdVolume: st.holdVolume, holdFree: st.holdVolume - used, provisionVolume: GOODS.provisions.volume * st.provisionVolumeMul,
     roundShot: self.ammo.round ?? 0, gunsPerSide: st.gunsPerSide,
     hull: you?.hull ?? 1, hullMax: you?.hullMax ?? 1, sails: you?.sails ?? 1, sailsMax: you?.sailsMax ?? 1,
+    cloth: self.cargo.sailcloth ?? 0, clothVolume: GOODS.sailcloth.volume * st.materialVolumeMul,
   };
 }
 
@@ -76,11 +77,13 @@ function unitVol(state: ClientState, good: GoodId): number {
   return g.volume * (good === 'planks' || good === 'sailcloth' ? st?.materialVolumeMul ?? 1 : good === 'provisions' ? st?.provisionVolumeMul ?? 1 : 1);
 }
 
-/** The free room in her hold now (m³). */
+/** The room in her hold the buying may fill now (m³): what is free less the fifth always left free (owner, 2026-10-19:
+ *  «Выходя из порта должны оставлять 20 процентов места на корабле после авто покупки рекомендаций»). */
 export function holdRoom(state: ClientState): number {
   const ship = voyageShip(state);
-  return ship ? Math.max(0, ship.holdFree) : 0;
+  return ship ? buyRoom(ship) : 0;
 }
+export { HOLD_KEEP_FREE };
 
 /** The harbour's market row for a good, if it sells it. */
 function row(state: ClientState, good: GoodId) {
@@ -130,6 +133,11 @@ function offerOf(need: VoyageNeed, state: ClientState): Offer {
       const per = view?.crewHireCost ?? 0;
       return offer(need, Math.min(need.buy, view?.crewAvailable ?? 0), 1, (k) => Math.ceil(per * k), (k) => [{ t: 'hire_crew', qty: k, prof: 'sailor' }]);
     }
+    case 'cloth': {
+      const r = row(state, 'sailcloth');
+      const v = unitVol(state, 'sailcloth');
+      return offer(need, r ? Math.min(need.buy, r.stock) : 0, 1, (k) => (r ? walkBuyCost('sailcloth', r.buy, r.stock, k) : 0), (k) => [{ t: 'trade', good: 'sailcloth', qty: k }], { vol: (k) => k * v });
+    }
     case 'ammo': {
       const per = view?.ammoPrices.round ?? 0;
       return offer(need, per > 0 ? need.buy : 0, 10, (k) => Math.ceil(per * k), (k) => [{ t: 'buy_ammo', ammo: 'round', qty: k }]);
@@ -145,7 +153,7 @@ function offerOf(need: VoyageNeed, state: ClientState): Offer {
 export function departOffers(state: ClientState): Offer[] {
   const ship = voyageShip(state);
   if (!ship || !state.portView) return [];
-  const order = ['food', 'repair', 'ammo', 'crew'];
+  const order = ['food', 'cloth', 'repair', 'ammo', 'crew'];
   const needs = voyageNeeds(ship);
   // The provisions for the hands she would hire here too (the hands hired, the food wanted grows: «Докупить всё» left
   // four barrels short of it).
@@ -229,6 +237,12 @@ function rowHtml(o: Offer, i: number, state: ClientState): string {
       line = L('depart.crewLine', { have: n.have, want: n.want });
       none = L('depart.noHands');
       break;
+    case 'cloth':
+      ico = 'good_sailcloth';
+      title = L('depart.cloth');
+      line = L('depart.clothLine', { have: n.have, want: n.want });
+      none = n.buy <= 0 ? L('depart.foodNoRoom') : row(state, 'sailcloth') ? L('depart.soldOut') : L('depart.notSold');
+      break;
     case 'ammo':
       ico = 'ammo_round';
       title = L('depart.ammo');
@@ -293,7 +307,10 @@ export function departOrAsk(state: ClientState, send: (m: ClientMsg) => void, go
     // (on a phone held sideways the heading, the lead and the purse's word share one line: the four rows and the foot
     // stand in one screen with nothing to scroll — owner, 2026-10-09)
     const always = offers.length ? `<label class="check dp-always" data-hint="${esc(U2('depart.alwaysHint'))}" title="${esc(U2('depart.alwaysHint'))}"><input type="checkbox" data-dpalways${settings().autoTopUp ? ' checked' : ''}> ${esc(U2('depart.always'))}</label>` : '';
-    const head = `<div class="dp-head"><h3 id="dp-title" class="dp-title">${icon('stat_sails', '', 'ico-md')}${esc(L('depart.title'))}</h3>${offers.length ? `<p class="dp-lead">${esc(L('depart.lead', { min: VOYAGE_MINUTES }))}</p>` : `<p class="dp-lead dp-ok">${esc(L('depart.ready'))}</p>`}${plan.buy.length && !plan.all ? `<p class="dp-warn">${esc(L('depart.short', { gold: fmt(gold) }))}</p>` : ''}${always}</div>`;
+    const vs = voyageShip(state)!;
+    const freeAfter = Math.max(0, vs.holdFree - plan.buy.reduce((a, o) => a + o.vol(o.n), 0));
+    const keep = plan.buy.length ? ` <span class="dp-free muted">· ${esc(L('depart.keepFree', { free: Math.floor(freeAfter), max: Math.round(vs.holdVolume) }))}</span>` : '';
+    const head = `<div class="dp-head"><h3 id="dp-title" class="dp-title">${icon('stat_sails', '', 'ico-md')}${esc(L('depart.title'))}</h3>${offers.length ? `<p class="dp-lead">${esc(L('depart.lead', { min: VOYAGE_MINUTES }))}${keep}</p>` : `<p class="dp-lead dp-ok">${esc(L('depart.ready'))}</p>`}${plan.buy.length && !plan.all ? `<p class="dp-warn">${esc(L('depart.short', { gold: fmt(gold) }))}</p>` : ''}${always}</div>`;
     const body = `${head}${offers.length ? `<div class="dp-list">${offers.map((o, i) => rowHtml(o, i, state)).join('')}</div>` : ''}`;
     const foot = `${plan.buy.length ? buttonHtml({ kind: 'primary', size: 'md', label: plan.all ? L('depart.buyAll', { cost: fmt(plan.cost) }) : L('depart.buyFit', { cost: fmt(plan.cost) }), data: { dp: 'all' } }) : ''}${buttonHtml({ kind: offers.length && plan.buy.length ? 'secondary' : 'primary', size: 'md', label: offers.length ? L('depart.sailAnyway') : L('depart.sail'), data: { dp: 'sail' } })}${buttonHtml({ kind: 'secondary', label: L('depart.stay'), data: { dp: 'stay' } })}`;
     if (body !== lastBody) {

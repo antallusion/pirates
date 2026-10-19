@@ -68,6 +68,7 @@ import { drawWaysMini } from '../render/waystations.ts'; // docs/35
 import { drawRoamsMini } from '../render/roamers.ts';
 import { drawCitadelsMini } from '../render/citadels.ts'; // docs/19 E4 // docs/19 D7
 import { armyGlance } from './army.ts';
+import { holdMix, holdMixHtml } from './holdmix.ts';
 import { gloryChip } from './throne.ts'; // docs/19 E1
 import { Toasts } from './kit/toast.ts'; // docs/23 phase 1
 import { faceAttrs } from './kit/faces.ts'; // the rebuild of 2026-10-07
@@ -698,7 +699,7 @@ export class Hud {
         ${self.abyss && (self.abyss.inside || self.abyss.pressure > 0) ? `<div class="row" title="${esc(L('pressureTip'))}"><span class="lbl" style="color:${self.abyss.pressure < 60 ? 'var(--fog)' : 'var(--bad)'}">${esc(L('pressure'))}</span><span class="val">${self.abyss.pressure}${self.abyss.shards ? ` · ${esc(L('shards', { n: self.abyss.shards }))}` : ''}</span></div>${bar('sanity', self.abyss.pressure / 100)}` : ''}${you.sanity < 99.5 ? `<div class="row" title="${esc(L('sanityTip'))}"><span class="lbl" style="color:${you.sanity > 50 ? 'var(--fog)' : 'var(--bad)'}">${esc(L('sanity'))}</span><span class="val">${Math.round(you.sanity)} · ${esc(sanityWord(you.sanity))}</span></div>${bar('sanity', you.sanity / 100)}` : ''}
         ${self.company.unrest ? `<div class="row" title="${esc(L('unrestTip'))}"><span class="lbl" style="color:var(--bad)">${esc(L('crew'))}</span><span class="val" style="color:var(--bad)">${esc(sv(self.company.unrest))}</span></div>` : ''}
         ${self.captain === 'drowned' ? `<div class="row" title="${esc(L('dreadTip'))}"><span class="lbl" style="color:var(--turq)">${esc(L('dread'))}</span><span class="val" style="color:var(--turq)">${Math.round(you.dread)}${you.dread >= 80 ? ` · ${esc(L('theCall'))}` : ''}</span></div>${bar('dread', you.dread / 100)}` : ''}
-        <div class="row"><span class="lbl">${icon('tab_market', '', 'ico-xs')}${esc(L('hold'))}</span><span class="val">${vol.toFixed(0)} / ${holdMax.toFixed(0)}${self.cargo.provisions ? ` · ${esc(L('food', { n: Math.floor(self.cargo.provisions) }))}` : ` · <span style="color:var(--bad)">${esc(L('noFood'))}</span>`}</span></div>
+        <div class="row"><span class="lbl">${icon('tab_market', '', 'ico-xs')}${esc(L('hold'))}</span><span class="val">${vol.toFixed(0)} / ${holdMax.toFixed(0)}${self.cargo.provisions ? ` · ${esc(L('food', { n: Math.floor(self.cargo.provisions) }))}` : ` · <span style="color:var(--bad)">${esc(L('noFood'))}</span>`}</span></div>${bar('hold', vol / Math.max(1, holdMax))}${holdMixHtml(holdMix(self.cargo, state.ownStats), vol, holdMax)}
         ${self.curse >= 25 ? `<div class="row"><span class="lbl" style="color:var(--turq)">${esc(L('curse'))}</span><span class="val" style="color:var(--turq)">${esc(L('curseStage', { n: self.curse >= 80 ? 3 : self.curse >= 50 ? 2 : 1 }))} · ${self.curse}</span></div>` : ''}
         <div class="row" style="margin-top:4px"><span class="lbl">${icon('wind', '', 'ico-xs')}${esc(keyless(L('sail')))}</span><span class="val">${knots(you.spd)} ${esc(L('kn'))}${you.flags & SF.REPAIRING ? ` · ${esc(L('repairing'))}` : ''}</span></div>
         <div class="sail-steps">${steps}</div>`;

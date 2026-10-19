@@ -258,13 +258,13 @@ test('broken off by a shot near a coast: the lead line keeps her off it until sh
   assert.equal(startAutosail(game, s, is.x - is.radius - 700, is.y - 3000, 4), null);
   // a shot at her: the helmsman lets go with her bow on the island
   ship.state.heading = Math.PI / 2;
-  ship.lastCombat = game.now + 0.01;
+  ship.gunsAt = ship.lastCombat = game.now + 0.01;
   const t0 = touches.get(ship)?.touch ?? 0;
   let broke = false;
   const t1 = game.now;
   phone(game, { c, s }, 60, 4, () => {
     if (!autosailOf(ship)) broke = true;
-    if (game.now - t1 < 20) ship.lastCombat = game.now; // (the fight goes on a while: no course taken up again)
+    if (game.now - t1 < 20) ship.gunsAt = ship.lastCombat = game.now; // (the fight goes on a while: no course taken up again)
   });
   calm();
   assert.ok(broke, 'the course broken off');
@@ -317,7 +317,7 @@ test('every run sends its planned way: a tap\'s, a goal\'s in port (from the har
   }
 });
 
-test('a goal\'s place the helmsman cannot sail for yet (a hostile sail in range) is sent with its way all the same', () => {
+test('a goal’s place in a storm: the helmsman sails for it all the same (owner, 2026-10-19), its way sent', () => {
   const { game } = makeGame();
   fair(game);
   const { s, c, ship } = seaCaptainAt(game, 'brig', 50000, 50000, 0);
@@ -338,9 +338,9 @@ test('a goal\'s place the helmsman cannot sail for yet (a hostile sail in range)
   QUESTS_BY_ID['nr_visit'] = { id: 'nr_visit', kind: 'job', name: 'Test', mentor: 'T', port: port.id, summary: '', requires: {}, steps: [{ type: 'visit', port: port.id, text: 'Go.' }], reward: { xp: 1, silver: 1 } } as never;
   c.inbox.length = 0;
   const e = gotoGoal(game, s, 'q:nr_visit');
-  assert.ok(e, 'refused for now (a storm)');
-  assert.equal(autosailOf(ship), null);
-  const r = c.inbox.filter((m) => m.t === 'route' && m.on).pop() as { view?: { path?: [number, number][] } } | undefined;
-  assert.ok((r?.view?.path?.length ?? 0) >= 2, 'the place sent with its way');
+  assert.equal(e, null, 'not refused in a storm');
+  assert.ok(autosailOf(ship), 'the helmsman sails for it');
+  const a = c.inbox.filter((m) => m.t === 'autosail' && m.on).pop() as { path?: [number, number][] } | undefined;
+  assert.ok((a?.path?.length ?? 0) >= 2, 'the way sent');
   game.weatherOf = was;
 });

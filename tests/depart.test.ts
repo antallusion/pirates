@@ -38,10 +38,10 @@ test('the window’s list: what a voyage wants and how much at the harbour’s p
   const st = harbour();
   const ship = voyageShip(st)!;
   const needs = voyageNeeds(ship);
-  assert.deepEqual(needs.map((n) => n.kind).sort(), ['ammo', 'crew', 'food', 'repair']);
+  assert.deepEqual(needs.map((n) => n.kind).sort(), ['ammo', 'cloth', 'crew', 'food', 'repair']);
   const offers = departOffers(st);
-  assert.deepEqual(offers.map((o) => o.need.kind), ['food', 'repair', 'ammo', 'crew'], 'food, repairs, shot, hands');
-  const food = offers[0], repair = offers[1], ammo = offers[2], crew = offers[3];
+  assert.deepEqual(offers.map((o) => o.need.kind), ['food', 'cloth', 'repair', 'ammo', 'crew'], 'food, a repair’s sailcloth, repairs, shot, hands');
+  const food = offers[0], repair = offers[2], ammo = offers[3], crew = offers[4];
   // Provisions: the voyage's want — for the hands she would hire here too — at the market's walking price.
   const cNeed = needs.find((n) => n.kind === 'crew')!;
   const hire = cNeed.kind === 'crew' ? Math.min(cNeed.buy, 30) : 0;
@@ -76,20 +76,21 @@ test('«Докупить всё»: everything at a full purse; as far as her sil
   let p = departPlan(offers, 5000);
   assert.equal(p.all, true);
   assert.equal(p.cost, whole);
-  assert.deepEqual(p.buy.map((o) => o.need.kind), ['food', 'repair', 'ammo', 'crew']);
-  assert.equal(p.buy[1].via, 'yard');
+  assert.deepEqual(p.buy.map((o) => o.need.kind), ['food', 'cloth', 'repair', 'ammo', 'crew']);
+  assert.equal(p.buy[2].via, 'yard');
   // Just short of it all: the food and the yard whole, the rest a part.
   p = departPlan(offers, whole - 30);
   assert.equal(p.all, false);
   assert.ok(p.cost <= whole - 30 && p.cost > whole - 120, `${p.cost}`);
   // A thin purse: the food first, the yard past it — the planks and sailcloth instead, then what is left.
-  const food = offers[0];
-  const thin = food.cost + 120;
+  const food = offers[0], cloth = offers[1];
+  const thin = food.cost + cloth.cost + 120;
   p = departPlan(offers, thin);
   assert.equal(p.all, false);
   assert.ok(p.cost <= thin);
   assert.equal(p.buy[0], food, 'the food whole');
-  assert.equal(p.buy[1].via, 'stores', 'the carpenters’ stores for the yard she cannot pay');
+  assert.equal(p.buy[1], cloth, 'a repair’s sailcloth whole');
+  assert.equal(p.buy[2].via, 'stores', 'the carpenters’ stores for the yard she cannot pay');
   assert.ok(p.buy.every((o) => o.cost <= thin && o.msgs.length > 0));
   // Ten silver: a part of the food, nothing else.
   p = departPlan(offers, 10);

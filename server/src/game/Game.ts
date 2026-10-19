@@ -249,7 +249,7 @@ import { chooseBoon, descentLandable, leaveDescent, startDescent, stepDescent, s
 import { holidayGhostSunk, stepHolidays } from './holidays.ts';
 import { addGood, addItem, buyAtStall, claimBazaar, closeStall, openStall, removeLine, sendBazaarShadows, stepBazaar } from './bazaar.ts';
 import { HULL_PER_PLANK, SAILS_PER_CLOTH, SEA_FIRE_PACE, SEA_HULL_PER_MIN, SEA_RUDDER_PER_MIN, SEA_SAILS_PER_MIN } from '../../../shared/src/data/dealings.ts';
-import { repairLack, repairOrder, seaCrewShare } from './searepair.ts';
+import { repairDone, repairLack, repairOrder, seaCrewShare, tallyRepair } from './searepair.ts';
 import { hearOfPorts } from './demand.ts';
 import { abandonRun, acceptRun, expireRuns, settleRuns } from './traderuns.ts';
 import { bid as auctionBid, claimAuction, putUp, stepAuction } from './auction.ts';
@@ -1374,14 +1374,18 @@ export class Game {
           const stocked = planks >= planksNeeded;
           const k = stocked ? 1 : oldSalt ? 0.5 : planks / planksNeeded;
           ship.hull += hullGain * k;
-          if (!cove) ship.cargo.planks = Math.round(Math.max(0, planks - planksNeeded * (stocked ? 1 : planks / planksNeeded)) * 100) / 100;
+          const used = cove ? 0 : planksNeeded * (stocked ? 1 : planks / planksNeeded);
+          if (!cove) ship.cargo.planks = Math.round(Math.max(0, planks - used) * 100) / 100;
+          tallyRepair(ship, now, hullGain * k, 0, used, 0);
           did = true;
         }
         if (sailGain > 0.02 && (cloth > 0.01 || oldSalt)) {
           const stocked = cloth >= clothNeeded;
           const k = stocked ? 1 : oldSalt ? 0.5 : cloth / clothNeeded;
           ship.sails += sailGain * k;
-          if (!cove) ship.cargo.sailcloth = Math.round(Math.max(0, cloth - clothNeeded * (stocked ? 1 : cloth / clothNeeded)) * 100) / 100;
+          const used = cove ? 0 : clothNeeded * (stocked ? 1 : cloth / clothNeeded);
+          if (!cove) ship.cargo.sailcloth = Math.round(Math.max(0, cloth - used) * 100) / 100;
+          tallyRepair(ship, now, 0, sailGain * k, 0, used);
           did = true;
         }
         if (ship.rudderHp < 1 && (planks > 0.2 || oldSalt)) {
@@ -1390,11 +1394,24 @@ export class Game {
         }
         if ((ship.cargo.planks ?? 0) <= 0.01) delete ship.cargo.planks;
         if ((ship.cargo.sailcloth ?? 0) <= 0.01) delete ship.cargo.sailcloth;
+        // the «+N» over her as they work (every two seconds)
+        const t = ship.repairTally;
+        if (t && now - t.at >= 2) {
+          const n = t.hull + t.sails - t.shown;
+          if (n >= 1) skillNumber(this, ship, 'repair', { heal: n });
+          t.shown = t.hull + t.sails;
+          t.at = now;
+        }
         if (!did) {
           ship.repairing = false;
           const full = ship.hull >= st.hullMax - 0.5 && ship.sails >= st.sailHpMax - 0.5;
-          // Out of what they mend with: what is wanted, in plain words.
-          this.toastShip(ship, full ? 'Repairs complete.' : repairLack(ship, cove) ?? 'Repairs complete.', full ? 'good' : 'info');
+          // What they did, with what; and out of what they mend with — what is wanted, in plain words.
+          const lack = full ? null : repairLack(ship, cove);
+          const done = repairDone(ship);
+          if (done) this.toastShip(ship, done, 'good');
+          if (lack) this.toastShip(ship, lack, 'bad');
+          else if (!done) this.toastShip(ship, 'Repairs complete.', 'good');
+          ship.repairTally = null;
         }
       }
     }

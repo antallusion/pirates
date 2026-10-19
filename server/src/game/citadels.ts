@@ -48,6 +48,7 @@ import { siegeLeft } from './tacbattle.ts';
 import type { SiegeInput, TacBattle } from './tacbattle.ts';
 import { citadelTitan, titanWhy } from './titans.ts';
 import { isTitan } from '../../../shared/src/data/titans.ts';
+import { approach } from './approach.ts';
 
 const KEY = 'citadels';
 const HOUR = 3_600_000;
@@ -303,6 +304,8 @@ function openWindow(game: Game, id: number): { start: number; end: number } {
 
 // ------------------------------------------------------------------ the assault (E5)
 
+const CIT_FAR = 'Come to its anchorage: the assault begins before its gate.';
+
 /** Why she may not assault this citadel now (null: she may). */
 function assaultWhy(game: Game, s: PlayerSession, id: number): string | null {
   const p = s.profile, ship = s.ship;
@@ -321,7 +324,7 @@ function assaultWhy(game: Game, s: PlayerSession, id: number): string | null {
   if (ship.boarding || ship.grappled || ship.landing) return 'Not in the middle of a boarding';
   if (!game.tacticalBoarding) return 'The siege is fought on the hexes.';
   const c = defs(game)[id];
-  if (dist(c.x, c.y, ship.state.x, ship.state.y) > CIT_RANGE) return 'Come to its anchorage: the assault begins before its gate.';
+  if (dist(c.x, c.y, ship.state.x, ship.state.y) > CIT_RANGE) return CIT_FAR;
   if (ship.underFire(game.now)) return 'Not while under fire';
   if (!S.cits[id].garrison.some((x) => x.n > 0)) return 'Its garrison is gone: it is yours to take.';
   return null;
@@ -340,6 +343,11 @@ export function assaultCitadel(game: Game, s: PlayerSession, id: number): string
     return null;
   }
   const why = assaultWhy(game, s, id);
+  // far from its anchorage (2026-10-19): the helmsman takes her there, and the assault begins on arrival
+  if (why === CIT_FAR) {
+    const c0 = defs(game)[id];
+    return approach(game, s, { x: c0.x, y: c0.y, reach: CIT_RANGE - 40 }, why);
+  }
   if (why) return why;
   const c = defs(game)[id];
   const ship = s.ship!;

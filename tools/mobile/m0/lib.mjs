@@ -16,7 +16,7 @@ export async function browser() {
 /** A page at a size; touch below 1000 px wide. */
 export async function page(b, [W, H] = SIZES.phone, opts = {}) {
   const touch = opts.touch ?? W < 1000;
-  const ctx = await b.newContext({ viewport: { width: W, height: H }, isMobile: touch, hasTouch: touch, deviceScaleFactor: 1, locale: opts.lang === 'en' ? 'en-US' : 'ru-RU' });
+  const ctx = await b.newContext({ viewport: { width: W, height: H }, isMobile: touch, hasTouch: touch, deviceScaleFactor: Number(process.env.DSF ?? 1), locale: opts.lang === 'en' ? 'en-US' : 'ru-RU' });
   await ctx.addInitScript((l) => { try { if (!localStorage.getItem('gravetide.lang')) localStorage.setItem('gravetide.lang', l); } catch {} }, opts.lang ?? 'ru');
   // Films are another helper's: skipped as they come, so the screens under them can be measured.
   if (opts.films !== true) await ctx.addInitScript(() => { setInterval(() => document.querySelectorAll('.film').forEach((f) => f.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))), 300); });

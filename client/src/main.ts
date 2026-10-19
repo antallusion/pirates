@@ -51,7 +51,7 @@ import { AudioEngine, turnCreakLoad } from './audio.ts';
 import { AutosailPill, FirstTips, autosailRequest, autosailStopText, routeLabel, tipForMsg, tipForState } from './ui/ease.ts';
 import { claimNear, claimSpot, tapTarget } from './ui/sailto.ts'; // seaux: sail-to on tap
 import { toggleCaptainMenu } from './ui/capmenu.ts'; // seaux: the captain's menu on her portrait
-import { actBarHtml, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
+import { actBarHtml, attackRelevant, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
 import { FIND_REACH, FIND_SLOW } from '../../shared/src/data/seafinds.ts';
 import type { FindView } from '../../shared/src/findproto.ts';
 import { ROAMS, ROAM_REACH, ROAM_SEE } from '../../shared/src/data/roamers.ts'; // docs/19 D7
@@ -680,6 +680,7 @@ function sailToTap(px: number, py: number): boolean {
   const t = tapTarget(state, w.x, w.y, renderer.zoom);
   if (!t) return false;
   if (t.kind === 'find') workFind(Number(t.id));
+  else if (t.kind === 'way') net.send({ t: 'way', action: 'moor', id: Number(t.id) }); // (the server sails her in: approach.ts)
   else if (t.kind === 'mark' && !state.markDone.has(Number(t.id))) workMark(Number(t.id));
   else sailToSpot(t, t.near);
   return true;
@@ -693,6 +694,15 @@ const RT = dict(ROUTE_EN, ROUTE_RU);
 let goalRun: RouteRun | null = null;
 /** Why the helmsman last gave the wheel back, and when (the page's clock). */
 let helmStop: { why: AutosailStop; at: number } | null = null;
+/** The last «the helmsman has the wheel» said, and for which mark: a course re-set for the same mark (a moving thing
+ *  followed, a fight's course taken up) is not said again. */
+let asSaid = { x: NaN, y: NaN, at: -1e9 };
+function autosailQuiet(m: { x?: number; y?: number }): boolean {
+  const now = performance.now();
+  const same = m.x !== undefined && m.y !== undefined && Math.hypot(m.x - asSaid.x, m.y - asSaid.y) < 400 && now - asSaid.at < 30_000;
+  if (!same) asSaid = { x: m.x ?? NaN, y: m.y ?? NaN, at: now };
+  return same;
+}
 /** The quests she had at the last private state (a new one is followed: its mark shows on the sea). */
 let questsKnown: Set<string> | null = null;
 /** The last tap of a goal (one request per tap: a bounced finger sends nothing more). */
@@ -1434,8 +1444,11 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'autosail': {
       // docs/16 #36: the helmsman has the wheel, or has given it back and why (a run to a goal says its own course).
-      if (m.on && !state.route) hud.toast(EL('as_on'), 'info');
-      else {
+      // (2026-10-19: a course taken on a run to a goal fell through to the «given back» branch — «Автоплавание выключено.»
+      // flashed off the quay while the course went on)
+      if (m.on) {
+        if (!state.route && !autosailQuiet(m)) hud.toast(EL('as_on'), 'info');
+      } else {
         helmStop = { why: m.why ?? 'off', at: performance.now() }; // ux2: the run to a goal reads why
         const w = autosailStopText(m.why);
         hud.toast(w.text, w.kind);
@@ -2329,13 +2342,20 @@ hud.onMiniMark = (x, y) => {
 };
 // The action bar (owner, 2026-10-02): a button does what its key does, every one in sight (2026-10-18). A press never
 // takes the focus (Space and Enter stay the ship's).
+// (2026-10-19: the bar is laid anew when what is at hand changes — a far find's «≈ 600 м» as she sails — and a press whose
+// button was laid anew under it between down and up lost its click: the button pressed is kept from the press)
+let promptDown: { id: string; at: number } | null = null;
 $('hud-prompt').addEventListener('mousedown', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLElement>('[data-act]');
   if ((e.target as HTMLElement).closest('button')) e.preventDefault();
+  promptDown = b ? { id: curActs[Number(b.dataset.act)]?.id ?? '', at: performance.now() } : null;
 });
 $('hud-prompt').addEventListener('click', (e) => {
   const el = e.target as HTMLElement;
   const b = el.closest<HTMLElement>('[data-act]');
-  const a = b ? curActs[Number(b.dataset.act)] : undefined;
+  const down = promptDown;
+  promptDown = null;
+  const a = b ? curActs[Number(b.dataset.act)] : down && performance.now() - down.at < 800 ? curActs.find((x) => x.id === down.id) : undefined;
   if (a) runAct(a);
 });
 // Screens redraw themselves (a tab click, a trade): on touch their keyboard hints come off every time.
@@ -3018,8 +3038,11 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     else if (back) info.push(esc(LROAM('i.back', { what: name, t: backClock(back) })));
     else if (rm.offer === 'flee' && rm.ratio !== undefined) info.push(esc(LROAM('i.flee', { r: rm.ratio })));
   }
-  // «Атаковать» (docs/23 item 33): the target frame's ship, or the pursuit under way.
-  attackMark = attackable(targetId) && !roamLead ? targetId : null;
+  // «Атаковать» (docs/23 item 33): the target frame's ship, or the pursuit under way — only a ship of her choosing (a
+  // tap, the lock, the target key) or one the frame picked that is within her guns' reach (owner, 2026-10-19: «Кнопка
+  // атаковать горит всегда даже когда у меня нет цели. Пусть внизу выпрыгивают кнопки только когда я рядом с чем-то
+  // проплываю или беру кого-то в прицел»).
+  attackMark = attackable(targetId) && !roamLead && attackRelevant(targetPinned, markRange()) ? targetId : null;
   const pursued = state.pursuit ? state.ships.get(state.pursuit.target) : undefined;
   if (state.pursuit) facts.attack = { name: placeName(pursued?.info?.name ?? L('her')), pursuing: true, mode: state.pursuit.mode, ...(unboardableMark(state.pursuit.target) ? { gunsOnly: true } : {}) };
   else if (attackMark !== null) facts.attack = { name: placeName(state.ships.get(attackMark)?.info?.name ?? L('her')), pursuing: false, mode: 'board' };

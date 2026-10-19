@@ -33,6 +33,7 @@ import { groupOfAccount } from './party.ts';
 import type { PlayerSession } from './player.ts';
 import { chronicle } from './renown.ts';
 import type { ShipEntity } from './ship.ts';
+import { approach } from './approach.ts';
 
 const KEY = 'abyss_raid';
 
@@ -142,6 +143,8 @@ function raidOf(game: Game, acc: number, make: boolean): Raid | null {
 
 const hpOf = (army: readonly ArmyStack[]): number => army.reduce((a, x) => a + x.n * (UNITS[x.u]?.hp ?? 0), 0);
 
+const GATE_FAR = 'Come to the gate of the Stair: the Maw opens there.';
+
 /** Why she may not board the raid's legend now (null: she may). */
 function whyNot(game: Game, s: PlayerSession, r: Raid | null): string | null {
   const p = s.profile, ship = s.ship;
@@ -152,7 +155,7 @@ function whyNot(game: Game, s: PlayerSession, r: Raid | null): string | null {
   if (r?.fighting !== undefined && r.fighting !== s.accountId) return 'Another captain of your raid is aboard the legend now.';
   if (r && !r.members.includes(s.accountId) && r.members.length >= RAID_GROUP) return 'Five captains at the most in one raid.';
   const g = gateOf(game);
-  if (dist(g.x, g.y, ship.state.x, ship.state.y) > RAID_GATE_R) return 'Come to the gate of the Stair: the Maw opens there.';
+  if (dist(g.x, g.y, ship.state.x, ship.state.y) > RAID_GATE_R) return GATE_FAR;
   if (ship.underFire(game.now)) return 'Not while under fire';
   return null;
 }
@@ -160,6 +163,11 @@ function whyNot(game: Game, s: PlayerSession, r: Raid | null): string | null {
 /** Her raid's legend comes alongside at the gate and grapples at once. */
 export function boardRaid(game: Game, s: PlayerSession): string | null {
   const why = whyNot(game, s, raidOf(game, s.accountId, false));
+  // far from the gate (2026-10-19): the helmsman takes her there, and the legend is boarded on arrival
+  if (why === GATE_FAR) {
+    const g = gateOf(game);
+    return approach(game, s, { x: g.x, y: g.y, reach: RAID_GATE_R - 30 }, why);
+  }
   if (why) return why;
   const S = store(game);
   const r = raidOf(game, s.accountId, true)!;

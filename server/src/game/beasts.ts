@@ -42,6 +42,7 @@ import type { ShipEntity } from './ship.ts';
 import { pursuitOf } from './pursuit.ts';
 import { onboardingProtected } from './onboarding.ts';
 import { SPEED_SCALE, TURN_SCALE } from '../../../shared/src/constants.ts';
+import { approach } from './approach.ts';
 
 type Mode = 'roam' | 'hunt' | 'flee' | 'line' | 'spent';
 
@@ -1185,7 +1186,10 @@ function startFlense(game: Game, s: PlayerSession, id: number): string | null {
   const ship = s.ship!;
   const c = S.carcasses.get(id);
   if (!c) return 'Nothing to flense here.';
-  if (dist(c.x, c.y, ship.state.x, ship.state.y) > FLENSE_R + ship.stats.length / 2 || ship.state.speed > 1.5) return 'Heave to alongside the carcass first.';
+  // far off or under way (2026-10-19): the helmsman brings her alongside, heaves to, and the flensing begins
+  if (dist(c.x, c.y, ship.state.x, ship.state.y) > FLENSE_R + ship.stats.length / 2 || ship.state.speed > 1.5) {
+    return approach(game, s, { x: c.x, y: c.y, reach: FLENSE_R + ship.stats.length / 2 - 5, where: () => (bs(game).carcasses.get(id) ?? null), slow: 1.3 }, 'Heave to alongside the carcass first.');
+  }
   if (c.by !== null && c.by !== s.accountId) {
     const o = game.sessionByAccount(c.by)?.ship;
     if (o && dist(c.x, c.y, o.state.x, o.state.y) <= FLENSE_R + o.stats.length / 2 && o.state.speed <= 1.5) return 'Someone is already flensing it.';

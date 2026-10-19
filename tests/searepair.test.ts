@@ -61,7 +61,7 @@ test('nothing to mend her with: plain words of what is wanted, and the button do
   let from = c.inbox.length;
   c.push({ t: 'repair', on: true });
   assert.equal(ship.repairing, false, '«Чинить» stays «Чинить»');
-  assert.deepEqual(toasts(c, from).map((t) => [t.msg, t.kind]), [[NO_STORES, 'info']]);
+  assert.deepEqual(toasts(c, from).map((t) => [t.msg, t.kind]), [[NO_STORES, 'bad']]);
   // Planks but no sailcloth, the sails whole: to work; with the planks gone mid-work, why they stopped.
   ship.sails = ship.stats.sailHpMax;
   ship.cargo.planks = 2;
@@ -70,7 +70,7 @@ test('nothing to mend her with: plain words of what is wanted, and the button do
   from = c.inbox.length;
   steps(game, 20 * 30);
   assert.equal(ship.repairing, false);
-  assert.ok(toasts(c, from).some((t) => t.msg === NO_PLANKS && t.kind === 'info'), JSON.stringify(toasts(c, from)));
+  assert.ok(toasts(c, from).some((t) => t.msg === NO_PLANKS && t.kind === 'bad'), JSON.stringify(toasts(c, from)));
   // Whole: nothing to do.
   ship.hull = ship.stats.hullMax;
   from = c.inbox.length;

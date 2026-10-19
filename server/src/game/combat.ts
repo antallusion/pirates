@@ -203,6 +203,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
     ship.reload[side] = reloadTime(ship, side, game.now, false);
     ship.lastReloadTotal[side] = ship.reload[side];
     ship.lastCombat = game.now;
+    ship.gunsAt = game.now;
     return null;
   }
   const range = effectiveRange(ship, side, ammo) * stormGunnerRange(game, ship);
@@ -303,6 +304,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
     target.addEffect({ id: 'gun_smoke', until: game.now + 3, mods: { spreadMul: 0.1 }, source: ship.id }, game.now);
   }
   ship.lastCombat = game.now;
+  ship.gunsAt = game.now;
   ship.protectedUntil = 0;
   ship.repairing = ship.repairing && ship.hasFlag('battle_repair');
   game.emit({ k: 'volley', ship: ship.id, side, ammo, balls, spd: shotSpeed !== 1 ? shotSpeed : undefined, ...(focus.perfect ? { perfect: true as const } : {}) }, ship.state.x, ship.state.y);
@@ -378,6 +380,7 @@ export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: num
   ship.ammo[ammo] -= shots;
   ship.chaserReload[end] = CHASER_RELOAD * seaReload(ship, !mark || onSeaTable(mark)) * ship.stats.reloadMul;
   ship.lastCombat = game.now;
+  ship.gunsAt = game.now;
   ship.protectedUntil = 0;
   const spd = 1 + tval(ship.stats, 'shotSpeed');
   game.emit({ k: 'volley', ship: ship.id, side: end, ammo, balls, spd: spd !== 1 ? spd : undefined }, ship.state.x, ship.state.y);

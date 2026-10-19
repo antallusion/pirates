@@ -141,7 +141,9 @@ export function buildActs(f: ActFacts): Act[] {
   if (!f.roam?.lead) out.push(...roam);
   for (const k of f.looks ?? []) out.push({ id: 'look', icon: LOOK_ICON[k.kind], label: L('a.look'), sub: k.name, title: L('a.lookTitle', { name: k.name }), arg: k.kind });
   const r = f.repair;
-  if (r && (r.repairing || (!r.combat && r.hurt && !r.short))) out.push({ id: 'repair', icon: 'prof_carpenter', label: L(r.repairing ? 'a.repairStop' : 'a.repair'), title: L(r.repairing ? 'a.repairStop' : 'a.repair'), key: 'repair' });
+  // (owner, 2026-10-19: «Кнопка ремонт должна запускать фактический ремонт»): hurt, the button is there — short of planks
+  // or sailcloth too: a press says exactly what is wanted (searepair.ts), never nothing at all
+  if (r && (r.repairing || (!r.combat && r.hurt))) out.push({ id: 'repair', icon: 'prof_carpenter', label: L(r.repairing ? 'a.repairStop' : 'a.repair'), title: r.repairing ? L('a.repairStop') : r.short ? L('a.repairShort') : L('a.repair'), key: 'repair' });
   if ((f.watchHome || ((f.port || f.way) && !f.board && !at && !f.roam?.lead)) && !f.grabbed) {
     const i = out.findIndex((a) => a.id === 'dock' || a.id === 'homeport' || a.id === 'moor_way');
     if (i > 0) out.unshift(...out.splice(i, 1));
@@ -164,6 +166,13 @@ function roamActs(f: ActFacts): Act[] {
   }
   out.push({ id: 'roam_look', icon: 'act_inspect', label: LR('a.look'), sub: rm.name, title: LR('t.look'), arg: String(rm.id) });
   return out;
+}
+
+/** «Атаковать» is offered only for a ship of her own choosing (a tap, the lock, the target key) or the frame's nearest
+ *  foe once she is within her guns' reach of it (owner, 2026-10-19: «Кнопка атаковать горит всегда даже когда у меня нет
+ *  цели. Пусть внизу выпрыгивают кнопки только когда я рядом с чем-то проплываю или беру кого-то в прицел»). */
+export function attackRelevant(pinned: boolean, range: 'in' | 'far' | null): boolean {
+  return pinned || range === 'in';
 }
 
 /** What the land key does at sea, with nothing to land at: the mast, the net, the mark — in the bar's order. */

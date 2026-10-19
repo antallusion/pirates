@@ -33,6 +33,22 @@ export const FOOD_HOLD_SHARE = 0.5;
 export const VOYAGE_BROADSIDES = 10;
 /** Below this share of hull or canvas she should see the yard. */
 export const REPAIR_BELOW = 0.9;
+/** The share of the hold the buying on the way out always leaves free (owner, 2026-10-19: «Выходя из порта должны
+ *  оставлять 20 процентов места на корабле после авто покупки рекомендаций»): the cargo after it at most 80 %. */
+export const HOLD_KEEP_FREE = 0.2;
+/** One repair's sailcloth (owner, 2026-10-19: «всегда надо предлагать провизию и парусину … Примерно на одну починку»):
+ *  the bolts to mend this share of her sails at sea. */
+export const KIT_SAILS = 0.5;
+
+/** The sailcloth for one repair at sea: KIT_SAILS of her sails, a bolt for SAILS_PER_CLOTH of them (one at least). */
+export function repairKitCloth(sailsMax: number): number {
+  return Math.max(1, Math.ceil((Math.max(0, sailsMax) * KIT_SAILS) / SAILS_PER_CLOTH));
+}
+
+/** The hold's room the buying on the way out may fill (m³): what is free less HOLD_KEEP_FREE of the whole. */
+export function buyRoom(s: Pick<VoyageShip, 'holdVolume' | 'holdFree'>): number {
+  return Math.max(0, s.holdFree - s.holdVolume * HOLD_KEEP_FREE);
+}
 
 export interface VoyageShip {
   crew: number;
@@ -50,12 +66,17 @@ export interface VoyageShip {
   hullMax: number;
   sails: number;
   sailsMax: number;
+  /** The sailcloth aboard (bolts); unset: not reckoned (one repair's worth is asked for when it is set). */
+  cloth?: number;
+  /** A bolt's room in her hold (m³; 0.5 by default). */
+  clothVolume?: number;
 }
 
 export type VoyageNeed =
   | { kind: 'food'; have: number; want: number; buy: number; minutes: number }
   | { kind: 'crew'; have: number; want: number; buy: number }
   | { kind: 'ammo'; have: number; want: number; buy: number }
+  | { kind: 'cloth'; have: number; want: number; buy: number }
   | { kind: 'repair'; hull: number; sails: number };
 
 /** Playthrough C: a warship's bread room — what a big crew eats is stowed in her own storerooms as well as the hold, so a
@@ -84,9 +105,19 @@ export function voyageNeeds(s: VoyageShip): VoyageNeed[] {
   const out: VoyageNeed[] = [];
   const food = voyageFood(s);
   const have = Math.floor(s.provisions);
+  // (the hold's room less the fifth always left free: owner, 2026-10-19)
+  const room = buyRoom(s);
   if (have < food) {
-    const room = Math.floor(Math.max(0, s.holdFree) / Math.max(0.05, s.provisionVolume));
-    out.push({ kind: 'food', have, want: food, buy: Math.max(0, Math.min(food - have, room)), minutes: VOYAGE_MINUTES });
+    const n = Math.floor(room / Math.max(0.05, s.provisionVolume));
+    out.push({ kind: 'food', have, want: food, buy: Math.max(0, Math.min(food - have, n)), minutes: VOYAGE_MINUTES });
+  }
+  // one repair's sailcloth, always offered while short of it (owner, 2026-10-19)
+  if (s.cloth !== undefined) {
+    const want = repairKitCloth(s.sailsMax), got = Math.floor(s.cloth);
+    // (the room: the window's plan fills the hold in the order a voyage needs, food first — client/src/ui/depart.ts)
+    // (no room for a bolt: not asked — a full hold is not stopped at every harbour for it)
+    const buy = Math.max(0, Math.min(want - got, Math.floor(room / Math.max(0.05, s.clothVolume ?? 0.5))));
+    if (got < want && buy > 0) out.push({ kind: 'cloth', have: got, want, buy });
   }
   const hands = voyageCrew(s);
   if (s.crew < hands) out.push({ kind: 'crew', have: s.crew, want: hands, buy: hands - s.crew });

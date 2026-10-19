@@ -27,4 +27,11 @@ export const SERVER_RU_H: Record<string, string> = {
   'Someone else has the wheel': 'Штурвал в чужих руках',
   // ux2 (2026-10-11): a course broken off by a fight is taken up again once the sea is quiet
   'The sea is quiet again: the helmsman takes her on to her mark.': 'Бой позади: рулевой снова ведёт корабль к метке.',
+  // 2026-10-19 (owner: «автоплавание … работало всегда и везде»): a course given in port or in a fight is kept for later
+  'Course set: the helmsman takes her there as soon as she casts off.': 'Курс проложен: рулевой поведёт корабль, как только вы отчалите.',
+  // 2026-10-19 (owner: «нажимая ремонт … ниче не происходит»): the carpenters say what they do, with what, and what is short
+  'The carpenters set to: hull {0}%, sails {1}%; {2} planks and {3} sailcloth aboard, about {4} min.': 'Плотники взялись за ремонт: корпус {0}%, паруса {1}%; в трюме досок {2}, парусины {3}, около {4} мин.',
+  'Repairs done: hull {0}% (+{1}), sails {2}% (+{3}); used {4} planks, {5} sailcloth.': 'Ремонт: корпус {0}% (+{1}), паруса {2}% (+{3}); ушло досок {4}, парусины {5}.',
+  'No sailcloth aboard: the sails stay as they are — buy sailcloth in port.': 'В трюме нет парусины: паруса останутся как есть — купите парусину в порту.',
+  'No planks aboard: the hull stays as it is — buy planks in port.': 'В трюме нет досок: корпус останется как есть — купите доски в порту.',
 };

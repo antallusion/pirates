@@ -225,8 +225,14 @@ export class ShipEntity {
   /** The last time another ship's fire (not a beast's, not her own, not the sea's) struck her (owner, 2026-10-07: «я
    *  должен со всем взаимодействовать, ошибок типа "не под огнём" быть не должно абсолютно»). */
   lastHitAt = -999;
+  /** The last time her own guns (a broadside, the chasers, a mount) fired: with another's blow, a fight under way — the
+   *  sea's own harm (a reef, a storm, a fire) is none (autosail.ts, owner 2026-10-19). */
+  gunsAt = -999;
   attackers = new Map<number, number>(); // entity id -> last hit time
   repairing = false;
+  /** The carpenters' tally since «Ремонт» (owner, 2026-10-19: «нажимая ремонт … ниче не происходит»): the hull and sails
+   *  mended and the planks and sailcloth used, said when they stop; the «+N» shown over her every two seconds. */
+  repairTally: { hull: number; sails: number; planks: number; cloth: number; shown: number; at: number } | null = null;
   landing: Landing | null = null;
   curse = 0; // the sea's claim on the ship, 0..100
   water = 0; // tonnes of seawater in the hold
