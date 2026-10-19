@@ -51,7 +51,7 @@ import { AudioEngine, turnCreakLoad } from './audio.ts';
 import { AutosailPill, FirstTips, autosailRequest, autosailStopText, routeLabel, tipForMsg, tipForState } from './ui/ease.ts';
 import { claimNear, claimSpot, tapTarget } from './ui/sailto.ts'; // seaux: sail-to on tap
 import { toggleCaptainMenu } from './ui/capmenu.ts'; // seaux: the captain's menu on her portrait
-import { actBarHtml, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
+import { actBarHtml, attackRelevant, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
 import { FIND_REACH, FIND_SLOW } from '../../shared/src/data/seafinds.ts';
 import type { FindView } from '../../shared/src/findproto.ts';
 import { ROAMS, ROAM_REACH, ROAM_SEE } from '../../shared/src/data/roamers.ts'; // docs/19 D7
@@ -3031,8 +3031,11 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     else if (back) info.push(esc(LROAM('i.back', { what: name, t: backClock(back) })));
     else if (rm.offer === 'flee' && rm.ratio !== undefined) info.push(esc(LROAM('i.flee', { r: rm.ratio })));
   }
-  // «Атаковать» (docs/23 item 33): the target frame's ship, or the pursuit under way.
-  attackMark = attackable(targetId) && !roamLead ? targetId : null;
+  // «Атаковать» (docs/23 item 33): the target frame's ship, or the pursuit under way — only a ship of her choosing (a
+  // tap, the lock, the target key) or one the frame picked that is within her guns' reach (owner, 2026-10-19: «Кнопка
+  // атаковать горит всегда даже когда у меня нет цели. Пусть внизу выпрыгивают кнопки только когда я рядом с чем-то
+  // проплываю или беру кого-то в прицел»).
+  attackMark = attackable(targetId) && !roamLead && attackRelevant(targetPinned, markRange()) ? targetId : null;
   const pursued = state.pursuit ? state.ships.get(state.pursuit.target) : undefined;
   if (state.pursuit) facts.attack = { name: placeName(pursued?.info?.name ?? L('her')), pursuing: true, mode: state.pursuit.mode, ...(unboardableMark(state.pursuit.target) ? { gunsOnly: true } : {}) };
   else if (attackMark !== null) facts.attack = { name: placeName(state.ships.get(attackMark)?.info?.name ?? L('her')), pursuing: false, mode: 'board' };

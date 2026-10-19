@@ -166,6 +166,13 @@ function roamActs(f: ActFacts): Act[] {
   return out;
 }
 
+/** «Атаковать» is offered only for a ship of her own choosing (a tap, the lock, the target key) or the frame's nearest
+ *  foe once she is within her guns' reach of it (owner, 2026-10-19: «Кнопка атаковать горит всегда даже когда у меня нет
+ *  цели. Пусть внизу выпрыгивают кнопки только когда я рядом с чем-то проплываю или беру кого-то в прицел»). */
+export function attackRelevant(pinned: boolean, range: 'in' | 'far' | null): boolean {
+  return pinned || range === 'in';
+}
+
 /** What the land key does at sea, with nothing to land at: the mast, the net, the mark — in the bar's order. */
 export function landKeyAct(acts: Act[]): Act | null {
   return acts.find((a) => a.id === 'land' || a.id === 'cut_mast' || a.id === 'cast' || a.id === 'mark' || a.id === 'find' || a.id === 'roam') ?? null;
