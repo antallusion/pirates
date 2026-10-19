@@ -43,6 +43,7 @@ import { joinCreatures } from './tame.ts';
 import { rscrollsOf, spendRScroll } from './shop.ts';
 import { weekView } from './calendar.ts';
 import { keepsDeep } from './town.ts';
+import { approach } from './approach.ts';
 
 const H = 3_600_000;
 
@@ -450,7 +451,9 @@ export function moor(game: Game, s: PlayerSession, id: number): string | null {
   if (!ship || ship.docked) return 'Not now';
   const w = waystations(game.world).list[Math.trunc(Number(id))];
   if (!w) return 'No waystation there';
-  if (Math.hypot(w.x - ship.state.x, w.y - ship.state.y) > WAY_MOOR_RANGE + 40) return 'Sail closer to the waystation to moor.';
+  // (owner, 2026-10-19: «штуки … должны включать автоплавание и плыть автоматом туда куда надо»): far off, the helmsman
+  // takes her to it and she moors on arrival
+  if (Math.hypot(w.x - ship.state.x, w.y - ship.state.y) > WAY_MOOR_RANGE + 40) return approach(game, s, { x: w.x, y: w.y, reach: WAY_MOOR_RANGE + 30 }, 'Sail closer to the waystation to moor.');
   const busy = resBusy(game, s);
   if (busy) return busy;
   moored.set(s, w.id);

@@ -6,7 +6,7 @@
 
 import type { ClientState } from '../state.ts';
 
-export type TapKind = 'find' | 'mark' | 'sight' | 'drift' | 'shoal' | 'wreck' | 'loot' | 'castaway' | 'adv' | 'lair';
+export type TapKind = 'find' | 'mark' | 'sight' | 'drift' | 'shoal' | 'wreck' | 'loot' | 'castaway' | 'adv' | 'lair' | 'way';
 
 export interface TapTarget {
   kind: TapKind;
@@ -37,6 +37,8 @@ export function tapTarget(state: ClientState, wx: number, wy: number, zoom: numb
   for (const d of state.drifts) take({ kind: 'drift', id: d.id, x: d.x, y: d.y });
   for (const o of state.adv?.objs ?? []) take({ kind: 'adv', id: o.id, x: o.x, y: o.y });
   for (const l of state.lairs?.list ?? []) take({ kind: 'lair', id: l.id, x: l.x, y: l.y });
+  // a floating waystation (owner, 2026-10-19): the tap moors her there, the helmsman taking her in first
+  for (const w of state.ways.values()) take({ kind: 'way', id: w.id, x: w.x, y: w.y });
   for (const s of state.shoals) take({ kind: 'shoal', id: s.id, x: s.x, y: s.y, near: Math.max(20, s.r * 0.5) }, s.r * 0.6);
   for (const m of state.seaMarks.values()) {
     if (Math.abs(m.x - wx) > m.r + slack || Math.abs(m.y - wy) > m.r + slack) continue;

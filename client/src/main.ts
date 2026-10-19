@@ -680,6 +680,7 @@ function sailToTap(px: number, py: number): boolean {
   const t = tapTarget(state, w.x, w.y, renderer.zoom);
   if (!t) return false;
   if (t.kind === 'find') workFind(Number(t.id));
+  else if (t.kind === 'way') net.send({ t: 'way', action: 'moor', id: Number(t.id) }); // (the server sails her in: approach.ts)
   else if (t.kind === 'mark' && !state.markDone.has(Number(t.id))) workMark(Number(t.id));
   else sailToSpot(t, t.near);
   return true;
