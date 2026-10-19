@@ -27,6 +27,10 @@ import { STEP_WORDS, defaultCount, parseStep, wordsOf } from './steps.ts';
 import type { StepSpec } from './steps.ts';
 import type { ChapterSrc, QuestSrc, StepSrc, T } from './types.ts';
 
+/** The campaign's opening (owner, 2026-10-19): its first quests — the shops, a ship sunk, a ship boarded, a neutral stack,
+ *  a town founded (ch01.ts) — whose fights are softened and whose courses the client sails by itself. */
+export const OPENING_SLOTS = 5;
+
 /** How near a location everything of its quests is (metres: an island's shore, a port's anchorage, a fight's water). */
 export const LOCAL_R = 1500;
 
@@ -154,7 +158,7 @@ function stepWords(src: StepSrc, spec: StepSpec, qid: string, i: number, part: '
 function portBound(q: { b: T; d: T; s: StepSrc[] }): boolean {
   const texts = [q.b[0], q.d[0], ...q.s.map((x) => (typeof x === 'string' ? '' : x[1]))];
   if (texts.some((t) => /\{(hub|port|port2|at)\}/.test(t))) return true;
-  return q.s.some((x) => /^(port|port2|at|carry|bring|recruit|customs|contraband)\b/.test(typeof x === 'string' ? x : x[0]));
+  return q.s.some((x) => /^(port|port2|at|carry|bring|recruit|customs|contraband|buy)\b/.test(typeof x === 'string' ? x : x[0]));
 }
 
 // ------------------------------------------------------------------ the locations
@@ -369,7 +373,18 @@ interface QuestCtx {
   turn: number;
 }
 
-function buildQuest(c: QuestCtx, src: { t: T; b: T; d: T; s: StepSrc[] }, id: string, slot: number, k: number, gate: number, xp: number, silver: number, travel: boolean, way?: { key: string; way: 'a' | 'b'; label: T }): QuestDef {
+/** The island a town is founded on from a location (the opening's, owner 2026-10-19: «к ближайшему острову основать свой
+ *  город»): the nearest one may sail to and claim — not a port's — by its shore. */
+export function foundIsle(pl: { islands: Island[] }, at: { x: number; y: number }): Island {
+  let best = pl.islands[0], bd = Infinity;
+  for (const i of pl.islands) {
+    const d = shoreDist(i, at.x, at.y);
+    if (d < bd) [best, bd] = [i, d];
+  }
+  return best;
+}
+
+function buildQuest(c: QuestCtx, src: { t: T; b: T; d: T; s: StepSrc[]; lane?: { at: number; r: number } }, id: string, slot: number, k: number, gate: number, xp: number, silver: number, travel: boolean, way?: { key: string; way: 'a' | 'b'; label: T }): QuestDef {
   const { pl, ch, loc } = c;
   const band = shipBandOf(gate);
   const specs = src.s.map((x) => parseStep(typeof x === 'string' ? x : x[0])).filter((x): x is StepSpec => typeof x !== 'string');
@@ -405,6 +420,12 @@ function buildQuest(c: QuestCtx, src: { t: T; b: T; d: T; s: StepSrc[] }, id: st
   const land2Site = specs.find((s) => s.kind === 'land2' && s.site)?.site;
   const i1 = withSite(landSite);
   const i2 = withSite(land2Site, i1.is);
+  // the opening: the island its town is founded on is the one its {isle} names, and its fights put out on the lane
+  // from the quay to that island (types.ts QuestSrc.lane)
+  const founding = specs.some((x) => x.kind === 'found') || !!src.lane;
+  const town = founding ? foundIsle(pl, loc) : null;
+  if (town && specs.some((x) => x.kind === 'found')) i1.is = town;
+  const laneNear = town && src.lane ? { x: Math.round(loc.x + (town.x - loc.x) * src.lane.at), y: Math.round(loc.y + (town.y - loc.y) * src.lane.at), r: src.lane.r } : null;
   if (i2.is === i1.is && ring.length > 1) i2.is = ring.find((i) => i !== i1.is)!;
   c.turn++;
   const minShip = Math.max(1, band - 1);
@@ -452,8 +473,8 @@ function buildQuest(c: QuestCtx, src: { t: T; b: T; d: T; s: StepSrc[] }, id: st
         else if (s.kind === 'land') steps.push({ type: 'land', island: i1.is.id, ...(s.site && i1.site ? { site: i1.site } : {}), text: text() });
         else steps.push({ type: 'land', island: i2.is.id, ...(s.site && i2.site ? { site: i2.site } : {}), text: text() });
         break;
-      case 'board': steps.push({ type: 'board', count: n, minShip, near, text: text() }); break;
-      case 'sink': steps.push({ type: 'sink', count: n, ...(s.role ? { role: s.role } : {}), minShip, near, text: text() }); break;
+      case 'board': steps.push({ type: 'board', count: n, minShip, near: laneNear ?? near, text: text() }); break;
+      case 'sink': steps.push({ type: 'sink', count: n, ...(s.role ? { role: s.role } : {}), minShip, near: laneNear ?? near, text: text() }); break;
       case 'lair': steps.push({ type: 'lair', count: n, near, text: text() }); break;
       case 'beast': steps.push({ type: 'beast', count: n, group: s.group ?? 'any', near, text: text() }); break;
       case 'chart': steps.push({ type: 'chart', count: n, text: text() }); break;
@@ -475,6 +496,11 @@ function buildQuest(c: QuestCtx, src: { t: T; b: T; d: T; s: StepSrc[] }, id: st
       case 'recruit': steps.push({ type: 'recruit', count: n, text: text() }); break;
       case 'customs': steps.push({ type: 'customs', text: text() }); break;
       case 'contraband': steps.push({ type: 'sell_contraband', qty: n, text: text() }); break;
+      // the opening (owner, 2026-10-19): the shops of any harbour (the words name the start's), a neutral stack on the
+      // lane, the town founded on the nearest island
+      case 'buy': steps.push({ type: 'buy', shop: s.shop!, text: text() }); break;
+      case 'neutral': steps.push({ type: 'neutral', count: n, near: laneNear ?? near, text: text() }); break;
+      case 'found': steps.push({ type: 'claim', island: (town ?? i1.is).id, text: text() }); break;
     }
   });
   const en = (p: T) => fill(withGiver(p[0], ch, 0), v);

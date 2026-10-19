@@ -7,7 +7,8 @@
 // have no raiders of their own to board.
 
 import { MAX_LEVEL } from '../../../shared/src/constants.ts';
-import { buildCampaign } from '../../../shared/src/data/campaign/build.ts';
+import { OPENING_SLOTS, buildCampaign } from '../../../shared/src/data/campaign/build.ts';
+import { SOFT_HULL, SOFT_MEN } from './firstfights.ts';
 import type { Campaign, CampaignSlot } from '../../../shared/src/data/campaign/build.ts';
 import { CHAPTERS } from '../../../shared/src/data/campaign/chapters.ts';
 import { chapterPurse } from '../../../shared/src/data/campaign/pacing.ts';
@@ -268,6 +269,13 @@ export function campaignTick(game: Game, s: PlayerSession): void {
     }
   } else foe = spawnCampaignFoe(game, ship, s.accountId, band, st.type === 'sink' && st.role === 'ghost', near);
   if (!foe) return;
+  // the opening's fights (owner, 2026-10-19: «атака корабля, дальше абордаж» in the first minutes): softened as the
+  // first fights are — half her hull, her men thinned, her shot lighter on the newcomer (firstfights.ts)
+  if (q!.campaign && q!.campaign.slot < OPENING_SLOTS && st.type !== 'beast') {
+    foe.hull = Math.min(foe.hull, foe.stats.hullMax * SOFT_HULL);
+    foe.setArmy(foe.army.map((x) => ({ ...x, n: Math.max(1, Math.round(x.n * SOFT_MEN)) })));
+    foe.softFor = ship.id;
+  }
   w.ids.push(foe.id);
   if (!w.told) game.sendTo(s, { t: 'toast', msg: 'Enemy sails close in: the campaign’s fight comes to you.', kind: 'bad' });
   w.told = true;

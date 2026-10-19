@@ -61,7 +61,12 @@ export type QuestStep =
    *  the waters of an island (no landing); hold an island of one's own; lay works on it (a building, a producer, a level);
    *  sign on men for the ship's army. */
   | { type: 'isle'; island: number; text: string }
-  | { type: 'claim'; text: string }
+  /** `island`: the island the step names (the opening's town, owner 2026-10-19): routed to; any island of her own does it. */
+  | { type: 'claim'; island?: number; text: string }
+  /** The opening (owner, 2026-10-19): a purchase at a port's shop — provisions, sailcloth, guns or hands, a trade good. */
+  | { type: 'buy'; shop: 'provisions' | 'sailcloth' | 'arms' | 'trade'; port?: string; text: string }
+  /** The opening: neutral stacks beaten — the sea's roaming creatures (or a lair of the land's). */
+  | { type: 'neutral'; count: number; near?: Near; text: string }
   /** docs/36: a marked place of a harbour's own island's coast (a cove, a spit) to come to — for a harbour with no island
    *  within reach of its quay. */
   | { type: 'spot'; x: number; y: number; r: number; island?: number; text: string }

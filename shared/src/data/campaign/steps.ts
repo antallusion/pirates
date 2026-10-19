@@ -8,10 +8,17 @@ import type { T } from './types.ts';
 
 export type StepKind =
   | 'hub' | 'at' | 'port' | 'port2' | 'isle' | 'isle2' | 'land' | 'land2' | 'board' | 'sink' | 'lair' | 'beast' | 'chart' | 'dive' | 'catch' | 'named'
-  | 'rescue' | 'prize' | 'tribute' | 'carry' | 'bring' | 'escort' | 'reach' | 'claim' | 'build' | 'recruit' | 'customs' | 'contraband';
+  | 'rescue' | 'prize' | 'tribute' | 'carry' | 'bring' | 'escort' | 'reach' | 'claim' | 'build' | 'recruit' | 'customs' | 'contraband'
+  // the campaign's opening (owner, 2026-10-19): the port's shops, a neutral stack beaten, a town founded
+  | 'buy' | 'neutral' | 'found';
 
 export const STEP_KINDS: readonly StepKind[] = ['hub', 'at', 'port', 'port2', 'isle', 'isle2', 'land', 'land2', 'board', 'sink', 'lair', 'beast', 'chart', 'dive', 'catch', 'named',
-  'rescue', 'prize', 'tribute', 'carry', 'bring', 'escort', 'reach', 'claim', 'build', 'recruit', 'customs', 'contraband'];
+  'rescue', 'prize', 'tribute', 'carry', 'bring', 'escort', 'reach', 'claim', 'build', 'recruit', 'customs', 'contraband', 'buy', 'neutral', 'found'];
+
+/** The port's shops of the opening's lesson: provisions and sailcloth at the market, a battery of guns at the yard or hands
+ *  at the tavern («arms»), and a good to trade (anything of the market but its supplies and contraband). */
+export type ShopKind = 'provisions' | 'sailcloth' | 'arms' | 'trade';
+export const SHOP_KINDS: readonly ShopKind[] = ['provisions', 'sailcloth', 'arms', 'trade'];
 
 export type SinkRole = 'pirate' | 'ghost' | 'patrol' | 'merchant' | 'hunter';
 export const SINK_ROLES: readonly SinkRole[] = ['pirate', 'ghost', 'patrol', 'merchant', 'hunter'];
@@ -30,6 +37,8 @@ export interface StepSpec {
   good?: GoodId;
   /** `at`: the port named. */
   port?: string;
+  /** `buy`: the shop. */
+  shop?: ShopKind;
 }
 
 /** A code read, or the reason it cannot be. */
@@ -74,6 +83,17 @@ export function parseStep(code: string): StepSpec | string {
       if (!(BEAST_GROUPS as readonly string[]).includes(g)) return `unknown beasts «${g}»`;
       out.group = g as BeastGroup | 'any';
       const n = num(rest[1]);
+      if (typeof n === 'string') return n;
+      out.n = n;
+      return out;
+    }
+    case 'buy':
+      if (rest.length !== 1 || !(SHOP_KINDS as readonly string[]).includes(rest[0])) return `«${code}» wants a shop (${SHOP_KINDS.join(', ')})`;
+      out.shop = rest[0] as ShopKind;
+      return out;
+    case 'neutral': {
+      if (rest.length > 1) return `too many parts in «${code}»`;
+      const n = num(rest[0]);
       if (typeof n === 'string') return n;
       out.n = n;
       return out;
@@ -240,6 +260,13 @@ export const STEP_WORDS: Record<string, T[]> = {
   recruit: [['Sign on men for the ship’s army: {n}.', 'Наберите бойцов в армию корабля: {n}.']],
   customs: [['Pass a Crown inspection with contraband aboard.', 'Пройдите досмотр Короны с контрабандой в трюме.']],
   contraband: [['Sell contraband at a black market: {n}.', 'Продайте контрабанду на чёрном рынке: {n}.']],
+  // the opening (owner, 2026-10-19): the shops of {hub}, step by step; a stack of the sea's creatures; a town founded
+  buy_provisions: [['Buy provisions at the market of {hub}.', 'Купите провизию на рынке порта {hub}.']],
+  buy_sailcloth: [['Buy sailcloth at the market for the sails.', 'Купите парусину на рынке — для ремонта парусов.']],
+  buy_arms: [['Buy a battery of guns at the yard, or sign on hands at the tavern.', 'Купите пушки на верфи или наймите матросов в таверне.']],
+  buy_trade: [['Buy a good to trade at the market: carry it where it sells dear.', 'Купите на рынке товар для торговли — его выгодно продать в другом порту.']],
+  neutral: [['Beat a stack of the sea’s creatures: {n}.', 'Разбейте отряд морских тварей: {n}.']],
+  found: [['Sail to {isle} and claim it: found your town there.', 'Плывите к острову {isle} и займите его — заложите там свой город.']],
 };
 
 /** The wordings a step takes. */
@@ -254,6 +281,8 @@ export function wordsOf(s: StepSpec, part: 'pick' | 'drop' = 'pick'): T[] {
       return STEP_WORDS[`beast_${s.group ?? 'any'}`];
     case 'carry':
       return STEP_WORDS[part === 'pick' ? 'carry_pick' : 'carry_drop'];
+    case 'buy':
+      return STEP_WORDS[`buy_${s.shop ?? 'trade'}`];
     default:
       return STEP_WORDS[s.kind];
   }

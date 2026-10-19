@@ -39,6 +39,7 @@ import { haulTake } from './seahaul.ts';
 import { sideOf } from './tactical.ts';
 import type { TacBattle } from './tacbattle.ts';
 import { keepsDeep } from './town.ts';
+import { questEvent } from './quests.ts';
 
 /** What the sea remembers of a stack (only of those touched lately). */
 interface RoamState {
@@ -462,6 +463,7 @@ function roamEnd(game: Game, s: PlayerSession, sp: RoamSpot, won: boolean, left:
     if (it?.art) artifact = it.art;
   }
   s.profile!.roamWins = (s.profile!.roamWins ?? 0) + 1;
+  questEvent(game, s, { k: 'neutral' }); // the campaign's opening: a neutral stack beaten (owner, 2026-10-19)
   game.toastShip(ship, raised > 0 ? `The ${ROAM_NAME[sp.kind]} are beaten: ${mine.silver} silver; ${raised} of your fallen are hauled back from the water.` : `The ${ROAM_NAME[sp.kind]} are beaten: ${mine.silver} silver.`, 'gold');
   return { silver: 0, xp: 0, goods: [], res: {}, roam: { xp, silver: mine.silver, res: mine.res, ...(artifact ? { artifact } : {}), raised, mates: mates.length, ...(mine.thin ? { thin: true } : {}), ...(gap <= 0 ? { grey: true } : {}) } };
 }

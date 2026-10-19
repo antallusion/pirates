@@ -759,7 +759,8 @@ export interface PrivateState {
     summary?: string; stepTexts?: string[]; silver?: number; xp?: number; portrait?: string; category?: string;
     /** seconds left to earn the speed bonus */ fastIn?: number;
     /** The pay chosen on taking it, when not all in silver, and what it comes to. */ pay?: QuestPay; paid?: { silver: number; heavy: number; incendiary: number; rep: number };
-    /** Groupmates on the same quest (docs/11 P6), and the step each is on. */ mates?: { name: string; step: number }[] }[];
+    /** Groupmates on the same quest (docs/11 P6), and the step each is on. */ mates?: { name: string; step: number }[];
+    /** The campaign's opening (owner, 2026-10-19): the step the guide points through — `buy:<shop>`, `sink`, `board`, `neutral`, `found`. */ op?: string }[];
   questsDone: string[];
   /** docs/36: her place in the main campaign. */
   campaign?: CampaignView;

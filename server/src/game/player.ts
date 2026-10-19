@@ -29,6 +29,8 @@ import type { Colours } from '../../../shared/src/data/colours.ts';
 import type { PvpState } from './pvp.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
+import type { QuestDef } from '../../../shared/src/data/quests.ts';
+import { OPENING_SLOTS } from '../../../shared/src/data/campaign/build.ts';
 import { questPayOf, veteranPay } from '../../../shared/src/data/questpay.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { FACTIONS, FACTION_IDS, factionRelation, wantedLevel } from '../../../shared/src/data/factions.ts';
@@ -367,6 +369,17 @@ export interface Hearsay {
   expiresAt: number;
 }
 
+/** The campaign's opening (owner, 2026-10-19): the step the client's guide points the newcomer through — a shop
+ *  (`buy:<shop>`), `sink`, `board`, `neutral`, `found` — or null past the opening. */
+export function openingStep(def: QuestDef, step: number): string | null {
+  if (def.kind !== 'campaign' || (def.campaign?.slot ?? OPENING_SLOTS) >= OPENING_SLOTS) return null;
+  const st = def.steps[step];
+  if (!st) return null;
+  if (st.type === 'buy') return `buy:${st.shop}`;
+  if (st.type === 'claim') return 'found';
+  return st.type === 'sink' || st.type === 'board' || st.type === 'neutral' ? st.type : null;
+}
+
 export function dealings(p: Profile): Dealings {
   const d = (p.dealings ??= { runs: [], next: null, hearsay: [], held: [] });
   d.runs ??= [];
@@ -644,6 +657,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
         ...(q.pay && paid ? { pay: q.pay, paid: { ...paid, silver: Math.round(paid.silver * vet) } } : {}),
         ...(world.questMates?.[q.id] ? { mates: world.questMates[q.id] } : {}),
         ...((lv) => (lv ? { ship: lv } : {}))(shipLevelOfQuest(def)),
+        ...((o) => (o ? { op: o } : {}))(openingStep(def, q.step)),
       };
     }),
     questsDone: p.quests.done,

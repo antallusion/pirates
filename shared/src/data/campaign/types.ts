@@ -37,6 +37,9 @@ export type T = [string, string];
  *   recruit[:N]              sign on N men for the ship's army (a tavern, a dwelling)
  *   customs                  pass a Crown inspection with contraband aboard
  *   contraband[:N]           sell N units of contraband at a black market
+ *   buy:<shop>               buy at a port's shop (provisions | sailcloth | arms: guns or hands | trade: a good)
+ *   neutral[:N]              beat N neutral stacks: the sea's roaming creatures (or a lair of the land's)
+ *   found                    sail to the island nearest the location (the opening's: the start's) and claim it
  *
  * A count left out is the builder's, by the quest's level (more and harder further on).
  */
@@ -59,6 +62,11 @@ export interface QuestSrc {
   d: T;
   /** 1–4 steps (a `carry` counts two). */
   s: StepSrc[];
+  /** The campaign's opening (owner, 2026-10-19: «обучение по покупкам… атака корабля… абордаж… нападение на нейтралов…
+   *  к ближайшему острову основать свой город… в первые минут 5-10 с учетом плаваний»): its fights put out on the lane
+   *  from the start's quay to the island its town is founded on, at this share of the way (and within `r` of it), so
+   *  the newcomer sails one short course and meets them on it. */
+  lane?: { at: number; r: number };
   /** A branch (a choice of two ways): this quest is the first way, `alt` the second. Both fill the same place in the
    *  campaign; the choice is remembered under `key` (and told in docs/36). */
   alt?: { key: string; /** the two ways' labels, as the cards say them */ label: [T, T]; t: T; b: T; d: T; s: StepSrc[] };

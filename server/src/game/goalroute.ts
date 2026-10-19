@@ -39,6 +39,7 @@ import type { ShipEntity } from './ship.ts';
 import { worldGoals } from './worldgoals.ts';
 import { campaignFoes } from './campaign.ts'; // docs/36
 import { ownIsland } from './estate.ts';
+import { roamFighter, roamUp, roamWhere, roamersAbout } from './roamers.ts';
 import { castawaysOf } from './castaways.ts';
 import { liveNamed } from './wanted.ts';
 import { activeTasks } from './worldtasks.ts';
@@ -460,8 +461,21 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
       // a merchant to stop and make pay (the Brethren's raid, docs/12 P6)
       return { cands: hunt(game, s, 'merchants') };
     case 'claim':
-      // docs/36: an island of her own — the nearest she may claim
+      // docs/36: an island of her own — the nearest she may claim; the opening's town, its own island (owner, 2026-10-19)
+      if (st.island !== undefined && !ownIsland(game, s.accountId)) return { cands: islands(game, (i) => i.id === st.island, 'land') };
       return { cands: islands(game, (i) => !i.portId, 'land') };
+    case 'buy':
+      // the opening's lesson of the shops: the start's harbour (the quest's), else the nearest
+      return { cands: [portCand(game.portById(QUESTS_BY_ID[id].port) ?? game.world.ports[0]), ...ports(game)] };
+    case 'neutral': {
+      // the opening: a standing stack of the sea's creatures on the lane (its `near`), else the nearest standing one
+      const up = (x: number, y: number, r: number): Cand[] => roamersAbout(game, x, y, r).filter((sp) => roamUp(game, sp.id) && roamFighter(game, sp.id) === null).map((sp) => {
+        const w = roamWhere(game, sp);
+        return { x: w.x, y: w.y, r: 120, kind: 'place' as const, name: 'stack' };
+      });
+      const lane = st.near ? up(st.near.x, st.near.y, st.near.r) : [];
+      return { cands: lane.length ? lane : up(ship.state.x, ship.state.y, 6000) };
+    }
     case 'recruit':
       return { cands: ports(game) };
     case 'deliver': {

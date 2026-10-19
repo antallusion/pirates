@@ -7,7 +7,7 @@ export const EN = {
   // отрыл»): the way to found a town of her own.
   foundTip: 'Found a town of your own',
   foundH: 'A town of your own',
-  foundBody: 'You hold no island yet. Sail to any wild island — not one with a port — and press «Claim» in the row of actions when you are at its shore. Your first island is free: a town hall stands on it at once, and the town grows from there.',
+  foundBody: 'You hold no island yet. Sail to any wild island — not one with a port — and press “Claim” in the row of actions when you are at its shore. Your first island is free: a town hall stands on it at once, and the town grows from there.',
   foundNear: 'The helmsman will take you to the nearest free island: the line and the distance show the way.',
   foundHere: 'An island to claim lies off your bow: {name}.',
   foundGo: 'Sail there',
