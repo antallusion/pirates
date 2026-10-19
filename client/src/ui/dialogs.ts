@@ -29,6 +29,7 @@ import { EN as REN, RU as RRU } from '../lang/ui/research.ts';
 import { EN as CEN, RU as CRU } from '../lang/ui/colours.ts';
 import { EN as OEN, RU as ORU } from '../lang/ui/outcome.ts';
 import { outcomeNote } from '../../../shared/src/data/outcome.ts';
+import { holdMix, holdMixText } from './holdmix.ts';
 
 const LC = dict(CEN, CRU);
 const LO = dict(OEN, ORU); // the two choices (owner, 2026-10-18)
@@ -200,7 +201,8 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
   const st = state.ownStats;
   if (!self || !st) return;
   const cls = SHIP_CLASSES[self.loadout.classId];
-  const cargo = Object.entries(self.cargo).filter(([, n]) => (n ?? 0) > 0);
+  // (the most room first, as the server reckons it — owner, 2026-10-19: «не понимаю … чем забит корабль»)
+  const cargo = holdMix(self.cargo, st).map((p) => [p.good, p.n, p.vol] as const);
   const art = assetUrl(cls.sprite);
   // A figure with its picture: the stat tiles of the ship screen.
   const tile = (pic: string, label: string, value: string, flip = false) =>
@@ -225,13 +227,14 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
       ${tile('insurance', L('ship.insurance'), esc(self.insured ? L('ship.insured') : L('ship.none')))}
     </div>
     <div class="cols" style="margin-top:12px"><div>
-      <h3 class="title-sm" style="font-size:20px">${esc(L('ship.hold'))}</h3>
-      <div class="cargo-list${hasSale ? ' has-sale' : ''}${self.dockedAt ? '' : ' has-dump'}">${cargo.map(([g, n]) => {
+      <h3 class="title-sm" style="font-size:20px">${esc(L('ship.hold'))} <small class="muted">${dec1(used)} / ${st.holdVolume.toFixed(0)}</small></h3>
+      <div class="hold-fill" title="${esc(holdMixText(holdMix(self.cargo, st), 99))}">${holdMix(self.cargo, st).map((p) => `<i class="hf-${p.good}" style="width:${Math.max(0.5, (p.vol / Math.max(1, st.holdVolume)) * 100).toFixed(1)}%" title="${esc(GOODS[p.good].name)}"></i>`).join('')}</div>
+      <div class="cargo-list${hasSale ? ' has-sale' : ''}${self.dockedAt ? '' : ' has-dump'}">${cargo.map(([g, n, v]) => {
         const a = self.appraisal?.[g as GoodId];
         const where = a ? state.ports.find((p) => p.id === a.port)?.name ?? a.port : '';
         const good = GOODS[g as GoodId];
         return `<div class="cargo-row">${icon(`good_${g}`, '', 'item-ico')}
-          <div class="item-text"><b class="${good.contraband ? 'contra' : ''}">${esc(good.name)}</b><span class="muted">${esc(L('ship.volume'))} ${dec1((n ?? 0) * good.volume)} · ${esc(L('ship.weight'))} ${dec1((n ?? 0) * good.weight)}${a ? ` · ${esc(where)}` : ''}</span></div>
+          <div class="item-text"><b class="${good.contraband ? 'contra' : ''}">${esc(good.name)}</b><span class="muted">${esc(L('ship.volume'))} ${dec1(v)} (${Math.round((v / Math.max(1, st.holdVolume)) * 100)}%) · ${esc(L('ship.weight'))} ${dec1((n ?? 0) * good.weight)}${a ? ` · ${esc(where)}` : ''}</span></div>
           <b class="cargo-qty">×${Math.floor(n ?? 0)}</b>
           ${hasSale ? `<span class="cargo-sale">${a ? money(a.price * Math.floor(n ?? 0)) : ''}</span>` : ''}
           ${self.dockedAt ? '' : `<button class="btn btn-small btn-danger" data-dump="${g}" title="${esc(L('ship.overboard'))}">⤓</button>`}</div>`;

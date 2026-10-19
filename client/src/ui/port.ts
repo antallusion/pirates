@@ -70,6 +70,7 @@ import type { BoardChip } from './board.ts';
 import { weeklyLog } from './renown.ts';
 import { worldGoalsLog } from './social.ts';
 import { bindGoalTaps } from './goaltap.ts';
+import { holdMix, holdMixText } from './holdmix.ts';
 
 const LIS = dict(IS_EN, IS_RU);
 /** A generated job's picture by its kind (docs/11 P4). */
@@ -233,7 +234,7 @@ export class PortScreen {
     const bg = assetUrl(`bg.port_${port.id}`) ?? assetUrl(`bg.port_${port.faction}`);
     root.style.setProperty('--bg-port', bg ? `url('${bg}')` : 'none');
     const events = state.events.filter((e) => e.port === port.id).map((e) => `${serverText(e.title)}${e.kind === 'blockade' || e.kind === 'armada' ? L('head.blockade') : e.kind === 'epidemic' ? L('head.epidemic') : ''}`);
-    const figures = `${events.length ? `<span class="w-fig bad" data-hint="${esc(W('port.event', { what: events.join(' · ') }))}" title="${esc(events.join(' · '))}">⚑</span>` : ''}${figure('coin', fmt(self.gold), W('port.purse'), 'gold')}${figure('tab_market', `${vol.toFixed(0)}/${holdMax.toFixed(0)}`, W('port.hold', { vol: vol.toFixed(0), max: holdMax.toFixed(0) }))}${figure('stat_crew', String(self.crew), W('port.crew', { n: self.crew }))}`;
+    const figures = `${events.length ? `<span class="w-fig bad" data-hint="${esc(W('port.event', { what: events.join(' · ') }))}" title="${esc(events.join(' · '))}">⚑</span>` : ''}${figure('coin', fmt(self.gold), W('port.purse'), 'gold')}${figure('tab_market', `${vol.toFixed(0)}/${holdMax.toFixed(0)}`, `${W('port.hold', { vol: vol.toFixed(0), max: holdMax.toFixed(0) })}: ${holdMixText(holdMix(self.cargo, state.ownStats))}`)}${figure('stat_crew', String(self.crew), W('port.crew', { n: self.crew }))}`;
     const html = `${winHead(placeName(port.name), { crest: `faction_${port.faction}`, sub: `${faction.name} · ${REGIONS[port.region].name}`, figures })}
       <div class="w-frame">${railTabs(main, this.tab, 'ptab')}<div class="w-pane">${chipRow(second, this.tab, 'ptab')}${this.tab === 'quests' ? boardSwitches(view, state, this.qchip) : ''}
       <div class="modal-body w-body port-body" data-page="${this.tab}">${this.body(view, state)}</div></div></div>`;
@@ -609,8 +610,12 @@ export class PortScreen {
     const fence = view.fence !== null ? `<div class="card"><h4>${esc(L('fence.title'))}</h4><p class="muted">${esc(L('fence.text', { pct: Math.round(view.fence * 100) }))}</p>
         ${(Object.keys(self.cargo) as (keyof typeof GOODS)[]).filter((g) => GOODS[g].contraband && (self.cargo[g] ?? 0) >= 1).map((g) => `<button class="btn btn-small" data-act="fence" data-good="${g}">${esc(L('fence.sell', { n: Math.floor(self.cargo[g] ?? 0), good: GOODS[g].name }))}</button>`).join(' ') || `<span class="muted">${esc(L('fence.nothing'))}</span>`}</div>` : '';
     const note = view.duty || portDef.blackMarket ? `<p class="muted mk-note">${view.duty ? L('market.duty', { pct: Math.round(view.duty * 100) }) : ''} ${portDef.blackMarket ? esc(L('market.blackMarket')) : ''}</p>` : '';
+    // what fills her hold, the most first (owner, 2026-10-19: «не понимаю как я забиваю корабль и чем»)
+    const st = state.ownStats;
+    const used = cargoVolume(self.cargo, st?.contrabandVolumeMul ?? 1, st?.materialVolumeMul ?? 1, st?.provisionVolumeMul ?? 1, st?.cursedVolumeMul ?? 1);
+    const mix = `<p class="muted mk-hold">${icon('tab_market', '', 'ico-sm')}${esc(W('port.hold', { vol: used.toFixed(0), max: (st?.holdVolume ?? 0).toFixed(0) }))}: ${esc(holdMixText(holdMix(self.cargo, st)))}</p>`;
     return `${this.quick(view, state, ['sell', 'supplies', 'repair', 'hire'])}
-      <div class="mk-head">${sec(W('mk.goods'))}${by}</div>${note}
+      <div class="mk-head">${sec(W('mk.goods'))}${by}</div>${mix}${note}
       <div class="mk-list">${rows}</div>
       ${sec(W('mk.shot'))}<div class="mk-list">${ammo}</div>
       ${more(W('mk.extra'), `${fence}${intel}`, 'mk-extra')}`;
