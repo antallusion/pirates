@@ -41,5 +41,5 @@ test('the row in the page: every one of curActs, the small ones wrapping upward,
   assert.match(css, /body\.touch #touch > \.tc-actrow > \.k-btn \{ flex: none;/);
   assert.match(css, /\.tc-actrow\.tc-icons > \.tc-act2 \{ width: var\(--f-tap, 36px\); padding: 0;/);
   // (the small ones' words for the long press and the screen reader)
-  assert.ok(hud.includes('data-hint="${esc(words)}"'));
+  assert.ok(hud.includes('b.dataset.hint = words;'), 'kept in place, its words updated on it (2026-10-19)');
 });

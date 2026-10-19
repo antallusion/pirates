@@ -122,7 +122,7 @@ test('the gold button is the one the pad\'s A always took, and padContext runs t
   assert.match(pad, /gatherActs\(\)\.acts\[0\]/);
   assert.match(pad, /runAct\(first\)/);
   assert.match(main, /landKeyAct\(gatherActs\(\)\.acts\)/, 'the land key');
-  assert.match(main, /const a = b \? curActs\[Number\(b\.dataset\.act\)\] : undefined;\r?\n {2}if \(a\) runAct\(a\);/, 'a click');
+  assert.match(main, /const a = b \? curActs\[Number\(b\.dataset\.act\)\] : down && performance\.now\(\) - down\.at < 800 \? curActs\.find\(\(x\) => x\.id === down\.id\) : undefined;\r?\n {2}if \(a\) runAct\(a\);/, 'a click (the pressed button kept across a redraw)');
 });
 
 test('the land key takes the mast, the net, the sea mark in the bar\'s order', () => {
