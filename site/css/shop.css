@@ -141,3 +141,4 @@ mark.todo { background: rgba(224, 112, 63, 0.18); color: #ffcfae; border: 1px da
   .testpay dl { margin-bottom: 10px; gap: 4px 14px; }
   .testpay-act .btn-gold, .testpay-act .btn-oak { min-height: 44px; }
 }
+.shop-find .search, .shop-find .search input { min-width: 0; }

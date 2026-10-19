@@ -81,3 +81,5 @@
 @media (max-width: 400px) {
   .rt-row:not(.guild) .rt-cap { display: none; }
 }
+/* the search never wider than a narrow phone (the input's own width let it push 2 px past 360) */
+.rt-find .search, .rt-find .search input { min-width: 0; }
