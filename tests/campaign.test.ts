@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MAX_LEVEL, xpForLevel } from '../shared/src/constants.ts';
-import { LOCAL_R, buildCampaign, locDist } from '../shared/src/data/campaign/build.ts';
+import { LOCAL_R, OPENING_SLOTS, buildCampaign, locDist } from '../shared/src/data/campaign/build.ts';
 import { CHAPTERS } from '../shared/src/data/campaign/chapters.ts';
 import { checkChapter } from '../shared/src/data/campaign/check.ts';
 import { campaignPaces, roadXp } from '../shared/src/data/campaign/pacing.ts';
@@ -70,7 +70,7 @@ test('the owner’s steps: an island visited and ships boarded in every chapter;
     assert.ok(qs.filter((q) => q.steps.some((x) => x.type === 'board')).length >= 3, `chapter ${ch.n}: boardings`);
     for (const q of qs) for (const st of q.steps) mix[st.type] = (mix[st.type] ?? 0) + 1;
   }
-  for (const t of ['visit', 'isle', 'land', 'board', 'sink', 'lair', 'beast', 'deliver', 'pickup', 'time_in', 'chart', 'dive', 'claim', 'build', 'recruit', 'named', 'rescue']) assert.ok(mix[t] > 0, `the campaign has ${t} steps`);
+  for (const t of ['visit', 'isle', 'land', 'board', 'sink', 'lair', 'beast', 'deliver', 'pickup', 'time_in', 'chart', 'dive', 'claim', 'build', 'recruit', 'named', 'rescue', 'buy', 'neutral']) assert.ok(mix[t] > 0, `the campaign has ${t} steps`);
   // the fights are of the quest's level: a grey ship of the old waters does not count
   for (const q of built.quests) for (const st of q.steps) if (st.type === 'board' || st.type === 'sink') assert.ok((st.minShip ?? 0) >= 1, q.id);
 });
@@ -426,6 +426,12 @@ function doStep(game: Game, s: PlayerSession, st: QuestStep): void {
       return questEvent(game, s, { k: 'tick', dt: 1 });
     case 'claim':
       return questEvent(game, s, { k: 'tick', dt: 1 });
+    // the opening (owner, 2026-10-19): a purchase at a port's shop; a neutral stack of the sea beaten
+    case 'buy':
+      return questEvent(game, s, { k: 'buy', shop: st.shop, port: 'saltmarrow' });
+    case 'neutral':
+      for (let i = 0; i < st.count; i++) questEvent(game, s, { k: 'neutral' });
+      return;
     case 'build':
       for (let i = 0; i < st.count; i++) questEvent(game, s, { k: 'build' });
       return;
@@ -564,7 +570,7 @@ test('a fork: its two ways put before her (a card and a popup), none under way t
 test('the campaign’s fight comes to her: on a boarding step at sea, foes of the quest’s level put out near her, two at most', () => {
   const { game } = makeGame();
   const { s } = captain(game, 'Hunted', 3);
-  const q = campaignOf(game).bySlot.get(2)!.a; // «Tallow and Lanterns»: board one, then report
+  const q = campaignOf(game).bySlot.get(2)!.a; // «Борт о борт», the opening's boarding (owner, 2026-10-19)
   assert.equal(q.steps[0].type, 'board');
   s.profile!.campaign!.at = 2;
   onStep(s, q);
@@ -581,7 +587,7 @@ test('the campaign’s fight comes to her: on a boarding step at sea, foes of th
     assert.ok(Math.hypot(f.state.x - near.x, f.state.y - near.y) <= near.r, 'put out in the location’s waters');
   }
   questEvent(game, s, { k: 'board', victim: foes[0] });
-  assert.equal(s.profile!.quests.active[0].step, 1, 'boarding one of them is the step');
+  assert.ok(s.profile!.campaign!.at > 2 || s.profile!.quests.active[0].step >= 1, 'boarding one of them is the step');
 });
 
 test('an «arrive at» step is done by arriving after the quest is taken: not by the port she lies in when it comes', () => {
@@ -639,6 +645,8 @@ test('location by location: small runs (2–6 quests), each done within 1.5 km o
   for (const sl of built.slots) {
     const L = locs[sl.loc];
     assert.equal(sl.travel, sl.slot === L.from && L.i > 0, `${sl.a.id}: the voyage is the first of its run`);
+    // (the opening's fights are on the lane out to the island of her town, owner 2026-10-19: tests/opening.test.ts)
+    if (sl.slot < OPENING_SLOTS) continue;
     for (const q of [sl.a, ...(sl.b ? [sl.b] : [])]) {
       const pick = q.steps.some((x) => x.type === 'pickup');
       for (const st of q.steps) {
@@ -732,7 +740,7 @@ test('a location’s fight puts out in its waters, and only there', () => {
   questEvent(game, s, { k: 'board', victim: v });
   assert.equal(s.profile!.quests.active[0].progress, 0);
   questEvent(game, s, { k: 'board', victim: foes[0] });
-  assert.ok(s.profile!.quests.active[0].progress >= 1 || s.profile!.quests.active[0].step >= 1);
+  assert.ok(s.profile!.campaign!.at > sl.slot || s.profile!.quests.active[0].progress >= 1 || s.profile!.quests.active[0].step >= 1);
 });
 
 test('a dive of the campaign has its wreck laid in its location’s shallows', () => {

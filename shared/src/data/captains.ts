@@ -135,3 +135,15 @@ export const CAPTAIN_IDS = Object.keys(CAPTAINS) as CaptainId[];
 export function findAbility(captain: CaptainId, abilityId: string): AbilityDef | undefined {
   return CAPTAINS[captain].abilities.find((a) => a.id === abilityId);
 }
+
+/** The premium captains' price (owner, 2026-10-19: «премиум героев можно на старте выбрать бесплатно, а они должны стоить
+ *  денег. Примерно 2500 руб за героя»): 2 490 doubloons — about 2 500 ₽ at the shop's rate of a doubloon to a rouble, and
+ *  1 868 ⭐ at the top-up's ¾ star a doubloon (docs/32). A single thing, not a quantity on the ladder's rungs (no rung's
+ *  bonus): the price stands by itself between the 1 990 and 2 990 rungs, within the shop's 290–9 900. Bought once per
+ *  account on the captain's choice; a captain picked free before 2026-10-19 stays hers (grandfathered). */
+export const CAPTAIN_PRICE = 2490;
+
+/** A captain's price in doubloons (0: free to pick). */
+export function captainPrice(id: CaptainId): number {
+  return CAPTAINS[id]?.premium ? CAPTAIN_PRICE : 0;
+}

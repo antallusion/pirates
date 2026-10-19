@@ -310,10 +310,16 @@ export class ThroneWindow {
   }
 }
 
-/** The glory chip on the captain's plate (docs/19 E1): the rank, and a mark when a boon or a point waits. */
-export function gloryChip(g: GloryView | undefined): string {
-  if (!g || !g.open) return '';
-  const wait = g.pending > 0 || g.points - g.spent > 0;
-  return `<button class="uf-glory${wait ? ' wait' : ''}" data-throne title="${esc(L('plateTip', { n: g.rank }))}">★${g.rank}</button>`;
+/** The glory chip on the captain's plate (docs/19 E1): the rank, and a mark when a boon or a point waits. Always there
+ *  (owner, 2026-10-19: «Слава всегда должна быть под аватаркой»): before the cap a nought, its tip saying when glory
+ *  gathers, the Throne's window telling the same. The star drawn (a letter's ★ sat off the middle on every phone). */
+export function gloryChip(g: GloryView | undefined, cls = 'uf-glory'): string {
+  const open = !!g?.open;
+  const rank = open ? g!.rank : 0;
+  const wait = open && (g!.pending > 0 || g!.points - g!.spent > 0);
+  const tip = open ? L('plateTip', { n: rank }) : L('plateLocked', { n: MAX_LEVEL });
+  return `<button type="button" class="${cls}${wait ? ' wait' : ''}${open ? '' : ' locked'}" data-throne title="${esc(tip)}" aria-label="${esc(tip)}">${GLORY_STAR}<i>${rank}</i></button>`;
 }
+/** Glory's star, drawn in the buttons' 24-unit box (gold, currentColor). */
+const GLORY_STAR = '<svg class="g-svg gl-star" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.6l2.85 6.05 6.6.8-4.88 4.55 1.28 6.55L12 17.3l-5.85 3.25 1.28-6.55L2.55 9.45l6.6-.8z" fill="currentColor"/></svg>';
 export const throneLabel = (): string => L('throne');

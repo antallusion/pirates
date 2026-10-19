@@ -26,6 +26,10 @@ export const EN = {
   'place.invasion': 'the Choir’s invasion',
   'place.beasts': 'the beasts’ waters',
   'place.place': 'the place',
+  'place.stack': 'a stack of creatures',
+  // (the campaign's fight's waters and a castaway were left in the server's English: «к цели: campaign», 2026-10-19)
+  'place.campaign': 'the fight’s waters',
+  'place.castaway': 'castaways',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -53,4 +57,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'place.invasion': 'вторжение Хора',
   'place.beasts': 'воды зверей',
   'place.place': 'место',
+  'place.stack': 'отряд тварей',
+  'place.campaign': 'воды боя',
+  'place.castaway': 'потерпевшие крушение',
 };

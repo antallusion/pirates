@@ -8,6 +8,8 @@ import { decodeSnap, SnapState } from '../shared/src/codec.ts';
 import type { ClientMsg, ServerMsg } from '../shared/src/protocol.ts';
 import { AuthService } from '../server/src/auth.ts';
 import { Game } from '../server/src/game/Game.ts';
+import { grantCaptain } from '../server/src/game/captainshop.ts';
+import { CAPTAINS } from '../shared/src/data/captains.ts';
 import type { WsConnection } from '../server/src/net/websocket.ts';
 import { Database } from '../server/src/persistence/db.ts';
 import { quietAdv } from '../server/src/game/advmap.ts';
@@ -84,8 +86,10 @@ export function onWeekday(game: Game): void {
 
 export function join(game: Game, name: string, captain: 'corsair' | 'reaver' | 'smuggler' | 'navigator' | 'drowned' | 'admiral' = 'corsair'): FakeConn {
   const conn = new FakeConn();
-  game.attach(conn as unknown as WsConnection);
+  const s = game.attach(conn as unknown as WsConnection);
   conn.push({ t: 'hello', v: PROTOCOL_VERSION, name });
+  // a premium captain is bought before she takes command (owner, 2026-10-19): the tests' captains are given hers
+  if (CAPTAINS[captain].premium && s.authed) grantCaptain(game, s.accountId, captain);
   conn.push({ t: 'create_captain', captain, shipName: 'Test Wake' });
   return conn;
 }

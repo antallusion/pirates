@@ -38,6 +38,8 @@ import { findsOf } from './seafinds.ts';
 import type { ShipEntity } from './ship.ts';
 import { worldGoals } from './worldgoals.ts';
 import { campaignFoes } from './campaign.ts'; // docs/36
+import { ownIsland } from './estate.ts';
+import { roamFighter, roamUp, roamWhere, roamersAbout } from './roamers.ts';
 import { castawaysOf } from './castaways.ts';
 import { liveNamed } from './wanted.ts';
 import { activeTasks } from './worldtasks.ts';
@@ -459,8 +461,21 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
       // a merchant to stop and make pay (the Brethren's raid, docs/12 P6)
       return { cands: hunt(game, s, 'merchants') };
     case 'claim':
-      // docs/36: an island of her own — the nearest she may claim
+      // docs/36: an island of her own — the nearest she may claim; the opening's town, its own island (owner, 2026-10-19)
+      if (st.island !== undefined && !ownIsland(game, s.accountId)) return { cands: islands(game, (i) => i.id === st.island, 'land') };
       return { cands: islands(game, (i) => !i.portId, 'land') };
+    case 'buy':
+      // the opening's lesson of the shops: the start's harbour, the quest's (any harbour's shops do it, the words name this one)
+      return { cands: [portCand(game.portById(QUESTS_BY_ID[id].port) ?? game.world.ports[0])] };
+    case 'neutral': {
+      // the opening: a standing stack of the sea's creatures on the lane (its `near`), else the nearest standing one
+      const up = (x: number, y: number, r: number): Cand[] => roamersAbout(game, x, y, r).filter((sp) => roamUp(game, sp.id) && roamFighter(game, sp.id) === null).map((sp) => {
+        const w = roamWhere(game, sp);
+        return { x: w.x, y: w.y, r: 120, kind: 'place' as const, name: 'stack' };
+      });
+      const lane = st.near ? up(st.near.x, st.near.y, st.near.r) : [];
+      return { cands: lane.length ? lane : up(ship.state.x, ship.state.y, 6000) };
+    }
     case 'recruit':
       return { cands: ports(game) };
     case 'deliver': {
@@ -734,6 +749,12 @@ export function resolveGoal(game: Game, s: PlayerSession, key: string): Resolved
       return bossPlaces(game, REGION_IDS.includes(id as RegionId) ? (id as RegionId) : undefined);
     case 'boss':
       return bossPlaces(game);
+    case 'own': {
+      // the island button (owner, 2026-10-19: «кнопка острова… или я еще остров не отрыл»): her own island, or before
+      // she holds one the nearest wild island to found her town on (docs/29: any but a port's, the first free)
+      const h = ownIsland(game, s.accountId);
+      return { cands: islands(game, h ? (i) => i.id === h.island : (i) => !i.portId, 'land') };
+    }
   }
   return { none: ROUTE_WORDS.unknown };
 }

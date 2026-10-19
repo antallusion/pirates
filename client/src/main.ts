@@ -11,7 +11,7 @@ import { liveSignals, plateGoal, signalToast } from './ui/social.ts';
 import { noteHearsay, repairState } from './ui/dealings.ts';
 import { renderHall } from './ui/hall.ts';
 import { renderLook, resetLookDraft } from './ui/looks.ts';
-import { ask, tell } from './ui/confirm.ts';
+import { ask, askHtml, tell } from './ui/confirm.ts';
 import { BEASTS, beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
 import { NetHaulPanel } from './ui/nethaul.ts';
@@ -79,7 +79,7 @@ import { objective, setTracked, setWaypoint as setMark, trackedId, trackedQuest,
 import { Net } from './net.ts';
 import { Renderer, shipHeel } from './render/renderer.ts';
 import { ClientState } from './state.ts';
-import { showCaptainSelect } from './ui/captain.ts';
+import { captainBalance, captainShopHeard, showCaptainSelect } from './ui/captain.ts';
 import { renderBoarding, renderHelp, renderShip, renderSunk } from './ui/dialogs.ts';
 import { renderCrew, renderMutiny } from './ui/crew.ts';
 import { CompanyScreen, renderBarter } from './ui/company.ts';
@@ -92,7 +92,7 @@ import { buttonHtml } from './ui/kit/button.ts';
 import { ZOOM_NEAR_MIN, clampZoom } from './render/freecam.ts'; // the far view and the free look (owner, 2026-10-17)
 import { EN as FC_EN, RU as FC_RU } from './lang/ui/freecam.ts';
 import { askMove } from './ui/isletree.ts'; // docs/29: the island's move, its confirm
-import { $, decorateSums, esc, fmt, icon, keepInputs, knots } from './ui/dom.ts';
+import { $, decorateSums, esc, fmt, glyphSvg, icon, keepInputs, knots } from './ui/dom.ts';
 import { Hud, TOUCH_FOLDED, releaseModalToasts } from './ui/hud.ts';
 import { SeaHud, bestSpecial, seaWord } from './ui/seahud.ts'; // docs/23 phase 2: the sea and five buttons
 import type { DeckSlot, SeaKeys } from './ui/seahud.ts';
@@ -135,7 +135,8 @@ const HUD_L = dict(HUD_EN, HUD_RU);
 import { applyDataLocale, NAME_RU } from './lang/data.ts';
 import { personName } from './lang/names.ts';
 import { campaignWordsReady, loadCampaignWords, serverText } from './lang/server.ts';
-import { campaignNews } from './ui/campaignnews.ts'; // docs/36: the campaign's next quest comes by itself
+import { GOODS } from '../../shared/src/data/goods.ts'; // the opening's good to trade
+import { STORY_FROM, campaignLore, campaignNews } from './ui/campaignnews.ts'; // docs/36: the campaign's next quest comes by itself
 import { FACTIONS } from '../../shared/src/data/factions.ts';
 import { placeName } from './ui/maps.ts';
 import type { Key } from './i18n.ts';
@@ -923,13 +924,15 @@ const seaHud = new SeaHud($('touch'), {
     seaHud.lend(['hud-target'], 'target');
   },
 });
-// The island screen's way in from the sea (owner, 2026-10-15): «Остров» under the menu while she holds an island.
+// The island screen's way in from the sea (owner, 2026-10-15): «Остров» under the captain's plate. Always there (owner,
+// 2026-10-19: «под аватаркой кнопка острова, щас я ее не вижу или я еще остров не отрыл»): before she holds an island
+// it says how to found a town of her own and sails her to the nearest free island (the route `own`, goalroute.ts).
 const isleBtn = (() => {
   const t = document.createElement('template');
   t.innerHTML = buttonHtml({ kind: 'icon', id: 'tc-isle', icon: 'ui_lighthouse', glyph: '⚓', aria: LIS('enterTip'), cls: 'sea-round hidden' }).trim();
   const b = t.content.firstElementChild as HTMLButtonElement;
   b.insertAdjacentHTML('beforeend', '<span class="tc-isle-l"></span>');
-  b.addEventListener('click', () => openBase());
+  b.addEventListener('click', () => (hasIsle() ? openBase() : openFound()));
   $('touch').append(b);
   return b;
 })();
@@ -954,17 +957,58 @@ function homeBtnFrame(): void {
     homeBtn.setAttribute('aria-label', LFC('homeAria'));
   }
 }
-/** «Остров» shown while she holds an island and no fight is near (its word in her language). */
-function isleBtnFrame(): void {
-  const show = state.self?.homeIsle !== null && state.self?.homeIsle !== undefined;
-  if (isleBtn.classList.contains('hidden') === show) isleBtn.classList.toggle('hidden', !show);
-  const w = LIS('enter');
-  const l = isleBtn.querySelector('.tc-isle-l')!;
-  if (l.textContent !== w) {
-    l.textContent = w;
-    isleBtn.title = LIS('enterTip');
-    isleBtn.setAttribute('aria-label', LIS('enterTip'));
+const hasIsle = (): boolean => state.self?.homeIsle !== null && state.self?.homeIsle !== undefined;
+/** The campaign's opening (owner, 2026-10-19): its step now, for the finger (pointer.ts) — and its courses sailed by
+ *  the helmsman: a fight's lane, a stack of creatures, the island of her town, set once a step the moment she is at sea
+ *  (the line and the distance drawn, goalroute.ts). Null past the opening, in the First Watch, in a fight. */
+let openingRun = '';
+function openingFrame(): string | null {
+  if (state.onboarding?.stage) return null;
+  const q = state.self?.quests.find((x) => x.kind === 'campaign' && x.op);
+  if (!q?.op) return null;
+  const key = `${q.id}:${q.step}`;
+  const sea = q.op === 'sink' || q.op === 'board' || q.op === 'neutral' || q.op === 'found';
+  if (sea && openingRun !== key && !state.self?.dockedAt && !state.boardTac && !state.boardFight && !state.pursuit && inGame && !isleScene.isOpen) {
+    openingRun = key;
+    startGoal(`q:${q.id}`, false);
   }
+  return q.op;
+}
+/** A good to trade at this market for the opening's lesson: the first in stock that is not a supply nor contraband. */
+function tradeGoodHere(): string | null {
+  const v = state.portView;
+  if (!v) return null;
+  return v.market.find((r) => r.stock > 0 && r.legal && GOODS[r.good]?.category !== 'supply')?.good ?? null;
+}
+/** «Остров» always under the plate (owner, 2026-10-19), but in the First Watch (its steps show the HUD a block at a time);
+ *  before she holds an island a «+» on its corner and «Основать свой город» for its words. */
+function isleBtnFrame(): void {
+  const show = !!state.self && !state.onboarding?.stage;
+  if (isleBtn.classList.contains('hidden') === show) isleBtn.classList.toggle('hidden', !show);
+  const own = hasIsle();
+  const w = LIS('enter');
+  const tip = LIS(own ? 'enterTip' : 'foundTip');
+  const l = isleBtn.querySelector('.tc-isle-l')!;
+  if (l.textContent !== w || isleBtn.title !== tip) {
+    l.textContent = w;
+    isleBtn.title = tip;
+    isleBtn.setAttribute('aria-label', tip);
+  }
+  const mark = isleBtn.querySelector('.tc-isle-new');
+  if (!own && !mark) isleBtn.insertAdjacentHTML('beforeend', `<b class="k-badge tc-isle-new" aria-hidden="true">${glyphSvg('plus')}</b>`);
+  else if (own && mark) mark.remove();
+}
+/** No island yet: how a town of her own is founded, and the helmsman to the nearest free island (or its claim, when one
+ *  lies off her bow). */
+function openFound(): void {
+  const near = state.self?.claimIsle;
+  const isl = near ? state.islands.get(near.island) : undefined;
+  const body = `<p id="confirm-text"><b>${esc(LIS('foundH'))}</b></p><p>${esc(LIS('foundBody'))}</p><p class="muted">${esc(isl ? LIS('foundHere', { name: placeName(isl.name) }) : LIS('foundNear'))}</p>`;
+  void askHtml(body, LIS(isl ? 'foundClaim' : 'foundGo'), LIS('foundNo'), 'found-panel').then((ok) => {
+    if (!ok) return;
+    if (isl) claimIsland();
+    else startGoal('own');
+  });
 }
 const onboarding = new OnboardingUi(state);
 /** The First Watch's finger over the button its step wants (docs/23 item 80). */
@@ -1472,6 +1516,11 @@ function onMessage(m: ServerMsg): void {
           btn.textContent = L('continueAs', { name: localStorage.getItem(CAPTAIN_KEY)! });
           btn.classList.remove('hidden');
         }
+      } else if (!inGame && m.msg === 'That captain is sold for doubloons') {
+        // (a premium captain refused at the choice: the screen back, the reason under its button)
+        $('screen-captain').classList.remove('hidden');
+        const why = document.getElementById('captain-why');
+        if (why) why.textContent = serverText(m.msg);
       } else if (!inGame) $('login-error').textContent = serverText(m.msg);
       // The glass asks by itself every few seconds (askGlass): its «too far» is no refusal of hers to tell.
       else if (GLASS_QUIET.has(m.msg)) break;
@@ -1487,7 +1536,7 @@ function onMessage(m: ServerMsg): void {
       if (!m.hasCaptain) showCaptainSelect((captain, shipName, tutorial) => {
         prologuePending = tutorial;
         net.send({ t: 'create_captain', captain, shipName, tutorial });
-      });
+      }, (x) => net.send(x));
       break;
     case 'init':
       bootMark('init');
@@ -1625,6 +1674,9 @@ function onMessage(m: ServerMsg): void {
       void giverDialog(m.offer, m.from).then((pay) => net.send({ t: 'quest', action: pay ? 'accept' : 'decline', id: m.offer.id, ...(pay && pay !== 'silver' ? { pay } : {}) }));
       break;
     case 'campaign_new':
+      // the story begins after the opening (owner, 2026-10-19: «и далее уже основная кампания начинается с каким-то
+      // лором»): its prologue, once, before the first quest of the story
+      if (m.ch === 1 && m.k === STORY_FROM && !m.choice) campaignLore('prologue', () => !!state.boardTac || !!state.boardFight);
       // docs/36: the campaign's next quest came by itself (or a fork's ways) — a toast and a card, held while she fights
       campaignNews(m, {
         busy: () => !!state.boardTac,
@@ -1648,6 +1700,8 @@ function onMessage(m: ServerMsg): void {
       if (m.line) hud.toast(serverText(m.line), 'info');
       audio.bell();
       audio.coins();
+      // the campaign's last quest: its epilogue («крутой финал», owner 2026-10-19)
+      if (m.campaign && m.campaign.at >= m.campaign.total) campaignLore('epilogue', false);
       break;
     }
     case 'crew_say': {
@@ -1803,11 +1857,15 @@ function onMessage(m: ServerMsg): void {
     case 'tame':
       if (modal === 'tame') refreshModal();
       break;
+    case 'captain_shop': // the premium captains on the choice screen (owner, 2026-10-19)
+      captainShopHeard(m);
+      break;
     case 'premium':
     case 'doubloons':
       if (modal === 'shop') refreshModal();
       // a premium purchase heard (the balance down: the doubloons spent)
       if (m.t === 'doubloons') {
+        captainBalance(m.n);
         if (lastDoubloons >= 0 && m.n < lastDoubloons) cue('buy');
         lastDoubloons = m.n;
         // the top-up came in: the purchase it was for goes now (price.ts topUpThenBuy)
@@ -4314,7 +4372,8 @@ function step(t: number): void {
     boardFight.render(state.boardFight);
     tactical.render(state.boardTac);
     filmMoments();
-    tutorPointer.set({ stage: state.onboarding?.stage ?? null, touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null });
+    const op = openingFrame();
+    tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : null), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null });
     tutorPointer.frame();
     encounterCard.frame();
     surrenderCard.frame(state);

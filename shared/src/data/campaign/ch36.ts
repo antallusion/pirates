@@ -212,14 +212,19 @@ export const CHAPTER: ChapterSrc = {
     {
       t: ['The Great Bell', 'Великий колокол'],
       b: [
-        'At the bottom of the bowl, over the great bell, Galt takes the wheel from you for the first time. Hold the waters round him while the divers hang the new tongue, then keep her steady while he strikes. Once, he says, is enough.',
-        'На дне чаши, над великим колоколом, Галт впервые берёт у вас штурвал. Удерживайте воды вокруг, пока водолазы вешают новый язык, а потом держите корабль ровно, пока он бьёт. Одного раза, говорит он, хватит.',
+        'At the bottom of the Eye hangs the Great Bell of the Drowned Crown, tall as a church, and every ship the sea took in a hundred years stands guard over it. The Choir sings from the dark. Galt takes the wheel from you for the first time: break the drowned guard, hold the waters while the divers hang the new tongue, and keep her steady while he strikes.',
+        'На дне Ока висит Великий колокол Утонувшей Короны, высотой с церковь, и его стерегут все корабли, что море забрало за сто лет. Из темноты поёт Хор. Галт впервые берёт у вас штурвал: разбейте утонувшую стражу, удерживайте воды, пока водолазы вешают новый язык, и держите корабль ровно, пока он бьёт.',
       ],
       d: [
-        'The great bell gives one low note, backward, and the sea lies down like an old dog by the hearth. Slowly, the Eye closes.',
-        'Великий колокол издаёт одну низкую ноту, задом наперёд, и море ложится, как старый пёс у очага. Медленно, очень медленно Око закрывается.',
+        'One low note, backward, rolls through the whole sea. The drowned guard sinks into the light, the Choir falls silent mid-word, and the sea lies down like an old dog by the hearth. Slowly, the Eye closes.',
+        'Одна низкая нота, задом наперёд, прокатывается по всему морю. Утонувшая стража уходит в свет, Хор смолкает на полуслове, и море ложится, как старый пёс у очага. Медленно Око закрывается.',
       ],
-      s: ['escort', 'dive', 'hub'],
+      s: [
+        ['board:2', 'Break the drowned guard over the Great Bell: take its ships by boarding: {n}.', 'Разбейте утонувшую стражу над Великим колоколом: возьмите её корабли на абордаж: {n}.'],
+        'escort',
+        'dive',
+        'hub',
+      ],
     },
     {
       t: ['The Pilot’s Farewell', 'Прощание лоцмана'],

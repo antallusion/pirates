@@ -17,6 +17,20 @@ export const EN = {
   newQuest: 'A new campaign quest: {name}',
   fork: 'The campaign: choose your way',
   choose: 'Choose',
+  // The story's prologue after the opening, and the campaign's epilogue (owner, 2026-10-19: «основная кампания
+  // начинается с каким-то лором и крутым финалом»).
+  'lore.prologue.t': 'The Gravetide',
+  'lore.prologue.k': 'Prologue',
+  'lore.prologue.1': 'A hundred years ago the Drowned Crown went under in a single night: its admirals, its bell towers, its city of white stone. The sea did not keep it quietly. Once in a hundred years the drowned bells ring beneath the waves, and the tide comes ashore to take back what it lost. The old men of the coast call it the Gravetide.',
+  'lore.prologue.2': 'The hundred years are up. In the fog off Saltmarrow a bell has begun to ring again, and someone is lighting false beacons on the rocks to feed it ships. Her men call her the Widow of the Tide: Morwen, widow of the last admiral of the Crown. She means to ring the Gravetide in, and drown every living coast to raise her dead one.',
+  'lore.prologue.3': 'Oren Galt, the old pilot, saw your flag go up over your own island. Tonight, on the quay, he will tell you the rest.',
+  'lore.prologue.go': 'Hear him out',
+  'lore.epilogue.t': 'Master of the Tide',
+  'lore.epilogue.k': 'Epilogue',
+  'lore.epilogue.1': 'The last bell is silent. Beyond the Wall the sea lies flat and grey, and for the first time in a hundred years it is only the sea. The Widow’s flagship sleeps on the bottom with her crown, and the Choir has no song left to sing.',
+  'lore.epilogue.2': 'In Saltmarrow the lighthouse burns again with Oren Galt’s lantern. Jory Penn writes his name in the keeper’s book in full. The coast that lived in fear of the tide now tells of a captain who went beyond the Wall and came home.',
+  'lore.epilogue.3': 'The campaign is done. The tide sleeps, and the sea is yours.',
+  'lore.epilogue.go': 'Raise the colours',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -36,4 +50,16 @@ export const RU: Record<keyof typeof EN, string> = {
   newQuest: 'Новое задание кампании: {name}',
   fork: 'Кампания: выберите путь',
   choose: 'Выбрать',
+  'lore.prologue.t': 'Гробовой прилив',
+  'lore.prologue.k': 'Пролог',
+  'lore.prologue.1': 'Сто лет назад Утонувшая Корона ушла под воду за одну ночь — с адмиралами, колокольнями и городом из белого камня. Море не стало хранить её молча. Раз в сто лет под волнами звонят утонувшие колокола, и прилив выходит на берег, чтобы забрать своё. Старики побережья зовут его Гробовым приливом.',
+  'lore.prologue.2': 'Сто лет прошли. В тумане у Солтмарроу снова звонит колокол, а кто-то зажигает на скалах ложные огни и кормит его кораблями. Её люди зовут её Вдовой Прилива: Морвен, вдова последнего адмирала Короны. Она хочет прозвонить Гробовой прилив и утопить все живые берега, чтобы поднять свой, мёртвый.',
+  'lore.prologue.3': 'Старый лоцман Орен Галт видел, как над вашим островом поднялся флаг. Этой ночью, на причале, он расскажет остальное.',
+  'lore.prologue.go': 'Выслушать',
+  'lore.epilogue.t': 'Хозяин прилива',
+  'lore.epilogue.k': 'Эпилог',
+  'lore.epilogue.1': 'Последний колокол умолк. За Стеной море лежит ровное и серое — и впервые за сто лет это просто море. Флагман Вдовы спит на дне вместе с её короной, и Хору больше нечего петь.',
+  'lore.epilogue.2': 'В Солтмарроу снова горит маяк — с фонарём Орена Галта. Джори Пенн вписывает своё имя в книгу смотрителя полностью. Берег, что жил в страхе перед приливом, теперь рассказывает о капитане, который ушёл за Стену и вернулся домой.',
+  'lore.epilogue.3': 'Кампания пройдена. Прилив спит, и море ваше.',
+  'lore.epilogue.go': 'Поднять флаг',
 };

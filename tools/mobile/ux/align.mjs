@@ -121,7 +121,9 @@ async function shut(p) {
 // ring's painted hole (the ring art's pixels read along its two middle lines, laid as the ring is drawn: the ::after's
 // box, background contain). RING_SEL by default «К кораблю»; RING_ALL=1 every .sea-round (reported, the rule the same).
 async function RING({ tol, all }) {
-  const SEL = all ? 'body.simple .sea-round' : '#tc-home';
+  // (the round buttons whose pictures are held to the ring's hole, not to the box: seahud.css, 2026-10-19)
+  const RING_HELD = '#tc-home, #tc-isle, #tc-menu, #tc-daily, #tc-special, #tc-lock, #tc-ammo, #tc-offer';
+  const SEL = all ? 'body.simple .sea-round' : RING_HELD;
   const px = async (url) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -177,6 +179,8 @@ async function RING({ tol, all }) {
 
 // In the page: the candidates and their content's centres.
 function MEASURE(TOL) {
+  // (the round buttons whose pictures are held to their ring's hole: RING measures them, the box does not)
+  const RING_HELD = '#tc-home, #tc-isle, #tc-menu, #tc-daily, #tc-special, #tc-lock, #tc-ammo, #tc-offer';
   const CAND = ':is(button, [role="button"]):not(#hud-captain, #mm-tab), #mm-tab .mm-tab-pill, .k-badge, .sea-round, .tc-offer-t, kbd, .po-clock, .tc-ammo-n, .dk-n';
   // decorations on a button's corner: judged on their own, not as its content
   const DECOR = '.cs-bar, .dk-n, .dk-cd, .dk-slot.locked .dk-cdt, .dk-charge, .tc-isle-l, .tc-home-l, .k-badge, kbd, .kc, .tc-ring, .tc-offer-off, .tc-offer-t, .tc-ammo-n, .po-off, .sh-bonus, .sh-lim, .act-k, .act-s, .tc-sail-pips';
@@ -257,7 +261,7 @@ function MEASURE(TOL) {
     if (modal && !modal.contains(e)) continue; // (with a window up: only the window's own)
     const r = e.getBoundingClientRect();
     if (r.width > 340 || r.height > 120 || r.width < 6 || r.height < 6) continue;
-    if (e.matches('#tc-home')) continue; // (its picture is held to its ring's hole: RING)
+    if (e.matches(RING_HELD)) continue; // (its picture is held to its ring's hole: RING)
     // (what is on top at its middle: a candidate under another layer is not seen)
     // (a corner badge lets taps through: its button's middle is looked at instead)
     const host = getComputedStyle(e).pointerEvents === 'none' ? e.parentElement.closest('button, [role="button"]') ?? e : e;

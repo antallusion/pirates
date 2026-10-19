@@ -276,7 +276,10 @@ export type QuestEvent =
   | { k: 'citadel'; n: number }
   /** docs/36: works laid on her own island (base.ts startBuild, upgradeAt); men signed on for the army (dwell.ts recruit). */
   | { k: 'build' }
-  | { k: 'recruit'; n: number };
+  | { k: 'recruit'; n: number }
+  /** The campaign's opening (owner, 2026-10-19): a purchase at a port's shop; a neutral stack of the sea beaten. */
+  | { k: 'buy'; shop: 'provisions' | 'sailcloth' | 'arms' | 'trade'; port: string }
+  | { k: 'neutral' };
 
 export function newQuestLog(): QuestLog {
   return { active: [], done: [] };
@@ -770,6 +773,11 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
       return (ev.k === 'tick' || ev.k === 'dock' || ev.k === 'land') && !!ownIsland(game, s.accountId) ? 1 : 0;
     case 'build':
       return ev.k === 'build' ? 1 : 0;
+    // the opening (owner, 2026-10-19): the shops of any harbour; a neutral stack of the sea or a lair of the land's
+    case 'buy':
+      return ev.k === 'buy' && ev.shop === st.shop && (!st.port || st.port === ev.port) ? 1 : 0;
+    case 'neutral':
+      return ev.k === 'neutral' || ev.k === 'lair' ? 1 : 0;
     case 'recruit':
       return ev.k === 'recruit' ? ev.n : 0;
     case 'prize':

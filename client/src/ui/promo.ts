@@ -22,6 +22,7 @@ import type { ClientState } from '../state.ts';
 import { ask } from './confirm.ts';
 import { esc, fmt, icon, glyphSvg } from './dom.ts';
 import { buttonHtml, setBadge } from './kit/button.ts';
+import { holdToHole } from './kit/ringink.ts';
 import { doubloonIcon, famArt, qtyOf } from './premium.ts';
 import { priceHtml, priceText, topUpThenBuy } from './price.ts';
 
@@ -277,6 +278,7 @@ export class Promos {
       const f = OFFERS.get(c.offer);
       const art = c.special === 'first' || !f || f.fam.icon.startsWith('unit:') ? 'doubloon' : f.fam.icon;
       el.innerHTML = `${icon(art, '%', 'k-btn-ico')}${c.off > 0 && list.length === 1 ? `<i class="tc-offer-off" aria-hidden="true">−${c.off}%</i>` : ''}${c.until ? `<b class="tc-offer-t po-clock" data-poend="${c.until}" data-pofmt="hms" aria-hidden="true">${esc(clockShort(left))}</b>` : ''}`;
+      holdToHole(el); // its picture's ink on the ring's hole (kit/ringink.ts: the offers' pictures differ)
       const words = c.until ? L('iconAria', { name: this.nameOf(c), t: countdown(left) }) : this.nameOf(c);
       el.setAttribute('aria-label', words);
       el.title = words;

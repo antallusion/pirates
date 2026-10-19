@@ -86,6 +86,9 @@ export type ClientMsg =
   | { t: 'hero'; action: 'skill' | 'focus' | 'learn' | 'cast' | 'buy' | 'view'; pick?: number; id?: string; index?: number }
   | { t: 'hello'; v: number; token?: string; name?: string }
   | { t: 'create_captain'; captain: CaptainId; shipName: string; tutorial?: boolean } // tutorial: the First Watch (docs/07 §13)
+  /** The captains' choice (owner, 2026-10-19: premium captains cost money): `view` asks which she owns; `buy` buys a
+   *  premium captain for doubloons before she takes command (the top-up, if short, by the shop's own `premium` stars). */
+  | { t: 'captain_shop'; action: 'view' | 'buy'; captain?: CaptainId }
   | { t: 'onboarding'; action: 'skip_stage' | 'skip_all' | 'hide_goals' }
   /** `helm`: the captain's own hand on the helm (the stick held, a key down) — under «Атаковать» it takes the wheel. */
   | { t: 'input'; seq: number; rudder: number; sail: number; helm?: boolean }
@@ -756,7 +759,8 @@ export interface PrivateState {
     summary?: string; stepTexts?: string[]; silver?: number; xp?: number; portrait?: string; category?: string;
     /** seconds left to earn the speed bonus */ fastIn?: number;
     /** The pay chosen on taking it, when not all in silver, and what it comes to. */ pay?: QuestPay; paid?: { silver: number; heavy: number; incendiary: number; rep: number };
-    /** Groupmates on the same quest (docs/11 P6), and the step each is on. */ mates?: { name: string; step: number }[] }[];
+    /** Groupmates on the same quest (docs/11 P6), and the step each is on. */ mates?: { name: string; step: number }[];
+    /** The campaign's opening (owner, 2026-10-19): the step the guide points through — `buy:<shop>`, `sink`, `board`, `neutral`, `found`. */ op?: string }[];
   questsDone: string[];
   /** docs/36: her place in the main campaign. */
   campaign?: CampaignView;

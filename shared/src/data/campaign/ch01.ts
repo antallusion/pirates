@@ -1,4 +1,5 @@
-// Chapter 1 — Saltmarrow (Act I, Fog over Saltmarrow). The written model of a chapter (docs/36).
+// Chapter 1 — Saltmarrow (Act I, Fog over Saltmarrow). The written model of a chapter (docs/36). Its first five quests
+// are the campaign's opening (owner, 2026-10-19): the shops, a ship sunk, a ship boarded, a neutral stack, a town founded.
 
 import type { ChapterSrc } from './types.ts';
 
@@ -15,13 +16,66 @@ export const CHAPTER: ChapterSrc = {
   portrait: 'giver_old_salt_m',
   reward: { ammo: true },
   quests: [
+    // The opening (owner, 2026-10-19: «Кампания должна начинаться так — обучение по покупкам разным в магазинам, дальше
+    // атака корабля, дальше абордаж, дальше нападение на нейтралов, и дальше к ближайшему острову основать свой город.
+    // Все это должно быть сделано в первые условно там минут 5-10 с учетом плаваний»): the shops of the start's quay,
+    // a ship sunk and one boarded and a stack of the sea's creatures beaten on the lane out to the nearest island, and the
+    // town founded there. Then the story begins («Соль и туман»).
+    {
+      t: ['The Harbour’s Shops', 'Портовые лавки'],
+      b: [
+        'Oren Galt meets you on the quay of {hub} with a list in his hand. “A ship sails on her stores, not on her flag. Provisions, canvas, guns or hands, and a cargo to sell: the shops of the quay will teach you more than I can.”',
+        'Орен Галт встречает вас на причале порта {hub} со списком в руке. «Корабль ходит на припасах, а не на флаге. Провизия, парусина, пушки или люди и товар на продажу — лавки на набережной научат вас большему, чем я».',
+      ],
+      d: ['Galt ticks off the last line. “Now you are a ship, not a boat with a name.”', 'Галт вычёркивает последнюю строку. «Теперь вы корабль, а не лодка с именем»'],
+      s: ['buy:provisions', 'buy:sailcloth', 'buy:arms', 'buy:trade'],
+    },
+    {
+      t: ['The First Broadside', 'Первый залп'],
+      lane: { at: 0.35, r: 700 },
+      b: [
+        'A wreckers’ tender under grey sails prowls outside the harbour, waiting for a fishing boat to stray. Galt points out to sea: “There. Show her your guns.”',
+        'За гаванью рыщет тендер мародёров под серыми парусами — ждёт, когда рыбачья лодка отобьётся от своих. Галт указывает в море: «Вон там. Покажите ей свои пушки».',
+      ],
+      d: ['The tender goes down with her grey sails still set. The fishermen on the quay cheer.', 'Тендер уходит на дно, так и не спустив серых парусов. Рыбаки на причале кричат «ура».'],
+      s: [['sink:1', 'Attack the wreckers’ tender and sink her.', 'Атакуйте тендер мародёров и потопите его.']],
+    },
+    {
+      t: ['Over the Rail', 'Борт о борт'],
+      lane: { at: 0.35, r: 700 },
+      b: [
+        'A second tender comes on to avenge the first. Galt wants her whole: “Grapples, not guns. A ship on the bottom tells no tales.”',
+        'Второй тендер идёт мстить за первый. Галт хочет взять его целым: «Крючья, а не пушки. Корабль на дне ничего не расскажет».',
+      ],
+      d: ['In her hold: a lantern with a small brass bell on its handle, and a chart with three islands ringed in grey.', 'В её трюме — фонарь с медным колокольчиком на ручке и карта, где серым обведены три острова.'],
+      s: [['board:1', 'Close with the second tender and take her by boarding.', 'Сблизьтесь со вторым тендером и возьмите его на абордаж.']],
+    },
+    {
+      t: ['Creatures of the Shoals', 'Твари на отмели'],
+      lane: { at: 0.6, r: 1500 },
+      b: [
+        'The way to the islands is held by the sea’s creatures: they rise at every boat that passes. Galt says a captain clears her own road.',
+        'Путь к островам держат морские твари: они бросаются на каждую проходящую лодку. Галт говорит, что капитан сам расчищает себе дорогу.',
+      ],
+      d: ['The creatures scatter into the deep. The road to the islands is open.', 'Твари уходят в глубину. Дорога к островам открыта.'],
+      s: [['neutral:1', 'Attack a stack of the sea’s creatures on the way to the islands and beat it.', 'Атакуйте отряд морских тварей на пути к островам и разбейте его.']],
+    },
+    {
+      t: ['A Shore of Your Own', 'Свой берег'],
+      b: [
+        '“Every captain of this coast needs a shore to come home to,” Galt says, and points at {isle}. “Nobody holds it. Raise your flag there, and a town will grow around it.”',
+        '«Каждому капитану на этом берегу нужна своя земля, куда можно вернуться», — говорит Галт и указывает на остров {isle}. «Он ничей. Поднимите там флаг — и вокруг вырастет город».',
+      ],
+      d: ['A town hall of fresh timber stands on {isle}, and your flag snaps over it in the wind.', 'На острове {isle} стоит ратуша из свежего бруса, и над ней на ветру хлопает ваш флаг.'],
+      s: ['found'],
+    },
     {
       t: ['Salt and Fog', 'Соль и туман'],
       b: [
-        'Oren Galt has piloted ships past the Teeth for twenty years. Before he trusts you with a word, he wants to see you hold a course.',
-        'Орен Галт двадцать лет водит корабли мимо Зубьев. Прежде чем доверить вам хоть слово, он хочет посмотреть, как вы держите курс.',
+        'That night Galt sits with you on the quay of {hub} and tells you why the coast is afraid: once in a hundred years the drowned bells ring under the sea, and the Gravetide comes ashore. Before he says more, he wants to see you hold a course.',
+        'Ночью Галт сидит с вами на причале порта {hub} и рассказывает, почему побережье живёт в страхе: раз в сто лет под водой звонят утонувшие колокола, и на берег выходит Гробовой прилив. Прежде чем сказать больше, он хочет посмотреть, как вы держите курс.',
       ],
-      d: ['“You hold her steady,” Galt grumbles. “That will do for a start.”', '«Держишь ровно, — ворчит Галт. — Для начала сойдёт».'],
+      d: ['“You hold her steady,” Galt grumbles. “Then listen: the bells have started again.”', '«Держишь ровно, — ворчит Галт. — Тогда слушай: колокола снова зазвонили»'],
       s: ['isle', 'hub'],
     },
     {
@@ -34,15 +88,6 @@ export const CHAPTER: ChapterSrc = {
       s: ['land', 'hub'],
     },
     {
-      t: ['Tallow and Lanterns', 'Сало и фонари'],
-      b: [
-        'Someone keeps tallow and lanterns on the islands — that is how false lights are lit. Galt wants to know whose men they are.',
-        'Кто-то держит на островах сало и фонари — так зажигают ложные огни. Галт хочет знать, чьи это люди.',
-      ],
-      d: ['On the captured launch: a lantern with a small brass bell on its handle.', 'На захваченном баркасе нашёлся фонарь с медным колокольчиком на ручке.'],
-      s: ['board:1', 'hub'],
-    },
-    {
       t: ['A Bell on the Handle', 'Колокольчик на ручке'],
       b: [
         'Galt turns the lantern over and goes quiet. Such bells were cast at {port}, he says, and asks you to find out who ordered them.',
@@ -50,15 +95,6 @@ export const CHAPTER: ChapterSrc = {
       ],
       d: ['The founder remembers the buyer: a woman in grey who paid in old Crown silver.', 'Литейщик помнит заказчицу: женщина в сером, платила старым серебром Короны.'],
       s: ['port', 'hub'],
-    },
-    {
-      t: ['Grey Sails', 'Серые паруса'],
-      b: [
-        'Small boats under grey sails slip between the islands at dusk. Galt calls them the wreckers’ tenders. Stop a few and see what they carry.',
-        'В сумерках между островами шныряют лодки под серыми парусами. Галт зовёт их тендерами мародёров. Остановите несколько и посмотрите, что они везут.',
-      ],
-      d: ['Bales of rope, a crate of lamp oil and a chart with three islands ringed in grey.', 'Бухты канатов, ящик лампового масла и карта, где серым обведены три острова.'],
-      s: ['board:1', 'sink:2'],
     },
     {
       t: ['Three Grey Rings', 'Три серых круга'],
@@ -77,24 +113,6 @@ export const CHAPTER: ChapterSrc = {
       ],
       d: ['The lantern is smashed, the tallow thrown into the sea. The coast is darker and safer.', 'Фонарь разбит, сало выброшено в море. На берегу стало темнее — и безопаснее.'],
       s: ['land', 'hub'],
-    },
-    {
-      t: ['Shot and Powder', 'Ядра и порох'],
-      b: [
-        'Galt says a captain with an empty magazine is a captain on borrowed time. Bring powder to {hub} before the wreckers come back for their light.',
-        'Галт говорит: капитан с пустым пороховым погребом живёт взаймы. Привезите порох в порт {hub}, пока мародёры не вернулись за своим огнём.',
-      ],
-      d: ['The powder is stowed in the old customs cellar. The town sleeps easier.', 'Порох уложен в старом таможенном погребе. Город спит спокойнее.'],
-      s: ['bring:gunpowder'],
-    },
-    {
-      t: ['Lights on the Water', 'Огни на воде'],
-      b: [
-        'Tonight the wreckers’ boats are out again. Meet them at sea before they reach the coast.',
-        'Этой ночью лодки мародёров снова вышли в море. Встретьте их в открытой воде, пока они не добрались до берега.',
-      ],
-      d: ['Two boats are sunk; the third ran for the fog with its lights out.', 'Две лодки на дне; третья ушла в туман, погасив огни.'],
-      s: ['sink:2', 'hub'],
     },
     {
       t: ['Jory Penn', 'Джори Пенн'],
@@ -187,15 +205,6 @@ export const CHAPTER: ChapterSrc = {
       ],
       d: ['The escort scatters. The fishing boats put out again at dawn.', 'Охрана рассеяна. На рассвете рыбачьи лодки снова выходят в море.'],
       s: ['sink:3', 'board:1'],
-    },
-    {
-      t: ['Charts of the Teeth', 'Лоции Зубьев'],
-      b: [
-        'Galt is old, and the Teeth change every winter. He asks you to chart the islands he no longer has the eyes for.',
-        'Галт стар, а Зубья меняются каждую зиму. Он просит нанести на карту острова, до которых его глаза уже не достают.',
-      ],
-      d: ['Galt copies your marks into his own chart, slowly, by candlelight.', 'Галт медленно переносит ваши пометки на свою карту при свече.'],
-      s: ['chart', 'hub'],
     },
     {
       t: ['The Drowned Wreck', 'Затонувший корабль'],

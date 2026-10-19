@@ -294,6 +294,8 @@ export class Hud {
     // It drops open under the frame's lowest edge (portrait, bars and the line under them), measured as it opens.
     $('hud-captain').onclick = (e) => {
       if ((e.target as HTMLElement).closest('[data-hudshop]')) return this.onShop();
+      // glory, always on the plate (owner, 2026-10-19): the Throne of the Sea
+      if ((e.target as HTMLElement).closest('[data-throne]')) return this.onThrone();
       if (simpleHud()) return this.onCaptain();
       if (document.body.classList.toggle('ship-open')) placeShipPanel();
     };
@@ -817,14 +819,15 @@ export class Hud {
     const url = assetUrl(cap.portrait);
     const xpPct = levelPct(self.xp, self.xpNext);
     const dot = captainDot(self.talentPoints, self.level);
-    const key = `simple|${lang()}|${url ? 1 : 0}|${self.level}|${xpPct}|${self.gold}|${state.doubloons}|${you.hull}|${you.hullMax}|${you.crew}|${you.crewMax}|${you.sails}|${you.sailsMax}|${dot}`;
+    const g = self.glory;
+    const key = `simple|${lang()}|${url ? 1 : 0}|${self.level}|${xpPct}|${self.gold}|${state.doubloons}|${you.hull}|${you.hullMax}|${you.crew}|${you.crewMax}|${you.sails}|${you.sailsMax}|${dot}|${g ? `${g.open}:${g.rank}:${g.pending}:${g.points - g.spent}` : ''}`;
     if (key === this.lastCaptainKey) return;
     this.lastCaptainKey = key;
     const el = $('hud-captain');
     const row = (k: 'hull' | 'crew' | 'sails', v: number, max: number, art: string, val: string) =>
       `<div class="cs-row cs-${k}" title="${esc(`${L(k)}: ${fmt(v)} / ${fmt(max)}`)}">${icon(art, '', 'cs-ico')}<span class="cs-bar"><i style="width:${pct(clamp(v / Math.max(1, max), 0, 1))}"></i></span><span class="cs-v">${esc(val)}</span></div>`;
     el.innerHTML = `<div class="cs">
-      <div class="cs-frame"><div class="cs-face" ${faceAttrs(cap.portrait, url)}></div><b class="cs-lv" style="--xp:${xpPct}%" title="${esc(`${L('lv', { n: self.level })} · ${xpLine(self)}`)}">${self.level}</b>${dot ? `<i class="cs-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}"></i>` : ''}</div>
+      <div class="cs-frame"><div class="cs-face" ${faceAttrs(cap.portrait, url)}></div><b class="cs-lv" style="--xp:${xpPct}%" title="${esc(`${L('lv', { n: self.level })} · ${xpLine(self)}`)}">${self.level}</b>${dot ? `<i class="cs-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}"></i>` : ''}${gloryChip(g, 'cs-glory')}</div>
       <div class="cs-body">${row('hull', you.hull, you.hullMax, 'stat_hull', fmt(you.hull))}${row('crew', you.crew, you.crewMax, 'stat_crew', `${you.crew}/${you.crewMax}`)}${row('sails', you.sails, you.sailsMax, 'stat_sails', fmt(you.sails))}
         <span class="cs-purse"><span class="cs-silver">${icon('coin', '⛁', 'cs-coin')}${fmt(self.gold)}</span>${shopChip(state.doubloons, 'cs-dbl')}</span></div>
     </div>`;

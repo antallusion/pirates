@@ -276,6 +276,7 @@ import { seamarkMessage, stepSeaMarks } from './seamarks.ts'; // the dense sea's
 import { findMessage, stepSeaFinds } from './seafinds.ts'; // docs/19 D5: the sea's small things, and the day's caps
 import { roamMessage, stepRoamers } from './roamers.ts'; // docs/19 D7: the creatures roaming the sea
 import { premiumMessage, sendBalance } from './premium.ts'; // the premium shop (owner, 2026-10-03)
+import { captainShopMessage, ownsCaptain } from './captainshop.ts'; // premium captains cost money (owner, 2026-10-19)
 import { levelGifts, stepShop, xpBoost } from './shop.ts';
 import { sendPromo, stepPromo } from './promo.ts'; // the shop's goods (owner, 2026-10-15)
 import { opsSilverMul, opsXpMul, stepLiveOps, trackEvent } from './liveops.ts'; // the live ops' panel and funnel (docs/34)
@@ -330,6 +331,15 @@ export interface GameOptions {
 }
 
 const START_PORT = 'saltmarrow';
+
+/** A good bought at a port's market, for the opening's lesson of the shops (owner, 2026-10-19): provisions, sailcloth, or
+ *  a good to trade (anything but the supplies and contraband). */
+function shopEvent(game: Game, s: PlayerSession, port: Port, good: GoodId): void {
+  const def = GOODS[good];
+  if (!def) return;
+  const shop = good === 'provisions' ? 'provisions' : good === 'sailcloth' ? 'sailcloth' : def.category !== 'supply' && !def.contraband ? 'trade' : null;
+  if (shop) questEvent(game, s, { k: 'buy', shop, port: port.id });
+}
 
 const EVENT_LEAD = 1200;
 const roundCircle = (c: { x: number; y: number; r: number }) => ({ x: Math.round(c.x), y: Math.round(c.y), r: Math.round(c.r) });
@@ -3411,6 +3421,7 @@ export class Game {
     if (msg.t === 'hello') return this.onHello(s, msg);
     if (!s.authed) return this.sendTo(s, { t: 'err', msg: 'Not authenticated' });
     if (msg.t === 'create_captain') return this.onCreateCaptain(s, msg.captain, msg.shipName, msg.tutorial === true);
+    if (msg.t === 'captain_shop') return captainShopMessage(this, s, msg); // premium captains cost money (owner, 2026-10-19)
     const ship = s.ship;
     const p = s.profile;
     if (!ship || !p) return this.sendTo(s, { t: 'err', msg: 'No captain' });
@@ -3702,12 +3713,22 @@ export class Game {
       case 'halt':
         return this.halt(s);
       case 'trade':
-        return portAction((pt) => trade(this, s, pt, msg.good, Math.trunc(Number(msg.qty))));
+        return portAction((pt) => {
+          const qty = Math.trunc(Number(msg.qty));
+          const e = trade(this, s, pt, msg.good, qty);
+          if (!e && qty > 0) shopEvent(this, s, pt, msg.good); // the opening's lesson of the shops (owner, 2026-10-19)
+          return e;
+        });
       case 'buy_ammo':
         return portAction((pt) => buyAmmo(this, s, pt, msg.ammo, Math.trunc(Number(msg.qty))));
       case 'hire_crew':
         if (Number(msg.qty) > 0 && port && hireBlocked(this, port)) return err(hireBlocked(this, port));
-        return portAction((pt) => hireCrew(this, s, pt, Math.trunc(Number(msg.qty)), msg.prof && PROFESSIONS.includes(msg.prof) ? msg.prof : 'sailor', !!msg.dregs));
+        return portAction((pt) => {
+          const qty = Math.trunc(Number(msg.qty));
+          const e = hireCrew(this, s, pt, qty, msg.prof && PROFESSIONS.includes(msg.prof) ? msg.prof : 'sailor', !!msg.dregs);
+          if (!e && qty > 0) questEvent(this, s, { k: 'buy', shop: 'arms', port: pt.id }); // hands at the tavern (the opening)
+          return e;
+        });
       case 'press_gang':
         return portAction((pt) => pressGang(this, s, pt, Math.trunc(Number(msg.qty))));
       case 'officer':
@@ -4019,8 +4040,11 @@ export class Game {
               return shipyardRepair(this, s);
             case 'module':
               return shipyardModule(this, s, pt, msg.module);
-            case 'guns':
-              return shipyardGuns(this, s, pt, msg.side, msg.gun);
+            case 'guns': {
+              const e = shipyardGuns(this, s, pt, msg.side, msg.gun);
+              if (!e) questEvent(this, s, { k: 'buy', shop: 'arms', port: pt.id }); // a battery at the yard (the opening)
+              return e;
+            }
             case 'buy_ship':
               return shipyardBuy(this, s, pt, msg.classId);
             case 'mount':
@@ -4548,6 +4572,8 @@ export class Game {
   private onCreateCaptain(s: PlayerSession, captain: CaptainId, rawShipName: string, tutorial = false): void {
     if (s.profile) return this.sendTo(s, { t: 'err', msg: 'You already have a captain' });
     if (!CAPTAIN_IDS.includes(captain)) return this.sendTo(s, { t: 'err', msg: 'Unknown captain' });
+    // owner, 2026-10-19: a premium captain is bought first (captainshop.ts); a captain saved before keeps hers
+    if (!ownsCaptain(this, s.accountId, captain)) return this.sendTo(s, { t: 'err', msg: 'That captain is sold for doubloons' });
     const shipName = sanitizeName(rawShipName ?? '') ?? CAPTAINS[captain].epithet;
     const port = this.portById(START_PORT)!;
     s.profile = newProfile(captain, shipName, port.id, this.now);

@@ -5,6 +5,7 @@ import type { Gift, GiftView } from './data/dailygift.ts';
 import type { TgnCat, TgnView } from './data/telegram.ts';
 import type { UnitId } from './data/army.ts';
 import type { ShipClassId } from './data/ships.ts';
+import type { CaptainId } from './data/captains.ts';
 
 /** Why a card's Buy is shut (the window says it in her language): too few doubloons; a hull is delivered only in port;
  *  she sails one already; the yard has her on the ways; her level is short of the hull's; every berth taken; no free
@@ -144,7 +145,10 @@ export type PremiumServerMsg =
   | { t: 'doubloons'; n: number; /** Her auto-battle scrolls (owner, 2026-10-11). */ scrolls?: number }
   /** The Telegram Stars invoice for a pack (server/src/telegram.ts): opened in the Mini App by openInvoice, on the
    *  website as a link (it opens Telegram). Null link: it could not be made (a toast says why). */
-  | { t: 'premium_invoice'; pack: string; link: string | null };
+  | { t: 'premium_invoice'; pack: string; link: string | null }
+  /** The captains' choice before she has one (owner, 2026-10-19): the premium captains her account owns, her doubloons
+   *  and whether the top-up takes payments. `bought`: the captain just bought (the choice may go on); `why`: a refusal (the server's words). */
+  | { t: 'captain_shop'; owned: CaptainId[]; balance: number; pay: boolean; bought?: CaptainId; why?: string };
 
 // ------------------------------------------------------------------------------------------------ personal offers
 
