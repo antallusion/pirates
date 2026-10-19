@@ -50,7 +50,8 @@ export interface WebItem {
 /** The shop's own offers on the site (the «Акции» row the shop marks). */
 export const WEB_SHOP_OFFERS = ['starter', 'sub30', 'weekly'] as const;
 
-const fmt = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+/** Thousands apart by a no-break space (a number never broken over two lines). */
+const fmt = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
 
 const CAPTAIN_RU: Record<string, Tr> = {
   drowned: ['Ilse Harrow, the Drowned Captain', 'Ильзе Харроу, Утопленница'],
