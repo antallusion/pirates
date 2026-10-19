@@ -88,8 +88,8 @@ test('too few hands for a boarding party: «Атаковать» to board turns 
   assert.ok(msgs.some((m) => /Not enough hands/.test(m)), 'with the reason');
 });
 
-test('the helmsman sails on past a shoal of sharks that do not come for her; one that does gives the wheel back', async () => {
-  const { autosailDanger } = await import('../server/src/game/autosail.ts');
+test('the helmsman sails on past a shoal of sharks, even one coming for her (owner, 2026-10-19: autosail always); her bite gives the wheel back', async () => {
+  const { autosailDanger, hostileNear } = await import('../server/src/game/autosail.ts');
   const { beastBrain, spawnBeast } = await import('../server/src/game/beasts.ts');
   const { duelSea, openWater } = await import('./balance/duel.ts');
   const { seaCaptain } = await import('./balance/seafight.ts');
@@ -102,7 +102,11 @@ test('the helmsman sails on past a shoal of sharks that do not come for her; one
   for (const sh of sharks) { brain(sh.id).target = null; game.grid.upsert(sh.id, sh.state.x, sh.state.y); }
   assert.equal(autosailDanger(game, s, ship, game.now), null, 'a shoal about, none hunting her');
   brain(sharks[0].id).target = ship.id;
-  assert.equal(autosailDanger(game, s, ship, game.now), 'hostile', 'one comes for her');
+  assert.equal(autosailDanger(game, s, ship, game.now), null, 'one comes for her: she sails on');
+  assert.ok(hostileNear(game, ship), 'the HUD warns of her');
+  const since = game.now;
+  ship.attackers.set(sharks[0].id, game.now + 1);
+  assert.equal(autosailDanger(game, s, ship, since), 'attack', 'her bite is a fight');
 });
 
 test('a job\'s goods lost with the hold: the job goes back to taking them on, and says where', async () => {

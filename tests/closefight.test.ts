@@ -323,7 +323,7 @@ test('the action list for a stack: its «Атаковать» first (no ship\'s 
   assert.ok(!/t: 'roam', action: 'attack'/.test(main), 'no old attack message');
   // The ship the target frame picked by itself is not «Атаковать» while a stack leads; the stack's id never goes in a
   // ship's order (board_odds, appraise, board, attack target are all of targetId / attackMark / boardTarget).
-  assert.match(main, /attackMark = attackable\(targetId\) && !roamLead \? targetId : null;/);
+  assert.match(main, /attackMark = attackable\(targetId\) && !roamLead && attackRelevant\(targetPinned, markRange\(\)\) \? targetId : null;/);
   for (const m of main.matchAll(/net\.send\(\{ t: '(board_odds|appraise|board|volley)'[^)]*\)/g)) assert.ok(!/roam/i.test(m[0]), m[0]);
   // A finger's tap is never the mouse's click-to-fire; a click on a stack marks it and fires nothing.
   assert.match(main, /if \(!inGame \|\| e\.button !== 0 \|\| fromFinger\(e\)\) return;/);
