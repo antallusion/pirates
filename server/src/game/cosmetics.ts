@@ -154,9 +154,27 @@ export function dressShip(game: Game, s: PlayerSession): void {
   game.refreshInfo(ship);
 }
 
+const equipTimes = new WeakMap<PlayerSession, number[]>();
+
+/** Whether a change of dress is within her pace (each one re-sends her ship's card to everyone in sight): EQUIP_BURST
+ *  in ten seconds. */
+function equipPace(game: Game, s: PlayerSession): boolean {
+  const now = game.now;
+  const list = (equipTimes.get(s) ?? []).filter((t) => now - t < 10);
+  if (list.length >= EQUIP_BURST) {
+    equipTimes.set(s, list);
+    return false;
+  }
+  list.push(now);
+  equipTimes.set(s, list);
+  return true;
+}
+const EQUIP_BURST = 12;
+
 /** Wear a thing in its slot, or take it off (id null). Null: done; else the refusal. */
 export function equipCos(game: Game, s: PlayerSession, slot: string, id: string | null): string | null {
   if (!s.profile) return 'Not now';
+  if (!equipPace(game, s)) return 'Not so fast: one change at a time.';
   if (!(EQUIP_SLOTS as string[]).includes(slot)) return 'Not now';
   const sl = slot as keyof CosEquip;
   const st = cosState(game, s.accountId);

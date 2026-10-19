@@ -5,7 +5,7 @@ import { provisionsPerMinute } from '../../../shared/src/data/voyage.ts';
 import { chatCommand, chatFromAfar, chatHist, chatIn, chatOnLogin, chatRead, chatReport, cleanChat, guildSay } from './chat.ts'; // docs/28
 import { callOn, drink, hallView, invite, sign } from './guests.ts';
 import { lookOf, setLook, unlockDeed } from './looks.ts';
-import { cosMessage, cosWire, sendCos, stepCosmetics } from './cosmetics.ts'; // docs/32 §12
+import { cosMessage, cosWire, dressShip, forgetCos, sendCos, stepCosmetics } from './cosmetics.ts'; // docs/32 §12
 import { fatesOnDock, fulfilRequest, stepFates } from './fates.ts';
 import { dutchmanSunk, stepDutchman } from './dutchman.ts';
 import { nailCoin, omenBroken, omenKept, sendOmen, stepOmens } from './omens.ts';
@@ -4683,7 +4683,10 @@ export class Game {
     sendBalance(this, s); // her account's doubloons (the premium shop)
     sendGift(this, s); // her daily login calendar (owner, 2026-10-16): first, the offers' carousel waits for it
     sendPromo(this, s); // her personal offers and the entry carousel (owner, 2026-10-15)
-    sendCos(this, s); // docs/32 §12: her wardrobe
+    // docs/32 §12: her wardrobe read afresh (another zone may have changed it), her ship dressed, the view sent
+    forgetCos(this, s.accountId);
+    dressShip(this, s);
+    sendCos(this, s);
     noticesAboard(this, s); // her Telegram notices' switches; «давно не заходили» may come again
     if (away) this.sendTo(s, { t: 'away', view: away });
     // Back at the helm in the middle of a fight (a reload, a dropped line): the fight as it stands, or it went on unseen.

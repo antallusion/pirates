@@ -428,6 +428,7 @@ export function cosPatterns(): [string, string][] {
     ...COS_KINDS.flatMap((k) => COS_TABLES[k].map((x) => [x.name[0], x.name[1]] as [string, string])),
     ['Earned: {0}!', 'Получено: {0}!'],
     ['Not so fast: one emote at a time.', 'Не так быстро: по одной эмоции.'],
+    ['Not so fast: one change at a time.', 'Не так быстро: по одной вещи.'],
     ['You do not own this yet.', 'Это у вас пока не куплено и не заслужено.'],
     ['Cosmetics: {0} yours; worn: {1}.', 'Косметика: ваших вещей — {0}; надето: {1}.'],
     ['Every cosmetic is yours.', 'Вся косметика теперь ваша.'],
