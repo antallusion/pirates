@@ -465,8 +465,8 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
       if (st.island !== undefined && !ownIsland(game, s.accountId)) return { cands: islands(game, (i) => i.id === st.island, 'land') };
       return { cands: islands(game, (i) => !i.portId, 'land') };
     case 'buy':
-      // the opening's lesson of the shops: the start's harbour (the quest's), else the nearest
-      return { cands: [portCand(game.portById(QUESTS_BY_ID[id].port) ?? game.world.ports[0]), ...ports(game)] };
+      // the opening's lesson of the shops: the start's harbour, the quest's (any harbour's shops do it, the words name this one)
+      return { cands: [portCand(game.portById(QUESTS_BY_ID[id].port) ?? game.world.ports[0])] };
     case 'neutral': {
       // the opening: a standing stack of the sea's creatures on the lane (its `near`), else the nearest standing one
       const up = (x: number, y: number, r: number): Cand[] => roamersAbout(game, x, y, r).filter((sp) => roamUp(game, sp.id) && roamFighter(game, sp.id) === null).map((sp) => {
