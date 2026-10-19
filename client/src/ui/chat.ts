@@ -13,7 +13,7 @@
 //  - Everything escaped; links stay words, but our own domain's.
 
 import { esc, faceOf, icon, portraitUrl, glyphSvg } from './dom.ts';
-import { faceCrop } from './kit/faces.ts';
+import { faceCentred } from './kit/faces.ts';
 import { sagaCardHtml } from './saga.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/chat.ts';
@@ -491,7 +491,7 @@ export class ChatPanel {
     const id = own ? face! : faceOf(name);
     const url = own ?? portraitUrl(id);
     if (!url) return '';
-    const c = faceCrop(id, /^pirate_/.test(id) ? 560 / 448 : 560 / 422);
+    const c = faceCentred(id, /^pirate_/.test(id) ? 560 / 448 : 560 / 422);
     return ` data-crop="face" data-face="${c.face}" style="background-image:url('${esc(url)}');background-size:${c.size};background-position:${c.pos}"`;
   }
 

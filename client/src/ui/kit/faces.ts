@@ -15,6 +15,9 @@ export const FACES: Readonly<Record<string, Face>> = {
   admiral: [0.42, 0.11, 0.13],
 };
 
+/** The stand-in faces (`pirate_00`…`pirate_23`, a sheet of busts 448×560): the head a third of the way down. */
+export const PIRATE_FACE: Face = [0.5, 0.33, 0.23];
+
 /** A portrait not in the list: the head where a standing figure's usually is. */
 export const FACE_DEFAULT: Face = [0.5, 0.15, 0.16];
 
@@ -41,6 +44,21 @@ export function faceCrop(id: string, aspect = 560 / 422): { size: string; pos: s
     if (Math.hypot(hx - 0.5, hy - 0.5) + fr * s <= 0.49) break;
   }
   return out;
+}
+
+/** A face set in the very middle of a small round frame (owner, 2026-10-19: «аватарка в чате — там лицо капитана не
+ *  отцентровано»): the head `share` of the circle's width, its middle at (0.5, `cy`) — the picture moved as far as that
+ *  takes, the frame's dark ground showing at an edge where the head is painted near the picture's own (faceCrop keeps
+ *  the picture over the whole circle instead, and a head at the very top of its painting stayed at the circle's top).
+ *  The picture is never narrower than the circle. */
+export function faceCentred(id: string, aspect = 560 / 422, share = 0.6, cy = 0.47): { size: string; pos: string; face: string } {
+  const key = id.replace(/^portrait\./, '');
+  const [fx, fy, fr] = FACES[key] ?? (/^pirate_\d+$/.test(key) ? PIRATE_FACE : FACE_DEFAULT);
+  const s = Math.max(1.05, share / (2 * fr));
+  const sh = s * aspect;
+  // background-position's share of (circle − picture): the head's middle onto the circle's (0.5, cy)
+  const px = ((0.5 - fx * s) / (1 - s)) * 100, py = ((cy - fy * sh) / (1 - sh)) * 100;
+  return { size: `${(s * 100).toFixed(1)}% auto`, pos: `${px.toFixed(1)}% ${py.toFixed(1)}%`, face: `${fx} ${fy} ${fr}` };
 }
 
 /** The same as an inline style and attributes for an element whose background is the portrait. */
