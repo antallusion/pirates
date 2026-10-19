@@ -78,13 +78,14 @@ export function scuttleWhy(o: { docked: boolean; sinking: boolean; boarding: boo
   return null;
 }
 
-/** What scuttling costs, as the sinking reckons it (Game.playerDeath): the yard's fee (a tenth of her class's price, as
- *  far as the purse goes), a tenth of the purse after it, the hold (two-fifths of it left on the water, the rest gone;
+/** What scuttling costs, as the sinking reckons it (Game.beginSinking, Game.playerDeath): a twentieth of the purse into
+ *  her wreck on the water, the yard's fee (a tenth of her class's price, as far as the purse goes), a tenth of the rest, the hold (two-fifths of it left on the water, the rest gone;
  *  the lifeboats save a fifth a rank of the lawful goods), about a third of the crew (less with lifeboats), half the
  *  shot, a tenth off every worn item. */
 export function scuttleQuote(o: { gold: number; classPrice: number; crew: number; cargoValue: number; lifeboats: number }): { fee: number; purse: number; crew: number; cargo: number } {
-  const fee = Math.min(Math.floor(o.gold), Math.round(o.classPrice * 0.1));
-  const purse = Math.floor((o.gold - fee) * 0.1);
+  const wreck = Math.floor(Math.max(0, o.gold) * 0.05);
+  const fee = Math.min(Math.floor(o.gold - wreck), Math.round(o.classPrice * 0.1));
+  const purse = wreck + Math.floor((o.gold - wreck - fee) * 0.1);
   const crew = Math.max(0, Math.round(o.crew * 0.35 * Math.max(0, 1 - 0.3 * o.lifeboats)));
   return { fee, purse, crew, cargo: Math.round(o.cargoValue) };
 }
