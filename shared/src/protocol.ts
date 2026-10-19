@@ -62,6 +62,7 @@ import type { CitServerMsg, ThroneClientMsg } from './throneproto.ts'; // docs/1
 import type { GloryView } from './data/throne.ts';
 import type { FindClientMsg, FindServerMsg } from './findproto.ts';
 import type { CastawayView, WreckView } from './data/wrecks.ts'; // seaux: her own wreckage and castaways
+import type { AdriftView } from './data/adrift.ts'; // owner 2026-10-20: torn sails, the jury rig, scuttling home
 import type { RoamClientMsg, RoamServerMsg } from './roamproto.ts'; // docs/19 D7
 import type { PremiumClientMsg, PremiumServerMsg } from './premiumproto.ts'; // the premium shop (owner, 2026-10-03)
 import type { WayClientMsg, WayData, WayServerMsg } from './wayproto.ts'; // docs/35: the floating waystations, the resurrection
@@ -140,6 +141,8 @@ export type ClientMsg =
   /** docs/25 item 64: whether she comes aboard her group's boardings at once, and the kinds she brings. */
   | { t: 'board_assist'; auto: boolean; bring?: string[] }
   | { t: 'scuttle' }
+  /** owner 2026-10-20: «Затопить и вернуться в порт» — her own scuttling, out of the fight (shared/src/data/adrift.ts). */
+  | { t: 'scuttle_home' }
   | { t: 'captive'; index: number; mode: 'ransom' | 'hand_over' | 'officer' | 'skipper' }
   | { t: 'repair'; on: boolean }
   | { t: 'dock'; bribe?: boolean }
@@ -1977,7 +1980,7 @@ export type ServerMsg =
   | { t: 'trek'; view: TrekView | null }
   | { t: 'isles'; view: IslesView }
   | { t: 'mapoffer'; offer: MapOfferView | null }
-  | { t: 'encounter_result'; id: number; def: EncounterId; outcome: string; vars: { n?: number; silver?: number; good?: GoodId; item?: Item } }
+  | { t: 'encounter_result'; id: number; def: EncounterId; outcome: string; vars: { n?: number; silver?: number; good?: GoodId; item?: Item; cloth?: number; planks?: number } }
   | { t: 'legends'; view: LegendsView }
   | { t: 'renown'; view: RenownView }
   | { t: 'away'; view: AwayView }
@@ -2001,7 +2004,7 @@ export type ServerMsg =
   /** Owner, 2026-10-16 («Повтор»): a fight played again — its opening view and its steps; or her last twenty. */
   | { t: 'tac_replay'; base?: TacView; frames?: TacReplayFrame[]; list?: TacReplayList['list']; error?: string }
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
-  | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean; /** a boarding lost (owner, 2026-10-05): who took her and the silver they had */ boarded?: { by: string; silver: number; repelled?: boolean } }
+  | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean; /** her own scuttling (owner 2026-10-20) */ scuttled?: boolean; /** a boarding lost (owner, 2026-10-05): who took her and the silver they had */ boarded?: { by: string; silver: number; repelled?: boolean } }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
   /** A hull researched (docs/20): the yard's film and word. */
   | { t: 'researched'; classId: ShipClassId }
@@ -2064,6 +2067,8 @@ export type ServerMsg =
   | FindServerMsg
   /** seaux (2026-10-11): her own wreckage in sight (48 h each once taken) and her castaways. */
   | { t: 'wrecks'; list: WreckView[] }
+  /** owner 2026-10-20: the jury rig's progress, stranded, the scuttle's wait (null: nothing of it). */
+  | { t: 'adrift'; v: AdriftView | null }
   | { t: 'castaways'; list: CastawayView[] }
   /** docs/19 D7: the creatures roaming the sea. */
   | RoamServerMsg

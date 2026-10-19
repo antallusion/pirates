@@ -24,7 +24,7 @@ export interface EncounterResult {
   id: number;
   def: EncounterId;
   outcome: string;
-  vars: { n?: number; silver?: number; good?: GoodId; item?: Item };
+  vars: { n?: number; silver?: number; good?: GoodId; item?: Item; cloth?: number; planks?: number };
 }
 
 /** The words of an outcome with its numbers put in (the good and the item in the reader's language). */
@@ -33,6 +33,8 @@ export function outcomeHtml(r: EncounterResult): string {
   const v = r.vars;
   return esc(t).replace(/\{(\w+)\}/g, (_, k: string) => {
     if (k === 'n') return String(v.n ?? 0);
+    if (k === 'cloth') return String(v.cloth ?? 0);
+    if (k === 'planks') return String(v.planks ?? 0);
     if (k === 'silver') return money(v.silver ?? 0);
     if (k === 'good') return v.good ? esc(GOODS[v.good].name.toLowerCase()) : '';
     if (k === 'item') return v.item ? `<b style="color:${RARITY_COLOR[v.item.rarity]}">${esc(itemName(v.item, ru() === 1))}</b>` : '';

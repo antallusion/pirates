@@ -30,6 +30,7 @@ import { EN as CEN, RU as CRU } from '../lang/ui/colours.ts';
 import { EN as OEN, RU as ORU } from '../lang/ui/outcome.ts';
 import { outcomeNote } from '../../../shared/src/data/outcome.ts';
 import { holdMix, holdMixText } from './holdmix.ts';
+import { LA } from './adrift.ts'; // owner 2026-10-20: scuttling home
 
 const LC = dict(CEN, CRU);
 const LO = dict(OEN, ORU); // the two choices (owner, 2026-10-18)
@@ -158,7 +159,7 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
   draw();
 }
 
-export function renderSunk(root: HTMLElement, lost: { cargoValue: number; crew: number; repairFee: number }, portName: string, close: () => void, towed = false, boarded?: { by: string; silver: number; repelled?: boolean }): void {
+export function renderSunk(root: HTMLElement, lost: { cargoValue: number; crew: number; repairFee: number }, portName: string, close: () => void, towed = false, boarded?: { by: string; silver: number; repelled?: boolean }, scuttled = false): void {
   if (boarded) {
     // A boarding lost (owner, 2026-10-05): the same card — what the victors took, and the port she limped into.
     root.innerHTML = `<div class="modal-body"><div class="center-card">
@@ -184,7 +185,7 @@ export function renderSunk(root: HTMLElement, lost: { cargoValue: number; crew: 
     return;
   }
   root.innerHTML = `<div class="modal-body"><div class="center-card">
-    <h2 class="title-sm" style="font-size:40px">${esc(L('sunk.title'))}</h2>
+    <h2 class="title-sm" style="font-size:40px">${esc(scuttled ? LA('sunk.title') : L('sunk.title'))}</h2>
     <p style="font-family:var(--serif);font-size:18px;color:var(--fog)">${esc(L('sunk.body', { port: portName }))}</p>
     <div class="loss-list">
       <div class="loss-row">${icon('tab_market', '', 'item-ico')}<span>${esc(L('sunk.cargo'))}</span><b class="up">${money(lost.cargoValue)}</b></div>
@@ -196,7 +197,7 @@ export function renderSunk(root: HTMLElement, lost: { cargoValue: number; crew: 
   root.querySelector('button')!.onclick = close;
 }
 
-export function renderShip(root: HTMLElement, state: ClientState, send?: (m: ClientMsg) => void, openGear?: () => void, openLook?: () => void): void {
+export function renderShip(root: HTMLElement, state: ClientState, send?: (m: ClientMsg) => void, openGear?: () => void, openLook?: () => void, scuttle?: () => void): void {
   const self = state.self;
   const st = state.ownStats;
   if (!self || !st) return;
@@ -209,7 +210,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
     `<div class="stat-tile">${icon(pic, '', flip ? 'stat-ico flip' : 'stat-ico')}<span class="stat-l">${esc(label)}</span><b class="stat-v">${value}</b></div>`;
   const hasSale = cargo.some(([g]) => self.appraisal?.[g as GoodId]);
   const used = cargoVolume(self.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
-  root.innerHTML = `<div class="modal-head ship-head"><div class="ship-hero">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div><div><h2>${esc(self.loadout.trophy ? placeName(self.loadout.name) : self.loadout.name)}</h2><div class="sub">${esc(cls.name)} — ${esc(cls.role)}</div><div class="sub ship-passive">${icon('xp', '', 'ico-sm')}${esc(L('ship.passive', { name: cls.passive.name, text: cls.passive.description }))}</div>${giftLine(cls.id)}</div><div class="ship-head-r">${openGear ? `<button class="btn btn-small btn-primary" data-open-gear>${icon('menu_cabin', '', 'ico-sm')}${esc(L('ship.gear'))}</button>` : ''}${openLook ? `<button class="btn btn-small" data-open-look>${icon('faction_free', '', 'ico-sm')}${esc(L('ship.look'))}</button>` : ''}<div class="muted">${esc(L('ship.close', { key: kb('ship') }))}</div></div></div>
+  root.innerHTML = `<div class="modal-head ship-head"><div class="ship-hero">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div><div><h2>${esc(self.loadout.trophy ? placeName(self.loadout.name) : self.loadout.name)}</h2><div class="sub">${esc(cls.name)} — ${esc(cls.role)}</div><div class="sub ship-passive">${icon('xp', '', 'ico-sm')}${esc(L('ship.passive', { name: cls.passive.name, text: cls.passive.description }))}</div>${giftLine(cls.id)}</div><div class="ship-head-r">${openGear ? `<button class="btn btn-small btn-primary" data-open-gear>${icon('menu_cabin', '', 'ico-sm')}${esc(L('ship.gear'))}</button>` : ''}${openLook ? `<button class="btn btn-small" data-open-look>${icon('faction_free', '', 'ico-sm')}${esc(L('ship.look'))}</button>` : ''}${scuttle && !self.dockedAt ? `<button class="btn btn-small btn-danger" data-scuttle title="${esc(LA('ship.scuttleT'))}">${icon('map_wreck', '', 'ico-sm')}${esc(LA('ship.scuttle'))}</button>` : ''}<div class="muted">${esc(L('ship.close', { key: kb('ship') }))}</div></div></div>
     <div class="modal-body"><div class="stat-grid">
       ${tile('stat_sails', L('ship.speed'), esc(L('ship.speedVal', { v: dec1(st.maxSpeed) })))}
       ${tile('menu_ship', L('ship.turn'), esc(L('ship.turnVal', { v: dec1((st.turnRate * 180) / Math.PI) })))}
@@ -248,6 +249,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
     </div></div></div>`;
   root.querySelector<HTMLElement>('[data-open-gear]')?.addEventListener('click', () => openGear?.());
   root.querySelector<HTMLElement>('[data-open-look]')?.addEventListener('click', () => openLook?.());
+  root.querySelector<HTMLElement>('[data-scuttle]')?.addEventListener('click', () => scuttle?.()); // owner 2026-10-20
   if (send) bindCompanion(root, send);
   if (send) bindColours(root, send); // docs/24: the colours and «Абордаж: выкл» (live in port)
   root.querySelectorAll<HTMLElement>('[data-craft]').forEach((el) => (el.onclick = () => send?.({ t: 'craft', recipe: el.dataset.craft as 'round', n: 10 })));

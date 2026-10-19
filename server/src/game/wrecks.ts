@@ -16,6 +16,7 @@ import {
   WRECK_AGAIN_MS, WRECK_CELL, WRECK_CELLS, WRECK_CLEAR, WRECK_GOODS, WRECK_PER_CELL, WRECK_PICK, wreckCount, wreckId, wreckValue,
 } from '../../../shared/src/data/wrecks.ts';
 import type { WreckView } from '../../../shared/src/data/wrecks.ts';
+import { wreckExtras } from '../../../shared/src/data/adrift.ts';
 import { Rng, hash2 } from '../../../shared/src/rng.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { clearAt } from '../../../shared/src/world/solids.ts';
@@ -30,6 +31,8 @@ export interface WreckSpot {
   y: number;
   good: GoodId;
   n: number;
+  /** owner 2026-10-20: «помимо бабок всегда было чутка парусины и дерева» — every spot's sailcloth and planks besides. */
+  extras: { sailcloth: number; planks: number };
   value: number;
 }
 
@@ -58,8 +61,10 @@ export function cellSpots(game: Game, account: number, cx: number, cy: number): 
       const [good, [lo, hi]] = rng.weighted(WRECK_GOODS.map((g) => [g, g[2]] as [typeof g, number]));
       const roll = rng.float();
       if (!openSea(game, x, y)) continue;
-      const n = wreckCount(lo, hi, roll, sectorAt(game.world, x, y).level);
-      out.push({ id: wreckId(cx, cy, k), x: Math.round(x), y: Math.round(y), good, n, value: wreckValue(good, n) });
+      const level = sectorAt(game.world, x, y).level;
+      const n = wreckCount(lo, hi, roll, level);
+      const extras = wreckExtras(level);
+      out.push({ id: wreckId(cx, cy, k), x: Math.round(x), y: Math.round(y), good, n, extras, value: wreckValue(good, n) + wreckValue('sailcloth', extras.sailcloth) + wreckValue('planks', extras.planks) });
       break;
     }
   }
@@ -89,7 +94,7 @@ export function lootSpot(game: Game, x: number, y: number): { x: number; y: numb
 /** The sea's loot (Game.loot): each piece, as it is dropped, moved out to the open water nearest when it fell on a hulk,
  *  a skerry, a floe or the shore's edge — every spawner at once (the wrecks of a sunk ship, the sea's flotsam, a wreck
  *  field's crates, a storm's, a siege's, a holding's), so none lies where no hull can come to it. */
-export class LootMap<V extends { x: number; y: number; placed?: boolean }> extends Map<number, V> {
+export class LootMap<V extends { x: number; y: number; placed?: boolean; wreck?: unknown; cargo?: Partial<Record<GoodId, number>> }> extends Map<number, V> {
   game: Game | null = null;
   constructor(game: Game) {
     super();
@@ -100,9 +105,18 @@ export class LootMap<V extends { x: number; y: number; placed?: boolean }> exten
       v.placed = true;
       const p = lootSpot(this.game, v.x, v.y);
       if (p) [v.x, v.y] = [p.x, p.y];
+      // owner 2026-10-20: every wreck on the water carries a little sailcloth and planks besides (the sea's level's)
+      if (v.wreck !== undefined && v.cargo) wreckMinimum(v.cargo, sectorAt(this.game.world, v.x, v.y).level);
     }
     return super.set(k, v);
   }
+}
+
+/** A wreck's cargo brought up to the sea's minimum of sailcloth and planks (wreckExtras): what it has already counts. */
+export function wreckMinimum(cargo: Partial<Record<GoodId, number>>, level: number): void {
+  const ex = wreckExtras(level);
+  cargo.sailcloth = Math.max(cargo.sailcloth ?? 0, ex.sailcloth);
+  cargo.planks = Math.max(cargo.planks ?? 0, ex.planks);
 }
 
 /** The spots she took and when (real milliseconds), those 48 hours old let go. */
@@ -155,23 +169,45 @@ function segDist(px: number, py: number, ax: number, ay: number, bx: number, by:
   return Math.hypot(px - (ax + vx * t), py - (ay + vy * t));
 }
 
-/** She takes a spot: its goods into the hold (what will not fit broken up for its silver), gone for her 48 hours. */
+/** She takes a spot: the sailcloth and planks first (what a ship with her sails shot away needs most), then its goods
+ *  (what of them will not fit broken up for its silver); the sailcloth and planks that will not fit are left behind, and
+ *  she is told so. Gone for her 48 hours. */
 export function takeWreck(game: Game, s: PlayerSession, sp: WreckSpot): void {
   const ship = s.ship!, p = s.profile!;
   wrecksTaken(game, p)[String(sp.id)] = game.wallNow();
+  const st = ship.stats;
+  const vol = (c: Partial<Record<GoodId, number>>) => cargoVolume(c, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
+  let free = st.holdVolume - vol(ship.cargo);
+  /** As many of `good` as fit (up to `want`), into the hold. */
+  const stow = (good: GoodId, want: number): number => {
+    const per = vol({ [good]: 1 });
+    const n = Math.max(0, Math.min(want, Math.floor((free + 1e-6) / Math.max(1e-6, per))));
+    if (n > 0) {
+      ship.cargo[good] = (ship.cargo[good] ?? 0) + n;
+      free -= n * per;
+    }
+    return n;
+  };
+  const ex = sp.extras ?? { sailcloth: 0, planks: 0 };
+  const cloth = stow('sailcloth', ex.sailcloth), planks = stow('planks', ex.planks);
   const g = GOODS[sp.good];
-  const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
-  const per = g.volume * (g.contraband ? ship.stats.contrabandVolumeMul : 1);
-  const n = Math.max(0, Math.min(sp.n, Math.floor((free + 1e-6) / Math.max(1e-6, per))));
-  if (n > 0) ship.cargo[sp.good] = (ship.cargo[sp.good] ?? 0) + n;
+  const n = stow(sp.good, sp.n);
   const silver = Math.round(g.basePrice * (sp.n - n) * 0.5);
   if (silver > 0) {
     p.gold += silver;
     game.db.ledger(s.accountId, 'loot', silver, 'wreck');
   }
   // (the lines of the salvage everywhere: «Поднято со дна: …», the full hold's own)
-  if (n > 0) game.toastShip(ship, `Salvaged: ${n} ${g.name}.`, 'gold');
+  const got: string[] = [];
+  if (n > 0) got.push(`${n} ${g.name}`);
+  if (cloth > 0) got.push(`${cloth} ${GOODS.sailcloth.name}`);
+  if (planks > 0) got.push(`${planks} ${GOODS.planks.name}`);
+  if (got.length) game.toastShip(ship, `Salvaged: ${got.join(', ')}.`, 'gold');
   if (silver > 0) game.toastShip(ship, `The hold is full: the rest of the salvage is broken up for ${silver} silver.`, 'gold');
+  const left: string[] = [];
+  if (ex.sailcloth - cloth > 0) left.push(`${ex.sailcloth - cloth} ${GOODS.sailcloth.name}`);
+  if (ex.planks - planks > 0) left.push(`${ex.planks - planks} ${GOODS.planks.name}`);
+  if (left.length) game.toastShip(ship, `No room in the hold: left behind ${left.join(', ')}.`, 'bad');
 }
 
 /** Every second, each captain at sea: the spots she passed through taken, her view sent when it changed. */

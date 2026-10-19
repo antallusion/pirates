@@ -320,6 +320,8 @@ export interface Profile {
   seaMarks?: Record<string, number>;
   /** seaux (2026-10-11): her own wreckage she took, by spot, and when (real milliseconds): each hers again 48 hours on. */
   wrecks?: Record<string, number>;
+  /** owner 2026-10-20: when she last scuttled her ship herself (real milliseconds; a ten-minute wait). */
+  scuttledAt?: number;
   /** docs/19 E1–E3: her glory past the cap, her mastery tree, her trials of mastery (throne.ts). */
   throne?: ThroneRec;
   /** docs/25 item 38: the facets of her abilities she has chosen («ability@rank» → a | b; shared/src/data/seaskill.ts). */

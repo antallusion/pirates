@@ -23,6 +23,8 @@ import { dist, headingVec } from '../../../shared/src/math.ts';
 import type { EncounterView, SightView } from '../../../shared/src/protocol.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
+import { sectorAt } from '../../../shared/src/world/sectors.ts';
+import { wreckExtras } from '../../../shared/src/data/adrift.ts';
 import type { Island } from '../../../shared/src/world/worldgen.ts';
 import { isLand, nearHarbour } from '../../../shared/src/world/worldgen.ts';
 import { applyDamage, igniteShip } from './combat.ts';
@@ -364,6 +366,9 @@ interface Vars {
   silver?: number;
   good?: GoodId;
   item?: Item;
+  /** owner 2026-10-20: the flotsam's sailcloth and planks besides its good. */
+  cloth?: number;
+  planks?: number;
 }
 
 function settle(game: Game, s: PlayerSession, live: Live, choice: string): void {
@@ -629,9 +634,12 @@ function resolve(game: Game, s: PlayerSession, live: Live, choice: string): { ou
     }
     case 'flotsam': {
       if (choice === 'pass') return O('passed');
+      // owner 2026-10-20: «в обломках … всегда было чутка парусины и дерева» — sailcloth and planks first, by the sea's level
+      const ex = wreckExtras(sectorAt(game.world, ship.state.x, ship.state.y).level);
+      const cloth = giveGoods(ship, 'sailcloth', ex.sailcloth), planks = giveGoods(ship, 'planks', ex.planks);
       const good = rng.pick(['planks', 'sailcloth', 'timber', 'iron'] as GoodId[]);
       const n = giveGoods(ship, good, rng.int(5, 12));
-      return n ? O('gathered', { n, good }) : O('full');
+      return n || cloth || planks ? O('gathered', { n, good, cloth, planks }) : O('full');
     }
     case 'mine':
       if (choice === 'avoid') return O('avoided');

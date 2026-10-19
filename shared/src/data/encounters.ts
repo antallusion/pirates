@@ -223,7 +223,7 @@ export const ENCOUNTERS: Record<EncounterId, EncounterDef> = {
     text: ['Spars, planks and a few crates spread over a cable’s length of water.', 'Реи, доски и несколько ящиков разбросаны по воде на кабельтов вокруг.'],
     choices: [{ id: 'gather', label: ['Gather it', 'Собрать'] }, { id: 'pass', label: ['Sail on', 'Пройти мимо'] }],
     outcomes: {
-      gathered: ['Good timber for the carpenter: {n} of {good}.', 'Хороший материал для плотника: {good} — {n}.'],
+      gathered: ['Good timber for the carpenter: {n} of {good}, and sailcloth {cloth}, planks {planks} (what found room in the hold).', 'Хороший материал для плотника: {good} — {n}, парусина — {cloth}, доски — {planks} (сколько уместилось в трюме).'],
       full: ['There is no room in the hold.', 'В трюме нет места.'],
       passed: ['You leave it to the gulls.', 'Вы оставляете это чайкам.'],
     },

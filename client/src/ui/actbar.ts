@@ -16,6 +16,8 @@ import { EN as REN, RU as RRU } from '../lang/ui/roamers.ts';
 import { EN as SEN, RU as SRU } from '../lang/ui/seafight.ts';
 import { EN as WEN, RU as WRU } from '../lang/ui/waystation.ts';
 import type { Action } from '../settings.ts';
+import type { AdriftFacts } from './adrift.ts';
+import { LA } from './adrift.ts';
 import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
@@ -24,7 +26,7 @@ const LR = dict(REN, RRU);
 const LS = dict(SEN, SRU);
 const LW = dict(WEN, WRU);
 
-export type ActId = 'attack' | 'attack_stop' | 'attack_mode' | 'axes' | 'harbour' | 'board' | 'dock' | 'moor_way' | 'homeport' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'roam' | 'roam_join' | 'roam_look' | 'look' | 'repair';
+export type ActId = 'attack' | 'attack_stop' | 'attack_mode' | 'axes' | 'harbour' | 'board' | 'dock' | 'moor_way' | 'homeport' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'roam' | 'roam_join' | 'roam_look' | 'look' | 'repair' | 'jury' | 'scuttle';
 export type LandAction = 'land' | 'dig' | 'raise' | 'expedition' | 'descent' | 'keeper' | 'escort' | 'dive' | 'lair';
 export type LookKind = 'obj' | 'guard' | 'lair' | 'drift' | 'struck';
 
@@ -64,6 +66,8 @@ export interface ActFacts {
   /** docs/23 item 33: a mark to attack, or the pursuit under way (and how); `gunsOnly`: no grapple takes her (a beast, a
    *  monster, a zone boss) — no «Сблизиться». */
   attack?: { name: string; pursuing: boolean; mode: 'guns' | 'board'; gunsOnly?: boolean } | null;
+  /** owner 2026-10-20: torn sails with no sailcloth — the jury sail's progress, stranded, the scuttle's wait. */
+  adrift?: AdriftFacts | null;
 }
 
 export interface Act {
@@ -119,6 +123,10 @@ export function buildActs(f: ActFacts): Act[] {
   if (f.port) out.push({ id: 'dock', icon: 'map_port', label: L('a.moor'), sub: f.port.name, title: `${L('a.moor')}: ${f.port.name}`, key: 'dock' });
   if (f.way && !f.port) out.push({ id: 'moor_way', icon: 'build_tavern', label: L('a.moor'), sub: LW('a.moorSub'), title: LW('a.moorTitle', { name: f.way.name }), key: 'dock', arg: String(f.way.id) });
   if (!f.port && f.homeport) out.push({ id: 'homeport', icon: 'map_port', label: L('a.dock'), sub: f.homeport.name, title: `${L('a.dock')}: ${f.homeport.name}` });
+  // «Корабль без парусов» (owner, 2026-10-20): the jury sail as it goes up, and — stranded — scuttling home
+  const ad = f.adrift;
+  if (ad && ad.pct !== null) out.push({ id: 'jury', icon: 'stat_sails', label: LA('a.jury'), sub: `${ad.pct}%`, title: ad.paused ? LA('a.juryPaused') : LA('a.juryT', { s: ad.left }) });
+  if (ad && ad.stranded && !f.board && !at) out.push({ id: 'scuttle', icon: 'map_wreck', label: LA('a.scuttle'), sub: ad.cdMin > 0 ? LA('a.scuttleCd', { m: ad.cdMin }) : LA('a.scuttleSub'), title: LA('a.scuttleT') });
   const l = f.landable;
   if (l && !l.blocked) {
     const sub = l.action === 'raise' || l.action === 'dive' || l.action === 'lair' ? l.feature : l.action === 'descent' ? '' : l.island;

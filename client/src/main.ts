@@ -95,6 +95,7 @@ import { askMove } from './ui/isletree.ts'; // docs/29: the island's move, its c
 import { $, decorateSums, esc, fmt, glyphSvg, icon, keepInputs, knots } from './ui/dom.ts';
 import { Hud, TOUCH_FOLDED, releaseModalToasts } from './ui/hud.ts';
 import { SeaHud, bestSpecial, seaWord } from './ui/seahud.ts'; // docs/23 phase 2: the sea and five buttons
+import { adriftFacts, adriftInfo, askScuttle, juryTapText } from './ui/adrift.ts'; // owner 2026-10-20: torn sails, the jury rig, scuttling home
 import type { DeckSlot, SeaKeys } from './ui/seahud.ts';
 import { goalCount, goalSheetView } from './ui/goalsheet.ts'; // «Цели и вести»: the campaign, the quests taken, the orders
 import { attackKind, buildCursors, cursorUrl } from './ui/cursor.ts'; // the attack cursor (owner, 2026-10-07)
@@ -253,7 +254,7 @@ const firstTips = new FirstTips();
 firstTips.covered = () => modal !== null;
 let modal: Modal = null;
 let inGame = false;
-let lastSunk: { lost: { cargoValue: number; crew: number; repairFee: number }; port: string; towed: boolean; boarded?: { by: string; silver: number; repelled: boolean } } | null = null;
+let lastSunk: { lost: { cargoValue: number; crew: number; repairFee: number }; port: string; towed: boolean; scuttled?: boolean; boarded?: { by: string; silver: number; repelled: boolean } } | null = null;
 /** The prologue plays once, for a captain who has just taken the First Watch. */
 let prologuePending = false;
 const keys = new Set<string>();
@@ -1667,7 +1668,7 @@ function onMessage(m: ServerMsg): void {
       }
       break;
     case 'sunk_self':
-      lastSunk = { lost: m.lost, port: placeName(state.ports.find((p) => p.id === m.respawnPort)?.name ?? '') || L('port'), towed: !!m.towed, ...(m.boarded ? { boarded: { by: sv(m.boarded.by), silver: m.boarded.silver, repelled: !!m.boarded.repelled } } : {}) };
+      lastSunk = { lost: m.lost, port: placeName(state.ports.find((p) => p.id === m.respawnPort)?.name ?? '') || L('port'), towed: !!m.towed, scuttled: !!m.scuttled, ...(m.boarded ? { boarded: { by: sv(m.boarded.by), silver: m.boarded.silver, repelled: !!m.boarded.repelled } } : {}) };
       openModal('sunk');
       sunkAt = performance.now();
       // A boarding lost has the defeat's film (the battle's end has it already, once). A ship gone down to the guns has
@@ -2188,7 +2189,7 @@ function renderModal(root: HTMLElement): void {
       journal.render(root, state);
       break;
     case 'ship':
-      renderShip(root, state, (m) => net.send(m), () => openModal('gear'), () => openModal('look'));
+      renderShip(root, state, (m) => net.send(m), () => openModal('gear'), () => openModal('look'), () => void askScuttle(state, (m) => net.send(m), (msg) => hud.toast(msg, 'bad')));
       break;
     case 'help':
       renderHelp(root, state.onboarding);
@@ -2274,7 +2275,7 @@ function renderModal(root: HTMLElement): void {
       researchWindow.render(root, state);
       break;
     case 'sunk':
-      if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed, lastSunk.boarded);
+      if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed, lastSunk.boarded, lastSunk.scuttled);
       break;
   }
   if (touch.enabled) stripKeyHints(root);
@@ -3121,6 +3122,18 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     homeport = state.ports.reduce<(typeof state.ports)[number] | null>((b, p) => (!b || dist(p.x, p.y, own.x, own.y) < dist(b.x, b.y, own.x, own.y) ? p : b), null);
     if (homeport) facts.homeport = { name: sv(homeport.name) };
   }
+  // Torn sails with no sailcloth (owner, 2026-10-20): «Корабль без парусов», the jury sail as it goes up; stranded,
+  // «В порт» to the nearest harbour that will have her (the helmsman sails her in at the limping pace) and «Затопить».
+  const ad = adriftFacts(state.adrift, (performance.now() - state.adriftAt) / 1000);
+  facts.adrift = ad;
+  if (ad) {
+    info.unshift(esc(adriftInfo(ad)));
+    const near = ad.stranded && !port && !state.pursuit && !homeport ? state.ports.find((p) => p.id === state.adrift?.port) ?? null : null;
+    if (near) {
+      homeport = near;
+      facts.homeport = { name: sv(near.name) };
+    }
+  }
   facts.looks = advCard.closedLooks();
   // A struck ship's terms put off by «Later»: her card back with «Look…».
   const struck = surrenderCard.laterName();
@@ -3166,6 +3179,13 @@ function runAct(a: Act): void {
     case 'moor_way':
       if (state.wayView?.id === Number(a.arg)) return openModal('way');
       return void net.send({ t: 'way', action: 'moor', id: Number(a.arg) });
+    case 'jury': {
+      const ad = adriftFacts(state.adrift, (performance.now() - state.adriftAt) / 1000);
+      if (ad) hud.toast(juryTapText(ad), 'info');
+      return;
+    }
+    case 'scuttle':
+      return void askScuttle(state, (m) => net.send(m), (msg) => hud.toast(msg, 'bad'));
     case 'homeport':
       if (!homeport) return;
       // Already on her way there: a second tap sends nothing (each one said «Автоплавание: штурвал у рулевого…» again,

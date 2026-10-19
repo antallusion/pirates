@@ -196,6 +196,7 @@ import { autosailInput, startAutosail, stepAutosail, stopAutosail } from './auto
 import { cancelApproach, stepApproach } from './approach.ts'; // seaux: sail-to on tap
 import { cancelRoute, gotoGoal, stepRoutes } from './goalroute.ts'; // route: tap a goal, sail to its nearest place
 import { LootMap, stepWrecks } from './wrecks.ts'; // seaux: wreckage per captain
+import { scuttleHome, scuttledHome, stepAdrift } from './adrift.ts'; // owner 2026-10-20: the jury rig, stranded, scuttling home
 import { stepCastaways } from './castaways.ts'; // seaux: castaways
 import { gyardCancel, gyardGive, gyardStart } from './guildyard.ts';
 import { applyIslandNames, applyPantheon, seasonAction, seasonMods, seasonStat, seasonXp, stepSeasons, warKill } from './seasons.ts';
@@ -1175,6 +1176,7 @@ export class Game {
       fogSecond(this, s); // the fog of war: her lookouts, her island's reach, her scouts (owner, 2026-10-17)
       this.recordSightings(s);
       if (s.ship.landing) stepLanding(this, s.ship);
+      stepAdrift(this, s); // torn sails, no sailcloth: the jury rig and the stranded prompt (owner, 2026-10-20)
       expireForwards(this, s);
       expireOptions(this, s);
       expireRuns(this, s); // the merchants' runs (docs/16 #12)
@@ -2478,8 +2480,11 @@ export class Game {
     // A sinking ends the voyage.
     p.deedState.voyagePorts = [];
     p.deedState.wantedTime = 0;
-    // Respawn at the last port if it will still have us, otherwise the nearest that will.
-    let port = this.portById(p.lastPort);
+    // Respawn at the last port if it will still have us, otherwise the nearest that will. Scuttled by her own hand
+    // (owner, 2026-10-20): the nearest that will have her — the boats row to the nearest harbour.
+    const scuttled = scuttledHome.has(ship);
+    scuttledHome.delete(ship);
+    let port = scuttled ? null : this.portById(p.lastPort);
     if (!port || !canDock(p, port.faction).ok) port = this.nearestPort(ship.state.x, ship.state.y, (q) => canDock(p, q.faction).ok) ?? this.portById(START_PORT)!;
     ship.cargo = saved;
     if (Object.keys(saved).length) this.sendTo(s, { t: 'toast', msg: `The boats saved ${Object.entries(saved).map(([g, n]) => `${n} ${GOODS[g as GoodId].name}`).join(', ')}.`, kind: 'good' });
@@ -2491,7 +2496,7 @@ export class Game {
     this.refitAndDock(s, ship, port);
     this.db.ledger(s.accountId, 'death', -fee, `sunk; cargo ${lostValue}`);
     questCargoLost(this, s); // a job's goods on the bottom: take them on again (docs/30)
-    this.sendTo(s, { t: 'sunk_self', lost: { cargoValue: lostValue, crew: crewLost, repairFee: fee }, respawnPort: port.id });
+    this.sendTo(s, { t: 'sunk_self', lost: { cargoValue: lostValue, crew: crewLost, repairFee: fee }, respawnPort: port.id, ...(scuttled ? { scuttled: true } : {}) });
     this.saveSession(s);
   }
 
@@ -3677,6 +3682,9 @@ export class Game {
         return assistPref(this, s, msg.auto === true, Array.isArray(msg.bring) ? msg.bring.map(String) : undefined);
       case 'scuttle':
         return err(lightFuse(this, ship));
+      case 'scuttle_home':
+        // owner 2026-10-20: «Затопить и вернуться в порт» — out of the fight, once in ten minutes (adrift.ts)
+        return err(scuttleHome(this, s));
       case 'captive':
         // Ransomed, handed over — or turned into an officer or a caravan skipper (docs/12 P10 #16).
         if (msg.mode === 'officer' || msg.mode === 'skipper') return portAction(() => turnCaptive(this, s, Math.trunc(Number(msg.index)), msg.mode as 'officer'));

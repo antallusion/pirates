@@ -472,6 +472,7 @@ export function scatterWreckage(game: Game, region: RegionId, n: number): void {
     if (regionAt(game.world, x, y) !== region || isLand(game.world, x, y) || !game.inZone(x, y)) continue;
     const id = game.allocId();
     const pick = game.worldEvents.rng.pick(['timber', 'planks', 'sailcloth', 'rum', 'spices', 'iron'] as GoodId[]);
+    // (owner 2026-10-20: sailcloth too, always — the LootMap's wreck minimum, wrecks.ts)
     game.loot.set(id, { id, x, y, cargo: { [pick]: game.worldEvents.rng.int(6, 20), planks: game.worldEvents.rng.int(3, 10) }, gold: game.worldEvents.rng.int(50, 400), expires: game.now + 6 * 3600, wreck: region });
     n--;
   }

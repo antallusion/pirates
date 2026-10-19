@@ -10,6 +10,7 @@ import type { LairCard, LairsView } from '../../shared/src/lairproto.ts';
 import type { DriftCard, DriftMark, TameView } from '../../shared/src/driftproto.ts';
 import type { FindView } from '../../shared/src/findproto.ts';
 import type { CastawayView, WreckView } from '../../shared/src/data/wrecks.ts';
+import type { AdriftView } from '../../shared/src/data/adrift.ts';
 import type { RoamView } from '../../shared/src/roamproto.ts';
 import type { CitMark } from '../../shared/src/data/citadels.ts';
 import { skillSeaMods } from '../../shared/src/data/hero.ts';
@@ -193,6 +194,9 @@ export class ClientState {
   /** seaux (2026-10-11): her own wreckage in sight (each gone for her 48 h once taken) and her castaways, and when
    *  the castaways' list came (their time left counts from it). */
   wrecks: WreckView[] = [];
+  /** owner 2026-10-20: torn sails with no sailcloth — the jury rig, stranded, the scuttle's wait (null: none of it). */
+  adrift: AdriftView | null = null;
+  adriftAt = 0;
   castaways: CastawayView[] = [];
   castawaysAt = 0;
   findBusy: { id: number; until: number; total: number } | null = null;
@@ -565,6 +569,10 @@ export class ClientState {
         break;
       case 'wrecks':
         this.wrecks = m.list;
+        break;
+      case 'adrift':
+        this.adrift = m.v;
+        this.adriftAt = performance.now();
         break;
       case 'castaways':
         this.castaways = m.list;
