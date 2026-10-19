@@ -2595,10 +2595,13 @@ export class Renderer {
         g.save();
         g.translate(0, -len * 0.18);
         g.rotate(flow + Math.sin(t * 3 + s.id) * 0.06);
-        g.globalAlpha *= 0.35;
-        g.drawImage(cloth, 1, 1 - h / 2, w, h); // its shadow on the deck and the sea
-        g.globalAlpha /= 0.35;
-        drawWavingFlag(g, cloth, w, h, t, s.id, this.zoom < 0.6 ? 4 : 6);
+        const px = w * this.zoom;
+        if (px >= 28) {
+          g.globalAlpha *= 0.35;
+          g.drawImage(cloth, 1, 1 - h / 2, w, h); // its shadow on the deck and the sea (seen only when it is large)
+          g.globalAlpha /= 0.35;
+        }
+        drawWavingFlag(g, cloth, w, h, t, s.id, 6, px);
         g.fillStyle = 'rgba(30,22,14,0.9)';
         g.fillRect(-0.6, -h * 0.6, 1.2, h * 1.2); // the staff
         g.restore();

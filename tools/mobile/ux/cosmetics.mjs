@@ -159,49 +159,61 @@ try {
 writeFileSync(`${OUT}/report.json`, JSON.stringify(report, null, 1));
 L.log('errors', report.errors.length, JSON.stringify(report.errors.slice(0, 6)));
 
-/** 30 ships on a phone's screen: each wears a plate, a flag and a trail (their cards given them in the page), against
- *  the same ships wearing nothing; the frame rate and the cosmetics' own milliseconds a frame. */
+/** 30 ships on a phone's screen, sailing: each wears a plate, a flag and a trail, against the same 30 wearing nothing;
+ *  the frame rate and the cosmetics' own milliseconds a frame (the trails' step and draw, the names with their plates,
+ *  the hulls with their flags). The 30 are the page's own (client-side ships laid out on the screen and moved each
+ *  frame), so the scene is the same in both runs. */
 async function perf() {
   const p = await L.page(b, [844, 390], { lang: 'ru' });
   await L.login(p, { port, know: true, name: 'Perf ' + Math.random().toString(36).slice(2, 4) });
   await clean(p);
   await L.say(p, '/god');
+  await L.say(p, '/time 13');
   await L.send(p, { t: 'undock' });
   await L.sleep(1500);
   await L.say(p, '/tp 21000 70000');
   await L.sleep(2500);
   await clean(p);
-  for (let i = 0; i < 30; i++) {
-    await L.say(p, `/spawn merchant ${['brig', 'sloop', 'schooner'][i % 3]} league`);
-    await L.sleep(120);
-  }
-  await L.sleep(2500);
-  await clean(p);
-  // the camera a little out so the 30 are on the screen; each ship's card made a captain's in the page
-  const n = await p.evaluate(() => {
+  await p.evaluate(() => {
     const g = globalThis.gravetide;
-    g.renderer.targetZoom = 0.62;
-    let k = 0;
+    const st = g.state, r = g.renderer;
+    const o = st.ownDisplay;
     const codes = ['f.4.6.6.0.3', '3.2.2.2.4.4', 'g.6.4.5.7.0', '2.1.8.e.9.5', '9.7.5.b.3.2', 'b.3.1.8.6.1'];
-    for (const s of g.state.ships.values()) {
-      if (!s.info) continue;
-      s.__cos = codes[k % codes.length];
-      k++;
+    const cls = ['brig', 'sloop', 'schooner'];
+    const z = r.zoom, W = r.w / z, H = r.h / z;
+    const fakes = [];
+    for (let k = 0; k < 30; k++) {
+      const col = k % 6, row = Math.floor(k / 6);
+      const x = o.x - W * 0.42 + (col + 0.5) * (W * 0.84 / 6), y = o.y - H * 0.38 + (row + 0.5) * (H * 0.76 / 5);
+      const s = { id: 900000 + k, info: { id: 900000 + k, kind: 'ship', name: 'Q' + k, classId: cls[k % 3], faction: 'player', captainName: 'Cap' + k, isPlayer: true, level: 5, shipLevel: 3 },
+        buf: [], cur: { t: 0, x, y, h: Math.PI / 2 + (k % 2 ? 0.3 : -0.3), spd: 7, sail: 2, hull: 1, sails: 1, flags: 0, crew: 1 }, wake: [], sinkStart: 0, __code: codes[k % codes.length], __dx: x - o.x, __dy: y - o.y, __run: 0 };
+      st.ships.set(s.id, s);
+      fakes.push(s);
     }
-    return k;
+    globalThis.__fakes = fakes;
+    let last = performance.now();
+    const drive = (t) => {
+      const dt = Math.min(0.05, (t - last) / 1000);
+      last = t;
+      // (each keeps her place on the screen round the captain's own ship, which sails on, and runs to and fro on it)
+      const me = st.ownDisplay;
+      for (const s of fakes) {
+        s.__run = (s.__run + 9 * dt) % 120;
+        const run = s.__run - 60;
+        s.cur = { ...s.cur, x: me.x + s.__dx + Math.sin(s.cur.h) * run, y: me.y + s.__dy - Math.cos(s.cur.h) * run };
+      }
+      if (globalThis.__fakes) requestAnimationFrame(drive);
+    };
+    requestAnimationFrame(drive);
   });
-  L.log('ships', n);
   const measure = (on) => p.evaluate((on) => new Promise((done) => {
     const g = globalThis.gravetide;
     const r = g.renderer;
-    for (const s of g.state.ships.values()) {
-      if (!s.__cos) continue;
-      s.info = { ...s.info, isPlayer: true, captainName: 'Q', cos: on ? s.__cos : undefined };
-    }
-    let trailMs = 0, labelMs = 0, frames = 0;
-    const st = r.stepTrails, dl = r.drawLabel;
-    r.stepTrails = function (...a) { const t = performance.now(); st.apply(this, a); trailMs += performance.now() - t; };
-    r.drawLabel = function (...a) { const t = performance.now(); dl.apply(this, a); labelMs += performance.now() - t; };
+    for (const s of globalThis.__fakes) s.info = { ...s.info, cos: on ? s.__code : undefined };
+    const ms = { trail: 0, label: 0, ship: 0 };
+    let frames = 0;
+    const wrap = (name, key) => { const f = r[name]; r[name] = function (...a) { const t = performance.now(); const v = f.apply(this, a); ms[key] += performance.now() - t; return v; }; return () => (r[name] = f); };
+    const undo = [wrap('stepTrails', 'trail'), wrap('drawLabel', 'label'), wrap('drawShip', 'ship')];
     const ts = [];
     const t0 = performance.now();
     let plates = 0, motes = 0;
@@ -212,10 +224,10 @@ async function perf() {
       motes = Math.max(motes, r.trails.live);
       if (t - t0 < 6000) requestAnimationFrame(f);
       else {
-        r.stepTrails = st;
-        r.drawLabel = dl;
+        undo.forEach((u) => u());
         const d = ts.slice(1).map((x, i) => x - ts[i]).sort((a, b) => a - b);
-        done({ fps: +((ts.length - 1) / ((ts.at(-1) - ts[0]) / 1000)).toFixed(1), p50: +d[Math.floor(d.length / 2)].toFixed(1), p95: +d[Math.floor(d.length * 0.95)].toFixed(1), trailMsPerFrame: +(trailMs / frames).toFixed(3), labelMsPerFrame: +(labelMs / frames).toFixed(3), plates, motes, ships: g.state.ships.size });
+        const per = (x) => +(x / frames).toFixed(2);
+        done({ fps: +((ts.length - 1) / ((ts.at(-1) - ts[0]) / 1000)).toFixed(1), p50: +d[Math.floor(d.length / 2)].toFixed(1), p95: +d[Math.floor(d.length * 0.95)].toFixed(1), msTrails: per(ms.trail), msNames: per(ms.label), msHulls: per(ms.ship), plates, motes });
       }
     };
     requestAnimationFrame(f);
@@ -225,15 +237,16 @@ async function perf() {
     const cdp = await p.ctx.newCDPSession(p);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: cpu });
     for (const on of [false, true, false, true]) {
-      await L.sleep(800);
+      await L.sleep(1500);
       const r = await measure(on);
       rows.push({ cpu, on, ...r });
       L.log(`cpu ${cpu}× cosmetics ${on ? 'on ' : 'off'}`, JSON.stringify(r));
+      if (on && cpu === 1) await shot(p, 'perf_30_ships');
     }
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
     await cdp.detach();
   }
-  await shot(p, 'perf_30_ships');
+  await p.evaluate(() => { globalThis.__fakes = null; });
   await p.ctx.close();
   return rows;
 }

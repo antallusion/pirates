@@ -141,8 +141,18 @@ export function flagCloth(emblemId: string, clothId: string): HTMLCanvasElement 
   return c;
 }
 
-/** The flag waving at (0, 0) — its hoist on the staff, its fly along +x — `w` by `h`, in `strips` vertical strips. */
-export function drawWavingFlag(g: CanvasRenderingContext2D, cloth: HTMLCanvasElement, w: number, h: number, t: number, seed: number, strips = 6): void {
+/** The flag waving at (0, 0) — its hoist on the staff, its fly along +x — `w` by `h`, in `strips` vertical strips; a
+ *  flag a few pixels wide on the screen (`px`: its width there) is one picture swaying on a shear (strips would not
+ *  show and cost a draw each). */
+export function drawWavingFlag(g: CanvasRenderingContext2D, cloth: HTMLCanvasElement, w: number, h: number, t: number, seed: number, strips = 6, px = 99): void {
+  if (px < 28) {
+    const ph = t * 5.5 + seed;
+    g.save();
+    g.transform(1, Math.sin(ph) * 0.12, 0, 1 - 0.05 * (0.5 + 0.5 * Math.cos(ph)), 0, 0);
+    g.drawImage(cloth, 0, -h / 2, w, h);
+    g.restore();
+    return;
+  }
   const sw = cloth.width / strips;
   const dw = w / strips;
   for (let i = 0; i < strips; i++) {
@@ -157,9 +167,9 @@ export function drawWavingFlag(g: CanvasRenderingContext2D, cloth: HTMLCanvasEle
 // ------------------------------------------------------------------------------------------------ the trails
 
 /** The pool's motes, every ship's together; the ships that may emit at once; a ship's motes a second at full speed. */
-export const TRAIL_MAX = 720;
-export const TRAIL_SHIPS = 16;
-const RATE = 22;
+export const TRAIL_MAX = 420;
+export const TRAIL_SHIPS = 12;
+const RATE = 15;
 
 const dots = new Map<string, HTMLCanvasElement>();
 
@@ -202,7 +212,7 @@ export class TrailPool {
     const t = trailOf(trailId);
     if (!t || spdK < 0.08) return;
     const ki = KINDS.indexOf(t) + 1;
-    let d = (this.debt.get(id) ?? 0) + RATE * Math.min(1.2, 0.35 + spdK) * dt * (low ? 0.5 : 1);
+    let d = (this.debt.get(id) ?? 0) + RATE * Math.min(1.2, 0.35 + spdK) * dt * (low ? 0.4 : 1);
     const bx = -Math.sin(h), by = Math.cos(h); // astern (heading 0 = north, the bow up)
     while (d >= 1) {
       d -= 1;
