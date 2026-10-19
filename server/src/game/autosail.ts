@@ -5,14 +5,14 @@
 // helm herself. No dice anywhere: the same sea gives the same course (tests replay `game.rng`).
 
 import {
-  AUTOSAIL_ARRIVE, AUTOSAIL_DANGER_R, AUTOSAIL_LOW_HULL, AUTOSAIL_MAX_RANGE, AUTOSAIL_REPLANS, AUTOSAIL_STUCK_SEC, autosailSail,
+  AUTOSAIL_ARRIVE, AUTOSAIL_DANGER_R, AUTOSAIL_MAX_RANGE, AUTOSAIL_REPLANS, AUTOSAIL_STUCK_SEC, autosailSail,
 } from '../../../shared/src/data/autosail.ts';
 import type { AutosailStop } from '../../../shared/src/data/autosail.ts';
 import { NAV_CELL, SAIL_STEPS, SPEED_SCALE, WORLD_SIZE } from '../../../shared/src/constants.ts';
 import { angleDiff, clamp, headingOf, headingVec, pointInPolygon, wrapAngle } from '../../../shared/src/math.ts';
 import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
-import { depthAt, isLand, navBlocked, reefDepthAt } from '../../../shared/src/world/worldgen.ts';
+import { depthAt, isLand, navBlocked } from '../../../shared/src/world/worldgen.ts';
 import { WORLD_EDGE_MARGIN } from '../../../shared/src/world/regions.ts';
 import type { Game } from './Game.ts';
 import { banksUp } from './isles.ts';
@@ -24,13 +24,14 @@ import type { Path } from './nav.ts';
 import { beatAngle } from './npc.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
-import { onboardingProtected } from './onboarding.ts';
 import { pursuitOf } from './pursuit.ts';
 
 const DEG = Math.PI / 180;
 /** Never 100 m nearer her mark in this many seconds: she is going round something, not to her mark (a beat to
  *  windward makes good far more than that). */
 export const AUTOSAIL_ROUND = 60;
+/** Never 100 m nearer her mark in this long, plan after plan: no water leads there (the only run given back short of it). */
+export const AUTOSAIL_GIVEUP = 240;
 
 export interface AutoSail {
   /** Her mark, and the point of open water nearest it the route ends at. */
@@ -47,9 +48,14 @@ export interface AutoSail {
   beatAt: number;
   stuck: { x: number; y: number; t: number };
   replans: number;
+  /** The nearest she has been to her mark in the whole run, and when she last came 100 m nearer. */
+  ever?: number;
+  gainAt?: number;
   /** The nearest she has been to her mark, and when (round and round a thing, never nearer: plan afresh). */
   best?: number;
   bestAt?: number;
+  /** The sail her helm carried when he took the wheel (a beat already on its way carries it a moment yet). */
+  was?: number;
   /** Within this of her mark she has arrived (seaux 2026-10-11: a sail-to on tap stops at the thing's own reach, not
    *  150 m short of it); AUTOSAIL_ARRIVE when unset. */
   arrive?: number;
@@ -166,35 +172,48 @@ export function homeward(game: Game, x: number, y: number): boolean {
 }
 
 /** What stops the helmsman now, if anything (checked every tick while he has the wheel, and before he takes it);
- *  `mark` — where he is to take her. */
+ *  `mark` — where he is to take her.
+ *
+ *  Owner, 2026-10-19: «Автоплавание … надо чтобы работало всегда и везде»: no sailcloth (she sails slower, as torn
+ *  canvas does), no provisions, a low hull, a short crew, a storm (he reefs to three quarters: the canvas is not
+ *  shredded), fog, night, a hostile sail merely in sight, a reef under her keel (he works her off it) — none of them
+ *  takes the wheel from him any longer. Only a fight under way breaks a course off (and it is taken up again once the
+ *  sea is quiet, stepResume), her ship lost, a harbour, or another hand at the wheel (a mutiny). `mark` is kept for the
+ *  callers (a run home was the one a low hull allowed). */
 export function autosailDanger(game: Game, s: PlayerSession, ship: ShipEntity, since: number, mark?: { x: number; y: number }): AutosailStop | null {
+  void mark;
   if (!ship.alive) return 'lost';
   if (ship.docked) return 'port';
   if (s.profile?.company.mutiny || ship.seizedHelm) return 'helm';
   if (ship.grappled || ship.boarding || ship.landing) return 'attack';
-  // (In the First Watch nothing can be lost, and «В порт» after the lesson's battle is the low hull's very cure: the
-  // helmsman gave the wheel back at once and the pupil sat a mile off the quay, QA 2026-10-07.)
-  // …but a run to a harbour he takes whatever her hull (docs/30: beaten off by a cutter at a third of her hull, «Корпус
-  // слишком слаб» — the one order a wounded ship wants, and a phone's captain steered her ten kilometres by hand onto the
-  // rocks; a yard short of silver sends her out under the line as well).
-  if (ship.hull < ship.stats.hullMax * AUTOSAIL_LOW_HULL && !onboardingProtected(s) && !(mark && homeward(game, mark.x, mark.y))) return 'hull';
-  // Her keel on a reef or a shoal already (a bank the tide bared, a reef the chart did not show).
-  if (ship.cls.passive.id !== 'shallow_runner' && depthAt(game.world, ship.state.x, ship.state.y) < draftOf(ship)) return 'reef';
-  // A shot at her, or her own guns, since he took the wheel (or in the last seconds before).
-  if (ship.lastCombat > since || game.now - ship.lastCombat < 5) return 'attack';
+  // A shot at her, or her own guns, since he took the wheel (or in the last seconds before) — another ship's, not the
+  // sea's harm: a reef grinding her keel, a storm, a fire aboard are no fight (they were: «attack», and on a reef the
+  // course never came back).
+  const fight = Math.max(ship.gunsAt, ship.lastHitAt);
+  if (fight > since || game.now - fight < 5) return 'attack';
   for (const t of ship.attackers.values()) if (t > since) return 'attack';
+  return null;
+}
+
+/** A storm's sail (owner, 2026-10-19: the helmsman sails on in a storm): three quarters at most — the storm shreds only
+ *  canvas carried past four fifths (Game.ts). */
+export const STORM_SAIL = 3;
+/** The sail he carries now for her captain's `sail`: reefed in a storm. */
+export function carriedSail(game: Game, ship: ShipEntity, sail: number): number {
   const w = game.weatherOf(ship);
-  if (w === 'storm' || w === 'black_storm') return 'storm';
+  return w === 'storm' || w === 'black_storm' ? Math.min(sail, STORM_SAIL) : sail;
+}
+
+/** A hostile sail within AUTOSAIL_DANGER_R (no longer a stop: the HUD's warning, the tests). */
+export function hostileNear(game: Game, ship: ShipEntity): boolean {
   let hostile = false;
   game.forShipsNear(ship.state.x, ship.state.y, AUTOSAIL_DANGER_R, (o) => {
     if (hostile || o.id === ship.id || !o.alive || o.docked || o.ghost || o.surrendered || o.prize) return;
     if (Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y) > AUTOSAIL_DANGER_R) return;
-    // A beast of the sea is danger once it comes for her — not every shark of the shoal off a harbour (docs/30: thirteen
-    // sharks round Moon Landing, «Рядом враждебные паруса» every eight seconds, the helmsman never once took the wheel).
     if (o.npcRole === 'beast' && beastBrain(game, o.id)?.target !== ship.id && !((ship.attackers.get(o.id) ?? -999) > game.now - 30)) return;
     if (game.isHostile(o, ship)) hostile = true;
   });
-  return hostile ? 'hostile' : null;
+  return hostile;
 }
 
 /** The planner's water for her hull (owner, 2026-10-18: «маршруты надо строить минуя заграждения, потому что часто
@@ -281,31 +300,72 @@ function send(game: Game, s: PlayerSession, run: AutoSail | null, why?: Autosail
   game.sendTo(s, run ? { t: 'autosail', on: true, x: Math.round(run.x), y: Math.round(run.y), sail: run.sail, path: pathView(own ? [own, ...run.path.slice(run.i)] : run.path) } : { t: 'autosail', on: false, why: why ?? 'off' });
 }
 
-/** The captain gives the helmsman the wheel for her mark. Null when he has it; else why not. */
+/** What she is told when a course is kept for later (translated on the client, server.ru.h.ts). */
+export const QUEUED_PORT = 'Course set: the helmsman takes her there as soon as she casts off.';
+
+/** A course given in port, taken up the moment she casts off (owner, 2026-10-19: «работало всегда и везде»). */
+const queued = new WeakMap<ShipEntity, Paused>();
+/** The course waiting in port for her casting off, if any (tests). */
+export function queuedCourse(ship: ShipEntity | null | undefined): { x: number; y: number } | null {
+  const q = ship ? queued.get(ship) : undefined;
+  return q ? { x: q.x, y: q.y } : null;
+}
+
+/** The captain gives the helmsman the wheel for her mark. Null when he has it — or will have it: in port as soon as
+ *  she casts off, in a fight once it is over (the course kept, said to her); else why not (no ship, a mark off the
+ *  chart or under her keel already, the mutineers at the wheel, no water at all leading there). */
 export function startAutosail(game: Game, s: PlayerSession, x: number, y: number, sail?: number, arrive?: number): string | null {
   const ship = s.ship;
   if (!ship || !s.profile) return 'No ship';
   if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0 || x > WORLD_SIZE || y > WORLD_SIZE) return 'That mark is off the chart';
-  if (ship.docked) return 'Cast off first: the helmsman sails from open water';
+  const idx = autosailSail(sail ?? SAIL_STEPS.indexOf(ship.input.sailTarget as never));
+  const keep: Paused = { x, y, sail: idx, ...(arrive !== undefined ? { arrive } : {}), at: game.now, calm: null };
+  if (ship.docked) {
+    queued.set(ship, keep);
+    paused.delete(ship);
+    game.sendTo(s, { t: 'toast', msg: QUEUED_PORT, kind: 'info' });
+    return null;
+  }
   const d = Math.hypot(x - ship.state.x, y - ship.state.y);
   if (d <= (arrive ?? AUTOSAIL_ARRIVE)) return 'You are at your mark already';
   if (d > AUTOSAIL_MAX_RANGE) return 'That mark is too far for one run: set a nearer one';
   const why = autosailDanger(game, s, ship, game.now, { x, y });
+  if (why === 'attack') {
+    // a fight under way: the course is kept and taken up once the sea is quiet (stepResume), its line drawn dimmed (the
+    // client says «paused: the course goes on after the fight»)
+    queued.delete(ship);
+    paused.set(ship, keep);
+    const p = plan(game, ship, x, y);
+    game.sendTo(s, { t: 'autosail', on: false, why: 'attack', x: Math.round(x), y: Math.round(y), ...(p && p.length >= 2 ? { path: pathView(p) } : {}) });
+    return null;
+  }
   if (why) return STOP_WORDS[why];
   const path = plan(game, ship, x, y);
   if (!path || path.length < 2) return 'No open water leads to that mark';
-  const idx = autosailSail(sail ?? SAIL_STEPS.indexOf(ship.input.sailTarget as never));
+  const was = SAIL_STEPS.indexOf(ship.input.sailTarget as never);
   const run: AutoSail = {
+    was: was >= 0 ? was : lastIn.get(ship) ?? 0,
     x, y, path, i: 1, sail: idx, since: game.now, tackSide: 1, tackAt: -Infinity, beatAt: -Infinity,
     stuck: { x: ship.state.x, y: ship.state.y, t: game.now }, replans: 0, plannedAt: game.now, end: path[path.length - 1], ...(arrive !== undefined ? { arrive } : {}),
   };
   runs.set(ship, run);
   paused.delete(ship);
+  queued.delete(ship);
   guards.delete(ship);
   s.sailHold = null;
-  ship.input = { rudder: 0, sailTarget: SAIL_STEPS[idx] };
+  ship.input = { rudder: 0, sailTarget: SAIL_STEPS[carriedSail(game, ship, idx)] };
   send(game, s, run);
   return null;
+}
+
+/** Each tick for a captain with no helmsman at the wheel: the course given in port taken up once she is at sea. */
+function stepQueued(game: Game, s: PlayerSession, ship: ShipEntity): void {
+  const q = queued.get(ship);
+  if (!q || ship.docked) return;
+  queued.delete(ship);
+  if (!ship.alive || s.disconnectedAt !== null) return;
+  const e = startAutosail(game, s, q.x, q.y, q.sail, q.arrive);
+  if (e && e !== STOP_WORDS.arrived) game.sendTo(s, { t: 'toast', msg: e, kind: 'info' });
 }
 
 /** The wheel back to the captain, with the reason. */
@@ -375,15 +435,27 @@ function stepGuard(game: Game, s: PlayerSession, ship: ShipEntity): void {
   s.sailHold = g.sail;
 }
 
+/** A beat of her helm sent before he took the wheel arrives within this many seconds of it. */
+export const AUTOSAIL_BEAT = 2;
+/** The sail each captain's helm last sent (her idle beat sends it again and again). */
+const lastIn = new WeakMap<ShipEntity, number>();
+
 /** The captain's own helm while the helmsman has the wheel: the steady beat of an idle helm (no rudder, the same
- *  sail) is swallowed; any turn of the wheel or change of sail takes it back. True when the input is swallowed. */
+ *  sail) is swallowed; any turn of the wheel or change of sail takes it back. True when the input is swallowed.
+ *  (2026-10-19: «the same sail» is the helmsman's, or the one her helm was already sending — a beat already on its way
+ *  when he took the wheel carries her old sail, and it took the wheel straight back: «Выловить бутылку» far off set the
+ *  course and it was gone the next quarter second.) */
 export function autosailInput(game: Game, s: PlayerSession, rudder: number, sail: number): boolean {
-  const run = autosailOf(s.ship);
+  const ship = s.ship;
+  const run = autosailOf(ship);
+  const step = Math.round(sail);
+  const before = ship ? lastIn.get(ship) : undefined;
+  if (ship) lastIn.set(ship, step);
   if (!run) {
-    if (s.ship && rudder !== 0) helmAt.set(s.ship, game.now);
+    if (ship && rudder !== 0) helmAt.set(ship, game.now);
     return false;
   }
-  if (rudder === 0 && Math.round(sail) === run.sail) return true;
+  if (rudder === 0 && (step === run.sail || step === before || (step === run.was && game.now - run.since < AUTOSAIL_BEAT))) return true;
   stopAutosail(game, s, 'manual');
   return false;
 }
@@ -503,14 +575,18 @@ export function autosailHeading(game: Game, ship: ShipEntity, run: AutoSail): nu
   return null;
 }
 
-/** Every tick, before the ships move: each helmsman checks for danger, then steers. */
+/** Every tick, before the ships move: each helmsman checks for danger, then steers. He never gives the wheel back by
+ *  himself short of her mark (owner, 2026-10-19: «работало всегда и везде»): no way through yet is planned afresh, again
+ *  and again; no clear water ahead, she is worked off it under little sail — only her mark reached, a fight, port, her
+ *  own hand, her ship lost or a mutiny end his run. */
 export function stepAutosail(game: Game): void {
   for (const s of game.sessions) {
     const ship = s.ship;
     const run = autosailOf(ship);
     if (!ship) continue;
     if (!run) {
-      stepResume(game, s, ship);
+      stepQueued(game, s, ship);
+      if (!autosailOf(ship)) stepResume(game, s, ship);
       if (!autosailOf(ship)) stepGuard(game, s, ship);
       continue;
     }
@@ -526,23 +602,28 @@ export function stepAutosail(game: Game): void {
     const d = Math.hypot(run.x - ship.state.x, run.y - ship.state.y);
     const end = run.path[run.path.length - 1];
     const near = run.arrive ?? AUTOSAIL_ARRIVE;
-    if (d <= near || Math.hypot(end[0] - ship.state.x, end[1] - ship.state.y) <= near) {
+    const toEnd = Math.hypot(end[0] - ship.state.x, end[1] - ship.state.y);
+    if (d <= near || toEnd <= near) {
       stopAutosail(game, s, 'arrived');
       continue;
     }
     // the last stretch to her end (a mark by a shore): as near as she safely comes
-    const last = Math.hypot(end[0] - ship.state.x, end[1] - ship.state.y) <= Math.max(near * 3, ship.stats.length * 2 + 60);
+    const last = toEnd <= Math.max(near * 3, ship.stats.length * 2 + 60);
     const why = autosailDanger(game, s, ship, run.since, run);
     if (why) {
-      // (a coast's own shallows under her keel there, no reef: arrived, hove to — not «foul water», the wheel back)
-      stopAutosail(game, s, why === 'reef' && last && reefDepthAt(game.world, ship.state.x, ship.state.y) >= draftOf(ship) ? 'arrived' : why);
+      stopAutosail(game, s, why);
       continue;
     }
     // Stuck (a headland the grid did not see, a dead calm), or going round and round (2026-10-09: never 100 m nearer
-    // her mark in AUTOSAIL_ROUND seconds): plan afresh a few times, then give up.
+    // her mark in AUTOSAIL_ROUND seconds): plan afresh. Torn canvas or none (no sailcloth to mend it) makes her slow, not
+    // stuck: he sails on all the same; and a shore's mark he cannot come nearer to is reached.
     if (run.best === undefined || d < run.best - 100) {
       run.best = d;
       run.bestAt = game.now;
+    }
+    if (run.ever === undefined || d < run.ever - 100) {
+      run.ever = d;
+      run.gainAt = game.now;
     }
     const round = game.now - (run.bestAt ?? game.now) > AUTOSAIL_ROUND;
     if (round || game.now - run.stuck.t > AUTOSAIL_STUCK_SEC) {
@@ -553,7 +634,13 @@ export function stepAutosail(game: Game): void {
         run.bestAt = game.now;
       }
       if (moved < 60 || round) {
-        if (++run.replans > AUTOSAIL_REPLANS) {
+        if (++run.replans > AUTOSAIL_REPLANS && toEnd <= Math.max(near * 4, 600)) {
+          stopAutosail(game, s, 'arrived');
+          continue;
+        }
+        // Never 100 m nearer in AUTOSAIL_GIVEUP seconds, plan after plan: no water leads there at all (a wall she has no
+        // leave to pass) — the one run he gives back. Slow is not that: a ship in rags gains her 100 m in a minute.
+        if (game.now - (run.gainAt ?? run.since) > AUTOSAIL_GIVEUP) {
           stopAutosail(game, s, 'stuck');
           continue;
         }
@@ -573,16 +660,28 @@ export function stepAutosail(game: Game): void {
       stopAutosail(game, s, 'arrived');
       continue;
     }
-    // No clear water ahead at all: a new plan from where she lies before the wheel is given back.
-    if (h === null && game.now - (run.plannedAt ?? -Infinity) >= 2 && (run.blocked = (run.blocked ?? 0) + 1) <= AUTOSAIL_REPLANS && replan(game, ship, run)) h = autosailHeading(game, ship, run);
+    // No clear water ahead at all: a new plan from where she lies.
+    if (h === null && game.now - (run.plannedAt ?? -Infinity) >= 2 && replan(game, ship, run)) h = autosailHeading(game, ship, run);
+    let carry = carriedSail(game, ship, run.sail);
     if (h === null) {
-      stopAutosail(game, s, 'reef');
-      continue;
-    }
-    ship.input = { rudder: clamp(angleDiff(ship.state.heading, h) * 2.2, -1, 1), sailTarget: SAIL_STEPS[run.sail] };
+      // …and none yet: worked off it under little sail — for the open water nearest her, or about
+      run.blocked = (run.blocked ?? 0) + 1;
+      h = escapeHeading(game, ship);
+      carry = Math.min(carry, 1);
+    } else run.blocked = 0;
+    ship.input = { rudder: clamp(angleDiff(ship.state.heading, h) * 2.2, -1, 1), sailTarget: SAIL_STEPS[carry] };
     // a new plan: her screen draws it
     if (run.sentPlan !== run.path) send(game, s, run);
   }
+}
+
+/** The heading off foul water when no heading ahead is clear: for the open water nearest her (as her hull lies in it),
+ *  else straight about. */
+function escapeHeading(game: Game, ship: ShipEntity): number {
+  const { x, y } = ship.state;
+  const w = nearestWater(game.world, x, y, hullWater(ship), 600, (px, py) => !foulWater(game, ship, px, py));
+  if (w && Math.hypot(w[0] - x, w[1] - y) > 5) return headingOf(w[0] - x, w[1] - y);
+  return wrapAngle(ship.state.heading + Math.PI);
 }
 
 /** The new plans off her route are at least this many seconds apart. */

@@ -461,6 +461,8 @@ export class ClientState {
           const resumable = !m.on && (m.why === 'hostile' || m.why === 'attack' || m.why === 'storm');
           if (m.on) this.pausedCourse = null;
           else if (resumable && was) this.pausedCourse = { ...was };
+          // a course given in a fight (2026-10-19): kept by the server for after it, its line drawn dimmed meanwhile
+          else if (resumable && m.x !== undefined && m.y !== undefined) this.pausedCourse = { x: m.x, y: m.y, ...(m.path && m.path.length >= 2 ? { path: m.path } : {}) };
           else this.pausedCourse = null;
           if (!m.on && !resumable && !this.route) this.lastPath = null;
           // Arrived, foul water, no way through: he heaves to before giving the wheel back, and her sails stay in

@@ -214,6 +214,7 @@ export function fireMount(game: Game, ship: ShipEntity, tx: number, ty: number):
   }
   ship.mountReload = mountReloadTime(ship);
   ship.lastCombat = now;
+  ship.gunsAt = now;
   ship.protectedUntil = 0;
   return null;
 }

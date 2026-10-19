@@ -12,7 +12,7 @@ import { relWindDeg } from '../shared/src/sim/sailing.ts';
 import { depthAt, isLand } from '../shared/src/world/worldgen.ts';
 import { serverTable } from '../client/src/lang/server.ts';
 import type { Game } from '../server/src/game/Game.ts';
-import { STOP_WORDS, autosailOf, foulWater } from '../server/src/game/autosail.ts';
+import { QUEUED_PORT, STOP_WORDS, autosailOf, foulWater, pausedCourse, queuedCourse } from '../server/src/game/autosail.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import { join, makeGame, onHull, steps } from './helpers.ts';
@@ -174,83 +174,82 @@ test('a steady idle helm is swallowed; a turn of the wheel or a change of sail t
   assert.equal(lastAuto(c)!.why, 'manual');
 });
 
-test('danger hands the wheel back: a hostile sail in range, a shot, a storm, a low hull', () => {
+test('only a fight takes the wheel from him (owner, 2026-10-19): a hostile sail in sight, a storm, a low hull, a reef sail on', () => {
   const { game } = makeGame();
   fair(game);
   const is = game.world.islands[ISLE];
   const { c, s, ship } = captain(game, 'Dora Watch');
   const x = is.x - is.radius - 1500, y = is.y;
   const go = () => {
-    c.push({ t: 'autosail', x, y: y + 4000, sail: 3 });
+    c.push({ t: 'autosail', x, y: y + 4000, sail: 4 });
     assert.equal(lastAuto(c)!.on, true, c.all('toast').map((t) => t.msg).join(' | '));
   };
   atSea(game, s, x, y);
-  // A pirate comes within range.
+  // A pirate within range: he sails on (only her guns or theirs make a fight).
   go();
-  const far = pirate(game, ship.state.x + AUTOSAIL_DANGER_R + 400, ship.state.y);
-  steps(game, 2);
-  assert.ok(autosailOf(ship), 'out of range he sails on');
-  game.removeShip(far.id);
   const foe = pirate(game, ship.state.x + AUTOSAIL_DANGER_R - 200, ship.state.y);
   steps(game, 2);
-  assert.equal(lastAuto(c)!.why, 'hostile');
-  // He will not take it back while the pirate is there.
-  c.push({ t: 'autosail', x, y: y + 4000, sail: 3 });
-  assert.equal(lastAuto(c)!.on, false);
-  assert.ok(c.all('toast').some((t) => t.msg === STOP_WORDS.hostile));
+  assert.ok(autosailOf(ship), 'a hostile sail in sight is no stop');
   game.removeShip(foe.id);
-  // A shot at her.
-  atSea(game, s, x, y);
-  go();
+  // A shot at her: paused, the course kept.
   steps(game, 3);
   ship.attackers.set(999_999, game.now);
   steps(game, 1);
   assert.equal(lastAuto(c)!.why, 'attack');
+  assert.ok(pausedCourse(ship), 'the course is kept for after the fight');
   ship.attackers.clear();
-  // A storm comes over.
+  // A storm comes over: on he sails, reefed to three quarters (the storm shreds only full canvas).
   atSea(game, s, x, y);
   game.now += 10;
   go();
   game.weather[ship.region].kind = 'storm';
-  steps(game, 1);
-  assert.equal(lastAuto(c)!.why, 'storm');
+  steps(game, 3);
+  assert.ok(autosailOf(ship), 'a storm is no stop');
+  assert.ok(ship.input.sailTarget <= 0.75 + 1e-9, `reefed in the storm: ${ship.input.sailTarget}`);
   fair(game);
-  // The hull is low.
-  go();
+  // The hull is low: he sails on, and takes the wheel on a low hull too.
   ship.hull = ship.stats.hullMax * (AUTOSAIL_LOW_HULL - 0.05);
   steps(game, 1);
-  assert.equal(lastAuto(c)!.why, 'hull');
-  c.push({ t: 'autosail', x, y: y + 4000, sail: 3 });
-  assert.ok(c.all('toast').some((t) => t.msg === STOP_WORDS.hull), 'nor starts on a weak hull');
+  assert.ok(autosailOf(ship), 'a low hull is no stop');
+  c.push({ t: 'autosail', stop: true });
+  go();
   ship.hull = ship.stats.hullMax;
-  // Docked: he sails from open water only.
+  // Docked: the course waits for her casting off, and is taken up then.
+  c.push({ t: 'autosail', stop: true });
   ship.docked = 'x';
   c.push({ t: 'autosail', x, y: y + 4000, sail: 3 });
-  assert.ok(c.all('toast').some((t) => t.msg === STOP_WORDS.port));
+  assert.ok(c.all('toast').some((t) => t.msg === QUEUED_PORT), 'told it waits for her casting off');
+  assert.ok(queuedCourse(ship));
+  ship.docked = null;
+  steps(game, 1);
+  assert.ok(autosailOf(ship), 'cast off: the helmsman has the wheel');
 });
 
-test('foul water he cannot round hands the wheel back; a mark ashore ends on the water nearest it', () => {
+test('foul water: he works her off a reef and on; a mark ashore ends on the water nearest it', () => {
   const { game } = makeGame();
   fair(game);
   const { c, s, ship } = captain(game, 'Eve Lead');
   onHull(game, ship, 'brig'); // a keel that feels the bottom (the sloop skates over the shallows)
   assert.notEqual(ship.cls.passive.id, 'shallow_runner');
-  // In the middle of a wide reef every heading runs over it.
+  // In the middle of a wide reef every heading runs over it: he takes the wheel all the same.
   const rf = game.world.reefs.filter((r) => r.depth < ship.cls.draft && r.radius > 270).sort((a, b) => b.radius - a.radius)[0];
   assert.ok(rf, 'a wide shallow reef');
   atSea(game, s, rf.x, rf.y);
   ship.region = 'black_coast';
   c.push({ t: 'autosail', x: rf.x + 5000, y: rf.y, sail: 3 });
-  assert.notEqual(lastAuto(c)?.on, true);
-  assert.ok(c.all('toast').some((t) => t.msg === STOP_WORDS.reef), 'he will not take her off a reef');
-  // Under way, she is driven onto one: the wheel comes back.
+  assert.equal(lastAuto(c)?.on, true, 'he takes her off the reef');
+  steps(game, 20 * 5);
+  assert.ok(autosailOf(ship), `and keeps the wheel: ${JSON.stringify(c.all('autosail').map((m) => m.why ?? 'on'))} ${c.all('toast').map((t) => t.msg).join(' | ')}`);
+  // Under way, she is driven onto one: he keeps the wheel.
+  c.push({ t: 'autosail', stop: true });
   atSea(game, s, rf.x - rf.radius - 600, rf.y);
   c.push({ t: 'autosail', x: rf.x + 5000, y: rf.y, sail: 3 });
   assert.equal(lastAuto(c)!.on, true, c.all('toast').map((t) => t.msg).join(' | '));
   ship.state.x = rf.x;
   ship.state.y = rf.y;
   steps(game, 1);
-  assert.equal(lastAuto(c)!.why, 'reef');
+  assert.ok(autosailOf(ship), 'a reef under her keel is no stop');
+  c.push({ t: 'autosail', stop: true });
   // A mark on the island itself: the route ends on open water by it.
   const is = game.world.islands[ISLE];
   atSea(game, s, is.x - is.radius - 1500, is.y);
@@ -268,7 +267,7 @@ test('foul water he cannot round hands the wheel back; a mark ashore ends on the
 
 test('the helmsman’s words are in Russian too', () => {
   const table = serverTable();
-  for (const w of [...Object.values(STOP_WORDS), 'That mark is off the chart', 'That mark is too far for one run: set a nearer one', 'No open water leads to that mark', 'You are at your mark already']) {
+  for (const w of [...Object.values(STOP_WORDS), QUEUED_PORT, 'That mark is off the chart', 'That mark is too far for one run: set a nearer one', 'No open water leads to that mark', 'You are at your mark already']) {
     assert.ok(table[w], `RU for "${w}"`);
     assert.ok(!/[A-Za-z]/.test(table[w]), `no Latin in "${table[w]}"`);
   }

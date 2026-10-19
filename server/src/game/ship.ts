@@ -225,6 +225,9 @@ export class ShipEntity {
   /** The last time another ship's fire (not a beast's, not her own, not the sea's) struck her (owner, 2026-10-07: «я
    *  должен со всем взаимодействовать, ошибок типа "не под огнём" быть не должно абсолютно»). */
   lastHitAt = -999;
+  /** The last time her own guns (a broadside, the chasers, a mount) fired: with another's blow, a fight under way — the
+   *  sea's own harm (a reef, a storm, a fire) is none (autosail.ts, owner 2026-10-19). */
+  gunsAt = -999;
   attackers = new Map<number, number>(); // entity id -> last hit time
   repairing = false;
   landing: Landing | null = null;

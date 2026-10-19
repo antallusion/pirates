@@ -693,6 +693,15 @@ const RT = dict(ROUTE_EN, ROUTE_RU);
 let goalRun: RouteRun | null = null;
 /** Why the helmsman last gave the wheel back, and when (the page's clock). */
 let helmStop: { why: AutosailStop; at: number } | null = null;
+/** The last «the helmsman has the wheel» said, and for which mark: a course re-set for the same mark (a moving thing
+ *  followed, a fight's course taken up) is not said again. */
+let asSaid = { x: NaN, y: NaN, at: -1e9 };
+function autosailQuiet(m: { x?: number; y?: number }): boolean {
+  const now = performance.now();
+  const same = m.x !== undefined && m.y !== undefined && Math.hypot(m.x - asSaid.x, m.y - asSaid.y) < 400 && now - asSaid.at < 30_000;
+  if (!same) asSaid = { x: m.x ?? NaN, y: m.y ?? NaN, at: now };
+  return same;
+}
 /** The quests she had at the last private state (a new one is followed: its mark shows on the sea). */
 let questsKnown: Set<string> | null = null;
 /** The last tap of a goal (one request per tap: a bounced finger sends nothing more). */
@@ -1434,8 +1443,11 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'autosail': {
       // docs/16 #36: the helmsman has the wheel, or has given it back and why (a run to a goal says its own course).
-      if (m.on && !state.route) hud.toast(EL('as_on'), 'info');
-      else {
+      // (2026-10-19: a course taken on a run to a goal fell through to the «given back» branch — «Автоплавание выключено.»
+      // flashed off the quay while the course went on)
+      if (m.on) {
+        if (!state.route && !autosailQuiet(m)) hud.toast(EL('as_on'), 'info');
+      } else {
         helmStop = { why: m.why ?? 'off', at: performance.now() }; // ux2: the run to a goal reads why
         const w = autosailStopText(m.why);
         hud.toast(w.text, w.kind);
