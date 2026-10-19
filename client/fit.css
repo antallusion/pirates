@@ -68,6 +68,14 @@
   .captain-card .pm-long { display: none; }
   .captain-card .pm-short { display: inline; }
   .captain-card.active { box-shadow: inset 0 0 0 1px var(--brass); }
+  /* a premium captain not yet bought (owner, 2026-10-19): her name, the padlock and the price — the role is the detail's,
+     beside (a two-line name and role left the price under the card's edge at 480×270); the doubloons in the detail's
+     button */
+  .captain-card.cc-shut .cc-role { display: none; }
+  .captain-card .cc-lock { gap: 3px; }
+  .captain-card .cc-lock .cc-lock-i { width: 12px; height: 12px; }
+  .captain-card .cc-price { font-size: calc(10px + 1.5 * var(--u)); }
+  .captain-card .cc-price .rp-dbl { display: none; }
   /* the chosen one: the key facts beside the list, her portrait faded behind them, the order at the foot */
   .captain-detail { grid-area: detail; position: relative; display: flex; flex-direction: column; min-height: 0; overflow: hidden; gap: 0;
     background: linear-gradient(90deg, rgba(10, 9, 8, 0.96) 40%, rgba(10, 9, 8, 0.72)), var(--cd-art, none) right 15% / auto 100% no-repeat; border: 1px solid rgba(140, 107, 58, 0.35); padding: calc(3px + 5 * var(--u)) var(--f-pad); }
