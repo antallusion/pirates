@@ -12,4 +12,5 @@ export const SERVER_RU_ADRIFT: Record<string, string> = {
   'You scuttled a ship not long ago: again in {0} min': 'Вы уже топили корабль недавно: снова через {0} мин',
   'No room in the hold: left behind {0}.': 'В трюме нет места, на воде осталось: {0}.',
   'No ship': 'Нет корабля',
+  'Sails at {0}%, no sailcloth aboard.': 'Паруса на {0}%, парусины в трюме нет.',
 };

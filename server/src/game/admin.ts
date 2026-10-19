@@ -1230,6 +1230,15 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       ship.hull = 0;
       game.beginSinking(ship);
       return 'She goes down.';
+    case 'adrift': {
+      // owner 2026-10-20: the sails down to N% (0 by default) and the sailcloth out of the hold — the jury rig, stranded.
+      if (ship.docked) return 'Put to sea first.';
+      const n = Math.max(0, Math.min(100, num(0, 0)));
+      ship.sails = ship.stats.sailHpMax * n / 100;
+      delete ship.cargo.sailcloth;
+      game.pushSelf(s, true);
+      return `Sails at ${Math.round(n)}%, no sailcloth aboard.`;
+    }
     case 'hurt': {
       // Hull and sails down to N% (repairs at sea, docs/16 #15).
       const n = Math.max(1, Math.min(100, num(0, 50)));
