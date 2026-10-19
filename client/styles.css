@@ -5554,3 +5554,7 @@ body.tac-ph .tb-top { position: absolute; top: calc(env(safe-area-inset-top, 0px
 .cs-dbl i, .uf-dbl i { display: inline-flex; align-items: center; justify-content: center; height: 12px; }
 .cs-dbl i .g-svg, .uf-dbl i .g-svg { width: 8px; height: 8px; stroke-width: 3.6; filter: none; }
 .k-sheet-x .g-svg { width: 20px; height: 20px; }
+/* the website's shop for a browser captain (owner, 2026-10-20; never inside Telegram) */
+.pm-web { display: flex; align-items: center; gap: 12px; margin: 10px 0 0; padding: 8px 10px; border: 1px solid rgba(176, 141, 87, 0.4); border-radius: 6px; }
+.pm-web p { flex: 1; margin: 0; font-size: 12px; }
+.pm-web .btn { flex: none; text-decoration: none; }
