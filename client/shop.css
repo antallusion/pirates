@@ -98,6 +98,21 @@
 .cs-dbl .cs-coin, .uf-dbl .cs-coin { width: 14px; height: 14px; object-fit: contain; margin: 0; }
 .cs-dbl i, .uf-dbl i { font-style: normal; margin-left: 1px; padding: 0 3px; border-radius: 6px; background: var(--gold); color: #1a1208; font: 800 10px/12px var(--sans); }
 .uf-dbl { margin-left: 6px; height: 18px; }
+/* glory on the plate, always (owner, 2026-10-19: «Слава всегда должна быть под аватаркой»): the star and the rank,
+   beside the doubloons — a nought before the cap, a glow when a boon or a point waits; a tap opens the Throne */
+.cs-glory { display: inline-flex; align-items: center; justify-content: center; gap: 2px; height: 20px; margin: 1px 0 0; padding: 0 6px 0 4px; border: 1px solid rgba(224, 184, 98, 0.55);
+  border-radius: 10px; background: rgba(28, 22, 12, 0.85); color: var(--gold); font: 700 11px/1 var(--sans); font-variant-numeric: tabular-nums; cursor: pointer; pointer-events: auto; touch-action: manipulation; }
+.cs-glory .gl-star { width: 13px; height: 13px; flex: none; }
+.cs-glory b { font-weight: 700; }
+.cs-glory.locked { color: var(--bone, #e6dccb); border-color: rgba(176, 141, 87, 0.45); }
+.cs-glory.locked .gl-star { color: var(--gold); opacity: 0.8; }
+.cs-glory.wait { border-color: var(--gold); box-shadow: 0 0 8px rgba(224, 184, 98, 0.55); }
+:where(body.touch) .cs-glory { position: relative; }
+:where(body.touch) .cs-glory::after { content: ''; position: absolute; inset: -8px -3px; }
+.uf-glory { display: inline-flex; align-items: center; gap: 2px; }
+.uf-glory .gl-star { width: 10px; height: 10px; flex: none; }
+.uf-glory b { font-weight: inherit; }
+@media (max-height: 420px) { body.simple .cs-glory { height: 18px; } }
 #isle .is-sb.shop { border-color: rgba(224, 184, 98, 0.7); }
 
 /* ---------- a phone held sideways: the fluid sizes of fit.css */

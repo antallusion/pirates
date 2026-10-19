@@ -54,6 +54,7 @@ export const EN = {
   fighting: 'The trial of {skill} is under way.',
   plate: 'Glory {n}',
   plateTip: 'Glory rank {n}: open the Throne of the Sea',
+  plateLocked: 'Glory: from level {n} every point of experience goes into it. Open the Throne of the Sea',
   throne: 'Throne',
   // docs/19 E9: the seals of the deep
   'tab.seals': 'Seals',
@@ -147,6 +148,7 @@ export const RU: Record<keyof typeof EN, string> = {
   fighting: 'Идёт испытание навыка «{skill}».',
   plate: 'Слава {n}',
   plateTip: 'Ранг славы {n}: открыть Престол Моря',
+  plateLocked: 'Слава: с {n}-го уровня в неё идёт весь опыт. Открыть Престол Моря',
   throne: 'Престол',
   'tab.seals': 'Печати',
   'seal.h': 'Печать глубин {n}',

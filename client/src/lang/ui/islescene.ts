@@ -3,6 +3,16 @@
 export const EN = {
   enter: 'Island',
   enterTip: 'Go ashore on your island',
+  // The island button before she holds one (owner, 2026-10-19: «кнопка острова… щас я ее не вижу или я еще остров не
+  // отрыл»): the way to found a town of her own.
+  foundTip: 'Found a town of your own',
+  foundH: 'A town of your own',
+  foundBody: 'You hold no island yet. Sail to any wild island — not one with a port — and press «Claim» in the row of actions when you are at its shore. Your first island is free: a town hall stands on it at once, and the town grows from there.',
+  foundNear: 'The helmsman will take you to the nearest free island: the line and the distance show the way.',
+  foundHere: 'An island to claim lies off your bow: {name}.',
+  foundGo: 'Sail there',
+  foundClaim: 'Claim it',
+  foundNo: 'Later',
   sea: 'To sea',
   seaTip: 'Back to the sea',
   loading: 'Rowing ashore…',
@@ -60,6 +70,14 @@ export const EN = {
 export const RU: Record<keyof typeof EN, string> = {
   enter: 'Остров',
   enterTip: 'Сойти на берег своего острова',
+  foundTip: 'Основать свой город',
+  foundH: 'Свой город',
+  foundBody: 'У вас ещё нет своего острова. Подойдите к любому дикому острову — не к острову с портом — и у его берега нажмите «Занять» в ряду действий. Первый остров бесплатный: на нём сразу встаёт ратуша, и город растёт от неё.',
+  foundNear: 'Рулевой поведёт к ближайшему свободному острову: линия и расстояние покажут путь.',
+  foundHere: 'Остров для своего города прямо по курсу: {name}.',
+  foundGo: 'Плыть',
+  foundClaim: 'Занять',
+  foundNo: 'Позже',
   sea: 'В море',
   seaTip: 'Вернуться в море',
   loading: 'Шлюпка идёт к берегу…',

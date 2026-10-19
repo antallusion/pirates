@@ -38,6 +38,7 @@ import { findsOf } from './seafinds.ts';
 import type { ShipEntity } from './ship.ts';
 import { worldGoals } from './worldgoals.ts';
 import { campaignFoes } from './campaign.ts'; // docs/36
+import { ownIsland } from './estate.ts';
 import { castawaysOf } from './castaways.ts';
 import { liveNamed } from './wanted.ts';
 import { activeTasks } from './worldtasks.ts';
@@ -734,6 +735,12 @@ export function resolveGoal(game: Game, s: PlayerSession, key: string): Resolved
       return bossPlaces(game, REGION_IDS.includes(id as RegionId) ? (id as RegionId) : undefined);
     case 'boss':
       return bossPlaces(game);
+    case 'own': {
+      // the island button (owner, 2026-10-19: «кнопка острова… или я еще остров не отрыл»): her own island, or before
+      // she holds one the nearest wild island to found her town on (docs/29: any but a port's, the first free)
+      const h = ownIsland(game, s.accountId);
+      return { cands: islands(game, h ? (i) => i.id === h.island : (i) => !i.portId, 'land') };
+    }
   }
   return { none: ROUTE_WORDS.unknown };
 }

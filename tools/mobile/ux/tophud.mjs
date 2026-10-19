@@ -232,7 +232,7 @@ async function measure(p) {
       const c = cs.getBoundingClientRect();
       // the plate's visible extent: the ring and the bars' column
       let l = ring.l, t = ring.t, r = ring.r, b = ring.b;
-      for (const e of cs.querySelectorAll('.cs-row, .cs-silver')) { if (!vis(e)) continue; const x = e.getBoundingClientRect(); l = Math.min(l, x.left); t = Math.min(t, x.top); r = Math.max(r, x.right); b = Math.max(b, x.bottom); }
+      for (const e of cs.querySelectorAll('.cs-row, .cs-silver, .cs-dbl, .cs-glory')) { if (!vis(e)) continue; const x = e.getBoundingClientRect(); l = Math.min(l, x.left); t = Math.min(t, x.top); r = Math.max(r, x.right); b = Math.max(b, x.bottom); }
       cap = R({ left: l, top: t, right: r, bottom: b, width: r - l, height: b - t });
       void c;
     }

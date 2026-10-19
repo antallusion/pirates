@@ -293,6 +293,8 @@ export class Hud {
     // It drops open under the frame's lowest edge (portrait, bars and the line under them), measured as it opens.
     $('hud-captain').onclick = (e) => {
       if ((e.target as HTMLElement).closest('[data-hudshop]')) return this.onShop();
+      // glory, always on the plate (owner, 2026-10-19): the Throne of the Sea
+      if ((e.target as HTMLElement).closest('[data-throne]')) return this.onThrone();
       if (simpleHud()) return this.onCaptain();
       if (document.body.classList.toggle('ship-open')) placeShipPanel();
     };
@@ -443,7 +445,7 @@ export class Hud {
       bandTop = fr.top - k;
       bandBottom = fr.bottom + k;
     }
-    for (const el of document.querySelectorAll('#hud-captain :is(.cs-row, .cs-silver)')) {
+    for (const el of document.querySelectorAll('#hud-captain :is(.cs-row, .cs-silver, .cs-dbl, .cs-glory)')) {
       const r = el.getBoundingClientRect();
       if (!r.width || !r.height) continue;
       left = Math.max(left, r.right + gap);
@@ -816,7 +818,8 @@ export class Hud {
     const url = assetUrl(cap.portrait);
     const xpPct = levelPct(self.xp, self.xpNext);
     const dot = captainDot(self.talentPoints, self.level);
-    const key = `simple|${lang()}|${url ? 1 : 0}|${self.level}|${xpPct}|${self.gold}|${state.doubloons}|${you.hull}|${you.hullMax}|${you.crew}|${you.crewMax}|${you.sails}|${you.sailsMax}|${dot}`;
+    const g = self.glory;
+    const key = `simple|${lang()}|${url ? 1 : 0}|${self.level}|${xpPct}|${self.gold}|${state.doubloons}|${you.hull}|${you.hullMax}|${you.crew}|${you.crewMax}|${you.sails}|${you.sailsMax}|${dot}|${g ? `${g.open}:${g.rank}:${g.pending}:${g.points - g.spent}` : ''}`;
     if (key === this.lastCaptainKey) return;
     this.lastCaptainKey = key;
     const el = $('hud-captain');
@@ -825,7 +828,7 @@ export class Hud {
     el.innerHTML = `<div class="cs">
       <div class="cs-frame"><div class="cs-face" ${faceAttrs(cap.portrait, url)}></div><b class="cs-lv" style="--xp:${xpPct}%" title="${esc(`${L('lv', { n: self.level })} · ${xpLine(self)}`)}">${self.level}</b>${dot ? `<i class="cs-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}"></i>` : ''}</div>
       <div class="cs-body">${row('hull', you.hull, you.hullMax, 'stat_hull', fmt(you.hull))}${row('crew', you.crew, you.crewMax, 'stat_crew', `${you.crew}/${you.crewMax}`)}${row('sails', you.sails, you.sailsMax, 'stat_sails', fmt(you.sails))}
-        <span class="cs-purse"><span class="cs-silver">${icon('coin', '⛁', 'cs-coin')}${fmt(self.gold)}</span>${shopChip(state.doubloons, 'cs-dbl')}</span></div>
+        <span class="cs-purse"><span class="cs-silver">${icon('coin', '⛁', 'cs-coin')}${fmt(self.gold)}</span>${shopChip(state.doubloons, 'cs-dbl')}${gloryChip(g, 'cs-glory')}</span></div>
     </div>`;
     el.setAttribute('aria-label', `${self.name}: ${L('lv', { n: self.level })}, ${xpLine(self)}`);
     el.title = self.name;

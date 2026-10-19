@@ -11,7 +11,7 @@ import { liveSignals, plateGoal, signalToast } from './ui/social.ts';
 import { noteHearsay, repairState } from './ui/dealings.ts';
 import { renderHall } from './ui/hall.ts';
 import { renderLook, resetLookDraft } from './ui/looks.ts';
-import { ask, tell } from './ui/confirm.ts';
+import { ask, askHtml, tell } from './ui/confirm.ts';
 import { BEASTS, beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
 import { NetHaulPanel } from './ui/nethaul.ts';
@@ -92,7 +92,7 @@ import { buttonHtml } from './ui/kit/button.ts';
 import { ZOOM_NEAR_MIN, clampZoom } from './render/freecam.ts'; // the far view and the free look (owner, 2026-10-17)
 import { EN as FC_EN, RU as FC_RU } from './lang/ui/freecam.ts';
 import { askMove } from './ui/isletree.ts'; // docs/29: the island's move, its confirm
-import { $, decorateSums, esc, fmt, icon, keepInputs, knots } from './ui/dom.ts';
+import { $, decorateSums, esc, fmt, glyphSvg, icon, keepInputs, knots } from './ui/dom.ts';
 import { Hud, TOUCH_FOLDED, releaseModalToasts } from './ui/hud.ts';
 import { SeaHud, bestSpecial, seaWord } from './ui/seahud.ts'; // docs/23 phase 2: the sea and five buttons
 import type { DeckSlot, SeaKeys } from './ui/seahud.ts';
@@ -913,13 +913,15 @@ const seaHud = new SeaHud($('touch'), {
     seaHud.lend(['hud-target'], 'target');
   },
 });
-// The island screen's way in from the sea (owner, 2026-10-15): «Остров» under the menu while she holds an island.
+// The island screen's way in from the sea (owner, 2026-10-15): «Остров» under the captain's plate. Always there (owner,
+// 2026-10-19: «под аватаркой кнопка острова, щас я ее не вижу или я еще остров не отрыл»): before she holds an island
+// it says how to found a town of her own and sails her to the nearest free island (the route `own`, goalroute.ts).
 const isleBtn = (() => {
   const t = document.createElement('template');
   t.innerHTML = buttonHtml({ kind: 'icon', id: 'tc-isle', icon: 'ui_lighthouse', glyph: '⚓', aria: LIS('enterTip'), cls: 'sea-round hidden' }).trim();
   const b = t.content.firstElementChild as HTMLButtonElement;
   b.insertAdjacentHTML('beforeend', '<span class="tc-isle-l"></span>');
-  b.addEventListener('click', () => openBase());
+  b.addEventListener('click', () => (hasIsle() ? openBase() : openFound()));
   $('touch').append(b);
   return b;
 })();
@@ -944,17 +946,36 @@ function homeBtnFrame(): void {
     homeBtn.setAttribute('aria-label', LFC('homeAria'));
   }
 }
-/** «Остров» shown while she holds an island and no fight is near (its word in her language). */
+const hasIsle = (): boolean => state.self?.homeIsle !== null && state.self?.homeIsle !== undefined;
+/** «Остров» always under the plate (owner, 2026-10-19), but in the First Watch (its steps show the HUD a block at a time);
+ *  before she holds an island a «+» on its corner and «Основать свой город» for its words. */
 function isleBtnFrame(): void {
-  const show = state.self?.homeIsle !== null && state.self?.homeIsle !== undefined;
+  const show = !!state.self && !state.onboarding?.stage;
   if (isleBtn.classList.contains('hidden') === show) isleBtn.classList.toggle('hidden', !show);
+  const own = hasIsle();
   const w = LIS('enter');
+  const tip = LIS(own ? 'enterTip' : 'foundTip');
   const l = isleBtn.querySelector('.tc-isle-l')!;
-  if (l.textContent !== w) {
+  if (l.textContent !== w || isleBtn.title !== tip) {
     l.textContent = w;
-    isleBtn.title = LIS('enterTip');
-    isleBtn.setAttribute('aria-label', LIS('enterTip'));
+    isleBtn.title = tip;
+    isleBtn.setAttribute('aria-label', tip);
   }
+  const mark = isleBtn.querySelector('.tc-isle-new');
+  if (!own && !mark) isleBtn.insertAdjacentHTML('beforeend', `<b class="k-badge tc-isle-new" aria-hidden="true">${glyphSvg('plus')}</b>`);
+  else if (own && mark) mark.remove();
+}
+/** No island yet: how a town of her own is founded, and the helmsman to the nearest free island (or its claim, when one
+ *  lies off her bow). */
+function openFound(): void {
+  const near = state.self?.claimIsle;
+  const isl = near ? state.islands.get(near.island) : undefined;
+  const body = `<p id="confirm-text"><b>${esc(LIS('foundH'))}</b></p><p>${esc(LIS('foundBody'))}</p><p class="muted">${esc(isl ? LIS('foundHere', { name: placeName(isl.name) }) : LIS('foundNear'))}</p>`;
+  void askHtml(body, LIS(isl ? 'foundClaim' : 'foundGo'), LIS('foundNo'), 'found-panel').then((ok) => {
+    if (!ok) return;
+    if (isl) claimIsland();
+    else startGoal('own');
+  });
 }
 const onboarding = new OnboardingUi(state);
 /** The First Watch's finger over the button its step wants (docs/23 item 80). */

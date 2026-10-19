@@ -166,6 +166,9 @@ body.simple #hud #touch > #tc-daily .tc-daily-b { background: linear-gradient(18
 body.simple #hud #touch > :is(#tc-isle, #tc-offer, #tc-daily) .k-badge { top: -4px; right: -6px; left: auto; }
 /* the words under the left row's buttons: «Остров», the offer's clock */
 body.simple #hud #touch > #tc-isle .tc-isle-l { left: 50%; right: auto; top: calc(100% + 3px); bottom: auto; transform: translateX(-50%); font-size: 9px; }
+/* no island yet (owner, 2026-10-19): a «+» on its corner — «Основать свой город» */
+body.simple #hud #touch > #tc-isle .tc-isle-new { display: inline-flex; align-items: center; justify-content: center; padding: 0; min-width: 16px; width: 16px; height: 16px; background: linear-gradient(180deg, #e8c46a, #9c7a33); color: #1a1208; }
+body.simple #hud #touch > #tc-isle .tc-isle-new .g-svg { width: 11px; height: 11px; stroke-width: 3.4; filter: none; }
 /* the chat's round button heads the left row (a desk keeps it by the helm: chat.css), its line of words to the right
    of the row */
 @media (max-width: 1099px), (max-height: 599px) {
