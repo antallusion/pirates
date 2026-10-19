@@ -125,7 +125,7 @@ export function buildActs(f: ActFacts): Act[] {
   if (!f.port && f.homeport) out.push({ id: 'homeport', icon: 'map_port', label: L('a.dock'), sub: f.homeport.name, title: `${L('a.dock')}: ${f.homeport.name}` });
   // «Корабль без парусов» (owner, 2026-10-20): the jury sail as it goes up, and — stranded — scuttling home
   const ad = f.adrift;
-  if (ad && ad.pct !== null) out.push({ id: 'jury', icon: 'stat_sails', label: LA('a.jury'), sub: `${ad.pct}%`, title: ad.paused ? LA('a.juryPaused') : LA('a.juryT', { s: ad.left }) });
+  if (ad && ad.pct !== null) out.push({ id: 'jury', icon: 'stat_sails', label: `${LA('a.jury')} ${ad.pct}%`, title: ad.paused ? LA('a.juryPaused') : LA('a.juryT', { s: ad.left }) });
   if (ad && ad.stranded && !f.board && !at) out.push({ id: 'scuttle', icon: 'map_wreck', label: LA('a.scuttle'), sub: ad.cdMin > 0 ? LA('a.scuttleCd', { m: ad.cdMin }) : LA('a.scuttleSub'), title: LA('a.scuttleT') });
   const l = f.landable;
   if (l && !l.blocked) {

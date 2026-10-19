@@ -198,10 +198,10 @@ export function takeWreck(game: Game, s: PlayerSession, sp: WreckSpot): void {
     game.db.ledger(s.accountId, 'loot', silver, 'wreck');
   }
   // (the lines of the salvage everywhere: «Поднято со дна: …», the full hold's own)
-  const got: string[] = [];
-  if (n > 0) got.push(`${n} ${g.name}`);
-  if (cloth > 0) got.push(`${cloth} ${GOODS.sailcloth.name}`);
-  if (planks > 0) got.push(`${planks} ${GOODS.planks.name}`);
+  // (one line a good: a spot of planks gives its planks and the planks besides as one count)
+  const tally = new Map<GoodId, number>();
+  for (const [k, v] of [[sp.good, n], ['sailcloth', cloth], ['planks', planks]] as [GoodId, number][]) if (v > 0) tally.set(k, (tally.get(k) ?? 0) + v);
+  const got = [...tally].map(([k, v]) => `${v} ${GOODS[k].name}`);
   if (got.length) game.toastShip(ship, `Salvaged: ${got.join(', ')}.`, 'gold');
   if (silver > 0) game.toastShip(ship, `The hold is full: the rest of the salvage is broken up for ${silver} silver.`, 'gold');
   const left: string[] = [];

@@ -170,7 +170,7 @@ test('the stranded prompt: «Корабль без парусов» with the jur
   const f = adriftFacts({ ...v, stranded: true }, 0)!;
   const acts = buildActs({ adrift: f, homeport: { name: 'Солтмарроу' } });
   assert.deepEqual(acts.map((a) => a.id), ['homeport', 'jury', 'scuttle']);
-  assert.match(acts[1].sub ?? '', /^\d+%$/);
+  assert.match(acts[1].label.replace(/\s/g, ' '), /^Аварийный парус \d+%$/);
   assert.equal(acts[2].label, 'Затопить');
   assert.match(adriftInfo(f).replace(/\s/g, ' '), /^Корабль без парусов · аварийный парус \d+% · \d+ с$/);
   // in a fight there is no scuttle button
