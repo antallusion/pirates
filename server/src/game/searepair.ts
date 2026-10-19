@@ -64,12 +64,54 @@ export const NO_CLOTH = 'No sailcloth aboard: the carpenters mend the sails with
 export const NO_STORES = 'No planks or sailcloth aboard: the carpenters mend her with them. Buy them in port, or have the yard mend her.';
 export const SOUND = 'She is already sound.';
 
+/** The carpenters' work added to her tally (Game.ts, each tick they work). */
+export function tallyRepair(ship: ShipEntity, now: number, hull: number, sails: number, planks: number, cloth: number): void {
+  const t = (ship.repairTally ??= { hull: 0, sails: 0, planks: 0, cloth: 0, shown: 0, at: now });
+  t.hull += hull;
+  t.sails += sails;
+  t.planks += planks;
+  t.cloth += cloth;
+}
+
+/** A store used, in whole units (a part of one counts as one). */
+const whole = (n: number): number => (n < 0.05 ? 0 : Math.ceil(n - 0.05));
+
+/** What the carpenters did since «Ремонт», in words (null: nothing). */
+export function repairDone(ship: ShipEntity): string | null {
+  const t = ship.repairTally;
+  if (!t || t.hull + t.sails < 1) return null;
+  const st = ship.stats;
+  return `Repairs done: hull ${Math.round((ship.hull / st.hullMax) * 100)}% (+${Math.round(t.hull)}), sails ${Math.round((ship.sails / st.sailHpMax) * 100)}% (+${Math.round(t.sails)}); used ${whole(t.planks)} planks, ${whole(t.cloth)} sailcloth.`;
+}
+
+/** What she is told as the carpenters set to: what they mend and with what (her stores, from the hold). */
+export function repairStart(ship: ShipEntity): string {
+  const st = ship.stats;
+  const r = seaRepairView(ship);
+  return `The carpenters set to: hull ${Math.round((ship.hull / st.hullMax) * 100)}%, sails ${Math.round((ship.sails / st.sailHpMax) * 100)}%; ${r.havePlanks} planks and ${r.haveCloth} sailcloth aboard, about ${Math.max(1, r.minutes)} min.`;
+}
+
+/** The part of her harm the carpenters cannot mend with what is aboard (they mend the rest), in plain words. */
+export function partLack(ship: ShipEntity, cove = false): string | null {
+  if (cove || ship.hasFlag('old_salt')) return null;
+  const h = hurt(ship);
+  if (h.sails && (ship.cargo.sailcloth ?? 0) < 0.2) return NO_CLOTH_PART;
+  if ((h.hull || h.rudder) && (ship.cargo.planks ?? 0) < 0.2) return NO_PLANKS_PART;
+  return null;
+}
+export const NO_CLOTH_PART = 'No sailcloth aboard: the sails stay as they are — buy sailcloth in port.';
+export const NO_PLANKS_PART = 'No planks aboard: the hull stays as it is — buy planks in port.';
+
 /** «Чинить» / «Хватит чинить». At sea: to work, unless there is nothing to mend or nothing to mend it with (said in
  *  plain words, and the button stays as it was). In port: the yard mends her whole for silver. */
 export function repairOrder(game: Game, s: PlayerSession, on: boolean, cove = false): void {
   const ship = s.ship!;
   if (!on) {
+    // stopped by her: what they did so far
+    const done = ship.repairing ? repairDone(ship) : null;
     ship.repairing = false;
+    ship.repairTally = null;
+    if (done) game.sendTo(s, { t: 'toast', msg: done, kind: 'good' });
     return;
   }
   const h = hurt(ship);
@@ -81,8 +123,15 @@ export function repairOrder(game: Game, s: PlayerSession, on: boolean, cove = fa
   const lack = repairLack(ship, cove);
   if (lack) {
     ship.repairing = false;
-    game.sendTo(s, { t: 'toast', msg: lack, kind: 'info' });
+    // (said as bad news, so it is never mistaken for nothing at all: the owner's «ниче не происходит»)
+    game.sendTo(s, { t: 'toast', msg: lack, kind: 'bad' });
     return;
+  }
+  if (!ship.repairing) {
+    ship.repairTally = { hull: 0, sails: 0, planks: 0, cloth: 0, shown: 0, at: game.now };
+    game.sendTo(s, { t: 'toast', msg: repairStart(ship), kind: 'good' });
+    const part = partLack(ship, cove);
+    if (part) game.sendTo(s, { t: 'toast', msg: part, kind: 'bad' });
   }
   ship.repairing = true;
 }

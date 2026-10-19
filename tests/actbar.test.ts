@@ -41,7 +41,7 @@ function oldPad(f: ActFacts): ActId | null {
   if (f.home) return 'base';
   if (f.claim) return 'claim';
   const r = f.repair;
-  if (r && (r.repairing || (!r.combat && r.hurt && !r.short))) return 'repair';
+  if (r && (r.repairing || (!r.combat && r.hurt))) return 'repair';
   return null;
 }
 
@@ -67,7 +67,8 @@ test('every thing at hand is a button, each with its icon, word, title and key',
   // The carpenters: not while fighting, not with nothing to mend, not short of planks; always to stop them.
   assert.deepEqual(buildActs({ repair: { repairing: false, combat: true, hurt: true } }), []);
   assert.deepEqual(buildActs({ repair: { repairing: false, combat: false, hurt: false } }), []);
-  assert.deepEqual(buildActs({ repair: { repairing: false, combat: false, hurt: true, short: true } }), []);
+  // short of planks or sailcloth: the button stays, its press says what is wanted (owner, 2026-10-19)
+  assert.equal(buildActs({ repair: { repairing: false, combat: false, hurt: true, short: true } })[0].id, 'repair');
   assert.equal(buildActs({ repair: { repairing: true, combat: true, hurt: true } })[0].id, 'repair');
   // Each mark kind its own word and icon; worked today or at work: no button (the info line says so).
   for (const k of MARK_KINDS) {

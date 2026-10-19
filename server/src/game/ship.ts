@@ -230,6 +230,9 @@ export class ShipEntity {
   gunsAt = -999;
   attackers = new Map<number, number>(); // entity id -> last hit time
   repairing = false;
+  /** The carpenters' tally since «Ремонт» (owner, 2026-10-19: «нажимая ремонт … ниче не происходит»): the hull and sails
+   *  mended and the planks and sailcloth used, said when they stop; the «+N» shown over her every two seconds. */
+  repairTally: { hull: number; sails: number; planks: number; cloth: number; shown: number; at: number } | null = null;
   landing: Landing | null = null;
   curse = 0; // the sea's claim on the ship, 0..100
   water = 0; // tonnes of seawater in the hold
