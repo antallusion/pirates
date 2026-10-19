@@ -152,11 +152,21 @@ export class TutorPointer {
   }
 
   private find(): HTMLElement | null {
+    const opening = !!this.facts.stage?.startsWith('c:');
     for (const sel of pointerTargets(this.facts)) {
-      for (const el of document.querySelectorAll<HTMLElement>(sel)) if (shown(el)) return el;
+      for (const el of document.querySelectorAll<HTMLElement>(sel)) {
+        if (shown(el)) return el;
+        // the opening's row of a shop below the window's fold (the market's sailcloth): brought into sight once
+        if (opening && el !== this.scrolled && el.closest('#modal-panel') && el.getClientRects().length) {
+          this.scrolled = el;
+          el.scrollIntoView({ block: 'center' });
+          if (shown(el)) return el;
+        }
+      }
     }
     return null;
   }
+  private scrolled: HTMLElement | null = null;
 }
 
 /** On the screen and not under something else (a sheet, a window): the middle of its box hits it. */
