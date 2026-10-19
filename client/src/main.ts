@@ -135,7 +135,8 @@ const HUD_L = dict(HUD_EN, HUD_RU);
 import { applyDataLocale, NAME_RU } from './lang/data.ts';
 import { personName } from './lang/names.ts';
 import { campaignWordsReady, loadCampaignWords, serverText } from './lang/server.ts';
-import { campaignNews } from './ui/campaignnews.ts'; // docs/36: the campaign's next quest comes by itself
+import { GOODS } from '../../shared/src/data/goods.ts'; // the opening's good to trade
+import { STORY_FROM, campaignLore, campaignNews } from './ui/campaignnews.ts'; // docs/36: the campaign's next quest comes by itself
 import { FACTIONS } from '../../shared/src/data/factions.ts';
 import { placeName } from './ui/maps.ts';
 import type { Key } from './i18n.ts';
@@ -947,6 +948,28 @@ function homeBtnFrame(): void {
   }
 }
 const hasIsle = (): boolean => state.self?.homeIsle !== null && state.self?.homeIsle !== undefined;
+/** The campaign's opening (owner, 2026-10-19): its step now, for the finger (pointer.ts) — and its courses sailed by
+ *  the helmsman: a fight's lane, a stack of creatures, the island of her town, set once a step the moment she is at sea
+ *  (the line and the distance drawn, goalroute.ts). Null past the opening, in the First Watch, in a fight. */
+let openingRun = '';
+function openingFrame(): string | null {
+  if (state.onboarding?.stage) return null;
+  const q = state.self?.quests.find((x) => x.kind === 'campaign' && x.op);
+  if (!q?.op) return null;
+  const key = `${q.id}:${q.step}`;
+  const sea = q.op === 'sink' || q.op === 'board' || q.op === 'neutral' || q.op === 'found';
+  if (sea && openingRun !== key && !state.self?.dockedAt && !state.boardTac && !state.boardFight && !state.pursuit && inGame && !isleScene.isOpen) {
+    openingRun = key;
+    startGoal(`q:${q.id}`, false);
+  }
+  return q.op;
+}
+/** A good to trade at this market for the opening's lesson: the first in stock that is not a supply nor contraband. */
+function tradeGoodHere(): string | null {
+  const v = state.portView;
+  if (!v) return null;
+  return v.market.find((r) => r.stock > 0 && r.legal && GOODS[r.good]?.category !== 'supply')?.good ?? null;
+}
 /** «Остров» always under the plate (owner, 2026-10-19), but in the First Watch (its steps show the HUD a block at a time);
  *  before she holds an island a «+» on its corner and «Основать свой город» for its words. */
 function isleBtnFrame(): void {
@@ -1638,6 +1661,9 @@ function onMessage(m: ServerMsg): void {
       void giverDialog(m.offer, m.from).then((pay) => net.send({ t: 'quest', action: pay ? 'accept' : 'decline', id: m.offer.id, ...(pay && pay !== 'silver' ? { pay } : {}) }));
       break;
     case 'campaign_new':
+      // the story begins after the opening (owner, 2026-10-19: «и далее уже основная кампания начинается с каким-то
+      // лором»): its prologue, once, before the first quest of the story
+      if (m.ch === 1 && m.k === STORY_FROM && !m.choice) campaignLore('prologue', () => !!state.boardTac || !!state.boardFight);
       // docs/36: the campaign's next quest came by itself (or a fork's ways) — a toast and a card, held while she fights
       campaignNews(m, {
         busy: () => !!state.boardTac,
@@ -1661,6 +1687,8 @@ function onMessage(m: ServerMsg): void {
       if (m.line) hud.toast(serverText(m.line), 'info');
       audio.bell();
       audio.coins();
+      // the campaign's last quest: its epilogue («крутой финал», owner 2026-10-19)
+      if (m.campaign && m.campaign.at >= m.campaign.total) campaignLore('epilogue', false);
       break;
     }
     case 'crew_say': {
@@ -4321,7 +4349,8 @@ function step(t: number): void {
     boardFight.render(state.boardFight);
     tactical.render(state.boardTac);
     filmMoments();
-    tutorPointer.set({ stage: state.onboarding?.stage ?? null, touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null });
+    const op = openingFrame();
+    tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : null), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null });
     tutorPointer.frame();
     encounterCard.frame();
     surrenderCard.frame(state);

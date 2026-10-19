@@ -5347,6 +5347,12 @@ body.touch.sea-docked #touch > :is(#tc-stick, .tc-special, #tc-target) { display
 .cn-way { padding: 6px 8px; border: 1px solid rgba(111, 90, 56, 0.6); border-radius: 6px; background: rgba(10, 12, 16, 0.35); }
 .cn-way b { color: var(--gold, #e0b862); }
 .cn-way p { margin: 4px 0 6px; line-height: 1.35; overflow-wrap: anywhere; }
+/* the campaign's prologue and epilogue (owner, 2026-10-19): a page of the book — its mark, three paragraphs in the serif */
+.cn-lore { display: flex; flex-direction: column; gap: 8px; max-width: 62ch; margin: 0 auto; }
+.cn-lore p { margin: 0; font: 500 15px/1.45 var(--serif); color: var(--bone, #e6dccb); overflow-wrap: anywhere; }
+.cn-lore .cn-lore-k { font: 600 11px/1 var(--sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold, #e0b862); }
+.cn-lore-sheet .k-sheet-foot { display: flex; justify-content: center; }
+@media (max-height: 520px) { .cn-lore { gap: 5px; } .cn-lore p { font-size: 13px; line-height: 1.35; } }
 .campaign-book { display: flex; flex-direction: column; gap: 6px; }
 .cb-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
 .cb-head .cm-bar { height: 6px; }

@@ -44,6 +44,42 @@ function flush(h: CampaignNewsHooks): void {
   }
 }
 
+/** The first quest of the story, after the opening (shared/src/data/campaign/build.ts OPENING_SLOTS: the shops, a ship sunk,
+ *  a ship boarded, a neutral stack, a town founded). */
+export const STORY_FROM = 5;
+
+/** The story's prologue (the campaign's lore: the Gravetide, the Widow, Saltmarrow's bell) before its first quest, and its
+ *  epilogue at the end (owner, 2026-10-19: «основная кампания начинается с каким-то лором и крутым финалом»): a card of
+ *  its own, once, after any fight — a window she reads and closes, never a toast. */
+const LORE_KEY = 'gravetide.lore.';
+let loreWait: ReturnType<typeof setInterval> | null = null;
+export function campaignLore(kind: 'prologue' | 'epilogue', busy: boolean | (() => boolean)): void {
+  try {
+    if (localStorage.getItem(LORE_KEY + kind)) return;
+  } catch { /* no storage: shown */ }
+  const isBusy = typeof busy === 'function' ? busy : () => busy;
+  const show = () => {
+    try { localStorage.setItem(LORE_KEY + kind, '1'); } catch { /* no storage */ }
+    loreCard(kind);
+  };
+  if (!isBusy()) return show();
+  if (loreWait) clearInterval(loreWait);
+  loreWait = setInterval(() => {
+    if (isBusy()) return;
+    clearInterval(loreWait!);
+    loreWait = null;
+    show();
+  }, 1500);
+}
+
+/** The lore's card: its mark («Пролог»), its title, three paragraphs and one button. */
+export function loreCard(kind: 'prologue' | 'epilogue'): void {
+  const k = (x: string) => L(`lore.${kind}.${x}` as keyof typeof EN);
+  const body = `<div class="cn-lore"><p class="cn-lore-k">${esc(k('k'))}</p>${['1', '2', '3'].map((n) => `<p>${esc(k(n))}</p>`).join('')}</div>`;
+  const sheet = openSheet({ title: k('t'), body, height: 'auto', cls: 'cn-sheet cn-lore-sheet', foot: `<button type="button" class="k-btn k-btn--primary k-btn--md" data-lore-go>${esc(k('go'))}</button>` });
+  sheet.panel.querySelector<HTMLElement>('[data-lore-go]')?.addEventListener('click', () => sheet.close('button'));
+}
+
 /** Waiting words (for the tests). */
 export const newsWaiting = (): number => queue.length;
 

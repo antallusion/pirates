@@ -13,11 +13,44 @@ export interface PointerFacts {
   helmsman?: boolean;
   /** «Атаковать» under way, and how: closing for the grapples, or holding off at gun range. */
   pursuit?: 'board' | 'guns' | null;
+  /** The campaign's opening (owner, 2026-10-19), its shop of trade: the good of this market to point at. */
+  tradeGood?: string | null;
+}
+
+/** The harbour's way out to sea, the First Watch's own (the gold «В море» of the port window, the HUD's round one). */
+const TO_SEA = ['#modal-panel [data-ptab="sea"]', '#tc-cast', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'];
+/** Into the port window from the HUD in port, or into a harbour from the sea. */
+const TO_PORT = ['#tc-act[data-act="harbour"]', '.act-btn.act-harbour', '#tc-act[data-act="dock"]', '#tc-act[data-act="homeport"]', '.act-btn.act-dock', '.act-btn.act-homeport'];
+
+/** The campaign's opening (owner, 2026-10-19: «обучение по покупкам разным в магазинам, дальше атака корабля, дальше
+ *  абордаж, дальше нападение на нейтралов, и дальше к ближайшему острову основать свой город»): the finger through
+ *  each step — the shop's tab and its row, «В море», «Атаковать», «На абордаж», the stack's «Атаковать», «Занять». */
+function openingTargets(f: PointerFacts, op: string): string[] {
+  if (op.startsWith('buy:')) {
+    if (!f.docked) return TO_PORT;
+    const shop = op.slice(4);
+    if (shop === 'arms') return ['#modal-panel [data-act="crew"][data-prof="sailor"][data-n="1"]:not([disabled])', '#modal-panel [data-act="hire_short"]', '#modal-panel [data-act="gun"]:not([disabled])', '#modal-panel [data-ptab="tavern"]', ...TO_PORT];
+    const good = shop === 'trade' ? f.tradeGood : shop;
+    return [...(good ? [`#modal-panel .mk-row[data-good="${good}"] [data-act="buy"]:not([disabled])`] : []), '#modal-panel [data-ptab="market"]', ...TO_PORT];
+  }
+  if (f.docked) return TO_SEA;
+  switch (op) {
+    case 'sink':
+      return ['#tc-act[data-act="attack"]', '.act-btn.act-attack', ...(f.touch && f.pursuit ? ['#tc-fire'] : [])];
+    case 'board':
+      return pointerTargets({ ...f, stage: 'board' });
+    case 'neutral':
+      return ['#tc-act[data-act="roam"]', '.act-btn.act-roam'];
+    case 'found':
+      return ['#modal-panel [data-est="claim"]', '.confirm-panel [data-yes]', '#tc-act[data-act="claim"]', '.act-btn.act-claim'];
+  }
+  return [];
 }
 
 /** The buttons a step's finger may point at, in order of preference (the first one shown wins). */
 export function pointerTargets(f: PointerFacts): string[] {
   if (!f.stage || f.battle) return [];
+  if (f.stage.startsWith('c:')) return openingTargets(f, f.stage.slice(2));
   switch (f.stage) {
     case 'sail':
       // In port: the harbour's gold «В море» on its rail (docs/23 phase 6; the old «Поднять паруса» is gone — the finger
