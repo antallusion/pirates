@@ -148,6 +148,10 @@ body.simple #hud #touch > #tc-news { --tr-x: 1; }
 body.simple #hud #touch > #tc-home { display: block; position: absolute; left: auto; bottom: auto; top: calc(var(--tr-top) + var(--tr-b) + var(--tr-g));
   right: calc(var(--sa-r) + 8px + (var(--mm) - var(--tr-b)) / 2); width: var(--tr-b); height: var(--tr-b); min-width: 0; min-height: 0; pointer-events: auto; }
 body.simple #hud #touch > #tc-home.hidden { display: none; }
+/* (owner, 2026-10-19: «Иконка "к кораблю" не отцентрована по вертикали»): by its box it was centred, and it sat 1.6–2 px
+   low in the ring — the ring's painted hole stands 2 % of its art above the art's middle, and the ship's own weight is in
+   her hull, below the bow's thin point. Lifted onto the hole's middle by her ink (tools/mobile/ux/align.mjs RING). */
+body.simple #hud #touch > #tc-home .k-btn-ico { top: 17.5%; bottom: 26.5%; left: 22%; right: 22%; inset: 17.5% 22% 26.5%; }
 /* (a fight on a touch screen with the chart brought back by her tap — the menu in the row, the fight's buttons below —
    it waits: a pinch brings the view in; with the chart up behind its tab it stands under the row, as ever) */
 body.simple.touch.sea-fight:not(.mm-peek) #hud #touch > #tc-home { display: none; }
