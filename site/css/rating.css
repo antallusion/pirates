@@ -1,0 +1,81 @@
+/* The captains' rating (/site/rating/): the site's dark wood and brass; the portraits, plates and frames are the game's. */
+.rt { padding-top: 24px; }
+.rt-tabs { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
+.rt-find { display: flex; gap: 12px; justify-content: center; align-items: center; margin: 0 auto 26px; max-width: 560px; }
+.rt-find .search { flex: 1; width: auto; }
+
+/* ---- a captain found by name */
+.rt-found { max-width: 760px; margin: 0 auto 28px; }
+.rt-msg { text-align: center; color: var(--muted); margin: 0; }
+.rt-card { position: relative; display: grid; grid-template-columns: auto 1fr; gap: 6px 22px; align-items: center; padding: 22px 26px; border-color: rgba(245, 196, 81, 0.25); }
+.rt-card h3 { font-size: clamp(24px, 3vw, 32px); color: var(--gold1); }
+.rt-card .kicker { margin-bottom: 6px; }
+.rt-card .muted { margin: 6px 0 0; font-size: 14px; }
+.rt-card .rt-plate { margin-top: 8px; }
+.rt-x { position: absolute; top: 10px; right: 12px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line2); background: none; color: var(--text); font-size: 22px; line-height: 1; cursor: pointer; }
+.rt-x:hover { color: var(--gold1); border-color: rgba(245, 196, 81, 0.4); }
+.rt-places { grid-column: 1 / -1; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.rt-places ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.rt-places button { width: 100%; display: grid; gap: 2px; padding: 10px 8px; border-radius: 12px; background: rgba(14, 19, 32, 0.85); border: 1px solid var(--line); color: var(--text); font: 400 12px/1.3 var(--sans); cursor: pointer; text-align: center; }
+.rt-places button:hover { border-color: rgba(245, 196, 81, 0.4); }
+.rt-places b { font: 700 20px/1.1 var(--display); color: #f2e6c8; font-variant-numeric: lining-nums tabular-nums; }
+
+/* ---- the board */
+.rt-board { max-width: 980px; margin: 0 auto; padding: 8px 0; overflow: hidden; }
+.rt-board[aria-busy='true'] .rt-list { opacity: 0.45; transition: opacity 0.2s; }
+.rt-head { display: grid; grid-template-columns: 56px 1fr auto; gap: 14px; padding: 12px 22px; font: 600 11px/1.3 var(--sans); letter-spacing: 0.2em; text-transform: uppercase; color: var(--ice); border-bottom: 1px solid var(--line); }
+.rt-head span:last-child { text-align: right; }
+.rt-list { list-style: none; margin: 0; padding: 0; }
+.rt-row { display: grid; grid-template-columns: 56px auto minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 10px 22px; border-bottom: 1px solid var(--line); }
+.rt-row:last-child { border-bottom: 0; }
+.rt-row:nth-child(even) { background: rgba(255, 255, 255, 0.015); }
+.rt-rank { display: grid; place-items: center; width: 42px; height: 42px; margin: 0 auto; font: 700 18px/1 var(--sans); color: #cfc8b8; font-variant-numeric: lining-nums tabular-nums; }
+.rt-row.top .rt-rank { padding: 0 0 1px 1px; background: url(/site/img/ui/coin_iron.webp) center / contain no-repeat; color: #e6dcc6; text-shadow: 0 1px 2px #000; }
+.rt-row.top1 .rt-rank { background-image: url(/site/img/ui/coin_hot.webp); color: #2a1a06; text-shadow: 0 1px 0 rgba(255, 235, 190, 0.65); }
+.rt-row.top2 .rt-rank { background-image: url(/site/img/ui/coin.webp); color: #2a1a06; text-shadow: 0 1px 0 rgba(255, 235, 190, 0.65); }
+.rt-row.top1 { background: linear-gradient(90deg, rgba(245, 196, 81, 0.1), transparent 70%); }
+.rt-who { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+.rt-name { max-width: 100%; font: 700 20px/1.15 var(--display); color: var(--gold1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-tag { font: 600 12px var(--sans); letter-spacing: 0.06em; color: var(--ice); }
+.rt-cap { font-size: 13px; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-val { display: grid; justify-items: end; text-align: right; }
+.rt-val b { font: 700 26px/1 var(--display); color: #f2e6c8; font-variant-numeric: lining-nums tabular-nums; }
+.rt-val i { font-style: normal; font-size: 12px; color: var(--muted); white-space: nowrap; margin-top: 3px; }
+.rt-empty { text-align: center; padding: 40px 20px; margin: 0; }
+.rt-at { text-align: center; font-size: 13px; margin: 14px 0 0; }
+
+/* ---- the portrait in its frame (the frame wider than the face by --k, as the game draws it) */
+.rt-av { position: relative; display: inline-block; width: var(--av); height: var(--av); flex: none; }
+.rt-face { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 50%; background: #0a0e18; box-shadow: 0 0 0 2px rgba(245, 196, 81, 0.35), 0 4px 10px rgba(0, 0, 0, 0.6); }
+.rt-av.framed .rt-face { box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6); }
+.rt-ring { position: absolute; left: 50%; top: 50%; width: calc(var(--av) * var(--k, 1.4)); height: calc(var(--av) * var(--k, 1.4)); max-width: none; transform: translate(-50%, -50%); object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6)); }
+.rt-row .rt-av { margin: 0 8px; }
+
+/* ---- the title on its plate */
+.rt-plate { display: inline-flex; align-items: center; justify-content: center; height: 26px; min-width: 120px; max-width: 100%; background: center / 100% 100% no-repeat; font: 700 13px/1 var(--display); letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 2px var(--halo), 0 0 2px var(--halo), 0 1px 1px var(--halo); }
+
+/* ---- guilds */
+.rt-gtag { display: grid; place-items: center; min-width: 64px; height: 40px; padding: 0 8px; margin: 0 4px; border-radius: 10px; font: 700 15px/1 var(--sans); letter-spacing: 0.08em; color: #2a1a06; background: var(--gold); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5); }
+
+@media (max-width: 700px) {
+  .rt-tabs { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; margin: 0 -14px 16px; padding: 2px 14px 6px; scrollbar-width: none; scroll-snap-type: x proximity; }
+  .rt-tabs::-webkit-scrollbar { display: none; }
+  .rt-tabs .chip { flex: none; scroll-snap-align: start; padding: 8px 14px; }
+  .rt-find { gap: 8px; }
+  .rt-find .btn-gold.sm { padding: 0 14px; }
+  .rt-head { grid-template-columns: 34px 1fr auto; padding: 10px 12px; gap: 10px; }
+  .rt-row { grid-template-columns: 34px auto minmax(0, 1fr) auto; gap: 10px; padding: 9px 12px; }
+  .rt-rank { width: 34px; height: 34px; font-size: 15px; }
+  .rt-row .rt-av { --av: 40px !important; margin: 0 4px; }
+  .rt-name { font-size: 17px; }
+  .rt-plate { height: 22px; min-width: 96px; font-size: 11px; }
+  .rt-val b { font-size: 21px; }
+  .rt-cap { font-size: 12px; }
+  .rt-card { grid-template-columns: auto 1fr; padding: 18px 16px; gap: 6px 14px; }
+  .rt-card .rt-av { --av: 64px !important; }
+  .rt-places ul { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rt-gtag { min-width: 50px; height: 34px; font-size: 13px; }
+}
+@media (max-width: 400px) {
+  .rt-row .rt-cap { display: none; }
+}

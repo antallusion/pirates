@@ -373,3 +373,13 @@ img[src*="/site/img/ico/"], img[src*="/site/img/rank/"], img[src*="/site/img/med
 .abil-tx { min-width: 0; }
 .passive .abil-ico { width: 48px; height: 48px; }
 .passive > img { display: none; }
+
+/* ---- the footer's legal line (the shop's terms and refunds) */
+.ftr nav.ftr-legal a { color: var(--muted); font-size: 13px; }
+.ftr nav.ftr-legal a:hover { color: var(--ice); }
+/* seven links in the pill (the rating and the shop joined, 2026-10-20): tighter before the phone menu takes over */
+@media (max-width: 1240px) and (min-width: 901px) {
+  .hdr-pill { gap: 10px; }
+  .hdr-nav a { padding: 9px 10px; gap: 6px; font-size: 14px; }
+  .hdr-nav a img { width: 18px; height: 18px; }
+}
