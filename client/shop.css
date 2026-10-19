@@ -98,17 +98,19 @@
 .cs-dbl .cs-coin, .uf-dbl .cs-coin { width: 14px; height: 14px; object-fit: contain; margin: 0; }
 .cs-dbl i, .uf-dbl i { font-style: normal; margin-left: 1px; padding: 0 3px; border-radius: 6px; background: var(--gold); color: #1a1208; font: 800 10px/12px var(--sans); }
 .uf-dbl { margin-left: 6px; height: 18px; }
-/* glory on the plate, always (owner, 2026-10-19: «Слава всегда должна быть под аватаркой»): the star and the rank,
-   beside the doubloons — a nought before the cap, a glow when a boon or a point waits; a tap opens the Throne */
-.cs-glory { display: inline-flex; align-items: center; justify-content: center; gap: 2px; height: 20px; margin: 1px 0 0; padding: 0 6px 0 4px; border: 1px solid rgba(224, 184, 98, 0.55);
-  border-radius: 10px; background: rgba(28, 22, 12, 0.85); color: var(--gold); font: 700 11px/1 var(--sans); font-variant-numeric: tabular-nums; cursor: pointer; pointer-events: auto; touch-action: manipulation; }
-.cs-glory .gl-star { width: 13px; height: 13px; flex: none; }
+/* glory under the avatar, always (owner, 2026-10-19: «Слава всегда должна быть под аватаркой»): the star and the rank on
+   the ring's lower right, the level's badge's twin on its left — a nought before the cap, a glow when a boon or a point
+   waits; a tap opens the Throne. Inside the ring's box: the plate keeps its width and the left row its place */
+.cs-glory { position: absolute; right: calc(var(--cs-face) * -0.34); bottom: calc(var(--cs-face) * -0.3); z-index: 2; display: inline-flex; align-items: center; justify-content: center; gap: 1px;
+  min-width: 22px; height: 22px; margin: 0; padding: 0 5px 0 3px; box-sizing: border-box; border: 1px solid rgba(224, 184, 98, 0.75); border-radius: var(--k-r-round, 11px);
+  background: radial-gradient(circle at 40% 30%, #3a2c16, #120e0a 75%); box-shadow: 0 1px 3px #000; color: var(--gold); font: 700 11px/1 var(--sans); font-variant-numeric: tabular-nums; cursor: pointer; pointer-events: auto; touch-action: manipulation; }
+.cs-glory .gl-star { width: 11px; height: 11px; flex: none; }
 .cs-glory i { font-style: normal; font-weight: 700; } /* (an i, not a b: the windows' sizes of b and span pass it over, fit.css) */
-.cs-glory.locked { color: var(--bone, #e6dccb); border-color: rgba(176, 141, 87, 0.45); }
-.cs-glory.locked .gl-star { color: var(--gold); opacity: 0.8; }
-.cs-glory.wait { border-color: var(--gold); box-shadow: 0 0 8px rgba(224, 184, 98, 0.55); }
-:where(body.touch) .cs-glory { position: relative; }
-:where(body.touch) .cs-glory::after { content: ''; position: absolute; inset: -8px -3px; }
+.cs-glory.locked { color: var(--bone, #e6dccb); }
+.cs-glory.locked .gl-star { color: var(--gold); opacity: 0.85; }
+.cs-glory.wait { border-color: var(--gold); box-shadow: 0 0 8px rgba(224, 184, 98, 0.65); }
+:where(body.touch) .cs-glory::after { content: ''; position: absolute; inset: -6px; }
+@media (max-height: 420px) { .cs-glory { height: 20px; min-width: 20px; font-size: 10px; } .cs-glory .gl-star { width: 10px; height: 10px; } }
 .uf-glory { display: inline-flex; align-items: center; gap: 2px; }
 .uf-glory .gl-star { width: 10px; height: 10px; flex: none; }
 .uf-glory i { font: 700 9px/1 var(--sans); font-style: normal; }
