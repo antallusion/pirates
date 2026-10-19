@@ -341,3 +341,24 @@ test('the field draws every ability by hand, each its own look, cheaply (a few h
     assert.ok(calls - c0 > 3 && calls - c0 < 200, `${k} shot`);
   }
 });
+
+// Owner, 2026-10-19: every ability has its own painted icon (tools/art/skills_pack.py, the three ChatGPT sheets), in the
+// manifest and baked, the nearest of the game's other icons kept behind it; and the action buttons' «Атаковать» and
+// «Осмотреть» from the same sheets.
+test('every ability has its own painted icon in the manifest, baked, with a stand-in behind it', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const root = path.resolve(import.meta.dirname, '..');
+  const m = JSON.parse(fs.readFileSync(path.join(root, 'assets', 'manifest.json'), 'utf8')) as { assets: Record<string, { local: string; job?: string }> };
+  for (const id of [...SKILL_IDS.map((s) => SKILLS[s].art), 'icon.act_attack', 'icon.act_inspect']) {
+    const e = m.assets[id];
+    assert.ok(e, `${id}: in the manifest`);
+    assert.equal(e.job, 'gpt-skills_pack', id);
+    assert.ok(fs.statSync(path.join(root, 'assets', e.local)).size > 2000, `${id}: baked`);
+  }
+  for (const s of SKILL_IDS) {
+    assert.equal(SKILLS[s].art, `icon.sk_${s}`);
+    assert.ok(m.assets[SKILLS[s].icon], `${s}: its stand-in ${SKILLS[s].icon}`);
+  }
+  assert.equal(new Set(SKILL_IDS.map((s) => SKILLS[s].art)).size, SKILL_IDS.length, 'one icon each');
+});

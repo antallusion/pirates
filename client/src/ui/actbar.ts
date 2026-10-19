@@ -105,7 +105,7 @@ export function buildActs(f: ActFacts): Act[] {
   // «Атаковать» (docs/23 item 33): one tap and the ship does the rest; under way, the other way to fight her and the
   // helm back.
   const at = f.attack;
-  if (at && !at.pursuing) out.push({ id: 'attack', icon: 'ab_mark_target', label: LS('a.attack'), sub: at.name, title: LS('a.attackTitle', { name: at.name }) });
+  if (at && !at.pursuing) out.push({ id: 'attack', icon: 'act_attack', label: LS('a.attack'), sub: at.name, title: LS('a.attackTitle', { name: at.name }) });
   if (at && at.pursuing) {
     if (!at.gunsOnly) {
       out.push(at.mode === 'board'
@@ -149,7 +149,9 @@ export function buildActs(f: ActFacts): Act[] {
   return out;
 }
 
-/** docs/19 D7: a stack's buttons — «Атаковать» (one action, like «На абордаж»: from afar the helmsman sails her in, a
+/** Owner, 2026-10-19 (the old ones were barely seen): «Атаковать» wears the crossed cutlasses and «Осмотреть» the
+ *  spyglass of his own sheet (icons/act_attack, act_inspect: tools/art/skills_pack.py), the sea's attack too.
+ *  docs/19 D7: a stack's buttons — «Атаковать» (one action, like «На абордаж»: from afar the helmsman sails her in, a
  *  cable off the boats go and the hex battle opens; «Отставить» while he sails), «Принять» at HoMM3's offer, «Осмотреть». */
 function roamActs(f: ActFacts): Act[] {
   const out: Act[] = [];
@@ -157,10 +159,10 @@ function roamActs(f: ActFacts): Act[] {
   if (!rm) return out;
   if (!rm.fight && !rm.back) {
     if (rm.running) out.push({ id: 'attack_stop', icon: 'item_ship_wheel', label: LS('a.stop'), sub: rm.name, title: LS('a.stopTitle') });
-    else out.push({ id: 'roam', icon: 'prof_marine', label: LR('a.attack'), sub: `${rm.word} · ⚓${rm.lv}`, title: LR(rm.far ? 't.attackFar' : 't.attack', { what: rm.name, word: rm.word, lv: rm.lv }), key: 'land', arg: String(rm.id) });
+    else out.push({ id: 'roam', icon: 'act_attack', label: LR('a.attack'), sub: `${rm.word} · ⚓${rm.lv}`, title: LR(rm.far ? 't.attackFar' : 't.attack', { what: rm.name, word: rm.word, lv: rm.lv }), key: 'land', arg: String(rm.id) });
     if (rm.offer === 'join' && (rm.joinN ?? 0) > 0 && !rm.far) out.push({ id: 'roam_join', icon: 'stat_crew', label: LR('a.join'), sub: `×${rm.joinN}`, title: LR('t.join', { n: rm.joinN ?? 0 }), arg: String(rm.id) });
   }
-  out.push({ id: 'roam_look', icon: rm.icon, label: LR('a.look'), sub: rm.name, title: LR('t.look'), arg: String(rm.id) });
+  out.push({ id: 'roam_look', icon: 'act_inspect', label: LR('a.look'), sub: rm.name, title: LR('t.look'), arg: String(rm.id) });
   return out;
 }
 

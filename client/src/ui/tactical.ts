@@ -85,7 +85,8 @@ const SL = dict(SKEN, SKRU); // owner, 2026-10-18: the creatures' abilities
 /** An ability's name and its line with its numbers. */
 export const skName = (id: SkillId): string => SL(`n.${id}` as keyof typeof SKEN);
 export const skText = (id: SkillId): string => SL(`d.${id}` as keyof typeof SKEN, skillVars(id));
-const skIcon = (id: SkillId, cls = 'ico'): string => icon(SKILLS[id].icon, '', cls);
+/** An ability's own painted icon (icon.sk_<id>); the nearest of the game's icons only while that is not in. */
+const skIcon = (id: SkillId, cls = 'ico'): string => icon(SKILLS[id].art, '', cls) || icon(SKILLS[id].icon, '', cls);
 const CL = dict(CEN, CRU); // docs/19 E5: the siege's words
 const LL = dict(LEN, LRU);
 const DL = dict(DEN, DRU);
@@ -370,6 +371,8 @@ export function tacArt(v: TacView): string[] {
     for (const fig of si ? [own, `unit.${si.u}`] : [own]) for (const pose of ['', '_atk', '_b', '_hit']) ids.push(fig + pose);
     if (s.officer?.unique) ids.push(`portrait.officer_${s.officer.unique}`);
     if (s.unit) ids.push(unitArt(s.unit));
+    // (its ability's icon: on the button, the book's card and the stack's card — loaded with the battle, not before)
+    if (s.skill) ids.push(SKILLS[s.skill.id].art);
   }
   const land = v.land?.type ?? '';
   for (const c of new Set(v.cells)) {

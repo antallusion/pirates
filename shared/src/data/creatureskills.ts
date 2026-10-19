@@ -70,11 +70,13 @@ export interface SkillDef {
   n?: number;
   /** Its worth in the sea's reckoning of an army (×1+worth on the kind's might and its silver). */
   worth: number;
-  /** The painted icon on its button (from what is in assets/icons). */
+  /** Its own painted icon (owner, 2026-10-19: the ChatGPT sheets, tools/art/skills_pack.py): `icon.sk_<id>`. */
+  art: string;
+  /** The nearest of the game's other icons: stands in only while `art` is not in the manifest. */
   icon: string;
 }
 
-const D = (id: SkillId, aim: SkillAim, worth: number, icon: string, o: Partial<SkillDef> = {}): SkillDef => ({ id, aim, worth, icon: `icon.${icon}`, ...o });
+const D = (id: SkillId, aim: SkillAim, worth: number, icon: string, o: Partial<SkillDef> = {}): SkillDef => ({ id, aim, worth, art: `icon.sk_${id}`, icon: `icon.${icon}`, ...o });
 
 /** Every kind of ability: what it is pointed at and its numbers. */
 export const SKILLS: Record<SkillId, SkillDef> = {

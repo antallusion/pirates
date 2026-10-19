@@ -32,8 +32,9 @@ export const FIND_SLOW: Record<FindKind, number> = { bottle: 3, flyfish: 99, cal
 /** Seconds of the work (the chest's is the fight). */
 export const FIND_WORK: Record<FindKind, number> = { bottle: 2, flyfish: 0, calm: 6, gulls: 0, boat: 3, chest: 0 };
 /** The icon of each on the bar, the toast and the minimap. */
+// (gulls: «Отметить косяк» — the spyglass of the action buttons, owner 2026-10-19: the gull's figure was barely seen)
 export const FIND_ICON: Record<FindKind, string> = {
-  bottle: 'tattoo_bottle', flyfish: 'good_fish', calm: 'weather_fog', gulls: 'creature.gull', boat: 'talent_srv_lifeboats', chest: 'tattoo_shark_tooth',
+  bottle: 'tattoo_bottle', flyfish: 'good_fish', calm: 'weather_fog', gulls: 'act_inspect', boat: 'talent_srv_lifeboats', chest: 'tattoo_shark_tooth',
 };
 
 /** The bottle: a hint (an island near put on her chart, or a hidden one shown) most of the time; now and then a piece
