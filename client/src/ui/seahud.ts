@@ -505,11 +505,41 @@ export class SeaHud {
       }
       // the gold one at the thumb's end of the row, the small ones beside it leftward and on up (seahud.css: the row runs
       // right to left and wraps upward), every one of them
-      for (const b of [...this.actRowEl.querySelectorAll('.tc-act2')]) b.remove();
+      // (each kept in place while it stays — its words and picture changed on it — a new one added, a gone one taken out:
+      // 2026-10-19, a far find's «≈ 600 м» under its button changed as she sailed and the whole row was laid anew each
+      // time — a finger's press on «Ремонт» landed on a button already taken out, and nothing happened)
+      const olds = [...this.actRowEl.querySelectorAll<HTMLElement>('.tc-act2')];
+      const keep = new Map<string, HTMLElement>();
+      for (const b of olds) keep.set(`${b.dataset.act}|${b.dataset.acti}`, b);
+      const used = new Set<HTMLElement>();
+      let pos = 1; // (after the gold one)
       for (const x of a?.extra ?? []) {
         const words = x.sub ? `${x.label}: ${x.sub}` : x.label;
-        this.actRowEl.insertAdjacentHTML('beforeend', `<button type="button" class="${actBtnClass(false)}${was.has(x.id) ? '' : ' tc-pop'}" data-acti="${x.i}" data-act="${esc(x.id)}" aria-label="${esc(words)}" title="${esc(words)}" data-hint="${esc(words)}"><span class="tc-act-ico">${icon(x.icon, '•', 'k-btn-ico')}</span><span class="k-btn-l">${esc(x.label)}</span></button>`);
+        const pic = icon(x.icon, '•', 'k-btn-ico');
+        let b = keep.get(`${x.id}|${x.i}`) ?? null;
+        if (!b) {
+          const t = document.createElement('template');
+          t.innerHTML = `<button type="button" class="${actBtnClass(false)}${was.has(x.id) ? '' : ' tc-pop'}" data-acti="${x.i}" data-act="${esc(x.id)}"><span class="tc-act-ico"></span><span class="k-btn-l"></span></button>`;
+          b = t.content.firstElementChild as HTMLElement;
+        }
+        // (in the list's order; a button already in its place is not moved)
+        const here = this.actRowEl.children[pos] ?? null;
+        if (here !== b) this.actRowEl.insertBefore(b, here);
+        pos++;
+        used.add(b);
+        if (b.dataset.pic !== pic) {
+          b.dataset.pic = pic;
+          b.querySelector('.tc-act-ico')!.innerHTML = pic;
+        }
+        const l = b.querySelector('.k-btn-l')!;
+        if (l.textContent !== x.label) l.textContent = x.label;
+        if (b.getAttribute('aria-label') !== words) {
+          b.setAttribute('aria-label', words);
+          b.title = words;
+          b.dataset.hint = words;
+        }
       }
+      for (const b of olds) if (!used.has(b)) b.remove();
       if (a && !was.has(a.id)) {
         this.actEl.classList.remove('tc-pop');
         void this.actEl.offsetWidth; // (the animation again for a new gold button)

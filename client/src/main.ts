@@ -2342,13 +2342,20 @@ hud.onMiniMark = (x, y) => {
 };
 // The action bar (owner, 2026-10-02): a button does what its key does, every one in sight (2026-10-18). A press never
 // takes the focus (Space and Enter stay the ship's).
+// (2026-10-19: the bar is laid anew when what is at hand changes — a far find's «≈ 600 м» as she sails — and a press whose
+// button was laid anew under it between down and up lost its click: the button pressed is kept from the press)
+let promptDown: { id: string; at: number } | null = null;
 $('hud-prompt').addEventListener('mousedown', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLElement>('[data-act]');
   if ((e.target as HTMLElement).closest('button')) e.preventDefault();
+  promptDown = b ? { id: curActs[Number(b.dataset.act)]?.id ?? '', at: performance.now() } : null;
 });
 $('hud-prompt').addEventListener('click', (e) => {
   const el = e.target as HTMLElement;
   const b = el.closest<HTMLElement>('[data-act]');
-  const a = b ? curActs[Number(b.dataset.act)] : undefined;
+  const down = promptDown;
+  promptDown = null;
+  const a = b ? curActs[Number(b.dataset.act)] : down && performance.now() - down.at < 800 ? curActs.find((x) => x.id === down.id) : undefined;
   if (a) runAct(a);
 });
 // Screens redraw themselves (a tab click, a trade): on touch their keyboard hints come off every time.
