@@ -37,7 +37,11 @@ export function extract(root = 'server/src'): string[] {
   const files: string[] = [];
   const walk = (d: string) => {
     for (const f of readdirSync(d, { withFileTypes: true })) {
-      if (f.isDirectory()) walk(join(d, f.name));
+      // (server/src/pay: the payment provider's protocol and the test checkout's page, which speaks both languages
+      // itself — never a sentence of the game's toasts)
+      if (f.isDirectory()) {
+        if (f.name !== 'pay') walk(join(d, f.name));
+      }
       // The admin console speaks the tester's language too (the owner plays with it). The owner's own web pages
       // (http/telemetry.ts, http/ops.ts: Russian only, never shown to a player) are not the game's sentences.
       else if (f.name.endsWith('.ts') && !(d.endsWith('http') && OWNER_PAGES.has(f.name))) files.push(join(d, f.name));

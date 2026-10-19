@@ -18,7 +18,7 @@ export const CAPTAIN_KIND = 'doubloons_captain';
 
 /** Whether her account may take this captain: a free one always, a premium one once bought (or granted). */
 export function ownsCaptain(game: Game, accountId: number, id: CaptainId): boolean {
-  if (!CAPTAINS[id]) return false;
+  if (!Object.hasOwn(CAPTAINS, id)) return false;
   if (!CAPTAINS[id].premium) return true;
   return game.db.doubloonRef(accountId, CAPTAIN_KIND, id);
 }
@@ -41,13 +41,18 @@ export function sendCaptainShop(game: Game, s: PlayerSession, o: { bought?: Capt
 
 /** A premium captain bought for doubloons (null: done; else why not — every check before a coin moves). */
 export function buyCaptain(game: Game, s: PlayerSession, id: CaptainId): string | null {
-  if (!CAPTAINS[id]) return 'Unknown captain';
+  return buyCaptainFor(game, s.accountId, id);
+}
+
+/** The same purchase by the account alone (the website's shop delivers it so, aboard or not: server/src/game/webshop.ts). */
+export function buyCaptainFor(game: Game, accountId: number, id: CaptainId): string | null {
+  if (!Object.hasOwn(CAPTAINS, id)) return 'Unknown captain';
   if (!CAPTAINS[id].premium) return 'That captain is free to choose';
-  if (ownsCaptain(game, s.accountId, id)) return 'That captain is yours already';
+  if (ownsCaptain(game, accountId, id)) return 'That captain is yours already';
   const price = captainPrice(id);
-  if (game.db.doubloons(s.accountId) < price) return 'Not enough doubloons: top up your account first.';
-  if (move(game, s.accountId, -price, CAPTAIN_KIND, id) === null) return 'Not enough doubloons: top up your account first.';
-  trackEvent(game, s.accountId, 'buy', { amount: price, product: `captain:${id}` }); // docs/34: the funnel's purchases
+  if (game.db.doubloons(accountId) < price) return 'Not enough doubloons: top up your account first.';
+  if (move(game, accountId, -price, CAPTAIN_KIND, id) === null) return 'Not enough doubloons: top up your account first.';
+  trackEvent(game, accountId, 'buy', { amount: price, product: `captain:${id}` }); // docs/34: the funnel's purchases
   return null;
 }
 

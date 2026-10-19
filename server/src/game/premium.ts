@@ -106,7 +106,7 @@ export function sendBalance(game: Game, s: PlayerSession): void {
  *  `ref`: a whole number up to CREDIT_MAX, the balance and its ledger row in one transaction, the captain told if she
  *  is aboard. A payment already credited is not credited again (its balance is answered). Null: refused — no such
  *  account, or a bad amount. */
-export function creditPremium(game: Game, accountId: number, amount: number, source: PremiumSource, ref: string): number | null {
+export function creditPremium(game: Game, accountId: number, amount: number, source: PremiumSource, ref: string, quiet = false): number | null {
   const n = Math.floor(Number(amount));
   if (!(n > 0) || n > CREDIT_MAX || !game.db.accountById(accountId)) return null;
   const kind = `doubloons_${source}`;
@@ -118,8 +118,21 @@ export function creditPremium(game: Game, accountId: number, amount: number, sou
   const s = game.sessionByAccount(accountId);
   if (bal !== null && s && source !== 'sub') {
     sendBalance(game, s);
-    game.sendTo(s, { t: 'toast', msg: `Doubloons credited to your account: ${n}.`, kind: 'gold' });
+    if (!quiet) game.sendTo(s, { t: 'toast', msg: `Doubloons credited to your account: ${n}.`, kind: 'gold' });
   }
+  return bal;
+}
+
+/** A payment of real money in (the Telegram bot's Stars, the website's shop): its doubloons credited once by its
+ *  reference (`tg:<charge>`, `web:<order>`) — a `doubloons_pay` row, the first top-up's double — the revenue in the
+ *  live ops' funnel (`rub`: the roubles paid; a doubloon ≈ 1 ₽) and her shop's window brought up to date if she is
+ *  aboard. `quiet`: no toast of its own (the caller says it in its words). The balance, or null: refused. */
+export function payIn(game: Game, accountId: number, n: number, rub: number, product: string, ref: string, quiet = false): number | null {
+  const bal = creditPremium(game, accountId, n, 'pay', ref, quiet);
+  if (bal === null) return null;
+  trackEvent(game, accountId, 'topup', { amount: rub, product });
+  const s = game.sessionByAccount(accountId);
+  if (s) sendPremium(game, s);
   return bal;
 }
 

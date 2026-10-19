@@ -386,6 +386,10 @@ export class PgDatabase implements Db {
     return [...out.values()];
   }
 
+  allCaptains(): { account_id: number; name: string; data: string }[] {
+    return [...this.captains.values()].map((c) => ({ account_id: c.account_id, name: this.accounts.get(c.account_id)?.name ?? '', data: c.data }));
+  }
+
   silverHoldings(): { account_id: number; gold: number; bank: number }[] {
     return [...this.captains.values()].map((c) => ({ account_id: c.account_id, gold: c.gold, bank: c.bank }));
   }

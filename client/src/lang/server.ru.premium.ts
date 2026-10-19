@@ -1,7 +1,11 @@
 // The server's lines of the premium shop (owner, 2026-10-03: doubloons, the hulls and creatures they buy, the tester's
 // console), English → Russian. A sum of doubloons is written «дубл.»: the server cannot decline it by the number.
 
+import { webPatterns } from '../../../shared/src/data/webshop.ts';
+
 export const SERVER_RU_PREMIUM: Record<string, string> = {
+  // A purchase from the website's shop delivered aboard (owner, 2026-10-20; server/src/game/webshop.ts).
+  ...Object.fromEntries(webPatterns()),
   'Doubloons credited to your account: {0}.': 'Зачислено дублонов на ваш счёт: {0}.',
   // The premium captains are bought (owner, 2026-10-19; server/src/game/captainshop.ts).
   'That captain is sold for doubloons': 'Этого капитана нужно сначала купить за дублоны',
