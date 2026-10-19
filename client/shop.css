@@ -103,7 +103,7 @@
 .cs-glory { display: inline-flex; align-items: center; justify-content: center; gap: 2px; height: 20px; margin: 1px 0 0; padding: 0 6px 0 4px; border: 1px solid rgba(224, 184, 98, 0.55);
   border-radius: 10px; background: rgba(28, 22, 12, 0.85); color: var(--gold); font: 700 11px/1 var(--sans); font-variant-numeric: tabular-nums; cursor: pointer; pointer-events: auto; touch-action: manipulation; }
 .cs-glory .gl-star { width: 13px; height: 13px; flex: none; }
-.cs-glory b { font-weight: 700; }
+.cs-glory i { font-style: normal; font-weight: 700; } /* (an i, not a b: the windows' sizes of b and span pass it over, fit.css) */
 .cs-glory.locked { color: var(--bone, #e6dccb); border-color: rgba(176, 141, 87, 0.45); }
 .cs-glory.locked .gl-star { color: var(--gold); opacity: 0.8; }
 .cs-glory.wait { border-color: var(--gold); box-shadow: 0 0 8px rgba(224, 184, 98, 0.55); }
@@ -111,7 +111,7 @@
 :where(body.touch) .cs-glory::after { content: ''; position: absolute; inset: -8px -3px; }
 .uf-glory { display: inline-flex; align-items: center; gap: 2px; }
 .uf-glory .gl-star { width: 10px; height: 10px; flex: none; }
-.uf-glory b { font-weight: inherit; }
+.uf-glory i { font: 700 9px/1 var(--sans); font-style: normal; }
 @media (max-height: 420px) { body.simple .cs-glory { height: 18px; } }
 #isle .is-sb.shop { border-color: rgba(224, 184, 98, 0.7); }
 

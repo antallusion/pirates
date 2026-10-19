@@ -318,7 +318,7 @@ export function gloryChip(g: GloryView | undefined, cls = 'uf-glory'): string {
   const rank = open ? g!.rank : 0;
   const wait = open && (g!.pending > 0 || g!.points - g!.spent > 0);
   const tip = open ? L('plateTip', { n: rank }) : L('plateLocked', { n: MAX_LEVEL });
-  return `<button type="button" class="${cls}${wait ? ' wait' : ''}${open ? '' : ' locked'}" data-throne title="${esc(tip)}" aria-label="${esc(tip)}">${GLORY_STAR}<b>${rank}</b></button>`;
+  return `<button type="button" class="${cls}${wait ? ' wait' : ''}${open ? '' : ' locked'}" data-throne title="${esc(tip)}" aria-label="${esc(tip)}">${GLORY_STAR}<i>${rank}</i></button>`;
 }
 /** Glory's star, drawn in the buttons' 24-unit box (gold, currentColor). */
 const GLORY_STAR = '<svg class="g-svg gl-star" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.6l2.85 6.05 6.6.8-4.88 4.55 1.28 6.55L12 17.3l-5.85 3.25 1.28-6.55L2.55 9.45l6.6-.8z" fill="currentColor"/></svg>';

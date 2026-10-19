@@ -14,7 +14,7 @@
 .po-t { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .po-n { font: 600 11px/1.12 var(--sans); overflow-wrap: anywhere; }
 .po-n small { color: var(--fog); font-weight: 500; }
-.po-l { display: flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 11px; }
+.po-l { display: flex; flex-wrap: wrap; align-items: center; gap: 1px 5px; white-space: nowrap; font-size: 11px; } /* (the price in real money and doubloons, the clock: a second line when the card is narrow — frames.mjs 2026-10-19) */
 .po-was { color: var(--steel-text); font-size: 10px; }
 .po-new { display: inline-flex; align-items: center; gap: 2px; color: var(--gold); font-weight: 700; font-variant-numeric: tabular-nums; }
 .po-new .ico-xs { width: 12px; height: 12px; margin: 0; object-fit: contain; }

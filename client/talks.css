@@ -69,5 +69,6 @@ body.touch #surrender .sur-two .sur-choice:nth-child(2) { grid-column: 3 / 5; }
   body.simple.touch #surrender .sur-two .sur-choice .choice-ico { width: 20px; height: 20px; margin: 0; flex: none; }
   body.simple.touch #surrender .sur-two .sur-choice > span { display: block; min-width: 0; }
   body.simple.touch #surrender .sur-two .sur-choice b { display: none; }
-  body.simple.touch #surrender .sur-two .sur-choice .sur-short { display: block; font-size: 11px; line-height: 1.1; white-space: normal; }
+  body.simple.touch #surrender .sur-two .sur-choice { padding-inline: 4px; }
+  body.simple.touch #surrender .sur-two .sur-choice .sur-short { display: block; font-size: 10.5px; line-height: 1.1; white-space: normal; overflow-wrap: anywhere; }
 }
