@@ -101,7 +101,7 @@ export const CAPTAINS: Record<CaptainId, CaptainDef> = {
     start: { ship: 'cutter', gun: 'long_9', crew: 18, gold: 1300, cargo: { provisions: 10, planks: 3, sailcloth: 3 } },
   },
   drowned: {
-    id: 'drowned', archetype: 'The Drowned Captain', name: 'Ilse Harrow', epithet: 'The Drowned', premium: true, portrait: 'portrait.drowned',
+    id: 'drowned', archetype: 'The Drowned Captain', name: 'Silas Fenn', epithet: 'The Drowned', premium: true, portrait: 'portrait.drowned',
     bio: 'Went down with the Saint Verity in the Drowned Crown. Walked out of the surf at Wrecktide eleven years later, dripping, calm, and very hungry for something that is not food.',
     playstyle: 'Deep-sea mysticism. Area control, slows and attrition. Every miracle costs the crew\'s nerve.',
     favoredTrees: ['abyssal', 'survival', 'boarding'],
@@ -115,8 +115,8 @@ export const CAPTAINS: Record<CaptainId, CaptainDef> = {
     start: { ship: 'sloop', gun: 'light_6', crew: 22, gold: 1100, cargo: { provisions: 8, planks: 3, sailcloth: 2, cursed_relics: 1 } },
   },
   admiral: {
-    id: 'admiral', archetype: 'The Black Admiral', name: 'Cassius Dray', epithet: 'The Black Admiral', premium: true, portrait: 'portrait.admiral',
-    bio: 'Commanded the Crown\'s Black Squadron until he sold its route charts to the Confederacy for a single signature. He still signs his letters "Admiral". Nobody corrects him.',
+    id: 'admiral', archetype: 'The Black Admiral', name: 'Isolde Crane', epithet: 'The Black Admiral', premium: true, portrait: 'portrait.admiral',
+    bio: 'Commanded the Crown\'s Black Squadron until she sold its route charts to the Confederacy for a single signature. She still signs her letters "Admiral". Nobody corrects her.',
     playstyle: 'Fleet command. Buffs allies, marks targets, calls escorts and bombardments. Strongest with friends.',
     favoredTrees: ['command', 'gunnery', 'shipwright'],
     passive: { id: 'chain_of_command', name: 'Chain of Command', description: 'Allied and escort ships within 500 m reload 8% faster (15% by rank 5). +5% boarding power.', mods: { boardingPower: 0.05 } },

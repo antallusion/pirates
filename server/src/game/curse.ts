@@ -40,7 +40,7 @@ export function stepCurse(game: Game, ship: ShipEntity, drift = true): boolean {
   } else if (ship.npcRole === 'ghost') {
     ship.curse = 100;
   } else {
-    const floor = ship.captain === 'drowned' ? 30 : 0; // Ilse Harrow never quite dries out
+    const floor = ship.captain === 'drowned' ? 30 : 0; // Silas Fenn never quite dries out
     ship.curse = Math.max(floor, Math.min(100, ship.curse + curseRate(game, ship)));
   }
   const stage = curseStage(ship.curse);

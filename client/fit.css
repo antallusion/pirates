@@ -38,75 +38,6 @@
   }
 }
 
-/* ================================================================== the captain's choice (captain.ts) */
-/* The desk keeps its look; the new pieces are the phone's. */
-.captain-card .cc-role, .captain-card .pm-short, .cd-start-s { display: none; }
-@media (max-height: 520px) and (min-width: 460px) {
-  #screen-captain { overflow: hidden; align-items: stretch; }
-  .skinned #screen-captain > .captain-wrap { border-width: calc(6px + 4 * var(--u)); border-image-width: calc(6px + 4 * var(--u)); }
-  #screen-captain > .captain-wrap {
-    width: 100vw; height: 100dvh; max-width: none; margin: 0; overflow: hidden;
-    padding: var(--f-pad) max(calc(4px + 6 * var(--u)), env(safe-area-inset-right)) var(--f-pad) max(calc(4px + 6 * var(--u)), env(safe-area-inset-left));
-    display: grid; gap: var(--f-gap) calc(6px + 4 * var(--u));
-    grid-template-columns: minmax(0, 0.74fr) minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
-    grid-template-areas: 'title detail' 'list detail';
-  }
-  .captain-wrap h2.title-sm { grid-area: title; margin: 0; font-size: min(17px, calc(12.5px + 5 * var(--u))) !important; line-height: 1.2; justify-self: start; }
-  .skinned .captain-wrap h2.title-sm { border-width: 5px calc(14px + 10 * var(--u)); border-image-width: 5px calc(14px + 10 * var(--u)); padding: 0 2px; max-width: 100%; }
-  /* all six at once: two columns of three */
-  .captain-list { grid-area: list; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: var(--f-gap); overflow: hidden; min-height: 0; flex-direction: initial; }
-  /* the portrait fades in on the card's right, the words run its whole width */
-  .captain-card { position: relative; min-height: var(--f-tap); min-width: 0; overflow: hidden; display: block; padding: calc(3px + 2 * var(--u)) calc(4px + 3 * var(--u)); }
-  .captain-card .portrait { position: absolute; top: 0; right: 0; bottom: 0; width: 52%; height: auto; border: 0; background-position: center 18%; opacity: 0.7; -webkit-mask-image: linear-gradient(90deg, transparent, #000 60%); mask-image: linear-gradient(90deg, transparent, #000 60%); }
-  .captain-card.active .portrait { opacity: 0.95; }
-  .captain-card .cc-t { position: relative; min-width: 0; display: flex; flex-direction: column; gap: 1px; text-shadow: 0 1px 2px #000, 0 0 6px #000; }
-  .captain-card .arch { font-size: calc(12px + 2 * var(--u)); line-height: 1.15; }
-  .captain-card .nm { display: none; }
-  .captain-card .cc-role { display: block; color: var(--bone); font: 500 calc(10px + 1.5 * var(--u))/1.22 var(--sans); }
-  .captain-card .premium { margin-top: auto; font: 600 var(--f-fs-s)/1.2 var(--sans); letter-spacing: 0.04em; }
-  .captain-card .pm-long { display: none; }
-  .captain-card .pm-short { display: inline; }
-  .captain-card.active { box-shadow: inset 0 0 0 1px var(--brass); }
-  /* a premium captain not yet bought (owner, 2026-10-19): her name, the padlock and the price — the role is the detail's,
-     beside (a two-line name and role left the price under the card's edge at 480×270); the doubloons in the detail's
-     button */
-  .captain-card.cc-shut .cc-role { display: none; }
-  .captain-card .cc-lock { gap: 3px; }
-  .captain-card .cc-lock .cc-lock-i { width: 12px; height: 12px; }
-  .captain-card .cc-price { font-size: calc(10px + 1.5 * var(--u)); }
-  .captain-card .cc-price .rp-dbl { display: none; }
-  /* the chosen one: the key facts beside the list, her portrait faded behind them, the order at the foot */
-  .captain-detail { grid-area: detail; position: relative; display: flex; flex-direction: column; min-height: 0; overflow: hidden; gap: 0;
-    background: linear-gradient(90deg, rgba(10, 9, 8, 0.96) 40%, rgba(10, 9, 8, 0.72)), var(--cd-art, none) right 15% / auto 100% no-repeat; border: 1px solid rgba(140, 107, 58, 0.35); padding: calc(3px + 5 * var(--u)) var(--f-pad); }
-  .captain-detail .cd-art, .captain-detail .cd-bio, .captain-detail .cd-fav, .captain-detail .ability small, .captain-detail .cd-cd, .captain-detail .cd-start-l { display: none; }
-  .captain-detail .cd-text { display: flex; flex-direction: column; gap: calc(1px + 4 * var(--u)); min-height: 0; flex: 1 1 auto; }
-  .captain-detail h3 { font-size: var(--f-fs-h); line-height: 1.1; }
-  .captain-detail .epithet { font-size: var(--f-fs-m); line-height: 1.2; margin-top: -2px; }
-  .captain-detail p { margin: 0; }
-  .captain-detail .cd-play { font: 500 var(--f-fs)/1.28 var(--sans) !important; color: var(--bone); opacity: 0.9; }
-  .captain-detail .ability { margin: 0; padding: 0 0 0 6px; overflow: visible; }
-  .captain-detail .cd-passive b { font: 600 var(--f-fs)/1.28 var(--sans); color: var(--gold); }
-  .captain-detail .cd-abils { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(2px + 2 * var(--u)) 6px; }
-  .captain-detail .cd-abils .ability { display: flex; align-items: center; gap: 4px; min-width: 0; padding: 0; border: 0; }
-  .captain-detail .cd-abils .ab-ico { float: none; width: calc(20px + 6 * var(--u)); height: calc(20px + 6 * var(--u)); margin: 0; flex: none; }
-  .captain-detail .cd-abils .key { flex: none; min-width: 15px; margin: 0; font-size: var(--f-fs-s); line-height: 14px; }
-  .captain-detail .cd-abils b { font: 600 var(--f-fs)/1.2 var(--sans); min-width: 0; }
-  .captain-detail .cd-start { font: 500 var(--f-fs)/1.28 var(--sans) !important; color: var(--fog); }
-  .captain-detail .cd-start-s { display: inline; }
-  .captain-detail .cd-foot { margin-top: auto; display: flex; flex-direction: column; gap: calc(2px + 3 * var(--u)); }
-  .captain-detail .cd-name { display: flex; align-items: center; gap: 6px; margin: 0; font: 500 var(--f-fs-s) var(--sans); color: var(--fog); }
-  .captain-detail .cd-name > span { flex: none; }
-  .captain-detail .cd-name input { flex: 1 1 auto; min-width: 0; margin: 0; height: var(--f-tap); padding: 2px 8px; font-size: var(--f-fs-m); }
-  .captain-detail .pick-bar { position: static; margin: 0; padding: 0; background: none; display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; }
-  .captain-detail .pick-bar label.know-sea { flex: 1 1 auto; min-width: 0; min-height: var(--f-tap); gap: 5px; }
-  .captain-detail .pick-bar label.know-sea input { width: 16px; height: 16px; flex: none; }
-  .captain-detail .pick-bar label.know-sea b { font-size: var(--f-fs); }
-  .captain-detail .pick-bar label.know-sea small { font-size: var(--f-fs-s); }
-  .captain-detail .pick-bar .btn { flex: 0 0 auto; min-height: var(--f-btn); font-size: var(--f-fs-m); padding-inline: calc(2px + 6 * var(--u)); }
-  .captain-detail .pick-bar label.know-sea span { line-height: 1.12; }
-}
-
 /* ================================================================== windows and sheets on a phone held sideways */
 @media (max-height: 520px) {
   /* The kit's own sizes, fluid. */
@@ -345,16 +276,6 @@
    gold say which) — eleven chips and the lit one's word ran 433 px in a 404 px row at 480×270 */
 @media (max-height: 520px) and (max-width: 560px) {
   .w-chips:has(> .w-chip:nth-child(5)) > .w-chip:has(.w-chip-ico) { padding: 1px 2px; } /* the words stay (docs/30); the row scrolls */
-}
-/* the captain's choice on the smallest phones (270–300 px tall): the epithet is the card's portrait's, the story a
-   line tighter, the order's note beside its word */
-@media (max-height: 300px) and (min-width: 460px) {
-  .captain-detail .epithet { display: none; }
-  .captain-detail .cd-play, .captain-detail .cd-start { line-height: 1.18 !important; }
-  .captain-detail .cd-passive b { line-height: 1.18; }
-  /* the tick's own word only: its note («skip the First Watch») ran under the order's button at 480×270 */
-  .captain-detail .pick-bar label.know-sea span { display: block; overflow: hidden; }
-  .captain-detail .pick-bar label.know-sea small { display: none; }
 }
 
 /* ================================================================== the sea's HUD below 360 px tall (seahud.css) */

@@ -213,6 +213,7 @@
   <link rel="stylesheet" href="/talks.css" />
   <!-- the VK Mini App (docs/36): what VK must not show -->
   <link rel="stylesheet" href="/vk.css" />
+  <link rel="stylesheet" href="/captain.css" />
   <link rel="stylesheet" href="/fit.css" />
 </head>
 <body>
@@ -276,10 +277,10 @@
 
   <!-- Captain selection -->
   <section id="screen-captain" class="screen hidden">
-    <div class="captain-wrap panel">
+    <div class="captain-wrap panel cpk">
       <h2 class="title-sm" data-i18n="captain.choose">Choose your captain</h2>
-      <div id="captain-list" class="captain-list"></div>
-      <div id="captain-detail" class="captain-detail"></div>
+      <div id="captain-list" class="cpk-roster" role="listbox" data-i18n-aria="captain.choose" aria-label="Choose your captain"></div>
+      <div id="captain-detail"></div>
     </div>
   </section>
 

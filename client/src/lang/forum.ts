@@ -73,7 +73,7 @@ export const FORUM_RU: Record<string, string> = {
   p_avatar: 'Аватар', p_main_char: 'Капитан в подписи', p_save: 'Сохранить', p_saved: 'Сохранено', p_set_role: 'Назначить роль', p_none: 'Пока ни одного сообщения.', p_official: 'Официальные ответы',
   role_user: 'Капитан', role_moderator: 'Модератор', role_admin: 'Администрация', role_banned: 'Заблокирован',
   rank0: 'Юнга', rank1: 'Матрос', rank2: 'Боцман', rank3: 'Канонир', rank4: 'Квартирмейстер', rank5: 'Старпом', rank6: 'Капитан', rank7: 'Адмирал',
-  cls_corsair: 'Корсар', cls_reaver: 'Налётчик', cls_smuggler: 'Контрабандистка', cls_navigator: 'Штурман', cls_drowned: 'Утопленная капитанша', cls_admiral: 'Чёрный адмирал',
+  cls_corsair: 'Корсар', cls_reaver: 'Налётчик', cls_smuggler: 'Контрабандистка', cls_navigator: 'Штурман', cls_drowned: 'Утопленный капитан', cls_admiral: 'Чёрный адмирал',
   g_admiral: 'Адмирал', g_vice: 'Вице-адмирал', g_commodore: 'Коммодор', g_captain: 'Капитан', g_bosun: 'Боцман', g_sailor: 'Матрос', g_cabin_boy: 'Юнга',
   g_title: 'Гильдия', g_members: 'Состав', g_on_forum: 'на форуме', g_rank: 'Звание в гильдии',
   m_title: 'Сообщения', m_empty: 'Диалогов пока нет. Напишите капитану из его профиля.', m_with: 'Диалог с', m_send: 'Отправить', m_placeholder: 'Ваше сообщение…', m_none: 'Сообщений пока нет — напишите первое.', m_you: 'Вы',

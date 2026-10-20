@@ -61,50 +61,100 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
   sendMsg = send ?? null;
   send?.({ t: 'captain_shop', action: 'view' });
   const list = $('captain-list');
+  // Three layouts for the owner to choose from (2026-10-21: «дай мне 3 варианта верстки на выбор … слишком большой
+  // размер выбора»): 1 the carousel, 2 the strip, 3 the list (client/captain.css); ?capv=N or localStorage picks one.
+  const wrap = $('screen-captain').querySelector<HTMLElement>('.captain-wrap')!;
+  const asked = new URLSearchParams(location.search).get('capv');
+  if (asked && /^[123]$/.test(asked)) localStorage.setItem('gravetide.capv', asked);
+  const v = localStorage.getItem('gravetide.capv') ?? '2';
+  wrap.classList.remove('v1', 'v2', 'v3');
+  wrap.classList.add(`v${/^[123]$/.test(v) ? v : '2'}`);
+  // the roster rides a rail with an arrow at each end (a click steps to the captain beside; a finger swipes the rail)
+  if (!list.parentElement!.classList.contains('cpk-rail')) {
+    const rail = document.createElement('div');
+    rail.className = 'cpk-rail';
+    list.before(rail);
+    rail.append(Object.assign(document.createElement('button'), { type: 'button', className: 'cpk-arr cpk-prev', innerHTML: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' }), list,
+      Object.assign(document.createElement('button'), { type: 'button', className: 'cpk-arr cpk-next', innerHTML: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' }));
+  }
   let current: CaptainId = 'corsair';
   let ship0: string | null = null;
   let know0 = false;
   const render = () => {
+    // The roster (owner, 2026-10-21: the old list «лоховской, неудобный и некрасивый»): six framed portraits, HoMM's
+    // heroes in a row — the chosen one lifted in gold; a premium captain not yet hers dimmed, her padlock and price on
+    // the portrait's foot, the real money first. Styles: client/captain.css.
     list.innerHTML = CAPTAIN_IDS.map((id) => {
       const c = CAPTAINS[id];
       const url = assetUrl(c.portrait);
       const shut = !captainOpen(id);
-      // (the role — the playstyle's first sentence — is the card's key fact on a phone, where all six stand at once;
-      // a premium captain not yet hers: the lock and the price, the real money first)
       const badge = !c.premium ? '' : shut
-        ? `<div class="premium cc-lock" title="${esc(L('lockedTitle', { price: priceText(captainPrice(id)) }))}"><span class="pm-long">${esc(L('premiumLocked'))}</span>${lockSvg()}${priceHtml(captainPrice(id), { cls: 'cc-price' })}</div>`
-        : `<div class="premium"><span class="pm-long">${esc(L(shop.owned.has(id) ? 'premiumOwnedLong' : 'premium'))}</span><span class="pm-short">${esc(L(shop.owned.has(id) ? 'premiumOwned' : 'premiumShort'))}</span></div>`;
-      return `<div class="captain-card ${id === current ? 'active' : ''}${shut ? ' cc-shut' : ''}" data-id="${id}">
-        <div class="portrait" style="background-image:${url ? `url('${url}')` : 'none'}"></div>
-        <div class="cc-t"><div class="arch">${esc(c.archetype)}</div><div class="nm">${esc(c.name)} — ${quote(c.epithet)}</div><div class="cc-role">${esc(captainRole(c.playstyle))}</div>${badge}</div>
-      </div>`;
+        ? `<span class="cpk-badge" title="${esc(L('lockedTitle', { price: priceText(captainPrice(id)) }))}">${lockSvg()}${priceHtml(captainPrice(id), { cls: 'cpk-price' })}</span>`
+        : `<span class="cpk-gem">${esc(L(shop.owned.has(id) ? 'premiumOwned' : 'premiumShort'))}</span>`;
+      return `<button type="button" class="captain-card cpk-tile${id === current ? ' active' : ''}${shut ? ' cc-shut' : ''}" data-id="${id}" role="option" aria-selected="${id === current}">
+        <span class="cpk-face" style="background-image:${url ? `url('${url}')` : 'none'}">${badge}</span>
+        <span class="cpk-tt"><span class="cpk-tname">${esc(c.archetype)}</span><span class="cpk-trole">${esc(captainRole(c.playstyle))}</span></span>${shut ? `<span class="cpk-tprice">${lockSvg()}${priceHtml(captainPrice(id), { cls: 'cpk-price' })}</span>` : ''}
+      </button>`;
     }).join('');
+    const pick = (id: CaptainId) => (list.querySelector<HTMLElement>(`.captain-card[data-id="${id}"]`))?.click();
+    const step = (d: number) => pick(CAPTAIN_IDS[(CAPTAIN_IDS.indexOf(current) + d + CAPTAIN_IDS.length) % CAPTAIN_IDS.length]);
+    wrap.querySelector<HTMLElement>('.cpk-prev')!.onclick = () => step(-1);
+    wrap.querySelector<HTMLElement>('.cpk-next')!.onclick = () => step(1);
+    wrap.querySelectorAll<HTMLElement>('.cpk-arr').forEach((b) => b.setAttribute('aria-label', L(b.classList.contains('cpk-prev') ? 'prevCap' : 'nextCap')));
+    // the chosen one brought to the rail's middle
+    requestAnimationFrame(() => list.querySelector<HTMLElement>('.captain-card.active')?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' }));
     list.querySelectorAll<HTMLElement>('.captain-card').forEach((el) => (el.onclick = () => {
+      if (current === el.dataset.id) return;
+      // (a name she typed and the tick stay; a name offered follows the captain)
+      const typed = ($('ship-name') as HTMLInputElement).value;
+      ship0 = CAPTAIN_IDS.some((id) => typed === defaultShipName(id)) ? null : typed;
+      know0 = ($('know-sea') as HTMLInputElement).checked;
       current = el.dataset.id as CaptainId;
       render();
+      ship0 = null;
+      know0 = false;
     }));
     const c = CAPTAINS[current];
     const url = assetUrl(c.portrait);
     const ship = SHIP_CLASSES[c.start.ship];
-    // A phone held sideways (styles in client/fit.css) keeps the key facts — the role, the gift, the four orders by
-    // name, the ship she starts on — beside the six cards; the bio and the long descriptions are the desk's.
-    $('captain-detail').style.setProperty('--cd-art', url ? `url('${url}')` : 'none');
+    const role = captainRole(c.playstyle);
+    const art = url ? `url('${url}')` : 'none';
+    // The chosen one: her portrait whole (3:4) with her name on its plate; beside it the role, the story, the gift,
+    // the four orders as tiles (a tap opens one's words where they are hidden), the favoured trees and the start; the
+    // ship's name and the order pinned at the foot. A phone held sideways keeps the facts and the names; on the
+    // smallest the portrait is the story's backdrop (--cd-art).
+    $('screen-captain').querySelector<HTMLElement>('.captain-wrap')?.style.setProperty('--cd-art', art);
     $('captain-detail').innerHTML = `
-      <div class="cd-art"><div class="big-portrait" style="background-image:${url ? `url('${url}')` : 'none'}"></div></div>
-      <div class="cd-text">
-        <h3>${esc(c.archetype)}</h3>
-        <div class="epithet">${esc(c.name)}, ${quote(c.epithet)}</div>
-        <p class="cd-bio">${esc(c.bio)}</p>
-        <p class="muted cd-play" style="font-size:14px"><span>${esc(c.playstyle)}</span> <span class="cd-fav">${esc(L('favoured', { list: c.favoredTrees.map((t) => TREES[t].name).join(', ') }))}</span></p>
-        <div class="ability cd-passive"><b>${esc(L('passive', { name: c.passive.name }))}</b><small>${esc(c.passive.description)}</small></div>
-        <div class="cd-abils">${c.abilities.map((a) => `<div class="ability ${a.kind === 'ultimate' ? 'ult' : ''}">${icon(`ab_${a.id}`, '', 'ab-ico')}<span class="key">${a.key}</span><b>${esc(a.name)}</b> <span class="muted cd-cd">· ${esc(L('cooldown', { n: a.cooldown }))}</span><small>${esc(a.description)}</small></div>`).join('')}</div>
-        <p class="muted cd-start" style="font-size:13px;font-family:var(--sans)"><span class="cd-start-l">${esc(L('starts', { ship: ship.name, gun: GUNS[c.start.gun].name, crew: c.start.crew, gold: c.start.gold }))}</span><span class="cd-start-s">${esc(L('startsShort', { ship: ship.name, crew: c.start.crew, gold: c.start.gold }))}</span></p>
-        <div class="cd-foot">
-          <label class="lbl cd-name"><span>${esc(L('shipName'))}</span><input id="ship-name" class="field" maxlength="20" value="${esc(defaultShipName(current))}" /></label>
-          <div class="pick-bar">${knowSea()}${captainOpen(current) ? `<button id="pick-captain" class="btn btn-primary">${esc(L('takeCommand'))}</button>` : `<button id="pick-captain" class="btn btn-primary cc-buy" data-buy="${current}" aria-label="${esc(L('buyFor', { price: priceText(captainPrice(current)) }))}"><span>${esc(L('buy'))}</span>${priceHtml(captainPrice(current))}</button>`}</div>
+      <div class="cpk-art"><div class="cpk-portrait" style="background-image:${art}"></div>
+        <div class="cpk-plate"><h3>${esc(c.archetype)}</h3><div class="cpk-epi">${esc(c.name)}, ${quote(c.epithet)}</div></div></div>
+      <div class="cpk-info">
+        <div class="cpk-scroll">
+          <div class="cpk-head"><h3>${esc(c.archetype)}</h3><div class="cpk-epi">${esc(c.name)}, ${quote(c.epithet)}</div></div>
+          <p class="cpk-role">${esc(role)}</p>
+          <p class="cpk-bio">${esc(c.bio)}</p>
+          <p class="cpk-play">${esc(c.playstyle.trim().slice(role.length).trim())}</p>
+          <section class="cpk-sec"><h4>${esc(L('giftH'))}</h4>
+            <div class="cpk-gift"><b>${esc(c.passive.name)}</b><small>${esc(c.passive.description)}</small></div></section>
+          <section class="cpk-sec"><h4>${esc(L('ordersH'))}</h4>
+            <div class="cpk-abils">${c.abilities.map((a) => `<button type="button" class="cpk-ab${a.kind === 'ultimate' ? ' ult' : ''}" aria-expanded="false">
+              <span class="cpk-abi">${icon(`ab_${a.id}`, '', 'ab-ico')}<span class="key">${a.key}</span></span>
+              <span class="cpk-abt"><b>${esc(a.name)}</b><span class="cpk-cd">${esc(L('cooldown', { n: a.cooldown }))}</span></span>
+              <small>${esc(a.description)}</small></button>`).join('')}</div></section>
+          <section class="cpk-sec cpk-trees"><h4>${esc(L('treesH'))}</h4>
+            <div class="cpk-chips">${c.favoredTrees.map((t) => `<span>${esc(TREES[t].name)}</span>`).join('')}</div></section>
+          <p class="cpk-start"><span class="cpk-start-l">${esc(L('starts', { ship: ship.name, gun: GUNS[c.start.gun].name, crew: c.start.crew, gold: c.start.gold }))}</span><span class="cpk-start-s">${esc(L('startsShort', { ship: ship.name, crew: c.start.crew, gold: c.start.gold }))}</span></p>
+        </div>
+        <div class="cpk-foot">
+          <label class="cpk-name"><span>${esc(L('shipName'))}</span><input id="ship-name" class="field" maxlength="20" value="${esc(defaultShipName(current))}" /></label>
+          ${knowSea()}
+          ${captainOpen(current) ? `<button id="pick-captain" class="btn btn-primary cpk-go">${esc(L('takeCommand'))}</button>` : `<button id="pick-captain" class="btn btn-primary cpk-go cc-buy" data-buy="${current}" aria-label="${esc(L('buyFor', { price: priceText(captainPrice(current)) }))}"><span>${esc(L('buy'))}</span>${priceHtml(captainPrice(current))}</button>`}
           <p id="captain-why" class="cc-why" role="status" aria-live="polite"></p>
         </div>
       </div>`;
+    $('captain-detail').querySelectorAll<HTMLElement>('.cpk-ab').forEach((b) => (b.onclick = () => {
+      const open = b.classList.toggle('open');
+      b.setAttribute('aria-expanded', String(open));
+    }));
     if (ship0 !== null) ($('ship-name') as HTMLInputElement).value = ship0;
     ($('know-sea') as HTMLInputElement).checked = know0;
     $('pick-captain').onclick = () => {
@@ -142,7 +192,7 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
  *  screen's foot, under the scrolled story): the words in bold, what they do under them in small. */
 function knowSea(): string {
   const [say, does] = t('captain.knowSea').split(/\s—\s/); // (the Russian dash comes after a space that does not break)
-  return `<label class="check know-sea"><input type="checkbox" id="know-sea" /><span><b>${esc(say)}</b>${does ? `<small>${esc(does)}</small>` : ''}</span></label>`;
+  return `<label class="check know-sea"${does ? ` title="${esc(does)}"` : ''}><input type="checkbox" id="know-sea" /><span><b>${esc(say)}</b>${does ? `<small>${esc(does)}</small>` : ''}</span></label>`;
 }
 
 /** The lock of a captain not yet bought: a padlock drawn in the buttons' 24-unit box (gold, currentColor). */

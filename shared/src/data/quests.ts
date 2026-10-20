@@ -181,26 +181,26 @@ export const QUESTS: QuestDef[] = [
   },
   // ---------------------------------------------------------------- premium Paths: Legend quests
   {
-    id: 'q_legend_drowned', kind: 'legend', name: 'Drown Once', mentor: 'Ilse Harrow', port: 'saint_maw',
-    summary: 'Ilse Harrow went down with two hundred souls and came back. She will teach no one who has not gone under.',
+    id: 'q_legend_drowned', kind: 'legend', name: 'Drown Once', mentor: 'Silas Fenn', port: 'saint_maw',
+    summary: 'Silas Fenn went down with two hundred souls and came back. He will teach no one who has not gone under.',
     requires: { level: 25, rep: { choir: 20 }, treePoints: { abyssal: 10 }, anyOf: true },
     steps: [
       { type: 'deliver', port: 'saint_maw', good: 'cursed_relics', qty: 6, text: 'Bring six cursed relics to the Choir at Saint Maw.' },
       { type: 'sink', count: 3, role: 'ghost', text: 'Send three ghost ships back under.' },
       { type: 'time_in', region: 'the_abyss', seconds: 120, weather: 'black_storm', text: 'Ride out two minutes of a black storm in the Abyss.' },
       { type: 'die_in', region: 'drowned_crown', text: 'Go down with your ship in the Drowned Crown.' },
-      { type: 'visit', port: 'saint_maw', text: 'Return to Ilse Harrow at Saint Maw, dripping.' },
+      { type: 'visit', port: 'saint_maw', text: 'Return to Silas Fenn at Saint Maw, dripping.' },
     ],
     reward: { xp: questXp(25, legacyQuestSize(12000, 25)), silver: 5000, path: 'drowned', deed: 'deed_legend_quest' },
   },
   {
-    id: 'q_legend_admiral', kind: 'legend', name: "The Admiralty's Verdict", mentor: 'Cassius Dray', port: 'gravesend',
-    summary: 'Cassius Dray still signs his letters "Admiral". Earn the right to sign yours the same way.',
+    id: 'q_legend_admiral', kind: 'legend', name: "The Admiralty's Verdict", mentor: 'Isolde Crane', port: 'gravesend',
+    summary: 'Isolde Crane still signs her letters "Admiral". Earn the right to sign yours the same way.',
     requires: { level: 25, treePoints: { command: 10 } },
     steps: [
       { type: 'fleet_win', count: 3, text: 'Win three fleet actions: sink a ship with two escorts at your side.' },
       { type: 'sink', count: 1, minTier: 4, text: 'Sink a frigate or larger.' },
-      { type: 'deliver', port: 'cinderhold', good: 'weapons', qty: 20, text: 'Deliver 20 crates of arms to Cinderhold — the Admiral keeps his debts.' },
+      { type: 'deliver', port: 'cinderhold', good: 'weapons', qty: 20, text: 'Deliver 20 crates of arms to Cinderhold — the Admiral keeps her debts.' },
       { type: 'visit', port: 'gravesend', text: 'Hear the Verdict at Gravesend.' },
     ],
     reward: { xp: questXp(25, legacyQuestSize(12000, 25)), silver: 5000, path: 'admiral', deed: 'deed_legend_quest' },

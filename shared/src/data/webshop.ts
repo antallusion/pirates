@@ -170,8 +170,8 @@ export function webQty(offer: ShopOffer, fam: ShopFamily): Tr | undefined {
 }
 
 const CAPTAIN_RU: Record<string, Tr> = {
-  drowned: ['Ilse Harrow, the Drowned Captain', 'Ильзе Харроу, Утопленница'],
-  admiral: ['Cassius Dray, the Black Admiral', 'Кассий Дрей, Чёрный адмирал'],
+  drowned: ['Silas Fenn, the Drowned Captain', 'Сайлас Фенн, Утопленник'],
+  admiral: ['Isolde Crane, the Black Admiral', 'Изольда Крейн, Чёрный адмирал'],
 };
 
 /** A hull's name in both languages. */
