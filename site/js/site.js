@@ -14,6 +14,29 @@
     items.forEach((el) => io.observe(el));
   } else items.forEach((el) => el.classList.add('in'));
 
+  // The home page's trailer over its poster (tools/site/trailer.mjs): never for reduced motion, Save-Data or a slow line
+  // (the poster stays); the cut that fits the screen (upright phones: the tall crop; small screens: the lighter one);
+  // shown once it plays, held still while off-screen or in a hidden tab.
+  const film = d.querySelector('.hero-vid');
+  const net = navigator.connection;
+  if (film && !matchMedia('(prefers-reduced-motion: reduce)').matches && !(net && (net.saveData || /(^|-)2g$|^3g$/.test(net.effectiveType || '')))) {
+    const cut = matchMedia(film.dataset.tall).matches ? 'v' : matchMedia('(max-width: 1000px)').matches ? '960' : '1280';
+    for (const [ext, type] of [['webm', 'video/webm; codecs="vp9"'], ['mp4', 'video/mp4']]) {
+      const s = d.createElement('source');
+      s.src = `${film.dataset.film}-${cut}.${ext}`;
+      s.type = type;
+      film.append(s);
+    }
+    film.muted = true;
+    film.addEventListener('playing', () => film.classList.add('on'), { once: true });
+    let seen = true;
+    const go = () => { if (seen && !d.hidden) film.play().catch(() => {}); else film.pause(); };
+    if ('IntersectionObserver' in window) new IntersectionObserver((es) => { seen = es[es.length - 1].isIntersecting; go(); }).observe(film);
+    d.addEventListener('visibilitychange', go);
+    film.load();
+    go();
+  }
+
   // The phone menu.
   const hdr = d.querySelector('.hdr');
   const burger = d.querySelector('.hdr-burger');

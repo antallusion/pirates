@@ -146,7 +146,7 @@ const UI: Record<string, Tr> = {
 const u = (k: string, lang: Lang) => L(lang, UI[k]);
 const root = (lang: Lang) => (lang === 'ru' ? '/site/' : '/site/en/');
 
-interface Hero { img: string; imgM?: string; kicker: string; title: string; lead?: string; cta?: boolean; tall?: boolean; mini?: boolean }
+interface Hero { img: string; imgM?: string; kicker: string; title: string; lead?: string; cta?: boolean; tall?: boolean; mini?: boolean; film?: boolean }
 
 function header(lang: Lang, active: string, path: string): string {
   const r = root(lang);
@@ -162,8 +162,19 @@ function header(lang: Lang, active: string, path: string): string {
 </div></header>`;
 }
 
+/** The home page's trailer (tools/site/trailer.mjs → site/video/): its poster is the hero's picture (the first frame, the
+ *  largest paint, preloaded), the film is laid over it by site.js, never for reduced motion, Save-Data or a slow line.
+ *  An upright phone gets the middle of the frame cut tall; the cut-off is FILM_TALL. */
+const FILM = '/site/video/trailer';
+const FILM_TALL = '(max-aspect-ratio: 4/5)';
+const filmPreload = () =>
+  `<link rel="preload" as="image" type="image/avif" href="${FILM}-poster-v.avif" media="${FILM_TALL}" fetchpriority="high"><link rel="preload" as="image" type="image/avif" href="${FILM}-poster.avif" media="not all and ${FILM_TALL}" fetchpriority="high">`;
+const filmArt = () =>
+  `<div class="hero-art hero-film"><picture><source media="${FILM_TALL}" type="image/avif" srcset="${FILM}-poster-v.avif"><source media="${FILM_TALL}" srcset="${FILM}-poster-v.jpg"><source type="image/avif" srcset="${FILM}-poster.avif"><img src="${FILM}-poster.jpg" alt="" width="1280" height="720" fetchpriority="high"></picture>` +
+  `<video class="hero-vid" data-film="${FILM}" data-tall="${FILM_TALL}" muted loop playsinline autoplay preload="metadata" disablepictureinpicture disableremoteplayback aria-hidden="true" tabindex="-1"></video></div>`;
+
 function heroBlock(h: Hero, lang: Lang): string {
-  return `<section class="hero${h.tall ? ' tall' : ''}${h.mini ? ' mini' : ''}"><picture class="hero-art">${h.imgM ? `<source media="(max-width: 700px)" srcset="${h.imgM}">` : ''}<img src="${h.img}" alt="" fetchpriority="high"></picture>
+  return `<section class="hero${h.tall ? ' tall' : ''}${h.mini ? ' mini' : ''}">${h.film ? filmArt() : `<picture class="hero-art">${h.imgM ? `<source media="(max-width: 700px)" srcset="${h.imgM}">` : ''}<img src="${h.img}" alt="" fetchpriority="high"></picture>`}
 <div class="hero-in wrap"><p class="kicker">${T(h.kicker, lang)}</p><h1>${T(h.title, lang)}</h1>${h.lead ? `<p class="lead">${T(h.lead, lang)}</p>` : ''}
 ${h.cta ? `<div class="hero-cta"><a class="btn-gold lg" href="/play">${u('playFree', lang)}</a><a class="btn-oak" href="https://t.me/gravetide_bot" target="_blank" rel="noopener">${u('tg', lang)}</a></div>` : ''}</div></section>`;
 }
@@ -208,7 +219,7 @@ function page(lang: Lang, o: { path: string; active: string; title: string; desc
   const r = root(lang);
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 ${seoHead(lang, o)}
-<link rel="preload" href="/site/fonts/cormorantsc-700-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+${o.hero.film ? filmPreload() : ''}<link rel="preload" href="/site/fonts/cormorantsc-700-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site/css/fonts.css"><link rel="stylesheet" href="/site/css/site.css">${o.css ? `<link rel="stylesheet" href="${o.css}">` : ''}</head>
 <body class="pg-${o.active}">${header(lang, o.active, o.path)}
 <main>${heroBlock(o.hero, lang)}${o.body}</main>
@@ -274,7 +285,7 @@ function home(lang: Lang): string {
   return page(lang, {
     path: '', active: 'home', title: lang === 'ru' ? 'GRAVETIDE — пиратские «Герои» в море Pirate Gothic' : 'GRAVETIDE — pirate Heroes on a Pirate Gothic sea',
     desc: lang === 'ru' ? 'Онлайн-песочница про пиратов: корабль — армия, капитан — герой, абордаж — пошаговая битва на гексах.' : 'An online pirate sandbox: a ship is an army, a captain is a hero, boarding is a turn-based hex battle.',
-    hero: { img: K('hero/home'), imgM: K('hero/home_m'), kicker: lang === 'ru' ? 'Онлайн-песочница · Pirate Gothic' : 'Online sandbox · Pirate Gothic', title: lang === 'ru' ? 'Море помнит каждого капитана' : 'The sea remembers every captain', lead: lang === 'ru' ? 'Соберите армию в трюме, отстройте остров, возьмите на абордаж флагман и поднимитесь на Престол глубин.' : 'Raise an army in your hold, build your island, board a flagship and climb to the Throne of the Deep.', cta: true, tall: true },
+    hero: { img: K('hero/home'), imgM: K('hero/home_m'), kicker: lang === 'ru' ? 'Онлайн-песочница · Pirate Gothic' : 'Online sandbox · Pirate Gothic', title: lang === 'ru' ? 'Море помнит каждого капитана' : 'The sea remembers every captain', lead: lang === 'ru' ? 'Соберите армию в трюме, отстройте остров, возьмите на абордаж флагман и поднимитесь на Престол глубин.' : 'Raise an army in your hold, build your island, board a flagship and climb to the Throne of the Deep.', cta: true, tall: true, film: true },
     body,
   });
 }

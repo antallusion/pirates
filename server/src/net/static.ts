@@ -34,6 +34,7 @@ const MIME: Record<string, string> = {
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
   '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
   '.xml': 'application/xml; charset=utf-8',
   '.txt': 'text/plain; charset=utf-8',
 };
@@ -288,7 +289,7 @@ export function createStaticHandler(root: string) {
         return await send(req, res, be, ext, 'public, max-age=31536000, immutable');
       }
       // Films are served in ranges (a browser seeks in them, and iOS will not play one served whole).
-      const range = ext === '.mp4' ? /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '') : null;
+      const range = ext === '.mp4' || ext === '.webm' ? /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '') : null;
       if (range) {
         const size = entry.body.length;
         const start = range[1] ? Number(range[1]) : Math.max(0, size - Number(range[2]));
@@ -297,13 +298,13 @@ export function createStaticHandler(root: string) {
           res.writeHead(416, { 'Content-Range': `bytes */${size}` }).end();
           return true;
         }
-        res.writeHead(206, { 'Content-Type': 'video/mp4', 'Content-Length': end - start + 1, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=86400' });
+        res.writeHead(206, { 'Content-Type': MIME[ext], 'Content-Length': end - start + 1, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=86400' });
         if (req.method === 'HEAD') res.end();
         else res.end(entry.body.subarray(start, end + 1));
         return true;
       }
       // a versioned asset (the manifest's `?v=`) never changes at its address; the rest is asked again each time
-      const picture = ext === '.png' || ext === '.webp' || ext === '.jpg' || ext === '.avif' || ext === '.mp4';
+      const picture = ext === '.png' || ext === '.webp' || ext === '.jpg' || ext === '.avif' || ext === '.mp4' || ext === '.webm';
       const cc = mount.prefix === '/assets/' && url.searchParams.has('v') ? 'public, max-age=31536000, immutable' : picture ? 'public, max-age=86400' : 'no-cache';
       return await send(req, res, entry, ext, cc);
     } catch {
@@ -347,7 +348,7 @@ async function send(req: IncomingMessage, res: ServerResponse, entry: Entry, ext
     'Cache-Control': cacheControl,
     ETag: entry.etag,
   };
-  if (ext === '.mp4') head['Accept-Ranges'] = 'bytes';
+  if (ext === '.mp4' || ext === '.webm') head['Accept-Ranges'] = 'bytes';
   // the pictures may be drawn on a canvas from a CDN's host (docs/33: ASSET_ORIGIN): any page may read them
   if (ext === '.webp' || ext === '.avif' || ext === '.png' || ext === '.jpg') head['Access-Control-Allow-Origin'] = '*';
   if (TEXT.has(ext)) head['Vary'] = 'Accept-Encoding';
