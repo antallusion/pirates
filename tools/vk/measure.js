@@ -87,11 +87,15 @@
       // cut: a text or button past a clipping ancestor that does not scroll that way (the text's own box for a text)
       if (content && (ownText(e) || isBtn(e))) {
         const tb = ownText(e) && !isBtn(e) ? textBox(e) ?? r : r;
+        // (past a scroller along an axis the text is reachable by scrolling it: the outer clips no longer count that way)
+        let sx = false, sy = false;
         for (const k of cl) {
           const b = k.box;
-          const px = !k.sx && k.cx && (tb.right > b.right + 1.5 || tb.left < b.left - 1.5);
-          const py = !k.sy && k.cy && (tb.bottom > b.bottom + 1.5 || tb.top < b.top - 1.5);
+          const px = !sx && !k.sx && k.cx && (tb.right > b.right + 1.5 || tb.left < b.left - 1.5);
+          const py = !sy && !k.sy && k.cy && (tb.bottom > b.bottom + 1.5 || tb.top < b.top - 1.5);
           if (px || py) { out.cut.push(`${short(e)} [${R(tb)}] by ${short(k.el).split(' «')[0]} [${R(b)}]`); break; }
+          sx ||= k.sx;
+          sy ||= k.sy;
         }
       }
       // outside: in-flow text / button past its frame's inner edge (right, bottom)
@@ -109,7 +113,7 @@
         }
       }
       // a button's text: wider than the inner width, or out of the button
-      if (isBtn(e)) {
+      if (isBtn(e) && (e.tagName === 'BUTTON' || e.tagName === 'A' || !e.matches('[role="button"]'))) {
         const tb = textBox(e);
         if (tb) {
           const inner = e.clientWidth - parseFloat(c.paddingLeft) - parseFloat(c.paddingRight);
@@ -133,8 +137,13 @@
     // overlap: placed pieces on each other, or on a text (not their own ancestors / descendants)
     const hit = (a, b) => a.left < b.right - 2 && b.left < a.right - 2 && a.top < b.bottom - 2 && b.top < a.bottom - 2;
     const kin = (a, b) => a.contains(b) || b.contains(a);
+    const said = (e) => (e.innerText || '').trim().length > 0;
+    const small = (r) => r.right - r.left <= 48 && r.bottom - r.top <= 32;
+    // (a badge on its own picture — a level on a portrait, a count on an icon — is the design: only a badge on a badge,
+    //  a plate on a plate, or a piece over a text counts)
+    const meant = (a, b) => (!said(a.e) && small(b.r)) || (!said(b.e) && small(a.r));
     for (let i = 0; i < placed.length; i++) {
-      for (let j = i + 1; j < placed.length; j++) if (!kin(placed[i].e, placed[j].e) && hit(placed[i].r, placed[j].r)) out.overlap.push(`${short(placed[i].e)} × ${short(placed[j].e)}`);
+      for (let j = i + 1; j < placed.length; j++) if (!kin(placed[i].e, placed[j].e) && !meant(placed[i], placed[j]) && hit(placed[i].r, placed[j].r)) out.overlap.push(`${short(placed[i].e)} × ${short(placed[j].e)}`);
       for (const t of texts) if (!kin(placed[i].e, t.e) && !empty(t.r) && hit(placed[i].r, t.r)) {
         // (the piece must be drawn over the text: the topmost element at the overlap's middle)
         const x = (Math.max(placed[i].r.left, t.r.left) + Math.min(placed[i].r.right, t.r.right)) / 2, y = (Math.max(placed[i].r.top, t.r.top) + Math.min(placed[i].r.bottom, t.r.bottom)) / 2;

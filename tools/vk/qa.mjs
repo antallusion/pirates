@@ -163,6 +163,16 @@ const modalOpen = (p) => p.evaluate(() => !document.getElementById('modal')?.cla
 const tabsOf = (p) => p.evaluate(() => [...document.querySelectorAll('#modal-panel .w-tab:not(.w-tab--go):not([disabled]), #modal-panel .tab:not([disabled])')].slice(0, 9).map((t, i) => ({ i, label: (t.getAttribute('aria-label') || t.textContent || '').trim().slice(0, 18) })));
 
 async function sweepWindows(p, sizeTag) {
+  // the offers' card and the daily gift over the sea (they come by themselves): measured, then put away
+  await p.evaluate(() => globalThis.gravetide.open(null));
+  await say(p, '/offers carousel');
+  await sleep(1500);
+  if (await p.$('#promo-over')) {
+    await measure(p, 'promo', sizeTag, { root: '#promo-over', shop: true });
+    await p.evaluate(() => document.querySelector('#promo-over [data-poshut]')?.click());
+    await sleep(400);
+  }
+  if (await p.$('#gift-over')) await measure(p, 'daily-gift', sizeTag, { root: '#gift-over' });
   for (const w of WINDOWS) {
     if (ONLY && !ONLY.has(w)) continue;
     if (w === 'shop') { await sweepShop(p, sizeTag); continue; }
