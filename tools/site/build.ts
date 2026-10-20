@@ -181,7 +181,7 @@ function page(lang: Lang, o: { path: string; active: string; title: string; desc
 <footer class="ftr"><div class="wrap ftr-in"><img src="${K('brand/logo')}" alt="GRAVETIDE" width="110" height="88" loading="lazy">
 <p>${T(u('footer', lang), lang)}</p><nav><a href="${r}creatures/">${u('creatures', lang)}</a><a href="${r}captains/">${u('captains', lang)}</a><a href="${r}ships/">${u('ships', lang)}</a><a href="${r}rating/">${u('rating', lang)}</a><a href="${r}shop/">${u('shop', lang)}</a><a href="${r}forum/">${u('forum', lang)}</a><a href="/play">${u('play', lang)}</a></nav>
 <nav class="ftr-legal" aria-label="${lang === 'ru' ? 'Документы' : 'Documents'}">${DOC_IDS.map((d) => `<a href="${r}${d}/">${L(lang, DOC_TITLES[d])}</a>`).join('')}</nav>
-<p class="ftr-req">${lang === 'ru' ? `${SELLER.name[1]} · ИНН ${SELLER.inn} · ОГРНИП ${SELLER.ogrnip}` : `${SELLER.name[0]} · INN ${SELLER.inn} · OGRNIP ${SELLER.ogrnip}`}<br><a href="mailto:${SELLER.info}">${SELLER.info}</a> · <a href="mailto:${SELLER.support}">${SELLER.support}</a></p>
+<p class="ftr-req">${lang === 'ru' ? `${SELLER.name[1]} · ИНН&nbsp;${SELLER.inn} · ОГРНИП&nbsp;${SELLER.ogrnip}` : `${SELLER.name[0]} · INN&nbsp;${SELLER.inn} · OGRNIP&nbsp;${SELLER.ogrnip}`}<br><a href="mailto:${SELLER.info}">${SELLER.info}</a> · <a href="mailto:${SELLER.support}">${SELLER.support}</a></p>
 <small>© GRAVETIDE · gravetidegame.com</small></div></footer>
 <script src="/site/js/site.js" defer></script>${o.script ? `<script type="module" src="${o.script}"></script>` : ''}</body></html>`;
 }

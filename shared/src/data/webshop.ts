@@ -20,12 +20,13 @@ import { UNITS } from './army.ts';
 import type { UnitId } from './army.ts';
 import { CAPTAINS, CAPTAIN_IDS, CAPTAIN_PRICE } from './captains.ts';
 import type { CaptainId } from './captains.ts';
-import { CLOTHS, COS_EMOTES, TRAILS } from './cosmetics.ts';
+import { CLOTHS, COS_EMOTES, PLATES, TITLES, TRAILS } from './cosmetics.ts';
 import { AUTO_SCROLL_PACKS, DOUBLOON_PACKS, premiumShips, premiumUnits } from './premium.ts';
 import { PREMIUM_NAMES, premiumFrom } from './premiumbeasts.ts';
 import { DEAL_OFF, DEAL_POOL, OFFERS, RECRUIT_KINDS, SHOP, unitPacks } from './shop.ts';
 import type { ShopFamily, ShopOffer } from './shop.ts';
 import { SHIP_CLASSES } from './ships.ts';
+import { SHIP_BEAST_NAMES } from './shipbeasts.ts';
 import type { ShipClassId } from './ships.ts';
 import { captainLevelFor, levelRange } from './shiplevel.ts';
 import { DATA_RU_FLEET } from '../../../client/src/lang/data.fleet.ru.ts';
@@ -76,6 +77,10 @@ export interface WebItem {
    *  under it (a flag's cloth, a trail's glow). */
   art: string;
   swatch?: string;
+  /** A title's words written on its plate (the plate's ink and halo), as other captains see it over a ship. */
+  label?: Tr;
+  ink?: string;
+  halo?: string;
   /** A pack's doubloons with its bonus. */
   doubloons?: number;
   bonus?: number;
@@ -173,7 +178,7 @@ const CAPTAIN_RU: Record<string, Tr> = {
 export const shipName = (c: ShipClassId): Tr => [SHIP_CLASSES[c].name, DATA_RU_FLEET[`ships.SHIP_CLASSES.${c}.name`] ?? DATA_RU_CORE[`ships.SHIP_CLASSES.${c}.name`] ?? SHIP_CLASSES[c].name];
 /** A creature's name (a stack's) in both languages. */
 export function unitNames(u: UnitId): Tr {
-  const p = (PREMIUM_NAMES as Record<string, [string, string, string, string]>)[u];
+  const p = (PREMIUM_NAMES as Record<string, [string, string, string, string]>)[u] ?? (SHIP_BEAST_NAMES as Record<string, [string, string, string, string]>)[u];
   if (p) return [p[0], p[1]];
   const en = (ARMY_EN as Record<string, string>)[`u.${u}`] ?? u;
   return [en, (ARMY_RU as Record<string, string>)[`u.${u}`] ?? en];
@@ -184,7 +189,7 @@ const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 const famArt = (icon: string) => (icon.startsWith('unit:') ? `unit.${icon.slice(5)}` : `icon.${icon}`);
 
 /** A cosmetic's own picture or swatch, by its offer (cos_<kind>_<id>, cos_pack_<id>). */
-function cosArt(id: string, icon: string): { art: string; swatch?: string } {
+function cosArt(id: string, icon: string): { art: string; swatch?: string; label?: Tr; ink?: string; halo?: string } {
   const m = /^cos_(plate|frame|emblem|cloth|trail|title|pack)_(.+)$/.exec(id);
   if (!m) return { art: `icon.${icon}` };
   const [, k, x] = m;
@@ -198,7 +203,10 @@ function cosArt(id: string, icon: string): { art: string; swatch?: string } {
     const t = TRAILS.find((y) => y.id === x);
     return { art: '', ...(t ? { swatch: `radial-gradient(circle at 50% 55%, ${t.c[0]} 0 10%, ${t.c[1]} 34%, transparent 68%)` } : {}) };
   }
-  return { art: 'icon.cos_titles' };
+  // a title: its words on the plate of its tier
+  const t = TITLES.find((y) => y.id === x);
+  const pl = PLATES.find((y) => y.id === ['driftwood', 'bronze', 'silver', 'gold', 'abyss'][Math.max(0, Math.min(4, t?.tier ?? 1))]);
+  return t && pl ? { art: `cos.plate_${pl.id}`, label: t.name, ink: pl.ink, halo: pl.halo } : { art: `icon.${icon}` };
 }
 
 function build(): WebItem[] {
@@ -270,7 +278,7 @@ function build(): WebItem[] {
         id: offer.id, kind: 'offer', tab, sec, card: f.id, rub: offer.price, offer: offer.id,
         name: qty ? [`${f.name[0]} · ${qty[0]}`, `${f.name[1]} · ${qty[1]}`] : f.name, title: f.name, text: f.text,
         ...(qty ? { qty } : {}),
-        art: cos ? cos.art : famArt(f.icon), ...(cos?.swatch ? { swatch: cos.swatch } : {}),
+        art: cos ? cos.art : famArt(f.icon), ...(cos?.swatch ? { swatch: cos.swatch } : {}), ...(cos?.label ? { label: cos.label, ink: cos.ink, halo: cos.halo } : {}),
         ...(rec ? { meta: [`${unitNames(rec)[0]}: into your free hammocks.`, `${unitNames(rec)[1]}: в свободные койки.`] as Tr } : {}),
         ...(offer.limit?.per === 'ever' ? { once: true } : offer.limit ? { per: offer.limit.per } : {}),
         ...(offer.from !== undefined ? { from: offer.from, until: offer.until } : {}),

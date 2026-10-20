@@ -105,7 +105,7 @@
     if (F.sort === 'cheap') a.sort((p, q) => minRub(p) - minRub(q) || p.i - q.i);
     else if (F.sort === 'dear') a.sort((p, q) => minRub(q) - minRub(p) || p.i - q.i);
     else if (F.sort === 'new') a.sort((p, q) => (q.first.from || 0) - (p.first.from || 0) || q.i - p.i);
-    else a.sort((p, q) => Number(!!q.first.tag && q.first.kind !== 'unit') - Number(!!p.first.tag && p.first.kind !== 'unit') || p.i - q.i);
+    else a.sort((p, q) => p.i - q.i); // (the shop's own order: the ladders as the game lays them out)
     return a;
   };
 
@@ -113,8 +113,9 @@
   const date = (ms) => new Date(ms).toLocaleDateString(data.lang === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'long' });
   const artOf = (x) => {
     const src = x.art && data.art[x.art];
-    const cls = x.kind === 'captain' ? ' face' : x.kind === 'ship' ? ' hull' : (x.art || '').startsWith('unit.') ? ' fig' : x.kind === 'pack' ? ' coin' : '';
-    return `<div class="shop-art${cls}${x.swatch ? ' sw' : ''}"${x.swatch ? ` style="--sw:${esc(x.swatch)}"` : ''}>${src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async">` : ''}${ribbon(x)}</div>`;
+    const cls = x.kind === 'captain' ? ' face' : x.kind === 'ship' ? ' hull' : (x.art || '').startsWith('unit.') ? ' fig' : x.kind === 'pack' ? ' coin' : (x.art || '').startsWith('cos.plate_') ? ' plate' : '';
+    const label = x.label ? `<span class="sc-label" style="color:${esc(x.ink || '#f2e6c8')};text-shadow:0 0 6px ${esc(x.halo || '#000')},0 1px 2px ${esc(x.halo || '#000')}">${esc(L(x.label))}</span>` : '';
+    return `<div class="shop-art${cls}${x.swatch ? ' sw' : ''}"${x.swatch ? ` style="--sw:${esc(x.swatch)}"` : ''}>${src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async">` : ''}${label}${ribbon(x)}</div>`;
   };
   const btnLabel = (x, why, single) => {
     if (busy === x.id) return esc(t.paying);
@@ -228,6 +229,8 @@ ${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n
   const focusables = (el) => [...el.querySelectorAll('button:not([disabled]), input:not([disabled]), select, a[href], [tabindex]:not([tabindex="-1"])')].filter((x) => x.offsetParent !== null);
   const openDrawer = () => {
     lastFocus = d.activeElement;
+    side.classList.add('on');
+    void side.offsetWidth; // (mounted first, so its slide-in runs)
     side.classList.add('open');
     backdrop.hidden = false;
     requestAnimationFrame(() => backdrop.classList.add('on'));
@@ -242,7 +245,7 @@ ${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n
     side.classList.remove('open');
     side.style.transform = '';
     backdrop.classList.remove('on');
-    setTimeout(() => { if (!side.classList.contains('open')) backdrop.hidden = true; }, reduced.matches ? 0 : 280);
+    setTimeout(() => { if (!side.classList.contains('open')) { backdrop.hidden = true; side.classList.remove('on'); } }, reduced.matches ? 0 : 280);
     d.documentElement.classList.remove('st-lock');
     tab.setAttribute('aria-expanded', 'false');
     side.removeAttribute('role');

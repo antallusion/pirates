@@ -565,7 +565,7 @@ test('the pages in both languages: the rating, the shop, the terms and the refun
       assert.match(ru, new RegExp(`href="/site/${doc}/"`));
       assert.match(en, new RegExp(`href="/site/en/${doc}/"`));
     }
-    assert.match(ru, /ИП Спиридонов Дмитрий Вадимович · ИНН 760806658219 · ОГРНИП 324762700012347/);
+    assert.match(ru, /ИП Спиридонов Дмитрий Вадимович · ИНН&nbsp;760806658219 · ОГРНИП&nbsp;324762700012347/);
     assert.match(ru, /info@gravetidegame\.com/);
     assert.match(en, /support@gravetidegame\.com/);
   }
