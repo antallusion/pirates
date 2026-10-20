@@ -6,7 +6,9 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { VkFail, createBridge, orderOutcome } from '../client/src/vkbridge.ts';
+import { VkFail, bindViewEvents, createBridge, orderOutcome } from '../client/src/vkbridge.ts';
+import { appPaused, gateFrames, mediaSleeps, onLifecycle, pauseApp, resetLifecycle, resumeApp, soundSleeps } from '../client/src/lifecycle.ts';
+import { AudioEngine } from '../client/src/audio.ts';
 import type { BridgeWin } from '../client/src/vkbridge.ts';
 
 type Ev = { data?: unknown; detail?: unknown };
@@ -140,4 +142,75 @@ test('VKWebAppShowOrderBox: an answer missing its fields does not crash — read
   b.on((type) => seen.push(type));
   f.fire('VKWebAppEvent', { detail: { type: 'VKWebAppUpdateConfig', data: { insets: { top: 24, bottom: 0, left: 0, right: 0 } } } });
   assert.deepEqual(seen, ['VKWebAppUpdateConfig']);
+});
+
+test('VKWebAppViewHide puts the game to sleep — the pause hook, the sound suspended, the frames held; ViewRestore wakes it', () => {
+  resetLifecycle();
+  // the sound: the real engine with a fake context (it has one once the player has tapped)
+  const ctx = { state: 'running', suspend() { this.state = 'suspended'; return Promise.resolve(); }, resume() { this.state = 'running'; return Promise.resolve(); } };
+  const g = globalThis as { localStorage?: unknown };
+  g.localStorage ??= { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+  const audio = new AudioEngine();
+  (audio as unknown as { ctx: typeof ctx }).ctx = ctx;
+  const calls: string[] = [];
+  onLifecycle(soundSleeps(audio));
+  onLifecycle({ pause: () => calls.push('pause'), resume: () => calls.push('resume') });
+  // a film playing, another <video> paused already
+  const film = { paused: false, ended: false, play() { this.paused = false; calls.push('play'); }, pause() { this.paused = true; } };
+  const idle = { paused: true, ended: false, play() { calls.push('play idle'); }, pause() {} };
+  onLifecycle(mediaSleeps({ querySelectorAll: () => [film, idle] }));
+  // the animation frames: a fake window's, gated
+  const ran: number[] = [];
+  const queue: FrameRequestCallback[] = [];
+  const cls = new Set<string>();
+  const win = {
+    requestAnimationFrame: (cb: FrameRequestCallback) => (queue.push(cb), queue.length),
+    cancelAnimationFrame: () => {},
+    document: { documentElement: { classList: { toggle: (c: string, on?: boolean) => (on ? cls.add(c) : cls.delete(c)) } } },
+  };
+  gateFrames(win);
+  const tick = () => { const l = queue.splice(0); for (const cb of l) cb(0); };
+  const loop = () => { ran.push(1); win.requestAnimationFrame(loop); };
+  win.requestAnimationFrame(loop);
+  tick();
+  tick();
+  assert.equal(ran.length, 2);
+  const f = fakeWin({ web: true });
+  const b = createBridge(f.w);
+  bindViewEvents(b);
+  f.fire('message', { data: { type: 'vk-connect', data: { type: 'VKWebAppViewHide', data: {} } } });
+  assert.equal(appPaused(), true);
+  assert.deepEqual(calls, ['pause']);
+  assert.equal(ctx.state, 'suspended');
+  assert.equal(film.paused, true);
+  assert.ok(cls.has('app-paused'));
+  // asleep: the loop's frame booked before the sleep runs once, its next is held
+  tick();
+  tick();
+  tick();
+  assert.equal(ran.length, 3);
+  assert.equal(queue.length, 0);
+  // the page hidden too: VK's restore alone does not wake it
+  pauseApp('hidden');
+  f.fire('VKWebAppEvent', { detail: { type: 'VKWebAppViewRestore', data: {} } });
+  assert.equal(appPaused(), true);
+  assert.equal(ctx.state, 'suspended');
+  resumeApp('hidden');
+  assert.equal(appPaused(), false);
+  assert.deepEqual(calls, ['pause', 'resume', 'play']);
+  assert.equal(ctx.state, 'running');
+  assert.equal(film.paused, false);
+  assert.ok(!cls.has('app-paused'));
+  // the held frame runs on the wake, and the loop goes on
+  tick();
+  assert.equal(ran.length, 4);
+  tick();
+  assert.equal(ran.length, 5);
+  // a hide twice is one sleep
+  f.fire('VKWebAppEvent', { detail: { type: 'VKWebAppViewHide' } });
+  f.fire('VKWebAppEvent', { detail: { type: 'VKWebAppViewHide' } });
+  assert.equal(calls.filter((c) => c === 'pause').length, 2);
+  f.fire('VKWebAppEvent', { detail: { type: 'VKWebAppViewRestore' } });
+  assert.equal(appPaused(), false);
+  resetLifecycle();
 });

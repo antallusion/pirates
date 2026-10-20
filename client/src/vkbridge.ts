@@ -10,7 +10,9 @@
 // ({type: 'vk-connect', data: {type: '<Method>Result' | '<Method>Failed', data: {…, request_id}}}) on the web and as
 // window 'VKWebAppEvent' CustomEvents ({detail: {type, data}}) in the phones' clients; each is matched to its call by the
 // request_id (an answer without one, to the oldest call of its method). No answer within the timeout: the call fails.
-// No imports: the node tests drive it with a fake window (tests/vkbridge.test.ts).
+// No DOM imports (lifecycle.ts only): the node tests drive it with a fake window (tests/vkbridge.test.ts).
+
+import { pauseApp, resumeApp } from './lifecycle.ts';
 
 type Fn = (...a: unknown[]) => unknown;
 
@@ -188,6 +190,15 @@ export function createBridge(w: BridgeWin, o: { timeout?: number } = {}): Bridge
       return pending.size;
     },
   };
+}
+
+/** VK's own «the app is out of sight» and «back» (owner, 2026-10-20 — VK moderation: the sound went on and the game
+ *  ran with the app minimised): VKWebAppViewHide puts the game to sleep, VKWebAppViewRestore wakes it (lifecycle.ts). */
+export function bindViewEvents(b: Bridge): void {
+  b.on((type) => {
+    if (type === 'VKWebAppViewHide') pauseApp('vk');
+    else if (type === 'VKWebAppViewRestore') resumeApp('vk');
+  });
 }
 
 /** VKWebAppShowOrderBox's answer read without trusting its shape (owner, 2026-10-20: a game crashed on an answer with no

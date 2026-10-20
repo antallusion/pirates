@@ -5558,3 +5558,6 @@ body.tac-ph .tb-top { position: absolute; top: calc(env(safe-area-inset-top, 0px
 .pm-web { display: flex; align-items: center; gap: 12px; margin: 10px 0 0; padding: 8px 10px; border: 1px solid rgba(176, 141, 87, 0.4); border-radius: 6px; }
 .pm-web p { flex: 1; margin: 0; font-size: 12px; }
 .pm-web .btn { flex: none; text-decoration: none; }
+
+/* The game asleep out of sight (client/src/lifecycle.ts, docs/36): no CSS animation runs while it is hidden. */
+html.app-paused *, html.app-paused *::before, html.app-paused *::after { animation-play-state: paused !important; }

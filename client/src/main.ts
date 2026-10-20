@@ -155,7 +155,8 @@ import { Promos } from './ui/promo.ts'; // her personal offers (owner, 2026-10-1
 import { DailyGift } from './ui/dailygift.ts'; // the daily login gift (owner, 2026-10-16)
 import { initTgNotices } from './ui/tgnotices.ts'; // «Уведомления в Телеграме» (owner, 2026-10-16)
 import { tgInvoices, tgLoginButton, tgStart } from './tg.ts'; // Telegram: the Mini App, «Войти через Телеграм», Stars (docs/27)
-import { inVk, mayFullscreen, vkStart } from './vk.ts'; // the VK Mini App: its sign-in, no fullscreen of the game's own (docs/36)
+import { inVk, mayFullscreen, vkStart } from './vk.ts';
+import { gateFrames, mediaSleeps, onLifecycle, pauseApp, resumeApp, soundSleeps } from './lifecycle.ts'; // the game asleep out of sight (docs/36) // the VK Mini App: its sign-in, no fullscreen of the game's own (docs/36)
 import { ResearchWindow } from './ui/research.ts'; // the yard's tree of hulls (owner, 2026-10-04; docs/20)
 import { AdvCard } from './ui/advcard.ts'; // docs/17 H4
 import { PuzzleWindow } from './ui/puzzle.ts';
@@ -193,7 +194,27 @@ addEventListener('click', (e) => {
   const b = (e.target as Element | null)?.closest?.('button, .btn, [role="button"], [role="switch"], .w-chip');
   if (b && !(b as HTMLButtonElement).disabled && !b.closest('#world')) cue('click');
 }, { capture: true, passive: true });
-document.addEventListener('visibilitychange', () => audio.setHidden(document.hidden));
+// Out of sight the whole game sleeps (owner, 2026-10-20 — VK moderation: «если свернуть игру, звук продолжает играть»;
+// lifecycle.ts, docs/36): the sound's context suspended, the films and any <audio>/<video> paused, every animation frame
+// held, the helm let go with one neutral input — on every platform when the page is hidden or put away; inside VK also
+// on VKWebAppViewHide and the window's blur (vk.ts). Awake again as it comes back.
+gateFrames(globalThis as unknown as Parameters<typeof gateFrames>[0]);
+onLifecycle(soundSleeps(audio));
+onLifecycle(mediaSleeps(document));
+onLifecycle({
+  pause: () => {
+    keys.clear();
+    touch.course = null;
+    state.input.rudder = 0;
+    if (inGame && !state.syncSail) net.send({ t: 'input', seq: ++state.input.seq, rudder: 0, sail: state.input.sail });
+  },
+  resume: () => {
+    last = performance.now();
+  },
+});
+document.addEventListener('visibilitychange', () => (document.hidden ? pauseApp('hidden') : resumeApp('hidden')));
+addEventListener('pagehide', () => pauseApp('pagehide'));
+addEventListener('pageshow', () => resumeApp('pagehide'));
 {
   const hook = (): boolean => {
     const w = (globalThis as { Telegram?: { WebApp?: { onEvent?: (e: string, f: () => void) => void } } }).Telegram?.WebApp;

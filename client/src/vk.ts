@@ -17,7 +17,8 @@ import type { Net } from './net.ts';
 import type { ServerMsg } from '../../shared/src/protocol.ts';
 import { esc } from './ui/dom.ts';
 import { bootMark, settleViewport } from './viewport.ts';
-import { VkFail, createBridge, orderOutcome } from './vkbridge.ts';
+import { VkFail, bindViewEvents, createBridge, orderOutcome } from './vkbridge.ts';
+import { pauseApp, resumeApp } from './lifecycle.ts';
 import type { Bridge, BridgeWin } from './vkbridge.ts';
 
 const L = dict(EN, RU);
@@ -160,6 +161,11 @@ export function vkStart(net: Net): boolean {
   b.on((type, data) => {
     if (type === 'VKWebAppUpdateConfig') applyInsets(data);
   });
+  // Minimised, the game sleeps: VK's ViewHide / ViewRestore (lifecycle.ts — the page's own hiding is main.ts's), and the
+  // window's blur as the fallback inside VK (a client that sends neither).
+  bindViewEvents(b);
+  addEventListener('blur', () => pauseApp('blur'));
+  addEventListener('focus', () => resumeApp('blur'));
   bootScreen(L('boot'));
   net.on((m: ServerMsg) => {
     if (m.t === 'welcome' || (m.t === 'err' && m.msg === 'auth_required')) bootDone();
