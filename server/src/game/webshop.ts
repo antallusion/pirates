@@ -503,8 +503,8 @@ export class WebShop {
     let why: string | null = null;
     if (!x) why = 'unknown_item';
     else if (x.kind === 'captain') why = buyCaptainFor(game, o.acc, x.captain!);
-    else if (x.kind === 'ship') why = s ? buyShip(game, s, x.ship!) : 'not aboard';
-    else if (x.kind === 'unit') why = s ? buyUnit(game, s, x.unit!, x.k ?? 1, o.id) : 'not aboard';
+    else if (x.kind === 'ship') why = s ? buyShip(game, s, x.ship!) : 'not_aboard';
+    else if (x.kind === 'unit') why = s ? buyUnit(game, s, x.unit!, x.k ?? 1, o.id) : 'not_aboard';
     else if (x.kind === 'offer') why = buyForAccount(game, o.acc, x.offer!, o.id, promo, true);
     else if (x.kind === 'deal') why = buyForAccount(game, o.acc, x.offer!, o.id, { ...promo, count: 'deal' }, true);
     // (bought already by this very order — a resumed delivery — is no refusal)

@@ -377,6 +377,9 @@ img[src*="/site/img/ico/"], img[src*="/site/img/rank/"], img[src*="/site/img/med
 /* ---- the footer's legal line (the shop's terms and refunds) */
 .ftr nav.ftr-legal a { color: var(--muted); font-size: 13px; }
 .ftr nav.ftr-legal a:hover { color: var(--ice); }
+.ftr p.ftr-req { font-size: 12.5px; line-height: 1.6; color: #6f7888; max-width: 640px; }
+.ftr p.ftr-req a { color: var(--muted); }
+.ftr p.ftr-req a:hover { color: var(--ice); }
 /* seven links in the pill (the rating and the shop joined, 2026-10-20): tighter before the phone menu takes over */
 @media (max-width: 1240px) and (min-width: 901px) {
   .hdr-pill { gap: 10px; }

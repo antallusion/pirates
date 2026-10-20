@@ -550,7 +550,7 @@ test('YooKassa live: the webhook is not believed — the payment is fetched agai
 // ------------------------------------------------------------------------------------------------ the pages
 
 test('the pages in both languages: the rating, the shop, the terms and the refunds; «Рейтинг» and «Магазин» in the menu', () => {
-  for (const p of ['rating', 'shop', 'terms', 'refunds']) {
+  for (const p of ['rating', 'shop', 'offer', 'terms', 'privacy', 'consent', 'cookies', 'refunds', 'contacts']) {
     assert.ok(existsSync(pjoin(SITE, p, 'index.html')), `ru ${p}`);
     assert.ok(existsSync(pjoin(SITE, 'en', p, 'index.html')), `en ${p}`);
   }
@@ -560,8 +560,14 @@ test('the pages in both languages: the rating, the shop, the terms and the refun
     assert.match(ru, /href="\/site\/shop\/"[^>]*>.*?Магазин/s);
     assert.match(en, /href="\/site\/en\/rating\/"[^>]*>.*?Rating/s);
     assert.match(en, /href="\/site\/en\/shop\/"[^>]*>.*?Shop/s);
-    assert.match(ru, /href="\/site\/terms\/"/);
-    assert.match(en, /href="\/site\/en\/refunds\/"/);
+    // every legal document in the footer, and the seller's details with the game's addresses
+    for (const doc of ['offer', 'terms', 'privacy', 'consent', 'cookies', 'refunds', 'contacts']) {
+      assert.match(ru, new RegExp(`href="/site/${doc}/"`));
+      assert.match(en, new RegExp(`href="/site/en/${doc}/"`));
+    }
+    assert.match(ru, /ИП Спиридонов Дмитрий Вадимович · ИНН 760806658219 · ОГРНИП 324762700012347/);
+    assert.match(ru, /info@gravetidegame\.com/);
+    assert.match(en, /support@gravetidegame\.com/);
   }
   // the scripts' strings: the same keys in both, the Russian ones Russian
   for (const [page, id] of [['shop', 'shop-data'], ['rating', 'rt-data']] as const) {
@@ -574,7 +580,7 @@ test('the pages in both languages: the rating, the shop, the terms and the refun
     assert.deepEqual(Object.keys(ru).sort(), Object.keys(en).sort(), page);
     for (const [k, v] of Object.entries(ru)) {
       assert.ok(v, `${page}.${k}`);
-      assert.ok(!/[A-Za-z]{3,}/.test(v.replace(/ЮKassa|YooKassa|СБП|mail@example\.com/g, '')), `${page}.${k} is Russian: ${v}`);
+      assert.ok(!/[A-Za-z]{3,}/.test(v.replace(/ЮKassa|YooKassa|СБП|mail@example\.com|[a-z]+@gravetidegame\.com/g, '')), `${page}.${k} is Russian: ${v}`);
     }
   }
   // the legal pages: the seller's details filled in, nothing left for the owner to fill
@@ -582,6 +588,12 @@ test('the pages in both languages: the rating, the shop, the terms and the refun
   assert.equal((terms.match(/class="todo"/g) ?? []).length, 0);
   assert.match(terms, /760806658219/);
   assert.match(terms, /324762700012347/);
-  assert.match(readFileSync(pjoin(SITE, 'shop', 'index.html'), 'utf8'), /публичной оферты/);
-  assert.match(readFileSync(pjoin(SITE, 'en', 'shop', 'index.html'), 'utf8'), /terms of sale/);
+  for (const doc of ['offer', 'terms', 'privacy', 'consent', 'cookies', 'refunds', 'contacts']) for (const lang of ['', 'en']) {
+    const html = readFileSync(pjoin(SITE, lang, doc, 'index.html'), 'utf8');
+    assert.match(html, lang ? /Version of 20 October 2026/ : /Редакция от 20 октября 2026 года/, `${lang}/${doc}: dated`);
+    assert.match(html, /support@gravetidegame\.com/, `${lang}/${doc}: the support address`);
+    assert.ok(!/class="todo"|ВЛАДЕЛЕЦ|OWNER:/.test(html), `${lang}/${doc}: nothing left to fill in`);
+  }
+  assert.match(readFileSync(pjoin(SITE, 'shop', 'index.html'), 'utf8'), /Нажимая «Оплатить», вы принимаете <a href="\/site\/offer\/"/);
+  assert.match(readFileSync(pjoin(SITE, 'en', 'shop', 'index.html'), 'utf8'), /By pressing «Pay» you accept the <a href="\/site\/en\/offer\/"/);
 });
