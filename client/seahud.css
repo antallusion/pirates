@@ -487,6 +487,13 @@ body.reduce-motion .dk-shot.best::before { animation: none; }
 .dk-charge > i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--k-turq); box-shadow: 0 0 4px var(--k-turq); }
 /* the context row keeps between the helm and the deck */
 body.simple:not(.touch) #hud-bottom { bottom: calc(var(--sa-b) + 12px); max-width: calc(100vw - 2 * (var(--dk-pad) + var(--dk-fire) + 26px + 5 * var(--dk-slot) + 4 * var(--dk-gap) + 16px)); }
+/* (a narrow desk — VK's window inside vk.com, 826 px — left the row 66 px between the deck's two halves and «В гавань»
+   spilled out of its button, docs/36: with the deck put away the row takes the width between the helm and «В море»; with
+   the deck up and too little room beside it, the row stands over the deck) */
+body.simple:not(.touch):has(#tc-deck.hidden) #hud-bottom { max-width: calc(100vw - 2 * (var(--stick) + 48px)); }
+@media (max-width: 1099px) {
+  body.simple:not(.touch):has(#tc-deck:not(.hidden)) #hud-bottom { bottom: calc(var(--sa-b) + 2 * var(--dk-slot) + 3 * var(--dk-gap) + 40px); max-width: calc(100vw - 2 * (var(--stick) + 48px)); }
+}
 body.simple:not(.touch) #hud-prompt .act-row { gap: 6px; flex-wrap: wrap; justify-content: center; }
 body.simple:not(.touch) #hud-prompt .act-btn { --h: 34px; text-align: left; } /* (as wide as its words: nothing to centre) */
 

@@ -115,13 +115,30 @@ async function newPage(size, touch) {
 }
 
 const say = (p, text) => p.evaluate((x) => globalThis.gravetide.net.send({ t: 'chat', text: x }), text);
-const closeAll = async (p) => { for (let i = 0; i < 3; i++) { await p.evaluate(() => { globalThis.gravetide?.open(null); document.querySelector('#confirm .k-btn--secondary, #confirm [data-no]')?.click(); }); await sleep(150); } };
+// (every window, an ask, the offers' card that comes by itself; the island's scene left)
+const closeAll = async (p) => { for (let i = 0; i < 3; i++) { await p.evaluate(() => { globalThis.gravetide?.open(null); document.querySelector('#confirm .k-btn--secondary, #confirm [data-no]')?.click(); document.querySelector('#promo-over [data-poshut]')?.click(); if (globalThis.gravetide?.isle?.isOpen) globalThis.gravetide.isle.exit(); }); await sleep(150); } };
+let homePort = null;
+/** Docked at her first port (the harbour's window needs it). */
+async function dock(p) {
+  if (await p.evaluate(() => !!globalThis.gravetide.state.self?.dockedAt)) return true;
+  if (!homePort) return false;
+  await say(p, `/tp ${homePort}`);
+  await sleep(2500);
+  for (let i = 0; i < 6; i++) {
+    await p.evaluate(() => globalThis.gravetide.net.send({ t: 'dock' }));
+    await sleep(1500);
+    if (await p.evaluate(() => !!globalThis.gravetide.state.self?.dockedAt)) break;
+  }
+  await sleep(1500);
+  await closeAll(p);
+  return p.evaluate(() => !!globalThis.gravetide.state.self?.dockedAt);
+}
 
 async function signIn(p, user, platform) {
   await p.goto(`${BASE}/play?vk&${launchQuery(user, platform)}`, { waitUntil: 'domcontentloaded', timeout: 90000 });
   const t0 = Date.now();
   // the captain's choice (a new VK user) or the HUD (one who has played)
-  const on = await p.waitForSelector('#screen-captain:not(.hidden), #hud:not(.hidden)', { timeout: 120000 });
+  const on = await p.waitForSelector('#screen-captain:not(.hidden), #hud:not(.hidden), #board-tac:not(.hidden)', { timeout: 120000 });
   log(`signed in by VK in ${Date.now() - t0} ms`);
   if (await on.evaluate((e) => e.id === 'screen-captain')) {
     await sleep(600);
@@ -130,14 +147,15 @@ async function signIn(p, user, platform) {
     await p.evaluate(() => document.getElementById('pick-captain')?.click());
     for (let i = 0; i < 60 && !(await p.$('#hud:not(.hidden)')); i++) { await p.mouse.click(10, 10).catch(() => {}); await sleep(500); }
   }
-  await p.waitForSelector('#hud:not(.hidden)', { timeout: 60000 });
+  await p.waitForSelector('#hud:not(.hidden), #board-tac:not(.hidden)', { timeout: 60000 });
   await sleep(1500);
   await p.evaluate(MEASURE);
   await p.evaluate(() => document.body.classList.add('reduce-motion'));
 }
 
 async function fill(p) {
-  const orders = ['/level 30', '/silver 500000', '/glory 3', '/doubloons 600', '/doubloons sample on', '/army marine 30', '/army mermaid 14', '/army lantern_maw 6', '/creature', '/isle 3', '/island free', '/relic all', '/art list', '/feats', '/album', '/cos all', '/scrolls 3', '/heal'];
+  homePort ??= await p.evaluate(() => globalThis.gravetide.state.self?.dockedAt ?? null);
+  const orders = ['/level 30', '/silver 500000', '/glory 3', '/doubloons 600', '/doubloons sample on', '/army marine 30', '/army mermaid 14', '/army lantern_maw 6', '/creature', '/isle 3', '/relic all', '/art list', '/feats', '/album', '/cos all', '/scrolls 3', '/heal'];
   for (const o of orders) { await say(p, o); await sleep(500); }
   await sleep(1500);
   await closeAll(p);
@@ -176,8 +194,20 @@ async function sweepWindows(p, sizeTag) {
   for (const w of WINDOWS) {
     if (ONLY && !ONLY.has(w)) continue;
     if (w === 'shop') { await sweepShop(p, sizeTag); continue; }
+    if (w === 'port' && !(await dock(p))) { results.push({ size: sizeTag, screen: w, skipped: 'not docked' }); continue; }
+    if (w === 'base') {
+      // her island's base is a scene of its own (islescene.ts), not a window
+      await closeAll(p);
+      await p.evaluate(() => globalThis.gravetide.open('base'));
+      await sleep(2500);
+      if (await p.evaluate(() => !!globalThis.gravetide.isle?.isOpen)) await measure(p, 'base (island scene)', sizeTag, { root: '#isle' });
+      else results.push({ size: sizeTag, screen: w, skipped: 'no island of her own' });
+      await closeAll(p);
+      continue;
+    }
     await closeAll(p);
-    await p.evaluate((x) => globalThis.gravetide.open(x), w);
+    // (the panel emptied first: a window with nothing to show leaves it so — never the last window's leftovers)
+    await p.evaluate((x) => { document.getElementById('modal-panel').innerHTML = ''; globalThis.gravetide.open(x); }, w);
     await sleep(700);
     if (!(await modalOpen(p))) { results.push({ size: sizeTag, screen: w, skipped: 'no state for it (the window closes itself without its moment)' }); continue; }
     await measure(p, w, sizeTag, { root: '#modal-panel' });
@@ -343,9 +373,20 @@ async function share(p) {
 }
 
 async function battle(p, sizes, touch) {
+  // (out of the harbour first: the test battle's orders, /?battle's own — main.ts runTestBattle)
+  await closeAll(p);
+  if (await p.evaluate(() => !!globalThis.gravetide.state.self?.dockedAt)) {
+    await p.evaluate(() => globalThis.gravetide.net.send({ t: 'undock' }));
+    await sleep(4000);
+    await closeAll(p);
+  }
   const orders = ['/level 30', '/tp gravewater', '/ship frigate', '/heal', '/army clear', '/army marine 30', '/army mermaid 14', '/army lantern_maw 6', '/army ancient_turtle 3', '/foe patrol frigate', '/board'];
-  for (const o of orders) { await say(p, o); await sleep(800); }
-  const ok = await p.waitForSelector('#board-tac:not(.hidden)', { timeout: 40000 }).then(() => true, () => false);
+  for (const o of orders) { await say(p, o); await sleep(900); }
+  let ok = await p.waitForSelector('#board-tac:not(.hidden)', { timeout: 30000 }).then(() => true, () => false);
+  if (!ok) {
+    await say(p, '/board');
+    ok = await p.waitForSelector('#board-tac:not(.hidden)', { timeout: 30000 }).then(() => true, () => false);
+  }
   if (!ok) { results.push({ size: 'all', screen: 'battle', skipped: 'the boarding did not start' }); return; }
   await sleep(3000);
   for (const [w, h] of sizes) {
@@ -401,12 +442,11 @@ try {
     await measure(p, 'rotate-veil:over-shop', `${w}x${h}`, { root: '#rotate-lock' });
     await closeAll(p);
   }
-  if (!ONLY || ONLY.has('battle')) await battle(p, side, true);
   findings.errors.push(...p.errs.map((e) => `phone: ${e}`));
   const fsPhone = await p.evaluate(() => globalThis.__vk.fs);
   await p.ctx.close();
-  // 2. the window inside vk.com on a desk, and a desk: the same captain (the same VK user) with a mouse
-  let fsDesk = 0;
+  // 2. the window inside vk.com on a desk, and a desk: the same captain (the same VK user) with a mouse; then the battle
+  let fsDesk = 0, fsBattle = 0;
   if (desk.length) {
     const d = await newPage(desk[0], false);
     await signIn(d, user, 'desktop_web');
@@ -421,7 +461,25 @@ try {
     findings.errors.push(...d.errs.map((e) => `desk: ${e}`));
     await d.ctx.close();
   }
-  check(fsPhone === 0 && fsDesk === 0, `requestFullscreen never called inside VK (phone ${fsPhone}, desk ${fsDesk})`);
+  // 3. the boarding battle on the phones (the same captain again, her battle resumed — or begun)
+  if (!ONLY || ONLY.has('battle')) {
+    const b = await newPage(side[side.length - 1] ?? [812, 375], true);
+    await signIn(b, user, 'mobile_android');
+    if (await b.$('#board-tac:not(.hidden)')) {
+      await sleep(2500);
+      for (const [w, h] of side) {
+        await b.setViewportSize({ width: w, height: h });
+        await sleep(900);
+        await measure(b, 'battle', `${w}x${h}`, { root: '#board-tac' });
+        const book = await b.evaluate(() => { const x = document.querySelector('#board-tac [data-book]'); x?.click(); return !!x; });
+        if (book) { await sleep(700); await measure(b, 'battle:book', `${w}x${h}`, { root: '#board-tac' }); await b.evaluate(() => document.querySelector('#board-tac [data-book]')?.click()); await sleep(400); }
+      }
+    } else await battle(b, side, true);
+    fsBattle = await b.evaluate(() => globalThis.__vk.fs);
+    findings.errors.push(...b.errs.map((e) => `battle: ${e}`));
+    await b.ctx.close();
+  }
+  check(fsPhone === 0 && fsDesk === 0 && fsBattle === 0, `requestFullscreen never called inside VK (phone ${fsPhone}, desk ${fsDesk}, battle ${fsBattle})`);
 } catch (e) {
   console.error(e);
   failures++;

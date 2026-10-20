@@ -5,8 +5,8 @@
 .out-hold { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
 .out-good { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 .out-line { margin: 0; line-height: 1.35; }
-.out-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.out-choices.one { grid-template-columns: 1fr; }
+.out-choices { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.out-choices.one { grid-template-columns: minmax(0, 1fr); }
 .out-choice { display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 6px 10px; text-align: left; white-space: normal; }
 .out-choice > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .out-choice b { line-height: 1.2; }
@@ -19,7 +19,7 @@
   .out-choice small { font-size: 11px; }
 }
 @media (max-width: 420px) {
-  .out-choices { grid-template-columns: 1fr; gap: 5px; }
+  .out-choices { grid-template-columns: minmax(0, 1fr); gap: 5px; }
 }
 
 /* ---- the struck ship's card: two choices take the row the four took (styles.css, feel.css) ---- */

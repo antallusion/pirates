@@ -11,7 +11,7 @@
 //               on the goods' texts at all;
 //   links     — <a href> that leads off the game's page (another origin, or another path of ours), visible ones.
 (() => {
-  const SKIP = '#world, #boot, #boot-log, #pad-cursor, #atk-mark, script, style, link, meta, br, wbr';
+  const SKIP = '#world, #boot, #boot-log, #pad-cursor, #atk-mark, .is-view .is-t, script, style, link, meta, br, wbr';
   const BTN = 'button, a.btn, [role="button"], .btn, .k-btn, .sh-off, .w-chip, .w-tab, .tab, .menu-tile';
   window.__vkMeasure = (o = {}) => {
     const W = innerWidth, H = innerHeight;
@@ -32,6 +32,9 @@
         const c = cs(p);
         if (c.display === 'none' || c.visibility === 'hidden' || c.visibility === 'collapse' || Number(c.opacity) < 0.05) return false;
       }
+      // (a heading kept for a screen reader only — 1 px, clipped — is not on screen)
+      const r = e.getBoundingClientRect();
+      if (r.width <= 1 && r.height <= 1) return false;
       return e.getClientRects().length > 0;
     };
     const ownText = (e) => [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
@@ -125,7 +128,7 @@
       // ellipsis that cuts (everywhere); in the shop any clamp rule on the goods' texts
       if (c.textOverflow === 'ellipsis' && c.overflowX !== 'visible' && e.scrollWidth > e.clientWidth + 1) out.ellipsis.push(`${short(e)} «…» ${e.scrollWidth}>${e.clientWidth}`);
       else if (o.shop && e.closest('.card, .sh-card, .pm-card, .pm-pack, .po-card, .po-box, [class^="cos-"], .sh-stores, .sh-work, #confirm') && (c.textOverflow === 'ellipsis' || (c.webkitLineClamp && c.webkitLineClamp !== 'none')) && ownText(e)) out.ellipsis.push(`${short(e)} rule ${c.textOverflow === 'ellipsis' ? 'text-overflow' : 'line-clamp ' + c.webkitLineClamp}`);
-      if (c.position === 'absolute' || c.position === 'fixed' || c.position === 'sticky') {
+      if ((c.position === 'absolute' || c.position === 'fixed' || c.position === 'sticky') && e.tagName !== 'CANVAS') {
         const big = (vr.right - vr.left) * (vr.bottom - vr.top) > W * H * 0.35;
         const decor = !content && c.backgroundImage === 'none' && (c.backgroundColor === 'rgba(0, 0, 0, 0)' || c.backgroundColor === 'transparent') && !e.querySelector('img,svg,button');
         if (!big && !decor && vr.right - vr.left >= 6 && vr.bottom - vr.top >= 6 && c.pointerEvents !== 'none' || (!big && ownText(e))) placed.push({ e, r: vr });

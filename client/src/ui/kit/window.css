@@ -43,6 +43,19 @@
    тащите — сдвиг, колесо — масштаб» showed its first 297 of 566 px at 1500×600, QA 2026-10-09). */
 .w-head--chips .w-sub { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; font-size: 12.5px; line-height: 1.25; }
 @media (max-height: 520px), (max-width: 699px) { .w-head--chips .w-sub { display: none; } }
+/* A desk's window too narrow for its name and its chips in one line (VK's window inside vk.com, 826 px: «Настр…» and
+   the last chips under the close button — docs/36): the name stays whole and the chips take the next line. */
+@media (min-width: 701px) and (min-height: 521px) {
+  .w-head--chips { flex-wrap: wrap; row-gap: 2px; }
+  .w-head--chips .w-title { flex: none; }
+  .w-head--chips .w-chips { min-width: min(100%, max-content); }
+  /* the name never cut; the line under it (the port's admiralty and sea) in two lines rather than «…» */
+  .w-head .w-title { flex: none; max-width: 100%; }
+  .w-head:not(.w-head--chips) .w-sub { white-space: normal; text-overflow: clip; line-height: 1.2; }
+  /* a row of chips wider than its pane wraps to a second row: a mouse has no swipe for a row that only scrolls
+     sideways with its scrollbar hidden (the port's twelve places at 826 px showed six) */
+  .w-chips { flex-wrap: wrap; overflow-x: visible; }
+}
 
 /* ---------- The frame under the band: the rail of big tabs, and the pane (the chips, the page) */
 .w-frame { flex: 1 1 auto; min-height: 0; display: flex; }

@@ -82,14 +82,18 @@ export function vkPayOpen(): boolean {
   return !!cfgNow?.enabled && cfgNow.pay !== false;
 }
 
-/** The mini app's id: the server's, else the launch's own. */
-function appId(): number | null {
+/** GRAVETIDE's mini app on VK (dev.vk.com, 2026-10-20: «Игра», «Стратегии»): the share link's id when neither the
+ *  server's config nor the launch names one. */
+export const VK_APP_ID = 54838627;
+
+/** The mini app's id: the server's, else the launch's own, else GRAVETIDE's. */
+function appId(): number {
   if (cfgNow?.appId) return cfgNow.appId;
   try {
     const n = Number(new URLSearchParams(LAUNCH ?? '').get('vk_app_id'));
-    return Number.isSafeInteger(n) && n > 0 ? n : null;
+    return Number.isSafeInteger(n) && n > 0 ? n : VK_APP_ID;
   } catch {
-    return null;
+    return VK_APP_ID;
   }
 }
 
@@ -250,19 +254,15 @@ export const vkPayNote = (): string => L('payNote');
 // ------------------------------------------------------------------------------------------------ «Позвать друзей»
 
 /** The mini app's own address: the only link the game hands out inside VK. */
-export function vkAppLink(): string | null {
+export function vkAppLink(): string {
   const id = appId();
-  return id ? `https://vk.com/app${id}` : null;
+  return `https://vk.com/app${id}`;
 }
 
 /** «Позвать друзей»: VK's share sheet with the mini app's address. */
 export async function vkShare(toast?: (msg: string, kind: string) => void): Promise<boolean> {
   await vkConfig();
   const link = vkAppLink();
-  if (!link) {
-    toast?.(L('shareFailed'), 'bad');
-    return false;
-  }
   try {
     await vkBridge().send('VKWebAppShare', { link }, 5 * 60_000);
     toast?.(L('shared'), 'good');

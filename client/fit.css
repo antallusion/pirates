@@ -246,7 +246,7 @@
   #modal-panel[data-modal="talents"] .tal-layout { display: contents; }
   #modal-panel[data-modal="talents"] .tal-chips { position: absolute; z-index: 3; top: calc((var(--f-head) - 24px) / 2); left: calc(120px + 30 * var(--u)); right: calc(var(--f-btn) + 12px); height: 24px; gap: 4px; flex-wrap: nowrap; overflow: hidden; }
   #modal-panel[data-modal="talents"] .chip-stat { padding: 1px 7px 1px 4px; font-size: var(--f-fs); }
-  #modal-panel[data-modal="talents"] .tal-loadout { grid-area: load; margin: 0; gap: 3px; display: grid; grid-template-columns: 1fr 1fr; }
+  #modal-panel[data-modal="talents"] .tal-loadout { grid-area: load; margin: 0; gap: 3px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   #modal-panel[data-modal="talents"] .tal-loadout > .with-ico, #modal-panel[data-modal="talents"] .tal-loadout > .muted { display: none; }
   #modal-panel[data-modal="talents"] .tal-loadout.muted { display: none; }
   #modal-panel[data-modal="talents"] .tal-loadout .btn { min-height: var(--f-tap); padding: 0 2px; font-size: var(--f-fs-s); }
@@ -256,7 +256,7 @@
   #modal-panel[data-modal="talents"] .tal-main + .fit-pager { grid-area: pager; border-top: 0; background: none; }
   #modal-panel[data-modal="talents"] .tal-respec .card { margin: 0; padding: 0; border: 0; background: none; }
   #modal-panel[data-modal="talents"] .tal-respec .card > :not(.respec-btns) { display: none; }
-  #modal-panel[data-modal="talents"] .respec-btns { grid-template-columns: 1fr; gap: 3px; }
+  #modal-panel[data-modal="talents"] .respec-btns { grid-template-columns: minmax(0, 1fr); gap: 3px; }
   #modal-panel[data-modal="talents"] .respec-btns .btn { min-height: var(--f-btn); font-size: var(--f-fs-s); line-height: 1.15; padding: 0 3px; }
   #modal-panel[data-modal="talents"] .respec-btns .btn:last-child { display: none; }
   #modal-panel[data-modal="talents"] .tal-rules { display: none; }
@@ -265,7 +265,7 @@
   #modal-panel[data-modal="talents"] .rose-node { position: relative; left: auto; top: auto; width: var(--f-tap); height: var(--f-tap); margin: 0; transform: none; }
   #modal-panel[data-modal="talents"] .rose-node .rose-ico { inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); }
   #modal-panel[data-modal="talents"] .rose-pts { font-size: var(--f-fs-s); min-width: 16px; height: 15px; line-height: 13px; padding: 0 3px; }
-  #modal-panel[data-modal="talents"] .rose-extra { grid-template-columns: 1fr 1fr; margin-top: var(--f-gap); gap: 3px; } /* side by side: the rail's button says «Деяния» (the full name stood out of its half into the trees; one under the other ran into «Чистый лист» at 480×270, docs/30) */
+  #modal-panel[data-modal="talents"] .rose-extra { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin-top: var(--f-gap); gap: 3px; } /* side by side: the rail's button says «Деяния» (the full name stood out of its half into the trees; one under the other ran into «Чистый лист» at 480×270, docs/30) */
   #modal-panel[data-modal="talents"] .rose-extra .btn { min-height: var(--f-tap); padding: 0 2px; gap: 2px; font-size: var(--f-fs-s); white-space: normal; line-height: 1.1; }
   #modal-panel[data-modal="talents"] .rose-extra .btn .ico-sm { display: none; }
   #modal-panel[data-modal="talents"] .tal-main.fit-paged { column-count: 2; column-gap: 16px; }
