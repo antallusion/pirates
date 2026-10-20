@@ -28,6 +28,8 @@ import { mailerFromEnv } from './mail.ts';
 import { OAuthFlow, providersFromEnv } from './oauth.ts';
 import { telegramFromEnv } from './telegram.ts';
 import { handleTelegram } from './http/tg-routes.ts';
+import { vkFromEnv } from './vk.ts';
+import { handleVk } from './http/vk-routes.ts';
 import { readFileSync } from 'node:fs';
 import { ForumStore } from './forum/store.ts';
 import { ForumService } from './forum/service.ts';
@@ -64,6 +66,9 @@ wireLiveOps();
 const opsPanel = new OpsPanel(game, liveops);
 // Telegram (docs/27): the Mini App's sign-in, «Войти через Телеграм», the bot's webhook, Stars — null without TELEGRAM_BOT_TOKEN.
 const tg = telegramFromEnv({ db, auth, game, publicUrl: PUBLIC_URL });
+// The VK Mini App (docs/36): the launch's sign-in and the votes' payments callback — null without VK_APP_SECRET.
+const vk = vkFromEnv({ db, auth, game, publicUrl: PUBLIC_URL });
+if (vk) console.log(`[${GAME_NAME}] VK Mini App: app ${vk.appId ?? '(any)'}${vk.payTest ? ', test payments credited' : ''}`);
 // The community forum (docs/32_FORUM.md): its own SQLite file and uploads folder beside the game's database.
 const forumDir = DB_PATH === ':memory:' ? null : dirname(DB_PATH);
 const ids = (v: string | undefined) => (v ?? '').split(',').map((x) => Number(x.trim())).filter((x) => Number.isInteger(x) && x > 0);
@@ -132,6 +137,7 @@ const server = createServer(async (req, res) => {
   if (req.url?.startsWith('/telemetry') && (await telemetry.handle(req, res))) return;
   if (req.url?.startsWith('/ops') && (await opsPanel.handle(req, res))) return;
   if (await handleTelegram(req, res, tg)) return;
+  if (await handleVk(req, res, vk)) return;
   if (await handleAuth(req, res, auth, oauth)) return;
   if (req.url?.startsWith('/api/forum/') && (await handleForum(req, res))) return;
   if (req.url?.startsWith('/api/site/') && (await handleSite(req, res))) return;

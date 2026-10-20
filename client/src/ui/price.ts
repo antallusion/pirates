@@ -12,27 +12,40 @@ import { assetUrl } from '../assets.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/premium.ts';
 import { inTelegram, starIcon } from '../tg.ts';
+import { inVk, vkBuy, vkPayOpen } from '../vk.ts'; // VK's votes (docs/36)
+import { packVotes, votesOf, votesText } from '../../../shared/src/data/vk.ts';
 import { ask } from './confirm.ts';
 import { esc, fmt, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 
-/** What real money the captain sees: roubles on the website, Telegram Stars in the Mini App. */
-export type PayIn = 'rub' | 'stars';
+/** What real money the captain sees: roubles on the website, Telegram Stars in the Mini App, VK votes in VK's
+ *  (docs/36: a vote is 7 ₽ to a buyer — shared/src/data/vk.ts). */
+export type PayIn = 'rub' | 'stars' | 'votes';
 
-/** Stars inside Telegram (the Mini App: its launch data, or html.tg-app as tg.ts sets it), roubles elsewhere. */
+/** Votes inside VK (html.vk-app as vk.ts sets it), Stars inside Telegram (its launch data, or html.tg-app), roubles
+ *  elsewhere. */
 export function payIn(): PayIn {
+  if (typeof document !== 'undefined' && document.documentElement.classList.contains('vk-app')) return 'votes';
+  if (inVk()) return 'votes';
   if (typeof document !== 'undefined' && document.documentElement.classList.contains('tg-app')) return 'stars';
   return inTelegram() ? 'stars' : 'rub';
 }
 
-/** A price of `dbl` doubloons in real money: roubles one to one, Stars at the top-up's rate (¾ a doubloon). */
-export function realOf(dbl: number, cur: PayIn): number {
-  return cur === 'stars' ? Math.round(dbl * STARS_PER_DOUBLOON) : Math.round(dbl);
+/** Whether a top-up can be paid here: in VK by its votes (the server takes VK's callback), elsewhere as the server says. */
+export function payOpen(serverPay: boolean): boolean {
+  return payIn() === 'votes' ? vkPayOpen() : serverPay;
 }
 
-/** The real money's words: «290 ₽», «218 ⭐». */
+/** A price of `dbl` doubloons in real money: roubles one to one, Stars at the top-up's rate (¾ a doubloon), votes at
+ *  seven roubles a vote. */
+export function realOf(dbl: number, cur: PayIn): number {
+  return cur === 'stars' ? Math.round(dbl * STARS_PER_DOUBLOON) : cur === 'votes' ? votesOf(dbl) : Math.round(dbl);
+}
+
+/** The real money's words: «290 ₽», «218 ⭐», «41 голос». */
 export function realText(dbl: number, cur: PayIn = payIn()): string {
+  if (cur === 'votes') return votesText(realOf(dbl, cur), lang() === 'ru' ? 'ru' : 'en');
   return `${fmt(realOf(dbl, cur))} ${cur === 'stars' ? '⭐' : '₽'}`; // (signs, not words: the same in both languages)
 }
 
@@ -48,6 +61,8 @@ export function doubloonIcon(cls = 'ico-sm'): string {
 
 /** The real money drawn: «290 ₽», or Telegram's star and «218». */
 export function realHtml(dbl: number, cur: PayIn = payIn()): string {
+  // (VK's votes: «41 голос», the word declined — shared/src/data/vk.ts)
+  if (cur === 'votes') return esc(realText(dbl, cur));
   return cur === 'stars' ? `${starIcon()}${fmt(realOf(dbl, cur))}` : `${fmt(realOf(dbl, cur))} ₽`;
 }
 
@@ -88,6 +103,8 @@ export function priceView(dbl: number, balance: number, cur: PayIn = payIn()): P
 
 /** A tier's own price: its Stars in Telegram (what the invoice asks), its roubles elsewhere (its doubloons, one to one). */
 export function packPrice(p: DoubloonPack, cur: PayIn = payIn()): string {
+  // (in VK: what VK's order box asks, in votes)
+  if (cur === 'votes') return votesText(packVotes(p), lang() === 'ru' ? 'ru' : 'en');
   return cur === 'stars' ? `${fmt(p.stars)} ⭐` : `${fmt(p.n)} ₽`;
 }
 
@@ -137,18 +154,24 @@ if (typeof addEventListener === 'function') {
 /** A Buy with too few doubloons (owner, 2026-10-18): the question names what is missing and the tier that covers it;
  *  yes — that tier's Stars invoice is asked for (payments open: `pay`) and the purchase waits for the doubloons, or the
  *  top-up's page opens (payments not open yet). Nothing is paid without the captain's own tap in Telegram's sheet. */
-export async function topUpThenBuy(o: { price: number; balance: number; name: string; msg: ClientMsg; pay: boolean; send: (m: ClientMsg) => void; openTopup: () => void }): Promise<boolean> {
+export async function topUpThenBuy(o: { price: number; balance: number; name: string; msg: ClientMsg; pay: boolean; send: (m: ClientMsg) => void; openTopup: () => void; toast?: (msg: string, kind: string) => void }): Promise<boolean> {
   const v = priceView(o.price, o.balance);
   if (!v.short || !v.pack) return false;
   const p = v.pack;
+  const pay = payOpen(o.pay);
   const text = L('short.ask', { name: o.name, n: fmt(v.short), pack: fmt(p.n + p.bonus), price: packPrice(p) });
-  const ok = await ask(text, L(o.pay ? 'short.go' : 'short.open'), L('short.no'));
+  const ok = await ask(text, L(pay ? 'short.go' : 'short.open'), L('short.no'));
   if (!ok) return false;
-  if (!o.pay) {
+  if (!pay) {
     o.openTopup();
     return true;
   }
   waitForTopUp(o.price, o.msg, o.name);
+  // in VK: VK's own order box for the tier (its answer, read defensively, ends the wait when unpaid — vk.ts)
+  if (payIn() === 'votes') {
+    void vkBuy(p.id, o.toast);
+    return true;
+  }
   o.send({ t: 'premium', action: 'stars', pack: p.id, lang: lang() === 'ru' ? 'ru' : 'en' });
   return true;
 }

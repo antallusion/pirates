@@ -3,6 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <!-- The VK Mini App (docs/36): VKWebAppInit at once, before anything heavy, by every channel a VK client may listen
+       on (Android, iOS, VK's React Native shell, the web's parent frame) — VK's splash waits for it, and the game must
+       start on every phone even if its own code fails later. The launch parameters are kept (the game's start wipes the
+       address); html.vk-app hides every link out of VK. The bridge proper: src/vkbridge.ts. -->
+  <script>
+    (function () {
+      try {
+        var s = location.search, kept = null, w = window, m = 'VKWebAppInit', p = {};
+        try { kept = sessionStorage.getItem('gt.vkLaunch'); } catch (e) {}
+        var launch = /[?&]vk_app_id=/.test(s) && /[?&]sign=/.test(s);
+        if (!launch && !kept && !/[?&]vk(=|&|$)/.test(s)) return;
+        if (launch) { try { sessionStorage.setItem('gt.vkLaunch', s); } catch (e) {} }
+        document.documentElement.className += ' vk-app';
+        try { if (w.AndroidBridge && typeof w.AndroidBridge[m] === 'function') w.AndroidBridge[m](JSON.stringify(p)); } catch (e) {}
+        try { var h = w.webkit && w.webkit.messageHandlers && w.webkit.messageHandlers[m]; if (h && typeof h.postMessage === 'function') h.postMessage(p); } catch (e) {}
+        try { if (w.ReactNativeWebView && typeof w.ReactNativeWebView.postMessage === 'function') w.ReactNativeWebView.postMessage(JSON.stringify({ handler: m, params: p })); } catch (e) {}
+        try { if (w.parent && typeof w.parent.postMessage === 'function') w.parent.postMessage({ handler: m, params: p, type: 'vk-connect' }, '*'); } catch (e) {}
+        w.__vkInit = Date.now();
+      } catch (e) {}
+    })();
+  </script>
   <meta name="theme-color" content="#0b0d10" />
   <meta name="mobile-web-app-capable" content="yes" />
   <!-- The game's marks (the owner's pack, 2026-10-17: the brass wheel and the anchor on a stormy circle; tools/art/ui_pack.py):
@@ -190,6 +211,8 @@
   <link rel="stylesheet" href="/dailygift.css" />
   <link rel="stylesheet" href="/way.css" />
   <link rel="stylesheet" href="/talks.css" />
+  <!-- the VK Mini App (docs/36): what VK must not show -->
+  <link rel="stylesheet" href="/vk.css" />
   <link rel="stylesheet" href="/fit.css" />
 </head>
 <body>

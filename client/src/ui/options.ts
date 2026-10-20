@@ -15,6 +15,7 @@ import { tgDeepLink, tgLinked, tgSettingsButton } from '../tg.ts'; // «Прив
 import { EN as UX2_EN, RU as UX2_RU } from '../lang/ui/ux2.ts';
 import { EN as GIFT_EN, RU as GIFT_RU } from '../lang/ui/dailygift.ts';
 import { tgnHtml, tgnView, wireTgn } from './tgnotices.ts'; // «Уведомления в Телеграме» (owner, 2026-10-16)
+import { inVk, vkInviteButton, vkShare } from '../vk.ts'; // docs/36: «Позвать друзей» in VK, no link out of it
 
 const W = dict(WIN_EN, WIN_RU);
 const U2 = dict(UX2_EN, UX2_RU);
@@ -24,6 +25,8 @@ export const UI_SIZES = [0.85, 1, 1.15, 1.3] as const;
 
 /** The game's legal documents on its website (owner, 2026-10-20: «сделай все юридические страницы»), in her language. */
 function legalLinks(): string {
+  // (inside VK no link leads out of it — the documents are on the website: docs/36)
+  if (inVk()) return '';
   const r = lang() === 'ru' ? '/site/' : '/site/en/';
   const docs: [string, string][] = [['terms/', 'opt.legal.terms'], ['privacy/', 'opt.legal.privacy'], ['offer/', 'opt.legal.offer'], ['contacts/', 'opt.legal.contacts']];
   return `<nav class="opt-legal">${docs.map(([href, k]) => `<a href="${r}${href}" target="_blank" rel="noopener">${esc(W(k as Parameters<typeof W>[0]))}</a>`).join('<span aria-hidden="true">·</span>')}</nav>`;
@@ -43,6 +46,8 @@ export class OptionsScreen {
   /** The account's Telegram: linked, not yet, or null (no Telegram on the server) — docs/27. */
   private tg: boolean | null = null;
   close: () => void = () => {};
+  /** A word to the captain (main.ts: the HUD's toast). */
+  toast: (msg: string, kind: string) => void = () => {};
 
   constructor() {
     addEventListener(
@@ -104,6 +109,12 @@ export class OptionsScreen {
         if (this.root === root && root.isConnected && !this.more) this.render(root);
       });
     }
+    root.querySelector<HTMLButtonElement>('[data-ovk]')?.addEventListener('click', (e) => {
+      const b = e.currentTarget as HTMLButtonElement;
+      b.disabled = true;
+      setTimeout(() => (b.disabled = false), 3000);
+      void vkShare((msg, kind) => this.toast(msg, kind));
+    });
     root.querySelector<HTMLButtonElement>('[data-omore]')?.addEventListener('click', () => {
       this.more = true;
       this.render(root);
@@ -189,7 +200,7 @@ export class OptionsScreen {
       ${row('menu_map', W('opt.mmTarget'), seg([['hide', W('opt.mmHide'), s.mmTarget === 'hide'], ['show', W('opt.mmShow'), s.mmTarget === 'show']], 'omm', W('opt.mmTarget')), W('opt.mmTargetHint'), 'opt-row--wide')}
       ${tgnView() ? row('ui_bell', G('tgn.title'), `<button type="button" class="k-btn k-btn--secondary k-btn--sm" data-otgn>${esc(G('tgn.open'))}</button>`, G('tgn.hint'), 'opt-row--wide') : ''}
     </div>
-    <div class="opt-foot"><button type="button" class="k-btn k-btn--secondary k-btn--md opt-more" data-omore>${esc(W('opt.more'))}</button>${tgSettingsButton(this.tg)}</div>
+    <div class="opt-foot"><button type="button" class="k-btn k-btn--secondary k-btn--md opt-more" data-omore>${esc(W('opt.more'))}</button>${tgSettingsButton(this.tg)}${vkInviteButton()}</div>
     ${legalLinks()}`;
   }
 

@@ -155,6 +155,7 @@ import { Promos } from './ui/promo.ts'; // her personal offers (owner, 2026-10-1
 import { DailyGift } from './ui/dailygift.ts'; // the daily login gift (owner, 2026-10-16)
 import { initTgNotices } from './ui/tgnotices.ts'; // «Уведомления в Телеграме» (owner, 2026-10-16)
 import { tgInvoices, tgLoginButton, tgStart } from './tg.ts'; // Telegram: the Mini App, «Войти через Телеграм», Stars (docs/27)
+import { inVk, mayFullscreen, vkStart } from './vk.ts'; // the VK Mini App: its sign-in, no fullscreen of the game's own (docs/36)
 import { ResearchWindow } from './ui/research.ts'; // the yard's tree of hulls (owner, 2026-10-04; docs/20)
 import { AdvCard } from './ui/advcard.ts'; // docs/17 H4
 import { PuzzleWindow } from './ui/puzzle.ts';
@@ -533,6 +534,7 @@ let lastDoubloons = -1;
 hud.onThrone = () => openThrone();
 // The premium shop (owner, 2026-10-03): from the micro menu and the cabin; `topup` opens it at the packs.
 const premiumWindow = new PremiumWindow((m) => net.send(m));
+premiumWindow.toast = (msg, kind) => hud.toast(msg, kind);
 const researchWindow = new ResearchWindow((m) => net.send(m));
 function openShop(topup = false, at?: Parameters<PremiumWindow['open']>[1]): void {
   premiumWindow.open(topup, at);
@@ -838,9 +840,11 @@ tactical.purse = () => state.self?.gold ?? 0;
 tactical.sky = () => ({ weather: state.weather, fog: state.fog, wind: state.wind, night: nightFactor(state.estServerTime()) });
 const optionsScreen = new OptionsScreen();
 optionsScreen.close = () => closeModal();
+optionsScreen.toast = (msg, kind) => hud.toast(msg, kind);
 // A phone plays sideways only (owner, 2026-10-02). On the first touch the game goes full screen and holds the screen
 // sideways where the browser allows it (Android); elsewhere the #rotate-lock veil asks for the phone to be turned.
-if (matchMedia('(pointer: coarse)').matches) {
+// Never inside VK (docs/36): VK's own windows — the payment's first — must stay over the game.
+if (matchMedia('(pointer: coarse)').matches && mayFullscreen()) {
   const holdSideways = (): void => {
     const lock = () => (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }).lock?.('landscape').catch(() => {});
     const el = document.documentElement;
@@ -1354,8 +1358,8 @@ setFilmGate(() => (modal !== null && !FILM_OVER.has(modal)) || [...document.quer
     if (!net.live) net.connect();
   };
 }
-// Inside Telegram (or on its host) the Mini App signs in by itself (docs/27); else the page's own start.
-if (!tgStart(net)) {
+// Inside VK (docs/36) or Telegram (or on its host, docs/27) the Mini App signs in by itself; else the page's own start.
+if (!vkStart(net) && !tgStart(net)) {
   if (net.token) net.connect();
   else $('login-name').focus();
 }
@@ -1432,7 +1436,8 @@ $('support-back').onclick = () => {
     $('login-error').textContent = L('supportSent');
   } else $('login-error').textContent = r.error ? serverText(r.error) : L('noAnswer');
 };
-fetch('/auth/providers').then((r) => r.json()).then((d: { providers: { id: string; name: string }[] }) => {
+// (inside VK no sign-in leads out of it: docs/36)
+if (!inVk()) fetch('/auth/providers').then((r) => r.json()).then((d: { providers: { id: string; name: string }[] }) => {
   $('oauth-buttons').innerHTML = d.providers.map((p) => `<a class="btn btn-small" href="/auth/oauth/${p.id}">${esc(L('signInWith', { name: p.name }))}</a>`).join('');
 }).catch(() => undefined);
 tgLoginButton(net, onLang);

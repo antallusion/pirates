@@ -21,6 +21,7 @@ import { EN, RU } from '../lang/ui/chat.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { CHAT_MAX, EMOTE_GROUPS, EMOTES, LINK_RE, chatParts, emoteSuggest, ownLink } from '../../../shared/src/chat.ts';
 import type { EmoteGroup } from '../../../shared/src/chat.ts';
+import { inVk } from '../vk.ts';
 import type { ChatLineView, ChatThreadView, ClientMsg } from '../../../shared/src/protocol.ts';
 
 const L = dict(EN, RU);
@@ -46,7 +47,8 @@ function linkify(s: string): string {
   let out = '';
   let last = 0;
   for (const m of s.matchAll(LINK_RE)) {
-    const href = ownLink(m[1]);
+    // (inside VK no link leads out of it: every link stays words — docs/36)
+    const href = inVk() ? null : ownLink(m[1]);
     if (!href) continue;
     out += `${esc(s.slice(last, m.index))}<a class="cl-link" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(m[1])}</a>`;
     last = m.index! + m[0].length;

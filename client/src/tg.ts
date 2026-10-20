@@ -16,6 +16,7 @@ import type { ServerMsg } from '../../shared/src/protocol.ts';
 import { esc, fmt } from './ui/dom.ts';
 import { ask } from './ui/confirm.ts';
 import { bootMark, settleViewport } from './viewport.ts';
+import { inVk } from './vk.ts'; // inside VK nothing of Telegram's shows (docs/36: no link out of VK)
 
 const L = dict(EN, RU);
 
@@ -315,6 +316,7 @@ let waiting: { stop: () => void } | null = null;
 
 /** «Войти через Телеграм» (no token) or «Привязать Телеграм» (the captain's token): the bot's link, the wait. */
 export async function tgDeepLink(o: { net?: Net; token?: string | null; onLinked?: (name: string) => void; toast?: (msg: string, kind: string) => void }): Promise<void> {
+  if (inVk()) return;
   waiting?.stop();
   const s = await post<{ nonce?: string; link?: string; expires?: number; code?: string }>('/auth/tg/start', o.token ? { token: o.token } : {});
   if (!s.nonce || !s.link) {
@@ -409,7 +411,7 @@ export function tgLoginButton(net: Net, onLang: (f: () => void) => void): void {
   };
   label();
   onLang(label);
-  void tgConfig().then((c) => b.classList.toggle('hidden', !c?.enabled || inTelegram() || onTgHost()));
+  void tgConfig().then((c) => b.classList.toggle('hidden', !c?.enabled || inTelegram() || onTgHost() || inVk()));
   b.onclick = () => {
     b.disabled = true;
     setTimeout(() => (b.disabled = false), 3000);
@@ -424,7 +426,7 @@ let linkedFor: string | null = null;
 
 /** Whether the captain's account has its Telegram linked (null: no Telegram on the server, or not signed in). */
 export function tgLinked(token: string | null): Promise<boolean | null> {
-  if (!token) return Promise.resolve(null);
+  if (!token || inVk()) return Promise.resolve(null);
   if (linkedFor !== token) linkedCache = null;
   linkedFor = token;
   linkedCache ??= tgConfig().then((c) => (c?.enabled ? post<{ linked?: boolean }>('/auth/tg/linked', { token }).then((r) => (typeof r.linked === 'boolean' ? r.linked : null)) : null));
@@ -459,7 +461,7 @@ export const tgPayNote = (): string => L('payNote');
 /** The invoices the server sends: the Mini App opens them in place, the website as a link (it opens Telegram). */
 export function tgInvoices(net: Net, toast: (msg: string, kind: string) => void): void {
   net.on((m: ServerMsg) => {
-    if (m.t !== 'premium_invoice' || !m.link) return;
+    if (m.t !== 'premium_invoice' || !m.link || inVk()) return;
     const link = m.link;
     const w = webApp ?? g.Telegram?.WebApp;
     if (w?.openInvoice && w.initData) {

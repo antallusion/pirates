@@ -12,6 +12,7 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/dailygift.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
 import { esc } from './dom.ts';
+import { inVk } from '../vk.ts';
 
 const L = dict(EN, RU);
 const W = dict(WIN_EN, WIN_RU);
@@ -50,7 +51,8 @@ export function initTgNotices(sendFn: (m: ClientMsg) => void, on: (f: (m: Server
 }
 
 export function tgnView(): TgnView | null {
-  return view;
+  // (inside VK nothing of Telegram's is shown: docs/36)
+  return inVk() ? null : view;
 }
 
 /** A switch: all of them or one kind. Turning them on in the Mini App asks Telegram's write access first. */

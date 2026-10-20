@@ -1,0 +1,19 @@
+/* The VK Mini App (docs/36_VK.md): html.vk-app is set by index.html's first script and src/vk.ts. Inside VK no link
+   may lead out of it (VK moderation) — the website's sign-ins, the legal documents, the website's shop, Telegram; the
+   code that builds them asks inVk() too, these rules are the second lock. */
+html.vk-app #oauth-buttons,
+html.vk-app #login-tg,
+html.vk-app .opt-legal,
+html.vk-app .opt-tg,
+html.vk-app .pm-web,
+html.vk-app .tg-login,
+html.vk-app #tg-wait { display: none !important; }
+/* a link in the chat stays words */
+html.vk-app a.cl-link { pointer-events: none; color: inherit; text-decoration: none; }
+
+/* «Позвать друзей» beside «Подробнее» in the settings */
+.opt-vk { gap: 6px; }
+
+/* A pack's Buy in votes: «41 голос» on the button, wrapping inside it on the narrowest phones (never past its frame). */
+.pm-votes { max-width: 100%; min-width: 0; white-space: normal; line-height: 1.15; overflow-wrap: anywhere; text-align: center; }
+.pm-votes b { font-weight: 700; }

@@ -32,7 +32,8 @@ import { placeName } from './maps.ts';
 import { chipRow, railTabs, winHead } from './kit/window.ts';
 import type { WinTab } from './kit/window.ts';
 import { inTelegram, onTgHost, tgPackButton, tgPayNote, starIcon } from '../tg.ts'; // the packs for Telegram Stars (docs/27)
-import { doubloonIcon, packPrice, payIn, priceHtml, priceText, realHtml, topUpThenBuy } from './price.ts';
+import { doubloonIcon, packPrice, payIn, payOpen, priceHtml, priceText, realHtml, topUpThenBuy } from './price.ts';
+import { inVk, vkBuy, vkPackButton, vkPayNote } from '../vk.ts'; // the packs for VK's votes (docs/36)
 import { cosL, cosShelf, wardrobe, wireCos } from './cosmetics.ts'; // docs/32 §12: the «Косметика» tab
 
 export { doubloonIcon };
@@ -183,7 +184,7 @@ function dealsShelf(sv: ShopView, v: PremiumView): string {
   if (sv.gift > 0) out.push(`<div class="card sh-card sh-gift">${famArt('doubloon')}<div class="sh-txt"><b class="sh-name">${esc(L('gift.title'))}</b><span class="sh-note">${esc(L('first.text'))}</span></div>
     <div class="sh-offs"><button type="button" class="sh-off on hot" data-shgift><span class="sh-q">${esc(L('gift.claim', { n: fmt(sv.gift) }))}</span><span class="sh-p">${doubloonIcon('ico-xs')}</span></button></div></div>`);
   else if (sv.firstPay) out.push(`<div class="card sh-card sh-first">${famArt('doubloon')}<div class="sh-txt"><b class="sh-name">${esc(L('first.title'))}</b><span class="sh-note">${esc(L('first.text'))}</span></div>
-    <div class="sh-offs"><button type="button" class="sh-off on hot" data-pmtop><span class="sh-q">${esc(L('topup'))}</span><span class="sh-p">${starIcon()}</span></button></div></div>`);
+    <div class="sh-offs"><button type="button" class="sh-off on hot" data-pmtop><span class="sh-q">${esc(L('topup'))}</span><span class="sh-p">${payIn() === 'stars' ? starIcon() : doubloonIcon('ico-xs')}</span></button></div></div>`);
   const d = OFFERS.get(sv.deal.id);
   if (d) {
     out.push(`<div class="card sh-card sh-deal${sv.deal.why && sv.deal.why !== 'poor' ? ' shut' : ''}">${famArt(d.fam.icon)}<div class="sh-txt"><b class="sh-name">${esc(L('deal.title'))}: ${esc(T(d.fam.name))}</b><span class="sh-note">${esc(L('deal.text', { n: Math.round(DEAL_OFF * 100) }))}</span><span class="sh-meta sh-clock">${esc(L('deal.ends', { t: '' }))}<b data-shend="${sv.dayEnds}"></b></span></div>
@@ -229,7 +230,7 @@ function workCard(sv: ShopView, refit = false): string {
 /** The website's shop for a captain who plays in the browser (owner, 2026-10-20): roubles there, the purchase here by
  *  her name. Never inside Telegram — the Mini App keeps to Stars. */
 function webShopLink(state: ClientState): string {
-  if (inTelegram() || onTgHost()) return '';
+  if (inTelegram() || onTgHost() || inVk()) return ''; // (and never inside VK: no link out of it, docs/36)
   const name = state.self?.name ?? '';
   const href = `${lang() === 'ru' ? '/site/shop/' : '/site/en/shop/'}${name ? `?nick=${encodeURIComponent(name)}` : ''}`;
   return `<div class="pm-web"><p class="muted">${esc(L('top.webNote'))}</p><a class="btn btn-small btn-primary" href="${esc(href)}" target="_blank" rel="noopener">${esc(L('top.web'))}</a></div>`;
@@ -237,19 +238,22 @@ function webShopLink(state: ClientState): string {
 
 /** The top-up: the packs for Stars, the first top-up's double. */
 function topUp(v: PremiumView, state: ClientState): string {
+  const cur = payIn();
+  const pay = payOpen(v.pay);
+  const buyBtn = (p: (typeof DOUBLOON_PACKS)[number]) => (cur === 'votes' ? vkPackButton(p.id, packPrice(p, 'votes')) : tgPackButton(p.id, p.stars));
   const packs = DOUBLOON_PACKS.map((p) => {
     const n = p.n + p.bonus;
     const pct = p.bonus ? Math.round((p.bonus / p.n) * 100) : 0;
     return `<div class="card pm-pack${p.id === 'd1990' ? ' best' : ''}">${doubloonIcon('ico-lg')}<b class="pm-pack-n">${fmt(n)}</b><span class="pm-pack-w">${esc(dblWord(n))}</span>
-      <span class="pm-bonus${p.bonus ? '' : ' none'}">${p.bonus ? esc(`+${pct}%`) : '&nbsp;'}</span>${payIn() === 'rub' ? `<b class="pm-pack-real">${esc(packPrice(p, 'rub'))}</b>` : ''}
-      ${v.pay ? tgPackButton(p.id, p.stars) : `<button class="btn btn-small" disabled>${esc(L('top.soon'))}</button>`}</div>`;
+      <span class="pm-bonus${p.bonus ? '' : ' none'}">${p.bonus ? esc(`+${pct}%`) : '&nbsp;'}</span>${cur === 'rub' ? `<b class="pm-pack-real">${esc(packPrice(p, 'rub'))}</b>` : ''}
+      ${pay ? buyBtn(p) : `<button class="btn btn-small" disabled>${esc(L('top.soon'))}</button>`}</div>`;
   }).join('');
   const first = v.shop?.firstPay ? `<p class="sh-firstline">${doubloonIcon('ico-sm')}<b>${esc(L('first.title'))}</b><span>${esc(L('first.text'))}</span></p>` : '';
   // Payments closed (no bot token on the server): the packs are shown, none can be bought; open, each Buys for Stars.
   return `<div class="pm-top"><div class="pm-top-h"><div><h3 class="title-sm">${esc(L('top.title'))}</h3><p class="muted">${esc(L('top.sub'))}</p></div>
       <button class="btn btn-small" data-pmback>${esc(L('top.back'))}</button></div>${first}
     <div class="pm-packs">${packs}</div>
-    ${v.pay ? `<p class="pm-paynote">${starIcon()}${esc(tgPayNote())}</p>` : `<p class="pm-soon">${icon('tab_letters', '', 'ico-sm')}${esc(L('top.note'))}</p>`}${webShopLink(state)}</div>`;
+    ${pay ? `<p class="pm-paynote">${cur === 'votes' ? `${doubloonIcon('ico-sm')}${esc(vkPayNote())}` : `${starIcon()}${esc(tgPayNote())}`}</p>` : `<p class="pm-soon">${icon('tab_letters', '', 'ico-sm')}${esc(L('top.note'))}</p>`}${webShopLink(state)}</div>`;
 }
 
 const TAB_ICON: Record<ShopTab, string> = { sea: 'menu_ship', board: 'ui_cutlasses', isle: 'tab_isles', cos: 'cos_titles' };
@@ -274,6 +278,8 @@ export class PremiumWindow {
   wardrobe = false;
   private send: (m: ClientMsg) => void;
   private timer = 0;
+  /** A word to the captain (main.ts: the HUD's toast) — VK's order box's answer. */
+  toast: (msg: string, kind: string) => void = () => {};
 
   constructor(send: (m: ClientMsg) => void) {
     this.send = send;
@@ -358,7 +364,7 @@ export class PremiumWindow {
     const balance = v?.balance ?? state.doubloons;
     const buy = (price: number, name: string, question: string, msg: ClientMsg, b?: HTMLButtonElement) => {
       if (balance < price) {
-        void topUpThenBuy({ price, balance, name, msg, pay: !!v?.pay, send: this.send, openTopup: () => {
+        void topUpThenBuy({ price, balance, name, msg, pay: !!v?.pay, send: this.send, toast: this.toast, openTopup: () => {
           this.topup = true;
           redraw();
         } });
@@ -383,6 +389,11 @@ export class PremiumWindow {
       b.disabled = true;
       setTimeout(() => (b.disabled = false), 4000);
       this.send({ t: 'premium', action: 'stars', pack: b.dataset.pmpack!, lang: lang() === 'ru' ? 'ru' : 'en' });
+    }));
+    // A pack for VK's votes: VK's own order box (vk.ts); the doubloons come by the server's callback.
+    root.querySelectorAll<HTMLButtonElement>('[data-pmvk]').forEach((b) => (b.onclick = () => {
+      b.disabled = true;
+      void vkBuy(b.dataset.pmvk!, this.toast).finally(() => (b.disabled = false));
     }));
     root.querySelectorAll<HTMLElement>('[data-shtab]').forEach((b) => (b.onclick = () => {
       this.tab = b.dataset.shtab as ShopTab;
