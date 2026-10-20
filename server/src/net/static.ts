@@ -98,6 +98,8 @@ export function createStaticHandler(root: string) {
     { prefix: '/assets/', dir: resolve(root, 'assets') },
     // The game's website and forum (tools/site/build.ts writes its pages; the forum's API is server/src/http).
     { prefix: '/site/', dir: resolve(root, 'site') },
+    // shared/ modules that import the client's dictionaries ask for them as /client/src/… (shared/src/data/webshop.ts)
+    { prefix: '/client/', dir: resolve(root, 'client') },
     { prefix: '/', dir: resolve(root, 'client') },
   ];
   const clientDir = resolve(root, 'client');
@@ -182,7 +184,7 @@ export function createStaticHandler(root: string) {
     const walk = async (url: string): Promise<void> => {
       if (seen.has(url)) return;
       seen.add(url);
-      const file = url.startsWith('/shared/') ? join(sharedDir, url.slice(8)) : join(clientDir, url.slice(1));
+      const file = url.startsWith('/shared/') ? join(sharedDir, url.slice(8)) : url.startsWith('/client/') ? join(clientDir, url.slice(8)) : join(clientDir, url.slice(1));
       let src: string;
       try {
         src = await readFile(file, 'utf8');
