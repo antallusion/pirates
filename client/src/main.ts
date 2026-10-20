@@ -1163,10 +1163,22 @@ function readAloud(): void {
   synth.speak(u);
 }
 
-onboarding.onEdge = () => {
-  // Never over a fight's screen: the boarding or the shipwreck come first.
-  if (modal === null || modal === 'map' || modal === 'help') openModal('edge');
-};
+// Never over a fight's screen: the boarding or the shipwreck come first. The notice waits for a clear deck (edgeFrame),
+// and one already open when grapples fly is put away and told after the battle (the hex field is no modal of its own).
+let edgeDue = false;
+onboarding.onEdge = () => (edgeDue = true);
+function edgeFrame(): void {
+  if (modal === 'edge' && state.boardTac) {
+    closeModal();
+    edgeDue = true;
+    return;
+  }
+  if (!edgeDue || state.boardTac || document.querySelector('.film')) return;
+  if (modal === null || modal === 'map' || modal === 'help') {
+    edgeDue = false;
+    openModal('edge');
+  }
+}
 
 // ------------------------------------------------------------------ boot
 
@@ -1238,7 +1250,7 @@ function runTestBattle(): void {
   // A great one ashore (/?battle=walrus_tyrant …) comes ashore on the nearest island of its kind and is fought at once.
   const orders = kind && kind !== 'deck'
     ? [...army, isShoreBoss(kind) ? `/shoreboss ${kind} fight` : `/lair ${kind} fight`]
-    : ['/level 30', '/tp gravewater', '/ship frigate', ...army.slice(1), '/army ancient_turtle 3', '/army young_kraken 1', '/army white_whale 1', '/foe patrol frigate', '/board'];
+    : ['/level 30', '/tp gravewater', '/ship frigate', ...army.slice(1), '/army ancient_turtle 3', '/army young_kraken 1', '/army white_whale 1', '/foe patrol frigate 50', '/board']; // (50 m: /foe's default 140 m is past the grapples' throw)
   orders.forEach((text, i) => setTimeout(() => net.send({ t: 'chat', text }), 800 + i * 700));
 }
 /** When each refusal was last told (the page's clock), and her last press or key (main.ts refusalAgain). */
@@ -4423,6 +4435,7 @@ function step(t: number): void {
     }
     hoverCursor(renderer.mouseX, renderer.mouseY);
     lawlessFrame();
+    edgeFrame();
     touchAttackMark();
     targetMenuFrame();
     divePanel.render(state.dive);
