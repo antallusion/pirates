@@ -17,8 +17,8 @@ import type { Net } from './net.ts';
 import type { ServerMsg } from '../../shared/src/protocol.ts';
 import { esc } from './ui/dom.ts';
 import { bootMark, settleViewport } from './viewport.ts';
-import { VkFail, bindViewEvents, createBridge, orderOutcome } from './vkbridge.ts';
-import { pauseApp, resumeApp } from './lifecycle.ts';
+import { VkFail, askNotifications, bindViewEvents, createBridge, orderOutcome, watchDenied } from './vkbridge.ts';
+import { appPaused, pauseApp, resumeApp } from './lifecycle.ts';
 import type { Bridge, BridgeWin } from './vkbridge.ts';
 
 const L = dict(EN, RU);
@@ -168,6 +168,9 @@ export function vkStart(net: Net): boolean {
   // Minimised, the game sleeps: VK's ViewHide / ViewRestore (lifecycle.ts — the page's own hiding is main.ts's), and the
   // window's blur as the fallback inside VK (a client that sends neither).
   bindViewEvents(b);
+  // her notices: a no in VK's own menu reported; the one ask three minutes in, if the launch did not say yes (docs/36)
+  tokenOf = () => net.token;
+  watchDenied(b, reportNotify);
   addEventListener('blur', () => pauseApp('blur'));
   addEventListener('focus', () => resumeApp('blur'));
   bootScreen(L('boot'));
@@ -203,6 +206,16 @@ export function vkStart(net: Net): boolean {
     }
     net.adopt(r.token);
     if (!net.live) net.connect();
+    let asked = false;
+    try {
+      asked = localStorage.getItem('gt.vkNotifyAsked') === '1';
+    } catch {
+      asked = false;
+    }
+    if (!notifyOn && !asked) {
+      const later = () => (appPaused() ? setTimeout(later, 60_000) : void vkAskNotifications());
+      setTimeout(later, 180_000);
+    }
   })();
   return true;
 }
@@ -273,8 +286,50 @@ export async function vkShare(toast?: (msg: string, kind: string) => void): Prom
   }
 }
 
-/** The settings' «Позвать друзей» (VK only; nothing elsewhere). */
+/** The settings' «Позвать друзей» and «Уведомления» (VK only; nothing elsewhere). */
 export function vkInviteButton(): string {
   if (!inVk()) return '';
-  return `<button type="button" class="k-btn k-btn--secondary k-btn--md opt-vk" data-ovk title="${esc(L('inviteHint'))}"><span>${esc(L('invite'))}</span></button>`;
+  return `<button type="button" class="k-btn k-btn--secondary k-btn--md opt-vk" data-ovk title="${esc(L('inviteHint'))}"><span>${esc(L('invite'))}</span></button>`
+    + `<button type="button" class="k-btn k-btn--secondary k-btn--md opt-vk" data-ovkn title="${esc(L('notifyHint'))}"${notifyOn ? ' disabled aria-disabled="true"' : ''}><span>${esc(L(notifyOn ? 'notifyOn' : 'notify'))}</span></button>`;
 }
+
+// ------------------------------------------------------------------------------------------------ the notices
+
+/** VK's notices allowed (the launch said so, or she allowed them here). */
+let notifyOn = (() => {
+  try {
+    return new URLSearchParams(LAUNCH ?? '').get('vk_are_notifications_enabled') === '1';
+  } catch {
+    return false;
+  }
+})();
+let tokenOf: () => string | null = () => null;
+
+/** Her answer to the server (POST /auth/vk/notify with her game token). */
+function reportNotify(on: boolean): Promise<unknown> {
+  notifyOn = on;
+  const token = tokenOf();
+  return token ? post('/auth/vk/notify', { token, on }) : Promise.resolve();
+}
+
+/** «Уведомления» in the settings, or the game's one ask (vkStart: three minutes in, once): VKWebAppAllowNotifications. */
+export function vkAskNotifications(toast?: (msg: string, kind: string) => void): Promise<boolean> {
+  try {
+    localStorage.setItem('gt.vkNotifyAsked', '1');
+  } catch {
+    /* asked again some day */
+  }
+  return askNotifications(vkBridge(), reportNotify).then((on) => {
+    toast?.(L(on ? 'notifyOn' : 'notifyOff'), on ? 'good' : 'info');
+    return on;
+  });
+}
+
+/** The notice she opened the app from (VK's fragment `#n_<kind>`, kept before the game's start wipes the address). */
+export const vkLaunchHash: string = (() => {
+  try {
+    return location.hash;
+  } catch {
+    return '';
+  }
+})();

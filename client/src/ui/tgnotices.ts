@@ -12,7 +12,7 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/dailygift.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
 import { esc } from './dom.ts';
-import { inVk } from '../vk.ts';
+import { inVk, vkLaunchHash } from '../vk.ts';
 
 const L = dict(EN, RU);
 const W = dict(WIN_EN, WIN_RU);
@@ -29,7 +29,8 @@ export function noticeKind(search = location.search, hash = location.hash, start
   const h = new URLSearchParams(hash.replace(/^#/, ''));
   const sp = startParam ?? q.get('tgWebAppStartParam') ?? h.get('tgWebAppStartParam') ?? '';
   const m = /^n_([a-z]{3,8})$/.exec(sp);
-  const k = m?.[1] ?? q.get('n') ?? '';
+  // (VK: the notice's fragment #n_<kind>, kept by vk.ts before the game's start wiped the address — docs/36)
+  const k = m?.[1] ?? q.get('n') ?? /(?:^#?|&)n_([a-z]{3,8})/.exec(hash || vkLaunchHash)?.[1] ?? '';
   return (TGN_CATS as string[]).includes(k) ? k : null;
 }
 

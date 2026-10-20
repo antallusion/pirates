@@ -11,6 +11,7 @@ import { DOUBLOON_PACKS } from '../shared/src/data/premium.ts';
 import { VOTE_RUB, packVotes, votesText, votesWord, vkPack } from '../shared/src/data/vk.ts';
 import { VkService, checkLaunch, doubloonsTitle, paySig, signLaunch, vkFromEnv } from '../server/src/vk.ts';
 import { handleVk } from '../server/src/http/vk-routes.ts';
+import { notify, tgnState } from '../server/src/game/tgnotify.ts';
 import { EN as VK_EN, RU as VK_RU } from '../client/src/lang/ui/vk.ts';
 import { makeGame } from './helpers.ts';
 
@@ -251,4 +252,76 @@ test('votes: the packs\' prices and the Russian plurals; the VK screen words in 
   assert.equal(votesText(141, 'en'), '141 votes');
   assert.deepEqual(Object.keys(VK_RU).sort(), Object.keys(VK_EN).sort());
   for (const [k, v] of Object.entries(VK_RU)) assert.doesNotMatch(v, /[A-Za-z]/, `RU ${k}: ${v}`);
+});
+
+// ------------------------------------------------------------------------------------------------ the notices
+
+test('notices by VK: notifications.sendMessage with the right params, judged as Telegram\'s, off on «disabled», the key never logged', async () => {
+  const KEY = 'vk-service-key-SECRET-123';
+  const calls: Record<string, string>[] = [];
+  let answer: unknown = { response: [{ user_id: 5001, status: true }] };
+  const fetch = async (url: string, init: { body: string }) => {
+    assert.equal(url, 'https://api.vk.com/method/notifications.sendMessage');
+    calls.push(Object.fromEntries(new URLSearchParams(init.body)));
+    return { json: async () => answer };
+  };
+  const { game, db } = makeGame();
+  const logs: string[] = [];
+  const clock = { t: Date.UTC(2026, 9, 21, 10, 0) }; // 13:00 Moscow
+  game.wallNow = () => clock.t;
+  const vk = new VkService({ db, auth: game.auth, game, appId: APP, secret: SECRET, publicUrl: 'https://gravetidegame.com', now: () => clock.t, log: (l) => logs.push(l), serviceKey: KEY, fetch });
+  // the launch says she allowed the app's notices: her yes
+  const a = vk.launch(launch(5001, Math.floor(clock.t / 1000) - 60, { extra: { vk_are_notifications_enabled: '1' } }), 'Мэри');
+  assert.ok(!('error' in a));
+  const st = tgnState(game, a.accountId)!;
+  assert.equal(st.vk, 5001);
+  assert.equal(st.on, true);
+  assert.equal(st.vkOff, false);
+  // aboard: nothing (no session here: she is away)
+  assert.equal(await notify(game, a.accountId, 'raid', { isle: 'Ys' }), 'send');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].user_ids, '5001');
+  assert.equal(calls[0].fragment, 'n_raid');
+  assert.equal(calls[0].v, '5.199');
+  assert.equal(calls[0].access_token, KEY);
+  assert.ok(calls[0].message.length > 0 && calls[0].message.length <= 254);
+  assert.match(calls[0].random_id, /^\d+$/);
+  // the gaps and the cap as Telegram's: the same kind within its gap is dropped; three a Moscow day
+  assert.equal(await notify(game, a.accountId, 'raid'), 'drop');
+  clock.t += 3 * 3_600_000;
+  assert.equal(await notify(game, a.accountId, 'build'), 'send');
+  clock.t += 3 * 3_600_000;
+  assert.equal(await notify(game, a.accountId, 'raid'), 'send');
+  clock.t += 1 * 3_600_000; // 20:00 Moscow
+  assert.equal(await notify(game, a.accountId, 'build'), 'drop', 'the cap: three a day');
+  assert.equal(calls.length, 3);
+  // the quiet hours: 23–09 Moscow — the island's news waits for the morning
+  clock.t = Date.UTC(2026, 9, 22, 21, 0); // 00:00 Moscow
+  assert.equal(await notify(game, a.accountId, 'raid'), 'defer');
+  assert.equal(calls.length, 3);
+  // VK says «disabled» (her notices off in VK): they stop until she allows them again
+  clock.t = Date.UTC(2026, 9, 23, 10, 0);
+  answer = { response: [{ user_id: 5001, status: false, error: { code: 1, description: 'notifications disabled' } }] };
+  await notify(game, a.accountId, 'build');
+  assert.equal(tgnState(game, a.accountId)!.vkOff, true);
+  answer = { response: [{ user_id: 5001, status: true }] };
+  clock.t += 3 * 3_600_000;
+  assert.equal(await notify(game, a.accountId, 'raid'), 'drop');
+  assert.equal(calls.length, 4);
+  // allowed again in the game (POST /auth/vk/notify): on
+  assert.deepEqual(vk.notifyAllow(a.token, true), { ok: true });
+  assert.equal(tgnState(game, a.accountId)!.vkOff, false);
+  assert.equal(await notify(game, a.accountId, 'raid'), 'send');
+  assert.deepEqual(vk.notifyAllow('nope-nope-nope-nope-nope', true), { error: 'Sign in first.' });
+  // an API error by its code only; the key never in a log
+  answer = { error: { error_code: 5, error_msg: `User authorization failed: ${KEY}` } };
+  clock.t += 3 * 3_600_000;
+  await notify(game, a.accountId, 'build');
+  assert.ok(logs.some((l) => /VK API error 5$/.test(l)));
+  assert.ok(logs.every((l) => !l.includes(KEY)));
+  // a launch without the yes: VK's notices stay off until allowed
+  const b = vk.launch(launch(5002, Math.floor(clock.t / 1000) - 60), 'Аня');
+  assert.ok(!('error' in b));
+  assert.equal(tgnState(game, b.accountId)!.vkOff, true);
+  assert.equal(await notify(game, b.accountId, 'raid'), 'drop');
 });

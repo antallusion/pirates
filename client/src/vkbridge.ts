@@ -201,6 +201,30 @@ export function bindViewEvents(b: Bridge): void {
   });
 }
 
+/** VK's notices asked for (VKWebAppAllowNotifications): her answer reported to the server (`report`) — yes on its
+ *  Result, no on its Failed (a refusal, a cancel); VKWebAppDenyNotifications later (VK's own menu) reports a no too. */
+export async function askNotifications(b: Bridge, report: (on: boolean) => unknown): Promise<boolean> {
+  let on = false;
+  try {
+    const r = await b.send('VKWebAppAllowNotifications', {}, 120_000);
+    on = r.result !== false;
+  } catch {
+    on = false;
+  }
+  try {
+    await report(on);
+  } catch {
+    /* the server's word is not the game's crash */
+  }
+  return on;
+}
+
+export function watchDenied(b: Bridge, report: (on: boolean) => unknown): void {
+  b.on((type) => {
+    if (type === 'VKWebAppDenyNotificationsResult') void Promise.resolve().then(() => report(false)).catch(() => {});
+  });
+}
+
 /** VKWebAppShowOrderBox's answer read without trusting its shape (owner, 2026-10-20: a game crashed on an answer with no
  *  array of items): paid unless VK says otherwise — the doubloons themselves come by the server's callback either way. */
 export function orderOutcome(r: unknown): 'paid' | 'cancelled' | 'failed' {

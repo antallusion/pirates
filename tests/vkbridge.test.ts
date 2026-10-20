@@ -6,7 +6,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { VkFail, bindViewEvents, createBridge, orderOutcome } from '../client/src/vkbridge.ts';
+import { VkFail, askNotifications, bindViewEvents, createBridge, orderOutcome, watchDenied } from '../client/src/vkbridge.ts';
 import { appPaused, gateFrames, mediaSleeps, onLifecycle, pauseApp, resetLifecycle, resumeApp, soundSleeps } from '../client/src/lifecycle.ts';
 import { AudioEngine } from '../client/src/audio.ts';
 import type { BridgeWin } from '../client/src/vkbridge.ts';
@@ -17,7 +17,7 @@ type Ev = { data?: unknown; detail?: unknown };
 function fakeWin(o: { android?: boolean; ios?: boolean; rn?: boolean; web?: boolean } = { android: true, ios: true, rn: true, web: true }) {
   const log: { ch: string; method: string; params: Record<string, unknown> }[] = [];
   const listeners: Record<string, ((e: Ev) => void)[]> = {};
-  const methods = ['VKWebAppInit', 'VKWebAppGetUserInfo', 'VKWebAppShowOrderBox', 'VKWebAppShare'];
+  const methods = ['VKWebAppInit', 'VKWebAppGetUserInfo', 'VKWebAppShowOrderBox', 'VKWebAppShare', 'VKWebAppAllowNotifications'];
   const w: BridgeWin = {
     addEventListener: (t, fn) => void (listeners[t] ??= []).push(fn),
   };
@@ -142,6 +142,33 @@ test('VKWebAppShowOrderBox: an answer missing its fields does not crash — read
   b.on((type) => seen.push(type));
   f.fire('VKWebAppEvent', { detail: { type: 'VKWebAppUpdateConfig', data: { insets: { top: 24, bottom: 0, left: 0, right: 0 } } } });
   assert.deepEqual(seen, ['VKWebAppUpdateConfig']);
+});
+
+test('notices: VKWebAppAllowNotifications — yes and no reported to the server; VKWebAppDenyNotifications later reports a no', async () => {
+  const f = fakeWin({ android: true });
+  const b = createBridge(f.w);
+  const told: boolean[] = [];
+  watchDenied(b, (on) => told.push(on));
+  // allowed
+  const p1 = askNotifications(b, (on) => told.push(on));
+  const ask1 = f.log.find((x) => x.method === 'VKWebAppAllowNotifications');
+  assert.ok(ask1);
+  f.fire('VKWebAppEvent', { detail: { type: 'VKWebAppAllowNotificationsResult', data: { result: true, request_id: ask1.params.request_id } } });
+  assert.equal(await p1, true);
+  // refused (VK's Failed, the user's no)
+  const p2 = askNotifications(b, (on) => told.push(on));
+  const ask2 = f.log.filter((x) => x.method === 'VKWebAppAllowNotifications')[1];
+  f.fire('VKWebAppEvent', { detail: { type: 'VKWebAppAllowNotificationsFailed', data: { error_type: 'client_error', error_data: { error_code: 4 }, request_id: ask2.params.request_id } } });
+  assert.equal(await p2, false);
+  // turned off later in VK's own menu
+  f.fire('VKWebAppEvent', { detail: { type: 'VKWebAppDenyNotificationsResult', data: { result: true } } });
+  await new Promise((r) => setTimeout(r, 5));
+  assert.deepEqual(told, [true, false, false]);
+  // a report that throws does not break the game
+  const p3 = askNotifications(b, () => { throw new Error('offline'); });
+  const ask3 = f.log.filter((x) => x.method === 'VKWebAppAllowNotifications')[2];
+  f.fire('VKWebAppEvent', { detail: { type: 'VKWebAppAllowNotificationsResult', data: { request_id: ask3.params.request_id } } });
+  assert.equal(await p3, true);
 });
 
 test('VKWebAppViewHide puts the game to sleep — the pause hook, the sound suspended, the frames held; ViewRestore wakes it', () => {

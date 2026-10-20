@@ -15,6 +15,10 @@ export const EN = {
   'payCancelled': 'Payment cancelled.',
   'payFailed': 'The payment did not go through.',
   'payNote': 'Paid with VK votes. The doubloons arrive as soon as VK confirms the payment.',
+  'notify': 'Notifications',
+  'notifyOn': 'Notifications on',
+  'notifyOff': 'Notifications stay off.',
+  'notifyHint': 'VK tells you when the island has finished building, the daily gift is ready or the island is raided.',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -31,4 +35,8 @@ export const RU: Record<keyof typeof EN, string> = {
   'payCancelled': 'Оплата отменена.',
   'payFailed': 'Оплата не прошла.',
   'payNote': 'Оплата голосами ВКонтакте. Дублоны придут, как только ВКонтакте подтвердит оплату.',
+  'notify': 'Уведомления',
+  'notifyOn': 'Уведомления включены',
+  'notifyOff': 'Уведомления остаются выключены.',
+  'notifyHint': 'ВКонтакте сообщит, когда на острове закончена стройка, готов ежедневный подарок или остров ограбили.',
 };

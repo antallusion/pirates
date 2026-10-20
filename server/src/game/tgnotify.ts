@@ -73,6 +73,10 @@ export interface TgnState {
   idle: boolean;
   /** Notices waiting out the quiet hours (one a kind). */
   pending: { cat: TgnCat; key: TgTextKey; vars: Record<string, string | number> }[];
+  /** Her VK user id (docs/36: the VK Mini App's notices — notifications.sendMessage), 0: none. */
+  vk?: number;
+  /** VK's notices refused (she did not allow them, or VK said «disabled»): none by VK until she allows them again. */
+  vkOff?: boolean;
 }
 
 export function newTgnState(chat = 0, lang: TgLang = 'ru'): TgnState {
@@ -86,8 +90,9 @@ export type Verdict = 'send' | 'defer' | 'drop';
 
 /** Whether a notice of `cat` goes now: sent, kept for the morning, or not sent (and why). Pure. */
 export function judge(st: TgnState, cat: TgnCat, now: number, aboard: boolean): { v: Verdict; why: string } {
-  if (!st.chat) return { v: 'drop', why: 'nochat' };
-  if (st.blocked) return { v: 'drop', why: 'blocked' };
+  // (two channels, one notice: Telegram's chat and VK's user — docs/36; the cap and the gaps count the notice once)
+  if (!st.chat && !st.vk) return { v: 'drop', why: 'nochat' };
+  if ((!st.chat || st.blocked) && (!st.vk || st.vkOff)) return { v: 'drop', why: 'blocked' };
   if (st.on !== true) return { v: 'drop', why: 'unasked' };
   if (!catOn(st, cat)) return { v: 'drop', why: 'kindoff' };
   if (aboard) return { v: 'drop', why: 'aboard' };
@@ -110,6 +115,13 @@ export function setNoticeDesk(game: Game, desk: NoticeDesk | null): void {
   if (desk) desks.set(game, desk);
   else desks.delete(game);
 }
+/** VK's side (server/src/vk.ts: notifications.sendMessage), `chat` being her VK user id; 'blocked': VK says disabled. */
+const vkDesks = new WeakMap<Game, NoticeDesk>();
+export function setVkNoticeDesk(game: Game, desk: NoticeDesk | null): void {
+  if (desk) vkDesks.set(game, desk);
+  else vkDesks.delete(game);
+}
+const anyDesk = (game: Game): boolean => desks.has(game) || vkDesks.has(game);
 
 // ------------------------------------------------------------------------------------------------ her state
 
@@ -138,6 +150,22 @@ export function noticeLink(game: Game, acc: number, chat: number, lang: TgLang, 
   st.chat = chat;
   st.lang = lang;
   if (consent && st.on === null) st.on = true;
+  save(game, acc, st);
+  indexAdd(game, acc);
+  return st;
+}
+
+/** Her VK user tied to her account (vk.ts: the launch's sign-in, the game's «allow» or «deny»): `consent` true — VK's
+ *  notices allowed (her yes for the notices, if never asked); false — refused; null — as it was. */
+export function vkNoticeLink(game: Game, acc: number, user: number, lang: TgLang, consent: boolean | null): TgnState {
+  const st = tgnState(game, acc) ?? newTgnState(0, lang);
+  st.vk = user;
+  if (!st.chat) st.lang = lang;
+  if (consent === true) {
+    st.vkOff = false;
+    if (st.on === null || !st.chat) st.on = true;
+  } else if (consent === false) st.vkOff = true;
+  else if (st.vkOff === undefined) st.vkOff = true;
   save(game, acc, st);
   indexAdd(game, acc);
   return st;
@@ -186,8 +214,9 @@ export function aboard(game: Game, acc: number): boolean {
  *  dropped. The day's count and the kind's time are written before the send, so two at once cannot pass the cap. */
 export async function notify(game: Game, acc: number, cat: TgnCat, vars: Record<string, string | number> = {}, key: TgTextKey = `n.${cat}` as TgTextKey): Promise<Verdict> {
   const desk = desks.get(game);
+  const vkDesk = vkDesks.get(game);
   const st = tgnState(game, acc);
-  if (!desk || !st) return 'drop';
+  if ((!desk && !vkDesk) || !st) return 'drop';
   const now = game.wallNow();
   const { v } = judge(st, cat, now, aboard(game, acc));
   if (v === 'defer') {
@@ -202,6 +231,25 @@ export async function notify(game: Game, acc: number, cat: TgnCat, vars: Record<
   if (cat === 'idle') st.idle = true;
   save(game, acc, st);
   const text = tgText(key, st.lang, { name: nameOf(game, acc), ...vars });
+  // VK's notice first (no buttons: its own link back is the notice's fragment, n_<kind>), then Telegram's
+  if (vkDesk && st.vk && !st.vkOff) {
+    let rv: 'ok' | 'blocked' | 'error' = 'error';
+    try {
+      rv = await vkDesk.send(st.vk, cat, text, st.lang);
+    } catch {
+      rv = 'error';
+    }
+    if (rv === 'blocked') {
+      const now2 = tgnState(game, acc) ?? st;
+      now2.vkOff = true;
+      save(game, acc, now2);
+      tally(game, cat, 'blocked');
+    } else if (rv === 'ok') {
+      trackEvent(game, acc, 'vk_notice_sent', { product: cat });
+      tally(game, cat, 'sent');
+    }
+  }
+  if (!desk || !st.chat || st.blocked) return 'send';
   let r: 'ok' | 'blocked' | 'error' = 'error';
   try {
     r = await desk.send(st.chat, cat, text, st.lang);
@@ -226,13 +274,13 @@ export async function notify(game: Game, acc: number, cat: TgnCat, vars: Record<
 
 /** A notice for the island's owner when she is away (base.ts, baseclaim.ts call it; a no-op without the bot). */
 export function notifyAway(game: Game, acc: number, cat: TgnCat, vars: Record<string, string | number> = {}, key?: TgTextKey): void {
-  if (!desks.has(game) || aboard(game, acc)) return;
+  if (!anyDesk(game) || aboard(game, acc)) return;
   void notify(game, acc, cat, vars, key);
 }
 
 /** A zone boss rising in a sea: a notice to every captain away whose sea it was (the kind is off unless she turns it on). */
 export function notifySea(game: Game, region: string): void {
-  if (!desks.has(game)) return;
+  if (!anyDesk(game)) return;
   for (const acc of index(game)) {
     const st = tgnState(game, acc);
     if (st && st.sea === region && st.on === true && catOn(st, 'boss') && !aboard(game, acc)) void notify(game, acc, 'boss');
@@ -244,7 +292,7 @@ const lastStep = new WeakMap<Game, number>();
 /** Once a minute (from the game's second, only with the bot): the morning's notices kept over the quiet hours, the daily
  *  gift ready, a personal offer's last hour, and «давно не заходили» once — to the captains away. */
 export function stepNotices(game: Game, force = false): Promise<void>[] {
-  if (!desks.has(game)) return [];
+  if (!anyDesk(game)) return [];
   const now = game.wallNow();
   if (!force && now - (lastStep.get(game) ?? 0) < MIN) return [];
   lastStep.set(game, now);
@@ -254,7 +302,7 @@ export function stepNotices(game: Game, force = false): Promise<void>[] {
   for (const acc of index(game)) {
     if (aboard(game, acc)) continue;
     const st = tgnState(game, acc);
-    if (!st || st.on !== true || st.blocked || !st.seen) continue;
+    if (!st || st.on !== true || ((!st.chat || st.blocked) && (!st.vk || st.vkOff)) || !st.seen) continue;
     if (st.pending.length) {
       const list = st.pending;
       st.pending = [];

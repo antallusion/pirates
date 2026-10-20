@@ -3,6 +3,7 @@
 //   GET  /auth/vk/config                        → {enabled, appId, pay}
 //   POST /auth/vk/launch {launch, name?, token?} → {token, name, accountId}   the Mini App's sign-in
 //   POST /vk/pay                                ← VK's payments callback (application/x-www-form-urlencoded, signed)
+//   POST /auth/vk/notify {token, on}            → {ok}   VK notices allowed / denied in the game
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { VkService } from '../vk.ts';
@@ -58,6 +59,14 @@ export async function handleVk(req: IncomingMessage, res: ServerResponse, vk: Vk
       const r = vk.launch(String(b.launch ?? ''), str(b.name), str(b.token));
       if ('error' in r) json(res, 401, { error: r.error });
       else json(res, 200, { token: r.token, name: r.name, accountId: r.accountId });
+      return true;
+    }
+    if (path === '/auth/vk/notify') {
+      // her «allow» / «deny» of VK's notices (VKWebAppAllowNotifications' answer), with her game token
+      const raw = await readBody(req, 4096);
+      const b = (raw ? JSON.parse(raw) : {}) as Record<string, unknown>;
+      const r = vk.notifyAllow(String(b.token ?? ''), b.on === true);
+      json(res, 'error' in r ? 400 : 200, r);
       return true;
     }
     json(res, 404, { error: 'Not found' });

@@ -16,6 +16,8 @@ import type { Db } from './persistence/db.ts';
 import type { Game } from './game/Game.ts';
 import { payIn } from './game/premium.ts';
 import { packVotes, vkPack } from '../../shared/src/data/vk.ts';
+import { setVkNoticeDesk, tgnState, vkNoticeLink } from './game/tgnotify.ts';
+import type { TgnCat } from '../../shared/src/data/telegram.ts';
 
 const PROVIDER = 'vk';
 /** A launch is good for three days (VK's own advice for the launch parameters' age). */
@@ -37,6 +39,8 @@ export interface VkLaunch {
   ts: number;
   lang: string;
   platform: string;
+  /** vk_are_notifications_enabled: she has allowed the app's notices. */
+  notify: boolean;
 }
 
 /** The launch checked: its sign, its age (three days, not from the future), its app and user. Null: not VK's, stale, or
@@ -55,7 +59,7 @@ export function checkLaunch(search: string, secret: string, appId: number | null
   const app = Number(q.get('vk_app_id'));
   if (!Number.isSafeInteger(userId) || userId <= 0 || !Number.isSafeInteger(app) || app <= 0) return null;
   if (appId && app !== appId) return null;
-  return { userId, appId: app, ts, lang: q.get('vk_language') ?? 'ru', platform: q.get('vk_platform') ?? '' };
+  return { userId, appId: app, ts, lang: q.get('vk_language') ?? 'ru', platform: q.get('vk_platform') ?? '', notify: q.get('vk_are_notifications_enabled') === '1' };
 }
 
 // ------------------------------------------------------------------------------------------------ the payments' callback
@@ -107,7 +111,19 @@ export interface VkOptions {
   admins?: number[];
   now?: () => number;
   log?: (line: string) => void;
+  /** VK_SERVICE_KEY: the app's service key — the notices by notifications.sendMessage (none without it). */
+  serviceKey?: string;
+  /** The fetch VK's API is called with (the tests' stub). */
+  fetch?: VkFetch;
 }
+
+export type VkFetch = (url: string, init: { method: string; headers: Record<string, string>; body: string }) => Promise<{ json(): Promise<unknown> }>;
+
+/** A notice's words for VK: one line of at most 254 characters (VK's limit). */
+export const vkNoticeText = (text: string): string => {
+  const t = text.replace(/\s+/g, ' ').trim();
+  return t.length <= 254 ? t : `${t.slice(0, 253).trimEnd()}…`;
+};
 
 export class VkService {
   readonly appId: number | null;
@@ -133,6 +149,42 @@ export class VkService {
     this.admins = new Set(o.admins ?? []);
     this.now = o.now ?? Date.now;
     this.log = o.log ?? ((l) => console.log(l));
+    const key = o.serviceKey?.trim();
+    const f = o.fetch ?? (globalThis.fetch as unknown as VkFetch);
+    if (key) setVkNoticeDesk(o.game, { send: (user, cat, text) => this.sendNotice(f, key, user, cat, text) });
+  }
+
+  /** notifications.sendMessage to one VK user (the notice's kind as the fragment: a tap opens the app at #n_<kind>).
+   *  'blocked': VK says her notices are off (error code 1 for her, or the app not allowed); never the key in a log. */
+  private async sendNotice(f: VkFetch, key: string, user: number, cat: TgnCat, text: string): Promise<'ok' | 'blocked' | 'error'> {
+    const body = new URLSearchParams({ user_ids: String(user), message: vkNoticeText(text), fragment: `n_${cat}`, random_id: String(Math.floor(Math.random() * 2 ** 31)), v: '5.199', access_token: key });
+    let r: { response?: { user_id?: number; status?: boolean; error?: { code?: number } }[]; error?: { error_code?: number } };
+    try {
+      r = (await (await f('https://api.vk.com/method/notifications.sendMessage', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() })).json()) as typeof r;
+    } catch {
+      this.log(`[vk] notice ${cat}: VK unreachable`);
+      return 'error';
+    }
+    if (r?.error) {
+      this.log(`[vk] notice ${cat}: VK API error ${Number(r.error.error_code ?? 0)}`);
+      // (the app may not write to her: 15 access denied, 901 / 903 messages or notices not allowed)
+      return [15, 901, 903].includes(Number(r.error.error_code)) ? 'blocked' : 'error';
+    }
+    const one = Array.isArray(r?.response) ? r.response[0] : undefined;
+    if (one?.status === true) return 'ok';
+    const code = Number(one?.error?.code ?? 0);
+    this.log(`[vk] notice ${cat}: not delivered, code ${code}`);
+    return code === 1 ? 'blocked' : 'error';
+  }
+
+  /** The game's «allow» / «deny» of VK's notices (POST /auth/vk/notify with her token): her VK user's switch. */
+  notifyAllow(gameToken: string, on: boolean): { ok: true } | { error: string } {
+    const cur = this.auth.resume(gameToken);
+    if (!cur) return { error: 'Sign in first.' };
+    const st = tgnState(this.game, cur.accountId);
+    if (!st?.vk) return { error: 'Not a VK captain.' };
+    vkNoticeLink(this.game, cur.accountId, st.vk, st.lang, on);
+    return { ok: true };
   }
 
   /** What the page is told: on, the app's id, payments open (the shop's buttons in votes). */
@@ -159,14 +211,21 @@ export class VkService {
     if (!v) return { error: 'VK sign-in failed: open the game from VK again.' };
     const subject = String(v.userId);
     const linked = this.db.accountByOAuth(PROVIDER, subject);
+    // (her VK user tied to the account for the notices: allowed when the launch says so — docs/36)
+    const lang = /^en/i.test(v.lang) ? 'en' : 'ru';
     if (linked && gameToken) {
       const cur = this.auth.resume(gameToken);
-      if (cur && cur.accountId === linked.id) return cur;
+      if (cur && cur.accountId === linked.id) {
+        vkNoticeLink(this.game, cur.accountId, v.userId, lang, v.notify ? true : null);
+        return cur;
+      }
     }
     const first = String(name ?? '').replace(/\s+/g, ' ').trim().slice(0, 20);
     // (oauthLogin keeps letters, digits, spaces; a name shorter than three letters takes the default)
     const display = first.replace(/[^\p{L}\p{N} _'-]/gu, '').trim().length >= 3 ? first : 'Капитан';
-    return this.auth.oauthLogin(PROVIDER, subject, null, display);
+    const r = this.auth.oauthLogin(PROVIDER, subject, null, display);
+    vkNoticeLink(this.game, r.accountId, v.userId, lang, v.notify ? true : null);
+    return r;
   }
 
   /** The payments' callback (its form's fields): the answer VK wants, never a throw. */
@@ -223,6 +282,7 @@ export function vkFromEnv(o: { db: Db; auth: AuthService; game: Game; publicUrl:
     secret,
     appId: Number.isSafeInteger(appId) && appId > 0 ? appId : null,
     payTest: env.VK_PAY_TEST === '1',
+    serviceKey: env.VK_SERVICE_KEY,
     admins: (env.VK_ADMIN_IDS ?? '').split(',').map((x) => Number(x.trim())).filter((x) => Number.isSafeInteger(x) && x > 0),
   });
 }

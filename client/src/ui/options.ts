@@ -15,7 +15,7 @@ import { tgDeepLink, tgLinked, tgSettingsButton } from '../tg.ts'; // «Прив
 import { EN as UX2_EN, RU as UX2_RU } from '../lang/ui/ux2.ts';
 import { EN as GIFT_EN, RU as GIFT_RU } from '../lang/ui/dailygift.ts';
 import { tgnHtml, tgnView, wireTgn } from './tgnotices.ts'; // «Уведомления в Телеграме» (owner, 2026-10-16)
-import { inVk, vkInviteButton, vkShare } from '../vk.ts'; // docs/36: «Позвать друзей» in VK, no link out of it
+import { inVk, vkAskNotifications, vkInviteButton, vkShare } from '../vk.ts'; // docs/36: «Позвать друзей» in VK, no link out of it
 
 const W = dict(WIN_EN, WIN_RU);
 const U2 = dict(UX2_EN, UX2_RU);
@@ -114,6 +114,9 @@ export class OptionsScreen {
       b.disabled = true;
       setTimeout(() => (b.disabled = false), 3000);
       void vkShare((msg, kind) => this.toast(msg, kind));
+    });
+    root.querySelector<HTMLButtonElement>('[data-ovkn]')?.addEventListener('click', () => {
+      void vkAskNotifications((msg, kind) => this.toast(msg, kind)).then(() => this.root === root && root.isConnected && this.render(root));
     });
     root.querySelector<HTMLButtonElement>('[data-omore]')?.addEventListener('click', () => {
       this.more = true;
