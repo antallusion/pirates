@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /ops/
+Disallow: /telemetry/
+Disallow: /auth/
+Disallow: /tg/
+Disallow: /site/forum/search
+Disallow: /site/en/forum/search
+
+User-agent: Yandex
+Allow: /
+Disallow: /api/
+Disallow: /ops/
+Disallow: /telemetry/
+Disallow: /auth/
+Disallow: /tg/
+Disallow: /site/forum/search
+Disallow: /site/en/forum/search
+Clean-param: n&kit&ref /
+
+Sitemap: https://gravetidegame.com/sitemap.xml

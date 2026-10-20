@@ -165,12 +165,46 @@ function heroBlock(h: Hero, lang: Lang): string {
 ${h.cta ? `<div class="hero-cta"><a class="btn-gold lg" href="/play">${u('playFree', lang)}</a><a class="btn-oak" href="https://t.me/gravetide_bot" target="_blank" rel="noopener">${u('tg', lang)}</a></div>` : ''}</div></section>`;
 }
 
+
+// ------------------------------------------------------------------------------------------------ search engines
+
+const ORIGIN = 'https://gravetidegame.com';
+/** A page's public address: the Russian home is the domain's root, every other page lives under /site/. */
+const pageUrl = (lang: Lang, path: string) => (lang === 'ru' && path === '' ? `${ORIGIN}/` : `${ORIGIN}${root(lang)}${path}`);
+const SECTION: Record<string, Tr> = { creatures: ['Bestiary', 'Бестиарий'], captains: ['Captains', 'Капитаны'], ships: ['Fleet', 'Флот'], forum: ['Forum', 'Форум'], rating: ['Rating', 'Рейтинг'], shop: ['Shop', 'Магазин'], terms: ['Terms', 'Оферта'], refunds: ['Refunds', 'Возврат'] };
+
+/** The head every page shares for the search engines and the social cards (owner, 2026-10-20: «настрой крутую сеошку»):
+ *  canonical and hreflang pairs, Open Graph and Twitter cards, the webmasters' verification, schema.org JSON-LD. */
+function seoHead(lang: Lang, o: { path: string; active: string; title: string; desc: string; hero: Hero }): string {
+  const url = pageUrl(lang, o.path);
+  const img = o.hero.img.startsWith('http') ? o.hero.img : `${ORIGIN}${o.hero.img}`;
+  const desc = o.desc.length > 300 ? `${o.desc.slice(0, 297)}…` : o.desc;
+  const crumbs: { name: string; item: string }[] = [{ name: 'GRAVETIDE', item: pageUrl(lang, '') }];
+  const seg = o.path.split('/')[0];
+  if (seg && SECTION[seg]) crumbs.push({ name: L(lang, SECTION[seg]), item: pageUrl(lang, `${seg}/`) });
+  if (o.path.endsWith('.html')) crumbs.push({ name: o.hero.title, item: url });
+  const ld: object[] = [];
+  if (crumbs.length > 1) ld.push({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: crumbs.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: c.name, item: c.item })) });
+  if (o.path === '') {
+    ld.push({ '@context': 'https://schema.org', '@type': 'VideoGame', name: 'GRAVETIDE', url, image: img, description: desc, inLanguage: ['ru', 'en'], genre: ['MMORPG', 'Strategy', 'Pirates'], gamePlatform: ['Web browser', 'Telegram'], applicationCategory: 'Game', operatingSystem: 'Any', playMode: 'MultiPlayer', offers: { '@type': 'Offer', price: '0', priceCurrency: 'RUB', availability: 'https://schema.org/InStock', url: `${ORIGIN}/play` }, publisher: { '@type': 'Organization', name: 'GRAVETIDE', url: `${ORIGIN}/` } });
+    ld.push({ '@context': 'https://schema.org', '@type': 'WebSite', name: 'GRAVETIDE', url: `${ORIGIN}/`, inLanguage: lang });
+    ld.push({ '@context': 'https://schema.org', '@type': 'Organization', name: 'GRAVETIDE', url: `${ORIGIN}/`, logo: `${ORIGIN}${K('brand/icon')}`, sameAs: ['https://t.me/gravetide_bot'] });
+  }
+  const json = (x: object) => JSON.stringify(x).replace(/</g, '\u003c');
+  return `<title>${esc(o.title)}</title><meta name="description" content="${esc(desc)}"><meta name="theme-color" content="#07090f">
+<meta name="robots" content="index, follow, max-image-preview:large"><meta name="yandex-verification" content="e7ce6a5f6d15ce06">
+<link rel="canonical" href="${url}"><link rel="alternate" hreflang="ru" href="${pageUrl('ru', o.path)}"><link rel="alternate" hreflang="en" href="${pageUrl('en', o.path)}"><link rel="alternate" hreflang="x-default" href="${pageUrl('ru', o.path)}">
+<meta property="og:type" content="${o.path === '' ? 'website' : 'article'}"><meta property="og:site_name" content="GRAVETIDE"><meta property="og:locale" content="${lang === 'ru' ? 'ru_RU' : 'en_US'}"><meta property="og:locale:alternate" content="${lang === 'ru' ? 'en_US' : 'ru_RU'}">
+<meta property="og:url" content="${url}"><meta property="og:title" content="${esc(o.title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:image" content="${img}"><meta property="og:image:alt" content="${esc(o.hero.title)}">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(o.title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${img}">
+<link rel="icon" href="${K('brand/icon')}"><link rel="apple-touch-icon" href="${K('brand/icon')}">
+${ld.map((x) => `<script type="application/ld+json">${json(x)}</script>`).join('')}`;
+}
+
 function page(lang: Lang, o: { path: string; active: string; title: string; desc: string; hero: Hero; body: string; css?: string; script?: string }): string {
   const r = root(lang);
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>${esc(o.title)}</title><meta name="description" content="${esc(o.desc)}"><meta name="theme-color" content="#07090f">
-<meta property="og:title" content="${esc(o.title)}"><meta property="og:description" content="${esc(o.desc)}"><meta property="og:image" content="${o.hero.img}">
-<link rel="icon" href="${K('brand/icon')}"><link rel="alternate" hreflang="ru" href="/site/${o.path}"><link rel="alternate" hreflang="en" href="/site/en/${o.path}">
+${seoHead(lang, o)}
 <link rel="preload" href="/site/fonts/cormorantsc-700-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site/css/fonts.css"><link rel="stylesheet" href="/site/css/site.css">${o.css ? `<link rel="stylesheet" href="${o.css}">` : ''}</head>
 <body class="pg-${o.active}">${header(lang, o.active, o.path)}
@@ -506,7 +540,9 @@ function forum(lang: Lang): string {
 
 // ------------------------------------------------------------------------------------------------ write
 
+const WRITTEN: string[] = [];
 function write(rel: string, html: string): void {
+  if (rel.endsWith('.html')) WRITTEN.push(rel);
   const f = join(SITE, rel);
   mkdirSync(dirname(f), { recursive: true });
   writeFileSync(f, html);
@@ -526,5 +562,18 @@ for (const lang of ['ru', 'en'] as Lang[]) {
   write(`${base}refunds/index.html`, legal(lang, 'refunds'));
   for (const c of CREATURES) write(`${base}creatures/${c.id}.html`, creaturePage(c, lang));
   n += 8 + CREATURES.length;
+}
+// The sitemap (each page with its other tongue as an hreflang pair) and robots.txt; static.ts serves both at the root.
+{
+  const NL = '\n';
+  const today = new Date().toISOString().slice(0, 10);
+  const pages = WRITTEN.filter((r) => !r.startsWith('en/')).map((r) => r.replace(/index\.html$/, ''));
+  const prio = (p: string) => (p === '' ? '1.0' : /^[a-z]+\/$/.test(p) ? '0.8' : '0.6');
+  const alt = (p: string) => `<xhtml:link rel="alternate" hreflang="ru" href="${pageUrl('ru', p)}"/><xhtml:link rel="alternate" hreflang="en" href="${pageUrl('en', p)}"/><xhtml:link rel="alternate" hreflang="x-default" href="${pageUrl('ru', p)}"/>`;
+  const urls = pages.flatMap((p) => (['ru', 'en'] as Lang[]).map((lang) => `<url><loc>${pageUrl(lang, p)}</loc><lastmod>${today}</lastmod><changefreq>${p === '' || p === 'forum/' ? 'daily' : 'weekly'}</changefreq><priority>${prio(p)}</priority>${alt(p)}</url>`));
+  writeFileSync(join(SITE, 'sitemap.xml'), ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">', ...urls, '</urlset>', ''].join(NL));
+  const shut = ['Disallow: /api/', 'Disallow: /ops/', 'Disallow: /telemetry/', 'Disallow: /auth/', 'Disallow: /tg/', 'Disallow: /site/forum/search', 'Disallow: /site/en/forum/search'];
+  writeFileSync(join(SITE, 'robots.txt'), ['User-agent: *', 'Allow: /', ...shut, '', 'User-agent: Yandex', 'Allow: /', ...shut, 'Clean-param: n&kit&ref /', '', `Sitemap: ${ORIGIN}/sitemap.xml`, ''].join(NL));
+  console.log(`sitemap: ${urls.length} addresses`);
 }
 console.log(`site: ${n} pages, ${CREATURES.length} creatures`);

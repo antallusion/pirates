@@ -71,3 +71,36 @@ test('the root of the public domain is the website, /play and the Telegram host 
     srv.close();
   }
 });
+
+test('search engines: robots and the sitemap at the root, every page with canonical, hreflang pairs and valid JSON-LD', async () => {
+  const sm = readFileSync(join(SITE, 'sitemap.xml'), 'utf8');
+  assert.match(sm, /<loc>https:\/\/gravetidegame\.com\/<\/loc>/);
+  assert.ok((sm.match(/<url>/g) ?? []).length > 500);
+  const rb = readFileSync(join(SITE, 'robots.txt'), 'utf8');
+  assert.match(rb, /Sitemap: https:\/\/gravetidegame\.com\/sitemap\.xml/);
+  assert.match(rb, /Disallow: \/api\//);
+  for (const p of ['index.html', 'creatures/crab.html', 'en/ships/index.html', 'captains/index.html']) {
+    const h = readFileSync(join(SITE, p), 'utf8');
+    assert.match(h, /<link rel="canonical" href="https:\/\/gravetidegame\.com\//, p);
+    assert.match(h, /hreflang="en"/, p);
+    assert.match(h, /hreflang="x-default"/, p);
+    assert.match(h, /og:image" content="https:\/\//, p);
+    for (const m of h.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)) assert.doesNotThrow(() => JSON.parse(m[1]), p);
+  }
+  assert.match(readFileSync(join(SITE, 'index.html'), 'utf8'), /"@type":"VideoGame"/);
+  const { createServer, request } = await import('node:http');
+  const { createStaticHandler } = await import('../server/src/net/static.ts');
+  const handle = createStaticHandler(join(import.meta.dirname, '..'));
+  const srv = createServer((req, res) => { handle(req, res).then((ok) => { if (!ok) res.writeHead(404).end(); }); });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  const port = (srv.address() as { port: number }).port;
+  const get = (path: string) => new Promise<[number, string]>((ok, bad) => { const rq = request({ host: '127.0.0.1', port, path, headers: { host: 'gravetidegame.com' } }, (rs) => { let b = ''; rs.setEncoding('utf8'); rs.on('data', (c) => (b += c)); rs.on('end', () => ok([rs.statusCode ?? 0, `${rs.headers['content-type']}|${b.slice(0, 60)}`])); }); rq.on('error', bad); rq.end(); });
+  try {
+    const [s1, b1] = await get('/robots.txt');
+    assert.equal(s1, 200); assert.match(b1, /text\/plain/);
+    const [s2, b2] = await get('/sitemap.xml');
+    assert.equal(s2, 200); assert.match(b2, /application\/xml/);
+  } finally {
+    srv.close();
+  }
+});

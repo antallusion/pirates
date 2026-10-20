@@ -34,10 +34,12 @@ const MIME: Record<string, string> = {
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
   '.mp4': 'video/mp4',
+  '.xml': 'application/xml; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
 };
 
 /** Worth compressing (the pictures and films are compressed already). */
-const TEXT = new Set(['.html', '.js', '.ts', '.css', '.json', '.svg']);
+const TEXT = new Set(['.html', '.js', '.ts', '.css', '.json', '.svg', '.xml', '.txt']);
 
 interface Mount {
   prefix: string;
@@ -224,6 +226,8 @@ export function createStaticHandler(root: string) {
     const fm = /^\/site\/(en\/)?forum(\/.*)?$/.exec(path);
     if (fm && !/\.[a-z0-9]{2,5}$/i.test(fm[2] ?? '')) path = `/site/${fm[1] ?? ''}forum/index.html`;
     if (path.startsWith('/site/') && path.endsWith('/')) path += 'index.html';
+    // the search engines' files, written by tools/site/build.ts
+    if (path === '/robots.txt' || path === '/sitemap.xml') path = `/site${path}`;
     if (path === '/assets/manifest.v.json') {
       try {
         return await send(req, res, await versionedManifest(), '.json', 'no-cache');
