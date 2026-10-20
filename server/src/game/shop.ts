@@ -412,6 +412,8 @@ function offerWhy(game: Game, s: PlayerSession, st: ShopState, offer: ShopOffer,
   if (deal ? (st.buys.deal?.day === dayOf(wall) && st.buys.deal.d >= 1) : leftOf(st, offer, wall) <= 0) return 'limit';
   const count = new Map<string, number>();
   for (const g of offer.grants) {
+    // (by the account alone — the website's shop for a captain not aboard: her ship's goods wait for her, unjudged)
+    if (!s.profile && !ACCOUNT_GRANTS.has(g.k)) continue;
     const why = grantWhy(game, s, st, g, offer, count);
     if (why) return why;
   }
@@ -605,7 +607,7 @@ export function shopWhyText(why: ShopWhy): string {
 
 /** An offer of the shop bought (or the deal of the day: `deal`): every check, then the doubloons, the ledger's row,
  *  her stores and the goods together. Null: bought (or bought already by this purchase id); else the refusal. */
-export function buyOffer(game: Game, s: PlayerSession, offerId: string, pid: string, promo?: { price: number; tag: string; done: () => void }, quiet = false): string | null {
+export function buyOffer(game: Game, s: PlayerSession, offerId: string, pid: string, promo?: { price: number; tag: string; done: () => void; count?: string }, quiet = false): string | null {
   if (!s.authed || !s.profile) return 'Not for sale';
   return buyCore(game, s, true, offerId, pid, promo, quiet);
 }
@@ -613,18 +615,19 @@ export function buyOffer(game: Game, s: PlayerSession, offerId: string, pid: str
 /** The goods that are the account's alone — its stores, its scrolls, its wardrobe, its island by the account — and need
  *  nothing of a captain aboard: an offer made only of them can be bought for a captain who is not at sea (the website's
  *  shop, server/src/game/webshop.ts). */
-const ACCOUNT_GRANTS = new Set<ShopGrant['k']>(['speed', 'builder', 'perm', 'prod', 'shield', 'move', 'xp', 'wind', 'charm', 'kit', 'scrolls', 'rscroll', 'sub', 'cos']);
+const ACCOUNT_GRANTS = new Set<ShopGrant['k']>(['speed', 'builder', 'perm', 'res', 'prod', 'shield', 'move', 'xp', 'wind', 'charm', 'kit', 'scrolls', 'rscroll', 'sub', 'cos']);
 export const accountOffer = (offer: ShopOffer): boolean => offer.grants.every((g) => ACCOUNT_GRANTS.has(g.k));
 
 /** Why an offer cannot be had by this account now, the purse aside (null: it can) — aboard through her session, else by
  *  the account (an offer of the account's goods only; anything else: 'gone'). */
-export function accountOfferWhy(game: Game, accountId: number, offerId: string): ShopWhy | null {
-  const found = OFFERS.get(String(offerId ?? ''));
+export function accountOfferWhy(game: Game, accountId: number, offerId: string, deal = false): ShopWhy | null {
+  const found = deal ? { offer: dealOf(dayOf(game.wallNow())).offer } : OFFERS.get(String(offerId ?? ''));
   if (!found) return 'gone';
   const s = game.sessionByAccount(accountId);
-  if (s?.authed && s.profile) return offerShut(game, s, found.offer);
-  if (!accountOffer(found.offer)) return 'gone';
-  const why = offerWhy(game, standIn(accountId), shopState(game, accountId), found.offer);
+  // (not aboard: the account's own checks — its limits, its level's gift, its stores; the goods of her ship are judged
+  // when she comes aboard to take them: server/src/game/webshop.ts)
+  const who = s?.authed && s.profile ? s : standIn(accountId);
+  const why = offerWhy(game, who, shopState(game, accountId), found.offer, deal);
   return why === 'poor' ? null : why;
 }
 
@@ -633,7 +636,7 @@ const standIn = (accountId: number) => ({ accountId, authed: true, profile: null
 
 /** An offer bought for an account (the website's shop): through her session if she is aboard — the very purchase of the
  *  shop's window — else by the account, for an offer of the account's goods only. Null: bought; else the refusal. */
-export function buyForAccount(game: Game, accountId: number, offerId: string, pid: string, promo?: { price: number; tag: string; done: () => void }, quiet = false): string | null {
+export function buyForAccount(game: Game, accountId: number, offerId: string, pid: string, promo?: { price: number; tag: string; done: () => void; count?: string }, quiet = false): string | null {
   const s = game.sessionByAccount(accountId);
   if (s?.authed && s.profile) return buyOffer(game, s, offerId, pid, promo, quiet);
   const found = OFFERS.get(String(offerId ?? ''));
@@ -641,7 +644,7 @@ export function buyForAccount(game: Game, accountId: number, offerId: string, pi
   return buyCore(game, standIn(accountId), false, offerId, pid, promo, true);
 }
 
-function buyCore(game: Game, s: PlayerSession, aboard: boolean, offerId: string, pid: string, promo: { price: number; tag: string; done: () => void } | undefined, quiet: boolean): string | null {
+function buyCore(game: Game, s: PlayerSession, aboard: boolean, offerId: string, pid: string, promo: { price: number; tag: string; done: () => void; count?: string } | undefined, quiet: boolean): string | null {
   const deal = offerId === 'deal';
   const day = dayOf(game.wallNow());
   const found = deal ? { offer: dealOf(day).offer } : OFFERS.get(String(offerId ?? ''));
@@ -662,7 +665,7 @@ function buyCore(game: Game, s: PlayerSession, aboard: boolean, offerId: string,
     if (game.db.addDoubloons(s.accountId, -price) === null) return;
     game.db.ledger(s.accountId, 'doubloons_buy', -price, detail);
     for (const g of offer.grants) grant(game, s, st, g, offer.id);
-    count(st, deal ? 'deal' : offer.id, wall);
+    count(st, promo?.count ?? (deal ? 'deal' : offer.id), wall);
     save(game, s.accountId, st);
     promo?.done();
     if (aboard) game.saveSession(s);

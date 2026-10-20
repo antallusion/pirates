@@ -21,7 +21,6 @@ import { noticePid, yooAddress } from '../pay/yookassa.ts';
 import type { YooKassa } from '../pay/yookassa.ts';
 import { testCheckoutPage } from '../pay/testpage.ts';
 import { clientIp } from '../net/conn.ts';
-import { webItem } from '../../../shared/src/data/webshop.ts';
 
 const BODY_MAX = 16 * 1024;
 const MIN = 60_000;
@@ -196,7 +195,7 @@ export function siteRoutes(d: SiteDeps) {
     const id = String(url.searchParams.get('order') ?? '');
     const o = shop.get(id);
     if (!o || o.provider !== 'test' || !shop.testAllowed(o.acc)) throw new HttpError('not_found', 404);
-    const x = webItem(o.item);
+    const x = shop.itemOf(o);
     const html = testCheckoutPage({ id: o.id, lang: o.lang, name: o.name, item: x ? x.name[o.lang === 'en' ? 0 : 1] : o.item, rub: o.rub, open: o.status === 'pending' });
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' });
     res.end(html);

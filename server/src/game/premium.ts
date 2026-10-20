@@ -154,12 +154,12 @@ export function move(game: Game, accountId: number, delta: number, kind: string,
 /** The tester's sample catalogue is in the shop (`/doubloons sample`, admin servers only). */
 const samples = new WeakSet<Game>();
 
-function shipOffer(game: Game, c: ShipClassId): PremiumShip | undefined {
+export function shipOffer(game: Game, c: ShipClassId): PremiumShip | undefined {
   if (!Object.hasOwn(SHIP_CLASSES, c)) return undefined;
   return SHIP_CLASSES[c].premium ?? (samples.has(game) ? PREMIUM_SAMPLE.ships[c] : undefined);
 }
 
-function unitOffer(game: Game, u: UnitId): PremiumUnit | undefined {
+export function unitOffer(game: Game, u: UnitId): PremiumUnit | undefined {
   // A premium hull's own kind comes only aboard her (shared/src/data/shipbeasts.ts): never off the shelf.
   if (!Object.hasOwn(UNITS, u) || isShipBeast(u)) return undefined;
   return UNITS[u].premium ?? (samples.has(game) ? PREMIUM_SAMPLE.units[u] : undefined);
@@ -181,7 +181,7 @@ function unitList(game: Game): UnitId[] {
 
 /** Why a hull cannot be hers now (null: she can be): as at a yard — in port, not the class she sails, the yard not
  *  busy with her, her level up to the hull's — and a berth free for the ship she leaves. */
-function shipWhy(game: Game, s: PlayerSession, c: ShipClassId, price: number, balance: number): PremiumWhy | null {
+export function shipWhy(game: Game, s: PlayerSession, c: ShipClassId, price: number, balance: number): PremiumWhy | null {
   const ship = s.ship!, p = s.profile!;
   if (!ship.docked) return 'port';
   if (ship.loadout.classId === c) return 'yours';
@@ -194,7 +194,7 @@ function shipWhy(game: Game, s: PlayerSession, c: ShipClassId, price: number, ba
 /** Why a stack of a kind cannot come aboard now (null: it can): as a tamer's, a slot of its own (or its stack aboard)
  *  and hammocks for every one of them; never in a fight; the deep's own only for a captain who keeps the deep; and a
  *  tier only from the ship level that signs it on (docs/18 VII: worth the money, not an auto-win). */
-function unitWhy(game: Game, s: PlayerSession, u: UnitId, o: PremiumUnit, balance: number, k = 1): PremiumWhy | null {
+export function unitWhy(game: Game, s: PlayerSession, u: UnitId, o: PremiumUnit, balance: number, k = 1): PremiumWhy | null {
   const ship = s.ship!;
   if (!ship.alive || ship.boarding || ship.underFire(game.now) || landFighting(game, s)) return 'fight';
   if (peopleOf(u) === 'deep' && !keepsDeep(s) && s.profile!.captain !== 'drowned') return 'deep';
