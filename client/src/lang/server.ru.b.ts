@@ -1443,5 +1443,17 @@ export const SERVER_RU_B: Record<string, string> = {
   "The ransom is paid in silver aboard": "Выкуп платится серебром на борту",
   "The ransom is paid: your boarders come back with the silver.": "Выкуп уплачен: ваши абордажники возвращаются с серебром.",
   "Won the boarding battle with {0}": "Победа в абордажном бою с «{0}»",
+  // the VK Mini App (docs/36): the sign-in's refusal, and the payments callback's errors (VK shows them to a buyer)
+  "VK sign-in failed: open the game from VK again.": "Не удалось войти через ВКонтакте: откройте игру во ВКонтакте снова.",
+  "Not a VK captain.": "Этот капитан не из ВКонтакте.",
+  "Bad signature": "Неверная подпись",
+  "Item not found": "Товар не найден",
+  "User not found": "Игрок не найден",
+  "Wrong app": "Чужое приложение",
+  "Wrong price": "Неверная цена",
+  "Unknown notification": "Неизвестное уведомление",
+  "Unknown status": "Неизвестный статус",
+  "Temporary error, try again": "Временная ошибка, попробуйте ещё раз",
+  "Test payments are not credited on this server": "Тестовые платежи на этом сервере не зачисляются",
   "You pay {0} silver and the boarders go back over the rail.": "Вы платите {0} серебра, и абордажники уходят за борт.",
 };
