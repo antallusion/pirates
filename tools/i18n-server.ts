@@ -23,7 +23,9 @@ export function looksLikeProse(s: string): boolean {
   const bare = s.replace(/\{\d+\}/g, '').trim();
   if (bare.length < 4 || !/[a-z]/.test(bare)) return false;
   if (/^\[/.test(bare) || /^[a-z_]+(\.[a-z_]+)*$/.test(bare) || /^[a-z]+[A-Z]\w*$/.test(bare)) return false; // log tags, ids, camelCase
-  if (/^(SELECT|INSERT|UPDATE|DELETE|CREATE|PRAGMA)\b/.test(bare)) return false;
+  if (/^(SELECT|INSERT|UPDATE|DELETE|CREATE|PRAGMA|ALTER|AND|OR|WHERE|INTEGER|BIGINT)\b|\bIS (NOT )?NULL$/.test(bare)) return false; // SQL
+  if (/^</.test(bare) || /<[^>\s]+@[^>\s]+>$/.test(bare) || /^[\w.-]+\/[\w.+-]+;|max-age=|^bytes |^default-src /.test(bare)) return false; // HTML, a mailbox, HTTP
+  if (/[А-Яа-яЁё]/.test(bare) || bare === 'Infinity') return false; // already Russian (the owner's pages); a number's name
   if (/^[\w-]+$/.test(bare) && !/^[A-Z]/.test(bare)) return false; // a single lower-case token
   // A word between the holes of a sentence ("{0} rises! {1}", "+{0} XP — {1}") is prose too.
   if (/\{\d+\}.*\{\d+\}/.test(s) && /[A-Za-z]{2,}[.!?]?/.test(bare) && /\s/.test(s.replace(/\{\d+\}/g, 'x'))) return true;
@@ -39,20 +41,24 @@ export function extract(root = 'server/src'): string[] {
     for (const f of readdirSync(d, { withFileTypes: true })) {
       // (server/src/pay: the payment provider's protocol and the test checkout's page, which speaks both languages
       // itself — never a sentence of the game's toasts)
+      // (server/src/forum: its seed carries both languages itself; server/src/net: the transport's headers)
       if (f.isDirectory()) {
-        if (f.name !== 'pay') walk(join(d, f.name));
+        if (!['pay', 'forum', 'net'].includes(f.name)) walk(join(d, f.name));
       }
       // The admin console speaks the tester's language too (the owner plays with it). The owner's own web pages
-      // (http/telemetry.ts, http/ops.ts: Russian only, never shown to a player) are not the game's sentences.
-      else if (f.name.endsWith('.ts') && !(d.endsWith('http') && OWNER_PAGES.has(f.name))) files.push(join(d, f.name));
+      // (http/telemetry.ts, http/ops.ts: Russian only, never shown to a player) are not the game's sentences; nor
+      // the mailer's errors (mail.ts).
+      else if (f.name.endsWith('.ts') && f.name !== 'mail.ts' && !(d.endsWith('http') && OWNER_PAGES.has(f.name))) files.push(join(d, f.name));
     }
   };
   walk(root);
   for (const file of files) {
     const src = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
     const visit = (n: Any): void => {
-      // Skip the log calls: they are for operators, not players.
-      if (ts.isCallExpression(n) && /\.log$|^console\./.test(n.expression.getText(src))) return;
+      // Skip the log calls: they are for operators, not players; an Error's message (thrown and logged, never said);
+      // a letter (written in its reader's language where it is sent).
+      if (ts.isCallExpression(n) && /\.log$|^console\.|mailer\.send$/.test(n.expression.getText(src))) return;
+      if (ts.isNewExpression(n) && /Error$/.test(n.expression.getText(src))) return;
       let pat: string | null = null;
       if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) pat = n.text;
       else if (ts.isTemplateExpression(n)) {

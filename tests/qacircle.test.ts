@@ -58,10 +58,12 @@ test('popup budget: the sea\'s news, a hint and a boss\'s card keep out of the s
 test('not a word of Latin in a Russian line a player reads (QA circle: NPC, PvP, HUD, WebGL, e-mail, UTC, MMORPG)', async () => {
   const { readdirSync } = await import('node:fs');
   // Key names, roman numerals, the game's name, ship names (HMS …), the gamepad's own button names, chat commands.
-  const OK = /^(Tab|Shift|Ctrl|Alt|Esc|Enter|Space|Backspace|Del|Ins|Home|End|PgUp|PgDn|Caps|LMB|RMB|MMB|WASD|F\d{1,2}|[A-Za-z]|[IVX]+|GRAVETIDE|HMS|Menu|View|gc|nbsp|px)$/;
+  const OK = /^(Tab|Shift|Ctrl|Alt|Esc|Enter|Space|Backspace|Del|Ins|Home|End|PgUp|PgDn|Caps|LMB|RMB|MMB|WASD|F\d{1,2}|[A-Za-z]|[IVX]+|GRAVETIDE|HMS|Menu|View|gc|nbsp|px|PNG|JPG|WebP|MP|YouTube)$/; // (the forum's file formats: MP4 reads «MP»)
   const dir = new URL('../client/src/lang/', import.meta.url);
   const tables: [string, Record<string, unknown>][] = [];
-  for (const f of readdirSync(dir)) if (f.endsWith('.ts') && /ru/.test(f) && !/admin/.test(f)) for (const v of Object.values(await import(new URL(f, dir).href) as Record<string, unknown>)) if (v && typeof v === 'object') tables.push([f, v as Record<string, unknown>]);
+  // (a Russian table's file is named «….ru.…» or ru.ts — «forum.ts» only spells «ru»; the forum's Russian is its FORUM_RU)
+  tables.push(['forum.ts', (await import(new URL('forum.ts', dir).href) as { FORUM_RU: Record<string, unknown> }).FORUM_RU]);
+  for (const f of readdirSync(dir)) if (f.endsWith('.ts') && /(^|\.)ru\./.test(f) && !/admin/.test(f)) for (const v of Object.values(await import(new URL(f, dir).href) as Record<string, unknown>)) if (v && typeof v === 'object') tables.push([f, v as Record<string, unknown>]);
   for (const f of readdirSync(new URL('ui/', dir))) { const m = await import(new URL(`ui/${f}`, dir).href) as { RU?: Record<string, unknown> }; if (m.RU) tables.push([f, m.RU]); }
   const bad: string[] = [];
   for (const [f, t] of tables) for (const [k, v] of Object.entries(t)) {

@@ -55,7 +55,9 @@ test('the UI fires each cue where its event happens', () => {
   assert.match(src('client/src/ui/dailygift.ts'), /cue\('gift'\)/);
   // the sound sleeps while the page is hidden (another tab, the Mini App in Telegram's background)
   const main = src('client/src/main.ts');
-  assert.match(main, /visibilitychange', \(\) => audio\.setHidden\(document\.hidden\)/);
+  // (docs/36: lifecycle.ts puts the whole game to sleep, the sound with it, on visibilitychange, pagehide and VK's ViewHide)
+  assert.match(main, /onLifecycle\(soundSleeps\(audio\)\)/);
+  assert.match(main, /visibilitychange', \(\) => \(document\.hidden \? pauseApp\('hidden'\) : resumeApp\('hidden'\)\)/);
   assert.match(main, /onEvent\('deactivated'/);
   assert.equal(typeof proto.setHidden, 'function');
 });

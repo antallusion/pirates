@@ -152,7 +152,9 @@ export class AuthService {
       await this.mailer.send({
         to: email,
         subject: locale === 'ru' ? 'GRAVETIDE — подтвердите почту' : 'GRAVETIDE — confirm your e-mail',
-        text: `Captain,\n\nConfirm this address for your GRAVETIDE account:\n${url}\n\nThe link is good for three days. If you did not ask for this, ignore the letter.\n\n— The Harbour Master`,
+        text: locale === 'ru'
+          ? `Капитан,\n\nподтвердите этот адрес для аккаунта GRAVETIDE:\n${url}\n\nСсылка действует три дня. Если вы ничего не запрашивали, просто не отвечайте на письмо.\n\n— Начальник порта`
+          : `Captain,\n\nConfirm this address for your GRAVETIDE account:\n${url}\n\nThe link is good for three days. If you did not ask for this, ignore the letter.\n\n— The Harbour Master`,
         template: 'sendersy/email-verify--gaming',
         locale,
         variables: { verify_url: url },
@@ -180,7 +182,9 @@ export class AuthService {
     await this.mailer.send({
       to: a.email,
       subject: locale === 'ru' ? 'GRAVETIDE — новый пароль' : 'GRAVETIDE — reset your password',
-      text: `Captain ${a.name},\n\nSet a new password here (good for one hour):\n${url}\n\nIf you did not ask for this, ignore the letter; your password stays as it is.\n\n— The Harbour Master`,
+      text: locale === 'ru'
+        ? `Капитан ${a.name},\n\nзадайте новый пароль по ссылке (она действует час):\n${url}\n\nЕсли вы ничего не запрашивали, не отвечайте на письмо: пароль останется прежним.\n\n— Начальник порта`
+        : `Captain ${a.name},\n\nSet a new password here (good for one hour):\n${url}\n\nIf you did not ask for this, ignore the letter; your password stays as it is.\n\n— The Harbour Master`,
       template: 'sendersy/password-reset--gaming',
       locale,
       variables: { reset_url: url },
