@@ -53,6 +53,8 @@
 /* ---------------------------------------------------------------- settings */
 .opt-foot { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--k-sp-2, 6px); margin-top: var(--k-sp-3, 10px); }
 .opt-foot .opt-more { margin-top: 0; }
+.opt-legal { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 8px; margin-top: var(--k-sp-2, 6px); font-size: 12px; opacity: 0.75; }
+.opt-legal a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .opt-tg { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; }
 .opt-tg .tg-ico { color: #8fb7cf; }
 .opt-tg:disabled { opacity: 0.75; cursor: default; }

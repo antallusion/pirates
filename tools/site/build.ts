@@ -25,7 +25,10 @@ import { ORDER_IDS } from '../../shared/src/data/hero.ts';
 import { ARTIFACT_IDS } from '../../shared/src/data/artifacts.ts';
 import { FACTIONS } from '../../shared/src/data/factions.ts';
 import { FRAMES, PLATES, TITLES } from '../../shared/src/data/cosmetics.ts';
-import { WEB_ITEMS } from '../../shared/src/data/webshop.ts';
+import { WEB_ITEMS, WEB_SECS, WEB_TABS, WEB_TAB_NAMES } from '../../shared/src/data/webshop.ts';
+import { SHOP } from '../../shared/src/data/shop.ts';
+import { DOC_IDS, DOC_TITLES, EDITION, LEGAL, REQUISITES, SELLER } from './legal.ts';
+import type { DocId } from './legal.ts';
 import { EN as ARMY_EN, RU as ARMY_RU } from '../../client/src/lang/ui/army.ts';
 import { DATA_RU } from '../../client/src/lang/data.ts';
 import { typo } from './typo.ts';
@@ -211,7 +214,8 @@ ${seoHead(lang, o)}
 <main>${heroBlock(o.hero, lang)}${o.body}</main>
 <footer class="ftr"><div class="wrap ftr-in"><img src="${K('brand/logo')}" alt="GRAVETIDE" width="110" height="88" loading="lazy">
 <p>${T(u('footer', lang), lang)}</p><nav><a href="${r}creatures/">${u('creatures', lang)}</a><a href="${r}captains/">${u('captains', lang)}</a><a href="${r}ships/">${u('ships', lang)}</a><a href="${r}rating/">${u('rating', lang)}</a><a href="${r}shop/">${u('shop', lang)}</a><a href="${r}forum/">${u('forum', lang)}</a><a href="/play">${u('play', lang)}</a></nav>
-<nav class="ftr-legal"><a href="${r}terms/">${lang === 'ru' ? 'Публичная оферта' : 'Terms of sale'}</a><a href="${r}refunds/">${lang === 'ru' ? 'Политика возврата' : 'Refund policy'}</a></nav>
+<nav class="ftr-legal" aria-label="${lang === 'ru' ? 'Документы' : 'Documents'}">${DOC_IDS.map((d) => `<a href="${r}${d}/">${L(lang, DOC_TITLES[d])}</a>`).join('')}</nav>
+<p class="ftr-req">${lang === 'ru' ? `${SELLER.name[1]} · ИНН&nbsp;${SELLER.inn} · ОГРНИП&nbsp;${SELLER.ogrnip}` : `${SELLER.name[0]} · INN&nbsp;${SELLER.inn} · OGRNIP&nbsp;${SELLER.ogrnip}`}<br><a href="mailto:${SELLER.info}">${SELLER.info}</a> · <a href="mailto:${SELLER.support}">${SELLER.support}</a></p>
 <small>© GRAVETIDE · gravetidegame.com</small></div></footer>
 <script src="/site/js/site.js" defer></script>${o.script ? `<script type="module" src="${o.script}"></script>` : ''}</body></html>`;
 }
@@ -424,19 +428,34 @@ const SHOP_T: Record<string, Tr> = {
   badName: ['A name is 2 to 24 letters and digits.', 'Ник — от 2 до 24 букв и цифр.'], rate: ['Too many tries: wait a minute.', 'Слишком много попыток: подождите минуту.'],
   net: ['No answer from the server. Try again.', 'Нет связи с сервером. Попробуйте ещё раз.'], to: ['For', 'Получатель'], level: ['Level', 'Уровень'],
   change: ['Another name', 'Другой ник'], noCap: ['no captain chosen yet', 'капитан ещё не выбран'],
+  atSea: ['in the game now', 'сейчас в игре'], inPort: ['in port', 'в порту'], offline: ['not in the game', 'не в игре'],
   email: ['E-mail for the receipt', 'Почта для чека'], emailNote: ['The payment’s receipt is sent here.', 'Сюда придёт чек об оплате.'], needEmail: ['Enter an e-mail for the receipt.', 'Укажите почту для чека.'],
-  step2: ['Choose', 'Выберите товар'], g_pack: ['Doubloons', 'Дублоны'], g_captain: ['Premium captains', 'Премиум-капитаны'], g_bundle: ['Outfits', 'Наряды'], g_offer: ['Shop chests', 'Наборы лавки'],
-  buy: ['Buy', 'Купить'], owned: ['Owned', 'Уже есть'], limit: ['Bought this week', 'Уже куплено на этой неделе'], max: ['At the limit', 'Достигнут предел'], gone: ['Not on sale', 'Не продаётся'],
-  needNick: ['Find your captain first: step 1.', 'Сначала найдите капитана — шаг 1.'], paying: ['To the payment…', 'Переходим к оплате…'],
-  best: ['Best value', 'Выгодно'], hot: ['Popular', 'Хит'], until: ['Until {d}', 'До {d}'], bonus: ['+{n} free', '+{n} в подарок'], once: ['Once per account', 'Один раз на счёт'],
-  step3: ['Pay', 'Оплата'],
-  pay3: ['By card or the SBP on YooKassa’s secure page: the card never passes through our server. Once paid, the purchase is on the captain’s account at once; if they are at sea, the game says «Web shop purchase».', 'Картой или через СБП на защищённой странице ЮKassa: данные карты не проходят через наш сервер. Сразу после оплаты покупка приходит на счёт капитана, а если он в море — игра сообщит: «Покупка с сайта».'],
+  all: ['All items', 'Все товары'], filters: ['Filters', 'Фильтры'], cats: ['Categories', 'Категории'], price: ['Price, ₽', 'Цена, ₽'], from: ['from', 'от'], to2: ['to', 'до'],
+  mine: ['Available to me', 'Доступно мне'], mineHint: ['Enter your captain’s name first.', 'Сначала укажите ник капитана.'],
+  sort: ['Sort', 'Сортировка'], s_pop: ['Popular', 'Популярные'], s_cheap: ['Cheaper first', 'Сначала дешевле'], s_dear: ['Dearer first', 'Сначала дороже'], s_new: ['New', 'Новые'],
+  show: ['Show {n}', 'Показать {n}'], reset: ['Reset', 'Сбросить'], close: ['Close', 'Закрыть'], empty: ['Nothing matches these filters.', 'По этим фильтрам ничего нет.'],
+  items: ['items', 'товаров'], buy: ['Buy', 'Купить'], owned: ['Owned', 'Уже есть'],
+  needNick: ['Enter your captain’s name first: the purchase goes to the captain’s account.', 'Сначала укажите ник капитана: покупка придёт на его счёт.'], paying: ['To the payment…', 'Переходим к оплате…'],
+  best: ['Best value', 'Выгодно'], hot: ['Popular', 'Хит'], until: ['Until {d}', 'До {d}'], since: ['From {d}', 'С {d}'], bonus: ['+{n} free', '+{n} в подарок'], once: ['Once per account', 'Один раз на счёт'],
+  perDay: ['Once a day', 'Раз в день'], perWeek: ['Once a week', 'Раз в неделю'], aboard: ['Delivered aboard', 'Вручается на борту'],
+  // why a thing cannot be bought (the server's word: server/src/game/webshop.ts Unavailable)
+  w_owned: ['Owned', 'Уже есть'], w_claimed: ['Already claimed', 'Уже получено'], w_limit: ['Bought for now', 'Пока куплено'], w_max: ['At the limit', 'Предельный запас'],
+  w_gone: ['Not on sale', 'Не продаётся'], w_season: ['Out of season', 'Не сезон'], w_level: ['Level too low', 'Мал уровень'], w_island: ['Needs an island', 'Нужен остров'],
+  w_tier: ['Ship level too low', 'Мал уровень корабля'], w_slot: ['No free slot', 'Нет слота в армии'], w_room: ['No room', 'Нет места'], w_hold: ['Hold full', 'Трюм полон'],
+  w_berths: ['Berths full', 'Причалы заняты'], w_yours: ['Your ship now', 'Уже ваш корабль'], w_order: ['First one first', 'Сначала первая'], w_none: ['Nothing to do', 'Сейчас не нужно'], w_deep: ['For the deep’s own', 'Только для глубин'],
+  step3: ['Payment', 'Оплата'],
+  pay3: ['By card or the SBP on YooKassa’s secure page: the card never passes through our server. Once paid, the purchase is on the captain’s account at once; a ship comes in port, creatures and ship’s stores out of a fight — as in the game. In the game a toast says «Web shop purchase».', 'Картой или через СБП на защищённой странице ЮKassa: данные карты не проходят через наш сервер. Сразу после оплаты покупка приходит на счёт капитана; корабль — в порту, существа и припасы — вне боя, как в игре. В игре появится сообщение «Покупка с сайта».'],
+  confirm: ['Your order', 'Ваш заказ'], payBtn: ['Pay {p}', 'Оплатить {p}'], cancel: ['Cancel', 'Отмена'],
   test: ['TEST MODE: the payment system is not connected yet and no money is charged. Only the site’s administrators can make a test purchase.', 'ТЕСТОВЫЙ РЕЖИМ: платёжная система ещё не подключена, деньги не списываются. Тестовую покупку могут оформить только администраторы.'],
   testOpen: ['TEST MODE: no money is charged; the checkout is a test page of the game.', 'ТЕСТОВЫЙ РЕЖИМ: деньги не списываются, вместо оплаты — тестовая страница игры.'],
   o_pending: ['The payment is being processed…', 'Оплата в обработке…'], o_paid: ['Paid: the purchase is on its way…', 'Оплата прошла, вручаем покупку…'],
   o_done: ['Paid! The purchase is on the captain’s account.', 'Оплата прошла! Покупка уже на счёте капитана.'],
+  o_kept: ['Paid! It could not be handed over in the game, so its doubloons are on the captain’s account.', 'Оплата прошла! Вручить вещь в игре не вышло, поэтому её стоимость зачислена дублонами на счёт капитана.'],
+  o_wait_port: ['Paid! The ship waits for the captain in port: she is handed over at the next call at a port.', 'Оплата прошла! Корабль ждёт капитана: его вручат, как только капитан зайдёт в порт.'],
+  o_wait_fight: ['Paid! It comes aboard as soon as the captain’s fight is over.', 'Оплата прошла! Покупка придёт на борт, как только закончится бой.'],
+  o_wait_login: ['Paid! The purchase waits for the captain: it comes aboard at the next login.', 'Оплата прошла! Покупка ждёт капитана и придёт на борт при следующем входе в игру.'],
   o_canceled: ['The payment did not go through or was cancelled. No money was taken.', 'Оплата не прошла или отменена. Деньги не списаны.'],
-  o_failed: ['The payment did not go through. If money was taken, write to us and we will sort it out.', 'Оплата не прошла. Если деньги списались — напишите нам, разберёмся.'],
+  o_failed: ['The payment did not go through. If money was taken, write to support@gravetidegame.com and we will sort it out.', 'Оплата не прошла. Если деньги списались — напишите на support@gravetidegame.com, разберёмся.'],
   o_missing: ['No such order.', 'Заказ не найден.'], o_slow: ['Still waiting for the bank. The page checks again by itself; you may also come back later.', 'Банк ещё не ответил. Страница проверит сама; можно вернуться позже.'],
   orderNum: ['Order', 'Заказ'], forWho: ['for', 'для'],
   e_owned: ['The captain has this already.', 'Это у капитана уже есть.'], e_limit: ['Bought as often as it may be for now.', 'Куплено столько раз, сколько можно сейчас.'],
@@ -447,81 +466,93 @@ const SHOP_T: Record<string, Tr> = {
   rub: ['₽', '₽'],
 };
 
+/** The store's categories (the site's tabs, shared/src/data/webshop.ts WEB_TABS) with their pictures: the site kit's and
+ *  the game's own (the cosmetics' icons of the game's shop). */
+const CAT_ICON: Record<string, string | null> = {
+  all: K('ico/chest'), dbl: K('ico/doubloon'), cap: K('ico/captains'), ship: K('ico/ships'), unit: K('ico/creatures'),
+  boost: asset('icon.ui_hourglass') ?? K('ico/hourglass'), set: asset('icon.ui_chest') ?? K('ico/chest'), cos: asset('icon.cos_bundle') ?? K('ico/star'), deal: K('ico/hot'),
+  cos_titles: asset('icon.cos_titles'), cos_frames: asset('icon.cos_frames'), cos_flags: asset('icon.cos_flags'), cos_trails: asset('icon.cos_trails'), cos_emotes: asset('icon.cos_emotes'), cos_sets: asset('icon.cos_bundle'),
+};
+const COS_SUBS = ['cos_titles', 'cos_frames', 'cos_flags', 'cos_trails', 'cos_emotes', 'cos_sets'];
+const COS_SUB_NAMES: Record<string, Tr> = {
+  cos_titles: ['Titles and plates', 'Звания'], cos_frames: ['Frames', 'Рамки'], cos_flags: ['Flags', 'Флаги'], cos_trails: ['Trails', 'Следы'], cos_emotes: ['Emotes', 'Эмоции'], cos_sets: ['Outfits', 'Наряды'],
+};
+
+const PRICE_STEPS: [number, number][] = [[0, 590], [590, 1990], [1990, 4990], [4990, 0]];
+/** A number with a no-break thin gap between thousands. */
+const nb = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
 function shop(lang: Lang): string {
   const tr = (t: Record<string, Tr>) => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, L(lang, v)]));
   const r = root(lang);
-  const art = Object.fromEntries(WEB_ITEMS.map((x) => [x.art, asset(x.art)]));
-  const legalLine = lang === 'ru'
-    ? `Оплачивая заказ, вы принимаете условия <a href="${r}terms/">публичной оферты</a> и <a href="${r}refunds/">политики возврата</a>. Цены — в рублях. Дублоны и предметы — цифровые товары игры: они остаются на счёте капитана и не обмениваются обратно на деньги.`
-    : `By paying you accept the <a href="${r}terms/">terms of sale</a> and the <a href="${r}refunds/">refund policy</a>. Prices are in roubles. Doubloons and items are the game’s digital goods: they stay on the captain’s account and are not exchanged back for money.`;
+  const ru = lang === 'ru';
+  const art = Object.fromEntries([...new Set(WEB_ITEMS.map((x) => x.art).concat(SHOP.map((f) => (f.icon.startsWith('unit:') ? `unit.${f.icon.slice(5)}` : `icon.${f.icon}`))))].filter(Boolean).map((a) => [a, asset(a)]));
+  const t = (k: string) => L(lang, SHOP_T[k]);
+  const cat = (id: string, name: string, sub = false) => `<button type="button" class="st-cat${sub ? ' sub' : ''}" data-cat="${id}" aria-pressed="false"><span class="st-ico">${CAT_ICON[id] ? `<img src="${CAT_ICON[id]}" alt="" width="28" height="28" loading="lazy">` : ''}</span><span class="st-cn">${esc(name)}</span><i class="st-n"></i></button>`;
+  const cats = `<button type="button" class="st-cat all" data-cat="all" aria-pressed="true"><span class="st-ico"><img src="${CAT_ICON.all}" alt="" width="28" height="28"></span><span class="st-cn">${t('all')}</span><i class="st-n"></i></button>
+${WEB_TABS.map((id) => cat(id, L(lang, WEB_TAB_NAMES[id])) + (id === 'cos' ? `<div class="st-subs">${COS_SUBS.map((s) => cat(s, L(lang, COS_SUB_NAMES[s]), true)).join('')}</div>` : '')).join('')}`;
+  const legalLine = ru
+    ? `Нажимая «Оплатить», вы принимаете <a href="${r}offer/" target="_blank">публичную оферту</a>, <a href="${r}terms/" target="_blank">пользовательское соглашение</a> и <a href="${r}refunds/" target="_blank">условия возврата</a> и даёте <a href="${r}consent/" target="_blank">согласие на обработку персональных данных</a> по <a href="${r}privacy/" target="_blank">политике конфиденциальности</a>.`
+    : `By pressing «Pay» you accept the <a href="${r}offer/" target="_blank">public offer</a>, the <a href="${r}terms/" target="_blank">terms of use</a> and the <a href="${r}refunds/" target="_blank">refund terms</a> and give your <a href="${r}consent/" target="_blank">consent to data processing</a> under the <a href="${r}privacy/" target="_blank">privacy policy</a>.`;
   const body = `<section class="wrap sec shop" id="shop">
 <p class="shop-mode" role="note" hidden></p>
 <div class="shop-order panel" role="status" aria-live="polite" hidden></div>
-<ol class="shop-steps">
-<li class="shop-step panel" id="step1"><h2><span class="shop-num">1</span>${L(lang, SHOP_T.step1)}</h2><p class="muted">${T(L(lang, SHOP_T.hint1), lang)}</p>
-<form class="shop-find"><label class="search"><img src="${K('ico/captains')}" alt="" width="22" height="22"><input name="nick" maxlength="24" autocomplete="nickname" autocapitalize="off" spellcheck="false" placeholder="${esc(L(lang, SHOP_T.nickPh))}" aria-label="${esc(L(lang, SHOP_T.step1))}"></label><button class="btn-gold sm" type="submit">${L(lang, SHOP_T.find)}</button></form>
-<div class="shop-who" hidden></div>
-<label class="shop-mail" hidden><span class="kicker">${L(lang, SHOP_T.email)}</span><span class="search"><input type="email" name="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="mail@example.com"></span><small class="muted">${L(lang, SHOP_T.emailNote)}</small></label>
-<p class="shop-err" role="alert" hidden></p></li>
-<li class="shop-step" id="step2"><h2><span class="shop-num">2</span>${L(lang, SHOP_T.step2)}</h2><div class="shop-cat" aria-busy="true"></div></li>
-<li class="shop-step panel" id="step3"><h2><span class="shop-num">3</span>${L(lang, SHOP_T.step3)}</h2><p>${T(L(lang, SHOP_T.pay3), lang)}</p><p class="shop-legal muted">${legalLine}</p></li>
-</ol></section>
-${dataTag('shop-data', { lang, t: tr(SHOP_T), art, cos: { portraits: Object.fromEntries(CAPTAIN_IDS.map((id) => [id, portraitOf(id)])), names: capNames(lang) }, coin: K('ico/doubloon') })}`;
+<div class="st-who panel" id="step1"><div class="st-who-in"><div class="st-who-l"><h2>${t('step1')}</h2><p class="muted">${T(t('hint1'), lang)}</p></div>
+<form class="shop-find"><label class="search"><img src="${K('ico/captains')}" alt="" width="22" height="22"><input name="nick" maxlength="24" autocomplete="nickname" autocapitalize="off" spellcheck="false" placeholder="${esc(t('nickPh'))}" aria-label="${esc(t('step1'))}"></label><button class="btn-gold sm" type="submit">${t('find')}</button></form>
+<div class="shop-who" hidden></div></div>
+<label class="shop-mail" hidden><span class="kicker">${t('email')}</span><span class="search"><input type="email" name="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="mail@example.com"></span><small class="muted">${t('emailNote')}</small></label>
+<p class="shop-err" role="alert" hidden></p></div>
+<div class="store">
+<aside class="st-side" id="st-filters" aria-label="${t('filters')}" tabindex="-1">
+<div class="st-side-head"><b>${t('filters')}</b><button type="button" class="st-x" data-close aria-label="${t('close')}">×</button></div>
+<div class="st-side-body">
+<nav class="st-cats" aria-label="${t('cats')}">${cats}</nav>
+<fieldset class="st-price"><legend>${t('price')}</legend><div class="st-range"><label><span>${t('from')}</span><input type="number" inputmode="numeric" min="0" step="10" name="min" placeholder="290"></label><label><span>${t('to2')}</span><input type="number" inputmode="numeric" min="0" step="10" name="max" placeholder="9 900"></label></div>
+<div class="st-steps">${PRICE_STEPS.map(([a, b]) => `<button type="button" class="st-step" data-min="${a || ''}" data-max="${b || ''}">${!a ? `≤ ${nb(b)}` : !b ? `${nb(a)}+` : `${nb(a)}–${nb(b)}`}</button>`).join('')}</div></fieldset>
+<label class="st-mine"><input type="checkbox" name="mine"><span class="st-sw" aria-hidden="true"></span><span>${t('mine')}<small class="muted">${t('mineHint')}</small></span></label>
+</div>
+<div class="st-side-foot"><button type="button" class="btn-oak sm" data-reset>${t('reset')}</button><button type="button" class="btn-gold sm" data-close data-show>${t('show').replace('{n}', '')}</button></div>
+</aside>
+<div class="st-main">
+<div class="st-bar"><h2 class="st-title">${t('all')} <i class="st-total"></i></h2><label class="st-sort"><span class="muted">${t('sort')}</span><select name="sort"><option value="pop">${t('s_pop')}</option><option value="cheap">${t('s_cheap')}</option><option value="dear">${t('s_dear')}</option><option value="new">${t('s_new')}</option></select></label></div>
+<div class="shop-cat st-grid" aria-busy="true" aria-live="polite"></div>
+<p class="st-empty muted" hidden>${t('empty')}</p>
+<div class="st-pay panel"><h3>${t('step3')}</h3><p>${T(t('pay3'), lang)}</p><p class="shop-legal muted">${ru ? `Цены — в рублях, 1 дублон = 1 ₽. Дублоны и предметы — цифровые товары игры: они остаются на счёте капитана и не обмениваются обратно на деньги. Продавец: ${SELLER.name[1]}, ИНН ${SELLER.inn}, ОГРНИП ${SELLER.ogrnip}. Поддержка: <a href="mailto:${SELLER.support}">${SELLER.support}</a>.` : `Prices are in roubles, 1 doubloon = 1 ₽. Doubloons and items are the game’s digital goods: they stay on the captain’s account and are not exchanged back for money. Seller: ${SELLER.name[0]}, INN ${SELLER.inn}, OGRNIP ${SELLER.ogrnip}. Support: <a href="mailto:${SELLER.support}">${SELLER.support}</a>.`}</p></div>
+</div></div>
+<button type="button" class="st-tab" aria-controls="st-filters" aria-expanded="false"><img src="${K('ico/spyglass')}" alt="" width="22" height="22"><span>${t('filters')}</span><i class="st-badge" hidden></i></button>
+<div class="st-backdrop" hidden></div>
+<div class="st-confirm" role="dialog" aria-modal="true" aria-labelledby="st-confirm-h" hidden><div class="st-confirm-in panel"><h3 id="st-confirm-h">${t('confirm')}</h3><div class="st-confirm-what"></div>
+<div class="st-confirm-act"><button type="button" class="btn-oak sm" data-cancel>${t('cancel')}</button><button type="button" class="btn-gold sm" data-pay></button></div><p class="shop-legal muted">${legalLine}</p></div></div>
+</section>
+${dataTag('shop-data', { lang, t: tr(SHOP_T), art, tabs: WEB_TABS.map((id) => ({ id, name: L(lang, WEB_TAB_NAMES[id]) })), secs: Object.fromEntries(Object.entries(WEB_SECS).map(([k, v]) => [k, L(lang, v)])), subs: Object.fromEntries(COS_SUBS.map((s) => [s, L(lang, COS_SUB_NAMES[s])])), cos: { portraits: Object.fromEntries(CAPTAIN_IDS.map((id) => [id, portraitOf(id)])), names: capNames(lang) }, coin: K('ico/doubloon') })}`;
   return page(lang, {
-    path: 'shop/', active: 'shop', title: lang === 'ru' ? 'Магазин GRAVETIDE — дублоны, капитаны, наряды' : 'GRAVETIDE Shop — doubloons, captains, outfits',
-    desc: lang === 'ru' ? 'Купите дублоны, премиум-капитана или наряд для своего капитана: введите ник, выберите товар и оплатите.' : 'Buy doubloons, a premium captain or an outfit for your captain: enter the name, choose, pay.',
-    hero: { img: K('hero/cabin'), kicker: lang === 'ru' ? 'Каюта казначея' : 'The purser’s cabin', title: lang === 'ru' ? 'Магазин' : 'Shop', lead: lang === 'ru' ? 'Ник капитана, товар, оплата — и покупка уже на счёте. Без входа и без установки.' : 'The captain’s name, the item, the payment — and it is on the account. No sign-in, nothing to install.', mini: true },
+    path: 'shop/', active: 'shop', title: ru ? 'Магазин GRAVETIDE — дублоны, корабли, существа, косметика' : 'GRAVETIDE Shop — doubloons, ships, creatures, cosmetics',
+    desc: ru ? 'Всё из премиум-лавки игры: дублоны, капитаны, корабли, существа, ускорители, наборы, косметика и акции. Введите ник, выберите товар и оплатите.' : 'Everything of the game’s premium shop: doubloons, captains, ships, creatures, boosters, supplies, cosmetics and offers. Enter the name, choose, pay.',
+    hero: { img: K('hero/cabin'), kicker: ru ? 'Каюта казначея' : 'The purser’s cabin', title: ru ? 'Магазин' : 'Shop', lead: ru ? 'Всё, что продаётся в игре: ник капитана, товар, оплата — и покупка уже на счёте. Без входа и без установки.' : 'Everything the game sells: the captain’s name, the item, the payment — and it is on the account. No sign-in, nothing to install.', mini: true },
     body, css: '/site/css/shop.css', script: '/site/js/shop.js',
   });
 }
 
-/** The legal pages (owner's details to be filled in: every such place is marked and highlighted). */
-const TODO = (ru: string, en: string, lang: Lang) => `<mark class="todo" title="${lang === 'ru' ? 'Заполнит владелец' : 'To be filled in by the owner'}">[${lang === 'ru' ? ru : en}]</mark>`;
-function legal(lang: Lang, kind: 'terms' | 'refunds'): string {
+// ------------------------------------------------------------------------------------------------ the legal pages
+
+const DOC_ICON: Record<DocId, string> = { offer: 'ico/scroll', terms: 'ico/official', privacy: 'ico/locked', consent: 'ico/quest', cookies: 'ico/tools', refunds: 'ico/silver', contacts: 'ico/messages' };
+
+/** The legal documents (tools/site/legal.ts): every one in both languages, the seller's details, dated 2026-10-20. */
+function legal(lang: Lang, id: DocId): string {
   const ru = lang === 'ru';
   const r = root(lang);
-  const seller = TODO('ВЛАДЕЛЕЦ: ФИО ИП или название организации', 'OWNER: the sole trader’s or the company’s name', lang);
-  const inn = TODO('ВЛАДЕЛЕЦ: ИНН', 'OWNER: tax number (INN)', lang);
-  const ogrn = TODO('ВЛАДЕЛЕЦ: ОГРНИП / ОГРН', 'OWNER: registration number (OGRNIP / OGRN)', lang);
-  const addr = TODO('ВЛАДЕЛЕЦ: адрес', 'OWNER: address', lang);
-  const mail = TODO('ВЛАДЕЛЕЦ: почта поддержки', 'OWNER: support e-mail', lang);
-  const date = TODO('ВЛАДЕЛЕЦ: дата публикации', 'OWNER: date of publication', lang);
-  const terms = ru ? `
-<h2>1. Общие положения</h2><p>Настоящий документ — публичная оферта ${seller} (далее — Продавец) любому лицу (далее — Покупатель) о продаже цифровых товаров онлайн-игры GRAVETIDE на сайте gravetidegame.com. Оплата заказа означает полное и безоговорочное принятие этой оферты.</p>
-<h2>2. Предмет</h2><p>Продавец предоставляет Покупателю цифровые товары игры: игровую валюту (дублоны), премиум-капитанов, косметические предметы и наборы лавки (далее — Товар). Товар — это право пользоваться внутриигровыми возможностями на игровом счёте капитана, ник которого Покупатель указал при заказе. Товар не является денежными средствами и не обменивается на них.</p>
-<h2>3. Цены и оплата</h2><p>Цены указаны на странице магазина в рублях и действуют на момент оформления заказа. Оплата принимается через платёжный сервис ЮKassa (ООО НКО «ЮМани») банковской картой и другими способами, которые он предлагает. Данные карты вводятся на странице ЮKassa и Продавцу не передаются.</p>
-<h2>4. Передача Товара</h2><p>Товар зачисляется автоматически на игровой счёт капитана с указанным ником сразу после того, как платёжный сервис подтвердит оплату. Покупатель сам отвечает за правильность ника: Товар, зачисленный на счёт указанного капитана, считается переданным.</p>
-<h2>5. Правила игры</h2><p>Пользование Товаром подчиняется правилам игры. За нарушение правил доступ к счёту может быть ограничен; в этом случае стоимость Товара не возвращается, кроме случаев, предусмотренных законом.</p>
-<h2>6. Возврат</h2><p>Условия возврата изложены в <a href="${r}refunds/">политике возврата</a>.</p>
-<h2>7. Прочее</h2><p>Продавец вправе изменять оферту; к заказу применяется редакция, действовавшая в момент оплаты. Споры решаются переговорами, а при недостижении согласия — в порядке, установленном законодательством Российской Федерации.</p>
-<h2>8. Реквизиты Продавца</h2><dl class="reqs"><dt>Продавец</dt><dd>${seller}</dd><dt>ИНН</dt><dd>${inn}</dd><dt>ОГРНИП / ОГРН</dt><dd>${ogrn}</dd><dt>Адрес</dt><dd>${addr}</dd><dt>Почта</dt><dd>${mail}</dd></dl><p class="muted">Редакция от ${date}.</p>`
-    : `
-<h2>1. General</h2><p>This is the public offer of ${seller} (the Seller) to any person (the Buyer) to sell the digital goods of the online game GRAVETIDE on gravetidegame.com. Paying an order is the full acceptance of this offer. The Russian version of this document prevails.</p>
-<h2>2. Subject</h2><p>The Seller provides the game’s digital goods: the in-game currency (doubloons), premium captains, cosmetic items and shop chests (the Goods). The Goods are a right to use in-game features on the account of the captain whose name the Buyer gave with the order. The Goods are not money and are not exchanged for money.</p>
-<h2>3. Prices and payment</h2><p>Prices are shown on the shop page in roubles and apply at the time of the order. Payment is taken by the YooKassa payment service (YooMoney) by bank card and the other methods it offers. Card details are entered on YooKassa’s page and never reach the Seller.</p>
-<h2>4. Delivery</h2><p>The Goods are credited automatically to the account of the captain of the given name as soon as the payment service confirms the payment. The Buyer is responsible for the name being right: Goods credited to that captain’s account are delivered.</p>
-<h2>5. The game’s rules</h2><p>The Goods are used under the game’s rules. An account may be restricted for breaking them; the Goods’ price is then not refunded, except where the law says otherwise.</p>
-<h2>6. Refunds</h2><p>See the <a href="${r}refunds/">refund policy</a>.</p>
-<h2>7. Other</h2><p>The Seller may change this offer; an order is governed by the version in force when it was paid. Disputes are settled by negotiation, failing that under the laws of the Russian Federation.</p>
-<h2>8. The Seller</h2><dl class="reqs"><dt>Seller</dt><dd>${seller}</dd><dt>INN</dt><dd>${inn}</dd><dt>OGRNIP / OGRN</dt><dd>${ogrn}</dd><dt>Address</dt><dd>${addr}</dd><dt>E-mail</dt><dd>${mail}</dd></dl><p class="muted">Version of ${date}.</p>`;
-  const refunds = ru ? `
-<h2>Когда деньги возвращаются</h2><ul><li>оплата прошла, а Товар не пришёл на счёт капитана;</li><li>деньги списаны дважды за один заказ;</li><li>техническая ошибка на нашей стороне не дала воспользоваться Товаром.</li></ul>
-<h2>Когда возврат не производится</h2><p>Товар — цифровой и зачисляется сразу после оплаты. Если Товар уже получен и использован (дублоны потрачены, капитан выбран, наряд надет), его стоимость не возвращается, кроме случаев, предусмотренных законом. Ошибку в нике мы исправим, если Товар ещё не использован: перенесём покупку на нужного капитана.</p>
-<h2>Как обратиться</h2><p>Напишите на ${mail} в течение 14 дней после оплаты: номер заказа (он есть на странице магазина после оплаты), ник капитана, дата и сумма. Мы ответим в течение 3 рабочих дней.</p>
-<h2>Сроки</h2><p>Одобренный возврат отправляется тем же способом, которым была оплата. Деньги приходят обычно за 1–10 рабочих дней — срок зависит от банка. Вместе с возвратом с игрового счёта списывается возвращённый Товар.</p>
-<p class="muted">Продавец: ${seller}, ИНН ${inn}. Редакция от ${date}.</p>`
-    : `
-<h2>When money is refunded</h2><ul><li>the payment went through but the Goods did not reach the captain’s account;</li><li>one order was charged twice;</li><li>a technical fault on our side kept the Goods from being used.</li></ul>
-<h2>When it is not</h2><p>The Goods are digital and are credited at once. Goods already received and used (doubloons spent, the captain chosen, the outfit worn) are not refunded, except where the law says otherwise. A mistyped name we put right while the Goods are unused: the purchase is moved to the right captain.</p>
-<h2>How to ask</h2><p>Write to ${mail} within 14 days of the payment: the order number (shown on the shop page after paying), the captain’s name, the date and the amount. We answer within 3 working days.</p>
-<h2>How long it takes</h2><p>An approved refund goes back the way the payment came; it usually arrives in 1–10 working days, depending on the bank. The refunded Goods are taken off the game account with it.</p>
-<p class="muted">Seller: ${seller}, INN ${inn}. Version of ${date}. The Russian version prevails.</p>`;
-  const isTerms = kind === 'terms';
+  const d = LEGAL[lang][id];
+  const para = (p: string | string[]) => (Array.isArray(p) ? `<ul>${p.map((li) => `<li>${T(li, lang)}</li>`).join('')}</ul>` : `<p>${T(p, lang).replace(/([a-z]+@gravetidegame\.com)/g, '<a href="mailto:$1">$1</a>')}</p>`);
+  const reqs = `<dl class="reqs">${REQUISITES(ru).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v.includes('@gravetidegame.com') ? `<a href="mailto:${v}">${v}</a>` : v.startsWith('+7') ? `<a href="tel:${v.replace(/[^\d+]/g, '')}">${esc(v)}</a>` : esc(v)}</dd>`).join('')}</dl>`;
+  const tabs = `<nav class="legal-tabs" aria-label="${ru ? 'Документы' : 'Documents'}">${DOC_IDS.map((x) => `<a href="${r}${x}/"${x === id ? ' class="on" aria-current="page"' : ''}><img src="${K(DOC_ICON[x])}" alt="" width="18" height="18">${esc(L(lang, DOC_TITLES[x]))}</a>`).join('')}</nav>`;
+  const sections = d.sections.map(([h, ps]) => `<section><h2>${T(h, lang)}</h2>${ps.map(para).join('')}</section>`).join('');
+  const tail = id === 'contacts' ? `<section><h2>${ru ? 'Реквизиты' : 'Details'}</h2>${reqs}</section>` : `<section><h2>${ru ? 'Реквизиты' : 'The seller'}</h2>${reqs}</section>`;
+  const body = `<section class="wrap sec">${tabs}<article class="legal panel"><p class="lead">${T(d.lead, lang)}</p><p class="legal-ed muted">${L(lang, EDITION)}</p>${sections}${tail}<p class="back"><a class="btn-oak sm" href="${r}shop/">${ru ? '← В магазин' : '← To the shop'}</a></p></article></section>`;
+  const title = L(lang, DOC_TITLES[id]);
   return page(lang, {
-    path: `${kind}/`, active: kind, title: isTerms ? (ru ? 'Публичная оферта — GRAVETIDE' : 'Terms of sale — GRAVETIDE') : (ru ? 'Политика возврата — GRAVETIDE' : 'Refund policy — GRAVETIDE'),
-    desc: isTerms ? (ru ? 'Условия продажи цифровых товаров игры GRAVETIDE.' : 'The terms of sale of GRAVETIDE’s digital goods.') : (ru ? 'Когда и как возвращаются деньги за покупки в GRAVETIDE.' : 'When and how GRAVETIDE purchases are refunded.'),
-    hero: { img: K('hero/forum'), kicker: ru ? 'Магазин' : 'Shop', title: isTerms ? (ru ? 'Публичная оферта' : 'Terms of sale') : (ru ? 'Политика возврата' : 'Refund policy'), mini: true },
-    body: `<section class="wrap sec"><article class="legal panel">${isTerms ? terms : refunds}<p class="back"><a class="btn-oak sm" href="${r}shop/">${ru ? '← В магазин' : '← To the shop'}</a></p></article></section>`, css: '/site/css/shop.css',
+    path: `${id}/`, active: id, title: `${title} — GRAVETIDE`, desc: d.lead,
+    hero: { img: K('hero/forum'), kicker: ru ? 'Документы' : 'Documents', title, mini: true },
+    body, css: '/site/css/shop.css',
   });
 }
 
@@ -558,10 +589,9 @@ for (const lang of ['ru', 'en'] as Lang[]) {
   write(`${base}forum/index.html`, forum(lang));
   write(`${base}rating/index.html`, rating(lang));
   write(`${base}shop/index.html`, shop(lang));
-  write(`${base}terms/index.html`, legal(lang, 'terms'));
-  write(`${base}refunds/index.html`, legal(lang, 'refunds'));
+  for (const d of DOC_IDS) write(`${base}${d}/index.html`, legal(lang, d));
   for (const c of CREATURES) write(`${base}creatures/${c.id}.html`, creaturePage(c, lang));
-  n += 8 + CREATURES.length;
+  n += 6 + DOC_IDS.length + CREATURES.length;
 }
 // The sitemap (each page with its other tongue as an hreflang pair) and robots.txt; static.ts serves both at the root.
 {

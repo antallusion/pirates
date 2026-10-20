@@ -22,6 +22,13 @@ const G = dict(GIFT_EN, GIFT_RU);
 /** The interface's sizes on the main page (uiScale). */
 export const UI_SIZES = [0.85, 1, 1.15, 1.3] as const;
 
+/** The game's legal documents on its website (owner, 2026-10-20: «сделай все юридические страницы»), in her language. */
+function legalLinks(): string {
+  const r = lang() === 'ru' ? '/site/' : '/site/en/';
+  const docs: [string, string][] = [['terms/', 'opt.legal.terms'], ['privacy/', 'opt.legal.privacy'], ['offer/', 'opt.legal.offer'], ['contacts/', 'opt.legal.contacts']];
+  return `<nav class="opt-legal">${docs.map(([href, k]) => `<a href="${r}${href}" target="_blank" rel="noopener">${esc(W(k as Parameters<typeof W>[0]))}</a>`).join('<span aria-hidden="true">·</span>')}</nav>`;
+}
+
 const TAB_ICON: Record<string, string> = { ui: 'menu_options', vision: 'ab_spotters_eye', sound: 'opt_sound', controls: 'opt_controls', notify: 'ui_bell' };
 
 type Tab = 'ui' | 'vision' | 'sound' | 'controls' | 'notify';
@@ -182,7 +189,8 @@ export class OptionsScreen {
       ${row('menu_map', W('opt.mmTarget'), seg([['hide', W('opt.mmHide'), s.mmTarget === 'hide'], ['show', W('opt.mmShow'), s.mmTarget === 'show']], 'omm', W('opt.mmTarget')), W('opt.mmTargetHint'), 'opt-row--wide')}
       ${tgnView() ? row('ui_bell', G('tgn.title'), `<button type="button" class="k-btn k-btn--secondary k-btn--sm" data-otgn>${esc(G('tgn.open'))}</button>`, G('tgn.hint'), 'opt-row--wide') : ''}
     </div>
-    <div class="opt-foot"><button type="button" class="k-btn k-btn--secondary k-btn--md opt-more" data-omore>${esc(W('opt.more'))}</button>${tgSettingsButton(this.tg)}</div>`;
+    <div class="opt-foot"><button type="button" class="k-btn k-btn--secondary k-btn--md opt-more" data-omore>${esc(W('opt.more'))}</button>${tgSettingsButton(this.tg)}</div>
+    ${legalLinks()}`;
   }
 
   private body(s: Settings): string {

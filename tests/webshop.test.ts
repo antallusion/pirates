@@ -12,8 +12,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join as pjoin } from 'node:path';
 import { CAPTAIN_PRICE } from '../shared/src/data/captains.ts';
 import { BUNDLES } from '../shared/src/data/cosmetics.ts';
-import { DOUBLOON_PACKS } from '../shared/src/data/premium.ts';
-import { WEB_ITEMS, cleanCaptainName, webItem } from '../shared/src/data/webshop.ts';
+import { WEB_EXCLUDED, WEB_ITEMS, WEB_SECS, WEB_TABS, cleanCaptainName, gameShopIds, webItem } from '../shared/src/data/webshop.ts';
+import { UNITS } from '../shared/src/data/army.ts';
+import { DOUBLOON_PACKS, premiumShips, premiumUnits } from '../shared/src/data/premium.ts';
+import { OFFERS, dayOf, dealOf, unitPacks } from '../shared/src/data/shop.ts';
+import { SHIP_CLASSES } from '../shared/src/data/ships.ts';
 import { ownsCaptain } from '../server/src/game/captainshop.ts';
 import { cosState, forgetCos } from '../server/src/game/cosmetics.ts';
 import { SiteRating } from '../server/src/game/siterating.ts';
@@ -21,7 +24,10 @@ import { WebShop } from '../server/src/game/webshop.ts';
 import { SITE_LIMITS, siteRoutes } from '../server/src/http/site-routes.ts';
 import { TestPay, YooKassa, noticePid, readPayment, yooAddress, yookassaFromEnv } from '../server/src/pay/yookassa.ts';
 import { serverText } from '../client/src/lang/server.ts';
-import { join, makeGame } from './helpers.ts';
+import { FakeConn, join, makeGame, onHull, steps } from './helpers.ts';
+import { PROTOCOL_VERSION } from '../shared/src/constants.ts';
+import type { WsConnection } from '../server/src/net/websocket.ts';
+import { shopState } from '../server/src/game/shop.ts';
 
 type G = ReturnType<typeof makeGame>;
 const SITE = pjoin(import.meta.dirname, '..', 'site');
@@ -34,21 +40,21 @@ function cap(g: G, name: string, p: Record<string, unknown> = {}): number {
 
 function shopOf(g: G, o: Partial<ConstructorParameters<typeof WebShop>[1]> = {}): WebShop {
   const rating = new SiteRating(g.game);
-  return new WebShop(g.game, { provider: null, returnUrl: 'https://gravetidegame.com/site/shop/', payTest: true, hidden: (a, n) => rating.hidden(a, n), log: () => {}, ...o });
+  return new WebShop(g.game, { provider: null, returnUrl: 'https://gravetidegame.com/site/shop/', payTest: true, hidden: (a, n) => rating.hidden(a, n), log: () => {}, pumpMs: 0, ...o });
 }
 
 /** The ledger's rows of an account (the purchase's proof). */
 const rows = (g: G, acc: number, kind: string) =>
   (g.db as unknown as { db: { prepare(s: string): { all(...a: unknown[]): { kind: string; amount: number; detail: string }[] } } }).db.prepare('SELECT kind, amount, detail FROM ledger WHERE account_id = ? AND kind = ?').all(acc, kind);
 
-test('the catalogue: the top-up’s ladder 290–9 900 ₽ with its bonus, premium captains at 2 490, the bundles, the marked chests', () => {
+test('the catalogue: the top-up’s ladder 290–9 900 ₽ with its bonus, premium captains at 2 490, every hull, creature and good of the game’s shop', () => {
   const packs = WEB_ITEMS.filter((x) => x.kind === 'pack');
   assert.deepEqual(packs.map((x) => x.rub), [290, 590, 990, 1990, 4990, 9900]);
   for (const p of DOUBLOON_PACKS) assert.equal(webItem(p.id)?.doubloons, p.n + p.bonus);
   assert.deepEqual(WEB_ITEMS.filter((x) => x.kind === 'captain').map((x) => [x.id, x.rub]), [['cap_drowned', CAPTAIN_PRICE], ['cap_admiral', CAPTAIN_PRICE]]);
-  assert.deepEqual(WEB_ITEMS.filter((x) => x.kind === 'bundle').map((x) => x.id), BUNDLES.map((b) => b.id));
-  assert.deepEqual(WEB_ITEMS.filter((x) => x.kind === 'offer').map((x) => x.id), ['starter', 'sub30', 'weekly']);
+  for (const b of BUNDLES) assert.equal(webItem(b.id)?.tab, 'cos', b.id);
   for (const x of WEB_ITEMS) assert.ok(x.name[1] && x.text[1] && !/[A-Za-z]{3,}/.test(x.name[1].replace(/GRAVETIDE/g, '')), `${x.id}: a Russian name`);
+  for (const x of WEB_ITEMS) assert.ok(WEB_TABS.includes(x.tab) && (x.sec === '' || WEB_SECS[x.sec]), `${x.id}: a tab and a shelf`);
   assert.equal(webItem('__proto__'), undefined);
   assert.equal(webItem('constructor'), undefined);
   assert.equal(cleanCaptainName('  Red   Hook '), 'Red Hook');
@@ -56,15 +62,44 @@ test('the catalogue: the top-up’s ladder 290–9 900 ₽ with its bonus, premi
   assert.equal(cleanCaptainName('<b>x</b>'), null);
 });
 
-test('the seasonal bundles are on sale only between their dates', () => {
+test('every id of the game’s premium shop is on the site or on the documented exclusions; the site’s prices are the game’s', () => {
+  const missing = gameShopIds().filter((id) => !webItem(id) && !WEB_EXCLUDED[id]);
+  assert.deepEqual(missing, [], 'every in-game item on the site or explained');
+  for (const [id, why] of Object.entries(WEB_EXCLUDED)) assert.ok(why[0] && why[1], `${id}: a reason in both languages`);
+  for (const id of Object.keys(WEB_EXCLUDED)) assert.equal(webItem(id), undefined, `${id}: excluded, so not sold`);
+  // the doubloon price of each, a rouble a doubloon
+  for (const c of premiumShips()) assert.equal(webItem(`ship_${c}`)?.rub, SHIP_CLASSES[c].premium!.price, c);
+  for (const u of premiumUnits()) for (const p of unitPacks(UNITS[u].premium!.price)) {
+    const x = webItem(`unit_${u}_${p.k}`)!;
+    assert.equal(x.rub, p.price, `${u}×${p.k}`);
+    assert.equal(x.n, UNITS[u].premium!.n * p.k);
+  }
+  for (const [id, { offer }] of OFFERS) if (!WEB_EXCLUDED[id]) assert.equal(webItem(id)?.rub, offer.price, id);
+  // the tabs: every one of them stocked
+  for (const t of WEB_TABS) assert.ok(WEB_ITEMS.some((x) => x.tab === t), t);
+  // the ship's own creatures are never sold apart from her (as in the game)
+  assert.ok(!WEB_ITEMS.some((x) => x.kind === 'unit' && x.unit === 'cormorant'));
+  // the deal of the day: today's offer at the game's price
   const g = makeGame();
   const shop = shopOf(g);
+  const d = dealOf(dayOf(g.game.wallNow()));
+  const deal = shop.catalog().find((x) => x.id === 'deal')!;
+  assert.equal(deal.offer, d.offer.id);
+  assert.equal(deal.rub, d.price);
+});
+
+test('the seasonal bundles are sold only between their dates, and shown out of them as «not the season»', () => {
+  const g = makeGame();
+  const shop = shopOf(g);
+  const acc = cap(g, 'Season Sal');
   const hw = BUNDLES.find((b) => b.id === 'cos_halloween')!;
   g.game.wallNow = () => hw.from! + 1000;
-  assert.ok(shop.catalog().some((x) => x.id === 'cos_halloween'));
+  assert.equal(shop.catalog().find((x) => x.id === 'cos_halloween')?.off, undefined);
+  assert.equal(shop.why(acc, webItem('cos_halloween')!), null);
   g.game.wallNow = () => hw.until! + 1000;
-  assert.ok(!shop.catalog().some((x) => x.id === 'cos_halloween'));
-  assert.ok(shop.catalog().some((x) => x.id === 'cos_starter'), 'the starter outfit is always there');
+  assert.equal(shop.catalog().find((x) => x.id === 'cos_halloween')?.off, 'season');
+  assert.equal(shop.unavailable(acc).cos_halloween, 'season');
+  assert.ok(shop.catalog().some((x) => x.id === 'cos_starter' && !x.off), 'the starter outfit is always there');
 });
 
 test('the captain lookup: found with her captain and level, unknown and hidden are «not found», a bad name refused', () => {
@@ -77,7 +112,7 @@ test('the captain lookup: found with her captain and level, unknown and hidden a
   assert.equal(r.name, 'Salt Gull', 'the name as the game writes it');
   assert.equal(r.captain, 'navigator');
   assert.equal(r.level, 23);
-  assert.deepEqual(Object.keys(r).sort(), ['captain', 'level', 'name', 'unavailable'], 'nothing more: no account id, no e-mail');
+  assert.deepEqual(Object.keys(r).sort(), ['captain', 'level', 'name', 'online', 'port', 'unavailable'], 'nothing more: no account id, no e-mail');
   assert.equal(shop.lookup('Nobody Here'), null);
   assert.equal(shop.lookup('Bot a1b2c3'), null, 'a load-test bot is not a buyer');
   assert.equal(shop.lookup('x'), 'bad_name');
@@ -184,6 +219,143 @@ test('aboard: the purchase arrives live with the toast «Покупка с са�
   assert.equal(serverText('Web shop purchase: 2390 doubloons.').replace(/\u00a0/g, ' '), 'Покупка с сайта: 2390 дубл.');
 });
 
+test('a ship from the site: paid at sea she waits for the port, then comes by the game’s own buyShip — once', async () => {
+  const g = makeGame();
+  const c = join(g.game, 'Hull Hanna');
+  const s = g.game.sessionByName('Hull Hanna')!;
+  const ship = s.ship!;
+  const port = ship.docked!;
+  const was = ship.loadout.classId;
+  c.push({ t: 'undock' });
+  assert.equal(ship.docked, null);
+  const shop = shopOf(g);
+  const r = await shop.order({ name: 'Hull Hanna', item: 'ship_lantern_sampan', lang: 'ru' });
+  assert.ok('orderId' in r, JSON.stringify(r));
+  assert.equal(shop.get(r.orderId)!.rub, SHIP_CLASSES.lantern_sampan.premium!.price);
+  c.inbox.length = 0;
+  await shop.settleTest(r.orderId, true);
+  assert.equal(shop.view(r.orderId)!.status, 'paid');
+  assert.equal(shop.view(r.orderId)!.wait, 'port');
+  assert.equal(ship.loadout.classId, was, 'not at sea');
+  assert.equal(g.db.doubloons(s.accountId), 0, 'nothing credited while she waits');
+  assert.match(c.all('toast').map((m) => m.msg).join('|'), /waits for you in port: Lantern Sampan/);
+  shop.pump();
+  assert.equal(shop.get(r.orderId)!.status, 'paid');
+  // she makes port: delivered by the game's own purchase of a hull, her old ship berthed there
+  const back = g.game.portById(port)!;
+  ship.state = { ...ship.state, x: back.x, y: back.y, speed: 0 };
+  ship.docked = port;
+  shop.pump();
+  assert.equal(shop.get(r.orderId)!.status, 'done');
+  assert.equal(ship.loadout.classId, 'lantern_sampan');
+  assert.equal(s.profile!.berths.at(-1)!.loadout.classId, was);
+  assert.ok(ship.army.some((x) => x.u === 'cormorant'), 'her own creatures aboard');
+  assert.deepEqual(rows(g, s.accountId, 'doubloons_buy').map((x) => [x.amount, x.detail]), [[-990, 'ship:lantern_sampan']]);
+  assert.deepEqual(rows(g, s.accountId, 'doubloons_pay').map((x) => [x.amount, x.detail]), [[990, `web:${r.orderId}`]]);
+  shop.pump();
+  await shop.refresh(r.orderId);
+  assert.equal(rows(g, s.accountId, 'doubloons_buy').length, 1, 'once');
+  const l = shop.lookup('Hull Hanna');
+  assert.ok(l && l !== 'bad_name' && l.unavailable.ship_lantern_sampan === 'yours');
+  assert.ok(l.online && l.port);
+});
+
+test('a creature pack from the site: in a fight it waits, then joins by the game’s own buyUnit (unit:<kind>:<n>:<order>)', async () => {
+  const g = makeGame();
+  const c = join(g.game, 'Beast Bella');
+  const s = g.game.sessionByName('Beast Bella')!;
+  const ship = s.ship!;
+  onHull(g.game, ship, 'brig', 5);
+  const u = premiumUnits()[0];
+  const k = unitPacks(UNITS[u].premium!.price)[1].k;
+  const id = `unit_${u}_${k}`;
+  const n = UNITS[u].premium!.n * k;
+  const shop = shopOf(g);
+  const r = await shop.order({ name: 'Beast Bella', item: id, lang: 'ru' });
+  assert.ok('orderId' in r, JSON.stringify(r));
+  ship.lastHitAt = g.game.now;
+  await shop.settleTest(r.orderId, true);
+  assert.equal(shop.view(r.orderId)!.wait, 'fight');
+  assert.ok(!ship.army.some((x) => x.u === u));
+  ship.lastHitAt = -999;
+  shop.pump();
+  assert.equal(shop.get(r.orderId)!.status, 'done');
+  assert.equal(ship.army.find((x) => x.u === u)?.n, n, 'the whole pack aboard');
+  const price = webItem(id)!.rub;
+  assert.deepEqual(rows(g, s.accountId, 'doubloons_buy').map((x) => [x.amount, x.detail]), [[-price, `unit:${u}:${n}:${r.orderId}`]]);
+  assert.equal(g.db.doubloons(s.accountId), 0);
+  assert.match(c.all('toast').map((m) => m.msg).join('|'), new RegExp(`Web shop purchase: .*×${n}`));
+});
+
+test('a thing for her ship while she is ashore waits for her login; the account’s goods come at once', async () => {
+  const g = makeGame();
+  const c = join(g.game, 'Shore Sam');
+  const s = g.game.sessionByName('Shore Sam')!;
+  const acc = s.accountId;
+  const token = s.token!;
+  c.close();
+  steps(g.game, 3);
+  assert.equal(g.game.sessionByAccount(acc), null, 'ashore: her session retired');
+  const shop = shopOf(g);
+  const r = await shop.order({ name: 'Shore Sam', item: 'ammo_290', lang: 'ru' });
+  assert.ok('orderId' in r, JSON.stringify(r));
+  await shop.settleTest(r.orderId, true);
+  assert.equal(shop.view(r.orderId)!.wait, 'login');
+  shop.pump();
+  assert.equal(shop.get(r.orderId)!.status, 'paid', 'still waiting for her');
+  // she logs in again (her token, as a reload does)
+  const again = new FakeConn();
+  g.game.attach(again as unknown as WsConnection);
+  again.push({ t: 'hello', v: PROTOCOL_VERSION, token });
+  const back = g.game.sessionByAccount(acc)!;
+  assert.ok(back?.ship, 'she is back aboard');
+  const round = back.ship!.ammo.round ?? 0;
+  shop.pump();
+  assert.equal(shop.get(r.orderId)!.status, 'done');
+  assert.equal(back.ship!.ammo.round, round + (OFFERS.get('ammo_290')!.offer.grants[0] as { n: number }).n, 'the shot in her magazine');
+  assert.deepEqual(rows(g, acc, 'doubloons_buy').map((x) => x.detail), [`shop:web:${r.orderId}`]);
+  // the account's goods: an elixir for an account not aboard, at once
+  const off = cap(g, 'Ashore Ann');
+  const r2 = await shop.order({ name: 'Ashore Ann', item: 'xp_290', lang: 'ru' });
+  assert.ok('orderId' in r2);
+  await shop.settleTest(r2.orderId, true);
+  assert.equal(shop.get(r2.orderId)!.status, 'done');
+  assert.ok(shopState(g.game, off).xp > g.game.wallNow());
+});
+
+test('level gifts and the deal of the day: shut until her level, bought once, the deal once a day at its price', async () => {
+  const g = makeGame();
+  const acc = cap(g, 'Gift Gwen');
+  const shop = shopOf(g);
+  assert.equal(shop.unavailable(acc).lv20, 'level');
+  assert.deepEqual(await shop.order({ name: 'Gift Gwen', item: 'lv20' }), { error: 'level' });
+  shopState(g.game, acc).gifts[20] = g.game.wallNow();
+  assert.equal(shop.unavailable(acc).lv20, undefined);
+  const r = await shop.order({ name: 'Gift Gwen', item: 'lv20', lang: 'ru' });
+  assert.ok('orderId' in r);
+  await shop.settleTest(r.orderId, true);
+  assert.equal(shop.get(r.orderId)!.status, 'done');
+  assert.equal(shop.get(r.orderId)!.note, undefined);
+  assert.equal(shop.unavailable(acc).lv20, 'claimed');
+  // a hull above her level: shut, with the reason
+  assert.equal(shop.unavailable(acc).ship_crimson_tide, 'level');
+  // the deal of the day for a captain aboard (its goods may be her ship's)
+  join(g.game, 'Deal Dora');
+  const dora = g.game.sessionByName('Deal Dora')!.accountId;
+  const d = dealOf(dayOf(g.game.wallNow()));
+  const why = shop.unavailable(dora).deal;
+  if (why) return assert.ok(['island', 'room', 'tier', 'none', 'slot', 'hold'].includes(why), why); // (today's deal is not for a new captain)
+  const r2 = await shop.order({ name: 'Deal Dora', item: 'deal', lang: 'ru' });
+  assert.ok('orderId' in r2, JSON.stringify(r2));
+  const o = shop.get(r2.orderId)!;
+  assert.equal(o.offer, d.offer.id);
+  assert.equal(o.rub, d.price);
+  await shop.settleTest(r2.orderId, true);
+  assert.equal(shop.get(r2.orderId)!.status, 'done');
+  assert.deepEqual(rows(g, dora, 'doubloons_buy').map((x) => [x.amount, x.detail]), [[-d.price, `shop:web:${r2.orderId}`]]);
+  assert.equal(shop.unavailable(dora).deal, 'limit', 'once a day');
+});
+
 test('a payment of the wrong amount or a declined one delivers nothing', async () => {
   const g = makeGame();
   const acc = cap(g, 'Short Change');
@@ -234,7 +406,7 @@ test('the test mode end to end over HTTP: the name, the order, the fake checkout
   const g = makeGame();
   const acc = cap(g, 'Web Wanda', { captain: 'smuggler', level: 31 });
   const rating = new SiteRating(g.game);
-  const shop = new WebShop(g.game, { provider: null, returnUrl: '/site/shop/', payTest: true, hidden: (a, n) => rating.hidden(a, n), log: () => {} });
+  const shop = new WebShop(g.game, { provider: null, returnUrl: '/site/shop/', payTest: true, hidden: (a, n) => rating.hidden(a, n), log: () => {}, pumpMs: 0 });
   const { srv, port } = await serve(shop, rating);
   const origin = `http://127.0.0.1:${port}`;
   try {
@@ -347,7 +519,7 @@ test('YooKassa live: the webhook is not believed — the payment is fetched agai
   };
   const yoo = new YooKassa({ shopId: '1', secret: 's', receipt: false, vatCode: 1, checkIp: false }, http, () => {});
   const rating = new SiteRating(g.game);
-  const shop = new WebShop(g.game, { provider: yoo, returnUrl: 'https://gravetidegame.com/site/shop/', log: () => {} });
+  const shop = new WebShop(g.game, { provider: yoo, returnUrl: 'https://gravetidegame.com/site/shop/', log: () => {}, pumpMs: 0 });
   assert.equal(shop.mode, 'live');
   const { srv, port } = await serve(shop, rating);
   try {
@@ -378,7 +550,7 @@ test('YooKassa live: the webhook is not believed — the payment is fetched agai
 // ------------------------------------------------------------------------------------------------ the pages
 
 test('the pages in both languages: the rating, the shop, the terms and the refunds; «Рейтинг» and «Магазин» in the menu', () => {
-  for (const p of ['rating', 'shop', 'terms', 'refunds']) {
+  for (const p of ['rating', 'shop', 'offer', 'terms', 'privacy', 'consent', 'cookies', 'refunds', 'contacts']) {
     assert.ok(existsSync(pjoin(SITE, p, 'index.html')), `ru ${p}`);
     assert.ok(existsSync(pjoin(SITE, 'en', p, 'index.html')), `en ${p}`);
   }
@@ -388,8 +560,14 @@ test('the pages in both languages: the rating, the shop, the terms and the refun
     assert.match(ru, /href="\/site\/shop\/"[^>]*>.*?Магазин/s);
     assert.match(en, /href="\/site\/en\/rating\/"[^>]*>.*?Rating/s);
     assert.match(en, /href="\/site\/en\/shop\/"[^>]*>.*?Shop/s);
-    assert.match(ru, /href="\/site\/terms\/"/);
-    assert.match(en, /href="\/site\/en\/refunds\/"/);
+    // every legal document in the footer, and the seller's details with the game's addresses
+    for (const doc of ['offer', 'terms', 'privacy', 'consent', 'cookies', 'refunds', 'contacts']) {
+      assert.match(ru, new RegExp(`href="/site/${doc}/"`));
+      assert.match(en, new RegExp(`href="/site/en/${doc}/"`));
+    }
+    assert.match(ru, /ИП Спиридонов Дмитрий Вадимович · ИНН&nbsp;760806658219 · ОГРНИП&nbsp;324762700012347/);
+    assert.match(ru, /info@gravetidegame\.com/);
+    assert.match(en, /support@gravetidegame\.com/);
   }
   // the scripts' strings: the same keys in both, the Russian ones Russian
   for (const [page, id] of [['shop', 'shop-data'], ['rating', 'rt-data']] as const) {
@@ -402,12 +580,20 @@ test('the pages in both languages: the rating, the shop, the terms and the refun
     assert.deepEqual(Object.keys(ru).sort(), Object.keys(en).sort(), page);
     for (const [k, v] of Object.entries(ru)) {
       assert.ok(v, `${page}.${k}`);
-      assert.ok(!/[A-Za-z]{3,}/.test(v.replace(/ЮKassa|YooKassa|СБП|mail@example\.com/g, '')), `${page}.${k} is Russian: ${v}`);
+      assert.ok(!/[A-Za-z]{3,}/.test(v.replace(/ЮKassa|YooKassa|СБП|mail@example\.com|[a-z]+@gravetidegame\.com/g, '')), `${page}.${k} is Russian: ${v}`);
     }
   }
-  // the legal pages mark every place the owner must fill in
+  // the legal pages: the seller's details filled in, nothing left for the owner to fill
   const terms = readFileSync(pjoin(SITE, 'terms', 'index.html'), 'utf8');
-  assert.ok((terms.match(/class="todo"/g) ?? []).length >= 5);
-  assert.match(readFileSync(pjoin(SITE, 'shop', 'index.html'), 'utf8'), /публичной оферты/);
-  assert.match(readFileSync(pjoin(SITE, 'en', 'shop', 'index.html'), 'utf8'), /terms of sale/);
+  assert.equal((terms.match(/class="todo"/g) ?? []).length, 0);
+  assert.match(terms, /760806658219/);
+  assert.match(terms, /324762700012347/);
+  for (const doc of ['offer', 'terms', 'privacy', 'consent', 'cookies', 'refunds', 'contacts']) for (const lang of ['', 'en']) {
+    const html = readFileSync(pjoin(SITE, lang, doc, 'index.html'), 'utf8');
+    assert.match(html, lang ? /Version of 20 October 2026/ : /Редакция от 20 октября 2026 года/, `${lang}/${doc}: dated`);
+    assert.match(html, /support@gravetidegame\.com/, `${lang}/${doc}: the support address`);
+    assert.ok(!/class="todo"|ВЛАДЕЛЕЦ|OWNER:/.test(html), `${lang}/${doc}: nothing left to fill in`);
+  }
+  assert.match(readFileSync(pjoin(SITE, 'shop', 'index.html'), 'utf8'), /Нажимая «Оплатить», вы принимаете <a href="\/site\/offer\/"/);
+  assert.match(readFileSync(pjoin(SITE, 'en', 'shop', 'index.html'), 'utf8'), /By pressing «Pay» you accept the <a href="\/site\/en\/offer\/"/);
 });
