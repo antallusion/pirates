@@ -1,9 +1,7 @@
 /* The captain's choice (client/src/ui/captain.ts), laid out anew (owner, 2026-10-21: «нужно полностью переверстать
    этот дизайн выбора»; then «дай мне 3 варианта верстки на выбор. какие-то слайдеры, все очень компактно было»).
-   Three compact layouts on one markup, chosen by the wrap's class (captain.ts: ?capv=1|2|3, kept in localStorage):
-     .v1 — the carousel: the six as cards on a rail, the chosen one in the middle, her facts in a row beneath;
-     .v2 — the strip: her portrait on the left, a rail of small portraits over her facts on the right;
-     .v3 — the list: her portrait large on the left, the six as rows on the right (WoW's character screen).
+   Of three compact layouts the owner chose the strip (?capv=2): her portrait on the left, a rail of small portraits
+   over her facts on the right.
    The long story is the desk's no more: the role, the gift, the four orders (a tap opens one's words), the start.
    Measured by assets/raw/audit/capshot.mjs. */
 
@@ -120,43 +118,23 @@
 
 /* the foot: the ship's name, the tick, the order */
 .cpk-foot {
-  flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 12px;
+  flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
   padding: 8px 14px; border-top: 1px solid rgba(140, 107, 58, 0.36); background: linear-gradient(180deg, rgba(20, 16, 11, 0.9), rgba(10, 9, 7, 0.96));
 }
-.cpk-name { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin: 0; min-width: 0; font: 600 10px/1 var(--sans); letter-spacing: 0.12em; text-transform: uppercase; color: var(--brass); }
+.cpk-name { flex: 1 1 100%; display: flex; align-items: center; gap: 10px; margin: 0; min-width: 0; font: 600 10px/1 var(--sans); letter-spacing: 0.12em; text-transform: uppercase; color: var(--brass); }
 .cpk-name > span { flex: none; }
 .cpk-name input.field { flex: 1 1 auto; margin: 0; height: 34px; padding: 2px 10px; font-size: 15px; min-width: 0; }
-.cpk-foot label.know-sea { display: flex; align-items: center; gap: 8px; margin: 0; min-width: 0; min-height: 40px; cursor: pointer; }
+/* (owner, 2026-10-21: the order lay over the tick's words — now the tick holds the room its words need, and the order
+   that will not fit beside it takes the next line, the whole width) */
+.cpk-foot label.know-sea { flex: 1 1 auto; display: flex; align-items: center; gap: 8px; margin: 0; min-width: min-content; min-height: 40px; cursor: pointer; }
 .cpk-foot label.know-sea input { width: 18px; height: 18px; flex: none; margin: 0; accent-color: var(--brass); }
 .cpk-foot label.know-sea span { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
 .cpk-foot label.know-sea b { color: var(--bone); font: 600 13px/1.2 var(--sans); white-space: nowrap; }
-.cpk-foot label.know-sea small { color: var(--fog); font: 400 11px/1.2 var(--sans); }
-.cpk-go { min-height: 42px; padding-inline: 16px; white-space: nowrap; font-size: 15px; }
+.cpk-foot label.know-sea small { color: var(--fog); font: 400 11px/1.2 var(--sans); white-space: nowrap; }
+.cpk-go { flex: 1 0 auto; min-height: 42px; padding-inline: 16px; white-space: nowrap; font-size: 15px; }
 .cpk-go.cc-buy { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-.cpk-foot .cc-why { grid-column: 1 / -1; margin: 0; color: var(--bone); font: 500 12px/1.3 var(--sans); }
+.cpk-foot .cc-why { flex: 1 1 100%; margin: 0; color: var(--bone); font: 500 12px/1.3 var(--sans); }
 .cpk-foot .cc-why:empty { display: none; }
-
-/* ================================================================= 1 · the carousel */
-#screen-captain > .cpk.v1 {
-  width: min(900px, 96vw); height: min(600px, 94vh); padding: 14px 18px; gap: 8px 14px;
-  grid-template-columns: minmax(0, 1fr); grid-template-rows: 40px auto minmax(0, 1fr); grid-template-areas: 'title' 'rail' 'info';
-}
-.v1 .cpk-art { display: none; }
-.v1 .cpk-rail > .cpk-roster { scroll-snap-type: x mandatory; padding-inline: calc(50% - 70px); gap: 12px; align-items: flex-end; }
-.v1 .cpk-tile { width: 140px; }
-.v1 .cpk-tile:not(.active) .cpk-face { transform: scale(0.82); transform-origin: 50% 100%; }
-.v1 .cpk-tile.active .cpk-face { transform: none; }
-.v1 .cpk-tname { font-size: 14px; }
-.v1 .cpk-info { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
-.v1 .cpk-scroll { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr); grid-template-areas: 'head orders' 'role orders' 'gift orders' 'start orders'; gap: 2px 18px; align-content: start; }
-.v1 .cpk-head { display: block; grid-area: head; }
-.v1 .cpk-role { grid-area: role; font-size: 13.5px; }
-.v1 .cpk-sec:not(.cpk-trees):first-of-type { grid-area: gift; }
-.v1 .cpk-sec:not(.cpk-trees):nth-of-type(2) { grid-area: orders; }
-.v1 .cpk-sec:nth-of-type(2) h4 { margin-top: 2px; }
-.v1 .cpk-start { grid-area: start; }
-.v1 .cpk-foot { grid-template-columns: minmax(0, 1.2fr) auto auto; }
-.v1 .cpk-name { grid-column: auto; }
 
 /* ================================================================= 2 · the strip */
 #screen-captain > .cpk.v2 {
@@ -169,45 +147,9 @@
 .v2 .cpk-tname { display: none; }
 .v2 .cpk-rail > .cpk-roster { gap: 8px; justify-content: safe center; }
 
-/* ================================================================= 3 · the list */
-#screen-captain > .cpk.v3 {
-  width: min(940px, 96vw); height: min(560px, 94vh); padding: 14px 18px; gap: 8px 16px;
-  grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: 40px minmax(0, 1fr) auto;
-  grid-template-areas: 'title title' 'art rail' 'info rail';
-}
-.v3 .cpk-art { overflow: hidden; border: 1px solid rgba(176, 141, 87, 0.7); background: #080706; }
-.v3 .cpk-art::before { content: ''; position: absolute; inset: -20px; background: var(--cd-art, none) center / cover no-repeat; filter: blur(16px) brightness(0.4) saturate(0.8); }
-.v3 .cpk-portrait { background-size: contain; background-position: center top; border: 0; box-shadow: none; }
-.v3 .cpk-plate { text-align: left; padding: 40px 16px 12px; }
-.v3 .cpk-plate h3 { font-size: 28px; }
-.v3 .cpk-arr { display: none; }
-.v3 .cpk-rail { align-items: flex-start; }
-.v3 .cpk-rail > .cpk-roster { flex-direction: column; gap: 4px; overflow: visible; padding: 0; scroll-snap-type: none; }
-.v3 .cpk-tile { width: 100%; flex-direction: row; align-items: center; gap: 10px; padding: 3px 8px 3px 3px; border: 1px solid rgba(140, 107, 58, 0.28); background: rgba(14, 12, 9, 0.7); text-align: left; }
-.v3 .cpk-tile.active { border-color: var(--gold); background: linear-gradient(90deg, rgba(224, 184, 98, 0.16), rgba(14, 12, 9, 0.75)); }
-.v3 .cpk-face { width: 34px; }
-.v3 .cpk-tile.active .cpk-face { border-width: 1px; }
-.v3 .cpk-tt { flex: 1 1 auto; }
-.v3 .cpk-tname { font: 600 14px/1.15 var(--serif); hyphens: none; }
-.v3 .cpk-trole { display: block; font: 400 11px/1.2 var(--sans); color: var(--fog); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.v3 .cpk-gem, .v3 .cpk-face .cpk-badge { display: none; }
-.v3 .cpk-tprice { display: flex; flex: none; align-items: center; gap: 3px; color: var(--gold); font: 600 12px/1.1 var(--sans); white-space: nowrap; font-variant-numeric: lining-nums tabular-nums; }
-.v3 .cpk-tprice .cc-lock-i { width: 11px; height: 11px; }
-.v3 .cpk-tprice .rp-dbl { display: none; }
-.v3 .cpk-scroll { padding: 6px 10px; }
-.v3 .cpk-role, .v3 .cpk-start { display: none; }
-.v3 .cpk-sec h4 { margin: 4px 0 5px; }
-.v3 .cpk-sec:first-of-type { display: none; }
-.v3 .cpk-abils { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.v3 .cpk-ab { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; padding: 4px 2px; }
-.v3 .cpk-abt b { font-size: 10.5px; }
-.v3 .cpk-cd { display: none; }
-.v3 .cpk-scroll { flex: none; }
-.v3 .cpk-foot { padding: 6px 10px; grid-template-columns: minmax(0, 1fr) auto; }
-
 /* ================================================================= an upright window: every layout as the strip, stacked */
 @media (max-width: 899px) and (min-height: 521px) {
-  #screen-captain > .cpk.v1, #screen-captain > .cpk.v2, #screen-captain > .cpk.v3 {
+  #screen-captain > .cpk.v2 {
     width: min(720px, 100vw); height: min(900px, 100dvh); padding: 12px; gap: 8px 12px;
     grid-template-columns: minmax(0, 0.42fr) minmax(0, 1fr); grid-template-rows: 40px auto minmax(0, 1fr);
     grid-template-areas: 'title title' 'rail rail' 'art info';
@@ -231,14 +173,12 @@
   .cpk .cpk-abils { grid-template-columns: minmax(0, 1fr); }
   .cpk .cpk-ab { grid-template-columns: 34px minmax(0, 1fr); justify-items: stretch; text-align: left; }
   .cpk .cpk-cd { display: inline; }
-  .cpk .cpk-foot { grid-template-columns: minmax(0, 1fr) auto; }
-  .cpk .cpk-name { grid-column: 1 / -1; }
 }
 
 /* ================================================================= a phone held sideways */
 @media (max-height: 520px) and (min-width: 460px) {
   #screen-captain { overflow: hidden; align-items: stretch; }
-  #screen-captain > .cpk.v1, #screen-captain > .cpk.v2, #screen-captain > .cpk.v3 {
+  #screen-captain > .cpk.v2 {
     width: 100vw; height: 100dvh; max-width: none; margin: 0;
     padding: 5px max(8px, env(safe-area-inset-right)) 5px max(8px, env(safe-area-inset-left)); gap: 4px 8px;
   }
@@ -270,18 +210,6 @@
   .cpk-foot label.know-sea small { display: none; }
   .cpk-go { min-height: 34px; padding-inline: 10px; font-size: 13px; }
 
-  /* 1 · the carousel: the rail over a row of her facts and the foot */
-  #screen-captain > .cpk.v1 { grid-template-columns: minmax(0, 1fr); grid-template-rows: 22px auto minmax(0, 1fr); grid-template-areas: 'title' 'rail' 'info'; }
-  .v1 .cpk-tile { width: calc((100cqh - 22px) * 0.3); }
-  .v1 .cpk-rail > .cpk-roster { padding: 2px calc(50% - (100cqh - 22px) * 0.15); gap: 6px; }
-  .v1 .cpk-tname { font-size: 11.5px; }
-  .v1 .cpk-info { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr); }
-  .v1 .cpk-scroll { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr); gap: 0 10px; }
-  .v1 .cpk-head h3 { font-size: 17px; }
-  .v1 .cpk-foot { grid-template-columns: minmax(0, 1fr); align-content: center; border-top: 0; border-left: 1px solid rgba(140, 107, 58, 0.36); width: 200px; }
-  .v1 .cpk-go { width: 100%; padding-inline: 6px; font-size: 12.5px; }
-  .v1 .cpk-name { flex-direction: column; align-items: stretch; gap: 3px; }
-
   /* 2 · the strip: the portrait at full height, the rail and her facts beside it */
   #screen-captain > .cpk.v2 { grid-template-columns: auto minmax(0, 1fr); grid-template-rows: 22px auto minmax(0, 1fr); grid-template-areas: 'art title' 'art rail' 'art info'; }
   .v2 .cpk-art { height: 100cqh; max-width: 36cqw; }
@@ -289,16 +217,6 @@
   .v2 .cpk-rail > .cpk-roster { padding: 3px 2px; gap: 6px; }
   .v2 .cpk-badge .cpk-price { display: none; }
 
-  /* 3 · the list: the portrait large on the left, the six rows and the foot on the right */
-  #screen-captain > .cpk.v3 { grid-template-columns: minmax(0, 1fr) 236px; grid-template-rows: 22px minmax(0, 1fr) auto; grid-template-areas: 'art title' 'art rail' 'info rail'; }
-  .v3 .cpk-tile { padding: 2px 6px 2px 2px; gap: 7px; }
-  .v3 .cpk-face { width: 24px; }
-  .v3 .cpk-tname { font-size: 12px; }
-  .v3 .cpk-trole { font-size: 10px; }
-  .v3 .cpk-tprice { font-size: 10.5px; }
-  .v3 .cpk-plate h3 { font-size: 22px; }
-  .v3 .cpk-scroll { display: none; }
-  .v3 .cpk-foot { border-top: 0; }
 }
 /* a small phone on its side: the strip's portrait gives its room to the facts (it becomes their backdrop) */
 @media (max-height: 520px) and (min-width: 460px) and (max-width: 759px) {
@@ -307,7 +225,4 @@
   .v2 .cpk-head { display: block; }
   .v2 .cpk-head h3 { font-size: 17px; }
   .v2 .cpk-info { background: linear-gradient(90deg, rgba(10, 9, 8, 0.97) 52%, rgba(10, 9, 8, 0.72)), var(--cd-art, none) right top / auto 100% no-repeat; }
-  #screen-captain > .cpk.v3 { grid-template-columns: minmax(0, 1fr) 210px; }
-  .v3 .cpk-foot { grid-template-columns: minmax(0, 1fr) auto; }
-  .v3 .cpk-name { grid-column: 1 / -1; }
 }

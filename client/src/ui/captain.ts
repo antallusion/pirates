@@ -61,14 +61,10 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
   sendMsg = send ?? null;
   send?.({ t: 'captain_shop', action: 'view' });
   const list = $('captain-list');
-  // Three layouts for the owner to choose from (2026-10-21: «дай мне 3 варианта верстки на выбор … слишком большой
-  // размер выбора»): 1 the carousel, 2 the strip, 3 the list (client/captain.css); ?capv=N or localStorage picks one.
+  // The strip (owner, 2026-10-21, of three layouts offered: «давай вот это»): her portrait on the left, a rail of the
+  // six over her facts on the right (client/captain.css).
   const wrap = $('screen-captain').querySelector<HTMLElement>('.captain-wrap')!;
-  const asked = new URLSearchParams(location.search).get('capv');
-  if (asked && /^[123]$/.test(asked)) localStorage.setItem('gravetide.capv', asked);
-  const v = localStorage.getItem('gravetide.capv') ?? '2';
-  wrap.classList.remove('v1', 'v2', 'v3');
-  wrap.classList.add(`v${/^[123]$/.test(v) ? v : '2'}`);
+  wrap.classList.add('v2');
   // the roster rides a rail with an arrow at each end (a click steps to the captain beside; a finger swipes the rail)
   if (!list.parentElement!.classList.contains('cpk-rail')) {
     const rail = document.createElement('div');
