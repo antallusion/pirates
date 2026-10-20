@@ -124,7 +124,7 @@
       }
       // ellipsis that cuts (everywhere); in the shop any clamp rule on the goods' texts
       if (c.textOverflow === 'ellipsis' && c.overflowX !== 'visible' && e.scrollWidth > e.clientWidth + 1) out.ellipsis.push(`${short(e)} «…» ${e.scrollWidth}>${e.clientWidth}`);
-      else if (o.shop && (c.textOverflow === 'ellipsis' || (c.webkitLineClamp && c.webkitLineClamp !== 'none')) && ownText(e)) out.ellipsis.push(`${short(e)} rule ${c.textOverflow === 'ellipsis' ? 'text-overflow' : 'line-clamp ' + c.webkitLineClamp}`);
+      else if (o.shop && e.closest('.card, .sh-card, .pm-card, .pm-pack, .po-card, .po-box, [class^="cos-"], .sh-stores, .sh-work, #confirm') && (c.textOverflow === 'ellipsis' || (c.webkitLineClamp && c.webkitLineClamp !== 'none')) && ownText(e)) out.ellipsis.push(`${short(e)} rule ${c.textOverflow === 'ellipsis' ? 'text-overflow' : 'line-clamp ' + c.webkitLineClamp}`);
       if (c.position === 'absolute' || c.position === 'fixed' || c.position === 'sticky') {
         const big = (vr.right - vr.left) * (vr.bottom - vr.top) > W * H * 0.35;
         const decor = !content && c.backgroundImage === 'none' && (c.backgroundColor === 'rgba(0, 0, 0, 0)' || c.backgroundColor === 'transparent') && !e.querySelector('img,svg,button');

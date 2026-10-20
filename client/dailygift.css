@@ -77,7 +77,7 @@ body.reduce-motion .gf-day.fresh { animation: none; }
 .tgn { display: flex; flex-direction: column; gap: 6px; }
 .tgn-hint { margin: 0; font-size: 12px; color: var(--fog); }
 .tgn-bad { margin: 0; font-size: 12px; color: var(--bad); }
-.tgn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 4px 12px; }
+.tgn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); gap: 4px 12px; }
 .tgn-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; }
 .tgn-row > span { min-width: 0; font-size: 13px; }
 .tgn-row.off > span { opacity: 0.55; }
@@ -85,7 +85,7 @@ body.reduce-motion .gf-day.fresh { animation: none; }
 /* a phone held sideways: the kinds in two columns, so the whole list stands on one screen at 480×270 */
 @media (max-height: 420px) {
   .tgn { gap: 3px; }
-  .tgn-grid { grid-template-columns: 1fr 1fr; gap: 0 10px; }
+  .tgn-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 10px; }
   .tgn-row { min-height: 28px; gap: 6px; }
   .tgn-row > span { font-size: 11px; line-height: 1.15; }
   .tgn-hint, .tgn-bad { font-size: 10.5px; line-height: 1.25; }

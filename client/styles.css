@@ -4572,7 +4572,7 @@ img.beast-face.fig { object-fit: cover; object-position: 50% 8%; background: rad
 .pm-top-h .title-sm { font-size: 24px; margin: 0 0 2px; }
 .pm-top-h p { margin: 0; }
 .pm-top-h .btn { flex: none; white-space: nowrap; }
-.pm-packs { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 10px; }
+.pm-packs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)); gap: 8px; margin-top: 10px; }
 .pm-pack { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 0; padding: 12px 8px 10px; text-align: center; border-color: rgba(176, 141, 87, 0.5); }
 .pm-pack .ico-lg { width: 56px; height: 56px; object-fit: contain; }
 .pm-pack-n { font-family: var(--display); font-weight: 400; font-size: 28px; line-height: 1; color: var(--gold); font-variant-numeric: tabular-nums; }
@@ -4592,7 +4592,7 @@ img.beast-face.fig { object-fit: cover; object-position: 50% 8%; background: rad
   .pm-buy { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: flex-end; gap: 8px; text-align: right; }
   .pm-buy .pm-why { order: -1; margin-right: auto; text-align: left; }
   .pm-buy .btn { min-width: 96px; }
-  .pm-packs { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
+  .pm-packs { grid-template-columns: repeat(auto-fit, minmax(min(104px, 100%), 1fr)); }
   .pm-pack-n { font-size: 24px; }
   .pm-top-h { flex-wrap: wrap; }
 }

@@ -13,7 +13,7 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/premium.ts';
 import { inTelegram, starIcon } from '../tg.ts';
 import { inVk, vkBuy, vkPayOpen } from '../vk.ts'; // VK's votes (docs/36)
-import { packVotes, votesOf, votesText } from '../../../shared/src/data/vk.ts';
+import { packVotes, votesOf, votesText, votesWord } from '../../../shared/src/data/vk.ts';
 import { ask } from './confirm.ts';
 import { esc, fmt, icon } from './dom.ts';
 
@@ -62,7 +62,12 @@ export function doubloonIcon(cls = 'ico-sm'): string {
 /** The real money drawn: «290 ₽», or Telegram's star and «218». */
 export function realHtml(dbl: number, cur: PayIn = payIn()): string {
   // (VK's votes: «41 голос», the word declined — shared/src/data/vk.ts)
-  if (cur === 'votes') return esc(realText(dbl, cur));
+  // (the number and its word apart, so a narrow button puts the word under the number: shop.css .rp-vw)
+  if (cur === 'votes') {
+    const n = realOf(dbl, cur);
+    const l = lang() === 'ru' ? 'ru' : 'en';
+    return `${esc(n.toLocaleString(l === 'ru' ? 'ru-RU' : 'en-US'))} <span class="rp-vw">${esc(votesWord(n, l))}</span>`;
+  }
   return cur === 'stars' ? `${starIcon()}${fmt(realOf(dbl, cur))}` : `${fmt(realOf(dbl, cur))} ₽`;
 }
 

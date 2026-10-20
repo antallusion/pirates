@@ -20,7 +20,7 @@
 .cos-wbtn { flex: none; display: inline-flex; align-items: center; gap: 5px; }
 .cos-wbtn .ico-sm { width: 18px; height: 18px; margin: 0; }
 .cos-h { margin: 10px 0 6px; font: 600 14px/1.2 var(--serif); color: var(--gold); letter-spacing: 0.02em; }
-.cos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(154px, 1fr)); gap: 8px; align-items: stretch; }
+.cos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(154px, 100%), 1fr)); gap: 8px; align-items: stretch; }
 .cos-card { position: relative; display: flex; flex-direction: column; gap: 5px; min-width: 0; margin: 0; padding: 7px 7px 8px; border: 1px solid rgba(176, 141, 87, 0.42); border-top: 2px solid var(--tier, rgba(176, 141, 87, 0.6)); border-radius: 4px;
   background: linear-gradient(180deg, rgba(32, 27, 22, 0.94), rgba(13, 12, 11, 0.96)); box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4); }
 .cos-card.worn { border-color: rgba(224, 184, 98, 0.85); box-shadow: inset 0 0 14px rgba(224, 184, 98, 0.12), 0 0 0 1px rgba(224, 184, 98, 0.35); }
@@ -80,7 +80,7 @@
 .cos-wr-pick { min-width: 0; }
 .cos-wr-chips { flex-wrap: wrap; }
 .cos-tip { margin: 4px 0 6px; font-size: 11.5px; }
-.cos-opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+.cos-opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(92px, 100%), 1fr)); gap: 6px; }
 .cos-opt { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 64px; padding: 5px 4px; margin: 0; border: 1px solid rgba(176, 141, 87, 0.45); border-radius: 4px;
   background: linear-gradient(180deg, #221d18, #110f0c); color: var(--bone); cursor: pointer; touch-action: manipulation; }
 .cos-opt.on { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(224, 184, 98, 0.5), inset 0 0 10px rgba(224, 184, 98, 0.15); }
@@ -121,7 +121,7 @@ body.chat-open #hud-chat > .cos-qbtn, body.chat-open #hud-chat > .cos-qpanel, bo
 /* ------------------------------------------------------------------ a phone held sideways */
 @media (max-height: 520px) {
   .cos-lead p { font-size: var(--f-fs-s, 11px); }
-  .cos-grid { grid-template-columns: repeat(auto-fill, minmax(calc(118px + 12 * var(--u, 1px)), 1fr)); gap: var(--f-gap, 6px); }
+  .cos-grid { grid-template-columns: repeat(auto-fill, minmax(min(calc(118px + 12 * var(--u, 1px)), 100%), 1fr)); gap: var(--f-gap, 6px); }
   .cos-card { padding: 5px 5px 6px; gap: 3px; }
   .cos-prev { height: 50px; }
   .cos-ship { height: 50px; }
@@ -139,7 +139,7 @@ body.chat-open #hud-chat > .cos-qbtn, body.chat-open #hud-chat > .cos-qpanel, bo
   .cos-wr { grid-template-columns: minmax(170px, 36%) minmax(0, 1fr); gap: 8px; }
   .cos-ship-lg { height: 112px; }
   .cos-wr-me { padding: 2px 4px; gap: 8px; }
-  .cos-opts { grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 4px; }
+  .cos-opts { grid-template-columns: repeat(auto-fill, minmax(min(78px, 100%), 1fr)); gap: 4px; }
   .cos-opt { min-height: 54px; padding: 3px; }
   .cos-qe-row { grid-template-columns: repeat(4, 40px); max-height: 172px; }
   .cos-qe-b { width: 40px; height: 40px; }
