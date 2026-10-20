@@ -33,6 +33,10 @@ import { ForumStore } from './forum/store.ts';
 import { ForumService } from './forum/service.ts';
 import { gameLink } from './forum/gamelink.ts';
 import { forumRoutes } from './http/forum-routes.ts';
+import { SiteRating } from './game/siterating.ts';
+import { WebShop } from './game/webshop.ts';
+import { siteRoutes } from './http/site-routes.ts';
+import { yookassaFromEnv } from './pay/yookassa.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const PORT = Number(process.env.PORT ?? 8080);
@@ -77,6 +81,16 @@ const forum = new ForumService({
   uploadsDir: forumDir ? resolve(forumDir, 'forum-uploads') : null, avatars: portraits,
 });
 const handleForum = forumRoutes(forum, auth);
+// The website's captains' rating and shop (owner, 2026-10-20): YooKassa when YOOKASSA_SHOP_ID and YOOKASSA_SECRET_KEY are
+// set, else the test mode (its fake checkout opens with GRAVETIDE_PAY_TEST=1 or for SITE_ADMINS / FORUM_ADMINS).
+const rating = new SiteRating(game, { banned: (acc) => forum.store.user(acc)?.role === 'banned' });
+const webShop = new WebShop(game, {
+  provider: yookassaFromEnv(), returnUrl: process.env.YOOKASSA_RETURN_URL ?? `${PUBLIC_URL}/site/shop/`,
+  admins: ids(process.env.SITE_ADMINS ?? process.env.FORUM_ADMINS), payTest: process.env.GRAVETIDE_PAY_TEST === '1',
+  hidden: (acc, name) => rating.hidden(acc, name),
+});
+console.log(`[${GAME_NAME}] web shop: ${webShop.mode === 'live' ? 'YooKassa' : `TEST MODE${process.env.GRAVETIDE_PAY_TEST === '1' ? ' (open to all)' : ' (admins only)'}`}`);
+const handleSite = siteRoutes({ rating, shop: webShop, publicUrl: PUBLIC_URL });
 
 const server = createServer(async (req, res) => {
   if (req.url === '/onboarding') {
@@ -120,6 +134,7 @@ const server = createServer(async (req, res) => {
   if (await handleTelegram(req, res, tg)) return;
   if (await handleAuth(req, res, auth, oauth)) return;
   if (req.url?.startsWith('/api/forum/') && (await handleForum(req, res))) return;
+  if (req.url?.startsWith('/api/site/') && (await handleSite(req, res))) return;
   if (await serveStatic(req, res)) return;
   res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');
 });

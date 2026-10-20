@@ -102,6 +102,8 @@ export interface Db {
   scrolls(accountId: number): number;
   addScrolls(accountId: number, delta: number): number | null;
   silverHoldings(): { account_id: number; gold: number; bank: number }[];
+  /** Every saved captain with her account's name (the website's captains' rating reads them, at most once a minute). */
+  allCaptains(): { account_id: number; name: string; data: string }[];
   transaction(fn: () => void): void;
   // e-mail and OAuth sign-in
   accountById(id: number): AccountRow | undefined;
@@ -270,6 +272,10 @@ export class Database implements Db {
          FROM ledger WHERE at >= ? GROUP BY kind`,
       )
       .all(sinceMs) as { kind: string; inflow: number; outflow: number; n: number }[];
+  }
+
+  allCaptains(): { account_id: number; name: string; data: string }[] {
+    return this.db.prepare('SELECT c.account_id AS account_id, a.name AS name, c.data AS data FROM captains c JOIN accounts a ON a.id = c.account_id').all() as { account_id: number; name: string; data: string }[];
   }
 
   /** Silver held by every saved captain: purse and League bank balance. */

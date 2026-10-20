@@ -16,7 +16,7 @@ import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 
 import type { AuthResult, AuthService } from './auth.ts';
 import type { Db } from './persistence/db.ts';
 import type { Game } from './game/Game.ts';
-import { chargebackPremium, creditPremium, sendPremium, setPayDesk } from './game/premium.ts';
+import { chargebackPremium, payIn, setPayDesk } from './game/premium.ts';
 import { doubloonPack } from '../../shared/src/data/premium.ts';
 import { tgDevice, tgLang, tgText, tgTime } from '../../shared/src/data/telegram.ts';
 import type { TgLang, TgnCat } from '../../shared/src/data/telegram.ts';
@@ -619,14 +619,11 @@ ${this.publicUrl}/telemetry/admin`);
       return;
     }
     const n = o.pack.n + o.pack.bonus;
-    const bal = creditPremium(this.game, o.accountId, n, 'pay', `tg:${charge}`);
+    // docs/34: the revenue — the pack's roubles (its doubloons before the bonus; a doubloon ≈ 1 ₽)
+    const bal = payIn(this.game, o.accountId, n, o.pack.n, o.pack.id, `tg:${charge}`);
     if (bal === null) return;
     this.db.setKv(key, { account: o.accountId, user: from.id, pack: o.pack.id, stars: p.total_amount, n, at: this.now(), refunded: false } satisfies TgPayment);
     this.log(`[tg] paid: account ${o.accountId}, ${o.pack.id}, ${p.total_amount} XTR, charge ${charge}`);
-    // docs/34: the revenue — the pack's roubles (its doubloons before the bonus; a doubloon ≈ 1 ₽)
-    trackEvent(this.game, o.accountId, 'topup', { amount: o.pack.n, product: o.pack.id });
-    const s = this.game.sessionByAccount(o.accountId);
-    if (s) sendPremium(this.game, s);
     await this.say(from.id, tgText('paid', tgLang(from.language_code), { n, name: this.db.accountById(o.accountId)?.name ?? '' }));
   }
 

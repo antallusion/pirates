@@ -169,6 +169,9 @@ export const arenaBest = (game: Game, acc: number): number => {
   return r ? Math.max(r.best ?? 0, r.r) : 0;
 };
 const ratingOf = (S: Store, acc: number): number => S.rows[acc]?.r ?? ARENA_START;
+/** This season's table — each captain's rating, bouts and wins — for the website's captains' rating. */
+export const arenaTable = (game: Game): { acc: number; r: number; n: number; w: number }[] =>
+  Object.entries(store(game).rows).map(([acc, x]) => ({ acc: Number(acc), r: x.r, n: x.n, w: x.w }));
 
 // ------------------------------------------------------------------ who may come
 

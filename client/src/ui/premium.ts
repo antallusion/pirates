@@ -31,7 +31,7 @@ import { treeLabel } from './isletree.ts';
 import { placeName } from './maps.ts';
 import { chipRow, railTabs, winHead } from './kit/window.ts';
 import type { WinTab } from './kit/window.ts';
-import { tgPackButton, tgPayNote, starIcon } from '../tg.ts'; // the packs for Telegram Stars (docs/27)
+import { inTelegram, onTgHost, tgPackButton, tgPayNote, starIcon } from '../tg.ts'; // the packs for Telegram Stars (docs/27)
 import { doubloonIcon, packPrice, payIn, priceHtml, priceText, realHtml, topUpThenBuy } from './price.ts';
 import { cosL, cosShelf, wardrobe, wireCos } from './cosmetics.ts'; // docs/32 §12: the «Косметика» tab
 
@@ -226,8 +226,17 @@ function workCard(sv: ShopView, refit = false): string {
   return `<div class="card sh-work"><div class="sh-wh">${head}</div>${rows || (refit ? '' : `<p class="sh-meta">${esc(L('job.none'))}</p>`)}</div>`;
 }
 
+/** The website's shop for a captain who plays in the browser (owner, 2026-10-20): roubles there, the purchase here by
+ *  her name. Never inside Telegram — the Mini App keeps to Stars. */
+function webShopLink(state: ClientState): string {
+  if (inTelegram() || onTgHost()) return '';
+  const name = state.self?.name ?? '';
+  const href = `${lang() === 'ru' ? '/site/shop/' : '/site/en/shop/'}${name ? `?nick=${encodeURIComponent(name)}` : ''}`;
+  return `<div class="pm-web"><p class="muted">${esc(L('top.webNote'))}</p><a class="btn btn-small btn-primary" href="${esc(href)}" target="_blank" rel="noopener">${esc(L('top.web'))}</a></div>`;
+}
+
 /** The top-up: the packs for Stars, the first top-up's double. */
-function topUp(v: PremiumView): string {
+function topUp(v: PremiumView, state: ClientState): string {
   const packs = DOUBLOON_PACKS.map((p) => {
     const n = p.n + p.bonus;
     const pct = p.bonus ? Math.round((p.bonus / p.n) * 100) : 0;
@@ -240,7 +249,7 @@ function topUp(v: PremiumView): string {
   return `<div class="pm-top"><div class="pm-top-h"><div><h3 class="title-sm">${esc(L('top.title'))}</h3><p class="muted">${esc(L('top.sub'))}</p></div>
       <button class="btn btn-small" data-pmback>${esc(L('top.back'))}</button></div>${first}
     <div class="pm-packs">${packs}</div>
-    ${v.pay ? `<p class="pm-paynote">${starIcon()}${esc(tgPayNote())}</p>` : `<p class="pm-soon">${icon('tab_letters', '', 'ico-sm')}${esc(L('top.note'))}</p>`}</div>`;
+    ${v.pay ? `<p class="pm-paynote">${starIcon()}${esc(tgPayNote())}</p>` : `<p class="pm-soon">${icon('tab_letters', '', 'ico-sm')}${esc(L('top.note'))}</p>`}${webShopLink(state)}</div>`;
 }
 
 const TAB_ICON: Record<ShopTab, string> = { sea: 'menu_ship', board: 'ui_cutlasses', isle: 'tab_isles', cos: 'cos_titles' };
@@ -308,7 +317,7 @@ export class PremiumWindow {
     const purse = `<span class="w-fig gold sh-bal" title="${esc(L('balance'))}">${doubloonIcon('w-fig-ico')}<b>${fmt(balance)}</b></span><button type="button" class="btn btn-small btn-primary sh-top" data-pmtop>${esc(L('topup'))}</button>`;
     const head = winHead(this.wardrobe && this.tab === 'cos' ? cosL('wardrobe') : L('title'), { crest: 'doubloon', figures: purse });
     if (!v || !sv) root.innerHTML = `${head}<div class="modal-body sh-body"></div>`;
-    else if (this.topup) root.innerHTML = `${head}<div class="modal-body sh-body sh-topup">${topUp(v)}</div>`;
+    else if (this.topup) root.innerHTML = `${head}<div class="modal-body sh-body sh-topup">${topUp(v, state)}</div>`;
     else {
       if (this.sec !== 'deals' && !TAB_SECS[this.tab].includes(this.sec)) this.sec = 'deals';
       // docs/32 §12: the «Косметика» tab has no «Акции» row — its first shelf is the titles
