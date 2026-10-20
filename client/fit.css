@@ -249,7 +249,7 @@
   #modal-panel[data-modal="talents"] .tal-loadout { grid-area: load; margin: 0; gap: 3px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   #modal-panel[data-modal="talents"] .tal-loadout > .with-ico, #modal-panel[data-modal="talents"] .tal-loadout > .muted { display: none; }
   #modal-panel[data-modal="talents"] .tal-loadout.muted { display: none; }
-  #modal-panel[data-modal="talents"] .tal-loadout .btn { min-height: var(--f-tap); padding: 0 2px; font-size: var(--f-fs-s); }
+  #modal-panel[data-modal="talents"] .tal-loadout .btn { min-height: var(--f-tap); min-width: 0; padding: 0 2px; font-size: var(--f-fs-s); white-space: normal; overflow-wrap: anywhere; line-height: 1.1; }
   #modal-panel[data-modal="talents"] .tal-side { grid-area: side; min-height: 0; }
   #modal-panel[data-modal="talents"] .tal-main { grid-area: main; min-height: 0; overflow-y: auto; }
   #modal-panel[data-modal="talents"] .tal-respec { grid-area: respec; min-height: 0; align-self: end; }

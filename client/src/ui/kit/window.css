@@ -243,7 +243,7 @@
   .cap-gear .gear-body > .gear-side { padding-top: 60px; }
 }
 /* The order book's schools: one row of chips; the school's note is its chip's hint on a phone. */
-.cap-body .w-chips.hx-schools { flex-wrap: nowrap; padding: 0 0 var(--k-sp-2); border: 0; margin: 0 calc(-1 * var(--k-sp-1)); }
+.cap-body .w-chips.hx-schools { flex-wrap: wrap; padding: 0 0 var(--k-sp-2); border: 0; margin: 0 calc(-1 * var(--k-sp-1)); }
 /* The level's choice in the Hero tab: two rows, a finger-wide «Взять» (the card from below is levelUpSheet). */
 @media (max-height: 520px), (max-width: 699px) {
   .cap-body .hx-note { display: none; }

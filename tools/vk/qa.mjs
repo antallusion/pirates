@@ -175,7 +175,8 @@ async function measure(p, screen, sizeTag, o = {}) {
   return row;
 }
 
-const modalOpen = (p) => p.evaluate(() => !document.getElementById('modal')?.classList.contains('hidden') && (document.getElementById('modal-panel')?.textContent ?? '').trim().length > 0);
+// (that very window: one without its moment closes itself, and in port the harbour's comes back in its place)
+const modalOpen = (p, w) => p.evaluate((x) => !document.getElementById('modal')?.classList.contains('hidden') && (!x || globalThis.gravetide.modal() === x) && (document.getElementById('modal-panel')?.textContent ?? '').trim().length > 0, w ?? null);
 
 /** A window's own tabs (the rail's big tabs and the older .tab ones), their attribute names and values. */
 const tabsOf = (p) => p.evaluate(() => [...document.querySelectorAll('#modal-panel .w-tab:not(.w-tab--go):not([disabled]), #modal-panel .tab:not([disabled])')].slice(0, 9).map((t, i) => ({ i, label: (t.getAttribute('aria-label') || t.textContent || '').trim().slice(0, 18) })));
@@ -209,14 +210,14 @@ async function sweepWindows(p, sizeTag) {
     // (the panel emptied first: a window with nothing to show leaves it so — never the last window's leftovers)
     await p.evaluate((x) => { document.getElementById('modal-panel').innerHTML = ''; globalThis.gravetide.open(x); }, w);
     await sleep(700);
-    if (!(await modalOpen(p))) { results.push({ size: sizeTag, screen: w, skipped: 'no state for it (the window closes itself without its moment)' }); continue; }
+    if (!(await modalOpen(p, w))) { results.push({ size: sizeTag, screen: w, skipped: 'no state for it (the window closes itself without its moment)' }); continue; }
     await measure(p, w, sizeTag, { root: '#modal-panel' });
     if (!TABS) continue;
     const tabs = await tabsOf(p);
     for (const t of tabs.slice(1)) {
       await p.evaluate((i) => [...document.querySelectorAll('#modal-panel .w-tab:not(.w-tab--go):not([disabled]), #modal-panel .tab:not([disabled])')][i]?.click(), t.i);
       await sleep(500);
-      if (!(await modalOpen(p))) break;
+      if (!(await modalOpen(p, w))) break;
       await measure(p, `${w}:${t.i}-${t.label}`, sizeTag, { root: '#modal-panel' });
     }
   }
