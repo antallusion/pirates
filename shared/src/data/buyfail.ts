@@ -58,6 +58,9 @@ export interface BuyFail {
   /** hammocks: her crew and her hammocks. */
   crew?: number;
   crewMax?: number;
+  /** room: how many the plan makes room for and «Продать и купить» buys, when fewer than asked (the harbour's stock, her
+   *  purse); unset: all of `want`. */
+  buy?: number;
   /** room: a quest's goods waiting on the quay (free: nothing to buy — the advisor sells only, the goods then come aboard). */
   pickup?: boolean;
 }
@@ -79,16 +82,19 @@ export interface RoomItem {
 export const GOOD_PRICE = 1;
 
 /** The advisor's plan (pure): what to sell here, the fewest units, to free `need` m³ — first the goods this harbour
- *  pays well for (dearest against their base first), then the cheapest for their room; never what is kept, never the
- *  good being bought. The last line sells only as many as the room still wants. */
+ *  pays well for (dearest against their base first), then the cheapest for their room, her own stores last; never what
+ *  is kept, never the good being bought. The last line sells only as many as the room still wants. */
 export function roomPlan(items: RoomItem[], need: number, buying?: GoodId): { lines: SellLine[]; freed: number } {
   const ok = items.filter((i) => i.good !== buying && i.sell > 0 && i.unitVol > 0 && Math.floor(i.have - i.keep) >= 1);
   const ratio = (i: RoomItem) => i.sell / Math.max(1, GOODS[i.good]?.basePrice ?? 1);
-  const good = ok.filter((i) => ratio(i) >= GOOD_PRICE).sort((a, b) => ratio(b) - ratio(a));
-  const rest = ok.filter((i) => ratio(i) < GOOD_PRICE).sort((a, b) => a.sell / a.unitVol - b.sell / b.unitVol);
+  // (her own stores — provisions past the voyage's, sailcloth past a repair's, the carpenters' planks — last of all)
+  const store = (i: RoomItem) => GOODS[i.good]?.category === 'supply';
+  const good = ok.filter((i) => !store(i) && ratio(i) >= GOOD_PRICE).sort((a, b) => ratio(b) - ratio(a));
+  const rest = ok.filter((i) => !store(i) && ratio(i) < GOOD_PRICE).sort((a, b) => a.sell / a.unitVol - b.sell / b.unitVol);
+  const stores = ok.filter(store).sort((a, b) => a.sell / a.unitVol - b.sell / b.unitVol);
   const lines: SellLine[] = [];
   let freed = 0;
-  for (const i of [...good, ...rest]) {
+  for (const i of [...good, ...rest, ...stores]) {
     if (freed + 1e-6 >= need) break;
     const avail = Math.floor(i.have - i.keep);
     const qty = Math.min(avail, Math.ceil((need - freed - 1e-6) / i.unitVol));

@@ -46,12 +46,15 @@ let open: SheetHandle | null = null;
 const gName = (g: string) => (GOODS[g as keyof typeof GOODS]?.name ?? g).toLowerCase();
 const m3 = (n: number) => String(Math.round(n * 10) / 10).replace('.', lang() === 'ru' ? ',' : '.');
 
+/** A distance in km, a decimal comma in Russian. */
+export const km = (d: number): string => (d / 1000).toFixed(1).replace('.', lang() === 'ru' ? ',' : '.');
+
 function sellersHtml(f: BuyFail): string {
   const list = f.sellers ?? [];
   if (!list.length) return `<p class="muted ba-note">${esc(L('noSellers'))}</p>`;
   return `<p class="ba-sub">${esc(L('sellers'))}</p><div class="ba-list">${list.map((x) => `<div class="w-row ba-row">
     <span class="w-row-t"><b>${esc(placeName(x.name))}</b><small>${esc(L('seller', { n: x.stock, price: fmt(x.price) }))}</small></span>
-    <span class="w-row-b">${buttonHtml({ kind: 'secondary', size: 'md', label: L('course', { km: (x.dist / 1000).toFixed(1) }), data: { ba: 'sail', port: x.port } })}</span></div>`).join('')}</div>`;
+    <span class="w-row-b">${buttonHtml({ kind: 'secondary', size: 'md', label: L('course', { km: km(x.dist) }), data: { ba: 'sail', port: x.port } })}</span></div>`).join('')}</div>`;
 }
 
 /** The advisor for a refused purchase (a sheet from the bottom edge; the toast stays quiet). */
@@ -63,7 +66,8 @@ export function showAdvice(f: BuyFail, ctx: AdviceCtx): SheetHandle | null {
   const good = f.good ? gName(f.good) : '';
   let title = '', body = '', foot = '';
   if (f.why === 'room') {
-    const need = Math.max(0, (f.need ?? 0) - (f.free ?? 0));
+    const buyN = f.buy ?? f.want;
+    const need = Math.max(0, (f.need ?? 0) * (buyN / Math.max(1, f.want)) - (f.free ?? 0));
     const plan = f.plan ?? [];
     const covers = (f.planFree ?? 0) + 1e-6 >= need && plan.length > 0;
     title = L('room.title');
@@ -71,7 +75,8 @@ export function showAdvice(f: BuyFail, ctx: AdviceCtx): SheetHandle | null {
     body = `<p class="ba-lead"><b>${esc(lead + L('room.lead', { need: m3(f.need ?? 0), free: m3(f.free ?? 0), n: f.want, good }))}</b></p>
       ${plan.length ? `<p class="ba-sub">${esc(L('room.plan'))}</p><div class="ba-list">${plan.map((l) => `<div class="w-row ba-row" data-good="${l.good}">${icon(`good_${l.good}`, '', 'w-row-ico')}
         <span class="w-row-t"><b>${esc(L('room.line', { n: l.qty, good: gName(l.good) }))}</b><small>${esc(L('room.frees', { v: m3(l.vol) }))}</small></span>
-        <span class="w-row-n">+${money(l.price)}</span></div>`).join('')}</div>` : `<p class="muted ba-note">${esc(L('room.none'))}</p>`}
+        <span class="w-row-n ba-gain"><i aria-hidden="true">+</i>${money(l.price)}</span></div>`).join('')}</div>` : `<p class="muted ba-note">${esc(L('room.none'))}</p>`}
+      ${buyN < f.want ? `<p class="muted ba-note">${esc(L('room.only', { n: buyN, good }))}</p>` : ''}
       ${plan.length && !covers ? `<p class="muted ba-note">${esc(L('room.short', { v: m3(f.planFree ?? 0), need: m3(need) }))}</p>` : ''}`;
     foot = `${covers ? buttonHtml({ kind: 'primary', size: 'md', id: 'ba-go', label: f.pickup ? L('room.sellOnly') : L('room.sellBuy'), data: { ba: f.pickup ? 'sell' : 'sellbuy' } }) : ''}${!f.pickup && (f.can ?? 0) > 0 ? buttonHtml({ kind: 'secondary', size: 'md', label: L('room.fit', { n: f.can! }), data: { ba: 'fit' } }) : ''}${buttonHtml({ kind: covers ? 'secondary' : 'primary', size: 'md', label: L('room.manual'), data: { ba: 'manual' } })}`;
   } else if (f.why === 'notsold') {
@@ -94,7 +99,7 @@ export function showAdvice(f: BuyFail, ctx: AdviceCtx): SheetHandle | null {
     if (!b || (b as HTMLButtonElement).disabled) return;
     const what = b.dataset.ba!;
     sheet.close('button');
-    if (what === 'sellbuy' && f.good) ctx.send({ t: 'sellbuy', good: f.good, qty: f.want });
+    if (what === 'sellbuy' && f.good) ctx.send({ t: 'sellbuy', good: f.good, qty: f.buy ?? f.want });
     else if (what === 'sell') for (const l of f.plan ?? []) ctx.send({ t: 'trade', good: l.good, qty: -l.qty });
     else if (what === 'fit' && f.good && (f.can ?? 0) > 0) ctx.send({ t: 'trade', good: f.good, qty: f.can! });
     else if (what === 'manual') ctx.market();

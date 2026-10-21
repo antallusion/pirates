@@ -92,7 +92,11 @@ test('the owner’s case: a full hold buying rum is told «нет места» w
   assert.ok(!c.all('toast').some((t) => /stock/i.test(t.msg)), 'never «stock»');
   assert.equal(nb(ru(() => serverText(f.msg))), 'Нет места в трюме: нужно 5 м³, свободно 0');
   assert.ok(adviceFor(f.fail), 'the advisor opens for it');
-  assert.ok(f.fail.plan!.length > 0 && (f.fail.planFree ?? 0) >= 5, 'what to sell here for the room');
+  assert.equal(f.fail.buy, 3, 'the harbour has three: room is made for those');
+  assert.ok(f.fail.plan!.length > 0 && (f.fail.planFree ?? 0) >= 3, 'what to sell here for the room');
+  // «Продать и купить» for the three: sold and bought, at once
+  c.push({ t: 'sellbuy', good: 'rum', qty: f.fail.buy! });
+  assert.equal(s.ship!.cargo.rum, 3);
 });
 
 test('each reason its own words: stock (how many there are), silver (how much is missing), not sold here (the nearest ports)', () => {

@@ -1058,7 +1058,7 @@ function questBuyCards(view: PortView): string {
     const room = q.fit < n;
     const status = !q.soldHere ? BA('qb.notHere') : q.stock < q.qty ? BA('qb.short', { n: q.stock }) : BA('qb.here', { n: q.stock, fit: q.fit });
     const buy = q.soldHere && n > 0 ? `<button type="button" class="k-btn ${room ? 'k-btn--primary' : 'k-btn--primary'} k-btn--md" ${room ? 'id="qb-room"' : 'id="qb-buy"'} data-act="buyn" data-good="${q.good}" data-n="${n}">${esc(room ? BA('qb.room') : BA('qb.buy', { n }))}</button>` : '';
-    const sail = q.sellers.slice(0, q.soldHere ? 1 : 2).map((x) => `<button type="button" class="k-btn k-btn--secondary k-btn--md qb-sail" data-act="goal" data-key="p:${esc(x.port)}" title="${esc(placeName(x.name))}">${esc(`${placeName(x.name)} · ${(x.dist / 1000).toFixed(1)} км`.replace('км', lang() === 'ru' ? 'км' : 'km'))}</button>`).join('');
+    const sail = q.sellers.slice(0, q.soldHere ? 1 : 2).map((x) => `<button type="button" class="k-btn k-btn--secondary k-btn--md qb-sail" data-act="goal" data-key="p:${esc(x.port)}" title="${esc(placeName(x.name))}">${esc(`${placeName(x.name)} · ${(x.dist / 1000).toFixed(1).replace('.', lang() === 'ru' ? ',' : '.')} ${lang() === 'ru' ? 'км' : 'km'}`)}</button>`).join('');
     return `<div class="card qb-card" data-qb="${q.good}">${icon(`good_${q.good}`, '', 'ico-md')}<div class="qb-t"><b>${esc(BA('qb.title', { q: serverText(q.name), n: q.qty, good }))}</b><small class="muted">${esc(status)}</small></div><div class="qb-b">${buy}${sail}</div></div>`;
   }).join('');
 }

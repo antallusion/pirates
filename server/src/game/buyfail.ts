@@ -160,8 +160,10 @@ export function goodBuyCheck(game: Game, s: PlayerSession, port: Port, good: Goo
   }
   if (why === 'room') {
     const need = qty * unit;
-    const plan = roomPlan(roomItems(game, s, port), need - free, good); // (an overfull hold: its excess too)
-    return { fail: { why: 'room', good, want: qty, can: fit, need: r1(need), free: r1(Math.max(0, free)), plan: plan.lines, planFree: plan.freed }, msg: lackRoom(need, free) };
+    // the room made for as many as the harbour has and her purse pays (the stock short too: those, not a sale for nothing)
+    const buy = Math.max(1, Math.min(qty, avail, Math.max(1, afford)));
+    const plan = roomPlan(roomItems(game, s, port), buy * unit - free, good); // (an overfull hold: its excess too)
+    return { fail: { why: 'room', good, want: qty, can: fit, need: r1(need), free: r1(Math.max(0, free)), plan: plan.lines, planFree: plan.freed, ...(buy < qty ? { buy } : {}) }, msg: lackRoom(need, free) };
   }
   const price = cost(Math.min(qty, Math.max(1, avail)));
   return { fail: { why: 'silver', good, want: qty, can: afford, need: price, missing: Math.max(1, Math.ceil(price - p.gold)) }, msg: lackSilver(price, p.gold) };

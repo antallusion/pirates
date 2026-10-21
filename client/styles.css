@@ -5510,6 +5510,8 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
 .ba-panel .ba-list { display: flex; flex-direction: column; gap: 4px; }
 .ba-panel .ba-row { min-height: 40px; padding: 4px 8px; border: 1px solid rgba(217, 178, 90, 0.28); border-radius: 5px; background: rgba(0, 0, 0, 0.22); }
 .ba-panel .k-sheet-foot { flex-wrap: wrap; gap: 6px; }
+.ba-panel .w-row .w-row-n.ba-gain { display: inline-flex; flex-direction: row; align-items: center; gap: 2px; white-space: nowrap; color: #9fe08a; }
+.ba-panel .ba-gain > i { font-style: normal; }
 .qb-card { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 10px; margin: 6px 0; border-color: rgba(217, 178, 90, 0.55); }
 .qb-card .qb-t { display: flex; flex-direction: column; flex: 1 1 200px; min-width: 0; }
 .qb-card .qb-t b { overflow-wrap: anywhere; }

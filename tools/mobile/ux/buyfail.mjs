@@ -23,8 +23,8 @@ const sheet = (p) => p.evaluate(() => {
   const r = document.querySelector('#buy-advice');
   if (!r) return null;
   const box = r.querySelector('.k-sheet')?.getBoundingClientRect();
-  const over = [...r.querySelectorAll('button, .w-row, p, h2')].filter((e) => { const b = e.getBoundingClientRect(); return b.width && (b.right > innerWidth + 1 || b.bottom > innerHeight + 1 || e.scrollWidth > e.clientWidth + 1); }).map((e) => e.textContent.trim().slice(0, 40));
-  return { title: r.querySelector('.k-sheet-title')?.textContent ?? '', text: r.querySelector('.k-sheet-body')?.innerText.replace(/\s+/g, ' ').slice(0, 300) ?? '', btns: [...r.querySelectorAll('.k-sheet-foot button, .ba-row button')].map((x) => x.textContent.trim()), h: Math.round(box?.height ?? 0), over };
+  const over = [...r.querySelectorAll('button:not(.k-sheet-x), .w-row, p, h2')].filter((e) => { const b = e.getBoundingClientRect(); return b.width && (b.right > innerWidth + 1 || b.bottom > innerHeight + 1 || e.scrollWidth > e.clientWidth + 1); }).map((e) => `${e.className}:${e.textContent.trim().slice(0, 30)}:${Math.round(e.getBoundingClientRect().right)}x${Math.round(e.getBoundingClientRect().bottom)}/${e.scrollWidth}>${e.clientWidth}`);
+  return { title: (r.querySelector('.k-sheet-title')?.textContent ?? '').replace(/\s+/g, ' '), text: r.querySelector('.k-sheet-body')?.innerText.replace(/\s+/g, ' ').slice(0, 300) ?? '', btns: [...r.querySelectorAll('.k-sheet-foot button, .ba-row button')].map((x) => x.textContent.trim()), h: Math.round(box?.height ?? 0), over };
 });
 const view = (p) => p.evaluate(() => ({ market: globalThis.gravetide.state.portView?.market.map((r) => [r.good, r.stock]) ?? [], cargo: globalThis.gravetide.state.self?.cargo ?? {}, docked: globalThis.gravetide.state.self?.dockedAt }));
 try {
@@ -39,8 +39,12 @@ try {
     let v = await view(p);
     L.log(`${lang} docked ${v.docked}, market ${v.market.length}`);
     // 1. fill the hold with a bulky good of the market (not rum), then buy rum
-    const filler = v.market.map((r) => r[0]).find((g) => g !== 'rum' && !['provisions', 'sailcloth', 'planks'].includes(g)) ?? 'sugar';
-    await L.say(p, `/give ${filler} 400`);
+    const goods = v.market.map((r) => r[0]);
+    const filler = ['tobacco', 'spices', 'cloth', 'salt', 'iron'].find((g) => goods.includes(g)) ?? 'tobacco'; // (a m³ a unit)
+    // (the hold filled to its last m³, not past it)
+    const room = await p.evaluate(() => { const s = globalThis.gravetide.state; const st = s.ownStats; let used = 0; for (const [g, n] of Object.entries(s.self.cargo)) used += n * (g === 'provisions' ? st.provisionVolumeMul : g === 'planks' || g === 'sailcloth' ? st.materialVolumeMul : 1) * ({ planks: 1.5, timber: 2 }[g] ?? 1); return Math.floor(st.holdVolume - used); });
+    L.log(`${lang} filling ${room} m³ with ${filler}`);
+    await L.say(p, `/give ${filler} ${room}`);
     await L.sleep(1200);
     await L.closeAll(p);
     await L.open(p, 'port');
