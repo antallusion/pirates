@@ -4505,8 +4505,8 @@ export class Renderer {
       : '';
     if (s.flags & SF.SHAME) g.fillStyle = 'rgba(224,119,107,0.9)';
     g.fillText(tag + marks + (s.flags & SF.SURRENDERED ? L('struck') : '') + (s.flags & SF.TRUCE ? ` · ${LOUT('cf.truce')}` : '') + (s.flags & SF.IN_BATTLE ? L('inBattle') : ''), x, y + 11);
-    // In a battle (owner, 2026-10-22): two crossed sabres over her name — nobody may touch her till it is over.
-    if (s.flags & SF.IN_BATTLE) crossedSwords(g, x - 30, y - 6);
+    // In a battle (owner, 2026-10-22): two crossed sabres over her name, centred — nobody may touch her till it is over.
+    if (s.flags & SF.IN_BATTLE) crossedSwords(g, x, y - 26);
     // A ceasefire bought from her (owner, 2026-10-18): a white flag over her name, on its staff.
     if (s.flags & SF.TRUCE) {
       const fx = x + 30, fy = y - 2;
