@@ -11,6 +11,7 @@
 //    raid shares a tier's pay); each captain's losses come off her own stacks (tactical.ts sync).
 // No bout of the Colosseum, no trial of mastery (her own test), no jolly-boat raid and no old deck fight takes allies.
 
+import { battleEnded, inBattle } from './inbattle.ts'; // owner, 2026-10-22
 import { UNITS } from '../../../shared/src/data/army.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -51,6 +52,7 @@ export function mateWhy(game: Game, ms: PlayerSession, at: ShipEntity): string |
   if (!ship || !ship.alive || !ms.profile) return 'Put to sea first';
   if (ship.docked) return 'Not at sea';
   if (ship.boarding || ship.boardAlly !== null) return 'Already in a boarding';
+  if (inBattle(game, ship)) return 'Finish your battle first.'; // her party ashore (owner, 2026-10-22)
   if (ship.landing) return 'Your party is ashore';
   if (ship.surrendered) return 'You struck your colours';
   if (inDuel(game, ship)) return 'Not in a duel';
@@ -347,7 +349,10 @@ export function sharesView(game: Game, fight: BoardFight, a: ShipEntity, b: Ship
 export function releaseAllies(game: Game, fight: BoardFight): void {
   for (const e of fight.tacAllies ?? []) {
     const ship = game.ships.get(e.ship);
-    if (ship && ship.boardAlly !== null) ship.boardAlly = null;
+    if (ship && ship.boardAlly !== null) {
+      ship.boardAlly = null;
+      battleEnded(game, ship); // owner, 2026-10-22: her grace after the fight, as the captains' own
+    }
     const ms = game.sessionByAccount(e.acc);
     if (ms) game.sendTo(ms, { t: 'board_tac', view: null });
   }

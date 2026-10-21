@@ -2245,6 +2245,7 @@ export class TacticalPanel {
           // A battle at sea closes itself a moment later: the button puts the reckoning away now.
           this.endHidden = true;
           banner.classList.add('hidden');
+          this.send({ t: 'tac_done' }); // the grace after it runs its last seconds (owner, 2026-10-22, inbattle.ts)
         }
       });
       banner.querySelectorAll<HTMLElement>('[data-cap]').forEach((b) => (b.onclick = () => this.send({ t: 'drift', action: 'capture', choice: b.dataset.cap as 'take' })));

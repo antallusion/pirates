@@ -2278,6 +2278,8 @@ export class Renderer {
     const hidden = (s.flags & SF.HIDDEN) !== 0 || (s.flags & SF.SWALLOWED) !== 0;
     const sinking = s.sinkT > 0 || (s.flags & SF.SINKING) !== 0;
     const sinkF = sinking ? clamp(s.sinkT / 6, 0, 1) : 0;
+    // Owner, 2026-10-22: another captain in a battle (or just out of one) is out of everyone's reach — drawn dimmed.
+    const battleDim = !s.own && (s.flags & SF.IN_BATTLE) !== 0;
     // Heel: she leans to leeward with the wind on her beam and her canvas set; water in the hold adds a list.
     const heel = shipHeel(s.h, state.wind[0], state.wind[1], s.sail, cls.tier, s.own ? state.you?.water ?? 0 : 0, settings().reduceMotion ? 0 : Math.sin(this.time * 0.9 + s.id));
     g.save();
@@ -2310,7 +2312,7 @@ export class Renderer {
       g.translate(heel * beam * 0.18, 0);
       g.transform(1 - Math.abs(heel) * 0.14, 0, heel * 0.06, 1, 0, 0);
     }
-    g.globalAlpha = (hidden ? 0.45 : 1) * (1 - sinkF * 0.85);
+    g.globalAlpha = (hidden ? 0.45 : battleDim ? 0.6 : 1) * (1 - sinkF * 0.85);
     const stage = curseStageFromFlags(s.flags);
     const art = bossArt(s.id, state) ?? cls.sprite;
     const hullImg = this.shipImage(cls.id, stage, art);
@@ -2330,7 +2332,7 @@ export class Renderer {
         g.drawImage(t, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
       }
     }
-    g.globalAlpha = (hidden ? 0.45 : 1) * (1 - sinkF * 0.85);
+    g.globalAlpha = (hidden ? 0.45 : battleDim ? 0.6 : 1) * (1 - sinkF * 0.85);
     this.drawPennant(s, len, beam, state);
     g.restore();
 
@@ -4502,7 +4504,9 @@ export class Renderer {
       ? `${col?.label ? ` · ${col.label}` : ''}${col?.noBoard ? ` · ${LF('mark.noBoard')}` : ''}${s.flags & SF.SHAME ? L('shame') : ''}${s.flags & SF.BOUNTY ? L('bounty') : ''}${s.flags & SF.DUEL ? L('duel') : ''}${s.flags & SF.GUARDED ? L('guarded') : ''}`
       : '';
     if (s.flags & SF.SHAME) g.fillStyle = 'rgba(224,119,107,0.9)';
-    g.fillText(tag + marks + (s.flags & SF.SURRENDERED ? L('struck') : '') + (s.flags & SF.TRUCE ? ` · ${LOUT('cf.truce')}` : ''), x, y + 11);
+    g.fillText(tag + marks + (s.flags & SF.SURRENDERED ? L('struck') : '') + (s.flags & SF.TRUCE ? ` · ${LOUT('cf.truce')}` : '') + (s.flags & SF.IN_BATTLE ? L('inBattle') : ''), x, y + 11);
+    // In a battle (owner, 2026-10-22): two crossed sabres over her name — nobody may touch her till it is over.
+    if (s.flags & SF.IN_BATTLE) crossedSwords(g, x - 30, y - 6);
     // A ceasefire bought from her (owner, 2026-10-18): a white flag over her name, on its staff.
     if (s.flags & SF.TRUCE) {
       const fx = x + 30, fy = y - 2;
@@ -4740,6 +4744,35 @@ export function critIcon(g: CanvasRenderingContext2D, part: CritPart, x: number,
       }
       break;
     }
+  }
+  g.restore();
+}
+
+/** Two crossed sabres in a dark disc (a captain «в бою», owner 2026-10-22): drawn in code, no art of its own. */
+function crossedSwords(g: CanvasRenderingContext2D, x: number, y: number): void {
+  g.save();
+  g.translate(x, y);
+  g.fillStyle = 'rgba(14,12,10,0.82)';
+  g.beginPath();
+  g.arc(0, 0, 8, 0, Math.PI * 2);
+  g.fill();
+  g.strokeStyle = 'rgba(201,168,92,0.9)';
+  g.lineWidth = 1;
+  g.stroke();
+  g.lineCap = 'round';
+  for (const k of [1, -1]) {
+    g.strokeStyle = '#d9d2c0';
+    g.lineWidth = 1.6;
+    g.beginPath();
+    g.moveTo(-4.5 * k, 4.5);
+    g.lineTo(4.5 * k, -4.5);
+    g.stroke();
+    g.strokeStyle = '#c9a85c';
+    g.lineWidth = 1.4;
+    g.beginPath();
+    g.moveTo(-5.5 * k, 2.2);
+    g.lineTo(-2.2 * k, 5.5);
+    g.stroke();
   }
   g.restore();
 }

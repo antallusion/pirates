@@ -3070,7 +3070,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   for (const s of state.ships.values()) {
     if (!s.info) continue;
     const c = s.cur;
-    if (c.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED)) continue;
+    if (c.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED | SF.IN_BATTLE)) continue;
     const cls = SHIP_CLASSES[s.info.classId];
     if (beastOfClass(s.info.classId)) continue; // no decks on a beast of the sea
     if (isZoneBossClass(s.info.classId)) continue; // nor on a zone boss: guns only (docs/21)
@@ -3316,7 +3316,7 @@ let helmAt = -1e9;
 function attackable(id: number | null): boolean {
   const s = id !== null ? state.ships.get(id) : undefined;
   const own = state.ownDisplay;
-  if (!s?.info || !own || state.self?.dockedAt || s.cur.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED)) return false;
+  if (!s?.info || !own || state.self?.dockedAt || s.cur.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED | SF.IN_BATTLE)) return false;
   if (dist(own.x, own.y, s.cur.x, s.cur.y) > 2500) return false;
   if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(s.cur.flags & SF.HOSTILE) && !fairCaptain(s.cur.flags, s.info)) return false;
   return true;
@@ -3664,12 +3664,22 @@ const TM_DWELL = 140;
 /** A finger's choices go by themselves after this long untouched (a phone). */
 const TM_IDLE = 6000;
 
+/** «Она в бою» once a tap (not once a frame), when she would be touched. */
+let inBattleSaidAt = -1e9, inBattleSaidOf = -1;
+function inBattleSaid(id: number): void {
+  const now = performance.now();
+  if (id === inBattleSaidOf && now - inBattleSaidAt < 4000) return;
+  inBattleSaidAt = now;
+  inBattleSaidOf = id;
+  hud.toast(seaWord('tm.inBattle'), 'info');
+}
+
 /** The grapples may take her now: in their reach, a ship a grapple takes, one «На абордаж» offers (gatherActs). */
 function canBoardNow(id: number): boolean {
   const s = state.ships.get(id), own = state.ownDisplay, st = state.ownStats, you = state.you;
   if (!s?.info || !own || !st || !you || grabbed() || you.flags & SF.BOARDING) return false;
   const c = s.cur;
-  if (c.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED | SF.SURRENDERED) || unboardableMark(id)) return false;
+  if (c.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED | SF.IN_BATTLE | SF.SURRENDERED) || unboardableMark(id)) return false;
   if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(c.flags & SF.HOSTILE) && !fairCaptain(c.flags, s.info)) return false;
   return dist(own.x, own.y, c.x, c.y) <= st.boardingRange + (st.beam + SHIP_CLASSES[s.info.classId].beam) / 2;
 }
@@ -3682,6 +3692,11 @@ function targetChoices(about: string): { choices: TmChoice[]; name: string; x: n
   if (!own || !you || !self || self.dockedAt || !Number.isFinite(id)) return null;
   if (kind === 'ship') {
     const s = state.ships.get(id), f = shipFight(id);
+    // Owner, 2026-10-22: a captain in a battle (or just out of one) is out of everyone's reach — said, not silently refused.
+    if (s?.info && id !== state.entityId && s.cur.flags & SF.IN_BATTLE) {
+      inBattleSaid(id);
+      return null;
+    }
     if (!s?.info || !f?.attackable) return null;
     const board = canBoardNow(id);
     const beast = beastOfClass(s.info.classId);

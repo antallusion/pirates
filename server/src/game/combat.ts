@@ -50,6 +50,7 @@ import { giftOnHit } from './shipgifts.ts';
 import { kitCrit, passiveNums, skillNumber, volleyKit } from './seaskill.ts';
 import type { VolleyKit } from './seaskill.ts';
 import { truceHit } from './ceasefire.ts'; // owner, 2026-10-18
+import { battleBlocked, dropGrace, inBattle, SELF_IN_BATTLE_WHY } from './inbattle.ts'; // owner, 2026-10-22
 
 /** A broadside laid on a mark by her gun captains (auto-aim, the sea's own gunners): the balls converge on `aimAt`. */
 export interface Lay {
@@ -189,6 +190,7 @@ export function shotDrift(game: Game, ship: ShipEntity, heading: number, dist: n
  *  gunners aim off for (0 for a captain, who sees the drift on her mark and leads it herself). */
 export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist: number, aimAt?: { x: number; y: number }, windAllow = 0, lay?: Lay): string | null {
   if (!ship.alive || ship.docked || ship.grappled || ship.surrendered) return 'Cannot fire now';
+  if (inBattle(game, ship)) return SELF_IN_BATTLE_WHY; // her party fights ashore: the guns wait (owner, 2026-10-22)
   if (ship.hasEffect('submerged') || ship.hasEffect('ghost_return')) return 'The guns are under black water';
   if (ship.reload[side] > 0) return 'Guns are still loading';
   const guns = ship.stats.gunsPerSide - ship.gunsDisabled[side];
@@ -306,6 +308,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   ship.lastCombat = game.now;
   ship.gunsAt = game.now;
   ship.protectedUntil = 0;
+  dropGrace(ship); // her guns speak: the grace after her battle is over (owner, 2026-10-22)
   ship.repairing = ship.repairing && ship.hasFlag('battle_repair');
   game.emit({ k: 'volley', ship: ship.id, side, ammo, balls, spd: shotSpeed !== 1 ? shotSpeed : undefined, ...(focus.perfect ? { perfect: true as const } : {}) }, ship.state.x, ship.state.y);
   return null;
@@ -349,6 +352,7 @@ export function dash(game: Game, ship: ShipEntity): string | null {
 /** Bow/stern chasers: long guns aimed at a point within a cone along the keel. Great for chases. */
 export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: number, ty: number, windAllow = 0): string | null {
   if (!ship.alive || ship.docked || ship.grappled || ship.surrendered) return 'Cannot fire now';
+  if (inBattle(game, ship)) return SELF_IN_BATTLE_WHY;
   const count = end === 'bow' ? ship.stats.bowChasers : ship.cls.sternChasers;
   if (count <= 0) return `No ${end} chasers on a ${ship.cls.name}`;
   if (ship.chaserReload[end] > 0) return 'Chasers are still loading';
@@ -382,6 +386,7 @@ export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: num
   ship.lastCombat = game.now;
   ship.gunsAt = game.now;
   ship.protectedUntil = 0;
+  dropGrace(ship); // her guns speak: the grace after her battle is over (owner, 2026-10-22)
   const spd = 1 + tval(ship.stats, 'shotSpeed');
   game.emit({ k: 'volley', ship: ship.id, side: end, ammo, balls, spd: spd !== 1 ? spd : undefined }, ship.state.x, ship.state.y);
   return null;
@@ -526,6 +531,9 @@ export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): 
   // Two ships lashed in a boarding are out of the sea's fight until it is over (owner, 2026-10-01): no third ship
   // may fire on, ram or board either of them.
   if (b.grappled && (!a || b.boarding!.with !== a.id)) return 'She is locked in a boarding: no one may touch her until it is over.';
+  // Owner, 2026-10-22: a captain in any battle (and a short while after it) is out of the sea's reach (inbattle.ts).
+  const battle = battleBlocked(game, a, b);
+  if (battle) return battle;
   if (!a) return null;
   // Duels, the Green Pennant (pvp.ts).
   const pv = pvpBlocked(game, a, b);
@@ -872,6 +880,8 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   if (!target.alive || target.docked || target.god) return 0;
   // Locked in a boarding: nothing from outside lands on her (see damageBlocked).
   if (target.grappled && (!source || target.boarding!.with !== source.id)) return 0;
+  // Owner, 2026-10-22: in a battle, or in its grace, nothing of the sea harms her (inbattle.ts).
+  if (source !== target && battleBlocked(game, source, target)) return 0;
   // A ship across a zone line: the hit is hers to take in her own zone.
   if (target.ghost) {
     game.zone?.forwardHit(target, d, source);

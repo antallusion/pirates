@@ -21,6 +21,7 @@ import { DEG, angleDiff, dist, headingVec, segmentHitsHull } from '../../../shar
 import { curseStage } from '../../../shared/src/protocol.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { applyDamage, damageBlocked, igniteShip } from './combat.ts';
+import { dropGrace } from './inbattle.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -217,6 +218,7 @@ export function fireMount(game: Game, ship: ShipEntity, tx: number, ty: number):
   ship.lastCombat = now;
   ship.gunsAt = now;
   ship.protectedUntil = 0;
+  dropGrace(ship); // owner, 2026-10-22: her grace after a battle ends as she fires
   return null;
 }
 

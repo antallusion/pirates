@@ -35,6 +35,7 @@ import { contractOver } from './admiralty.ts'; // docs/19 E15
 import { arenaOver, isArenaFight } from './arena.ts'; // docs/19 E14
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { softenFoe } from './firstfights.ts';
+import { battleEnded, battlePartner, dropGrace, inBattle, IN_BATTLE_WHY, SELF_IN_BATTLE_WHY, untouchable } from './inbattle.ts'; // owner, 2026-10-22
 import { kitNums, skillNumber } from './seaskill.ts';
 
 const AGG = {
@@ -135,6 +136,13 @@ export function startBoarding(game: Game, a: ShipEntity, b: ShipEntity, aggressi
     game.toastShip(a, ZB_NO_BOARD, 'bad');
     return;
   }
+  // Owner, 2026-10-22 (a stack fight won, then a pirate's boarding she could not play): never a second battle — not on a
+  // ship in one (a boarding, a group mate's, her party's fight ashore or its reckoning), nor on one in its grace.
+  if (a === b || a.boarding || b.boarding || a.boardAlly !== null || b.boardAlly !== null || inBattle(game, a) || inBattle(game, b) || (untouchable(game, b) && !battlePartner(a, b))) {
+    if (a.isPlayer) game.toastShip(a, inBattle(game, a) ? SELF_IN_BATTLE_WHY : IN_BATTLE_WHY, 'bad');
+    return;
+  }
+  dropGrace(a); // she grapples another: her own grace after a battle is over
   truceBoarded(game, a, b); // grappling a ship under her white flag breaks the truce (owner, 2026-10-18)
   softenFoe(game, a, b); // a novice's first three fights (docs/23 item 81): before the men are counted
   const now = game.now;
@@ -699,6 +707,7 @@ export function resendBoarding(game: Game, ship: ShipEntity): void {
 
 function closeFight(game: Game, s: ShipEntity): void {
   if (!s.isPlayer) return;
+  battleEnded(game, s); // owner, 2026-10-22: the grace after it, and her reckoning still up
   closeTac(game, s);
   const ses = game.sessionOf(s);
   if (ses) game.sendTo(ses, { t: 'board_fight', view: null });

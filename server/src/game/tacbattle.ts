@@ -3401,15 +3401,50 @@ export function stepBattle(bt: TacBattle, now: number, rng: Rng): void {
     if ((d.ready[0] && d.ready[1]) || now >= d.ends) recStep(bt, [3], () => endDeploy(bt, now, rng));
     return;
   }
-  if (bt.over || bt.active === null) return;
+  if (bt.over) return;
+  if (bt.active === null) {
+    // The watchdog (owner, 2026-10-22: «бой где я не мог ходить и вообще ничего делать»): a battle with nobody's turn
+    // and no end is stuck — a moment past its clock the next stack is given its turn.
+    if (now >= bt.turnEnds + TAC_STUCK_SECS) unstick(bt, now, rng);
+    return;
+  }
   const s = stackById(bt, bt.active);
   if (!s) return nextTurn(bt, now, rng);
   const h = capOf(bt, s);
+  const was = bt.active, ends = bt.turnEnds, ai = bt.aiAt;
+  // (a turn given anew — the next stack's, or hers again on good morale — sets its clocks afresh)
+  const stuck = () => !bt.over && bt.active === was && bt.turnEnds === ends && bt.aiAt === ai;
   if (h.auto) {
-    if (now >= bt.aiAt) aiAct(bt, now, rng);
-    return;
+    if (now < bt.aiAt) return;
+    aiAct(bt, now, rng);
+  } else {
+    if (now < bt.turnEnds) return;
+    timeOut(bt, now, rng);
+    // Her turn ran out and «defend» could not end it: the sea's mind plays it (the auto-move).
+    if (stuck()) aiAct(bt, now, rng);
   }
-  if (now >= bt.turnEnds) timeOut(bt, now, rng);
+  // Nothing at all came of the turn (no order the rules would take): the watchdog ends the battle's deadlock.
+  if (stuck()) unstick(bt, now, rng);
+}
+
+/** Seconds past a turn's clock a battle with nobody's turn waits before the watchdog moves it on. */
+export const TAC_STUCK_SECS = 2;
+
+/** The watchdog's last resort: the next stack is given its turn; and should the field refuse even that, the battle is
+ *  reckoned at once as its rounds' end is (the side with more of its hit points left wins). */
+function unstick(bt: TacBattle, now: number, rng: Rng): void {
+  const was = bt.active;
+  if (was !== null) {
+    const i = bt.queue.indexOf(was);
+    if (i >= 0) bt.queue.splice(i, 1);
+  }
+  bt.active = null;
+  nextTurn(bt, now, rng);
+  bt.seq++;
+  if (bt.over || (bt.active !== null && bt.active !== was)) return;
+  const left = (side: 0 | 1) => alive(bt).filter((x) => x.side === side).reduce((n, x) => n + hpOf(x), 0) / Math.max(1, bt.heroes[side].startHp);
+  bt.over = { winner: bt.siege ? 1 : left(0) >= left(1) ? 0 : 1, why: 'rounds' };
+  bt.active = null;
 }
 
 /** Her turn run out (TAC_TURN, or her chess clock spent): the stack defends. */

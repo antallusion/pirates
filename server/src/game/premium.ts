@@ -357,8 +357,9 @@ export function buyScrolls(game: Game, s: PlayerSession, packId: string): string
   trackEvent(game, s.accountId, 'buy', { amount: p.price, product: `scrolls:${p.id}` });
   sendBalance(game, s);
   game.toastShip(s.ship, `Auto-battle scrolls: +${p.n} for ${p.price} doubloons (${game.db.scrolls(s.accountId)} in all).`, 'gold');
-  if (s.ship) resendBoarding(game, s.ship);
-  resendLandFight(game, s);
+  // (one battle at a time, inbattle.ts: a live boarding's view is never laid over by a fight ashore's reckoning)
+  if (s.ship && (s.ship.boarding || s.ship.boardAlly !== null)) resendBoarding(game, s.ship);
+  else resendLandFight(game, s);
   return null;
 }
 

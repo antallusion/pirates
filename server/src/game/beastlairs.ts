@@ -11,6 +11,7 @@
 // A lair is not a ship: it stands where it is, never moves off its island (docs/18 #21), and its state is the world's
 // (down until it stands again, its creatures as the last fight left them). Every roll here is on this system's own Rng.
 
+import { battleCardClosed, battleEnded, dropGrace } from './inbattle.ts'; // owner, 2026-10-22
 import { lackBerth, lackHammocks, lackMore, lackSlot } from '../../../shared/src/data/buyfail.ts';
 import { UNITS, armyMen, armyPower, armyWeight, isPremiumUnit } from '../../../shared/src/data/army.ts';
 import { onboardingProtected } from './onboarding.ts';
@@ -600,6 +601,8 @@ export function startFight(game: Game, s: PlayerSession, id: string, force = fal
   const why = fightWhy(game, s, l, force);
   if (why === LAIR_FAR && !force) return lairApproach(game, s, l); // seaux: sail in to its shore first
   if (why) return why;
+  const busy = secondFight(game, s);
+  if (busy) return busy;
   const ship = s.ship!;
   const base = sideOf(game, ship, ship, true);
   const party = landParty(base.army ?? []);
@@ -635,6 +638,16 @@ function freeQuickAshore(bt: TacBattle): void {
   bt.quick = [sideStrength(bt, 0) >= TAC_LEN.quick * sideStrength(bt, 1), false];
 }
 
+/** Owner, 2026-10-22: never a second battle — her party does not land while her ship is grappled or her mates' boarding
+ *  holds her (and a fight ashore is her own battle: the grace after another ends with it). */
+function secondFight(game: Game, s: PlayerSession): string | null {
+  const ship = s.ship;
+  if (!ship) return 'Put to sea first.';
+  if (ship.boarding || ship.boardAlly !== null || L(game).fights.has(s.accountId)) return 'Finish your battle first.';
+  dropGrace(ship);
+  return null;
+}
+
 export const landFighting = (game: Game, s: PlayerSession): boolean => all.get(game)?.fights.has(s.accountId) ?? false;
 /** docs/35: her fight ashore still being fought (its end shown on the screen is no fight: the fallen may be raised). */
 export const landFightOn = (game: Game, s: PlayerSession): boolean => { const f = all.get(game)?.fights.get(s.accountId); return !!f && !f.done; };
@@ -662,6 +675,8 @@ function sendFight(game: Game, s: PlayerSession): void {
 export function startCreatureFight(game: Game, s: PlayerSession, ext: ExtFight, name: string, men: ArmyStack[], face: string, level: number): string | null {
   const S = L(game);
   if (S.fights.has(s.accountId)) return 'Your party is ashore already.';
+  const busy = secondFight(game, s);
+  if (busy) return busy;
   const ship = s.ship!;
   const base = sideOf(game, ship, ship, true);
   const party = landParty(base.army ?? []);
@@ -763,6 +778,7 @@ export function closeFight(game: Game, s: PlayerSession): void {
   if (!f) return;
   if (!f.done) return;
   S.fights.delete(s.accountId);
+  battleCardClosed(game, s.ship, true); // owner, 2026-10-22: a moment's grace more as she puts it away
   game.sendTo(s, { t: 'board_tac', view: null });
   sendLairCard(game, s, true);
   sendLairs(game, s, true);
@@ -775,6 +791,7 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
   if (f.done) return;
   f.done = true;
   f.closeAt = game.now + 45;
+  battleEnded(game, s.ship, false); // owner, 2026-10-22: the grace after it (its reckoning up keeps her in it besides)
   const S = L(game);
   const bt = f.bt;
   const ship = s.ship!;

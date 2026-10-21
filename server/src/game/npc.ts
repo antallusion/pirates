@@ -4,6 +4,7 @@
 //  * active — near a player: full sailing physics, perception, tacking and combat AI.
 // Every NPC has a purpose: merchants haul real cargo between real markets (docs/01 §5).
 
+import { untouchable } from './inbattle.ts'; // owner, 2026-10-22
 import { convoyFoe, raidEscort } from './raiding.ts';
 import { joinedRaid } from './npcwars.ts';
 import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
@@ -233,6 +234,8 @@ export function planWander(game: Game, ship: ShipEntity, brain: NpcBrain): boole
 
 export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): boolean {
   if (npc.id === other.id || !other.alive || other.docked) return false;
+  // Owner, 2026-10-22: a captain in a battle (or just out of one) is nobody's prey (inbattle.ts).
+  if (other.accountId !== null && untouchable(game, other)) return false;
   // A ceasefire bought from her (owner, 2026-10-18): that captain is no foe of hers until it lapses or she fires.
   if (npc.truceUntil > game.now && (game.npcs.get(npc.id)?.truce?.get(other.id) ?? 0) > game.now) return false;
   // The adventure map's guards (docs/17 H4): they bar a captain's way; the sea's own ships leave them be.
@@ -560,6 +563,13 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
 
   // Ships lashed in a boarding are out of the fight until it is over: no one hunts them or flees from them.
   if (prey && (prey as ShipEntity).grappled && ship.boarding?.with !== (prey as ShipEntity).id) prey = null;
+  // A captain in a battle of hers (a stack's, a lair's, a boarding) or in its grace: dropped, whatever brought her
+  // (a hunt, the lesson, a chase) — owner, 2026-10-22 (a pirate grappled her as the gulls' fight ended).
+  if (prey && untouchable(game, prey as ShipEntity)) {
+    if (brain.target === (prey as ShipEntity).id) brain.target = null;
+    prey = null;
+  }
+  if (threat && untouchable(game, threat as ShipEntity)) threat = null;
   // Under a white flag to her (ceasefire.ts): never her prey, whatever brought her (a hunt, a chase, a pack's call).
   if (prey && ship.truceUntil > now && (brain.truce?.get((prey as ShipEntity).id) ?? 0) > now) prey = null;
   if (threat && (threat as ShipEntity).grappled) threat = null;

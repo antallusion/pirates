@@ -10,6 +10,7 @@
 // it lies on the water to be finished. Its carcass floats for five minutes to be flensed alongside, hove to, and the
 // blood in the water brings the sharks — and in the cold seas the orcas.
 
+import { untouchable } from './inbattle.ts'; // owner, 2026-10-22
 import { legacyPrizeUnits, targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { worldGoalBeast } from './worldgoals.ts';
 import { sectorAt } from '../../../shared/src/world/sectors.ts';
@@ -537,7 +538,8 @@ function think(game: Game, b: ShipEntity, br: Brain, dt: number, now: number): v
     away(game, b, threat ? threat.state : br.home, speedOf(b, br, 1), dt);
     return;
   }
-  const target = br.bay && hunted ? foe : chooseTarget(game, b, br, now);
+  const pick = br.bay && hunted ? foe : chooseTarget(game, b, br, now);
+  const target = pick && untouchable(game, pick) ? null : pick; // a captain in a battle is nobody's prey (owner, 2026-10-22)
   if (target) {
     br.mode = 'hunt';
     br.target = target.id;
@@ -623,7 +625,7 @@ function chooseTarget(game: Game, b: ShipEntity, br: Brain, now: number): ShipEn
   let best: ShipEntity | null = null, bd = reach;
   game.forShipsNear(b.state.x, b.state.y, reach, (o) => {
     if (!o.alive || o.docked || o.npcRole === 'beast' || o.cls.monster || o.hasEffect('submerged')) return;
-    if (o.protectedUntil > now) return;
+    if (o.protectedUntil > now || untouchable(game, o)) return; // (in a battle, or just out of one: owner, 2026-10-22)
     const frac = o.hull / Math.max(1, o.stats.hullMax);
     if (br.beast === 'orca' && !(frac < (migrating ? 0.8 : 0.6))) return;
     if (br.beast === 'orca' && o.hasFlag('fh_white_orca')) return; // the White Orca's figure on the bow

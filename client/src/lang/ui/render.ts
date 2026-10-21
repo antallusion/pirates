@@ -11,6 +11,7 @@ export const EN = {
   shame: ' · SHAME',
   bounty: ' · bounty',
   duel: ' · duelling',
+  inBattle: ' · in battle',
   struck: ' · STRUCK',
   eye: 'hull {hull}% · crew {crew} · morale {morale} · P{port} S{stbd}',
   /** Under her mark's ring (owner, 2026-10-07): inside the close fight's band, where her gun captains fire, or not yet. */
@@ -65,6 +66,7 @@ export const RU: Record<keyof typeof EN, string> = {
   shame: ' · ПОЗОР',
   bounty: ' · награда за голову',
   duel: ' · дуэль',
+  inBattle: ' · в бою',
   struck: ' · СПУСТИЛ ФЛАГ',
   eye: 'корпус {hull}% · экипаж {crew} · дух {morale} · Л{port} П{stbd}',
   'range.in': 'в дальности',

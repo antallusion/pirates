@@ -183,6 +183,7 @@ import type { DelayedStrike } from './abilities.ts';
 import { boardingRangeBetween, canBoard, claimPrize, cutGrapples, resendBoarding, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
 import { assistPref, joinBoarding } from './boardgroup.ts'; // docs/25 block Е
 import { tacAction } from './tactical.ts';
+import { battleCardClosed, untouchable } from './inbattle.ts'; // owner, 2026-10-22
 import { replayList, replayOf } from './tacreplay.ts'; // owner, 2026-10-16: «Повтор»
 import { surrenderBlocked, surrenderClosed } from './struck.ts';
 import { endStreak, onStreakKill, streakAhead } from './streak.ts';
@@ -3668,15 +3669,20 @@ export class Game {
         return;
       }
       case 'board_cut':
-        if (landFighting(this, s)) return err(landTac(this, s, 'cut')); // back to the boats from a lair (docs/18 II)
+        // (the battle she is in takes the order: a boarding's before a fight ashore — owner, 2026-10-22, the two never
+        // stand together now, inbattle.ts, but an order must never go to a battle over while a live one waits)
+        if (landFighting(this, s) && !ship.boarding) return err(landTac(this, s, 'cut')); // back to the boats from a lair (docs/18 II)
         return err(cutGrapples(this, ship));
       case 'board_tactic':
         return err(setTactic(this, ship, msg.tactic));
       case 'board_duel':
         return err(duelAction(this, ship, msg.action, typeof msg.at === 'number' ? msg.at : undefined));
       case 'tac':
-        if (landFighting(this, s)) return err(landTac(this, s, msg.act)); // the battle ashore (docs/18 II)
+        if (landFighting(this, s) && !ship.boarding && ship.boardAlly === null) return err(landTac(this, s, msg.act)); // the battle ashore (docs/18 II)
         return err(tacAction(this, ship, msg.act));
+      case 'tac_done':
+        battleCardClosed(this, ship); // owner, 2026-10-22: the reckoning put away — a moment's grace more, then the sea
+        return;
       case 'tac_replay':
         // Owner, 2026-10-16 («Повтор»): a fight of her last twenty played again, or their list.
         if (!s.authed) return;
@@ -4718,8 +4724,9 @@ export class Game {
     noticesAboard(this, s); // her Telegram notices' switches; «давно не заходили» may come again
     if (away) this.sendTo(s, { t: 'away', view: away });
     // Back at the helm in the middle of a fight (a reload, a dropped line): the fight as it stands, or it went on unseen.
-    if (s.ship) resendBoarding(this, s.ship);
-    resendLandFight(this, s);
+    // (one battle at a time, inbattle.ts: a live boarding's view is never laid over by a fight ashore's reckoning)
+    if (s.ship && (s.ship.boarding || s.ship.boardAlly !== null)) resendBoarding(this, s.ship);
+    else resendLandFight(this, s);
   }
 
   private onDisconnect(s: PlayerSession): void {
@@ -4957,7 +4964,7 @@ export class Game {
       o.id, Math.round(o.state.x * 10) / 10, Math.round(o.state.y * 10) / 10, Math.round(o.state.heading * 1000) / 1000,
       Math.round(o.state.speed * 10) / 10, Math.round(o.state.sail * 100) / 100,
       Math.round((o.hull / o.stats.hullMax) * 1000) / 1000, Math.round((o.sails / o.stats.sailHpMax) * 100) / 100,
-      o.flagsFor(null, false, this.now) | (frame.tethered.has(o.id) ? SF.TETHERED : 0) | (o.isPlayer ? pvpFlags(this, o) : 0), Math.round((o.crew / Math.max(1, o.stats.crewMax)) * 100) / 100,
+      o.flagsFor(null, false, this.now) | (frame.tethered.has(o.id) ? SF.TETHERED : 0) | (o.isPlayer ? pvpFlags(this, o) | (untouchable(this, o) ? SF.IN_BATTLE : 0) : 0), Math.round((o.crew / Math.max(1, o.stats.crewMax)) * 100) / 100,
     ];
     r = { row, key: `${row[1]},${row[2]},${row[3]},${row[4]},${row[5]},${row[6]},${row[7]},${row[8]},${row[9]}` };
     frame.rows.set(o.id, r);
@@ -5095,7 +5102,7 @@ export class Game {
           stern: me.cls.sternChasers ? 1 - me.chaserReload.stern / (CHASER_RELOAD * seaReload(me)) : 0,
           mount: me.loadout.mount ? 1 - me.mountReload / mountReloadTime(me) : 0,
         },
-        ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now) | (frame.tethered.has(me.id) ? SF.TETHERED : 0) | pvpFlags(this, me), combat: me.inCombat(this.now), underFire: me.underFire(this.now),
+        ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now) | (frame.tethered.has(me.id) ? SF.TETHERED : 0) | pvpFlags(this, me) | (untouchable(this, me) ? SF.IN_BATTLE : 0), combat: me.inCombat(this.now), underFire: me.underFire(this.now),
         water: Math.min(1, me.water / floodCapacity(me)), leaks: me.leaks, station: me.station,
         resolve: me.resolve, dread: me.dread, sanity: me.sanity,
       };

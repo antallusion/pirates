@@ -256,6 +256,11 @@ export class ShipEntity {
   protectedUntil = 0;
   /** A boarding just lost (owner, 2026-10-05): no grapples bite her again until then. */
   boardShieldUntil = 0;
+  /** Owner, 2026-10-22 («если я сражаюсь с кем-то, то делай корабль неактивным для окружения вообще»): a short while
+   *  after a battle of hers ends she is still out of the sea's reach (inbattle.ts) — until then (game seconds). */
+  battleGraceUntil = 0;
+  /** ...and while the battle's reckoning is still on her screen (from its end: a cap, inbattle.ts BATTLE_CARD_MAX). */
+  battleCardAt = 0;
   removeAt = 0; // for escorts/despawn timers
   ownerId: number | null = null; // escort owner entity id
   wantedCache = 0;

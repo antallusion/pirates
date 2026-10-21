@@ -134,6 +134,8 @@ export type ClientMsg =
   | { t: 'tac'; act: TacAction }
   /** Owner, 2026-10-16 («Повтор»): a fight of her last twenty played again (`id`), or the list of them (no id). */
   | { t: 'tac_replay'; id?: string }
+  /** Owner, 2026-10-22: she put a battle's reckoning away (the grace after it runs its last seconds, inbattle.ts). */
+  | { t: 'tac_done' }
   /** The captain would rather fight boardings the old way, round by round (Boarding 2.0). */
   | { t: 'board_pref'; classic: boolean; /** Owner, 2026-10-16: set her stacks before round one (absent: as before, on) */ deploy?: boolean }
   /** docs/25 item 64: come aboard a group mate's boarding (`with`: the ship that grappled, BoardOffer.with) with the kinds of
@@ -1099,6 +1101,7 @@ export const SF = {
   NO_BOARD: 1 << 25, // «Абордаж: выкл» (docs/24 C1): she boards nobody and is boarded by nobody, guns only
   GREEN_PENNANT: 1 << 26, // a young captain under the Green Pennant: neutral to captains in contested water (docs/24)
   TRUCE: 1 << 27, // a ship of the sea under a white flag: a ceasefire bought from her holds (owner, 2026-10-18)
+  IN_BATTLE: 1 << 28, // a captain in a battle (or just out of one): nobody may touch her (owner, 2026-10-22, inbattle.ts)
 } as const;
 
 /**
