@@ -10,7 +10,7 @@ import { CAPTAINS, CAPTAIN_IDS, captainPrice } from '../../../shared/src/data/ca
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
-import { move, paymentsOpen, sendBalance } from './premium.ts';
+import { move, paymentsOpen, sendBalance, webPayOpen } from './premium.ts';
 import { trackEvent } from './liveops.ts';
 
 /** The ledger's kind of a captain's purchase (or grant): its detail is the captain's id. */
@@ -36,7 +36,7 @@ export function grantCaptain(game: Game, accountId: number, id: CaptainId): void
 
 /** Her account's captains, its doubloons and whether payments are open, to the choice screen. */
 export function sendCaptainShop(game: Game, s: PlayerSession, o: { bought?: CaptainId; why?: string } = {}): void {
-  game.sendTo(s, { t: 'captain_shop', owned: ownedCaptains(game, s.accountId), balance: game.db.doubloons(s.accountId), pay: paymentsOpen(game), ...(o.bought ? { bought: o.bought } : {}), ...(o.why ? { why: o.why } : {}) });
+  game.sendTo(s, { t: 'captain_shop', owned: ownedCaptains(game, s.accountId), balance: game.db.doubloons(s.accountId), pay: paymentsOpen(game), web: webPayOpen(game, s.accountId), ...(o.bought ? { bought: o.bought } : {}), ...(o.why ? { why: o.why } : {}) });
 }
 
 /** A premium captain bought for doubloons (null: done; else why not — every check before a coin moves). */

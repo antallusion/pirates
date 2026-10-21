@@ -32,7 +32,7 @@ import { placeName } from './maps.ts';
 import { chipRow, railTabs, winHead } from './kit/window.ts';
 import type { WinTab } from './kit/window.ts';
 import { inTelegram, onTgHost, tgPackButton, tgPayNote, starIcon } from '../tg.ts'; // the packs for Telegram Stars (docs/27)
-import { doubloonIcon, packPrice, payIn, payOpen, priceHtml, priceText, realHtml, topUpThenBuy } from './price.ts';
+import { doubloonIcon, packPrice, payIn, payOpen, priceHtml, priceText, realHtml, topUpThenBuy, viaCheckout } from './price.ts';
 import { inVk, vkBuy, vkPackButton, vkPayNote } from '../vk.ts'; // the packs for VK's votes (docs/36)
 import { cosL, cosShelf, wardrobe, wireCos } from './cosmetics.ts'; // docs/32 §12: the «Косметика» tab
 
@@ -236,11 +236,14 @@ function webShopLink(state: ClientState): string {
   return `<div class="pm-web"><p class="muted">${esc(L('top.webNote'))}</p><a class="btn btn-small btn-primary" href="${esc(href)}" target="_blank" rel="noopener">${esc(L('top.web'))}</a></div>`;
 }
 
-/** The top-up: the packs for Stars, the first top-up's double. */
-function topUp(v: PremiumView, state: ClientState): string {
+/** The top-up: the packs — for roubles through YooKassa in the browser, Stars in Telegram, votes in VK — and the first
+ *  top-up's double. */
+export function topUp(v: PremiumView, state: ClientState): string {
   const cur = payIn();
   const pay = payOpen(v.pay);
-  const buyBtn = (p: (typeof DOUBLOON_PACKS)[number]) => (cur === 'votes' ? vkPackButton(p.id, packPrice(p, 'votes')) : tgPackButton(p.id, p.stars));
+  // (the browser: YooKassa for her own account, in roubles — checkout.ts; Telegram: Stars; VK: votes)
+  const yk = viaCheckout();
+  const buyBtn = (p: (typeof DOUBLOON_PACKS)[number]) => (cur === 'votes' ? vkPackButton(p.id, packPrice(p, 'votes')) : yk ? `<button class="btn btn-small btn-primary pm-yk" data-pmyk="${esc(p.id)}" aria-label="${esc(`${L('yk.buy')}: ${packPrice(p, 'rub')}`)}">${esc(L('yk.buy'))}</button>` : tgPackButton(p.id, p.stars));
   const packs = DOUBLOON_PACKS.map((p) => {
     const n = p.n + p.bonus;
     const pct = p.bonus ? Math.round((p.bonus / p.n) * 100) : 0;
@@ -253,7 +256,7 @@ function topUp(v: PremiumView, state: ClientState): string {
   return `<div class="pm-top"><div class="pm-top-h"><div><h3 class="title-sm">${esc(L('top.title'))}</h3><p class="muted">${esc(L('top.sub'))}</p></div>
       <button class="btn btn-small" data-pmback>${esc(L('top.back'))}</button></div>${first}
     <div class="pm-packs">${packs}</div>
-    ${pay ? `<p class="pm-paynote">${cur === 'votes' ? `${doubloonIcon('ico-sm')}${esc(vkPayNote())}` : `${starIcon()}${esc(tgPayNote())}`}</p>` : `<p class="pm-soon">${icon('tab_letters', '', 'ico-sm')}${esc(L('top.note'))}</p>`}${webShopLink(state)}</div>`;
+    ${pay ? `<p class="pm-paynote">${cur === 'votes' ? `${doubloonIcon('ico-sm')}${esc(vkPayNote())}` : yk ? `${doubloonIcon('ico-sm')}${esc(L('yk.note'))}` : `${starIcon()}${esc(tgPayNote())}`}</p>` : `<p class="pm-soon">${icon('tab_letters', '', 'ico-sm')}${esc(L('top.note'))}</p>`}${webShopLink(state)}</div>`;
 }
 
 const TAB_ICON: Record<ShopTab, string> = { sea: 'menu_ship', board: 'ui_cutlasses', isle: 'tab_isles', cos: 'cos_titles' };
@@ -389,6 +392,12 @@ export class PremiumWindow {
       b.disabled = true;
       setTimeout(() => (b.disabled = false), 4000);
       this.send({ t: 'premium', action: 'stars', pack: b.dataset.pmpack!, lang: lang() === 'ru' ? 'ru' : 'en' });
+    }));
+    // A pack for roubles in the browser: YooKassa's page for her own account (checkout.ts opens it).
+    root.querySelectorAll<HTMLButtonElement>('[data-pmyk]').forEach((b) => (b.onclick = () => {
+      b.disabled = true;
+      setTimeout(() => (b.disabled = false), 4000);
+      this.send({ t: 'premium', action: 'checkout', pack: b.dataset.pmyk!, lang: lang() === 'ru' ? 'ru' : 'en' });
     }));
     // A pack for VK's votes: VK's own order box (vk.ts); the doubloons come by the server's callback.
     root.querySelectorAll<HTMLButtonElement>('[data-pmvk]').forEach((b) => (b.onclick = () => {

@@ -57,6 +57,15 @@ export function setPayDesk(game: Game, desk: PayDesk | null): void {
   else desks.delete(game);
 }
 
+/** The web game's checkout (server/src/game/webshop.ts sets it): whether it takes this account's payment — YooKassa live,
+ *  or the test mode open to her (owner, 2026-10-21: «подключай кассу на сайт и в игре»). */
+const webPays = new WeakMap<Game, (accountId: number) => boolean>();
+export function setWebPay(game: Game, open: ((accountId: number) => boolean) | null): void {
+  if (open) webPays.set(game, open);
+  else webPays.delete(game);
+}
+export const webPayOpen = (game: Game, accountId: number): boolean => !!webPays.get(game)?.(accountId);
+
 /** Whether the top-up takes payments: the static switch, or a desk wired in at run time. */
 export function paymentsOpen(game: Game): boolean {
   return PAYMENTS_OPEN || desks.has(game);
@@ -360,6 +369,7 @@ export function premiumView(game: Game, s: PlayerSession): PremiumView {
     }),
     port: ship.docked ? game.portById(ship.docked)?.name ?? null : null,
     pay: paymentsOpen(game),
+    web: webPayOpen(game, s.accountId),
     scrolls: game.db.scrolls(s.accountId),
     shop: s.authed ? shopView(game, s) : undefined,
   };

@@ -15,6 +15,7 @@ import { inTelegram, starIcon } from '../tg.ts';
 import { inVk, vkBuy, vkPayOpen } from '../vk.ts'; // VK's votes (docs/36)
 import { packVotes, votesOf, votesText, votesWord } from '../../../shared/src/data/vk.ts';
 import { ask } from './confirm.ts';
+import { webPayOpen } from '../checkout.ts'; // the web game's YooKassa (owner, 2026-10-21)
 import { esc, fmt, icon } from './dom.ts';
 
 const L = dict(EN, RU);
@@ -32,10 +33,15 @@ export function payIn(): PayIn {
   return inTelegram() ? 'stars' : 'rub';
 }
 
-/** Whether a top-up can be paid here: in VK by its votes (the server takes VK's callback), elsewhere as the server says. */
+/** Whether a top-up can be paid here: in VK by its votes (the server takes VK's callback), in the browser by YooKassa (or,
+ *  before its keys are set, Stars by a link as before), in Telegram as the server says. */
 export function payOpen(serverPay: boolean): boolean {
-  return payIn() === 'votes' ? vkPayOpen() : serverPay;
+  const cur = payIn();
+  return cur === 'votes' ? vkPayOpen() : cur === 'rub' ? webPayOpen() || serverPay : serverPay;
 }
+
+/** The browser's top-up goes through YooKassa (checkout.ts): roubles here, and the server's checkout open to her. */
+export const viaCheckout = (): boolean => payIn() === 'rub' && webPayOpen();
 
 /** A price of `dbl` doubloons in real money: roubles one to one, Stars at the top-up's rate (¾ a doubloon), votes at
  *  seven roubles a vote. */
@@ -122,6 +128,22 @@ interface Pending {
 }
 let pending: Pending | null = null;
 const WAIT_MS = 15 * 60_000;
+const STASH = 'gravetide.pendingBuy';
+
+/** The waiting purchase kept over the YooKassa page opened in place of the game (checkout.ts), and taken back on return. */
+export function stashPending(): void {
+  try {
+    if (pending) sessionStorage.setItem(STASH, JSON.stringify(pending));
+  } catch { /* no storage */ }
+}
+try {
+  const raw = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(STASH) : null;
+  if (raw) {
+    sessionStorage.removeItem(STASH);
+    const p = JSON.parse(raw) as Pending;
+    if (p && typeof p.need === 'number' && p.msg && p.until > Date.now()) pending = p;
+  }
+} catch { /* no storage */ }
 
 /** The purchase waiting now (tests, the QA). */
 export const pendingBuy = (): Readonly<Pending> | null => (pending && pending.until > Date.now() ? pending : null);
@@ -175,6 +197,11 @@ export async function topUpThenBuy(o: { price: number; balance: number; name: st
   // in VK: VK's own order box for the tier (its answer, read defensively, ends the wait when unpaid — vk.ts)
   if (payIn() === 'votes') {
     void vkBuy(p.id, o.toast);
+    return true;
+  }
+  // in the browser: YooKassa for her own account (checkout.ts opens its page)
+  if (viaCheckout()) {
+    o.send({ t: 'premium', action: 'checkout', pack: p.id, lang: lang() === 'ru' ? 'ru' : 'en' });
     return true;
   }
   o.send({ t: 'premium', action: 'stars', pack: p.id, lang: lang() === 'ru' ? 'ru' : 'en' });

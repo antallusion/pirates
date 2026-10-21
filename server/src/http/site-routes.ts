@@ -7,6 +7,7 @@
 //   GET  /api/site/order?id=…                                               an order's state (the return page polls it)
 //   POST /api/site/pay/yookassa                                             YooKassa's webhook (re-fetched, never trusted)
 //   GET|POST /api/site/pay/test?order=…                                     the test mode's fake checkout
+//   GET  /api/site/pay/back?order=…                                         the web game's buyer back from the checkout
 // No cookies and no sign-in: a cross-site page can neither read these answers (no CORS) nor make an order in a buyer's
 // name (a POST must come from this site's own pages: its Origin is checked, and an order's body is JSON only). Every
 // public door has a limit per address; the captain lookup's is tight, against walking the list of names.
@@ -19,7 +20,8 @@ import type { Board } from '../game/siterating.ts';
 import type { WebShop } from '../game/webshop.ts';
 import { noticePid, yooAddress } from '../pay/yookassa.ts';
 import type { YooKassa } from '../pay/yookassa.ts';
-import { testCheckoutPage } from '../pay/testpage.ts';
+import { gameBackPage, testCheckoutPage } from '../pay/testpage.ts';
+import { randomBytes } from 'node:crypto';
 import { clientIp } from '../net/conn.ts';
 
 const BODY_MAX = 16 * 1024;
@@ -123,6 +125,21 @@ export function siteRoutes(d: SiteDeps) {
       if (!lim.take(`all:${ip}`, max, win)) throw new HttpError('rate', 429);
 
       if (path === 'pay/test') return await testCheckout(req, res, url, method);
+      // the web game's buyer back from the checkout (owner, 2026-10-21): the order's payment checked again, a word, and
+      // back to the game (its tab told to look, this one closed)
+      if (path === 'pay/back') {
+        if (method !== 'GET') throw new HttpError('bad_request', 405);
+        take('status', ip, SITE_LIMITS.status);
+        const id = String(url.searchParams.get('order') ?? '');
+        await d.shop.refresh(id);
+        const v = d.shop.view(id);
+        if (!v?.game) throw new HttpError('not_found', 404);
+        const nonce = randomBytes(12).toString('base64');
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex', 'Referrer-Policy': 'no-referrer',
+          'Content-Security-Policy': `default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'nonce-${nonce}'; base-uri 'none'; form-action 'self'` });
+        res.end(gameBackPage({ id, lang: d.shop.get(id)?.lang ?? 'ru', status: v.status, nonce }));
+        return true;
+      }
 
       if (method === 'GET') {
         if (path === 'rating') {
@@ -188,7 +205,7 @@ export function siteRoutes(d: SiteDeps) {
       const o = shop.get(id);
       if (!o || !shop.testAllowed(o.acc)) throw new HttpError('not_found', 404);
       await shop.settleTest(id, form.get('act') === 'pay');
-      const back = `${o.lang === 'en' ? '/site/en/shop/' : '/site/shop/'}?order=${id}`;
+      const back = o.from === 'game' ? `/api/site/pay/back?order=${id}` : `${o.lang === 'en' ? '/site/en/shop/' : '/site/shop/'}?order=${id}`;
       res.writeHead(303, { Location: back, 'Cache-Control': 'no-store' }).end();
       return true;
     }

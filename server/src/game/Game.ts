@@ -278,6 +278,7 @@ import { seamarkMessage, stepSeaMarks } from './seamarks.ts'; // the dense sea's
 import { findMessage, stepSeaFinds } from './seafinds.ts'; // docs/19 D5: the sea's small things, and the day's caps
 import { roamMessage, stepRoamers } from './roamers.ts'; // docs/19 D7: the creatures roaming the sea
 import { premiumMessage, sendBalance } from './premium.ts'; // the premium shop (owner, 2026-10-03)
+import { gameCheckout } from './webshop.ts'; // the web game's YooKassa top-up (owner, 2026-10-21)
 import { captainShopMessage, ownsCaptain } from './captainshop.ts'; // premium captains cost money (owner, 2026-10-19)
 import { levelGifts, stepShop, xpBoost } from './shop.ts';
 import { sendPromo, stepPromo } from './promo.ts'; // the shop's goods (owner, 2026-10-15)
@@ -3453,6 +3454,8 @@ export class Game {
     if (msg.t === 'seamark') return seamarkMessage(this, s, msg);
     if (msg.t === 'seafind') return findMessage(this, s, msg);
     if (msg.t === 'roam') return roamMessage(this, s, msg); // docs/19 D7
+    // the web game's top-up through YooKassa (owner, 2026-10-21: «подключай кассу на сайт и в игре»)
+    if (msg.t === 'premium' && (msg.action === 'checkout' || msg.action === 'checkout_check')) return gameCheckout(this, s, msg);
     if (msg.t === 'premium') return premiumMessage(this, s, msg); // the premium shop (owner, 2026-10-03)
     if (msg.t === 'cos') return cosMessage(this, s, msg); // docs/32 §12: the cosmetics
     if (msg.t === 'scout') return scoutMessage(this, s, msg); // the island's scouts (owner, 2026-10-17)

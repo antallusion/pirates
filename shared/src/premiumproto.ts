@@ -47,6 +47,9 @@ export interface PremiumView {
   port: string | null;
   /** Whether the top-up takes payments yet (Telegram Stars, once the bot's token is configured on the server). */
   pay: boolean;
+  /** The web game's checkout (YooKassa, or the test mode's for the testers) takes her payment: the browser's top-up
+   *  (owner, 2026-10-21; Telegram and VK keep their own). */
+  web?: boolean;
   /** «Свиток автобоя» (owner, 2026-10-11): her account's auto-battle scrolls (their packs: AUTO_SCROLL_PACKS). */
   scrolls: number;
   /** The shop's goods, bundles and her stores (owner, 2026-10-15; shared/src/data/shop.ts). */
@@ -124,6 +127,10 @@ export type PremiumClientMsg =
   | { t: 'premium'; action: 'promo_close' | 'promo_seen'; id: string; where: PromoPlace }
   /** A pack of the top-up for Telegram Stars: the server answers with the invoice's link (owner, 2026-10-11). */
   | { t: 'premium'; action: 'stars'; pack: string; lang?: 'en' | 'ru' }
+  /** The web game's top-up (owner, 2026-10-21): a pack paid through YooKassa for her own account (the browser only —
+   *  Telegram keeps Stars, VK its votes); its order's payment asked about again (server/src/game/webshop.ts). */
+  | { t: 'premium'; action: 'checkout'; pack: string; lang?: 'en' | 'ru' }
+  | { t: 'premium'; action: 'checkout_check'; order: string }
   /** The daily login gift (owner, 2026-10-16; server/src/game/dailygift.ts): her calendar asked for, today's gift taken. */
   | { t: 'premium'; action: 'gift_view' | 'gift_claim' }
   /** Her Telegram notices (server/src/game/tgnotify.ts): all of them or one kind on or off; a notice's button tapped
@@ -146,9 +153,12 @@ export type PremiumServerMsg =
   /** The Telegram Stars invoice for a pack (server/src/telegram.ts): opened in the Mini App by openInvoice, on the
    *  website as a link (it opens Telegram). Null link: it could not be made (a toast says why). */
   | { t: 'premium_invoice'; pack: string; link: string | null }
+  /** The web game's YooKassa checkout: its page to open (null: none — a toast says why), its order; or, asked again, how
+   *  the order stands (`pending` | `paid` | `done` | `canceled` | `failed`). */
+  | { t: 'premium_checkout'; pack: string; url: string | null; order?: string; status?: string }
   /** The captains' choice before she has one (owner, 2026-10-19): the premium captains her account owns, her doubloons
    *  and whether the top-up takes payments. `bought`: the captain just bought (the choice may go on); `why`: a refusal (the server's words). */
-  | { t: 'captain_shop'; owned: CaptainId[]; balance: number; pay: boolean; bought?: CaptainId; why?: string };
+  | { t: 'captain_shop'; owned: CaptainId[]; balance: number; pay: boolean; web?: boolean; bought?: CaptainId; why?: string };
 
 // ------------------------------------------------------------------------------------------------ personal offers
 

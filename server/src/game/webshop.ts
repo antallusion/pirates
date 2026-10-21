@@ -35,7 +35,7 @@ import { buyCaptainFor, ownsCaptain } from './captainshop.ts';
 import type { Game } from './Game.ts';
 import { opsPrice, opsShut } from './liveops.ts';
 import type { PlayerSession } from './player.ts';
-import { buyShip, buyUnit, payIn, sendBalance, sendPremium, shipWhy, unitOffer, unitWhy } from './premium.ts';
+import { buyShip, buyUnit, payIn, sendBalance, sendPremium, setWebPay, shipWhy, unitOffer, unitWhy } from './premium.ts';
 import { refitHolds } from './refit.ts';
 import { MAX_BERTHS } from './shipbuilding.ts';
 import { accountOfferWhy, buyForAccount, shopState } from './shop.ts';
@@ -64,6 +64,9 @@ export interface WebOrder {
   wait?: OrderWait;
   /** Why a thing was not handed over (its doubloons kept on the account instead), or why the order failed. */
   note?: string;
+  /** Made in the web game itself (the top-up of /play, owner 2026-10-21): no name typed, the session's own account; the
+   *  buyer comes back to the game (/api/site/pay/back), not to the shop's page. */
+  from?: 'game';
 }
 
 /** Why a thing cannot be bought for her now (the site says it on the card): hers already, a once-only thing had, its
@@ -89,7 +92,13 @@ export interface WebShopOptions {
   now?: () => number;
   /** How often the waiting orders are looked at (ms; 0: never by itself — the tests call pump()). */
   pumpMs?: number;
+  /** Where a buyer from the web game comes back (default: the returnUrl's site with /api/site/pay/back). */
+  backUrl?: string;
 }
+
+/** The world's web shop (the web game's top-up reaches it by its game: Game.ts, `premium` `checkout`). */
+const SHOPS = new WeakMap<Game, WebShop>();
+export const webShopOf = (game: Game): WebShop | null => SHOPS.get(game) ?? null;
 
 const ORDER_ID = /^[0-9a-f]{24}$/;
 const PENDING_MAX = 5;
@@ -142,6 +151,8 @@ export class WebShop {
     this.o = o;
     this.test = o.provider ? null : new TestPay();
     this.provider = o.provider ?? this.test!;
+    SHOPS.set(game, this);
+    setWebPay(game, (acc) => this.mode === 'live' || this.testAllowed(acc));
     const ms = o.pumpMs ?? 3000;
     if (ms > 0) setInterval(() => this.pump(), ms).unref();
   }
@@ -311,7 +322,11 @@ export class WebShop {
     this.game.db.setKv(`weborder:${o.id}`, o);
   }
 
-  private returnUrl(lang: 'ru' | 'en', id: string): string {
+  private returnUrl(lang: 'ru' | 'en', id: string, from?: 'game'): string {
+    if (from === 'game') {
+      const back = this.o.backUrl ?? this.o.returnUrl.replace(/\/site\/.*$/, '/api/site/pay/back');
+      return `${back}${back.includes('?') ? '&' : '?'}order=${id}`;
+    }
     const base = this.o.returnUrl;
     const b = lang === 'en' ? base.replace(/\/site\/(?!en\/)/, '/site/en/') : base;
     return `${b}${b.includes('?') ? '&' : '?'}order=${id}`;
@@ -325,11 +340,37 @@ export class WebShop {
     if (!a) return { error: 'not_found' };
     const x0 = webItem(b.item);
     if (!x0) return { error: 'bad_item' };
+    return this.place(a, x0, b.lang === 'en' ? 'en' : 'ru', cleanEmail(b.email));
+  }
+
+  /**
+   * The web game's top-up (owner, 2026-10-21: «подключай кассу на сайт и в игре»): a pack of doubloons for the session's
+   * own account — no name typed, nothing of the page trusted but the pack's id; the price is the ladder's in roubles
+   * (the catalogue's, the server's). The same order, the same provider, the same check and delivery as the site's; the
+   * buyer comes back to the game. Telegram keeps its Stars and VK its votes: the client asks this only in the browser.
+   */
+  async orderInGame(acc: number, pack: unknown, lang: 'ru' | 'en'): Promise<{ orderId: string; url: string } | { error: OrderError }> {
+    const row = this.game.db.accountById(acc);
+    if (!row) return { error: 'not_found' };
+    const x0 = webItem(pack);
+    if (!x0 || x0.kind !== 'pack') return { error: 'bad_item' };
+    return this.place({ acc, name: row.name }, x0, lang, cleanEmail(row.email), 'game');
+  }
+
+  /** An order of the web game asked about by its own account (null: none of hers): its payment checked again, its view. */
+  async checkInGame(acc: number, id: string): Promise<ReturnType<WebShop['view']>> {
+    const o = this.get(id);
+    if (!o || o.acc !== acc) return null;
+    await this.refresh(id);
+    return this.view(id);
+  }
+
+  /** The order written and its payment asked of the provider. */
+  private async place(a: { acc: number; name: string }, x0: WebItem, lang: 'ru' | 'en', email: string | null, from?: 'game'): Promise<{ orderId: string; url: string } | { error: OrderError }> {
     const x = this.today(x0);
     const why = this.why(a.acc, x0);
     if (why) return { error: why };
     if (this.mode === 'test' && !this.testAllowed(a.acc)) return { error: 'test_only' };
-    const email = cleanEmail(b.email);
     if (this.provider.needsEmail && !email) return { error: 'email' };
     // a few unpaid orders at most per account (an abandoned page is not a reason to make more)
     const idx = this.game.db.getKv<string[]>(`weborders:${a.acc}`) ?? [];
@@ -338,16 +379,15 @@ export class WebShop {
     if (open.length >= PENDING_MAX) return { error: 'rate' };
     const rub = this.priceOf(x0);
     if (!(rub > 0)) return { error: 'gone' };
-    const lang = b.lang === 'en' ? 'en' : 'ru';
     const o: WebOrder = {
       id: randomBytes(12).toString('hex'), acc: a.acc, name: a.name, item: x0.id, ...(x0.kind === 'deal' ? { offer: x.offer } : {}),
-      rub, lang, provider: this.provider.name, status: 'pending', at: now,
+      rub, lang, provider: this.provider.name, status: 'pending', at: now, ...(from ? { from } : {}),
     };
     // (written before the provider is asked: a payment the network lost on its way back still has an order to find)
     this.put(o);
     this.game.db.setKv(`weborders:${a.acc}`, [...idx, o.id].slice(-20));
     const pay = await this.provider.create({
-      orderId: o.id, rub, returnUrl: this.returnUrl(lang, o.id), email,
+      orderId: o.id, rub, returnUrl: this.returnUrl(lang, o.id, from), email,
       description: `GRAVETIDE: ${x.name[lang === 'ru' ? 1 : 0]} — ${a.name}`.slice(0, 128),
       receiptItem: `Игровой товар «${x.name[1]}» · GRAVETIDE`.slice(0, 128),
     });
@@ -359,7 +399,7 @@ export class WebShop {
     }
     o.pid = pay.pid;
     this.put(o);
-    this.log(`[pay] web order ${o.id}: «${a.name}» (account ${a.acc}), ${x0.id}${o.offer ? ` (${o.offer})` : ''}, ${rub} RUB via ${o.provider}`);
+    this.log(`[pay] ${from === 'game' ? 'game' : 'web'} order ${o.id}: «${a.name}» (account ${a.acc}), ${x0.id}${o.offer ? ` (${o.offer})` : ''}, ${rub} RUB via ${o.provider}`);
     return { orderId: o.id, url: pay.url };
   }
 
@@ -519,17 +559,18 @@ export class WebShop {
     if (ss) {
       sendBalance(game, ss);
       if (ss.ship && ss.profile) sendPremium(game, ss);
-      const msg = !x || x.kind === 'pack' ? `Web shop purchase: ${n} doubloons.` : why ? `A web shop purchase could not be handed over: ${x.name[0]}. Its ${n} doubloons are on your account.` : `Web shop purchase: ${x.name[0]}.`;
+      // (the web game's own top-up: the doubloons as the game's top-up words them)
+      const msg = o.from === 'game' && x?.kind === 'pack' ? `Doubloons credited to your account: ${n}.` : !x || x.kind === 'pack' ? `Web shop purchase: ${n} doubloons.` : why ? `A web shop purchase could not be handed over: ${x.name[0]}. Its ${n} doubloons are on your account.` : `Web shop purchase: ${x.name[0]}.`;
       game.sendTo(ss, { t: 'toast', msg, kind: why ? 'info' : 'gold' });
     }
   }
 
   /** The return page's view of an order: only what its buyer saw already (what, for whom, how much, how it stands, what
    *  it waits for, whether its doubloons were kept instead). */
-  view(id: string): { status: OrderStatus; item: string; name: string; rub: number; provider: string; wait?: OrderWait; kept?: boolean } | null {
+  view(id: string): { status: OrderStatus; item: string; name: string; rub: number; provider: string; wait?: OrderWait; kept?: boolean; game?: boolean } | null {
     const o = this.get(id);
     if (!o) return null;
-    return { status: o.status, item: o.item, name: o.name, rub: o.rub, provider: o.provider, ...(o.status === 'paid' && o.wait ? { wait: o.wait } : {}), ...(o.note?.startsWith('kept:') ? { kept: true } : {}) };
+    return { status: o.status, item: o.item, name: o.name, rub: o.rub, provider: o.provider, ...(o.status === 'paid' && o.wait ? { wait: o.wait } : {}), ...(o.note?.startsWith('kept:') ? { kept: true } : {}), ...(o.from === 'game' ? { game: true } : {}) };
   }
 
   /** The tester's answer on the fake checkout (test mode only): the payment settled, then checked as YooKassa's is. */
@@ -539,4 +580,35 @@ export class WebShop {
     this.test.settle(o.pid, paid);
     return this.notice(o.pid);
   }
+}
+
+// ------------------------------------------------------------------------------------------------ the web game's top-up
+
+/** The web game's top-up messages (Game.ts): `checkout` — a pack's order for her own account and the provider's page
+ *  (`premium_checkout` with its link, or none and a toast why); `checkout_check` — her order's payment asked again (the
+ *  game asks while the page is open and when she comes back to it). */
+export function gameCheckout(game: Game, s: PlayerSession, msg: { action: 'checkout'; pack: string; lang?: 'en' | 'ru' } | { action: 'checkout_check'; order: string }): void {
+  const shop = webShopOf(game);
+  if (!s.authed) return;
+  if (msg.action === 'checkout_check') {
+    const id = String(msg.order ?? '');
+    if (!shop || !ORDER_ID.test(id)) return;
+    void shop.checkInGame(s.accountId, id).then((v) => {
+      if (v) game.sendTo(s, { t: 'premium_checkout', pack: v.item, url: null, order: id, status: v.status });
+    });
+    return;
+  }
+  const pack = String(msg.pack ?? '');
+  const fail = (why: string) => {
+    game.sendTo(s, { t: 'toast', msg: why, kind: 'bad' });
+    game.sendTo(s, { t: 'premium_checkout', pack, url: null });
+  };
+  if (!shop) return fail('Payments are not open yet.');
+  void shop.orderInGame(s.accountId, pack, msg.lang === 'ru' ? 'ru' : 'en').then(
+    (r) => {
+      if ('error' in r) return fail(r.error === 'test_only' ? 'Payments are not open yet.' : r.error === 'rate' ? 'Too many unpaid orders. Pay one or wait an hour.' : r.error === 'email' ? 'The receipt needs your e-mail: add it to your account.' : 'The payment could not be made. Try again in a minute.');
+      game.sendTo(s, { t: 'premium_checkout', pack, url: r.url, order: r.orderId });
+    },
+    () => fail('The payment could not be made. Try again in a minute.'),
+  );
 }

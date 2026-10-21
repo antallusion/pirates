@@ -150,10 +150,11 @@ import { TameWindow } from './ui/tame.ts'; // docs/18 IV
 import { ThroneWindow } from './ui/throne.ts'; // docs/19 E1–E3, E18
 import { PremiumWindow } from './ui/premium.ts'; // the premium shop (owner, 2026-10-03)
 import { mountQuickEmotes, ownEmotes } from './ui/cosmetics.ts'; // docs/32 §12: the cosmetics
-import { heardDoubloons } from './ui/price.ts'; // a purchase waiting for its top-up (owner, 2026-10-18)
+import { heardDoubloons, stashPending } from './ui/price.ts'; // a purchase waiting for its top-up (owner, 2026-10-18)
 import { Promos } from './ui/promo.ts'; // her personal offers (owner, 2026-10-15)
 import { DailyGift } from './ui/dailygift.ts'; // the daily login gift (owner, 2026-10-16)
 import { initTgNotices } from './ui/tgnotices.ts'; // «Уведомления в Телеграме» (owner, 2026-10-16)
+import { webCheckouts } from './checkout.ts';
 import { tgInvoices, tgLoginButton, tgStart } from './tg.ts'; // Telegram: the Mini App, «Войти через Телеграм», Stars (docs/27)
 import { inVk, mayFullscreen, vkStart } from './vk.ts';
 import { gateFrames, mediaSleeps, onLifecycle, pauseApp, resumeApp, soundSleeps } from './lifecycle.ts'; // the game asleep out of sight (docs/36) // the VK Mini App: its sign-in, no fullscreen of the game's own (docs/36)
@@ -1475,6 +1476,7 @@ if (!inVk()) fetch('/auth/providers').then((r) => r.json()).then((d: { providers
 }).catch(() => undefined);
 tgLoginButton(net, onLang);
 tgInvoices(net, (msg, kind) => hud.toast(msg, kind));
+webCheckouts(net, (msg, kind) => hud.toast(msg, kind), stashPending); // the browser's top-up through YooKassa (owner, 2026-10-21)
 
 ($('login-form') as HTMLFormElement).onsubmit = (e) => {
   e.preventDefault();
