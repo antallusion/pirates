@@ -38,16 +38,20 @@ function openingTargets(f: PointerFacts, op: string): string[] {
     // a purchase refused for room: the advisor's «Продать и купить» first (owner, 2026-10-21: the guide points to the
     // sell suggestion, not to a button that cannot be done)
     const shop = op.slice(4);
-    if (shop === 'arms') return ['#modal-panel [data-act="crew"][data-prof="sailor"][data-n="1"]:not([disabled])', '#modal-panel [data-act="hire_short"]', '#modal-panel [data-act="gun"]:not([disabled])', '#modal-panel [data-ptab="tavern"]', ...TO_PORT];
+    // (the tavern's own «Нанять N» first: the sailors' row is folded under «Мастера и прочее» — QA 2026-10-22, the finger
+    // stood on the tavern's tab already open and the step went nowhere)
+    if (shop === 'arms') return ['#modal-panel [data-act="hire_n"]:not([disabled])', '#modal-panel [data-act="crew"][data-prof="sailor"][data-n="1"]:not([disabled])', '#modal-panel [data-act="hire_short"]', '#modal-panel [data-act="gun"]:not([disabled])', '#modal-panel [data-ptab="tavern"]', ...TO_PORT];
     const good = shop === 'trade' ? f.tradeGood : shop;
     return [...ADVICE, ...(good ? [`#modal-panel .mk-row[data-good="${good}"] [data-act="buy"]:not([disabled])`] : []), '#modal-panel [data-ptab="market"]', ...TO_PORT];
   }
   if (f.docked) return TO_SEA;
   switch (op) {
+    // (the opening's softened foe strikes her colours soon: on her card the step's own choice — «Забрать всё и
+    // затопить» sinks her, the gold «отпустить» counts as a boarding only and «Первый залп» stood still, QA 2026-10-22)
     case 'sink':
-      return ['#tc-act[data-act="attack"]', '.act-btn.act-attack', ...(f.touch && f.pursuit ? ['#tc-fire'] : [])];
+      return ['[data-sur="sink"]:not([disabled])', '#tc-act[data-act="attack"]', '.act-btn.act-attack', ...(f.touch && f.pursuit ? ['#tc-fire'] : [])];
     case 'board':
-      return pointerTargets({ ...f, stage: 'board' });
+      return ['[data-sur="release"]:not([disabled])', ...pointerTargets({ ...f, stage: 'board' })];
     case 'neutral':
       return ['#tc-act[data-act="roam"]', '.act-btn.act-roam'];
     case 'found':
@@ -178,9 +182,11 @@ export class TutorPointer {
   private scrolled: HTMLElement | null = null;
 }
 
-/** On the screen and not under something else (a sheet, a window): the middle of its box hits it. */
+/** On the screen and not under something else (a sheet, a window): the middle of its box hits it. A tab already open
+ *  is no target: a tap on it does nothing (QA 2026-10-22: the finger stood on the open tavern's tab). */
 function shown(el: HTMLElement): boolean {
   if (el.classList.contains('hidden') || el.closest('.hidden, .tut-hidden')) return false;
+  if (el.getAttribute('aria-selected') === 'true') return false;
   const r = el.getBoundingClientRect();
   if (r.width < 4 || r.height < 4 || r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) return false;
   const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);

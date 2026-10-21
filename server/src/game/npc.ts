@@ -240,7 +240,9 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
   // The First Watch's raider is her pupil's lesson, and a ship boarded and being looted is her captor's: the sea's
   // other ships leave them be (QA 2026-10-09: a Crown patrol off the harbour shot the raider from 100 % to nothing
   // before «На абордаж» twice, and sank her under the card of spoils — «Приз ускользнул», the ransom lost).
-  if (!other.isPlayer && (other.lootLockedFor !== null || game.npcs.get(other.id)?.practice !== undefined)) return false;
+  // So is a ship sent after a captain (the campaign's fight, huntAccount): a Crown patrol sank the opening's struck tender
+  // under her card, the kill was the patrol's and «Первый залп» stood still (QA 2026-10-22).
+  if (!other.isPlayer && (other.lootLockedFor !== null || game.npcs.get(other.id)?.practice !== undefined || (game.npcs.get(other.id)?.huntAccount ?? null) !== null)) return false;
   const role = npc.npcRole;
   // docs/19 E16: the Choir's invaders go for every captain and the sea's ships; the law's patrols go for them.
   const inv = npc.invader || other.invader ? invaderHostile(npc, other) : null;
@@ -271,6 +273,10 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
   }
   if (game.npcs.get(npc.id)?.practice === other.id) return true;
   if (other.isPlayer && game.npcs.get(npc.id)?.huntFor === other.id) return true;
+  // A ship sent after her (the campaign's fight, a band after her cargo, a bounty hunter): her foe in any water — in
+  // Saltmarrow's safe water the opening's tender was no foe of hers, so the target frame took a shark beside it and the
+  // finger's «Атаковать» went for the shark; «Первый залп» could not be done (QA 2026-10-22).
+  if (other.isPlayer && other.accountId !== null && game.npcs.get(npc.id)?.huntAccount === other.accountId && !other.surrendered) return true;
   if (other.attackers.has(npc.id) && game.now - (npc.attackers.get(other.id) ?? -999) < 120) return true;
   if ((npc.attackers.get(other.id) ?? -999) > game.now - 120) return true;
   const safety = REGIONS[other.region].safety;
