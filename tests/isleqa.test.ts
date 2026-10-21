@@ -77,3 +77,24 @@ test('no wolf pack round a captain in her first quarter of an hour, nor round a 
   const line = npc.split(String.fromCharCode(10)).find((l) => l.includes('rallyPack(game, ship, p)'))!;
   for (const need of ['brain.huntFor === undefined', 'brain.huntAccount === null', 'ship.softFor === undefined', '!fresh(game.profileOf(p))', '!inFirstWatch(game, p)']) assert.ok(line.includes(need), need);
 });
+
+test('her own town’s island is not offered for lease, nor leased (it was listed at 16 800 a week)', async () => {
+  const { claimIsland } = await import('../server/src/game/baseclaim.ts');
+  const { ownIsland } = await import('../server/src/game/estate.ts');
+  const { holdingsFor, rentIsland } = await import('../server/src/game/holdings.ts');
+  const { game } = makeGame();
+  join(game, 'Townie', 'corsair');
+  const s = [...game.sessions].find((x) => x.name === 'Townie')!;
+  const port = game.portById('saltmarrow')!;
+  const isl = game.world.islands.filter((i) => i.region === port.region && !i.portId && !i.minor && i.radius < 400).sort((a, b) => Math.hypot(a.x - port.x, a.y - port.y) - Math.hypot(b.x - port.x, b.y - port.y))[0]!;
+  const ship = s.ship!;
+  ship.docked = null;
+  ship.state.x = isl.x + isl.radius + 120;
+  ship.state.y = isl.y;
+  assert.equal(claimIsland(game, s, isl.id), null, 'claimed');
+  assert.equal(ownIsland(game, s.accountId)?.island, isl.id);
+  s.profile!.gold = 1e6;
+  assert.match(rentIsland(game, s, isl.id, 7) ?? '', /yours for good/);
+  ship.docked = 'saltmarrow';
+  assert.ok(!holdingsFor(game, s).region.some((o) => o.island === isl.id), 'not in the harbour office’s list');
+});

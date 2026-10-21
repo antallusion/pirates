@@ -672,6 +672,8 @@ export const SERVER_RU_B: Record<string, string> = {
   "{0} is handed to {1}.": "{0} передан: {1}.",
   "{0} is in a fight": "{0} в бою",
   "{0} is leased to {1}": "{0} сдан в аренду: {1}",
+  "{0} is yours for good: no lease is needed": "{0} ваш навсегда: аренда не нужна",
+  "Held for good: not for lease": "Выкуплен навсегда: в аренду не сдаётся",
   "{0} is locked in a boarding action": "{0} ведёт абордажный бой",
   "{0} is lost": "{0} потерян",
   "{0} is lost. The Ledger frowns; a new caravan fits out in 30 minutes.": "{0} потерян. Книга хмурится; новый караван снарядят через 30 минут.",
