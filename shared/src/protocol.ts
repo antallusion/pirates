@@ -4,6 +4,7 @@
 // for the planned binary encoding.
 
 import type { OutcomeNums } from './data/outcome.ts';
+import type { BuyFail, BuySeller } from './data/buyfail.ts';
 import type { CeasefireView } from './data/ceasefire.ts';
 import type { QuestKind } from './data/questclass.ts';
 import type { RequestKind } from './data/fates.ts';
@@ -154,6 +155,8 @@ export type ClientMsg =
    *  down, way off, the helmsman's course and a goal's run dropped. */
   | { t: 'halt' }
   | { t: 'trade'; good: GoodId; qty: number }
+  /** The advisor's «Продать и купить» (owner, 2026-10-21): sell here what makes room, then buy — all or nothing. */
+  | { t: 'sellbuy'; good: GoodId; qty: number }
   | { t: 'buy_ammo'; ammo: AmmoId; qty: number }
   | { t: 'hire_crew'; qty: number; prof?: Profession; dregs?: boolean }
   | { t: 'officer'; action: 'hire' | 'dismiss' | 'order' | 'fulfil'; id: string }
@@ -1008,6 +1011,9 @@ export interface PortView {
   bank: BankView;
   insurance: InsuranceQuote[];
   priceIntel?: { portId: string; name: string; good: GoodId; sell: number; ageSec: number }[];
+  /** The goods her quests ask her to bring and she has not aboard (owner, 2026-10-21: «квест на покупку рома»): sold here
+   *  or not, the stock, how many fit her hold now, and the nearest harbours that sell it — the market's card for it. */
+  questBuys?: { quest: string; name: string; good: GoodId; qty: number; soldHere: boolean; stock: number; fit: number; sellers: BuySeller[] }[];
 }
 
 export interface ShipInfo {
@@ -2006,6 +2012,8 @@ export type ServerMsg =
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean; /** her own scuttling (owner 2026-10-20) */ scuttled?: boolean; /** a boarding lost (owner, 2026-10-05): who took her and the silver they had */ boarded?: { by: string; silver: number; repelled?: boolean } }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
+  /** A purchase refused, its one real reason and numbers (owner, 2026-10-21; shared/src/data/buyfail.ts); `msg` the toast's words. */
+  | { t: 'buyfail'; fail: BuyFail; msg: string }
   /** A hull researched (docs/20): the yard's film and word. */
   | { t: 'researched'; classId: ShipClassId }
   /** A film for a moment the server sees (docs/20: the companions' films); shown once, as every film. */

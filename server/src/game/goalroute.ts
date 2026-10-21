@@ -749,6 +749,13 @@ export function resolveGoal(game: Game, s: PlayerSession, key: string): Resolved
       return bossPlaces(game, REGION_IDS.includes(id as RegionId) ? (id as RegionId) : undefined);
     case 'boss':
       return bossPlaces(game);
+    case 'p': {
+      // a harbour by name (owner, 2026-10-21: «не продаётся здесь» — the nearest port that sells it, a course there)
+      const pt = game.portById(id);
+      if (!pt) return { none: ROUTE_WORDS.unknown };
+      if (s.ship.docked === pt.id) return { done: true };
+      return { cands: [portCand(pt)] };
+    }
     case 'own': {
       // the island button (owner, 2026-10-19: «кнопка острова… или я еще остров не отрыл»): her own island, or before
       // she holds one the nearest wild island to found her town on (docs/29: any but a port's, the first free)

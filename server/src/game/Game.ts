@@ -78,6 +78,7 @@ import type {
 import { SF, STATIONS, curseStage } from '../../../shared/src/protocol.ts';
 import type { FrontWarn, QuestTarget } from '../../../shared/src/protocol.ts';
 import { buildSites, buyRights, ownSiteNear, siteView, tickSites, warehouseAction } from './resources.ts';
+import { sellAndBuy } from './buyfail.ts';
 import type { ResourceSite } from './resources.ts';
 import {
   acceptForward, bankAction, buyPolicy, cancelOrder, claimPolicy, collectDebt, decayClaims, expireForwards, fillOrder, postOrder,
@@ -3738,6 +3739,14 @@ export class Game {
           const qty = Math.trunc(Number(msg.qty));
           const e = trade(this, s, pt, msg.good, qty);
           if (!e && qty > 0) shopEvent(this, s, pt, msg.good); // the opening's lesson of the shops (owner, 2026-10-19)
+          return e;
+        });
+      case 'sellbuy':
+        // the advisor's «Продать и купить» (owner, 2026-10-21): room made by selling here, then the purchase
+        return portAction((pt) => {
+          const qty = Math.trunc(Number(msg.qty));
+          const e = sellAndBuy(this, s, pt, msg.good, qty);
+          if (!e) shopEvent(this, s, pt, msg.good);
           return e;
         });
       case 'buy_ammo':

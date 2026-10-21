@@ -61,6 +61,7 @@ import type { PlayerSession, Profile } from './player.ts';
 import { pardonCost } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { onSaleDeeds } from './progression.ts';
+import { goodBuyCheck, lackSilver, questBuys, sendBuyFail } from './buyfail.ts';
 import { dealOfDay, onSale, talentPriceMods } from './tradefx.ts';
 import { portFence } from './smugglefx.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
@@ -256,6 +257,9 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     licence: port.faction in FACTION_DUTY ? { cost: feeFor(ship, licenceCost(p.level)), until: p.licences[port.faction as keyof typeof p.licences] ?? 0 } : null,
     pardonCost: port.faction === 'free' || port.faction === 'brokers' || port.faction === 'confederacy' ? pardonCost(p) : null,
   };
+  // the goods her quests still want brought and she has not aboard (owner, 2026-10-21): the market's card for each
+  const qb = questBuys(game, s, port);
+  if (qb.length) view.questBuys = qb;
   if (ship.hasFlag('market_sense')) {
     const intel: NonNullable<PortView['priceIntel']> = [];
     for (const pid in p.priceIntel) {
@@ -289,20 +293,25 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   if (!Number.isInteger(qty) || qty === 0 || Math.abs(qty) > 500) return 'Bad quantity';
   const market = game.markets.get(port.id)!;
   const gm = market.goods[good];
-  if (!gm) return `${port.name} does not trade ${GOODS[good].name}`;
   const def = GOODS[good];
+  if (qty > 0) {
+    if (def.contraband && ship.hasFlag('honest_merchant')) return 'An Honest Merchant does not carry contraband';
+    // The one real reason, with its numbers (owner, 2026-10-21: a full hold buying rum was told «недостаточно на складе» —
+    // the stock was checked before the room, and the five asked were more than the three the harbour had): not sold
+    // here (where it is), the room (m³ wanted / free, the advisor's plan), the stock (how many there are), the silver.
+    const no = goodBuyCheck(game, s, port, good, qty);
+    if (no) {
+      sendBuyFail(game, s, no.fail, no.msg);
+      return no.msg;
+    }
+  }
+  if (!gm) return `${port.name} does not trade ${GOODS[good].name}`;
   if (def.contraband && !port.blackMarket) return 'Contraband cannot be traded here';
   const mods = priceMods(ship, port, s.profile!, game.now, game);
   if (qty > 0) {
-    if (def.contraband && ship.hasFlag('honest_merchant')) return 'An Honest Merchant does not carry contraband';
-    if (gm.stock < qty) return 'Not enough in stock';
     const quoted = quoteBuy(good, gm, qty, mods);
     const levy = levyFor(game, port, quoted); // the governor's hundredth
     const price = quoted + levy;
-    if (p.gold < price) return 'Not enough silver';
-    const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
-    const need = qty * def.volume * (def.contraband ? ship.stats.contrabandVolumeMul : 1);
-    if (need > free + 1e-6) return 'Not enough room in the hold';
     // (the governor's levy only on a sale made: a buy refused for room paid it to his guild out of nothing, docs/30)
     payLevy(game, port, levy);
     p.gold -= price;

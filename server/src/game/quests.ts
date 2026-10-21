@@ -50,6 +50,7 @@ import { CONVOY_RANGE, groupOfAccount } from './party.ts';
 import { seasonStat } from './seasons.ts';
 import { grantMap, makeMap } from './explorefx.ts';
 import type { ShipEntity } from './ship.ts';
+import { canMakeRoom } from './buyfail.ts';
 import { admiraltyById, isAdmId } from '../../../shared/src/data/admiralty.ts'; // docs/19 E15
 import { contractDone } from './admiralty.ts';
 import { campaignDone, campaignTick } from './campaign.ts'; // docs/36, the main campaign
@@ -740,36 +741,34 @@ export function jobSanctions(game: Game, s: PlayerSession, victim: ShipEntity): 
   });
 }
 
-/** Room left in her hold for one unit of a good (the volume it takes aboard, her ship's own multipliers). */
-function roomFor(ship: ShipEntity, good: GoodId): boolean {
-  const st = ship.stats;
-  const used = cargoVolume(ship.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
-  const one = cargoVolume({ [good]: 1 }, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
-  return st.holdVolume - used + 1e-6 >= one;
-}
-
 /** The goods a step `buy:trade` may be done with: anything but the supplies and contraband (Game.ts shopEvent). */
 const TRADE_GOODS = (Object.keys(GOODS) as GoodId[]).filter((g) => GOODS[g].category !== 'supply' && !GOODS[g].contraband);
 
 /**
  * Every step that asks her to buy, hire, fill or equip, checked against what she has (owner, 2026-10-21: «если у меня уже
  * пополнено все, то квест меня ведет к пополнению моряков в таверну, хотя у меня все забито. и скипнуть этот шаг нельзя.
- * все квесты должны даблчекаться и если такое происходит, то пропускать шаг»). A step already satisfied, or one that
- * cannot be done because something is full, is counted — the toast says why — and the guide's finger goes on. Checked as
- * the step comes and every second after (questEvent's tick), so a change of hers (a full crew, a full hold) counts too.
- * Steps of delivery (`pickup`, `deliver`, `carry`) are not: the hold is emptied and the goods come aboard as before.
+ * все квесты должны даблчекаться и если такое происходит, то пропускать шаг»). A step is counted — the toast says why —
+ * only when it is already satisfied or truly impossible:
+ * - hands (`arms`, `recruit`): her hammocks all taken — the crew is full, the lesson learnt;
+ * - provisions, sailcloth, a trade good: no room for one and nothing she could sell to make it.
+ * A full hold with goods she may sell is NOT counted (owner, 2026-10-21: «у меня просто полностью трюм заполнен, но квест
+ * на покупку рома есть и купить не могу»): the market's advisor sells to make room (buyfail.ts), the guide points at it.
+ * Checked as the step comes and every second after (questEvent's tick). Steps of delivery (`pickup`, `deliver`, `carry`)
+ * are not: the hold is emptied and the goods come aboard as before.
  */
 export function stepMoot(s: PlayerSession, st: QuestStep): string | null {
   const ship = s.ship;
   if (!ship) return null;
   const crewFull = ship.crew >= ship.stats.crewMax;
   switch (st.type) {
-    case 'buy':
+    case 'buy': {
       // hands at the tavern, or a battery at the yard: a full crew is the lesson learnt (the owner's skip)
       if (st.shop === 'arms') return crewFull ? 'The crew is already full — the step is counted.' : null;
-      if (st.shop === 'provisions') return roomFor(ship, 'provisions') ? null : 'No room in the hold for provisions — the step is counted.';
-      if (st.shop === 'sailcloth') return roomFor(ship, 'sailcloth') ? null : 'No room in the hold for sailcloth — the step is counted.';
-      return TRADE_GOODS.some((g) => roomFor(ship, g)) ? null : 'The hold is full — the step is counted.';
+      // (the voyage's own provisions aboard is no reason: a fresh ship carries them, and the lesson is the buying)
+      if (st.shop === 'provisions') return canMakeRoom(s, 'provisions') ? null : 'No room in the hold for provisions — the step is counted.';
+      if (st.shop === 'sailcloth') return canMakeRoom(s, 'sailcloth') ? null : 'No room in the hold for sailcloth — the step is counted.';
+      return TRADE_GOODS.some((g) => canMakeRoom(s, g)) ? null : 'The hold is full — the step is counted.';
+    }
     case 'recruit':
       // men for the army sleep in her hammocks (dwell.ts recruit: «No hammocks left aboard»)
       return crewFull ? 'The crew is already full — the step is counted.' : null;
