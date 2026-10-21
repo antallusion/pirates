@@ -16,6 +16,7 @@ import { BEASTS, beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
 import { NetHaulPanel } from './ui/nethaul.ts';
 import { departHooks, departOrAsk } from './ui/depart.ts';
+import { adviceFor, showAdvice } from './ui/buyadvice.ts';
 import { RouteRun } from './ui/goalrun.ts'; // ux2 / route: the run to a goal's nearest place
 import { EN as UX2_EN, RU as UX2_RU } from './lang/ui/ux2.ts';
 import type { AutosailStop } from '../../shared/src/data/autosail.ts';
@@ -1261,6 +1262,8 @@ addEventListener('pointerdown', () => (pressAt = performance.now()), { capture: 
 addEventListener('keydown', () => (pressAt = performance.now()), { capture: true, passive: true });
 /** The same refusal within REFUSAL_QUIET_MS of the last, with no press of hers in the moment before it: not news. */
 const REFUSAL_QUIET_MS = 8000;
+/** The words of a refusal the advisor shows already (its toast keeps quiet). */
+let adviceToast: { msg: string; at: number } | null = null;
 function refusalAgain(msg: string): boolean {
   const now = performance.now();
   const at = refusedAt.get(msg);
@@ -1768,7 +1771,31 @@ function onMessage(m: ServerMsg): void {
       // The sea's goals of the week (docs/16 #32).
       if (modal === 'journal') refreshModal();
       break;
+    case 'buyfail':
+      // A purchase refused for its one real reason (owner, 2026-10-21): the advisor — what to sell to make room, where it
+      // is sold, how many there are — instead of a dead-end toast (the toast that follows with the same words keeps quiet).
+      if (adviceFor(m.fail) && state.self?.dockedAt) {
+        adviceToast = { msg: m.msg, at: performance.now() };
+        showAdvice(m.fail, {
+          state,
+          send: (x) => net.send(x),
+          market: () => {
+            if (modal !== 'port') openModal('port');
+            portScreen.tab = 'market';
+            refreshModal();
+          },
+          sailTo: (port) => {
+            if (modal) closeModal();
+            startGoal(`p:${port}`);
+          },
+        });
+      }
+      break;
     case 'toast':
+      if (adviceToast && adviceToast.msg === m.msg && performance.now() - adviceToast.at < 3000) {
+        adviceToast = null;
+        break;
+      }
       // The glass's own «too far» (askGlass asks by itself every few seconds; the server's refusals come as toasts, so
       // the filter on 'err' alone let «Too far for the glass ×5» through at every broadside).
       if (GLASS_QUIET.has(m.msg)) break;

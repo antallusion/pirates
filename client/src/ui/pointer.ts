@@ -25,6 +25,9 @@ const TO_SEA = ['#modal-panel [data-ptab="sea"]', '#tc-cast', '#tc-act[data-act=
 /** Into the port window from the HUD in port, or into a harbour from the sea. */
 const TO_PORT = ['#tc-act[data-act="harbour"]', '.act-btn.act-harbour', '#tc-act[data-act="dock"]', '#tc-act[data-act="homeport"]', '.act-btn.act-dock', '.act-btn.act-homeport'];
 
+/** The advisor's own button (client/src/ui/buyadvice.ts): «Продать и купить» when a purchase found no room. */
+export const ADVICE = ['#buy-advice #ba-go'];
+
 /** The campaign's opening (owner, 2026-10-19: «обучение по покупкам разным в магазинам, дальше атака корабля, дальше
  *  абордаж, дальше нападение на нейтралов, и дальше к ближайшему острову основать свой город»): the finger through
  *  each step — the shop's tab and its row, «В море», «Атаковать», «На абордаж», the stack's «Атаковать», «Занять». */
@@ -32,10 +35,12 @@ function openingTargets(f: PointerFacts, op: string): string[] {
   if (op.startsWith('buy:')) {
     if (op === 'buy:arms' && f.crewFull) return [];
     if (!f.docked) return TO_PORT;
+    // a purchase refused for room: the advisor's «Продать и купить» first (owner, 2026-10-21: the guide points to the
+    // sell suggestion, not to a button that cannot be done)
     const shop = op.slice(4);
     if (shop === 'arms') return ['#modal-panel [data-act="crew"][data-prof="sailor"][data-n="1"]:not([disabled])', '#modal-panel [data-act="hire_short"]', '#modal-panel [data-act="gun"]:not([disabled])', '#modal-panel [data-ptab="tavern"]', ...TO_PORT];
     const good = shop === 'trade' ? f.tradeGood : shop;
-    return [...(good ? [`#modal-panel .mk-row[data-good="${good}"] [data-act="buy"]:not([disabled])`] : []), '#modal-panel [data-ptab="market"]', ...TO_PORT];
+    return [...ADVICE, ...(good ? [`#modal-panel .mk-row[data-good="${good}"] [data-act="buy"]:not([disabled])`] : []), '#modal-panel [data-ptab="market"]', ...TO_PORT];
   }
   if (f.docked) return TO_SEA;
   switch (op) {

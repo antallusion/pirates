@@ -5500,3 +5500,17 @@ body.tac-ph .tb-top { position: absolute; top: calc(env(safe-area-inset-top, 0px
 
 /* The game asleep out of sight (client/src/lifecycle.ts, docs/36): no CSS animation runs while it is hidden. */
 html.app-paused *, html.app-paused *::before, html.app-paused *::after { animation-play-state: paused !important; }
+
+/* The «sell before you buy» advisor and the market's quest card (owner, 2026-10-21; client/src/ui/buyadvice.ts) */
+.ba-panel { width: min(600px, 100%); max-height: calc(100dvh - 24px); display: flex; flex-direction: column; text-align: left; }
+.ba-panel .k-sheet-body { min-height: 0; overflow-y: auto; }
+.ba-panel p.ba-lead { margin: 0 0 6px; font-size: 16px; color: var(--bone); }
+.ba-panel p.ba-sub { margin: 4px 0; font-size: 13px; color: var(--gold, #d9b25a); }
+.ba-panel p.ba-note { margin: 4px 0; font-size: 13px; }
+.ba-panel .ba-list { display: flex; flex-direction: column; gap: 4px; }
+.ba-panel .ba-row { min-height: 40px; padding: 4px 8px; border: 1px solid rgba(217, 178, 90, 0.28); border-radius: 5px; background: rgba(0, 0, 0, 0.22); }
+.ba-panel .k-sheet-foot { flex-wrap: wrap; gap: 6px; }
+.qb-card { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 10px; margin: 6px 0; border-color: rgba(217, 178, 90, 0.55); }
+.qb-card .qb-t { display: flex; flex-direction: column; flex: 1 1 200px; min-width: 0; }
+.qb-card .qb-t b { overflow-wrap: anywhere; }
+.qb-card .qb-b { display: flex; gap: 6px; flex-wrap: wrap; }

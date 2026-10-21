@@ -48,6 +48,7 @@ import { commonCard, dailyCard } from './daily.ts';
 import { invasionCard } from './invasion.ts'; // docs/19 E16
 import { giverDialog } from './giver.ts';
 import { EN, RU } from '../lang/ui/port.ts';
+import { EN as BA_EN, RU as BA_RU } from '../lang/ui/buyadvice.ts';
 import { serverText } from '../lang/server.ts';
 import { sendService, serviceCard } from './marque.ts';
 import { captivesCard } from './turncoats.ts';
@@ -79,6 +80,7 @@ const JOB_ICON: Record<string, string> = {
   diplomacy: 'map_contract', revenge: 'danger', investigation: 'ab_spotters_eye', elite: 'danger',
 };
 const L = dict(EN, RU);
+const BA = dict(BA_EN, BA_RU);
 const RL = dict(REN, RRU); // the yard's tree of hulls (docs/20)
 const LI = dict(ISLES_EN, ISLES_RU);
 const W = dict(WIN_EN, WIN_RU);
@@ -614,7 +616,7 @@ export class PortScreen {
     const st = state.ownStats;
     const used = cargoVolume(self.cargo, st?.contrabandVolumeMul ?? 1, st?.materialVolumeMul ?? 1, st?.provisionVolumeMul ?? 1, st?.cursedVolumeMul ?? 1);
     const mix = `<p class="muted mk-hold">${icon('tab_market', '', 'ico-sm')}${esc(W('port.hold', { vol: used.toFixed(0), max: (st?.holdVolume ?? 0).toFixed(0) }))}: ${esc(holdMixText(holdMix(self.cargo, st)))}</p>`;
-    return `${this.quick(view, state, ['sell', 'supplies', 'repair', 'hire'])}
+    return `${this.quick(view, state, ['sell', 'supplies', 'repair', 'hire'])}${questBuyCards(view)}
       <div class="mk-head">${sec(W('mk.goods'))}${by}</div>${mix}${note}
       <div class="mk-list">${rows}</div>
       ${sec(W('mk.shot'))}<div class="mk-list">${ammo}</div>
@@ -1044,4 +1046,19 @@ function tipsHtml(r: { tips: TipView[]; clerk: { cost: number; until: number } }
     ${t.bought ? `<span class="good">${esc(L('tips.bought'))}</span>` : `<button class="btn btn-small" data-act="tip" data-id="${esc(t.id)}">${esc(L('tips.buy', { cost: t.cost }))}</button>`}</div>`).join('') || `<p class="muted">${esc(L('tips.none'))}</p>`;
   const clerk = r.clerk.until > 0 ? `<p class="good">${esc(L('tips.clerkOn', { min: Math.ceil(r.clerk.until / 60) }))}</p>` : `<button class="btn btn-small" data-act="clerk">${esc(L('tips.clerk', { cost: r.clerk.cost }))}</button>`;
   return `<div class="card tips-card"><h4 class="card-h">${icon('map_contract', '', 'ico-md')}${esc(L('tips.title'))}</h4><p class="muted">${esc(L('tips.hint'))}</p>${rows}<div class="row">${clerk}</div></div>`;
+}
+
+/** The market's card for a good her quest wants brought (owner, 2026-10-21: «квест на покупку рома есть и купить не
+ *  могу»): sold here — «Купить N» (no room: «Освободить место», the same order, answered by the advisor with what to
+ *  sell); not sold here, or too few — the nearest harbours that sell it, a course to each. */
+function questBuyCards(view: PortView): string {
+  return (view.questBuys ?? []).map((q) => {
+    const good = (GOODS[q.good]?.name ?? q.good).toLowerCase();
+    const n = Math.min(q.qty, q.stock);
+    const room = q.fit < n;
+    const status = !q.soldHere ? BA('qb.notHere') : q.stock < q.qty ? BA('qb.short', { n: q.stock }) : BA('qb.here', { n: q.stock, fit: q.fit });
+    const buy = q.soldHere && n > 0 ? `<button type="button" class="k-btn ${room ? 'k-btn--primary' : 'k-btn--primary'} k-btn--md" ${room ? 'id="qb-room"' : 'id="qb-buy"'} data-act="buyn" data-good="${q.good}" data-n="${n}">${esc(room ? BA('qb.room') : BA('qb.buy', { n }))}</button>` : '';
+    const sail = q.sellers.slice(0, q.soldHere ? 1 : 2).map((x) => `<button type="button" class="k-btn k-btn--secondary k-btn--md qb-sail" data-act="goal" data-key="p:${esc(x.port)}" title="${esc(placeName(x.name))}">${esc(`${placeName(x.name)} · ${(x.dist / 1000).toFixed(1)} км`.replace('км', lang() === 'ru' ? 'км' : 'km'))}</button>`).join('');
+    return `<div class="card qb-card" data-qb="${q.good}">${icon(`good_${q.good}`, '', 'ico-md')}<div class="qb-t"><b>${esc(BA('qb.title', { q: serverText(q.name), n: q.qty, good }))}</b><small class="muted">${esc(status)}</small></div><div class="qb-b">${buy}${sail}</div></div>`;
+  }).join('');
 }
