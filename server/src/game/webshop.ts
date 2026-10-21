@@ -23,10 +23,14 @@
 // it opens only with GRAVETIDE_PAY_TEST=1 or for the site's admin accounts (SITE_ADMINS, else FORUM_ADMINS).
 
 import { randomBytes } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { OFFERS, LEVEL_OFFER_H, dayOf, dealOf } from '../../../shared/src/data/shop.ts';
 import { shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import { WEB_ITEMS, cleanCaptainName, dealItem, webItem, webOnSale } from '../../../shared/src/data/webshop.ts';
 import type { WebItem } from '../../../shared/src/data/webshop.ts';
+import { webDetail } from '../../../shared/src/data/webdetail.ts';
+import type { ArtOf, WebDetail } from '../../../shared/src/data/webdetail.ts';
 import type { PremiumWhy, ShopWhy } from '../../../shared/src/premiumproto.ts';
 import type { PayProvider, VerifiedPayment } from '../pay/yookassa.ts';
 import { TestPay } from '../pay/yookassa.ts';
@@ -96,7 +100,24 @@ export interface WebShopOptions {
   backUrl?: string;
   /** The test mode asks the buyer's e-mail as the live receipts do (GRAVETIDE_PAY_TEST_RECEIPT=1: QA of the prompt). */
   testReceipt?: boolean;
+  /** How a thing's card finds its pictures (default: the game's assets/manifest.json → /assets/…). */
+  art?: ArtOf;
 }
+
+/** The game's pictures by their manifest ids, as the site addresses them (read once, on the first card asked). */
+let MANIFEST: Record<string, { local: string }> | null = null;
+export const manifestArt: ArtOf = (id) => {
+  if (id.startsWith('/')) return id;
+  if (!MANIFEST) {
+    try {
+      MANIFEST = (JSON.parse(readFileSync(join(import.meta.dirname, '..', '..', '..', 'assets', 'manifest.json'), 'utf8')) as { assets: Record<string, { local: string }> }).assets;
+    } catch {
+      MANIFEST = {};
+    }
+  }
+  const a = Object.hasOwn(MANIFEST, id) ? MANIFEST[id] : undefined;
+  return a ? `/assets/${a.local}` : null;
+};
 
 /** The world's web shop (the web game's top-up reaches it by its game: Game.ts, `premium` `checkout`). */
 const SHOPS = new WeakMap<Game, WebShop>();
@@ -212,6 +233,28 @@ export class WebShop {
     return WEB_ITEMS.filter((x) => !this.shut(x) && (x.until === undefined || wall < x.until + 30 * 86_400_000)).map((x) => ({
       ...this.today(x), rub: this.priceOf(x), ...(webOnSale(x, wall) ? {} : { off: 'season' as const }),
     }));
+  }
+
+  /** The cards already made (the tables never change while the server runs; the deal's by its day's offer). */
+  private cards = new Map<string, WebDetail>();
+
+  /** A thing's whole card for the site's window (GET /api/site/shop/item?id=): the item as the catalogue sells it now
+   *  (its price, its season) and its card made of the game's tables. Null: no such thing on the shelves. */
+  item(id: unknown): { item: WebItem & { off?: 'season' }; detail: WebDetail } | null {
+    const x0 = webItem(id);
+    if (!x0) return null;
+    const item = this.catalog().find((y) => y.id === x0.id);
+    if (!item) return null;
+    const deal = x0.kind === 'deal' ? this.deal() : undefined;
+    const key = deal ? `deal:${deal.offer}:${deal.rub}` : `${x0.id}:${item.rub}`;
+    let detail = this.cards.get(key);
+    if (!detail) {
+      detail = webDetail(x0.id, this.o.art ?? manifestArt, deal);
+      if (!detail) return null;
+      if (this.cards.size > 2000) this.cards.clear();
+      this.cards.set(key, detail);
+    }
+    return { item, detail };
   }
 
   /** Her captain's save as the site's checks read it: aboard, the live one; else the saved (null: none yet). */

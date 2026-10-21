@@ -2,6 +2,7 @@
 //   GET  /api/site/rating?board=level|glory|boarded|arena|campaign|guilds   a board's top 100 (cached a minute)
 //   GET  /api/site/rating/find?name=…                                       a captain's places on every board
 //   GET  /api/site/shop                                                     the shop's mode and its catalogue now
+//   GET  /api/site/shop/item?id=…                                           a thing's whole card (the site's window)
 //   GET  /api/site/captain?name=…                                           the shop's step 1: her captain, what she has
 //   POST /api/site/order {name,item,lang,email?}                            an order → { orderId, url } (go pay there)
 //   GET  /api/site/order?id=…                                               an order's state (the return page polls it)
@@ -155,6 +156,10 @@ export function siteRoutes(d: SiteDeps) {
           return f ? json(res, 200, f) : json(res, 404, { error: 'not_found' });
         }
         if (path === 'shop') return json(res, 200, { ...d.shop.status(), items: d.shop.catalog() });
+        if (path === 'shop/item') {
+          const r = d.shop.item(url.searchParams.get('id') ?? '');
+          return r ? json(res, 200, r, MINUTE_CACHE) : json(res, 404, { error: 'not_found' });
+        }
         if (path === 'captain') {
           take('captain', ip, SITE_LIMITS.captain);
           const r = d.shop.lookup(url.searchParams.get('name') ?? '');
