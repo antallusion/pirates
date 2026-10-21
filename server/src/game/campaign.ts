@@ -303,7 +303,10 @@ function releaseFoes(game: Game, ids: number[]): void {
 
 /** Her campaign's foes now (goalroute.ts: the run makes for them first). */
 export function campaignFoes(game: Game, s: PlayerSession): number[] {
-  return (watches.get(s)?.ids ?? []).filter((id) => game.ships.get(id)?.alive);
+  const w = watches.get(s), qs = s.profile ? campaignActive(s.profile) : null;
+  // (the step's own: a step just done leaves its foes to be called off at the next tick, never the run's mark)
+  if (!w || !qs || w.step !== `${qs.id}:${qs.step}`) return [];
+  return w.ids.filter((id) => game.ships.get(id)?.alive);
 }
 
 // ------------------------------------------------------------------ what the screens read
