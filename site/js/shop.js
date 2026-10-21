@@ -485,8 +485,12 @@ ${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n
   const heroArt = (x, det) => {
     const hz = det ? det.hero : { cls: x.kind === 'ship' ? 'hull' : x.kind === 'captain' ? 'face' : (x.art || '').startsWith('unit.') ? 'fig' : x.kind === 'pack' ? 'coin' : x.tab === 'cos' ? 'cos' : 'icon', art: x.art && data.art[x.art] };
     const label = x.label ? `<span class="sc-label" style="color:${esc(x.ink || '#f2e6c8')};text-shadow:0 0 6px ${esc(x.halo || '#000')},0 1px 2px ${esc(x.halo || '#000')}">${esc(L(x.label))}</span>` : '';
-    const two = hz.alt && hz.cls === 'fig' ? `${im(hz.art, 'p0', 240, 300, L(x.title))}${im(hz.alt, 'p1', 240, 300)}` : hz.cls === 'face' ? `<span class="cap-ring">${im(hz.art, '', 300, 300, L(x.title))}</span>${hz.alt ? im(hz.alt, 'pd-hfig', 160, 300) : ''}` : im(hz.art, '', 300, 300, L(x.title));
-    return `<div class="pd-art ${hz.cls}${x.swatch ? ' sw' : ''}${hz.alt && hz.cls === 'fig' ? ' anim' : ''}"${x.swatch ? ` style="--sw:${esc(x.swatch)}"` : ''}>${two}${label}${ribbon(x)}</div>`;
+    // The figure and its blow at one height (owner, 2026-10-21): each set in the fitted box (det.hero.fit).
+    const at = (q) => `left:${+q[0]}%;top:${+q[1]}%;width:${+q[2]}%;height:${+q[3]}%`;
+    const fit = hz.alt && hz.cls === 'fig' && hz.fit && hz.art ? hz.fit : null;
+    const two = fit ? `<span class="fitstage" style="--r:${+fit.ar};--fb:6%"><img src="${esc(hz.art)}" alt="${esc(L(x.title))}" class="p0" style="${at(fit.a)}" decoding="async"><img src="${esc(hz.alt)}" alt="" class="p1" style="${at(fit.b)}" decoding="async"></span>`
+      : hz.alt && hz.cls === 'fig' ? `${im(hz.art, 'p0', 240, 300, L(x.title))}${im(hz.alt, 'p1', 240, 300)}` : hz.cls === 'face' ? `<span class="cap-ring">${im(hz.art, '', 300, 300, L(x.title))}</span>${hz.alt ? im(hz.alt, 'pd-hfig', 160, 300) : ''}` : im(hz.art, '', 300, 300, L(x.title));
+    return `<div class="pd-art ${hz.cls}${x.swatch ? ' sw' : ''}${hz.alt && hz.cls === 'fig' ? ' anim' : ''}${fit ? ' fitbox' : ''}"${x.swatch ? ` style="--sw:${esc(x.swatch)}"` : ''}>${two}${label}${ribbon(x)}</div>`;
   };
   const opts = (x) => {
     const its = shop.items.filter((y) => y.card === x.card);

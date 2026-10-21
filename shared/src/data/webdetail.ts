@@ -17,6 +17,7 @@
 // the page draws it (site/js/shop.js). Public things only: no captain's, no order's.
 
 import { UNITS } from './army.ts';
+import { fitStage } from './framefit.ts';
 import type { UnitDef, UnitId } from './army.ts';
 import { armySlots } from './army.ts';
 import { CAPTAINS, CAPTAIN_PRICE } from './captains.ts';
@@ -103,7 +104,7 @@ export type DView = 'ship' | 'unit' | 'captain' | 'set' | 'cos' | 'pack';
 export interface WebDetail {
   id: string;
   view: DView;
-  hero: { art: Img; alt?: Img; cls: 'hull' | 'fig' | 'face' | 'icon' | 'coin' | 'cos'; kicker: Tr; title: Tr; lead: Tr; chips: DChip[]; swatch?: string; label?: Tr; ink?: string; halo?: string };
+  hero: { art: Img; alt?: Img; fit?: FitStage; cls: 'hull' | 'fig' | 'face' | 'icon' | 'coin' | 'cos'; kicker: Tr; title: Tr; lead: Tr; chips: DChip[]; swatch?: string; label?: Tr; ink?: string; halo?: string };
   tabs: DTab[];
   /** The plain numbers of the card (the tests hold them to the game's tables). */
   facts: Record<string, number | string | boolean>;
@@ -186,6 +187,13 @@ const unitNote = (u: UnitId): Tr => {
   return army(`ud.${u}`).map((s) => (s.startsWith('ud.') ? '' : s)) as Tr;
 };
 const unitArt = (u: UnitId, art: ArtOf): Img => art(`unit.${u}`) ?? art(UNITS[u].art);
+/** The figure and its blow in one box, the blow at the figure's height (owner, 2026-10-21; shared/src/data/framefit.ts):
+ *  the box's width / height and each pose's place in it in per cent — the site sets them as it alternates the two. */
+export type FitStage = NonNullable<ReturnType<typeof fitStage>>;
+const figFit = (u: UnitId, art: ArtOf): { fit?: FitStage } => {
+  const f = art(`unit.${u}`) && art(`unit.${u}_atk`) ? fitStage(`unit.${u}`, `unit.${u}_atk`) : null;
+  return f ? { fit: f } : {};
+};
 
 function unitStats(d: UnitDef): DStat[] {
   const r = tierRange(d.tier);
@@ -483,7 +491,7 @@ function unitDetail(x: WebItem, art: ArtOf): WebDetail {
   return {
     id: x.id, view: 'unit',
     hero: {
-      art: unitArt(u, art), alt: art(`unit.${u}_atk`), cls: 'fig', kicker: [`Tier ${d.tier} · ${peopleOf(u)[0]}`, `Уровень ${d.tier} · ${peopleOf(u)[1]}`], title: unitNames(u), lead: note[1] ? note : o.note,
+      art: unitArt(u, art), alt: art(`unit.${u}_atk`), ...figFit(u, art), cls: 'fig', kicker: [`Tier ${d.tier} · ${peopleOf(u)[0]}`, `Уровень ${d.tier} · ${peopleOf(u)[1]}`], title: unitNames(u), lead: note[1] ? note : o.note,
       chips: [{ k: 'tier', icon: ICON.tier, name: [`Tier ${d.tier}`, `Уровень ${d.tier}`], tone: 'gold' }, rangedChip(d), ...roleChips(d)],
     },
     tabs: [
