@@ -31,7 +31,7 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
-import { changeRep } from './player.ts';
+import { changeRep, openingStep } from './player.ts';
 import { grantDeed } from './progression.ts';
 import { newsHint } from './onboarding.ts';
 import { spawnCargoAmbush, spawnPackLeader } from './npc.ts';
@@ -681,9 +681,12 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
       // (the campaign's quest, always under way, counts beside the rest: it takes no ship from a job — docs/36)
       if (kill && spent && q.kind !== 'campaign' && (st.type === 'sink' || st.type === 'board' || st.type === 'prize' || st.type === 'lair')) break;
       // The band's leader sunk: the hunt is won at a stroke.
-      const gained = st.type === 'sink' && ev.k === 'sink' && qs.leader !== undefined && ev.victim.id === qs.leader ? Math.max(1, stepCount(st) - qs.progress) : stepGain(game, s, st, ev);
+      // A step of buying, hiring or filling that is done already or cannot be done (a full crew, a full hold): counted.
+      const moot = stepMoot(s, st);
+      if (moot) game.sendTo(s, { t: 'toast', msg: moot, kind: 'info' });
+      const gained = moot ? Math.max(1, stepCount(st) - qs.progress) : st.type === 'sink' && ev.k === 'sink' && qs.leader !== undefined && ev.victim.id === qs.leader ? Math.max(1, stepCount(st) - qs.progress) : stepGain(game, s, st, ev);
       if (gained <= 0) break;
-      if (kill && q.kind !== 'campaign') spent = true;
+      if (kill && !moot && q.kind !== 'campaign') spent = true;
       qs.progress += gained;
       if (qs.progress + 1e-9 < stepCount(st)) break;
       qs.step++;
@@ -704,6 +707,21 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   }
 }
 
+/** «Пропустить шаг» (owner, 2026-10-21: «скипнуть этот шаг нельзя»): the last resort of the opening's lessons of the
+ *  shops — a guide's step, not a deed — passed over by her own word. The quest goes on to its next step. */
+export function skipGuideStep(game: Game, s: PlayerSession, id: string): string | null {
+  const p = s.profile;
+  const qs = p?.quests.active.find((a) => a.id === id);
+  const q = QUESTS_BY_ID[id];
+  if (!p || !qs || !q) return 'Not under way';
+  if (!openingStep(q, qs.step)?.startsWith('buy:')) return 'Only a lesson of the shops can be skipped';
+  qs.step++;
+  qs.progress = 0;
+  if (qs.step >= q.steps.length) completeQuest(game, s, q);
+  else game.sendTo(s, { t: 'toast', msg: `${q.name}: ${q.steps[qs.step].text}`, kind: 'info' });
+  return null;
+}
+
 /** A job of hers, given at a port of the victim's own flag, asks for this very ship now (its step wants her sunk,
  *  boarded or taken): the flag that asked for it does not hold it against her (QA playthrough B, docs/30 — Cinderhold's
  *  «Sink pirate ships in the Ashen Isles: 3» cost −18 standing with the Confederacy for +5 from the job, and a captain of
@@ -721,6 +739,47 @@ export function jobSanctions(game: Game, s: PlayerSession, victim: ShipEntity): 
     return !st.role || victim.npcRole === st.role || (st.role === 'patrol' && victim.npcRole === 'hunter');
   });
 }
+
+/** Room left in her hold for one unit of a good (the volume it takes aboard, her ship's own multipliers). */
+function roomFor(ship: ShipEntity, good: GoodId): boolean {
+  const st = ship.stats;
+  const used = cargoVolume(ship.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
+  const one = cargoVolume({ [good]: 1 }, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
+  return st.holdVolume - used + 1e-6 >= one;
+}
+
+/** The goods a step `buy:trade` may be done with: anything but the supplies and contraband (Game.ts shopEvent). */
+const TRADE_GOODS = (Object.keys(GOODS) as GoodId[]).filter((g) => GOODS[g].category !== 'supply' && !GOODS[g].contraband);
+
+/**
+ * Every step that asks her to buy, hire, fill or equip, checked against what she has (owner, 2026-10-21: «если у меня уже
+ * пополнено все, то квест меня ведет к пополнению моряков в таверну, хотя у меня все забито. и скипнуть этот шаг нельзя.
+ * все квесты должны даблчекаться и если такое происходит, то пропускать шаг»). A step already satisfied, or one that
+ * cannot be done because something is full, is counted — the toast says why — and the guide's finger goes on. Checked as
+ * the step comes and every second after (questEvent's tick), so a change of hers (a full crew, a full hold) counts too.
+ * Steps of delivery (`pickup`, `deliver`, `carry`) are not: the hold is emptied and the goods come aboard as before.
+ */
+export function stepMoot(s: PlayerSession, st: QuestStep): string | null {
+  const ship = s.ship;
+  if (!ship) return null;
+  const crewFull = ship.crew >= ship.stats.crewMax;
+  switch (st.type) {
+    case 'buy':
+      // hands at the tavern, or a battery at the yard: a full crew is the lesson learnt (the owner's skip)
+      if (st.shop === 'arms') return crewFull ? 'The crew is already full — the step is counted.' : null;
+      if (st.shop === 'provisions') return roomFor(ship, 'provisions') ? null : 'No room in the hold for provisions — the step is counted.';
+      if (st.shop === 'sailcloth') return roomFor(ship, 'sailcloth') ? null : 'No room in the hold for sailcloth — the step is counted.';
+      return TRADE_GOODS.some((g) => roomFor(ship, g)) ? null : 'The hold is full — the step is counted.';
+    case 'recruit':
+      // men for the army sleep in her hammocks (dwell.ts recruit: «No hammocks left aboard»)
+      return crewFull ? 'The crew is already full — the step is counted.' : null;
+    default:
+      return null;
+  }
+}
+
+/** The step types stepMoot double-checks (tests: every buy/hire step has its check). */
+export const MOOT_STEPS = ['buy', 'recruit'] as const;
 
 function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): number {
   const ship = s.ship!;

@@ -16,4 +16,10 @@ export const SERVER_RU_CAMPAIGN: Record<string, string> = {
   'Enemy sails close in: the campaign’s fight comes to you.': 'Вражеские паруса идут на сближение: бой кампании сам идёт к вам.',
   'Nobody here offers that': 'Здесь такого не предлагают',
   'The campaign’s quest is not set aside: it goes on by itself': 'Задание кампании не откладывается: она идёт сама',
+  // owner, 2026-10-21: a step of buying or hiring already done, or one that cannot be (quests.ts stepMoot, skipGuideStep)
+  'The crew is already full — the step is counted.': 'Экипаж уже полон — шаг засчитан.',
+  'No room in the hold for provisions — the step is counted.': 'В трюме нет места для провизии — шаг засчитан.',
+  'No room in the hold for sailcloth — the step is counted.': 'В трюме нет места для парусины — шаг засчитан.',
+  'The hold is full — the step is counted.': 'Трюм полон — шаг засчитан.',
+  'Only a lesson of the shops can be skipped': 'Пропустить можно только урок лавок',
 };

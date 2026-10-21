@@ -356,8 +356,9 @@ function fillGoals(p: Profile): void {
     if (g.active.length >= 3) break;
     if (g.active.includes(id) || g.done.includes(id)) continue;
     g.active.push(id);
-    // Measured from now: what was done before does not count — except the flags (level, a policy, profit).
-    g.base[id] = /^g_(level5|insure|profit)$/.test(id) ? 0 : GOALS[id].metric(p);
+    // Measured from now: what was done before does not count — except the flags (level, a policy, profit) and a fitting
+    // (owner, 2026-10-21: every goal double-checked — with every slot already fitted, «fit a module» could never be done).
+    g.base[id] = /^g_(level5|insure|profit|module)$/.test(id) ? 0 : GOALS[id].metric(p);
   }
 }
 
@@ -368,7 +369,7 @@ function stepGoals(game: Game, s: PlayerSession, p: Profile): boolean {
   let changed = false;
   for (const id of [...g.active]) {
     const def = GOALS[id];
-    if (!def || def.metric(p) <= (g.base[id] ?? 0)) continue;
+    if (!def || def.metric(p) <= (id === 'g_module' ? 0 : g.base[id] ?? 0)) continue; // (a fitting already aboard: done)
     g.active = g.active.filter((x) => x !== id);
     g.done.push(id);
     const lv = addXp(p, lumpXp(p.level, XP_UNITS.tutorialGoal));

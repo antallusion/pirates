@@ -4443,7 +4443,7 @@ function step(t: number): void {
     tactical.render(state.boardTac);
     filmMoments();
     const op = openingFrame();
-    tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : null), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null });
+    tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : null), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax });
     tutorPointer.frame();
     encounterCard.frame();
     surrenderCard.frame(state);

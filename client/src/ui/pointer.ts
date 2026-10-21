@@ -15,6 +15,9 @@ export interface PointerFacts {
   pursuit?: 'board' | 'guns' | null;
   /** The campaign's opening (owner, 2026-10-19), its shop of trade: the good of this market to point at. */
   tradeGood?: string | null;
+  /** No hammocks left aboard: «Нанять» cannot be done, the finger never points at the tavern for it (owner, 2026-10-21;
+   *  the server counts the step — quests.ts stepMoot). */
+  crewFull?: boolean;
 }
 
 /** The harbour's way out to sea, the First Watch's own (the gold «В море» of the port window, the HUD's round one). */
@@ -27,6 +30,7 @@ const TO_PORT = ['#tc-act[data-act="harbour"]', '.act-btn.act-harbour', '#tc-act
  *  each step — the shop's tab and its row, «В море», «Атаковать», «На абордаж», the stack's «Атаковать», «Занять». */
 function openingTargets(f: PointerFacts, op: string): string[] {
   if (op.startsWith('buy:')) {
+    if (op === 'buy:arms' && f.crewFull) return [];
     if (!f.docked) return TO_PORT;
     const shop = op.slice(4);
     if (shop === 'arms') return ['#modal-panel [data-act="crew"][data-prof="sailor"][data-n="1"]:not([disabled])', '#modal-panel [data-act="hire_short"]', '#modal-panel [data-act="gun"]:not([disabled])', '#modal-panel [data-ptab="tavern"]', ...TO_PORT];

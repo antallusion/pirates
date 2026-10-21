@@ -163,7 +163,7 @@ export type ClientMsg =
   | { t: 'escort'; action: 'hire' | 'dismiss'; classId?: ShipClassId; id?: string }
   | { t: 'formation'; formation: 'line' | 'wedge' | 'ring' }
   /** `pay`: how a job is to be paid, chosen on taking it (docs/11 P6). */
-  | { t: 'quest'; action: 'accept' | 'abandon' | 'decline' | 'share'; id: string; pay?: QuestPay }
+  | { t: 'quest'; action: 'accept' | 'abandon' | 'decline' | 'share' | 'skip_step'; id: string; pay?: QuestPay }
   | { t: 'path'; to: CaptainId }
   | { t: 'oath'; oath: 'code' | 'marque' }
   | { t: 'build'; req: { classId: ShipClassId; name: string; frame: WoodId; plank: WoodId; rares: Partial<Record<RareSlot, GoodId>>; figurehead?: FigureheadId; planId?: string; master?: boolean } }

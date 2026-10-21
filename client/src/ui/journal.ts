@@ -82,6 +82,7 @@ const EN = {
   noPlace: 'This step has no place on the chart',
   share: 'Share with the group',
   abandon: 'Set aside',
+  skipStep: 'Skip step',
   confirmAbandon: 'Set this quest aside? Its progress is lost.',
   fast: 'A quarter more if done within {m} min',
   done: 'Quests done: {n}',
@@ -139,6 +140,7 @@ const RU: typeof EN = {
   noPlace: 'У этого шага нет места на карте',
   share: 'Поделиться с группой',
   abandon: 'Отложить',
+  skipStep: 'Пропустить шаг',
   confirmAbandon: 'Отложить это задание? Сделанное по нему пропадёт.',
   fast: 'На четверть больше, если управитесь за {m} мин',
   done: 'Выполнено заданий: {n}',
@@ -263,6 +265,8 @@ export class Journal {
     root.querySelector<HTMLElement>('[data-share]')?.addEventListener('click', () => this.chosen && this.send({ t: 'quest', action: 'share', id: this.chosen }));
     // A group contract: on the board of those looking for a group, by its name.
     root.querySelector<HTMLElement>('[data-lfg]')?.addEventListener('click', () => q && this.send({ t: 'group', action: 'lfg', note: serverText(q.name) }));
+    // the opening's lesson of the shops: «Пропустить шаг», the last resort (owner, 2026-10-21)
+    root.querySelector<HTMLElement>('[data-jskip]')?.addEventListener('click', () => this.chosen && this.send({ t: 'quest', action: 'skip_step', id: this.chosen }));
     root.querySelector<HTMLElement>('[data-abandon]')?.addEventListener('click', () => {
       const id = this.chosen;
       if (id) void ask(L('confirmAbandon')).then((ok) => ok && this.send({ t: 'quest', action: 'abandon', id }));
@@ -373,6 +377,7 @@ export class Journal {
         <button class="btn btn-small${tracked ? ' on' : ''}" data-follow ${tracked ? 'disabled' : ''}>${esc(L(tracked ? 'following' : 'follow'))}</button>
         ${canShare ? `<button class="btn btn-small" data-share>${esc(L('share'))}</button>` : ''}
         ${q.category === 'elite' && !inGroup ? `<button class="btn btn-small" data-lfg title="${esc(L('lfgHint'))}">${esc(L('lfg'))}</button>` : ''}
+        ${q.op?.startsWith('buy:') ? `<button class="btn btn-small" data-jskip>${esc(L('skipStep'))}</button>` : ''}
         ${q.kind === 'job' || q.kind === 'story' ? `<button class="btn btn-small btn-danger" data-abandon>${esc(L('abandon'))}</button>` : ''}
       </div>`;
   }
