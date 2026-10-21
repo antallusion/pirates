@@ -71,7 +71,10 @@ test('the opening’s guide: the client is told the step, the finger has a butto
     }
     assert.deepEqual(pointerTargets({ stage: `c:${op}`, touch: true, docked: false, battle: true }), [], 'never over a battle');
   }
-  assert.ok(pointerTargets({ stage: 'c:buy:provisions', touch: true, docked: true, battle: false })[0].includes('data-good="provisions"'), 'the market’s row');
+  // (the «sell before you buy» advisor's button first while it is up — a purchase refused for room: owner, 2026-10-21)
+  const buyT = pointerTargets({ stage: 'c:buy:provisions', touch: true, docked: true, battle: false });
+  assert.equal(buyT[0], '#buy-advice #ba-go', 'the advisor first');
+  assert.ok(buyT[1].includes('data-good="provisions"'), 'the market’s row');
   assert.ok(pointerTargets({ stage: 'c:found', touch: true, docked: false, battle: false }).some((x) => x.includes('claim')), '«Занять»');
 });
 
