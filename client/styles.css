@@ -5514,3 +5514,11 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
 .qb-card .qb-t { display: flex; flex-direction: column; flex: 1 1 200px; min-width: 0; }
 .qb-card .qb-t b { overflow-wrap: anywhere; }
 .qb-card .qb-b { display: flex; gap: 6px; flex-wrap: wrap; }
+/* The receipt's e-mail asked in the web game's top-up (owner, 2026-10-21; client/src/checkout.ts) */
+.yk-mail-panel { width: min(480px, 100%); text-align: left; }
+.yk-mail-panel .yk-mail-lead { margin: 0 0 8px; font-size: 14px; }
+.yk-mail-panel .yk-mail-f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.yk-mail-panel .yk-mail-f input { min-height: 40px; padding: 6px 10px; font-size: 16px; color: var(--bone); background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(217, 178, 90, 0.45); border-radius: 5px; }
+.yk-mail-panel .yk-mail-f input[aria-invalid='true'] { border-color: var(--bad, #e0473a); }
+.yk-mail-panel .yk-mail-bad { margin: 4px 0 0; font-size: 13px; color: var(--bad, #e0473a); }
+.yk-mail-panel .yk-mail-save { margin-top: 8px; font-size: 13px; }

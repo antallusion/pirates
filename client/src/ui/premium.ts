@@ -6,6 +6,7 @@
 // (the boarding's «Существа») keep their own cards. The server decides every price and every refusal; the window
 // asks, and names each purchase with an id of its own so a message sent twice buys once.
 
+import { sendCheckout } from '../checkout.ts'; // the receipt's e-mail asked first (owner, 2026-10-21)
 import { AUTO_SCROLL_ICON, DOUBLOON_PACKS } from '../../../shared/src/data/premium.ts';
 import { DEAL_OFF, OFFERS, SHOP, TAB_SECS, offerBonus } from '../../../shared/src/data/shop.ts';
 import type { ShopFamily, ShopOffer, ShopSec, ShopTab } from '../../../shared/src/data/shop.ts';
@@ -397,7 +398,7 @@ export class PremiumWindow {
     root.querySelectorAll<HTMLButtonElement>('[data-pmyk]').forEach((b) => (b.onclick = () => {
       b.disabled = true;
       setTimeout(() => (b.disabled = false), 4000);
-      this.send({ t: 'premium', action: 'checkout', pack: b.dataset.pmyk!, lang: lang() === 'ru' ? 'ru' : 'en' });
+      sendCheckout(this.send, b.dataset.pmyk!); // (the receipt's e-mail asked first when none is known: checkout.ts)
     }));
     // A pack for VK's votes: VK's own order box (vk.ts); the doubloons come by the server's callback.
     root.querySelectorAll<HTMLButtonElement>('[data-pmvk]').forEach((b) => (b.onclick = () => {

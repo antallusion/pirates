@@ -7,17 +7,85 @@
 // order every few seconds (the notice may be late) and at once when the page comes back (/api/site/pay/back tells its
 // opener, or, opened in place of the game, brings her back to /play?yk=<order>).
 
-import type { ServerMsg } from '../../shared/src/protocol.ts';
-import { dict } from './i18n.ts';
+import type { ClientMsg, ServerMsg } from '../../shared/src/protocol.ts';
+import { dict, lang } from './i18n.ts';
 import { EN, RU } from './lang/ui/premium.ts';
 import type { Net } from './net.ts';
 import { ask } from './ui/confirm.ts';
+import { esc } from './ui/dom.ts';
+import { buttonHtml } from './ui/kit/button.ts';
+import { openSheet } from './ui/kit/sheet.ts';
 
 const L = dict(EN, RU);
 
 /** The checkout takes her payment (the server's word: YooKassa live, or the test mode open to her). */
 let open = false;
 export const webPayOpen = (): boolean => open;
+
+/** The receipt's e-mail (owner, 2026-10-21: live 54-FZ receipts): the server says when none is known for her account
+ *  (`webEmail` of the shop's view); the e-mail typed here is kept for this page, and on the server only if she ticks it. */
+let mailNeeded = false;
+let pageMail: string | null = null;
+export const MAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
+/** For the tests: what the checkout knows of the e-mail. */
+export const mailState = (): { needed: boolean; page: string | null } => ({ needed: mailNeeded, page: pageMail });
+
+/** The top-up's order for a pack: straight to the server when an e-mail is known (or none is needed), else the e-mail
+ *  asked first, inline (one field, checked), and the order sent with it. */
+export function sendCheckout(send: (m: ClientMsg) => void, pack: string): void {
+  const l = lang() === 'ru' ? 'ru' : 'en';
+  if (!mailNeeded || pageMail) return send({ t: 'premium', action: 'checkout', pack, lang: l, ...(pageMail ? { email: pageMail } : {}) });
+  askMail(send, pack);
+}
+
+/** The one field of the e-mail, a box to keep it, «Перейти к оплате»; cancelled — the waiting purchase stops waiting. */
+function askMail(send: (m: ClientMsg) => void, pack: string): void {
+  if (typeof document === 'undefined') return;
+  document.getElementById('yk-mail')?.remove();
+  let done = false;
+  const sheet = openSheet({
+    id: 'yk-mail', title: L('yk.mailTitle'), cls: 'yk-mail-panel', height: 'auto',
+    body: `<p class="yk-mail-lead">${esc(L('yk.mailLead'))}</p>
+      <label class="yk-mail-f"><span>${esc(L('yk.mailField'))}</span><input type="email" inputmode="email" autocomplete="email" maxlength="254" spellcheck="false" data-ykmail placeholder="name@mail.ru"></label>
+      <p class="yk-mail-bad hidden" role="alert">${esc(L('yk.mailBad'))}</p>
+      <label class="check yk-mail-save"><input type="checkbox" data-yksave> ${esc(L('yk.mailSave'))}</label>`,
+    foot: `${buttonHtml({ kind: 'primary', size: 'md', label: L('yk.mailGo'), data: { ykgo: '1' } })}${buttonHtml({ kind: 'secondary', size: 'md', label: L('yk.cancel'), data: { ykno: '1' } })}`,
+    onClose: () => {
+      if (!done) unpaid();
+    },
+  });
+  const input = sheet.panel.querySelector<HTMLInputElement>('[data-ykmail]')!;
+  const bad = sheet.panel.querySelector<HTMLElement>('.yk-mail-bad')!;
+  const go = () => {
+    const v = input.value.trim().toLowerCase();
+    if (!MAIL_RE.test(v)) {
+      bad.classList.remove('hidden');
+      input.setAttribute('aria-invalid', 'true');
+      input.focus();
+      return;
+    }
+    const save = !!sheet.panel.querySelector<HTMLInputElement>('[data-yksave]')?.checked;
+    pageMail = v;
+    if (save) mailNeeded = false;
+    done = true;
+    sheet.close('button');
+    send({ t: 'premium', action: 'checkout', pack, lang: lang() === 'ru' ? 'ru' : 'en', email: v, ...(save ? { save: true } : {}) });
+  };
+  input.addEventListener('input', () => {
+    bad.classList.add('hidden');
+    input.removeAttribute('aria-invalid');
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') go();
+  });
+  sheet.panel.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-ykgo], [data-ykno]');
+    if (!b) return;
+    if (b.dataset.ykgo) go();
+    else sheet.close('button');
+  });
+  input.focus({ preventScroll: true });
+}
 
 /** The orders being paid now, and until when they are asked about. */
 const watching = new Map<string, number>();
@@ -63,7 +131,10 @@ export function webCheckouts(net: Net, toast: (msg: string, kind: string) => voi
     back = null;
   }
   net.on((m: ServerMsg) => {
-    if (m.t === 'premium') open = !!m.view.web;
+    if (m.t === 'premium') {
+      open = !!m.view.web;
+      mailNeeded = !!m.view.webEmail;
+    }
     else if (m.t === 'captain_shop') open = !!m.web;
     else if (m.t === 'doubloons' && back) {
       watching.set(back, Date.now() + WATCH_MS);
@@ -74,6 +145,11 @@ export function webCheckouts(net: Net, toast: (msg: string, kind: string) => voi
         watching.set(m.order, Date.now() + WATCH_MS);
         toast(L('yk.opened'), 'info');
         openPage(m.url, stash);
+      } else if (m.needEmail) {
+        // the receipt wants her e-mail (none known, or the one typed was refused): asked inline, the order sent again
+        mailNeeded = true;
+        pageMail = null;
+        askMail((x) => net.send(x), m.pack);
       } else if (!m.order) unpaid(); // (no page: the server said why)
       else if (m.status === 'done' || m.status === 'canceled' || m.status === 'failed') {
         watching.delete(m.order);

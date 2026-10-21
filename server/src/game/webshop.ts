@@ -35,7 +35,7 @@ import { buyCaptainFor, ownsCaptain } from './captainshop.ts';
 import type { Game } from './Game.ts';
 import { opsPrice, opsShut } from './liveops.ts';
 import type { PlayerSession } from './player.ts';
-import { buyShip, buyUnit, payIn, sendBalance, sendPremium, setWebPay, shipWhy, unitOffer, unitWhy } from './premium.ts';
+import { buyShip, buyUnit, payIn, sendBalance, sendPremium, setWebMail, setWebPay, shipWhy, unitOffer, unitWhy } from './premium.ts';
 import { refitHolds } from './refit.ts';
 import { MAX_BERTHS } from './shipbuilding.ts';
 import { accountOfferWhy, buyForAccount, shopState } from './shop.ts';
@@ -94,6 +94,8 @@ export interface WebShopOptions {
   pumpMs?: number;
   /** Where a buyer from the web game comes back (default: the returnUrl's site with /api/site/pay/back). */
   backUrl?: string;
+  /** The test mode asks the buyer's e-mail as the live receipts do (GRAVETIDE_PAY_TEST_RECEIPT=1: QA of the prompt). */
+  testReceipt?: boolean;
 }
 
 /** The world's web shop (the web game's top-up reaches it by its game: Game.ts, `premium` `checkout`). */
@@ -149,10 +151,11 @@ export class WebShop {
   constructor(game: Game, o: WebShopOptions) {
     this.game = game;
     this.o = o;
-    this.test = o.provider ? null : new TestPay();
+    this.test = o.provider ? null : new TestPay({ needsEmail: !!o.testReceipt });
     this.provider = o.provider ?? this.test!;
     SHOPS.set(game, this);
     setWebPay(game, (acc) => this.mode === 'live' || this.testAllowed(acc));
+    setWebMail(game, (acc) => this.provider.needsEmail && !this.knownEmail(acc));
     const ms = o.pumpMs ?? 3000;
     if (ms > 0) setInterval(() => this.pump(), ms).unref();
   }
@@ -349,12 +352,23 @@ export class WebShop {
    * (the catalogue's, the server's). The same order, the same provider, the same check and delivery as the site's; the
    * buyer comes back to the game. Telegram keeps its Stars and VK its votes: the client asks this only in the browser.
    */
-  async orderInGame(acc: number, pack: unknown, lang: 'ru' | 'en'): Promise<{ orderId: string; url: string } | { error: OrderError }> {
+  async orderInGame(acc: number, pack: unknown, lang: 'ru' | 'en', email?: unknown, save = false): Promise<{ orderId: string; url: string } | { error: OrderError }> {
     const row = this.game.db.accountById(acc);
     if (!row) return { error: 'not_found' };
     const x0 = webItem(pack);
     if (!x0 || x0.kind !== 'pack') return { error: 'bad_item' };
-    return this.place({ acc, name: row.name }, x0, lang, cleanEmail(row.email), 'game');
+    // The receipt's e-mail (owner, 2026-10-21: live 54-FZ receipts): her account's, else the one she kept for receipts,
+    // else the one she typed in the game now — kept for the next time only when she ticked «запомнить» (and never as
+    // her login: the account's own e-mail is changed only by its own confirmed rules, auth.ts).
+    const typed = cleanEmail(email);
+    if (email !== undefined && email !== '' && !typed) return { error: 'email' };
+    if (typed && save) this.game.db.setKv(`receiptmail:${acc}`, typed);
+    return this.place({ acc, name: row.name }, x0, lang, typed ?? this.knownEmail(acc), 'game');
+  }
+
+  /** The e-mail a receipt goes to for an account: its own, else the one kept for receipts (null: none known). */
+  knownEmail(acc: number): string | null {
+    return cleanEmail(this.game.db.accountById(acc)?.email) ?? cleanEmail(this.game.db.getKv<string>(`receiptmail:${acc}`));
   }
 
   /** An order of the web game asked about by its own account (null: none of hers): its payment checked again, its view. */
@@ -587,7 +601,7 @@ export class WebShop {
 /** The web game's top-up messages (Game.ts): `checkout` — a pack's order for her own account and the provider's page
  *  (`premium_checkout` with its link, or none and a toast why); `checkout_check` — her order's payment asked again (the
  *  game asks while the page is open and when she comes back to it). */
-export function gameCheckout(game: Game, s: PlayerSession, msg: { action: 'checkout'; pack: string; lang?: 'en' | 'ru' } | { action: 'checkout_check'; order: string }): void {
+export function gameCheckout(game: Game, s: PlayerSession, msg: { action: 'checkout'; pack: string; lang?: 'en' | 'ru'; email?: string; save?: boolean } | { action: 'checkout_check'; order: string }): void {
   const shop = webShopOf(game);
   if (!s.authed) return;
   if (msg.action === 'checkout_check') {
@@ -604,8 +618,13 @@ export function gameCheckout(game: Game, s: PlayerSession, msg: { action: 'check
     game.sendTo(s, { t: 'premium_checkout', pack, url: null });
   };
   if (!shop) return fail('Payments are not open yet.');
-  void shop.orderInGame(s.accountId, pack, msg.lang === 'ru' ? 'ru' : 'en').then(
+  void shop.orderInGame(s.accountId, pack, msg.lang === 'ru' ? 'ru' : 'en', msg.email, !!msg.save).then(
     (r) => {
+      // no e-mail for the receipt: the game asks it (one field) and orders again — no dead end (owner, 2026-10-21)
+      if ('error' in r && r.error === 'email') {
+        if (msg.email) game.sendTo(s, { t: 'toast', msg: 'That does not look like an e-mail address.', kind: 'bad' });
+        return game.sendTo(s, { t: 'premium_checkout', pack, url: null, needEmail: true });
+      }
       if ('error' in r) return fail(r.error === 'test_only' ? 'Payments are not open yet.' : r.error === 'rate' ? 'Too many unpaid orders. Pay one or wait an hour.' : r.error === 'email' ? 'The receipt needs your e-mail: add it to your account.' : 'The payment could not be made. Try again in a minute.');
       game.sendTo(s, { t: 'premium_checkout', pack, url: r.url, order: r.orderId });
     },

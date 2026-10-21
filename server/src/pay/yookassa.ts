@@ -193,7 +193,11 @@ export function yookassaFromEnv(env: NodeJS.ProcessEnv = process.env, http?: Fet
  *  tester chooses «paid» or «declined»; the shop then checks the payment with `fetch`, as with YooKassa. */
 export class TestPay implements PayProvider {
   readonly name = 'test' as const;
-  readonly needsEmail = false;
+  /** The buyer's e-mail asked as the live 54-FZ receipts ask it (GRAVETIDE_PAY_TEST_RECEIPT=1: QA of the e-mail prompt). */
+  readonly needsEmail: boolean;
+  constructor(o: { needsEmail?: boolean } = {}) {
+    this.needsEmail = !!o.needsEmail;
+  }
   private pays = new Map<string, VerifiedPayment>();
 
   async create(o: CreatePayment): Promise<{ pid: string; url: string } | null> {

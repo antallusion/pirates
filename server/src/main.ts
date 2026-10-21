@@ -92,6 +92,7 @@ const rating = new SiteRating(game, { banned: (acc) => forum.store.user(acc)?.ro
 const webShop = new WebShop(game, {
   provider: yookassaFromEnv(), returnUrl: process.env.YOOKASSA_RETURN_URL ?? `${PUBLIC_URL}/site/shop/`,
   admins: ids(process.env.SITE_ADMINS ?? process.env.FORUM_ADMINS), payTest: process.env.GRAVETIDE_PAY_TEST === '1',
+  testReceipt: process.env.GRAVETIDE_PAY_TEST_RECEIPT === '1', // QA: the test checkout asks the receipt's e-mail as live does
   hidden: (acc, name) => rating.hidden(acc, name),
 });
 console.log(`[${GAME_NAME}] web shop: ${webShop.mode === 'live' ? 'YooKassa' : `TEST MODE${process.env.GRAVETIDE_PAY_TEST === '1' ? ' (open to all)' : ' (admins only)'}`}`);

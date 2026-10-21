@@ -15,7 +15,7 @@ import { inTelegram, starIcon } from '../tg.ts';
 import { inVk, vkBuy, vkPayOpen } from '../vk.ts'; // VK's votes (docs/36)
 import { packVotes, votesOf, votesText, votesWord } from '../../../shared/src/data/vk.ts';
 import { ask } from './confirm.ts';
-import { webPayOpen } from '../checkout.ts'; // the web game's YooKassa (owner, 2026-10-21)
+import { sendCheckout, webPayOpen } from '../checkout.ts'; // the web game's YooKassa (owner, 2026-10-21)
 import { esc, fmt, icon } from './dom.ts';
 
 const L = dict(EN, RU);
@@ -201,7 +201,7 @@ export async function topUpThenBuy(o: { price: number; balance: number; name: st
   }
   // in the browser: YooKassa for her own account (checkout.ts opens its page)
   if (viaCheckout()) {
-    o.send({ t: 'premium', action: 'checkout', pack: p.id, lang: lang() === 'ru' ? 'ru' : 'en' });
+    sendCheckout(o.send, p.id); // (the receipt's e-mail asked first when none is known: checkout.ts)
     return true;
   }
   o.send({ t: 'premium', action: 'stars', pack: p.id, lang: lang() === 'ru' ? 'ru' : 'en' });

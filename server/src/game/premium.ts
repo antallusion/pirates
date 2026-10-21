@@ -66,6 +66,14 @@ export function setWebPay(game: Game, open: ((accountId: number) => boolean) | n
   else webPays.delete(game);
 }
 export const webPayOpen = (game: Game, accountId: number): boolean => !!webPays.get(game)?.(accountId);
+/** Whether the web game's checkout must ask her e-mail first (owner, 2026-10-21: the 54-FZ receipt, and no e-mail known
+ *  for her account — a Telegram-born or a guest account playing in the browser). */
+const webMails = new WeakMap<Game, (accountId: number) => boolean>();
+export function setWebMail(game: Game, need: ((accountId: number) => boolean) | null): void {
+  if (need) webMails.set(game, need);
+  else webMails.delete(game);
+}
+export const webMailNeeded = (game: Game, accountId: number): boolean => !!webMails.get(game)?.(accountId);
 
 /** Whether the top-up takes payments: the static switch, or a desk wired in at run time. */
 export function paymentsOpen(game: Game): boolean {
@@ -372,6 +380,7 @@ export function premiumView(game: Game, s: PlayerSession): PremiumView {
     port: ship.docked ? game.portById(ship.docked)?.name ?? null : null,
     pay: paymentsOpen(game),
     web: webPayOpen(game, s.accountId),
+    ...(webMailNeeded(game, s.accountId) ? { webEmail: true } : {}),
     scrolls: game.db.scrolls(s.accountId),
     shop: s.authed ? shopView(game, s) : undefined,
   };
