@@ -488,7 +488,7 @@ ${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n
     // The figure and its blow at one height (owner, 2026-10-21): each set in the fitted box (det.hero.fit).
     const at = (q) => `left:${+q[0]}%;top:${+q[1]}%;width:${+q[2]}%;height:${+q[3]}%`;
     const fit = hz.alt && hz.cls === 'fig' && hz.fit && hz.art ? hz.fit : null;
-    const two = fit ? `<span class="fitstage" style="--r:${+fit.ar};--fb:6%"><img src="${esc(hz.art)}" alt="${esc(L(x.title))}" class="p0" style="${at(fit.a)}" decoding="async"><img src="${esc(hz.alt)}" alt="" class="p1" style="${at(fit.b)}" decoding="async"></span>`
+    const two = fit ? `<span class="fitstage" style="--r:${+fit.ar};--fb:6%;--fw:96cqw"><img src="${esc(hz.art)}" alt="${esc(L(x.title))}" class="p0" style="${at(fit.a)}" decoding="async"><img src="${esc(hz.alt)}" alt="" class="p1" style="${at(fit.b)}" decoding="async"></span>`
       : hz.alt && hz.cls === 'fig' ? `${im(hz.art, 'p0', 240, 300, L(x.title))}${im(hz.alt, 'p1', 240, 300)}` : hz.cls === 'face' ? `<span class="cap-ring">${im(hz.art, '', 300, 300, L(x.title))}</span>${hz.alt ? im(hz.alt, 'pd-hfig', 160, 300) : ''}` : im(hz.art, '', 300, 300, L(x.title));
     return `<div class="pd-art ${hz.cls}${x.swatch ? ' sw' : ''}${hz.alt && hz.cls === 'fig' ? ' anim' : ''}${fit ? ' fitbox' : ''}"${x.swatch ? ` style="--sw:${esc(x.swatch)}"` : ''}>${two}${label}${ribbon(x)}</div>`;
   };
