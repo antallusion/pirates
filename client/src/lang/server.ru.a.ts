@@ -567,7 +567,7 @@ export const SERVER_RU_A: Record<string, string> = {
   "Not that much in the treasury": "В казне столько нет",
   "Not that much silver aboard": "На борту столько серебра нет",
   "Not under the nose of a patrol": "Не под носом у патруля",
-  "Not under way": "Корабль не на ходу",
+  "Not under way": "Задание не взято",
   "Not while at war": "Не во время войны",
   "Not while grappled": "Не пока вы сцеплены кошками",
   "Not while under fire": "Не под огнём",
