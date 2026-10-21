@@ -1,7 +1,7 @@
 // A ship with her sails shot away and no sailcloth aboard (owner, 2026-10-20: «без парусины корабль ваще не плывет,
 // надо что-то с этим сделать. может какое-то самоуничтожение. кстати в обломках которые раскиданы по морю надо сделать
 // так чтобы помимо бабок всегда было чутка парусины и дерева»). Three answers, the numbers here:
-//  - the speed floor (shared/src/sim/sailing.ts): torn sails keep 40 % of her way, never less than 35 % with her crew
+//  - the speed floor (shared/src/sim/sailing.ts): torn sails keep at least 40 % of her way, never less than 35 % with her crew
 //    and her hold counted in — a fight on chain shot still pays, a ship is never left lying dead;
 //  - the jury rig: under a fifth of her sails and no sailcloth, her crew rigs a sail of spars and hammocks — up to a
 //    quarter of her sails in a minute, for nothing, again each time they are shot away; never above a quarter;
@@ -34,9 +34,16 @@ export const STRANDED_FAR = 3000;
 /** Her own scuttling: once in this long (real milliseconds). */
 export const SCUTTLE_CD_MS = 10 * 60_000;
 
-/** The share of her way torn sails leave her (0..1 health), before the crew and the hold. */
+/** Her way by her sails as it always was: a quarter at none, the rest by the share of her sails left. */
+export const SAIL_WAY_BASE = 0.25;
+
+/** The share of her way torn sails leave her (0..1 health), before the crew and the hold. The 40 % is a floor under
+ *  the old line (0.25 + 0.75 × sails), not a new line: above a fifth of her sails (where the jury rig stops) a ship
+ *  sails as she did before 2026-10-20. The first cut (0.4 + 0.6 × sails) sped up every ship with a bolt of sail shot
+ *  away — a sail-shot warship let a fishing ketch kite her (tests/balance/roles.test.ts: 2/12 against 0/12), and the
+ *  zone bosses' squads of kitted captains lost 8 % of their shot (tests/zonebosses.test.ts: ten in 20.3 min). */
 export function sailHealthMul(health: number): number {
-  return SAIL_TORN_MUL + (1 - SAIL_TORN_MUL) * Math.max(0, Math.min(1, health));
+  return Math.max(SAIL_TORN_MUL, SAIL_WAY_BASE + (1 - SAIL_WAY_BASE) * Math.max(0, Math.min(1, health)));
 }
 
 /** Sails, crew and hold together (`fit` = crew × hold, 0..1): the floor keeps her moving, never faster than sound sails. */

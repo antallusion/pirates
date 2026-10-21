@@ -149,7 +149,8 @@ export function targetSpeed(state: SailState, p: SailParams, wind: WindSample): 
   if (tal?.stormRider) windFactor *= wind.strength >= 0.75 ? 1.2 : wind.strength < 0.35 ? 0.7 : 1;
   const sailFactor = Math.pow(state.sail, 0.85) * (tal && tal.silentRunning > 0 && state.sail <= 0.51 ? 1 + 0.05 * tal.silentRunning : 1);
   // Torn sails, her crew and her hold together (owner, 2026-10-20: «без парусины корабль ваще не плывет»): torn sails
-  // keep 40 % of her way (was 25 %), and the three never hold her under 35 % (shared/src/data/adrift.ts).
+  // keep at least 40 % of her way (a floor under the old 0.25 + 0.75 × sails), and the three never hold her under 35 %
+  // (shared/src/data/adrift.ts).
   const crew = 0.45 + 0.55 * p.crewFactor;
   return p.maxSpeed * eff * windFactor * windPush(rel, windS) * sailFactor * sailShape(p.sailHealth, crew * p.loadFactor) * p.speedMul;
 }
