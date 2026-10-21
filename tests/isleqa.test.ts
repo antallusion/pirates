@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { pointerTargets } from '../client/src/ui/pointer.ts';
 import { TICK_RATE } from '../shared/src/constants.ts';
 import { campaignActive, campaignFoes } from '../server/src/game/campaign.ts';
+import { questEvent } from '../server/src/game/quests.ts';
 import { join, makeGame } from './helpers.ts';
 
 const src = (f: string) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
@@ -41,6 +42,12 @@ test('«Первый залп»: the tender sent after her is her foe in Saltmar
   // …and hers alone: a Crown patrol beside her leaves the tender be (one sank her struck under the card, the kill the patrol's)
   const patrol = game.spawnNpcShip('patrol', 'cutter', 'crown', foe.state.x + 200, foe.state.y, 0);
   assert.equal(game.isHostile(patrol, foe), false, 'no patrol goes for the campaign’s foe');
+  // the step done by another ship of hers, the tender sent for it is called off (she hunted the newcomer on to «Свой берег»)
+  const other = game.spawnNpcShip('pirate', 'sloop', 'confederacy', foe.state.x + 50, foe.state.y, 0);
+  questEvent(game, s, { k: 'sink', victim: other });
+  for (let i = 0; i < 2 * TICK_RATE; i++) game.step();
+  assert.equal(campaignActive(p)?.id, 'c01_03');
+  if (foe.alive) assert.notEqual(game.npcs.get(foe.id)?.huntAccount, s.accountId, 'the tender of a step done hunts her no more');
 });
 
 test('the opening’s struck foe: the finger on the card’s choice that does the step (sink for «Первый залп»)', () => {
@@ -48,4 +55,25 @@ test('the opening’s struck foe: the finger on the card’s choice that does th
   assert.equal(pointerTargets({ ...f, stage: 'c:sink' })[0], '[data-sur="sink"]:not([disabled])');
   assert.equal(pointerTargets({ ...f, stage: 'c:board' })[0], '[data-sur="release"]:not([disabled])');
   assert.match(src('client/src/ui/surrender.ts'), /data-sur="\$\{fate\}"/, 'the card’s buttons carry data-sur');
+});
+
+test('the finger finds a step’s button among a phone’s action pills, not only as the gold one', () => {
+  const t = pointerTargets({ stage: 'c:found', touch: true, docked: false, battle: false });
+  assert.ok(t.includes('.tc-act2[data-act="claim"]'), '«Занять» as a pill');
+  assert.ok(t.indexOf('#tc-act[data-act="claim"]') < t.indexOf('.tc-act2[data-act="claim"]'), 'the gold one first');
+  assert.ok(pointerTargets({ stage: 'c:neutral', touch: true, docked: false, battle: false }).includes('.tc-act2[data-act="roam"]'));
+  assert.match(src('client/src/ui/seahud.ts'), /'tc-actb--primary tc-act' : 'tc-act2'/, 'the pills are .tc-act2');
+});
+
+test('a boarding battle that opens shuts an ordinary window over it (its turns ran out unseen under the claim’s terms)', () => {
+  const main = src('client/src/main.ts');
+  const at = main.indexOf("if (m.t === 'board_tac' && m.view && !hadTac) {");
+  assert.ok(at > 0, 'the battle\u2019s opening has a block');
+  assert.match(main.slice(at, at + 600), /if \(modal && !ANSWER\.includes\(modal\)\) closeModal\(\);/);
+});
+
+test('no wolf pack round a captain in her first quarter of an hour, nor round a foe brought or sent for her', () => {
+  const npc = src('server/src/game/npc.ts');
+  const line = npc.split(String.fromCharCode(10)).find((l) => l.includes('rallyPack(game, ship, p)'))!;
+  for (const need of ['brain.huntFor === undefined', 'brain.huntAccount === null', 'ship.softFor === undefined', '!fresh(game.profileOf(p))', '!inFirstWatch(game, p)']) assert.ok(line.includes(need), need);
 });

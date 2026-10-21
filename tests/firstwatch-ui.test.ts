@@ -20,7 +20,7 @@ test('the finger points at the one button each step wants (docs/23 items 79–80
   assert.equal(pointerTargets({ ...base, stage: 'attack' })[0], '#tc-act[data-act="attack"]');
   assert.deepEqual(pointerTargets({ ...base, stage: 'fire' }), ['#tc-fire']);
   // «На абордаж»: closing in, only the grapples' button; held off at gun range, «Сблизиться»; no pursuit, «Атаковать».
-  assert.deepEqual(pointerTargets({ ...base, stage: 'board', pursuit: 'board' }), ['#tc-act[data-act="board"]', '.act-btn.act-board']);
+  assert.deepEqual(pointerTargets({ ...base, stage: 'board', pursuit: 'board' }), ['#tc-act[data-act="board"]', '.tc-act2[data-act="board"]', '.act-btn.act-board']);
   assert.ok(pointerTargets({ ...base, stage: 'board', pursuit: 'guns' }).includes('#tc-act[data-act="attack_mode"]'));
   assert.ok(!pointerTargets({ ...base, stage: 'board', pursuit: 'board' }).includes('#tc-act[data-act="attack_mode"]'), 'never «Бортами» while he runs in');
   assert.ok(pointerTargets({ ...base, stage: 'board', pursuit: null }).includes('#tc-act[data-act="attack"]'));

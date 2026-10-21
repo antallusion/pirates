@@ -51,7 +51,7 @@ function openingTargets(f: PointerFacts, op: string): string[] {
     case 'sink':
       return ['[data-sur="sink"]:not([disabled])', '#tc-act[data-act="attack"]', '.act-btn.act-attack', ...(f.touch && f.pursuit ? ['#tc-fire'] : [])];
     case 'board':
-      return ['[data-sur="release"]:not([disabled])', ...pointerTargets({ ...f, stage: 'board' })];
+      return ['[data-sur="release"]:not([disabled])', ...targetsOf({ ...f, stage: 'board' })];
     case 'neutral':
       return ['#tc-act[data-act="roam"]', '.act-btn.act-roam'];
     case 'found':
@@ -60,8 +60,20 @@ function openingTargets(f: PointerFacts, op: string): string[] {
   return [];
 }
 
-/** The buttons a step's finger may point at, in order of preference (the first one shown wins). */
+/** The buttons a step's finger may point at, in order of preference (the first one shown wins). On a phone the action
+ *  row's other buttons are `.tc-act2` pills, not the desk's `.act-btn`: each gold `#tc-act[data-act=…]` brings its pill
+ *  after it (QA 2026-10-22: «Занять» second to an «Атаковать» had no finger on a phone, and the town step stood). */
 export function pointerTargets(f: PointerFacts): string[] {
+  const out: string[] = [];
+  for (const sel of targetsOf(f)) {
+    out.push(sel);
+    const m = /^#tc-act\[data-act="(\w+)"\]$/.exec(sel);
+    if (m) out.push(`.tc-act2[data-act="${m[1]}"]`);
+  }
+  return out;
+}
+
+function targetsOf(f: PointerFacts): string[] {
   if (!f.stage || f.battle) return [];
   if (f.stage.startsWith('c:')) return openingTargets(f, f.stage.slice(2));
   switch (f.stage) {

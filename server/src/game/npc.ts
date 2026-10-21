@@ -45,7 +45,7 @@ import { pactNeutral } from './abyssfx.ts';
 import type { Path } from './nav.ts';
 import type { NpcRole, ShipEntity } from './ship.ts';
 import { holdGuard } from './advmap.ts';
-import { onboardingProtected } from './onboarding.ts';
+import { fresh, onboardingProtected } from './onboarding.ts';
 import { invaderHostile } from './invasions.ts'; // docs/19 E16
 
 export interface NpcBrain {
@@ -631,7 +631,10 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
       ship.addEffect({ id: 'ambush', until: now + 8, flags: ['shadow_strike'] }, now);
     }
     // (no wolf pack round the First Watch's lesson, nor round a captain still in it)
-    if (role === 'pirate' && brain.target !== p.id && p.isPlayer && brain.practice === undefined && !inFirstWatch(game, p)) rallyPack(game, ship, p);
+    // (nor round a captain's first quarter of an hour, nor round a foe brought or sent for her — the campaign's softened
+    // tender, a fresh captain's own-level pirate: QA 2026-10-22, a newcomer of ⚓3 off a safe harbour had three crews on
+    // her at each cast-off and sank three times on «Свой берег»)
+    if (role === 'pirate' && brain.target !== p.id && p.isPlayer && brain.practice === undefined && brain.huntFor === undefined && brain.huntAccount === null && ship.softFor === undefined && !inFirstWatch(game, p) && !fresh(game.profileOf(p))) rallyPack(game, ship, p);
     // No endless chases (docs/23 item 44): forty seconds after a captain and not a hit either way, and no nearer to her
     // for the last ten, she gives it up (a pack still beating up to her keeps coming).
     if (brain.preySince?.id !== p.id) brain.preySince = { id: p.id, t: now, best: preyD, closer: now };
