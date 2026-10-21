@@ -40,6 +40,7 @@ import { WEB_ITEMS, WEB_SECS, WEB_TAB_NAMES, dealItem, shipName, unitNames, webI
 import type { WebItem } from './webshop.ts';
 import { DATA_RU_CORE } from '../../../client/src/lang/data.ru.ts';
 import { DATA_RU_FLEET } from '../../../client/src/lang/data.fleet.ru.ts';
+import { DATA_RU_ARMS } from '../../../client/src/lang/data.arms.ru.ts';
 import { EN as ARMY_EN, RU as ARMY_RU } from '../../../client/src/lang/ui/army.ts';
 import { EN as SK_EN, RU as SK_RU } from '../../../client/src/lang/ui/skills.ts';
 import { EN as FL_EN, RU as FL_RU } from '../../../client/src/lang/ui/fleet.ts';
@@ -130,7 +131,7 @@ const metres = (m: number): Tr => [`${fmt(m)} m`, `${fmt(m)} м`];
 const pct = (x: number): Tr => same(`${Math.round(x * 100)}%`);
 const rub = (n: number): Tr => [`${fmt(n)} ₽`, `${fmt(n)} ₽`];
 const fill = (s: string, v: Record<string, string | number>) => s.replace(/\{(\w+)\}/g, (_, k: string) => (v[k] !== undefined ? String(v[k]) : `{${k}}`));
-const ruData = (key: string, en: string): string => DATA_RU_FLEET[key] ?? DATA_RU_CORE[key] ?? en;
+const ruData = (key: string, en: string): string => DATA_RU_FLEET[key] ?? DATA_RU_CORE[key] ?? DATA_RU_ARMS[key] ?? en;
 const army = (k: string): Tr => {
   const en = (ARMY_EN as Record<string, string>)[k] ?? k;
   return [en, (ARMY_RU as Record<string, string>)[k] ?? en];
@@ -460,8 +461,7 @@ function shipDetail(x: WebItem, art: ArtOf): WebDetail {
     tabs: [
       tab('stats', [{ t: 'bars', k: 'ship', note: [`Against the ${listName[0].toLowerCase()} of the fleet (${list.length} hulls)`, `Среди кораблей списка «${listName[1]}» (${list.length})`], rows: bars }, { t: 'tiles', k: 'more', rows: tiles }]),
       tab('abil', [{ t: 'abil', k: 'ship', rows: abil }]),
-      tab('set', sets),
-      tab('about', [{ t: 'text', k: 'note', body: d.premium?.note ?? role }]),
+      tab('set', [...sets, { t: 'text', k: 'note', h: ['About her', 'О корабле'], body: d.premium?.note ?? role }]),
     ],
     facts: { hull: d.hull, sails: d.sailHp, speed: d.maxSpeed, turn: d.turnRate, guns: d.gunPortsPerSide, slots: armySlots(d.tier), crew: d.crewMax, hold: d.holdVolume, armor: d.armor, lv, gift: gift?.kind ?? '', beasts: beasts.length },
   };
@@ -500,8 +500,8 @@ function unitDetail(x: WebItem, art: ArtOf): WebDetail {
         ] },
         { t: 'lines', k: 'packs', h: ['Packs', 'Наборы'], rows: packs.map((p) => ({ k: `unit_${u}_${p.k}`, icon: unitArt(u, art), name: [`×${o.n * p.k} · ${fmt(p.price)} ₽`, `×${o.n * p.k} · ${fmt(p.price)} ₽`] as Tr, qty: [`${fmt(Math.round(p.price / (o.n * p.k)))} ₽ a head`, `${fmt(Math.round(p.price / (o.n * p.k)))} ₽ за шт.`] as Tr })) },
         { t: 'text', k: 'deliver', icon: ICON.ship, h: ['Delivery', 'Вручение'], body: [`Into your army out of a fight: a ship of level ${lv} or more, a free stack and hammocks aboard. A kind already aboard joins its stack.`, `В армию вне боя: корабль ${lv}-го уровня и выше, свободный слот и койки на борту. Если такие уже есть — встают в тот же отряд.`] },
+        { t: 'text', k: 'note', h: ['About it', 'О существе'], body: o.note },
       ]),
-      tab('about', [{ t: 'text', k: 'note', body: o.note }]),
     ],
     facts: { tier: d.tier, hp: d.hp, atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, speed: d.speed, init: d.init, shots: d.shots, n, per, lv, skill: skillOf(u) ?? '', ranged: d.shots > 0 },
   };

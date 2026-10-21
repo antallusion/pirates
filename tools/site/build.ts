@@ -27,6 +27,7 @@ import { FACTIONS } from '../../shared/src/data/factions.ts';
 import { FRAMES, PLATES, TITLES } from '../../shared/src/data/cosmetics.ts';
 import { WEB_ITEMS, WEB_SECS, WEB_TABS, WEB_TAB_NAMES } from '../../shared/src/data/webshop.ts';
 import { SHOP } from '../../shared/src/data/shop.ts';
+import { SPECIAL_ICON as WD_SPECIAL_ICON } from '../../shared/src/data/webdetail.ts';
 import { DOC_IDS, DOC_TITLES, EDITION, LEGAL, REQUISITES, SELLER } from './legal.ts';
 import type { DocId } from './legal.ts';
 import { EN as ARMY_EN, RU as ARMY_RU } from '../../client/src/lang/ui/army.ts';
@@ -113,15 +114,8 @@ const CREATURES: Creature[] = (Object.keys(UNITS) as string[]).map((id) => {
   };
 });
 const BY_ID = new Map(CREATURES.map((c) => [c.id, c]));
-/** A creature ability's picture: the game paints none of its own, so each takes the nearest of the game's icons. */
-const SPECIAL_ICON: Record<string, string> = {
-  shooter: 'sp_musket_storm', no_penalty: 'talent_gun_steady_aim', blast: 'sp_powder_keg', double_strike: 'talent_brd_cutlass_drill',
-  no_retaliation: 'sp_sm_knives', retaliate_all: 'sp_rv_butcher', leader: 'talent_cmd_inspiring_presence', steady: 'sp_iron_discipline',
-  undead: 'sp_dr_brine_kiss', fear: 'sp_dread', sweep: 'talent_brd_boarding_axes', shield_wall: 'sp_shield_wall', shell: 'talent_srv_iron_hull',
-  poison: 'sp_foul_water', swarm: 'sp_red_harvest', regen: 'sp_tide_returns', terror: 'talent_brd_terror', flying: 'sp_following_wind',
-  diving: 'sp_dr_undertow', mend: 'sp_brine_mend', bind: 'sp_dr_anchor_chain', chill: 'sp_rain_squall', drain: 'sp_dr_drowning_grip',
-  breath: 'sp_st_elmos_fire', chain: 'sp_forked_lightning', fortune: 'talent_smg_smugglers_luck',
-};
+/** A creature ability's picture: the shop's cards and the bestiary share one table (shared/src/data/webdetail.ts). */
+const SPECIAL_ICON = WD_SPECIAL_ICON;
 /** An ability's line with its icon in a brass frame. */
 const abil = (ico: string | null, name: string, text: string, lang: Lang) =>
   `<li${ico ? ' class="ico"' : ''}>${ico ? `<span class="abil-ico"><img src="${ico}" alt="" loading="lazy" decoding="async" width="48" height="48"></span>` : ''}<span class="abil-tx"><b>${esc(name)}</b><span>${T(text, lang)}</span></span></li>`;
@@ -475,6 +469,15 @@ const SHOP_T: Record<string, Tr> = {
   e_provider: ['The payment system did not answer. Try again in a minute.', 'Платёжная система не ответила. Попробуйте через минуту.'],
   e_bad_item: ['No such item.', 'Нет такого товара.'], e_origin: ['Open the shop from the site itself.', 'Откройте магазин с самого сайта.'], e_unknown: ['Something went wrong. Try again.', 'Что-то пошло не так. Попробуйте ещё раз.'],
   rub: ['₽', '₽'],
+  // the thing's window (owner, 2026-10-21: «на тапу или нажатию я хочу видеть модалку красивую с иконками и описанием»)
+  more: ['Details', 'Подробнее'], prev: ['Previous', 'Предыдущий товар'], next: ['Next', 'Следующий товар'], of: ['of', 'из'],
+  loading: ['Loading…', 'Загружаем…'], loadErr: ['The card could not be loaded.', 'Не удалось загрузить карточку.'], retry: ['Try again', 'Повторить'],
+  save: ['Saves {n}%', 'Выгода {n}%'], worth: ['{w} at single prices', 'По отдельности — {w}'], usual: ['Usually {p}', 'Обычно {p}'],
+  perHead: ['{p} a head', '{p} за шт.'], ends: ['Ends in {t}', 'До конца — {t}'], starts: ['Starts in {t}', 'Начнётся через {t}'],
+  dd: ['d', 'д'], hh: ['h', 'ч'], mm: ['min', 'мин'], choose: ['Choose a pack', 'Выберите набор'], range: ['From {a} to {b} in the list', 'В списке от {a} до {b}'],
+  onlyHere: ['only here', 'только здесь'], alone: ['alone {p}', 'отдельно — {p}'], forCap: ['For', 'Для'], lv: ['lv.', 'ур.'],
+  copy: ['Copy the link', 'Скопировать ссылку'], copied: ['Link copied', 'Ссылка скопирована'], swipe: ['Swipe down to close', 'Смахните вниз, чтобы закрыть'],
+  emoteSay: ['Over your ship and in the chat', 'Над кораблём и в чате'], sample: ['Sample', 'Пример'],
 };
 
 /** The store's categories (the site's tabs, shared/src/data/webshop.ts WEB_TABS) with their pictures: the site kit's and
@@ -532,6 +535,12 @@ ${WEB_TABS.map((id) => cat(id, L(lang, WEB_TAB_NAMES[id])) + (id === 'cos' ? `<d
 </div></div>
 <button type="button" class="st-tab" aria-controls="st-filters" aria-expanded="false"><img src="${K('ico/spyglass')}" alt="" width="22" height="22"><span>${t('filters')}</span><i class="st-badge" hidden></i></button>
 <div class="st-backdrop" hidden></div>
+<div class="pd" role="dialog" aria-modal="true" aria-labelledby="pd-title" hidden><div class="pd-back" data-pd-close></div>
+<div class="pd-box" tabindex="-1"><div class="pd-grab" aria-hidden="true"><span></span></div>
+<div class="pd-top"><button type="button" class="pd-nav" data-pd-nav="-1" aria-label="${esc(t('prev'))}"><span aria-hidden="true">‹</span></button><span class="pd-pos muted" aria-live="polite"></span><button type="button" class="pd-nav" data-pd-nav="1" aria-label="${esc(t('next'))}"><span aria-hidden="true">›</span></button>
+<button type="button" class="pd-link" data-pd-copy aria-label="${esc(t('copy'))}"><img src="${K('ico/link')}" alt="" width="20" height="20"></button><button type="button" class="pd-x" data-pd-close aria-label="${esc(t('close'))}">×</button></div>
+<div class="pd-scroll"></div>
+<div class="pd-foot"><p class="pd-err" role="alert" hidden></p><div class="pd-who"></div><div class="pd-buy"></div></div></div></div>
 <div class="st-confirm" role="dialog" aria-modal="true" aria-labelledby="st-confirm-h" hidden><div class="st-confirm-in panel"><h3 id="st-confirm-h">${t('confirm')}</h3><div class="st-confirm-what"></div>
 <div class="st-confirm-act"><button type="button" class="btn-oak sm" data-cancel>${t('cancel')}</button><button type="button" class="btn-gold sm" data-pay></button></div><p class="shop-legal muted">${legalLine}</p></div></div>
 </section>
