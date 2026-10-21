@@ -104,10 +104,15 @@ test('docs/25 items 48 and 70: a stack\'s turn 20 s at every level (owner, 2026-
   assert.deepEqual([1, 10, 11, 25, 45, 60].map(tacBankSecs), [60, 60, 120, 180, 300, 360]);
   const a = side(playerArmy(8), captainAt('reaver', 8, 1), 'reaver', true);
   const b = side(playerArmy(8), captainAt('admiral', 8, 2), 'admiral', false);
+  // Owner, 2026-10-22: against the sea no clock at all — her twenty seconds every turn, never a turn lost to it.
+  const sea = newBattle(a, b, 4, 0, new Rng(4), { len: 'board' });
+  assert.deepEqual([sea.heroes[0].bank, sea.heroes[1].bank], [-1, -1], 'a boarding of the sea\'s ship keeps no chess clock');
+  // Between two captains (the other on auto here, her side played by the sea's mind): a minute each at level 8.
   const rng = new Rng(4);
-  const bt = newBattle(a, b, 4, 0, rng, { len: 'board' });
+  const bt = newBattle(a, { ...b, human: true }, 4, 0, rng, { len: 'board' });
   assert.equal(bt.heroes[0].bank, 60, 'a minute at level 8');
-  assert.equal(bt.heroes[1].bank, -1, 'the sea\'s mind keeps none');
+  assert.equal(bt.heroes[1].bank, 60);
+  bt.heroes[1].auto = true;
   // Play to her turn; she thinks eight seconds and defends: they come off her clock.
   let t = 0;
   while (!bt.over && (bt.active === null || stackById(bt, bt.active)!.side !== 0)) stepBattle(bt, (t += 0.5), rng);

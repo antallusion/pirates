@@ -39,6 +39,12 @@ test('TAC_TURN: twenty seconds a stack at every level, against the sea and a cap
     const rng = new Rng(L + (pvp ? 100 : 0));
     const bt = newBattle(a, b, 3, 0, rng, { len: 'board', level: L });
     const t = toTurnOf(bt, 0, rng, 0);
+    if (!pvp) {
+      // Owner, 2026-10-22: against the sea no chess clock — her twenty seconds every turn, never a turn lost to it.
+      assert.equal(bt.heroes[0].bank, -1, `L${L}: no clock against the sea`);
+      assert.ok(!bt.over && bt.clock === undefined && bt.turnEnds > t, `L${L}: her turn is hers`);
+      continue;
+    }
     assert.ok(!bt.over && bt.clock, `L${L}${pvp ? ' pvp' : ''}: her turn runs on her clock`);
     // Her turn starts once what came before it is played: from then, TAC_TURN (her chess clock holds more than that).
     assert.ok(bt.heroes[0].bank >= TAC_TURN, `L${L}: a chess clock of ${bt.heroes[0].bank} s`);

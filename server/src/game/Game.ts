@@ -183,7 +183,7 @@ import type { DelayedStrike } from './abilities.ts';
 import { boardingRangeBetween, canBoard, claimPrize, cutGrapples, resendBoarding, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
 import { assistPref, joinBoarding } from './boardgroup.ts'; // docs/25 block Е
 import { tacAction } from './tactical.ts';
-import { battleCardClosed, untouchable } from './inbattle.ts'; // owner, 2026-10-22
+import { battleCardClosed, inBattle, SELF_IN_BATTLE_WHY, untouchable } from './inbattle.ts'; // owner, 2026-10-22
 import { replayList, replayOf } from './tacreplay.ts'; // owner, 2026-10-16: «Повтор»
 import { surrenderBlocked, surrenderClosed } from './struck.ts';
 import { endStreak, onStreakKill, streakAhead } from './streak.ts';
@@ -4203,6 +4203,7 @@ export class Game {
         this.sendTo(s, { t: 'legends', view: legendsView(this, s) });
         return;
       case 'land': {
+        if (!ship.docked && inBattle(this, ship)) return err(SELF_IN_BATTLE_WHY); // one thing at a time in a battle (owner, 2026-10-22)
         // Off a dark lighthouse at dusk: pay its keeper (docs/16 #23).
         if (!ship.docked && s.landable?.action === 'keeper') {
           err(payKeeper(this, s));
@@ -4769,6 +4770,7 @@ export class Game {
     const p = s.profile!;
     if (ship.docked) return 'Already in port';
     if (!ship.alive || ship.boarding) return 'Not now';
+    if (inBattle(this, ship)) return SELF_IN_BATTLE_WHY; // her party fights ashore, or her group's boarding holds her (owner, 2026-10-22)
     if (ship.underFire(this.now)) return 'The harbour chain stays up while you are in a fight';
     const port = this.nearestPort(ship.state.x, ship.state.y);
     if (!port || dist(port.x, port.y, ship.state.x, ship.state.y) > PORT_DOCK_RADIUS) return 'No harbour close enough';

@@ -699,8 +699,11 @@ export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: n
       h.startHp = bt.stacks.filter((s) => s.side === side).reduce((n, s) => n + hpOf(s), 0);
     }
   }
-  // docs/25 item 48: a captain's chess clock over a boarding (the sea's mind keeps none).
-  if (board) for (const [x, h] of [[a, 0], [b, 1]] as const) if (x.human) bt.heroes[h].bank = tacBankSecs(level);
+  // docs/25 item 48: a captain's chess clock over a boarding between captains (the sea's mind keeps none). Against the
+  // sea she keeps her twenty seconds every turn (owner, 2026-10-22: «бой … где я не мог ходить и вообще ничего делать» —
+  // a minute's clock spent, every turn of hers went to defence by itself): the clock is only to end a fight of two
+  // captains in time.
+  if (board && a.human && b.human) for (const [x, h] of [[a, 0], [b, 1]] as const) if (x.human) bt.heroes[h].bank = tacBankSecs(level);
   // The flag's hex is kept clear of what the guns left (a hole or a fire on it).
   if (bt.flag) for (const i of bt.flag.hex) if (bt.cells[i] === 'H' || bt.cells[i] === 'F') bt.cells[i] = '.';
   // Owner, 2026-10-18: what each deck shows, by her ship, and the gangplanks — from the seed, the same for both sides.
@@ -926,8 +929,9 @@ export function addAlly(bt: TacBattle, side: 0 | 1, input: TacSideInput, grow: b
   // docs/25 item 48: the side's chess clock shared by the stacks each captain plays.
   if (bt.len === 'board') {
     const all = sideStacks + stacks.length;
+    const clocked = sideHeroes(bt, side).some((h) => h.bank >= 0); // (a fight with the sea keeps none, above)
     for (const h of sideHeroes(bt, side)) if (h.bank >= 0) h.bank = Math.round(h.bank * (sideStacks / Math.max(1, all)) * 10) / 10;
-    if (input.human) hero.bank = Math.round(tacBankSecs(bt.level) * (stacks.length / Math.max(1, all)) * 10) / 10;
+    if (input.human && clocked) hero.bank = Math.round(tacBankSecs(bt.level) * (stacks.length / Math.max(1, all)) * 10) / 10;
   }
   bt.stacks.push(...stacks);
   (bt.allies ??= []).push({ side, slot, hero, joined: Math.max(1, bt.round), ...(tag !== undefined ? { tag } : {}) });

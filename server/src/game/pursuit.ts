@@ -26,6 +26,7 @@
 // and, a cable off, her boats go (roamers.ts attackRoam): the hex battle opens. No ship's order goes to a stack: a run
 // on one has no ship for its mark (`target` −1), and the gunners only answer a ship that fires on her.
 
+import { IN_BATTLE_WHY, inBattle } from './inbattle.ts'; // owner, 2026-10-22
 import { campaignFoes } from './campaign.ts'; // owner, 2026-10-22: «Огонь» takes her quest's foe
 import { AIMED_SPREAD, AUTO_ARC_DEG, BOARD_RUN, CHASE_GIVE_UP, LAY_ARC_DEG, closeRange, leadPoint } from '../../../shared/src/data/gunnery.ts';
 import { ROAM_REACH } from '../../../shared/src/data/roamers.ts';
@@ -290,7 +291,7 @@ export function stepPursuit(game: Game): void {
       stopPursuit(game, s, 'off');
       continue;
     }
-    if (ship.boarding || ship.grappled || s.pendingBoarding) {
+    if (ship.boarding || ship.grappled || s.pendingBoarding || inBattle(game, ship)) {
       stopPursuit(game, s, 'board');
       continue;
     }
@@ -303,9 +304,16 @@ export function stepPursuit(game: Game): void {
       stopPursuit(game, s, 'struck');
       continue;
     }
-    if (!t || attackBlocked(game, ship, t)) {
+    const blocked = t ? attackBlocked(game, ship, t) : null;
+    if (!t || blocked) {
       // Lost (sunk, gone, out of sight): the nearest threat is the next mark (docs/23 item 43).
       const next = nearestThreat(game, ship, RETARGET_R);
+      // (her mark gone into a battle of its own — owner, 2026-10-22: said why, not «lost»)
+      if (!next && blocked === IN_BATTLE_WHY) {
+        stopPursuit(game, s, 'off');
+        game.refuse(s, blocked);
+        continue;
+      }
       if (!next) {
         stopPursuit(game, s, t && !t.alive ? 'sunk' : 'lost');
         continue;

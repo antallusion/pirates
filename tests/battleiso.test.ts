@@ -174,3 +174,31 @@ test('the watchdog: a battle with nobody’s turn, or a turn no order ends, move
 test('the words of the battles’ isolation in Russian', () => {
   for (const [en, ru] of Object.entries(SERVER_RU_BATTLE)) assert.ok(en && ru && !/[A-Za-z]/.test(ru), en);
 });
+
+test('a stack fight survives a Telegram reload: the field is sent again and her orders still play it; no docking out of it', async () => {
+  const { PROTOCOL_VERSION } = await import('../shared/src/constants.ts');
+  const { FakeConn } = await import('./helpers.ts');
+  const game = sea();
+  const s = captain(game, 'Reloaded');
+  gullFight(game, s);
+  const c = (s as unknown as { conn: InstanceType<typeof FakeConn> }).conn;
+  const token = c.last('welcome')!.token;
+  c.close();
+  steps(game, 40); // two seconds with the line down: her party fights on by itself
+  const c2 = new FakeConn();
+  game.attach(c2 as unknown as import('../server/src/net/websocket.ts').WsConnection);
+  c2.push({ t: 'hello', v: PROTOCOL_VERSION, token });
+  const s2 = game.sessionByName('Reloaded')!;
+  assert.ok(landFighting(game, s2), 'the fight is still hers');
+  const v = c2.last('board_tac')?.view;
+  assert.ok(v && v.land, 'the field is sent with the login');
+  assert.ok(v.over || !v.stacks.every((x) => x.side !== 0), 'her stacks on it');
+  // her order is taken by the live fight (no «The fight is over», no «Nothing to fight»)
+  const before = c2.all('toast').length;
+  c2.push({ t: 'tac', act: { a: 'defend' } });
+  const said = c2.all('toast').slice(before).map((m) => m.msg);
+  assert.ok(!said.some((m) => /Nothing to fight|The fight is over/.test(m)), said.join('; '));
+  // no harbour, no landing out of a battle
+  c2.push({ t: 'dock' });
+  assert.ok(!s2.ship!.docked);
+});
