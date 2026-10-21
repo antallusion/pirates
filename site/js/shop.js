@@ -461,7 +461,8 @@ ${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n
   const cosRow = (c) => {
     const tag = c.only ? `<em class="pd-only">${esc(t.onlyHere)}</em>` : c.alone ? `<em>${esc(t.alone.replace('{p}', rub(c.alone)))}</em>` : '';
     const name = `<figcaption><b>${esc(L(c.name))}</b>${tag}</figcaption>`;
-    const words = (w) => `<span class="pd-words" style="color:${esc(c.ink || '#f2e6c8')};text-shadow:0 0 6px ${esc(c.halo || '#000')},0 1px 2px ${esc(c.halo || '#000')}">${esc(L(w))}</span>`;
+    const sp = c.span || [0.22, 0.78];
+    const words = (w) => `<span class="pd-words" style="left:${(sp[0] * 100).toFixed(1)}%;right:${((1 - sp[1]) * 100).toFixed(1)}%;color:${esc(c.ink || '#f2e6c8')};text-shadow:0 0 6px ${esc(c.halo || '#000')},0 1px 2px ${esc(c.halo || '#000')}">${esc(L(w))}</span>`;
     if (c.k === 'title' || c.k === 'plate') return `<figure class="pd-cos plate">${c.k === 'plate' ? `<small class="muted">${esc(t.sample)}</small>` : ''}<span class="pd-plate">${im(c.plate, '', 512, 144)}${words(c.words)}</span>${name}</figure>`;
     if (c.k === 'frame') return `<figure class="pd-cos frame"><span class="pd-frame" style="--k:${Number(c.scale) || 1.4}">${im(c.face, 'face', 120, 120)}${im(c.art, 'ring', 256, 256)}</span>${name}</figure>`;
     if (c.k === 'emblem' || c.k === 'cloth') return `<figure class="pd-cos flag"><span class="pd-sea"><span class="pd-flag big" style="--rgb:${esc(c.rgb || '#333')}">${im(c.emblem, '', 64, 64)}</span><span class="pd-mship">${im(c.ship, '', 120, 240)}<span class="pd-flag" style="--rgb:${esc(c.rgb || '#333')}">${im(c.emblem, '', 64, 64)}</span></span></span>${name}</figure>`;
@@ -701,6 +702,9 @@ ${tabs.map((tb) => `<section class="pd-panel" role="tabpanel" id="pdp-${tb.id}" 
     pdTab = id;
     pd.querySelectorAll('[data-pd-tab]').forEach((b) => { const on = b.dataset.pdTab === id; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; if (on && focus) b.focus(); });
     pd.querySelectorAll('.pd-panel').forEach((p) => { p.hidden = p.id !== `pdp-${id}`; });
+    // (the tab's own blocks in sight: the row of tabs brought up to the top when it sits low)
+    const row = pd.querySelector('.pd-tabs');
+    if (row && row.offsetTop - pdScroll.scrollTop > pdScroll.clientHeight * 0.35) pdScroll.scrollTo({ top: row.offsetTop - 10, behavior: reduced.matches ? 'auto' : 'smooth' });
   };
   d.addEventListener('keydown', (e) => {
     if (!pdOn() || !confirmEl.hidden) return;

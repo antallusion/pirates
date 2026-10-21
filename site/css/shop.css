@@ -386,21 +386,21 @@ html.st-lock2, html.st-lock2 body { overflow: hidden; }
 .pd-text img { width: 26px; height: 26px; flex: none; margin-top: 1px; }
 .pd-text span { min-width: 0; }
 /* cosmetics as the sea sees them */
-.pd-cosl { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.pd-cosl { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 12px; }
 .pd-cos { margin: 0; padding: 14px; display: grid; gap: 10px; justify-items: center; align-content: start; text-align: center; border-radius: 16px; border: 1px solid var(--line); background: radial-gradient(70% 70% at 50% 40%, rgba(60, 100, 160, 0.16), transparent 70%), #0a0e18; min-width: 0; }
 .pd-cos figcaption { display: grid; gap: 2px; }
 .pd-cos figcaption b { color: var(--gold1); font-size: 15px; }
 .pd-cos figcaption em { font-style: normal; font-size: 12px; color: var(--muted); }
 .pd-cos figcaption .pd-only { color: #f0b393; }
 .pd-cos small { font-size: 11.5px; letter-spacing: 0.12em; text-transform: uppercase; }
-.pd-plate { position: relative; display: block; width: 100%; max-width: 300px; aspect-ratio: 512 / 144; }
+.pd-plate { position: relative; display: block; width: 100%; max-width: 320px; aspect-ratio: 512 / 144; container-type: inline-size; }
 .pd-plate img { width: 100%; height: 100%; object-fit: contain; }
-.pd-words { position: absolute; inset: 0; display: grid; place-items: center; padding: 0 20%; font: 700 clamp(14px, 1.7vw, 18px)/1.05 var(--display); letter-spacing: 0.02em; text-align: center; }
+.pd-words { position: absolute; top: 0; bottom: 0; display: grid; place-items: center; font: 700 5.4cqw/1 var(--display); letter-spacing: 0.01em; text-align: center; white-space: nowrap; }
 .pd-frame { position: relative; display: block; width: 150px; height: 150px; }
 .pd-frame .face { position: absolute; left: 50%; top: 50%; width: calc(100% / var(--k)); height: calc(100% / var(--k)); border-radius: 50%; object-fit: cover; object-position: top; transform: translate(-50%, -50%); }
 .pd-frame .ring { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6)); }
 .pd-sea { position: relative; display: block; width: 100%; height: 150px; overflow: hidden; border-radius: 12px; background: radial-gradient(120% 90% at 50% 50%, #17375a, #070b14 78%); }
-.pd-mship { position: absolute; left: 56%; top: 50%; width: 46px; height: 120px; transform: translate(-50%, -50%) rotate(90deg); }
+.pd-mship { position: absolute; left: 58%; top: 50%; width: 58px; height: 150px; transform: translate(-50%, -50%) rotate(90deg); }
 .pd-mship > img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.6)); }
 .pd-mship.run { animation: pd-bob 2.4s ease-in-out infinite alternate; }
 .pd-flag { position: absolute; left: 50%; top: 40%; z-index: 1; width: 28px; height: 20px; display: grid; place-items: center; border-radius: 2px; background: linear-gradient(160deg, var(--rgb), var(--rgb) 60%, rgba(0, 0, 0, 0.4)); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); transform: translate(-50%, -50%) rotate(-90deg); }

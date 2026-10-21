@@ -71,6 +71,8 @@ export interface DCos {
   plate?: Img;
   ink?: string;
   halo?: string;
+  /** The plate's calm middle the words keep to (shares of its width). */
+  span?: [number, number];
   /** A frame: the face inside and how much wider the frame is drawn than the face. */
   face?: Img;
   scale?: number;
@@ -356,11 +358,11 @@ function cosPreview(key: string, art: ArtOf): DCos[] {
   switch (x.kind) {
     case 'title': {
       const pl = PLATES.find((y) => y.id === plateForTier(x.tier))!;
-      return [{ k: 'title', ...base, words: x.name, plate: art(`cos.plate_${pl.id}`), ink: pl.ink, halo: pl.halo }];
+      return [{ k: 'title', ...base, words: x.name, plate: art(`cos.plate_${pl.id}`), ink: pl.ink, halo: pl.halo, span: pl.span }];
     }
     case 'plate': {
       const pl = PLATES.find((y) => y.id === x.id)!;
-      return [{ k: 'plate', ...base, plate: art(`cos.plate_${pl.id}`), ink: pl.ink, halo: pl.halo, words: ['Your title', 'Ваше звание'] }];
+      return [{ k: 'plate', ...base, plate: art(`cos.plate_${pl.id}`), ink: pl.ink, halo: pl.halo, span: pl.span, words: ['Your title', 'Ваше звание'] }];
     }
     case 'frame': {
       const f = FRAMES.find((y) => y.id === x.id)!;
