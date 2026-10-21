@@ -435,6 +435,10 @@ body.simple.touch.sea-docked #touch > .tc-actrow { right: calc(var(--sa-r) + var
 body.simple #touch > #tc-cast { display: none; }
 body.simple.sea-docked #touch > #tc-cast:not(.hidden) { display: flex; right: calc(var(--sa-r) + var(--sea-pad) + 4px); bottom: calc(var(--sa-b) + var(--sea-pad) + 4px); width: var(--sea-fire); height: var(--sea-fire); }
 body.simple #touch > #tc-cast { background: radial-gradient(circle at 50% 38%, #4a3c28 0, #2a2117 40%, #110d09 64%); }
+/* (its sail and its word together held to the ring's painted hole, not to the box: the hole lies a little above the box's
+   middle — owner, 2026-10-21: «отцентруй по вертикали иконку и текст „В море“, оно щас слишком внизу»; tools/mobile/ux/
+   ring.mjs RING measured them 0.8–1.5 px low and 0.2–0.8 px right; a share of the button's own size, so at every size) */
+body.simple #touch > :is(#tc-cast, #tc-fire) > :is(.tc-big-pic, .tc-big-l) { top: -1.7%; left: -0.6%; } /* («Огонь» the same: 0.9–1.3 px low) */
 body.simple.sea-docked #touch > :is(#tc-stick, #tc-fire, #tc-ammo, #tc-lock, #tc-special, #tc-deck) { display: none !important; }
 
 /* ---------- bottom right on a desk: the gun deck — «Огонь» big in the corner, «Цель» over it, and beside it the
