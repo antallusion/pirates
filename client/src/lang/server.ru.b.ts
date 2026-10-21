@@ -1462,7 +1462,6 @@ export const SERVER_RU_B: Record<string, string> = {
   "Hired Ship of the Line ": "Наёмный линейный корабль ",
   "Island: {0}, hall {1}; claims {2}; the next move: {3}.": "Остров: {0}, ратуша {1}; заявок {2}; следующий переезд: {3}.",
   "Kraken was slain by Anne Vey, Morrow Kett.": "Кракен повержен: Анна Вей, Морроу Кетт.",
-  "Live ops today: {0} sign-ups, {1} aboard, {2} payments for {3} ₽. 7 days: revenue {4} ₽, {5} payers ({6}%), ARPPU {7} ₽. Running: {8} sales, {9} off the shelves, {10} global offers, {11} events. The panel: /ops/admin": "Лайв-опс сегодня: регистраций {0}, в игре {1}, платежей {2} на {3} ₽. За 7 дней: выручка {4} ₽, платящих {5} ({6}%), средний платёж {7} ₽. Идёт: распродаж {8}, снято с полок {9}, общих предложений {10}, событий {11}. Подробно — на странице лайв-опса.",
   "Sold at Tidewrack": "Продано в Тайдрэке",
   "Telemetry for {0} d: {1} reports from {2} devices; at sea {3} fps typical, {4} in the worst 5%; start {5} s; {6} JS errors. The page: /telemetry/admin": "Телеметрия за {0} дн.: отчётов {1}, устройств {2}; в море обычно {3} кадр/с, в худших 5% — {4}; запуск {5} с; ошибок JS: {6}. Подробно — на странице телеметрии.",
   "That harbour will not have you": "Эта гавань вас не примет",
