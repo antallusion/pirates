@@ -4,6 +4,7 @@
 // word. A true cache is freshly stocked and fatter for those who heard of it; a false one was dug out long ago; a false
 // caravan never was. She learns which when she gets there.
 
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { HEARSAY_ARRIVE, HEARSAY_PRICE, HEARSAY_SLOTS, HEARSAY_TTL, RELIABILITY } from '../../../shared/src/data/dealings.ts';
 import type { HearsayKind, Reliability } from '../../../shared/src/data/dealings.ts';
 import { WORLD_SIZE } from '../../../shared/src/constants.ts';
@@ -118,7 +119,7 @@ export function buyHearsay(game: Game, s: PlayerSession, port: Port, id: string)
     const speed = o.truth ? Math.max(3, sh!.state.speed) : game.rng.range(5, 9);
     h = { id: o.id, kind: 'caravan', reliability: o.reliability, truth: o.truth, x: Math.round(at.x), y: Math.round(at.y), r: HEARSAY_ARRIVE.caravan, heading: Math.round(heading * 100) / 100, speed: Math.round(speed * 10) / 10, name: sh?.name ?? 'a merchantman', shipId: o.truth ? o.shipId : undefined, t: game.now, expiresAt: game.now + HEARSAY_TTL.caravan };
   }
-  if (p.gold < o.price) return 'Not enough silver';
+  if (p.gold < o.price) return lackSilver(o.price, p.gold);
   p.gold -= o.price;
   game.db.ledger(s.accountId, 'hearsay', -o.price, o.id);
   o.buyers.add(s.accountId);

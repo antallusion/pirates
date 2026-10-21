@@ -3,6 +3,7 @@
 // Every silver that enters or leaves here is written to the ledger, so the economy report
 // (see economy report in Game) can tell faucets from sinks.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { wantedLevel } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -91,7 +92,7 @@ export function acceptForward(game: Game, s: PlayerSession, port: Port, id: stri
   const f = offers.find((x) => x.id === id);
   if (!f) return 'That forward has been taken';
   if (p.forwards.length >= MAX_FORWARDS) return `At most ${MAX_FORWARDS} open forwards`;
-  if (p.gold < f.collateral) return `The exchange wants ${f.collateral} silver as collateral`;
+  if (p.gold < f.collateral) return lackMore(`The exchange wants ${f.collateral} silver as collateral`, f.collateral, p.gold);
   p.gold -= f.collateral;
   p.forwards.push({ ...f });
   offers.splice(offers.indexOf(f), 1);
@@ -175,7 +176,7 @@ export function postOrder(game: Game, s: PlayerSession, port: Port, good: GoodId
   if (game.orders.filter((o) => o.accountId === s.accountId && !o.closed).length >= MAX_ORDERS) return `At most ${MAX_ORDERS} open orders`;
   const escrow = qty * price;
   const fee = Math.ceil(escrow * ORDER_FEE);
-  if (p.gold < escrow + fee) return `Needs ${escrow + fee} silver (escrow and a ${Math.round(ORDER_FEE * 100)}% listing fee)`;
+  if (p.gold < escrow + fee) return lackMore(`Needs ${escrow + fee} silver (escrow and a ${Math.round(ORDER_FEE * 100)}% listing fee)`, escrow + fee, p.gold);
   p.gold -= escrow + fee;
   game.orders.push({
     id: `bo${Math.floor(game.now)}_${game.allocId()}`, accountId: s.accountId, name: s.name, portId: port.id, good, qty, filled: 0, price, escrow,
@@ -414,7 +415,7 @@ export function buyPolicy(game: Game, s: PlayerSession, port: Port, tier: Insura
   const q = insuranceQuotes(game, s, port).find((x) => x.tier === tier);
   if (!q) return 'Unknown policy';
   if (q.cover > 0 && q.declared < 50) return 'Nothing in the hold worth insuring';
-  if (p.gold < q.premium) return `The premium is ${q.premium} silver`;
+  if (p.gold < q.premium) return lackMore(`The premium is ${q.premium} silver`, q.premium, p.gold);
   p.gold -= q.premium;
   p.policy = { tier, declared: q.declared, premium: q.premium, deductible: q.deductible };
   p.insured = true;

@@ -6,6 +6,7 @@
 // legend will fight her again in three hours. A trial is fought with blunted steel: her men stand again after it.
 // The trials' few rolls are on the Throne's own dice.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { MAX_LEVEL } from '../../../shared/src/constants.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { GM_RANK, PRIMS, SKILLS, SKILL_IDS, SKILL_MAX, SKILL_SLOTS, heroBattle, startingOrders } from '../../../shared/src/data/hero.ts';
@@ -152,7 +153,7 @@ export function resetMastery(game: Game, s: PlayerSession): string | null {
   if (!spent) return 'Nothing to forget';
   if (!s.ship?.docked) return 'You must be in port';
   const cost = resetCost(spent);
-  if (p.gold < cost) return `Needs ${cost} silver`;
+  if (p.gold < cost) return lackMore(`Needs ${cost} silver`, cost, p.gold);
   p.gold -= cost;
   game.db.ledger(s.accountId, 'mastery_reset', -cost, String(spent));
   t.nodes = {};

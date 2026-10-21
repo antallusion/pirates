@@ -3,6 +3,7 @@
 // the service's ports, fleet orders to be done by sunset (intercept a quarry off a port, sink the flag's enemies in a
 // sea, bring goods, patrol off a port), the service's quartermaster, the livery, and the letter revoked for crimes.
 
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { DAY_LENGTH_SEC, timeOfDay } from '../../../shared/src/constants.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -405,7 +406,7 @@ export function buyWare(game: Game, s: PlayerSession, port: Port, index: number)
   const w = wares(game, s, port)[index];
   if (!w || sv.bought.includes(w.key)) return 'The quartermaster has nothing more for you today.';
   if (p.stash.length >= 40) return 'Your locker is full';
-  if (p.gold < w.price) return 'Not enough silver';
+  if (p.gold < w.price) return lackSilver(w.price, p.gold);
   p.gold -= w.price;
   game.db.ledger(s.accountId, 'service_store', -w.price, w.item.base);
   p.stash.push({ ...w.item, uid: p.itemSeq++ });

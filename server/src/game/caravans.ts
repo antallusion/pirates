@@ -7,6 +7,7 @@
 // their owner the fight is reckoned (escorts against pirates, with luck) and a letter tells how it went; within
 // 25 km of her the alarm sounds and the fight is real.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { caravanNemesis, caravanNemesisLine } from './nemesis.ts';
 import { liveNamed, putToSea } from './wanted.ts';
 import { COUNTING_HOUSE_PROFIT, INSURANCE_COVER, INSURANCE_PREMIUM, MAX_ESCORTS, RESCUE_R, RESCUE_SEC, RISK, SKIPPER_COST, TASK_NAMES, defenceOdds, escortCost } from '../../../shared/src/data/caravans.ts';
@@ -259,7 +260,7 @@ export function launchCaravan(game: Game, s: PlayerSession, o: LaunchOrder): str
   // The skipper: a turned captain of her own for nothing (docs/12 P10 #16), else one hired.
   const lvl = level(c);
   const cost = escorts * escortCost(lvl) + ((p.skippers ?? []).length ? 0 : SKIPPER_COST);
-  if (p.gold < cost) return `Needs ${cost} silver`;
+  if (p.gold < cost) return lackMore(`Needs ${cost} silver`, cost, p.gold);
   // What the island sends: the goods to sell.
   if (c.task === 'sell') {
     const list = c.goods.length ? c.goods : (Object.keys(h.store) as GoodId[]);

@@ -13,6 +13,7 @@
 //  powder_kegs  — two kegs over the stern for whoever follows (gunpowder from the hold)
 //  war_drums    — her crew's heart up, the enemy's down
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { harpoonBeast } from './beasts.ts';
 import { AMMO, MOUNTS } from '../../../shared/src/data/ships.ts';
 import type { MountId } from '../../../shared/src/data/ships.ts';
@@ -302,7 +303,7 @@ export function shipyardMount(game: Game, s: PlayerSession, port: Port, mount: M
   if (ship.loadout.mount === mount) return 'Already fitted';
   const refund = ship.loadout.mount ? Math.round(MOUNTS[ship.loadout.mount].price * 0.4) : 0;
   const cost = Math.max(0, Math.round((MOUNTS[mount].price - refund) * Math.max(0.5, 1 + tx(ship.stats, 'yardCost'))));
-  if (s.profile!.gold < cost) return `Needs ${cost} silver`;
+  if (s.profile!.gold < cost) return lackMore(`Needs ${cost} silver`, cost, s.profile!.gold);
   s.profile!.gold -= cost;
   ship.loadout.mount = mount;
   ship.mountReload = 0;

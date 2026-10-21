@@ -17,27 +17,12 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { priceMods, trade } from './ports.ts';
 import type { ShipEntity } from './ship.ts';
+import { questEvent } from './quests.ts';
 import type { PortView } from '../../../shared/src/protocol.ts';
 
+export { lackDoubloons, lackHammocks, lackRoom, lackSilver } from '../../../shared/src/data/buyfail.ts';
+import { lackRoom, lackSilver } from '../../../shared/src/data/buyfail.ts';
 const r1 = (n: number) => Math.round(n * 10) / 10;
-
-/** «Not enough silver: N more needed» — what is missing, never a bare «not enough». */
-export function lackSilver(cost: number, have: number): string {
-  return `Not enough silver: ${Math.max(1, Math.ceil(cost - have))} more needed`;
-}
-/** «Not enough doubloons: N more needed». */
-export function lackDoubloons(cost: number, have: number): string {
-  return `Not enough doubloons: ${Math.max(1, Math.ceil(cost - have))} more needed`;
-}
-/** No hammocks for the men: how many wanted, how many free. */
-export function lackHammocks(want: number, crew: number, crewMax: number): string {
-  const free = Math.max(0, Math.floor(crewMax - crew));
-  return free <= 0 ? `No hammocks left aboard: ${Math.floor(crew)} of ${Math.floor(crewMax)} taken` : `Hammocks for ${free} more only, ${Math.ceil(want)} wanted`;
-}
-/** No room in the hold: the m³ wanted and the m³ free. */
-export function lackRoom(need: number, free: number): string {
-  return `No room in the hold: ${r1(need)} m³ needed, ${r1(Math.max(0, free))} free`;
-}
 
 /** Her hold's free room (m³, her own multipliers). */
 export function holdFree(ship: ShipEntity): number {
@@ -175,7 +160,7 @@ export function goodBuyCheck(game: Game, s: PlayerSession, port: Port, good: Goo
   }
   if (why === 'room') {
     const need = qty * unit;
-    const plan = roomPlan(roomItems(game, s, port), need - Math.max(0, free), good);
+    const plan = roomPlan(roomItems(game, s, port), need - free, good); // (an overfull hold: its excess too)
     return { fail: { why: 'room', good, want: qty, can: fit, need: r1(need), free: r1(Math.max(0, free)), plan: plan.lines, planFree: plan.freed }, msg: lackRoom(need, free) };
   }
   const price = cost(Math.min(qty, Math.max(1, avail)));
@@ -201,7 +186,7 @@ export function sellAndBuy(game: Game, s: PlayerSession, port: Port, good: GoodI
     sendBuyFail(game, s, first.fail, first.msg);
     return first.msg;
   }
-  const need = qty * unitVolume(ship, good) - Math.max(0, holdFree(ship));
+  const need = qty * unitVolume(ship, good) - holdFree(ship); // (an overfull hold: its excess too)
   const plan = roomPlan(roomItems(game, s, port), need, good);
   if (plan.freed + 1e-6 < need) {
     const msg = `Not enough to sell here to make room: ${r1(plan.freed)} of ${r1(need)} m³`;
@@ -213,7 +198,7 @@ export function sellAndBuy(game: Game, s: PlayerSession, port: Port, good: GoodI
   let proceeds = 0;
   for (const l of plan.lines) {
     const g = game.markets.get(port.id)?.goods[l.good];
-    if (!g) return 'Bad plan';
+    if (!g) return 'Bad order';
     const gross = Math.floor(quoteSell(l.good, g, l.qty, mods) * saleMul(game, s, port, l.good, l.qty));
     proceeds += gross - levyFor(game, port, gross);
   }
@@ -223,7 +208,7 @@ export function sellAndBuy(game: Game, s: PlayerSession, port: Port, good: GoodI
   if (p.gold + proceeds < price) return lackSilver(price, p.gold + proceeds);
   for (const l of plan.lines) {
     const e = trade(game, s, port, l.good, -l.qty);
-    if (e) return e; // (cannot: checked above — kept for the record)
+    if (e) return e; // (cannot: checked above)
   }
   return trade(game, s, port, good, qty);
 }
@@ -246,4 +231,27 @@ export function questBuys(game: Game, s: PlayerSession, port: Port): NonNullable
     out.push({ quest: q.id, name: q.name, good: st.good, qty: short, soldHere, stock, fit, sellers: soldHere && stock >= short ? [] : nearestSellers(game, s, st.good, short, port.id) });
   }
   return out;
+}
+
+/** A quest's goods waiting on this quay with no room for them (quests.ts, the step `pickup`): the advisor's plan — what to
+ *  sell here to make the room; the goods come aboard once there is room (pickupAfterSale). */
+export function pickupAdvice(game: Game, s: PlayerSession, port: Port, good: GoodId, qty: number): void {
+  const ship = s.ship!;
+  const need = qty * unitVolume(ship, good);
+  const free = holdFree(ship);
+  const plan = roomPlan(roomItems(game, s, port), need - free, good);
+  sendBuyFail(game, s, { why: 'room', good, want: qty, can: Math.max(0, Math.floor((free + 1e-6) / unitVolume(ship, good))), need: r1(need), free: r1(Math.max(0, free)), plan: plan.lines, planFree: plan.freed, pickup: true }, lackRoom(need, free));
+}
+
+/** After a sale in port: a quest's goods waiting on this quay come aboard now that there is room for them. */
+export function pickupAfterSale(game: Game, s: PlayerSession, port: Port): void {
+  const ship = s.ship!;
+  for (const qs of s.profile!.quests.active) {
+    const st = QUESTS_BY_ID[qs.id]?.steps[qs.step];
+    if (st?.type !== 'pickup' || st.port !== port.id) continue;
+    if (holdFree(ship) + 1e-6 >= st.qty * unitVolume(ship, st.good)) {
+      questEvent(game, s, { k: 'dock', port, fresh: true }); // (fresh: an «arrive at» step is not done by a sale)
+      return;
+    }
+  }
 }

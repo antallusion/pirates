@@ -6,6 +6,7 @@
 // ship's stacks: a kind already aboard joins its stack, a new kind takes a free slot, and the hammocks (crewMax) are
 // the limit. An upgraded dwelling trains a stack of its tier's plain kind up for the difference in price.
 
+import { lackHammocks, lackMore, lackSlot } from '../../../shared/src/data/buyfail.ts';
 import { BOSS_UNIT_IDS, BOSS_UNIT_NAMES } from '../../../shared/src/data/bossunits.ts';
 import { TITAN_IDS, TITAN_NAMES } from '../../../shared/src/data/titans.ts';
 import type { TitanId } from '../../../shared/src/data/titans.ts';
@@ -228,16 +229,16 @@ export function recruit(game: Game, s: PlayerSession, src: Src, u: UnitId, want:
   const might = mightRoom(ship.army, u, ship.shipLevel, ship.stats.crewMax, ship.armySlots);
   const n = Math.min(Math.floor(Number(want)), Math.floor(pools[d.tier] ?? 0), ship.stats.crewMax - ship.crew, picked, might);
   if (!Number.isFinite(n) || n <= 0) {
-    if (ship.crew >= ship.stats.crewMax) return 'No hammocks left aboard';
+    if (ship.crew >= ship.stats.crewMax) return lackHammocks(1, ship.crew, ship.stats.crewMax);
     if (picked <= 0) return `A ship of level ${ship.shipLevel} berths ${pickedMax(s)} picked men (tier 4 and up) at most.`;
     if (might <= 0) return mightWhy(ship.shipLevel);
     return 'Nobody waiting in that dwelling this week.';
   }
-  if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return 'No free slot in the army for a new kind of man.';
+  if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
   const price = priceOf(game, s, at, u, n);
   const l = lack(game, s, at, price.goods);
   if (l) return l;
-  if (p.gold < price.silver) return `Needs ${price.silver} silver`;
+  if (p.gold < price.silver) return lackMore(`Needs ${price.silver} silver`, price.silver, p.gold);
   p.gold -= price.silver;
   take(game, s, at, price.goods);
   game.db.ledger(s.accountId, 'recruit', -price.silver, `${src}:${u}:${n}`);
@@ -324,12 +325,12 @@ export function train(game: Game, s: PlayerSession, src: Src, u: UnitId, want: n
   const n = Math.min(Math.floor(Number(want)), stack?.n ?? 0, might);
   if (stack && might <= 0) return mightWhy(ship.shipLevel);
   if (!stack || !Number.isFinite(n) || n <= 0) return 'None of them aboard.';
-  if (n < stack.n && !ship.army.some((x) => x.u === to) && ship.army.length >= ship.armySlots) return 'No free slot in the army for a new kind of man.';
+  if (n < stack.n && !ship.army.some((x) => x.u === to) && ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
   const price = upgradePrice(u, n, !!at.port)!;
   const l = lack(game, s, at, price.goods);
   if (l) return l;
   const p = s.profile!;
-  if (p.gold < price.silver) return `Needs ${price.silver} silver`;
+  if (p.gold < price.silver) return lackMore(`Needs ${price.silver} silver`, price.silver, p.gold);
   p.gold -= price.silver;
   take(game, s, at, price.goods);
   game.db.ledger(s.accountId, 'train', -price.silver, `${src}:${u}:${n}`);

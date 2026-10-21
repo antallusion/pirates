@@ -8,6 +8,7 @@
 //    sale tax at the port's duty, auction commission 5% (Appraiser: −30%). Listings last 48 hours.
 // Mailboxes and boards live in the database's key-value store and survive restarts.
 
+import { lackMore, lackRoom } from '../../../shared/src/data/buyfail.ts';
 import type { LetterView, ListingView, MarketView } from '../../../shared/src/protocol.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -313,7 +314,7 @@ export function marketSell(game: Game, s: PlayerSession, port: Port, good: GoodI
   const bad = listCheck(game, s, port, good, qty, price);
   if (bad) return bad;
   const fee = listFee(price * qty);
-  if (s.profile!.gold < fee) return `The listing fee is ${fee} silver`;
+  if (s.profile!.gold < fee) return lackMore(`The listing fee is ${fee} silver`, fee, s.profile!.gold);
   const e = takeGoods(s, port, good, qty, from);
   if (e) return e;
   s.profile!.gold -= fee;
@@ -330,7 +331,7 @@ export function marketBuyOrder(game: Game, s: PlayerSession, port: Port, good: G
   if (bad) return bad;
   const total = price * qty;
   const fee = listFee(total);
-  if (s.profile!.gold < total + fee) return `The order needs ${total} silver held against it, and ${fee} for the listing`;
+  if (s.profile!.gold < total + fee) return lackMore(`The order needs ${total} silver held against it, and ${fee} for the listing`, total + fee, s.profile!.gold);
   s.profile!.gold -= total + fee;
   game.db.ledger(s.accountId, 'market_fee', -fee, port.id);
   const b = game.post.board(game, port.id);
@@ -348,7 +349,7 @@ export function marketAuction(game: Game, s: PlayerSession, port: Port, good: Go
   if (bo && bo < reserve) return 'The buyout cannot be below the reserve';
   if (![2, 8, 24].includes(hours)) return 'An auction runs 2, 8 or 24 hours';
   const fee = listFee(reserve);
-  if (s.profile!.gold < fee) return `The listing fee is ${fee} silver`;
+  if (s.profile!.gold < fee) return lackMore(`The listing fee is ${fee} silver`, fee, s.profile!.gold);
   const e = takeGoods(s, port, good, qty, from);
   if (e) return e;
   s.profile!.gold -= fee;
@@ -374,10 +375,10 @@ export function marketFill(game: Game, s: PlayerSession, port: Port, id: number,
   const gross = l.price * qty;
   const net = Math.floor(gross * (1 - tax));
   if (l.kind === 'sell') {
-    if (p.gold < gross) return `That costs ${gross} silver`;
+    if (p.gold < gross) return lackMore(`That costs ${gross} silver`, gross, p.gold);
     const st = ship.stats;
     const free = st.holdVolume - cargoVolume(ship.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
-    if (qty * GOODS[l.good].volume > free + 1e-6) return 'No room in your hold';
+    if (qty * GOODS[l.good].volume > free + 1e-6) return lackRoom(qty * GOODS[l.good].volume, free);
     p.gold -= gross;
     ship.cargo[l.good] = (ship.cargo[l.good] ?? 0) + qty;
     const had = (ship.cargo[l.good] ?? 0) - qty;
@@ -411,7 +412,7 @@ export function marketBid(game: Game, s: PlayerSession, port: Port, id: number, 
   if (l.buyout && price >= l.buyout) price = l.buyout;
   else if (!Number.isFinite(price) || price < min) return `The next bid is at least ${min} silver`;
   const p = s.profile!;
-  if (p.gold < price) return `You have ${p.gold} silver`;
+  if (p.gold < price) return lackMore(`You have ${p.gold} silver`, price, p.gold);
   p.gold -= price;
   if (l.bidder !== null) {
     deliver(game, l.bidder, { from: 'Tidewrack Auction House', subject: `Outbid: ${l.qty} ${GOODS[l.good].name}`, body: `${s.name} bid ${price}. Your ${l.price} silver is returned.`, gold: l.price, goods: null });

@@ -2,6 +2,7 @@
 // trophy hall, her records and her people, drink in her tavern (the silver goes to her treasury), and sign her
 // guestbook. The week's visits, drinks and signatures rank the islands.
 
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import type { HallView } from '../../../shared/src/protocol.ts';
 import type { Game } from './Game.ts';
 import { trophies } from './estate.ts';
@@ -103,7 +104,7 @@ export function drink(game: Game, s: PlayerSession, islandId: number): string | 
   if (!h || !welcome(game, s, h) || !near(game, s, islandId)) return 'You are not invited to that island.';
   if (!has(h, 'tavern')) return 'There is no tavern on that island.';
   const p = s.profile!;
-  if (p.gold < DRINK_COST) return 'Not enough silver';
+  if (p.gold < DRINK_COST) return lackSilver(DRINK_COST, p.gold);
   p.gold -= DRINK_COST;
   if (h.owner.id !== s.accountId) {
     h.treasury += DRINK_COST;

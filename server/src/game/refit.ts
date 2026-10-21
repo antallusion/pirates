@@ -3,6 +3,7 @@
 // be up to the ship's. The work goes on by the wall clock, so a refit ordered before a night's sleep is done by
 // morning.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { captainLevelFor, levelRange, refitCost } from '../../../shared/src/data/shiplevel.ts';
@@ -96,7 +97,7 @@ function refitBlocked(game: Game, s: PlayerSession, port: Port): string | null {
   const need = captainLevelFor(level + 1);
   if (p.level < need) return `Captain level ${need} is needed to command her at level ${level + 1}`;
   const cost = refitCostFor(p, level + 1)!;
-  if (p.gold < cost.silver) return `Needs ${cost.silver} silver`;
+  if (p.gold < cost.silver) return lackMore(`Needs ${cost.silver} silver`, cost.silver, p.gold);
   for (const g of cost.goods) if (have(s, port, g.good) < g.qty) return `Needs ${g.qty} ${GOODS[g.good].name.toLowerCase()} (in the hold or your warehouse here)`;
   if (cost.hearts && (p.stormHearts ?? 0) < cost.hearts) return 'Needs a heart of the storm in her keel (caught in the Storm of the Century)';
   return null;

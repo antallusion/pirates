@@ -11,6 +11,7 @@
 // A lair is not a ship: it stands where it is, never moves off its island (docs/18 #21), and its state is the world's
 // (down until it stands again, its creatures as the last fight left them). Every roll here is on this system's own Rng.
 
+import { lackBerth, lackHammocks, lackMore, lackSlot } from '../../../shared/src/data/buyfail.ts';
 import { UNITS, armyMen, armyPower, armyWeight, isPremiumUnit } from '../../../shared/src/data/army.ts';
 import { onboardingProtected } from './onboarding.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
@@ -951,7 +952,7 @@ export function lairChoice(game: Game, s: PlayerSession, id: string, choice: 'jo
     if (offer !== 'join') return 'They will not go with you.';
     const men = lairJoiners(game, s, l);
     const n = armyMen(men);
-    if (n <= 0) return 'No hammocks or slots for them aboard.';
+    if (n <= 0) return lackBerth({ crew: s.ship!.crew, crewMax: s.ship!.stats.crewMax, used: s.ship!.army.length, slots: s.ship!.armySlots });
     const c = s.profile!.company;
     reconcile(game, c, ship.crew);
     for (const x of men) ship.addMen(x.u, x.n);
@@ -1005,7 +1006,7 @@ function settleWhy(game: Game, s: PlayerSession, l: Lair): string | null {
   if (!d || d.owner !== s.accountId) return 'Raise your flag over it first.';
   if ((d.lv ?? 1) >= 2) return 'It is settled already.';
   const c = DWELL_UP.cost(UNITS[LAIRS[l.kind].mix[0][0]].tier);
-  if (s.profile!.gold < c.silver) return `Needs ${c.silver} silver`;
+  if (s.profile!.gold < c.silver) return lackMore(`Needs ${c.silver} silver`, c.silver, s.profile!.gold);
   return landLack(s.profile!, c.land);
 }
 
@@ -1124,14 +1125,14 @@ function signBeasts(game: Game, s: PlayerSession, u: BeastId, want: number, pool
   const might = mightRoom(ship.army, u, ship.shipLevel, ship.stats.crewMax, ship.armySlots);
   const n = Math.min(Math.floor(Number(want)), Math.floor(pool), ship.stats.crewMax - ship.crew, picked, might);
   if (!Number.isFinite(n) || n <= 0) {
-    if (ship.crew >= ship.stats.crewMax) return 'No hammocks left aboard';
+    if (ship.crew >= ship.stats.crewMax) return lackHammocks(1, ship.crew, ship.stats.crewMax);
     if (might <= 0) return `Your crew is as strong as a ship of level ${ship.shipLevel} carries: raise her level for better men.`;
     return 'Nobody waiting in that dwelling this week.';
   }
-  if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return 'No free slot in the army for a new kind of man.';
+  if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
   const silver = n * d.cost;
   const p = s.profile!;
-  if (p.gold < silver) return `Needs ${silver} silver`;
+  if (p.gold < silver) return lackMore(`Needs ${silver} silver`, silver, p.gold);
   p.gold -= silver;
   game.db.ledger(s.accountId, 'recruit', -silver, `beast:${u}:${n}`);
   take(n);
@@ -1458,9 +1459,9 @@ export function adminBeast(game: Game, s: PlayerSession, args: string[]): string
   if (!isCreature(u)) return `Kinds: ${CREATURE_IDS.join(', ')}.`;
   const ship = s.ship!;
   const n = Math.max(1, Math.min(500, Math.round(Number(args[1] ?? 10)) || 10));
-  if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return 'No free slot in the army for a new kind of man.';
+  if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
   const k = Math.max(0, Math.min(n, ship.stats.crewMax - ship.crew));
-  if (k <= 0) return 'No hammocks left aboard';
+  if (k <= 0) return lackHammocks(1, ship.crew, ship.stats.crewMax);
   ship.addMen(u, k);
   s.profile!.company.pools.sailor += k;
   ship.companyKey = '';

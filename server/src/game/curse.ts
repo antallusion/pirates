@@ -2,6 +2,7 @@
 // captain. Four stages: barnacles and bone (armour, lost speed, uneasy crews), then the glow in the planks
 // that makes enemy crews falter. The 80/20 rule: most ships never go past stage 1. See docs/06 §curse stages.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import type { StatMods } from '../../../shared/src/data/stats.ts';
 import { curseStage } from '../../../shared/src/protocol.ts';
@@ -73,7 +74,7 @@ export function cleanse(game: Game, s: PlayerSession, port: Port): string | null
   const floor = ship.captain === 'drowned' ? 30 : 0;
   if (ship.curse <= floor + 1) return 'The hull is as clean as it will ever be';
   const cost = cleanseCost(ship);
-  if (s.profile!.gold < cost) return `Scraping and blessing costs ${cost} silver`;
+  if (s.profile!.gold < cost) return lackMore(`Scraping and blessing costs ${cost} silver`, cost, s.profile!.gold);
   s.profile!.gold -= cost;
   ship.curse = floor;
   stepCurse(game, ship, false);

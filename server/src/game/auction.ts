@@ -1,3 +1,4 @@
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 // The trophy auction of the free ports (docs/16 #13): rare pieces on the block with a clock — the house's own (rare,
 // epic, now and then a legendary) and captains' — the sea's bidders in the room raising too, each up to what the
@@ -177,7 +178,7 @@ export function bid(game: Game, s: PlayerSession, port: Port, id: string, amount
   const least = nextBid(l);
   if (!Number.isFinite(amount) || amount < least) return `The least bid is ${least} silver`;
   const p = s.profile!;
-  if (p.gold < amount) return 'Not enough silver';
+  if (p.gold < amount) return lackSilver(amount, p.gold);
   p.gold -= amount;
   game.db.ledger(s.accountId, 'auction_bid', -amount, l.id);
   place(game, l, amount, { account: s.accountId, name: s.name });

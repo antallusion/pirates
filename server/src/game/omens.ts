@@ -1,6 +1,7 @@
 // Omens of the day (docs/12 P10 #9) on the server: the day's omen for all; its mods on every captain's ship at sea;
 // fortune for an hour to her who keeps it, misfortune for an hour to her who breaks it (once a day each).
 
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { COIN_COST, FAIR_WIND, FORTUNE, MISFORTUNE, OMENS, omenDay, omenOf } from '../../../shared/src/data/omens.ts';
 import type { OmenId } from '../../../shared/src/data/omens.ts';
 import type { Game } from './Game.ts';
@@ -64,7 +65,7 @@ export function nailCoin(game: Game, s: PlayerSession): string | null {
   const ship = s.ship, p = s.profile!;
   if (!ship?.docked) return 'Only in port';
   if (ship.hasEffect('fair_wind')) return 'The coin is nailed already.';
-  if (p.gold < COIN_COST) return 'Not enough silver';
+  if (p.gold < COIN_COST) return lackSilver(COIN_COST, p.gold);
   p.gold -= COIN_COST;
   game.db.ledger(s.accountId, 'omen_coin', -COIN_COST, '');
   ship.addEffect({ id: 'fair_wind', until: game.now + (48 * 60), mods: FAIR_WIND }, game.now);

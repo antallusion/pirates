@@ -3,6 +3,7 @@
 // on a port's map board at her price. Whoever digs the chest up takes it; its author gains a cartographer's fame (and
 // a title at five). A chest someone has dug is gone for every copy of its map.
 
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
@@ -66,7 +67,7 @@ export function buryChest(game: Game, s: PlayerSession, silverRaw: number, riddl
   if (riddle.length < 8) return 'Write a riddle for the map (eight letters at least).';
   const qty = good ? Math.max(0, Math.floor(Number(qtyRaw) || 0)) : 0;
   if (good && qty > 0 && (ship.cargo[good] ?? 0) < qty) return 'Not that much in the hold.';
-  if (p.gold < silver + CHEST_COST) return 'Not enough silver';
+  if (p.gold < silver + CHEST_COST) return lackSilver(silver + CHEST_COST, p.gold);
   // The island: the nearest shore within 400 m; the spot a little inland from where the boat lands.
   let best = null as null | { id: number; x: number; y: number };
   let bd = Infinity;
@@ -180,7 +181,7 @@ export function boardAction(game: Game, s: PlayerSession, action: string, idRaw:
       const it = b.items.find((x) => x.id === Number(idRaw) && x.port === port.id);
       if (!it) return 'No such map';
       if (it.seller === s.accountId) return 'That map is yours.';
-      if (p.gold < it.price) return 'Not enough silver';
+      if (p.gold < it.price) return lackSilver(it.price, p.gold);
       if (chestCount(p.explore.maps) >= MAX_MAPS) return 'Your map chest is full';
       p.gold -= it.price;
       b.items = b.items.filter((x) => x !== it);
@@ -310,7 +311,7 @@ export function answerMapOffer(game: Game, s: PlayerSession, idRaw: number, acce
   }
   const p = s.profile!;
   if (!seller || !seller.profile || !alongside(s, seller)) return 'The seller is no longer alongside';
-  if (p.gold < o.price) return 'Not enough silver';
+  if (p.gold < o.price) return lackSilver(o.price, p.gold);
   if (chestCount(p.explore.maps) >= MAX_MAPS) return 'Your map chest is full';
   const sp = seller.profile;
   if (!o.copy) {

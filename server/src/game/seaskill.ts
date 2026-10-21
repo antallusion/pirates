@@ -4,6 +4,7 @@
 // the passives (the Admiral's chain of command, the Navigator's gauge, the Drowned's dread), the combos (item 41) and
 // their cues, the numbers over the ships, the facets chosen and changed (item 38) and the ranks' news (item 37).
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { SEA_SKILLS, captainSkills, facetCost, facetKey, facetRanks, nextRank, skillNums, skillRank, volleyShare } from '../../../shared/src/data/seaskill.ts';
 import type { FacetPick, SkillCtx, SkillNums } from '../../../shared/src/data/seaskill.ts';
@@ -332,7 +333,7 @@ export function chooseFacet(game: Game, s: PlayerSession, id: string, rank: numb
   if (was) {
     if (!s.ship?.docked) return 'A facet chosen is changed in a port';
     const cost = facetCost(p.level);
-    if (p.gold < cost) return `Needs ${cost} silver`;
+    if (p.gold < cost) return lackMore(`Needs ${cost} silver`, cost, p.gold);
     p.gold -= cost;
     game.db.ledger(s.accountId, 'spend', -cost, `facet:${key}`);
   }

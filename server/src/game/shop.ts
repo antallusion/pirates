@@ -10,6 +10,7 @@
 // the elixir, the fair wind, the harvest, the island's charter of protection, the subscription, the level's gifts,
 // the first top-up's double, the infirmary's roll of the fallen.
 
+import { lackDoubloons, lackHammocks, lackRoom, lackSlot } from '../../../shared/src/data/buyfail.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { FIELDS, HULLS, LAMPS, LOOK_COLORS, SAILS, EMBLEM_COUNT, DEED_UNLOCKS, STARTING_UNLOCKS } from '../../../shared/src/data/looks.ts';
@@ -605,6 +606,23 @@ export function shopWhyText(why: ShopWhy): string {
   }
 }
 
+/** A refusal with its numbers (owner, 2026-10-21): the doubloons missing, the hold's m³ wanted against its free, the
+ *  hammocks wanted against the free; the rest as shopWhyText says it. */
+function whyNumbers(game: Game, s: PlayerSession, offer: ShopOffer, why: ShopWhy, price: number): string {
+  const ship = s.ship;
+  if (why === 'poor' && price > 0) return `${lackDoubloons(price, game.db.doubloons(s.accountId))} — top up your account first.`;
+  if (why === 'hold' && ship) {
+    const st = ship.stats;
+    let need = 0;
+    for (const g of offer.grants) if (g.k === 'cargo') need += cargoVolume({ [g.good]: g.n }, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
+    const free = st.holdVolume - cargoVolume(ship.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
+    return lackRoom(need, free);
+  }
+  if (why === 'room' && ship && offer.grants.some((g) => g.k === 'crew' || g.k === 'units')) return lackHammocks(1, ship.crew, ship.stats.crewMax);
+  if (why === 'slot' && ship) return lackSlot(ship.army.length, ship.armySlots);
+  return shopWhyText(why);
+}
+
 /** An offer of the shop bought (or the deal of the day: `deal`): every check, then the doubloons, the ledger's row,
  *  her stores and the goods together. Null: bought (or bought already by this purchase id); else the refusal. */
 export function buyOffer(game: Game, s: PlayerSession, offerId: string, pid: string, promo?: { price: number; tag: string; done: () => void; count?: string }, quiet = false): string | null {
@@ -656,7 +674,7 @@ function buyCore(game: Game, s: PlayerSession, aboard: boolean, offerId: string,
   const st = shopState(game, s.accountId);
   // (a personal offer, promo.ts: its own price — the balance is checked against it, every other check as a buy's)
   const why = promo ? offerShut(game, s, offer) ?? (game.db.doubloons(s.accountId) < promo.price ? 'poor' : null) : offerWhy(game, s, st, offer, deal);
-  if (why) return shopWhyText(why);
+  if (why) return whyNumbers(game, s, offer, why, promo ? promo.price : priceOf(game, s, st, offer, deal));
   const price = promo ? promo.price : priceOf(game, s, st, offer, deal);
   if (!(price > 0)) return 'Not for sale';
   const wall = game.wallNow();

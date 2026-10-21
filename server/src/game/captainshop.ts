@@ -6,6 +6,7 @@
 // keeps it with the account. The server refuses a premium captain her account does not own (onCreateCaptain); a
 // captain picked free before the change stays hers — the check is at the choice only, never on a saved captain.
 
+import { lackDoubloons } from '../../../shared/src/data/buyfail.ts';
 import { CAPTAINS, CAPTAIN_IDS, captainPrice } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import type { Game } from './Game.ts';
@@ -50,7 +51,7 @@ export function buyCaptainFor(game: Game, accountId: number, id: CaptainId): str
   if (!CAPTAINS[id].premium) return 'That captain is free to choose';
   if (ownsCaptain(game, accountId, id)) return 'That captain is yours already';
   const price = captainPrice(id);
-  if (game.db.doubloons(accountId) < price) return 'Not enough doubloons: top up your account first.';
+  if (game.db.doubloons(accountId) < price) return `${lackDoubloons(price, game.db.doubloons(accountId))} — top up your account first.`;
   if (move(game, accountId, -price, CAPTAIN_KIND, id) === null) return 'Not enough doubloons: top up your account first.';
   trackEvent(game, accountId, 'buy', { amount: price, product: `captain:${id}` }); // docs/34: the funnel's purchases
   return null;

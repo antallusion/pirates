@@ -4,6 +4,7 @@
 // the sky takes a while to make another. Hearts are forged into the Storm-Chaser set, and one goes into a ship's keel
 // for her tenth level (refit.ts).
 
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { BOLT, CHARGE_NEED, CORE_R, HEARTS_PER_STORM, HEART_R, HEART_REST, HEART_SPEED, STORM_FORGE, STORM_SLOTS, STRIKE_EVERY } from '../../../shared/src/data/storms.ts';
 import { CAPTAIN_SLOTS, STASH_SIZE, captainIlvl, itemName, makeItem } from '../../../shared/src/data/items.ts';
 import type { Slot } from '../../../shared/src/data/items.ts';
@@ -205,7 +206,7 @@ export function forgeStorm(game: Game, s: PlayerSession, port: Port, slot: Slot)
   if (port.shipyardTier < 2) return 'No forge here: the Storm-Chaser set wants a yard of the second rank or better';
   if (!STORM_SLOTS.includes(slot)) return 'That is not a piece of the Storm-Chaser set';
   if ((p.stormHearts ?? 0) < STORM_FORGE.hearts) return `Needs ${STORM_FORGE.hearts} hearts of the storm`;
-  if (p.gold < STORM_FORGE.silver) return 'Not enough silver';
+  if (p.gold < STORM_FORGE.silver) return lackSilver(STORM_FORGE.silver, p.gold);
   if (p.stash.length >= STASH_SIZE) return 'Your locker is full';
   const captain = (CAPTAIN_SLOTS as readonly Slot[]).includes(slot);
   const ilvl = captain ? captainIlvl(p.level) : Math.max(1, p.loadout.level ?? s.ship?.shipLevel ?? 1);

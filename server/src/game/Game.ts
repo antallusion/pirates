@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { provisionsPerMinute } from '../../../shared/src/data/voyage.ts';
 import { chatCommand, chatFromAfar, chatHist, chatIn, chatOnLogin, chatRead, chatReport, cleanChat, guildSay } from './chat.ts'; // docs/28
 import { callOn, drink, hallView, invite, sign } from './guests.ts';
@@ -4772,7 +4773,7 @@ export class Game {
     // A bribe instead of a search (and, with Greased Palms, instead of the harbour master's refusal).
     if (bribing && lawful && (contrabandValue(ship) > 0 || override === 'bribe')) {
       const cost = bribeCost(ship);
-      if (p.gold < cost) return `The customs officer wants ${cost} silver`;
+      if (p.gold < cost) return lackMore(`The customs officer wants ${cost} silver`, cost, p.gold);
       p.gold -= cost;
       this.db.ledger(s.accountId, 'bribe', -cost, port.id);
       this.toastShip(ship, `${cost} silver changes hands. The customs officer admires the sky.`, 'info');

@@ -1,6 +1,7 @@
 // Captain progression (docs/03_TALENT_TREES.md §2): talent points from levels and Legend Deeds, respec
 // (free under level 20, Forget a Lesson, Clean Slate, Clean Logbook tokens) and talent loadouts.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { deedXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { questEvent } from './quests.ts';
 import { DEEDS_BY_ID, MAX_COUNTED_DEEDS } from '../../../shared/src/data/deeds.ts';
@@ -102,7 +103,7 @@ export function respec(game: Game, s: PlayerSession, mode: RespecMode, talentId?
     const why = canUnlearn(p.talents, id, learnContext(p));
     if (why) return why;
     const cost = p.level < FREE_RESPEC_LEVEL ? 0 : forgetCost(p, id);
-    if (p.gold < cost) return `Forgetting ${def.name} costs ${cost} silver`;
+    if (p.gold < cost) return lackMore(`Forgetting ${def.name} costs ${cost} silver`, cost, p.gold);
     p.gold -= cost;
     if (cost) game.db.ledger(s.accountId, 'respec', -cost, `forget:${id}`);
     delete p.talents[id];
@@ -116,7 +117,7 @@ export function respec(game: Game, s: PlayerSession, mode: RespecMode, talentId?
     const last = p.cleanSlates.length ? p.cleanSlates[p.cleanSlates.length - 1] : -Infinity;
     if (now - last < CLEAN_SLATE_CD) return `The next Clean Slate is possible in ${Math.ceil((CLEAN_SLATE_CD - (now - last)) / 3600)} h (or use a token)`;
     const cost = cleanSlateCost(p, now);
-    if (p.gold < cost) return `A Clean Slate costs ${cost} silver`;
+    if (p.gold < cost) return lackMore(`A Clean Slate costs ${cost} silver`, cost, p.gold);
     p.gold -= cost;
     p.cleanSlates = [...p.cleanSlates.filter((t) => now - t < 7 * 86400), now];
     game.db.ledger(s.accountId, 'respec', -cost, 'clean_slate');

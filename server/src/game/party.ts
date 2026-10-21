@@ -8,6 +8,7 @@
 
 // (a group's words: chat.ts — docs/28)
 export { groupSay } from './chat.ts';
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { GROUP_MAX } from '../../../shared/src/protocol.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
@@ -633,7 +634,7 @@ export function cancelBarter(game: Game, b: Barter, why: string | null): string 
 /** Why an offer can no longer be kept (null: it can): silver, goods and gear all still hers. */
 function offerWhy(s: PlayerSession, o: Offer): string | null {
   const p = s.profile!;
-  if (p.gold < o.gold) return `${s.name} no longer has the silver`;
+  if (p.gold < o.gold) return lackMore(`${s.name} no longer has the silver`, o.gold, p.gold);
   for (const [g, n] of Object.entries(o.cargo)) if ((s.ship!.cargo[g as GoodId] ?? 0) < (n ?? 0)) return `${s.name} no longer carries the goods`;
   for (const uid of o.items) {
     const it = p.stash.find((x) => x.uid === uid);

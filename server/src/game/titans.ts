@@ -5,6 +5,7 @@
 // `/titan`. The citadels of docs/19 E4 keep them too: one a week to the captains of the guild that holds one
 // (citadels.ts hireCitadelTitan → citadelTitan here), at the Grail's price, the pearls from her hold.
 
+import { lackHammocks, lackMore, lackSlot } from '../../../shared/src/data/buyfail.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { TITAN_IDS, TITAN_MAX, TITAN_NAMES, TITAN_PRICE, TITAN_SHIP_LEVEL, TITAN_WEEKLY, isTitan, titansIn } from '../../../shared/src/data/titans.ts';
@@ -34,9 +35,9 @@ export function titanWhy(game: Game, s: PlayerSession, u: TitanId, grail = true)
   if (grail && hiredThisWeek(game, s) >= TITAN_WEEKLY) return 'The Grail gives one titan a week: come again next week.';
   if (ship.army.some((x) => x.u === u)) return `The ${name(u)} serves you already: never two of a kind.`;
   if (titansIn(ship.army) >= TITAN_MAX) return 'Two titans aboard at the most.';
-  if (ship.army.length >= ship.armySlots) return 'No free slot in the army for a new kind of man.';
-  if (ship.crew >= ship.stats.crewMax) return 'No hammocks left aboard';
-  if (s.profile!.gold < TITAN_PRICE.silver) return `Needs ${TITAN_PRICE.silver} silver`;
+  if (ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
+  if (ship.crew >= ship.stats.crewMax) return lackHammocks(1, ship.crew, ship.stats.crewMax);
+  if (s.profile!.gold < TITAN_PRICE.silver) return lackMore(`Needs ${TITAN_PRICE.silver} silver`, TITAN_PRICE.silver, s.profile!.gold);
   if (!grail) return (ship.cargo.pearls ?? 0) < TITAN_PRICE.pearls ? `Needs ${TITAN_PRICE.pearls} pearls in the hold` : null;
   return islePay(game, s, { pearls: TITAN_PRICE.pearls }, false);
 }
@@ -119,7 +120,7 @@ export function adminTitan(game: Game, s: PlayerSession, args: string[]): string
   }
   if (!k || !isTitan(k)) return `Titans: ${TITAN_IDS.join(', ')}`;
   if (ship.army.some((x) => x.u === k)) return `The ${name(k)} serves you already: never two of a kind.`;
-  if (ship.army.length >= ship.armySlots) return 'No free slot in the army for a new kind of man.';
+  if (ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
   ship.addMen(k, 1);
   ship.companyKey = '';
   game.pushSelf(s, true);

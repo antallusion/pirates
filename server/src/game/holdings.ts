@@ -11,6 +11,7 @@
 //    a fort that fire on pirates and on whoever fires on you, a lighthouse (sight, witness, toll), farms, mines,
 //    plantations, a sawmill, a distillery, a powder mill, a chapel, a chart house, barracks.
 
+import { lackMore, lackRoom } from '../../../shared/src/data/buyfail.ts';
 import { estateProduce, ownedSlots, residentMul } from './estate.ts';
 import type { Resident } from './estate.ts';
 import { reckonBase, startBuild } from './base.ts';
@@ -439,7 +440,7 @@ export function rentIsland(game: Game, s: PlayerSession, islandId: number, days:
     game.db.ledger(s.accountId, 'island_rent_guild', 0, `${isl.id}:${days}:${price}`);
   } else {
     if (cur && cur.owner.kind === 'guild' && mayUse(game, cur, s.accountId)) return 'That island is the guild’s: lease it for the guild';
-    if (p.gold < price) return `The lease is ${price} silver`;
+    if (p.gold < price) return lackMore(`The lease is ${price} silver`, price, p.gold);
     p.gold -= price;
     game.db.ledger(s.accountId, 'island_rent', -price, `${isl.id}:${days}`);
   }
@@ -509,7 +510,7 @@ export function build(game: Game, s: PlayerSession, islandId: number, id: Buildi
   if (def.feature === 'mine' && !isl.features.includes('mine')) return 'There is no ore in this rock';
   if (def.biomes && !def.biomes.includes(isl.biome)) return 'Nothing like that grows here';
   const p = s.profile!;
-  if (p.gold < def.cost) return `${def.name}: ${def.cost} silver`;
+  if (p.gold < def.cost) return lackMore(`${def.name}: ${def.cost} silver`, def.cost, p.gold);
   // Materials from the hold first, then the island's store.
   const ship = s.ship!;
   for (const [g, n] of Object.entries(def.materials)) {
@@ -558,7 +559,7 @@ export function storeMove(game: Game, s: PlayerSession, islandId: number, good: 
     const n = Math.min(qty, Math.floor(ship.cargo[good] ?? 0));
     if (n <= 0) return 'You do not carry that';
     if (GOODS[good].contraband && !has(h, 'smuggler_store')) return 'Contraband needs a smugglers’ store';
-    if (cargoVolume(h.store) + n * GOODS[good].volume > storeCapacity(h) + 1e-6) return 'The store is full';
+    if (cargoVolume(h.store) + n * GOODS[good].volume > storeCapacity(h) + 1e-6) return `The store is full: ${Math.round(n * GOODS[good].volume * 10) / 10} m³ needed, ${Math.max(0, Math.round((storeCapacity(h) - cargoVolume(h.store)) * 10) / 10)} free`;
     ship.cargo[good] = (ship.cargo[good] ?? 0) - n;
     if (!ship.cargo[good]) delete ship.cargo[good];
     h.store[good] = (h.store[good] ?? 0) + n;
@@ -569,7 +570,7 @@ export function storeMove(game: Game, s: PlayerSession, islandId: number, good: 
     const st = ship.stats;
     const free = st.holdVolume - cargoVolume(ship.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
     const n = Math.min(-qty, Math.floor(h.store[good] ?? 0), Math.floor((free + 1e-6) / GOODS[good].volume));
-    if (n <= 0) return (h.store[good] ?? 0) <= 0 ? 'None of that in the store' : 'No room in the hold';
+    if (n <= 0) return (h.store[good] ?? 0) <= 0 ? 'None of that in the store' : lackRoom(GOODS[good].volume, free);
     h.store[good] = (h.store[good] ?? 0) - n;
     if (!h.store[good]) delete h.store[good];
     ship.cargo[good] = (ship.cargo[good] ?? 0) + n;
@@ -595,7 +596,7 @@ export function islandService(game: Game, s: PlayerSession, islandId: number, wh
       if (ship.cls.tier > (has(h, 'dry_dock') || yardLv >= 4 ? 4 : 3)) return `This yard cannot take a tier ${ship.cls.tier} hull`;
       const cost = Math.ceil(repairCost(ship) * (has(h, 'dry_dock') ? 1 - dockDiscount(levelOf(h, 'dry_dock')) : 1) * (1 - (SHIPYARD_REPAIR[yardLv] ?? 0)));
       if (cost <= 0) return 'She is already sound';
-      if (p.gold < cost) return `Repairs cost ${cost} silver`;
+      if (p.gold < cost) return lackMore(`Repairs cost ${cost} silver`, cost, p.gold);
       p.gold -= cost;
       h.treasury += Math.round(cost * 0.3); // your yard, your hands: part of the bill stays on the island
       ship.hull = ship.stats.hullMax;
@@ -630,7 +631,7 @@ export function islandService(game: Game, s: PlayerSession, islandId: number, wh
       const m = p.explore.maps.find((x) => x.id === String(arg));
       if (!m) return 'No such map';
       const price = chartCopy(levelOf(h, 'chart_house'));
-      if (p.gold < price) return `A copy costs ${price} silver`;
+      if (p.gold < price) return lackMore(`A copy costs ${price} silver`, price, p.gold);
       if (p.explore.maps.length >= 12) return 'Your chart chest is full';
       p.gold -= price;
       p.explore.maps.push({ ...m, id: `m${game.allocId()}`, hoard: m.hoard ?? m.id, copy: true, verdict: undefined, sealed: undefined }); // a copy leads to the same chest

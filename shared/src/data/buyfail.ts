@@ -58,6 +58,8 @@ export interface BuyFail {
   /** hammocks: her crew and her hammocks. */
   crew?: number;
   crewMax?: number;
+  /** room: a quest's goods waiting on the quay (free: nothing to buy — the advisor sells only, the goods then come aboard). */
+  pickup?: boolean;
 }
 
 /** A good of her hold as the advisor weighs it. */
@@ -109,4 +111,39 @@ export function bindingLimit(want: number, fit: number, avail: number, afford: n
   if (fit === lo && fit < want) return 'room';
   if (avail === lo && avail < want) return 'stock';
   return 'silver';
+}
+
+// ------------------------------------------------------------------ the words (English; the client's TABLE has the Russian)
+
+const r1 = (n: number) => Math.round(n * 10) / 10;
+
+/** «Not enough silver: N more needed» — what is missing, never a bare «not enough». */
+export function lackSilver(cost: number, have: number): string {
+  return `Not enough silver: ${Math.max(1, Math.ceil(cost - have))} more needed`;
+}
+/** «Not enough doubloons: N more needed». */
+export function lackDoubloons(cost: number, have: number): string {
+  return `Not enough doubloons: ${Math.max(1, Math.ceil(cost - have))} more needed`;
+}
+/** No hammocks for the men: how many wanted, how many free. */
+export function lackHammocks(want: number, crew: number, crewMax: number): string {
+  const free = Math.max(0, Math.floor(crewMax - crew));
+  return free <= 0 ? `No hammocks left aboard: ${Math.floor(crew)} of ${Math.floor(crewMax)} taken` : `Hammocks for ${free} more only, ${Math.ceil(want)} wanted`;
+}
+/** No room in the hold: the m³ wanted and the m³ free. */
+export function lackRoom(need: number, free: number): string {
+  return `No room in the hold: ${r1(need)} m³ needed, ${r1(Math.max(0, free))} free`;
+}
+
+/** A price's refusal with what is missing after it: «Needs 50 silver: 20 more needed» (the client reads the two halves). */
+export function lackMore(msg: string, cost: number, have: number): string {
+  return `${msg.replace(/\.$/, '')}: ${Math.max(1, Math.ceil(cost - have))} more needed`;
+}
+/** A full army: no slot for a new kind of men — its slots taken, merge or dismiss a stack. */
+export function lackSlot(used: number, slots: number): string {
+  return `No free slot in the army for a new kind of man: ${Math.floor(used)} of ${Math.floor(slots)} taken — merge or dismiss a stack`;
+}
+/** Men who would join and cannot: the hammocks all taken, else the army's slots. */
+export function lackBerth(s: { crew: number; crewMax: number; used: number; slots: number }): string {
+  return s.crew >= s.crewMax ? lackHammocks(1, s.crew, s.crewMax) : lackSlot(s.used, s.slots);
 }

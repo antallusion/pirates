@@ -3,10 +3,12 @@
 // takings go by letter (the harbour keeps its cut); the stall closes when she closes it there, or after a week, and
 // what was left waits for her (her warehouse there, her locker when she is next aboard).
 
+import { lackRoom, lackSilver } from '../../../shared/src/data/buyfail.ts';
 import {
   HARBOUR_CUT, PAY_EVERY_MIN, PRICE_CAP, STALL_DAYS, STALL_FEE, STALL_GOODS, STALL_ITEMS,
 } from '../../../shared/src/data/bazaar.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
+import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { STASH_SIZE, itemName } from '../../../shared/src/data/items.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
@@ -62,7 +64,7 @@ export function openStall(game: Game, s: PlayerSession, port: Port): string | nu
   const stalls = all(game);
   const had = stalls[s.accountId];
   if (had) return `You already keep a stall at ${portName(game, had.port)}.`;
-  if (p.gold < STALL_FEE) return 'Not enough silver';
+  if (p.gold < STALL_FEE) return lackSilver(STALL_FEE, p.gold);
   p.gold -= STALL_FEE;
   game.db.ledger(s.accountId, 'bazaar_fee', -STALL_FEE, port.id);
   stalls[s.accountId] = {
@@ -180,9 +182,9 @@ export function buyAtStall(game: Game, s: PlayerSession, port: Port, owner: numb
     const qty = Math.max(1, Math.min(Math.floor(qtyRaw), line?.qty ?? 0));
     if (!line) return 'No such line at that stall.';
     price = line.price * qty;
-    if (p.gold < price) return 'Not enough silver';
+    if (p.gold < price) return lackSilver(price, p.gold);
     const got = s.ship ? giveGoods(s.ship, line.good, qty) : 0;
-    if (got <= 0) return 'Your hold has no room for it.';
+    if (got <= 0) return lackRoom(GOODS[line.good].volume, s.ship ? s.ship.stats.holdVolume - cargoVolume(s.ship.cargo, s.ship.stats.contrabandVolumeMul, s.ship.stats.materialVolumeMul, s.ship.stats.provisionVolumeMul, s.ship.stats.cursedVolumeMul) : 0);
     price = line.price * got;
     line.qty -= got;
     if (line.qty <= 0) st.goods.splice(index, 1);
@@ -191,7 +193,7 @@ export function buyAtStall(game: Game, s: PlayerSession, port: Port, owner: numb
     const line = st.items[index];
     if (!line) return 'No such line at that stall.';
     price = line.price;
-    if (p.gold < price) return 'Not enough silver';
+    if (p.gold < price) return lackSilver(price, p.gold);
     if (p.stash.length >= STASH_SIZE) return 'Your locker is full';
     p.stash.push({ ...line.item, uid: p.itemSeq++ });
     st.items.splice(index, 1);

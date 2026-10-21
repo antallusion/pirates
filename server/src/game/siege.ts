@@ -14,6 +14,7 @@
 //  6. The victor chooses: capture (the lease to its end, the buildings at half), plunder (30% of the store
 //     on the beach and 30% of the treasury as contribution) or raze. Then 72 hours' peace.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { dist } from '../../../shared/src/math.ts';
 import type { SiegeView } from '../../../shared/src/protocol.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
@@ -140,7 +141,7 @@ export function declareSiege(game: Game, s: PlayerSession, islandId: number): st
     g.treasury -= cost;
     game.guilds.touch();
   } else {
-    if (s.profile!.gold < cost) return `The declaration costs ${cost} silver`;
+    if (s.profile!.gold < cost) return lackMore(`The declaration costs ${cost} silver`, cost, s.profile!.gold);
     s.profile!.gold -= cost;
   }
   game.db.ledger(s.accountId, 'siege_declared', side.kind === 'player' ? -cost : 0, `${isl.id}:${cost}`);

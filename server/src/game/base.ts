@@ -7,6 +7,7 @@
 // yard up to its caps (the island's level and its warehouse widen them); the yard, then the island's store, then
 // the hold of a ship lying off the island pay for the building.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { notifyAway } from './tgnotify.ts'; // the Telegram notices (owner, 2026-10-16)
 import { singleHall } from '../../../shared/src/data/baselevels.ts';
 import {
@@ -400,7 +401,7 @@ function pay(game: Game, s: PlayerSession, h: Holding, y: Yard, plot: number, wh
   const near = lyingOff(game, s, h);
   const lack = lacking(h, y, s, near, cost.goods);
   if (lack) return lack;
-  if (p.gold < cost.silver) return `Needs ${cost.silver} silver`;
+  if (p.gold < cost.silver) return lackMore(`Needs ${cost.silver} silver`, cost.silver, p.gold);
   p.gold -= cost.silver;
   takeGoods(h, y, s, near, cost.goods);
   game.db.ledger(s.accountId, 'isle_base', -cost.silver, `${h.island}:${what}:${level}`);
@@ -417,7 +418,7 @@ export function payCost(game: Game, s: PlayerSession, h: Holding, y: Yard, cost:
   const near = lyingOff(game, s, h);
   const lack = lacking(h, y, s, near, cost.goods);
   if (lack) return lack;
-  if (p.gold < cost.silver) return `Needs ${cost.silver} silver`;
+  if (p.gold < cost.silver) return lackMore(`Needs ${cost.silver} silver`, cost.silver, p.gold);
   p.gold -= cost.silver;
   takeGoods(h, y, s, near, cost.goods);
   game.db.ledger(s.accountId, 'isle_ship', -cost.silver, `${h.island}:${tag}`);
@@ -485,7 +486,7 @@ export function speedup(game: Game, s: PlayerSession, jobId: number, payWith: st
     j.end = now;
   } else if (payWith === 'silver') {
     const price = speedupSilver(left);
-    if (p.gold < price) return `Needs ${price} silver`;
+    if (p.gold < price) return lackMore(`Needs ${price} silver`, price, p.gold);
     p.gold -= price;
     game.db.ledger(s.accountId, 'isle_speedup', -price, `${h.island}:${j.what}`);
     j.end = now;
@@ -525,7 +526,7 @@ export function orderBarge(game: Game, s: PlayerSession): string | null {
   }
   if (!Object.keys(take).length) return 'The yard is full: no room for a barge.';
   const p = s.profile!;
-  if (p.gold < cost) return `A barge costs ${cost} silver`;
+  if (p.gold < cost) return lackMore(`A barge costs ${cost} silver`, cost, p.gold);
   p.gold -= cost;
   for (const [g, k] of Object.entries(take) as [BaseRes, number][]) y.res[g] = (y.res[g] ?? 0) + k;
   game.db.ledger(s.accountId, 'barge', -cost, Object.entries(take).map(([g, k]) => `${k} ${g}`).join(', '));

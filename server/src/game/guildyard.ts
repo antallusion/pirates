@@ -5,6 +5,7 @@
 // brought 2% or more is named among its builders. Done, the ship joins the guild fleet at the nearest port (any
 // captain of the guild may borrow her, guilds.ts), or the shipyard rises a level.
 
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { GUILD_PROJECTS, GUILD_PROJECT_DEFS, GUILD_PROJECT_SHARE, guildShipClass, projectUnits } from '../../../shared/src/data/social.ts';
 import type { GuildProject } from '../../../shared/src/data/social.ts';
 import { SHIPYARD_MAX, YARD_SHIP_LEVEL } from '../../../shared/src/data/baseships.ts';
@@ -119,7 +120,7 @@ export function gyardGive(game: Game, s: PlayerSession, good: GoodId | undefined
     const want = Math.max(0, n.silver - p.silver);
     const k = Math.min(Math.floor(silver), want);
     if (k <= 0) return 'The project needs no more silver';
-    if (pr.gold < k) return 'Not enough silver';
+    if (pr.gold < k) return lackSilver(k, pr.gold);
     pr.gold -= k;
     p.silver += k;
     game.db.ledger(s.accountId, 'guild_yard', -k, g.tag);

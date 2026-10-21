@@ -17,6 +17,7 @@
 // small rotating hire of the waters' kinds (the recruit window, src 'way'), a quick repair dearer than a yard's, and
 // «В море». She drifts off past WAY_LEAVE_RANGE, or a fight finds her: the window shuts.
 
+import { lackHammocks, lackMore, lackSlot } from '../../../shared/src/data/buyfail.ts';
 import { UNITS, armyWeight } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { PICKED_TIER, TIER_SHIP_LEVEL, mightCap, mightRoom } from '../../../shared/src/data/town.ts';
@@ -326,7 +327,7 @@ export function resurrect(game: Game, s: PlayerSession, u: UnitId | undefined, v
     if (x.room <= 0) return x.why ?? 'No hammocks left aboard';
     if (scrollsOf(game, s) <= 0) return 'No scrolls of resurrection: the shop sells them.';
     const k = raiseAboard(game, s, x.u, x.room);
-    if (k <= 0) return 'No hammocks left aboard';
+    if (k <= 0) return lackHammocks(1, s.ship!.crew, s.ship!.stats.crewMax);
     takeOff(rec, x.u, k);
     spendScroll(game, s);
     rec.done.push(rid);
@@ -431,7 +432,7 @@ function wayRepair(game: Game, s: PlayerSession): string | null {
   if (busy) return busy;
   const cost = wayRepairCost(s);
   if (cost <= 0) return 'The waystation’s carpenters mend no further: a yard does the rest.';
-  if (s.profile!.gold < cost) return `Repairs cost ${cost} silver`;
+  if (s.profile!.gold < cost) return lackMore(`Repairs cost ${cost} silver`, cost, s.profile!.gold);
   s.profile!.gold -= cost;
   ship.hull = Math.max(ship.hull, ship.stats.hullMax * WAY_REPAIR_TO);
   ship.sails = Math.max(ship.sails, ship.stats.sailHpMax * WAY_REPAIR_TO);
@@ -574,15 +575,15 @@ export function wayRecruit(game: Game, s: PlayerSession, u: UnitId, want: number
   const n = Math.min(Math.floor(Number(want)), hirePool(game, w, u), ship.stats.crewMax - ship.crew, picked, might, Math.floor(s.profile!.gold / per));
   if (!Number.isFinite(n) || n <= 0) {
     if (hirePool(game, w, u) <= 0) return 'Nobody left for hire here today.';
-    if (ship.crew >= ship.stats.crewMax) return 'No hammocks left aboard';
+    if (ship.crew >= ship.stats.crewMax) return lackHammocks(1, ship.crew, ship.stats.crewMax);
     if (picked <= 0) return `A ship of level ${ship.shipLevel} berths ${pickedMax(s)} picked men (tier 4 and up) at most.`;
     if (might <= 0) return `Your crew is as strong as a ship of level ${ship.shipLevel} carries: raise her level for better men.`;
     return `Needs ${per} silver`;
   }
-  if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return 'No free slot in the army for a new kind of man.';
+  if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
   const cost = n * per;
   const got = raiseAboard(game, s, u, n);
-  if (got <= 0) return 'No hammocks left aboard';
+  if (got <= 0) return lackHammocks(1, ship.crew, ship.stats.crewMax);
   s.profile!.gold -= got * per;
   takenOf(game).set(poolKey(game, w, u), (takenOf(game).get(poolKey(game, w, u)) ?? 0) + got);
   s.profile!.stats.recruited = (s.profile!.stats.recruited ?? 0) + got;

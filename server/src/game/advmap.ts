@@ -15,6 +15,7 @@
 //
 // Nothing here draws on the sea's rng: what varies is hashed from the thing and the week.
 
+import { lackBerth } from '../../../shared/src/data/buyfail.ts';
 import { obeliskReveals } from './isles18.ts';
 import { ALTAR_POINTS, altarPrim, GUARDS, openWater, GUARD_RESPAWN_SEC, JOIN_RATIO, JOIN_SHARE, MILL_DAYS, MILL_GOODS, OBJS, STORE_DAYS, TOWER_R, WELL_MORALE, WELL_SANITY, altarXp, buildAdv, chestPay, guardArmy, guardPay, millLoad } from '../../../shared/src/data/advmap.ts';
 import type { AdvGuard, AdvMap, AdvObj, ObjKind } from '../../../shared/src/data/advmap.ts';
@@ -409,7 +410,7 @@ export function guardChoice(game: Game, s: PlayerSession, id: string, choice: st
     if (offer !== 'join') return 'They will not sail with you.';
     const men = joinersOf(game, s, g);
     const n = armyMen(men);
-    if (n <= 0) return 'No hammocks or slots for them aboard.';
+    if (n <= 0) return lackBerth({ crew: s.ship!.crew, crewMax: s.ship!.stats.crewMax, used: s.ship!.army.length, slots: s.ship!.armySlots });
     const c = s.profile!.company;
     reconcile(game, c, ship.crew);
     c.loyalty = (c.loyalty * ship.crew + 40 * n) / (ship.crew + n);

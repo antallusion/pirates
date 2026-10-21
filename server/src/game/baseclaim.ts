@@ -7,6 +7,7 @@
 // island for the owner to fight, then reckoned against the island's batteries, fort and her own ships lying there.
 // A raid lost takes a share of the yard and store (capped a day) and weathers a building; one beaten pays.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { notifyAway } from './tgnotify.ts'; // the Telegram notices (owner, 2026-10-16)
 import { hasMoveCharter, shielded, spendMoveCharter } from './shop.ts'; // the premium shop (owner, 2026-10-15)
 import {
@@ -209,8 +210,8 @@ export function claimIsland(game: Game, s: PlayerSession, islandId: number, pay?
       return null;
     }
     if (fee && pay === 'free') return `Moving costs ${fee.silver} silver.`;
-    if (fee && pay === 'silver' && p.gold < fee.silver) return `Moving costs ${fee.silver} silver.`;
-    if (fee && pay === 'doubloons' && game.db.doubloons(s.accountId) < fee.doubloons) return `Moving costs ${fee.doubloons} doubloons.`;
+    if (fee && pay === 'silver' && p.gold < fee.silver) return lackMore(`Moving costs ${fee.silver} silver.`, fee.silver, p.gold);
+    if (fee && pay === 'doubloons' && game.db.doubloons(s.accountId) < fee.doubloons) return lackMore(`Moving costs ${fee.doubloons} doubloons.`, fee.doubloons, game.db.doubloons(s.accountId));
   }
   // (a first island after one given up is a move too: the fee, if any, without a confirm of losses)
   if (!old && fee && pay !== 'silver' && pay !== 'doubloons') {
@@ -219,7 +220,7 @@ export function claimIsland(game: Game, s: PlayerSession, islandId: number, pay?
     return null;
   }
   if (fee && pay === 'silver') {
-    if (p.gold < fee.silver) return `Moving costs ${fee.silver} silver.`;
+    if (p.gold < fee.silver) return lackMore(`Moving costs ${fee.silver} silver.`, fee.silver, p.gold);
     p.gold -= fee.silver;
     game.db.ledger(s.accountId, 'island_move', -fee.silver, String(isl.id));
   } else if (fee && pay === 'doubloons') {

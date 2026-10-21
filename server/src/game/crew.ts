@@ -2,6 +2,7 @@
 // wages, loyalty and the Codex share, the morale ladder, wounds and deaths of officers, betrayal and
 // the three-phase road to mutiny, tavern hiring, press gangs and prisoners who sign on.
 
+import { lackHammocks, lackMore, lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { hullsFor } from '../../../shared/src/data/shiplevel.ts';
 import { levelNear } from './npc.ts';
 import { FACTIONS, wantedLevel } from '../../../shared/src/data/factions.ts';
@@ -514,7 +515,7 @@ export function resolveMutiny(game: Game, s: PlayerSession, choice: 'pay' | 'sup
   };
   if (choice === 'pay') {
     const cost = mutinyPayCost(c);
-    if (p.gold < cost) return `Three hours' wages is ${cost} silver`;
+    if (p.gold < cost) return lackMore(`Three hours' wages is ${cost} silver`, cost, p.gold);
     p.gold -= cost;
     game.db.ledger(s.accountId, 'mutiny', -cost, 'paid');
     c.owed = 0;
@@ -932,7 +933,13 @@ export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profes
   const avail = prof === 'sailor' ? Math.floor(game.tavernCrew.get(port.id) ?? 0) : Math.floor(tav.stock[prof] ?? 0);
   const room = ship.stats.crewMax - ship.crew;
   let n = Math.min(qty, avail, room);
-  if (n <= 0) return room <= 0 ? 'No hammocks left aboard' : `No ${PROFESSION_DEFS[prof].name.toLowerCase()} looking for a berth here`;
+  if (n <= 0) {
+    // the one real reason (owner, 2026-10-21): her hammocks all taken (how many), or nobody of the trade here
+    if (room > 0) return `No ${PROFESSION_DEFS[prof].name.toLowerCase()} looking for a berth here`;
+    const msg = lackHammocks(qty, ship.crew, ship.stats.crewMax);
+    game.sendTo(s, { t: 'buyfail', fail: { why: 'hammocks', want: qty, can: 0, need: qty, free: 0, crew: ship.crew, crewMax: ship.stats.crewMax }, msg });
+    return msg;
+  }
   // Press Gang rank 2: the dregs of a lawless port, at half price and morale 30.
   const scum = dregs && prof === 'sailor' && ship.rank('cmd_press_gang') >= 2 && REGIONS[port.region].safety === 'lawless';
   if (dregs && !scum) return 'Only a practised press-gang captain finds the dregs, and only in lawless ports';
@@ -949,7 +956,7 @@ export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profes
       share = true;
     }
   }
-  if (p.gold < cost) return 'Not enough silver';
+  if (p.gold < cost) return lackSilver(cost, p.gold);
   p.gold -= cost;
   game.db.ledger(s.accountId, 'crew', -cost, `${port.id}:${prof}`);
   const newMorale = scum ? 30 : share ? 45 : ship.hasFlag('legend_at_helm') ? 80 : 62;
@@ -985,9 +992,9 @@ export function hireOfficer(game: Game, s: PlayerSession, port: Port, offerId: s
   if (!offer || tav.hired.includes(offerId)) return 'Nobody by that name is drinking here';
   if (offer.unique && (c.uniquesGone.includes(offer.unique) || c.officers.some((o) => o.unique === offer.unique))) return `${offer.name} will not sail with you`;
   const slots = officerBerths(ship);
-  if (c.officers.length >= slots) return `Your ship has berths for ${slots} officer${slots === 1 ? '' : 's'}`;
+  if (c.officers.length >= slots) return `Your ship has berths for ${slots} officer${slots === 1 ? '' : 's'}: pay one off to sign another`;
   if (offer.rep && (p.reputation[port.faction as FactionId] ?? 0) < offer.rep) return `${offer.name} wants a captain ${FACTIONS[port.faction].short} trusts (${offer.rep}+)`;
-  if (p.gold < offer.price) return `${offer.name} wants ${offer.price} silver to sign`;
+  if (p.gold < offer.price) return lackMore(`${offer.name} wants ${offer.price} silver to sign`, offer.price, p.gold);
   p.gold -= offer.price;
   game.db.ledger(s.accountId, 'officer', -offer.price, offer.name);
   const u = UNIQUE_OFFICERS.find((x) => x.id === offer.unique);
@@ -1019,7 +1026,7 @@ export function pressGang(game: Game, s: PlayerSession, port: Port, qty: number)
   if (REGIONS[port.region].safety !== 'lawless') return 'Only lawless ports turn a blind eye to press gangs';
   const room = ship.stats.crewMax - ship.crew;
   const n = Math.min(qty, room, 20);
-  if (n <= 0) return 'No hammocks left aboard';
+  if (n <= 0) return lackHammocks(qty, ship.crew, ship.stats.crewMax);
   const cost = n * 6;
   if (p.gold < cost) return 'Not enough silver for the cudgels and rum';
   p.gold -= cost;

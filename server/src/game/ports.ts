@@ -1,6 +1,7 @@
 // Port services: market, chandlery (ammo), tavern (crew, rumours), shipyard, contracts board,
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { researchWhy } from './research.ts';
 import { worldGoalSale } from './worldgoals.ts';
 import { careerBuyMul, careerYardBonus, renownTrade } from './renown.ts';
@@ -61,7 +62,7 @@ import type { PlayerSession, Profile } from './player.ts';
 import { pardonCost } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { onSaleDeeds } from './progression.ts';
-import { goodBuyCheck, lackSilver, questBuys, sendBuyFail } from './buyfail.ts';
+import { goodBuyCheck, lackSilver, pickupAfterSale, questBuys, sendBuyFail } from './buyfail.ts';
 import { dealOfDay, onSale, talentPriceMods } from './tradefx.ts';
 import { portFence } from './smugglefx.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
@@ -380,15 +381,20 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   renownTrade(game, s, port, price); // the flag's deeds, the week's trade (docs/16 #26–27)
   onSaleDeeds(game, s, port.id, good, n, price);
   game.checkDeliveries(s, port);
+  pickupAfterSale(game, s, port); // a quest's goods on the quay come aboard once the room is made (owner, 2026-10-21)
   return null;
 }
 
 export function buyAmmo(game: Game, s: PlayerSession, port: Port, ammo: AmmoId, qty: number): string | null {
   const ship = s.ship!;
   if (!AMMO_IDS.includes(ammo) || !Number.isInteger(qty) || qty <= 0 || qty > 500) return 'Bad order';
-  if (ammoPrice(game, port, ammo) <= 0) return 'Nobody here will sell you that';
+  if (ammoPrice(game, port, ammo) <= 0) {
+    // not sold here (owner, 2026-10-21): the nearest harbours that sell it
+    const at = game.world.ports.filter((pt) => pt.id !== port.id && ammoPrice(game, pt, ammo) > 0).sort((a, b) => dist(a.x, a.y, ship.state.x, ship.state.y) - dist(b.x, b.y, ship.state.x, ship.state.y)).slice(0, 3);
+    return at.length ? `Nobody here sells ${AMMO[ammo].name.toLowerCase()}: sold at ${at.map((pt) => pt.name).join(', ')}` : `Nobody here sells ${AMMO[ammo].name.toLowerCase()}`;
+  }
   const cost = Math.ceil(ammoPrice(game, port, ammo) * qty);
-  if (s.profile!.gold < cost) return 'Not enough silver';
+  if (s.profile!.gold < cost) return lackSilver(cost, s.profile!.gold);
   s.profile!.gold -= cost;
   ship.ammo[ammo] += qty;
   game.db.ledger(s.accountId, 'ammo', -cost, ammo);
@@ -468,7 +474,7 @@ export function shipyardModule(game: Game, s: PlayerSession, port: Port, module:
   const wh = s.profile!.warehouses[port.id] ?? {};
   const avail = need ? Math.min(need.units, Math.floor(ship.cargo[need.good] ?? 0) + Math.floor(wh[need.good] ?? 0)) / need.units : 0;
   const cost = Math.round(full * (1 - 0.3 * avail));
-  if (s.profile!.gold < cost) return `Needs ${cost} silver`;
+  if (s.profile!.gold < cost) return lackMore(`Needs ${cost} silver`, cost, s.profile!.gold);
   if (avail > 0) supplyMaterials(s, port, module);
   s.profile!.gold -= cost;
   ship.loadout.modules[module] = level + 1;
@@ -492,7 +498,7 @@ export function shipyardUnfit(game: Game, s: PlayerSession, module: ModuleId): s
   const level = ship.loadout.modules[module] ?? 0;
   if (!MODULES[module] || level <= 0) return 'Nothing fitted there';
   const cost = ship.hasFlag('modular_refit') ? 0 : Math.round(moduleCost(module, level, ship.cls.tier) * 0.1 * yardMul(ship));
-  if (s.profile!.gold < cost) return `Taking it out costs ${cost} silver`;
+  if (s.profile!.gold < cost) return lackMore(`Taking it out costs ${cost} silver`, cost, s.profile!.gold);
   s.profile!.gold -= cost;
   if (cost) game.db.ledger(s.accountId, 'module', -cost, `unfit:${module}`);
   if (level - 1 > 0) ship.loadout.modules[module] = level - 1;
@@ -539,7 +545,7 @@ export function shipyardGuns(game: Game, s: PlayerSession, port: Port, side: Sid
   if (old.id === gun) return 'Already mounted';
   const n = ship.stats.gunsPerSide;
   const cost = Math.max(0, Math.round((def.price * n - old.price * n * 0.5) * yardMul(ship)));
-  if (s.profile!.gold < cost) return `Needs ${cost} silver`;
+  if (s.profile!.gold < cost) return lackMore(`Needs ${cost} silver`, cost, s.profile!.gold);
   s.profile!.gold -= cost;
   if (cost) game.db.ledger(s.accountId, 'guns', -cost, gun);
   ship.loadout.guns[side] = gun;
@@ -570,7 +576,7 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   if (keep && p.berths.length >= MAX_BERTHS) return `You already berth ${MAX_BERTHS} ships — sell or take one out first`;
   const tradeIn = keep ? 0 : Math.round(shipValue(ship) * 0.6);
   const cost = Math.max(0, def.price - tradeIn);
-  if (p.gold < cost) return `Needs ${cost} silver after trade-in`;
+  if (p.gold < cost) return lackMore(`Needs ${cost} silver after trade-in`, cost, p.gold);
   const back = keep ? null : takeGearBack(p, ship.loadout); // the old hull's gear comes ashore into the locker
   if (back) return back;
   const gun = defaultGunFor(def);
@@ -640,7 +646,7 @@ export function buyLicence(game: Game, s: PlayerSession, port: Port): string | n
   if (!(port.faction in FACTION_DUTY)) return 'This harbour levies no duties to be licensed against';
   if (wantedLevel(p.infamy) >= 2) return 'The clerks will not license a wanted captain';
   const cost = feeFor(s.ship!, licenceCost(p.level));
-  if (p.gold < cost) return `A licence costs ${cost} silver`;
+  if (p.gold < cost) return lackMore(`A licence costs ${cost} silver`, cost, p.gold);
   p.gold -= cost;
   const f = port.faction as keyof typeof p.licences;
   p.licences[f] = Math.max(game.now, p.licences[f] ?? 0) + LICENCE_SEC;
@@ -653,7 +659,7 @@ export function pardon(game: Game, s: PlayerSession, port: Port): string | null 
   const p = s.profile!;
   if (p.infamy < 20) return 'You are not wanted';
   const cost = pardonCost(p);
-  if (p.gold < cost) return `Forged letters of pardon cost ${cost} silver`;
+  if (p.gold < cost) return lackMore(`Forged letters of pardon cost ${cost} silver`, cost, p.gold);
   p.gold -= cost;
   p.infamy = 10;
   game.db.ledger(s.accountId, 'pardon', -cost, port.id);
@@ -819,7 +825,7 @@ export function buyChart(game: Game, s: PlayerSession, port: Port, region: Regio
   if (!list.length) return 'You already know everything this chart shows';
   const price = chartPrice(list, port);
   const p = s.profile!;
-  if (p.gold < price) return `The chart costs ${price} silver`;
+  if (p.gold < price) return lackMore(`The chart costs ${price} silver`, price, p.gold);
   p.gold -= price;
   // Bought knowledge charts the islands but earns no discovery experience — you did not sail there.
   for (const is of list) game.chartIsland(s, is);

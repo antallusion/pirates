@@ -5,6 +5,7 @@
 // (profile.captainGear). A ship item's level may not pass her level, a captain's item may not pass the captain's
 // band; a ship's slot opens at a level of hers. Gear is changed out of a fight.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import {
   CAPTAIN_SLOTS, ITEM_BASES, RARITY_NAMES, SHIP_SLOTS, SLOT_NAMES, SLOT_OPENS, STASH_SIZE, TEMPER_MAX, captainIlvl, isShipSlot, itemName, itemSlot, itemValue, makeItem, mendCost,
   reforgeCost, reforgeLine, salvageYield, temperCost,
@@ -144,7 +145,7 @@ export function temperItem(game: Game, s: PlayerSession, port: Port, uid: number
   if (!it) return 'No such piece';
   if ((it.temper ?? 0) >= TEMPER_MAX) return 'Tempered to the full';
   const c = temperCost(it);
-  if (p.gold < c.silver) return `Needs ${c.silver} silver`;
+  if (p.gold < c.silver) return lackMore(`Needs ${c.silver} silver`, c.silver, p.gold);
   const cargo = s.ship!.cargo;
   if ((cargo.iron ?? 0) < c.iron || (cargo.planks ?? 0) < c.planks) return `Needs ${c.iron} iron and ${c.planks} planks (in the hold)`;
   p.gold -= c.silver;
@@ -169,7 +170,7 @@ export function reforgeItem(game: Game, s: PlayerSession, port: Port, uid: numbe
   const roll = reforgeLine(game.rng, it, line);
   if (!roll) return 'No such line to reforge';
   const cost = reforgeCost(it);
-  if (p.gold < cost) return `Needs ${cost} silver`;
+  if (p.gold < cost) return lackMore(`Needs ${cost} silver`, cost, p.gold);
   p.gold -= cost;
   game.db.ledger(s.accountId, 'reforge', -cost, it.base);
   it.affixes[line] = roll;
@@ -186,7 +187,7 @@ export function mendGear(game: Game, s: PlayerSession, port: Port): string | nul
   const worn = wornItems(p).filter((it) => it.dur < 100);
   if (!worn.length) return 'Your gear is sound';
   const cost = worn.reduce((a, it) => a + mendCost(it), 0);
-  if (p.gold < cost) return `Needs ${cost} silver`;
+  if (p.gold < cost) return lackMore(`Needs ${cost} silver`, cost, p.gold);
   p.gold -= cost;
   game.db.ledger(s.accountId, 'gear_mend', -cost, String(worn.length));
   for (const it of worn) it.dur = 100;
@@ -236,7 +237,7 @@ export function buyWare(game: Game, s: PlayerSession, port: Port, index: number)
   if (!ware) return 'That is sold';
   if (p.stash.length >= STASH_SIZE) return 'Your locker is full';
   const price = itemValue(ware);
-  if (p.gold < price) return `Needs ${price} silver`;
+  if (p.gold < price) return lackMore(`Needs ${price} silver`, price, p.gold);
   p.gold -= price;
   game.db.ledger(s.accountId, 'item_bought', -price, ware.base);
   p.stash.push({ ...ware, uid: newUid(p), affixes: ware.affixes.map((a) => ({ ...a })) });

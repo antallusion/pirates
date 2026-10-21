@@ -4,6 +4,7 @@
 // captains; the lairs on the islands — a battery to silence from the sea, then a landing for the chest and the
 // prisoners; and the trail of a wanted captain for a licensed hunter.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { claimLair } from './isles18.ts';
 import { legacyIslands } from '../../../shared/src/world/worldgen.ts';
@@ -762,7 +763,7 @@ export function payInformant(game: Game, s: PlayerSession, port: Port, id: strin
   const ship = live ? game.ships.get(live.ship) : undefined;
   if (!ship?.alive) return 'Nobody here has seen that one of late.';
   const cost = informantCost(np.level);
-  if (p.gold < cost) return `Needs ${cost} silver`;
+  if (p.gold < cost) return lackMore(`Needs ${cost} silver`, cost, p.gold);
   p.gold -= cost;
   game.db.ledger(s.accountId, 'informant', -cost, id);
   S.informed.set(s.accountId, { id, x: Math.round(ship.state.x), y: Math.round(ship.state.y), until: game.now + INFORMANT_SEC });

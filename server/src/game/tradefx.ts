@@ -2,6 +2,7 @@
 // the monopolist's grip, profit sharing, remote price letters, options on stock, patrol protection and
 // the Counting House caravans.
 
+import { lackMore, lackRoom } from '../../../shared/src/data/buyfail.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { cargoVolume, tx } from '../../../shared/src/sim/shipstats.ts';
@@ -126,7 +127,7 @@ export function buyOption(game: Game, s: PlayerSession, port: Port, good: GoodId
   if (p.trade.options.some((o) => o.port === port.id && o.good === good)) return 'You already hold an option on that';
   const price = quoteBuy(good, gm, qty, mods);
   const deposit = Math.ceil(price * 0.2);
-  if (p.gold < deposit) return `The deposit is ${deposit} silver`;
+  if (p.gold < deposit) return lackMore(`The deposit is ${deposit} silver`, deposit, p.gold);
   p.gold -= deposit;
   game.db.ledger(s.accountId, 'option_deposit', -deposit, `${port.id}:${good}`);
   applyTrade(game.markets.get(port.id)!, good, -qty); // the stock is set aside for you
@@ -141,10 +142,10 @@ export function exerciseOption(game: Game, s: PlayerSession, port: Port, index: 
   if (!o) return 'No such option';
   if (o.port !== port.id) return `That option is held in ${game.portById(o.port)?.name}`;
   const rest = o.price - o.deposit;
-  if (p.gold < rest) return `Exercising costs ${rest} silver more`;
+  if (p.gold < rest) return lackMore(`Exercising costs ${rest} silver more`, rest, p.gold);
   const free = ship.stats.holdVolume - cargoVolumeOf(ship);
   const need = o.qty * GOODS[o.good].volume * (GOODS[o.good].contraband ? ship.stats.contrabandVolumeMul : 1);
-  if (need > free + 1e-6) return 'Not enough room in the hold';
+  if (need > free + 1e-6) return lackRoom(need, free);
   p.gold -= rest;
   ship.cargo[o.good] = (ship.cargo[o.good] ?? 0) + o.qty;
   game.setCostBasis(s, o.good, o.price / o.qty);

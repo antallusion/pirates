@@ -5,6 +5,7 @@
 // in port and the ship she sailed is berthed there, as a hull built to order is; creatures join the army as a tamer's
 // do (a slot, the hammocks). The pay, the goods and her save go in one transaction.
 
+import { lackDoubloons, lackSlot } from '../../../shared/src/data/buyfail.ts';
 import { UNITS, isPremiumUnit } from '../../../shared/src/data/army.ts';
 import { isShipBeast } from '../../../shared/src/data/shipbeasts.ts';
 import type { PremiumUnit, UnitId } from '../../../shared/src/data/army.ts';
@@ -214,16 +215,17 @@ export function unitWhy(game: Game, s: PlayerSession, u: UnitId, o: PremiumUnit,
 }
 
 /** A refusal in words (her window says the same in her language). */
-function whyText(game: Game, s: PlayerSession, why: PremiumWhy, c?: ShipClassId, n = 0): string {
+function whyText(game: Game, s: PlayerSession, why: PremiumWhy, c?: ShipClassId, n = 0, price = 0): string {
   switch (why) {
-    case 'poor': return 'Not enough doubloons: top up your account first.';
+    // (what is missing, when the price is known: owner, 2026-10-21 — no bare «not enough»)
+    case 'poor': return price > 0 ? `${lackDoubloons(price, game.db.doubloons(s.accountId))} — top up your account first.` : 'Not enough doubloons: top up your account first.';
     case 'port': return 'A hull is delivered in port: make port first.';
     case 'yours': return 'You already sail one';
     case 'refit': return refitHolds(game, s.profile!) ?? 'The yard has her on the ways.';
     case 'level': return `Captain level ${captainLevelFor(levelRange(c!)[0])} is needed to command a ${SHIP_CLASSES[c!].name}`;
     case 'berths': return `You already berth ${MAX_BERTHS} ships — sell or take one out first`;
-    case 'slot': return 'No free slot in the army for a new kind of man.';
-    case 'room': return `No hammocks aboard for ${n} more.`;
+    case 'slot': return s.ship ? lackSlot(s.ship.army.length, s.ship.armySlots) : 'No free slot in the army for a new kind of man.';
+    case 'room': return `No hammocks aboard for ${n} more: ${Math.max(0, Math.floor((s.ship?.stats.crewMax ?? 0) - (s.ship?.crew ?? 0)))} free.`;
     case 'fight': return 'Not in the middle of a fight.';
     case 'deep': return 'The deep’s own serve only a captain who keeps the deep: the Choir’s favour, a cursed hull or a drowned crew.';
     case 'tier': return `Creatures of tier ${n} serve a ship of level ${premiumFrom(n)} and up.`;
@@ -262,7 +264,7 @@ export function buyShip(game: Game, s: PlayerSession, c: ShipClassId): string | 
   const o = shipOffer(game, c);
   if (!o) return 'Not for sale';
   const why = shipWhy(game, s, c, o.price, game.db.doubloons(s.accountId));
-  if (why) return whyText(game, s, why, c);
+  if (why) return whyText(game, s, why, c, 0, o.price);
   const ship = s.ship!, p = s.profile!;
   const port = game.portById(ship.docked!)!;
   const cls = SHIP_CLASSES[c];
@@ -314,7 +316,7 @@ export function buyUnit(game: Game, s: PlayerSession, u: UnitId, k = 0, pid?: st
   const detail = `unit:${u}:${o.n * k}${tag}`;
   if (tag && game.db.doubloonRef(s.accountId, 'doubloons_buy', detail)) return null;
   const why = unitWhy(game, s, u, o, game.db.doubloons(s.accountId), k);
-  if (why) return whyText(game, s, why, undefined, why === 'tier' ? UNITS[u].tier : o.n * k);
+  if (why) return whyText(game, s, why, undefined, why === 'tier' ? UNITS[u].tier : o.n * k, packOf(o.price, k)?.price ?? 0);
   const price = packOf(o.price, k)!.price;
   const bal = move(game, s.accountId, -price, 'doubloons_buy', detail, () => {
     joinCreatures(game, s, u, o.n * k);

@@ -16,6 +16,7 @@
 //  - Islands: up to six guild islands (leased from the treasury by vice-admirals); a base on one raises it through
 //    five levels (+2 slots a level, weekly upkeep from the island's treasury).
 
+import { lackMore, lackRoom } from '../../../shared/src/data/buyfail.ts';
 import { legacyIslands } from '../../../shared/src/world/worldgen.ts';
 import { gyardView } from './guildyard.ts';
 import { upkeepMul } from './empires.ts';
@@ -271,7 +272,7 @@ export function foundGuild(game: Game, s: PlayerSession, rawName: string, rawTag
     if (g.name.toLowerCase() === name.toLowerCase()) return 'That name is taken';
     if (g.tag === tag) return 'That tag is taken';
   }
-  if (p.gold < GUILD_COST) return `Registering a guild costs ${GUILD_COST} silver`;
+  if (p.gold < GUILD_COST) return lackMore(`Registering a guild costs ${GUILD_COST} silver`, GUILD_COST, p.gold);
   p.gold -= GUILD_COST;
   game.db.ledger(s.accountId, 'guild_found', -GUILD_COST, tag);
   const now = game.wallNow();
@@ -604,7 +605,7 @@ export function storeMove(game: Game, s: PlayerSession, good: GoodId, qty: numbe
   const st = ship.stats;
   const free = st.holdVolume - cargoVolume(ship.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
   const fit = Math.min(n, Math.floor((free + 1e-6) / GOODS[good].volume));
-  if (fit <= 0) return 'No room in the hold';
+  if (fit <= 0) return lackRoom(GOODS[good].volume, free);
   const e = withdrawOk(game, g, m, fit * GOODS[good].basePrice, WITHDRAW_CAP);
   if (e) return e;
   store[good] = (store[good] ?? 0) - fit;
@@ -659,7 +660,7 @@ export function borrowShip(game: Game, s: PlayerSession, id: number): string | n
   if (f.port !== s.ship?.docked) return `She lies at ${game.portById(f.port)?.name ?? f.port}`;
   if (p.berths.length >= 3) return 'Your berths are full';
   const deposit = Math.round(SHIP_CLASSES[f.loadout.classId].price * 0.2);
-  if (p.gold < deposit) return `The deposit is ${deposit} silver`;
+  if (p.gold < deposit) return lackMore(`The deposit is ${deposit} silver`, deposit, p.gold);
   p.gold -= deposit;
   f.lentTo = s.accountId;
   f.deposit = deposit;

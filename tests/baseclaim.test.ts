@@ -222,8 +222,9 @@ test('docs/29: moving house pulls the old island down — the first move free, t
   assert.ok(!ask2.free && ask2.silver === MOVE_SILVER && ask2.doubloons === MOVE_DOUBLOONS && ask2.moves === 1);
   assert.equal(buyIsland(game, s, third.id, 'free'), `Moving costs ${MOVE_SILVER} silver.`);
   s.profile!.gold = MOVE_SILVER - 1;
-  assert.equal(buyIsland(game, s, third.id, 'silver'), `Moving costs ${MOVE_SILVER} silver.`);
-  assert.equal(buyIsland(game, s, third.id, 'doubloons'), `Moving costs ${MOVE_DOUBLOONS} doubloons.`);
+  // (what is missing said after the price: owner, 2026-10-21)
+  assert.equal(buyIsland(game, s, third.id, 'silver'), `Moving costs ${MOVE_SILVER} silver: 1 more needed`);
+  assert.match(buyIsland(game, s, third.id, 'doubloons') ?? '', new RegExp(`^Moving costs ${MOVE_DOUBLOONS} doubloons: [0-9]+ more needed$`));
   game.db.addDoubloons(s.accountId, MOVE_DOUBLOONS + 5);
   assert.equal(buyIsland(game, s, third.id, 'doubloons'), null);
   assert.equal(game.db.doubloons(s.accountId), 5, 'the doubloons spent');

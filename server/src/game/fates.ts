@@ -2,6 +2,7 @@
 // days, kept three) and what keeping or forgetting them does to loyalty; love in a port, the merry evenings there,
 // and pining when the ship stays away.
 
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { DAY_LENGTH_SEC } from '../../../shared/src/constants.ts';
 import { LOVERS, LOVE_PINE_DAYS, PASTS, REQUEST_EVERY_DAYS, REQUEST_KINDS, REQUEST_LASTS_DAYS } from '../../../shared/src/data/fates.ts';
 import type { OfficerFate } from '../../../shared/src/data/fates.ts';
@@ -112,7 +113,7 @@ export function fulfilRequest(game: Game, s: PlayerSession, id: string): string 
   const r = f.request;
   if (!r || (r.kind !== 'brother' && r.kind !== 'debt')) return 'Nothing to do for that one.';
   if (ship.docked !== r.port) return 'Not here.';
-  if (p.gold < (r.n ?? 0)) return 'Not enough silver';
+  if (p.gold < (r.n ?? 0)) return lackSilver((r.n ?? 0), p.gold);
   p.gold -= r.n ?? 0;
   game.db.ledger(s.accountId, `officer_${r.kind}`, -(r.n ?? 0), o.id);
   done(game, s, o, f);

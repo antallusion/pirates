@@ -8,6 +8,7 @@
 // water. A trophy hall shows a hunter's heads, a whaler's skulls and a fisher's records, and lends each trade a
 // little; guests may look round it.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { welcome } from './guests.ts';
 import { isCitadelIsland } from '../../../shared/src/data/citadels.ts'; // docs/19 E4
 import {
@@ -228,7 +229,7 @@ export function hireResident(game: Game, s: PlayerSession): string | null {
   if (!has(h, 'tavern')) return 'Build a tavern on the island to hire there';
   if ((h.residents?.length ?? 0) >= residentCap(h)) return 'The houses are full: build a Residents’ House or raise the island.';
   const p = s.profile!;
-  if (p.gold < RESIDENT_HIRE) return `Needs ${RESIDENT_HIRE} silver`;
+  if (p.gold < RESIDENT_HIRE) return lackMore(`Needs ${RESIDENT_HIRE} silver`, RESIDENT_HIRE, p.gold);
   p.gold -= RESIDENT_HIRE;
   game.db.ledger(s.accountId, 'resident', -RESIDENT_HIRE, String(h.island));
   settle(game, h);
@@ -359,7 +360,7 @@ export function foundOutpost(game: Game, s: PlayerSession, kind: OutpostKind): s
   if (lack.length) return `Bring ${Object.entries(OUTPOST_BUILD).map(([g, n]) => `${n} ${GOODS[g as GoodId].name.toLowerCase()}`).join(', ')} in the hold to found it.`;
   const safety = REGIONS[isl.region].safety;
   const fee = claimCost(safety);
-  if (p.gold < fee) return `Needs ${fee} silver`;
+  if (p.gold < fee) return lackMore(`Needs ${fee} silver`, fee, p.gold);
   p.gold -= fee;
   for (const [g, n] of Object.entries(OUTPOST_BUILD) as [GoodId, number][]) {
     ship.cargo[g] = (ship.cargo[g] ?? 0) - n;
@@ -395,7 +396,7 @@ export function outpostOrder(game: Game, s: PlayerSession, id: string, action: s
       const c = outpostUpgrade(o.level, o.kind);
       const lack = (Object.entries(c.goods) as [GoodId, number][]).filter(([g, n]) => (ship.cargo[g] ?? 0) < n);
       if (lack.length) return `Bring ${Object.entries(c.goods).map(([g, n]) => `${n} ${GOODS[g as GoodId].name.toLowerCase()}`).join(', ')} in the hold to found it.`;
-      if (p.gold < c.silver) return `Needs ${c.silver} silver`;
+      if (p.gold < c.silver) return lackMore(`Needs ${c.silver} silver`, c.silver, p.gold);
       p.gold -= c.silver;
       for (const [g, n] of Object.entries(c.goods) as [GoodId, number][]) {
         ship.cargo[g] = (ship.cargo[g] ?? 0) - n;
@@ -414,7 +415,7 @@ export function outpostOrder(game: Game, s: PlayerSession, id: string, action: s
       const g = (arg ?? 'none') as Guard;
       if (!GUARDS[g]) return 'Unknown order';
       const cost = GUARDS[g].cost;
-      if (p.gold < cost) return `Needs ${cost} silver`;
+      if (p.gold < cost) return lackMore(`Needs ${cost} silver`, cost, p.gold);
       p.gold -= cost;
       o.guard = g;
       touch(game);
@@ -438,7 +439,7 @@ export function outpostOrder(game: Game, s: PlayerSession, id: string, action: s
     }
     case 'renew': {
       const fee = claimCost(REGIONS[isl.region].safety);
-      if (p.gold < fee) return `Needs ${fee} silver`;
+      if (p.gold < fee) return lackMore(`Needs ${fee} silver`, fee, p.gold);
       p.gold -= fee;
       o.claimUntil = Math.max(o.claimUntil, game.wallNow()) + CLAIM_DAYS * DAY;
       touch(game);

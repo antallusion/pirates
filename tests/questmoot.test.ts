@@ -22,17 +22,21 @@ const seconds = (game: ReturnType<typeof makeGame>['game'], n: number) => {
   for (let i = 0; i < n * TICK_RATE; i++) game.step();
 };
 
-/** Her hold filled to the last cubic foot (with a heavy good of the trade), her hammocks all taken. */
-function fillUp(s: PlayerSession, crew = true, hold = true): void {
+/** Her hold filled to the last cubic foot (with a heavy good of the trade), her hammocks all taken. `kept`: the cargo is
+ *  plundered — never put on the counter by the advisor (buyfail.ts), so no room can be made by selling (owner,
+ *  2026-10-21: a full hold of goods she may sell is not a step done — the advisor sells to make room). */
+function fillUp(s: PlayerSession, crew = true, hold = true, kept = true): void {
   const ship = s.ship!;
   if (crew) ship.crew = ship.stats.crewMax;
   if (hold) {
     const big = (Object.keys(GOODS) as GoodId[]).filter((g) => GOODS[g].category !== 'supply' && !GOODS[g].contraband).sort((a, b) => GOODS[b].volume - GOODS[a].volume)[0];
-    ship.cargo = { [big]: Math.ceil(ship.stats.holdVolume / GOODS[big].volume) + 1 };
+    const n = Math.ceil(ship.stats.holdVolume / GOODS[big].volume) + 1;
+    ship.cargo = { [big]: n };
+    s.profile!.stolen = kept ? { [big]: n } : {};
   }
 }
 
-test('a fresh account with a full crew and a full hold walks the opening’s shops without a purchase', () => {
+test('a fresh account with a full crew and a hold full of what it may not sell walks the opening’s shops without a purchase', () => {
   const { game } = makeGame();
   const conn = join(game, 'Fullhold');
   const s = [...game.sessions].find((x) => x.name === 'Fullhold')!;
@@ -47,6 +51,24 @@ test('a fresh account with a full crew and a full hold walks the opening’s sho
     assert.ok(SERVER_RU_CAMPAIGN[m] && !/[A-Za-z]/.test(SERVER_RU_CAMPAIGN[m]), `in Russian: ${m}`);
   }
   assert.equal(campaignActive(p)?.id, campaignOf(game).bySlot.get(1)!.a.id, 'the next of the opening comes: «Первый залп»');
+});
+
+test('a full hold of goods she may sell is no step done: the purchase asked, the advisor makes room (owner, 2026-10-21)', () => {
+  const { game } = makeGame();
+  const conn = join(game, 'Sellfirst');
+  const s = [...game.sessions].find((x) => x.name === 'Sellfirst')!;
+  const p = s.profile!;
+  const qs = () => p.quests.active.find((a) => a.id === 'c01_01')!;
+  fillUp(s, false, true, false);
+  seconds(game, 3);
+  assert.equal(qs().step, 0, 'provisions still asked: it IS possible after selling');
+  assert.ok(!conn.all('toast').some((t) => /the step is counted/.test(t.msg)), 'nothing counted');
+  conn.push({ t: 'trade', good: 'provisions', qty: 1 } as never);
+  const f = conn.last('buyfail')!;
+  assert.equal(f.fail.why, 'room', 'the full hold: «нет места», not the stock');
+  assert.ok(f.fail.plan!.length > 0, 'something to sell here');
+  conn.push({ t: 'sellbuy', good: 'provisions', qty: 1 } as never);
+  assert.equal(qs().step, 1, 'sold to make room and bought: the step done');
 });
 
 test('the owner’s case: crew full, the rest bought — the tavern’s step is counted, the trade good still asked', () => {

@@ -2,6 +2,7 @@
 // loyalty; turning him at a harbour master into an officer or a caravan skipper (he signs, refuses, or escapes); the
 // skippers' pool, and a skipper of low loyalty sailing off with a hull of her caravan.
 
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { DAY_LENGTH_SEC } from '../../../shared/src/constants.ts';
 import { OFFICER_DEFS, TRAITS } from '../../../shared/src/data/crew.ts';
 import type { TraitId } from '../../../shared/src/data/crew.ts';
@@ -97,7 +98,7 @@ export function turnCaptive(game: Game, s: PlayerSession, index: number, as: 'of
   }
   if (as === 'skipper' && (p.skippers ?? []).length >= MAX_SKIPPERS) return 'You have skippers enough.';
   const cost = turnCost(c);
-  if (p.gold < cost) return 'Not enough silver';
+  if (p.gold < cost) return lackSilver(cost, p.gold);
   const loyalty = captiveLoyalty(game, p, c);
   const chance = Math.max(0.1, Math.min(0.9, loyalty / 100));
   if (!game.rng.chance(chance)) {

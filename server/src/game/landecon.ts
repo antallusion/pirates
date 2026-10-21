@@ -5,6 +5,7 @@
 // dwellings). docs/19 E13: the workshop's anvil — an artifact forged and reforged (shared/src/data/forge.ts), its new
 // roll beside the old until she chooses; the anvil's dice are its own Rng.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { ARTIFACTS } from '../../../shared/src/data/artifacts.ts';
 import { FORGE_MARKET, forgeCost, forgeRoll, forgeable } from '../../../shared/src/data/forge.ts';
 import type { ForgeWhat } from '../../../shared/src/data/forge.ts';
@@ -73,7 +74,7 @@ function fitWhy(game: Game, s: PlayerSession, h: Holding, id: FittingId): string
   if (r >= FITTING_MAX) return 'It is at its greatest';
   if (!lyingOff(game, s, h)) return 'Lie off your island: its carpenters fit her out.';
   const c = fittingCost(id, r + 1);
-  if (s.profile!.gold < c.silver) return `Needs ${c.silver} silver`;
+  if (s.profile!.gold < c.silver) return lackMore(`Needs ${c.silver} silver`, c.silver, s.profile!.gold);
   return landLack(s.profile!, c.land);
 }
 
@@ -105,7 +106,7 @@ function craftWhy(game: Game, s: PlayerSession, h: Holding, y: Yard, i: number):
   if (!c) return 'No such work';
   if (townLevel(y, 'market') < c.market) return c.market <= 1 ? 'Build a market in your town first: its workshop makes it.' : `Raise the market to level ${c.market} first.`;
   if (!lyingOff(game, s, h)) return 'Lie off your island: its workshop makes it.';
-  if (s.profile!.gold < c.silver) return `Needs ${c.silver} silver`;
+  if (s.profile!.gold < c.silver) return lackMore(`Needs ${c.silver} silver`, c.silver, s.profile!.gold);
   return landLack(s.profile!, c.land) ?? lacking(h, y, s, true, c.goods);
 }
 
@@ -152,7 +153,7 @@ function forgeWhy(game: Game, s: PlayerSession, h: Holding, y: Yard, it: Item, w
   if (it.forgeWas) return 'Choose first: the new roll or the old one.';
   if (s.ship?.underFire(game.now)) return 'Not in the middle of a fight';
   const c = forgeCost(it);
-  if (s.profile!.gold < c.silver) return `Needs ${c.silver} silver`;
+  if (s.profile!.gold < c.silver) return lackMore(`Needs ${c.silver} silver`, c.silver, s.profile!.gold);
   return landLack(s.profile!, c.land) ?? lacking(h, y, s, true, { pearls: c.pearls });
 }
 

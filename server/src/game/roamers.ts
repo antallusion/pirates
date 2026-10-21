@@ -11,6 +11,7 @@
 // Not saved: a stack is down for minutes, and a stack's state is the sea's for that long. Every roll here is on this
 // system's own Rng.
 
+import { lackBerth } from '../../../shared/src/data/buyfail.ts';
 import { xpAt } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { UNITS, armyMen, armyPower } from '../../../shared/src/data/army.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
@@ -481,7 +482,7 @@ export function roamChoice(game: Game, s: PlayerSession, id: number, choice: 'jo
     if (offer !== 'join') return 'They will not go with you.';
     const men = roamJoiners(game, s, sp!);
     const n = armyMen(men);
-    if (n <= 0) return 'No hammocks or slots for them aboard.';
+    if (n <= 0) return lackBerth({ crew: s.ship!.crew, crewMax: s.ship!.stats.crewMax, used: s.ship!.army.length, slots: s.ship!.armySlots });
     for (const x of men) ship.addMen(x.u, x.n);
     ship.companyKey = '';
     roamGone(game, sp!);

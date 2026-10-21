@@ -2,6 +2,7 @@
 // divers, wake trails, soundings, weather forecasts, the gold trail, and the edge of the map.
 // The base treasure system lives here; Phase 8 adds multi-part maps, riddles and map theft on top.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { mapReveals } from './isles18.ts';
 import { DEG, dist, headingVec } from '../../../shared/src/math.ts';
@@ -295,7 +296,7 @@ export function tavernMap(game: Game, s: PlayerSession, portId: string): string 
   if (p.explore.tavernDeals.includes(key)) return 'Nobody here has another map to sell today';
   const free = s.ship!.hasFlag('rumor_hound') && p.explore.rumorDay !== day;
   const price = free ? 0 : 350;
-  if (p.gold < price) return `The map costs ${price} silver`;
+  if (p.gold < price) return lackMore(`The map costs ${price} silver`, price, p.gold);
   if (chestCount(p.explore.maps) >= MAX_MAPS) return 'Your map chest is full';
   p.gold -= price;
   if (price) game.db.ledger(s.accountId, 'map', -price, portId);

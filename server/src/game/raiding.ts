@@ -4,6 +4,7 @@
 // one let go; the heat of a sea's lanes — escorts, League cutters and dearer goods where the raids are; the
 // Brethren's fame and ranks; and the mark of a merchant under a friend's guns.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { questEvent } from './quests.ts';
 import { BRETHREN_RANKS, CODE_RANK, CONVOY_EVERY, CONVOY_INFAMY, CONVOY_MAX, CONVOY_SPOT_R, DEED_CONVOYS, ESCORT_KEEP_R, ESCORT_SIGN_R, convoyStrongbox, escortPay, FAME, HEAT, MORALE_RANK, TERROR_TITLE, TIP_WINDOW, TITLE_RANK, TRIBUTE, brethrenRank, clerkCost, heatPrices, tipCost } from '../../../shared/src/data/raiding.ts';
@@ -248,7 +249,7 @@ export function buyTip(game: Game, s: PlayerSession, port: Port, id: string): st
   if (t.buyers.has(s.accountId)) return 'The tip is yours already.';
   const cost = tipCost(tipValue(t));
   const p = s.profile!;
-  if (p.gold < cost) return `Needs ${cost} silver`;
+  if (p.gold < cost) return lackMore(`Needs ${cost} silver`, cost, p.gold);
   p.gold -= cost;
   game.db.ledger(s.accountId, 'tip', -cost, id);
   t.buyers.add(s.accountId);
@@ -261,7 +262,7 @@ export function bribeClerk(game: Game, s: PlayerSession, port: Port): string | n
   const S = rs(game);
   const cost = clerkCost(port.size);
   const p = s.profile!;
-  if (p.gold < cost) return `Needs ${cost} silver`;
+  if (p.gold < cost) return lackMore(`Needs ${cost} silver`, cost, p.gold);
   p.gold -= cost;
   game.db.ledger(s.accountId, 'clerk', -cost, port.id);
   S.manifests.set(s.accountId, { port: port.id, until: game.now + 3600 });

@@ -304,7 +304,8 @@ test('a resource pack into the yard (past its cap), a creature pack and a recrui
   // the press of hands: the free hammocks filled; none free, refused
   assert.equal(buyOffer(game, s, 'crew_290', pid()), null);
   assert.equal(ship.crew, ship.stats.crewMax);
-  assert.equal(buyOffer(game, s, 'crew_290', pid()), 'No room for it: make room first.');
+  // (owner, 2026-10-21: the refusal with its numbers — the hammocks all taken)
+  assert.equal(buyOffer(game, s, 'crew_290', pid()), `No hammocks left aboard: ${ship.crew} of ${ship.stats.crewMax} taken`);
   // a premium creature by three: three stacks' worth, the pack's price
   onHull(game, ship, 'brig', 5);
   ship.setArmy([{ u: 'deckhand', n: 10 }]);

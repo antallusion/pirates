@@ -9,6 +9,7 @@
 //      a season, land to strike while they are up, and rare things on them for a landing party once each rise.
 // Also what the captain's chart and HUD are told of all of this (a small 'isles' message every two seconds).
 
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { isNight, nightFactor } from '../../../shared/src/constants.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -115,7 +116,7 @@ export function payKeeper(game: Game, s: PlayerSession): string | null {
   if (!is) return 'No keeper within hail';
   const p = s.profile!;
   const price = keeperPrice(game, is);
-  if (p.gold < price) return 'Not enough silver';
+  if (p.gold < price) return lackSilver(price, p.gold);
   p.gold -= price;
   game.db.ledger(s.accountId, 'keeper', -price, is.name);
   st(game).paid.set(is.id, game.now + LIGHT_PAID_SEC);

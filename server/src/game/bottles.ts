@@ -3,6 +3,7 @@
 // sails within a cable of it fishes it out: the note comes to her as a letter, and the thrower hears who found it.
 // A bottle nobody finds in two weeks goes to the bottom.
 
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { BOTTLE_COST, BOTTLE_FIND_R, BOTTLE_MAX_NOTE, BOTTLE_MAX_SILVER, BOTTLE_MIN_AGE_MS, BOTTLE_SINK_MS } from '../../../shared/src/data/bottles.ts';
 import { currentAt, isLand } from '../../../shared/src/world/worldgen.ts';
 import { windAt } from '../../../shared/src/sim/wind.ts';
@@ -57,7 +58,7 @@ export function throwBottle(game: Game, s: PlayerSession, noteRaw: string, silve
   const note = String(noteRaw ?? '').replace(/[<>{}`]/g, '').replace(/\s+/g, ' ').trim().slice(0, BOTTLE_MAX_NOTE);
   if (!note) return 'Write something first.';
   const silver = Math.max(0, Math.min(BOTTLE_MAX_SILVER, Math.floor(Number(silverRaw) || 0)));
-  if (p.gold < silver + BOTTLE_COST) return 'Not enough silver';
+  if (p.gold < silver + BOTTLE_COST) return lackSilver(silver + BOTTLE_COST, p.gold);
   p.gold -= silver + BOTTLE_COST;
   const S = bs(game);
   const b: Bottle = { id: S.seq++, from: s.name, account: s.accountId, note, silver, x: ship.state.x, y: ship.state.y, thrown: game.wallNow() };

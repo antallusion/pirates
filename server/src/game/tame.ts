@@ -5,6 +5,7 @@
 // on the stacks she brings to a battle; the beaten who follow her after a fight won; the pen of her island that keeps
 // those beyond her slots; the tamers of some ports who buy and sell them. Every roll here is on this system's own Rng.
 
+import { lackHammocks } from '../../../shared/src/data/buyfail.ts';
 import { UNITS, isPremiumUnit } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { BEAST_PLURAL, isCreature } from '../../../shared/src/data/bestiary.ts';
@@ -320,7 +321,7 @@ export function fromPen(game: Game, s: PlayerSession, u: UnitId, n: number): str
   const room = creatureRoom(ship, u);
   if (room <= 0) return ship.army.length >= ship.armySlots && !ship.army.some((x) => x.u === u) ? 'No free slot in the army for a new kind of man.' : 'No hammocks left aboard';
   const k = joinCreatures(game, s, u, Math.min(have, Math.floor(Number(n)) || have));
-  if (k <= 0) return 'No hammocks left aboard';
+  if (k <= 0) return lackHammocks(1, ship.crew, ship.stats.crewMax);
   st[u] = have - k;
   if (!st[u]) delete st[u];
   game.holdings.touch();

@@ -3,6 +3,7 @@
 // bosses and in guards' chests, another path's page taught at a guild for twice the price, her stamina at rest, and
 // the tester's console (/path, /stam, /scroll, /pathfoe). Every roll here is on the path book's own dice.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { ORDERS, isOrder, guildOf, guildPrice, orderLevelCap, rankOf } from '../../../shared/src/data/hero.ts';
@@ -135,7 +136,7 @@ export function learnForeign(game: Game, s: PlayerSession, port: Port, id: strin
   if (h.orders.includes(id)) return 'You know that order already';
   const cap = orderLevelCap(p.level, rankOf(h.skills, 'mysticism'));
   if (ORDERS[id].level > cap) return `Orders of level ${ORDERS[id].level} are beyond you yet (Deep Mysticism or more levels open them)`;
-  if (p.gold < offer.price) return `Needs ${offer.price} silver`;
+  if (p.gold < offer.price) return lackMore(`Needs ${offer.price} silver`, offer.price, p.gold);
   p.gold -= offer.price;
   game.db.ledger(s.accountId, 'guild_order', -offer.price, id);
   h.orders.push(id);

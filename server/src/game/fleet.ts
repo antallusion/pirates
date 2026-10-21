@@ -1,6 +1,7 @@
 // Command (docs/03 §4.4): a squadron of hired NPC escorts that sail with the flagship, formations and
 // signal flags, Line of Battle, Screen the Flagship, auras and the active orders of the Command tree.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { pointsInTree } from '../../../shared/src/data/talents.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
@@ -78,7 +79,7 @@ export function hireEscort(game: Game, s: PlayerSession, port: Port, classId: Sh
   if (slots <= 0) return 'Escorts answer only to a commander (10 points in Command)';
   // Her own ships at sea take the berths first (docs/15 item 4).
   if (p.fleet.escorts.length >= slots) return `You have berths for ${slots} escort${slots === 1 ? '' : 's'}`;
-  if (p.gold < offer.price) return `A ${SHIP_CLASSES[classId].name} and her crew cost ${offer.price} silver`;
+  if (p.gold < offer.price) return lackMore(`A ${SHIP_CLASSES[classId].name} and her crew cost ${offer.price} silver`, offer.price, p.gold);
   p.gold -= offer.price;
   game.db.ledger(s.accountId, 'escort', -offer.price, classId);
   const name = `${game.rng.pick(ESCORT_NAMES)}`;

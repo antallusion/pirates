@@ -4,6 +4,7 @@
 // and then another of the island games — and at the far side a cache, richer for every risk taken and survived. One
 // short card; the server rolls every chance on its own generator (the shared game.rng is left to the sea).
 
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { MINI_LIFE_SEC } from './minigames.ts';
 import { openMinigame, startMinigame } from './minigames.ts';
@@ -168,7 +169,7 @@ export function playTrek(game: Game, s: PlayerSession, pick: string): string | n
     if (!ch) return 'No such choice';
     const key = ch.to ?? (rng.chance(ch.chance ?? 0.5) ? ch.win! : ch.lose!);
     const o = ev.outcomes[key];
-    if (o.pay.cost && s.profile.gold < purse(s, o.pay.cost)) return 'Not enough silver';
+    if (o.pay.cost && s.profile.gold < purse(s, o.pay.cost)) return lackSilver(purse(s, o.pay.cost), s.profile.gold);
     t.choice = false;
     resolve(game, s, t, ev.id, key, o);
     next(game, s, t);

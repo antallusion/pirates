@@ -50,7 +50,7 @@ import { CONVOY_RANGE, groupOfAccount } from './party.ts';
 import { seasonStat } from './seasons.ts';
 import { grantMap, makeMap } from './explorefx.ts';
 import type { ShipEntity } from './ship.ts';
-import { canMakeRoom } from './buyfail.ts';
+import { canMakeRoom, pickupAdvice } from './buyfail.ts';
 import { admiraltyById, isAdmId } from '../../../shared/src/data/admiralty.ts'; // docs/19 E15
 import { contractDone } from './admiralty.ts';
 import { campaignDone, campaignTick } from './campaign.ts'; // docs/36, the main campaign
@@ -799,7 +799,8 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
       if (ev.k !== 'dock' || ev.port.id !== st.port) return 0;
       const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
       if (free + 1e-6 < GOODS[st.good].volume * st.qty) {
-        game.toastShip(ship, `Make room in the hold: ${st.qty} ${GOODS[st.good].name.toLowerCase()} wait on the quay.`, 'info');
+        game.toastShip(ship, `Make room in the hold: ${st.qty} ${GOODS[st.good].name.toLowerCase()} wait on the quay (${Math.round(GOODS[st.good].volume * st.qty * 10) / 10} m³ needed, ${Math.max(0, Math.round(free * 10) / 10)} free).`, 'info');
+        pickupAdvice(game, s, ev.port, st.good, st.qty); // the advisor: what to sell here to make the room (owner, 2026-10-21)
         return 0;
       }
       ship.cargo[st.good] = (ship.cargo[st.good] ?? 0) + st.qty;

@@ -4,6 +4,7 @@
 // winner is named Master of Dice at the week's turn. At midnight in the Abyss, Davy Jones plays: a cursed thing
 // against a toll from the ship.
 
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { unlockDeed } from './looks.ts';
 import { DAVY, DAVY_STAKE, DICE_HOUSE_CUT, DICE_MAX_SEATS, DICE_OPEN_S, DICE_REGULARS, DICE_STAKES, DICE_START, DICE_TURN_S, countFace, npcMove, validRaise } from '../../../shared/src/data/dice.ts';
 import type { Bid } from '../../../shared/src/data/dice.ts';
@@ -114,7 +115,7 @@ export function diceOpen(game: Game, s: PlayerSession, stake: number, davy = fal
   if (tableOf(game, s.accountId)) return 'You are at a table already.';
   if (davy && !diceAvailableDavy(game, s)) return 'Davy Jones plays only at midnight, and only in the Abyss.';
   const st = davy ? DAVY_STAKE : DICE_STAKES.includes(stake) ? stake : DICE_STAKES[0];
-  if (p.gold < st) return 'Not enough silver';
+  if (p.gold < st) return lackSilver(st, p.gold);
   p.gold -= st;
   const S = ds(game);
   const t: Table = { id: S.seq++, port: port.id, stake: st, davy, phase: 'open', seats: [], turn: 0, bid: null, deadline: game.now + (davy ? 2 : DICE_OPEN_S), log: [], reveal: null, revealUntil: 0, starter: 0, winner: null, pot: st };
@@ -132,7 +133,7 @@ export function diceJoin(game: Game, s: PlayerSession, id: number): string | nul
   const t = ds(game).tables.get(id);
   if (tableOf(game, s.accountId)) return 'You are at a table already.';
   if (!t || t.phase !== 'open' || t.davy || t.seats.length >= DICE_MAX_SEATS || s.ship?.docked !== t.port) return 'That table is full or already playing.';
-  if (p.gold < t.stake) return 'Not enough silver';
+  if (p.gold < t.stake) return lackSilver(t.stake, p.gold);
   p.gold -= t.stake;
   t.pot += t.stake;
   t.seats.push({ name: s.name, account: s.accountId, cup: [], dice: DICE_START, nerve: 0.5 });

@@ -6,6 +6,7 @@
 // Aid's patched-up men, and the artifacts: found on bosses, in hoards and lairs, won from guarded ships, sold by a few
 // ports' merchants. Every roll here is on the hero's own dice (the sea's stream stays as the tests replay it).
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { recordFallen } from './waystations.ts'; // docs/35: the record of the fallen
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
@@ -244,7 +245,7 @@ export function learnAtGuild(game: Game, s: PlayerSession, port: Port, id: strin
   if (isPathPage(id)) return learnForeign(game, s, port, id); // another path's page, twice the price (docs/18)
   if (!isOrder(id) || !list.includes(id)) return 'This guild does not teach that order';
   const price = guildPrice(id);
-  if (p.gold < price) return `Needs ${price} silver`;
+  if (p.gold < price) return lackMore(`Needs ${price} silver`, price, p.gold);
   const why = learnOrder(game, s, id);
   if (why) return why;
   p.gold -= price;
@@ -458,7 +459,7 @@ export function buyArtifact(game: Game, s: PlayerSession, port: Port, index: num
   if (!id || h.bought.includes(key)) return 'That is sold';
   if (p.stash.length >= STASH_SIZE) return 'Your locker is full';
   const price = ARTIFACTS[id].price;
-  if (p.gold < price) return `Needs ${price} silver`;
+  if (p.gold < price) return lackMore(`Needs ${price} silver`, price, p.gold);
   p.gold -= price;
   game.db.ledger(s.accountId, 'artifact', -price, id);
   p.stash.push(makeArtifact(id, p.itemSeq++));

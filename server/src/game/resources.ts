@@ -3,6 +3,7 @@
 // anchor and haul it with the boats — then carry it to a port, a warehouse, or a shipyard.
 // Every step is a ship at sea that can be robbed, which is how the economy makes PvP by itself.
 
+import { lackMore, lackRoom } from '../../../shared/src/data/buyfail.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { closestOnPolygon, dist } from '../../../shared/src/math.ts';
@@ -100,7 +101,7 @@ export function buyRights(game: Game, s: PlayerSession, port: Port, siteId: stri
   if (!site) return 'This harbour master has no say over that site';
   if (site.until > game.now && site.holder !== s.accountId) return `${site.holderName} holds those rights until they lapse`;
   const cost = rightsCost(site);
-  if (s.profile!.gold < cost) return `Rights cost ${cost} silver`;
+  if (s.profile!.gold < cost) return lackMore(`Rights cost ${cost} silver`, cost, s.profile!.gold);
   s.profile!.gold -= cost;
   site.holder = s.accountId;
   site.holderName = s.name;
@@ -149,7 +150,7 @@ export function warehouseAction(game: Game, s: PlayerSession, port: Port, good: 
   let wh = p.warehouses[port.id];
   if (!wh) {
     const rent = Math.round(warehouseRent(p.level) * Math.max(0, 1 + tx(ship.stats, 'dutyMul')));
-    if (p.gold < rent) return `Renting a warehouse here costs ${rent} silver`;
+    if (p.gold < rent) return lackMore(`Renting a warehouse here costs ${rent} silver`, rent, p.gold);
     p.gold -= rent;
     wh = p.warehouses[port.id] = {};
     game.db.ledger(s.accountId, 'warehouse', -rent, port.id);
@@ -159,7 +160,7 @@ export function warehouseAction(game: Game, s: PlayerSession, port: Port, good: 
     const have = ship.cargo[good] ?? 0;
     const n = Math.min(qty, have);
     if (n <= 0) return 'You do not carry that';
-    if (warehouseVolume(wh) + n * GOODS[good].volume > WAREHOUSE_VOLUME + 1e-6) return 'The warehouse is full';
+    if (warehouseVolume(wh) + n * GOODS[good].volume > WAREHOUSE_VOLUME + 1e-6) return `The warehouse is full: ${Math.round(n * GOODS[good].volume * 10) / 10} m³ needed, ${Math.max(0, Math.round((WAREHOUSE_VOLUME - warehouseVolume(wh)) * 10) / 10)} free`;
     ship.cargo[good] = have - n;
     if (!ship.cargo[good]) delete ship.cargo[good];
     wh[good] = (wh[good] ?? 0) + n;
@@ -172,7 +173,7 @@ export function warehouseAction(game: Game, s: PlayerSession, port: Port, good: 
   if (n <= 0) return 'Nothing of that kind stored here';
   const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
   const fit = Math.min(n, Math.floor((free + 1e-6) / GOODS[good].volume));
-  if (fit <= 0) return 'No room in the hold';
+  if (fit <= 0) return lackRoom(GOODS[good].volume, free);
   wh[good] = (wh[good] ?? 0) - fit;
   if (!wh[good]) delete wh[good];
   ship.cargo[good] = (ship.cargo[good] ?? 0) + fit;

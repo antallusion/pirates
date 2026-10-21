@@ -3,6 +3,7 @@
 // yard; the old ship is berthed there and can be taken out again. Plus the living materials at sea
 // (cursed wood, drowned silk) and what the figureheads do.
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { researchWhy } from './research.ts';
 import { takeGearBack } from './gear.ts';
 import { refitHolds } from './refit.ts';
@@ -226,7 +227,7 @@ export function buyPlan(game: Game, s: PlayerSession, port: Port, classId: ShipC
   if (!YARD_FACTIONS_WITH_PLANS.includes(port.faction as never)) return 'This yard sells no plans';
   if ((p.reputation[port.faction as never] ?? 0) < PLAN_REP) return `The yard shows its plans only to friends (standing ${PLAN_REP})`;
   const price = Math.round(cls.price * 0.3);
-  if (p.gold < price) return `The plan costs ${price} silver`;
+  if (p.gold < price) return lackMore(`The plan costs ${price} silver`, price, p.gold);
   p.gold -= price;
   game.db.ledger(s.accountId, 'plan', -price, classId);
   const plan = rollPlan(game, 'good', classId);
@@ -263,7 +264,7 @@ export function buyFigurehead(game: Game, s: PlayerSession, port: Port, id?: Fig
   if (id !== undefined && !here.includes(id)) return 'That figurehead is carved elsewhere';
   const fh = FIGUREHEADS[id ?? here[0]];
   if (ship.loadout.build?.figurehead === fh.id) return 'She already carries it';
-  if (p.gold < fh.price) return `The carver wants ${fh.price} silver`;
+  if (p.gold < fh.price) return lackMore(`The carver wants ${fh.price} silver`, fh.price, p.gold);
   p.gold -= fh.price;
   game.db.ledger(s.accountId, 'figurehead', -fh.price, fh.id);
   const build: ShipBuild = ship.loadout.build ?? { frame: 'oak', plank: 'oak', rares: [], quality: 'common', variants: [], builder: port.id };

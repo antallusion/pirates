@@ -2,6 +2,7 @@
 // tavern's pet seller, given by quests. One rides on deck at a time, for all to see, and does its trade: the cat
 // keeps the rats down, the parrot screams at a hostile sail, the monkey robs the quay, the dog digs ashore.
 
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { PETS, PET_IDS, parrotCurse, petsForSale } from '../../../shared/src/data/companions.ts';
 import type { PetId } from '../../../shared/src/data/companions.ts';
 import { compassPoint } from '../../../shared/src/data/companions.ts';
@@ -66,7 +67,7 @@ export function petAction(game: Game, s: PlayerSession, action: string, pet: str
       const offer = port ? petOffers(game, port.id).find((o) => o.pet === id) : undefined;
       if (!offer) return 'No pet seller here has that one.';
       if (pets.owned.includes(id)) return 'You have that pet already.';
-      if (p.gold < offer.price) return 'Not enough silver';
+      if (p.gold < offer.price) return lackSilver(offer.price, p.gold);
       p.gold -= offer.price;
       game.db.ledger(s.accountId, 'pet', -offer.price, id);
       givePet(game, s, id);

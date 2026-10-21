@@ -5,6 +5,7 @@
 // same timers and speed-ups (their work is a job of the yard with no plot). Paid from the purse and the yard (then the
 // island's store, then the hold of a ship lying off the island).
 
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { TOWN, TOWN_IDS, HALL_INCOME, KEEP_GROWTH, MARKET_GOODS, POOL_WEEKS, TIER_UNIT, deepAllowed, dwellingOf, isleGrowth, marketBuy, marketSell, townCost, townOf } from '../../../shared/src/data/town.ts';
 import { ISLE_OF_HALL, TREE_BASE, TREE_MAX, TREE_TOWN, isTree, isTreeTown, treeNeeds } from '../../../shared/src/data/isletree.ts';
 import type { TreeId } from '../../../shared/src/data/isletree.ts';
@@ -155,7 +156,7 @@ export function buildTown(game: Game, s: PlayerSession, id: TownId): string | nu
   const near = lyingOff(game, s, h);
   const lack = lacking(h, y, s, near, cost.goods);
   if (lack) return lack;
-  if (p.gold < cost.silver) return `Needs ${cost.silver} silver`;
+  if (p.gold < cost.silver) return lackMore(`Needs ${cost.silver} silver`, cost.silver, p.gold);
   // docs/18 #43: the land's resources some levels ask besides.
   const land = townHooks.land?.(id, level) ?? {};
   const lackLand = townHooks.landLack?.(s, land) ?? null;
