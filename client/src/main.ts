@@ -1792,13 +1792,14 @@ function onMessage(m: ServerMsg): void {
       }
       break;
     case 'toast':
+      // The glass's own «too far» (askGlass asks by itself every few seconds; the server's refusals come as toasts, so
+      // the filter on 'err' alone let «Too far for the glass ×5» through at every broadside).
+      if (GLASS_QUIET.has(m.msg)) break;
+      // A refusal the buy advice already shows in its own window.
       if (adviceToast && adviceToast.msg === m.msg && performance.now() - adviceToast.at < 3000) {
         adviceToast = null;
         break;
       }
-      // The glass's own «too far» (askGlass asks by itself every few seconds; the server's refusals come as toasts, so
-      // the filter on 'err' alone let «Too far for the glass ×5» through at every broadside).
-      if (GLASS_QUIET.has(m.msg)) break;
       // The harbour turned her away for her speed: take in sail and try again when she slows.
       // Any other refusal of the harbour (a fight, the law): the request is not sent again every 1.5 s for 25 s.
       if (pendingDock && m.kind === 'bad' && m.msg !== 'Take in sail before entering harbour' && performance.now() - dockSentAt < 1500) pendingDock = null;
