@@ -565,6 +565,13 @@ export class SeaHud {
       this.specialEl.title = L('special', { name: sp.name });
     });
     this.target.set(v.docked ? null : v.target);
+    // «Огонь» says whom it fires on (owner, 2026-10-22): her mark's name in its words (the ring on the ship besides).
+    this.once('fireAt', `${v.target?.name ?? ''}|${lg}|${key('fire')}`, () => {
+      const t = withKey(v.target ? L('fireAt', { name: v.target.name }) : L('fireAria'), key('fire'));
+      this.fireEl.setAttribute('aria-label', t);
+      this.fireEl.title = t;
+      this.fireEl.classList.toggle('marked', !!v.target);
+    });
     this.once('lock', `${v.target ? v.target.name : ''}|${lg}|${key('target')}`, () => {
       const t = withKey(v.target ? L('lock', { name: v.target.name }) : L('lockNone'), key('target'));
       this.lockEl.classList.toggle('on', !!v.target);

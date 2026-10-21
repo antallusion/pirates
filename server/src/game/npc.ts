@@ -274,6 +274,10 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
   }
   if (game.npcs.get(npc.id)?.practice === other.id) return true;
   if (other.isPlayer && game.npcs.get(npc.id)?.huntFor === other.id) return true;
+  // Sent for her (the campaign's foe, a hunter, an ambush on her cargo — huntAccount): at war with her wherever she sails,
+  // so her screen marks it a foe and her «Огонь» finds it (owner, 2026-10-22: the opening's tender was no «foe» in the
+  // Crown's quiet water — the round button did nothing until she tapped the ship).
+  if (other.isPlayer && other.accountId !== null && game.npcs.get(npc.id)?.huntAccount === other.accountId) return true;
   if (other.attackers.has(npc.id) && game.now - (npc.attackers.get(other.id) ?? -999) < 120) return true;
   if ((npc.attackers.get(other.id) ?? -999) > game.now - 120) return true;
   const safety = REGIONS[other.region].safety;

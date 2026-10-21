@@ -26,6 +26,7 @@
 // and, a cable off, her boats go (roamers.ts attackRoam): the hex battle opens. No ship's order goes to a stack: a run
 // on one has no ship for its mark (`target` −1), and the gunners only answer a ship that fires on her.
 
+import { campaignFoes } from './campaign.ts'; // owner, 2026-10-22: «Огонь» takes her quest's foe
 import { AIMED_SPREAD, AUTO_ARC_DEG, BOARD_RUN, CHASE_GIVE_UP, LAY_ARC_DEG, closeRange, leadPoint } from '../../../shared/src/data/gunnery.ts';
 import { ROAM_REACH } from '../../../shared/src/data/roamers.ts';
 import { AMMO, CHASER_CONE } from '../../../shared/src/data/ships.ts';
@@ -596,7 +597,14 @@ export function aimedVolley(game: Game, s: PlayerSession): string | null {
   const ship = s.ship;
   if (!ship || !free(ship)) return 'Cannot fire now';
   const t = gunneryMark(game, ship) ?? nearestThreat(game, ship, Math.max(effectiveRange(ship, 'port', ship.ammoSel), effectiveRange(ship, 'starboard', ship.ammoSel)));
-  if (!t) return 'No ship in reach of your guns';
+  if (!t) {
+    // Owner, 2026-10-22 («горела атака … надо было выделить цель, и нажать на корабль а не на кнопку атаки»): the round
+    // «Огонь» with no mark and nobody in reach takes the best foe in sight — her quest's, else the nearest at war with
+    // her — and the helmsman lays a broadside on it, the crews firing as she bears (the pursuit «Бортами»).
+    const foe = fireFoe(game, s);
+    if (!foe) return NO_FOE;
+    return startPursuit(game, s, foe.id, 'guns');
+  }
   const lead = leadOn(ship, t);
   const arc = (LAY_ARC_DEG + tval(ship.stats, 'gunTrain')) * DEG;
   let best: 'port' | 'starboard' | null = null, bo = Infinity, loaded = false;
@@ -610,6 +618,31 @@ export function aimedVolley(game: Game, s: PlayerSession): string | null {
     }
   }
   if (!loaded) return 'Guns are still loading';
-  if (!best) return 'She is not on your beam';
+  if (!best) {
+    // Not on her beam and no helmsman at it: he lays the broadside on her (the button never just buzzes at a foe).
+    if (!runs.has(ship) && !attackBlocked(game, ship, t)) return startPursuit(game, s, t.id, 'guns');
+    return 'She is not on your beam';
+  }
   return fireBroadside(game, ship, best, lead.d, lead, 1, { spread: AIMED_SPREAD });
+}
+
+/** «Огонь» with no foe in sight at all: said, not buzzed. */
+export const NO_FOE = 'No foe in sight: mark a ship (tap her) to fire on her.';
+
+/** The foe «Огонь» takes when she has none (owner, 2026-10-22): her campaign quest's ship in sight first (the opening's
+ *  «Первый залп»), else the nearest ship in sight at war with her that may be fought. */
+export function fireFoe(game: Game, s: PlayerSession): ShipEntity | null {
+  const ship = s.ship;
+  if (!ship) return null;
+  const ok = (o: ShipEntity | undefined): o is ShipEntity => !!o && o.alive && !o.sinkingUntil && !o.surrendered && !o.prize && !o.docked && attackBlocked(game, ship, o) === null;
+  const near = (o: ShipEntity) => Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y);
+  const quest = campaignFoes(game, s).map((id) => game.ships.get(id)).filter(ok).sort((a, b) => near(a) - near(b))[0];
+  if (quest) return quest;
+  let best: ShipEntity | null = null, bd = PURSUIT_SIGHT;
+  game.forShipsNear(ship.state.x, ship.state.y, PURSUIT_SIGHT, (o) => {
+    if (o.id === ship.id || o.grappled || !game.isHostile(o, ship) || !ok(o)) return;
+    const d = near(o);
+    if (d < bd) [best, bd] = [o, d];
+  });
+  return best;
 }

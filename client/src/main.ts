@@ -1529,6 +1529,8 @@ function onMessage(m: ServerMsg): void {
     case 'pursuit':
       // docs/23 item 33: the wheel back, and why when it is news (a mark lost, slipped away, sunk).
       if (!m.on && (m.why === 'lost' || m.why === 'slipped' || m.why === 'sunk')) hud.toast(LSF(`why.${m.why}`), m.why === 'sunk' ? 'good' : 'info');
+      // «Огонь» with no mark (owner, 2026-10-22): the foe the helmsman took is her mark — its ring on it, its line on top.
+      if (m.on && m.target !== undefined && (targetId === null || !targetPinned)) pinTarget(m.target);
       break;
     case 'board_risk':
       void askRisk(m.risk);

@@ -3,6 +3,7 @@
 export const EN = {
   'fire': 'Fire',
   'fireAria': 'Fire: a broadside now. Hold for shots, abilities and talents',
+  'fireAt': 'Fire on {name}: a broadside, or the helmsman lays her guns on it. Hold for shots, abilities and talents',
   'act': 'Action',
   'special': 'Special: {name}',
   'menu': 'Menu',
@@ -46,6 +47,7 @@ export const EN = {
 export const RU: Record<keyof typeof EN, string> = {
   'fire': 'Огонь',
   'fireAria': 'Огонь: залп сейчас. Удерживать — снаряды, умения, таланты',
+  'fireAt': 'Огонь по цели «{name}»: залп, или рулевой наводит на неё борт. Удерживать — снаряды, умения, таланты',
   'act': 'Действие',
   'special': 'Особое: {name}',
   'menu': 'Меню',
