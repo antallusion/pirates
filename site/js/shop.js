@@ -15,9 +15,14 @@
   const t = data.t;
   const NICK = 'gravetide.shop.nick', MAIL = 'gravetide.shop.mail';
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-  const nf = new Intl.NumberFormat('ru-RU');
-  const rub = (n) => `${nf.format(n)} ${t.rub}`;
-  const L = (tr) => (tr ? (data.lang === 'ru' ? tr[1] : tr[0]) : '');
+  // the numbers (owner, 2026-10-21: «красиво оформить … и вообще числа»): thousands apart by a thin no-break space,
+  // ₽ and % after a thin one, everywhere the page writes a number (the server's words included)
+  const NB = '\u202F';
+  const grp = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, NB);
+  const nf = { format: grp };
+  const rub = (n) => `${grp(n)}${NB}${t.rub}`;
+  const thin = (s) => String(s).replace(/(\d)[ \u00a0\u202F](?=\d{3}(?!\d))/g, `$1${NB}`).replace(/(\d)[ \u00a0]?(₽|%)/g, `$1${NB}$2`);
+  const L = (tr) => (tr ? thin(data.lang === 'ru' ? tr[1] : tr[0]) : '');
   const store = { get: (k) => { try { return localStorage.getItem(k) || ''; } catch { return ''; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } } };
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -117,40 +122,113 @@
   };
 
   const ribbon = (x) => (x.tag ? `<span class="shop-tag ${x.tag}">${esc(t[x.tag])}</span>` : '');
+  // ---- the badges: a card's facts as icons with their meaning in a tooltip (a tap shows it on a phone)
+  const GLYPH = {
+    wing: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2.5 15.5c3.2-.4 6.3-1.9 8.6-4.6 2-2.4 3.5-5.4 4.4-8.4 1.2 2.6 1.3 5.6.3 8.4 2.2-.7 4.3-2.2 5.9-4.1-.2 4.6-3 8.6-7.2 10.4-2.4 1-5 1.3-7.6.8l-1.2 3.5-1.6-.6 1.1-3.3c-1.1-.5-2-1.2-2.7-2.1z"/></svg>',
+    gem: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 3h10l5 6-10 12L2 9z"/><path fill="#fff" opacity=".45" d="M7 3h10l-2 6H9zM2 9h7l3 12z"/></svg>',
+  };
+  const bsrc = (ic) => (!ic ? '' : ic.startsWith('/') ? ic : data.art[ic] || '');
+  const bdg = (b) => {
+    const hint = typeof b.hint === 'string' ? b.hint : L(b.hint);
+    const v = b.v ? (typeof b.v === 'string' ? b.v : L(b.v)) : '';
+    const a = ` role="img" aria-label="${esc(v && !hint.includes(v) ? `${hint}: ${v}` : hint)}" data-tip="${esc(hint)}"`;
+    if (b.band !== undefined && !b.icon) return `<span class="bd md m${b.band} k-${esc(b.k)}"${a}><b>${esc(v)}</b></span>`;
+    const ic = b.icon && b.icon.startsWith('#') ? `<i class="bd-g">${GLYPH[b.icon.slice(1)] || ''}</i>` : bsrc(b.icon) ? `<img src="${esc(bsrc(b.icon))}" alt="" width="20" height="20" loading="lazy" decoding="async">` : '';
+    return `<span class="bd${v ? '' : ' io'}${b.cos ? ` cs c${b.band}` : ''} k-${esc(b.k)}"${a}>${ic}${v ? `<b>${esc(v)}</b>` : ''}</span>`;
+  };
+  /** The limits and the dates as badges too (the catalogue's own fields). */
+  const limitBadges = (x) => {
+    const out = [];
+    if (x.kind === 'pack' && x.bonus) out.push({ k: 'bonus', icon: '/site/img/ico/gift.webp', v: `+${grp(x.bonus)}`, hint: t.h_bonus.replace('{n}', grp(x.bonus)) });
+    if (x.until && x.off !== 'season') out.push({ k: 'until', icon: 'icon.ui_hourglass', v: t.until.replace('{d}', date(x.until - 1)), hint: t.h_until.replace('{d}', date(x.until - 1)) });
+    if (x.off === 'season' && x.from > Date.now()) out.push({ k: 'since', icon: 'icon.ui_hourglass', v: t.since.replace('{d}', date(x.from)), hint: t.h_since.replace('{d}', date(x.from)) });
+    if (x.once) out.push({ k: 'once', icon: '/site/img/ico/locked.webp', hint: t.h_once });
+    else if (x.per) out.push({ k: x.per, icon: '/site/img/ico/clock.webp', v: x.per === 'day' ? t.perDay : t.perWeek, hint: x.per === 'day' ? t.h_day : t.h_week });
+    if (x.aboard && x.kind !== 'ship' && x.kind !== 'unit') out.push({ k: 'aboard', icon: '/site/img/ico/ships.webp', hint: t.h_aboard });
+    return out;
+  };
+  const badgesOf = (x, cls = '', skip = null) => {
+    const all = [...(x.badges || []), ...limitBadges(x)].filter((b) => !skip || !skip.has(b.k));
+    return all.length ? `<div class="sc-bd${cls}">${all.map(bdg).join('')}</div>` : '';
+  };
+  /** A flag on the picture: a bundle's saving, a doubloon pack's bonus share. */
+  const flagOf = (x) => {
+    if (x.kind === 'pack' && x.bonus) { const n = Math.round((x.bonus / x.rub) * 100); return `<span class="sc-flag" data-tip="${esc(t.h_bonus.replace('{n}', grp(x.bonus)))}">${esc(thin(t.bonusPct.replace('{n}', n)))}</span>`; }
+    if (x.save) return `<span class="sc-flag" data-tip="${esc(t.h_save.replace('{w}', rub(Math.round(x.rub * (1 + x.save / 100)))))}">${esc(thin(t.saveTag.replace('{n}', x.save)))}</span>`;
+    return '';
+  };
+  // ---- the price buttons: the pack's size as a chip with its icon, the price in the display numerals with a coin, the
+  // price a unit under it, «−N %» against the card's smallest pack, the brass «Выгодно» tag (it was a bare yellow dot)
+  const dec = (v, d) => { const s = v.toFixed(d).replace(/\.0+$/, ''); return data.lang === 'ru' ? s.replace('.', ',') : s; };
+  const perVal = (y) => (y.amt ? y.rub / y.amt : 0);
+  const perText = (y) => {
+    const p = perVal(y);
+    if (!p) return '';
+    if (y.amtU === 'pc' && p < 1) {
+      const by = p * 100 >= 1 ? 100 : 1000;
+      const q = p * by;
+      return `${q >= 10 ? grp(q) : dec(q, 1)}${NB}${t.rub} ${t[`u_${by}`]}`;
+    }
+    return `${p >= 10 ? grp(p) : dec(p, 1)}${NB}${t.rub}/${t[`u_${y.amtU}`]}`;
+  };
+  /** «−N %» a unit against the card's first (smallest) pack of the same measure. */
+  const offOf = (y, its) => {
+    const p = perVal(y);
+    const first = its.find((z) => z.amtU === y.amtU && perVal(z));
+    if (!p || !first || first === y) return 0;
+    const n = Math.round((1 - p / perVal(first)) * 100);
+    return n >= 3 ? n : 0;
+  };
+  const qtyIcon = (y) => {
+    const src = y.kind === 'unit' || (y.art || '').startsWith('unit.') ? '/site/img/ico/creatures.webp' : y.amtU === 'h' || y.amtU === 'd' ? data.art['icon.ui_hourglass'] : (y.art || '').startsWith('icon.') ? data.art[y.art] : '';
+    return src ? `<img src="${esc(src)}" alt="" width="16" height="16" loading="lazy" decoding="async">` : '';
+  };
+  const priceHtml = (n) => `<span class="p"><img src="${esc(data.coin)}" alt="" width="15" height="15">${grp(n)}<small>${NB}${esc(t.rub)}</small></span>`;
+  const optInner = (y, its, why) => {
+    const q = `<span class="q">${qtyIcon(y)}<b>${esc(L(y.qty) || t.buy)}</b></span>`;
+    if (busy === y.id) return `${q}<span class="p">${esc(t.paying)}</span>`;
+    if (why) return `${y.qty ? q : ''}<span class="p why">${esc(t[`w_${why}`] || t.w_gone)}</span>`;
+    const off = offOf(y, its);
+    const per = perText(y);
+    const tag = y.tag === 'best' ? `<span class="sc-tag" data-tip="${esc(t.h_best)}">${esc(t.best)}</span>` : y.tag === 'hot' ? `<span class="sc-tag hot" data-tip="${esc(t.h_hot)}">${esc(t.hot)}</span>` : '';
+    return `${tag}${off ? `<span class="sc-off" data-tip="${esc(t.h_off.replace('{n}', off))}">${esc(thin(t.off.replace('{n}', off)))}</span>` : ''}${q}${priceHtml(y.rub)}${per ? `<span class="u">${esc(per)}</span>` : ''}`;
+  };
   const date = (ms) => new Date(ms).toLocaleDateString(data.lang === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'long' });
+  /** A trail's id (its card shows it on a patch of sea: site/js/trails.js). */
+  const trailOf = (x) => { const m = /^cos_trail_(.+)$/.exec(x.id || ''); return m && data.sea && data.sea.trails[m[1]] ? m[1] : ''; };
+  let seaMod = null;
+  const seas = () => {
+    if (!data.sea || (!seaMod && !root.querySelector('canvas.tr-sea'))) return;
+    (seaMod ||= import('/site/js/trails.js').then((m) => m.seaLoop(data.sea))).then((m) => m.scan(), () => { seaMod = null; });
+  };
   const artOf = (x) => {
     const src = x.art && data.art[x.art];
     const cls = x.kind === 'captain' ? ' face' : x.kind === 'ship' ? ' hull' : (x.art || '').startsWith('unit.') ? ' fig' : x.kind === 'pack' ? ' coin' : (x.art || '').startsWith('cos.plate_') ? ' plate' : '';
     const label = x.label ? `<span class="sc-label" style="color:${esc(x.ink || '#f2e6c8')};text-shadow:0 0 6px ${esc(x.halo || '#000')},0 1px 2px ${esc(x.halo || '#000')}">${esc(L(x.label))}</span>` : '';
-    return `<div class="shop-art${cls}${x.swatch ? ' sw' : ''}"${x.swatch ? ` style="--sw:${esc(x.swatch)}"` : ''}>${src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async">` : ''}${label}${ribbon(x)}</div>`;
+    const trail = trailOf(x);
+    if (trail) return `<div class="shop-art sea"><canvas class="tr-sea" data-trail="${esc(trail)}" aria-hidden="true"></canvas>${ribbon(x)}</div>`;
+    return `<div class="shop-art${cls}${x.swatch ? ' sw' : ''}"${x.swatch ? ` style="--sw:${esc(x.swatch)}"` : ''}>${src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async">` : ''}${label}${ribbon(x)}${flagOf(x)}</div>`;
   };
-  const btnLabel = (x, why, single) => {
+  const btnLabel = (x, why, single, its) => {
+    if (!single) return optInner(x, its, why);
     if (busy === x.id) return esc(t.paying);
-    if (why) return `${x.qty ? `<span class="q">${esc(L(x.qty))}</span>` : ''}<span class="p">${esc(t[`w_${why}`] || t.w_gone)}</span>`;
-    if (single) return `<span class="w">${esc(t.buy)} · </span><span class="p">${esc(rub(x.rub))}</span>`;
-    return `<span class="q">${esc(L(x.qty) || t.buy)}</span><span class="p">${esc(rub(x.rub))}</span>`;
+    if (why) return `<span class="p">${esc(t[`w_${why}`] || t.w_gone)}</span>`;
+    return `<span class="w">${esc(t.buy)} · </span><span class="p">${grp(x.rub)}<small>${NB}${esc(t.rub)}</small></span>`;
   };
   const card = (c) => {
     const x = c.first;
     const single = c.items.length === 1 && !x.qty;
     const whys = c.items.map(whyOf);
     const all = whys.every(Boolean);
-    const chips = [];
-    if (x.kind === 'pack' && x.bonus) chips.push(`<span class="shop-bonus">${esc(t.bonus.replace('{n}', nf.format(x.bonus)))}</span>`);
-    if (x.until && x.off !== 'season') chips.push(`<span class="shop-until">${esc(t.until.replace('{d}', date(x.until - 1)))}</span>`);
-    if (x.off === 'season' && x.from > Date.now()) chips.push(`<span class="shop-until">${esc(t.since.replace('{d}', date(x.from)))}</span>`);
-    if (x.once) chips.push(`<span class="shop-once">${esc(t.once)}</span>`);
-    else if (x.per) chips.push(`<span class="shop-once">${esc(x.per === 'day' ? t.perDay : t.perWeek)}</span>`);
-    if (x.aboard && x.kind !== 'ship' && x.kind !== 'unit') chips.push(`<span class="shop-once">${esc(t.aboard)}</span>`);
     const n = x.kind === 'pack' ? `<b class="shop-n"><img src="${esc(data.coin)}" alt="" width="26" height="26">${nf.format(x.doubloons)}</b>` : '';
     const btns = c.items.map((y, i) => {
       const why = whys[i];
-      return `<button type="button" class="${single ? 'btn-gold sm shop-buy' : 'sc-opt'}${why ? ' off' : ''}${y.tag && !single ? ` ${y.tag}` : ''}" data-buy="${esc(y.id)}"${why || busy ? ' disabled' : ''}>${btnLabel(y, why, single)}</button>`;
+      return `<button type="button" class="${single ? 'btn-gold sm shop-buy' : 'sc-opt'}${why ? ' off' : ''}${y.tag && !single ? ` ${y.tag}` : ''}" data-buy="${esc(y.id)}"${why || busy ? ' disabled' : ''}>${btnLabel(y, why, single, c.items)}</button>`;
     }).join('');
     const section = SUBS.includes(x.sec) ? data.subs[x.sec] : tabName[x.tab];
     return `<article class="shop-card${all ? ' owned' : ''}${x.tag ? ` tag-${x.tag}` : ''}" data-kind="${x.kind}" data-card="${esc(c.id)}">
-${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n}<h3><button type="button" class="sc-more" data-open="${esc(x.id)}" aria-haspopup="dialog">${esc(L(x.title))}</button></h3><p>${esc(L(x.text))}</p>${x.meta ? `<p class="sc-meta">${esc(L(x.meta))}</p>` : ''}${chips.length ? `<div class="sc-chips">${chips.join('')}</div>` : ''}</div>
-<div class="${single ? 'sc-one' : `sc-opts n${Math.min(c.items.length, 6)}`}">${btns}</div>${all && !single && whys[0] ? `<small class="sc-why">${esc(t[`w_${whys[0]}`] || '')}</small>` : ''}</article>`;
+${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n}<h3><button type="button" class="sc-more" data-open="${esc(x.id)}" aria-haspopup="dialog">${esc(L(x.title))}</button></h3><p>${esc(L(x.text))}</p>${x.meta && !x.badges ? `<p class="sc-meta">${esc(L(x.meta))}</p>` : ''}${badgesOf(x)}</div>
+<div class="${single ? 'sc-one' : `sc-opts n${Math.min(c.items.length, 6)}${c.items.length % 2 ? ' odd' : ''}`}">${btns}</div>${all && !single && whys[0] ? `<small class="sc-why">${esc(t[`w_${whys[0]}`] || '')}</small>` : ''}</article>`;
   };
 
   /** The counts by category (the price and «mine» filters applied). */
@@ -195,6 +273,7 @@ ${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n
       html = `<div class="st-cards">${list.map(card).join('')}</div>`;
     }
     grid.innerHTML = html;
+    seas();
     empty.hidden = list.length > 0;
     const n = activeCount();
     badge.textContent = String(n);
@@ -360,6 +439,46 @@ ${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n
   confirmEl.addEventListener('click', (e) => { if (e.target === confirmEl || e.target.closest('[data-cancel]')) closeConfirm(); });
   confirmEl.querySelector('[data-pay]').addEventListener('click', () => { const p = pending; closeConfirm(); if (p) void buy(p.x); });
 
+  const tip = d.createElement('div');
+  tip.className = 'bd-tip';
+  tip.setAttribute('role', 'tooltip');
+  tip.hidden = true;
+  d.body.appendChild(tip);
+  let tipOn = null, tipT = 0;
+  const tipShow = (el) => {
+    const s2 = el.dataset.tip;
+    if (!s2) return;
+    tipOn = el;
+    tip.textContent = s2;
+    tip.hidden = false;
+    const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    const x = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+    const above = r.top - h - 8 > 4;
+    tip.style.left = `${x}px`;
+    tip.style.top = `${above ? r.top - h - 8 : r.bottom + 8}px`;
+    tip.classList.toggle('below', !above);
+    tip.style.setProperty('--ax', `${Math.round(r.left + r.width / 2 - x)}px`);
+  };
+  const tipHide = () => { tipOn = null; tip.hidden = true; clearTimeout(tipT); };
+  root.addEventListener('pointerover', (e) => {
+    if (e.pointerType === 'touch') return;
+    const el = e.target.closest && e.target.closest('[data-tip]');
+    if (el && el !== tipOn) tipShow(el); else if (!el && tipOn) tipHide();
+  });
+  root.addEventListener('pointerleave', tipHide);
+  addEventListener('scroll', () => { if (tipOn) tipHide(); }, { passive: true, capture: true });
+  // a tap on a badge (not a button's own tag) reads it instead of opening the card
+  root.addEventListener('click', (e) => {
+    const el = e.target.closest && e.target.closest('.bd[data-tip], .sc-flag[data-tip]');
+    if (!el || !matchMedia('(hover: none)').matches) { if (tipOn && !el) tipHide(); return; }
+    e.preventDefault();
+    e.stopPropagation();
+    if (tipOn === el) { tipHide(); return; }
+    tipShow(el);
+    clearTimeout(tipT);
+    tipT = setTimeout(tipHide, 3200);
+  }, true);
+
   grid.addEventListener('click', (e) => {
     const b = e.target.closest('[data-buy]');
     if (!b) {
@@ -466,6 +585,7 @@ ${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n
     if (c.k === 'title' || c.k === 'plate') return `<figure class="pd-cos plate">${c.k === 'plate' ? `<small class="muted">${esc(t.sample)}</small>` : ''}<span class="pd-plate">${im(c.plate, '', 512, 144)}${words(c.words)}</span>${name}</figure>`;
     if (c.k === 'frame') return `<figure class="pd-cos frame"><span class="pd-frame" style="--k:${Number(c.scale) || 1.4}">${im(c.face, 'face', 120, 120)}${im(c.art, 'ring', 256, 256)}</span>${name}</figure>`;
     if (c.k === 'emblem' || c.k === 'cloth') return `<figure class="pd-cos flag"><span class="pd-sea"><span class="pd-flag big" style="--rgb:${esc(c.rgb || '#333')}">${im(c.emblem, '', 64, 64)}</span><span class="pd-mship">${im(c.ship, '', 120, 240)}<span class="pd-flag" style="--rgb:${esc(c.rgb || '#333')}">${im(c.emblem, '', 64, 64)}</span></span></span>${name}</figure>`;
+    if (c.k === 'trail' && c.trail && data.sea && data.sea.trails[c.trail]) return `<figure class="pd-cos trail"><span class="pd-sea live"><canvas class="tr-sea" data-trail="${esc(c.trail)}" aria-hidden="true"></canvas></span>${name}</figure>`;
     if (c.k === 'trail') return `<figure class="pd-cos trail"><span class="pd-sea"><span class="pd-wake${c.glow ? ' glow' : ''}" style="--c1:${esc(c.c[0])};--c2:${esc(c.c[1])}">${'<i></i>'.repeat(9)}</span><span class="pd-mship run">${im(c.ship, '', 120, 240)}</span></span>${name}</figure>`;
     return `<figure class="pd-cos emotes"><span class="pd-emotes">${(c.emotes || []).map((e) => `<span>${im(e.art, '', 72, 72)}<i>${esc(L(e.name))}</i></span>`).join('')}</span><small class="muted">${esc(t.emoteSay)}</small>${name}</figure>`;
   };
@@ -477,12 +597,13 @@ ${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n
       case 'abil': return `${h}<ul class="pd-abil">${b.rows.map(abil).join('')}</ul>`;
       case 'chips': return `${h}<ul class="pd-specs">${b.rows.map((c) => `<li>${im(c.icon, '', 34, 34)}<span><b>${esc(L(c.name))}</b>${c.hint && L(c.hint) ? `<i>${esc(L(c.hint))}</i>` : ''}</span></li>`).join('')}</ul>`;
       case 'units': return `${h}<ul class="pd-units">${b.rows.map(unitRow).join('')}</ul>`;
-      case 'lines': return `${h}<ul class="pd-lines">${b.rows.map(line).join('')}</ul>${b.save ? `<div class="pd-value"><b>${esc(t.save.replace('{n}', nf.format(b.save)))}</b><span>${esc(t.worth.replace('{w}', rub(b.worth)))}</span><span class="pd-vbar"><span style="width:${Math.max(4, Math.round((b.price / b.worth) * 100))}%"></span></span></div>` : ''}`;
+      case 'lines': return `${h}<ul class="pd-lines">${b.rows.map(line).join('')}</ul>${b.save ? `<div class="pd-value"><b>${esc(thin(t.save.replace('{n}', nf.format(b.save))))}</b><span>${esc(t.worth.replace('{w}', rub(b.worth)))}</span><span class="pd-vbar"><span style="width:${Math.max(4, Math.round((b.price / b.worth) * 100))}%"></span></span></div>` : ''}`;
       case 'cos': return `${h}<div class="pd-cosl">${b.rows.map(cosRow).join('')}</div>`;
       default: return `${h}<p class="pd-text">${b.icon ? im(b.icon, '', 26, 26) : ''}<span>${esc(L(b.body))}</span></p>`;
     }
   };
   const heroArt = (x, det) => {
+    if (trailOf(x)) return `<div class="pd-art cos sea"><canvas class="tr-sea" data-trail="${esc(trailOf(x))}" aria-hidden="true"></canvas>${ribbon(x)}</div>`;
     const hz = det ? det.hero : { cls: x.kind === 'ship' ? 'hull' : x.kind === 'captain' ? 'face' : (x.art || '').startsWith('unit.') ? 'fig' : x.kind === 'pack' ? 'coin' : x.tab === 'cos' ? 'cos' : 'icon', art: x.art && data.art[x.art] };
     const label = x.label ? `<span class="sc-label" style="color:${esc(x.ink || '#f2e6c8')};text-shadow:0 0 6px ${esc(x.halo || '#000')},0 1px 2px ${esc(x.halo || '#000')}">${esc(L(x.label))}</span>` : '';
     const two = hz.alt && hz.cls === 'fig' ? `${im(hz.art, 'p0', 240, 300, L(x.title))}${im(hz.alt, 'p1', 240, 300)}` : hz.cls === 'face' ? `<span class="cap-ring">${im(hz.art, '', 300, 300, L(x.title))}</span>${hz.alt ? im(hz.alt, 'pd-hfig', 160, 300) : ''}` : im(hz.art, '', 300, 300, L(x.title));
@@ -493,7 +614,7 @@ ${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n
     if (its.length < 2) return '';
     return `<div class="pd-opts" role="radiogroup" aria-label="${esc(t.choose)}">${its.map((y) => {
       const why = whyOf(y);
-      return `<button type="button" role="radio" class="sc-opt${why ? ' off' : ''}${y.id === x.id ? ' on' : ''}" aria-checked="${y.id === x.id}" data-pd-opt="${esc(y.id)}"><span class="q">${esc(L(y.qty) || t.buy)}</span><span class="p">${esc(rub(y.rub))}</span></button>`;
+      return `<button type="button" role="radio" class="sc-opt${why ? ' off' : ''}${y.id === x.id ? ' on' : ''}" aria-checked="${y.id === x.id}" data-pd-opt="${esc(y.id)}">${optInner(y, its, why)}</button>`;
     }).join('')}</div>`;
   };
   const season = (x) => {
@@ -504,19 +625,22 @@ ${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n
     return '';
   };
 
+  /** The detail's hero chips the badges already say. */
+  const PD_SAID = new Set(['tier', 'level', 'ranged', 'melee', 'fly', 'once', 'day', 'week', 'beasts', 'bonus']);
   /** The whole card: the hero (art, kicker, name, lead, chips, the packs), the tabs, their blocks. */
   const pdRender = (x, res) => {
     const det = res && res.detail;
     const tabs = det ? det.tabs.filter((tb) => tb.blocks.length) : [];
     if (!tabs.find((tb) => tb.id === pdTab)) pdTab = tabs[0] ? tabs[0].id : null;
     const head = `<div class="pd-hero">${heroArt(x, det)}<div class="pd-info"><p class="kicker">${esc(det ? L(det.hero.kicker) : SUBS.includes(x.sec) ? data.subs[x.sec] : tabName[x.tab])}</p>
-<h2 id="pd-title">${esc(det ? L(det.hero.title) : L(x.title))}</h2><p class="pd-lead">${esc(det ? L(det.hero.lead) : L(x.text))}</p>${det ? `<div class="pd-chips">${chipsOf(det.hero.chips)}</div>` : ''}${season(x)}${opts(x)}</div></div>`;
+<h2 id="pd-title">${esc(det ? L(det.hero.title) : L(x.title))}</h2><p class="pd-lead">${esc(det ? L(det.hero.lead) : L(x.text))}</p>${badgesOf(x, ' big')}${det ? `<div class="pd-chips">${chipsOf(det.hero.chips.filter((c) => !PD_SAID.has(c.k)))}</div>` : ''}${season(x)}${opts(x)}</div></div>`;
     let body;
     if (!res) body = `<div class="pd-wait" aria-busy="true"><span></span><span></span><span></span><p class="muted">${esc(t.loading)}</p></div>`;
     else if (res === 'err') body = `<div class="pd-wait"><p>${esc(t.loadErr)}</p><button type="button" class="btn-oak sm" data-pd-retry>${esc(t.retry)}</button></div>`;
     else body = `${tabs.length > 1 ? `<div class="pd-tabs" role="tablist">${tabs.map((tb) => `<button type="button" role="tab" id="pdt-${tb.id}" aria-controls="pdp-${tb.id}" aria-selected="${tb.id === pdTab}" tabindex="${tb.id === pdTab ? 0 : -1}" data-pd-tab="${tb.id}">${esc(L(tb.name))}</button>`).join('')}</div>` : ''}
 ${tabs.map((tb) => `<section class="pd-panel" role="tabpanel" id="pdp-${tb.id}" aria-labelledby="pdt-${tb.id}"${tb.id === pdTab ? '' : ' hidden'}>${tb.blocks.map(block).join('')}</section>`).join('')}`;
     pdScroll.innerHTML = `${head}<div class="pd-body">${body}</div>`;
+    seas();
   };
 
   /** The buy bar: whom for, the price, and «Купить · N ₽» (or why not). */
@@ -529,7 +653,7 @@ ${tabs.map((tb) => `<section class="pd-panel" role="tabpanel" id="pdp-${tb.id}" 
     const save = det && det.facts && det.facts.save;
     const worth = det && det.facts && det.facts.worth;
     const sub = x.kind === 'unit' && x.n ? t.perHead.replace('{p}', rub(Math.round(x.rub / x.n))) : x.kind === 'deal' && worth ? t.usual.replace('{p}', rub(worth)) : save && worth ? t.worth.replace('{w}', rub(worth)) : '';
-    pdBuyEl.innerHTML = `<div class="pd-price"><b>${esc(rub(x.rub))}</b>${sub ? `<span class="muted">${esc(sub)}</span>` : ''}</div>
+    pdBuyEl.innerHTML = `<div class="pd-price"><b><img src="${esc(data.coin)}" alt="" width="24" height="24">${grp(x.rub)}<small>${NB}${esc(t.rub)}</small></b>${sub ? `<span class="muted">${esc(sub)}</span>` : ''}</div>
 <button type="button" class="btn-gold pd-go${why ? ' off' : ''}" data-pd-buy${why || busy ? ' disabled' : ''}>${busy === x.id ? esc(t.paying) : why ? esc(t[`w_${why}`] || t.w_gone) : `${esc(t.buy)} · ${esc(rub(x.rub))}`}</button>`;
     if (captain) {
       pdWho.innerHTML = `<span class="pd-for">${captain.captain && data.cos.portraits[captain.captain] ? im(data.cos.portraits[captain.captain], '', 28, 28) : ''}<span>${esc(t.forCap)} <b>«${esc(captain.name)}»</b>${captain.captain ? ` · ${esc(t.lv)} ${captain.level}` : ''}</span></span>${pdNeed === 'mail' ? `<label class="search pd-mail"><input type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="${esc(t.email)}" aria-label="${esc(t.email)}" value="${esc(mailIn.value)}"></label>` : ''}`;

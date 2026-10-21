@@ -24,7 +24,7 @@ import { CAPTAINS, CAPTAIN_IDS } from '../../shared/src/data/captains.ts';
 import { ORDER_IDS } from '../../shared/src/data/hero.ts';
 import { ARTIFACT_IDS } from '../../shared/src/data/artifacts.ts';
 import { FACTIONS } from '../../shared/src/data/factions.ts';
-import { FRAMES, PLATES, TITLES } from '../../shared/src/data/cosmetics.ts';
+import { FRAMES, PLATES, TITLES, TRAILS } from '../../shared/src/data/cosmetics.ts';
 import { WEB_ITEMS, WEB_SECS, WEB_TABS, WEB_TAB_NAMES } from '../../shared/src/data/webshop.ts';
 import { SHOP } from '../../shared/src/data/shop.ts';
 import { SPECIAL_ICON as WD_SPECIAL_ICON } from '../../shared/src/data/webdetail.ts';
@@ -478,6 +478,14 @@ const SHOP_T: Record<string, Tr> = {
   onlyHere: ['only here', 'только здесь'], alone: ['alone {p}', 'отдельно — {p}'], forCap: ['For', 'Для'], lv: ['lv.', 'ур.'],
   copy: ['Copy the link', 'Скопировать ссылку'], copied: ['Link copied', 'Ссылка скопирована'], swipe: ['Swipe down to close', 'Смахните вниз, чтобы закрыть'],
   emoteSay: ['Over your ship and in the chat', 'Над кораблём и в чате'], sample: ['Sample', 'Пример'],
+  // the badges and the price buttons (owner, 2026-10-21: «красиво оформить эти числа уровня, и вообще числа»)
+  h_once: ['Bought once per account', 'Покупается один раз на счёт'], h_day: ['Bought once a day', 'Покупается раз в день'], h_week: ['Bought once a week', 'Покупается раз в неделю'],
+  h_aboard: ['Delivered aboard: the captain must be at sea and out of a fight', 'Вручается на борту: капитан в море и не в бою'],
+  h_until: ['On sale until {d}', 'В продаже до {d}'], h_since: ['On sale from {d}', 'В продаже с {d}'], h_bonus: ['{n} doubloons more on top', 'Ещё {n} дублонов сверху'],
+  bonusPct: ['+{n}% free', '+{n}% в подарок'], saveTag: ['Save {n}%', 'Выгода {n}%'], h_save: ['The goods inside are worth {w} at single prices', 'Товары внутри по отдельности стоят {w}'],
+  off: ['−{n}%', '−{n}%'], h_off: ['{n}% cheaper a unit than the smallest pack', 'На {n}% дешевле за единицу, чем самый малый набор'],
+  h_best: ['The best price a unit of this card', 'Самая выгодная цена за единицу на этой карточке'], h_hot: ['The most bought', 'Берут чаще всего'],
+  u_pc: ['pc', 'шт.'], u_100: ['per 100', 'за 100'], u_1000: ['per 1,000', 'за 1000'], u_h: ['h', 'ч'], u_d: ['day', 'день'],
 };
 
 /** The store's categories (the site's tabs, shared/src/data/webshop.ts WEB_TABS) with their pictures: the site kit's and
@@ -496,11 +504,23 @@ const PRICE_STEPS: [number, number][] = [[0, 590], [590, 1990], [1990, 4990], [4
 /** A number with a no-break thin gap between thousands. */
 const nb = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
+/** The trails' little seas (owner, 2026-10-21: «следы в магазине прям покажи как визуально выглядят, то есть должен быть
+ *  кусочек моря и какой-то рандомный корабль и как плывет»): the game's painted sea, the hulls a card picks one of at
+ *  random (her sprite, length and beam, top speed), and every trail's look as the game's renderer draws it
+ *  (shared/src/data/cosmetics.ts TRAILS → client/src/render/cosdraw.ts; site/js/trails.js ports it). */
+function seaData() {
+  const hulls = (Object.values(SHIP_CLASSES) as unknown as { id: string; list?: string; tier: number; sprite: string; length: number; beam: number; maxSpeed: number }[])
+    .filter((s) => s.list && s.tier <= 6 && asset(s.sprite))
+    .map((s) => ({ src: asset(s.sprite), len: s.length, beam: s.beam, v: s.maxSpeed }));
+  return { tex: asset('tex.ocean'), hulls, trails: Object.fromEntries(TRAILS.map((t) => [t.id, { c: t.c, size: t.size, life: t.life, rise: t.rise, glow: t.glow }])) };
+}
+
 function shop(lang: Lang): string {
   const tr = (t: Record<string, Tr>) => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, L(lang, v)]));
   const r = root(lang);
   const ru = lang === 'ru';
-  const art = Object.fromEntries([...new Set(WEB_ITEMS.map((x) => x.art).concat(SHOP.map((f) => (f.icon.startsWith('unit:') ? `unit.${f.icon.slice(5)}` : `icon.${f.icon}`))))].filter(Boolean).map((a) => [a, asset(a)]));
+  const badgeArt = WEB_ITEMS.flatMap((x) => (x.badges ?? []).map((b) => b.icon ?? '')).filter((a) => a && !a.startsWith('/') && !a.startsWith('#'));
+  const art = Object.fromEntries([...new Set(WEB_ITEMS.map((x) => x.art).concat(SHOP.map((f) => (f.icon.startsWith('unit:') ? `unit.${f.icon.slice(5)}` : `icon.${f.icon}`)), badgeArt, ['icon.ui_hourglass', 'icon.doubloon']))].filter(Boolean).map((a) => [a, asset(a)]));
   const t = (k: string) => L(lang, SHOP_T[k]);
   const cat = (id: string, name: string, sub = false) => `<button type="button" class="st-cat${sub ? ' sub' : ''}" data-cat="${id}" aria-pressed="false"><span class="st-ico">${CAT_ICON[id] ? `<img src="${CAT_ICON[id]}" alt="" width="28" height="28" loading="lazy">` : ''}</span><span class="st-cn">${esc(name)}</span><i class="st-n"></i></button>`;
   const cats = `<button type="button" class="st-cat all" data-cat="all" aria-pressed="true"><span class="st-ico"><img src="${CAT_ICON.all}" alt="" width="28" height="28"></span><span class="st-cn">${t('all')}</span><i class="st-n"></i></button>
@@ -544,7 +564,7 @@ ${WEB_TABS.map((id) => cat(id, L(lang, WEB_TAB_NAMES[id])) + (id === 'cos' ? `<d
 <div class="st-confirm" role="dialog" aria-modal="true" aria-labelledby="st-confirm-h" hidden><div class="st-confirm-in panel"><h3 id="st-confirm-h">${t('confirm')}</h3><div class="st-confirm-what"></div>
 <div class="st-confirm-act"><button type="button" class="btn-oak sm" data-cancel>${t('cancel')}</button><button type="button" class="btn-gold sm" data-pay></button></div><p class="shop-legal muted">${legalLine}</p></div></div>
 </section>
-${dataTag('shop-data', { lang, t: tr(SHOP_T), art, tabs: WEB_TABS.map((id) => ({ id, name: L(lang, WEB_TAB_NAMES[id]) })), secs: Object.fromEntries(Object.entries(WEB_SECS).map(([k, v]) => [k, L(lang, v)])), subs: Object.fromEntries(COS_SUBS.map((s) => [s, L(lang, COS_SUB_NAMES[s])])), cos: { portraits: Object.fromEntries(CAPTAIN_IDS.map((id) => [id, portraitOf(id)])), names: capNames(lang) }, coin: K('ico/doubloon') })}`;
+${dataTag('shop-data', { lang, t: tr(SHOP_T), art, tabs: WEB_TABS.map((id) => ({ id, name: L(lang, WEB_TAB_NAMES[id]) })), secs: Object.fromEntries(Object.entries(WEB_SECS).map(([k, v]) => [k, L(lang, v)])), subs: Object.fromEntries(COS_SUBS.map((s) => [s, L(lang, COS_SUB_NAMES[s])])), cos: { portraits: Object.fromEntries(CAPTAIN_IDS.map((id) => [id, portraitOf(id)])), names: capNames(lang) }, coin: K('ico/doubloon'), sea: seaData() })}`;
   return page(lang, {
     path: 'shop/', active: 'shop', title: ru ? 'Магазин GRAVETIDE — дублоны, корабли, существа, косметика' : 'GRAVETIDE Shop — doubloons, ships, creatures, cosmetics',
     desc: ru ? 'Всё из премиум-лавки игры: дублоны, капитаны, корабли, существа, ускорители, наборы, косметика и акции. Введите ник, выберите товар и оплатите.' : 'Everything of the game’s premium shop: doubloons, captains, ships, creatures, boosters, supplies, cosmetics and offers. Enter the name, choose, pay.',

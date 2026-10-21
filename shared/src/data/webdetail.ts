@@ -83,6 +83,8 @@ export interface DCos {
   /** A wake: its two colours and whether it glows. */
   c?: [string, string];
   glow?: boolean;
+  /** A wake's trail id (the page draws it as the game does: site/js/trails.js). */
+  trail?: string;
   emotes?: { art: Img; name: Tr }[];
   /** Sold alone too (its price), or had only in this bundle. */
   alone?: number;
@@ -379,7 +381,7 @@ function cosPreview(key: string, art: ArtOf): DCos[] {
     }
     case 'trail': {
       const t = TRAILS.find((y) => y.id === x.id)!;
-      return [{ k: 'trail', ...base, c: t.c, glow: t.glow, ship: art(SAMPLE_SHIP) }];
+      return [{ k: 'trail', ...base, c: t.c, glow: t.glow, trail: t.id, ship: art(SAMPLE_SHIP) }];
     }
     case 'emote': return [{ k: 'emote', ...base, emotes: [{ art: art(`cos.emote_${x.id}`), name: x.name }] }];
   }

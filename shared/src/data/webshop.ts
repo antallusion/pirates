@@ -20,11 +20,12 @@ import { UNITS } from './army.ts';
 import type { UnitId } from './army.ts';
 import { CAPTAINS, CAPTAIN_IDS, CAPTAIN_PRICE } from './captains.ts';
 import type { CaptainId } from './captains.ts';
-import { CLOTHS, COS_EMOTES, PLATES, TITLES, TRAILS } from './cosmetics.ts';
+import { CLOTHS, COS_EMOTES, EMOTE_PACKS, PLATES, TITLES, TRAILS, cosItem } from './cosmetics.ts';
+import { MAGIC_SHOTS, SKILLS, shotOf, skillOf } from './creatureskills.ts';
 import { AUTO_SCROLL_PACKS, DOUBLOON_PACKS, premiumShips, premiumUnits } from './premium.ts';
-import { PREMIUM_NAMES, premiumFrom } from './premiumbeasts.ts';
-import { DEAL_OFF, DEAL_POOL, OFFERS, RECRUIT_KINDS, SHOP, unitPacks } from './shop.ts';
-import type { ShopFamily, ShopOffer } from './shop.ts';
+import { PREMIUM_NAMES, PREMIUM_PEOPLE, isPremiumBeast, premiumFrom } from './premiumbeasts.ts';
+import { DEAL_OFF, DEAL_POOL, OFFERS, RECRUIT_KINDS, SHOP, unitPacks, worthOf } from './shop.ts';
+import type { ShopFamily, ShopGrant, ShopOffer } from './shop.ts';
 import { SHIP_CLASSES } from './ships.ts';
 import { SHIP_BEAST_NAMES } from './shipbeasts.ts';
 import type { ShipClassId } from './ships.ts';
@@ -32,6 +33,7 @@ import { captainLevelFor, levelRange } from './shiplevel.ts';
 import { DATA_RU_FLEET } from '../../../client/src/lang/data.fleet.ru.ts';
 import { DATA_RU_CORE } from '../../../client/src/lang/data.ru.ts';
 import { EN as ARMY_EN, RU as ARMY_RU } from '../../../client/src/lang/ui/army.ts';
+import { EN as SK_EN, RU as SK_RU } from '../../../client/src/lang/ui/skills.ts';
 
 type Tr = [string, string];
 
@@ -107,6 +109,26 @@ export interface WebItem {
   tag?: 'best' | 'hot';
   /** It needs the captain aboard (a hull in port, creatures out of a fight, her hold, her book): delivered when she is. */
   aboard?: boolean;
+  /** The card's facts as icon badges (a tier medallion, ⚓ the ship level, the captain level, steel or shot…). */
+  badges?: WebBadge[];
+  /** A bundle's worth over its price, in per cent («Выгода 23 %»). */
+  save?: number;
+  /** A button's amount for its price a unit (`amtU`: pieces, hours, days): «98 ₽/шт.». */
+  amt?: number;
+  amtU?: 'pc' | 'h' | 'd';
+}
+
+/** A card's fact as a badge (owner, 2026-10-21: «в магазине надо как-то красиво оформить эти числа уровня, и вообще
+ *  числа. не хватает каких-то иконок»): its picture (an asset id of the manifest, a site kit path, or `#name` for one
+ *  of the page's own drawn glyphs), the short value on it, what it means (the tooltip), and a medallion's metal
+ *  (`band` 0 iron … 4 legendary; `cos` the game's own rarity colours of the cosmetics instead). */
+export interface WebBadge {
+  k: string;
+  icon?: string;
+  v?: Tr;
+  hint: Tr;
+  band?: number;
+  cos?: boolean;
 }
 
 const SAME_AS_AS: [string, string] = ['The battle bar’s scrolls are the same goods at the same prices as «Auto-battle scrolls» (as_*), sold on the site.', 'Свитки из панели боя — тот же товар по тем же ценам, что «Свитки автобоя» (as_*) на сайте.'];
@@ -169,6 +191,134 @@ export function webQty(offer: ShopOffer, fam: ShopFamily): Tr | undefined {
   }
 }
 
+/** An offer's amount for a price a unit: pieces, hours or days (none: a thing of one, «the 1st brigade»). */
+export function webAmt(offer: ShopOffer, fam: ShopFamily): { amt: number; amtU: 'pc' | 'h' | 'd' } | undefined {
+  const g = offer.grants[0];
+  if (!g || fam.sec === 'deals' || fam.offers.length < 2 || g.k === 'perm') return undefined;
+  let n = 0;
+  for (const x of offer.grants) {
+    if (x.k !== g.k) continue;
+    n += 'min' in x ? x.min / 60 : 'days' in x ? x.days : 'hours' in x ? x.hours : 'n' in x ? x.n : 1;
+  }
+  if (!n) return undefined;
+  const u = g.k === 'speed' || 'hours' in g ? 'h' : 'days' in g ? 'd' : 'pc';
+  return { amt: Math.round(n * 100) / 100, amtU: u };
+}
+
+// ------------------------------------------------------------------------------------------------ the badges
+
+const same = (s: string | number): Tr => [String(s), String(s)];
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+/** A creature tier's metal: 1–2 iron, 3–4 bronze, 5 silver, 6 gold, 7–8 legendary. */
+export const tierBand = (t: number) => (t <= 2 ? 0 : t <= 4 ? 1 : t === 5 ? 2 : t === 6 ? 3 : 4);
+/** A hull rank's metal (ten ranks): 1–2 iron, 3–4 bronze, 5–6 silver, 7–8 gold, 9–10 legendary. */
+const rankBand = (r: number) => Math.min(4, Math.floor((r - 1) / 2));
+const COS_TIER: Tr[] = [['Common', 'Простое'], ['Fine', 'Хорошее'], ['Rare', 'Редкое'], ['Epic', 'Эпическое'], ['Legendary', 'Легендарное']];
+const skillWords = (k: string): Tr => [(SK_EN as Record<string, string>)[k] ?? k, (SK_RU as Record<string, string>)[k] ?? (SK_EN as Record<string, string>)[k] ?? k];
+
+function tierBadge(t: number): WebBadge {
+  return { k: 'tier', v: same(t), band: tierBand(t), hint: [`Creature tier ${t} of 8`, `Уровень существа: ${t} из 8`] };
+}
+/** Steel or shot (and magic), wings, its once-a-battle ability. */
+function fightBadges(u: UnitId): WebBadge[] {
+  const d = UNITS[u];
+  const out: WebBadge[] = [];
+  if (d.shots) {
+    const kind = shotOf(u);
+    const magic = MAGIC_SHOTS.has(kind);
+    const w = skillWords(`sh.${kind}`);
+    out.push({ k: 'ranged', icon: magic ? 'icon.sk_chain' : 'icon.ammo_round', v: same(d.shots), hint: [`Ranged${magic ? ', magic' : ''}: ${w[0]}, ${d.shots} shots`, `Стрелок${magic ? ', магия' : ''}: ${w[1]}, выстрелов — ${d.shots}`] });
+  } else out.push({ k: 'melee', icon: 'icon.ui_cutlasses', hint: ['Melee: fights hand to hand', 'Ближний бой: бьётся вплотную'] });
+  if (d.specials.includes('flying')) out.push({ k: 'fly', icon: '#wing', hint: ['Flies over the field', 'Летает над полем боя'] });
+  const s = skillOf(u);
+  if (s) {
+    const n = skillWords(`n.${s}`);
+    out.push({ k: 'skill', icon: SKILLS[s].art, hint: [`Once a battle: ${n[0]}`, `Раз за бой: ${n[1]}`] });
+  }
+  return out;
+}
+const SLOT_BADGE: WebBadge = { k: 'slot', icon: 'icon.menu_crew', hint: ['Needs a free army slot aboard', 'Нужен свободный слот армии'] };
+const BUNK_BADGE: WebBadge = { k: 'bunk', icon: 'icon.sp_hammock_nettings', hint: ['Needs free hammocks aboard for them all', 'Нужны свободные койки на борту на всех'] };
+
+function unitBadges(u: UnitId, lv: number): WebBadge[] {
+  const d = UNITS[u];
+  const people = isPremiumBeast(u) ? PREMIUM_PEOPLE[u] : null;
+  return [
+    tierBadge(d.tier),
+    { k: 'ship', icon: 'icon.ui_anchor', v: same(`${lv}+`), hint: [`Needs a ship of level ⚓${lv} or higher`, `Нужен корабль ⚓${lv}-го уровня и выше`] },
+    SLOT_BADGE, BUNK_BADGE,
+    ...fightBadges(u),
+    ...(people ? [{ k: 'people', icon: people === 'land' ? '/site/img/ico/island.webp' : '/site/img/ico/creatures.webp', hint: (people === 'land' ? ['Legendary hire of the land', 'Легендарный найм суши'] : ['Legendary hire of the sea', 'Легендарный найм моря']) as Tr }] : []),
+  ];
+}
+function shipBadges(c: ShipClassId, lv: number): WebBadge[] {
+  const d = SHIP_CLASSES[c];
+  const [lo, hi] = levelRange(c);
+  const beasts = d.premium?.beasts ?? [];
+  const n = beasts.reduce((a, b) => a + b.n, 0);
+  return [
+    { k: 'rank', v: same(ROMAN[d.tier] ?? d.tier), band: rankBand(d.tier), hint: [`Hull rank ${d.tier} of 10`, `Ранг корпуса: ${d.tier} из 10`] },
+    { k: 'ship', icon: 'icon.ui_anchor', v: same(`${lo}${hi !== lo ? `–${hi}` : ''}`), hint: [`Ship level ⚓${lo}${hi !== lo ? `–${hi}` : ''}`, `Уровень корабля ⚓${lo}${hi !== lo ? `–${hi}` : ''}`] },
+    { k: 'cap', icon: 'ui.helm', v: same(`${lv}+`), hint: [`From captain level ${lv}`, `С ${lv}-го уровня капитана`] },
+    { k: 'guns', icon: 'icon.ui_cannon', v: same(d.gunPortsPerSide), hint: [`Guns a side: ${d.gunPortsPerSide}`, `Пушек на борт: ${d.gunPortsPerSide}`] },
+    { k: 'crew', icon: 'icon.stat_crew', v: same(d.crewMax), hint: [`Crew up to ${d.crewMax}`, `Команда до ${d.crewMax}`] },
+    ...(n ? [{ k: 'mates', icon: '/site/img/ico/creatures.webp', v: same(`+${n}`), hint: [`Comes with: ${beasts.map((b) => `${lowerFirst(unitNames(b.u)[0])} ×${b.n}`).join(', ')}`, `С ней приходят: ${beasts.map((b) => `${lowerFirst(unitNames(b.u)[1])} ×${b.n}`).join(', ')}`] as Tr }] : []),
+    { k: 'port', icon: '/site/img/ico/lighthouse.webp', hint: ['Delivered in port; your old ship stays berthed', 'Вручается в порту, прежний корабль остаётся у причала'] },
+  ];
+}
+function captainBadges(id: CaptainId): WebBadge[] {
+  const c = CAPTAINS[id];
+  const arche = DATA_RU_CORE[`captains.CAPTAINS.${id}.archetype`] ?? c.archetype;
+  return [
+    { k: 'school', icon: `icon.school_${id}`, hint: [`${c.archetype}: a school of orders of her own`, `${arche}: своя школа приказов`] },
+    { k: 'abil', icon: `icon.ab_${c.abilities[0]?.id}`, v: same(c.abilities.length), hint: [`${c.abilities.length} abilities and a trait`, `${c.abilities.length} способности и особенность`] },
+    { k: 'start', icon: '/site/img/ico/ships.webp', hint: [`Starts on the ${shipName(c.start.ship)[0]}`, `Стартует на корабле «${shipName(c.start.ship)[1]}»`] },
+  ];
+}
+/** A cosmetic offer's rarity (its dearest thing's) and, for an outfit, how many things are inside. */
+function cosBadges(offer: ShopOffer): WebBadge[] {
+  const g = offer.grants.find((x) => x.k === 'cos');
+  if (!g || g.k !== 'cos') return [];
+  let tier = 0;
+  for (const key of g.keys) {
+    if (key.startsWith('pack:')) tier = Math.max(tier, EMOTE_PACKS.find((p) => p.id === key.slice(5))?.tier ?? 0);
+    else tier = Math.max(tier, cosItem(key)?.tier ?? 0);
+  }
+  const t = Math.min(4, tier);
+  const out: WebBadge[] = [{ k: 'rarity', icon: '#gem', v: COS_TIER[t], band: t, cos: true, hint: [`Rarity: ${COS_TIER[t][0]}`, `Редкость: ${COS_TIER[t][1]}`] }];
+  if (g.keys.length > 1) out.push({ k: 'items', icon: 'icon.cos_bundle', v: same(g.keys.length), hint: [`${g.keys.length} things inside`, `Вещей внутри: ${g.keys.length}`] });
+  return out;
+}
+/** A bundle's goods as its card counts them (a hoard's artifacts one line, an outfit's things each). */
+const goodsOf = (grants: readonly ShopGrant[]): number => {
+  let n = 0, art = false;
+  for (const g of grants) {
+    if (g.k === 'art') { if (!art) n++; art = true; } else if (g.k === 'cos') n += g.keys.length; else n++;
+  }
+  return n;
+};
+/** A bundle's (an offer of one) goods and their time; a recruiter's kind; a level's gift. */
+function offerBadges(f: ShopFamily, offer: ShopOffer, rec: UnitId | null, tab: WebTab): WebBadge[] {
+  if (tab === 'cos') return cosBadges(offer);
+  const out: WebBadge[] = [];
+  if (rec) {
+    out.push(tierBadge(UNITS[rec].tier), ...fightBadges(rec).filter((b) => b.k !== 'skill'), BUNK_BADGE);
+    return out;
+  }
+  if (f.level) out.push({ k: 'cap', icon: 'ui.helm', v: same(f.level), hint: [`Opens at captain level ${f.level}, for three days`, `Открывается на ${f.level}-м уровне капитана на три дня`] });
+  const one = f.offers.length < 2 || f.sec === 'deals';
+  if (one) {
+    const n = goodsOf(offer.grants);
+    if (n > 1) out.push({ k: 'items', icon: 'icon.ui_chest', v: same(n), hint: [`${n} kinds of goods inside`, `Видов товара внутри: ${n}`] });
+    const timed = offer.grants.find((g) => 'hours' in g || 'days' in g);
+    if (timed && n === 1) {
+      const v: Tr = 'hours' in timed ? (timed.hours >= 48 && timed.hours % 24 === 0 ? [`${timed.hours / 24} d`, `${timed.hours / 24} дн.`] : [`${timed.hours} h`, `${timed.hours} ч`]) : 'days' in timed ? [`${timed.days} d`, `${timed.days} дн.`] : same('');
+      out.push({ k: 'time', icon: '/site/img/ico/clock.webp', v, hint: [`Lasts ${v[0]}`, `Действует ${v[1]}`] });
+    }
+  }
+  return out;
+}
+
 const CAPTAIN_RU: Record<string, Tr> = {
   drowned: ['Silas Fenn, the Drowned Captain', 'Сайлас Фенн, Утопленник'],
   admiral: ['Isolde Crane, the Black Admiral', 'Изольда Крейн, Чёрный адмирал'],
@@ -229,7 +379,7 @@ function build(): WebItem[] {
     if (!c.premium) continue;
     const name = CAPTAIN_RU[id] ?? [c.name, c.name];
     out.push({
-      id: `cap_${id}`, kind: 'captain', tab: 'cap', sec: '', card: `cap_${id}`, rub: CAPTAIN_PRICE, captain: id, once: true, art: c.portrait, name, title: name,
+      id: `cap_${id}`, kind: 'captain', tab: 'cap', sec: '', card: `cap_${id}`, rub: CAPTAIN_PRICE, captain: id, once: true, art: c.portrait, name, title: name, badges: captainBadges(id),
       text: ['A premium captain for your account: chosen when you start a new captain, for good.', 'Премиум-капитан на ваш счёт: выбирается при создании капитана, навсегда.'],
     });
   }
@@ -244,7 +394,7 @@ function build(): WebItem[] {
       ? [`Comes with ${beasts.map((b) => `${lowerFirst(unitNames(b.u)[0])} ×${b.n}`).join(', ')}. `, `С ней приходят: ${beasts.map((b) => `${lowerFirst(unitNames(b.u)[1])} ×${b.n}`).join(', ')}. `]
       : ['', ''];
     out.push({
-      id: `ship_${c}`, kind: 'ship', tab: 'ship', sec: d.list ?? 'combat', card: `ship_${c}`, rub: o.price, ship: c, lv, art: d.sprite, name, title: name, text: o.note, aboard: true,
+      id: `ship_${c}`, kind: 'ship', tab: 'ship', sec: d.list ?? 'combat', card: `ship_${c}`, rub: o.price, ship: c, lv, art: d.sprite, name, title: name, text: o.note, aboard: true, badges: shipBadges(c, lv),
       meta: [`${comes[0]}Captain level ${lv}+. Delivered in port; your old ship is berthed there.`, `${comes[1]}С ${lv}-го уровня капитана. Вручается в порту, прежний корабль остаётся у причала.`],
     });
   }
@@ -257,7 +407,7 @@ function build(): WebItem[] {
     unitPacks(o.price).forEach((p, i, all) => {
       const n = o.n * p.k;
       out.push({
-        id: `unit_${u}_${p.k}`, kind: 'unit', tab: 'unit', sec: 'beasts', card: `unit_${u}`, rub: p.price, unit: u, k: p.k, n, lv, art: `unit.${u}`, aboard: true,
+        id: `unit_${u}_${p.k}`, kind: 'unit', tab: 'unit', sec: 'beasts', card: `unit_${u}`, rub: p.price, unit: u, k: p.k, n, lv, art: `unit.${u}`, aboard: true, amt: n, amtU: 'pc', badges: unitBadges(u, lv),
         name: [`${nm[0]} ×${n}`, `${nm[1]} ×${n}`], title: nm, text: o.note, qty: [`×${n}`, `×${n}`],
         meta: [`Tier ${d.tier} · a ship of level ${lv}+ · a free slot and hammocks aboard.`, `Уровень ${d.tier} · корабль ${lv}-го уровня и выше · свободный слот и койки на борту.`],
         ...(i === all.length - 1 ? { tag: 'best' as const } : {}),
@@ -274,6 +424,10 @@ function build(): WebItem[] {
     const rec = /^rec\d$/.test(f.id) ? RECRUIT_KINDS[Number(f.id.slice(3)) - 1] : f.id === 'crew' ? 'deckhand' : null;
     for (const offer of f.offers) {
       const qty = webQty(offer, f);
+      const amt = webAmt(offer, f);
+      const worth = offer.worth ?? worthOf(offer.grants);
+      const one = f.offers.length < 2 || f.sec === 'deals';
+      const badges = offerBadges(f, offer, rec as UnitId | null, tab);
       out.push({
         id: offer.id, kind: 'offer', tab, sec, card: f.id, rub: offer.price, offer: offer.id,
         name: qty ? [`${f.name[0]} · ${qty[0]}`, `${f.name[1]} · ${qty[1]}`] : f.name, title: f.name, text: f.text,
@@ -285,6 +439,9 @@ function build(): WebItem[] {
         ...(f.level ? { level: f.level, meta: [`Opens at level ${f.level} for three days, once.`, `Открывается на ${f.level}-м уровне на три дня, один раз.`] as Tr } : {}),
         ...(offer.tag ? { tag: offer.tag } : {}),
         ...(offerAboard(offer) ? { aboard: true } : {}),
+        ...(amt ?? {}),
+        ...(badges.length ? { badges } : {}),
+        ...(one && tab !== 'cos' && worth > offer.price * 1.02 ? { save: Math.round((worth / offer.price - 1) * 100) } : {}),
       });
     }
   }
