@@ -28,6 +28,7 @@ import { FRAMES, PLATES, TITLES, TRAILS } from '../../shared/src/data/cosmetics.
 import { WEB_ITEMS, WEB_SECS, WEB_TABS, WEB_TAB_NAMES } from '../../shared/src/data/webshop.ts';
 import { SHOP } from '../../shared/src/data/shop.ts';
 import { SPECIAL_ICON as WD_SPECIAL_ICON } from '../../shared/src/data/webdetail.ts';
+import { fitStage } from '../../shared/src/data/framefit.ts';
 import { DOC_IDS, DOC_TITLES, EDITION, LEGAL, REQUISITES, SELLER } from './legal.ts';
 import type { DocId } from './legal.ts';
 import { EN as ARMY_EN, RU as ARMY_RU } from '../../client/src/lang/ui/army.ts';
@@ -308,8 +309,10 @@ function creaturePage(c: Creature, lang: Lang): string {
   const up = c.u.upgrade && c.u.upgrade !== c.id ? link(c.u.upgrade) : '';
   const base = c.u.up && c.u.base !== c.id ? link(c.u.base) : '';
   const prem = (c.u as { premium?: { price: number } }).premium;
+  // Its idle pose and the breath after it at one height (owner, 2026-10-21; shared/src/data/framefit.ts).
+  const fit = asset(`unit.${c.id}`) && asset(`unit.${c.id}_b`) ? fitStage(`unit.${c.id}`, `unit.${c.id}_b`) : null;
   const body = `<section class="wrap sec"><div class="cdet" style="--tint:${g.color}">
-<div class="cdet-art reveal"><div class="stage">${c.poses.length > 1 ? c.poses.slice(0, 2).map((p, i) => `<img src="${p}" alt="${i ? '' : esc(L(lang, c.name))}" class="pose p${i}"${i ? ' aria-hidden="true"' : ''}>`).join('') : img(c.figure, L(lang, c.name), 'pose p0', false)}</div>
+<div class="cdet-art reveal"><div class="stage${fit ? ' fitbox' : ''}">${fit ? `<span class="fitstage" style="--r:${fit.ar}">${[fit.a, fit.b].map((q, i) => `<img src="${c.poses[i]}" alt="${i ? '' : esc(L(lang, c.name))}" class="pose p${i}" style="left:${q[0]}%;top:${q[1]}%;width:${q[2]}%;height:${q[3]}%"${i ? ' aria-hidden="true"' : ''}>`).join('')}</span>` : c.poses.length > 1 ? c.poses.slice(0, 2).map((p, i) => `<img src="${p}" alt="${i ? '' : esc(L(lang, c.name))}" class="pose p${i}"${i ? ' aria-hidden="true"' : ''}>`).join('') : img(c.figure, L(lang, c.name), 'pose p0', false)}</div>
 ${c.poses.length > 2 ? `<div class="poses"><span>${u('poses', lang)}</span>${c.poses.map((p) => `<img src="${p}" alt="" loading="lazy">`).join('')}</div>` : ''}</div>
 <div class="cdet-info reveal"><p class="kicker"><img src="${K(g.icon)}" alt="" width="18" height="18"> ${esc(c.roster ? L(lang, rosterName(c.roster)) : L(lang, g.name))}</p>
 ${L(lang, c.note) ? `<p class="lore">${T(L(lang, c.note), lang)}</p>` : ''}

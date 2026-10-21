@@ -177,6 +177,11 @@ p { margin: 0 0 1em; }
 .stage::after { content: ''; position: absolute; left: 15%; right: 15%; bottom: 9%; height: 7%; border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 0, 0, 0.6), transparent); }
 .pose { position: absolute; inset: 6% 8% 8%; width: 84%; height: 86%; object-fit: contain; object-position: bottom; z-index: 1; filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.7)); }
 .pose.p1 { animation: breath 2.6s ease-in-out infinite alternate; opacity: 0; }
+/* A figure's poses at one height (owner, 2026-10-21; shared/src/data/framefit.ts): a box round the poses as fitted,
+   contained in the picture, its foot on the picture's; each pose set in it by per cent (inline). */
+.fitbox { container-type: size; }
+.fitstage { position: absolute; z-index: 1; left: 50%; bottom: var(--fb, 8%); transform: translateX(-50%); width: min(var(--fw, 84cqw), calc(86cqh * var(--r))); aspect-ratio: var(--r); }
+.fitstage > img { position: absolute; max-width: none; object-fit: fill; }
 @keyframes breath { 0%, 40% { opacity: 0; } 60%, 100% { opacity: 1; } }
 .poses { display: flex; align-items: center; gap: 10px; margin-top: 14px; overflow-x: auto; }
 .poses span { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ice); margin-right: 6px; }

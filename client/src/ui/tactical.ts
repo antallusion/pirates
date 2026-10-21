@@ -15,6 +15,7 @@ import type { TacCell, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import { DECOR_SIZE, PLANK_DRAW, PROP_SIZE, plankSpan } from '../../../shared/src/data/tacprops.ts'; // owner, 2026-10-18: the boarding pack
 import type { ClientMsg, ServerMsg, TacAction, TacAllyView, TacEvent, TacPreview, TacReplayFrame, TacStackView, TacView, TacWhy } from '../../../shared/src/protocol.ts';
 import { assetEpoch, assetFor, assetIds, assetUrl, sprite } from '../assets.ts';
+import { FRAME_FIT, frameFit } from '../../../shared/src/data/framefit.ts'; // owner, 2026-10-21: a creature's poses at one height
 import { dict, lang, plural } from '../i18n.ts';
 import { ORDERS, PRIMS, PRIM_ICON, PRIM_NAMES, SCHOOLS, SCHOOL_ICON, SCHOOL_NAMES } from '../../../shared/src/data/hero.ts';
 import type { School } from '../../../shared/src/data/hero.ts';
@@ -350,6 +351,21 @@ function footX(id: string, img: HTMLImageElement): number {
   }
   footCache.set(id, f);
   return f;
+}
+
+/** A pose's frame fitted to its idle one (owner, 2026-10-21; shared/src/data/framefit.ts): its size and its box's
+ *  top-left from the idle figure's anchor (its feet at footX), at the idle's pixel scale k. Null without a fit — the
+ *  frame is drawn as before. The pictures drawn are the stand-ins' when the kind is not painted: the fit is theirs. */
+function poseFit(id: string, frame: string, base: HTMLImageElement, img: HTMLImageElement, k: number): { x: number; y: number; W: number; H: number } | null {
+  const ri = assetFor(id), rf = assetFor(frame);
+  if (!ri || !rf || rf === ri || !rf.startsWith(ri)) return null;
+  const f = frameFit(rf);
+  if (!f || !FRAME_FIT[ri]) return null;
+  const Hi = base.naturalHeight * k, Wi = base.naturalWidth * k;
+  const H = img.naturalHeight * k * f.scale, W = img.naturalWidth * k * f.scale;
+  // The idle box's bottom-centre from the anchor, then the frame's from it.
+  const cx = Wi * (0.5 - footX(id, base)) + f.dx * Hi;
+  return { x: cx - W / 2, y: f.dy * Hi - H, W, H };
 }
 
 /** Everything a battle shows, for its loading screen (ui/loader.ts; owner, 2026-10-15: no bare pictures): the night sea
@@ -4827,7 +4843,9 @@ export class TacticalPanel {
       const c = this.center(pl);
       const id = figureArt(crew[j])!;
       const img = sprite(sprite(`${id}_atk`) ? `${id}_atk` : id)!.img;
-      const H = w * 1.25, W = (img.naturalWidth * H) / img.naturalHeight;
+      // The blow's frame at the figure's own height (owner, 2026-10-21): its fitted size beside the idle's.
+      const fr = assetFor(`${id}_atk`), fi = fr ? FRAME_FIT[fr] : undefined;
+      const H = w * 1.25 * (fi ? fi[0] * fi[3] : 1), W = (img.naturalWidth * H) / img.naturalHeight;
       const [A, B] = this.xf();
       const ax = c.x - A * w * 1.4, ay = c.y - B * w * 1.4, bx = c.x + A * w * 1.6, by = c.y + B * w * 1.6;
       const x = ax + (bx - ax) * kk, y = ay + (by - ay) * kk - Math.sin(Math.PI * kk) * w * 0.7 + w * 0.25;
@@ -5776,7 +5794,9 @@ export class TacticalPanel {
     const frame = k > 0.2 && k < 0.72 && sprite(`${id}_atk`) ? `${id}_atk` : k >= 0.72 && sprite(`${id}_b`) ? `${id}_b` : id;
     const img = sprite(frame)!.img;
     const sc = Math.min(ch * 0.4, w * 2.7) / base.naturalHeight;
-    const W = img.naturalWidth * sc, H = img.naturalHeight * sc;
+    // Her poses at one height (owner, 2026-10-21): the fitted frame's box from her idle box's left foot.
+    const fit = frame === id ? null : poseFit(id, frame, base, img, sc);
+    const W = fit ? fit.W : img.naturalWidth * sc, H = fit ? fit.H : img.naturalHeight * sc;
     const fade = Math.max(0, Math.min(1, k / 0.14, (1 - k) / 0.2));
     const left = h.side === 0;
     const x = left ? w * 0.15 - (1 - Math.min(1, k / 0.14)) * w : cw - w * 0.15 + (1 - Math.min(1, k / 0.14)) * w;
@@ -5792,7 +5812,9 @@ export class TacticalPanel {
     g.fillRect(cx - H * 0.7, y - H * 1.15, H * 1.4, H * 1.4);
     g.translate(x, y);
     if (!left) g.scale(-1, 1);
-    g.drawImage(img, 0, -H, W, H);
+    // poseFit's box is from the idle's foot anchor; here the idle's box starts at her edge (x = 0).
+    if (fit) g.drawImage(img, fit.x + base.naturalWidth * sc * footX(id, base), fit.y, W, H);
+    else g.drawImage(img, 0, -H, W, H);
     g.restore();
   }
 
@@ -5963,10 +5985,13 @@ export class TacticalPanel {
     const k = Math.min((size * w) / base.naturalHeight, (Math.min(size * 1.25, 2) * w) / base.naturalWidth);
     const img = sprite(frame)?.img ?? base;
     const breathe = frame === id ? 1 + 0.012 * Math.sin(t / 620 + s.id * 1.7) : 1;
-    const H = img.naturalHeight * k * breathe, W = img.naturalWidth * k;
+    // Owner, 2026-10-21: the blow's figure as tall as the figure itself — each frame at its fitted scale and place
+    // (shared/src/data/framefit.ts, tools/art/frame_fit.py); a frame with no fit as before: its own feet, centred.
+    const fit = frame === id ? null : poseFit(id, frame, base, img, k);
+    const H = fit ? fit.H : img.naturalHeight * k * breathe, W = fit ? fit.W : img.naturalWidth * k;
     // It faces the way it last went (owner, 2026-10-08), walking the way it walks; the painting faces right.
     const flip = this.walkDx ? this.walkDx < 0 : this.facesLeft(s);
-    const fx = footX(frame, img);
+    const fx = fit ? -fit.x / W : footX(frame, img);
     g.save();
     g.translate(x + ox, fy + oy - lift);
     if (tilt) g.rotate(tilt);
@@ -5975,7 +6000,7 @@ export class TacticalPanel {
     if (s.blind) g.filter = 'grayscale(0.7) brightness(0.8)';
     else if (flash) g.filter = `${tint ?? ''} brightness(${(1 + flash * 1.6).toFixed(2)}) sepia(${(flash * 0.7).toFixed(2)}) saturate(${(1 + flash * 2).toFixed(2)}) hue-rotate(-25deg)`.trim();
     else if (tint) g.filter = tint;
-    g.drawImage(img, -W * fx, -H, W, H);
+    g.drawImage(img, -W * fx, fit ? fit.y : -H, W, H);
     g.filter = 'none';
     // The struck stack's flash (owner, 2026-10-08): a burst of light over it as the blow lands.
     if (flash > 0) {
@@ -5995,7 +6020,8 @@ export class TacticalPanel {
       g.fillRect(-W * fx, -H * 0.45, W, H * 0.45);
     }
     g.restore();
-    const top = fy - lift - H;
+    // The marks over it keep to the idle figure's head (a blow's frame no longer moves them).
+    const top = fy - lift - (fit ? base.naturalHeight * k : H);
     if (s.marked) {
       const cy = top + H * 0.35, R0 = Math.max(8, w * 0.22);
       g.strokeStyle = `rgba(240,120,60,${0.6 + 0.4 * pulse})`;
