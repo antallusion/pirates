@@ -4771,7 +4771,9 @@ body.tac-ph .tb-pl .tb-rb { width: 52px; height: 52px; }
 .tb-end.sea .tb-er > small { padding-top: 0; }
 .tb-end.sea .tb-endbtn { min-width: 0; }
 @media (max-height: 520px) {
-  .tb-banner.tb-end.sea { top: 4px; bottom: auto; max-height: 64px; padding: 4px 10px; }
+  /* (under the safe top: in Telegram its close and menu buttons lie over the first 46 px — «Почему», «Дальше» were
+     under them at every phone size, endbar.mjs) */
+  .tb-banner.tb-end.sea { top: calc(var(--sa-t, 0px) + 4px); bottom: auto; max-height: 64px; padding: 4px 10px; }
   .tb-end.sea .tb-bsc > b { font-size: 20px; }
   .tb-end.sea .tb-er > small { display: none; }
   /* …and with the labels gone a lone «нет» said nothing (640×360: «Примкнули: 1 нет Дальше»): a row with nothing in it

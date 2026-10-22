@@ -1,7 +1,8 @@
 // The battle's reckoning bar (owner, 2026-10-22: «плашка "почему" — её надо задизайнить как кнопку дальше»): «Почему»
 // and «Повтор» the same button as «Дальше» — the same frame (border-image), height, font, padding — only its variant
 // apart (secondary against the gold primary), and all of them centred on the bar's middle line. A boarding at sea and a
-// fight ashore at a lair, each ended at once (quick; ashore with an auto-battle scroll), measured and shot at the sizes, RU and EN, in Telegram (TG=46).
+// fight ashore at a lair, each ended at once (quick; ashore with an auto-battle scroll), measured and shot at the sizes, RU and EN, in Telegram (TG=46):
+// nothing of the bar under Telegram's top band or past the screen.
 //   GPORT=58640 SIZE=844x390,1093x481 LANG2=ru,en TG=46 OUT=assets/raw/audit/endbar node tools/mobile/ux/endbar.mjs
 import * as L from '../m0/lib.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -113,6 +114,14 @@ function MEASURE() {
     const d = (r.top + r.bottom) / 2 - mid;
     if (Math.abs(d) > 1.5) bad.push(`«${e.textContent.trim()}» ${d.toFixed(1)} px off the bar's middle line`);
     if (r.top < br.top - 0.5 || r.bottom > br.bottom + 0.5 || r.left < br.left - 0.5 || r.right > br.right + 0.5) bad.push(`«${e.textContent.trim()}» out of the bar`);
+  }
+  // (in Telegram the top band is Telegram's own — its close and menu buttons: nothing of the bar's under it; and the bar
+  // inside the screen)
+  const tgTop = document.documentElement.classList.contains('tg-app') ? parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tg-top')) || 0 : 0;
+  for (const e of new Set([main, ...others, ...row.querySelectorAll('button')])) {
+    const r = e.getBoundingClientRect();
+    if (r.top < tgTop - 0.5) bad.push(`«${e.textContent.trim() || e.className}» under Telegram's controls (its top ${Math.round(r.top)} < ${tgTop})`);
+    if (r.bottom > innerHeight + 0.5 || r.right > innerWidth + 0.5 || r.left < -0.5) bad.push(`«${e.textContent.trim() || e.className}» past the screen`);
   }
   return { bad, btns, box: [br.left, br.top, br.right, br.bottom].map(Math.round) };
 }
