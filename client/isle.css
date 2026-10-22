@@ -135,9 +135,12 @@ body.isle-on :is(#world, #hud, #hud-chat, #encounter, #surrender, #lairchest, #a
 /* the island's places (its ships, its town's trade, its supply) as a wider sheet of the same make */
 #isle:has(.is-card.wide:not(.hidden)) { --is-card: clamp(300px, 60vw, 660px); }
 #isle .is-ph { margin: 0 0 4px; padding-right: 26px; font: 600 15px/1.2 var(--serif, Georgia, serif); color: var(--brass, #c9a46a); }
-#isle .is-cb .tw-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+#isle .is-cb .tw-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); } /* (three tiles across a desk's 660 px card, not four: in four the names and levels were cut to «Стрельб…», «Не пост…») */
 #isle .is-cb .tw-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px; }
 #isle .is-cb .town, #isle .is-cb .sup-body { min-width: 0; }
+/* a card that opens on its own line of figures (the defence's waters, the raid) keeps it clear of the card's ×: «Без налога»
+   lay under it at 480×270 */
+#isle .is-cb > :is(.base-def, .base-raid):first-child { padding-right: 30px; }
 #isle .is-x { position: absolute; top: 2px; right: 2px; z-index: 2; width: 28px; height: 28px; padding: 0; border: 0; background: none; color: var(--fog, #9aa3a8); font-size: 20px; line-height: 1; cursor: pointer; }
 #isle .is-x:hover { color: var(--bone, #e6dccb); }
 #isle .is-cb { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px 8px 8px; font-size: 12px; scrollbar-width: thin; }
@@ -167,7 +170,7 @@ body.isle-on :is(#world, #hud, #hud-chat, #encounter, #surrender, #lairchest, #a
   #isle .is-cb .bsheet-h b { font-size: var(--f-fs-h, 12px); }
   #isle .is-ph { font-size: var(--f-fs-h, 12px); }
   #isle:has(.is-card.wide:not(.hidden)) { --is-card: clamp(280px, 62vw, 560px); }
-  #isle .is-cb .tw-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  #isle .is-cb .tw-grid { grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); }
   #isle .is-cb .bthumb { width: 36px; height: 36px; }
   #isle .is-cb :is(.bopt-text, .bcosts, .tr-needs li, .bdesc) { font-size: var(--f-fs-s, 9px); }
   #isle .is-cb :is(.tr-now, .tr-gives, .tr-hn, p) { font-size: var(--f-fs, 10px); line-height: 1.3; }
@@ -175,6 +178,16 @@ body.isle-on :is(#world, #hud, #hud-chat, #encounter, #surrender, #lairchest, #a
   #isle .is-cb .bopt-art { width: 34px; height: 34px; }
   #isle .is-cb :is(.bupcard, .bjobcard) { padding: 5px; margin: 4px 0; }
   #isle .is-cb .btn-small { min-height: calc(26px + 4 * var(--u, 1px)); font-size: var(--f-fs, 10px); padding: 2px 8px; }
+  /* the town's tiles and its land's rows on the phone's scale (they kept the desk's 12.5–15 px in a 450 px card) */
+  #isle .is-cb :is(.tw-card, .tw-craft-t, .tw-mine, .tw-mk, .tw-res, .tw-meta) { font-size: var(--f-fs, 10px); }
+  #isle .is-cb .tw-art { width: 40px; height: 34px; } /* (the name beside it keeps its room: «Казарма морпехов» was cut at 740×360) */
+  #isle .is-cb .tw-id b { font-size: var(--f-fs-m, 11px); }
+  #isle .is-cb :is(.tw-text, .tw-why, .tw-max, .tw-pool, .tw-nn, .tw-rates) { font-size: var(--f-fs-s, 9px); }
+  /* the supply's and the defence's words too (16 px heading, 12–13 px lines in a 296 px card at 480×270) */
+  #isle .is-cb .sup-head h3 { font-size: var(--f-fs-h, 12px); margin: 2px 0; }
+  #isle .is-cb .sup-head p { margin-bottom: 4px; }
+  #isle .is-cb .sup-meta { font-size: var(--f-fs, 10px); gap: 3px 10px; margin-bottom: 6px; }
+  #isle .is-cb :is(.base-def, .base-raid) { font-size: var(--f-fs, 10px); }
 }
 @media (max-height: 320px) {
   #isle .is-sb-l { font-size: 6.5px; }

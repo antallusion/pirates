@@ -1,8 +1,12 @@
 // The battle's reckoning bar (owner, 2026-10-22: «плашка "почему" — её надо задизайнить как кнопку дальше»): «Почему»
 // and «Повтор» the same button as «Дальше» — the same frame (border-image), height, font, padding — only its variant
 // apart (secondary against the gold primary), and all of them centred on the bar's middle line. A boarding at sea and a
-// fight ashore at a lair, each ended at once (quick; ashore with an auto-battle scroll), measured and shot at the sizes, RU and EN, in Telegram (TG=46).
-//   GPORT=58640 SIZE=844x390,1093x481 LANG2=ru,en TG=46 OUT=assets/raw/audit/endbar node tools/mobile/ux/endbar.mjs
+// fight ashore at a lair, each ended at once (quick; ashore with an auto-battle scroll), measured and shot at the sizes, RU and EN, in Telegram (TG=46):
+// nothing of the bar under Telegram's top band or past the screen.
+// The ordinary QA (docs/33 §7), with a server of your own with the admin's commands:
+//   GPORT=58617 SIZE=1093x481,844x390,812x375,740x360,480x270 LANG2=ru,en TG=46 OUT=assets/raw/audit/endbar node tools/mobile/ux/endbar.mjs
+//   GPORT=58617 SIZE=1440x900 LANG2=ru,en TG=0 OUT=assets/raw/audit/endbar node tools/mobile/ux/endbar.mjs
+//   KINDS=sea — the boarding alone; DUMP=1 — the bar's boxes listed. Exit code 1 on any problem.
 import * as L from '../m0/lib.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
@@ -22,7 +26,7 @@ let total = 0;
 try {
   for (const lang of langs) {
     const [W0, H0] = sizes[0];
-    const p = await L.page(b, [W0, H0], { lang, touch: W0 < 1000 });
+    const p = await L.page(b, [W0, H0], { lang, touch: process.env.TOUCH ? process.env.TOUCH === '1' : Math.min(W0, H0) < 520 } /* a phone on its side is a touch screen, 1093×481 too */);
     if (tg) await p.ctx.addInitScript((t) => {
       addEventListener('DOMContentLoaded', () => {
         document.documentElement.classList.add('tg-app');
@@ -54,7 +58,12 @@ try {
       for (const [W, H] of sizes) {
         await p.setViewportSize({ width: W, height: H });
         await L.sleep(800);
+        // the offers' card that may come up over the field (promo.ts) put away: it is not the bar
+        await p.evaluate(() => document.querySelector('#promo-over:not(.hidden) [data-polater]')?.click());
+        await L.sleep(300);
         const v = await p.evaluate(MEASURE);
+        // DUMP=1: the bar's boxes, each child's, for a probe
+        if (process.env.DUMP) L.log(await p.evaluate(() => { const bar = document.querySelector('#board-tac .tb-end'); const d = (e) => { const r = e.getBoundingClientRect(), c = getComputedStyle(e); return `${e.tagName.toLowerCase()}.${[...e.classList].join('.')} [${[r.left, r.top, r.width, r.height].map(Math.round)}] disp=${c.display} flex=${c.flexDirection}/${c.flexWrap} ov=${c.overflow} pos=${c.position}`; }; return [bar, ...bar.querySelectorAll('*')].filter((e) => e.getBoundingClientRect().width).slice(0, 40).map(d).join(' | '); }));
         const name = `${W}x${H}_${lang}${tg ? '_tg' : ''}_${kind}`;
         await p.screenshot({ path: `${OUT}/${name}.png` });
         // a crop of the bar itself, to see it close
@@ -108,6 +117,14 @@ function MEASURE() {
     const d = (r.top + r.bottom) / 2 - mid;
     if (Math.abs(d) > 1.5) bad.push(`«${e.textContent.trim()}» ${d.toFixed(1)} px off the bar's middle line`);
     if (r.top < br.top - 0.5 || r.bottom > br.bottom + 0.5 || r.left < br.left - 0.5 || r.right > br.right + 0.5) bad.push(`«${e.textContent.trim()}» out of the bar`);
+  }
+  // (in Telegram the top band is Telegram's own — its close and menu buttons: nothing of the bar's under it; and the bar
+  // inside the screen)
+  const tgTop = document.documentElement.classList.contains('tg-app') ? parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tg-top')) || 0 : 0;
+  for (const e of new Set([main, ...others, ...row.querySelectorAll('button')])) {
+    const r = e.getBoundingClientRect();
+    if (r.top < tgTop - 0.5) bad.push(`«${e.textContent.trim() || e.className}» under Telegram's controls (its top ${Math.round(r.top)} < ${tgTop})`);
+    if (r.bottom > innerHeight + 0.5 || r.right > innerWidth + 0.5 || r.left < -0.5) bad.push(`«${e.textContent.trim() || e.className}» past the screen`);
   }
   return { bad, btns, box: [br.left, br.top, br.right, br.bottom].map(Math.round) };
 }

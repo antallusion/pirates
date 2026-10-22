@@ -12,9 +12,14 @@
 //   cut    a button clipped sideways by a box that cannot scroll to it;
 //   btn    a button outside its row or card;
 //   cover  a button, a tab, a field whose middle is under something else (a header, a tab strip, another button);
-//   overlap two buttons over each other.
-//   GPORT=58640 SIZE=1093x481,844x390,812x375,740x360,480x270 LANG2=ru,en TG=46 OUT=assets/raw/audit/ports node tools/mobile/ux/ports.mjs
-//   (TG=0: the browser; SIZE=1440x900 TG=0 for a desk.)  ONLY=exchange,shop — some screens;  SHOTS=0;  LIST=1 — all.
+//   overlap two buttons over each other;
+//   ell     a one-line name cut at its box with no ellipsis, or spilling past it;
+//   vc      a button's icon or label off the button's middle line.
+// The ordinary QA (docs/33 §7): a server of your own with the admin's commands, then the phone in Telegram and the desk —
+//   GPORT=58617 SIZE=1093x481,844x390,812x375,740x360,480x270 LANG2=ru,en TG=46 OUT=assets/raw/audit/ports node tools/mobile/ux/ports.mjs
+//   GPORT=58617 SIZE=1440x900 LANG2=ru,en TG=0 OUT=assets/raw/audit/ports node tools/mobile/ux/ports.mjs
+//   (TG=0: the browser.)  ONLY=exchange,shop — some screens;  SHOTS=0;  LIST=1 — all;  TOUCH=0/1 (default: a touch screen
+//   under 520 px on its short side). Exit code 1 on any violation; the report in OUT/report[_tg].json.
 import * as L from '../m0/lib.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
@@ -57,7 +62,7 @@ let total = 0;
 try {
   for (const lang of langs) {
     const [W0, H0] = sizes[0];
-    const p = await L.page(b, [W0, H0], { lang, touch: process.env.TOUCH ? process.env.TOUCH === '1' : W0 < 1000 });
+    const p = await L.page(b, [W0, H0], { lang, touch: process.env.TOUCH ? process.env.TOUCH === '1' : Math.min(W0, H0) < 520 } /* a phone on its side is a touch screen, 1093×481 too */);
     if (tg) await p.ctx.addInitScript((t) => {
       addEventListener('DOMContentLoaded', () => {
         document.documentElement.classList.add('tg-app');
@@ -68,7 +73,9 @@ try {
     }, tg);
     // toasts come and go: not what is measured
     await p.ctx.addInitScript(() => addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '#toasts{visibility:hidden!important}'; document.head.append(s); }));
-    await L.login(p, { port, know: true });
+    // a long-named captain (the longest name the harbour takes: 20), for the names' ellipses
+    const sfx = String(Math.floor(Math.random() * 900) + 100);
+    await L.login(p, { port, know: true, name: (lang === 'en' ? 'Maximiliana Hartw' : 'Аделаида Крестова') + sfx });
     await L.closeAll(p);
     await seed(p);
     for (const [W, H] of sizes) {
@@ -178,7 +185,7 @@ async function measure(p, name, group) {
 /** Her captain set up to have something in every place: level, silver, an island, tattoos, pets; then to a great
  *  League harbour (an exchange and a bank) — a forward signed, an order posted, silver banked, the auction stirred. */
 async function seed(p) {
-  for (const c of ['/god', '/level 60', '/silver 90000', '/isle', '/tattoo all', '/pet cat', '/pet parrot', '/give rum 40', '/give timber 30']) { await L.say(p, c); await L.sleep(450); }
+  for (const c of ['/god', '/level 60', '/silver 90000', '/doubloons 500', '/isle', '/tattoo all', '/pet cat', '/pet parrot', '/pet monkey', '/give rum 40', '/give timber 30', '/give provisions 25', '/army marine 40', '/army musketeer 20', '/contract take 1', '/contract take 2', '/relic all', '/item random 60 6', '/scrolls 12', '/mine take', '/find bottle done', '/find chest done']) { await L.say(p, c); await L.sleep(450); }
   const to = await p.evaluate(() => {
     const s = globalThis.gravetide.state;
     const lg = s.ports.filter((x) => x.faction === 'league' && x.size >= 2).sort((a, b) => b.size - a.size);
@@ -193,6 +200,15 @@ async function seed(p) {
   await L.closeAll(p);
   await L.send(p, { t: 'bank', action: 'deposit', amount: 4000 });
   await L.sleep(400);
+  await L.send(p, { t: 'bank', action: 'borrow', amount: 1500 });
+  await L.sleep(400);
+  // a guild with a long name (the longest the harbour office registers), for the names' ellipses
+  const tag = 'Q' + Math.random().toString(36).slice(2, 5).toUpperCase().replace(/[^A-Z0-9]/g, 'X');
+  await L.send(p, { t: 'guild', action: 'found', name: (await p.evaluate(() => document.documentElement.lang)) === 'en' ? 'Brotherhood of Black Moon' .slice(0, 24) : 'Братство Чёрной Луны Юга', tag });
+  await L.sleep(400);
+  // a rumour bought (the tavern's hearsay), if one is told here
+  const rid = await p.evaluate(() => globalThis.gravetide.state.portView?.hearsay?.[0]?.id ?? globalThis.gravetide.state.portView?.rumours?.[0]?.id);
+  if (rid) await L.send(p, { t: 'hearsay', action: 'buy', id: rid });
   for (let i = 0; i < 1; i++) { // (one signed: the others stay on the board)
     const fid = await p.evaluate((i) => globalThis.gravetide.state.portView?.exchange?.forwards?.[i]?.id, i);
     if (fid) await L.send(p, { t: 'forward', id: fid });
@@ -321,6 +337,48 @@ function CHECK() {
     // (a line of ≤3 characters: in a box under five letters wide — the squeezed column — or two such lines and more;
     // a long label's last word on a line of its own is ordinary wrapping)
     else if (s.replace(/\s/g, '').length >= 6 && (lines.filter((x) => x.trim().length > 0 && x.trim().length <= 3).length >= 2 || (lines.some((x) => x.trim().length > 0 && x.trim().length <= 3) && pe.getBoundingClientRect().width < 5 * parseFloat(getComputedStyle(pe).fontSize)))) bad.add(`wrap: «${t}» with a line of ≤3 characters (${lines.map((x) => x.trim()).join(' / ')}) in ${label(pe).split(' «')[0]}`);
+  }
+  // ell: a one-line text (a name, a label held to its line) cut at its box's edge with no ellipsis, or spilling past it
+  for (const e of all) {
+    if (e.children.length && [...e.children].some((k) => !/^(B|I|EM|STRONG|SMALL|SPAN)$/.test(k.tagName) || k.children.length)) continue;
+    const s = (e.textContent || '').trim();
+    if (s.length < 4 || e.closest('select, textarea, input, .k-badge, .w-badge, [class*="badge"]')) continue;
+    const c = getComputedStyle(e);
+    if (c.display === 'inline' || c.whiteSpace !== 'nowrap' && c.whiteSpace !== 'pre') continue;
+    if (e.scrollWidth <= e.clientWidth + 1) continue;
+    const cut = c.overflowX !== 'visible';
+    if (cut && c.textOverflow === 'ellipsis') continue;
+    // (spilling: only when it leaves its parent's box too, or is cut)
+    const pr = e.parentElement.getBoundingClientRect(), r = e.getBoundingClientRect();
+    if (!cut && r.left + e.scrollWidth <= pr.right + 1) continue;
+    bad.add(`ell: «${s.slice(0, 26)}» ${cut ? 'cut with no ellipsis' : 'spilling past its box'} (${e.scrollWidth}/${e.clientWidth}) in ${label(e).split(' «')[0]}`);
+  }
+  // vc: an icon and a label in a one-line button, each on the button's middle line
+  for (const e of clicks) {
+    if (!e.matches('button, .btn, .k-btn')) continue;
+    const r = e.getBoundingClientRect(), c = getComputedStyle(e);
+    if (r.height < 14 || r.height > 72) continue;
+    const pt = parseFloat(c.paddingTop) + parseFloat(c.borderTopWidth), pb = parseFloat(c.paddingBottom) + parseFloat(c.borderBottomWidth);
+    const mid = (r.top + pt + r.bottom - pb) / 2;
+    const parts = [];
+    for (const k of e.querySelectorAll('img, svg, .ic, .icon, [class*="-ic"]')) { if (k.parentElement.closest('svg') ) continue; const kr = k.getBoundingClientRect(); if (kr.width > 3 && kr.height > 3 && kr.height < r.height) parts.push(['icon', kr]); }
+    const w2 = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
+    let lines = 0;
+    for (let n = w2.nextNode(); n; n = w2.nextNode()) {
+      if (!n.textContent.trim() || !shown(n.parentElement)) continue;
+      rg.selectNodeContents(n);
+      const rs = [...rg.getClientRects()].filter((x) => x.width > 0.5);
+      lines += rs.length;
+      if (rs.length === 1) parts.push(['label', rs[0]]);
+    }
+    if (lines !== parts.filter((x) => x[0] === 'label').length || lines > 2) continue; // a wrapped label: a block, not a line
+    // (only when the button holds one row: its parts side by side)
+    const tops = parts.map(([, x]) => x);
+    if (tops.some((a) => tops.some((b) => a !== b && (a.bottom <= b.top + 1 || b.bottom <= a.top + 1)))) continue;
+    for (const [k, x] of parts) {
+      const d = (x.top + x.bottom) / 2 - mid;
+      if (Math.abs(d) > 2.5) { bad.add(`vc: ${label(e)} its ${k} ${d.toFixed(1)} px off the middle line`); break; }
+    }
   }
   // cover: a button's middle under something else; overlap: two buttons over each other
   const live = [];
