@@ -128,7 +128,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "The duel is agreed: {0} against {1}. Guns in five seconds; stay inside the ring.": "Дуэль назначена: {0} против {1}. Огонь через пять секунд; не покидайте круга.",
   "The exchange wants {0} silver as collateral": "Биржа требует {0} серебра в залог",
   "The exchange will not take plundered goods": "Биржа не берёт награбленное",
-  "The fall: the sea pours into the Eye. Only guns within 900 m of it reach it — and too close, it swallows you.": "Падение: море хлещет в Око. Достают его лишь орудия в пределах 900 м — а подойдёте слишком близко, оно вас проглотит.",
+  "The fall: the sea pours into the Eye. Only guns within 450 m of it reach it — and too close, it swallows you.": "Падение: море хлещет в Око. Достают его лишь орудия в пределах 450 м — а подойдёте слишком близко, оно вас проглотит.",
   "The fear bonus is paid: {0} silver. Nobody slips ashore tonight.": "Надбавка за страх выплачена: {0} серебра. Этой ночью никто не сбежит на берег.",
   "The fence only deals in contraband": "Скупщик берёт только контрабанду",
   "The fence takes {0} {1} for {2} silver.": "Скупщик берёт {1} × {0} за {2} серебра.",

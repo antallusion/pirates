@@ -975,8 +975,6 @@ export interface GunDef {
   damage: number;
   range: number;
   reload: number; // seconds with a full gun crew
-  /** The balls' spread (degrees). Doubled when the reaches were halved (owner, 2026-10-22): the same metres wide at
-   *  the same share of her reach, so a ball strikes there as often as it did and a captain's craft counts as it did. */
   spreadDeg: number;
   weight: number;
   crewPerGun: number;
@@ -1005,19 +1003,19 @@ export interface GunDef {
 }
 
 export const GUNS: Record<GunId, GunDef> = {
-  light_6: { id: 'light_6', name: '6-pdr Gun', damage: 40, range: 145, reload: 8, spreadDeg: 7, weight: 1, crewPerGun: 3, price: 300, minTier: 1, description: 'Light, quick, cheap.' },
-  long_9: { id: 'long_9', name: '9-pdr Long Gun', damage: 46, range: 205, reload: 10, spreadDeg: 4, weight: 1.5, crewPerGun: 4, price: 700, minTier: 1, description: 'Long barrel, long reach, accurate.' },
-  medium_12: { id: 'medium_12', name: '12-pdr Gun', damage: 60, range: 170, reload: 11, spreadDeg: 6, weight: 2, crewPerGun: 5, price: 1000, minTier: 2, description: 'The workhorse of every navy.' },
-  heavy_18: { id: 'heavy_18', name: '18-pdr Gun', damage: 80, range: 180, reload: 13.5, spreadDeg: 6, weight: 3, crewPerGun: 6, price: 1800, minTier: 3, description: 'Hull-breaker. Heavy and slow.' },
-  carronade_24: { id: 'carronade_24', name: '24-pdr Carronade', damage: 110, range: 100, reload: 10, spreadDeg: 10, weight: 1.6, crewPerGun: 4, price: 1200, minTier: 2, description: 'Smasher. Devastating at pistol range, useless beyond it.' },
-  minion_4: { id: 'minion_4', name: '4-pdr Minion', damage: 26, range: 135, reload: 5.5, spreadDeg: 7.6, weight: 0.6, crewPerGun: 2, price: 200, minTier: 1, description: 'A little gun two hands can serve: quick to load and light on the deck, for a ship short of men.' },
-  perrier: { id: 'perrier', name: 'Stone Perrier', damage: 30, range: 120, reload: 8.5, spreadDeg: 10, weight: 1, crewPerGun: 3, price: 450, minTier: 1, factions: ['free', 'confederacy', 'brokers'], crewMul: 1.4, sailMul: 1.5, description: 'Throws stone shot that shatters on the side: men struck down ×1.4 and canvas torn ×1.5 a ball, the hull barely scratched. Cast in the free ports.' },
-  culverin_8: { id: 'culverin_8', name: '8-pdr Culverin', damage: 36, range: 250, reload: 12, spreadDeg: 2.8, weight: 2, crewPerGun: 4, price: 1300, minTier: 2, shotSpeed: 0.25, description: 'A long, slender bore: the longest reach of any gun, and the ball flies 25% faster (less drift, less lead). A light ball, slow to load.' },
-  whaling_gun: { id: 'whaling_gun', name: 'Bomb-Lance Gun', damage: 52, range: 155, reload: 11, spreadDeg: 6, weight: 1.8, crewPerGun: 4, price: 1400, minTier: 2, factions: ['harpoon', 'free'], monster: 1.5, description: "The Order's whaling gun: 1.5 times the damage against monsters, beasts and the dead, a little light against a ship's oak." },
-  gunbreaker_14: { id: 'gunbreaker_14', name: '14-pdr Gunbreaker', damage: 58, range: 155, reload: 12, spreadDeg: 6, weight: 2.2, crewPerGun: 5, price: 1700, minTier: 3, factions: ['crown', 'league'], dismount: 0.12, description: 'Short and stout, laid low across the enemy gun deck: round shot dismounts a gun three times as often (+12% a hit).' },
-  shell_gun: { id: 'shell_gun', name: 'Shell Gun', damage: 66, range: 160, reload: 14, spreadDeg: 6.4, weight: 2.6, crewPerGun: 6, price: 2400, minTier: 3, factions: ['crown', 'confederacy'], fire: 0.06, description: 'Fires hollow shells packed with powder: 6% of hull hits start a fire, with any shot but grape and chain.' },
-  drowned_bronze: { id: 'drowned_bronze', name: 'Drowned Bronze', damage: 60, range: 170, reload: 12, spreadDeg: 6.4, weight: 2.2, crewPerGun: 4, price: 2600, minTier: 2, factions: ['choir'], morale: 1.2, description: "Bronze raised from the Choir's wrecks, green with the sea: each hit costs her crew 1.2 more morale, and four hands serve a gun." },
-  demi_cannon_32: { id: 'demi_cannon_32', name: '32-pdr Demi-Cannon', damage: 118, range: 170, reload: 17.5, spreadDeg: 6.8, weight: 4.4, crewPerGun: 8, price: 3600, minTier: 4, pierce: 0.25, description: 'The heaviest long gun afloat: its ball ignores a quarter of any armour. Eight hands a gun, and the weight of a small chapel.' },
+  light_6: { id: 'light_6', name: '6-pdr Gun', damage: 40, range: 145, reload: 8, spreadDeg: 3.5, weight: 1, crewPerGun: 3, price: 300, minTier: 1, description: 'Light, quick, cheap.' },
+  long_9: { id: 'long_9', name: '9-pdr Long Gun', damage: 46, range: 205, reload: 10, spreadDeg: 2, weight: 1.5, crewPerGun: 4, price: 700, minTier: 1, description: 'Long barrel, long reach, accurate.' },
+  medium_12: { id: 'medium_12', name: '12-pdr Gun', damage: 60, range: 170, reload: 11, spreadDeg: 3, weight: 2, crewPerGun: 5, price: 1000, minTier: 2, description: 'The workhorse of every navy.' },
+  heavy_18: { id: 'heavy_18', name: '18-pdr Gun', damage: 80, range: 180, reload: 13.5, spreadDeg: 3, weight: 3, crewPerGun: 6, price: 1800, minTier: 3, description: 'Hull-breaker. Heavy and slow.' },
+  carronade_24: { id: 'carronade_24', name: '24-pdr Carronade', damage: 110, range: 100, reload: 10, spreadDeg: 5, weight: 1.6, crewPerGun: 4, price: 1200, minTier: 2, description: 'Smasher. Devastating at pistol range, useless beyond it.' },
+  minion_4: { id: 'minion_4', name: '4-pdr Minion', damage: 26, range: 135, reload: 5.5, spreadDeg: 3.8, weight: 0.6, crewPerGun: 2, price: 200, minTier: 1, description: 'A little gun two hands can serve: quick to load and light on the deck, for a ship short of men.' },
+  perrier: { id: 'perrier', name: 'Stone Perrier', damage: 30, range: 120, reload: 8.5, spreadDeg: 5, weight: 1, crewPerGun: 3, price: 450, minTier: 1, factions: ['free', 'confederacy', 'brokers'], crewMul: 1.4, sailMul: 1.5, description: 'Throws stone shot that shatters on the side: men struck down ×1.4 and canvas torn ×1.5 a ball, the hull barely scratched. Cast in the free ports.' },
+  culverin_8: { id: 'culverin_8', name: '8-pdr Culverin', damage: 36, range: 250, reload: 12, spreadDeg: 1.4, weight: 2, crewPerGun: 4, price: 1300, minTier: 2, shotSpeed: 0.25, description: 'A long, slender bore: the longest reach of any gun, and the ball flies 25% faster (less drift, less lead). A light ball, slow to load.' },
+  whaling_gun: { id: 'whaling_gun', name: 'Bomb-Lance Gun', damage: 52, range: 155, reload: 11, spreadDeg: 3, weight: 1.8, crewPerGun: 4, price: 1400, minTier: 2, factions: ['harpoon', 'free'], monster: 1.5, description: "The Order's whaling gun: 1.5 times the damage against monsters, beasts and the dead, a little light against a ship's oak." },
+  gunbreaker_14: { id: 'gunbreaker_14', name: '14-pdr Gunbreaker', damage: 58, range: 155, reload: 12, spreadDeg: 3, weight: 2.2, crewPerGun: 5, price: 1700, minTier: 3, factions: ['crown', 'league'], dismount: 0.12, description: 'Short and stout, laid low across the enemy gun deck: round shot dismounts a gun three times as often (+12% a hit).' },
+  shell_gun: { id: 'shell_gun', name: 'Shell Gun', damage: 66, range: 160, reload: 14, spreadDeg: 3.2, weight: 2.6, crewPerGun: 6, price: 2400, minTier: 3, factions: ['crown', 'confederacy'], fire: 0.06, description: 'Fires hollow shells packed with powder: 6% of hull hits start a fire, with any shot but grape and chain.' },
+  drowned_bronze: { id: 'drowned_bronze', name: 'Drowned Bronze', damage: 60, range: 170, reload: 12, spreadDeg: 3.2, weight: 2.2, crewPerGun: 4, price: 2600, minTier: 2, factions: ['choir'], morale: 1.2, description: "Bronze raised from the Choir's wrecks, green with the sea: each hit costs her crew 1.2 more morale, and four hands serve a gun." },
+  demi_cannon_32: { id: 'demi_cannon_32', name: '32-pdr Demi-Cannon', damage: 118, range: 170, reload: 17.5, spreadDeg: 3.4, weight: 4.4, crewPerGun: 8, price: 3600, minTier: 4, pierce: 0.25, description: 'The heaviest long gun afloat: its ball ignores a quarter of any armour. Eight hands a gun, and the weight of a small chapel.' },
 };
 
 export const GUN_IDS = Object.keys(GUNS) as GunId[];

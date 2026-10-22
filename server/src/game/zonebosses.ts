@@ -8,7 +8,7 @@
 
 import { notifySea } from './tgnotify.ts'; // the Telegram notices (owner, 2026-10-16)
 import { xpAt } from '../../../shared/src/data/xpcurve.ts'; // docs/26
-import { ZB_GRUDGE, ZB_LIFE, ZB_MIN_SHARE, ZB_REACH, ZB_ROAM, ZB_WARN, ZONE_BOSSES, zbSlot, zbSlotStart } from '../../../shared/src/data/zonebosses.ts';
+import { ZB_CLOSE, ZB_GRUDGE, ZB_LIFE, ZB_MIN_SHARE, ZB_REACH, ZB_ROAM, ZB_WARN, ZONE_BOSSES, zbSlot, zbSlotStart } from '../../../shared/src/data/zonebosses.ts';
 import type { ZoneBossDef } from '../../../shared/src/data/zonebosses.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { SHIP_SLOTS, makeItem } from '../../../shared/src/data/items.ts';
@@ -288,7 +288,7 @@ export function stepZoneBosses(game: Game, dt: number): void {
     if (near) {
       // The nearest who fired on her: closer if far, broadside on when within her reach.
       const toward = Math.atan2(near.state.x - ship.state.x, -(near.state.y - ship.state.y));
-      if (nd > ZB_REACH * 0.6) {
+      if (nd > ZB_CLOSE) {
         tx = near.state.x;
         ty = near.state.y;
         speed = 15;

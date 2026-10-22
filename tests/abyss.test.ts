@@ -182,15 +182,15 @@ test('the Ancient Leviathan is three times the beast; the Eye shrugs off shot un
   steps(game, SEC + 1);
   assert.equal(f.phase, 1);
   assert.ok(game.windFor(s.ship!).strength < 0.05);
-  // The fall: only from within 900 m.
+  // The fall: only from within 450 m (900 before the reaches were halved, owner 2026-10-22).
   e.hull = e.stats.hullMax * 0.3;
   steps(game, SEC + 1);
   assert.equal(f.phase, 2);
-  at(game, s, eye.x + 1200, eye.y);
+  at(game, s, eye.x + 600, eye.y);
   hp = e.hull;
   applyDamage(game, e, { hull: 400 }, s.ship!);
   assert.equal(e.hull, hp);
-  at(game, s, eye.x + 600, eye.y);
+  at(game, s, eye.x + 400, eye.y);
   applyDamage(game, e, { hull: 400 }, s.ship!);
   assert.ok(e.hull < hp);
   reward(game, f, eye.x, eye.y);

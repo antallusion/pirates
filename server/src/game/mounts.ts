@@ -88,7 +88,7 @@ export function fireMount(game: Game, ship: ShipEntity, tx: number, ty: number):
       ship.ammo.chain -= 3;
       const balls: [number, number, number, number, number][] = [];
       for (let i = 0; i < 3; i++) {
-        const bh = h + game.rng.gauss() * 6 * DEG * ship.stats.spreadMul;
+        const bh = h + game.rng.gauss() * 3 * DEG * ship.stats.spreadMul;
         game.projectiles.push({ owner: ship.id, x: ship.state.x, y: ship.state.y, heading: bh, speed: AMMO.chain.speed * SPEED_SCALE, dist: reach, traveled: 0, ammo: 'chain', damage: 34 * ship.stats.gunDamageMul, maxRange: def.range, delay: i * 0.15 });
         balls.push([Math.round(ship.state.x), Math.round(ship.state.y), Math.round(bh * 1000) / 1000, Math.round(reach), i * 150]);
       }
@@ -138,13 +138,13 @@ export function fireMount(game: Game, ship: ShipEntity, tx: number, ty: number):
     case 'swivel_gun': {
       if (ship.ammo.grape < 2) return 'The musketoons need grapeshot';
       ship.ammo.grape -= 2;
-      pivotShot(game, ship, h, reach, def.range, 'grape', 3, 20, 10);
+      pivotShot(game, ship, h, reach, def.range, 'grape', 3, 20, 5);
       break;
     }
     case 'long_tom': {
       if (ship.ammo.round < 1) return 'The Long Tom needs round shot';
       ship.ammo.round -= 1;
-      pivotShot(game, ship, h, reach, def.range, 'round', 1, 130, 2.5);
+      pivotShot(game, ship, h, reach, def.range, 'round', 1, 130, 1.2);
       break;
     }
     case 'rocket_frame': {
@@ -222,8 +222,7 @@ export function fireMount(game: Game, ship: ShipEntity, tx: number, ty: number):
   return null;
 }
 
-/** A pivot gun's shot (the musketoons, the Long Tom): `n` balls of `ammo` on bearing `h`, `spread` degrees apart (the
- *  spreads widened as the reaches were halved, 2026-10-22: the same metres wide at her reach's end). */
+/** A pivot gun's shot (the musketoons, the Long Tom): `n` balls of `ammo` on bearing `h`, `spread` degrees apart. */
 function pivotShot(game: Game, ship: ShipEntity, h: number, reach: number, range: number, ammo: 'grape' | 'round', n: number, damage: number, spread: number): void {
   const balls: [number, number, number, number, number][] = [];
   for (let i = 0; i < n; i++) {

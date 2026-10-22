@@ -1118,14 +1118,15 @@ const minigameWindow = new MinigameWindow((m) => net.send(m));
 setInterval(() => {
   if (minigameWindow.isOpen && (state.boardTac || state.boardFight || state.pursuit || dangerClose())) minigameWindow.close();
 }, 700);
-/** A hostile sail within 900 m, or a beast at her side (300 m): the shoals of sharks off a harbour are no reason. */
+/** A hostile sail within 450 m, or a beast at her side (150 m): the shoals of sharks off a harbour are no reason (the
+ *  reaches halved, owner 2026-10-22: 900 and 300 m before). */
 function dangerClose(): boolean {
   const o = state.ownDisplay;
   if (!o || state.self?.dockedAt) return false;
   for (const x of state.ships.values()) {
     if (x.id === state.entityId || !x.cur || !(x.cur.flags & 64)) continue;
     const d = Math.hypot(x.cur.x - o.x, x.cur.y - o.y);
-    if (d < (x.info?.npcRole === 'beast' ? 300 : 900)) return true;
+    if (d < (x.info?.npcRole === 'beast' ? 150 : 450)) return true;
   }
   return false;
 }
@@ -4071,7 +4072,7 @@ function sendGunnery(): void {
 }
 
 /** The boarding chance is asked for a mark this near her at most (metres). */
-const ODDS_REACH = 1500;
+const ODDS_REACH = 750;
 /** The target frame's boarding chance, asked every few seconds (docs/23 item 49). */
 let oddsId: number | null = null, oddsAt = 0;
 function askOdds(id: number | null): void {
@@ -4451,7 +4452,7 @@ function pollPad(dt: number): void {
         break;
       case BTN.LT:
       case BTN.RT:
-        padAim = { side: e.b === BTN.LT ? 'port' : 'starboard', range: padAim?.range ?? 320, lead: 0 };
+        padAim = { side: e.b === BTN.LT ? 'port' : 'starboard', range: padAim?.range ?? 150, lead: 0 };
         break;
       case BTN.UP:
         if (own) {
@@ -4478,7 +4479,7 @@ function pollPad(dt: number): void {
   }
   // Aim: the right stick sets range (up = further) and lead; a locked ship draws the aim onto her.
   if (padAim && own) {
-    padAim.range = clamp(padAim.range - ry * 450 * dt, 60, 900);
+    padAim.range = clamp(padAim.range - ry * 225 * dt, 30, 450); // (to the mortar's 450 m, the longest reach afloat)
     padAim.lead = clamp(padAim.lead + rx * 250 * dt, -250, 250);
     const tgt = padTarget !== null ? state.ships.get(padTarget) : undefined;
     if (tgt) aimAt(tgt.cur.x, tgt.cur.y);
@@ -4490,7 +4491,7 @@ function pollPad(dt: number): void {
   } else renderer.look = { x: rx * 350, y: ry * 350 };
 }
 
-/** The nearest ship toward the right stick (or simply the nearest) within 1.5 km. */
+/** The nearest ship toward the right stick (or simply the nearest) within 750 m. */
 function lockTarget(rx: number, ry: number): number | null {
   const own = state.ownDisplay;
   if (!own) return null;
@@ -4499,7 +4500,7 @@ function lockTarget(rx: number, ry: number): number | null {
   for (const s of state.ships.values()) {
     if (s.id === state.entityId) continue;
     const d = dist(s.cur.x, s.cur.y, own.x, own.y);
-    if (d > 1500) continue;
+    if (d > 750) continue;
     const off = aim === null ? 0 : Math.abs(Math.atan2(Math.sin(Math.atan2(s.cur.x - own.x, -(s.cur.y - own.y)) - aim), Math.cos(Math.atan2(s.cur.x - own.x, -(s.cur.y - own.y)) - aim)));
     const sc = d * (1 + off * 2);
     if (sc < score) {
@@ -4649,7 +4650,7 @@ function step(t: number): void {
     audio.ambience(state.wind[1], state.weather, dt);
     if (own) {
       // The score follows the scene (docs/07 §10.4); the rigging creaks with the load; the bells keep the watch.
-      const hostileNear = [...state.ships.values()].some((x) => x.cur.flags & SF.HOSTILE && dist(x.cur.x, x.cur.y, own.x, own.y) < 1200);
+      const hostileNear = [...state.ships.values()].some((x) => x.cur.flags & SF.HOSTILE && dist(x.cur.x, x.cur.y, own.x, own.y) < 600);
       audio.frame(dt, {
         docked: !!state.self?.dockedAt,
         combat: !!state.you?.combat,

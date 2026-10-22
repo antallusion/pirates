@@ -1073,7 +1073,7 @@ function serpentSecond(game: Game, f: Fight, body: ShipEntity, ships: ShipEntity
     sayTo(game, ships, 'The Serpent breaks away for the shoals! Only small, fast ships can keep up — and big guns cannot hit it in the shallows.', 'info');
   }
   if (f.phase === 1) {
-    const near = ships.some((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 1200);
+    const near = ships.some((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 600);
     if (near) f.aloneSince = now;
     else if (now - f.aloneSince > 60) return void end(game, f, 'escaped');
     return;
@@ -1081,7 +1081,7 @@ function serpentSecond(game: Game, f: Fight, body: ShipEntity, ships: ShipEntity
   // The coil: a ring around the thick of the fleet.
   if (!f.ring && ships.length && every(f, 'coil', now, 40)) {
     let cx = 0, cy = 0;
-    const close = ships.filter((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 1500);
+    const close = ships.filter((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 750);
     for (const s of close) {
       cx += s.state.x;
       cy += s.state.y;
@@ -1114,7 +1114,7 @@ function serpentSecond(game: Game, f: Fight, body: ShipEntity, ships: ShipEntity
   }
   // Bile: canvas-eating spit.
   if (ships.length && every(f, 'bile', now, 8)) {
-    const t = game.rng.pick(ships.filter((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 900).concat([]));
+    const t = game.rng.pick(ships.filter((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 450).concat([]));
     if (t) {
       f.bile = { x: t.state.x, y: t.state.y, until: now + 3 };
       game.emit({ k: 'fx', fx: 'bile', x: Math.round(t.state.x), y: Math.round(t.state.y), r: 70 }, t.state.x, t.state.y);
@@ -1173,7 +1173,7 @@ function motherSecond(game: Game, f: Fight, body: ShipEntity, ships: ShipEntity[
     game.emit({ k: 'fx', fx: 'claws', x: Math.round(body.state.x), y: Math.round(body.state.y), r: 130 }, body.state.x, body.state.y);
   }
   if (every(f, 'debris', now, 6)) {
-    const far = ships.filter((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 1400);
+    const far = ships.filter((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 700);
     if (far.length) {
       const big = far.reduce((a, b) => (b.cls.tier > a.cls.tier ? b : a));
       game.strikes.push({ at: now + 2.5, x: big.state.x + game.rng.gauss() * 25, y: big.state.y + game.rng.gauss() * 25, radius: 50, hull: 90 + big.stats.hullMax * 0.02, rudder: 0.05, owner: body.id, slow: 0, shells: 1, fx: 'mortar' });
@@ -1252,7 +1252,7 @@ export function bossIncoming(game: Game, target: ShipEntity, d: DamagePacket, so
   switch (f.kind) {
     case 'abyss_eye':
       if (f.phase < 2) mul = 0.25; // it only truly opens as it falls
-      else if (!source || dist(source.state.x, source.state.y, target.state.x, target.state.y) > 900) return null;
+      else if (!source || dist(source.state.x, source.state.y, target.state.x, target.state.y) > 450) return null;
       break;
     case 'leviathan':
     case 'ancient_leviathan': {
@@ -1582,7 +1582,7 @@ function view(game: Game, f: Fight, body: ShipEntity, s: PlayerSession): BossVie
 function hintFor(game: Game, f: Fight, body: ShipEntity): string {
   switch (f.kind) {
     case 'abyss_eye':
-      return f.phase === 0 ? 'The black storm: the wind leaps every few seconds, lightning finds the tallest mast. The Eye shrugs off shot (×0.25).' : f.phase === 1 ? 'The dead wind: no wind at all within 3 km, and the Echoes rise. Row, tow, fight.' : 'The fall: the sea pours into the Eye. Only guns within 900 m of it reach it — and too close, it swallows you.';
+      return f.phase === 0 ? 'The black storm: the wind leaps every few seconds, lightning finds the tallest mast. The Eye shrugs off shot (×0.25).' : f.phase === 1 ? 'The dead wind: no wind at all within 3 km, and the Echoes rise. Row, tow, fight.' : 'The fall: the sea pours into the Eye. Only guns within 450 m of it reach it — and too close, it swallows you.';
     case 'ancient_leviathan':
     case 'leviathan':
       if (f.whirl) return 'Sail WITH the whirlpool current — against it you are drawn into the mouth.';
