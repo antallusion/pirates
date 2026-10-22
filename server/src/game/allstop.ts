@@ -37,15 +37,22 @@ export function lastAllStop(s: PlayerSession): { why: StopWhy; what: string; at:
   return last.get(s) ?? null;
 }
 
-/** The sail her phone keeps sending is held off until she sets another step (Game.ts 'input'). */
+/** The sail her phone keeps sending is held off until she sets another step (Game.ts 'input'; -1: her phone has sent
+ *  nothing yet — the first step it sends is the one held off). */
 export function holdSail(s: PlayerSession): void {
-  s.sailHold = s.lastSail >= 0 ? s.lastSail : 0;
+  s.sailHold = s.lastSail >= 0 ? s.lastSail : -1;
 }
 
-/** Every course and every sail of hers taken in: she lies still until her own hand sets sail or gives a course. */
-export function allStop(game: Game, s: PlayerSession | null | undefined, why: StopWhy, what = ''): void {
+/** Every course and every sail of hers taken in: she lies still until her own hand sets sail or gives a course.
+ *  `about`: the ship it is about (sunk by her, struck to her) — while «Атаковать» runs on another ship, that fight goes
+ *  on (a bystander striking her colours does not stop the chase of the mark she chose). */
+export function allStop(game: Game, s: PlayerSession | null | undefined, why: StopWhy, what = '', about?: number): void {
   const ship = s?.ship;
   if (!s || !ship || !ship.alive || ship.docked) return;
+  if (about !== undefined) {
+    const run = pursuitOf(ship);
+    if (run && run.roam === undefined && run.target !== about && game.ships.get(run.target)?.alive) return;
+  }
   last.set(s, { why, what, at: game.now });
   // (first: the phone puts its sail control down and keeps the helmsman's «the helm is yours» quiet)
   game.sendTo(s, { t: 'allstop', why });
@@ -138,5 +145,5 @@ export function cardSent(game: Game, s: PlayerSession, msg: ServerMsg): void {
   }
   if (on.has(msg.t)) return;
   on.add(msg.t);
-  allStop(game, s, 'card', msg.t);
+  allStop(game, s, 'card', msg.t, msg.t === 'surrender_offer' ? msg.offer?.id : undefined);
 }

@@ -2336,7 +2336,7 @@ export class Game {
       if (owner) return this.creditKill(owner, victim, how);
     }
     if (!s || !s.profile) return;
-    allStop(this, s, 'sunk'); // owner, 2026-10-22: a ship sunk by her — the fight is over, she lies still
+    allStop(this, s, 'sunk', '', victim.id); // owner, 2026-10-22: a ship sunk by her — the fight is over, she lies still
     ownShipsKill(this, s, victim); // her own ships near share in it (docs/15 item 4)
     const p = s.profile;
     // The colour of the prize (canon D12 as WoW's, docs/26): the captain's level against the ship's fighting level —
@@ -3522,8 +3522,10 @@ export class Game {
         return;
       case 'input': {
         if (!Number.isFinite(msg.rudder) || !Number.isFinite(msg.sail)) return;
-        // (the step her phone sends, whoever has the wheel: the one held off after a stop — allstop.ts)
+        // (the step her phone sends, whoever has the wheel: the one held off after a stop — allstop.ts; a stop that came
+        // before her phone ever spoke holds off the first step it sends)
         s.lastSail = clamp(Math.round(msg.sail), 0, SAIL_STEPS.length - 1);
+        if (s.sailHold === -1) s.sailHold = s.lastSail;
         if (s.profile?.company.mutiny) return; // the mutineers hold the wheel
         if (s.pendingBoarding) {
           ship.input = { rudder: 0, sailTarget: 0 }; // hove to by her prize until the spoils are settled
