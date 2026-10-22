@@ -549,7 +549,7 @@ export const DATA_RU_CORE: Record<string, string> = {
   "ships.MODULES.ghost_timbers.name": "Призрачные шпангоуты",
   "ships.MODULES.ghost_timbers.description": "Бледное дерево с костяных кладбищ Простора, подогнанное по чертежам корабля, который не должен держаться на воде. Лёгкое, тихое, жуткое.",
   "ships.MODULES.choir_bell.name": "Колокол Хора",
-  "ships.MODULES.choir_bell.description": "Бронзовый колокол Хора на баке. Его звон заглушает Песнь Утопленного Кита для всех кораблей в пределах 400 м.",
+  "ships.MODULES.choir_bell.description": "Бронзовый колокол Хора на баке. Его звон заглушает Песнь Утопленного Кита для всех кораблей в пределах 200 м.",
   "ships.MODULES.lightning_rod.name": "Громоотвод",
   "ships.MODULES.lightning_rod.description": "Медь вдоль грот-мачты до самой воды: удары молнии наносят на 60% меньше урона.",
   "ships.MODULES.bone_culverin.name": "Костяные кулеврины",

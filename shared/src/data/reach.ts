@@ -37,10 +37,10 @@ export const BOARD_REL_SPEED = 8;
 /** Bow and Stern (the talent) and Red Hook (the ultimate): grapples from any quarter within this of the beam. */
 export const BOARD_ARC_WIDE_DEG = 70;
 /** A parley across the water (the white flag asked of a ship firing on her): hull to hull, no farther than the guns
- *  carry — and only for a ship on the captain's screen (the client's own test). Was 2.5 km. */
-export const REACH_HAIL = 500;
+ *  carry — and only for a ship on the captain's screen (the client's own test). Was 2.5 km, then 500 m (owner, 2026-10-22: «переговоры тоже 450»). */
+export const REACH_HAIL = 450;
 /** The spyglass: as far as the glass shows her (and only what is on the captain's screen, the client's own test). */
-export const SIGHT_GLASS = 1200;
+export const SIGHT_GLASS = 600;
 /** The server's allowance over a reach (metres): the quarter second between her screen and its own reckoning. */
 export const REACH_SLACK = 8;
 /** A token on the water (a stack, a drift, a find, a bottle, a cache) is about this big about its point (metres). */
