@@ -135,6 +135,12 @@ export const NPC_JOINED_SEC = 20;
 /** The sea's own ships see a captain at this share of their sight (ships.ts `detection`, the captain's own view of the
  *  sea untouched): the owner's «в два раза сокращай дальность всего остального» for their aggro. */
 export const NPC_SIGHT = 0.5;
+/** The sea's own come round to present a side to their mark from this far (m), and close on her in the spiral of their
+ *  fighting helm (the band NPC_OPEN_FIRE·FIGHT_NEAR–FIGHT_HOLD), not bow on. */
+export const NPC_PRESENT_FROM = 400;
+/** …and from this near (m) they are well round, their side half presented (the easy turn in of their fighting helm): a
+ *  captain running in for the grapples finds her mark's beam, not her bow (seafight.test: about 13 s from 700 m). */
+export const NPC_EASY_FROM = 250;
 
 /** Whether `ship` may let her guns go at `target` `d` metres off: a captain's always (to her guns' reach); the sea's own
  *  only within NPC_OPEN_FIRE, or in a fight already joined. */
@@ -832,6 +838,9 @@ export const WIND_EYE_COST = 1.5;
  *  FIGHT_NEAR of it. At the very edge of it two ships used to circle just out of range, firing nothing but the chasers. */
 export const FIGHT_HOLD = 0.92;
 export const FIGHT_NEAR = 0.7;
+/** …and the band is never narrower than this (m): a ship's turning circle did not shrink when the reaches were halved
+ *  (owner, 2026-10-22), and a band of 37 m (0.7–0.92 of a 12-pounder's 170) threw her out of it at every turn. */
+export const FIGHT_BAND = 70;
 /** What a broadside's course onto something she would strike costs her in the choice of side (more than any other). */
 export const FOUL_COST = 4;
 
@@ -868,7 +877,14 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
   }
   // (The close fight runs straight at a mark past half as far again as the band's far edge: one running from her gained
   // on her all the way out to 1.5 × her reach, her bow 50° off it.)
-  if (d > (hold ? hold.far * 1.5 : maxRange * 1.5)) {
+  // (The sea's own, their band held inside NPC_OPEN_FIRE: they come round to present a side from NPC_PRESENT_FROM, not
+  // run bow on at their mark to 1.5 × the band and spin there — owner 2026-10-22, the reaches halved; a captain coming
+  // alongside found her mark weaving across her bow.)
+  const own = brain.captain || ship.isPlayer;
+  const runIn = hold ? hold.far * 1.5 : own ? maxRange * 1.5 : Math.max(maxRange * 1.5, NPC_PRESENT_FROM);
+  // (…and they are well round, their side half presented, from NPC_EASY_FROM in: the easy turn in to their band)
+  const easyFrom = own ? 0 : NPC_EASY_FROM;
+  if (d > runIn) {
     steer(game, ship, brain, bearing, 1, false, d);
   } else if (mode === 'board' && d < ALONGSIDE_FROM) {
     alongsideHelm(game, ship, brain, target);
@@ -891,8 +907,8 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
       }
       // Boarders fight at chain-shot range to strip the rigging; others at their gun's comfortable range.
       const range = mode === 'rig' ? Math.min(rangeOf(side), effectiveRange(ship, side, 'chain')) : rangeOf(side);
-      if (d > range * FIGHT_HOLD) return wrapAngle(h + inward * 0.85);
-      if (d > range * FIGHT_NEAR) return wrapAngle(h + inward * 0.4);
+      if (d > Math.max(range * FIGHT_HOLD, easyFrom)) return wrapAngle(h + inward * 0.85);
+      if (d > Math.min(range * FIGHT_NEAR, range * FIGHT_HOLD - FIGHT_BAND)) return wrapAngle(h + inward * 0.4);
       if (d < range * 0.35 && mode === 'guns') return wrapAngle(h - inward * 0.35);
       return h;
     };
