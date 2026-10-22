@@ -45,6 +45,24 @@ export interface TgWebApp {
   onEvent?(ev: string, cb: (e?: { error?: string; isFullscreen?: boolean }) => void): void;
   BackButton?: { show(): void; hide(): void; onClick(cb: () => void): void };
   openInvoice?(url: string, cb?: (status: InvoiceStatus) => void): void;
+  openLink?(url: string): void;
+  openTelegramLink?(url: string): void;
+}
+
+/** A link out of the Mini App (the legal pages, the site, a t.me link): Telegram's own opener — an `<a target=_blank>`
+ *  in its web view did nothing on some phones or took the game's own page away (QA 2026-10-22). Null: not a link out. */
+export function tgLinkOut(a: { href: string; target: string; hasAttribute(n: string): boolean }, here: string): { url: string; tg: boolean } | null {
+  if (!a.href || a.hasAttribute('download')) return null;
+  let u: URL;
+  try {
+    u = new URL(a.href, here);
+  } catch {
+    return null;
+  }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+  const tg = u.hostname === 't.me';
+  if (!tg && a.target !== '_blank' && u.origin === new URL(here).origin) return null;
+  return { url: u.href, tg };
 }
 
 type G = typeof globalThis & { Telegram?: { WebApp?: TgWebApp } };
@@ -216,6 +234,21 @@ function setupMiniApp(w: TgWebApp): void {
   const veil = document.querySelector('#rotate-lock small');
   if (veil && !document.querySelector('#rotate-lock .tg-rot')) veil.insertAdjacentHTML('afterend', `<small class="tg-rot">${esc(L('rotateTg'))}</small>`);
   applyInsets(w);
+  // Links out by Telegram's opener (the settings' legal pages, the site's): a tap on an <a target=_blank>
+  if (w.openLink) {
+    document.addEventListener('click', (e) => {
+      const a = (e.target as HTMLElement | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
+      const out = a ? tgLinkOut(a, location.href) : null;
+      if (!out) return;
+      e.preventDefault();
+      try {
+        if (out.tg && w.openTelegramLink) w.openTelegramLink(out.url);
+        else w.openLink!(out.url);
+      } catch {
+        window.open(out.url, '_blank');
+      }
+    }, true);
+  }
   // Telegram's own turn, fullscreen and bars: the insets, and the size looked at again (its view reports the turn late)
   for (const ev of ['safeAreaChanged', 'contentSafeAreaChanged', 'fullscreenChanged', 'viewportChanged']) {
     w.onEvent?.(ev, () => {

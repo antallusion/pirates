@@ -239,6 +239,13 @@ export function campaignTick(game: Game, s: PlayerSession): void {
   const qs = campaignActive(p);
   const q = qs ? QUESTS_BY_ID[qs.id] : undefined;
   const st = q?.steps[qs!.step];
+  const old = watches.get(s);
+  if (old && (!qs || old.step !== `${qs.id}:${qs.step}`)) {
+    // The step done (or another): its foes still about are called off — the opening's spare tenders hunted her on to
+    // «Свой берег» and their pirates brought packs (QA 2026-10-22).
+    releaseFoes(game, old.ids);
+    watches.delete(s);
+  }
   if (!qs || !st || (st.type !== 'sink' && st.type !== 'board' && st.type !== 'beast')) return;
   if (st.type === 'sink' && st.role && st.role !== 'pirate' && st.role !== 'ghost') return; // patrols and merchants sail the sea anyway
   // docs/36: the fight is the location's — it puts out in its waters once she comes near them
@@ -281,9 +288,25 @@ export function campaignTick(game: Game, s: PlayerSession): void {
   w.told = true;
 }
 
+/** A campaign fight's foes no longer wanted: they give up the hunt and leave the sea a minute later (a beast is the
+ *  sea's own and stays). */
+function releaseFoes(game: Game, ids: number[]): void {
+  for (const id of ids) {
+    const b = game.npcs.get(id);
+    if (!b || b.huntAccount === null) continue;
+    b.huntAccount = null;
+    b.target = null;
+    b.chase = null;
+    b.expiresAt = Math.min(b.expiresAt || Infinity, game.now + 60);
+  }
+}
+
 /** Her campaign's foes now (goalroute.ts: the run makes for them first). */
 export function campaignFoes(game: Game, s: PlayerSession): number[] {
-  return (watches.get(s)?.ids ?? []).filter((id) => game.ships.get(id)?.alive);
+  const w = watches.get(s), qs = s.profile ? campaignActive(s.profile) : null;
+  // (the step's own: a step just done leaves its foes to be called off at the next tick, never the run's mark)
+  if (!w || !qs || w.step !== `${qs.id}:${qs.step}`) return [];
+  return w.ids.filter((id) => game.ships.get(id)?.alive);
 }
 
 // ------------------------------------------------------------------ what the screens read

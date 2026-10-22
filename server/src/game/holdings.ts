@@ -426,6 +426,8 @@ export function rentIsland(game: Game, s: PlayerSession, islandId: number, days:
   const p = s.profile!;
   const now = game.wallNow();
   const cur = game.holdings.get(game, islandId);
+  // An island held outright (a captain's town) is no one's to lease: her own was offered at 16 800 a week (QA 2026-10-22)
+  if (game.holdings.own(game, s.accountId)?.island === islandId) return `${isl.name} is yours for good: no lease is needed`;
   if (cur && !mayUse(game, cur, s.accountId) && cur.until + GRACE_MS > now) return `${isl.name} is leased to ${cur.owner.name}`;
   // A guild lease is paid from the guild's treasury; a captain's from their purse.
   const guild = forGuild ? guildCanLease(game, s) : null;
@@ -958,11 +960,13 @@ export function holdingsFor(game: Game, s: PlayerSession): { mine: HoldingView[]
   const ship = s.ship;
   const mine = Object.values(game.holdings.map(game)).filter((h) => mayUse(game, h, s.accountId)).map((h) => holdingView(game, h, s.accountId));
   const near = ship ? islandNear(game, ship) : null;
-  const here = near ? islandOffer(game, near) : null;
+  // (her own town's island is hers for good: no lease of it offered — QA 2026-10-22, it was listed at 16 800 a week)
+  const town = game.holdings.own(game, s.accountId)?.island;
+  const here = near ? { ...islandOffer(game, near), ...(near.id === town ? { why: 'Held for good: not for lease' } : {}) } : null;
   let region: IslandOffer[] = [];
   if (ship?.docked) {
     const port = game.portById(ship.docked);
-    if (port) region = game.world.islands.filter((i) => i.region === port.region && !i.portId).map((i) => islandOffer(game, i)).filter((o) => !o.why).sort((a, b) => dist(a.x, a.y, port.x, port.y) - dist(b.x, b.y, port.x, port.y)).slice(0, 20);
+    if (port) region = game.world.islands.filter((i) => i.region === port.region && !i.portId && i.id !== town).map((i) => islandOffer(game, i)).filter((o) => !o.why).sort((a, b) => dist(a.x, a.y, port.x, port.y) - dist(b.x, b.y, port.x, port.y)).slice(0, 20);
   }
   return { mine, here, region, sieges: siegesFor(game, s) };
 }

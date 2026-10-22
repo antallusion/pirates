@@ -309,7 +309,9 @@ export function departOrAsk(state: ClientState, send: (m: ClientMsg) => void, go
     const always = offers.length ? `<label class="check dp-always" data-hint="${esc(U2('depart.alwaysHint'))}" title="${esc(U2('depart.alwaysHint'))}"><input type="checkbox" data-dpalways${settings().autoTopUp ? ' checked' : ''}> ${esc(U2('depart.always'))}</label>` : '';
     const vs = voyageShip(state)!;
     const freeAfter = Math.max(0, vs.holdFree - plan.buy.reduce((a, o) => a + o.vol(o.n), 0));
-    const keep = plan.buy.length ? ` <span class="dp-free muted">· ${esc(L('depart.keepFree', { free: Math.floor(freeAfter), max: Math.round(vs.holdVolume) }))}</span>` : '';
+    // (the hold's word only when something bought takes room in it: under a repair alone it read as the thing short — QA
+    // 2026-10-22)
+    const keep = plan.buy.some((o) => o.vol(o.n) > 0) ? ` <span class="dp-free muted">· ${esc(L('depart.keepFree', { free: Math.floor(freeAfter), max: Math.round(vs.holdVolume) }))}</span>` : '';
     const head = `<div class="dp-head"><h3 id="dp-title" class="dp-title">${icon('stat_sails', '', 'ico-md')}${esc(L('depart.title'))}</h3>${offers.length ? `<p class="dp-lead">${esc(L('depart.lead', { min: VOYAGE_MINUTES }))}${keep}</p>` : `<p class="dp-lead dp-ok">${esc(L('depart.ready'))}</p>`}${plan.buy.length && !plan.all ? `<p class="dp-warn">${esc(L('depart.short', { gold: fmt(gold) }))}</p>` : ''}${always}</div>`;
     const body = `${head}${offers.length ? `<div class="dp-list">${offers.map((o, i) => rowHtml(o, i, state)).join('')}</div>` : ''}`;
     const foot = `${plan.buy.length ? buttonHtml({ kind: 'primary', size: 'md', label: plan.all ? L('depart.buyAll', { cost: fmt(plan.cost) }) : L('depart.buyFit', { cost: fmt(plan.cost) }), data: { dp: 'all' } }) : ''}${buttonHtml({ kind: offers.length && plan.buy.length ? 'secondary' : 'primary', size: 'md', label: offers.length ? L('depart.sailAnyway') : L('depart.sail'), data: { dp: 'sail' } })}${buttonHtml({ kind: 'secondary', label: L('depart.stay'), data: { dp: 'stay' } })}`;

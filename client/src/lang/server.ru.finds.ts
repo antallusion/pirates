@@ -37,7 +37,7 @@ export const SERVER_RU_FINDS: Record<string, string> = {
   'The gulls are over a shoal: the fishing is marked on your chart. Cast a net there.': 'Чайки над косяком: место лова отмечено на вашей карте. Бросайте там сеть.',
   'The gulls scatter: the shoal has gone deep.': 'Чайки разлетаются: косяк ушёл на глубину.',
   'The lairs are hunted out today: their spoils are half now (the lesson is whole; more as your hours at sea grow).': 'Логова сегодня уже опустошены: добыча вполовину (опыт полный; больше — с часами в море).',
-  'The sailors of the sinking boat come aboard: {0} deckhands sign on for nothing but their lives.': 'Моряки с тонущей шлюпки поднимаются на борт: {0} юнг нанимаются даром — за спасённую жизнь.',
+  'The sailors of the sinking boat come aboard: {0} deckhands sign on for nothing but their lives.': 'Моряки с тонущей шлюпки поднимаются на борт, юнги нанимаются даром — за спасённую жизнь: {0}.',
   'The sea marks are picked over today: what the boats find now pays half (more as your hours at sea grow).': 'Морские знаки сегодня уже обобраны: находки шлюпок — вполовину (больше — с часами в море).',
   'The sharks are driven off and the chest hauled up: {0} silver and {1} {2}.': 'Акулы отогнаны, сундук поднят: {0} серебра и {2} — {1}.',
   'The sharks are driven off and the chest hauled up: {0} silver.': 'Акулы отогнаны, сундук поднят: {0} серебра.',

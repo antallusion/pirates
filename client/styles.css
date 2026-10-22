@@ -2057,6 +2057,8 @@ body.has-poster .poster .btn { max-width: 100%; }
 .doll-slot .tt-ink { width: 100%; height: 100%; border-radius: 0; }
 .doll-empty { color: rgba(232, 196, 106, 0.55); font-size: 24px; line-height: 1; }
 .doll-lock { color: #8d8d93; font-size: 13px; font-weight: 700; }
+/* the Old Needle's place: its needle, greyed (a «✒» glyph read as a dash on phones, QA 2026-10-22) */
+.doll-slot.locked .doll-ico--lock { filter: grayscale(1) brightness(0.6); opacity: 0.7; }
 .tt-chosen { font-size: 13px; text-align: center; margin: 4px 0 0; }
 @media (max-width: 380px) { .doll { --ds: 52px; } }
 /* The gear window's captain sheet: five squares down each side. */
@@ -2648,6 +2650,11 @@ body.touch .base-board .bplot { cursor: default; }
   #modal-toasts .toast { padding: 5px 10px; font-size: 12.5px; line-height: 16px; }
 }
 
+/* A sheet up over the window (the claim's «Подтвердить», the cast-off's list): the strip goes to the top band, off the
+   sheet's buttons (QA 2026-10-22: «Переждите шторм…» lay over «Отмена / Подтвердить»). */
+body:has(.k-sheet-root.k-open) #modal-toasts, #modal-toasts.mt-top { top: calc(var(--sa-t, 0px) + 6px); bottom: auto; }
+/* (between the window's title plate and its figures on a phone held sideways) */
+@media (max-height: 520px) { #modal-toasts.mt-top { width: min(420px, calc(100vw - 16px)); } }
 /* The column's toasts wait under an open window (the strip takes the new ones); they come back when it closes. */
 body:has(#modal:not(.hidden)) #toasts { display: none; }
 

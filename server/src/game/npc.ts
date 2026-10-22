@@ -46,7 +46,7 @@ import { pactNeutral } from './abyssfx.ts';
 import type { Path } from './nav.ts';
 import type { NpcRole, ShipEntity } from './ship.ts';
 import { holdGuard } from './advmap.ts';
-import { onboardingProtected } from './onboarding.ts';
+import { fresh, onboardingProtected } from './onboarding.ts';
 import { invaderHostile } from './invasions.ts'; // docs/19 E16
 
 export interface NpcBrain {
@@ -243,7 +243,9 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
   // The First Watch's raider is her pupil's lesson, and a ship boarded and being looted is her captor's: the sea's
   // other ships leave them be (QA 2026-10-09: a Crown patrol off the harbour shot the raider from 100 % to nothing
   // before «На абордаж» twice, and sank her under the card of spoils — «Приз ускользнул», the ransom lost).
-  if (!other.isPlayer && (other.lootLockedFor !== null || game.npcs.get(other.id)?.practice !== undefined)) return false;
+  // So is a ship sent after a captain (the campaign's fight, huntAccount): a Crown patrol sank the opening's struck tender
+  // under her card, the kill was the patrol's and «Первый залп» stood still (QA 2026-10-22).
+  if (!other.isPlayer && (other.lootLockedFor !== null || game.npcs.get(other.id)?.practice !== undefined || (game.npcs.get(other.id)?.huntAccount ?? null) !== null)) return false;
   const role = npc.npcRole;
   // docs/19 E16: the Choir's invaders go for every captain and the sea's ships; the law's patrols go for them.
   const inv = npc.invader || other.invader ? invaderHostile(npc, other) : null;
@@ -274,10 +276,10 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
   }
   if (game.npcs.get(npc.id)?.practice === other.id) return true;
   if (other.isPlayer && game.npcs.get(npc.id)?.huntFor === other.id) return true;
-  // Sent for her (the campaign's foe, a hunter, an ambush on her cargo — huntAccount): at war with her wherever she sails,
-  // so her screen marks it a foe and her «Огонь» finds it (owner, 2026-10-22: the opening's tender was no «foe» in the
-  // Crown's quiet water — the round button did nothing until she tapped the ship).
-  if (other.isPlayer && other.accountId !== null && game.npcs.get(npc.id)?.huntAccount === other.accountId) return true;
+  // A ship sent after her (the campaign's fight, a band after her cargo, a bounty hunter): her foe in any water — in
+  // Saltmarrow's safe water the opening's tender was no foe of hers, so the target frame took a shark beside it and the
+  // finger's «Атаковать» went for the shark; «Первый залп» could not be done (QA 2026-10-22).
+  if (other.isPlayer && other.accountId !== null && game.npcs.get(npc.id)?.huntAccount === other.accountId && !other.surrendered) return true;
   if (other.attackers.has(npc.id) && game.now - (npc.attackers.get(other.id) ?? -999) < 120) return true;
   if ((npc.attackers.get(other.id) ?? -999) > game.now - 120) return true;
   const safety = REGIONS[other.region].safety;
@@ -639,7 +641,10 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
       ship.addEffect({ id: 'ambush', until: now + 8, flags: ['shadow_strike'] }, now);
     }
     // (no wolf pack round the First Watch's lesson, nor round a captain still in it)
-    if (role === 'pirate' && brain.target !== p.id && p.isPlayer && brain.practice === undefined && !inFirstWatch(game, p)) rallyPack(game, ship, p);
+    // (nor round a captain's first quarter of an hour, nor round a foe brought or sent for her — the campaign's softened
+    // tender, a fresh captain's own-level pirate: QA 2026-10-22, a newcomer of ⚓3 off a safe harbour had three crews on
+    // her at each cast-off and sank three times on «Свой берег»)
+    if (role === 'pirate' && brain.target !== p.id && p.isPlayer && brain.practice === undefined && brain.huntFor === undefined && brain.huntAccount === null && ship.softFor === undefined && !inFirstWatch(game, p) && !fresh(game.profileOf(p))) rallyPack(game, ship, p);
     // No endless chases (docs/23 item 44): forty seconds after a captain and not a hit either way, and no nearer to her
     // for the last ten, she gives it up (a pack still beating up to her keeps coming).
     if (brain.preySince?.id !== p.id) brain.preySince = { id: p.id, t: now, best: preyD, closer: now };

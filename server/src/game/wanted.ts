@@ -5,6 +5,7 @@
 // prisoners; and the trail of a wanted captain for a licensed hunter.
 
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
+import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 import { targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { claimLair } from './isles18.ts';
 import { legacyIslands } from '../../../shared/src/world/worldgen.ts';
@@ -176,8 +177,12 @@ function placeLairs(game: Game, S: WantedState): void {
   // makes its own camp there).
   const camps = new Map<RegionId, { is: Island; x: number; y: number }[]>();
   const islets = new Map<RegionId, { is: Island; x: number; y: number }[]>();
+  // The campaign's towns (the opening's «Свой берег» and any other claim step's island) are no lair's: Ravencliff, the
+  // newcomer's first town, had a named pirate's fortress on it, and its garrison sank her there (QA 2026-10-22).
+  const towns = new Set<number>();
+  for (const q of Object.values(QUESTS_BY_ID)) for (const st of q.steps) if (st.type === 'claim' && st.island !== undefined) towns.add(st.island);
   for (const is of legacyIslands(game.world)) { // docs/18 III: the lairs stand where they stood
-    if (is.portId || is.minor) continue;
+    if (is.portId || is.minor || towns.has(is.id)) continue;
     const camp = islandLife({ id: is.id, region: is.region, biome: is.biome, x: is.x, y: is.y, r: is.radius, poly: is.poly, features: is.features }).find((l) => l.kind === 'pirate_camp');
     if (camp) {
       const list = camps.get(is.region) ?? [];
@@ -376,6 +381,16 @@ function stepLairs(game: Game): void {
   const captains: ShipEntity[] = [];
   for (const s of game.sessions) if (s.ship && !s.ship.docked && s.ship.alive) captains.push(s.ship);
   for (const lair of S.lairs.values()) {
+    // A captain's town on the island (claimed before a lair's island was refused): the fortress is hers, its garrison
+    // and guns stand down — they boarded and sank her at every cast-off from the harbour beside it (QA 2026-10-22).
+    if (game.holdings.onIsland(game, lair.island).length) {
+      const g = S.garrison.get(lair.id);
+      if (g?.length) {
+        for (const x of garrisonAfloat(game, lair)) if (!x.boarding) game.removeShip(x.id);
+        S.garrison.delete(lair.id);
+      }
+      continue;
+    }
     let near = Infinity;
     for (const o of captains) near = Math.min(near, Math.abs(o.state.x - lair.x) + Math.abs(o.state.y - lair.y));
     const gar = S.garrison.get(lair.id);
@@ -863,6 +878,12 @@ export function clearWanted(game: Game): void {
 
 /** The admin (play-testing, docs/16 #7): every lair; silence its battery (opening it for a landing); sink its
  *  garrison. */
+/** A named pirate's fortress on this island, if one stands there (baseclaim.ts: no town on a lair's island). */
+export function lairOnIsland(game: Game, islandId: number): Readonly<Lair> | undefined {
+  for (const l of ws(game).lairs.values()) if (l.island === islandId) return l;
+  return undefined;
+}
+
 export function lairsAll(game: Game): Readonly<Lair>[] {
   return [...ws(game).lairs.values()];
 }

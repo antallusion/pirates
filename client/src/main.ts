@@ -1520,7 +1520,12 @@ function onMessage(m: ServerMsg): void {
   const hadTac = !!state.boardTac;
   state.apply(m);
   // a boarding opens: its loading screen until the decks, the figures and their poses are in (warmed while she closed in)
-  if (m.t === 'board_tac' && m.view && !hadTac) beginLoad('battle', 7000).need(tacArt(m.view)).settle().done();
+  if (m.t === 'board_tac' && m.view && !hadTac) {
+    beginLoad('battle', 7000).need(tacArt(m.view)).settle().done();
+    // …and a window she had open (the claim's terms, the journal) shut: it stood over the battle and her turns ran out
+    // unseen under it (QA 2026-10-22: boarded with «Занять бесплатно» up, the fight lost by the clock)
+    if (modal && !ANSWER.includes(modal)) closeModal();
+  }
   // Owner, 2026-10-16 («Повтор»): a kept fight played again over the field.
   if (m.t === 'tac_replay' && m.base) beginLoad('battle', 7000).need(tacArt(m.base)).settle().done();
   if (m.t === 'tac_replay') tactical.onReplay(m);

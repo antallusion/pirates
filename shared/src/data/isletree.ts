@@ -256,6 +256,7 @@ export function treePatterns(): Tr[] {
     ['Moving costs {0} doubloons.', 'Перенос стоит {0} дублонов.'],
     ['Your island moves to {0}: everything on {1} is pulled down.', 'Ваш остров переезжает на {0}: всё на острове {1} снесено.'],
     ['Port islands are not for claiming.', 'Острова с портом занять нельзя.'],
+    ['A pirate fortress holds this island: choose another.', 'Этот остров держит пиратская крепость: выберите другой.'],
     ['Sail to {0} to claim it.', 'Чтобы занять остров {0}, подплывите к нему.'],
     ['That is your island already.', 'Это уже ваш остров.'],
     ['Not while raiders lie off your island.', 'Не пока у вашего острова стоят налётчики.'],
