@@ -36,6 +36,7 @@ import { placeName } from '../ui/maps.ts';
 import { serverText } from '../lang/server.ts';
 import type { IslandData, SeaMarkData, ShipInfo } from '../../../shared/src/protocol.ts';
 import { markInReach } from '../../../shared/src/data/seamarks.ts';
+import { ownHull } from '../reachview.ts';
 import { SF, curseStageFromFlags } from '../../../shared/src/protocol.ts';
 import { fbm } from '../../../shared/src/rng.ts';
 import type { SailState } from '../../../shared/src/sim/sailing.ts';
@@ -1183,7 +1184,8 @@ export class Renderer {
     const own = state.ownDisplay;
     const busy = state.markBusy?.id === m.id ? state.markBusy : null;
     const done = state.markDone.has(m.id);
-    const near = own ? markInReach(m, own.x, own.y) : false;
+    const hull = ownHull(state);
+    const near = own && hull ? markInReach(m, hull) : false;
     if (!busy && !done && !near) return;
     const R = Math.max(10, m.r * z + 8 * z);
     g.save();

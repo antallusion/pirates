@@ -9,7 +9,8 @@
 
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { beastFace, drawFace } from './beastface.ts';
-import { ROAMS, ROAM_MINI, ROAM_REACH, roamPos } from '../../../shared/src/data/roamers.ts';
+import { ROAMS, ROAM_MINI, roamInReach, roamPos } from '../../../shared/src/data/roamers.ts';
+import { ownHull } from '../reachview.ts';
 import type { RoamKind } from '../../../shared/src/data/roamers.ts';
 import { THREAT_COLOR, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
 import type { RoamView } from '../../../shared/src/roamproto.ts';
@@ -136,6 +137,7 @@ export function drawRoamsWorld(g: G, state: ClientState, c: RoamCtx): void {
   const R = Math.max(11, Math.min(22, 19 * c.zoom));
   const small = c.zoom < 0.13;
   const own = state.ownDisplay;
+  const hull = ownHull(state);
   for (const v of list) {
     const p = roamPos(v.seed, v.x, v.y, now);
     const x = c.sx(p.x), y = c.sy(p.y);
@@ -160,7 +162,7 @@ export function drawRoamsWorld(g: G, state: ClientState, c: RoamCtx): void {
     if (state.roamMark === v.id) {
       // Marked by a tap or a click (owner, 2026-10-07): the engraved ring of a mark in its ladder colour, as a ship's
       // target ring — bright within the boats' reach (the fight can start), fainter while she is still too far.
-      const near = !!own && Math.hypot(p.x - own.x, p.y - own.y) <= ROAM_REACH;
+      const near = !!own && !!hull && roamInReach(hull, p);
       markRing(g, x, y, R * 1.6, col, near, near ? 1 : 0.85 + 0.15 * Math.sin(c.time * 2.4));
     }
     const big = c.zoom > 0.45 ? 12 : 11;

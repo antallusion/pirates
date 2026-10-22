@@ -169,18 +169,21 @@ function roamActs(f: ActFacts): Act[] {
   if (!rm) return out;
   if (!rm.fight && !rm.back) {
     if (rm.running) out.push({ id: 'attack_stop', icon: 'item_ship_wheel', label: LS('a.stop'), sub: rm.name, title: LS('a.stopTitle') });
-    else out.push({ id: 'roam', icon: 'act_attack', label: LR('a.attack'), sub: `${rm.word} · ⚓${rm.lv}`, title: LR(rm.far ? 't.attackFar' : 't.attack', { what: rm.name, word: rm.word, lv: rm.lv }), key: 'land', arg: String(rm.id) });
+    // (owner, 2026-10-22: «Атаковать» only within thirty metres of them; her mark farther off has its «Осмотреть» and
+    // the bar's «ещё N м»)
+    else if (!rm.far) out.push({ id: 'roam', icon: 'act_attack', label: LR('a.attack'), sub: `${rm.word} · ⚓${rm.lv}`, title: LR(rm.far ? 't.attackFar' : 't.attack', { what: rm.name, word: rm.word, lv: rm.lv }), key: 'land', arg: String(rm.id) });
     if (rm.offer === 'join' && (rm.joinN ?? 0) > 0 && !rm.far) out.push({ id: 'roam_join', icon: 'stat_crew', label: LR('a.join'), sub: `×${rm.joinN}`, title: LR('t.join', { n: rm.joinN ?? 0 }), arg: String(rm.id) });
   }
   out.push({ id: 'roam_look', icon: 'act_inspect', label: LR('a.look'), sub: rm.name, title: LR('t.look'), arg: String(rm.id) });
   return out;
 }
 
-/** «Атаковать» is offered only for a ship of her own choosing (a tap, the lock, the target key) or the frame's nearest
- *  foe once she is within her guns' reach of it (owner, 2026-10-19: «Кнопка атаковать горит всегда даже когда у меня нет
- *  цели. Пусть внизу выпрыгивают кнопки только когда я рядом с чем-то проплываю или беру кого-то в прицел»). */
-export function attackRelevant(pinned: boolean, range: 'in' | 'far' | null): boolean {
-  return pinned || range === 'in';
+/** «Атаковать» on a ship is offered only within her guns' real reach of it, and only for a ship on her screen, out of
+ *  the fog (owner, 2026-10-22: «щас атаковать можно за 400 метров … я не вижу ниче на карте, а уже могу брать абордаж,
+ *  атаку»; 2026-10-19: «Пусть внизу выпрыгивают кнопки только когда я рядом с чем-то проплываю»). Her own mark farther
+ *  off is sailed to from its own choices (the target menu's «Преследовать»), not from the bar. */
+export function attackRelevant(inGuns: boolean, seen: boolean): boolean {
+  return inGuns && seen;
 }
 
 /** What the land key does at sea, with nothing to land at: the mast, the net, the mark — in the bar's order. */
