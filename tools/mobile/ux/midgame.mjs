@@ -86,7 +86,7 @@ async function cards(p) {
       out.push(`struck: ${sur.querySelector('.sur-dist')?.textContent ?? ''} ${b?.disabled ? 'DISABLED' : 'press ' + want}`);
       if (b && !b.disabled) b.click();
     }
-    for (const b of document.querySelectorAll('#modal-panel[data-modal="prize"] [data-prize]')) { out.push(b.textContent.trim()); b.click(); break; }
+    for (const b of document.querySelectorAll(`[data-fate="${globalThis.__wantSink ? 'sink' : 'release'}"]`)) { if (!b.getBoundingClientRect().width || b.disabled) continue; out.push('fate ' + b.dataset.fate); b.click(); break; }
     return out;
   });
 }
@@ -217,20 +217,20 @@ try {
         for (const sh of s.ships.values()) {
           if (sh.id === s.entityId || !sh.cur || sh.cur.flags & 1 || sh.cur.flags & 16) continue;
           const role = sh.info?.npcRole ?? sh.info?.role ?? '';
-          if (want === 'beast' ? role !== 'beast' : want ? role !== want : !(sh.cur.flags & 64) || role === 'beast' || role === 'merchant') continue;
+          if (want === 'beast' ? role !== 'beast' : want ? role !== want : !(sh.cur.flags & 64) || role === 'beast' || role === 'merchant' || role === 'ghost') continue;
           out.push({ id: sh.id, d: Math.round(Math.hypot(sh.cur.x - o.x, sh.cur.y - o.y)), name: sh.info?.name, role, lv: sh.info?.level });
         }
         return { foes: out.sort((a, b) => a.d - b.d), on: s.pursuit?.target ?? null };
       }, want);
       const f0 = foes.foes[0];
       if (f0 && f0.d < 3500) {
-        const sink = st.type === 'sink' || st.type === 'beast';
+        const sink = st.type === 'beast';
         if (foes.on !== f0.id && (foes.on === null || !foes.foes.some((x) => x.id === foes.on))) {
           log(`  attack ${f0.name} (${f0.role} ⚓${f0.lv ?? '?'}) ${f0.d} m ${sink ? 'guns' : 'board'}`);
           await L.send(p, { t: 'attack', target: f0.id, mode: sink ? 'guns' : 'board' });
         }
         await L.sleep(1500);
-        await p.evaluate((v) => (globalThis.__wantSink = v), sink);
+        await p.evaluate((v) => (globalThis.__wantSink = v), st.type === 'sink');
         const c = await cards(p); if (c.length) log('  card:', c.join(' | '));
         if (age > 360000) { await issue(p, 'fight', `${key}: ${Math.round(age / 1000)} s on «${text}»`); await L.say(p, '/camp step'); await L.sleep(1500); }
         continue;

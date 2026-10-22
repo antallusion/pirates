@@ -322,6 +322,9 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
         return !other.surrendered;
       case 'ghost':
         if (other.hasFlag('tattoo_dutchman') || other.hasFlag('fh_dutchman')) return false; // the Flying Dutchman's mark (docs/12 P9)
+        // The Crown's safe water (mid-game QA 2026-10-22): in the Tide of the Dead the drowned sail every sea, but in the
+        // starter's they pass a captain by, as the pirates do — a ⚓7 ghost ship came for a ⚓4 newcomer by Saltmarrow.
+        if (safety === 'safe') return false;
         return !pactNeutral(other, npc, game.now);
       case 'boss':
         return true;
@@ -1464,8 +1467,11 @@ export function spawnGhost(game: Game, everywhere = false): void {
   const [cx, cy] = REGIONS[region].center;
   const x = cx + game.rng.range(-6000, 6000), y = cy + game.rng.range(-6000, 6000);
   if (!openSea(game, x, y)) return;
-  const ship = game.spawnNpcShip('ghost', 'ghost_ship', 'choir', x, y, game.rng.range(0, 6.28), { ship: 'The Hollow Psalm', captain: 'Something Wearing a Captain' });
-  game.setNpcLevel(ship, sectorLevel(game, x, y));
+  // (her hull of her waters' level: the great ghost ship sails at ⚓7 at the least — in the Tide of the Dead she came to
+  // the starter's ⚓1–4 sea at that; the largest of the drowned's hulls that fits, no draw of the sea's dice for it)
+  const h = game.rng.range(0, 6.28), lv = sectorLevel(game, x, y);
+  const ship = game.spawnNpcShip('ghost', hullsFor('ghost', lv).at(-1)!, 'choir', x, y, h, { ship: 'The Hollow Psalm', captain: 'Something Wearing a Captain' });
+  game.setNpcLevel(ship, lv);
   ship.cargo = { cursed_relics: game.rng.int(3, 8), pearls: game.rng.int(2, 6), abyssal_ore: game.rng.int(1, 4) };
   ship.purse = 1500 + game.rng.int(0, 1500);
   const brain = game.npcs.get(ship.id)!;

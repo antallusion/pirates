@@ -21,3 +21,41 @@ test('a struck ship’s two choices are hers from afar: the helmsman lays her al
   const game = src('server/src/game/Game.ts');
   assert.match(game, /if \(why === SURRENDER_FAR && target\) return approach\(/);
 });
+
+test('the Tide of the Dead: the drowned pass a captain by in the Crown’s safe water, and sail a hull of their waters’ level', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { REGIONS } = await import('../shared/src/world/regions.ts');
+  const { spawnGhost } = await import('../server/src/game/npc.ts');
+  const { levelRange } = await import('../shared/src/data/shiplevel.ts');
+  const { game } = makeGame();
+  join(game, 'Newcomer');
+  const s = game.sessionByName('Newcomer')!;
+  const ship = s.ship!;
+  ship.docked = null;
+  // by Saltmarrow (safe water): a ghost alongside is no foe of hers
+  const [bx, by] = REGIONS.black_coast.center;
+  ship.state.x = bx; ship.state.y = by;
+  ship.region = 'black_coast';
+  const ghost = game.spawnNpcShip('ghost', 'ghost_ship', 'choir', bx + 300, by, 0);
+  assert.equal(game.isHostile(ghost, ship), false, 'safe water: the drowned do not come for her');
+  // fired on by her, the ghost answers
+  ghost.attackers.set(ship.id, game.now);
+  assert.equal(game.isHostile(ghost, ship), true, 'a ghost she fired on fights back');
+  // in contested water the drowned come for her as before
+  const [gx, gy] = REGIONS.gravewater.center;
+  ship.state.x = gx; ship.state.y = gy;
+  ship.region = 'gravewater';
+  const ghost2 = game.spawnNpcShip('ghost', 'ghost_ship', 'choir', gx + 300, gy, 0);
+  assert.equal(game.isHostile(ghost2, ship), true, 'contested water: hers to fear');
+  // the season's ghosts in every sea: their hulls of their waters' level (the great ghost ship only at ⚓7 and above)
+  const before = new Set(game.ships.keys());
+  for (let i = 0; i < 400; i++) spawnGhost(game, true);
+  const made = [...game.ships.values()].filter((x) => !before.has(x.id) && x.npcRole === 'ghost');
+  assert.ok(made.length > 20, `ghosts put out (${made.length})`);
+  for (const g of made) {
+    const [lo, hi] = levelRange(g.loadout.classId);
+    assert.ok(g.shipLevel >= lo && g.shipLevel <= hi, `${g.loadout.classId} at ⚓${g.shipLevel} (${lo}–${hi})`);
+  }
+  const low = made.filter((g) => g.region === 'black_coast');
+  assert.ok(low.length && low.every((g) => g.loadout.classId !== 'ghost_ship' && g.shipLevel <= 4), `the Black Coast's ghosts small: ${low.map((g) => `${g.loadout.classId}⚓${g.shipLevel}`).join(', ')}`);
+});
