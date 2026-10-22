@@ -8,6 +8,7 @@ import { lairImpact } from './wanted.ts';
 import { ladderBetween } from './ladder.ts';
 import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, LAY_ARC_DEG, LAY_OVER, SEA_DAMAGE, SEA_RELOAD, aimFocus, windDriftAngle } from '../../../shared/src/data/gunnery.ts';
 import { ALPHA_OFF_LADDER, ALPHA_OVER, IRON_RAIN_PIERCE, alphaShare, seaCrewPace, seaCritPace, seaGrapePace, seaHullPace, seaReloadBy } from '../../../shared/src/data/seabalance.ts';
+import { forgiveStray } from './stray.ts';
 import { onboardingVolley, PRACTICE_HULL, PUPIL_HULL } from './onboarding.ts';
 import { softDealt, softenFoe } from './firstfights.ts';
 import { AMMO, ARMOR_PIERCE, CHASER_CONE, CHASER_GUN, CHASER_RELOAD, GUNS } from '../../../shared/src/data/ships.ts';
@@ -1023,6 +1024,9 @@ export function killMen(game: Game, target: ShipEntity, killed: number, source: 
 function registerAggression(game: Game, a: ShipEntity, b: ShipEntity): void {
   const now = game.now;
   const prev = b.attackers.get(a.id);
+  // QA 2026-10-22: a newcomer's ball that strayed onto a lawful ship beside her fight is no crime (stray.ts) — nor does
+  // that ship take her for its attacker. (Asked only on the first blow of an engagement: one she keeps striking is hers.)
+  if ((prev === undefined || now - prev >= 60) && forgiveStray(game, a, b)) return;
   b.attackers.set(a.id, now);
   if (a.isPlayer && !b.isPlayer && b.npcRole === 'merchant' && prev === undefined) tributeBroken(game, a, b); // a word given for tribute
   if (b.npcRole === 'boss' || a.npcRole === 'boss' || b.cls.monster) return; // no law and no flag at sea against the deep

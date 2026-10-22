@@ -4567,6 +4567,12 @@ body.tac-ph .tb-pad { display: block; position: absolute; inset: 0; z-index: 4; 
 .tb-rb > .ico { position: absolute; inset: 13%; width: 74%; height: 74%; margin: 0; border-radius: 50%; object-fit: cover; }
 .tb-rb:active:not(:disabled) { transform: scale(0.93); filter: brightness(1.3); }
 .tb-rb:disabled { cursor: default; filter: grayscale(0.8) brightness(0.55); }
+/* QA 2026-10-22: one that cannot be used now looks it (a tap says why, tactical.ts); «Авто» without a scroll dimmed too
+   (its lock and the wheel's «Купить свитки» stay). */
+.tb-rb.off { cursor: default; filter: grayscale(0.8) brightness(0.55); }
+.tb-rb.off:active { transform: none; filter: grayscale(0.8) brightness(0.55); }
+.tb-rb.locked:not(.on) { filter: grayscale(0.7) brightness(0.7); }
+.tb-acts .btn[aria-disabled="true"] { opacity: 0.4; cursor: default; }
 .tb-rb.spent { filter: grayscale(1) brightness(0.45); }
 .tb-rb.on { box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(224, 184, 98, 0.8); }
 .tb-rb.danger { background: radial-gradient(circle, #3a1714 0 52%, #140c0a 74%); }

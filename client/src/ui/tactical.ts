@@ -962,6 +962,17 @@ export class TacticalPanel {
       <div class="tb-book hidden"></div>
     </div>`;
     this.el = root.querySelector('.tb-root');
+    // QA 2026-10-22: a button that cannot be used now looks it (dimmed) and, tapped, says why — a disabled one took the
+    // tap in silence. Caught before the button's own handler.
+    for (const sel of ['.tb-pad', '.tb-acts']) {
+      this.el!.querySelector(sel)!.addEventListener('click', (e) => {
+        const b = (e.target as HTMLElement).closest<HTMLElement>('[aria-disabled="true"]');
+        if (!b) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this.notice(b.dataset.why || L('off.now'));
+      }, true);
+    }
     // An order's whole words: the mouse resting on a page of the panel or the book, or a key's focus on it.
     const PAGE = '.tb-spells [data-spell], .tb-spells [data-move], .tb-book [data-spell]';
     const el = this.el!;
@@ -1809,8 +1820,11 @@ export class TacticalPanel {
     }
     const me = v.heroes[v.you];
     const act = v.stacks.find((s) => s.id === v.active);
-    const rb = (data: string, label: string, art: string, cls = '', off = false): string =>
-      `<button class="tb-rb${cls}" ${data} title="${esc(label)}" aria-label="${esc(label)}"${off ? ' disabled' : ''}>${art}</button>`;
+    // (one that cannot be used now: dimmed, and a tap says why — `off` is the reason, true for the plain «not now»)
+    const rb = (data: string, label: string, art: string, cls = '', off: boolean | string = false): string =>
+      `<button class="tb-rb${cls}${off ? ' off' : ''}" ${data} title="${esc(label)}" aria-label="${esc(label)}"${off ? ` aria-disabled="true" data-why="${esc(typeof off === 'string' ? off : L('off.now'))}"` : ''}>${art}</button>`;
+    const offWait = this.offWait(v);
+    const offMine = v.mine ? false : this.offTurn(v);
     const officer = v.mine && act?.officer?.ready ? act.officer : null;
     const pathReady = v.mine && !!me.path && (me.innate === 'ready' || (me.ult === 'ready' && v.round >= (me.ultFrom ?? ULT_ROUND)));
     // From the corner up: wait under the thumb, then defend, then auto (its wheel). «Свиток автобоя» (owner, 2026-10-11):
@@ -1819,13 +1833,13 @@ export class TacticalPanel {
     const autoTip = me.auto ? L('autoOff') : locked ? L('scLocked', { n: AUTO_SCROLL_PACKS[0].price }) : v.scrolls?.paid ? `${L('autoMenu')} · ${L('scPaid')}` : v.scrolls ? `${L('autoMenu')} · ${L('scN', { n: v.scrolls.n })}` : L('autoMenu');
     const left = v.deploy && !v.over
       ? [
-          rb('data-ready', L('dep.ready'), btIcon('bt_charge', 'icon.bt_order', 'ico'), ' ready', v.deploy.ready),
+          rb('data-ready', L('dep.ready'), btIcon('bt_charge', 'icon.bt_order', 'ico'), ' ready', v.deploy.ready ? L('off.ready') : false),
           rb('data-autow', autoTip, btIcon('bt_auto', 'icon.bt_captain', 'ico') + this.scrollBadge(v), `${me.auto ? ' on' : ''}${locked ? ' locked' : ''}`, !!v.over),
         ].join('')
       : [
-          ...(act?.skill && act.side === v.you && SKILLS[act.skill.id].aim !== 'death' ? [rb('data-a="skill"', `${skName(act.skill.id)}: ${skText(act.skill.id)}`, skIcon(act.skill.id), ` skill${this.targeting === 'skill' ? ' on' : ''}`, !v.mine || !v.skillAim)] : []),
-          rb('data-a="wait"', L('wait'), btIcon('bt_wait', 'icon.bt_hold', 'ico'), '', !v.mine || !!act?.waited || !!v.moved),
-          rb('data-a="defend"', L('defend'), btIcon('bt_defend', 'icon.mod_hull_plating', 'ico'), '', !v.mine),
+          ...(act?.skill && act.side === v.you && SKILLS[act.skill.id].aim !== 'death' ? [rb('data-a="skill"', `${skName(act.skill.id)}: ${skText(act.skill.id)}`, skIcon(act.skill.id), ` skill${this.targeting === 'skill' ? ' on' : ''}`, offMine || (!v.skillAim ? L('off.skill') : false))] : []),
+          rb('data-a="wait"', L('wait'), btIcon('bt_wait', 'icon.bt_hold', 'ico'), '', offWait),
+          rb('data-a="defend"', L('defend'), btIcon('bt_defend', 'icon.mod_hull_plating', 'ico'), '', offMine),
           rb('data-autow', autoTip, btIcon('bt_auto', 'icon.bt_captain', 'ico') + this.scrollBadge(v), `${me.auto ? ' on' : ''}${locked ? ' locked' : ''}`, !!v.over),
         ].join('');
     const t = this.targeting;
@@ -1907,7 +1921,11 @@ export class TacticalPanel {
           const now = this.view;
           if (!now) return;
           if (now.heroes[now.you].auto) this.order({ a: 'auto', on: false });
-          else this.tapWheel(auto);
+          else {
+            // (locked: why, said at once — the wheel beside it offers «Купить свитки»)
+            if (this.scrollLocked(now)) this.notice(L('scLocked', { n: AUTO_SCROLL_PACKS[0].price }));
+            this.tapWheel(auto);
+          }
         },
       });
     }
@@ -2166,19 +2184,22 @@ export class TacticalPanel {
     const ransom = v.ransom ? (poor ? L('ransomShort', { n: v.ransom }) : ransomOn ? L('ransomSure', { n: v.ransom }) : L('ransom', { n: v.ransom })) : '';
     const strike = armed ? L('strikeSure') : L('strike');
     const danger = settings().tacDanger;
+    // (one that cannot be used now: dimmed, and a tap says why — QA 2026-10-22)
+    const off = (why: string | false): string => (why ? `aria-disabled="true" data-why="${esc(why)}"` : '');
+    const offMine = v.mine ? false : this.offTurn(v);
     el.querySelector('.tb-acts')!.innerHTML = [
-      v.deploy && !v.over ? `<button class="btn btn-primary" data-a="ready" ${lab(L('dep.ready'))} ${v.deploy.ready ? 'disabled' : ''}>${btIcon('bt_charge', 'icon.bt_order')}${word(L('dep.ready'))}</button>` : '',
+      v.deploy && !v.over ? `<button class="btn btn-primary" data-a="ready" ${lab(L('dep.ready'))} ${off(v.deploy.ready ? L('off.ready') : false)}>${btIcon('bt_charge', 'icon.bt_order')}${word(L('dep.ready'))}</button>` : '',
       `<button class="btn" data-a="log" ${lab(L('log.title'), L('log.tip'))}>${icon('icon.deed_ledger_partner', '', 'ico-sm')}${word(L('log.title'))}</button>`,
       v.over ? '' : `<button class="btn${danger ? ' on' : ''}" data-a="danger" aria-pressed="${danger}" ${lab(L('danger'), L('danger.tip'))}>${icon('icon.danger', '', 'ico-sm')}${word(L('danger'))}</button>`,
-      `<button class="btn" data-a="wait" ${lab(L('wait'))} ${!v.mine || act?.waited || v.moved ? 'disabled' : ''}>${btIcon('bt_wait', 'icon.bt_hold')}${word(L('wait'))}</button>`,
-      `<button class="btn" data-a="defend" ${lab(L('defend'))} ${!v.mine ? 'disabled' : ''}>${btIcon('bt_defend', 'icon.mod_hull_plating')}${word(L('defend'))}</button>`,
+      `<button class="btn" data-a="wait" ${lab(L('wait'))} ${off(this.offWait(v))}>${btIcon('bt_wait', 'icon.bt_hold')}${word(L('wait'))}</button>`,
+      `<button class="btn" data-a="defend" ${lab(L('defend'))} ${off(offMine)}>${btIcon('bt_defend', 'icon.mod_hull_plating')}${word(L('defend'))}</button>`,
       officer ? `<button class="btn btn-primary" data-a="order" ${lab(L(`o.${officer.order}` as K), L(`od.${officer.order}` as K))}>${icon(`icon.role_${officer.role}`, '', 'ico-sm')}${word(L(`o.${officer.order}` as K))}</button>` : '',
-      act?.skill && act.side === v.you && SKILLS[act.skill.id].aim !== 'death' ? `<button class="btn btn-primary tb-skill${this.targeting === 'skill' ? ' on' : ''}" data-a="skill" ${lab(skName(act.skill.id), `${skName(act.skill.id)} (F): ${skText(act.skill.id)}`)} ${!v.mine || !v.skillAim ? 'disabled' : ''}>${skIcon(act.skill.id, 'ico-sm')}${word(skName(act.skill.id))}</button>` : '',
+      act?.skill && act.side === v.you && SKILLS[act.skill.id].aim !== 'death' ? `<button class="btn btn-primary tb-skill${this.targeting === 'skill' ? ' on' : ''}" data-a="skill" ${lab(skName(act.skill.id), `${skName(act.skill.id)} (F): ${skText(act.skill.id)}`)} ${off(offMine || (!v.skillAim ? L('off.skill') : false))}>${skIcon(act.skill.id, 'ico-sm')}${word(skName(act.skill.id))}</button>` : '',
       `<button class="btn${me.auto ? ' on' : ''}${locked ? ' locked' : ''}" data-a="${locked ? 'buyscroll' : 'auto'}" ${lab(auto, autoTip)}>${btIcon('bt_auto', '')}${word(auto)}${this.scrollBadge(v, true)}</button>`,
       locked ? `<button class="btn btn-primary tb-scbuy" data-a="buyscroll" ${lab(L('scBuy'))}>${icon(AUTO_SCROLL_ICON, '', 'ico-sm')}${word(L('scBuy'))}</button>` : '',
       v.noQuick ? '' : `<button class="btn${v.quickNow ? ' btn-primary tb-quicknow' : ''}${!quickFree && locked ? ' locked' : ''}" data-a="${!quickFree && locked ? 'buyscroll' : 'quick'}" ${lab(L('quick'), v.quickNow ? L('quickNow') : quickFree ? undefined : locked ? L('scQuickLocked') : L('scQuick'))} ${v.over ? 'disabled' : ''}>${btIcon('bt_quick', '')}${word(L('quick'))}</button>`,
       v.canCut && !v.over ? `<button class="btn btn-danger" data-a="cut" ${lab(cut)}>${btIcon('bt_retreat', '')}${word(cut)}</button>` : '',
-      v.ransom && !v.over ? `<button class="btn${ransomOn ? ' on armed' : ''}" data-a="ransom" ${lab(ransom, L('ransomTip'))}${poor ? ' disabled' : ''}>${btIcon('bt_ransom', 'icon.coin')}${word(ransom)}</button>` : '',
+      v.ransom && !v.over ? `<button class="btn${ransomOn ? ' on armed' : ''}" data-a="ransom" ${lab(ransom, L('ransomTip'))} ${off(poor ? L('ransomShort', { n: v.ransom ?? 0 }) : false)}>${btIcon('bt_ransom', 'icon.coin')}${word(ransom)}</button>` : '',
       v.canStrike && !v.over ? `<button class="btn btn-danger${armed ? ' on armed' : ''}" data-a="surrender" ${lab(strike)}>${btIcon('bt_strike', '')}${word(strike)}</button>` : '',
     ].join('');
     el.querySelectorAll<HTMLElement>('[data-a]').forEach((b) => (b.onclick = () => {
@@ -2330,11 +2351,12 @@ export class TacticalPanel {
       case 'poison':
       case 'regen':
         return L(e.k === 'poison' && e.id === 'sick' ? 'log.sick' : e.k === 'regen' && (e.id === 'mend' || e.id === 'drain' || e.id === 'role') ? `log.${e.id}` : `log.${e.k}`, { a: name(e.s), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
+      case 'timeout':
+        return L(e.id === 'crew' ? 'log.crew' : 'log.timeout', { a: name(e.s) }); // (the practice fight: her crew played it)
       case 'wait':
       case 'defend':
       case 'morale':
       case 'luck':
-      case 'timeout':
         return L(`log.${e.k}`, { a: name(e.s) });
       default:
         return '';
@@ -2375,6 +2397,8 @@ export class TacticalPanel {
       if (on(foe, f.hex[me])) return L('hint.flagLost', { n: f.held[foe], m: f.need });
       if (on(me, f.hex[foe])) return L('hint.flagHeld', { n: f.held[me], m: f.need });
     }
+    // QA 2026-10-22: the practice fight — what to do, and that the crew plays a turn she lets run out
+    if (v.lesson && v.mine && !this.targeting) return L('hint.lesson');
     if (v.mine && this.bankNow(v, me, Math.max(0, this.mySlot(v))) === 0) return L('clock.out');
     if (v.quickNow) return L('quickNow');
     if (f && (!v.mine || v.round <= 1)) return L('hint.flag', { m: f.need });
@@ -2843,7 +2867,22 @@ export class TacticalPanel {
   }
 
   /** A word over the field's top band for a moment (the replay that is no longer kept). */
+  /** Why «Ждать» cannot be used now (false: it can). */
+  private offWait(v: TacView): string | false {
+    if (!v.mine) return this.offTurn(v);
+    const act = v.stacks.find((s) => s.id === v.active);
+    if (act?.waited) return serverText('This stack has waited once this round');
+    if (v.moved) return serverText('She has marched: strike or defend');
+    return false;
+  }
+
+  /** Why an order of a stack cannot be given now: the battle over, or not her turn. */
+  private offTurn(v: TacView): string {
+    return v.over ? L('off.over') : serverText('Not your turn');
+  }
+
   private notice(text: string): void {
+    document.querySelectorAll('.tb-notice').forEach((x) => x.remove()); // (a tap again: the newest words only)
     const n = document.createElement('div');
     n.className = 'tb-notice';
     n.setAttribute('role', 'status');

@@ -212,6 +212,8 @@ onLifecycle({
   },
   resume: () => {
     last = performance.now();
+    // a boarding's spoils that waited while she was away: their card again (QA 2026-10-22, boardingCardFrame)
+    if (inGame) net.send({ t: 'board_result' });
   },
 });
 document.addEventListener('visibilitychange', () => (document.hidden ? pauseApp('hidden') : resumeApp('hidden')));
@@ -755,7 +757,9 @@ function startGoal(key: string, quiet = false): void {
   if (key.startsWith('q:')) setTracked(key.slice(2));
   goalRun = new RouteRun(key, now, PORT_DOCK_RADIUS);
   goalQuiet = quiet;
-  if (modal) closeModal();
+  // (never a window that must be answered: the opening's next run started by itself the moment a boarding's field
+  // closed, and shut the prize's card — the ship lay hove to by her prize, the helmsman never went, QA 2026-10-22)
+  if (modal && !ANSWER.includes(modal)) closeModal();
   net.send({ t: 'goto', key });
 }
 /** A tap on the beacon: the run to the goal it shows (a quest, a contract's port), else a plain course to it. */
@@ -916,9 +920,11 @@ const seaHud = new SeaHud($('touch'), {
   fire: () => seaFire(),
   fireOptions: () => fireWheel(),
   firePick: (id) => pickFireWheel(id),
-  act: () => padContext(),
-  actAt: (i) => {
-    const x = curActs[i];
+  act: (id) => padContext(id),
+  // (by the button's own act, not its place: the list is laid anew as she sails — «Причалить» tapped ran whatever stood
+  // in its place a moment later, or nothing, QA 2026-10-22)
+  actAt: (i, id) => {
+    const x = liveAct(id) ?? (id === undefined ? curActs[i] : undefined);
     if (x) runAct(x);
   },
   // The wheel keeps the list it opened with while computePrompt() rebuilds curActs every frame: the pick runs that
@@ -1002,7 +1008,9 @@ function openingFrame(): string | null {
   if (!q?.op) return null;
   const key = `${q.id}:${q.step}`;
   const sea = q.op === 'sink' || q.op === 'board' || q.op === 'neutral' || q.op === 'found';
-  if (sea && openingRun !== key && !state.self?.dockedAt && !state.boardTac && !state.boardFight && !state.pursuit && inGame && !isleScene.isOpen) {
+  // (not while a battle's account waits for her — the prize's card, a loss — nor under any window that must be answered:
+  // the run is started once that is settled)
+  if (sea && openingRun !== key && !state.self?.dockedAt && !state.boardTac && !state.boardFight && !state.pursuit && !state.boarding && !(modal && ANSWER.includes(modal)) && inGame && !isleScene.isOpen) {
     openingRun = key;
     startGoal(`q:${q.id}`, false);
   }
@@ -1283,6 +1291,23 @@ function lawlessFrame(): void {
   if (!lawlessHere(state)) return;
   const w = lawlessWords();
   hud.lawless(w.title, w.line);
+}
+/** A boarding's spoils wait for her answer (the ship lies hove to by her prize until then): their card is always up
+ *  (QA 2026-10-22: after a won hex boarding the card was gone — the opening's next run had shut it — the ship lay still,
+ *  the helmsman never went and «Твари на отмели» hung until `gravetide.open('boarding')`). Brought back over whatever
+ *  took its place, but never over another window that must be answered (the wreck's, the mutiny's, a reward's pick:
+ *  it comes after them). The server settles it by itself if she never answers (Game.ts BOARD_SETTLE_SECS). */
+let boardingAskAt = 0;
+function boardingCardFrame(): void {
+  if (!inGame || !state.boarding || modal === 'boarding') return;
+  if (modal && ANSWER.includes(modal)) return;
+  openModal('boarding');
+  // (and once in a while the server is asked whether it still waits: a card it already settled goes)
+  const now = performance.now();
+  if (now - boardingAskAt > 5000) {
+    boardingAskAt = now;
+    net.send({ t: 'board_result' });
+  }
 }
 /** The sea's news held through a boarding battle (case 'toast'), told once the deck is clear. */
 const heldToasts: { msg: string; kind: string }[] = [];
@@ -2276,7 +2301,11 @@ function renderModal(root: HTMLElement): void {
       optionsScreen.render(root);
       break;
     case 'boarding':
-      if (state.boarding) renderBoarding(root, state.boarding, state, (m) => net.send(m), () => closeModal());
+      // (answered: the card goes at once and is not brought back by boardingCardFrame before the server's word comes)
+      if (state.boarding) renderBoarding(root, state.boarding, state, (m) => net.send(m), () => {
+        state.boarding = null;
+        closeModal();
+      });
       break;
     case 'crew':
       renderCrew(root, state, (m) => net.send(m));
@@ -3232,6 +3261,8 @@ function landTagText(l: NonNullable<NonNullable<typeof state.self>['landable']>)
 function computePrompt(): string {
   const { acts, info } = gatherActs();
   curActs = acts;
+  const t = performance.now();
+  for (const a of acts) actsShown.set(a.id, { a, at: t });
   // Every thing to do at once (owner, 2026-10-18: «нельзя скрывать ничего»): no «⋯ N more».
   if (acts.length && !actTipOffered) {
     actTipOffered = true;
@@ -4029,10 +4060,20 @@ function actionsRadial(): RadialItem[] {
 /** The pad's context action (and the touch bar's gold button): the first of the action bar's — board, dock, land,
  *  cut the mast, cast, her island, a sea mark, a card closed by hand, repair. In port: the harbour's screen on touch,
  *  casting off otherwise (the bar itself shows nothing over the harbour's screen). */
-function padContext(): void {
+function padContext(id?: string): void {
   if (state.self?.dockedAt && !grabbed()) return void (touch.enabled && modal !== 'port' ? openModal('port') : departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' })));
-  const first = gatherActs().acts[0];
+  const first = liveAct(id) ?? gatherActs().acts[0];
   if (first) runAct(first);
+}
+/** The acts shown on the bar a moment ago, by id: a button still on the screen as the list changed under the finger
+ *  (it fades out over ACT_OUT_MS) does what it says — and the server tells why if it cannot. */
+const actsShown = new Map<string, { a: Act; at: number }>();
+function liveAct(id: string | undefined): Act | undefined {
+  if (!id) return undefined;
+  const now = curActs.find((x) => x.id === id);
+  if (now) return now;
+  const was = actsShown.get(id);
+  return was && performance.now() - was.at < 3000 ? was.a : undefined;
 }
 
 /** Lying off one's own island (docs/15): the way into its base. */
@@ -4067,13 +4108,18 @@ let pendingDock: { bribe: boolean; until: number; next: number } | null = null;
 /** When the renewed request last went (a refusal right after it is the harbour's answer). */
 let dockSentAt = -1e9;
 function requestDock(bribe: boolean, refused = false): void {
-  const own = state.ownDisplay;
-  if (refused || (own && own.speed > 6)) {
+  if (refused) {
     state.input.sail = 0;
     if (!pendingDock) hud.toast(L('reefToDock'), 'info');
     pendingDock = { bribe, until: performance.now() + 25000, next: performance.now() + 1500 };
     return;
   }
+  // Always the harbour's own answer (QA 2026-10-22, «Причалить» did nothing): under way she is hove to by the server
+  // and put in as soon as she slows (underfire.ts WAY_WORDS) — the helmsman's course dropped with it; any other
+  // refusal comes back with its reason. (The page's own wait for her to slow never told the helmsman, who kept her
+  // under sail: 25 s of nothing.)
+  state.input.sail = 0;
+  dockSentAt = performance.now();
   net.send({ t: 'dock', bribe });
 }
 /** The nearest harbour «В порт» would sail to (the First Watch's last step), and the one the helmsman is sailing to:
@@ -4100,8 +4146,8 @@ function stepPendingDock(): void {
   const own = state.ownDisplay;
   if (state.self?.dockedAt || performance.now() > pendingDock.until || state.input.sail > 0) {
     // Run out of time still at sea (she never slowed: a current, the wind, a pull of the stick): said, not dropped
-    // (docs/23 item 93: «убираем паруса», then nothing).
-    if (!state.self?.dockedAt && performance.now() > pendingDock.until && state.input.sail === 0) hud.toast(L('dockGaveUp'), 'bad');
+    // (docs/23 item 93: «убираем паруса», then nothing) — and so is her own hand on the sails calling it off.
+    if (!state.self?.dockedAt && (performance.now() > pendingDock.until || state.input.sail > 0)) hud.toast(L('dockGaveUp'), 'bad');
     pendingDock = null;
     return;
   }
@@ -4493,6 +4539,7 @@ function step(t: number): void {
     divePanel.render(state.dive);
     boardFight.render(state.boardFight);
     tactical.render(state.boardTac);
+    boardingCardFrame();
     filmMoments();
     const op = openingFrame();
     tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : null), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax });

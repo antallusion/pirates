@@ -305,6 +305,10 @@ export interface TacBattle {
   flag?: { hex: [number, number]; held: [number, number]; open: [boolean, boolean] };
   /** docs/25 item 49: a quick fight offered at once to this side (the sea's side clearly the weaker). */
   quick?: [boolean, boolean];
+  /** QA 2026-10-22: the First Watch's practice fight — the pupil's side. It cannot be lost (LESSON_*): a turn she lets run
+   *  out is played for her (with a word), her last man never falls, the raider strikes once she is badly cut, the rounds'
+   *  end is hers; and she does not strike her own colours. */
+  lesson?: 0 | 1;
   /** Men fallen on each side so far. */
   dead: [number, number];
   /** Officers whose party was broken (dead) or badly cut (hurt). */
@@ -1543,7 +1547,9 @@ export function blow(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'sh
 function hurt(bt: TacBattle, t: TacStack, dmg: number, by: 0 | 1, who = bt.casting ?? 0): number {
   const before = t.count;
   const had = hpOf(t);
-  const left = had - dmg;
+  let left = had - dmg;
+  // QA 2026-10-22: the practice fight — the pupil's last man standing never falls (the raider strikes first, checkOver)
+  if (left <= 0 && bt.lesson === t.side && !t.summoned && !bt.stacks.some((x) => x !== t && x.side === t.side && x.count > 0 && !x.summoned)) left = 1;
   // docs/25 item 67: what each captain cut down (her blows, her stacks' shots, her orders and path moves).
   if (by !== t.side && had > 0) {
     const key = `${by}:${who}`;
@@ -2354,7 +2360,7 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
       if (bt.round >= TAC_MAX_ROUNDS) {
         const left = (side: 0 | 1) => alive(bt).filter((s) => s.side === side).reduce((n, s) => n + hpOf(s), 0) / Math.max(1, bt.heroes[side].startHp);
         // docs/19 E5: a siege not carried in time is the garrison's.
-        bt.over = { winner: bt.siege ? 1 : left(0) > left(1) ? 0 : 1, why: 'rounds' };
+        bt.over = { winner: roundsWinner(bt, left, false), why: 'rounds' };
         bt.active = null;
         bt.seq++;
         return;
@@ -2476,7 +2482,8 @@ function giveTurn(bt: TacBattle, now: number): void {
   const h = s ? capOf(bt, s) : undefined;
   const from = now + play;
   const turn = tacTurnSecs(bt.level);
-  if (s && h && h.bank >= 0 && !h.auto) {
+  if (s && h && bt.lesson === s.side && !s.own && !h.auto) bt.turnEnds = from + LESSON_TURN; // (no chess clock in the lesson)
+  else if (s && h && h.bank >= 0 && !h.auto) {
     bt.turnEnds = from + Math.max(0, Math.min(turn, h.bank));
     bt.clock = { side: s.side, from, ...(s.own ? { slot: s.own } : {}) };
   } else bt.turnEnds = from + turn;
@@ -2595,6 +2602,13 @@ export function checkOver(bt: TacBattle): void {
     bt.seq++;
     return;
   }
+  // QA 2026-10-22: the practice fight is never lost — the pupil cut down to LESSON_STRIKE of her men, the raider strikes.
+  if (bt.lesson !== undefined && left[bt.lesson] <= Math.max(1, bt.heroes[bt.lesson].startMen * LESSON_STRIKE)) {
+    bt.over = { winner: bt.lesson, why: 'struck' };
+    bt.active = null;
+    bt.seq++;
+    return;
+  }
   // No crew strikes of herself (docs/17, after H5): a heart all but gone is HoMM3's bad morale — her stacks freeze in
   // fear and lose turns (nextTurn) — and striking, the ransom and falling back stay her captain's own orders.
 }
@@ -2688,6 +2702,7 @@ function actNow(bt: TacBattle, side: 0 | 1, a: TacAction, now: number, rng: Rng,
   }
   // docs/25 item 64: the colours, the quick fight and the ransom are the captain's who grappled (or was grappled).
   if (slot && (a.a === 'surrender' || a.a === 'quick' || a.a === 'ransom')) return 'Only the captain of the ship decides that';
+  if (a.a === 'surrender' && bt.lesson === side) return LESSON_NO_STRIKE;
   if (a.a === 'surrender') {
     delete bt.deploy;
     bt.over = { winner: (1 - side) as 0 | 1, why: 'struck' };
@@ -3423,7 +3438,12 @@ export function stepBattle(bt: TacBattle, now: number, rng: Rng): void {
     aiAct(bt, now, rng);
   } else {
     if (now < bt.turnEnds) return;
-    timeOut(bt, now, rng);
+    // QA 2026-10-22: the practice fight — a turn she let run out is played for her by her crew (not a defence that lost
+    // the lesson while she looked on), with a word in the feed.
+    if (bt.lesson === s.side && !s.own) {
+      push(bt, { k: 'timeout', side: s.side, s: s.id, id: 'crew' });
+      aiAct(bt, now, rng);
+    } else timeOut(bt, now, rng);
     // Her turn ran out and «defend» could not end it: the sea's mind plays it (the auto-move).
     if (stuck()) aiAct(bt, now, rng);
   }
@@ -3433,6 +3453,17 @@ export function stepBattle(bt: TacBattle, now: number, rng: Rng): void {
 
 /** Seconds past a turn's clock a battle with nobody's turn waits before the watchdog moves it on. */
 export const TAC_STUCK_SECS = 2;
+
+/** QA 2026-10-22, the practice fight (TacBattle.lesson): a pupil's turn lasts this long, then her crew plays it for her;
+ *  the raider strikes once the pupil has this share of her men or fewer left. */
+export const LESSON_TURN = 12;
+export const LESSON_STRIKE = 0.4;
+export const LESSON_NO_STRIKE = 'A practice fight: no colours to strike. Fight it out — the crew will help.';
+/** The side the rounds' end (or the watchdog) gives the battle to: the pupil's in a practice fight. */
+function roundsWinner(bt: TacBattle, left: (side: 0 | 1) => number, tie: boolean): 0 | 1 {
+  if (bt.lesson !== undefined) return bt.lesson;
+  return bt.siege ? 1 : (tie ? left(0) >= left(1) : left(0) > left(1)) ? 0 : 1;
+}
 
 /** The watchdog's last resort: the next stack is given its turn; and should the field refuse even that, the battle is
  *  reckoned at once as its rounds' end is (the side with more of its hit points left wins). */
@@ -3447,7 +3478,7 @@ function unstick(bt: TacBattle, now: number, rng: Rng): void {
   bt.seq++;
   if (bt.over || (bt.active !== null && bt.active !== was)) return;
   const left = (side: 0 | 1) => alive(bt).filter((x) => x.side === side).reduce((n, x) => n + hpOf(x), 0) / Math.max(1, bt.heroes[side].startHp);
-  bt.over = { winner: bt.siege ? 1 : left(0) >= left(1) ? 0 : 1, why: 'rounds' };
+  bt.over = { winner: roundsWinner(bt, left, true), why: 'rounds' };
   bt.active = null;
 }
 
@@ -3483,7 +3514,7 @@ export function quickFinish(bt: TacBattle, now: number, rng: Rng): void {
     if (bt.active === null) break;
     aiAct(bt, now, rng);
   }
-  if (!bt.over) bt.over = { winner: 1, why: 'rounds' };
+  if (!bt.over) bt.over = { winner: bt.lesson ?? 1, why: 'rounds' };
 }
 
 // ------------------------------------------------------------------ the reckoning
@@ -3585,7 +3616,7 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
       const aim = skillTargets(bt, act0);
       return aim ? { skillAim: aim } : {};
     })() : {}),
-    heroes: ([0, 1] as const).map((x) => (x === side && slot ? asCaptain(bt, side, slot, () => hero(x)) : hero(x))) as [TacHeroView, TacHeroView], log: bt.log.slice(-12), seq: bt.seq, over: bt.over, canCut, canStrike: side === 1, ...(bt.warn?.length && !bt.over ? { warn: [...bt.warn] } : {}), ...extra,
+    heroes: ([0, 1] as const).map((x) => (x === side && slot ? asCaptain(bt, side, slot, () => hero(x)) : hero(x))) as [TacHeroView, TacHeroView], log: bt.log.slice(-12), seq: bt.seq, over: bt.over, canCut, canStrike: side === 1 && bt.lesson !== side, ...(bt.lesson === side ? { lesson: true } : {}), ...(bt.warn?.length && !bt.over ? { warn: [...bt.warn] } : {}), ...extra,
     ...(bt.props ? { props: bt.props } : {}), ...(bt.planks ? { planks: bt.planks } : {}),
     ...(bt.siege ? { siege: { type: bt.land ?? 'rocky', hp: [...bt.siege.hp], max: [...bt.siege.max], cat: bt.siege.catapult, ...(bt.siege.name ? { name: bt.siege.name } : {}) } } : {}),
     // docs/25 block Г: the level, the turn's seconds, the chess clocks, the flags.

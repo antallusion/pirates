@@ -257,9 +257,10 @@ export interface SeaHooks {
   fire(): void;
   fireOptions(): WheelOption[];
   firePick(id: string): void;
-  act(): void;
+  /** `id`: the act the gold button shows now (the one she tapped, not whatever is first a moment later). */
+  act(id?: string): void;
   /** seaux: one of the small buttons beside «Действие» (its place in the bar's list). */
-  actAt?(i: number): void;
+  actAt?(i: number, id?: string): void;
   actOptions(): WheelOption[];
   actPick(id: string): void;
   special(): void;
@@ -403,7 +404,7 @@ export class SeaHud {
     this.actRowEl.append(this.actEl);
     this.actRowEl.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLElement>('[data-acti]');
-      if (b) hooks.actAt?.(Number(b.dataset.acti));
+      if (b) hooks.actAt?.(Number(b.dataset.acti), b.dataset.act);
     });
     this.specialEl = make(`<button type="button" id="tc-special" class="k-btn k-btn--icon k-btn--lg tc-special sea-round hidden" aria-label=""></button>`) as HTMLButtonElement;
     this.ammoEl = make(`<button type="button" id="tc-ammo" class="k-btn k-btn--icon k-btn--lg tc-ammo sea-round" aria-label="${esc(L('ammoNone'))}"><span class="tc-ammo-pic"></span><b class="tc-ammo-n" aria-hidden="true"></b></button>`) as HTMLButtonElement;
@@ -413,7 +414,7 @@ export class SeaHud {
     this.deckEl = make(`<div id="tc-deck" class="sea-deck hidden" role="toolbar" aria-label="${esc(L('deck'))}"><div class="dk-row dk-abil"></div><div class="dk-row dk-shots"></div></div>`);
     attachWheel(this.fireEl, { options: () => hooks.fireOptions(), onPick: (o) => hooks.firePick(o.id), onTap: () => hooks.fire(), title: L('wheelFire') });
     attachWheel(this.ammoEl, { options: () => hooks.fireOptions(), onPick: (o) => hooks.firePick(o.id), onTap: () => hooks.ammoNext(), title: L('wheelFire') });
-    attachWheel(this.actEl, { options: () => hooks.actOptions(), onPick: (o) => hooks.actPick(o.id), onTap: () => hooks.act(), title: L('wheelAct') });
+    attachWheel(this.actEl, { options: () => hooks.actOptions(), onPick: (o) => hooks.actPick(o.id), onTap: () => hooks.act(this.actEl.dataset.act), title: L('wheelAct') });
     tapOrHold(this.lockEl, () => hooks.nextTarget(), () => this.view?.target && hooks.target());
     this.castEl.addEventListener('click', () => hooks.sail());
     this.specialEl.addEventListener('click', () => hooks.special());

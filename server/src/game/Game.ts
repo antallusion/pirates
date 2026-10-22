@@ -156,6 +156,16 @@ export const PLAYER_CELL = 6000;
 export const MID_LOD_R = SNAP_NEAR + 300;
 /** The same refusal to the same captain is told once in this many seconds (Game.refuse). */
 export const REFUSAL_QUIET = 2.5;
+/** QA 2026-10-22: a boarding's spoils left unanswered this long (her card never seen, her phone asleep) are shared out by
+ *  her quartermaster — all of a ship of the sea's (A), a captain's ship let go with her hold taken — and she sails on. */
+export const BOARD_SETTLE_SECS = 120;
+/** The orders she taps herself: each refusal of them is told every time (REFUSAL_QUIET kept quiet her second tap on
+ *  «Причалить» — the button «did nothing», QA 2026-10-22). */
+const TOLD_EVERY_TIME = new Set<string>(['dock', 'way']);
+/** Her own order held for the shot or her way (holdOrder), its moment gone: she is told so, not left waiting. */
+export const ORDER_LAPSED = 'The order lapsed: its moment passed. Try again.';
+/** «Причалить» with a boarding's spoils still to share out. */
+export const SPOILS_FIRST = 'Settle the spoils of your boarding first.';
 /** A prize's experience in units of her own level's ship sunk (docs/26): sunk 1, taken by boarding 2. */
 export const XP_SUNK = XP_UNITS.sunk;
 export const XP_BOARDED = XP_UNITS.boarded;
@@ -195,7 +205,7 @@ import type { LegendaryId } from '../../../shared/src/data/legendary.ts';
 import { awayMark, awayReturn, awayTake, renownDistance, renownKill, sendRenown, stepRenown } from './renown.ts';
 import { sendWorldGoals, stepWorldGoals, worldGoalKill, worldGoalsCollect } from './worldgoals.ts';
 import { sendSignal } from './signals.ts';
-import { autosailInput, startAutosail, stepAutosail, stopAutosail } from './autosail.ts';
+import { autosailInput, autosailOf, startAutosail, stepAutosail, stopAutosail } from './autosail.ts';
 import { cancelApproach, stepApproach } from './approach.ts'; // seaux: sail-to on tap
 import { cancelRoute, gotoGoal, stepRoutes } from './goalroute.ts'; // route: tap a goal, sail to its nearest place
 import { LootMap, stepWrecks } from './wrecks.ts'; // seaux: wreckage per captain
@@ -263,7 +273,7 @@ import { sagaNote, shareSaga } from './saga.ts';
 import { logNote } from './captainlog.ts';
 import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
 import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
-import { installLairHooks, landFighting, landTac, lairList, lairMessage, lairPos, lairPrompt, lairUp, resendLandFight, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
+import { closeFight, installLairHooks, landFightOn, landFighting, landTac, lairList, lairMessage, lairPos, lairPrompt, lairUp, resendLandFight, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
 import { installSealHooks, sealView } from './seals.ts'; // docs/19 E9
 import { installTitanHooks } from './titans.ts'; // docs/19 E10
 import { raidView, stepAbyssRaid } from './abyssraid.ts'; // docs/19 E11
@@ -1168,13 +1178,19 @@ export class Game {
       // An order that waited for the shot to stop: given again now she is clear.
       if (s.whenClear) {
         // Its moment gone: the time out, or she boarded, grappled, sunk or in port since (a boarding is its own fight).
-        if (now > s.whenClear.until || s.ship.boarding || !s.ship.alive || (s.ship.docked && s.whenClear.msg.t !== 'repair')) s.whenClear = null;
+        if (now > s.whenClear.until || s.ship.boarding || !s.ship.alive || (s.ship.docked && s.whenClear.msg.t !== 'repair')) {
+          // (its time run out with nothing done: told — the dock tapped at speed under the helmsman waited 30 s and
+          // vanished without a word, QA 2026-10-22)
+          if (now > s.whenClear.until && s.ship.alive && !s.ship.boarding && !s.ship.docked) this.sendTo(s, { t: 'toast', msg: ORDER_LAPSED, kind: 'bad' });
+          s.whenClear = null;
+        }
         else if (!s.ship.underFire(now) && (s.whenClear.way === undefined || Math.abs(s.ship.state.speed) <= s.whenClear.way)) {
           const m = s.whenClear.msg;
           s.whenClear = null;
           this.handle(s, m);
         }
       }
+      if (s.pendingBoarding && now - (s.pendingBoarding.at ?? now) >= BOARD_SETTLE_SECS) this.settleSpoils(s);
       this.streamChunks(s);
       this.discover(s);
       fogSecond(this, s); // the fog of war: her lookouts, her island's reach, her scouts (owner, 2026-10-17)
@@ -2583,7 +2599,7 @@ export class Game {
         const lvl = wantedLevel(sa.profile.infamy);
         if (lvl < 5) this.addInfamy(a, WANTED_THRESHOLDS[lvl + 1] - sa.profile.infamy + 1, 'gave no quarter');
       }
-      sa.pendingBoarding = { result, targetId: b.id };
+      sa.pendingBoarding = { result, targetId: b.id, at: this.now };
       // She lies to beside her prize while the spoils are shared out (the helm held her course and she sailed 3.5 km
       // off with the window open: «The prize drifted too far», the ransom and the purse lost).
       a.input = { rudder: 0, sailTarget: 0 };
@@ -2692,6 +2708,21 @@ export class Game {
     this.sendTo(s, { t: 'sunk_self', lost: { cargoValue: taken, crew: lesson ? 0 : Math.max(0, Math.round(crewLost)), repairFee: 0 }, respawnPort: port.id, ...(lesson ? { towed: true } : { boarded: { by: victor.name, silver, ...(repelled ? { repelled: true } : {}) } }) }); // the First Watch's soft card
     this.pushSelf(s, true);
     this.saveSession(s);
+  }
+
+  /** QA 2026-10-22: her boarding's spoils never answered (BOARD_SETTLE_SECS): her quartermaster shares them out — a ship
+   *  of the sea's all of her (A), a captain's ship let go with what of her hold fits — and the card goes. */
+  settleSpoils(s: PlayerSession): void {
+    const pend = s.pendingBoarding;
+    if (!pend) return;
+    const target = this.ships.get(pend.targetId);
+    const take: Cargo = {};
+    if (!pend.result.npc && target) for (const g of Object.keys(target.cargo) as GoodId[]) take[g] = target.cargo[g] ?? 0;
+    const why = this.resolveLoot(s, take, pend.result.npc ? 'sink' : 'release');
+    s.pendingBoarding = null; // (settled or not — a prize gone — it holds her no longer)
+    this.sendTo(s, { t: 'boarding', result: null });
+    this.sendTo(s, { t: 'toast', msg: why ?? 'Your quartermaster shared out the spoils of the boarding.', kind: why ? 'bad' : 'info' });
+    this.pushSelf(s, true);
   }
 
   private resolveLoot(s: PlayerSession, take: Cargo, fateAsked: 'sink' | 'release' | 'ransom' | 'prize' | 'trophy', recruit = 0): string | null {
@@ -3359,7 +3390,7 @@ export class Game {
     const now = this.now;
     // (the same refusal to another order is news: a whisper and an invitation both refused for the same reason)
     const key = `${order}|${m}`;
-    const again = !!s.lastRefusal && s.lastRefusal.msg === key && now - s.lastRefusal.at < REFUSAL_QUIET;
+    const again = !TOLD_EVERY_TIME.has(order) && !!s.lastRefusal && s.lastRefusal.msg === key && now - s.lastRefusal.at < REFUSAL_QUIET;
     s.lastRefusal = { msg: key, at: now }; // (the quiet runs on while it keeps coming: an order repeated by itself is told once)
     if (!again) this.sendTo(s, { t: 'toast', msg: m, kind: 'bad' });
   }
@@ -3420,6 +3451,8 @@ export class Game {
     const ship = s.ship;
     if (way !== undefined && ship) {
       if (pursuitOf(ship)) stopPursuit(this, s, 'off');
+      // …and the helmsman's course too: he kept her under sail, she never slowed and the dock lapsed (QA 2026-10-22)
+      if (autosailOf(ship)) stopAutosail(this, s, 'manual');
       ship.input = { rudder: 0, sailTarget: 0 };
       s.sailHold = s.lastSail;
       this.pushSelf(s, true);
@@ -3682,6 +3715,10 @@ export class Game {
         return err(tacAction(this, ship, msg.act));
       case 'tac_done':
         battleCardClosed(this, ship); // owner, 2026-10-22: the reckoning put away — a moment's grace more, then the sea
+        return;
+      case 'board_result':
+        // QA 2026-10-22: the page asks again for spoils waiting for her answer (back from the background, its watchdog)
+        this.sendTo(s, { t: 'boarding', result: s.pendingBoarding?.result ?? null });
         return;
       case 'tac_replay':
         // Owner, 2026-10-16 («Повтор»): a fight of her last twenty played again, or their list.
@@ -4769,7 +4806,15 @@ export class Game {
     const ship = s.ship!;
     const p = s.profile!;
     if (ship.docked) return 'Already in port';
-    if (!ship.alive || ship.boarding) return 'Not now';
+    if (!ship.alive) return 'Not now';
+    if (ship.boarding || ship.grappled) return 'Not in the middle of a boarding';
+    // her boarding's spoils wait for her answer: their card again, and why (QA 2026-10-22)
+    if (s.pendingBoarding) {
+      this.sendTo(s, { t: 'boarding', result: s.pendingBoarding.result });
+      return SPOILS_FIRST;
+    }
+    // a fight ashore over, its reckoning still up: put away by the dock itself (it held her «in battle» for 45 s)
+    if (landFighting(this, s) && !landFightOn(this, s)) closeFight(this, s);
     if (inBattle(this, ship)) return SELF_IN_BATTLE_WHY; // her party fights ashore, or her group's boarding holds her (owner, 2026-10-22)
     if (ship.underFire(this.now)) return 'The harbour chain stays up while you are in a fight';
     const port = this.nearestPort(ship.state.x, ship.state.y);

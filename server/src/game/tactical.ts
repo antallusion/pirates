@@ -18,6 +18,7 @@ import type { TacAction } from '../../../shared/src/protocol.ts';
 import { XP_UNITS, battleXp, targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { Rng } from '../../../shared/src/rng.ts';
+import { onboardingProtected } from './onboarding.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
 import type { NpcRole } from './ship.ts';
@@ -240,6 +241,9 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
     const bt = newBattle(aIn, bIn, seed, game.tacNow(), rng, { ...(so ? { siege: so.siege } : {}), len, ...(allies.length ? { allies } : {}), deploy: [deploy(a), deploy(b)], record: true });
     fight.tac = bt;
     linkAllies(fight, bt);
+    // QA 2026-10-22: the First Watch's practice fight cannot be lost (tacbattle.ts TacBattle.lesson).
+    const pupil = lessonSide(game, a, b);
+    if (pupil !== null) bt.lesson = pupil;
     // docs/25 item 49: a captain against a clearly weaker ship of the sea is offered the quick fight at once.
     if (len === 'board') {
       const st = [sideStrength(bt, 0), sideStrength(bt, 1)];
@@ -249,6 +253,15 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
   fight.tacSync = [0, 0];
   fight.tacSeen = new Map(fight.tac.stacks.map((s) => [s.id, s.count]));
   sendTac(game, a, b);
+}
+
+/** The pupil's side of a practice fight: a captain still in the First Watch against a ship of the sea (null: none). */
+export function lessonSide(game: Game, a: ShipEntity, b: ShipEntity): 0 | 1 | null {
+  for (const [x, other, side] of [[a, b, 0], [b, a, 1]] as const) {
+    if (other.isPlayer || game.sessionOf(other)) continue;
+    if (onboardingProtected(game.sessionOf(x) ?? null)) return side;
+  }
+  return null;
 }
 
 const rngOf = (game: Game, a: ShipEntity): Rng => a.boarding?.fight.tacRng ?? game.rng;

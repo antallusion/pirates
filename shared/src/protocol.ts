@@ -136,6 +136,9 @@ export type ClientMsg =
   | { t: 'tac_replay'; id?: string }
   /** Owner, 2026-10-22: she put a battle's reckoning away (the grace after it runs its last seconds, inbattle.ts). */
   | { t: 'tac_done' }
+  /** QA 2026-10-22: the page back from the background (or its watchdog) asks again for a boarding's spoils still waiting
+   *  for her answer — the card comes again (or, none waiting, a stale one goes). */
+  | { t: 'board_result' }
   /** The captain would rather fight boardings the old way, round by round (Boarding 2.0). */
   | { t: 'board_pref'; classic: boolean; /** Owner, 2026-10-16: set her stacks before round one (absent: as before, on) */ deploy?: boolean }
   /** docs/25 item 64: come aboard a group mate's boarding (`with`: the ship that grappled, BoardOffer.with) with the kinds of
@@ -1863,6 +1866,8 @@ export interface TacView {
    *  weaker, docs/25 item 49). Absent: no captain's account behind the view. */
   scrolls?: TacScrolls;
   canStrike: boolean;
+  /** QA 2026-10-22: the First Watch's practice fight (it cannot be lost; a turn let run out is played by her crew). */
+  lesson?: boolean;
   /** Silver it would cost this captain to pay the other side off (null: not offered). */
   ransom?: number | null;
   /** The reckoning once it is over: the men each side lost by kind, what the captain learnt, the silver paid; ashore

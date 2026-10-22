@@ -466,7 +466,8 @@ export class PlayerSession {
    *  sending that step she stays hove to; her own hand on the sheets (another step) takes them back. */
   lastSail = -1;
   sailHold: number | null = null;
-  pendingBoarding: { result: BoardingResult; targetId: number } | null = null;
+  /** `at`: when the spoils came to her (the quartermaster shares them out by himself after Game.BOARD_SETTLE_SECS). */
+  pendingBoarding: { result: BoardingResult; targetId: number; at?: number } | null = null;
   /** A job offered and not yet answered, open for a while (docs/11 P6): by an island's people on the beach, or
    *  shared by a groupmate. */
   questOffer: { id: string; until: number; island?: number; from?: string } | null = null;

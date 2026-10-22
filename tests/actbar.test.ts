@@ -118,7 +118,9 @@ test('the gold button is the one the pad\'s A always took, and padContext runs t
   assert.equal(buildActs({ looks: [{ kind: 'lair', name: 'Den' }], repair: { repairing: true, combat: false, hurt: true } })[0].id, 'look');
   // main.ts: the pad's A (and every key that shares the bar's button) runs the bar's own list.
   const main = readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8');
-  const pad = main.slice(main.indexOf('function padContext(): void {'), main.indexOf('/** Lying off one\'s own island'));
+  // (QA 2026-10-22: the gold button's own act first, by its id — liveAct — else the bar's first)
+  const pad = main.slice(main.indexOf('function padContext(id?: string): void {'), main.indexOf('/** Lying off one\'s own island'));
+  assert.match(pad, /liveAct\(id\) \?\? gatherActs\(\)\.acts\[0\]/);
   assert.match(pad, /gatherActs\(\)\.acts\[0\]/);
   assert.match(pad, /runAct\(first\)/);
   assert.match(main, /landKeyAct\(gatherActs\(\)\.acts\)/, 'the land key');
