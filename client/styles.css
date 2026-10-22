@@ -3397,7 +3397,7 @@ body.touch .rc-go { min-height: 44px; }
 .tw-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .tw-art { width: 64px; height: 54px; object-fit: contain; flex: none; margin: 0; }
 .tw-id { display: flex; flex-direction: column; min-width: 0; }
-.tw-id b { font-family: var(--serif); font-size: 15px; color: var(--bone); overflow-wrap: anywhere; }
+.tw-id b { font-family: var(--serif); font-size: 15px; color: var(--bone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* (cut short, its card's hint has it whole: «Адмиралтейство» broke «Адмиралтейст|во», 844×390, 2026-10-22) */
 .tw-text { margin: 0; font-size: 11.5px; line-height: 1.3; }
 .tw-pool { margin: 0; color: var(--good); font-size: 12px; }
 .tw-why, .tw-max { margin: 0; font-size: 11.5px; }

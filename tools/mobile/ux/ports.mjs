@@ -31,15 +31,24 @@ mkdirSync(OUT, { recursive: true });
 
 // The port's places by their tab (port.ts): the ones that open a window of their own are measured as that window.
 const SUBS = '[data-qchip], [data-xtab]'; // a place's own switch: each of its pages measured too
+// The windows around the harbour: each opened afresh; `tabs` its own tabs (each measured, with the chips of its page),
+// `opens` its buttons that open a window of their own (the island's side buttons, the ship's gear and looks) — each
+// measured as the window on top.
+const WTABS = '#modal-panel:not([data-modal="port"]) .w-tab:not(.w-tab--go), #modal-panel .tabs .tab, #modal-panel button[data-view]';
+const WCHIPS = '#modal-panel:not([data-modal="port"]) .w-pane > .w-chips .w-chip';
 const WINDOWS = [
-  { id: 'tattoos', open: (p) => p.evaluate(() => { globalThis.gravetide.open('port'); setTimeout(() => document.querySelector('[data-ptab="tattoo"]')?.click(), 300); }) },
-  { id: 'isle', open: (p) => p.evaluate(() => { globalThis.gravetide.open('port'); setTimeout(() => document.querySelector('[data-ptab="isle"]')?.click(), 300); }) },
-  { id: 'shop', open: (p) => p.evaluate(() => globalThis.gravetide.shop()) },
-  { id: 'ship', open: (p) => p.evaluate(() => globalThis.gravetide.open('ship')) },
-  { id: 'journal', open: (p) => p.evaluate(() => globalThis.gravetide.open('journal')) },
+  { id: 'tattoos', open: (p) => viaPort(p, 'tattoo'), tabs: WTABS },
+  { id: 'isle', open: (p) => viaPort(p, 'isle'), opens: '#isle:not(.hidden) .is-sb:not(:disabled)' },
+  { id: 'shop', open: (p) => p.evaluate(() => globalThis.gravetide.shop()), tabs: WTABS, chips: WCHIPS },
+  { id: 'ship', open: (p) => p.evaluate(() => globalThis.gravetide.open('ship')), opens: '#modal-panel [data-open-gear], #modal-panel [data-open-look]' },
+  { id: 'journal', open: (p) => p.evaluate(() => globalThis.gravetide.open('journal')), tabs: WTABS, chips: WCHIPS },
 ];
-// a window's own tabs (lib.mjs tour, and the shop's rail)
-const TABS = '#modal-panel .w-tab:not(.w-tab--go), #modal-panel .tab, #modal-panel button[data-view], .k-sheet-root.k-open [data-shtab], .k-sheet-root.k-open .w-tab, #isle:not(.hidden) .w-tab, #isle:not(.hidden) [data-istab]';
+async function viaPort(p, tab) {
+  await p.evaluate(() => globalThis.gravetide.open('port'));
+  await L.sleep(500);
+  await p.evaluate((t) => document.querySelector(`#modal-panel [data-ptab="${t}"]`)?.click(), tab);
+}
+const keyOf = (e) => (e.dataset.tab || e.dataset.view || e.dataset.iside || e.textContent.trim() || '').slice(0, 14).replace(/[^\p{L}\p{N}_-]+/gu, '');
 
 const b = await L.browser();
 const rows = [];
@@ -92,13 +101,41 @@ try {
         await w.open(p);
         await L.sleep(1100);
         await offers(p);
-        const n = await p.evaluate((s) => document.querySelectorAll(s).length, TABS);
-        if (!n) await measure(p, `${tag}_${w.id}`, w.id);
-        for (let i = 0; i < Math.min(n, 14); i++) {
-          const k = await p.evaluate(([s, i]) => { const e = [...document.querySelectorAll(s)][i]; if (!e) return null; e.click(); return (e.dataset.tab || e.dataset.shtab || e.dataset.view || e.dataset.istab || e.textContent.trim() || String(i)).slice(0, 14).replace(/[^\p{L}\p{N}_-]+/gu, ''); }, [TABS, i]);
-          if (k === null) break;
+        await measure(p, `${tag}_${w.id}`, w.id);
+        const tabs = w.tabs ? await p.evaluate((s) => document.querySelectorAll(s).length, w.tabs) : 0;
+        // (each tab from the window opened afresh: a chip may open another window — the journal's «Сага»)
+        const tab = async (i) => {
+          await shut(p);
+          await w.open(p);
+          await L.sleep(900);
+          await offers(p);
+          const k = await p.evaluate(([s, i, f]) => { const e = [...document.querySelectorAll(s)][i]; if (!e) return null; e.click(); return (0, eval)(f)(e); }, [w.tabs, i, keyOf.toString()]);
           await L.sleep(600);
-          await measure(p, `${tag}_${w.id}-${i}${k ? '-' + k : ''}`, w.id);
+          return k;
+        };
+        for (let i = 0; i < Math.min(tabs, 14); i++) {
+          const k = await tab(i);
+          if (k === null) break;
+          await measure(p, `${tag}_${w.id}-${i}-${k}`, w.id);
+          const chips = w.chips ? await p.evaluate((s) => [...document.querySelectorAll(s)].filter((c) => !c.classList.contains('on')).length, w.chips) : 0;
+          for (let j = 0; j < Math.min(chips, 8); j++) {
+            if (j) await tab(i);
+            const c = await p.evaluate(([s, j, f]) => { const e = [...document.querySelectorAll(s)].filter((c) => !c.classList.contains('on'))[j]; if (!e) return null; const k = (0, eval)(f)(e); e.click(); return k; }, [w.chips, j, keyOf.toString()]);
+            if (c === null) break;
+            await L.sleep(500);
+            await measure(p, `${tag}_${w.id}-${i}-${k}-${c}`, w.id);
+          }
+        }
+        const opens = w.opens ? await p.evaluate((s) => [...document.querySelectorAll(s)].map((e) => e.outerHTML.length), w.opens) : [];
+        for (let i = 0; i < opens.length; i++) {
+          await shut(p);
+          await w.open(p);
+          await L.sleep(1100);
+          await offers(p);
+          const k = await p.evaluate(([s, i, f]) => { const e = [...document.querySelectorAll(s)][i]; if (!e) return null; const k = (0, eval)(f)(e); e.click(); return k; }, [w.opens, i, keyOf.toString()]);
+          if (k === null) continue;
+          await L.sleep(1100);
+          await measure(p, `${tag}_${w.id}-${k}`, w.id);
         }
       }
     }
