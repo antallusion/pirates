@@ -4,7 +4,7 @@ import { WayWindow, mountFallen, resRid } from './ui/waystation.ts'; // docs/35
 import { setWayFog, wayName } from './render/waystations.ts'; // docs/35
 import { fogFarLayer, underFog } from './render/fog.ts'; // the fog of war (owner, 2026-10-17)
 import { WAY_SIZE, wayInReach } from '../../shared/src/world/waystations.ts'; // docs/35
-import { BOARD_ARC_DEG, BOARD_GAP, DOCK_SLOW, REACH_DOCK, REACH_MOOR, REACH_OBJ, REACH_HINT, REACH_SHORE, alongsideWhy, gapTo, hullsGap, shoreGap } from '../../shared/src/data/reach.ts'; // owner, 2026-10-22
+import { BOARD_ARC_DEG, BOARD_GAP, BOARD_REL_SPEED, DOCK_SLOW, REACH_DOCK, REACH_MOOR, REACH_OBJ, REACH_HINT, REACH_SHORE, alongsideWhy, boardGap, gapTo, shoreGap } from '../../shared/src/data/reach.ts'; // owner, 2026-10-22
 import type { Hull } from '../../shared/src/data/reach.ts';
 import { GRAPPLE_REACH } from '../../shared/src/data/gunnery.ts';
 import { dockGap } from '../../shared/src/world/dock.ts';
@@ -307,9 +307,10 @@ function boardWhy(id: number): { why: 'far' | 'abeam' | 'speed'; gap: number } |
   const s = state.ships.get(id), me = ownHull(state), st = state.ownStats, own = state.ownDisplay;
   const her = s ? viewHull(s) : null;
   if (!s || !me || !her || !st || !own) return { why: 'far', gap: Infinity };
-  const gap = hullsGap(me, her);
+  const gap = boardGap(me, her);
   const base = (34 + st.length * 0.5) * GRAPPLE_REACH;
-  const why = alongsideWhy(me, own.speed, her, s.cur.spd, { gapMul: Math.max(1, Math.min(2.5, st.boardingRange / base)), arcDeg: BOARD_ARC_DEG, anySpeed: !!(s.cur.flags & SF.SURRENDERED) });
+  // (a captain's own way matched within half again the lines' hold — boarding.ts boardGeomWhy)
+  const why = alongsideWhy(me, own.speed, her, s.cur.spd, { gapMul: Math.max(1, Math.min(2.5, st.boardingRange / base)), arcDeg: BOARD_ARC_DEG, anySpeed: !!(s.cur.flags & SF.SURRENDERED), relMax: BOARD_REL_SPEED * 1.5 });
   return why ? { why, gap } : null;
 }
 

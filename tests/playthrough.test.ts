@@ -421,7 +421,7 @@ test('playthrough: the sea\'s director keeps still down the Descent (a bosun\'s 
   const ship = s.ship!;
   ship.docked = null;
   s.profile!.docked = null;
-  Object.assign(ship.state, { x: g.x + 200, y: g.y, speed: 4, sail: 0.6 });
+  Object.assign(ship.state, { x: g.x + 60, y: g.y, speed: 4, sail: 0.6 }); // (at the Stair: thirty metres of her hull — reach.ts)
   ship.region = g.region;
   ship.protectedUntil = 0;
   ship.lastCombat = -999;
