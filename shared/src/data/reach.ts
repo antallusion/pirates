@@ -22,6 +22,9 @@ import { closestOnPolygon, headingVec, pointInPolygon } from '../math.ts';
 export const REACH_OBJ = 30;
 /** Hull edge to the coastline (metres): a landing party, a dig, a lair or a mine ashore, her own island's quay. */
 export const REACH_SHORE = 30;
+/** Lying off an island to deal with it from her deck (her own island's yard, a claim, a holding's moorings): hull edge to
+ *  the coast. Twice the boats' reach — a ship hove to rides on the current a few metres a minute. */
+export const REACH_MOOR = 60;
 /** Hull edge to a harbour's quays or its anchorage (metres), and her way under DOCK_SLOW (knots of the HUD's scale). */
 export const REACH_DOCK = 40;
 export const DOCK_SLOW = 4;
@@ -49,7 +52,7 @@ export const REACH_HINT = 80;
 export const REACH_TABLE = {
   stack: 'obj', lair: 'shore', shoreBoss: 'shore', guard: 'obj', advVisit: 'obj', drift: 'obj', find: 'obj', bottle: 'obj', mark: 'obj',
   carcass: 'obj', event: 'obj', dive: 'obj', raise: 'obj', grail: 'obj', way: 'obj', citadel: 'obj', raidGate: 'obj', quest: 'obj',
-  land: 'shore', dig: 'shore', mine: 'shore', haul: 'shore', home: 'shore', claim: 'shore', isleQuest: 'shore', keeper: 'shore',
+  land: 'shore', dig: 'shore', mine: 'shore', haul: 'shore', home: 'moor', claim: 'moor', isleQuest: 'shore', keeper: 'shore',
   dock: 'dock', board: 'board', hail: 'hail', barter: 'obj', glass: 'glass',
 } as const;
 export type ReachKind = (typeof REACH_TABLE)[keyof typeof REACH_TABLE];

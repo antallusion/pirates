@@ -386,7 +386,7 @@ export function islesAdmin(game: Game, s: PlayerSession, cmd: string, args: stri
       if (!b) return 'No banks.';
       const how = args[0] ?? 'up';
       forceBank(game, b.id, how === 'off' ? null : how !== 'down');
-      if (how !== 'here' && how !== 'off' && how !== 'down') parkOff(game, s, b.x, b.y, b.poly, [ship.state.x, ship.state.y], 140);
+      if (how !== 'here' && how !== 'off' && how !== 'down') parkOff(game, s, b.x, b.y, b.poly, [ship.state.x, ship.state.y], 20); // (within the boats' thirty metres — reach.ts)
       if (s.profile!.isles) delete s.profile!.isles.tides[b.id];
       sendIsles(game, s, true);
       game.pushSelf(s, true);
@@ -413,7 +413,7 @@ export function islesAdmin(game: Game, s: PlayerSession, cmd: string, args: stri
       if (!l) return 'No lookouts.';
       const is = game.world.islands[l.id];
       if (s.profile!.isles) delete s.profile!.isles.lookouts[l.id];
-      parkOff(game, s, is.x, is.y, is.poly, [l.x, l.y], 120);
+      parkOff(game, s, is.x, is.y, is.poly, [l.x, l.y], 20);
       game.pushSelf(s, true);
       return `Off the lookout on ${is.name}.`;
     }
@@ -422,7 +422,7 @@ export function islesAdmin(game: Game, s: PlayerSession, cmd: string, args: stri
       const is = near(list);
       if (!is) return 'No island.';
       delete s.profile!.explored[`${is.id}:scene`];
-      parkOff(game, s, is.x, is.y, is.poly, [ship.state.x, ship.state.y], 110);
+      parkOff(game, s, is.x, is.y, is.poly, [ship.state.x, ship.state.y], 20);
       game.pushSelf(s, true);
       return `Off ${is.name}: land for the walk.`;
     }

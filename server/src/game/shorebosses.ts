@@ -19,7 +19,7 @@
 // half its strength, the Abbess's at two fifths); when the great one falls its kin scatter and the fight is won.
 // `direct` is pure but for the dice it is handed, so the tests and the balance play the same fight (`simulateShore`).
 
-import { REACH_SHORE, REACH_SLACK, hullOf, landingWithin } from '../../../shared/src/data/reach.ts';
+import { REACH_SHORE, REACH_SLACK, hullOf, landingPoint, landingWithin } from '../../../shared/src/data/reach.ts';
 import { islandLoot } from './isleloot.ts'; // docs/29 §9 (owner, 2026-10-17)
 import { xpAt } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { isNight } from '../../../shared/src/constants.ts';
@@ -397,6 +397,20 @@ export function adminShoreBoss(game: Game, s: PlayerSession, args: string[]): st
 function offShore(game: Game, s: PlayerSession, r: Rising): void {
   const is = islandOf(game, r);
   let x = r.x, y = r.y;
+  // (off its beach — the coast's point nearest it — within the boats' thirty metres, reach.ts)
+  const lp = is ? landingPoint(is.poly, r.x, r.y) : null;
+  if (is && lp) {
+    const nl = Math.hypot(lp.x - r.x, lp.y - r.y) || 1, nx = (lp.x - r.x) / nl, ny = (lp.y - r.y) / nl;
+    for (const off of [24, 30, 38]) {
+      const px = lp.x + nx * (off + s.ship!.stats.beam / 2), py = lp.y + ny * (off + s.ship!.stats.beam / 2);
+      if (isLand(game.world, px, py) || pointInPolygon(px, py, is.poly)) continue;
+      parkNear(game, s, px, py, 1);
+      s.ship!.state.heading = Math.atan2(-ny, -nx);
+      s.ship!.state.speed = 0;
+      game.pushSelf(s, true);
+      return;
+    }
+  }
   if (is) {
     const ax = r.x - is.x, ay = r.y - is.y, al = Math.hypot(ax, ay) || 1;
     for (let d = 20; d < 1500; d += 10) {

@@ -670,12 +670,13 @@ export function adminDrift(game: Game, s: PlayerSession, args: string[]): string
     let at: [number, number] | null = null;
     for (let t = 0; t < 24 && !at; t++) {
       const v = headingVec(ship.state.heading + (t % 2 ? 1 : -1) * Math.floor(t / 2) * 0.5);
-      const x = ship.state.x + v.x * 160, y = ship.state.y + v.y * 160;
+      const off = ship.stats.length / 2 + OBJ_R + 16; // (within the boats' thirty metres of her bow — reach.ts)
+      const x = ship.state.x + v.x * off, y = ship.state.y + v.y * off;
       if (openWater(game, x, y) || (!isLand(game.world, x, y) && game.inZone(x, y))) at = [x, y];
     }
     if (!at) {
       parkNear(game, s, ship.state.x, ship.state.y, 1);
-      at = [ship.state.x + 200, ship.state.y];
+      at = [ship.state.x + ship.stats.length / 2 + OBJ_R + 16, ship.state.y];
     }
     const d = DRIFTS[k].legend ? raiseLegend(game, k, at[0], at[1]) : putDrift(game, k, at[0], at[1], s.accountId);
     if (S.legend && DRIFTS[k].legend) {

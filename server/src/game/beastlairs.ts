@@ -1365,6 +1365,18 @@ function goTo(game: Game, s: PlayerSession, l: Lair): void {
   const ship = s.ship!;
   if (l.island >= 0) {
     const is = game.world.islands[l.island];
+    // (owner, 2026-10-22: off its beach — the coast's point nearest it — within the boats' thirty metres, reach.ts)
+    const lp = landingPoint(is.poly, l.x, l.y);
+    const nl = Math.hypot(lp.x - l.x, lp.y - l.y) || 1, nx = (lp.x - l.x) / nl, ny = (lp.y - l.y) / nl;
+    for (const off of [24, 30, 38]) {
+      const x = lp.x + nx * (off + ship.stats.beam / 2), y = lp.y + ny * (off + ship.stats.beam / 2);
+      if (isLand(game.world, x, y) || pointInPolygon(x, y, is.poly)) continue;
+      parkNear(game, s, x, y, 1);
+      ship.state.heading = Math.atan2(-ny, -nx);
+      ship.state.speed = 0;
+      game.pushSelf(s, true);
+      return;
+    }
     // The nearest water off the shore from the lair, whichever way it lies (a grotto lies deep inland).
     let best: [number, number] | null = null, bd = Infinity;
     for (let k = 0; k < 24; k++) {
@@ -1381,7 +1393,9 @@ function goTo(game: Game, s: PlayerSession, l: Lair): void {
     parkNear(game, s, x, y, 1);
   } else {
     const p = lairPos(game, l);
-    parkNear(game, s, p.x, p.y, 230);
+    // (a turtle's shell or a bank: her hull within the boats' thirty metres of its edge — reach.ts)
+    const r = l.turtle !== undefined ? turtles(game.world)[l.turtle]?.r ?? 160 : tidalIsles(game.world)[l.bank ?? -1]?.r ?? 160;
+    parkNear(game, s, p.x, p.y, r + 16 + ship.stats.beam / 2);
   }
   ship.state.speed = 0;
   game.pushSelf(s, true);

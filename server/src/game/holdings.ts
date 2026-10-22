@@ -11,7 +11,7 @@
 //    a fort that fire on pirates and on whoever fires on you, a lighthouse (sight, witness, toll), farms, mines,
 //    plantations, a sawmill, a distillery, a powder mill, a chapel, a chart house, barracks.
 
-import { REACH_SHORE, REACH_SLACK, hullOf, shoreGap, shoreWithin } from '../../../shared/src/data/reach.ts';
+import { REACH_MOOR, hullOf, shoreGap, shoreWithin } from '../../../shared/src/data/reach.ts';
 import { lackMore, lackRoom } from '../../../shared/src/data/buyfail.ts';
 import { estateProduce, ownedSlots, residentMul } from './estate.ts';
 import type { Resident } from './estate.ts';
@@ -49,9 +49,9 @@ const DAY = 86_400_000;
 const HOUR = 3_600_000;
 export const GRACE_MS = 72 * HOUR;
 // Her hull within this of the island's coast to deal with it from her deck, and to heave to off it (owner, 2026-10-22:
-// 800 and 300 m from its rim → 30 m from her hull, reach.ts).
-export const REACH = REACH_SHORE + REACH_SLACK;
-export const MOOR = REACH_SHORE + REACH_SLACK;
+// 800 and 300 m from its rim → 60 m from her hull, reach.ts REACH_MOOR: hove to, she rides on the current a little).
+export const REACH = REACH_MOOR;
+export const MOOR = REACH_MOOR;
 
 export interface Owner {
   kind: 'player' | 'guild';

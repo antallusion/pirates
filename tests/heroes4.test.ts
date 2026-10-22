@@ -35,6 +35,7 @@ import { SERVER_RU_ADMIN } from '../client/src/lang/server.ru.admin.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { applyDataLocale } from '../client/src/lang/data.ts';
 import { join, makeGame, onHull, steps } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 let clock = 20_000 * 86_400_000;
 
@@ -182,7 +183,7 @@ test('HoMM3\'s offer: before three times their might they flee, or some sign on 
   const s = captain(game, 'Strong Captain', 8, 'frigate');
   // A weak guard of the low waters against a frigate's army.
   const g = advMap(game).guards.find((x) => x.level <= 2 && x.kind !== 'wreck' && x.kind !== 'beasts')!;
-  parkNear(game, s, g.x, g.y, 120);
+  parkNear(game, s, g.x, g.y, 40); // (beside them: thirty metres — reach.ts)
   seconds(game, 3);
   const offer = guardOffer(game, s, g);
   assert.ok(offer === 'join' || offer === 'flee', 'an offer');
@@ -214,7 +215,7 @@ test('a guard bars its thing and its mine: no visit and no flag until it is beat
   const game = world();
   const s = captain(game);
   const o = advMap(game).objs.find((x) => x.guard && x.kind === 'chest')!;
-  parkNear(game, s, o.x, o.y, 100);
+  parkNear(game, s, o.x, o.y, 62); // (within the boats' thirty metres of its skerry — reach.ts)
   seconds(game, 2);
   assert.equal(visit(game, s, o.id, 'silver'), 'A guard stands before it: beat them first.');
   const g = advMap(game).guards.find((x) => x.id === o.guard)!;
@@ -285,7 +286,7 @@ test('an altar teaches a talent point once (four from the altars in all, then ex
   advOf(s.profile!).pts = ALTAR_POINTS;
   const other = advMap(game).objs.filter((x) => x.kind === 'altar' && x.id !== id)[0];
   if (other.guard) downGuard(game, other.guard);
-  parkNear(game, s, other.x, other.y, 150);
+  parkNear(game, s, other.x, other.y, 62); // (within the boats' thirty metres of its skerry — reach.ts)
   const before = talentPointsAvailable(s.profile!), xp = s.profile!.xp, lvl = s.profile!.level;
   assert.equal(cardView(game, s)!.obj!.altar!.point, false);
   assert.equal(visit(game, s, other.id), null);
@@ -364,12 +365,13 @@ test('the dig: sand where it is not, the Grail where it is — the chronicle tel
   // Her own island first.
   const home = game.world.islands.find((i) => !i.portId && !i.minor && !i.raft && i.region === 'gravewater' && i.radius > 150 && !game.holdings.get(game, i.id) && !lairIsland(game, i.id) && !mineSites(game).some((m) => m.islandId === i.id))!;
   parkNear(game, s, home.x, home.y, home.radius + 120);
+  assert.ok(offCoast(game, s.ship!, home), 'water off its coast'); // (her hull within its coast's reach — reach.ts)
   assert.equal(buyIsland(game, s, home.id), null);
   // A wrong shore: sand.
   const spot = grailSpot(game, s.accountId);
   const wrong = game.world.islands.find((i) => !i.portId && !i.minor && i.id !== spot.island.id && dist(i.x, i.y, spot.x, spot.y) > 5000 && i.radius > 150)!;
   parkNear(game, s, wrong.x, wrong.y, wrong.radius + 80);
-  for (let k = 0; k < 30 && startDig(game, s) === 'No shore within reach of the boats to dig.'; k++) parkNear(game, s, wrong.x, wrong.y, wrong.radius + 60 - k * 5);
+  assert.ok(offCoast(game, s.ship!, wrong), 'water off its coast'); // (her hull within its coast's reach — reach.ts)
   seconds(game, 22);
   assert.ok(!advOf(s.profile!).found, 'nothing found');
   assert.equal(startDig(game, s), 'The diggers are still resting from the last hole.');

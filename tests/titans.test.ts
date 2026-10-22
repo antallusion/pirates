@@ -26,6 +26,7 @@ import { serverText } from '../client/src/lang/server.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { winRate } from './balance/recruit.ts';
 import { join, makeGame, onHull, steps } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 const manifest = JSON.parse(readFileSync(new URL('../assets/manifest.json', import.meta.url), 'utf8')) as { assets: Record<string, unknown> };
 const w1 = (u: UnitId) => armyWeight([{ u, n: 1 }]);
@@ -87,6 +88,7 @@ function grailed(game: Game): PlayerSession {
   s.ship!.setArmy(armyForLevel(10, s.ship!.stats.crewMax, s.ship!.armySlots, 'player').slice(0, 5));
   const home = game.world.islands.find((i) => !i.portId && !i.minor && !i.raft && i.region === 'gravewater' && i.radius > 150 && !game.holdings.get(game, i.id) && !lairIsland(game, i.id) && !mineSites(game).some((m) => m.islandId === i.id))!;
   parkNear(game, s, home.x, home.y, home.radius + 120);
+  assert.ok(offCoast(game, s.ship!, home), 'water off its coast'); // (her hull within its coast's reach — reach.ts)
   s.profile!.gold = 1_000_000;
   assert.equal(buyIsland(game, s, home.id), null);
   townState(yardOf(game, ownIsland(game, s.accountId)!)).b.grail = 1;

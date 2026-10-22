@@ -438,7 +438,7 @@ export function isle18Admin(game: Game, s: PlayerSession, cmd: string, args: str
   if (ship.docked) return 'Put to sea first.';
   const x = ship.state.x, y = ship.state.y;
   const land = game.world.islands.filter((is) => !is.portId && !is.raft && !(is.minor && is.isle !== 'ridge'));
-  const go = (is: Island, off = 140) => {
+  const go = (is: Island, off = 20) => { // (her hull within the boats' thirty metres of its coast — reach.ts)
     parkOff(game, s, is.x, is.y, is.poly, is.radius, off);
     game.pushSelf(s, true);
   };
@@ -499,7 +499,7 @@ export function isle18Admin(game: Game, s: PlayerSession, cmd: string, args: str
       if (how === 'go') {
         st(game).forced.set(t.d.id, true);
         delete combed(s.profile!)[t.d.id];
-        parkOff(game, s, t.x, t.y, null, TURTLE_R, 150);
+        parkOff(game, s, t.x, t.y, null, TURTLE_R, 20);
         game.pushSelf(s, true);
       }
       sendTurtles(game, s, true);
@@ -512,7 +512,7 @@ export function isle18Admin(game: Game, s: PlayerSession, cmd: string, args: str
       if (!b) return 'No sandbars.';
       forceBank(game, b.id, true);
       if (s.profile!.isles) delete s.profile!.isles.tides[b.id];
-      parkOff(game, s, b.x, b.y, b.poly, b.r, 140);
+      parkOff(game, s, b.x, b.y, b.poly, b.r, 20);
       sendIsles(game, s, true);
       game.pushSelf(s, true);
       return `A sandbar is bared before you: ${TIDAL_NAMES[b.name][0]}.`;

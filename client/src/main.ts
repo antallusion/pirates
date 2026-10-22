@@ -4,7 +4,7 @@ import { WayWindow, mountFallen, resRid } from './ui/waystation.ts'; // docs/35
 import { setWayFog, wayName } from './render/waystations.ts'; // docs/35
 import { fogFarLayer, underFog } from './render/fog.ts'; // the fog of war (owner, 2026-10-17)
 import { WAY_SIZE, wayInReach } from '../../shared/src/world/waystations.ts'; // docs/35
-import { BOARD_ARC_DEG, BOARD_GAP, DOCK_SLOW, REACH_DOCK, REACH_OBJ, REACH_HINT, REACH_SHORE, alongsideWhy, gapTo, hullsGap, shoreGap } from '../../shared/src/data/reach.ts'; // owner, 2026-10-22
+import { BOARD_ARC_DEG, BOARD_GAP, DOCK_SLOW, REACH_DOCK, REACH_MOOR, REACH_OBJ, REACH_HINT, REACH_SHORE, alongsideWhy, gapTo, hullsGap, shoreGap } from '../../shared/src/data/reach.ts'; // owner, 2026-10-22
 import type { Hull } from '../../shared/src/data/reach.ts';
 import { GRAPPLE_REACH } from '../../shared/src/data/gunnery.ts';
 import { dockGap } from '../../shared/src/world/dock.ts';
@@ -4221,8 +4221,8 @@ function nearHome(): { name: string } | null {
   const own = state.ownDisplay;
   if (id === null || id === undefined || !own || state.self?.dockedAt) return null;
   const isl = state.islands.get(id), h = ownHull(state);
-  // (owner, 2026-10-22: her hull within REACH_SHORE of its coast — reach.ts — not 900 m off its rim)
-  if (!isl || !h || shoreGap(h, isl, isl.r, REACH_SHORE) > REACH_SHORE) return null;
+  // (owner, 2026-10-22: her hull lying off its coast, REACH_MOOR — reach.ts — not 900 m off its rim)
+  if (!isl || !h || shoreGap(h, isl, isl.r, REACH_MOOR) > REACH_MOOR) return null;
   return { name: isl.name };
 }
 

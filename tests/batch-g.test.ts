@@ -207,7 +207,7 @@ test('a new week brings new goals and keeps what is owed', () => {
 // ================================================================== 33. trade alongside at sea
 
 /** Two captains alongside, the table open. */
-function table(game: Game, gap = 200): { a: ReturnType<typeof cap>; b: ReturnType<typeof cap> } {
+function table(game: Game, gap = 20): { a: ReturnType<typeof cap>; b: ReturnType<typeof cap> } {
   const a = cap(game, 'Ada Trade'), b = cap(game, 'Ben Trade');
   atSea(game, a.s, 50_000, 50_000);
   atSea(game, b.s, 50_000 + gap, 50_000);
@@ -216,15 +216,15 @@ function table(game: Game, gap = 200): { a: ReturnType<typeof cap>; b: ReturnTyp
   return { a, b };
 }
 
-test('trade at sea within 300 m and no nearer need: sailing ships may trade, a ship beyond reach may not', () => {
-  assert.equal(TRADE_RANGE, 300);
+test('trade at sea within 30 m hull to hull (owner, 2026-10-22: reach.ts): sailing ships may trade, a ship beyond reach may not', () => {
+  assert.equal(TRADE_RANGE, 30);
   const { game } = makeGame();
   const a = cap(game, 'Ada Trade'), b = cap(game, 'Ben Trade');
   atSea(game, a.s, 50_000, 50_000);
-  atSea(game, b.s, 50_301, 50_000);
+  atSea(game, b.s, 50_120, 50_000);
   a.c.push({ t: 'barter', action: 'propose', name: 'Ben Trade' });
-  assert.match(errs(a.c), /Come within 300 m/);
-  b.s.ship!.state.x = 50_300;
+  assert.match(errs(a.c), /Come within 30 m/);
+  b.s.ship!.state.x = 50_020;
   b.s.ship!.state.speed = 6; // under way: no need to heave to
   a.c.push({ t: 'barter', action: 'propose', name: 'Ben Trade' });
   b.c.push({ t: 'barter', action: 'propose', name: 'Ada Trade' });

@@ -152,7 +152,7 @@ test('a chest on the map may hold an artifact for her this week, on its own dice
   }
   assert.ok(found, 'some chest holds an artifact');
   if (found!.guard) downGuard(game, found!.guard);
-  parkNear(game, s, found!.x, found!.y, 120);
+  parkNear(game, s, found!.x, found!.y, 62); // (within the boats' thirty metres of its skerry — reach.ts)
   const card = cardView(game, s)!.obj!;
   assert.equal(card.id, found!.id);
   const art = chestArtifact(thisWeek(game), s.accountId, found!.id, !!found!.guard)!;
