@@ -87,6 +87,8 @@ function put(game: Game, side: Side, role: 'patrol' | 'hunter', x: number, y: nu
   game.setNpcLevel(ship, side.level);
   const brain = newBrain(ship.id, role, game.now);
   brain.active = true;
+  // A scripted captain is a captain: her guns are not held to the sea's own NPC_OPEN_FIRE (owner, 2026-10-22).
+  if (side.craft === 'perfect' || side.craft === 'average') brain.captain = true;
   if (side.skill) {
     brain.skill = side.skill;
     ship.effects = ship.effects.filter((e) => e.id !== 'npc_craft');

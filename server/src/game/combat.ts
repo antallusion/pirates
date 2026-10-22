@@ -303,7 +303,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   // Overgunned: a full broadside makes the hull groan.
   if (ship.hasFlag('overgunned') && ship.gunsDisabled[side] === 0) ship.hull -= ship.stats.hullMax * 0.005;
   // Weather Gauge: the powder smoke blows down onto the enemy.
-  if (target && ship.hasFlag('weather_gauge') && upwindOf(game, ship, target) && Math.hypot(target.state.x - ship.state.x, target.state.y - ship.state.y) < 450) {
+  if (target && ship.hasFlag('weather_gauge') && upwindOf(game, ship, target) && Math.hypot(target.state.x - ship.state.x, target.state.y - ship.state.y) < 225) {
     target.addEffect({ id: 'gun_smoke', until: game.now + 3, mods: { spreadMul: 0.1 }, source: ship.id }, game.now);
   }
   ship.lastCombat = game.now;

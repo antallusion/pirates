@@ -334,7 +334,10 @@ export function underway(game: Game, A: ShipEntity, B: ShipEntity, k: number, ma
   for (const s of [A, B]) {
     const b = newBrain(s.id, 'hunter', game.now);
     b.active = true;
-    if (s.isPlayer) b.skill = CRAFT.average;
+    if (s.isPlayer) {
+      b.skill = CRAFT.average;
+      b.captain = true; // her guns to their reach, not the sea's own NPC_OPEN_FIRE
+    }
     brains.set(s.id, b);
     game.npcs.delete(s.id);
   }

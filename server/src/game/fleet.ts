@@ -173,9 +173,10 @@ export function escortLost(game: Game, esc: ShipEntity): void {
 
 /** Station relative to the flagship: x to starboard, y ahead (negative astern). */
 export function formationOffset(f: Formation, i: number): { x: number; y: number } {
-  if (f === 'wedge') return [{ x: -130, y: -110 }, { x: 130, y: -110 }, { x: 0, y: -240 }][i] ?? { x: 0, y: -240 - i * 100 };
-  if (f === 'ring') return [{ x: -160, y: 0 }, { x: 160, y: 0 }, { x: 0, y: -190 }][i] ?? { x: 0, y: -190 - i * 100 };
-  return { x: 0, y: -(170 + i * 150) };
+  // (owner, 2026-10-22: the sea's reaches halved — the guns 100–250 m, the auras with them: the stations closed up by half)
+  if (f === 'wedge') return [{ x: -65, y: -55 }, { x: 65, y: -55 }, { x: 0, y: -120 }][i] ?? { x: 0, y: -120 - i * 50 };
+  if (f === 'ring') return [{ x: -80, y: 0 }, { x: 80, y: 0 }, { x: 0, y: -95 }][i] ?? { x: 0, y: -95 - i * 50 };
+  return { x: 0, y: -(85 + i * 75) };
 }
 
 export function setFormation(game: Game, s: PlayerSession, f: Formation): string | null {
