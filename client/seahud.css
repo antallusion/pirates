@@ -843,7 +843,7 @@ body.tac-ph .tb-qbar:not(.fold) ~ .tb-top { top: calc(env(safe-area-inset-top, 0
 /* The end: «Почему» and «Повтор» beside its button; the why's sheet. */
 .tb-endrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
 .tb-end.sea .tb-endrow { flex: 0 0 auto; }
-.tb-endx { min-width: 0; }
+.tb-endrow .tb-endbtn.tb-endx { min-width: 0; } /* «Почему», «Повтор»: «Дальше»'s button, the secondary of the pair, as wide as its word */
 .tb-why-l { margin: 0 0 6px; font-size: 13px; line-height: 1.35; }
 .tb-why-turn { color: var(--gold); }
 .tb-whyk h4 { margin: 10px 0 4px; font-size: 13px; color: var(--fog); font-weight: 600; }
