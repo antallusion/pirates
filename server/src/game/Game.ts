@@ -1,6 +1,8 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { DOCK_SLOW, LANDING_R, REACH_DOCK, REACH_SLACK, hullOf } from '../../../shared/src/data/reach.ts';
+import { dockWithin } from '../../../shared/src/world/dock.ts';
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { provisionsPerMinute } from '../../../shared/src/data/voyage.ts';
 import { chatCommand, chatFromAfar, chatHist, chatIn, chatOnLogin, chatRead, chatReport, cleanChat, guildSay } from './chat.ts'; // docs/28
@@ -206,7 +208,7 @@ import { awayMark, awayReturn, awayTake, renownDistance, renownKill, sendRenown,
 import { sendWorldGoals, stepWorldGoals, worldGoalKill, worldGoalsCollect } from './worldgoals.ts';
 import { sendSignal } from './signals.ts';
 import { autosailInput, autosailOf, startAutosail, stepAutosail, stopAutosail } from './autosail.ts';
-import { approachInput, cancelApproach, stepApproach } from './approach.ts'; // seaux: sail-to on tap
+import { approach, approachInput, cancelApproach, stepApproach } from './approach.ts'; // seaux: sail-to on tap
 import { cancelRoute, gotoGoal, stepRoutes } from './goalroute.ts'; // route: tap a goal, sail to its nearest place
 import { LootMap, stepWrecks } from './wrecks.ts'; // seaux: wreckage per captain
 import { scuttleHome, scuttledHome, stepAdrift } from './adrift.ts'; // owner 2026-10-20: the jury rig, stranded, scuttling home
@@ -4836,8 +4838,15 @@ export class Game {
     if (inBattle(this, ship)) return SELF_IN_BATTLE_WHY; // her party fights ashore, or her group's boarding holds her (owner, 2026-10-22)
     if (ship.underFire(this.now)) return 'The harbour chain stays up while you are in a fight';
     const port = this.nearestPort(ship.state.x, ship.state.y);
+    // Only from the harbour's approach (owner, 2026-10-22: her hull within REACH_DOCK of its anchorage or its quays —
+    // shared/src/world/dock.ts); a cable or a mile off, the helmsman takes her in and she puts in there (approach.ts).
+    const isl = port ? this.world.islands[port.islandId] : undefined;
+    const quay = isl ? { x: isl.x, y: isl.y, r: isl.radius, poly: isl.poly } : null;
     if (!port || dist(port.x, port.y, ship.state.x, ship.state.y) > PORT_DOCK_RADIUS) return 'No harbour close enough';
-    if (ship.state.speed > 7) return 'Take in sail before entering harbour';
+    if (!dockWithin(hullOf(ship), port, quay, REACH_SLACK)) {
+      return approach(this, s, { x: port.x, y: port.y, reach: REACH_DOCK, r: LANDING_R, near: () => !!s.ship && dockWithin(hullOf(s.ship), port, quay, -4), slow: DOCK_SLOW - 0.5 }, 'Come into the harbour first: up to its quays.');
+    }
+    if (ship.state.speed > DOCK_SLOW) return 'Take in sail before entering harbour';
     const ok = canDock(p, port.faction);
     const override = ok.ok ? null : dockOverride(ship, p, port, bribing);
     if (!ok.ok && !override) return ok.reason!;

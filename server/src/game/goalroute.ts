@@ -26,7 +26,7 @@ import type { RegionId, Safety } from '../../../shared/src/world/regions.ts';
 import { SECTOR_SIZE, sectorAt, sectorGrid } from '../../../shared/src/world/sectors.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { AUTOSAIL_ARRIVE } from '../../../shared/src/data/autosail.ts';
-import { REACH_DOCK } from '../../../shared/src/data/reach.ts';
+import { REACH_DOCK, landingPoint } from '../../../shared/src/data/reach.ts';
 import { autosailOf, helmTouched, lastStopOf, pathView, pausedCourse, planFrom, startAutosail, stopAutosail } from './autosail.ts';
 import { beastsAlive } from './beasts.ts';
 import { commonView } from './commongoal.ts';
@@ -177,7 +177,17 @@ export function pickNearest(game: Game, s: PlayerSession, cands: Cand[], again =
     if (w < bw) [best, bw, bd] = [o, w, d];
   }
   if (!best) return null;
-  const c = best.c;
+  let c = best.c;
+  // An island to land on (owner, 2026-10-22: the landing is thirty metres from her hull): the beach nearest her, a little
+  // out from it, not the island's middle — the run ends inside the boats' reach.
+  if (c.act === 'land' && c.island !== undefined) {
+    const is = game.world.islands[c.island];
+    if (is) {
+      const b = landingPoint(is.poly, here.x, here.y);
+      const nx = b.x - is.x, ny = b.y - is.y, l = Math.hypot(nx, ny) || 1;
+      c = { ...c, x: b.x + (nx / l) * 18, y: b.y + (ny / l) * 18, r: 60 };
+    }
+  }
   return {
     x: Math.round(c.x), y: Math.round(c.y), r: Math.round(c.r), kind: c.kind, name: c.name, dist: Math.round(bd), level: best.k.level, risk: best.k.risk,
     ...(c.act ? { act: c.act } : {}), ...(c.port ? { port: c.port } : {}), ...(c.island !== undefined ? { island: c.island } : {}),
