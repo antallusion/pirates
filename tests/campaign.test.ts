@@ -7,7 +7,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_LEVEL, xpForLevel } from '../shared/src/constants.ts';
+import { MAX_LEVEL, WORLD_SEED, xpForLevel } from '../shared/src/constants.ts';
 import { LOCAL_R, OPENING_SLOTS, buildCampaign, locDist } from '../shared/src/data/campaign/build.ts';
 import { CHAPTERS } from '../shared/src/data/campaign/chapters.ts';
 import { checkChapter } from '../shared/src/data/campaign/check.ts';
@@ -766,4 +766,18 @@ test('a newcomer starts where she starts: chapter 1 at Saltmarrow and its waters
   }
   const legs = built.locations.slice(1).map((l, i) => ({ l, d: Math.hypot(l.x - built.locations[i].x, l.y - built.locations[i].y) })).filter((x) => campaignPaces()[x.l.from].gate < 5);
   for (const x of legs) assert.ok(x.d <= 6500, `${x.l.name}: ${(x.d / 1000).toFixed(1)} km before the fifth level`);
+});
+
+test('every step names the very island or port its mark is on (QA 2026-10-22: «Kitty Marsh … off Veilislet Isle» marked Sallowwisp Rock)', () => {
+  for (const seed of [1337, WORLD_SEED]) {
+    const w = seed === 1337 ? world : generateWorld(seed);
+    const c = seed === 1337 ? built : buildCampaign(w, seed, CHAPTERS);
+    for (const q of c.quests) for (const st of q.steps) {
+      if ((st.type === 'isle' || st.type === 'land') && st.island >= 0) assert.ok(st.text.includes(w.islands[st.island].name), `${q.id}: «${st.text}» marks ${w.islands[st.island].name}`);
+      if (st.type === 'visit' || st.type === 'deliver' || st.type === 'pickup') {
+        const name = w.ports.find((p) => p.id === st.port)?.name;
+        assert.ok(name && st.text.includes(name), `${q.id}: «${st.text}» marks ${name}`);
+      }
+    }
+  }
 });

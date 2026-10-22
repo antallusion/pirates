@@ -452,6 +452,9 @@ function buildQuest(c: QuestCtx, src: { t: T; b: T; d: T; s: StepSrc[]; lane?: {
     }
     // an island's run of the Abyss: the mentor's ship rides at anchor off its island, not in a harbour
     if (!port && s.kind === 'hub' && typeof x === 'string') words = STEP_WORDS.hub_isle[hashString(`${id}:${i}`) % STEP_WORDS.hub_isle.length];
+    // (its words name the anchorage's island — the one the step's mark is on — not the run's {isle}: QA 2026-10-22,
+    // «Kitty Marsh … off Veilislet Isle» marked Sallowwisp Rock)
+    if (!port && anchor && (s.kind === 'hub' || s.kind === 'at' || s.kind === 'port' || s.kind === 'port2')) sv.isle = anchor.name;
     const text = (part: 'pick' | 'drop' = 'pick') => fill(withGiver((part === 'drop' ? stepWords(x, s, id, i, 'drop') : words)[0], ch, 0), sv);
     const visitHere = () => (port ? steps.push({ type: 'visit', port: port.id, text: text() }) : steps.push({ type: 'isle', island: anchor!.id, text: text() }));
     switch (s.kind) {
