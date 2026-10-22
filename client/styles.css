@@ -2652,7 +2652,9 @@ body.touch .base-board .bplot { cursor: default; }
 
 /* A sheet up over the window (the claim's «Подтвердить», the cast-off's list): the strip goes to the top band, off the
    sheet's buttons (QA 2026-10-22: «Переждите шторм…» lay over «Отмена / Подтвердить»). */
-body:has(.k-sheet-root.k-open) #modal-toasts { top: calc(var(--sa-t, 0px) + 6px); bottom: auto; }
+body:has(.k-sheet-root.k-open) #modal-toasts, #modal-toasts.mt-top { top: calc(var(--sa-t, 0px) + 6px); bottom: auto; }
+/* (between the window's title plate and its figures on a phone held sideways) */
+@media (max-height: 520px) { #modal-toasts.mt-top { width: min(420px, calc(100vw - 16px)); } }
 /* The column's toasts wait under an open window (the strip takes the new ones); they come back when it closes. */
 body:has(#modal:not(.hidden)) #toasts { display: none; }
 

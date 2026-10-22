@@ -109,3 +109,8 @@ test('inside Telegram a link out goes by Telegram’s opener (the settings’ le
   assert.equal(tgLinkOut(a('javascript:void 0', '_blank'), here), null);
   assert.match(src('client/src/ui/options.ts'), /target="_blank"/, 'the legal links are links out');
 });
+
+test('a window’s toast strip goes up when the window has its buttons along its foot', () => {
+  assert.match(src('client/src/ui/hud.ts'), /before: \(host\) => \(host === this\.toastsEl \? this\.placeStrip\(\) : placeModalStrip\(host\)\)/);
+  assert.match(src('client/styles.css'), /#modal-toasts\.mt-top \{ top: calc\(var\(--sa-t, 0px\) \+ 6px\); bottom: auto; \}/);
+});

@@ -125,6 +125,23 @@ export function releaseModalToasts(): void {
   for (const el of [...strip.children].reverse()) col.prepend(el);
 }
 
+/** The window's strip in the bottom band, or in the top one when the window has its buttons along its foot (the
+ *  waystation's «Воскресить · В море», the cast-off's list): a toast lay over their words (QA 2026-10-22). */
+export function placeModalStrip(strip: HTMLElement): void {
+  const panel = document.getElementById('modal-panel');
+  const H = innerHeight;
+  let foot = false;
+  for (const b of panel?.querySelectorAll<HTMLElement>('button, .btn, a.k-btn') ?? []) {
+    const r = b.getBoundingClientRect();
+    if (r.width > 0 && r.bottom > H - 64 && r.top < H) {
+      foot = true;
+      break;
+    }
+  }
+  // (a kit sheet over the window has its own foot: styles.css keeps the strip up then)
+  strip.classList.toggle('mt-top', foot);
+}
+
 /** A short screen (a phone, a small window): the action bar fills its bottom, the toasts keep to the top row. */
 const SHORT = '(max-width: 699px), (max-height: 520px)';
 
@@ -1767,7 +1784,7 @@ export class Hud {
    *  in the HUD's band (placed by placeStrip for the popup budget), or the open window's strip under it. */
   private toastQ = new Toasts({
     host: () => (modalOpen() ? $('modal-toasts') : this.toastsEl),
-    before: (host) => host === this.toastsEl && this.placeStrip(),
+    before: (host) => (host === this.toastsEl ? this.placeStrip() : placeModalStrip(host)),
     render: (t) => (t.data as () => HTMLElement)(),
     bump: (el, t) => {
       let badge = el.querySelector<HTMLElement>('.t-count');
