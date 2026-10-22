@@ -24,7 +24,7 @@ import { log as guildLog, member, rankAtLeast } from './guilds.ts';
 import { deliver as mail } from './post.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
-import { ownGood, ownTrade } from './ownstock.ts';
+import { ownTrade } from './ownstock.ts';
 
 const DAY = 24 * 3600_000;
 const WEEK = 7 * DAY;
@@ -397,8 +397,9 @@ export function saleMul(game: Game, s: PlayerSession, port: Port, good: GoodId, 
     const lic = game.empires.licences(game).active.find((l) => l.good === good && l.region === port.region);
     if (lic) mul *= lic.holder === s.accountId ? 1.1 : 0.8;
   }
-  // Counter-supply: past 40% of the market in an hour, every further tenth costs another 15% (her own market: ownstock.ts).
-  const gm = s.profile ? ownGood(game, s.profile, port, good) : game.markets.get(port.id)?.goods[good];
+  // Counter-supply: past 40% of the market in an hour, every further tenth costs another 15% — of the port's own appetite,
+  // not of her own (deeper) stock (ownstock.ts): her market's depth is no licence to dump into one town.
+  const gm = game.markets.get(port.id)?.goods[good];
   if (gm) {
     const key = `${s.accountId}:${port.id}:${good}`;
     const log = (game.empires.flooding.get(key) ?? []).filter((e) => game.now - e.t < 3600);
@@ -415,9 +416,9 @@ export function noteSale(game: Game, s: PlayerSession, port: Port, good: GoodId,
   log.push({ t: game.now, qty });
   game.empires.flooding.set(key, log);
   // NPC counter-supply: the market fills from elsewhere when one captain floods it — her own stock (ownstock.ts).
-  const gm = s.profile ? ownGood(game, s.profile, port, good) : undefined;
+  const gm = game.markets.get(port.id)?.goods[good];
   const sold = log.reduce((a, e) => a + e.qty, 0);
-  if (gm && !gm.flat && sold > gm.target * 0.4) ownTrade(game, s.profile!, port, good, Math.min(qty, sold - gm.target * 0.4) * 0.5);
+  if (gm && s.profile && sold > gm.target * 0.4) ownTrade(game, s.profile, port, good, Math.min(qty, sold - gm.target * 0.4) * 0.5);
 }
 
 /** The week turns at the exchange: the highest bid takes each licence; the rest get their silver back. */

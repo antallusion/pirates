@@ -642,6 +642,9 @@ export function onEventSale(game: Game, s: PlayerSession, port: Port, good: Good
   if (good !== 'medicine') return;
   const ep = game.worldEvents.at(game, port.id, 'epidemic');
   if (!ep) return;
+  // the medicine reaches the sick town itself (her trade moves only her own stock, ownstock.ts; this is the town's)
+  const gm = game.markets.get(port.id)?.goods.medicine;
+  if (gm) gm.stock += n;
   game.adjustRepProfile(s, port.faction, Math.min(15, n * 0.5));
   game.grantXp(s, pointsXp(s.profile!.level, n * 12), `${GOODS.medicine.name} for fevered ${port.name}`);
 }

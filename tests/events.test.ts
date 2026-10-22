@@ -255,9 +255,11 @@ test('an epidemic: a port short of medicine falls sick; quarantine shuts the tav
   s.ship!.effects = [];
   s.ship!.recompute(game.now);
   const rep = s.profile!.reputation[port.faction] ?? 0;
+  const sick = gm.stock;
   conn.push({ t: 'trade', good: 'medicine', qty: -40 });
   assert.ok((s.profile!.reputation[port.faction] ?? 0) > rep);
-  gm.stock = gm.target;
+  assert.ok(gm.stock >= sick + 40 - 1e-6, 'her medicine reaches the town (not only her own stock)');
+  gm.stock = Math.max(gm.stock, gm.target);
   steps(game, SEC * 2);
   assert.equal(ev(game, 'epidemic'), undefined, 'the fever breaks');
 });

@@ -1,5 +1,4 @@
 import { test } from 'node:test';
-import { ownGood } from '../server/src/game/ownstock.ts';
 import assert from 'node:assert/strict';
 import { REGIONS } from '../shared/src/world/regions.ts';
 import type { RegionId } from '../shared/src/world/regions.ts';
@@ -152,7 +151,7 @@ test('against monopoly: flooding one market costs more with every tenth of it, a
   const { s } = captain(game, 'Flood Fenn');
   stepEmpires(game);
   const port = game.world.ports.find((p) => p.faction === 'free' && game.markets.get(p.id)!.goods.rum)!;
-  const gm = ownGood(game, s.profile!, port, 'rum')!; // her own market (ownstock.ts): its mark is hers
+  const gm = game.markets.get(port.id)!.goods.rum!; // the port's own appetite, whatever her own stock (ownstock.ts)
   assert.equal(saleMul(game, s, port, 'rum', Math.floor(gm.target * 0.3)), 1);
   assert.ok(saleMul(game, s, port, 'rum', Math.ceil(gm.target * 0.75)) < 0.65, 'a flood is dear');
 });
