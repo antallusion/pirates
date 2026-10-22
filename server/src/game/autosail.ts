@@ -636,7 +636,17 @@ export function stepAutosail(game: Game): void {
     const end = run.path[run.path.length - 1];
     const near = run.arrive ?? AUTOSAIL_ARRIVE;
     const toEnd = Math.hypot(end[0] - ship.state.x, end[1] - ship.state.y);
-    if (d <= near || toEnd <= near) {
+    if (d <= near) {
+      stopAutosail(game, s, 'arrived');
+      continue;
+    }
+    // The last metres to a mark by a shore, a quay or a solid thing (owner, 2026-10-22: every reach is thirty metres from
+    // her hull now): straight in under easy canvas while her hull's next stretch keeps clear of the coast's band, the
+    // solid things and the reefs — the lead line (it sounds the coasts' own shallows) and the planner's open water
+    // stopped her a cable short.
+    if (Math.min(d, toEnd) < CREEP_FROM && game.now - (run.creepAt ??= game.now) < CREEP_SEC && creepStep(game, ship, run.x, run.y)) continue;
+    if (Math.min(d, toEnd) >= CREEP_FROM) run.creepAt = undefined;
+    if (toEnd <= near) {
       stopAutosail(game, s, 'arrived');
       continue;
     }
@@ -686,11 +696,6 @@ export function stepAutosail(game: Game): void {
       run.offAt = game.now;
       if (offRoute(game, ship, run) && game.now - (run.plannedAt ?? -Infinity) >= REPLAN_GAP) replan(game, ship, run);
     }
-    // The last metres to a mark by a shore, a quay or a solid thing (owner, 2026-10-22: every reach is thirty metres from
-    // her hull now): straight in under easy canvas while her hull's next stretch keeps clear of the coast's band, the
-    // solid things and the reefs — the lead line (it sounds the coasts' own shallows) stopped her a cable short.
-    if (Math.min(d, toEnd) < CREEP_FROM && game.now - (run.creepAt ??= game.now) < CREEP_SEC && creepStep(game, ship, run.x, run.y)) continue;
-    if (Math.min(d, toEnd) >= CREEP_FROM) run.creepAt = undefined;
     let h = autosailHeading(game, ship, run);
     // No clear water ahead in the last stretch to a mark by a shore (a great hull's lead line reaches past her mark onto
     // the coast beyond it): she is as near as she safely comes — arrived, hove to, not «foul water ahead».

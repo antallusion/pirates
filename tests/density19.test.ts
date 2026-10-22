@@ -277,7 +277,7 @@ test('D5: within reach and hove to; at most two of hers at a time in quiet saili
   runAdmin(game, s, '/tp gravewater');
   const ship = s.ship!;
   const f = putFind(game, s, 'bottle', { x: ship.state.x + 900, y: ship.state.y })!;
-  assert.match(startFind(game, s, f.id)!, /within a cable/);
+  assert.match(startFind(game, s, f.id)!, /within thirty metres/);
   ship.state.x = f.x - FIND_REACH.bottle + 20;
   ship.state.y = f.y;
   ship.state.speed = 8;

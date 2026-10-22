@@ -295,7 +295,7 @@ test('D7: the action bar — «Атаковать» (the land key\'s), «Осм�
   assert.equal(landKeyAct(acts)?.id, 'roam');
   assert.equal(buildActs({ roam: { ...roam, offer: 'join', joinN: 4 } }).map((a) => a.id).join(), 'roam,roam_join,roam_look');
   assert.deepEqual(buildActs({ roam: { ...roam, fight: 'other' } }).map((a) => a.id), ['roam_look']);
-  assert.equal(ROAM_REACH, 250);
+  assert.equal(ROAM_REACH, 30); // her hull to the stack's edge (owner, 2026-10-22: reach.ts)
 });
 
 test('D7: /stack in both HELPs, every new server line and every word of the client in Russian', () => {
