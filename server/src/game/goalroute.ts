@@ -15,6 +15,7 @@
 // `r:<kind>:<region>` the week's challenge, `cm` the common goal, `inv` the Choir's invasion, `g:<id>` a captain's goal,
 // `f` her trade (the fishing: by her tackle), `b:<group>` the beasts, `zb:<region>` a zone boss, `boss` the sea's bosses.
 
+import { ownStockOf } from './ownstock.ts';
 import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import type { BeastGroup } from '../../../shared/src/data/beasts.ts';
 import type { DailyKind } from '../../../shared/src/data/dailies.ts';
@@ -483,7 +484,7 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
       if (!port) break;
       if ((ship.cargo[st.good] ?? 0) >= st.qty) return { cands: [portCand(port)] };
       // not aboard: a port that sells it, else the port that waits for it (they say what they want there)
-      const sells = game.world.ports.filter((pt) => (game.markets.get(pt.id)?.goods[st.good]?.stock ?? 0) >= st.qty && pt.id !== st.port);
+      const sells = game.world.ports.filter((pt) => ownStockOf(game, p, pt, st.good) >= st.qty && pt.id !== st.port); // her own stock (ownstock.ts)
       return { cands: sells.length ? sells.map((pt) => portCand(pt)) : [portCand(port)] };
     }
     case 'chart':

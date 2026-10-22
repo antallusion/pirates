@@ -118,15 +118,18 @@ test('Contract Broker, Cold Hold, Heavy Hauler, Honest Merchant, Appraiser', () 
   assert.ok(hc.all('toast').some((t) => /Honest Merchant/.test(t.msg)));
 });
 
-test('Speculator: options reserve stock at a locked price; a lapsed option loses the deposit', () => {
+test('Speculator: options reserve stock at a locked price — her own (ownstock.ts), the port’s untouched; a lapsed option loses the deposit', async () => {
+  const { ownStockOf } = await import('../server/src/game/ownstock.ts');
   const { game } = makeGame();
   const { c, p, ship } = captain(game, 'Spec', { trd_market_sense: 1, trd_speculator: 1 });
   const port = game.portById(p.docked!)!;
   const gm = game.markets.get(port.id)!.goods.salt!;
-  const stock0 = gm.stock;
+  p.ownStock = { [`${port.id}|salt`]: [300, game.now] }; // she sold salt here: her stock above the floor
+  const stock0 = ownStockOf(game, p, port, 'salt'), world0 = gm.stock;
   c.push({ t: 'option', good: 'salt', qty: 10 });
   assert.equal(p.trade.options.length, 1);
-  assert.ok(gm.stock < stock0, 'stock set aside');
+  assert.ok(ownStockOf(game, p, port, 'salt') <= stock0 - 9, 'stock set aside');
+  assert.equal(gm.stock, world0, 'the port’s own market untouched');
   const g0 = p.gold;
   ship.cargo = {};
   c.push({ t: 'option_exercise', index: 0 });
@@ -134,10 +137,10 @@ test('Speculator: options reserve stock at a locked price; a lapsed option loses
   assert.ok(p.gold < g0);
   c.push({ t: 'option', good: 'salt', qty: 5 });
   p.trade.options[0].until = game.now;
-  const before = gm.stock;
+  const before = ownStockOf(game, p, port, 'salt');
   steps(game, 25);
   assert.equal(p.trade.options.length, 0);
-  assert.ok(gm.stock >= before + 5 - 0.5, 'stock returned');
+  assert.ok(ownStockOf(game, p, port, 'salt') >= before + 5 - 1, 'stock returned');
 });
 
 test('Convoy Rights: patrols come about when a protected captain is attacked', () => {

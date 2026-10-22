@@ -11,7 +11,7 @@
 // The purse, a lock, a slot: the toast says it with its numbers (nothing to do here but read it).
 
 import type { BuyFail } from '../../../shared/src/data/buyfail.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, stockText } from '../../../shared/src/data/goods.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/buyadvice.ts';
@@ -53,7 +53,7 @@ function sellersHtml(f: BuyFail): string {
   const list = f.sellers ?? [];
   if (!list.length) return `<p class="muted ba-note">${esc(L('noSellers'))}</p>`;
   return `<p class="ba-sub">${esc(L('sellers'))}</p><div class="ba-list">${list.map((x) => `<div class="w-row ba-row">
-    <span class="w-row-t"><b>${esc(placeName(x.name))}</b><small>${esc(L('seller', { n: x.stock, price: fmt(x.price) }))}</small></span>
+    <span class="w-row-t"><b>${esc(placeName(x.name))}</b><small>${esc(L('seller', { n: stockText(x.stock), price: fmt(x.price) }))}</small></span>
     <span class="w-row-b">${buttonHtml({ kind: 'secondary', size: 'md', label: L('course', { km: km(x.dist) }), data: { ba: 'sail', port: x.port } })}</span></div>`).join('')}</div>`;
 }
 

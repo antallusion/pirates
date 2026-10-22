@@ -2,7 +2,7 @@
 // from stock vs target. Goods only move when a ship (NPC or player) physically carries them, so a sunk
 // convoy literally creates a shortage at its destination. See docs/01_GDD_WORLD_ECONOMY.md §6.
 
-import { GOODS, GOOD_IDS, MARKET_ELASTICITY } from '../../../shared/src/data/goods.ts';
+import { GOODS, GOOD_IDS, INF_STOCK, MARKET_ELASTICITY, SUPPLY_BUYBACK } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import type { MarketRow } from '../../../shared/src/protocol.ts';
@@ -20,6 +20,13 @@ export interface GoodMarket {
   cons: number;
   history: number[]; // recent mid prices, newest last
   shock: number; // temporary multiplier from world events (1 = none)
+  /** The stock the port was made with (createMarket): its normal level, its normal price. */
+  base?: number;
+  /** A captain's view of one of the ship's stores (ownstock.ts): stock without end, the port's normal price flat, taken
+   *  back at SUPPLY_BUYBACK of the base price. */
+  flat?: boolean;
+  /** A captain's own stock (ownstock.ts): never below this — bought down to it, the harbour tops it up, the price stands. */
+  floor?: number;
 }
 
 export interface Market {
@@ -69,7 +76,7 @@ export function createMarket(port: Port, level = 0): Market {
     // (provisions: the town's own trade and the ships' victualling in one — a port of big ships' waters makes and sells
     // as much more, at the same balance, so its stock stands at the same share of its mark and its price where it was)
     const k = id === 'provisions' ? Math.max(1, victualTarget(level) / Math.max(1, target)) : 1;
-    goods[id] = { stock: stock * k, target: target * k, prod: prod * k, cons: cons * k, history: [], shock: 1 };
+    goods[id] = { stock: stock * k, target: target * k, prod: prod * k, cons: cons * k, history: [], shock: 1, base: stock * k };
   }
   return { portId: port.id, goods };
 }
@@ -104,14 +111,24 @@ export function quoteBuy(good: GoodId, gm: GoodMarket, qty: number, mods: PriceM
   let total = 0;
   const sim = { ...gm };
   const k = step(good, mods), g = mods.goodBuy?.[good] ?? 1;
+  if (gm.flat) return Math.ceil(midPrice(good, gm) * (1 + SPREAD) * mods.buyMul * g * qty); // a store without end: flat
+  const floor = gm.floor ?? 0;
   for (let i = 0; i < qty; i++) {
     total += midPrice(good, sim) * (1 + SPREAD) * mods.buyMul * g;
-    sim.stock = Math.max(0, sim.stock - k);
+    sim.stock = Math.max(floor, sim.stock - k);
   }
   return Math.ceil(total);
 }
 
+/** What a harbour gives for one of its endless stores: SUPPLY_BUYBACK of the base price (the duty off), and never more
+ *  than four fifths of what she pays for it here — under any harbour's price, so no round trip pays (docs/31 §13). */
+export function supplyBuyback(good: GoodId, gm: GoodMarket, mods: PriceMods): number {
+  const buy = midPrice(good, gm) * (1 + SPREAD) * mods.buyMul * (mods.goodBuy?.[good] ?? 1);
+  return Math.min(GOODS[good].basePrice * SUPPLY_BUYBACK, buy * 0.8) * (1 - mods.duty);
+}
+
 export function quoteSell(good: GoodId, gm: GoodMarket, qty: number, mods: PriceMods): number {
+  if (gm.flat) return Math.floor(supplyBuyback(good, gm, mods) * qty);
   let total = 0;
   const sim = { ...gm };
   // Honest Merchant's bonus is already inside sellMul but only applies to legal goods.
@@ -136,9 +153,9 @@ export function marketRows(market: Market, mods: PriceMods): MarketRow[] {
     rows.push({
       good,
       buy: Math.ceil(mid * (1 + SPREAD) * mods.buyMul * (mods.goodBuy?.[good] ?? 1)),
-      sell: Math.floor(mid * (1 - SPREAD) * mods.sellMul * (mods.goodSell?.[good] ?? 1) * (1 - mods.duty)),
-      stock: Math.floor(gm.stock),
-      trend: Math.max(-1, Math.min(1, (mid - old) / Math.max(1, old))),
+      sell: gm.flat ? Math.floor(supplyBuyback(good, gm, mods)) : Math.floor(mid * (1 - SPREAD) * mods.sellMul * (mods.goodSell?.[good] ?? 1) * (1 - mods.duty)),
+      stock: gm.flat ? INF_STOCK : Math.floor(gm.stock),
+      trend: gm.flat ? 0 : Math.max(-1, Math.min(1, (mid - old) / Math.max(1, old))),
       legal: !GOODS[good].contraband,
     });
   }

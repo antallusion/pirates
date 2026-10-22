@@ -3,6 +3,7 @@
 // be up to the ship's. The work goes on by the wall clock, so a refit ordered before a night's sleep is done by
 // morning.
 
+import { ownStockOf } from './ownstock.ts';
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -51,11 +52,11 @@ export function refitCostFor(p: Profile, to: number): RefitCost | null {
 
 /** The nearest harbour to this one whose market has n of a good (its name), or null — the refit card says where the
  *  iron is (docs/30: the yard asked for iron and no captain of 5 knew which port sold it). */
-function sellerNear(game: Game, from: Port, good: GoodId, n: number): string | null {
+function sellerNear(game: Game, from: Port, good: GoodId, n: number, prof?: Profile): string | null {
   let best: Port | null = null, bd = Infinity;
   for (const p of game.world.ports) {
     const g = game.markets.get(p.id)?.goods[good];
-    if (!g || g.stock < n) continue;
+    if (!g || (prof ? ownStockOf(game, prof, p, good) : g.stock) < n) continue; // her own stock (ownstock.ts)
     const d = Math.hypot(p.x - from.x, p.y - from.y);
     if (d < bd) [best, bd] = [p, d];
   }
@@ -75,7 +76,7 @@ export function refitView(game: Game, s: PlayerSession, port: Port): RefitView {
   const next = {
     to: level + 1,
     silver: cost.silver,
-    goods: cost.goods.map((g) => { const h = have(s, port, g.good); const where = h < g.qty ? sellerNear(game, port, g.good, g.qty - h) : null; return { good: g.good, qty: g.qty, have: h, ...(where ? { where } : {}) }; }),
+    goods: cost.goods.map((g) => { const h = have(s, port, g.good); const where = h < g.qty ? sellerNear(game, port, g.good, g.qty - h, s.profile!) : null; return { good: g.good, qty: g.qty, have: h, ...(where ? { where } : {}) }; }),
     sec: cost.sec,
     captain: captainLevelFor(level + 1),
     ...(cost.hearts ? { hearts: { qty: cost.hearts, have: p.stormHearts ?? 0 } } : {}),

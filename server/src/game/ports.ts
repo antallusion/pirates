@@ -38,7 +38,7 @@ import type { ShipLoadout } from '../../../shared/src/sim/shipstats.ts';
 import type { Island, Port } from '../../../shared/src/world/worldgen.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
-import { FACTION_DUTY, LICENCE_SEC, licenceCost, marketRows, midPrice, portIsLawful, quoteBuy, quoteSell, applyTrade } from './economy.ts';
+import { FACTION_DUTY, LICENCE_SEC, licenceCost, marketRows, midPrice, portIsLawful, quoteBuy, quoteSell } from './economy.ts';
 import { wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { PriceMods } from './economy.ts';
 import { mayUse } from './holdings.ts';
@@ -62,6 +62,7 @@ import type { PlayerSession, Profile } from './player.ts';
 import { pardonCost } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { onSaleDeeds } from './progression.ts';
+import { ownGood, ownMarket, ownTrade } from './ownstock.ts';
 import { goodBuyCheck, lackSilver, pickupAfterSale, questBuys, sendBuyFail } from './buyfail.ts';
 import { dealOfDay, onSale, talentPriceMods } from './tradefx.ts';
 import { portFence } from './smugglefx.ts';
@@ -186,7 +187,7 @@ export function repairLowMul(shipLevel: number): number {
 export function buildPortView(game: Game, s: PlayerSession, port: Port): PortView {
   const ship = s.ship!;
   const p = s.profile!;
-  const market = game.markets.get(port.id)!;
+  const market = ownMarket(game, p, port)!; // her own stock, the stores without end (ownstock.ts)
   const mods = priceMods(ship, port, s.profile!, game.now, game);
   const ammoPrices = {} as Record<AmmoId, number>;
   for (const a of AMMO_IDS) ammoPrices[a] = ammoPrice(game, port, a);
@@ -278,8 +279,9 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
 export function recordIntel(game: Game, s: PlayerSession, port: Port): void {
   const ship = s.ship!;
   const market = game.markets.get(port.id);
-  if (!market) return;
-  const rows = marketRows(market, priceMods(ship, port, s.profile!, game.now, game));
+  const own = ownMarket(game, s.profile!, port);
+  if (!market || !own) return;
+  const rows = marketRows(own, priceMods(ship, port, s.profile!, game.now, game));
   const sell: Partial<Record<GoodId, number>> = {};
   for (const r of rows) sell[r.good] = r.sell;
   s.profile!.priceIntel[port.id] = { t: game.now, sell, ...demandOf(market, port.blackMarket) };
@@ -292,8 +294,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   const p = s.profile!;
   if (!GOOD_IDS.includes(good)) return 'Unknown good';
   if (!Number.isInteger(qty) || qty === 0 || Math.abs(qty) > 500) return 'Bad quantity';
-  const market = game.markets.get(port.id)!;
-  const gm = market.goods[good];
+  const gm = ownGood(game, p, port, good); // her own stock (ownstock.ts): the world's market is not moved by her trade
   const def = GOODS[good];
   if (qty > 0) {
     if (def.contraband && ship.hasFlag('honest_merchant')) return 'An Honest Merchant does not carry contraband';
@@ -320,7 +321,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
     const prevBasis = game.costBasis(s, good);
     ship.cargo[good] = prevQty + qty;
     game.setCostBasis(s, good, (prevBasis * prevQty + price) / (prevQty + qty));
-    applyTrade(market, good, -qty);
+    ownTrade(game, p, port, good, -qty);
     noteExoticPurchase(p, port, good, qty);
     // Forged Papers rank 2: the Brokers stamp what they sell you.
     if (def.contraband && port.faction === 'brokers' && ship.rank('smg_forged_papers') >= 2) p.smuggle.stamped[good] = (p.smuggle.stamped[good] ?? 0) + qty;
@@ -351,7 +352,8 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
     p.stolen[good] = stolen - fenced;
   } else if (stolen > 0) p.stolen[good] = Math.max(0, stolen - Math.max(0, n - (have - stolen)));
   if (!p.stolen[good]) delete p.stolen[good];
-  const full = quoteSell(good, gm, n, mods) * saleMul(game, s, port, good, n); // licences and the flooded market
+  // licences and the flooded market (the ship's stores: the harbour's buyback, flat)
+  const full = quoteSell(good, gm, n, mods) * (gm.flat ? 1 : saleMul(game, s, port, good, n));
   const gross = Math.floor(full - (full / n) * fenced * 0.15);
   const levy = levyFor(game, port, gross); // the governor's hundredth
   const price = gross - levy;
@@ -364,7 +366,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   const gilded = ship.hasFlag('fh_gilded_scale') && port.faction === 'league' ? Math.floor(price * 0.05) : 0; // the Gilded Scale
   p.gold += price + exotic + gilded;
   taxSale(game, s, price); // the guild's share
-  applyTrade(market, good, n);
+  ownTrade(game, p, port, good, n);
   const profit = price - basis * n;
   p.stats.tradeProfit += Math.max(0, profit);
   if (profit > 0) game.grantXp(s, silverXp(p.level, profit, s.ship?.shipLevel ?? 1), null); // docs/26: a trader's lesson by her waters' hour

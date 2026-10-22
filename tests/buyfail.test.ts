@@ -32,6 +32,7 @@ import { adviceFor } from '../client/src/ui/buyadvice.ts';
 import { pointerTargets } from '../client/src/ui/pointer.ts';
 import type { Net } from '../client/src/net.ts';
 import { join, makeGame } from './helpers.ts';
+import * as ownstock from '../server/src/game/ownstock.ts';
 
 type G = ReturnType<typeof makeGame>['game'];
 
@@ -79,7 +80,6 @@ test('the owner’s case: a full hold buying rum is told «нет места» w
   const { c, s, port } = captain(game, 'Rum Runner');
   const rum = game.markets.get(port.id)!.goods.rum;
   assert.ok(rum, 'rum sold here');
-  rum.stock = 3; // fewer than asked, as in her harbour
   fillHold(game, s, port.id);
   s.profile!.gold = 1e6;
   c.push({ t: 'trade', good: 'rum', qty: 5 });
@@ -92,28 +92,30 @@ test('the owner’s case: a full hold buying rum is told «нет места» w
   assert.ok(!c.all('toast').some((t) => /stock/i.test(t.msg)), 'never «stock»');
   assert.equal(nb(ru(() => serverText(f.msg))), 'Нет места в трюме: нужно 5 м³, свободно 0');
   assert.ok(adviceFor(f.fail), 'the advisor opens for it');
-  assert.equal(f.fail.buy, 3, 'the harbour has three: room is made for those');
-  assert.ok(f.fail.plan!.length > 0 && (f.fail.planFree ?? 0) >= 3, 'what to sell here for the room');
-  // «Продать и купить» for the three: sold and bought, at once
-  c.push({ t: 'sellbuy', good: 'rum', qty: f.fail.buy! });
-  assert.equal(s.ship!.cargo.rum, 3);
+  assert.equal(f.fail.buy, undefined, 'her own stock is never under 100 (ownstock.ts): room is made for all five');
+  assert.ok(f.fail.plan!.length > 0 && (f.fail.planFree ?? 0) >= 5, 'what to sell here for the room');
+  // «Продать и купить» for the five: sold and bought, at once
+  c.push({ t: 'sellbuy', good: 'rum', qty: 5 });
+  assert.equal(s.ship!.cargo.rum, 5);
 });
 
 test('each reason its own words: stock (how many there are), silver (how much is missing), not sold here (the nearest ports)', () => {
   const { game } = makeGame();
   const { c, s, ship, port } = captain(game, 'Honest Hal');
   ship.cargo = {};
-  const rum = game.markets.get(port.id)!.goods.rum!;
-  rum.stock = 3.7;
+  // her own stock of rum (ownstock.ts): never under 100; more asked than she has is «stock», with how many there are
+  const { ownStockOf } = ownstock;
+  const have = ownStockOf(game, s.profile!, port, 'rum');
+  assert.ok(have >= 100 && have < 495, `her rum here: ${have}`);
+  ship.stats.holdVolume = 5000; // (room for all of them: the stock binds)
   s.profile!.gold = 1e6;
-  c.push({ t: 'trade', good: 'rum', qty: 5 });
+  c.push({ t: 'trade', good: 'rum', qty: have + 5 });
   let f = c.last('buyfail')!;
   assert.equal(f.fail.why, 'stock');
-  assert.equal(f.fail.can, 3, 'buy the three there are');
-  assert.match(f.msg, /has only 3 rum, 5 asked$/);
-  assert.match(nb(ru(() => serverText(f.msg))), /осталось только 3, а нужно 5$/);
+  assert.equal(f.fail.can, have, 'buy those there are');
+  assert.match(f.msg, new RegExp(`has only ${have} rum, ${have + 5} asked$`));
+  assert.match(nb(ru(() => serverText(f.msg))), new RegExp(`осталось только ${have}, а нужно ${have + 5}$`));
   // the purse: what is missing
-  rum.stock = 500;
   s.profile!.gold = 10;
   c.push({ t: 'trade', good: 'rum', qty: 5 });
   f = c.last('buyfail')!;
@@ -130,7 +132,7 @@ test('each reason its own words: stock (how many there are), silver (how much is
   const sellers = f.fail.sellers!;
   assert.ok(sellers.length >= 1 && sellers.length <= 3, 'up to three ports');
   for (let i = 1; i < sellers.length; i++) assert.ok(sellers[i - 1].dist <= sellers[i].dist, 'nearest first');
-  for (const x of sellers) assert.ok((game.markets.get(x.port)!.goods.rum?.stock ?? 0) >= 1 && x.port !== port.id);
+  for (const x of sellers) assert.ok(ownstock.ownStockOf(game, s.profile!, game.portById(x.port)!, 'rum') >= 100 && x.stock >= 100 && x.port !== port.id);
   assert.match(f.msg, new RegExp(`does not sell rum: sold at ${sellers[0].name}`));
   assert.ok(!/[A-Za-z]{3,} [A-Za-z]{3,} [A-Za-z]{3,}/.test(ru(() => serverText(f.msg))), `in Russian: ${ru(() => serverText(f.msg))}`);
   assert.ok(adviceFor(f.fail), 'the advisor: where it is sold, a course there');

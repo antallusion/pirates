@@ -173,6 +173,9 @@ export interface Profile {
   stolen: Partial<Record<GoodId, number>>;
   licences: Partial<Record<FactionId, number>>;
   warehouses: Record<string, Cargo>;
+  /** Her own stock of the harbours' goods (owner, 2026-10-22; ownstock.ts): `port|good` → [stock in her units, world
+   *  time it was set]; only the goods she traded and only while they differ from the port's own (absent: the port's). */
+  ownStock?: Record<string, [number, number]>;
   forwards: Forward[];
   bank: number;
   loan: Loan | null;
@@ -774,6 +777,8 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.scouts = Array.isArray(p.scouts) ? p.scouts.filter((x) => x && typeof x.id === 'string' && typeof x.ready === 'number' && (!x.route || (Array.isArray(x.route) && x.route.length >= 4))).slice(0, 3) : [];
   p.cooldowns ??= {};
   p.priceIntel ??= {};
+  if (!p.ownStock || typeof p.ownStock !== 'object') delete p.ownStock;
+  else for (const k in p.ownStock) { const e = p.ownStock[k]; if (!Array.isArray(e) || !Number.isFinite(e[0]) || !Number.isFinite(e[1])) delete p.ownStock[k]; }
   p.costBasis ??= {};
   p.sightings ??= [];
   p.chartSales ??= {};

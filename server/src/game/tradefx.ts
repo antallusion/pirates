@@ -8,12 +8,13 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { cargoVolume, tx } from '../../../shared/src/sim/shipstats.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
-import { applyTrade, midPrice, quoteBuy } from './economy.ts';
+import { midPrice, quoteBuy } from './economy.ts';
 import type { PriceMods } from './economy.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { smugglingSellMul } from './smugglefx.ts';
+import { ownGood, ownTrade } from './ownstock.ts';
 
 const DAY = 7200; // one game day = two real hours
 
@@ -120,7 +121,7 @@ export interface TradeOption {
 export function buyOption(game: Game, s: PlayerSession, port: Port, good: GoodId, qty: number, mods: PriceMods): string | null {
   const p = s.profile!;
   if (!s.ship!.hasFlag('speculator')) return 'You need the Speculator talent';
-  const gm = game.markets.get(port.id)?.goods[good];
+  const gm = GOODS[good] ? ownGood(game, p, port, good) : undefined; // her own stock (ownstock.ts)
   if (!gm || !GOODS[good]) return `${port.name} does not trade that`;
   if (!Number.isInteger(qty) || qty < 1 || qty > gm.stock * 0.3) return `You may reserve up to ${Math.floor(gm.stock * 0.3)}`;
   if (p.trade.options.length >= 3) return 'At most three options at a time';
@@ -130,7 +131,7 @@ export function buyOption(game: Game, s: PlayerSession, port: Port, good: GoodId
   if (p.gold < deposit) return lackMore(`The deposit is ${deposit} silver`, deposit, p.gold);
   p.gold -= deposit;
   game.db.ledger(s.accountId, 'option_deposit', -deposit, `${port.id}:${good}`);
-  applyTrade(game.markets.get(port.id)!, good, -qty); // the stock is set aside for you
+  ownTrade(game, p, port, good, -qty); // the stock is set aside for you (her own)
   p.trade.options.push({ port: port.id, good, qty, price, deposit, until: game.now + 7200 });
   return null;
 }
@@ -163,8 +164,8 @@ export function expireOptions(game: Game, s: PlayerSession): void {
   const p = s.profile!;
   for (const o of [...p.trade.options]) {
     if (o.until > game.now) continue;
-    const m = game.markets.get(o.port);
-    if (m) applyTrade(m, o.good, o.qty);
+    const pt = game.portById(o.port);
+    if (pt) ownTrade(game, p, pt, o.good, o.qty); // back into her own stock
     p.trade.options = p.trade.options.filter((x) => x !== o);
     game.sendTo(s, { t: 'toast', msg: `Your option on ${o.qty} ${GOODS[o.good].name.toLowerCase()} lapsed; the deposit of ${o.deposit} is lost.`, kind: 'bad' });
   }

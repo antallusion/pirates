@@ -81,12 +81,42 @@ export const GOOD_IDS = Object.keys(GOODS) as GoodId[];
 /** How hard a port's price answers its stock: price ∝ (target / stock) ^ this (server/src/game/economy.ts). */
 export const MARKET_ELASTICITY = 0.6;
 
+// ------------------------------------------------------------------ her own stock (owner, 2026-10-22)
+// «в гаванях всегда должны продаваться парусины, провизии и доски в бесконечном количестве. и для каждого игрока своя
+// цифра в гавани должна быть остального, но не менее 100 единиц на складе для каждого игрока» (docs/31 §13).
+
+/** The ship's stores every harbour sells without end, at its normal price: the crew's food, the sailmaker's cloth and
+ *  the carpenters' planks (searepair.ts). Never «sold out», shown «∞». */
+export const SUPPLY_GOODS: readonly GoodId[] = ['provisions', 'sailcloth', 'planks'];
+export function isSupply(good: GoodId): boolean {
+  return SUPPLY_GOODS.includes(good);
+}
+/** A captain's own stock of any other good in a harbour never stands below this: bought below it, it is topped up at
+ *  once (server/src/game/ownstock.ts). */
+export const STOCK_FLOOR = 100;
+/** The stock a market row shows for a store without end (the client draws «∞»; any number she asks is under it). */
+export const INF_STOCK = 999_999;
+export function isInfStock(stock: number): boolean {
+  return stock >= INF_STOCK;
+}
+/** A stock as the screens write it: «∞» for a store without end. */
+export function stockText(stock: number): number | string {
+  return isInfStock(stock) ? '∞' : stock;
+}
+/** A harbour takes its stores back at this share of their base price (no sell mods but the duty): under the cheapest
+ *  buying price of any harbour, so an endless store is no buy-low/sell-high between ports. */
+export const SUPPLY_BUYBACK = 0.3;
+
 /** What `n` units cost from a market row (its first unit's price and its stock): each one bought leaves one less in
- *  stock and the next dearer, as the harbour's quote walks it (a «Buy 5 · 100» button charged 111 at a thin stock). */
+ *  stock and the next dearer, as the harbour's quote walks it (a «Buy 5 · 100» button charged 111 at a thin stock) —
+ *  down to her floor of STOCK_FLOOR, where the harbour tops her stock up and the price stands; a store without end does
+ *  not walk at all. */
 export function walkBuyCost(good: GoodId, buy: number, stock: number, n: number): number {
+  if (isInfStock(stock)) return Math.ceil(buy * n);
   // (the price's own ceiling: 3.2 times the good's base, with the buying spread)
   const cap = Math.max(buy, GOODS[good].basePrice * 3.2 * 1.055);
+  const floor = stock >= STOCK_FLOOR ? STOCK_FLOOR : 1; // (a row from before the floor walks to the last unit)
   let total = 0;
-  for (let i = 0; i < n; i++) total += Math.min(cap, buy * Math.pow(Math.max(1, stock) / Math.max(1, stock - i), MARKET_ELASTICITY));
+  for (let i = 0; i < n; i++) total += Math.min(cap, buy * Math.pow(Math.max(1, stock) / Math.max(floor, stock - i), MARKET_ELASTICITY));
   return Math.ceil(total);
 }

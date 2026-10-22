@@ -1,4 +1,5 @@
 import { test } from 'node:test';
+import { ownStockOf } from '../server/src/game/ownstock.ts';
 import assert from 'node:assert/strict';
 import { PROTOCOL_VERSION } from '../shared/src/constants.ts';
 import { headingVec } from '../shared/src/math.ts';
@@ -65,10 +66,13 @@ test('trading is validated server-side and moves the market', () => {
   const ship = shipOf(game, c);
   const gold0 = p.gold;
   const stock0 = game.markets.get('saltmarrow')!.goods.salt!.stock;
+  const port = game.portById('saltmarrow')!;
+  p.ownStock = { 'saltmarrow|salt': [300, game.now] }; // her own stock (ownstock.ts), above the floor
   c.push({ t: 'trade', good: 'salt', qty: 5 });
   assert.equal(ship.cargo.salt, 5);
   assert.ok(p.gold < gold0);
-  assert.equal(game.markets.get('saltmarrow')!.goods.salt!.stock, stock0 - 5);
+  assert.equal(game.markets.get('saltmarrow')!.goods.salt!.stock, stock0, 'the port’s own market: untouched by her');
+  assert.ok(Math.abs(ownStockOf(game, p, port, 'salt') - 295) <= 1, 'her own stock moved');
   // Contraband cannot be sold in a Crown port, and nobody can sell what they do not have.
   ship.cargo.dreamleaf = 3;
   c.push({ t: 'trade', good: 'dreamleaf', qty: -3 });

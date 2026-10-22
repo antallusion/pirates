@@ -18,6 +18,7 @@ import type { PlayerSession } from './player.ts';
 import { priceMods, trade } from './ports.ts';
 import type { ShipEntity } from './ship.ts';
 import { questEvent } from './quests.ts';
+import { ownGood, ownMarket, ownStockOf } from './ownstock.ts';
 import type { PortView } from '../../../shared/src/protocol.ts';
 
 export { lackDoubloons, lackHammocks, lackRoom, lackSilver } from '../../../shared/src/data/buyfail.ts';
@@ -82,7 +83,7 @@ export function canMakeRoom(s: PlayerSession, good: GoodId): boolean {
 export function roomItems(game: Game, s: PlayerSession, port: Port): RoomItem[] {
   const ship = s.ship!;
   const p = s.profile!;
-  const market = game.markets.get(port.id);
+  const market = ownMarket(game, p, port); // her own prices (ownstock.ts)
   if (!market) return [];
   const rows = new Map(marketRows(market, priceMods(ship, port, p, game.now, game)).map((r) => [r.good, r]));
   const keep = keptCargo(s);
@@ -107,8 +108,8 @@ export function nearestSellers(game: Game, s: PlayerSession, good: GoodId, want:
   const all: BuySeller[] = [];
   for (const pt of game.world.ports) {
     if (pt.id === except || (contra && !pt.blackMarket)) continue;
-    const gm = game.markets.get(pt.id)?.goods[good];
-    const stock = Math.floor(gm?.stock ?? 0);
+    const gm = ownGood(game, s.profile!, pt, good); // her own stock there, the stores without end (ownstock.ts)
+    const stock = gm ? ownStockOf(game, s.profile!, pt, good) : 0;
     if (!gm || stock < 1) continue;
     const row = marketRows({ goods: { [good]: gm } } as never, priceMods(ship, pt, s.profile!, game.now, game))[0];
     all.push({ port: pt.id, name: pt.name, dist: Math.round(Math.hypot(pt.x - ship.state.x, pt.y - ship.state.y)), stock, price: row?.buy ?? 0 });
@@ -122,7 +123,7 @@ export function goodBuyCheck(game: Game, s: PlayerSession, port: Port, good: Goo
   const ship = s.ship!;
   const p = s.profile!;
   const def = GOODS[good];
-  const gm = game.markets.get(port.id)?.goods[good];
+  const gm = ownGood(game, p, port, good); // her own stock, the stores without end (ownstock.ts)
   const name = def.name.toLowerCase();
   if (!gm || (def.contraband && !port.blackMarket)) {
     const sellers = nearestSellers(game, s, good, qty, port.id);
@@ -131,7 +132,7 @@ export function goodBuyCheck(game: Game, s: PlayerSession, port: Port, good: Goo
     return { fail: { why: 'notsold', good, want: qty, can: 0, sellers }, msg };
   }
   const mods = priceMods(ship, port, p, game.now, game);
-  const avail = Math.floor(gm.stock);
+  const avail = ownStockOf(game, p, port, good);
   const free = holdFree(ship);
   const unit = unitVolume(ship, good);
   const fit = Math.max(0, Math.floor((free + 1e-6) / Math.max(1e-6, unit)));
@@ -181,7 +182,7 @@ export function sellAndBuy(game: Game, s: PlayerSession, port: Port, good: GoodI
   const ship = s.ship!;
   const p = s.profile!;
   if (!GOODS[good] || !Number.isInteger(qty) || qty <= 0 || qty > 500) return 'Bad quantity';
-  const gm = game.markets.get(port.id)?.goods[good];
+  const gm = ownGood(game, p, port, good);
   const first = goodBuyCheck(game, s, port, good, qty);
   if (!first) return trade(game, s, port, good, qty); // room enough already
   if (first.fail.why !== 'room' || !gm) {
@@ -199,14 +200,15 @@ export function sellAndBuy(game: Game, s: PlayerSession, port: Port, good: GoodI
   const mods = priceMods(ship, port, p, game.now, game);
   let proceeds = 0;
   for (const l of plan.lines) {
-    const g = game.markets.get(port.id)?.goods[l.good];
+    const g = ownGood(game, p, port, l.good);
     if (!g) return 'Bad order';
-    const gross = Math.floor(quoteSell(l.good, g, l.qty, mods) * saleMul(game, s, port, l.good, l.qty));
+    const gross = Math.floor(quoteSell(l.good, g, l.qty, mods) * (g.flat ? 1 : saleMul(game, s, port, l.good, l.qty)));
     proceeds += gross - levyFor(game, port, gross);
   }
   const quoted = quoteBuy(good, gm, qty, mods);
   const price = quoted + levyFor(game, port, quoted);
-  if (Math.floor(gm.stock) < qty) return `${port.name} has only ${Math.floor(gm.stock)} ${GOODS[good].name.toLowerCase()}, ${qty} asked`;
+  const avail = ownStockOf(game, p, port, good);
+  if (avail < qty) return `${port.name} has only ${avail} ${GOODS[good].name.toLowerCase()}, ${qty} asked`;
   if (p.gold + proceeds < price) return lackSilver(price, p.gold + proceeds);
   for (const l of plan.lines) {
     const e = trade(game, s, port, l.good, -l.qty);
@@ -229,7 +231,7 @@ export function questBuys(game: Game, s: PlayerSession, port: Port): NonNullable
     const gm = game.markets.get(port.id)?.goods[st.good];
     const soldHere = !!gm && (!GOODS[st.good].contraband || port.blackMarket);
     const fit = Math.max(0, Math.floor((holdFree(ship) + 1e-6) / unitVolume(ship, st.good)));
-    const stock = soldHere ? Math.floor(gm!.stock) : 0;
+    const stock = soldHere ? ownStockOf(game, s.profile!, port, st.good) : 0; // hers (ownstock.ts)
     out.push({ quest: q.id, name: q.name, good: st.good, qty: short, soldHere, stock, fit, sellers: soldHere && stock >= short ? [] : nearestSellers(game, s, st.good, short, port.id) });
   }
   return out;

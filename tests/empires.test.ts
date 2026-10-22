@@ -1,4 +1,5 @@
 import { test } from 'node:test';
+import { ownGood } from '../server/src/game/ownstock.ts';
 import assert from 'node:assert/strict';
 import { REGIONS } from '../shared/src/world/regions.ts';
 import type { RegionId } from '../shared/src/world/regions.ts';
@@ -69,7 +70,8 @@ test('governors: 60% of a lawless region\'s nodes at the turn of the week; a 1% 
   dockAt(game, trader.s, port);
   // A fair cargo of the dearest thing the port takes, well short of flooding it.
   const goods = game.markets.get(port.id)!.goods;
-  const good = (Object.keys(goods) as (keyof typeof goods)[]).sort((a, b) => (goods[b]!.target > 0 ? 1 : 0) - (goods[a]!.target > 0 ? 1 : 0))[0];
+  // (not one of the ship's stores: those the harbour takes back at its buyback, ownstock.ts)
+  const good = (Object.keys(goods) as (keyof typeof goods)[]).filter((g) => !['provisions', 'sailcloth', 'planks'].includes(g)).sort((a, b) => (goods[b]!.target > 0 ? 1 : 0) - (goods[a]!.target > 0 ? 1 : 0))[0];
   const qty = Math.max(5, Math.floor(goods[good]!.target * 0.3));
   trader.s.ship!.cargo = { [good]: qty };
   trader.c.push({ t: 'trade', good, qty: -qty });
@@ -150,7 +152,7 @@ test('against monopoly: flooding one market costs more with every tenth of it, a
   const { s } = captain(game, 'Flood Fenn');
   stepEmpires(game);
   const port = game.world.ports.find((p) => p.faction === 'free' && game.markets.get(p.id)!.goods.rum)!;
-  const gm = game.markets.get(port.id)!.goods.rum!;
+  const gm = ownGood(game, s.profile!, port, 'rum')!; // her own market (ownstock.ts): its mark is hers
   assert.equal(saleMul(game, s, port, 'rum', Math.floor(gm.target * 0.3)), 1);
   assert.ok(saleMul(game, s, port, 'rum', Math.ceil(gm.target * 0.75)) < 0.65, 'a flood is dear');
 });
