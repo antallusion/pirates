@@ -15,7 +15,7 @@ import type { TalentRanks } from '../../shared/src/data/talents.ts';
 import { skillSeaMods } from '../../shared/src/data/hero.ts';
 import type { SkillSlot } from '../../shared/src/data/hero.ts';
 import { SHIP_CLASSES } from '../../shared/src/data/ships.ts';
-import type { GunId, ShipClassId } from '../../shared/src/data/ships.ts';
+import type { GunId, ShipClassId, AmmoId } from '../../shared/src/data/ships.ts';
 import type { CaptainId } from '../../shared/src/data/captains.ts';
 import { refLevel } from '../../shared/src/data/xpcurve.ts';
 import { Rng } from '../../shared/src/rng.ts';
@@ -234,9 +234,9 @@ export function volley(game: Game, ship: ShipEntity, t: ShipEntity, ammo: 'round
   return { hull: h0 - t.hull, men: m0 - t.crew, balls };
 }
 
-/** The close fight's distance for her guns. */
-export function fightDistance(ship: ShipEntity): number {
-  return Math.round(closeRange(effectiveRange(ship, 'starboard', 'round')).best);
+/** The close fight's distance for her guns (with `ammo`: the band her helmsman holds with it loaded, pursuit.ts). */
+export function fightDistance(ship: ShipEntity, ammo: AmmoId = 'round'): number {
+  return Math.round(closeRange(effectiveRange(ship, 'starboard', ammo)).best);
 }
 
 export interface Measure {

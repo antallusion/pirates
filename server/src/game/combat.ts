@@ -146,6 +146,12 @@ export function effectiveRange(ship: ShipEntity, side: Side, ammo: AmmoId): numb
   return gun.range * ship.stats.rangeMul * AMMO[ammo].rangeMul * chain;
 }
 
+/** A ball loses up to 30% of its weight over this many times her reach. The reaches were halved (owner, 2026-10-22: the
+ *  guns 100–250 m, were 220–560) and the fight's own distances were not (the close fight's 90–140 m, gunnery.ts
+ *  closeRange): over twice the new reach a ball strikes there as hard as it did, and the broadside table (docs/25 §1.1)
+ *  holds. */
+export const FALLOFF_REACH = 2;
+
 /** Nearest hostile inside a broadside's arc and range — the ship the gunners are laying on. */
 export function aimTarget(game: Game, ship: ShipEntity, side: Side, range: number): ShipEntity | null {
   const h = sideHeading(ship, side);
@@ -591,7 +597,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   const ammo = AMMO[p.ammo];
   const gd = p.gun ? GUNS[p.gun] : undefined; // the gun's own trade (ships.ts), on a broadside's balls
   if (target.named && shooter?.isPlayer) target.scar = p.ammo === 'incendiary' ? 'fire' : 'cannon'; // the scar he will carry (docs/12 P10 #1)
-  const falloff = 1 - 0.3 * clamp(p.traveled / Math.max(1, p.maxRange), 0, 1);
+  const falloff = 1 - 0.3 * clamp(p.traveled / Math.max(1, p.maxRange * FALLOFF_REACH), 0, 1);
   // Angle of impact: how closely the ball travels along the target's keel line.
   const ball = headingVec(p.heading);
   const keel = headingVec(target.state.heading);

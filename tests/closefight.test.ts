@@ -135,7 +135,7 @@ test('«Атаковать» is the order to fire whatever the auto-fire switch 
     const s = seaCaptain(game, 'brig', 5, at.x, at.y, 0);
     s.autoFire = false;
     s.expert = expert;
-    const foe = putSide(game, { cls: 'brig', level: 5, craft: 'bot' }, at.x + 130, at.y, 0).ship; // abeam, in the band
+    const foe = putSide(game, { cls: 'brig', level: 5, craft: 'bot' }, at.x + 100, at.y, 0).ship; // abeam, in the band (90–121 m of a 12-pounder's 170)
     let n = 0;
     const emit = game.emit.bind(game);
     game.emit = (ev, x, y) => {

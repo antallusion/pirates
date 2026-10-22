@@ -1104,6 +1104,8 @@ export const FLANK_UPWIND_DEG = 45;
  *  pirate that came for her called two more — 91 packs and 35 fireships in 65 fights of a frigate ⚓6 in the Ashen Isles
  *  and Gravewater, every boarding three crews to her one. Now a pack (and its fireship) once in PACK_EVERY seconds. */
 export const PACK_EVERY = 300;
+/** How far a pirate's call for her pack carries (m): 3 km before the reaches were halved (owner, 2026-10-22). */
+export const PACK_CALL = 1500;
 const packAt = new WeakMap<Game, Map<number, number>>();
 
 /** A wolf pack: a pirate that goes for a captain calls up to two idle pirates within 1.5 km (3 km before the reaches were halved, 2026-10-22); they come round to
@@ -1115,8 +1117,9 @@ export function rallyPack(game: Game, ship: ShipEntity, prey: ShipEntity): numbe
   if (now - (last.get(prey.id) ?? -Infinity) < PACK_EVERY) return 0;
   const sides = [1.9, -1.9];
   let n = 0;
-  game.forShipsNear(ship.state.x, ship.state.y, 1500, (o) => {
+  game.forShipsNear(ship.state.x, ship.state.y, PACK_CALL, (o) => {
     if (n >= sides.length || o.id === ship.id || !o.alive || o.docked || o.prize || o.surrendered) return;
+    if (dist(o.state.x, o.state.y, ship.state.x, ship.state.y) > PACK_CALL) return;
     const b = game.npcs.get(o.id);
     if (!b || b.role !== 'pirate' || b.target !== null || o.hull < o.stats.hullMax * 0.4) return;
     b.active = true;
