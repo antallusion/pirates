@@ -12,7 +12,7 @@ import { assetUrl } from '../assets.ts';
 import { dict, lang } from '../i18n.ts';
 import { serverText } from '../lang/server.ts';
 import type { ClientState } from '../state.ts';
-import { esc } from './dom.ts';
+import { esc, icon } from './dom.ts';
 import { itemCardHtml } from './gear.ts';
 
 const L = dict({
@@ -78,7 +78,7 @@ export function tattooIcon(t: TattooDef, cls = 'tt-ico'): string {
 
 /** Why a place is still shut: the next of its keys the captain lacks. */
 function lockOf(i: number, level: number, owned: string[]): [string, string] {
-  const keys: [boolean, string, string][] = [[level >= 15, L('locked15'), '15'], [level >= 30, L('locked30'), '30'], [level >= 45, L('locked45'), '45'], [owned.includes('needle'), L('lockedNeedle'), '✒']];
+  const keys: [boolean, string, string][] = [[level >= 15, L('locked15'), '⚓15'], [level >= 30, L('locked30'), '⚓30'], [level >= 45, L('locked45'), '⚓45'], [owned.includes('needle'), L('lockedNeedle'), 'needle']];
   const missing = keys.filter(([ok]) => !ok);
   const open = 2 + keys.filter(([ok]) => ok).length;
   const k = missing[i - open];
@@ -97,7 +97,7 @@ export function renderTattoos(root: HTMLElement, state: ClientState, send: (m: C
     const lock = lockOf(i, level, v.owned);
     const title = open ? (t ? t.name[ru()] : L('empty')) : lock[0];
     return `<button class="doll-slot${t ? ' full' : ''}${open ? '' : ' locked'}${sel === i ? ' on' : ''}" ${open ? `data-place="${i}"` : 'disabled'} title="${esc(title)}" aria-label="${esc(title)}">
-      ${t ? tattooIcon(t, 'doll-ico') : open ? '<span class="doll-empty">+</span>' : `<span class="doll-lock">${esc(lock[1])}</span>`}</button>`;
+      ${t ? tattooIcon(t, 'doll-ico') : open ? '<span class="doll-empty">+</span>' : (lock[1] === 'needle' ? icon('tattoo_needle', '', 'doll-ico doll-ico--lock') : `<span class="doll-lock">${esc(lock[1])}</span>`)}</button>`;
   };
   const cap = state.self ? CAPTAINS[state.self.captain] : undefined;
   const face = cap ? assetUrl(cap.portrait) : null;

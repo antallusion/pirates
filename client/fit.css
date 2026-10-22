@@ -58,6 +58,9 @@
   #modal-panel[data-modal="hero"] .w-rail { width: calc(var(--f-rail) + 16px - 6 * var(--u)); }
   .w-tab { height: var(--f-tab); font-size: var(--f-fs-s); gap: 0; letter-spacing: 0; }
   .w-tab-ico { width: var(--f-ico); height: var(--f-ico); }
+  /* the picture and the word held on the tab's middle as the eye reads them (the word's capitals, not its line box with
+     the descenders' room): 1.4–1.6 px high before (align.mjs, QA 2026-10-22) */
+  .w-tab:not(.w-tab--go) { padding-top: 3.5px; padding-bottom: 0.5px; }
   /* the gold «В море» keeps its word whole (its 15 px line sat in a 10 px box) */
   .w-tab--go { min-height: calc(var(--f-tab) + 2px); padding: 2px; }
   .w-tab--go .w-tab-l { line-height: 1.2; overflow: visible; }
