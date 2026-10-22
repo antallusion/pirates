@@ -838,6 +838,10 @@ export const WIND_EYE_COST = 1.5;
  *  FIGHT_NEAR of it. At the very edge of it two ships used to circle just out of range, firing nothing but the chasers. */
 export const FIGHT_HOLD = 0.92;
 export const FIGHT_NEAR = 0.7;
+/** …and before her hull is this near a great one's (a zone boss, a monster, a boss: m, over half their lengths) — a third
+ *  of a 12-pounder's reach was 130 m of water once, and is 60 m since the reaches were halved (owner, 2026-10-22): under
+ *  a great ship's bow she sailed through her. */
+export const CLEAR_HULLS = 30;
 /** …and the band is never narrower than this (m): a ship's turning circle did not shrink when the reaches were halved
  *  (owner, 2026-10-22), and a band of 37 m (0.7–0.92 of a 12-pounder's 170) threw her out of it at every turn. */
 export const FIGHT_BAND = 70;
@@ -895,6 +899,7 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
     const hPort = wrapAngle(bearing + Math.PI / 2); // target on our port beam
     const hStar = wrapAngle(bearing - Math.PI / 2);
     // The course that presents a side, turned in or out to hold her distance.
+    const great = !!target.zoneBoss || target.cls.monster === true || target.npcRole === 'boss';
     const course = (side: 'port' | 'starboard'): number => {
       const inward = side === 'port' ? -1 : 1; // rotation that turns the bow toward the target
       const h = side === 'port' ? hPort : hStar;
@@ -909,7 +914,7 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
       const range = mode === 'rig' ? Math.min(rangeOf(side), effectiveRange(ship, side, 'chain')) : rangeOf(side);
       if (d > Math.max(range * FIGHT_HOLD, easyFrom)) return wrapAngle(h + inward * 0.85);
       if (d > Math.min(range * FIGHT_NEAR, range * FIGHT_HOLD - FIGHT_BAND)) return wrapAngle(h + inward * 0.4);
-      if (d < range * 0.35 && mode === 'guns') return wrapAngle(h - inward * 0.35);
+      if (d < (great ? Math.max(range * 0.35, (ship.stats.length + target.stats.length) / 2 + CLEAR_HULLS) : range * 0.35) && mode === 'guns') return wrapAngle(h - inward * 0.35);
       return h;
     };
     // The quick sea fight (docs/23 item 47): a side whose course lies in the wind's eye cannot be held (she would sit at

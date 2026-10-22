@@ -140,9 +140,13 @@ const ship = (d: ShipClassDef): ShipClassDef => d;
 // Playthrough C: the seas of ⚓9–10 are the cap's, and their captains sail in their level's kit — 11 200 s of a geared
 // captain's fire (tests/balance/zonebosses.ts KIT_SEA): three to four times a bare one's, and ten geared captains of 60
 // had the Abyssal Ark in six minutes.
+// The reaches halved (owner, 2026-10-22: the guns 100–250 m, were 220–560): a captain's fire on her fought inside a
+// hundred-odd metres of her, and the sims' captain (soloDps) laid 6–30 % less of it a minute; each hull re-weighed by
+// her sea's measure to the ten's 18.75 min again (was 1594500 / 3113500 / 3048500 / 3272000 / 5227500 / 5674500 /
+// 23501500 / 25626500).
 export const ZB_HULL: Record<ZoneBossClassId, number> = {
-  zb_black_coast: 1594500, zb_gravewater: 3113500, zb_whispering: 3048500, zb_leviathan_reach: 3272000,
-  zb_ashen_isles: 5227500, zb_dead_mans_expanse: 5674500, zb_drowned_crown: 23501500, zb_the_abyss: 25626500,
+  zb_black_coast: 1525500, zb_gravewater: 2326000, zb_whispering: 2286500, zb_leviathan_reach: 2324000,
+  zb_ashen_isles: 3844000, zb_dead_mans_expanse: 4061000, zb_drowned_crown: 16442500, zb_the_abyss: 27615000,
 };
 
 /** A zone boss (docs/21): a great warship of her sea at one level, in no fleet list and no tree, never sold. Her hull

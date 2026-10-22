@@ -350,14 +350,11 @@ export function npcSkill(level: number): NpcSkill {
   // docs/23 item 36: the sea's gunners lay their broadsides on the mark now (the guns train onto her); a green crew still
   // misjudges her range and her way more than a seasoned one. Item 47: they let fly within 30° of the beam (a captain's
   // gun captains within AUTO_ARC_DEG, 36°: her edge over a bot of her level, about seven fights in ten).
-  // (2026-10-22, the reaches halved — the guns 100–250 m, the sea's own firing from 150 m: a green crew misjudges her
-  // range by as many metres as it did, twice the share of the shorter fight — rangeErr ×2 — and its shot flies a little
-  // wider, +0.3: at a hundred metres every ball found her and a captain's craft no longer told; tests/balance/ladder.)
-  if (level <= 2) return { lead: 0.82, rangeErr: 0.18, arcDeg: 34, spread: 0.45, react: 1.4, dash: false };
-  if (level <= 4) return { lead: 0.83, rangeErr: 0.18, arcDeg: 34, spread: 0.45, react: 1.3, dash: false };
-  if (level <= 6) return { lead: 0.84, rangeErr: 0.17, arcDeg: 34, spread: 0.44, react: 1.2, dash: false };
-  if (level <= 8) return { lead: 0.85, rangeErr: 0.16, arcDeg: 35, spread: 0.43, react: 1.1, dash: true };
-  return { lead: 0.86, rangeErr: 0.16, arcDeg: 35, spread: 0.42, react: 1.0, dash: true };
+  if (level <= 2) return { lead: 0.82, rangeErr: 0.09, arcDeg: 34, spread: 0.15, react: 1.4, dash: false };
+  if (level <= 4) return { lead: 0.83, rangeErr: 0.09, arcDeg: 34, spread: 0.15, react: 1.3, dash: false };
+  if (level <= 6) return { lead: 0.84, rangeErr: 0.085, arcDeg: 34, spread: 0.14, react: 1.2, dash: false };
+  if (level <= 8) return { lead: 0.85, rangeErr: 0.08, arcDeg: 35, spread: 0.13, react: 1.1, dash: true };
+  return { lead: 0.86, rangeErr: 0.08, arcDeg: 35, spread: 0.12, react: 1.0, dash: true };
 }
 
 /** An elite ⚔ (group contracts, barons): built for a company — hull ×2.5, guns ×1.5. */
