@@ -3151,6 +3151,19 @@ function wayNearby(): { w: WayData; left: number } | null {
   return best;
 }
 
+/** The nearest of the dense sea's marks close by on her screen but not yet within the boats' reach, and the metres left. */
+function markNearby(): { m: SeaMarkData; left: number } | null {
+  const h = ownHull(state);
+  if (!h || state.self?.dockedAt) return null;
+  let best: { m: SeaMarkData; left: number } | null = null;
+  for (const m of state.seaMarks.values()) {
+    if (Math.abs(m.x - h.x) > 500 || Math.abs(m.y - h.y) > 500 || state.markDone.has(m.id)) continue;
+    const left = gapTo(h, m.x, m.y, m.r) - REACH_OBJ;
+    if (left > 0 && left < REACH_HINT && (!best || left < best.left) && seenOnScreen(m.x, m.y, m.r)) best = { m, left };
+  }
+  return best;
+}
+
 /** The nearest of the dense sea's marks within the boats' reach of her. */
 function markAtHand(): SeaMarkData | null {
   const own = state.ownDisplay;
@@ -3281,6 +3294,10 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   if (wild) facts.claim = { name: placeName(wild.name), price: fmt(wild.price) };
   facts.claimOpen = modal === 'company';
   const mk = markAtHand();
+  if (!mk) {
+    const mn = markNearby();
+    if (mn) info.push(esc(nearWords(LR8('mark'), mn.left)));
+  }
   if (mk) {
     const busy = state.markBusy?.id === mk.id ? state.markBusy : null;
     facts.mark = { id: mk.id, kind: mk.kind, done: state.markDone.has(mk.id), busy: !!busy };

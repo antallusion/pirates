@@ -43,7 +43,7 @@ export const REACH_SLACK = 8;
 /** A token on the water (a stack, a drift, a find, a bottle, a cache) is about this big about its point (metres). */
 export const OBJ_R = 12;
 /** Close but not yet in reach: the bar says how far is left within this many metres more (the hint «ещё 12 м»). */
-export const REACH_HINT = 150;
+export const REACH_HINT = 80;
 
 /** Every interaction, the reach that rules it (the table the tests walk, docs/38). */
 export const REACH_TABLE = {
