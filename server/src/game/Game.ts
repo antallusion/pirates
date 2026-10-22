@@ -196,6 +196,7 @@ import { BOARD_ABEAM, BOARD_FAR, BOARD_SPEED, canBoard, claimPrize, cutGrapples,
 import { assistPref, joinBoarding } from './boardgroup.ts'; // docs/25 block Е
 import { tacAction } from './tactical.ts';
 import { battleCardClosed, inBattle, SELF_IN_BATTLE_WHY, untouchable } from './inbattle.ts'; // owner, 2026-10-22
+import { allStop, cardSent, holdSail, orderDone } from './allstop.ts'; // owner, 2026-10-22: every action stops her
 import { replayList, replayOf } from './tacreplay.ts'; // owner, 2026-10-16: «Повтор»
 import { SURRENDER_FAR, SURRENDER_RANGE, surrenderBlocked, surrenderClosed, surrenderNear } from './struck.ts';
 import { endStreak, onStreakKill, streakAhead } from './streak.ts';
@@ -208,7 +209,7 @@ import { awayMark, awayReturn, awayTake, renownDistance, renownKill, sendRenown,
 import { sendWorldGoals, stepWorldGoals, worldGoalKill, worldGoalsCollect } from './worldgoals.ts';
 import { sendSignal } from './signals.ts';
 import { autosailInput, autosailOf, startAutosail, stepAutosail, stopAutosail } from './autosail.ts';
-import { approach, approachInput, cancelApproach, stepApproach } from './approach.ts'; // seaux: sail-to on tap
+import { approach, approachInput, approachOf, cancelApproach, stepApproach } from './approach.ts'; // seaux: sail-to on tap
 import { cancelRoute, gotoGoal, stepRoutes } from './goalroute.ts'; // route: tap a goal, sail to its nearest place
 import { LootMap, stepWrecks } from './wrecks.ts'; // seaux: wreckage per captain
 import { scuttleHome, scuttledHome, stepAdrift } from './adrift.ts'; // owner 2026-10-20: the jury rig, stranded, scuttling home
@@ -2335,6 +2336,7 @@ export class Game {
       if (owner) return this.creditKill(owner, victim, how);
     }
     if (!s || !s.profile) return;
+    allStop(this, s, 'sunk'); // owner, 2026-10-22: a ship sunk by her — the fight is over, she lies still
     ownShipsKill(this, s, victim); // her own ships near share in it (docs/15 item 4)
     const p = s.profile;
     // The colour of the prize (canon D12 as WoW's, docs/26): the captain's level against the ship's fighting level —
@@ -2728,7 +2730,7 @@ export class Game {
     // helmsman's course, if she had one, goes on by itself)
     if (s.ship) {
       s.ship.input = { rudder: 0, sailTarget: 0 };
-      s.sailHold = s.lastSail;
+      holdSail(s);
     }
     this.sendTo(s, { t: 'boarding', result: null });
     this.sendTo(s, { t: 'toast', msg: why ?? 'Your quartermaster shared out the spoils of the boarding.', kind: why ? 'bad' : 'info' });
@@ -3323,6 +3325,9 @@ export class Game {
   }
 
   sendTo(s: PlayerSession, msg: ServerMsg): void {
+    cardSent(this, s, msg); // owner, 2026-10-22: a modal card coming up stops her (allstop.ts)
+    // (her order refused: it did nothing, so it does not stop her — Game.handle)
+    if (msg.t === 'toast' && msg.kind === 'bad' && this.handling?.s === s) this.handling.refused = true;
     if (s.conn.closed || s.disconnectedAt !== null) return;
     // Her own order refused for the shot flying or her way: held, not refused (holdOrder).
     if (msg.t === 'toast' && msg.kind === 'bad' && this.handling?.s === s) {
@@ -3399,6 +3404,7 @@ export class Game {
   refuse(s: PlayerSession, m: string, order = ''): void {
     const now = this.now;
     // (the same refusal to another order is news: a whisper and an invitation both refused for the same reason)
+    if (this.handling?.s === s) this.handling.refused = true;
     const key = `${order}|${m}`;
     const again = !TOLD_EVERY_TIME.has(order) && !!s.lastRefusal && s.lastRefusal.msg === key && now - s.lastRefusal.at < REFUSAL_QUIET;
     s.lastRefusal = { msg: key, at: now }; // (the quiet runs on while it keeps coming: an order repeated by itself is told once)
@@ -3417,7 +3423,7 @@ export class Game {
   }
 
   /** The order being handled, and whose (an order refused only because shot is flying waits for it to stop). */
-  private handling: { s: PlayerSession; msg: ClientMsg } | null = null;
+  private handling: { s: PlayerSession; msg: ClientMsg; refused?: boolean } | null = null;
 
   // ---- seaux (2026-10-11): sail-to on tap (approach.ts) — the order being handled, and the same order given again
   /** Her order being handled now (null outside her handler). */
@@ -3433,7 +3439,8 @@ export class Game {
 
   private handle(s: PlayerSession, msg: ClientMsg): void {
     const prev = this.handling;
-    this.handling = { s, msg };
+    const h: { s: PlayerSession; msg: ClientMsg; refused?: boolean } = { s, msg };
+    this.handling = h;
     // The same order pressed again supersedes the one held (no second purchase, no second landing when the first comes).
     if (s.whenClear && s.whenClear.msg !== msg && s.whenClear.msg.t === msg.t) s.whenClear = null;
     try {
@@ -3443,9 +3450,12 @@ export class Game {
         stopPursuit(this, s, 'off');
         // The helmsman had the sheets: the helm's sail is not her hand (she lies to for her boats).
         s.ship!.input = { rudder: 0, sailTarget: 0 };
-        s.sailHold = s.lastSail;
+        holdSail(s);
       }
       this.handleMsg(s, msg);
+      // Owner, 2026-10-22 (allstop.ts): an order that did a thing at sea — not refused, not waiting for her arrival
+      // (approach.ts) or for the shot to stop (holdOrder) — leaves her lying still.
+      orderDone(this, s, msg, h.refused === true, approachOf(this, s)?.msg === msg || s.whenClear?.msg === msg);
     } finally {
       this.handling = prev;
     }
@@ -3464,7 +3474,7 @@ export class Game {
       // …and the helmsman's course too: he kept her under sail, she never slowed and the dock lapsed (QA 2026-10-22)
       if (autosailOf(ship)) stopAutosail(this, s, 'manual');
       ship.input = { rudder: 0, sailTarget: 0 };
-      s.sailHold = s.lastSail;
+      holdSail(s);
       this.pushSelf(s, true);
     }
     if (fresh) this.sendTo(s, { t: 'toast', msg: way !== undefined ? HELD_FOR_WAY : HELD_UNDER_FIRE, kind: 'info' });
@@ -3512,6 +3522,8 @@ export class Game {
         return;
       case 'input': {
         if (!Number.isFinite(msg.rudder) || !Number.isFinite(msg.sail)) return;
+        // (the step her phone sends, whoever has the wheel: the one held off after a stop — allstop.ts)
+        s.lastSail = clamp(Math.round(msg.sail), 0, SAIL_STEPS.length - 1);
         if (s.profile?.company.mutiny) return; // the mutineers hold the wheel
         if (s.pendingBoarding) {
           ship.input = { rudder: 0, sailTarget: 0 }; // hove to by her prize until the spoils are settled
@@ -3530,8 +3542,7 @@ export class Game {
           if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
           return; // the helmsman has the wheel (docs/16 #36)
         }
-        const step = clamp(Math.round(msg.sail), 0, SAIL_STEPS.length - 1);
-        s.lastSail = step;
+        const step = s.lastSail;
         // Hove to by an order of hers (holdOrder): the helm's old sail is not her hand; a new one is.
         if (s.sailHold !== null && step !== s.sailHold) s.sailHold = null;
         ship.input = { rudder: clamp(msg.rudder, -1, 1), sailTarget: s.sailHold !== null ? 0 : SAIL_STEPS[step] };

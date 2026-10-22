@@ -38,6 +38,7 @@ import { arenaOver, isArenaFight } from './arena.ts'; // docs/19 E14
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { softenFoe } from './firstfights.ts';
 import { battleEnded, battlePartner, dropGrace, inBattle, IN_BATTLE_WHY, SELF_IN_BATTLE_WHY, untouchable } from './inbattle.ts'; // owner, 2026-10-22
+import { allStopShip } from './allstop.ts'; // owner, 2026-10-22
 import { kitNums, skillNumber } from './seaskill.ts';
 
 const AGG = {
@@ -164,6 +165,8 @@ export function startBoarding(game: Game, a: ShipEntity, b: ShipEntity, aggressi
     return;
   }
   dropGrace(a); // she grapples another: her own grace after a battle is over
+  allStopShip(game, a, 'boarding'); // owner, 2026-10-22: a boarding stops both captains' ships (allstop.ts)
+  allStopShip(game, b, 'boarding');
   truceBoarded(game, a, b); // grappling a ship under her white flag breaks the truce (owner, 2026-10-18)
   softenFoe(game, a, b); // a novice's first three fights (docs/23 item 81): before the men are counted
   const now = game.now;

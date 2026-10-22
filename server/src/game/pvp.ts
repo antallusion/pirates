@@ -32,6 +32,7 @@ import { SF } from '../../../shared/src/protocol.ts';
 import type { BountyView, DuelView, PvpView } from '../../../shared/src/protocol.ts';
 import { dist } from '../../../shared/src/math.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
+import { allStop } from './allstop.ts'; // owner, 2026-10-22
 import type { Game } from './Game.ts';
 import { groupOfAccount, sameGroup, sameGroupAccounts } from './party.ts';
 import { atWar, guildFriends } from './guilds.ts';
@@ -473,6 +474,7 @@ function endDuel(game: Game, d: Duel, winner: 0 | 1 | null): void {
     if (!s) continue;
     if (winner !== null && d.sides[winner].includes(m)) game.shared?.bump('duels', m, s.name, 1);
     game.sendTo(s, { t: 'duel', view: null });
+    allStop(game, s, 'battle_end', 'duel'); // owner, 2026-10-22: a duel over, she lies still (allstop.ts)
     game.pushSelf(s, true);
   }
 }

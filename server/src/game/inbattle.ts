@@ -11,6 +11,7 @@
 
 import { landFighting } from './beastlairs.ts';
 import type { Game } from './Game.ts';
+import { allStopShip } from './allstop.ts';
 import type { ShipEntity } from './ship.ts';
 
 /** Seconds she stays out of reach after a battle ends (owner: «~10–15 s»). */
@@ -59,6 +60,8 @@ export function battleEnded(game: Game, ship: ShipEntity | null | undefined, car
   if (!ship || ship.accountId === null) return;
   ship.battleGraceUntil = Math.max(ship.battleGraceUntil, game.now + BATTLE_GRACE);
   ship.battleCardAt = card ? game.now : 0;
+  // (owner, 2026-10-22: after any battle she lies still — no course taken up, her phone's old sail held off; allstop.ts)
+  allStopShip(game, ship, 'battle_end');
 }
 
 /** She put the battle's reckoning away. */

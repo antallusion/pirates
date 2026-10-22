@@ -2043,6 +2043,9 @@ export type ServerMsg =
   /** docs/16 #35: a groupmate's signal flag. */
   | { t: 'signal'; from: string; kind: SignalKind; x: number; y: number }
   /** docs/16 #36: the helmsman has the wheel for a mark, or has given it back and why. */
+  /** Owner, 2026-10-22 (server allstop.ts): an action of hers, a battle or a card stopped her — the phone brings its sail
+   *  control down to nothing and lets go of the helm stick; she sails on only by her own hand. */
+  | { t: 'allstop'; why: string }
   | { t: 'autosail'; on: boolean; x?: number; y?: number; sail?: number; why?: AutosailStop;
       /** The planned way round the land (owner, 2026-10-18: «всегда должно быть показано направление линией и путь»): her
        *  place when it was planned, its turns, the end; whole metres. Sent again on every new plan. */ path?: [number, number][] }

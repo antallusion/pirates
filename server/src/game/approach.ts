@@ -156,7 +156,7 @@ export function stepApproach(game: Game): void {
       if (!a.heaving) {
         a.heaving = true;
         const run = autosailOf(ship);
-        s.sailHold = run ? run.sail : s.lastSail;
+        s.sailHold = s.lastSail >= 0 ? s.lastSail : run ? run.sail : 0; // (her phone's own step: Game.ts 'input')
         if (run) stopAutosail(game, s, 'arrived');
         ship.input = { rudder: 0, sailTarget: 0 };
       }

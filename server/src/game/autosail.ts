@@ -92,8 +92,10 @@ export const RESUME_WINDOW = 300;
 export const RESUME_CALM = 5;
 /** What she is told when he does (translated on the client). */
 export const RESUME_WORDS = 'The sea is quiet again: the helmsman takes her on to her mark.';
-/** The reasons a course is only broken off, not ended. */
-const RESUMABLE: ReadonlySet<AutosailStop> = new Set(['hostile', 'attack', 'storm']);
+/** The reasons a course is only broken off, not ended. (Owner, 2026-10-22, allstop.ts: «любое действие … должно
+ *  останавливать корабль» — a fight is no longer one of them: after a fight she lies still until her own hand sets
+ *  sail or a course; only a sail sighted or a storm, with no fight, still leaves the course to be taken up.) */
+const RESUMABLE: ReadonlySet<AutosailStop> = new Set(['hostile', 'storm']);
 
 interface Paused {
   x: number;
@@ -102,8 +104,16 @@ interface Paused {
   arrive?: number;
   at: number;
   calm: number | null;
+  /** Her own course given in the middle of a fight (startAutosail): kept for after it; a course the sea broke off is
+   *  dropped the moment a fight comes (owner, 2026-10-22). */
+  own?: boolean;
 }
 const paused = new WeakMap<ShipEntity, Paused>();
+
+/** Every course kept to be taken up again is dropped (allstop.ts: an action of hers, a fight, a card). */
+export function dropPaused(ship: ShipEntity): void {
+  paused.delete(ship);
+}
 /** When her own hand last turned the wheel with nobody else at it. */
 const helmAt = new WeakMap<ShipEntity, number>();
 
@@ -134,7 +144,8 @@ function stepResume(game: Game, s: PlayerSession, ship: ShipEntity): void {
   }
   // (since RESUME_CALM ago: a shot or a hit in the last seconds is still the fight)
   const why = autosailDanger(game, s, ship, game.now - RESUME_CALM, p);
-  if (why === 'hull' || why === 'lost' || why === 'helm' || why === 'port' || why === 'reef') {
+  // (a fight come on a course the sea broke off: dropped — after a fight she lies still, owner 2026-10-22)
+  if (why === 'hull' || why === 'lost' || why === 'helm' || why === 'port' || why === 'reef' || (why === 'attack' && !p.own)) {
     paused.delete(ship);
     return;
   }
@@ -362,7 +373,7 @@ export function startAutosail(game: Game, s: PlayerSession, x: number, y: number
     // a fight under way: the course is kept and taken up once the sea is quiet (stepResume), its line drawn dimmed (the
     // client says «paused: the course goes on after the fight»)
     queued.delete(ship);
-    paused.set(ship, keep);
+    paused.set(ship, { ...keep, own: true });
     const p = plan(game, ship, x, y);
     game.sendTo(s, { t: 'autosail', on: false, why: 'attack', x: Math.round(x), y: Math.round(y), ...(p && p.length >= 2 ? { path: pathView(p) } : {}) });
     return null;
@@ -415,7 +426,8 @@ export function stopAutosail(game: Game, s: PlayerSession, why: AutosailStop): v
   // …and held so (2026-10-18): her phone sends its helm four times a second, the sail the helmsman was given among it,
   // and that sail set her running on past the mark onto the shore the moment the wheel was hers (the sims: a brig
   // brought to an island's water ran 220 ticks along its rocks). The old sail is held off until she sets another.
-  if (heave) s.sailHold = run.sail;
+  // (the step her phone itself sends — Game.ts 'input' — not the helmsman's: the two differ, and the phone's took her on)
+  if (heave) s.sailHold = s.lastSail >= 0 ? s.lastSail : run.sail;
   // Her hand off the wheel a while yet: the lead line still kept (stepGuard) — she is not run ashore by the way she was
   // left with, or by the course she held when a fight broke the run off.
   if (why !== 'manual' && why !== 'lost' && why !== 'port' && why !== 'helm') guards.set(ship, { since: game.now, until: game.now + (RESUMABLE.has(why) ? RESUME_WINDOW : GUARD_SEC), sail: run.sail });
@@ -465,7 +477,7 @@ function stepGuard(game: Game, s: PlayerSession, ship: ShipEntity): void {
     return;
   }
   ship.input = { rudder: 0, sailTarget: 0 };
-  s.sailHold = g.sail;
+  s.sailHold = s.lastSail >= 0 ? s.lastSail : g.sail;
 }
 
 /** A beat of her helm sent before he took the wheel arrives within this many seconds of it. */

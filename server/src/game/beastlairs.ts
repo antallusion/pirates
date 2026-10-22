@@ -13,6 +13,7 @@
 
 import { LANDING_R, REACH_SHORE, REACH_SLACK, gapTo, hullOf, landingPoint, landingWithin } from '../../../shared/src/data/reach.ts';
 import { battleCardClosed, battleEnded, dropGrace } from './inbattle.ts'; // owner, 2026-10-22
+import { allStop } from './allstop.ts'; // owner, 2026-10-22: a battle's start and end stop her
 import { lackBerth, lackHammocks, lackMore, lackSlot } from '../../../shared/src/data/buyfail.ts';
 import { UNITS, armyMen, armyPower, armyWeight, isPremiumUnit } from '../../../shared/src/data/army.ts';
 import { onboardingProtected } from './onboarding.ts';
@@ -629,6 +630,7 @@ export function startFight(game: Game, s: PlayerSession, id: string, force = fal
   const bt = newBattle(a, b, seed, game.tacNow(), rng, { land: l.type });
   freeQuickAshore(bt);
   S.fights.set(s.accountId, { lair: l.id, bt, rng, seq: -1, done: false, closeAt: Infinity, retreat: false, xp: 0 });
+  allStop(game, s, 'battle', 'lair');
   meetCreatures(game, s, men.map((x) => x.u)); // docs/18 #46: the bestiary's first pages
   ship.input = { rudder: 0, sailTarget: 0 };
   ship.state.speed = 0;
@@ -701,6 +703,7 @@ export function startCreatureFight(game: Game, s: PlayerSession, ext: ExtFight, 
   const bt = newBattle(a, b, seed, game.tacNow(), rng, { land: ext.type });
   freeQuickAshore(bt);
   S.fights.set(s.accountId, { lair: '', bt, rng, seq: -1, done: false, closeAt: Infinity, retreat: false, xp: 0, ext });
+  allStop(game, s, 'battle', 'ashore');
   ext.onStep?.(game, s, bt, rng);
   meetCreatures(game, s, men.map((x) => x.u)); // docs/18 #46
   ship.input = { rudder: 0, sailTarget: 0 };

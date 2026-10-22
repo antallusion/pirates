@@ -35,6 +35,7 @@ import { Rng } from '../../../shared/src/rng.ts';
 import type { ArenaOp } from '../../../shared/src/throneproto.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
+import { allStopShip } from './allstop.ts'; // owner, 2026-10-22
 import { inDuel } from './pvp.ts';
 import { chronicle } from './renown.ts';
 import { seasonId } from './seasons.ts';
@@ -352,6 +353,8 @@ function lock(game: Game, A: ShipEntity, B: ShipEntity, b: Bout): void {
   }
   A.boarding = st(B, true, A);
   B.boarding = st(A, false, B);
+  allStopShip(game, A, 'battle', 'arena'); // owner, 2026-10-22 (allstop.ts)
+  allStopShip(game, B, 'battle', 'arena');
   fights.set(fight, b);
   b.ships = [A.id, B.id];
 }
