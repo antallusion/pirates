@@ -794,8 +794,10 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
   }
   // Her craft by her level (docs/12 §3.3): how much of the lead she allows, how wide she lets fly, her tricks.
   const sk = brain.skill ?? npcSkill(ship.shipLevel);
+  // (A captain running in on her for the grapples, pursuit.ts board_run: a boarder meets her alongside — circling her at
+  // her chain shot's hundred metres, since the reaches were halved (owner, 2026-10-22), the two never came together.)
   const weakened = target.surrendered || target.sails < target.stats.sailHpMax * 0.4 || target.crew < target.stats.crewMax * 0.5 || target.hull < target.stats.hullMax * 0.55;
-  const { px, py, leadD, leadBearing } = engageHelm(game, ship, brain, target, d, wantsBoard ? (weakened ? 'board' : 'rig') : 'guns', sk.lead);
+  const { px, py, leadD, leadBearing } = engageHelm(game, ship, brain, target, d, wantsBoard ? (weakened || target.hasEffect('board_run') ? 'board' : 'rig') : 'guns', sk.lead);
   const rangeOf = (side: 'port' | 'starboard') => effectiveRange(ship, side, ship.ammoSel);
   // The sea's own hold their fire till they are within NPC_OPEN_FIRE of her, or the fight is joined.
   if (!npcMayFire(game, ship, brain, target, d)) return;

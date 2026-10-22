@@ -18,9 +18,9 @@ import { campaignActive, campaignFoes, campaignOf } from '../server/src/game/cam
 import { claimIsland, claimPrompt } from '../server/src/game/baseclaim.ts';
 import { ownIsland } from '../server/src/game/estate.ts';
 import { landFighting, landTac } from '../server/src/game/beastlairs.ts';
-import { startPursuit } from '../server/src/game/pursuit.ts';
+import { startPursuit, startRoamRun } from '../server/src/game/pursuit.ts';
 import { questEvent } from '../server/src/game/quests.ts';
-import { attackRoam, roamWhere, roamersAbout, roamUp } from '../server/src/game/roamers.ts';
+import { roamWhere, roamersAbout, roamUp } from '../server/src/game/roamers.ts';
 import { ROAM_REACH } from '../shared/src/data/roamers.ts';
 import { openingStep } from '../server/src/game/player.ts';
 import { pointerTargets } from '../client/src/ui/pointer.ts';
@@ -147,17 +147,19 @@ test('a fresh account plays the opening through on the real sea within ten minut
   mark('boarded');
 
   // 4. a neutral stack: the goal's run to the nearest standing stack on the lane, «Атаковать», the battle (90 s)
+  // (2026-10-22: the goal's run brings her to the stack's water — its 60 m — and «Атаковать» on it does the rest, as a
+  // captain's tap does: a stack that drifts off a little from where the run was laid is sailed to and the boats go from
+  // its 30 m, startRoamRun. The run's arrival a hull's length off it is no longer taken for the boats' reach.)
   const stackNear = () => roamersAbout(game, ship().state.x, ship().state.y, ROAM_REACH + 600).find((sp) => {
     const w = roamWhere(game, sp);
-    return roamUp(game, sp.id) && Math.hypot(w.x - ship().state.x, w.y - ship().state.y) <= ROAM_REACH;
+    return roamUp(game, sp.id) && Math.hypot(w.x - ship().state.x, w.y - ship().state.y) <= 150;
   });
   conn.push({ t: 'goto', key: 'q:c01_04' });
   until(() => !!stackNear(), 300, 'at a stack of creatures');
   const sp = stackNear()!;
-  const where = roamWhere(game, sp);
-  assert.ok(Math.hypot(where.x - ship().state.x, where.y - ship().state.y) <= ROAM_REACH + 30);
+  assert.equal(startRoamRun(game, s, sp.id), null, '«Атаковать» on the stack');
+  until(() => landFighting(game, s) || at() >= 4, 60, 'the party goes');
   conn.push({ t: 'halt' }); // (she lies to while her party fights: no way made in the fight's minute and a half)
-  assert.equal(attackRoam(game, s, sp.id), null, 'the party goes');
   run(90);
   if (landFighting(game, s)) landTac(game, s, { a: 'quick' }, true);
   run(1);

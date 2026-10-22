@@ -222,13 +222,14 @@ test('The Drowned Whale: the Song is quieted by a Choir Bell; at the last only b
   const { game, f, body, caps } = arena('drowned_whale', 3);
   const [A, B, C] = caps;
   body.hull = body.stats.hullMax * 0.5;
-  // A bell on Bram's ship covers Bram and Anne (within 400 m); Cora is out of its reach.
+  // A bell on Bram's ship covers Bram and Anne (within 200 m); Cora is out of its reach, inside the Song's 800 m (the
+  // reaches halved, owner 2026-10-22: 400 m and 1.6 km before).
   B.ship.loadout.modules.choir_bell = 1;
   B.ship.recompute(game.now);
   assert.ok(B.ship.hasFlag('choir_bell'));
-  at(game, A.ship, body.state.x + 300, body.state.y);
-  at(game, B.ship, body.state.x + 450, body.state.y);
-  at(game, C.ship, body.state.x - 900, body.state.y);
+  at(game, A.ship, body.state.x + 150, body.state.y);
+  at(game, B.ship, body.state.x + 225, body.state.y);
+  at(game, C.ship, body.state.x - 450, body.state.y);
   for (const x of caps) x.ship.morale = 80;
   f.ready.song = 0;
   steps(game, SEC + 1);
