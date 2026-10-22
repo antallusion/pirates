@@ -17,6 +17,8 @@ import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { gapTo, hullOf } from '../../../shared/src/data/reach.ts';
 import { pursuitOf } from './pursuit.ts';
+import { ALONGSIDE_FROM, alongsideHelm, newBrain } from './npc.ts';
+import type { NpcBrain } from './npc.ts';
 
 /** What she is sent to: where it lies (or a reader of where it is now, for a thing that moves or goes), and the reach
  *  within which its order may be done — from her hull's edge to the thing's (reach.ts: `r` its radius about the point)
@@ -31,6 +33,8 @@ export interface ApproachTarget {
   near?: () => boolean;
   /** The boats are lowered only this slow (m/s): arrived, she heaves to first and the order is given once she has. */
   slow?: number;
+  /** A ship to come alongside (a boarding): near her the helmsman lays her beam to beam (npc.ts alongsideHelm). */
+  alongside?: ShipEntity;
 }
 
 interface Approach extends ApproachTarget {
@@ -41,6 +45,7 @@ interface Approach extends ApproachTarget {
    *  hulk, a quay): he edges her the last metres in under easy canvas (`creeping`), unless her own hand took the helm. */
   creeping?: boolean;
   hand?: boolean;
+  brain?: NpcBrain;
 }
 
 /** The last stretch is crept in this slowly (a share of her canvas), and only this near the thing (metres, centre). */
@@ -163,6 +168,16 @@ export function stepApproach(game: Game): void {
       } finally {
         redoing.delete(s);
       }
+      continue;
+    }
+    // A ship to come alongside: near her, beam to beam on her course and her way (owner, 2026-10-22).
+    const al = a.alongside;
+    if (al && !a.hand && al.alive && Math.hypot(al.state.x - ship.state.x, al.state.y - ship.state.y) < ALONGSIDE_FROM * 1.2) {
+      if (autosailOf(ship)) stopAutosail(game, s, 'off');
+      if (!a.creeping) releaseGuard(ship);
+      a.creeping = true;
+      s.sailHold = null;
+      alongsideHelm(game, ship, (a.brain ??= newBrain(ship.id, 'pirate', game.now)), al);
       continue;
     }
     // A thing that moves (a drift, a raft on the current): the course follows it.

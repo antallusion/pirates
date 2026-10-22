@@ -16,11 +16,12 @@
 //    and its citadels a stone harder and its towers harder the season after.
 // Every roll is on this system's own Rng; the clock is the game's wall clock.
 
+import { LANDING_R, REACH_SLACK, hullOf } from '../../../shared/src/data/reach.ts';
 import { MAX_LEVEL } from '../../../shared/src/constants.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import {
-  CITADELS, CIT_NOTICE_MS, CIT_OWN, CIT_POINTS, CIT_RANGE, CIT_TOWER, CIT_WARD, CIT_WINDOW_MS, THRONE_PENNANT, THRONE_TITLE, addToGarrison, buildCitadels, gatherGarrison,
+  CITADELS, CIT_NOTICE_MS, CIT_OWN, CIT_POINTS, CIT_RANGE, CIT_TOWER, atAnchorage, CIT_WARD, CIT_WINDOW_MS, THRONE_PENNANT, THRONE_TITLE, addToGarrison, buildCitadels, gatherGarrison,
   castellanOf, citBombard, citGarrison, citName, citNextWindow, citSpellHp, citTax, citWeek, citWindowAt,
 } from '../../../shared/src/data/citadels.ts';
 import type { CitMark, CitRow, CitView, CitadelDef } from '../../../shared/src/data/citadels.ts';
@@ -324,7 +325,7 @@ function assaultWhy(game: Game, s: PlayerSession, id: number): string | null {
   if (ship.boarding || ship.grappled || ship.landing) return 'Not in the middle of a boarding';
   if (!game.tacticalBoarding) return 'The siege is fought on the hexes.';
   const c = defs(game)[id];
-  if (dist(c.x, c.y, ship.state.x, ship.state.y) > CIT_RANGE) return CIT_FAR;
+  if (!atAnchorage(hullOf(ship), c, REACH_SLACK)) return CIT_FAR;
   if (ship.underFire(game.now)) return 'Not while under fire';
   if (!S.cits[id].garrison.some((x) => x.n > 0)) return 'Its garrison is gone: it is yours to take.';
   return null;
@@ -338,7 +339,7 @@ export function assaultCitadel(game: Game, s: PlayerSession, id: number): string
   // An empty garrison: the besiegers walk in.
   const sg = S.sieges[id];
   const g = game.guilds.of(game, s.accountId);
-  if (!rec.garrison.some((x) => x.n > 0) && sg && g && (sg.gid === g.id || g.alliance.includes(sg.gid)) && siegeNow(game, id) && dist(defs(game)[id].x, defs(game)[id].y, s.ship?.state.x ?? 0, s.ship?.state.y ?? 0) <= CIT_RANGE) {
+  if (!rec.garrison.some((x) => x.n > 0) && sg && g && (sg.gid === g.id || g.alliance.includes(sg.gid)) && siegeNow(game, id) && !!s.ship && atAnchorage(hullOf(s.ship), defs(game)[id], REACH_SLACK)) {
     capture(game, id, sg.gid);
     return null;
   }
@@ -346,7 +347,7 @@ export function assaultCitadel(game: Game, s: PlayerSession, id: number): string
   // far from its anchorage (2026-10-19): the helmsman takes her there, and the assault begins on arrival
   if (why === CIT_FAR) {
     const c0 = defs(game)[id];
-    return approach(game, s, { x: c0.x, y: c0.y, reach: CIT_RANGE - 40 }, why);
+    return approach(game, s, { x: c0.x, y: c0.y, reach: CIT_RANGE, r: LANDING_R }, why);
   }
   if (why) return why;
   const c = defs(game)[id];
@@ -467,7 +468,7 @@ function holdWhy(game: Game, s: PlayerSession, id: number): string | null {
   if (!ship || !ship.alive || ship.docked) return 'Put to sea first.';
   if (ship.boarding || ship.grappled) return 'Not in the middle of a boarding';
   const c = defs(game)[id];
-  if (dist(c.x, c.y, ship.state.x, ship.state.y) > CIT_RANGE) return 'Bring your ship to its anchorage.';
+  if (!atAnchorage(hullOf(ship), c, REACH_SLACK)) return 'Bring your ship to its anchorage.';
   if (store(game).sieges[id]?.fighting !== undefined) return 'Not while its walls are under assault.';
   return null;
 }

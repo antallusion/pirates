@@ -6,6 +6,7 @@
 //
 // Sailing faster brings things sooner; a harbour's waters and a fight keep the director still.
 
+import { OBJ_R, REACH_OBJ, REACH_SLACK, hullOf, inReach } from '../../../shared/src/data/reach.ts';
 import { catAboard, givePet, sanitizePets } from './pets.ts';
 import { tattooCount } from './tattoos.ts';
 import { questEvent } from './quests.ts';
@@ -42,10 +43,10 @@ import { inDescent } from './descent.ts';
 import { approach } from './approach.ts';
 
 /** How close a sign must be for its card to open, and how far a captain may leave it before it is gone. */
-export const OPEN_R = 380;
+export const OPEN_R = 240; // (owner, 2026-10-22: a sign on her screen, 380 → 240 m from her middle)
 /** seaux (2026-10-11, owner: «я должен нажать и плыть к цели»): a choice on a sign's card is done alongside it — from
  *  farther the helmsman sails her there and it is done when she is (approach.ts). */
-export const CHOOSE_R = 170;
+export const CHOOSE_R = REACH_OBJ; // her hull to the sign's edge (owner, 2026-10-22: 170 m → 30 m — reach.ts)
 const LOSE_R = 4500;
 const LIFE_SEC = 6 * 60;
 /** No encounters within this of a port. */
@@ -352,8 +353,8 @@ export function chooseEncounter(game: Game, s: PlayerSession, id: number, choice
   if (!def.choices.some((c) => c.id === choice)) return 'No such choice';
   // (a thing on the water — a raft, a wreck, a sinking merchant — is reached first; one aboard is at hand)
   const ship = s.ship;
-  if (def.sight && ship && dist(ship.state.x, ship.state.y, live.x, live.y) > CHOOSE_R) {
-    return approach(game, s, { x: live.x, y: live.y, reach: CHOOSE_R, where: () => (live.resolved || !st(game).live.has(live.id) ? null : live) }, 'Come alongside it first.');
+  if (def.sight && ship && !inReach(hullOf(ship), live.x, live.y, OBJ_R, CHOOSE_R + REACH_SLACK)) {
+    return approach(game, s, { x: live.x, y: live.y, reach: CHOOSE_R, r: OBJ_R, where: () => (live.resolved || !st(game).live.has(live.id) ? null : live) }, 'Come alongside it first.');
   }
   settle(game, s, live, choice);
   return null;
