@@ -131,7 +131,7 @@ test('cutting grapples: Iron Grip holds them, then the defender may cut loose', 
 test('Jolly Boat Raid: the boat boards while the mother ship keeps firing', () => {
   const { game } = makeGame();
   const { c, ship } = atSea(game, 'Boatman', { brd_jolly_boat: 1 });
-  const npc = crippled(game, ship, 100, 4);
+  const npc = crippled(game, ship, 70, 4); // within the boat's 75 m of her hull (ranges ÷2, owner 2026-10-22)
   const crew0 = ship.crew;
   c.push({ t: 'talent_active', id: 'brd_jolly_boat' });
   assert.ok(ship.crew < crew0, 'the party is in the boat');

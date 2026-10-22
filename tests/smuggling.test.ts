@@ -51,11 +51,11 @@ test('signature: Low Profile and Silent Running make you harder to see; Dark Lan
   assert.ok(signature(ship) <= 0.72 + 1e-9, 'silent running at half speed');
   assert.ok(visibleRange(game, ship, watcher) < 2200);
   assert.equal(visibleRange(game, watcher, ship), Infinity, 'ordinary ships stay visible');
-  // Night: 250 m.
+  // Night: 125 m (ranges ÷2, owner 2026-10-22).
   let t = 0;
   while (!isNight(t)) t += 60;
   game.now = t;
-  assert.equal(visibleRange(game, ship, watcher), 250);
+  assert.equal(visibleRange(game, ship, watcher), 125);
 });
 
 test('customs: open hold 60%, Forged Papers cut it; hidden compartments; bribes skip the search', () => {

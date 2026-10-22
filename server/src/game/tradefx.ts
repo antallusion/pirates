@@ -177,7 +177,7 @@ export function expireOptions(game: Game, s: PlayerSession): void {
 export function callPatrols(game: Game, victim: ShipEntity, attacker: ShipEntity): void {
   if (!victim.hasFlag('convoy_rights') || victim.hasFlag('black_ledger') || REGIONS[victim.region].safety === 'lawless') return;
   if (attacker.id === victim.id || attacker.ownerId === victim.id) return;
-  game.forShipsNear(victim.state.x, victim.state.y, 2500, (o) => {
+  game.forShipsNear(victim.state.x, victim.state.y, 1250, (o) => {
     if (o.npcRole !== 'patrol' || !o.alive || o.id === attacker.id) return;
     if (o.faction !== 'crown' && o.faction !== 'league') return;
     const brain = game.npcs.get(o.id);

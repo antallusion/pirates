@@ -34,12 +34,12 @@ export function signature(ship: ShipEntity): number {
 export function visibleRange(game: Game, target: ShipEntity, observer: ShipEntity): number {
   const base = visibleRangeBase(game, target);
   // Fog Sense: the observer reads the fog better.
-  return observer.hasFlag('fog_sense') && base.fog ? Math.max(250, base.r * 1.5) : Math.max(250, base.r);
+  return observer.hasFlag('fog_sense') && base.fog ? Math.max(125, base.r * 1.5) : Math.max(125, base.r);
 }
 
 /** How far this ship can be seen, before the observer's own talents (the same for every observer). */
 export function visibleRangeBase(game: Game, target: ShipEntity): { r: number; fog: boolean } {
-  if (target.hasFlag('dark_lanterns') && isNight(game.now)) return { r: 250, fog: false };
+  if (target.hasFlag('dark_lanterns') && isNight(game.now)) return { r: 125, fog: false };
   const sig = signature(target);
   if (sig >= 1) return { r: Infinity, fog: false };
   const w = game.weatherOf(target);
@@ -224,7 +224,7 @@ export function deferCrime(game: Game, ship: ShipEntity, amount: number, reason:
   if (!ship.hasFlag('nobodys_ship') || REGIONS[ship.region].safety !== 'contested' || ship.accountId === null) return false;
   if (shoreWitness(game, ship.state.x, ship.state.y)) return false; // the lighthouse keeper saw it
   const witnesses: number[] = [];
-  game.forShipsNear(ship.state.x, ship.state.y, 800, (o) => {
+  game.forShipsNear(ship.state.x, ship.state.y, 400, (o) => {
     if (o.id !== ship.id && o.alive && o.ownerId !== ship.id) witnesses.push(o.id);
   });
   game.crimes.push({ account: ship.accountId, amount, reason, witnesses, due: game.now + 600 });
@@ -265,8 +265,8 @@ export function loseTrail(game: Game, hunter: ShipEntity, hunted: ShipEntity): b
 
 export function falseColors(game: Game, ship: ShipEntity): string | null {
   let patrolNear = false;
-  game.forShipsNear(ship.state.x, ship.state.y, 300, (o) => {
-    if (o.npcRole === 'patrol' && dist(o.state.x, o.state.y, ship.state.x, ship.state.y) < 150) patrolNear = true;
+  game.forShipsNear(ship.state.x, ship.state.y, 150, (o) => {
+    if (o.npcRole === 'patrol' && dist(o.state.x, o.state.y, ship.state.x, ship.state.y) < 75) patrolNear = true;
   });
   if (patrolNear) return 'Not under the nose of a patrol';
   ship.addEffect({ id: 'false_colors', until: game.now + 1800, flags: ['false_colors'] }, game.now);
@@ -289,8 +289,8 @@ export function slipAway(game: Game, ship: ShipEntity): string | null {
   const w = game.weatherOf(ship);
   if (!isNight(game.now) && w !== 'fog') return 'Slip Away needs night or fog';
   let enemyNear = false;
-  game.forShipsNear(ship.state.x, ship.state.y, 220, (o) => {
-    if (o.id !== ship.id && o.alive && game.isHostile(o, ship) && dist(o.state.x, o.state.y, ship.state.x, ship.state.y) < 200) enemyNear = true;
+  game.forShipsNear(ship.state.x, ship.state.y, 110, (o) => {
+    if (o.id !== ship.id && o.alive && game.isHostile(o, ship) && dist(o.state.x, o.state.y, ship.state.x, ship.state.y) < 100) enemyNear = true;
   });
   if (enemyNear) return 'Too close to an enemy to slip away';
   ship.addEffect({ id: 'slip_away', until: game.now + 20, flags: ['hidden'] }, game.now);

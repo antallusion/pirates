@@ -214,7 +214,7 @@ test('orders: Rally, Sea Shanty (not under fire), Cat-o\'-Nine-Tails, Concentrat
   c.push({ t: 'talent_active', id: 'cmd_concentrate_fire', x: foe.state.x, y: foe.state.y });
   assert.ok(foe.hasEffect('marked'));
   // Black Flag: a frightened merchant strikes or runs.
-  const m = game.spawnNpcShip('merchant', 'brig', 'league', ship.state.x - 200, ship.state.y, 0);
+  const m = game.spawnNpcShip('merchant', 'brig', 'league', ship.state.x - 120, ship.state.y, 0); // within the flag's 150 m (ranges ÷2)
   game.grid.upsert(m.id, m.state.x, m.state.y);
   m.morale = 40;
   c.push({ t: 'talent_active', id: 'cmd_black_flag' });
@@ -240,7 +240,7 @@ test('Admiral\'s Eye reads the ships around; Legend at the Helm frightens pirate
   const { game } = makeGame();
   const { s, ship } = captain(game, 'Eye', { cmd_admirals_eye: 1, cmd_legend_at_the_helm: 1 });
   toSea(game, s);
-  const pirate = game.spawnNpcShip('pirate', 'brig', 'confederacy', ship.state.x + 400, ship.state.y, 0);
+  const pirate = game.spawnNpcShip('pirate', 'brig', 'confederacy', ship.state.x + 250, ship.state.y, 0); // within the Eye's 300 m (ranges ÷2)
   game.grid.upsert(pirate.id, pirate.state.x, pirate.state.y);
   const seen = admiralsEye(game, ship);
   assert.ok(seen.some((x) => x.id === pirate.id && x.crew === pirate.crew));

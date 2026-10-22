@@ -250,7 +250,7 @@ test('Weather Gauge and Stolen Wind: holding the wind speeds you and steals hers
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);
   const wind = game.windFor(ship);
   const v = headingVec(wind.dir); // downwind
-  const npc = game.spawnNpcShip('pirate', 'fluyt', 'confederacy', ship.state.x + v.x * 200, ship.state.y + v.y * 200, 0);
+  const npc = game.spawnNpcShip('pirate', 'fluyt', 'confederacy', ship.state.x + v.x * 100, ship.state.y + v.y * 100, 0); // within Stolen Wind's 125 m (ranges ÷2)
   game.npcs.delete(npc.id);
   game.grid.upsert(npc.id, npc.state.x, npc.state.y);
   const hostile = game.isHostile(npc, ship);
