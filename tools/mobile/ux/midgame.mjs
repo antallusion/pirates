@@ -45,15 +45,15 @@ const cur = (p) => p.evaluate(() => {
     modal: document.querySelector('#modal-panel')?.dataset.modal ?? null,
   };
 });
-const acts = (p) => p.evaluate(() => [...document.querySelectorAll('.act-btn')].filter((b) => b.getBoundingClientRect().width).map((b) => [...b.classList].find((c) => c.startsWith('act-') && c !== 'act-btn')?.slice(4)));
+// the bar's buttons: a phone's gold #tc-act and its .tc-act2 pills (data-act = the id), a desk's .act-btn.act-<id>
+const acts = (p) => p.evaluate(() => [...document.querySelectorAll('#tc-act[data-act], .tc-act2[data-act], .act-btn')].filter((b) => b.getBoundingClientRect().width).map((b) => b.dataset.act && !/^\d+$/.test(b.dataset.act) ? b.dataset.act : [...b.classList].find((c) => c.startsWith('act-') && c !== 'act-btn')?.slice(4)));
 async function tapAct(p, id) {
-  const r = await L.tapEl(p, `.act-btn.act-${id}`);
-  if (r !== 'ok') {
-    // a phone folds the rest under «⋯»: open it and look again
-    const more = await p.$('.act-more:not(.hidden), [data-actmore]');
-    if (more) { await more.tap().catch(() => {}); await L.sleep(400); return L.tapEl(p, `.act-btn.act-${id}`); }
+  for (const sel of [`#tc-act[data-act="${id}"]`, `.tc-act2[data-act="${id}"]`, `.act-btn.act-${id}`]) {
+    const r = await L.tapEl(p, sel);
+    if (r === 'ok') return r;
+    if (r !== 'none' && r !== 'hidden') log(`  tap ${sel}: ${r}`);
   }
-  return r;
+  return 'none';
 }
 /** The battle on the hexes, if one is open: won at once, its card closed. */
 async function battle(p, tag) {
@@ -161,6 +161,7 @@ try {
   let s = await cur(p);
   log('start', JSON.stringify(s));
   await shot(p, 'start');
+  const popSeen = new Set(); let lastProg = '';
   let lastKey = '', stepT = Date.now(), stuckAt = 0, legFrom = null, passes = 0, sailedOnce = '';
   const end = (await import('../../../shared/src/data/campaign/progress.ts').catch(() => null))?.FIRST_SLOT?.[TO] ?? 1e9;
   while (Date.now() - t0 < Number(process.env.MINUTES ?? 110) * 60000) {
@@ -169,6 +170,16 @@ try {
     // toasts since last
     while (toasts.length) { const t = toasts.shift(); log('  toast:', t); if (/[A-Za-z]{4,}/.test(t.replace(/Mid\d \w+/g, ''))) issues.push(`latin toast: ${t}`); }
     if (s.tac) { await battle(p, `s${s.at}`); continue; }
+    // a level's pick (the hero's skills) and a passing boat's game: answered as a finger would
+    const pop = await p.evaluate(() => {
+      const lu = document.querySelector('[data-lupick="0"]');
+      if (lu && lu.getBoundingClientRect().width) { const t = lu.closest('.lu-picks')?.innerText.replace(/\s+/g, ' ').slice(0, 120); lu.click(); return 'level pick: ' + t; }
+      const mg = document.querySelector('.mg-card [data-mg="walk"]');
+      if (mg && mg.getBoundingClientRect().width) { const t = document.querySelector('.mg-h')?.textContent; mg.click(); return 'minigame walked: ' + t; }
+      return null;
+    });
+    if (pop) { log('  ' + pop); if (!popSeen.has(pop.slice(0, 12))) { popSeen.add(pop.slice(0, 12)); await shot(p, pop.slice(0, 12)); } await L.sleep(800); continue; }
+    if (s.q && `${s.q.id}:${s.q.step}:${s.q.progress}` !== lastProg) { lastProg = `${s.q.id}:${s.q.step}:${s.q.progress}`; if (s.q.progress) log(`  progress ${s.q.progress}/${s.q.need}`); }
     { const st0 = s.q ? TYPES[s.q.id]?.[s.q.step - 1] ?? {} : {}; await p.evaluate((v) => (globalThis.__wantSink = v), st0.type === 'sink'); const c0 = await cards(p); if (c0.length) { log('  card:', c0.join(' | ')); await shot(p, `s${s.at}_card`); } }
     const key = s.q ? `${s.q.id}:${s.q.step}` : `none:${s.at}`;
     if (key !== lastKey) {
@@ -253,8 +264,8 @@ try {
       continue;
     }
     // under way already?
-    if (s.route && s.auto) {
-      if (Math.abs(s.spd) < 0.05) { if (!stuckAt) stuckAt = Date.now(); else if (Date.now() - stuckAt > 25000) { await issue(p, 'stuck', `${key}: the run to ${s.route.name} lies still ${Math.round((Date.now() - stuckAt) / 1000)} s at ${s.x},${s.y}`); stuckAt = 0; await sailCampaign(p, `s${s.at}_again`); } }
+    if (s.auto) {
+      if (Math.abs(s.spd) < 0.05) { if (!stuckAt) stuckAt = Date.now(); else if (Date.now() - stuckAt > 25000) { await issue(p, 'stuck', `${key}: the run to ${s.route?.name ?? "an approach"} lies still ${Math.round((Date.now() - stuckAt) / 1000)} s at ${s.x},${s.y}`); stuckAt = 0; await sailCampaign(p, `s${s.at}_again`); } }
       else stuckAt = 0;
       await L.sleep(2000);
       if (age > 600000) { await issue(p, 'leg', `${key}: ${Math.round(age / 1000)} s under way («${text}»)`); await L.say(p, '/camp step'); }

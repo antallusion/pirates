@@ -59,3 +59,21 @@ test('the Tide of the Dead: the drowned pass a captain by in the Crown’s safe 
   const low = made.filter((g) => g.region === 'black_coast');
   assert.ok(low.length && low.every((g) => g.loadout.classId !== 'ghost_ship' && g.shipLevel <= 4), `the Black Coast's ghosts small: ${low.map((g) => `${g.loadout.classId}⚓${g.shipLevel}`).join(', ')}`);
 });
+
+test('the Russian of the landing’s boats and the tavern’s word of a boss: no noun left in the wrong case', async () => {
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  setLang('ru');
+  try {
+    // «гребут к костёр отшельника на Рейвенрок-Рок» — the site's name is a nominative the line cannot decline
+    const boats = serverText('Boats away: 8 hands row for the hermit\'s fire on Ravenrock Rock (12s). The ship lies at anchor.');
+    assert.doesNotMatch(boats, /гребут к /, boats);
+    assert.match(boats, /^Шлюпки спущены: 8 человек гребут на /, boats);
+    // «Старый Швартов шевелится в Чёрное побережье»
+    const boss = serverText('Old Hawser stirs in The Black Coast. Whalers mark the water 26 km east, 78 km south — within the half hour.');
+    assert.doesNotMatch(boss, / в Чёрное/, boss);
+    assert.match(boss, /от угла карты/, boss);
+  } finally {
+    setLang('en');
+  }
+});

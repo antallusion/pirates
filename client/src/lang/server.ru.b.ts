@@ -741,7 +741,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "{0} sinks back into the deep, unbeaten.": "{0} уходит обратно в глубину непобеждённым.",
   "{0} sold {1} {2} in {3}: {4} silver to your account.": "{0} продал {2} × {1} в {3}: {4} серебра на ваш счёт.",
   "{0} spoke the Raising Ritual at the Eye. A ghost ship answered.": "{0} произнёс Ритуал Подъёма у Ока. Откликнулся корабль-призрак.",
-  "{0} stirs in {1}. Whalers mark the water {2} km east, {3} km south — within the half hour.": "{0} шевелится в {1}. Китобои отмечают воду в {2} км к востоку, {3} км к югу — в течение получаса.",
+  "{0} stirs in {1}. Whalers mark the water {2} km east, {3} km south — within the half hour.": "{0} шевелится — {1}. Китобои отмечают воду в {2} км к востоку и {3} км к югу от угла карты: в течение получаса.",
   "{0} strikes her colours without a fight!": "{0} спускает флаг без боя!",
   "{0} strikes her colours!": "{0} спускает флаг!",
   "{0} takes out the {1} (deposit {2}).": "{0} забирает «{1}» (залог {2}).",
