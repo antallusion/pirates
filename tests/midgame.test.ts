@@ -126,3 +126,14 @@ test('«Плыть» to a campaign lair names its island, not «место»', a
   assert.equal(r.cands![0].name, game.world.islands[t.island!].name, 'its island by name');
   assert.ok(QUESTS_BY_ID[q.id]);
 });
+
+test('the autosail pill at the run’s place says «на месте», not «пауза»', async () => {
+  const { pillTail } = await import('../client/src/ui/ease.ts');
+  const { RU, EN } = await import('../client/src/lang/ui/ease.ts');
+  assert.equal(pillTail({ paused: false }, 3000, { r: 260 }), null, 'under way: no word');
+  assert.equal(pillTail({ paused: true }, 40, { r: 260 }), 'here', '40 m off a lair’s beach: at the place');
+  assert.equal(pillTail({ paused: true }, 2500, { r: 260 }), 'paused', 'broken off short of it');
+  assert.equal(pillTail({ paused: true }, 60, null), 'paused', 'a course of her own (no goal) keeps «пауза»');
+  assert.equal(RU.as_here, 'на месте');
+  assert.equal(EN.as_here, 'here');
+});

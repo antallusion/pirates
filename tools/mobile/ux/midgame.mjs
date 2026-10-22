@@ -47,9 +47,24 @@ const cur = (p) => p.evaluate(() => {
 });
 // the bar's buttons: a phone's gold #tc-act and its .tc-act2 pills (data-act = the id), a desk's .act-btn.act-<id>
 const acts = (p) => p.evaluate(() => [...document.querySelectorAll('#tc-act[data-act], .tc-act2[data-act], .act-btn')].filter((b) => b.getBoundingClientRect().width).map((b) => b.dataset.act && !/^\d+$/.test(b.dataset.act) ? b.dataset.act : [...b.classList].find((c) => c.startsWith('act-') && c !== 'act-btn')?.slice(4)));
+/** A finger's tap as the bar's buttons take it (radial.ts: pointer down, up within the hold): CDP's touch tap did not
+ *  reach their pointer handlers in headless Chrome. */
+const finger = (p, sel) => p.evaluate(async (q) => {
+  const e = document.querySelector(q); if (!e) return 'none';
+  const r = e.getBoundingClientRect(); if (!r.width) return 'hidden';
+  const x = r.left + r.width / 2, y = r.top + r.height / 2;
+  const top = document.elementFromPoint(x, y);
+  if (top && top !== e && !e.contains(top)) return 'covered by ' + (top.id || top.className);
+  if (e.id !== 'tc-act') { e.click(); return 'ok'; } // (the pills take a click; the gold one its press — radial.ts)
+  const o = { bubbles: true, cancelable: true, pointerId: 41, clientX: x, clientY: y, pointerType: 'touch', isPrimary: true };
+  e.dispatchEvent(new PointerEvent('pointerdown', o));
+  await new Promise((z) => setTimeout(z, 60));
+  e.dispatchEvent(new PointerEvent('pointerup', o));
+  return 'ok';
+}, sel);
 async function tapAct(p, id) {
   for (const sel of [`#tc-act[data-act="${id}"]`, `.tc-act2[data-act="${id}"]`, `.act-btn.act-${id}`]) {
-    const r = await L.tapEl(p, sel);
+    const r = await finger(p, sel);
     if (r === 'ok') return r;
     if (r !== 'none' && r !== 'hidden') log(`  tap ${sel}: ${r}`);
   }
@@ -155,13 +170,13 @@ try {
     new MutationObserver(() => document.querySelectorAll('#toasts > .toast').forEach((t) => { if (!seen.has(t)) { seen.add(t); globalThis.__toast(t.innerText.replace(/\s+/g, ' ').trim()); } })).observe(document.body, { childList: true, subtree: true });
   });
   await L.closeAll(p);
-  for (const c of [`/camp ch ${CH}`, '/god', '/heal', '/silver 20000', `/speed ${SPEED}`, '/army marine 30']) { log('>', c, await L.say(p, c)); await L.sleep(600); }
+  for (const c of [process.env.SLOT ? `/camp slot ${process.env.SLOT}` : `/camp ch ${CH}`, '/god', '/heal', '/silver 20000', `/speed ${SPEED}`, '/army marine 30', ...(process.env.TP ? [`/tp ${process.env.TP}`] : [])]) { log('>', c, await L.say(p, c)); await L.sleep(600); }
   await L.sleep(1500);
   await L.closeAll(p);
   let s = await cur(p);
   log('start', JSON.stringify(s));
   await shot(p, 'start');
-  const popSeen = new Set(); let lastProg = '';
+  const popSeen = new Set(); const pestAt = new Map(); let lastProg = '';
   let lastKey = '', stepT = Date.now(), stuckAt = 0, legFrom = null, passes = 0, sailedOnce = '';
   const end = (await import('../../../shared/src/data/campaign/progress.ts').catch(() => null))?.FIRST_SLOT?.[TO] ?? 1e9;
   while (Date.now() - t0 < Number(process.env.MINUTES ?? 110) * 60000) {
@@ -174,11 +189,35 @@ try {
     const pop = await p.evaluate(() => {
       const lu = document.querySelector('[data-lupick="0"]');
       if (lu && lu.getBoundingClientRect().width) { const t = lu.closest('.lu-picks')?.innerText.replace(/\s+/g, ' ').slice(0, 120); lu.click(); return 'level pick: ' + t; }
-      const mg = document.querySelector('.mg-card [data-mg="walk"]');
+      const cf = document.querySelector('.confirm-panel [data-yes]');
+      if (cf && cf.getBoundingClientRect().width) { const t = cf.closest('.confirm-panel')?.innerText.replace(/\s+/g, ' ').slice(0, 160); cf.click(); return 'confirm yes: ' + t; }
+      const tk = document.querySelector('#trek:not(.hidden) [data-trek]:not([disabled])');
+      if (tk && tk.getBoundingClientRect().width) { const t = document.querySelector('#trek .mg-h')?.textContent + ' · ' + tk.textContent.trim(); tk.click(); return 'trek: ' + t; }
+      const mg = document.querySelector('#minigame:not(.hidden) .mg-card [data-mg="walk"]');
       if (mg && mg.getBoundingClientRect().width) { const t = document.querySelector('.mg-h')?.textContent; mg.click(); return 'minigame walked: ' + t; }
       return null;
     });
     if (pop) { log('  ' + pop); if (!popSeen.has(pop.slice(0, 12))) { popSeen.add(pop.slice(0, 12)); await shot(p, pop.slice(0, 12)); } await L.sleep(800); continue; }
+    // a beast or a ship at her (the helmsman pauses while she is under fire): her guns on it, as a captain would
+    if (!s.docked) {
+      const pest = await p.evaluate(() => {
+        const s = globalThis.gravetide.state, o = s.ownDisplay; if (!o || s.pursuit) return null;
+        let best = null;
+        for (const sh of s.ships.values()) {
+          if (sh.id === s.entityId || !sh.cur || !(sh.cur.flags & 64) || sh.cur.flags & 17) continue;
+          const d = Math.hypot(sh.cur.x - o.x, sh.cur.y - o.y);
+          if (d < 260 && (!best || d < best.d)) best = { id: sh.id, d: Math.round(d), name: sh.info?.name, role: sh.info?.npcRole ?? '' };
+        }
+        return best;
+      });
+      if (pest && Date.now() - (pestAt.get(pest.id) ?? 0) > 30000) {
+        pestAt.set(pest.id, Date.now());
+        log(`  pest: ${pest.name} (${pest.role}) ${pest.d} m — guns on it`);
+        await L.send(p, { t: 'attack', target: pest.id, mode: pest.role === 'beast' ? 'guns' : 'board' });
+        await L.sleep(1500);
+        continue;
+      }
+    }
     if (s.q && `${s.q.id}:${s.q.step}:${s.q.progress}` !== lastProg) { lastProg = `${s.q.id}:${s.q.step}:${s.q.progress}`; if (s.q.progress) log(`  progress ${s.q.progress}/${s.q.need}`); }
     { const st0 = s.q ? TYPES[s.q.id]?.[s.q.step - 1] ?? {} : {}; await p.evaluate((v) => (globalThis.__wantSink = v), st0.type === 'sink'); const c0 = await cards(p); if (c0.length) { log('  card:', c0.join(' | ')); await shot(p, `s${s.at}_card`); } }
     const key = s.q ? `${s.q.id}:${s.q.step}` : `none:${s.at}`;
