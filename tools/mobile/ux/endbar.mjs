@@ -22,7 +22,7 @@ let total = 0;
 try {
   for (const lang of langs) {
     const [W0, H0] = sizes[0];
-    const p = await L.page(b, [W0, H0], { lang, touch: W0 < 1000 });
+    const p = await L.page(b, [W0, H0], { lang, touch: process.env.TOUCH ? process.env.TOUCH === '1' : Math.min(W0, H0) < 520 } /* a phone on its side is a touch screen, 1093×481 too */);
     if (tg) await p.ctx.addInitScript((t) => {
       addEventListener('DOMContentLoaded', () => {
         document.documentElement.classList.add('tg-app');
@@ -54,7 +54,12 @@ try {
       for (const [W, H] of sizes) {
         await p.setViewportSize({ width: W, height: H });
         await L.sleep(800);
+        // the offers' card that may come up over the field (promo.ts) put away: it is not the bar
+        await p.evaluate(() => document.querySelector('#promo-over:not(.hidden) [data-polater]')?.click());
+        await L.sleep(300);
         const v = await p.evaluate(MEASURE);
+        // DUMP=1: the bar's boxes, each child's, for a probe
+        if (process.env.DUMP) L.log(await p.evaluate(() => { const bar = document.querySelector('#board-tac .tb-end'); const d = (e) => { const r = e.getBoundingClientRect(), c = getComputedStyle(e); return `${e.tagName.toLowerCase()}.${[...e.classList].join('.')} [${[r.left, r.top, r.width, r.height].map(Math.round)}] disp=${c.display} flex=${c.flexDirection}/${c.flexWrap} ov=${c.overflow} pos=${c.position}`; }; return [bar, ...bar.querySelectorAll('*')].filter((e) => e.getBoundingClientRect().width).slice(0, 40).map(d).join(' | '); }));
         const name = `${W}x${H}_${lang}${tg ? '_tg' : ''}_${kind}`;
         await p.screenshot({ path: `${OUT}/${name}.png` });
         // a crop of the bar itself, to see it close

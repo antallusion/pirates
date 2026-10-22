@@ -57,7 +57,7 @@ let total = 0;
 try {
   for (const lang of langs) {
     const [W0, H0] = sizes[0];
-    const p = await L.page(b, [W0, H0], { lang, touch: process.env.TOUCH ? process.env.TOUCH === '1' : W0 < 1000 });
+    const p = await L.page(b, [W0, H0], { lang, touch: process.env.TOUCH ? process.env.TOUCH === '1' : Math.min(W0, H0) < 520 } /* a phone on its side is a touch screen, 1093×481 too */);
     if (tg) await p.ctx.addInitScript((t) => {
       addEventListener('DOMContentLoaded', () => {
         document.documentElement.classList.add('tg-app');
