@@ -37,10 +37,10 @@ export function lastAllStop(s: PlayerSession): { why: StopWhy; what: string; at:
   return last.get(s) ?? null;
 }
 
-/** The sail her phone keeps sending is held off until she sets another step (Game.ts 'input'; -1: her phone has sent
- *  nothing yet — the first step it sends is the one held off). */
+/** The sail her phone keeps sending is held off until she sets another step (Game.ts 'input'; her phone silent since
+ *  she came aboard — a moment after a login — nothing to hold off: its first step is hers). */
 export function holdSail(s: PlayerSession): void {
-  s.sailHold = s.lastSail >= 0 ? s.lastSail : -1;
+  s.sailHold = s.lastSail >= 0 ? s.lastSail : null;
 }
 
 /** Every course and every sail of hers taken in: she lies still until her own hand sets sail or gives a course.

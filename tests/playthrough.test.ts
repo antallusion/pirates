@@ -187,9 +187,12 @@ test('playthrough: she lies to beside her prize while the spoils are open — th
   c.push({ t: 'loot_take', take: {}, fate: 'release' }); // the two choices (owner, 2026-10-18): her crew and a little silver
   assert.ok(!c.all('toast').some((m) => /drifted too far|slipped away/.test(m.msg)));
   assert.ok(s.profile!.gold > gold, 'a little of her purse paid');
-  // Settled: the helm is hers again.
+  // Settled: she lies still while her helm keeps asking the old full sail (owner, 2026-10-22, allstop.ts: after any
+  // action nothing sails her on by itself); her own hand on the sheets — another step — sets sail.
   c.push({ t: 'input', seq: 200, rudder: 0, sail: 3 });
-  assert.ok(ship.input.sailTarget > 0);
+  assert.equal(ship.input.sailTarget, 0, 'the old sail held off');
+  c.push({ t: 'input', seq: 201, rudder: 0, sail: 2 });
+  assert.ok(ship.input.sailTarget > 0, 'a new step: under sail');
 });
 
 test('playthrough: the cabin\'s twelve doors on a phone on its side, two rows of six; the lessons name the real buttons', async () => {

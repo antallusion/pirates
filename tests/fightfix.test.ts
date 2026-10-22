@@ -105,6 +105,7 @@ test('bug 1: spoils never answered are shared out by her quartermaster after BOA
   npc.lootLockedFor = ship.id;
   npc.surrendered = true; // (a prize taken lies still beside her)
   npc.cargo = { rum: 3 };
+  conn(s).push({ t: 'input', seq: 0, rudder: 0, sail: 0 }); // (her phone's helm, beating as it does: lying to)
   game.onBoardingWon(ship, npc, resultFor(npc) as never);
   assert.ok(s.pendingBoarding);
   steps(game, 10);

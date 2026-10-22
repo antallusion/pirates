@@ -3522,10 +3522,8 @@ export class Game {
         return;
       case 'input': {
         if (!Number.isFinite(msg.rudder) || !Number.isFinite(msg.sail)) return;
-        // (the step her phone sends, whoever has the wheel: the one held off after a stop — allstop.ts; a stop that came
-        // before her phone ever spoke holds off the first step it sends)
+        // (the step her phone sends, whoever has the wheel: the one held off after a stop — allstop.ts)
         s.lastSail = clamp(Math.round(msg.sail), 0, SAIL_STEPS.length - 1);
-        if (s.sailHold === -1) s.sailHold = s.lastSail;
         if (s.profile?.company.mutiny) return; // the mutineers hold the wheel
         if (s.pendingBoarding) {
           ship.input = { rudder: 0, sailTarget: 0 }; // hove to by her prize until the spoils are settled
