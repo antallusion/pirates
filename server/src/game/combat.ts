@@ -1024,9 +1024,6 @@ export function killMen(game: Game, target: ShipEntity, killed: number, source: 
 function registerAggression(game: Game, a: ShipEntity, b: ShipEntity): void {
   const now = game.now;
   const prev = b.attackers.get(a.id);
-  // QA 2026-10-22: a newcomer's ball that strayed onto a lawful ship beside her fight is no crime (stray.ts) — nor does
-  // that ship take her for its attacker. (Asked only on the first blow of an engagement: one she keeps striking is hers.)
-  if ((prev === undefined || now - prev >= 60) && forgiveStray(game, a, b)) return;
   b.attackers.set(a.id, now);
   if (a.isPlayer && !b.isPlayer && b.npcRole === 'merchant' && prev === undefined) tributeBroken(game, a, b); // a word given for tribute
   if (b.npcRole === 'boss' || a.npcRole === 'boss' || b.cls.monster) return; // no law and no flag at sea against the deep
@@ -1037,6 +1034,9 @@ function registerAggression(game: Game, a: ShipEntity, b: ShipEntity): void {
   // Self defence: b attacked a recently.
   const selfDefence = (a.attackers.get(b.id) ?? -999) > now - 90;
   if (selfDefence) return;
+  // QA 2026-10-22: a newcomer's ball that strayed onto a lawful ship beside her fight is no crime (stray.ts): no infamy,
+  // no standing lost (the ship struck still knows who hit her). Asked on the engagement's first blow, as the law is.
+  if (forgiveStray(game, a, b)) return;
   const safety = REGIONS[b.region].safety;
   const zoneMul = safety === 'safe' ? 2 : safety === 'contested' ? 1 : 0.3;
   let infamy = 0;

@@ -227,7 +227,6 @@ test('bug 3: a newcomer\'s stray ball on a lawful fisher beside her fight is no 
   applyDamage(game, fisher, { hull: 20 }, s.ship!);
   assert.equal(s.profile!.infamy, 0, 'no infamy for the stray');
   assert.equal(wantedLevel(s.profile!.infamy), 0, 'not wanted');
-  assert.equal(fisher.attackers.has(s.ship!.id), false, 'the fisher does not take her for its attacker');
   assert.ok(toasts(s).includes(STRAY_FORGIVEN), 'she is told');
   assert.ok(SERVER_RU_BATTLE[STRAY_FORGIVEN], 'RU');
   // the opening's campaign (past the First Watch, chapter one): forgiven too

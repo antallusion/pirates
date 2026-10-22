@@ -3,11 +3,11 @@
 // (docs/24, the law): a ball that strays onto a lawful ship of the sea while she is fighting another — her mark is
 // another ship, a foe of hers is about (one at war with her, one that struck her or she struck, the campaign's own
 // foes) — is no crime for a newcomer (the First Watch, the campaign's first chapter, the first levels): no infamy, no
-// standing lost, and the ship struck does not take her for an attacker. She is told once. A ball she aims at a lawful ship
-// with nothing else about is her own doing, as before. Only a blow that lands counts at all: the battles' isolation
+// standing lost (the ship struck still knows who hit her: she flees, the raiders' bookkeeping holds). She is told once.
+// A ball she aims at a lawful ship with nothing else about is her own doing, as before. Only a blow that lands counts at all: the battles' isolation
 // (inbattle.ts battleBlocked) stops the rest before this is asked.
 
-import { FIRST_SLOT } from '../../../shared/src/data/campaign/progress.ts';
+import { FIRST_SLOT, gateOf } from '../../../shared/src/data/campaign/progress.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { campaignFoes } from './campaign.ts';
 import type { Game } from './Game.ts';
@@ -27,8 +27,9 @@ export const STRAY_FORGIVEN = 'A stray ball struck a lawful ship: the harbour fo
 export function lawNewbie(p: Profile | null | undefined): boolean {
   if (!p) return false;
   if (fresh(p)) return true;
-  if (p.campaign && p.campaign.at < (FIRST_SLOT[1] ?? 0)) return true;
-  return p.level <= LAW_NEWBIE_LEVEL;
+  if (p.level <= LAW_NEWBIE_LEVEL) return true;
+  // (the campaign's opening chapter, for a captain of its levels — not a seasoned one whose campaign never began)
+  return !!p.campaign && p.campaign.at < (FIRST_SLOT[1] ?? 0) && p.level <= gateOf(FIRST_SLOT[1] ?? 0) + 2;
 }
 
 /** `b` (a lawful ship of the sea) struck by `a`'s ball while `a` is fighting another: the ball strayed. */
