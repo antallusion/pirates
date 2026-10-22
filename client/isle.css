@@ -138,6 +138,9 @@ body.isle-on :is(#world, #hud, #hud-chat, #encounter, #surrender, #lairchest, #a
 #isle .is-cb .tw-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 #isle .is-cb .tw-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px; }
 #isle .is-cb .town, #isle .is-cb .sup-body { min-width: 0; }
+/* a card that opens on its own line of figures (the defence's waters, the raid) keeps it clear of the card's ×: «Без налога»
+   lay under it at 480×270 */
+#isle .is-cb > :is(.base-def, .base-raid):first-child { padding-right: 30px; }
 #isle .is-x { position: absolute; top: 2px; right: 2px; z-index: 2; width: 28px; height: 28px; padding: 0; border: 0; background: none; color: var(--fog, #9aa3a8); font-size: 20px; line-height: 1; cursor: pointer; }
 #isle .is-x:hover { color: var(--bone, #e6dccb); }
 #isle .is-cb { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px 8px 8px; font-size: 12px; scrollbar-width: thin; }
@@ -179,6 +182,11 @@ body.isle-on :is(#world, #hud, #hud-chat, #encounter, #surrender, #lairchest, #a
   #isle .is-cb :is(.tw-card, .tw-craft-t, .tw-mine, .tw-mk, .tw-res) { font-size: var(--f-fs, 10px); }
   #isle .is-cb .tw-id b { font-size: var(--f-fs-m, 11px); }
   #isle .is-cb :is(.tw-text, .tw-why, .tw-max, .tw-pool, .tw-nn, .tw-rates) { font-size: var(--f-fs-s, 9px); }
+  /* the supply's and the defence's words too (16 px heading, 12–13 px lines in a 296 px card at 480×270) */
+  #isle .is-cb .sup-head h3 { font-size: var(--f-fs-h, 12px); margin: 2px 0; }
+  #isle .is-cb .sup-head p { margin-bottom: 4px; }
+  #isle .is-cb .sup-meta { font-size: var(--f-fs, 10px); gap: 3px 10px; margin-bottom: 6px; }
+  #isle .is-cb :is(.base-def, .base-raid) { font-size: var(--f-fs, 10px); }
 }
 @media (max-height: 320px) {
   #isle .is-sb-l { font-size: 6.5px; }
