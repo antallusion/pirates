@@ -842,9 +842,6 @@ export const FIGHT_NEAR = 0.7;
  *  of a 12-pounder's reach was 130 m of water once, and is 60 m since the reaches were halved (owner, 2026-10-22): under
  *  a great ship's bow she sailed through her. */
 export const CLEAR_HULLS = 30;
-/** …and the band is never narrower than this (m): a ship's turning circle did not shrink when the reaches were halved
- *  (owner, 2026-10-22), and a band of 37 m (0.7–0.92 of a 12-pounder's 170) threw her out of it at every turn. */
-export const FIGHT_BAND = 70;
 /** What a broadside's course onto something she would strike costs her in the choice of side (more than any other). */
 export const FOUL_COST = 4;
 
@@ -913,7 +910,7 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
       // Boarders fight at chain-shot range to strip the rigging; others at their gun's comfortable range.
       const range = mode === 'rig' ? Math.min(rangeOf(side), effectiveRange(ship, side, 'chain')) : rangeOf(side);
       if (d > Math.max(range * FIGHT_HOLD, easyFrom)) return wrapAngle(h + inward * 0.85);
-      if (d > Math.min(range * FIGHT_NEAR, range * FIGHT_HOLD - FIGHT_BAND)) return wrapAngle(h + inward * 0.4);
+      if (d > range * FIGHT_NEAR) return wrapAngle(h + inward * 0.4);
       if (d < (great ? Math.max(range * 0.35, (ship.stats.length + target.stats.length) / 2 + CLEAR_HULLS) : range * 0.35) && mode === 'guns') return wrapAngle(h - inward * 0.35);
       return h;
     };
