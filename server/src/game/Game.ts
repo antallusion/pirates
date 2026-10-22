@@ -1830,7 +1830,7 @@ export class Game {
     const out: Record<string, QuestTarget> = {};
     // The nearest lair of a kind is looked for once a call (owner, 2026-10-16: no cap on her quests — thirty at a lair's
     // step cost 2 ms a push, the same search thirty times).
-    const lairMemo = new Map<string, { x: number; y: number } | null>();
+    const lairMemo = new Map<string, { x: number; y: number; island?: number } | null>();
     for (const qs of p.quests.active) {
       const st = QUESTS_BY_ID[qs.id]?.steps[qs.step];
       if (!st) continue;
@@ -1892,7 +1892,7 @@ export class Game {
         // location)
         const from = st.near ?? (ship ? ship.state : this.portById(QUESTS_BY_ID[qs.id].port) ?? null);
         const memoKey = `${st.island ?? ''}|${st.kind ?? ''}|${from ? `${Math.round(from.x)},${Math.round(from.y)}` : ''}`;
-        let best: { x: number; y: number } | null = null, bd = Infinity;
+        let best: { x: number; y: number; island?: number } | null = null, bd = Infinity;
         const memo = lairMemo.get(memoKey);
         if (memo !== undefined) {
           best = memo;
@@ -1913,7 +1913,8 @@ export class Game {
           }
           const byQuay = quayside ? 20_000 : 0;
           const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay;
-          if (d < bd) [best, bd] = [lp, d];
+          // (its island named on the route: «Плыть» to a campaign's lair said «место», mid-game QA 2026-10-22)
+          if (d < bd) [best, bd] = [{ x: lp.x, y: lp.y, ...(l.island >= 0 && l.turtle === undefined ? { island: l.island } : {}) }, d];
         }
         if (bd !== -1) lairMemo.set(memoKey, best);
         if (!best && st.island !== undefined && this.world.islands[st.island]) best = this.world.islands[st.island];
@@ -1921,6 +1922,7 @@ export class Game {
           at = best;
           r = 260;
           if (st.island !== undefined) island = st.island;
+          else if (best.island !== undefined) island = best.island;
         }
       } else if (st.type === 'dive' && ship) {
         // the nearest wreck her divers can go down to now; else the nearest not stripped lately (a deeper bell wanted)

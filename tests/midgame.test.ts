@@ -100,3 +100,29 @@ test('a walk across an island ended and left alone: its card goes from her scree
   assert.equal(openTrek(game, s), null, 'dropped');
   assert.equal(c.last('trek')?.view, null, 'and her card closed with it');
 });
+
+test('«Плыть» to a campaign lair names its island, not «место»', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { QUESTS_BY_ID } = await import('../shared/src/data/quests.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { resolveGoal } = await import('../server/src/game/goalroute.ts');
+  const { game } = makeGame();
+  join(game, 'Lairer');
+  const s = game.sessionByName('Lairer')!;
+  s.profile!.level = 8;
+  const q = campaignOf(game).quests.find((x) => x.steps.some((st) => st.type === 'lair' && st.island === undefined && 'near' in st && st.near))!;
+  assert.ok(q, 'a campaign quest with a lair of its location');
+  const i = q.steps.findIndex((st) => st.type === 'lair');
+  s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
+  s.ship!.docked = null;
+  const near = (q.steps[i] as { near: { x: number; y: number } }).near;
+  s.ship!.state.x = near.x + 900;
+  s.ship!.state.y = near.y;
+  const t = game.questTargets(s)[q.id];
+  assert.ok(t && t.island !== undefined, `the target carries the lair's island (${JSON.stringify(t)})`);
+  const r = resolveGoal(game, s, `q:${q.id}`) as { cands?: { kind: string; name: string }[] };
+  assert.ok(r.cands?.length, JSON.stringify(r));
+  assert.equal(r.cands![0].kind, 'lair');
+  assert.equal(r.cands![0].name, game.world.islands[t.island!].name, 'its island by name');
+  assert.ok(QUESTS_BY_ID[q.id]);
+});
