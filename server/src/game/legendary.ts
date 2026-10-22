@@ -261,8 +261,8 @@ export function legendarySecond(game: Game, s: PlayerSession): void {
         ship.talentReady.sorrow = now + 600;
         ship.morale = Math.max(0, ship.morale - 1);
       }
-      // The ships in her line reload faster.
-      game.forShipsNear(ship.state.x, ship.state.y, 400, (o) => {
+      // The ships in her line reload faster (within 200 m: ranges ÷2, owner 2026-10-22).
+      game.forShipsNear(ship.state.x, ship.state.y, 200, (o) => {
         if (o.id === ship.id || !o.alive || !(o.ownerId === ship.id || game.areAllies(o, ship))) return;
         o.addEffect({ id: 'sorrow_line', until: now + 2, mods: { reloadMul: -0.05 } }, now);
       });
