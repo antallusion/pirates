@@ -2720,6 +2720,12 @@ export class Game {
     if (!pend.result.npc && target) for (const g of Object.keys(target.cargo) as GoodId[]) take[g] = target.cargo[g] ?? 0;
     const why = this.resolveLoot(s, take, pend.result.npc ? 'sink' : 'release');
     s.pendingBoarding = null; // (settled or not — a prize gone — it holds her no longer)
+    // (she is not at the helm: left hove to — the sail her phone last sent would take her onto the rocks unwatched; the
+    // helmsman's course, if she had one, goes on by itself)
+    if (s.ship) {
+      s.ship.input = { rudder: 0, sailTarget: 0 };
+      s.sailHold = s.lastSail;
+    }
     this.sendTo(s, { t: 'boarding', result: null });
     this.sendTo(s, { t: 'toast', msg: why ?? 'Your quartermaster shared out the spoils of the boarding.', kind: why ? 'bad' : 'info' });
     this.pushSelf(s, true);

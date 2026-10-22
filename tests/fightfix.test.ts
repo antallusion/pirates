@@ -119,7 +119,8 @@ test('bug 1: spoils never answered are shared out by her quartermaster after BOA
   assert.ok(toasts(s).includes('Your quartermaster shared out the spoils of the boarding.'), toasts(s).slice(-4).join(' | '));
   assert.ok((ship.cargo.rum ?? 0) >= 3, 'all of her (A): her hold in hers');
   assert.ok(!game.ships.get(npc.id)?.alive || game.ships.get(npc.id)?.sinkingUntil, 'the prize gone down');
-  // the helm is hers again
+  // left hove to (not sailing on unwatched); the helm is hers again at her own hand
+  assert.equal(ship.input.sailTarget, 0);
   conn(s).push({ t: 'input', seq: 1, rudder: 0, sail: 3 });
   assert.ok(ship.input.sailTarget > 0, 'no longer hove to by a prize');
 });
