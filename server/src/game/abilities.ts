@@ -68,7 +68,7 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
   if (def.targeting === 'point' || def.targeting === 'ship') {
     if (!Number.isFinite(x) || !Number.isFinite(y)) return 'Choose a target';
     const d = dist(ship.state.x, ship.state.y, x, y);
-    const range = def.range ?? 400;
+    const range = def.range ?? 200;
     if (d > range) {
       // Clamp to max range along the aim direction.
       x = ship.state.x + ((x - ship.state.x) / d) * range;
@@ -105,15 +105,15 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
     case 'form_line': {
       mods = { spreadMul: -(n.spread ?? 0.3), skillReload: -(n.reload ?? 0.1), ...(n.dmg ? { skillDamage: n.dmg } : {}) };
       const m = mods;
-      game.forShipsNear(ship.state.x, ship.state.y, 500, (o) => {
+      game.forShipsNear(ship.state.x, ship.state.y, 250, (o) => {
         if (o.id !== ship.id && (o.ownerId === ship.id || game.areAllies(o, ship))) o.addEffect({ id: 'form_line', until: now + dur, mods: m, source: ship.id }, now);
       });
       break;
     }
     case 'mark_target': {
       const found: ShipEntity[] = [];
-      game.forShipsNear(x, y, 260, (o) => {
-        if (o.id !== ship.id && o.alive && o.ownerId !== ship.id && dist(o.state.x, o.state.y, x, y) <= 260) found.push(o);
+      game.forShipsNear(x, y, 130, (o) => {
+        if (o.id !== ship.id && o.alive && o.ownerId !== ship.id && dist(o.state.x, o.state.y, x, y) <= 130) found.push(o);
       });
       found.sort((a, b) => dist(a.state.x, a.state.y, x, y) - dist(b.state.x, b.state.y, x, y));
       if (!found.length) return 'No ship near the mark';
@@ -134,7 +134,7 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
     case 'admiralty_barrage': {
       // Into the ship she marked (the combo, item 41): the shells home on her (within 60 m), 15% harder.
       const marked = k.cast.markOn !== undefined ? game.ships.get(k.cast.markOn) : undefined;
-      const combo = !!marked && marked.alive && now - (k.cast.mark_target ?? -1e9) <= (SEA_SKILLS.mark_target.combo?.win ?? 5) && dist(marked.state.x, marked.state.y, x, y) <= 200;
+      const combo = !!marked && marked.alive && now - (k.cast.mark_target ?? -1e9) <= (SEA_SKILLS.mark_target.combo?.win ?? 5) && dist(marked.state.x, marked.state.y, x, y) <= 100;
       if (combo) {
         x = marked!.state.x;
         y = marked!.state.y;
@@ -153,7 +153,7 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
       break;
     case 'war_cry': {
       ship.morale = Math.min(100, ship.morale + 20);
-      const r = n.r ?? 300;
+      const r = n.r ?? 150;
       game.forShipsNear(ship.state.x, ship.state.y, r, (o) => {
         if (o.id === ship.id || !game.isHostile(o, ship) || dist(o.state.x, o.state.y, ship.state.x, ship.state.y) > r) return;
         o.morale = Math.max(0, o.morale - (n.morale ?? 15));
@@ -200,7 +200,7 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
       const found = game.revealAround(ship, 7000);
       game.toastShip(ship, `Star fix taken: ${found} new islands charted.`, 'good');
       game.emit({ k: 'fx', fx: 'star_fix', x: Math.round(ship.state.x), y: Math.round(ship.state.y), r: 7000 }, ship.state.x, ship.state.y);
-      // The weak angles of the foes within 1.5 km (item 31), and the combo's broadside (item 41).
+      // The weak angles of the foes within 750 m (item 31), and the combo's broadside (item 41).
       k.star = { until: now + dur, bonus: n.rake ?? 0.2, combo: true, sure: !!n.sure };
       if (n.range) mods = { rangeMul: n.range };
       break;
@@ -226,10 +226,10 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
     }
     case 'undertow': {
       const dir = headingOf(x - ship.state.x, y - ship.state.y);
-      // The race starts at your bow and runs 400 m toward the mark.
-      const cx = ship.state.x + Math.sin(dir) * 200, cy = ship.state.y - Math.cos(dir) * 200;
-      game.zones.push({ kind: 'undertow', x: cx, y: cy, r: 200, dir, start: now, until: now + dur, owner: ship.id, power: power * (n.pull ?? 1), hit: [], ...(n.wide ? { width: 50 } : {}), ...(n.rip ? { rip: n.rip } : {}), ...(n.ride ? { ride: n.ride } : {}) });
-      game.emit({ k: 'fx', fx: 'undertow', x: Math.round(cx), y: Math.round(cy), r: 200, dir: Math.round(dir * 1000) / 1000 }, cx, cy);
+      // The race starts at your bow and runs 200 m toward the mark.
+      const cx = ship.state.x + Math.sin(dir) * 100, cy = ship.state.y - Math.cos(dir) * 100;
+      game.zones.push({ kind: 'undertow', x: cx, y: cy, r: 100, dir, start: now, until: now + dur, owner: ship.id, power: power * (n.pull ?? 1), hit: [], ...(n.wide ? { width: 50 } : {}), ...(n.rip ? { rip: n.rip } : {}), ...(n.ride ? { ride: n.ride } : {}) });
+      game.emit({ k: 'fx', fx: 'undertow', x: Math.round(cx), y: Math.round(cy), r: 100, dir: Math.round(dir * 1000) / 1000 }, cx, cy);
       break;
     }
     case 'deep_call': {
