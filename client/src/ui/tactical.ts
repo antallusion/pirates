@@ -1992,18 +1992,23 @@ export class TacticalPanel {
       removeEventListener('pointerdown', pick, true);
       removeEventListener('keydown', key, true);
       btn.classList.remove('k-wheel-src');
+      let off: string | null = null;
       if (e) {
         e.preventDefault();
         e.stopPropagation();
         // The choice under the finger (by its circle), not merely the nearest by angle.
         const items = [...document.querySelectorAll<HTMLElement>('.k-wheel-item')];
-        wheel.select(items.findIndex((it) => {
+        const i = items.findIndex((it) => {
           const b = it.getBoundingClientRect();
           return Math.hypot(e.clientX - (b.left + b.width / 2), e.clientY - (b.top + b.height / 2)) <= b.width * 0.75;
-        }));
+        });
+        // (a choice that cannot be taken says why — its words — instead of closing in silence, QA 2026-10-22)
+        if (items[i]?.getAttribute('aria-disabled') === 'true') off = items[i].querySelector('.k-wheel-l')?.textContent ?? null;
+        wheel.select(i);
       }
       const o = wheel.close(!!e);
       if (o && !o.disabled) this.autoPick(o.id);
+      else if (off) this.notice(off);
     };
     const pick = (e: PointerEvent) => done(e);
     const key = (e: KeyboardEvent) => {

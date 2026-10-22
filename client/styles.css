@@ -4573,6 +4573,7 @@ body.tac-ph .tb-pad { display: block; position: absolute; inset: 0; z-index: 4; 
 .tb-rb.off:active { transform: none; filter: grayscale(0.8) brightness(0.55); }
 .tb-rb.locked:not(.on) { filter: grayscale(0.7) brightness(0.7); }
 .tb-acts .btn[aria-disabled="true"] { opacity: 0.4; cursor: default; }
+.tb-acts .btn.locked:not(.btn-primary) { opacity: 0.55; }
 .tb-rb.spent { filter: grayscale(1) brightness(0.45); }
 .tb-rb.on { box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(224, 184, 98, 0.8); }
 .tb-rb.danger { background: radial-gradient(circle, #3a1714 0 52%, #140c0a 74%); }
