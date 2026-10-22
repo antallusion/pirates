@@ -287,7 +287,7 @@ export function sellMap(game: Game, s: PlayerSession, mapId: string, toShip: num
   if (copy && !ownChest(game, s, m)) return 'Only the author of a chest may sell copies of its map.';
   const target = game.sessionOf(game.ships.get(Math.trunc(Number(toShip))) ?? null);
   if (!target || target === s || !target.profile) return 'No such captain alongside';
-  if (!alongside(s, target)) return 'Come within a kilometre of her first (or meet in port).';
+  if (!alongside(s, target)) return 'Come alongside her first (or meet in port).';
   const book = offerBook(game);
   if (book.list.some((o) => o.from === s.accountId && o.to === target.accountId)) return 'She is still thinking over your last offer.';
   const id = book.seq++;

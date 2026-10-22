@@ -334,8 +334,9 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
         if (port) {
           const is = game.world.islands[port.islandId];
           const d = Math.hypot(port.x - is.x, port.y - is.y) || 1;
-          x = port.x + ((port.x - is.x) / d) * 150;
-          y = port.y + ((port.y - is.y) / d) * 150;
+          // (in the harbour's approach, «Причалить» at hand — owner, 2026-10-22: 40 m of its anchorage, dock.ts)
+          x = port.x + ((port.x - is.x) / d) * 30;
+          y = port.y + ((port.y - is.y) / d) * 30;
           where = port.name;
         } else if (region) {
           [x, y] = openWater(game, REGIONS[region].center[0], REGIONS[region].center[1]);

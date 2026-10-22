@@ -7,6 +7,7 @@ import { NODE_HOLD_SEC, WAR_COST } from '../server/src/game/guilds.ts';
 import { legalTarget } from '../server/src/game/pvp.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { join, makeGame, steps } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 import type { FakeConn } from './helpers.ts';
 
 const DAY = 86_400_000;
@@ -253,12 +254,14 @@ test('guild islands: leased from the treasury, used by members, raised to a base
   A.c.push({ t: 'guild', action: 'treasury', amount: 150_000 });
   const isl = game.world.islands.find((i) => !i.portId && i.region === 'gravewater' && islandSize(i.radius) === 'medium')!;
   atSea(A.s, isl.x + isl.radius + 150, isl.y, isl.region);
+  assert.ok(offCoast(game, A.s.ship!, isl), 'water off its coast'); // (lying off it: reach.ts)
   A.c.push({ t: 'guild', action: 'lease', island: isl.id, days: 7 });
   const h = game.holdings.get(game, isl.id)!;
   assert.equal(h.owner.kind, 'guild');
   assert.equal(g.treasury, 150_000 - 36_000);
   // Members use it; the admiral's own island limit is untouched.
   atSea(B.s, isl.x + isl.radius + 150, isl.y, isl.region);
+  assert.ok(offCoast(game, B.s.ship!, isl), 'water off its coast'); // (lying off it: reach.ts)
   B.s.ship!.cargo = { salt: 5 };
   B.c.push({ t: 'isle', action: 'store', island: isl.id, good: 'salt', qty: 5 });
   assert.equal(h.store.salt, 5);

@@ -1,5 +1,8 @@
 // The orca calf's card in the ship window (docs/12 P10 #2): its name, its growth, what it does, and its harnesses.
 
+import { ownHull, viewHull } from '../reachview.ts';
+import { hullsGap } from '../../../shared/src/data/reach.ts';
+import { TRADE_RANGE } from '../../../shared/src/data/social.ts';
 import { HARNESSES, HARNESS_IDS, PETS, calfFindEvery, calfFindRange, calfStrike } from '../../../shared/src/data/companions.ts';
 import type { PetId } from '../../../shared/src/data/companions.ts';
 import { BOTTLE_COST, BOTTLE_MAX_NOTE, BOTTLE_MAX_SILVER } from '../../../shared/src/data/bottles.ts';
@@ -146,7 +149,9 @@ function cachesHtml(state: ClientState): string {
     return `<div class="cache-row"><b>${LI('cache.row', { island: esc(serverText(c.island)), silver: money(c.silver) })}</b><span class="muted">${esc(bits.join(' · '))}</span></div>`;
   }).join('');
   const own = state.ownDisplay;
-  const near = own ? [...state.ships.values()].filter((x) => x.info?.isPlayer && x.id !== state.entityId && Math.hypot(x.cur.x - own.x, x.cur.y - own.y) <= 1000) : [];
+  // (alongside: hull to hull within the thirty metres of the trade — owner, 2026-10-22, reach.ts)
+  const me = ownHull(state);
+  const near = own && me ? [...state.ships.values()].filter((x) => { const h = x.info?.isPlayer && x.id !== state.entityId ? viewHull(x) : null; return !!h && hullsGap(me, h) <= TRADE_RANGE; }) : [];
   const maps = self.maps.filter((m) => m.kind !== 'fragment');
   const sell = maps.length ? `<div class="giver-h">${esc(LI('cache.sell'))}</div>${near.length
     ? `<div class="cache-sell"><select class="field" data-msmap aria-label="${esc(LI('cache.sell'))}">${maps.map((m) => `<option value="${esc(m.id)}">${esc(serverText(m.name))}</option>`).join('')}</select>

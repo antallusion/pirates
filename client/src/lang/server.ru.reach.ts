@@ -8,4 +8,5 @@ export const SERVER_RU_REACH: Record<string, string> = {
   'Nothing but sand — the landmarks are close: a little further {0}.': 'Один песок — но приметы уже близко: ещё чуть дальше на {0}.',
   'Come into the harbour first: up to its quays.': 'Сначала войдите в гавань — к самым причалам.',
   'Come alongside her to take her surrender.': 'Встаньте с ней борт к борту, чтобы принять сдачу.',
+  'Come alongside her first (or meet in port).': 'Сначала встаньте с ней борт к борту (или встретьтесь в порту).',
 };
