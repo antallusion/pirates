@@ -170,7 +170,7 @@ try {
     new MutationObserver(() => document.querySelectorAll('#toasts > .toast').forEach((t) => { if (!seen.has(t)) { seen.add(t); globalThis.__toast(t.innerText.replace(/\s+/g, ' ').trim()); } })).observe(document.body, { childList: true, subtree: true });
   });
   await L.closeAll(p);
-  for (const c of [process.env.SLOT ? `/camp slot ${process.env.SLOT}` : `/camp ch ${CH}`, '/god', '/heal', '/silver 20000', `/speed ${SPEED}`, '/army marine 30', ...(process.env.TP ? [`/tp ${process.env.TP}`] : [])]) { log('>', c, await L.say(p, c)); await L.sleep(600); }
+  for (const c of [process.env.SLOT ? `/camp slot ${process.env.SLOT}` : `/camp ch ${CH}`, '/god', '/heal', '/silver 20000', `/speed ${SPEED}`, '/army marine 30', '/scrolls 80', ...(process.env.TP ? [`/tp ${process.env.TP}`] : [])]) { log('>', c, await L.say(p, c)); await L.sleep(600); }
   await L.sleep(1500);
   await L.closeAll(p);
   let s = await cur(p);
