@@ -137,7 +137,9 @@ export function giveScrolls(game: Game, name?: string, n = 50): void {
  *  coves: a stretch where the coast lies about her as the reach measures it. True when such water was found. */
 export function offCoast(game: Game, ship: { state: { x: number; y: number; heading: number; speed: number }; stats: { length: number; beam: number }; id: number; docked?: string | null }, is: { x: number; y: number; poly: ArrayLike<number> }, gap = 14): boolean {
   const n = is.poly.length / 2;
-  for (let i = 0; i < n; i++) {
+  // (the stretch of coast nearest where she lies first: the test's own side of the island)
+  const order = [...Array(n).keys()].sort((a, b) => Math.hypot(is.poly[a * 2] - ship.state.x, is.poly[a * 2 + 1] - ship.state.y) - Math.hypot(is.poly[b * 2] - ship.state.x, is.poly[b * 2 + 1] - ship.state.y));
+  for (const i of order) {
     const vx = is.poly[i * 2], vy = is.poly[i * 2 + 1];
     const dx = vx - is.x, dy = vy - is.y, l = Math.hypot(dx, dy) || 1;
     const nx = dx / l, ny = dy / l;

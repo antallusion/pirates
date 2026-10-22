@@ -455,13 +455,13 @@ export function isle18Admin(game: Game, s: PlayerSession, cmd: string, args: str
         if (!ISLE_TYPES.includes(t)) return `Kinds: ${ISLE_TYPES.join(', ')}.`;
         const is = nearest(land.filter((i) => !i.minor && !i.hidden && isleType(i) === t && i.radius > 120), x, y);
         if (!is) return 'No island.';
-        go(is, 160);
+        go(is, 20);
         return tell(is);
       }
       if (sub === 'atoll' || sub === 'ridge' || sub === 'small') {
         const is = nearest(land.filter((i) => i.isle === sub && !i.minor && !i.hidden), x, y);
         if (!is) return 'No island.';
-        go(is, 160);
+        go(is, 20);
         return tell(is);
       }
       if (sub === 'hidden') {
@@ -475,7 +475,7 @@ export function isle18Admin(game: Game, s: PlayerSession, cmd: string, args: str
         const want = args[1] === 'deadly' ? 3 : 2;
         const is = nearest(land.filter((i) => !i.minor && !i.hidden && i.radius > 150 && isleLevel(game.world, i) - ship.shipLevel >= want), x, y);
         if (!is) return 'No island that far above your ship.';
-        go(is, 120);
+        go(is, 20);
         return tell(is);
       }
       return 'Usage: /isle level|type kind|atoll|ridge|small|hidden [reveal]|danger [deadly]';

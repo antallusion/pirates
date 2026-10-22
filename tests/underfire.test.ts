@@ -104,6 +104,10 @@ test('every order with a beast marked nearby is answered — a sea mark, a find,
       assert.ok(offCoast(game, ship, is), 'water off its coast'); // (owner, 2026-10-22: her hull within thirty metres of its coast — reach.ts)
       game.grid.upsert(ship.id, ship.state.x, ship.state.y);
       sharkFight(game, s, 6);
+      // (her chase took her off the coast: back within the boats' thirty metres of it — reach.ts — her way still on)
+      const way = ship.state.speed;
+      assert.ok(offCoast(game, ship, is), 'water off its coast');
+      ship.state.speed = way;
       c.push({ t: 'land' });
       // At way under «Атаковать»: she heaves to for the boats and they go (no «Heave to first»).
       return () => {
@@ -114,7 +118,7 @@ test('every order with a beast marked nearby is answered — a sea mark, a find,
     }],
     ['the harbour', (game, c, s, ship) => {
       const port = game.world.ports[0];
-      ship.state = { ...ship.state, x: port.x + 15, y: port.y + 15, speed: 0, sail: 0 } // (the harbour's approach — dock.ts);
+      ship.state = { ...ship.state, x: port.x + 15, y: port.y + 15, speed: 0, sail: 0 }; // (the harbour's approach — dock.ts)
       game.grid.upsert(ship.id, ship.state.x, ship.state.y);
       sharkFight(game, s, 6);
       c.push({ t: 'dock' });
@@ -156,7 +160,7 @@ test('under a ship\'s fire an order is held, not refused, and done the moment th
   const { game } = makeGame();
   const { c, s, ship } = captain(game, 'Harried Hal');
   const port = game.world.ports[0];
-  ship.state = { ...ship.state, x: port.x + 15, y: port.y + 15, speed: 0, sail: 0 } // (the harbour's approach — dock.ts);
+  ship.state = { ...ship.state, x: port.x + 15, y: port.y + 15, speed: 0, sail: 0 }; // (the harbour's approach — dock.ts)
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);
   const pirate = game.spawnNpcShip('pirate', 'sloop', 'confederacy', ship.state.x - 300, ship.state.y, 0);
   game.npcs.delete(pirate.id);

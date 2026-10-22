@@ -230,8 +230,8 @@ test('trade at sea within 30 m hull to hull (owner, 2026-10-22: reach.ts): saili
   b.c.push({ t: 'barter', action: 'propose', name: 'Ada Trade' });
   const v = a.c.last('barter')!.view!;
   assert.ok(v.atSea);
-  assert.equal(v.dist, 300);
-  assert.equal(v.range, 300);
+  assert.ok((v.dist ?? 0) <= 30, `hull to hull: ${v.dist} m`);
+  assert.equal(v.range, 30);
 });
 
 test('trade: silver, goods and gear; both lock, both confirm the table they saw; it all changes hands at once', () => {
