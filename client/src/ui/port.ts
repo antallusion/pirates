@@ -24,7 +24,7 @@ import { trophyLine, trophyTag } from './surrender.ts';
 import { personName } from '../lang/names.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
-import { GOODS, stockText } from '../../../shared/src/data/goods.ts';
+import { GOODS, isInfStock, stockText } from '../../../shared/src/data/goods.ts';
 import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 import { AMMO, AMMO_IDS, GUNS, MODULES, MOUNTS, SHIP_CLASSES, defaultGunFor } from '../../../shared/src/data/ships.ts';
 import type { MountId, ShipClassId } from '../../../shared/src/data/ships.ts';
@@ -595,7 +595,7 @@ export class PortScreen {
       const trend = r.trend > 0.03 ? `<span class="up">▲</span>` : r.trend < -0.03 ? `<span class="down">▼</span>` : '';
       const tags = [view.dealOfDay === r.good ? L('market.dealOfDay') : '', r.legal ? '' : L('market.contraband'), g.spoilPerHour ? L('market.perishable') : '', g.danger > 0.3 ? L('market.dangerous') : '', stolen ? L('market.stolen', { n: stolen }) : ''].filter(Boolean).join(' · ');
       return `<div class="w-row mk-row${have ? ' have' : ''}" data-good="${r.good}" data-hint="${esc(`${g.name}. ${g.description}`)}">${icon(`good_${r.good}`, '', 'w-row-ico')}
-        <span class="w-row-t"><b class="${r.legal ? '' : 'contra'}">${esc(g.name)}</b><small>${esc(have ? W('mk.have', { n: have }) : W('mk.stock', { n: stockText(r.stock) }))}${tags ? ` · ${esc(tags)}` : ''}</small></span>
+        <span class="w-row-t"><b class="${r.legal ? '' : 'contra'}">${esc(g.name)}</b><small>${esc(have ? (isInfStock(r.stock) ? `${W('mk.have', { n: have })} · ${W('mk.stock', { n: stockText(r.stock) })}` : W('mk.have', { n: have })) : W('mk.stock', { n: stockText(r.stock) }))}${tags ? ` · ${esc(tags)}` : ''}</small></span>
         <span class="w-row-n" title="${esc(W('mk.priceHint', { buy: r.buy, sell: r.sell }))}">${money(r.buy)}<small>${money(r.sell)}${trend}</small></span>
         <span class="w-row-b"><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="buy" data-good="${r.good}" ${r.stock > 0 ? '' : 'disabled'}>${esc(L('btn.buy'))}</button><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="sell" data-good="${r.good}" ${have ? '' : 'disabled'}>${esc(L('btn.sell'))}</button></span></div>`;
     }).join('');
