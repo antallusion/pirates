@@ -3,7 +3,12 @@
 import { WayWindow, mountFallen, resRid } from './ui/waystation.ts'; // docs/35
 import { setWayFog, wayName } from './render/waystations.ts'; // docs/35
 import { fogFarLayer, underFog } from './render/fog.ts'; // the fog of war (owner, 2026-10-17)
-import { WAY_MOOR_RANGE } from '../../shared/src/world/waystations.ts'; // docs/35
+import { WAY_SIZE, wayInReach } from '../../shared/src/world/waystations.ts'; // docs/35
+import { BOARD_ARC_DEG, BOARD_GAP, BOARD_REL_SPEED, DOCK_SLOW, REACH_DOCK, REACH_MOOR, REACH_OBJ, REACH_HINT, REACH_SHORE, alongsideWhy, boardGap, gapTo, shoreGap } from '../../shared/src/data/reach.ts'; // owner, 2026-10-22
+import type { Hull } from '../../shared/src/data/reach.ts';
+import { GRAPPLE_REACH } from '../../shared/src/data/gunnery.ts';
+import { dockGap } from '../../shared/src/world/dock.ts';
+import { onScreen, ownHull, viewHull } from './reachview.ts';
 import type { WayData } from '../../shared/src/wayproto.ts'; // docs/35
 import { EN as I18_EN, RU as I18_RU } from './lang/ui/isles18.ts';
 import { shipLevelOf } from '../../shared/src/data/shiplevel.ts';
@@ -53,9 +58,9 @@ import { AutosailPill, FirstTips, autosailRequest, autosailStopText, routeLabel,
 import { claimNear, claimSpot, tapTarget } from './ui/sailto.ts'; // seaux: sail-to on tap
 import { toggleCaptainMenu } from './ui/capmenu.ts'; // seaux: the captain's menu on her portrait
 import { actBarHtml, attackRelevant, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
-import { FIND_REACH, FIND_SLOW } from '../../shared/src/data/seafinds.ts';
+import { FIND_REACH, FIND_SLOW, findGap } from '../../shared/src/data/seafinds.ts';
 import type { FindView } from '../../shared/src/findproto.ts';
-import { ROAMS, ROAM_REACH, ROAM_SEE } from '../../shared/src/data/roamers.ts'; // docs/19 D7
+import { ROAMS, ROAM_REACH, ROAM_SEE, roamHullGap } from '../../shared/src/data/roamers.ts'; // docs/19 D7
 import { BOSSES } from '../../shared/src/data/bosses.ts';
 import type { BossId } from '../../shared/src/data/bosses.ts';
 import { isShoreBoss } from '../../shared/src/data/shorebosses.ts'; // the great ones ashore (2026-10-03)
@@ -65,6 +70,7 @@ import { backClock, roamBackLeft, roamName, roamNow } from './render/roamers.ts'
 import { openRoamCard } from './ui/roamcard.ts';
 import { strengthWord as roamWord } from './ui/army.ts';
 import { EN as ROAM_EN, RU as ROAM_RU } from './lang/ui/roamers.ts';
+import { EN as REACH_EN, RU as REACH_RU } from './lang/ui/reach.ts';
 import type { Act, ActFacts } from './ui/actbar.ts';
 import { riskConfirm } from './ui/kit/risk.ts';
 import { wireSheetSwipe } from './ui/kit/sheet.ts';
@@ -291,6 +297,45 @@ let lastInputKey = '';
 let boardTarget: number | null = null;
 /** Why no ship in the grapples' reach may be boarded: boarding off on hers or yours (docs/24 C1). */
 let noBoardWhy: string | null = null;
+/** Her mark close by but not yet alongside (owner, 2026-10-22): what is left — the water between the hulls, her beam,
+ *  her way — for the bar's muted line. */
+let boardNear: { name: string; why: 'far' | 'abeam' | 'speed'; gap: number } | null = null;
+
+/** Whether the grapples would fly between her and ship `id` now (reach.ts alongsideWhy, as the server reckons it):
+ *  null — alongside; else why not and the water between the hulls. Undefined hulls: not alongside. */
+function boardWhy(id: number): { why: 'far' | 'abeam' | 'speed'; gap: number } | null {
+  const s = state.ships.get(id), me = ownHull(state), st = state.ownStats, own = state.ownDisplay;
+  const her = s ? viewHull(s) : null;
+  if (!s || !me || !her || !st || !own) return { why: 'far', gap: Infinity };
+  const gap = boardGap(me, her);
+  const base = (34 + st.length * 0.5) * GRAPPLE_REACH;
+  // (a captain's own way matched within half again the lines' hold — boarding.ts boardGeomWhy)
+  const why = alongsideWhy(me, own.speed, her, s.cur.spd, { gapMul: Math.max(1, Math.min(2.5, st.boardingRange / base)), arcDeg: BOARD_ARC_DEG, anySpeed: !!(s.cur.flags & SF.SURRENDERED), relMax: BOARD_REL_SPEED * 1.5 });
+  return why ? { why, gap } : null;
+}
+
+/** The island a harbour stands on (its quays: dock.ts), as her chart has it. */
+let portIsles = new Map<string, { x: number; y: number; r: number; poly: ArrayLike<number> }>();
+let portIslesN = -1;
+function portIsle(p: { id: string }): { x: number; y: number; r: number; poly: ArrayLike<number> } | null {
+  if (portIslesN !== state.islands.size) {
+    portIsles = new Map();
+    for (const is of state.islands.values()) if (is.portId || is.town) portIsles.set((is.portId ?? is.town)!, is);
+    portIslesN = state.islands.size;
+  }
+  return portIsles.get(p.id) ?? null;
+}
+
+/** «Причалить: ещё 12 м» — a thing close by, not yet within reach (owner, 2026-10-22). */
+function nearWords(what: string, m: number): string {
+  return LR8('near', { what, m: Math.max(1, Math.round(m)) });
+}
+
+/** Whether a point (and `r` metres about it) is on her screen and out of her fog (owner, 2026-10-22: no buttons for what
+ *  she cannot see). */
+function seenOnScreen(x: number, y: number, r = 0): boolean {
+  return onScreen(renderer, state.seen, x, y, r);
+}
 let aimSide: 'port' | 'starboard' | null = null;
 /** The target frame's ship (canon D12): chosen by a tap, a click on her or the target key; else the nearest hostile. */
 let targetId: number | null = null;
@@ -375,6 +420,8 @@ function askGlass(id: number | null): void {
   }
   const s = state.ships.get(id);
   if (!s?.info || s.info.npcRole === 'beast' || SHIP_CLASSES[s.info.classId]?.monster) return;
+  // (owner, 2026-10-22: the glass only on a ship she sees on her screen)
+  if (!seenOnScreen(s.cur.x, s.cur.y, 20)) return;
   if (id === glassId && now - glassAt < 4000) return;
   glassId = id;
   glassAt = now;
@@ -1088,6 +1135,7 @@ const LI = dict(ISLES_EN, ISLES_RU);
 const LLAIR = dict(LAIRS_EN, LAIRS_RU); // docs/18 II
 const L18 = dict(I18_EN, I18_RU); // docs/18 III
 const LROAM = dict(ROAM_EN, ROAM_RU); // docs/19 D7
+const LR8 = dict(REACH_EN, REACH_RU); // owner, 2026-10-22: the reaches' hints
 const LFL = dict(FLAGS_EN, FLAGS_RU); // docs/24 C1, D1
 
 /** docs/18 #28: the land key on an island two levels or more above her ship asks first (once an island). */
@@ -3009,37 +3057,47 @@ let pendingMark: { id: number; until: number } | null = null;
 /** docs/19 D5: the small thing her boats will go to once she has slowed. */
 let pendingFind: { id: number; until: number } | null = null;
 
-/** docs/19 D5: the sea's small thing within reach of her (the flying fish: aboard while they last). */
+/** docs/19 D5: the sea's small thing within reach of her (the flying fish: aboard while they last) — her hull within
+ *  thirty metres of it (owner, 2026-10-22, reach.ts); or the nearest close by on her screen, with the metres left (the
+ *  bar's hint, not a button). */
 function findAtHand(): FindView | null {
-  const own = state.ownDisplay;
-  if (!own || state.self?.dockedAt) return null;
+  const own = state.ownDisplay, h = ownHull(state);
+  if (!own || !h || state.self?.dockedAt) return null;
   let best: FindView | null = null, bd = Infinity;
   for (const f of state.finds) {
-    const d = f.kind === 'flyfish' ? 0 : dist(f.x, f.y, own.x, own.y);
-    // (seaux: every find of hers in sight — out of reach its button sails her there, approach.ts)
-    if (d <= FIND_SEE && d < bd) [best, bd] = [f, d];
+    const d = findGap(h, f);
+    if (d <= FIND_REACH[f.kind] && d < bd) [best, bd] = [f, d];
   }
   return best;
 }
-/** seaux: how far off a find of hers still shows its button (they turn up 650–1200 m off). */
-const FIND_SEE = 1800;
+/** The nearest of her small things close by (on her screen, within REACH_HINT of its reach), and the metres left. */
+function findNearby(): { f: FindView; left: number } | null {
+  const h = ownHull(state);
+  if (!h || state.self?.dockedAt) return null;
+  let best: { f: FindView; left: number } | null = null;
+  for (const f of state.finds) {
+    if (f.kind === 'flyfish') continue;
+    const left = findGap(h, f) - FIND_REACH[f.kind];
+    if (left > 0 && left < REACH_HINT && (!best || left < best.left) && seenOnScreen(f.x, f.y)) best = { f, left };
+  }
+  return best;
+}
 /** Metres to a find beyond its reach (0: within it). */
 function findFar(f: FindView): number {
-  const own = state.ownDisplay;
-  if (!own || f.kind === 'flyfish') return 0;
-  const d = dist(f.x, f.y, own.x, own.y);
-  return d > FIND_REACH[f.kind] ? d : 0;
+  const h = ownHull(state);
+  if (!h || f.kind === 'flyfish') return 0;
+  const left = findGap(h, f) - FIND_REACH[f.kind];
+  return left > 0 ? left : 0;
 }
 
-/** docs/19 D7: the roaming stack within a cable of her (the nearest). */
+/** docs/19 D7: the roaming stack within the fight's reach of her hull (owner, 2026-10-22: thirty metres, reach.ts). */
 function roamAtHand(): RoamView | null {
-  const own = state.ownDisplay;
-  if (!own || state.self?.dockedAt) return null;
+  const own = state.ownDisplay, h = ownHull(state);
+  if (!own || !h || state.self?.dockedAt) return null;
   let best: RoamView | null = null, bd = ROAM_REACH;
   for (const v of state.roams) {
-    if (Math.abs(v.x - own.x) > ROAM_REACH + 200 || Math.abs(v.y - own.y) > ROAM_REACH + 200) continue;
-    const p = roamNow(state, v);
-    const d = dist(p.x, p.y, own.x, own.y);
+    if (Math.abs(v.x - own.x) > 400 || Math.abs(v.y - own.y) > 400) continue;
+    const d = roamHullGap(h, roamNow(state, v));
     if (d <= bd) [best, bd] = [v, d];
   }
   return best;
@@ -3056,23 +3114,53 @@ function roamFocus(): { v: RoamView; marked: boolean; far: boolean } | null {
   if (state.roamMark !== null) {
     const v = state.roams.find((x) => x.id === state.roamMark);
     const p = v ? roamNow(state, v) : null;
-    if (v && p && v.fight !== 'other' && dist(p.x, p.y, own.x, own.y) <= ROAM_SEE) return { v, marked: true, far: dist(p.x, p.y, own.x, own.y) > ROAM_REACH };
+    const h = ownHull(state);
+    // (owner, 2026-10-22: her mark on her screen — out of it, or under the fog, it is let go)
+    if (v && p && h && v.fight !== 'other' && dist(p.x, p.y, own.x, own.y) <= ROAM_SEE && seenOnScreen(p.x, p.y, 20)) return { v, marked: true, far: roamHullGap(h, p) > ROAM_REACH };
     state.roamMark = null;
   }
   const v = roamAtHand();
   return v ? { v, marked: false, far: false } : null;
 }
 
-/** docs/35: the nearest floating waystation within mooring reach of her. */
+/** docs/35: the nearest floating waystation within mooring reach of her hull (owner, 2026-10-22: 30 m, reach.ts). */
 function wayAtHand(own: { x: number; y: number }): WayData | null {
-  let best: WayData | null = null, bd = WAY_MOOR_RANGE;
+  const h = ownHull(state);
+  if (!h) return null;
+  let best: WayData | null = null, bd = Infinity;
   for (const w of state.ways.values()) {
-    if (Math.abs(w.x - own.x) > WAY_MOOR_RANGE || Math.abs(w.y - own.y) > WAY_MOOR_RANGE) continue;
-    const d = dist(w.x, w.y, own.x, own.y);
+    if (Math.abs(w.x - own.x) > 300 || Math.abs(w.y - own.y) > 300 || !wayInReach(h, w)) continue;
+    const d = gapTo(h, w.x, w.y, WAY_SIZE / 2);
     if (d <= bd) {
       bd = d;
       best = w;
     }
+  }
+  return best;
+}
+
+/** docs/35: the nearest waystation close by but not yet within mooring reach, and the metres left (the bar's hint). */
+function wayNearby(): { w: WayData; left: number } | null {
+  const h = ownHull(state);
+  if (!h) return null;
+  let best: { w: WayData; left: number } | null = null;
+  for (const w of state.ways.values()) {
+    if (Math.abs(w.x - h.x) > 400 || Math.abs(w.y - h.y) > 400) continue;
+    const left = gapTo(h, w.x, w.y, WAY_SIZE / 2) - REACH_OBJ;
+    if (left > 0 && left < REACH_HINT && (!best || left < best.left) && seenOnScreen(w.x, w.y)) best = { w, left };
+  }
+  return best;
+}
+
+/** The nearest of the dense sea's marks close by on her screen but not yet within the boats' reach, and the metres left. */
+function markNearby(): { m: SeaMarkData; left: number } | null {
+  const h = ownHull(state);
+  if (!h || state.self?.dockedAt) return null;
+  let best: { m: SeaMarkData; left: number } | null = null;
+  for (const m of state.seaMarks.values()) {
+    if (Math.abs(m.x - h.x) > 500 || Math.abs(m.y - h.y) > 500 || state.markDone.has(m.id)) continue;
+    const left = gapTo(h, m.x, m.y, m.r) - REACH_OBJ;
+    if (left > 0 && left < REACH_HINT && (!best || left < best.left) && seenOnScreen(m.x, m.y, m.r)) best = { m, left };
   }
   return best;
 }
@@ -3083,7 +3171,8 @@ function markAtHand(): SeaMarkData | null {
   if (!own || state.self?.dockedAt) return null;
   let best: SeaMarkData | null = null, bd = Infinity;
   for (const m of state.seaMarks.values()) {
-    if (Math.abs(m.x - own.x) > 600 || Math.abs(m.y - own.y) > 600 || !markInReach(m, own.x, own.y)) continue;
+    const h = ownHull(state);
+    if (!h || Math.abs(m.x - own.x) > 600 || Math.abs(m.y - own.y) > 600 || !markInReach(m, h)) continue;
     const d = dist(m.x, m.y, own.x, own.y) - m.r;
     if (d < bd) {
       bd = d;
@@ -3101,6 +3190,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const you = state.you;
   boardTarget = null;
   noBoardWhy = null;
+  boardNear = null;
   if (!own || !self || !you) return { acts: [], info: [] };
   if (self.dockedAt) return { acts: buildActs({ grabbed: grabbed(), docked: true, harbourOpen: modal === 'port' }), info: [] };
   const st = state.ownStats!;
@@ -3123,8 +3213,15 @@ function gatherActs(): { acts: Act[]; info: string[] } {
       continue;
     }
     const d = dist(own.x, own.y, c.x, c.y);
-    const range = st.boardingRange + (st.beam + cls.beam) / 2;
-    if (d > range) continue;
+    if (d > st.boardingRange + st.length + cls.length) continue;
+    // Alongside only (owner, 2026-10-22): the hulls within the grapples' few metres, side by side, the way matched —
+    // the server's own rule (reach.ts); close but not yet, the bar says what is left (her mark's).
+    const bw = boardWhy(s.id);
+    if (bw !== null) {
+      if (s.id === (state.pursuit?.target ?? targetId) && bw.why) boardNear = { name: placeName(s.info.name), ...bw };
+      continue;
+    }
+    void cls;
     // Boarding at once (docs/17 H1): any ship in the grapples' reach, whole or wrecked; the server says why not.
     if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(c.flags & SF.HOSTILE)) continue;
     // Her mark first (the pursuit's, or the one she tapped), whatever lies nearer: «На абордаж» took the nearest ship
@@ -3147,7 +3244,14 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const info: string[] = [];
   const facts: ActFacts = { grabbed: grabbed() };
   if (best !== null) facts.board = { name: placeName(state.ships.get(best)?.info?.name ?? L('her')) };
-  const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
+  else if (boardNear && boardNear.gap < REACH_HINT) info.push(esc(boardNear.why === 'far' ? nearWords(LR8('board'), boardNear.gap - BOARD_GAP) : LR8(boardNear.why === 'abeam' ? 'abeam' : 'speed', { name: boardNear.name })));
+  // A harbour's waters, and her hull within its approach (owner, 2026-10-22: 40 m of its anchorage or quays — dock.ts);
+  // in its waters short of it, the bar says how far is left.
+  const me = ownHull(state);
+  const waters = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
+  const dockLeft = waters && me ? dockGap(me, waters, portIsle(waters)) - REACH_DOCK : Infinity;
+  const port = dockLeft <= 0 ? waters : undefined;
+  if (waters && !port && dockLeft < REACH_HINT) info.push(esc(nearWords(LR8('dock'), dockLeft)));
   // Just out of the harbour, «В порт» is not the gold button for half a minute (unless she is hurt): the 2026-10-06
   // newcomer's run cast off, saw «В порт» as the one thing to press and put straight back in — 190 times in 15 minutes.
   const watchHome = state.onboarding?.stage === 'port';
@@ -3156,6 +3260,10 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   // Moored with her window shut (another window over it): the same button brings it back.
   const way = !port ? (state.wayView ? (modal === 'way' ? null : state.ways.get(state.wayView.id) ?? null) : wayAtHand(own)) : null;
   if (way) facts.way = { id: way.id, name: wayName(way.kind) };
+  else if (!port) {
+    const wn = wayNearby();
+    if (wn) info.push(esc(nearWords(LR8('moor'), wn.left)));
+  }
   if (watchHome) facts.watchHome = true;
   const ab = self.abyss;
   facts.ritual = !!ab && ab.shards >= 3 && dist(own.x, own.y, ab.eye.x, ab.eye.y) < 1500;
@@ -3187,6 +3295,10 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   if (wild) facts.claim = { name: placeName(wild.name), price: fmt(wild.price) };
   facts.claimOpen = modal === 'company';
   const mk = markAtHand();
+  if (!mk) {
+    const mn = markNearby();
+    if (mn) info.push(esc(nearWords(LR8('mark'), mn.left)));
+  }
   if (mk) {
     const busy = state.markBusy?.id === mk.id ? state.markBusy : null;
     facts.mark = { id: mk.id, kind: mk.kind, done: state.markDone.has(mk.id), busy: !!busy };
@@ -3194,7 +3306,12 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     else if (state.markDone.has(mk.id)) info.push(esc(markInfo(mk.kind, 'done')));
     else if (pendingMark?.id === mk.id) info.push(esc(slowWord()));
   }
-  const fd = findAtHand();
+  // (the boats at one: hers to see through, whatever the drift since)
+  const fd = findAtHand() ?? (state.findBusy ? state.finds.find((f) => f.id === state.findBusy!.id) ?? null : null);
+  if (!fd) {
+    const fn = findNearby();
+    if (fn) info.push(esc(nearWords(LR8('find'), fn.left)));
+  }
   if (fd) {
     const busy = state.findBusy?.id === fd.id ? state.findBusy : null;
     const far = findFar(fd);
@@ -3204,6 +3321,18 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   }
   const focus = roamFocus();
   const rm = focus?.v;
+  // (a stack close by, not yet within the boats' thirty metres: how far is left — owner, 2026-10-22)
+  if (!focus) {
+    const hh = ownHull(state);
+    let left = Infinity;
+    if (hh) for (const v of state.roams) {
+      if (v.fight || Math.abs(v.x - hh.x) > 400 || Math.abs(v.y - hh.y) > 400) continue;
+      const p = roamNow(state, v);
+      const l = roamHullGap(hh, p) - ROAM_REACH;
+      if (l > 0 && l < left && seenOnScreen(p.x, p.y, 20) && !roamBackLeft(state, v)) left = l;
+    }
+    if (left < REACH_HINT) info.push(esc(nearWords(LR8('stack'), left)));
+  }
   // A stack in focus (marked, or a cable off) with no ship of her own choosing: its «Атаковать» leads, and the nearest
   // hostile ship the target frame picked by itself is not offered (one «Атаковать», the stack's — owner, 2026-10-07).
   const roamLead = !!focus && !targetPinned && !state.pursuit;
@@ -3214,12 +3343,22 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     if (rm.fight) info.push(esc(LROAM(rm.fight === 'mate' ? 'i.mate' : 'i.fight', { what: name })));
     else if (back) info.push(esc(LROAM('i.back', { what: name, t: backClock(back) })));
     else if (rm.offer === 'flee' && rm.ratio !== undefined) info.push(esc(LROAM('i.flee', { r: rm.ratio })));
+    // (owner, 2026-10-22: her mark a little off — the boats go from thirty metres; the bar says how far is left)
+    const hh = ownHull(state);
+    const left = focus.far && hh ? roamHullGap(hh, roamNow(state, rm)) - ROAM_REACH : 0;
+    if (left > 0 && left < REACH_HINT && !rm.fight && !back && state.roamRun !== rm.id) info.push(esc(nearWords(LR8('stack'), left)));
   }
   // «Атаковать» (docs/23 item 33): the target frame's ship, or the pursuit under way — only a ship of her choosing (a
   // tap, the lock, the target key) or one the frame picked that is within her guns' reach (owner, 2026-10-19: «Кнопка
   // атаковать горит всегда даже когда у меня нет цели. Пусть внизу выпрыгивают кнопки только когда я рядом с чем-то
   // проплываю или беру кого-то в прицел»).
-  attackMark = attackable(targetId) && !roamLead && attackRelevant(targetPinned, markRange()) ? targetId : null;
+  // (owner, 2026-10-22: and only within her guns' real reach of a ship on her screen — «я не вижу ниче на карте, а уже
+  // могу брать абордаж, атаку»; her mark a little beyond it: how far is left)
+  const tgt = targetId !== null ? state.ships.get(targetId) : undefined;
+  const tgtSeen = !!tgt && seenOnScreen(tgt.cur.x, tgt.cur.y, 20);
+  const gunLeft = tgt ? dist(own.x, own.y, tgt.cur.x, tgt.cur.y) - gunReach() : Infinity;
+  attackMark = attackable(targetId) && !roamLead && attackRelevant(gunLeft <= 0, tgtSeen) ? targetId : null;
+  if (attackMark === null && targetPinned && tgtSeen && !state.pursuit && attackable(targetId) && gunLeft > 0 && gunLeft < REACH_HINT * 2) info.push(esc(LR8('attackFar', { m: Math.round(gunLeft) })));
   const pursued = state.pursuit ? state.ships.get(state.pursuit.target) : undefined;
   if (state.pursuit) facts.attack = { name: placeName(pursued?.info?.name ?? L('her')), pursuing: true, mode: state.pursuit.mode, ...(unboardableMark(state.pursuit.target) ? { gunsOnly: true } : {}) };
   else if (attackMark !== null) facts.attack = { name: placeName(state.ships.get(attackMark)?.info?.name ?? L('her')), pursuing: false, mode: 'board' };
@@ -3396,6 +3535,14 @@ function unboardableMark(id: number): boolean {
  *  HoMM3 flight. */
 function openRoamLook(v: RoamView): void {
   void openRoamCard(state, v, (action, id) => net.send(action === 'attack' ? { t: 'attack', roam: id } : { t: 'roam', action, id }));
+}
+
+/** Her guns' real reach as loaded (the farther broadside): «Атаковать» on a ship is offered within it (owner,
+ *  2026-10-22). */
+function gunReach(): number {
+  const self = state.self, you = state.you;
+  if (!self || !you) return 0;
+  return Math.max(GUNS[self.loadout.guns.port].range, GUNS[self.loadout.guns.starboard].range) * (state.ownStats?.rangeMul ?? 1) * (AMMO[you.ammoSel]?.rangeMul ?? 1);
 }
 
 /** The close fight's «в дальности» (owner, 2026-10-07): her mark within the band her gun captains fire in
@@ -3663,10 +3810,9 @@ function deckView(): DeckSlot[] | null {
 
 /** A ship as the attack cursor needs her: may she be fought, may a grapple take her, is she in the grapples' reach. */
 function shipFight(id: number): { attackable: boolean; boardable: boolean; inReach: boolean } | null {
-  const s = state.ships.get(id), own = state.ownDisplay, st = state.ownStats;
+  const s = state.ships.get(id);
   if (!s?.info) return null;
-  const cls = SHIP_CLASSES[s.info.classId];
-  const inReach = !!own && !!st && dist(own.x, own.y, s.cur.x, s.cur.y) <= st.boardingRange + (st.beam + cls.beam) / 2;
+  const inReach = boardWhy(id) === null; // alongside (owner, 2026-10-22)
   return { attackable: attackable(id) && !(s.cur.flags & SF.SURRENDERED), boardable: !unboardableMark(id) && !grabbed(), inReach };
 }
 
@@ -3722,7 +3868,7 @@ function canBoardNow(id: number): boolean {
   const c = s.cur;
   if (c.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED | SF.IN_BATTLE | SF.SURRENDERED) || unboardableMark(id)) return false;
   if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(c.flags & SF.HOSTILE) && !fairCaptain(c.flags, s.info)) return false;
-  return dist(own.x, own.y, c.x, c.y) <= st.boardingRange + (st.beam + SHIP_CLASSES[s.info.classId].beam) / 2;
+  return boardWhy(id) === null; // alongside only (owner, 2026-10-22: reach.ts)
 }
 
 /** The choices about a target (`ship:id`, `roam:id`) and where she stands on the screen, or null: nothing to offer. */
@@ -3759,9 +3905,11 @@ function targetChoices(about: string): { choices: TmChoice[]; name: string; x: n
     const p = roamNow(state, v);
     const d = dist(p.x, p.y, own.x, own.y);
     if (d > ROAM_SEE) return null;
+    const hh = ownHull(state);
+    const gap = hh ? roamHullGap(hh, p) : d;
     const choices: TmChoice[] = [{ id: 'lock', art: 'item_ranging_glass', label: seaWord('tm.lock'), title: seaWord('tm.lockT'), on: state.roamMark === id && !targetPinned }];
     // sailing to them: the helmsman's course (no pursuit of a stack but the fight's own run)
-    if (d > ROAM_REACH && worldMap.onAutosail) choices.push({ id: 'pursue', art: 'talent_nav_wake_rider', label: seaWord('tm.pursue'), title: seaWord('tm.pursueStack') });
+    if (gap > ROAM_REACH && worldMap.onAutosail) choices.push({ id: 'pursue', art: 'talent_nav_wake_rider', label: seaWord('tm.pursue'), title: seaWord('tm.pursueStack') });
     // the boats go (or the helmsman runs her in first): not under fire, nor with too few hands, nor while another
     // fight holds her (roamers.ts fightWhy — the server's «Не под огнём» never answers a choice offered here)
     if (!v.fight && !roamBackLeft(state, v) && !you.combat && you.crew >= 3 && !(you.flags & SF.BOARDING) && !self.landing) choices.push({ id: 'fight', art: 'bt_charge', label: seaWord('tm.fight'), title: seaWord('tm.fightStack') });
@@ -3962,7 +4110,8 @@ function workMark(id: number): void {
   const own = state.ownDisplay;
   // (seaux: out of reach the order goes at once — the helmsman sails her there and the server gives it alongside)
   const m = state.seaMarks.get(id);
-  if (own && m && !markInReach(m, own.x, own.y)) {
+  const h = ownHull(state);
+  if (own && m && h && !markInReach(m, h)) {
     pendingMark = null;
     return void net.send({ t: 'seamark', action: 'work', id });
   }
@@ -4084,8 +4233,9 @@ function nearHome(): { name: string } | null {
   const id = state.self?.homeIsle;
   const own = state.ownDisplay;
   if (id === null || id === undefined || !own || state.self?.dockedAt) return null;
-  const isl = state.islands.get(id);
-  if (!isl || dist(isl.x, isl.y, own.x, own.y) - isl.r > 900) return null;
+  const isl = state.islands.get(id), h = ownHull(state);
+  // (owner, 2026-10-22: her hull lying off its coast, REACH_MOOR — reach.ts — not 900 m off its rim)
+  if (!isl || !h || shoreGap(h, isl, isl.r, REACH_MOOR) > REACH_MOOR) return null;
   return { name: isl.name };
 }
 
@@ -4154,7 +4304,7 @@ function stepPendingDock(): void {
     pendingDock = null;
     return;
   }
-  if (own && own.speed <= 6 && performance.now() >= pendingDock.next) {
+  if (own && own.speed <= DOCK_SLOW - 0.5 && performance.now() >= pendingDock.next) {
     // Keep the request until the harbour answers: a refusal (still too fast) renews it.
     pendingDock.next = performance.now() + 1500;
     dockSentAt = performance.now();

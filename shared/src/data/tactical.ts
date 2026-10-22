@@ -57,7 +57,8 @@ export function tacBankSecs(level: number): number {
  *  (`pace` and `paceSea` — a group's blows and orders harder by each ally on the field — are gone, owner 2026-10-10:
  *  «9 матросов убили 20 моих матросов с одного удара … чини атаку всем». A blow is its stack's own.) */
 export const TAC_GROUP = {
-  range: 600,
+  // (owner, 2026-10-22: a mate's boats cross from close by — hull to hull within 60 m of the grappled pair, was 600 m)
+  range: 60,
   side: 3,
   bring: 2,
   bringFrom: 11,

@@ -581,7 +581,7 @@ export function adminTamer(game: Game, s: PlayerSession, args: string[]): string
   if (ship.docked) game.undock(s);
   const is = game.world.islands[best.islandId];
   const d = Math.hypot(best.x - is.x, best.y - is.y) || 1;
-  const x = best.x + ((best.x - is.x) / d) * 150, y = best.y + ((best.y - is.y) / d) * 150;
+  const x = best.x + ((best.x - is.x) / d) * 30, y = best.y + ((best.y - is.y) / d) * 30; // (within the harbour's approach: dock.ts)
   ship.state = { ...ship.state, x, y, speed: 0, sail: 0 };
   ship.input = { rudder: 0, sailTarget: 0 };
   game.grid.upsert(ship.id, x, y);

@@ -5,6 +5,7 @@
 // for the next of them, all week — and a tier taken pays the group by the share of it each one cut down. Everything here
 // is a function of the tier alone, the same for the server, the client and the balance tools.
 
+import { REACH_OBJ } from './reach.ts';
 import { armyForLevel, armyWeight } from './army.ts';
 import type { ArmyMix, ArmyStack, UnitId } from './army.ts';
 import type { CaptainId } from './captains.ts';
@@ -17,7 +18,7 @@ export const RAID_TIERS = 7;
 /** Captains in one raid at the most. */
 export const RAID_GROUP = 5;
 /** Within this of the Stair's gate a tier's legend comes alongside. */
-export const RAID_GATE_R = 900;
+export const RAID_GATE_R = REACH_OBJ; // her hull to the Stair's eye (owner, 2026-10-22: 900 → 30 m; descent.ts atGate)
 /** A tier's legend orders as a captain of ⚓10 does, her crew's strength times this (the castellans' and the
  *  Admiralty's legends' rule: counted from the whole of a tier's army, the first Musket Storm swept a deck). */
 export const RAID_SPELL: readonly number[] = [1, 1.05, 1.1, 1.15, 1.2, 1.3, 1.45];

@@ -10,6 +10,8 @@
 // lantern), a hulk chapel (an old hull moored with a shrine on her deck), a floating market (boats and stalls lashed
 // round a raft).
 
+import { REACH_OBJ, gapTo } from '../data/reach.ts';
+import type { Hull } from '../data/reach.ts';
 import { CHUNKS_PER_SIDE, WORLD_SIZE } from '../constants.ts';
 import { closestOnPolygon, pointInPolygon } from '../math.ts';
 import { WORLD_EDGE_MARGIN } from './regions.ts';
@@ -44,11 +46,14 @@ export const WAY_START_GAP = 3000;
 export const WAY_START_PORT = 'saltmarrow';
 /** At most so many in one streaming chunk (3 km): the density cap for the drawing and the wire. */
 export const WAY_CHUNK_CAP = 30;
-/** How near she must be to moor (metres from the waystation), and how far she may drift before she is cast off. */
-export const WAY_MOOR_RANGE = 150;
-export const WAY_LEAVE_RANGE = 260;
+/** How near she must be to moor — from her hull to the waystation's edge (owner, 2026-10-22: 150 m from her middle →
+ *  30 m from her hull, reach.ts) — and how far she may drift (from her middle) before she is cast off. */
+export const WAY_MOOR_RANGE = REACH_OBJ;
+export const WAY_LEAVE_RANGE = 200;
 /** The size she is drawn at (metres across). */
 export const WAY_SIZE = 46;
+/** Her hull within mooring reach of a waystation. */
+export const wayInReach = (h: Hull, w: { x: number; y: number }, slack = 0): boolean => gapTo(h, w.x, w.y, WAY_SIZE / 2) <= WAY_MOOR_RANGE + slack;
 
 export interface WayIndex {
   list: Waystation[];

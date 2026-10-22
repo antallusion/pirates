@@ -19,6 +19,7 @@
 // half its strength, the Abbess's at two fifths); when the great one falls its kin scatter and the fight is won.
 // `direct` is pure but for the dice it is handed, so the tests and the balance play the same fight (`simulateShore`).
 
+import { REACH_SHORE, REACH_SLACK, hullOf, landingPoint, landingWithin } from '../../../shared/src/data/reach.ts';
 import { islandLoot } from './isleloot.ts'; // docs/29 §9 (owner, 2026-10-17)
 import { xpAt } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { isNight } from '../../../shared/src/constants.ts';
@@ -57,7 +58,7 @@ import type { CaptainId } from '../../../shared/src/data/captains.ts';
 
 /** Within this of the great one's spot (and the boats' reach of its island's shore) the land key lands against it. */
 export const SHORE_BOSS_REACH = 1100;
-const LAND_REACH = 260;
+const LAND_REACH = REACH_SHORE; // (owner, 2026-10-22: her hull to the beach nearest it, 260 → 30 m — reach.ts)
 /** Rare spoils (the artifact) once a week a captain a kind, as the sea's bosses' plans (BOSS_LOCKOUT). */
 const SHORE_LOCKOUT = 7 * 24 * 3600 * 1000;
 
@@ -226,7 +227,7 @@ function risingInReach(game: Game, s: PlayerSession): Rising | null {
   for (const r of store(game).risen) {
     if (Math.abs(r.x - x) > SHORE_BOSS_REACH || Math.abs(r.y - y) > SHORE_BOSS_REACH || dist(r.x, r.y, x, y) > SHORE_BOSS_REACH) continue;
     const is = islandOf(game, r);
-    if (is && Math.sqrt(closestOnPolygon(x, y, is.poly).d2) <= LAND_REACH) return r;
+    if (is && landingWithin(hullOf(ship), is.poly, r.x, r.y, REACH_SLACK)) return r;
   }
   return null;
 }
@@ -396,11 +397,25 @@ export function adminShoreBoss(game: Game, s: PlayerSession, args: string[]): st
 function offShore(game: Game, s: PlayerSession, r: Rising): void {
   const is = islandOf(game, r);
   let x = r.x, y = r.y;
+  // (off its beach — the coast's point nearest it — within the boats' thirty metres, reach.ts)
+  const lp = is ? landingPoint(is.poly, r.x, r.y) : null;
+  if (is && lp) {
+    const nl = Math.hypot(lp.x - r.x, lp.y - r.y) || 1, nx = (lp.x - r.x) / nl, ny = (lp.y - r.y) / nl;
+    for (const off of [24, 30, 38]) {
+      const px = lp.x + nx * (off + s.ship!.stats.beam / 2), py = lp.y + ny * (off + s.ship!.stats.beam / 2);
+      if (isLand(game.world, px, py) || pointInPolygon(px, py, is.poly)) continue;
+      parkNear(game, s, px, py, 1);
+      s.ship!.state.heading = Math.atan2(-ny, -nx);
+      s.ship!.state.speed = 0;
+      game.pushSelf(s, true);
+      return;
+    }
+  }
   if (is) {
     const ax = r.x - is.x, ay = r.y - is.y, al = Math.hypot(ax, ay) || 1;
     for (let d = 20; d < 1500; d += 10) {
       const px = r.x + (ax / al) * d, py = r.y + (ay / al) * d;
-      if (!pointInPolygon(px, py, is.poly) && !isLand(game.world, px, py) && Math.sqrt(closestOnPolygon(px, py, is.poly).d2) >= 110) {
+      if (!pointInPolygon(px, py, is.poly) && !isLand(game.world, px, py) && Math.sqrt(closestOnPolygon(px, py, is.poly).d2) >= 34) { // (thirty metres off the beach — reach.ts)
         [x, y] = [px, py];
         break;
       }

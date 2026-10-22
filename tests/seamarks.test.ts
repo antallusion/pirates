@@ -58,10 +58,10 @@ function work(game: Game, s: PlayerSession, id: number): void {
   assert.equal(markBusy(game, s), null, 'and back');
 }
 
-test('the marks: six kinds, each with its time, a reach of a cable, a worth of two to five hundredths of a sea hour', () => {
+test('the marks: six kinds, each with its time, a reach of thirty metres from the hull, a worth of two to five hundredths of a sea hour', () => {
   assert.deepEqual([...MARK_KINDS].sort(), ['bones', 'buoy', 'drift', 'floe', 'lantern', 'wreck']);
   for (const k of MARK_KINDS) assert.ok(MARK_TIME[k] >= 2 && MARK_TIME[k] <= 4, k);
-  assert.ok(MARK_REACH >= 120 && MARK_REACH <= 200);
+  assert.equal(MARK_REACH, 30); // (owner, 2026-10-22: reach.ts)
   assert.equal(MARK_AGAIN_MS, 24 * 3_600_000);
   for (let L = 1; L <= 10; L++) {
     assert.equal(seaHourOf(L), seaHour(L), `the island's sea hour at ⚓${L}`);
@@ -69,7 +69,9 @@ test('the marks: six kinds, each with its time, a reach of a cable, a worth of t
     assert.equal(markWorth(L, 0.9999999), Math.round(seaHour(L) * MARK_SHARE[1]));
   }
   assert.deepEqual(MARK_SHARE, [0.02, 0.05]);
-  assert.ok(markInReach({ x: 0, y: 0, r: 40 }, 0, 190) && !markInReach({ x: 0, y: 0, r: 40 }, 0, 210));
+  // her hull's edge to the mark's: a 30 m sloop, beam 8, broadside on at 40 + 4 + 28 m in reach, at 40 + 4 + 33 not
+  const hull = (y: number) => ({ x: 0, y, heading: Math.PI / 2, length: 30, beam: 8 });
+  assert.ok(markInReach({ x: 0, y: 0, r: 40 }, hull(72)) && !markInReach({ x: 0, y: 0, r: 40 }, hull(77)));
 });
 
 test('driftwood: planks or timber for about its worth, then not again today; a day later it is hers again', () => {
@@ -195,9 +197,9 @@ test('the boats go only hove to, within reach, out of the fight; making way call
   assert.equal(markAgain(game, s.profile!, m.id), 0, 'not worked');
   // Far off: out of reach.
   s.ship!.state = { ...s.ship!.state, x: m.x + 2000, speed: 0 };
-  assert.equal(startMark(game, s, m.id), 'Come within a cable of it first.');
+  assert.equal(startMark(game, s, m.id), 'Come up to it first: within thirty metres.');
   // A full hold: the boats leave it and it stays hers to work.
-  s.ship!.state = { ...s.ship!.state, x: m.x, y: m.y + m.r + 90, speed: 0 };
+  s.ship!.state = { ...s.ship!.state, x: m.x, y: m.y + m.r + 20, heading: Math.PI / 2, speed: 0 };
   s.ship!.cargo.iron = 1e6;
   workMark(game, s, m);
   assert.match(toasts(s).at(-1)!.msg, /Your hold is full/);

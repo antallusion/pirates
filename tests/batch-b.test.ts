@@ -98,7 +98,7 @@ test('escort: she signs on by a convoy, the sea sends raiders at it, and she is 
   const cv = sailConvoy(game, 'gravewater')!;
   const lead = game.ships.get(cv.members[0])!;
   assert.equal(escortOffer(game, s), null, 'too far to hail');
-  beside(game, ship, lead, 600);
+  beside(game, ship, lead, 30); // (alongside one of its ships: thirty metres — reach.ts)
   const o = escortOffer(game, s)!;
   assert.ok(o && !o.blocked);
   assert.equal(o.pay, escortPay(cv.level));
@@ -135,7 +135,7 @@ test('raiding a convoy: the League marks her name, the escorts answer, her contr
   const { c, s, ship } = captain(game, 'Raider Rook', 'gravewater');
   const cv = sailConvoy(game, 'gravewater')!;
   const lead = game.ships.get(cv.members[0])!;
-  beside(game, ship, lead, 500);
+  beside(game, ship, lead, 30); // (alongside one of its ships: thirty metres — reach.ts)
   assert.equal(signEscort(game, s), null);
   const league0 = s.profile!.reputation.league ?? 0;
   lead.attackers.set(ship.id, game.now);

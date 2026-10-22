@@ -10,6 +10,7 @@
 // tamers of some ports who buy and sell them. Everything here is a function of its arguments: the server rolls the
 // dice on its own Rng, and the client, the tests and the balance tools read the same numbers.
 
+import { REACH_OBJ } from './reach.ts';
 import type { CaptainId } from './captains.ts';
 import { UNITS, isPremiumUnit } from './army.ts';
 import type { ArmyStack, UnitId } from './army.ts';
@@ -271,10 +272,11 @@ export const DRIFT_FIND = 0.75;
 /** Metres: where it is put (off her bow), seen from (a mark on the minimap and in the world), the card's reach. */
 export const DRIFT_AT: [number, number] = [1300, 2300];
 export const DRIFT_SEE = 3500;
-export const DRIFT_CARD_R = 520;
-/** (seaux 2026-10-11: 380 → 220 m — the boats went from where the drift was a speck; the card still shows at 520 m and
- *  its buttons sail her in, approach.ts) */
-export const DRIFT_REACH = 220;
+/** (owner, 2026-10-22: the card shows only for a drift on her screen, 520 → 180 m from her middle) */
+export const DRIFT_CARD_R = 180;
+/** The boats' reach: her hull's edge to the drift's (reach.ts REACH_OBJ — owner, 2026-10-22: 220 → 30 m); farther, the
+ *  card's buttons sail her in (approach.ts). */
+export const DRIFT_REACH = REACH_OBJ;
 
 // ------------------------------------------------------------------------------------------------ 35. the rescue
 

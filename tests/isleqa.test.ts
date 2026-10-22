@@ -9,6 +9,7 @@ import { TICK_RATE } from '../shared/src/constants.ts';
 import { campaignActive, campaignFoes } from '../server/src/game/campaign.ts';
 import { questEvent } from '../server/src/game/quests.ts';
 import { join, makeGame } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 const src = (f: string) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
 
@@ -89,8 +90,7 @@ test('her own town’s island is not offered for lease, nor leased (it was liste
   const isl = game.world.islands.filter((i) => i.region === port.region && !i.portId && !i.minor && i.radius < 400).sort((a, b) => Math.hypot(a.x - port.x, a.y - port.y) - Math.hypot(b.x - port.x, b.y - port.y))[0]!;
   const ship = s.ship!;
   ship.docked = null;
-  ship.state.x = isl.x + isl.radius + 120;
-  ship.state.y = isl.y;
+  assert.ok(offCoast(game, ship, isl), 'water off its coast'); // (her hull within its thirty metres — reach.ts)
   assert.equal(claimIsland(game, s, isl.id), null, 'claimed');
   assert.equal(ownIsland(game, s.accountId)?.island, isl.id);
   s.profile!.gold = 1e6;

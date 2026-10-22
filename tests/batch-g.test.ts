@@ -26,6 +26,7 @@ import { ownIsland } from '../server/src/game/estate.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import type { Port } from '../shared/src/world/worldgen.ts';
 import { join, makeGame, steps } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 import type { FakeConn } from './helpers.ts';
 
 function cap(game: Game, name: string): { c: FakeConn; s: PlayerSession } {
@@ -206,7 +207,7 @@ test('a new week brings new goals and keeps what is owed', () => {
 // ================================================================== 33. trade alongside at sea
 
 /** Two captains alongside, the table open. */
-function table(game: Game, gap = 200): { a: ReturnType<typeof cap>; b: ReturnType<typeof cap> } {
+function table(game: Game, gap = 20): { a: ReturnType<typeof cap>; b: ReturnType<typeof cap> } {
   const a = cap(game, 'Ada Trade'), b = cap(game, 'Ben Trade');
   atSea(game, a.s, 50_000, 50_000);
   atSea(game, b.s, 50_000 + gap, 50_000);
@@ -215,22 +216,22 @@ function table(game: Game, gap = 200): { a: ReturnType<typeof cap>; b: ReturnTyp
   return { a, b };
 }
 
-test('trade at sea within 300 m and no nearer need: sailing ships may trade, a ship beyond reach may not', () => {
-  assert.equal(TRADE_RANGE, 300);
+test('trade at sea within 30 m hull to hull (owner, 2026-10-22: reach.ts): sailing ships may trade, a ship beyond reach may not', () => {
+  assert.equal(TRADE_RANGE, 30);
   const { game } = makeGame();
   const a = cap(game, 'Ada Trade'), b = cap(game, 'Ben Trade');
   atSea(game, a.s, 50_000, 50_000);
-  atSea(game, b.s, 50_301, 50_000);
+  atSea(game, b.s, 50_120, 50_000);
   a.c.push({ t: 'barter', action: 'propose', name: 'Ben Trade' });
-  assert.match(errs(a.c), /Come within 300 m/);
-  b.s.ship!.state.x = 50_300;
+  assert.match(errs(a.c), /Come within 30 m/);
+  b.s.ship!.state.x = 50_020;
   b.s.ship!.state.speed = 6; // under way: no need to heave to
   a.c.push({ t: 'barter', action: 'propose', name: 'Ben Trade' });
   b.c.push({ t: 'barter', action: 'propose', name: 'Ada Trade' });
   const v = a.c.last('barter')!.view!;
   assert.ok(v.atSea);
-  assert.equal(v.dist, 300);
-  assert.equal(v.range, 300);
+  assert.ok((v.dist ?? 0) <= 30, `hull to hull: ${v.dist} m`);
+  assert.equal(v.range, 30);
 });
 
 test('trade: silver, goods and gear; both lock, both confirm the table they saw; it all changes hands at once', () => {
@@ -450,6 +451,7 @@ test('the guild’s shipyard: the admiral lays a project down at her island; mem
   assert.equal(mem.s.profile!.gold, gold - 500);
   // Lying off the island: from the hold, only what the project needs, never past its need.
   atSea(game, mem.s, isl.x + isl.radius + 60, isl.y);
+  assert.ok(offCoast(game, mem.s.ship!, isl), 'water off its coast'); // (her hull within its thirty metres — reach.ts)
   assert.match(gyardGive(game, mem.s, 'rum', 5, 0) ?? '', /does not need/);
   assert.equal(gyardGive(game, mem.s, 'timber', 80, 0), null);
   assert.equal(mem.s.ship!.cargo.timber, 20);

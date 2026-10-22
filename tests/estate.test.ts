@@ -26,6 +26,7 @@ import type { ShipEntity } from '../server/src/game/ship.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { join, makeGame, onHull } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 import { ISLE_OF_HALL } from '../shared/src/data/isletree.ts';
 import { reckonBase, yardOf } from '../server/src/game/base.ts';
 import { buildTown } from '../server/src/game/town.ts';
@@ -52,14 +53,7 @@ function captain(game: Game, name: string): { c: FakeConn; s: PlayerSession; shi
 /** Puts a ship at sea just off an island's shore. */
 function offShore(game: Game, ship: ShipEntity, is: Island): void {
   ship.docked = null;
-  for (let k = 0; k < 48; k++) {
-    const a = (k / 48) * Math.PI * 2;
-    const x = is.x + Math.sin(a) * (is.radius + 120), y = is.y - Math.cos(a) * (is.radius + 120);
-    if (isLand(game.world, x, y)) continue;
-    ship.state.x = x;
-    ship.state.y = y;
-    break;
-  }
+  assert.ok(offCoast(game, ship, is), 'water off its coast'); // (owner, 2026-10-22: her hull within thirty metres of its coast — reach.ts)
   ship.state.speed = 0;
   ship.region = is.region;
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);

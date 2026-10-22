@@ -11,6 +11,7 @@
 //    a fort that fire on pirates and on whoever fires on you, a lighthouse (sight, witness, toll), farms, mines,
 //    plantations, a sawmill, a distillery, a powder mill, a chapel, a chart house, barracks.
 
+import { REACH_MOOR, hullOf, shoreGap, shoreWithin } from '../../../shared/src/data/reach.ts';
 import { lackMore, lackRoom } from '../../../shared/src/data/buyfail.ts';
 import { estateProduce, ownedSlots, residentMul } from './estate.ts';
 import type { Resident } from './estate.ts';
@@ -47,8 +48,10 @@ import { chartCopy, dockDiscount, levelMul, smugglerRoom, workshopYield } from '
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
 export const GRACE_MS = 72 * HOUR;
-export const REACH = 800; // metres beyond the shore to deal with the island from your deck
-export const MOOR = 300;
+// Her hull within this of the island's coast to deal with it from her deck, and to heave to off it (owner, 2026-10-22:
+// 800 and 300 m from its rim → 60 m from her hull, reach.ts REACH_MOOR: hove to, she rides on the current a little).
+export const REACH = REACH_MOOR;
+export const MOOR = REACH_MOOR;
 
 export interface Owner {
   kind: 'player' | 'guild';
@@ -360,7 +363,7 @@ function islesAbout(game: Game, x: number, y: number): Island[] {
     cells = new Map();
     for (const isl of game.world.islands) {
       if (isl.portId || isl.minor) continue;
-      const r = isl.radius + REACH;
+      const r = isl.radius + REACH + 120;
       for (let cy = Math.floor((isl.y - r) / ISLE_CELL); cy <= Math.floor((isl.y + r) / ISLE_CELL); cy++) {
         for (let cx = Math.floor((isl.x - r) / ISLE_CELL); cx <= Math.floor((isl.x + r) / ISLE_CELL); cx++) {
           const k = cy * 100_000 + cx;
@@ -380,8 +383,8 @@ export function islandNear(game: Game, ship: ShipEntity): Island | null {
   let best: Island | null = null, bd = Infinity;
   for (const isl of islesAbout(game, ship.state.x, ship.state.y)) {
     if (isl.portId || isl.minor) continue; // a sea stack is no estate (docs/16 P3)
-    const d = dist(isl.x, isl.y, ship.state.x, ship.state.y) - isl.radius;
-    if (d < REACH && d < bd) {
+    const d = shoreGap(hullOf(ship), isl, isl.radius, REACH);
+    if (d <= REACH && d < bd) {
       bd = d;
       best = isl;
     }
@@ -390,7 +393,7 @@ export function islandNear(game: Game, ship: ShipEntity): Island | null {
 }
 
 function moored(game: Game, ship: ShipEntity, isl: Island): boolean {
-  return !ship.docked && ship.alive && Math.abs(ship.state.speed) < 1.2 && !ship.underFire(game.now) && dist(isl.x, isl.y, ship.state.x, ship.state.y) - isl.radius < MOOR;
+  return !ship.docked && ship.alive && Math.abs(ship.state.speed) < 1.2 && !ship.underFire(game.now) && shoreWithin(hullOf(ship), isl, isl.radius, MOOR);
 }
 
 /** Where a captain may deal with this island: at it, or at a harbour office in its region. */

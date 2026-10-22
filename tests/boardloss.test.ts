@@ -117,6 +117,9 @@ test('boarded by a much stronger ship and taken: in port, robbed, over, and not 
   c.push({ t: 'undock' });
   ship.state.x = foe.state.x + 20;
   ship.state.y = foe.state.y;
+  // (alongside: beam to beam, still — owner, 2026-10-22, reach.ts)
+  ship.state.heading = foe.state.heading = 0;
+  ship.state.speed = foe.state.speed = 0;
   ship.protectedUntil = 0;
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);
   assert.ok(canBoard(game, foe, ship), 'no grapples within the respite');

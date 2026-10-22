@@ -33,6 +33,7 @@ import { serverTable, serverText } from '../client/src/lang/server.ts';
 import { EN as P_EN, RU as P_RU } from '../client/src/lang/ui/premium.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { join, makeGame, onHull } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 import { SHIP_CLASSES, SHIP_CLASS_IDS } from '../shared/src/data/ships.ts';
 import { AUTO_SCROLL_PACKS, DOUBLOON_PACKS, STARS_PER_DOUBLOON } from '../shared/src/data/premium.ts';
 
@@ -51,14 +52,7 @@ function world(): { game: Game; db: Database } {
 
 function offShore(game: Game, ship: ShipEntity, is: Island): void {
   ship.docked = null;
-  for (let k = 0; k < 48; k++) {
-    const a = (k / 48) * Math.PI * 2;
-    const x = is.x + Math.sin(a) * (is.radius + 120), y = is.y - Math.cos(a) * (is.radius + 120);
-    if (isLand(game.world, x, y)) continue;
-    ship.state.x = x;
-    ship.state.y = y;
-    break;
-  }
+  assert.ok(offCoast(game, ship, is), 'water off its coast'); // (owner, 2026-10-22: her hull within thirty metres of its coast — reach.ts)
   ship.state.speed = 0;
   ship.region = is.region;
   ship.protectedUntil = 0;

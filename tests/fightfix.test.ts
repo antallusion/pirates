@@ -294,7 +294,7 @@ test('bug 4: a fight ashore over, its account still up — «Причалить�
   assert.ok(landFighting(game, s), 'the account is up');
   const ship = s.ship!;
   const port = game.nearestPort(ship.state.x, ship.state.y)!;
-  ship.state.x = port.x + 200;
+  ship.state.x = port.x + 20; // (the harbour's approach — dock.ts)
   ship.state.y = port.y;
   ship.state.speed = 0;
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);

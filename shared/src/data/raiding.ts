@@ -1,6 +1,8 @@
 // The pirate's and the privateer's trade (docs/12 P6): the Brethren of the Coast's ranks for a raider, the heat of
 // a sea's shipping lanes, the tavern's tips and the clerk's manifest, tribute from a merchant who has struck.
 
+import { REACH_OBJ } from './reach.ts';
+
 export type Tr = [string, string];
 
 /** Fame with the Brethren for each rank (index = rank 0..5). */
@@ -48,7 +50,7 @@ export const CONVOY_MAX = 4;
 /** A captain within this of a convoy's ship has seen it: its route goes on her chart. */
 export const CONVOY_SPOT_R = 4000;
 /** Close enough to a convoy's ship to hail the commodore and sign on as escort. */
-export const ESCORT_SIGN_R = 1200;
+export const ESCORT_SIGN_R = REACH_OBJ; // hull to hull with one of the convoy's ships (owner, 2026-10-22: 1200 → 30 m, reach.ts)
 /** An escort is paid if she is this near the convoy or its port when it comes in. */
 export const ESCORT_KEEP_R = 5000;
 /** What the League pays an escort on arrival (a convoy of a level), before the share of hulls brought in. */

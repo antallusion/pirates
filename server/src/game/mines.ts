@@ -5,6 +5,7 @@
 // unwatched ones by their waters (a mine's own dice for each day, never the sea's rng), and must be beaten ashore
 // before a flag goes up again. Half the lawless waters' mines start in the raiders' hands.
 
+import { REACH_SHORE, REACH_SLACK, hullOf, shoreWithin } from '../../../shared/src/data/reach.ts';
 import { FLAG_HOLD_SECS, FLAG_SECS, MINES, MINES_MAX, MINE_STOCK_DAYS, RAID_DAY, buildMines, mineDaily, raidersGarrison } from '../../../shared/src/data/mines.ts';
 import type { MineSite } from '../../../shared/src/data/mines.ts';
 import { weekMines } from '../../../shared/src/data/week.ts';
@@ -28,7 +29,7 @@ import { guardOfSite } from './advmap.ts';
 
 /** RAIDERS: the sea's raiders hold it. */
 const RAIDERS = -1;
-const LAND_RANGE = 260;
+const LAND_RANGE = REACH_SHORE + REACH_SLACK; // her hull to the coast (owner, 2026-10-22: 260 → 30 m, reach.ts)
 const KEY = 'h3:mines';
 
 interface MineState {
@@ -196,8 +197,7 @@ function tell(game: Game, account: number, subject: string, body: string): void 
 export function mineNear(game: Game, ship: ShipEntity): MineSite | null {
   for (const x of mines(game).sites) {
     const is = game.world.islands[x.islandId];
-    if (!is || dist(is.x, is.y, ship.state.x, ship.state.y) > is.radius + LAND_RANGE) continue;
-    if (Math.sqrt(closestOnPolygon(ship.state.x, ship.state.y, is.poly).d2) <= LAND_RANGE) return x;
+    if (is && shoreWithin(hullOf(ship), is, is.radius, LAND_RANGE)) return x;
   }
   return null;
 }
@@ -319,15 +319,12 @@ export function offIsland(game: Game, s: PlayerSession, islandId: number): void 
     const d = Math.hypot(is.poly[i] - is.x, is.poly[i + 1] - is.y);
     if (d > bd) [bx, by, bd] = [is.poly[i], is.poly[i + 1], d];
   }
-  // Out from the headland until the water is deep enough for her keel (still within the boats' reach).
-  let d = 120;
-  for (; d < 240; d += 20) {
-    const k = d / Math.max(1, bd);
-    if (depthAt(game.world, bx + (bx - is.x) * k, by + (by - is.y) * k) > ship.cls.draft + 1) break;
-  }
+  // Off the headland, her beam to it, within the boats' thirty metres (owner, 2026-10-22: reach.ts — the coasts' own
+  // shallows take no keel: the hull keeps off the coast itself).
+  const d = 26 + ship.stats.beam / 2;
   const k = d / Math.max(1, bd);
   if (ship.docked) game.undock(s);
-  ship.state = { ...ship.state, x: bx + (bx - is.x) * k, y: by + (by - is.y) * k, speed: 0, sail: 0 };
+  ship.state = { ...ship.state, x: bx + (bx - is.x) * k, y: by + (by - is.y) * k, heading: Math.atan2(-(by - is.y), -(bx - is.x)), speed: 0, sail: 0 };
   ship.input = { rudder: 0, sailTarget: 0 };
 }
 

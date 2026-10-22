@@ -15,6 +15,8 @@
 //
 // Nothing here draws on the sea's rng: what varies is hashed from the thing and the week.
 
+import { OBJ_R, REACH_OBJ, REACH_SLACK, hullOf as shipHull, hullsGap, inReach, BOARD_GAP } from '../../../shared/src/data/reach.ts';
+import { SKERRY_R } from '../../../shared/src/world/solids.ts';
 import { lackBerth } from '../../../shared/src/data/buyfail.ts';
 import { obeliskReveals } from './isles18.ts';
 import { ALTAR_POINTS, altarPrim, GUARDS, openWater, GUARD_RESPAWN_SEC, JOIN_RATIO, JOIN_SHARE, MILL_DAYS, MILL_GOODS, OBJS, STORE_DAYS, TOWER_R, WELL_MORALE, WELL_SANITY, altarXp, buildAdv, chestPay, guardArmy, guardPay, millLoad } from '../../../shared/src/data/advmap.ts';
@@ -35,7 +37,7 @@ import { depthAt, isLand } from '../../../shared/src/world/worldgen.ts';
 import { hashString } from '../../../shared/src/rng.ts';
 import { armyEdge } from './army.ts';
 import { approach } from './approach.ts';
-import { canBoard, startBoarding } from './boarding.ts';
+import { BOARD_ABEAM, BOARD_FAR, BOARD_SPEED, canBoard, startBoarding } from './boarding.ts';
 import { thisWeek, today, weekView } from './calendar.ts';
 import { officerBerths, reconcile } from './crew.ts';
 import { giveGoods } from './director.ts';
@@ -166,11 +168,20 @@ function save(game: Game): void {
   game.db.setKv(KEY, a.st);
 }
 
-/** Within reach of the boats for a visit; a guard's card from this far. */
-export const VISIT_R = 260;
-export const GUARD_CARD_R = 650;
-/** seaux (2026-10-11): a guard's men taken or let go alongside them, not from the card's 650 m (approach.ts sails her in). */
-export const GUARD_DEAL_R = 300;
+/** A thing's card shows within this of it (metres from her middle: on her screen), a guard's within GUARD_CARD_R; the boats
+ *  visit from her hull within REACH_OBJ of its skerry (owner, 2026-10-22: 260 m → 30 m from her hull, reach.ts). */
+export const VISIT_R = 220;
+export const GUARD_CARD_R = 260;
+/** seaux (2026-10-11): a guard's men taken or let go alongside them — her hull within REACH_OBJ of theirs (approach.ts
+ *  sails her in). */
+export const GUARD_DEAL_R = REACH_OBJ;
+/** Her hull within the boats' reach of a thing's skerry. */
+const visitReach = (ship: ShipEntity, o: { x: number; y: number }, slack = REACH_SLACK): boolean => inReach(shipHull(ship), o.x, o.y, SKERRY_R, REACH_OBJ + slack);
+/** Her hull within reach of a guard (its ship, or where it lies before its ship is in the water). */
+const guardReach = (game: Game, ship: ShipEntity, g: AdvGuard, slack = REACH_SLACK): boolean => {
+  const gs = guardShip(game, g.id);
+  return gs ? hullsGap(shipHull(ship), shipHull(gs)) <= GUARD_DEAL_R + slack : inReach(shipHull(ship), g.x, g.y, OBJ_R, GUARD_DEAL_R + slack);
+};
 /** Seen from this far (on the charts for good); a guard is put in the water this near a captain, taken out this far. */
 export const SEE_R = 2600;
 const MAT_R = 3400;
@@ -394,12 +405,15 @@ export function guardChoice(game: Game, s: PlayerSession, id: string, choice: st
   if (!guardUp(game, g)) return 'They are gone';
   if (dist(ship.state.x, ship.state.y, g.x, g.y) > GUARD_CARD_R) return 'Too far';
   if (ship.boarding) return 'Not now';
-  if (choice !== 'fight' && dist(ship.state.x, ship.state.y, g.x, g.y) > GUARD_DEAL_R) return approach(game, s, { x: g.x, y: g.y, reach: GUARD_DEAL_R }, 'Too far');
+  // (no offer of theirs: said at once, not sailed in for)
+  if (choice !== 'fight' && !guardOffer(game, s, g)) return 'They will not yield to you.';
+  if (choice !== 'fight' && !guardReach(game, ship, g)) return approach(game, s, { x: g.x, y: g.y, reach: GUARD_DEAL_R, r: OBJ_R, near: () => !!s.ship && guardReach(game, s.ship, g, -4) }, 'Too far');
   if (choice === 'fight') {
     const gs = guardShip(game, g.id) ?? raise(game, g);
     const why = canBoard(game, ship, gs);
     // seaux: out of the grapples' reach the helmsman takes her alongside and the boarding is given there (approach.ts)
-    if (why === 'Too far to throw grapples') return approach(game, s, { x: gs.state.x, y: gs.state.y, reach: 70, where: () => (gs.alive ? gs.state : null), near: () => canBoard(game, ship, gs) !== 'Too far to throw grapples' }, 'Come alongside first: within the grapples’ reach.');
+    // (owner, 2026-10-22: alongside only — the helmsman lays her beam to beam with the guard's ship, approach.ts)
+    if (why === BOARD_FAR || why === BOARD_ABEAM || why === BOARD_SPEED) return approach(game, s, { x: gs.state.x, y: gs.state.y, reach: BOARD_GAP, r: gs.stats.beam / 2, where: () => (gs.alive ? gs.state : null), near: () => canBoard(game, ship, gs) === null, alongside: gs }, 'Come alongside first: within the grapples’ reach.');
     if (why) return why;
     startBoarding(game, ship, gs, 'standard');
     return null;
@@ -536,14 +550,14 @@ function chestOf(s: PlayerSession, o: AdvObj): { silver: number; xp: number } {
 /** An altar's lesson for her, once its points are spent. */
 const altarFor = (s: PlayerSession, o: AdvObj): number => xpAt(s.profile!.level, xpLevel(s, o), altarXp(xpLevel(s, o)));
 
-const VISIT_FAR = 'Come within reach of the boats.';
+const VISIT_FAR = 'Come up to it first: within thirty metres.';
 
 /** Why a visit would not go through now (null: it would). */
 function visitWhy(game: Game, s: PlayerSession, o: AdvObj): string | null {
   const ship = s.ship;
   if (!ship || ship.docked) return 'Put to sea first.';
   if (ship.boarding) return 'Not while grappled.';
-  if (dist(ship.state.x, ship.state.y, o.x, o.y) > VISIT_R + 40) return VISIT_FAR;
+  if (!visitReach(ship, o)) return VISIT_FAR;
   if (o.guard) {
     const g = adv(game).guardById.get(o.guard);
     if (g && guardUp(game, g)) return 'A guard stands before it: beat them first.';
@@ -606,7 +620,7 @@ export function visit(game: Game, s: PlayerSession, id: string, choice?: string)
   const o = adv(game).objById.get(id);
   if (!o) return 'Nothing here';
   const why = visitWhy(game, s, o);
-  if (why === VISIT_FAR) return approach(game, s, { x: o.x, y: o.y, reach: VISIT_R + 40 }, why); // seaux: sail there first
+  if (why === VISIT_FAR) return approach(game, s, { x: o.x, y: o.y, reach: REACH_OBJ, r: SKERRY_R, near: () => !!s.ship && visitReach(s.ship, o, -4) }, why); // seaux: sail there first
   if (why) return why;
   const p = s.profile!, ship = s.ship!;
   const name = OBJS[o.kind].name[0];
@@ -925,7 +939,7 @@ export function adminObj(game: Game, s: PlayerSession, args: string[]): string {
   if (!o) return 'Nothing on the map.';
   const name = OBJS[o.kind].name[0];
   if (args.includes('go')) {
-    parkNear(game, s, o.x, o.y, 120, -Math.PI / 2);
+    parkNear(game, s, o.x, o.y, 62, -Math.PI / 2); // (her beam within the boats' thirty metres of its skerry — reach.ts)
     ship.state.heading = 0;
     seenOf(game, s).add(o.id);
     advOf(s.profile!).seen = [...seenOf(game, s)];

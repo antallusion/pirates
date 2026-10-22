@@ -174,17 +174,16 @@ test('the first time the bar shows something, a hint says what it is', () => {
   assert.match(main, /firstTips\.offer\('actions', true\)/);
 });
 
-test('«Атаковать» only for her own mark or a foe within her guns\' reach; the row pops up and sinks away (owner, 2026-10-19)', async () => {
+test('«Атаковать» only within her guns’ real reach of a ship on her screen (owner, 2026-10-22); the row pops up and sinks away', async () => {
   const { attackRelevant } = await import('../client/src/ui/actbar.ts');
-  // no target of hers, the frame's nearest foe out of reach: no button (it was lit with no target at all)
-  assert.equal(attackRelevant(false, 'far'), false);
-  assert.equal(attackRelevant(false, null), false);
-  // her own mark (a tap, the lock, the target key), however far; the frame's foe once within the guns' reach
-  assert.equal(attackRelevant(true, 'far'), true);
-  assert.equal(attackRelevant(false, 'in'), true);
+  // beyond her guns, or off her screen (or under the fog): no button — her mark however pinned is sailed to from its menu
+  assert.equal(attackRelevant(false, true), false);
+  assert.equal(attackRelevant(true, false), false);
+  assert.equal(attackRelevant(false, false), false);
+  assert.equal(attackRelevant(true, true), true);
   const { readFileSync } = await import('node:fs');
   const main = readFileSync('client/src/main.ts', 'utf8');
-  assert.ok(main.includes('attackable(targetId) && !roamLead && attackRelevant(targetPinned, markRange())'), 'the bar asks it');
+  assert.ok(main.includes('attackable(targetId) && !roamLead && attackRelevant(gunLeft <= 0, tgtSeen)'), 'the bar asks it');
   const hud = readFileSync('client/src/ui/seahud.ts', 'utf8'), css = readFileSync('client/seahud.css', 'utf8');
   assert.ok(hud.includes("' tc-pop'") && hud.includes("classList.add('tc-out')"), 'a new button pops up, an empty row sinks away');
   assert.ok(/@keyframes tc-pop/.test(css) && /@keyframes tc-out/.test(css) && /prefers-reduced-motion: reduce\) \{ #touch > \.tc-actrow/.test(css));

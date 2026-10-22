@@ -19,6 +19,7 @@
 // What is paid goes nowhere a captain can take it back from (not into her hold or purse): no buying a truce and
 // boarding the money back.
 
+import { hullOf, hullsGap } from '../../../shared/src/data/reach.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { REFUSED_SEC, TALK_COOLDOWN, TALK_R, TRUCE_SEC, TURN_AWAY_SEC, refuseChance, trucePrice } from '../../../shared/src/data/ceasefire.ts';
@@ -160,7 +161,7 @@ export function negotiate(game: Game, s: PlayerSession, ids: readonly number[], 
   for (const id of want) {
     const o = game.ships.get(id);
     if (!o || !attacking(game, o, ship)) return o && truceHolds(game, o, ship) ? `${o.name} is under a white flag to you already` : 'She is not firing on you';
-    if (Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y) > TALK_R) return 'She is too far off to hail';
+    if (hullsGap(hullOf(o), hullOf(ship)) > TALK_R) return 'She is too far off to hail';
     const no = noBargain(game, o, ship); // (g)
     if (no) return `${o.name}: ${no}`;
     if ((t.refused.get(o.id) ?? 0) > now) return `${o.name} refused you: she will not talk again so soon`; // (f)

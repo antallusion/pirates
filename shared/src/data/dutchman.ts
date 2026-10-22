@@ -5,10 +5,11 @@
 
 type Tr = [string, string];
 
+import { REACH_OBJ } from './reach.ts';
 export const WEEK_MS = 7 * 86_400_000;
 export const DAY_MS = 86_400_000;
 export const PAGES = 5;
-export const PAGE_R = 250;
+export const PAGE_R = REACH_OBJ; // her hull over the page's spot (owner, 2026-10-22: 250 → 30 m, reach.ts)
 export const SHARE_R = 3000;
 export const BATTLE_R = 1500;
 export const DUTCHMAN_TITLE = 'Dutchman’s Bane';

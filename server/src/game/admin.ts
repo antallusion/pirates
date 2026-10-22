@@ -341,8 +341,9 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
         if (port) {
           const is = game.world.islands[port.islandId];
           const d = Math.hypot(port.x - is.x, port.y - is.y) || 1;
-          x = port.x + ((port.x - is.x) / d) * 150;
-          y = port.y + ((port.y - is.y) / d) * 150;
+          // (in the harbour's approach, «Причалить» at hand — owner, 2026-10-22: 40 m of its anchorage, dock.ts)
+          x = port.x + ((port.x - is.x) / d) * 30;
+          y = port.y + ((port.y - is.y) / d) * 30;
           where = port.name;
         } else if (region) {
           [x, y] = openWater(game, REGIONS[region].center[0], REGIONS[region].center[1]);
@@ -1154,7 +1155,8 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       const role = (args[0] ?? 'pirate') as 'pirate';
       const cls = (args[1] ?? 'brig') as ShipClassId;
       if (!SHIP_CLASSES[cls]) return `Classes: ${Object.keys(SHIP_CLASSES).join(', ')}`;
-      const d = Math.max(20, Math.min(900, Number.isFinite(num(2, 140)) ? num(2, 140) : 140));
+      // (`grapple`: alongside, the grapples' few metres off her beam — reach.ts, owner 2026-10-22)
+      const d = args.includes('grapple') ? (ship.stats.beam + SHIP_CLASSES[cls].beam) / 2 + 5 : Math.max(20, Math.min(900, Number.isFinite(num(2, 140)) ? num(2, 140) : 140));
       const v = headingVec(ship.state.heading + Math.PI / 2);
       const o = game.spawnNpcShip(role, cls, role === 'pirate' ? 'free' : role === 'ghost' ? 'choir' : 'league', ship.state.x + v.x * d, ship.state.y + v.y * d, ship.state.heading);
       game.setNpcLevel(o, ship.shipLevel);

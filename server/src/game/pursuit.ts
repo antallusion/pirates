@@ -29,7 +29,8 @@
 import { IN_BATTLE_WHY, inBattle } from './inbattle.ts'; // owner, 2026-10-22
 import { campaignFoes } from './campaign.ts'; // owner, 2026-10-22: «Огонь» takes her quest's foe
 import { AIMED_SPREAD, AUTO_ARC_DEG, BOARD_RUN, CHASE_GIVE_UP, LAY_ARC_DEG, closeRange, leadPoint } from '../../../shared/src/data/gunnery.ts';
-import { ROAM_REACH } from '../../../shared/src/data/roamers.ts';
+import { roamInReach } from '../../../shared/src/data/roamers.ts';
+import { hullOf } from '../../../shared/src/data/reach.ts';
 import { AMMO, CHASER_CONE } from '../../../shared/src/data/ships.ts';
 import type { PursuitMode, PursuitStop } from '../../../shared/src/protocol.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
@@ -40,7 +41,7 @@ import { boardingRangeBetween, canBoard, captainsShip, crewRefuses, startBoardin
 import { NO_BOARD_HER, NO_BOARD_OWN, boardingOff } from './colours.ts';
 import { applyDamage, damageBlocked, effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
 import type { Game } from './Game.ts';
-import { engageHelm, helmTo, newBrain } from './npc.ts';
+import { ALONGSIDE_FROM, engageHelm, helmTo, newBrain } from './npc.ts';
 import { findPath, lineFree } from './nav.ts';
 import type { Path } from './nav.ts';
 import { hullWater, laneFoul } from './seaway.ts';
@@ -60,8 +61,9 @@ export const PURSUIT_SIGHT = 2600;
 export const RETARGET_R = 1600;
 /** Said when her crew will not board and the pursuit turns to the guns (docs/30). */
 export const GUNS_INSTEAD = 'The helmsman keeps off her side: the guns fight her instead.';
-/** The boarding run starts this near her mark. */
+/** The boarding run starts this near her mark, and ends this near (she comes alongside under her own canvas). */
 export const BOARD_RUN_FROM = 1200;
+export const BOARD_RUN_TO = 90;
 /** Auto-battle against the weak (docs/23 item 46): a mark this many levels below her own is settled in AUTO_WEAK_SEC. */
 export const AUTO_WEAK_GAP = 2;
 export const AUTO_WEAK_SEC = 3;
@@ -193,7 +195,7 @@ export function startRoamRun(game: Game, s: PlayerSession, id: number): string |
   const why = roamRunWhy(game, s, id);
   if (why) return why;
   const p = roamWhereId(game, id)!;
-  if (Math.hypot(p.x - ship.state.x, p.y - ship.state.y) <= ROAM_REACH) {
+  if (roamInReach(hullOf(ship), p)) {
     if (runs.has(ship)) stopPursuit(game, s, 'board');
     return attackRoam(game, s, id);
   }
@@ -222,7 +224,7 @@ function stepRoamRun(game: Game, s: PlayerSession, ship: ShipEntity, run: Pursui
   if (game.now - run.helmAt < PURSUIT_RESUME) return; // her own hand on the helm
   const p = roamWhereId(game, id)!;
   const d = Math.hypot(p.x - ship.state.x, p.y - ship.state.y);
-  if (d <= ROAM_REACH) {
+  if (roamInReach(hullOf(ship), p)) {
     stopPursuit(game, s, 'board');
     const e = attackRoam(game, s, id);
     if (e) game.refuse(s, e);
@@ -231,7 +233,7 @@ function stepRoamRun(game: Game, s: PlayerSession, ship: ShipEntity, run: Pursui
   // Full sail in with the boarding run's hands on the braces (as quick as a run for the grapples), easing the last
   // cable so she does not run past it.
   boardRun(game, s, ship, d < BOARD_RUN_FROM);
-  helmTo(game, ship, run.brain, p.x, p.y, d < ROAM_REACH * 2 ? 0.6 : 1);
+  helmTo(game, ship, run.brain, p.x, p.y, d < 160 ? 0.45 : 1);
 }
 
 /** A mark for the auto-battle: one of the sea's ships on the ladder, `AUTO_WEAK_GAP` levels and more below hers. */
@@ -358,18 +360,19 @@ export function stepPursuit(game: Game): void {
       engageHelm(game, ship, run.brain, t, d, run.closing ? 'close' : 'guns', run.closing ? 180 / Math.max(6, ship.stats.maxSpeed) : 1, hold);
       continue;
     }
-    // For the grapples she steers for where the mark will be when she gets there (the intercept at her own way).
-    engageHelm(game, ship, run.brain, t, d, 'close', 180 / Math.max(6, ship.stats.maxSpeed));
+    // For the grapples she steers for where the mark will be when she gets there (the intercept at her own way), and
+    // near her comes alongside (npc.ts alongsideHelm: her beam, her course, her way — owner, 2026-10-22: «абордаж вообще
+    // только когда поровняюсь с кораблем»).
+    engageHelm(game, ship, run.brain, t, d, 'board', 180 / Math.max(6, ship.stats.maxSpeed));
     if (run.mode === 'board') {
-      // Alongside she matches the mark's way herself (docs/23 item 54): no speed to judge on a phone.
       const reach = boardingRangeBetween(ship, t);
       // The boarding run (docs/23 item 36): every hand on the braces and the sweeps while she closes — twice her way,
-      // a quick helm, and the wind no matter.
-      boardRun(game, s, ship, d < BOARD_RUN_FROM && d > reach * 0.9);
+      // a quick helm, and the wind no matter — until she is coming alongside.
+      boardRun(game, s, ship, d < BOARD_RUN_FROM && d > BOARD_RUN_TO);
       // Her own crew will not go over the rail (no heart for it, too few hands): the grapples never fly, and alongside
       // her hull ground on the mark's until she sank, untold (docs/30: morale 5, two sloops lost so). Said once; the guns
       // fight her from their reach instead.
-      const unwilling = d < reach * 2 ? crewRefuses(ship) : null;
+      const unwilling = d < reach * 3 ? crewRefuses(ship) : null;
       if (unwilling) {
         game.sendTo(s, { t: 'toast', msg: unwilling, kind: 'bad' });
         game.sendTo(s, { t: 'toast', msg: GUNS_INSTEAD, kind: 'info' });
@@ -378,15 +381,12 @@ export function stepPursuit(game: Game): void {
         send(game, s, run);
         continue;
       }
-      if (run.grapple && d <= reach && canBoard(game, ship, t) === null) {
+      if (run.grapple && d <= reach * 1.5 && canBoard(game, ship, t) === null) {
         stopPursuit(game, s, 'board');
         startBoarding(game, ship, t, 'standard');
         continue;
       }
-      if (d < reach * 1.4) {
-        const want = t.state.speed + (d > reach ? BOARD_CLOSE : 0.5);
-        ship.input.sailTarget = ship.state.speed > want + 0.6 ? 0.25 : ship.state.speed < want - 0.6 ? 1 : 0.6;
-      } else ship.input.sailTarget = 1;
+      if (d >= ALONGSIDE_FROM) ship.input.sailTarget = 1;
     }
   }
 }

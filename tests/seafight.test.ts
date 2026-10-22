@@ -1,5 +1,6 @@
 // The quick sea fight and boarding a senior (docs/23 phases 3–4, owner 2026-10-06): two ships of a level sink each other
-// with broadsides in 30 s or less; «Атаковать» runs her in to the grapples in 10 s or less; a green captain's laid
+// with broadsides in 30 s or less; «Атаковать» runs her in alongside for the grapples (owner, 2026-10-22: only beam to
+// beam — reach.ts) in about 13 s from 700 m against a mark that fights back, a minute at the most; a green captain's laid
 // broadsides strike three balls in five and better; the helm is the captain's the moment she takes it and the
 // helmsman's 1.5 s after; a lost mark gives way to the nearest threat; no chase goes on for ever; a mark two levels down
 // is settled in about three seconds; the ladder no longer bars the grapples, and a senior or a slim chance opens the
@@ -47,15 +48,18 @@ test('two ships of a level sink each other with broadsides alone in the table’
   console.log(rows.join('\n'));
 });
 
-test('«Атаковать» to the grapples in 10 s or less from 700 m; a green captain’s laid broadsides strike 60% and more', () => {
+// (Owner, 2026-10-22: the grapples fly only alongside — 12 m of water, beam to beam, the way matched — not from 96 m on
+// any bearing. Was: median and p90 ≤ 10 s within 40 s. Measured after, 20 runs a level against a hunter that fights
+// her with its broadsides: ⚓1 12.7/18.4 s, ⚓3 12.2/21.2, ⚓5 13.6/20.8, ⚓8 13.8/21.1, the slowest 52 s, none missed.)
+test('«Атаковать» alongside for the grapples in about 13 s from 700 m, a minute at the most; a green captain’s laid broadsides strike 60% and more', () => {
   const game = duelSea();
   for (const L of LEVELS) {
     const t: number[] = [];
     // Ten runs (with six the «90th percentile» was only the slowest one: a mark fleeing dead before the wind).
-    for (let k = 0; k < 10; k++) t.push(captainRun(game, LEVEL_HULL[L], L, 700 + k, 'board', 40).sec);
+    for (let k = 0; k < 10; k++) t.push(captainRun(game, LEVEL_HULL[L], L, 700 + k, 'board', 60).sec);
     assert.ok(t.every((x) => x > 0), `⚓${L}: always alongside (${t.join(' ')})`);
     const { med, p90 } = pct(t);
-    assert.ok(med <= 10 && p90 <= 10, `⚓${L}: to the grapples median ${med} s, p90 ${p90} s`);
+    assert.ok(med <= 16 && p90 <= 45, `⚓${L}: to the grapples median ${med} s, p90 ${p90} s`);
     // (Six fights: in the close fight of 2026-10-07 three were over in 16 balls.)
     let balls = 0, hits = 0;
     for (let k = 0; k < 6; k++) {
@@ -68,11 +72,11 @@ test('«Атаковать» to the grapples in 10 s or less from 700 m; a green
 });
 
 /** A captain on the open sea with a bot of her level `d` metres off. */
-function pair(level: number, foeLevel = level, d = 600): { game: Game; s: ReturnType<typeof seaCaptain>; me: ShipEntity; foe: ShipEntity; c: FakeConn } {
+function pair(level: number, foeLevel = level, d = 600, fh = Math.PI / 2): { game: Game; s: ReturnType<typeof seaCaptain>; me: ShipEntity; foe: ShipEntity; c: FakeConn } {
   const game = duelSea();
   const at = openWater(game, 3);
   const s = seaCaptain(game, LEVEL_HULL[level] ?? 'brig', level, at.x, at.y, 0);
-  const foe = putSide(game, { cls: LEVEL_HULL[foeLevel] ?? 'brig', level: foeLevel, craft: 'bot' }, at.x + d, at.y, Math.PI / 2).ship;
+  const foe = putSide(game, { cls: LEVEL_HULL[foeLevel] ?? 'brig', level: foeLevel, craft: 'bot' }, at.x + d, at.y, fh).ship;
   return { game, s, me: s.ship!, foe, c: s.conn as unknown as FakeConn };
 }
 
@@ -160,7 +164,7 @@ test('a bot strikes her colours sooner: below three tenths of her men', () => {
 });
 
 test('boarding a senior: allowed, the window first («Рискнуть» boards, nothing without it); an easy prize at once', () => {
-  const { game, me, foe, c, s } = pair(1, 3, 40);
+  const { game, me, foe, c, s } = pair(1, 3, 20, 0); // (alongside: beam to beam — owner, 2026-10-22)
   s.profile!.level = 1; // a captain of her sloop's level: her lesson goes by her level (docs/26)
   foe.state.speed = me.state.speed = 0;
   assert.equal(canBoard(game, me, foe), null, 'the ladder no longer bars the grapples');
@@ -176,7 +180,7 @@ test('boarding a senior: allowed, the window first («Рискнуть» boards,
   c.push({ t: 'board', target: foe.id, aggression: 'standard', risk: true });
   assert.ok(me.boarding, '«Рискнуть»: the grapples fly');
   // Her equal, beaten to a third of her men: no window, the grapples at once.
-  const p = pair(3, 3, 40);
+  const p = pair(3, 3, 22, 0);
   p.foe.state.speed = p.me.state.speed = 0;
   p.foe.crew = Math.ceil(p.foe.stats.crewMax * 0.25);
   p.c.inbox.length = 0;

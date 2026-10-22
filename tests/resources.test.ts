@@ -12,8 +12,10 @@ function parkOffIsland(game: Game, ship: ShipEntity, islandId: number): void {
   const is = game.world.islands[islandId];
   const px = is.poly[0], py = is.poly[1];
   const dx = px - is.x, dy = py - is.y, d = Math.hypot(dx, dy);
-  ship.state.x = px + (dx / d) * 120;
-  ship.state.y = py + (dy / d) * 120;
+  // (her beam to the coast, her hull within the boats' thirty metres — owner, 2026-10-22: reach.ts)
+  ship.state.x = px + (dx / d) * 28;
+  ship.state.y = py + (dy / d) * 28;
+  ship.state.heading = Math.atan2(-dy / d, -dx / d);
   ship.state.speed = 0;
   ship.input = { rudder: 0, sailTarget: 0 };
   ship.protectedUntil = 0;

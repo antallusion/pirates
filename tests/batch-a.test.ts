@@ -200,7 +200,7 @@ function foe(game: Game, ship: ShipEntity, role: 'pirate' | 'patrol' | 'merchant
 test('a warship strikes her colours only battered and outgunned by a captain on her; never the named', () => {
   const { game } = makeGame();
   const { ship } = atSea(game, 'Terms');
-  const whole = foe(game, ship, 'pirate', 200, 1);
+  const whole = foe(game, ship, 'pirate', 22, 1);
   assert.equal(wouldStrike(game, whole.npc, ship), false, 'a whole ship fights on');
   const beaten = foe(game, ship, 'pirate', 250, 0.18);
   assert.equal(wouldStrike(game, beaten.npc, ship), true, 'battered and outgunned');
@@ -239,15 +239,15 @@ test('the captain she strikes to gets the card: the two choices; taken only alon
   assert.equal(offer!.cargo, 6);
   assert.ok(offer!.outcome && offer!.outcome.release.silver > 0 && offer!.outcome.sink.silver === 120, 'the numbers of the two choices');
   assert.equal(offer!.range, SURRENDER_RANGE);
-  // Too far: she waits for you to come alongside.
+  // Too far: the helmsman takes her alongside first (owner, 2026-10-22: hull to hull, thirty metres — reach.ts).
   c.push({ t: 'surrender', id: npc.id, fate: 'release' });
-  assert.match(c.last('toast')!.msg, /Come within 400 m/);
+  assert.match(c.last('toast')!.msg, /Course set|Sail up to it/);
   assert.ok(npc.surrendered);
   // The old terms are gone (owner, 2026-10-18).
   c.push({ t: 'surrender', id: npc.id, fate: 'ransom' as never });
   assert.match(c.last('toast')!.msg, /Two choices only/);
   // Alongside: her crew and a little of her purse; she is gone at once; the card goes.
-  npc.state.x = ship.state.x + 250;
+  npc.state.x = ship.state.x + 25;
   npc.state.y = ship.state.y;
   game.grid.upsert(npc.id, npc.state.x, npc.state.y);
   const gold = s.profile!.gold;
@@ -262,7 +262,7 @@ test('take all and sink her: her hold in yours (nothing lost to a fight that nev
   const { game } = makeGame();
   const { c, ship } = atSea(game, 'Plunder');
   const s = [...game.sessions].find((x) => x.name === 'Plunder')!;
-  const m = foe(game, ship, 'merchant', 200, 0.3);
+  const m = foe(game, ship, 'merchant', 22, 0.3);
   m.npc.cargo = { rum: 10, sugar: 4 };
   struck(game, m.npc, m.brain, ship);
   c.push({ t: 'surrender', id: m.npc.id, fate: 'sink' });
@@ -325,7 +325,7 @@ test('a grey ship far below her does not count toward a streak; the streak swell
   assert.equal(streakCounts(game, ship, v), false, 'grey');
   s.profile!.level = 1;
   s.profile!.streak = 4;
-  const m = foe(game, ship, 'merchant', 200, 0.3);
+  const m = foe(game, ship, 'merchant', 22, 0.3);
   m.npc.purse = 1000;
   struck(game, m.npc, m.brain, ship);
   let purse = 0;
@@ -340,7 +340,7 @@ test('a trophy keeps her name and her story, and goes to a berth at the next por
   const { game } = makeGame();
   const { c, ship } = atSea(game, 'Collector');
   const s = [...game.sessions].find((x) => x.name === 'Collector')!;
-  const { npc, brain } = foe(game, ship, 'pirate', 200, 0.15);
+  const { npc, brain } = foe(game, ship, 'pirate', 22, 0.15);
   const name = npc.name, captain = npc.captainName;
   struck(game, npc, brain, ship);
   // (a ship of the sea is no trophy by the card any more, owner 2026-10-18: the berth's rules stand for a prize put aboard)
@@ -375,7 +375,7 @@ test('a trophy with every berth taken goes to the prize court after all; the sto
   const { game } = makeGame();
   const { ship } = atSea(game, 'Full');
   const s = [...game.sessions].find((x) => x.name === 'Full')!;
-  const { npc, brain } = foe(game, ship, 'pirate', 200, 0.15);
+  const { npc, brain } = foe(game, ship, 'pirate', 22, 0.15);
   struck(game, npc, brain, ship);
   assert.equal(takePrize(game, s, npc, 'struck'), null);
   assert.ok(npc.trophy);

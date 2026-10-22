@@ -10,6 +10,8 @@ import { inDuel } from './pvp.ts';
 import { NO_BOARD_HER, NO_BOARD_OWN, boardingOff, markPvp } from './colours.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { clamp, dist } from '../../../shared/src/math.ts';
+import { BOARD_ARC_DEG, BOARD_ARC_WIDE_DEG, BOARD_GAP, BOARD_REL_SPEED, alongsideWhy, hullOf } from '../../../shared/src/data/reach.ts';
+import { GRAPPLE_REACH } from '../../../shared/src/data/gunnery.ts';
 import type { Aggression, BoardFightView, BoardingResult, BoardSideView } from '../../../shared/src/protocol.ts';
 import { cargoValue, cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { AmmoStock, Cargo } from '../../../shared/src/sim/shipstats.ts';
@@ -50,13 +52,43 @@ const ROUND_KILL = 0.17;
 const MOMENTUM = { win: 35, even: 15, lose: 5 } as const;
 /** Captain's moves that take the round whatever the other side chose. */
 const TAKES_ROUND = new Set(['point_blank', 'smoke_and_knives', 'turn_the_flank']);
-/** The speed between the hulls the grapples still hold at (knots). */
-export const BOARD_REL_SPEED = 8;
+/** The speed between the hulls the grapples still hold at (knots): reach.ts's, the same for every captain. */
+export { BOARD_REL_SPEED } from '../../../shared/src/data/reach.ts';
 
+/** Said when the grapples cannot fly: the hulls too far apart, not side by side, their way not matched. */
+export const BOARD_FAR = 'Too far to throw grapples';
+export const BOARD_ABEAM = 'Come alongside her: side by side, not astern or bow on.';
+export const BOARD_SPEED = 'Match her speed before boarding';
+
+/** The grapples' reach as a share of the plain one (BOARD_GAP): the talents and the gear on `boardingRange`. */
+export function boardGapMul(a: ShipEntity): number {
+  const base = (34 + a.stats.length * 0.5) * GRAPPLE_REACH;
+  return Math.max(1, Math.min(2.5, a.stats.boardingRange / base));
+}
+
+/** The reach of the grapples centre to centre at the best (side by side, the gap at its widest): the coarse first test
+ *  (the client's button, the pursuit's run in). The true one is alongsideWhy's. */
 export function boardingRangeBetween(a: ShipEntity, b: ShipEntity): number {
-  // Bow and Stern: the reach runs the length of both hulls, not just the beams.
-  const span = a.hasFlag('bow_and_stern') ? Math.max((a.stats.beam + b.stats.beam) / 2, (a.stats.length + b.stats.length) * 0.45) : (a.stats.beam + b.stats.beam) / 2;
-  return a.stats.boardingRange + span;
+  return (a.stats.beam + b.stats.beam) / 2 + BOARD_GAP * boardGapMul(a) + Math.max(a.stats.length, b.stats.length) * 0.5 * (a.hasFlag('bow_and_stern') ? 1 : 0.6);
+}
+
+/** Why the grapples cannot fly from `a` to `b` by where they lie (reach.ts: alongside, the hulls within BOARD_GAP, each
+ *  on the other's beam, their way matched), or null. The same for every captain, the sea's own too. */
+export function boardGeomWhy(game: Game, a: ShipEntity, b: ShipEntity): string | null {
+  const anywhere = a.hasFlag('boarding_anywhere');
+  // Chain and Grapple: tangled rigging is half-way to a grapple already.
+  const tangled = a.hasFlag('chain_and_grapple') && b.hasEffect('tangled');
+  // Kraken's Embrace: the deep holds her still for the grapples.
+  const held = b.effects.some((e) => e.id === 'kraken_hold' && e.source === a.id) || tangled;
+  const rammed = a.ramTarget === b.id && a.ramUntil > game.now; // Hull to Hull: the ram is the grapple
+  const why = alongsideWhy(hullOf(a), a.state.speed, hullOf(b), b.state.speed, {
+    gapMul: boardGapMul(a) * (tangled ? 1.5 : 1),
+    arcDeg: rammed ? 90 : anywhere || a.hasFlag('bow_and_stern') ? BOARD_ARC_WIDE_DEG : BOARD_ARC_DEG,
+    anySpeed: anywhere || held || rammed || b.surrendered || a.tether?.target === b.id,
+    // (a captain's ship matches the mark's way herself as the grapples fly, docs/23 item 54: half again the lines' hold)
+    relMax: BOARD_REL_SPEED * (1 + tx(a.stats, 'matchSpeed')) * (a.isPlayer ? 1.5 : 1),
+  });
+  return why === 'far' ? BOARD_FAR : why === 'abeam' ? BOARD_ABEAM : why === 'speed' ? BOARD_SPEED : null;
 }
 
 export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | null {
@@ -82,21 +114,10 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   if (blocked === 'friendly') return 'That ship sails with you';
   // The ladder (canon D12) no longer bars the grapples (docs/23 item 48): a junior may board a senior — the gap still
   // weighs on her boarders in the battle, and a captain is shown her honest chance first (boardodds.ts).
-  const anywhere = a.hasFlag('boarding_anywhere');
-  const d = dist(a.state.x, a.state.y, b.state.x, b.state.y);
-  // Chain and Grapple: tangled rigging is half-way to a grapple already.
-  const tangled = a.hasFlag('chain_and_grapple') && b.hasEffect('tangled');
-  if (d > boardingRangeBetween(a, b) * (tangled ? 1.5 : 1)) return 'Too far to throw grapples';
-  // Kraken's Embrace: the deep holds her still for the grapples.
-  const held = b.effects.some((e) => e.id === 'kraken_hold' && e.source === a.id) || tangled;
-  // Boarding at once (docs/17 H1): any ship within the grapples' reach, whole or wrecked — the guns only thin her
-  // stacks before the battle. Only a ship tearing past faster than the lines can hold slips them.
-  // A captain's ship matches the mark's way herself as the grapples fly (docs/23 item 54): no speed to judge on a phone.
-  if (!anywhere && !held && !a.isPlayer) {
-    const relSpeed = Math.abs(a.state.speed - b.state.speed);
-    const rammed = a.ramTarget === b.id && a.ramUntil > game.now; // Hull to Hull
-    if (relSpeed > BOARD_REL_SPEED * (1 + tx(a.stats, 'matchSpeed')) && !b.surrendered && a.tether?.target !== b.id && !rammed) return 'Match her speed before boarding';
-  }
+  // Alongside only (owner, 2026-10-22: «абордаж вообще только когда поровняюсь с кораблем должен быть … у всех»):
+  // the hulls within the grapples' few metres, side by side, their way matched (reach.ts).
+  const geom = boardGeomWhy(game, a, b);
+  if (geom) return geom;
   return crewRefuses(a);
 }
 

@@ -46,7 +46,7 @@ function place(game: Game, s: PlayerSession, x: number, y: number): void {
 }
 
 /** Off an island's shore, `off` metres out along the line from her middle through one of her coast's points. */
-function parkOff(game: Game, s: PlayerSession, isId: number, off = 110, k = 0): void {
+function parkOff(game: Game, s: PlayerSession, isId: number, off = 26, k = 0): void { // (the boats' thirty metres of her hull — reach.ts)
   const is = game.world.islands[isId];
   const px = is.poly[k * 2], py = is.poly[k * 2 + 1];
   const dx = px - is.x, dy = py - is.y, l = Math.hypot(dx, dy);
@@ -168,7 +168,7 @@ test('a buried chest is listed with its map; its author sells copies on a board 
   const { game } = makeGame();
   const { c, s } = captain(game, 'Riddler Rue');
   const is = game.world.islands.find((i) => !i.portId && !i.minor && i.radius > 200 && REGIONS[i.region].safety === 'safe')!;
-  parkOff(game, s, is.id, 150);
+  parkOff(game, s, is.id);
   c.push({ t: 'chest', silver: 800, riddle: 'Where the gulls go quiet at noon', good: null, qty: 0 });
   const caches = myCaches(game, s);
   assert.equal(caches.length, 1);
@@ -197,19 +197,19 @@ test('a buried chest is listed with its map; its author sells copies on a board 
   assert.ok(b.c.all('toast').some((t) => /Only the author/.test(t.msg)));
 });
 
-test('a map sold alongside: the offer, the answer, the silver; not from beyond a kilometre', () => {
+test('a map sold alongside: the offer, the answer, the silver; not from beyond thirty metres of the hulls', () => {
   const { game } = makeGame();
   const a = captain(game, 'Seller Sal');
   const b = captain(game, 'Taker Tam');
   const is = game.world.islands.find((i) => !i.portId && !i.minor && i.radius > 200 && REGIONS[i.region].safety === 'safe')!;
-  parkOff(game, a.s, is.id, 150);
+  parkOff(game, a.s, is.id);
   a.c.push({ t: 'chest', silver: 500, riddle: 'Under the one-eyed rock', good: null, qty: 0 });
   const map = a.s.profile!.explore.maps.find((m) => m.kind === 'player')!;
   place(game, b.s, a.s.ship!.state.x + 3000, a.s.ship!.state.y);
   a.s.msgCount = 0;
   a.c.push({ t: 'mapsell', map: map.id, to: b.s.ship!.id, price: 700 });
-  assert.ok(a.c.all('toast').some((t) => /within a kilometre/.test(t.msg)), 'too far');
-  place(game, b.s, a.s.ship!.state.x + 400, a.s.ship!.state.y);
+  assert.ok(a.c.all('toast').some((t) => /Come alongside her first/.test(t.msg)), 'too far');
+  place(game, b.s, a.s.ship!.state.x + 22, a.s.ship!.state.y);
   a.c.push({ t: 'mapsell', map: map.id, to: b.s.ship!.id, price: 700 });
   const offer = b.c.last('mapoffer')?.offer;
   assert.ok(offer && offer.price === 700 && offer.chest && offer.riddle === 'Under the one-eyed rock');
@@ -235,7 +235,7 @@ test('lighthouses: the Crown keeps its own lit, a keeper elsewhere lights his fo
   let t = game.now;
   while (nightFactor(t) < 0.8) t += 30;
   game.now = t;
-  parkOff(game, s, wild.id, 600);
+  parkOff(game, s, wild.id);
   assert.equal(keeperNear(game, s)?.id, wild.id);
   steps(game, 25);
   assert.equal(s.landable?.action, 'keeper', 'the land key hails the keeper');
@@ -269,7 +269,7 @@ test('a lookout on a headland: climbed first, it charts the islands, reefs and w
   const is = game.world.islands[id];
   // Park off the headland itself.
   const dx = lx - is.x, dy = ly - is.y, d = Math.hypot(dx, dy);
-  place(game, s, lx + (dx / d) * 150, ly + (dy / d) * 150);
+  place(game, s, lx + (dx / d) * 26, ly + (dy / d) * 26);
   steps(game, 25);
   assert.equal(findLandable(game, s)?.feature, 'lookout');
   const before = s.discovered.size;
@@ -333,7 +333,7 @@ test('a bared bank strikes like land; a landing party combs it once a rise; the 
   assert.ok(Math.hypot(ship.state.x - b.x, ship.state.y - b.y) > b.r * 0.5, 'put back off it');
   // Off its edge: the land key rows for it.
   const px = b.poly[0], py = b.poly[1], dx = px - b.x, dy = py - b.y, d = Math.hypot(dx, dy);
-  place(game, s, px + (dx / d) * 120, py + (dy / d) * 120);
+  place(game, s, px + (dx / d) * 26, py + (dy / d) * 26);
   steps(game, 25);
   assert.ok(s.landable && /bank/.test(s.landable.feature), 'the HUD offers the bank');
   const gold = s.profile!.gold, hold = JSON.stringify(ship.cargo);

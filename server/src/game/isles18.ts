@@ -4,6 +4,7 @@
 // the sandbars are among them), and the supply routes from a claimed lair island to one's own island, delivered at the
 // first dawn of every week of the sea's calendar.
 
+import { REACH_SHORE, REACH_SLACK, gapTo, hullOf } from '../../../shared/src/data/reach.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -202,7 +203,7 @@ export function turtleHere(game: Game, s: PlayerSession): TurtleDef | null {
   for (const d of turtles(game.world)) {
     if (!turtleUpNow(game, d)) continue;
     const p = turtlePos(d, game.now);
-    if (dist(p.x, p.y, ship.state.x, ship.state.y) > d.r + 260) continue;
+    if (gapTo(hullOf(ship), p.x, p.y, d.r) > REACH_SHORE + REACH_SLACK) continue; // her hull at its shell (owner, 2026-10-22: 260 → 30 m)
     if (combed(s.profile!)[d.id] === turtleRise(d, game.now)) continue;
     return d;
   }
@@ -437,7 +438,7 @@ export function isle18Admin(game: Game, s: PlayerSession, cmd: string, args: str
   if (ship.docked) return 'Put to sea first.';
   const x = ship.state.x, y = ship.state.y;
   const land = game.world.islands.filter((is) => !is.portId && !is.raft && !(is.minor && is.isle !== 'ridge'));
-  const go = (is: Island, off = 140) => {
+  const go = (is: Island, off = 20) => { // (her hull within the boats' thirty metres of its coast — reach.ts)
     parkOff(game, s, is.x, is.y, is.poly, is.radius, off);
     game.pushSelf(s, true);
   };
@@ -454,13 +455,13 @@ export function isle18Admin(game: Game, s: PlayerSession, cmd: string, args: str
         if (!ISLE_TYPES.includes(t)) return `Kinds: ${ISLE_TYPES.join(', ')}.`;
         const is = nearest(land.filter((i) => !i.minor && !i.hidden && isleType(i) === t && i.radius > 120), x, y);
         if (!is) return 'No island.';
-        go(is, 160);
+        go(is, 20);
         return tell(is);
       }
       if (sub === 'atoll' || sub === 'ridge' || sub === 'small') {
         const is = nearest(land.filter((i) => i.isle === sub && !i.minor && !i.hidden), x, y);
         if (!is) return 'No island.';
-        go(is, 160);
+        go(is, 20);
         return tell(is);
       }
       if (sub === 'hidden') {
@@ -474,7 +475,7 @@ export function isle18Admin(game: Game, s: PlayerSession, cmd: string, args: str
         const want = args[1] === 'deadly' ? 3 : 2;
         const is = nearest(land.filter((i) => !i.minor && !i.hidden && i.radius > 150 && isleLevel(game.world, i) - ship.shipLevel >= want), x, y);
         if (!is) return 'No island that far above your ship.';
-        go(is, 120);
+        go(is, 20);
         return tell(is);
       }
       return 'Usage: /isle level|type kind|atoll|ridge|small|hidden [reveal]|danger [deadly]';
@@ -498,7 +499,7 @@ export function isle18Admin(game: Game, s: PlayerSession, cmd: string, args: str
       if (how === 'go') {
         st(game).forced.set(t.d.id, true);
         delete combed(s.profile!)[t.d.id];
-        parkOff(game, s, t.x, t.y, null, TURTLE_R, 150);
+        parkOff(game, s, t.x, t.y, null, TURTLE_R, 20);
         game.pushSelf(s, true);
       }
       sendTurtles(game, s, true);
@@ -511,7 +512,7 @@ export function isle18Admin(game: Game, s: PlayerSession, cmd: string, args: str
       if (!b) return 'No sandbars.';
       forceBank(game, b.id, true);
       if (s.profile!.isles) delete s.profile!.isles.tides[b.id];
-      parkOff(game, s, b.x, b.y, b.poly, b.r, 140);
+      parkOff(game, s, b.x, b.y, b.poly, b.r, 20);
       sendIsles(game, s, true);
       game.pushSelf(s, true);
       return `A sandbar is bared before you: ${TIDAL_NAMES[b.name][0]}.`;

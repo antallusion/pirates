@@ -2,6 +2,7 @@
 // divers, wake trails, soundings, weather forecasts, the gold trail, and the edge of the map.
 // The base treasure system lives here; Phase 8 adds multi-part maps, riddles and map theft on top.
 
+import { LANDING_R, OBJ_R, REACH_OBJ, REACH_SLACK, gapTo, hullOf, inReach } from '../../../shared/src/data/reach.ts';
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { mapReveals } from './isles18.ts';
@@ -24,7 +25,11 @@ import type { ShipEntity } from './ship.ts';
 import { maybeArtifact } from './hero.ts';
 
 export const MAX_MAPS = 6;
-export const DIG_RANGE = 250;
+/** The true spot is dug from her hull within REACH_OBJ of it (a spot of LANDING_R on the water) — owner, 2026-10-22: 250 m
+ *  from her middle → 30 m from her hull (reach.ts). */
+export const DIG_RANGE = REACH_OBJ;
+/** Metres from her hull to the edge of a map's true spot. */
+export const digGap = (ship: ShipEntity, m: { sx: number; sy: number }): number => gapTo(hullOf(ship), m.sx, m.sy, LANDING_R);
 const BASE_RADIUS = [0, 900, 1400, 2000];
 const TIER_NAMES = ['', 'Stained', 'Captain\'s', 'Legendary'];
 
@@ -188,7 +193,7 @@ export function mapHere(game: Game, s: PlayerSession): TreasureMap | null {
   const ship = s.ship!;
   for (const m of s.profile!.explore.maps) {
     const c = mapReach(game, s, m);
-    if (c && dist(c.x, c.y, ship.state.x, ship.state.y) <= c.r + DIG_RANGE) return m;
+    if (c && dist(c.x, c.y, ship.state.x, ship.state.y) <= c.r + ship.stats.length / 2 + DIG_RANGE) return m;
   }
   return null;
 }
@@ -214,12 +219,13 @@ export function resolveDig(game: Game, s: PlayerSession, mapId: string, share: n
   const ship = s.ship!;
   const m = p.explore.maps.find((x) => x.id === mapId);
   if (!m) return;
-  const d = dist(m.sx, m.sy, ship.state.x, ship.state.y);
-  if (d <= DIG_RANGE && digOutcome(game, s, m, share)) return; // shared chests, forgeries, curses, the legend
-  if (d > DIG_RANGE) {
+  const d = digGap(ship, m);
+  if (d <= DIG_RANGE + REACH_SLACK && digOutcome(game, s, m, share)) return; // shared chests, forgeries, curses, the legend
+  if (d > DIG_RANGE + REACH_SLACK) {
     const bearing = Math.atan2(m.sx - ship.state.x, -(m.sy - ship.state.y)) / DEG;
     const dir = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'][Math.round(((bearing + 360) % 360) / 45) % 8];
-    game.toastShip(ship, `Nothing but sand. The landmarks on the map point further ${dir}.`, 'info');
+    // (the spot is a few boat lengths now, not a cable: so near, the landmarks say so)
+    game.toastShip(ship, d < 200 ? `Nothing but sand — the landmarks are close: a little further ${dir}.` : `Nothing but sand. The landmarks on the map point further ${dir}.`, 'info');
     return;
   }
   p.explore.maps = p.explore.maps.filter((x) => x !== m);
@@ -335,7 +341,9 @@ export function diveDepth(ship: ShipEntity): number {
 }
 
 export function wreckHere(game: Game, ship: ShipEntity): SunkenWreck | null {
-  for (const w of game.wrecks) if (dist(w.x, w.y, ship.state.x, ship.state.y) < 150) return w;
+  // (owner, 2026-10-22: over the wreck — her hull within REACH_OBJ of it, not 150 m from her middle; reach.ts)
+  const h = hullOf(ship);
+  for (const w of game.wrecks) if (Math.abs(w.x - h.x) < 200 && Math.abs(w.y - h.y) < 200 && inReach(h, w.x, w.y, OBJ_R, REACH_OBJ + REACH_SLACK)) return w;
   return null;
 }
 

@@ -181,7 +181,7 @@ test('barter at sea: within reach, the boats take time, and parting calls it off
   B.ship!.cargo = {};
   a.push({ t: 'barter', action: 'propose', name: 'Bram Swell' });
   assert.match(a.last('toast')!.msg, /Come within/);
-  B.ship!.state.x = 50_060;
+  B.ship!.state.x = 50_022; // (alongside: hull to hull within thirty metres — reach.ts)
   a.push({ t: 'barter', action: 'propose', name: 'Bram Swell' });
   b.push({ t: 'barter', action: 'propose', name: 'Anne Swell' });
   a.push({ t: 'barter', action: 'offer', gold: 0, cargo: { sugar: 8 } });

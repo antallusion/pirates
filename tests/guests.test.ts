@@ -13,20 +13,14 @@ import type { PlayerSession } from '../server/src/game/player.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { join, makeGame, onHull } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 function offShore(game: Game, s: PlayerSession, islandId: number): void {
   const is = game.world.islands[islandId];
   const ship = s.ship!;
   ship.docked = null;
   s.profile!.docked = null;
-  for (let k = 0; k < 48; k++) {
-    const a = (k / 48) * Math.PI * 2;
-    const x = is.x + Math.sin(a) * (is.radius + 150), y = is.y - Math.cos(a) * (is.radius + 150);
-    if (isLand(game.world, x, y)) continue;
-    ship.state.x = x;
-    ship.state.y = y;
-    break;
-  }
+  assert.ok(offCoast(game, ship, is), 'water off its coast'); // (owner, 2026-10-22: her hull within thirty metres of its coast — reach.ts)
   ship.region = is.region;
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);
 }

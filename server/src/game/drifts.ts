@@ -11,6 +11,7 @@
 //
 // The drifts are the sea's for a few minutes, not saved; the legend's season is. Every roll here is on its own Rng.
 
+import { OBJ_R, REACH_SLACK, gapTo, hullOf } from '../../../shared/src/data/reach.ts';
 import { xpAt } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { UNITS, armyPower } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
@@ -297,7 +298,7 @@ const DRIFT_FAR = 'Come alongside: within the boats’ reach.';
  *  follows it) and the order is given again alongside (approach.ts). */
 function driftApproach(game: Game, s: PlayerSession, d: Drift, why: string): string | null {
   const list = D(game).list;
-  return approach(game, s, { x: d.x, y: d.y, reach: DRIFT_REACH, where: () => (list.get(d.id) === d ? d : null) }, why);
+  return approach(game, s, { x: d.x, y: d.y, reach: DRIFT_REACH, r: OBJ_R, where: () => (list.get(d.id) === d ? d : null), slow: 2.3 }, why);
 }
 
 /** Why nothing may be done at it now (null: she may). */
@@ -308,7 +309,7 @@ function busyWhy(game: Game, s: PlayerSession, d: Drift): string | null {
   if (landFighting(game, s)) return 'Your party is ashore already.';
   if (d.taken !== undefined && d.taken !== s.accountId) return 'Another captain is at it already.';
   if (ship.underFire(game.now)) return 'Not while under fire';
-  if (dist(d.x, d.y, ship.state.x, ship.state.y) > DRIFT_REACH) return DRIFT_FAR;
+  if (gapTo(hullOf(ship), d.x, d.y, OBJ_R) > DRIFT_REACH + REACH_SLACK) return DRIFT_FAR;
   if (ship.state.speed > 2.5) return 'Heave to first — the boats cannot be lowered at speed';
   return null;
 }
@@ -334,7 +335,7 @@ function card(game: Game, s: PlayerSession, d: Drift): DriftCard {
   const joins = serves(s, d);
   const room = joins ? Math.min(d.n, creatureRoom(ship, def.u)) : 0;
   return {
-    id: d.id, kind: d.kind, level: d.level, u: def.u, n: d.n, left: Math.max(0, Math.round(d.until - game.now)), reach: dist(d.x, d.y, ship.state.x, ship.state.y) <= DRIFT_REACH,
+    id: d.id, kind: d.kind, level: d.level, u: def.u, n: d.n, left: Math.max(0, Math.round(d.until - game.now)), reach: gapTo(hullOf(ship), d.x, d.y, OBJ_R) <= DRIFT_REACH,
     ways, room, pen: joins ? Math.min(d.n, penRoom(game, s, def.u)) : 0, gift: driftGift(d.kind, d.level), joins,
     // (seaux: distance alone is no «why» — the card's buttons sail her alongside, approach.ts)
     fightWhy: (why === DRIFT_FAR ? null : why) ?? (d.mini ? 'Not now' : null), why: d.mini && d.mini.acc === s.accountId ? null : why === DRIFT_FAR ? null : why,
@@ -669,12 +670,13 @@ export function adminDrift(game: Game, s: PlayerSession, args: string[]): string
     let at: [number, number] | null = null;
     for (let t = 0; t < 24 && !at; t++) {
       const v = headingVec(ship.state.heading + (t % 2 ? 1 : -1) * Math.floor(t / 2) * 0.5);
-      const x = ship.state.x + v.x * 160, y = ship.state.y + v.y * 160;
+      const off = ship.stats.length / 2 + OBJ_R + 16; // (within the boats' thirty metres of her bow — reach.ts)
+      const x = ship.state.x + v.x * off, y = ship.state.y + v.y * off;
       if (openWater(game, x, y) || (!isLand(game.world, x, y) && game.inZone(x, y))) at = [x, y];
     }
     if (!at) {
       parkNear(game, s, ship.state.x, ship.state.y, 1);
-      at = [ship.state.x + 200, ship.state.y];
+      at = [ship.state.x + ship.stats.length / 2 + OBJ_R + 16, ship.state.y];
     }
     const d = DRIFTS[k].legend ? raiseLegend(game, k, at[0], at[1]) : putDrift(game, k, at[0], at[1], s.accountId);
     if (S.legend && DRIFTS[k].legend) {

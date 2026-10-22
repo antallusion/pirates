@@ -3,6 +3,7 @@
 // raises out of the sea. The words are here in both languages; the server rolls every chance and sends ids and
 // numbers.
 
+import { REACH_SHORE } from './reach.ts';
 import type { GoodId } from './goods.ts';
 
 export type Tr = [string, string];
@@ -227,8 +228,9 @@ export const LIGHT_PAID_SEC = 30 * 60;
 /** The keeper's price: a base and so much a level of the square's ships. */
 export const KEEPER_BASE = 40;
 export const KEEPER_PER_LEVEL = 15;
-/** The keeper hears a boat within this many metres of the island's shore. */
-export const KEEPER_RANGE = 1500;
+/** The keeper hears a boat from her hull within this many metres of the island's shore (owner, 2026-10-22: 1500 →
+ *  30 m, reach.ts). */
+export const KEEPER_RANGE = REACH_SHORE + 8;
 
 // ------------------------------------------------------------------ 24. lookouts on the headlands
 

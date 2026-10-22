@@ -6,6 +6,7 @@ import type { Game } from '../server/src/game/Game.ts';
 import { GRACE_MS, shoreWitness } from '../server/src/game/holdings.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { join, makeGame, steps, knowHulls } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 import type { FakeConn } from './helpers.ts';
 
 const DAY = 86_400_000;
@@ -17,12 +18,14 @@ function pick(game: Game, pred: (i: Island) => boolean): Island {
 }
 
 /** Lie stopped off the island's shore. */
-function offShore(s: PlayerSession, isl: Island, extra = 150): void {
+function offShore(game: Game, s: PlayerSession, isl: Island, extra = 150): void {
   const sh = s.ship!;
   sh.docked = null;
   s.profile!.docked = null;
   sh.state.x = isl.x + isl.radius + extra;
   sh.state.y = isl.y;
+  // (by its coast: her hull within its thirty metres — owner, 2026-10-22, reach.ts)
+  if (extra <= 300) assert.ok(offCoast(game, sh, isl), 'water off its coast');
   sh.state.speed = 0;
   sh.state.sail = 0;
   sh.input = { rudder: 0, sailTarget: 0 };
@@ -38,7 +41,7 @@ function setup(pred: (i: Island) => boolean = (i) => i.region === 'gravewater' &
   const A = game.sessionByName('Anne Isle')!;
   A.profile!.gold = 500_000;
   const isl = pick(game, pred);
-  offShore(A, isl);
+  offShore(game, A, isl);
   return { game, a, A, isl, advance: (ms: number) => (clock += ms) };
 }
 
@@ -58,14 +61,14 @@ test('leasing an island: the price by size and zone, one of your own, nobody els
   assert.equal(h.until, until + 14 * DAY);
   // A second island of your own: no.
   const other = pick(game, (i) => i.region === 'gravewater' && i.id !== isl.id && islandSize(i.radius) === 'small');
-  offShore(A, other);
+  offShore(game, A, other);
   a.push({ t: 'isle', action: 'rent', island: other.id, days: 7 });
   assert.match(a.last('toast')!.msg, /one island/);
   // Someone else cannot take hers.
   const b = join(game, 'Bram Isle');
   const B = game.sessionByName('Bram Isle')!;
   B.profile!.gold = 500_000;
-  offShore(B, isl);
+  offShore(game, B, isl);
   b.push({ t: 'isle', action: 'rent', island: isl.id, days: 7 });
   assert.match(b.last('toast')!.msg, /leased to Anne Isle/);
   // Not the Abyss, not a large island on the Crown's coast, and only from nearby or a harbour office in the region.
@@ -74,7 +77,7 @@ test('leasing an island: the price by size and zone, one of your own, nobody els
   assert.match(b.last('toast')!.msg, /Sail to/);
   const abyss = game.world.islands.find((i) => i.region === 'the_abyss' && !i.portId);
   if (abyss) {
-    offShore(B, abyss);
+    offShore(game, B, abyss);
     b.push({ t: 'isle', action: 'rent', island: abyss.id, days: 7 });
     assert.match(b.last('toast')!.msg, /Abyss/);
   }

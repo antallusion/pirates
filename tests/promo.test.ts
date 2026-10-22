@@ -26,6 +26,7 @@ import { serverTable } from '../client/src/lang/server.ts';
 import { SERVER_RU_ADMIN } from '../client/src/lang/server.ru.admin.ts';
 import { EN as P_EN, RU as P_RU } from '../client/src/lang/ui/promo.ts';
 import { join, makeGame, onHull } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 const DAY = 86_400_000;
 const H = 3_600_000;
@@ -43,14 +44,7 @@ function world(): { game: Game; db: Database } {
 
 function offShore(game: Game, ship: ShipEntity, is: Island): void {
   ship.docked = null;
-  for (let k = 0; k < 48; k++) {
-    const a = (k / 48) * Math.PI * 2;
-    const x = is.x + Math.sin(a) * (is.radius + 120), y = is.y - Math.cos(a) * (is.radius + 120);
-    if (isLand(game.world, x, y)) continue;
-    ship.state.x = x;
-    ship.state.y = y;
-    break;
-  }
+  assert.ok(offCoast(game, ship, is), 'water off its coast'); // (owner, 2026-10-22: her hull within thirty metres of its coast — reach.ts)
   ship.state.speed = 0;
   ship.region = is.region;
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);

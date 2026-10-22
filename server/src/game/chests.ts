@@ -3,6 +3,7 @@
 // on a port's map board at her price. Whoever digs the chest up takes it; its author gains a cartographer's fame (and
 // a title at five). A chest someone has dug is gone for every copy of its map.
 
+import { REACH_OBJ, REACH_SLACK, hullOf, hullsGap } from '../../../shared/src/data/reach.ts';
 import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -255,7 +256,7 @@ interface MapOffer {
 }
 
 const OFFER_SEC = 60;
-export const SELL_RANGE = 1000;
+export const SELL_RANGE = REACH_OBJ; // hull to hull, alongside (owner, 2026-10-22: a kilometre → 30 m, reach.ts)
 const offers = new WeakMap<Game, { seq: number; list: MapOffer[] }>();
 function offerBook(game: Game): { seq: number; list: MapOffer[] } {
   let o = offers.get(game);
@@ -268,12 +269,12 @@ function offerView(o: MapOffer): MapOfferView {
   return { id: o.id, from: o.fromName, name: o.map.name, riddle: o.map.clue ?? null, price: o.price, chest: o.map.kind === 'player', until: o.until };
 }
 
-/** Whether two captains are alongside for a trade: both at sea within a kilometre, or in the same port. */
+/** Whether two captains are alongside for a trade: both at sea, hull to hull within SELL_RANGE, or in the same port. */
 function alongside(a: PlayerSession, b: PlayerSession): boolean {
   const x = a.ship, y = b.ship;
   if (!x || !y || !x.alive || !y.alive) return false;
   if (x.docked || y.docked) return !!x.docked && x.docked === y.docked;
-  return dist(x.state.x, x.state.y, y.state.x, y.state.y) <= SELL_RANGE;
+  return hullsGap(hullOf(x), hullOf(y)) <= SELL_RANGE + REACH_SLACK;
 }
 
 /** She offers a map (or, her own chest's, a copy) to a captain alongside at her price. */
@@ -286,7 +287,7 @@ export function sellMap(game: Game, s: PlayerSession, mapId: string, toShip: num
   if (copy && !ownChest(game, s, m)) return 'Only the author of a chest may sell copies of its map.';
   const target = game.sessionOf(game.ships.get(Math.trunc(Number(toShip))) ?? null);
   if (!target || target === s || !target.profile) return 'No such captain alongside';
-  if (!alongside(s, target)) return 'Come within a kilometre of her first (or meet in port).';
+  if (!alongside(s, target)) return 'Come alongside her first (or meet in port).';
   const book = offerBook(game);
   if (book.list.some((o) => o.from === s.accountId && o.to === target.accountId)) return 'She is still thinking over your last offer.';
   const id = book.seq++;

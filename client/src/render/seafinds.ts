@@ -6,7 +6,7 @@
 // its clock.
 
 import type { FindKind } from '../../../shared/src/data/seafinds.ts';
-import { FIND_REACH } from '../../../shared/src/data/seafinds.ts';
+import { FIND_FOG_R } from '../../../shared/src/data/seafinds.ts';
 import type { FindView } from '../../../shared/src/findproto.ts';
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/seafinds.ts';
@@ -217,7 +217,7 @@ export function drawFindsWorld(g: G, state: ClientState, c: FindCtx): void {
     const wx = f.kind === 'flyfish' && own ? own.x : f.x, wy = f.kind === 'flyfish' && own ? own.y : f.y;
     const x = c.sx(wx), y = c.sy(wy);
     const R = Math.max(11, Math.min(22, 18 * c.zoom));
-    const far = f.kind === 'calm' ? FIND_REACH.calm * c.zoom : R * 4;
+    const far = f.kind === 'calm' ? FIND_FOG_R * c.zoom : R * 4;
     if (x < -far || y < -far || x > c.w + far || y > c.h + far) continue;
     const bob = Math.sin(c.time * 1.5 + f.id) * R * 0.06;
     g.save();
@@ -229,7 +229,7 @@ export function drawFindsWorld(g: G, state: ClientState, c: FindCtx): void {
         flyfish(g, x, y, Math.max(10, 34 * c.zoom), c.time, f.id);
         break;
       case 'calm':
-        fogBank(g, x, y, Math.max(40, FIND_REACH.calm * c.zoom), c.time, f.id);
+        fogBank(g, x, y, Math.max(40, FIND_FOG_R * c.zoom), c.time, f.id);
         break;
       case 'gulls':
         shoal(g, x, y, R * 1.3, c.time, f.id);

@@ -339,11 +339,11 @@ function pirateBy(game: Game, ship: ShipEntity, crew = 60): ShipEntity {
   return npc;
 }
 
-test('64 on the ships: mates within 600 m come aboard with the grapples, the others are asked; too far, docked or not of the group never', () => {
+test('64 on the ships: mates within 60 m (hull to hull, owner 2026-10-22) come aboard with the grapples, the others are asked; too far, docked or not of the group never', () => {
   const { game } = makeGame();
   game.tacticalBoarding = true;
-  const A = atSea(game, 'Anna', 'corsair', 0), B = atSea(game, 'Bea', 'drowned', 150), C = atSea(game, 'Cora', 'admiral', 400);
-  const D = atSea(game, 'Dora', 'reaver', 750), E = atSea(game, 'Ella', 'navigator', 200);
+  const A = atSea(game, 'Anna', 'corsair', 0), B = atSea(game, 'Bea', 'drowned', 45), C = atSea(game, 'Cora', 'admiral', 75);
+  const D = atSea(game, 'Dora', 'reaver', 300), E = atSea(game, 'Ella', 'navigator', 60);
   group(game, A, B, C, D);
   B.c.push({ t: 'board_assist', auto: true });
   D.c.push({ t: 'board_assist', auto: true });
@@ -383,7 +383,7 @@ test('67 on the ships: each captain\'s losses off her own ship; the lesson and t
   const { game } = makeGame();
   game.tacticalBoarding = true;
   // (her level's ship: a grey prize teaches nobody anything)
-  const A = atSea(game, 'Ada', 'corsair', 0, 5), B = atSea(game, 'Bel', 'admiral', 150, 5);
+  const A = atSea(game, 'Ada', 'corsair', 0, 5), B = atSea(game, 'Bel', 'admiral', 45, 5);
   group(game, A, B);
   B.c.push({ t: 'board_assist', auto: true });
   const npc = pirateBy(game, A.ship, 16);
@@ -419,7 +419,7 @@ test('67 on the ships: each captain\'s losses off her own ship; the lesson and t
 test('64 between captains: the boarded captain\'s group comes aboard her side; nobody is grown', () => {
   const { game } = makeGame();
   game.tacticalBoarding = true;
-  const A = atSea(game, 'Ari', 'reaver', 0), D = atSea(game, 'Dee', 'admiral', 30), M = atSea(game, 'Meg', 'drowned', 200);
+  const A = atSea(game, 'Ari', 'reaver', 0), D = atSea(game, 'Dee', 'admiral', 30), M = atSea(game, 'Meg', 'drowned', 60);
   const v = headingVec(A.ship.state.heading - Math.PI / 2);
   D.ship.state.x = A.ship.state.x + v.x * 18;
   D.ship.state.y = A.ship.state.y + v.y * 18;

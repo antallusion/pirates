@@ -4,6 +4,7 @@
 // hers to work once a day. The marks are the world's (shared/src/world/worldgen.ts); what she has worked is kept on
 // her profile. Every roll here is on its own Rng (the sea's stream is the fights' and the landings').
 
+import { REACH_SLACK, hullOf } from '../../../shared/src/data/reach.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -75,7 +76,7 @@ export function markWithin(game: Game, s: PlayerSession): SeaMark | null {
   let best: SeaMark | null = null, bd = Infinity;
   for (const m of marksNear(game.world, ship.state.x, ship.state.y, 400)) {
     const d = dist(m.x, m.y, ship.state.x, ship.state.y) - m.r;
-    if (markInReach(m, ship.state.x, ship.state.y) && d < bd) {
+    if (markInReach(m, hullOf(ship), REACH_SLACK) && d < bd) {
       bd = d;
       best = m;
     }
@@ -89,14 +90,14 @@ const WORK_WORD: Record<MarkKind, string> = {
   drift: 'driftwood', wreck: 'wreck field', buoy: 'lane buoy', lantern: 'lantern float', bones: 'floating bones', floe: 'ice floe',
 };
 
-const MARK_FAR = 'Come within a cable of it first.';
+const MARK_FAR = 'Come up to it first: within thirty metres.';
 
 /** Why her boats cannot work a mark now (null: they can). */
 function whyNot(game: Game, s: PlayerSession, m: SeaMark | undefined): string | null {
   const ship = s.ship!;
   if (!m || !isMarkKind(m.kind)) return 'Nothing there to work.';
   if (ship.docked || !ship.alive || ship.ghost) return 'Out at sea, alongside a mark.';
-  if (!markInReach(m, ship.state.x, ship.state.y)) return MARK_FAR;
+  if (!markInReach(m, hullOf(ship), REACH_SLACK)) return MARK_FAR;
   if (ship.underFire(game.now)) return 'Not under fire.';
   if (markAgain(game, s.profile!, m.id) > 0) return markAgainMs(m.kind) > 86_400_000 ? 'Your boats took this wreckage already: it is yours again two days on.' : 'Your boats worked this one today already.';
   if (ship.state.speed > MARK_SLOW) return 'Shorten sail first: the boats cannot work it at speed.';
@@ -109,7 +110,7 @@ export function startMark(game: Game, s: PlayerSession, id: number): string | nu
   const m = markById(game, id);
   const why = whyNot(game, s, m);
   // seaux: out of reach, the helmsman sails her to it and the order is given again there (approach.ts)
-  if (why === MARK_FAR && m) return approach(game, s, { x: m.x, y: m.y, reach: MARK_REACH + m.r, near: () => !!s.ship && markInReach(m, s.ship.state.x, s.ship.state.y), slow: MARK_SLOW - 0.2 }, why);
+  if (why === MARK_FAR && m) return approach(game, s, { x: m.x, y: m.y, reach: MARK_REACH, r: m.r, near: () => !!s.ship && markInReach(m, hullOf(s.ship), -4), slow: MARK_SLOW - 0.2 }, why);
   if (why) return why;
   const S = M(game);
   const cur = S.busy.get(s);
@@ -333,7 +334,8 @@ export function adminSeaMark(game: Game, s: PlayerSession, args: string[]): stri
     }
     if (!best) return 'No such mark in these waters.';
     if (ship.docked) game.undock(s);
-    ship.state = { ...ship.state, x: best.x, y: best.y + best.r + 45, speed: 0, sail: 0 };
+    // (her beam to it, her hull 15 m off its edge: within the boats' thirty metres — reach.ts)
+    ship.state = { ...ship.state, x: best.x, y: best.y + best.r + 15 + ship.stats.beam / 2, heading: Math.PI / 2, speed: 0, sail: 0 };
     ship.input = { rudder: 0, sailTarget: 0 };
     ship.region = game.regionAt(ship.state.x, ship.state.y);
     game.grid.upsert(ship.id, ship.state.x, ship.state.y);

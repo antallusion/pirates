@@ -6,6 +6,8 @@
 // and keeps it with what its captains leave in the garrison. It is besieged only in its two windows a week, announced.
 // Everything here is a function of the world and the clock, the same for the server, the client and the balance tools.
 
+import { LANDING_R, REACH_OBJ, gapTo } from './reach.ts';
+import type { Hull } from './reach.ts';
 import { UNITS, armyForLevel, armyWeight } from './army.ts';
 import type { ArmyStack, UnitId } from './army.ts';
 import { RAID_REF } from './abyssraid.ts';
@@ -30,8 +32,10 @@ export const CITADELS = 12;
 /** An island great enough to carry a citadel, and the second of a sea at least this far from the first. */
 export const CIT_MIN_RADIUS = 300;
 export const CIT_APART = 8000;
-/** Within this of a citadel's anchorage a captain may declare, assault, leave men and hire its titan. */
-export const CIT_RANGE = 1200;
+/** Within this of a citadel's anchorage — her hull to its mooring (LANDING_R about the point; owner, 2026-10-22: 1200 m
+ *  from her middle → 30 m from her hull, reach.ts) — a captain may declare, assault, leave men and hire its titan. */
+export const CIT_RANGE = REACH_OBJ;
+export const atAnchorage = (h: Hull, c: { x: number; y: number }, slack = 0): boolean => gapTo(h, c.x, c.y, LANDING_R) <= CIT_RANGE + slack;
 
 export interface CitadelDef {
   id: number;

@@ -1,6 +1,7 @@
 // Bridge talents (docs/03 §5): rules that reward two roles at once. Each helper is called from the
 // system it bends (combat, boarding, trade, customs, fleet, landing).
 
+import { OBJ_R, REACH_OBJ, REACH_SLACK, hullOf, inReach } from '../../../shared/src/data/reach.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { MODULES } from '../../../shared/src/data/ships.ts';
@@ -154,7 +155,7 @@ export function salvageTarget(game: Game, s: PlayerSession): SunkHull | null {
   if (!ship.hasFlag('salvage_king')) return null;
   const day = Math.floor(game.now / 7200);
   if (s.profile!.salvageDay === day) return null;
-  for (const h of game.sunkHulls) if (game.now - h.t < 600 && dist(h.x, h.y, ship.state.x, ship.state.y) < 200) return h;
+  for (const h of game.sunkHulls) if (game.now - h.t < 600 && inReach(hullOf(ship), h.x, h.y, OBJ_R, REACH_OBJ + REACH_SLACK)) return h; // (owner, 2026-10-22: over it, 30 m from her hull)
   return null;
 }
 

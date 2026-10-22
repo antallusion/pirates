@@ -265,8 +265,10 @@ function parkOff(game: Game, s: PlayerSession, isId: number): void {
   const ship = s.ship!;
   const px = is.poly[0], py = is.poly[1];
   const dx = px - is.x, dy = py - is.y, l = Math.hypot(dx, dy);
-  ship.state.x = px + (dx / l) * 110;
-  ship.state.y = py + (dy / l) * 110;
+  // (her beam to the coast, her hull within the boats' thirty metres — owner, 2026-10-22: reach.ts)
+  ship.state.x = px + (dx / l) * 28;
+  ship.state.y = py + (dy / l) * 28;
+  ship.state.heading = Math.atan2(-dy / l, -dx / l);
   ship.state.speed = 0;
   ship.input = { rudder: 0, sailTarget: 0 };
   ship.protectedUntil = 0;

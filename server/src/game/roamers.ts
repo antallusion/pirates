@@ -11,6 +11,7 @@
 // Not saved: a stack is down for minutes, and a stack's state is the sea's for that long. Every roll here is on this
 // system's own Rng.
 
+import { OBJ_R, REACH_SLACK, hullOf, reachSpan } from '../../../shared/src/data/reach.ts';
 import { lackBerth } from '../../../shared/src/data/buyfail.ts';
 import { xpAt } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { UNITS, armyMen, armyPower } from '../../../shared/src/data/army.ts';
@@ -19,7 +20,7 @@ import { LAND_RES } from '../../../shared/src/data/bestiary.ts';
 import type { LandRes } from '../../../shared/src/data/bestiary.ts';
 import { landParty } from '../../../shared/src/data/lairs.ts';
 import {
-  ROAMS, ROAM_ART, ROAM_BATTLE_XP, ROAM_HEAL, ROAM_REST_MAX, ROAM_REST_MS, ROAM_MATE_XP, ROAM_RAISE, ROAM_REACH, ROAM_SEE, ROAM_SHARE_R, ROAM_SHIFT, ROAM_WANDER,
+  ROAMS, ROAM_ART, ROAM_BATTLE_XP, roamHullGap, roamInReach, ROAM_HEAL, ROAM_REST_MAX, ROAM_REST_MS, ROAM_MATE_XP, ROAM_RAISE, ROAM_REACH, ROAM_SEE, ROAM_SHARE_R, ROAM_SHIFT, ROAM_WANDER,
   buildRoamers, isRoamKind, roamDown, roamGap, roamPay, roamPos, roamRes, roamShift, roamStacks, roamersNear,
 } from '../../../shared/src/data/roamers.ts';
 import type { RoamIndex, RoamKind, RoamSpot } from '../../../shared/src/data/roamers.ts';
@@ -303,14 +304,14 @@ export function stepRoamers(game: Game): void {
 
 // ------------------------------------------------------------------------------------------------ the fight
 
-/** The stack within her reach (the nearest standing one). */
-export function roamAtHand(game: Game, s: PlayerSession, slack = 30): RoamSpot | null {
+/** The stack within her reach (the nearest standing one): her hull within ROAM_REACH of it (reach.ts). */
+export function roamAtHand(game: Game, s: PlayerSession, slack = REACH_SLACK): RoamSpot | null {
   const ship = s.ship;
   if (!ship || ship.docked) return null;
+  const h = hullOf(ship);
   let best: RoamSpot | null = null, bd = ROAM_REACH + slack;
-  for (const sp of roamersAbout(game, ship.state.x, ship.state.y, ROAM_REACH + slack)) {
-    const p = roamWhere(game, sp);
-    const d = dist(p.x, p.y, ship.state.x, ship.state.y);
+  for (const sp of roamersAbout(game, ship.state.x, ship.state.y, reachSpan(ship.stats.length, OBJ_R, ROAM_REACH + slack))) {
+    const d = roamHullGap(h, roamWhere(game, sp));
     if (d <= bd) [best, bd] = [sp, d];
   }
   return best;
@@ -328,6 +329,9 @@ export function roamRunWhy(game: Game, s: PlayerSession, id: number): string | n
   return fightWhy(game, s, R(game).idx.byId.get(id), false);
 }
 
+/** Said when she is not yet within the fight's reach of a stack (owner, 2026-10-22: thirty metres). */
+export const ROAM_FAR = 'Come up to them first: within thirty metres.';
+
 function fightWhy(game: Game, s: PlayerSession, sp: RoamSpot | undefined, reach = true): string | null {
   const ship = s.ship;
   if (!ship || ship.docked || !ship.alive || ship.ghost) return 'Put to sea first.';
@@ -337,7 +341,7 @@ function fightWhy(game: Game, s: PlayerSession, sp: RoamSpot | undefined, reach 
   if (f !== null) return f === s.accountId ? 'Your party is at them already.' : sameGroup(game, f, s.accountId) ? 'Your group mate is fighting them: the spoils will be shared.' : 'Another captain is fighting them.';
   const p = roamWhere(game, sp);
   const d = dist(p.x, p.y, ship.state.x, ship.state.y);
-  if (reach && d > ROAM_REACH + 30) return 'Come within a cable of them first.';
+  if (reach && !roamInReach(hullOf(ship), p, REACH_SLACK)) return ROAM_FAR;
   if (!reach && d > ROAM_SEE) return 'They are gone';
   if (ship.underFire(game.now)) return 'Not while under fire';
   if (ship.boarding || ship.grappled || ship.landing) return 'Not now';
@@ -534,7 +538,7 @@ export function adminStack(game: Game, s: PlayerSession, args: string[]): string
     }
     if (!best) return kind ? `No ${kind} stands anywhere.` : 'No stack stands anywhere.';
     const p = roamWhere(game, best);
-    parkNear(game, s, p.x, p.y, 150);
+    parkNear(game, s, p.x, p.y, 40); // (within the fight's thirty metres of her hull — owner, 2026-10-22)
     ship.state.speed = 0;
     ship.input = { rudder: 0, sailTarget: 0 };
     sendRoams(game, s, true);

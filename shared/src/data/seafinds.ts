@@ -5,6 +5,8 @@
 // with sharks round it (a small fight on the battle at sea, the chest the prize). Each is her own (sighted for her),
 // for a few minutes; each kind rolls on dice of its own; what each gives is modest.
 
+import { OBJ_R, REACH_OBJ, gapTo } from './reach.ts';
+import type { Hull } from './reach.ts';
 import { armyPower } from './army.ts';
 import { guardBaseMight } from './advmap.ts';
 import type { GoodId } from './goods.ts';
@@ -26,7 +28,14 @@ export const FIND_AT: [number, number] = [650, 1200];
 /** Within this of it (metres) she is at it; the fog bank is as wide as its reach. */
 /** (seaux 2026-10-11: alongside — the gulls' and the fog's 300–360 m fired from where the thing was a speck; flying fish
  *  land on her deck: no reach) */
-export const FIND_REACH: Record<FindKind, number> = { bottle: 140, flyfish: 0, calm: 220, gulls: 200, boat: 170, chest: 200 };
+// (owner, 2026-10-22: from her hull's edge to the thing's, thirty metres — reach.ts; was 140–220 m from her middle)
+export const FIND_REACH: Record<FindKind, number> = { bottle: REACH_OBJ, flyfish: 0, calm: REACH_OBJ, gulls: REACH_OBJ, boat: REACH_OBJ, chest: REACH_OBJ };
+/** The fog bank a cache lies hidden in, as drawn (metres about it): the boats search its heart, within the reach. */
+export const FIND_FOG_R = 220;
+/** Metres of water between her hull and a small thing (the fish: none, they are aboard). */
+export function findGap(h: Hull, f: { kind: FindKind; x: number; y: number }): number {
+  return f.kind === 'flyfish' ? 0 : gapTo(h, f.x, f.y, OBJ_R);
+}
 /** Slower than this (m/s) for the boats' work; the gulls and the fish want no stop. */
 export const FIND_SLOW: Record<FindKind, number> = { bottle: 3, flyfish: 99, calm: 3, gulls: 99, boat: 3, chest: 3 };
 /** Seconds of the work (the chest's is the fight). */

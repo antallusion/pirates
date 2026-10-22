@@ -5,6 +5,7 @@
 // mill and the warehouse, a prison's officer, an obelisk a season), the Grail (the chart's pieces, the dig, the
 // chronicle, the Grail in the town), the sea's rng untouched, the admin's commands and every word in both languages.
 
+import { alongsidePoint, hullOf } from '../shared/src/data/reach.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALTAR_POINTS, GRAIL_GROWTH, GRAIL_R, GRAIL_SILVER, GUARDS, GUARD_KINDS, GUARD_RESPAWN_SEC, JOIN_RATIO, OBELISKS, OBJS, OBJ_KINDS, PUZZLE_GRID, REF_MEN, advHour, buildAdv, chestPay, guardArmy, guardMight, openWater } from '../shared/src/data/advmap.ts';
@@ -35,6 +36,7 @@ import { SERVER_RU_ADMIN } from '../client/src/lang/server.ru.admin.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { applyDataLocale } from '../client/src/lang/data.ts';
 import { join, makeGame, onHull, steps } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 let clock = 20_000 * 86_400_000;
 
@@ -144,7 +146,10 @@ test('a guard stands in the water near a captain, never moves, takes no shot, is
 
 function alongside(game: Game, s: PlayerSession, id: string) {
   const gs = guardShip(game, id)!;
-  s.ship!.state = { ...s.ship!.state, x: gs.state.x + 18, y: gs.state.y, speed: 0, sail: 0 };
+  // (beam to beam, on its course — owner, 2026-10-22: the grapples fly only alongside, reach.ts)
+  const P = alongsidePoint(hullOf(s.ship!), hullOf(gs));
+  s.ship!.state = { ...s.ship!.state, x: P.x, y: P.y, heading: P.heading, speed: 0, sail: 0 };
+  gs.state.speed = 0;
   s.ship!.input = { rudder: 0, sailTarget: 0 };
   game.grid.upsert(s.ship!.id, s.ship!.state.x, s.ship!.state.y);
   return gs;
@@ -182,7 +187,7 @@ test('HoMM3\'s offer: before three times their might they flee, or some sign on 
   const s = captain(game, 'Strong Captain', 8, 'frigate');
   // A weak guard of the low waters against a frigate's army.
   const g = advMap(game).guards.find((x) => x.level <= 2 && x.kind !== 'wreck' && x.kind !== 'beasts')!;
-  parkNear(game, s, g.x, g.y, 120);
+  parkNear(game, s, g.x, g.y, 40); // (beside them: thirty metres — reach.ts)
   seconds(game, 3);
   const offer = guardOffer(game, s, g);
   assert.ok(offer === 'join' || offer === 'flee', 'an offer');
@@ -214,7 +219,7 @@ test('a guard bars its thing and its mine: no visit and no flag until it is beat
   const game = world();
   const s = captain(game);
   const o = advMap(game).objs.find((x) => x.guard && x.kind === 'chest')!;
-  parkNear(game, s, o.x, o.y, 100);
+  parkNear(game, s, o.x, o.y, 62); // (within the boats' thirty metres of its skerry — reach.ts)
   seconds(game, 2);
   assert.equal(visit(game, s, o.id, 'silver'), 'A guard stands before it: beat them first.');
   const g = advMap(game).guards.find((x) => x.id === o.guard)!;
@@ -285,7 +290,7 @@ test('an altar teaches a talent point once (four from the altars in all, then ex
   advOf(s.profile!).pts = ALTAR_POINTS;
   const other = advMap(game).objs.filter((x) => x.kind === 'altar' && x.id !== id)[0];
   if (other.guard) downGuard(game, other.guard);
-  parkNear(game, s, other.x, other.y, 150);
+  parkNear(game, s, other.x, other.y, 62); // (within the boats' thirty metres of its skerry — reach.ts)
   const before = talentPointsAvailable(s.profile!), xp = s.profile!.xp, lvl = s.profile!.level;
   assert.equal(cardView(game, s)!.obj!.altar!.point, false);
   assert.equal(visit(game, s, other.id), null);
@@ -364,12 +369,14 @@ test('the dig: sand where it is not, the Grail where it is — the chronicle tel
   // Her own island first.
   const home = game.world.islands.find((i) => !i.portId && !i.minor && !i.raft && i.region === 'gravewater' && i.radius > 150 && !game.holdings.get(game, i.id) && !lairIsland(game, i.id) && !mineSites(game).some((m) => m.islandId === i.id))!;
   parkNear(game, s, home.x, home.y, home.radius + 120);
+  assert.ok(offCoast(game, s.ship!, home), 'water off its coast'); // (her hull within its coast's reach — reach.ts)
   assert.equal(buyIsland(game, s, home.id), null);
   // A wrong shore: sand.
   const spot = grailSpot(game, s.accountId);
   const wrong = game.world.islands.find((i) => !i.portId && !i.minor && i.id !== spot.island.id && dist(i.x, i.y, spot.x, spot.y) > 5000 && i.radius > 150)!;
   parkNear(game, s, wrong.x, wrong.y, wrong.radius + 80);
-  for (let k = 0; k < 30 && startDig(game, s) === 'No shore within reach of the boats to dig.'; k++) parkNear(game, s, wrong.x, wrong.y, wrong.radius + 60 - k * 5);
+  assert.ok(offCoast(game, s.ship!, wrong), 'water off its coast'); // (her hull within its coast's reach — reach.ts)
+  assert.equal(startDig(game, s), null, 'the diggers row ashore');
   seconds(game, 22);
   assert.ok(!advOf(s.profile!).found, 'nothing found');
   assert.equal(startDig(game, s), 'The diggers are still resting from the last hole.');

@@ -4,6 +4,7 @@
 // fought over her — until her captain raises her; if her captain is gone 30 days, she returns to the Legendary
 // Reserve and the contest begins again.
 
+import { OBJ_R, REACH_OBJ, REACH_SLACK, hullOf, inReach } from '../../../shared/src/data/reach.ts';
 import { bossXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -23,7 +24,7 @@ import { sendEvents } from './events.ts';
 const DAY = 24 * 3600_000;
 const GLORY_MS = 48 * 3600_000;
 const RESERVE_MS = 30 * DAY;
-const RAISE_RANGE = 300;
+const RAISE_RANGE = REACH_OBJ + REACH_SLACK; // her hull over the wreck (owner, 2026-10-22: 300 → 30 m, reach.ts)
 
 export interface LegendRecord {
   status: 'locked' | 'commission' | 'owned' | 'sunk';
@@ -213,7 +214,7 @@ export function raiseLegend(game: Game, s: PlayerSession): string | null | undef
   const st = store(game);
   for (const id of LEGENDARY_IDS) {
     const rec = st[id];
-    if (rec.status !== 'sunk' || !rec.wreck || dist(rec.wreck.x, rec.wreck.y, ship.state.x, ship.state.y) > RAISE_RANGE) continue;
+    if (rec.status !== 'sunk' || !rec.wreck || !inReach(hullOf(ship), rec.wreck.x, rec.wreck.y, OBJ_R, RAISE_RANGE)) continue;
     if (rec.owner !== s.accountId) return `Only ${rec.ownerName ?? 'her captain'} can raise the ${LEGENDARY[id].name}`;
     if (ship.state.speed > 2) return 'Heave to over the wreck first';
     rec.status = 'owned';
@@ -237,7 +238,7 @@ export function legendWreckHere(game: Game, ship: ShipEntity): { id: LegendaryId
   if (!st) return null;
   for (const id of LEGENDARY_IDS) {
     const rec = st[id];
-    if (rec?.status === 'sunk' && rec.wreck && dist(rec.wreck.x, rec.wreck.y, ship.state.x, ship.state.y) < RAISE_RANGE) return { id, owner: rec.ownerName };
+    if (rec?.status === 'sunk' && rec.wreck && inReach(hullOf(ship), rec.wreck.x, rec.wreck.y, OBJ_R, RAISE_RANGE)) return { id, owner: rec.ownerName };
   }
   return null;
 }

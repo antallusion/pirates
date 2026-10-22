@@ -26,6 +26,7 @@ import type { RegionId, Safety } from '../../../shared/src/world/regions.ts';
 import { SECTOR_SIZE, sectorAt, sectorGrid } from '../../../shared/src/world/sectors.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { AUTOSAIL_ARRIVE } from '../../../shared/src/data/autosail.ts';
+import { REACH_DOCK, landingPoint } from '../../../shared/src/data/reach.ts';
 import { autosailOf, helmTouched, lastStopOf, pathView, pausedCourse, planFrom, startAutosail, stopAutosail } from './autosail.ts';
 import { beastsAlive } from './beasts.ts';
 import { commonView } from './commongoal.ts';
@@ -176,7 +177,17 @@ export function pickNearest(game: Game, s: PlayerSession, cands: Cand[], again =
     if (w < bw) [best, bw, bd] = [o, w, d];
   }
   if (!best) return null;
-  const c = best.c;
+  let c = best.c;
+  // An island to land on (owner, 2026-10-22: the landing is thirty metres from her hull): the beach nearest her, a little
+  // out from it, not the island's middle — the run ends inside the boats' reach.
+  if (c.act === 'land' && c.island !== undefined) {
+    const is = game.world.islands[c.island];
+    if (is) {
+      const b = landingPoint(is.poly, here.x, here.y);
+      const nx = b.x - is.x, ny = b.y - is.y, l = Math.hypot(nx, ny) || 1;
+      c = { ...c, x: b.x + (nx / l) * 18, y: b.y + (ny / l) * 18, r: 60 };
+    }
+  }
   return {
     x: Math.round(c.x), y: Math.round(c.y), r: Math.round(c.r), kind: c.kind, name: c.name, dist: Math.round(bd), level: best.k.level, risk: best.k.risk,
     ...(c.act ? { act: c.act } : {}), ...(c.port ? { port: c.port } : {}), ...(c.island !== undefined ? { island: c.island } : {}),
@@ -324,7 +335,7 @@ function wrecks(game: Game, s: PlayerSession): Cand[] {
   const p = s.profile!;
   const ok: Cand[] = [], any: Cand[] = [];
   for (const w of game.wrecks) {
-    const c: Cand = { x: w.x, y: w.y, r: 120, kind: 'wreck', name: 'wreck', hint: ROUTE_HINTS.dive };
+    const c: Cand = { x: w.x, y: w.y, r: 60, kind: 'wreck', name: 'wreck', hint: ROUTE_HINTS.dive };
     if (!canDive(game, s, w)) ok.push(c);
     else if (game.now - (p.explore.dived[w.id] ?? -1e9) >= 7200) any.push(c);
   }
@@ -472,7 +483,7 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
       // the opening: a standing stack of the sea's creatures on the lane (its `near`), else the nearest standing one
       const up = (x: number, y: number, r: number): Cand[] => roamersAbout(game, x, y, r).filter((sp) => roamUp(game, sp.id) && roamFighter(game, sp.id) === null).map((sp) => {
         const w = roamWhere(game, sp);
-        return { x: w.x, y: w.y, r: 120, kind: 'place' as const, name: 'stack' };
+        return { x: w.x, y: w.y, r: 60, kind: 'place' as const, name: 'stack' };
       });
       const lane = st.near ? up(st.near.x, st.near.y, st.near.r) : [];
       return { cands: lane.length ? lane : up(ship.state.x, ship.state.y, 6000) };
@@ -501,7 +512,7 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
     }
     case 'dive': {
       const w = st.wreck !== undefined ? game.wrecks[st.wreck] : undefined;
-      if (w) return { cands: [{ x: w.x, y: w.y, r: 120, kind: 'wreck', name: 'wreck', hint: ROUTE_HINTS.dive }] };
+      if (w) return { cands: [{ x: w.x, y: w.y, r: 60, kind: 'wreck', name: 'wreck', hint: ROUTE_HINTS.dive }] };
       return { cands: wrecks(game, s) };
     }
     case 'sell_contraband':
@@ -804,8 +815,10 @@ export function routeOf(game: Game, s: PlayerSession): { key: string; view: Rout
 
 /** How near the helmsman brings her to a place of this reach. */
 function arriveOf(v: RouteView): number {
-  if (v.act === 'dock') return AUTOSAIL_ARRIVE;
-  return Math.max(30, Math.min(AUTOSAIL_ARRIVE, Math.round(v.r * 0.4)));
+  // (owner, 2026-10-22: the reaches are thirty metres from her hull now — reach.ts — so the run ends inside them: a
+  // harbour's anchorage within REACH_DOCK, a thing within REACH_OBJ)
+  if (v.act === 'dock') return REACH_DOCK - 10;
+  return Math.max(24, Math.min(AUTOSAIL_ARRIVE, Math.round(v.r * 0.4)));
 }
 
 /** The place said to her screen (owner, 2026-10-18: «всегда должно быть показано направление линией и путь»): while

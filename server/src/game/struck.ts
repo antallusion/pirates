@@ -4,6 +4,7 @@
 // (for the court, or to keep her as a trophy, docs/16 #5). The terms go through the boarding's own result
 // (claimPrize → onBoardingWon → the loot), so a surrender is a ship taken like any other.
 
+import { REACH_OBJ, REACH_SLACK, hullOf, hullsGap } from '../../../shared/src/data/reach.ts';
 import { seaRansom } from '../../../shared/src/data/silverpay.ts';
 import type { SurrenderOffer } from '../../../shared/src/protocol.ts';
 import { dist } from '../../../shared/src/math.ts';
@@ -25,7 +26,11 @@ export const STRIKE_OUTGUNNED = 1.5;
 /** Each think (four a second) a battered, outgunned ship may strike: in a second or two, if the fire keeps on. */
 export const STRIKE_CHANCE = 0.3;
 /** How close the captain must come to take the surrender (the same reach as the plunder's). */
-export const SURRENDER_RANGE = 400;
+/** Her surrender is taken alongside: hull to hull within this (owner, 2026-10-22: 400 m → 30 m, reach.ts); farther, the
+ *  helmsman takes her alongside first (Game.acceptSurrender, approach.ts). */
+export const SURRENDER_RANGE = REACH_OBJ;
+export const SURRENDER_FAR = 'Come alongside her to take her surrender.';
+export const surrenderNear = (a: ShipEntity, b: ShipEntity, slack = REACH_SLACK): boolean => hullsGap(hullOf(a), hullOf(b)) <= SURRENDER_RANGE + slack;
 /** How long she lies struck before she thinks better of it (npc.ts). */
 export const SURRENDER_WAIT = 75;
 
@@ -124,7 +129,6 @@ export function surrenderBlocked(game: Game, s: PlayerSession, target: ShipEntit
   if (target.lootLockedFor !== null && target.lootLockedFor !== ship.id) return 'She struck to another captain';
   if (offered.get(target) !== s.accountId && !target.attackers.has(ship.id)) return 'She did not strike to you';
   if (ship.boarding || s.pendingBoarding) return 'Settle the ship alongside first';
-  const d = dist(ship.state.x, ship.state.y, target.state.x, target.state.y);
-  if (d > SURRENDER_RANGE) return `Come within ${SURRENDER_RANGE} m to take her surrender (${Math.round(d)} m)`;
+  if (!surrenderNear(ship, target)) return SURRENDER_FAR;
   return null;
 }

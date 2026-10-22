@@ -14,6 +14,8 @@ import type { WsConnection } from '../server/src/net/websocket.ts';
 import { Database } from '../server/src/persistence/db.ts';
 import { quietAdv } from '../server/src/game/advmap.ts';
 import { holidayAt } from '../shared/src/data/holidays.ts';
+import { gapToShore } from '../shared/src/data/reach.ts';
+import { isLand } from '../shared/src/world/worldgen.ts';
 
 export class FakeConn {
   onMessage: (text: string) => void = () => {};
@@ -128,4 +130,31 @@ export function knowHulls(p: { research?: { xp: Record<string, number>; free: nu
  *  the captain's account (by name; none named: every captain aboard) the scrolls a player would have bought. */
 export function giveScrolls(game: Game, name?: string, n = 50): void {
   for (const s of game.sessions) if (s.authed && (!name || s.name === name)) game.db.addScrolls(s.accountId, n);
+}
+
+/** Her ship hove to off an island's coast, her beam to it, `gap` metres of water between her hull and the coast (owner,
+ *  2026-10-22: every island's dealing is within thirty metres of the hull — shared/src/data/reach.ts). Out of the island's
+ *  coves: a stretch where the coast lies about her as the reach measures it. True when such water was found. */
+export function offCoast(game: Game, ship: { state: { x: number; y: number; heading: number; speed: number }; stats: { length: number; beam: number }; id: number; docked?: string | null }, is: { x: number; y: number; poly: ArrayLike<number> }, gap = 14): boolean {
+  const n = is.poly.length / 2;
+  // (the stretch of coast nearest where she lies first: the test's own side of the island)
+  const order = [...Array(n).keys()].sort((a, b) => Math.hypot(is.poly[a * 2] - ship.state.x, is.poly[a * 2 + 1] - ship.state.y) - Math.hypot(is.poly[b * 2] - ship.state.x, is.poly[b * 2 + 1] - ship.state.y));
+  for (const i of order) {
+    const vx = is.poly[i * 2], vy = is.poly[i * 2 + 1];
+    const dx = vx - is.x, dy = vy - is.y, l = Math.hypot(dx, dy) || 1;
+    const nx = dx / l, ny = dy / l;
+    const x = vx + nx * (gap + ship.stats.beam / 2 + 2), y = vy + ny * (gap + ship.stats.beam / 2 + 2);
+    if (isLand(game.world, x, y)) continue;
+    const heading = Math.atan2(-ny, -nx); // her keel along the coast
+    const g = gapToShore({ x, y, heading, length: ship.stats.length, beam: ship.stats.beam }, is.poly);
+    if (g < gap - 6 || g > gap + 6) continue;
+    if ('docked' in ship) ship.docked = null;
+    ship.state.x = x;
+    ship.state.y = y;
+    ship.state.heading = heading;
+    ship.state.speed = 0;
+    game.grid.upsert(ship.id, x, y);
+    return true;
+  }
+  return false;
 }

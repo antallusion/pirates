@@ -10,6 +10,8 @@
 // nobody walks from raid to raid for its spoils; one boarding of a raid at a time. The men she loses are hers to lose:
 // no blunted steel here, and no prize either way. Every roll is on this system's own Rng.
 
+import { REACH_SLACK, hullOf } from '../../../shared/src/data/reach.ts';
+import { GATE_BODY, atGate } from '../../../shared/src/data/descent.ts';
 import { MAX_LEVEL } from '../../../shared/src/constants.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
@@ -155,7 +157,7 @@ function whyNot(game: Game, s: PlayerSession, r: Raid | null): string | null {
   if (r?.fighting !== undefined && r.fighting !== s.accountId) return 'Another captain of your raid is aboard the legend now.';
   if (r && !r.members.includes(s.accountId) && r.members.length >= RAID_GROUP) return 'Five captains at the most in one raid.';
   const g = gateOf(game);
-  if (dist(g.x, g.y, ship.state.x, ship.state.y) > RAID_GATE_R) return GATE_FAR;
+  if (!atGate(hullOf(ship), g, REACH_SLACK)) return GATE_FAR;
   if (ship.underFire(game.now)) return 'Not while under fire';
   return null;
 }
@@ -166,7 +168,7 @@ export function boardRaid(game: Game, s: PlayerSession): string | null {
   // far from the gate (2026-10-19): the helmsman takes her there, and the legend is boarded on arrival
   if (why === GATE_FAR) {
     const g = gateOf(game);
-    return approach(game, s, { x: g.x, y: g.y, reach: RAID_GATE_R - 30 }, why);
+    return approach(game, s, { x: g.x, y: g.y, reach: RAID_GATE_R, r: GATE_BODY }, why);
   }
   if (why) return why;
   const S = store(game);
@@ -348,7 +350,7 @@ export function adminMaw(game: Game, s: PlayerSession, args: string[]): string {
   const S = store(game);
   if (args[0] === 'go') {
     const g = gateOf(game);
-    parkNear(game, s, g.x, g.y, 300);
+    parkNear(game, s, g.x, g.y, 60); // (within the Stair's thirty metres — reach.ts)
     return 'At the gate of the Stair.';
   }
   if (args[0] === 'board') return S.board.map((b, i) => `${i + 1}. ${b.names.join(', ')}`).join(' · ') || 'Nobody has brought the Master down this week.';

@@ -10,6 +10,7 @@ import { isLand } from '../shared/src/world/worldgen.ts';
 import type { Port } from '../shared/src/world/worldgen.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { join, makeGame, steps } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 const SEC = 20;
 const DAY = 24 * 3600_000;
@@ -205,8 +206,7 @@ test('a new island: the sea boils for six hours, then land; the first captain as
   join(game, 'Nell Firstfoot');
   const s = game.sessionByName('Nell Firstfoot')!;
   s.ship!.docked = null;
-  s.ship!.state.x = is.x + is.radius + 200;
-  s.ship!.state.y = is.y;
+  assert.ok(offCoast(game, s.ship!, is), 'water off its coast'); // (her hull within its thirty metres — reach.ts)
   steps(game, SEC * 2);
   assert.equal(is.name, "Nell's Landfall");
   assert.ok(s.discovered.has(is.id));

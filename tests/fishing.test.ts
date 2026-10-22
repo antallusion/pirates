@@ -22,6 +22,7 @@ import type { PlayerSession } from '../server/src/game/player.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { join, makeGame } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 import type { FakeConn } from './helpers.ts';
 
 const tackle = (base: string): Item => ({ uid: 1, base, ilvl: 1, rarity: 1, affixes: [], dur: 100 });
@@ -237,8 +238,7 @@ test('pots on the shallows: too soon, then a haul; in lawless waters another cap
   }
   assert.equal(setTrap(game, s), 'Pots go down in the shallows, within a mile of land');
   const is = game.world.islands.find((x) => x.region === 'dead_mans_expanse' && !game.world.ports.some((p) => p.islandId === x.id))!;
-  ship.state.x = is.x + is.radius + 300;
-  ship.state.y = is.y;
+  assert.ok(offCoast(game, ship, is), 'water off its coast'); // (her hull within its thirty metres — reach.ts)
   ship.region = 'dead_mans_expanse';
   assert.equal(setTrap(game, s), null);
   assert.match(haulTrap(game, s)!, /^Too soon/);

@@ -97,7 +97,8 @@ test('sail-to: arriving at full sail she heaves to first, then the boats go', ()
   const f = putFind(game, s, 'boat', at)!;
   c.push({ t: 'seafind', action: 'work', id: f.id });
   assert.ok(approachOf(game, s));
-  place(game, s, at.x - 60, at.y, 8);
+  place(game, s, at.x - 30, at.y, 8); // (her hull's thirty metres — owner, 2026-10-22, reach.ts)
+  s.ship!.state.heading = Math.PI / 2;
   steps(game, 1);
   assert.ok(approachOf(game, s), 'at 8 m/s the boats wait');
   assert.equal(s.ship!.input.sailTarget, 0, 'sail in');

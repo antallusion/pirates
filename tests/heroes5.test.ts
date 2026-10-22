@@ -34,6 +34,7 @@ import { serverText } from '../client/src/lang/server.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { applyDataLocale } from '../client/src/lang/data.ts';
 import { join, makeGame, onHull, steps } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 let clock = 20_000 * 86_400_000;
 
@@ -60,14 +61,7 @@ function offShore(game: Game, s: PlayerSession, is: Island): void {
   const ship = s.ship!;
   ship.docked = null;
   s.profile!.docked = null;
-  for (let k = 0; k < 96; k++) {
-    const a = (k / 96) * Math.PI * 2;
-    const x = is.x + Math.sin(a) * (is.radius + 100), y = is.y - Math.cos(a) * (is.radius + 100);
-    if (isLand(game.world, x, y)) continue;
-    ship.state.x = x;
-    ship.state.y = y;
-    break;
-  }
+  assert.ok(offCoast(game, ship, is), 'water off its coast'); // (owner, 2026-10-22: her hull within thirty metres of its coast — reach.ts)
   ship.state.speed = 0;
   ship.region = is.region;
   ship.protectedUntil = 0;
@@ -158,7 +152,7 @@ test('a chest on the map may hold an artifact for her this week, on its own dice
   }
   assert.ok(found, 'some chest holds an artifact');
   if (found!.guard) downGuard(game, found!.guard);
-  parkNear(game, s, found!.x, found!.y, 120);
+  parkNear(game, s, found!.x, found!.y, 62); // (within the boats' thirty metres of its skerry — reach.ts)
   const card = cardView(game, s)!.obj!;
   assert.equal(card.id, found!.id);
   const art = chestArtifact(thisWeek(game), s.accountId, found!.id, !!found!.guard)!;

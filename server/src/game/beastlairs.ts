@@ -11,6 +11,7 @@
 // A lair is not a ship: it stands where it is, never moves off its island (docs/18 #21), and its state is the world's
 // (down until it stands again, its creatures as the last fight left them). Every roll here is on this system's own Rng.
 
+import { LANDING_R, REACH_SHORE, REACH_SLACK, gapTo, hullOf, landingPoint, landingWithin } from '../../../shared/src/data/reach.ts';
 import { battleCardClosed, battleEnded, dropGrace } from './inbattle.ts'; // owner, 2026-10-22
 import { lackBerth, lackHammocks, lackMore, lackSlot } from '../../../shared/src/data/buyfail.ts';
 import { UNITS, armyMen, armyPower, armyWeight, isPremiumUnit } from '../../../shared/src/data/army.ts';
@@ -280,8 +281,9 @@ function islandName(game: Game, l: Lair): string {
 // ------------------------------------------------------------------------------------------------ reach and the offer
 
 /** Within reach of the boats at a lair (and, a card's reach, of seeing it close). */
-export const LAIR_CARD_R = 900;
-const LAND_REACH = 260;
+// (owner, 2026-10-22: the card for a lair she can see, 900 → 400 m; the boats from her hull to its beach, 260 → 30 m)
+export const LAIR_CARD_R = 400;
+const LAND_REACH = REACH_SHORE;
 const SEE_R = 2600;
 /** docs/19 D6: the cells the lairs are kept in for the lookouts' sweep (as wide as their sight). */
 const CELL = 2600;
@@ -336,26 +338,33 @@ function sealHere(game: Game, s: PlayerSession): { at: Lair; lv: number } | null
 /** seaux (2026-10-11): the flag and the settling at a lair from its shore, as the fight (they went from 1100 m off the
  *  lair, wherever the shore was): from farther the helmsman sails her in and the order is given there (approach.ts). */
 function lairApproach(game: Game, s: PlayerSession, l: Lair): string | null {
-  const p = lairPos(game, l);
-  return approach(game, s, { x: p.x, y: p.y, reach: LAND_REACH, near: () => !!s.ship && inReach(game, s, l) }, LAIR_FAR);
+  const p = lairBeach(game, l);
+  return approach(game, s, { x: p.x, y: p.y, reach: LAND_REACH, r: LANDING_R, near: () => !!s.ship && inReach(game, s, l, -4) }, LAIR_FAR);
 }
 const LAIR_FAR = 'Come in to the shore: within the boats’ reach.';
 
-/** The boats can reach the lair's shore from where she lies. */
-function inReach(game: Game, s: PlayerSession, l: Lair): boolean {
+/** The beach the boats row for: the coast's point nearest the lair (a turtle's or a bank's middle). */
+function lairBeach(game: Game, l: Lair): { x: number; y: number } {
+  if (l.turtle !== undefined || l.bank !== undefined) return lairPos(game, l);
+  const is = game.world.islands[l.island];
+  return is ? landingPoint(is.poly, l.x, l.y) : l;
+}
+
+/** The boats can reach the lair's shore from where she lies: her hull within REACH_SHORE of its beach (reach.ts). */
+function inReach(game: Game, s: PlayerSession, l: Lair, slack = REACH_SLACK): boolean {
   const ship = s.ship!;
-  const x = ship.state.x, y = ship.state.y;
+  const h = hullOf(ship);
   if (l.turtle !== undefined) {
     const p = lairPos(game, l);
     const d = turtles(game.world)[l.turtle];
-    return dist(p.x, p.y, x, y) <= (d?.r ?? 160) + LAND_REACH;
+    return gapTo(h, p.x, p.y, d?.r ?? 160) <= LAND_REACH + slack;
   }
   if (l.bank !== undefined) {
     const b = tidalIsles(game.world)[l.bank];
-    return !!b && dist(b.x, b.y, x, y) <= b.r + LAND_REACH;
+    return !!b && gapTo(h, b.x, b.y, b.r) <= LAND_REACH + slack;
   }
   const is = game.world.islands[l.island];
-  return !!is && dist(l.x, l.y, x, y) <= LAIR_CARD_R + 200 && Math.sqrt(closestOnPolygon(x, y, is.poly).d2) <= LAND_REACH;
+  return !!is && Math.abs(l.x - h.x) < 1500 && Math.abs(l.y - h.y) < 1500 && landingWithin(h, is.poly, l.x, l.y, slack);
 }
 
 /** The men she would land (all but a watch left aboard). */
@@ -1090,7 +1099,7 @@ function dwellHere(game: Game, s: PlayerSession): { l: Lair; d: DwellState; u: B
   for (const [id, d] of Object.entries(S.store.dw)) {
     if (d.owner !== s.accountId) continue;
     const l = S.byId.get(id);
-    if (!l) continue;
+    if (!l || !inReach(game, s, l)) continue;
     const e = dist(l.x, l.y, ship.state.x, ship.state.y);
     if (e < bd) [best, bd] = [{ l, d, u: LAIRS[l.kind].mix[0][0] }, e];
   }
@@ -1356,13 +1365,25 @@ function goTo(game: Game, s: PlayerSession, l: Lair): void {
   const ship = s.ship!;
   if (l.island >= 0) {
     const is = game.world.islands[l.island];
+    // (owner, 2026-10-22: off its beach — the coast's point nearest it — within the boats' thirty metres, reach.ts)
+    const lp = landingPoint(is.poly, l.x, l.y);
+    const nl = Math.hypot(lp.x - l.x, lp.y - l.y) || 1, nx = (lp.x - l.x) / nl, ny = (lp.y - l.y) / nl;
+    for (const off of [24, 30, 38]) {
+      const x = lp.x + nx * (off + ship.stats.beam / 2), y = lp.y + ny * (off + ship.stats.beam / 2);
+      if (isLand(game.world, x, y) || pointInPolygon(x, y, is.poly)) continue;
+      parkNear(game, s, x, y, 1);
+      ship.state.heading = Math.atan2(-ny, -nx);
+      ship.state.speed = 0;
+      game.pushSelf(s, true);
+      return;
+    }
     // The nearest water off the shore from the lair, whichever way it lies (a grotto lies deep inland).
     let best: [number, number] | null = null, bd = Infinity;
     for (let k = 0; k < 24; k++) {
       const a = (k / 24) * Math.PI * 2, ax = Math.sin(a), ay = -Math.cos(a);
       for (let d = 0; d < is.radius * 2 + 800 && d < bd; d += 10) {
         const px = l.x + ax * d, py = l.y + ay * d;
-        if (!pointInPolygon(px, py, is.poly) && !isLand(game.world, px, py) && Math.sqrt(closestOnPolygon(px, py, is.poly).d2) >= 110) {
+        if (!pointInPolygon(px, py, is.poly) && !isLand(game.world, px, py) && Math.sqrt(closestOnPolygon(px, py, is.poly).d2) >= 34) { // (her boats' thirty metres off the beach — reach.ts)
           if (d < bd) [best, bd] = [[px, py], d];
           break;
         }
@@ -1372,7 +1393,9 @@ function goTo(game: Game, s: PlayerSession, l: Lair): void {
     parkNear(game, s, x, y, 1);
   } else {
     const p = lairPos(game, l);
-    parkNear(game, s, p.x, p.y, 230);
+    // (a turtle's shell or a bank: her hull within the boats' thirty metres of its edge — reach.ts)
+    const r = l.turtle !== undefined ? turtles(game.world)[l.turtle]?.r ?? 160 : tidalIsles(game.world)[l.bank ?? -1]?.r ?? 160;
+    parkNear(game, s, p.x, p.y, r + 16 + ship.stats.beam / 2);
   }
   ship.state.speed = 0;
   game.pushSelf(s, true);

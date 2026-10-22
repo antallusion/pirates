@@ -17,6 +17,7 @@
 // small rotating hire of the waters' kinds (the recruit window, src 'way'), a quick repair dearer than a yard's, and
 // «В море». She drifts off past WAY_LEAVE_RANGE, or a fight finds her: the window shuts.
 
+import { REACH_SLACK, hullOf } from '../../../shared/src/data/reach.ts';
 import { lackHammocks, lackMore, lackSlot } from '../../../shared/src/data/buyfail.ts';
 import { UNITS, armyWeight } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
@@ -28,7 +29,7 @@ import {
 import type { FallenRec, ResPlace } from '../../../shared/src/data/resurrect.ts';
 import { PRICE_MAX, PRICE_MIN, REFILL_RATE, dayOf } from '../../../shared/src/data/shop.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
-import { WAY_LEAVE_RANGE, WAY_MOOR_RANGE, wayNear, waysOfChunk, waystations } from '../../../shared/src/world/waystations.ts';
+import { WAY_LEAVE_RANGE, WAY_MOOR_RANGE, WAY_SIZE, wayInReach, wayNear, waysOfChunk, waystations } from '../../../shared/src/world/waystations.ts';
 import type { Waystation } from '../../../shared/src/world/waystations.ts';
 import type { ResRow, ResView, WayClientMsg, WayData, WayView } from '../../../shared/src/wayproto.ts';
 import { Rng } from '../../../shared/src/rng.ts';
@@ -454,7 +455,7 @@ export function moor(game: Game, s: PlayerSession, id: number): string | null {
   if (!w) return 'No waystation there';
   // (owner, 2026-10-19: «штуки … должны включать автоплавание и плыть автоматом туда куда надо»): far off, the helmsman
   // takes her to it and she moors on arrival
-  if (Math.hypot(w.x - ship.state.x, w.y - ship.state.y) > WAY_MOOR_RANGE + 40) return approach(game, s, { x: w.x, y: w.y, reach: WAY_MOOR_RANGE + 30 }, 'Sail closer to the waystation to moor.');
+  if (!wayInReach(hullOf(ship), w, REACH_SLACK)) return approach(game, s, { x: w.x, y: w.y, reach: WAY_MOOR_RANGE, r: WAY_SIZE / 2, slow: 3 }, 'Sail closer to the waystation to moor.');
   const busy = resBusy(game, s);
   if (busy) return busy;
   moored.set(s, w.id);

@@ -3,6 +3,7 @@
 // anchor and haul it with the boats — then carry it to a port, a warehouse, or a shipyard.
 // Every step is a ship at sea that can be robbed, which is how the economy makes PvP by itself.
 
+import { REACH_SHORE, REACH_SLACK, hullOf, shoreWithin } from '../../../shared/src/data/reach.ts';
 import { lackMore, lackRoom } from '../../../shared/src/data/buyfail.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -31,7 +32,7 @@ export interface ResourceSite {
 }
 
 export const RIGHTS_SEC = 2 * 3600;
-const HAUL_RANGE = 300;
+const HAUL_RANGE = REACH_SHORE + REACH_SLACK; // her hull to the coast (owner, 2026-10-22: 300 → 30 m, reach.ts)
 export const WAREHOUSE_VOLUME = 120;
 export const WAREHOUSE_RENT = 300;
 
@@ -119,8 +120,7 @@ export function ownSiteNear(game: Game, s: PlayerSession): { site: ResourceSite;
   for (const site of game.sites) {
     if (site.holder !== s.accountId || site.until <= game.now || site.stock < 1) continue;
     const is = game.world.islands[site.islandId];
-    if (dist(is.x, is.y, ship.state.x, ship.state.y) > is.radius + HAUL_RANGE) continue;
-    if (Math.sqrt(closestOnPolygon(ship.state.x, ship.state.y, is.poly).d2) <= HAUL_RANGE) return { site, island: is };
+    if (shoreWithin(hullOf(ship), is, is.radius, HAUL_RANGE)) return { site, island: is };
   }
   return null;
 }

@@ -21,6 +21,7 @@ import { baseView, reckonBase, startBuild, upgradeAt, yardOf } from '../server/s
 import { lairIsland } from '../server/src/game/wanted.ts';
 import { isLand } from '../shared/src/world/worldgen.ts';
 import { join, makeGame, onHull } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 const SINGLE = BUILDING_IDS.filter((id) => !isTreeBase(id));
 
@@ -130,14 +131,7 @@ test('on the server: a farm raised to 2 with the hall at 2, refused with the hal
   const home = game.world.islands.find((i) => !i.portId && i.region === 'gravewater' && i.radius > 150 && !game.holdings.get(game, i.id) && !lairIsland(game, i.id))!;
   const ship = s.ship!;
   ship.docked = null;
-  for (let k = 0; k < 48; k++) {
-    const a = (k / 48) * Math.PI * 2;
-    const x = home.x + Math.sin(a) * (home.radius + 120), y = home.y - Math.cos(a) * (home.radius + 120);
-    if (isLand(game.world, x, y)) continue;
-    ship.state.x = x;
-    ship.state.y = y;
-    break;
-  }
+  assert.ok(offCoast(game, ship, home), 'water off its coast'); // (owner, 2026-10-22: her hull within thirty metres of its coast — reach.ts)
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);
   assert.equal(buyIsland(game, s, home.id), null);
   const h = ownIsland(game, s.accountId)!;

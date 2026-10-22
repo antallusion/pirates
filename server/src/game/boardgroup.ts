@@ -11,6 +11,7 @@
 //    raid shares a tier's pay); each captain's losses come off her own stacks (tactical.ts sync).
 // No bout of the Colosseum, no trial of mastery (her own test), no jolly-boat raid and no old deck fight takes allies.
 
+import { REACH_SLACK, hullOf, hullsGap } from '../../../shared/src/data/reach.ts';
 import { battleEnded, inBattle } from './inbattle.ts'; // owner, 2026-10-22
 import { UNITS } from '../../../shared/src/data/army.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -57,7 +58,7 @@ export function mateWhy(game: Game, ms: PlayerSession, at: ShipEntity): string |
   if (ship.surrendered) return 'You struck your colours';
   if (inDuel(game, ship)) return 'Not in a duel';
   if (!ship.army.some((x) => x.n > 0)) return 'No men aboard to bring';
-  if (dist(ship.state.x, ship.state.y, at.state.x, at.state.y) > TAC_GROUP.range) return `Come within ${TAC_GROUP.range} m of the grapple`;
+  if (hullsGap(hullOf(ship), hullOf(at)) > TAC_GROUP.range + REACH_SLACK) return `Come within ${TAC_GROUP.range} m of the grapple`;
   return null;
 }
 

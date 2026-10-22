@@ -5,6 +5,7 @@
 // bring them down), a keel limit, a current, ambushes from the wrecks, and the Graveyard Captain at its heart.
 // Each week's Tide changes them: Fog, Blood Moon, Calm.
 
+import { OBJ_R, REACH_OBJ, REACH_SLACK, hullOf, inReach } from '../../../shared/src/data/reach.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -96,7 +97,7 @@ const WALL_R = 360;
 const YARD_R = 900;
 const GATE_ARC = 0.14; // radians either side of a gate
 const KEEL_LIMIT = 3.2;
-const DIVE_RANGE = 250;
+const DIVE_RANGE = REACH_OBJ + REACH_SLACK; // her hull over the sunken city (owner, 2026-10-22: 250 m → 30 m, reach.ts)
 
 export class ExpeditionHub {
   sites: PveSite[];
@@ -237,7 +238,7 @@ function depthFrom(rooms: Room[], from: number, to: number): number {
 }
 
 export function cityHere(game: Game, ship: ShipEntity): PveSite | null {
-  for (const s of game.expeditions.sites) if (s.kind === 'city' && dist(s.x, s.y, ship.state.x, ship.state.y) < DIVE_RANGE) return s;
+  for (const s of game.expeditions.sites) if (s.kind === 'city' && inReach(hullOf(ship), s.x, s.y, OBJ_R, DIVE_RANGE)) return s;
   return null;
 }
 
@@ -265,7 +266,7 @@ export function startDive(game: Game, s: PlayerSession): string | null {
   for (const m of g?.members ?? []) {
     if (members.length >= 5 || m === s.accountId) continue;
     const o = game.sessionByAccount(m)?.ship;
-    if (o && o.alive && !o.docked && dist(o.state.x, o.state.y, site.x, site.y) < DIVE_RANGE * 2 && !hub.runOf(m)) members.push(m);
+    if (o && o.alive && !o.docked && dist(o.state.x, o.state.y, site.x, site.y) < 300 && !hub.runOf(m)) members.push(m);
   }
   const tide = tideOf(game);
   const depth = diveDepth(ship);
@@ -439,7 +440,7 @@ function diveSecond(game: Game, run: DiveRun): void {
   const leader = game.sessionByAccount(run.leader);
   const ship = leader?.ship;
   if (!ship || !ship.alive || ship.docked) return void finishDive(game, run, false, 'The ship above is gone.');
-  if (dist(ship.state.x, ship.state.y, site.x, site.y) > DIVE_RANGE * 1.4 || Math.abs(ship.state.speed) > 3) return void finishDive(game, run, false, 'The ship dragged her anchor and the bell line parted.');
+  if (!inReach(hullOf(ship), site.x, site.y, OBJ_R, DIVE_RANGE + 40) || Math.abs(ship.state.speed) > 3) return void finishDive(game, run, false, 'The ship dragged her anchor and the bell line parted.');
   if (game.now >= run.ends) return void finishDive(game, run, false, 'The bell stayed down too long.');
   if (game.expeditionSecs % 3 === 0) {
     run.air -= 1;

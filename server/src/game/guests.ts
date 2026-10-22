@@ -2,6 +2,7 @@
 // trophy hall, her records and her people, drink in her tavern (the silver goes to her treasury), and sign her
 // guestbook. The week's visits, drinks and signatures rank the islands.
 
+import { REACH_SHORE, REACH_SLACK, hullOf, shoreWithin } from '../../../shared/src/data/reach.ts';
 import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import type { HallView } from '../../../shared/src/protocol.ts';
 import type { Game } from './Game.ts';
@@ -11,7 +12,7 @@ import type { PlayerSession } from './player.ts';
 
 export const DRINK_COST = 20;
 const WEEK_MS = 7 * 86_400_000;
-const NEAR_M = 800;
+const NEAR_M = REACH_SHORE + REACH_SLACK; // her hull to the island's coast (owner, 2026-10-22: 800 → 30 m, reach.ts)
 
 interface GuestHolding extends Holding {
   invited?: string[];
@@ -48,7 +49,7 @@ export function welcome(game: Game, s: PlayerSession, h: GuestHolding): boolean 
 function near(game: Game, s: PlayerSession, islandId: number): boolean {
   const ship = s.ship;
   const is = game.world.islands[islandId];
-  return !!ship && !!is && !ship.docked && Math.hypot(is.x - ship.state.x, is.y - ship.state.y) - is.radius <= NEAR_M;
+  return !!ship && !!is && !ship.docked && shoreWithin(hullOf(ship), is, is.radius, NEAR_M);
 }
 
 function holding(game: Game, islandId: number, guest?: number): GuestHolding | null {

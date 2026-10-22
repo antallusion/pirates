@@ -5,6 +5,8 @@
 // order stands and is given again the moment the shot stops (Game.holdUnderFire), and she is told once that it waits.
 
 /** The words of every order's refusal for the fight: an order refused with these is held, never refused. */
+import { DOCK_SLOW } from '../../../shared/src/data/reach.ts';
+
 export const UNDER_FIRE_WORDS = new Set<string>([
   'Not while under fire',
   'Not under fire.',
@@ -29,7 +31,7 @@ export const HOLD_UNDER_FIRE = 30;
 export const WAY_WORDS = new Map<string, number>([
   ['Heave to first — the boats cannot be lowered at speed', 2.4],
   ['Heave to first', 2.4],
-  ['Take in sail before entering harbour', 6.5],
+  ['Take in sail before entering harbour', DOCK_SLOW - 0.5], // (owner, 2026-10-22: a harbour is entered slow — reach.ts)
 ]);
 
 /** What she is told, once, of an order that waits for her to lie still (or slow for the harbour). */

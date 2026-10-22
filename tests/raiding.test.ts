@@ -44,7 +44,7 @@ function raider(game: Game, name: string, region: RegionId, cls = 'brig', level 
 }
 
 function merchantBy(game: Game, ship: ShipEntity, cargo: Record<string, number>): ShipEntity {
-  const m = game.spawnNpcShip('merchant', 'fluyt', 'league', ship.state.x + 200, ship.state.y, 0);
+  const m = game.spawnNpcShip('merchant', 'fluyt', 'league', ship.state.x + 28, ship.state.y, 0); // (alongside: within hail, 30 m of the hulls — reach.ts)
   game.setNpcLevel(m, 4);
   m.cargo = cargo;
   m.purse = 100;

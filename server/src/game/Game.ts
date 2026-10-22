@@ -1,6 +1,8 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { DOCK_SLOW, LANDING_R, REACH_DOCK, REACH_SLACK, hullOf } from '../../../shared/src/data/reach.ts';
+import { dockWithin } from '../../../shared/src/world/dock.ts';
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { provisionsPerMinute } from '../../../shared/src/data/voyage.ts';
 import { chatCommand, chatFromAfar, chatHist, chatIn, chatOnLogin, chatRead, chatReport, cleanChat, guildSay } from './chat.ts'; // docs/28
@@ -67,7 +69,7 @@ import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, CHASER_RELOAD, GUNS, SHIP_CLASSES, defaultGunFor, emptyAmmo } from '../../../shared/src/data/ships.ts';
-import { aimedVolley, pursuitInput, pursuitOf, startPursuit, startRoamRun, stepAutoFire, stepPursuit, stopPursuit } from './pursuit.ts';
+import { BOARD_RUN_FROM, aimedVolley, pursuitInput, pursuitOf, startPursuit, startRoamRun, stepAutoFire, stepPursuit, stopPursuit } from './pursuit.ts';
 import { ODDS_BUDGET_MS, ODDS_SIMS, RISK_BUDGET_MS, boardOdds, boardRisk, isRisky } from './boardodds.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { TALENTS_BY_ID, canLearn } from '../../../shared/src/data/talents.ts';
@@ -190,12 +192,12 @@ import { playMinigame, stepMinigames } from './minigames.ts';
 import { playTrek, stepTreks } from './trek.ts';
 import { islesPrompt, islesSecond, payKeeper, recallLookouts, sendIsles } from './isles.ts';
 import type { DelayedStrike } from './abilities.ts';
-import { boardingRangeBetween, canBoard, claimPrize, cutGrapples, resendBoarding, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
+import { BOARD_ABEAM, BOARD_FAR, BOARD_SPEED, canBoard, claimPrize, cutGrapples, resendBoarding, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
 import { assistPref, joinBoarding } from './boardgroup.ts'; // docs/25 block Е
 import { tacAction } from './tactical.ts';
 import { battleCardClosed, inBattle, SELF_IN_BATTLE_WHY, untouchable } from './inbattle.ts'; // owner, 2026-10-22
 import { replayList, replayOf } from './tacreplay.ts'; // owner, 2026-10-16: «Повтор»
-import { surrenderBlocked, surrenderClosed } from './struck.ts';
+import { SURRENDER_FAR, SURRENDER_RANGE, surrenderBlocked, surrenderClosed, surrenderNear } from './struck.ts';
 import { endStreak, onStreakKill, streakAhead } from './streak.ts';
 import { legendsView } from './legends.ts';
 import { EmpireHub, GOVERNOR_PENNANT, empireAction, empireView, governsAny, stepEmpires } from './empires.ts';
@@ -206,7 +208,7 @@ import { awayMark, awayReturn, awayTake, renownDistance, renownKill, sendRenown,
 import { sendWorldGoals, stepWorldGoals, worldGoalKill, worldGoalsCollect } from './worldgoals.ts';
 import { sendSignal } from './signals.ts';
 import { autosailInput, autosailOf, startAutosail, stepAutosail, stopAutosail } from './autosail.ts';
-import { cancelApproach, stepApproach } from './approach.ts'; // seaux: sail-to on tap
+import { approach, approachInput, cancelApproach, stepApproach } from './approach.ts'; // seaux: sail-to on tap
 import { cancelRoute, gotoGoal, stepRoutes } from './goalroute.ts'; // route: tap a goal, sail to its nearest place
 import { LootMap, stepWrecks } from './wrecks.ts'; // seaux: wreckage per captain
 import { scuttleHome, scuttledHome, stepAdrift } from './adrift.ts'; // owner 2026-10-20: the jury rig, stranded, scuttling home
@@ -1860,7 +1862,7 @@ export class Game {
         const is = this.world.islands[st.island];
         at = is ?? null;
         if (is) {
-          r = is.radius + ISLE_REACH * 0.7;
+          r = is.radius + ISLE_REACH;
           island = st.island;
         }
       } else if (st.type === 'spot') {
@@ -2551,6 +2553,8 @@ export class Game {
   acceptSurrender(s: PlayerSession, id: number, fate: SurrenderFate): string | null {
     const target = this.ships.get(id);
     const why = surrenderBlocked(this, s, target);
+    // (owner, 2026-10-22: alongside, not 400 m off — the helmsman takes her there and her terms are taken on arrival)
+    if (why === SURRENDER_FAR && target) return approach(this, s, { x: target.state.x, y: target.state.y, reach: SURRENDER_RANGE, r: target.stats.length / 2, where: () => (target.alive && target.surrendered ? target.state : null), near: () => !!s.ship && surrenderNear(s.ship, target, -4), slow: 4 }, why);
     if (why) return why;
     const t = target!;
     if (fate !== 'sink' && fate !== 'release') return TWO_CHOICES;
@@ -3518,6 +3522,10 @@ export class Game {
           if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
           return; // the helmsman pursues her mark (docs/23 item 33)
         }
+        if (approachInput(this, s, msg.rudder, msg.helm === true)) {
+          if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
+          return; // the last metres to a thing crept in (approach.ts, owner 2026-10-22)
+        }
         if (autosailInput(this, s, msg.rudder, msg.sail)) {
           if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
           return; // the helmsman has the wheel (docs/16 #36)
@@ -3692,10 +3700,18 @@ export class Game {
         if (why) {
           // The odds taken («Рискнуть») while the ships drew apart: the helmsman takes her alongside and the grapples
           // fly there (owner, 2026-10-18: «на нпс сразу можно было абордажить»), not «too far» and a second press.
-          if (why === 'Too far to throw grapples' && msg.risk === true && Math.hypot(target.state.x - ship.state.x, target.state.y - ship.state.y) < boardingRangeBetween(ship, target) * 8 && startPursuit(this, s, target.id, 'board') === null) {
-            const run = pursuitOf(ship);
-            if (run) run.grapple = true;
-            return;
+          // Not alongside (owner, 2026-10-22: the grapples fly only side by side): the same — her helmsman comes
+          // alongside and they fly there; the odds of a risky one asked first, as at the rail.
+          if ((why === BOARD_FAR || why === BOARD_ABEAM || why === BOARD_SPEED) && Math.hypot(target.state.x - ship.state.x, target.state.y - ship.state.y) < BOARD_RUN_FROM) {
+            if (msg.risk !== true) {
+              const risk = boardRisk(this, ship, target, RISK_BUDGET_MS);
+              if (risk.risky) return this.sendTo(s, { t: 'board_risk', risk });
+            }
+            if (startPursuit(this, s, target.id, 'board') === null) {
+              const run = pursuitOf(ship);
+              if (run) run.grapple = true;
+              return;
+            }
           }
           return err(why);
         }
@@ -4824,8 +4840,15 @@ export class Game {
     if (inBattle(this, ship)) return SELF_IN_BATTLE_WHY; // her party fights ashore, or her group's boarding holds her (owner, 2026-10-22)
     if (ship.underFire(this.now)) return 'The harbour chain stays up while you are in a fight';
     const port = this.nearestPort(ship.state.x, ship.state.y);
+    // Only from the harbour's approach (owner, 2026-10-22: her hull within REACH_DOCK of its anchorage or its quays —
+    // shared/src/world/dock.ts); a cable or a mile off, the helmsman takes her in and she puts in there (approach.ts).
+    const isl = port ? this.world.islands[port.islandId] : undefined;
+    const quay = isl ? { x: isl.x, y: isl.y, r: isl.radius, poly: isl.poly } : null;
     if (!port || dist(port.x, port.y, ship.state.x, ship.state.y) > PORT_DOCK_RADIUS) return 'No harbour close enough';
-    if (ship.state.speed > 7) return 'Take in sail before entering harbour';
+    if (!dockWithin(hullOf(ship), port, quay, REACH_SLACK)) {
+      return approach(this, s, { x: port.x, y: port.y, reach: REACH_DOCK, r: LANDING_R, near: () => !!s.ship && dockWithin(hullOf(s.ship), port, quay, -4), slow: DOCK_SLOW - 0.5 }, 'Come into the harbour first: up to its quays.');
+    }
+    if (ship.state.speed > DOCK_SLOW) return 'Take in sail before entering harbour';
     const ok = canDock(p, port.faction);
     const override = ok.ok ? null : dockOverride(ship, p, port, bribing);
     if (!ok.ok && !override) return ok.reason!;

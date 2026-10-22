@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { recruitCost } from '../server/src/game/crew.ts';
 import { PROTOCOL_VERSION } from '../shared/src/constants.ts';
 import { FakeConn, join, makeGame, steps } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 test('a level gained on the quay sends the port again: the price per man shown is the one the hire takes', () => {
   const { game } = makeGame();
@@ -227,11 +228,7 @@ test('a barge of timber, coal and iron to her island\'s yard for silver (a small
   const ship = s.ship!;
   ship.docked = null;
   s.profile!.docked = null;
-  for (let k = 0; k < 96; k++) {
-    const a = (k / 96) * Math.PI * 2;
-    const x = is.x + Math.sin(a) * (is.radius + 100), y = is.y - Math.cos(a) * (is.radius + 100);
-    if (!isLand(game.world, x, y)) { ship.state.x = x; ship.state.y = y; break; }
-  }
+  assert.ok(offCoast(game, ship, is), 'water off its coast'); // (owner, 2026-10-22: her hull within thirty metres of its coast — reach.ts)
   assert.equal(buyIsland(game, s, is.id), null);
   const h = ownIsland(game, s.accountId)!;
   const cost = Object.entries(BARGE).reduce((a, [g, n]) => a + Math.round((n ?? 0) * GOODS[g as 'timber'].basePrice * BARGE_MUL), 0);

@@ -34,6 +34,7 @@ import { serverText } from '../client/src/lang/server.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { kitShare } from './balance/relics.ts';
 import { join, makeGame, onHull, steps } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 const manifest = JSON.parse(readFileSync(new URL('../assets/manifest.json', import.meta.url), 'utf8')) as { assets: Record<string, unknown> };
 const slots = (r: RelicId) => RELICS[r].parts.map((id) => ARTIFACTS[id].slot);
@@ -215,6 +216,7 @@ function atAnvil(game: Game): PlayerSession {
   const s = captain(game, 'Smith Captain');
   const home = game.world.islands.find((i) => !i.portId && !i.minor && !i.raft && i.region === 'gravewater' && i.radius > 150 && !game.holdings.get(game, i.id) && !lairIsland(game, i.id) && !mineSites(game).some((m) => m.islandId === i.id))!;
   parkNear(game, s, home.x, home.y, home.radius + 120);
+  assert.ok(offCoast(game, s.ship!, home), 'water off its coast'); // (her hull within its coast's reach — reach.ts)
   s.profile!.gold = 1_000_000;
   assert.equal(buyIsland(game, s, home.id), null);
   townState(yardOf(game, ownIsland(game, s.accountId)!)).b.market = 1;
