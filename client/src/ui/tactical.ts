@@ -2269,7 +2269,9 @@ export class TacticalPanel {
       // docs/19 E14: a bout of the Colosseum — its rating under the why.
       const arenaLine = r?.arena ? `<span class="tb-why tb-arena${r.arena.rated ? (r.arena.delta >= 0 ? ' up' : ' down') : ''}">${icon('icon.item_duelling_pistols', '', 'ico-sm')}${esc(arenaEndLine(r.arena))}</span>` : '';
       // Owner, 2026-10-16: «Почему» (its sheet: each stack's harm, the turning point) and «Повтор» beside the button.
-      const more = `${r?.why ? `<button class="k-btn k-btn--md tb-endx" data-why>${esc(L('why.btn'))}</button>` : ''}${r?.replay && !v.replay ? `<button class="k-btn k-btn--md tb-endx" data-replay="${esc(r.replay)}">${esc(L('replay'))}</button>` : ''}`;
+      // (owner, 2026-10-22: «плашка "почему" — её надо задизайнить как кнопку дальше»): the same button as «Дальше» —
+      // its frame, height, words and padding (tb-endbtn) — the secondary of the pair, as the action row's (actBtnClass)
+      const more = `${r?.why ? `<button class="k-btn k-btn--secondary k-btn--lg tb-endbtn tb-endx" data-why>${esc(L('why.btn'))}</button>` : ''}${r?.replay && !v.replay ? `<button class="k-btn k-btn--secondary k-btn--lg tb-endbtn tb-endx" data-replay="${esc(r.replay)}">${esc(L('replay'))}</button>` : ''}`;
       // (laid anew only when its words change: a redraw between the finger's down and up took «К морю» from under it and
       // the tap did nothing — QA 2026-10-22, the stack's end stood until a second tap)
       const endHtml = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span class="tb-why">${esc(whyText)}</span>${arenaLine}${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${rows}${v.land && !v.replay ? '<div data-fallen-slot class="tb-fallen"></div>' : ''}</div><div class="tb-endrow">${more}<button class="k-btn k-btn--primary k-btn--lg tb-endbtn" data-endbtn>${esc(v.replay ? L('replay.close') : v.land ? LL('close') : L('next'))}</button><button class="tb-endx2" data-endx title="${esc(L('close.x'))}" aria-label="${esc(L('close.x'))}"><i class="tb-pk-x" aria-hidden="true"></i></button></div>`;

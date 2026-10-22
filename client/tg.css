@@ -95,6 +95,11 @@
    it measures the panes, not the screen) lays them out in what is left */
 html.tg-app .screen, html.tg-app #modal { top: var(--tg-top, 0px); bottom: var(--tg-bottom, 0px); left: var(--tg-left, 0px); right: var(--tg-right, 0px); }
 html.tg-app #modal-panel, html.tg-app .captain-wrap, html.tg-app #screen-login > .login-panel { max-height: 100%; }
+/* …and the window's own padding for the notch (feel.css, fit.css: --sa-*) is not added on top: Telegram's insets
+   (src/tg.ts) are both of them, so the window stood a second Telegram band lower — 46 px of a 270 px screen lost, the
+   page under it cut (owner, 2026-10-22: «кнопки выходят за рамку», the exchange at 1093×481) */
+html.tg-app #modal { padding: 0; }
+html.tg-app .screen { padding-left: 0; padding-right: 0; }
 @media (max-height: 520px), (max-width: 699px) {
   html.tg-app #modal-panel, html.tg-app .captain-wrap { height: 100%; }
 }

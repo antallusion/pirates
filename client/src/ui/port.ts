@@ -89,6 +89,7 @@ function licenceLeft(n: number): string {
   return L('licence.left', { n, minutes: plural(n, L('licence.min1'), L('licence.min2'), L('licence.min5')) });
 }
 
+type XTab = 'fwd' | 'orders' | 'bank' | 'opt';
 type Tab = 'market' | 'shipyard' | 'tavern' | 'quests' | 'harbour' | 'colours' | 'holdings' | 'exchange' | 'auction' | 'dice' | 'rumours' | 'charts' | 'army' | 'pets';
 
 /** The harbour's places by their icons. */
@@ -159,6 +160,8 @@ export function bestOffers(view: PortView, state: ClientState): Offer[] {
 
 export class PortScreen {
   tab: Tab = 'market';
+  /** The exchange's own switch (owner, 2026-10-22): the forwards, the orders, the bank, the options. */
+  xtab: XTab = 'fwd';
   /** The switch of «Задания» (board.ts). */
   qchip: BoardChip = 'all';
   /** «Плыть» on a card of «Задания»: the run to its place, set off as she casts off (main.ts startGoal). */
@@ -255,6 +258,11 @@ export class PortScreen {
       root.querySelector<HTMLElement>('.port-body')?.scrollTo({ top: 0 });
     }));
     root.querySelectorAll<HTMLElement>('[data-act]').forEach((el) => (el.onclick = () => this.act(el.dataset, root, state)));
+    root.querySelectorAll<HTMLElement>('[data-xtab]').forEach((el) => (el.onclick = () => {
+      this.xtab = el.dataset.xtab as XTab;
+      this.render(root, state);
+      root.querySelector<HTMLElement>('.port-body')?.scrollTo({ top: 0 });
+    }));
     // A quest's card or row tapped (not its button): what it asks, the long press's words (docs/30).
     if (this.tab === 'quests') {
       root.querySelectorAll<HTMLElement>('.q-card[data-hint], .mk-list .w-row[data-hint]').forEach((el) => (el.onclick = (e) => { if (!(e.target as HTMLElement).closest('button')) showHint(el); }));
@@ -872,7 +880,7 @@ ${orders}${berths}</div>` : ''}`;
     const regatta = regattaCard(state, state.regatta, state.self?.dockedAt ?? null) + holidayCard(state);
     const self = state.self!;
     const port = state.ports.find((p) => p.id === view.portId)!;
-    const reps = Object.entries(self.reputation).map(([f, v]) => `<tr><td>${icon(`faction_${f}`)}${esc(FACTIONS[f as never as keyof typeof FACTIONS].name)}</td><td class="${(v ?? 0) < 0 ? 'up' : 'down'}">${v}</td></tr>`).join('');
+    const reps = Object.entries(self.reputation).map(([f, v]) => ledgerRow({ ico: icon(`faction_${f}`), title: esc(FACTIONS[f as never as keyof typeof FACTIONS].name), acts: `<b class="lr-num ${(v ?? 0) < 0 ? 'up' : 'down'}">${v}</b>`, cls: 'lr-rep' })).join('');
     return `${regatta}<div class="cols"><div>
         <div class="card"><h4 class="card-h">${icon('wanted', '', 'ico-md')}${esc(L('pardon.title'))}</h4>${view.pardonCost !== null ? `<p>${esc(L('pardon.text', { n: self.infamy }))}</p><button class="btn" data-act="pardon" ${self.infamy >= 20 ? '' : 'disabled'}>${esc(L('pardon.buy', { cost: fmt(view.pardonCost) }))}</button>` : `<p class="muted">${esc(L('pardon.none'))}</p>`}</div>
         ${view.licence ? `<div class="card"><h4 class="card-h">${icon('map_contract', '', 'ico-md')}${esc(L('licence.title'))}</h4><p>${esc(view.licence.until > state.estServerTime() ? L('licence.textActive', { faction: FACTIONS[port.faction].short }) : L('licence.textDuty', { pct: Math.round(view.duty * 100) || '', faction: FACTIONS[port.faction].short }))}</p>
@@ -897,7 +905,7 @@ ${orders}${berths}</div>` : ''}`;
         <div class="card"><h4 class="card-h">${icon('map_wreck', '', 'ico-md')}${esc(L('claim.title'))}</h4><p class="muted">${esc(L('claim.text'))}</p>
           <div class="row" style="gap:6px"><input id="claim-email" type="email" placeholder="${esc(L('claim.emailPh'))}" style="flex:1"><input id="claim-password" type="password" placeholder="${esc(L('claim.passwordPh'))}" style="flex:1"><button class="btn btn-small" data-act="claim">${esc(L('btn.save'))}</button></div></div>
         <div class="card"><h4 class="card-h">${icon('menu_talents', '', 'ico-md')}${esc(L('respec.title'))}</h4><p>${esc(L('respec.text', { cost: fmt(60 * self.level) }))}</p><button class="btn btn-danger" data-act="respec">${esc(L('respec.btn'))}</button></div>
-      </div><div class="card"><h4 class="card-h">${icon('faction_league', '', 'ico-md')}${esc(L('standing.title'))}</h4><table class="grid">${reps}</table>
+      </div><div class="card"><h4 class="card-h">${icon('faction_league', '', 'ico-md')}${esc(L('standing.title'))}</h4><div class="lr-list">${reps}</div>
       <p class="muted" style="margin-top:8px">${esc(L('standing.stats', { sunk: self.stats.sunk, taken: self.stats.boarded, profit: fmt(self.stats.tradeProfit), km: fmt(self.stats.distance / 1000), islands: self.discoveredCount }))}</p></div></div>`;
 
   }
@@ -909,65 +917,103 @@ ${orders}${berths}</div>` : ''}`;
       const left = x.until > now ? Math.round((x.until - now) / 60) : 0;
       const status = x.mine ? `<span class="good">${esc(L('site.yours', { n: left, stock: x.stock, cap: x.capacity }))}</span>` : x.holder ? `<span class="bad">${esc(L('site.held', { who: x.holder, n: left }))}</span>` : `<span class="muted">${esc(L('site.unclaimed'))}</span>`;
       const can = !x.holder || x.mine;
-      return `<tr><td><b>${esc(placeName(x.island))}</b></td><td>${icon(`good_${x.good}`)}${esc(GOODS[x.good].name)}</td><td>${esc(L('site.rate', { n: x.rate }))}</td><td>${status}</td>
-        <td><button class="btn btn-small" data-act="rights" data-site="${esc(x.id)}" ${can ? '' : 'disabled'}>${esc(x.mine ? L('site.extend') : L('site.buy'))} ${money(x.cost)}</button></td></tr>`;
+      return ledgerRow({ ico: icon(`good_${x.good}`), title: esc(placeName(x.island)), to: GOODS[x.good].name, toCls: 'muted',
+        meta: [`<span class="lr-kv">${esc(L('site.rate', { n: x.rate }))}</span>`, `<span class="lr-kv">${status}</span>`],
+        acts: `<button class="btn btn-small" data-act="rights" data-site="${esc(x.id)}" ${can ? '' : 'disabled'}>${esc(x.mine ? L('site.extend') : L('site.buy'))} ${money(x.cost)}</button>` });
     }).join('');
     const wh = view.warehouse;
     const goods = new Set([...Object.keys(wh.goods), ...Object.keys(self.cargo)]);
     const rows = [...goods].filter((g) => (wh.goods[g as never] ?? 0) > 0 || (self.cargo[g as never] ?? 0) >= 1).map((g) => {
       const stored = Math.floor(wh.goods[g as never] ?? 0);
       const held = Math.floor(self.cargo[g as never] ?? 0);
-      return `<tr><td>${icon(`good_${g}`)}${esc(GOODS[g as never as keyof typeof GOODS].name)}</td><td>${held}</td><td>${stored}</td>
-        <td><button class="btn btn-small" data-act="store" data-good="${g}" data-n="${held}" ${held ? '' : 'disabled'}>${esc(L('wh.storeAll'))}</button>
-        <button class="btn btn-small" data-act="store" data-good="${g}" data-n="${-stored}" ${stored ? '' : 'disabled'}>${esc(L('wh.takeAll'))}</button></td></tr>`;
+      return ledgerRow({ ico: icon(`good_${g}`), title: esc(GOODS[g as never as keyof typeof GOODS].name),
+        meta: [`<span class="lr-kv"><small>${esc(L('th.hold'))}</small>${held}</span>`, `<span class="lr-kv"><small>${esc(L('th.stored'))}</small>${stored}</span>`],
+        acts: `<button class="btn btn-small" data-act="store" data-good="${g}" data-n="${held}" ${held ? '' : 'disabled'}>${esc(L('wh.storeAll'))}</button><button class="btn btn-small" data-act="store" data-good="${g}" data-n="${-stored}" ${stored ? '' : 'disabled'}>${esc(L('wh.takeAll'))}</button>` });
     }).join('');
     return `<div class="cols"><div><div class="card"><h4 class="card-h">${icon('tab_law', '', 'ico-md')}${esc(L('rights.title'))}</h4>
         <p class="muted">${esc(L('rights.text', { how: landHow() }))}</p>
-        ${sites ? `<table class="grid"><tr><th>${esc(L('th.island'))}</th><th>${esc(L('th.yield'))}</th><th>${esc(L('th.rate'))}</th><th>${esc(L('th.status'))}</th><th></th></tr>${sites}</table>` : `<p class="muted">${esc(L('rights.none'))}</p>`}</div></div>
+        ${sites ? `<div class="lr-list">${sites}</div>` : `<p class="muted">${esc(L('rights.none'))}</p>`}</div></div>
       <div><div class="card"><h4 class="card-h">${icon('tab_holdings', '', 'ico-md')}${esc(L('wh.title'))} ${wh.rented ? `<span class="muted">${Math.round(wh.volume)}/${wh.capacity}</span>` : ''}</h4>
         <p class="muted">${esc(wh.rented ? L('wh.rented') : L('wh.rent', { cost: fmt(wh.rent) }))}</p>
-        ${rows ? `<table class="grid"><tr><th>${esc(L('th.good'))}</th><th>${esc(L('th.hold'))}</th><th>${esc(L('th.stored'))}</th><th></th></tr>${rows}</table>` : `<p class="muted">${esc(L('wh.empty'))}</p>`}</div></div></div>`;
+        ${rows ? `<div class="lr-list">${rows}</div>` : `<p class="muted">${esc(L('wh.empty'))}</p>`}</div></div></div>`;
   }
 
 
   private exchange(view: PortView, state: ClientState): string {
+    // (owner, 2026-10-22: «что-то с версткой текста на бирже и кнопки выходят за рамку» — the forwards' table beside the
+    // bank on a phone held sideways squeezed its columns to a letter a line and pushed «Подписать» out of its row): the
+    // exchange is a switch of its own — the forwards, the orders, the bank (and a speculator's options) — each a list of
+    // ledger rows (ledgerRow: the good's picture, its name and where to, the price, the deposit and the time on a line
+    // under it, the button in the row), at any width.
     const self = state.self!;
     const now = state.estServerTime();
     const portName = (id: string) => state.ports.find((p) => p.id === id)?.name ?? id;
     const mins = (t: number) => L('unit.min', { n: Math.max(0, Math.round((t - now) / 60)) });
     const ex = view.exchange;
-    const forwards = ex?.forwards.map((f) => `<tr><td>${goodQty(f.good, f.qty)}</td><td class="lg-wide">${esc(placeName(f.toName))}</td><td class="gold">${esc(L('unit.perU', { n: f.price }))}</td><td>${money(f.collateral)}</td><td>${esc(mins(f.expiresAt))}</td>
-      <td><button class="btn btn-small" data-act="forward" data-id="${esc(f.id)}">${esc(L('btn.sign'))}</button></td></tr>`).join('') ?? '';
-    const mine = self.forwards.map((f) => `<tr><td>${goodQty(f.good, f.qty)} <span class="muted">${f.delivered}/${f.qty}</span></td><td class="lg-wide">${esc(portName(f.toPort))}</td><td class="gold">${esc(L('unit.perU', { n: f.price }))}</td><td>${money(f.collateral)}</td><td>${esc(mins(f.expiresAt))}</td></tr>`).join('');
-    const orders = ex?.orders.map((o) => {
-      const have = Math.floor(self.cargo[o.good] ?? 0);
-      const n = Math.min(have, o.qty - o.filled);
-      return `<tr><td>${esc(o.name)}</td><td>${goodQty(o.good, o.qty - o.filled)}</td><td class="gold">${esc(L('unit.perU', { n: o.price }))}</td><td>${esc(mins(o.expiresAt))}</td>
-        <td>${o.mine ? `<button class="btn btn-small" data-act="order_cancel" data-id="${esc(o.id)}">${esc(L('btn.cancel'))}</button>` : `<button class="btn btn-small" data-act="order_fill" data-id="${esc(o.id)}" data-n="${n}" ${n ? '' : 'disabled'}>${esc(L('order.sell', { n: n || '' }).trim())}</button>`}</td></tr>`;
-    }).join('') ?? '';
-    const goodsOpts = view.market.map((r) => `<option value="${r.good}">${esc(GOODS[r.good].name)} (~${r.sell})</option>`).join('');
     const b = view.bank;
-    const loan = b.loan ? `<p class="${b.loan.defaulted ? 'bad' : ''}">${esc(L('loan.owed', { owed: fmt(b.loan.owed), status: b.loan.defaulted ? L('loan.default') : L('loan.due', { t: mins(b.loan.due) }) }))}</p>` : '';
-    return `<div class="cols"><div>
-        <div class="card"><h4 class="card-h">${icon('tab_exchange', '', 'ico-md')}${esc(L('fwd.title'))}</h4>${ex ? `<p class="muted">${esc(L('fwd.text'))}</p>
-          ${forwards ? `<table class="grid"><tr><th>${esc(L('th.goods'))}</th><th>${esc(L('th.to'))}</th><th>${esc(L('th.price'))}</th><th>${esc(L('th.collateral'))}</th><th>${esc(L('th.deadline'))}</th><th></th></tr>${forwards}</table>` : `<p class="muted">${esc(L('fwd.none'))}</p>`}` : `<p class="muted">${esc(L('fwd.noExchange'))}</p>`}
-          ${mine ? `<h4 style="margin-top:10px">${esc(L('fwd.mine'))}</h4><table class="grid">${mine}</table>` : ''}</div>
-        ${ex ? `<div class="card"><h4 class="card-h">${icon('tab_board', '', 'ico-md')}${esc(L('orders.title'))}</h4><p class="muted">${esc(L('orders.text'))}</p>
-          ${orders ? `<table class="grid"><tr><th>${esc(L('th.buyer'))}</th><th>${esc(L('th.wants'))}</th><th>${esc(L('th.pays'))}</th><th>${esc(L('th.lapses'))}</th><th></th></tr>${orders}</table>` : `<p class="muted">${esc(L('orders.none'))}</p>`}
-          <div class="form-grid"><label class="fg-wide">${esc(L('th.goods'))}<select id="ord-good">${goodsOpts}</select></label><label>${esc(L('orders.qty'))}<input id="ord-qty" type="number" min="1" max="200" value="20"></label><label>${esc(L('orders.price'))}<input id="ord-price" type="number" min="1" value="20"></label><button class="btn btn-primary fg-wide" data-act="order_post">${esc(L('orders.post'))}</button></div></div>` : ''}
-      </div><div>
-        ${self.talents.trd_speculator ? `<div class="card"><h4 class="card-h">${icon('tab_exchange', '', 'ico-md')}${esc(L('opt.title'))}</h4><p class="muted">${esc(L('opt.text'))}</p>
-          ${self.options.map((o, i) => `<div class="row" style="padding:3px 0"><span>${o.qty} ${icon(`good_${o.good}`)}${esc(GOODS[o.good].name)} @ ${esc(state.ports.find((p) => p.id === o.port)?.name ?? o.port)} · ${fmt(o.price)} · ${esc(mins(o.until))}</span>${o.port === view.portId ? `<button class="btn btn-small" data-act="option_ex" data-i="${i}">${esc(L('opt.exercise', { cost: fmt(o.price - o.deposit) }))}</button>` : ''}</div>`).join('')}
-          <div class="row" style="gap:6px;margin-top:6px"><select id="opt-good">${view.market.filter((r) => r.stock > 3).map((r) => `<option value="${r.good}">${esc(GOODS[r.good].name)} ${esc(L('opt.stock', { buy: r.buy, stock: r.stock }))}</option>`).join('')}</select><input id="opt-qty" type="number" min="1" value="10" style="width:60px"><button class="btn btn-small" data-act="option_buy">${esc(L('opt.reserve'))}</button></div></div>` : ''}
-        <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${esc(L('bank.title'))}</h4>${b.available ? `<p>${L('bank.text', { balance: fmt(b.balance), pct: Math.round(b.withdrawFee * 100) })}</p>
+    const subs: { id: XTab; label: string }[] = [
+      { id: 'fwd', label: L('xtab.fwd') },
+      ...(ex ? [{ id: 'orders' as XTab, label: L('xtab.orders') }] : []),
+      { id: 'bank', label: L('xtab.bank') },
+      ...(self.talents.trd_speculator ? [{ id: 'opt' as XTab, label: L('xtab.opt') }] : []),
+    ];
+    if (!subs.some((x) => x.id === this.xtab)) this.xtab = 'fwd';
+    const seg = `<div class="xch-seg" role="tablist">${subs.map((x) => `<button type="button" role="tab" aria-selected="${x.id === this.xtab}" class="k-btn k-btn--sm ${x.id === this.xtab ? 'k-btn--primary on' : 'k-btn--secondary'}" data-xtab="${x.id}">${esc(x.label)}</button>`).join('')}</div>`;
+    const kv = (k: string, v: string, cls = '') => `<span class="lr-kv${cls ? ' ' + cls : ''}"><small>${esc(k)}</small>${v}</span>`;
+    let body = '';
+    if (this.xtab === 'fwd') {
+      const forwards = ex?.forwards.map((f) => ledgerRow({
+        ico: icon(`good_${f.good}`), title: `${esc(GOODS[f.good].name)}&nbsp;×&nbsp;${f.qty}`, to: placeName(f.toName),
+        meta: [kv(L('th.price'), esc(L('unit.perU', { n: f.price })), 'gold'), kv(L('th.collateral'), money(f.collateral)), kv(L('th.deadline'), esc(mins(f.expiresAt)))],
+        acts: `<button class="btn btn-small btn-primary" data-act="forward" data-id="${esc(f.id)}">${esc(L('btn.sign'))}</button>`,
+      })).join('') ?? '';
+      const mine = self.forwards.map((f) => ledgerRow({
+        ico: icon(`good_${f.good}`), title: `${esc(GOODS[f.good].name)}&nbsp;×&nbsp;${f.qty}`, to: placeName(portName(f.toPort)),
+        meta: [kv(L('th.price'), esc(L('unit.perU', { n: f.price })), 'gold'), kv(L('th.collateral'), money(f.collateral)), kv(L('th.deadline'), esc(mins(f.expiresAt))), `<span class="lr-kv muted">${esc(L('fwd.left', { n: f.delivered, m: f.qty }))}</span>`],
+      })).join('');
+      body = `<div class="card"><h4 class="card-h">${icon('tab_exchange', '', 'ico-md')}${esc(L('fwd.title'))}</h4>${ex ? `<p class="muted">${esc(L('fwd.text'))}</p>
+          ${forwards ? `<div class="lr-list">${forwards}</div>` : `<p class="muted">${esc(L('fwd.none'))}</p>`}` : `<p class="muted">${esc(L('fwd.noExchange'))}</p>`}</div>
+        ${mine ? `<div class="card"><h4 class="card-h">${icon('map_contract', '', 'ico-md')}${esc(L('fwd.mine'))}</h4><div class="lr-list">${mine}</div></div>` : ''}`;
+    } else if (this.xtab === 'orders' && ex) {
+      const orders = ex.orders.map((o) => {
+        const have = Math.floor(self.cargo[o.good] ?? 0);
+        const n = Math.min(have, o.qty - o.filled);
+        return ledgerRow({
+          ico: icon(`good_${o.good}`), title: `${esc(GOODS[o.good].name)}&nbsp;×&nbsp;${o.qty - o.filled}`, to: o.name, toCls: 'muted',
+          meta: [kv(L('th.pays'), esc(L('unit.perU', { n: o.price })), 'gold'), kv(L('th.lapses'), esc(mins(o.expiresAt)))],
+          acts: o.mine ? `<button class="btn btn-small" data-act="order_cancel" data-id="${esc(o.id)}">${esc(L('btn.cancel'))}</button>` : `<button class="btn btn-small btn-primary" data-act="order_fill" data-id="${esc(o.id)}" data-n="${n}" ${n ? '' : 'disabled'}>${esc(L('order.sell', { n: n || '' }).trim())}</button>`,
+        });
+      }).join('');
+      const goodsOpts = view.market.map((r) => `<option value="${r.good}">${esc(GOODS[r.good].name)} (~${r.sell})</option>`).join('');
+      body = `<div class="card"><h4 class="card-h">${icon('tab_board', '', 'ico-md')}${esc(L('orders.title'))}</h4><p class="muted">${esc(L('orders.text'))}</p>
+          ${orders ? `<div class="lr-list">${orders}</div>` : `<p class="muted">${esc(L('orders.none'))}</p>`}
+          <div class="form-grid xch-form"><label class="fg-wide">${esc(L('th.goods'))}<select id="ord-good">${goodsOpts}</select></label><label>${esc(L('orders.qty'))}<input id="ord-qty" type="number" min="1" max="200" value="20"></label><label>${esc(L('orders.price'))}<input id="ord-price" type="number" min="1" value="20"></label><button class="btn btn-primary fg-wide" data-act="order_post">${esc(L('orders.post'))}</button></div></div>`;
+    } else if (this.xtab === 'opt') {
+      body = `<div class="card"><h4 class="card-h">${icon('tab_exchange', '', 'ico-md')}${esc(L('opt.title'))}</h4><p class="muted">${esc(L('opt.text'))}</p>
+          ${self.options.length ? `<div class="lr-list">${self.options.map((o, i) => ledgerRow({
+            ico: icon(`good_${o.good}`), title: `${esc(GOODS[o.good].name)}&nbsp;×&nbsp;${o.qty}`, to: placeName(portName(o.port)),
+            meta: [kv(L('th.price'), money(o.price), 'gold'), kv(L('th.deadline'), esc(mins(o.until)))],
+            acts: o.port === view.portId ? `<button class="btn btn-small btn-primary" data-act="option_ex" data-i="${i}">${esc(L('opt.exercise', { cost: fmt(o.price - o.deposit) }))}</button>` : '',
+          })).join('')}</div>` : ''}
+          <div class="form-grid xch-form"><label class="fg-wide">${esc(L('th.goods'))}<select id="opt-good">${view.market.filter((r) => r.stock > 3).map((r) => `<option value="${r.good}">${esc(GOODS[r.good].name)} ${esc(L('opt.stock', { buy: r.buy, stock: r.stock }))}</option>`).join('')}</select></label><label>${esc(L('orders.qty'))}<input id="opt-qty" type="number" min="1" value="10"></label><button class="btn btn-primary" data-act="option_buy">${esc(L('opt.reserve'))}</button></div></div>`;
+    } else {
+      const loan = b.loan ? `<p class="${b.loan.defaulted ? 'bad' : ''}">${esc(L('loan.owed', { owed: fmt(b.loan.owed), status: b.loan.defaulted ? L('loan.default') : L('loan.due', { t: mins(b.loan.due) }) }))}</p>` : '';
+      body = `<div class="card xch-bank"><h4 class="card-h">${icon('coin', '', 'ico-md')}${esc(L('bank.title'))}</h4>${b.available ? `<p>${L('bank.text', { balance: fmt(b.balance), pct: Math.round(b.withdrawFee * 100) })}</p>
           <p>${L('bank.credit', { limit: fmt(b.limit), pct: Math.round(b.interest * 100), h: Math.round(b.term / 3600) })}</p>${loan}
-          <div class="form-grid"><label class="fg-wide">${esc(L('bank.amount'))}<input id="bank-amt" type="number" min="1" value="500"></label>
-          ${(['deposit', 'withdraw', 'borrow', 'repay'] as const).map((m) => `<button class="btn" data-act="bank" data-mode="${m}">${esc(L(`bank.${m}`))}</button>`).join('')}</div>`
-          : `<p class="muted">${esc(L('bank.none', { balance: fmt(self.bank) }))}</p>${loan}`}</div>
-
-      </div></div>`;
+          <div class="xch-bank-acts"><label class="xch-amt">${esc(L('bank.amount'))}<input id="bank-amt" type="number" min="1" value="500"></label>
+          ${(['deposit', 'withdraw', 'borrow', 'repay'] as const).map((m) => `<button class="btn${m === 'deposit' ? ' btn-primary' : ''}" data-act="bank" data-mode="${m}">${esc(L(`bank.${m}`))}</button>`).join('')}</div>`
+          : `<p class="muted">${esc(L('bank.none', { balance: fmt(self.bank) }))}</p>${loan}`}</div>`;
+    }
+    return `<div class="xch" data-x="${this.xtab}">${seg}${body}</div>`;
   }
 
+}
+
+/** A ledger's row (the exchange, the holdings, the standing): the picture, the name with where it goes (each cut short
+ *  with an ellipsis, never broken a letter a line), what it costs and how long on a line under it, its button in the
+ *  row — on a narrow screen the button drops under the words, still inside the row. */
+function ledgerRow(o: { ico: string; title: string; to?: string; toCls?: string; meta?: string[]; acts?: string; cls?: string }): string {
+  return `<div class="lrow${o.cls ? ' ' + o.cls : ''}"><span class="lr-ico">${o.ico}</span><div class="lr-main"><div class="lr-t"><b class="lr-name">${o.title}</b>${o.to ? `<span class="lr-to${o.toCls ? ' ' + o.toCls : ''}" title="${esc(o.to)}">${o.toCls ? '' : '→ '}${esc(o.to)}</span>` : ''}</div>${o.meta?.length ? `<div class="lr-meta">${o.meta.join('')}</div>` : ''}</div>${o.acts ? `<div class="lr-acts">${o.acts}</div>` : ''}</div>`;
 }
 
 /** A good and how much of it, the way a ledger reads: the picture, the name, × 30. */
