@@ -98,3 +98,14 @@ test('her own town’s island is not offered for lease, nor leased (it was liste
   ship.docked = 'saltmarrow';
   assert.ok(!holdingsFor(game, s).region.some((o) => o.island === isl.id), 'not in the harbour office’s list');
 });
+
+test('inside Telegram a link out goes by Telegram’s opener (the settings’ legal pages)', async () => {
+  const { tgLinkOut } = await import('../client/src/tg.ts');
+  const a = (href: string, target = '') => ({ href, target, hasAttribute: () => false });
+  const here = 'https://tg.gravetidegame.com/?tg';
+  assert.deepEqual(tgLinkOut(a('/site/terms/', '_blank'), here), { url: 'https://tg.gravetidegame.com/site/terms/', tg: false });
+  assert.deepEqual(tgLinkOut(a('https://t.me/gravetide_bot'), here), { url: 'https://t.me/gravetide_bot', tg: true });
+  assert.equal(tgLinkOut(a('/site/terms/'), here), null, 'a link within the game\u2019s own page stays');
+  assert.equal(tgLinkOut(a('javascript:void 0', '_blank'), here), null);
+  assert.match(src('client/src/ui/options.ts'), /target="_blank"/, 'the legal links are links out');
+});
