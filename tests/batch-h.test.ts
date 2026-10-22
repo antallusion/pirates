@@ -191,12 +191,12 @@ test('only a fight takes the wheel from him (owner, 2026-10-19): a hostile sail 
   steps(game, 2);
   assert.ok(autosailOf(ship), 'a hostile sail in sight is no stop');
   game.removeShip(foe.id);
-  // A shot at her: paused, the course kept.
+  // A shot at her: the course is broken off, and not kept to be taken up by itself (owner, 2026-10-22, allstop.ts).
   steps(game, 3);
   ship.attackers.set(999_999, game.now);
   steps(game, 1);
   assert.equal(lastAuto(c)!.why, 'attack');
-  assert.ok(pausedCourse(ship), 'the course is kept for after the fight');
+  assert.equal(pausedCourse(ship), null, 'after a fight her own hand sets the course again');
   ship.attackers.clear();
   // A storm comes over: on he sails, reefed to three quarters (the storm shreds only full canvas).
   atSea(game, s, x, y);

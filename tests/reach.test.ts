@@ -31,6 +31,7 @@ import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import { runAdmin } from '../server/src/game/admin.ts';
+import { lastAllStop } from '../server/src/game/allstop.ts';
 import { approachOf } from '../server/src/game/approach.ts';
 import { autosailOf, startAutosail } from '../server/src/game/autosail.ts';
 import { BOARD_ABEAM, BOARD_FAR, BOARD_SPEED, canBoard } from '../server/src/game/boarding.ts';
@@ -339,7 +340,7 @@ test('the «go there and do it» runs end inside the reaches and do it: a wreck 
   steps(game, 20 * 20);
 });
 
-test('boarding from 300 m: «На абордаж» sails her alongside and the grapples fly there', () => {
+test('boarding from 300 m: «На абордаж» sails her in; a merchant striking on the way puts her terms up and stops her, and the terms taken sail her alongside', () => {
   const { game } = makeGame();
   const { s, c, ship } = captain(game, 'Boarder Bo');
   ship.crew = ship.stats.crewMax;
@@ -351,10 +352,20 @@ test('boarding from 300 m: «На абордаж» sails her alongside and the g
   c.push({ t: 'board', target: npc.id, aggression: 'standard', risk: true });
   assert.ok(!ship.boarding, 'not from 300 m');
   let t = 0;
-  for (; t < 20 * 90 && !ship.boarding; t++) game.step();
-  assert.ok(ship.boarding, 'alongside: grappled');
-  console.log(`alongside and grappled in ${(t / 20).toFixed(1)} s from 300 m`);
-  void s;
+  for (; t < 20 * 90 && !ship.boarding && !npc.surrendered; t++) game.step();
+  if (!ship.boarding) {
+    // Beaten, she strikes her colours on the way in: her terms come up and the ship lies still (owner, 2026-10-22, allstop.ts)
+    assert.ok(npc.surrendered, 'grappled, or she struck');
+    assert.ok(c.all('surrender_offer').some((m) => (m as { offer: unknown }).offer), 'her terms before the captain');
+    assert.equal(lastAllStop(s)?.what, 'surrender_offer');
+    steps(game, 20 * 10);
+    assert.ok(ship.state.speed < 0.3, `she lies still (${ship.state.speed.toFixed(2)})`);
+    // «Забрать всё и затопить» from where she lies: the helmsman takes her alongside and the terms are taken there.
+    c.push({ t: 'surrender', id: npc.id, fate: 'sink' });
+    for (; t < 20 * 180 && npc.alive && !npc.sinkingUntil && npc.surrendered; t++) game.step();
+    assert.ok(!npc.alive || npc.sinkingUntil || !npc.surrendered, 'her terms taken alongside');
+  }
+  console.log(`alongside in ${(t / 20).toFixed(1)} s from 300 m (${ship.boarding ? 'grappled' : 'her terms taken'})`);
 });
 
 test('a landing run: the helmsman takes her to the beach, creeps the last stretch in, and the boats can land', () => {

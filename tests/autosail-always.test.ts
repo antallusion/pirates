@@ -154,7 +154,7 @@ test('auto-sail always: in a group, as in her own company', () => {
   assert.deepEqual(r.stops, ['arrived']);
 });
 
-test('auto-sail always: after a fight the course is taken up again by itself; a reef under the keel is no fight', () => {
+test('auto-sail always: a fight breaks the course off and it is NOT taken up by itself (owner, 2026-10-22); a reef under the keel is no fight', () => {
   const { game, s, c, ship, b, calm } = scene('after-fight');
   const empty = emptySea(game, ship);
   let hitAt = -1;
@@ -164,9 +164,17 @@ test('auto-sail always: after a fight the course is taken up again by itself; a 
     if (hitAt < 0 && autosailOf(ship) && game.now - (autosailOf(ship)!.since) > 10) hitAt = game.now;
     if (hitAt >= 0 && game.now - hitAt < 3) ship.lastHitAt = game.now;
   });
-  calm();
   assert.equal(r.stops[0], 'attack', 'the fight breaks the course off');
-  assert.equal(r.stops.at(-1), 'arrived', `taken up again and brought in: ${JSON.stringify(r.stops)}`);
+  // (owner, 2026-10-22, allstop.ts: «после боя курс продолжается сам» is superseded — after a fight her own hand sets
+  // the course again)
+  assert.deepEqual(r.stops, ['attack'], 'nothing more');
+  assert.equal(pausedCourse(ship), null, 'no course kept to be taken up');
+  for (let i = 0; i < (RESUME_CALM * 3 + 6) * TICK_RATE; i++) {
+    empty();
+    game.step();
+  }
+  calm();
+  assert.equal(autosailOf(ship), null, 'the sea quiet again: the helmsman does not take the wheel by himself');
   // the sea's own harm: no «attack»
   ship.lastHitAt = -999;
   ship.gunsAt = -999;

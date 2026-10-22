@@ -26,7 +26,7 @@ export const SERVER_RU_H: Record<string, string> = {
   'The hull is too weak to leave her to the helmsman': 'Корпус слишком слаб, чтобы доверить корабль рулевому',
   'Someone else has the wheel': 'Штурвал в чужих руках',
   // ux2 (2026-10-11): a course broken off by a fight is taken up again once the sea is quiet
-  'The sea is quiet again: the helmsman takes her on to her mark.': 'Бой позади: рулевой снова ведёт корабль к метке.',
+  'The sea is quiet again: the helmsman takes her on to her mark.': 'Море спокойно: рулевой снова ведёт корабль к метке.',
   // 2026-10-19 (owner: «автоплавание … работало всегда и везде»): a course given in port or in a fight is kept for later
   'Course set: the helmsman takes her there as soon as she casts off.': 'Курс проложен: рулевой поведёт корабль, как только вы отчалите.',
   // 2026-10-19 (owner: «нажимая ремонт … ниче не происходит»): the carpenters say what they do, with what, and what is short

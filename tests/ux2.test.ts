@@ -178,7 +178,7 @@ function eastOf(game: Game, s: PlayerSession, d: number): { x: number; y: number
   throw new Error('no open water east of her');
 }
 
-test('a course broken off by a fight is taken up again once the sea is quiet; her own stop drops it', () => {
+test('a course broken off by a hostile sail is taken up again once the sea is quiet, one broken off by a fight is not (owner, 2026-10-22); her own stop drops it', () => {
   const { game } = makeGame();
   const { s, c } = captain(game, 'Resume Rhea');
   const ship = s.ship!;
@@ -201,8 +201,12 @@ test('a course broken off by a fight is taken up again once the sea is quiet; he
   assert.ok(autosailOf(ship), 'the course is taken up again');
   assert.equal(pausedCourse(ship), null);
   assert.ok(c.all('toast').some((m) => (m as { msg: string }).msg === RESUME_WORDS), 'she is told');
-  // a stop of her own drops a broken-off course
+  // a fight: nothing kept — after it she lies still until her own hand sets a course (allstop.ts)
   stopAutosail(game, s, 'attack');
+  assert.equal(pausedCourse(ship), null, 'a fight keeps no course');
+  // a stop of her own drops a broken-off course
+  startAutosail(game, s, to.x, to.y);
+  stopAutosail(game, s, 'hostile');
   assert.ok(pausedCourse(ship));
   c.push({ t: 'autosail', stop: true });
   game.step();
@@ -219,7 +223,7 @@ test('a course broken off by a fight is taken up again once the sea is quiet; he
   game.step();
   assert.equal(pausedCourse(ship), null, 'in port it is dropped');
   ship.docked = null;
-  assert.equal(SERVER_RU_H[RESUME_WORDS], 'Бой позади: рулевой снова ведёт корабль к метке.');
+  assert.equal(SERVER_RU_H[RESUME_WORDS], 'Море спокойно: рулевой снова ведёт корабль к метке.');
 });
 
 test('taps are never lost to a redraw: the window waits for the tap, a tab drawn away is pressed again, a long press still switches', () => {
