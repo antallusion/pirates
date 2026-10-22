@@ -54,3 +54,27 @@ test('admin /speed: the wall clock (build queue, respawns, weeks) runs ahead wit
   assert.ok(Math.abs(game.wallNow() - Date.now() - game.wallSkew) < 50, 'wallNow carries the skew');
   assert.equal(game.db.getKv<number>('wall_skew'), game.wallSkew, 'kept across a restart');
 });
+
+test('the tester’s /camp: a chapter’s first quest under way at its gate, a step and a quest done; its HELP pair; its lines in Russian', async () => {
+  const { FIRST_SLOT } = await import('../shared/src/data/campaign/progress.ts');
+  const { QUESTS_BY_ID } = await import('../shared/src/data/quests.ts');
+  const { SERVER_RU_ADMIN } = await import('../client/src/lang/server.ru.admin.ts');
+  const { game } = makeGame();
+  const conn = join(game, 'Camp');
+  const s = [...game.sessions].find((x) => (x.conn as unknown) === conn)!;
+  const p = s.profile!;
+  assert.match(runAdmin(game, s, '/camp ch 3') ?? '', /chapter 3, quest 1 of/);
+  assert.equal(p.campaign!.at, FIRST_SLOT[2]);
+  const act = () => p.quests.active.find((a) => QUESTS_BY_ID[a.id]?.kind === 'campaign');
+  assert.equal(QUESTS_BY_ID[act()!.id].campaign!.slot, FIRST_SLOT[2], 'its quest under way');
+  assert.ok(p.level >= (QUESTS_BY_ID[act()!.id].requires.level ?? 1), 'her level at its gate');
+  runAdmin(game, s, '/camp step');
+  assert.equal(act()!.step, 1);
+  runAdmin(game, s, '/camp done');
+  assert.equal(p.campaign!.at, FIRST_SLOT[2] + 1, 'the quest done, the next comes');
+  assert.match(runAdmin(game, s, '/camp') ?? '', /chapter 3, quest 2 of/);
+  const help = runAdmin(game, s, '/help')!;
+  assert.ok(help.includes('/camp [ch N|slot N|step|done]'));
+  assert.ok(SERVER_RU_ADMIN[help]?.includes('/camp [ch N|slot N|step|done]'), 'the Russian HELP');
+  for (const k of ['No campaign quest under way.', 'Usage: /camp [ch N|slot N|step|done]', 'Campaign: chapter {0}, quest {1} of {2}.', 'Done: {0}.']) assert.ok(SERVER_RU_ADMIN[k], k);
+});

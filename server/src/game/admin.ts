@@ -54,6 +54,10 @@ import { sanitizeNemeses } from './nemesis.ts';
 import { NEMESIS_CAUSES } from '../../../shared/src/data/nemesis.ts';
 import type { NemesisCause } from '../../../shared/src/data/nemesis.ts';
 import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
+import { CAMPAIGN_SIZE } from '../../../shared/src/data/campaign/plan.ts';
+import { FIRST_SLOT, chapterOfSlot, gateOf as campGate } from '../../../shared/src/data/campaign/progress.ts';
+import { campaignActive, campaignNext } from './campaign.ts';
+import { completeQuest } from './quests.ts';
 import { applyTattoos, earnTattoo, offerChoice, sanitizeTattoos, sendTattoos } from './tattoos.ts';
 import { TATTOOS, TATTOO_BY_ID } from '../../../shared/src/data/sidequests.ts';
 import { ownIsland } from './estate.ts';
@@ -191,7 +195,7 @@ const KIT_BUILD: string[] = [
   'srv_carpenters', 'srv_carpenters', 'srv_carpenters', 'srv_bucket_brigade', 'srv_bucket_brigade', 'srv_iron_hull', 'srv_iron_hull', 'srv_iron_hull',
 ];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] [grapple|hunt] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level|go] · /prim [atk|def|pow|will N|reset] · /skill id [0-3]|offer [n]|clear · /order id|all|clear · /art [id|set regalia|hook|storm|list] · /will [N|full] · /guard [go|beat|weak|board|reset] [kind] [level] · /obj [kind] [go|reset] · /obelisk [n|all|go] · /grail [go|found|reset] · /isle level|type kind|atoll|ridge|small|hidden [reveal]|danger [deadly] · /zone [go] · /turtle [go|up|down|off] · /sandbar · /supply [claim|link|week] · /path [learn page|forget] · /stam [N|full] · /scroll [page|random|clear] [n] · /pathfoe [path] [class] [grapple] · /lair [kind] [go|fight|beat|weak|reset|chain|grotto|guardian|dwell|turtle|sandbar] · /creature [kind] [n] · /egg [kind|hatch|grow] · /landres [n] · /drift [kind|legend|whale|kraken] [go|save|fail|fight|clear] · /tame [kind] [wins N|rank R|hunger S|pen N|slip] · /feed [N|starve] · /tamer [go] · /landecon [fit id rank|cap] · /bestiary [all|clear|kind] · /seamark [drift|wreck|buoy|lantern|bones|floe] [go|done|reset] · /glory [n|xp N|reset] · /mastery [node|branch|all|reset] · /trial [skill] [go|win|lose|reset] · /find [bottle|flyfish|calm|gulls|boat|chest] [go|done|reset] · /haul [reset] · /stack [kind] [go|fight|beat|reset] · /doubloons [N|-N|sample [on|off]] · /scrolls [N|-N] · /zboss [region] [rise|here|leave|kill|announce|reset] · /flag [neutral|faction|pirate] [city] · /noboard on|off · /seal [lv N|kind K|go|win|lose|reset|board] · /titan [kind|grail|reset] · /maw [tier N|win|lose|go|reset|board] · /relic [id|parts id|all|drop [N]|clear] · /invasion [region|start|wave|win|fail|clear] · /cit [go|guild|window|siege|win|own|lose|free|points N|season|reset] [n] · /contract [list|take N|done N|week|reset|go N] · /arena [queue|bot|win|lose|rating N|season|reset] · /mates name [name] · /kit [show|build|charge|facet id 3|5 a|b|clear] · /refund charge_id · /mute name minutes · /castaway [n] · /island [free|claims N|go] · /build [finish|tree N] · /offers [stats|roll|carousel] · /gift [reset|day N|claim] · /tgn [link|stats] · /way [go|fallen [kind n]|clear|list] · /telemetry [days] · /ops · /fog [all|reset|home] · /cos [all|wear slot id|reset]';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] [grapple|hunt] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level|go] · /prim [atk|def|pow|will N|reset] · /skill id [0-3]|offer [n]|clear · /order id|all|clear · /art [id|set regalia|hook|storm|list] · /will [N|full] · /guard [go|beat|weak|board|reset] [kind] [level] · /obj [kind] [go|reset] · /obelisk [n|all|go] · /grail [go|found|reset] · /isle level|type kind|atoll|ridge|small|hidden [reveal]|danger [deadly] · /zone [go] · /turtle [go|up|down|off] · /sandbar · /supply [claim|link|week] · /path [learn page|forget] · /stam [N|full] · /scroll [page|random|clear] [n] · /pathfoe [path] [class] [grapple] · /lair [kind] [go|fight|beat|weak|reset|chain|grotto|guardian|dwell|turtle|sandbar] · /creature [kind] [n] · /egg [kind|hatch|grow] · /landres [n] · /drift [kind|legend|whale|kraken] [go|save|fail|fight|clear] · /tame [kind] [wins N|rank R|hunger S|pen N|slip] · /feed [N|starve] · /tamer [go] · /landecon [fit id rank|cap] · /bestiary [all|clear|kind] · /seamark [drift|wreck|buoy|lantern|bones|floe] [go|done|reset] · /glory [n|xp N|reset] · /mastery [node|branch|all|reset] · /trial [skill] [go|win|lose|reset] · /find [bottle|flyfish|calm|gulls|boat|chest] [go|done|reset] · /haul [reset] · /stack [kind] [go|fight|beat|reset] · /doubloons [N|-N|sample [on|off]] · /scrolls [N|-N] · /zboss [region] [rise|here|leave|kill|announce|reset] · /flag [neutral|faction|pirate] [city] · /noboard on|off · /seal [lv N|kind K|go|win|lose|reset|board] · /titan [kind|grail|reset] · /maw [tier N|win|lose|go|reset|board] · /relic [id|parts id|all|drop [N]|clear] · /invasion [region|start|wave|win|fail|clear] · /cit [go|guild|window|siege|win|own|lose|free|points N|season|reset] [n] · /contract [list|take N|done N|week|reset|go N] · /arena [queue|bot|win|lose|rating N|season|reset] · /mates name [name] · /kit [show|build|charge|facet id 3|5 a|b|clear] · /refund charge_id · /mute name minutes · /castaway [n] · /island [free|claims N|go] · /build [finish|tree N] · /offers [stats|roll|carousel] · /gift [reset|day N|claim] · /tgn [link|stats] · /way [go|fallen [kind n]|clear|list] · /telemetry [days] · /ops · /fog [all|reset|home] · /cos [all|wear slot id|reset] · /camp [ch N|slot N|step|done]';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -255,6 +259,9 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     // docs/32 §12: the cosmetics — all of them hers, one worn, all forgotten.
     case 'cos':
       return adminCos(game, s, args);
+    // the campaign's place for the QA of its middle chapters (QA 2026-10-22): a chapter's first quest, a slot, a step done
+    case 'camp':
+      return adminCamp(game, s, args);
     // «Свиток автобоя» (owner, 2026-10-11): auto-battle scrolls given to her account, or taken off it.
     case 'scrolls':
       return adminScrolls(game, s, args);
@@ -1606,6 +1613,46 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     default:
       return `Unknown command. ${HELP}`;
   }
+}
+
+/** /camp: where she stands in the campaign; `ch N` / `slot N` sets her at a chapter's first quest or a slot (her level
+ *  raised to its gate, its quest under way); `step` counts the step under way; `done` the whole quest. */
+function adminCamp(game: Game, s: PlayerSession, args: string[]): string {
+  const p = s.profile!;
+  if (!p.campaign) return 'No campaign.';
+  const qs = campaignActive(p);
+  const q = qs ? QUESTS_BY_ID[qs.id] : undefined;
+  if (args[0] === 'step' || args[0] === 'done') {
+    if (!qs || !q) return 'No campaign quest under way.';
+    if (args[0] === 'done') qs.step = q.steps.length - 1;
+    qs.step++;
+    qs.progress = 0;
+    if (qs.step >= q.steps.length) completeQuest(game, s, q);
+    else game.sendTo(s, { t: 'toast', msg: `${q.name}: ${q.steps[qs.step].text}`, kind: 'info' });
+    game.pushSelf(s, true);
+    return `Done: ${q.name}.`;
+  }
+  const n = Math.round(Number(args[1]));
+  const slot = args[0] === 'ch' && n >= 1 && n <= FIRST_SLOT.length ? FIRST_SLOT[n - 1] : args[0] === 'slot' && n >= 0 && n < CAMPAIGN_SIZE ? n : null;
+  if (slot === null) {
+    if (args.length) return 'Usage: /camp [ch N|slot N|step|done]';
+    const { ch, k, size } = chapterOfSlot(p.campaign.at);
+    return `Campaign: chapter ${ch}, quest ${k + 1} of ${size}${q ? `, ${q.name}, step ${qs!.step + 1} of ${q.steps.length}` : ''}.`;
+  }
+  p.quests.active = p.quests.active.filter((a) => QUESTS_BY_ID[a.id]?.kind !== 'campaign');
+  p.campaign.at = slot;
+  p.campaign.started = true;
+  const gate = campGate(slot);
+  if (p.level < gate) {
+    p.level = Math.min(MAX_LEVEL, gate);
+    p.xp = 0;
+    s.ship!.level = p.level;
+    s.ship!.recompute(game.now);
+  }
+  campaignNext(game, s);
+  game.pushSelf(s, true);
+  const { ch, k, size } = chapterOfSlot(slot);
+  return `Campaign: chapter ${ch}, quest ${k + 1} of ${size}.`;
 }
 
 /** The nearest open water to a point: out along a widening spiral until no shore is within 300 m. */
