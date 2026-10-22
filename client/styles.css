@@ -1061,7 +1061,7 @@ body.touch #hud-dive .dhint { display: none; }
    an ellipsis if even that does not fit. */
 .skinned .title-sm { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
 @media (max-width: 699px) { .skinned .title-sm { font-size: 18px !important; } }
-.btn .money { gap: 4px; }
+.btn .money { gap: 4px; vertical-align: middle; } /* the coin's figure on the label's middle line, not its baseline: at 480×270 a 15 px coin beside 9 px words pushed «Открыть стол» 3 px down (ports.mjs vc) */
 /* The close button is on every window: a phone needs no "[O] close" hint beside it. */
 @media (max-width: 699px), (max-height: 520px) { .modal-head > .muted:last-child { display: none; } }
 /* Checkboxes in the game's hand: a dark well with a brass rim, a gold tick when set. */
