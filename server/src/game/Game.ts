@@ -44,7 +44,7 @@ import { ADM_REFIT_HINT, ADM_REFIT_WORDS, orderRefit, refitHolds, stepRefit } fr
 import { clampLevel, ladder, levelRange, npcSkill } from '../../../shared/src/data/shiplevel.ts';
 import { ALPHA_OVER as ALPHA_OVER_RAM, alphaShare, npcSeaScale } from '../../../shared/src/data/seabalance.ts';
 import { RAM_SHARE, volleyShare } from '../../../shared/src/data/seaskill.ts';
-import { XP_UNITS, contractPay, hourSilver, pointsXp, prizeXp, xpGap } from '../../../shared/src/data/xpcurve.ts';
+import { XP_UNITS, contractPay, hourSilver, pointsXp, prizeXp, shipBandOf, xpGap } from '../../../shared/src/data/xpcurve.ts';
 import { WRECK_SHARE } from '../../../shared/src/data/silverpay.ts';
 import { RELEASE_CREW, SCUTTLE_SINK_SEC, SINK_CREW, outcomeCrew, releaseSilver, wreckTimber } from '../../../shared/src/data/outcome.ts';
 import type { OutcomeFate, OutcomeNums } from '../../../shared/src/data/outcome.ts';
@@ -1891,7 +1891,7 @@ export class Game {
         // its lair on the island the step names, else the nearest of its kind (or any) still standing (a campaign's: to its
         // location)
         const from = st.near ?? (ship ? ship.state : this.portById(QUESTS_BY_ID[qs.id].port) ?? null);
-        const memoKey = `${st.island ?? ''}|${st.kind ?? ''}|${from ? `${Math.round(from.x)},${Math.round(from.y)}` : ''}`;
+        const memoKey = `${st.island ?? ''}|${st.kind ?? ''}|${from ? `${Math.round(from.x)},${Math.round(from.y)}` : ''}|${st.near ? QUESTS_BY_ID[qs.id]?.requires.level ?? 0 : ''}`;
         let best: { x: number; y: number; island?: number } | null = null, bd = Infinity;
         const memo = lairMemo.get(memoKey);
         if (memo !== undefined) {
@@ -1912,7 +1912,10 @@ export class Game {
             this.lairQuay.set(l.id, quayside);
           }
           const byQuay = quayside ? 20_000 : 0;
-          const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay;
+          // A campaign's lair of its own level first (mid-game QA 2026-10-22: «За серой тканью» at the fourth level sent
+          // her to a ⚓3 hermits' camp two levels above her sloop, a ⚓2 bat cave 180 m farther in the same waters)
+          const above = st.near ? Math.max(0, l.level - shipBandOf(QUESTS_BY_ID[qs.id]?.requires.level ?? p.level)) * 3000 : 0;
+          const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay + above;
           // (its island named on the route: «Плыть» to a campaign's lair said «место», mid-game QA 2026-10-22)
           if (d < bd) [best, bd] = [{ x: lp.x, y: lp.y, ...(l.island >= 0 && l.turtle === undefined ? { island: l.island } : {}) }, d];
         }

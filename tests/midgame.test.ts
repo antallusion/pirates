@@ -137,3 +137,28 @@ test('the autosail pill at the run’s place says «на месте», not «п�
   assert.equal(RU.as_here, 'на месте');
   assert.equal(EN.as_here, 'here');
 });
+
+test('a campaign lair step points at a lair of the quest’s own level in its waters, when one stands there', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { lairList, lairPos } = await import('../server/src/game/beastlairs.ts');
+  const { shipBandOf } = await import('../shared/src/data/xpcurve.ts');
+  const { game } = makeGame();
+  join(game, 'Hermit');
+  const s = game.sessionByName('Hermit')!;
+  // «За серой тканью» (chapter 2, the fourth level): a ⚓3 hermits' camp nearest, a ⚓2 bat cave in the same waters
+  const q = campaignOf(game).quests.find((x) => x.id === 'c02_08')!;
+  const i = q.steps.findIndex((st) => st.type === 'lair');
+  s.profile!.level = q.requires.level ?? 4;
+  s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
+  s.ship!.docked = null;
+  const t = game.questTargets(s)[q.id];
+  const l = lairList(game).find((x) => { const lp = lairPos(game, x); return Math.hypot(lp.x - t.x, lp.y - t.y) < 1; })!;
+  assert.ok(l, 'the mark is a lair');
+  assert.ok(l.level <= shipBandOf(q.requires.level ?? 4), `a lair of her band (⚓${l.level} ${l.kind})`);
+  const near = (q.steps[i] as { near: { x: number; y: number; r: number } }).near;
+  assert.ok(Math.hypot(t.x - near.x, t.y - near.y) <= near.r, 'within the location’s waters');
+  // the second word: «Потери врага» on the battle's card, not «Её потери» (a lair's creatures, an arena's captain)
+  const { RU } = await import('../client/src/lang/ui/tactical.ts');
+  assert.equal(RU['res.killed'], 'Потери врага');
+});
