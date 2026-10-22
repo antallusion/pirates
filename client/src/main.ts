@@ -3321,6 +3321,18 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   }
   const focus = roamFocus();
   const rm = focus?.v;
+  // (a stack close by, not yet within the boats' thirty metres: how far is left — owner, 2026-10-22)
+  if (!focus) {
+    const hh = ownHull(state);
+    let left = Infinity;
+    if (hh) for (const v of state.roams) {
+      if (v.fight || Math.abs(v.x - hh.x) > 400 || Math.abs(v.y - hh.y) > 400) continue;
+      const p = roamNow(state, v);
+      const l = roamHullGap(hh, p) - ROAM_REACH;
+      if (l > 0 && l < left && seenOnScreen(p.x, p.y, 20) && !roamBackLeft(state, v)) left = l;
+    }
+    if (left < REACH_HINT) info.push(esc(nearWords(LR8('stack'), left)));
+  }
   // A stack in focus (marked, or a cable off) with no ship of her own choosing: its «Атаковать» leads, and the nearest
   // hostile ship the target frame picked by itself is not offered (one «Атаковать», the stack's — owner, 2026-10-07).
   const roamLead = !!focus && !targetPinned && !state.pursuit;
