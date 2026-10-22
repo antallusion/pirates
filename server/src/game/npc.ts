@@ -19,6 +19,7 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { AmmoId, Rig, ShipClassId } from '../../../shared/src/data/ships.ts';
 import { CHASER_CONE, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { angleDiff, clamp, DEG, dist, headingOf, headingVec, wrapAngle } from '../../../shared/src/math.ts';
+import { alongsidePoint, hullOf } from '../../../shared/src/data/reach.ts';
 import { polarEfficiency, relWindDeg, sailFloor, windPush } from '../../../shared/src/sim/sailing.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
@@ -757,7 +758,7 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
   // Her craft by her level (docs/12 §3.3): how much of the lead she allows, how wide she lets fly, her tricks.
   const sk = brain.skill ?? npcSkill(ship.shipLevel);
   const weakened = target.surrendered || target.sails < target.stats.sailHpMax * 0.4 || target.crew < target.stats.crewMax * 0.5 || target.hull < target.stats.hullMax * 0.55;
-  const { px, py, leadD, leadBearing } = engageHelm(game, ship, brain, target, d, wantsBoard ? (weakened ? 'close' : 'rig') : 'guns', sk.lead);
+  const { px, py, leadD, leadBearing } = engageHelm(game, ship, brain, target, d, wantsBoard ? (weakened ? 'board' : 'rig') : 'guns', sk.lead);
   const rangeOf = (side: 'port' | 'starboard') => effectiveRange(ship, side, ship.ammoSel);
   for (const side of ['port', 'starboard'] as const) {
     if (ship.reload[side] > 0) continue;
@@ -781,8 +782,12 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
 }
 
 /** How a fighter's helm works her foe: `guns` holds the best range for her broadsides and presents them, `rig` the
- *  same at chain-shot range (a boarder stripping the rigging), `close` runs straight in on her lead for the grapples. */
-export type HelmMode = 'guns' | 'rig' | 'close';
+ *  same at chain-shot range (a boarder stripping the rigging), `close` runs straight in on her lead, `board` runs in on
+ *  her lead and, within ALONGSIDE_FROM, comes alongside her (reach.ts: her beam, a parallel course, her way matched) —
+ *  the only place the grapples fly from (owner, 2026-10-22). */
+export type HelmMode = 'guns' | 'rig' | 'close' | 'board';
+/** The boarder leaves the run in on the lead for the alongside helm this near her mark (metres, centre to centre). */
+export const ALONGSIDE_FROM = 260;
 /** What a broadside's course into the wind's eye costs her in the choice of side (as an angle to turn, radians). */
 export const WIND_EYE_COST = 1.5;
 /** Her broadside fight is held inside her guns' reach (docs/23 item 47): the hard turn in (0.85 rad, her guns well
@@ -827,7 +832,9 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
   // on her all the way out to 1.5 × her reach, her bow 50° off it.)
   if (d > (hold ? hold.far * 1.5 : maxRange * 1.5)) {
     steer(game, ship, brain, bearing, 1, false, d);
-  } else if (mode === 'close') {
+  } else if (mode === 'board' && d < ALONGSIDE_FROM) {
+    alongsideHelm(game, ship, brain, target);
+  } else if (mode === 'close' || mode === 'board') {
     steer(game, ship, brain, leadBearing, d < 250 ? 0.75 : 1, false, leadD); // close for the grapple
   } else {
     // Present a loaded broadside, spiralling in or out to hold the ideal distance.
@@ -865,6 +872,27 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
     steer(game, ship, brain, course(side), 1, true);
   }
   return out;
+}
+
+/** The boarder's helm alongside (owner, 2026-10-22: «абордаж вообще только когда поровняюсь с кораблем»): she makes
+ *  for the water off her mark's beam on the side she is on (reach.ts alongsidePoint), on a line that runs into it along
+ *  her mark's course from astern, and matches her mark's way there — a little more while astern of the spot, less once
+ *  past it. A mark lying still (struck, hove to, a hulk) is come alongside on whichever course she already holds. */
+export function alongsideHelm(game: Game, ship: ShipEntity, brain: NpcBrain, t: ShipEntity): void {
+  const P = alongsidePoint(hullOf(ship), hullOf(t));
+  let f = headingVec(t.state.heading);
+  const own = headingVec(ship.state.heading);
+  // (a mark with no way on her: alongside on either course, the one nearer her own head)
+  if (Math.abs(t.state.speed) < 1.5 && f.x * own.x + f.y * own.y < 0) f = { x: -f.x, y: -f.y };
+  const dx = P.x - ship.state.x, dy = P.y - ship.state.y;
+  const dP = Math.hypot(dx, dy);
+  const along = dx * f.x + dy * f.y; // + the spot lies ahead of her along the mark's course
+  const lead = clamp(dP * 0.8, 14, 140);
+  const qx = P.x + f.x * lead, qy = P.y + f.y * lead;
+  steer(game, ship, brain, headingOf(qx - ship.state.x, qy - ship.state.y), 1, false, dP + lead);
+  const want = Math.max(0, Math.abs(t.state.speed) + clamp(along * 0.12, -4, 4));
+  const v = ship.state.speed;
+  ship.input.sailTarget = v > want + 0.6 ? (v > want + 3 ? 0 : 0.25) : v < want - 0.6 ? 1 : clamp(ship.input.sailTarget, 0.35, 0.75);
 }
 
 /** The helm to a point (a captain's run on a creature stack, docs/19 D7: tacking to windward and clear of islands, as

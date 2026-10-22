@@ -40,7 +40,7 @@ import { boardingRangeBetween, canBoard, captainsShip, crewRefuses, startBoardin
 import { NO_BOARD_HER, NO_BOARD_OWN, boardingOff } from './colours.ts';
 import { applyDamage, damageBlocked, effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
 import type { Game } from './Game.ts';
-import { engageHelm, helmTo, newBrain } from './npc.ts';
+import { ALONGSIDE_FROM, engageHelm, helmTo, newBrain } from './npc.ts';
 import { findPath, lineFree } from './nav.ts';
 import type { Path } from './nav.ts';
 import { hullWater, laneFoul } from './seaway.ts';
@@ -358,18 +358,19 @@ export function stepPursuit(game: Game): void {
       engageHelm(game, ship, run.brain, t, d, run.closing ? 'close' : 'guns', run.closing ? 180 / Math.max(6, ship.stats.maxSpeed) : 1, hold);
       continue;
     }
-    // For the grapples she steers for where the mark will be when she gets there (the intercept at her own way).
-    engageHelm(game, ship, run.brain, t, d, 'close', 180 / Math.max(6, ship.stats.maxSpeed));
+    // For the grapples she steers for where the mark will be when she gets there (the intercept at her own way), and
+    // near her comes alongside (npc.ts alongsideHelm: her beam, her course, her way — owner, 2026-10-22: «абордаж вообще
+    // только когда поровняюсь с кораблем»).
+    engageHelm(game, ship, run.brain, t, d, 'board', 180 / Math.max(6, ship.stats.maxSpeed));
     if (run.mode === 'board') {
-      // Alongside she matches the mark's way herself (docs/23 item 54): no speed to judge on a phone.
       const reach = boardingRangeBetween(ship, t);
       // The boarding run (docs/23 item 36): every hand on the braces and the sweeps while she closes — twice her way,
-      // a quick helm, and the wind no matter.
-      boardRun(game, s, ship, d < BOARD_RUN_FROM && d > reach * 0.9);
+      // a quick helm, and the wind no matter — until she is coming alongside.
+      boardRun(game, s, ship, d < BOARD_RUN_FROM && d > ALONGSIDE_FROM);
       // Her own crew will not go over the rail (no heart for it, too few hands): the grapples never fly, and alongside
       // her hull ground on the mark's until she sank, untold (docs/30: morale 5, two sloops lost so). Said once; the guns
       // fight her from their reach instead.
-      const unwilling = d < reach * 2 ? crewRefuses(ship) : null;
+      const unwilling = d < reach * 3 ? crewRefuses(ship) : null;
       if (unwilling) {
         game.sendTo(s, { t: 'toast', msg: unwilling, kind: 'bad' });
         game.sendTo(s, { t: 'toast', msg: GUNS_INSTEAD, kind: 'info' });
@@ -378,15 +379,12 @@ export function stepPursuit(game: Game): void {
         send(game, s, run);
         continue;
       }
-      if (run.grapple && d <= reach && canBoard(game, ship, t) === null) {
+      if (run.grapple && d <= reach * 1.5 && canBoard(game, ship, t) === null) {
         stopPursuit(game, s, 'board');
         startBoarding(game, ship, t, 'standard');
         continue;
       }
-      if (d < reach * 1.4) {
-        const want = t.state.speed + (d > reach ? BOARD_CLOSE : 0.5);
-        ship.input.sailTarget = ship.state.speed > want + 0.6 ? 0.25 : ship.state.speed < want - 0.6 ? 1 : 0.6;
-      } else ship.input.sailTarget = 1;
+      if (d >= ALONGSIDE_FROM) ship.input.sailTarget = 1;
     }
   }
 }

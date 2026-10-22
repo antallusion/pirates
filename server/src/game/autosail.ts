@@ -407,6 +407,11 @@ export function guardOf(ship: ShipEntity): boolean {
 
 /** Each tick for a ship whose wheel the helmsman gave back: foul water ahead within the way she carries — she is turned
  *  off it (the nearer clear heading), or her sails taken in when none is. Her own hand on the wheel ends it. */
+/** The lead line's watch after a run let go (approach.ts creeps her the last metres in onto the thing itself). */
+export function releaseGuard(ship: ShipEntity): void {
+  guards.delete(ship);
+}
+
 function stepGuard(game: Game, s: PlayerSession, ship: ShipEntity): void {
   const g = guards.get(ship);
   if (!g) return;

@@ -10,17 +10,23 @@
 
 import { AUTOSAIL_ARRIVE } from '../../../shared/src/data/autosail.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
-import { autosailOf, startAutosail, stopAutosail } from './autosail.ts';
+import { autosailOf, releaseGuard, startAutosail, stopAutosail } from './autosail.ts';
+import { angleDiff, clamp, headingOf } from '../../../shared/src/math.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
+import type { ShipEntity } from './ship.ts';
+import { gapTo, hullOf } from '../../../shared/src/data/reach.ts';
 import { pursuitOf } from './pursuit.ts';
 
 /** What she is sent to: where it lies (or a reader of where it is now, for a thing that moves or goes), and the reach
- *  within which its order may be done (or the handler's own test of it, for a reach measured from a shore). */
+ *  within which its order may be done — from her hull's edge to the thing's (reach.ts: `r` its radius about the point)
+ *  — or the handler's own test of it (`near`, for a reach measured from a shore or a quay). */
 export interface ApproachTarget {
   x: number;
   y: number;
   reach: number;
+  /** The thing's own radius about its point (metres): the reach is from her hull to its edge. */
+  r?: number;
   where?: () => { x: number; y: number } | null;
   near?: () => boolean;
   /** The boats are lowered only this slow (m/s): arrived, she heaves to first and the order is given once she has. */
@@ -31,7 +37,15 @@ interface Approach extends ApproachTarget {
   msg: ClientMsg;
   until: number;
   heaving?: boolean;
+  /** The helmsman's course ran out short of the reach (the lead line will not sail onto the thing itself: a skerry, a
+   *  hulk, a quay): he edges her the last metres in under easy canvas (`creeping`), unless her own hand took the helm. */
+  creeping?: boolean;
+  hand?: boolean;
 }
+
+/** The last stretch is crept in this slowly (a share of her canvas), and only this near the thing (metres, centre). */
+const CREEP_SAIL = 0.3;
+const CREEP_FROM = 400;
 
 /** An order waits this long at most (seconds of the sea's clock): past it, the moment is gone. */
 export const APPROACH_SEC = 240;
@@ -57,10 +71,16 @@ export function approachOf(game: Game, s: PlayerSession): { x: number; y: number
   return a ? { x: a.x, y: a.y, reach: a.reach, msg: a.msg } : null;
 }
 
-/** Where the helmsman's own mark ends for a thing of this reach: well inside it (the reach is measured to the thing,
- *  the route ends on the water by it). */
-function arriveFor(reach: number): number {
-  return Math.max(30, Math.min(AUTOSAIL_ARRIVE, reach * 0.55));
+/** Where the helmsman's own mark ends for a thing of this reach: well inside it (the reach is from her hull to the
+ *  thing's edge, the route ends on the water by it — owner, 2026-10-22: thirty metres, not four hundred). */
+function arriveFor(t: { reach: number; r?: number }): number {
+  return Math.max(14, Math.min(AUTOSAIL_ARRIVE, (t.r ?? 0) + t.reach * 0.55 + 6));
+}
+
+/** Within the reach of it: her hull to its edge (reach.ts), a little inside the handler's own so that its test never
+ *  says «too far» by a metre. */
+function within(ship: ShipEntity, a: { reach: number; r?: number }, p: { x: number; y: number }): boolean {
+  return gapTo(hullOf(ship), p.x, p.y, a.r ?? 0) <= Math.max(4, a.reach - 4);
 }
 
 /** A handler found her out of reach of `t` for the order being handled: the helmsman takes her there and the order
@@ -76,9 +96,20 @@ export function approach(game: Game, s: PlayerSession, t: ApproachTarget, far: s
   const run = autosailOf(ship);
   // Already on her way there (a second tap on the same thing): the course stands, nothing more is said.
   if (run && Math.hypot(run.x - p.x, run.y - p.y) < 60) return null;
-  const e = startAutosail(game, s, p.x, p.y, undefined, arriveFor(t.reach));
+  const e = startAutosail(game, s, p.x, p.y, undefined, arriveFor(t));
   game.sendTo(s, { t: 'toast', msg: e ? APPROACH_OWN : APPROACH_SET, kind: 'info' });
   return null;
+}
+
+/** The captain's helm while the helmsman creeps her the last metres in: the idle beat (no rudder) is swallowed; her
+ *  hand on the wheel takes it, and the order still waits for her to come within reach herself. True when swallowed. */
+export function approachInput(game: Game, s: PlayerSession, rudder: number, helm: boolean): boolean {
+  const a = orders.get(game)?.get(s);
+  if (!a || !a.creeping) return false;
+  if (rudder === 0 && !helm) return true;
+  a.creeping = false;
+  a.hand = true;
+  return false;
 }
 
 /** The order dropped (the pill's stop, a mark of her own, a new order of another kind). */
@@ -110,7 +141,7 @@ export function stepApproach(game: Game): void {
       continue;
     }
     // (a little inside the handler's own reach: its test then never says «too far» by a metre)
-    const at = a.near ? a.near() : Math.hypot(p.x - ship.state.x, p.y - ship.state.y) <= Math.max(10, a.reach - 8);
+    const at = a.near ? a.near() : within(ship, a, p);
     if ((at || a.heaving) && a.slow !== undefined && Math.abs(ship.state.speed) > a.slow) {
       // Alongside at speed: sail in, she lies to (the captain's last sail held off until she sets another), and the
       // order goes the moment she lies still enough.
@@ -136,6 +167,16 @@ export function stepApproach(game: Game): void {
     }
     // A thing that moves (a drift, a raft on the current): the course follows it.
     const run = autosailOf(ship);
-    if (run && Math.hypot(run.x - p.x, run.y - p.y) > 120) startAutosail(game, s, p.x, p.y, run.sail, arriveFor(a.reach));
+    if (run && Math.hypot(run.x - p.x, run.y - p.y) > 120) startAutosail(game, s, p.x, p.y, run.sail, arriveFor(a));
+    // The course ended short of the reach (owner, 2026-10-22: the reaches are thirty metres now, and the lead line
+    // stops her a cable off a solid thing): the last metres crept in under easy canvas, straight for it — never a
+    // «sail closer» dead end. Her own hand on the helm takes it back (approachInput).
+    if (!run && !a.hand && Math.hypot(p.x - ship.state.x, p.y - ship.state.y) < CREEP_FROM) {
+      if (!a.creeping) releaseGuard(ship);
+      a.creeping = true;
+      const want = headingOf(p.x - ship.state.x, p.y - ship.state.y);
+      ship.input = { rudder: clamp(angleDiff(ship.state.heading, want) * 2.2, -1, 1), sailTarget: CREEP_SAIL };
+      s.sailHold = null;
+    } else a.creeping = false;
   }
 }

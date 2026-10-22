@@ -224,7 +224,7 @@ export function launchJollyBoat(game: Game, ship: ShipEntity): string | null {
     if (d > bd) return;
     // The same conditions as a boarding, except distance and speed.
     const why = canBoard(game, ship, o);
-    if (why && !/Too far|Match her speed/.test(why)) return;
+    if (why && !/Too far|Match her speed|Come alongside/.test(why)) return;
     bd = d;
     target = o;
   });
