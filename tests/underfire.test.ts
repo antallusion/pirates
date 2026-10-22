@@ -123,7 +123,8 @@ test('every order with a beast marked nearby is answered — a sea mark, a find,
       sharkFight(game, s, 6);
       c.push({ t: 'dock' });
       return () => {
-        steps(game, 20 * 12);
+        // (her chase took her off the quays: the helmsman brings her back to the harbour's approach first — dock.ts)
+        for (let i = 0; i < 20 * 60 && !ship.docked; i++) game.step();
         assert.ok(ship.docked, 'in harbour');
       };
     }],

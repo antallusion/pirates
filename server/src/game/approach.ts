@@ -16,7 +16,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { gapTo, hullOf } from '../../../shared/src/data/reach.ts';
-import { pursuitOf } from './pursuit.ts';
+import { pursuitOf, stopPursuit } from './pursuit.ts';
 import { ALONGSIDE_FROM, alongsideHelm, newBrain } from './npc.ts';
 import type { NpcBrain } from './npc.ts';
 
@@ -96,6 +96,9 @@ export function approach(game: Game, s: PlayerSession, t: ApproachTarget, far: s
   const msg = game.orderOf(s);
   if (!ship || !msg || redoing.has(s) || ship.docked || !ship.alive) return far;
   const m = book(game);
+  // Her new order takes the helm from a chase under «Атаковать» (owner, 2026-10-22: a harbour or a thing a cable off is
+  // sailed to now, never refused — the helmsman cannot do both).
+  if (pursuitOf(ship)) stopPursuit(game, s, 'off');
   m.set(s, { ...t, msg, until: game.now + APPROACH_SEC });
   const p = t.where?.() ?? t;
   const run = autosailOf(ship);

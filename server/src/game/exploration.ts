@@ -3,6 +3,7 @@
 // Features restock after a while, so islands stay worth revisiting. Rumours in taverns point to them.
 
 import { REACH_SHORE, REACH_SLACK, hullOf, shoreGap } from '../../../shared/src/data/reach.ts';
+import { approach } from './approach.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { fatesOnLand } from './fates.ts';
 import { petsOnLand } from './pets.ts';
@@ -219,8 +220,45 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
   const lair = beastLanding(game, s);
   if (lair !== undefined) return lair;
   const target = findLandable(game, s);
-  if (!target) return 'Nothing worth landing for within reach of the boats';
+  if (!target) {
+    // A beach a little way off with something to land for (owner, 2026-10-22: the boats' reach is thirty metres now):
+    // the helmsman takes her in to it and the boats go there (approach.ts) — no «nothing within reach» a cable off.
+    const beach = landingBeach(game, s);
+    if (beach) return approach(game, s, { x: beach.x, y: beach.y, reach: REACH_SHORE, near: () => !!s.ship && !!findLandable(game, s), slow: 2.3 }, LAND_NONE);
+    return LAND_NONE;
+  }
   return landAt(game, s, target);
+}
+
+const LAND_NONE = 'Nothing worth landing for within reach of the boats';
+/** How far off a beach her landing order still sails her in to it (metres from her hull to the coast). */
+const LAND_SAIL_IN = 300;
+
+/** The beach nearest her within LAND_SAIL_IN with something her boats would land for there (found as findLandable finds
+ *  it, her hull set down off that beach for the asking), and the water off it the helmsman makes for. */
+function landingBeach(game: Game, s: PlayerSession): { x: number; y: number } | null {
+  const ship = s.ship!;
+  const h = hullOf(ship);
+  let best: { x: number; y: number } | null = null, bd = Infinity;
+  for (const id of islandsNear(game.world, ship.state.x, ship.state.y)) {
+    const is = game.world.islands[id];
+    if (is.portId || is.raft || (is.hidden && !s.discovered.has(is.id))) continue;
+    const g = shoreGap(h, is, is.radius, LAND_SAIL_IN);
+    if (g > LAND_SAIL_IN || g >= bd) continue;
+    const c = closestOnPolygon(ship.state.x, ship.state.y, is.poly);
+    const l = Math.hypot(ship.state.x - c.x, ship.state.y - c.y) || 1;
+    const off = 14 + ship.stats.beam / 2;
+    const x = c.x + ((ship.state.x - c.x) / l) * off, y = c.y + ((ship.state.y - c.y) / l) * off;
+    // (would the boats find anything there? asked with her hull set down off the beach a moment)
+    const was = ship.state;
+    ship.state = { ...was, x, y };
+    const there = findLandable(game, s);
+    ship.state = was;
+    if (!there || there.island.id !== is.id) continue;
+    best = { x, y };
+    bd = g;
+  }
+  return best;
 }
 
 /** The landing a job of hers asks for within the boats' reach (her site on her island), or null. */

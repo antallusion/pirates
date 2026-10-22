@@ -186,6 +186,9 @@ test('taken out off the island she sails at her station and counts in the squadr
   assert.equal(escortsOf(game, ship).length, 1);
   assert.equal(squadronOf(s).own, 1);
   // The island's frigate (⚓8) sails lighter built and lighter gunned: no more than 1.3 hired escorts (docs/15 item 8).
+  // (her sail of twenty seconds took her off the island: back off its coast — reach.ts)
+  ship.input = { rudder: 0, sailTarget: 0 };
+  offShore(game, ship, home);
   w.level = 8;
   assert.equal(shipLaunch(game, s, w.id), null);
   const fr = escortsOf(game, ship).find((e) => s.profile!.fleet.escorts.some((f) => f.id === e.fleetId && f.own === w.id))!;

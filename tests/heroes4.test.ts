@@ -5,6 +5,7 @@
 // mill and the warehouse, a prison's officer, an obelisk a season), the Grail (the chart's pieces, the dig, the
 // chronicle, the Grail in the town), the sea's rng untouched, the admin's commands and every word in both languages.
 
+import { alongsidePoint, hullOf } from '../shared/src/data/reach.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALTAR_POINTS, GRAIL_GROWTH, GRAIL_R, GRAIL_SILVER, GUARDS, GUARD_KINDS, GUARD_RESPAWN_SEC, JOIN_RATIO, OBELISKS, OBJS, OBJ_KINDS, PUZZLE_GRID, REF_MEN, advHour, buildAdv, chestPay, guardArmy, guardMight, openWater } from '../shared/src/data/advmap.ts';
@@ -145,7 +146,10 @@ test('a guard stands in the water near a captain, never moves, takes no shot, is
 
 function alongside(game: Game, s: PlayerSession, id: string) {
   const gs = guardShip(game, id)!;
-  s.ship!.state = { ...s.ship!.state, x: gs.state.x + 18, y: gs.state.y, speed: 0, sail: 0 };
+  // (beam to beam, on its course — owner, 2026-10-22: the grapples fly only alongside, reach.ts)
+  const P = alongsidePoint(hullOf(s.ship!), hullOf(gs));
+  s.ship!.state = { ...s.ship!.state, x: P.x, y: P.y, heading: P.heading, speed: 0, sail: 0 };
+  gs.state.speed = 0;
   s.ship!.input = { rudder: 0, sailTarget: 0 };
   game.grid.upsert(s.ship!.id, s.ship!.state.x, s.ship!.state.y);
   return gs;
@@ -372,6 +376,7 @@ test('the dig: sand where it is not, the Grail where it is — the chronicle tel
   const wrong = game.world.islands.find((i) => !i.portId && !i.minor && i.id !== spot.island.id && dist(i.x, i.y, spot.x, spot.y) > 5000 && i.radius > 150)!;
   parkNear(game, s, wrong.x, wrong.y, wrong.radius + 80);
   assert.ok(offCoast(game, s.ship!, wrong), 'water off its coast'); // (her hull within its coast's reach — reach.ts)
+  assert.equal(startDig(game, s), null, 'the diggers row ashore');
   seconds(game, 22);
   assert.ok(!advOf(s.profile!).found, 'nothing found');
   assert.equal(startDig(game, s), 'The diggers are still resting from the last hole.');

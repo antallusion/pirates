@@ -405,6 +405,8 @@ export function guardChoice(game: Game, s: PlayerSession, id: string, choice: st
   if (!guardUp(game, g)) return 'They are gone';
   if (dist(ship.state.x, ship.state.y, g.x, g.y) > GUARD_CARD_R) return 'Too far';
   if (ship.boarding) return 'Not now';
+  // (no offer of theirs: said at once, not sailed in for)
+  if (choice !== 'fight' && !guardOffer(game, s, g)) return 'They will not yield to you.';
   if (choice !== 'fight' && !guardReach(game, ship, g)) return approach(game, s, { x: g.x, y: g.y, reach: GUARD_DEAL_R, r: OBJ_R, near: () => !!s.ship && guardReach(game, s.ship, g, -4) }, 'Too far');
   if (choice === 'fight') {
     const gs = guardShip(game, g.id) ?? raise(game, g);
