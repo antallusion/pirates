@@ -8,6 +8,7 @@
 
 // (a group's words: chat.ts — docs/28)
 export { groupSay } from './chat.ts';
+import { REACH_SLACK, hullOf, hullsGap } from '../../../shared/src/data/reach.ts';
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { GROUP_MAX } from '../../../shared/src/protocol.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
@@ -449,7 +450,7 @@ function alongside(game: Game, a: PlayerSession, b: PlayerSession): { ok: boolea
     if (sa.docked && sa.docked === sb.docked) return { ok: true, atSea: false, port: sa.docked };
     return { ok: false, atSea: false, port: null, why: 'Trade across the quay in the same port, or come alongside at sea' };
   }
-  if (dist(sa.state.x, sa.state.y, sb.state.x, sb.state.y) > BARTER_RANGE) return { ok: false, atSea: true, port: null, why: `Come within ${BARTER_RANGE} m to pass goods across` };
+  if (hullsGap(hullOf(sa), hullOf(sb)) > BARTER_RANGE + REACH_SLACK) return { ok: false, atSea: true, port: null, why: `Come within ${BARTER_RANGE} m to pass goods across` };
   if (sa.underFire(game.now) || sb.underFire(game.now)) return { ok: false, atSea: true, port: null, why: 'Not in the middle of a fight' };
   return { ok: true, atSea: true, port: null };
 }
@@ -775,7 +776,7 @@ function side(game: Game, id: number, o: Offer): BarterSide {
 
 function pushBarter(game: Game, b: Barter): void {
   const A = game.sessionByAccount(b.a)?.ship, B = game.sessionByAccount(b.b)?.ship;
-  const d = A && B && b.port === null ? Math.round(dist(A.state.x, A.state.y, B.state.x, B.state.y)) : 0;
+  const d = A && B && b.port === null ? Math.max(0, Math.round(hullsGap(hullOf(A), hullOf(B)))) : 0; // (hull to hull, as the range — reach.ts)
   for (const id of [b.a, b.b]) {
     const ms = game.sessionByAccount(id);
     if (!ms) continue;

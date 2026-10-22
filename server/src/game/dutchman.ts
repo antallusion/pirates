@@ -3,6 +3,7 @@
 // name his island; there he rises for the captain who has them; the first to sink him this week wins his figurehead
 // and a title; after that, his echo pays silver.
 
+import { OBJ_R, REACH_SLACK, gapTo, hullOf } from '../../../shared/src/data/reach.ts';
 import { bossXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { unlockDeed } from './looks.ts';
 import { BATTLE_R, DAY_MS, DUTCHMAN_TITLE, PAGES, PAGE_R, RIDDLES, SHARE_R, WEEK_MS } from '../../../shared/src/data/dutchman.ts';
@@ -118,7 +119,7 @@ export function stepDutchman(game: Game): void {
     if (!ship || !p || ship.docked || !ship.alive) continue;
     for (let i = 0; i < shown; i++) {
       const pg = plan.pages[i];
-      if (!pg || Math.hypot(pg.x - ship.state.x, pg.y - ship.state.y) > PAGE_R) continue;
+      if (!pg || Math.abs(pg.x - ship.state.x) > 300 || Math.abs(pg.y - ship.state.y) > 300 || gapTo(hullOf(ship), pg.x, pg.y, OBJ_R) > PAGE_R + REACH_SLACK) continue;
       takePage(game, s, i);
       // Her group near her takes it with her.
       const g = groupOfAccount(game, s.accountId);

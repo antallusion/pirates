@@ -9,6 +9,7 @@
 //      a season, land to strike while they are up, and rare things on them for a landing party once each rise.
 // Also what the captain's chart and HUD are told of all of this (a small 'isles' message every two seconds).
 
+import { REACH_SHORE, REACH_SLACK, hullOf, shoreWithin } from '../../../shared/src/data/reach.ts';
 import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { isNight, nightFactor } from '../../../shared/src/constants.ts';
@@ -104,7 +105,7 @@ export function keeperNear(game: Game, s: PlayerSession): Island | null {
   if (!ship || ship.docked || nightFactor(game.now) < 0.55) return null;
   for (const id of lighthouseIslands(game)) {
     const is = game.world.islands[id];
-    if (dist(is.x, is.y, ship.state.x, ship.state.y) - is.radius > KEEPER_RANGE) continue;
+    if (!shoreWithin(hullOf(ship), is, is.radius, KEEPER_RANGE)) continue;
     if (!lightOf(game, is, s.accountId).lit) return is;
   }
   return null;
@@ -252,8 +253,8 @@ export function bankHere(game: Game, s: PlayerSession): TidalIsle | null {
   const ship = s.ship!;
   const T = islesOf(s.profile!).tides;
   for (const b of banksUp(game)) {
-    if (dist(b.x, b.y, ship.state.x, ship.state.y) > b.r + 400) continue;
-    if (Math.sqrt(closestOnPolygon(ship.state.x, ship.state.y, b.poly).d2) > 260) continue;
+    // (owner, 2026-10-22: her hull at its edge, 30 m — reach.ts — not 260 m from her middle)
+    if (!shoreWithin(hullOf(ship), b, b.r, REACH_SHORE + REACH_SLACK)) continue;
     if (T[b.id] === tidalRise(b, game.now)) continue;
     return b;
   }

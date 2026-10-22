@@ -4,6 +4,8 @@
 // чтобы это же корабль точно прекратил огонь»). The server's rules: server/src/game/ceasefire.ts; docs/31 §11.
 
 /** Each ship's price: this share of what the captain carries (her silver and her hold at the goods' base prices). */
+import { REACH_HAIL } from './reach.ts';
+
 export const TRUCE_SHARE = 0.15;
 /** …and never less than this (a captain with nothing aboard still pays something, if she has it). */
 export const TRUCE_MIN = 10;
@@ -13,8 +15,8 @@ export const TRUCE_SEC = 600;
 export const TALK_COOLDOWN = 20;
 /** A ship that refused does not talk with that captain again for this long. */
 export const REFUSED_SEC = 180;
-/** How near a ship must be to be talked to. */
-export const TALK_R = 2500;
+/** How near a ship must be to be talked to: hull to hull (reach.ts REACH_HAIL — owner, 2026-10-22: 2.5 km → 500 m). */
+export const TALK_R = REACH_HAIL;
 /** How long a ship paid turns away from the captain before she goes her own way. */
 export const TURN_AWAY_SEC = 25;
 

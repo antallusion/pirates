@@ -197,7 +197,7 @@ import { assistPref, joinBoarding } from './boardgroup.ts'; // docs/25 block Е
 import { tacAction } from './tactical.ts';
 import { battleCardClosed, inBattle, SELF_IN_BATTLE_WHY, untouchable } from './inbattle.ts'; // owner, 2026-10-22
 import { replayList, replayOf } from './tacreplay.ts'; // owner, 2026-10-16: «Повтор»
-import { surrenderBlocked, surrenderClosed } from './struck.ts';
+import { SURRENDER_FAR, SURRENDER_RANGE, surrenderBlocked, surrenderClosed, surrenderNear } from './struck.ts';
 import { endStreak, onStreakKill, streakAhead } from './streak.ts';
 import { legendsView } from './legends.ts';
 import { EmpireHub, GOVERNOR_PENNANT, empireAction, empireView, governsAny, stepEmpires } from './empires.ts';
@@ -2553,6 +2553,8 @@ export class Game {
   acceptSurrender(s: PlayerSession, id: number, fate: SurrenderFate): string | null {
     const target = this.ships.get(id);
     const why = surrenderBlocked(this, s, target);
+    // (owner, 2026-10-22: alongside, not 400 m off — the helmsman takes her there and her terms are taken on arrival)
+    if (why === SURRENDER_FAR && target) return approach(this, s, { x: target.state.x, y: target.state.y, reach: SURRENDER_RANGE, r: target.stats.length / 2, where: () => (target.alive && target.surrendered ? target.state : null), near: () => !!s.ship && surrenderNear(s.ship, target, -4), slow: 4 }, why);
     if (why) return why;
     const t = target!;
     if (fate !== 'sink' && fate !== 'release') return TWO_CHOICES;

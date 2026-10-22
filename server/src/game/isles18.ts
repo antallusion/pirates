@@ -4,6 +4,7 @@
 // the sandbars are among them), and the supply routes from a claimed lair island to one's own island, delivered at the
 // first dawn of every week of the sea's calendar.
 
+import { REACH_SHORE, REACH_SLACK, gapTo, hullOf } from '../../../shared/src/data/reach.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -202,7 +203,7 @@ export function turtleHere(game: Game, s: PlayerSession): TurtleDef | null {
   for (const d of turtles(game.world)) {
     if (!turtleUpNow(game, d)) continue;
     const p = turtlePos(d, game.now);
-    if (dist(p.x, p.y, ship.state.x, ship.state.y) > d.r + 260) continue;
+    if (gapTo(hullOf(ship), p.x, p.y, d.r) > REACH_SHORE + REACH_SLACK) continue; // her hull at its shell (owner, 2026-10-22: 260 → 30 m)
     if (combed(s.profile!)[d.id] === turtleRise(d, game.now)) continue;
     return d;
   }

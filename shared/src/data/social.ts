@@ -2,6 +2,7 @@
 // shared goals of the week (#32), trade alongside at sea (#33), the guild's shipyard on the leader's island (#34)
 // and the signal flags a group hoists to its own (#35). The numbers and the words; the server and client read them.
 
+import { REACH_OBJ } from './reach.ts';
 import { XP_UNITS, lumpXp } from './xpcurve.ts'; // docs/26
 import type { GoodId } from './goods.ts';
 import { Rng } from '../rng.ts';
@@ -90,8 +91,8 @@ export function worldGoalText(kind: WorldGoalKind, target: number, port: string,
 
 // ------------------------------------------------------------------ 33. trade alongside at sea
 
-/** How close two ships must keep to trade at sea (m). */
-export const TRADE_RANGE = 300;
+/** How close two ships must keep to trade at sea: hull to hull (owner, 2026-10-22: 300 m → 30 m, reach.ts). */
+export const TRADE_RANGE = REACH_OBJ;
 /** Pieces of gear one side may put on the table. */
 export const TRADE_ITEMS_MAX = 6;
 /** Kinds of goods one side may put on the table. */

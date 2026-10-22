@@ -4,6 +4,8 @@
 // one let go; the heat of a sea's lanes — escorts, League cutters and dearer goods where the raids are; the
 // Brethren's fame and ranks; and the mark of a merchant under a friend's guns.
 
+import { REACH_OBJ, REACH_SLACK, SIGHT_GLASS, hullOf, hullsGap } from '../../../shared/src/data/reach.ts';
+import { approach } from './approach.ts';
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { questEvent } from './quests.ts';
@@ -184,7 +186,7 @@ export function appraise(game: Game, s: PlayerSession, id: number): AppraisalVie
   const t = game.ships.get(id);
   if (!ship || !t || !t.alive || t.cls.monster) return 'Nothing to appraise there.';
   const d = dist(ship.state.x, ship.state.y, t.state.x, t.state.y);
-  if (d > ship.stats.detection * 0.85) return 'Too far for the glass.';
+  if (d > Math.min(ship.stats.detection * 0.85, SIGHT_GLASS)) return 'Too far for the glass.'; // (her screen's own: the client offers it only for a ship she sees)
   const man = S.manifests.get(s.accountId);
   const exact = !!man && man.until > game.now && t.originPort === man.port;
   const glass = s.profile?.captainGear.spyglass ? 0.05 : 0.15;
@@ -434,7 +436,7 @@ export function escortOffer(game: Game, s: PlayerSession): { id: number; to: str
   if (!ship || ship.docked || !ship.alive || !s.profile) return null;
   for (const c of rs(game).convoys.values()) {
     if (c.broken || c.delivered || c.hired.has(s.accountId)) continue;
-    const near = standingOf(game, c).some((m) => Math.abs(m.state.x - ship.state.x) < ESCORT_SIGN_R && Math.abs(m.state.y - ship.state.y) < ESCORT_SIGN_R && dist(m.state.x, m.state.y, ship.state.x, ship.state.y) < ESCORT_SIGN_R);
+    const near = standingOf(game, c).some((m) => Math.abs(m.state.x - ship.state.x) < 200 && Math.abs(m.state.y - ship.state.y) < 200 && hullsGap(hullOf(m), hullOf(ship)) <= ESCORT_SIGN_R + REACH_SLACK);
     if (!near) continue;
     const to = game.portById(c.to)?.name ?? c.to;
     const pay = escortPay(c.level);
@@ -710,7 +712,8 @@ export function demandTribute(game: Game, s: PlayerSession, id: number): string 
   const ship = s.ship!;
   const m = game.ships.get(id);
   if (!m || !m.alive || m.isPlayer || m.npcRole !== 'merchant' || !m.surrendered) return 'Only a merchant who has struck pays tribute.';
-  if (dist(ship.state.x, ship.state.y, m.state.x, m.state.y) > 400) return 'Come within hail of her first.';
+  // (owner, 2026-10-22: alongside her — hull to hull 30 m, reach.ts — not 400 m off; farther, the helmsman takes her there)
+  if (hullsGap(hullOf(ship), hullOf(m)) > REACH_OBJ + REACH_SLACK) return approach(game, s, { x: m.state.x, y: m.state.y, reach: REACH_OBJ, r: m.stats.length / 2, where: () => (m.alive && m.surrendered ? m.state : null), near: () => !!s.ship && hullsGap(hullOf(s.ship), hullOf(m)) <= REACH_OBJ - 4 }, 'Come within hail of her first.');
   const paid = S.tributes.get(m.id);
   if (paid?.has(s.accountId)) return 'She has paid you already.';
   const p = s.profile!;

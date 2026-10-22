@@ -2,6 +2,7 @@
 // jettisoned casks, hidden coves, night fences and the Black Ledger, witnesses for Nobody's Ship,
 // hunters losing a ghost wake, and the actives (False Colors, Slip Away, Decoy Barrels).
 
+import { LANDING_R, REACH_SHORE, REACH_SLACK, hullOf, inReach } from '../../../shared/src/data/reach.ts';
 import { FENCE_RANK, WARES_RANK, brethrenRank } from '../../../shared/src/data/raiding.ts';
 import { ghostTraderMul } from './bridgefx.ts';
 import { pointsInTree } from '../../../shared/src/data/talents.ts';
@@ -176,7 +177,8 @@ export function buildCoves(game: Game): Cove[] {
 }
 
 export function coveAt(game: Game, ship: ShipEntity): Cove | null {
-  for (const c of game.coves) if (dist(c.x, c.y, ship.state.x, ship.state.y) < 300) return c;
+  // (owner, 2026-10-22: her hull at the cove's landing, 30 m — reach.ts — not 300 m from her middle)
+  for (const c of game.coves) if (Math.abs(c.x - ship.state.x) < 300 && Math.abs(c.y - ship.state.y) < 300 && inReach(hullOf(ship), c.x, c.y, LANDING_R, REACH_SHORE + REACH_SLACK)) return c;
   return null;
 }
 

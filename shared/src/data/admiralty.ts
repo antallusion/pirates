@@ -64,7 +64,7 @@ export const ADM_LEGEND_BOARDINGS: Record<number, number> = { 2: 1.5, 3: 4, 4: 4
 export const ADM_LEGEND_SPELL: Record<number, number> = { 2: 1, 3: 1.15, 4: 1.3 };
 export const ADM_LEGEND_HOURS: Record<number, number> = { 2: 1, 3: 2.25, 4: 2.5 };
 /** Within this of the legend's mark her ship comes alongside. */
-export const ADM_LEGEND_R = 1500;
+export const ADM_LEGEND_R = 400; // (owner, 2026-10-22: the gold mark a captain can see, 1500 → 400 m; the legend comes alongside there)
 
 /** The seal's asks (the level and the depths won in time) and a geared captain's chance in time at each
  *  (tests/balance/seals.ts: 10 — 80 %, 12 — 43 %): the hours are the depths' (a quarter of an hour each, the misses
