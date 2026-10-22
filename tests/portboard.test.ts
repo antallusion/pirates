@@ -108,17 +108,21 @@ test('no auto-dock: sailing through a harbour\'s waters leaves her at sea; «П�
   assert.ok(out >= 60 && out < PORT_DOCK_RADIUS, `${out}`);
   assert.ok(ship.state.speed >= 3 && ship.state.sail > 0);
   // in the harbour's reach, slow, for a long while: still at sea
-  ship.state.x = port.x + 150;
-  ship.state.y = port.y;
+  const ox = (ship.state.x - port.x) / out, oy = (ship.state.y - port.y) / out;
+  ship.state.x = port.x + ox * 150;
+  ship.state.y = port.y + oy * 150;
   ship.input = { rudder: 0, sailTarget: 0 };
   ship.state.speed = 0;
   steps(game, 100);
   assert.equal(ship.docked, null, 'nothing docks her but the button');
-  // the button
-  ship.state.x = port.x + 150;
-  ship.state.y = port.y;
+  // the button: from the harbour's approach at once (owner, 2026-10-22: 40 m of its anchorage or quays — dock.ts); from
+  // farther in its waters it sails her in and docks her there
+  ship.state.x = port.x + ox * 150;
+  ship.state.y = port.y + oy * 150;
   ship.state.speed = 0;
   c.push({ t: 'dock' });
+  assert.equal(ship.docked, null, 'not from 150 m');
+  for (let i = 0; i < 20 * 90 && !ship.docked; i++) game.step();
   assert.equal(ship.docked, port.id);
   assert.ok(c.last('port')?.view, 'the harbour opens');
   c.push({ t: 'undock' });

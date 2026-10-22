@@ -5,7 +5,8 @@ import { TALENTS, canLearn } from '../shared/src/data/talents.ts';
 import type { TalentRanks } from '../shared/src/data/talents.ts';
 import { REGIONS } from '../shared/src/world/regions.ts';
 import { bloodAndSalt, exoticBonus, ghostTraderMul, grandBattery, nightRaider, noteExoticPurchase, stepBridges } from '../server/src/game/bridgefx.ts';
-import { boardingRangeBetween, canBoard, startBoarding } from '../server/src/game/boarding.ts';
+import { boardGapMul, canBoard, startBoarding } from '../server/src/game/boarding.ts';
+import { BOARD_GAP, boardGap, hullOf } from '../shared/src/data/reach.ts';
 import { applyDamage } from '../server/src/game/combat.ts';
 import { escortsOf, stepFleet } from '../server/src/game/fleet.ts';
 import type { Game } from '../server/src/game/Game.ts';
@@ -54,11 +55,16 @@ test('Chain and Grapple: a tangled ship is boarded from further', () => {
   const { s, ship } = captain(game, 'Grapple', { brg_chain_and_grapple: 1 });
   toSea(game, s);
   const foe = game.spawnNpcShip('merchant', 'fluyt', 'league', ship.state.x + 55, ship.state.y, 0);
-  // Past the grapples' own reach, inside half as far again (a captain's ship matches any speed herself, docs/23 item 54).
-  foe.state.x = ship.state.x + boardingRangeBetween(ship, foe) * 1.3;
+  // Past the grapples' own reach, inside half as far again (owner, 2026-10-22: the water between the hulls alongside —
+  // reach.ts boardGap — and her way matched within half again the lines' hold).
+  ship.state.heading = foe.state.heading = 0;
+  for (let x = 1; x < 200; x += 0.5) {
+    foe.state.x = ship.state.x + x;
+    if (boardGap(hullOf(ship), hullOf(foe)) >= BOARD_GAP * boardGapMul(ship) * 1.25) break;
+  }
   game.grid.upsert(foe.id, foe.state.x, foe.state.y);
   foe.hull = foe.stats.hullMax * 0.4;
-  foe.state.speed = 9;
+  foe.state.speed = 5;
   assert.ok(canBoard(game, ship, foe) !== null);
   foe.addEffect({ id: 'tangled', until: game.now + 6, mods: { turnRate: -0.35 } }, game.now);
   assert.equal(canBoard(game, ship, foe), null);
@@ -147,7 +153,7 @@ test('Salvage King: raise a hull that just went down and tow her home', () => {
   const { game } = makeGame();
   const { c, s, ship, p } = captain(game, 'Salvor', { brg_salvage_king: 1 });
   toSea(game, s);
-  const wreck = game.spawnNpcShip('merchant', 'brig', 'league', ship.state.x + 80, ship.state.y, 0);
+  const wreck = game.spawnNpcShip('merchant', 'brig', 'league', ship.state.x + 30, ship.state.y, 0); // (over her: 30 m of the hull)
   wreck.hull = 0;
   game.beginSinking(wreck);
   steps(game, 20 * 8);
