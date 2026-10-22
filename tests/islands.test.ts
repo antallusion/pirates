@@ -71,8 +71,10 @@ test('a landing party rows ashore to a pirate camp: a fight on the sand, plunder
   const site = lifeOf(is).find((x) => x.kind === 'pirate_camp')!;
   const px = is.poly[site.v * 2], py = is.poly[site.v * 2 + 1];
   const dx = px - is.x, dy = py - is.y, l = Math.hypot(dx, dy);
-  ship.state.x = px + (dx / l) * 120;
-  ship.state.y = py + (dy / l) * 120;
+  // (her beam to the coast, her hull within the boats' thirty metres — owner, 2026-10-22: reach.ts)
+  ship.state.x = px + (dx / l) * 28;
+  ship.state.y = py + (dy / l) * 28;
+  ship.state.heading = Math.atan2(-dy / l, -dx / l);
   ship.state.speed = 0;
   ship.input = { rudder: 0, sailTarget: 0 };
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);

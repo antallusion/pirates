@@ -26,6 +26,7 @@ import { ownIsland } from '../server/src/game/estate.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import type { Port } from '../shared/src/world/worldgen.ts';
 import { join, makeGame, steps } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 import type { FakeConn } from './helpers.ts';
 
 function cap(game: Game, name: string): { c: FakeConn; s: PlayerSession } {
@@ -450,6 +451,7 @@ test('the guild’s shipyard: the admiral lays a project down at her island; mem
   assert.equal(mem.s.profile!.gold, gold - 500);
   // Lying off the island: from the hold, only what the project needs, never past its need.
   atSea(game, mem.s, isl.x + isl.radius + 60, isl.y);
+  assert.ok(offCoast(game, mem.s.ship!, isl), 'water off its coast'); // (her hull within its thirty metres — reach.ts)
   assert.match(gyardGive(game, mem.s, 'rum', 5, 0) ?? '', /does not need/);
   assert.equal(gyardGive(game, mem.s, 'timber', 80, 0), null);
   assert.equal(mem.s.ship!.cargo.timber, 20);

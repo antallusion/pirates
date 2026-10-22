@@ -38,6 +38,7 @@ import { serverTable } from '../client/src/lang/server.ts';
 import { EN as BASE_EN, RU as BASE_RU } from '../client/src/lang/ui/base.ts';
 import { EN as CO_EN, RU as CO_RU } from '../client/src/lang/ui/company.ts';
 import { join, makeGame, onHull } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 import { MOVE_DOUBLOONS, MOVE_SILVER } from '../shared/src/data/isletree.ts';
 import type { FakeConn } from './helpers.ts';
 
@@ -55,14 +56,8 @@ function world(): Game {
 
 function offShore(game: Game, ship: ShipEntity, is: Island): void {
   ship.docked = null;
-  for (let k = 0; k < 48; k++) {
-    const a = (k / 48) * Math.PI * 2;
-    const x = is.x + Math.sin(a) * (is.radius + 120), y = is.y - Math.cos(a) * (is.radius + 120);
-    if (isLand(game.world, x, y)) continue;
-    ship.state.x = x;
-    ship.state.y = y;
-    break;
-  }
+  // (her hull within the thirty metres of its coast — owner, 2026-10-22, reach.ts)
+  assert.ok(offCoast(game, ship, is), 'water off its coast');
   ship.state.speed = 0;
   ship.region = is.region;
   ship.protectedUntil = 0;

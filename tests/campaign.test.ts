@@ -1,3 +1,4 @@
+import type { Island } from '../shared/src/world/worldgen.ts';
 // The main campaign (docs/36; owner, 2026-10-17: «в сюжете минимум (в кампании главной) должно быть 700 крутых квестов
 // и только пройдя их ты должен быть максимального уровня … один из шагов должен быть … посещение острова и несколько
 // абордажей … сети мики числится как побочное»): its size and shape, the one taxonomy on every screen, the road of
@@ -38,6 +39,7 @@ import type { PlayerSession } from '../server/src/game/player.ts';
 import { sanitizeProfile } from '../server/src/game/player.ts';
 import { ISLE_REACH, questEvent } from '../server/src/game/quests.ts';
 import { join, makeGame } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 const world = generateWorld(1337);
 const built = buildCampaign(world, 1337, CHAPTERS);
@@ -192,6 +194,13 @@ function atSea(game: Game, s: PlayerSession, x: number, y: number): void {
   game.grid.upsert(s.ship!.id, x, y);
 }
 
+/** At sea off an island's coast, her hull within its thirty metres (owner, 2026-10-22: reach.ts). */
+function atCoast(game: Game, s: PlayerSession, is: Island): void {
+  atSea(game, s, is.x + is.radius + 150, is.y);
+  assert.ok(offCoast(game, s.ship!, is), 'water off its coast'); // (her hull within its thirty metres — reach.ts)
+  assert.ok(offCoast(game, s.ship!, is), 'water off its coast');
+}
+
 /** A quest put under way at a step (its own state, as startQuest makes it). */
 function onStep(s: PlayerSession, q: QuestDef, step = 0): void {
   s.profile!.quests.active = [{ id: q.id, step, progress: 0, startedAt: 0 }];
@@ -213,7 +222,7 @@ test('new steps tracked by the game: an island’s waters reached, ships boarded
   atSea(game, s, isl.x + isl.radius + ISLE_REACH + 3000, isl.y);
   questEvent(game, s, { k: 'tick', dt: 1 });
   assert.equal(s.profile!.quests.active[0].step, 0, 'too far off');
-  atSea(game, s, isl.x + isl.radius + ISLE_REACH - 100, isl.y);
+  atCoast(game, s, isl);
   questEvent(game, s, { k: 'tick', dt: 1 });
   assert.equal(s.profile!.quests.active[0].step, 1, 'the island’s waters reached');
   // boarding: a grey sloop of the first waters does not count for a captain of the 10th; ships of ⚓3 do
@@ -239,7 +248,7 @@ test('new steps tracked by the game: an island’s waters reached, ships boarded
   onStep(s, cq);
   questEvent(game, s, { k: 'tick', dt: 1 });
   assert.equal(s.profile!.quests.active.length, 1, 'no island yet');
-  atSea(game, s, isl.x + isl.radius + 150, isl.y);
+  atCoast(game, s, isl);
   assert.equal(claimIsland(game, s, isl.id), null);
   questEvent(game, s, { k: 'tick', dt: 1 });
   assert.equal(s.profile!.quests.active.length, 0, 'an island of her own');
@@ -259,7 +268,7 @@ test('the island’s yard and the dwellings send their events: works laid on her
   const { s } = captain(game, 'Builder', 20);
   s.profile!.gold = 1e7;
   const isl = game.world.islands.find((i) => !i.portId && !i.minor && !i.raft && !i.hidden && !i.slot && i.region === 'black_coast')!;
-  atSea(game, s, isl.x + isl.radius + 150, isl.y);
+  atCoast(game, s, isl);
   const { claimIsland } = await import('../server/src/game/baseclaim.ts');
   assert.equal(claimIsland(game, s, isl.id), null);
   const q = fake([{ type: 'build', count: 1, text: 'a' }]);
@@ -298,7 +307,7 @@ test('«Плыть» has a place for every step of every campaign quest', async 
   const { game } = makeGame();
   const { s } = captain(game, 'Router', 30);
   const isl = game.world.islands.find((i) => !i.portId && !i.minor && !i.raft && !i.hidden && !i.slot && i.region === 'black_coast')!;
-  atSea(game, s, isl.x + isl.radius + 150, isl.y);
+  atCoast(game, s, isl);
   const { claimIsland } = await import('../server/src/game/baseclaim.ts');
   claimIsland(game, s, isl.id); // her island (a «build» step sails there)
   atSea(game, s, 30000, 80000);
@@ -366,15 +375,13 @@ function doStep(game: Game, s: PlayerSession, st: QuestStep): void {
       const is = game.world.islands[st.island];
       ship.docked = null;
       sailed(s, is.x + is.radius + 200, is.y);
-      ship.state.x = is.x + is.radius + 200;
-      ship.state.y = is.y;
+      assert.ok(offCoast(game, ship, is), 'water off its coast');
       return questEvent(game, s, { k: 'tick', dt: 1 });
     }
     case 'land': {
       const is = game.world.islands[st.island];
       sailed(s, is.x + is.radius + 200, is.y);
-      ship.state.x = is.x + is.radius + 200;
-      ship.state.y = is.y;
+      assert.ok(offCoast(game, ship, is), 'water off its coast'); // (her hull within its thirty metres — reach.ts)
       return questEvent(game, s, { k: 'land', island: st.island, feature: st.site ?? 'beach' });
     }
     case 'board':
@@ -450,7 +457,7 @@ test('a captain who does only the campaign: every quest taken and done by the ga
   const p = s.profile!;
   p.campaign!.started = true;
   const isl = game.world.islands.find((i) => !i.portId && !i.minor && !i.raft && !i.hidden && !i.slot && i.region === 'black_coast')!;
-  atSea(game, s, isl.x + isl.radius + 150, isl.y);
+  atCoast(game, s, isl);
   const { claimIsland } = await import('../server/src/game/baseclaim.ts');
   claimIsland(game, s, isl.id); // the island of chapter 6 (claimed early here: the step then is done at once)
   const camp = campaignOf(game);

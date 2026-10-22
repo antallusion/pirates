@@ -8,6 +8,7 @@
 // water. A trophy hall shows a hunter's heads, a whaler's skulls and a fisher's records, and lends each trade a
 // little; guests may look round it.
 
+import { REACH_SHORE, REACH_SLACK, hullOf, shoreWithin } from '../../../shared/src/data/reach.ts';
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { welcome } from './guests.ts';
 import { isCitadelIsland } from '../../../shared/src/data/citadels.ts'; // docs/19 E4
@@ -321,7 +322,7 @@ export function visitHall(game: Game, s: PlayerSession, islandId: number): { own
   if (!h || !h.owned || !has(h, 'trophy_hall') || h.owner.kind !== 'player') return 'No trophy hall there';
   const ship = s.ship!;
   const isl = island(game, islandId)!;
-  if (ship.docked || dist(isl.x, isl.y, ship.state.x, ship.state.y) - isl.radius > 800) return `Sail to ${isl.name}, or ask at a harbour office in ${REGIONS[isl.region].name}`;
+  if (ship.docked || !shoreWithin(hullOf(ship), isl, isl.radius, REACH_SHORE + REACH_SLACK)) return `Sail to ${isl.name}, or ask at a harbour office in ${REGIONS[isl.region].name}`; // (her hull at its coast — reach.ts)
   const owner = game.sessionByAccount(h.owner.id);
   h.visitors = (h.visitors ?? 0) + (h.owner.id === s.accountId ? 0 : 1);
   game.holdings.touch();
@@ -378,7 +379,7 @@ export function foundOutpost(game: Game, s: PlayerSession, kind: OutpostKind): s
 
 function nearOutpost(game: Game, ship: ShipEntity, o: Outpost): boolean {
   const isl = island(game, o.island);
-  return !!isl && !ship.docked && dist(isl.x, isl.y, ship.state.x, ship.state.y) - isl.radius < 800;
+  return !!isl && !ship.docked && shoreWithin(hullOf(ship), isl, isl.radius, REACH_SHORE + REACH_SLACK); // (her hull at its coast — reach.ts)
 }
 
 export function outpostOrder(game: Game, s: PlayerSession, id: string, action: string, arg?: string): string | null {

@@ -14,6 +14,7 @@ import { priceMods } from '../server/src/game/ports.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { join, makeGame } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 /** Every calendar far off but the one wanted, which is due now; then ten seconds of the world. */
 function due(game: Game, kind: string): void {
@@ -78,8 +79,7 @@ test('a star falls by night; the first captain to anchor off the island takes th
   const ship = S.ship!;
   ship.docked = null;
   S.profile!.docked = null;
-  ship.state.x = is.x + is.radius + 200;
-  ship.state.y = is.y;
+  assert.ok(offCoast(game, ship, is), 'water off its coast'); // (her hull within its thirty metres — reach.ts)
   ship.state.speed = 0;
   ship.cargo = {};
   stepEvents(game);

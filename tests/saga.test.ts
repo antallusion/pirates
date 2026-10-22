@@ -12,6 +12,7 @@ import { isLand } from '../shared/src/world/worldgen.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { tellSaga } from '../client/src/ui/saga.ts';
 import { join, makeGame, onWeekday } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 test('a chapter for a deed: the day of her voyages; on a holiday, the holiday’s day', () => {
   const { game } = makeGame();
@@ -39,14 +40,7 @@ test('deeds write themselves: an island bought is a chapter', () => {
   const ship = s.ship!;
   ship.docked = null;
   s.profile!.docked = null;
-  for (let k = 0; k < 48; k++) {
-    const a = (k / 48) * Math.PI * 2;
-    const x = is.x + Math.sin(a) * (is.radius + 150), y = is.y - Math.cos(a) * (is.radius + 150);
-    if (isLand(game.world, x, y)) continue;
-    ship.state.x = x;
-    ship.state.y = y;
-    break;
-  }
+  assert.ok(offCoast(game, ship, is), 'water off its coast'); // (owner, 2026-10-22: her hull within thirty metres of its coast — reach.ts)
   ship.region = is.region;
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);
   assert.equal(buyIsland(game, s, is.id), null);

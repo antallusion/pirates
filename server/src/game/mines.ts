@@ -319,15 +319,12 @@ export function offIsland(game: Game, s: PlayerSession, islandId: number): void 
     const d = Math.hypot(is.poly[i] - is.x, is.poly[i + 1] - is.y);
     if (d > bd) [bx, by, bd] = [is.poly[i], is.poly[i + 1], d];
   }
-  // Out from the headland until the water is deep enough for her keel (still within the boats' reach).
-  let d = 120;
-  for (; d < 240; d += 20) {
-    const k = d / Math.max(1, bd);
-    if (depthAt(game.world, bx + (bx - is.x) * k, by + (by - is.y) * k) > ship.cls.draft + 1) break;
-  }
+  // Off the headland, her beam to it, within the boats' thirty metres (owner, 2026-10-22: reach.ts — the coasts' own
+  // shallows take no keel: the hull keeps off the coast itself).
+  const d = 26 + ship.stats.beam / 2;
   const k = d / Math.max(1, bd);
   if (ship.docked) game.undock(s);
-  ship.state = { ...ship.state, x: bx + (bx - is.x) * k, y: by + (by - is.y) * k, speed: 0, sail: 0 };
+  ship.state = { ...ship.state, x: bx + (bx - is.x) * k, y: by + (by - is.y) * k, heading: Math.atan2(-(by - is.y), -(bx - is.x)), speed: 0, sail: 0 };
   ship.input = { rudder: 0, sailTarget: 0 };
 }
 

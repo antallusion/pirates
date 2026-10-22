@@ -35,6 +35,7 @@ import { SERVER_RU_B } from '../client/src/lang/server.ru.b.ts';
 import { serverTable } from '../client/src/lang/server.ts';
 import { EN as BASE_EN, RU as BASE_RU } from '../client/src/lang/ui/base.ts';
 import { join, makeGame, onHull, steps } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 import { ISLE_OF_HALL } from '../shared/src/data/isletree.ts';
 
 const MIN = 60_000;
@@ -50,14 +51,7 @@ function world(): Game {
 
 function offShore(game: Game, ship: ShipEntity, is: Island): void {
   ship.docked = null;
-  for (let k = 0; k < 48; k++) {
-    const a = (k / 48) * Math.PI * 2;
-    const x = is.x + Math.sin(a) * (is.radius + 120), y = is.y - Math.cos(a) * (is.radius + 120);
-    if (isLand(game.world, x, y)) continue;
-    ship.state.x = x;
-    ship.state.y = y;
-    break;
-  }
+  assert.ok(offCoast(game, ship, is), 'water off its coast'); // (owner, 2026-10-22: her hull within thirty metres of its coast — reach.ts)
   ship.state.speed = 0;
   ship.region = is.region;
   ship.protectedUntil = 0;

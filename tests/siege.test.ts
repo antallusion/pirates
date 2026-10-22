@@ -6,6 +6,7 @@ import type { Game } from '../server/src/game/Game.ts';
 import { BATTERY_HP, LANDING_SEC, besieging, landingPoint, siegeImpact } from '../server/src/game/siege.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { join, makeGame, steps } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 import type { FakeConn } from './helpers.ts';
 
 const HOUR = 3_600_000;
@@ -54,6 +55,7 @@ function dock(game: Game, s: PlayerSession, portId: string): void {
 /** Anne leases the island and arms it; the shield from the lease is lifted for the test. */
 function fortified(game: Game, A: { c: FakeConn; s: PlayerSession }, isl: Island) {
   sea(game, A.s, isl.x + isl.radius + 150, isl.y);
+  assert.ok(offCoast(game, A.s.ship!, isl), 'water off its coast'); // (her hull within its thirty metres — reach.ts)
   A.c.push({ t: 'isle', action: 'rent', island: isl.id, days: 30 });
   A.s.ship!.cargo = { planks: 400, iron: 60, weapons: 40 };
   A.c.push({ t: 'isle', action: 'build', island: isl.id, building: 'warehouse' });
@@ -116,6 +118,7 @@ test('bombardment: shot on the island silences the batteries; the lull; the defe
   assert.ok(sg.windowStart - game.wallNow() >= 18 * HOUR);
   // The defenders rebuild one battery with planks from the store.
   sea(game, A.s, isl.x + isl.radius + 150, isl.y);
+  assert.ok(offCoast(game, A.s.ship!, isl), 'water off its coast'); // (her hull within its thirty metres — reach.ts)
   A.s.ship!.cargo = { planks: 60 };
   A.c.push({ t: 'isle', action: 'store', island: isl.id, good: 'planks', qty: 60 });
   A.c.push({ t: 'isle', action: 'fortify', island: isl.id });

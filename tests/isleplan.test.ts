@@ -19,6 +19,7 @@ import { shopState, useSpeed } from '../server/src/game/shop.ts';
 import { speedup } from '../server/src/game/base.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { join, makeGame, onHull } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 const fresh = (o: Partial<PlanState> = {}): PlanState => ({ levels: { hall: 1 }, producers: {}, biome: 'temperate', safe: false, playerLevel: 60, path: 'corsair', ...o });
 
@@ -98,8 +99,7 @@ function owner(game: Game): PlayerSession {
   s.profile!.gold = 2_000_000;
   const home = game.world.islands.find((i) => !i.portId && i.region === 'gravewater' && i.radius > 150 && !game.holdings.get(game, i.id) && !lairIsland(game, i.id))!;
   s.ship!.docked = null;
-  s.ship!.state.x = home.x + home.radius + 120;
-  s.ship!.state.y = home.y;
+  assert.ok(offCoast(game, s.ship!, home), 'water off its coast'); // (her hull within its thirty metres — reach.ts)
   s.ship!.state.speed = 0;
   game.grid.upsert(s.ship!.id, s.ship!.state.x, s.ship!.state.y);
   assert.equal(buyIsland(game, s, home.id), null);

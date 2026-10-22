@@ -25,6 +25,7 @@ import { armyForLevel } from '../shared/src/data/army.ts';
 import { EN, RU } from '../client/src/lang/ui/isleloot.ts';
 import { EN as SC_EN, RU as SC_RU } from '../client/src/lang/ui/islescene.ts';
 import { join, makeGame, onHull, steps } from './helpers.ts';
+import { offCoast } from './helpers.ts';
 
 const LAIR = (size: 'weak' | 'avg' | 'strong', role: 'shore' | 'grotto' | 'guardian', level: number): IsleLootSrc => ({ src: 'lair', size, role, level });
 
@@ -111,8 +112,7 @@ function withIsland(game: Game, s: PlayerSession): void {
   const home = game.world.islands.find((i) => !i.portId && i.region === 'gravewater' && i.radius > 150 && !game.holdings.get(game, i.id) && !lairIsland(game, i.id))!;
   const sx = s.ship!.state.x, sy = s.ship!.state.y;
   s.ship!.docked = null;
-  s.ship!.state.x = home.x + home.radius + 120;
-  s.ship!.state.y = home.y;
+  assert.ok(offCoast(game, s.ship!, home), 'water off its coast'); // (her hull within its thirty metres — reach.ts)
   game.grid.upsert(s.ship!.id, s.ship!.state.x, s.ship!.state.y);
   assert.equal(buyIsland(game, s, home.id), null);
   s.ship!.state.x = sx;
