@@ -61,9 +61,13 @@ export const PURSUIT_SIGHT = 2600;
 export const RETARGET_R = 1600;
 /** Said when her crew will not board and the pursuit turns to the guns (docs/30). */
 export const GUNS_INSTEAD = 'The helmsman keeps off her side: the guns fight her instead.';
-/** The boarding run starts this near her mark, and ends this near (she comes alongside under her own canvas). */
+/** The boarding run starts this near her mark, and ends this near (she comes alongside under her own canvas) — unless
+ *  she still lies more than BOARD_RUN_LAG metres astern of her spot alongside (a mark faster than her on this point of
+ *  sail: under her own canvas she hung 88 m astern of a brigantine for ever, the run cut at 90 m and back on at 90 m);
+ *  then the hands stay on the braces until she is level with it. */
 export const BOARD_RUN_FROM = 1200;
 export const BOARD_RUN_TO = 90;
+export const BOARD_RUN_LAG = 12;
 /** Auto-battle against the weak (docs/23 item 46): a mark this many levels below her own is settled in AUTO_WEAK_SEC. */
 export const AUTO_WEAK_GAP = 2;
 export const AUTO_WEAK_SEC = 3;
@@ -368,7 +372,8 @@ export function stepPursuit(game: Game): void {
       const reach = boardingRangeBetween(ship, t);
       // The boarding run (docs/23 item 36): every hand on the braces and the sweeps while she closes — twice her way,
       // a quick helm, and the wind no matter — until she is coming alongside.
-      boardRun(game, s, ship, d < BOARD_RUN_FROM && d > BOARD_RUN_TO);
+      const lag = d <= BOARD_RUN_TO ? (run.brain.alongLag ?? 0) : 0;
+      boardRun(game, s, ship, d < BOARD_RUN_FROM && (d > BOARD_RUN_TO || lag > (ship.hasEffect('board_run') ? 0 : BOARD_RUN_LAG)));
       // Her own crew will not go over the rail (no heart for it, too few hands): the grapples never fly, and alongside
       // her hull ground on the mark's until she sank, untold (docs/30: morale 5, two sloops lost so). Said once; the guns
       // fight her from their reach instead.

@@ -215,12 +215,12 @@ export function alongsideWhy(a: Hull, aSpeed: number, b: Hull, bSpeed: number, o
   return null;
 }
 
-/** Where to lie alongside `b` (her beam on the side `a` is on, BOARD_GAP·0.5 of water between): the point and the head
- *  to hold there (her course). The helm of a boarder, a captain's helmsman and the sea's own alike. */
-export function alongsidePoint(a: Hull, b: Hull): { x: number; y: number; heading: number; side: 1 | -1 } {
+/** Where to lie alongside `b` (her beam on the side `a` is on, or on `want`'s; BOARD_GAP·0.5 of water between): the
+ *  point and the head to hold there (her course). The helm of a boarder, a captain's helmsman and the sea's own alike. */
+export function alongsidePoint(a: Hull, b: Hull, want?: 1 | -1): { x: number; y: number; heading: number; side: 1 | -1 } {
   const f = headingVec(b.heading);
   const rx = -f.y, ry = f.x; // her starboard (heading 0 north: starboard east)
-  const side: 1 | -1 = (a.x - b.x) * rx + (a.y - b.y) * ry >= 0 ? 1 : -1;
+  const side: 1 | -1 = want ?? ((a.x - b.x) * rx + (a.y - b.y) * ry >= 0 ? 1 : -1);
   const off = Math.max(a.beam / 2 + b.beam / 2 + BOARD_GAP * 0.5, BUMP_SHARE * (a.length + b.length) + 4);
   return { x: b.x + rx * off * side, y: b.y + ry * off * side, heading: b.heading, side };
 }

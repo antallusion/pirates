@@ -21,7 +21,8 @@ import type { Island } from '../shared/src/world/worldgen.ts';
 import { autosailOf, plan } from '../server/src/game/autosail.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import { findPath } from '../server/src/game/nav.ts';
-import { courseFoul } from '../server/src/game/npc.ts';
+import { alongsideFoul, alongsideSpot, courseFoul, newBrain } from '../server/src/game/npc.ts';
+import { alongsidePoint, hullOf } from '../shared/src/data/reach.ts';
 import { pursuitOf, startPursuit, STUCK_GIVE_UP, STUCK_SEC } from '../server/src/game/pursuit.ts';
 import { fineDetour, hullWater, reefOnLine, REEF_MARGIN, runClear, waterAt } from '../server/src/game/seaway.ts';
 import { touches } from '../server/src/game/strike.ts';
@@ -84,6 +85,31 @@ test('«Атаковать» to board past a hulk, a skerry, a graveyard\'s hulk
     assert.equal(r.reef, 0, `${sc.kind}: no reef`);
     assert.equal(r.stuck, false, `${sc.kind}: never held fast`);
   }
+});
+
+test('alongside by a skerry: the helmsman takes the beam away from it (her own side foul, the other clear), and back to her own once clear', () => {
+  const { game } = makeGame();
+  const sc = chaseScenes(game.world, 5).find((s) => s.kind === 'skerry')!;
+  const [, sx, sy] = /skerry (\-?\d+),(\-?\d+)/.exec(sc.of)!.map(Number);
+  const { s, c, ship } = seaCaptainAt(game, 'brig', sx + 200, sy, 0);
+  const T = game.spawnNpcShip('pirate', 'brigantine', 'confederacy', sx, sy + 300, 0);
+  game.npcs.delete(T.id);
+  // Her mark heading north (her starboard beam east) with the skerry square on it, the boarder on that side, astern.
+  const off = Math.hypot(alongsidePoint(hullOf(ship), hullOf(T), 1).x - T.state.x, alongsidePoint(hullOf(ship), hullOf(T), 1).y - T.state.y);
+  T.state = { ...T.state, x: sx - off, y: sy, heading: 0, speed: 10 };
+  ship.state = { ...ship.state, x: sx - off + 30, y: sy + 70, heading: 0, speed: 10 };
+  assert.equal(alongsidePoint(hullOf(ship), hullOf(T)).side, 1, 'she is on the starboard side');
+  assert.equal(alongsideFoul(game, ship, T, 1), true, 'the skerry in the water off the starboard beam');
+  assert.equal(alongsideFoul(game, ship, T, -1), false, 'the port beam: clear water');
+  const brain = newBrain(-1, 'pirate', game.now);
+  assert.equal(alongsideSpot(game, ship, brain, T).P.side, -1, 'the port beam');
+  // Her mark sailed on well clear of it: her own side again once the hold is out.
+  T.state.y = sy - 600;
+  ship.state.y = sy - 530;
+  game.now += 5;
+  assert.equal(alongsideSpot(game, ship, brain, T).P.side, 1, 'her own side again');
+  void s;
+  void c;
 });
 
 test('her mark behind an island: the helmsman takes her round it and boards her, no blow, never held fast', () => {

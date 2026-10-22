@@ -102,6 +102,11 @@ export interface NpcBrain {
   /** Dynamic combat (docs/11 P2): a pack member's side of approach (radians off the prey's heading), until when. */
   flank?: number;
   flankUntil?: number;
+  /** The boarder's beam of her mark to come alongside on (alongsideSpot: her own side unless foul), held until when. */
+  alongSide?: 1 | -1;
+  alongSideUntil?: number;
+  /** Metres she lay astern of that spot along her mark's course at the alongside helm's last look (+ astern of it). */
+  alongLag?: number;
   /** A merchant's cargo thrown over the side to run lighter: how often, and when next. */
   dumped?: number;
   dumpAt?: number;
@@ -874,19 +879,54 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
   return out;
 }
 
+/** How long the side she has chosen to come alongside on is held before it is looked at again (seconds); a side
+ *  given up for the other one (foul: a skerry, a coast, a hulk, a reef in the water off that beam) held longer, so she
+ *  crosses her mark's wake to it and does not swing back half-way. */
+export const ALONGSIDE_SIDE_HOLD = 1;
+export const ALONGSIDE_SIDE_SWAP_HOLD = 4;
+
+/** Whether the water off her mark's `side` beam — where she would lie alongside, from a length astern of it to her
+ *  mark's next three seconds ahead of it — has anything her hull or keel would strike (seaway.ts laneFoul). */
+export function alongsideFoul(game: Game, ship: ShipEntity, t: ShipEntity, side: 1 | -1): boolean {
+  const P = alongsidePoint(hullOf(ship), hullOf(t), side);
+  const f = headingVec(t.state.heading);
+  const back = ship.stats.length, ahead = ship.stats.length + Math.abs(t.state.speed) * SPEED_SCALE * 3;
+  return laneFoul(game, ship, P.x - f.x * back, P.y - f.y * back, P.x + f.x * ahead, P.y + f.y * ahead, ship.stats.beam * 0.5 + 4);
+}
+
+/** The spot the boarder makes for alongside her mark (owner, 2026-10-22: the beam, ±35°, the gap ≤ 12 m — reach.ts):
+ *  her mark's beam on the side she is on, unless the water there is foul (a skerry, a coast, a hulk, a reef her mark
+ *  skirts) and the other beam's is clear — then the other, held a few seconds while she crosses. Both foul: her own
+ *  side (the water opens as her mark sails on). `f`: the course to lie on (a mark with no way on her: either course, the
+ *  one nearer her own head); `along`: metres the spot lies ahead of her along it. */
+export function alongsideSpot(game: Game, ship: ShipEntity, brain: NpcBrain, t: ShipEntity): { P: { x: number; y: number; side: 1 | -1 }; f: { x: number; y: number }; dx: number; dy: number; dP: number; along: number } {
+  const a = hullOf(ship), b = hullOf(t);
+  if (brain.alongSide === undefined || game.now >= (brain.alongSideUntil ?? 0)) {
+    const mine = alongsidePoint(a, b).side;
+    let side = mine;
+    let hold = ALONGSIDE_SIDE_HOLD;
+    if (alongsideFoul(game, ship, t, mine) && !alongsideFoul(game, ship, t, -mine as 1 | -1)) {
+      side = -mine as 1 | -1;
+      hold = ALONGSIDE_SIDE_SWAP_HOLD;
+    }
+    brain.alongSide = side;
+    brain.alongSideUntil = game.now + hold;
+  }
+  const P = alongsidePoint(a, b, brain.alongSide);
+  let f = headingVec(t.state.heading);
+  const own = headingVec(ship.state.heading);
+  if (Math.abs(t.state.speed) < 1.5 && f.x * own.x + f.y * own.y < 0) f = { x: -f.x, y: -f.y };
+  const dx = P.x - ship.state.x, dy = P.y - ship.state.y;
+  return { P, f, dx, dy, dP: Math.hypot(dx, dy), along: dx * f.x + dy * f.y };
+}
+
 /** The boarder's helm alongside (owner, 2026-10-22: «абордаж вообще только когда поровняюсь с кораблем»): she makes
- *  for the water off her mark's beam on the side she is on (reach.ts alongsidePoint), on a line that runs into it along
+ *  for the water off her mark's beam on the side she is on, or the other when hers is foul (alongsideSpot), on a line that runs into it along
  *  her mark's course from astern, and matches her mark's way there — a little more while astern of the spot, less once
  *  past it. A mark lying still (struck, hove to, a hulk) is come alongside on whichever course she already holds. */
 export function alongsideHelm(game: Game, ship: ShipEntity, brain: NpcBrain, t: ShipEntity): void {
-  const P = alongsidePoint(hullOf(ship), hullOf(t));
-  let f = headingVec(t.state.heading);
-  const own = headingVec(ship.state.heading);
-  // (a mark with no way on her: alongside on either course, the one nearer her own head)
-  if (Math.abs(t.state.speed) < 1.5 && f.x * own.x + f.y * own.y < 0) f = { x: -f.x, y: -f.y };
-  const dx = P.x - ship.state.x, dy = P.y - ship.state.y;
-  const dP = Math.hypot(dx, dy);
-  const along = dx * f.x + dy * f.y; // + the spot lies ahead of her along the mark's course
+  const { P, f, dx, dy, dP, along } = alongsideSpot(game, ship, brain, t);
+  brain.alongLag = along;
   const lateral = Math.abs(dx * f.y - dy * f.x);
   const lead = clamp(dP * 0.6, 30, 120);
   // (far off she makes for her mark's quarter — the spot a little astern of her beam — and runs up along her side)
