@@ -135,10 +135,14 @@ test('every other good: her own stock — one captain buying it out leaves anoth
   const rowB = buildPortView(game, b.s, port).market.find((r) => r.good === good)!;
   assert.deepEqual([rowB.stock, rowB.buy, rowB.sell], [rowB0.stock, rowB0.buy, rowB0.sell], 'hers untouched');
   assert.equal(game.markets.get(port.id)!.goods[good]!.stock, world0, 'the port’s own untouched');
-  // her sale raises her own stock, not the other's
+  // her sale raises her own stock, not the other's (a small one: past 40 % of the port's appetite an hour the
+  // counter-supply comes into her stock too, empires.ts noteSale)
   const before = ownStockOf(game, a.p, port, good);
-  a.c.push({ t: 'trade', good, qty: -50 });
-  assert.equal(ownStockOf(game, a.p, port, good), before + 50);
+  const n = Math.max(1, Math.floor(game.markets.get(port.id)!.goods[good]!.target * 0.3));
+  a.c.push({ t: 'trade', good, qty: -n });
+  assert.equal(ownStockOf(game, a.p, port, good), before + n);
+  a.c.push({ t: 'trade', good, qty: -100 }); // a flood: the counter-supply on top, still hers alone
+  assert.ok(ownStockOf(game, a.p, port, good) > before + n + 100);
   assert.equal(ownStockOf(game, b.p, port, good), rowB0.stock);
 });
 
