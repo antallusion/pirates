@@ -60,45 +60,42 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
   $('screen-captain').classList.remove('hidden');
   sendMsg = send ?? null;
   send?.({ t: 'captain_shop', action: 'view' });
-  const list = $('captain-list');
-  // The strip (owner, 2026-10-21, of three layouts offered: «давай вот это»): her portrait on the left, a rail of the
-  // six over her facts on the right (client/captain.css).
+  // The hero screen (owner, 2026-10-22: «экран выбора … как тут [Rise of Kingdoms], но в нашем стиле … эффекты
+  // подбавь, хочется экран выбора прям пушечный»): the roster of six on the left, the chosen captain at full height on
+  // the painted compass dais of the deck (bg.captain), her name, tags, role, gift and orders on the right, the start
+  // under her feet, the ship's name and the two big buttons at the foot; fog, embers, the moon's shaft, the runes
+  // turning round the dais. Styles: client/captain.css.
   const wrap = $('screen-captain').querySelector<HTMLElement>('.captain-wrap')!;
-  wrap.classList.add('v2');
-  // the roster rides a rail with an arrow at each end (a click steps to the captain beside; a finger swipes the rail)
-  if (!list.parentElement!.classList.contains('cpk-rail')) {
-    const rail = document.createElement('div');
-    rail.className = 'cpk-rail';
-    list.before(rail);
-    rail.append(Object.assign(document.createElement('button'), { type: 'button', className: 'cpk-arr cpk-prev', innerHTML: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' }), list,
-      Object.assign(document.createElement('button'), { type: 'button', className: 'cpk-arr cpk-next', innerHTML: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' }));
-  }
+  const list = $('captain-list');
   let current: CaptainId = 'corsair';
   let ship0: string | null = null;
   let know0 = false;
-  const render = () => {
-    // The roster (owner, 2026-10-21: the old list «лоховской, неудобный и некрасивый»): six framed portraits, HoMM's
-    // heroes in a row — the chosen one lifted in gold; a premium captain not yet hers dimmed, her padlock and price on
-    // the portrait's foot, the real money first. Styles: client/captain.css.
+  let tipOf = 'g';
+  const setTip = (k: string) => {
+    tipOf = k;
+    const c = CAPTAINS[current];
+    wrap.querySelectorAll<HTMLElement>('.cpx-sk').forEach((b) => b.classList.toggle('open', b.dataset.k === k));
+    wrap.querySelector('#captain-story')?.classList.toggle('on', k === 'story');
+    const a = /^\d$/.test(k) ? c.abilities[+k] : null;
+    $('cpx-tip').innerHTML = k === 'story'
+      ? `<b>${esc(L('storyOf', { name: c.name }))}</b> — ${esc(c.bio)} ${esc(c.playstyle.trim().slice(captainRole(c.playstyle).length).trim())}`
+      : a ? `<b>${esc(a.name)}</b> <span class="cpx-cd">· ${esc(L('cooldown', { n: a.cooldown }))}</span> — ${esc(a.description)}`
+        : `<b>${esc(c.passive.name)}</b> — ${esc(c.passive.description)}`;
+  };
+  const render = (fresh: boolean) => {
+    // the roster: framed portraits, the school's medallion on each; a premium captain not yet hers dimmed, her padlock
+    // and price under the portrait (owner: «чтобы цена на портреты не заезжала»); the premium ones are the last row.
+    $('cpx-count').textContent = String(CAPTAIN_IDS.length);
+    $('cpx-roster-h').textContent = L('rosterH');
     list.innerHTML = CAPTAIN_IDS.map((id) => {
       const c = CAPTAINS[id];
-      const url = assetUrl(c.portrait);
       const shut = !captainOpen(id);
-      const badge = !c.premium ? '' : shut
-        ? `<span class="cpk-badge" title="${esc(L('lockedTitle', { price: priceText(captainPrice(id)) }))}">${lockSvg()}${priceHtml(captainPrice(id), { cls: 'cpk-price' })}</span>`
-        : `<span class="cpk-gem">${esc(L(shop.owned.has(id) ? 'premiumOwned' : 'premiumShort'))}</span>`;
-      return `<button type="button" class="captain-card cpk-tile${id === current ? ' active' : ''}${shut ? ' cc-shut' : ''}" data-id="${id}" role="option" aria-selected="${id === current}">
-        <span class="cpk-face" style="background-image:${url ? `url('${url}')` : 'none'}">${badge}</span>
-        <span class="cpk-tt"><span class="cpk-tname">${esc(c.archetype)}</span><span class="cpk-trole">${esc(captainRole(c.playstyle))}</span></span>${shut ? `<span class="cpk-tprice">${lockSvg()}${priceHtml(captainPrice(id), { cls: 'cpk-price' })}</span>` : ''}
-      </button>`;
+      const tag = !c.premium ? '' : shut
+        ? `<span class="cpx-price" title="${esc(L('lockedTitle', { price: priceText(captainPrice(id)) }))}">${lockSvg()}${priceHtml(captainPrice(id), { cls: 'cpx-pr' })}</span>`
+        : `<span class="cpx-price owned">${esc(L(shop.owned.has(id) ? 'premiumOwned' : 'premiumShort'))}</span>`;
+      return `<button type="button" class="captain-card cpx-cap${id === current ? ' active' : ''}${shut ? ' cc-shut' : ''}" data-id="${id}" role="option" aria-selected="${id === current}" aria-label="${esc(c.archetype)}">
+        <span class="cpx-face" style="background-image:${art(c.portrait)}"><span class="cpx-school" style="background-image:${art(`icon.school_${id}`)}"></span></span>${tag}</button>`;
     }).join('');
-    const pick = (id: CaptainId) => (list.querySelector<HTMLElement>(`.captain-card[data-id="${id}"]`))?.click();
-    const step = (d: number) => pick(CAPTAIN_IDS[(CAPTAIN_IDS.indexOf(current) + d + CAPTAIN_IDS.length) % CAPTAIN_IDS.length]);
-    wrap.querySelector<HTMLElement>('.cpk-prev')!.onclick = () => step(-1);
-    wrap.querySelector<HTMLElement>('.cpk-next')!.onclick = () => step(1);
-    wrap.querySelectorAll<HTMLElement>('.cpk-arr').forEach((b) => b.setAttribute('aria-label', L(b.classList.contains('cpk-prev') ? 'prevCap' : 'nextCap')));
-    // the chosen one brought to the rail's middle
-    requestAnimationFrame(() => list.querySelector<HTMLElement>('.captain-card.active')?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' }));
     list.querySelectorAll<HTMLElement>('.captain-card').forEach((el) => (el.onclick = () => {
       if (current === el.dataset.id) return;
       // (a name she typed and the tick stay; a name offered follows the captain)
@@ -106,51 +103,39 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
       ship0 = CAPTAIN_IDS.some((id) => typed === defaultShipName(id)) ? null : typed;
       know0 = ($('know-sea') as HTMLInputElement).checked;
       current = el.dataset.id as CaptainId;
-      render();
+      render(true);
       ship0 = null;
       know0 = false;
     }));
     const c = CAPTAINS[current];
-    const url = assetUrl(c.portrait);
     const ship = SHIP_CLASSES[c.start.ship];
-    const role = captainRole(c.playstyle);
-    const art = url ? `url('${url}')` : 'none';
-    // The chosen one: her portrait whole (3:4) with her name on its plate; beside it the role, the story, the gift,
-    // the four orders as tiles (a tap opens one's words where they are hidden), the favoured trees and the start; the
-    // ship's name and the order pinned at the foot. A phone held sideways keeps the facts and the names; on the
-    // smallest the portrait is the story's backdrop (--cd-art).
-    $('screen-captain').querySelector<HTMLElement>('.captain-wrap')?.style.setProperty('--cd-art', art);
+    // her figure on the dais: a flash and a step in when she changes
+    const hero = $('cpx-hero') as HTMLImageElement;
+    const src = assetUrl(`unit.hero_${current}`);
+    if (src && hero.getAttribute('src') !== src) hero.src = src;
+    if (fresh) for (const el of [hero.parentElement!, $('cpx-flash')]) { el.classList.remove('go'); void el.offsetWidth; el.classList.add('go'); }
     $('captain-detail').innerHTML = `
-      <div class="cpk-art"><div class="cpk-portrait" style="background-image:${art}"></div>
-        <div class="cpk-plate"><h3>${esc(c.archetype)}</h3><div class="cpk-epi">${esc(c.name)}, ${quote(c.epithet)}</div></div></div>
-      <div class="cpk-info">
-        <div class="cpk-scroll">
-          <div class="cpk-head"><h3>${esc(c.archetype)}</h3><div class="cpk-epi">${esc(c.name)}, ${quote(c.epithet)}</div></div>
-          <p class="cpk-role">${esc(role)}</p>
-          <p class="cpk-bio">${esc(c.bio)}</p>
-          <p class="cpk-play">${esc(c.playstyle.trim().slice(role.length).trim())}</p>
-          <section class="cpk-sec"><h4>${esc(L('giftH'))}</h4>
-            <div class="cpk-gift"><b>${esc(c.passive.name)}</b><small>${esc(c.passive.description)}</small></div></section>
-          <section class="cpk-sec"><h4>${esc(L('ordersH'))}</h4>
-            <div class="cpk-abils">${c.abilities.map((a) => `<button type="button" class="cpk-ab${a.kind === 'ultimate' ? ' ult' : ''}" aria-expanded="false">
-              <span class="cpk-abi">${icon(`ab_${a.id}`, '', 'ab-ico')}<span class="key">${a.key}</span></span>
-              <span class="cpk-abt"><b>${esc(a.name)}</b><span class="cpk-cd">${esc(L('cooldown', { n: a.cooldown }))}</span></span>
-              <small>${esc(a.description)}</small></button>`).join('')}</div></section>
-          <section class="cpk-sec cpk-trees"><h4>${esc(L('treesH'))}</h4>
-            <div class="cpk-chips">${c.favoredTrees.map((t) => `<span>${esc(TREES[t].name)}</span>`).join('')}</div></section>
-          <p class="cpk-start"><span class="cpk-start-l">${esc(L('starts', { ship: ship.name, gun: GUNS[c.start.gun].name, crew: c.start.crew, gold: c.start.gold }))}</span><span class="cpk-start-s">${esc(L('startsShort', { ship: ship.name, crew: c.start.crew, gold: c.start.gold }))}</span></p>
-        </div>
-        <div class="cpk-foot">
-          <label class="cpk-name"><span>${esc(L('shipName'))}</span><input id="ship-name" class="field" maxlength="20" value="${esc(defaultShipName(current))}" /></label>
-          ${knowSea()}
-          ${captainOpen(current) ? `<button id="pick-captain" class="btn btn-primary cpk-go">${esc(L('takeCommand'))}</button>` : `<button id="pick-captain" class="btn btn-primary cpk-go cc-buy" data-buy="${current}" aria-label="${esc(L('buyFor', { price: priceText(captainPrice(current)) }))}"><span>${esc(L('buy'))}</span>${priceHtml(captainPrice(current))}</button>`}
-          <p id="captain-why" class="cc-why" role="status" aria-live="polite"></p>
-        </div>
+      <section class="cpx-info">
+        <div class="cpx-kicker"><span class="cpx-kico" style="background-image:${art(`icon.school_${current}`)}"></span><span>${esc(c.archetype)}</span></div>
+        <h3 class="cpx-name">${esc(c.name)}</h3>
+        <div class="cpx-epi">${quote(c.epithet)}</div>
+        <div class="cpx-tags">${c.premium ? `<span class="cpx-tag prem"><i></i>${esc(L('premiumShort'))}</span>` : ''}${c.favoredTrees.map((t) => `<span class="cpx-tag"><i></i>${esc(TREES[t].name)}</span>`).join('')}</div>
+        <div class="cpx-role">${esc(captainRole(c.playstyle))}</div>
+        <div class="cpx-skh">${esc(L('skillsH'))}</div>
+        <div class="cpx-skills"><button type="button" class="cpx-sk gift" data-k="g" aria-label="${esc(c.passive.name)}" style="background-image:${art(`icon.school_${current}`)}"></button>${c.abilities.map((a, k) => `<button type="button" class="cpx-sk${a.kind === 'ultimate' ? ' ult' : ''}" data-k="${k}" aria-label="${esc(a.name)}" style="background-image:${art(`icon.ab_${a.id}`)}"><b class="key">${a.key}</b></button>`).join('')}</div>
+        <div class="cpx-tip" id="cpx-tip" role="status" aria-live="polite"></div>
+      </section>
+      <div class="cpx-power cpx-plate"><span class="cpx-pico" style="background-image:${art('icon.anchor')}"></span><span>${esc(L('startsShort', { ship: ship.name, crew: c.start.crew, gold: c.start.gold }))}</span></div>
+      <div class="cpx-foot">
+        <div class="cpx-foot-row"><label class="cpx-ship"><span>${esc(L('shipH'))}</span><input id="ship-name" maxlength="20" value="${esc(defaultShipName(current))}" aria-label="${esc(L('shipName'))}" /></label>${knowSea()}</div>
+        <div class="cpx-btns"><button type="button" class="cpx-big" id="captain-story">${esc(L('story'))}</button>${captainOpen(current)
+          ? `<button type="button" id="pick-captain" class="cpx-big main">${esc(L('takeCommand'))}</button>`
+          : `<button type="button" id="pick-captain" class="cpx-big main cc-buy" data-buy="${current}" aria-label="${esc(L('buyFor', { price: priceText(captainPrice(current)) }))}"><span>${esc(L('buy'))}</span>${priceHtml(captainPrice(current))}</button>`}</div>
+        <p id="captain-why" class="cc-why" role="status" aria-live="polite"></p>
       </div>`;
-    $('captain-detail').querySelectorAll<HTMLElement>('.cpk-ab').forEach((b) => (b.onclick = () => {
-      const open = b.classList.toggle('open');
-      b.setAttribute('aria-expanded', String(open));
-    }));
+    $('captain-detail').querySelectorAll<HTMLElement>('.cpx-sk').forEach((b) => (b.onclick = () => setTip(b.dataset.k!)));
+    $('captain-story').onclick = () => setTip(tipOf === 'story' ? 'g' : 'story');
+    setTip(fresh ? 'g' : tipOf);
     if (ship0 !== null) ($('ship-name') as HTMLInputElement).value = ship0;
     ($('know-sea') as HTMLInputElement).checked = know0;
     $('pick-captain').onclick = () => {
@@ -161,13 +146,14 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
       onPick(current, name, !($('know-sea') as HTMLInputElement).checked);
     };
   };
-  render();
+  render(true);
+  embers(wrap);
   // The server's answer of owned captains (or a purchase) redraws it, keeping what was typed.
   redraw = () => {
     if ($('screen-captain').classList.contains('hidden')) return;
     ship0 = ($('ship-name') as HTMLInputElement).value;
     know0 = ($('know-sea') as HTMLInputElement).checked;
-    render();
+    render(false);
     ship0 = null;
     know0 = false;
   };
@@ -178,10 +164,59 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
     // (an offered name left as it was follows the language; one she typed stays)
     if (CAPTAIN_IDS.some((id) => ship0 === EN[`ship.${id}`] || ship0 === RU[`ship.${id}`])) ship0 = null;
     know0 = ($('know-sea') as HTMLInputElement).checked;
-    render();
+    render(false);
     ship0 = null;
     know0 = false;
   });
+}
+
+/** An asset as a CSS url (none when it is missing). */
+const art = (id: string): string => {
+  const u = assetUrl(id);
+  return u ? `url('${u}')` : 'none';
+};
+
+/** Embers rising from the dais and the lanterns while the screen is up (none under reduced motion); the canvas stops
+ *  drawing once the screen is hidden. */
+function embers(wrap: HTMLElement): void {
+  const cv = wrap.querySelector<HTMLCanvasElement>('.cpx-embers');
+  if (!cv || cv.dataset.on || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cx = cv.getContext('2d');
+  if (!cx) return;
+  cv.dataset.on = '1';
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  let W = 0, H = 0;
+  const size = () => { W = cv.width = Math.round(cv.clientWidth * dpr); H = cv.height = Math.round(cv.clientHeight * dpr); };
+  type P = { x: number; y: number; vx: number; vy: number; r: number; life: number; max: number; hue: number };
+  const spawn = (): P => {
+    const near = Math.random() < 0.6;
+    return { x: near ? W * (0.42 + Math.random() * 0.16) : Math.random() * W, y: H * (near ? 0.82 : 1.02), vx: (Math.random() - 0.5) * 0.4, vy: -(0.4 + Math.random() * 1.1) * dpr, r: (0.6 + Math.random() * 1.6) * dpr, life: 0, max: 220 + Math.random() * 260, hue: 28 + Math.random() * 18 };
+  };
+  size();
+  const ps: P[] = [];
+  for (let k = 0; k < 60; k++) { const p = spawn(); p.y = Math.random() * H; p.life = Math.random() * p.max; ps.push(p); }
+  const screen = $('screen-captain');
+  const tick = () => {
+    if (screen.classList.contains('hidden')) { delete cv.dataset.on; return; }
+    if (Math.round(cv.clientWidth * dpr) !== W || Math.round(cv.clientHeight * dpr) !== H) size();
+    cx.clearRect(0, 0, W, H);
+    for (const p of ps) {
+      p.life++;
+      p.x += p.vx + Math.sin((p.life + p.r * 50) / 30) * 0.35;
+      p.y += p.vy;
+      const a = Math.sin(Math.PI * Math.min(1, p.life / p.max));
+      const g = cx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 4);
+      g.addColorStop(0, `hsla(${p.hue},100%,75%,${0.9 * a})`);
+      g.addColorStop(1, `hsla(${p.hue},100%,50%,0)`);
+      cx.fillStyle = g;
+      cx.beginPath();
+      cx.arc(p.x, p.y, p.r * 4, 0, 6.283);
+      cx.fill();
+      if (p.life > p.max || p.y < -20) Object.assign(p, spawn());
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 
 /** «I know the sea» beside the order in the pinned bar (owner's QA, 2026-10-08: at 1500×600 it lay 230px below the
