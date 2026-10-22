@@ -267,6 +267,13 @@ test('bug 4: every refusal of «Причалить» is told, each tap; under th
   const t = captain(game, 'Helmsman', { off: 300 });
   const ship = t.ship!;
   const port = game.world.ports.find((x) => REGIONS[x.region].safety === 'safe')!;
+  // inside the harbour's approach (owner, 2026-10-22: «Причалить» only within REACH_DOCK of its anchorage; from
+  // farther out the order sails her in — tests/reach.test.ts), out from its island, in open water
+  const isl = game.world.islands[port.islandId];
+  const d = Math.hypot(port.x - isl.x, port.y - isl.y) || 1;
+  ship.state.x = port.x + ((port.x - isl.x) / d) * 20;
+  ship.state.y = port.y + ((port.y - isl.y) / d) * 20;
+  game.grid.upsert(ship.id, ship.state.x, ship.state.y);
   conn(t).push({ t: 'autosail', x: port.x + 9000, y: port.y + 9000 });
   ship.state.speed = 12;
   assert.ok(autosailOf(ship) || true);
