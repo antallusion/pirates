@@ -28,7 +28,7 @@ export const DOCK_SLOW = 4;
 /** Boarding: the water between the two hulls the grapples cross (metres), how far off the beam the other may lie
  *  (degrees, each from the other), and the way between them the lines still hold (the HUD's knots, as a vector: two
  *  ships side by side on one course at ten knots are still). */
-export const BOARD_GAP = 10;
+export const BOARD_GAP = 12;
 export const BOARD_ARC_DEG = 35;
 export const BOARD_REL_SPEED = 8;
 /** Bow and Stern (the talent) and Red Hook (the ultimate): grapples from any quarter within this of the beam. */

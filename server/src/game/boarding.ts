@@ -85,7 +85,8 @@ export function boardGeomWhy(game: Game, a: ShipEntity, b: ShipEntity): string |
     gapMul: boardGapMul(a) * (tangled ? 1.5 : 1),
     arcDeg: rammed ? 90 : anywhere || a.hasFlag('bow_and_stern') ? BOARD_ARC_WIDE_DEG : BOARD_ARC_DEG,
     anySpeed: anywhere || held || rammed || b.surrendered || a.tether?.target === b.id,
-    relMax: BOARD_REL_SPEED * (1 + tx(a.stats, 'matchSpeed')),
+    // (a captain's ship matches the mark's way herself as the grapples fly, docs/23 item 54: half again the lines' hold)
+    relMax: BOARD_REL_SPEED * (1 + tx(a.stats, 'matchSpeed')) * (a.isPlayer ? 1.5 : 1),
   });
   return why === 'far' ? BOARD_FAR : why === 'abeam' ? BOARD_ABEAM : why === 'speed' ? BOARD_SPEED : null;
 }
