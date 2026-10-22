@@ -324,7 +324,12 @@ export function stepTreks(game: Game): void {
       continue;
     }
     if (t.done) {
-      if (game.now > t.until + 60) S.live.delete(t.account);
+      // (a minute on, her card goes with it: the walk's end stood over the sea for good, ten minutes on and two islands
+      // away, «Отряд возвращается к шлюпкам» — mid-game QA 2026-10-22)
+      if (game.now > t.until + 60) {
+        S.live.delete(t.account);
+        send(game, s, null);
+      }
       continue;
     }
     // Her game at this step lapsed or was closed without a word: the walk goes on.

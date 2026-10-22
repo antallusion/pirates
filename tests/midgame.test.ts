@@ -77,3 +77,26 @@ test('the Russian of the landing’s boats and the tavern’s word of a boss: no
     setLang('en');
   }
 });
+
+test('a walk across an island ended and left alone: its card goes from her screen when the walk is dropped', async () => {
+  const { makeGame, join, steps } = await import('./helpers.ts');
+  const { startTrek, openTrek, playTrek } = await import('../server/src/game/trek.ts');
+  const { game } = makeGame();
+  const c = join(game, 'Walker');
+  const s = game.sessionByName('Walker')!;
+  s.ship!.docked = null;
+  const is = game.world.islands.find((i) => !i.portId && !i.minor && !i.hidden && i.region === 'black_coast')!;
+  s.ship!.state.x = is.x + is.radius + 60;
+  s.ship!.state.y = is.y;
+  const t = startTrek(game, s, is, 1)!;
+  assert.ok(t);
+  // walked back at once (the game at the haunt passed by, the path not taken): the end card, «На борт»
+  if (t.game !== null) { t.game = null; }
+  playTrek(game, s, 'back');
+  const tv = openTrek(game, s);
+  assert.ok(tv?.done, 'the walk is over');
+  assert.ok(c.last('trek')?.view?.done, 'her end card');
+  steps(game, 20 * 70);
+  assert.equal(openTrek(game, s), null, 'dropped');
+  assert.equal(c.last('trek')?.view, null, 'and her card closed with it');
+});
