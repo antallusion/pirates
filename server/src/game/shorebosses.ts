@@ -401,7 +401,7 @@ function offShore(game: Game, s: PlayerSession, r: Rising): void {
     const ax = r.x - is.x, ay = r.y - is.y, al = Math.hypot(ax, ay) || 1;
     for (let d = 20; d < 1500; d += 10) {
       const px = r.x + (ax / al) * d, py = r.y + (ay / al) * d;
-      if (!pointInPolygon(px, py, is.poly) && !isLand(game.world, px, py) && Math.sqrt(closestOnPolygon(px, py, is.poly).d2) >= 110) {
+      if (!pointInPolygon(px, py, is.poly) && !isLand(game.world, px, py) && Math.sqrt(closestOnPolygon(px, py, is.poly).d2) >= 34) { // (thirty metres off the beach — reach.ts)
         [x, y] = [px, py];
         break;
       }

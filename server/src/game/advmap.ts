@@ -937,7 +937,7 @@ export function adminObj(game: Game, s: PlayerSession, args: string[]): string {
   if (!o) return 'Nothing on the map.';
   const name = OBJS[o.kind].name[0];
   if (args.includes('go')) {
-    parkNear(game, s, o.x, o.y, 120, -Math.PI / 2);
+    parkNear(game, s, o.x, o.y, 62, -Math.PI / 2); // (her beam within the boats' thirty metres of its skerry — reach.ts)
     ship.state.heading = 0;
     seenOf(game, s).add(o.id);
     advOf(s.profile!).seen = [...seenOf(game, s)];

@@ -835,7 +835,7 @@ export function adminCit(game: Game, s: PlayerSession, args: string[]): string {
     case 'list':
       return `Citadels: ${defs(game).map((x) => `${x.id + 1} ⚓${x.level}${S.cits[x.id].owner !== null ? ` [${tagOf(game, S.cits[x.id].owner!).tag}]` : ''}`).join(' · ')}`;
     case 'go':
-      parkNear(game, s, c.x, c.y, 90, Math.atan2(c.x - c.fx, -(c.y - c.fy)));
+      parkNear(game, s, c.x, c.y, 40, Math.atan2(c.x - c.fx, -(c.y - c.fy))); // (at the anchorage: thirty metres — reach.ts)
       return `At the anchorage of the ${nameOf(c)}.`;
     case 'guild':
       return testGuild(game, s) ?? `Your guild: [${game.guilds.of(game, s.accountId)!.tag}].`;
@@ -855,7 +855,7 @@ export function adminCit(game: Game, s: PlayerSession, args: string[]): string {
         if (d) return d;
       }
       S.sieges[c.id].assaults = S.sieges[c.id].assaults.filter((a) => a !== s.accountId);
-      parkNear(game, s, c.x, c.y, 90, Math.atan2(c.x - c.fx, -(c.y - c.fy)));
+      parkNear(game, s, c.x, c.y, 40, Math.atan2(c.x - c.fx, -(c.y - c.fy)));
       game.tacticalBoarding = true;
       return assaultCitadel(game, s, c.id) ?? `The assault on the ${nameOf(c)} begins.`;
     }

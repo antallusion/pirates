@@ -538,7 +538,7 @@ export function adminStack(game: Game, s: PlayerSession, args: string[]): string
     }
     if (!best) return kind ? `No ${kind} stands anywhere.` : 'No stack stands anywhere.';
     const p = roamWhere(game, best);
-    parkNear(game, s, p.x, p.y, 150);
+    parkNear(game, s, p.x, p.y, 40); // (within the fight's thirty metres of her hull — owner, 2026-10-22)
     ship.state.speed = 0;
     ship.input = { rudder: 0, sailTarget: 0 };
     sendRoams(game, s, true);

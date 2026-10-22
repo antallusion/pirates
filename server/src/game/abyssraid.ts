@@ -350,7 +350,7 @@ export function adminMaw(game: Game, s: PlayerSession, args: string[]): string {
   const S = store(game);
   if (args[0] === 'go') {
     const g = gateOf(game);
-    parkNear(game, s, g.x, g.y, 300);
+    parkNear(game, s, g.x, g.y, 60); // (within the Stair's thirty metres — reach.ts)
     return 'At the gate of the Stair.';
   }
   if (args[0] === 'board') return S.board.map((b, i) => `${i + 1}. ${b.names.join(', ')}`).join(' · ') || 'Nobody has brought the Master down this week.';

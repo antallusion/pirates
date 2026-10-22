@@ -1371,7 +1371,7 @@ function goTo(game: Game, s: PlayerSession, l: Lair): void {
       const a = (k / 24) * Math.PI * 2, ax = Math.sin(a), ay = -Math.cos(a);
       for (let d = 0; d < is.radius * 2 + 800 && d < bd; d += 10) {
         const px = l.x + ax * d, py = l.y + ay * d;
-        if (!pointInPolygon(px, py, is.poly) && !isLand(game.world, px, py) && Math.sqrt(closestOnPolygon(px, py, is.poly).d2) >= 110) {
+        if (!pointInPolygon(px, py, is.poly) && !isLand(game.world, px, py) && Math.sqrt(closestOnPolygon(px, py, is.poly).d2) >= 34) { // (her boats' thirty metres off the beach — reach.ts)
           if (d < bd) [best, bd] = [[px, py], d];
           break;
         }

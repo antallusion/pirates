@@ -267,10 +267,10 @@ export function adminGrail(game: Game, s: PlayerSession, args: string[]): string
     // Out from the island's middle through the spot, until the water is open.
     const is = spot.island;
     const dx = spot.x - is.x, dy = spot.y - is.y, len = Math.hypot(dx, dy) || 1;
-    let k = 40;
-    for (; k < 380; k += 20) {
+    let k = 20;
+    for (; k < 380; k += 4) {
       const x = spot.x + (dx / len) * k, y = spot.y + (dy / len) * k;
-      if (!isLand(game.world, x, y) && depthAt(game.world, x, y) > s.ship!.cls.draft + 1.5 && Math.sqrt(closestOnPolygon(x, y, is.poly).d2) > 70) break;
+      if (!isLand(game.world, x, y) && Math.sqrt(closestOnPolygon(x, y, is.poly).d2) > 34) break; // (her hull at the spot's beach — reach.ts)
     }
     parkNear(game, s, spot.x + (dx / len) * k, spot.y + (dy / len) * k, 1);
     game.pushSelf(s, true);
