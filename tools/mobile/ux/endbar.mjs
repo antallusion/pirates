@@ -1,7 +1,7 @@
 // The battle's reckoning bar (owner, 2026-10-22: «плашка "почему" — её надо задизайнить как кнопку дальше»): «Почему»
 // and «Повтор» the same button as «Дальше» — the same frame (border-image), height, font, padding — only its variant
 // apart (secondary against the gold primary), and all of them centred on the bar's middle line. A boarding at sea and a
-// fight ashore at a lair, each ended at once (quick), measured and shot at the sizes, RU and EN, in Telegram (TG=46).
+// fight ashore at a lair, each ended at once (quick; ashore with an auto-battle scroll), measured and shot at the sizes, RU and EN, in Telegram (TG=46).
 //   GPORT=58640 SIZE=844x390,1093x481 LANG2=ru,en TG=46 OUT=assets/raw/audit/endbar node tools/mobile/ux/endbar.mjs
 import * as L from '../m0/lib.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -13,7 +13,7 @@ const langs = (process.env.LANG2 ?? 'ru,en').split(',');
 const port = Number(process.env.GPORT ?? 58640);
 const tg = Number(process.env.TG ?? 46);
 const OUT = process.env.OUT ?? 'assets/raw/audit/endbar';
-const KINDS = (process.env.KINDS ?? 'sea,land').split(',');
+const KINDS = (process.env.KINDS ?? 'land,sea').split(',');
 mkdirSync(OUT, { recursive: true });
 
 const b = await L.browser();
@@ -36,14 +36,14 @@ try {
     await L.send(p, { t: 'undock' });
     await L.sleep(3000);
     await L.closeAll(p);
-    for (const c of ['/level 30', '/god', '/heal', '/army clear', '/army marine 40', '/army musketeer 20', '/noboard on']) { await L.say(p, c); await L.sleep(500); }
+    for (const c of ['/level 30', '/god', '/heal', '/army clear', '/army marine 40', '/army musketeer 20', '/noboard on', '/scrolls 20']) { await L.say(p, c); await L.sleep(500); }
     for (const kind of KINDS) {
       await p.setViewportSize({ width: W0, height: H0 });
       await L.say(p, '/tp 21000 70000');
       await L.sleep(2500);
       await L.closeAll(p);
       await L.say(p, '/heal');
-      await L.say(p, kind === 'sea' ? '/board pirate sloop' : '/lair crab_beach fight');
+      await L.say(p, kind === 'sea' ? '/board pirate sloop' : '/lair fight');
       for (let i = 0; i < 40 && !(await p.evaluate(() => document.body.classList.contains('tac'))); i++) await L.sleep(500);
       await L.sleep(2500);
       await L.send(p, { t: 'tac', act: { a: 'quick' } });
@@ -87,7 +87,7 @@ function MEASURE() {
   const cs = (e) => getComputedStyle(e);
   const m = cs(main), mr = main.getBoundingClientRect();
   const btns = [main, ...others].map((e) => { const r = e.getBoundingClientRect(); const c = cs(e); return `«${e.textContent.trim()}» ${Math.round(r.width)}×${r.height.toFixed(1)} @${((r.top + r.bottom) / 2).toFixed(1)} ${c.fontSize} ${c.paddingLeft}/${c.paddingRight} ${/url/.test(c.borderImageSource) ? 'framed' : 'plain'}`; });
-  if (!others.length) bad.push('no «Почему» on the bar (the result had no why)');
+  if (!others.length && globalThis.gravetide.tactical.view?.result?.why) bad.push('no «Почему» on the bar though the result has its why');
   for (const e of others) {
     const c = cs(e), r = e.getBoundingClientRect(), t = e.textContent.trim();
     if (!/url/.test(c.borderImageSource)) bad.push(`«${t}» has no painted frame (a plain plate)`);
