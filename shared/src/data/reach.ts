@@ -169,6 +169,17 @@ export function reachSpan(length: number, r = OBJ_R, reach = REACH_OBJ): number 
   return length / 2 + r + reach;
 }
 
+/** Two hulls fend each other off at sea as two discs of BUMP_SHARE of their length (Game.ts collideShips): long ships
+ *  lie that much farther apart beam to beam than their beams. */
+export const BUMP_SHARE = 0.32;
+
+/** The water between two hulls as the grapples see it: the gap, less what their fenders keep between them anyway (two
+ *  frigates side by side cannot lie closer than their bump discs allow). */
+export function boardGap(a: Hull, b: Hull): number {
+  const keep = Math.max(0, BUMP_SHARE * (a.length + b.length) - (a.beam + b.beam) / 2);
+  return hullsGap(a, b) - keep;
+}
+
 /** A ship's way as a vector (the HUD's knots scale: `speed` along her head). */
 function wayOf(h: { heading: number }, speed: number): { x: number; y: number } {
   const f = headingVec(h.heading);
@@ -191,7 +202,7 @@ export interface AlongsideOpts {
  *  between the hulls is more than the grapples cross; `abeam` — not side by side (astern, ahead, bow on: each must lie
  *  on the other's beam); `speed` — the way between them is more than the lines hold. */
 export function alongsideWhy(a: Hull, aSpeed: number, b: Hull, bSpeed: number, o: AlongsideOpts = {}): 'far' | 'abeam' | 'speed' | null {
-  if (hullsGap(a, b) > BOARD_GAP * Math.max(1, o.gapMul ?? 1)) return 'far';
+  if (boardGap(a, b) > BOARD_GAP * Math.max(1, o.gapMul ?? 1)) return 'far';
   const arc = o.arcDeg ?? BOARD_ARC_DEG;
   if (arc < 90 && (offBeamDeg(a, b.x, b.y) > arc || offBeamDeg(b, a.x, a.y) > arc)) return 'abeam';
   if (!o.anySpeed) {
@@ -207,6 +218,6 @@ export function alongsidePoint(a: Hull, b: Hull): { x: number; y: number; headin
   const f = headingVec(b.heading);
   const rx = -f.y, ry = f.x; // her starboard (heading 0 north: starboard east)
   const side: 1 | -1 = (a.x - b.x) * rx + (a.y - b.y) * ry >= 0 ? 1 : -1;
-  const off = a.beam / 2 + b.beam / 2 + BOARD_GAP * 0.5;
+  const off = Math.max(a.beam / 2 + b.beam / 2 + BOARD_GAP * 0.5, BUMP_SHARE * (a.length + b.length) + 4);
   return { x: b.x + rx * off * side, y: b.y + ry * off * side, heading: b.heading, side };
 }

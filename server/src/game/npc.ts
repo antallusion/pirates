@@ -887,10 +887,20 @@ export function alongsideHelm(game: Game, ship: ShipEntity, brain: NpcBrain, t: 
   const dx = P.x - ship.state.x, dy = P.y - ship.state.y;
   const dP = Math.hypot(dx, dy);
   const along = dx * f.x + dy * f.y; // + the spot lies ahead of her along the mark's course
-  const lead = clamp(dP * 0.8, 14, 140);
-  const qx = P.x + f.x * lead, qy = P.y + f.y * lead;
-  steer(game, ship, brain, headingOf(qx - ship.state.x, qy - ship.state.y), 1, false, dP + lead);
-  const want = Math.max(0, Math.abs(t.state.speed) + clamp(along * 0.12, -4, 4));
+  const lateral = Math.abs(dx * f.y - dy * f.x);
+  const lead = clamp(dP * 0.6, 30, 120);
+  // (far off she makes for her mark's quarter — the spot a little astern of her beam — and runs up along her side)
+  const aft = dP > 60 ? Math.min(40, dP * 0.25) : 0;
+  const qx = P.x + f.x * (lead - aft), qy = P.y + f.y * (lead - aft);
+  // (as a fighter steers: off the no-go edge only — a beat's tack would lay her 50° off her mark's course — and on the
+  // edge nearer her course each time, no tack held for half a minute)
+  brain.tackUntil = 0;
+  steer(game, ship, brain, headingOf(qx - ship.state.x, qy - ship.state.y), 1, true, dP + lead);
+  // (far from the spot she comes up hand over fist; near it she matches her mark's way, a little more astern of it —
+  // and keeps steerage way while she is still off to the side of it)
+  // (the spot astern of her — she has run past it — she eases and lets her mark come up)
+  const far = along > -15 ? clamp(dP * 0.1, 2, 14) : -2;
+  const want = Math.max(lateral > 10 ? 4 : 0, Math.abs(t.state.speed) + (dP > 40 ? far : clamp(along * 0.15, -4, 4) + (lateral > 10 ? 2.5 : 0)));
   const v = ship.state.speed;
   ship.input.sailTarget = v > want + 0.6 ? (v > want + 3 ? 0 : 0.25) : v < want - 0.6 ? 1 : clamp(ship.input.sailTarget, 0.35, 0.75);
 }
