@@ -3,7 +3,10 @@
 // apart (secondary against the gold primary), and all of them centred on the bar's middle line. A boarding at sea and a
 // fight ashore at a lair, each ended at once (quick; ashore with an auto-battle scroll), measured and shot at the sizes, RU and EN, in Telegram (TG=46):
 // nothing of the bar under Telegram's top band or past the screen.
-//   GPORT=58640 SIZE=844x390,1093x481 LANG2=ru,en TG=46 OUT=assets/raw/audit/endbar node tools/mobile/ux/endbar.mjs
+// The ordinary QA (docs/33 §7), with a server of your own with the admin's commands:
+//   GPORT=58617 SIZE=1093x481,844x390,812x375,740x360,480x270 LANG2=ru,en TG=46 OUT=assets/raw/audit/endbar node tools/mobile/ux/endbar.mjs
+//   GPORT=58617 SIZE=1440x900 LANG2=ru,en TG=0 OUT=assets/raw/audit/endbar node tools/mobile/ux/endbar.mjs
+//   KINDS=sea — the boarding alone; DUMP=1 — the bar's boxes listed. Exit code 1 on any problem.
 import * as L from '../m0/lib.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';

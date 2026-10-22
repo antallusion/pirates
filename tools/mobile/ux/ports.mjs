@@ -12,9 +12,14 @@
 //   cut    a button clipped sideways by a box that cannot scroll to it;
 //   btn    a button outside its row or card;
 //   cover  a button, a tab, a field whose middle is under something else (a header, a tab strip, another button);
-//   overlap two buttons over each other.
-//   GPORT=58640 SIZE=1093x481,844x390,812x375,740x360,480x270 LANG2=ru,en TG=46 OUT=assets/raw/audit/ports node tools/mobile/ux/ports.mjs
-//   (TG=0: the browser; SIZE=1440x900 TG=0 for a desk.)  ONLY=exchange,shop — some screens;  SHOTS=0;  LIST=1 — all.
+//   overlap two buttons over each other;
+//   ell     a one-line name cut at its box with no ellipsis, or spilling past it;
+//   vc      a button's icon or label off the button's middle line.
+// The ordinary QA (docs/33 §7): a server of your own with the admin's commands, then the phone in Telegram and the desk —
+//   GPORT=58617 SIZE=1093x481,844x390,812x375,740x360,480x270 LANG2=ru,en TG=46 OUT=assets/raw/audit/ports node tools/mobile/ux/ports.mjs
+//   GPORT=58617 SIZE=1440x900 LANG2=ru,en TG=0 OUT=assets/raw/audit/ports node tools/mobile/ux/ports.mjs
+//   (TG=0: the browser.)  ONLY=exchange,shop — some screens;  SHOTS=0;  LIST=1 — all;  TOUCH=0/1 (default: a touch screen
+//   under 520 px on its short side). Exit code 1 on any violation; the report in OUT/report[_tg].json.
 import * as L from '../m0/lib.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
