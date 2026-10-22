@@ -741,6 +741,23 @@ function stepClaimRun(): void {
     openClaim();
   } else if (performance.now() - claimRun.at > 120_000) claimRun = null; // (the helmsman refused — a sail in sight: she may sail in herself)
 }
+/** When the server last stopped her for an action, a battle or a card (the page's clock). */
+let allStopAt = -1e9;
+/** Owner, 2026-10-22 (server allstop.ts): «любое действие … должно останавливать корабль». Her sail control comes down to
+ *  nothing and the helm stick lets go — the old sail step is never sent again, and she sails on only when she sets sail
+ *  or gives a course herself; the runs the page was keeping (home, a claim, a goal, a dock) let go too. */
+function allStopHere(): void {
+  allStopAt = performance.now();
+  state.input.sail = 0;
+  state.input.rudder = 0;
+  touch.course = null;
+  goalRun = null;
+  homeRun = null;
+  claimRun = null;
+  pendingDock = null;
+  renderer.goal = null;
+  setMark(null);
+}
 /** The helmsman's course to a spot (and how near he should bring her), drawn with its ring. */
 function sailToSpot(p: { x: number; y: number }, near?: number): void {
   touch.course = null; // the helm stick lets go, or it would take the wheel straight back
@@ -1045,26 +1062,26 @@ function homeBtnFrame(): void {
   }
 }
 const hasIsle = (): boolean => state.self?.homeIsle !== null && state.self?.homeIsle !== undefined;
-/** The campaign's opening (owner, 2026-10-19): its step now, for the finger (pointer.ts) — and its courses sailed by
- *  the helmsman: a fight's lane, a stack of creatures, the island of her town, set once a step the moment she is at sea
- *  (the line and the distance drawn, goalroute.ts). Null past the opening, in the First Watch, in a fight. */
-let openingRun = '';
+/** The campaign's opening (owner, 2026-10-19): its step now, for the finger (pointer.ts). Null past the opening, in the
+ *  First Watch. (Owner, 2026-10-22: «любое действие … должно останавливать корабль» — its courses are no longer set by
+ *  themselves the moment she is at sea or a battle's card is put away: her «Плыть» on the bar, openingSail.) */
 function openingFrame(): string | null {
   if (state.onboarding?.stage) return null;
-  // (in port the step's run is forgotten: put to sea again — after a wreck, a tow, a mutiny's port — it starts again; it
-  // was set once a step, and a run broken off left «Твари на отмели» with no course and no finger, QA 2026-10-22)
-  if (state.self?.dockedAt) openingRun = '';
   const q = state.self?.quests.find((x) => x.kind === 'campaign' && x.op);
-  if (!q?.op) return null;
-  const key = `${q.id}:${q.step}`;
+  return q?.op ?? null;
+}
+/** The opening's step at sea with no course for it: «Плыть» on the bar (the finger on it when the step's own button is
+ *  not there). Not while a battle's account waits for her — the prize's card, a loss — nor under any window that must
+ *  be answered, nor while the helmsman has her or «Атаковать» is under way. */
+function openingSail(): { key: string; name: string } | null {
+  const q = state.self?.quests.find((x) => x.kind === 'campaign' && x.op);
+  if (!q?.op || state.onboarding?.stage) return null;
   const sea = q.op === 'sink' || q.op === 'board' || q.op === 'neutral' || q.op === 'found';
-  // (not while a battle's account waits for her — the prize's card, a loss — nor under any window that must be answered:
-  // the run is started once that is settled)
-  if (sea && openingRun !== key && !state.self?.dockedAt && !state.boardTac && !state.boardFight && !state.pursuit && !state.boarding && !(modal && ANSWER.includes(modal)) && inGame && !isleScene.isOpen) {
-    openingRun = key;
-    startGoal(`q:${q.id}`, false);
-  }
-  return q.op;
+  if (!sea || !inGame || state.self?.dockedAt || isleScene.isOpen) return null;
+  if (state.boardTac || state.boardFight || state.pursuit || state.boarding || state.roamRun !== null || (modal && ANSWER.includes(modal))) return null;
+  const key = `q:${q.id}`;
+  if (state.autosail || (goalRun?.key === key && state.route?.key === key)) return null;
+  return { key, name: sv(q.name) };
 }
 /** A good to trade at this market for the opening's lesson: the first in stock that is not a supply nor contraband. */
 function tradeGoodHere(): string | null {
@@ -1619,6 +1636,9 @@ function onMessage(m: ServerMsg): void {
     case 'route':
       onRoute(m);
       break;
+    case 'allstop':
+      allStopHere();
+      break;
     case 'autosail': {
       // docs/16 #36: the helmsman has the wheel, or has given it back and why (a run to a goal says its own course).
       // (2026-10-19: a course taken on a run to a goal fell through to the «given back» branch — «Автоплавание выключено.»
@@ -1628,7 +1648,8 @@ function onMessage(m: ServerMsg): void {
       } else {
         helmStop = { why: m.why ?? 'off', at: performance.now() }; // ux2: the run to a goal reads why
         const w = autosailStopText(m.why);
-        hud.toast(w.text, w.kind);
+        // (stopped by an action, a battle or a card — allStopHere: his «штурвал ваш» is no news then)
+        if (performance.now() - allStopAt > 1500) hud.toast(w.text, w.kind);
         if (m.why === 'arrived') setMark(null);
         if (w.kind === 'bad') audio.bell();
       }
@@ -3380,6 +3401,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
       facts.homeport = { name: sv(near.name) };
     }
   }
+  facts.goalSail = openingSail(); // owner, 2026-10-22: the opening's next place — sailed for only at her word
   facts.looks = advCard.closedLooks();
   // A struck ship's terms put off by «Later»: her card back with «Look…».
   const struck = surrenderCard.laterName();
@@ -3482,6 +3504,11 @@ function runAct(a: Act): void {
       return void (state.pursuit && net.send({ t: 'attack', target: state.pursuit.target, mode: state.pursuit.mode === 'board' ? 'guns' : 'board' }));
     case 'attack_stop':
       return void net.send({ t: 'attack', stop: true });
+    case 'goal_sail': {
+      const o = openingSail();
+      if (o) startGoal(o.key);
+      return;
+    }
   }
 }
 

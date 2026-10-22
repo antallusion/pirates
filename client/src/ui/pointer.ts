@@ -23,6 +23,8 @@ export interface PointerFacts {
 /** The harbour's way out to sea, the First Watch's own (the gold «В море» of the port window, the HUD's round one). */
 const TO_SEA = ['#modal-panel [data-ptab="sea"]', '#tc-cast', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'];
 /** Into the port window from the HUD in port, or into a harbour from the sea. */
+/** The opening's «Плыть» (owner, 2026-10-22): its next place is sailed for only at her word — after the step's own button. */
+const GOAL_SAIL = ['#tc-act[data-act="goal_sail"]', '.act-btn.act-goal_sail'];
 const TO_PORT = ['#tc-act[data-act="harbour"]', '.act-btn.act-harbour', '#tc-act[data-act="dock"]', '#tc-act[data-act="homeport"]', '.act-btn.act-dock', '.act-btn.act-homeport'];
 
 /** The advisor's own button (client/src/ui/buyadvice.ts): «Продать и купить» when a purchase found no room. */
@@ -49,13 +51,13 @@ function openingTargets(f: PointerFacts, op: string): string[] {
     // (the opening's softened foe strikes her colours soon: on her card the step's own choice — «Забрать всё и
     // затопить» sinks her, the gold «отпустить» counts as a boarding only and «Первый залп» stood still, QA 2026-10-22)
     case 'sink':
-      return ['[data-sur="sink"]:not([disabled])', '#tc-act[data-act="attack"]', '.act-btn.act-attack', ...(f.touch && f.pursuit ? ['#tc-fire'] : [])];
+      return ['[data-sur="sink"]:not([disabled])', '#tc-act[data-act="attack"]', '.act-btn.act-attack', ...(f.touch && f.pursuit ? ['#tc-fire'] : []), ...GOAL_SAIL];
     case 'board':
-      return ['[data-sur="release"]:not([disabled])', ...targetsOf({ ...f, stage: 'board' })];
+      return ['[data-sur="release"]:not([disabled])', ...targetsOf({ ...f, stage: 'board' }), ...GOAL_SAIL];
     case 'neutral':
-      return ['#tc-act[data-act="roam"]', '.act-btn.act-roam'];
+      return ['#tc-act[data-act="roam"]', '.act-btn.act-roam', ...GOAL_SAIL];
     case 'found':
-      return ['#modal-panel [data-est="claim"]', '.confirm-panel [data-yes]', '#tc-act[data-act="claim"]', '.act-btn.act-claim'];
+      return ['#modal-panel [data-est="claim"]', '.confirm-panel [data-yes]', '#tc-act[data-act="claim"]', '.act-btn.act-claim', ...GOAL_SAIL];
   }
   return [];
 }

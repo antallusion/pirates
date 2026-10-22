@@ -131,9 +131,9 @@ test('bug 1: the page never shuts the prize card by itself — the opening run w
   const sg = main.slice(main.indexOf('function startGoal('), main.indexOf('function tapGoal('));
   assert.match(sg, /if \(modal && !ANSWER\.includes\(modal\)\) closeModal\(\);/);
   assert.doesNotMatch(sg, /if \(modal\) closeModal\(\);/);
-  // the opening's run waits for a battle's account and an answer window
-  const of = main.slice(main.indexOf('function openingFrame('), main.indexOf('function tradeGoodHere('));
-  assert.match(of, /!state\.boarding/);
+  // the opening's «Плыть» waits for a battle's account and an answer window (owner, 2026-10-22: never sailed by itself)
+  const of = main.slice(main.indexOf('function openingSail('), main.indexOf('function tradeGoodHere('));
+  assert.match(of, /state\.boarding/);
   assert.match(of, /ANSWER\.includes\(modal\)/);
   // the watchdog: every frame, the card up while the spoils wait; asked again on waking
   assert.match(main, /tactical\.render\(state\.boardTac\);\s*boardingCardFrame\(\);/);
@@ -334,8 +334,11 @@ test('bug 1 (the end of every battle): its screen is not laid anew under the fin
   const tap = src.slice(src.indexOf("banner.querySelector<HTMLElement>('[data-endbtn]')!.addEventListener('click'"), src.indexOf("banner.querySelectorAll<HTMLElement>('[data-cap]')"));
   assert.match(tap, /banner\.classList\.add\('hidden'\);\s*if \(now\.land\) \{/, 'hidden at once, ashore as at sea');
   assert.match(src, /v\.land && !v\.replay && this\.endHidden && this\.closeAskAt && performance\.now\(\) - this\.closeAskAt > 2500\) \{[\s\S]{0,120}t: 'lair', action: 'close'/, 'ashore: asked again until the field goes');
-  // the opening's run starts again after a return to port (a wreck, a tow, a mutiny's port)
+  // the opening's step is never sailed for by itself (owner, 2026-10-22): its «Плыть» is offered again at sea after a
+  // return to port (a wreck, a tow, a mutiny's port), and pressed it starts the run
   const main = readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8');
   const of = main.slice(main.indexOf('function openingFrame('), main.indexOf('function tradeGoodHere('));
-  assert.match(of, /if \(state\.self\?\.dockedAt\) openingRun = '';/);
+  assert.doesNotMatch(of, /startGoal\(/);
+  assert.match(of, /state\.self\?\.dockedAt \|\|/);
+  assert.match(main, /case 'goal_sail': \{\s*const o = openingSail\(\);\s*if \(o\) startGoal\(o\.key\);/);
 });

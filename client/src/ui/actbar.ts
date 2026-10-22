@@ -26,7 +26,7 @@ const LR = dict(REN, RRU);
 const LS = dict(SEN, SRU);
 const LW = dict(WEN, WRU);
 
-export type ActId = 'attack' | 'attack_stop' | 'attack_mode' | 'axes' | 'harbour' | 'board' | 'dock' | 'moor_way' | 'homeport' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'roam' | 'roam_join' | 'roam_look' | 'look' | 'repair' | 'jury' | 'scuttle';
+export type ActId = 'attack' | 'attack_stop' | 'attack_mode' | 'axes' | 'harbour' | 'board' | 'dock' | 'moor_way' | 'homeport' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'roam' | 'roam_join' | 'roam_look' | 'look' | 'repair' | 'jury' | 'scuttle' | 'goal_sail';
 export type LandAction = 'land' | 'dig' | 'raise' | 'expedition' | 'descent' | 'keeper' | 'escort' | 'dive' | 'lair';
 export type LookKind = 'obj' | 'guard' | 'lair' | 'drift' | 'struck';
 
@@ -68,6 +68,9 @@ export interface ActFacts {
   attack?: { name: string; pursuing: boolean; mode: 'guns' | 'board'; gunsOnly?: boolean } | null;
   /** owner 2026-10-20: torn sails with no sailcloth — the jury sail's progress, stranded, the scuttle's wait. */
   adrift?: AdriftFacts | null;
+  /** Owner, 2026-10-22: the opening's next place at sea, not sailed for by itself after a battle or a step — her «Плыть»
+   *  (the step's own button, near its thing, comes first). */
+  goalSail?: { name: string } | null;
 }
 
 export interface Act {
@@ -156,6 +159,8 @@ export function buildActs(f: ActFacts): Act[] {
     const i = out.findIndex((a) => a.id === 'dock' || a.id === 'homeport' || a.id === 'moor_way');
     if (i > 0) out.unshift(...out.splice(i, 1));
   }
+  // (last: the step's own button — «Атаковать», «Занять» — leads when it is there)
+  if (f.goalSail && !f.docked) out.push({ id: 'goal_sail', icon: 'stat_sails', label: L('a.goalSail'), sub: f.goalSail.name, title: L('a.goalSailTitle') });
   return out;
 }
 

@@ -7,6 +7,7 @@
 // sea step on the game's clock, the moments of the screens (a purchase, a fight's rounds) on a fixed allowance. All of it
 // within ten minutes of the game.
 
+import { autosailOf } from '../server/src/game/autosail.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { OPENING_SLOTS, foundIsle } from '../shared/src/data/campaign/build.ts';
@@ -107,6 +108,26 @@ test('a fresh account plays the opening through on the real sea within ten minut
     assert.ok(cond(), `${what} (${log.join(' · ')})`);
   };
   const at = () => p.campaign!.at;
+  // (a mutiny after a costly fight is an answer window: she pays the men off, as a player would)
+  const answerMutiny = () => {
+    if (!p.company.mutiny) return;
+    conn.push({ t: 'mutiny', choice: 'pay' });
+    log.push(`${Math.round(game.now - t0)} s mutiny paid off`);
+  };
+  // «Плыть» on the bar (owner, 2026-10-22: after a battle or a step nothing sails her on by itself): pressed, and pressed
+  // again whenever she lies with no course while the bar offers it (a mutiny answered, a fight broke the run off)
+  const sailFor = (key: string, cond: () => boolean, sec: number, what: string) => {
+    answerMutiny();
+    conn.push({ t: 'goto', key });
+    for (let i = 0; i < sec * TICK_RATE && !cond(); i++) {
+      game.step();
+      odo();
+      if (i % (5 * TICK_RATE) !== 5 * TICK_RATE - 1) continue;
+      answerMutiny();
+      if (!autosailOf(ship()) && !ship().boarding && !landFighting(game, s) && !s.pendingBoarding) conn.push({ t: 'goto', key });
+    }
+    assert.ok(cond(), `${what} (${log.join(' · ')})`);
+  };
   assert.equal(ship().docked, 'saltmarrow', 'she starts in Saltmarrow, docked');
   assert.equal(campaignActive(p)?.id, 'c01_01', 'the shops under way from the first second');
 
@@ -128,31 +149,53 @@ test('a fresh account plays the opening through on the real sea within ten minut
   const first = foeNear(1400)!;
   assert.ok(first.hull <= first.stats.hullMax * 0.51, 'the opening’s foe is softened');
   startPursuit(game, s, first.id, 'guns');
-  until(() => Math.hypot(first.state.x - ship().state.x, first.state.y - ship().state.y) < 450 || !first.alive, 120, 'at gun range');
-  run(60);
-  questEvent(game, s, { k: 'sink', victim: first });
-  first.hull = 0;
+  until(() => Math.hypot(first.state.x - ship().state.x, first.state.y - ship().state.y) < 450 || !first.alive || first.surrendered, 120, 'at gun range');
+  for (let i = 0; i < 60 * TICK_RATE && first.alive && !first.surrendered; i++) {
+    game.step();
+    odo();
+  }
+  if (first.surrendered) {
+    // She strikes her colours: her terms stop the ship (owner, 2026-10-22, allstop.ts) and the finger is on the card's
+    // «Забрать всё и затопить» — the step's sinking; the helmsman takes her alongside for it.
+    conn.push({ t: 'surrender', id: first.id, fate: 'sink' });
+    until(() => at() >= 2 || !first.alive, 120, 'her terms taken alongside');
+  }
+  if (at() < 2) questEvent(game, s, { k: 'sink', victim: first });
+  if (first.alive) first.hull = 0;
   assert.equal(at(), 2, 'the ship sunk');
   mark('sunk');
+  // (owner, 2026-10-22, allstop.ts: a ship sunk by her ends the fight and she lies still — nothing sails her on by itself;
+  // she presses «Плыть» on the bar for the next step, as a player would)
+  run(2);
+  assert.equal(autosailOf(ship()), null, 'lying still after the sinking');
 
   // 3. a ship boarded: the second tender (the campaign's foe), «На абордаж», the battle on the hexes (90 s)
+  answerMutiny();
   conn.push({ t: 'goto', key: 'q:c01_03' });
   until(() => campaignFoes(game, s).some((id) => id !== first.id && game.ships.get(id)?.alive), 120, 'the second tender comes');
   const second = game.ships.get(campaignFoes(game, s).find((id) => id !== first.id)!)!;
   startPursuit(game, s, second.id, 'board');
-  until(() => Math.hypot(second.state.x - ship().state.x, second.state.y - ship().state.y) < 160 || !!ship().boarding, 180, 'alongside');
-  run(90);
-  questEvent(game, s, { k: 'board', victim: second });
+  until(() => Math.hypot(second.state.x - ship().state.x, second.state.y - ship().state.y) < 160 || !!ship().boarding || second.surrendered, 180, 'alongside');
+  if (second.surrendered && !ship().boarding) {
+    // She struck her colours on the way in: her terms stop the ship (owner, 2026-10-22, allstop.ts) and the finger is
+    // on the card's «отпустить» — a boarding for the step; the helmsman takes her alongside for it.
+    conn.push({ t: 'surrender', id: second.id, fate: 'release' });
+    until(() => at() >= 3, 120, 'her terms taken alongside');
+  } else run(90);
+  if (at() < 3) questEvent(game, s, { k: 'board', victim: second });
   assert.equal(at(), 3, 'the ship boarded');
   mark('boarded');
+  // (the battle's end stops her: the spoils settled, «Плыть»)
+  until(() => !ship().boarding, 120, 'the boarding over');
+  if (s.pendingBoarding) conn.push({ t: 'loot_take', take: {}, fate: 'sink' });
+  assert.equal(autosailOf(ship()), null, 'lying still after the battle');
 
   // 4. a neutral stack: the goal's run to the nearest standing stack on the lane, «Атаковать», the battle (90 s)
   const stackNear = () => roamersAbout(game, ship().state.x, ship().state.y, ROAM_REACH + 600).find((sp) => {
     const w = roamWhere(game, sp);
     return roamUp(game, sp.id) && Math.hypot(w.x - ship().state.x, w.y - ship().state.y) <= ROAM_REACH;
   });
-  conn.push({ t: 'goto', key: 'q:c01_04' });
-  until(() => !!stackNear(), 300, 'at a stack of creatures');
+  sailFor('q:c01_04', () => !!stackNear(), 300, 'at a stack of creatures');
   const sp = stackNear()!;
   const where = roamWhere(game, sp);
   assert.ok(Math.hypot(where.x - ship().state.x, where.y - ship().state.y) <= ROAM_REACH + 30);
@@ -163,11 +206,11 @@ test('a fresh account plays the opening through on the real sea within ten minut
   run(1);
   assert.equal(at(), 4, `the stack beaten (${log.join(' · ')})`);
   mark('stack');
+  assert.equal(autosailOf(ship()), null, 'lying still after the battle: «Плыть» is hers to press');
 
   // 5. the town: the goal's run to the island, «Занять» in reach, the claim's question (15 s)
-  conn.push({ t: 'goto', key: 'q:c01_05' });
   const isle = (QUESTS_BY_ID.c01_05.steps[0] as Extract<QuestStep, { type: 'claim' }>).island!;
-  until(() => claimPrompt(game, s)?.island === isle, 360, 'off the island of her town, «Занять» at hand');
+  sailFor('q:c01_05', () => claimPrompt(game, s)?.island === isle, 360, 'off the island of her town, «Занять» at hand');
   run(15);
   assert.equal(claimIsland(game, s, isle), null, 'claimed');
   run(1);
