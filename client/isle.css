@@ -175,6 +175,10 @@ body.isle-on :is(#world, #hud, #hud-chat, #encounter, #surrender, #lairchest, #a
   #isle .is-cb .bopt-art { width: 34px; height: 34px; }
   #isle .is-cb :is(.bupcard, .bjobcard) { padding: 5px; margin: 4px 0; }
   #isle .is-cb .btn-small { min-height: calc(26px + 4 * var(--u, 1px)); font-size: var(--f-fs, 10px); padding: 2px 8px; }
+  /* the town's tiles and its land's rows on the phone's scale (they kept the desk's 12.5–15 px in a 450 px card) */
+  #isle .is-cb :is(.tw-card, .tw-craft-t, .tw-mine, .tw-mk, .tw-res) { font-size: var(--f-fs, 10px); }
+  #isle .is-cb .tw-id b { font-size: var(--f-fs-m, 11px); }
+  #isle .is-cb :is(.tw-text, .tw-why, .tw-max, .tw-pool, .tw-nn, .tw-rates) { font-size: var(--f-fs-s, 9px); }
 }
 @media (max-height: 320px) {
   #isle .is-sb-l { font-size: 6.5px; }
