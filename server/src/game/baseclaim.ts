@@ -41,6 +41,7 @@ import { deliver } from './post.ts';
 import { flying, hasPennant, neutral } from './pvp.ts';
 import { sendBalance } from './premium.ts';
 import { sagaNote } from './saga.ts';
+import { lairOnIsland } from './wanted.ts';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -126,6 +127,8 @@ export function claimOf(game: Game, h: Holding): IsleClaim {
 export function claimBlock(game: Game, isl: Island, _account?: number): string | null {
   // (a step-9 harbour town stands on its island's coast and leaves the island free: shared/src/world/towns.ts)
   if (isl.portId) return 'Port islands are not for claiming.';
+  // a named pirate's fortress holds it: its garrison and battery would sink her at every cast-off (QA 2026-10-22)
+  if (lairOnIsland(game, isl.id)) return 'A pirate fortress holds this island: choose another.';
   return null;
 }
 

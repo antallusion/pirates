@@ -114,3 +114,27 @@ test('a window’s toast strip goes up when the window has its buttons along its
   assert.match(src('client/src/ui/hud.ts'), /before: \(host\) => \(host === this\.toastsEl \? this\.placeStrip\(\) : placeModalStrip\(host\)\)/);
   assert.match(src('client/styles.css'), /#modal-toasts\.mt-top \{ top: calc\(var\(--sa-t, 0px\) \+ 6px\); bottom: auto; \}/);
 });
+
+test('no town on a pirate fortress’s island, and a town already there has the fortress stand down', async () => {
+  const { claimBlock } = await import('../server/src/game/baseclaim.ts');
+  const { lairOnIsland, lairsAll } = await import('../server/src/game/wanted.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { game } = makeGame();
+  const lair = lairsAll(game).find((l) => game.world.islands[l.island]?.region === 'black_coast') ?? lairsAll(game)[0]!;
+  const isl = game.world.islands[lair.island]!;
+  assert.equal(lairOnIsland(game, isl.id)?.id, lair.id);
+  assert.match(claimBlock(game, isl) ?? '', /pirate fortress/);
+  setLang('ru');
+  try {
+    assert.match(serverText(claimBlock(game, isl)!), /пиратская крепость/);
+  } finally {
+    setLang('en');
+  }
+  assert.match(src('server/src/game/wanted.ts'), /if \(game\.holdings\.onIsland\(game, lair\.island\)\.length\) \{/);
+  // the opening's own town (Ravencliff) holds no fortress: the campaign sent the newcomer to found it under its guns
+  const { QUESTS_BY_ID } = await import('../shared/src/data/quests.ts');
+  const town = (QUESTS_BY_ID.c01_05.steps[0] as { island?: number }).island!;
+  assert.equal(lairOnIsland(game, town), undefined, 'no lair on «Свой берег»’s island');
+  assert.equal(claimBlock(game, game.world.islands[town]!), null);
+});
