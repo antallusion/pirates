@@ -577,6 +577,9 @@ export class TacticalPanel {
   private foeArmed: number | null = null;
   /** The end put away by its button (a battle at sea closes itself a moment later). */
   private endHidden = false;
+  /** The end screen's words as last laid (it is laid anew only when they change), and when ashore its close was asked. */
+  private endHtml = '';
+  private closeAskAt = 0;
   /** An order's whole words (docs/23, 2026-10-09: the panel's pages cut them at two lines): beside a page of the panel
    *  or the book under the mouse or a key's focus, over a card of a phone's book held by a finger. One for the battle,
    *  over the sheets (in the body). */
@@ -843,6 +846,12 @@ export class TacticalPanel {
       else v = this.rpView;
     }
     const root = $('board-tac');
+    // A fight ashore put away and still on the field: its close asked again (QA 2026-10-22 — never left on a field she
+    // has closed).
+    if (v?.over && v.land && !v.replay && this.endHidden && this.closeAskAt && performance.now() - this.closeAskAt > 2500) {
+      this.closeAskAt = performance.now();
+      this.send({ t: 'lair', action: 'close' });
+    }
     if (v && !this.arrived.has(v)) this.arrived.set(v, performance.now() / 1000);
     // A view with more of the battle in it waits while the last is still being played (owner, 2026-10-08: every turn
     // of hers seen whole — who moved, who struck whom, how many fell); one with nothing new comes in at once.
@@ -936,6 +945,8 @@ export class TacticalPanel {
         this.clearPick();
         this.pickKey = '';
         this.endHidden = false;
+        this.endHtml = '';
+        this.closeAskAt = 0;
       }
       return;
     }
@@ -2259,25 +2270,33 @@ export class TacticalPanel {
       const arenaLine = r?.arena ? `<span class="tb-why tb-arena${r.arena.rated ? (r.arena.delta >= 0 ? ' up' : ' down') : ''}">${icon('icon.item_duelling_pistols', '', 'ico-sm')}${esc(arenaEndLine(r.arena))}</span>` : '';
       // Owner, 2026-10-16: «Почему» (its sheet: each stack's harm, the turning point) and «Повтор» beside the button.
       const more = `${r?.why ? `<button class="k-btn k-btn--md tb-endx" data-why>${esc(L('why.btn'))}</button>` : ''}${r?.replay && !v.replay ? `<button class="k-btn k-btn--md tb-endx" data-replay="${esc(r.replay)}">${esc(L('replay'))}</button>` : ''}`;
-      banner.innerHTML = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span class="tb-why">${esc(whyText)}</span>${arenaLine}${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${rows}${v.land && !v.replay ? '<div data-fallen-slot class="tb-fallen"></div>' : ''}</div><div class="tb-endrow">${more}<button class="k-btn k-btn--primary k-btn--lg tb-endbtn" data-endbtn>${esc(v.replay ? L('replay.close') : v.land ? LL('close') : L('next'))}</button><button class="tb-endx2" data-endx title="${esc(L('close.x'))}" aria-label="${esc(L('close.x'))}"><i class="tb-pk-x" aria-hidden="true"></i></button></div>`;
+      // (laid anew only when its words change: a redraw between the finger's down and up took «К морю» from under it and
+      // the tap did nothing — QA 2026-10-22, the stack's end stood until a second tap)
+      const endHtml = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span class="tb-why">${esc(whyText)}</span>${arenaLine}${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${rows}${v.land && !v.replay ? '<div data-fallen-slot class="tb-fallen"></div>' : ''}</div><div class="tb-endrow">${more}<button class="k-btn k-btn--primary k-btn--lg tb-endbtn" data-endbtn>${esc(v.replay ? L('replay.close') : v.land ? LL('close') : L('next'))}</button><button class="tb-endx2" data-endx title="${esc(L('close.x'))}" aria-label="${esc(L('close.x'))}"><i class="tb-pk-x" aria-hidden="true"></i></button></div>`;
+      if (endHtml !== this.endHtml || !banner.querySelector('[data-endbtn]')) {
+      this.endHtml = endHtml;
+      banner.innerHTML = endHtml;
       banner.querySelector<HTMLElement>('[data-endx]')?.addEventListener('click', () => banner.querySelector<HTMLElement>('[data-endbtn]')?.click());
       banner.querySelector<HTMLElement>('[data-why]')?.addEventListener('click', () => this.openWhy(v));
       banner.querySelector<HTMLElement>('[data-replay]')?.addEventListener('click', (e) => this.askReplay((e.currentTarget as HTMLElement).dataset.replay!));
       banner.querySelector<HTMLElement>('[data-endbtn]')!.addEventListener('click', () => {
-        if (v.replay) return this.stopReplay();
+        const now = this.view;
+        if (!now) return;
+        if (now.replay) return this.stopReplay();
+        // The button puts the reckoning away now (the field follows when the server lets the battle go); ashore it asks
+        // again until the field is gone (endFrame), so the tap always takes.
         this.endHidden = true;
-        if (v.land) this.send({ t: 'lair', action: 'close' });
-        else {
-          // A battle at sea closes itself a moment later: the button puts the reckoning away now.
-          this.endHidden = true;
-          banner.classList.add('hidden');
-          this.send({ t: 'tac_done' }); // the grace after it runs its last seconds (owner, 2026-10-22, inbattle.ts)
-        }
+        banner.classList.add('hidden');
+        if (now.land) {
+          this.closeAskAt = performance.now();
+          this.send({ t: 'lair', action: 'close' });
+        } else this.send({ t: 'tac_done' }); // the grace after it runs its last seconds (owner, 2026-10-22, inbattle.ts)
       });
       banner.querySelectorAll<HTMLElement>('[data-cap]').forEach((b) => (b.onclick = () => this.send({ t: 'drift', action: 'capture', choice: b.dataset.cap as 'take' })));
       // docs/35: a fight ashore over — her fallen and the quick «Воскресить», as on a boarding's result.
       if (v.land && !v.replay) this.onFallenSlot?.(banner);
-    }
+      }
+    } else this.endHtml = '';
     // The phone's book follows the battle while it is open (the will spent, a page ready again).
     if (this.sheetKind === 'book' && this.sheetH?.open) {
       if (v.over) this.closeSheet();

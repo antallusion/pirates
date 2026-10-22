@@ -1004,6 +1004,9 @@ const hasIsle = (): boolean => state.self?.homeIsle !== null && state.self?.home
 let openingRun = '';
 function openingFrame(): string | null {
   if (state.onboarding?.stage) return null;
+  // (in port the step's run is forgotten: put to sea again — after a wreck, a tow, a mutiny's port — it starts again; it
+  // was set once a step, and a run broken off left «Твари на отмели» with no course and no finger, QA 2026-10-22)
+  if (state.self?.dockedAt) openingRun = '';
   const q = state.self?.quests.find((x) => x.kind === 'campaign' && x.op);
   if (!q?.op) return null;
   const key = `${q.id}:${q.step}`;
