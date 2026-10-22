@@ -10,6 +10,7 @@
 // Russian through patterns.ts); experience and silver by the pace (pacing.ts). Deterministic: a captain's place in it is
 // a number (her `campaign.at`), and a save of before a change of places finds its quest re-anchored where it now is.
 
+import { LANDING_R, REACH_OBJ } from '../reach.ts';
 import { REGIONS } from '../../world/regions.ts';
 import type { RegionId } from '../../world/regions.ts';
 import type { Island, Port, World } from '../../world/worldgen.ts';
@@ -344,8 +345,9 @@ interface Node {
 
 // ------------------------------------------------------------------ a quest at its location
 
-/** How near a coast's marked place her ship must come (metres). */
-export const SPOT_R = 300;
+/** How near a coast's marked place her ship must come: her hull within REACH_OBJ of it (owner, 2026-10-22: 300 m from
+ *  her middle → 30 m from her hull, reach.ts; the step checks it so — quests.ts — this is the ring her chart draws). */
+export const SPOT_R = REACH_OBJ + LANDING_R;
 
 /** The coves and spits of a harbour's own island within reach of its quay (water off its shore, 0.5–1.45 km from the
  *  anchorage), round the island in order. */

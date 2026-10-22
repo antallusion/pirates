@@ -26,6 +26,7 @@ import type { RegionId, Safety } from '../../../shared/src/world/regions.ts';
 import { SECTOR_SIZE, sectorAt, sectorGrid } from '../../../shared/src/world/sectors.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { AUTOSAIL_ARRIVE } from '../../../shared/src/data/autosail.ts';
+import { REACH_DOCK } from '../../../shared/src/data/reach.ts';
 import { autosailOf, helmTouched, lastStopOf, pathView, pausedCourse, planFrom, startAutosail, stopAutosail } from './autosail.ts';
 import { beastsAlive } from './beasts.ts';
 import { commonView } from './commongoal.ts';
@@ -324,7 +325,7 @@ function wrecks(game: Game, s: PlayerSession): Cand[] {
   const p = s.profile!;
   const ok: Cand[] = [], any: Cand[] = [];
   for (const w of game.wrecks) {
-    const c: Cand = { x: w.x, y: w.y, r: 120, kind: 'wreck', name: 'wreck', hint: ROUTE_HINTS.dive };
+    const c: Cand = { x: w.x, y: w.y, r: 60, kind: 'wreck', name: 'wreck', hint: ROUTE_HINTS.dive };
     if (!canDive(game, s, w)) ok.push(c);
     else if (game.now - (p.explore.dived[w.id] ?? -1e9) >= 7200) any.push(c);
   }
@@ -472,7 +473,7 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
       // the opening: a standing stack of the sea's creatures on the lane (its `near`), else the nearest standing one
       const up = (x: number, y: number, r: number): Cand[] => roamersAbout(game, x, y, r).filter((sp) => roamUp(game, sp.id) && roamFighter(game, sp.id) === null).map((sp) => {
         const w = roamWhere(game, sp);
-        return { x: w.x, y: w.y, r: 120, kind: 'place' as const, name: 'stack' };
+        return { x: w.x, y: w.y, r: 60, kind: 'place' as const, name: 'stack' };
       });
       const lane = st.near ? up(st.near.x, st.near.y, st.near.r) : [];
       return { cands: lane.length ? lane : up(ship.state.x, ship.state.y, 6000) };
@@ -501,7 +502,7 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
     }
     case 'dive': {
       const w = st.wreck !== undefined ? game.wrecks[st.wreck] : undefined;
-      if (w) return { cands: [{ x: w.x, y: w.y, r: 120, kind: 'wreck', name: 'wreck', hint: ROUTE_HINTS.dive }] };
+      if (w) return { cands: [{ x: w.x, y: w.y, r: 60, kind: 'wreck', name: 'wreck', hint: ROUTE_HINTS.dive }] };
       return { cands: wrecks(game, s) };
     }
     case 'sell_contraband':
@@ -804,8 +805,10 @@ export function routeOf(game: Game, s: PlayerSession): { key: string; view: Rout
 
 /** How near the helmsman brings her to a place of this reach. */
 function arriveOf(v: RouteView): number {
-  if (v.act === 'dock') return AUTOSAIL_ARRIVE;
-  return Math.max(30, Math.min(AUTOSAIL_ARRIVE, Math.round(v.r * 0.4)));
+  // (owner, 2026-10-22: the reaches are thirty metres from her hull now — reach.ts — so the run ends inside them: a
+  // harbour's anchorage within REACH_DOCK, a thing within REACH_OBJ)
+  if (v.act === 'dock') return REACH_DOCK - 10;
+  return Math.max(24, Math.min(AUTOSAIL_ARRIVE, Math.round(v.r * 0.4)));
 }
 
 /** The place said to her screen (owner, 2026-10-18: «всегда должно быть показано направление линией и путь»): while

@@ -13,7 +13,10 @@ import { NAV_CELL, SAIL_STEPS, SPEED_SCALE, WORLD_SIZE } from '../../../shared/s
 import { angleDiff, clamp, headingOf, headingVec, pointInPolygon, wrapAngle } from '../../../shared/src/math.ts';
 import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
-import { depthAt, isLand, navBlocked } from '../../../shared/src/world/worldgen.ts';
+import { depthAt, isLand, navBlocked, reefDepthAt } from '../../../shared/src/world/worldgen.ts';
+import { blockersNear } from '../../../shared/src/world/solids.ts';
+import { hullClearance } from '../../../shared/src/sim/hull.ts';
+import type { Blocker } from '../../../shared/src/sim/hull.ts';
 import { WORLD_EDGE_MARGIN } from '../../../shared/src/world/regions.ts';
 import type { Game } from './Game.ts';
 import { banksUp } from './isles.ts';
@@ -38,6 +41,8 @@ export interface AutoSail {
   /** Her mark, and the point of open water nearest it the route ends at. */
   x: number;
   y: number;
+  /** When the creep of the last metres began (it gives up after CREEP_SEC). */
+  creepAt?: number;
   path: Path;
   /** The route's point she steers for. */
   i: number;
@@ -150,6 +155,28 @@ export function autosailOf(ship: ShipEntity | null | undefined): AutoSail | null
 function draftOf(ship: ShipEntity): number {
   return ship.cls.draft * Math.max(0.5, 1 + tval(ship.stats, 'draftMul'));
 }
+
+/** The last stretch is crept from this near her mark's end (metres), for this long at most (seconds). */
+export const CREEP_FROM = 160;
+export const CREEP_SEC = 45;
+const CREEP_LIST: Blocker[] = [];
+
+/** One tick of the creep to (tx, ty): her head for it, easy canvas — when her hull a few metres on along it keeps clear
+ *  of every blocker's own margin (the coast's band, a pier, a hulk, a skerry) and her keel of the reefs. False: no
+ *  clear water that way (the usual helm decides). */
+function creepStep(game: Game, ship: ShipEntity, tx: number, ty: number): boolean {
+  const { x, y } = ship.state;
+  const want = headingOf(tx - x, ty - y);
+  const v = headingVec(want);
+  const step = Math.max(10, ship.state.speed * SPEED_SCALE * 2);
+  const nx = x + v.x * step, ny = y + v.y * step;
+  const list = blockersNear(game.world, nx, ny, ship.stats.length + 40, CREEP_LIST);
+  if (hullClearance({ x: nx, y: ny, heading: want }, ship.stats.length, ship.stats.beam, list) < 3) return false;
+  if (ship.cls.passive.id !== 'shallow_runner' && reefDepthAt(game.world, nx, ny) < draftOf(ship) + 0.3) return false;
+  ship.input = { rudder: clamp(angleDiff(ship.state.heading, want) * 2.2, -1, 1), sailTarget: Math.hypot(tx - x, ty - y) > 90 ? 0.6 : CREEP_SAIL };
+  return true;
+}
+const CREEP_SAIL = 0.35;
 
 /** Whether the water at a point would take her keel (land, shoal, a reef, a bank the tide has bared). */
 export function foulWater(game: Game, ship: ShipEntity, x: number, y: number): boolean {
@@ -659,6 +686,11 @@ export function stepAutosail(game: Game): void {
       run.offAt = game.now;
       if (offRoute(game, ship, run) && game.now - (run.plannedAt ?? -Infinity) >= REPLAN_GAP) replan(game, ship, run);
     }
+    // The last metres to a mark by a shore, a quay or a solid thing (owner, 2026-10-22: every reach is thirty metres from
+    // her hull now): straight in under easy canvas while her hull's next stretch keeps clear of the coast's band, the
+    // solid things and the reefs — the lead line (it sounds the coasts' own shallows) stopped her a cable short.
+    if (Math.min(d, toEnd) < CREEP_FROM && game.now - (run.creepAt ??= game.now) < CREEP_SEC && creepStep(game, ship, run.x, run.y)) continue;
+    if (Math.min(d, toEnd) >= CREEP_FROM) run.creepAt = undefined;
     let h = autosailHeading(game, ship, run);
     // No clear water ahead in the last stretch to a mark by a shore (a great hull's lead line reaches past her mark onto
     // the coast beyond it): she is as near as she safely comes — arrived, hove to, not «foul water ahead».

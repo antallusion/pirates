@@ -1860,7 +1860,7 @@ export class Game {
         const is = this.world.islands[st.island];
         at = is ?? null;
         if (is) {
-          r = is.radius + ISLE_REACH * 0.7;
+          r = is.radius + ISLE_REACH;
           island = st.island;
         }
       } else if (st.type === 'spot') {

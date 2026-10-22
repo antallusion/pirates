@@ -10,6 +10,7 @@
 // it lies on the water to be finished. Its carcass floats for five minutes to be flensed alongside, hove to, and the
 // blood in the water brings the sharks — and in the cold seas the orcas.
 
+import { REACH_OBJ, REACH_SLACK, hullOf, inReach } from '../../../shared/src/data/reach.ts';
 import { untouchable } from './inbattle.ts'; // owner, 2026-10-22
 import { legacyPrizeUnits, targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { worldGoalBeast } from './worldgoals.ts';
@@ -144,7 +145,11 @@ const SPAWN_R: [number, number] = [2500, 4000];
 const DESPAWN_R = 7000;
 const WORLD_CAP = 80;
 const CARCASS_LIFE = 300;
-const FLENSE_R = 80;
+/** The flensing knives reach from her hull to the carcass's flank (CARCASS_R about its middle) — reach.ts, owner
+ *  2026-10-22. */
+const FLENSE_R = REACH_OBJ;
+const CARCASS_R = 25;
+const atCarcass = (ship: ShipEntity, c: { x: number; y: number }, slack = REACH_SLACK): boolean => inReach(hullOf(ship), c.x, c.y, CARCASS_R, FLENSE_R + slack);
 const CARCASS_VIEW = 4000;
 
 export function beastBrain(game: Game, id: number): Readonly<Brain> | undefined {
@@ -1189,12 +1194,12 @@ function startFlense(game: Game, s: PlayerSession, id: number): string | null {
   const c = S.carcasses.get(id);
   if (!c) return 'Nothing to flense here.';
   // far off or under way (2026-10-19): the helmsman brings her alongside, heaves to, and the flensing begins
-  if (dist(c.x, c.y, ship.state.x, ship.state.y) > FLENSE_R + ship.stats.length / 2 || ship.state.speed > 1.5) {
-    return approach(game, s, { x: c.x, y: c.y, reach: FLENSE_R + ship.stats.length / 2 - 5, where: () => (bs(game).carcasses.get(id) ?? null), slow: 1.3 }, 'Heave to alongside the carcass first.');
+  if (!atCarcass(ship, c) || ship.state.speed > 1.5) {
+    return approach(game, s, { x: c.x, y: c.y, reach: FLENSE_R, r: CARCASS_R, where: () => (bs(game).carcasses.get(id) ?? null), slow: 1.3 }, 'Heave to alongside the carcass first.');
   }
   if (c.by !== null && c.by !== s.accountId) {
     const o = game.sessionByAccount(c.by)?.ship;
-    if (o && dist(c.x, c.y, o.state.x, o.state.y) <= FLENSE_R + o.stats.length / 2 && o.state.speed <= 1.5) return 'Someone is already flensing it.';
+    if (o && atCarcass(o, c) && o.state.speed <= 1.5) return 'Someone is already flensing it.';
   }
   c.by = s.accountId;
   S.paused.delete(s.accountId);
@@ -1215,7 +1220,7 @@ function stepCarcasses(game: Game): void {
     if (c.by !== null) {
       const s = game.sessionByAccount(c.by);
       const ship = s?.ship;
-      if (!s || !ship || !ship.alive || ship.docked || dist(c.x, c.y, ship.state.x, ship.state.y) > FLENSE_R + ship.stats.length / 2 || ship.state.speed > 1.5) {
+      if (!s || !ship || !ship.alive || ship.docked || !atCarcass(ship, c, REACH_SLACK + 20) || ship.state.speed > 1.5) {
         if (s && !S.paused.has(c.by)) {
           S.paused.add(c.by);
           game.sendTo(s, { t: 'toast', msg: 'Flensing stopped: stay alongside and hove to.', kind: 'bad' });
@@ -1372,7 +1377,7 @@ export function beastSecond(game: Game): void {
 // ------------------------------------------------------------------------------------------------ what a captain sees
 
 function nearCarcass(game: Game, ship: ShipEntity): Carcass | null {
-  for (const c of bs(game).carcasses.values()) if (dist(c.x, c.y, ship.state.x, ship.state.y) <= FLENSE_R + ship.stats.length / 2 + 40) return c;
+  for (const c of bs(game).carcasses.values()) if (atCarcass(ship, c)) return c;
   return null;
 }
 

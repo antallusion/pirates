@@ -1,6 +1,7 @@
 // Path and Legend quests (docs/00 D1, docs/02 §7): mentors in their ports, step objectives driven by what the
 // captain does at sea, Path unlocks and switching at a Captain's House, the First Descent, and faction oaths.
 
+import { LANDING_R, REACH_OBJ, REACH_SHORE, REACH_SLACK, hullOf, inReach, shoreWithin } from '../../../shared/src/data/reach.ts';
 import { opsSilverMul } from './liveops.ts'; // docs/34: the silver event
 import { isCampaignId } from '../../../shared/src/data/questclass.ts';
 import { givePet } from './pets.ts';
@@ -824,10 +825,11 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
     case 'isle': {
       if (ev.k !== 'tick' || ship.docked) return 0;
       const is = game.world.islands[st.island];
-      return is && Math.hypot(ship.state.x - is.x, ship.state.y - is.y) <= is.radius + ISLE_REACH ? 1 : 0;
+      return is && shoreWithin(hullOf(ship), is, is.radius, ISLE_REACH) ? 1 : 0;
     }
     case 'spot':
-      return ev.k === 'tick' && !ship.docked && Math.hypot(ship.state.x - st.x, ship.state.y - st.y) <= st.r ? 1 : 0;
+      // (owner, 2026-10-22: the marked place from her hull, 30 m — reach.ts — whatever ring the old step kept)
+      return ev.k === 'tick' && !ship.docked && inReach(hullOf(ship), st.x, st.y, LANDING_R, REACH_OBJ + REACH_SLACK) ? 1 : 0;
     case 'claim':
       return (ev.k === 'tick' || ev.k === 'dock' || ev.k === 'land') && !!ownIsland(game, s.accountId) ? 1 : 0;
     case 'build':
@@ -904,8 +906,9 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
 export const NEAR_FIGHT = 1500;
 export const inWater = (n: { x: number; y: number; r: number }, x: number, y: number, extra = 0): boolean => Math.hypot(x - n.x, y - n.y) <= n.r + extra;
 
-/** docs/36: how near an island's shore her ship must come for its waters to count as reached (metres past its radius). */
-export const ISLE_REACH = 900;
+/** docs/36: how near an island's shore her ship must come for its waters to count as reached — her hull to its coast
+ *  (owner, 2026-10-22: 900 m past its rim → 30 m from her hull, reach.ts). */
+export const ISLE_REACH = REACH_SHORE + REACH_SLACK;
 
 /** A campaign fight's ship counts if she is of the quest's ⚓ or above, or not grey to the captain (docs/26: a captain
  *  above the quest's waters may fight there what still teaches her). A monster, a hulk, a boss: off the ladder, counts. */
