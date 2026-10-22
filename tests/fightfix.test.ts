@@ -320,3 +320,15 @@ test('bug 4: the action bar\'s button does its own act (by id), a stale one stil
   assert.match(rd, /net\.send\(\{ t: 'dock', bribe \}\);/);
   assert.doesNotMatch(rd, /own\.speed > 6/);
 });
+
+test('bug 1 (the end of every battle): its screen is not laid anew under the finger, the tap hides it at once, ashore the close is asked again', () => {
+  const src = readFileSync(new URL('../client/src/ui/tactical.ts', import.meta.url), 'utf8');
+  assert.match(src, /if \(endHtml !== this\.endHtml \|\| !banner\.querySelector\('\[data-endbtn\]'\)\) \{/, 'laid anew only when its words change');
+  const tap = src.slice(src.indexOf("banner.querySelector<HTMLElement>('[data-endbtn]')!.addEventListener('click'"), src.indexOf("banner.querySelectorAll<HTMLElement>('[data-cap]')"));
+  assert.match(tap, /banner\.classList\.add\('hidden'\);\s*if \(now\.land\) \{/, 'hidden at once, ashore as at sea');
+  assert.match(src, /v\.land && !v\.replay && this\.endHidden && this\.closeAskAt && performance\.now\(\) - this\.closeAskAt > 2500\) \{[\s\S]{0,120}t: 'lair', action: 'close'/, 'ashore: asked again until the field goes');
+  // the opening's run starts again after a return to port (a wreck, a tow, a mutiny's port)
+  const main = readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8');
+  const of = main.slice(main.indexOf('function openingFrame('), main.indexOf('function tradeGoodHere('));
+  assert.match(of, /if \(state\.self\?\.dockedAt\) openingRun = '';/);
+});
