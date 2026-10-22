@@ -29,7 +29,8 @@
 import { IN_BATTLE_WHY, inBattle } from './inbattle.ts'; // owner, 2026-10-22
 import { campaignFoes } from './campaign.ts'; // owner, 2026-10-22: «Огонь» takes her quest's foe
 import { AIMED_SPREAD, AUTO_ARC_DEG, BOARD_RUN, CHASE_GIVE_UP, LAY_ARC_DEG, closeRange, leadPoint } from '../../../shared/src/data/gunnery.ts';
-import { ROAM_REACH } from '../../../shared/src/data/roamers.ts';
+import { roamInReach } from '../../../shared/src/data/roamers.ts';
+import { hullOf } from '../../../shared/src/data/reach.ts';
 import { AMMO, CHASER_CONE } from '../../../shared/src/data/ships.ts';
 import type { PursuitMode, PursuitStop } from '../../../shared/src/protocol.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
@@ -193,7 +194,7 @@ export function startRoamRun(game: Game, s: PlayerSession, id: number): string |
   const why = roamRunWhy(game, s, id);
   if (why) return why;
   const p = roamWhereId(game, id)!;
-  if (Math.hypot(p.x - ship.state.x, p.y - ship.state.y) <= ROAM_REACH) {
+  if (roamInReach(hullOf(ship), p)) {
     if (runs.has(ship)) stopPursuit(game, s, 'board');
     return attackRoam(game, s, id);
   }
@@ -222,7 +223,7 @@ function stepRoamRun(game: Game, s: PlayerSession, ship: ShipEntity, run: Pursui
   if (game.now - run.helmAt < PURSUIT_RESUME) return; // her own hand on the helm
   const p = roamWhereId(game, id)!;
   const d = Math.hypot(p.x - ship.state.x, p.y - ship.state.y);
-  if (d <= ROAM_REACH) {
+  if (roamInReach(hullOf(ship), p)) {
     stopPursuit(game, s, 'board');
     const e = attackRoam(game, s, id);
     if (e) game.refuse(s, e);
@@ -231,7 +232,7 @@ function stepRoamRun(game: Game, s: PlayerSession, ship: ShipEntity, run: Pursui
   // Full sail in with the boarding run's hands on the braces (as quick as a run for the grapples), easing the last
   // cable so she does not run past it.
   boardRun(game, s, ship, d < BOARD_RUN_FROM);
-  helmTo(game, ship, run.brain, p.x, p.y, d < ROAM_REACH * 2 ? 0.6 : 1);
+  helmTo(game, ship, run.brain, p.x, p.y, d < 160 ? 0.45 : 1);
 }
 
 /** A mark for the auto-battle: one of the sea's ships on the ladder, `AUTO_WEAK_GAP` levels and more below hers. */

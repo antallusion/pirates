@@ -6,13 +6,14 @@
 // rolls on its own dice; what each gives is modest, and past her day's count of them half (seahaul.ts). Not saved:
 // they are the sea's for a few minutes. Every second this module also counts her time at sea for the day's caps.
 
+import { OBJ_R, REACH_SLACK, hullOf } from '../../../shared/src/data/reach.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { advHour } from '../../../shared/src/data/advmap.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import {
-  BOTTLE_COIN, BOTTLE_MAP, BOTTLE_WORTH, CALM_CACHE, CALM_WORTH, CHEST_GOODS, CHEST_WORTH, FIND_AT, FIND_EVERY, FIND_HARBOUR, FIND_MAX, FIND_KINDS, FIND_REACH, FIND_SLOW, FIND_TTL, FIND_WEIGHT, FIND_WORK, FISH_SHARE,
+  BOTTLE_COIN, BOTTLE_MAP, BOTTLE_WORTH, CALM_CACHE, CALM_WORTH, CHEST_GOODS, CHEST_WORTH, FIND_AT, FIND_EVERY, FIND_HARBOUR, FIND_MAX, FIND_KINDS, FIND_REACH, FIND_SLOW, findGap, FIND_TTL, FIND_WEIGHT, FIND_WORK, FISH_SHARE,
   boatHands, chestSharks, isFindKind,
 } from '../../../shared/src/data/seafinds.ts';
 import type { FindKind } from '../../../shared/src/data/seafinds.ts';
@@ -148,8 +149,8 @@ export function findAtHand(game: Game, s: PlayerSession): Find | null {
   let best: Find | null = null, bd = Infinity;
   for (const f of F(game).list.values()) {
     if (f.owner !== s.accountId) continue;
-    const d = f.kind === 'flyfish' ? 0 : dist(f.x, f.y, ship.state.x, ship.state.y);
-    if (d <= FIND_REACH[f.kind] && d < bd) [best, bd] = [f, d];
+    const d = findGap(hullOf(ship), f);
+    if (d <= FIND_REACH[f.kind] + REACH_SLACK && d < bd) [best, bd] = [f, d];
   }
   return best;
 }
@@ -173,7 +174,7 @@ export function stepSeaFinds(game: Game): void {
       const f = S.list.get(b.id);
       if (!f || ship.docked) cancelFind(game, s);
       else if (ship.state.speed > FIND_SLOW[f.kind] + 1.5) cancelFind(game, s, 'The boats are called back: she made way.');
-      else if (dist(f.x, f.y, ship.state.x, ship.state.y) > FIND_REACH[f.kind] + 80) cancelFind(game, s, 'The boats are called back: she drifted off.');
+      else if (findGap(hullOf(ship), f) > FIND_REACH[f.kind] + 60) cancelFind(game, s, 'The boats are called back: she drifted off.');
       else if (ship.underFire(game.now)) cancelFind(game, s, 'The boats are called back: under fire.');
       else if (game.now >= b.until) {
         S.busy.delete(s);
@@ -210,14 +211,14 @@ function whyNot(game: Game, s: PlayerSession, f: Find | undefined): string | nul
   const ship = s.ship!;
   if (!f || f.owner !== s.accountId) return 'It is gone.';
   if (ship.docked || !ship.alive || ship.ghost) return 'Out at sea, alongside it.';
-  if (f.kind !== 'flyfish' && dist(f.x, f.y, ship.state.x, ship.state.y) > FIND_REACH[f.kind]) return FIND_FAR;
+  if (f.kind !== 'flyfish' && findGap(hullOf(ship), f) > FIND_REACH[f.kind] + REACH_SLACK) return FIND_FAR;
   if (ship.underFire(game.now)) return 'Not under fire.';
   if (ship.boarding || ship.grappled || ship.landing || landFighting(game, s)) return 'Not now';
   if (ship.state.speed > FIND_SLOW[f.kind]) return 'Shorten sail first: the boats cannot be lowered at speed.';
   return null;
 }
 
-const FIND_FAR = 'Come within a cable of it first.';
+const FIND_FAR = 'Come up to it first: within thirty metres.';
 
 /** Her order at a small thing: the boats away (a few seconds hove to), the fish gathered at once, the fight begun.
  *  Out of its reach the helmsman sails her to it and the order is given again there (seaux: approach.ts). */
@@ -226,7 +227,7 @@ export function startFind(game: Game, s: PlayerSession, id: number): string | nu
   const S = F(game);
   const f = S.list.get(id);
   const why = whyNot(game, s, f);
-  if (why === FIND_FAR && f) return approach(game, s, { x: f.x, y: f.y, reach: FIND_REACH[f.kind], where: () => (S.list.has(f.id) ? f : null), ...(FIND_SLOW[f.kind] < 50 ? { slow: FIND_SLOW[f.kind] - 0.2 } : {}) }, why);
+  if (why === FIND_FAR && f) return approach(game, s, { x: f.x, y: f.y, reach: FIND_REACH[f.kind], r: OBJ_R, where: () => (S.list.has(f.id) ? f : null), ...(FIND_SLOW[f.kind] < 50 ? { slow: FIND_SLOW[f.kind] - 0.2 } : {}) }, why);
   if (why) return why;
   if (S.busy.get(s)?.id === id) return null;
   if (f!.kind === 'chest') return fightChest(game, s, f!);
@@ -451,7 +452,7 @@ export function adminFind(game: Game, s: PlayerSession, args: string[]): string 
     // Within reach of her, ahead (the fish aboard).
     const v = headingVec(ship.state.heading);
     let at: { x: number; y: number } | undefined;
-    for (const d of [Math.min(110, FIND_REACH[k] * 0.6), 60, 30]) {
+    for (const d of [ship.stats.length / 2 + OBJ_R + 14, 60, 30]) {
       const x = ship.state.x + v.x * d, y = ship.state.y + v.y * d;
       if (!isLand(game.world, x, y)) {
         at = { x, y };

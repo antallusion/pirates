@@ -5,6 +5,7 @@
 // unwatched ones by their waters (a mine's own dice for each day, never the sea's rng), and must be beaten ashore
 // before a flag goes up again. Half the lawless waters' mines start in the raiders' hands.
 
+import { REACH_SHORE, REACH_SLACK, hullOf, shoreWithin } from '../../../shared/src/data/reach.ts';
 import { FLAG_HOLD_SECS, FLAG_SECS, MINES, MINES_MAX, MINE_STOCK_DAYS, RAID_DAY, buildMines, mineDaily, raidersGarrison } from '../../../shared/src/data/mines.ts';
 import type { MineSite } from '../../../shared/src/data/mines.ts';
 import { weekMines } from '../../../shared/src/data/week.ts';
@@ -28,7 +29,7 @@ import { guardOfSite } from './advmap.ts';
 
 /** RAIDERS: the sea's raiders hold it. */
 const RAIDERS = -1;
-const LAND_RANGE = 260;
+const LAND_RANGE = REACH_SHORE + REACH_SLACK; // her hull to the coast (owner, 2026-10-22: 260 → 30 m, reach.ts)
 const KEY = 'h3:mines';
 
 interface MineState {
@@ -196,8 +197,7 @@ function tell(game: Game, account: number, subject: string, body: string): void 
 export function mineNear(game: Game, ship: ShipEntity): MineSite | null {
   for (const x of mines(game).sites) {
     const is = game.world.islands[x.islandId];
-    if (!is || dist(is.x, is.y, ship.state.x, ship.state.y) > is.radius + LAND_RANGE) continue;
-    if (Math.sqrt(closestOnPolygon(ship.state.x, ship.state.y, is.poly).d2) <= LAND_RANGE) return x;
+    if (is && shoreWithin(hullOf(ship), is, is.radius, LAND_RANGE)) return x;
   }
   return null;
 }

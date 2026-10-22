@@ -3,11 +3,13 @@
 // bones, an ice floe — has one small thing to do at it, a few seconds hove to within a cable of it, once a day a
 // captain a mark. What it gives is small: two to five hundredths of an hour at sea for her ship's level.
 
+import { REACH_OBJ, gapTo } from './reach.ts';
+import type { Hull } from './reach.ts';
 export type MarkKind = 'wreck' | 'buoy' | 'lantern' | 'drift' | 'bones' | 'floe';
 export const MARK_KINDS: readonly MarkKind[] = ['drift', 'wreck', 'buoy', 'lantern', 'bones', 'floe'];
 
 /** Metres from the mark's edge within which the boats can work it. */
-export const MARK_REACH = 160;
+export const MARK_REACH = REACH_OBJ; // (owner, 2026-10-22: her hull's edge to the mark's, 160 → 30 m — reach.ts)
 /** No faster than this (m/s) while they work; a little more and the work stops. */
 export const MARK_SLOW = 3;
 export const MARK_SLOW_BREAK = 4.5;
@@ -46,9 +48,9 @@ export const MARK_ICON: Record<MarkKind, string> = {
   drift: 'good_timber', wreck: 'map_wreck', buoy: 'map_port', lantern: 'tattoo_lantern', bones: 'good_whalebone', floe: 'good_provisions',
 };
 
-/** Whether a point lies within the boats' reach of a mark. */
-export function markInReach(m: { x: number; y: number; r: number }, x: number, y: number): boolean {
-  return Math.hypot(m.x - x, m.y - y) - m.r <= MARK_REACH;
+/** Whether her hull lies within the boats' reach of a mark (its edge: `r` about it). */
+export function markInReach(m: { x: number; y: number; r: number }, h: Hull, slack = 0): boolean {
+  return gapTo(h, m.x, m.y, m.r) <= MARK_REACH + slack;
 }
 
 export function isMarkKind(k: unknown): k is MarkKind {

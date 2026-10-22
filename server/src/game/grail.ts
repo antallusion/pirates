@@ -9,6 +9,7 @@
 // shared by all would be on every tavern's lips by the second evening. Her own spot keeps the puzzle hers; the
 // obelisks are the same stones for all. Every find goes into the sea's chronicle, the season's first by name.
 
+import { LANDING_R, REACH_SHORE, REACH_SLACK, gapTo, hullOf } from '../../../shared/src/data/reach.ts';
 import { legacyIslands } from '../../../shared/src/world/worldgen.ts';
 import { GRAIL_DIG_SECS, GRAIL_MISS_SECS, GRAIL_R, GRAIL_TREASURE_HOURS, GRAIL_WILL, PUZZLE_GRID, PUZZLE_W, advHour, advLevelXp } from '../../../shared/src/data/advmap.ts';
 import type { AdvObj } from '../../../shared/src/data/advmap.ts';
@@ -177,7 +178,7 @@ export function stepGrail(game: Game): void {
     if (game.now < d.until) continue;
     G.digs.delete(account);
     const spot = grailSpot(game, account);
-    if (dist(ship.state.x, ship.state.y, spot.x, spot.y) <= GRAIL_R) grailFound(game, s, spot.island);
+    if (gapTo(hullOf(ship), spot.x, spot.y, LANDING_R) <= REACH_SHORE + REACH_SLACK) grailFound(game, s, spot.island); // (owner, 2026-10-22: her hull at its beach, not 400 m off — reach.ts)
     else {
       G.wait.set(account, game.now + GRAIL_MISS_SECS);
       game.toastShip(ship, 'Only sand and crabs. The Grail lies elsewhere.', 'bad');

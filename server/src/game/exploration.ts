@@ -2,6 +2,7 @@
 // grove, mine, pearl bank, shrine). It takes time, leaves the ship anchored and exposed, and can cost lives.
 // Features restock after a while, so islands stay worth revisiting. Rumours in taverns point to them.
 
+import { REACH_SHORE, REACH_SLACK, hullOf, shoreGap } from '../../../shared/src/data/reach.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { fatesOnLand } from './fates.ts';
 import { petsOnLand } from './pets.ts';
@@ -74,7 +75,7 @@ const DURATION: Record<LandableFeature, number> = {
 const RESTOCK_SEC = 2 * 3600; // a feature can be worked again two real hours later
 /** An island's haunt has a new game for the same captain half an hour later. */
 export const SCENE_COOLDOWN = 30 * 60;
-const LAND_RANGE = 260; // meters from the coastline
+const LAND_RANGE = REACH_SHORE + REACH_SLACK; // metres from her hull to the coastline (owner, 2026-10-22: 260 → 30 m, reach.ts)
 /** A bared bank is combed quickly: the sea is coming back. */
 export const TIDAL_LANDING_SEC = 18;
 
@@ -101,9 +102,8 @@ export function findLandable(game: Game, s: PlayerSession): { island: Island; fe
   let bd = Infinity;
   for (const id of islandsNear(game.world, ship.state.x, ship.state.y)) {
     const is = game.world.islands[id];
-    if (dist(is.x, is.y, ship.state.x, ship.state.y) > is.radius + LAND_RANGE) continue;
     if (is.hidden && !s.discovered.has(is.id)) continue; // a hidden island in her mist (docs/18 #30)
-    const d = Math.sqrt(closestOnPolygon(ship.state.x, ship.state.y, is.poly).d2);
+    const d = shoreGap(hullOf(ship), is, is.radius, LAND_RANGE);
     if (d > LAND_RANGE || d >= bd) continue;
     // The island's features first, then her people and beasts.
     // A named pirate's lair is the first thing on its island (docs/16 #7): the boats go for the camp.

@@ -3,6 +3,7 @@
 // sails within a cable of it fishes it out: the note comes to her as a letter, and the thrower hears who found it.
 // A bottle nobody finds in two weeks goes to the bottom.
 
+import { OBJ_R, gapTo, hullOf } from '../../../shared/src/data/reach.ts';
 import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { BOTTLE_COST, BOTTLE_FIND_R, BOTTLE_MAX_NOTE, BOTTLE_MAX_SILVER, BOTTLE_MIN_AGE_MS, BOTTLE_SINK_MS } from '../../../shared/src/data/bottles.ts';
 import { currentAt, isLand } from '../../../shared/src/world/worldgen.ts';
@@ -95,7 +96,7 @@ export function stepBottles(game: Game, dtSec = 10): void {
     for (const s of game.sessions) {
       const ship = s.ship;
       if (!ship || ship.docked || !ship.alive || s.accountId === b.account || !s.profile) continue;
-      if (Math.hypot(ship.state.x - b.x, ship.state.y - b.y) > BOTTLE_FIND_R) continue;
+      if (Math.abs(ship.state.x - b.x) > 200 || Math.abs(ship.state.y - b.y) > 200 || gapTo(hullOf(ship), b.x, b.y, OBJ_R) > BOTTLE_FIND_R) continue;
       found(game, s, b);
       break;
     }

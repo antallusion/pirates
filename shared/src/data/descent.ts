@@ -2,6 +2,8 @@
 // Stair opens in one sea; those who go down fight tier after tier, each a new mix of the deep's creatures, currents and
 // darkness; between tiers they take a blessing or a curse; the deepest go on the week's board.
 
+import { REACH_OBJ, gapTo } from './reach.ts';
+import type { Hull } from './reach.ts';
 import type { StatMods } from './stats.ts';
 
 type Tr = [string, string];
@@ -10,8 +12,11 @@ export const WEEK_MS = 7 * 86_400_000;
 /** The arena about the Stair; leaving it this long ends a captain's descent. */
 export const ARENA_R = 1800;
 export const OUT_SEC = 20;
-/** Within this of the Stair a descent is begun; group mates within this go down together. */
-export const GATE_R = 600;
+/** Within this of the Stair a descent is begun — from her hull to the eye of the Stair (GATE_BODY about its point;
+ *  owner, 2026-10-22: 600 m from her middle → 30 m from her hull, reach.ts); group mates within GROUP_R go down together. */
+export const GATE_R = REACH_OBJ;
+export const GATE_BODY = 40;
+export const atGate = (h: Hull, g: { x: number; y: number }, slack = 0): boolean => gapTo(h, g.x, g.y, GATE_BODY) <= GATE_R + slack;
 export const GROUP_R = 1500;
 /** A tier is over when its creatures are gone, or after this long (the deep takes the rest). */
 export const TIER_SEC = 5 * 60;

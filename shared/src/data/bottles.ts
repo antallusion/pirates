@@ -1,9 +1,12 @@
 // Bottle mail (docs/12 P10 #6): the rules of a bottle thrown into the sea, and its lines in both tongues.
 
+import { REACH_OBJ } from './reach.ts';
+
 export const BOTTLE_COST = 10;
 export const BOTTLE_MAX_NOTE = 240;
 export const BOTTLE_MAX_SILVER = 500;
-export const BOTTLE_FIND_R = 220;
+/** A captain's bottle is fished out by a ship whose hull passes this near it (reach.ts — owner, 2026-10-22: 220 → 30 m). */
+export const BOTTLE_FIND_R = REACH_OBJ;
 export const BOTTLE_MIN_AGE_MS = 3600_000;
 export const BOTTLE_SINK_MS = 14 * 86_400_000;
 

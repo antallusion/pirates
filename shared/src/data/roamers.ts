@@ -12,6 +12,8 @@
 // what and where it is whatever the sea grows later (a new island over a cell only takes that one stack away; nothing
 // else moves). Balance: tests/balance/roamers.ts, node tools/balance-roamers.ts.
 
+import { OBJ_R, REACH_OBJ, gapTo } from './reach.ts';
+import type { Hull } from './reach.ts';
 import { UNITS, armyPower, isPremiumUnit } from './army.ts';
 import type { ArmyStack, UnitId } from './army.ts';
 import { advHour, advLevelXp, buildAdv, guardBaseMight } from './advmap.ts';
@@ -121,8 +123,18 @@ export const ROAM_SHORE = 260;
 export const ROAM_HARBOUR = 1500;
 export const ROAM_LANE = 260;
 const KEEP_REEF = 220, KEEP_MARK = 140, KEEP_ADV = 320;
-/** Within this of a stack her action bar offers the fight (metres from it). */
-export const ROAM_REACH = 250;
+/** Within this of a stack her action bar offers the fight: metres from her hull's edge to the stack's (reach.ts — owner,
+ *  2026-10-22: thirty metres, not a cable). */
+export const ROAM_REACH = REACH_OBJ;
+/** Whether her hull is within the fight's reach of a stack standing at `p` (`slack`: the server's allowance for the
+ *  quarter second between her screen and its own reckoning). */
+export function roamInReach(h: Hull, p: { x: number; y: number }, slack = 0): boolean {
+  return gapTo(h, p.x, p.y, OBJ_R) <= ROAM_REACH + slack;
+}
+/** Metres of water between her hull and the stack's edge. */
+export function roamHullGap(h: Hull, p: { x: number; y: number }): number {
+  return gapTo(h, p.x, p.y, OBJ_R);
+}
 /** The stacks a captain is told of, about her (metres), and those on her minimap at full strength (the rest fade). */
 export const ROAM_SEE = 4500;
 export const ROAM_MINI = 2600;

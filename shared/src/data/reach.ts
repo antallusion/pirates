@@ -37,6 +37,8 @@ export const BOARD_ARC_WIDE_DEG = 70;
 export const REACH_HAIL = 120;
 /** The spyglass: as far as the glass shows her (and only what is on the captain's screen, the client's own test). */
 export const SIGHT_GLASS = 1200;
+/** The server's allowance over a reach (metres): the quarter second between her screen and its own reckoning. */
+export const REACH_SLACK = 8;
 /** A token on the water (a stack, a drift, a find, a bottle, a cache) is about this big about its point (metres). */
 export const OBJ_R = 12;
 /** Close but not yet in reach: the bar says how far is left within this many metres more (the hint «ещё 12 м»). */
@@ -95,6 +97,35 @@ export function gapToShore(h: Hull, poly: ArrayLike<number>): number {
     least = Math.min(least, pointInPolygon(x, y, poly) ? -d : d);
   }
   return least - h.beam / 2;
+}
+
+/** A thing ashore (a lair, a great one risen, a quest's site) is landed against from the stretch of beach nearest it:
+ *  the coast's point nearest the thing, and this much of the shore either way of it (metres). */
+export const LANDING_R = 20;
+
+/** The beach a thing ashore at (x, y) is landed against: the nearest point of its island's coast. */
+export function landingPoint(poly: ArrayLike<number>, x: number, y: number): { x: number; y: number } {
+  const c = closestOnPolygon(x, y, poly);
+  return { x: c.x, y: c.y };
+}
+
+/** Within the landing party's reach of a thing ashore at (x, y): her hull within REACH_SHORE of its beach. */
+export function landingWithin(h: Hull, poly: ArrayLike<number>, x: number, y: number, slack = 0): boolean {
+  const lp = landingPoint(poly, x, y);
+  return gapTo(h, lp.x, lp.y, LANDING_R) <= REACH_SHORE + slack;
+}
+
+/** Metres between her hull and an island's coast, or Infinity when she is plainly beyond `reach` of it (the coarse
+ *  test on its middle and radius first: a sea of islands is cheap). */
+export function shoreGap(h: Hull, isl: { x: number; y: number; poly: ArrayLike<number> }, radius: number, reach = REACH_SHORE): number {
+  if (Math.abs(isl.x - h.x) > radius + reach + h.length || Math.abs(isl.y - h.y) > radius + reach + h.length) return Infinity;
+  if (Math.hypot(isl.x - h.x, isl.y - h.y) > radius + reach + h.length / 2) return Infinity;
+  return gapToShore(h, isl.poly);
+}
+
+/** Within `reach` of an island's coast (a landing, a dig, a mine, her own island). */
+export function shoreWithin(h: Hull, isl: { x: number; y: number; poly: ArrayLike<number> }, radius: number, reach = REACH_SHORE): boolean {
+  return shoreGap(h, isl, radius, reach) <= reach;
 }
 
 /** Metres of water between two hulls (negative: they overlap). */

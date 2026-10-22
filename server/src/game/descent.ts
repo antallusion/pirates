@@ -3,10 +3,12 @@
 // current and a darkness; cleared, it pays and the leader takes a blessing or a curse; leaving the arena, sinking or
 // going home ends it; the deepest descents of the week go on the board.
 
+import { REACH_SLACK, hullOf } from '../../../shared/src/data/reach.ts';
 import { itemName, makeItem } from '../../../shared/src/data/items.ts';
 import {
   ARENA_R, BLESSINGS, BOONS, BREATH_SEC, CHOICE_SEC, CURRENTS, CURRENT_IDS, CURSES, DARKS, DARK_IDS, GATE_R, GROUP_R, HOSTS, HOST_IDS,
   OUT_SEC, TIER_SEC, WEEK_MS, glory, tierCount, tierLevelBonus, tierSilver,
+  atGate,
 } from '../../../shared/src/data/descent.ts';
 import type { BoonId, CurrentId, DarkId, HostId } from '../../../shared/src/data/descent.ts';
 import { hullsFor } from '../../../shared/src/data/shiplevel.ts';
@@ -111,7 +113,7 @@ export function descentLandable(game: Game, s: PlayerSession): { island: string;
   const ship = s.ship;
   if (!ship || ship.docked || runOf(game, s.accountId)) return null;
   const g = gateOf(game);
-  return Math.hypot(ship.state.x - g.x, ship.state.y - g.y) <= GATE_R ? { island: 'The Maelstrom Stair', feature: 'the way down', action: 'descent' } : null;
+  return atGate(hullOf(ship), g, REACH_SLACK) ? { island: 'The Maelstrom Stair', feature: 'the way down', action: 'descent' } : null;
 }
 
 /** She goes down, and her group near with her. */
@@ -121,7 +123,7 @@ export function startDescent(game: Game, s: PlayerSession): string | null {
   if (!ship || ship.docked || !ship.alive) return 'The Stair is not here.';
   if (runOf(game, s.accountId)) return 'You are already going down.';
   const g = gateOf(game);
-  if (Math.hypot(ship.state.x - g.x, ship.state.y - g.y) > GATE_R) return 'The Stair is not here.';
+  if (!atGate(hullOf(ship), g, REACH_SLACK)) return 'The Stair is not here.';
   const members = [s.accountId];
   const group = groupOfAccount(game, s.accountId);
   for (const m of group?.members ?? []) {
