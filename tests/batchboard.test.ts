@@ -139,3 +139,30 @@ test('sharks (and the other hunters) leave a newcomer in the starting sea be —
   run(20);
   assert.ok(pack.some((b) => beastBrain(game, b.id)?.target === wild.ship.id) || wild.ship.hull < w0, 'hunted out of the starting sea');
 });
+
+// ------------------------------------------------------------------ 6. Russian plurals in the server's lines
+
+test('a count in a server line reads in Russian with its noun in the number’s form (men, silver, units, days, minutes, ships…)', async () => {
+  const { ruCounts, countForm, COUNT_WORDS } = await import('../client/src/lang/counts.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { setLang } = await import('../client/src/i18n.ts');
+  assert.equal(ruCounts('Яма обваливается: 22 человек погребены под песком.'), 'Яма обваливается: 22 человека погребены под песком.');
+  assert.equal(ruCounts('21 человек, 11 человек, 5 человека'), '21 человек, 11 человек, 5 человек');
+  assert.equal(ruCounts('Призовая команда из 22 человек оставит вас без рук'), 'Призовая команда из 22 человек оставит вас без рук', 'after «из»: as written');
+  assert.equal(ruCounts('стоит 1 серебра, 2 серебра, 1 001 серебра'), 'стоит 1 серебро, 2 серебра, 1 001 серебро');
+  assert.equal(ruCounts('3 единиц, 1 единиц, 12 единиц'), '3 единицы, 1 единица, 12 единиц');
+  assert.equal(ruCounts('через 3 дней, 1 дней, 25 дней'), 'через 3 дня, 1 день, 25 дней');
+  assert.equal(ruCounts('2 минут, 1,5 минут, 21 минут'), '2 минуты, 1,5 минуты, 21 минута');
+  assert.equal(ruCounts('Потоплено 1 кораблей, 4 кораблей, 14 кораблей'), 'Потоплено 1 корабль, 4 корабля, 14 кораблей');
+  assert.equal(ruCounts('в 2 раз больше'), 'в 2 раза больше');
+  assert.equal(countForm('104', COUNT_WORDS[0]), 'человека');
+  // through the server's own table
+  setLang('ru');
+  try {
+    assert.equal(serverText('The pit caves in: 22 men buried with the sand.'), 'Яма обваливается: 22 человека погребены под песком.');
+    assert.match(serverText('{0} men go over the side without a word. The planks close up behind them.'.replace('{0}', '3')), /^3 человека молча/);
+    assert.match(serverText('The raiders off Saltmarrow are beaten! 21 silver of their plunder is yours.'), /21 серебро/);
+  } finally {
+    setLang('en');
+  }
+});

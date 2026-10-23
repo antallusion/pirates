@@ -4,6 +4,7 @@
 // themselves translated when they are known names or phrases. Unknown text passes through unchanged.
 
 import { fishingPatterns } from '../../../shared/src/data/fishing.ts';
+import { ruCounts } from './counts.ts';
 import { cosPatterns } from '../../../shared/src/data/cosmetics.ts'; // docs/32 §12
 import { beastPatterns } from '../../../shared/src/data/beasts.ts';
 import { piratePatterns } from '../../../shared/src/data/pirates.ts';
@@ -290,7 +291,8 @@ export function serverText(s: string): string {
   // Thousands the server writes with commas (1,020 silver) take the Russian space that does not break.
   // A name quoted in its own Russian («Фитиль и сало») inside a line that quotes it again keeps one pair of guillemets
   // («нападение на ««Фитиль и сало»»», QA 2026-10-09).
-  return typeset(feminineRu(s, translateLine(s))).replace(/««([^«»]*)»»/g, '«$1»').replace(/(\d),(?=\d{3}(?!\d))/g, '$1\u00a0').replace(/\b(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4})\b/g, (_, d: string, m: string, y: string) => `${d} ${MONTHS_RU[m]} ${y}`);
+  // (a count's noun in the number's form: «22 человека», not the table's one word for all — lang/counts.ts)
+  return typeset(feminineRu(s, ruCounts(translateLine(s)))).replace(/««([^«»]*)»»/g, '«$1»').replace(/(\d),(?=\d{3}(?!\d))/g, '$1\u00a0').replace(/\b(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4})\b/g, (_, d: string, m: string, y: string) => `${d} ${MONTHS_RU[m]} ${y}`);
 }
 
 /** For tests: how many patterns are known. */
