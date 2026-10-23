@@ -356,3 +356,18 @@ test('«Take tribute from merchants»: a merchant boarded and let go has paid it
   raidFate(game, s, m2, 'release');
   assert.ok(campaignActive(s.profile!)?.id !== 'c19_02' || campaignActive(s.profile!)!.step > i, 'two merchants: the step is done');
 });
+
+test('a chart step with every island of the sea already on her chart is counted, not left with nowhere to sail', async () => {
+  const { steps } = await import('./helpers.ts');
+  const { campaignActive } = await import('../server/src/game/campaign.ts');
+  const { chartableLeft } = await import('../server/src/game/quests.ts');
+  const { game, s, q, i } = await onCampaignStep('c34_01', 'chart');
+  assert.ok(chartableLeft(game, s) > 0);
+  steps(game, 40);
+  assert.equal(campaignActive(s.profile!)?.step, i, 'islands left: the step waits for her charts');
+  for (const is of game.world.islands) s.discovered.add(is.id);
+  assert.equal(chartableLeft(game, s), 0);
+  steps(game, 40);
+  const a = campaignActive(s.profile!);
+  assert.ok(a?.id !== q.id || a.step > i, `counted (${JSON.stringify(a)})`);
+});

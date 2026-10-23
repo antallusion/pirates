@@ -22,5 +22,6 @@ export const SERVER_RU_CAMPAIGN: Record<string, string> = {
   'No room in the hold for provisions — the step is counted.': 'В трюме нет места для провизии — шаг засчитан.',
   'No room in the hold for sailcloth — the step is counted.': 'В трюме нет места для парусины — шаг засчитан.',
   'The hold is full — the step is counted.': 'Трюм полон — шаг засчитан.',
+  'Every island of the sea is on your chart already — the step is counted.': 'Все острова моря уже на вашей карте — шаг засчитан.',
   'Only a lesson of the shops can be skipped': 'Пропустить можно только урок лавок',
 };

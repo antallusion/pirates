@@ -689,7 +689,7 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
       if (kill && spent && q.kind !== 'campaign' && (st.type === 'sink' || st.type === 'board' || st.type === 'prize' || st.type === 'lair')) break;
       // The band's leader sunk: the hunt is won at a stroke.
       // A step of buying, hiring or filling that is done already or cannot be done (a full crew, a full hold): counted.
-      const moot = stepMoot(s, st);
+      const moot = stepMoot(s, st, game);
       if (moot) game.sendTo(s, { t: 'toast', msg: moot, kind: 'info' });
       const gained = moot ? Math.max(1, stepCount(st) - qs.progress) : st.type === 'sink' && ev.k === 'sink' && qs.leader !== undefined && ev.victim.id === qs.leader ? Math.max(1, stepCount(st) - qs.progress) : stepGain(game, s, st, ev);
       if (gained <= 0) break;
@@ -801,9 +801,12 @@ const TRADE_GOODS = (Object.keys(GOODS) as GoodId[]).filter((g) => GOODS[g].cate
  * Checked as the step comes and every second after (questEvent's tick). Steps of delivery (`pickup`, `deliver`, `carry`)
  * are not: the hold is emptied and the goods come aboard as before.
  */
-export function stepMoot(s: PlayerSession, st: QuestStep): string | null {
+export function stepMoot(s: PlayerSession, st: QuestStep, game?: Game): string | null {
   const ship = s.ship;
   if (!ship) return null;
+  // A chart of islands never seen, when she has seen every one the sea has (a captain of the old sea, the late chapters'
+  // charts after the Abyss's forty islands): nothing left to chart — «Плыть» had nowhere to go (late-game QA 2026-10-23).
+  if (st.type === 'chart' && game && chartableLeft(game, s) === 0) return 'Every island of the sea is on your chart already — the step is counted.';
   const crewFull = ship.crew >= ship.stats.crewMax;
   switch (st.type) {
     case 'buy': {
@@ -820,6 +823,13 @@ export function stepMoot(s: PlayerSession, st: QuestStep): string | null {
     default:
       return null;
   }
+}
+
+/** The islands she may still chart (goalroute.ts «Плыть»'s own: not a rock, a raft, a hidden isle or a claim's slot). */
+export function chartableLeft(game: Game, s: PlayerSession): number {
+  let n = 0;
+  for (const i of game.world.islands) if (!i.minor && !i.raft && !i.hidden && !i.slot && !s.discovered.has(i.id)) n++;
+  return n;
 }
 
 /** The step types stepMoot double-checks (tests: every buy/hire step has its check). */
