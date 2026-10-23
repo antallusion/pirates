@@ -410,3 +410,17 @@ test('«/mastery all» brings the ranks of glory its nodes stand on: never «с�
   const src = (await import('node:fs')).readFileSync(new URL('../client/src/ui/throne.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /n: g\.points - g\.spent/, 'the window never shows a negative count');
 });
+
+test('a toast over an open window keeps off its buttons: under the Throne’s tab strip when its foot is buttons too', async () => {
+  const { stripLane } = await import('../client/src/ui/hud.ts');
+  const W = 844, H = 390, sa = 46;
+  const tabs = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => ({ left: 300 + i * 55, top: 60, right: 345 + i * 55, bottom: 92 }));
+  const foot = [{ left: 100, top: 350, right: 740, bottom: 384 }];
+  assert.equal(stripLane([], W, H, sa, 40, 560), 'bottom', 'nothing in the way: the bottom band');
+  assert.equal(stripLane(foot, W, H, sa, 40, 560), 'top', 'buttons along the foot: the top band');
+  const lane = stripLane([...tabs, ...foot], W, H, sa, 40, 560);
+  assert.equal(typeof lane, 'number', `the Throne: under its tabs (${lane})`);
+  assert.ok((lane as number) >= 92, 'below the tab strip');
+  const css = (await import('node:fs')).readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8');
+  assert.match(css, /#modal-toasts\.mt-top\.mt-below \{ top: var\(--mt-below\); bottom: auto; \}/);
+});

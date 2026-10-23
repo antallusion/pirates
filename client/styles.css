@@ -2685,6 +2685,8 @@ body.touch .base-board .bplot { cursor: default; }
 body:has(.k-sheet-root.k-open) #modal-toasts, #modal-toasts.mt-top { top: calc(var(--sa-t, 0px) + 6px); bottom: auto; }
 /* (between the window's title plate and its figures on a phone held sideways) */
 @media (max-height: 520px) { #modal-toasts.mt-top { width: min(420px, calc(100vw - 16px)); } }
+/* (under the window's head row of tabs when its foot and its very top are both buttons: hud.ts stripLane) */
+#modal-toasts.mt-top.mt-below { top: var(--mt-below); bottom: auto; }
 /* The column's toasts wait under an open window (the strip takes the new ones); they come back when it closes. */
 body:has(#modal:not(.hidden)) #toasts { display: none; }
 
