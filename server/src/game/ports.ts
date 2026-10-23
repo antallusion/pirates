@@ -27,6 +27,7 @@ import { onEventSale } from './events.ts';
 import { levyFor, noteSale, payLevy, saleMul } from './empires.ts';
 import { seasonStat, shanty } from './seasons.ts';
 import { GOODS, GOOD_IDS } from '../../../shared/src/data/goods.ts';
+import { linked } from '../../../shared/src/data/questgen.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { AMMO, AMMO_IDS, GUNS, GUN_IDS, MODULES, MODULE_IDS, MOUNTS, SHIP_CLASSES, SHIP_CLASS_IDS, defaultGunFor, moduleCost } from '../../../shared/src/data/ships.ts';
@@ -624,7 +625,8 @@ function hotRun(game: Game, s: PlayerSession, port: Port): Contract[] {
   const p = s.profile!;
   if (!ship.hasFlag('black_ledger') || port.faction !== 'brokers') return [];
   if (p.smuggle.hotRun && p.smuggle.hotRun.expiresAt > game.now) return [p.smuggle.hotRun];
-  const dests = game.world.ports.filter((q) => q.blackMarket && q.id !== port.id && dist(q.x, q.y, port.x, port.y) < 45000);
+  // (owner, 2026-10-23: no run over 3 km on the sea route — «никто за 6-10 и тем более 20 км никуда не поплывет»)
+  const dests = game.world.ports.filter((q) => q.blackMarket && q.id !== port.id && !q.raft && linked(game.world, port, q));
   if (!dests.length) return [];
   const dest = dests[Math.floor(game.rng.float() * dests.length)];
   const good: GoodId = game.rng.chance(0.5) ? 'dreamleaf' : 'cursed_relics';
@@ -689,7 +691,8 @@ export function generateContracts(game: Game, port: Port): Contract[] {
   const out: Contract[] = [];
   const rng = game.rng;
   const now = game.now;
-  const others = game.world.ports.filter((p) => p.id !== port.id && dist(p.x, p.y, port.x, port.y) < 32000 && dist(p.x, p.y, port.x, port.y) > 4000);
+  // the harbours a letter or a cargo is sent to: within a chain's leg on the sea route, there and back (owner, 2026-10-23)
+  const others = game.world.ports.filter((p) => p.id !== port.id && !p.raft && linked(game.world, port, p));
   const lawful = FACTIONS[port.faction].lawful;
   for (let i = 0; i < 4; i++) {
     const kind = rng.weighted<Contract['kind']>([['delivery', 3], ['courier', 1.5], ['bounty', lawful ? 2 : 0.2]]);
@@ -725,7 +728,7 @@ export function generateContracts(game: Game, port: Port): Contract[] {
   }
   // Errands (owner, 2026-09-29: short jobs with a clock): ten minutes, paid double — letters to the next harbour,
   // and in the wild waters a rover seen off the harbour mouth.
-  const nearby = game.world.ports.filter((p) => p.id !== port.id && dist(p.x, p.y, port.x, port.y) >= 2500 && dist(p.x, p.y, port.x, port.y) < 10000);
+  const nearby = others;
   if (nearby.length) {
     const dest = nearby.reduce((a, b) => (dist(a.x, a.y, port.x, port.y) < dist(b.x, b.y, port.x, port.y) ? a : b));
     const d = dist(dest.x, dest.y, port.x, port.y);

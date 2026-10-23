@@ -57,11 +57,11 @@ test('The Last Volley: sink, deliver, sink bigger, report — and the Corsair\'s
     questEvent(game, s, { k: 'sink', victim: v });
   }
   assert.equal(p.quests.active[0].step, 1);
-  // Arriving without the powder does nothing.
-  questEvent(game, s, { k: 'dock', port: dock(game, s, 'blackwater') });
+  // Arriving without the powder does nothing (the battery is Gravesend's own: owner 2026-10-23, no run of 3 km and more).
+  questEvent(game, s, { k: 'dock', port: dock(game, s, 'gravesend') });
   assert.equal(p.quests.active[0].step, 1);
   ship.cargo.gunpowder = 25;
-  questEvent(game, s, { k: 'dock', port: game.portById('blackwater')! });
+  questEvent(game, s, { k: 'dock', port: game.portById('gravesend')! });
   assert.equal(p.quests.active[0].step, 2);
   assert.equal(ship.cargo.gunpowder, 5);
   atSea(game, s);

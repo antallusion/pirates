@@ -9,7 +9,10 @@ import type { Island } from '../shared/src/world/worldgen.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MAX_LEVEL, WORLD_SEED, xpForLevel } from '../shared/src/constants.ts';
-import { LOCAL_R, OPENING_SLOTS, buildCampaign, campaignLegs, locDist, nearGood, nearestSeller } from '../shared/src/data/campaign/build.ts';
+import { CHAPTER_LEG, LOCAL_R, OPENING_SLOTS, buildCampaign, locDist, nearGood } from '../shared/src/data/campaign/build.ts';
+import { campaignChainLegs } from '../shared/src/data/chainaudit.ts';
+import { CHAIN_LEG, legTo, nearestSellerByRoute } from '../shared/src/data/questlegs.ts';
+import { navLen } from '../shared/src/world/navlen.ts';
 import { CHAPTERS } from '../shared/src/data/campaign/chapters.ts';
 import { checkChapter } from '../shared/src/data/campaign/check.ts';
 import { campaignPaces, roadXp } from '../shared/src/data/campaign/pacing.ts';
@@ -68,7 +71,8 @@ test('the owner’s steps: an island visited and ships boarded in every chapter;
   const mix: Record<string, number> = {};
   for (const ch of PLAN) {
     const qs = built.slots.filter((s) => s.ch === ch.n).map((s) => s.a);
-    assert.ok(qs.filter((q) => q.steps.some((x) => x.type === 'isle')).length >= 2, `chapter ${ch.n}: islands`);
+    // (an island's waters, or — where none lies within a chain's leg, owner 2026-10-23 — the coves of its harbour's own)
+    assert.ok(qs.filter((q) => q.steps.some((x) => x.type === 'isle' || x.type === 'spot')).length >= 2, `chapter ${ch.n}: islands`);
     assert.ok(qs.filter((q) => q.steps.some((x) => x.type === 'board')).length >= 3, `chapter ${ch.n}: boardings`);
     for (const q of qs) for (const st of q.steps) mix[st.type] = (mix[st.type] ?? 0) + 1;
   }
@@ -666,7 +670,9 @@ test('location by location: small runs (2–6 quests), each done within 1.5 km o
         else if ('near' in st && st.near) d = Math.hypot(st.near.x - L.x, st.near.y - L.y);
         else continue;
         checked++;
-        if (d > LOCAL_R + 50) far.push(`${q.id} ${st.type} ${Math.round(d)} m from ${L.name}`);
+        // (a good sold nowhere near waits at a neighbour's quay: within a chain's leg — owner, 2026-10-23)
+        const lim = st.type === 'pickup' && st.port !== L.id ? CHAIN_LEG : LOCAL_R + 50;
+        if (d > lim) far.push(`${q.id} ${st.type} ${Math.round(d)} m from ${L.name}`);
       }
     }
   }
@@ -695,44 +701,48 @@ test('a harbour with no island within reach of its quay: no island steps there �
   assert.ok(spots > 5, `${spots} coves and spits`);
 });
 
-test('the voyages: no leg over about 6 km before the eighth level, short everywhere the coast allows', () => {
-  const paces = campaignPaces();
-  const legs = built.locations.slice(1).map((l, i) => ({ l, from: built.locations[i], d: Math.hypot(l.x - built.locations[i].x, l.y - built.locations[i].y) }));
-  for (const x of legs) if (paces[x.l.from].gate < 8) assert.ok(x.d <= 6500, `${x.from.name} → ${x.l.name}: ${(x.d / 1000).toFixed(1)} km before the eighth level`);
-  const avg = legs.reduce((a, x) => a + x.d, 0) / legs.length;
-  assert.ok(avg < 7000, `${(avg / 1000).toFixed(1)} km a voyage`);
-  const long = legs.filter((x) => x.d > 8000);
-  assert.ok(long.length <= 30, `${long.length} legs over 8 km`);
-  if (process.env.CAMPAIGN_PACE) console.log(long.map((x) => `ch${x.l.ch} ${x.from.name} → ${x.l.name} ${(x.d / 1000).toFixed(1)} km`).join(' | '));
-});
-
-test('every run short (mid-game QA 2026-10-23: chapter 6 opened with 26 km to Gravesend, the pledge’s pearls sold 15 km off): no voyage within a sea, delivery or good’s seller over 11.5 km', () => {
+test('the voyages (owner, 2026-10-23: «максимум на удалении 3км друг от друга»): within a chapter no voyage between its places over CHAPTER_LEG on the sea route; the one long sail a chapter asks is its hand-over', () => {
   for (const seed of [1337, WORLD_SEED]) {
     const w = seed === 1337 ? world : generateWorld(seed);
     const c = seed === 1337 ? built : buildCampaign(w, seed, CHAPTERS);
-    const legs = campaignLegs(w, c);
-    const long = legs.filter((l) => !l.crossing && l.d > 11500);
-    assert.deepEqual(long.map((l) => `${l.q} ${l.kind} ${l.from} → ${l.to} ${(l.d / 1000).toFixed(1)} km`), [], `seed ${seed}`);
-    assert.ok(legs.filter((l) => !l.crossing && l.d > 8000).length <= 16, `seed ${seed}: runs over 8 km`);
-    // chapter 6's first quest: no `at:` harbour far off pulls the run there; its pledge bought near
-    const c6 = c.locations.findIndex((l) => l.ch === 6);
-    const prev = c.locations[c6 - 1];
-    assert.ok(Math.hypot(c.locations[c6].x - prev.x, c.locations[c6].y - prev.y) < 20000, `seed ${seed}: chapter 6 opens far off`);
-    const pledge = legs.find((l) => l.q === 'c06_02' && l.kind === 'bring')!;
-    assert.ok(pledge.d <= 6000, `seed ${seed}: the pledge ${pledge.from} ${(pledge.d / 1000).toFixed(1)} km`);
+    const far: string[] = [];
+    c.locations.forEach((l, i) => {
+      const prev = c.locations[i - 1];
+      if (!prev || prev.ch !== l.ch || (i === c.locations.length - 1 && l.id === 'saltmarrow')) return;
+      if (prev.id === l.id && prev.kind === l.kind) return;
+      const a = prev.kind === 'isle' ? w.islands[prev.id as number] : null, b = l.kind === 'isle' ? w.islands[l.id as number] : null;
+      // (quay to quay, or into an island's waters from the facing shore)
+      const from = a ? { x: a.x + ((l.x - a.x) / Math.hypot(l.x - a.x, l.y - a.y)) * (a.radius + 40), y: a.y + ((l.y - a.y) / Math.hypot(l.x - a.x, l.y - a.y)) * (a.radius + 40) } : prev;
+      const d = b ? legTo(w, from, { x: b.x, y: b.y, r: b.radius + 40, name: '' }, CHAIN_LEG).d : navLen(w, from.x, from.y, l.x, l.y, CHAIN_LEG);
+      if (!(d <= CHAPTER_LEG + 1)) far.push(`ch${l.ch} ${prev.name} → ${l.name}: ${(d / 1000).toFixed(1)} km`);
+    });
+    assert.deepEqual(far, [], `seed ${seed}`);
+  }
+});
+
+test('chapter 6 (mid-game QA 2026-10-23: it opened with 26 km to Gravesend, the pledge’s pearls sold 15 km off): its `at:` harbour no pull from afar, the pledge taken on within 3 km', () => {
+  for (const seed of [1337, WORLD_SEED]) {
+    const w = seed === 1337 ? world : generateWorld(seed);
+    const c = seed === 1337 ? built : buildCampaign(w, seed, CHAPTERS);
+    const legs = campaignChainLegs(w, c).legs.filter((l) => l.quest === 'c06_01' || l.quest === 'c06_02');
+    assert.ok(legs.length >= 2);
+    for (const l of legs) assert.ok(l.d <= CHAIN_LEG + 1, `seed ${seed}: ${l.quest} → ${l.to} ${(l.d / 1000).toFixed(1)} km`);
+    const q = c.quests.find((x) => x.id === 'c06_02')!;
+    assert.ok(q.steps.some((st) => st.type === 'deliver'), 'the pledge delivered');
   }
 });
 
 test('a delivery’s good its words do not name is the one of its kind sold near; one they name is kept', () => {
   const ports = world.ports.filter((p) => !p.raft);
-  const far = ports.find((h) => (nearestSeller(ports, h.x, h.y, 'pearls', h.id)?.d ?? 0) > 9000)!;
+  const far = ports.find((h) => !nearestSellerByRoute(world, h, 'pearls', undefined, CHAIN_LEG) && KIN_NEAR.some((g) => nearestSellerByRoute(world, h, g, undefined, 1500)))!;
   assert.ok(far, 'a harbour with no pearls near');
-  const g = nearGood(ports, far, 'pearls', 20, 'bring a pledge of costly goods');
+  const g = nearGood(world, far, 'pearls', 'bring a pledge of costly goods');
   assert.notEqual(g, 'pearls');
-  assert.ok(nearestSeller(ports, far.x, far.y, g, far.id)!.d < nearestSeller(ports, far.x, far.y, 'pearls', far.id)!.d);
-  assert.equal(nearGood(ports, far, 'pearls', 20, 'bring pearls and ask for a strongroom'), 'pearls');
-  assert.equal(nearGood(ports, far, 'gunpowder', 20, 'bring good powder north'), 'gunpowder');
+  assert.ok(nearestSellerByRoute(world, far, g, undefined, CHAIN_LEG));
+  assert.equal(nearGood(world, far, 'pearls', 'bring pearls and ask for a strongroom'), 'pearls');
+  assert.equal(nearGood(world, far, 'gunpowder', 'bring good powder north'), 'gunpowder');
 });
+const KIN_NEAR = ['spices', 'tobacco', 'scrimshaw', 'ambergris', 'narwhal_tusk'] as const;
 
 test('the locations go through all the seas, the start and the end at home, the seas first come to as their levels rise', () => {
   const firsts = new Map<string, number>();
@@ -744,7 +754,8 @@ test('the locations go through all the seas, the start and the end at home, the 
   for (let i = 1; i < gates.length; i++) assert.ok(gates[i] >= gates[i - 1], 'each sea first come to no earlier than the one before');
   assert.equal([...firsts.keys()].at(-1), 'the_abyss');
   const ports = new Set(built.locations.filter((l) => l.kind === 'port').map((l) => l.id));
-  assert.ok(ports.size >= 80, `${ports.size} harbours`);
+  // (a chapter's places within 3 km of each other — owner, 2026-10-23 — so fewer harbours, a run often held where it was)
+  assert.ok(ports.size >= 40, `${ports.size} harbours`);
   assert.ok(built.locations.some((l) => l.kind === 'isle' && l.region === 'the_abyss'), 'islands of the Abyss itself');
 });
 

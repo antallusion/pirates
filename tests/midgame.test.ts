@@ -264,7 +264,7 @@ test('a landing’s haul with a price in it reads in Russian («1 Provisions, pa
   } finally { setLang('en'); applyDataLocale('en'); }
 });
 
-test('an island’s waters to reach: «Плыть» marks its coast nearest her, and her hull at the mark counts', async () => {
+test('an island’s waters to reach: «Плыть» marks its coast nearest her, and her hull at the mark counts', async (tc) => {
   const { makeGame, join } = await import('./helpers.ts');
   const { campaignOf } = await import('../server/src/game/campaign.ts');
   const { questEvent } = await import('../server/src/game/quests.ts');
@@ -272,9 +272,14 @@ test('an island’s waters to reach: «Плыть» marks its coast nearest her,
   const { game } = makeGame();
   join(game, 'Lantern');
   const s = game.sessionByName('Lantern')!;
-  const q = campaignOf(game).quests.find((x) => x.id === 'c04_08')!; // «Thieves from the Water»: Lanternwick Rock's waters
+  // a quest of the campaign whose step is an island's waters, sent to Lanternwick Rock's (the island of the QA's bay;
+  // its places move with the campaign's, owner 2026-10-23)
+  const q = campaignOf(game).quests.find((x) => x.steps.some((st) => st.type === 'isle'))!;
   const i = q.steps.findIndex((st) => st.type === 'isle');
-  const isl = (q.steps[i] as { island: number }).island;
+  const isl = game.world.islands.find((x) => x.name === 'Lanternwick Rock')!.id;
+  const was = (q.steps[i] as { island: number }).island;
+  (q.steps[i] as { island: number }).island = isl;
+  tc.after(() => ((q.steps[i] as { island: number }).island = was));
   s.profile!.level = 10;
   s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
   s.ship!.docked = null; s.profile!.docked = null;
