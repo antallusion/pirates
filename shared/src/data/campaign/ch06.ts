@@ -29,10 +29,10 @@ export const CHAPTER: ChapterSrc = {
       s: ['at:gravesend', 'hub'],
     },
     {
-      t: ['A Depositor’s Pearls', 'Жемчуг вкладчика'],
+      t: ['A Depositor’s Pledge', 'Залог вкладчика'],
       b: [
-        'The bell-in-a-coin seal belongs to the House of Vane, whose brass counting rooms stand over the flooded market of {hub}. The House opens its doors only to depositors. Isolde suggests you become one: bring pearls and ask for a strongroom.',
-        'Печать с колоколом в монете принадлежит дому Вейна, чьи медные конторы стоят над затопленным рынком порта {hub}. Двери дома открыты только вкладчикам. Изольда предлагает вам им стать: привезите жемчуг и попросите отдельное хранилище.',
+        'The bell-in-a-coin seal belongs to the House of Vane, whose brass counting rooms stand over the flooded market of {hub}. The House opens its doors only to depositors. Isolde suggests you become one: bring a pledge of costly goods and ask for a strongroom.',
+        'Печать с колоколом в монете принадлежит дому Вейна, чьи медные конторы стоят над затопленным рынком порта {hub}. Двери дома открыты только вкладчикам. Изольда предлагает вам им стать: привезите в залог дорогой товар и попросите отдельное хранилище.',
       ],
       d: [
         'The strongroom you are given stands next to one whose lock is stamped with a small bell.',

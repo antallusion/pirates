@@ -18,7 +18,8 @@ import { islandLife } from '../../world/islandlife.ts';
 import { isLand } from '../../world/worldgen.ts';
 import { sectorAt } from '../../world/sectors.ts';
 import { hashString } from '../../rng.ts';
-import { GOODS } from '../goods.ts';
+import { GOODS, portTrades } from '../goods.ts';
+import type { GoodId } from '../goods.ts';
 import { SITE_NAMES } from '../questgen.ts';
 import type { QuestDef, QuestStep } from '../quests.ts';
 import { shipBandOf } from '../xpcurve.ts';
@@ -169,9 +170,13 @@ interface Run {
   from: number;
   size: number;
   gate: number;
-  /** `at:` ports named by its quests (the run is held there). */
+  /** `at:` ports named by its quests (the run is held there when it is near: mid-game QA 2026-10-23, chapter 6 sent her
+   *  26 km to Gravesend for its first quest — the words name the location's own harbour, whatever the code's port). */
   at?: string;
   island: boolean;
+  /** The goods its `bring:` steps ask for, bought at the nearest harbour that trades them (a seller near is a pull; a
+   *  strong one for a good the quest's words name, which nearGood never trades for another). */
+  goods: { good: GoodId; named: boolean }[];
 }
 
 /** A chapter's runs, of these lengths. */
@@ -184,7 +189,11 @@ function runsFrom(ch: ChapterSrc, first: number, lens: number[]): Run[] {
     const ats = qs.flatMap((q) => [q, ...(q.alt ? [q.alt] : [])]).flatMap((q) => q.s).map((x) => (typeof x === 'string' ? x : x[0])).filter((c) => c.startsWith('at:')).map((c) => c.slice(3));
     // (a run whose quests name no harbour may be held at an island's anchorage)
     const island = !qs.some((q) => portBound(q) || (q.alt ? portBound(q.alt) : false));
-    out.push({ ch, from, size: len, gate: paces[Math.min(paces.length - 1, from)].gate, ...(ats.length ? { at: ats[ats.length - 1] } : {}), island });
+    const goods = qs.flatMap((q) => [q, ...(q.alt ? [q.alt] : [])]).flatMap((q) => {
+      const told = [q.t[0], q.b[0], q.d[0]].join(' ').toLowerCase();
+      return q.s.map((x) => parseStep(typeof x === 'string' ? x : x[0])).flatMap((x) => (typeof x !== 'string' && x.kind === 'bring' && x.good ? [{ good: x.good as GoodId, named: !goodSwaps(x.good as GoodId, told) }] : []));
+    });
+    out.push({ ch, from, size: len, gate: paces[Math.min(paces.length - 1, from)].gate, ...(ats.length ? { at: ats[ats.length - 1] } : {}), island, goods });
     from += len;
   }
   return out;
@@ -217,6 +226,8 @@ function abyssLens(ch: ChapterSrc, size: number): number[] {
 export const LEG_EARLY = 6000;
 export const LEG_LATE = 8000;
 export const EARLY_LEVEL = 8;
+/** How hard a chapter's first run is drawn to its mentor's harbour, and its last to the next one's. */
+const HUB_PULL = 0.3;
 
 /** The islands within reach of a harbour's quay (owner: what is farther from the quay than 1.5 km is far). */
 const nearCount = (pl: Places, p: Port): number => islandsNear(pl, { kind: 'port', id: p.id, x: p.x, y: p.y }, LOCAL_R).length;
@@ -233,6 +244,7 @@ const nearCount = (pl: Places, p: Port): number => islandsNear(pl, { kind: 'port
 function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: number }[]): { runs: Run[]; locations: CampaignLoc[] } {
   const byId = (id: string) => pl.ports.find((p) => p.id === id)!;
   const used = new Map<string | number, number>();
+  const seller = new Map<string, number>();
   const runs: Run[] = [];
   const locations: CampaignLoc[] = [];
   let prev: { x: number; y: number } | null = null;
@@ -248,8 +260,9 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
     const lastOfAll = ci === chapters.length - 1;
     const abyss = ch.region === 'the_abyss';
     const fixedOf = (run: Run, r: number, n: number): Node | undefined => {
+      // (the home-coming's harbour is the campaign's end, however far; any other `at:` a pull below, not a must)
       const at = run.at ? byId(run.at) : undefined;
-      if (at && (nearCount(pl, at) >= 2 || (lastOfAll && r === n - 1))) return portNode(at);
+      if (at && lastOfAll && r === n - 1) return portNode(at);
       // the mentor's port, where it has islands within reach of its quay (or it is the start, Saltmarrow: the newcomer's
       // own); else the run goes to the nearest place about it that has (the path's pull below)
       const hub = byId(ch.hub);
@@ -259,6 +272,12 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
     const isleSeas: RegionId[] = abyss ? ['the_abyss'] : [ch.region, ...(ch.more ?? [])];
     const bridge: RegionId[] = next && !abyss ? [next.ch.region === 'the_abyss' ? 'drowned_crown' : next.ch.region] : [];
     const target = (campaignPaces()[first]?.gate ?? 1) < EARLY_LEVEL ? LEG_EARLY : LEG_LATE;
+    const sellerCost = (n: Node, g: GoodId, lim: number): number => {
+      const k = `${n.id}|${g}`;
+      let d = seller.get(k);
+      if (d === undefined) seller.set(k, (d = nearestSeller(pl.ports, n.x, n.y, g, n.id as string)?.d ?? 1e5));
+      return d + 30 * Math.max(0, d - lim * 1.25);
+    };
     const legCost = (d: number) => d + 30 * Math.max(0, d - target);
     const start = prev as { x: number; y: number } | null;
     const hub = byId(ch.hub);
@@ -274,15 +293,21 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
         if (fix) return [fix];
         const band = shipBandOf(run.gate);
         const fits = (n: Node) => lv(n.id) <= band + 2 && lv(n.id) >= band - 2;
+        const at = run.at ? byId(run.at) : undefined;
         const c = [
-          ...portNodes.filter((n) => (seas.includes(n.region) || bridge.includes(n.region)) && fits(n)),
+          ...(at && nearCount(pl, at) >= 2 ? [portNode(at)] : []),
+          ...portNodes.filter((n) => n.id !== run.at && (seas.includes(n.region) || bridge.includes(n.region)) && fits(n)),
           ...(run.island ? isleNodes.filter((n) => (isleSeas.includes(n.region) || bridge.includes(n.region)) && fits(n)) : []),
         ];
         return c.length ? c : portNodes.filter((n) => seas.includes(n.region) && n.near >= 1);
       });
       const node = (n: Node, run: Run) => {
         const band = shipBandOf(run.gate), l = lv(n.id);
-        return (run === rs[0] && !abyss ? 0.3 * Math.hypot(n.x - hub.x, n.y - hub.y) : 0) + (used.get(n.id) ?? 0) * 1e5 + (n.near === 0 ? 2500 : n.near === 1 ? 1000 : 0)
+        // a delivery's good: its nearest seller a run there and back (QA 2026-10-23: the pearls for Shell Creek were
+        // sold 15 km off); the `at:` harbour its quests name, a pull while it is near
+        let goods = 0;
+        if (n.kind === 'port') for (const g of run.goods) goods += g.named ? sellerCost(n, g.good, target) : 0.3 * Math.min(2e4, sellerCost(n, g.good, 1e9));
+        return (run.at === n.id ? -2500 : 0) + goods + (run === rs[0] && !abyss ? HUB_PULL * Math.hypot(n.x - hub.x, n.y - hub.y) : 0) + (used.get(n.id) ?? 0) * 1e5 + (n.near === 0 ? 2500 : n.near === 1 ? 1000 : 0)
           + (l > band + 1 ? 6000 : l > band || l < band - 1 ? 3000 : 0) + (isleSeas.includes(n.region) || seas.includes(n.region) ? 0 : 1500) + (n.kind === 'isle' && !abyss ? 1200 : 0);
       };
       // the path: best[r][j] the cost of the runs up to r ending at its j-th candidate
@@ -306,7 +331,7 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
       const last = rs.length - 1;
       let bj = -1, bc = Infinity;
       cands[last].forEach((p, j) => {
-        const c = best[last][j].cost + (nextHub ? 0.3 * Math.hypot(nextHub.x - p.x, nextHub.y - p.y) : 0);
+        const c = best[last][j].cost + (nextHub ? HUB_PULL * Math.hypot(nextHub.x - p.x, nextHub.y - p.y) : 0);
         if (c < bc) [bc, bj] = [c, j];
       });
       if (bj < 0) continue;
@@ -437,9 +462,15 @@ function buildQuest(c: QuestCtx, src: { t: T; b: T; d: T; s: StepSrc[]; lane?: {
     isle: i1.is.name, isle2: i2.is.name, region: REGIONS[loc.region].name, giver: giverName(ch, 0),
   };
   const steps: QuestStep[] = [];
+  const told = [src.t[0], src.b[0], src.d[0]].join(' ').toLowerCase();
   src.s.forEach((x, i) => {
-    const s = specs[i];
+    let s = specs[i];
     if (!s) return;
+    // a delivery's good sold nowhere near (and not named by the quest's words): the nearest of its kind
+    if (s.kind === 'bring' && s.good) {
+      const g = nearGood(pl.ports, home, s.good, gate, told);
+      if (g !== s.good) s = { ...s, good: g };
+    }
     const n = s.kind === 'dive' ? 1 : s.n ?? defaultCount(s.kind, band); // (one wreck is laid for a dive at a location)
     const sv: Record<string, string> = { ...v, n: String(n), ...(s.good ? { good: GOODS[s.good].name } : {}) };
     if (s.kind === 'land' && i1.site) sv.site = SITE_NAMES[i1.site] ?? i1.site;
@@ -516,6 +547,40 @@ function buildQuest(c: QuestCtx, src: { t: T; b: T; d: T; s: StepSrc[]; lane?: {
   };
 }
 
+/** Goods a delivery may stand in for one another with, by kind — and the words that name each in a quest's English (a
+ *  quest whose words name its good keeps it: «bring powder» is not to bring muskets). */
+const KIN: GoodId[][] = [
+  ['pearls', 'spices', 'tobacco', 'scrimshaw', 'ambergris', 'narwhal_tusk'],
+  ['coal', 'timber', 'tar', 'whale_oil'],
+  ['drowned_silk', 'leviathan_bone', 'kraken_ink', 'sulfur_iron'],
+  ['rum', 'sugar', 'salt', 'cloth'],
+];
+const NAMED: Partial<Record<GoodId, RegExp>> = {
+  pearls: /\bpearls?\b/, spices: /\bspices?\b/, tobacco: /\btobacco\b/, scrimshaw: /\bscrimshaw\b/, ambergris: /\bambergris\b/, narwhal_tusk: /\b(narwhal|tusks?)\b/,
+  coal: /\b(coal|colliers?)\b/, timber: /\b(timber|logs?|lumber)\b/, tar: /\b(tar|pitch)\b/, whale_oil: /\b(whale oil|oil)\b/,
+  drowned_silk: /\bsilk\b/, leviathan_bone: /\bleviathan bone\b/, kraken_ink: /\bink\b/, sulfur_iron: /\bsul(f|ph)ur\b/,
+  rum: /\brum\b/, sugar: /\bsugar\b/, salt: /\bsalt\b/, cloth: /\bcloth\b/,
+};
+
+/** Whether a delivery's good may be traded for another of its kind (it has kin, and the quest's words do not name it). */
+export const goodSwaps = (good: GoodId, told: string): boolean => !!KIN.find((k) => k.includes(good)) && !(NAMED[good]?.test(told) ?? true);
+
+/** The good a `bring:` step asks for at a harbour (mid-game QA 2026-10-23: the pearls for Shell Creek were sold 15 km
+ *  off): its own while a harbour trades it within ¾ of the voyages' aim, or the quest's words name it; else the one of
+ *  its kind sold nearest. */
+export function nearGood(ports: readonly Port[], home: { x: number; y: number; id: string }, good: GoodId, gate: number, told: string): GoodId {
+  const lim = 0.75 * (gate < EARLY_LEVEL ? LEG_EARLY : LEG_LATE);
+  if (!goodSwaps(good, told)) return good;
+  const own = nearestSeller(ports, home.x, home.y, good, home.id)?.d ?? Infinity;
+  if (own <= lim) return good;
+  let best = good, bd = own;
+  for (const g of KIN.find((k) => k.includes(good))!) {
+    const d = nearestSeller(ports, home.x, home.y, g, home.id)?.d ?? Infinity;
+    if (d < bd - 500) [best, bd] = [g, d];
+  }
+  return best;
+}
+
 /** The campaign of these chapters on this world. Chapters are taken in the plan's order; the pace is the whole plan's. */
 export function buildCampaign(world: World, _seed: number, chapters: ChapterSrc[]): Campaign {
   const pl = placesOf(world);
@@ -554,4 +619,63 @@ export function buildCampaign(world: World, _seed: number, chapters: ChapterSrc[
     }
   });
   return { slots, bySlot: new Map(slots.map((x) => [x.slot, x])), chapters: PLAN.map((p) => byN.get(p.n)).filter((c): c is ChapterSrc => !!c), quests, firstOf, locations };
+}
+
+// ------------------------------------------------------------------ the runs audited
+
+/** A run the campaign asks her to sail: a voyage between two locations, a delivery's, a good's from its nearest seller,
+ *  a black market's from the location (tools/campaign-legs.ts, tests/campaign.test.ts). */
+export interface CampaignLeg {
+  q: string;
+  kind: 'voyage' | 'carry' | 'bring' | 'black';
+  from: string;
+  to: string;
+  d: number;
+  /** A voyage into another sea (a chapter's crossing, or the home-coming): long by design. */
+  crossing?: boolean;
+}
+
+/** The nearest harbour to a point that trades a good (not `not`), and how far. */
+export function nearestSeller(ports: readonly Port[], x: number, y: number, good: GoodId, not?: string): { port: Port; d: number } | null {
+  let best: { port: Port; d: number } | null = null;
+  for (const p of ports) {
+    if (p.raft || p.id === not || !portTrades(p, good)) continue;
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (!best || d < best.d) best = { port: p, d };
+  }
+  return best;
+}
+
+export function campaignLegs(world: World, c: Campaign): CampaignLeg[] {
+  const out: CampaignLeg[] = [];
+  const port = (id: string) => world.ports.find((p) => p.id === id)!;
+  c.locations.forEach((l, i) => {
+    const prev = c.locations[i - 1];
+    if (prev) out.push({ q: `c${String(l.ch).padStart(2, '0')}_${String(l.from - c.firstOf[l.ch - 1] + 1).padStart(2, '0')}`, kind: 'voyage', from: prev.name, to: l.name, d: Math.hypot(l.x - prev.x, l.y - prev.y), ...(l.region !== prev.region || i === c.locations.length - 1 ? { crossing: true } : {}) });
+  });
+  for (const q of c.quests) {
+    const loc = c.locations[q.campaign?.loc ?? 0];
+    q.steps.forEach((st, k) => {
+      if (st.type === 'deliver') {
+        const to = port(st.port);
+        const pick = q.steps[k - 1];
+        if (pick && pick.type === 'pickup') {
+          const from = port(pick.port);
+          out.push({ q: q.id, kind: 'carry', from: from.name, to: to.name, d: Math.hypot(to.x - from.x, to.y - from.y) });
+        } else {
+          const s = nearestSeller(world.ports, to.x, to.y, st.good, to.id);
+          out.push({ q: q.id, kind: 'bring', from: s ? `${s.port.name} (${st.good})` : `nowhere (${st.good})`, to: to.name, d: s ? s.d : Infinity });
+        }
+      }
+      if (st.type === 'sell_contraband' || st.type === 'customs') {
+        let best: Port | null = null, bd = Infinity;
+        for (const p of world.ports) if (p.blackMarket && !p.raft) {
+          const d = Math.hypot(p.x - loc.x, p.y - loc.y);
+          if (d < bd) [best, bd] = [p, d];
+        }
+        out.push({ q: q.id, kind: 'black', from: loc.name, to: best?.name ?? 'nowhere', d: bd });
+      }
+    });
+  }
+  return out;
 }

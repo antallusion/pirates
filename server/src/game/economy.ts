@@ -2,7 +2,7 @@
 // from stock vs target. Goods only move when a ship (NPC or player) physically carries them, so a sunk
 // convoy literally creates a shortage at its destination. See docs/01_GDD_WORLD_ECONOMY.md §6.
 
-import { GOODS, GOOD_IDS, INF_STOCK, MARKET_ELASTICITY, SUPPLY_BUYBACK } from '../../../shared/src/data/goods.ts';
+import { GOODS, GOOD_IDS, INF_STOCK, MARKET_ELASTICITY, SUPPLY_BUYBACK, portTrades } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import type { MarketRow } from '../../../shared/src/protocol.ts';
@@ -37,7 +37,6 @@ export interface Market {
 /** The share of a port's own provisions it grows itself, whatever its trade (createMarket). */
 export const PROVISIONS_LOCAL = 0.75;
 
-const ALWAYS_TRADED: GoodId[] = ['provisions', 'rum', 'planks', 'sailcloth', 'salt', 'fish', 'prime_fish', 'salted_fish', 'baleen', 'whalebone', 'shark_skin', 'orca_tooth', 'tar', 'smoked_fish'];
 
 /** Playthrough C: a harbour victuals the ships of its waters — the hands a warship of each ⚓ carries (the balance tools'
  *  hammocks), and the voyages of her food its stores keep (VICTUAL_VOYAGES at the stock a port holds, about half its
@@ -54,7 +53,6 @@ export function victualTarget(level: number): number {
 /** A port's market; `level`: the ⚓ of the square it stands in (its provisions are kept for the ships of its waters). */
 export function createMarket(port: Port, level = 0): Market {
   const goods: Partial<Record<GoodId, GoodMarket>> = {};
-  const allowContraband = port.blackMarket;
   for (const id of GOOD_IDS) {
     const def = GOODS[id];
     const cons = port.profile.consumes[id] ?? 0;
@@ -62,10 +60,7 @@ export function createMarket(port: Port, level = 0): Market {
     // provisions sold its last barrel and stayed at nothing — 218 of 318 ports, Hollowmere among them, had no food to
     // sell a captain. Three quarters of what it eats keeps a stock about half its mark, the price above the base.
     const prod = id === 'provisions' ? Math.max(port.profile.produces[id] ?? 0, cons * PROVISIONS_LOCAL) : port.profile.produces[id] ?? 0;
-    const traded = prod > 0 || cons > 0 || ALWAYS_TRADED.includes(id) || (def.contraband && allowContraband) || port.size >= 3;
-    if (!traded) continue;
-    if (def.category === 'rare' && prod === 0 && cons === 0) continue; // rare materials only where they come from
-    if (def.contraband && !allowContraband) continue;
+    if (!portTrades(port, id)) continue; // (rare materials only where they come from, contraband at a black market)
     const size = port.size;
     let target: number;
     if (prod > cons) target = 6 * prod + 20 * size;

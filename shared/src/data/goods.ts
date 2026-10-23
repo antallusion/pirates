@@ -78,6 +78,20 @@ export const GOODS: Record<GoodId, GoodDef> = {
 
 export const GOOD_IDS = Object.keys(GOODS) as GoodId[];
 
+/** The goods every harbour trades, whatever its trade (server/src/game/economy.ts createMarket). */
+export const ALWAYS_TRADED: readonly GoodId[] = ['provisions', 'rum', 'planks', 'sailcloth', 'salt', 'fish', 'prime_fish', 'salted_fish', 'baleen', 'whalebone', 'shark_skin', 'orca_tooth', 'tar', 'smoked_fish'];
+
+/** Whether a harbour's market trades a good (createMarket's rule; the campaign's builder asks it to send a delivery to a
+ *  harbour with a seller near): what it makes or eats, the goods every one trades, every good at a great harbour — but
+ *  rare materials only where they come from, and contraband only at a black market. */
+export function portTrades(port: { size: number; blackMarket: boolean; profile: { produces: Partial<Record<GoodId, number>>; consumes: Partial<Record<GoodId, number>> } }, id: GoodId): boolean {
+  const def = GOODS[id];
+  const prod = port.profile.produces[id] ?? 0, cons = port.profile.consumes[id] ?? 0;
+  if (def.contraband && !port.blackMarket) return false;
+  if (def.category === 'rare' && prod === 0 && cons === 0) return false;
+  return prod > 0 || cons > 0 || id === 'provisions' || ALWAYS_TRADED.includes(id) || def.contraband || port.size >= 3;
+}
+
 /** How hard a port's price answers its stock: price ∝ (target / stock) ^ this (server/src/game/economy.ts). */
 export const MARKET_ELASTICITY = 0.6;
 

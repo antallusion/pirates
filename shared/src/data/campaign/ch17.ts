@@ -77,10 +77,10 @@ export const CHAPTER: ChapterSrc = {
       s: ['sink:3:ghost', 'hub'],
     },
     {
-      t: ['Coal for the Furnaces', 'Уголь для печей'],
+      t: ['Fuel for the Furnaces', 'Топливо для печей'],
       b: [
-        'A glass furnace that goes cold cracks, and a cracked furnace takes a year to rebuild. Pirates have been taking the colliers on the way in. Bring coal, and teach the pirates to choose other prey.',
-        'Остывшая стекловаренная печь трескается, а треснувшую строят заново целый год. Пираты перехватывают угольщиков на подходе. Привезите уголь и научите пиратов выбирать другую добычу.',
+        'A glass furnace that goes cold cracks, and a cracked furnace takes a year to rebuild. Pirates have been taking the fuel ships on the way in. Bring fuel, and teach the pirates to choose other prey.',
+        'Остывшая стекловаренная печь трескается, а треснувшую строят заново целый год. Пираты перехватывают суда с топливом на подходе. Привезите топливо и научите пиратов выбирать другую добычу.',
       ],
       d: [
         'The furnaces glow orange again, and the glassblowers sing at their pipes.',
