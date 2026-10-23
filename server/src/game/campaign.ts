@@ -252,7 +252,7 @@ export function campaignTick(game: Game, s: PlayerSession): void {
     const key = `${qs.id}:${qs.step}`;
     let w = watches.get(s);
     if (!w || w.step !== key) watches.set(s, (w = { next: game.now + 8, ids: [], step: key, told: false }));
-    if (game.now < w.next || ship.inCombat(game.now)) return;
+    if (game.now < w.next) return; // (in a fight or not: the lawless seas' rovers kept her in one, and none came — QA)
     w.next = game.now + FOE_EVERY;
     const o = namedForCampaign(game, ship);
     if (o && !w.told) game.sendTo(s, { t: 'toast', msg: `The Brethren’s ${o.captainName} puts to sea near you: sink that ship.`, kind: 'bad' });
