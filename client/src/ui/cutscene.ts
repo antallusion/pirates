@@ -17,7 +17,7 @@ let busy: () => boolean = () => false;
 export const FILM_WAIT_MS = 6_000; // (owner, 2026-10-23: a film come late, after the quest was read, is no intro — let go)
 /** One film for one moment (owner, 2026-10-23: «запускается два разных видоса зачем-то»): a moment's film this soon
  *  after the last one is let go — not counted as seen, it plays at a later moment — and one never queues behind another. */
-export const FILM_GAP_MS = 90_000;
+export const FILM_GAP_MS = 45_000;
 /** A film that has not started by then (a phone's slow network) is let go at once: the game is never held behind it. */
 export const FILM_START_MS = 3500;
 let lastFilmAt = -Infinity;

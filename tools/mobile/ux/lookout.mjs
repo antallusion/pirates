@@ -51,6 +51,8 @@ try {
   await L.sleep(3000);
   await L.closeAll(p);
   for (const c of ['/god', '/heal']) { await L.say(p, c); await L.sleep(400); }
+  // (the launch's film had its moment: the next one waits FILM_GAP_MS, ui/cutscene.ts)
+  await L.sleep(46000);
   const films0 = await p.evaluate(() => globalThis.__films.length);
   await L.say(p, '/lookout');
   await L.sleep(2500);
@@ -74,6 +76,16 @@ try {
     });
     seen.push(v);
     if (i === 2) await shot(p, '2_landing');
+    // the quests at once, the film or not: the journal opened over the landing
+    if (i === 3) {
+      await L.open(p, 'journal');
+      await L.sleep(600);
+      const j = await p.evaluate(() => ({ rows: [...document.querySelectorAll('.jr-row b')].map((e) => e.textContent?.trim()), detail: document.querySelector('.giver-name')?.textContent?.trim() ?? '' }));
+      L.log('journal at the lookout', JSON.stringify(j));
+      if (!j.rows.length || j.rows.some((t) => !t || /…/.test(t)) || /…/.test(j.detail)) fail('the quests not shown at once: ' + JSON.stringify(j));
+      await shot(p, '2b_journal');
+      await L.open(p, null);
+    }
   }
   await shot(p, '3_after');
   // and once more ashore at the same island (its scene, a job's landing): no second film for the one visit

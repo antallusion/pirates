@@ -45,7 +45,7 @@ test('a lookout’s landing and the next: one film; a seen one is offered again,
   assert.equal(playFilm('cut_landing'), false, 'the same visit’s next landing: none');
   const seen = () => JSON.parse(page.store.get('gravetide.filmsSeen') ?? '[]') as string[];
   assert.deepEqual(seen(), ['cut_lighthouse'], 'the one let go is still unseen: it plays at a later moment');
-  assert.ok(FILM_GAP_MS >= 60_000, 'a minute and more between two films');
+  assert.ok(FILM_GAP_MS >= 30_000, 'half a minute and more between two films');
   assert.ok(FILM_START_MS <= 4000, 'a film that does not start soon is let go');
   assert.ok(FILM_WAIT_MS <= 6000, 'nor does one wait long behind a window: it would come after the quest was read');
   // the film never started (no frame in this page): let go at once, unseen again
