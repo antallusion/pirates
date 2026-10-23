@@ -194,8 +194,16 @@
   0,5 км на то, что игрок кончает серию у острова, а не у причала). Если ничего нового так близко нет, серия остаётся в
   той же локации. Если первое задание новой серии всё равно вышло дальше 3 км от места, где игрок закончил прошлую,
   серия остаётся там, где была прошлая, и всё раскладывается заново.
-- Глава целиком сидит в одном «гнезде» локаций своего моря. Длинное плавание у главы одно — **передача главы**: переход
-  в её воды из того места, где кончилась прошлая глава. Ещё одно — **возвращение домой** в Солтмарроу в финале по сюжету.
+- **Передача главы** тоже не длиннее 3 км: глава начинается там, где кончилась прошлая (в той же локации или в
+  соседней в 2,5 км морем — первая серия может лежать и в море прошлой главы), а последние серии главы тянутся к морю
+  следующей. Но каждая глава хотя бы одну серию играется в своём море (`SEA_MISSED`): иначе кампания так и не дошла бы
+  до Предела Левиафана и Бездны. В текстах {region} и {hub} — места локации.
+- **Переход (passage).** Если глава должна начаться в далёком море и цепочкой туда не дойти, корабль игрока бесплатно
+  доставляет «попутный корабль» (`campaignPassage`, server/src/game/campaign.ts). Это происходит, когда игрок в море и
+  не в бою; если он в порту — как только выйдет в море (тост «Вас ждёт корабль…»). Корабль встаёт у входа в гавань
+  локации или у берега её острова, паруса спущены, тост «Попутный корабль доставляет вас в …». Переход делается один
+  раз на место (`CampaignState.passed`). Так же устроено и возвращение домой в финале. Сам игрок дальше 3 км не плывёт
+  нигде.
 - Порт наставника, «at:»-порт из текста задания и продавец нужного товара — только притяжение при выборе места, не
   обязательство: прежде «at:gravesend» в начале 6-й главы гнал игрока за 26 км. В текстах {hub}, {at} и {port} — это порт
   локации.
@@ -223,8 +231,13 @@
 | арки | 173 → 0 / 168 → 0 | 2,5 / 2,6 |
 | пути и легенды | 6 → 0 / 6 → 0 | 0 / 0 |
 
-Передачи глав (по прямой, км) остаются длинными там, где главы меняют море: в мире WORLD_SEED их сумма 338 км (было 437),
-длиннее 10 км — 10 глав; самая длинная — 19-я, 59 км (Шепчущий → Пепельные острова). Возвращение домой в финале — 84 км.
+Передачи глав (было, по прямой: сумма 437 км, длиннее 10 км — 16 глав, 19-я — 59 км, домой — 84 км). Теперь главы
+одного моря подряд начинаются там же, где кончилась прошлая (в мире WORLD_SEED 24 начала глав и серий — не дальше
+1,2 км морем). Главы, чьё море лежит далеко (главы чередуют моря: Грейвуотер ↔ Шепчущий ↔ Простор Мертвеца…), и
+острова Бездны за краем гаваней идут **переходом** — попутный корабль: в мире WORLD_SEED главы 3, 4, 5, 6, 8, 9, 10,
+11, 12, 14, 15, 17, 18, 19, 21, 22, 23, 27, 28, 31 (дважды), 33, 34, 35, 36 и возвращение домой в финале — 26 переходов,
+от 2 до 38,6 км по прямой и 84 км домой. Сам игрок не плывёт дальше 3 км нигде. Каждая глава хотя бы одну серию
+играется в своём море (в мире WORLD_SEED — все, кроме финальной 36-й: её серии у края Бездны, в Утонувшей Короне).
 Заданий в портах стало меньше (9 132 вместо 9 510): порт без соседей в 3 км не даёт доставок. Арок — 116 глав из 120
 (четыре главы без острова рядом не выходят). Заданий жителей островов — 87 из 128.
 
@@ -232,8 +245,8 @@
 
 **Сохранения.** Место игрока — номер задания; задание при старте строится заново на новой локации, на том же шаге.
 
-Таблица локаций (`node tools/campaign-sim.ts --locs`, мир 1337; названия — английские имена мира; внутри главы —
-путь морем, у первой серии главы — передача главы по прямой):
+Таблица локаций (`node tools/campaign-sim.ts --locs`, мир 1337; названия — английские имена мира; путь морем, у
+перехода — по прямой):
 
 | № | Глава | Локация | Море | Задания | Ур. | Плавание до неё, км |
 |---|---|---|---|---|---|---|
@@ -241,148 +254,150 @@
 | 2 | 1 | Saltmarrow | black_coast | 7–12 | 2–2 | 0 (та же) |
 | 3 | 1 | Saltmarrow | black_coast | 13–17 | 2–3 | 0 (та же) |
 | 4 | 1 | Saltmarrow | black_coast | 18–22 | 3–3 | 0 (та же) |
-| 5 | 2 | Lucky Creek | black_coast | 23–27 | 4–4 | 4.1 (переход в главу) |
-| 6 | 2 | Coldcliff (остров) | black_coast | 28–32 | 4–5 | 2.1 |
-| 7 | 2 | Lucky Creek | black_coast | 33–36 | 5–5 | 2.5 |
-| 8 | 2 | Lucky Creek | black_coast | 37–40 | 5–5 | 0 (та же) |
-| 9 | 3 | Cod Bay | black_coast | 41–45 | 6–6 | 5.5 (переход в главу) |
-| 10 | 3 | Cod Bay | black_coast | 46–50 | 6–7 | 0 (та же) |
-| 11 | 3 | Cod Bay | black_coast | 51–55 | 7–7 | 0 (та же) |
-| 12 | 3 | Cod Bay | black_coast | 56–59 | 7–7 | 0 (та же) |
-| 13 | 4 | Mermaid Watch | whispering | 60–65 | 8–8 | 28.3 (переход в главу) |
-| 14 | 4 | Rope Pier | whispering | 66–71 | 8–9 | 1.6 |
-| 15 | 4 | Mermaid Watch | whispering | 72–76 | 9–9 | 1.6 |
-| 16 | 5 | Hushwater | whispering | 77–82 | 9–10 | 1.0 (переход в главу) |
-| 17 | 5 | Hushwater | whispering | 83–88 | 10–10 | 0 (та же) |
-| 18 | 5 | Hushwater | whispering | 89–93 | 10–11 | 0 (та же) |
-| 19 | 6 | Sail Backwater | gravewater | 94–98 | 11–11 | 24.3 (переход в главу) |
-| 20 | 6 | Sail Backwater | gravewater | 99–103 | 11–12 | 0 (та же) |
+| 5 | 2 | Saltmarrow | black_coast | 23–27 | 4–4 | 0 (та же) |
+| 6 | 2 | Ravenreach (остров) | black_coast | 28–32 | 4–5 | 4.0 |
+| 7 | 2 | Rope Port | black_coast | 33–36 | 5–5 | 2.8 |
+| 8 | 2 | Rope Port | black_coast | 37–40 | 5–5 | 0 (та же) |
+| 9 | 3 | Rope Port | black_coast | 41–45 | 6–6 | 0 (та же) |
+| 10 | 3 | Rope Port | black_coast | 46–50 | 6–7 | 0 (та же) |
+| 11 | 3 | Rope Port | black_coast | 51–55 | 7–7 | 0 (та же) |
+| 12 | 3 | Rope Port | black_coast | 56–59 | 7–7 | 0 (та же) |
+| 13 | 4 | Sail Backwater | gravewater | 60–65 | 8–8 | 34.3 (попутный корабль) |
+| 14 | 4 | Sail Backwater | gravewater | 66–71 | 8–9 | 0 (та же) |
+| 15 | 4 | Sail Backwater | gravewater | 72–76 | 9–9 | 0 (та же) |
+| 16 | 5 | Sail Backwater | gravewater | 77–82 | 9–10 | 0 (та же) |
+| 17 | 5 | Lantern Rest | whispering | 83–88 | 10–10 | 10.1 (попутный корабль) |
+| 18 | 5 | Lantern Rest | whispering | 89–93 | 10–11 | 0 (та же) |
+| 19 | 6 | Lantern Rest | whispering | 94–98 | 11–11 | 0 (та же) |
+| 20 | 6 | Sail Backwater | gravewater | 99–103 | 11–12 | 10.1 (попутный корабль) |
 | 21 | 6 | Sail Backwater | gravewater | 104–107 | 12–12 | 0 (та же) |
 | 22 | 6 | Ravenmouth Rock (остров) | gravewater | 108–111 | 12–12 | 0.3 |
-| 23 | 7 | Sugarloaf | gravewater | 112–117 | 13–13 | 7.3 (переход в главу) |
-| 24 | 7 | Sugarloaf | gravewater | 118–123 | 13–14 | 0 (та же) |
-| 25 | 7 | Sugarloaf | gravewater | 124–128 | 14–14 | 0 (та же) |
-| 26 | 8 | Coral Port | whispering | 129–134 | 14–15 | 22.8 (переход в главу) |
-| 27 | 8 | Salt Haven | whispering | 135–140 | 15–15 | 1.3 |
-| 28 | 8 | Coral Port | whispering | 141–145 | 15–16 | 1.3 |
-| 29 | 9 | Wreckhold | dead_mans_expanse | 146–150 | 16–16 | 12.8 (переход в главу) |
-| 30 | 9 | Wreckhold | dead_mans_expanse | 151–154 | 16–16 | 0 (та же) |
+| 23 | 7 | Sail Backwater | gravewater | 112–117 | 13–13 | 0.3 |
+| 24 | 7 | Sail Backwater | gravewater | 118–123 | 13–14 | 0 (та же) |
+| 25 | 7 | Sail Backwater | gravewater | 124–128 | 14–14 | 0 (та же) |
+| 26 | 8 | Last Backwater | whispering | 129–134 | 14–15 | 16.6 (попутный корабль) |
+| 27 | 8 | Last Backwater | whispering | 135–140 | 15–15 | 0 (та же) |
+| 28 | 8 | Last Backwater | whispering | 141–145 | 15–16 | 0 (та же) |
+| 29 | 9 | Last Backwater | whispering | 146–150 | 16–16 | 0 (та же) |
+| 30 | 9 | Wreckhold | dead_mans_expanse | 151–154 | 16–16 | 3.9 (попутный корабль) |
 | 31 | 9 | Wreckreef (остров) | dead_mans_expanse | 155–158 | 16–17 | 2.9 |
 | 32 | 9 | Wreckhold | dead_mans_expanse | 159–162 | 17–17 | 2.7 |
-| 33 | 10 | Last Backwater | whispering | 163–168 | 17–18 | 3.9 (переход в главу) |
-| 34 | 10 | Last Backwater | whispering | 169–174 | 18–18 | 0 (та же) |
-| 35 | 10 | Last Backwater | whispering | 175–179 | 18–18 | 0 (та же) |
-| 36 | 11 | Kelp Tavern | whispering | 180–185 | 19–19 | 4.4 (переход в главу) |
-| 37 | 11 | Kelp Tavern | whispering | 186–190 | 19–19 | 0 (та же) |
-| 38 | 11 | Kelp Tavern | whispering | 191–195 | 20–20 | 0 (та же) |
-| 39 | 11 | Kelp Tavern | whispering | 196–200 | 20–20 | 0 (та же) |
-| 40 | 12 | Seal Bay | leviathan_reach | 201–206 | 20–21 | 19.1 (переход в главу) |
-| 41 | 12 | Seal Bay | leviathan_reach | 207–211 | 21–21 | 0 (та же) |
+| 33 | 10 | Wreckhold | dead_mans_expanse | 163–168 | 17–18 | 0 (та же) |
+| 34 | 10 | Gale Sound | gravewater | 169–174 | 18–18 | 12.9 (попутный корабль) |
+| 35 | 10 | Gale Sound | gravewater | 175–179 | 18–18 | 0 (та же) |
+| 36 | 11 | Bell Tavern | whispering | 180–185 | 19–19 | 31.1 (попутный корабль) |
+| 37 | 11 | Cannon Port | whispering | 186–190 | 19–19 | 1.2 |
+| 38 | 11 | Bell Tavern | whispering | 191–195 | 20–20 | 1.2 |
+| 39 | 11 | Cannon Port | whispering | 196–200 | 20–20 | 1.2 |
+| 40 | 12 | Cannon Port | whispering | 201–206 | 20–21 | 0 (та же) |
+| 41 | 12 | Seal Bay | leviathan_reach | 207–211 | 21–21 | 4.0 (попутный корабль) |
 | 42 | 12 | Seal Bay | leviathan_reach | 212–216 | 21–22 | 0 (та же) |
 | 43 | 12 | Seal Bay | leviathan_reach | 217–221 | 22–22 | 0 (та же) |
-| 44 | 13 | Anchor Backwater | leviathan_reach | 222–227 | 22–23 | 3.1 (переход в главу) |
-| 45 | 13 | Anchor Backwater | leviathan_reach | 228–232 | 23–23 | 0 (та же) |
-| 46 | 13 | Anchor Backwater | leviathan_reach | 233–237 | 23–23 | 0 (та же) |
-| 47 | 13 | Anchor Backwater | leviathan_reach | 238–242 | 23–24 | 0 (та же) |
-| 48 | 14 | Oyster Roads | dead_mans_expanse | 243–248 | 24–24 | 11.8 (переход в главу) |
+| 44 | 13 | Seal Bay | leviathan_reach | 222–227 | 22–23 | 0 (та же) |
+| 45 | 13 | Seal Bay | leviathan_reach | 228–232 | 23–23 | 0 (та же) |
+| 46 | 13 | Seal Bay | leviathan_reach | 233–237 | 23–23 | 0 (та же) |
+| 47 | 13 | Seal Bay | leviathan_reach | 238–242 | 23–24 | 0 (та же) |
+| 48 | 14 | Oyster Roads | dead_mans_expanse | 243–248 | 24–24 | 8.9 (попутный корабль) |
 | 49 | 14 | Oyster Roads | dead_mans_expanse | 249–253 | 24–25 | 0 (та же) |
 | 50 | 14 | Lucky Bay | dead_mans_expanse | 254–258 | 25–25 | 1.7 |
 | 51 | 14 | Oyster Roads | dead_mans_expanse | 259–263 | 25–25 | 1.8 |
-| 52 | 15 | Kelp Rest | leviathan_reach | 264–269 | 26–26 | 12.2 (переход в главу) |
-| 53 | 15 | Kelp Rest | leviathan_reach | 270–275 | 26–26 | 0 (та же) |
-| 54 | 15 | Kelp Rest | leviathan_reach | 276–280 | 27–27 | 0 (та же) |
-| 55 | 15 | Frostspur (остров) | leviathan_reach | 281–285 | 27–27 | 3.4 |
-| 56 | 16 | Salt Town | leviathan_reach | 286–291 | 27–28 | 5.0 (переход в главу) |
-| 57 | 16 | Salt Town | leviathan_reach | 292–297 | 28–28 | 0 (та же) |
-| 58 | 16 | Salt Town | leviathan_reach | 298–302 | 28–29 | 0 (та же) |
-| 59 | 16 | Salt Town | leviathan_reach | 303–307 | 29–29 | 0 (та же) |
-| 60 | 17 | Tar Roads | whispering | 308–313 | 29–29 | 10.4 (переход в главу) |
-| 61 | 17 | Mermaid Reach | whispering | 314–319 | 30–30 | 1.8 |
-| 62 | 17 | Tar Roads | whispering | 320–324 | 30–30 | 1.8 |
-| 63 | 17 | Sail Sound | whispering | 325–329 | 30–31 | 1.5 |
-| 64 | 18 | Cannon Port | whispering | 330–335 | 31–31 | 2.2 (переход в главу) |
-| 65 | 18 | Bell Tavern | whispering | 336–341 | 31–32 | 1.2 |
-| 66 | 18 | Cannon Port | whispering | 342–346 | 32–32 | 1.2 |
-| 67 | 18 | Bell Tavern | whispering | 347–351 | 32–32 | 1.2 |
-| 68 | 19 | Tar Town | ashen_isles | 352–357 | 33–33 | 46.9 (переход в главу) |
+| 52 | 15 | Oyster Roads | dead_mans_expanse | 264–269 | 26–26 | 0 (та же) |
+| 53 | 15 | Anchor Backwater | leviathan_reach | 270–275 | 26–26 | 11.8 (попутный корабль) |
+| 54 | 15 | Anchor Backwater | leviathan_reach | 276–280 | 27–27 | 0 (та же) |
+| 55 | 15 | Whitebone Key (остров) | leviathan_reach | 281–285 | 27–27 | 0.3 |
+| 56 | 16 | Anchor Backwater | leviathan_reach | 286–291 | 27–28 | 0.3 |
+| 57 | 16 | Anchor Backwater | leviathan_reach | 292–297 | 28–28 | 0 (та же) |
+| 58 | 16 | Anchor Backwater | leviathan_reach | 298–302 | 28–29 | 0 (та же) |
+| 59 | 16 | Anchor Backwater | leviathan_reach | 303–307 | 29–29 | 0 (та же) |
+| 60 | 17 | Oyster Roads | dead_mans_expanse | 308–313 | 29–29 | 11.8 (попутный корабль) |
+| 61 | 17 | Lucky Bay | dead_mans_expanse | 314–319 | 30–30 | 1.7 |
+| 62 | 17 | Oyster Roads | dead_mans_expanse | 320–324 | 30–30 | 1.8 |
+| 63 | 17 | Lucky Bay | dead_mans_expanse | 325–329 | 30–31 | 1.7 |
+| 64 | 18 | Grey Backwater | whispering | 330–335 | 31–31 | 8.5 (попутный корабль) |
+| 65 | 18 | Seal Town | whispering | 336–341 | 31–32 | 1.4 |
+| 66 | 18 | Grey Backwater | whispering | 342–346 | 32–32 | 1.7 |
+| 67 | 18 | Seal Town | whispering | 347–351 | 32–32 | 1.4 |
+| 68 | 19 | Tar Town | ashen_isles | 352–357 | 33–33 | 46.7 (попутный корабль) |
 | 69 | 19 | Tar Town | ashen_isles | 358–362 | 33–33 | 0 (та же) |
 | 70 | 19 | Tar Town | ashen_isles | 363–367 | 33–34 | 0 (та же) |
 | 71 | 19 | Tar Town | ashen_isles | 368–372 | 34–34 | 0 (та же) |
-| 72 | 20 | Rum Tavern | ashen_isles | 373–376 | 34–34 | 5.0 (переход в главу) |
-| 73 | 20 | Slagcone (остров) | ashen_isles | 377–380 | 34–35 | 0.3 |
-| 74 | 20 | Rum Tavern | ashen_isles | 381–384 | 35–35 | 0.3 |
-| 75 | 20 | Rum Tavern | ashen_isles | 385–387 | 35–35 | 0 (та же) |
-| 76 | 20 | Rum Tavern | ashen_isles | 388–390 | 35–35 | 0 (та же) |
-| 77 | 20 | Slagcone (остров) | ashen_isles | 391–393 | 36–36 | 0.3 |
-| 78 | 21 | Coal Port | dead_mans_expanse | 394–399 | 36–36 | 11.7 (переход в главу) |
+| 72 | 20 | Tar Town | ashen_isles | 373–376 | 34–34 | 0 (та же) |
+| 73 | 20 | Tar Town | ashen_isles | 377–380 | 34–35 | 0 (та же) |
+| 74 | 20 | Tar Town | ashen_isles | 381–384 | 35–35 | 0 (та же) |
+| 75 | 20 | Tar Town | ashen_isles | 385–387 | 35–35 | 0 (та же) |
+| 76 | 20 | Tar Town | ashen_isles | 388–390 | 35–35 | 0 (та же) |
+| 77 | 20 | Ashcone Rock (остров) | ashen_isles | 391–393 | 36–36 | 2.7 |
+| 78 | 21 | Coal Port | dead_mans_expanse | 394–399 | 36–36 | 9.7 (попутный корабль) |
 | 79 | 21 | Grey Town | dead_mans_expanse | 400–404 | 36–37 | 1.8 |
 | 80 | 21 | Coal Port | dead_mans_expanse | 405–409 | 37–37 | 1.8 |
 | 81 | 21 | Grey Town | dead_mans_expanse | 410–414 | 37–37 | 1.8 |
-| 82 | 22 | Gull Landing | ashen_isles | 415–419 | 37–38 | 8.5 (переход в главу) |
-| 83 | 22 | Gull Landing | ashen_isles | 420–423 | 38–38 | 0 (та же) |
-| 84 | 22 | Gull Landing | ashen_isles | 424–427 | 38–38 | 0 (та же) |
-| 85 | 22 | Slagscar Holm (остров) | ashen_isles | 428–431 | 38–39 | 2.1 |
-| 86 | 22 | Gull Landing | ashen_isles | 432–435 | 39–39 | 1.7 |
-| 87 | 23 | Widows Roads | ashen_isles | 436–441 | 39–39 | 2.6 (переход в главу) |
-| 88 | 23 | Widows Roads | ashen_isles | 442–446 | 39–40 | 0 (та же) |
-| 89 | 23 | Widows Roads | ashen_isles | 447–451 | 40–40 | 0 (та же) |
-| 90 | 23 | Widows Roads | ashen_isles | 452–456 | 40–40 | 0 (та же) |
-| 91 | 24 | Pearl Tavern | drowned_crown | 457–462 | 41–41 | 14.9 (переход в главу) |
-| 92 | 24 | Pearl Tavern | drowned_crown | 463–468 | 41–41 | 0 (та же) |
-| 93 | 24 | Pearl Tavern | drowned_crown | 469–473 | 41–42 | 0 (та же) |
-| 94 | 24 | Pearl Tavern | drowned_crown | 474–478 | 42–42 | 0 (та же) |
-| 95 | 25 | Steeplewater | drowned_crown | 479–483 | 42–42 | 4.7 (переход в главу) |
-| 96 | 25 | Steeplewater | drowned_crown | 484–488 | 43–43 | 0 (та же) |
-| 97 | 25 | Steeplewater | drowned_crown | 489–492 | 43–43 | 0 (та же) |
-| 98 | 25 | Sporecay (остров) | drowned_crown | 493–496 | 43–43 | 0.9 |
-| 99 | 25 | Steeplewater | drowned_crown | 497–500 | 43–44 | 0.9 |
-| 100 | 26 | Tallow Roads | drowned_crown | 501–504 | 44–44 | 8.9 (переход в главу) |
-| 101 | 26 | Tallow Roads | drowned_crown | 505–508 | 44–44 | 0 (та же) |
-| 102 | 26 | Tallow Roads | drowned_crown | 509–512 | 44–45 | 0 (та же) |
-| 103 | 26 | Tallow Roads | drowned_crown | 513–516 | 45–45 | 0 (та же) |
-| 104 | 26 | Tallow Roads | drowned_crown | 517–519 | 45–45 | 0 (та же) |
-| 105 | 26 | Tallow Roads | drowned_crown | 520–522 | 45–45 | 0 (та же) |
-| 106 | 27 | Tallow Watch | drowned_crown | 523–528 | 45–46 | 6.1 (переход в главу) |
-| 107 | 27 | Tallow Watch | drowned_crown | 529–534 | 46–46 | 0 (та же) |
-| 108 | 27 | Tallow Watch | drowned_crown | 535–539 | 46–47 | 0 (та же) |
-| 109 | 27 | Tallow Watch | drowned_crown | 540–544 | 47–47 | 0 (та же) |
-| 110 | 28 | Sail Pier | drowned_crown | 545–550 | 47–47 | 5.7 (переход в главу) |
-| 111 | 28 | Sail Pier | drowned_crown | 551–555 | 47–48 | 0 (та же) |
-| 112 | 28 | Sail Pier | drowned_crown | 556–560 | 48–48 | 0 (та же) |
-| 113 | 28 | Sail Pier | drowned_crown | 561–565 | 48–48 | 0 (та же) |
-| 114 | 29 | Raven Haven | drowned_crown | 566–569 | 49–49 | 7.2 (переход в главу) |
-| 115 | 29 | Raven Haven | drowned_crown | 570–573 | 49–49 | 0 (та же) |
-| 116 | 29 | Raven Haven | drowned_crown | 574–577 | 49–49 | 0 (та же) |
-| 117 | 29 | Idolcrypt (остров) | drowned_crown | 578–581 | 49–50 | 0.3 |
-| 118 | 29 | Raven Haven | drowned_crown | 582–585 | 50–50 | 0.3 |
-| 119 | 30 | Tallow Wharf | drowned_crown | 586–590 | 50–50 | 7.7 (переход в главу) |
-| 120 | 30 | Tallow Wharf | drowned_crown | 591–595 | 50–51 | 0 (та же) |
-| 121 | 30 | Tallow Wharf | drowned_crown | 596–600 | 51–51 | 0 (та же) |
-| 122 | 30 | Tallow Wharf | drowned_crown | 601–605 | 51–51 | 0 (та же) |
-| 123 | 31 | Black Quarter | drowned_crown | 606–609 | 51–52 | 9.5 (переход в главу) |
-| 124 | 31 | Black Quarter | drowned_crown | 610–614 | 52–52 | 0 (та же) |
-| 125 | 31 | Black Quarter | drowned_crown | 615–619 | 52–52 | 0 (та же) |
-| 126 | 31 | Black Quarter | drowned_crown | 620–625 | 52–53 | 0 (та же) |
-| 127 | 32 | Barrel Rest | drowned_crown | 626–630 | 53–53 | 3.9 (переход в главу) |
-| 128 | 32 | Barrel Rest | drowned_crown | 631–635 | 53–53 | 0 (та же) |
-| 129 | 32 | Barrel Rest | drowned_crown | 636–640 | 54–54 | 0 (та же) |
-| 130 | 32 | Barrel Rest | drowned_crown | 641–644 | 54–54 | 0 (та же) |
-| 131 | 33 | Smugglers Haven | drowned_crown | 645–648 | 54–54 | 5.8 (переход в главу) |
-| 132 | 33 | Smugglers Haven | drowned_crown | 649–653 | 54–55 | 0 (та же) |
-| 133 | 33 | Smugglers Haven | drowned_crown | 654–658 | 55–55 | 0 (та же) |
-| 134 | 33 | Smugglers Haven | drowned_crown | 659–663 | 55–55 | 0 (та же) |
-| 135 | 34 | Gravevault (остров) | the_abyss | 664–667 | 56–56 | 20.9 (переход в главу) |
-| 136 | 34 | Mermaid Roads | drowned_crown | 668–672 | 56–56 | 2.7 |
-| 137 | 34 | Lightlesspit Key (остров) | the_abyss | 673–677 | 56–56 | 2.5 |
-| 138 | 34 | Deepvault Rock (остров) | the_abyss | 678–682 | 56–57 | 2.6 |
-| 139 | 35 | Oyster Rest | drowned_crown | 683–686 | 57–57 | 12.1 (переход в главу) |
-| 140 | 35 | Crownfall | drowned_crown | 687–691 | 57–57 | 2.4 |
-| 141 | 35 | Oyster Rest | drowned_crown | 692–696 | 57–58 | 2.4 |
-| 142 | 35 | Crownfall | drowned_crown | 697–701 | 58–58 | 2.4 |
-| 143 | 36 | Saintsteps | drowned_crown | 702–705 | 58–58 | 6.8 (переход в главу) |
-| 144 | 36 | Saintsteps | drowned_crown | 706–710 | 58–59 | 0 (та же) |
-| 145 | 36 | Saintsteps | drowned_crown | 711–715 | 59–59 | 0 (та же) |
-| 146 | 36 | Saltmarrow | black_coast | 716–720 | 59–59 | 86.4 (переход в главу) |
+| 82 | 22 | Grey Town | dead_mans_expanse | 415–418 | 37–38 | 0 (та же) |
+| 83 | 22 | Coal Port | dead_mans_expanse | 419–422 | 38–38 | 1.8 |
+| 84 | 22 | Drearpoint (остров) | dead_mans_expanse | 423–426 | 38–38 | 0.2 |
+| 85 | 22 | Coal Port | dead_mans_expanse | 427–429 | 38–38 | 0.2 |
+| 86 | 22 | Grey Town | dead_mans_expanse | 430–432 | 38–39 | 1.8 |
+| 87 | 22 | Brimcone (остров) | ashen_isles | 433–435 | 39–39 | 2.5 |
+| 88 | 23 | Coal Moorings | ashen_isles | 436–439 | 39–39 | 12.3 (попутный корабль) |
+| 89 | 23 | Coal Moorings | ashen_isles | 440–443 | 39–39 | 0 (та же) |
+| 90 | 23 | Coal Moorings | ashen_isles | 444–447 | 40–40 | 0 (та же) |
+| 91 | 23 | Coal Moorings | ashen_isles | 448–450 | 40–40 | 0 (та же) |
+| 92 | 23 | Cindertooth Key (остров) | ashen_isles | 451–453 | 40–40 | 0.3 |
+| 93 | 23 | Pearl Tavern | drowned_crown | 454–456 | 40–40 | 3.0 |
+| 94 | 24 | Pearl Tavern | drowned_crown | 457–462 | 41–41 | 0 (та же) |
+| 95 | 24 | Pearl Tavern | drowned_crown | 463–468 | 41–41 | 0 (та же) |
+| 96 | 24 | Pearl Tavern | drowned_crown | 469–473 | 41–42 | 0 (та же) |
+| 97 | 24 | Pearl Tavern | drowned_crown | 474–478 | 42–42 | 0 (та же) |
+| 98 | 25 | Pearl Tavern | drowned_crown | 479–483 | 42–42 | 0 (та же) |
+| 99 | 25 | Pearl Tavern | drowned_crown | 484–488 | 43–43 | 0 (та же) |
+| 100 | 25 | Pearl Tavern | drowned_crown | 489–492 | 43–43 | 0 (та же) |
+| 101 | 25 | Idolcourt Rock (остров) | drowned_crown | 493–496 | 43–43 | 1.6 |
+| 102 | 25 | Pearl Tavern | drowned_crown | 497–500 | 43–44 | 1.4 |
+| 103 | 26 | Pearl Tavern | drowned_crown | 501–504 | 44–44 | 0 (та же) |
+| 104 | 26 | Pearl Tavern | drowned_crown | 505–508 | 44–44 | 0 (та же) |
+| 105 | 26 | Pearl Tavern | drowned_crown | 509–512 | 44–45 | 0 (та же) |
+| 106 | 26 | Pearl Tavern | drowned_crown | 513–516 | 45–45 | 0 (та же) |
+| 107 | 26 | Pearl Tavern | drowned_crown | 517–519 | 45–45 | 0 (та же) |
+| 108 | 26 | Pearl Tavern | drowned_crown | 520–522 | 45–45 | 0 (та же) |
+| 109 | 27 | Steeplewater | drowned_crown | 523–528 | 45–46 | 4.7 (попутный корабль) |
+| 110 | 27 | Coal Moorings | ashen_isles | 529–534 | 46–46 | 6.1 (попутный корабль) |
+| 111 | 27 | Coal Moorings | ashen_isles | 535–539 | 46–47 | 0 (та же) |
+| 112 | 27 | Coal Moorings | ashen_isles | 540–544 | 47–47 | 0 (та же) |
+| 113 | 28 | Coal Moorings | ashen_isles | 545–550 | 47–47 | 0 (та же) |
+| 114 | 28 | Hollowtomb Isle | drowned_crown | 551–555 | 47–48 | 4.8 (попутный корабль) |
+| 115 | 28 | Hollowtomb Isle | drowned_crown | 556–560 | 48–48 | 0 (та же) |
+| 116 | 28 | Hollowtomb Isle | drowned_crown | 561–565 | 48–48 | 0 (та же) |
+| 117 | 29 | Hollowtomb Isle | drowned_crown | 566–570 | 49–49 | 0 (та же) |
+| 118 | 29 | Hollowtomb Isle | drowned_crown | 571–575 | 49–49 | 0 (та же) |
+| 119 | 29 | Hollowtomb Isle | drowned_crown | 576–580 | 49–50 | 0 (та же) |
+| 120 | 29 | Hollowtomb Isle | drowned_crown | 581–585 | 50–50 | 0 (та же) |
+| 121 | 30 | Hollowtomb Isle | drowned_crown | 586–590 | 50–50 | 0 (та же) |
+| 122 | 30 | Hollowtomb Isle | drowned_crown | 591–595 | 50–51 | 0 (та же) |
+| 123 | 30 | Hollowtomb Isle | drowned_crown | 596–600 | 51–51 | 0 (та же) |
+| 124 | 30 | Hollowtomb Isle | drowned_crown | 601–605 | 51–51 | 0 (та же) |
+| 125 | 31 | Hollowossuary (остров) | the_abyss | 606–609 | 51–52 | 28.7 (попутный корабль) |
+| 126 | 31 | Raven Haven | drowned_crown | 610–614 | 52–52 | 3.5 |
+| 127 | 31 | Raven Haven | drowned_crown | 615–619 | 52–52 | 0 (та же) |
+| 128 | 31 | Raven Haven | drowned_crown | 620–625 | 52–53 | 0 (та же) |
+| 129 | 32 | Raven Haven | drowned_crown | 626–630 | 53–53 | 0 (та же) |
+| 130 | 32 | Raven Haven | drowned_crown | 631–635 | 53–53 | 0 (та же) |
+| 131 | 32 | Raven Haven | drowned_crown | 636–640 | 54–54 | 0 (та же) |
+| 132 | 32 | Raven Haven | drowned_crown | 641–644 | 54–54 | 0 (та же) |
+| 133 | 33 | Raven Haven | drowned_crown | 645–648 | 54–54 | 0 (та же) |
+| 134 | 33 | Hollowjaw (остров) | the_abyss | 649–653 | 54–55 | 1.9 |
+| 135 | 33 | Raven Haven | drowned_crown | 654–658 | 55–55 | 1.9 |
+| 136 | 33 | Raven Haven | drowned_crown | 659–663 | 55–55 | 0 (та же) |
+| 137 | 34 | Idolcrypt (остров) | drowned_crown | 664–667 | 56–56 | 0.3 |
+| 138 | 34 | Raven Haven | drowned_crown | 668–672 | 56–56 | 0.3 |
+| 139 | 34 | Hollowossuary (остров) | the_abyss | 673–677 | 56–56 | 3.5 |
+| 140 | 34 | Ribvault Key (остров) | the_abyss | 678–682 | 56–57 | 1.6 |
+| 141 | 35 | Mermaid Roads | drowned_crown | 683–686 | 57–57 | 9.2 (попутный корабль) |
+| 142 | 35 | Mermaid Roads | drowned_crown | 687–691 | 57–57 | 0 (та же) |
+| 143 | 35 | Mermaid Roads | drowned_crown | 692–696 | 57–58 | 0 (та же) |
+| 144 | 35 | Lightlesspit Key (остров) | the_abyss | 697–701 | 58–58 | 2.5 |
+| 145 | 36 | Mermaid Roads | drowned_crown | 702–705 | 58–58 | 2.3 |
+| 146 | 36 | Mermaid Roads | drowned_crown | 706–710 | 58–59 | 0 (та же) |
+| 147 | 36 | Mermaid Roads | drowned_crown | 711–715 | 59–59 | 0 (та же) |
+| 148 | 36 | Saltmarrow | black_coast | 716–720 | 59–59 | 100.7 (попутный корабль) |
 
 ## 3. Как устроено
 

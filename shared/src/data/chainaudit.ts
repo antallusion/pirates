@@ -4,7 +4,7 @@
 // jobs, the islands' people's jobs, the region arcs and the written quests (tools/chain-legs.ts, tests/chainlegs.test.ts).
 
 import type { World } from '../world/worldgen.ts';
-import { buildCampaign } from './campaign/build.ts';
+import { arrival, buildCampaign } from './campaign/build.ts';
 import type { Campaign } from './campaign/build.ts';
 import { CHAPTERS } from './campaign/chapters.ts';
 import { generateArcs } from './questarcs.ts';
@@ -18,7 +18,7 @@ import type { At, ChainLeg } from './questlegs.ts';
 export interface ChainAudit {
   byKind: Record<string, { legs: ChainLeg[] }>;
   /** The campaign's voyages into a chapter's waters (straight, metres): long by design, one a chapter. */
-  handovers: { ch: number; d: number }[];
+  handovers: { ch: number; d: number; passage: boolean }[];
 }
 
 const portAt = (w: World, id: string): At | null => {
@@ -26,32 +26,28 @@ const portAt = (w: World, id: string): At | null => {
   return p ? { x: p.x, y: p.y } : null;
 };
 
-/** The campaign's legs, chapter by chapter, the hand-overs apart. */
-export function campaignChainLegs(w: World, c: Campaign): { legs: ChainLeg[]; handovers: { ch: number; d: number }[] } {
+/** The campaign's legs, one chain from the first quest to the last (owner, 2026-10-23: a chapter starts within 3 km of
+ *  where the one before ended). A chapter's start (and the home-coming) is its hand-over: sailed — its first leg, kept
+ *  among the legs — or, where its place lies farther, a passage: a ship takes her there (she sails none of it). */
+export function campaignChainLegs(w: World, c: Campaign): { legs: ChainLeg[]; handovers: { ch: number; d: number; passage: boolean }[] } {
   const legs: ChainLeg[] = [];
-  const handovers: { ch: number; d: number }[] = [];
+  const handovers: { ch: number; d: number; passage: boolean }[] = [];
   let at: At | null = null;
   let ch = 0;
   const home = c.locations.length - 1;
   for (const sl of c.slots) {
-    // (the home-coming, the campaign's end at the start's harbour: a hand-over of its own)
-    const homecoming = sl.loc === home && c.locations[home].from === sl.slot && c.locations[home - 1]?.ch === sl.ch;
-    if (sl.ch !== ch || homecoming) {
-      ch = sl.ch;
-      // the hand-over: from where the chapter before ended to the chapter's first place
-      const first = [sl.a, ...(sl.b ? [sl.b] : [])][0].steps.map((st) => stepPlace(w, st)).find((p) => p);
-      if (at && first) {
-        handovers.push({ ch, d: Math.max(0, Math.hypot(first.x - at.x, first.y - at.y) - first.r) });
-        // (she sails to the chapter's place: a harbour's quay, an island's shore facing her; a fight's water about a
-        // harbour is the harbour's)
-        const loc = c.locations[sl.loc];
-        const isle = loc.kind === 'isle' ? w.islands[loc.id as number] : undefined;
-        const k = Math.hypot(at.x - loc.x, at.y - loc.y) || 1, r = isle ? isle.radius + 40 : 0;
-        at = { x: loc.x + ((at.x - loc.x) / k) * r, y: loc.y + ((at.y - loc.y) / k) * r };
-      } else if (first) at = { x: first.x, y: first.y };
+    const loc = c.locations[sl.loc];
+    const homecoming = sl.loc === home && loc.from === sl.slot && c.locations[home - 1]?.ch === sl.ch;
+    const handover = !!at && (sl.ch !== ch || homecoming);
+    ch = sl.ch;
+    if (at && loc.passage && loc.from === sl.slot) {
+      // (the ship that takes her puts her off its quay, or off its island's shore facing where she came from)
+      handovers.push({ ch: sl.ch, d: Math.hypot(loc.x - at.x, loc.y - at.y), passage: true });
+      at = arrival(w, loc, at);
     }
     const from: At = at ?? portAt(w, sl.a.port) ?? { x: 0, y: 0 };
     const a = questLegs(w, sl.a, from);
+    if (handover && !loc.passage) handovers.push({ ch: sl.ch, d: a.legs[0]?.d ?? 0, passage: false });
     legs.push(...a.legs);
     if (sl.b) legs.push(...questLegs(w, sl.b, from).legs);
     at = a.end;
