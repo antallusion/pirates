@@ -21,7 +21,11 @@ export interface PointerFacts {
 }
 
 /** The harbour's way out to sea, the First Watch's own (the gold «В море» of the port window, the HUD's round one). */
-const TO_SEA = ['#modal-panel [data-ptab="sea"]', '#tc-cast', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'];
+/** (the «Готовы к выходу?» sheet first when «В море» brought it up — her hull mended after the First Watch's fight, the
+ *  stores short: its gold «Докупить всё», else «Отплыть так»; the finger stood aside under the sheet and the opening's
+ *  «Первый залп» stood still in port, the newcomer's run 2026-10-23) */
+export const DEPART = ['.depart-panel [data-dp="all"]', '.depart-panel [data-dp="sail"]'];
+const TO_SEA = [...DEPART, '#modal-panel [data-ptab="sea"]', '#tc-cast', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'];
 /** Into the port window from the HUD in port, or into a harbour from the sea. */
 /** The opening's «Плыть» (owner, 2026-10-22): its next place is sailed for only at her word — after the step's own button. */
 const GOAL_SAIL = ['#tc-act[data-act="goal_sail"]', '.act-btn.act-goal_sail'];
@@ -95,7 +99,7 @@ function targetsOf(f: PointerFacts): string[] {
     case 'sail':
       // In port: the harbour's gold «В море» on its rail (docs/23 phase 6; the old «Поднять паруса» is gone — the finger
       // pointed at nothing and the watch's first step stood still, e2e 2026-10-07), else the HUD's big round «В море».
-      if (f.docked) return ['#modal-panel [data-ptab="sea"]', '#tc-cast', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'];
+      if (f.docked) return TO_SEA;
       return f.touch ? ['#tc-stick'] : [];
     case 'attack':
       // (already alongside her, «Действие» reads «На абордаж»: that is the step's battle, sooner)
