@@ -467,7 +467,7 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
     case 'rescue': {
       // a castaway on a spar of hers, else the open water where they are met
       const cast = castawaysOf(game, s).map((c): Cand => ({ x: c.x, y: c.y, r: 80, kind: 'place', name: 'castaway' }));
-      return { cands: cast.length ? cast : squares(game, () => true, 'sea', 1.3) };
+      return { cands: cast.length ? cast : squares(game, () => true, 'open_sea', 1.3) };
     }
     case 'tribute':
       // a merchant to stop and make pay (the Brethren's raid, docs/12 P6)

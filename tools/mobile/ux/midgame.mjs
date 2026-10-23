@@ -199,14 +199,14 @@ try {
     });
     if (pop) { log('  ' + pop); if (!popSeen.has(pop.slice(0, 12))) { popSeen.add(pop.slice(0, 12)); await shot(p, pop.slice(0, 12)); } await L.sleep(800); continue; }
     // a beast or a ship at her (the helmsman pauses while she is under fire): her guns on it, as a captain would
-    if (!s.docked) {
+    if (!s.docked && !s.auto) {
       const pest = await p.evaluate(() => {
         const s = globalThis.gravetide.state, o = s.ownDisplay; if (!o || s.pursuit) return null;
         let best = null;
         for (const sh of s.ships.values()) {
           if (sh.id === s.entityId || !sh.cur || !(sh.cur.flags & 64) || sh.cur.flags & 17) continue;
           const d = Math.hypot(sh.cur.x - o.x, sh.cur.y - o.y);
-          if (d < 260 && (!best || d < best.d)) best = { id: sh.id, d: Math.round(d), name: sh.info?.name, role: sh.info?.npcRole ?? '' };
+          if (d < 120 && (!best || d < best.d)) best = { id: sh.id, d: Math.round(d), name: sh.info?.name, role: sh.info?.npcRole ?? '' };
         }
         return best;
       });

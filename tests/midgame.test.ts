@@ -176,3 +176,49 @@ test('a campaign lair step points at a lair of the quest’s own level in its wa
   const { RU } = await import('../client/src/lang/ui/tactical.ts');
   assert.equal(RU['res.killed'], 'Потери врага');
 });
+
+test('a rescue step comes true with a full crew: castaways still put out for her, given water and counted', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { castawaysOf, haulCastaway, setCastRng, stepCastaways } = await import('../server/src/game/castaways.ts');
+  const { Rng } = await import('../shared/src/rng.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { game } = makeGame();
+  game.directorOn = true;
+  join(game, 'Full Crew');
+  const s = game.sessionByName('Full Crew')!;
+  const ship = s.ship!;
+  setCastRng(game, new Rng(5));
+  ship.docked = null;
+  s.profile!.docked = null;
+  ship.state.x = 21000; ship.state.y = 74000; // open water off Shell Creek
+  ship.crew = ship.stats.crewMax; // every berth taken
+  const q = campaignOf(game).quests.find((x) => x.id === 'c02_15')!; // «Singing on the Water»: save souls from the sea, 2
+  const i = q.steps.findIndex((st) => st.type === 'rescue');
+  s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
+  let saw = 0;
+  for (let t = 0; t < 1200 && s.profile!.quests.active.some((a) => a.id === q.id && a.step === i); t++) {
+    ship.state.speed = 8;
+    ship.lastCombat = -1000;
+    stepCastaways(game);
+    for (const k of castawaysOf(game, s)) { saw++; haulCastaway(game, s, k); }
+    game.now += 1;
+  }
+  assert.ok(saw >= 1, 'castaways put out for her');
+  assert.ok(!s.profile!.quests.active.some((a) => a.id === q.id && a.step === i), 'the step done within twenty minutes');
+  assert.equal(ship.crew, ship.stats.crewMax, 'no man past her berths');
+});
+
+test('every name a route may carry reads in Russian (the rescue step’s open water was «sea» on the autosail pill)', async () => {
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { routeLabel } = await import('../client/src/ui/ease.ts');
+  const { readFileSync: rf } = await import('node:fs');
+  const src = rf(new URL('../server/src/game/goalroute.ts', import.meta.url), 'utf8');
+  const names = new Set([...src.matchAll(/name: '([a-z_]+)'/g), ...src.matchAll(/squares\(game, [^,]+, '([a-z_]+)'/g)].map((m) => m[1]));
+  assert.ok(names.has('open_sea') && !names.has('sea'));
+  setLang('ru');
+  try {
+    for (const n of names) assert.doesNotMatch(routeLabel({ kind: 'place', name: n }), /[A-Za-z]/, n);
+  } finally {
+    setLang('en');
+  }
+});
