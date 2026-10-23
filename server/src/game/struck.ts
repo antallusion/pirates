@@ -84,10 +84,13 @@ export function struck(game: Game, ship: ShipEntity, brain: NpcBrain, foe: ShipE
   ship.input = { rudder: 0, sailTarget: 0 };
   brain.surrenderedAt = game.now;
   brain.target = null;
-  game.toastNear(ship, `${ship.name} strikes her colours!`);
   game.emit({ k: 'fx', fx: 'struck', x: Math.round(ship.state.x), y: Math.round(ship.state.y) }, ship.state.x, ship.state.y);
   const captain = captainShip(game, foe);
   const s = captain ? game.sessionOf(captain) : undefined;
+  // The word to her captor only (and her mates' sight shows it): a merchant striking to the sea's own pirates a league
+  // off is no news — in the Whispering Archipelago two dozen «… спускает флаг!» a minute filled her toasts (mid-game QA
+  // 2026-10-23).
+  if (s) game.sendTo(s, { t: 'toast', msg: `${ship.name} strikes her colours!`, kind: 'info' });
   if (s?.profile && dist(captain!.state.x, captain!.state.y, ship.state.x, ship.state.y) < 2000) {
     offered.set(ship, s.accountId);
     game.sendTo(s, { t: 'surrender_offer', offer: surrenderOffer(game, s, ship) });

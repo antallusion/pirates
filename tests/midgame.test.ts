@@ -367,3 +367,21 @@ test('the crew’s rum and dreamleaf rations never touch a cargo a quest of hers
   stepMind(game, ship);
   assert.equal(ship.cargo.dreamleaf, qty);
 });
+
+test('a ship striking to the sea’s own pirates is no toast for every captain about; her captor is told', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { struck } = await import('../server/src/game/struck.ts');
+  const { game } = makeGame();
+  const c = join(game, 'Bystander');
+  const s = game.sessionByName('Bystander')!;
+  s.ship!.docked = null; s.profile!.docked = null;
+  const { x, y } = s.ship!.state;
+  const m = game.spawnNpcShip('merchant', 'sloop', 'league', x + 600, y, 0);
+  const pir = game.spawnNpcShip('pirate', 'sloop', 'confederacy', x + 700, y, 0);
+  const before = c.all('toast').length;
+  struck(game, m, game.npcs.get(m.id)!, pir);
+  assert.equal(c.all('toast').length, before, 'no word to a captain who is not her captor');
+  const m2 = game.spawnNpcShip('merchant', 'sloop', 'league', x + 300, y, 0);
+  struck(game, m2, game.npcs.get(m2.id)!, s.ship!);
+  assert.ok(c.all('toast').slice(before).some((t) => /strikes her colours!/.test(t.msg)), 'her captor told');
+});
