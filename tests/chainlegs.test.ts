@@ -23,7 +23,10 @@ for (const seed of [WORLD_SEED, 1337]) {
       assert.deepEqual(over.map((l) => `${l.quest} #${l.step} → ${l.to}: ${Number.isFinite(l.d) ? (l.d / 1000).toFixed(2) : '>6'} km`), [], kind);
     }
     assert.equal(a.byKind.campaign.legs.length > 1000, true, 'the campaign followed');
+    // a chapter starts within 3 km of where the one before ended — or a ship takes her there (a passage)
     assert.ok(a.handovers.length >= 35, 'a hand-over a chapter (and the home-coming)');
+    for (const h of a.handovers) assert.ok(h.passage || h.d <= CHAIN_LEG + 1, `ch${h.ch}: ${(h.d / 1000).toFixed(1)} km sailed`);
+    assert.ok(a.handovers.filter((h) => !h.passage).length >= 20, 'most chapters begin where the one before ended');
   });
 }
 
@@ -51,4 +54,29 @@ test('a port’s letters and cargoes go to harbours within 3 km on the sea route
     }
   }
   assert.ok(n > 10, `${n} contracts`);
+});
+
+test('a passage: a chapter that must begin far off — a ship takes her there, free, once at sea (in port: once she casts off)', async () => {
+  const { campaignOf, campaignPassage, passageDue } = await import('../server/src/game/campaign.ts');
+  const { join } = await import('./helpers.ts');
+  const { game } = makeGame();
+  join(game, 'Passenger');
+  const s = game.sessionByName('Passenger')!, ship = s.ship!;
+  const c = campaignOf(game);
+  const loc = c.locations.find((l) => l.passage && l.i > 0)!;
+  assert.ok(loc, 'a passage in the campaign');
+  s.profile!.campaign!.at = loc.from;
+  s.profile!.quests.active = [];
+  assert.ok(passageDue(game, s.profile!));
+  // in port: it waits
+  assert.ok(ship.docked);
+  assert.equal(campaignPassage(game, s, true), false);
+  // at sea, far off: taken there
+  game.undock(s);
+  ship.state.x = loc.x + 20000;
+  ship.state.y = loc.y;
+  assert.equal(campaignPassage(game, s), true);
+  assert.ok(Math.hypot(ship.state.x - loc.x, ship.state.y - loc.y) < (loc.kind === 'isle' ? game.world.islands[loc.id as number].radius + 800 : 800), 'off its place');
+  assert.equal(passageDue(game, s.profile!), null, 'once');
+  assert.equal(campaignPassage(game, s), false);
 });

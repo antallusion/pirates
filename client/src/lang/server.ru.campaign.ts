@@ -22,4 +22,6 @@ export const SERVER_RU_CAMPAIGN: Record<string, string> = {
   'No room in the hold for sailcloth — the step is counted.': 'В трюме нет места для парусины — шаг засчитан.',
   'The hold is full — the step is counted.': 'Трюм полон — шаг засчитан.',
   'Only a lesson of the shops can be skipped': 'Пропустить можно только урок лавок',
+  'A ship waits to take you to {0}: cast off, and she takes you there.': 'Вас ждёт корабль до порта {0}: выйдите в море, и он доставит вас туда.',
+  'A ship of the story takes you to {0}: the passage is free, and the chapter goes on there.': 'Попутный корабль доставляет вас в {0}: переход бесплатный, глава продолжается там.',
 };

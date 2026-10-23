@@ -66,6 +66,10 @@ export interface CampaignLoc {
   ch: number;
   from: number;
   size: number;
+  /** A chapter's first place (or the home-coming) farther than a chain's leg from where the one before ended (owner,
+   *  2026-10-23: «никто за 6-10 и тем более 20 км никуда не поплывет»): a ship takes her there, free (server campaign.ts
+   *  campaignPassage) — she never sails the crossing herself. */
+  passage?: boolean;
 }
 
 export interface Campaign {
@@ -246,6 +250,13 @@ function abyssLens(ch: ChapterSrc, size: number): number[] {
 export const CHAPTER_LEG = 2500;
 /** A run held where the run before it was (no harbour or island near enough): allowed, a little dearer than a new place. */
 const REPEAT = 4000;
+/** A hand-over too long to sail (a passage): as dear as this many metres more (a chapter's seas with a place near
+ *  where the one before ended take it). */
+const PASSAGE_COST = 20000;
+/** A place visited in a chapter before: allowed (the chain comes first), dearer than a new one. */
+const USED = 1500;
+/** A run held in the seas of the chapter before (on its way from them): allowed, dearer than its own seas. */
+const OTHER_SEA = 2000;
 /** How hard a chapter's first run is drawn to its mentor's harbour, and its last to the next one's. */
 const HUB_PULL = 0.1;
 
@@ -290,7 +301,7 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
   const others = new Map<string | number, boolean>();
   const runs: Run[] = [];
   const locations: CampaignLoc[] = [];
-  let prev: { x: number; y: number } | null = null;
+  let prev: Node | null = null;
   const lv = (k: string | number) => pl.level.get(k) ?? 1;
   const isleLoc = (i: Island): Node => ({ kind: 'isle', id: i.id, name: i.name, x: i.x, y: i.y, r: i.radius + 40, region: i.region, near: islandsNear(pl, { kind: 'isle', id: i.id, x: i.x, y: i.y }, LOCAL_R, i.id).length + 1 });
   const portNode = (p: Port): Node => ({ kind: 'port', id: p.id, name: p.name, x: p.x, y: p.y, r: 0, region: p.region, near: nearCount(pl, p) });
@@ -319,6 +330,10 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
     const seas: RegionId[] = abyss ? ['drowned_crown'] : [ch.region, ...(ch.more ?? [])];
     const isleSeas: RegionId[] = abyss ? ['the_abyss'] : [ch.region, ...(ch.more ?? [])];
     const bridge: RegionId[] = next && !abyss ? [next.ch.region === 'the_abyss' ? 'drowned_crown' : next.ch.region] : [];
+    // (the seas the chapter before ended in: its start may lie there, on the way, so it begins near where that one ended)
+    const before = ci > 0 ? chapters[ci - 1].ch : null;
+    const back: RegionId[] = before ? (before.region === 'the_abyss' ? ['drowned_crown', 'the_abyss'] : [before.region, ...(before.more ?? [])]) : [];
+    const ownSea = (r: RegionId) => isleSeas.includes(r) || seas.includes(r);
     // a good's nearest seller by the route from a harbour's quay (within reach of it; past it, dear)
     const sellerCost = (n: Node, g: GoodId, strong: boolean): number => {
       const k = `${n.id}|${g}`;
@@ -326,7 +341,24 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
       if (d === undefined) seller.set(k, (d = nearestSellerByRoute(pl.world, n, g, undefined, CHAPTER_LEG)?.d ?? Infinity));
       return Number.isFinite(d) ? d * 0.5 + (d > LOCAL_R ? 2000 : 0) : strong ? 4000 : 3000;
     };
-    const start = prev as { x: number; y: number } | null;
+    const start = prev as Node | null;
+    // the next chapter's seas: its places, whose nearest the chapter drifts to, so the hand-over is a short sail
+    const nextSeas: RegionId[] = next ? (next.ch.region === 'the_abyss' ? ['drowned_crown'] : [next.ch.region, ...(next.ch.more ?? [])]) : [];
+    const nextPorts = portNodes.filter((n) => nextSeas.includes(n.region));
+    const toNext = (p: Node): number => {
+      if (!nextPorts.length || lastOfAll) return 0;
+      let d = Infinity;
+      for (const q of nextPorts) d = Math.min(d, Math.hypot(q.x - p.x, q.y - p.y));
+      return d;
+    };
+    // the hand-over (owner, 2026-10-23): a sail within a chain's leg of where the chapter before ended; past it, a passage
+    // (a ship takes her there) — dear, so a place near is taken wherever the chapter's seas have one
+    const handover = (p: Node): number => {
+      if (!start) return 0;
+      if (start.id === p.id && start.kind === p.kind) return 0;
+      const d = locRoute(pl, start, p);
+      return Number.isFinite(d) ? d : PASSAGE_COST + Math.hypot(p.x - start.x, p.y - start.y);
+    };
     const hub = byId(ch.hub);
     let pick: { runs: Run[]; nodes: Node[]; cost: number } | null = null;
     const base = Math.max(1, Math.round(size / 5)), most = Math.max(base, Math.floor(size / 2));
@@ -341,9 +373,16 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
         const band = shipBandOf(run.gate);
         const fits = (n: Node) => lv(n.id) <= band + 2 && lv(n.id) >= band - 2;
         const c = [
-          ...portNodes.filter((n) => (seas.includes(n.region) || bridge.includes(n.region)) && fits(n)),
-          ...(run.island ? isleNodes.filter((n) => (isleSeas.includes(n.region) || bridge.includes(n.region)) && fits(n)) : []),
+          ...portNodes.filter((n) => (seas.includes(n.region) || bridge.includes(n.region) || back.includes(n.region)) && fits(n)),
+          ...(run.island ? isleNodes.filter((n) => (isleSeas.includes(n.region) || bridge.includes(n.region) || back.includes(n.region)) && fits(n)) : []),
         ];
+        // a chapter's first run: also where the chapter before ended, and every place a chain's leg from it (whatever its
+        // sea or its ⚓ — the campaign drifts across the world step by step, owner 2026-10-23)
+        if (r === 0 && start) {
+          const near = [...portNodes, ...(run.island ? isleNodes : [])].filter((n) => (n.kind === 'port' || run.island) && Math.hypot(n.x - start.x, n.y - start.y) - n.r - start.r <= CHAPTER_LEG && locRoute(pl, start, n) <= CHAPTER_LEG);
+          if ((start.kind === 'port' || run.island) && !near.some((n) => n.id === start.id && n.kind === start.kind)) near.push(start);
+          for (const n of near) if (!c.some((x) => x.id === n.id && x.kind === n.kind)) c.push(n);
+        }
         return c.length ? c : portNodes.filter((n) => seas.includes(n.region) && n.near >= 1);
       });
       const node = (n: Node, run: Run) => {
@@ -355,12 +394,12 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
           for (const g of run.goods) need += sellerCost(n, g.good, g.named);
           if (run.carry && !otherNear(n)) need += 1000;
         }
-        return (run.at === n.id ? -1500 : 0) + need + (run === rs[0] && !abyss ? HUB_PULL * Math.hypot(n.x - hub.x, n.y - hub.y) : 0) + (used.get(n.id) ?? 0) * 1e5 + (n.near === 0 ? 2500 : n.near === 1 ? 1000 : 0)
-          + (l > band + 1 ? 6000 : l > band || l < band - 1 ? 3000 : 0) + (isleSeas.includes(n.region) || seas.includes(n.region) ? 0 : 1500) + (n.kind === 'isle' && !abyss ? 1200 : 0);
+        return (run.at === n.id ? -1500 : 0) + need + (run === rs[0] && !abyss ? HUB_PULL * Math.hypot(n.x - hub.x, n.y - hub.y) : 0) + (start && n.id === start.id && run === rs[0] ? 0 : (used.get(n.id) ?? 0) * USED) + (n.near === 0 ? 2500 : n.near === 1 ? 1000 : 0)
+          + (l > band + 1 ? 6000 : l > band || l < band - 1 ? 3000 : 0) + (ownSea(n.region) ? 0 : bridge.includes(n.region) ? 1500 : OTHER_SEA) + (n.kind === 'isle' && !abyss ? 1200 : 0);
       };
       // the path: best[r][j] the cost of the runs up to r ending at its j-th candidate; a voyage within the chapter
       // over the chain's limit is barred (a run may stay where the run before it was, whatever its own candidates)
-      const best: { cost: number; from: number }[][] = [cands[0].map((p) => ({ cost: (start ? Math.hypot(p.x - start.x, p.y - start.y) : 0) + node(p, rs[0]), from: -1 }))];
+      const best: { cost: number; from: number }[][] = [cands[0].map((p) => ({ cost: handover(p) + node(p, rs[0]), from: -1 }))];
       for (let r = 1; r < rs.length; r++) {
         const prevC = cands[r - 1], prevB = best[r - 1];
         const fixed = !!fixedOf(rs[r], r, rs.length);
@@ -385,7 +424,7 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
       const last = rs.length - 1;
       let bj = -1, bc = Infinity;
       cands[last].forEach((p, j) => {
-        const c = best[last][j].cost + (nextHub ? HUB_PULL * Math.hypot(nextHub.x - p.x, nextHub.y - p.y) : 0);
+        const c = best[last][j].cost + (nextHub ? HUB_PULL * Math.hypot(nextHub.x - p.x, nextHub.y - p.y) : 0) + toNext(p);
         if (c < bc) [bc, bj] = [c, j];
       });
       if (bj < 0 || bc === Infinity) continue;
@@ -396,9 +435,11 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
     const chosen = pick!;
     chosen.runs.forEach((run, r) => {
       const n = chosen.nodes[r];
-      const loc: CampaignLoc = { i: locations.length, kind: n.kind, id: n.id, name: n.name, x: n.x, y: n.y, region: n.region, ch: ch.n, from: run.from, size: run.size };
+      const far = r === 0 && !!start && !(start.id === n.id && start.kind === n.kind) && !(locRoute(pl, start, n, CHAIN_LEG) <= CHAIN_LEG);
+      const home = lastOfAll && r === chosen.runs.length - 1 && r > 0 && !(locRoute(pl, chosen.nodes[r - 1], n, CHAIN_LEG) <= CHAIN_LEG);
+      const loc: CampaignLoc = { i: locations.length, kind: n.kind, id: n.id, name: n.name, x: n.x, y: n.y, region: n.region, ch: ch.n, from: run.from, size: run.size, ...(far || home ? { passage: true } : {}) };
       if (r === 0 || chosen.nodes[r - 1].id !== n.id) used.set(loc.id, (used.get(loc.id) ?? 0) + 1);
-      prev = loc;
+      prev = n;
       runs.push(run);
       locations.push(loc);
     });
@@ -684,6 +725,15 @@ export function nearGood(world: World, home: { x: number; y: number; id: string 
   return best;
 }
 
+/** Where she comes to a place from afar (a passage puts her there; a chapter's start is reckoned from it): a harbour's
+ *  quay, an island's shore facing where she came from. */
+export function arrival(world: World, loc: { kind: 'port' | 'isle'; id: string | number; x: number; y: number }, from: { x: number; y: number }): { x: number; y: number } {
+  if (loc.kind === 'port') return { x: loc.x, y: loc.y };
+  const i = world.islands[loc.id as number];
+  const k = Math.hypot(from.x - i.x, from.y - i.y) || 1;
+  return { x: i.x + ((from.x - i.x) / k) * (i.radius + 40), y: i.y + ((from.y - i.y) / k) * (i.radius + 40) };
+}
+
 /** The campaign of these chapters on this world. Chapters are taken in the plan's order; the pace is the whole plan's. */
 export function buildCampaign(world: World, _seed: number, chapters: ChapterSrc[]): Campaign {
   const pl = placesOf(world);
@@ -713,7 +763,7 @@ export function buildCampaign(world: World, _seed: number, chapters: ChapterSrc[
     runs.forEach((run, r) => {
       const loc = locations[r];
       const fresh = !chain || r === 0 || locations[r - 1].ch !== loc.ch;
-      const ctx: QuestCtx = { pl, ch: run.ch, loc, turn: 0, at: fresh || !chain ? { x: loc.x, y: loc.y } : chain };
+      const ctx: QuestCtx = { pl, ch: run.ch, loc, turn: 0, at: !chain ? { x: loc.x, y: loc.y } : fresh || (loc.passage && r > 0) ? arrival(world, loc, chain) : chain };
       for (let s = run.from; s < run.from + run.size; s++) {
         const k = s - firstOf[run.ch.n - 1];
         const q: QuestSrc = run.ch.quests[k];
@@ -726,7 +776,9 @@ export function buildCampaign(world: World, _seed: number, chapters: ChapterSrc[
         const b = q.alt ? buildQuest(ctx, q.alt, `${id}b`, s, k, pace.gate, pace.xp, pace.silver, travel, { key: q.alt.key, way: 'b', label: q.alt.label[1] }) : undefined;
         ctx.turn = turn;
         const legs = questLegs(world, a, ctx.at);
-        if (s === run.from && !fresh && legs.legs.some((l) => l.d > CHAIN_LEG)) far.push(r);
+        if (s === run.from && !fresh && !loc.passage && legs.legs.some((l) => l.d > CHAIN_LEG)) far.push(r);
+        // (a chapter's first quest farther than a leg from where the one before ended: a ship takes her — a passage)
+        if (s === run.from && fresh && r > 0 && chain && !loc.passage && questLegs(world, a, chain).legs.some((l) => l.d > CHAIN_LEG)) loc.passage = true;
         ctx.at = legs.end;
         slots.push({ slot: s, ch: run.ch.n, k, gate: pace.gate, loc: loc.i, travel, a, ...(b ? { b } : {}) });
         quests.push(a);
@@ -750,6 +802,12 @@ export function buildCampaign(world: World, _seed: number, chapters: ChapterSrc[
       moved = true;
     }
     if (!moved) break;
+  }
+  // what no holding mends (a run's first quest still over a leg from where the one before ended): a ship takes her
+  const left = lay();
+  if (left.length) {
+    for (const r of left) locations[r].passage = true;
+    lay();
   }
   return { slots, bySlot: new Map(slots.map((x) => [x.slot, x])), chapters: PLAN.map((p) => byN.get(p.n)).filter((c): c is ChapterSrc => !!c), quests, firstOf, locations };
 }

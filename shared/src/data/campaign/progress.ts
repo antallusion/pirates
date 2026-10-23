@@ -15,6 +15,8 @@ export interface CampaignState {
   started: boolean;
   /** The slot it began at for her (a migrated captain's chapter; 0 for one who began at the beginning). */
   from: number;
+  /** The last place a passage took her to (a slot: server campaign.ts campaignPassage — once a place). */
+  passed?: number;
 }
 
 export function newCampaignState(): CampaignState {
@@ -74,5 +76,5 @@ export function sanitizeCampaign(raw: CampaignState | undefined, level: number, 
   const at = Math.max(0, Math.min(CAMPAIGN_SIZE, Math.floor(raw.at)));
   const picks: Record<string, 'a' | 'b'> = {};
   for (const [k, v] of Object.entries(raw.picks ?? {})) if (v === 'a' || v === 'b') picks[k] = v;
-  return { at, picks, started: true, from: Math.max(0, Math.min(at, Math.floor(raw.from ?? 0))) };
+  return { at, picks, started: true, from: Math.max(0, Math.min(at, Math.floor(raw.from ?? 0))), ...(typeof raw.passed === 'number' ? { passed: Math.floor(raw.passed) } : {}) };
 }

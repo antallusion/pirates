@@ -7,7 +7,10 @@
 // have no raiders of their own to board.
 
 import { MAX_LEVEL } from '../../../shared/src/constants.ts';
-import { OPENING_SLOTS, buildCampaign } from '../../../shared/src/data/campaign/build.ts';
+import { OPENING_SLOTS, arrival, buildCampaign } from '../../../shared/src/data/campaign/build.ts';
+import { headingVec } from '../../../shared/src/math.ts';
+import { hullWater, nearestWater } from './seaway.ts';
+import { untouchable } from './inbattle.ts';
 import { SOFT_HULL, SOFT_MEN } from './firstfights.ts';
 import type { Campaign, CampaignSlot } from '../../../shared/src/data/campaign/build.ts';
 import { CHAPTERS } from '../../../shared/src/data/campaign/chapters.ts';
@@ -185,6 +188,61 @@ export function campaignDone(game: Game, s: PlayerSession, q: QuestDef): void {
   if (meta.k === size - 1) chapterEnd(game, s, meta.ch, q.requires.level ?? 1);
   if (c.at >= CAMPAIGN_SIZE) game.sendTo(s, { t: 'toast', msg: 'The campaign is done. The tide sleeps.', kind: 'gold' });
   campaignNext(game, s, true);
+  campaignPassage(game, s, true);
+}
+
+// ------------------------------------------------------------------ the passage
+
+/** The place a passage takes her to now, if one is due: her next quest the first of a place too far to sail to
+ *  (build.ts CampaignLoc.passage — a chapter's start in a far sea, the home-coming), not yet taken there. */
+export function passageDue(game: Game, p: Profile): { loc: Campaign['locations'][number]; slot: number } | null {
+  const c = p.campaign;
+  if (!c || c.at >= CAMPAIGN_SIZE || c.passed === c.at) return null;
+  const slot = campaignOf(game).bySlot.get(c.at);
+  if (!slot) return null;
+  const loc = campaignOf(game).locations[slot.loc];
+  return loc?.passage && loc.from === slot.slot ? { loc, slot: slot.slot } : null;
+}
+
+/** The passage (owner, 2026-10-23: «никто за 6-10 и тем более 20 км никуда не поплывет»): a chapter that must begin in
+ *  a far sea — and the home-coming — has a ship of the story take her there, free: she is put off its harbour's mouth (or
+ *  its island's shore), her sails down, and told so. At sea and out of any fight; in port, once she casts off. `fresh`:
+ *  the quest just done (a word if she must cast off first). */
+export function campaignPassage(game: Game, s: PlayerSession, fresh = false): boolean {
+  const p = s.profile, ship = s.ship;
+  if (!p || !ship) return false;
+  const due = passageDue(game, p);
+  if (!due) return false;
+  const { loc } = due;
+  if (ship.docked) {
+    if (fresh) game.sendTo(s, { t: 'toast', msg: `A ship waits to take you to ${loc.name}: cast off, and she takes you there.`, kind: 'info' });
+    return false;
+  }
+  if (!ship.alive || ship.grappled || ship.boarding || s.pendingBoarding || untouchable(game, ship) || ship.inCombat(game.now)) return false;
+  game.halt(s);
+  let x: number, y: number, heading: number;
+  if (loc.kind === 'port') {
+    const port = game.portById(loc.id as string)!;
+    const is = game.world.islands[port.islandId];
+    heading = Math.atan2(port.x - is.x, -(port.y - is.y));
+    const v = headingVec(heading);
+    [x, y] = [port.x + v.x * 130, port.y + v.y * 130];
+  } else {
+    const a = arrival(game.world, loc, ship.state);
+    [x, y] = [a.x, a.y];
+    heading = Math.atan2(x - loc.x, -(y - loc.y));
+  }
+  const w = nearestWater(game.world, x, y, hullWater(ship), 600);
+  if (w) [x, y] = w;
+  ship.state = { ...ship.state, x, y, heading, speed: 0, sail: 0, rudder: 0 };
+  ship.input = { rudder: 0, sailTarget: 0 };
+  ship.protectedUntil = game.now + 20;
+  ship.region = loc.region;
+  game.grid.upsert(ship.id, x, y);
+  p.campaign!.passed = due.slot;
+  game.sendTo(s, { t: 'toast', msg: `A ship of the story takes you to ${loc.name}: the passage is free, and the chapter goes on there.`, kind: 'gold' });
+  game.pushSelf(s, true);
+  return true;
 }
 
 /** A chapter's end: a purse, and the chapter's own reward (a title to wear, a treasure map, shot for the guns). */
@@ -236,6 +294,7 @@ const watches = new WeakMap<PlayerSession, FoeWatch>();
 export function campaignTick(game: Game, s: PlayerSession): void {
   const p = s.profile, ship = s.ship;
   if (!p || !ship || ship.docked || !ship.alive || ship.boarding) return;
+  if (campaignPassage(game, s)) return; // (cast off with a passage waiting: the ship takes her now)
   const qs = campaignActive(p);
   const q = qs ? QUESTS_BY_ID[qs.id] : undefined;
   const st = q?.steps[qs!.step];

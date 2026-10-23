@@ -19,4 +19,4 @@ for (const [kind, r] of Object.entries(a.byKind)) {
   console.log(`  ${kind.padEnd(10)} legs ${String(r.legs.length).padStart(5)}  over 3 km ${String(over.length).padStart(4)}  longest ${over.some((l) => !Number.isFinite(l.d)) ? '>6 km' : `${((Math.max(0, ...fin)) / 1000).toFixed(1)} km`}`);
   for (const l of (all ? over : over.slice(0, 6))) console.log(`      ${l.quest} #${l.step} → ${l.to}: ${Number.isFinite(l.d) ? `${(l.d / 1000).toFixed(1)} km` : '>6 km'}`);
 }
-console.log(`  hand-overs (campaign, into a chapter's waters): ${a.handovers.map((h) => `ch${h.ch} ${(h.d / 1000).toFixed(1)}`).join(', ')}`);
+console.log(`  hand-overs: sailed ${a.handovers.filter((h) => !h.passage).length} (longest ${(Math.max(0, ...a.handovers.filter((h) => !h.passage).map((h) => h.d)) / 1000).toFixed(1)} km); passages: ${a.handovers.filter((h) => h.passage).map((h) => `ch${h.ch} ${(h.d / 1000).toFixed(1)} km`).join(', ') || 'none'}`);
