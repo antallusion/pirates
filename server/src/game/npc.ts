@@ -665,7 +665,9 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   // Fighters. Battered past bearing and outgunned by a captain on her, she strikes her colours (docs/16 #3).
   if (strikeColours(game, ship, brain, (prey ?? threat) as ShipEntity | null)) return;
   const lowHull = ship.hull < ship.stats.hullMax * (ship.fleeAt ?? 0.22); // a named coward runs sooner, a brute never
-  if (role === 'pirate' && lowHull && prey) {
+  // (a foe softened for a fresh captain's first fights — the opening's tender — fights it out: since the reaches were
+  // halved, owner 2026-10-22, a pirate running at 22 % outran a long 9-pounder's 205 m and the lesson was never done)
+  if (role === 'pirate' && lowHull && prey && ship.softFor === undefined) {
     const away = headingOf(ship.state.x - (prey as ShipEntity).state.x, ship.state.y - (prey as ShipEntity).state.y);
     steer(game, ship, brain, away, 1);
     return;
