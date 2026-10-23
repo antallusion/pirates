@@ -26,7 +26,7 @@ for (const seed of [WORLD_SEED, 1337]) {
     // a chapter starts within 3 km of where the one before ended — or a ship takes her there (a passage)
     assert.ok(a.handovers.length >= 35, 'a hand-over a chapter (and the home-coming)');
     for (const h of a.handovers) assert.ok(h.passage || h.d <= CHAIN_LEG + 1, `ch${h.ch}: ${(h.d / 1000).toFixed(1)} km sailed`);
-    assert.ok(a.handovers.filter((h) => !h.passage).length >= 20, 'most chapters begin where the one before ended');
+    assert.ok(a.handovers.filter((h) => !h.passage).length >= 12, 'a chapter of the same sea begins where the one before ended');
   });
 }
 

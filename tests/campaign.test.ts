@@ -710,6 +710,7 @@ test('the voyages (owner, 2026-10-23: «максимум на удалении 3
       const prev = c.locations[i - 1];
       if (!prev || prev.ch !== l.ch || (i === c.locations.length - 1 && l.id === 'saltmarrow')) return;
       if (prev.id === l.id && prev.kind === l.kind) return;
+      if (l.passage) return; // (a ship takes her there: chainlegs.test.ts)
       const a = prev.kind === 'isle' ? w.islands[prev.id as number] : null, b = l.kind === 'isle' ? w.islands[l.id as number] : null;
       // (quay to quay, or into an island's waters from the facing shore)
       const from = a ? { x: a.x + ((l.x - a.x) / Math.hypot(l.x - a.x, l.y - a.y)) * (a.radius + 40), y: a.y + ((l.y - a.y) / Math.hypot(l.x - a.x, l.y - a.y)) * (a.radius + 40) } : prev;
@@ -754,8 +755,9 @@ test('the locations go through all the seas, the start and the end at home, the 
   for (let i = 1; i < gates.length; i++) assert.ok(gates[i] >= gates[i - 1], 'each sea first come to no earlier than the one before');
   assert.equal([...firsts.keys()].at(-1), 'the_abyss');
   const ports = new Set(built.locations.filter((l) => l.kind === 'port').map((l) => l.id));
-  // (a chapter's places within 3 km of each other — owner, 2026-10-23 — so fewer harbours, a run often held where it was)
-  assert.ok(ports.size >= 40, `${ports.size} harbours`);
+  // (a chapter's places within 3 km of each other and of where the one before ended — owner, 2026-10-23 — so fewer
+  // harbours, a run often held where it was)
+  assert.ok(ports.size >= 18, `${ports.size} harbours`);
   assert.ok(built.locations.some((l) => l.kind === 'isle' && l.region === 'the_abyss'), 'islands of the Abyss itself');
 });
 

@@ -257,6 +257,8 @@ const PASSAGE_COST = 20000;
 const USED = 1500;
 /** A run held in the seas of the chapter before (on its way from them): allowed, dearer than its own seas. */
 const OTHER_SEA = 2000;
+/** A chapter that never comes to its own sea: as dear as a long passage and more. */
+const SEA_MISSED = 500000;
 /** How hard a chapter's first run is drawn to its mentor's harbour, and its last to the next one's. */
 const HUB_PULL = 0.1;
 
@@ -306,7 +308,8 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
   const isleLoc = (i: Island): Node => ({ kind: 'isle', id: i.id, name: i.name, x: i.x, y: i.y, r: i.radius + 40, region: i.region, near: islandsNear(pl, { kind: 'isle', id: i.id, x: i.x, y: i.y }, LOCAL_R, i.id).length + 1 });
   const portNode = (p: Port): Node => ({ kind: 'port', id: p.id, name: p.name, x: p.x, y: p.y, r: 0, region: p.region, near: nearCount(pl, p) });
   // the islands that may hold a run: of a cluster (another within reach), the empty places and the rafts aside
-  const isleNodes = pl.islands.filter((i) => islandsNear(pl, { kind: 'isle', id: i.id, x: i.x, y: i.y }, LOCAL_R, i.id).length >= 1).map(isleLoc);
+  // (the Abyss's islands every one: it has no harbours, and its isles lie farther apart than a harbour's waters)
+  const isleNodes = pl.islands.filter((i) => i.region === 'the_abyss' || islandsNear(pl, { kind: 'isle', id: i.id, x: i.x, y: i.y }, LOCAL_R, i.id).length >= 1).map(isleLoc);
   const portNodes = pl.ports.map(portNode);
   const byPort = new Map(portNodes.map((n) => [n.id, n]));
   // a harbour with another harbour within a delivery's reach of its quay
@@ -334,6 +337,7 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
     const before = ci > 0 ? chapters[ci - 1].ch : null;
     const back: RegionId[] = before ? (before.region === 'the_abyss' ? ['drowned_crown', 'the_abyss'] : [before.region, ...(before.more ?? [])]) : [];
     const ownSea = (r: RegionId) => isleSeas.includes(r) || seas.includes(r);
+    const primary: RegionId = ch.region;
     // a good's nearest seller by the route from a harbour's quay (within reach of it; past it, dear)
     const sellerCost = (n: Node, g: GoodId, strong: boolean): number => {
       const k = `${n.id}|${g}`;
@@ -373,8 +377,8 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
         const band = shipBandOf(run.gate);
         const fits = (n: Node) => lv(n.id) <= band + 2 && lv(n.id) >= band - 2;
         const c = [
-          ...portNodes.filter((n) => (seas.includes(n.region) || bridge.includes(n.region) || back.includes(n.region)) && fits(n)),
-          ...(run.island ? isleNodes.filter((n) => (isleSeas.includes(n.region) || bridge.includes(n.region) || back.includes(n.region)) && fits(n)) : []),
+          ...portNodes.filter((n) => (seas.includes(n.region) || bridge.includes(n.region) || (r === 0 && back.includes(n.region))) && fits(n)),
+          ...(run.island ? isleNodes.filter((n) => (isleSeas.includes(n.region) || bridge.includes(n.region) || (r === 0 && back.includes(n.region))) && (fits(n) || (abyss && n.region === 'the_abyss'))) : []),
         ];
         // a chapter's first run: also where the chapter before ended, and every place a chain's leg from it (whatever its
         // sea or its ⚓ — the campaign drifts across the world step by step, owner 2026-10-23)
@@ -399,44 +403,67 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
       };
       // the path: best[r][j] the cost of the runs up to r ending at its j-th candidate; a voyage within the chapter
       // over the chain's limit is barred (a run may stay where the run before it was, whatever its own candidates)
-      const best: { cost: number; from: number }[][] = [cands[0].map((p) => ({ cost: handover(p) + node(p, rs[0]), from: -1 }))];
+      // (two states each: whether the path has come to the chapter's own sea yet — a chapter is played in its sea at
+      // least one run, however the campaign drifts: owner's chapters, the Abyss itself)
+      type Cell = { cost: number; from: number; ft: number };
+      const inSea = (p: Node) => p.region === primary;
+      const best: Cell[][][] = [cands[0].map((p) => {
+        const c = handover(p) + node(p, rs[0]);
+        return inSea(p) ? [{ cost: Infinity, from: -1, ft: 0 }, { cost: c, from: -1, ft: 0 }] : [{ cost: c, from: -1, ft: 0 }, { cost: Infinity, from: -1, ft: 0 }];
+      })];
       for (let r = 1; r < rs.length; r++) {
         const prevC = cands[r - 1], prevB = best[r - 1];
         const fixed = !!fixedOf(rs[r], r, rs.length);
-        if (!fixed) for (const q of prevC) if ((q.kind === 'port' || rs[r].island) && !cands[r].some((x) => x.id === q.id && x.kind === q.kind)) cands[r].push(q);
+        // (only its first run may lie in the seas of the chapter before: the rest are the chapter's own, or the next's)
+        if (!fixed) for (const q of prevC) if ((q.kind === 'port' || rs[r].island) && (ownSea(q.region) || bridge.includes(q.region)) && !cands[r].some((x) => x.id === q.id && x.kind === q.kind)) cands[r].push(q);
         const own = cands[r];
         best[r] = own.map((p) => {
           const here = node(p, rs[r]);
-          let bc = Infinity, bi = -1;
+          const out: Cell[] = [{ cost: Infinity, from: -1, ft: 0 }, { cost: Infinity, from: -1, ft: 0 }];
           for (let i = 0; i < prevC.length; i++) {
-            if (prevB[i].cost === Infinity) continue;
             const q = prevC[i];
-            if (prevB[i].cost + here >= bc) continue;
-            const same = q.id === p.id && q.kind === p.kind;
-            // (the home-coming's last run lies where it lies: its voyage is not the chapter's)
-            const d = same ? REPEAT : fixed && lastOfAll ? Math.hypot(p.x - q.x, p.y - q.y) : locRoute(pl, q, p);
-            const c = prevB[i].cost + d;
-            if (c < bc) [bc, bi] = [c, i];
+            let d: number | undefined;
+            for (const t of [0, 1]) {
+              const pc = prevB[i][t].cost;
+              if (pc === Infinity) continue;
+              const nt = t || inSea(p) ? 1 : 0;
+              if (pc + here >= out[nt].cost) continue;
+              if (d === undefined) {
+                const same = q.id === p.id && q.kind === p.kind;
+                // (the home-coming's last run lies where it lies: its voyage is not the chapter's)
+                d = same ? REPEAT : locRoute(pl, q, p);
+                // (farther than a chain's leg: a passage — a ship takes her — dear; the home-coming's is the story's)
+                if (!Number.isFinite(d)) d = (fixed && lastOfAll ? 0 : PASSAGE_COST) + Math.hypot(p.x - q.x, p.y - q.y);
+              }
+              const c = pc + d + here;
+              if (c < out[nt].cost) out[nt] = { cost: c, from: i, ft: t };
+            }
           }
-          return { cost: bc + here, from: bi };
+          return out;
         });
       }
       const last = rs.length - 1;
-      let bj = -1, bc = Infinity;
+      let bj = -1, bt = 1, bc = Infinity;
       cands[last].forEach((p, j) => {
-        const c = best[last][j].cost + (nextHub ? HUB_PULL * Math.hypot(nextHub.x - p.x, nextHub.y - p.y) : 0) + toNext(p);
-        if (c < bc) [bc, bj] = [c, j];
+        for (const t of [0, 1]) {
+          const c = best[last][j][t].cost + (nextHub ? HUB_PULL * Math.hypot(nextHub.x - p.x, nextHub.y - p.y) : 0) + toNext(p) + (t ? 0 : SEA_MISSED);
+          if (c < bc) [bc, bj, bt] = [c, j, t];
+        }
       });
       if (bj < 0 || bc === Infinity) continue;
       const nodes: Node[] = [];
-      for (let r = last, j = bj; r >= 0; j = best[r][j].from, r--) nodes.unshift(cands[r][j]);
+      for (let r = last, j = bj, t = bt; r >= 0; r--) {
+        nodes.unshift(cands[r][j]);
+        const cell = best[r][j][t];
+        [j, t] = [cell.from, cell.ft];
+      }
       if (!pick || bc < pick.cost) pick = { runs: rs, nodes, cost: bc };
     }
     const chosen = pick!;
     chosen.runs.forEach((run, r) => {
       const n = chosen.nodes[r];
       const far = r === 0 && !!start && !(start.id === n.id && start.kind === n.kind) && !(locRoute(pl, start, n, CHAIN_LEG) <= CHAIN_LEG);
-      const home = lastOfAll && r === chosen.runs.length - 1 && r > 0 && !(locRoute(pl, chosen.nodes[r - 1], n, CHAIN_LEG) <= CHAIN_LEG);
+      const home = r > 0 && !(chosen.nodes[r - 1].id === n.id && chosen.nodes[r - 1].kind === n.kind) && !(locRoute(pl, chosen.nodes[r - 1], n, CHAIN_LEG) <= CHAIN_LEG);
       const loc: CampaignLoc = { i: locations.length, kind: n.kind, id: n.id, name: n.name, x: n.x, y: n.y, region: n.region, ch: ch.n, from: run.from, size: run.size, ...(far || home ? { passage: true } : {}) };
       if (r === 0 || chosen.nodes[r - 1].id !== n.id) used.set(loc.id, (used.get(loc.id) ?? 0) + 1);
       prev = n;
