@@ -111,7 +111,7 @@ export function questLegs(world: World, q: QuestDef, from: At, cap = CHAIN_LEG *
     if (st.type === 'pickup') held.add(st.good);
     // a delivery with nothing taken on for it: bought at the nearest seller first
     if (st.type === 'deliver' && !held.has(st.good)) {
-      const s = nearestSellerByRoute(world, at, st.good, st.port, cap);
+      const s = nearestSellerByRoute(world, at, st.good, undefined, cap);
       legs.push({ quest: q.id, step: i, to: s ? `seller ${s.port.id} (${st.good})` : `no seller (${st.good})`, d: s ? s.d : Infinity });
       if (s) at = { x: s.port.x, y: s.port.y };
     }

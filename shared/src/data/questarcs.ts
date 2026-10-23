@@ -12,7 +12,8 @@ import { islandLife } from '../world/islandlife.ts';
 import type { GoodId } from './goods.ts';
 import { GOODS } from './goods.ts';
 import type { QuestDef, QuestStep } from './quests.ts';
-import { SITE_NAMES, STEP_TEXT, fill, giverPortrait, numberedPattern } from './questgen.ts';
+import { CHAIN_LEG, legTo } from './questlegs.ts';
+import { SITE_NAMES, STEP_TEXT, chainShort, fill, giverPortrait, isleByRoute, linked, numberedPattern } from './questgen.ts';
 import { legacyQuestSize, questXp } from './xpcurve.ts';
 import type { Profession, StepKind } from './questgen.ts';
 
@@ -247,57 +248,84 @@ export const ARCS: Arc[] = [
 ];
 
 /** The arcs on a world: each chapter a quest offered at the region's port, opening when the one before is done. */
+/**
+ * The arcs laid on the world. Each is held at one harbour of its region and its waters (owner, 2026-10-23: «все квесты
+ * цепочек … максимум на удалении 3км друг от друга»): the harbour nearest the region's middle whose three chapters all
+ * keep within a chain's leg — its other harbours linked to it (and to each other), its islands within reach of its
+ * quay, a good bought near — else the one that keeps the most of them.
+ */
 export function generateArcs(world: World, seed: number): QuestDef[] {
+  const full = world;
   world = legacyWorld(world); // docs/18 III: the arcs a saved game knows keep their islands
   const out: QuestDef[] = [];
+  const ports = world.ports.filter((p) => !p.raft); // the floating towns keep out of the stories (docs/16 P3)
   for (const arc of ARCS) {
-    const rng = new Rng((hashString(arc.id) ^ (seed * 40503)) >>> 0);
     const [cx, cy] = REGIONS[arc.region].center;
-    const ports = world.ports.filter((p) => !p.raft); // the floating towns keep out of the stories (docs/16 P3)
     const regionPorts = ports.filter((p) => p.region === arc.region).sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy));
-    const home: Port | undefined = regionPorts[0] ?? ports.slice().sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy))[0];
-    if (!home) continue;
-    const others = ports.filter((p) => p.id !== home.id).sort((a, b) => Math.hypot(a.x - home.x, a.y - home.y) - Math.hypot(b.x - home.x, b.y - home.y)).slice(0, 6);
-    const islands = world.islands.filter((is) => is.region === arc.region && !is.portId && !is.minor);
-    const level = [1, 6, 10, 14, 18, 16, 22, 40][REGION_IDS.indexOf(arc.region)] ?? 10;
-    let prev: string | null = null;
-    arc.chapters.forEach((ch, i) => {
-      const port2 = others[rng.int(0, Math.max(0, others.length - 1))];
-      const port3 = others.filter((p) => p !== port2)[rng.int(0, Math.max(0, others.length - 2))] ?? port2;
-      const fits = (is: Island): string | undefined => {
-        const here = [...is.features, ...islandLife({ id: is.id, region: is.region, biome: is.biome, x: is.x, y: is.y, r: Math.round(is.radius), poly: is.poly, features: is.features, portId: is.portId }).map((x) => x.kind)];
-        if (ch.site === 'people') return here.find((f) => f === 'fishers' || f === 'smugglers');
-        if (ch.site === 'ruins') return here.find((f) => f === 'ruins' || f === 'shrine' || f === 'bell');
-        if (ch.site === 'beasts') return here.find((f) => f === 'seals' || f === 'crabs' || f === 'turtles');
-        return ch.site ? here.find((f) => f === ch.site) : undefined;
-      };
-      // The site in the arc's own waters, else on the nearest island that has it (safe waters keep no smugglers' camps).
-      let siteIslands = ch.site ? islands.filter((is) => fits(is)) : [];
-      if (ch.site && !siteIslands.length) siteIslands = world.islands.filter((is) => !is.portId && !is.minor && fits(is)).sort((a, b) => Math.hypot(a.x - home.x, a.y - home.y) - Math.hypot(b.x - home.x, b.y - home.y)).slice(0, 5);
-      const landable = islands.filter((is) => is.features.some((f) => f !== 'port'));
-      const island = ch.site ? (siteIslands.length ? rng.pick(siteIslands) : undefined) : landable.length ? rng.pick(landable) : islands.length ? rng.pick(islands) : undefined;
-      // A chapter that needs a site the region lacks lands anywhere on the island instead.
-      const steps = ch.steps.map((k) => (k === 'land_site' && (!island || !fits(island)) ? 'land_any' : k));
-      if (steps.some((k) => k.startsWith('land')) && !island) return;
-      const site = island && ch.site ? fits(island) : undefined;
-      const good = ch.good ?? 'provisions';
-      const n = steps.includes('time_in') ? 4 : steps.some((k) => k === 'pickup' || k.startsWith('deliver')) ? 10 : steps.includes('chart') ? 4 : steps.includes('contraband') ? 8 : 2;
-      const v: Record<string, string> = {
-        giver: arc.giver, port: home.name, port2: port2?.name ?? '', port3: port3?.name ?? '', island: island?.name ?? '', region: REGIONS[arc.region].name,
-        good: GOODS[good].name, n: String(n), site: site ? SITE_NAMES[site] ?? site : '',
-      };
-      const qs: QuestStep[] = steps.map((k) => arcStep(k, { home, port2, port3, island, site, good, n, region: arc.region }, fill(STEP_TEXT[k][0], v)));
-      const id = `a_${arc.region}_${arc.id}_${i + 1}`;
-      const lvl = level + i * 2;
-      out.push({
-        id, kind: 'story', name: fill(ch.name[0], v), mentor: `${arc.giver}, ${PROF_EN[arc.profession]}`, port: home.id, summary: fill(ch.summary[0], v),
-        requires: { level: lvl, ...(prev ? { done: [prev] } : {}) }, steps: qs,
-        reward: { xp: questXp(lvl, legacyQuestSize((500 + i * 350) * (1 + lvl / 12), lvl)), silver: Math.round((500 + i * 400) * (1 + lvl / 12)) }, category: 'arc', template: `${arc.id}.${i + 1}`,
-        portrait: giverPortrait(arc.profession, arc.giver),
-      });
-      prev = id;
-    });
+    const homes = regionPorts.length ? regionPorts : ports.slice().sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy)).slice(0, 1);
+    let best: { qs: QuestDef[]; good: number } | null = null;
+    for (const home of homes) {
+      const qs = arcAt(arc, home, world, full, ports, seed);
+      const good = qs.filter((q) => chainShort(full, q, home)).length;
+      if (!best || good > best.good) best = { qs, good };
+      if (good === 3) break;
+    }
+    if (best) out.push(...best.qs);
   }
+  return out;
+}
+
+function arcAt(arc: Arc, home: Port, world: World, full: World, ports: Port[], seed: number): QuestDef[] {
+  const out: QuestDef[] = [];
+  const rng = new Rng((hashString(arc.id) ^ (seed * 40503)) >>> 0);
+  const others = ports.filter((p) => p.id !== home.id && linked(full, home, p)).sort((a, b) => Math.hypot(a.x - home.x, a.y - home.y) - Math.hypot(b.x - home.x, b.y - home.y)).slice(0, 6);
+  // (its islands within reach of its quay; where it has none, any within a chain's leg there and back)
+  const isles = world.islands.filter((is) => !is.portId && !is.minor && !is.hidden);
+  let islands = isles.filter((is) => isleByRoute(full, home, is));
+  if (!islands.length) islands = isles.filter((is) => Math.hypot(is.x - home.x, is.y - home.y) - is.radius < CHAIN_LEG && legTo(full, home, { x: is.x, y: is.y, r: is.radius + 40, name: '' }, CHAIN_LEG).d <= CHAIN_LEG - 500);
+  const level = [1, 6, 10, 14, 18, 16, 22, 40][REGION_IDS.indexOf(arc.region)] ?? 10;
+  let prev: string | null = null;
+  arc.chapters.forEach((ch, i) => {
+    // (a harbour with none linked: its errands are run on its own quays)
+    const port2 = others.length ? others[rng.int(0, Math.max(0, others.length - 1))] : home;
+    const thirds = others.filter((p) => p !== port2 && linked(full, port2, p));
+    const port3 = thirds.length ? thirds[rng.int(0, Math.max(0, thirds.length - 1))] : port2;
+    const fits = (is: Island): string | undefined => {
+      const here = [...is.features, ...islandLife({ id: is.id, region: is.region, biome: is.biome, x: is.x, y: is.y, r: Math.round(is.radius), poly: is.poly, features: is.features, portId: is.portId }).map((x) => x.kind)];
+      if (ch.site === 'people') return here.find((f) => f === 'fishers' || f === 'smugglers');
+      if (ch.site === 'ruins') return here.find((f) => f === 'ruins' || f === 'shrine' || f === 'bell');
+      if (ch.site === 'beasts') return here.find((f) => f === 'seals' || f === 'crabs' || f === 'turtles');
+      return ch.site ? here.find((f) => f === ch.site) : undefined;
+    };
+    // the site in the harbour's own waters; a chapter that needs a site they lack lands anywhere on an island near
+    const siteIslands = ch.site ? islands.filter((is) => fits(is)) : [];
+    const landable = islands.filter((is) => is.features.some((f) => f !== 'port'));
+    const island = ch.site && siteIslands.length ? rng.pick(siteIslands) : landable.length ? rng.pick(landable) : islands.length ? rng.pick(islands) : undefined;
+    let steps = ch.steps.map((k) => (k === 'land_site' && (!island || !fits(island)) ? 'land_any' : k));
+    if (steps.some((k) => k.startsWith('land')) && !island) return;
+    if (steps.some((k) => k === 'visit2' || k === 'deliver2' || k === 'contraband' || k === 'race2') && !port2) return;
+    if (steps.some((k) => k === 'visit3' || k === 'deliver3') && !port3) return;
+    const site = island && ch.site ? fits(island) : undefined;
+    const good = ch.good ?? 'provisions';
+    const n = steps.includes('time_in') ? 4 : steps.some((k) => k === 'pickup' || k.startsWith('deliver')) ? 10 : steps.includes('chart') ? 4 : steps.includes('contraband') ? 8 : 2;
+    const v: Record<string, string> = {
+      giver: arc.giver, port: home.name, port2: port2?.name ?? '', port3: port3?.name ?? '', island: island?.name ?? '', region: REGIONS[arc.region].name,
+      good: GOODS[good].name, n: String(n), site: site ? SITE_NAMES[site] ?? site : '',
+    };
+    const id = `a_${arc.region}_${arc.id}_${i + 1}`;
+    const lvl = level + i * 2;
+    const make = (ks: StepKind[]): QuestDef => ({
+      id, kind: 'story', name: fill(ch.name[0], v), mentor: `${arc.giver}, ${PROF_EN[arc.profession]}`, port: home.id, summary: fill(ch.summary[0], v),
+      requires: { level: lvl, ...(prev ? { done: [prev] } : {}) }, steps: ks.map((k) => arcStep(k, { home, port2, port3, island, site, good, n, region: arc.region }, fill(STEP_TEXT[k][0], v))),
+      reward: { xp: questXp(lvl, legacyQuestSize((500 + i * 350) * (1 + lvl / 12), lvl)), silver: Math.round((500 + i * 400) * (1 + lvl / 12)) }, category: 'arc', template: `${arc.id}.${i + 1}`,
+      portrait: giverPortrait(arc.profession, arc.giver),
+    });
+    let q = make(steps);
+    // a good to deliver sold nowhere within a chain's leg: the giver hands it over on her quay (owner, 2026-10-23)
+    if (!chainShort(full, q, home) && steps.some((k) => k === 'deliver2' || k === 'deliver3') && !steps.includes('pickup')) q = make((steps = ['pickup', ...steps]));
+    out.push(q);
+    prev = id;
+  });
   return out;
 }
 

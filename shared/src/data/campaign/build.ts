@@ -323,7 +323,7 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
     const sellerCost = (n: Node, g: GoodId, strong: boolean): number => {
       const k = `${n.id}|${g}`;
       let d = seller.get(k);
-      if (d === undefined) seller.set(k, (d = nearestSellerByRoute(pl.world, n, g, n.id as string, CHAPTER_LEG)?.d ?? Infinity));
+      if (d === undefined) seller.set(k, (d = nearestSellerByRoute(pl.world, n, g, undefined, CHAPTER_LEG)?.d ?? Infinity));
       return Number.isFinite(d) ? d * 0.5 + (d > LOCAL_R ? (strong ? 6000 : 2000) : 0) : strong ? 15000 : 4000;
     };
     const start = prev as { x: number; y: number } | null;
@@ -564,7 +564,7 @@ function buildQuest(c: QuestCtx, src: { t: T; b: T; d: T; s: StepSrc[]; lane?: {
       if (g !== s.good) s = { ...s, good: g };
       // none sold within a chain's leg of her and of the quay: it waits at a neighbour's quay between (else on the
       // quay itself, in its warehouse), taken on there
-      const sold = nearestSellerByRoute(pl.world, c.at, s.good!, home.id, CHAIN_LEG);
+      const sold = nearestSellerByRoute(pl.world, c.at, s.good!, undefined, CHAIN_LEG);
       if (!sold || navLen(pl.world, sold.port.x, sold.port.y, home.x, home.y, CHAIN_LEG) > CHAIN_LEG) waits = between(c.at, home) ?? home;
     }
     const n = s.kind === 'dive' ? 1 : s.n ?? defaultCount(s.kind, band); // (one wreck is laid for a dive at a location)
@@ -674,11 +674,11 @@ export const goodSwaps = (good: GoodId, told: string): boolean => !!KIN.find((k)
  *  sea route), or the quest's words name it; else the one of its kind sold nearest. */
 export function nearGood(world: World, home: { x: number; y: number; id: string }, good: GoodId, told: string): GoodId {
   if (!goodSwaps(good, told)) return good;
-  const own = nearestSellerByRoute(world, home, good, home.id, CHAIN_LEG)?.d ?? Infinity;
+  const own = nearestSellerByRoute(world, home, good, undefined, CHAIN_LEG)?.d ?? Infinity;
   if (own <= LOCAL_R) return good;
   let best = good, bd = own;
   for (const g of KIN.find((k) => k.includes(good))!) {
-    const d = nearestSellerByRoute(world, home, g, home.id, CHAIN_LEG)?.d ?? Infinity;
+    const d = nearestSellerByRoute(world, home, g, undefined, CHAIN_LEG)?.d ?? Infinity;
     if (d < bd - 300) [best, bd] = [g, d];
   }
   return best;
@@ -713,7 +713,7 @@ export function buildCampaign(world: World, _seed: number, chapters: ChapterSrc[
     runs.forEach((run, r) => {
       const loc = locations[r];
       const fresh = !chain || r === 0 || locations[r - 1].ch !== loc.ch;
-      const ctx: QuestCtx = { pl, ch: run.ch, loc, turn: 0, at: chain ?? { x: loc.x, y: loc.y } };
+      const ctx: QuestCtx = { pl, ch: run.ch, loc, turn: 0, at: fresh || !chain ? { x: loc.x, y: loc.y } : chain };
       for (let s = run.from; s < run.from + run.size; s++) {
         const k = s - firstOf[run.ch.n - 1];
         const q: QuestSrc = run.ch.quests[k];

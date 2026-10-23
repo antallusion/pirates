@@ -497,7 +497,7 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
       if (!port) break;
       if ((ship.cargo[st.good] ?? 0) >= st.qty) return { cands: [portCand(port)] };
       // not aboard: a port that sells it, else the port that waits for it (they say what they want there)
-      const sells = game.world.ports.filter((pt) => ownStockOf(game, p, pt, st.good) >= st.qty && pt.id !== st.port); // her own stock (ownstock.ts)
+      const sells = game.world.ports.filter((pt) => ownStockOf(game, p, pt, st.good) >= st.qty); // her own stock (ownstock.ts); the port that waits for it too, when it sells it (owner 2026-10-23: no voyage off for what is on its quay)
       return { cands: sells.length ? sells.map((pt) => portCand(pt)) : [portCand(port)] };
     }
     case 'chart':

@@ -40,8 +40,15 @@ export function campaignChainLegs(w: World, c: Campaign): { legs: ChainLeg[]; ha
       ch = sl.ch;
       // the hand-over: from where the chapter before ended to the chapter's first place
       const first = [sl.a, ...(sl.b ? [sl.b] : [])][0].steps.map((st) => stepPlace(w, st)).find((p) => p);
-      if (at && first) handovers.push({ ch, d: Math.max(0, Math.hypot(first.x - at.x, first.y - at.y) - first.r) });
-      if (first) at = { x: first.x, y: first.y };
+      if (at && first) {
+        handovers.push({ ch, d: Math.max(0, Math.hypot(first.x - at.x, first.y - at.y) - first.r) });
+        // (she sails to the chapter's place: a harbour's quay, an island's shore facing her; a fight's water about a
+        // harbour is the harbour's)
+        const loc = c.locations[sl.loc];
+        const isle = loc.kind === 'isle' ? w.islands[loc.id as number] : undefined;
+        const k = Math.hypot(at.x - loc.x, at.y - loc.y) || 1, r = isle ? isle.radius + 40 : 0;
+        at = { x: loc.x + ((at.x - loc.x) / k) * r, y: loc.y + ((at.y - loc.y) / k) * r };
+      } else if (first) at = { x: first.x, y: first.y };
     }
     const from: At = at ?? portAt(w, sl.a.port) ?? { x: 0, y: 0 };
     const a = questLegs(w, sl.a, from);

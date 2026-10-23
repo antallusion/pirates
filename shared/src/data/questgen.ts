@@ -16,6 +16,8 @@ import type { QuestDef, QuestStep } from './quests.ts';
 import { SPEED_SCALE } from '../constants.ts';
 import { legacyQuestSize, questXp, shipBandOf } from './xpcurve.ts';
 import { jobSilver } from './silverpay.ts';
+import { navLen } from '../world/navlen.ts';
+import { CHAIN_LEG, legTo, questLegs } from './questlegs.ts';
 
 // ------------------------------------------------------------------ the people who give the jobs
 
@@ -106,6 +108,25 @@ export function nearFirst<T>(list: T[], gap: (t: T) => number): T[] {
     if (d < bd) [best, bd] = [t, d];
   }
   return best === undefined ? [] : [best];
+}
+
+/** Two harbours a chain may run between (owner, 2026-10-23: «все квесты цепочек … максимум на удалении 3км друг от
+ *  друга»): the sea route there and back within CHAIN_LEG. */
+export function linked(world: World, a: { x: number; y: number }, b: { x: number; y: number }): boolean {
+  if (Math.hypot(a.x - b.x, a.y - b.y) > CHAIN_LEG) return false;
+  return navLen(world, a.x, a.y, b.x, b.y, CHAIN_LEG) <= CHAIN_LEG && navLen(world, b.x, b.y, a.x, a.y, CHAIN_LEG) <= CHAIN_LEG;
+}
+
+/** An island's waters within QUEST_LOCAL_R of a harbour's quay by the sea route (the line alone took an island across
+ *  the harbour's own island). */
+export function isleByRoute(world: World, port: { x: number; y: number }, is: Island): boolean {
+  if (Math.hypot(is.x - port.x, is.y - port.y) - is.radius > QUEST_LOCAL_R) return false;
+  return legTo(world, port, { x: is.x, y: is.y, r: is.radius + 40, name: '' }, QUEST_LOCAL_R * 2).d <= QUEST_LOCAL_R;
+}
+
+/** A job whose every leg — from its giver's quay (or island) through its places and back — lies within a chain's leg. */
+export function chainShort(world: World, q: QuestDef, from: { x: number; y: number }): boolean {
+  return questLegs(world, q, from, CHAIN_LEG).legs.every((l) => l.d <= CHAIN_LEG);
 }
 
 /** The hold a delivery job may fill: a starter sloop's 30 less her own stores (planks, sailcloth, powder: 12) and a little catch. */
@@ -726,12 +747,15 @@ export function generateQuests(world: World, seed: number): QuestDef[] {
         if (made >= per) break;
         const k = Math.floor(rng.float() * plot.flavors.length);
         const flavor = plot.flavors[k];
-        const params = rollParams(rng, plot, flavor, port, near, islandsNear, sitesOf, farOf(port));
+        const params = rollParams(rng, plot, flavor, port, near, islandsNear, sitesOf, farOf(port), full);
         if (!params) continue;
         const id = `g_${port.id}_${plot.id}_${k}_${round}`;
         if (ids.has(id)) continue;
+        const q = build(id, plot, flavor, params, levelBase);
+        // (a chain over 3 km anywhere — a good bought far off, a harbour behind its island: not on the board)
+        if (!chainShort(full, q, port)) continue;
         ids.add(id);
-        out.push(build(id, plot, flavor, params, levelBase));
+        out.push(q);
         made++;
       }
     }
@@ -751,12 +775,14 @@ export function generateQuests(world: World, seed: number): QuestDef[] {
   return out;
 }
 
-function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port[], islands: Island[], sitesOf: (is: Island) => string[], farRegions: RegionId[] = []): GenParams | null {
+function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port[], islands: Island[], sitesOf: (is: Island) => string[], farRegions: RegionId[] = [], world?: World): GenParams | null {
   const sex = PROFESSION_SEX[flavor.giver];
   const giver = `${rng.pick(sex === 'f' ? GIVER_WOMEN : sex === 'm' ? GIVER_MEN : GIVER_FIRST)} ${rng.pick(GIVER_LAST)}`;
-  const reach = near.slice(0, 8);
+  // (owner, 2026-10-23: the other harbours of a job within a chain's leg of hers, and of each other)
+  const reach = (world ? near.filter((p) => linked(world, port, p)) : near).slice(0, 8);
   const port2 = reach.length ? rng.pick(reach) : undefined;
-  const port3 = reach.filter((p) => p !== port2).length ? rng.pick(reach.filter((p) => p !== port2)) : undefined;
+  const third = reach.filter((p) => p !== port2 && (!world || !port2 || linked(world, port2, p)));
+  const port3 = third.length ? rng.pick(third) : undefined;
   const good = plot.goods ? rng.pick(plot.goods) : undefined;
   const needs = (k: StepKind) => plot.steps.includes(k);
   if ((needs('visit2') || needs('deliver2') || needs('contraband') || needs('race2')) && !port2) return null;
@@ -764,8 +790,9 @@ function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port
   let island: Island | undefined, island2: Island | undefined, site: string | undefined;
   // Near its port (QUEST_LOCAL_R, shore to quays) — and none farther: a harbour with no island within reach of its quay has
   // no landing on its board (owner, 2026-10-18: «чтобы все было недалеко»); a scouting of a far sea goes where it names.
-  const shore = (is: Island) => Math.hypot(is.x - port.x, is.y - port.y) - is.radius;
-  const pickNear = needs('reach') ? nearFirst : nearOnly;
+  // (by the sea route where the world is known; a scouting of a far sea no more — owner, 2026-10-23: nothing far)
+  const shore = (is: Island) => (world ? (isleByRoute(world, port, is) ? 0 : Infinity) : Math.hypot(is.x - port.x, is.y - port.y) - is.radius);
+  const pickNear = needs('reach') && !world ? nearFirst : nearOnly;
   if (needs('land_site')) {
     const want = plot.site;
     const fits = (is: Island): string | undefined => {
@@ -790,7 +817,7 @@ function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port
     island2 = rng.pick(cands);
   }
   // A far region for the scouting and rescue plots, the home region for the hunts.
-  const far = needs('reach');
+  const far = needs('reach') && !world;
   const region: RegionId = far ? rng.pick(farRegions.length ? farRegions : (Object.keys(REGIONS).filter((r) => r !== port.region && r !== 'the_abyss') as RegionId[])) : port.region;
   if (far && island) {
     // The island lies in that region.
@@ -920,11 +947,13 @@ export function generateIslandJobs(world: World, seed: number): QuestDef[] {
     const plot = rng.pick(plots);
     const flavors = plot.flavors.filter((f) => (people.kind === 'fishers' ? ['fishwife', 'old_salt', 'widow', 'priest', 'harbour_master'] : ['smuggler', 'fence', 'old_salt', 'tavern_keeper']).includes(f.giver));
     const flavor = flavors.length ? rng.pick(flavors) : plot.flavors[0];
-    const params = rollParams(rng, plot, flavor, port, near.slice(1, 9), [], () => []);
+    const params = rollParams(rng, plot, flavor, port, near.slice(1, 9), [], () => [], [], world);
     if (!params) continue;
     params.island = is;
     params.site = people.kind;
     const q = build(`i_${is.id}`, { ...plot, steps: plot.steps.map((k) => (k === 'home' ? 'back' : k)) }, flavor, params, REGION_LEVEL[REGIONS[is.region].safety] ?? 0);
+    // (owner, 2026-10-23: from their beach through its harbours and back within a chain's leg — else no job there)
+    if (!chainShort(world, q, { x: is.x, y: is.y })) continue;
     out.push({ ...q, island: is.id });
   }
   return out;

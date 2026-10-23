@@ -137,7 +137,7 @@ export const QUESTS: QuestDef[] = [
     requires: { level: 5 },
     steps: [
       { type: 'sink', count: 4, role: 'pirate', text: 'Sink four pirate ships.' },
-      { type: 'deliver', port: 'blackwater', good: 'gunpowder', qty: 20, text: 'Bring 20 barrels of powder to the battery at Porto Blackwater.' },
+      { type: 'deliver', port: 'gravesend', good: 'gunpowder', qty: 20, text: 'Bring 20 barrels of powder to the harbour battery at Gravesend.' },
       { type: 'sink', count: 1, minTier: 2, text: 'Sink a ship of the second rate or larger.' },
       { type: 'visit', port: 'gravesend', text: 'Report to Edric Vane at Gravesend.' },
     ],
@@ -150,7 +150,7 @@ export const QUESTS: QuestDef[] = [
     steps: [
       { type: 'sell_contraband', qty: 40, port: 'fogmouth', text: 'Sell 40 units of contraband in Fogmouth.' },
       { type: 'customs', text: 'Make port at a lawful harbour with contraband aboard — and keep it.' },
-      { type: 'deliver', port: 'wrecktide', good: 'dreamleaf', qty: 10, text: 'Carry 10 bales of dreamleaf to Wrecktide.' },
+      { type: 'deliver', port: 'fogmouth', good: 'dreamleaf', qty: 10, text: 'Stow 10 bales of dreamleaf in Mara Quill’s cellar at Fogmouth.' },
       { type: 'visit', port: 'fogmouth', text: 'Settle the ledger with Mara Quill in Fogmouth.' },
     ],
     reward: { xp: questXp(5, legacyQuestSize(2500, 5)), silver: 1500, path: 'smuggler' },
@@ -200,7 +200,7 @@ export const QUESTS: QuestDef[] = [
     steps: [
       { type: 'fleet_win', count: 3, text: 'Win three fleet actions: sink a ship with two escorts at your side.' },
       { type: 'sink', count: 1, minTier: 4, text: 'Sink a frigate or larger.' },
-      { type: 'deliver', port: 'cinderhold', good: 'weapons', qty: 20, text: 'Deliver 20 crates of arms to Cinderhold — the Admiral keeps her debts.' },
+      { type: 'deliver', port: 'gravesend', good: 'weapons', qty: 20, text: 'Deliver 20 crates of arms to the Admiralty armoury at Gravesend — the Admiral keeps her debts.' },
       { type: 'visit', port: 'gravesend', text: 'Hear the Verdict at Gravesend.' },
     ],
     reward: { xp: questXp(25, legacyQuestSize(12000, 25)), silver: 5000, path: 'admiral', deed: 'deed_legend_quest' },
