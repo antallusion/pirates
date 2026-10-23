@@ -261,3 +261,36 @@ test('a landing’s haul with a price in it reads in Russian («1 Provisions, pa
     assert.match(t, /заплачено 34/, t);
   } finally { setLang('en'); applyDataLocale('en'); }
 });
+
+test('an island’s waters to reach: «Плыть» marks its coast nearest her, and her hull at the mark counts', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { questEvent } = await import('../server/src/game/quests.ts');
+  const { isLand } = await import('../shared/src/world/worldgen.ts');
+  const { game } = makeGame();
+  join(game, 'Lantern');
+  const s = game.sessionByName('Lantern')!;
+  const q = campaignOf(game).quests.find((x) => x.id === 'c04_08')!; // «Thieves from the Water»: Lanternwick Rock's waters
+  const i = q.steps.findIndex((st) => st.type === 'isle');
+  const isl = (q.steps[i] as { island: number }).island;
+  s.profile!.level = 10;
+  s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
+  s.ship!.docked = null; s.profile!.docked = null;
+  // the bay where the old run stopped: inside the island's radius, 89 m off its shore — not yet its waters
+  s.ship!.state.x = 41502; s.ship!.state.y = 67149;
+  questEvent(game, s, { k: 'tick', dt: 1 });
+  assert.equal(s.profile!.quests.active[0]?.step, i, 'the bay is not its waters');
+  const t = game.questTargets(s)[q.id];
+  assert.equal(t.island, isl);
+  assert.ok(t.r! <= 60, 'a mark on the coast, not the middle');
+  assert.ok(Math.hypot(t.x - 41502, t.y - 67149) < 120, 'the coast nearest her');
+  // her hull by the mark (in the water off it): the step done
+  const is = game.world.islands[isl];
+  const a = Math.atan2(t.x - is.x, -(t.y - is.y));
+  for (const off of [18, 25, 30]) {
+    s.ship!.state.x = t.x + Math.sin(a) * off; s.ship!.state.y = t.y - Math.cos(a) * off;
+    if (!isLand(game.world, s.ship!.state.x, s.ship!.state.y)) break;
+  }
+  questEvent(game, s, { k: 'tick', dt: 1 });
+  assert.notEqual(s.profile!.quests.active.find((x) => x.id === q.id)?.step ?? 99, i, 'its waters reached');
+});

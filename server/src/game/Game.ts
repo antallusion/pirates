@@ -73,7 +73,7 @@ import { BOARD_RUN_FROM, aimedVolley, pursuitInput, pursuitOf, startPursuit, sta
 import { ODDS_BUDGET_MS, ODDS_SIMS, RISK_BUDGET_MS, boardOdds, boardRisk, isRisky } from './boardodds.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { TALENTS_BY_ID, canLearn } from '../../../shared/src/data/talents.ts';
-import { angleDiff, clamp, dist, headingOf, headingVec } from '../../../shared/src/math.ts';
+import { angleDiff, clamp, closestOnPolygon, dist, headingOf, headingVec } from '../../../shared/src/math.ts';
 import type {
   BoardingResult, SurrenderFate, ClientMsg, EntityInfo, GameEvent, IslandData, LootRow, PortPublic, SelfRow, ServerMsg, ShipRow, Side,
   PrivateState,
@@ -1865,6 +1865,13 @@ export class Game {
         if (is) {
           r = is.radius + ISLE_REACH;
           island = st.island;
+          // its coast nearest her, not its middle: the run to the middle of a long island ended in a bay 89 m off the
+          // shore, inside its radius and outside the step's reach (mid-game QA 2026-10-23, Lanternwick Rock)
+          if (ship && !ship.docked) {
+            const c = closestOnPolygon(ship.state.x, ship.state.y, is.poly);
+            at = { x: c.x, y: c.y };
+            r = 60;
+          }
         }
       } else if (st.type === 'spot') {
         // docs/36: a cove or a spit of a harbour's own island
