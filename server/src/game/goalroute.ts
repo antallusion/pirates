@@ -463,7 +463,8 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
       const out: Cand[] = [];
       for (const n of liveNamed(game)) {
         const o = game.ships.get(n.ship);
-        if (o?.alive) out.push({ x: o.state.x, y: o.state.y, r: 250, kind: 'ships', name: 'pirates', ship: o.id });
+        // (the campaign's: one of the Brethren is put out near her — campaign.ts — never a run to one 30 km off)
+        if (o?.alive && (!cmp || Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y) < 12000)) out.push({ x: o.state.x, y: o.state.y, r: 250, kind: 'ships', name: 'pirates', ship: o.id });
       }
       return { cands: out.length ? out : hunt(game, s, 'pirates') };
     }

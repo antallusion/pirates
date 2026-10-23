@@ -72,7 +72,8 @@ async function onCampaignStep(id: string, type: string) {
   shipAtLevel(game, s, shipBandOf(q.requires.level ?? 1));
   s.profile!.campaign!.at = q.campaign!.slot;
   s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
-  const near = (q.steps[i] as { near: { x: number; y: number; r: number } }).near;
+  // (its location's waters: the step's own, else the quest's)
+  const near = [q.steps[i], ...q.steps].map((x) => (x as { near?: { x: number; y: number; r: number } }).near).find(Boolean)!;
   const ship = s.ship!;
   ship.docked = null;
   s.profile!.docked = null;
@@ -302,4 +303,25 @@ test('a wreck to dive on is named once on the bar («wreck of the wreck of the S
   } finally {
     setLang('en');
   }
+});
+
+test('«Плыть» on the campaign’s named step never runs 30 km to a Brethren captain of another sea: hers comes to her', async () => {
+  const { steps } = await import('./helpers.ts');
+  const { routeFor } = await import('../server/src/game/goalroute.ts');
+  const { putToSea, liveNamed } = await import('../server/src/game/wanted.ts');
+  const { namedPirates } = await import('../shared/src/data/pirates.ts');
+  const { game, s, q, ship } = await onCampaignStep('c34_14', 'named');
+  // a far one, in another sea (a decoy ship put there)
+  const decoy = game.spawnNpcShip('pirate', 'brig', 'confederacy', ship.state.x - 30000 > 4000 ? ship.state.x - 30000 : ship.state.x + 30000, ship.state.y, 0);
+  const np = namedPirates().find((x) => !x.baron && x.region === 'gravewater')!;
+  const far = putToSea(game, np, decoy, 'gravewater', [100, 3000]);
+  if (far) {
+    const r = routeFor(game, s, `q:${q.id}`) as { ship?: number };
+    assert.notEqual(r.ship, far.id, 'not the far one');
+  }
+  steps(game, 20 * 12);
+  const near = liveNamed(game).map((l) => game.ships.get(l.ship)!).find((o) => o && Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y) < 9000);
+  assert.ok(near, 'one came to her');
+  const r2 = routeFor(game, s, `q:${q.id}`) as { ship?: number };
+  assert.equal(r2.ship, near!.id, '«Плыть» goes for her');
 });
