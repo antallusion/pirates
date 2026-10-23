@@ -27,7 +27,8 @@ import { openingStep } from '../server/src/game/player.ts';
 import { pointerTargets } from '../client/src/ui/pointer.ts';
 import { STORY_FROM } from '../client/src/ui/campaignnews.ts';
 import { EN as LORE_EN, RU as LORE_RU } from '../client/src/lang/ui/campaignbook.ts';
-import { join, makeGame } from './helpers.ts';
+import { giveScrolls, join, makeGame } from './helpers.ts';
+import { tacAction } from '../server/src/game/tactical.ts';
 
 test('the opening: shops, a ship sunk, a ship boarded, a neutral stack, a town founded — in that order, then the story', () => {
   const { game } = makeGame();
@@ -174,14 +175,21 @@ test('a fresh account plays the opening through on the real sea within ten minut
   conn.push({ t: 'goto', key: 'q:c01_03' });
   until(() => campaignFoes(game, s).some((id) => id !== first.id && game.ships.get(id)?.alive), 120, 'the second tender comes');
   const second = game.ships.get(campaignFoes(game, s).find((id) => id !== first.id)!)!;
-  startPursuit(game, s, second.id, 'board');
-  until(() => Math.hypot(second.state.x - ship().state.x, second.state.y - ship().state.y) < 160 || !!ship().boarding || second.surrendered, 180, 'alongside');
-  if (second.surrendered && !ship().boarding) {
+  // «На абордаж» as the button sends it (Game.ts 'board': the helmsman comes alongside and the grapples fly there; a
+  // pursuit alone never throws them, and the old 90 s waited alongside for a battle that never came)
+  conn.push({ t: 'board', target: second.id, risk: true } as never);
+  until(() => !!ship().boarding || second.surrendered || !second.alive, 180, 'alongside');
+  if (ship().boarding?.fight.tac) {
+    giveScrolls(game);
+    tacAction(game, ship(), { a: 'quick' });
+    until(() => !ship().boarding, 90, 'the hex battle fought');
+  }
+  if (second.surrendered && !ship().boarding && at() < 3) {
     // She struck her colours on the way in: her terms stop the ship (owner, 2026-10-22, allstop.ts) and the finger is
     // on the card's «отпустить» — a boarding for the step; the helmsman takes her alongside for it.
     conn.push({ t: 'surrender', id: second.id, fate: 'release' });
     until(() => at() >= 3, 120, 'her terms taken alongside');
-  } else run(90);
+  }
   if (at() < 3) questEvent(game, s, { k: 'board', victim: second });
   assert.equal(at(), 3, 'the ship boarded');
   mark('boarded');

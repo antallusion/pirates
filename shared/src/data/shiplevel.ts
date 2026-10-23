@@ -355,10 +355,10 @@ export function npcSkill(level: number): NpcSkill {
   // (2026-10-22, the reaches halved — guns 100–250 m, the sea's own firing from 150 m: her misjudged range and her short
   // lead were shares of a fight twice as long, and at a hundred metres they cost her nothing; the average captain fell
   // to 36–56 % against her. Re-weighed per hull by the duel sims (tests/balance/ladder, ~/rangejob tiers: an average
-  // captain 63–71 %, a perfect one 83–93 % on the sloop, brig, frigate and line), the spread kept for the sea table and
+  // captain 59–71 %, a perfect one 83–93 % on the sloop, schooner, brig, frigate and line; the schooner's 0.14 keeps a fishing ketch perfectly fought below her, roles.test), the spread kept for the sea table and
   // the lead still rising with her level: the bigger and slower the hull, the more a green crew misjudges at close range.)
   if (level <= 2) return { lead: 0.72, rangeErr: 0.1, arcDeg: 34, spread: 0.15, react: 1.4, dash: false };
-  if (level <= 4) return { lead: 0.72, rangeErr: 0.2, arcDeg: 34, spread: 0.15, react: 1.3, dash: false };
+  if (level <= 4) return { lead: 0.72, rangeErr: 0.14, arcDeg: 34, spread: 0.15, react: 1.3, dash: false };
   if (level <= 6) return { lead: 0.73, rangeErr: 0.25, arcDeg: 34, spread: 0.14, react: 1.2, dash: false };
   if (level <= 8) return { lead: 0.74, rangeErr: 0.32, arcDeg: 35, spread: 0.13, react: 1.1, dash: true };
   return { lead: 0.75, rangeErr: 0.42, arcDeg: 35, spread: 0.12, react: 1.0, dash: true };
