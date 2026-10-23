@@ -189,6 +189,8 @@ try {
     const pop = await p.evaluate(() => {
       const lu = document.querySelector('[data-lupick="0"]');
       if (lu && lu.getBoundingClientRect().width) { const t = lu.closest('.lu-picks')?.innerText.replace(/\s+/g, ' ').slice(0, 120); lu.click(); return 'level pick: ' + t; }
+      const cw = document.querySelector('[data-cway]');
+      if (cw && cw.getBoundingClientRect().width) { const t = cw.closest('div')?.innerText.replace(/\s+/g, ' ').slice(0, 100); cw.click(); return 'fork chosen: ' + t; }
       const cf = document.querySelector('.confirm-panel [data-yes]');
       if (cf && cf.getBoundingClientRect().width) { const t = cf.closest('.confirm-panel')?.innerText.replace(/\s+/g, ' ').slice(0, 160); cf.click(); return 'confirm yes: ' + t; }
       const tk = document.querySelector('#trek:not(.hidden) [data-trek]:not([disabled])');
@@ -204,7 +206,7 @@ try {
         const s = globalThis.gravetide.state, o = s.ownDisplay; if (!o || s.pursuit) return null;
         let best = null;
         for (const sh of s.ships.values()) {
-          if (sh.id === s.entityId || !sh.cur || !(sh.cur.flags & 64) || sh.cur.flags & 17) continue;
+          if (sh.id === s.entityId || !sh.cur || !(sh.cur.flags & 64) || sh.cur.flags & 17 || !['beast', 'pirate'].includes(sh.info?.npcRole ?? '')) continue;
           const d = Math.hypot(sh.cur.x - o.x, sh.cur.y - o.y);
           if (d < 120 && (!best || d < best.d)) best = { id: sh.id, d: Math.round(d), name: sh.info?.name, role: sh.info?.npcRole ?? '' };
         }
@@ -274,7 +276,7 @@ try {
         for (const sh of s.ships.values()) {
           if (sh.id === s.entityId || !sh.cur || sh.cur.flags & 1 || sh.cur.flags & 16) continue;
           const role = sh.info?.npcRole ?? sh.info?.role ?? '';
-          if (want === 'beast' ? role !== 'beast' : want ? role !== want : !(sh.cur.flags & 64) || role === 'beast' || role === 'merchant' || role === 'ghost') continue;
+          if (want === 'beast' ? role !== 'beast' : want ? role !== want : role !== 'pirate') continue; // (never the Crown's: a wanted captain is shut out of its ports)
           out.push({ id: sh.id, d: Math.round(Math.hypot(sh.cur.x - o.x, sh.cur.y - o.y)), name: sh.info?.name, role, lv: sh.info?.level });
         }
         return { foes: out.sort((a, b) => a.d - b.d), on: s.pursuit?.target ?? null };

@@ -18,6 +18,8 @@ import type { ShipEntity } from './ship.ts';
 
 /** A newcomer to the law's eyes up to this level (and through the campaign's first chapter, and the First Watch). */
 export const LAW_NEWBIE_LEVEL = 5;
+/** The campaign's chapters in the Crown's safe sea (the Black Coast, plan.ts): a newcomer's to the law through them. */
+export const CROWN_CHAPTERS = 3;
 /** Another ship in a fight with her within this many seconds, or this near (m), makes a ball on a third one stray. */
 export const STRAY_FIGHT_SECS = 30;
 export const STRAY_NEAR = 1600;
@@ -28,8 +30,11 @@ export function lawNewbie(p: Profile | null | undefined): boolean {
   if (!p) return false;
   if (fresh(p)) return true;
   if (p.level <= LAW_NEWBIE_LEVEL) return true;
-  // (the campaign's opening chapter, for a captain of its levels — not a seasoned one whose campaign never began)
-  return !!p.campaign && p.campaign.at < (FIRST_SLOT[1] ?? 0) && p.level <= gateOf(FIRST_SLOT[1] ?? 0) + 2;
+  // (the campaign's chapters of the Crown's safe sea, the Black Coast's three, for a captain of their levels — not a
+  // seasoned one whose campaign never began. Mid-game QA 2026-10-23: at the eighth level, chapter 3, a ball that strayed
+  // off the campaign's pirates onto a Crown merchant by Salt Stockade made her Wanted 2, and the chapter's own Crown
+  // harbours shut their quays to her: «Возьмите груз в Соляном Остроге» could not be done.)
+  return !!p.campaign && p.campaign.at < (FIRST_SLOT[CROWN_CHAPTERS] ?? 0) && p.level <= gateOf(FIRST_SLOT[CROWN_CHAPTERS] ?? 0) + 2;
 }
 
 /** `b` (a lawful ship of the sea) struck by `a`'s ball while `a` is fighting another: the ball strayed. */

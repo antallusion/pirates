@@ -234,3 +234,17 @@ test('a harbour that refuses a wanted ship says the way back (a pardon in a free
   setLang('ru');
   try { assert.match(serverText(r.reason!), /^Начальники портов .+помилование.+вольной гавани/); } finally { setLang('en'); }
 });
+
+test('the law forgives a stray ball through the campaign’s Crown chapters (the Black Coast’s three), not beyond', async () => {
+  const { lawNewbie, CROWN_CHAPTERS } = await import('../server/src/game/stray.ts');
+  const { FIRST_SLOT, gateOf } = await import('../shared/src/data/campaign/progress.ts');
+  const { PLAN } = await import('../shared/src/data/campaign/plan.ts');
+  assert.ok(PLAN.slice(0, CROWN_CHAPTERS).every((c) => c.region === 'black_coast') && PLAN[CROWN_CHAPTERS].region !== 'black_coast');
+  const p = (at: number, level: number) => ({ level, campaign: { at, picks: {}, started: true, from: 0 }, tutorial: { stage: null, done: true, hints: {} }, onboarding: null } as never);
+  // chapter 3 at the eighth level (Salt Stockade's ball on a Crown merchant): forgiven — its harbours stay open to her
+  assert.ok(lawNewbie(p(FIRST_SLOT[2] + 14, 8)), 'chapter 3, level 8');
+  // chapter 4 (Gravewater, contested): the law as for anyone
+  assert.ok(!lawNewbie(p(FIRST_SLOT[3] + 1, gateOf(FIRST_SLOT[3]))), 'chapter 4');
+  // a seasoned captain whose campaign stands at the start: not a newcomer
+  assert.ok(!lawNewbie(p(0, 30)), 'level 30');
+});
