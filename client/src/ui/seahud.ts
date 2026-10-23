@@ -279,7 +279,7 @@ export interface SeaHooks {
   folded: readonly string[];
   /** «Цели и вести» (owner, 2026-10-17): the campaign, the quests and contracts taken, the day's orders (goalsheet.ts);
    *  `go` the run to a goal ({t:'goto', key}). */
-  goals?: { view(): GoalSheetView; portName(id: string): string; go(key: string): void; /** docs/36: take the campaign's quest (anywhere) */ take?(id: string): void };
+  goals?: { view(): GoalSheetView; portName(id: string): string; go(key: string): void; /** docs/36: take the campaign's quest (anywhere) */ take?(id: string): void; /** owner, 2026-10-23: a quest step done in this port — by its button, or on the port's page */ here?(id: string): void; tab?(tab: string): void };
 }
 
 /** A press held this long is a long press (the card behind «Цель»). */
@@ -778,6 +778,12 @@ export class SeaHud {
         e.stopPropagation();
         this.newsSheet?.close('button');
         g.go(btn.dataset.gsail!);
+      }));
+      for (const el of [top, mine]) el.querySelectorAll<HTMLElement>('[data-act="quest_here"], [data-act="quest_tab"]').forEach((btn) => btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (btn.dataset.act === 'quest_here') return g.here?.(btn.dataset.id!);
+        this.newsSheet?.close('button');
+        g.tab?.(btn.dataset.tab ?? 'market');
       }));
       // docs/36: «Взять» on the campaign's quest — taken where she is; the sheet stays, the row turns to «Плыть»
       top.querySelectorAll<HTMLElement>('[data-gtake]').forEach((btn) => btn.addEventListener('click', (e) => {

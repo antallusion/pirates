@@ -177,7 +177,7 @@ export const BOARD_LOSS_PURSE = 0.08;
 export const BOARD_LOSS_SHIELD = 180;
 import { stepBridges } from './bridgefx.ts';
 import { MAX_BERTHS, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
-import { ISLE_REACH, abandonQuest, acceptQuest, answerOffer, bandRefusal, portBand, jobSanctions, questCargoLost, questEvent, questLandsHere, questXpOf, shareQuest, skipGuideStep, swearOath, switchPath } from './quests.ts';
+import { ISLE_REACH, abandonQuest, acceptQuest, answerOffer, bandRefusal, portBand, jobSanctions, questCargoLost, questEvent, questLandsHere, questHere, questXpOf, shareQuest, skipGuideStep, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import { commonCollect, commonView, stepCommon } from './commongoal.ts';
 import { guildGoalCollect } from './guildgoal.ts';
@@ -3654,6 +3654,13 @@ export class Game {
         // the opening's lessons of the shops: «Пропустить шаг», the last resort (owner, 2026-10-21)
         if (msg.action === 'skip_step') {
           err(skipGuideStep(this, s, String(msg.id)));
+          if (s.ship?.docked) this.pushPort(s);
+          this.pushSelf(s, true);
+          return;
+        }
+        // owner, 2026-10-23: a step done in port by her own button («Расспросить», «Сдать груз»…)
+        if (msg.action === 'here') {
+          err(questHere(this, s, String(msg.id)));
           if (s.ship?.docked) this.pushPort(s);
           this.pushSelf(s, true);
           return;

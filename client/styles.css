@@ -5590,3 +5590,9 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
 .tt-pick-row:hover:not(:disabled) { border-color: #e8c46a; }
 .tt-pick-row:disabled { opacity: 0.55; cursor: default; }
 .tt-pick-off { align-self: center; }
+
+/* A quest step done in this very port (owner, 2026-10-23): its block at the head of «Задания», its verb button. */
+.q-here-box { margin: 0 0 10px; padding: 6px 8px 8px; border: 1px solid rgba(232, 196, 106, 0.6); border-radius: 6px; background: rgba(232, 196, 106, 0.07); }
+.q-here-box .giver-h { color: var(--gold); }
+.q-here-btn { white-space: nowrap; }
+.jr-item .jr-here { flex: none; align-self: center; margin-left: 4px; }

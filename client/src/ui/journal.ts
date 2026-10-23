@@ -44,6 +44,7 @@ import { worldGoalsLog } from './social.ts';
 import { bindGoalTaps } from './goaltap.ts'; // route: a goal's line sails to its nearest place
 import { classWord, questClass } from './questclass.ts'; // docs/36 §1: the one taxonomy's words
 import { bookChapters, bookWord, campaignBookHtml } from './campaignbook.ts'; // docs/36: the «Кампания» page
+import { actButton, hereAct } from './questact.ts'; // owner, 2026-10-23: a step done in this port has its own button
 
 const EN = {
   title: 'Quest journal',
@@ -187,6 +188,8 @@ export class Journal {
   openLog: (() => void) | null = null;
   /** «Плыть» (ux2): the course to the quest's place, and on to its next steps (main.ts, goalrun.ts). */
   onSail: (key: string) => void = () => {};
+  /** A port's page for a quest step done there («В лавку», «На рынок», «Нанять»): main.ts opens the port window on it. */
+  onPortTab: (tab: string) => void = () => {};
   /** Another tab of «Журнал»: the company's pages (main.ts). */
   onTab: (t: Exclude<LogTab, 'quests'>) => void = () => {};
   private send: (m: ClientMsg) => void;
@@ -221,7 +224,7 @@ export class Journal {
     }
     root.innerHTML = logFrame('quests', state, chips, '', `<div class="journal">
         <div class="jr-side">
-          ${this.campaignTop(state)}<div class="jr-list">${quests.length || contracts.length ? `${quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('')}${contracts.map((c) => this.contractRow(c, `c:${c.id}` === this.chosen, state)).join('')}` : `<p class="muted">${esc(L('none'))}</p>`}</div>
+          ${this.campaignTop(state)}<div class="jr-list">${quests.length || contracts.length ? `${quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked, self?.dockedAt)).join('')}${contracts.map((c) => this.contractRow(c, `c:${c.id}` === this.chosen, state)).join('')}` : `<p class="muted">${esc(L('none'))}</p>`}</div>
           <div class="jr-day">${dailyLog(self?.daily)}${weeklyLog(state.renown?.weekly)}${commonLog(self?.common)}${invasionLog(self?.invasion, false)}${worldGoalsLog(state)}${tasksLog(state, false)}${omenLog(state.omen)}${dutchmanLog(state.dutchman)}${wondersLog(state.wonders)}${nemesisLog(state.wanted?.nemeses, state.wanted?.heads ?? 0)}${hunterLog(state.wanted)}${brethrenLog(state.raid)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
           ${self?.questsDone.length ? `<details class="jr-done"><summary>${esc(L('done', { n: self.questsDone.length }))}</summary><ol>${(self.questsRecent ?? []).map((n) => `<li>${esc(serverText(n))}</li>`).join('')}</ol></details>` : ''}
         </div>
@@ -254,6 +257,15 @@ export class Journal {
       const k = b.dataset.jgo!;
       if (k.startsWith('q:')) setTracked(k.slice(2));
       this.onSail(k);
+    }));
+    // A step done in this port: its verb («Расспросить», «Сдать груз»…) does it, or opens the port's page for it.
+    root.querySelectorAll<HTMLElement>('[data-act="quest_here"]').forEach((b) => (b.onclick = (e) => {
+      e.stopPropagation();
+      this.send({ t: 'quest', action: 'here', id: b.dataset.id! });
+    }));
+    root.querySelectorAll<HTMLElement>('[data-act="quest_tab"]').forEach((b) => (b.onclick = (e) => {
+      e.stopPropagation();
+      this.onPortTab(b.dataset.tab ?? 'market');
     }));
     root.querySelector<HTMLElement>('[data-jcabandon]')?.addEventListener('click', () => {
       const id = ct?.id;
@@ -302,11 +314,12 @@ export class Journal {
     this.book = on;
   }
 
-  private row(q: Quest, on: boolean, tracked: boolean): string {
+  private row(q: Quest, on: boolean, tracked: boolean, docked?: string | null): string {
+    const here = hereAct(q, docked);
     const count = q.need > 1 ? ` · ${q.progress}/${q.need}` : '';
     return `<div class="jr-item"><button class="jr-row${on ? ' on' : ''}${tracked ? ' tracked' : ''}" data-jq="${esc(q.id)}">
       <b>${tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc((q.kind === 'campaign' ? cmpText : serverText)(q.name))}${q.ship ? ` ${levelChip(q.ship)}` : ''}</b>
-      <span class="muted">${esc(classWord(questClass(q)))} · ${q.step}/${q.steps}${count}${q.mates?.length ? ` · ${icon('tab_group', '⚑', 'ico-sm')}${q.mates.length}` : ''}</span></button>${q.target ? this.goBtn(`q:${q.id}`) : ''}</div>`;
+      <span class="muted">${esc(classWord(questClass(q)))} · ${q.step}/${q.steps}${count}${q.mates?.length ? ` · ${icon('tab_group', '⚑', 'ico-sm')}${q.mates.length}` : ''}</span></button>${here ? actButton(q.id, here, 'btn btn-small btn-primary jr-here') : q.target ? this.goBtn(`q:${q.id}`) : ''}</div>`;
   }
 
   /** The campaign when its quest is not under way: the next with its level to come, or a fork's two ways to choose. */
@@ -373,7 +386,8 @@ export class Journal {
       ${q.mates?.length ? `<div class="jr-mates"><span class="giver-h">${esc(L('mates'))}</span>${q.mates.map((m) => `<span class="jr-mate">${esc(L('mateStep', { name: m.name, step: m.step }))}</span>`).join('')}</div>` : ''}
       ${q.silver !== undefined ? `<div class="giver-pay"><span class="giver-h">${esc(L('pay'))}</span>${paidHtml(q.silver, q.pay, q.paid)}${xpBadge(q.xp ?? 0)}${q.fastIn ? `<span class="jr-fast">${esc(L('fast', { m: Math.max(1, Math.ceil(q.fastIn / 60)) }))}</span>` : ''}</div>` : ''}
       <div class="jr-acts">
-        <button class="btn btn-small btn-primary jr-sail" data-jsail data-hint="${esc(L('sailHint'))}" title="${esc(L('sailHint'))}">${icon('stat_sails', '', 'ico-sm')}${esc(L(docked ? 'sailPort' : 'sail'))}${far !== null && !q.target?.region ? ` · ${esc(distWords(far))}` : ''}</button>
+        ${((a) => (a ? actButton(q.id, a, 'btn btn-small btn-primary') : ''))(hereAct(q, state.self?.dockedAt))}
+        ${hereAct(q, state.self?.dockedAt) ? '' : `<button class="btn btn-small btn-primary jr-sail" data-jsail data-hint="${esc(L('sailHint'))}" title="${esc(L('sailHint'))}">${icon('stat_sails', '', 'ico-sm')}${esc(L(docked ? 'sailPort' : 'sail'))}${far !== null && !q.target?.region ? ` · ${esc(distWords(far))}` : ''}</button>`}
         <button class="btn btn-small${tracked ? ' on' : ''}" data-follow ${tracked ? 'disabled' : ''}>${esc(L(tracked ? 'following' : 'follow'))}</button>
         ${canShare ? `<button class="btn btn-small" data-share>${esc(L('share'))}</button>` : ''}
         ${q.category === 'elite' && !inGroup ? `<button class="btn btn-small" data-lfg title="${esc(L('lfgHint'))}">${esc(L('lfg'))}</button>` : ''}

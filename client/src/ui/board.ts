@@ -27,6 +27,8 @@ import { classSwitch, classWord, questClass } from './questclass.ts';
 import type { QuestClass } from './questclass.ts';
 import type { QuestKind } from '../../../shared/src/data/questclass.ts';
 import { chipRow } from './kit/window.ts';
+import type { QuestAct } from '../../../shared/src/data/questact.ts';
+import { actButton, hereAct, hereTitle } from './questact.ts'; // owner, 2026-10-23: a step done here has its own button
 
 const L = dict(EN, RU);
 const W = dict(WIN_EN, WIN_RU);
@@ -73,6 +75,8 @@ export interface BoardItem {
   stores: boolean;
   /** Taken already (a card of hers, «Плыть»). */
   taken: boolean;
+  /** A taken quest's step action in port (its verb instead of «Плыть» when it is done here). */
+  act?: QuestAct;
   /** docs/36 §1: a quest's class (its word on the card), and a campaign quest's place (the chapter, the quest in it). */
   cls?: QuestClass;
   cmp?: { ch: number; k: number; size: number };
@@ -150,7 +154,7 @@ export function boardItems(view: PortView, state: ClientState): BoardItem[] {
     if (!visit.offered.has(`q:${q.id}`)) continue;
     const t = q.target;
     taken.push({ kind: 'quest', id: q.id, title: qtext(q.kind, q.name), text: qtext(q.kind, q.text), art: 'goal', silver: q.silver ?? 0, xp: q.xp ?? 0, dest: t && !t.region ? { x: t.x, y: t.y, name: placeName(port(t.port)?.name ?? '') } : null,
-      blocked: null, urgent: false, group: false, path: false, stores: false, taken: true, chips: chipsOfQuest(q.kind, q.category, false), score: 0, cls: questClass(q) });
+      blocked: null, urgent: false, group: false, path: false, stores: false, taken: true, chips: chipsOfQuest(q.kind, q.category, false), score: 0, cls: questClass(q), ...(q.act ? { act: q.act } : {}) });
   }
   for (const c of self?.contracts ?? []) {
     if (!visit.offered.has(`c:${c.id}`)) continue;
@@ -209,7 +213,8 @@ function meta(x: BoardItem, state: ClientState, mine: number): string {
 function row(x: BoardItem, state: ClientState, mine: number): string {
   const docked = !!state.self?.dockedAt;
   const key = x.kind === 'contract' ? `c:${x.id}` : `q:${x.id}`;
-  const btn = x.taken
+  const here = x.taken && x.kind === 'quest' ? hereAct(x, state.self?.dockedAt) : null;
+  const btn = here ? actButton(x.id, here, 'k-btn k-btn--primary k-btn--md') : x.taken
     ? `<button type="button" class="k-btn k-btn--primary k-btn--md q-sail" data-act="goal" data-key="${esc(key)}" title="${esc(L(docked ? 'sailHint' : 'sail'))}">${icon('stat_sails', '', 'ico-sm')}${esc(L('sail'))}</button>`
     : x.kind === 'contract'
       ? `<button type="button" class="k-btn k-btn--primary k-btn--md" data-act="contract" data-mode="accept" data-id="${esc(x.id)}"${x.blocked ? ' disabled' : ''}>${esc(W('q.take'))}</button>`
@@ -237,7 +242,7 @@ function takenList(state: ClientState): string {
   const sail = (key: string) => `<button type="button" class="k-btn k-btn--primary k-btn--md q-sail" data-act="goal" data-key="${esc(key)}" title="${esc(L(docked ? 'sailHint' : 'sail'))}">${icon('stat_sails', '', 'ico-sm')}${esc(L('sail'))}</button>`;
   const rows = [
     ...self.quests.map((q) => `<div class="w-row q-row q-taken" data-hint="${esc(qtext(q.kind, q.text))}">${icon('goal', '', 'w-row-ico')}<span class="w-row-t"><b>${esc(qtext(q.kind, q.name))}</b><small>${q.step}/${q.steps}: ${esc(qtext(q.kind, q.text))}${q.need > 1 ? ` (${q.progress}/${q.need})` : ''}</small></span>
-      <span class="w-row-b">${q.target ? sail(`q:${q.id}`) : ''}${q.kind === 'campaign' ? '' : `<button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="quest_abandon" data-id="${esc(q.id)}">${esc(L('setAside'))}</button>`}</span></div>`),
+      <span class="w-row-b">${((a) => (a ? actButton(q.id, a, 'k-btn k-btn--primary k-btn--md') : q.target ? sail(`q:${q.id}`) : ''))(hereAct(q, self.dockedAt))}${q.kind === 'campaign' ? '' : `<button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="quest_abandon" data-id="${esc(q.id)}">${esc(L('setAside'))}</button>`}</span></div>`),
     ...self.contracts.map((c) => `<div class="w-row q-row q-taken" data-hint="${esc(serverText(c.description))}">${icon(contractArt(c), '', 'w-row-ico')}<span class="w-row-t"><b>${esc(serverText(c.title))}</b><small>${esc(c.kind === 'bounty' ? `${c.progress ?? 0}/${c.kills}` : W('q.to', { port: placeName(port(c.toPort)?.name ?? '') }))}</small></span><span class="w-row-n">${money(c.reward)}</span>
       <span class="w-row-b">${c.toPort ? sail(`c:${c.id}`) : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="contract" data-mode="abandon" data-id="${esc(c.id)}">${esc(L('abandon'))}</button></span></div>`),
   ].join('');
@@ -257,6 +262,22 @@ export interface BoardExtras {
 /** The switches' row (over the page, outside its pager: it stays as the pages turn). */
 export function boardSwitches(view: PortView, state: ClientState, chip: BoardChip): string {
   return `<div class="q-seg">${chipRow(boardChips(boardItems(view, state), state, view), chip, 'qchip')}</div>`;
+}
+
+/** The quests whose step is done in this very port (the campaign's too: it is never on a board), at the head of every
+ *  switch but «Взятые» (where their rows carry the same buttons). */
+export function hereQuests(state: ClientState): NonNullable<ClientState['self']>['quests'] {
+  const docked = state.self?.dockedAt;
+  return (state.self?.quests ?? []).filter((q) => !!hereAct(q, docked));
+}
+
+function hereBlock(state: ClientState): string {
+  const qs = hereQuests(state);
+  if (!qs.length) return '';
+  const docked = state.self?.dockedAt;
+  const rows = qs.map((q) => `<div class="w-row q-row q-taken q-here" data-hint="${esc(qtext(q.kind, q.text))}" data-qid="q:${esc(q.id)}">${icon('goal', '', 'w-row-ico')}<span class="w-row-t"><b>${esc(qtext(q.kind, q.name))}</b><small>${q.step}/${q.steps}: ${esc(qtext(q.kind, q.text))}</small></span>
+      <span class="w-row-b">${actButton(q.id, hereAct(q, docked)!, 'k-btn k-btn--primary k-btn--md')}</span></div>`).join('');
+  return `<div class="q-here-box"><div class="giver-h">${esc(hereTitle())}</div><div class="mk-list">${rows}</div></div>`;
 }
 
 /** The switch's cards. */
@@ -286,5 +307,5 @@ export function boardHtml(view: PortView, state: ClientState, chip: BoardChip, e
       body = takenList(state);
       break;
   }
-  return `<div class="q-page" data-chip="${chip}">${body}</div>`;
+  return `<div class="q-page" data-chip="${chip}">${chip === 'mine' ? '' : hereBlock(state)}${body}</div>`;
 }
