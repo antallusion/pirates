@@ -1265,6 +1265,10 @@ export class Game {
       const stair = s.ship.docked || s.ship.landing ? null : descentLandable(this, s);
       const convoy = s.ship.docked || s.ship.landing ? null : escortOffer(this, s); // sign on as a League convoy's escort (docs/16 #6)
       const isle = s.ship.docked || s.ship.landing || own ? null : islesPrompt(this, s); // a dark lighthouse's keeper, a bared bank (docs/16 #23, #25)
+      // A job of hers that lands here: her landing comes first (QA playthrough B, docs/30; exploration.ts startLanding) —
+      // before a wreck or a buried chest on the same beach too (late-game QA 2026-10-23: the campaign's «высадитесь на
+      // острове» ended its run by a campaign wreck in the shallows, and the bar had «Нырять» where «Высадка» should be).
+      const job = !!land && questLandsHere(s.profile, land.island.id, land.feature);
       s.landable = stair
         ? stair
         : legend
@@ -1273,6 +1277,8 @@ export class Game {
         ? city
         : cove
         ? { island: cove.name, feature: 'buyers for contraband (90% of Fogmouth)' }
+        : job && land
+        ? { island: land.island.name, feature: featureName(land.island, land.feature) }
         : tmap && tmap.kind === 'player'
         ? { island: this.world.islands[tmap.island ?? -1]?.name ?? tmap.name, feature: "a captain's buried chest", action: 'dig' } // docs/16 #22
         : tmap
@@ -1287,8 +1293,6 @@ export class Game {
         ? isle
         : land ? { island: land.island.name, feature: featureName(land.island, land.feature) } : null;
       // A mine ashore (docs/17 H3): the flag goes up before the boats row for anything else on its island.
-      // A job of hers that lands here: her landing comes first (QA playthrough B, docs/30; exploration.ts startLanding).
-      const job = !!land && questLandsHere(s.profile, land.island.id, land.feature);
       const flag = s.ship.docked || s.ship.landing || job ? null : mineLandable(this, s);
       if (flag && (!s.landable || (land && s.landable.island === land.island.name && !s.landable.action))) s.landable = flag;
       // docs/18 #28, #31: an island's level against hers on the prompt; a turtle island's back when nothing else calls.

@@ -127,3 +127,39 @@ test('«Sink the hunters on your trail», «Sink patrol ships»: the campaign se
     assert.equal(campaignActive(s.profile!)?.step, i);
   }
 });
+
+test('a campaign landing whose beach has a campaign wreck in its shallows: the bar lands her, it does not send the divers', async () => {
+  // «Высадитесь на острове …» (chapter 11): the run ended by the wreck laid for a dive step of the same location, and the
+  // one button was «Нырять» — the landing could not be pressed there.
+  const { makeGame, join, steps, shipAtLevel } = await import('./helpers.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { routeFor } = await import('../server/src/game/goalroute.ts');
+  const { wreckHere } = await import('../server/src/game/explorefx.ts');
+  const { isLand } = await import('../shared/src/world/worldgen.ts');
+  const { game } = makeGame();
+  join(game, 'Lander');
+  const s = game.sessionByName('Lander')!;
+  const ship = s.ship!;
+  let checked = 0;
+  for (const q of campaignOf(game).quests) {
+    const i = q.steps.findIndex((st) => st.type === 'land');
+    if (i < 0) continue;
+    s.profile!.level = q.requires.level ?? 1;
+    s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
+    const is = game.world.islands[(q.steps[i] as { island: number }).island];
+    ship.docked = null;
+    s.profile!.docked = null;
+    ship.state.x = is.x + is.radius + 2500; ship.state.y = is.y;
+    const r = routeFor(game, s, `q:${q.id}`) as { x: number; y: number };
+    if (!('x' in r) || isLand(game.world, r.x, r.y)) continue;
+    ship.state.x = r.x; ship.state.y = r.y; ship.state.speed = 0;
+    game.grid.upsert(ship.id, r.x, r.y);
+    if (!wreckHere(game, ship)) continue; // (only the beaches with a wreck by them)
+    steps(game, 25);
+    checked++;
+    assert.equal(s.landable?.island, is.name, `${q.id}: «Высадка» on ${is.name}, not ${JSON.stringify(s.landable)}`);
+    assert.notEqual(s.landable?.action, 'dive', q.id);
+    void shipAtLevel;
+  }
+  assert.ok(checked >= 1, `a landing by a wreck checked (${checked})`);
+});
