@@ -238,7 +238,18 @@ function bindDrag(card: HTMLElement, drop: (slot: number) => void): void {
     let ghost: HTMLElement | null = null;
     let over: HTMLElement | null = null;
     let armed = !touch;
+    // The window's page scrolls under a lifted card held near its top or bottom edge (on a phone on its side the places
+    // scroll away above a long collection).
+    const body = card.closest<HTMLElement>('.modal-body');
+    let lastY = y0;
+    const edge = window.setInterval(() => {
+      if (!ghost || !body) return;
+      const r = body.getBoundingClientRect();
+      const d = lastY < r.top + 44 ? -14 : lastY > r.bottom - 44 ? 14 : 0;
+      if (d) body.scrollTop += d;
+    }, 30);
     const move = (x: number, y: number) => {
+      lastY = y;
       if (!ghost) return;
       ghost.style.transform = `translate(${Math.round(x - 28)}px, ${Math.round(y - 28)}px)`;
       const el = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('.doll-slot[data-place]') ?? null;
@@ -261,6 +272,7 @@ function bindDrag(card: HTMLElement, drop: (slot: number) => void): void {
     const noScroll = (te: TouchEvent) => { if (ghost) te.preventDefault(); };
     const end = (ok: boolean) => {
       window.clearTimeout(hold);
+      window.clearInterval(edge);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onCancel);

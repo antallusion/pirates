@@ -60,5 +60,5 @@ export function hereAct(q: { act?: QuestAct }, docked: string | null | undefined
  *  classes (the port's kit, the journal's). */
 export function actButton(id: string, act: QuestAct, cls: string): string {
   const data = act.how === 'here' ? `data-act="quest_here" data-id="${esc(id)}"` : `data-act="quest_tab" data-tab="${esc(act.tab ?? 'market')}" data-id="${esc(id)}"`;
-  return `<button type="button" class="${cls} q-here-btn" ${data} data-verb="${act.verb}" title="${esc(actHint(act.verb))}" data-hint="${esc(actHint(act.verb))}">${icon(ART[act.verb], '', 'ico-sm')}${esc(actWord(act.verb))}</button>`;
+  return `<button type="button" class="${cls} q-here-btn" ${data} data-verb="${act.verb}" title="${esc(actHint(act.verb))}" data-hint="${esc(actHint(act.verb))}" aria-label="${esc(actWord(act.verb))}">${icon(ART[act.verb], '', 'ico-sm')}<span class="q-verb">${esc(actWord(act.verb))}</span></button>`;
 }
