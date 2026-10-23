@@ -56,3 +56,74 @@ test('«Потопите именитого капитана» in the Abyss: one
   wantedKill(game, s, b);
   assert.ok(campaignActive(s.profile!)?.id !== q.id || campaignActive(s.profile!)!.step > i, 'a baron sunk: the step is done');
 });
+
+/** A captain on a campaign quest's step in its location's waters, her ship of the quest's band. */
+async function onCampaignStep(id: string, type: string) {
+  const { makeGame, join, shipAtLevel } = await import('./helpers.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { shipBandOf } = await import('../shared/src/data/xpcurve.ts');
+  const { game } = makeGame();
+  join(game, 'Latecomer');
+  const s = game.sessionByName('Latecomer')!;
+  const q = campaignOf(game).quests.find((x) => x.id === id)!;
+  const i = q.steps.findIndex((st) => st.type === type);
+  assert.ok(i >= 0, `${id}: a ${type} step`);
+  s.profile!.level = q.requires.level ?? 1;
+  shipAtLevel(game, s, shipBandOf(q.requires.level ?? 1));
+  s.profile!.campaign!.at = q.campaign!.slot;
+  s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
+  const near = (q.steps[i] as { near: { x: number; y: number; r: number } }).near;
+  const ship = s.ship!;
+  ship.docked = null;
+  s.profile!.docked = null;
+  ship.state.x = near.x; ship.state.y = near.y;
+  game.grid.upsert(ship.id, near.x, near.y);
+  return { game, s, q, i, ship };
+}
+
+test('the epilogue’s «drowned guard over the Great Bell» puts out off Saltmarrow and stays: a ⚓10 sent after her wanders any water', async () => {
+  // The guard (⚓9+ to board) was put out by the campaign's fight off Saltmarrow (⚓1–3 water) and gone the next second:
+  // a pirate wanders only a square of her level (npc.ts squareFor) — the step could never be done.
+  const { steps } = await import('./helpers.ts');
+  const { campaignFoes, campaignActive } = await import('../server/src/game/campaign.ts');
+  const { questEvent } = await import('../server/src/game/quests.ts');
+  const { game, s, q, i, ship } = await onCampaignStep('c36_17', 'board');
+  let seen = 0;
+  for (let t = 0; t < 60; t++) {
+    steps(game, 20);
+    ship.hull = ship.stats.hullMax;
+    seen = Math.max(seen, campaignFoes(game, s).length);
+  }
+  const foes = campaignFoes(game, s).map((id) => game.ships.get(id)!);
+  assert.ok(seen >= 1 && foes.length >= 1, `the guard about her (${seen} seen, ${foes.length} now)`);
+  assert.ok(foes.every((o) => o.alive && o.shipLevel >= 9), foes.map((o) => `⚓${o.shipLevel}`).join(','));
+  questEvent(game, s, { k: 'board', victim: foes[0] });
+  assert.equal(campaignActive(s.profile!)?.progress, 1, 'boarded: counted');
+  assert.equal(campaignActive(s.profile!)?.id, q.id);
+  assert.equal(campaignActive(s.profile!)?.step, i);
+});
+
+test('«Sink the hunters on your trail», «Sink patrol ships»: the campaign sends them after her, of the quest’s level, and they count', async () => {
+  // The sea's own hunters are of their waters' level (a ⚓3 whaler at the 24th level) and the patrols keep to the law's
+  // water: neither step could be done in its location.
+  const { steps } = await import('./helpers.ts');
+  const { campaignFoes, campaignActive } = await import('../server/src/game/campaign.ts');
+  const { questEvent } = await import('../server/src/game/quests.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { makeGame } = await import('./helpers.ts');
+  const ids = (role: string) => campaignOf(makeGame().game).quests.filter((x) => x.steps.some((st) => st.type === 'sink' && st.role === role)).map((x) => x.id);
+  for (const [role, id] of [['hunter', ids('hunter').find((x) => x >= 'c13')!], ['patrol', ids('patrol')[0]]] as const) {
+    const { game, s, i, ship } = await onCampaignStep(id, 'sink');
+    let foe = null;
+    for (let t = 0; t < 30 && !foe; t++) {
+      steps(game, 20);
+      ship.hull = ship.stats.hullMax;
+      foe = campaignFoes(game, s).map((x) => game.ships.get(x)!).find((o) => o.npcRole === role) ?? null;
+    }
+    assert.ok(foe, `${id}: a ${role} sent after her`);
+    assert.ok(game.isHostile(foe!, ship), 'and hostile to her');
+    questEvent(game, s, { k: 'sink', victim: foe! });
+    assert.equal(campaignActive(s.profile!)?.progress, 1, `${id}: sunk, counted`);
+    assert.equal(campaignActive(s.profile!)?.step, i);
+  }
+});

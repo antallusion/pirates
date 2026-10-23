@@ -441,7 +441,8 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
   switch (st.type) {
     case 'sink': {
       if (cmp) {
-        const foes = campaignFoes(game, s).map((fid) => game.ships.get(fid)!).map((o): Cand => ({ x: o.state.x, y: o.state.y, r: 250, kind: 'ships', name: 'pirates', ship: o.id, w: 0.7 }));
+        const name = st.role === 'ghost' ? 'ghosts' : st.role === 'hunter' ? 'hunters' : st.role === 'patrol' ? 'patrols' : 'pirates';
+        const foes = campaignFoes(game, s).map((fid) => game.ships.get(fid)!).map((o): Cand => ({ x: o.state.x, y: o.state.y, r: 250, kind: 'ships', name, ship: o.id, w: 0.7 }));
         if (foes.length) return { cands: foes };
         if (st.near) return { cands: [{ x: st.near.x, y: st.near.y, r: Math.round(st.near.r * 0.6), kind: 'region', name: 'campaign' }] };
       }

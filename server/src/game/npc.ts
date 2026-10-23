@@ -264,7 +264,10 @@ export function squareFor(game: Game, x: number, y: number, level: number): bool
 
 export function planWander(game: Game, ship: ShipEntity, brain: NpcBrain): boolean {
   if (!brain.area) return false;
-  const p = randomPointIn(game, brain.area, ship.npcRole === 'pirate' ? ship.shipLevel : 0);
+  // (a pirate sent after a captain — the campaign's fight, a band after her cargo — sails where she is, whatever the square:
+  // the epilogue's ⚓10 guard over Saltmarrow's bell found no ⚓1–3 water to wander and was gone the second it put out —
+  // QA 2026-10-23)
+  const p = randomPointIn(game, brain.area, ship.npcRole === 'pirate' && (brain.huntAccount ?? null) === null ? ship.shipLevel : 0);
   if (!p) return false;
   const path = findPath(game.world, ship.state.x, ship.state.y, p[0], p[1], 20000);
   if (!path) return false;
@@ -1595,7 +1598,7 @@ export function spawnCargoAmbush(game: Game, prey: ShipEntity, accountId: number
  *  put out a couple of kilometres off and set on her, for a quarter of an hour. The Crown's quiet waters have no pirates
  *  of their own (traffic.ts MIX), so the campaign's boardings of the Black Coast would have nothing to board. Null when
  *  no open water was found. */
-export function spawnCampaignFoe(game: Game, prey: ShipEntity, accountId: number, level: number, ghost: boolean, at?: { x: number; y: number; r: number }): ShipEntity | null {
+export function spawnCampaignFoe(game: Game, prey: ShipEntity, accountId: number, level: number, kind: 'pirate' | 'ghost' | 'hunter' | 'patrol', at?: { x: number; y: number; r: number }): ShipEntity | null {
   for (let k = 0; k < 12; k++) {
     const a = game.rng.float() * Math.PI * 2;
     // in the location's waters (docs/36: its fights are fought there), else a couple of kilometres off her
@@ -1604,7 +1607,11 @@ export function spawnCampaignFoe(game: Game, prey: ShipEntity, accountId: number
     if (!openSea(game, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500 || !game.inZone(x, y)) continue;
     const lv = Math.max(1, Math.min(10, Math.round(level)));
     const h = headingOf(prey.state.x - x, prey.state.y - y);
-    const ship = ghost ? game.spawnNpcShip('ghost', game.rng.pick(hullsFor('pirate', lv)), 'choir', x, y, h) : game.spawnNpcShip('pirate', game.rng.pick(hullsFor('pirate', lv)), 'confederacy', x, y, h);
+    // (the hunters on her trail and the Crown's patrols of a chapter's story are sent after her as its pirates are: the sea's
+    // own were of their waters' level, under the step's ⚓, and the step could not be done — QA 2026-10-23)
+    const ship = kind === 'ghost' ? game.spawnNpcShip('ghost', game.rng.pick(hullsFor('pirate', lv)), 'choir', x, y, h)
+      : kind === 'hunter' || kind === 'patrol' ? game.spawnNpcShip(kind, game.rng.pick(hullsFor(kind, lv)), 'crown', x, y, h)
+      : game.spawnNpcShip('pirate', game.rng.pick(hullsFor('pirate', lv)), 'confederacy', x, y, h);
     game.setNpcLevel(ship, lv);
     const brain = game.npcs.get(ship.id);
     if (brain) {

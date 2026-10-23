@@ -260,7 +260,7 @@ export function campaignTick(game: Game, s: PlayerSession): void {
     return;
   }
   if (!qs || !st || (st.type !== 'sink' && st.type !== 'board' && st.type !== 'beast')) return;
-  if (st.type === 'sink' && st.role && st.role !== 'pirate' && st.role !== 'ghost') return; // patrols and merchants sail the sea anyway
+  if (st.type === 'sink' && st.role === 'merchant') return; // merchants sail the sea anyway
   // docs/36: the fight is the location's — it puts out in its waters once she comes near them
   const near = st.near;
   if (near && Math.hypot(ship.state.x - near.x, ship.state.y - near.y) > near.r + FOE_COME) return;
@@ -287,7 +287,7 @@ export function campaignTick(game: Game, s: PlayerSession): void {
       const x = (near?.x ?? ship.state.x) + Math.sin(a) * d, y = (near?.y ?? ship.state.y) - Math.cos(a) * d;
       if (beastWater(game, x, y)) foe = spawnBeast(game, id, x, y, band);
     }
-  } else foe = spawnCampaignFoe(game, ship, s.accountId, band, st.type === 'sink' && st.role === 'ghost', near);
+  } else foe = spawnCampaignFoe(game, ship, s.accountId, band, st.type === 'sink' && (st.role === 'ghost' || st.role === 'hunter' || st.role === 'patrol') ? st.role : 'pirate', near);
   if (!foe) return;
   // the opening's fights (owner, 2026-10-19: «атака корабля, дальше абордаж» in the first minutes): softened as the
   // first fights are — half her hull, her men thinned, her shot lighter on the newcomer (firstfights.ts)
