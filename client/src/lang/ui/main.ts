@@ -64,6 +64,7 @@ export const EN = {
   escortSign: 'Sign on as escort — {island}, {feature}',
   protected: 'Protected — firing ends it',
   repairLull: '{key} repairs need a lull in the fighting',
+  inviteWaits: '{from} asks you to sail with them — tap to answer',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -130,4 +131,5 @@ export const RU: Record<keyof typeof EN, string> = {
   escortSign: 'Наняться в охрану — {island}, {feature}',
   protected: 'Под защитой — выстрел её снимет',
   repairLull: '{key} для починки нужно затишье в бою',
+  inviteWaits: '{from} зовёт вас идти вместе — нажмите, чтобы ответить',
 };

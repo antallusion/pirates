@@ -92,6 +92,7 @@ import { renderCrew, renderMutiny } from './ui/crew.ts';
 import { CompanyScreen, renderBarter } from './ui/company.ts';
 import type { CompanyTab } from './ui/company.ts';
 import { LOG_PAGES } from './ui/logbook.ts';
+import { InviteQueue } from './ui/invitequeue.ts';
 import { BaseWindow } from './ui/base.ts';
 import { IsleScene } from './ui/islescene.ts'; // the island screen (owner, 2026-10-15)
 import { EN as LIS_EN, RU as LIS_RU } from './lang/ui/islescene.ts';
@@ -2147,6 +2148,7 @@ function onMessage(m: ServerMsg): void {
     case 'legends':
     case 'empire':
     case 'renown':
+      if (m.t === 'party') noteInvites();
       if (modal === 'company') refreshModal();
       if (m.t === 'renown' && modal === 'journal') refreshModal();
       hud.setUnread(state.unread);
@@ -2281,6 +2283,9 @@ function closeModal(): void {
   hideModalEl();
   document.querySelectorAll('.gear-tip').forEach((e) => e.remove());
   releaseModalToasts();
+  queueMicrotask(() => {
+    if (!modal) announceInvites();
+  });
   // The recruit window opened from the island's town goes back to it (docs/17 H3).
   if (was === 'recruit' && recruitFrom === 'isle') return openBase();
   // docs/35: the hire at a waystation goes back to its window; the waystation's window shut is «В море».
@@ -2555,6 +2560,17 @@ function stripKeyHints(root: HTMLElement): void {
     for (const n of el.childNodes) {
       if (n.nodeType === Node.TEXT_NODE && /\[[^\]]{1,8}\]/.test(n.textContent ?? '')) n.textContent = (n.textContent ?? '').replace(/\s*\[[^\]]{1,8}\]\s*/g, ' ').trim();
     }
+  });
+}
+
+// Invitations to sail together (ui/invitequeue.ts): one that came while a window was open is told when it closes, a tap
+// away from the Company screen to answer it.
+const inviteQueue = new InviteQueue();
+const noteInvites = (): void => inviteQueue.note(state.invites, modal);
+function announceInvites(): void {
+  for (const w of inviteQueue.due(state.invites)) hud.tapToast(L('inviteWaits', { from: w.from }), 'info', () => {
+    companyScreen.open('group');
+    openModal('company');
   });
 }
 

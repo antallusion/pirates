@@ -37,7 +37,13 @@ import { reconcile } from './crew.ts';
 export const CONVOY_RANGE = 1500;
 /** docs/16 #33: two ships trade at sea within 300 m of each other (no heaving to). */
 export const BARTER_RANGE = TRADE_RANGE;
-const INVITE_SEC = 60;
+/** An invitation to sail together stands three minutes of the wall clock (mid-game QA 2026-10-23: a minute of the game's
+ *  clock ran out under /speed, or while the daily reward's window was open, before she answered). */
+export const INVITE_MS = 180_000;
+/** Real time (ms): the wall clock less what admin /speed ran it ahead (Game.wallSkew). */
+const realNow = (game: Game): number => game.wallNow() - game.wallSkew;
+/** A barter left unanswered lapses after this (game seconds). */
+const BARTER_SEC = 60;
 
 export interface Group {
   id: number;
@@ -135,7 +141,7 @@ export function groupInvite(game: Game, s: PlayerSession, name: string): string 
   if (g && g.members.length >= GROUP_MAX) return `A group sails at most ${GROUP_MAX} ships`;
   if (groupOfAccount(game, t.accountId)) return `${t.name} already sails with a group`;
   for (const i of game.social.invites.values()) if (i.from === s.accountId && i.to === t.accountId) return 'The invitation is already on its way';
-  const inv: Invite = { id: game.social.id(), from: s.accountId, fromName: s.name, to: t.accountId, until: game.now + INVITE_SEC };
+  const inv: Invite = { id: game.social.id(), from: s.accountId, fromName: s.name, to: t.accountId, until: realNow(game) + INVITE_MS };
   game.social.invites.set(inv.id, inv);
   game.sendTo(t, { t: 'toast', msg: `${s.name} asks you to sail with them. Answer in the Company screen [Y].`, kind: 'info' });
   pushParty(game, t);
@@ -207,7 +213,7 @@ export function groupAsk(game: Game, s: PlayerSession, name: string): string | n
   if (g && g.members.length >= GROUP_MAX) return 'Their group is full';
   const to = g ? g.leader : t.accountId;
   for (const i of game.social.invites.values()) if (i.ask && i.from === s.accountId && i.to === to) return 'You have already asked';
-  const inv: Invite = { id: game.social.id(), from: s.accountId, fromName: s.name, to, until: game.now + INVITE_SEC, ask: true };
+  const inv: Invite = { id: game.social.id(), from: s.accountId, fromName: s.name, to, until: realNow(game) + INVITE_MS, ask: true };
   game.social.invites.set(inv.id, inv);
   const lead = game.sessionByAccount(to);
   if (lead) {
@@ -799,8 +805,9 @@ function pushBarter(game: Game, b: Barter): void {
 /** Called every second. */
 export function stepSocial(game: Game): void {
   const soc = game.social;
+  const wall = realNow(game);
   for (const [k, i] of soc.invites) {
-    if (i.until > game.now) continue;
+    if (i.until > wall) continue;
     soc.invites.delete(k);
     const t = game.sessionByAccount(i.to);
     if (t) pushParty(game, t);
@@ -817,7 +824,7 @@ export function stepSocial(game: Game): void {
       continue;
     }
     if (!b.open) {
-      if (game.now - b.since > INVITE_SEC) cancelBarter(game, b, null);
+      if (game.now - b.since > BARTER_SEC) cancelBarter(game, b, null);
       continue;
     }
     const where = alongside(game, A, B);

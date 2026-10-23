@@ -1843,6 +1843,22 @@ export class Hud {
     });
   }
 
+  /** A toast that does something when tapped (an invitation waiting: the Company screen to answer it). */
+  tapToast(msg: string, kind: string, onTap: () => void): void {
+    this.toastQ.push(msg, kind, () => {
+      const el = document.createElement('div');
+      el.dataset.msg = msg;
+      el.className = `toast ${kind} tap`;
+      el.setAttribute('role', 'button');
+      el.innerHTML = `${icon('tab_letters', '', 'ico-toast')}<span>${esc(keyless(msg))}</span>`;
+      el.onclick = () => {
+        el.remove();
+        onTap();
+      };
+      return el;
+    });
+  }
+
   /** A sound caption at the edge of the screen it came from (docs/07 §11.5). */
   caption(text: string, dir: 'ahead' | 'astern' | 'port' | 'starboard' | 'near'): void {
     const el = document.createElement('div');
