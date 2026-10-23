@@ -32,6 +32,7 @@ import type { PlayerSession, Profile } from './player.ts';
 import type { QuestState } from './quests.ts';
 import { questEvent, startQuest } from './quests.ts';
 import { seasonStat } from './seasons.ts';
+import { namedForCampaign } from './wanted.ts';
 
 const built = new WeakMap<Game, Campaign>();
 
@@ -245,6 +246,18 @@ export function campaignTick(game: Game, s: PlayerSession): void {
     // «Свой берег» and their pirates brought packs (QA 2026-10-22).
     releaseFoes(game, old.ids);
     watches.delete(s);
+  }
+  if (qs && st?.type === 'named') {
+    // a named captain of the Brethren comes to her wherever the chapter is (wanted.ts namedForCampaign)
+    const key = `${qs.id}:${qs.step}`;
+    let w = watches.get(s);
+    if (!w || w.step !== key) watches.set(s, (w = { next: game.now + 8, ids: [], step: key, told: false }));
+    if (game.now < w.next || ship.inCombat(game.now)) return;
+    w.next = game.now + FOE_EVERY;
+    const o = namedForCampaign(game, ship);
+    if (o && !w.told) game.sendTo(s, { t: 'toast', msg: `The Brethren’s ${o.captainName} puts to sea near you: sink that ship.`, kind: 'bad' });
+    if (o) w.told = true;
+    return;
   }
   if (!qs || !st || (st.type !== 'sink' && st.type !== 'board' && st.type !== 'beast')) return;
   if (st.type === 'sink' && st.role && st.role !== 'pirate' && st.role !== 'ghost') return; // patrols and merchants sail the sea anyway
