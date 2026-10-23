@@ -222,3 +222,15 @@ test('every name a route may carry reads in Russian (the rescue step’s open wa
     setLang('en');
   }
 });
+
+test('a harbour that refuses a wanted ship says the way back (a pardon in a free harbour), in Russian too', async () => {
+  const { canDock } = await import('../server/src/game/player.ts');
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const p = { infamy: 9999, talents: {}, reputation: {} } as never;
+  const r = canDock(p, 'crown');
+  assert.equal(r.ok, false);
+  assert.match(r.reason!, /pardon/);
+  setLang('ru');
+  try { assert.match(serverText(r.reason!), /^Начальники портов .+помилование.+вольной гавани/); } finally { setLang('en'); }
+});

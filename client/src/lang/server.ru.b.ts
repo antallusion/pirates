@@ -641,7 +641,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "{0} hands take {1} as your prize. Bring her to any port with a yard.": "{0} человек уводят {1} как ваш приз. Приведите его в любой порт с верфью.",
   "{0} hands the admiralty to {1}.": "{0} передаёт адмиральство: {1}.",
   "{0} hands you a map: {1}.": "{0} вручает вам карту: {1}.",
-  "{0} harbour masters refuse ships at Wanted {1}.": "Начальники портов {0} не принимают суда с розыском {1}.",
+  "{0} harbour masters refuse ships at Wanted {1}: buy a pardon in a free harbour, or let the sea forget.": "Начальники портов {0} не принимают суда с розыском {1}: купите помилование в вольной гавани или переждите, пока море забудет.",
   "{0} has dug up {1}! The other pieces are only paper now.": "{0} откопал {1}! Остальные обрывки теперь просто бумага.",
   "{0} has fallen": "{0} пал",
   "{0} has gone": "{0} ушёл",
