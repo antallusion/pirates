@@ -2418,7 +2418,11 @@ export class Game {
     this.grantXp(s, xp * streak, `${how === 'sunk' ? 'Sank' : 'Took'} ${victim.name}`, true);
     if (!paid) for (const ms of mates) this.grantXp(ms, prizeXp(ms.profile!.level, vLevel, how) * XP_UNITS.mate, `${s.name} ${how === 'sunk' ? 'sank' : 'took'} ${victim.name}`, true);
     // Law and reputation (monsters and hulks answer to nobody).
-    if (victim.faction !== 'player' && !victim.cls.monster) {
+    // (a ship sent after her — a fireship, the campaign's foe, a band for her cargo — sunk in her own defence costs no
+    // standing with its flag: fireships cost Free Harbors ten a piece until chapter 4's hub shut its quays, QA 2026-10-23)
+    const hb = this.npcs.get(victim.id);
+    const sentAfter = !!hb && (hb.fireship === killer.id || hb.huntFor === killer.id || hb.huntAccount === s.accountId);
+    if (victim.faction !== 'player' && !victim.cls.monster && !sentAfter) {
       const f = FACTIONS[victim.faction];
       if (f.lawful) {
         const zone = REGIONS[victim.region].safety;

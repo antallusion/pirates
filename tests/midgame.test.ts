@@ -294,3 +294,31 @@ test('an island’s waters to reach: «Плыть» marks its coast nearest her,
   questEvent(game, s, { k: 'tick', dt: 1 });
   assert.notEqual(s.profile!.quests.active.find((x) => x.id === q.id)?.step ?? 99, i, 'its waters reached');
 });
+
+test('a fireship sent at her, sunk, costs no standing with its flag (Free Harbors shut chapter 4’s hub to her)', async () => {
+  const { makeGame, join, steps } = await import('./helpers.ts');
+  const { spawnFireship } = await import('../server/src/game/npc.ts');
+  const { game } = makeGame();
+  join(game, 'Fire Eater');
+  const s = game.sessionByName('Fire Eater')!;
+  const ship = s.ship!;
+  ship.docked = null; s.profile!.docked = null;
+  ship.state.x = 52000; ship.state.y = 74000;
+  const before = s.profile!.reputation.free ?? 0;
+  let sunk = 0;
+  for (let k = 0; k < 6; k++) {
+    const f = spawnFireship(game, ship);
+    if (!f) continue;
+    f.attackers.set(ship.id, game.now);
+    game.beginSinking(f);
+    sunk++;
+    steps(game, 2);
+  }
+  assert.ok(sunk >= 4, `${sunk} fireships`);
+  assert.ok((s.profile!.reputation.free ?? 0) >= before - 1, `Free Harbors' standing kept (${before} → ${s.profile!.reputation.free})`);
+  // an ordinary ship of the Free Harbors sunk by her still costs it
+  const other = game.spawnNpcShip('merchant', 'sloop', 'free', ship.state.x + 500, ship.state.y, 0);
+  other.attackers.set(ship.id, game.now);
+  game.beginSinking(other);
+  assert.ok((s.profile!.reputation.free ?? 0) < before - 1, 'a free merchant sunk still costs standing');
+});
