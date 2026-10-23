@@ -182,7 +182,7 @@ try {
   const end = (await import('../../../shared/src/data/campaign/progress.ts').catch(() => null))?.FIRST_SLOT?.[TO] ?? 1e9;
   while (Date.now() - t0 < Number(process.env.MINUTES ?? 110) * 60000) {
     s = await cur(p);
-    if (s.at >= end) { log('chapter(s) done at', s.at); break; }
+    if (s.at >= end || s.at >= 720) { log('chapter(s) done at', s.at); break; }
     // toasts since last
     while (toasts.length) { const t = toasts.shift(); log('  toast:', t); if (/[A-Za-z]{4,}/.test(t.replace(/Mid\d \w+/g, ''))) issues.push(`latin toast: ${t}`); }
     if (s.tac) { await battle(p, `s${s.at}`); continue; }
@@ -307,7 +307,8 @@ try {
       await shot(p, `s${s.at}_landed`); await L.closeAll(p, 1);
       continue;
     }
-    if (a.includes('dock') && s.q.target?.act === 'dock' && Math.hypot((s.q.target.x ?? 0) - s.x, (s.q.target.y ?? 0) - s.y) < 2500) {
+    // (or the run's own harbour: a delivery's run goes first to a port that sells the good)
+    if (a.includes('dock') && ((s.q.target?.act === 'dock' && Math.hypot((s.q.target.x ?? 0) - s.x, (s.q.target.y ?? 0) - s.y) < 2500) || (s.route?.act === 'dock' && Math.hypot(s.route.x - s.x, s.route.y - s.y) < 600))) {
       log('  «Причалить»');
       await tapAct(p, 'dock'); await L.sleep(2500);
       await shot(p, `s${s.at}_docked`);
