@@ -2041,7 +2041,8 @@ export type ServerMsg =
   | { t: 'who'; list: WhoView[]; total: number }
   | { t: 'inspect'; view: InspectView }
   | { t: 'party'; group: PartyView | null; invites: { id: number; from: string; ask?: boolean }[];
-      /** Captains looking for a group (docs/11 P6), and this captain's own posting */ lfg?: LfgEntry[]; lfgMine?: string | null; lfgGoal?: LfgMine | null }
+      /** Captains looking for a group (docs/11 P6), and this captain's own posting */ lfg?: LfgEntry[]; lfgMine?: string | null; lfgGoal?: LfgMine | null;
+      /** Captains hailing her to trade (party.ts barterHails): the Company screen's «Торговать» answers them. */ hails?: string[] }
   /** docs/16 #35: a groupmate's signal flag. */
   | { t: 'signal'; from: string; kind: SignalKind; x: number; y: number }
   /** docs/16 #36: the helmsman has the wheel for a mark, or has given it back and why. */

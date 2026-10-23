@@ -394,3 +394,22 @@ test('the claim card’s «free islands near» rows: the name its whole width, n
   assert.match(company, /<div class="item-row est-near"><div class="item-text">/, 'the row marked as one with no picture');
   assert.match(css, /\.item-row\.est-near \{ grid-template-columns: minmax\(0, 1fr\) auto; \}/);
 });
+
+test('a hail to trade shows on her Company screen, and «Торговать» there opens the table', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { game } = makeGame();
+  const ca = join(game, 'Hailer Ann');
+  const cb = join(game, 'Hailed Bo');
+  const a = game.sessionByName('Hailer Ann')!, b = game.sessionByName('Hailed Bo')!;
+  b.ship!.docked = a.ship!.docked; // the same harbour
+  ca.push({ t: 'barter', action: 'propose', name: 'Hailed Bo' });
+  const party = cb.last('party');
+  assert.deepEqual(party?.hails, ['Hailer Ann'], 'her screen carries the hail');
+  cb.push({ t: 'barter', action: 'propose', name: 'Hailer Ann' }); // her «Торговать»
+  assert.ok(cb.last('barter')?.view, 'the table opens');
+  const company = src('client/src/ui/company.ts');
+  assert.match(company, /data-hail=/);
+  assert.match(company, /\[data-hail\]'\)\.forEach\(\(el\) => \(el\.onclick = \(\) => this\.send\(\{ t: 'barter', action: 'propose'/);
+  const { RU } = await import('../client/src/lang/ui/company.ts');
+  assert.equal(RU.grp_hail_go, 'Торговать');
+});

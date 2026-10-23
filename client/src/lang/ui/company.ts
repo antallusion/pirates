@@ -183,6 +183,8 @@ export const EN = {
   grp_trade_text: 'In the same port, or at sea within 300 m: silver, goods and gear; both lock, both confirm.',
   grp_hail: 'Hail to trade',
   grp_invited: '{from} asks you to sail with them',
+  grp_hailed: '{from} hails you to trade',
+  grp_hail_go: 'Trade',
 
   // islands
   isl_offer_meta: '— {size}, {slots} {slotw}, {biome}',
@@ -766,6 +768,8 @@ export const RU: Record<keyof typeof EN, string> = {
   grp_trade_text: 'В одном порту или в море в пределах 300 м: серебро, товары и снаряжение; оба фиксируют, оба подтверждают.',
   grp_hail: 'Окликнуть для торга',
   grp_invited: '{from} зовёт вас идти вместе',
+  grp_hailed: '{from} предлагает торговать',
+  grp_hail_go: 'Торговать',
 
   isl_offer_meta: '— {size}, {slots} {slotw}, {biome}',
   isl_ore: ', руда',

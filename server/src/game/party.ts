@@ -319,7 +319,7 @@ export function pushParty(game: Game, s: PlayerSession): void {
   const g = groupOfAccount(game, s.accountId);
   const invites = [...game.social.invites.values()].filter((i) => i.to === s.accountId).map((i) => (i.ask ? { id: i.id, from: i.fromName, ask: true } : { id: i.id, from: i.fromName }));
   const mine = game.social.lfg.get(s.accountId);
-  game.sendTo(s, { t: 'party', group: g ? partyView(game, g) : null, invites, lfg: lfgList(game, s.accountId), lfgMine: mine?.note ?? null, lfgGoal: mine?.goal ? { goal: mine.goal, lo: mine.lo ?? 1, hi: mine.hi ?? 1 } : null });
+  game.sendTo(s, { t: 'party', group: g ? partyView(game, g) : null, invites, lfg: lfgList(game, s.accountId), lfgMine: mine?.note ?? null, lfgGoal: mine?.goal ? { goal: mine.goal, lo: mine.lo ?? 1, hi: mine.hi ?? 1 } : null, hails: barterHails(game, s.accountId) });
 }
 
 // ------------------------------------------------------------------------------------------ looking for a group
