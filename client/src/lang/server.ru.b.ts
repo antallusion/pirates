@@ -1431,6 +1431,12 @@ export const SERVER_RU_B: Record<string, string> = {
   "bank bared by the ebb": "отмель, обнажённая отливом",
   "bank bared in {0}": "отмель, что стоит над водой в сезон «{0}»",
   "bared bank": "обнажённая отмель",
+  // what her boats are at (player.ts landingName)
+  "buried treasure": "зарытый клад",
+  "the wreck below": "остов на дне",
+  "your stockpile": "ваш склад",
+  "the turtle’s back": "спина черепахи",
+  "the mine’s flag": "флаг над рудником",
   "a captain's buried chest": "зарытый сундук капитана",
   "far side": "дальний край",
   "lookout": "смотровая на мысе",

@@ -14,6 +14,7 @@ export const SERVER_RU_CAMPAIGN: Record<string, string> = {
   'Shot for the guns: the chapter’s stores are aboard.': 'Ядра для пушек: припасы главы погружены на борт.',
   'The campaign is walked alone': 'Кампанию проходят в одиночку',
   'Enemy sails close in: the campaign’s fight comes to you.': 'Вражеские паруса идут на сближение: бой кампании сам идёт к вам.',
+  'The Brethren’s {0} puts to sea near you: sink that ship.': 'Капитан Братства {0} выходит в море рядом с вами: потопите этот корабль.',
   'Nobody here offers that': 'Здесь такого не предлагают',
   'The campaign’s quest is not set aside: it goes on by itself': 'Задание кампании не откладывается: она идёт сама',
   // owner, 2026-10-21: a step of buying or hiring already done, or one that cannot be (quests.ts stepMoot, skipGuideStep)
@@ -21,5 +22,6 @@ export const SERVER_RU_CAMPAIGN: Record<string, string> = {
   'No room in the hold for provisions — the step is counted.': 'В трюме нет места для провизии — шаг засчитан.',
   'No room in the hold for sailcloth — the step is counted.': 'В трюме нет места для парусины — шаг засчитан.',
   'The hold is full — the step is counted.': 'Трюм полон — шаг засчитан.',
+  'Every island of the sea is on your chart already — the step is counted.': 'Все острова моря уже на вашей карте — шаг засчитан.',
   'Only a lesson of the shops can be skipped': 'Пропустить можно только урок лавок',
 };

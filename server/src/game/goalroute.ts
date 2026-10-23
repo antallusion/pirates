@@ -86,6 +86,7 @@ export const ROUTE_HINTS = {
   deep: 'Lie still over deep water and drop the line.',
   dive: 'Heave to over the wreck and send the divers down.',
   board: 'Come alongside and board her.',
+  tribute: 'Board a merchant and let her go: her share of the purse is the tribute.',
   beast: 'Close in and harpoon it.',
 } as const;
 
@@ -441,7 +442,8 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
   switch (st.type) {
     case 'sink': {
       if (cmp) {
-        const foes = campaignFoes(game, s).map((fid) => game.ships.get(fid)!).map((o): Cand => ({ x: o.state.x, y: o.state.y, r: 250, kind: 'ships', name: 'pirates', ship: o.id, w: 0.7 }));
+        const name = st.role === 'ghost' ? 'ghosts' : st.role === 'hunter' ? 'hunters' : st.role === 'patrol' ? 'patrols' : 'pirates';
+        const foes = campaignFoes(game, s).map((fid) => game.ships.get(fid)!).map((o): Cand => ({ x: o.state.x, y: o.state.y, r: 250, kind: 'ships', name, ship: o.id, w: 0.7 }));
         if (foes.length) return { cands: foes };
         if (st.near) return { cands: [{ x: st.near.x, y: st.near.y, r: Math.round(st.near.r * 0.6), kind: 'region', name: 'campaign' }] };
       }
@@ -462,7 +464,8 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
       const out: Cand[] = [];
       for (const n of liveNamed(game)) {
         const o = game.ships.get(n.ship);
-        if (o?.alive) out.push({ x: o.state.x, y: o.state.y, r: 250, kind: 'ships', name: 'pirates', ship: o.id });
+        // (the campaign's: one of the Brethren is put out near her — campaign.ts — never a run to one 30 km off)
+        if (o?.alive && (!cmp || Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y) < 12000)) out.push({ x: o.state.x, y: o.state.y, r: 250, kind: 'ships', name: 'pirates', ship: o.id });
       }
       return { cands: out.length ? out : hunt(game, s, 'pirates') };
     }
@@ -472,8 +475,8 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
       return { cands: cast.length ? cast : squares(game, () => true, 'open_sea', 1.3) };
     }
     case 'tribute':
-      // a merchant to stop and make pay (the Brethren's raid, docs/12 P6)
-      return { cands: hunt(game, s, 'merchants') };
+      // a merchant to stop and make pay (the Brethren's raid, docs/12 P6): boarded and let go
+      return { cands: hunt(game, s, 'merchants').map((c) => ({ ...c, hint: ROUTE_HINTS.tribute })) };
     case 'claim':
       // docs/36: an island of her own — the nearest she may claim; the opening's town, its own island (owner, 2026-10-19)
       if (st.island !== undefined && !ownIsland(game, s.accountId)) return { cands: islands(game, (i) => i.id === st.island, 'land') };

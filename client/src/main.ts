@@ -3334,7 +3334,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   if (self.landing) {
     const now = state.estServerTime();
     const frac = Math.max(0, Math.min(1, (now - self.landing.started) / (self.landing.until - self.landing.started)));
-    info.push(`${esc(L('ashore', { feature: sv(self.landing.feature.replace('_', ' ')), pct: Math.round(frac * 100) }))} ${esc(L('recall'))}`);
+    info.push(`${esc(L('ashore', { feature: sv(self.landing.name ?? self.landing.feature.replace(/_/g, ' ')), pct: Math.round(frac * 100) }))} ${esc(L('recall'))}`);
   } else if (l?.blocked) {
     // What stops you, after the place it is about (with a capital: it opens the line) unless it names the place itself.
     const why = sv(l.blocked), where = sv(l.feature);

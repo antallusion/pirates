@@ -177,7 +177,7 @@ export const BOARD_LOSS_PURSE = 0.08;
 export const BOARD_LOSS_SHIELD = 180;
 import { stepBridges } from './bridgefx.ts';
 import { MAX_BERTHS, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
-import { ISLE_REACH, abandonQuest, acceptQuest, answerOffer, bandRefusal, portBand, jobSanctions, questCargoLost, questEvent, questLandsHere, questHere, questXpOf, shareQuest, skipGuideStep, swearOath, switchPath } from './quests.ts';
+import { ISLE_REACH, NEAR_FIGHT, abandonQuest, acceptQuest, answerOffer, bandRefusal, portBand, jobSanctions, questCargoLost, questEvent, questLandsHere, questHere, questXpOf, shareQuest, skipGuideStep, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import { commonCollect, commonView, stepCommon } from './commongoal.ts';
 import { guildGoalCollect } from './guildgoal.ts';
@@ -1265,6 +1265,10 @@ export class Game {
       const stair = s.ship.docked || s.ship.landing ? null : descentLandable(this, s);
       const convoy = s.ship.docked || s.ship.landing ? null : escortOffer(this, s); // sign on as a League convoy's escort (docs/16 #6)
       const isle = s.ship.docked || s.ship.landing || own ? null : islesPrompt(this, s); // a dark lighthouse's keeper, a bared bank (docs/16 #23, #25)
+      // A job of hers that lands here: her landing comes first (QA playthrough B, docs/30; exploration.ts startLanding) —
+      // before a wreck or a buried chest on the same beach too (late-game QA 2026-10-23: the campaign's «высадитесь на
+      // острове» ended its run by a campaign wreck in the shallows, and the bar had «Нырять» where «Высадка» should be).
+      const job = !!land && questLandsHere(s.profile, land.island.id, land.feature);
       s.landable = stair
         ? stair
         : legend
@@ -1273,12 +1277,14 @@ export class Game {
         ? city
         : cove
         ? { island: cove.name, feature: 'buyers for contraband (90% of Fogmouth)' }
+        : job && land
+        ? { island: land.island.name, feature: featureName(land.island, land.feature) }
         : tmap && tmap.kind === 'player'
         ? { island: this.world.islands[tmap.island ?? -1]?.name ?? tmap.name, feature: "a captain's buried chest", action: 'dig' } // docs/16 #22
         : tmap
         ? { island: tmap.name.replace(/^.* — /, ''), feature: `buried treasure (${tmap.name.replace(/ — .*$/, '').toLowerCase()})`, action: 'dig' }
         : wreck
-        ? { island: 'the sea floor', feature: `wreck of the ${wreck.name} (${wreck.depth} m)`, action: 'dive', blocked: wreckWhy ?? undefined }
+        ? { island: 'the sea floor', feature: `${wreck.name} (${wreck.depth} m)`, action: 'dive', blocked: wreckWhy ?? undefined }
         : own
         ? { island: own.island.name, feature: `stockpile of ${GOODS[own.site.good].name.toLowerCase()} (${Math.floor(own.site.stock)})` }
         : convoy
@@ -1287,8 +1293,6 @@ export class Game {
         ? isle
         : land ? { island: land.island.name, feature: featureName(land.island, land.feature) } : null;
       // A mine ashore (docs/17 H3): the flag goes up before the boats row for anything else on its island.
-      // A job of hers that lands here: her landing comes first (QA playthrough B, docs/30; exploration.ts startLanding).
-      const job = !!land && questLandsHere(s.profile, land.island.id, land.feature);
       const flag = s.ship.docked || s.ship.landing || job ? null : mineLandable(this, s);
       if (flag && (!s.landable || (land && s.landable.island === land.island.name && !s.landable.action))) s.landable = flag;
       // docs/18 #28, #31: an island's level against hers on the prompt; a turtle island's back when nothing else calls.
@@ -1909,6 +1913,9 @@ export class Game {
           if (st.island !== undefined && l.island !== st.island) continue;
           if (st.kind && l.kind !== st.kind) continue;
           if (!lairUp(this, l)) continue;
+          // not one on a hidden island (late-game QA 2026-10-23: chapter 35's lairs were Glowhollow's, an island in the
+          // Abyss's mist — no «Штурм» there till it is charted, and nothing on the screen said so)
+          if (st.island === undefined && l.island >= 0 && this.world.islands[l.island]?.hidden) continue;
           const lp = lairPos(this, l);
           // A lair under a harbour's quays is the last pick (docs/30: Moon Landing's — the run ended between its piers,
           // the sloop on the beach, and off the quay straight onto the rocks); one out on an island first.
@@ -1922,7 +1929,10 @@ export class Game {
           // A campaign's lair of its own level first (mid-game QA 2026-10-22: «За серой тканью» at the fourth level sent
           // her to a ⚓3 hermits' camp two levels above her sloop, a ⚓2 bat cave 180 m farther in the same waters)
           const above = st.near ? Math.max(0, l.level - shipBandOf(QUESTS_BY_ID[qs.id]?.requires.level ?? p.level)) * 3000 : 0;
-          const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay + above;
+          // (and one within the location's waters, where a lair beaten counts — quests.ts stepGain: the nearest lair of an
+          // island in the mist passed over, the mark went to one 4 km off, beyond them)
+          const outside = st.near && Math.hypot(lp.x - st.near.x, lp.y - st.near.y) > st.near.r + NEAR_FIGHT - 300 ? 50_000 : 0;
+          const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay + above + outside;
           // (its island named on the route: «Плыть» to a campaign's lair said «место», mid-game QA 2026-10-22)
           // (the mark on its beach, where the boats put off: an inland camp's point left the run 100 m off with no «Штурм»)
           if (d < bd) { const b = lairBeach(this, l); [best, bd] = [{ x: b.x, y: b.y, ...(l.island >= 0 && l.turtle === undefined ? { island: l.island } : {}) }, d]; }

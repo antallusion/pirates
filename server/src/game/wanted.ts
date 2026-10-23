@@ -493,9 +493,9 @@ function freePoint(game: Game, x: number, y: number, r0: number, r1: number, reg
 }
 
 /** A named captain puts to sea with her lieutenants, some miles off a captain in her waters. */
-export function putToSea(game: Game, np: NamedPirate, near: ShipEntity): ShipEntity | null {
+export function putToSea(game: Game, np: NamedPirate, near: ShipEntity, waters: RegionId = np.region, r: [number, number] = [3500, 6500]): ShipEntity | null {
   const S = ws(game);
-  const pt = freePoint(game, near.state.x, near.state.y, 3500, 6500, np.region);
+  const pt = freePoint(game, near.state.x, near.state.y, r[0], r[1], waters);
   if (!pt) return null;
   // A nemesis sails levels above himself against the captain he hunts, on a bigger hull if his own tops out
   // (docs/12 P10 #1; the ladder of levels keeps each hull to its span).
@@ -517,7 +517,7 @@ export function putToSea(game: Game, np: NamedPirate, near: ShipEntity): ShipEnt
   brain.expiresAt = 0;
   const lts: number[] = [];
   np.lieutenants.forEach((lt, i) => {
-    const lp = freePoint(game, pt[0], pt[1], 120, 300, np.region);
+    const lp = freePoint(game, pt[0], pt[1], 120, 300, waters);
     if (!lp) return;
     const l = game.spawnNpcShip('pirate', lt.cls, 'confederacy', lp[0], lp[1], ship.state.heading, { ship: lt.name[0], captain: lt.name[0] });
     game.setNpcLevel(l, lt.level);
@@ -611,6 +611,30 @@ export function stepWanted(game: Game): void {
   }
   if (Math.floor(now) % 5 === 0) for (const s of game.sessions) sendWanted(game, s);
   if (Math.floor(now) % 60 === 0) save(game);
+}
+
+/** The campaign's «sink a named pirate captain» (campaign.ts campaignTick): one of the Brethren put to sea some 2–4 km off
+ *  her when none is within reach — whatever the hour and the weather. Her own sea's roster; beyond the pirate seas (the
+ *  Abyss: no Brethren of its own) the nearest pirate sea's sends one after her (QA 2026-10-23: the step in the Abyss's
+ *  chapters waited for a captain who never sails there, and in the pirate seas for the night, the fog, the twelve hours
+ *  after one was sunk). */
+export function namedForCampaign(game: Game, ship: ShipEntity, reach = 9000): ShipEntity | null {
+  const S = ws(game);
+  for (const l of S.live.values()) {
+    const o = game.ships.get(l.ship);
+    if (o?.alive && dist(o.state.x, o.state.y, ship.state.x, ship.state.y) < reach) return null;
+  }
+  const here = regionAt(game.world, ship.state.x, ship.state.y);
+  const sea = PIRATE_SEAS.includes(here) ? here : [...PIRATE_SEAS].sort((a, b) => dist(REGIONS[a].center[0], REGIONS[a].center[1], ship.state.x, ship.state.y) - dist(REGIONS[b].center[0], REGIONS[b].center[1], ship.state.x, ship.state.y))[0];
+  const pool = namedPirates().filter((np) => np.region === sea && !np.baron && !S.live.has(np.id));
+  if (!pool.length) return null;
+  // (of her ship's level when the roster allows: the nearest to her band)
+  const lv = ship.shipLevel;
+  const best = Math.min(...pool.map((np) => Math.abs(np.level - lv)));
+  const np = S.rng.pick(pool.filter((x) => Math.abs(x.level - lv) === best));
+  const o = putToSea(game, np, ship, here, [2000, 4000]);
+  if (o) S.dirty = true;
+  return o;
 }
 
 function respawnDelay(S: WantedState, np: NamedPirate): number {
@@ -729,9 +753,10 @@ export function wantedKill(game: Game, s: PlayerSession, victim: ShipEntity): vo
         if (b) game.sendTo(s, { t: 'toast', msg: `Three of his captains are sunk: ${b.name[0]}, baron of the Brethren in ${REGIONS[np.region].name}, will come for you himself.`, kind: 'bad' });
       }
       if (p.hunter!.captains >= CAPTAIN_KILLER) grantDeed(game, s, 'deed_captain_killer');
-      questEvent(game, s, { k: 'named' });
       addPoints(game, s, HUNTER_POINTS.captain);
     }
+    // (a baron is a named captain too: «Потопите именитого капитана» was not done by the greatest of them — QA 2026-10-23)
+    questEvent(game, s, { k: 'named' });
     game.grantXp(s, targetXp(s.profile!.level, np.level, 3), `Sank ${np.name[0]}`, true);
     S.dirty = true;
     sendWanted(game, s, true);

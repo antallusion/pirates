@@ -32,6 +32,7 @@ import type { PlayerSession, Profile } from './player.ts';
 import type { QuestState } from './quests.ts';
 import { questEvent, startQuest } from './quests.ts';
 import { seasonStat } from './seasons.ts';
+import { namedForCampaign } from './wanted.ts';
 
 const built = new WeakMap<Game, Campaign>();
 
@@ -49,7 +50,7 @@ export function initCampaign(game: Game, seed: number): Campaign {
 export function campaignPlaces(game: Game): void {
   const c = campaignOf(game);
   const floor = beforePorts(game.world);
-  const lairs = lairList(game);
+  const lairs = lairList(game).filter((l) => !(l.island >= 0 && game.world.islands[l.island]?.hidden)); // (none in the mist: Game.questTargets)
   for (const q of c.quests) for (const st of q.steps) {
     if (st.type === 'dive' && st.near && st.wreck === undefined) {
       let best: { x: number; y: number; depth: number } | null = null;
@@ -246,8 +247,20 @@ export function campaignTick(game: Game, s: PlayerSession): void {
     releaseFoes(game, old.ids);
     watches.delete(s);
   }
+  if (qs && st?.type === 'named') {
+    // a named captain of the Brethren comes to her wherever the chapter is (wanted.ts namedForCampaign)
+    const key = `${qs.id}:${qs.step}`;
+    let w = watches.get(s);
+    if (!w || w.step !== key) watches.set(s, (w = { next: game.now + 8, ids: [], step: key, told: false }));
+    if (game.now < w.next) return; // (in a fight or not: the lawless seas' rovers kept her in one, and none came — QA)
+    w.next = game.now + FOE_EVERY;
+    const o = namedForCampaign(game, ship);
+    if (o && !w.told) game.sendTo(s, { t: 'toast', msg: `The Brethren’s ${o.captainName} puts to sea near you: sink that ship.`, kind: 'bad' });
+    if (o) w.told = true;
+    return;
+  }
   if (!qs || !st || (st.type !== 'sink' && st.type !== 'board' && st.type !== 'beast')) return;
-  if (st.type === 'sink' && st.role && st.role !== 'pirate' && st.role !== 'ghost') return; // patrols and merchants sail the sea anyway
+  if (st.type === 'sink' && st.role === 'merchant') return; // merchants sail the sea anyway
   // docs/36: the fight is the location's — it puts out in its waters once she comes near them
   const near = st.near;
   if (near && Math.hypot(ship.state.x - near.x, ship.state.y - near.y) > near.r + FOE_COME) return;
@@ -274,7 +287,7 @@ export function campaignTick(game: Game, s: PlayerSession): void {
       const x = (near?.x ?? ship.state.x) + Math.sin(a) * d, y = (near?.y ?? ship.state.y) - Math.cos(a) * d;
       if (beastWater(game, x, y)) foe = spawnBeast(game, id, x, y, band);
     }
-  } else foe = spawnCampaignFoe(game, ship, s.accountId, band, st.type === 'sink' && st.role === 'ghost', near);
+  } else foe = spawnCampaignFoe(game, ship, s.accountId, band, st.type === 'sink' && (st.role === 'ghost' || st.role === 'hunter' || st.role === 'patrol') ? st.role : 'pirate', near);
   if (!foe) return;
   // the opening's fights (owner, 2026-10-19: «атака корабля, дальше абордаж» in the first minutes): softened as the
   // first fights are — half her hull, her men thinned, her shot lighter on the newcomer (firstfights.ts)

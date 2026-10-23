@@ -25,6 +25,8 @@ import type { ShipEntity } from './ship.ts';
 export const HELP_R = 5000;
 /** How long a call stands. */
 export const CALL_SEC = 150;
+/** A captain hears one merchant's cry in this many seconds at most (the toast; the rocket is seen by all). */
+export const HEARD_SEC = 60;
 /** A raider sunk within this of the call's end still counts as the rescue. */
 const GRACE = 30;
 /** Low waters: a raider preying on a square this low carries a bounty. */
@@ -43,6 +45,8 @@ interface Call {
 
 interface WarState {
   calls: Map<number, Call>;
+  /** When each captain's ship may hear the next cry (onNpcHit). */
+  heard: Map<number, number>;
   /** `${raider}:${captain}` → until: a captain who fired on the raiders' prey sails with them. */
   joined: Map<string, number>;
   stirAt: Map<number, number>;
@@ -52,7 +56,7 @@ const states = new WeakMap<Game, WarState>();
 
 function ws(game: Game): WarState {
   let s = states.get(game);
-  if (!s) states.set(game, (s = { calls: new Map(), joined: new Map(), stirAt: new Map() }));
+  if (!s) states.set(game, (s = { calls: new Map(), heard: new Map(), joined: new Map(), stirAt: new Map() }));
   return s;
 }
 
@@ -112,6 +116,10 @@ export function onNpcHit(game: Game, victim: ShipEntity, source: ShipEntity): vo
     if (!sh || !sh.alive || sh.docked || sh.id === source.id) continue;
     const d = dist(sh.state.x, sh.state.y, victim.state.x, victim.state.y);
     if (d > HELP_R) continue;
+    // one cry heard by a captain at a time (late-game QA 2026-10-23: in the lawless seas a new merchant's cry every few
+    // seconds, eleven toasts in a minute over her screen); the rocket still goes up for all to see
+    if (now < (S.heard.get(sh.id) ?? -Infinity)) continue;
+    S.heard.set(sh.id, now + HEARD_SEC);
     const km = (d / 1000).toFixed(1), dir = bearingWord(sh.state.x, sh.state.y, victim.state.x, victim.state.y);
     game.toastShip(sh, source.npcRole === 'ghost'
       ? `A ghost ship attacks ${victim.name}, ${km} km ${dir}: she calls for help!`
