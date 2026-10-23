@@ -87,7 +87,11 @@ export function seasonXp(game: Game, s: PlayerSession, xp: number): void {
     if (!r) continue;
     if (r.title && !p.titles.includes(r.title)) p.titles.push(r.title);
     if (r.pennant && !p.pennants.includes(r.pennant)) p.pennants.push(r.pennant);
-    game.sendTo(s, { t: 'toast', msg: `Season path ${se.level}: ${r.title ? `the title "${r.title}"` : ''}${r.title && r.pennant ? ' and ' : ''}${r.pennant ? 'a new pennant colour' : ''}. (Legends tab)`, kind: 'gold' });
+    // (one whole line for each case: the pieces glued in English came out half English in Russian — late-game QA 2026-10-23)
+    const msg = r.title && r.pennant ? `Season path ${se.level}: the title “${r.title}” and a new pennant colour (the Legends tab).`
+      : r.title ? `Season path ${se.level}: the title “${r.title}” (the Legends tab).`
+      : `Season path ${se.level}: a new pennant colour (the Legends tab).`;
+    game.sendTo(s, { t: 'toast', msg, kind: 'gold' });
   }
 }
 

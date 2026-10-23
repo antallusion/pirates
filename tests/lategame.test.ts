@@ -236,3 +236,25 @@ test('the lookout’s sighting reads in Russian for a ship of any gender («за
     setLang('en');
   }
 });
+
+test('the season path’s rewards read whole in Russian (the title and the pennant were glued in English)', async () => {
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { applyDataLocale } = await import('../client/src/lang/data.ts');
+  const { trackReward } = await import('../shared/src/data/seasons.ts');
+  const src = (await import('node:fs')).readFileSync(new URL('../server/src/game/seasons.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /\(Legends tab\)`/, 'no glued line');
+  setLang('ru');
+  applyDataLocale('ru');
+  try {
+    for (const theme of ['migration', 'war', 'storm', 'dead_tide'] as const) {
+    const r = trackReward(40, theme)!;
+    for (const msg of [`Season path 40: the title “${r.title}” and a new pennant colour (the Legends tab).`, `Season path 5: the title “${r.title}” (the Legends tab).`, 'Season path 10: a new pennant colour (the Legends tab).']) {
+      const ru = serverText(msg);
+      assert.doesNotMatch(ru, /[A-Za-z]{3,}/, ru);
+    }
+    }
+  } finally {
+    setLang('en');
+  }
+});
