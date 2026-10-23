@@ -248,3 +248,16 @@ test('the law forgives a stray ball through the campaign’s Crown chapters (the
   // a seasoned captain whose campaign stands at the start: not a newcomer
   assert.ok(!lawNewbie(p(0, 30)), 'level 30');
 });
+
+test('a landing’s haul with a price in it reads in Russian («1 Provisions, paid 34 silver»)', async () => {
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { applyDataLocale } = await import('../client/src/lang/data.ts');
+  setLang('ru');
+  applyDataLocale('ru');
+  try {
+    const t = serverText('The party returns from the fishing hamlet on Gallowswick Rock: 1 Provisions, paid 34 silver.');
+    assert.doesNotMatch(t, /[A-Za-z]{3,}/, t);
+    assert.match(t, /заплачено 34/, t);
+  } finally { setLang('en'); applyDataLocale('en'); }
+});
