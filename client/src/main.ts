@@ -130,6 +130,7 @@ import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { TutorPointer } from './ui/pointer.ts';
+import { resumeAfterEnd, resumeOn } from './ui/resumesail.ts';
 import { hereAct } from './ui/questact.ts'; // owner, 2026-10-23: a quest step done in this port
 import { buzz, guardVibrate } from './haptics.ts';
 import { cue, setCuePlayer } from './sfx.ts'; // the sound pass (owner, 2026-10-16): the cues the UI asks for
@@ -258,6 +259,7 @@ worldMap.send = (m) => net.send(m);
 worldMap.onAutosail = (wp) => {
   touch.course = null; // the helm stick lets go, or it would take the wheel straight back
   goalRun = null; // a course of her own: the run to a quest's place lets go
+  resumeKey = resumeAfterEnd(resumeKey, 'own');
   net.send(autosailRequest(state, wp));
   closeModal();
 };
@@ -282,6 +284,7 @@ const LSF = dict(SEAF_EN, SEAF_RU); // the quick sea fight (docs/23 phases 3–4
 const autosailPill = new AutosailPill();
 autosailPill.onStop = () => {
   goalRun = null; // the pill's stop ends the run to a quest's place too
+  resumeKey = resumeAfterEnd(resumeKey, 'own');
   net.send({ t: 'autosail', stop: true });
 };
 // docs/16 #37: a line the first time she meets each of the sea's mechanics.
@@ -765,6 +768,7 @@ function allStopHere(): void {
 function sailToSpot(p: { x: number; y: number }, near?: number): void {
   touch.course = null; // the helm stick lets go, or it would take the wheel straight back
   goalRun = null; // another course: the run to a quest's place lets go
+  resumeKey = resumeAfterEnd(resumeKey, 'own');
   const wp = { x: Math.round(p.x), y: Math.round(p.y) };
   setMark(wp);
   net.send({ ...autosailRequest(state, wp), ...(near !== undefined ? { near: Math.round(near) } : {}) });
@@ -794,6 +798,8 @@ const U2 = dict(UX2_EN, UX2_RU);
 const RT = dict(ROUTE_EN, ROUTE_RU);
 /** The run to a goal (route, 2026-10-15: the nearest place the server chose for any goal of hers), or none. */
 let goalRun: RouteRun | null = null;
+/** The goal of the last run, for her «Плыть» after a prize (ui/resumesail.ts). */
+let resumeKey: string | null = null;
 /** Why the helmsman last gave the wheel back, and when (the page's clock). */
 let helmStop: { why: AutosailStop; at: number } | null = null;
 /** The last «the helmsman has the wheel» said, and for which mark: a course re-set for the same mark (a moving thing
@@ -823,6 +829,7 @@ function startGoal(key: string, quiet = false): void {
   setMark(null); // her own old mark would lead the «Now:» line and the beacon instead of the goal
   if (key.startsWith('q:')) setTracked(key.slice(2));
   goalRun = new RouteRun(key, now, PORT_DOCK_RADIUS);
+  resumeKey = key;
   goalQuiet = quiet;
   // (never a window that must be answered: the opening's next run started by itself the moment a boarding's field
   // closed, and shut the prize's card — the ship lay hove to by her prize, the helmsman never went, QA 2026-10-22)
@@ -841,11 +848,13 @@ function tapGoal(): void {
 function onRoute(m: Extract<ServerMsg, { t: 'route' }>): void {
   if (!m.on) {
     if (goalRun?.key === m.key) goalRun = null;
+    if (resumeKey === m.key) resumeKey = resumeAfterEnd(resumeKey, m.why);
     renderer.goal = null;
     return;
   }
   if (!m.view) return;
   if (!goalRun || goalRun.key !== m.key) goalRun = new RouteRun(m.key, performance.now(), PORT_DOCK_RADIUS);
+  resumeKey = m.key;
   const fresh = goalTap.key === m.key && performance.now() - goalTap.at < 3000;
   if (fresh && !goalQuiet && !state.self?.dockedAt) hud.toast(RT('set', { name: routeLabel(m.view), d: distWords(m.view.dist) }), m.view.risk === 2 ? 'bad' : 'info');
   if (fresh) goalTap = { key: m.key, at: -1e9 };
@@ -1088,6 +1097,16 @@ function openingSail(): { key: string; name: string } | null {
   const key = `q:${q.id}`;
   if (state.autosail || (goalRun?.key === key && state.route?.key === key)) return null;
   return { key, name: sv(q.name) };
+}
+/** Her «Плыть» for a run broken off by another order (a struck ship's terms, a boarding): gold on the bar until pressed
+ *  (ui/resumesail.ts) — never sailed on by itself. */
+function resumeSail(): { key: string; name: string; resume: true } | null {
+  const key = resumeKey;
+  const q = key?.startsWith('q:') ? state.self?.quests.find((x) => x.id === key.slice(2)) : undefined;
+  const busy = !inGame || isleScene.isOpen || !!(state.boardTac || state.boardFight || state.pursuit || state.boarding) || state.roamRun !== null || !!(modal && ANSWER.includes(modal));
+  const on = resumeOn({ key, live: !key?.startsWith('q:') || !!q, routeOn: !!state.route, docked: !!state.self?.dockedAt, autosail: !!state.autosail, busy });
+  if (!on || !key) return null;
+  return { key, name: q ? sv(q.name) : '', resume: true };
 }
 /** A quest step done in this very port (owner, 2026-10-23): the finger's stage `h:<id>:<page>` — the campaign's first,
  *  a step done by its own button before one done on a page. Null at sea or with nothing to do here. */
@@ -3443,7 +3462,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
       facts.homeport = { name: sv(near.name) };
     }
   }
-  facts.goalSail = openingSail(); // owner, 2026-10-22: the opening's next place — sailed for only at her word
+  facts.goalSail = openingSail() ?? resumeSail(); // owner, 2026-10-22: the opening's next place — sailed for only at her word
   facts.looks = advCard.closedLooks();
   // A struck ship's terms put off by «Later»: her card back with «Look…».
   const struck = surrenderCard.laterName();
@@ -3547,7 +3566,7 @@ function runAct(a: Act): void {
     case 'attack_stop':
       return void net.send({ t: 'attack', stop: true });
     case 'goal_sail': {
-      const o = openingSail();
+      const o = openingSail() ?? resumeSail();
       if (o) startGoal(o.key);
       return;
     }

@@ -371,3 +371,27 @@ test('a chart step with every island of the sea already on her chart is counted,
   const a = campaignActive(s.profile!);
   assert.ok(a?.id !== q.id || a.step > i, `counted (${JSON.stringify(a)})`);
 });
+
+test('a run to a quest broken off by a prize: «Плыть» stays on the bar, gold, until pressed — never a resume by itself', async () => {
+  const { resumeOn, resumeAfterEnd } = await import('../client/src/ui/resumesail.ts');
+  const { buildActs } = await import('../client/src/ui/actbar.ts');
+  // another order took the helm (a struck ship's terms): the key is kept; met, or a course of her own: forgotten
+  assert.equal(resumeAfterEnd('q:c19_02', 'off'), 'q:c19_02');
+  assert.equal(resumeAfterEnd('q:c19_02', 'done'), null);
+  assert.equal(resumeAfterEnd('q:c19_02', 'own'), null);
+  const f = { key: 'q:c19_02', live: true, routeOn: false, docked: false, autosail: false, busy: false };
+  assert.equal(resumeOn(f), true, 'after the prize: on');
+  assert.equal(resumeOn({ ...f, busy: true }), false, 'while the card or the fight is up: off');
+  assert.equal(resumeOn({ ...f, routeOn: true }), false, 'on her way: off');
+  assert.equal(resumeOn({ ...f, autosail: true }), false);
+  assert.equal(resumeOn({ ...f, live: false }), false, 'the quest gone: off');
+  // the gold (first) button of the bar, unless a fight's own is up
+  const acts = buildActs({ docked: false, goalSail: { name: 'The Toll', resume: true }, looks: [{ kind: 'obj', name: 'x' }] } as never);
+  assert.equal(acts[0].id, 'goal_sail', acts.map((a) => a.id).join(','));
+  const fight = buildActs({ docked: false, goalSail: { name: 'The Toll', resume: true }, attack: { name: 'Gull', pursuing: false, mode: 'guns' } } as never);
+  assert.equal(fight[0].id, 'attack');
+  assert.ok(fight.some((a) => a.id === 'goal_sail'));
+  // the opening's own «Плыть» keeps its place after the step's button
+  const op = buildActs({ docked: false, goalSail: { name: 'The Toll' }, looks: [{ kind: 'obj', name: 'x' }] } as never);
+  assert.equal(op[op.length - 1].id, 'goal_sail');
+});
