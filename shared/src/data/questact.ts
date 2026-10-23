@@ -7,12 +7,14 @@
 
 import type { QuestStep } from './quests.ts';
 
-export type QuestVerb = 'ask' | 'talk' | 'report' | 'deliver' | 'pickup' | 'hand' | 'arrive' | 'customs' | 'buy' | 'sell' | 'recruit';
+export type QuestVerb = 'ask' | 'talk' | 'report' | 'deliver' | 'pickup' | 'hand' | 'arrive' | 'customs' | 'buy' | 'sell' | 'recruit' | 'build';
 
 export interface QuestAct {
   verb: QuestVerb;
-  /** `here`: done by its own button in port (the server checks the port); `tab`: done on a page of the port window. */
-  how: 'here' | 'tab';
+  /** `here`: done by its own button in port (the server checks the port); `tab`: done on a page of the port window;
+   *  `isle`: done on her own island — its screen opened by the button while she lies off it, or in a harbour by it
+   *  (mid-game QA 2026-10-23: «Заложите постройки» read «Плыть» with her ship at her island). */
+  how: 'here' | 'tab' | 'isle';
   /** The port it must be done in (none: any harbour). */
   port?: string;
   /** `tab`: the port window's page (port.ts Tab ids). */
@@ -52,6 +54,8 @@ export function questAct(st: QuestStep | undefined): QuestAct | null {
       return { verb: 'sell', how: 'tab', ...(st.port ? { port: st.port } : {}), tab: 'market' };
     case 'recruit':
       return { verb: 'recruit', how: 'tab', tab: 'army' };
+    case 'build':
+      return { verb: 'build', how: 'isle' };
     default:
       return null;
   }
@@ -59,5 +63,5 @@ export function questAct(st: QuestStep | undefined): QuestAct | null {
 
 /** Whether the act can be done where she lies now (`docked`: her port's id, or null at sea). */
 export function actHere(act: QuestAct | null | undefined, docked: string | null | undefined): boolean {
-  return !!act && !!docked && (!act.port || act.port === docked);
+  return !!act && act.how !== 'isle' && !!docked && (!act.port || act.port === docked);
 }

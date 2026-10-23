@@ -38,7 +38,9 @@ test('the audit: every step type is either done in port (with its action) or awa
     if ((PORT_STEPS as readonly string[]).includes(st.type)) assert.ok(act, `${q.id}: «${st.text}» (${st.type}) has its action in port`);
     else {
       assert.ok(AWAY.includes(st.type), `${q.id}: a step type nobody sorted: ${st.type}`);
-      assert.equal(act, null, `${q.id}: ${st.type} is done away`);
+      // (a step done on her own island: its screen opened from «Цели и вести» while she lies by it — batchboard.test.ts)
+      if (st.type === 'build') assert.deepEqual(act, { verb: 'build', how: 'isle' });
+      else assert.equal(act, null, `${q.id}: ${st.type} is done away`);
     }
   }
   for (const t of ['visit', 'deliver', 'pickup', 'sink', 'land']) assert.ok(seen.has(t), t);

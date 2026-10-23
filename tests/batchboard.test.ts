@@ -44,3 +44,25 @@ test('an invitation that comes while a window is open is told when the window cl
   q.note([{ id: 5, from: 'Ezra' }], 'company');
   assert.deepEqual(q.due([{ id: 4, from: 'Dora' }, { id: 5, from: 'Ezra' }]), [], 'no window, or the Company screen itself: the toast and the card do');
 });
+
+// ------------------------------------------------------------------ 3. «Заложите постройки» at her island
+
+test('«Заложите постройки»: at her island (or in a harbour by it) «Цели и вести» draws «Строить», which opens the island; elsewhere «Плыть»', async () => {
+  const { questAct } = await import('../shared/src/data/questact.ts');
+  const { goalSheetView } = await import('../client/src/ui/goalsheet.ts');
+  const { actButton } = await import('../client/src/ui/questact.ts');
+  const { setLang } = await import('../client/src/i18n.ts');
+  const act = questAct({ type: 'build', count: 1, text: 'Lay works on your island: 1.' })!;
+  assert.deepEqual(act, { verb: 'build', how: 'isle' });
+  const q = { id: 'c06_07', name: 'A Room Beneath the Floor', kind: 'campaign' as const, step: 0, steps: 2, text: 'Lay works on your island: 1.', progress: 0, need: 1, act };
+  const there = goalSheetView({ quests: [q], dockedAt: null, nearIsle: true });
+  assert.deepEqual(there.campaign?.line?.here ?? there.active[0]?.here, act, 'by her island: the verb');
+  const away = goalSheetView({ quests: [q], dockedAt: 'fogmouth', nearIsle: false });
+  assert.equal(away.campaign?.line?.here ?? away.active[0]?.here, undefined, 'far from it: «Плыть»');
+  setLang('ru');
+  const btn = actButton(q.id, act, 'btn');
+  assert.match(btn, /data-act="quest_isle"/);
+  assert.match(btn, /Строить/);
+  setLang('en');
+  assert.match(actButton(q.id, act, 'btn'), />Build</);
+});

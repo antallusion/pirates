@@ -30,6 +30,8 @@ export interface GoalSelf {
   quests: { id: string; name: string; kind: QuestKind; step: number; steps: number; text: string; progress: number; need: number; act?: QuestAct }[];
   /** The port she lies in (a step done there shows its verb instead of «Плыть»). */
   dockedAt?: string | null;
+  /** She lies off her own island, or in a harbour by it: a step done on the island shows «Строить» (questact.ts). */
+  nearIsle?: boolean;
   contracts?: { id: string; kind: 'delivery' | 'bounty' | 'courier'; title: string; toPort?: string; good?: string; kills?: number; progress?: number; reward: number; expiresAt: number }[];
   daily?: { orders: { kind: DailyKind; need: number; progress: number; done: boolean; silver: number }[]; streak: number; chest: boolean; chestSilver: number };
   campaign?: CampaignView;
@@ -87,7 +89,7 @@ export interface GoalSheetView {
 /** The sheet's lines: the campaign first, then the quests and contracts taken, then the day's orders. */
 export function goalSheetView(self: GoalSelf | null | undefined): GoalSheetView {
   const quests = self?.quests ?? [];
-  const line = (q: GoalSelf['quests'][number]): GoalLine => ({ key: `q:${q.id}`, kind: questClass(q), qkind: q.kind, title: q.name, text: q.text, step: q.step, steps: q.steps, progress: q.progress, need: q.need, done: false, ...((a) => (a ? { here: a } : {}))(hereAct(q, self?.dockedAt)) });
+  const line = (q: GoalSelf['quests'][number]): GoalLine => ({ key: `q:${q.id}`, kind: questClass(q), qkind: q.kind, title: q.name, text: q.text, step: q.step, steps: q.steps, progress: q.progress, need: q.need, done: false, ...((a) => (a ? { here: a } : {}))(hereAct(q, self?.dockedAt, !!self?.nearIsle)) });
   const c = self?.campaign;
   const mine = quests.find((q) => questClass(q) === 'campaign');
   const campaign: CampaignBlock | null = c

@@ -979,12 +979,13 @@ const touch = new TouchControls({
 const seaHud = new SeaHud($('touch'), {
   folded: TOUCH_FOLDED,
   goals: {
-    view: () => goalSheetView(state.self),
+    view: () => goalSheetView(state.self ? { ...state.self, nearIsle: isleNear() } : state.self),
     portName: (id) => placeName(state.ports.find((p) => p.id === id)?.name ?? id),
     go: (key) => startGoal(key),
     take: (id) => net.send({ t: 'quest', action: 'accept', id }), // docs/36: the campaign's quest, taken anywhere
     here: (id) => net.send({ t: 'quest', action: 'here', id }), // owner, 2026-10-23: «Расспросить» and the rest, in port
     tab: (tab) => journal.onPortTab(tab),
+    isle: () => openBase(), // mid-game QA 2026-10-23: «Заложите постройки» at her island — «Строить», not «Плыть»
   },
   fire: () => seaFire(),
   fireOptions: () => fireWheel(),
@@ -4295,6 +4296,17 @@ function liveAct(id: string | undefined): Act | undefined {
   const was = actsShown.get(id);
   return was && performance.now() - was.at < 3000 ? was.a : undefined;
 }
+
+/** Off her own island or in a harbour by it (within reach of the quay, LOCAL_R): a step done on the island opens its
+ *  screen there (mid-game QA 2026-10-23: «Заложите постройки» read «Плыть» with her ship at her island). */
+function isleNear(): boolean {
+  if (nearHome() || isleScene.isOpen) return true;
+  const id = state.self?.homeIsle, docked = state.self?.dockedAt;
+  if (id === null || id === undefined || !docked) return false;
+  const isl = state.islands.get(id), port = state.ports.find((p) => p.id === docked);
+  return !!isl && !!port && Math.hypot(port.x - isl.x, port.y - isl.y) - isl.r <= ISLE_NEAR_PORT;
+}
+const ISLE_NEAR_PORT = 1500;
 
 /** Lying off one's own island (docs/15): the way into its base. */
 function nearHome(): { name: string } | null {
