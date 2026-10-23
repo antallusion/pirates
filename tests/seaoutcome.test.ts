@@ -232,8 +232,9 @@ function underFire(name: string, lawless = false) {
   const p = cap.s.profile!;
   p.gold = 2000;
   cap.ship.cargo = { rum: 10 }; // the hold at base prices
-  const a = npcAt(game, 'pirate', at.x + 500, at.y, 3);
-  const b = npcAt(game, 'pirate', at.x - 500, at.y, 3);
+  // (within the hail's 450 m, hull to hull — reach.ts REACH_HAIL, 500 before 2026-10-22)
+  const a = npcAt(game, 'pirate', at.x + 400, at.y, 3);
+  const b = npcAt(game, 'pirate', at.x - 400, at.y, 3);
   for (const n of [a, b]) {
     game.npcs.get(n.id)!.target = cap.ship.id;
     cap.ship.attackers.set(n.id, game.now);

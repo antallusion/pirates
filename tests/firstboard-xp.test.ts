@@ -18,6 +18,7 @@ import { shopState } from '../server/src/game/shop.ts';
 import { onboardingVolley } from '../server/src/game/onboarding.ts';
 import { quietAdv } from '../server/src/game/advmap.ts';
 import { putSide } from './balance/duel.ts';
+import { dayOf } from '../shared/src/data/dailies.ts';
 import { FakeConn, giveScrolls, makeGame, steps } from './helpers.ts';
 
 function fresh(tutorial: boolean, name: string): { game: Game; c: FakeConn; s: PlayerSession } {
@@ -28,7 +29,11 @@ function fresh(tutorial: boolean, name: string): { game: Game; c: FakeConn; s: P
   game.attach(c as unknown as WsConnection);
   c.push({ t: 'hello', v: PROTOCOL_VERSION, name });
   c.push({ t: 'create_captain', captain: 'corsair', shipName: 'First', tutorial });
-  return { game, c, s: game.sessionByName(name)! };
+  const s = game.sessionByName(name)!;
+  // The day's orders are rolled by the real UTC day (dailies.ts): on 2026-10-23 one was «take 3 prizes», +150 XP on the
+  // third boarding. This file weighs the boardings and the first quests, not the day's dice: no orders today.
+  if (s.profile!.daily) Object.assign(s.profile!.daily, { day: dayOf(game.wallNow()), orders: [] });
+  return { game, c, s };
 }
 
 /** Her experience from the first level on, in levels (1.4 = the second level and two fifths of it). */

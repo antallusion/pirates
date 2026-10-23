@@ -899,7 +899,10 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
   const own = brain.captain || ship.isPlayer;
   const runIn = hold ? hold.far * 1.5 : own ? maxRange * 1.5 : Math.max(maxRange * 1.5, NPC_PRESENT_FROM);
   // (…and they are well round, their side half presented, from NPC_EASY_FROM in: the easy turn in to their band)
-  const easyFrom = own ? 0 : NPC_EASY_FROM;
+  // (only for a captain running in on her for the grapples, board_run: against a ship lying still or fighting with her
+  // guns the easy turn from 250 m closed 0.4 of her way a second, never came within her 150 m in the chase's forty
+  // seconds and gave her up — game.test «NPC pirates hunt», 2026-10-23)
+  const easyFrom = own || !target.hasEffect('board_run') ? 0 : NPC_EASY_FROM;
   if (d > runIn) {
     steer(game, ship, brain, bearing, 1, false, d);
   } else if (mode === 'board' && d < ALONGSIDE_FROM) {

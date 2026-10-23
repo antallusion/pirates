@@ -465,6 +465,9 @@ function diveSecond(game: Game, run: DiveRun): void {
       if (brain) {
         brain.active = true;
         brain.target = ship.id;
+        // (sent for her, whatever their sight: the sea's own see a captain at half their sight since 2026-10-22, and 650 m
+        // off a ghost lost her at once)
+        brain.chase = { id: ship.id, until: game.now + 180 };
         brain.area = { x: site.x, y: site.y, r: 1500 };
       }
       game.grid.upsert(b.id, x, y);

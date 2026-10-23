@@ -510,7 +510,7 @@ test('deck mounts: harpoon tethers and drags, mortar bombs a point, chain gun st
   assert.equal(s.ship!.loadout.mount, 'chain_gun');
   const ship = undockAtSea(game, c);
   // Chain gun in any direction.
-  const npc = npcAbeam(game, ship, 'starboard', 150);
+  const npc = npcAbeam(game, ship, 'starboard', 70); // (the chain gun's 120 m and the harpoon's 85: 260 and 190 before 2026-10-22)
   const sails0 = npc.sails;
   c.push({ t: 'mount', x: npc.state.x, y: npc.state.y });
   steps(game, 30);

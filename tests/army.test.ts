@@ -178,11 +178,11 @@ function broadside(game: Game, a: ShipEntity, side: 'port' | 'starboard', ammo: 
 
 test('a broadside kills men out of her stacks: grape the most, round shot fewer through a sound hull; the "−N" rises over her', () => {
   const g1 = makeGame().game;
-  const p1 = pair(g1, 110);
-  const grape = broadside(g1, p1.a, 'starboard', 'grape', 110);
+  const p1 = pair(g1, 60);
+  const grape = broadside(g1, p1.a, 'starboard', 'grape', 60);
   const g2 = makeGame().game;
-  const p2 = pair(g2, 110);
-  const round = broadside(g2, p2.a, 'starboard', 'round', 110);
+  const p2 = pair(g2, 60);
+  const round = broadside(g2, p2.a, 'starboard', 'round', 60);
   assert.ok(grape.killed > 0 && round.killed >= 0, `grape ${grape.killed}, round ${round.killed}`);
   assert.ok(grape.killed > round.killed * 3, `grape kills far more (${grape.killed} against ${round.killed})`);
   assert.equal(p1.b.crew, armyMen(p1.b.army), 'the stacks carry the loss');
@@ -191,7 +191,7 @@ test('a broadside kills men out of her stacks: grape the most, round shot fewer 
   assert.equal(men[0].n, grape.killed);
   assert.equal(men[0].ship, p1.b.id);
   // Both sides lose men before the boarding: she answers from her port battery, the sea's own ships among themselves.
-  const back = broadside(g1, p1.b, 'port', 'grape', 110);
+  const back = broadside(g1, p1.b, 'port', 'grape', 60);
   assert.ok(back.killed > 0, `the patrol loses ${back.killed} men too`);
 });
 

@@ -408,10 +408,11 @@ test('«Атаковать»: the gun captains hold while a ship of the law lies
     game.grid.upsert(o.id, o.state.x, o.state.y);
     return o;
   };
-  const pirate = put('pirate', 'sloop', 'confederacy', 260);
-  const patrol = put('patrol', 'cutter', 'crown', 130);
+  // (inside her 6-pounder's 145 m: 260 and 130 before the reaches were halved, 2026-10-22)
+  const pirate = put('pirate', 'sloop', 'confederacy', 120);
+  const patrol = put('patrol', 'cutter', 'crown', 60);
   assert.equal(startPursuit(game, s, pirate.id, 'guns'), null);
-  const lead = { x: pirate.state.x, y: pirate.state.y, d: 260 };
+  const lead = { x: pirate.state.x, y: pirate.state.y, d: 120 };
   assert.ok(fouledLine(game, ship, pirate, lead), 'the patrol is in the line');
   ship.reload.port = ship.reload.starboard = 0;
   stepAutoFire(game);
