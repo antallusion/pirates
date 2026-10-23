@@ -192,3 +192,34 @@ test('every campaign lair step marks a lair she can storm and that counts: not o
   assert.ok(n >= 10, `${n} lair steps`);
   assert.deepEqual(bad, []);
 });
+
+test('a merchant’s cry for help: one toast a minute for a captain, not one for every merchant of a lawless sea; «4,4 км» in Russian', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { onNpcHit, HEARD_SEC } = await import('../server/src/game/npcwars.ts');
+  const { game } = makeGame();
+  const c = join(game, 'Listener');
+  const s = game.sessionByName('Listener')!;
+  const ship = s.ship!;
+  ship.docked = null;
+  s.profile!.docked = null;
+  ship.state.x = 54000; ship.state.y = 44000;
+  const cries = () => c.all('toast').filter((t) => /calls for help/.test(t.msg)).length;
+  for (let k = 0; k < 6; k++) {
+    const m = game.spawnNpcShip('merchant', 'fluyt', 'league', 54000 + 1500 + k * 200, 44000, 0);
+    const pr = game.spawnNpcShip('pirate', 'sloop', 'confederacy', 54000 + 1500 + k * 200, 44200, 0);
+    onNpcHit(game, m, pr);
+  }
+  assert.equal(cries(), 1, 'six cries at once: one toast');
+  game.now += HEARD_SEC + 1;
+  const m = game.spawnNpcShip('merchant', 'fluyt', 'league', 55800, 44000, 0);
+  onNpcHit(game, m, game.spawnNpcShip('pirate', 'sloop', 'confederacy', 55800, 44200, 0));
+  assert.equal(cries(), 2, 'a minute on: the next is heard');
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  setLang('ru');
+  try {
+    assert.match(serverText('Pirates attack Grey Widow, 4.4 km south: she calls for help!'), /4,4\s?км/);
+  } finally {
+    setLang('en');
+  }
+});

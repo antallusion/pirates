@@ -170,13 +170,14 @@ try {
     new MutationObserver(() => document.querySelectorAll('#toasts > .toast').forEach((t) => { if (!seen.has(t)) { seen.add(t); globalThis.__toast(t.innerText.replace(/\s+/g, ' ').trim()); } })).observe(document.body, { childList: true, subtree: true });
   });
   await L.closeAll(p);
-  for (const c of [process.env.SLOT ? `/camp slot ${process.env.SLOT}` : `/camp ch ${CH}`, '/god', '/heal', '/silver 20000', `/speed ${SPEED}`, '/army marine 30', '/scrolls 80', ...(process.env.TP ? [`/tp ${process.env.TP}`] : [])]) { log('>', c, await L.say(p, c)); await L.sleep(600); }
+  for (const c of [process.env.SLOT ? `/camp slot ${process.env.SLOT}` : `/camp ch ${CH}`, '/god', '/heal', '/silver 20000', `/speed ${SPEED}`, '/army marine 30', '/scrolls 80', ...(process.env.EXTRA ? process.env.EXTRA.split(';') : []), ...(process.env.TP ? [`/tp ${process.env.TP}`] : [])]) { log('>', c, await L.say(p, c)); await L.sleep(600); }
   await L.sleep(1500);
   await L.closeAll(p);
   let s = await cur(p);
   log('start', JSON.stringify(s));
   await shot(p, 'start');
   const popSeen = new Set(); const hereDone = new Set(); const pestAt = new Map(); let lastProg = '';
+  let stepsDone = 0;
   let lastKey = '', stepT = Date.now(), stuckAt = 0, legFrom = null, passes = 0, sailedOnce = '';
   const end = (await import('../../../shared/src/data/campaign/progress.ts').catch(() => null))?.FIRST_SLOT?.[TO] ?? 1e9;
   while (Date.now() - t0 < Number(process.env.MINUTES ?? 110) * 60000) {
@@ -224,6 +225,8 @@ try {
     { const st0 = s.q ? TYPES[s.q.id]?.[s.q.step - 1] ?? {} : {}; await p.evaluate((v) => (globalThis.__wantSink = v), st0.type === 'sink'); const c0 = await cards(p); if (c0.length) { log('  card:', c0.join(' | ')); await shot(p, `s${s.at}_card`); } }
     const key = s.q ? `${s.q.id}:${s.q.step}` : `none:${s.at}`;
     if (key !== lastKey) {
+      // STEPS=n: a chapter's first few steps only (the late-game QA: each chapter's opening and its finale by SLOT)
+      if (lastKey && process.env.STEPS && ++stepsDone >= Number(process.env.STEPS)) { log(`  ${stepsDone} steps played`); break; }
       if (lastKey) log(`  done in ${Math.round((Date.now() - stepT) / 1000)} s${legFrom ? `, ${Math.round(Math.hypot(s.x - legFrom.x, s.y - legFrom.y))} m from where it began` : ''}`);
       lastKey = key; stepT = Date.now(); legFrom = { x: s.x, y: s.y }; stuckAt = 0; sailedOnce = '';
       log(`STEP [${(TYPES[s.q?.id]?.[(s.q?.step ?? 1) - 1] ?? {}).type ?? '?'}] slot ${s.at} ch${s.ch}.${(s.k ?? 0) + 1} L${s.level} ${s.q ? `${s.q.id} «${s.q.name}» ${s.q.step}/${s.q.steps}: ${s.q.text} [${s.q.progress}/${s.q.need}] target=${JSON.stringify(s.q.target)}` : `no quest (blocked=${s.blocked}, ways=${s.ways})`}`);
