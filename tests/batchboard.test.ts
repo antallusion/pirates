@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { INVITE_MS, stepSocial } from '../server/src/game/party.ts';
 import { InviteQueue } from '../client/src/ui/invitequeue.ts';
-import { join, makeGame } from './helpers.ts';
+import { join, makeGame, steps } from './helpers.ts';
 
 // ------------------------------------------------------------------ 2. group invitations
 
@@ -88,4 +88,54 @@ test('the guild founding card tells its price and the rest before «Основа
   assert.match(foundCard(null, 12000), /id="g-found" disabled title="В\sпорту"/);
   setLang('en');
   assert.match(foundCard('gravesend', 0), /10[,\s  ]?000 silver \(you have 0\)/);
+});
+
+// ------------------------------------------------------------------ 5. the starting sea's sharks
+
+test('sharks (and the other hunters) leave a newcomer in the starting sea be — bleeding, her helmsman sails on; past it, or once she strikes, they come', async () => {
+  const { spawnGroup, stepBeasts, beastSecond, beastBrain, SHELTER_LEVEL } = await import('../server/src/game/beasts.ts');
+  const { startAutosail, autosailOf } = await import('../server/src/game/autosail.ts');
+  const { REGIONS } = await import('../shared/src/world/regions.ts');
+  const { regionAt, isLand } = await import('../shared/src/world/worldgen.ts');
+  const { game } = makeGame();
+  const at = (name: string, region: 'black_coast' | 'gravewater', level: number) => {
+    join(game, name);
+    const s = game.sessionByName(name)!, ship = s.ship!;
+    ship.docked = null;
+    s.profile!.docked = null;
+    s.profile!.level = level;
+    const [cx, cy] = REGIONS[region].center;
+    for (let k = 0; k < 400; k++) {
+      const x = cx + ((k * 7919) % 16000) - 8000, y = cy + ((k * 104729) % 16000) - 8000;
+      let clear = regionAt(game.world, x, y) === region;
+      for (let a = 0; a < 8 && clear; a++) for (const r of [300, 700, 1500]) if (isLand(game.world, x + Math.cos(a) * r, y + Math.sin(a) * r)) clear = false;
+      if (!clear) continue;
+      ship.state.x = x;
+      ship.state.y = y;
+      break;
+    }
+    ship.region = region;
+    ship.hull = ship.stats.hullMax * 0.3; // bleeding: a shark's prey anywhere else
+    ship.protectedUntil = 0;
+    game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+    return { s, ship };
+  };
+  const run = (sec: number) => steps(game, Math.round(sec * 20)); // (the whole sea: the beasts, her helmsman)
+  void stepBeasts;
+  void beastSecond;
+  const fresh = at('Shark Novice', 'black_coast', 4);
+  const sharks = spawnGroup(game, 'shark', fresh.ship.state.x + 300, fresh.ship.state.y, 2, 3);
+  assert.equal(startAutosail(game, fresh.s, fresh.ship.state.x, fresh.ship.state.y - 3000, 3), null);
+  const h0 = fresh.ship.hull;
+  run(20);
+  assert.equal(fresh.ship.hull, h0, 'not bitten');
+  for (const b of sharks) assert.notEqual(beastBrain(game, b.id)?.target, fresh.ship.id, 'not hunted');
+  assert.ok(autosailOf(fresh.ship), 'her helmsman sails on');
+  assert.ok(SHELTER_LEVEL >= 8);
+  // a captain of the contested sea, bleeding: the sharks come
+  const wild = at('Shark Veteran', 'gravewater', 4);
+  const pack = spawnGroup(game, 'shark', wild.ship.state.x + 300, wild.ship.state.y, 2, 3);
+  const w0 = wild.ship.hull;
+  run(20);
+  assert.ok(pack.some((b) => beastBrain(game, b.id)?.target === wild.ship.id) || wild.ship.hull < w0, 'hunted out of the starting sea');
 });

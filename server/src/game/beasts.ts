@@ -597,6 +597,15 @@ function spook(game: Game, b: ShipEntity, br: Brain, now: number): void {
   });
 }
 
+/** The starting sea's newcomers are no beast's prey (mid-game QA 2026-10-23: sharks came for a captain of the fourth
+ *  level by the Black Coast, bleeding from her first fights, and kept breaking her helmsman's course off): a captain
+ *  under this level in safe waters is hunted by none — one she strikes (or whose pod she strikes) still turns on her. */
+export const SHELTER_LEVEL = 10;
+export function sheltered(game: Game, o: ShipEntity): boolean {
+  if (!o.isPlayer || REGIONS[o.region]?.safety !== 'safe') return false;
+  return (game.sessionOf(o)?.profile?.level ?? Infinity) < SHELTER_LEVEL;
+}
+
 /** Whom a beast goes for: its pod's quarry, whoever hurt it (or its pod), a wounded ship for the predators. */
 function chooseTarget(game: Game, b: ShipEntity, br: Brain, now: number): ShipEntity | null {
   const S = bs(game);
@@ -631,6 +640,7 @@ function chooseTarget(game: Game, b: ShipEntity, br: Brain, now: number): ShipEn
   game.forShipsNear(b.state.x, b.state.y, reach, (o) => {
     if (!o.alive || o.docked || o.npcRole === 'beast' || o.cls.monster || o.hasEffect('submerged')) return;
     if (o.protectedUntil > now || untouchable(game, o)) return; // (in a battle, or just out of one: owner, 2026-10-22)
+    if (sheltered(game, o)) return; // (a newcomer in the starting sea: nobody's prey)
     const frac = o.hull / Math.max(1, o.stats.hullMax);
     if (br.beast === 'orca' && !(frac < (migrating ? 0.8 : 0.6))) return;
     if (br.beast === 'orca' && o.hasFlag('fh_white_orca')) return; // the White Orca's figure on the bow
