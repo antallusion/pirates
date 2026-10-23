@@ -1,5 +1,6 @@
 // Captain selection screen: six captains, premium ones are side-grades (see docs/02 §7).
 
+import { metrikaGoal } from '../../../shared/src/metrika.ts';
 import { CAPTAINS, CAPTAIN_IDS, captainPrice } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import type { ClientMsg, ServerMsg } from '../../../shared/src/protocol.ts';
@@ -143,6 +144,7 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
       if (!captainOpen(current)) return void buy(current);
       const name = ($('ship-name') as HTMLInputElement).value.trim();
       $('screen-captain').classList.add('hidden');
+      metrikaGoal('registration', { captain: current }); // Yandex Direct pays per registration (shared/src/metrika.ts)
       onPick(current, name, !($('know-sea') as HTMLInputElement).checked);
     };
   };
