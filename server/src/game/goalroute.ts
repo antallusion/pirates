@@ -86,6 +86,7 @@ export const ROUTE_HINTS = {
   deep: 'Lie still over deep water and drop the line.',
   dive: 'Heave to over the wreck and send the divers down.',
   board: 'Come alongside and board her.',
+  tribute: 'Board a merchant and let her go: her share of the purse is the tribute.',
   beast: 'Close in and harpoon it.',
 } as const;
 
@@ -474,8 +475,8 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
       return { cands: cast.length ? cast : squares(game, () => true, 'open_sea', 1.3) };
     }
     case 'tribute':
-      // a merchant to stop and make pay (the Brethren's raid, docs/12 P6)
-      return { cands: hunt(game, s, 'merchants') };
+      // a merchant to stop and make pay (the Brethren's raid, docs/12 P6): boarded and let go
+      return { cands: hunt(game, s, 'merchants').map((c) => ({ ...c, hint: ROUTE_HINTS.tribute })) };
     case 'claim':
       // docs/36: an island of her own — the nearest she may claim; the opening's town, its own island (owner, 2026-10-19)
       if (st.island !== undefined && !ownIsland(game, s.accountId)) return { cands: islands(game, (i) => i.id === st.island, 'land') };

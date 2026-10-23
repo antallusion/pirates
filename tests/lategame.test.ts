@@ -73,7 +73,8 @@ async function onCampaignStep(id: string, type: string) {
   s.profile!.campaign!.at = q.campaign!.slot;
   s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
   // (its location's waters: the step's own, else the quest's)
-  const near = [q.steps[i], ...q.steps].map((x) => (x as { near?: { x: number; y: number; r: number } }).near).find(Boolean)!;
+  const hub = game.portById(q.port)!;
+  const near = [q.steps[i], ...q.steps].map((x) => (x as { near?: { x: number; y: number; r: number } }).near).find(Boolean) ?? { x: hub.x + 600, y: hub.y, r: 1500 };
   const ship = s.ship!;
   ship.docked = null;
   s.profile!.docked = null;
@@ -324,4 +325,34 @@ test('«Плыть» on the campaign’s named step never runs 30 km to a Brethr
   assert.ok(near, 'one came to her');
   const r2 = routeFor(game, s, `q:${q.id}`) as { ship?: number };
   assert.equal(r2.ship, near!.id, '«Плыть» goes for her');
+});
+
+test('«Take tribute from merchants»: a merchant boarded and let go has paid it — once a merchant; «Плыть» says how', async () => {
+  // The step was left with a button only a struck merchant's target frame shows (and a merchant strikes only to the
+  // boarding, whose card then covers the frame): the campaign's eight tribute steps could not be done on a phone.
+  const { campaignActive } = await import('../server/src/game/campaign.ts');
+  const { raidFate } = await import('../server/src/game/raiding.ts');
+  const { routeFor } = await import('../server/src/game/goalroute.ts');
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { game, s, i } = await onCampaignStep('c19_02', 'tribute');
+  const m = game.spawnNpcShip('merchant', 'fluyt', 'league', s.ship!.state.x + 40, s.ship!.state.y, 0);
+  raidFate(game, s, m, 'release');
+  assert.equal(campaignActive(s.profile!)?.progress, 1, 'let go: her tribute paid');
+  raidFate(game, s, m, 'release');
+  assert.equal(campaignActive(s.profile!)?.progress, 1, 'the same merchant pays once');
+  const pirate = game.spawnNpcShip('pirate', 'brig', 'confederacy', s.ship!.state.x + 60, s.ship!.state.y, 0);
+  raidFate(game, s, pirate, 'release');
+  assert.equal(campaignActive(s.profile!)?.progress, 1, 'a pirate let go is no tribute');
+  const m2 = game.spawnNpcShip('merchant', 'fluyt', 'league', s.ship!.state.x + 80, s.ship!.state.y, 0);
+  const r = routeFor(game, s, `q:c19_02`) as { hint?: string };
+  assert.match(r.hint ?? '', /let her go/, JSON.stringify(r));
+  setLang('ru');
+  try {
+    assert.doesNotMatch(serverText(r.hint!), /[A-Za-z]{3,}/);
+  } finally {
+    setLang('en');
+  }
+  raidFate(game, s, m2, 'release');
+  assert.ok(campaignActive(s.profile!)?.id !== 'c19_02' || campaignActive(s.profile!)!.step > i, 'two merchants: the step is done');
 });

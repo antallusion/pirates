@@ -19,5 +19,6 @@ export const SERVER_RU_ROUTE: Record<string, string> = {
   'Lie still over deep water and drop the line.': 'Остановитесь над глубиной и опустите леску.',
   'Heave to over the wreck and send the divers down.': 'Остановитесь над обломками и спустите водолазов.',
   'Come alongside and board her.': 'Подойдите борт к борту и берите на абордаж.',
+  'Board a merchant and let her go: her share of the purse is the tribute.': 'Возьмите купца на абордаж и отпустите — доля его кошелька и есть дань.',
   'Close in and harpoon it.': 'Подойдите ближе и бейте гарпуном.',
 };

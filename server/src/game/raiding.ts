@@ -789,6 +789,15 @@ export function raidFate(game: Game, s: PlayerSession, victim: ShipEntity, fate:
     const p = s.profile!;
     const pr = sanitizePiracy(p);
     pr.honour++;
+    // A merchant beaten and let go for a share of her purse (the two choices, owner 2026-10-18) has paid her tribute: the
+    // «take tribute from merchants» steps were left with a button only a struck merchant's frame shows, behind the
+    // boarding's card — none of the campaign's eight could be done on a phone (late-game QA 2026-10-23).
+    if (victim.npcRole === 'merchant' && !rs(game).tributes.get(victim.id)?.has(s.accountId)) {
+      const S = rs(game);
+      (S.tributes.get(victim.id) ?? S.tributes.set(victim.id, new Map()).get(victim.id)!).set(s.accountId, game.now);
+      pr.tributes++;
+      questEvent(game, s, { k: 'tribute' });
+    }
     if (p.oath === 'code') {
       addFame(game, s, FAME.release);
       game.sendTo(s, { t: 'toast', msg: 'The Brethren hear you kept the Code.', kind: 'good' });
