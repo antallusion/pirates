@@ -715,7 +715,7 @@ test('the voyages (owner, 2026-10-23: «максимум на удалении 3
       // (quay to quay, or into an island's waters from the facing shore)
       const from = a ? { x: a.x + ((l.x - a.x) / Math.hypot(l.x - a.x, l.y - a.y)) * (a.radius + 40), y: a.y + ((l.y - a.y) / Math.hypot(l.x - a.x, l.y - a.y)) * (a.radius + 40) } : prev;
       const d = b ? legTo(w, from, { x: b.x, y: b.y, r: b.radius + 40, name: '' }, CHAIN_LEG).d : navLen(w, from.x, from.y, l.x, l.y, CHAIN_LEG);
-      if (!(d <= CHAPTER_LEG + 1)) far.push(`ch${l.ch} ${prev.name} → ${l.name}: ${(d / 1000).toFixed(1)} km`);
+      if (!(d <= CHAIN_LEG + 1)) far.push(`ch${l.ch} ${prev.name} → ${l.name}: ${(d / 1000).toFixed(1)} km`);
     });
     assert.deepEqual(far, [], `seed ${seed}`);
   }
