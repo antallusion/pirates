@@ -41,22 +41,22 @@ export function stepTalents(game: Game, ship: ShipEntity): void {
   const st = ship.stats;
   let hostileNear = false;
   let gauge = false;
-  game.forShipsNear(ship.state.x, ship.state.y, 1000, (o) => {
+  game.forShipsNear(ship.state.x, ship.state.y, 500, (o) => {
     if (o.id === ship.id || !o.alive || o.docked) return;
     const d = dist(o.state.x, o.state.y, ship.state.x, ship.state.y);
     const hostile = game.isHostile(o, ship);
     if (hostile) hostileNear = true;
-    // Wake Rider: within 120 m astern of any ship, roughly on her track.
-    if (st.flags.has('wake_rider') && d < 140 + o.stats.length / 2) {
+    // Wake Rider: within 60 m astern of any ship, roughly on her track.
+    if (st.flags.has('wake_rider') && d < 70 + o.stats.length / 2) {
       const local = toShipLocal(ship.state.x, ship.state.y, o.state.x, o.state.y, o.state.heading);
-      if (local.y < -o.stats.length / 2 && local.y > -o.stats.length / 2 - 120 && Math.abs(local.x) < o.stats.beam * 1.5) {
+      if (local.y < -o.stats.length / 2 && local.y > -o.stats.length / 2 - 60 && Math.abs(local.x) < o.stats.beam * 1.5) {
         pulse(game, ship, 'wake_rider', { maxSpeed: 0.05 * ship.rank('nav_wake_rider') });
       }
     }
     if (!hostile || !upwindOf(game, ship, o)) return;
-    if (st.flags.has('weather_gauge') && d < 450) gauge = true;
-    if (st.flags.has('stolen_wind') && d < 250) pulse(game, o, 'stolen_wind', { maxSpeed: -0.15 }, ship.id);
-    if (st.flags.has('lee_shore') && d < 450 && leeShore(game, ship, o)) pulse(game, o, 'lee_shore', { accel: -0.2, turnRate: -0.1 }, ship.id);
+    if (st.flags.has('weather_gauge') && d < 225) gauge = true;
+    if (st.flags.has('stolen_wind') && d < 125) pulse(game, o, 'stolen_wind', { maxSpeed: -0.15 }, ship.id);
+    if (st.flags.has('lee_shore') && d < 225 && leeShore(game, ship, o)) pulse(game, o, 'lee_shore', { accel: -0.2, turnRate: -0.1 }, ship.id);
   });
   if (gauge) pulse(game, ship, 'weather_gauge', { maxSpeed: 0.08 });
   if (st.flags.has('trade_winds') && !hostileNear && !ship.inCombat(now)) pulse(game, ship, 'trade_winds', { maxSpeed: 0.05 * ship.rank('nav_trade_winds') });
@@ -77,10 +77,10 @@ export function stepTalents(game: Game, ship: ShipEntity): void {
   stepSwivels(game, ship);
 }
 
-/** Land or shoal within 250 m downwind of the victim. */
+/** Land or shoal within 125 m downwind of the victim. */
 function leeShore(game: Game, ship: ShipEntity, victim: ShipEntity): boolean {
   const v = headingVec(windTo(game, ship));
-  for (let d = 50; d <= 250; d += 50) {
+  for (let d = 25; d <= 125; d += 25) {
     const x = victim.state.x + v.x * d, y = victim.state.y + v.y * d;
     if (isLand(game.world, x, y)) return true;
   }

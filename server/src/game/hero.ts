@@ -365,14 +365,14 @@ export function castSea(game: Game, s: PlayerSession, id: string): string | null
       ship.hull = Math.min(ship.stats.hullMax, ship.hull + ship.stats.hullMax * 0.1 * k);
       break;
     case 'becalm': {
-      const near = others(700);
+      const near = others(350);
       if (!near.length) return 'No ship near to becalm';
       for (const o of near) o.addEffect({ id: 'becalmed', until: now + dur, mods: { maxSpeed: -0.4 }, source: ship.id }, now);
       break;
     }
     case 'gale':
       ship.addEffect({ id: 'order_gale', until: now + dur, mods: { maxSpeed: 0.3 * k } }, now);
-      for (const o of others(700)) o.sails = Math.max(0, o.sails - o.stats.sailHpMax * 0.125);
+      for (const o of others(350)) o.sails = Math.max(0, o.sails - o.stats.sailHpMax * 0.125);
       break;
   }
   h.mana -= cost;

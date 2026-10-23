@@ -206,9 +206,9 @@ export function fireMount(game: Game, ship: ShipEntity, tx: number, ty: number):
     case 'war_drums': {
       ship.morale = Math.min(100, ship.morale + 10);
       ship.addEffect({ id: 'war_drums', until: now + 15, mods: { boardingPower: 0.15, meleeDamage: 0.1 } }, now);
-      game.forShipsNear(ship.state.x, ship.state.y, 300, (o) => {
+      game.forShipsNear(ship.state.x, ship.state.y, 150, (o) => {
         if (o.id === ship.id || !o.alive || o.docked || !game.isHostile(o, ship)) return;
-        if (dist(o.state.x, o.state.y, ship.state.x, ship.state.y) <= 300) o.morale = Math.max(0, o.morale - 6);
+        if (dist(o.state.x, o.state.y, ship.state.x, ship.state.y) <= 150) o.morale = Math.max(0, o.morale - 6);
       });
       game.emit({ k: 'fx', fx: 'war_cry', x: Math.round(ship.state.x), y: Math.round(ship.state.y) }, ship.state.x, ship.state.y);
       break;

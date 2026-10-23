@@ -54,11 +54,11 @@ export function stepCurse(game: Game, ship: ShipEntity, drift = true): boolean {
   return had !== stage;
 }
 
-/** Stage 2+: enemy crews within 300 m lose their nerve. */
+/** Stage 2+: enemy crews within 150 m lose their nerve. */
 export function curseAura(game: Game, ship: ShipEntity): void {
   const stage = curseStage(ship.curse);
   if (stage < 2) return;
-  game.forShipsNear(ship.state.x, ship.state.y, 300, (o) => {
+  game.forShipsNear(ship.state.x, ship.state.y, 150, (o) => {
     if (o.id !== ship.id && o.alive && game.isHostile(o, ship) && o.cls.passive.id !== 'dead_crew') o.morale = Math.max(0, o.morale - (stage - 1) * 0.3);
   });
 }

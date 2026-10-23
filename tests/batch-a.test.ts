@@ -69,10 +69,11 @@ test('a broadside flies downwind of where it is laid by the same reckoning the a
   wind(game, 0, 1.2); // the wind blows north; the starboard battery fires east: a full cross wind from the south
   game.rng.gauss = () => 0; // no scatter: the line is the line she laid
   const evs = events(game);
-  assert.equal(fireBroadside(game, ship, 'starboard', 400), null);
+  // (laid at 140 m, inside her guns' reach — 100–250 m since 2026-10-22; at 400 the lay was cut to her reach)
+  assert.equal(fireBroadside(game, ship, 'starboard', 140), null);
   const v = evs.find((e) => e.k === 'volley') as Extract<GameEvent, { k: 'volley' }>;
   const laid = wrapAngle(ship.state.heading + Math.PI / 2);
-  const want = windDriftAngle(0, 1.2, laid, 400, AMMO[ship.ammoSel].speed);
+  const want = windDriftAngle(0, 1.2, laid, 140, AMMO[ship.ammoSel].speed);
   assert.ok(want < 0, 'blown north, to the left of an eastward ball');
   for (const b of v.balls) assert.ok(Math.abs(wrapAngle(b[2] - laid) - want) < 0.002, 'every ball turned by the drift');
   // Where the ball falls: as far off her line as the aim mark says.
@@ -81,12 +82,12 @@ test('a broadside flies downwind of where it is laid by the same reckoning the a
   for (let i = 0; i < 200 && game.projectiles.includes(p); i++) stepProjectiles(game, 0.05);
   const along = headingVec(laid), side = headingVec(laid + Math.PI / 2); // side: to the right of her line
   const off = (p.x - x0) * side.x + (p.y - y0) * side.y;
-  const drift = windDrift(0, 1.2, laid, 400, AMMO[ship.ammoSel].speed);
+  const drift = windDrift(0, 1.2, laid, 140, AMMO[ship.ammoSel].speed);
   assert.ok(Math.abs(off - drift) < 3.5, `falls ${off.toFixed(1)} m off her line; the mark said ${drift.toFixed(1)} m`);
-  assert.ok((p.x - x0) * along.x + (p.y - y0) * along.y > 350, 'at the range she laid');
+  assert.ok((p.x - x0) * along.x + (p.y - y0) * along.y > 120, 'at the range she laid');
   // Her gunners who allow for all of it lay straight on.
-  assert.ok(Math.abs(shotDrift(game, ship, laid, 400, 'round', 1)) < 1e-12);
-  assert.ok(Math.abs(shotDrift(game, ship, laid, 400, 'round', 0.5) - want / 2) < 1e-9);
+  assert.ok(Math.abs(shotDrift(game, ship, laid, 140, 'round', 1)) < 1e-12);
+  assert.ok(Math.abs(shotDrift(game, ship, laid, 140, 'round', 0.5) - want / 2) < 1e-9);
 });
 
 // ------------------------------------------------------------------ 2. critical hits on her parts

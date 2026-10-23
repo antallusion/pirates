@@ -29,7 +29,7 @@ function factors(ship: ShipEntity, anchor: number): { off: number; def: number }
 /** `shooter`'s broadsides on `target`, laid beam on at the close fight's distance. */
 function shoot(game: Game, shooter: ShipEntity, target: ShipEntity, ammo: 'round' | 'grape' = 'round', n = N) {
   const { x, y } = spot(game);
-  const d = fightDistance(shooter);
+  const d = fightDistance(shooter, ammo); // (the band her helmsman holds with that shot loaded: grape closer in)
   for (const [s, sx] of [[shooter, x], [target, x + d]] as const) {
     s.state.x = sx;
     s.state.y = y;

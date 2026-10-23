@@ -237,7 +237,9 @@ export const PVE_CRITS = [1, 0.35, 0, 0];
  *  every broadside of a fight of 6–24, where the 30% cap used to level every fight to four and the cuts above were
  *  what was left of the ladder. Re-weighed by the duel sims (tests/balance/ladder.test.ts): a perfect captain wins
  *  about one fight in ten a level up, an average one hardly any, none two levels up. The beasts keep the cuts above. */
-export const PVE_SHIP_JUNIOR = [1, 0.7, 0.5, 0.3];
+// (2026-10-22, the reaches halved: at 100–150 m nearly every ball strikes whoever lays it, and a perfect captain's craft
+// no longer carried her a level up — 0–1 of the ladder's 144 at ×0.7; ×0.8 gives her 7, an average one still none.)
+export const PVE_SHIP_JUNIOR = [1, 0.8, 0.5, 0.3];
 export const PVE_SHIP_SENIOR = [1, 1, 1.15, 1.3];
 /** Juniors who together outweigh a ship of the sea (a company against one a level up) are cut less; three levels
  *  up she is a skull to a company too. */
@@ -350,11 +352,16 @@ export function npcSkill(level: number): NpcSkill {
   // docs/23 item 36: the sea's gunners lay their broadsides on the mark now (the guns train onto her); a green crew still
   // misjudges her range and her way more than a seasoned one. Item 47: they let fly within 30° of the beam (a captain's
   // gun captains within AUTO_ARC_DEG, 36°: her edge over a bot of her level, about seven fights in ten).
-  if (level <= 2) return { lead: 0.82, rangeErr: 0.09, arcDeg: 34, spread: 0.15, react: 1.4, dash: false };
-  if (level <= 4) return { lead: 0.83, rangeErr: 0.09, arcDeg: 34, spread: 0.15, react: 1.3, dash: false };
-  if (level <= 6) return { lead: 0.84, rangeErr: 0.085, arcDeg: 34, spread: 0.14, react: 1.2, dash: false };
-  if (level <= 8) return { lead: 0.85, rangeErr: 0.08, arcDeg: 35, spread: 0.13, react: 1.1, dash: true };
-  return { lead: 0.86, rangeErr: 0.08, arcDeg: 35, spread: 0.12, react: 1.0, dash: true };
+  // (2026-10-22, the reaches halved — guns 100–250 m, the sea's own firing from 150 m: her misjudged range and her short
+  // lead were shares of a fight twice as long, and at a hundred metres they cost her nothing; the average captain fell
+  // to 36–56 % against her. Re-weighed per hull by the duel sims (tests/balance/ladder, ~/rangejob tiers: an average
+  // captain 63–71 %, a perfect one 83–93 % on the sloop, brig, frigate and line), the spread kept for the sea table and
+  // the lead still rising with her level: the bigger and slower the hull, the more a green crew misjudges at close range.)
+  if (level <= 2) return { lead: 0.72, rangeErr: 0.1, arcDeg: 34, spread: 0.15, react: 1.4, dash: false };
+  if (level <= 4) return { lead: 0.72, rangeErr: 0.2, arcDeg: 34, spread: 0.15, react: 1.3, dash: false };
+  if (level <= 6) return { lead: 0.73, rangeErr: 0.25, arcDeg: 34, spread: 0.14, react: 1.2, dash: false };
+  if (level <= 8) return { lead: 0.74, rangeErr: 0.32, arcDeg: 35, spread: 0.13, react: 1.1, dash: true };
+  return { lead: 0.75, rangeErr: 0.42, arcDeg: 35, spread: 0.12, react: 1.0, dash: true };
 }
 
 /** An elite ⚔ (group contracts, barons): built for a company — hull ×2.5, guns ×1.5. */

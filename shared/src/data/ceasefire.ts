@@ -15,7 +15,7 @@ export const TRUCE_SEC = 600;
 export const TALK_COOLDOWN = 20;
 /** A ship that refused does not talk with that captain again for this long. */
 export const REFUSED_SEC = 180;
-/** How near a ship must be to be talked to: hull to hull (reach.ts REACH_HAIL — owner, 2026-10-22: 2.5 km → 500 m). */
+/** How near a ship must be to be talked to: hull to hull (reach.ts REACH_HAIL — owner, 2026-10-22: 2.5 km → 500 m → 450 m). */
 export const TALK_R = REACH_HAIL;
 /** How long a ship paid turns away from the captain before she goes her own way. */
 export const TURN_AWAY_SEC = 25;

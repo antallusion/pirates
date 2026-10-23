@@ -348,7 +348,7 @@ export const SETS: Record<SetId, SetDef> = {
     bonus: [
       { n: 2, mods: { hiddenSearch: -0.25 }, text: ['Hidden cargo is found 25% less often', 'Тайник находят на 25% реже'] },
       { n: 4, mods: { signature: -0.06, nightSpeed: 0.03 }, text: ['−6% signature, +3% speed at night', '−6% к заметности, +3% к ходу ночью'] },
-      { n: 6, mods: { contrabandVolumeMul: -0.15 }, flags: ['dark_lanterns'], text: ['Contraband packs 15% tighter; at night none sees her past 250 m', 'Контрабанда плотнее на 15%; ночью её не видно дальше 250 м'] },
+      { n: 6, mods: { contrabandVolumeMul: -0.15 }, flags: ['dark_lanterns'], text: ['Contraband packs 15% tighter; at night none sees her past 125 m', 'Контрабанда плотнее на 15%; ночью её не видно дальше 125 м'] },
     ],
   },
 };

@@ -217,8 +217,8 @@ export interface JollyBoat {
 
 export function launchJollyBoat(game: Game, ship: ShipEntity): string | null {
   let target: ShipEntity | null = null;
-  let bd = 150;
-  game.forShipsNear(ship.state.x, ship.state.y, 180, (o) => {
+  let bd = 75;
+  game.forShipsNear(ship.state.x, ship.state.y, 120, (o) => {
     if (o.id === ship.id || !o.alive || o.docked || o.boarding) return;
     const d = dist(o.state.x, o.state.y, ship.state.x, ship.state.y) - o.stats.length / 2;
     if (d > bd) return;
@@ -228,7 +228,7 @@ export function launchJollyBoat(game: Game, ship: ShipEntity): string | null {
     bd = d;
     target = o;
   });
-  if (!target) return 'No crippled ship within 150 m for the boat';
+  if (!target) return 'No crippled ship within 75 m for the boat';
   const party = Math.floor(ship.crew * 0.15);
   if (party < 3) return 'Too few hands to man the boat';
   ship.crew -= party;

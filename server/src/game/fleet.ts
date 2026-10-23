@@ -173,9 +173,10 @@ export function escortLost(game: Game, esc: ShipEntity): void {
 
 /** Station relative to the flagship: x to starboard, y ahead (negative astern). */
 export function formationOffset(f: Formation, i: number): { x: number; y: number } {
-  if (f === 'wedge') return [{ x: -130, y: -110 }, { x: 130, y: -110 }, { x: 0, y: -240 }][i] ?? { x: 0, y: -240 - i * 100 };
-  if (f === 'ring') return [{ x: -160, y: 0 }, { x: 160, y: 0 }, { x: 0, y: -190 }][i] ?? { x: 0, y: -190 - i * 100 };
-  return { x: 0, y: -(170 + i * 150) };
+  // (owner, 2026-10-22: the sea's reaches halved — the guns 100–250 m, the auras with them: the stations closed up by half)
+  if (f === 'wedge') return [{ x: -65, y: -55 }, { x: 65, y: -55 }, { x: 0, y: -120 }][i] ?? { x: 0, y: -120 - i * 50 };
+  if (f === 'ring') return [{ x: -80, y: 0 }, { x: 80, y: 0 }, { x: 0, y: -95 }][i] ?? { x: 0, y: -95 - i * 50 };
+  return { x: 0, y: -(85 + i * 75) };
 }
 
 export function setFormation(game: Game, s: PlayerSession, f: Formation): string | null {
@@ -213,10 +214,10 @@ export function stepFleet(game: Game, s: PlayerSession): void {
     if (JSON.stringify(cur?.mods ?? {}) !== JSON.stringify(mods)) e.addEffect({ id: 'squadron', until: Infinity, mods }, now);
     if (logistics > 0 && !e.inCombat(now)) e.hull = Math.min(e.stats.hullMax, e.hull + e.stats.hullMax * 0.003 * logistics);
   }
-  // Inspiring Presence: 400 m aura on yourself, your escorts and allies (the strongest captain counts).
+  // Inspiring Presence: 200 m aura on yourself, your escorts and allies (the strongest captain counts).
   const inspire = tx(ship.stats, 'inspire');
   if (inspire > 0) {
-    game.forShipsNear(ship.state.x, ship.state.y, 400, (o) => {
+    game.forShipsNear(ship.state.x, ship.state.y, 200, (o) => {
       if (!o.alive || (o !== ship && o.ownerId !== ship.id && !game.areAllies(o, ship))) return;
       const cur = o.effects.find((x) => x.id === 'inspired');
       if (cur && (cur.mods?.moraleLoss ?? 0) < -0.03 * inspire - 1e-9) return;
@@ -229,7 +230,7 @@ export function stepFleet(game: Game, s: PlayerSession): void {
   if (disc > 0 && ship.morale > 70) ship.addEffect({ id: 'iron_discipline', until: now + 1.6, mods: { reloadMul: -disc, repairRate: disc } }, now);
   // Legend at the Helm: pirates know the name.
   if (ship.hasFlag('legend_at_helm')) {
-    game.forShipsNear(ship.state.x, ship.state.y, 800, (o) => {
+    game.forShipsNear(ship.state.x, ship.state.y, 400, (o) => {
       if (o.npcRole !== 'pirate' || o.talentReady[`legend:${ship.id}`]) return;
       o.talentReady[`legend:${ship.id}`] = 1;
       o.morale = Math.max(0, o.morale - 15);
@@ -272,8 +273,8 @@ export function lineOfBattle(game: Game, owner: ShipEntity, side: 'port' | 'star
   const v = headingVec(h);
   const ax = owner.state.x + v.x * d, ay = owner.state.y + v.y * d;
   let target: ShipEntity | null = null;
-  let bd = 250;
-  game.forShipsNear(ax, ay, 250, (o) => {
+  let bd = 125;
+  game.forShipsNear(ax, ay, 125, (o) => {
     if (o.id === owner.id || o.ownerId === owner.id || !o.alive) return;
     const dd = dist(o.state.x, o.state.y, ax, ay);
     if (dd < bd) {
@@ -298,11 +299,11 @@ export function lineOfBattle(game: Game, owner: ShipEntity, side: 'port' | 'star
   }
 }
 
-/** Screen the Flagship: the nearest escort within 150 m takes a quarter of the blow. Returns hull left for the flagship. */
+/** Screen the Flagship: the nearest escort within 75 m takes a quarter of the blow. Returns hull left for the flagship. */
 export function screenFlagship(game: Game, target: ShipEntity, hull: number): number {
   if (!target.hasFlag('screen_flagship') || hull <= 0) return hull;
   let best: ShipEntity | null = null;
-  let bd = 150;
+  let bd = 75;
   for (const e of escortsOf(game, target)) {
     const d = dist(e.state.x, e.state.y, target.state.x, target.state.y);
     if (d < bd) {
@@ -328,7 +329,7 @@ export function admiralsEye(game: Game, ship: ShipEntity): { id: number; hull: n
   const out: { id: number; hull: number; crew: number; morale: number; port: boolean; starboard: boolean }[] = [];
   const seen = new Set<number>();
   const eyes = [ship, ...(r >= 2 ? escortsOf(game, ship) : [])];
-  const range = r >= 2 ? 900 : 600;
+  const range = r >= 2 ? 450 : 300;
   for (const eye of eyes) {
     game.forShipsNear(eye.state.x, eye.state.y, range, (o) => {
       if (o.id === ship.id || seen.has(o.id) || !o.alive || o.hasFlag('hidden')) return;
@@ -373,8 +374,8 @@ export function commandActive(game: Game, s: PlayerSession, id: string, x?: numb
     case 'cmd_concentrate_fire': {
       const px = Number.isFinite(x) ? x! : ship.state.x, py = Number.isFinite(y) ? y! : ship.state.y;
       let best: ShipEntity | null = null;
-      let bd = 300;
-      game.forShipsNear(px, py, 300, (o) => {
+      let bd = 150;
+      game.forShipsNear(px, py, 150, (o) => {
         if (o.id === ship.id || o.ownerId === ship.id || !o.alive) return;
         const d = dist(o.state.x, o.state.y, px, py);
         if (d < bd) {
@@ -394,7 +395,7 @@ export function commandActive(game: Game, s: PlayerSession, id: string, x?: numb
     }
     case 'cmd_black_flag': {
       ship.addEffect({ id: 'black_flag', until: now + 20 }, now);
-      game.forShipsNear(ship.state.x, ship.state.y, 500, (o) => {
+      game.forShipsNear(ship.state.x, ship.state.y, 250, (o) => {
         if (o.id === ship.id || !o.alive || o.ownerId === ship.id) return;
         const d = dist(o.state.x, o.state.y, ship.state.x, ship.state.y);
         if (o.npcRole === 'merchant' && o.morale < 60) {
@@ -405,10 +406,10 @@ export function commandActive(game: Game, s: PlayerSession, id: string, x?: numb
             game.toastNear(o, `${o.name} sees the black flag and strikes her colours!`);
           } else if (b) b.fleeFrom = ship.id;
         }
-        if (d <= 300 && (game.isHostile(o, ship) || o.npcRole === 'merchant')) o.morale = Math.max(0, o.morale - 10);
+        if (d <= 150 && (game.isHostile(o, ship) || o.npcRole === 'merchant')) o.morale = Math.max(0, o.morale - 10);
       });
       if (REGIONS[ship.region].safety === 'contested') ship.addEffect({ id: 'aggressor', until: now + 300 }, now);
-      game.emit({ k: 'fx', fx: 'war_cry', x: Math.round(ship.state.x), y: Math.round(ship.state.y), r: 500 }, ship.state.x, ship.state.y);
+      game.emit({ k: 'fx', fx: 'war_cry', x: Math.round(ship.state.x), y: Math.round(ship.state.y), r: 250 }, ship.state.x, ship.state.y);
       return null;
     }
   }

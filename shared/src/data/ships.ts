@@ -140,9 +140,13 @@ const ship = (d: ShipClassDef): ShipClassDef => d;
 // Playthrough C: the seas of ⚓9–10 are the cap's, and their captains sail in their level's kit — 11 200 s of a geared
 // captain's fire (tests/balance/zonebosses.ts KIT_SEA): three to four times a bare one's, and ten geared captains of 60
 // had the Abyssal Ark in six minutes.
+// The reaches halved (owner, 2026-10-22: the guns 100–250 m, were 220–560): a captain's fire on her fought inside a
+// hundred-odd metres of her, and the sims' captain (soloDps) laid 6–30 % less of it a second; each hull re-weighed by
+// her sea's measure to the ten's 18.75 min again (was 1594500 / 3113500 / 3048500 / 3272000 / 5227500 / 5674500 /
+// 23501500 / 25626500).
 export const ZB_HULL: Record<ZoneBossClassId, number> = {
-  zb_black_coast: 1594500, zb_gravewater: 3113500, zb_whispering: 3048500, zb_leviathan_reach: 3272000,
-  zb_ashen_isles: 5227500, zb_dead_mans_expanse: 5674500, zb_drowned_crown: 23501500, zb_the_abyss: 25626500,
+  zb_black_coast: 1368500, zb_gravewater: 2148500, zb_whispering: 2244500, zb_leviathan_reach: 2448000,
+  zb_ashen_isles: 3622000, zb_dead_mans_expanse: 4050000, zb_drowned_crown: 17223500, zb_the_abyss: 27109000,
 };
 
 /** A zone boss (docs/21): a great warship of her sea at one level, in no fleet list and no tree, never sold. Her hull
@@ -764,7 +768,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     length: 64, beam: 18, hull: 8800, armor: 0.3, maxSpeed: 9, accel: 0.65, turnRate: 7.5, draft: 6.4,
     holdVolume: 700, holdWeight: 820, crewMin: 140, crewMax: 500, gunPortsPerSide: 14, bowChasers: 2, sternChasers: 2,
     sailHp: 300, repairRate: 0.8, detection: 1450, price: 98000, purchasable: false, sprite: 'ship.drowned_cathedral', list: 'hauler',
-    passive: { id: 'belfry', name: 'Belfry', description: 'Bells of the Choir in her rigging: their toll drowns the Song of the Drowned Whale for every ship within 400 m.', flags: ['choir_bell'] },
+    passive: { id: 'belfry', name: 'Belfry', description: 'Bells of the Choir in her rigging: their toll drowns the Song of the Drowned Whale for every ship within 200 m.', flags: ['choir_bell'] },
     premium: { price: 8890, note: ['A cathedral of the Choir afloat: her bells break the enemy\'s heart.', 'Собор Хора на плаву: её колокола ломают дух врага.'], beasts: [{ u: 'bell_priest', n: 16 }] },
   }),
   treasure_junk: ship({
@@ -1003,19 +1007,19 @@ export interface GunDef {
 }
 
 export const GUNS: Record<GunId, GunDef> = {
-  light_6: { id: 'light_6', name: '6-pdr Gun', damage: 40, range: 320, reload: 8, spreadDeg: 3.5, weight: 1, crewPerGun: 3, price: 300, minTier: 1, description: 'Light, quick, cheap.' },
-  long_9: { id: 'long_9', name: '9-pdr Long Gun', damage: 46, range: 460, reload: 10, spreadDeg: 2, weight: 1.5, crewPerGun: 4, price: 700, minTier: 1, description: 'Long barrel, long reach, accurate.' },
-  medium_12: { id: 'medium_12', name: '12-pdr Gun', damage: 60, range: 380, reload: 11, spreadDeg: 3, weight: 2, crewPerGun: 5, price: 1000, minTier: 2, description: 'The workhorse of every navy.' },
-  heavy_18: { id: 'heavy_18', name: '18-pdr Gun', damage: 80, range: 400, reload: 13.5, spreadDeg: 3, weight: 3, crewPerGun: 6, price: 1800, minTier: 3, description: 'Hull-breaker. Heavy and slow.' },
-  carronade_24: { id: 'carronade_24', name: '24-pdr Carronade', damage: 110, range: 220, reload: 10, spreadDeg: 5, weight: 1.6, crewPerGun: 4, price: 1200, minTier: 2, description: 'Smasher. Devastating at pistol range, useless beyond it.' },
-  minion_4: { id: 'minion_4', name: '4-pdr Minion', damage: 26, range: 300, reload: 5.5, spreadDeg: 3.8, weight: 0.6, crewPerGun: 2, price: 200, minTier: 1, description: 'A little gun two hands can serve: quick to load and light on the deck, for a ship short of men.' },
-  perrier: { id: 'perrier', name: 'Stone Perrier', damage: 30, range: 260, reload: 8.5, spreadDeg: 5, weight: 1, crewPerGun: 3, price: 450, minTier: 1, factions: ['free', 'confederacy', 'brokers'], crewMul: 1.4, sailMul: 1.5, description: 'Throws stone shot that shatters on the side: men struck down ×1.4 and canvas torn ×1.5 a ball, the hull barely scratched. Cast in the free ports.' },
-  culverin_8: { id: 'culverin_8', name: '8-pdr Culverin', damage: 36, range: 560, reload: 12, spreadDeg: 1.4, weight: 2, crewPerGun: 4, price: 1300, minTier: 2, shotSpeed: 0.25, description: 'A long, slender bore: the longest reach of any gun, and the ball flies 25% faster (less drift, less lead). A light ball, slow to load.' },
-  whaling_gun: { id: 'whaling_gun', name: 'Bomb-Lance Gun', damage: 52, range: 340, reload: 11, spreadDeg: 3, weight: 1.8, crewPerGun: 4, price: 1400, minTier: 2, factions: ['harpoon', 'free'], monster: 1.5, description: "The Order's whaling gun: 1.5 times the damage against monsters, beasts and the dead, a little light against a ship's oak." },
-  gunbreaker_14: { id: 'gunbreaker_14', name: '14-pdr Gunbreaker', damage: 58, range: 340, reload: 12, spreadDeg: 3, weight: 2.2, crewPerGun: 5, price: 1700, minTier: 3, factions: ['crown', 'league'], dismount: 0.12, description: 'Short and stout, laid low across the enemy gun deck: round shot dismounts a gun three times as often (+12% a hit).' },
-  shell_gun: { id: 'shell_gun', name: 'Shell Gun', damage: 66, range: 360, reload: 14, spreadDeg: 3.2, weight: 2.6, crewPerGun: 6, price: 2400, minTier: 3, factions: ['crown', 'confederacy'], fire: 0.06, description: 'Fires hollow shells packed with powder: 6% of hull hits start a fire, with any shot but grape and chain.' },
-  drowned_bronze: { id: 'drowned_bronze', name: 'Drowned Bronze', damage: 60, range: 380, reload: 12, spreadDeg: 3.2, weight: 2.2, crewPerGun: 4, price: 2600, minTier: 2, factions: ['choir'], morale: 1.2, description: "Bronze raised from the Choir's wrecks, green with the sea: each hit costs her crew 1.2 more morale, and four hands serve a gun." },
-  demi_cannon_32: { id: 'demi_cannon_32', name: '32-pdr Demi-Cannon', damage: 118, range: 380, reload: 17.5, spreadDeg: 3.4, weight: 4.4, crewPerGun: 8, price: 3600, minTier: 4, pierce: 0.25, description: 'The heaviest long gun afloat: its ball ignores a quarter of any armour. Eight hands a gun, and the weight of a small chapel.' },
+  light_6: { id: 'light_6', name: '6-pdr Gun', damage: 40, range: 145, reload: 8, spreadDeg: 3.5, weight: 1, crewPerGun: 3, price: 300, minTier: 1, description: 'Light, quick, cheap.' },
+  long_9: { id: 'long_9', name: '9-pdr Long Gun', damage: 46, range: 205, reload: 10, spreadDeg: 2, weight: 1.5, crewPerGun: 4, price: 700, minTier: 1, description: 'Long barrel, long reach, accurate.' },
+  medium_12: { id: 'medium_12', name: '12-pdr Gun', damage: 60, range: 170, reload: 11, spreadDeg: 3, weight: 2, crewPerGun: 5, price: 1000, minTier: 2, description: 'The workhorse of every navy.' },
+  heavy_18: { id: 'heavy_18', name: '18-pdr Gun', damage: 80, range: 180, reload: 13.5, spreadDeg: 3, weight: 3, crewPerGun: 6, price: 1800, minTier: 3, description: 'Hull-breaker. Heavy and slow.' },
+  carronade_24: { id: 'carronade_24', name: '24-pdr Carronade', damage: 110, range: 100, reload: 10, spreadDeg: 5, weight: 1.6, crewPerGun: 4, price: 1200, minTier: 2, description: 'Smasher. Devastating at pistol range, useless beyond it.' },
+  minion_4: { id: 'minion_4', name: '4-pdr Minion', damage: 26, range: 135, reload: 5.5, spreadDeg: 3.8, weight: 0.6, crewPerGun: 2, price: 200, minTier: 1, description: 'A little gun two hands can serve: quick to load and light on the deck, for a ship short of men.' },
+  perrier: { id: 'perrier', name: 'Stone Perrier', damage: 30, range: 120, reload: 8.5, spreadDeg: 5, weight: 1, crewPerGun: 3, price: 450, minTier: 1, factions: ['free', 'confederacy', 'brokers'], crewMul: 1.4, sailMul: 1.5, description: 'Throws stone shot that shatters on the side: men struck down ×1.4 and canvas torn ×1.5 a ball, the hull barely scratched. Cast in the free ports.' },
+  culverin_8: { id: 'culverin_8', name: '8-pdr Culverin', damage: 36, range: 250, reload: 12, spreadDeg: 1.4, weight: 2, crewPerGun: 4, price: 1300, minTier: 2, shotSpeed: 0.25, description: 'A long, slender bore: the longest reach of any gun, and the ball flies 25% faster (less drift, less lead). A light ball, slow to load.' },
+  whaling_gun: { id: 'whaling_gun', name: 'Bomb-Lance Gun', damage: 52, range: 155, reload: 11, spreadDeg: 3, weight: 1.8, crewPerGun: 4, price: 1400, minTier: 2, factions: ['harpoon', 'free'], monster: 1.5, description: "The Order's whaling gun: 1.5 times the damage against monsters, beasts and the dead, a little light against a ship's oak." },
+  gunbreaker_14: { id: 'gunbreaker_14', name: '14-pdr Gunbreaker', damage: 58, range: 155, reload: 12, spreadDeg: 3, weight: 2.2, crewPerGun: 5, price: 1700, minTier: 3, factions: ['crown', 'league'], dismount: 0.12, description: 'Short and stout, laid low across the enemy gun deck: round shot dismounts a gun three times as often (+12% a hit).' },
+  shell_gun: { id: 'shell_gun', name: 'Shell Gun', damage: 66, range: 160, reload: 14, spreadDeg: 3.2, weight: 2.6, crewPerGun: 6, price: 2400, minTier: 3, factions: ['crown', 'confederacy'], fire: 0.06, description: 'Fires hollow shells packed with powder: 6% of hull hits start a fire, with any shot but grape and chain.' },
+  drowned_bronze: { id: 'drowned_bronze', name: 'Drowned Bronze', damage: 60, range: 170, reload: 12, spreadDeg: 3.2, weight: 2.2, crewPerGun: 4, price: 2600, minTier: 2, factions: ['choir'], morale: 1.2, description: "Bronze raised from the Choir's wrecks, green with the sea: each hit costs her crew 1.2 more morale, and four hands serve a gun." },
+  demi_cannon_32: { id: 'demi_cannon_32', name: '32-pdr Demi-Cannon', damage: 118, range: 170, reload: 17.5, spreadDeg: 3.4, weight: 4.4, crewPerGun: 8, price: 3600, minTier: 4, pierce: 0.25, description: 'The heaviest long gun afloat: its ball ignores a quarter of any armour. Eight hands a gun, and the weight of a small chapel.' },
 };
 
 export const GUN_IDS = Object.keys(GUNS) as GunId[];
@@ -1118,7 +1122,7 @@ export const MODULES: Record<ModuleId, ModuleDef> = {
   hold_expansion: { id: 'hold_expansion', name: 'Hold Expansion', maxLevel: 2, baseCost: 1000, description: 'Rebuilt bulkheads and orlop storage.', perLevel: { holdMul: 0.12, speedMul: -0.01 } },
   crew_quarters: { id: 'crew_quarters', name: 'Crew Quarters', maxLevel: 2, baseCost: 850, description: 'More hammocks, more hands.', perLevel: { crewMul: 0.12 } },
   ghost_timbers: { id: 'ghost_timbers', name: 'Ghost Timbers', maxLevel: 1, baseCost: 2200, blueprint: true, description: 'Pale wood from the boneyards of the Expanse, fitted to the plans of a ship that should not float. Light, quiet, uncanny.', perLevel: { speedMul: 0.04, sailHpMul: 0.1, signature: -0.06 } },
-  choir_bell: { id: 'choir_bell', name: 'Choir Bell', maxLevel: 1, baseCost: 500, flags: ['choir_bell'], description: 'A bronze bell of the Choir on the forecastle. Its toll drowns the Song of the Drowned Whale for every ship within 400 m.', perLevel: {} },
+  choir_bell: { id: 'choir_bell', name: 'Choir Bell', maxLevel: 1, baseCost: 500, flags: ['choir_bell'], description: 'A bronze bell of the Choir on the forecastle. Its toll drowns the Song of the Drowned Whale for every ship within 200 m.', perLevel: {} },
   false_bulwark: { id: 'false_bulwark', name: 'False Bulwark', maxLevel: 1, baseCost: 900, flags: ['false_bulwark'], description: 'Painted canvas over the gun ports: to a pirate she is a fat merchant — a full hold draws the named ones — and her first broadside out of a minute\'s quiet strikes a quarter harder.', perLevel: {} },
   lightning_rod: { id: 'lightning_rod', name: 'Lightning Rod', maxLevel: 1, baseCost: 450, flags: ['lightning_rod'], description: 'Copper down the mainmast to the sea: lightning strikes do 60% less damage.', perLevel: {} },
   bone_culverin: { id: 'bone_culverin', name: 'Bone Culverins', maxLevel: 1, baseCost: 3800, blueprint: true, mods: { gunDamageMul: 0.06, rangeMul: 0.05 }, description: 'Barrels bored from leviathan bone, to plans taken from its hoard: +6% gun damage, +5% range.', perLevel: {} },
@@ -1191,19 +1195,19 @@ export interface MountDef {
 }
 
 export const MOUNTS: Record<MountId, MountDef> = {
-  mortar: { id: 'mortar', name: 'Sea Mortar', minTier: 2, minRange: 250, range: 900, reload: 25, price: 3200, factions: [], description: 'Lobs a bomb at a point: 3 s flight, 55 m blast, heavy hull damage, poor accuracy at long range. Useless against ships that keep moving.' },
-  harpoon: { id: 'harpoon', name: 'Harpoon Gun', minTier: 1, minRange: 0, range: 190, reload: 20, price: 1800, factions: ['harpoon', 'free', 'confederacy'], description: 'Whaler\'s harpoon on a cable: tethers the target for 20 s so it cannot escape. Sets up boardings. The line snaps if strained too long.' },
-  chain_gun: { id: 'chain_gun', name: 'Swivel Chain Gun', minTier: 1, minRange: 0, range: 260, reload: 7, price: 1400, factions: [], description: 'A pivoting swivel that fires three chain balls in any direction. Uses chain shot from the hold.' },
+  mortar: { id: 'mortar', name: 'Sea Mortar', minTier: 2, minRange: 125, range: 450, reload: 25, price: 3200, factions: [], description: 'Lobs a bomb at a point: 3 s flight, 55 m blast, heavy hull damage, poor accuracy at long range. Useless against ships that keep moving.' },
+  harpoon: { id: 'harpoon', name: 'Harpoon Gun', minTier: 1, minRange: 0, range: 85, reload: 20, price: 1800, factions: ['harpoon', 'free', 'confederacy'], description: 'Whaler\'s harpoon on a cable: tethers the target for 20 s so it cannot escape. Sets up boardings. The line snaps if strained too long.' },
+  chain_gun: { id: 'chain_gun', name: 'Swivel Chain Gun', minTier: 1, minRange: 0, range: 120, reload: 7, price: 1400, factions: [], description: 'A pivoting swivel that fires three chain balls in any direction. Uses chain shot from the hold.' },
   fire_charge: { id: 'fire_charge', name: 'Fire Charges', minTier: 99, minRange: 0, range: 0, reload: 999, price: 0, factions: ['__fixed__'], description: 'Tar, brushwood and powder. Light them and row away.' },
-  abyssal_lance: { id: 'abyssal_lance', name: 'Abyssal Lance', minTier: 2, minRange: 0, range: 320, reload: 30, price: 6000, factions: ['choir'], description: 'A spine from the deep that answers to a cursed hull. A lance of cold light: hull and crew damage, terror. Needs curse stage 1+, deepens your curse.' },
-  swivel_gun: { id: 'swivel_gun', name: 'Swivel Musketoons', minTier: 1, minRange: 0, range: 220, reload: 9, price: 1200, factions: [], description: 'Three musketoons on the rail that fire grape in any direction: they clear a deck before a boarding. Each blast takes 2 grapeshot from the hold.' },
-  long_tom: { id: 'long_tom', name: 'Long Tom', minTier: 2, minRange: 0, range: 640, reload: 16, price: 2800, factions: [], description: 'One long, heavy gun on a pivot amidships: a single ball (130 damage) on any bearing out to 640 m. Takes round shot from the hold.' },
-  rocket_frame: { id: 'rocket_frame', name: 'Rocket Frame', minTier: 2, minRange: 200, range: 800, reload: 30, price: 3600, factions: ['crown', 'confederacy'], description: 'Six war rockets fired at a point: they scatter over 90 m, each that strikes a ship does light damage and sets her afire one time in three. Poor against a single ship, cruel against a crowd.' },
-  fire_siphon: { id: 'fire_siphon', name: 'Fire Siphon', minTier: 2, minRange: 0, range: 140, reload: 24, price: 3000, factions: ['confederacy', 'free'], description: 'A bronze siphon spraying burning oil in a 30° cone out to 140 m: every ship in it catches fire and loses men. Each spray burns 2 whale oil from the hold.' },
-  net_thrower: { id: 'net_thrower', name: 'Net Thrower', minTier: 1, minRange: 0, range: 240, reload: 20, price: 1600, factions: ['harpoon', 'free', 'brokers'], description: 'Throws a weighted net into her rigging: for 8 s she loses 30% of her speed and 40% of her turning. No damage; works on beasts too.' },
+  abyssal_lance: { id: 'abyssal_lance', name: 'Abyssal Lance', minTier: 2, minRange: 0, range: 145, reload: 30, price: 6000, factions: ['choir'], description: 'A spine from the deep that answers to a cursed hull. A lance of cold light: hull and crew damage, terror. Needs curse stage 1+, deepens your curse.' },
+  swivel_gun: { id: 'swivel_gun', name: 'Swivel Musketoons', minTier: 1, minRange: 0, range: 100, reload: 9, price: 1200, factions: [], description: 'Three musketoons on the rail that fire grape in any direction: they clear a deck before a boarding. Each blast takes 2 grapeshot from the hold.' },
+  long_tom: { id: 'long_tom', name: 'Long Tom', minTier: 2, minRange: 0, range: 300, reload: 16, price: 2800, factions: [], description: 'One long, heavy gun on a pivot amidships: a single ball (130 damage) on any bearing out to 300 m. Takes round shot from the hold.' },
+  rocket_frame: { id: 'rocket_frame', name: 'Rocket Frame', minTier: 2, minRange: 90, range: 350, reload: 30, price: 3600, factions: ['crown', 'confederacy'], description: 'Six war rockets fired at a point: they scatter over 90 m, each that strikes a ship does light damage and sets her afire one time in three. Poor against a single ship, cruel against a crowd.' },
+  fire_siphon: { id: 'fire_siphon', name: 'Fire Siphon', minTier: 2, minRange: 0, range: 65, reload: 24, price: 3000, factions: ['confederacy', 'free'], description: 'A bronze siphon spraying burning oil in a 30° cone out to 65 m: every ship in it catches fire and loses men. Each spray burns 2 whale oil from the hold.' },
+  net_thrower: { id: 'net_thrower', name: 'Net Thrower', minTier: 1, minRange: 0, range: 110, reload: 20, price: 1600, factions: ['harpoon', 'free', 'brokers'], description: 'Throws a weighted net into her rigging: for 8 s she loses 30% of her speed and 40% of her turning. No damage; works on beasts too.' },
   smoke_pots: { id: 'smoke_pots', name: 'Smoke Pots', minTier: 1, minRange: 0, range: 0, reload: 45, price: 1400, factions: ['brokers', 'free', 'confederacy'], description: 'Pots of wet straw and saltpetre lit along the rail: for 8 s she is hidden in the smoke, and for the first 4 half the shot at her flies wide. Fired where she lies.' },
   powder_kegs: { id: 'powder_kegs', name: 'Keg Droppers', minTier: 1, minRange: 0, range: 0, reload: 35, price: 1500, factions: ['free', 'confederacy', 'brokers'], description: 'Two kegs over the stern on short fuses: they burst 5 and 6 s later behind her (220 damage, 45 m), for whoever follows in her wake. Each pair takes 2 gunpowder from the hold.' },
-  war_drums: { id: 'war_drums', name: 'War Drums', minTier: 1, minRange: 0, range: 0, reload: 60, price: 1000, factions: ['confederacy', 'free'], description: 'The drums beat to quarters: her crew +10 morale, +15% boarding and +10% in the melee for 15 s; every enemy within 300 m loses 6 morale.' },
+  war_drums: { id: 'war_drums', name: 'War Drums', minTier: 1, minRange: 0, range: 0, reload: 60, price: 1000, factions: ['confederacy', 'free'], description: 'The drums beat to quarters: her crew +10 morale, +15% boarding and +10% in the melee for 15 s; every enemy within 150 m loses 6 morale.' },
 };
 
 export const MOUNT_IDS = Object.keys(MOUNTS) as MountId[];

@@ -112,8 +112,9 @@ export const CHASE_GIVE_UP = 40;
 // at most: on the screen, nine balls in ten and better) and lies broadside on there; her gun captains let a side go
 // inside her effective reach only — the distance where three balls in four and more strike («в дальности»).
 
-/** The share of her guns' reach she fights at, and its bounds in metres. */
-export const CLOSE_SHARE = 0.3;
+/** The share of her guns' reach she fights at, and its bounds in metres. (0.3 before the reaches were halved, owner
+ *  2026-10-22: twice the share of half the reach — the band in metres where it was.) */
+export const CLOSE_SHARE = 0.6;
 export const CLOSE_MIN = 90;
 export const CLOSE_MAX = 140;
 /** Her effective reach, as a share of her guns' whole: three balls in four and more strike inside it, a ship's under way

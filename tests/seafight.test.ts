@@ -133,7 +133,8 @@ test('no endless chase: forty seconds with no hit either way and the pursued mer
 });
 
 test('auto-battle against the weak: a mark two levels down is settled in about three seconds', () => {
-  const { game, s, me, foe } = pair(5, 3, 400);
+  // (within her guns' reach, autoReach: 140 m — 400 before the reaches were halved, owner 2026-10-22)
+  const { game, s, me, foe } = pair(5, 3, 140);
   s.autoWeak = true;
   s.autoFire = false;
   assert.equal(startPursuit(game, s, foe.id, 'guns'), null);

@@ -40,15 +40,16 @@ const refusals = (s: PlayerSession) => conn(s).inbox.filter((m): m is Extract<Se
 
 // ------------------------------------------------------------------------------------------------ the close fight
 
-test('the close fight\'s band: the helmsman holds a third of her reach (140 m at most), her guns fire within its effective edge', () => {
-  for (const reach of [220, 320, 460, 560]) {
+test('the close fight\'s band: the helmsman holds six tenths of her reach (140 m at most), her guns fire within its effective edge', () => {
+  // (the guns' reaches 100–250 m since 2026-10-22, were 220–560: the band's share doubled, its metres where they were)
+  for (const reach of [100, 145, 205, 250]) {
     const b = closeRange(reach);
     assert.ok(b.best <= CLOSE_MAX && b.best <= reach * 0.8, `${reach}: best ${b.best}`);
     assert.ok(b.near < b.best && b.best < b.far && b.far <= reach, `${reach}: ${JSON.stringify(b)}`);
   }
-  // A long 9-pounder: lies at 138 m, fires inside 285 m (tools/mobile/hit-range.ts: 78–90% there, 50–80% at 420).
-  const b = closeRange(460);
-  assert.ok(b.best > 130 && b.best <= 140 && b.far > 270 && b.far < 300, JSON.stringify(b));
+  // A long 9-pounder (205 m, was 460): lies at 123 m (was 138), fires inside 166 m (was 285).
+  const b = closeRange(205);
+  assert.ok(b.best > 115 && b.best <= 130 && b.far > 155 && b.far < 175, JSON.stringify(b));
 });
 
 /** «Атаковать» with the guns on a bot of her level 900 m off, both under way (fight-time.ts's novice): the distance
@@ -135,7 +136,7 @@ test('«Атаковать» is the order to fire whatever the auto-fire switch 
     const s = seaCaptain(game, 'brig', 5, at.x, at.y, 0);
     s.autoFire = false;
     s.expert = expert;
-    const foe = putSide(game, { cls: 'brig', level: 5, craft: 'bot' }, at.x + 130, at.y, 0).ship; // abeam, in the band
+    const foe = putSide(game, { cls: 'brig', level: 5, craft: 'bot' }, at.x + 100, at.y, 0).ship; // abeam, in the band (90–121 m of a 12-pounder's 170)
     let n = 0;
     const emit = game.emit.bind(game);
     game.emit = (ev, x, y) => {

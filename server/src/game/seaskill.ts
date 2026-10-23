@@ -161,7 +161,7 @@ export function volleyKit(game: Game, ship: ShipEntity, mark: ShipEntity | null,
     any = true;
   }
   // The Navigator: the star fix's angles (and its combo), the weather gauge, the current she gives them.
-  if (mark && now <= k.star.until && dist(mark.state.x, mark.state.y, ship.state.x, ship.state.y) <= 1500) {
+  if (mark && now <= k.star.until && dist(mark.state.x, mark.state.y, ship.state.x, ship.state.y) <= 750) {
     v.mul *= 1 + k.star.bonus;
     v.rake = true;
     if (k.star.combo) {
@@ -236,13 +236,13 @@ export function stepSeaSkills(game: Game, ship: ShipEntity): void {
   });
   switch (ship.captain) {
     case 'admiral': {
-      // Chain of Command (item 17): allies and escorts within 500 m reload faster; in her line (Form Line at rank 5,
+      // Chain of Command (item 17): allies and escorts within 250 m reload faster; in her line (Form Line at rank 5,
       // «Цепь команды») twice, and she herself too.
       const p = passiveNums(game, ship);
       if (!p) break;
       const line = ship.hasEffect('form_line') && (kitNums(game, ship, 'form_line')?.n.chain ?? 0) > 0;
       const r = p.n.reload * (line ? 2 : 1);
-      mates(500, (o) => pulse(o, 'chain_of_command', { skillReload: -r }));
+      mates(250, (o) => pulse(o, 'chain_of_command', { skillReload: -r }));
       if (line) pulse(ship, 'chain_of_command', { skillReload: -p.n.reload });
       break;
     }
@@ -251,7 +251,7 @@ export function stepSeaSkills(game: Game, ship: ShipEntity): void {
       const p = passiveNums(game, ship);
       if (!p) break;
       let gauge = false;
-      foes(1500, (o) => {
+      foes(750, (o) => {
         if (!gauge && upwindOf(game, ship, o)) gauge = true;
       });
       if (gauge) pulse(ship, 'weather_gauge_nav', { rangeMul: p.n.wind });
@@ -260,23 +260,23 @@ export function stepSeaSkills(game: Game, ship: ShipEntity): void {
       if (cr) foes(cr.n.r, (o) => o.addEffect({ id: 'against_current', until: now + 1.6, mods: { maxSpeed: -cr.n.slow, turnRate: -cr.n.turn }, source: ship.id }, now));
       // Storm Chaser at rank 4: her allies sail her wind.
       const sc = ship.hasEffect('storm_chaser') ? kitNums(game, ship, 'storm_chaser') : null;
-      if (sc && sc.rank >= 4) mates(500, (o) => pulse(o, 'storm_wind', { maxSpeed: 0.15 }, ['personal_wind']));
+      if (sc && sc.rank >= 4) mates(250, (o) => pulse(o, 'storm_wind', { maxSpeed: 0.15 }, ['personal_wind']));
       // The star fix «for all» (rank 5): her allies see the angles too.
-      if (now <= ship.kit.star.until && (kitNums(game, ship, 'star_fix')?.n.all ?? 0) > 0) mates(500, (o) => {
+      if (now <= ship.kit.star.until && (kitNums(game, ship, 'star_fix')?.n.all ?? 0) > 0) mates(250, (o) => {
         o.kit.star.until = Math.max(o.kit.star.until, ship.kit.star.until);
         o.kit.star.bonus = Math.max(o.kit.star.bonus, ship.kit.star.bonus * 0.5);
       });
       break;
     }
     case 'drowned': {
-      // Dread as a weapon (item 36): every 25 Dread costs the foes within 400 m 5 morale each 15 s; below 30 they are
+      // Dread as a weapon (item 36): every 25 Dread costs the foes within 200 m 5 morale each 15 s; below 30 they are
       // shaken, and reload slower (item 24's link: spirit → rate of fire).
       const p = passiveNums(game, ship);
       if (!p) break;
       const bite = Math.floor(ship.dread / 25) * 5;
       const tick = (ship.talentReady.dreadBite ?? 0) <= now;
       if (tick && bite > 0) ship.talentReady.dreadBite = now + 15;
-      foes(400, (o) => {
+      foes(200, (o) => {
         // (her dread shakes them to 25 at most: the rout below it is the guns' and the boarders' work)
         if (tick && bite > 0 && o.morale > 25) o.morale = Math.max(25, o.morale - bite);
         if (o.morale < 30) o.addEffect({ id: 'dread_shaken', until: now + 1.6, mods: { skillReload: p.n.shake }, source: ship.id }, now);
@@ -287,15 +287,15 @@ export function stepSeaSkills(game: Game, ship: ShipEntity): void {
       // Smoke Pots' facets: the acrid smoke (rank 3) and the cover of her own (rank 5).
       if (!ship.hasEffect('smoke_pots')) break;
       const n = kitNums(game, ship, 'smoke_pots');
-      if (n?.n.acrid) foes(150, (o) => o.addEffect({ id: 'acrid_smoke', until: now + 1.6, mods: { spreadMul: n.n.acrid }, source: ship.id }, now));
-      if (n?.n.allies) mates(150, (o) => pulse(o, 'smoke_cover', { skillIncoming: -n.n.allies }));
+      if (n?.n.acrid) foes(75, (o) => o.addEffect({ id: 'acrid_smoke', until: now + 1.6, mods: { spreadMul: n.n.acrid }, source: ship.id }, now));
+      if (n?.n.allies) mates(75, (o) => pulse(o, 'smoke_cover', { skillIncoming: -n.n.allies }));
       break;
     }
     case 'corsair': {
       // The Spotter's Eye «for all» (rank 5): her mark ranged in for everyone and a little the more hurt.
       if (now > ship.kit.spot.until || !(kitNums(game, ship, 'spotters_eye')?.n.all ?? 0)) break;
       let best: ShipEntity | null = null, bd = 1e9;
-      foes(1200, (o) => {
+      foes(600, (o) => {
         const d = dist(o.state.x, o.state.y, ship.state.x, ship.state.y);
         if (d < bd) {
           bd = d;

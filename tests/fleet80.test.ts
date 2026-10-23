@@ -206,7 +206,7 @@ test('every premium hull has her gift — one of seven kinds, its card saying wh
       assert.ok(g.chance > 0 && g.chance < 1 && g.cd > 0 && g.secs > 0 && (g.foe || g.fire));
       says(g.cd);
     } else if (g.kind === 'toll') {
-      assert.ok(g.cd >= 15 && g.r >= 200 && g.r <= 500 && (g.hull || g.morale || g.foe));
+      assert.ok(g.cd >= 15 && g.r >= 100 && g.r <= 250 && (g.hull || g.morale || g.foe)); // ranges ÷2 (owner, 2026-10-22)
       says(g.cd);
       says(g.r);
       if (g.hull) says(Math.round(g.hull * 100));
@@ -473,7 +473,7 @@ function exercise(c: ShipClassId, g: ShipGift): void {
       return;
     }
     case 'toll': {
-      const o = foe(game, ship);
+      const o = foe(game, ship, 100); // inside the least toll's 150 m
       const far = foe(game, ship, g.r + 400);
       const bystander = game.spawnNpcShip('merchant', 'fluyt', 'league', ship.state.x - 150, ship.state.y, 0);
       game.grid.upsert(bystander.id, bystander.state.x, bystander.state.y);
@@ -520,7 +520,7 @@ function exercise(c: ShipClassId, g: ShipGift): void {
       if (g.self.signature) assert.ok((ship.stats.x.signature ?? 0) < (st0.x.signature ?? 0), `${c}: harder to see`);
       // Out of her sea, nothing.
       if (g.when === 'open') {
-        foe(game, ship, 800);
+        foe(game, ship, 400); // within OPEN_WATER (750 m)
         assert.ok(!sailHolds(game, ship, 'open'), `${c}: an enemy near`);
       }
       return;

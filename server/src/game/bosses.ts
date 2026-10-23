@@ -1017,21 +1017,21 @@ function whaleSecond(game: Game, f: Fight, body: ShipEntity, ships: ShipEntity[]
       game.grid.upsert(b.id, b.state.x, b.state.y);
     }
   }
-  // The Song: −3 morale every 10 s within 1.6 km, unless a Choir Bell tolls near or a deep pastor leads the prayers.
+  // The Song: −3 morale every 10 s within 800 m, unless a Choir Bell tolls near or a deep pastor leads the prayers.
   f.songActive = f.phase === 1;
   if (f.phase === 1 && every(f, 'song', now, 10)) {
     const bells = ships.filter((s) => s.hasFlag('choir_bell'));
-    game.emit({ k: 'fx', fx: 'song', x: Math.round(body.state.x), y: Math.round(body.state.y), r: 1600 }, body.state.x, body.state.y);
+    game.emit({ k: 'fx', fx: 'song', x: Math.round(body.state.x), y: Math.round(body.state.y), r: 800 }, body.state.x, body.state.y);
     for (const s of ships) {
-      if (dist(s.state.x, s.state.y, body.state.x, body.state.y) > 1600) continue;
-      const bell = bells.find((b) => dist(b.state.x, b.state.y, s.state.x, s.state.y) <= 400);
+      if (dist(s.state.x, s.state.y, body.state.x, body.state.y) > 800) continue;
+      const bell = bells.find((b) => dist(b.state.x, b.state.y, s.state.x, s.state.y) <= 200);
       const pastor = s.isPlayer && hasOfficer(game.profileOf(s)?.company, 'deep_pastor', now);
       if (bell || pastor) {
         credit(game, f, bell ?? s, 'support', 2);
         continue;
       }
       s.morale = Math.max(0, s.morale - 3);
-      if (s.isPlayer && every(f, `songmsg${s.id}`, now, 30)) game.toastShip(s, 'The Song of the Drowned Whale: your crew weeps and lets go of the ropes (−3 morale). A Choir Bell within 400 m or a deep pastor quiets it.', 'bad');
+      if (s.isPlayer && every(f, `songmsg${s.id}`, now, 30)) game.toastShip(s, 'The Song of the Drowned Whale: your crew weeps and lets go of the ropes (−3 morale). A Choir Bell within 200 m or a deep pastor quiets it.', 'bad');
     }
   }
   // The heart's guard fills up again slowly.
@@ -1073,7 +1073,7 @@ function serpentSecond(game: Game, f: Fight, body: ShipEntity, ships: ShipEntity
     sayTo(game, ships, 'The Serpent breaks away for the shoals! Only small, fast ships can keep up — and big guns cannot hit it in the shallows.', 'info');
   }
   if (f.phase === 1) {
-    const near = ships.some((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 1200);
+    const near = ships.some((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 600);
     if (near) f.aloneSince = now;
     else if (now - f.aloneSince > 60) return void end(game, f, 'escaped');
     return;
@@ -1081,7 +1081,7 @@ function serpentSecond(game: Game, f: Fight, body: ShipEntity, ships: ShipEntity
   // The coil: a ring around the thick of the fleet.
   if (!f.ring && ships.length && every(f, 'coil', now, 40)) {
     let cx = 0, cy = 0;
-    const close = ships.filter((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 1500);
+    const close = ships.filter((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 750);
     for (const s of close) {
       cx += s.state.x;
       cy += s.state.y;
@@ -1114,7 +1114,7 @@ function serpentSecond(game: Game, f: Fight, body: ShipEntity, ships: ShipEntity
   }
   // Bile: canvas-eating spit.
   if (ships.length && every(f, 'bile', now, 8)) {
-    const t = game.rng.pick(ships.filter((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 900).concat([]));
+    const t = game.rng.pick(ships.filter((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 450).concat([]));
     if (t) {
       f.bile = { x: t.state.x, y: t.state.y, until: now + 3 };
       game.emit({ k: 'fx', fx: 'bile', x: Math.round(t.state.x), y: Math.round(t.state.y), r: 70 }, t.state.x, t.state.y);
@@ -1173,7 +1173,7 @@ function motherSecond(game: Game, f: Fight, body: ShipEntity, ships: ShipEntity[
     game.emit({ k: 'fx', fx: 'claws', x: Math.round(body.state.x), y: Math.round(body.state.y), r: 130 }, body.state.x, body.state.y);
   }
   if (every(f, 'debris', now, 6)) {
-    const far = ships.filter((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 1400);
+    const far = ships.filter((s) => dist(s.state.x, s.state.y, body.state.x, body.state.y) < 700);
     if (far.length) {
       const big = far.reduce((a, b) => (b.cls.tier > a.cls.tier ? b : a));
       game.strikes.push({ at: now + 2.5, x: big.state.x + game.rng.gauss() * 25, y: big.state.y + game.rng.gauss() * 25, radius: 50, hull: 90 + big.stats.hullMax * 0.02, rudder: 0.05, owner: body.id, slow: 0, shells: 1, fx: 'mortar' });
@@ -1252,7 +1252,7 @@ export function bossIncoming(game: Game, target: ShipEntity, d: DamagePacket, so
   switch (f.kind) {
     case 'abyss_eye':
       if (f.phase < 2) mul = 0.25; // it only truly opens as it falls
-      else if (!source || dist(source.state.x, source.state.y, target.state.x, target.state.y) > 900) return null;
+      else if (!source || dist(source.state.x, source.state.y, target.state.x, target.state.y) > 450) return null;
       break;
     case 'leviathan':
     case 'ancient_leviathan': {
@@ -1547,7 +1547,7 @@ function view(game: Game, f: Fight, body: ShipEntity, s: PlayerSession): BossVie
   if (f.bile) rz('bile', f.bile.x, f.bile.y, 70);
   if (f.kind === 'storm_widow') rz('eye', f.eye.x, f.eye.y, f.eye.r);
   if (f.kind === 'mother_of_wrecks') rz('maze', body.state.x, body.state.y, 100);
-  if (f.songActive) rz('song', body.state.x, body.state.y, 1600);
+  if (f.songActive) rz('song', body.state.x, body.state.y, 800);
   tenZones(game, f, body, s, rz); // the six of 2026-10-03
   const parts: BossView['parts'] = [];
   for (const [id, p] of f.parts) {
@@ -1582,7 +1582,7 @@ function view(game: Game, f: Fight, body: ShipEntity, s: PlayerSession): BossVie
 function hintFor(game: Game, f: Fight, body: ShipEntity): string {
   switch (f.kind) {
     case 'abyss_eye':
-      return f.phase === 0 ? 'The black storm: the wind leaps every few seconds, lightning finds the tallest mast. The Eye shrugs off shot (×0.25).' : f.phase === 1 ? 'The dead wind: no wind at all within 3 km, and the Echoes rise. Row, tow, fight.' : 'The fall: the sea pours into the Eye. Only guns within 900 m of it reach it — and too close, it swallows you.';
+      return f.phase === 0 ? 'The black storm: the wind leaps every few seconds, lightning finds the tallest mast. The Eye shrugs off shot (×0.25).' : f.phase === 1 ? 'The dead wind: no wind at all within 3 km, and the Echoes rise. Row, tow, fight.' : 'The fall: the sea pours into the Eye. Only guns within 450 m of it reach it — and too close, it swallows you.';
     case 'ancient_leviathan':
     case 'leviathan':
       if (f.whirl) return 'Sail WITH the whirlpool current — against it you are drawn into the mouth.';
@@ -1590,7 +1590,7 @@ function hintFor(game: Game, f: Fight, body: ShipEntity): string {
     case 'kraken':
       return f.phase === 0 ? `Cut away the arms (${[...f.parts].filter(([id, p]) => p === 'arm' && game.ships.get(id)?.alive).length} left; the body opens at 4). Held? Board the arm: "Axes!"` : 'The body is open — pour it on.';
     case 'drowned_whale':
-      return f.phase === 0 ? 'Fight off the drowned boarders.' : f.phase === 1 ? 'The Song drains morale: a Choir Bell within 400 m or a deep pastor quiets it.' : 'Board the Heart of the Whale — cannon cannot finish it.';
+      return f.phase === 0 ? 'Fight off the drowned boarders.' : f.phase === 1 ? 'The Song drains morale: a Choir Bell within 200 m or a deep pastor quiets it.' : 'Board the Heart of the Whale — cannon cannot finish it.';
     case 'lantern_maw':
       return 'Lanterns draw it: sail dark (Dark Running). False lights are traps. Swallowed? Fire everything — ×3 inside.';
     case 'black_serpent':

@@ -326,10 +326,11 @@ test('the new deck mounts at work', () => {
   assert.equal(fireMount(game, ship, ship.state.x + 600, ship.state.y), null);
   assert.equal(ship.ammo.round, 2);
   assert.ok(Math.abs(game.projectiles[n].damage - 130 * ship.stats.gunDamageMul) < 1e-9);
-  // Rockets: six over a point, not under 200 m; they strike and now and then set a ship afire.
+  // Rockets: six over a point, not under 90 m (200 before the reaches were halved, 2026-10-22); they strike and now and
+  // then set a ship afire.
   fit('rocket_frame');
-  assert.match(fireMount(game, ship, ship.state.x + 100, ship.state.y) ?? '', /Too close/);
-  const prey = target(game, 'merchant', 'fluyt', ship.state.x, ship.state.y - 450);
+  assert.match(fireMount(game, ship, ship.state.x + 60, ship.state.y) ?? '', /Too close/);
+  const prey = target(game, 'merchant', 'fluyt', ship.state.x, ship.state.y - 300);
   let burnt = false, hurt = false;
   for (let i = 0; i < 12 && !burnt; i++) {
     ship.mountReload = 0;
@@ -346,7 +347,7 @@ test('the new deck mounts at work', () => {
   assert.ok(hurt && burnt, 'rockets struck and set her afire');
   // The fire siphon: whale oil from the hold, a cone of fire close aboard.
   fit('fire_siphon');
-  const near = target(game, 'merchant', 'fluyt', ship.state.x, ship.state.y - 90);
+  const near = target(game, 'merchant', 'fluyt', ship.state.x, ship.state.y - 50); // (the siphon's 65 m)
   assert.match(fireMount(game, ship, near.state.x, near.state.y) ?? '', /whale oil/);
   ship.cargo.whale_oil = 3;
   assert.equal(fireMount(game, ship, near.state.x, near.state.y), null);
@@ -373,7 +374,7 @@ test('the new deck mounts at work', () => {
   assert.equal(ship.cargo.gunpowder ?? 0, 0);
   // War drums: her crew's heart up, a foe's down.
   fit('war_drums');
-  const foe = target(game, 'pirate', 'brig', ship.state.x + 200, ship.state.y);
+  const foe = target(game, 'pirate', 'brig', ship.state.x + 120, ship.state.y); // (the drums' 150 m)
   foe.attackers.set(ship.id, game.now); // shots already exchanged
   ship.attackers.set(foe.id, game.now);
   ship.morale = 50;

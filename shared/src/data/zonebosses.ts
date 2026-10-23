@@ -22,8 +22,12 @@ export const ZB_WARN = 15 * 60_000;
 export const ZB_MIN_SHARE = 0.02;
 /** She wanders within this of where she rose (m). */
 export const ZB_ROAM = 9000;
-/** Her guns reach this far (m): past every gun and mortar a captain mounts. */
-export const ZB_REACH = 950;
+/** Her guns reach this far (m): past every gun and mortar a captain mounts (the mortar's 450 since the reaches were
+ *  halved, owner 2026-10-22; 950 before). */
+export const ZB_REACH = 475;
+/** She closes on the nearest who fired on her to this before she lies broadside on (m): inside every captain's guns
+ *  (100–250 m since 2026-10-22) and on a phone's screen, she answers only those who fired on her (ZB_GRUDGE). */
+export const ZB_CLOSE = 200;
 /** She answers whoever fired on her within this long (s). */
 export const ZB_GRUDGE = 60;
 

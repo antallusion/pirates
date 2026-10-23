@@ -40,8 +40,9 @@ test('a wolf pack: the pirate who goes for a captain calls two idle pirates, one
   // A steady wind blowing from the pack toward her: this test is of the pack's teamwork, not of beating to windward.
   game.windFor = () => ({ dir: -Math.PI / 2, strength: 0.7 });
   const first = npcAt(game, 'pirate', prey.state.x + 900, prey.state.y);
-  const a = npcAt(game, 'pirate', first.state.x + 1500, first.state.y + 800);
-  const b = npcAt(game, 'pirate', first.state.x - 1200, first.state.y + 1500);
+  // (within her call's 1.5 km: 3 km before the reaches were halved, owner 2026-10-22)
+  const a = npcAt(game, 'pirate', first.state.x + 1100, first.state.y + 600);
+  const b = npcAt(game, 'pirate', first.state.x - 800, first.state.y + 1000);
   const far = npcAt(game, 'pirate', first.state.x + 6000, first.state.y);
   const n = rallyPack(game, first, prey);
   assert.equal(n, 2, 'two came');
@@ -49,7 +50,7 @@ test('a wolf pack: the pirate who goes for a captain calls two idle pirates, one
   assert.equal(ba.target, prey.id);
   assert.equal(bb.target, prey.id);
   assert.ok(ba.flank !== undefined && bb.flank !== undefined && Math.sign(ba.flank) !== Math.sign(bb.flank), 'from either side');
-  assert.equal(game.npcs.get(far.id)!.target, null, 'a pirate beyond 3 km did not hear');
+  assert.equal(game.npcs.get(far.id)!.target, null, 'a pirate beyond 1.5 km did not hear');
   // They close in.
   const d0 = Math.hypot(a.state.x - prey.state.x, a.state.y - prey.state.y);
   // She swings out to her quarter of the prey first (which may take her further off), then closes: within two
@@ -86,8 +87,9 @@ test('beating to windward (docs/16 P5): a pack dead to leeward of a hove-to capt
   // The wind blows from her to the pack: every pirate has her dead to windward.
   game.windFor = () => ({ dir: Math.PI / 2, strength: 0.7 });
   const first = npcAt(game, 'pirate', prey.state.x + 900, prey.state.y);
-  const a = npcAt(game, 'pirate', prey.state.x + 2600, prey.state.y + 300);
-  const b = npcAt(game, 'pirate', prey.state.x + 2400, prey.state.y - 500);
+  // (within the caller's 1.5 km — 3 km before the reaches were halved, owner 2026-10-22)
+  const a = npcAt(game, 'pirate', prey.state.x + 2200, prey.state.y + 300);
+  const b = npcAt(game, 'pirate', prey.state.x + 2000, prey.state.y - 500);
   assert.equal(rallyPack(game, first, prey), 2);
   for (const o of [a, b]) assert.ok((game.npcs.get(o.id)!.flankUntil ?? 0) <= game.now + FLANK_SEC, 'the swing round is capped');
   // The one who called them sails off: were she to grapple the captain first, the pack would leave a ship locked in a
@@ -108,7 +110,7 @@ test('beating to windward (docs/16 P5): a pack dead to leeward of a hove-to capt
 test('a merchant run down throws a third of her hold over the side, at most three times, to run lighter', () => {
   const { game } = makeGame();
   const chaser = captainAtSea(game, 'Chaser');
-  const m = npcAt(game, 'merchant', chaser.state.x + 600, chaser.state.y);
+  const m = npcAt(game, 'merchant', chaser.state.x + 300, chaser.state.y); // (within 450 m: 900 before the reaches were halved)
   m.cargo = { sugar: 30, rum: 15 };
   const brain = game.npcs.get(m.id)!;
   const loot0 = game.loot.size;
@@ -141,7 +143,7 @@ test('only the chaser hears that a merchant throws her cargo over: a pirate\'s c
   assert.ok(runLighter(game, m, game.npcs.get(m.id)!, pirate));
   assert.equal(c.all('toast').filter((t) => /run lighter/.test(t.msg)).length, 0, 'no word to the onlooker');
   assert.equal(c.all('toast').length, before);
-  const m2 = npcAt(game, 'merchant', me.state.x + 500, me.state.y);
+  const m2 = npcAt(game, 'merchant', me.state.x + 300, me.state.y);
   m2.cargo = { rum: 30 };
   assert.ok(runLighter(game, m2, game.npcs.get(m2.id)!, me));
   assert.equal(c.all('toast').filter((t) => /run lighter/.test(t.msg)).length, 1, 'her chaser is told');
@@ -199,12 +201,13 @@ test('one wolf pack at a time (docs/30 B): a second pirate going for her within 
   const { game } = makeGame();
   const prey = captainAtSea(game, 'Pack Pia');
   const first = npcAt(game, 'pirate', prey.state.x + 900, prey.state.y);
-  npcAt(game, 'pirate', first.state.x + 1500, first.state.y + 800);
-  npcAt(game, 'pirate', first.state.x - 1200, first.state.y + 1500);
+  // (within her call's 1.5 km, PACK_CALL)
+  npcAt(game, 'pirate', first.state.x + 1100, first.state.y + 600);
+  npcAt(game, 'pirate', first.state.x - 800, first.state.y + 1000);
   assert.equal(rallyPack(game, first, prey), 2, 'the first pack comes');
   const second = npcAt(game, 'pirate', prey.state.x - 900, prey.state.y);
-  npcAt(game, 'pirate', second.state.x - 1500, second.state.y + 800);
-  npcAt(game, 'pirate', second.state.x + 900, second.state.y - 1500);
+  npcAt(game, 'pirate', second.state.x - 1100, second.state.y + 600);
+  npcAt(game, 'pirate', second.state.x + 600, second.state.y - 1100);
   const ships0 = game.ships.size;
   for (let k = 0; k < 20; k++) assert.equal(rallyPack(game, second, prey), 0, 'no second pack');
   assert.equal(game.ships.size, ships0, 'and no fireship sent with it');

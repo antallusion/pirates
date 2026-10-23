@@ -112,9 +112,9 @@ test('Undertow drags a ship with no way on; the Maw takes 15% of her hull, a mas
   toSea(game, s);
   onHull(game, ship, 'brig'); // even terms with the brigs she fights (canon D12)
   ship.dread = 100;
-  const foe = dummy(game, ship, 0, -200); // due north, in the race
+  const foe = dummy(game, ship, 0, -100); // due north, in the race (200 m long now: ranges ÷2, owner 2026-10-22)
   const y0 = foe.state.y;
-  c.push({ t: 'ability', id: 'undertow', x: ship.state.x, y: ship.state.y - 400 });
+  c.push({ t: 'ability', id: 'undertow', x: ship.state.x, y: ship.state.y - 200 });
   assert.equal(game.zones[0].kind, 'undertow');
   steps(game, 20 * 3);
   assert.ok(foe.state.y < y0 - 4, `dragged north: ${y0 - foe.state.y} m`);

@@ -33,7 +33,7 @@ export const GIFT_KINDS: GiftKind[] = ['rally', 'strike', 'toll', 'deck', 'sail'
 /** When a `sail` gift holds: a storm, winds under half strength, the night, fog, or open water (no fight, no enemy
  *  within OPEN_WATER metres). */
 export type SailWhen = 'storm' | 'calm' | 'night' | 'fog' | 'open';
-export const OPEN_WATER = 1500;
+export const OPEN_WATER = 750;
 
 interface GiftBase {
   /** Its name and what it does, as her card and her ship's screen say them: English, Russian. */
@@ -147,14 +147,14 @@ export const SHIP_GIFTS: Partial<Record<FleetClassId, ShipGift>> = {
     text: ['In a boarding her men come over the ram: for the first 2 rounds their blows strike 25% harder and the other side\'s 15% softer.', 'При абордаже её люди идут через таран: первые 2 раунда их удары на 25% сильнее, а удары врага на 15% слабее.'],
   },
   thunderer: {
-    kind: 'toll', cd: 25, r: 350, secs: 4, hull: 0.03, foe: { reloadMul: 0.15 }, fx: 'lightning',
+    kind: 'toll', cd: 25, r: 175, secs: 4, hull: 0.03, foe: { reloadMul: 0.15 }, fx: 'lightning',
     name: ['Lightning Rods', 'Громоотводы'],
-    text: ['In a fight, every 25 s lightning leaps from her rods to every enemy engaged with her within 350 m: 3% of its hull, and its gun crews reel — reloads 15% slower for 4 s.', 'В бою каждые 25 с молния бьёт с её громоотводов в каждого врага, что бьётся с ней, в 350 м: 3% корпуса, и расчёты оглушены — перезарядка на 15% медленнее 4 с.'],
+    text: ['In a fight, every 25 s lightning leaps from her rods to every enemy engaged with her within 175 m: 3% of its hull, and its gun crews reel — reloads 15% slower for 4 s.', 'В бою каждые 25 с молния бьёт с её громоотводов в каждого врага, что бьётся с ней, в 175 м: 3% корпуса, и расчёты оглушены — перезарядка на 15% медленнее 4 с.'],
   },
   wyvern_galleass: {
-    kind: 'toll', cd: 30, r: 400, secs: 6, morale: 6, foe: { turnRate: -0.25 }, fx: 'war_cry',
+    kind: 'toll', cd: 30, r: 200, secs: 6, morale: 6, foe: { turnRate: -0.25 }, fx: 'war_cry',
     name: ['Wyvern\'s Shadow', 'Тень виверны'],
-    text: ['In a fight, every 30 s the wyvern\'s shadow passes over every enemy engaged with her within 400 m: −6 morale, and it turns 25% slower for 6 s.', 'В бою каждые 30 с тень виверны проходит над каждым врагом, что бьётся с ней, в 400 м: −6 к боевому духу, и 6 с он поворачивает на 25% медленнее.'],
+    text: ['In a fight, every 30 s the wyvern\'s shadow passes over every enemy engaged with her within 200 m: −6 morale, and it turns 25% slower for 6 s.', 'В бою каждые 30 с тень виверны проходит над каждым врагом, что бьётся с ней, в 200 м: −6 к боевому духу, и 6 с он поворачивает на 25% медленнее.'],
   },
   kraken_hunter: {
     kind: 'strike', chance: 0.25, cd: 15, secs: 8, foe: { maxSpeed: -0.2, turnRate: -0.2 },
@@ -227,7 +227,7 @@ export const SHIP_GIFTS: Partial<Record<FleetClassId, ShipGift>> = {
   tea_clipper: {
     kind: 'sail', when: 'open', self: { maxSpeed: 0.1, accel: 0.1 }, aura: { spoilage: -0.5 },
     name: ['Tea Race', 'Чайная гонка'],
-    text: ['Away from a fight, with no enemy within 1500 m, she sails 10% faster and gathers way 10% quicker; perishables in her hold keep twice as long.', 'Вдали от боя, когда врагов нет ближе 1500 м, она идёт на 10% быстрее и на 10% быстрее набирает ход; скоропортящийся груз в её трюме хранится вдвое дольше.'],
+    text: ['Away from a fight, with no enemy within 750 m, she sails 10% faster and gathers way 10% quicker; perishables in her hold keep twice as long.', 'Вдали от боя, когда врагов нет ближе 750 м, она идёт на 10% быстрее и на 10% быстрее набирает ход; скоропортящийся груз в её трюме хранится вдвое дольше.'],
   },
   treasure_fluyt: {
     kind: 'rally', below: 0.4, secs: 10, cd: 120, self: { incomingDamageMul: -0.2, armor: 0.15 }, aura: { lifeboats: 2.5 },
@@ -265,7 +265,7 @@ export const SHIP_GIFTS: Partial<Record<FleetClassId, ShipGift>> = {
   albatross_xebec: {
     kind: 'sail', when: 'open', self: { maxSpeed: 0.12 }, aura: { moraleBase: 5 },
     name: ['Albatross Wings', 'Крылья альбатроса'],
-    text: ['Away from a fight, with no enemy within 1500 m, she sails 12% faster; the albatross aboard keeps her crew\'s morale 5 higher.', 'Вдали от боя, когда врагов нет ближе 1500 м, она идёт на 12% быстрее; альбатрос на борту держит боевой дух команды на 5 выше.'],
+    text: ['Away from a fight, with no enemy within 750 m, she sails 12% faster; the albatross aboard keeps her crew\'s morale 5 higher.', 'Вдали от боя, когда врагов нет ближе 750 м, она идёт на 12% быстрее; альбатрос на борту держит боевой дух команды на 5 выше.'],
   },
   silver_arrow: {
     kind: 'deck', rounds: 99, mine: { shot: 0.25 }, aura: { shotSpeed: 0.2 },
@@ -300,9 +300,9 @@ export const SHIP_GIFTS: Partial<Record<FleetClassId, ShipGift>> = {
     text: ['In a boarding her side takes 30% less from shots and 10% less from blows, the whole battle.', 'При абордаже её сторона весь бой получает на 30% меньше от выстрелов и на 10% меньше от ударов.'],
   },
   floating_fortress: {
-    kind: 'toll', cd: 20, r: 300, secs: 0, hull: 0.02, morale: 2, fx: 'mortar',
+    kind: 'toll', cd: 20, r: 150, secs: 0, hull: 0.02, morale: 2, fx: 'mortar',
     name: ['Corner Towers', 'Угловые башни'],
-    text: ['In a fight, every 20 s her tower guns fire on every enemy engaged with her within 300 m: 2% of its hull and −2 morale.', 'В бою каждые 20 с пушки её башен бьют по каждому врагу, что бьётся с ней, в 300 м: 2% корпуса и −2 к боевому духу.'],
+    text: ['In a fight, every 20 s her tower guns fire on every enemy engaged with her within 150 m: 2% of its hull and −2 morale.', 'В бою каждые 20 с пушки её башен бьют по каждому врагу, что бьётся с ней, в 150 м: 2% корпуса и −2 к боевому духу.'],
   },
   menagerie: {
     kind: 'deck', rounds: 2, mine: { init: 2 }, theirs: { morale: -2 },
@@ -322,9 +322,9 @@ export const SHIP_GIFTS: Partial<Record<FleetClassId, ShipGift>> = {
     cry: ['The coral grows over the breaches.', 'Коралл зарастает пробоины.'],
   },
   drowned_cathedral: {
-    kind: 'toll', cd: 30, r: 450, secs: 10, morale: 8, foe: { moraleRegen: -0.12 }, fx: 'song',
+    kind: 'toll', cd: 30, r: 225, secs: 10, morale: 8, foe: { moraleRegen: -0.12 }, fx: 'song',
     name: ['The Drowned Bells', 'Колокола утопших'],
-    text: ['In a fight, every 30 s her bells toll over every enemy engaged with her within 450 m: −8 morale, and its morale mends 30% slower for 10 s.', 'В бою каждые 30 с её колокола звонят над каждым врагом, что бьётся с ней, в 450 м: −8 к боевому духу, и 10 с дух его восстанавливается на 30% медленнее.'],
+    text: ['In a fight, every 30 s her bells toll over every enemy engaged with her within 225 m: −8 morale, and its morale mends 30% slower for 10 s.', 'В бою каждые 30 с её колокола звонят над каждым врагом, что бьётся с ней, в 225 м: −8 к боевому духу, и 10 с дух его восстанавливается на 30% медленнее.'],
   },
   treasure_junk: {
     kind: 'trade', goods: ['spices', 'cloth', 'drowned_silk', 'pearls', 'medicine'], sell: 1.12,
@@ -368,7 +368,7 @@ export const SHIP_GIFTS: Partial<Record<FleetClassId, ShipGift>> = {
   dolphin: {
     kind: 'sail', when: 'open', self: { maxSpeed: 0.08, turnRate: 0.1 },
     name: ['Bow Riders', 'На носовой волне'],
-    text: ['Away from a fight, with no enemy within 1500 m, the dolphins ride her bow wave: she sails 8% faster and turns 10% quicker.', 'Вдали от боя, когда врагов нет ближе 1500 м, дельфины идут на её носовой волне: она на 8% быстрее и поворачивает на 10% живее.'],
+    text: ['Away from a fight, with no enemy within 750 m, the dolphins ride her bow wave: she sails 8% faster and turns 10% quicker.', 'Вдали от боя, когда врагов нет ближе 750 м, дельфины идут на её носовой волне: она на 8% быстрее и поворачивает на 10% живее.'],
   },
   sailfish: {
     kind: 'strike', chance: 0.25, cd: 14, secs: 8, foe: { incomingDamageMul: 0.1, maxSpeed: -0.1 },
@@ -382,9 +382,9 @@ export const SHIP_GIFTS: Partial<Record<FleetClassId, ShipGift>> = {
     cry: ['A cask in the hold opens one eye.', 'Бочка в трюме открывает один глаз.'],
   },
   icebound_hulk: {
-    kind: 'toll', cd: 30, r: 300, secs: 6, foe: { turnRate: -0.2, reloadMul: 0.1 }, fx: 'song',
+    kind: 'toll', cd: 30, r: 150, secs: 6, foe: { turnRate: -0.2, reloadMul: 0.1 }, fx: 'song',
     name: ['Hoarfrost', 'Изморозь'],
-    text: ['In a fight, every 30 s frost falls on every enemy engaged with her within 300 m: its rigging stiffens and its gun crews numb — it turns 20% slower and reloads 10% slower for 6 s.', 'В бою каждые 30 с изморозь ложится на каждого врага, что бьётся с ней, в 300 м: снасти дубеют, руки расчётов немеют — 6 с он поворачивает на 20% медленнее и перезаряжается на 10% медленнее.'],
+    text: ['In a fight, every 30 s frost falls on every enemy engaged with her within 150 m: its rigging stiffens and its gun crews numb — it turns 20% slower and reloads 10% slower for 6 s.', 'В бою каждые 30 с изморозь ложится на каждого врага, что бьётся с ней, в 150 м: снасти дубеют, руки расчётов немеют — 6 с он поворачивает на 20% медленнее и перезаряжается на 10% медленнее.'],
   },
 };
 

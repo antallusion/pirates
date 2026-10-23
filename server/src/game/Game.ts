@@ -1231,8 +1231,8 @@ export class Game {
       this.stepDump(s);
       if (s.ship.hasEffect('false_colors')) {
         let close = false;
-        this.forShipsNear(s.ship.state.x, s.ship.state.y, 120, (o) => {
-          if (o.npcRole === 'patrol' && dist(o.state.x, o.state.y, s.ship!.state.x, s.ship!.state.y) < 100) close = true;
+        this.forShipsNear(s.ship.state.x, s.ship.state.y, 60, (o) => {
+          if (o.npcRole === 'patrol' && dist(o.state.x, o.state.y, s.ship!.state.x, s.ship!.state.y) < 50) close = true;
         });
         if (close) unmask(this, s.ship, 'a patrol came alongside');
       }
@@ -1710,7 +1710,7 @@ export class Game {
     const n = opts.two ? 2 : 1;
     for (let i = 0; i < n; i++) {
       const back = headingVec(owner.state.heading + Math.PI + (i ? 0.6 : 0));
-      const x = owner.state.x + back.x * 300, y = owner.state.y + back.y * 300;
+      const x = owner.state.x + back.x * 150, y = owner.state.y + back.y * 150;
       const ship = this.spawnNpcShip('escort', cls, 'free', x, y, owner.state.heading, { ship: names + this.rng.pick(['Tenacity', 'Warrant', 'Loyal Oath', 'Salt Debt']), captain: 'Sailing Master' });
       this.setNpcLevel(ship, cls === 'man_o_war' ? Math.max(9, e) : e);
       // Her broadsides a share of the Admiral's own (her guns by the weight of metal a second; two share the hire's
@@ -5090,7 +5090,7 @@ export class Game {
     const visible = (o: ShipEntity, fogSense: boolean) => {
       let v = vis.get(o.id);
       if (v === undefined) vis.set(o.id, (v = visibleRangeBase(this, o)));
-      return Math.max(250, fogSense && v.fog ? v.r * 1.5 : v.r);
+      return Math.max(125, fogSense && v.fog ? v.r * 1.5 : v.r);
     };
     for (const s of this.sessions) {
       if (!s.authed || !s.ship || s.disconnectedAt !== null) continue;
@@ -5113,9 +5113,9 @@ export class Game {
         if (o.id !== me.id) {
           if (o.docked) return;
           const lookout = crowsNest && d <= me.stats.detection; // Crow's Nest sees through it all
-          if (!lookout && d > 250 && o.hasFlag('hidden') && o.ownerId !== me.id && !sameGroup(this, o, me)) return;
+          if (!lookout && d > 125 && o.hasFlag('hidden') && o.ownerId !== me.id && !sameGroup(this, o, me)) return;
           // Seen from afar only by her signature (the fog-sense of the observer stretches it in fog).
-          if (!lookout && o.isPlayer && d > 250 && d > visible(o, fogSense) && !sameGroup(this, o, me)) return;
+          if (!lookout && o.isPlayer && d > 125 && d > visible(o, fogSense) && !sameGroup(this, o, me)) return;
         }
         const brain = this.npcs.get(o.id);
         if (brain && !brain.active) return;

@@ -95,7 +95,7 @@ export function abyssalActive(game: Game, s: PlayerSession, id: string, x?: numb
     let bd = range;
     game.forShipsNear(fromX, fromY, range, (o) => {
       if (o.id === ship.id || o.ownerId === ship.id || !o.alive || o.docked) return;
-      if (dist(o.state.x, o.state.y, ship.state.x, ship.state.y) > 300) return;
+      if (dist(o.state.x, o.state.y, ship.state.x, ship.state.y) > 150) return;
       const d = dist(o.state.x, o.state.y, fromX, fromY);
       if (d < bd) {
         bd = d;
@@ -106,8 +106,8 @@ export function abyssalActive(game: Game, s: PlayerSession, id: string, x?: numb
   };
   switch (id) {
     case 'abs_grasp_of_the_deep': {
-      const t = nearest(400, px, py);
-      if (!t) return 'Nothing within 300 m for the deep to seize';
+      const t = nearest(200, px, py);
+      if (!t) return 'Nothing within 150 m for the deep to seize';
       t.addEffect({ id: 'grasped', until: now + 3, mods: { maxSpeed: -0.4 * pw }, source: ship.id }, now);
       if (ship.hasFlag('krakens_embrace')) {
         t.addEffect({ id: 'kraken_hold', until: now + (t.isPlayer ? 0.75 : 1.5), mods: { maxSpeed: -1 }, source: ship.id }, now);
@@ -120,14 +120,14 @@ export function abyssalActive(game: Game, s: PlayerSession, id: string, x?: numb
       return null;
     }
     case 'abs_hymn_of_the_choir': {
-      game.forShipsNear(ship.state.x, ship.state.y, 400, (o) => {
+      game.forShipsNear(ship.state.x, ship.state.y, 200, (o) => {
         if (o.id === ship.id || o.ownerId === ship.id || !o.alive || !(game.isHostile(o, ship) || game.isHostile(ship, o))) return;
-        if (dist(o.state.x, o.state.y, ship.state.x, ship.state.y) > 400) return;
+        if (dist(o.state.x, o.state.y, ship.state.x, ship.state.y) > 200) return;
         o.morale = Math.max(0, o.morale - 15 * pw);
         raiseDread(game, o, 10 * pw);
         if (!o.isPlayer && o.morale < 30) o.addEffect({ id: 'panic', until: now + 6, mods: { reloadMul: 0.4, boardingPower: -0.3 }, source: ship.id }, now);
       });
-      game.emit({ k: 'fx', fx: 'war_cry', x: Math.round(ship.state.x), y: Math.round(ship.state.y), r: 400 }, ship.state.x, ship.state.y);
+      game.emit({ k: 'fx', fx: 'war_cry', x: Math.round(ship.state.x), y: Math.round(ship.state.y), r: 200 }, ship.state.x, ship.state.y);
       raiseDread(game, ship, 12);
       return null;
     }
@@ -142,7 +142,7 @@ export function abyssalActive(game: Game, s: PlayerSession, id: string, x?: numb
     }
     case 'abs_black_water': {
       const d = dist(px, py, ship.state.x, ship.state.y);
-      const k = d > 350 ? 350 / d : 1;
+      const k = d > 175 ? 175 / d : 1;
       const cx = ship.state.x + (px - ship.state.x) * k, cy = ship.state.y + (py - ship.state.y) * k;
       game.zones.push({ kind: 'black_water', x: cx, y: cy, r: 40, start: now, until: now + 8, owner: ship.id, power: pw, hit: [] });
       game.emit({ k: 'fx', fx: 'drowned_hands', x: Math.round(cx), y: Math.round(cy), r: 40 }, cx, cy);
@@ -150,8 +150,8 @@ export function abyssalActive(game: Game, s: PlayerSession, id: string, x?: numb
       return null;
     }
     case 'abs_sirens_call': {
-      const t = nearest(400, px, py);
-      if (!t) return 'No ship within 300 m hears the song';
+      const t = nearest(200, px, py);
+      if (!t) return 'No ship within 150 m hears the song';
       if (t.isPlayer) game.zones.push({ kind: 'siren', x: ship.state.x, y: ship.state.y, r: 0, target: t.id, start: now, until: now + 2, owner: ship.id, power: pw, hit: [] });
       else t.seizedHelm = { until: now + 4, x: ship.state.x, y: ship.state.y };
       t.attackers.set(ship.id, now);
@@ -185,7 +185,7 @@ export function stepAbyssShip(game: Game, ship: ShipEntity): void {
   if (ship.abyssStepAt && now >= ship.abyssStepAt) {
     ship.abyssStepAt = 0;
     const v = headingVec(ship.state.heading);
-    let d = 200;
+    let d = 100;
     while (d > 0 && isLand(game.world, ship.state.x + v.x * d, ship.state.y + v.y * d)) d -= 25;
     ship.state.x += v.x * d;
     ship.state.y += v.y * d;
@@ -226,9 +226,9 @@ export function stepAbyss(game: Game, s: PlayerSession): void {
     if (tick3) ship.talentReady.horror = now + 3;
     if (tick10) ship.talentReady.horrorDread = now + 10;
     if (tick3 || tick10) {
-      game.forShipsNear(ship.state.x, ship.state.y, 250, (o) => {
+      game.forShipsNear(ship.state.x, ship.state.y, 125, (o) => {
         if (o.id === ship.id || o.ownerId === ship.id || !o.alive || !(game.isHostile(o, ship) || game.isHostile(ship, o))) return;
-        if (dist(o.state.x, o.state.y, ship.state.x, ship.state.y) > 250) return;
+        if (dist(o.state.x, o.state.y, ship.state.x, ship.state.y) > 125) return;
         if (tick3) o.morale = Math.max(0, o.morale - ch);
         if (tick10) raiseDread(game, o, 1);
       });

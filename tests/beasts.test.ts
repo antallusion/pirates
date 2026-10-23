@@ -137,7 +137,8 @@ test('the line: played in the fair band the whale tires until it is spent; the s
   const { game } = makeGame();
   const { c, s, ship } = hunter(game, 'Harpooner Hale', 'gravewater', 'schooner', 4);
   ship.loadout.mount = 'harpoon';
-  const whale = spawnBeast(game, 'humpback', ship.state.x, ship.state.y - 120, 4);
+  // (within the harpoon gun's 85 m: 190 before the reaches were halved, owner 2026-10-22)
+  const whale = spawnBeast(game, 'humpback', ship.state.x, ship.state.y - 70, 4);
   assert.equal(fireMount(game, ship, whale.state.x, whale.state.y), null);
   assert.ok(lineOf(game, ship), 'the line is in');
   assert.ok(c.all('toast').some((t) => t.msg === 'The harpoon bites! Humpback Whale is on the line — work her with the sails.'));
@@ -173,7 +174,7 @@ test('the line parts under a surge held hard, and the iron works loose when it i
   const { game } = makeGame();
   const { c, ship } = hunter(game, 'Hard Hand', 'dead_mans_expanse', 'brig', 6);
   ship.loadout.mount = 'harpoon';
-  const whale = spawnBeast(game, 'sperm_whale', ship.state.x, ship.state.y - 150, 6);
+  const whale = spawnBeast(game, 'sperm_whale', ship.state.x, ship.state.y - 75, 6);
   assert.equal(fireMount(game, ship, whale.state.x, whale.state.y), null);
   const br = beastBrain(game, whale.id) as unknown as { surgeUntil: number; nextSurge: number; nextBite: number };
   run(game, 4, () => {
@@ -187,7 +188,7 @@ test('the line parts under a surge held hard, and the iron works loose when it i
   assert.equal(lineOf(game, ship), undefined);
   assert.ok(c.all('toast').some((t) => t.msg === 'The line parts! Sperm Whale is away with your iron in her.'));
   // Slack: steer for it with all sail on.
-  const hump = spawnBeast(game, 'humpback', ship.state.x + 150, ship.state.y, 4);
+  const hump = spawnBeast(game, 'humpback', ship.state.x + 75, ship.state.y, 4);
   ship.cargo = {};
   ship.mountReload = 0;
   assert.equal(fireMount(game, ship, hump.state.x, hump.state.y), null);

@@ -122,6 +122,43 @@ export interface NpcBrain {
   /** A pirate's mind about the neutral captains he has seen (docs/24 D1, colours.ts pirateDares): ship id → until when
    *  (world s), positive when he dares, negative when he lets her be. */
   dares?: Map<number, number>;
+  /** A captain's helm, not the sea's own (the balance sims' scripted captains, docs/12 §3.6): her guns are not held to
+   *  NPC_OPEN_FIRE, nor her helm to its band. */
+  captain?: boolean;
+  /** The fight she has joined (NPC_OPEN_FIRE): her mark and when her guns last spoke at her. */
+  opened?: { id: number; t: number };
+}
+
+/** The sea's own ships open fire on a mark only this near her (metres, centre to centre) — owner, 2026-10-22: «нпс
+ *  пусть начинают атаковать на расстоянии 150»: on a phone held sideways (±281 m across, ±130 m up and down of her) both
+ *  ships are on the screen when the first gun speaks. They close to it, and their fighting helm holds its band inside it
+ *  (FIGHT_NEAR–FIGHT_HOLD of it) whatever their guns' reach. */
+export const NPC_OPEN_FIRE = 150;
+/** Once the fight is joined — she has fired on her mark, or her mark has struck her, within this many seconds — she
+ *  fights with her guns' own reach (a captain who opens out to her long gun's 250 m is answered, not kited). */
+export const NPC_JOINED_SEC = 20;
+/** The sea's own ships see a captain at this share of their sight (ships.ts `detection`, the captain's own view of the
+ *  sea untouched): the owner's «в два раза сокращай дальность всего остального» for their aggro. */
+export const NPC_SIGHT = 0.5;
+/** The sea's own come round to present a side to their mark from this far (m), and close on her in the spiral of their
+ *  fighting helm (the band NPC_OPEN_FIRE·FIGHT_NEAR–FIGHT_HOLD), not bow on. */
+export const NPC_PRESENT_FROM = 400;
+/** …and from this near (m) they are well round, their side half presented (the easy turn in of their fighting helm): a
+ *  captain running in for the grapples finds her mark's beam, not her bow (seafight.test: about 13 s from 700 m). */
+export const NPC_EASY_FROM = 250;
+
+/** Whether `ship` may let her guns go at `target` `d` metres off: a captain's always (to her guns' reach); the sea's own
+ *  only within NPC_OPEN_FIRE, or in a fight already joined. */
+export function npcMayFire(game: Game, ship: ShipEntity, brain: NpcBrain, target: ShipEntity, d: number): boolean {
+  if (brain.captain || ship.isPlayer || d <= NPC_OPEN_FIRE) return true;
+  const now = game.now;
+  if (brain.opened && brain.opened.id === target.id && now - brain.opened.t < NPC_JOINED_SEC) return true;
+  return (ship.attackers.get(target.id) ?? -Infinity) > now - NPC_JOINED_SEC;
+}
+
+/** The reach her fighting helm works to: her guns' own for a captain, NPC_OPEN_FIRE at most for the sea's own. */
+function helmReach(ship: ShipEntity, brain: NpcBrain, range: number): number {
+  return brain.captain || ship.isPlayer ? range : Math.min(range, NPC_OPEN_FIRE);
 }
 
 const SHIP_NAMES = [
@@ -347,8 +384,8 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
 }
 
 function detectionRange(game: Game, npc: ShipEntity, other: ShipEntity): number {
-  let r = npc.stats.detection * signature(other);
-  if (other.hasFlag('hidden')) return 230;
+  let r = npc.stats.detection * NPC_SIGHT * signature(other);
+  if (other.hasFlag('hidden')) return 115;
   if (other.hasFlag('dark_running')) r *= other.talentReady.darkSeen || 0.4; // her Dark Running's facet (docs/25 item 38)
   if (other.hasFlag('lamplighter') && npc.npcRole === 'ghost') r *= 2; // the Lamplighter's lights draw the dead
   const w = game.weatherOf(other);
@@ -506,7 +543,7 @@ function replan(game: Game, ship: ShipEntity, brain: NpcBrain): boolean {
 // ------------------------------------------------------------------ active AI
 
 /** How far a merchant or a fisher looks for danger (she runs from what is within 1.4 km). */
-const CALM_LOOK = 1400;
+const CALM_LOOK = 700;
 
 function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   const now = game.now;
@@ -518,7 +555,7 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   let threatD = Infinity;
   let prey: ShipEntity | null = null;
   let preyD = Infinity;
-  game.forShipsNear(ship.state.x, ship.state.y, calm ? Math.min(ship.stats.detection, CALM_LOOK) : ship.stats.detection, (o) => {
+  game.forShipsNear(ship.state.x, ship.state.y, calm ? Math.min(ship.stats.detection * NPC_SIGHT, CALM_LOOK) : ship.stats.detection * NPC_SIGHT, (o) => {
     if (o.id === ship.id || !o.alive || o.docked) return;
     if ((brain.spared.get(o.id) ?? 0) > now) return;
     const d = dist(ship.state.x, ship.state.y, o.state.x, o.state.y);
@@ -558,7 +595,7 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     const p = prey as ShipEntity | null;
     if (f && p && !f.isPlayer && f.alive && !f.docked && npcHostileTo(game, ship, f) && (ship.attackers.get(p.id) ?? -999) < now - 60) {
       const fd = dist(ship.state.x, ship.state.y, f.state.x, f.state.y);
-      if (fd < ship.stats.detection * 1.3) {
+      if (fd < ship.stats.detection * NPC_SIGHT * 1.3) {
         prey = f;
         preyD = fd;
       }
@@ -614,7 +651,7 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   const peaceful = role === 'merchant' || role === 'fisher';
   if (peaceful) {
     const danger = (threat ?? (brain.fleeFrom !== null ? game.ships.get(brain.fleeFrom) ?? null : null)) as ShipEntity | null;
-    if (danger && dist(ship.state.x, ship.state.y, danger.state.x, danger.state.y) < 1400) {
+    if (danger && dist(ship.state.x, ship.state.y, danger.state.x, danger.state.y) < CALM_LOOK) {
       const beaten = ship.hull < ship.stats.hullMax * 0.35 || ship.crew < ship.stats.crewMax * 0.3 || ship.sails < ship.stats.sailHpMax * 0.25;
       if (beaten && ship.inCombat(now)) {
         struck(game, ship, brain, danger); // the card to the captain on her (docs/16 #3)
@@ -633,7 +670,9 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   // Fighters. Battered past bearing and outgunned by a captain on her, she strikes her colours (docs/16 #3).
   if (strikeColours(game, ship, brain, (prey ?? threat) as ShipEntity | null)) return;
   const lowHull = ship.hull < ship.stats.hullMax * (ship.fleeAt ?? 0.22); // a named coward runs sooner, a brute never
-  if (role === 'pirate' && lowHull && prey) {
+  // (a foe softened for a fresh captain's first fights — the opening's tender — fights it out: since the reaches were
+  // halved, owner 2026-10-22, a pirate running at 22 % outran a long 9-pounder's 205 m and the lesson was never done)
+  if (role === 'pirate' && lowHull && prey && ship.softFor === undefined) {
     const away = headingOf(ship.state.x - (prey as ShipEntity).state.x, ship.state.y - (prey as ShipEntity).state.y);
     steer(game, ship, brain, away, 1);
     return;
@@ -707,7 +746,7 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     const owner = game.ships.get(ship.ownerId);
     if (owner) {
       // Keep station in the flagship's formation (hired escorts), or astern of her.
-      const off = ship.fleetId ? formationOffset(owner.formation, ship.escortIndex) : { x: 0, y: -140 };
+      const off = ship.fleetId ? formationOffset(owner.formation, ship.escortIndex) : { x: 0, y: -70 };
       const f = headingVec(owner.state.heading), r = headingVec(owner.state.heading + Math.PI / 2);
       const tx = owner.state.x + f.x * off.y + r.x * off.x, ty = owner.state.y + f.y * off.y + r.y * off.x;
       const d = dist(ship.state.x, ship.state.y, tx, ty);
@@ -740,10 +779,10 @@ function followPath(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   steer(game, ship, brain, headingOf(wx - ship.state.x, wy - ship.state.y), 1);
 }
 
-function chooseAmmo(ship: ShipEntity, target: ShipEntity, d: number, wantsBoard: boolean): AmmoId {
+function chooseAmmo(ship: ShipEntity, target: ShipEntity, d: number, wantsBoard: boolean, boardingNow = wantsBoard): AmmoId {
   const has = (a: AmmoId) => ship.ammo[a] > 0;
   const inRange = (a: AmmoId) => d < Math.max(effectiveRange(ship, 'port', a), effectiveRange(ship, 'starboard', a)) * 0.95;
-  if (wantsBoard && has('grape') && inRange('grape') && target.crew > target.stats.crewMax * 0.35) return 'grape';
+  if (boardingNow && has('grape') && inRange('grape') && target.crew > target.stats.crewMax * 0.35) return 'grape';
   if (wantsBoard && has('chain') && inRange('chain') && target.sails > target.stats.sailHpMax * 0.45) return 'chain';
   if (has('round')) return 'round';
   return has('chain') ? 'chain' : 'grape';
@@ -753,18 +792,29 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
   // Pirates want the cargo, so they cripple and board; everyone else fights to sink. A ship with boarding off (docs/24
   // C1) is fought with the guns to the end.
   const wantsBoard = brain.role === 'pirate' && !boardingOff(game, target);
-  ship.ammoSel = chooseAmmo(ship, target, d, wantsBoard);
+  // (grape only once she runs in for the grapples — her mark beaten down, or a captain's boarding run on her: since the
+  // reaches were halved, owner 2026-10-22, her rigging band of 70–100 m lay inside grape's reach and she swept a fresh
+  // captain's deck from the first broadside — the opening's crew lost before its first stack, QA 2026-10-23)
+  const boardingNow = wantsBoard && (target.surrendered || target.sails < target.stats.sailHpMax * 0.4 || target.crew < target.stats.crewMax * 0.5 || target.hull < target.stats.hullMax * 0.55 || target.hasEffect('board_run'));
+  ship.ammoSel = chooseAmmo(ship, target, d, wantsBoard, boardingNow);
   // The First Watch's raider is a lesson, not a massacre: she closes as a pirate does (the pupil's grapples must reach
   // her) but never throws her own (she boarded, won and robbed a novice every 90 s, the lesson's gunnery never done).
-  if (wantsBoard && brain.practice === undefined && canBoard(game, ship, target) === null && npcWouldBoard(game, ship, target)) {
+  // (nor does a foe softened for a fresh captain's first fights, firstfights.ts: she comes alongside for the captain's
+  // grapples since the reaches were halved, and is to be boarded, not to board a newcomer and win — QA 2026-10-23)
+  if (wantsBoard && brain.practice === undefined && ship.softFor === undefined && canBoard(game, ship, target) === null && npcWouldBoard(game, ship, target)) {
     startBoarding(game, ship, target, 'standard');
     return;
   }
   // Her craft by her level (docs/12 §3.3): how much of the lead she allows, how wide she lets fly, her tricks.
   const sk = brain.skill ?? npcSkill(ship.shipLevel);
+  // (A captain running in on her for the grapples, pursuit.ts board_run: a boarder meets her alongside — circling her at
+  // her chain shot's hundred metres, since the reaches were halved (owner, 2026-10-22), the two never came together.)
   const weakened = target.surrendered || target.sails < target.stats.sailHpMax * 0.4 || target.crew < target.stats.crewMax * 0.5 || target.hull < target.stats.hullMax * 0.55;
-  const { px, py, leadD, leadBearing } = engageHelm(game, ship, brain, target, d, wantsBoard ? (weakened ? 'board' : 'rig') : 'guns', sk.lead);
+  const { px, py, leadD, leadBearing } = engageHelm(game, ship, brain, target, d, wantsBoard ? (weakened || target.hasEffect('board_run') ? 'board' : 'rig') : 'guns', sk.lead);
   const rangeOf = (side: 'port' | 'starboard') => effectiveRange(ship, side, ship.ammoSel);
+  // The sea's own hold their fire till they are within NPC_OPEN_FIRE of her, or the fight is joined.
+  if (!npcMayFire(game, ship, brain, target, d)) return;
+  const opened = () => (brain.opened = { id: target.id, t: game.now });
   for (const side of ['port', 'starboard'] as const) {
     if (ship.reload[side] > 0) continue;
     const off = Math.abs(angleDiff(sideHeading(ship, side), leadBearing));
@@ -772,17 +822,20 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
       // Laid on her lead (docs/23 item 34), as far off in range as her craft allows; the sea's own gunners know their
       // wind and allow for it.
       const err = 1 + (game.rng.float() * 2 - 1) * sk.rangeErr;
-      fireBroadside(game, ship, side, leadD * err, { x: ship.state.x + (px - ship.state.x) * err, y: ship.state.y + (py - ship.state.y) * err }, 1, {});
+      if (!fireBroadside(game, ship, side, leadD * err, { x: ship.state.x + (px - ship.state.x) * err, y: ship.state.y + (py - ship.state.y) * err }, 1, {})) opened();
     }
   }
   // A seasoned captain dashes out of a broadside held on her.
-  if (sk.dash && d < 700 && (target.aimStart.port >= 0 || target.aimStart.starboard >= 0) && game.rng.chance(0.2)) dash(game, ship);
+  if (sk.dash && d < 350 && (target.aimStart.port >= 0 || target.aimStart.starboard >= 0) && game.rng.chance(0.2)) dash(game, ship);
   // Chasers: pursuers fire from the bow, the pursued from the stern.
   const chaseRange = effectiveRange(ship, 'port', 'round') * 1.2;
   if (leadD < chaseRange) {
     const offBow = Math.abs(angleDiff(ship.state.heading, leadBearing));
-    if (offBow < CHASER_CONE && ship.chaserReload.bow <= 0 && ship.cls.bowChasers) fireChaser(game, ship, 'bow', px, py, 1);
-    else if (Math.PI - offBow < CHASER_CONE && ship.chaserReload.stern <= 0 && ship.cls.sternChasers) fireChaser(game, ship, 'stern', px, py, 1);
+    if (offBow < CHASER_CONE && ship.chaserReload.bow <= 0 && ship.cls.bowChasers) {
+      if (!fireChaser(game, ship, 'bow', px, py, 1)) opened();
+    } else if (Math.PI - offBow < CHASER_CONE && ship.chaserReload.stern <= 0 && ship.cls.sternChasers) {
+      if (!fireChaser(game, ship, 'stern', px, py, 1)) opened();
+    }
   }
 }
 
@@ -800,6 +853,10 @@ export const WIND_EYE_COST = 1.5;
  *  FIGHT_NEAR of it. At the very edge of it two ships used to circle just out of range, firing nothing but the chasers. */
 export const FIGHT_HOLD = 0.92;
 export const FIGHT_NEAR = 0.7;
+/** …and before her hull is this near a great one's (a zone boss, a monster, a boss: m, over half their lengths) — a third
+ *  of a 12-pounder's reach was 130 m of water once, and is 60 m since the reaches were halved (owner, 2026-10-22): under
+ *  a great ship's bow she sailed through her. */
+export const CLEAR_HULLS = 30;
 /** What a broadside's course onto something she would strike costs her in the choice of side (more than any other). */
 export const FOUL_COST = 4;
 
@@ -808,7 +865,8 @@ export const FOUL_COST = 4;
  *  fight (pursuit.ts, owner 2026-10-07) — the band she closes to and lies broadside on in, instead of the sea's own
  *  70–92% of her reach (the ladder of levels is tuned on that, tests/balance/). */
 export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target: ShipEntity, d: number, mode: HelmMode, lead: number, hold?: { best: number; near: number; far: number }): { px: number; py: number; leadD: number; leadBearing: number } {
-  const rangeOf = (side: 'port' | 'starboard') => effectiveRange(ship, side, ship.ammoSel);
+  // (the sea's own work to NPC_OPEN_FIRE at most: they close to it and hold their band inside it)
+  const rangeOf = (side: 'port' | 'starboard') => helmReach(ship, brain, effectiveRange(ship, side, ship.ammoSel));
   const maxRange = Math.max(rangeOf('port'), rangeOf('starboard'));
   const bearing = headingOf(target.state.x - ship.state.x, target.state.y - ship.state.y);
   // Lead the target by the ball's flight time (a green gunner allows only part of it).
@@ -835,7 +893,14 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
   }
   // (The close fight runs straight at a mark past half as far again as the band's far edge: one running from her gained
   // on her all the way out to 1.5 × her reach, her bow 50° off it.)
-  if (d > (hold ? hold.far * 1.5 : maxRange * 1.5)) {
+  // (The sea's own, their band held inside NPC_OPEN_FIRE: they come round to present a side from NPC_PRESENT_FROM, not
+  // run bow on at their mark to 1.5 × the band and spin there — owner 2026-10-22, the reaches halved; a captain coming
+  // alongside found her mark weaving across her bow.)
+  const own = brain.captain || ship.isPlayer;
+  const runIn = hold ? hold.far * 1.5 : own ? maxRange * 1.5 : Math.max(maxRange * 1.5, NPC_PRESENT_FROM);
+  // (…and they are well round, their side half presented, from NPC_EASY_FROM in: the easy turn in to their band)
+  const easyFrom = own ? 0 : NPC_EASY_FROM;
+  if (d > runIn) {
     steer(game, ship, brain, bearing, 1, false, d);
   } else if (mode === 'board' && d < ALONGSIDE_FROM) {
     alongsideHelm(game, ship, brain, target);
@@ -846,6 +911,7 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
     const hPort = wrapAngle(bearing + Math.PI / 2); // target on our port beam
     const hStar = wrapAngle(bearing - Math.PI / 2);
     // The course that presents a side, turned in or out to hold her distance.
+    const great = !!target.zoneBoss || target.cls.monster === true || target.npcRole === 'boss';
     const course = (side: 'port' | 'starboard'): number => {
       const inward = side === 'port' ? -1 : 1; // rotation that turns the bow toward the target
       const h = side === 'port' ? hPort : hStar;
@@ -858,9 +924,9 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
       }
       // Boarders fight at chain-shot range to strip the rigging; others at their gun's comfortable range.
       const range = mode === 'rig' ? Math.min(rangeOf(side), effectiveRange(ship, side, 'chain')) : rangeOf(side);
-      if (d > range * FIGHT_HOLD) return wrapAngle(h + inward * 0.85);
+      if (d > Math.max(range * FIGHT_HOLD, easyFrom)) return wrapAngle(h + inward * 0.85);
       if (d > range * FIGHT_NEAR) return wrapAngle(h + inward * 0.4);
-      if (d < range * 0.35 && mode === 'guns') return wrapAngle(h - inward * 0.35);
+      if (d < (great ? Math.max(range * 0.35, (ship.stats.length + target.stats.length) / 2 + CLEAR_HULLS) : range * 0.35) && mode === 'guns') return wrapAngle(h - inward * 0.35);
       return h;
     };
     // The quick sea fight (docs/23 item 47): a side whose course lies in the wind's eye cannot be held (she would sit at
@@ -1106,9 +1172,11 @@ export const FLANK_UPWIND_DEG = 45;
  *  pirate that came for her called two more — 91 packs and 35 fireships in 65 fights of a frigate ⚓6 in the Ashen Isles
  *  and Gravewater, every boarding three crews to her one. Now a pack (and its fireship) once in PACK_EVERY seconds. */
 export const PACK_EVERY = 300;
+/** How far a pirate's call for her pack carries (m): 3 km before the reaches were halved (owner, 2026-10-22). */
+export const PACK_CALL = 1500;
 const packAt = new WeakMap<Game, Map<number, number>>();
 
-/** A wolf pack: a pirate that goes for a captain calls up to two idle pirates within 3 km; they come round to
+/** A wolf pack: a pirate that goes for a captain calls up to two idle pirates within 1.5 km (3 km before the reaches were halved, 2026-10-22); they come round to
  *  her quarters from either side while the first closes from where she is. */
 export function rallyPack(game: Game, ship: ShipEntity, prey: ShipEntity): number {
   const now = game.now;
@@ -1117,8 +1185,9 @@ export function rallyPack(game: Game, ship: ShipEntity, prey: ShipEntity): numbe
   if (now - (last.get(prey.id) ?? -Infinity) < PACK_EVERY) return 0;
   const sides = [1.9, -1.9];
   let n = 0;
-  game.forShipsNear(ship.state.x, ship.state.y, 3000, (o) => {
+  game.forShipsNear(ship.state.x, ship.state.y, PACK_CALL, (o) => {
     if (n >= sides.length || o.id === ship.id || !o.alive || o.docked || o.prize || o.surrendered) return;
+    if (dist(o.state.x, o.state.y, ship.state.x, ship.state.y) > PACK_CALL) return;
     const b = game.npcs.get(o.id);
     if (!b || b.role !== 'pirate' || b.target !== null || o.hull < o.stats.hullMax * 0.4) return;
     b.active = true;
@@ -1201,7 +1270,7 @@ export function fireshipBlows(game: Game, ship: ShipEntity): void {
 export function runLighter(game: Game, ship: ShipEntity, brain: NpcBrain, danger: ShipEntity): boolean {
   const now = game.now;
   if ((brain.dumped ?? 0) >= 3 || now < (brain.dumpAt ?? 0) || ship.surrendered) return false;
-  if (dist(ship.state.x, ship.state.y, danger.state.x, danger.state.y) > 900) return false;
+  if (dist(ship.state.x, ship.state.y, danger.state.x, danger.state.y) > 450) return false;
   const cargo: Partial<Record<GoodId, number>> = {};
   let any = false;
   for (const [g, n] of Object.entries(ship.cargo) as [GoodId, number][]) {

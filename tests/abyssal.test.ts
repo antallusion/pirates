@@ -102,7 +102,7 @@ test('Hymn of the Choir, Small Bargain and Black Water', () => {
   const { game } = makeGame();
   const { c, s, ship } = captain(game, 'Choir', { abs_hymn_of_the_choir: 1, abs_small_bargain: 2, abs_black_water: 1 });
   toSea(game, s);
-  const foe = dummy(game, ship, 200, 0);
+  const foe = dummy(game, ship, 150, 0); // within the Hymn's 200 m (ranges ÷2, owner 2026-10-22)
   foe.attackers.set(ship.id, game.now);
   ship.attackers.set(foe.id, game.now);
   foe.morale = 40;
@@ -120,11 +120,11 @@ test('Hymn of the Choir, Small Bargain and Black Water', () => {
   assert.ok(!canMend(game, foe));
 });
 
-test('Siren\'s Call turns an NPC toward you; Abyss Step: untouchable below, 200 m on', () => {
+test('Siren\'s Call turns an NPC toward you; Abyss Step: untouchable below, 100 m on', () => {
   const { game } = makeGame();
   const { c, s, ship } = captain(game, 'Siren', { abs_sirens_call: 1, abs_abyss_step: 1 });
   toSea(game, s);
-  const foe = dummy(game, ship, 250, 0);
+  const foe = dummy(game, ship, 120, 0); // within the song's 150 m
   c.push({ t: 'talent_active', id: 'abs_sirens_call', x: foe.state.x, y: foe.state.y });
   assert.ok(foe.seizedHelm && Math.abs(foe.seizedHelm.x - ship.state.x) < 1);
   const x0 = ship.state.x, y0 = ship.state.y;
@@ -136,7 +136,7 @@ test('Siren\'s Call turns an NPC toward you; Abyss Step: untouchable below, 200 
   ship.reload.port = 0;
   assert.match(fireBroadside(game, ship, 'port', 200)!, /black water/);
   steps(game, 20 * 3);
-  assert.ok(Math.hypot(ship.state.x - x0, ship.state.y - y0) > 150, 'she rises ahead');
+  assert.ok(Math.hypot(ship.state.x - x0, ship.state.y - y0) > 75, 'she rises ahead');
 });
 
 test('Rising Dead and Hollow Men: the fallen climb back for a while', () => {
@@ -168,7 +168,7 @@ test('Offering, Creeping Horror and Voice of the Choir', () => {
   assert.ok(abyssCooldownMul(ship) < 1);
   ship.dread = 80;
   assert.ok(abyssCooldownMul(ship) <= 0.7 * 0.9 + 1e-9, 'Voice of the Choir at 75+');
-  const foe = dummy(game, ship, 150, 0);
+  const foe = dummy(game, ship, 100, 0); // within Creeping Horror's 125 m
   foe.attackers.set(ship.id, game.now);
   ship.attackers.set(foe.id, game.now);
   const m0 = foe.morale;

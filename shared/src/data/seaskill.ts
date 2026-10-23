@@ -160,11 +160,11 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
   // ------------------------------------------------------------------------------------------------ the Black Admiral
   chain_of_command: {
     id: 'chain_of_command', captain: 'admiral', key: 'P', by: { reload: [0.08, 0.1, 0.12, 0.135, 0.15] }, pow: ['reload'], fmt: { reload: 'pct' },
-    text: ['Allied and escort ships within 500 m reload {reload} faster.', 'Союзники и эскорт в 500 м перезаряжаются на {reload} быстрее.'],
+    text: ['Allied and escort ships within 250 m reload {reload} faster.', 'Союзники и эскорт в 250 м перезаряжаются на {reload} быстрее.'],
   },
   form_line: {
     id: 'form_line', captain: 'admiral', key: 'Z', by: { spread: [0.3, 0.33, 0.35, 0.38, 0.4], reload: [0.08, 0.085, 0.09, 0.095, 0.1], dur: 15 }, pow: ['reload'], fmt: { spread: 'pct', reload: 'pct', dur: 'sec' },
-    text: ['Signal flags: she and allies within 500 m get spread −{spread} and reload −{reload} for {dur}.', 'Сигнальные флаги: ей и союзникам в 500 м разброс −{spread} и перезарядка −{reload} на {dur}.'],
+    text: ['Signal flags: she and allies within 250 m get spread −{spread} and reload −{reload} for {dur}.', 'Сигнальные флаги: ей и союзникам в 250 м разброс −{spread} и перезарядка −{reload} на {dur}.'],
     facets: {
       3: [F('Close order', 'Плотный строй', 'Spread −10% more and damage +5%.', 'Разброс ещё −10% и урон +5%.', { add: { spread: 0.1, dmg: 0.05 } }),
         F('Long signal', 'Долгий сигнал', 'The line holds 5 s longer.', 'Строй держится на 5 с дольше.', { add: { dur: 5 } })],
@@ -233,10 +233,10 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
     node: { talent: 'brd_match_speed', kind: 'power', per: 0.12 },
   },
   war_cry: {
-    id: 'war_cry', captain: 'reaver', key: 'C', by: { morale: [15, 17, 19, 22, 25], slow: [0.12, 0.15, 0.18, 0.21, 0.25], dur: [8, 9, 10, 11, 12], r: 300 }, pow: ['slow'], fmt: { morale: 'n', slow: 'pct', dur: 'sec', r: 'm' },
+    id: 'war_cry', captain: 'reaver', key: 'C', by: { morale: [15, 17, 19, 22, 25], slow: [0.12, 0.15, 0.18, 0.21, 0.25], dur: [8, 9, 10, 11, 12], r: 150 }, pow: ['slow'], fmt: { morale: 'n', slow: 'pct', dur: 'sec', r: 'm' },
     text: ['His crew roars: +20 morale. Enemy crews within {r} lose {morale} morale and, shaken, reload {slow} slower for {dur} (twice that while their morale is below 30).', 'Команда ревёт: +20 духа. Враги в {r} теряют {morale} духа и, дрогнув, заряжают на {slow} медленнее {dur} (вдвое — пока их дух ниже 30).'],
     facets: {
-      3: [F('Roar', 'Рёв', 'Heard within 450 m.', 'Слышно в 450 м.', { add: { r: 150 } }),
+      3: [F('Roar', 'Рёв', 'Heard within 225 m.', 'Слышно в 225 м.', { add: { r: 75 } }),
         F('Heart', 'Кураж', 'His own guns reload 10% faster for 6 s.', 'Его пушки 6 с заряжаются на 10% быстрее.', { add: { heart: 1 } })],
       5: [F('Break them', 'Сломить дух', 'Morale lost ×1.5.', 'Потеря духа ×1,5.', { mul: { morale: 1.5 } }),
         F('Long dread', 'Долгий страх', 'Shaken half as long again.', 'Дрожат в полтора раза дольше.', { mul: { dur: 1.5 } })],
@@ -263,9 +263,9 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
     text: ['Tar pots over the side: a smoke bank for {dur}. Incoming fire −{cut}, NPCs lose their lock; her first broadside out of it is an ambush.', 'Смоляные горшки за борт: дымовая завеса на {dur}. Входящий огонь −{cut}, НПС теряют цель; её первый залп из дыма — засада.'],
     facets: {
       3: [F('Fire from the smoke', 'Стрелять из дыма', 'Firing does not unmask her: the smoke still hides her.', 'Выстрел её не раскрывает: дым по-прежнему скрывает.', { add: { keep: 1 } }),
-        F('Acrid smoke', 'Едкий дым', 'Enemies within 150 m aim 30% worse while it lasts.', 'Враги в 150 м целятся на 30% хуже, пока он стоит.', { add: { acrid: 0.3 } })],
+        F('Acrid smoke', 'Едкий дым', 'Enemies within 75 m aim 30% worse while it lasts.', 'Враги в 75 м целятся на 30% хуже, пока он стоит.', { add: { acrid: 0.3 } })],
       5: [F('Thick smoke', 'Густой дым', 'The bank stands 3 s longer.', 'Завеса стоит на 3 с дольше.', { add: { dur: 3 } }),
-        F('Cover the convoy', 'Прикрыть своих', 'Allies within 150 m take 20% less too.', 'Союзники в 150 м тоже получают на 20% меньше.', { add: { allies: 0.2 } })],
+        F('Cover the convoy', 'Прикрыть своих', 'Allies within 75 m take 20% less too.', 'Союзники в 75 м тоже получают на 20% меньше.', { add: { allies: 0.2 } })],
     },
     node: { talent: 'smg_slip_away', kind: 'dur', per: 0.25 },
   },
@@ -294,7 +294,7 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
   },
   vanish_into_fog: {
     id: 'vanish_into_fog', captain: 'smuggler', key: 'V', by: { knife: [0.15, 0.2, 0.25, 0.3], pierce: [0.3, 0.4, 0.5, 0.6], knives: 2, speed: 0.25, dur: 20 }, pow: ['knife'], fmt: { knife: 'pct', pierce: 'pct', knives: 'n', speed: 'pct', dur: 'sec' },
-    text: ['ULTIMATE. A fog bank swallows her: invisible beyond 250 m, +{speed} speed for {dur}. Knife in the fog: her next {knives} broadsides go through {pierce} of armour, +{knife}.', 'УЛЬТА. Туман поглощает корабль: невидима дальше 250 м, +{speed} хода на {dur}. Нож в тумане: следующие {knives} залпа проходят {pierce} брони, +{knife}.'],
+    text: ['ULTIMATE. A fog bank swallows her: invisible beyond 125 m, +{speed} speed for {dur}. Knife in the fog: her next {knives} broadsides go through {pierce} of armour, +{knife}.', 'УЛЬТА. Туман поглощает корабль: невидима дальше 125 м, +{speed} хода на {dur}. Нож в тумане: следующие {knives} залпа проходят {pierce} брони, +{knife}.'],
     facets: {
       3: [F('Thick fog', 'Густой туман', '5 s longer, +10% speed.', 'На 5 с дольше, ещё +10% хода.', { add: { dur: 5, speed: 0.1 } }),
         F('Three knives', 'Три ножа', 'Three broadsides of the knife.', 'Три залпа ножа.', { add: { knives: 1 } })],
@@ -318,10 +318,10 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
     node: { talent: 'nav_quick_trim', kind: 'power', per: 0.12 },
   },
   current_rider: {
-    id: 'current_rider', captain: 'navigator', key: 'X', by: { slow: [0.1, 0.125, 0.15, 0.175, 0.2], turn: [0.15, 0.18, 0.2, 0.23, 0.25], r: 300, dur: 20 }, pow: ['slow', 'turn'], fmt: { slow: 'pct', turn: 'pct', r: 'm', dur: 'sec' },
+    id: 'current_rider', captain: 'navigator', key: 'X', by: { slow: [0.1, 0.125, 0.15, 0.175, 0.2], turn: [0.15, 0.18, 0.2, 0.23, 0.25], r: 150, dur: 20 }, pow: ['slow', 'turn'], fmt: { slow: 'pct', turn: 'pct', r: 'm', dur: 'sec' },
     text: ['Ride the stream for {dur}: currents push her 150% harder, turn +20%; enemies within {r} fight her current — way −{slow}, turn −{turn} — and give her their side.', 'Встать на струю на {dur}: течения несут на 150% сильнее, поворот +20%; враги в {r} идут против её течения — ход −{slow}, поворот −{turn} — и сами подставляют борт.'],
     facets: {
-      3: [F('Race of the tide', 'Стремнина', 'Felt within 450 m.', 'Действует в 450 м.', { add: { r: 150 } }),
+      3: [F('Race of the tide', 'Стремнина', 'Felt within 225 m.', 'Действует в 225 м.', { add: { r: 75 } }),
         F('Head sea', 'Встречная волна', 'Their turn lost ×1.5.', 'Потеря поворота ×1,5.', { mul: { turn: 1.5 } })],
       5: [F('Show me your side', 'Подставь борт', 'Her broadsides on them +8%.', 'Её залпы по ним +8%.', { add: { side: 0.08 } }),
         F('Her own stream', 'Своя струя', 'Her own speed +15%.', 'Её ход +15%.', { add: { own: 0.15 } })],
@@ -330,11 +330,11 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
   },
   star_fix: {
     id: 'star_fix', captain: 'navigator', key: 'C', by: { rake: [0.12, 0.13, 0.15, 0.17, 0.2], dur: 20 }, pow: ['rake'], fmt: { rake: 'pct', dur: 'sec' },
-    text: ['A star fix: every island within 7 km charted, and for {dur} the weak angles of enemies within 1.5 km shown — her broadsides on them rake, +{rake}.', 'Звёздный отсчёт: все острова в 7 км на карте, и {dur} видны слабые углы врагов в 1,5 км — её залпы по ним продольные, +{rake}.'],
+    text: ['A star fix: every island within 7 km charted, and for {dur} the weak angles of enemies within 750 m shown — her broadsides on them rake, +{rake}.', 'Звёздный отсчёт: все острова в 7 км на карте, и {dur} видны слабые углы врагов в 750 м — её залпы по ним продольные, +{rake}.'],
     facets: {
       3: [F('Star chart', 'Звёздная карта', '6 s longer.', 'На 6 с дольше.', { add: { dur: 6 } }),
         F('Exact fix', 'Точный отсчёт', '+8% more and range +10%.', 'Ещё +8% и дальность +10%.', { add: { rake: 0.08, range: 0.1 } })],
-      5: [F('For all', 'Для всех', 'Allies within 500 m see the angles too.', 'Союзники в 500 м тоже видят углы.', { add: { all: 1 } }),
+      5: [F('For all', 'Для всех', 'Allies within 250 m see the angles too.', 'Союзники в 250 м тоже видят углы.', { add: { all: 1 } }),
         F('Weak spot', 'Слабое место', 'The rake ×1.2, and the combo\'s critical is certain.', 'Продольный ×1,2, крит связки наверняка.', { mul: { rake: 1.2 }, add: { sure: 1 } })],
     },
     node: { talent: 'exp_star_reader', kind: 'dur', per: 0.3 },
@@ -342,7 +342,7 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
   },
   storm_chaser: {
     id: 'storm_chaser', captain: 'navigator', key: 'V', by: { speed: 0.3, q: [0.04, 0.045, 0.05, 0.055], dur: 20 }, pow: ['q'], fmt: { speed: 'pct', q: 'pct', dur: 'sec' },
-    text: ['ULTIMATE. The wind follows her: for {dur} she always sails at the best angle, +{speed} speed, and her guns load faster on the best course — as many broadsides more as {q} of a fight of her ⚓. At rank 4 allies within 500 m sail her wind.', 'УЛЬТА. Ветер следует за ней: {dur} всегда лучший курс, +{speed} хода, и на лучшем курсе пушки заряжаются быстрее — лишних залпов на {q} боя её ступени. На 4-м ранге союзники в 500 м идут её ветром.'],
+    text: ['ULTIMATE. The wind follows her: for {dur} she always sails at the best angle, +{speed} speed, and her guns load faster on the best course — as many broadsides more as {q} of a fight of her ⚓. At rank 4 allies within 250 m sail her wind.', 'УЛЬТА. Ветер следует за ней: {dur} всегда лучший курс, +{speed} хода, и на лучшем курсе пушки заряжаются быстрее — лишних залпов на {q} боя её ступени. На 4-м ранге союзники в 250 м идут её ветром.'],
     facets: {
       3: [F('Eye of the storm', 'Око бури', '5 s longer.', 'На 5 с дольше.', { add: { dur: 5 } }),
         F('Squall', 'Шквал', 'Damage +10% while it blows.', 'Урон +10%, пока дует.', { add: { dmg: 0.1 } })],
@@ -352,7 +352,7 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
   // ------------------------------------------------------------------------------------------------ the Drowned
   drowned_once: {
     id: 'drowned_once', captain: 'drowned', key: 'P', by: { shake: [0.03, 0.033, 0.036, 0.038, 0.04], wake: [30, 30, 40, 40, 40] }, pow: ['shake'], fmt: { shake: 'pct', wake: 'n' },
-    text: ['Once per 5 min, lethal damage leaves her between water and light for 12 s (−50% incoming); mend to 10% or sink. She enters every fight with {wake} Dread. Dread as a weapon: every 25 Dread costs enemies within 400 m 5 morale each 15 s, and below 30 morale they reload {shake} slower.', 'Раз в 5 мин смертельный урон оставляет её между водой и светом на 12 с (−50% входящего); залатать до 10% — или ко дну. В каждый бой она входит с {wake} Ужаса. Ужас как оружие: каждые 25 Ужаса снимают врагам в 400 м 5 духа раз в 15 с, а ниже 30 духа они заряжают на {shake} медленнее.'],
+    text: ['Once per 5 min, lethal damage leaves her between water and light for 12 s (−50% incoming); mend to 10% or sink. She enters every fight with {wake} Dread. Dread as a weapon: every 25 Dread costs enemies within 200 m 5 morale each 15 s, and below 30 morale they reload {shake} slower.', 'Раз в 5 мин смертельный урон оставляет её между водой и светом на 12 с (−50% входящего); залатать до 10% — или ко дну. В каждый бой она входит с {wake} Ужаса. Ужас как оружие: каждые 25 Ужаса снимают врагам в 200 м 5 духа раз в 15 с, а ниже 30 духа они заряжают на {shake} медленнее.'],
   },
   deep_call: {
     id: 'deep_call', captain: 'drowned', key: 'Z', by: { leak: [0.8, 0.8, 0.8, 0.8, 0.8], r: 60, dur: 6, dread: 30 }, pow: ['leak'], fmt: { leak: 'vol', r: 'm', dur: 'sec', dread: 'n' },
@@ -379,7 +379,7 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
   },
   undertow: {
     id: 'undertow', captain: 'drowned', key: 'C', by: { pull: [1, 1.1, 1.2, 1.3, 1.4], dur: 10, dread: 35 }, pow: ['pull'], fmt: { pull: 'x', dur: 'sec', dread: 'n' },
-    text: ['{dread} Dread. A 400 × 60 m race of current from her toward the point for {dur}, ×{pull}: ships with it gain way, against it lose it, a ship with no way on is dragged along.', '{dread} Ужаса. Стремнина 400 × 60 м от неё к точке на {dur}, ×{pull}: по течению — быстрее, против — медленнее, судно без хода тащит.'],
+    text: ['{dread} Dread. A 200 × 60 m race of current from her toward the point for {dur}, ×{pull}: ships with it gain way, against it lose it, a ship with no way on is dragged along.', '{dread} Ужаса. Стремнина 200 × 60 м от неё к точке на {dur}, ×{pull}: по течению — быстрее, против — медленнее, судно без хода тащит.'],
     facets: {
       3: [F('Wide race', 'Широкая стремнина', '100 m wide.', 'Шириной 100 м.', { add: { wide: 1 } }),
         F('Long race', 'Долгая стремнина', '5 s longer.', 'На 5 с дольше.', { add: { dur: 5 } })],
