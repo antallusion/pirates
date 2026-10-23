@@ -195,7 +195,9 @@ export function sidePatterns(): [string, string][] {
   }
   out.push(
     ['Old Needle will ink {0} for you in any haven of the Brethren.', 'Старая Игла набьёт вам «{0}» в любой гавани Братства.'],
-    ['Old Needle inks {0}.', 'Старая Игла набивает «{0}».'],
+    ['Old Needle will ink {0} for you in any port: Tattoos, then a place.', 'Старая Игла набьёт вам «{0}» в любом порту: «Татуировки», затем место.'],
+    ['Old Needle inks {0}.', 'Набита татуировка «{0}».'],
+    ['Tattoos are changed in port.', 'Татуировки набивают и меняют в порту.'],
     ['A new quest begins: {0}.', 'Начинается новый квест: {0}.'],
     ['Too late: {0} is lost.', 'Опоздали: «{0}» провален.'],
     ['Choose your reward.', 'Выберите награду.'],

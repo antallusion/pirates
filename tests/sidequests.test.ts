@@ -59,7 +59,7 @@ test('a chain’s quests are offered in their port in order; hidden ones never',
   for (const h of HIDDEN_QUESTS) assert.ok(!questOffers(p, game.portById(h.port)!).some((o) => o.q.id === h.id));
 });
 
-test('the last quest of a chain earns a tattoo; Old Needle inks it in a haven of the Brethren and it works on the ship', () => {
+test('the last quest of a chain earns a tattoo; Old Needle inks it in ANY port as it is set, and it works on the ship (owner, 2026-10-23)', () => {
   const { game } = makeGame();
   const { s, c } = captain(game, 'Inked Ivy');
   const p = s.profile!;
@@ -68,19 +68,34 @@ test('the last quest of a chain earns a tattoo; Old Needle inks it in a haven of
   for (let i = 0; i < 3; i++) questEvent(game, s, { k: 'named' });
   assert.ok(p.quests.done.includes('side_hunter_3'));
   assert.deepEqual(p.tattoos!.pending, ['sabres']);
-  assert.ok(c.all('toast').some((t) => t.msg.startsWith('Old Needle will ink')));
-  // A Crown port has no Old Needle.
+  assert.ok(c.all('toast').some((t) => t.msg.startsWith('Old Needle will ink') && t.msg.includes('any port')));
+  // At sea: refused, and the refusal says why.
+  ship.docked = null;
+  assert.equal(setTattoo(game, s, 0, 'sabres'), 'Tattoos are changed in port.');
+  assert.deepEqual(p.tattoos!.pending, ['sabres']);
+  // A Crown port (no haven of the Brethren): the waiting tattoo is set in place 2 and inked there.
   const crown = game.world.ports.find((x) => x.faction === 'crown')!;
   ship.docked = crown.id;
   stepTattoos(game);
-  assert.deepEqual(p.tattoos!.pending, ['sabres'], 'still waiting');
-  const haven = game.world.ports.find((x) => x.faction === 'confederacy')!;
-  ship.docked = haven.id;
-  stepTattoos(game);
+  assert.deepEqual(p.tattoos!.pending, ['sabres'], 'not inked behind her back: she chooses the place');
+  assert.equal(setTattoo(game, s, 1, 'sabres'), null);
+  assert.deepEqual(p.tattoos!.pending, []);
   assert.deepEqual(p.tattoos!.owned, ['sabres']);
-  assert.equal(p.tattoos!.active[0], 'sabres', 'into a free place at once');
+  assert.equal(p.tattoos!.active[1], 'sabres', 'in the place she chose');
   assert.ok(ship.hasEffect('tattoos'), 'its strength on the ship');
   assert.equal(c.last('tattoos')!.view.owned[0], 'sabres');
+  assert.ok(c.all('toast').some((t) => t.msg === 'Old Needle inks Crossed Sabres.'));
+  // Removed and set again (free): it stays in the collection.
+  assert.equal(setTattoo(game, s, 1, null), null);
+  assert.deepEqual(p.tattoos!.owned, ['sabres']);
+  assert.equal(setTattoo(game, s, 0, 'sabres'), null);
+  // Old Needle's own mark, waiting, opens its own place as it is inked into it.
+  (p.tattoos!.pending as string[]).push('needle');
+  assert.equal(setTattoo(game, s, 2, 'needle'), null, 'the mark set in the place it opens');
+  assert.ok(p.tattoos!.owned.includes('needle'));
+  assert.equal(setTattoo(game, s, 0, 'rose'), 'No tattoo of that kind is yours.');
+  assert.equal(setTattoo(game, s, 0, 'nonsense'), 'No tattoo of that kind is yours.');
+  assert.equal(setTattoo(game, s, 9, 'sabres'), 'That place is not yours yet.');
 });
 
 test('places: two, and one more at 15, 30 and 45, and one for Old Needle’s mark; changed only in port', () => {
@@ -94,7 +109,7 @@ test('places: two, and one more at 15, 30 and 45, and one for Old Needle’s mar
   const ship = s.ship!;
   p.tattoos = { owned: ['swallow', 'fish'], pending: [], active: [], counts: {} };
   ship.docked = null;
-  assert.equal(setTattoo(game, s, 0, 'swallow'), 'Tattoos are changed in a tavern.');
+  assert.equal(setTattoo(game, s, 0, 'swallow'), 'Tattoos are changed in port.');
   ship.docked = game.world.ports[0].id;
   assert.equal(setTattoo(game, s, 2, 'swallow'), 'That place is not yours yet.');
   assert.equal(setTattoo(game, s, 0, 'anchor'), 'No tattoo of that kind is yours.');
@@ -218,4 +233,17 @@ test('the side quests read in Russian', () => {
   assert.equal(serverText('Old Needle will ink Crossed Sabres for you in any haven of the Brethren.').replace(/\u00a0/g, ' '), 'Старая Игла набьёт вам «Скрещённые сабли» в любой гавани Братства.');
   assert.equal(serverText('A skull in the net.').replace(/\u00a0/g, ' '), 'В сети — череп.');
   setLang('en');
+});
+
+test('the tattoo window: a tap on a card goes to the chosen place, else the first empty; a place’s picker lists the waiting ones first (owner, 2026-10-23)', async () => {
+  const { tapSlot, pickChoices } = await import('../client/src/ui/tattoos.ts');
+  const v = { owned: ['swallow', 'fish'], pending: ['rose'], active: ['swallow', null, null], slots: 3 };
+  assert.equal(tapSlot(v, null), 1, 'the first empty place');
+  assert.equal(tapSlot(v, 2), 2, 'the chosen place');
+  assert.equal(tapSlot({ ...v, active: ['swallow', 'fish', 'rose'] }, null), 0, 'all full: the first');
+  assert.deepEqual(pickChoices(v, 1), ['rose', 'swallow', 'fish'], 'the Rose waiting for Old Needle is offered');
+  assert.deepEqual(pickChoices(v, 0), ['rose', 'fish'], 'not the one already in that place');
+  const src = (await import('node:fs')).readFileSync(new URL('../client/src/ui/tattoos.ts', import.meta.url), 'utf8');
+  assert.ok(/kind !== 'unknown' \? `data-tt=/.test(src), 'a waiting card is tappable and draggable (it was a dead card)');
+  assert.ok(src.includes("addEventListener('pointerdown'") && src.includes('elementFromPoint'), 'hold-and-drag with pointer events');
 });
