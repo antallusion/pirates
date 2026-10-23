@@ -65,6 +65,8 @@ export const EN = {
   protected: 'Protected — firing ends it',
   repairLull: '{key} repairs need a lull in the fighting',
   inviteWaits: '{from} asks you to sail with them — tap to answer',
+  passageTitle: 'A ship takes you on',
+  passageLine: 'To {to}, free: chapter {ch} goes on there.',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -132,4 +134,6 @@ export const RU: Record<keyof typeof EN, string> = {
   protected: 'Под защитой — выстрел её снимет',
   repairLull: '{key} для починки нужно затишье в бою',
   inviteWaits: '{from} зовёт вас идти вместе — нажмите, чтобы ответить',
+  passageTitle: 'Попутный корабль',
+  passageLine: 'Бесплатно до {to}: там продолжается глава {ch}.',
 };

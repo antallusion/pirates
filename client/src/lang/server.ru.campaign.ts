@@ -25,5 +25,4 @@ export const SERVER_RU_CAMPAIGN: Record<string, string> = {
   'Every island of the sea is on your chart already — the step is counted.': 'Все острова моря уже на вашей карте — шаг засчитан.',
   'Only a lesson of the shops can be skipped': 'Пропустить можно только урок лавок',
   'A ship waits to take you to {0}: cast off, and she takes you there.': 'Вас ждёт корабль до порта {0}: выйдите в море, и он доставит вас туда.',
-  'A ship of the story takes you to {0}: the passage is free, and the chapter goes on there.': 'Попутный корабль доставляет вас в {0}: переход бесплатный, глава продолжается там.',
 };

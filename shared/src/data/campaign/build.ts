@@ -249,12 +249,12 @@ function abyssLens(ch: ChapterSrc, size: number): number[] {
  *  chain's 3 km (CHAIN_LEG): where she ends a run and where the next one's first place lies are a little off each. */
 export const CHAPTER_LEG = 2500;
 /** A run held where the run before it was (no harbour or island near enough): allowed, a little dearer than a new place. */
-const REPEAT = 4000;
+const REPEAT = 15000;
 /** A hand-over too long to sail (a passage): as dear as this many metres more (a chapter's seas with a place near
  *  where the one before ended take it). */
 const PASSAGE_COST = 20000;
 /** A place visited in a chapter before: allowed (the chain comes first), dearer than a new one. */
-const USED = 1500;
+const USED = 50000;
 /** A run held in the seas of the chapter before (on its way from them): allowed, dearer than its own seas. */
 const OTHER_SEA = 2000;
 /** A chapter that never comes to its own sea: as dear as a long passage and more. */

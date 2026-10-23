@@ -172,7 +172,7 @@ export type ClientMsg =
   | { t: 'escort'; action: 'hire' | 'dismiss'; classId?: ShipClassId; id?: string }
   | { t: 'formation'; formation: 'line' | 'wedge' | 'ring' }
   /** `pay`: how a job is to be paid, chosen on taking it (docs/11 P6). */
-  | { t: 'quest'; action: 'accept' | 'abandon' | 'decline' | 'share' | 'skip_step' | 'here'; id: string; pay?: QuestPay }
+  | { t: 'quest'; action: 'accept' | 'abandon' | 'decline' | 'share' | 'skip_step' | 'here' | 'passage'; id: string; pay?: QuestPay }
   | { t: 'path'; to: CaptainId }
   | { t: 'oath'; oath: 'code' | 'marque' }
   | { t: 'build'; req: { classId: ShipClassId; name: string; frame: WoodId; plank: WoodId; rares: Partial<Record<RareSlot, GoodId>>; figurehead?: FigureheadId; planId?: string; master?: boolean } }
@@ -703,6 +703,9 @@ export interface CampaignView {
   active?: string;
   next: { name: string; gate: number; ch: number; k: number; size: number }[];
   picks: Record<string, 'a' | 'b'>;
+  /** A passage due (server campaign.ts): a ship of the story takes her to this place — the client asks for it once she
+   *  is at sea with no window open and no fight (owner, 2026-10-23: never mid-dialog nor in a fight). */
+  passage?: { to: string };
 }
 
 export interface PrivateState {
@@ -1941,6 +1944,8 @@ export type ServerMsg =
    *  may take it or leave it. */
   /** docs/36: the campaign's next quest has come (a toast and a short card), or its fork's two ways to choose. */
   | { t: 'campaign_new'; id: string; name: string; ch: number; k: number; size: number; text: string; choice?: { id: string; name: string; label: string; text: string }[] }
+  /** A passage taken (campaign.ts campaignPassage): where to, the chapter, and the quest whose next step she faces. */
+  | { t: 'passage'; to: string; ch: number; quest: string | null }
   | { t: 'quest_offer'; offer: PortView['questOffers'][number]; island?: number; from?: string }
   /** A quest done: its name and all it paid (docs/11 P6). */
   | { t: 'quest_done'; name: string; silver: number; xp: number; /** done within the speed window */ fast?: boolean; /** groupmates in company (each a tenth more) */ company?: number; rep?: { faction: FactionId; n: number }; extra?: 'map' | 'supplies';

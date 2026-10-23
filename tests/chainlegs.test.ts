@@ -57,17 +57,22 @@ test('a port’s letters and cargoes go to harbours within 3 km on the sea route
 });
 
 test('a passage: a chapter that must begin far off — a ship takes her there, free, once at sea (in port: once she casts off)', async () => {
-  const { campaignOf, campaignPassage, passageDue } = await import('../server/src/game/campaign.ts');
+  const { campaignOf, campaignPassage, passageDue, campaignView, campaignNext } = await import('../server/src/game/campaign.ts');
+  const { stepPlace } = await import('../shared/src/data/questlegs.ts');
+  const { QUESTS_BY_ID } = await import('../shared/src/data/quests.ts');
   const { join } = await import('./helpers.ts');
   const { game } = makeGame();
-  join(game, 'Passenger');
+  const conn = join(game, 'Passenger');
   const s = game.sessionByName('Passenger')!, ship = s.ship!;
   const c = campaignOf(game);
   const loc = c.locations.find((l) => l.passage && l.i > 0)!;
   assert.ok(loc, 'a passage in the campaign');
   s.profile!.campaign!.at = loc.from;
   s.profile!.quests.active = [];
+  s.profile!.level = 60;
+  campaignNext(game, s);
   assert.ok(passageDue(game, s.profile!));
+  assert.equal(campaignView(game, s.profile!).passage?.to, loc.name, 'her client is told: it asks once nothing is open');
   // in port: it waits
   assert.ok(ship.docked);
   assert.equal(campaignPassage(game, s, true), false);
@@ -75,7 +80,25 @@ test('a passage: a chapter that must begin far off — a ship takes her there, f
   game.undock(s);
   ship.state.x = loc.x + 20000;
   ship.state.y = loc.y;
-  assert.equal(campaignPassage(game, s), true);
+  // a fight on: not now
+  ship.lastCombat = game.now;
+  assert.equal(campaignPassage(game, s), false, 'never in a fight');
+  ship.lastCombat = -1e9;
+  game.now += 60;
+  conn.push({ t: 'quest', action: 'passage', id: '' });
+  assert.equal(passageDue(game, s.profile!), null, 'taken at her client’s word');
+  const card = conn.last('passage');
+  assert.equal(card?.to, loc.name, 'one card: where');
+  assert.equal(card?.ch, loc.ch, 'and why: the chapter');
+  // her head to the next step
+  const qs = s.profile!.quests.active.find((a) => QUESTS_BY_ID[a.id]?.kind === 'campaign');
+  const st = qs ? QUESTS_BY_ID[qs.id].steps[qs.step] : undefined;
+  const to = st ? stepPlace(game.world, st) : null;
+  if (to && Math.hypot(to.x - ship.state.x, to.y - ship.state.y) > to.r + 20) {
+    const want = Math.atan2(to.x - ship.state.x, -(to.y - ship.state.y));
+    assert.ok(Math.abs(Math.atan2(Math.sin(want - ship.state.heading), Math.cos(want - ship.state.heading))) < 0.05, 'facing the next step');
+    assert.equal(card?.quest, qs!.id);
+  }
   assert.ok(Math.hypot(ship.state.x - loc.x, ship.state.y - loc.y) < (loc.kind === 'isle' ? game.world.islands[loc.id as number].radius + 800 : 800), 'off its place');
   assert.equal(passageDue(game, s.profile!), null, 'once');
   assert.equal(campaignPassage(game, s), false);
