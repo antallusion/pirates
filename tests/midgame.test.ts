@@ -387,3 +387,10 @@ test('a ship striking to the sea’s own pirates is no toast for every captain a
   struck(game, m2, game.npcs.get(m2.id)!, s.ship!);
   assert.ok(c.all('toast').slice(before).some((t) => /strikes her colours!/.test(t.msg)), 'her captor told');
 });
+
+test('the claim card’s «free islands near» rows: the name its whole width, not the 40 px picture column («Колдп/ойнт»)', () => {
+  const company = src('client/src/ui/company.ts');
+  const css = src('client/styles.css');
+  assert.match(company, /<div class="item-row est-near"><div class="item-text">/, 'the row marked as one with no picture');
+  assert.match(css, /\.item-row\.est-near \{ grid-template-columns: minmax\(0, 1fr\) auto; \}/);
+});
