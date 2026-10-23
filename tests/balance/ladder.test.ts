@@ -28,11 +28,7 @@ test('a level up: a perfect captain wins now and then, an average one hardly eve
   // (Three times the fights this test used to fight, the same share asked: 9 of 48 before docs/24 B3 and 11 after
   // sat on the edge of «10 at most»; of these 144, 22 before and 16 after.)
   for (const [cls, lv] of [['sloop', 1], ['brig', 5], ['frigate', 7]] as const) perf += winRate(game, { cls, level: lv, craft: 'perfect' }, { cls, level: lv + 1, craft: 'bot' }, 48, 100).wins;
-  // (2026-10-22, the reaches halved — the guns 100–250 m, the sea's own firing from 150 m: at a hundred metres nearly
-  // every ball strikes, whoever lays it, and a perfect captain's craft tells less against a hull a level up. 6 and 13 of
-  // these 144 before; 1–4 after, the bots' craft retuned for it (shiplevel.ts npcSkill). Still «now and then», never
-  // most.)
-  assert.ok(perf >= 1 && perf <= 30, `perfect a level up: ${perf}/144`);
+  assert.ok(perf >= 3 && perf <= 30, `perfect a level up: ${perf}/144`);
   const avg = winRate(game, { cls: 'brig', level: 5, craft: 'average' }, { cls: 'brig', level: 6, craft: 'bot' }, 16, 100);
   assert.ok(avg.wins <= 2, `average a level up: ${avg.wins}/16`);
   const two = winRate(game, { cls: 'brig', level: 5, craft: 'perfect' }, { cls: 'brig', level: 7, craft: 'bot' }, 16, 100);
