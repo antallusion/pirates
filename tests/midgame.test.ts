@@ -259,6 +259,8 @@ test('a landing’s haul with a price in it reads in Russian («1 Provisions, pa
     const t = serverText('The party returns from the fishing hamlet on Gallowswick Rock: 1 Provisions, paid 34 silver.');
     assert.doesNotMatch(t, /[A-Za-z]{3,}/, t);
     assert.match(t, /заплачено 34/, t);
+    const fort = serverText('The party returns from the garrisoned fort on Lowmere: shot for the guns, paid 120 silver.');
+    assert.doesNotMatch(fort, /[A-Za-z]{3,}/, fort);
   } finally { setLang('en'); applyDataLocale('en'); }
 });
 
