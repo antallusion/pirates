@@ -52,6 +52,8 @@ import { seasonStat } from './seasons.ts';
 import { grantMap, makeMap } from './explorefx.ts';
 import type { ShipEntity } from './ship.ts';
 import { canMakeRoom, pickupAdvice } from './buyfail.ts';
+import { questAct } from '../../../shared/src/data/questact.ts'; // owner, 2026-10-23: every in-port step has its button
+import { customsSearch } from './smugglefx.ts';
 import { admiraltyById, isAdmId } from '../../../shared/src/data/admiralty.ts'; // docs/19 E15
 import { contractDone } from './admiralty.ts';
 import { campaignDone, campaignTick } from './campaign.ts'; // docs/36, the main campaign
@@ -268,7 +270,7 @@ export type QuestEvent =
   | { k: 'rescue'; n: number }
   /** `fresh`: the quest was taken (or came) while she lay in this port — a step that asks her to arrive here is not done by
    *  it (owner's QA, 2026-10-18: a campaign quest was done the instant it came, its port the one she stood in). */
-  | { k: 'dock'; port: Port; fresh?: boolean }
+  | { k: 'dock'; port: Port; fresh?: boolean; /** her own button in port (questHere): this quest's step only */ only?: string }
   | { k: 'land'; island: number; feature: string }
   /** docs/18 #23: a lair of the land's creatures beaten. */
   | { k: 'lair'; island: number; kind: string }
@@ -630,8 +632,9 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   const p = s.profile;
   const ship = s.ship;
   if (!p || !ship) return;
-  // The day's orders and the sea's common cause move on with the same deeds.
-  if (ev.k === 'dock' && !ev.fresh) {
+  // The day's orders and the sea's common cause move on with the same deeds (not a button pressed in port: questHere).
+  const only = ev.k === 'dock' ? ev.only : undefined;
+  if (ev.k === 'dock' && !ev.fresh && !only) {
     newsHint(game, s, 'daily');
     // A captain of some years, putting in alone: the sea's company (docs/11 P6).
     if (p.level >= 3 && !groupOfAccount(game, s.accountId)) newsHint(game, s, 'social');
@@ -644,9 +647,11 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
     campaignTick(game, s); // docs/36: the campaign's fight comes to her
     localTick(game, s); // a port's quest: its quarry about its port (owner, 2026-10-18)
   }
-  dailyEvent(game, s, ev);
-  commonEvent(game, s, ev);
-  guildGoalEvent(game, s, ev);
+  if (!only) {
+    dailyEvent(game, s, ev);
+    commonEvent(game, s, ev);
+    guildGoalEvent(game, s, ev);
+  }
   if (ev.k === 'sink') {
     taskEvent(game, s, ev.victim);
     eliteSunk(game, ev.victim, s);
@@ -675,7 +680,7 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   const named = (qs: { id: string; step: number }) => (ev.k === 'lair' && (QUESTS_BY_ID[qs.id]?.steps[qs.step] as { island?: number } | undefined)?.island === ev.island ? 1 : 0);
   for (const qs of [...p.quests.active].sort((a, b) => named(b) - named(a))) {
     const q = QUESTS_BY_ID[qs.id];
-    if (!q) continue;
+    if (!q || (only && qs.id !== only)) continue;
     // Several steps may fall in one go (arriving somewhere with the goods already aboard).
     for (let guard = 0; guard < 4; guard++) {
       const st = q.steps[qs.step];
@@ -698,6 +703,7 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
         break;
       }
       game.sendTo(s, { t: 'toast', msg: `${q.name}: ${q.steps[qs.step].text}`, kind: 'info' });
+      if (only) break; // one press, one step: the next one shows its own button
       if (ev.k !== 'dock' && !ship.docked) break;
       // Docked: a next step that asks for this port can be done now.
       if (ev.k !== 'dock' && ship.docked) {
@@ -707,6 +713,44 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
       }
     }
   }
+}
+
+/**
+ * A step done by her own button in port (owner, 2026-10-23: «я все кнопки нажал и нету сдачи нигде» — the campaign's
+ * «расспросите на причалах» came while she lay in that very port, and a step that asks her to arrive waited for her to
+ * put in again, with nothing to press). `questAct` (shared/src/data/questact.ts) says which steps; this does them: a
+ * visit is counted, a cargo handed over or taken on (the hold checked), a race's finish, a customs search. Every refusal
+ * says why.
+ */
+export function questHere(game: Game, s: PlayerSession, id: string): string | null {
+  const p = s.profile;
+  const ship = s.ship;
+  const qs = p?.quests.active.find((a) => a.id === id);
+  const q = QUESTS_BY_ID[id];
+  if (!p || !ship || !qs || !q) return 'Not under way';
+  const st = q.steps[qs.step];
+  const act = questAct(st);
+  if (!st || !act || act.how !== 'here') return 'This step is not done in port: «Sail» takes you to it.';
+  const port = ship.docked ? game.portById(ship.docked) : undefined;
+  if (!port) return act.port ? `Put in at ${game.portById(act.port)?.name ?? act.port} first.` : 'Put in at a harbour first.';
+  if (act.port && act.port !== port.id) return `That is done at ${game.portById(act.port)?.name ?? act.port}: «Sail» takes you there.`;
+  const before = `${qs.step}:${qs.progress}`;
+  if (st.type === 'customs') {
+    if (!FACTIONS[port.faction].lawful) return 'No customs in this harbour: put in at a lawful one.';
+    if (!Object.keys(ship.cargo).some((g) => GOODS[g as GoodId].contraband && (ship.cargo[g as GoodId] ?? 0) > 0)) return 'Take contraband aboard first: the step wants it past an inspection.';
+    const seized = customsSearch(game, s, port);
+    if (seized.length) {
+      game.toastShip(ship, `Customs seized ${seized.join(', ')}.`, 'bad');
+      return null;
+    }
+    questEvent(game, s, { k: 'customs' });
+  } else {
+    questEvent(game, s, { k: 'dock', port, only: id });
+  }
+  const still = p.quests.active.find((a) => a.id === id);
+  // (a cargo short or no room in the hold: its own toast already says what is wanted)
+  if (still && `${still.step}:${still.progress}` === before && st.type === 'visit') return 'Nothing to be done here yet.';
+  return null;
 }
 
 /** «Пропустить шаг» (owner, 2026-10-21: «скипнуть этот шаг нельзя»): the last resort of the opening's lessons of the

@@ -66,7 +66,7 @@ import { dwellCard, tamerCard } from './recruit.ts';
 import { surgeonCard } from './waystation.ts'; // docs/35
 import { FLAGS_TAB, bindColours, coloursCard } from './flags.ts';
 import { admiraltyBoard, bindContracts } from './contracts.ts'; // docs/19 E15
-import { boardHtml, boardItems, boardSwitches } from './board.ts'; // the port's «Задания» (owner, 2026-10-16)
+import { boardHtml, boardItems, boardSwitches, hereQuests } from './board.ts'; // the port's «Задания» (owner, 2026-10-16)
 import type { BoardChip } from './board.ts';
 import { weeklyLog } from './renown.ts';
 import { worldGoalsLog } from './social.ts';
@@ -191,6 +191,18 @@ export class PortScreen {
 
   private lastHtml = '';
 
+  /** A page of the window by its id (a quest step's «В лавку», «На рынок», «Нанять»); the dwellings' page, when this
+   *  harbour has none, falls back to the tavern's hands. */
+  showTab(id: string, root: HTMLElement | null, state: ClientState): void {
+    const view = state.portView;
+    const port = view ? state.ports.find((p) => p.id === view.portId) : undefined;
+    this.tab = (id === 'army' && port && !(dwellCard(port) || tamerCard(port)) ? 'tavern' : id) as Tab;
+    if (root) {
+      this.render(root, state);
+      root.querySelector<HTMLElement>('.port-body')?.scrollTo({ top: 0 });
+    }
+  }
+
   render(root: HTMLElement, state: ClientState): void {
     const view = state.portView;
     const self = state.self;
@@ -208,7 +220,7 @@ export class PortScreen {
       { id: 'market', icon: TAB_ICON.market, label: W('port.market'), hint: W('port.marketHint') },
       { id: 'shipyard', icon: TAB_ICON.shipyard, label: W('port.yard'), hint: W('port.yardHint'), badge: yardBadge },
       { id: 'tavern', icon: TAB_ICON.tavern, label: W('port.tavern'), hint: W('port.tavernHint'), badge: crewShort },
-      { id: 'quests', icon: TAB_ICON.quests, label: W('port.quests'), hint: W('port.questsHint'), badge: boardItems(view, state).filter((x) => !x.taken && !x.blocked).length },
+      { id: 'quests', icon: TAB_ICON.quests, label: W('port.quests'), hint: W('port.questsHint'), badge: boardItems(view, state).filter((x) => !x.taken && !x.blocked).length + hereQuests(state).length },
       { id: 'sea', icon: 'stat_sails', label: W('port.sea'), hint: W('port.seaHint'), primary: true },
     ];
     const tv = view.tavern;
@@ -232,7 +244,8 @@ export class PortScreen {
     // A new harbour opens on its market (the one-tap bar); the same harbour keeps the place she left it on.
     if (view.portId !== this.lastPort) {
       this.lastPort = view.portId;
-      this.tab = 'market';
+      // (a quest step done here by its own button: the harbour opens on «Задания», where it stands first — owner, 2026-10-23)
+      this.tab = hereQuests(state).some((q) => q.act?.how === 'here') ? 'quests' : 'market';
     }
     if (!main.some((t) => t.id === this.tab) && !second.some((t) => t.id === this.tab)) this.tab = 'market';
     // The harbour's own painting behind the band (a town's own where the manifest has it, else her flag's).
@@ -337,6 +350,13 @@ export class PortScreen {
         return;
       case 'goal':
         if (d.key) this.onGoal?.(d.key);
+        return;
+      // owner, 2026-10-23: a quest step done here, by its own button (questact.ts)
+      case 'quest_here':
+        if (d.id) this.send({ t: 'quest', action: 'here', id: d.id });
+        return;
+      case 'quest_tab':
+        this.showTab(d.tab ?? 'market', root, state);
         return;
       case 'buyn':
         return this.send({ t: 'trade', good: d.good as never, qty: Number(d.n) });

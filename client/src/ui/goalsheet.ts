@@ -19,13 +19,17 @@ import { EN, RU } from '../lang/ui/goalsheet.ts';
 import { cmpText, serverText } from '../lang/server.ts';
 import { esc, icon, money } from './dom.ts';
 import { classWord, questClass } from './questclass.ts';
+import type { QuestAct } from '../../../shared/src/data/questact.ts';
+import { actButton, hereAct } from './questact.ts'; // owner, 2026-10-23: a step done in this port has its own button
 import type { QuestClass } from './questclass.ts';
 
 const L = dict(EN, RU);
 
 /** What the sheet reads of the captain (PrivateState's part, or a test's). */
 export interface GoalSelf {
-  quests: { id: string; name: string; kind: QuestKind; step: number; steps: number; text: string; progress: number; need: number }[];
+  quests: { id: string; name: string; kind: QuestKind; step: number; steps: number; text: string; progress: number; need: number; act?: QuestAct }[];
+  /** The port she lies in (a step done there shows its verb instead of «Плыть»). */
+  dockedAt?: string | null;
   contracts?: { id: string; kind: 'delivery' | 'bounty' | 'courier'; title: string; toPort?: string; good?: string; kills?: number; progress?: number; reward: number; expiresAt: number }[];
   daily?: { orders: { kind: DailyKind; need: number; progress: number; done: boolean; silver: number }[]; streak: number; chest: boolean; chestSilver: number };
   campaign?: CampaignView;
@@ -51,6 +55,8 @@ export interface GoalLine {
   toPort?: string;
   good?: string;
   bounty?: boolean;
+  /** A quest's step done in the port she lies in: its verb button instead of «Плыть». */
+  here?: QuestAct;
 }
 
 /** The campaign's block: the quest under way, or the ways to take now, and where she stands in it. */
@@ -81,7 +87,7 @@ export interface GoalSheetView {
 /** The sheet's lines: the campaign first, then the quests and contracts taken, then the day's orders. */
 export function goalSheetView(self: GoalSelf | null | undefined): GoalSheetView {
   const quests = self?.quests ?? [];
-  const line = (q: GoalSelf['quests'][number]): GoalLine => ({ key: `q:${q.id}`, kind: questClass(q), qkind: q.kind, title: q.name, text: q.text, step: q.step, steps: q.steps, progress: q.progress, need: q.need, done: false });
+  const line = (q: GoalSelf['quests'][number]): GoalLine => ({ key: `q:${q.id}`, kind: questClass(q), qkind: q.kind, title: q.name, text: q.text, step: q.step, steps: q.steps, progress: q.progress, need: q.need, done: false, ...((a) => (a ? { here: a } : {}))(hereAct(q, self?.dockedAt)) });
   const c = self?.campaign;
   const mine = quests.find((q) => questClass(q) === 'campaign');
   const campaign: CampaignBlock | null = c
@@ -132,7 +138,7 @@ function row(x: GoalLine, portName: (id: string) => string, where = ''): string 
   }
   const tag = x.kind === 'daily' ? '' : `<em class="gs-kind gs-k-${x.kind}">${esc(classWord(x.kind))}</em>`;
   const pay = `<span class="gs-pay">${x.silver ? money(x.silver) : ''}</span>`;
-  const sail = x.done ? '<span class="gs-done" aria-hidden="true">✓</span>' : sailBtn(x.key);
+  const sail = x.done ? '<span class="gs-done" aria-hidden="true">✓</span>' : x.here ? actButton(x.key.slice(2), x.here, 'btn btn-small btn-primary gs-sail') : sailBtn(x.key);
   return `<div class="gs-row gs-${x.kind}${x.done ? ' done' : ''}" data-gkey="${esc(x.key)}">${icon(art, '◆', 'gs-ico')}<span class="gs-t"><b>${tag}${esc(title)}</b><small>${esc(sub)}</small>${bar(x.progress, x.need, x.done)}</span>${pay}${sail}</div>`;
 }
 

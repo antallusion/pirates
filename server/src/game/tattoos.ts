@@ -1,6 +1,8 @@
 // Tattoos and the side quests' rewards (docs/12 P9). A deed done at sea, or the last quest of a chain, earns a
-// tattoo; Old Needle inks it in any haven of the Brethren; a captain wears two at first, one more at levels 15, 30
-// and 45 (and one for Old Needle's own mark), and changes them in any tavern. Hidden quests begin with a deed. A
+// tattoo; Old Needle inks it in any port as she sets it in its place (owner, 2026-10-23: «в любом порту должно
+// работать» — once only in the Brethren's havens, and a tattoo waiting for her could not be tapped at all); a captain
+// wears two at first, one more at levels 15, 30 and 45 (and one for Old Needle's own mark), and changes them in any
+// port, free of charge. Hidden quests begin with a deed. A
 // chain's quests end with a choice of three pieces of gear.
 
 import { unlockDeed } from './looks.ts';
@@ -34,7 +36,7 @@ export function sanitizeTattoos(p: Profile): TattooProfile {
   return t;
 }
 
-/** A tattoo earned: it waits for Old Needle in a haven of the Brethren. */
+/** A tattoo earned: it waits for Old Needle, who inks it in any port. */
 export function earnTattoo(game: Game, s: PlayerSession, id: string): void {
   const p = s.profile;
   const def = TATTOO_BY_ID[id];
@@ -42,7 +44,7 @@ export function earnTattoo(game: Game, s: PlayerSession, id: string): void {
   const t = sanitizeTattoos(p);
   if (t.owned.includes(id) || t.pending.includes(id)) return;
   t.pending.push(id);
-  game.sendTo(s, { t: 'toast', msg: `Old Needle will ink ${def.name[0]} for you in any haven of the Brethren.`, kind: 'gold' });
+  game.sendTo(s, { t: 'toast', msg: `Old Needle will ink ${def.name[0]} for you in any port: Tattoos, then a place.`, kind: 'gold' });
   sendTattoos(game, s);
 }
 
@@ -71,18 +73,27 @@ export function applyTattoos(ship: ShipEntity, p: Profile, now: number): void {
   ship.recompute(now);
 }
 
+/** A tattoo set in a place (or the place emptied, id null) — in any port. One waiting for Old Needle is inked as it
+ *  is set. Removing or changing one costs nothing; a removed tattoo stays in the collection. Every refusal says why. */
 export function setTattoo(game: Game, s: PlayerSession, slot: number, id: string | null): string | null {
   const p = s.profile!;
   const t = sanitizeTattoos(p);
-  if (!s.ship?.docked) return 'Tattoos are changed in a tavern.';
-  const slots = tattooSlots(p.level, t.owned);
-  if (slot < 0 || slot >= slots) return 'That place is not yours yet.';
-  if (id !== null && !t.owned.includes(id)) return 'No tattoo of that kind is yours.';
+  if (!s.ship?.docked) return 'Tattoos are changed in port.';
+  if (id !== null && !TATTOO_BY_ID[id]) return 'No tattoo of that kind is yours.';
+  const inking = id !== null && !t.owned.includes(id) && t.pending.includes(id);
+  if (id !== null && !t.owned.includes(id) && !inking) return 'No tattoo of that kind is yours.';
+  // Old Needle's own mark opens a place of its own: count it as inked when it is the one being set.
+  const slots = tattooSlots(p.level, inking && id === 'needle' ? [...t.owned, id] : t.owned);
+  if (!Number.isInteger(slot) || slot < 0 || slot >= slots) return 'That place is not yours yet.';
+  if (inking) {
+    t.pending = t.pending.filter((x) => x !== id);
+    t.owned.push(id!);
+  }
   while (t.active.length < slots) t.active.push(null);
   if (id !== null) for (let i = 0; i < t.active.length; i++) if (t.active[i] === id) t.active[i] = null;
   t.active[slot] = id;
   applyTattoos(s.ship!, p, game.now);
-  if (id) game.sendTo(s, { t: 'toast', msg: `${TATTOO_BY_ID[id].name[0]} is set in its place.`, kind: 'good' });
+  if (id) game.sendTo(s, { t: 'toast', msg: inking ? `Old Needle inks ${TATTOO_BY_ID[id].name[0]}.` : `${TATTOO_BY_ID[id].name[0]} is set in its place.`, kind: inking ? 'gold' : 'good' });
   sendTattoos(game, s);
   return null;
 }
@@ -129,7 +140,7 @@ function checkTriggers(game: Game, s: PlayerSession): void {
   }
 }
 
-/** Every five seconds: Old Needle's work in the havens, the tattoos kept on the ship, the long deeds counted. */
+/** Every five seconds: the tattoos kept on the ship, the long deeds counted. */
 export function stepTattoos(game: Game): void {
   for (const s of game.sessions) {
     const p = s.profile, ship = s.ship;
@@ -141,22 +152,6 @@ export function stepTattoos(game: Game): void {
       if (ship.state.y > 84000) t.counts.south = 1;
       if (ship.region === 'the_abyss') t.counts.abyss = 1;
       if (game.worldEvents.active(game).some((e) => e.kind === 'storm_century' && e.region === ship.region)) t.counts.storm = 1;
-    }
-    // Old Needle in a haven of the Brethren.
-    const port = ship.docked ? game.portById(ship.docked) : undefined;
-    if (port?.faction === 'confederacy' && t.pending.length) {
-      for (const id of t.pending) {
-        t.owned.push(id);
-        game.sendTo(s, { t: 'toast', msg: `Old Needle inks ${TATTOO_BY_ID[id].name[0]}.`, kind: 'gold' });
-        // Into a free place at once.
-        const slots = tattooSlots(p.level, t.owned);
-        while (t.active.length < slots) t.active.push(null);
-        const free = t.active.findIndex((x) => x === null);
-        if (free >= 0 && free < slots) t.active[free] = id;
-      }
-      t.pending = [];
-      applyTattoos(ship, p, game.now);
-      sendTattoos(game, s);
     }
     // The tattoos' strength is kept on whatever ship she sails.
     if (t.active.some(Boolean) && !ship.hasEffect('tattoos')) applyTattoos(ship, p, game.now);

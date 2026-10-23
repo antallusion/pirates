@@ -75,9 +75,22 @@ export function pointerTargets(f: PointerFacts): string[] {
   return out;
 }
 
+/** A quest step done in the port she lies in (owner, 2026-10-23: «должны прям показывать куда нажать в порту»): stage
+ *  `h:<quest id>:<page>` — its own button wherever it is drawn (the port's «Задания», the journal, «Цели и вести»), else
+ *  the port window's page it stands on, else the HUD's way into the port window. */
+export function hereTargets(f: PointerFacts, id: string, tab: string): string[] {
+  if (!f.docked) return [];
+  const q = id.replace(/[^a-z0-9_]/gi, '');
+  return [`[data-act="quest_here"][data-id="${q}"]`, `[data-act="quest_tab"][data-id="${q}"]`, ...(tab ? [`#modal-panel [data-ptab="${tab}"]`] : []), '#modal-panel [data-ptab="quests"]', ...TO_PORT];
+}
+
 function targetsOf(f: PointerFacts): string[] {
   if (!f.stage || f.battle) return [];
   if (f.stage.startsWith('c:')) return openingTargets(f, f.stage.slice(2));
+  if (f.stage.startsWith('h:')) {
+    const [, id, tab] = f.stage.split(':');
+    return hereTargets(f, id ?? '', tab ?? '');
+  }
   switch (f.stage) {
     case 'sail':
       // In port: the harbour's gold «В море» on its rail (docs/23 phase 6; the old «Поднять паруса» is gone — the finger

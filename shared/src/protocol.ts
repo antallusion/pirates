@@ -71,6 +71,7 @@ import type { CosClientMsg, CosServerMsg } from './cosproto.ts'; // docs/32 §12
 import type { IsleType } from './world/archipelago.ts';
 import type { CommonKind } from './data/commongoal.ts';
 import type { InvasionView } from './data/invasions.ts';
+import type { QuestAct } from './data/questact.ts';
 import type { QuestPay } from './data/questpay.ts';
 import type { TaskView } from './data/worldtasks.ts';
 import type { GuildGoalKind } from './data/guildgoal.ts';
@@ -171,7 +172,7 @@ export type ClientMsg =
   | { t: 'escort'; action: 'hire' | 'dismiss'; classId?: ShipClassId; id?: string }
   | { t: 'formation'; formation: 'line' | 'wedge' | 'ring' }
   /** `pay`: how a job is to be paid, chosen on taking it (docs/11 P6). */
-  | { t: 'quest'; action: 'accept' | 'abandon' | 'decline' | 'share' | 'skip_step'; id: string; pay?: QuestPay }
+  | { t: 'quest'; action: 'accept' | 'abandon' | 'decline' | 'share' | 'skip_step' | 'here'; id: string; pay?: QuestPay }
   | { t: 'path'; to: CaptainId }
   | { t: 'oath'; oath: 'code' | 'marque' }
   | { t: 'build'; req: { classId: ShipClassId; name: string; frame: WoodId; plank: WoodId; rares: Partial<Record<RareSlot, GoodId>>; figurehead?: FigureheadId; planId?: string; master?: boolean } }
@@ -773,7 +774,8 @@ export interface PrivateState {
     /** seconds left to earn the speed bonus */ fastIn?: number;
     /** The pay chosen on taking it, when not all in silver, and what it comes to. */ pay?: QuestPay; paid?: { silver: number; heavy: number; incendiary: number; rep: number };
     /** Groupmates on the same quest (docs/11 P6), and the step each is on. */ mates?: { name: string; step: number }[];
-    /** The campaign's opening (owner, 2026-10-19): the step the guide points through — `buy:<shop>`, `sink`, `board`, `neutral`, `found`. */ op?: string }[];
+    /** The campaign's opening (owner, 2026-10-19): the step the guide points through — `buy:<shop>`, `sink`, `board`, `neutral`, `found`. */ op?: string;
+    /** owner, 2026-10-23: the step's action in port (shared/src/data/questact.ts) — its button once she lies in the right harbour. */ act?: QuestAct }[];
   questsDone: string[];
   /** docs/36: her place in the main campaign. */
   campaign?: CampaignView;

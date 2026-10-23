@@ -129,6 +129,7 @@ import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { TutorPointer } from './ui/pointer.ts';
+import { hereAct } from './ui/questact.ts'; // owner, 2026-10-23: a quest step done in this port
 import { buzz, guardVibrate } from './haptics.ts';
 import { cue, setCuePlayer } from './sfx.ts'; // the sound pass (owner, 2026-10-16): the cues the UI asks for
 import { filmDue, loadFilms, playFilm, setFilmGate } from './ui/cutscene.ts';
@@ -261,6 +262,7 @@ worldMap.onAutosail = (wp) => {
 };
 // ux2: «Плыть» on a quest of the journal or the chart — the course to its place and on through its steps.
 journal.onSail = (key) => startGoal(key);
+journal.onPortTab = (tab) => { if (!state.portView) return; portScreen.showTab(tab, null, state); openModal('port'); }; // owner, 2026-10-23: a quest step's shop or table
 worldMap.onGoal = (key) => startGoal(key);
 // The fog of war's scouts (owner, 2026-10-17): «Выбрать на карте» on the shipyard's card opens the chart to take a tap
 // on the fog; the tap sends her and the chart closes back onto the island.
@@ -980,6 +982,8 @@ const seaHud = new SeaHud($('touch'), {
     portName: (id) => placeName(state.ports.find((p) => p.id === id)?.name ?? id),
     go: (key) => startGoal(key),
     take: (id) => net.send({ t: 'quest', action: 'accept', id }), // docs/36: the campaign's quest, taken anywhere
+    here: (id) => net.send({ t: 'quest', action: 'here', id }), // owner, 2026-10-23: «Расспросить» and the rest, in port
+    tab: (tab) => journal.onPortTab(tab),
   },
   fire: () => seaFire(),
   fireOptions: () => fireWheel(),
@@ -1082,6 +1086,15 @@ function openingSail(): { key: string; name: string } | null {
   const key = `q:${q.id}`;
   if (state.autosail || (goalRun?.key === key && state.route?.key === key)) return null;
   return { key, name: sv(q.name) };
+}
+/** A quest step done in this very port (owner, 2026-10-23): the finger's stage `h:<id>:<page>` — the campaign's first,
+ *  a step done by its own button before one done on a page. Null at sea or with nothing to do here. */
+function hereFrame(): string | null {
+  const docked = state.self?.dockedAt;
+  if (!docked || state.onboarding?.stage) return null;
+  const qs = [...(state.self?.quests ?? [])].filter((q) => hereAct(q, docked)).sort((a, b) => Number(b.kind === 'campaign') - Number(a.kind === 'campaign') || Number(b.act?.how === 'here') - Number(a.act?.how === 'here'));
+  const q = qs[0];
+  return q ? `h:${q.id}:${q.act?.how === 'tab' ? q.act.tab ?? '' : ''}` : null;
 }
 /** A good to trade at this market for the opening's lesson: the first in stock that is not a supply nor contraband. */
 function tradeGoodHere(): string | null {
@@ -1284,6 +1297,8 @@ loadAssets(['ui.helm', 'ui.loader_wheel', ...Object.values(CURSOR_ART)]).then(()
 /** The game's films at their moments (ui/cutscene.ts): the first boarding (a lair's fight ashore), the first win and
  *  loss, the first harbour, the first storm — each shown once. */
 const filmWas = { over: false, docked: true, atQuay: false, bosses: '', landing: true };
+/** The islands whose landing had its film this session (one island, one film). */
+const filmIsles = new Set<number>();
 /** A landing's film by what the party goes ashore for: a buried chest, a named pirate's lair, an island; none for a
  *  haul, a dive or the shallows. */
 const LANDING_FILM: Record<string, string | null> = { dig: 'cut_treasure', pirate_camp: 'cut_fort', lookout: 'cut_lighthouse', dive: 'cut_wreck_dive', haul: null, tidal: null, turtle: null };
@@ -1431,9 +1446,18 @@ function filmMoments(): void {
     const film = landing.feature in LANDING_FILM ? LANDING_FILM[landing.feature] : 'cut_landing';
     const y = state.you;
     let isle: string | null = null;
-    if (y) for (const is of state.islands.values()) if (Math.hypot(is.x - y.x, is.y - y.y) < is.r + 900 && filmDue(`cut_isle_${is.biome}`)) isle = `cut_isle_${is.biome}`;
-    if (film && filmDue(film)) playFilm(film);
-    else if (isle) playFilm(isle);
+    let at: number | null = null;
+    if (y) for (const is of state.islands.values()) if (Math.hypot(is.x - y.x, is.y - y.y) < is.r + 900) {
+      at ??= is.id;
+      if (filmDue(`cut_isle_${is.biome}`)) isle = `cut_isle_${is.biome}`;
+    }
+    // One island, one film (owner, 2026-10-23: a lookout's landing, then the same island's scene or a quest's landing,
+    // played two different films): an island whose landing had its film this session has no other.
+    if (at === null || !filmIsles.has(at)) {
+      if (at !== null) filmIsles.add(at);
+      if (film && filmDue(film)) playFilm(film);
+      else if (isle) playFilm(isle);
+    }
   }
   filmWas.landing = !!landing || !state.self;
 }
@@ -4722,7 +4746,8 @@ function step(t: number): void {
     boardingCardFrame();
     filmMoments();
     const op = openingFrame();
-    tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : null), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax });
+    const here = op ? null : hereFrame();
+    tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax });
     tutorPointer.frame();
     encounterCard.frame();
     surrenderCard.frame(state);

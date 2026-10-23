@@ -11,6 +11,7 @@ import type { ScoutRec } from './fog.ts';
 import type { PetId } from '../../../shared/src/data/companions.ts';
 import type { NemesisRec } from './nemesis.ts';
 import type { TattooProfile } from './tattoos.ts';
+import { questAct } from '../../../shared/src/data/questact.ts';
 import type { PiracyProfile } from './raiding.ts';
 import type { HunterProfile } from './wanted.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
@@ -664,6 +665,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
         ...(world.questMates?.[q.id] ? { mates: world.questMates[q.id] } : {}),
         ...((lv) => (lv ? { ship: lv } : {}))(shipLevelOfQuest(def)),
         ...((o) => (o ? { op: o } : {}))(openingStep(def, q.step)),
+        ...((a) => (a ? { act: a } : {}))(questAct(def.steps[q.step])),
       };
     }),
     questsDone: p.quests.done,
