@@ -70,7 +70,7 @@ export interface ActFacts {
   adrift?: AdriftFacts | null;
   /** Owner, 2026-10-22: the opening's next place at sea, not sailed for by itself after a battle or a step — her «Плыть»
    *  (the step's own button, near its thing, comes first). */
-  goalSail?: { name: string } | null;
+  goalSail?: { name: string; resume?: boolean } | null;
 }
 
 export interface Act {
@@ -93,6 +93,9 @@ const LAND_ICON: Record<LandAction, string> = {
   land: 'map_cove', dig: 'map_treasure', raise: 'map_wreck', expedition: 'item_drowned_admiral_bell', descent: 'map_whirlpool', keeper: 'build_lighthouse', escort: 'tab_contracts', dive: 'prof_sailor', lair: 'prof_marine',
 };
 const LOOK_ICON: Record<LookKind, string> = { obj: 'map_event', guard: 'wanted', lair: 'map_monster', drift: 'map_ship', struck: 'talent_brd_surrender_terms' };
+
+/** The buttons a broken-off run's «Плыть» never steps before. */
+const FIGHT_FIRST = new Set<ActId>(['axes', 'board', 'attack', 'attack_mode', 'attack_stop']);
 
 /** Everything to do at hand, the first the one the pad's A does (padContext's order, kept here for both). */
 export function buildActs(f: ActFacts): Act[] {
@@ -160,7 +163,12 @@ export function buildActs(f: ActFacts): Act[] {
     if (i > 0) out.unshift(...out.splice(i, 1));
   }
   // (last: the step's own button — «Атаковать», «Занять» — leads when it is there)
-  if (f.goalSail && !f.docked) out.push({ id: 'goal_sail', icon: 'stat_sails', label: L('a.goalSail'), sub: f.goalSail.name, title: L('a.goalSailTitle') });
+  if (f.goalSail && !f.docked) {
+    const a: Act = { id: 'goal_sail', icon: 'stat_sails', label: L('a.goalSail'), ...(f.goalSail.name ? { sub: f.goalSail.name } : {}), title: L('a.goalSailTitle') };
+    // the run broken off by a prize: her «Плыть» is the gold one, unless a fight's own button is up
+    if (f.goalSail.resume && !FIGHT_FIRST.has(out[0]?.id as ActId)) out.unshift(a);
+    else out.push(a);
+  }
   return out;
 }
 

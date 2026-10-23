@@ -371,3 +371,56 @@ test('a chart step with every island of the sea already on her chart is counted,
   const a = campaignActive(s.profile!);
   assert.ok(a?.id !== q.id || a.step > i, `counted (${JSON.stringify(a)})`);
 });
+
+test('a run to a quest broken off by a prize: «Плыть» stays on the bar, gold, until pressed — never a resume by itself', async () => {
+  const { resumeOn, resumeAfterEnd } = await import('../client/src/ui/resumesail.ts');
+  const { buildActs } = await import('../client/src/ui/actbar.ts');
+  // another order took the helm (a struck ship's terms): the key is kept; met, or a course of her own: forgotten
+  assert.equal(resumeAfterEnd('q:c19_02', 'off'), 'q:c19_02');
+  assert.equal(resumeAfterEnd('q:c19_02', 'done'), null);
+  assert.equal(resumeAfterEnd('q:c19_02', 'own'), null);
+  const f = { key: 'q:c19_02', live: true, routeOn: false, docked: false, autosail: false, busy: false };
+  assert.equal(resumeOn(f), true, 'after the prize: on');
+  assert.equal(resumeOn({ ...f, busy: true }), false, 'while the card or the fight is up: off');
+  assert.equal(resumeOn({ ...f, routeOn: true }), false, 'on her way: off');
+  assert.equal(resumeOn({ ...f, autosail: true }), false);
+  assert.equal(resumeOn({ ...f, live: false }), false, 'the quest gone: off');
+  // the gold (first) button of the bar, unless a fight's own is up
+  const acts = buildActs({ docked: false, goalSail: { name: 'The Toll', resume: true }, looks: [{ kind: 'obj', name: 'x' }] } as never);
+  assert.equal(acts[0].id, 'goal_sail', acts.map((a) => a.id).join(','));
+  const fight = buildActs({ docked: false, goalSail: { name: 'The Toll', resume: true }, attack: { name: 'Gull', pursuing: false, mode: 'guns' } } as never);
+  assert.equal(fight[0].id, 'attack');
+  assert.ok(fight.some((a) => a.id === 'goal_sail'));
+  // the opening's own «Плыть» keeps its place after the step's button
+  const op = buildActs({ docked: false, goalSail: { name: 'The Toll' }, looks: [{ kind: 'obj', name: 'x' }] } as never);
+  assert.equal(op[op.length - 1].id, 'goal_sail');
+});
+
+test('«/mastery all» brings the ranks of glory its nodes stand on: never «свободно −37 из 0»', async () => {
+  process.env.GRAVETIDE_ADMIN = '1';
+  const { makeGame, join } = await import('./helpers.ts');
+  const { runAdmin } = await import('../server/src/game/admin.ts');
+  const { masteryPointsLeft } = await import('../server/src/game/throne.ts');
+  const { game } = makeGame();
+  join(game, 'Throned');
+  const s = game.sessionByName('Throned')!;
+  runAdmin(game, s, '/level 60');
+  runAdmin(game, s, '/mastery all');
+  assert.ok(masteryPointsLeft(s.profile!) >= 0, `free ${masteryPointsLeft(s.profile!)}`);
+  const src = (await import('node:fs')).readFileSync(new URL('../client/src/ui/throne.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /n: g\.points - g\.spent/, 'the window never shows a negative count');
+});
+
+test('a toast over an open window keeps off its buttons: under the Throne’s tab strip when its foot is buttons too', async () => {
+  const { stripLane } = await import('../client/src/ui/hud.ts');
+  const W = 844, H = 390, sa = 46;
+  const tabs = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => ({ left: 300 + i * 55, top: 60, right: 345 + i * 55, bottom: 92 }));
+  const foot = [{ left: 100, top: 350, right: 740, bottom: 384 }];
+  assert.equal(stripLane([], W, H, sa, 40, 560), 'bottom', 'nothing in the way: the bottom band');
+  assert.equal(stripLane(foot, W, H, sa, 40, 560), 'top', 'buttons along the foot: the top band');
+  const lane = stripLane([...tabs, ...foot], W, H, sa, 40, 560);
+  assert.equal(typeof lane, 'number', `the Throne: under its tabs (${lane})`);
+  assert.ok((lane as number) >= 92, 'below the tab strip');
+  const css = (await import('node:fs')).readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8');
+  assert.match(css, /#modal-toasts\.mt-top\.mt-below \{ top: var\(--mt-below\); bottom: auto; \}/);
+});

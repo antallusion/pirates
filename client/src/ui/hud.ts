@@ -126,20 +126,36 @@ export function releaseModalToasts(): void {
 }
 
 /** The window's strip in the bottom band, or in the top one when the window has its buttons along its foot (the
- *  waystation's «Воскресить · В море», the cast-off's list): a toast lay over their words (QA 2026-10-22). */
+ *  waystation's «Воскресить · В море», the cast-off's list): a toast lay over their words (QA 2026-10-22) — or, when its
+ *  top is a strip of tabs as well (the Throne: «Вперёдсмотрящий…» over «Слава · Мастерство…», late-game QA 2026-10-23),
+ *  just under that strip: the lane that covers no button (stripLane). */
 export function placeModalStrip(strip: HTMLElement): void {
   const panel = document.getElementById('modal-panel');
-  const H = innerHeight;
-  let foot = false;
-  for (const b of panel?.querySelectorAll<HTMLElement>('button, .btn, a.k-btn') ?? []) {
+  const btns: Box[] = [];
+  for (const b of panel?.querySelectorAll<HTMLElement>('button, .btn, a.k-btn, [role="tab"]') ?? []) {
     const r = b.getBoundingClientRect();
-    if (r.width > 0 && r.bottom > H - 64 && r.top < H) {
-      foot = true;
-      break;
-    }
+    if (r.width > 0 && r.height > 0) btns.push({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
   }
+  const sa = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sa-t')) || 0;
+  const lane = stripLane(btns, innerWidth, innerHeight, sa, Math.max(36, strip.getBoundingClientRect().height || 0), Math.min(560, innerWidth - 24));
   // (a kit sheet over the window has its own foot: styles.css keeps the strip up then)
-  strip.classList.toggle('mt-top', foot);
+  strip.classList.toggle('mt-top', lane !== 'bottom');
+  strip.classList.toggle('mt-below', typeof lane === 'number');
+  if (typeof lane === 'number') strip.style.setProperty('--mt-below', `${Math.round(lane)}px`);
+}
+
+interface Box { left: number; top: number; right: number; bottom: number }
+/** Where the window's toast strip goes: the bottom band, the top band, or (a number) its top just under the window's own
+ *  row of tabs and buttons at its head — the first of these that lies over no button, else the one over fewest. */
+export function stripLane(btns: Box[], vw: number, vh: number, saTop: number, h: number, w: number): 'bottom' | 'top' | number {
+  const left = (vw - w) / 2, right = left + w;
+  const over = (y0: number): number => btns.filter((b) => b.right > left && b.left < right && b.bottom > y0 && b.top < y0 + h).length;
+  const bottomY = vh - 6 - h, topY = saTop + 6;
+  // the head row: the buttons (tabs, the close cross) standing in the top quarter of the screen
+  const head = btns.filter((b) => b.top < saTop + vh * 0.25);
+  const belowY = head.length ? Math.max(...head.map((b) => b.bottom)) + 4 : topY;
+  const cands: ['bottom' | 'top' | number, number][] = [['bottom', over(bottomY)], ['top', over(topY)], [belowY, over(belowY)]];
+  return cands.reduce((a, b) => (b[1] < a[1] ? b : a))[0];
 }
 
 /** A short screen (a phone, a small window): the action bar fills its bottom, the toasts keep to the top row. */
