@@ -277,3 +277,29 @@ test('the landing’s line on the bar names what her boats are at, in Russian: n
   }
   assert.equal(landingName('wreck', 1), 'beached wreck');
 });
+
+test('a wreck to dive on is named once on the bar («wreck of the wreck of the Saint Brendan»), and in Russian', async () => {
+  const { makeGame, join, steps } = await import('./helpers.ts');
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { applyDataLocale } = await import('../client/src/lang/data.ts');
+  const { game } = makeGame();
+  join(game, 'Diver');
+  const s = game.sessionByName('Diver')!;
+  const w = game.wrecks[game.wrecks.length - 1];
+  s.ship!.docked = null;
+  s.profile!.docked = null;
+  s.ship!.state.x = w.x; s.ship!.state.y = w.y;
+  game.grid.upsert(s.ship!.id, w.x, w.y);
+  steps(game, 25);
+  assert.equal(s.landable?.action, 'dive', JSON.stringify(s.landable));
+  assert.doesNotMatch(s.landable!.feature, /wreck of the wreck/, s.landable!.feature);
+  setLang('ru');
+  applyDataLocale('ru');
+  try {
+    const ru = serverText(s.landable!.feature);
+    assert.doesNotMatch(ru, /wreck|остов «остов/, ru);
+  } finally {
+    setLang('en');
+  }
+});
