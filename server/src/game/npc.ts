@@ -774,10 +774,10 @@ function followPath(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   steer(game, ship, brain, headingOf(wx - ship.state.x, wy - ship.state.y), 1);
 }
 
-function chooseAmmo(ship: ShipEntity, target: ShipEntity, d: number, wantsBoard: boolean): AmmoId {
+function chooseAmmo(ship: ShipEntity, target: ShipEntity, d: number, wantsBoard: boolean, boardingNow = wantsBoard): AmmoId {
   const has = (a: AmmoId) => ship.ammo[a] > 0;
   const inRange = (a: AmmoId) => d < Math.max(effectiveRange(ship, 'port', a), effectiveRange(ship, 'starboard', a)) * 0.95;
-  if (wantsBoard && has('grape') && inRange('grape') && target.crew > target.stats.crewMax * 0.35) return 'grape';
+  if (boardingNow && has('grape') && inRange('grape') && target.crew > target.stats.crewMax * 0.35) return 'grape';
   if (wantsBoard && has('chain') && inRange('chain') && target.sails > target.stats.sailHpMax * 0.45) return 'chain';
   if (has('round')) return 'round';
   return has('chain') ? 'chain' : 'grape';
@@ -787,10 +787,16 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
   // Pirates want the cargo, so they cripple and board; everyone else fights to sink. A ship with boarding off (docs/24
   // C1) is fought with the guns to the end.
   const wantsBoard = brain.role === 'pirate' && !boardingOff(game, target);
-  ship.ammoSel = chooseAmmo(ship, target, d, wantsBoard);
+  // (grape only once she runs in for the grapples — her mark beaten down, or a captain's boarding run on her: since the
+  // reaches were halved, owner 2026-10-22, her rigging band of 70–100 m lay inside grape's reach and she swept a fresh
+  // captain's deck from the first broadside — the opening's crew lost before its first stack, QA 2026-10-23)
+  const boardingNow = wantsBoard && (target.surrendered || target.sails < target.stats.sailHpMax * 0.4 || target.crew < target.stats.crewMax * 0.5 || target.hull < target.stats.hullMax * 0.55 || target.hasEffect('board_run'));
+  ship.ammoSel = chooseAmmo(ship, target, d, wantsBoard, boardingNow);
   // The First Watch's raider is a lesson, not a massacre: she closes as a pirate does (the pupil's grapples must reach
   // her) but never throws her own (she boarded, won and robbed a novice every 90 s, the lesson's gunnery never done).
-  if (wantsBoard && brain.practice === undefined && canBoard(game, ship, target) === null && npcWouldBoard(game, ship, target)) {
+  // (nor does a foe softened for a fresh captain's first fights, firstfights.ts: she comes alongside for the captain's
+  // grapples since the reaches were halved, and is to be boarded, not to board a newcomer and win — QA 2026-10-23)
+  if (wantsBoard && brain.practice === undefined && ship.softFor === undefined && canBoard(game, ship, target) === null && npcWouldBoard(game, ship, target)) {
     startBoarding(game, ship, target, 'standard');
     return;
   }

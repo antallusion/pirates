@@ -154,6 +154,11 @@ test('a fresh account plays the opening through on the real sea within ten minut
     const w = roamWhere(game, sp);
     return roamUp(game, sp.id) && Math.hypot(w.x - ship().state.x, w.y - ship().state.y) <= 150;
   });
+  // (the boarding's chase may end her in a harbour's mouth, and she puts in: she casts off again, as a captain does)
+  if (ship().docked) {
+    conn.push({ t: 'undock' });
+    run(2);
+  }
   conn.push({ t: 'goto', key: 'q:c01_04' });
   until(() => !!stackNear(), 300, 'at a stack of creatures');
   const sp = stackNear()!;
