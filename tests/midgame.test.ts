@@ -342,3 +342,28 @@ test('a customs step with a clean hold sends her to a black market first, then t
   const b = resolveGoal(game, s, `q:${q.id}`) as { cands: { kind: string }[] };
   assert.ok(b.cands.every((c) => c.kind !== 'port'), 'contraband aboard: the patrols');
 });
+
+test('the crew’s rum and dreamleaf rations never touch a cargo a quest of hers is carrying', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { stepMind } = await import('../server/src/game/mind.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { game } = makeGame();
+  join(game, 'Broker Run');
+  const s = game.sessionByName('Broker Run')!;
+  const ship = s.ship!;
+  ship.docked = null; s.profile!.docked = null;
+  const q = campaignOf(game).quests.find((x) => x.id === 'c05_05')!; // «Leaf for a Broker»: dreamleaf × 10 to Wreckhold
+  const i = q.steps.findIndex((st) => st.type === 'deliver');
+  s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
+  const qty = (q.steps[i] as { qty: number }).qty;
+  ship.cargo = { dreamleaf: qty, rum: 3 } as never;
+  ship.sanity = 20;
+  ship.talentReady.leafPipe = 0; ship.talentReady.rumTot = 0;
+  stepMind(game, ship);
+  assert.equal(ship.cargo.dreamleaf, qty, 'the broker’s leaf untouched');
+  assert.equal(ship.cargo.rum, 2, 'the crew’s own rum is still theirs');
+  // one more leaf than the delivery: that one is smoked
+  ship.cargo.dreamleaf = qty + 1; ship.talentReady.leafPipe = 0; ship.sanity = 20;
+  stepMind(game, ship);
+  assert.equal(ship.cargo.dreamleaf, qty);
+});

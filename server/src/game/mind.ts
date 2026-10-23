@@ -4,6 +4,7 @@
 //  - sanity (0..100): what the deep does to a crew over hours (docs/01 §13.3). Every player ship has it.
 // Also the Drowned Captain's zones (Deep Call hands, Undertow strips, the Maw's pull).
 
+import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 import { isNight } from '../../../shared/src/constants.ts';
 import { dist, headingVec } from '../../../shared/src/math.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
@@ -199,6 +200,20 @@ function stepDread(game: Game, ship: ShipEntity): void {
   }
 }
 
+/** What of a good in her hold a quest of hers is carrying (a step to deliver it): the crew's rations never touch it —
+ *  the broker's dreamleaf went up in the crew's pipes at sea and «Сонный лист для брокера» went back to its pickup
+ *  (mid-game QA 2026-10-23). */
+function questCargo(game: Game, ship: ShipEntity, good: 'rum' | 'dreamleaf'): number {
+  const p = game.sessionOf(ship)?.profile;
+  if (!p) return 0;
+  let n = 0;
+  for (const q of p.quests.active) {
+    const st = QUESTS_BY_ID[q.id]?.steps[q.step];
+    if (st && st.type === 'deliver' && st.good === good) n += st.qty;
+  }
+  return n;
+}
+
 function stepSanity(game: Game, ship: ShipEntity): void {
   const now = game.now;
   if (ship.docked) {
@@ -208,7 +223,7 @@ function stepSanity(game: Game, ship: ShipEntity): void {
   }
   loseSanity(ship, sanityDrain(game, ship));
   // Rations for the nerves: a tot of rum or a pipe of dreamleaf, each at most every 20 minutes.
-  if (ship.sanity < 75 && (ship.cargo.rum ?? 0) >= 1 && (ship.talentReady.rumTot ?? 0) <= now) {
+  if (ship.sanity < 75 && (ship.cargo.rum ?? 0) - questCargo(game, ship, 'rum') >= 1 && (ship.talentReady.rumTot ?? 0) <= now) {
     ship.talentReady.rumTot = now + 1200;
     ship.cargo.rum = (ship.cargo.rum ?? 0) - 1;
     if (ship.cargo.rum <= 0) delete ship.cargo.rum;
@@ -218,7 +233,7 @@ function stepSanity(game: Game, ship: ShipEntity): void {
     ship.morale = Math.min(100, ship.morale + 5 + (drunk ? 10 : 0));
     game.toastShip(ship, 'A tot of rum all round steadies the hands. (+10 sanity)', 'info');
   }
-  if (ship.sanity < 60 && (ship.cargo.dreamleaf ?? 0) >= 1 && (ship.talentReady.leafPipe ?? 0) <= now) {
+  if (ship.sanity < 60 && (ship.cargo.dreamleaf ?? 0) - questCargo(game, ship, 'dreamleaf') >= 1 && (ship.talentReady.leafPipe ?? 0) <= now) {
     ship.talentReady.leafPipe = now + 1200;
     ship.cargo.dreamleaf = (ship.cargo.dreamleaf ?? 0) - 1;
     if (ship.cargo.dreamleaf <= 0) delete ship.cargo.dreamleaf;
