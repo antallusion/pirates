@@ -395,3 +395,18 @@ test('a run to a quest broken off by a prize: «Плыть» stays on the bar, g
   const op = buildActs({ docked: false, goalSail: { name: 'The Toll' }, looks: [{ kind: 'obj', name: 'x' }] } as never);
   assert.equal(op[op.length - 1].id, 'goal_sail');
 });
+
+test('«/mastery all» brings the ranks of glory its nodes stand on: never «свободно −37 из 0»', async () => {
+  process.env.GRAVETIDE_ADMIN = '1';
+  const { makeGame, join } = await import('./helpers.ts');
+  const { runAdmin } = await import('../server/src/game/admin.ts');
+  const { masteryPointsLeft } = await import('../server/src/game/throne.ts');
+  const { game } = makeGame();
+  join(game, 'Throned');
+  const s = game.sessionByName('Throned')!;
+  runAdmin(game, s, '/level 60');
+  runAdmin(game, s, '/mastery all');
+  assert.ok(masteryPointsLeft(s.profile!) >= 0, `free ${masteryPointsLeft(s.profile!)}`);
+  const src = (await import('node:fs')).readFileSync(new URL('../client/src/ui/throne.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /n: g\.points - g\.spent/, 'the window never shows a negative count');
+});

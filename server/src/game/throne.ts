@@ -12,7 +12,7 @@ import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { GM_RANK, PRIMS, SKILLS, SKILL_IDS, SKILL_MAX, SKILL_SLOTS, heroBattle, startingOrders } from '../../../shared/src/data/hero.ts';
 import type { HeroBattle, PrimId, Prims, SkillId, SkillSlot } from '../../../shared/src/data/hero.ts';
 import {
-  BRANCHES, GLORY_CAP, LEGENDS, MASTERY, MASTERY_BY_ID, TRIAL_MEN, TRIAL_PRIM, TRIAL_WAIT, gloryPending, gloryXp, masteryOther, masteryPoints, masterySea, masterySpent, masteryWhy,
+  BRANCHES, GLORY_CAP, LEGENDS, MASTERY, MASTERY_BY_ID, MASTERY_EVERY, TRIAL_MEN, TRIAL_PRIM, TRIAL_WAIT, gloryPending, gloryXp, masteryOther, masteryPoints, masterySea, masterySpent, masteryWhy,
   resetCost, throneLift,
 } from '../../../shared/src/data/throne.ts';
 import type { GloryView, MasteryRanks, ThroneLift, TrialView } from '../../../shared/src/data/throne.ts';
@@ -500,6 +500,8 @@ export function throneAdmin(game: Game, s: PlayerSession, cmd: string, args: str
       } else if (args[0] && (BRANCHES as string[]).includes(args[0])) {
         for (const n of MASTERY) if (n.branch === args[0]) t.nodes[n.id] = n.max;
       } else if (args.length) return `Usage: /mastery [node|branch|all|reset] · ${MASTERY.map((n) => n.id).join(' ')}`;
+      // (the ranks of glory the nodes stand on come with them: «/mastery all» left her «свободно −37 из 0» — QA 2026-10-23)
+      t.rank = Math.max(t.rank, masterySpent(t.nodes) * MASTERY_EVERY);
       applyHero(game, s);
       game.pushSelf(s, true);
       return `Mastery: ${Object.entries(t.nodes).map(([id, r]) => `${id} ${r}`).join(', ') || 'none'} (${masterySpent(t.nodes)}/${masteryPoints(t.rank)}).`;

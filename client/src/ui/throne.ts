@@ -70,7 +70,7 @@ function gloryTab(g: GloryView, state: ClientState): string {
       <div class="th-hside"><div class="gi-h">${esc(L('rank'))} ${g.rank}</div>
         <div class="th-bar"><i style="width:${Math.round(f * 100)}%"></i></div>
         <small class="muted">${esc(L('toNext', { n: fmt(g.xp), m: fmt(g.need), r: g.rank + 1 }))}</small>
-        <small class="gold">${esc(L('points', { n: g.points - g.spent, m: g.points }))} · ${esc(L('pointsNext', { r: next }))}</small>
+        <small class="gold">${esc(L('points', { n: Math.max(0, g.points - g.spent), m: g.points }))} · ${esc(L('pointsNext', { r: next }))}</small>
       </div></div>
     ${boon}
     <div class="gi-h">${esc(L('liftH'))}</div>
@@ -99,7 +99,7 @@ function masteryTab(g: GloryView, state: ClientState): string {
     return `<div class="th-branch card"><h4 class="card-h">${icon(BRANCH_ICON[b], '', 'ico-md')}<span>${esc(T(BRANCH_NAMES[b]))}<small class="muted">${esc(T(BRANCH_TEXT[b]))}</small></span><span class="th-bp">${esc(L('branchPts', { n: branchPoints(g.nodes, b) }))}</span></h4>${tiers}</div>`;
   };
   const docked = !!state.self?.dockedAt;
-  return `<div class="th-mhead"><b class="gold">${esc(L('points', { n: g.points - g.spent, m: g.points }))}</b>
+  return `<div class="th-mhead"><b class="gold">${esc(L('points', { n: Math.max(0, g.points - g.spent), m: g.points }))}</b>
       <button class="btn btn-small" data-threset ${!docked || !g.spent || (state.self?.gold ?? 0) < g.reset ? 'disabled' : ''} title="${esc(L('resetPort'))}">${esc(L('reset'))}${g.spent ? money(g.reset) : ''}</button></div>
     <div class="th-branches">${BRANCHES.map(branch).join('')}</div>`;
 }
