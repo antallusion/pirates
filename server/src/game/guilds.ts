@@ -38,7 +38,8 @@ import { fresh } from './onboarding.ts';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
-export const GUILD_COST = 10_000;
+export { GUILD_COST } from '../../../shared/src/data/social.ts';
+import { GUILD_COST } from '../../../shared/src/data/social.ts';
 export const GUILD_MAX = 150;
 export const WAR_COST = 50_000;
 export const OFFICE_WEEK = 2_000;

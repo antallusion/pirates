@@ -101,6 +101,9 @@ export const TRADE_GOODS_MAX = 12;
 // ------------------------------------------------------------------ 34. the guild's shipyard
 
 export type GuildProject = 'ship' | 'yard';
+/** A guild's registration at a harbour office (server/src/game/guilds.ts foundGuild; the founding card tells it first). */
+export const GUILD_COST = 10_000;
+
 export const GUILD_PROJECTS: GuildProject[] = ['ship', 'yard'];
 export const GUILD_PROJECT_DEFS: Record<GuildProject, { name: [string, string]; text: [string, string]; goods: Partial<Record<GoodId, number>>; silver: number }> = {
   ship: {

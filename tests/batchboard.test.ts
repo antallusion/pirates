@@ -66,3 +66,26 @@ test('«Заложите постройки»: at her island (or in a harbour by
   setLang('en');
   assert.match(actButton(q.id, act, 'btn'), />Build</);
 });
+
+// ------------------------------------------------------------------ 4. the guild's price told first
+
+test('the guild founding card tells its price and the rest before «Основать» (RU+EN), on every screen; short of silver the button says why', async () => {
+  const { foundCard } = await import('../client/src/ui/company.ts');
+  const { GUILD_COST } = await import('../shared/src/data/social.ts');
+  const { GUILD_COST: SERVER_COST } = await import('../server/src/game/guilds.ts');
+  const { setLang } = await import('../client/src/i18n.ts');
+  assert.equal(GUILD_COST, SERVER_COST, 'one price');
+  setLang('ru');
+  const poor = foundCard('gravesend', 3200).replace(/ /g, ' '); // (the typography's no-break spaces read as spaces)
+  const req = poor.slice(poor.indexOf('g-req'), poor.indexOf('g-found'));
+  assert.match(req, /10[\s  ]?000 серебра \(у вас 3[\s  ]?200\)/, 'the price and her silver');
+  assert.match(req, /в портовой конторе/);
+  assert.match(req, /название из 3–24 букв/);
+  assert.doesNotMatch(req, /w-desk/, 'not the desk’s alone');
+  assert.match(poor, /id="g-found" disabled title="Не хватает серебра: ещё 6[\s  ]?800"/);
+  const rich = foundCard('gravesend', 12000);
+  assert.doesNotMatch(rich, /id="g-found" disabled/);
+  assert.match(foundCard(null, 12000), /id="g-found" disabled title="В\sпорту"/);
+  setLang('en');
+  assert.match(foundCard('gravesend', 0), /10[,\s  ]?000 silver \(you have 0\)/);
+});

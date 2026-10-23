@@ -14,6 +14,7 @@ import { BOSSES } from '../../../shared/src/data/bosses.ts';
 import type { BossId } from '../../../shared/src/data/bosses.ts';
 import { GOODS, GOOD_IDS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
+import { GUILD_COST } from '../../../shared/src/data/social.ts';
 import { BUILDINGS, BUILDING_IDS } from '../../../shared/src/data/holdings.ts';
 import type { BuildingId } from '../../../shared/src/data/holdings.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
@@ -70,6 +71,17 @@ const RANK_ORDER: GuildRank[] = ['admiral', 'vice', 'commodore', 'captain', 'bos
 const RANK_NAMES = (r: GuildRank) => L(`rank_${r}`);
 const BASE_KEYS = ['', 'base_anchorage', 'base_outpost', 'base_fortress', 'base_citadel', 'base_stronghold'] as const;
 const BASE_NAMES = (n: number) => (BASE_KEYS[n] ? L(BASE_KEYS[n] as Exclude<(typeof BASE_KEYS)[number], ''>) : '');
+
+/** The guild's founding card (mid-game QA 2026-10-23: its price, 10 000, came only with the refusal — on a phone the
+ *  line that told it was the desk's alone): what it takes, each met or not, in sight before «Основать». */
+export function foundCard(docked: string | null, gold: number): string {
+  const req = (ok: boolean, text: string) => `<li class="${ok ? 'ok' : 'no'}">${ok ? '✓' : '✗'} ${esc(text)}</li>`;
+  const short = Math.max(0, GUILD_COST - gold);
+  const why = !docked ? L('g_in_port') : short ? L('g_req_short', { need: fmt(short) }) : '';
+  return `<div class="card"><h4 class="card-h" data-hint="${esc(L('g_found_text', { cost: fmt(GUILD_COST) }).replace(/<[^>]+>/g, ''))}">${icon('tab_guild', '', 'ico-md')}${L('g_found_title')}</h4><p class="muted w-desk">${L('g_found_text', { cost: fmt(GUILD_COST) })}</p>
+    <div class="g-req"><b>${esc(L('g_req'))}</b><ul>${req(gold >= GUILD_COST, L('g_req_cost', { cost: fmt(GUILD_COST), have: fmt(gold) }))}${req(!!docked, L('g_req_port'))}${req(true, L('g_req_free'))}${req(true, L('g_req_words'))}</ul></div>
+    <div class="row g-found"><input id="g-name" placeholder="${L('g_ph_name')}" maxlength="24"><input id="g-tag" placeholder="${L('ph_tag')}" maxlength="4" style="width:80px;text-transform:uppercase"><button class="btn btn-primary" id="g-found" ${why ? `disabled title="${esc(why)}"` : ''}>${L('g_found_btn')}</button></div></div>`;
+}
 
 export class CompanyScreen {
   tab: CompanyTab = 'group';
@@ -564,8 +576,7 @@ export class CompanyScreen {
     const docked = state.self?.dockedAt ?? null;
     const portName = (id: string) => placeName(state.ports.find((p) => p.id === id)?.name ?? id);
     if (!g) {
-      const found = `<div class="card"><h4 class="card-h" data-hint="${esc(L('g_found_text', { cost: fmt(10000) }).replace(/<[^>]+>/g, ''))}">${icon('tab_guild', '', 'ico-md')}${L('g_found_title')}</h4><p class="muted w-desk">${L('g_found_text', { cost: fmt(10000) })}</p>
-          <div class="row g-found"><input id="g-name" placeholder="${L('g_ph_name')}" maxlength="24"><input id="g-tag" placeholder="${L('ph_tag')}" maxlength="4" style="width:80px;text-transform:uppercase"><button class="btn btn-primary" id="g-found" ${docked ? '' : `disabled title="${L('g_in_port')}"`}>${L('g_found_btn')}</button></div></div>`;
+      const found = foundCard(docked, state.self?.gold ?? 0);
       const invites = state.guildInvites.map((i) => `<div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('g_invites', { by: esc(i.by), name: esc(i.name), tag: esc(i.tag) })}</h4><button class="btn btn-primary" data-gjoin="${i.id}">${L('join')}</button> <button class="btn" data-gno="${i.id}">${L('decline')}</button></div>`).join('');
       body.innerHTML = `<div class="cols"><div>
         ${invites}${state.recruiting.length ? this.recruitingCard(state) : found}
