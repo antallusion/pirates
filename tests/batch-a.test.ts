@@ -190,6 +190,8 @@ function foe(game: Game, ship: ShipEntity, role: 'pirate' | 'patrol' | 'merchant
   npc.state.speed = 0;
   npc.input = { rudder: 0, sailTarget: 0 };
   npc.attackers.set(ship.id, game.now);
+  // (a real fight behind it: twenty seconds of her guns, a third of the hull — struck.ts foughtClose)
+  npc.foeDealt.set(ship.id, { first: game.now - 20, hull: npc.stats.hullMax * 0.3, men: 0 });
   npc.lastCombat = game.now;
   ship.lastCombat = game.now;
   const brain = game.npcs.get(npc.id)!;
@@ -227,7 +229,7 @@ test('the captain she strikes to gets the card: the two choices; taken only alon
   const { game } = makeGame();
   const { c, ship } = atSea(game, 'Quarter');
   const s = [...game.sessions].find((x) => x.name === 'Quarter')!;
-  const { npc, brain } = foe(game, ship, 'pirate', 900, 0.15);
+  const { npc, brain } = foe(game, ship, 'pirate', 250, 0.15);
   npc.cargo = { rum: 6 };
   npc.purse = 120;
   const real = game.rng.chance.bind(game.rng);

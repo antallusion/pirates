@@ -883,6 +883,18 @@ export function cutMastWreck(game: Game, ship: ShipEntity): string | null {
 }
 
 /** Central damage entry point for cannon fire, abilities, collisions and hazards. Returns the men it killed. */
+/** What a ship did to her: its first blow (a fight's start), the hull and the men she lost to it (struck.ts). Kept for a
+ *  fight: a blow after a minute's quiet starts it afresh. */
+function noteDealt(game: Game, target: ShipEntity, source: ShipEntity, hull: number, men: number): void {
+  const e = target.foeDealt.get(source.id);
+  const last = target.attackers.get(source.id) ?? -Infinity;
+  if (!e || game.now - Math.max(e.first, last) > 60) target.foeDealt.set(source.id, { first: game.now, hull, men });
+  else {
+    e.hull += hull;
+    e.men += men;
+  }
+}
+
 export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, source: ShipEntity | null, at?: { x: number; y: number }): number {
   if (!target.alive || target.docked || target.god) return 0;
   // Locked in a boarding: nothing from outside lands on her (see damageBlocked).
@@ -951,6 +963,7 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     if (target.zoneBoss) zbCredit(game, target, source, Math.min(Math.max(0, target.hull), hull)); // each captain's part of her (docs/21)
     target.hull -= hull;
     onHullDamage(game, target, hull, source, d.cut ?? 0);
+    if (source && source !== target && hull > 0) noteDealt(game, target, source, hull, 0);
   }
   if (d.sails) target.sails = Math.max(0, target.sails - d.sails);
   if (d.rudder && !target.hasFlag('iron_tiller')) target.rudderHp = Math.max(0, target.rudderHp - d.rudder);
@@ -965,6 +978,7 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     const floor = target.npcRole ? game.npcs.get(target.id)?.practiceFloor : undefined;
     if (floor !== undefined) cap = Math.min(cap, Math.max(0, target.crew - floor));
     fell = killMen(game, target, Math.min(killed, target.crew), source, cap);
+    if (source && source !== target && fell > 0) noteDealt(game, target, source, 0, fell);
   }
   if (d.morale) target.morale -= d.morale * moraleLossMul(target);
   // Terror: crews under 30% break twice as fast.

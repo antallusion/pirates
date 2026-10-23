@@ -229,6 +229,9 @@ export class ShipEntity {
    *  sea's own harm (a reef, a storm, a fire) is none (autosail.ts, owner 2026-10-19). */
   gunsAt = -999;
   attackers = new Map<number, number>(); // entity id -> last hit time
+  /** What each ship has done to her (struck.ts: a surrender only after a real fight): its first blow, the hull it took off
+   *  her, the men it killed. */
+  foeDealt = new Map<number, { first: number; hull: number; men: number }>();
   repairing = false;
   /** The carpenters' tally since «Ремонт» (owner, 2026-10-19: «нажимая ремонт … ниче не происходит»): the hull and sails
    *  mended and the planks and sailcloth used, said when they stop; the «+N» shown over her every two seconds. */

@@ -166,3 +166,44 @@ test('a count in a server line reads in Russian with its noun in the number’s 
     setLang('en');
   }
 });
+
+// ------------------------------------------------------------------ 8. the Whispering Archipelago's pirates
+
+test('a pirate battered by the sea’s own fights strikes only after a real fight at close range — not to one ball from 1200 m', async () => {
+  const { wouldStrike, STRIKE_RANGE, STRIKE_FIGHT_SEC } = await import('../server/src/game/struck.ts');
+  const { applyDamage } = await import('../server/src/game/combat.ts');
+  const { onHull } = await import('./helpers.ts');
+  const { game } = makeGame();
+  join(game, 'Whisper Hunter');
+  const s = game.sessionByName('Whisper Hunter')!, ship = s.ship!;
+  ship.docked = null;
+  s.profile!.docked = null;
+  ship.region = 'whispering';
+  const npc = game.spawnNpcShip('pirate', 'brig', 'confederacy', ship.state.x + 1200, ship.state.y, 0);
+  onHull(game, ship, 'brig', npc.shipLevel);
+  ship.crew = ship.stats.crewMax;
+  game.npcs.get(npc.id)!.active = true;
+  // battered by the sea's merchants and patrols before she came: a fifth of her hull
+  npc.hull = npc.stats.hullMax * 0.2;
+  // one ball of hers from 1200 m
+  applyDamage(game, npc, { hull: 5 }, ship);
+  ship.lastCombat = game.now;
+  assert.equal(wouldStrike(game, npc, ship), false, 'not at 1200 m, after one ball');
+  // close in: within the guns' reach, but the fight only begun
+  npc.state.x = ship.state.x + 180;
+  game.grid.upsert(npc.id, npc.state.x, npc.state.y);
+  applyDamage(game, npc, { hull: npc.stats.hullMax * 0.02 }, ship);
+  assert.equal(wouldStrike(game, npc, ship), false, 'a blow or two close by is no fight yet');
+  // a real fight: her guns on her for a while, a good share of what is left of the hull taken
+  npc.hull = npc.stats.hullMax * 0.6;
+  for (let t = 0; t <= STRIKE_FIGHT_SEC + 2; t += 2) {
+    game.now += 2;
+    applyDamage(game, npc, { hull: npc.stats.hullMax * 0.05 }, ship);
+    ship.lastCombat = game.now;
+  }
+  assert.ok(npc.hull < npc.stats.hullMax * 0.25);
+  assert.equal(wouldStrike(game, npc, ship), true, 'battered by her, close by, after a fight');
+  // the same fight, but she has fallen far astern: no
+  npc.state.x = ship.state.x + STRIKE_RANGE + 600;
+  assert.equal(wouldStrike(game, npc, ship), false, 'not from afar');
+});

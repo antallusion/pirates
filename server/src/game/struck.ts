@@ -23,6 +23,38 @@ export const STRIKE_CREW = 0.3;
 export const STRIKE_MORALE = 15;
 /** And she strikes only to a captain whose ship still has half as much fight in her again as her own. */
 export const STRIKE_OUTGUNNED = 1.5;
+/** A real fight first (mid-game QA 2026-10-23: the Whispering Archipelago's pirates struck almost at once, 1200 m off —
+ *  battered by the sea's own fights before she came, one ball of hers was enough): she strikes only to a captain who
+ *  has fought her close — her side within this of her (the guns' 100–250 m, NPCs open fire at 150 m) — for this long,
+ *  and has taken this much of her hull or her men with her own guns and hands. */
+export const STRIKE_RANGE = 300;
+export const STRIKE_FIGHT_SEC = 12;
+export const STRIKE_DEALT_HULL = 0.2;
+export const STRIKE_DEALT_MEN = 0.2;
+
+/** What a captain's side (she, her escorts, her prizes) has done to a ship in this fight: since when, how much. */
+export function sideDealt(game: Game, ship: ShipEntity, captain: ShipEntity): { first: number; hull: number; men: number } {
+  let first = Infinity, hull = 0, men = 0;
+  for (const [id, e] of ship.foeDealt) {
+    const o = game.ships.get(id);
+    if (!o || (o.id !== captain.id && o.ownerId !== captain.id)) continue;
+    first = Math.min(first, e.first);
+    hull += e.hull;
+    men += e.men;
+  }
+  return { first, hull, men };
+}
+
+/** A real fight at close range between her and the captain: near, long enough, and hurt by her side. */
+export function foughtClose(game: Game, ship: ShipEntity, foe: ShipEntity): boolean {
+  const captain = captainShip(game, foe) ?? foe;
+  const near = [foe, captain].some((o) => o.alive && dist(o.state.x, o.state.y, ship.state.x, ship.state.y) <= STRIKE_RANGE + (o.stats.length + ship.stats.length) / 2);
+  if (!near) return false;
+  const d = sideDealt(game, ship, captain);
+  if (!Number.isFinite(d.first) || game.now - d.first < STRIKE_FIGHT_SEC) return false;
+  return d.hull >= ship.stats.hullMax * STRIKE_DEALT_HULL || d.men >= ship.stats.crewMax * STRIKE_DEALT_MEN;
+}
+
 /** Each think (four a second) a battered, outgunned ship may strike: in a second or two, if the fire keeps on. */
 export const STRIKE_CHANCE = 0.3;
 /** How close the captain must come to take the surrender (the same reach as the plunder's). */
@@ -67,7 +99,7 @@ export function wouldStrike(game: Game, ship: ShipEntity, foe: ShipEntity | null
   if (!captain) return false;
   if (!ship.inCombat(game.now) || (ship.attackers.get(foe.id) ?? -1e9) < game.now - 30) return false;
   const battered = ship.hull < ship.stats.hullMax * STRIKE_HULL || ship.crew < ship.stats.crewMax * STRIKE_CREW || ship.morale < STRIKE_MORALE;
-  return battered && fightingPower(foe) >= STRIKE_OUTGUNNED * fightingPower(ship);
+  return battered && fightingPower(foe) >= STRIKE_OUTGUNNED * fightingPower(ship) && foughtClose(game, ship, foe);
 }
 
 /** A warship's think: strike now? She strikes but once — having thought better of it, she fights on. */

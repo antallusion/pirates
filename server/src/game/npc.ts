@@ -35,7 +35,7 @@ import { boardingOff, coloursOf, pirateDares, pirateSworn } from './colours.ts';
 import { avoidPort } from './events.ts';
 import { convoyArrived } from './empires.ts';
 import { applyDamage, dash, effectiveRange, fireBroadside, fireChaser, igniteShip, sideHeading } from './combat.ts';
-import { SURRENDER_WAIT, strikeColours, struck, surrenderClosed } from './struck.ts';
+import { SURRENDER_WAIT, foughtClose, strikeColours, struck, surrenderClosed } from './struck.ts';
 import { CHASE_GIVE_UP } from '../../../shared/src/data/gunnery.ts';
 import { caravanSold } from './tradefx.ts';
 import { coveAt, loseTrail, signature } from './smugglefx.ts';
@@ -656,7 +656,9 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     const danger = (threat ?? (brain.fleeFrom !== null ? game.ships.get(brain.fleeFrom) ?? null : null)) as ShipEntity | null;
     if (danger && dist(ship.state.x, ship.state.y, danger.state.x, danger.state.y) < CALM_LOOK) {
       const beaten = ship.hull < ship.stats.hullMax * 0.35 || ship.crew < ship.stats.crewMax * 0.3 || ship.sails < ship.stats.sailHpMax * 0.25;
-      if (beaten && ship.inCombat(now)) {
+      // (to the one who beat her, close by: mid-game QA 2026-10-23 — battered by the sea's pirates, she struck to a captain
+      // who had fired one ball at her 1200 m off)
+      if (beaten && ship.inCombat(now) && foughtClose(game, ship, danger)) {
         struck(game, ship, brain, danger); // the card to the captain on her (docs/16 #3)
         return;
       }

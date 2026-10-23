@@ -157,6 +157,8 @@ test('a bot strikes her colours sooner: below three tenths of her men', () => {
   assert.equal(STRIKE_CREW, 0.3);
   foe.npcRole = 'pirate';
   foe.attackers.set(me.id, game.now);
+  // (a real fight behind it, 300 m off: her side's guns and hands took a third of her men — struck.ts foughtClose)
+  foe.foeDealt.set(me.id, { first: game.now - 20, hull: 0, men: Math.ceil(foe.stats.crewMax * 0.3) });
   foe.lastCombat = game.now;
   foe.crew = Math.floor(foe.stats.crewMax * 0.29);
   assert.ok(wouldStrike(game, foe, me), 'battered at 29% of her men');
