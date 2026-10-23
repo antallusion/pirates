@@ -1040,6 +1040,11 @@ function registerAggression(game: Game, a: ShipEntity, b: ShipEntity): void {
   // Self defence: b attacked a recently.
   const selfDefence = (a.attackers.get(b.id) ?? -999) > now - 90;
   if (selfDefence) return;
+  // Nor is a ship sent after her: a fireship steered at her, the campaign's foe or a band out for her cargo (mid-game QA
+  // 2026-10-23: every fireship sunk cost Free Harbors standing until their ports — chapter 4's own hub, Kelp Backwater —
+  // called her an enemy and shut their quays).
+  const hb = game.npcs.get(b.id);
+  if (hb && (hb.fireship === a.id || hb.huntFor === a.id || (a.accountId !== null && hb.huntAccount === a.accountId) || hb.chase?.id === a.id)) return;
   // QA 2026-10-22: a newcomer's ball that strayed onto a lawful ship beside her fight is no crime (stray.ts): no infamy,
   // no standing lost (the ship struck still knows who hit her). Asked on the engagement's first blow, as the law is.
   if (forgiveStray(game, a, b)) return;

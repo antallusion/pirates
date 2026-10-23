@@ -44,7 +44,7 @@ import { ADM_REFIT_HINT, ADM_REFIT_WORDS, orderRefit, refitHolds, stepRefit } fr
 import { clampLevel, ladder, levelRange, npcSkill } from '../../../shared/src/data/shiplevel.ts';
 import { ALPHA_OVER as ALPHA_OVER_RAM, alphaShare, npcSeaScale } from '../../../shared/src/data/seabalance.ts';
 import { RAM_SHARE, volleyShare } from '../../../shared/src/data/seaskill.ts';
-import { XP_UNITS, contractPay, hourSilver, pointsXp, prizeXp, xpGap } from '../../../shared/src/data/xpcurve.ts';
+import { XP_UNITS, contractPay, hourSilver, pointsXp, prizeXp, shipBandOf, xpGap } from '../../../shared/src/data/xpcurve.ts';
 import { WRECK_SHARE } from '../../../shared/src/data/silverpay.ts';
 import { RELEASE_CREW, SCUTTLE_SINK_SEC, SINK_CREW, outcomeCrew, releaseSilver, wreckTimber } from '../../../shared/src/data/outcome.ts';
 import type { OutcomeFate, OutcomeNums } from '../../../shared/src/data/outcome.ts';
@@ -73,7 +73,7 @@ import { BOARD_RUN_FROM, aimedVolley, pursuitInput, pursuitOf, startPursuit, sta
 import { ODDS_BUDGET_MS, ODDS_SIMS, RISK_BUDGET_MS, boardOdds, boardRisk, isRisky } from './boardodds.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { TALENTS_BY_ID, canLearn } from '../../../shared/src/data/talents.ts';
-import { angleDiff, clamp, dist, headingOf, headingVec } from '../../../shared/src/math.ts';
+import { angleDiff, clamp, closestOnPolygon, dist, headingOf, headingVec } from '../../../shared/src/math.ts';
 import type {
   BoardingResult, SurrenderFate, ClientMsg, EntityInfo, GameEvent, IslandData, LootRow, PortPublic, SelfRow, ServerMsg, ShipRow, Side,
   PrivateState,
@@ -276,7 +276,7 @@ import { sagaNote, shareSaga } from './saga.ts';
 import { logNote } from './captainlog.ts';
 import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
 import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
-import { closeFight, installLairHooks, landFightOn, landFighting, landTac, lairList, lairMessage, lairPos, lairPrompt, lairUp, resendLandFight, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
+import { closeFight, installLairHooks, landFightOn, landFighting, landTac, lairBeach, lairList, lairMessage, lairPos, lairPrompt, lairUp, resendLandFight, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
 import { installSealHooks, sealView } from './seals.ts'; // docs/19 E9
 import { installTitanHooks } from './titans.ts'; // docs/19 E10
 import { raidView, stepAbyssRaid } from './abyssraid.ts'; // docs/19 E11
@@ -1830,7 +1830,7 @@ export class Game {
     const out: Record<string, QuestTarget> = {};
     // The nearest lair of a kind is looked for once a call (owner, 2026-10-16: no cap on her quests — thirty at a lair's
     // step cost 2 ms a push, the same search thirty times).
-    const lairMemo = new Map<string, { x: number; y: number } | null>();
+    const lairMemo = new Map<string, { x: number; y: number; island?: number } | null>();
     for (const qs of p.quests.active) {
       const st = QUESTS_BY_ID[qs.id]?.steps[qs.step];
       if (!st) continue;
@@ -1865,6 +1865,13 @@ export class Game {
         if (is) {
           r = is.radius + ISLE_REACH;
           island = st.island;
+          // its coast nearest her, not its middle: the run to the middle of a long island ended in a bay 89 m off the
+          // shore, inside its radius and outside the step's reach (mid-game QA 2026-10-23, Lanternwick Rock)
+          if (ship && !ship.docked) {
+            const c = closestOnPolygon(ship.state.x, ship.state.y, is.poly);
+            at = { x: c.x, y: c.y };
+            r = 60;
+          }
         }
       } else if (st.type === 'spot') {
         // docs/36: a cove or a spit of a harbour's own island
@@ -1891,8 +1898,8 @@ export class Game {
         // its lair on the island the step names, else the nearest of its kind (or any) still standing (a campaign's: to its
         // location)
         const from = st.near ?? (ship ? ship.state : this.portById(QUESTS_BY_ID[qs.id].port) ?? null);
-        const memoKey = `${st.island ?? ''}|${st.kind ?? ''}|${from ? `${Math.round(from.x)},${Math.round(from.y)}` : ''}`;
-        let best: { x: number; y: number } | null = null, bd = Infinity;
+        const memoKey = `${st.island ?? ''}|${st.kind ?? ''}|${from ? `${Math.round(from.x)},${Math.round(from.y)}` : ''}|${st.near ? QUESTS_BY_ID[qs.id]?.requires.level ?? 0 : ''}`;
+        let best: { x: number; y: number; island?: number } | null = null, bd = Infinity;
         const memo = lairMemo.get(memoKey);
         if (memo !== undefined) {
           best = memo;
@@ -1912,15 +1919,21 @@ export class Game {
             this.lairQuay.set(l.id, quayside);
           }
           const byQuay = quayside ? 20_000 : 0;
-          const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay;
-          if (d < bd) [best, bd] = [lp, d];
+          // A campaign's lair of its own level first (mid-game QA 2026-10-22: «За серой тканью» at the fourth level sent
+          // her to a ⚓3 hermits' camp two levels above her sloop, a ⚓2 bat cave 180 m farther in the same waters)
+          const above = st.near ? Math.max(0, l.level - shipBandOf(QUESTS_BY_ID[qs.id]?.requires.level ?? p.level)) * 3000 : 0;
+          const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay + above;
+          // (its island named on the route: «Плыть» to a campaign's lair said «место», mid-game QA 2026-10-22)
+          // (the mark on its beach, where the boats put off: an inland camp's point left the run 100 m off with no «Штурм»)
+          if (d < bd) { const b = lairBeach(this, l); [best, bd] = [{ x: b.x, y: b.y, ...(l.island >= 0 && l.turtle === undefined ? { island: l.island } : {}) }, d]; }
         }
         if (bd !== -1) lairMemo.set(memoKey, best);
         if (!best && st.island !== undefined && this.world.islands[st.island]) best = this.world.islands[st.island];
         if (best) {
           at = best;
-          r = 260;
+          r = 80;
           if (st.island !== undefined) island = st.island;
+          else if (best.island !== undefined) island = best.island;
         }
       } else if (st.type === 'dive' && ship) {
         // the nearest wreck her divers can go down to now; else the nearest not stripped lately (a deeper bell wanted)
@@ -2405,7 +2418,11 @@ export class Game {
     this.grantXp(s, xp * streak, `${how === 'sunk' ? 'Sank' : 'Took'} ${victim.name}`, true);
     if (!paid) for (const ms of mates) this.grantXp(ms, prizeXp(ms.profile!.level, vLevel, how) * XP_UNITS.mate, `${s.name} ${how === 'sunk' ? 'sank' : 'took'} ${victim.name}`, true);
     // Law and reputation (monsters and hulks answer to nobody).
-    if (victim.faction !== 'player' && !victim.cls.monster) {
+    // (a ship sent after her — a fireship, the campaign's foe, a band for her cargo — sunk in her own defence costs no
+    // standing with its flag: fireships cost Free Harbors ten a piece until chapter 4's hub shut its quays, QA 2026-10-23)
+    const hb = this.npcs.get(victim.id);
+    const sentAfter = !!hb && (hb.fireship === killer.id || hb.huntFor === killer.id || hb.huntAccount === s.accountId);
+    if (victim.faction !== 'player' && !victim.cls.monster && !sentAfter) {
       const f = FACTIONS[victim.faction];
       if (f.lawful) {
         const zone = REGIONS[victim.region].safety;

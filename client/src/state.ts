@@ -140,6 +140,8 @@ export class ClientState {
   /** docs/16 #31: one's own posting's goal and levels. */
   lfgGoal: LfgMine | null = null;
   invites: { id: number; from: string; ask?: boolean }[] = [];
+  /** Captains hailing her to trade (the Company screen's card). */
+  hails: string[] = [];
   /** docs/16 #35: groupmates' signal flags on the charts, with when they came (performance.now s). */
   signals: { from: string; kind: SignalKind; x: number; y: number; at: number }[] = [];
   /** docs/16 #32: the sea's goals of the week, and when they were told (performance.now s). */
@@ -451,6 +453,7 @@ export class ClientState {
       case 'party':
         this.party = m.group;
         this.invites = m.invites;
+        this.hails = m.hails ?? [];
         this.lfg = m.lfg ?? [];
         this.lfgMine = m.lfgMine ?? null;
         this.lfgGoal = m.lfgGoal ?? null;

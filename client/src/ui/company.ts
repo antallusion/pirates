@@ -240,6 +240,7 @@ export class CompanyScreen {
         <button class="btn ${g.convoy ? 'btn-primary' : ''}" id="convoy">${g.convoy ? L('grp_convoy_down') : L('grp_convoy_up')}</button></div>` : g?.convoy ? `<p class="muted">${L('grp_convoy_flying')}</p>` : ''}
       ${g ? `<button class="btn btn-danger" id="leave">${L('grp_leave')}</button>` : ''}
     </div><div>
+      ${state.hails.map((n) => `<div class="card"><h4 class="card-h">${icon('tab_board', '', 'ico-md')}${L('grp_hailed', { from: esc(n) })}</h4><button class="btn btn-primary" data-hail="${esc(n)}">${L('grp_hail_go')}</button></div>`).join('')}
       ${state.invites.map((i) => i.ask ? askCard(i) : `<div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('grp_invited', { from: esc(i.from) })}</h4><button class="btn btn-primary" data-accept="${i.id}">${L('join')}</button> <button class="btn" data-decline="${i.id}">${L('decline')}</button></div>`).join('')}
       ${lead ? `<div class="card"><h4 class="card-h">${icon('tab_group', '', 'ico-md')}${L('grp_invite_title')}</h4><div class="row"><input id="inv-name" placeholder="${L('ph_captain')}" maxlength="20" style="flex:1"><button class="btn btn-primary" id="invite">${L('invite')}</button></div></div>` : ''}
       ${lfgCard(state, !!g, lead, lead && (g?.members.length ?? 1) < GROUP_MAX)}
@@ -253,6 +254,9 @@ export class CompanyScreen {
     body.querySelector<HTMLElement>('#hail')?.addEventListener('click', () => val('#bar-name') && this.send({ t: 'barter', action: 'propose', name: val('#bar-name') }));
     body.querySelector<HTMLElement>('#convoy')?.addEventListener('click', () => this.send({ t: 'group', action: 'convoy', on: !g?.convoy }));
     body.querySelector<HTMLElement>('#leave')?.addEventListener('click', () => this.send({ t: 'group', action: 'leave' }));
+    // a hail to trade answered: her own hail back opens the table (party.ts proposeBarter — mid-game QA 2026-10-23: the toast
+    // sent her to this screen and nothing here took the trade)
+    body.querySelectorAll<HTMLElement>('[data-hail]').forEach((el) => (el.onclick = () => this.send({ t: 'barter', action: 'propose', name: el.dataset.hail! })));
     body.querySelectorAll<HTMLElement>('[data-accept]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'accept', id: Number(el.dataset.accept) })));
     body.querySelectorAll<HTMLElement>('[data-decline]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'decline', id: Number(el.dataset.decline) })));
     body.querySelectorAll<HTMLElement>('[data-lead]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'lead', name: el.dataset.lead! })));
@@ -857,7 +861,7 @@ function estateHtml(state: ClientState): string {
   } else if (!e.claim) parts.push(`<div class="card est-card"><p class="muted">${esc(L('est_none'))}</p></div>`);
   if (e.claim) parts.push(claimCard(e.claim));
   // docs/30: the other free islands near, with their size — «Занять» took the nearest at once, a small one
-  if (e.freeNear?.length) parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}${esc(L('ct_near'))}</h4><p class="muted">${esc(L('ct_near_note'))}</p>${e.freeNear.map((f) => `<div class="item-row"><div class="item-text"><b>${esc(placeName(f.name))}</b><span class="muted">${esc(L(`size_${f.size}` as 'size_small'))}</span></div><button class="btn btn-small item-btn" data-freego="${f.island}">${esc(L('ct_near_go', { km: (f.d / 1000).toFixed(1) }))}</button></div>`).join('')}</div>`);
+  if (e.freeNear?.length) parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}${esc(L('ct_near'))}</h4><p class="muted">${esc(L('ct_near_note'))}</p>${e.freeNear.map((f) => `<div class="item-row est-near"><div class="item-text"><b>${esc(placeName(f.name))}</b><span class="muted">${esc(L(`size_${f.size}` as 'size_small'))}</span></div><button class="btn btn-small item-btn" data-freego="${f.island}">${esc(L('ct_near_go', { km: (f.d / 1000).toFixed(1) }))}</button></div>`).join('')}</div>`);
   else if (e.buy) parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}${esc(L('est_buy_title', { name: placeName(e.buy.name) }))}</h4><p class="muted">${esc(L('est_buy_text'))}</p><button class="btn btn-primary" data-est="buy" data-isl="${e.buy.island}" data-price="${e.buy.price}">${esc(L('est_buy', { price: fmt(e.buy.price) }))}</button></div>`);
   if (e.outposts.length || e.kinds.length) {
     const rows = e.outposts.map((o) => {

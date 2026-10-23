@@ -15,7 +15,7 @@ import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { runAdmin } from '../server/src/game/admin.ts';
 import { RESUME_CALM, RESUME_WORDS, autosailOf, pausedCourse, startAutosail, stopAutosail } from '../server/src/game/autosail.ts';
-import { lairList, lairUp } from '../server/src/game/beastlairs.ts';
+import { lairBeach, lairList, lairUp } from '../server/src/game/beastlairs.ts';
 import { openSea } from '../server/src/game/wrecks.ts';
 import { GoalRun, goalTarget, goalsNear } from '../client/src/ui/goalrun.ts';
 import type { GoalState, GoalView } from '../client/src/ui/goalrun.ts';
@@ -72,7 +72,9 @@ test('a quest’s place says what is done there: a port to put in at, an island 
   const up = lairList(game).filter((l) => lairUp(game, l));
   const best = up.reduce((a, b) => (Math.hypot(b.x - ship.state.x, b.y - ship.state.y) < Math.hypot(a.x - ship.state.x, a.y - ship.state.y) ? b : a));
   assert.ok(t.ux2_lair, 'a lair step points somewhere');
-  assert.ok(Math.hypot(t.ux2_lair.x - best.x, t.ux2_lair.y - best.y) < 2, 'at the nearest lair standing');
+  // (its beach, where the boats put off — mid-game QA 2026-10-23: an inland point left the run out of the boats' reach)
+  const beach = lairBeach(game, best);
+  assert.ok(Math.hypot(t.ux2_lair.x - beach.x, t.ux2_lair.y - beach.y) < 2, 'at the nearest lair standing, on its beach');
   // the nearest wreck her divers can go down to
   assert.ok(t.ux2_dive && t.ux2_dive.r === 120, 'a dive points at a wreck');
   assert.ok(game.wrecks.some((w) => Math.hypot(w.x - t.ux2_dive.x, w.y - t.ux2_dive.y) < 2));

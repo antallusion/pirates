@@ -190,7 +190,13 @@ function counted(s: string): string | undefined {
     const m = /^(\d[\d,.]*) (.+)$/.exec(it);
     // (the silver in a list of goods — «296 silver» — as the goods: QA circle, it kept the whole list in English)
     const n = m ? (m[2] === 'silver' ? 'серебро' : lowerName(m[2]) ?? NAME_RU.get(m[2])) : undefined;
-    if (!m || !n) return undefined;
+    if (!m || !n) {
+      // a phrase of its own among the goods («1 Provisions, paid 34 silver» — a hamlet's catch: mid-game QA 2026-10-23)
+      const t = exact.get(it) ?? (templates ? translate(it, 2) : it);
+      if (t === it || latin(t)) return undefined;
+      out.push(t);
+      continue;
+    }
     out.push(`${n.charAt(0).toLowerCase()}${n.slice(1)} — ${m[1]}`); // «доски и смола — 30», as the yard's own line
   }
   return out.join(', ');

@@ -15,6 +15,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { openSea } from './wrecks.ts';
 import { questEvent } from './quests.ts';
+import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 
 export interface Castaway {
   id: number;
@@ -156,13 +157,22 @@ export function stepCastaways(game: Game): void {
       continue;
     }
     if (now < due) continue;
-    if (room <= 0 || castRoomHour(game, s) <= 0 || ship.state.speed < 1.5 || ship.inCombat(now) || castawaysOf(game, s).length >= 2) {
+    // A quest of hers that asks for souls saved (the campaign's «rescue»): they come all the same — with her berths full
+    // they are given water and a course home and still count (haulCastaway). Before, a full crew meant none ever came,
+    // and «Спасите людей из моря: 2» could never be done (mid-game QA 2026-10-23).
+    const wanted = rescueWanted(s);
+    if ((!wanted && (room <= 0 || castRoomHour(game, s) <= 0)) || ship.state.speed < 1.5 || ship.inCombat(now) || castawaysOf(game, s).length >= 2) {
       S.next.set(s.accountId, now + 30);
       continue;
     }
-    S.next.set(s.accountId, now + castWait(full, S.rng.float()));
+    S.next.set(s.accountId, now + castWait(wanted ? 0 : full, S.rng.float()));
     putCastaway(game, s);
   }
+}
+
+/** A quest of hers is at a step of souls to save. */
+function rescueWanted(s: PlayerSession): boolean {
+  return !!s.profile?.quests.active.some((q) => QUESTS_BY_ID[q.id]?.steps[q.step]?.type === 'rescue');
 }
 
 /** Her castaways to her client, when they changed. */

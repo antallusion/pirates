@@ -1,0 +1,415 @@
+// The mid-game QA (2026-10-22, tools/mobile/ux/midgame.mjs: the campaign's chapters 2–6 played on a phone in Telegram,
+// the island, the fleet, the group): the faults found on the way, each held here.
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const src = (f: string) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8').replace(/\r/g, '');
+
+test('a struck ship’s two choices are hers from afar: the helmsman lays her alongside and the terms are taken there', async () => {
+  // She strikes 160 m off and her captor lies still (allstop.ts); the card's buttons were dead until she was steered by
+  // hand within 30 m of the hull — the server takes the order from afar and sails her in (Game.acceptSurrender).
+  const card = src('client/src/ui/surrender.ts');
+  assert.doesNotMatch(card, /!near \? ' disabled'/, 'no choice disabled for the distance');
+  assert.doesNotMatch(card, /b\.disabled = !near/, 'nor turned off as she drifts');
+  const { EN, RU } = await import('../client/src/lang/ui/colours.ts');
+  assert.match(RU['sur.far'], /подвед/, 'the far line tells the helmsman takes her there');
+  assert.match(EN['sur.far'], /helmsman/);
+  assert.deepEqual([...RU['sur.far'].matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort(), [...EN['sur.far'].matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort());
+  // the server's side: an order from afar is an approach, not a refusal
+  const game = src('server/src/game/Game.ts');
+  assert.match(game, /if \(why === SURRENDER_FAR && target\) return approach\(/);
+});
+
+test('the Tide of the Dead: the drowned pass a captain by in the Crown’s safe water, and sail a hull of their waters’ level', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { REGIONS } = await import('../shared/src/world/regions.ts');
+  const { spawnGhost } = await import('../server/src/game/npc.ts');
+  const { levelRange } = await import('../shared/src/data/shiplevel.ts');
+  const { game } = makeGame();
+  join(game, 'Newcomer');
+  const s = game.sessionByName('Newcomer')!;
+  const ship = s.ship!;
+  ship.docked = null;
+  // by Saltmarrow (safe water): a ghost alongside is no foe of hers
+  const [bx, by] = REGIONS.black_coast.center;
+  ship.state.x = bx; ship.state.y = by;
+  ship.region = 'black_coast';
+  const ghost = game.spawnNpcShip('ghost', 'ghost_ship', 'choir', bx + 300, by, 0);
+  assert.equal(game.isHostile(ghost, ship), false, 'safe water: the drowned do not come for her');
+  // fired on by her, the ghost answers
+  ghost.attackers.set(ship.id, game.now);
+  assert.equal(game.isHostile(ghost, ship), true, 'a ghost she fired on fights back');
+  // in contested water the drowned come for her as before
+  const [gx, gy] = REGIONS.gravewater.center;
+  ship.state.x = gx; ship.state.y = gy;
+  ship.region = 'gravewater';
+  const ghost2 = game.spawnNpcShip('ghost', 'ghost_ship', 'choir', gx + 300, gy, 0);
+  assert.equal(game.isHostile(ghost2, ship), true, 'contested water: hers to fear');
+  // the season's ghosts in every sea: their hulls of their waters' level (the great ghost ship only at ⚓7 and above)
+  const before = new Set(game.ships.keys());
+  for (let i = 0; i < 400; i++) spawnGhost(game, true);
+  const made = [...game.ships.values()].filter((x) => !before.has(x.id) && x.npcRole === 'ghost');
+  assert.ok(made.length > 20, `ghosts put out (${made.length})`);
+  for (const g of made) {
+    const [lo, hi] = levelRange(g.loadout.classId);
+    assert.ok(g.shipLevel >= lo && g.shipLevel <= hi, `${g.loadout.classId} at ⚓${g.shipLevel} (${lo}–${hi})`);
+  }
+  const low = made.filter((g) => g.region === 'black_coast');
+  assert.ok(low.length && low.every((g) => g.loadout.classId !== 'ghost_ship' && g.shipLevel <= 4), `the Black Coast's ghosts small: ${low.map((g) => `${g.loadout.classId}⚓${g.shipLevel}`).join(', ')}`);
+});
+
+test('the Russian of the landing’s boats and the tavern’s word of a boss: no noun left in the wrong case', async () => {
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  setLang('ru');
+  try {
+    // «гребут к костёр отшельника на Рейвенрок-Рок» — the site's name is a nominative the line cannot decline
+    const boats = serverText('Boats away: 8 hands row for the hermit\'s fire on Ravenrock Rock (12s). The ship lies at anchor.');
+    assert.doesNotMatch(boats, /гребут к /, boats);
+    assert.match(boats, /^Шлюпки спущены: 8 человек гребут на /, boats);
+    // «Старый Швартов шевелится в Чёрное побережье»
+    const boss = serverText('Old Hawser stirs in The Black Coast. Whalers mark the water 26 km east, 78 km south — within the half hour.');
+    assert.doesNotMatch(boss, / в Чёрное/, boss);
+    assert.match(boss, /от угла карты/, boss);
+  } finally {
+    setLang('en');
+  }
+});
+
+test('a walk across an island ended and left alone: its card goes from her screen when the walk is dropped', async () => {
+  const { makeGame, join, steps } = await import('./helpers.ts');
+  const { startTrek, openTrek, playTrek } = await import('../server/src/game/trek.ts');
+  const { game } = makeGame();
+  const c = join(game, 'Walker');
+  const s = game.sessionByName('Walker')!;
+  s.ship!.docked = null;
+  const is = game.world.islands.find((i) => !i.portId && !i.minor && !i.hidden && i.region === 'black_coast')!;
+  s.ship!.state.x = is.x + is.radius + 60;
+  s.ship!.state.y = is.y;
+  const t = startTrek(game, s, is, 1)!;
+  assert.ok(t);
+  // walked back at once (the game at the haunt passed by, the path not taken): the end card, «На борт»
+  if (t.game !== null) { t.game = null; }
+  playTrek(game, s, 'back');
+  const tv = openTrek(game, s);
+  assert.ok(tv?.done, 'the walk is over');
+  assert.ok(c.last('trek')?.view?.done, 'her end card');
+  steps(game, 20 * 70);
+  assert.equal(openTrek(game, s), null, 'dropped');
+  assert.equal(c.last('trek')?.view, null, 'and her card closed with it');
+});
+
+test('«Плыть» to a campaign lair names its island, not «место»', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { QUESTS_BY_ID } = await import('../shared/src/data/quests.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { resolveGoal } = await import('../server/src/game/goalroute.ts');
+  const { game } = makeGame();
+  join(game, 'Lairer');
+  const s = game.sessionByName('Lairer')!;
+  s.profile!.level = 8;
+  const q = campaignOf(game).quests.find((x) => x.steps.some((st) => st.type === 'lair' && st.island === undefined && 'near' in st && st.near))!;
+  assert.ok(q, 'a campaign quest with a lair of its location');
+  const i = q.steps.findIndex((st) => st.type === 'lair');
+  s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
+  s.ship!.docked = null;
+  const near = (q.steps[i] as { near: { x: number; y: number } }).near;
+  s.ship!.state.x = near.x + 900;
+  s.ship!.state.y = near.y;
+  const t = game.questTargets(s)[q.id];
+  assert.ok(t && t.island !== undefined, `the target carries the lair's island (${JSON.stringify(t)})`);
+  const r = resolveGoal(game, s, `q:${q.id}`) as { cands?: { kind: string; name: string }[] };
+  assert.ok(r.cands?.length, JSON.stringify(r));
+  assert.equal(r.cands![0].kind, 'lair');
+  assert.equal(r.cands![0].name, game.world.islands[t.island!].name, 'its island by name');
+  assert.ok(QUESTS_BY_ID[q.id]);
+});
+
+test('the autosail pill at the run’s place says «на месте», not «пауза»', async () => {
+  const { pillTail } = await import('../client/src/ui/ease.ts');
+  const { RU, EN } = await import('../client/src/lang/ui/ease.ts');
+  assert.equal(pillTail({ paused: false }, 3000, { r: 260 }), null, 'under way: no word');
+  assert.equal(pillTail({ paused: true }, 40, { r: 260 }), 'here', '40 m off a lair’s beach: at the place');
+  assert.equal(pillTail({ paused: true }, 2500, { r: 260 }), 'paused', 'broken off short of it');
+  assert.equal(pillTail({ paused: true }, 60, null), 'paused', 'a course of her own (no goal) keeps «пауза»');
+  assert.equal(RU.as_here, 'на месте');
+  assert.equal(EN.as_here, 'here');
+});
+
+test('a campaign lair step points at a lair of the quest’s own level in its waters, when one stands there', async () => {
+  const { makeGame, join, steps } = await import('./helpers.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { lairList, lairBeach } = await import('../server/src/game/beastlairs.ts');
+  const { shipBandOf } = await import('../shared/src/data/xpcurve.ts');
+  const { game } = makeGame();
+  (await import('../server/src/game/advmap.ts')).quietAdv(game, false); // (the lairs awake, as on the live sea)
+  join(game, 'Hermit');
+  const s = game.sessionByName('Hermit')!;
+  // «За серой тканью» (chapter 2, the fourth level): a ⚓3 hermits' camp nearest, a ⚓2 bat cave in the same waters
+  const q = campaignOf(game).quests.find((x) => x.id === 'c02_08')!;
+  const i = q.steps.findIndex((st) => st.type === 'lair');
+  s.profile!.level = q.requires.level ?? 4;
+  s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
+  s.ship!.docked = null;
+  const t = game.questTargets(s)[q.id];
+  const l = lairList(game).find((x) => { const lp = lairBeach(game, x); return Math.hypot(lp.x - t.x, lp.y - t.y) < 1; })!;
+  assert.ok(l, 'the mark is a lair’s beach');
+  // her run's end there: «Штурм» on her bar (an inland camp's point left the run 100 m off with nothing to press)
+  const is = game.world.islands[l.island];
+  const a = Math.atan2(t.x - is.x, -(t.y - is.y));
+  for (const off of [20, 30, 40, 55]) {
+    s.ship!.state.x = t.x + Math.sin(a) * off;
+    s.ship!.state.y = t.y - Math.cos(a) * off;
+    s.ship!.state.speed = 0;
+    s.ship!.state.heading = a + Math.PI / 2;
+    const { isLand } = await import('../shared/src/world/worldgen.ts');
+    if (!isLand(game.world, s.ship!.state.x, s.ship!.state.y)) break;
+  }
+  steps(game, 25);
+  assert.equal(s.landable?.action, 'lair', `the lair in her boats' reach at the mark (${JSON.stringify(s.landable)})`);
+  assert.ok(l.level <= shipBandOf(q.requires.level ?? 4), `a lair of her band (⚓${l.level} ${l.kind})`);
+  const near = (q.steps[i] as { near: { x: number; y: number; r: number } }).near;
+  assert.ok(Math.hypot(t.x - near.x, t.y - near.y) <= near.r, 'within the location’s waters');
+  // the second word: «Потери врага» on the battle's card, not «Её потери» (a lair's creatures, an arena's captain)
+  const { RU } = await import('../client/src/lang/ui/tactical.ts');
+  assert.equal(RU['res.killed'], 'Потери врага');
+});
+
+test('a rescue step comes true with a full crew: castaways still put out for her, given water and counted', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { castawaysOf, haulCastaway, setCastRng, stepCastaways } = await import('../server/src/game/castaways.ts');
+  const { Rng } = await import('../shared/src/rng.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { game } = makeGame();
+  game.directorOn = true;
+  join(game, 'Full Crew');
+  const s = game.sessionByName('Full Crew')!;
+  const ship = s.ship!;
+  setCastRng(game, new Rng(5));
+  ship.docked = null;
+  s.profile!.docked = null;
+  ship.state.x = 21000; ship.state.y = 74000; // open water off Shell Creek
+  ship.crew = ship.stats.crewMax; // every berth taken
+  const q = campaignOf(game).quests.find((x) => x.id === 'c02_15')!; // «Singing on the Water»: save souls from the sea, 2
+  const i = q.steps.findIndex((st) => st.type === 'rescue');
+  s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
+  let saw = 0;
+  for (let t = 0; t < 1200 && s.profile!.quests.active.some((a) => a.id === q.id && a.step === i); t++) {
+    ship.state.speed = 8;
+    ship.lastCombat = -1000;
+    stepCastaways(game);
+    for (const k of castawaysOf(game, s)) { saw++; haulCastaway(game, s, k); }
+    game.now += 1;
+  }
+  assert.ok(saw >= 1, 'castaways put out for her');
+  assert.ok(!s.profile!.quests.active.some((a) => a.id === q.id && a.step === i), 'the step done within twenty minutes');
+  assert.equal(ship.crew, ship.stats.crewMax, 'no man past her berths');
+});
+
+test('every name a route may carry reads in Russian (the rescue step’s open water was «sea» on the autosail pill)', async () => {
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { routeLabel } = await import('../client/src/ui/ease.ts');
+  const { readFileSync: rf } = await import('node:fs');
+  const src = rf(new URL('../server/src/game/goalroute.ts', import.meta.url), 'utf8');
+  const names = new Set([...src.matchAll(/name: '([a-z_]+)'/g), ...src.matchAll(/squares\(game, [^,]+, '([a-z_]+)'/g)].map((m) => m[1]));
+  assert.ok(names.has('open_sea') && !names.has('sea'));
+  setLang('ru');
+  try {
+    for (const n of names) assert.doesNotMatch(routeLabel({ kind: 'place', name: n }), /[A-Za-z]/, n);
+  } finally {
+    setLang('en');
+  }
+});
+
+test('a harbour that refuses a wanted ship says the way back (a pardon in a free harbour), in Russian too', async () => {
+  const { canDock } = await import('../server/src/game/player.ts');
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const p = { infamy: 9999, talents: {}, reputation: {} } as never;
+  const r = canDock(p, 'crown');
+  assert.equal(r.ok, false);
+  assert.match(r.reason!, /pardon/);
+  setLang('ru');
+  try { assert.match(serverText(r.reason!), /^Начальники портов .+помилование.+вольной гавани/); } finally { setLang('en'); }
+});
+
+test('the law forgives a stray ball through the campaign’s Crown chapters (the Black Coast’s three), not beyond', async () => {
+  const { lawNewbie, CROWN_CHAPTERS } = await import('../server/src/game/stray.ts');
+  const { FIRST_SLOT, gateOf } = await import('../shared/src/data/campaign/progress.ts');
+  const { PLAN } = await import('../shared/src/data/campaign/plan.ts');
+  assert.ok(PLAN.slice(0, CROWN_CHAPTERS).every((c) => c.region === 'black_coast') && PLAN[CROWN_CHAPTERS].region !== 'black_coast');
+  const p = (at: number, level: number) => ({ level, campaign: { at, picks: {}, started: true, from: 0 }, tutorial: { stage: null, done: true, hints: {} }, onboarding: null } as never);
+  // chapter 3 at the eighth level (Salt Stockade's ball on a Crown merchant): forgiven — its harbours stay open to her
+  assert.ok(lawNewbie(p(FIRST_SLOT[2] + 14, 8)), 'chapter 3, level 8');
+  // chapter 4 (Gravewater, contested): the law as for anyone
+  assert.ok(!lawNewbie(p(FIRST_SLOT[3] + 1, gateOf(FIRST_SLOT[3]))), 'chapter 4');
+  // a seasoned captain whose campaign stands at the start: not a newcomer
+  assert.ok(!lawNewbie(p(0, 30)), 'level 30');
+});
+
+test('a landing’s haul with a price in it reads in Russian («1 Provisions, paid 34 silver»)', async () => {
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { applyDataLocale } = await import('../client/src/lang/data.ts');
+  setLang('ru');
+  applyDataLocale('ru');
+  try {
+    const t = serverText('The party returns from the fishing hamlet on Gallowswick Rock: 1 Provisions, paid 34 silver.');
+    assert.doesNotMatch(t, /[A-Za-z]{3,}/, t);
+    assert.match(t, /заплачено 34/, t);
+    const fort = serverText('The party returns from the garrisoned fort on Lowmere: shot for the guns, paid 120 silver.');
+    assert.doesNotMatch(fort, /[A-Za-z]{3,}/, fort);
+  } finally { setLang('en'); applyDataLocale('en'); }
+});
+
+test('an island’s waters to reach: «Плыть» marks its coast nearest her, and her hull at the mark counts', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { questEvent } = await import('../server/src/game/quests.ts');
+  const { isLand } = await import('../shared/src/world/worldgen.ts');
+  const { game } = makeGame();
+  join(game, 'Lantern');
+  const s = game.sessionByName('Lantern')!;
+  const q = campaignOf(game).quests.find((x) => x.id === 'c04_08')!; // «Thieves from the Water»: Lanternwick Rock's waters
+  const i = q.steps.findIndex((st) => st.type === 'isle');
+  const isl = (q.steps[i] as { island: number }).island;
+  s.profile!.level = 10;
+  s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
+  s.ship!.docked = null; s.profile!.docked = null;
+  // the bay where the old run stopped: inside the island's radius, 89 m off its shore — not yet its waters
+  s.ship!.state.x = 41502; s.ship!.state.y = 67149;
+  questEvent(game, s, { k: 'tick', dt: 1 });
+  assert.equal(s.profile!.quests.active[0]?.step, i, 'the bay is not its waters');
+  const t = game.questTargets(s)[q.id];
+  assert.equal(t.island, isl);
+  assert.ok(t.r! <= 60, 'a mark on the coast, not the middle');
+  assert.ok(Math.hypot(t.x - 41502, t.y - 67149) < 120, 'the coast nearest her');
+  // her hull by the mark (in the water off it): the step done
+  const is = game.world.islands[isl];
+  const a = Math.atan2(t.x - is.x, -(t.y - is.y));
+  for (const off of [18, 25, 30]) {
+    s.ship!.state.x = t.x + Math.sin(a) * off; s.ship!.state.y = t.y - Math.cos(a) * off;
+    if (!isLand(game.world, s.ship!.state.x, s.ship!.state.y)) break;
+  }
+  questEvent(game, s, { k: 'tick', dt: 1 });
+  assert.notEqual(s.profile!.quests.active.find((x) => x.id === q.id)?.step ?? 99, i, 'its waters reached');
+});
+
+test('a fireship sent at her, sunk, costs no standing with its flag (Free Harbors shut chapter 4’s hub to her)', async () => {
+  const { makeGame, join, steps } = await import('./helpers.ts');
+  const { spawnFireship } = await import('../server/src/game/npc.ts');
+  const { game } = makeGame();
+  join(game, 'Fire Eater');
+  const s = game.sessionByName('Fire Eater')!;
+  const ship = s.ship!;
+  ship.docked = null; s.profile!.docked = null;
+  ship.state.x = 52000; ship.state.y = 74000;
+  const before = s.profile!.reputation.free ?? 0;
+  let sunk = 0;
+  for (let k = 0; k < 6; k++) {
+    const f = spawnFireship(game, ship);
+    if (!f) continue;
+    f.attackers.set(ship.id, game.now);
+    game.beginSinking(f);
+    sunk++;
+    steps(game, 2);
+  }
+  assert.ok(sunk >= 4, `${sunk} fireships`);
+  assert.ok((s.profile!.reputation.free ?? 0) >= before - 1, `Free Harbors' standing kept (${before} → ${s.profile!.reputation.free})`);
+  // an ordinary ship of the Free Harbors sunk by her still costs it
+  const other = game.spawnNpcShip('merchant', 'sloop', 'free', ship.state.x + 500, ship.state.y, 0);
+  other.attackers.set(ship.id, game.now);
+  game.beginSinking(other);
+  assert.ok((s.profile!.reputation.free ?? 0) < before - 1, 'a free merchant sunk still costs standing');
+});
+
+test('a customs step with a clean hold sends her to a black market first, then to the patrols', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { resolveGoal } = await import('../server/src/game/goalroute.ts');
+  const { game } = makeGame();
+  join(game, 'Smuggler Sal');
+  const s = game.sessionByName('Smuggler Sal')!;
+  const q = campaignOf(game).quests.find((x) => x.steps.some((st) => st.type === 'customs'))!;
+  const i = q.steps.findIndex((st) => st.type === 'customs');
+  s.profile!.level = 12;
+  s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
+  s.ship!.docked = null; s.profile!.docked = null;
+  s.ship!.cargo = {};
+  const a = resolveGoal(game, s, `q:${q.id}`) as { cands: { kind: string; port?: string }[] };
+  assert.ok(a.cands.length && a.cands.every((c) => c.kind === 'port' && game.portById(c.port!)?.blackMarket), 'a black market');
+  s.ship!.cargo = { dreamleaf: 2 } as never;
+  const b = resolveGoal(game, s, `q:${q.id}`) as { cands: { kind: string }[] };
+  assert.ok(b.cands.every((c) => c.kind !== 'port'), 'contraband aboard: the patrols');
+});
+
+test('the crew’s rum and dreamleaf rations never touch a cargo a quest of hers is carrying', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { stepMind } = await import('../server/src/game/mind.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { game } = makeGame();
+  join(game, 'Broker Run');
+  const s = game.sessionByName('Broker Run')!;
+  const ship = s.ship!;
+  ship.docked = null; s.profile!.docked = null;
+  const q = campaignOf(game).quests.find((x) => x.id === 'c05_05')!; // «Leaf for a Broker»: dreamleaf × 10 to Wreckhold
+  const i = q.steps.findIndex((st) => st.type === 'deliver');
+  s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
+  const qty = (q.steps[i] as { qty: number }).qty;
+  ship.cargo = { dreamleaf: qty, rum: 3 } as never;
+  ship.sanity = 20;
+  ship.talentReady.leafPipe = 0; ship.talentReady.rumTot = 0;
+  stepMind(game, ship);
+  assert.equal(ship.cargo.dreamleaf, qty, 'the broker’s leaf untouched');
+  assert.equal(ship.cargo.rum, 2, 'the crew’s own rum is still theirs');
+  // one more leaf than the delivery: that one is smoked
+  ship.cargo.dreamleaf = qty + 1; ship.talentReady.leafPipe = 0; ship.sanity = 20;
+  stepMind(game, ship);
+  assert.equal(ship.cargo.dreamleaf, qty);
+});
+
+test('a ship striking to the sea’s own pirates is no toast for every captain about; her captor is told', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { struck } = await import('../server/src/game/struck.ts');
+  const { game } = makeGame();
+  const c = join(game, 'Bystander');
+  const s = game.sessionByName('Bystander')!;
+  s.ship!.docked = null; s.profile!.docked = null;
+  const { x, y } = s.ship!.state;
+  const m = game.spawnNpcShip('merchant', 'sloop', 'league', x + 600, y, 0);
+  const pir = game.spawnNpcShip('pirate', 'sloop', 'confederacy', x + 700, y, 0);
+  const before = c.all('toast').length;
+  struck(game, m, game.npcs.get(m.id)!, pir);
+  assert.equal(c.all('toast').length, before, 'no word to a captain who is not her captor');
+  const m2 = game.spawnNpcShip('merchant', 'sloop', 'league', x + 300, y, 0);
+  struck(game, m2, game.npcs.get(m2.id)!, s.ship!);
+  assert.ok(c.all('toast').slice(before).some((t) => /strikes her colours!/.test(t.msg)), 'her captor told');
+});
+
+test('the claim card’s «free islands near» rows: the name its whole width, not the 40 px picture column («Колдп/ойнт»)', () => {
+  const company = src('client/src/ui/company.ts');
+  const css = src('client/styles.css');
+  assert.match(company, /<div class="item-row est-near"><div class="item-text">/, 'the row marked as one with no picture');
+  assert.match(css, /\.item-row\.est-near \{ grid-template-columns: minmax\(0, 1fr\) auto; \}/);
+});
+
+test('a hail to trade shows on her Company screen, and «Торговать» there opens the table', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { game } = makeGame();
+  const ca = join(game, 'Hailer Ann');
+  const cb = join(game, 'Hailed Bo');
+  const a = game.sessionByName('Hailer Ann')!, b = game.sessionByName('Hailed Bo')!;
+  b.ship!.docked = a.ship!.docked; // the same harbour
+  ca.push({ t: 'barter', action: 'propose', name: 'Hailed Bo' });
+  const party = cb.last('party');
+  assert.deepEqual(party?.hails, ['Hailer Ann'], 'her screen carries the hail');
+  cb.push({ t: 'barter', action: 'propose', name: 'Hailer Ann' }); // her «Торговать»
+  assert.ok(cb.last('barter')?.view, 'the table opens');
+  const company = src('client/src/ui/company.ts');
+  assert.match(company, /data-hail=/);
+  assert.match(company, /\[data-hail\]'\)\.forEach\(\(el\) => \(el\.onclick = \(\) => this\.send\(\{ t: 'barter', action: 'propose'/);
+  const { RU } = await import('../client/src/lang/ui/company.ts');
+  assert.equal(RU.grp_hail_go, 'Торговать');
+});

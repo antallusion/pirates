@@ -126,13 +126,14 @@ export class SurrenderCard {
         dl.textContent = near ? L('sur.near', { n: d }) : L('sur.far', { range: o.range, n: d });
       }
       if (tl) tl.textContent = L('sur.left', { n: left });
-      this.el.querySelectorAll<HTMLButtonElement>('button[data-sur]').forEach((b) => (b.disabled = !near || b.dataset.off === '1'));
+      // (far off a choice is still hers: the helmsman takes her alongside and the terms are taken there — Game.acceptSurrender)
+      this.el.querySelectorAll<HTMLButtonElement>('button[data-sur]').forEach((b) => (b.disabled = b.dataset.off === '1'));
       return;
     }
     const cls = SHIP_CLASSES[o.classId];
     const art = assetUrl(cls.sprite);
     const choice = (fate: SurrenderFate, ico: string, title: string, short: string, sub: string, cls: string) =>
-      `<button class="btn choice sur-choice ${cls}" data-sur="${fate}" data-off="0" title="${esc(`${title}: ${sub}`)}" aria-label="${esc(title)}"${!near ? ' disabled' : ''}>${icon(ico, '', 'choice-ico')}<span><b>${esc(title)}</b><i class="sur-short">${esc(short)}</i><small>${esc(sub)}</small></span></button>`;
+      `<button class="btn choice sur-choice ${cls}" data-sur="${fate}" data-off="0" title="${esc(`${title}: ${sub}`)}" aria-label="${esc(title)}">${icon(ico, '', 'choice-ico')}<span><b>${esc(title)}</b><i class="sur-short">${esc(short)}</i><small>${esc(sub)}</small></span></button>`;
     // The two choices (owner, 2026-10-18): take all and sink her, or take her crew and let her go.
     const n = o.outcome ?? { sink: { silver: o.gold, take: o.cargo, left: 0, timber: 0, crew: 0 }, release: { silver: 0, crew: 0 }, room: 0, survivors: 0 };
     this.el.innerHTML = `<div class="enc-card sur-card sur-two">

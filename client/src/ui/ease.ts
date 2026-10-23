@@ -60,6 +60,13 @@ function distText(d: number): string {
 
 /** The pill «Auto-sail · 2.4 km · stop» at the top of the stack while the helmsman has the wheel; with a run to a goal
  *  (route, 2026-10-15) the place's name and the danger of its waters, and the stop ends the run as well. */
+/** The pill's last word for a course not being sailed: at its place now (mid-game QA 2026-10-22: a run arrived 40 m off
+ *  a lair's beach read «40 м · пауза» as if a fight had broken it off), or broken off short of it. */
+export function pillTail(c: { paused: boolean }, left: number, rt: { r: number } | null): 'here' | 'paused' | null {
+  if (!c.paused) return null;
+  return rt && left <= Math.max(80, Math.min(rt.r, 400)) ? 'here' : 'paused';
+}
+
 export class AutosailPill {
   private key = '';
   onStop: () => void = () => {};
@@ -84,7 +91,8 @@ export class AutosailPill {
       const left = L('as_left', { d: distText(courseAhead(c, own.x, own.y).left) });
       const named = rt ? null : courseName(state, c.to);
       const to = rt ? RT('to', { name: routeLabel(rt) }) : named ? L('as_to', { name: placeName(named) }) : L('as_mark');
-      const pause = c.paused ? ` · ${L('as_paused')}` : '';
+      const tail = pillTail(c, courseAhead(c, own.x, own.y).left, rt);
+      const pause = tail ? ` · ${L(tail === 'here' ? 'as_here' : 'as_paused')}` : '';
       const text = `· ${to} · ${left}${pause}`;
       // (the place's name and the way left apart: a narrow chip keeps the way left, its name in the title — styles.css)
       if (d.dataset.t !== text) {
