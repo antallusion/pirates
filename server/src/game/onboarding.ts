@@ -275,11 +275,15 @@ export const PUPIL_HULL = 0.25;
 /** Each novice's practice raider (entity id). */
 const raiders = new WeakMap<PlayerSession, number>();
 
+/** How far off the First Watch's raider is put out (upwind of her). */
+export const WATCH_RAIDER_OFF = 600;
+
 function practiceRaider(game: Game, s: PlayerSession, ship: ShipEntity): void {
   const wind = game.windFor(ship);
   for (const off of [0, 0.8, -0.8, 1.6, -1.6]) {
     const a = wind.dir + Math.PI + off;
-    const x = ship.state.x + Math.sin(a) * 900, y = ship.state.y - Math.cos(a) * 900;
+    // (600 m, not 900: the newcomer sailed 40–50 s before the raider was near enough to see — the run of 2026-10-23)
+    const x = ship.state.x + Math.sin(a) * WATCH_RAIDER_OFF, y = ship.state.y - Math.cos(a) * WATCH_RAIDER_OFF;
     if (coastLand(game, x, y)) continue;
     const r = game.spawnNpcShip('pirate', 'sloop', 'confederacy', x, y, a + Math.PI, { ship: 'Red Novice', captain: 'Jory Slack' });
     game.setNpcLevel(r, 1); // the first fight is an even one

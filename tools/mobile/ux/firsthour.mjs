@@ -43,7 +43,7 @@ const look = (p) => p.evaluate(() => {
   const tac = document.body.classList.contains('tac');
   const endBtn = document.querySelector('#board-tac [data-endbtn]');
   const quick = [...document.querySelectorAll('#board-tac [data-quicknow], #board-tac .tb-qn, #board-tac [data-a="quick"]')].find(vis);
-  const cards = [...document.querySelectorAll('[data-sur], [data-fate], #promo-over [data-polater], .enc-card button, #lvl-up button, .levelup button, [data-dgok], [data-endbtn]')].filter(vis).map((e) => ({ sel: e.dataset.sur ? `[data-sur="${e.dataset.sur}"]` : e.dataset.fate ? `[data-fate="${e.dataset.fate}"]` : null, txt: txt(e), at: box(e), gold: e.classList.contains('btn-primary') || e.classList.contains('k-btn--primary') || e.classList.contains('gold') }));
+  const cards = [...document.querySelectorAll('[data-sur], [data-fate], #promo-over [data-polater], .enc-card button, [data-lupick], [data-lore-go], [data-gfclaim], [data-gfdone], [data-endbtn], .depart-panel [data-dp="all"], .depart-panel [data-dp="sail"]')].filter(vis).map((e) => ({ sel: e.dataset.sur ? `[data-sur="${e.dataset.sur}"]` : e.dataset.fate ? `[data-fate="${e.dataset.fate}"]` : null, kind: Object.keys(e.dataset).join(','), txt: txt(e), at: box(e), gold: e.classList.contains('btn-primary') || e.classList.contains('k-btn--primary') || e.classList.contains('gold') }));
   const camp = s?.self?.campaign ?? null;
   return {
     stage: s?.onboarding?.stage ?? null,
@@ -159,7 +159,7 @@ try {
     else if (v.finger?.shown) act = [`finger ${v.finger.sel} «${v.finger.txt}»`, async () => (v.finger.sel === '#tc-stick' ? stick(p, v.finger.at) : tap(p, v.finger.at))];
     else if (v.tac && v.end) act = ['battle end', async () => p.evaluate(() => { const r = document.querySelector('#board-tac [data-endbtn]').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }).then((xy) => tap(p, xy))];
     else if (v.tac && v.quick) act = ['battle quick', async () => tap(p, v.quick)];
-    else if (!v.tac && v.cards.length) { const c = v.cards.find((x) => x.gold) ?? v.cards[0]; act = [`card «${c.txt}»`, async () => tap(p, c.at)]; }
+    else if (!v.tac && v.cards.length) { const c = v.cards.find((x) => /lupick/.test(x.kind ?? '')) ?? v.cards.find((x) => x.gold) ?? v.cards[0]; act = [`card «${c.txt}»`, async () => tap(p, c.at)]; }
     if (act) {
       const label = act[0];
       if (label === lastAct) sameAct++; else sameAct = 0;
@@ -180,6 +180,12 @@ try {
     }
     // nothing to tap: she waits. A wait under the helmsman, in a battle's animation or a film is fine for a while.
     const idle = (Date.now() - idleSince) / 1000;
+    // the waits seen as she sees them: a shot every 8 s of a wait, four a step at most
+    if (idle > 6 && Date.now() - (st.lastIdleShot ?? 0) > 8000 && (st.idleShots ?? 0) < 4) {
+      st.lastIdleShot = Date.now(); st.idleShots = (st.idleShots ?? 0) + 1;
+      rec({ wait: key, idle: Math.round(idle), v });
+      await shot(p, `wait_${key.replace(/[:]/g, '-')}`);
+    }
     const moving = v.auto || v.spd > 0.5;
     const limit = v.tac ? 30 : moving ? 120 : 12;
     if (idle > limit) {
@@ -192,7 +198,7 @@ try {
       if (lastShotKey !== key) { await shot(p, `stuck_${key.replace(/[:]/g, '-')}`); lastShotKey = key; }
       // what a person would try: the gold «Плыть», the quest's own button, «В море», the journal's goal
       const tried = await p.evaluate(() => {
-        for (const q of ['#tc-act[data-act="goal_sail"]', '.tc-act2[data-act="goal_sail"]', '#tc-act', '[data-act="quest_here"]', '#modal-panel [data-ptab="sea"]', '#tc-cast']) {
+        for (const q of ['#tc-act[data-act="goal_sail"]', '.tc-act2[data-act="goal_sail"]', '[data-act="quest_here"]', '#modal-panel [data-ptab="sea"]', '#tc-cast']) {
           const e = document.querySelector(q); if (!e) continue; const r = e.getBoundingClientRect(); if (r.width < 4 || e.closest('.hidden')) continue;
           return { q, at: [r.left + r.width / 2, r.top + r.height / 2], txt: e.innerText?.trim().slice(0, 30) };
         }

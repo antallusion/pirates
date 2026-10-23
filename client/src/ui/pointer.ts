@@ -96,6 +96,9 @@ function targetsOf(f: PointerFacts): string[] {
     return hereTargets(f, id ?? '', tab ?? '');
   }
   switch (f.stage) {
+    case 'go':
+      // the story's next place (main.ts storyFrame): out of port, then its «Плыть»; quiet while the helmsman has her
+      return f.docked ? TO_SEA : f.helmsman ? [] : GOAL_SAIL;
     case 'sail':
       // In port: the harbour's gold «В море» on its rail (docs/23 phase 6; the old «Поднять паруса» is gone — the finger
       // pointed at nothing and the watch's first step stood still, e2e 2026-10-07), else the HUD's big round «В море».

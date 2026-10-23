@@ -16,3 +16,49 @@ test('«В море» brings up «Готовы к выходу?»: the finger go
   // at sea there is no sheet to point into
   assert.ok(!pointerTargets({ stage: 'c:sink', touch: true, docked: false, battle: false }).some((x) => x.includes('depart')));
 });
+
+test('the First Watch\'s «Атакуйте»: «Атаковать» on its raider from afar, and the raider put out nearer', async () => {
+  const { attackRelevant, WATCH_RAIDER } = await import('../client/src/ui/actbar.ts');
+  // 560 m off, out of her guns' reach and off her screen: the lesson's button is there all the same
+  assert.equal(attackRelevant(false, false, true), true);
+  assert.equal(attackRelevant(false, true, false), false, 'any other ship: only within her guns');
+  const { readFileSync } = await import('node:fs');
+  const onb = readFileSync('server/src/game/onboarding.ts', 'utf8');
+  assert.ok(onb.includes(`ship: '${WATCH_RAIDER}'`), 'the client knows the raider by the name the server gives her');
+  const { WATCH_RAIDER_OFF } = await import('../server/src/game/onboarding.ts');
+  assert.ok(WATCH_RAIDER_OFF <= 600, 'no 40–50 s of open sea before the raider is near');
+  const main = readFileSync('client/src/main.ts', 'utf8');
+  assert.match(main, /attackRelevant\(gunLeft <= 0, tgtSeen, state\.onboarding\?\.stage === 'attack' && tgt\?\.info\?\.name === WATCH_RAIDER\)/);
+});
+
+test('the story after the opening: «Плыть» on the bar and the finger on it in the first two chapters', () => {
+  // «Соль и туман»: at sea «Плыть», in port «В море» first; quiet while the helmsman has her
+  assert.deepEqual(pointerTargets({ stage: 'go', touch: true, docked: false, battle: false }), ['#tc-act[data-act="goal_sail"]', '.tc-act2[data-act="goal_sail"]', '.act-btn.act-goal_sail']);
+  assert.equal(pointerTargets({ stage: 'go', touch: true, docked: true, battle: false })[0], DEPART[0]);
+  assert.ok(pointerTargets({ stage: 'go', touch: true, docked: true, battle: false }).includes('#modal-panel [data-ptab="sea"]'));
+  assert.deepEqual(pointerTargets({ stage: 'go', touch: true, docked: false, battle: false, helmsman: true }), []);
+  assert.deepEqual(pointerTargets({ stage: 'go', touch: true, docked: false, battle: true }), [], 'never over a battle');
+});
+
+test('main.ts: the opening is not interrupted — the level card waits for a run to end, the gift and offers wait out the opening, the stack is marked', async () => {
+  const { readFileSync } = await import('node:fs');
+  const main = readFileSync('client/src/main.ts', 'utf8');
+  // «Новый уровень» came up while the helmsman sailed her at the tender, 90 m off
+  assert.match(main, /!hostileNear\(\) && !underWay\(\)\) \{\s*heroSeen = waiting;/);
+  assert.match(main, /function underWay\(\): boolean \{\s*return !!state\.autosail \|\| !!state\.pursuit \|\| state\.roamRun !== null/);
+  // «Награда за вход» over «Плыть» between «Борт о борт» and «Твари на отмели»
+  assert.match(main, /new DailyGift\(\{[^\n]*busy: \(\) => [^\n]*openingFrame\(\) !== null \}\)/);
+  assert.match(main, /new Promos\(\{[^\n]*openingFrame\(\) !== null, held/);
+  // «Твари на отмели»: «Плыть» stopped her 60 m off the stack and nothing lit — the stack on her screen is marked
+  assert.match(main, /openingFrame\(\) === 'neutral' && !state\.autosail && state\.roamRun === null \? openingStack\(own\)/);
+  // the story's «Плыть» and its finger; the prologue's «Выслушать» puts the window under it away
+  assert.match(main, /if \(!q\?\.op\) return storySail\(\);/);
+  assert.match(main, /hereFrame\(\) \?\? storyFrame\(\)/);
+  assert.match(main, /campaignLore\('prologue', [^\n]*closeModal\(\)/);
+});
+
+test('the toast of a campaign quest names «Плыть», not a mark to find (RU and EN)', async () => {
+  const { EN, RU } = await import('../client/src/lang/ui/ux2.ts');
+  assert.match(RU['goal.trackedSail'], /«Плыть»/);
+  assert.match(EN['goal.trackedSail'], /“Sail”/);
+});

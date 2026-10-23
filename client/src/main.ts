@@ -57,7 +57,7 @@ import { AudioEngine, turnCreakLoad } from './audio.ts';
 import { AutosailPill, FirstTips, autosailRequest, autosailStopText, routeLabel, tipForMsg, tipForState } from './ui/ease.ts';
 import { claimNear, claimSpot, tapTarget } from './ui/sailto.ts'; // seaux: sail-to on tap
 import { toggleCaptainMenu } from './ui/capmenu.ts'; // seaux: the captain's menu on her portrait
-import { actBarHtml, attackRelevant, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
+import { actBarHtml, attackRelevant, WATCH_RAIDER, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
 import { FIND_REACH, FIND_SLOW, findGap } from '../../shared/src/data/seafinds.ts';
 import type { FindView } from '../../shared/src/findproto.ts';
 import { ROAMS, ROAM_REACH, ROAM_SEE, roamHullGap } from '../../shared/src/data/roamers.ts'; // docs/19 D7
@@ -534,6 +534,10 @@ function worldFeedShown(msg: string, region: string | null | undefined, level: n
   return true;
 }
 let heroSeen = -1;
+/** The helmsman has her on a run (a goal, «Атаковать», a stack's attack): a card that would cover the bar waits. */
+function underWay(): boolean {
+  return !!state.autosail || !!state.pursuit || state.roamRun !== null || (!!goalRun && !state.self?.dockedAt && (state.ownDisplay?.speed ?? 0) > 1);
+}
 /** A hostile sail or beast within 1.5 km, or a chase on: the level's card waits (docs/30: it came up over the helm and
  *  «Огонь» with four sharks round her). */
 function hostileNear(): boolean {
@@ -551,7 +555,9 @@ setInterval(() => {
   if (heroSeen < 0 || waiting < heroSeen) heroSeen = waiting;
   // Not in the First Watch either: at its last step «Новый уровень» covered «В порт», the step's finger stepped aside and
   // the pupil stood (e2e, docs/23 item 90); the choice waits for the watch's end.
-  if (waiting > heroSeen && (h.offer.length || h.focus) && !modal && !state.boardTac && !state.boardFight && !state.onboarding?.stage && !document.body.classList.contains('sea-target') && !levelUpOpen() && !hostileNear()) {
+  // Nor while the helmsman sails her to a thing to do (the opening's tender 90 m off, «Атаковать» under the card — the
+  // newcomer's run of 2026-10-23): it comes when she lies still, after the fight.
+  if (waiting > heroSeen && (h.offer.length || h.focus) && !modal && !state.boardTac && !state.boardFight && !state.onboarding?.stage && !document.body.classList.contains('sea-target') && !levelUpOpen() && !hostileNear() && !underWay()) {
     heroSeen = waiting;
     levelUpSheet(state, (m) => net.send(m));
   }
@@ -634,9 +640,11 @@ addEventListener('gravetide:shop', (e) => {
 hud.onShop = () => openShop();
 // Her personal offers (owner, 2026-10-15): the entry carousel, the sea's chip, the island's card, the harbour's strip.
 // The daily login gift (owner, 2026-10-16): its calendar comes first on entry, the offers' carousel after it.
-const dailyGift = new DailyGift({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight });
+// (both wait out the campaign's opening, its five lessons: «Награда за вход» came up between «Борт о борт» and «Твари на
+// отмели» over the bar's «Плыть» — the newcomer's run of 2026-10-23)
+const dailyGift = new DailyGift({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight || openingFrame() !== null });
 initTgNotices((m) => net.send(m), (f) => net.on(f));
-const promos = new Promos({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight, held: () => dailyGift.holding() });
+const promos = new Promos({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight || openingFrame() !== null, held: () => dailyGift.holding() });
 const puzzleWindow = new PuzzleWindow((m) => net.send(m));
 function openPuzzle(): void {
   puzzleWindow.open();
@@ -907,7 +915,8 @@ function noteNewQuests(): void {
   const fresh = known ? qs.find((q) => !known.has(q.id)) : undefined;
   if (!fresh) return;
   setTracked(fresh.id);
-  if (fresh.target) hud.toast(U2('goal.tracked', { name: sv(fresh.name) }), 'info');
+  // (the campaign's quests have their «Плыть» on the bar: the toast names it, not a mark to find on the sea)
+  if (fresh.target) hud.toast(U2(fresh.kind === 'campaign' ? 'goal.trackedSail' : 'goal.tracked', { name: sv(fresh.name) }), 'info');
 }
 departHooks.told = (msg) => hud.toast(msg, 'gold');
 // ---- /ux2
@@ -1090,13 +1099,36 @@ function openingFrame(): string | null {
  *  be answered, nor while the helmsman has her or «Атаковать» is under way. */
 function openingSail(): { key: string; name: string } | null {
   const q = state.self?.quests.find((x) => x.kind === 'campaign' && x.op);
-  if (!q?.op || state.onboarding?.stage) return null;
+  if (!q?.op) return storySail();
+  if (state.onboarding?.stage) return null;
   const sea = q.op === 'sink' || q.op === 'board' || q.op === 'neutral' || q.op === 'found';
   if (!sea || !inGame || state.self?.dockedAt || isleScene.isOpen) return null;
   if (state.boardTac || state.boardFight || state.pursuit || state.boarding || state.roamRun !== null || (modal && ANSWER.includes(modal))) return null;
   const key = `q:${q.id}`;
   if (state.autosail || (goalRun?.key === key && state.route?.key === key)) return null;
   return { key, name: sv(q.name) };
+}
+/** The story's quest now (the campaign's, after the opening): the one «Плыть» sails for. */
+function storyQuest(): { id: string; name: string } | null {
+  if (state.onboarding?.stage) return null;
+  const q = state.self?.quests.find((x) => x.kind === 'campaign' && !x.op);
+  return q ?? null;
+}
+/** After the opening the story's quests have their «Плыть» too (the newcomer's run of 2026-10-23: «Соль и туман» said
+ *  «нажмите на золотую метку», nothing lit on the bar, no finger — she stood twelve minutes): at sea, no run of the
+ *  helmsman's on, no fight, no window to answer. */
+function storySail(): { key: string; name: string } | null {
+  const q = storyQuest();
+  if (!q || !inGame || state.self?.dockedAt || isleScene.isOpen) return null;
+  if (state.boardTac || state.boardFight || state.pursuit || state.boarding || state.roamRun !== null || (modal && ANSWER.includes(modal))) return null;
+  const key = `q:${q.id}`;
+  if (state.autosail || (goalRun?.key === key && state.route?.key === key)) return null;
+  return { key, name: sv(q.name) };
+}
+/** The finger on the story's way (the first two chapters, a newcomer's first hour): in port «В море», at sea «Плыть». */
+function storyFrame(): string | null {
+  if ((state.self?.campaign?.ch ?? 99) > 2 || !storyQuest()) return null;
+  return state.self?.dockedAt || storySail() ? 'go' : null;
 }
 /** Her «Плыть» for a run broken off by another order (a struck ship's terms, a boarding): gold on the bar until pressed
  *  (ui/resumesail.ts) — never sailed on by itself. */
@@ -1876,7 +1908,7 @@ function onMessage(m: ServerMsg): void {
     case 'campaign_new':
       // the story begins after the opening (owner, 2026-10-19: «и далее уже основная кампания начинается с каким-то
       // лором»): its prologue, once, before the first quest of the story
-      if (m.ch === 1 && m.k === STORY_FROM && !m.choice) campaignLore('prologue', () => !!state.boardTac || !!state.boardFight);
+      if (m.ch === 1 && m.k === STORY_FROM && !m.choice) campaignLore('prologue', () => !!state.boardTac || !!state.boardFight, () => { if (modal && !ANSWER.includes(modal)) closeModal(); });
       // docs/36: the campaign's next quest came by itself (or a fork's ways) — a toast and a card, held while she fights
       campaignNews(m, {
         busy: () => !!state.boardTac,
@@ -3201,8 +3233,28 @@ function roamFocus(): { v: RoamView; marked: boolean; far: boolean } | null {
     if (v && p && h && v.fight !== 'other' && dist(p.x, p.y, own.x, own.y) <= ROAM_SEE && seenOnScreen(p.x, p.y, 20)) return { v, marked: true, far: roamHullGap(h, p) > ROAM_REACH };
     state.roamMark = null;
   }
+  // The opening's «Твари на отмели»: the stack on her screen is marked for her — «Плыть» stopped her 60 m off it (the
+  // stack drifts; its boats go from 30 m) and nothing lit for two and a half minutes (the newcomer's run, 2026-10-23)
+  const near = openingFrame() === 'neutral' && !state.autosail && state.roamRun === null ? openingStack(own) : null;
+  const nv = near !== null ? state.roams.find((x) => x.id === near) : undefined;
+  const nh = ownHull(state);
+  if (nv && nh) {
+    state.roamMark = nv.id;
+    return { v: nv, marked: true, far: roamHullGap(nh, roamNow(state, nv)) > ROAM_REACH };
+  }
   const v = roamAtHand();
   return v ? { v, marked: false, far: false } : null;
+}
+/** The nearest stack of the sea on her screen, standing and nobody's fight, within 1.5 km (the opening's lesson). */
+function openingStack(own: { x: number; y: number }): number | null {
+  let best: number | null = null, bd = 1500;
+  for (const v of state.roams) {
+    if (v.fight) continue;
+    const p = roamNow(state, v);
+    const d = dist(p.x, p.y, own.x, own.y);
+    if (d < bd && seenOnScreen(p.x, p.y, 20)) [best, bd] = [v.id, d];
+  }
+  return best;
 }
 
 /** docs/35: the nearest floating waystation within mooring reach of her hull (owner, 2026-10-22: 30 m, reach.ts). */
@@ -3439,7 +3491,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const tgt = targetId !== null ? state.ships.get(targetId) : undefined;
   const tgtSeen = !!tgt && seenOnScreen(tgt.cur.x, tgt.cur.y, 20);
   const gunLeft = tgt ? dist(own.x, own.y, tgt.cur.x, tgt.cur.y) - gunReach() : Infinity;
-  attackMark = attackable(targetId) && !roamLead && attackRelevant(gunLeft <= 0, tgtSeen) ? targetId : null;
+  attackMark = attackable(targetId) && !roamLead && attackRelevant(gunLeft <= 0, tgtSeen, state.onboarding?.stage === 'attack' && tgt?.info?.name === WATCH_RAIDER) ? targetId : null;
   if (attackMark === null && targetPinned && tgtSeen && !state.pursuit && attackable(targetId) && gunLeft > 0 && gunLeft < REACH_HINT * 2) info.push(esc(LR8('attackFar', { m: Math.round(gunLeft) })));
   const pursued = state.pursuit ? state.ships.get(state.pursuit.target) : undefined;
   if (state.pursuit) facts.attack = { name: placeName(pursued?.info?.name ?? L('her')), pursuing: true, mode: state.pursuit.mode, ...(unboardableMark(state.pursuit.target) ? { gunsOnly: true } : {}) };
@@ -4794,7 +4846,7 @@ function step(t: number): void {
     boardingCardFrame();
     filmMoments();
     const op = openingFrame();
-    const here = op ? null : hereFrame();
+    const here = op ? null : hereFrame() ?? storyFrame();
     tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax });
     tutorPointer.frame();
     encounterCard.frame();

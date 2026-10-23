@@ -191,12 +191,17 @@ function roamActs(f: ActFacts): Act[] {
   return out;
 }
 
+/** The First Watch's practice raider, by the name the server gives her (server/src/game/onboarding.ts practiceRaider). */
+export const WATCH_RAIDER = 'Red Novice';
+
 /** «Атаковать» on a ship is offered only within her guns' real reach of it, and only for a ship on her screen, out of
  *  the fog (owner, 2026-10-22: «щас атаковать можно за 400 метров … я не вижу ниче на карте, а уже могу брать абордаж,
  *  атаку»; 2026-10-19: «Пусть внизу выпрыгивают кнопки только когда я рядом с чем-то проплываю»). Her own mark farther
  *  off is sailed to from its own choices (the target menu's «Преследовать»), not from the bar. */
-export function attackRelevant(inGuns: boolean, seen: boolean): boolean {
-  return inGuns && seen;
+export function attackRelevant(inGuns: boolean, seen: boolean, lesson = false): boolean {
+  // (the First Watch's «Атакуйте»: its raider half a kilometre off and the step's one button not there — the newcomer
+  // sailed 40–50 s with nothing lit and no finger, the run of 2026-10-23; there «Атаковать» is the lesson itself)
+  return lesson || (inGuns && seen);
 }
 
 /** What the land key does at sea, with nothing to land at: the mast, the net, the mark — in the bar's order. */

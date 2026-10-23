@@ -53,14 +53,14 @@ export const STORY_FROM = 5;
  *  its own, once, after any fight — a window she reads and closes, never a toast. */
 const LORE_KEY = 'gravetide.lore.';
 let loreWait: ReturnType<typeof setInterval> | null = null;
-export function campaignLore(kind: 'prologue' | 'epilogue', busy: boolean | (() => boolean)): void {
+export function campaignLore(kind: 'prologue' | 'epilogue', busy: boolean | (() => boolean), after?: () => void): void {
   try {
     if (localStorage.getItem(LORE_KEY + kind)) return;
   } catch { /* no storage: shown */ }
   const isBusy = typeof busy === 'function' ? busy : () => busy;
   const show = () => {
     try { localStorage.setItem(LORE_KEY + kind, '1'); } catch { /* no storage */ }
-    loreCard(kind);
+    loreCard(kind, after);
   };
   if (!isBusy()) return show();
   if (loreWait) clearInterval(loreWait);
@@ -72,12 +72,17 @@ export function campaignLore(kind: 'prologue' | 'epilogue', busy: boolean | (() 
   }, 1500);
 }
 
-/** The lore's card: its mark («Пролог»), its title, three paragraphs and one button. */
-export function loreCard(kind: 'prologue' | 'epilogue'): void {
+/** The lore's card: its mark («Пролог»), its title, three paragraphs and one button. `after`: what its button does next
+ *  (the prologue's «Выслушать» puts away the window under it — the new town's page of the journal stood there with
+ *  nothing to press for the story's first quest, the newcomer's run of 2026-10-23). */
+export function loreCard(kind: 'prologue' | 'epilogue', after?: () => void): void {
   const k = (x: string) => L(`lore.${kind}.${x}` as keyof typeof EN);
   const body = `<div class="cn-lore"><p class="cn-lore-k">${esc(k('k'))}</p>${['1', '2', '3'].map((n) => `<p>${esc(k(n))}</p>`).join('')}</div>`;
   const sheet = openSheet({ title: k('t'), body, height: 'auto', cls: 'cn-sheet cn-lore-sheet', foot: `<button type="button" class="k-btn k-btn--primary k-btn--md" data-lore-go>${esc(k('go'))}</button>` });
-  sheet.panel.querySelector<HTMLElement>('[data-lore-go]')?.addEventListener('click', () => sheet.close('button'));
+  sheet.panel.querySelector<HTMLElement>('[data-lore-go]')?.addEventListener('click', () => {
+    sheet.close('button');
+    after?.();
+  });
 }
 
 /** Waiting words (for the tests). */

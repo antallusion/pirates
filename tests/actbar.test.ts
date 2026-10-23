@@ -183,7 +183,7 @@ test('«Атаковать» only within her guns’ real reach of a ship on her
   assert.equal(attackRelevant(true, true), true);
   const { readFileSync } = await import('node:fs');
   const main = readFileSync('client/src/main.ts', 'utf8');
-  assert.ok(main.includes('attackable(targetId) && !roamLead && attackRelevant(gunLeft <= 0, tgtSeen)'), 'the bar asks it');
+  assert.ok(main.includes('attackable(targetId) && !roamLead && attackRelevant(gunLeft <= 0, tgtSeen, '), 'the bar asks it');
   const hud = readFileSync('client/src/ui/seahud.ts', 'utf8'), css = readFileSync('client/seahud.css', 'utf8');
   assert.ok(hud.includes("' tc-pop'") && hud.includes("classList.add('tc-out')"), 'a new button pops up, an empty row sinks away');
   assert.ok(/@keyframes tc-pop/.test(css) && /@keyframes tc-out/.test(css) && /prefers-reduced-motion: reduce\) \{ #touch > \.tc-actrow/.test(css));
