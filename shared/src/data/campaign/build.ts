@@ -247,7 +247,7 @@ export const CHAPTER_LEG = 2500;
 /** A run held where the run before it was (no harbour or island near enough): allowed, a little dearer than a new place. */
 const REPEAT = 4000;
 /** How hard a chapter's first run is drawn to its mentor's harbour, and its last to the next one's. */
-const HUB_PULL = 0.3;
+const HUB_PULL = 0.1;
 
 /** The islands within reach of a harbour's quay (owner: what is farther from the quay than 1.5 km is far). */
 const nearCount = (pl: Places, p: Port): number => islandsNear(pl, { kind: 'port', id: p.id, x: p.x, y: p.y }, LOCAL_R).length;
@@ -324,7 +324,7 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
       const k = `${n.id}|${g}`;
       let d = seller.get(k);
       if (d === undefined) seller.set(k, (d = nearestSellerByRoute(pl.world, n, g, undefined, CHAPTER_LEG)?.d ?? Infinity));
-      return Number.isFinite(d) ? d * 0.5 + (d > LOCAL_R ? (strong ? 6000 : 2000) : 0) : strong ? 15000 : 4000;
+      return Number.isFinite(d) ? d * 0.5 + (d > LOCAL_R ? 2000 : 0) : strong ? 4000 : 3000;
     };
     const start = prev as { x: number; y: number } | null;
     const hub = byId(ch.hub);
@@ -353,7 +353,7 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
         let need = 0;
         if (n.kind === 'port') {
           for (const g of run.goods) need += sellerCost(n, g.good, g.named);
-          if (run.carry && !otherNear(n)) need += 3000;
+          if (run.carry && !otherNear(n)) need += 1000;
         }
         return (run.at === n.id ? -1500 : 0) + need + (run === rs[0] && !abyss ? HUB_PULL * Math.hypot(n.x - hub.x, n.y - hub.y) : 0) + (used.get(n.id) ?? 0) * 1e5 + (n.near === 0 ? 2500 : n.near === 1 ? 1000 : 0)
           + (l > band + 1 ? 6000 : l > band || l < band - 1 ? 3000 : 0) + (isleSeas.includes(n.region) || seas.includes(n.region) ? 0 : 1500) + (n.kind === 'isle' && !abyss ? 1200 : 0);
