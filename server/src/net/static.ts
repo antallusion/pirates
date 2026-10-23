@@ -205,6 +205,10 @@ export function createStaticHandler(root: string) {
       await Promise.all(deps.map(walk));
     };
     await walk('/src/main.ts');
+    // The campaign's words (client/src/lang/server.ts loadCampaignWords, imported at once on start): named up front too,
+    // after the game's own modules — on a phone's slow network they came behind some nine hundred pictures, half a minute
+    // and more of «…» for the quests' titles (owner, 2026-10-23: «задержка где-то минуту прежде чем квесты подгрузятся»).
+    await walk('/shared/src/data/campaign/patterns.ts');
     const build = hash(Buffer.from([...stamps.entries()].sort().map(([u, v]) => `${u}=${v}`).join('|'), 'utf8'));
     graph = { at: Date.now(), list: order, build };
     return graph;

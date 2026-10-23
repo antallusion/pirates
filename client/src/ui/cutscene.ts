@@ -14,7 +14,15 @@ const waiting: { id: string; done?: () => void }[] = [];
 /** Is the captain busy at a window or a form (main.ts sets it)? A film waits for her rather than open over it. */
 let busy: () => boolean = () => false;
 /** How long a film waits for a busy captain before it is let go (to play at the next such moment). */
-export const FILM_WAIT_MS = 20_000;
+export const FILM_WAIT_MS = 6_000; // (owner, 2026-10-23: a film come late, after the quest was read, is no intro — let go)
+/** One film for one moment (owner, 2026-10-23: «запускается два разных видоса зачем-то»): a moment's film this soon
+ *  after the last one is let go — not counted as seen, it plays at a later moment — and one never queues behind another. */
+export const FILM_GAP_MS = 90_000;
+/** A film that has not started by then (a phone's slow network) is let go at once: the game is never held behind it. */
+export const FILM_START_MS = 3500;
+let lastFilmAt = -Infinity;
+/** The films offered again this session (a seen film's moment: «Посмотреть ролик снова», once). */
+const offered = new Set<string>();
 
 /** The window gate: true while a window that is not the film's own moment or a text field holds the captain. */
 export function setFilmGate(gate: () => boolean): void {
@@ -61,7 +69,18 @@ export function filmDue(id: string): boolean {
 /** Show a film over the screen if it is due; `done` runs when it ends or is skipped (at once when there is none).
  *  Films wait their turn: two moments together play one after the other. */
 export function playFilm(id: string, done?: () => void, opts: { always?: boolean; over?: boolean } = {}): boolean {
-  if (!films?.has(id) || (!opts.always && seen().has(id)) || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (!films?.has(id) || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    done?.();
+    return false;
+  }
+  // Seen already: never again by itself — a small «Посмотреть ролик снова» instead (once a session).
+  if (!opts.always && seen().has(id)) {
+    offerReplay(id);
+    done?.();
+    return false;
+  }
+  // One film for one moment: another one playing, waiting, or just shown — this one is let go (still unseen).
+  if (!opts.always && (playing || performance.now() - lastFilmAt < FILM_GAP_MS)) {
     done?.();
     return false;
   }
@@ -101,6 +120,7 @@ export function playFilm(id: string, done?: () => void, opts: { always?: boolean
 
 function show(id: string, done?: () => void): void {
   playing = true;
+  lastFilmAt = performance.now();
   const el = document.createElement('div');
   el.className = 'film';
   el.setAttribute('role', 'dialog');
@@ -161,8 +181,15 @@ function show(id: string, done?: () => void): void {
     v.muted = true;
     void v.play().catch(end);
   });
-  // A film that never starts does not hold the game.
-  setTimeout(() => { if (!over && v.currentTime === 0) end(); }, 8000);
+  // A film that never starts does not hold the game (a phone's slow network): let go at once, and left unseen.
+  setTimeout(() => {
+    if (over || v.currentTime > 0) return;
+    const left = seen();
+    left.delete(id);
+    localStorage.setItem(SEEN, JSON.stringify([...left]));
+    lastFilmAt = -Infinity;
+    end();
+  }, FILM_START_MS);
   // Nor one that stops on the way (a phone's network gone mid-film, the view turned under it): six seconds without a
   // frame and the game goes on.
   let seenAt = -1, still = 0;
@@ -176,4 +203,24 @@ function show(id: string, done?: () => void): void {
       end();
     }
   }, 1000);
+}
+
+/** A seen film's moment come again: a small pill in the bottom band, «Посмотреть ролик снова», for a few seconds — a tap
+ *  plays it (owner, 2026-10-23: a film plays by itself once; after that only at her word). Once a session for each. */
+export function offerReplay(id: string): void {
+  if (offered.has(id) || playing || typeof document === 'undefined') return;
+  offered.add(id);
+  document.getElementById('film-replay')?.remove();
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.id = 'film-replay';
+  b.className = 'film-replay';
+  b.textContent = `▶ ${L('replay')}`;
+  b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    b.remove();
+    playFilm(id, undefined, { always: true });
+  });
+  document.body.appendChild(b);
+  setTimeout(() => b.remove(), 6000);
 }

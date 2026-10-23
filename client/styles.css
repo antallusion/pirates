@@ -5596,3 +5596,7 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
 .q-here-box .giver-h { color: var(--gold); }
 .q-here-btn { white-space: nowrap; }
 .jr-item .jr-here { flex: none; align-self: center; margin-left: 4px; }
+
+/* A seen film's moment (ui/cutscene.ts offerReplay): a small pill in the bottom band, a few seconds, never over the middle. */
+.film-replay { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); transform: translateX(-50%); z-index: 60; padding: 6px 12px; min-height: 32px; border-radius: 16px; border: 1px solid rgba(232, 196, 106, 0.6); background: rgba(10, 12, 16, 0.85); color: var(--bone, #e6dcc8); font: 500 12px var(--sans); cursor: pointer; white-space: nowrap; animation: film-replay-in 0.3s ease-out; }
+@keyframes film-replay-in { from { opacity: 0; transform: translate(-50%, 8px); } }

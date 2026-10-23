@@ -1297,6 +1297,8 @@ loadAssets(['ui.helm', 'ui.loader_wheel', ...Object.values(CURSOR_ART)]).then(()
 /** The game's films at their moments (ui/cutscene.ts): the first boarding (a lair's fight ashore), the first win and
  *  loss, the first harbour, the first storm — each shown once. */
 const filmWas = { over: false, docked: true, atQuay: false, bosses: '', landing: true };
+/** The islands whose landing had its film this session (one island, one film). */
+const filmIsles = new Set<number>();
 /** A landing's film by what the party goes ashore for: a buried chest, a named pirate's lair, an island; none for a
  *  haul, a dive or the shallows. */
 const LANDING_FILM: Record<string, string | null> = { dig: 'cut_treasure', pirate_camp: 'cut_fort', lookout: 'cut_lighthouse', dive: 'cut_wreck_dive', haul: null, tidal: null, turtle: null };
@@ -1444,9 +1446,18 @@ function filmMoments(): void {
     const film = landing.feature in LANDING_FILM ? LANDING_FILM[landing.feature] : 'cut_landing';
     const y = state.you;
     let isle: string | null = null;
-    if (y) for (const is of state.islands.values()) if (Math.hypot(is.x - y.x, is.y - y.y) < is.r + 900 && filmDue(`cut_isle_${is.biome}`)) isle = `cut_isle_${is.biome}`;
-    if (film && filmDue(film)) playFilm(film);
-    else if (isle) playFilm(isle);
+    let at: number | null = null;
+    if (y) for (const is of state.islands.values()) if (Math.hypot(is.x - y.x, is.y - y.y) < is.r + 900) {
+      at ??= is.id;
+      if (filmDue(`cut_isle_${is.biome}`)) isle = `cut_isle_${is.biome}`;
+    }
+    // One island, one film (owner, 2026-10-23: a lookout's landing, then the same island's scene or a quest's landing,
+    // played two different films): an island whose landing had its film this session has no other.
+    if (at === null || !filmIsles.has(at)) {
+      if (at !== null) filmIsles.add(at);
+      if (film && filmDue(film)) playFilm(film);
+      else if (isle) playFilm(isle);
+    }
   }
   filmWas.landing = !!landing || !state.self;
 }
