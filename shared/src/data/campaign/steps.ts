@@ -250,6 +250,8 @@ export const STEP_WORDS: Record<string, T[]> = {
   carry_pick: [['Take on {good} × {n} at {port}.', 'Примите груз в порту {port}: {good} × {n}.']],
   carry_drop: [['Carry the cargo to {port2}.', 'Доставьте груз в порт {port2}.']],
   bring: [['Bring {good} × {n} to {hub}.', 'Привезите в порт {hub}: {good} × {n}.']],
+  // (a good sold nowhere within reach of the quay: it waits at a neighbour's quay — owner, 2026-10-23)
+  bring_pick: [['Take on {good} × {n} waiting for you at {port2}.', 'Заберите груз, который ждёт вас в порту {port2}: {good} × {n}.']],
   escort: [
     ['Hold the waters of {region} for {n} min.', 'Продержитесь в водах «{region}»: {n} мин.'],
     ['Keep watch at sea in {region} for {n} min.', 'Несите дозор в водах «{region}»: {n} мин.'],

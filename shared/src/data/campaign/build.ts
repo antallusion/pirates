@@ -17,10 +17,13 @@ import type { Island, Port, World } from '../../world/worldgen.ts';
 import { islandLife } from '../../world/islandlife.ts';
 import { isLand } from '../../world/worldgen.ts';
 import { sectorAt } from '../../world/sectors.ts';
+import { navLen } from '../../world/navlen.ts';
 import { hashString } from '../../rng.ts';
 import { GOODS, portTrades } from '../goods.ts';
 import type { GoodId } from '../goods.ts';
 import { SITE_NAMES } from '../questgen.ts';
+import { CHAIN_LEG, legTo, nearestSellerByRoute, questLegs } from '../questlegs.ts';
+import type { At } from '../questlegs.ts';
 import type { QuestDef, QuestStep } from '../quests.ts';
 import { shipBandOf } from '../xpcurve.ts';
 import { campaignPaces } from './pacing.ts';
@@ -106,6 +109,8 @@ interface Places {
   /** A port's own island; the islands about a location, by its key and radius (kept). */
   portIsle: Map<string, Island>;
   near: Map<string, Island[]>;
+  /** The sea routes asked for between places (kept). */
+  routes: Map<string, number>;
 }
 
 function placesOf(world: World): Places {
@@ -116,7 +121,7 @@ function placesOf(world: World): Places {
   for (const i of islands) level.set(i.id, sectorAt(world, i.x, i.y).level);
   const portIsle = new Map<string, Island>();
   for (const i of world.islands) if (i.portId && !portIsle.has(i.portId)) portIsle.set(i.portId, i);
-  return { world, ports, islands, level, portIsle, near: new Map() };
+  return { world, ports, islands, level, portIsle, near: new Map(), routes: new Map() };
 }
 
 /** How far an island's shore is from a point. */
@@ -132,7 +137,14 @@ export function locDist(world: World, loc: { kind: 'port' | 'isle'; id: string |
   return own ? Math.min(d, Math.max(0, Math.hypot(i.x - own.x, i.y - own.y) - i.radius - own.radius)) : d;
 }
 
-/** The islands about a location, nearest first. */
+/** The sea route from a location (its quay, or its island's shore facing it) into an island's waters. */
+export function isleRoute(world: World, loc: { kind: 'port' | 'isle'; id: string | number; x: number; y: number }, i: Island, cap: number): number {
+  const from = locPoint(world, loc, i);
+  return legTo(world, from, { x: i.x, y: i.y, r: i.radius + 40, name: '' }, cap).d;
+}
+
+/** The islands about a location, nearest first: their shore within `r` of it, and the sea route there too (owner,
+ *  2026-10-23: a chain's legs on the route — an island across its port's own island is far whatever the line says). */
 function islandsNear(pl: Places, loc: { kind: 'port' | 'isle'; id: string | number; x: number; y: number }, r: number, not?: number): Island[] {
   const key = `${loc.kind}:${loc.id}:${r}`;
   let all = pl.near.get(key);
@@ -140,8 +152,11 @@ function islandsNear(pl: Places, loc: { kind: 'port' | 'isle'; id: string | numb
     const d = new Map<Island, number>();
     for (const i of pl.islands) {
       if (Math.abs(i.x - loc.x) > r + 6000 || Math.abs(i.y - loc.y) > r + 6000) continue;
+      if (loc.kind === 'isle' && i.id === loc.id) continue;
       const x = locDist(pl.world, loc, i, pl.portIsle);
-      if (x <= r) d.set(i, x);
+      if (x > r) continue;
+      const route = isleRoute(pl.world, loc, i, r + 500);
+      if (route <= r) d.set(i, route);
     }
     all = [...d.keys()].sort((a, b) => d.get(a)! - d.get(b)!);
     pl.near.set(key, all);
@@ -177,6 +192,8 @@ interface Run {
   /** The goods its `bring:` steps ask for, bought at the nearest harbour that trades them (a seller near is a pull; a
    *  strong one for a good the quest's words name, which nearGood never trades for another). */
   goods: { good: GoodId; named: boolean }[];
+  /** A delivery from its harbour to the nearest other (`carry:`): drawn to a harbour with another near. */
+  carry: boolean;
 }
 
 /** A chapter's runs, of these lengths. */
@@ -193,7 +210,8 @@ function runsFrom(ch: ChapterSrc, first: number, lens: number[]): Run[] {
       const told = [q.t[0], q.b[0], q.d[0]].join(' ').toLowerCase();
       return q.s.map((x) => parseStep(typeof x === 'string' ? x : x[0])).flatMap((x) => (typeof x !== 'string' && x.kind === 'bring' && x.good ? [{ good: x.good as GoodId, named: !goodSwaps(x.good as GoodId, told) }] : []));
     });
-    out.push({ ch, from, size: len, gate: paces[Math.min(paces.length - 1, from)].gate, ...(ats.length ? { at: ats[ats.length - 1] } : {}), island, goods });
+    const carry = qs.flatMap((q) => [q, ...(q.alt ? [q.alt] : [])]).some((q) => q.s.some((x) => (typeof x === 'string' ? x : x[0]).startsWith('carry:')));
+    out.push({ ch, from, size: len, gate: paces[Math.min(paces.length - 1, from)].gate, ...(ats.length ? { at: ats[ats.length - 1] } : {}), island, goods, carry });
     from += len;
   }
   return out;
@@ -221,39 +239,71 @@ function abyssLens(ch: ChapterSrc, size: number): number[] {
   return best[size]?.cut ?? evenLens(size, Math.round(size / 5));
 }
 
-/** The voyages' aim (owner, 2026-10-18: «чтобы все было недалеко»): no leg over this before the eighth level, nor this
- *  after it, where the coast allows. */
-export const LEG_EARLY = 6000;
-export const LEG_LATE = 8000;
-export const EARLY_LEVEL = 8;
+/** The chain's limit (owner, 2026-10-23: «все квесты цепочек надо делать так, что они были максимум на удалении 3км друг
+ *  от друга, никто за 6-10 и тем более 20 км никуда не поплывет»): within a chapter, no voyage between two of its
+ *  locations over this on the sea route — the one voyage it may ask is its hand-over, into its waters. Under the
+ *  chain's 3 km (CHAIN_LEG): where she ends a run and where the next one's first place lies are a little off each. */
+export const CHAPTER_LEG = 2500;
+/** A run held where the run before it was (no harbour or island near enough): allowed, a little dearer than a new place. */
+const REPEAT = 4000;
 /** How hard a chapter's first run is drawn to its mentor's harbour, and its last to the next one's. */
 const HUB_PULL = 0.3;
 
 /** The islands within reach of a harbour's quay (owner: what is farther from the quay than 1.5 km is far). */
 const nearCount = (pl: Places, p: Port): number => islandsNear(pl, { kind: 'port', id: p.id, x: p.x, y: p.y }, LOCAL_R).length;
 
+/** A location's own point toward another place: a harbour's quay, an island's shore facing it. */
+export function locPoint(world: World, n: { kind: 'port' | 'isle'; id: string | number; x: number; y: number }, to: { x: number; y: number }): { x: number; y: number } {
+  if (n.kind === 'port') return { x: n.x, y: n.y };
+  const i = world.islands[n.id as number];
+  const dx = to.x - i.x, dy = to.y - i.y, k = Math.hypot(dx, dy) || 1;
+  return { x: i.x + (dx / k) * (i.radius + 40), y: i.y + (dy / k) * (i.radius + 40) };
+}
+
+/** The sea route between two locations (their quay or shore), within `cap` (Infinity past it). */
+function locRoute(pl: Places, a: Node, b: Node, cap = CHAPTER_LEG): number {
+  if (a.id === b.id && a.kind === b.kind) return 0;
+  if (Math.hypot(a.x - b.x, a.y - b.y) - a.r - b.r > cap) return Infinity;
+  const key = `${a.kind}:${a.id}|${b.kind}:${b.id}|${cap}`;
+  let d = pl.routes.get(key);
+  if (d === undefined) {
+    const from = locPoint(pl.world, a, b);
+    d = b.kind === 'port' ? navLen(pl.world, from.x, from.y, b.x, b.y, cap) : legTo(pl.world, from, { x: b.x, y: b.y, r: b.r, name: '' }, cap).d;
+    pl.routes.set(key, d);
+  }
+  return d;
+}
+
 /**
- * Every run's location, chapter by chapter through the seas in order. A chapter starts at its mentor's port; a run
- * whose quests name a port is held there (when it has islands about it, or it is the campaign's home-coming). The other
- * runs' harbours are a path from the last location to the next chapter's mentor's port: of the chapter's seas (or of the
- * next chapter's, to bridge the crossing) at the run's ⚓, with islands within reach of the quay, not visited before —
- * the path whose legs are shortest, with as many runs as it takes (runs of 3–6) for no leg over 6 km before the eighth
- * level and 8 km after it where the coast allows. The Abyss's runs go to its islands where their quests name no harbour,
- * to its edge's harbours where they do.
+ * Every run's location, chapter by chapter through the seas in order (owner, 2026-10-23: a chain's legs 3 km at most).
+ * A chapter's first run is its hand-over: the place of its seas at its ⚓ nearest the last location (its mentor's port a
+ * pull). Each run after it is held within CHAPTER_LEG of the run before on the sea route — a harbour or an island's
+ * anchorage of the chapter's seas, not visited before, or the same place again where nothing new lies near enough. A run
+ * that asks for a good is drawn to a harbour with a seller within reach of its quay, a delivery's run to one with
+ * another harbour near. The Abyss's runs go to its islands where their quests name no harbour, to its edge's harbours
+ * where they do. The home-coming's harbour is the campaign's end, however far.
  */
 function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: number }[]): { runs: Run[]; locations: CampaignLoc[] } {
   const byId = (id: string) => pl.ports.find((p) => p.id === id)!;
   const used = new Map<string | number, number>();
   const seller = new Map<string, number>();
+  const others = new Map<string | number, boolean>();
   const runs: Run[] = [];
   const locations: CampaignLoc[] = [];
   let prev: { x: number; y: number } | null = null;
   const lv = (k: string | number) => pl.level.get(k) ?? 1;
-  const isleLoc = (i: Island): Node => ({ kind: 'isle', id: i.id, name: i.name, x: i.x, y: i.y, region: i.region, near: islandsNear(pl, { kind: 'isle', id: i.id, x: i.x, y: i.y }, LOCAL_R, i.id).length + 1 });
-  const portNode = (p: Port): Node => ({ kind: 'port', id: p.id, name: p.name, x: p.x, y: p.y, region: p.region, near: nearCount(pl, p) });
+  const isleLoc = (i: Island): Node => ({ kind: 'isle', id: i.id, name: i.name, x: i.x, y: i.y, r: i.radius + 40, region: i.region, near: islandsNear(pl, { kind: 'isle', id: i.id, x: i.x, y: i.y }, LOCAL_R, i.id).length + 1 });
+  const portNode = (p: Port): Node => ({ kind: 'port', id: p.id, name: p.name, x: p.x, y: p.y, r: 0, region: p.region, near: nearCount(pl, p) });
   // the islands that may hold a run: of a cluster (another within reach), the empty places and the rafts aside
   const isleNodes = pl.islands.filter((i) => islandsNear(pl, { kind: 'isle', id: i.id, x: i.x, y: i.y }, LOCAL_R, i.id).length >= 1).map(isleLoc);
   const portNodes = pl.ports.map(portNode);
+  const byPort = new Map(portNodes.map((n) => [n.id, n]));
+  // a harbour with another harbour within a delivery's reach of its quay
+  const otherNear = (n: Node): boolean => {
+    let hit = others.get(n.id);
+    if (hit === undefined) others.set(n.id, (hit = portNodes.some((o) => o.id !== n.id && locRoute(pl, n, o) <= CHAPTER_LEG)));
+    return hit;
+  };
   chapters.forEach(({ ch, first, size }, ci) => {
     const next = chapters[ci + 1];
     const nextHub = next ? byId(next.ch.hub) : undefined;
@@ -262,70 +312,74 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
     const fixedOf = (run: Run, r: number, n: number): Node | undefined => {
       // (the home-coming's harbour is the campaign's end, however far; any other `at:` a pull below, not a must)
       const at = run.at ? byId(run.at) : undefined;
-      if (at && lastOfAll && r === n - 1) return portNode(at);
-      // the mentor's port, where it has islands within reach of its quay (or it is the start, Saltmarrow: the newcomer's
-      // own); else the run goes to the nearest place about it that has (the path's pull below)
-      const hub = byId(ch.hub);
-      return r === 0 && ci === 0 ? portNode(hub) : undefined;
+      if (at && lastOfAll && r === n - 1) return byPort.get(at.id);
+      // the start, Saltmarrow: the newcomer's own
+      return r === 0 && ci === 0 ? byPort.get(ch.hub) : undefined;
     };
     const seas: RegionId[] = abyss ? ['drowned_crown'] : [ch.region, ...(ch.more ?? [])];
     const isleSeas: RegionId[] = abyss ? ['the_abyss'] : [ch.region, ...(ch.more ?? [])];
     const bridge: RegionId[] = next && !abyss ? [next.ch.region === 'the_abyss' ? 'drowned_crown' : next.ch.region] : [];
-    const target = (campaignPaces()[first]?.gate ?? 1) < EARLY_LEVEL ? LEG_EARLY : LEG_LATE;
-    const sellerCost = (n: Node, g: GoodId, lim: number): number => {
+    // a good's nearest seller by the route from a harbour's quay (within reach of it; past it, dear)
+    const sellerCost = (n: Node, g: GoodId, strong: boolean): number => {
       const k = `${n.id}|${g}`;
       let d = seller.get(k);
-      if (d === undefined) seller.set(k, (d = nearestSeller(pl.ports, n.x, n.y, g, n.id as string)?.d ?? 1e5));
-      return d + 30 * Math.max(0, d - lim * 1.25);
+      if (d === undefined) seller.set(k, (d = nearestSellerByRoute(pl.world, n, g, n.id as string, CHAPTER_LEG)?.d ?? Infinity));
+      return Number.isFinite(d) ? d * 0.5 + (d > LOCAL_R ? (strong ? 6000 : 2000) : 0) : strong ? 15000 : 4000;
     };
-    const legCost = (d: number) => d + 30 * Math.max(0, d - target);
     const start = prev as { x: number; y: number } | null;
     const hub = byId(ch.hub);
-    let pick: { runs: Run[]; nodes: Node[]; max: number } | null = null;
+    let pick: { runs: Run[]; nodes: Node[]; cost: number } | null = null;
     const base = Math.max(1, Math.round(size / 5)), most = Math.max(base, Math.floor(size / 2));
-    const tries = abyss ? [abyssLens(ch, size)] : Array.from({ length: most - base + 1 }, (_, k) => evenLens(size, base + k));
+    const tries = abyss ? [abyssLens(ch, size)] : Array.from({ length: Math.min(3, most - base + 1) }, (_, k) => evenLens(size, base + k));
     for (const lens of tries) {
       const rs = runsFrom(ch, first, lens);
-      // the candidates of each run: fixed; or the harbours of its seas (and the next's) at its ⚓ with islands at the quay,
-      // and — for a run whose quests name no harbour — the islands of its seas at its ⚓ (an island's anchorage)
+      // the candidates of each run: fixed; or the harbours of its seas (and the next's) at its ⚓, and — for a run whose
+      // quests name no harbour — the islands of its seas at its ⚓ (an island's anchorage)
       const cands: Node[][] = rs.map((run, r) => {
         const fix = fixedOf(run, r, rs.length);
         if (fix) return [fix];
         const band = shipBandOf(run.gate);
         const fits = (n: Node) => lv(n.id) <= band + 2 && lv(n.id) >= band - 2;
-        const at = run.at ? byId(run.at) : undefined;
         const c = [
-          ...(at && nearCount(pl, at) >= 2 ? [portNode(at)] : []),
-          ...portNodes.filter((n) => n.id !== run.at && (seas.includes(n.region) || bridge.includes(n.region)) && fits(n)),
+          ...portNodes.filter((n) => (seas.includes(n.region) || bridge.includes(n.region)) && fits(n)),
           ...(run.island ? isleNodes.filter((n) => (isleSeas.includes(n.region) || bridge.includes(n.region)) && fits(n)) : []),
         ];
         return c.length ? c : portNodes.filter((n) => seas.includes(n.region) && n.near >= 1);
       });
       const node = (n: Node, run: Run) => {
         const band = shipBandOf(run.gate), l = lv(n.id);
-        // a delivery's good: its nearest seller a run there and back (QA 2026-10-23: the pearls for Shell Creek were
-        // sold 15 km off); the `at:` harbour its quests name, a pull while it is near
-        let goods = 0;
-        if (n.kind === 'port') for (const g of run.goods) goods += g.named ? sellerCost(n, g.good, target) : 0.3 * Math.min(2e4, sellerCost(n, g.good, 1e9));
-        return (run.at === n.id ? -2500 : 0) + goods + (run === rs[0] && !abyss ? HUB_PULL * Math.hypot(n.x - hub.x, n.y - hub.y) : 0) + (used.get(n.id) ?? 0) * 1e5 + (n.near === 0 ? 2500 : n.near === 1 ? 1000 : 0)
+        // a delivery's good: its nearest seller within reach of the quay (QA 2026-10-23: the pearls for Shell Creek
+        // were sold 15 km off); a carry's other harbour near; the `at:` harbour its quests name, a pull
+        let need = 0;
+        if (n.kind === 'port') {
+          for (const g of run.goods) need += sellerCost(n, g.good, g.named);
+          if (run.carry && !otherNear(n)) need += 3000;
+        }
+        return (run.at === n.id ? -1500 : 0) + need + (run === rs[0] && !abyss ? HUB_PULL * Math.hypot(n.x - hub.x, n.y - hub.y) : 0) + (used.get(n.id) ?? 0) * 1e5 + (n.near === 0 ? 2500 : n.near === 1 ? 1000 : 0)
           + (l > band + 1 ? 6000 : l > band || l < band - 1 ? 3000 : 0) + (isleSeas.includes(n.region) || seas.includes(n.region) ? 0 : 1500) + (n.kind === 'isle' && !abyss ? 1200 : 0);
       };
-      // the path: best[r][j] the cost of the runs up to r ending at its j-th candidate
-      const best: { cost: number; from: number }[][] = cands.map((c) => c.map(() => ({ cost: Infinity, from: -1 })));
-      cands[0].forEach((p, j) => (best[0][j] = { cost: (start ? legCost(Math.hypot(p.x - start.x, p.y - start.y)) : 0) + node(p, rs[0]), from: -1 }));
+      // the path: best[r][j] the cost of the runs up to r ending at its j-th candidate; a voyage within the chapter
+      // over the chain's limit is barred (a run may stay where the run before it was, whatever its own candidates)
+      const best: { cost: number; from: number }[][] = [cands[0].map((p) => ({ cost: (start ? Math.hypot(p.x - start.x, p.y - start.y) : 0) + node(p, rs[0]), from: -1 }))];
       for (let r = 1; r < rs.length; r++) {
         const prevC = cands[r - 1], prevB = best[r - 1];
-        cands[r].forEach((p, j) => {
-          const own = node(p, rs[r]);
+        const fixed = !!fixedOf(rs[r], r, rs.length);
+        if (!fixed) for (const q of prevC) if ((q.kind === 'port' || rs[r].island) && !cands[r].some((x) => x.id === q.id && x.kind === q.kind)) cands[r].push(q);
+        const own = cands[r];
+        best[r] = own.map((p) => {
+          const here = node(p, rs[r]);
           let bc = Infinity, bi = -1;
           for (let i = 0; i < prevC.length; i++) {
+            if (prevB[i].cost === Infinity) continue;
             const q = prevC[i];
-            if (q.id === p.id || prevB[i].cost === Infinity) continue;
-            const dx = p.x - q.x, dy = p.y - q.y;
-            const c = prevB[i].cost + legCost(Math.sqrt(dx * dx + dy * dy));
+            if (prevB[i].cost + here >= bc) continue;
+            const same = q.id === p.id && q.kind === p.kind;
+            // (the home-coming's last run lies where it lies: its voyage is not the chapter's)
+            const d = same ? REPEAT : fixed && lastOfAll ? Math.hypot(p.x - q.x, p.y - q.y) : locRoute(pl, q, p);
+            const c = prevB[i].cost + d;
             if (c < bc) [bc, bi] = [c, i];
           }
-          best[r][j] = { cost: bc + own, from: bi };
+          return { cost: bc + here, from: bi };
         });
       }
       const last = rs.length - 1;
@@ -334,21 +388,16 @@ function placeAll(pl: Places, chapters: { ch: ChapterSrc; first: number; size: n
         const c = best[last][j].cost + (nextHub ? HUB_PULL * Math.hypot(nextHub.x - p.x, nextHub.y - p.y) : 0);
         if (c < bc) [bc, bj] = [c, j];
       });
-      if (bj < 0) continue;
+      if (bj < 0 || bc === Infinity) continue;
       const nodes: Node[] = [];
       for (let r = last, j = bj; r >= 0; j = best[r][j].from, r--) nodes.unshift(cands[r][j]);
-      const pts: { x: number; y: number }[] = [...(start ? [start] : []), ...nodes];
-      void nextHub;
-      let max = 0;
-      for (let i = 1; i < pts.length; i++) max = Math.max(max, Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
-      if (!pick || max < pick.max - 1500) pick = { runs: rs, nodes, max };
-      if (max <= target) break;
+      if (!pick || bc < pick.cost) pick = { runs: rs, nodes, cost: bc };
     }
     const chosen = pick!;
     chosen.runs.forEach((run, r) => {
       const n = chosen.nodes[r];
       const loc: CampaignLoc = { i: locations.length, kind: n.kind, id: n.id, name: n.name, x: n.x, y: n.y, region: n.region, ch: ch.n, from: run.from, size: run.size };
-      used.set(loc.id, (used.get(loc.id) ?? 0) + 1);
+      if (r === 0 || chosen.nodes[r - 1].id !== n.id) used.set(loc.id, (used.get(loc.id) ?? 0) + 1);
       prev = loc;
       runs.push(run);
       locations.push(loc);
@@ -363,6 +412,8 @@ interface Node {
   name: string;
   x: number;
   y: number;
+  /** An island's waters' reach from its middle (0: a harbour's quay). */
+  r: number;
   region: RegionId;
   /** Islands within reach (an island's own counted). */
   near: number;
@@ -383,7 +434,7 @@ function coastSpots(pl: Places, port: Port, own: Island): { x: number; y: number
     for (const off of [160, 260, 380]) {
       const x = own.x + Math.cos(a) * (own.radius + off), y = own.y + Math.sin(a) * (own.radius + off);
       const d = Math.hypot(x - port.x, y - port.y);
-      if (d < 500 || d > LOCAL_R - 50 || isLand(pl.world, x, y)) continue;
+      if (d < 500 || d > LOCAL_R - 50 || isLand(pl.world, x, y) || navLen(pl.world, port.x, port.y, x, y, LOCAL_R) > LOCAL_R) continue;
       out.push({ x, y, a });
       break;
     }
@@ -398,6 +449,9 @@ interface QuestCtx {
   loc: CampaignLoc;
   /** The run's turn among its islands (each quest of a run starts at the next of them). */
   turn: number;
+  /** Where the chain stands as the quest begins (where the one before it ended): its places are picked within a
+   *  chain's leg of it where the location has them (owner, 2026-10-23). */
+  at: At;
 }
 
 /** The island a town is founded on from a location (the opening's, owner 2026-10-19: «к ближайшему острову основать свой
@@ -417,26 +471,62 @@ function buildQuest(c: QuestCtx, src: { t: T; b: T; d: T; s: StepSrc[]; lane?: {
   const specs = src.s.map((x) => parseStep(typeof x === 'string' ? x : x[0])).filter((x): x is StepSpec => typeof x !== 'string');
   const near = { x: Math.round(loc.x), y: Math.round(loc.y), r: LOCAL_R };
   const port = loc.kind === 'port' ? pl.world.ports.find((p) => p.id === loc.id)! : null;
-  // a delivery's other end: the harbour nearest to this one (a short run along the coast)
-  const other = port ? pl.ports.filter((p) => p.id !== port.id).sort((a, b) => Math.hypot(a.x - port.x, a.y - port.y) - Math.hypot(b.x - port.x, b.y - port.y))[0] : null;
-  const carries = specs.some((s) => s.kind === 'carry');
+  // a delivery's other end: the harbour nearest to this one by the sea route (a short run along the coast)
+  const byRoute = (from: { x: number; y: number }, not?: string) => {
+    let best: Port | null = null, bd = Infinity;
+    for (const p of pl.ports) {
+      if (p.id === not || Math.hypot(p.x - from.x, p.y - from.y) > Math.min(bd, CHAIN_LEG)) continue;
+      // (there and back: the mentor waits at the quay it set out from)
+      const d = Math.max(navLen(pl.world, from.x, from.y, p.x, p.y, CHAIN_LEG), navLen(pl.world, p.x, p.y, from.x, from.y, CHAIN_LEG));
+      if (d < bd) [best, bd] = [p, d];
+    }
+    return best;
+  };
+  // a harbour within a chain's leg of both her and the quay (the nearer of the two legs' longer)
+  const between = (from: At, to: Port): Port | null => {
+    let best: Port | null = null, bd = Infinity;
+    for (const p of pl.ports) {
+      if (p.id === to.id || Math.hypot(p.x - to.x, p.y - to.y) > CHAIN_LEG || Math.hypot(p.x - from.x, p.y - from.y) > CHAIN_LEG) continue;
+      const d = Math.max(navLen(pl.world, from.x, from.y, p.x, p.y, CHAIN_LEG), navLen(pl.world, p.x, p.y, to.x, to.y, CHAIN_LEG));
+      if (d < bd) [best, bd] = [p, d];
+    }
+    return best;
+  };
+  // (none within a chain's leg: the carry is a delivery to the mentor's own quay — a `bring` — owner, 2026-10-23)
+  const other = port ? byRoute(port, port.id) : null;
+  const carries = specs.some((s) => s.kind === 'carry') && !!other;
   const home = port ?? pl.world.ports.find((p) => p.id === ch.hub)!;
   // The islands about the location, its own first for an island's run, in turn by the quest (a run's quests see them all).
   const anchor = loc.kind === 'isle' ? pl.world.islands[loc.id as number] : null;
   const isles = islandsNear(pl, loc, LOCAL_R, anchor?.id);
   // A harbour with no island within reach of its quay (owner, 2026-10-18: «чтобы все было недалеко»): its own island's
   // coast stands for them — a cove to round to, a spit to land a party on, within reach of the quay.
-  const ownIsle = port && !isles.length ? pl.portIsle.get(port.id) : undefined;
+  // (the ones within a chain's leg of where she stands — and from there back to the location: the mentor waits there)
+  const legFrom = (i: Island) => legTo(pl.world, c.at, { x: i.x, y: i.y, r: i.radius + 40, name: '' }, CHAIN_LEG * 2).d;
+  const back = (i: Island) => {
+    const l = legTo(pl.world, c.at, { x: i.x, y: i.y, r: i.radius + 40, name: '' }, CHAIN_LEG * 2);
+    if (l.d > CHAIN_LEG) return Infinity;
+    return anchor ? (i === anchor ? 0 : legTo(pl.world, l.at, { x: anchor.x, y: anchor.y, r: anchor.radius + 40, name: '' }, CHAIN_LEG).d) : navLen(pl.world, l.at.x, l.at.y, loc.x, loc.y, CHAIN_LEG);
+  };
+  const near0 = (anchor ? [anchor, ...isles] : isles).filter((i) => legFrom(i) <= CHAIN_LEG);
+  const near1 = near0.filter((i) => back(i) <= CHAIN_LEG);
+  // A harbour with no island within reach of its quay (owner, 2026-10-18: «чтобы все было недалеко»), or none within a
+  // chain's leg of her: its own island's coast stands for them — a cove to round to, a spit to land a party on, within
+  // reach of the quay. An island's run with none near: its own island.
+  const ownIsle = port && (!isles.length || !near0.length) ? pl.portIsle.get(port.id) : undefined;
   const coast = ownIsle ? coastSpots(pl, port!, ownIsle) : [];
-  const ring = anchor ? [anchor, ...isles] : ownIsle ? [ownIsle] : isles;
-  const at = (i: number) => ring[(c.turn + i) % Math.max(1, ring.length)] ?? anchor ?? pl.islands[0];
+  const ring0 = anchor ? [anchor, ...isles] : ownIsle ? [ownIsle] : isles;
+  const reach = ownIsle ? ring0 : near1.length ? near1 : near0.length ? near0 : anchor ? [anchor] : [];
+  const ring = reach.length ? [...reach, ...ring0.filter((i) => !reach.includes(i))] : [...ring0].sort((a, b) => legFrom(a) - legFrom(b));
+  const at = (i: number) => ring[(c.turn + i) % Math.max(1, reach.length || 1)] ?? anchor ?? pl.islands[0];
+  const pool = reach.length ? reach : ring;
   const withSite = (site: string | undefined, not?: Island): { is: Island; site?: string } => {
     if (site) {
       // a site of the location's own waters: the one asked for, else another of its islands' sites (the words name it)
-      const s = ring.find((i) => i !== not && siteOf(i, site));
+      const s = pool.find((i) => i !== not && siteOf(i, site));
       if (s) return { is: s, site: siteOf(s, site) };
       for (const other of Object.keys(SITE_NAMES)) {
-        const o = ring.find((i) => i !== not && siteOf(i, other) === other);
+        const o = pool.find((i) => i !== not && siteOf(i, other) === other);
         if (o) return { is: o, site: other };
       }
     }
@@ -466,10 +556,16 @@ function buildQuest(c: QuestCtx, src: { t: T; b: T; d: T; s: StepSrc[]; lane?: {
   src.s.forEach((x, i) => {
     let s = specs[i];
     if (!s) return;
+    if (s.kind === 'carry' && !other) s = { ...s, kind: 'bring' };
     // a delivery's good sold nowhere near (and not named by the quest's words): the nearest of its kind
+    let waits: Port | null = null;
     if (s.kind === 'bring' && s.good) {
-      const g = nearGood(pl.ports, home, s.good, gate, told);
+      const g = nearGood(pl.world, home, s.good, told);
       if (g !== s.good) s = { ...s, good: g };
+      // none sold within a chain's leg of her and of the quay: it waits at a neighbour's quay between (else on the
+      // quay itself, in its warehouse), taken on there
+      const sold = nearestSellerByRoute(pl.world, c.at, s.good!, home.id, CHAIN_LEG);
+      if (!sold || navLen(pl.world, sold.port.x, sold.port.y, home.x, home.y, CHAIN_LEG) > CHAIN_LEG) waits = between(c.at, home) ?? home;
     }
     const n = s.kind === 'dive' ? 1 : s.n ?? defaultCount(s.kind, band); // (one wreck is laid for a dive at a location)
     const sv: Record<string, string> = { ...v, n: String(n), ...(s.good ? { good: GOODS[s.good].name } : {}) };
@@ -500,7 +596,9 @@ function buildQuest(c: QuestCtx, src: { t: T; b: T; d: T; s: StepSrc[]; lane?: {
       case 'land':
       case 'land2':
         if (ownIsle) {
-          const spot = coast[(c.turn + i) % Math.max(1, coast.length)] ?? { x: port!.x, y: port!.y };
+          const close = coast.filter((p) => legTo(pl.world, c.at, { ...p, r: SPOT_R, name: '' }, CHAIN_LEG).d <= CHAIN_LEG);
+          const pool = close.length ? close : coast;
+          const spot = pool[(c.turn + i) % Math.max(1, pool.length)] ?? { x: port!.x, y: port!.y };
           steps.push({ type: 'spot', x: Math.round(spot.x), y: Math.round(spot.y), r: SPOT_R, island: ownIsle.id, text: text() });
           break;
         }
@@ -522,9 +620,15 @@ function buildQuest(c: QuestCtx, src: { t: T; b: T; d: T; s: StepSrc[]; lane?: {
       case 'tribute': steps.push({ type: 'tribute', count: n, text: text() }); break;
       case 'carry':
         steps.push({ type: 'pickup', port: home.id, good: s.good!, qty: n, text: text('pick') });
-        steps.push({ type: 'deliver', port: (other ?? home).id, good: s.good!, qty: n, text: text('drop') });
+        steps.push({ type: 'deliver', port: other!.id, good: s.good!, qty: n, text: text('drop') });
         break;
-      case 'bring': steps.push({ type: 'deliver', port: home.id, good: s.good!, qty: n, text: text() }); break;
+      case 'bring':
+        if (waits) {
+          const w = STEP_WORDS.bring_pick[hashString(`${id}:${i}:pick`) % STEP_WORDS.bring_pick.length];
+          steps.push({ type: 'pickup', port: waits.id, good: s.good!, qty: n, text: fill(w[0], { ...sv, port2: waits.name }) });
+        }
+        steps.push({ type: 'deliver', port: home.id, good: s.good!, qty: n, text: text() });
+        break;
       case 'escort': steps.push({ type: 'time_in', region: loc.region, seconds: n * 60, near, text: text() }); break;
       case 'reach': steps.push({ type: 'reach', region: loc.region, text: text() }); break;
       case 'claim': steps.push({ type: 'claim', text: text() }); break;
@@ -566,17 +670,16 @@ const NAMED: Partial<Record<GoodId, RegExp>> = {
 export const goodSwaps = (good: GoodId, told: string): boolean => !!KIN.find((k) => k.includes(good)) && !(NAMED[good]?.test(told) ?? true);
 
 /** The good a `bring:` step asks for at a harbour (mid-game QA 2026-10-23: the pearls for Shell Creek were sold 15 km
- *  off): its own while a harbour trades it within ¾ of the voyages' aim, or the quest's words name it; else the one of
- *  its kind sold nearest. */
-export function nearGood(ports: readonly Port[], home: { x: number; y: number; id: string }, good: GoodId, gate: number, told: string): GoodId {
-  const lim = 0.75 * (gate < EARLY_LEVEL ? LEG_EARLY : LEG_LATE);
+ *  off; owner: a chain's legs 3 km at most): its own while a harbour trades it within reach of the quay (LOCAL_R on the
+ *  sea route), or the quest's words name it; else the one of its kind sold nearest. */
+export function nearGood(world: World, home: { x: number; y: number; id: string }, good: GoodId, told: string): GoodId {
   if (!goodSwaps(good, told)) return good;
-  const own = nearestSeller(ports, home.x, home.y, good, home.id)?.d ?? Infinity;
-  if (own <= lim) return good;
+  const own = nearestSellerByRoute(world, home, good, home.id, CHAIN_LEG)?.d ?? Infinity;
+  if (own <= LOCAL_R) return good;
   let best = good, bd = own;
   for (const g of KIN.find((k) => k.includes(good))!) {
-    const d = nearestSeller(ports, home.x, home.y, g, home.id)?.d ?? Infinity;
-    if (d < bd - 500) [best, bd] = [g, d];
+    const d = nearestSellerByRoute(world, home, g, home.id, CHAIN_LEG)?.d ?? Infinity;
+    if (d < bd - 300) [best, bd] = [g, d];
   }
   return best;
 }
@@ -599,25 +702,55 @@ export function buildCampaign(world: World, _seed: number, chapters: ChapterSrc[
     slot += plan.size;
   }
   const { runs, locations } = placeAll(pl, written);
-  runs.forEach((run, r) => {
-    const loc = locations[r];
-    const ctx: QuestCtx = { pl, ch: run.ch, loc, turn: 0 };
-    for (let s = run.from; s < run.from + run.size; s++) {
-      const k = s - firstOf[run.ch.n - 1];
-      const q: QuestSrc = run.ch.quests[k];
-      const pace = paces[s];
-      const id = `c${String(run.ch.n).padStart(2, '0')}_${String(k + 1).padStart(2, '0')}`;
-      const travel = s === run.from && r > 0;
-      const a = buildQuest(ctx, q, id, s, k, pace.gate, pace.xp, pace.silver, travel, q.alt ? { key: q.alt.key, way: 'a', label: q.alt.label[0] } : undefined);
-      const turn = ctx.turn;
-      if (q.alt) ctx.turn--;
-      const b = q.alt ? buildQuest(ctx, q.alt, `${id}b`, s, k, pace.gate, pace.xp, pace.silver, travel, { key: q.alt.key, way: 'b', label: q.alt.label[1] }) : undefined;
-      ctx.turn = turn;
-      slots.push({ slot: s, ch: run.ch.n, k, gate: pace.gate, loc: loc.i, travel, a, ...(b ? { b } : {}) });
-      quests.push(a);
-      if (b) quests.push(b);
+  // The quests laid on the places; a run whose first quest still runs over a chain's leg from where she ended the run
+  // before (the places a little off each other's quays and shores) is held where that one was — or, a harbour's run
+  // after an island's, that one is held at its harbour — and all laid again (owner, 2026-10-23: 3 km at most).
+  const lay = (): number[] => {
+    slots.length = 0;
+    quests.length = 0;
+    const far: number[] = [];
+    let chain: At | null = null;
+    runs.forEach((run, r) => {
+      const loc = locations[r];
+      const fresh = !chain || r === 0 || locations[r - 1].ch !== loc.ch;
+      const ctx: QuestCtx = { pl, ch: run.ch, loc, turn: 0, at: chain ?? { x: loc.x, y: loc.y } };
+      for (let s = run.from; s < run.from + run.size; s++) {
+        const k = s - firstOf[run.ch.n - 1];
+        const q: QuestSrc = run.ch.quests[k];
+        const pace = paces[s];
+        const id = `c${String(run.ch.n).padStart(2, '0')}_${String(k + 1).padStart(2, '0')}`;
+        const travel = s === run.from && r > 0;
+        const a = buildQuest(ctx, q, id, s, k, pace.gate, pace.xp, pace.silver, travel, q.alt ? { key: q.alt.key, way: 'a', label: q.alt.label[0] } : undefined);
+        const turn = ctx.turn;
+        if (q.alt) ctx.turn--;
+        const b = q.alt ? buildQuest(ctx, q.alt, `${id}b`, s, k, pace.gate, pace.xp, pace.silver, travel, { key: q.alt.key, way: 'b', label: q.alt.label[1] }) : undefined;
+        ctx.turn = turn;
+        const legs = questLegs(world, a, ctx.at);
+        if (s === run.from && !fresh && legs.legs.some((l) => l.d > CHAIN_LEG)) far.push(r);
+        ctx.at = legs.end;
+        slots.push({ slot: s, ch: run.ch.n, k, gate: pace.gate, loc: loc.i, travel, a, ...(b ? { b } : {}) });
+        quests.push(a);
+        if (b) quests.push(b);
+      }
+      chain = ctx.at;
+    });
+    return far;
+  };
+  const hold = (to: CampaignLoc, from: CampaignLoc) => Object.assign(to, { kind: from.kind, id: from.id, name: from.name, x: from.x, y: from.y, region: from.region });
+  for (let pass = 0; pass < 6; pass++) {
+    const far = lay();
+    let moved = false;
+    for (const r of far) {
+      const was = locations[r - 1], loc = locations[r];
+      if (was.id === loc.id && was.kind === loc.kind) continue;
+      if (r === runs.length - 1 && runs[r].at) continue; // (the home-coming lies where it lies)
+      if (was.kind === 'port' || runs[r].island) hold(loc, was);
+      else if (loc.kind === 'port') hold(was, loc);
+      else continue;
+      moved = true;
     }
-  });
+    if (!moved) break;
+  }
   return { slots, bySlot: new Map(slots.map((x) => [x.slot, x])), chapters: PLAN.map((p) => byN.get(p.n)).filter((c): c is ChapterSrc => !!c), quests, firstOf, locations };
 }
 
