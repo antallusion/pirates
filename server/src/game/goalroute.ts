@@ -15,6 +15,8 @@
 // `r:<kind>:<region>` the week's challenge, `cm` the common goal, `inv` the Choir's invasion, `g:<id>` a captain's goal,
 // `f` her trade (the fishing: by her tackle), `b:<group>` the beasts, `zb:<region>` a zone boss, `boss` the sea's bosses.
 
+import { GOODS } from '../../../shared/src/data/goods.ts';
+import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { ownStockOf } from './ownstock.ts';
 import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import type { BeastGroup } from '../../../shared/src/data/beasts.ts';
@@ -520,8 +522,14 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
       break;
     case 'letters':
       return { cands: findsOf(game, s).filter((f) => f.kind === 'bottle').map((f) => ({ x: f.x, y: f.y, r: 80, kind: 'place' as const, name: 'bottle' })) };
-    case 'customs':
+    case 'customs': {
+      // contraband aboard first: with none a patrol's inspection passes her for nothing (mid-game QA 2026-10-23 — «Плыть»
+      // sent her to the patrols with a clean hold, and the step never came true); a black market sells it
+      const ship = s.ship;
+      const carried = !!ship && Object.entries(ship.cargo).some(([g, n]) => (n ?? 0) > 0 && GOODS[g as GoodId]?.contraband);
+      if (!carried) return { cands: ports(game, (pt) => pt.blackMarket) };
       return { cands: hunt(game, s, 'patrols') };
+    }
     default:
       break;
   }

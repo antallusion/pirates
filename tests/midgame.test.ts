@@ -322,3 +322,23 @@ test('a fireship sent at her, sunk, costs no standing with its flag (Free Harbor
   game.beginSinking(other);
   assert.ok((s.profile!.reputation.free ?? 0) < before - 1, 'a free merchant sunk still costs standing');
 });
+
+test('a customs step with a clean hold sends her to a black market first, then to the patrols', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { resolveGoal } = await import('../server/src/game/goalroute.ts');
+  const { game } = makeGame();
+  join(game, 'Smuggler Sal');
+  const s = game.sessionByName('Smuggler Sal')!;
+  const q = campaignOf(game).quests.find((x) => x.steps.some((st) => st.type === 'customs'))!;
+  const i = q.steps.findIndex((st) => st.type === 'customs');
+  s.profile!.level = 12;
+  s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
+  s.ship!.docked = null; s.profile!.docked = null;
+  s.ship!.cargo = {};
+  const a = resolveGoal(game, s, `q:${q.id}`) as { cands: { kind: string; port?: string }[] };
+  assert.ok(a.cands.length && a.cands.every((c) => c.kind === 'port' && game.portById(c.port!)?.blackMarket), 'a black market');
+  s.ship!.cargo = { dreamleaf: 2 } as never;
+  const b = resolveGoal(game, s, `q:${q.id}`) as { cands: { kind: string }[] };
+  assert.ok(b.cands.every((c) => c.kind !== 'port'), 'contraband aboard: the patrols');
+});
