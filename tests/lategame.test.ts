@@ -258,3 +258,22 @@ test('the season path’s rewards read whole in Russian (the title and the penna
     setLang('en');
   }
 });
+
+test('the landing’s line on the bar names what her boats are at, in Russian: never a feature’s id («у цели «wreck»»)', async () => {
+  const { landingName } = await import('../server/src/game/player.ts');
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { applyDataLocale } = await import('../client/src/lang/data.ts');
+  const { LANDABLE } = await import('../server/src/game/exploration.ts');
+  setLang('ru');
+  applyDataLocale('ru');
+  try {
+    for (const f of [...LANDABLE, 'tidal', 'dig', 'dive', 'haul', 'turtle', 'flag']) {
+      const ru = serverText(landingName(f, 7));
+      assert.doesNotMatch(ru, /[A-Za-z]{3,}/, `${f}: ${ru}`);
+    }
+  } finally {
+    setLang('en');
+  }
+  assert.equal(landingName('wreck', 1), 'beached wreck');
+});

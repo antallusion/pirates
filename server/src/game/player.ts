@@ -5,6 +5,7 @@ import { streakView } from './streak.ts';
 import { seaRepairView } from './searepair.ts';
 import type { Look } from '../../../shared/src/data/looks.ts';
 import { HAUNT_NAMES, islandHaunt } from '../../../shared/src/data/minigames.ts';
+import { FEATURE_NAMES } from './exploration.ts';
 import { STARTING_UNLOCKS, encodeLook } from '../../../shared/src/data/looks.ts';
 import type { CompanionRec } from './companion.ts';
 import type { ScoutRec } from './fog.ts';
@@ -730,7 +731,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     sites: s.siteViews,
     warehouses: p.warehouses,
     landable: s.landable,
-    landing: ship?.landing ? { island: String(ship.landing.islandId), feature: ship.landing.feature === 'scene' ? HAUNT_NAMES[islandHaunt(ship.landing.islandId)][0] : ship.landing.feature === 'tidal' ? 'bared bank' : ship.landing.feature, until: ship.landing.until, started: ship.landing.started } : null,
+    landing: ship?.landing ? { island: String(ship.landing.islandId), feature: ship.landing.feature, name: landingName(ship.landing.feature, ship.landing.islandId), until: ship.landing.until, started: ship.landing.started } : null,
     discoveredCount: s.discovered.size,
     intel: Object.entries(p.priceIntel).map(([portId, rec]) => ({
       portId,
@@ -898,4 +899,12 @@ function woundedView(p: Profile, ship: ShipEntity | null): NonNullable<PrivateSt
   const medicine = Math.floor((ship ? ship.cargo.medicine : p.cargo.medicine) ?? 0);
   const r = woundRates(n, surgeons, medicine >= 1, practiceLevel(c.practice?.surgeon ?? 0));
   return { n, surgeons, medicine, healPerMin: Math.round(r.healPerMin * 10) / 10, diePerMin: Math.round(r.diePerMin * 10) / 10 };
+}
+
+/** What her boats are at, by name for the screens (late-game QA 2026-10-23: the bar's «у цели «wreck»» — the feature's
+ *  id, not its name, went out, and no tongue has a word for an id). */
+const LANDING_WORDS: Record<string, string> = { tidal: 'bared bank', dig: 'buried treasure', dive: 'the wreck below', haul: 'your stockpile', turtle: 'the turtle’s back', flag: 'the mine’s flag' };
+export function landingName(feature: string, islandId: number): string {
+  if (feature === 'scene') return HAUNT_NAMES[islandHaunt(islandId)][0];
+  return LANDING_WORDS[feature] ?? (FEATURE_NAMES as Record<string, string>)[feature] ?? feature.replace(/_/g, ' ');
 }

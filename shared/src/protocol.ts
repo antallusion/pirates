@@ -857,7 +857,8 @@ export interface PrivateState {
   /** Island feature within reach of the boats, if any. */
   landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent' | 'escort' | 'keeper' | 'lair'; blocked?: string; /** docs/18 #28 */ lv?: number; danger?: 'warn' | 'deadly' } | null;
   /** Landing party ashore. */
-  landing: { island: string; feature: string; until: number; started: number } | null;
+  /** `feature`: what the boats went for (its id: the landing's film by it); `name`: the same in words for the bar. */
+  landing: { island: string; feature: string; name?: string; until: number; started: number } | null;
   discoveredCount: number;
   /** What the captain knows about each visited market, and how old that knowledge is. */
   intel: { portId: string; t: number; top: [GoodId, number][]; dear?: GoodId[]; cheap?: GoodId[]; heard?: boolean }[];
