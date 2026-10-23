@@ -223,3 +223,16 @@ test('a merchant’s cry for help: one toast a minute for a captain, not one for
     setLang('en');
   }
 });
+
+test('the lookout’s sighting reads in Russian for a ship of any gender («замечен Чёрная цапля»)', async () => {
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  setLang('ru');
+  try {
+    const t = serverText('Lookout: Black Heron sighted.');
+    assert.doesNotMatch(t, /замечен /, t);
+    assert.match(t, /^Впередсмотрящий: на горизонте\s—\s/, t);
+  } finally {
+    setLang('en');
+  }
+});

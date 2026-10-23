@@ -437,7 +437,7 @@ export const SERVER_RU_A: Record<string, string> = {
   "Logged in elsewhere.": "Вход выполнен в другом месте.",
   "Long Arm": "Длинная рука",
   "Lookout: a ship with no lights… {0}.": "Впередсмотрящий: корабль без огней… {0}.",
-  "Lookout: {0} sighted.": "Впередсмотрящий: замечен {0}.",
+  "Lookout: {0} sighted.": "Впередсмотрящий: на горизонте — {0}.", // (no «замечен» before a name of any gender: «замечен Чёрная цапля», late-game QA)
   "Lookouts at {0}: {1}'s {2}{3} passed.": "Дозорные у {0}: прошёл «{2}» капитана {1}{3}.",
   "Lower Maréchal": "Нижний Марешаль",
   "Loyal Oath": "Верная клятва",
