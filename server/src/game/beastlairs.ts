@@ -345,7 +345,7 @@ function lairApproach(game: Game, s: PlayerSession, l: Lair): string | null {
 const LAIR_FAR = 'Come in to the shore: within the boats’ reach.';
 
 /** The beach the boats row for: the coast's point nearest the lair (a turtle's or a bank's middle). */
-function lairBeach(game: Game, l: Lair): { x: number; y: number } {
+export function lairBeach(game: Game, l: Lair): { x: number; y: number } {
   if (l.turtle !== undefined || l.bank !== undefined) return lairPos(game, l);
   const is = game.world.islands[l.island];
   return is ? landingPoint(is.poly, l.x, l.y) : l;
@@ -513,10 +513,26 @@ export function sendLairCard(game: Game, s: PlayerSession, force: boolean): void
 }
 
 /** The land key's prompt off a lair (null: none in reach). */
+/** The lair her boats reach now, if any (the nearest up): before the card's — two camps on one island, her boats on the
+ *  bat cave's beach and the card on the hermits' camp 300 m off left no «Штурм» at all (mid-game QA 2026-10-23). */
+function reachLair(game: Game, s: PlayerSession): Lair | null {
+  const ship = s.ship;
+  if (!ship || ship.docked || ship.boarding || !s.profile || quiet(game)) return null;
+  let best: Lair | null = null, bd = Infinity;
+  for (const l of lairsAbout(L(game), ship.state.x, ship.state.y)) {
+    const p = lairPos(game, l);
+    const d = dist(p.x, p.y, ship.state.x, ship.state.y);
+    if (d > LAIR_CARD_R || d >= bd || !lairUp(game, l) || !inReach(game, s, l)) continue;
+    if (l.island >= 0 && game.world.islands[l.island]?.hidden && !s.discovered.has(l.island)) continue;
+    [best, bd] = [l, d];
+  }
+  return best;
+}
+
 export function lairPrompt(game: Game, s: PlayerSession): { island: string; feature: string; action: 'lair'; lv: number; danger?: 'warn' | 'deadly'; blocked?: string } | null {
   const sh = sealHere(game, s);
   if (sh) return { island: islandName(game, sh.at), feature: `Seal ${sh.lv}, mythic depth: ${lairName(sh.at)}`, action: 'lair', lv: sh.at.level };
-  const l = cardLair(game, s);
+  const l = reachLair(game, s) ?? cardLair(game, s);
   if (!l || !lairUp(game, l) || !inReach(game, s, l)) return null;
   const d = l.level - (s.ship?.shipLevel ?? 1);
   const why = chainWhy(game, s, l);
@@ -527,7 +543,7 @@ export function lairPrompt(game: Game, s: PlayerSession): { island: string; feat
 export function lairLanding(game: Game, s: PlayerSession): string | null | undefined {
   if (quiet(game)) return undefined;
   if (sealHere(game, s) && lairCardHooks.enter) return lairCardHooks.enter(game, s);
-  const l = cardLair(game, s);
+  const l = reachLair(game, s) ?? cardLair(game, s);
   if (!l || !lairUp(game, l) || !inReach(game, s, l)) return undefined;
   return startFight(game, s, l.id);
 }

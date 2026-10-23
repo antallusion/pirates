@@ -139,11 +139,12 @@ test('the autosail pill at the run’s place says «на месте», not «п�
 });
 
 test('a campaign lair step points at a lair of the quest’s own level in its waters, when one stands there', async () => {
-  const { makeGame, join } = await import('./helpers.ts');
+  const { makeGame, join, steps } = await import('./helpers.ts');
   const { campaignOf } = await import('../server/src/game/campaign.ts');
-  const { lairList, lairPos } = await import('../server/src/game/beastlairs.ts');
+  const { lairList, lairBeach } = await import('../server/src/game/beastlairs.ts');
   const { shipBandOf } = await import('../shared/src/data/xpcurve.ts');
   const { game } = makeGame();
+  (await import('../server/src/game/advmap.ts')).quietAdv(game, false); // (the lairs awake, as on the live sea)
   join(game, 'Hermit');
   const s = game.sessionByName('Hermit')!;
   // «За серой тканью» (chapter 2, the fourth level): a ⚓3 hermits' camp nearest, a ⚓2 bat cave in the same waters
@@ -153,8 +154,21 @@ test('a campaign lair step points at a lair of the quest’s own level in its wa
   s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
   s.ship!.docked = null;
   const t = game.questTargets(s)[q.id];
-  const l = lairList(game).find((x) => { const lp = lairPos(game, x); return Math.hypot(lp.x - t.x, lp.y - t.y) < 1; })!;
-  assert.ok(l, 'the mark is a lair');
+  const l = lairList(game).find((x) => { const lp = lairBeach(game, x); return Math.hypot(lp.x - t.x, lp.y - t.y) < 1; })!;
+  assert.ok(l, 'the mark is a lair’s beach');
+  // her run's end there: «Штурм» on her bar (an inland camp's point left the run 100 m off with nothing to press)
+  const is = game.world.islands[l.island];
+  const a = Math.atan2(t.x - is.x, -(t.y - is.y));
+  for (const off of [20, 30, 40, 55]) {
+    s.ship!.state.x = t.x + Math.sin(a) * off;
+    s.ship!.state.y = t.y - Math.cos(a) * off;
+    s.ship!.state.speed = 0;
+    s.ship!.state.heading = a + Math.PI / 2;
+    const { isLand } = await import('../shared/src/world/worldgen.ts');
+    if (!isLand(game.world, s.ship!.state.x, s.ship!.state.y)) break;
+  }
+  steps(game, 25);
+  assert.equal(s.landable?.action, 'lair', `the lair in her boats' reach at the mark (${JSON.stringify(s.landable)})`);
   assert.ok(l.level <= shipBandOf(q.requires.level ?? 4), `a lair of her band (⚓${l.level} ${l.kind})`);
   const near = (q.steps[i] as { near: { x: number; y: number; r: number } }).near;
   assert.ok(Math.hypot(t.x - near.x, t.y - near.y) <= near.r, 'within the location’s waters');

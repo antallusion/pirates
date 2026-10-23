@@ -176,7 +176,7 @@ try {
   let s = await cur(p);
   log('start', JSON.stringify(s));
   await shot(p, 'start');
-  const popSeen = new Set(); const pestAt = new Map(); let lastProg = '';
+  const popSeen = new Set(); const hereDone = new Set(); const pestAt = new Map(); let lastProg = '';
   let lastKey = '', stepT = Date.now(), stuckAt = 0, legFrom = null, passes = 0, sailedOnce = '';
   const end = (await import('../../../shared/src/data/campaign/progress.ts').catch(() => null))?.FIRST_SLOT?.[TO] ?? 1e9;
   while (Date.now() - t0 < Number(process.env.MINUTES ?? 110) * 60000) {
@@ -253,6 +253,13 @@ try {
         await p.evaluate(() => document.querySelector('[data-ptab="tavern"]')?.click()); await L.sleep(800);
         await shot(p, `s${s.at}_tavern`);
         await L.send(p, { t: 'hire', qty: st.count ?? 10 }); await L.sleep(1200);
+      }
+      // the step's own verb in port («Расспросить», «Сдать груз» … — questact.ts), pressed once a step
+      if (!hereDone.has(key)) {
+        hereDone.add(key);
+        if (!(await p.evaluate(() => document.querySelector('#modal-panel')?.dataset.modal === 'port'))) { await L.open(p, 'port'); await L.sleep(800); }
+        const v = await p.evaluate(() => { const b = [...document.querySelectorAll('.q-here-btn')].find((x) => x.getBoundingClientRect().width); if (!b) return null; const t = b.innerText.trim() + '/' + b.dataset.verb; b.click(); return t; });
+        if (v) { log('  in-port verb:', v); await L.sleep(1500); await shot(p, `s${s.at}_verb`); continue; }
       }
       if (age > 4000) { log('  casting off'); await undock(p); }
       else await L.sleep(1000);

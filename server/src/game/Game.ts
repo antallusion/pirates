@@ -276,7 +276,7 @@ import { sagaNote, shareSaga } from './saga.ts';
 import { logNote } from './captainlog.ts';
 import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
 import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
-import { closeFight, installLairHooks, landFightOn, landFighting, landTac, lairList, lairMessage, lairPos, lairPrompt, lairUp, resendLandFight, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
+import { closeFight, installLairHooks, landFightOn, landFighting, landTac, lairBeach, lairList, lairMessage, lairPos, lairPrompt, lairUp, resendLandFight, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
 import { installSealHooks, sealView } from './seals.ts'; // docs/19 E9
 import { installTitanHooks } from './titans.ts'; // docs/19 E10
 import { raidView, stepAbyssRaid } from './abyssraid.ts'; // docs/19 E11
@@ -1917,13 +1917,14 @@ export class Game {
           const above = st.near ? Math.max(0, l.level - shipBandOf(QUESTS_BY_ID[qs.id]?.requires.level ?? p.level)) * 3000 : 0;
           const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay + above;
           // (its island named on the route: «Плыть» to a campaign's lair said «место», mid-game QA 2026-10-22)
-          if (d < bd) [best, bd] = [{ x: lp.x, y: lp.y, ...(l.island >= 0 && l.turtle === undefined ? { island: l.island } : {}) }, d];
+          // (the mark on its beach, where the boats put off: an inland camp's point left the run 100 m off with no «Штурм»)
+          if (d < bd) { const b = lairBeach(this, l); [best, bd] = [{ x: b.x, y: b.y, ...(l.island >= 0 && l.turtle === undefined ? { island: l.island } : {}) }, d]; }
         }
         if (bd !== -1) lairMemo.set(memoKey, best);
         if (!best && st.island !== undefined && this.world.islands[st.island]) best = this.world.islands[st.island];
         if (best) {
           at = best;
-          r = 260;
+          r = 80;
           if (st.island !== undefined) island = st.island;
           else if (best.island !== undefined) island = best.island;
         }
