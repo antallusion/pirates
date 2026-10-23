@@ -177,7 +177,7 @@ export const BOARD_LOSS_PURSE = 0.08;
 export const BOARD_LOSS_SHIELD = 180;
 import { stepBridges } from './bridgefx.ts';
 import { MAX_BERTHS, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
-import { ISLE_REACH, abandonQuest, acceptQuest, answerOffer, bandRefusal, portBand, jobSanctions, questCargoLost, questEvent, questLandsHere, questHere, questXpOf, shareQuest, skipGuideStep, swearOath, switchPath } from './quests.ts';
+import { ISLE_REACH, NEAR_FIGHT, abandonQuest, acceptQuest, answerOffer, bandRefusal, portBand, jobSanctions, questCargoLost, questEvent, questLandsHere, questHere, questXpOf, shareQuest, skipGuideStep, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import { commonCollect, commonView, stepCommon } from './commongoal.ts';
 import { guildGoalCollect } from './guildgoal.ts';
@@ -1913,6 +1913,9 @@ export class Game {
           if (st.island !== undefined && l.island !== st.island) continue;
           if (st.kind && l.kind !== st.kind) continue;
           if (!lairUp(this, l)) continue;
+          // not one on a hidden island (late-game QA 2026-10-23: chapter 35's lairs were Glowhollow's, an island in the
+          // Abyss's mist — no «Штурм» there till it is charted, and nothing on the screen said so)
+          if (st.island === undefined && l.island >= 0 && this.world.islands[l.island]?.hidden) continue;
           const lp = lairPos(this, l);
           // A lair under a harbour's quays is the last pick (docs/30: Moon Landing's — the run ended between its piers,
           // the sloop on the beach, and off the quay straight onto the rocks); one out on an island first.
@@ -1926,7 +1929,10 @@ export class Game {
           // A campaign's lair of its own level first (mid-game QA 2026-10-22: «За серой тканью» at the fourth level sent
           // her to a ⚓3 hermits' camp two levels above her sloop, a ⚓2 bat cave 180 m farther in the same waters)
           const above = st.near ? Math.max(0, l.level - shipBandOf(QUESTS_BY_ID[qs.id]?.requires.level ?? p.level)) * 3000 : 0;
-          const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay + above;
+          // (and one within the location's waters, where a lair beaten counts — quests.ts stepGain: the nearest lair of an
+          // island in the mist passed over, the mark went to one 4 km off, beyond them)
+          const outside = st.near && Math.hypot(lp.x - st.near.x, lp.y - st.near.y) > st.near.r + NEAR_FIGHT - 300 ? 50_000 : 0;
+          const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay + above + outside;
           // (its island named on the route: «Плыть» to a campaign's lair said «место», mid-game QA 2026-10-22)
           // (the mark on its beach, where the boats put off: an inland camp's point left the run 100 m off with no «Штурм»)
           if (d < bd) { const b = lairBeach(this, l); [best, bd] = [{ x: b.x, y: b.y, ...(l.island >= 0 && l.turtle === undefined ? { island: l.island } : {}) }, d]; }

@@ -163,3 +163,32 @@ test('a campaign landing whose beach has a campaign wreck in its shallows: the b
   }
   assert.ok(checked >= 1, `a landing by a wreck checked (${checked})`);
 });
+
+test('every campaign lair step marks a lair she can storm and that counts: not on an island in the mist, within the location’s waters', async () => {
+  // Chapter 35: the nearest lairs were on Glowhollow, a hidden island of the Abyss — no «Штурм» at the mark; passed over,
+  // the mark went to one 4 km off, beyond the waters where a lair beaten counts.
+  const { makeGame, join } = await import('./helpers.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { lairList, lairBeach } = await import('../server/src/game/beastlairs.ts');
+  const { NEAR_FIGHT } = await import('../server/src/game/quests.ts');
+  const { game } = makeGame();
+  (await import('../server/src/game/advmap.ts')).quietAdv(game, false);
+  join(game, 'Stormer');
+  const s = game.sessionByName('Stormer')!;
+  const bad: string[] = [];
+  let n = 0;
+  for (const q of campaignOf(game).quests) q.steps.forEach((st, i) => {
+    if (st.type !== 'lair' || !st.near) return;
+    s.profile!.level = q.requires.level ?? 1;
+    s.profile!.quests.active = [{ id: q.id, step: i, progress: 0, startedAt: 0 }];
+    const t = game.questTargets(s)[q.id];
+    const l = lairList(game).find((x) => { const b = lairBeach(game, x); return Math.hypot(b.x - t.x, b.y - t.y) < 1; });
+    n++;
+    if (!l) { bad.push(`${q.id}: no lair at the mark`); return; }
+    if (l.island >= 0 && game.world.islands[l.island]?.hidden) bad.push(`${q.id}: ${l.id} on a hidden island`);
+    const d = Math.hypot(l.x - st.near.x, l.y - st.near.y);
+    if (d > st.near.r + NEAR_FIGHT) bad.push(`${q.id}: ${l.id} ${Math.round(d)} m from the location (counts within ${st.near.r + NEAR_FIGHT})`);
+  });
+  assert.ok(n >= 10, `${n} lair steps`);
+  assert.deepEqual(bad, []);
+});

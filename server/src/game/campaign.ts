@@ -50,7 +50,7 @@ export function initCampaign(game: Game, seed: number): Campaign {
 export function campaignPlaces(game: Game): void {
   const c = campaignOf(game);
   const floor = beforePorts(game.world);
-  const lairs = lairList(game);
+  const lairs = lairList(game).filter((l) => !(l.island >= 0 && game.world.islands[l.island]?.hidden)); // (none in the mist: Game.questTargets)
   for (const q of c.quests) for (const st of q.steps) {
     if (st.type === 'dive' && st.near && st.wreck === undefined) {
       let best: { x: number; y: number; depth: number } | null = null;
