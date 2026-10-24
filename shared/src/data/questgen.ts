@@ -10,7 +10,7 @@ import { GOODS } from './goods.ts';
 import { REGIONS } from '../world/regions.ts';
 import type { RegionId } from '../world/regions.ts';
 import type { Island, Port, World } from '../world/worldgen.ts';
-import { legacyWorld } from '../world/worldgen.ts';
+import { isLand, legacyWorld } from '../world/worldgen.ts';
 import { islandLife } from '../world/islandlife.ts';
 import type { QuestDef, QuestStep } from './quests.ts';
 import { SPEED_SCALE } from '../constants.ts';
@@ -18,6 +18,9 @@ import { legacyQuestSize, questXp, shipBandOf } from './xpcurve.ts';
 import { jobSilver } from './silverpay.ts';
 import { navLen } from '../world/navlen.ts';
 import { CHAIN_LEG, legTo, questLegs } from './questlegs.ts';
+import { LANDING_R, REACH_OBJ } from './reach.ts';
+import { waystations } from '../world/waystations.ts';
+import type { WayKind } from '../world/waystations.ts';
 
 // ------------------------------------------------------------------ the people who give the jobs
 
@@ -170,7 +173,10 @@ export type StepKind = 'pickup' | 'deliver2' | 'deliver3' | 'visit2' | 'visit3' 
   | 'board' | 'prize' | 'land_site' | 'land_any' | 'land_any2' | 'dive' | 'chart' | 'reach' | 'time_in' | 'contraband' | 'customs'
   | 'catch_any' | 'catch_big' | 'hunt_whale' | 'hunt_orca' | 'hunt_shark'
   // docs/12 P9
-  | 'sink_named' | 'tribute' | 'find_letter' | 'race2';
+  | 'sink_named' | 'tribute' | 'find_letter' | 'race2'
+  // a harbour's own parcel and letter where no harbour or peopled island lies within a leg (owner, 2026-10-24): handed
+  // over at a waystation of the open sea, or at a fishers' cove on the harbour's own island
+  | 'spot_tavern' | 'spot_chapel' | 'spot_market' | 'spot_cove';
 
 export const STEP_TEXT: Record<StepKind, [string, string]> = {
   pickup: ['Take on {good} × {n} at {port}.', 'Примите груз в порту {port}: {good} × {n}.'],
@@ -204,6 +210,10 @@ export const STEP_TEXT: Record<StepKind, [string, string]> = {
   tribute: ['Take tribute from merchant ships: {n}.', 'Возьмите дань с торговых кораблей: {n}.'],
   find_letter: ['Fish letters in bottles out of the sea: {n}.', 'Выловите из моря письма в бутылках: {n}.'],
   race2: ['Reach {port2} within {n} min.', 'Дойдите до порта {port2} за {n} мин.'],
+  spot_tavern: ['Hand it over at the raft tavern off {port}.', 'Передайте на плот-таверну у порта {port}.'],
+  spot_chapel: ['Hand it over at the hulk chapel off {port}.', 'Передайте в часовню на остове у порта {port}.'],
+  spot_market: ['Hand it over at the floating market off {port}.', 'Передайте на плавучий рынок у порта {port}.'],
+  spot_cove: ['Hand it over at the fishers’ cove along the shore from {port}.', 'Передайте в рыбацкую бухту на берегу неподалёку от порта {port}.'],
 };
 
 // ------------------------------------------------------------------ plots and the ways they are told
@@ -678,6 +688,8 @@ export interface GenParams {
   good?: GoodId;
   n: number;
   region: RegionId;
+  /** A spot step's place (a waystation, a cove of the harbour's own island). */
+  spot?: { x: number; y: number; island?: number };
 }
 
 /** Fill a template's named places with values (English names; the client translates them). */
@@ -772,8 +784,151 @@ export function generateQuests(world: World, seed: number): QuestDef[] {
   for (const port of full.ports.slice(full.portsFrom ?? upto, upto)) jobsOf(port, byDistance(port, before), full.islands[port.islandId]);
   // docs/29 step 9's harbour towns (shared/src/world/towns.ts): a small board each, after every job before.
   for (const port of full.ports.slice(upto)) jobsOf(port, byDistance(port, full.ports), full.islands[port.islandId], TOWN_JOBS);
+  // Owner, 2026-10-24 («всё должно играться идеально и просто для человека»): every harbour's board has a parcel and a
+  // letter to carry within a leg — made after every job before, so none of them moves.
+  const byPort = new Map<string, QuestDef[]>();
+  for (const q of out) {
+    const l = byPort.get(q.port);
+    if (l) l.push(q);
+    else byPort.set(q.port, [q]);
+  }
+  for (const port of full.ports) {
+    for (const q of handJobs(full, seed, port, byPort.get(port.id) ?? [], sitesOf)) {
+      if (ids.has(q.id)) continue;
+      ids.add(q.id);
+      out.push(q);
+    }
+  }
   return out;
 }
+
+// ------------------------------------------------------------------ a parcel and a letter on every board
+
+/** A job that carries goods to a place and back (a courier's): goods taken on or bought, handed over at a harbour, an
+ *  island's hamlet or a spot of the sea — nothing to fight, fish or find on the way. */
+export function courierJob(q: QuestDef): boolean {
+  return q.kind === 'job' && q.steps.some((st) => st.type === 'pickup' || st.type === 'deliver')
+    && q.steps.every((st) => st.type === 'pickup' || st.type === 'deliver' || st.type === 'visit' || st.type === 'land' || st.type === 'spot');
+}
+
+/** A job that carries a letter (to a harbour, an island's hamlet, a spot of the sea) and back. */
+export function letterJob(q: QuestDef): boolean {
+  return q.kind === 'job' && !!q.template && /^letters(_isle|_spot)?\./.test(q.template);
+}
+
+/** A spot step's ring: the place from her hull, as the campaign's spots (reach.ts). */
+const HAND_R = REACH_OBJ + LANDING_R;
+
+/** The plots of a harbour's own parcel and letter where its board had none (owner, 2026-10-24). Kept out of PLOTS: the
+ *  ports' dice draw from that list, and a new plot there would move every job of every board. */
+export const HAND_PLOTS: Plot[] = [
+  {
+    id: 'parcel_spot', category: 'delivery', steps: ['pickup', 'spot_tavern', 'home'], goods: ['provisions', 'cloth', 'rum', 'salt', 'medicine'], level: 1, pay: 240, xp: 170, flavors: [
+      F('merchant', 'A Parcel off {port}', 'Посылка у порта {port}', '{giver} has {good} for folk a short sail from {port}.', 'У купца ({giver}) товар «{good}» для людей в недолгом плавании от порта {port}.'),
+      F('fishwife', 'Stores for the Water', 'Припасы на воду', '{giver} sends {good} to friends a short sail from {port}.', '{giver} отправляет товар «{good}» друзьям в недолгом плавании от порта {port}.'),
+      F('harbour_master', 'The Harbour’s Errand', 'Поручение порта', '{giver} needs {good} carried a short sail from {port}, and back by the next tide.', 'Начальнику порта ({giver}) нужно доставить товар «{good}» недалеко от порта {port} и вернуться к следующему приливу.'),
+    ],
+  },
+  {
+    id: 'letters_spot', category: 'diplomacy', steps: ['spot_tavern', 'home'], level: 1, pay: 200, xp: 150, flavors: [
+      F('widow', 'A Letter off {port}', 'Письмо у порта {port}', '{giver} has a letter for someone a short sail from {port}. She will not say whom.', 'У вдовы ({giver}) письмо для кого-то в недолгом плавании от порта {port}. Кому — не говорит.'),
+      F('old_salt', 'Word Across the Water', 'Весточка через воду', '{giver} has word for an old shipmate a short sail from {port}.', 'У моряка ({giver}) весточка для старого товарища в недолгом плавании от порта {port}.'),
+      F('harbour_master', 'The Harbour’s Notice', 'Извещение порта', '{giver} sends a notice to the folk a short sail from {port}.', '{giver} посылает извещение людям в недолгом плавании от порта {port}.'),
+    ],
+  },
+  {
+    id: 'letters_isle', category: 'diplomacy', steps: ['land_site', 'home'], site: 'people', level: 1, pay: 220, xp: 160, flavors: [
+      F('widow', 'A Letter for {island}', 'Письмо на остров {island}', '{giver} has a letter for the {site} on {island}. She will not say to whom.', 'У вдовы ({giver}) письмо в поселение «{site}» на острове {island}. Кому — не говорит.'),
+      F('priest', 'Word to {island}', 'Весть на остров {island}', '{giver} sends word to the {site} on {island}: the feast day is near.', '{giver} шлёт весть в поселение «{site}» на острове {island}: близится праздник.'),
+      F('fishwife', 'Word of the Shoals', 'Весть о косяках', '{giver} sends word to the {site} on {island} that the shoals have turned.', '{giver} шлёт весть в поселение «{site}» на острове {island}: косяки повернули.'),
+    ],
+  },
+];
+
+/** A harbour's own parcel and letter where its board has none: to the nearest place within a leg on the sea route —
+ *  another harbour, else an island's hamlet within reach of the quay, else a waystation of the open sea or a fishers' cove of her own island. */
+function handJobs(world: World, seed: number, port: Port, mine: QuestDef[], sitesOf: (is: Island) => string[]): QuestDef[] {
+  const needC = !mine.some(courierJob), needL = !mine.some(letterJob);
+  if (!needC && !needL) return [];
+  const rng = new Rng((hashString(`${port.id}:hand`) ^ (seed * 2654435761)) >>> 0);
+  const levelBase = REGION_LEVEL[REGIONS[port.region].safety] ?? 0;
+  const plot = (id: string) => [...PLOTS, ...HAND_PLOTS].find((p) => p.id === id)!;
+  const out: QuestDef[] = [];
+  // the harbours within a leg, the nearest first (any harbour of the world, the towns too; rollParams keeps the linked)
+  const harbours = world.ports.filter((p) => p.id !== port.id && !p.raft && Math.hypot(p.x - port.x, p.y - port.y) <= CHAIN_LEG)
+    .sort((a, b) => Math.hypot(a.x - port.x, a.y - port.y) - Math.hypot(b.x - port.x, b.y - port.y));
+  const make = (pl: Plot, extra: Partial<GenParams>, near: Port[] = []): QuestDef | null => {
+    const k0 = rng.int(0, pl.flavors.length - 1);
+    for (let j = 0; j < pl.flavors.length; j++) {
+      const k = (k0 + j) % pl.flavors.length;
+      const flavor = pl.flavors[k];
+      const base = near.length ? rollParams(rng, pl, flavor, port, near, [], sitesOf, [], world) : handParams(rng, pl, flavor, port);
+      if (!base) continue;
+      const q = build(`g_${port.id}_${pl.id}_${k}_h`, pl, flavor, { ...base, ...extra }, levelBase);
+      if (chainShort(world, q, port)) return q;
+    }
+    return null;
+  };
+  // an island's hamlet (fishers or smugglers) within reach of the quay (owner, 2026-10-18: a landing within 1.5 km)
+  let hamlet: { is: Island; site: string; d: number } | null = null;
+  for (const is of world.islands) {
+    if (is.portId || is.minor || is.raft || is.hidden || is.slot || is.id === port.islandId) continue;
+    if (Math.hypot(is.x - port.x, is.y - port.y) - is.radius > QUEST_LOCAL_R) continue;
+    const site = [...is.features, ...sitesOf(is)].find((f) => f === 'fishers' || f === 'smugglers');
+    if (!site || !isleByRoute(world, port, is)) continue;
+    const d = legTo(world, port, { x: is.x, y: is.y, r: is.radius + 40, name: '' }, CHAIN_LEG).d;
+    if (d < (hamlet?.d ?? Infinity)) hamlet = { is, site, d };
+  }
+  // a spot of the sea: the nearest waystation, or a cove of her own island (half a kilometre off at least)
+  let spot: { x: number; y: number; kind: WayKind | 'cove'; island?: number; d: number } | null = null;
+  for (const w of waystations(world).list) {
+    if (Math.abs(w.x - port.x) > CHAIN_LEG || Math.abs(w.y - port.y) > CHAIN_LEG) continue;
+    const d = navLen(world, port.x, port.y, w.x, w.y, CHAIN_LEG);
+    if (d <= CHAIN_LEG - HAND_R && d < (spot?.d ?? Infinity)) spot = { x: w.x, y: w.y, kind: w.kind, d };
+  }
+  const own = world.islands[port.islandId];
+  if (own && !own.raft) {
+    for (let a = 0; a < 48; a++) {
+      const t = (a / 48) * Math.PI * 2;
+      for (const off of [160, 260, 380]) {
+        const x = own.x + Math.cos(t) * (own.radius + off), y = own.y + Math.sin(t) * (own.radius + off);
+        if (isLand(world, x, y) || Math.hypot(x - port.x, y - port.y) < 500) continue;
+        const d = navLen(world, port.x, port.y, x, y, CHAIN_LEG);
+        if (d >= 500 && d <= CHAIN_LEG - HAND_R && d < (spot?.d ?? Infinity)) spot = { x, y, kind: 'cove', island: own.id, d };
+        break;
+      }
+    }
+  }
+  const atSpot = (id: string): QuestDef | null => {
+    if (!spot) return null;
+    const pl = plot(id);
+    const k = `spot_${spot.kind}` as StepKind;
+    return make({ ...pl, steps: pl.steps.map((x) => (x === 'spot_tavern' ? k : x)) }, { spot: { x: spot.x, y: spot.y, ...(spot.island !== undefined ? { island: spot.island } : {}) } });
+  };
+  if (needC) {
+    const q = (harbours.length ? make(plot('courier'), {}, harbours) : null)
+      ?? (hamlet ? make(plot('resident_request'), { island: hamlet.is, site: hamlet.site }) : null)
+      ?? atSpot('parcel_spot');
+    if (q) out.push(q);
+  }
+  if (needL) {
+    const q = (harbours.length ? make(plot('letters'), {}, harbours) : null)
+      ?? (hamlet ? make(plot('letters_isle'), { island: hamlet.is, site: hamlet.site }) : null)
+      ?? atSpot('letters_spot');
+    if (q) out.push(q);
+  }
+  return out;
+}
+
+/** A giver, a good and its count for a harbour's own parcel or letter (rollParams' dice, without its places). */
+function handParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port): GenParams {
+  const sex = PROFESSION_SEX[flavor.giver];
+  const giver = `${rng.pick(sex === 'f' ? GIVER_WOMEN : sex === 'm' ? GIVER_MEN : GIVER_FIRST)} ${rng.pick(GIVER_LAST)}`;
+  const good = plot.goods ? rng.pick(plot.goods) : undefined;
+  const n = good ? Math.min(rng.int(4, 12) * (good === 'medicine' ? 1 : 2), Math.max(4, Math.floor(QUEST_HOLD / GOODS[good].volume))) : 1;
+  return { giver, profession: flavor.giver, port, good, n, region: port.region };
+}
+
 
 function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port[], islands: Island[], sitesOf: (is: Island) => string[], farRegions: RegionId[] = [], world?: World): GenParams | null {
   const sex = PROFESSION_SEX[flavor.giver];
@@ -924,6 +1079,11 @@ function stepOf(k: StepKind, p: GenParams, text: string): QuestStep {
       return { type: 'letters', count: p.n, text };
     case 'race2':
       return { type: 'race', port: p.port2!.id, seconds: p.n * 60, text };
+    case 'spot_tavern':
+    case 'spot_chapel':
+    case 'spot_market':
+    case 'spot_cove':
+      return { type: 'spot', x: Math.round(p.spot!.x), y: Math.round(p.spot!.y), r: HAND_R, ...(p.spot!.island !== undefined ? { island: p.spot!.island } : {}), text };
   }
 }
 
@@ -984,7 +1144,7 @@ export function numberedPattern(en: string, ru: string): [string, string] {
 export function questPatterns(): [string, string][] {
   const out: [string, string][] = [];
   const add = (en: string, ru: string) => out.push(numberedPattern(en, ru));
-  for (const pl of PLOTS) for (const f of pl.flavors) {
+  for (const pl of [...PLOTS, ...HAND_PLOTS]) for (const f of pl.flavors) {
     add(f.name[0], f.name[1]);
     add(f.summary[0], f.summary[1]);
   }

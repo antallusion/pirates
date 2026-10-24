@@ -142,7 +142,7 @@ test('a campaign landing whose beach has a campaign wreck in its shallows: the b
   join(game, 'Lander');
   const s = game.sessionByName('Lander')!;
   const ship = s.ship!;
-  let checked = 0;
+  let checked = 0, laid = 0;
   for (const q of campaignOf(game).quests) {
     const i = q.steps.findIndex((st) => st.type === 'land');
     if (i < 0) continue;
@@ -156,7 +156,14 @@ test('a campaign landing whose beach has a campaign wreck in its shallows: the b
     if (!('x' in r) || isLand(game.world, r.x, r.y)) continue;
     ship.state.x = r.x; ship.state.y = r.y; ship.state.speed = 0;
     game.grid.upsert(ship.id, r.x, r.y);
-    if (!wreckHere(game, ship)) continue; // (only the beaches with a wreck by them)
+    // (only the beaches with a wreck by them. The 3 km chains (docs/36 §2а) moved the dive steps' wrecks off every landing's
+    // run end on this world, so the case is laid as it came about: a campaign wreck appended in the shallows under her)
+    if (!wreckHere(game, ship)) {
+      if (laid >= 3) continue;
+      laid++;
+      game.wrecks.push({ id: game.wrecks.length, name: 'wreck of the Ninth Hour', x: Math.round(r.x), y: Math.round(r.y), depth: 6, tier: 1 });
+      assert.ok(wreckHere(game, ship), `${q.id}: the wreck under her`);
+    }
     steps(game, 25);
     checked++;
     assert.equal(s.landable?.island, is.name, `${q.id}: «Высадка» on ${is.name}, not ${JSON.stringify(s.landable)}`);

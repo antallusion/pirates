@@ -1,6 +1,7 @@
 // Path and Legend quests (docs/00 D1, docs/02 §7): mentors in their ports, step objectives driven by what the
 // captain does at sea, Path unlocks and switching at a Captain's House, the First Descent, and faction oaths.
 
+import { courierJob, letterJob } from '../../../shared/src/data/questgen.ts'; // owner, 2026-10-24: a parcel and a letter on every board
 import { LANDING_R, REACH_OBJ, REACH_SHORE, REACH_SLACK, hullOf, inReach, shoreWithin } from '../../../shared/src/data/reach.ts';
 import { opsSilverMul } from './liveops.ts'; // docs/34: the silver event
 import { isCampaignId } from '../../../shared/src/data/questclass.ts';
@@ -365,7 +366,19 @@ export function boardJobs(p: Profile, port: Port, now: number, favor: BoardFavor
   // may take them.
   const beasts = scored.filter((x) => x.q.id.startsWith('lj_') && (x.q.requires.level ?? 1) <= p.level + 5).slice(0, BEAST_JOBS_ON_BOARD);
   const rest = scored.filter((x) => !x.q.id.startsWith('lj_'));
-  return [...rest.slice(0, JOBS_ON_BOARD - beasts.length), ...beasts].map((x) => x.q);
+  const shown = rest.slice(0, JOBS_ON_BOARD - beasts.length);
+  // Owner, 2026-10-24 («всё должно играться идеально и просто для человека»): a parcel and a letter to carry on every
+  // board, whatever the window turned up — the best of each (she may take it first) in place of the last of the rest.
+  for (const kind of [courierJob, letterJob]) {
+    if (shown.some((x) => kind(x.q))) continue;
+    const best = rest.find((x) => kind(x.q));
+    if (!best) continue;
+    let at = shown.length - 1;
+    while (at >= 0 && (courierJob(shown[at].q) || letterJob(shown[at].q))) at--;
+    if (shown.length < JOBS_ON_BOARD - beasts.length) shown.push(best);
+    else if (at >= 0) shown[at] = best;
+  }
+  return [...shown, ...beasts].map((x) => x.q);
 }
 
 export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string, pay?: QuestPay): string | null {
@@ -589,6 +602,18 @@ export function abandonQuest(game: Game, s: PlayerSession, id: string): string |
   return null;
 }
 
+/** A parcel handed over at a spot of the sea (a waystation, a cove — questgen.ts handJobs): the goods taken on for it
+ *  leave her hold there. */
+function handOver(ship: ShipEntity, q: QuestDef, step: number): void {
+  for (const st of q.steps.slice(0, step)) {
+    if (st.type !== 'pickup') continue;
+    const n = Math.min(st.qty, ship.cargo[st.good] ?? 0);
+    if (n <= 0) continue;
+    ship.cargo[st.good] = (ship.cargo[st.good] ?? 0) - n;
+    if (!ship.cargo[st.good]) delete ship.cargo[st.good];
+  }
+}
+
 function stepCount(st: QuestStep): number {
   switch (st.type) {
     case 'sink':
@@ -696,6 +721,7 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
       if (kill && !moot && q.kind !== 'campaign') spent = true;
       qs.progress += gained;
       if (qs.progress + 1e-9 < stepCount(st)) break;
+      if (st.type === 'spot' && q.kind === 'job') handOver(ship, q, qs.step);
       qs.step++;
       qs.progress = 0;
       if (qs.step >= q.steps.length) {

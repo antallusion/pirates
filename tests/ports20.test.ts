@@ -134,7 +134,10 @@ test('what the world alone places stands where it stood: the map, the turtles, t
   assert.deepEqual(buildSites(world), buildSites(old));
   assert.deepEqual(generateIslandJobs(world, WORLD_SEED), generateIslandJobs(old, WORLD_SEED), 'the islands\' people send where they sent');
   // Every port's jobs before, each with her id and her course; the twenty's after them.
-  const before = generateQuests(old, WORLD_SEED), now = generateQuests(world, WORLD_SEED);
+  // (a harbour's own parcel and letter, `…_h` — questgen.ts handJobs, owner 2026-10-24 — are made after every job, to the
+  // places about her in the world as it is: a new harbour near may take them; they are not the old jobs)
+  const own = (q: { id: string }) => !q.id.endsWith('_h');
+  const before = generateQuests(old, WORLD_SEED).filter(own), now = generateQuests(world, WORLD_SEED).filter(own);
   assert.deepEqual(now.slice(0, before.length), before);
   for (const p of fresh(world)) {
     const jobs = now.filter((q) => q.port === p.id);

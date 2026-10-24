@@ -100,7 +100,9 @@ test('the six captains alike: their passives touch no broadside — bare and ful
       for (const gear of ['bare', 'full'] as const) {
         const s = captainShip(game, { anchor: a, gear, captain }, x - 5000, y).ship, t = captainShip(game, { anchor: a, gear, captain: 'corsair' }, x - 5600, y).ship;
         const want = gear === 'bare' ? seaBase(a) : (seaBase(a) * gearDefCeil(a)) / gearOffCeil(a);
-        const got = shoot(game, s, t).volleys;
+        // (48 broadsides, not 16: the mean of 16 strayed past ±1 on the dice alone — ⚓10 corsair bare 25.3 here, 24.4 in
+        // the table's own test above; at 48 all six sit within 0.5 of the table)
+        const got = shoot(game, s, t, 'round', 48).volleys;
         if (!near(got, want, 1)) bad.push(`⚓${a} ${captain} ${gear}: ${got.toFixed(1)} (the table ${want.toFixed(1)})`);
       }
     }

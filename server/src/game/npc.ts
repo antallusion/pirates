@@ -1354,9 +1354,13 @@ export function spawnPirate(game: Game, near?: ShipEntity, only?: RegionId): Shi
   if (near) {
     // Just beyond the horizon of interest and to windward — attackers want the weather gauge.
     const wind = game.windFor(near);
-    const a = wind.dir + Math.PI + game.rng.range(-1.1, 1.1);
-    x = near.state.x + Math.sin(a) * 2350;
-    y = near.state.y - Math.cos(a) * 2350;
+    // A few bearings tried: an islet to windward must not leave a sent ambush («К бою!») with no sail at all.
+    for (let k = 0; ; k++) {
+      const a = wind.dir + Math.PI + game.rng.range(-1.1, 1.1);
+      x = near.state.x + Math.sin(a) * 2350;
+      y = near.state.y - Math.cos(a) * 2350;
+      if (k >= 5 || openSea(game, x, y)) break;
+    }
     region = game.regionAt(x, y);
   } else {
     const regions = game.zone ? PIRATE_REGIONS.filter((r) => game.zone!.regions.has(r)) : PIRATE_REGIONS;

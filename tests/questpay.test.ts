@@ -41,9 +41,10 @@ test('the board offers the choice; the pay chosen is kept with the job and paid 
   const { game } = makeGame();
   const c = join(game, 'Paid Right');
   const s = game.sessionByName('Paid Right')!;
-  const port = payingBoard(game, s, c, (o) => o.kind === 'job' && o.category !== 'elite' && o.silver >= 200 && !!o.pays)!;
+  // (one she may take: since the 3 km chains the first such job on the boards about her was of the fifth level — «Level 5»)
+  const port = payingBoard(game, s, c, (o) => o.kind === 'job' && o.category !== 'elite' && o.silver >= 200 && !!o.pays && !o.blocked)!;
   assert.ok(port, 'a harbour of the first waters with a job worth the choice');
-  const offer = c.last('port')!.view!.questOffers.find((o) => o.kind === 'job' && o.category !== 'elite' && o.silver >= 200);
+  const offer = c.last('port')!.view!.questOffers.find((o) => o.kind === 'job' && o.category !== 'elite' && o.silver >= 200 && !o.blocked);
   assert.ok(offer?.pays, 'a job on the board offers the pay to choose');
   assert.equal(offer!.pays!.faction, port.faction);
   assert.ok(offer!.pays!.favour && offer!.pays!.stores.heavy > 0);

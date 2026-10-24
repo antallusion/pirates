@@ -386,6 +386,10 @@ test('67 on the ships: each captain\'s losses off her own ship; the lesson and t
   const A = atSea(game, 'Ada', 'corsair', 0, 5), B = atSea(game, 'Bel', 'admiral', 45, 5);
   group(game, A, B);
   B.c.push({ t: 'board_assist', auto: true });
+  // The deck's dice pinned (the pirate's men and the battle's seed): this test weighs the shares of a won boarding, not
+  // its odds (tests/balance/boardgroup's). Left to the world's stream, every new harbour or job shifted the seed — at
+  // c90ffe4f it fell on one of the boardings two bare brigs of deckhands lose (6 of 8 streams won, 8 of 8 fresh seeds).
+  (game as unknown as { rng: Rng }).rng = new Rng(2);
   const npc = pirateBy(game, A.ship, 16);
   npc.purse = 1000;
   npc.cargo = { rum: 20 };
