@@ -6,6 +6,7 @@
 
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
+import { foundIsle } from '../../../shared/src/data/campaign/build.ts';
 import { targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { claimLair } from './isles18.ts';
 import { legacyIslands } from '../../../shared/src/world/worldgen.ts';
@@ -52,14 +53,14 @@ const HOUR = 3600_000;
 const WEEK = 7 * 24 * HOUR;
 const LIVE_PER_SEA: Record<string, number> = { safe: 1, contested: 2, lawless: 3 };
 const DESPAWN_R = 12000;
-const LAIR_BATTERY_R = 550;
+export const LAIR_BATTERY_R = 550;
 const LAIR_HIT_R = 140;
 const LAIR_OPEN_MIN = 20;
 const LAIR_REBUILD_H = 6;
 /** Each gun of a lair's battery reloads in this (docs/16 #7). */
 const LAIR_GUN_RELOAD = 6;
 /** Its garrison puts out when a captain comes this near (Manhattan metres), goes home when all are this far. */
-const GARRISON_R = 4000;
+export const GARRISON_R = 4000;
 const GARRISON_GONE_R = 9000;
 /** A garrison ship this near the lair keeps the boats off. */
 const GARRISON_GUARD_R = 2500;
@@ -181,6 +182,10 @@ function placeLairs(game: Game, S: WantedState): void {
   // newcomer's first town, had a named pirate's fortress on it, and its garrison sank her there (QA 2026-10-22).
   const towns = new Set<number>();
   for (const q of Object.values(QUESTS_BY_ID)) for (const st of q.steps) if (st.type === 'claim' && st.island !== undefined) towns.add(st.island);
+  // (and the start's nearest island by the line — the opening's town till 2026-10-24, when it went by the sea route — so
+  // the fortresses stand where they stood: Ravencliff, 3.4 km off Saltmarrow, the second chapter's landings, kept free)
+  const start = game.world.ports.find((p) => p.id === 'saltmarrow');
+  if (start) towns.add(foundIsle({ islands: game.world.islands.filter((i) => !i.minor && !i.raft && !i.hidden && !i.slot && !i.portId) }, start).id);
   for (const is of legacyIslands(game.world)) { // docs/18 III: the lairs stand where they stood
     if (is.portId || is.minor || towns.has(is.id)) continue;
     const camp = islandLife({ id: is.id, region: is.region, biome: is.biome, x: is.x, y: is.y, r: is.radius, poly: is.poly, features: is.features }).find((l) => l.kind === 'pirate_camp');

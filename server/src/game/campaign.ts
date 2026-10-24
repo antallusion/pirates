@@ -36,7 +36,7 @@ import type { PlayerSession, Profile } from './player.ts';
 import type { QuestState } from './quests.ts';
 import { questEvent, startQuest } from './quests.ts';
 import { seasonStat } from './seasons.ts';
-import { namedForCampaign } from './wanted.ts';
+import { GARRISON_R, lairsAll, namedForCampaign } from './wanted.ts';
 
 const built = new WeakMap<Game, Campaign>();
 
@@ -79,12 +79,42 @@ export function campaignPlaces(game: Game): void {
       game.wrecks.push({ id: st.wreck, name: `wreck of the ${WRECK_NAMES[st.wreck % WRECK_NAMES.length]}`, x: Math.round(best.x), y: Math.round(best.y), depth: Math.max(3, Math.min(8, Math.round(best.depth))), tier: region.safety === 'lawless' ? 3 : region.safety === 'contested' ? 2 : 1 }); // (in the shallows: a plain diver's reach)
     }
     if (st.type === 'lair' && st.near) {
-      let d = Infinity;
-      for (const l of lairs) d = Math.min(d, Math.hypot(l.x - st.near.x, l.y - st.near.y));
+      // (its waters reach the lair «Плыть» takes her to — the one of her band, clear of the pirates' guns: Game.questTargets)
+      const band = shipBandOf(q.requires.level ?? 1);
+      let d = Infinity, bc = Infinity;
+      for (const l of lairs) {
+        const ld = Math.hypot(l.x - st.near.x, l.y - st.near.y);
+        const c = ld + campaignLairCost(game, l, band) + Math.max(0, l.level - band) * 3000;
+        if (c < bc) [bc, d] = [c, ld];
+      }
       if (d > st.near.r && Number.isFinite(d)) st.near = { ...st.near, r: Math.ceil(d + 300) };
     }
   }
 }
+/** How clear of a named pirate's fortress a campaign's lair lies: its battery's reach (wanted.ts LAIR_BATTERY_R, 550 m) and
+ *  the boats' row past it. (A number: wanted.ts and this module import each other.) */
+export const FORT_CLEAR = 1200;
+
+/**
+ * What a lair costs a campaign's step of ship band `band` over its distance (Infinity: never one to send her to) — the
+ * first-hour run of 2026-10-24, «Твари дюн» lost twice at the fourth level: its lair was Widowwick Isle's iguanas, on the
+ * island of a ⚓4 pirate fortress whose battery drove her boats off; Ravencliff's rookery, the nearer, a strong one that a
+ * newcomer's party never beats (docs/31: a captain who did the opening and signed on Jory Penn's six should win 75–90 %).
+ * Not on a fortress's island nor within FORT_CLEAR of its camp; within its garrison's reach, dear when the fortress is
+ * above her; a newcomer's (⚓1–2) lair of the middle size first, a weak one next, a strong one last.
+ */
+export function campaignLairCost(game: Game, l: { island: number; x: number; y: number; size: string }, band: number): number {
+  let cost = 0;
+  for (const f of lairsAll(game)) {
+    if (l.island >= 0 && f.island === l.island) return Infinity;
+    const d = Math.hypot(f.x - l.x, f.y - l.y);
+    if (d < FORT_CLEAR) return Infinity;
+    if (d < GARRISON_R && f.level > band + 1) cost += 8000;
+  }
+  if (band <= 2) cost += l.size === 'strong' ? 6000 : l.size === 'weak' ? 1000 : 0;
+  return cost;
+}
+
 const WRECK_NAMES = ['Saint Brendan', 'Gloria Regis', 'Merciful Anne', 'Black Tithe', 'Silver Hind', 'Grey Widow', 'Constance', 'Lamentation', 'Ninth Hour', 'Iron Psalm', 'Tidecaller', 'Wandering Jew'];
 
 export function campaignOf(game: Game): Campaign {

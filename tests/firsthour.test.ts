@@ -247,3 +247,64 @@ test('the opening’s fights never begin with an empty locker; the guns empty on
   assert.match(main, /const shot = shotStage\(op \?\? storyQuest\(\)\?\.does, state\.self\?\.ammo\);\s*tutorPointer\.set\(\{ stage: state\.onboarding\?\.stage \?\? shot \?\?/);
   assert.match((await import('node:fs')).readFileSync('client/src/ui/port.ts', 'utf8'), /data: \{ act: 'supplies' \}/, '«Припасы» is the market’s button the finger names');
 });
+
+test('«Твари дюн»: a lair of her band, clear of the pirate fortresses; Jory Penn’s six signed on win it, a bare crew may lose', async () => {
+  // the first-hour run of 2026-10-24: at the fourth level the step's lair was Widowwick Isle's iguanas, on the island of a
+  // ⚓4 pirate fortress — «Высадка» rowed to its camp and the battery drove the boats off, twice. docs/31: a bare captain
+  // may fail, a sensibly built one should win about 75–90 % — measured on the real battle (tactical.ts sideOf, tacbattle.ts)
+  const { makeGame, join } = await import('./helpers.ts');
+  const { campaignNext, campaignOf, FORT_CLEAR } = await import('../server/src/game/campaign.ts');
+  const { lairList, lairBeach, lairMen } = await import('../server/src/game/beastlairs.ts');
+  const { lairsAll, LAIR_BATTERY_R } = await import('../server/src/game/wanted.ts');
+  const { sideOf } = await import('../server/src/game/tactical.ts');
+  const { landParty, LAIRS } = await import('../shared/src/data/lairs.ts');
+  const { ladder } = await import('../shared/src/data/shiplevel.ts');
+  const { newBattle, quickFinish } = await import('../server/src/game/tacbattle.ts');
+  const { Rng } = await import('../shared/src/rng.ts');
+  const { shipBandOf } = await import('../shared/src/data/xpcurve.ts');
+  const { game } = makeGame();
+  join(game, 'Duneclear', 'corsair');
+  const s = [...game.sessions].find((x) => x.name === 'Duneclear')!;
+  const p = s.profile!, ship = s.ship!;
+  const slot = campaignOf(game).slots.find((x) => x.a.id === 'c01_16')!;
+  p.quests.active = [];
+  p.campaign!.at = slot.slot;
+  while (p.level < 4) game.grantXp(s, 2000, 'admin');
+  campaignNext(game, s);
+  const t = game.questTargets(s).c01_16;
+  const l = lairList(game).find((x) => { const b = lairBeach(game, x); return Math.hypot(b.x - t.x, b.y - t.y) < 5; })!;
+  assert.ok(l, 'the step marks a lair');
+  const band = shipBandOf(slot.gate);
+  assert.ok(l.level <= band && l.size !== 'strong', `${l.kind} ⚓${l.level} ${l.size}`);
+  assert.ok(FORT_CLEAR > LAIR_BATTERY_R + 400);
+  for (const f of lairsAll(game)) {
+    assert.notEqual(f.island, l.island, `not on ${f.name}, a fortress's island`);
+    assert.ok(Math.hypot(f.x - l.x, f.y - l.y) > FORT_CLEAR, `clear of ${f.name}'s battery`);
+  }
+  const st = slot.a.steps[0] as { near: { x: number; y: number; r: number } };
+  assert.ok(Math.hypot(l.x - st.near.x, l.y - st.near.y) <= st.near.r, 'within the step’s waters (it counts)');
+  // her party ashore against it, as beastlairs.ts startFight lands it
+  const odds = (army: { u: 'deckhand' | 'marine'; n: number }[], n = 40): number => {
+    ship.setArmy(army);
+    let win = 0;
+    for (let k = 0; k < n; k++) {
+      const base = sideOf(game, ship, ship, true);
+      const a = { ...base, army: landParty(base.army ?? []), holes: 0, gunsOut: 0, fire: false, castle: false, struck: false, dealt: ladder(ship.shipLevel, l.level, false).dealt || 0.1 };
+      const men = lairMen(game, l);
+      const b = { name: 'Lair', ship: 'Island', captain: null, hands: 0, marines: 0, gunners: 0, army: men.map((x) => ({ u: x.u, n: x.n, src: x.u })), officers: [], skill: 3, morale: 50, dealt: ladder(l.level, ship.shipLevel, false).dealt || 0.1, power: 1, melee: 1, extraShots: 0, firstRush: 1, nets: 0, blooded: 0, castle: false, struck: false, human: false, noBook: true };
+      const seed = 1000 + k * 7919;
+      const rng = new Rng((seed ^ 0x1a7d) >>> 0);
+      const bt = newBattle(a as never, b as never, seed, 0, rng, { land: LAIRS[l.kind].types[0] });
+      quickFinish(bt, 0, rng);
+      if (bt.over!.winner === 0) win++;
+    }
+    return win / n;
+  };
+  // the opening leaves her 23 deckhands; Saltmarrow's dwellings sign on deckhands and marines (Jory Penn's step: six)
+  const built = odds([{ u: 'marine', n: 6 }, { u: 'deckhand', n: 20 }]);
+  const hands = odds([{ u: 'deckhand', n: 26 }]);
+  const bare = odds([{ u: 'deckhand', n: 20 }]);
+  assert.ok(built >= 0.75, `six marines signed on: wins ${built}`);
+  assert.ok(hands >= 0.75, `six deckhands signed on: wins ${hands}`);
+  assert.ok(bare < 0.75, `none signed on: may lose (${bare})`);
+});

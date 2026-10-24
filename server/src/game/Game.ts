@@ -54,7 +54,7 @@ import { generateIslandJobs, generateQuests } from '../../../shared/src/data/que
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
 import { generateLairJobs } from '../../../shared/src/data/lairquests.ts';
 import { generateArcs } from '../../../shared/src/data/questarcs.ts';
-import { acceptCampaign, campaignLevelUp, campaignPassage, campaignNext, campaignPlaces, campaignView, initCampaign } from './campaign.ts'; // docs/36
+import { acceptCampaign, campaignLairCost, campaignLevelUp, campaignPassage, campaignNext, campaignPlaces, campaignView, initCampaign } from './campaign.ts'; // docs/36
 import { registerElitePorts } from '../../../shared/src/data/elite.ts';
 import { restAfter } from '../../../shared/src/data/rested.ts';
 import { pushTasks, stepTasks, taskSalvage } from './worldtasks.ts';
@@ -1928,11 +1928,15 @@ export class Game {
           const byQuay = quayside ? 20_000 : 0;
           // A campaign's lair of its own level first (mid-game QA 2026-10-22: «За серой тканью» at the fourth level sent
           // her to a ⚓3 hermits' camp two levels above her sloop, a ⚓2 bat cave 180 m farther in the same waters)
-          const above = st.near ? Math.max(0, l.level - shipBandOf(QUESTS_BY_ID[qs.id]?.requires.level ?? p.level)) * 3000 : 0;
+          const band = shipBandOf(QUESTS_BY_ID[qs.id]?.requires.level ?? p.level);
+          const above = st.near ? Math.max(0, l.level - band) * 3000 : 0;
+          // (a campaign's: clear of a pirate fortress's battery, of a newcomer's size — campaign.ts campaignLairCost)
+          const camp = st.near ? campaignLairCost(this, l, band) : 0;
+          if (!Number.isFinite(camp)) continue;
           // (and one within the location's waters, where a lair beaten counts — quests.ts stepGain: the nearest lair of an
           // island in the mist passed over, the mark went to one 4 km off, beyond them)
           const outside = st.near && Math.hypot(lp.x - st.near.x, lp.y - st.near.y) > st.near.r + NEAR_FIGHT - 300 ? 50_000 : 0;
-          const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay + above + outside;
+          const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay + above + outside + camp;
           // (its island named on the route: «Плыть» to a campaign's lair said «место», mid-game QA 2026-10-22)
           // (the mark on its beach, where the boats put off: an inland camp's point left the run 100 m off with no «Штурм»)
           if (d < bd) { const b = lairBeach(this, l); [best, bd] = [{ x: b.x, y: b.y, ...(l.island >= 0 && l.turtle === undefined ? { island: l.island } : {}) }, d]; }
