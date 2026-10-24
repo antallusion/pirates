@@ -5636,11 +5636,14 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
 #port-splash .ps-t { position: absolute; z-index: 1; left: calc(var(--sa-l, 0px) + 28px); right: calc(var(--sa-r, 0px) + 28px); bottom: calc(var(--sa-b, 0px) + 22px); display: flex; flex-direction: column; gap: 4px; }
 #port-splash .ps-t b { font: 600 clamp(26px, 7vh, 44px) / 1.1 var(--serif); color: #f6ead0; text-shadow: 0 2px 4px #000, 0 0 18px rgba(0, 0, 0, 0.85); }
 #port-splash .ps-t span { font: 600 13px / 1.25 var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: #ecd59a; text-shadow: 0 1px 3px #000, 0 0 10px rgba(0, 0, 0, 0.9); }
-.ph-hero { position: relative; height: clamp(104px, 36vh, 260px); margin: 0 0 10px; border-radius: 6px; border: 1px solid rgba(232, 196, 106, 0.35); background: var(--bg-port, none) center 45% / cover no-repeat, #0b0d10; overflow: hidden; }
+.ph-hero { position: relative; height: clamp(84px, 24vh, 220px); margin: 0 0 10px; border-radius: 6px; border: 1px solid rgba(232, 196, 106, 0.35); background: var(--bg-port, none) center 45% / cover no-repeat, #0b0d10; overflow: hidden; }
 .ph-hero::before { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(6, 7, 9, 0.88) 0%, rgba(6, 7, 9, 0.55) 34%, rgba(6, 7, 9, 0) 64%); pointer-events: none; }
 .ph-hero-t { position: absolute; left: 14px; right: 14px; bottom: 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ph-hero-t b { font: 600 22px / 1.15 var(--serif); color: #f6ead0; text-shadow: 0 1px 3px #000, 0 0 12px rgba(0, 0, 0, 0.85); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ph-hero-t span { font: 600 11px / 1.25 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: #ecd59a; text-shadow: 0 1px 3px #000, 0 0 10px rgba(0, 0, 0, 0.9); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-height: 520px) { .ph-hero-t b { font-size: 19px; } }
 /* the harbour faintly behind the tabs and the pages (dark enough for every word on it: measured, AA) */
-#modal-panel[data-modal="port"] .w-frame { background: linear-gradient(rgba(11, 11, 13, 0.9), rgba(11, 11, 13, 0.93)), var(--bg-port, none) center 45% / cover no-repeat; }
+#modal-panel[data-modal="port"] .w-frame { background: linear-gradient(rgba(11, 11, 13, 0.93), rgba(11, 11, 13, 0.95)), var(--bg-port, none) center 45% / cover no-repeat; }
+/* (the bar's buttons at 30 px on a phone on its side: the brass band a little thinner, so an 18 px icon keeps inside
+   it — frames.mjs: the icons stood 3 px over the band's top) */
+@media (max-height: 520px) { .skinned .act-btn { border-width: 4px 9px; border-image: var(--ui-button) 40 fill / 4px 9px stretch; } .act-btn .act-ico { width: 16px; height: 16px; } }
