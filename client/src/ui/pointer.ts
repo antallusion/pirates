@@ -125,7 +125,8 @@ function targetsOf(f: PointerFacts): string[] {
       return f.docked ? TO_SEA : ['#tc-act[data-act="land"]', '.act-btn.act-land', ...GOAL_SAIL];
     case 'men':
       // no men for the step's fight: a harbour, its «Армия» and the way through it
-      return f.docked ? [...TAB_INSIDE.army, '#modal-panel [data-ptab="army"]', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'] : TO_PORT;
+      // (at sea far from any harbour «Плыть» takes her to the nearest — server goalroute.ts NEEDS_MEN)
+      return f.docked ? [...TAB_INSIDE.army, '#modal-panel [data-ptab="army"]', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'] : [...TO_PORT, ...GOAL_SAIL];
     case 'go:dock':
       // …and at the step's harbour, its «Причалить»
       return f.docked ? [] : ['#tc-act[data-act="dock"]', '.act-btn.act-dock', ...GOAL_SAIL];

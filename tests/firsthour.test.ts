@@ -139,7 +139,7 @@ test('a lair lost and no men left: the refusal says where to get them, and the f
   assert.equal(pointerTargets({ stage: 'men', touch: true, docked: false, battle: false })[0], '#tc-act[data-act="harbour"]');
   const t = pointerTargets({ stage: 'men', touch: true, docked: true, battle: false });
   assert.ok(t.includes('#modal-panel [data-dwell]') && t.includes('#modal-panel [data-ptab="army"]'));
-  assert.match((await import('node:fs')).readFileSync('client/src/main.ts', 'utf8'), /if \(q\.does && q\.does !== 'sink' && men < 3\) return 'men';/);
+  assert.match((await import('node:fs')).readFileSync('client/src/main.ts', 'utf8'), /if \(q\.does && q\.does !== 'sink' && men < 3\) return state\.self\?\.dockedAt \|\| !state\.autosail \? 'men' : null;/);
 });
 
 test('a ship\'s step and a shark at hand: no «Атаковать» finger on the shark, the target frame takes a ship first', async () => {
@@ -165,4 +165,13 @@ test('«Что говорят старики» — rum to hand over, none aboard
   assert.ok(!t.some((x) => x.includes('quest_here')), 'never «Сдать груз» with nothing to hand over');
   assert.ok(pointerTargets({ stage: 'h:c01_14:', touch: true, docked: true, battle: false })[0].includes('quest_here'), 'aboard: «Сдать груз»');
   assert.match((await import('node:fs')).readFileSync('client/src/main.ts', 'utf8'), /return sold \? `h:\$\{q\.id\}:market:\$\{a\.good\}` : null;/);
+});
+
+test('no men for the story’s fight: «Плыть» takes her to a harbour first (the server’s goal), the finger on it at sea', async () => {
+  const { NEEDS_MEN } = await import('../server/src/game/goalroute.ts');
+  for (const k of ['board', 'prize', 'neutral', 'lair']) assert.ok(NEEDS_MEN.has(k), k);
+  assert.ok(!NEEDS_MEN.has('sink'), 'the guns need no landing party');
+  const src = (await import('node:fs')).readFileSync('server/src/game/goalroute.ts', 'utf8');
+  assert.match(src, /if \(cmp && NEEDS_MEN\.has\(st\.type\) && armyMen\(ship\.army\) < 3\) return \{ cands: ports\(game\) \};/);
+  assert.ok(pointerTargets({ stage: 'men', touch: true, docked: false, battle: false }).includes('#tc-act[data-act="goal_sail"]'));
 });
