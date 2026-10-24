@@ -43,7 +43,8 @@ test('the opening: shops, a ship sunk, a ship boarded, a neutral stack, a town f
   for (let i = 0; i < OPENING_SLOTS; i++) assert.equal(c.bySlot.get(i)!.gate, 1, 'all of it at the first level');
   // the lane: the fights out on the way from the quay to the nearest wild island, the town on that island
   const port = game.portById('saltmarrow')!;
-  const isl = foundIsle({ islands: game.world.islands.filter((i) => !i.minor && !i.raft && !i.hidden && !i.slot && !i.portId) }, port);
+  // (by the sea route: the first-hour run of 2026-10-24 found Ravencliff 3.9 km round Saltmarrow's own island)
+  const isl = foundIsle({ islands: game.world.islands.filter((i) => !i.minor && !i.raft && !i.hidden && !i.slot && !i.portId), world: game.world }, port);
   const claim = c.bySlot.get(4)!.a.steps[0] as Extract<QuestStep, { type: 'claim' }>;
   assert.equal(claim.island, isl.id, `the nearest wild island: ${isl.name}`);
   const toIsle = Math.hypot(isl.x - port.x, isl.y - port.y);

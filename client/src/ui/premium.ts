@@ -249,7 +249,7 @@ export function topUp(v: PremiumView, state: ClientState): string {
     const n = p.n + p.bonus;
     const pct = p.bonus ? Math.round((p.bonus / p.n) * 100) : 0;
     return `<div class="card pm-pack${p.id === 'd1990' ? ' best' : ''}">${doubloonIcon('ico-lg')}<b class="pm-pack-n">${fmt(n)}</b><span class="pm-pack-w">${esc(dblWord(n))}</span>
-      <span class="pm-bonus${p.bonus ? '' : ' none'}">${p.bonus ? esc(`+${pct}%`) : '&nbsp;'}</span>${cur === 'rub' ? `<b class="pm-pack-real">${esc(packPrice(p, 'rub'))}</b>` : ''}
+      <span class="pm-bonus${p.bonus ? '' : ' none'}">${p.bonus ? esc(`+${pct}%`) : '&nbsp;'}</span>${cur === 'rub' ? `<b class="pm-pack-real">${esc(packPrice(p, 'rub'))}</b>` : cur === 'stars' && !pay ? `<b class="pm-pack-real">${starIcon()}${fmt(p.stars)}</b>` : ''}
       ${pay ? buyBtn(p) : `<button class="btn btn-small" disabled>${esc(L('top.soon'))}</button>`}</div>`;
   }).join('');
   const first = v.shop?.firstPay ? `<p class="sh-firstline">${doubloonIcon('ico-sm')}<b>${esc(L('first.title'))}</b><span>${esc(L('first.text'))}</span></p>` : '';

@@ -36,7 +36,7 @@ import type { PlayerSession, Profile } from './player.ts';
 import type { QuestState } from './quests.ts';
 import { questEvent, startQuest } from './quests.ts';
 import { seasonStat } from './seasons.ts';
-import { namedForCampaign } from './wanted.ts';
+import { GARRISON_R, lairsAll, namedForCampaign } from './wanted.ts';
 
 const built = new WeakMap<Game, Campaign>();
 
@@ -79,12 +79,42 @@ export function campaignPlaces(game: Game): void {
       game.wrecks.push({ id: st.wreck, name: `wreck of the ${WRECK_NAMES[st.wreck % WRECK_NAMES.length]}`, x: Math.round(best.x), y: Math.round(best.y), depth: Math.max(3, Math.min(8, Math.round(best.depth))), tier: region.safety === 'lawless' ? 3 : region.safety === 'contested' ? 2 : 1 }); // (in the shallows: a plain diver's reach)
     }
     if (st.type === 'lair' && st.near) {
-      let d = Infinity;
-      for (const l of lairs) d = Math.min(d, Math.hypot(l.x - st.near.x, l.y - st.near.y));
+      // (its waters reach the lair «Плыть» takes her to — the one of her band, clear of the pirates' guns: Game.questTargets)
+      const band = shipBandOf(q.requires.level ?? 1);
+      let d = Infinity, bc = Infinity;
+      for (const l of lairs) {
+        const ld = Math.hypot(l.x - st.near.x, l.y - st.near.y);
+        const c = ld + campaignLairCost(game, l, band) + Math.max(0, l.level - band) * 3000;
+        if (c < bc) [bc, d] = [c, ld];
+      }
       if (d > st.near.r && Number.isFinite(d)) st.near = { ...st.near, r: Math.ceil(d + 300) };
     }
   }
 }
+/** How clear of a named pirate's fortress a campaign's lair lies: its battery's reach (wanted.ts LAIR_BATTERY_R, 550 m) and
+ *  the boats' row past it. (A number: wanted.ts and this module import each other.) */
+export const FORT_CLEAR = 1200;
+
+/**
+ * What a lair costs a campaign's step of ship band `band` over its distance (Infinity: never one to send her to) — the
+ * first-hour run of 2026-10-24, «Твари дюн» lost twice at the fourth level: its lair was Widowwick Isle's iguanas, on the
+ * island of a ⚓4 pirate fortress whose battery drove her boats off; Ravencliff's rookery, the nearer, a strong one that a
+ * newcomer's party never beats (docs/31: a captain who did the opening and signed on Jory Penn's six should win 75–90 %).
+ * Not on a fortress's island nor within FORT_CLEAR of its camp; within its garrison's reach, dear when the fortress is
+ * above her; a newcomer's (⚓1–2) lair of the middle size first, a weak one next, a strong one last.
+ */
+export function campaignLairCost(game: Game, l: { island: number; x: number; y: number; size: string }, band: number): number {
+  let cost = 0;
+  for (const f of lairsAll(game)) {
+    if (l.island >= 0 && f.island === l.island) return Infinity;
+    const d = Math.hypot(f.x - l.x, f.y - l.y);
+    if (d < FORT_CLEAR) return Infinity;
+    if (d < GARRISON_R && f.level > band + 1) cost += 8000;
+  }
+  if (band <= 2) cost += l.size === 'strong' ? 6000 : l.size === 'weak' ? 1000 : 0;
+  return cost;
+}
+
 const WRECK_NAMES = ['Saint Brendan', 'Gloria Regis', 'Merciful Anne', 'Black Tithe', 'Silver Hind', 'Grey Widow', 'Constance', 'Lamentation', 'Ninth Hour', 'Iron Psalm', 'Tidecaller', 'Wandering Jew'];
 
 export function campaignOf(game: Game): Campaign {
@@ -129,12 +159,30 @@ function begin(game: Game, s: PlayerSession, q: QuestDef, _auto: boolean): void 
   const p = s.profile!;
   p.campaign!.started = true;
   startQuest(game, p, q, s);
+  feedGuns(game, s, q);
   const meta = q.campaign!;
   // «Новое задание кампании: …» — a toast and a short card (the client holds them while she fights)
   game.sendTo(s, { t: 'campaign_new', id: q.id, name: q.name, ch: meta.ch, k: meta.k, size: chapterOfSlot(meta.slot).size, text: q.steps[0].text });
   // a first step done where she is (in the right port) is done at once
   const port = s.ship?.docked ? game.portById(s.ship.docked) : undefined;
   if (port) questEvent(game, s, { k: 'dock', port, fresh: true }); // (an «arrive at» step waits for her to put in again)
+}
+
+/** The round shot the opening's fights find aboard at least (a newcomer's run of 2026-10-24 at 844×390: the First Watch
+ *  and «Первый залп» had fired all sixty of the start's, «Борт о борт» began with an empty hold — ammo 0 — and the chase
+ *  for the tender took 4.5 minutes). */
+export const OPENING_SHOT = 80;
+
+/** The opening's fight begins (a ship to sink or to board): Galt has round shot carried aboard up to OPENING_SHOT, and the
+ *  guns loaded with it when their own shot is gone. */
+function feedGuns(game: Game, s: PlayerSession, q: QuestDef): void {
+  const ship = s.ship;
+  if (!ship || !q.campaign || q.campaign.slot >= OPENING_SLOTS) return;
+  if (!q.steps.some((st) => st.type === 'sink' || st.type === 'board')) return;
+  if (ship.ammo.round >= OPENING_SHOT) return;
+  ship.ammo.round = OPENING_SHOT;
+  if ((ship.ammo[ship.ammoSel] ?? 0) <= 0) ship.ammoSel = 'round';
+  game.sendTo(s, { t: 'toast', msg: 'Galt has round shot carried aboard: your guns are fed.', kind: 'good' });
 }
 
 /** Choices put before her, by session (a fork asked once a place, again on coming aboard). */
@@ -288,12 +336,20 @@ export const FOE_COME = 2500;
 export const FOE_MAX = 2;
 export const FOE_EVERY = 35;
 const FOE_R = 9000;
+/** «Потопите N» (the first-hour run of 2026-10-24: c01_19 ×3, c01_21 ×3, c02_01 ×2, c02_06 ×2 took 6–11 minutes — one foe
+ *  at a time put out in the location's waters, the next 35 s after and only once she was out of the fight): the next of
+ *  the step's foes puts out this soon after one is sunk, taken or strikes her colours, while ships are still wanted… */
+export const FOE_NEXT = 6;
+/** …within this of her (metres: 0.3–0.9 of it — in sight, a minute's sail), when she is in the location's waters. */
+export const FOE_SEND_R = 1600;
 
 interface FoeWatch {
   next: number;
   ids: number[];
   step: string;
   told: boolean;
+  /** Foes put out for the step so far. */
+  made: number;
 }
 const watches = new WeakMap<PlayerSession, FoeWatch>();
 
@@ -315,7 +371,7 @@ export function campaignTick(game: Game, s: PlayerSession): void {
     // a named captain of the Brethren comes to her wherever the chapter is (wanted.ts namedForCampaign)
     const key = `${qs.id}:${qs.step}`;
     let w = watches.get(s);
-    if (!w || w.step !== key) watches.set(s, (w = { next: game.now + 8, ids: [], step: key, told: false }));
+    if (!w || w.step !== key) watches.set(s, (w = { next: game.now + 8, ids: [], step: key, told: false, made: 0 }));
     if (game.now < w.next) return; // (in a fight or not: the lawless seas' rovers kept her in one, and none came — QA)
     w.next = game.now + FOE_EVERY;
     const o = namedForCampaign(game, ship);
@@ -331,16 +387,31 @@ export function campaignTick(game: Game, s: PlayerSession): void {
   const key = `${qs.id}:${qs.step}`;
   let w = watches.get(s);
   if (!w || w.step !== key) {
-    w = { next: game.now + 8, ids: [], step: key, told: false };
+    w = { next: game.now + 8, ids: [], step: key, told: false, made: 0 };
     watches.set(s, w);
   }
+  const before = w.ids.length;
   w.ids = w.ids.filter((id) => {
     const o = game.ships.get(id);
     return !!o && o.alive && Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y) < FOE_R;
   });
-  if (game.now < w.next || w.ids.length >= FOE_MAX || ship.inCombat(game.now)) return;
+  // (one gone — sunk, taken: the next soon, not 35 s on)
+  // (hurt below 60 %: a breather first, the carpenters at work — the sooner pace sank more newcomers in the measure)
+  const hurt = ship.hull < ship.stats.hullMax * 0.6;
+  const pace = hurt ? FOE_EVERY : FOE_NEXT;
+  if (w.ids.length < before) w.next = Math.min(w.next, game.now + pace);
+  // one foe fighting her at a time (two at once sank a newcomer's sloop in the measure), the next as soon as it is sunk,
+  // taken or strikes her colours (a struck ship fights no more); FOE_MAX about her at most, a struck one waiting for her
+  const fighting = w.ids.filter((id) => !game.ships.get(id)!.surrendered).length;
+  if (fighting === 0 && w.ids.length) w.next = Math.min(w.next, game.now + pace);
+  if (game.now < w.next || fighting >= 1 || w.ids.length >= FOE_MAX) return;
+  // (her first foe waits out another fight of hers — a shark, a passing raider; the step's own come on through it while
+  // she is fit — hurt, she has her breather out of the fight first: the sooner pace sank more newcomers in the measure)
+  if ((!w.made || hurt) && ship.inCombat(game.now)) return;
   w.next = game.now + FOE_EVERY;
-  const band = shipBandOf(q!.requires.level ?? 1);
+  // (the first hour's — chapters 1–2 — never above her own ship's ⚓: a newcomer still on the start's ⚓1 sloop at the
+  // fourth level met ⚓2 raiders at «Письмо в клеёнке» and went down in half the measured runs)
+  const band = (q!.campaign?.ch ?? 99) <= 2 ? Math.min(shipBandOf(q!.requires.level ?? 1), Math.max(1, ship.shipLevel)) : shipBandOf(q!.requires.level ?? 1);
   let foe: ShipEntity | null = null;
   if (st.type === 'beast') {
     // a beast of the hunt's kind, in the location's waters
@@ -351,8 +422,15 @@ export function campaignTick(game: Game, s: PlayerSession): void {
       const x = (near?.x ?? ship.state.x) + Math.sin(a) * d, y = (near?.y ?? ship.state.y) - Math.cos(a) * d;
       if (beastWater(game, x, y)) foe = spawnBeast(game, id, x, y, band);
     }
-  } else foe = spawnCampaignFoe(game, ship, s.accountId, band, st.type === 'sink' && (st.role === 'ghost' || st.role === 'hunter' || st.role === 'patrol') ? st.role : 'pirate', near);
+  } else {
+    // in the location's waters, within FOE_SEND_R of her (a minute's sail), not across them; else anywhere in them
+    const kind = st.type === 'sink' && (st.role === 'ghost' || st.role === 'hunter' || st.role === 'patrol') ? st.role : 'pirate';
+    const inWaters = !near || Math.hypot(ship.state.x - near.x, ship.state.y - near.y) <= near.r + 500;
+    if (inWaters) foe = spawnCampaignFoe(game, ship, s.accountId, band, kind, { x: ship.state.x, y: ship.state.y, r: FOE_SEND_R }, near);
+    foe ??= spawnCampaignFoe(game, ship, s.accountId, band, kind, near);
+  }
   if (!foe) return;
+  w.made++;
   // the opening's fights (owner, 2026-10-19: «атака корабля, дальше абордаж» in the first minutes): softened as the
   // first fights are — half her hull, her men thinned, her shot lighter on the newcomer (firstfights.ts)
   if (q!.campaign && q!.campaign.slot < OPENING_SLOTS && st.type !== 'beast') {

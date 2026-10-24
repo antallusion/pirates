@@ -129,7 +129,7 @@ import { Journal, distWords } from './ui/journal.ts';
 import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
-import { TutorPointer } from './ui/pointer.ts';
+import { TutorPointer, shotStage } from './ui/pointer.ts';
 import { resumeAfterEnd, resumeOn } from './ui/resumesail.ts';
 import { hereAct } from './ui/questact.ts'; // owner, 2026-10-23: a quest step done in this port
 import { buzz, guardVibrate } from './haptics.ts';
@@ -4914,7 +4914,9 @@ function step(t: number): void {
     passageFrame();
     const op = openingFrame();
     const here = op ? null : hereFrame() ?? storyFrame();
-    tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax, markBeast: attackMark !== null && state.ships.get(attackMark)?.info?.npcRole === 'beast', crewShort: !!state.you && state.you.crew < 3 });
+    // (the guns empty on a ship's step: the finger to «Припасы» first — a newcomer's run of 2026-10-24)
+    const shot = shotStage(op ?? storyQuest()?.does, state.self?.ammo);
+    tutorPointer.set({ stage: state.onboarding?.stage ?? shot ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax, markBeast: attackMark !== null && state.ships.get(attackMark)?.info?.npcRole === 'beast', crewShort: !!state.you && state.you.crew < 3 });
     tutorPointer.frame();
     encounterCard.frame();
     surrenderCard.frame(state);

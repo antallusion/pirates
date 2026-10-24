@@ -523,14 +523,24 @@ interface QuestCtx {
 }
 
 /** The island a town is founded on from a location (the opening's, owner 2026-10-19: «к ближайшему острову основать свой
- *  город»): the nearest one may sail to and claim — not a port's — by its shore. */
-export function foundIsle(pl: { islands: Island[] }, at: { x: number; y: number }): Island {
+ *  город»): the nearest one may sail to and claim — not a port's — by the sea route from it (the first-hour run of
+ *  2026-10-24: by the line it was Ravencliff, 3.9 km by the route round Saltmarrow's own island, where Lanternreach lies
+ *  3.5); by the line where no world is given or none lies within a chain's legs. */
+export function foundIsle(pl: { islands: Island[]; world?: World }, at: { x: number; y: number }): Island {
   let best = pl.islands[0], bd = Infinity;
   for (const i of pl.islands) {
     const d = shoreDist(i, at.x, at.y);
     if (d < bd) [best, bd] = [i, d];
   }
-  return best;
+  if (!pl.world) return best;
+  let rb: Island | null = null, rd = Infinity;
+  for (const i of pl.islands) {
+    // (the route is never shorter than the line: only those whose shore lies within the best route so far are asked)
+    if (shoreDist(i, at.x, at.y) > Math.min(rd, CHAIN_LEG * 2)) continue;
+    const d = legTo(pl.world, at, { x: i.x, y: i.y, r: i.radius + 40, name: '' }, CHAIN_LEG * 2).d;
+    if (d < rd) [rb, rd] = [i, d];
+  }
+  return rb ?? best;
 }
 
 function buildQuest(c: QuestCtx, src: { t: T; b: T; d: T; s: StepSrc[]; lane?: { at: number; r: number } }, id: string, slot: number, k: number, gate: number, xp: number, silver: number, travel: boolean, way?: { key: string; way: 'a' | 'b'; label: T }): QuestDef {

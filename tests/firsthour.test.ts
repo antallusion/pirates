@@ -197,3 +197,256 @@ test('the story’s run on but the ship lying still: «Плыть» is back on t
   const main = (await import('node:fs')).readFileSync('client/src/main.ts', 'utf8');
   assert.match(main, /if \(state\.autosail \|\| \(goalRun\?\.key === key && state\.route\?\.key === key && \(state\.ownDisplay\?\.speed \?\? 0\) > 0\.5\)\) return null;/);
 });
+
+test('the opening’s fights never begin with an empty locker; the guns empty on a ship’s step: the finger to «Припасы»', async () => {
+  // the run of 2026-10-24 at 844×390: the First Watch and «Первый залп» fired the start's sixty round shot, «Борт о борт»
+  // began with ammo 0 and the chase for the tender took 4.5 minutes
+  const { makeGame, join } = await import('./helpers.ts');
+  const { campaignNext, campaignActive, OPENING_SHOT } = await import('../server/src/game/campaign.ts');
+  const { game } = makeGame();
+  const conn = join(game, 'Gunner', 'corsair');
+  const s = [...game.sessions].find((x) => x.name === 'Gunner')!;
+  const p = s.profile!, ship = s.ship!;
+  for (const slot of [1, 2]) {
+    p.quests.active = [];
+    p.campaign!.at = slot;
+    for (const a of Object.keys(ship.ammo) as (keyof typeof ship.ammo)[]) ship.ammo[a] = 0;
+    ship.ammoSel = 'chain';
+    campaignNext(game, s);
+    assert.equal(campaignActive(p)?.id, slot === 1 ? 'c01_02' : 'c01_03');
+    assert.ok(ship.ammo.round >= OPENING_SHOT && OPENING_SHOT >= 60, `slot ${slot}: ${ship.ammo.round} round shot aboard`);
+    assert.equal(ship.ammoSel, 'round', 'and loaded');
+  }
+  assert.ok(conn.all('toast').some((t) => /round shot carried aboard/.test(t.msg)), 'told so');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { setLang } = await import('../client/src/i18n.ts');
+  setLang('ru');
+  assert.match(serverText('Galt has round shot carried aboard: your guns are fed.'), /ядра/);
+  setLang('en');
+  // the neutral stack and the town: none given
+  p.quests.active = [];
+  p.campaign!.at = 3;
+  ship.ammo.round = 0;
+  campaignNext(game, s);
+  assert.equal(ship.ammo.round, 0);
+  // her own shot spent: the gun crews load the next she has
+  const { SPARE_SHOT } = await import('../server/src/game/pursuit.ts');
+  assert.deepEqual([...SPARE_SHOT], ['round', 'heavy', 'chain', 'grape']);
+  // the finger: «Припасы» in port (then the sheet's «Докупить всё»), the way into a harbour at sea
+  const { shotStage, SUPPLIES } = await import('../client/src/ui/pointer.ts');
+  const empty = { round: 0, chain: 0, grape: 0, heavy: 0 };
+  for (const op of ['sink', 'board']) assert.equal(shotStage(op, empty), 'shot', op);
+  assert.equal(shotStage('sink', { ...empty, chain: 4 }), null, 'any shot aboard: the fight’s own button');
+  assert.equal(shotStage('neutral', empty), null, 'a fight ashore wants no shot');
+  const inPort = pointerTargets({ stage: 'shot', touch: true, docked: true, battle: false });
+  assert.equal(inPort[0], SUPPLIES);
+  assert.ok(inPort.indexOf(DEPART[0]) > 0);
+  assert.ok(pointerTargets({ stage: 'shot', touch: true, docked: false, battle: false }).includes('#tc-act[data-act="harbour"]'));
+  assert.deepEqual(pointerTargets({ stage: 'shot', touch: true, docked: false, battle: true }), []);
+  const main = (await import('node:fs')).readFileSync('client/src/main.ts', 'utf8');
+  assert.match(main, /const shot = shotStage\(op \?\? storyQuest\(\)\?\.does, state\.self\?\.ammo\);\s*tutorPointer\.set\(\{ stage: state\.onboarding\?\.stage \?\? shot \?\?/);
+  assert.match((await import('node:fs')).readFileSync('client/src/ui/port.ts', 'utf8'), /data: \{ act: 'supplies' \}/, '«Припасы» is the market’s button the finger names');
+});
+
+test('«Твари дюн»: a lair of her band, clear of the pirate fortresses; Jory Penn’s six signed on win it, a bare crew may lose', async () => {
+  // the first-hour run of 2026-10-24: at the fourth level the step's lair was Widowwick Isle's iguanas, on the island of a
+  // ⚓4 pirate fortress — «Высадка» rowed to its camp and the battery drove the boats off, twice. docs/31: a bare captain
+  // may fail, a sensibly built one should win about 75–90 % — measured on the real battle (tactical.ts sideOf, tacbattle.ts)
+  const { makeGame, join } = await import('./helpers.ts');
+  const { campaignNext, campaignOf, FORT_CLEAR } = await import('../server/src/game/campaign.ts');
+  const { lairList, lairBeach, lairMen } = await import('../server/src/game/beastlairs.ts');
+  const { lairsAll, LAIR_BATTERY_R } = await import('../server/src/game/wanted.ts');
+  const { sideOf } = await import('../server/src/game/tactical.ts');
+  const { landParty, LAIRS } = await import('../shared/src/data/lairs.ts');
+  const { ladder } = await import('../shared/src/data/shiplevel.ts');
+  const { newBattle, quickFinish } = await import('../server/src/game/tacbattle.ts');
+  const { Rng } = await import('../shared/src/rng.ts');
+  const { shipBandOf } = await import('../shared/src/data/xpcurve.ts');
+  const { game } = makeGame();
+  join(game, 'Duneclear', 'corsair');
+  const s = [...game.sessions].find((x) => x.name === 'Duneclear')!;
+  const p = s.profile!, ship = s.ship!;
+  const slot = campaignOf(game).slots.find((x) => x.a.id === 'c01_16')!;
+  p.quests.active = [];
+  p.campaign!.at = slot.slot;
+  while (p.level < 4) game.grantXp(s, 2000, 'admin');
+  campaignNext(game, s);
+  const t = game.questTargets(s).c01_16;
+  const l = lairList(game).find((x) => { const b = lairBeach(game, x); return Math.hypot(b.x - t.x, b.y - t.y) < 5; })!;
+  assert.ok(l, 'the step marks a lair');
+  const band = shipBandOf(slot.gate);
+  assert.ok(l.level <= band && l.size !== 'strong', `${l.kind} ⚓${l.level} ${l.size}`);
+  assert.ok(FORT_CLEAR > LAIR_BATTERY_R + 400);
+  for (const f of lairsAll(game)) {
+    assert.notEqual(f.island, l.island, `not on ${f.name}, a fortress's island`);
+    assert.ok(Math.hypot(f.x - l.x, f.y - l.y) > FORT_CLEAR, `clear of ${f.name}'s battery`);
+  }
+  const st = slot.a.steps[0] as { near: { x: number; y: number; r: number } };
+  assert.ok(Math.hypot(l.x - st.near.x, l.y - st.near.y) <= st.near.r, 'within the step’s waters (it counts)');
+  // her party ashore against it, as beastlairs.ts startFight lands it
+  const odds = (army: { u: 'deckhand' | 'marine'; n: number }[], n = 40): number => {
+    ship.setArmy(army);
+    let win = 0;
+    for (let k = 0; k < n; k++) {
+      const base = sideOf(game, ship, ship, true);
+      const a = { ...base, army: landParty(base.army ?? []), holes: 0, gunsOut: 0, fire: false, castle: false, struck: false, dealt: ladder(ship.shipLevel, l.level, false).dealt || 0.1 };
+      const men = lairMen(game, l);
+      const b = { name: 'Lair', ship: 'Island', captain: null, hands: 0, marines: 0, gunners: 0, army: men.map((x) => ({ u: x.u, n: x.n, src: x.u })), officers: [], skill: 3, morale: 50, dealt: ladder(l.level, ship.shipLevel, false).dealt || 0.1, power: 1, melee: 1, extraShots: 0, firstRush: 1, nets: 0, blooded: 0, castle: false, struck: false, human: false, noBook: true };
+      const seed = 1000 + k * 7919;
+      const rng = new Rng((seed ^ 0x1a7d) >>> 0);
+      const bt = newBattle(a as never, b as never, seed, 0, rng, { land: LAIRS[l.kind].types[0] });
+      quickFinish(bt, 0, rng);
+      if (bt.over!.winner === 0) win++;
+    }
+    return win / n;
+  };
+  // the opening leaves her 23 deckhands; Saltmarrow's dwellings sign on deckhands and marines (Jory Penn's step: six)
+  const built = odds([{ u: 'marine', n: 6 }, { u: 'deckhand', n: 20 }]);
+  const hands = odds([{ u: 'deckhand', n: 26 }]);
+  const bare = odds([{ u: 'deckhand', n: 20 }]);
+  assert.ok(built >= 0.75, `six marines signed on: wins ${built}`);
+  assert.ok(hands >= 0.75, `six deckhands signed on: wins ${hands}`);
+  assert.ok(bare < 0.75, `none signed on: may lose (${bare})`);
+});
+
+test('«Потопите N»: the step’s foes put out within a minute’s sail of her, the next one six seconds after one goes down', async () => {
+  // the first-hour run of 2026-10-24: c01_19 ×3, c01_21 ×3, c02_01 ×2, c02_06 ×2 took 6–11 minutes — a foe put out in
+  // the location's waters, the next 35 s later and only once she was out of the fight
+  const { makeGame, join } = await import('./helpers.ts');
+  const { campaignNext, campaignOf, campaignActive, campaignFoes, FOE_NEXT, FOE_SEND_R } = await import('../server/src/game/campaign.ts');
+  const { TICK_RATE } = await import('../shared/src/constants.ts');
+  const { game } = makeGame();
+  join(game, 'Escortbane', 'corsair');
+  const s = [...game.sessions].find((x) => x.name === 'Escortbane')!;
+  const p = s.profile!, ship = s.ship!;
+  const slot = campaignOf(game).slots.find((x) => x.a.id === 'c01_19')!;
+  p.quests.active = [];
+  p.campaign!.at = slot.slot;
+  while (p.level < slot.gate) game.grantXp(s, 2000, 'admin');
+  campaignNext(game, s);
+  assert.equal(campaignActive(p)?.id, 'c01_19');
+  game.undock(s);
+  const run = (sec: number, done: () => boolean) => {
+    for (let i = 0; i < sec * TICK_RATE && !done(); i++) {
+      game.step();
+      ship.hull = ship.stats.hullMax; // (she holds: the measure is of the foes' coming, not of the fight)
+    }
+  };
+  const foes = () => campaignFoes(game, s).map((id) => game.ships.get(id)!).filter((o) => o?.alive && !o.surrendered);
+  const off = (o: { state: { x: number; y: number } }) => Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y);
+  run(12, () => foes().length > 0);
+  const first = foes()[0];
+  assert.ok(first, 'the first comes within 12 s at sea');
+  assert.ok(off(first) <= FOE_SEND_R, `${Math.round(off(first))} m off: in sight, not across the location's waters`);
+  assert.equal(foes().length, 1, 'one at a time');
+  // she fights it (in a fight): sunk — the next soon, in the fight's wake too
+  ship.lastCombat = game.now;
+  game.removeShip(first.id);
+  const t0 = game.now;
+  run(FOE_NEXT + 3, () => foes().some((o) => o.id !== first.id));
+  const next = foes().find((o) => o.id !== first.id);
+  assert.ok(next, 'the next one comes');
+  assert.ok(game.now - t0 <= FOE_NEXT + 2, `${(game.now - t0).toFixed(1)} s after`);
+  assert.ok(off(next) <= FOE_SEND_R + 200, `${Math.round(off(next))} m off`);
+  // a struck one fights no more: the next comes for her
+  next.surrendered = true;
+  const t1 = game.now;
+  run(FOE_NEXT + 3, () => foes().length > 0);
+  assert.ok(foes().length === 1 && game.now - t1 <= FOE_NEXT + 2, 'after a struck ship, the next');
+});
+
+test('the first hour’s raiders never outclass her own ship: chapter 2 on the start’s ⚓1 sloop meets ⚓1 ships', async () => {
+  // measured on the real sea (a newcomer played through chapter 2’s first fights, eight runs a quest, 2026-10-25):
+  // ⚓2 raiders against the start’s sloop at the fourth level sank her in half the runs
+  const { makeGame, join } = await import('./helpers.ts');
+  const { campaignNext, campaignOf, campaignFoes } = await import('../server/src/game/campaign.ts');
+  const { TICK_RATE } = await import('../shared/src/constants.ts');
+  const { shipBandOf } = await import('../shared/src/data/xpcurve.ts');
+  const { game } = makeGame();
+  join(game, 'Sloopkeep', 'corsair');
+  const s = [...game.sessions].find((x) => x.name === 'Sloopkeep')!;
+  const p = s.profile!, ship = s.ship!;
+  const slot = campaignOf(game).slots.find((x) => x.a.id === 'c02_01')!;
+  assert.equal(shipBandOf(slot.gate), 2, 'the step is of ⚓2');
+  p.quests.active = [];
+  p.campaign!.at = slot.slot;
+  while (p.level < slot.gate) game.grantXp(s, 2000, 'admin');
+  campaignNext(game, s);
+  game.undock(s);
+  assert.equal(ship.shipLevel, 1, 'still on the start’s sloop');
+  for (let i = 0; i < 15 * TICK_RATE && !campaignFoes(game, s).length; i++) game.step();
+  const foe = game.ships.get(campaignFoes(game, s)[0])!;
+  assert.ok(foe, 'a raider comes');
+  assert.equal(foe.shipLevel, 1);
+});
+
+test('the starting sea is calm for a newcomer: few sharks, alone, far, off the first chapters’ ways; a captain past it keeps hers', async () => {
+  // the first-hour run of 2026-10-24: the shallows round Saltmarrow swarmed with sharks (the sea kept three of her level
+  // within 2.5 km of her, in packs of up to three)
+  const { makeGame, join } = await import('./helpers.ts');
+  const { beastBrain, onFirstWays, CALM_NEAR_CAP, CLOSE_WANT, SHELTER_LEVEL } = await import('../server/src/game/beasts.ts');
+  const { TICK_RATE } = await import('../shared/src/constants.ts');
+  const watch = (level: number, sec: number) => {
+    const { game } = makeGame();
+    game.directorOn = true; // (the living sea)
+    join(game, 'Calmwater', 'corsair');
+    const s = [...game.sessions].find((x) => x.name === 'Calmwater')!;
+    while (s.profile!.level < level) game.grantXp(s, 5000, 'admin');
+    game.undock(s);
+    const ship = s.ship!;
+    const lane = (game as unknown as { questTargets: (x: unknown) => Record<string, { x: number; y: number }> });
+    void lane;
+    // she lies off Saltmarrow in its waters (the opening's lane), the sea's beasts rising about her
+    const born: number[] = [];
+    let most = 0;
+    for (let i = 0; i < sec * TICK_RATE; i++) {
+      game.step();
+      if (i % TICK_RATE) continue;
+      ship.state.speed = 0;
+      let n = 0;
+      for (const o of game.ships.values()) {
+        if (!o.alive || o.npcRole !== 'beast') continue;
+        if (!born.includes(o.id)) born.push(o.id);
+        if (Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y) < 5000) n++;
+      }
+      most = Math.max(most, n);
+    }
+    return { game, born, most };
+  };
+  const calm = watch(3, 300);
+  assert.ok(calm.most <= CALM_NEAR_CAP, `${calm.most} beasts within 5 km of a newcomer`);
+  for (const id of calm.born) {
+    const br = beastBrain(calm.game, id)!;
+    assert.equal(br.pack, 0, 'alone, not a pack');
+    assert.ok(!onFirstWays(calm.game, br.home.x, br.home.y), 'risen off the first chapters’ ways');
+  }
+  assert.ok(onFirstWays(calm.game, calm.game.portById('saltmarrow')!.x, calm.game.portById('saltmarrow')!.y), 'Saltmarrow’s quay is on them');
+  const past = watch(SHELTER_LEVEL, 60);
+  assert.ok(past.most >= CLOSE_WANT, `a captain of the ${SHELTER_LEVEL}th level keeps her sea’s beasts (${past.most})`);
+});
+
+test('a newcomer’s helmsman brushing a Crown patrol in the starting sea: they fend off — no blow, no enemy made', async () => {
+  // the first-hour runs: a patrol bumped at Saltmarrow's mouth took it for a ram, turned on her and sank her
+  const { makeGame, join } = await import('./helpers.ts');
+  const { game } = makeGame();
+  join(game, 'Fendoff', 'corsair');
+  const s = [...game.sessions].find((x) => x.name === 'Fendoff')!;
+  game.undock(s);
+  const ship = s.ship!;
+  const h = ship.state.heading;
+  const pt = game.spawnNpcShip('patrol', 'gunboat', 'crown', ship.state.x + Math.sin(h) * 6, ship.state.y - Math.cos(h) * 6, h + Math.PI);
+  game.npcs.get(pt.id)!.active = true;
+  ship.protectedUntil = 0;
+  game.grid.upsert(pt.id, pt.state.x, pt.state.y);
+  game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+  const h0 = ship.hull, p0 = pt.hull;
+  // her way into the patrol's bow, his into hers: the hulls meet (the collisions' own pass of the tick)
+  ship.state.speed = 8;
+  pt.state.speed = 6;
+  (game as unknown as { collideShips(): void }).collideShips();
+  assert.ok(ship.state.speed < 8, 'the hulls met');
+  assert.equal(ship.hull, h0, 'no blow to her');
+  assert.equal(pt.hull, p0, 'nor to the patrol');
+  assert.ok(!pt.attackers.has(ship.id) && !ship.attackers.has(pt.id), 'no enemy made');
+  assert.equal(game.isHostile(pt, ship), false);
+});

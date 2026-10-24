@@ -226,3 +226,36 @@ test('YooKassa only in the browser: Telegram keeps its Stars, VK its votes', () 
     g.location = had.location;
   }
 });
+
+test('inside Telegram (its WebApp object there, no tg-app class yet): the top-up’s packs show their Stars prices, not «Скоро»', async () => {
+  // the first-hour run of 2026-10-24 could not see it: the test window's server had no bot token, so every pack read
+  // «Скоро». inTelegram() by the WebApp's initData alone (tg.ts) → payIn() 'stars' → each pack's Stars button; no invoice
+  // is made here (the button only names the pack: the server makes the invoice on a tap)
+  const { DOUBLOON_PACKS } = await import('../shared/src/data/premium.ts');
+  const { inTelegram } = await import('../client/src/tg.ts');
+  const { setLang } = await import('../client/src/i18n.ts');
+  const g = globalThis as unknown as { Telegram?: unknown };
+  const had = g.Telegram;
+  g.Telegram = { WebApp: { initData: 'query_id=AAE&user=%7B%22id%22%3A1%7D&auth_date=1&hash=0' } };
+  setLang('ru');
+  try {
+    assert.equal(inTelegram(), true);
+    assert.equal(payIn(), 'stars');
+    const state = { self: { name: 'Anne' } } as unknown as ClientState;
+    const open = topUp({ pay: true, shop: { firstPay: false } } as unknown as PremiumView, state);
+    assert.ok(!open.includes('Скоро'), 'no «Скоро» with payments open');
+    for (const p of DOUBLOON_PACKS) {
+      assert.ok(open.includes(`data-pmpack="${p.id}"`), `${p.id}: its Stars button`);
+      assert.ok(open.includes(`<b>${p.stars.toLocaleString('ru-RU').replace(/\s/g, '\u00a0')}</b>`) || open.includes(`<b>${p.stars}</b>`), `${p.id}: ${p.stars} ⭐ on it`);
+    }
+    assert.ok(open.includes('tg-star'), 'Telegram’s star');
+    assert.ok(!open.includes('data-pmyk') && !open.includes('₽'), 'no roubles, no YooKassa in Telegram');
+    // payments closed on the server (no bot token): the Stars price still on every pack, «Скоро» on its button
+    const shut = topUp({ pay: false, shop: { firstPay: false } } as unknown as PremiumView, state);
+    assert.ok(shut.includes('Скоро'));
+    assert.equal((shut.match(/class="pm-pack-real"><svg class="tg-star"/g) ?? []).length, DOUBLOON_PACKS.length, 'the price shown on each pack');
+  } finally {
+    g.Telegram = had;
+    setLang('en');
+  }
+});

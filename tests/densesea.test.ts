@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { NEAR_R, NEAR_WANT, localTraffic, stepTraffic } from '../server/src/game/traffic.ts';
-import { CLOSE_R, CLOSE_WANT, beastSecond, isBeast } from '../server/src/game/beasts.ts';
+import { CALM_NEAR_CAP, CLOSE_R, CLOSE_WANT, beastSecond, isBeast, sheltered } from '../server/src/game/beasts.ts';
 import { roamersAbout } from '../server/src/game/roamers.ts';
 import { FIND_EVERY, FIND_HARBOUR, FIND_MAX } from '../shared/src/data/seafinds.ts';
 import { REGIONS } from '../shared/src/world/regions.ts';
@@ -59,8 +59,15 @@ test('within 2.5 km of a captain off Tar Wharf (safe, ⚓1), a start port and a 
     const safety = REGIONS[ship.region].safety;
     const sea = near(game, ship, NEAR_R, (o) => !!o.npcRole && localTraffic(game).has(o.id));
     assert.ok(sea >= NEAR_WANT[safety] - 2, `${tag}: ${sea} of the sea's ships within 2.5 km`);
-    const beasts = near(game, ship, CLOSE_R, isBeast);
-    assert.ok(beasts >= CLOSE_WANT - 1, `${tag}: ${beasts} beasts within 2.5 km`);
+    // (a newcomer in safe water: the starting sea calm — few beasts, far, alone: the first-hour run of 2026-10-24; past
+    // it, the sea keeps its beasts about her)
+    if (sheltered(game, ship)) {
+      const beasts = near(game, ship, 5000, isBeast);
+      assert.ok(beasts <= CALM_NEAR_CAP, `${tag}: ${beasts} beasts within 5 km of a newcomer in safe water`);
+    } else {
+      const beasts = near(game, ship, CLOSE_R, isBeast);
+      assert.ok(beasts >= CLOSE_WANT - 1, `${tag}: ${beasts} beasts within 2.5 km`);
+    }
     const [lo, hi] = sectorAt(game.world, ship.state.x, ship.state.y).band;
     const stacks = roamersAbout(game, ship.state.x, ship.state.y, 2500).filter((sp) => sp.level >= lo - 1 && sp.level <= hi + 1);
     assert.ok(stacks.length >= 3, `${tag}: ${stacks.length} stacks of her band within 2.5 km`);

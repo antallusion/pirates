@@ -32,7 +32,7 @@ import { assignResident, buyIsland, estateView, isleForge, foundOutpost, goHome,
 import { stepPods } from './omenpod.ts';
 import { appraise, bribeClerk, buyTip, demandTribute, escortOffer, raidFate, raidKill, signEscort, stepRaiding } from './raiding.ts';
 import { payInformant, stepWanted, wantedKill } from './wanted.ts';
-import { beastSecond, beastSlain, huntOrder, stepBeasts } from './beasts.ts';
+import { beastSecond, beastSlain, huntOrder, sheltered, stepBeasts } from './beasts.ts';
 import { castNet, dropDeepLine, endFight, endHaul, haulTrap, saltCatch, setTrap, stepFishing } from './fishing.ts';
 import { chooseEncounter, stepDirector } from './director.ts';
 import { stepSeaLife } from './sealife.ts';
@@ -54,7 +54,7 @@ import { generateIslandJobs, generateQuests } from '../../../shared/src/data/que
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
 import { generateLairJobs } from '../../../shared/src/data/lairquests.ts';
 import { generateArcs } from '../../../shared/src/data/questarcs.ts';
-import { acceptCampaign, campaignLevelUp, campaignPassage, campaignNext, campaignPlaces, campaignView, initCampaign } from './campaign.ts'; // docs/36
+import { acceptCampaign, campaignLairCost, campaignLevelUp, campaignPassage, campaignNext, campaignPlaces, campaignView, initCampaign } from './campaign.ts'; // docs/36
 import { registerElitePorts } from '../../../shared/src/data/elite.ts';
 import { restAfter } from '../../../shared/src/data/rested.ts';
 import { pushTasks, stepTasks, taskSalvage } from './worldtasks.ts';
@@ -928,7 +928,11 @@ export class Game {
         const closing = (va.x * a.state.speed - vb.x * b.state.speed) * nx + (va.y * a.state.speed - vb.y * b.state.speed) * ny;
         // Two of one squadron (a captain's escorts, her and hers, a group, a guild) bump and fend off: no ram between
         // friends (the quicker sea of docs/23 had two escorts at station hole each other).
-        const friends = (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly';
+        // A newcomer's bump in the starting sea (the first-hour runs: her helmsman brushed a Crown patrol at Saltmarrow's
+        // mouth, the patrol took it for a ram and sank her — 846 and 882 hull in the measure, «HOSTILE» patrols 17 m off in
+        // the robot's runs): two ships at peace, neither under Ramming Speed, one a sheltered captain — they fend off.
+        const peace = !a.hasEffect('ramming_speed') && !b.hasEffect('ramming_speed') && (sheltered(this, a) || sheltered(this, b)) && !this.isHostile(a, b) && !this.isHostile(b, a);
+        const friends = peace || (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly';
         if (closing > 3 && friends) {
           a.state.speed *= 0.6;
           b.state.speed *= 0.6;
@@ -1928,11 +1932,15 @@ export class Game {
           const byQuay = quayside ? 20_000 : 0;
           // A campaign's lair of its own level first (mid-game QA 2026-10-22: «За серой тканью» at the fourth level sent
           // her to a ⚓3 hermits' camp two levels above her sloop, a ⚓2 bat cave 180 m farther in the same waters)
-          const above = st.near ? Math.max(0, l.level - shipBandOf(QUESTS_BY_ID[qs.id]?.requires.level ?? p.level)) * 3000 : 0;
+          const band = shipBandOf(QUESTS_BY_ID[qs.id]?.requires.level ?? p.level);
+          const above = st.near ? Math.max(0, l.level - band) * 3000 : 0;
+          // (a campaign's: clear of a pirate fortress's battery, of a newcomer's size — campaign.ts campaignLairCost)
+          const camp = st.near ? campaignLairCost(this, l, band) : 0;
+          if (!Number.isFinite(camp)) continue;
           // (and one within the location's waters, where a lair beaten counts — quests.ts stepGain: the nearest lair of an
           // island in the mist passed over, the mark went to one 4 km off, beyond them)
           const outside = st.near && Math.hypot(lp.x - st.near.x, lp.y - st.near.y) > st.near.r + NEAR_FIGHT - 300 ? 50_000 : 0;
-          const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay + above + outside;
+          const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay + above + outside + camp;
           // (its island named on the route: «Плыть» to a campaign's lair said «место», mid-game QA 2026-10-22)
           // (the mark on its beach, where the boats put off: an inland camp's point left the run 100 m off with no «Штурм»)
           if (d < bd) { const b = lairBeach(this, l); [best, bd] = [{ x: b.x, y: b.y, ...(l.island >= 0 && l.turtle === undefined ? { island: l.island } : {}) }, d]; }

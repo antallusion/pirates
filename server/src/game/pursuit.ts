@@ -559,6 +559,9 @@ export function fouledLine(game: Game, ship: ShipEntity, t: ShipEntity, lead: { 
   return foul;
 }
 
+/** The shot the gun crews load when hers is spent, in this order. */
+export const SPARE_SHOT = ['round', 'heavy', 'chain', 'grape'] as const;
+
 /** Every tick: the captains' gun crews with auto-fire on lay each loaded side on the mark as it bears; without the
  *  expert's hand the chasers too (docs/23 items 35, 42). */
 export function stepAutoFire(game: Game): void {
@@ -572,7 +575,8 @@ export function stepAutoFire(game: Game): void {
     if (ship.reload.port > 0 && ship.reload.starboard > 0 && (s.expert || (ship.chaserReload.bow > 0 && ship.chaserReload.stern > 0))) continue;
     const t = gunneryMark(game, ship);
     if (!t) continue;
-    if (ship.ammo[ship.ammoSel] <= 0 && ship.ammo.round > 0) ship.ammoSel = 'round';
+    // (her own shot spent: the next she has aboard — round, heavy, chain, grape — not silent guns over a full locker)
+    if (ship.ammo[ship.ammoSel] <= 0) ship.ammoSel = SPARE_SHOT.find((a) => ship.ammo[a] > 0) ?? ship.ammoSel;
     // Her prize (docs/23 item 47): run in to board, the gun captains do not sink the ship she means to take — below
     // PRIZE_HOLD of her hull they hold all but grape (the quick fight's guns would send her down before the grapples).
     if (run?.mode === 'board' && run.target === t.id && ship.ammoSel !== 'grape' && t.hull < t.stats.hullMax * PRIZE_HOLD) continue;
