@@ -1135,6 +1135,8 @@ function storyFrame(): string | null {
   const t = q.target, own = state.ownDisplay;
   const p = t?.act === 'dock' && t.port && own ? state.ports.find((x) => x.id === t.port) : undefined;
   if (p && own && dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS * 2.5) return 'go:dock';
+  // a fight or a landing: its own button on the bar first (lit while the helmsman still closes), else «Плыть»
+  if (q.does) return `go:${q.does}`;
   return storySail() ? 'go' : null;
 }
 /** Her «Плыть» for a run broken off by another order (a struck ship's terms, a boarding): gold on the bar until pressed
@@ -3258,7 +3260,7 @@ function roamFocus(): { v: RoamView; marked: boolean; far: boolean } | null {
   }
   // The opening's «Твари на отмели»: the stack on her screen is marked for her — «Плыть» stopped her 60 m off it (the
   // stack drifts; its boats go from 30 m) and nothing lit for two and a half minutes (the newcomer's run, 2026-10-23)
-  const near = openingFrame() === 'neutral' && !state.autosail && state.roamRun === null ? openingStack(own) : null;
+  const near = (openingFrame() ?? storyQuest()?.does) === 'neutral' && !state.autosail && state.roamRun === null ? openingStack(own) : null;
   const nv = near !== null ? state.roams.find((x) => x.id === near) : undefined;
   const nh = ownHull(state);
   if (nv && nh) {
@@ -3496,7 +3498,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   if (rm) {
     const name = roamName(rm.kind);
     const back = roamBackLeft(state, rm);
-    facts.roam = { id: rm.id, icon: ROAM_UNITS[ROAMS[rm.kind].u as keyof typeof ROAM_UNITS].art, name, word: roamWord(rm.n).word, lv: rm.level, ...(rm.fight ? { fight: rm.fight } : {}), ...(back ? { back } : {}), ...(rm.offer ? { offer: rm.offer } : {}), ...(rm.joinN ? { joinN: rm.joinN } : {}), ...(roamLead ? { lead: true } : {}), ...(focus.far ? { far: true } : {}), ...(state.roamRun === rm.id ? { running: true } : {}) };
+    facts.roam = { id: rm.id, icon: ROAM_UNITS[ROAMS[rm.kind].u as keyof typeof ROAM_UNITS].art, name, word: roamWord(rm.n).word, lv: rm.level, ...(rm.fight ? { fight: rm.fight } : {}), ...(back ? { back } : {}), ...(rm.offer ? { offer: rm.offer } : {}), ...(rm.joinN ? { joinN: rm.joinN } : {}), ...(roamLead ? { lead: true } : {}), ...(focus.far ? { far: true } : {}), ...(state.roamRun === rm.id ? { running: true } : {}), ...(focus.marked && focus.far && (openingFrame() ?? storyQuest()?.does) === 'neutral' ? { quest: true } : {}) };
     if (rm.fight) info.push(esc(LROAM(rm.fight === 'mate' ? 'i.mate' : 'i.fight', { what: name })));
     else if (back) info.push(esc(LROAM('i.back', { what: name, t: backClock(back) })));
     else if (rm.offer === 'flee' && rm.ratio !== undefined) info.push(esc(LROAM('i.flee', { r: rm.ratio })));

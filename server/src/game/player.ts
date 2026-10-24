@@ -387,6 +387,18 @@ export function openingStep(def: QuestDef, step: number): string | null {
   return st.type === 'sink' || st.type === 'board' || st.type === 'neutral' ? st.type : null;
 }
 
+/** A campaign quest's step after the opening that is done at sea by a button of the bar: its finger (client pointer.ts
+ *  `go:<does>`) — the newcomer's run of 2026-10-23 stood by a pirate 40 m off with «Атаковать» lit and no finger. */
+export function storyStep(def: QuestDef, step: number): 'sink' | 'board' | 'neutral' | 'land' | null {
+  if (def.kind !== 'campaign' || openingStep(def, step)) return null;
+  const t = def.steps[step]?.type;
+  if (t === 'sink' || t === 'board' || t === 'neutral') return t;
+  if (t === 'named' || t === 'beast') return 'sink';
+  if (t === 'prize') return 'board';
+  if (t === 'lair' || t === 'land') return 'land';
+  return null;
+}
+
 export function dealings(p: Profile): Dealings {
   const d = (p.dealings ??= { runs: [], next: null, hearsay: [], held: [] });
   d.runs ??= [];
@@ -668,6 +680,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
         ...((lv) => (lv ? { ship: lv } : {}))(shipLevelOfQuest(def)),
         ...((o) => (o ? { op: o } : {}))(openingStep(def, q.step)),
         ...((a) => (a ? { act: a } : {}))(questAct(def.steps[q.step])),
+        ...((d) => (d ? { does: d } : {}))(storyStep(def, q.step)),
       };
     }),
     questsDone: p.quests.done,

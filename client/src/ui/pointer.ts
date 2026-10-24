@@ -99,6 +99,13 @@ function targetsOf(f: PointerFacts): string[] {
     case 'go':
       // the story's next place (main.ts storyFrame): out of port, then its «Плыть»; quiet while the helmsman has her
       return f.docked ? TO_SEA : f.helmsman ? [] : GOAL_SAIL;
+    case 'go:sink':
+    case 'go:board':
+    case 'go:neutral':
+      // the story's fight: as the opening's (its own button, a struck ship's choice, else «Плыть»)
+      return openingTargets(f, f.stage.slice(3));
+    case 'go:land':
+      return f.docked ? TO_SEA : ['#tc-act[data-act="land"]', '.act-btn.act-land', ...GOAL_SAIL];
     case 'go:dock':
       // …and at the step's harbour, its «Причалить»
       return f.docked ? [] : ['#tc-act[data-act="dock"]', '.act-btn.act-dock', ...GOAL_SAIL];

@@ -50,7 +50,7 @@ test('main.ts: the opening is not interrupted — the level card waits for a run
   assert.match(main, /new DailyGift\(\{[^\n]*busy: \(\) => [^\n]*openingFrame\(\) !== null \}\)/);
   assert.match(main, /new Promos\(\{[^\n]*openingFrame\(\) !== null, held/);
   // «Твари на отмели»: «Плыть» stopped her 60 m off the stack and nothing lit — the stack on her screen is marked
-  assert.match(main, /openingFrame\(\) === 'neutral' && !state\.autosail && state\.roamRun === null \? openingStack\(own\)/);
+  assert.match(main, /\(openingFrame\(\) \?\? storyQuest\(\)\?\.does\) === 'neutral' && !state\.autosail && state\.roamRun === null \? openingStack\(own\)/);
   // the story's «Плыть» and its finger; the prologue's «Выслушать» puts the window under it away
   assert.match(main, /if \(!q\?\.op\) return storySail\(\);/);
   assert.match(main, /hereFrame\(\) \?\? storyFrame\(\)/);
@@ -90,4 +90,31 @@ test('«Плыть» hurt with stores aboard: the carpenters mend her on the way
   assert.equal(mendUnderWay(game, s), false, 'nothing to mend with: no order, no refusal toast');
   const src = (await import('node:fs')).readFileSync('server/src/game/Game.ts', 'utf8');
   assert.match(src, /const e = gotoGoal\(this, s, [^\n]+\);\s*if \(!e\) mendUnderWay\(this, s\);/);
+});
+
+test('the story’s fights and landings: the server names the step, the finger goes to its own button (lit while the helmsman closes)', async () => {
+  const { storyStep } = await import('../server/src/game/player.ts');
+  const { QUESTS_BY_ID } = await import('../shared/src/data/quests.ts');
+  const story = Object.values(QUESTS_BY_ID).filter((d) => d.kind === 'campaign');
+  const kinds = new Set<string>();
+  for (const d of story) d.steps.forEach((st, i) => { const k = storyStep(d, i); if (k) kinds.add(`${st.type}>${k}`); });
+  assert.ok(kinds.has('board>board') && kinds.has('land>land'), [...kinds].join(' '));
+  // the opening's own steps keep their `op`
+  const c2 = QUESTS_BY_ID['c01_02'];
+  assert.equal(storyStep(c2, 0), null);
+  // «Сомнения патруля»: a pirate 40 m off, «Атаковать» lit, the helmsman on — the finger on it
+  const t = pointerTargets({ stage: 'go:board', touch: true, docked: false, battle: false, helmsman: true, pursuit: null });
+  assert.ok(t.indexOf('#tc-act[data-act="attack"]') >= 0 && t.indexOf('#tc-act[data-act="attack"]') < t.indexOf('#tc-act[data-act="goal_sail"]'));
+  assert.equal(pointerTargets({ stage: 'go:land', touch: true, docked: false, battle: false })[0], '#tc-act[data-act="land"]');
+  assert.equal(pointerTargets({ stage: 'go:sink', touch: true, docked: true, battle: false })[0], DEPART[0], 'in port: out to sea first');
+  assert.match((await import('node:fs')).readFileSync('client/src/main.ts', 'utf8'), /if \(q\.does\) return `go:\$\{q\.does\}`;/);
+});
+
+test('the step’s own stack 18 m off: «Атаковать» on the bar from afar; any other stack only within 30 m', async () => {
+  const { buildActs } = await import('../client/src/ui/actbar.ts');
+  const rm = { id: 7, icon: 'x', name: 'Тюлени', word: 'Горстка', lv: 1, far: true };
+  assert.ok(!buildActs({ roam: rm }).some((a) => a.id === 'roam'), 'a stack of no quest: «Осмотреть» and «ещё N м»');
+  assert.ok(buildActs({ roam: { ...rm, quest: true } }).some((a) => a.id === 'roam'), 'the step’s stack: «Атаковать»');
+  const main = (await import('node:fs')).readFileSync('client/src/main.ts', 'utf8');
+  assert.match(main, /focus\.marked && focus\.far && \(openingFrame\(\) \?\? storyQuest\(\)\?\.does\) === 'neutral' \? \{ quest: true \}/);
 });

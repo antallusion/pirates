@@ -60,7 +60,7 @@ export interface ActFacts {
   /** docs/19 D7: a roaming stack within reach, or the one she marked: its name, HoMM3's word and level, a fight on it,
    *  the offer at ×3; `lead` — hers to attack now (marked, or a cable off with no ship of her choosing): its buttons
    *  come first; `far` — beyond a cable (the helmsman sails her in); `running` — he is sailing her in now. */
-  roam?: { id: number; icon: string; name: string; word: string; lv: number; fight?: 'other' | 'mate'; back?: number; offer?: 'join' | 'flee'; joinN?: number; lead?: boolean; far?: boolean; running?: boolean } | null;
+  roam?: { id: number; icon: string; name: string; word: string; lv: number; fight?: 'other' | 'mate'; back?: number; offer?: 'join' | 'flee'; joinN?: number; lead?: boolean; far?: boolean; running?: boolean; /** the step's own stack (the opening's, a story's): «Атаковать» from afar */ quest?: boolean } | null;
   looks?: { kind: LookKind; name: string }[];
   repair?: { repairing: boolean; combat: boolean; hurt: boolean; short?: boolean } | null;
   /** docs/23 item 33: a mark to attack, or the pursuit under way (and how); `gunsOnly`: no grapple takes her (a beast, a
@@ -184,7 +184,9 @@ function roamActs(f: ActFacts): Act[] {
     if (rm.running) out.push({ id: 'attack_stop', icon: 'item_ship_wheel', label: LS('a.stop'), sub: rm.name, title: LS('a.stopTitle') });
     // (owner, 2026-10-22: «Атаковать» only within thirty metres of them; her mark farther off has its «Осмотреть» and
     // the bar's «ещё N м»)
-    else if (!rm.far) out.push({ id: 'roam', icon: 'act_attack', label: LR('a.attack'), sub: `${rm.word} · ⚓${rm.lv}`, title: LR(rm.far ? 't.attackFar' : 't.attack', { what: rm.name, word: rm.word, lv: rm.lv }), key: 'land', arg: String(rm.id) });
+    // (the step's own stack — the opening's «Твари на отмели», a story's — has it from afar: the helmsman's run stopped
+    // 18 m short, «Осмотреть» alone on the bar and «ещё 18 м» under it, the newcomer's run of 2026-10-23)
+    else if (!rm.far || rm.quest) out.push({ id: 'roam', icon: 'act_attack', label: LR('a.attack'), sub: `${rm.word} · ⚓${rm.lv}`, title: LR(rm.far ? 't.attackFar' : 't.attack', { what: rm.name, word: rm.word, lv: rm.lv }), key: 'land', arg: String(rm.id) });
     if (rm.offer === 'join' && (rm.joinN ?? 0) > 0 && !rm.far) out.push({ id: 'roam_join', icon: 'stat_crew', label: LR('a.join'), sub: `×${rm.joinN}`, title: LR('t.join', { n: rm.joinN ?? 0 }), arg: String(rm.id) });
   }
   out.push({ id: 'roam_look', icon: 'act_inspect', label: LR('a.look'), sub: rm.name, title: LR('t.look'), arg: String(rm.id) });

@@ -55,6 +55,21 @@ const look = (p) => p.evaluate(() => {
     modal: modalOn ? (txt(modalP.querySelector('h2, .w-title, .modal-title')) || 'modal') : null,
     film, tac, end: !!endBtn && vis(endBtn), quick: quick ? box(quick) : null,
     cards,
+    tbCard: (() => { const x = [...document.querySelectorAll('#board-tac .tb-card:not(.hidden) .k-x, #board-tac .tb-card:not(.hidden) [data-close], .k-sheet-root:not(.hidden) .k-sheet [data-close]')].find(vis); return x ? box(x) : null; })(),
+    sunk: (() => { const x = [...document.querySelectorAll('#modal-panel button.btn-primary')].find((e) => /Вернуться в порт|Back to port|Return to port/i.test(e.textContent) && vis(e)); return x ? box(x) : null; })(),
+    // a foe on the hexes, as her finger finds it: the red one nearest her own acting stack (her turn only)
+    foe: (() => {
+      const tb = g?.tactical, tv = tb?.view;
+      if (!tac || !tv || !tb.canvas || tv.over) return null;
+      const r = tb.canvas.getBoundingClientRect();
+      const mine = tv.stacks.find((x) => x.id === tv.active) ?? tv.stacks.find((x) => x.side === tv.you);
+      if (!tv.mine) return null;
+      const foes = tv.stacks.filter((x) => x.side !== tv.you && x.count > 0);
+      if (!foes.length) return null;
+      const c0 = mine ? tb.center(mine.hex) : { x: 0, y: 0 };
+      const f = foes.map((x) => ({ x, c: tb.center(x.hex) })).sort((a, b) => Math.hypot(a.c.x - c0.x, a.c.y - c0.y) - Math.hypot(b.c.x - c0.x, b.c.y - c0.y))[0];
+      return [Math.round(r.left + f.c.x), Math.round(r.top + f.c.y)];
+    })(),
     docked: s?.self?.dockedAt ?? null,
     spd: Math.round((s?.you?.spd ?? s?.ownDisplay?.speed ?? 0) * 10) / 10,
     auto: !!s?.autosail, sail: s?.input?.sail ?? null,
@@ -159,6 +174,9 @@ try {
     else if (v.finger?.shown) act = [`finger ${v.finger.sel} «${v.finger.txt}»`, async () => (v.finger.sel === '#tc-stick' ? stick(p, v.finger.at) : tap(p, v.finger.at))];
     else if (v.tac && v.end) act = ['battle end', async () => p.evaluate(() => { const r = document.querySelector('#board-tac [data-endbtn]').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }).then((xy) => tap(p, xy))];
     else if (v.tac && v.quick) act = ['battle quick', async () => tap(p, v.quick)];
+    else if (v.tac && v.tbCard) act = ['battle: close the card', async () => tap(p, v.tbCard)];
+    else if (v.sunk) act = ['«Вернуться в порт»', async () => tap(p, v.sunk)];
+    else if (v.tac && v.foe) act = ['battle: tap a foe', async () => tap(p, v.foe)];
     else if (!v.tac && v.cards.length) { const c = v.cards.find((x) => /lupick/.test(x.kind ?? '')) ?? v.cards.find((x) => x.gold) ?? v.cards[0]; act = [`card «${c.txt}»`, async () => tap(p, c.at)]; }
     if (act) {
       const label = act[0];
