@@ -15,6 +15,7 @@
 // `r:<kind>:<region>` the week's challenge, `cm` the common goal, `inv` the Choir's invasion, `g:<id>` a captain's goal,
 // `f` her trade (the fishing: by her tackle), `b:<group>` the beasts, `zb:<region>` a zone boss, `boss` the sea's bosses.
 
+import { armyMen } from '../../../shared/src/data/army.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { ownStockOf } from './ownstock.ts';
@@ -428,6 +429,9 @@ function questPlaces(game: Game, s: PlayerSession, id: string): Resolved {
   return { cands: localize(game, home, res.cands, () => (st.type === 'catch' ? localFishing(game, s, home) : ensureQuarry(game, s, qs, true).map((o) => shipCand(o, hint)))) };
 }
 
+/** The steps fought by her men (a boarding, a stack's battle, a lair's beach). */
+export const NEEDS_MEN: ReadonlySet<string> = new Set(['board', 'prize', 'neutral', 'lair']);
+
 /** A quest's step: where it is done, anywhere on the sea. */
 function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved {
   const p = s.profile!;
@@ -439,6 +443,10 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
   if (!st) return { done: true };
   const ship = s.ship!;
   const t = game.questTargets(s)[id];
+  // A fight of the story's with no men aboard to fight it (a lair's beach lost, every man of the army gone): «Плыть»
+  // takes her to a harbour to sign men on first (the newcomer's run of 2026-10-23 pressed «Штурм» with 2 hands aboard
+  // and stood half an hour; client pointer.ts 'men' points at «Армия» there).
+  if (cmp && NEEDS_MEN.has(st.type) && (armyMen(ship.army) < 3 || ship.crew < 3)) return { cands: ports(game) };
   switch (st.type) {
     case 'sink': {
       if (cmp) {

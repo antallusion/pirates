@@ -1136,17 +1136,21 @@ function storySail(): { key: string; name: string } | null {
   if (!q || !inGame || state.self?.dockedAt || isleScene.isOpen) return null;
   if (state.boardTac || state.boardFight || state.pursuit || state.boarding || state.roamRun !== null || (modal && ANSWER.includes(modal))) return null;
   const key = `q:${q.id}`;
-  if (state.autosail || (goalRun?.key === key && state.route?.key === key)) return null;
+  // (the run on but the helmsman not sailing her — arrived short, stopped by a fight's end, a card: she lay still and
+  // nothing was lit, «Сойдите на берег Солтрок-Ки» and «Войдите в воды…» stood 14–19 min, the run of 2026-10-23)
+  if (state.autosail || (goalRun?.key === key && state.route?.key === key && (state.ownDisplay?.speed ?? 0) > 0.5)) return null;
   return { key, name: sv(q.name) };
 }
 /** The finger on the story's way (the first two chapters, a newcomer's first hour): in port «В море», at sea «Плыть». */
 function storyFrame(): string | null {
   const q = storyQuest();
+  // a fork of the story waiting for her choice (its card closed, nothing lit — the run of 2026-10-23): the choice
+  if (!q && (state.self?.campaign?.ch ?? 99) <= 2 && (state.self?.campaign?.ways?.length ?? 0) > 1 && !state.self?.campaign?.active) return 'fork';
   if ((state.self?.campaign?.ch ?? 99) > 2 || !q) return null;
   // a fight with no men left to send (a lair's beach lost, the newcomer's run of 2026-10-23: «Штурм» pressed 1300 times
   // with «Слишком мало рук для десанта»): the way to men first — into port, the army's dwellings
   const men = (state.self?.company?.army ?? []).reduce((a, x) => a + x.n, 0);
-  if (q.does && q.does !== 'sink' && men < 3) return 'men';
+  if (q.does && q.does !== 'sink' && (men < 3 || (state.you?.crew ?? 99) < 3)) return state.self?.dockedAt || !state.autosail ? 'men' : null;
   if (state.self?.dockedAt) return 'go';
   // (the helmsman brings her to the step's harbour and «Причалить» is hers to press — owner, 2026-10-16: it lay lit 27 m
   // off the quay with no finger on it and «Соль и туман» stood half an hour, the newcomer's run of 2026-10-23)
@@ -1184,6 +1188,12 @@ function hereFrame(): string | null {
   if (!docked || state.onboarding?.stage) return null;
   const qs = [...(state.self?.quests ?? [])].filter((q) => hereAct(q, docked)).sort((a, b) => Number(b.kind === 'campaign') - Number(a.kind === 'campaign') || Number(b.act?.how === 'here') - Number(a.act?.how === 'here'));
   const q = qs[0];
+  // a cargo to hand over that is not aboard: the market's row of it, if this market has it
+  const a = q?.act;
+  if (q && a?.verb === 'deliver' && a.good && ((state.self?.cargo as Record<string, number> | undefined)?.[a.good] ?? 0) < (a.qty ?? 1)) {
+    const sold = state.portView?.market.some((r) => r.good === a.good && r.stock > 0);
+    return sold ? `h:${q.id}:market:${a.good}` : null;
+  }
   return q ? `h:${q.id}:${q.act?.how === 'tab' ? q.act.tab ?? '' : ''}` : null;
 }
 /** A good to trade at this market for the opening's lesson: the first in stock that is not a supply nor contraband. */
@@ -4891,7 +4901,7 @@ function step(t: number): void {
     passageFrame();
     const op = openingFrame();
     const here = op ? null : hereFrame() ?? storyFrame();
-    tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax, markBeast: attackMark !== null && state.ships.get(attackMark)?.info?.npcRole === 'beast' });
+    tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax, markBeast: attackMark !== null && state.ships.get(attackMark)?.info?.npcRole === 'beast', crewShort: !!state.you && state.you.crew < 3 });
     tutorPointer.frame();
     encounterCard.frame();
     surrenderCard.frame(state);

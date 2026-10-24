@@ -98,7 +98,7 @@ test('the story’s fights and landings: the server names the step, the finger g
   const story = Object.values(QUESTS_BY_ID).filter((d) => d.kind === 'campaign');
   const kinds = new Set<string>();
   for (const d of story) d.steps.forEach((st, i) => { const k = storyStep(d, i); if (k) kinds.add(`${st.type}>${k}`); });
-  assert.ok(kinds.has('board>board') && kinds.has('land>land'), [...kinds].join(' '));
+  assert.ok(kinds.has('board>board') && kinds.has('land>land') && kinds.has('dive>land'), [...kinds].join(' '));
   // the opening's own steps keep their `op`
   const c2 = QUESTS_BY_ID['c01_02'];
   assert.equal(storyStep(c2, 0), null);
@@ -139,7 +139,7 @@ test('a lair lost and no men left: the refusal says where to get them, and the f
   assert.equal(pointerTargets({ stage: 'men', touch: true, docked: false, battle: false })[0], '#tc-act[data-act="harbour"]');
   const t = pointerTargets({ stage: 'men', touch: true, docked: true, battle: false });
   assert.ok(t.includes('#modal-panel [data-dwell]') && t.includes('#modal-panel [data-ptab="army"]'));
-  assert.match((await import('node:fs')).readFileSync('client/src/main.ts', 'utf8'), /if \(q\.does && q\.does !== 'sink' && men < 3\) return 'men';/);
+  assert.match((await import('node:fs')).readFileSync('client/src/main.ts', 'utf8'), /if \(q\.does && q\.does !== 'sink' && \(men < 3 \|\| \(state\.you\?\.crew \?\? 99\) < 3\)\) return state\.self\?\.dockedAt \|\| !state\.autosail \? 'men' : null;/);
 });
 
 test('a ship\'s step and a shark at hand: no «Атаковать» finger on the shark, the target frame takes a ship first', async () => {
@@ -153,4 +153,47 @@ test('a ship\'s step and a shark at hand: no «Атаковать» finger on th
   const main = (await import('node:fs')).readFileSync('client/src/main.ts', 'utf8');
   assert.match(main, /if \(shipsFirst && s\.info\.npcRole === 'beast'\)/);
   assert.match(main, /return best \?\? beast;/);
+});
+
+test('«Что говорят старики» — rum to hand over, none aboard: the finger on the market\'s rum, not on «Сдать груз»', async () => {
+  const { questAct } = await import('../shared/src/data/questact.ts');
+  const a = questAct({ type: 'deliver', port: 'saltmarrow', good: 'rum', qty: 6, text: 'Bring Rum × 6 to Saltmarrow.' } as never);
+  assert.equal(a?.good, 'rum');
+  assert.equal(a?.qty, 6);
+  const t = pointerTargets({ stage: 'h:c01_14:market:rum', touch: true, docked: true, battle: false });
+  assert.ok(t.includes('#modal-panel .mk-row[data-good="rum"] [data-act="buy"]:not([disabled])'));
+  assert.ok(!t.some((x) => x.includes('quest_here')), 'never «Сдать груз» with nothing to hand over');
+  assert.ok(pointerTargets({ stage: 'h:c01_14:', touch: true, docked: true, battle: false })[0].includes('quest_here'), 'aboard: «Сдать груз»');
+  assert.match((await import('node:fs')).readFileSync('client/src/main.ts', 'utf8'), /return sold \? `h:\$\{q\.id\}:market:\$\{a\.good\}` : null;/);
+});
+
+test('no men for the story’s fight: «Плыть» takes her to a harbour first (the server’s goal), the finger on it at sea', async () => {
+  const { NEEDS_MEN } = await import('../server/src/game/goalroute.ts');
+  for (const k of ['board', 'prize', 'neutral', 'lair']) assert.ok(NEEDS_MEN.has(k), k);
+  assert.ok(!NEEDS_MEN.has('sink'), 'the guns need no landing party');
+  const src = (await import('node:fs')).readFileSync('server/src/game/goalroute.ts', 'utf8');
+  assert.match(src, /if \(cmp && NEEDS_MEN\.has\(st\.type\) && \(armyMen\(ship\.army\) < 3 \|\| ship\.crew < 3\)\) return \{ cands: ports\(game\) \};/);
+  assert.ok(pointerTargets({ stage: 'men', touch: true, docked: false, battle: false }).includes('#tc-act[data-act="goal_sail"]'));
+});
+
+test('the story’s fork with its card closed: the finger on «Цели и вести», never on one of the two ways', async () => {
+  assert.deepEqual(pointerTargets({ stage: 'fork', touch: true, docked: false, battle: false }), ['#tc-news']);
+  assert.match((await import('node:fs')).readFileSync('client/src/main.ts', 'utf8'), /\(state\.self\?\.campaign\?\.ways\?\.length \?\? 0\) > 1 && !state\.self\?\.campaign\?\.active\) return 'fork';/);
+});
+
+test('two hands left aboard: the refusal names the tavern, the finger leads to its «Нанять» first', async () => {
+  const { NO_HANDS } = await import('../server/src/game/beastlairs.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { setLang } = await import('../client/src/i18n.ts');
+  setLang('ru');
+  assert.match(serverText(NO_HANDS), /таверне/);
+  setLang('en');
+  const t = pointerTargets({ stage: 'men', touch: true, docked: true, battle: false, crewShort: true });
+  assert.equal(t[0], '#modal-panel [data-act="hire_n"]:not([disabled])');
+  assert.ok(t.indexOf('#modal-panel [data-ptab="tavern"]') < t.indexOf('#modal-panel [data-dwell]'));
+});
+
+test('the story’s run on but the ship lying still: «Плыть» is back on the bar', async () => {
+  const main = (await import('node:fs')).readFileSync('client/src/main.ts', 'utf8');
+  assert.match(main, /if \(state\.autosail \|\| \(goalRun\?\.key === key && state\.route\?\.key === key && \(state\.ownDisplay\?\.speed \?\? 0\) > 0\.5\)\) return null;/);
 });
