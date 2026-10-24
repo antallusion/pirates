@@ -22,7 +22,7 @@ import { esc, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
 import { bindStormForge, stormForgeCard } from './storms.ts';
 import { LOWER_BETTER, compareRows } from './gearcmp.ts';
-import { ARTIFACTS, ART_CLASS_NAMES, ART_SETS, RELICS, artPrimOf, fullRelics } from '../../../shared/src/data/artifacts.ts';
+import { ARTIFACTS, ART_CLASS_NAMES, ART_SETS, RELICS, artPrimOf, fullRelics, relicIcon } from '../../../shared/src/data/artifacts.ts';
 import type { ArtForge } from '../../../shared/src/data/artifacts.ts';
 import { EN as REL_EN, RU as REL_RU } from '../lang/ui/relics.ts';
 import { PRIMS, PRIM_NAMES } from '../../../shared/src/data/hero.ts';
@@ -182,7 +182,7 @@ function card(it: Item, worn: Item[]): string {
   if (art?.part) {
     const def = RELICS[art.part];
     const have = def.parts.filter((p) => worn.some((w) => w.art === p)).length;
-    artSet += `<div class="gi-set gi-relic">${icon('tattoo_crown', '', 'ico-sm')}${esc(RL('relic.part', { name: def.name[ru() ? 1 : 0], n: have, m: def.parts.length }))}<div class="gi-bonus${have >= def.parts.length ? ' on' : ''}">(${def.parts.length}) ${esc(def.text[ru() ? 1 : 0])}</div><div class="muted">${esc(def.parts.map((p) => ARTIFACTS[p].name[ru() ? 1 : 0]).join(' · '))}</div></div>`;
+    artSet += `<div class="gi-set gi-relic">${icon(relicIcon(def.id), '', 'ico-sm')}${esc(RL('relic.part', { name: def.name[ru() ? 1 : 0], n: have, m: def.parts.length }))}<div class="gi-bonus${have >= def.parts.length ? ' on' : ''}">(${def.parts.length}) ${esc(def.text[ru() ? 1 : 0])}</div><div class="muted">${esc(def.parts.map((p) => ARTIFACTS[p].name[ru() ? 1 : 0]).join(' · '))}</div></div>`;
   }
   let set = '';
   if (it.set) {

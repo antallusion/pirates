@@ -17,6 +17,14 @@ export const EN = {
   newQuest: 'A new campaign quest: {name}',
   fork: 'The campaign: choose your way',
   choose: 'Choose',
+  // A chapter's opener (its painting, its name and its words) when its first quest comes.
+  'ch.k': 'Chapter {n}',
+  'ch.go': 'Set sail',
+  // A parcel or a letter of a harbour's board handed over at the spot (the job's scene).
+  'drop.t': 'Handed over',
+  'drop.hamlet': 'The hamlet has what you brought; the lantern at the door goes back inside.',
+  'drop.cove': 'The fishers’ cove has what you brought; an old fisherwoman takes it by her lantern.',
+  'drop.waystation': 'The keeper of the waystation takes it aboard and marks it in his book.',
   // The story's prologue after the opening, and the campaign's epilogue (owner, 2026-10-19: «основная кампания
   // начинается с каким-то лором и крутым финалом»).
   'lore.prologue.t': 'The Gravetide',
@@ -50,6 +58,12 @@ export const RU: Record<keyof typeof EN, string> = {
   newQuest: 'Новое задание кампании: {name}',
   fork: 'Кампания: выберите путь',
   choose: 'Выбрать',
+  'ch.k': 'Глава {n}',
+  'ch.go': 'В путь',
+  'drop.t': 'Передано',
+  'drop.hamlet': 'Посёлок получил то, что вы везли; фонарь у двери уходит обратно в дом.',
+  'drop.cove': 'Рыбацкая бухта получила то, что вы везли; старая рыбачка принимает его у фонаря.',
+  'drop.waystation': 'Хозяин путевой станции принимает груз на борт и записывает его в книгу.',
   'lore.prologue.t': 'Гробовой прилив',
   'lore.prologue.k': 'Пролог',
   'lore.prologue.1': 'Сто лет назад Утонувшая Корона ушла под воду за одну ночь — с адмиралами, колокольнями и городом из белого камня. Море не стало хранить её молча. Раз в сто лет под волнами звонят утонувшие колокола, и прилив выходит на берег, чтобы забрать своё. Старики побережья зовут его Гробовым приливом.',

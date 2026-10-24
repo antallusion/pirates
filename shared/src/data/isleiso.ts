@@ -8,13 +8,16 @@
 
 import type { IslandBiome } from '../world/regions.ts';
 
-export type IsoMap = 'temperate' | 'volcanic' | 'ice' | 'jungle';
+export type IsoMap = 'temperate' | 'volcanic' | 'ice' | 'jungle' | 'dry' | 'drowned';
 export type IsoStage = 's0' | 's1' | 'l1' | 'l2' | 'l3' | 'l4' | 'l5' | 'up';
 
 /** The map an island of a biome is painted on (HANDOFF_PROMPT.md §2). */
 export const ISO_MAP_OF: Record<IslandBiome, IsoMap> = {
   temperate: 'temperate', mossy: 'temperate',
-  volcanic: 'volcanic', blacksand: 'volcanic', crystal: 'volcanic', barren: 'volcanic', ruins: 'volcanic', bone: 'volcanic', saltflat: 'volcanic',
+  volcanic: 'volcanic', blacksand: 'volcanic',
+  // (their own maps since 2026-10-24: the salt flats and the bare rock on the dry one, the drowned ruins on the drowned one)
+  saltflat: 'dry', barren: 'dry',
+  ruins: 'drowned', bone: 'drowned', crystal: 'drowned',
   ice: 'ice',
   jungle: 'jungle', mangrove: 'jungle', atoll: 'jungle', fungal: 'jungle',
 };
@@ -31,6 +34,8 @@ export const ISO_CORNERS: Record<IsoMap, { t: Pt; r: Pt; b: Pt; l: Pt }> = {
   volcanic: { t: [760, 180], r: [1275, 430], b: [770, 650], l: [315, 420] },
   ice: { t: [760, 228], r: [1315, 482], b: [790, 718], l: [255, 470] },
   jungle: { t: [765, 215], r: [1170, 440], b: [780, 640], l: [405, 430] },
+  dry: { t: [757, 262], r: [1150, 415], b: [776, 598], l: [362, 420] },
+  drowned: { t: [725, 205], r: [1200, 412], b: [748, 645], l: [325, 405] },
 };
 
 /** One cell of a plot's diamond in the baked pictures, px (tools/art/isle_iso.py UNIT). */

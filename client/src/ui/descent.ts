@@ -2,6 +2,8 @@
 // current and darkness, what is left of them and the clock), the choice between tiers (a blessing or a curse, for the
 // leader), and the week's board of the deepest.
 
+import { artBgAttr, artBgWire } from './artfall.ts';
+import { END_HEADER } from '../../../shared/src/data/paintart.ts';
 import { BOONS, CURRENTS, DARKS, HOSTS } from '../../../shared/src/data/descent.ts';
 import type { BoonId } from '../../../shared/src/data/descent.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
@@ -79,7 +81,7 @@ export function renderDescent(root: HTMLElement, state: ClientState, send: (m: C
   const run = v.run;
   const choice = run && run.phase === 'choice';
   const offers = run?.offers ?? [];
-  root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title'))}</h2>${run ? `<div class="sub">${esc(L('sub', { n: Math.max(0, run.tier) }))}</div>` : ''}</div></div>
+  root.innerHTML = `<div class="modal-head art-head"${artBgAttr([END_HEADER.descent])}><div><h2>${esc(L('title'))}</h2>${run ? `<div class="sub">${esc(L('sub', { n: Math.max(0, run.tier) }))}</div>` : ''}</div></div>
     <div class="modal-body descent">
       ${choice ? (run!.leader ? `<div class="ds-offers">${offers.map((b) => boonCard(b, true)).join('')}</div><p class="muted">${esc(L('auto', { t: clock(run!.left) }))}</p>` : `<p>${esc(L('wait'))}</p>`) : ''}
       ${run ? `<div class="card"><h4 class="card-h">${esc(L('taken'))}</h4>${run.boons.length ? `<div class="ds-taken">${run.boons.map((b) => `<span class="chip ${BOONS[b].curse ? 'bad' : 'good'}" title="${esc(BOONS[b].text[ru()])}">${esc(BOONS[b].name[ru()])}</span>`).join(' ')}</div>` : `<p class="muted">${esc(L('none'))}</p>`}</div>` : ''}
@@ -87,6 +89,7 @@ export function renderDescent(root: HTMLElement, state: ClientState, send: (m: C
         ${v.week.length ? v.week.map((r, i) => `<p class="ds-row"><span>${i + 1}. ${esc(r.names.map(personName).join(', '))}</span><span class="muted">${esc(L('row', { d: r.depth, g: r.glory }))}</span></p>`).join('') : `<p class="muted">${esc(L('empty'))}</p>`}</div>
       ${run ? `<div class="ds-foot"><button class="btn btn-small btn-danger" data-dleave>${esc(L('leave'))}</button></div>` : ''}
     </div>`;
+  artBgWire(root);
   root.querySelectorAll<HTMLElement>('[data-boon]').forEach((b) => (b.onclick = () => send({ t: 'descent', action: 'choose', pick: b.dataset.boon as BoonId })));
   root.querySelector<HTMLElement>('[data-dleave]')?.addEventListener('click', () => send({ t: 'descent', action: 'leave' }));
 }

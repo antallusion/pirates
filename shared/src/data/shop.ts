@@ -267,7 +267,8 @@ const mixed = (n: number): ShopGrant[] => ALL_RES.map((g) => res(g, n));
 
 /** A level's gift (LEVEL_OFFER_H hours from the level reached, once). */
 const levelGift = (lv: number, price: number, grants: ShopGrant[]): ShopFamily => ({
-  id: `lv${lv}`, tabs: ['sea', 'board', 'isle'], sec: 'deals', icon: 'tattoo_star', level: lv,
+  // (its own chest, icon.gift_lv10…lv60: the owner's sheet of 2026-10-24; the star was every level's)
+  id: `lv${lv}`, tabs: ['sea', 'board', 'isle'], sec: 'deals', icon: `gift_lv${lv}`, level: lv,
   name: T(`Level ${lv} gift`, `Подарок к уровню ${lv}`),
   text: T('For reaching the level: three days on the shelf, once.', 'За новый уровень: три дня на прилавке, один раз.'),
   offers: [o(`lv${lv}`, price, grants, { limit: { n: 1, per: 'ever' }, worth: worthOf(grants), tag: 'hot' })],

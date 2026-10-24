@@ -299,10 +299,11 @@ function bundleCard(b: (typeof BUNDLES)[number], v: CosView, sv: ShopView): stri
     }
     const x = cosItem(k);
     if (!x) return '';
-    const art = x.kind === 'plate' ? `cos.plate_${x.id}` : x.kind === 'frame' ? `cos.frame_${x.id}` : x.kind === 'emblem' ? `cos.emblem_${x.id}` : x.kind === 'trail' ? 'cos_trails' : x.kind === 'title' ? 'cos_titles' : x.kind === 'cloth' ? null : null;
+    const art = x.kind === 'plate' ? `cos.plate_${x.id}` : x.kind === 'frame' ? `cos.frame_${x.id}` : x.kind === 'emblem' ? `cos.emblem_${x.id}` : x.kind === 'trail' ? `trail_${x.id}` : x.kind === 'title' ? 'cos_titles' : x.kind === 'cloth' ? null : null;
     const own = v.own.includes(k) ? ' own' : '';
+    // (a cloth: its painted bolt, icon.cloth_<id> — its swatch if the picture is missing)
     return x.kind === 'cloth'
-      ? `<span class="cos-th${own}" title="${esc(T(x.name))}"><i class="cos-sw" style="background:${CLOTHS.find((c) => c.id === x.id)?.rgb ?? '#000'}"></i></span>`
+      ? `<span class="cos-th${own}" title="${esc(T(x.name))}">${icon(`cloth_${x.id}`, '', 'cos-th-i') || `<i class="cos-sw" style="background:${CLOTHS.find((c) => c.id === x.id)?.rgb ?? '#000'}"></i>`}</span>`
       : `<span class="cos-th${own}${x.kind === 'emblem' ? ' emb' : ''}" title="${esc(T(x.name))}">${art ? icon(art, '◆', 'cos-th-i') : ''}</span>`;
   }).join('');
   const words = b.keys.map((k) => (k.startsWith('pack:') ? EMOTE_PACKS.find((p) => p.id === k.slice(5))?.name : cosItem(k)?.name)).filter(Boolean).map((n) => T(n!)).join(' · ');

@@ -3,11 +3,14 @@
 // choose. Held while she fights (a boarding's deck, a fight ashore) and told once the fight is over — never over a battle.
 
 import type { ServerMsg } from '../../../shared/src/protocol.ts';
-import { dict } from '../i18n.ts';
+import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/campaignbook.ts';
 import { cmpText } from '../lang/server.ts';
 import { esc } from './dom.ts';
 import { openSheet } from './kit/sheet.ts';
+import { LORE_CARD, chapterCard } from '../../../shared/src/data/paintart.ts';
+import { artImg } from './artfall.ts';
+import { bookChapters } from './campaignbook.ts';
 
 const L = dict(EN, RU);
 
@@ -77,13 +80,44 @@ export function campaignLore(kind: 'prologue' | 'epilogue', busy: boolean | (() 
  *  nothing to press for the story's first quest, the newcomer's run of 2026-10-23). */
 export function loreCard(kind: 'prologue' | 'epilogue', after?: () => void): void {
   const k = (x: string) => L(`lore.${kind}.${x}` as keyof typeof EN);
-  const body = `<div class="cn-lore"><p class="cn-lore-k">${esc(k('k'))}</p>${['1', '2', '3'].map((n) => `<p>${esc(k(n))}</p>`).join('')}</div>`;
-  const sheet = openSheet({ title: k('t'), body, height: 'auto', cls: 'cn-sheet cn-lore-sheet', foot: `<button type="button" class="k-btn k-btn--primary k-btn--md" data-lore-go>${esc(k('go'))}</button>` });
+  // (its painting over the words, asked for only now: docs/ART_TODO.md §2 P1 #8)
+  const body = `<div class="cn-lore">${artImg([LORE_CARD[kind]], 'cn-art')}<p class="cn-lore-k">${esc(k('k'))}</p>${['1', '2', '3'].map((n) => `<p>${esc(k(n))}</p>`).join('')}</div>`;
+  loreOpen = true;
+  const sheet = openSheet({ title: k('t'), body, height: 'auto', cls: 'cn-sheet cn-lore-sheet', foot: `<button type="button" class="k-btn k-btn--primary k-btn--md" data-lore-go>${esc(k('go'))}</button>`, onClose: () => (loreOpen = false) });
   sheet.panel.querySelector<HTMLElement>('[data-lore-go]')?.addEventListener('click', () => {
     sheet.close('button');
     after?.();
   });
 }
+
+/** A lore card is open (a chapter's opener waits for it to close). */
+let loreOpen = false;
+
+/** A chapter's opener when its first quest comes (owner's paintings of 2026-10-24, card.ch_01..36): the painting, «Глава
+ *  N», its name and its words from the campaign book, one button — once a chapter, after any fight and after the
+ *  prologue. The chapters' words come with the book's module (loaded the first time). */
+const CH_KEY = 'gravetide.chapter.';
+export function chapterOpener(n: number, busy: () => boolean): void {
+  try {
+    if (localStorage.getItem(CH_KEY + n)) return;
+  } catch { /* no storage: shown */ }
+  const t = setInterval(() => {
+    if (busy() || loreOpen || loreWait) return;
+    const list = bookChapters(() => undefined);
+    if (!list) return;
+    clearInterval(t);
+    const ch = list.find((c) => c.n === n);
+    if (!ch) return;
+    try { localStorage.setItem(CH_KEY + n, '1'); } catch { /* no storage */ }
+    const ru = lang() === 'ru' ? 1 : 0;
+    const body = `<div class="cn-lore">${artImg([chapterCard(n)], 'cn-art')}<p class="cn-lore-k">${esc(L('ch.k', { n }))}</p><p>${esc(ch.blurb[ru])}</p></div>`;
+    const sheet = openSheet({ title: ch.title[ru], body, height: 'auto', cls: 'cn-sheet cn-lore-sheet', foot: `<button type="button" class="k-btn k-btn--primary k-btn--md" data-ch-go>${esc(L('ch.go'))}</button>` });
+    sheet.panel.querySelector<HTMLElement>('[data-ch-go]')?.addEventListener('click', () => sheet.close('button'));
+  }, 600);
+}
+
+/** The words of a job's hand-over card (main.ts 'handin'). */
+export const dropWord = (k: 'drop.t' | 'drop.hamlet' | 'drop.cove' | 'drop.waystation'): string => L(k);
 
 /** Waiting words (for the tests). */
 export const newsWaiting = (): number => queue.length;

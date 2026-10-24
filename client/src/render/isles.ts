@@ -118,6 +118,14 @@ export function drawLookouts(g: G, state: ClientState, c: IslesCtx, wind: number
     if (x < -60 || y < -60 || x > c.w + 60 || y > c.h + 60) continue;
     const z = Math.max(0.5, c.zoom);
     g.save();
+    // The owner's painting of the cairn on its headland (prop.lookout, strictly from above, its pennant painted); the
+    // drawn cairn and pole while it loads.
+    const art = sprite('prop.lookout');
+    if (art) {
+      const S = 52 * z, iw = art.img.naturalWidth, ih = art.img.naturalHeight, k = S / Math.max(iw, ih);
+      g.drawImage(art.img, x - (iw * k) / 2, y - ih * k * 0.62, iw * k, ih * k);
+    }
+    if (!art) {
     // The cairn: a few stones heaped.
     g.fillStyle = 'rgba(0,0,0,0.35)';
     g.beginPath();
@@ -149,6 +157,7 @@ export function drawLookouts(g: G, state: ClientState, c: IslesCtx, wind: number
     g.lineTo(x, y - 18 * z);
     g.closePath();
     g.fill();
+    }
     if (!l.at) {
       g.strokeStyle = `rgba(232,196,106,${0.35 + 0.25 * Math.sin(c.time * 2 + l.island)})`;
       g.lineWidth = 1.5;

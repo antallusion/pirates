@@ -10,8 +10,8 @@ import { RARITY_COLOR, itemName } from '../../../shared/src/data/items.ts';
 import type { ClientMsg, MinigameView } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/minigame.ts';
-import { assetUrl } from '../assets.ts';
 import { esc, icon, money } from './dom.ts';
+import { artBgAttr, artBgWire } from './artfall.ts';
 
 const L = dict(EN, RU);
 const ru = () => (lang() === 'ru' ? 1 : 0);
@@ -80,9 +80,8 @@ export class MinigameWindow {
 
   /** The header: the scene's painting, dimmed, and the face or thing of the game over it. */
   private art(d: MinigameDef): string {
-    const url = assetUrl(d.art);
     const face = icon(d.face, '', 'mg-face');
-    return `<div class="mg-art"${url ? ` style="background-image:url('${url}')"` : ''}>${face}</div>`;
+    return `<div class="mg-art"${artBgAttr([d.art, d.kin])}>${face}</div>`;
   }
 
   private render(fresh: boolean): void {
@@ -91,6 +90,7 @@ export class MinigameWindow {
     const intro = v.result || fresh || d.kind !== 'quest' || v.step === d.start ? `<p class="mg-text">${esc(tr(d.text))}</p>` : '';
     const body = v.result ? this.result(d, v) : this.body(d, v);
     this.el.innerHTML = `<div class="mg-card mg-${d.kind}">${this.art(d)}<div class="mg-h">${esc(tr(d.title))}</div>${intro}${body}</div>`;
+    artBgWire(this.el);
     this.el.classList.remove('hidden');
     this.el.querySelectorAll<HTMLElement>('[data-mg]').forEach((b) => (b.onclick = () => this.pick(b.dataset.mg!)));
     this.el.querySelector<HTMLElement>('[data-mg-close]')?.addEventListener('click', () => this.close());

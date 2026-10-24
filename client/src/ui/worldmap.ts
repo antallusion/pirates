@@ -1,5 +1,6 @@
 // World map: a dark nautical chart. Only what the captain has charted is drawn — information is a resource.
 
+import { portMark } from '../../../shared/src/data/paintart.ts';
 import { drawFog, drawScouts, underFog, visibleOnChart } from '../render/fog.ts'; // the fog of war (owner, 2026-10-17)
 import { LF, scoutName } from './scouts.ts';
 import { drawIslesChart, drawSupplyRoutes, isleFill, isleLegend, zoneHint } from './islemap.ts'; // docs/18 III
@@ -759,7 +760,10 @@ export class WorldMap {
     for (const p of on('ports') ? visibleOnChart(state.seen, state.ports) : []) {
       const known = (!p.id.includes('_v') && !/_t[0-9]+$/.test(p.id)) || found.has(p.id);
       if (!known) continue;
-      if (!mark(`icon.faction_${p.faction}`, tx(p.x), ty(p.y), ms * 0.95)) {
+      // her mark by her size (a capital, a town, a village, a floating town: the owner's sheet of 2026-10-24), her flag's
+      // crest small at its foot; the crest alone while the mark loads
+      if (mark(`icon.${portMark(p)}`, tx(p.x), ty(p.y), ms * 0.95)) mark(`icon.faction_${p.faction}`, tx(p.x) + ms * 0.34, ty(p.y) + ms * 0.3, ms * 0.48);
+      else if (!mark(`icon.faction_${p.faction}`, tx(p.x), ty(p.y), ms * 0.95)) {
         g.fillStyle = FACTIONS[p.faction].lantern;
         g.fillRect(tx(p.x) - 4, ty(p.y) - 4, 8, 8);
       }

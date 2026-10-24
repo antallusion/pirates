@@ -96,7 +96,8 @@ export function drawCitadelsWorld(g: G, state: ClientState, c: Ctx): void {
     g.beginPath();
     g.ellipse(x + s * 0.05, y + s * 0.07, s * 0.46, s * 0.42, 0, 0, Math.PI * 2);
     g.fill();
-    if (!drawArt(g, 'prop.life_fort', x, y, s, 0, 1)) {
+    // (its own star fort since 2026-10-24, prop.citadel; the shared fort while it loads or if it fails)
+    if (!drawArt(g, 'prop.citadel', x, y, s, 0, 1) && !drawArt(g, 'prop.life_fort', x, y, s, 0, 1)) {
       g.fillStyle = '#6a6760';
       g.beginPath();
       for (let i = 0; i < 16; i++) {

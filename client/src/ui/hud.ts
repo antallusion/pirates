@@ -1,6 +1,8 @@
 // In-game HUD: captain, ship condition, combat (ammo, reloads, abilities), navigation (wind, sails),
 // minimap, prompts, toasts, banners and chat.
 
+import { artBgAttr, artBgWire } from './artfall.ts';
+import { zoneBossCard } from '../../../shared/src/data/paintart.ts';
 import { drawFog, drawScouts } from '../render/fog.ts'; // the fog of war (owner, 2026-10-17)
 import { drawIslesMini, isleFill, wireMiniTip } from './islemap.ts'; // docs/18 III
 import { EN as SEAF_EN, RU as SEAF_RU } from '../lang/ui/seafight.ts';
@@ -1976,9 +1978,10 @@ export class Hud {
       <div class="tg-sub muted">${info.isPlayer && info.title ? `<span class="tg-title">${esc(sv(info.title))}</span> · ` : ''}${named ? `<span class="tg-wanted">${esc(named.tag)}</span> · ` : ''}${esc([guard || sameWords(cls?.name ?? info.classId, name) ? '' : cls?.name ?? info.classId, role].filter(Boolean).join(' · '))}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
       ${info.isPlayer ? `<div class="tg-colours">${flagChip(shipColours(c.flags, info))}</div>` : ''}
       ${bar('hull', c.hull)}${bar('crew', c.crew)}${bar('sails', c.sails)}
-      ${isZoneBossClass(info.classId) ? `<div class="tg-glass">${esc(L('tg.zboss'))}</div>` : info.crewMax ? armyGlance(Math.round(c.crew * info.crewMax), info.units ?? []) : ''}
+      ${isZoneBossClass(info.classId) ? `<div class="tg-zb"${artBgAttr([zoneBossCard(info.classId)])}></div><div class="tg-glass">${esc(L('tg.zboss'))}</div>` : info.crewMax ? armyGlance(Math.round(c.crew * info.crewMax), info.units ?? []) : ''}
       ${ap && !isZoneBossClass(info.classId) ? `<div class="tg-glass">${esc(L(ap.exact ? 'tg.glassExact' : 'tg.glass', { v: ap.value.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB'), fill: Math.round(ap.fill * 100), esc: ap.escorts, crew: ap.crew }))}${ap.dest ? ` · ${esc(L('tg.glassDest', { port: placeName(ap.dest) }))}` : ''}</div>` : ''}
       <div class="tg-foot">${threat ? `<span class="tg-threat" style="color:${THREAT_COLOR[threat]}">${esc(L(`tg.${threat}`))}</span>` : ''}${vol ? `<span class="tg-volleys" title="${esc(LSF('tg.volleysTip'))}">${esc(LSF('tg.volleys', { n: vol, w: plural(vol, LSF('tg.volley.one'), LSF('tg.volley.few'), LSF('tg.volley.many')) }))}</span>` : ''}${odds ? `<span class="tg-odds tg-odds-${odds.risky ? 'bad' : odds.chance < 0.55 ? 'warn' : 'good'}" title="${esc(LSF('tg.oddsTip', { n: ODDS_SIMS_SHOWN }))}">${esc(LSF('tg.odds', { p: Math.round(odds.chance * 100) }))}</span>` : ''}${fx.length ? `<span class="tg-fx">${esc(fx.join(' · '))}</span>` : ''}${struck ? `<button class="btn btn-small tg-tribute" data-tribute="${id}">${esc(L('tg.tribute'))}</button>` : ''}</div>`;
+    artBgWire(el);
     el.querySelector<HTMLElement>('[data-tribute]')?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.onTribute(id!);

@@ -49,9 +49,11 @@ test('four relics of 4–6 parts: real artifacts in distinct slots, painted with
     for (const id of d.parts) {
       const a = ARTIFACTS[id];
       assert.equal(a?.part, r, `${id} is a part of ${r}`);
-      assert.ok(`icon.${a.icon}` in manifest.assets && a.icon.startsWith('item_'), `${id}: ${a.icon} painted`);
+      // (its own painting since 2026-10-24, the item art it wore before kept as its stand-in)
+      assert.ok(`icon.${a.icon}` in manifest.assets && a.icon === `art_${id}`, `${id}: ${a.icon} painted`);
+      assert.ok(`icon.${a.kin}` in manifest.assets && a.kin.startsWith('item_'), `${id}: its kin ${a.kin} painted`);
       assert.equal(ITEM_BASES[a.base as keyof typeof ITEM_BASES]?.slot, a.slot, `${id}: its base in its slot`);
-      assert.ok(!/skull|bone|blood/.test(a.icon), `${id}: no skulls nor bones`);
+      assert.ok(!/skull|bone|blood/.test(a.icon) && !/skull|bone|blood/.test(a.kin), `${id}: no skulls nor bones`);
     }
     assert.ok(d.parts.some((id) => ARTIFACTS[id].only) && d.parts.some((id) => !ARTIFACTS[id].only), `${r}: its own parts and the sea's`);
   }

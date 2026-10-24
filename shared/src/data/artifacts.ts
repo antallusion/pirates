@@ -44,8 +44,10 @@ export interface ArtifactDef {
   id: string;
   slot: CaptainSlot;
   cls: ArtClass;
-  /** The item art it wears (icon.item_*), and the base it stands on (its slot and kind). */
+  /** Its own painting (icon.art_<id>), the plain item's icon it wore before (icon.item_*: its stand-in), and the base it
+   *  stands on (its slot and kind). */
   icon: string;
+  kin: string;
   base: string;
   name: [string, string];
   text: [string, string];
@@ -64,8 +66,10 @@ export interface ArtifactDef {
   price: number;
 }
 
-const A = (id: string, slot: CaptainSlot, cls: ArtClass, icon: string, base: string, name: [string, string], text: [string, string], rest: Partial<ArtifactDef> = {}): ArtifactDef =>
-  ({ id, slot, cls, icon, base, name, text, price: { treasure: 1500, minor: 4000, major: 11000, relic: 30000 }[cls], ...rest });
+// (each wears its own painting, icon.art_<id> — the owner's sheets of 2026-10-24; the plain item's icon it wore before
+//  is its kin, drawn while its own loads or if it fails: ICON_KIN below)
+const A = (id: string, slot: CaptainSlot, cls: ArtClass, kin: string, base: string, name: [string, string], text: [string, string], rest: Partial<ArtifactDef> = {}): ArtifactDef =>
+  ({ id, slot, cls, icon: `art_${id}`, kin, base, name, text, price: { treasure: 1500, minor: 4000, major: 11000, relic: 30000 }[cls], ...rest });
 
 export const ARTIFACTS: Record<string, ArtifactDef> = Object.fromEntries([
   // The Regalia of the Drowned Admiral (Water).
@@ -388,3 +392,12 @@ export function artWares(portId: string, day: number): string[] {
 export function artifactPatterns(): [string, string][] {
   return [...Object.values(ARTIFACTS).map((a) => a.name), ...Object.values(ART_SETS).map((s) => s.name), ...Object.values(RELICS).map((r) => r.name)];
 }
+
+/** A relic's own painting (icon.relic_<id>). */
+export const relicIcon = (id: RelicId): string => `relic_${id}`;
+
+/** The artifacts' and the relics' paintings → the old icon drawn while one loads or if it fails (client dom.ts icon). */
+export const ARTIFACT_ICON_KIN: Record<string, string> = {
+  ...Object.fromEntries(Object.values(ARTIFACTS).map((a) => [a.icon, a.kin])),
+  ...Object.fromEntries(Object.values(RELICS).map((r) => [relicIcon(r.id), ARTIFACTS[r.parts[0]].kin])),
+};

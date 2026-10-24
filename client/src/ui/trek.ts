@@ -11,8 +11,9 @@ import type { ClientMsg, TrekVars, TrekView } from '../../../shared/src/protocol
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/isles.ts';
 import { serverText } from '../lang/server.ts';
-import { assetUrl } from '../assets.ts';
 import { esc, icon, money } from './dom.ts';
+import { artBgAttr, artBgWire } from './artfall.ts';
+import { trekArt } from '../../../shared/src/data/paintart.ts';
 import { TREK_END } from '../../../shared/src/data/isles.ts';
 
 const L = dict(EN, RU);
@@ -66,8 +67,8 @@ export class TrekWindow {
       this.timer = window.setTimeout(() => this.render(), 400);
       return;
     }
-    const url = assetUrl('card.enc_signal_fire');
-    const art = `<div class="mg-art"${url ? ` style="background-image:url('${url}')"` : ''}>${icon('talent_exp_pathfinder', '', 'mg-face')}</div>`;
+    // (the landing party's path on a green island or a bare one: card.trek_lush / _stark, the old signal fire behind)
+    const art = `<div class="mg-art"${artBgAttr(trekArt(v.biome))}>${icon('talent_exp_pathfinder', '', 'mg-face')}</div>`;
     const dots = Array.from({ length: v.steps }, (_, i) => {
       const t = v.trail[i];
       if (!t) return `<span class="trek-dot${i === v.step && !v.done ? ' now' : ''}"></span>`;
@@ -95,6 +96,7 @@ export class TrekWindow {
       body += `<div class="mg-choices"><button class="btn btn-small btn-primary" data-trek="close">${esc(L('trek.close'))}</button></div>`;
     }
     this.el.innerHTML = `<div class="mg-card trek-card">${art}${head}${body}</div>`;
+    artBgWire(this.el);
     this.el.classList.remove('hidden');
     this.el.querySelectorAll<HTMLButtonElement>('[data-trek]').forEach((b) => (b.onclick = () => {
       const pick = b.dataset.trek!;

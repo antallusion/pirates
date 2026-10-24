@@ -345,13 +345,14 @@ function cosArt(id: string, icon: string): { art: string; swatch?: string; label
   const [, k, x] = m;
   if (k === 'plate' || k === 'frame' || k === 'emblem') return { art: `cos.${k}_${x}` };
   if (k === 'pack') return { art: `cos.emote_${COS_EMOTES.find((e) => e.pack === x)?.id ?? 'parrot'}` };
+  // (a cloth's bolt and a trail's wake painted on 2026-10-24: icon.cloth_<id>, icon.trail_<id>; the swatch under it)
   if (k === 'cloth') {
     const c = CLOTHS.find((y) => y.id === x);
-    return { art: '', ...(c ? { swatch: `linear-gradient(160deg, ${c.rgb}, ${c.rgb} 60%, rgba(0,0,0,0.45))` } : {}) };
+    return { art: c ? `icon.cloth_${c.id}` : '', ...(c ? { swatch: `linear-gradient(160deg, ${c.rgb}, ${c.rgb} 60%, rgba(0,0,0,0.45))` } : {}) };
   }
   if (k === 'trail') {
     const t = TRAILS.find((y) => y.id === x);
-    return { art: '', ...(t ? { swatch: `radial-gradient(circle at 50% 55%, ${t.c[0]} 0 10%, ${t.c[1]} 34%, transparent 68%)` } : {}) };
+    return { art: t ? `icon.trail_${t.id}` : '', ...(t ? { swatch: `radial-gradient(circle at 50% 55%, ${t.c[0]} 0 10%, ${t.c[1]} 34%, transparent 68%)` } : {}) };
   }
   // a title: its words on the plate of its tier
   const t = TITLES.find((y) => y.id === x);

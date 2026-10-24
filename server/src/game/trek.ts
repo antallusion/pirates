@@ -81,7 +81,7 @@ export function trekBusy(game: Game, s: PlayerSession): boolean {
 
 function view(game: Game, s: PlayerSession, t: TrekLive): TrekView {
   return {
-    id: t.id, island: game.world.islands[t.islandId]?.name ?? '?', step: t.step, steps: t.steps, paths: t.paths, event: t.event, choice: t.choice, outcome: t.outcome,
+    id: t.id, island: game.world.islands[t.islandId]?.name ?? '?', biome: game.world.islands[t.islandId]?.biome, step: t.step, steps: t.steps, paths: t.paths, event: t.event, choice: t.choice, outcome: t.outcome,
     vars: t.vars, trail: t.trail, game: t.game !== null, end: t.end, done: t.done, cost: s.profile?.gold ?? 0,
   };
 }

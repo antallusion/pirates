@@ -550,10 +550,12 @@ export function sailRun(game: Game, sc: SailScene, cls: ShipClassId = 'brig', ma
   let why = 'clock';
   if (!autosailOf(ship)) why = `refused: ${(c.last('toast') as { msg?: string } | undefined)?.msg ?? c.last('autosail')?.on}`;
   else {
-    let quiet = game.now + 10;
+    // (the sea kept quiet every 3 s: a raider spawned within a 10 s window caught the Gravesend pier run of 2026-10-24
+    //  on its way in — the helm's measure, not a fight)
+    let quiet = game.now + 3;
     while (game.now - t0 < maxSec) {
       if (game.now > quiet) {
-        quiet = game.now + 10;
+        quiet = game.now + 3;
         quietAround(game, ship.state.x, ship.state.y);
       }
       game.step();
