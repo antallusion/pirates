@@ -56,7 +56,9 @@ const look = (p) => p.evaluate(() => {
     film, tac, end: !!endBtn && vis(endBtn), quick: quick ? box(quick) : null,
     cards,
     tbCard: (() => { const x = [...document.querySelectorAll('.k-sheet-x')].find(vis); return x ? box(x) : null; })(),
-    sunk: (() => { const x = [...document.querySelectorAll('#modal-panel button.btn-primary')].find((e) => /Вернуться в порт|Back to port|Return to port/i.test(e.textContent) && vis(e)); return x ? box(x) : null; })(),
+    hull: Math.round(s?.you?.hull ?? 0),
+    near: (() => { const o = s?.ownDisplay; if (!o) return []; return [...s.ships.values()].filter((x) => x.id !== s.entityId && x.cur && Math.hypot(x.cur.x - o.x, x.cur.y - o.y) < 700).map((x) => `${x.info?.name}|${x.info?.npcRole ?? (x.info?.isPlayer ? 'player' : '?')}|${x.info?.faction ?? ''}|${x.cur.flags & 64 ? 'HOSTILE' : ''}|${Math.round(Math.hypot(x.cur.x - o.x, x.cur.y - o.y))}m|hull${Math.round(x.cur.hull ?? -1)}`); })(),
+    sunk: (() => { const x = [...document.querySelectorAll('button.btn-primary, button.k-btn--primary')].find((e) => /Вернуться в порт|Back to port|Return to port/i.test(e.textContent) && vis(e)); return x ? box(x) : null; })(),
     // a foe on the hexes, as her finger finds it: the red one nearest her own acting stack (her turn only)
     foe: (() => {
       const tb = g?.tactical, tv = tb?.view;
@@ -155,7 +157,7 @@ try {
 
   let lastKey = '', lastAct = '', sameAct = 0, lastShotKey = '';
   const hist = [];
-  let foeRest = 0; // a foe out of reach opened its card: the turn's clock plays her men (as it says it will)
+  let foeRest = 0, lastHull = -1; // a foe out of reach opened its card: the turn's clock plays her men (as it says it will)
   const deadline = T0 + maxMin * 60000;
   while (Date.now() < deadline) {
     const v = await look(p).catch((e) => ({ err: e.message }));
@@ -171,6 +173,8 @@ try {
       if (stopAt && v.q?.id === stopAt) break;
     }
     const st = steps.get(stepKey);
+    if (lastHull >= 0 && v.hull < lastHull - 5) rec({ hurt: lastHull - v.hull, hull: v.hull, near: v.near, toasts: v.toasts, auto: v.auto });
+    lastHull = v.hull;
     let act = null;
     if (v.film) act = null; // the kit taps films away
     else if (v.conf?.yes) act = ['conf', async () => p.evaluate(() => { const b = [...document.querySelectorAll('.confirm-panel [data-yes], #confirm [data-yes]')].find((e) => e.getBoundingClientRect().width > 0); const r = b.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }).then((xy) => tap(p, xy))];
