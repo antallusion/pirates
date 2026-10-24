@@ -192,3 +192,8 @@ test('two hands left aboard: the refusal names the tavern, the finger leads to i
   assert.equal(t[0], '#modal-panel [data-act="hire_n"]:not([disabled])');
   assert.ok(t.indexOf('#modal-panel [data-ptab="tavern"]') < t.indexOf('#modal-panel [data-dwell]'));
 });
+
+test('the story’s run on but the ship lying still: «Плыть» is back on the bar', async () => {
+  const main = (await import('node:fs')).readFileSync('client/src/main.ts', 'utf8');
+  assert.match(main, /if \(state\.autosail \|\| \(goalRun\?\.key === key && state\.route\?\.key === key && \(state\.ownDisplay\?\.speed \?\? 0\) > 0\.5\)\) return null;/);
+});

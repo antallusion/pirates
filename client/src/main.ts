@@ -1136,7 +1136,9 @@ function storySail(): { key: string; name: string } | null {
   if (!q || !inGame || state.self?.dockedAt || isleScene.isOpen) return null;
   if (state.boardTac || state.boardFight || state.pursuit || state.boarding || state.roamRun !== null || (modal && ANSWER.includes(modal))) return null;
   const key = `q:${q.id}`;
-  if (state.autosail || (goalRun?.key === key && state.route?.key === key)) return null;
+  // (the run on but the helmsman not sailing her — arrived short, stopped by a fight's end, a card: she lay still and
+  // nothing was lit, «Сойдите на берег Солтрок-Ки» and «Войдите в воды…» stood 14–19 min, the run of 2026-10-23)
+  if (state.autosail || (goalRun?.key === key && state.route?.key === key && (state.ownDisplay?.speed ?? 0) > 0.5)) return null;
   return { key, name: sv(q.name) };
 }
 /** The finger on the story's way (the first two chapters, a newcomer's first hour): in port «В море», at sea «Плыть». */
