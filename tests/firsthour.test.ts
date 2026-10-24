@@ -128,3 +128,16 @@ test('«Джори Пенн» — men for the army: the finger goes through the 
   // other pages keep their old way
   assert.equal(pointerTargets({ stage: 'h:x:market', touch: true, docked: true, battle: false })[0], '[data-act="quest_here"][data-id="x"]');
 });
+
+test('a lair lost and no men left: the refusal says where to get them, and the finger goes to a harbour\'s «Армия»', async () => {
+  const { NO_MEN } = await import('../server/src/game/beastlairs.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { setLang } = await import('../client/src/i18n.ts');
+  setLang('ru');
+  assert.match(serverText(NO_MEN), /Армия/);
+  setLang('en');
+  assert.equal(pointerTargets({ stage: 'men', touch: true, docked: false, battle: false })[0], '#tc-act[data-act="harbour"]');
+  const t = pointerTargets({ stage: 'men', touch: true, docked: true, battle: false });
+  assert.ok(t.includes('#modal-panel [data-dwell]') && t.includes('#modal-panel [data-ptab="army"]'));
+  assert.match((await import('node:fs')).readFileSync('client/src/main.ts', 'utf8'), /if \(q\.does && q\.does !== 'sink' && men < 3\) return 'men';/);
+});

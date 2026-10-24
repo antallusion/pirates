@@ -155,6 +155,7 @@ try {
 
   let lastKey = '', lastAct = '', sameAct = 0, lastShotKey = '';
   const hist = [];
+  let foeRest = 0; // a foe out of reach opened its card: the turn's clock plays her men (as it says it will)
   const deadline = T0 + maxMin * 60000;
   while (Date.now() < deadline) {
     const v = await look(p).catch((e) => ({ err: e.message }));
@@ -176,9 +177,9 @@ try {
     else if (v.finger?.shown) act = [`finger ${v.finger.sel} «${v.finger.txt}»`, async () => (v.finger.sel === '#tc-stick' ? stick(p, v.finger.at) : tap(p, v.finger.at))];
     else if (v.tac && v.end) act = ['battle end', async () => p.evaluate(() => { const r = document.querySelector('#board-tac [data-endbtn]').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }).then((xy) => tap(p, xy))];
     else if (v.tac && v.quick) act = ['battle quick', async () => tap(p, v.quick)];
-    else if (v.tac && v.tbCard) act = ['battle: close the card', async () => tap(p, v.tbCard)];
+    else if (v.tac && v.tbCard) { foeRest = Date.now() + 15000; act = ['battle: close the card', async () => tap(p, v.tbCard)]; }
     else if (v.sunk) act = ['«Вернуться в порт»', async () => tap(p, v.sunk)];
-    else if (v.tac && v.foe) act = ['battle: tap a foe', async () => tap(p, v.foe)];
+    else if (v.tac && v.foe && Date.now() > foeRest) act = ['battle: tap a foe', async () => tap(p, v.foe)];
     else if (!v.tac && v.cards.length) { const c = v.cards.find((x) => /lupick/.test(x.kind ?? '')) ?? v.cards.find((x) => x.gold) ?? v.cards[0]; act = [`card «${c.txt}»`, async () => tap(p, c.at)]; }
     if (act) {
       const label = act[0];

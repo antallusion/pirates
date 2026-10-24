@@ -425,6 +425,9 @@ function chainWhy(game: Game, s: PlayerSession, l: Lair): string | null {
 /** seaux: the card's «why» without the distance (its buttons sail her in now, approach.ts). */
 const farless = (w: string | null): string | null => (w === LAIR_FAR ? null : w);
 
+/** No fighting men aboard to send ashore — and where to get them. */
+export const NO_MEN = 'No men to send ashore: sign on men in a harbour — its “Army” page';
+
 /** Why she cannot land against it now (null: she can). */
 function fightWhy(game: Game, s: PlayerSession, l: Lair, force = false): string | null {
   const ship = s.ship;
@@ -632,7 +635,7 @@ export function startFight(game: Game, s: PlayerSession, id: string, force = fal
   const ship = s.ship!;
   const base = sideOf(game, ship, ship, true);
   const party = landParty(base.army ?? []);
-  if (!party.length) return 'Too few hands to spare a landing party';
+  if (!party.length) return NO_MEN; // (with what to do about it: the newcomer pressed «Штурм» 1300 times, 2026-10-23)
   const a: TacSideInput = { ...base, army: party, holes: 0, gunsOut: 0, fire: false, castle: false, struck: false, dealt: ladder(ship.shipLevel, l.level, false).dealt || 0.1 };
   const men = lairMen(game, l);
   const main = LAIRS[l.kind].mix[0][0];
@@ -707,7 +710,7 @@ export function startCreatureFight(game: Game, s: PlayerSession, ext: ExtFight, 
   const ship = s.ship!;
   const base = sideOf(game, ship, ship, true);
   const party = landParty(base.army ?? []);
-  if (!party.length) return 'Too few hands to spare a landing party';
+  if (!party.length) return NO_MEN; // (with what to do about it: the newcomer pressed «Штурм» 1300 times, 2026-10-23)
   const a: TacSideInput = { ...base, army: party, holes: 0, gunsOut: 0, fire: false, castle: false, struck: false, dealt: ladder(ship.shipLevel, level, false).dealt || 0.1 };
   const b: TacSideInput = {
     name, ship: ext.place, captain: null, hands: 0, marines: 0, gunners: 0, army: men.map((x) => ({ u: x.u, n: x.n, src: x.u })), officers: [], skill: 3,

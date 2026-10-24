@@ -304,6 +304,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "Too few hands to give": "Слишком мало рук, чтобы кого-то отдать",
   "Too few hands to man the boat": "Слишком мало рук, чтобы укомплектовать шлюпку",
   "Too few hands to spare a landing party": "Слишком мало рук для десанта",
+  "No men to send ashore: sign on men in a harbour — its “Army” page": "Некого высаживать: наймите бойцов в порту — страница «Армия»",
   "Too many attempts. Wait a minute.": "Слишком много попыток. Подождите минуту.",
   "Too slow to keep up": "Слишком медленно, чтобы не отстать",
   "Took": "Взят",

@@ -1129,6 +1129,10 @@ function storySail(): { key: string; name: string } | null {
 function storyFrame(): string | null {
   const q = storyQuest();
   if ((state.self?.campaign?.ch ?? 99) > 2 || !q) return null;
+  // a fight with no men left to send (a lair's beach lost, the newcomer's run of 2026-10-23: «Штурм» pressed 1300 times
+  // with «Слишком мало рук для десанта»): the way to men first — into port, the army's dwellings
+  const men = (state.self?.company?.army ?? []).reduce((a, x) => a + x.n, 0);
+  if (q.does && q.does !== 'sink' && men < 3) return 'men';
   if (state.self?.dockedAt) return 'go';
   // (the helmsman brings her to the step's harbour and «Причалить» is hers to press — owner, 2026-10-16: it lay lit 27 m
   // off the quay with no finger on it and «Соль и туман» stood half an hour, the newcomer's run of 2026-10-23)

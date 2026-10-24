@@ -113,6 +113,9 @@ function targetsOf(f: PointerFacts): string[] {
       return openingTargets(f, f.stage.slice(3));
     case 'go:land':
       return f.docked ? TO_SEA : ['#tc-act[data-act="land"]', '.act-btn.act-land', ...GOAL_SAIL];
+    case 'men':
+      // no men for the step's fight: a harbour, its «Армия» and the way through it
+      return f.docked ? [...TAB_INSIDE.army, '#modal-panel [data-ptab="army"]', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'] : TO_PORT;
     case 'go:dock':
       // …and at the step's harbour, its «Причалить»
       return f.docked ? [] : ['#tc-act[data-act="dock"]', '.act-btn.act-dock', ...GOAL_SAIL];
