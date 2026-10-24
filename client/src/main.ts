@@ -151,6 +151,7 @@ import { STORY_FROM, campaignLore, campaignNews, chapterOpener, dropWord } from 
 import { DROP_CARD } from '../../shared/src/data/paintart.ts'; // docs/36: the campaign's next quest comes by itself
 import { FACTIONS } from '../../shared/src/data/factions.ts';
 import { placeName } from './ui/maps.ts';
+import { portSplash } from './ui/portsplash.ts';
 import type { Key } from './i18n.ts';
 import { EN as MAIN_EN, RU as MAIN_RU } from './lang/ui/main.ts';
 import { renderDescent } from './ui/descent.ts';
@@ -1861,7 +1862,12 @@ function onMessage(m: ServerMsg): void {
       if (m.kind === 'goal' || m.kind === 'stage') audio.coins();
       break;
     case 'port':
-      if (m.view && modal !== 'port') audio.bell();
+      if (m.view && modal !== 'port') {
+        audio.bell();
+        // the harbour's painting full-width on arrival, once a port a session (ui/portsplash.ts)
+        const at = state.ports.find((p) => p.id === m.view!.portId);
+        if (at) portSplash(at, placeName(at.name), `${FACTIONS[at.faction].name} · ${REGIONS[at.region].name}`);
+      }
       // Never steal focus from another open screen (handbook, boarding, shipwreck); they return to port on close.
       if (m.view && modal === null && !isleScene.isOpen) openModal('port');
       else if (!m.view && modal === 'port') closeModal();

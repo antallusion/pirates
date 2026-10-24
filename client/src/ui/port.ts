@@ -902,8 +902,11 @@ ${orders}${berths}</div>` : ''}`;
     const regatta = regattaCard(state, state.regatta, state.self?.dockedAt ?? null) + holidayCard(state);
     const self = state.self!;
     const port = state.ports.find((p) => p.id === view.portId)!;
+    // (the harbour's own painting as a picture header: on a phone the window's band is too low to show it — its name
+    //  and flag over a gentle gradient at its foot; the painting is the band's, --bg-port)
+    const hero = `<div class="ph-hero" role="img" aria-label="${esc(placeName(port.name))}"><div class="ph-hero-t"><b>${esc(placeName(port.name))}</b><span>${esc(FACTIONS[port.faction].name)} · ${esc(REGIONS[port.region].name)}</span></div></div>`;
     const reps = Object.entries(self.reputation).map(([f, v]) => ledgerRow({ ico: icon(`faction_${f}`), title: esc(FACTIONS[f as never as keyof typeof FACTIONS].name), acts: `<b class="lr-num ${(v ?? 0) < 0 ? 'up' : 'down'}">${v}</b>`, cls: 'lr-rep' })).join('');
-    return `${regatta}<div class="cols"><div>
+    return `${hero}${regatta}<div class="cols"><div>
         <div class="card"><h4 class="card-h">${icon('wanted', '', 'ico-md')}${esc(L('pardon.title'))}</h4>${view.pardonCost !== null ? `<p>${esc(L('pardon.text', { n: self.infamy }))}</p><button class="btn" data-act="pardon" ${self.infamy >= 20 ? '' : 'disabled'}>${esc(L('pardon.buy', { cost: fmt(view.pardonCost) }))}</button>` : `<p class="muted">${esc(L('pardon.none'))}</p>`}</div>
         ${view.licence ? `<div class="card"><h4 class="card-h">${icon('map_contract', '', 'ico-md')}${esc(L('licence.title'))}</h4><p>${esc(view.licence.until > state.estServerTime() ? L('licence.textActive', { faction: FACTIONS[port.faction].short }) : L('licence.textDuty', { pct: Math.round(view.duty * 100) || '', faction: FACTIONS[port.faction].short }))}</p>
           ${port.faction === 'harpoon' ? `<p class="muted">${esc(L('licence.whaling'))}</p>` : ''}

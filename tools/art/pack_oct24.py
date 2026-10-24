@@ -85,12 +85,41 @@ def axe_rust(rgb: np.ndarray) -> np.ndarray:
     return (f * (1 - m) + rust * m).clip(0, 255).astype(np.uint8)
 
 
+def carved_idol(rgb: np.ndarray) -> np.ndarray:
+    """The «talking skull» game's mask on its pike (coordinator, 2026-10-25: a grinning face on a pike may read as a
+    head): recoloured to plain carved wood — the face mapped onto a warm wood ramp with a fine vertical grain, the grin's
+    pale teeth sunk into dark wood (no pale, bone-like tone left), the eye holes deepened — so it reads as a carved idol."""
+    out = rgb.astype(np.float32)
+    h, w = out.shape[:2]
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    # the mask's face (the cell's own pixels; the pike under it is wood already)
+    # (the ellipse about the face, and in it only the warm wood: the blue night behind it is left alone)
+    warm = np.clip((out[..., 0] - out[..., 2] - 4) / 16, 0, 1)
+    face = (((xx - 262) / 52) ** 2 + ((yy - 147) / 78) ** 2 <= 1).astype(np.float32) * warm
+    face = ndimage.gaussian_filter(face, 1.2)[..., None]
+    lum = out @ np.array([0.3, 0.59, 0.11], np.float32)
+    # the teeth and the whites of the grin: the bright pixels of the mouth pulled down into the wood's shadow
+    mouth = (((xx - 268) / 30) ** 2 + ((yy - 177) / 13) ** 2 <= 1).astype(np.float32)
+    mouth = ndimage.gaussian_filter(mouth, 2)
+    sink = mouth * np.clip((lum - 40) / 40, 0, 1)
+    lum = lum * (1 - 0.72 * sink)
+    face = np.maximum(face, mouth[..., None] * 0.95)
+    # the wood: a ramp from dark umber to warm tan, a fine grain down the carving
+    t = np.clip(lum / 190, 0, 1)
+    grain = 1 + 0.07 * np.sin(xx * 1.3 + np.sin(yy * 0.09) * 4.0) + 0.05 * np.sin(xx * 0.47 + yy * 0.05)
+    t = np.clip(t * grain, 0, 1)[..., None]
+    dark, light = np.array([38, 22, 10], np.float32), np.array([196, 132, 70], np.float32)
+    wood = dark + (light - dark) * t ** 0.9
+    out = out * (1 - face) + wood * face
+    return out.clip(0, 255).astype(np.uint8)
+
 FIXES = {
     # the Jolly Roger on the black flag top left (a skull over crossed bones)
     'card.ch_22': lambda c: inpaint(c, (36, 32, 62, 72), 60),
     # the small black flag over the fort with a pale skull on it
     'bg.port_gen_dead_confederacy': lambda c: inpaint(c, (526, 70, 545, 97), 45),
     'icon.art_red_hook_axe': axe_rust,
+    'card.mg_talking_skull': carved_idol,
 }
 
 
