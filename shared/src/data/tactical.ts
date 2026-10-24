@@ -64,7 +64,9 @@ export const TAC_GROUP = {
   bringFrom: 11,
   late: 3,
   echo: [[1, 0.35], [22, 0.35], [30, 0.6], [60, 0.6]] as [number, number][],
-  foe: { share: [[1, 0.7], [10, 0.7], [11, 1.6], [15, 1.4], [20, 1.1], [30, 0.9], [60, 1]] as [number, number][], order: [[1, 0], [30, 0.15], [60, 0.3]] as [number, number][] },
+  // (owner, 2026-10-24, docs/31 §14: a group of built captains wins about as often as one alone, a little more — never
+  // less; was 1.6 at 11 → 1 at 60, and two built ⚓4 captains won 48 % where one alone won 77 %)
+  foe: { share: [[1, 0.7], [10, 0.7], [11, 0.95], [40, 0.95], [44, 0.6], [60, 0.6]] as [number, number][], order: [[1, 0], [30, 0.15], [60, 0.3]] as [number, number][] },
 };
 /** docs/25 items 65 and 70: the echo of a second captain of one path at a boarding's level (TAC_GROUP.echo). */
 export function tacEcho(level: number): number {

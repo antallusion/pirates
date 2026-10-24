@@ -1,7 +1,8 @@
 // docs/25 block Е (items 64–67): a group's boarding measured — how a group of the sea's foes is grown (item 66), a mixed
 // group against three of one path (item 65), how long a group's boarding runs (§1.2).
 //
-//   node --disable-warning=ExperimentalWarning tools/balance-group.ts [--foe] [--roles] [--time] [n=4] [levels=8,30,55]
+//   node --disable-warning=ExperimentalWarning tools/balance-group.ts [--foe] [--roles] [--time] [--win] [n=4] [levels=8,30,55]
+//     [anchors=1,5,10]  (--win: wins against a pirate of her waters — alone and two, bare and best; n×6 boardings a cell)
 //     [echo=0.6] [roles=0]   (the «before» of item 65: echo=1 roles=0 — the books alone, no echo, no roles)
 //
 // tests/balance/boardgroup.ts plays the battles (the engine's own mind on every side, each turn timed as boardlen does).
@@ -9,7 +10,8 @@
 import type { CaptainId } from '../shared/src/data/captains.ts';
 import { PATHS, bandStat } from '../tests/balance/boardlen.ts';
 import { TAC_GROUP, TAC_ROLES } from '../shared/src/data/tactical.ts';
-import { groupStat, mixedVsSame } from '../tests/balance/boardgroup.ts';
+import { groupStat, groupWin, mixedVsSame } from '../tests/balance/boardgroup.ts';
+import { bandLevels } from '../shared/src/data/xpcurve.ts';
 
 const arg = (k: string, d: string): string => process.argv.find((a) => a.startsWith(`${k}=`))?.slice(k.length + 1) ?? d;
 const N = Number(arg('n', '4'));
@@ -21,6 +23,7 @@ const mm = (m: number) => {
 };
 const has = (f: string) => process.argv.includes(f);
 if (arg('echo', '')) TAC_GROUP.echo = [[1, Number(arg('echo', ''))]];
+if (arg('share', '')) TAC_GROUP.foe.share = [[1, Number(arg('share', ''))]]; // item 66's share, one for every level (calibration)
 if (arg('roles', '1') === '0') for (const k of Object.keys(TAC_ROLES) as (keyof typeof TAC_ROLES)[]) TAC_ROLES[k] = { name: TAC_ROLES[k].name, text: TAC_ROLES[k].text };
 
 if (has('--foe')) {
@@ -61,5 +64,17 @@ if (has('--time')) {
       return `${mm(s.mins)} (${s.rounds.toFixed(1)} r)`;
     };
     console.log(`| ${L} | ${mm(solo.mins)} (${solo.rounds.toFixed(1)} r) | ${c(2, 2)} | ${c(3, 3)} | ${c(3, 1)} | ${mm(sea.mins)} (${sea.rounds.toFixed(1)} r) | ${c(2, null)} | ${c(3, null)} |`);
+  }
+}
+
+if (has('--win')) {
+  const anchors = arg('anchors', '1,5,10').split(',').map(Number);
+  console.log(`docs/31 §14: wins against a pirate of her waters (${N * 6} boardings a cell; a pair's pirate grown by item 66)`);
+  console.log('| ⚓ | L | solo bare | solo best | pair bare | pair best |');
+  console.log('|---|---|---|---|---|---|');
+  for (const a of anchors) {
+    const [lo, hi] = bandLevels(a);
+    const L = Math.round((lo + hi) / 2);
+    console.log(`| ${a} | ${L} | ${pc(groupWin(L, 1, true, N * 6))} | ${pc(groupWin(L, 1, false, N * 6))} | ${pc(groupWin(L, 2, true, N * 6))} | ${pc(groupWin(L, 2, false, N * 6))} |`);
   }
 }

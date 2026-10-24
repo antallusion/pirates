@@ -16,10 +16,10 @@ import type { BoardRun } from './boardlen.ts';
 
 /** An ally of level L walking `path`: her strongest tacBring(L) stacks of her waters' crew, her captain in her
  *  level's kit, her orders reckoned from her whole crew (a captain's orders are a captain's: tactical.ts allyInput). */
-export function allyAt(path: CaptainId, L: number, seed: number, bring = tacBring(L)): TacSideInput {
+export function allyAt(path: CaptainId, L: number, seed: number, bring = tacBring(L), bare = false): TacSideInput {
   const army = playerArmy(L);
   const hp = army.reduce((n, x) => n + x.n * (UNITS[x.u]?.hp ?? 0), 0);
-  return { ...side(pickBring(army, bring), captainAt(path, L, 3 + seed * 11), path, true), name: `Mate ${seed}`, spellHp: hp };
+  return { ...side(pickBring(army, bring), captainAt(path, L, 3 + seed * 11, bare), path, true), name: `Mate ${seed}`, spellHp: hp };
 }
 
 export interface GroupRun extends BoardRun {
@@ -90,3 +90,20 @@ export function mixedVsSame(L: number, mixed: CaptainId[], same: CaptainId, n: n
 
 /** The hit points a side brought aboard (the grown ones counted). */
 export const sideHp = (bt: TacBattle, x: 0 | 1): number => bt.stacks.filter((s) => s.side === x).reduce((n, s) => n + s.start * s.hpMax, 0) || bt.stacks.filter((s) => s.side === x).reduce((n, s) => n + tacHp(s), 0);
+
+/** Owner, 2026-10-24 (docs/31 §14): the boarder side's wins against a pirate of her waters — `size` captains of level L
+ *  (her allies come aboard before round one, the pirate grown by item 66), the best build or a bare one (no secondary
+ *  skills, no artefacts; the same men), `n` boardings over the six paths. */
+export function groupWin(L: number, size: number, bare: boolean, n: number, from = 0): number {
+  let win = 0;
+  for (let i = from; i < from + n; i++) {
+    const j = i % PATHS.length;
+    const p = Array.from({ length: size }, (_, x) => PATHS[(j + x * 2 + Math.floor(i / PATHS.length)) % PATHS.length]);
+    const seed = 500 + i * 7;
+    const [a, b] = sidesAt(L, false, p[0], p[0], seed, bare);
+    const allies = p.slice(1).map((path, x) => ({ side: 0 as const, input: allyAt(path, L, seed * 3 + x + 1, tacBring(L), bare), grow: true }));
+    const r = playBoard(a, b, seed * 13 + L, allies.length ? { allies } : {});
+    win += r.winner === 0 ? 1 : 0;
+  }
+  return win / n;
+}

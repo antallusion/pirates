@@ -20,7 +20,7 @@ import { canBoard } from '../server/src/game/boarding.ts';
 import { giveScrolls, join, makeGame, steps } from './helpers.ts';
 import type { FakeConn } from './helpers.ts';
 import { captainAt, playerArmy, side, sidesAt } from './balance/boardlen.ts';
-import { allyAt, groupStat, mixedVsSame, playGroup } from './balance/boardgroup.ts';
+import { allyAt, groupStat, groupWin, mixedVsSame, playGroup } from './balance/boardgroup.ts';
 
 // ------------------------------------------------------------------ the engine
 
@@ -244,6 +244,13 @@ test('66: measured — three against the sea is no free win: each captain loses 
     assert.ok(g3.lost >= 0.45 * solo.lost, `L${L}: grown, each loses ${Math.round(g3.lost * 100)}% (alone ${Math.round(solo.lost * 100)}%)`);
     assert.ok(free.lost < g3.lost, `L${L}: not grown it would be ${Math.round(free.lost * 100)}%`);
   }
+});
+
+test('66, owner 2026-10-24 (docs/31 §14): two built captains against the sea win no less often than one alone', () => {
+  // ⚓4 (level 16): the worst of the old growth — two built captains 48 %, one alone 77 % over 48 boardings
+  const solo = groupWin(16, 1, false, 24), pair = groupWin(16, 2, false, 24);
+  assert.ok(pair >= solo - 0.1, `pair ${Math.round(pair * 100)}%, alone ${Math.round(solo * 100)}%`);
+  assert.ok(solo >= 0.6, `one built captain still wins: ${Math.round(solo * 100)}%`);
 });
 
 test('64: late joining — asked mid-battle she comes aboard as the next round opens, up to round 3; the foe grows then', () => {
