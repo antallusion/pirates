@@ -66,6 +66,9 @@ for (const bought of [false, true]) {
     const before = levels(s);
     assert.equal(p.level, 1);
     const me = s.ship!;
+    // The owner's case is a ship taken: her berths filled first (a fresh ship sails with 24 of 28, and 24 men against a
+    // full ⚓1 sloop are a coin's toss — the merged world's dice drew the loss). The XP of the prize is what is weighed.
+    me.crew = me.stats.crewMax;
     const foe = putSide(game, { cls: 'sloop', level: 1, craft: 'bot' }, me.state.x + 20, me.state.y, Math.PI).ship;
     assert.equal(foe.combatLevel, 1, 'a ship of ⚓1');
     boardAndScuttle(game, c, s, foe);

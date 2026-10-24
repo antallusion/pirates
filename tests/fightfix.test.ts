@@ -341,5 +341,6 @@ test('bug 1 (the end of every battle): its screen is not laid anew under the fin
   const of = main.slice(main.indexOf('function openingFrame('), main.indexOf('function tradeGoodHere('));
   assert.doesNotMatch(of, /startGoal\(/);
   assert.match(of, /state\.self\?\.dockedAt \|\|/);
-  assert.match(main, /case 'goal_sail': \{\s*const o = openingSail\(\);\s*if \(o\) startGoal\(o\.key\);/);
+  // (a run broken off by a prize shares the button since 4c22d55b: the opening's first, then the resumed run)
+  assert.match(main, /case 'goal_sail': \{\s*const o = openingSail\(\) \?\? resumeSail\(\);\s*if \(o\) startGoal\(o\.key\);/);
 });
