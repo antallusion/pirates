@@ -1184,6 +1184,12 @@ function hereFrame(): string | null {
   if (!docked || state.onboarding?.stage) return null;
   const qs = [...(state.self?.quests ?? [])].filter((q) => hereAct(q, docked)).sort((a, b) => Number(b.kind === 'campaign') - Number(a.kind === 'campaign') || Number(b.act?.how === 'here') - Number(a.act?.how === 'here'));
   const q = qs[0];
+  // a cargo to hand over that is not aboard: the market's row of it, if this market has it
+  const a = q?.act;
+  if (q && a?.verb === 'deliver' && a.good && ((state.self?.cargo as Record<string, number> | undefined)?.[a.good] ?? 0) < (a.qty ?? 1)) {
+    const sold = state.portView?.market.some((r) => r.good === a.good && r.stock > 0);
+    return sold ? `h:${q.id}:market:${a.good}` : null;
+  }
   return q ? `h:${q.id}:${q.act?.how === 'tab' ? q.act.tab ?? '' : ''}` : null;
 }
 /** A good to trade at this market for the opening's lesson: the first in stock that is not a supply nor contraband. */

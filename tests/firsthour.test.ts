@@ -154,3 +154,15 @@ test('a ship\'s step and a shark at hand: no «Атаковать» finger on th
   assert.match(main, /if \(shipsFirst && s\.info\.npcRole === 'beast'\)/);
   assert.match(main, /return best \?\? beast;/);
 });
+
+test('«Что говорят старики» — rum to hand over, none aboard: the finger on the market\'s rum, not on «Сдать груз»', async () => {
+  const { questAct } = await import('../shared/src/data/questact.ts');
+  const a = questAct({ type: 'deliver', port: 'saltmarrow', good: 'rum', qty: 6, text: 'Bring Rum × 6 to Saltmarrow.' } as never);
+  assert.equal(a?.good, 'rum');
+  assert.equal(a?.qty, 6);
+  const t = pointerTargets({ stage: 'h:c01_14:market:rum', touch: true, docked: true, battle: false });
+  assert.ok(t.includes('#modal-panel .mk-row[data-good="rum"] [data-act="buy"]:not([disabled])'));
+  assert.ok(!t.some((x) => x.includes('quest_here')), 'never «Сдать груз» with nothing to hand over');
+  assert.ok(pointerTargets({ stage: 'h:c01_14:', touch: true, docked: true, battle: false })[0].includes('quest_here'), 'aboard: «Сдать груз»');
+  assert.match((await import('node:fs')).readFileSync('client/src/main.ts', 'utf8'), /return sold \? `h:\$\{q\.id\}:market:\$\{a\.good\}` : null;/);
+});

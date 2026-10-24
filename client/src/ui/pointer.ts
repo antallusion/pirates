@@ -89,9 +89,12 @@ export function pointerTargets(f: PointerFacts): string[] {
 /** A quest step done in the port she lies in (owner, 2026-10-23: «должны прям показывать куда нажать в порту»): stage
  *  `h:<quest id>:<page>` — its own button wherever it is drawn (the port's «Задания», the journal, «Цели и вести»), else
  *  the port window's page it stands on, else the HUD's way into the port window. */
-export function hereTargets(f: PointerFacts, id: string, tab: string): string[] {
+export function hereTargets(f: PointerFacts, id: string, tab: string, good = ''): string[] {
   if (!f.docked) return [];
   const q = id.replace(/[^a-z0-9_]/gi, '');
+  // the cargo to hand over is not aboard: its row at this market first, never «Сдать груз» that cannot be done
+  const g = good.replace(/[^a-z0-9_]/gi, '');
+  if (g) return [...ADVICE, `#modal-panel .mk-row[data-good="${g}"] [data-act="buy"]:not([disabled])`, '#modal-panel [data-ptab="market"]', ...TO_PORT];
   return [...(TAB_INSIDE[tab] ?? []), `[data-act="quest_here"][data-id="${q}"]`, `[data-act="quest_tab"][data-id="${q}"]`, ...(tab ? [`#modal-panel [data-ptab="${tab}"]`] : []), '#modal-panel [data-ptab="quests"]', ...TO_PORT];
 }
 
@@ -106,8 +109,8 @@ function targetsOf(f: PointerFacts): string[] {
   if (!f.stage || f.battle) return [];
   if (f.stage.startsWith('c:')) return openingTargets(f, f.stage.slice(2));
   if (f.stage.startsWith('h:')) {
-    const [, id, tab] = f.stage.split(':');
-    return hereTargets(f, id ?? '', tab ?? '');
+    const [, id, tab, good] = f.stage.split(':');
+    return hereTargets(f, id ?? '', tab ?? '', good ?? '');
   }
   switch (f.stage) {
     case 'go':

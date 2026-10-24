@@ -19,6 +19,10 @@ export interface QuestAct {
   port?: string;
   /** `tab`: the port window's page (port.ts Tab ids). */
   tab?: 'market' | 'shipyard' | 'tavern' | 'army';
+  /** `deliver`: the good and how much of it — not aboard, the finger goes to the market's row first (the newcomer's
+   *  run of 2026-10-23: «Сдать груз» pressed with no rum aboard, round and round). */
+  good?: string;
+  qty?: number;
 }
 
 /** The step kinds a harbour does (the audit's list; tests walk every campaign step against it). */
@@ -39,7 +43,7 @@ export function questAct(st: QuestStep | undefined): QuestAct | null {
     case 'visit':
       return { verb: visitVerb(st.text), how: 'here', port: st.port };
     case 'deliver':
-      return { verb: 'deliver', how: 'here', port: st.port };
+      return { verb: 'deliver', how: 'here', port: st.port, good: st.good, qty: st.qty };
     case 'landres':
       return { verb: 'hand', how: 'here', port: st.port };
     case 'pickup':
