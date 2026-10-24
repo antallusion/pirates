@@ -153,6 +153,9 @@ try {
   L.log(`in the game after ${Math.round((Date.now() - T0) / 1000)} s, ${taps} taps`);
   await L.sleep(2000);
   await shot(p, 'first_screen');
+  // JUMP="/camp slot 13;/silver 3000": the rest of the hour from a later quest (admin commands, the QA server only)
+  for (const c of (process.env.JUMP ?? '').split(';').filter(Boolean)) { await L.say(p, c); await L.sleep(1500); }
+  if (process.env.JUMP) { await L.closeAll(p); await L.sleep(1500); }
   stepKey = 'start'; steps.set(stepKey, { first: Date.now(), taps: 0, stuck: 0 });
 
   let lastKey = '', lastAct = '', sameAct = 0, lastShotKey = '';
