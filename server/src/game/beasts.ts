@@ -820,9 +820,10 @@ function attack(game: Game, b: ShipEntity, br: Brain, t: ShipEntity, dt: number,
     }
     case 'ram': {
       // The sperm whale charges whoever struck it and rams, then stands off to come again — inside her guns' close band.
+      // (its stand-off on her beam, the side it lies on, where her broadside bears — drifting round her at its own
+      // bearing it lay half the time off her bow or quarter, out of every gun's arc: a ⚓8 fight ran 37 s, the band 20–30)
       if (now < br.nextBite) {
-        const a = Math.atan2(b.state.x - t.state.x, -(b.state.y - t.state.y)) + 0.2;
-        const v = headingVec(a);
+        const v = headingVec(t.state.heading + (Math.PI / 2) * toShipSide(t, b));
         swim(game, b, t.state.x + v.x * RAM_STAND, t.state.y + v.y * RAM_STAND, speedOf(b, br, 0.4), dt, 1.1);
         return;
       }
