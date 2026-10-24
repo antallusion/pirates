@@ -197,3 +197,53 @@ test('the story’s run on but the ship lying still: «Плыть» is back on t
   const main = (await import('node:fs')).readFileSync('client/src/main.ts', 'utf8');
   assert.match(main, /if \(state\.autosail \|\| \(goalRun\?\.key === key && state\.route\?\.key === key && \(state\.ownDisplay\?\.speed \?\? 0\) > 0\.5\)\) return null;/);
 });
+
+test('the opening’s fights never begin with an empty locker; the guns empty on a ship’s step: the finger to «Припасы»', async () => {
+  // the run of 2026-10-24 at 844×390: the First Watch and «Первый залп» fired the start's sixty round shot, «Борт о борт»
+  // began with ammo 0 and the chase for the tender took 4.5 minutes
+  const { makeGame, join } = await import('./helpers.ts');
+  const { campaignNext, campaignActive, OPENING_SHOT } = await import('../server/src/game/campaign.ts');
+  const { game } = makeGame();
+  const conn = join(game, 'Gunner', 'corsair');
+  const s = [...game.sessions].find((x) => x.name === 'Gunner')!;
+  const p = s.profile!, ship = s.ship!;
+  for (const slot of [1, 2]) {
+    p.quests.active = [];
+    p.campaign!.at = slot;
+    for (const a of Object.keys(ship.ammo) as (keyof typeof ship.ammo)[]) ship.ammo[a] = 0;
+    ship.ammoSel = 'chain';
+    campaignNext(game, s);
+    assert.equal(campaignActive(p)?.id, slot === 1 ? 'c01_02' : 'c01_03');
+    assert.ok(ship.ammo.round >= OPENING_SHOT && OPENING_SHOT >= 60, `slot ${slot}: ${ship.ammo.round} round shot aboard`);
+    assert.equal(ship.ammoSel, 'round', 'and loaded');
+  }
+  assert.ok(conn.all('toast').some((t) => /round shot carried aboard/.test(t.msg)), 'told so');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { setLang } = await import('../client/src/i18n.ts');
+  setLang('ru');
+  assert.match(serverText('Galt has round shot carried aboard: your guns are fed.'), /ядра/);
+  setLang('en');
+  // the neutral stack and the town: none given
+  p.quests.active = [];
+  p.campaign!.at = 3;
+  ship.ammo.round = 0;
+  campaignNext(game, s);
+  assert.equal(ship.ammo.round, 0);
+  // her own shot spent: the gun crews load the next she has
+  const { SPARE_SHOT } = await import('../server/src/game/pursuit.ts');
+  assert.deepEqual([...SPARE_SHOT], ['round', 'heavy', 'chain', 'grape']);
+  // the finger: «Припасы» in port (then the sheet's «Докупить всё»), the way into a harbour at sea
+  const { shotStage, SUPPLIES } = await import('../client/src/ui/pointer.ts');
+  const empty = { round: 0, chain: 0, grape: 0, heavy: 0 };
+  for (const op of ['sink', 'board']) assert.equal(shotStage(op, empty), 'shot', op);
+  assert.equal(shotStage('sink', { ...empty, chain: 4 }), null, 'any shot aboard: the fight’s own button');
+  assert.equal(shotStage('neutral', empty), null, 'a fight ashore wants no shot');
+  const inPort = pointerTargets({ stage: 'shot', touch: true, docked: true, battle: false });
+  assert.equal(inPort[0], SUPPLIES);
+  assert.ok(inPort.indexOf(DEPART[0]) > 0);
+  assert.ok(pointerTargets({ stage: 'shot', touch: true, docked: false, battle: false }).includes('#tc-act[data-act="harbour"]'));
+  assert.deepEqual(pointerTargets({ stage: 'shot', touch: true, docked: false, battle: true }), []);
+  const main = (await import('node:fs')).readFileSync('client/src/main.ts', 'utf8');
+  assert.match(main, /const shot = shotStage\(op \?\? storyQuest\(\)\?\.does, state\.self\?\.ammo\);\s*tutorPointer\.set\(\{ stage: state\.onboarding\?\.stage \?\? shot \?\?/);
+  assert.match((await import('node:fs')).readFileSync('client/src/ui/port.ts', 'utf8'), /data: \{ act: 'supplies' \}/, '«Припасы» is the market’s button the finger names');
+});

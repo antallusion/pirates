@@ -25,6 +25,13 @@ export interface PointerFacts {
   crewShort?: boolean;
 }
 
+/** No shot aboard for a ship's step of the story (its opening's or its own): the finger's stage is «shot» — the way to
+ *  the market's «Припасы» — not the fight's own button. Pure: `ammo` her locker, `op` the step's kind. */
+export function shotStage(op: string | null | undefined, ammo: Record<string, number> | null | undefined): 'shot' | null {
+  if ((op !== 'sink' && op !== 'board') || !ammo) return null;
+  return Object.values(ammo).some((n) => n > 0) ? null : 'shot';
+}
+
 /** The harbour's way out to sea, the First Watch's own (the gold «В море» of the port window, the HUD's round one). */
 /** (the «Готовы к выходу?» sheet first when «В море» brought it up — her hull mended after the First Watch's fight, the
  *  stores short: its gold «Докупить всё», else «Отплыть так»; the finger stood aside under the sheet and the opening's
@@ -35,6 +42,9 @@ const TO_SEA = [...DEPART, '#modal-panel [data-ptab="sea"]', '#tc-cast', '#tc-ac
 /** The opening's «Плыть» (owner, 2026-10-22): its next place is sailed for only at her word — after the step's own button. */
 const GOAL_SAIL = ['#tc-act[data-act="goal_sail"]', '.act-btn.act-goal_sail'];
 const TO_PORT = ['#tc-act[data-act="harbour"]', '.act-btn.act-harbour', '#tc-act[data-act="dock"]', '#tc-act[data-act="homeport"]', '.act-btn.act-dock', '.act-btn.act-homeport'];
+
+/** The market's «Припасы»: the food and the round shot a voyage wants, in one tap (port.ts quick). */
+export const SUPPLIES = '#modal-panel [data-act="supplies"]:not([disabled])';
 
 /** The advisor's own button (client/src/ui/buyadvice.ts): «Продать и купить» when a purchase found no room. */
 export const ADVICE = ['#buy-advice #ba-go'];
@@ -134,6 +144,10 @@ function targetsOf(f: PointerFacts): string[] {
       // no men for the step's fight: a harbour, its «Армия» and the way through it
       // (at sea far from any harbour «Плыть» takes her to the nearest — server goalroute.ts NEEDS_MEN)
       return f.docked ? [...(f.crewShort ? TAB_INSIDE.tavern : []), ...TAB_INSIDE.army, '#modal-panel [data-ptab="army"]', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'] : [...TO_PORT, ...GOAL_SAIL];
+    case 'shot':
+      // the guns empty on a ship's step (a newcomer's run of 2026-10-24: «Борт о борт» with ammo 0, a chase of 4.5 min):
+      // the market's «Припасы» (food and round shot in one tap), the sheet's «Докупить всё»; at sea the way into a harbour
+      return f.docked ? [SUPPLIES, ...DEPART, '#modal-panel [data-ptab="market"]', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'] : [...TO_PORT, ...GOAL_SAIL];
     case 'go:dock':
       // …and at the step's harbour, its «Причалить»
       return f.docked ? [] : ['#tc-act[data-act="dock"]', '.act-btn.act-dock', ...GOAL_SAIL];

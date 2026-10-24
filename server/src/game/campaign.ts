@@ -129,12 +129,30 @@ function begin(game: Game, s: PlayerSession, q: QuestDef, _auto: boolean): void 
   const p = s.profile!;
   p.campaign!.started = true;
   startQuest(game, p, q, s);
+  feedGuns(game, s, q);
   const meta = q.campaign!;
   // «Новое задание кампании: …» — a toast and a short card (the client holds them while she fights)
   game.sendTo(s, { t: 'campaign_new', id: q.id, name: q.name, ch: meta.ch, k: meta.k, size: chapterOfSlot(meta.slot).size, text: q.steps[0].text });
   // a first step done where she is (in the right port) is done at once
   const port = s.ship?.docked ? game.portById(s.ship.docked) : undefined;
   if (port) questEvent(game, s, { k: 'dock', port, fresh: true }); // (an «arrive at» step waits for her to put in again)
+}
+
+/** The round shot the opening's fights find aboard at least (a newcomer's run of 2026-10-24 at 844×390: the First Watch
+ *  and «Первый залп» had fired all sixty of the start's, «Борт о борт» began with an empty hold — ammo 0 — and the chase
+ *  for the tender took 4.5 minutes). */
+export const OPENING_SHOT = 80;
+
+/** The opening's fight begins (a ship to sink or to board): Galt has round shot carried aboard up to OPENING_SHOT, and the
+ *  guns loaded with it when their own shot is gone. */
+function feedGuns(game: Game, s: PlayerSession, q: QuestDef): void {
+  const ship = s.ship;
+  if (!ship || !q.campaign || q.campaign.slot >= OPENING_SLOTS) return;
+  if (!q.steps.some((st) => st.type === 'sink' || st.type === 'board')) return;
+  if (ship.ammo.round >= OPENING_SHOT) return;
+  ship.ammo.round = OPENING_SHOT;
+  if ((ship.ammo[ship.ammoSel] ?? 0) <= 0) ship.ammoSel = 'round';
+  game.sendTo(s, { t: 'toast', msg: 'Galt has round shot carried aboard: your guns are fed.', kind: 'good' });
 }
 
 /** Choices put before her, by session (a fork asked once a place, again on coming aboard). */

@@ -12,6 +12,7 @@ export const SERVER_RU_CAMPAIGN: Record<string, string> = {
   'Level {0}': 'Уровень {0}',
   'A purse for the chapter: {0} silver.': 'Награда за главу: {0} серебра.',
   'Shot for the guns: the chapter’s stores are aboard.': 'Ядра для пушек: припасы главы погружены на борт.',
+  'Galt has round shot carried aboard: your guns are fed.': 'Галт велел погрузить ядра: пушки снова заряжены.',
   'The campaign is walked alone': 'Кампанию проходят в одиночку',
   'Enemy sails close in: the campaign’s fight comes to you.': 'Вражеские паруса идут на сближение: бой кампании сам идёт к вам.',
   'The Brethren’s {0} puts to sea near you: sink that ship.': 'Капитан Братства {0} выходит в море рядом с вами: потопите этот корабль.',
