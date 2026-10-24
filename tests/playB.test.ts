@@ -146,26 +146,20 @@ test('plundered shot fills her magazine and no more (8 300 round shot piled up b
   assert.equal(take(4000), 0, 'over-full (bought): none');
 });
 
-test('a scouting or rescue job sails to a sea next to her port, never into the Abyss (453 ran 33 km one way on the mean, 63 to the Abyss from level 12)', async () => {
+test('a scouting or rescue job sails the sea of her own port (3 km chains), never into the Abyss (453 ran 33 km one way on the mean, 63 to the Abyss from level 12)', async () => {
   const { makeGame } = await import('./helpers.ts');
   const { JOBS } = await import('../shared/src/data/quests.ts');
   const { game } = makeGame();
   const reach = JOBS.filter((q) => q.steps.some((st) => st.type === 'reach'));
   assert.ok(reach.length > 100, `${reach.length} such jobs`);
-  let far = 0;
   for (const q of reach) {
     const st = q.steps.find((x) => x.type === 'reach') as { region: string };
     assert.notEqual(st.region, 'the_abyss', q.id);
     const port = game.portById(q.port)!;
-    // the job's sea lies near the port: among the three whose nearest island is nearest (the jobs are drawn on the sea
-    // of their making, a few islets fewer than today's)
-    const d = new Map<string, number>();
-    for (const is of game.world.islands) if (is.region !== port.region && is.region !== 'the_abyss') d.set(is.region, Math.min(d.get(is.region) ?? Infinity, Math.hypot(is.x - port.x, is.y - port.y)));
-    const three = [...d.entries()].sort((a, b) => a[1] - b[1]).slice(0, 3).map(([r]) => r);
-    assert.ok(three.includes(st.region), `${q.id}: ${st.region} not among ${three}`);
-    if ((d.get(st.region) ?? 0) > 30000) far++;
+    // Owner, 2026-10-23 (the 3 km chains, docs/36 §2а: «nothing far»): a scouting or a rescue made on the known world sails
+    // the waters of her own port — no other sea's run (it was among the three seas nearest her port, and 453 ran 33 km).
+    assert.equal(st.region, port.region, `${q.id}: ${st.region}, not her port's ${port.region}`);
   }
-  assert.ok(far < reach.length * 0.1, `${far} of ${reach.length} past 30 km`);
 });
 
 test('the waterfront asks no more for a hand past level 20 (67 a man at 26, 88 at 40, for a deckhand worth 20)', async () => {
