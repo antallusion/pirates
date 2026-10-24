@@ -32,7 +32,7 @@ import { assignResident, buyIsland, estateView, isleForge, foundOutpost, goHome,
 import { stepPods } from './omenpod.ts';
 import { appraise, bribeClerk, buyTip, demandTribute, escortOffer, raidFate, raidKill, signEscort, stepRaiding } from './raiding.ts';
 import { payInformant, stepWanted, wantedKill } from './wanted.ts';
-import { beastSecond, beastSlain, huntOrder, stepBeasts } from './beasts.ts';
+import { beastSecond, beastSlain, huntOrder, sheltered, stepBeasts } from './beasts.ts';
 import { castNet, dropDeepLine, endFight, endHaul, haulTrap, saltCatch, setTrap, stepFishing } from './fishing.ts';
 import { chooseEncounter, stepDirector } from './director.ts';
 import { stepSeaLife } from './sealife.ts';
@@ -928,7 +928,11 @@ export class Game {
         const closing = (va.x * a.state.speed - vb.x * b.state.speed) * nx + (va.y * a.state.speed - vb.y * b.state.speed) * ny;
         // Two of one squadron (a captain's escorts, her and hers, a group, a guild) bump and fend off: no ram between
         // friends (the quicker sea of docs/23 had two escorts at station hole each other).
-        const friends = (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly';
+        // A newcomer's bump in the starting sea (the first-hour runs: her helmsman brushed a Crown patrol at Saltmarrow's
+        // mouth, the patrol took it for a ram and sank her — 846 and 882 hull in the measure, «HOSTILE» patrols 17 m off in
+        // the robot's runs): two ships at peace, neither under Ramming Speed, one a sheltered captain — they fend off.
+        const peace = !a.hasEffect('ramming_speed') && !b.hasEffect('ramming_speed') && (sheltered(this, a) || sheltered(this, b)) && !this.isHostile(a, b) && !this.isHostile(b, a);
+        const friends = peace || (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly';
         if (closing > 3 && friends) {
           a.state.speed *= 0.6;
           b.state.speed *= 0.6;

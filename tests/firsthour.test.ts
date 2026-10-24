@@ -379,3 +379,74 @@ test('the first hour’s raiders never outclass her own ship: chapter 2 on the s
   assert.ok(foe, 'a raider comes');
   assert.equal(foe.shipLevel, 1);
 });
+
+test('the starting sea is calm for a newcomer: few sharks, alone, far, off the first chapters’ ways; a captain past it keeps hers', async () => {
+  // the first-hour run of 2026-10-24: the shallows round Saltmarrow swarmed with sharks (the sea kept three of her level
+  // within 2.5 km of her, in packs of up to three)
+  const { makeGame, join } = await import('./helpers.ts');
+  const { beastBrain, onFirstWays, CALM_NEAR_CAP, CLOSE_WANT, SHELTER_LEVEL } = await import('../server/src/game/beasts.ts');
+  const { TICK_RATE } = await import('../shared/src/constants.ts');
+  const watch = (level: number, sec: number) => {
+    const { game } = makeGame();
+    game.directorOn = true; // (the living sea)
+    join(game, 'Calmwater', 'corsair');
+    const s = [...game.sessions].find((x) => x.name === 'Calmwater')!;
+    while (s.profile!.level < level) game.grantXp(s, 5000, 'admin');
+    game.undock(s);
+    const ship = s.ship!;
+    const lane = (game as unknown as { questTargets: (x: unknown) => Record<string, { x: number; y: number }> });
+    void lane;
+    // she lies off Saltmarrow in its waters (the opening's lane), the sea's beasts rising about her
+    const born: number[] = [];
+    let most = 0;
+    for (let i = 0; i < sec * TICK_RATE; i++) {
+      game.step();
+      if (i % TICK_RATE) continue;
+      ship.state.speed = 0;
+      let n = 0;
+      for (const o of game.ships.values()) {
+        if (!o.alive || o.npcRole !== 'beast') continue;
+        if (!born.includes(o.id)) born.push(o.id);
+        if (Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y) < 5000) n++;
+      }
+      most = Math.max(most, n);
+    }
+    return { game, born, most };
+  };
+  const calm = watch(3, 300);
+  assert.ok(calm.most <= CALM_NEAR_CAP, `${calm.most} beasts within 5 km of a newcomer`);
+  for (const id of calm.born) {
+    const br = beastBrain(calm.game, id)!;
+    assert.equal(br.pack, 0, 'alone, not a pack');
+    assert.ok(!onFirstWays(calm.game, br.home.x, br.home.y), 'risen off the first chapters’ ways');
+  }
+  assert.ok(onFirstWays(calm.game, calm.game.portById('saltmarrow')!.x, calm.game.portById('saltmarrow')!.y), 'Saltmarrow’s quay is on them');
+  const past = watch(SHELTER_LEVEL, 60);
+  assert.ok(past.most >= CLOSE_WANT, `a captain of the ${SHELTER_LEVEL}th level keeps her sea’s beasts (${past.most})`);
+});
+
+test('a newcomer’s helmsman brushing a Crown patrol in the starting sea: they fend off — no blow, no enemy made', async () => {
+  // the first-hour runs: a patrol bumped at Saltmarrow's mouth took it for a ram, turned on her and sank her
+  const { makeGame, join } = await import('./helpers.ts');
+  const { game } = makeGame();
+  join(game, 'Fendoff', 'corsair');
+  const s = [...game.sessions].find((x) => x.name === 'Fendoff')!;
+  game.undock(s);
+  const ship = s.ship!;
+  const h = ship.state.heading;
+  const pt = game.spawnNpcShip('patrol', 'gunboat', 'crown', ship.state.x + Math.sin(h) * 6, ship.state.y - Math.cos(h) * 6, h + Math.PI);
+  game.npcs.get(pt.id)!.active = true;
+  ship.protectedUntil = 0;
+  game.grid.upsert(pt.id, pt.state.x, pt.state.y);
+  game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+  const h0 = ship.hull, p0 = pt.hull;
+  // her way into the patrol's bow, his into hers: the hulls meet (the collisions' own pass of the tick)
+  ship.state.speed = 8;
+  pt.state.speed = 6;
+  (game as unknown as { collideShips(): void }).collideShips();
+  assert.ok(ship.state.speed < 8, 'the hulls met');
+  assert.equal(ship.hull, h0, 'no blow to her');
+  assert.equal(pt.hull, p0, 'nor to the patrol');
+  assert.ok(!pt.attackers.has(ship.id) && !ship.attackers.has(pt.id), 'no enemy made');
+  assert.equal(game.isHostile(pt, ship), false);
+});

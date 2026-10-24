@@ -28,6 +28,8 @@ import { clamp, dist, headingVec, wrapAngle } from '../../../shared/src/math.ts'
 import type { CarcassView, HuntView } from '../../../shared/src/protocol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
+import { stepPlace } from '../../../shared/src/data/questlegs.ts';
+import { campaignOf } from './campaign.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { depthAt, isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { applyDamage } from './combat.ts';
@@ -265,16 +267,50 @@ function pickKind(game: Game, region: RegionId, level: number, mine = Infinity):
   return pool[0][0];
 }
 
-function openPoint(game: Game, x: number, y: number, r0: number, r1: number, region?: RegionId): [number, number] | null {
+function openPoint(game: Game, x: number, y: number, r0: number, r1: number, region?: RegionId, ok?: (x: number, y: number) => boolean): [number, number] | null {
   const S = bs(game);
   for (let k = 0; k < 12; k++) {
     const a = S.rng.float() * Math.PI * 2, r = S.rng.range(r0, r1);
     const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
     if (!openWater(game, px, py) || !game.inZone(px, py)) continue;
     if (region && regionAt(game.world, px, py) !== region) continue;
+    if (ok && !ok(px, py)) continue;
     return [px, py];
   }
   return null;
+}
+
+/** The starting sea calm for a newcomer (the first-hour run of 2026-10-24: the shallows round Saltmarrow swarmed with
+ *  sharks — the sea kept three of her level within 2.5 km of her, in packs of up to three — and they bit whenever her
+ *  course or her guns found one): about a sheltered captain (sheltered: under SHELTER_LEVEL, in safe water) the sea
+ *  raises at most CALM_NEAR_CAP within 5 km, one at a time, rarely, CALM_SPAWN off — and never on the first chapters'
+ *  ways (their harbours, islands and fights' waters, CALM_CLEAR about them). */
+export const CALM_NEAR_CAP = 2;
+const CALM_CHANCE = 0.03;
+const CALM_SPAWN: [number, number] = [2600, 4200];
+export const CALM_CLEAR = 900;
+
+/** The first two chapters' places (their steps' harbours, islands and fights' waters; not a lair's wide ring). */
+const firstWays = new WeakMap<Game, { x: number; y: number; r: number }[]>();
+function firstPlaces(game: Game): { x: number; y: number; r: number }[] {
+  let out = firstWays.get(game);
+  if (!out) {
+    out = [];
+    for (const sl of campaignOf(game).slots) {
+      if (sl.ch > 2) continue;
+      for (const q of [sl.a, ...(sl.b ? [sl.b] : [])]) for (const st of q.steps) {
+        const pl = stepPlace(game.world, st);
+        if (pl && pl.r <= 2000) out.push({ x: pl.x, y: pl.y, r: pl.r });
+      }
+    }
+    firstWays.set(game, out);
+  }
+  return out;
+}
+
+/** On the first chapters' ways (within CALM_CLEAR of one of their places). */
+export function onFirstWays(game: Game, x: number, y: number): boolean {
+  return firstPlaces(game).some((p) => Math.hypot(p.x - x, p.y - y) < p.r + CALM_CLEAR);
 }
 
 /** Every five seconds: now and then a group rises within a few miles of a captain at sea. */
@@ -291,18 +327,20 @@ function spawnAbout(game: Game): void {
     const migrating = orcaMigrationIn(game, ship.region);
     // Too few within her near reach: a group rises there now, not one time in eight (the wide ring's cap three higher
     // for it: the ones risen before swim on out of her near reach and stay within the five kilometres).
-    const close = beastsNear(game, ship, CLOSE_R) < CLOSE_WANT && !onboardingProtected(s);
-    if (beastsNear(game, ship) >= (migrating ? 10 : close ? NEAR_CAP + 3 : NEAR_CAP)) continue;
-    if (!close && !S.rng.chance(migrating ? 0.25 : 0.12)) continue;
+    // (a newcomer in the starting sea: calm — few, far, alone, off the first chapters' ways)
+    const calm = sheltered(game, ship);
+    const close = !calm && beastsNear(game, ship, CLOSE_R) < CLOSE_WANT && !onboardingProtected(s);
+    if (beastsNear(game, ship) >= (calm ? CALM_NEAR_CAP : migrating ? 10 : close ? NEAR_CAP + 3 : NEAR_CAP)) continue;
+    if (!close && !S.rng.chance(calm ? CALM_CHANCE : migrating ? 0.25 : 0.12)) continue;
     const lvl = sectorAt(game.world, ship.state.x, ship.state.y).level; // the beasts of the square (docs/16 P2)
     const kind = pickKind(game, ship.region, lvl, ship.combatLevel);
     if (!kind) continue;
-    const ring = close ? CLOSE_SPAWN : SPAWN_R;
-    const pt = openPoint(game, ship.state.x, ship.state.y, ring[0], ring[1], ship.region);
+    const ring = calm ? CALM_SPAWN : close ? CLOSE_SPAWN : SPAWN_R;
+    const pt = openPoint(game, ship.state.x, ship.state.y, ring[0], ring[1], ship.region, calm ? (x, y) => !onFirstWays(game, x, y) : undefined);
     if (!pt) continue;
     const d = BEASTS[kind];
     const level = clamp(Math.min(lvl + S.rng.int(-1, 1), ship.combatLevel), d.level[0], d.level[1]);
-    const group = spawnGroup(game, kind, pt[0], pt[1], level);
+    const group = spawnGroup(game, kind, pt[0], pt[1], level, calm ? 1 : undefined);
     // A pod of orcas now and then has a whale of its own in its jaws.
     if (kind === 'orca' && group.length && S.rng.chance(0.25)) {
       const w = spawnBeast(game, S.rng.chance(0.5) ? 'humpback' : 'narwhal', pt[0] + 120, pt[1], clamp(level, 4, 7));
@@ -359,6 +397,7 @@ function worldCap(game: Game): number {
  *  stayed till she was 7 km off — ten sharks within a kilometre of a sloop 2 km out of Saltmarrow). */
 export function beastsPass(game: Game, ship: ShipEntity): boolean {
   const S = bs(game);
+  if (sheltered(game, ship)) return false; // (the starting sea calm for a newcomer: spawnAbout's few alone)
   if (S.brains.size >= worldCap(game) || beastsNear(game, ship) >= NEAR_CAP) return false;
   const lvl = sectorAt(game.world, ship.state.x, ship.state.y).level; // the beasts of the square (docs/16 P2)
   const kind = pickKind(game, ship.region, lvl, ship.combatLevel);
