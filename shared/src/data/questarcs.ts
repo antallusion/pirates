@@ -400,6 +400,9 @@ function arcStep(k: StepKind, p: ArcParams, text: string): QuestStep {
       return { type: 'letters', count: 1, text };
     case 'race2':
       return { type: 'race', port: p.port2!.id, seconds: Math.max(300, p.n * 60), text };
+    default:
+      // (a harbour's own parcel's spots are not an arc's: questgen.ts handJobs)
+      throw new Error(`arc step ${k}`);
   }
 }
 
