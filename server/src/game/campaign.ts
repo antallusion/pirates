@@ -336,12 +336,20 @@ export const FOE_COME = 2500;
 export const FOE_MAX = 2;
 export const FOE_EVERY = 35;
 const FOE_R = 9000;
+/** «Потопите N» (the first-hour run of 2026-10-24: c01_19 ×3, c01_21 ×3, c02_01 ×2, c02_06 ×2 took 6–11 minutes — one foe
+ *  at a time put out in the location's waters, the next 35 s after and only once she was out of the fight): the next of
+ *  the step's foes puts out this soon after one is sunk, taken or strikes her colours, while ships are still wanted… */
+export const FOE_NEXT = 6;
+/** …within this of her (metres: 0.3–0.9 of it — in sight, a minute's sail), when she is in the location's waters. */
+export const FOE_SEND_R = 1600;
 
 interface FoeWatch {
   next: number;
   ids: number[];
   step: string;
   told: boolean;
+  /** Foes put out for the step so far. */
+  made: number;
 }
 const watches = new WeakMap<PlayerSession, FoeWatch>();
 
@@ -363,7 +371,7 @@ export function campaignTick(game: Game, s: PlayerSession): void {
     // a named captain of the Brethren comes to her wherever the chapter is (wanted.ts namedForCampaign)
     const key = `${qs.id}:${qs.step}`;
     let w = watches.get(s);
-    if (!w || w.step !== key) watches.set(s, (w = { next: game.now + 8, ids: [], step: key, told: false }));
+    if (!w || w.step !== key) watches.set(s, (w = { next: game.now + 8, ids: [], step: key, told: false, made: 0 }));
     if (game.now < w.next) return; // (in a fight or not: the lawless seas' rovers kept her in one, and none came — QA)
     w.next = game.now + FOE_EVERY;
     const o = namedForCampaign(game, ship);
@@ -379,16 +387,31 @@ export function campaignTick(game: Game, s: PlayerSession): void {
   const key = `${qs.id}:${qs.step}`;
   let w = watches.get(s);
   if (!w || w.step !== key) {
-    w = { next: game.now + 8, ids: [], step: key, told: false };
+    w = { next: game.now + 8, ids: [], step: key, told: false, made: 0 };
     watches.set(s, w);
   }
+  const before = w.ids.length;
   w.ids = w.ids.filter((id) => {
     const o = game.ships.get(id);
     return !!o && o.alive && Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y) < FOE_R;
   });
-  if (game.now < w.next || w.ids.length >= FOE_MAX || ship.inCombat(game.now)) return;
+  // (one gone — sunk, taken: the next soon, not 35 s on)
+  // (hurt below 60 %: a breather first, the carpenters at work — the sooner pace sank more newcomers in the measure)
+  const hurt = ship.hull < ship.stats.hullMax * 0.6;
+  const pace = hurt ? FOE_EVERY : FOE_NEXT;
+  if (w.ids.length < before) w.next = Math.min(w.next, game.now + pace);
+  // one foe fighting her at a time (two at once sank a newcomer's sloop in the measure), the next as soon as it is sunk,
+  // taken or strikes her colours (a struck ship fights no more); FOE_MAX about her at most, a struck one waiting for her
+  const fighting = w.ids.filter((id) => !game.ships.get(id)!.surrendered).length;
+  if (fighting === 0 && w.ids.length) w.next = Math.min(w.next, game.now + pace);
+  if (game.now < w.next || fighting >= 1 || w.ids.length >= FOE_MAX) return;
+  // (her first foe waits out another fight of hers — a shark, a passing raider; the step's own come on through it while
+  // she is fit — hurt, she has her breather out of the fight first: the sooner pace sank more newcomers in the measure)
+  if ((!w.made || hurt) && ship.inCombat(game.now)) return;
   w.next = game.now + FOE_EVERY;
-  const band = shipBandOf(q!.requires.level ?? 1);
+  // (the first hour's — chapters 1–2 — never above her own ship's ⚓: a newcomer still on the start's ⚓1 sloop at the
+  // fourth level met ⚓2 raiders at «Письмо в клеёнке» and went down in half the measured runs)
+  const band = (q!.campaign?.ch ?? 99) <= 2 ? Math.min(shipBandOf(q!.requires.level ?? 1), Math.max(1, ship.shipLevel)) : shipBandOf(q!.requires.level ?? 1);
   let foe: ShipEntity | null = null;
   if (st.type === 'beast') {
     // a beast of the hunt's kind, in the location's waters
@@ -399,8 +422,15 @@ export function campaignTick(game: Game, s: PlayerSession): void {
       const x = (near?.x ?? ship.state.x) + Math.sin(a) * d, y = (near?.y ?? ship.state.y) - Math.cos(a) * d;
       if (beastWater(game, x, y)) foe = spawnBeast(game, id, x, y, band);
     }
-  } else foe = spawnCampaignFoe(game, ship, s.accountId, band, st.type === 'sink' && (st.role === 'ghost' || st.role === 'hunter' || st.role === 'patrol') ? st.role : 'pirate', near);
+  } else {
+    // in the location's waters, within FOE_SEND_R of her (a minute's sail), not across them; else anywhere in them
+    const kind = st.type === 'sink' && (st.role === 'ghost' || st.role === 'hunter' || st.role === 'patrol') ? st.role : 'pirate';
+    const inWaters = !near || Math.hypot(ship.state.x - near.x, ship.state.y - near.y) <= near.r + 500;
+    if (inWaters) foe = spawnCampaignFoe(game, ship, s.accountId, band, kind, { x: ship.state.x, y: ship.state.y, r: FOE_SEND_R }, near);
+    foe ??= spawnCampaignFoe(game, ship, s.accountId, band, kind, near);
+  }
   if (!foe) return;
+  w.made++;
   // the opening's fights (owner, 2026-10-19: «атака корабля, дальше абордаж» in the first minutes): softened as the
   // first fights are — half her hull, her men thinned, her shot lighter on the newcomer (firstfights.ts)
   if (q!.campaign && q!.campaign.slot < OPENING_SLOTS && st.type !== 'beast') {

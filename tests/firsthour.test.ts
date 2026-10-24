@@ -308,3 +308,74 @@ test('«Твари дюн»: a lair of her band, clear of the pirate fortresses;
   assert.ok(hands >= 0.75, `six deckhands signed on: wins ${hands}`);
   assert.ok(bare < 0.75, `none signed on: may lose (${bare})`);
 });
+
+test('«Потопите N»: the step’s foes put out within a minute’s sail of her, the next one six seconds after one goes down', async () => {
+  // the first-hour run of 2026-10-24: c01_19 ×3, c01_21 ×3, c02_01 ×2, c02_06 ×2 took 6–11 minutes — a foe put out in
+  // the location's waters, the next 35 s later and only once she was out of the fight
+  const { makeGame, join } = await import('./helpers.ts');
+  const { campaignNext, campaignOf, campaignActive, campaignFoes, FOE_NEXT, FOE_SEND_R } = await import('../server/src/game/campaign.ts');
+  const { TICK_RATE } = await import('../shared/src/constants.ts');
+  const { game } = makeGame();
+  join(game, 'Escortbane', 'corsair');
+  const s = [...game.sessions].find((x) => x.name === 'Escortbane')!;
+  const p = s.profile!, ship = s.ship!;
+  const slot = campaignOf(game).slots.find((x) => x.a.id === 'c01_19')!;
+  p.quests.active = [];
+  p.campaign!.at = slot.slot;
+  while (p.level < slot.gate) game.grantXp(s, 2000, 'admin');
+  campaignNext(game, s);
+  assert.equal(campaignActive(p)?.id, 'c01_19');
+  game.undock(s);
+  const run = (sec: number, done: () => boolean) => {
+    for (let i = 0; i < sec * TICK_RATE && !done(); i++) {
+      game.step();
+      ship.hull = ship.stats.hullMax; // (she holds: the measure is of the foes' coming, not of the fight)
+    }
+  };
+  const foes = () => campaignFoes(game, s).map((id) => game.ships.get(id)!).filter((o) => o?.alive && !o.surrendered);
+  const off = (o: { state: { x: number; y: number } }) => Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y);
+  run(12, () => foes().length > 0);
+  const first = foes()[0];
+  assert.ok(first, 'the first comes within 12 s at sea');
+  assert.ok(off(first) <= FOE_SEND_R, `${Math.round(off(first))} m off: in sight, not across the location's waters`);
+  assert.equal(foes().length, 1, 'one at a time');
+  // she fights it (in a fight): sunk — the next soon, in the fight's wake too
+  ship.lastCombat = game.now;
+  game.removeShip(first.id);
+  const t0 = game.now;
+  run(FOE_NEXT + 3, () => foes().some((o) => o.id !== first.id));
+  const next = foes().find((o) => o.id !== first.id);
+  assert.ok(next, 'the next one comes');
+  assert.ok(game.now - t0 <= FOE_NEXT + 2, `${(game.now - t0).toFixed(1)} s after`);
+  assert.ok(off(next) <= FOE_SEND_R + 200, `${Math.round(off(next))} m off`);
+  // a struck one fights no more: the next comes for her
+  next.surrendered = true;
+  const t1 = game.now;
+  run(FOE_NEXT + 3, () => foes().length > 0);
+  assert.ok(foes().length === 1 && game.now - t1 <= FOE_NEXT + 2, 'after a struck ship, the next');
+});
+
+test('the first hour’s raiders never outclass her own ship: chapter 2 on the start’s ⚓1 sloop meets ⚓1 ships', async () => {
+  // measured on the real sea (a newcomer played through chapter 2’s first fights, eight runs a quest, 2026-10-25):
+  // ⚓2 raiders against the start’s sloop at the fourth level sank her in half the runs
+  const { makeGame, join } = await import('./helpers.ts');
+  const { campaignNext, campaignOf, campaignFoes } = await import('../server/src/game/campaign.ts');
+  const { TICK_RATE } = await import('../shared/src/constants.ts');
+  const { shipBandOf } = await import('../shared/src/data/xpcurve.ts');
+  const { game } = makeGame();
+  join(game, 'Sloopkeep', 'corsair');
+  const s = [...game.sessions].find((x) => x.name === 'Sloopkeep')!;
+  const p = s.profile!, ship = s.ship!;
+  const slot = campaignOf(game).slots.find((x) => x.a.id === 'c02_01')!;
+  assert.equal(shipBandOf(slot.gate), 2, 'the step is of ⚓2');
+  p.quests.active = [];
+  p.campaign!.at = slot.slot;
+  while (p.level < slot.gate) game.grantXp(s, 2000, 'admin');
+  campaignNext(game, s);
+  game.undock(s);
+  assert.equal(ship.shipLevel, 1, 'still on the start’s sloop');
+  for (let i = 0; i < 15 * TICK_RATE && !campaignFoes(game, s).length; i++) game.step();
+  const foe = game.ships.get(campaignFoes(game, s)[0])!;
+  assert.ok(foe, 'a raider comes');
+  assert.equal(foe.shipLevel, 1);
+});
