@@ -470,6 +470,9 @@ function slowLine(): boolean {
   return !!c && (!!c.saveData || c.effectiveType === '2g' || c.effectiveType === 'slow-2g');
 }
 
+/** The batch of the owner's sheets of 2026-10-24 (tools/art/pack_oct24.py REV). */
+const OCT24_REV = 20261024120000;
+
 /** The background's slow fill (once the game is in): the rest of the pictures into the cache, the likeliest first.
  *  The island screen's pictures and the reference art stay out (the island's own are warmed near her island). */
 export function warmAll(): void {
@@ -479,7 +482,10 @@ export function warmAll(): void {
     const k = order.findIndex((p) => id.startsWith(p));
     return k < 0 ? order.length : k;
   };
-  const ids = Object.keys(manifest.assets).filter((id) => !id.startsWith('art.reference') && !id.startsWith('isle.'));
+  // (the paintings of 2026-10-24 that only a window shows — the 90-odd harbour headers, the story's cards, the mini-games'
+  //  and the hand-overs' scenes, ~12 MB — stay out too: each is fetched when its window opens, docs/ART_TODO.md)
+  const shownOnly = (id: string) => (id.startsWith('bg.') || id.startsWith('card.')) && manifest!.assets[id].rev === OCT24_REV;
+  const ids = Object.keys(manifest.assets).filter((id) => !id.startsWith('art.reference') && !id.startsWith('isle.') && !shownOnly(id));
   ids.sort((a, b) => rank(a) - rank(b));
   prefetchAssets(ids, false);
 }
