@@ -480,12 +480,17 @@ test('letters for a harbour that will not let her in are not hers to take (band 
   const { game } = makeGame();
   const conn = join(game, 'Letter Lia');
   const s = game.sessionByName('Letter Lia')!;
-  const port = game.portById(s.ship!.docked!)!;
-  let c = game.contractsAt(port.id).find((x) => x.toPort);
-  for (let i = 0; i < 20 && !c; i++) {
-    game.now += 4000;
-    c = game.contractsAt(port.id).find((x) => x.toPort);
-  }
+  // Since the 3 km chains (docs/36 §2а) a harbour's letters go only to harbours linked within a leg: the starting one
+  // (Saltmarrow) has none such, so she is moored at the nearest harbour of her band that writes them.
+  const { bandRefusal, portBand } = await import('../server/src/game/quests.ts');
+  const home = game.portById(s.ship!.docked!)!;
+  const toAt = (id: string) => game.contractsAt(id).find((x) => x.toPort);
+  const port = [...game.world.ports].sort((a, b) => Math.hypot(a.x - home.x, a.y - home.y) - Math.hypot(b.x - home.x, b.y - home.y))
+    .find((pt) => !bandRefusal(s.profile!, portBand(game, pt)) && toAt(pt.id))!;
+  assert.ok(port, 'a harbour of her band with letters for another');
+  s.ship!.docked = s.profile!.docked = port.id;
+  s.ship!.state.x = port.x; s.ship!.state.y = port.y;
+  const c = toAt(port.id);
   assert.ok(c, 'a contract for another harbour');
   const dest = game.portById(c!.toPort!)!;
   s.profile!.reputation[dest.faction] = -100;

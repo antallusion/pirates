@@ -174,8 +174,10 @@ test('the speed bonus: a courier job done inside its window pays a quarter more;
   const { game } = makeGame();
   const c = join(game, 'Swift Sal');
   const s = game.sessionByName('Swift Sal')!;
-  const port = game.portById(s.ship!.docked!)!;
-  const job = JOBS.find((q) => q.port === port.id && q.steps.every((st) => st.type === 'visit' || st.type === 'deliver' || st.type === 'pickup'))!;
+  // A courier job of any harbour: since the 3 km chains (docs/36 §2а) a harbour's letters go only to harbours linked within
+  // a leg, and the starting one (Saltmarrow, like the old main harbours) has none such — its board holds no courier job.
+  const job = JOBS.find((q) => q.steps.every((st) => st.type === 'visit' || st.type === 'deliver' || st.type === 'pickup'))!;
+  assert.ok(job, 'a courier job on some board');
   const w = fastWindow(game, job);
   assert.ok(w && w > 240, `a window sized by the route: ${w}`);
   const hunt = JOBS.find((q) => q.steps.some((st) => st.type === 'sink'))!;
