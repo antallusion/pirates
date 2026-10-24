@@ -103,3 +103,41 @@ test('a passage: a chapter that must begin far off — a ship takes her there, f
   assert.equal(passageDue(game, s.profile!), null, 'once');
   assert.equal(campaignPassage(game, s), false);
 });
+
+for (const seed of [WORLD_SEED, 1337]) {
+  test(`the opening of world ${seed}: «Свой берег» is the nearest wild island by the route, every leg from the quay to it within 3 km`, async () => {
+    // the first-hour run of 2026-10-24: the town's island was the nearest by the line — Ravencliff, 3.9 km by the route
+    // round Saltmarrow's own island; and its leg was counted from the edge of the stack's 1.5 km water, not the stack
+    const { buildCampaign, foundIsle } = await import('../shared/src/data/campaign/build.ts');
+    const { CHAPTERS } = await import('../shared/src/data/campaign/chapters.ts');
+    const { legTo } = await import('../shared/src/data/questlegs.ts');
+    const w = generateWorld(seed);
+    const c = buildCampaign(w, seed, CHAPTERS);
+    const port = w.ports.find((p) => p.id === 'saltmarrow')!;
+    const wild = w.islands.filter((i) => !i.minor && !i.raft && !i.hidden && !i.slot && !i.portId);
+    const claim = c.bySlot.get(4)!.a.steps[0] as { island: number };
+    const isl = w.islands[claim.island];
+    assert.equal(foundIsle({ islands: wild, world: w }, port).id, isl.id);
+    const route = (from: { x: number; y: number }, i: { x: number; y: number; radius: number }) => legTo(w, from, { x: i.x, y: i.y, r: i.radius + 40, name: '' }, 20000).d;
+    const mine = route(port, isl);
+    for (const i of wild) if (i.id !== isl.id && Math.hypot(i.x - port.x, i.y - port.y) - i.radius < mine) assert.ok(route(port, i) >= mine - 1, `${i.name} is nearer by the route than ${isl.name}`);
+    // quay → the tender's water → the stack itself → the island: each leg within a chain's 3 km
+    let at: { x: number; y: number } = port;
+    for (const slot of [1, 2, 3]) {
+      const near = (c.bySlot.get(slot)!.a.steps[0] as { near: { x: number; y: number } }).near;
+      const d = navLen(w, at.x, at.y, near.x, near.y, CHAIN_LEG * 2);
+      assert.ok(d <= CHAIN_LEG, `slot ${slot}: ${Math.round(d)} m`);
+      at = near;
+    }
+    const last = route(at, isl);
+    assert.ok(last <= CHAIN_LEG, `the stack → ${isl.name}: ${Math.round(last)} m`);
+  });
+}
+
+test('«Свой берег» may be claimed: no pirate fortress on the opening’s island', async () => {
+  const { claimBlock } = await import('../server/src/game/baseclaim.ts');
+  const { campaignOf } = await import('../server/src/game/campaign.ts');
+  const { game } = makeGame();
+  const claim = campaignOf(game).bySlot.get(4)!.a.steps[0] as { island: number };
+  assert.equal(claimBlock(game, game.world.islands[claim.island]), null);
+});
