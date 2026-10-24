@@ -58,7 +58,7 @@ const look = (p) => p.evaluate(() => {
     tbCard: (() => { const x = [...document.querySelectorAll('.k-sheet-x')].find(vis); return x ? box(x) : null; })(),
     hull: Math.round(s?.you?.hull ?? 0),
     near: (() => { const o = s?.ownDisplay; if (!o) return []; return [...s.ships.values()].filter((x) => x.id !== s.entityId && x.cur && Math.hypot(x.cur.x - o.x, x.cur.y - o.y) < 700).map((x) => `${x.info?.name}|${x.info?.npcRole ?? (x.info?.isPlayer ? 'player' : '?')}|${x.info?.faction ?? ''}|${x.cur.flags & 64 ? 'HOSTILE' : ''}|${Math.round(Math.hypot(x.cur.x - o.x, x.cur.y - o.y))}m|hull${Math.round(x.cur.hull ?? -1)}`); })(),
-    sunk: (() => { const x = [...document.querySelectorAll('button.btn-primary, button.k-btn--primary')].find((e) => /Вернуться в порт|Back to port|Return to port/i.test(e.textContent) && vis(e)); return x ? box(x) : null; })(),
+    sunk: (() => { const x = [...document.querySelectorAll('button.btn-primary, button.k-btn--primary')].find((e) => /(Вернуться|Back)\s+(в|to)\s+(порт|port)/i.test(e.textContent ?? '') && vis(e)); return x ? box(x) : null; })(),
     // a foe on the hexes, as her finger finds it: the red one nearest her own acting stack (her turn only)
     foe: (() => {
       const tb = g?.tactical, tv = tb?.view;

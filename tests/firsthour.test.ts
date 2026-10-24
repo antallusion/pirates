@@ -141,3 +141,16 @@ test('a lair lost and no men left: the refusal says where to get them, and the f
   assert.ok(t.includes('#modal-panel [data-dwell]') && t.includes('#modal-panel [data-ptab="army"]'));
   assert.match((await import('node:fs')).readFileSync('client/src/main.ts', 'utf8'), /if \(q\.does && q\.does !== 'sink' && men < 3\) return 'men';/);
 });
+
+test('a ship\'s step and a shark at hand: no «Атаковать» finger on the shark, the target frame takes a ship first', async () => {
+  for (const stage of ['c:sink', 'c:board', 'go:sink', 'go:board']) {
+    const t = pointerTargets({ stage, touch: true, docked: false, battle: false, markBeast: true });
+    assert.ok(!t.some((x) => /attack/.test(x) && !/attack_mode/.test(x)), `${stage}: ${t.join(' ')}`);
+    assert.ok(t.includes('#tc-act[data-act="goal_sail"]'), `${stage}: «Плыть» instead`);
+    assert.ok(pointerTargets({ stage, touch: true, docked: false, battle: false }).includes('#tc-act[data-act="attack"]'), 'a ship: «Атаковать»');
+  }
+  assert.ok(pointerTargets({ stage: 'c:neutral', touch: true, docked: false, battle: false, markBeast: true }).length > 0);
+  const main = (await import('node:fs')).readFileSync('client/src/main.ts', 'utf8');
+  assert.match(main, /if \(shipsFirst && s\.info\.npcRole === 'beast'\)/);
+  assert.match(main, /return best \?\? beast;/);
+});

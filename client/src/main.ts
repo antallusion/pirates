@@ -444,16 +444,30 @@ function resolveTarget(): number | null {
   };
   if (targetPinned && alive(targetId)) return targetId;
   targetPinned = false;
-  let best: number | null = null, bd = 1600;
+  // The campaign's step a ship's fight (the opening's «Первый залп», «Борт о борт», a story's boarding): a ship first,
+  // the sea's beasts only with no ship about — the frame took a shark, the finger's «Атаковать» chased it four minutes
+  // through more sharks and the newcomer went down before «Борт о борт» (the run of 2026-10-23).
+  const shipsFirst = shipStep();
+  let best: number | null = null, bd = 1600, beast: number | null = null, bb = 1600;
   for (const s of state.ships.values()) {
     if (!s.info || !(s.cur.flags & SF.HOSTILE) || s.cur.flags & (SF.SINKING | SF.DOCKED)) continue;
     const d = dist(own.x, own.y, s.cur.x, s.cur.y);
+    if (shipsFirst && s.info.npcRole === 'beast') {
+      if (d < bb) [bb, beast] = [d, s.id];
+      continue;
+    }
     if (d < bd) {
       bd = d;
       best = s.id;
     }
   }
-  return best;
+  return best ?? beast;
+}
+/** The campaign's step now is a ship's fight (sunk or boarded). */
+function shipStep(): boolean {
+  const q = state.self?.quests.find((x) => x.kind === 'campaign');
+  const k = q?.op ?? q?.does;
+  return k === 'sink' || k === 'board';
 }
 
 const portScreen = new PortScreen((m) => net.send(m), () => closeModal());
@@ -4877,7 +4891,7 @@ function step(t: number): void {
     passageFrame();
     const op = openingFrame();
     const here = op ? null : hereFrame() ?? storyFrame();
-    tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax });
+    tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax, markBeast: attackMark !== null && state.ships.get(attackMark)?.info?.npcRole === 'beast' });
     tutorPointer.frame();
     encounterCard.frame();
     surrenderCard.frame(state);

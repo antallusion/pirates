@@ -18,6 +18,9 @@ export interface PointerFacts {
   /** No hammocks left aboard: «Нанять» cannot be done, the finger never points at the tavern for it (owner, 2026-10-21;
    *  the server counts the step — quests.ts stepMoot). */
   crewFull?: boolean;
+  /** «Атаковать» would go for one of the sea's beasts (a shark): never the finger's for a ship's step (the run of
+   *  2026-10-23 chased a shark four minutes and went down before «Борт о борт»). */
+  markBeast?: boolean;
 }
 
 /** The harbour's way out to sea, the First Watch's own (the gold «В море» of the port window, the HUD's round one). */
@@ -38,6 +41,10 @@ export const ADVICE = ['#buy-advice #ba-go'];
  *  абордаж, дальше нападение на нейтралов, и дальше к ближайшему острову основать свой город»): the finger through
  *  each step — the shop's tab and its row, «В море», «Атаковать», «На абордаж», the stack's «Атаковать», «Занять». */
 function openingTargets(f: PointerFacts, op: string): string[] {
+  const t = openingTargets0(f, op);
+  return f.markBeast && (op === 'sink' || op === 'board') ? t.filter((x) => !/act="attack|act-attack/.test(x)) : t;
+}
+function openingTargets0(f: PointerFacts, op: string): string[] {
   if (op.startsWith('buy:')) {
     if (op === 'buy:arms' && f.crewFull) return [];
     if (!f.docked) return TO_PORT;
