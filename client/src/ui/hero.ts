@@ -6,7 +6,7 @@
 // And the HUD's compact bar of sea orders: her will and a finger-wide button for each sea order she knows.
 
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
-import { ARTIFACTS, ART_CLASS_NAMES, ART_RARITY, ART_SETS, RELICS } from '../../../shared/src/data/artifacts.ts';
+import { ARTIFACTS, ART_CLASS_NAMES, ART_RARITY, ART_SETS, RELICS, relicIcon } from '../../../shared/src/data/artifacts.ts';
 import { EN as REL_EN, RU as REL_RU } from '../lang/ui/relics.ts';
 import type { ArtSetId } from '../../../shared/src/data/artifacts.ts';
 import { RARITY_COLOR, SLOT_NAMES } from '../../../shared/src/data/items.ts';
@@ -79,7 +79,7 @@ function relicCard(r: NonNullable<HeroView['relics']>[number]): string {
     const st = r.worn.includes(id) ? 'worn' : r.held.includes(id) ? 'held' : 'miss';
     return `<span class="hx-rpart ${st}" title="${esc(`${T(a.name)} · ${T(SLOT_NAMES[a.slot])} · ${RL(`relic.${st}`)}`)}">${icon(a.icon, '◆', 'ico-sm')}</span>`;
   }).join('');
-  return `<div class="hx-relic${on ? ' on' : ''}"><div class="hx-rhead">${icon(ARTIFACTS[d.parts[0]].icon, '◆', 'ico-md hx-rface')}<b>${esc(T(d.name))}</b><span class="muted hx-rn">${esc(on ? RL('relic.on') : RL('relic.of', { n: r.worn.length, m: d.parts.length }))}</span></div>
+  return `<div class="hx-relic${on ? ' on' : ''}"><div class="hx-rhead">${icon(relicIcon(d.id), '◆', 'ico-md hx-rface')}<b>${esc(T(d.name))}</b><span class="muted hx-rn">${esc(on ? RL('relic.on') : RL('relic.of', { n: r.worn.length, m: d.parts.length }))}</span></div>
     <div class="hx-rparts">${parts}</div><small>${esc(T(d.text))}</small></div>`;
 }
 

@@ -11,7 +11,8 @@ no skulls, no bones) are retouched by code here (FIXES), so a re-run gives the s
   panel  bg.port_* / bg.* / card.*   the dark gutter's last pixels trimmed, longest side <= 1536, opaque
   green  prop.port_* (towns)         keyed off the chroma green (cosmetics_pack.key_green: Vlahos + despill), trimmed,
                                      set on a square with the piers at its foot (renderer.ts drawPorts draws the
-                                     painting square, its lowest 0.265 over the water); then run quay_piers.py
+                                     painting square, its lowest 0.265 over the water), the painted boats between
+                                     the piers cleared (clear_quays.py, its slips registered); then run quay_piers.py
          prop.citadel/lookout/castaways, isle.pen   keyed, trimmed, longest side <= 640
   icon   icon.*                      the black gutter trimmed, the middle square cut, 192 x 192 (the game's icon size)
   map    isle.map.dry / drowned      1536 x 1024 JPEG like the other four maps (ISO_CORNERS set by eye in isleiso.ts)
@@ -42,6 +43,7 @@ JOB = 'gpt-art_oct24'
 PANEL_MAX = 1536
 SPRITE_MAX = 640
 ICON = 192
+RING = 0.49  # the chart marks' brass ring's outer radius, a share of the icon's side
 
 FOLDER = {'bg': 'art', 'card': 'cards', 'icon': 'icons', 'prop': 'props', 'isle': 'isle'}
 
@@ -131,7 +133,16 @@ def icon(aid: str, rgb: np.ndarray) -> Image.Image:
     rgb = np.ascontiguousarray(rgb[y0:y0 + s, x0:x0 + s])
     if aid in FIXES:
         rgb = FIXES[aid](rgb)
-    return Image.fromarray(rgb).resize((ICON, ICON), Image.LANCZOS)
+    im = Image.fromarray(rgb).resize((ICON, ICON), Image.LANCZOS)
+    if aid.startswith('icon.map_port_'):
+        # the chart's marks: the painting inside its brass ring only (the dark square round it would sit on the chart
+        # as a tile), the ring's outer edge feathered over a pixel and a half
+        yy, xx = np.mgrid[0:ICON, 0:ICON]
+        r = np.hypot(xx - (ICON - 1) / 2, yy - (ICON - 1) / 2)
+        a = np.clip((ICON * RING - r) / 1.5, 0, 1)
+        im = im.convert('RGBA')
+        im.putalpha(Image.fromarray((a * 255).astype(np.uint8)))
+    return im
 
 
 def keyed(aid: str, rgb: np.ndarray) -> np.ndarray:
@@ -206,7 +217,20 @@ def main(argv: list) -> None:
             print(f'{rel}: {out.size[0]}x{out.size[1]}')
         else:
             save(out, rel, 88 if out.mode == 'RGBA' else 84)
-        m['assets'][aid] = {'local': rel, 'remote': sheet + '.png', 'job': JOB, 'fit': f'sheet:{sheet}', 'rev': REV}
+        entry = {'local': rel, 'remote': sheet + '.png', 'job': JOB, 'fit': f'sheet:{sheet}', 'rev': REV}
+        if aid.startswith('prop.port_'):
+            # The painted boats between the piers go, as process.py does for every town: ships in port are the game's
+            # own (clear_quays.py, which keeps the original in assets/raw/port_orig/ and finds the slips between the piers,
+            # where ships in port are moored); the cleared painting is encoded again with its AVIF twin.
+            import clear_quays
+            p = os.path.join(A, rel)
+            clear_quays.clear(p, aid.split('_', 1)[1], fresh=True)
+            cleared = Image.open(p)
+            cleared.load()
+            save(cleared.convert('RGBA'), rel, 88)
+            if clear_quays.SLIPS:
+                entry['slips'] = clear_quays.SLIPS
+        m['assets'][aid] = entry
         n += 1
     print(f'fringe: {tot_g} of {tot_e} rim pixels keep a green cast')
     if not check:

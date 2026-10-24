@@ -147,7 +147,8 @@ import { applyDataLocale, NAME_RU } from './lang/data.ts';
 import { personName } from './lang/names.ts';
 import { campaignWordsReady, loadCampaignWords, serverText } from './lang/server.ts';
 import { GOODS } from '../../shared/src/data/goods.ts'; // the opening's good to trade
-import { STORY_FROM, campaignLore, campaignNews } from './ui/campaignnews.ts'; // docs/36: the campaign's next quest comes by itself
+import { STORY_FROM, campaignLore, campaignNews, chapterOpener, dropWord } from './ui/campaignnews.ts';
+import { DROP_CARD } from '../../shared/src/data/paintart.ts'; // docs/36: the campaign's next quest comes by itself
 import { FACTIONS } from '../../shared/src/data/factions.ts';
 import { placeName } from './ui/maps.ts';
 import type { Key } from './i18n.ts';
@@ -1953,6 +1954,8 @@ function onMessage(m: ServerMsg): void {
       // лором»): its prologue, once, before the first quest of the story
       if (m.ch === 1 && m.k === STORY_FROM && !m.choice) campaignLore('prologue', () => !!state.boardTac || !!state.boardFight, () => { if (modal && !ANSWER.includes(modal)) closeModal(); });
       // docs/36: the campaign's next quest came by itself (or a fork's ways) — a toast and a card, held while she fights
+      // a chapter's first quest: its opener (painting, name, words) once (the first chapter's after the prologue)
+      if (!m.choice && ((m.ch > 1 && m.k === 0) || (m.ch === 1 && m.k === STORY_FROM))) chapterOpener(m.ch, () => !!state.boardTac || !!state.boardFight);
       campaignNews(m, {
         busy: () => !!state.boardTac,
         toast: (text) => hud.toast(text, 'gold'),
@@ -2215,6 +2218,10 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'trophy_hall':
       void tell(L('trophyHall', { owner: m.view.owner, flag: m.view.flag, skull: m.view.skull, fish: m.view.fish }));
+      break;
+    case 'handin':
+      // a job's goods or letter handed over at the spot (a hamlet, a fishers' cove, a waystation): its scene
+      if (!state.boardTac) encounterCard.scene([DROP_CARD[m.art]], dropWord('drop.t'), dropWord(`drop.${m.art}` as const));
       break;
     case 'encounter_result':
       encounterCard.result(m);

@@ -2,6 +2,8 @@
 
 import { assetUrl } from '../assets.ts';
 import { lang } from '../i18n.ts';
+import { ICON_KIN } from '../../../shared/src/data/paintart.ts';
+import { ARTIFACT_ICON_KIN } from '../../../shared/src/data/artifacts.ts';
 
 export function $(id: string): HTMLElement {
   const e = document.getElementById(id);
@@ -142,8 +144,33 @@ export function glyphSvg(kind: GlyphKind, cls = ''): string {
   return `<svg class="g-svg g-${kind}${cls ? ` ${cls}` : ''}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${GLYPH_D[kind]}"/></svg>`;
 }
 
+/** Paintings whose file failed to load this session (client/src/ui/artfall.ts skips them). */
+export const DEAD_ART = new Set<string>();
+// An <img> with fallbacks (`data-fb`: the next addresses, `|`-joined — an icon's kin, a painting's older art): the next
+// one on an error (the event does not bubble: caught on its way down).
+if (typeof document !== 'undefined') {
+  document.addEventListener('error', (e) => {
+    const img = e.target;
+    if (!(img instanceof HTMLImageElement) || !img.dataset.fb) return;
+    DEAD_ART.add(img.getAttribute('src') ?? '');
+    const [next, ...rest] = img.dataset.fb.split('|');
+    if (rest.length) img.dataset.fb = rest.join('|');
+    else delete img.dataset.fb;
+    img.src = next;
+  }, true);
+}
+
+/** The icons painted on 2026-10-24 in the place of a shared one (the artifacts', the relics', the gifts', the trails',
+ *  the cloths'): the old one is drawn if the new one's file fails. */
+const ICON_FB: Record<string, string> = { ...ICON_KIN, ...ARTIFACT_ICON_KIN };
+
 export function icon(id: string, glyph = '', cls = 'ico'): string {
   id = NO_SKULL[id] ?? id;
+  const kin = ICON_FB[id];
+  const fb = kin ? assetUrl(`icon.${kin}`) : null;
+  const own = assetUrl(id.includes('.') ? id : `icon.${id}`);
+  if (fb && own && own !== fb && !DEAD_ART.has(own)) return `<img class="${cls}" src="${own}" data-fb="${fb}" alt="" draggable="false" />`;
+  if (fb && own && DEAD_ART.has(own)) return `<img class="${cls}" src="${fb}" alt="" draggable="false" />`;
   const url =(id.startsWith('portrait.') ? portraitUrl(id.slice(9)) : assetUrl(id.includes('.') ? id : `icon.${id}`)) ?? (STAND_IN[id] ? assetUrl(`icon.${STAND_IN[id]}`) : null) ?? (id.startsWith('good_') ? assetUrl('icon.good_provisions') : null);
   return url ? `<img class="${cls}" src="${url}" alt="" draggable="false" />` : glyph ? `<span class="${cls} glyph">${esc(glyph)}</span>` : '';
 }

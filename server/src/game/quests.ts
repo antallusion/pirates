@@ -722,6 +722,10 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
       qs.progress += gained;
       if (qs.progress + 1e-9 < stepCount(st)) break;
       if (st.type === 'spot' && q.kind === 'job') handOver(ship, q, qs.step);
+      // the goods or the letter handed over at the spot: its scene (shared/src/data/paintart.ts DROP_CARD)
+      const drop = q.kind !== 'job' ? null : st.type === 'spot' ? (st.island !== undefined ? 'cove' : 'waystation')
+        : st.type === 'land' && st.site && /_(resident_request|letters_isle)_/.test(q.id) ? 'hamlet' : null;
+      if (drop) game.sendTo(s, { t: 'handin', art: drop });
       qs.step++;
       qs.progress = 0;
       if (qs.step >= q.steps.length) {

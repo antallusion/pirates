@@ -5,7 +5,7 @@
 
 import type { CastawayView } from '../../../shared/src/data/wrecks.ts';
 import { CAST_TTL } from '../../../shared/src/data/wrecks.ts';
-import { clockBadge, foam, markRing } from './seaart.ts';
+import { clockBadge, drawArt, foam, markRing } from './seaart.ts';
 
 type G = CanvasRenderingContext2D;
 
@@ -120,7 +120,8 @@ export function drawCastawaysWorld(g: G, list: readonly CastawayView[], since: n
     if (x < -R * 3 || y < -R * 3 || x > c.w + R * 3 || y > c.h + R * 3) continue;
     const left = Math.max(0, v.left - (now - since));
     markRing(g, x, y, R * 1.9 * (1 + 0.05 * Math.sin(c.time * 3 + v.id)), '#e0b862', false, 0.85);
-    drawCastaway(g, x, y, R, c.time, v.id, v.n);
+    // (the owner's painting of three on a spar, strictly from above, bobbing and turning a little; the drawn ones while it loads)
+    if (!drawArt(g, 'prop.castaways', x, y + Math.sin(c.time * 1.7 + v.id) * R * 0.05, R * 3.1, Math.sin(c.time * 0.6 + v.id * 1.3) * 0.12)) drawCastaway(g, x, y, R, c.time, v.id, v.n);
     clockBadge(g, x + R * 1.55, y - R * 1.35, Math.max(6, R * 0.38), left / CAST_TTL, '#e0b862');
   }
 }

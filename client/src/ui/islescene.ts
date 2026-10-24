@@ -57,6 +57,8 @@ interface Spot {
 
 /** The pen's painted icon (icons/build_kennel.webp, 192 px) as a cell of a sheet: its plate's bottom vertex and width. */
 const PEN_ART = { anchor: [97, 159] as [number, number], dw: 172, foot: 3 };
+/** The pen's own painting (isle/pen.webp, 569 × 423, tools/art/pack_oct24.py): its fence's bottom vertex and width. */
+const PEN_OWN = { anchor: [291, 412] as [number, number], dw: 558, foot: 3 };
 /** The Grail's relic on its plinth. */
 const GRAIL_ART = 'icon.good_cursed_relics';
 
@@ -234,7 +236,11 @@ export class IsleScene {
     const map = ISO_MAP_OF[v.biome] ?? 'temperate';
     if (map !== this.map || !this.mapImg.getAttribute('src')) {
       this.map = map;
-      this.mapImg.src = isleUrl(`isle.map.${map}`) ?? '';
+      // (a map of its own that fails to load: the volcanic one it borrowed before — dom.ts's fallback listener)
+      const own = isleUrl(`isle.map.${map}`) ?? '', old = map === 'dry' || map === 'drowned' ? isleUrl('isle.map.volcanic') : null;
+      if (old && own !== old) this.mapImg.dataset.fb = old;
+      else delete this.mapImg.dataset.fb;
+      this.mapImg.src = own;
       this.sig = '';
       if (this.revealed && this.fx) {
         const img = this.mapImg;
@@ -340,8 +346,10 @@ export class IsleScene {
       // the pen and the Grail have no sheet. The pen's own painted icon is drawn in isometry on its plate (stood on the
       // plot like a cell of a sheet: PEN_ART); the Grail — a relic of the deep with the gold of the town about it — on a
       // stone plinth drawn in the board's isometry.
-      const art = sheet ? null : t.id === 'pen' ? townArt('pen', Math.max(1, t.level), false) : assetUrl(GRAIL_ART) ?? townArt(t.id, 1, false);
-      const pic = sheet ? { id: `isle.${sheet}.${ghost ? 's0' : st.stage}`, foot: isoFoot(sheet) } : !art ? null : t.id === 'pen' ? { url: art, ...PEN_ART } : { icon: art };
+      // (the pen's own isometric painting since 2026-10-24, isle.pen: its fence's diamond as a cell of a sheet)
+      const penOwn = t.id === 'pen' ? assetUrl('isle.pen') : null;
+      const art = sheet ? null : penOwn ?? (t.id === 'pen' ? townArt('pen', Math.max(1, t.level), false) : assetUrl(GRAIL_ART) ?? townArt(t.id, 1, false));
+      const pic = sheet ? { id: `isle.${sheet}.${ghost ? 's0' : st.stage}`, foot: isoFoot(sheet) } : !art ? null : t.id === 'pen' ? { url: art, ...(penOwn ? PEN_OWN : PEN_ART) } : { icon: art };
       const tag = t.job ? `<span class="is-t is-tj">${timer(t.job)}</span>` : t.level > 0 ? `<span class="is-t is-tl">${t.level}</span>` : can ? '<span class="is-t is-tp" aria-hidden="true">+</span>' : '';
       const upright = !sheet && t.id !== 'pen';
       out.push(mark({ key: `t:${t.id}`, town: t.id, cell, pic, cls: [ghost ? 'ghost' : '', can ? 'can' : '', !ghost && (st.dim || (!sheet && !!t.job)) ? 'dim' : '', upright ? `upright ${t.id}` : ''].filter(Boolean).join(' '), ground: upright ? (ghost ? 'plinth ghost' : 'plinth') : ghost ? 'ghost' : '', tag }));

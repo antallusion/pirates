@@ -9,6 +9,8 @@ import { omenLog } from './journal.ts';
 import { regattaCard } from './regatta.ts';
 import { diceCard } from './dice.ts';
 import { PETS } from '../../../shared/src/data/companions.ts';
+import { harbourArt } from '../../../shared/src/data/paintart.ts';
+import { artVar } from './artfall.ts';
 import { petIcon } from './companion.ts';
 import { nemesisPoster } from './nemesis.ts';
 import type { TipView } from '../../../shared/src/protocol.ts';
@@ -248,9 +250,9 @@ export class PortScreen {
       this.tab = hereQuests(state).some((q) => q.act?.how === 'here') ? 'quests' : 'market';
     }
     if (!main.some((t) => t.id === this.tab) && !second.some((t) => t.id === this.tab)) this.tab = 'market';
-    // The harbour's own painting behind the band (a town's own where the manifest has it, else her flag's).
-    const bg = assetUrl(`bg.port_${port.id}`) ?? assetUrl(`bg.port_${port.faction}`);
-    root.style.setProperty('--bg-port', bg ? `url('${bg}')` : 'none');
+    // The harbour's own painting behind the band: a town's own where the manifest has it, a floating town's, her sea and
+    // flag's generic harbour, her flag's (shared/src/data/paintart.ts) — the next one if a file fails to load.
+    artVar(root, '--bg-port', harbourArt(port));
     const events = state.events.filter((e) => e.port === port.id).map((e) => `${serverText(e.title)}${e.kind === 'blockade' || e.kind === 'armada' ? L('head.blockade') : e.kind === 'epidemic' ? L('head.epidemic') : ''}`);
     const figures = `${events.length ? `<span class="w-fig bad" data-hint="${esc(W('port.event', { what: events.join(' · ') }))}" title="${esc(events.join(' · '))}">⚑</span>` : ''}${figure('coin', fmt(self.gold), W('port.purse'), 'gold')}${figure('tab_market', `${vol.toFixed(0)}/${holdMax.toFixed(0)}`, `${W('port.hold', { vol: vol.toFixed(0), max: holdMax.toFixed(0) })}: ${holdMixText(holdMix(self.cargo, state.ownStats))}`)}${figure('stat_crew', String(self.crew), W('port.crew', { n: self.crew }))}`;
     const html = `${winHead(placeName(port.name), { crest: `faction_${port.faction}`, sub: `${faction.name} · ${REGIONS[port.region].name}`, figures })}

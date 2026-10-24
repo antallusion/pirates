@@ -94,6 +94,8 @@ export interface MinigameDef {
   text: Tr;
   /** The header's painting (an existing card) and a face or thing over it (a portrait, an icon or a prop). */
   art: string;
+  /** The kindred encounter card it showed before its own was painted: drawn if its own fails to load. */
+  kin?: string;
   face: string;
   /** The island haunts it may be found at, and whether a passing boat may offer it at sea. */
   haunts: HauntId[];
@@ -127,7 +129,7 @@ export const WALK_CHOICE = { id: 'walk', label: ['Walk away', 'Уйти'] as Tr 
 export const MINIGAMES: Record<MinigameId, MinigameDef> = {
   // ------------------------------------------------------------------ riddles and lore
   talking_skull: M({
-    id: 'talking_skull', kind: 'riddle', art: 'card.enc_skeleton_raft', face: 'icon.tattoo_skull', haunts: ['cairn', 'cave'], sea: false, weight: 10, rounds: 1,
+    id: 'talking_skull', kind: 'riddle', art: 'card.mg_talking_skull', kin: 'card.enc_skeleton_raft', face: 'icon.tattoo_skull', haunts: ['cairn', 'cave'], sea: false, weight: 10, rounds: 1,
     title: ['The Talking Skull', 'Говорящий череп'],
     text: ['A skull on a boarding pike grins at the beach. As your men come near, its jaw clacks: "Answer me, and my captain\'s purse is yours. Answer wrong, and carry my curse to sea."', 'Череп на абордажной пике скалится на пляж. Когда ваши люди подходят, его челюсть щёлкает: «Ответьте — и кошель моего капитана ваш. Ошибётесь — унесёте моё проклятие в море».'],
     questions: [
@@ -142,7 +144,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     },
   }),
   drowned_ferryman: M({
-    id: 'drowned_ferryman', kind: 'riddle', art: 'card.enc_voice_in_fog', face: 'portrait.drowned', haunts: ['cairn', 'crag'], sea: true, weight: 8, rounds: 1,
+    id: 'drowned_ferryman', kind: 'riddle', art: 'card.mg_drowned_ferryman', kin: 'card.enc_voice_in_fog', face: 'portrait.drowned', haunts: ['cairn', 'crag'], sea: true, weight: 8, rounds: 1,
     title: ['The Drowned Ferryman', 'Утопленник-перевозчик'],
     text: ['A grey man in a grey boat, weed in his beard, holds out a hand of wet bones. "I ferry the dead. Tell me my riddle and I ferry you nowhere tonight — and pay you for the trouble."', 'Серый человек в серой лодке, в бороде водоросли, протягивает руку из мокрых костей. «Я вожу мёртвых. Отгадай мою загадку — и этой ночью я тебя никуда не повезу. Да ещё заплачу за беспокойство».'],
     questions: [
@@ -157,7 +159,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     },
   }),
   old_parrot: M({
-    id: 'old_parrot', kind: 'riddle', art: 'card.enc_signal_fire', face: 'icon.pet_parrot', haunts: ['camp', 'crag'], sea: false, weight: 8, rounds: 1,
+    id: 'old_parrot', kind: 'riddle', art: 'card.mg_old_parrot', kin: 'card.enc_signal_fire', face: 'icon.pet_parrot', haunts: ['camp', 'crag'], sea: false, weight: 8, rounds: 1,
     title: ['The Dead Captain\'s Parrot', 'Попугай мёртвого капитана'],
     text: ['On a skeleton in a rotten coat sits a parrot older than your ship. It cocks its head and screeches its master\'s last riddle — and a silver chain glints under the coat.', 'На скелете в истлевшем камзоле сидит попугай старше вашего корабля. Он склоняет голову и выкрикивает последнюю загадку хозяина — а под камзолом поблёскивает серебряная цепь.'],
     questions: [
@@ -172,7 +174,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     },
   }),
   bosuns_lore: M({
-    id: 'bosuns_lore', kind: 'riddle', art: 'card.enc_calm', face: 'portrait.giver_bosun_m', haunts: ['shack', 'camp'], sea: true, weight: 9, rounds: 2,
+    id: 'bosuns_lore', kind: 'riddle', art: 'card.mg_bosuns_lore', kin: 'card.enc_calm', face: 'portrait.giver_bosun_m', haunts: ['shack', 'camp'], sea: true, weight: 9, rounds: 2,
     title: ['The Old Bosun\'s Questions', 'Вопросы старого боцмана'],
     text: ['A one-legged bosun with a pipe of black tobacco squints at your crew. "Two questions of the sea. Answer both and I\'ll stand you a purse. Answer none and you\'re no sailors at all."', 'Одноногий боцман с трубкой чёрного табака щурится на вашу команду. «Два вопроса о море. Ответите на оба — ставлю кошель. Ни на один — так вы и не моряки вовсе».'],
     questions: [
@@ -190,7 +192,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     },
   }),
   star_bearing: M({
-    id: 'star_bearing', kind: 'stars', art: 'card.enc_glowing_sea', face: 'icon.ab_star_fix', haunts: ['crag'], sea: true, weight: 9, rounds: 2,
+    id: 'star_bearing', kind: 'stars', art: 'card.mg_star_bearing', kin: 'card.enc_glowing_sea', face: 'icon.ab_star_fix', haunts: ['crag'], sea: true, weight: 9, rounds: 2,
     title: ['The Lost Pilot', 'Заблудившийся лоцман'],
     text: ['A pilot with a broken sextant has lost his reckoning. "Help me find my way by the sky, captain, and my charts are yours to copy." Above you the stars are out.', 'Лоцман со сломанным секстантом потерял счисление. «Помогите найти дорогу по небу, капитан, и мои карты — ваши, копируйте». Над вами высыпали звёзды.'],
     questions: [
@@ -208,7 +210,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
   }),
   // ------------------------------------------------------------------ games of chance (the server rolls)
   liars_dice: M({
-    id: 'liars_dice', kind: 'dice', art: 'card.enc_smuggler', face: 'portrait.giver_tavern_keeper_m', haunts: ['shack'], sea: true, weight: 10, stake: 60,
+    id: 'liars_dice', kind: 'dice', art: 'card.mg_liars_dice', kin: 'card.enc_smuggler', face: 'portrait.giver_tavern_keeper_m', haunts: ['shack'], sea: true, weight: 10, stake: 60,
     title: ['Liar\'s Dice', 'Кости лжеца'],
     text: ['The keeper of a grog shack rattles five bone dice in a leather cup. "Five for you, five for me. I bid, you call me a liar — or you raise." You see your own dice; his stay under the cup.', 'Хозяин хижины с грогом трясёт пять костяных кубиков в кожаном стакане. «Пять тебе, пять мне. Я делаю ставку, ты зовёшь меня лжецом — или повышаешь». Свои кости вы видите; его остаются под стаканом.'],
     choices: [{ id: 'liar', label: ['Liar!', 'Лжёшь!'] }, { id: 'raise', label: ['Raise by one', 'Поднять на одну'] }],
@@ -219,7 +221,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     },
   }),
   crown_anchor: M({
-    id: 'crown_anchor', kind: 'anchor', art: 'card.enc_mutiny_brewing', face: 'icon.tattoo_crown', haunts: ['shack', 'camp'], sea: true, weight: 9, stake: 50,
+    id: 'crown_anchor', kind: 'anchor', art: 'card.mg_crown_anchor', kin: 'card.enc_mutiny_brewing', face: 'icon.tattoo_crown', haunts: ['shack', 'camp'], sea: true, weight: 9, stake: 50,
     title: ['Crown and Anchor', 'Корона и якорь'],
     text: ['A deserter with a painted cloth and three dice: crown, anchor, heart, diamond, spade, club. "Put your silver on a sign. Every die that shows it pays you the stake again."', 'Дезертир с расписанной скатертью и тремя кубиками: корона, якорь, черви, бубны, пики, трефы. «Ставь серебро на знак. Каждый кубик, что его покажет, платит тебе ставку сверху».'],
     choices: [{ id: '0', label: ['Crown', 'Корона'] }, { id: '1', label: ['Anchor', 'Якорь'] }, { id: '2', label: ['Heart', 'Черви'] }, { id: '3', label: ['Diamond', 'Бубны'] }, { id: '4', label: ['Spade', 'Пики'] }, { id: '5', label: ['Club', 'Трефы'] }],
@@ -233,7 +235,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     },
   }),
   castaway_coin: M({
-    id: 'castaway_coin', kind: 'coin', art: 'card.enc_raft', face: 'icon.coin', haunts: ['camp'], sea: true, weight: 8, stake: 70,
+    id: 'castaway_coin', kind: 'coin', art: 'card.mg_castaway_coin', kin: 'card.enc_raft', face: 'icon.coin', haunts: ['camp'], sea: true, weight: 8, stake: 70,
     title: ['Crown or Ship', 'Корона или корабль'],
     text: ['A castaway with nothing but a gold doubloon and a mad grin. "Crown or ship, captain? Call it, and double or nothing — it\'s all I have left, and I\'m bored to death."', 'Отшельник, у которого нет ничего, кроме золотого дублона и безумной ухмылки. «Корона или корабль, капитан? Говори — всё или ничего. Это всё, что у меня осталось, а скука смертная».'],
     choices: [{ id: 'crown', label: ['Crown', 'Корона'] }, { id: 'ship', label: ['Ship', 'Корабль'] }, { id: 'inspect', label: ['Ask to see the coin', 'Попросить монету'] }],
@@ -247,7 +249,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     },
   }),
   three_shells: M({
-    id: 'three_shells', kind: 'shells', art: 'card.enc_peddler', face: 'portrait.giver_fence_m', haunts: ['shack', 'cave'], sea: false, weight: 9, stake: 60,
+    id: 'three_shells', kind: 'shells', art: 'card.mg_three_shells', kin: 'card.enc_peddler', face: 'portrait.giver_fence_m', haunts: ['shack', 'cave'], sea: false, weight: 9, stake: 60,
     title: ['Three Shells', 'Три ракушки'],
     text: ['A fence with quick hands puts a pearl under one of three shells and shuffles them on an upturned barrel. "Follow the pearl, captain. Find it, and I pay what you put down."', 'Скупщик с ловкими руками прячет жемчужину под одну из трёх ракушек и тасует их на перевёрнутой бочке. «Следите за жемчужиной, капитан. Найдёте — плачу, сколько поставите».'],
     choices: [{ id: '0', label: ['Left', 'Левая'] }, { id: '1', label: ['Middle', 'Средняя'] }, { id: '2', label: ['Right', 'Правая'] }, { id: 'wrist', label: ['Grab his wrist!', 'Схватить за руку!'] }],
@@ -262,7 +264,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
   }),
   // ------------------------------------------------------------------ memory and timing
   bosun_whistle: M({
-    id: 'bosun_whistle', kind: 'memory', art: 'card.enc_squall', face: 'icon.omen_whistle', haunts: ['crag', 'shack'], sea: false, weight: 8, length: 5,
+    id: 'bosun_whistle', kind: 'memory', art: 'card.mg_bosun_whistle', kin: 'card.enc_squall', face: 'icon.omen_whistle', haunts: ['crag', 'shack'], sea: false, weight: 8, length: 5,
     title: ['The Bosun\'s Call', 'Боцманская дудка'],
     text: ['An old bosun marooned on the crag still keeps his silver call. "Pipe it back to me, note for note, and my pipe is your crew\'s. Miss a note and you\'re no crew of mine."', 'Старый боцман, высаженный на скалу, всё ещё хранит серебряную дудку. «Повтори мой сигнал нота в ноту — и дудка ваша. Собьёшься — какая из вас команда».'],
     symbols: [['Long', 'Долгий'], ['Short', 'Короткий'], ['Trill', 'Трель'], ['Low', 'Низкий']],
@@ -274,7 +276,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     },
   }),
   flag_hoist: M({
-    id: 'flag_hoist', kind: 'memory', art: 'card.enc_pilot', face: 'icon.talent_cmd_signal_flags', haunts: ['crag'], sea: true, weight: 8, length: 6,
+    id: 'flag_hoist', kind: 'memory', art: 'card.mg_flag_hoist', kin: 'card.enc_pilot', face: 'icon.talent_cmd_signal_flags', haunts: ['crag'], sea: true, weight: 8, length: 6,
     title: ['Flag Hoist', 'Флажный сигнал'],
     text: ['A signal mast on the crag runs up a hoist of flags and hauls it down again. Repeat the hoist in the same order, and whoever keeps the station will know you for a friend.', 'Сигнальная мачта на скале поднимает гирлянду флагов и тут же спускает её. Повторите сигнал в том же порядке — и тот, кто держит пост, признает в вас друга.'],
     symbols: [['Red', 'Красный'], ['Yellow', 'Жёлтый'], ['Blue', 'Синий'], ['White', 'Белый'], ['Black', 'Чёрный']],
@@ -286,7 +288,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     },
   }),
   compass_needle: M({
-    id: 'compass_needle', kind: 'timing', art: 'card.enc_wisps', face: 'icon.item_brass_compass', haunts: ['cairn', 'crag'], sea: false, weight: 8, zone: 0.22, period: 2400, tries: 3,
+    id: 'compass_needle', kind: 'timing', art: 'card.mg_compass_needle', kin: 'card.enc_wisps', face: 'icon.item_brass_compass', haunts: ['cairn', 'crag'], sea: false, weight: 8, zone: 0.22, period: 2400, tries: 3,
     title: ['The Dead Man\'s Compass', 'Компас мертвеца'],
     text: ['On a cairn lies a brass compass whose needle swings like a pendulum. Scratched on the lid: "Stop it on north three times and it will show you what it hid." Stop the needle in the gold.', 'На кургане лежит медный компас, стрелка которого качается, как маятник. На крышке нацарапано: «Трижды останови на севере — и он покажет, что спрятал». Остановите стрелку на золоте.'],
     outcomes: {
@@ -298,7 +300,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     },
   }),
   harpoon_lagoon: M({
-    id: 'harpoon_lagoon', kind: 'timing', art: 'card.enc_giant_turtle', face: 'icon.mount_harpoon', haunts: ['camp', 'crag'], sea: false, weight: 8, zone: 0.26, period: 2100, tries: 3,
+    id: 'harpoon_lagoon', kind: 'timing', art: 'card.mg_harpoon_lagoon', kin: 'card.enc_giant_turtle', face: 'icon.mount_harpoon', haunts: ['camp', 'crag'], sea: false, weight: 8, zone: 0.26, period: 2100, tries: 3,
     title: ['Spear the Lagoon', 'Острога в лагуне'],
     text: ['The lagoon is thick with fat fish, but they dart like lightning. Your best harpooner stands on the rocks. Throw when the shadow crosses the mark — three throws.', 'Лагуна кишит жирной рыбой, но та мечется, как молния. Ваш лучший гарпунщик стоит на камнях. Бросайте, когда тень пересекает метку, — три броска.'],
     outcomes: {
@@ -311,7 +313,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
   }),
   // ------------------------------------------------------------------ the haggle
   beach_trader: M({
-    id: 'beach_trader', kind: 'haggle', art: 'card.enc_fishermen', face: 'portrait.giver_merchant_m', haunts: ['camp', 'shack'], sea: false, weight: 7,
+    id: 'beach_trader', kind: 'haggle', art: 'card.mg_beach_trader', kin: 'card.enc_fishermen', face: 'portrait.giver_merchant_m', haunts: ['camp', 'shack'], sea: false, weight: 7,
     title: ['The Beachcomber\'s Stall', 'Лавка на берегу'],
     text: ['A merchant washed ashore with his last crate sells from an upturned boat. One piece of fine gear, and a price he swears is robbery — his own.', 'Выброшенный на берег купец торгует с перевёрнутой лодки последним ящиком. Одна добрая вещь — и цена, которую он зовёт грабежом. Своим.'],
     outcomes: {
@@ -324,7 +326,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
   }),
   // ------------------------------------------------------------------ tales
   marooned_sailor: M({
-    id: 'marooned_sailor', kind: 'quest', art: 'card.enc_deserters', face: 'portrait.giver_old_salt_m', haunts: ['camp'], sea: false, weight: 9, start: 'hut',
+    id: 'marooned_sailor', kind: 'quest', art: 'card.mg_marooned_sailor', kin: 'card.enc_deserters', face: 'portrait.giver_old_salt_m', haunts: ['camp'], sea: false, weight: 9, start: 'hut',
     title: ['The Marooned Man', 'Высаженный на остров'],
     text: ['A man with a beard to his belt stumbles out of a driftwood hut. Marooned three years ago, he says, with a pistol and one shot — and he never spent the shot.', 'Из хижины из плавника, спотыкаясь, выходит человек с бородой до пояса. Высажен три года назад, говорит он, с пистолетом и одним зарядом — и заряд так и не потратил.'],
     steps: {
@@ -361,7 +363,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     },
   }),
   cursed_idol: M({
-    id: 'cursed_idol', kind: 'quest', art: 'card.enc_ghost_bargain', face: 'icon.good_cursed_relics', haunts: ['cairn', 'cave'], sea: false, weight: 9, start: 'altar',
+    id: 'cursed_idol', kind: 'quest', art: 'card.mg_cursed_idol', kin: 'card.enc_ghost_bargain', face: 'icon.good_cursed_relics', haunts: ['cairn', 'cave'], sea: false, weight: 9, start: 'altar',
     title: ['The Cursed Idol', 'Проклятый идол'],
     text: ['In a ring of black stones sits a golden idol with ruby eyes. Around it lie the bones of men who reached for it, their fingers still pointing.', 'В кольце чёрных камней сидит золотой идол с рубиновыми глазами. Вокруг лежат кости тех, кто к нему тянулся, — их пальцы до сих пор указывают на него.'],
     steps: {
@@ -392,7 +394,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     },
   }),
   smugglers_cave: M({
-    id: 'smugglers_cave', kind: 'quest', art: 'card.enc_barrel', face: 'portrait.giver_smuggler_f', haunts: ['cave'], sea: false, weight: 9, start: 'mouth',
+    id: 'smugglers_cave', kind: 'quest', art: 'card.mg_smugglers_cave', kin: 'card.enc_barrel', face: 'portrait.giver_smuggler_f', haunts: ['cave'], sea: false, weight: 9, start: 'mouth',
     title: ['The Smugglers\' Cave', 'Грот контрабандистов'],
     text: ['A sea cave, half drowned at high tide. Fresh rope marks on the rock, a lantern hook, and the smell of rum.', 'Морской грот, наполовину затопленный в прилив. Свежие следы каната на камне, крюк для фонаря и запах рома.'],
     steps: {
@@ -425,7 +427,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     },
   }),
   mutineers_grave: M({
-    id: 'mutineers_grave', kind: 'quest', art: 'card.enc_sunken_bell', face: 'icon.deed_mutiny', haunts: ['cairn'], sea: false, weight: 8, start: 'grave',
+    id: 'mutineers_grave', kind: 'quest', art: 'card.mg_mutineers_grave', kin: 'card.enc_sunken_bell', face: 'icon.deed_mutiny', haunts: ['cairn'], sea: false, weight: 8, start: 'grave',
     title: ['The Mutineer\'s Grave', 'Могила бунтовщика'],
     text: ['A driftwood cross: "HERE LIES JACK RENNARD, WHO TOOK THE SHIP AND LOST HER. DIG AT YOUR PERIL." The earth over him is freshly turned.', 'Крест из плавника: «ЗДЕСЬ ЛЕЖИТ ДЖЕК РЕННАРД, КОТОРЫЙ ЗАХВАТИЛ КОРАБЛЬ И ПОГУБИЛ ЕГО. КОПАЙ НА СВОЙ СТРАХ». Земля над ним свежевскопана.'],
     steps: {
@@ -460,7 +462,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     },
   }),
   three_levers: M({
-    id: 'three_levers', kind: 'quest', art: 'card.enc_derelict', face: 'prop.cache', haunts: ['cave', 'cairn'], sea: false, weight: 8, start: 'chest',
+    id: 'three_levers', kind: 'quest', art: 'card.mg_three_levers', kin: 'card.enc_derelict', face: 'prop.cache', haunts: ['cave', 'cairn'], sea: false, weight: 8, start: 'chest',
     title: ['The Chest of Three Levers', 'Сундук с тремя рычагами'],
     text: ['An iron-bound chest bolted to the rock, three levers on its lid — brass, iron and bone — and words cut above each. Over them all: "ONE OF US SPEAKS TRUE."', 'Окованный железом сундук, прикрученный к скале, на крышке три рычага — медный, железный и костяной, — и над каждым вырезаны слова. Над всеми: «ЛИШЬ ОДИН ИЗ НАС ГОВОРИТ ПРАВДУ».'],
     steps: {
@@ -484,7 +486,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     },
   }),
   split_map: M({
-    id: 'split_map', kind: 'quest', art: 'card.enc_mapmaker', face: 'icon.map_treasure', haunts: ['camp', 'cave'], sea: false, weight: 8, start: 'stranger',
+    id: 'split_map', kind: 'quest', art: 'card.mg_split_map', kin: 'card.enc_mapmaker', face: 'icon.map_treasure', haunts: ['camp', 'cave'], sea: false, weight: 8, start: 'stranger',
     title: ['Half a Map', 'Половина карты'],
     text: ['A one-eyed woman at a campfire holds up half a map. "You have a ship. I have the half that matters. We dig together, and we split it fair."', 'Одноглазая женщина у костра показывает половину карты. «У тебя корабль. У меня — та половина, что важна. Копаем вместе и делим честно».'],
     steps: {

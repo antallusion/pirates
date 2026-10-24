@@ -1944,6 +1944,8 @@ export type ServerMsg =
   /** A job offered (docs/11 P6) by an island's people on the beach, or shared by a groupmate (`from`): the captain
    *  may take it or leave it. */
   /** docs/36: the campaign's next quest has come (a toast and a short card), or its fork's two ways to choose. */
+  /** A parcel or a letter of a job handed over at the spot: its scene's card (shared/src/data/paintart.ts DROP_CARD). */
+  | { t: 'handin'; art: 'hamlet' | 'cove' | 'waystation' }
   | { t: 'campaign_new'; id: string; name: string; ch: number; k: number; size: number; text: string; choice?: { id: string; name: string; label: string; text: string }[] }
   /** A passage taken (campaign.ts campaignPassage): where to, the chapter, and the quest whose next step she faces. */
   | { t: 'passage'; to: string; ch: number; quest: string | null }
@@ -3434,6 +3436,8 @@ export interface OnboardingView {
 export interface TrekView {
   id: number;
   island: string;
+  /** The island's biome (the header's painting: a green island's path or a bare one's). */
+  biome?: IslandBiome;
   /** Steps walked, of how many. */
   step: number;
   steps: number;

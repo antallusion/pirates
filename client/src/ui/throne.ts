@@ -4,6 +4,8 @@
 // and mastery add in a boarding. Mastery: the four branches and their tiers, a point a node, the reset in port.
 // Trials: each skill's legend, her ship and army, and the challenge (or the wait, or the grandmaster won).
 
+import { artBgAttr, artBgWire } from './artfall.ts';
+import { END_HEADER } from '../../../shared/src/data/paintart.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { MAX_LEVEL } from '../../../shared/src/constants.ts';
 import { PRIMS, PRIM_ICON, PRIM_NAMES, SKILLS, skillText } from '../../../shared/src/data/hero.ts';
@@ -288,7 +290,9 @@ export class ThroneWindow {
     const self = state.self;
     const g = self?.glory;
     if (!self) return;
-    const head = `<div class="modal-head"><div><h2>${icon('tattoo_crown', '', 'ico-md')}${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: self.name, n: self.level, g: g?.rank ?? 0 }))}</div></div></div>`;
+    // (the band's painting by the tab: the Abyss raid's, the citadels' (and the Throne war's), the Throne's)
+    const headArt = this.tab === 'raid' ? END_HEADER.raid : this.tab.startsWith('cit') || this.tab === 'war' ? END_HEADER.citadel : END_HEADER.throne;
+    const head = `<div class="modal-head art-head"${artBgAttr([headArt])}><div><h2>${icon('tattoo_crown', '', 'ico-md')}${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: self.name, n: self.level, g: g?.rank ?? 0 }))}</div></div></div>`;
     if (!g) {
       root.innerHTML = `${head}<div class="modal-body throne-win"><p class="muted th-locked">${esc(L('locked', { n: MAX_LEVEL, m: self.level }))}</p></div>`;
     } else {
@@ -303,6 +307,7 @@ export class ThroneWindow {
       }).join('')}</div>${tab.render(g, state)}</div>`;
       tab.bind?.(root, this.send, () => this.onClose());
     }
+    artBgWire(root);
     root.querySelectorAll<HTMLElement>('[data-thtab]').forEach((b) => (b.onclick = () => {
       this.tab = b.dataset.thtab!;
       this.render(root, state);

@@ -9,6 +9,8 @@ import type { ChapterSrc } from '../../../shared/src/data/campaign/types.ts';
 import type { CampaignView } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
 import { esc, icon } from './dom.ts';
+import { artImg } from './artfall.ts';
+import { chapterCard } from '../../../shared/src/data/paintart.ts';
 import { EN, RU } from '../lang/ui/campaignbook.ts';
 
 const L = dict(EN, RU);
@@ -45,7 +47,8 @@ export function campaignBookHtml(c: CampaignView | undefined, list: ChapterSrc[]
     const doneN = Math.max(0, Math.min(p.size, at - first));
     const sum = `<summary>${icon(state === 'done' ? 'tab_legends' : 'tab_letters', '', 'ico-sm')}<b>${esc(L('chapter', { n: p.n }))}. ${esc(ch.title[ru])}</b>
       <span class="cb-meta">${state === 'done' ? '✓ ' : ''}${esc(L('quests', { n: doneN, of: p.size }))} · ${esc(L('levels', { a: gateOf(first), b: gateOf(last) }))}</span></summary>`;
-    const blurb = `<p class="cb-blurb">${esc(ch.blurb[ru])}</p>`;
+    // (its opener's painting for a chapter reached: loaded when its fold opens — a lazy picture in a shut <details> waits)
+    const blurb = `${state === 'ahead' ? '' : artImg([chapterCard(p.n)], 'cb-art', ' loading="lazy"')}<p class="cb-blurb">${esc(ch.blurb[ru])}</p>`;
     // the quests of a chapter behind her or the one she is in (those ahead keep their names to themselves)
     const quests = state === 'ahead' ? '' : `<ol class="cb-quests">${ch.quests.map((q, k) => {
       const slot = first + k;

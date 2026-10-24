@@ -11,6 +11,7 @@ import type { ClientMsg, EncounterView } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
 import { esc, money } from './dom.ts';
 import { assetUrl } from '../assets.ts';
+import { artImg } from './artfall.ts';
 
 /** Encounters whose own painting is not yet baked borrow a kindred one meanwhile (their own wins once it is). */
 const ENC_ART: Record<string, string> = { convict: 'raft', fishermen: 'raft', deserters: 'raft', mapmaker: 'raft', peddler: 'smuggler', pilot: 'signal_fire', bird_shoal: 'albatross', wisps: 'voice_in_fog', bottle: 'sunken_bell', barrel: 'sunken_bell', ambush: 'smuggler', patrol_search: 'derelict' };
@@ -91,6 +92,17 @@ export class EncounterCard {
     this.shown = r.id;
     this.el.innerHTML = `<div class="enc-card">${this.art(r.def)}<div class="enc-h">${esc(d.title[ru()])}</div>${d.choices.length ? '' : `<p class="enc-text">${esc(d.text[ru()])}</p>`}
       <p class="enc-out">${outcomeHtml(r)}</p><div class="enc-choices"><button class="btn btn-small btn-primary" data-enc-ok>${esc(L(d.choices.length ? 'close' : 'ok'))}</button></div></div>`;
+    this.el.classList.remove('hidden');
+    this.el.querySelector<HTMLElement>('[data-enc-ok]')!.onclick = () => this.close();
+    this.hideAt = performance.now() + 9000;
+  }
+
+  /** A scene that simply happened (a job's goods handed over at the spot): its painting, its title and line, and a
+   *  button; it fades by itself like an outcome. */
+  scene(ids: readonly string[], title: string, text: string): void {
+    this.shown = -1;
+    this.el.innerHTML = `<div class="enc-card">${artImg(ids, 'enc-art enc-art-img')}<div class="enc-h">${esc(title)}</div><p class="enc-out">${esc(text)}</p>
+      <div class="enc-choices"><button class="btn btn-small btn-primary" data-enc-ok>${esc(L('ok'))}</button></div></div>`;
     this.el.classList.remove('hidden');
     this.el.querySelector<HTMLElement>('[data-enc-ok]')!.onclick = () => this.close();
     this.hideAt = performance.now() + 9000;

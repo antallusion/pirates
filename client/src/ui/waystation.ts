@@ -14,6 +14,8 @@ import type { ClientState } from '../state.ts';
 import { unitIcon, unitName } from './army.ts';
 import { esc, fmt, icon, money } from './dom.ts';
 import { doubloons } from './premium.ts';
+import { artBgAttr, artBgWire } from './artfall.ts';
+import { WAY_HEADER } from '../../../shared/src/data/paintart.ts';
 import { wayName } from '../render/waystations.ts';
 
 const L = dict(EN, RU);
@@ -63,12 +65,12 @@ export class WayWindow {
     const title = way ? wayName(way.kind) : v?.place === 'port' ? L('title.port') : v?.place === 'field' ? L('title.field') : L('title.none');
     const art = way ? (way.kind === 'chapel' ? 'build_chapel' : way.kind === 'market' ? 'tab_market' : 'build_tavern') : 'prof_surgeon';
     if (!v) {
-      root.innerHTML = `<div class="modal-head way-head"><div class="way-ht">${icon(art, '', 'way-art')}<div><h2>${esc(title)}</h2></div></div></div><div class="modal-body"><p class="muted">${esc(L('none'))}</p></div>`;
+      root.innerHTML = `<div class="modal-head way-head${way ? ' art-head' : ''}"${way ? artBgAttr([WAY_HEADER[way.kind]]) : ''}><div class="way-ht">${icon(art, '', 'way-art')}<div><h2>${esc(title)}</h2></div></div></div><div class="modal-body"><p class="muted">${esc(L('none'))}</p></div>`;
       return;
     }
     const chips = `<div class="way-chips"><span class="ph-chip gold">${money(v.gold)}</span><span class="ph-chip">${doubloons(v.balance)}</span>${v.scrolls > 0 ? `<span class="ph-chip">${icon('ui_phial', '', 'ico-sm')}${esc(L('scrolls', { n: v.scrolls }))}</span>` : ''}</div>`;
     const sub = way ? L('sub.way', { n: v.fallen }) : L('sub.res', { n: v.fallen });
-    const head = `<div class="modal-head way-head"><div class="way-ht">${icon(art, '', 'way-art')}<div><h2>${esc(title)}</h2><div class="sub">${esc(sub)}</div></div></div>${chips}</div>`;
+    const head = `<div class="modal-head way-head${way ? ' art-head' : ''}"${way ? artBgAttr([WAY_HEADER[way.kind]]) : ''}><div class="way-ht">${icon(art, '', 'way-art')}<div><h2>${esc(title)}</h2><div class="sub">${esc(sub)}</div></div></div>${chips}</div>`;
     const rows = v.rows.map((r) => {
       const ok = this.rowOk(v, r);
       const scroll = !r.prem && v.scrolls > 0 && r.room > 0 && !v.why;
@@ -99,6 +101,7 @@ export class WayWindow {
       `<button class="btn" data-wclose>${esc(way ? L('sea') : L('close'))}</button>`,
     ].filter(Boolean).join('');
     root.innerHTML = `${head}<div class="modal-body way-body">${body}</div><div class="way-foot">${foot}</div>`;
+    artBgWire(root);
     this.bind(root, v);
   }
 
