@@ -98,7 +98,7 @@ test('the story’s fights and landings: the server names the step, the finger g
   const story = Object.values(QUESTS_BY_ID).filter((d) => d.kind === 'campaign');
   const kinds = new Set<string>();
   for (const d of story) d.steps.forEach((st, i) => { const k = storyStep(d, i); if (k) kinds.add(`${st.type}>${k}`); });
-  assert.ok(kinds.has('board>board') && kinds.has('land>land'), [...kinds].join(' '));
+  assert.ok(kinds.has('board>board') && kinds.has('land>land') && kinds.has('dive>land'), [...kinds].join(' '));
   // the opening's own steps keep their `op`
   const c2 = QUESTS_BY_ID['c01_02'];
   assert.equal(storyStep(c2, 0), null);

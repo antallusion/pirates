@@ -395,7 +395,8 @@ export function storyStep(def: QuestDef, step: number): 'sink' | 'board' | 'neut
   if (t === 'sink' || t === 'board' || t === 'neutral') return t;
   if (t === 'named' || t === 'beast') return 'sink';
   if (t === 'prize') return 'board';
-  if (t === 'lair' || t === 'land') return 'land';
+  // (a wreck dived: «Ныряльщики» is the land key's button too — c01_20 stood with it lit and no finger)
+  if (t === 'lair' || t === 'land' || t === 'dive') return 'land';
   return null;
 }
 
