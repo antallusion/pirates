@@ -1148,7 +1148,7 @@ function storyFrame(): string | null {
   // a fight with no men left to send (a lair's beach lost, the newcomer's run of 2026-10-23: «Штурм» pressed 1300 times
   // with «Слишком мало рук для десанта»): the way to men first — into port, the army's dwellings
   const men = (state.self?.company?.army ?? []).reduce((a, x) => a + x.n, 0);
-  if (q.does && q.does !== 'sink' && men < 3) return state.self?.dockedAt || !state.autosail ? 'men' : null;
+  if (q.does && q.does !== 'sink' && (men < 3 || (state.you?.crew ?? 99) < 3)) return state.self?.dockedAt || !state.autosail ? 'men' : null;
   if (state.self?.dockedAt) return 'go';
   // (the helmsman brings her to the step's harbour and «Причалить» is hers to press — owner, 2026-10-16: it lay lit 27 m
   // off the quay with no finger on it and «Соль и туман» stood half an hour, the newcomer's run of 2026-10-23)
@@ -4899,7 +4899,7 @@ function step(t: number): void {
     passageFrame();
     const op = openingFrame();
     const here = op ? null : hereFrame() ?? storyFrame();
-    tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax, markBeast: attackMark !== null && state.ships.get(attackMark)?.info?.npcRole === 'beast' });
+    tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax, markBeast: attackMark !== null && state.ships.get(attackMark)?.info?.npcRole === 'beast', crewShort: !!state.you && state.you.crew < 3 });
     tutorPointer.frame();
     encounterCard.frame();
     surrenderCard.frame(state);

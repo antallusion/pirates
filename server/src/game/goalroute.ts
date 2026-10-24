@@ -446,7 +446,7 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
   // A fight of the story's with no men aboard to fight it (a lair's beach lost, every man of the army gone): «Плыть»
   // takes her to a harbour to sign men on first (the newcomer's run of 2026-10-23 pressed «Штурм» with 2 hands aboard
   // and stood half an hour; client pointer.ts 'men' points at «Армия» there).
-  if (cmp && NEEDS_MEN.has(st.type) && armyMen(ship.army) < 3) return { cands: ports(game) };
+  if (cmp && NEEDS_MEN.has(st.type) && (armyMen(ship.army) < 3 || ship.crew < 3)) return { cands: ports(game) };
   switch (st.type) {
     case 'sink': {
       if (cmp) {

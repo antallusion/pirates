@@ -426,6 +426,7 @@ function chainWhy(game: Game, s: PlayerSession, l: Lair): string | null {
 const farless = (w: string | null): string | null => (w === LAIR_FAR ? null : w);
 
 /** No fighting men aboard to send ashore — and where to get them. */
+export const NO_HANDS = 'Too few hands to man the boats: sign on sailors in a harbour’s tavern';
 export const NO_MEN = 'No men to send ashore: sign on men in a harbour — its “Army” page';
 
 /** Why she cannot land against it now (null: she can). */
@@ -438,7 +439,7 @@ function fightWhy(game: Game, s: PlayerSession, l: Lair, force = false): string 
   if (ship.underFire(game.now) && !force) return 'Not while under fire';
   if (!inReach(game, s, l)) return LAIR_FAR;
   if (ship.state.speed > 2.5) return 'Heave to first — the boats cannot be lowered at speed';
-  if (ship.crew < 3) return 'Too few hands to spare a landing party';
+  if (ship.crew < 3) return NO_HANDS;
   return chainWhy(game, s, l);
 }
 

@@ -21,6 +21,8 @@ export interface PointerFacts {
   /** «Атаковать» would go for one of the sea's beasts (a shark): never the finger's for a ship's step (the run of
    *  2026-10-23 chased a shark four minutes and went down before «Борт о борт»). */
   markBeast?: boolean;
+  /** Fewer than three hands aboard: the boats cannot be manned (the tavern before the army). */
+  crewShort?: boolean;
 }
 
 /** The harbour's way out to sea, the First Watch's own (the gold «В море» of the port window, the HUD's round one). */
@@ -103,6 +105,8 @@ export function hereTargets(f: PointerFacts, id: string, tab: string, good = '')
  *  round and round): the army's dwellings, a kind of men, «Макс», «Нанять». */
 export const TAB_INSIDE: Record<string, string[]> = {
   army: ['[data-rcgo]:not([disabled])', '.rc-pick [data-rcmax]:not([disabled])', '.rc-unit:not(.off):not(.sel)', '#modal-panel [data-dwell]'],
+  // (the hands to row the boats: the tavern's «Нанять N»)
+  tavern: ['#modal-panel [data-act="hire_n"]:not([disabled])', '#modal-panel [data-ptab="tavern"]'],
 };
 
 function targetsOf(f: PointerFacts): string[] {
@@ -129,7 +133,7 @@ function targetsOf(f: PointerFacts): string[] {
     case 'men':
       // no men for the step's fight: a harbour, its «Армия» and the way through it
       // (at sea far from any harbour «Плыть» takes her to the nearest — server goalroute.ts NEEDS_MEN)
-      return f.docked ? [...TAB_INSIDE.army, '#modal-panel [data-ptab="army"]', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'] : [...TO_PORT, ...GOAL_SAIL];
+      return f.docked ? [...(f.crewShort ? TAB_INSIDE.tavern : []), ...TAB_INSIDE.army, '#modal-panel [data-ptab="army"]', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'] : [...TO_PORT, ...GOAL_SAIL];
     case 'go:dock':
       // …and at the step's harbour, its «Причалить»
       return f.docked ? [] : ['#tc-act[data-act="dock"]', '.act-btn.act-dock', ...GOAL_SAIL];
