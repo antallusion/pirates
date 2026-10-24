@@ -43,7 +43,7 @@ const look = (p) => p.evaluate(() => {
   const tac = document.body.classList.contains('tac');
   const endBtn = document.querySelector('#board-tac [data-endbtn]');
   const quick = [...document.querySelectorAll('#board-tac [data-quicknow], #board-tac .tb-qn, #board-tac [data-a="quick"]')].find(vis);
-  const cards = [...document.querySelectorAll('[data-sur], [data-fate], #promo-over [data-polater], .enc-card button, [data-lupick], [data-lore-go], [data-gfclaim], [data-gfdone], [data-endbtn], .depart-panel [data-dp="all"], .depart-panel [data-dp="sail"]')].filter(vis).map((e) => ({ sel: e.dataset.sur ? `[data-sur="${e.dataset.sur}"]` : e.dataset.fate ? `[data-fate="${e.dataset.fate}"]` : null, kind: Object.keys(e.dataset).join(','), txt: txt(e), at: box(e), gold: e.classList.contains('btn-primary') || e.classList.contains('k-btn--primary') || e.classList.contains('gold') }));
+  const cards = [...document.querySelectorAll('[data-sur], [data-fate], #promo-over [data-polater], .enc-card button, [data-lupick], [data-lore-go], [data-cway], [data-gtake], [data-gfclaim], [data-gfdone], [data-endbtn], .depart-panel [data-dp="all"], .depart-panel [data-dp="sail"]')].filter(vis).map((e) => ({ sel: e.dataset.sur ? `[data-sur="${e.dataset.sur}"]` : e.dataset.fate ? `[data-fate="${e.dataset.fate}"]` : null, kind: Object.keys(e.dataset).join(','), txt: txt(e), at: box(e), gold: e.classList.contains('btn-primary') || e.classList.contains('k-btn--primary') || e.classList.contains('gold') }));
   const camp = s?.self?.campaign ?? null;
   return {
     stage: s?.onboarding?.stage ?? null,

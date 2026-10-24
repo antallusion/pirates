@@ -175,3 +175,8 @@ test('no men for the story’s fight: «Плыть» takes her to a harbour firs
   assert.match(src, /if \(cmp && NEEDS_MEN\.has\(st\.type\) && armyMen\(ship\.army\) < 3\) return \{ cands: ports\(game\) \};/);
   assert.ok(pointerTargets({ stage: 'men', touch: true, docked: false, battle: false }).includes('#tc-act[data-act="goal_sail"]'));
 });
+
+test('the story’s fork with its card closed: the finger on «Цели и вести», never on one of the two ways', async () => {
+  assert.deepEqual(pointerTargets({ stage: 'fork', touch: true, docked: false, battle: false }), ['#tc-news']);
+  assert.match((await import('node:fs')).readFileSync('client/src/main.ts', 'utf8'), /\(state\.self\?\.campaign\?\.ways\?\.length \?\? 0\) > 1 && !state\.self\?\.campaign\?\.active\) return 'fork';/);
+});

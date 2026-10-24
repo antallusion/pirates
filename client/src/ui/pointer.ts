@@ -123,6 +123,9 @@ function targetsOf(f: PointerFacts): string[] {
       return openingTargets(f, f.stage.slice(3));
     case 'go:land':
       return f.docked ? TO_SEA : ['#tc-act[data-act="land"]', '.act-btn.act-land', ...GOAL_SAIL];
+    case 'fork':
+      // the story's fork, its card closed: «Цели и вести», where its two ways wait (never a finger on one of the two)
+      return ['#tc-news'];
     case 'men':
       // no men for the step's fight: a harbour, its «Армия» and the way through it
       // (at sea far from any harbour «Плыть» takes her to the nearest — server goalroute.ts NEEDS_MEN)

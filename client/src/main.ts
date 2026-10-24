@@ -1142,6 +1142,8 @@ function storySail(): { key: string; name: string } | null {
 /** The finger on the story's way (the first two chapters, a newcomer's first hour): in port «В море», at sea «Плыть». */
 function storyFrame(): string | null {
   const q = storyQuest();
+  // a fork of the story waiting for her choice (its card closed, nothing lit — the run of 2026-10-23): the choice
+  if (!q && (state.self?.campaign?.ch ?? 99) <= 2 && (state.self?.campaign?.ways?.length ?? 0) > 1 && !state.self?.campaign?.active) return 'fork';
   if ((state.self?.campaign?.ch ?? 99) > 2 || !q) return null;
   // a fight with no men left to send (a lair's beach lost, the newcomer's run of 2026-10-23: «Штурм» pressed 1300 times
   // with «Слишком мало рук для десанта»): the way to men first — into port, the army's dwellings
