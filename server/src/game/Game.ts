@@ -267,7 +267,7 @@ import { chooseBoon, descentLandable, leaveDescent, startDescent, stepDescent, s
 import { holidayGhostSunk, stepHolidays } from './holidays.ts';
 import { addGood, addItem, buyAtStall, claimBazaar, closeStall, openStall, removeLine, sendBazaarShadows, stepBazaar } from './bazaar.ts';
 import { HULL_PER_PLANK, SAILS_PER_CLOTH, SEA_FIRE_PACE, SEA_HULL_PER_MIN, SEA_RUDDER_PER_MIN, SEA_SAILS_PER_MIN } from '../../../shared/src/data/dealings.ts';
-import { repairDone, repairLack, repairOrder, seaCrewShare, tallyRepair } from './searepair.ts';
+import { mendUnderWay, repairDone, repairLack, repairOrder, seaCrewShare, tallyRepair } from './searepair.ts';
 import { hearOfPorts } from './demand.ts';
 import { abandonRun, acceptRun, expireRuns, settleRuns } from './traderuns.ts';
 import { bid as auctionBid, claimAuction, putUp, stepAuction } from './auction.ts';
@@ -4278,7 +4278,11 @@ export class Game {
       case 'goto':
         // route (owner 2026-10-15): a goal of hers — the nearest place it is done, and the helmsman takes her there
         cancelApproach(this, s);
-        return err(gotoGoal(this, s, String(msg.key ?? '')));
+        {
+          const e = gotoGoal(this, s, String(msg.key ?? ''));
+          if (!e) mendUnderWay(this, s); // hurt, the carpenters at work on the way (searepair.ts)
+          return err(e);
+        }
       case 'wgoals':
         return sendWorldGoals(this, s);
       case 'gyard': {

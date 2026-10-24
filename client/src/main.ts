@@ -1109,7 +1109,7 @@ function openingSail(): { key: string; name: string } | null {
   return { key, name: sv(q.name) };
 }
 /** The story's quest now (the campaign's, after the opening): the one «Плыть» sails for. */
-function storyQuest(): { id: string; name: string } | null {
+function storyQuest(): NonNullable<typeof state.self>['quests'][number] | null {
   if (state.onboarding?.stage) return null;
   const q = state.self?.quests.find((x) => x.kind === 'campaign' && !x.op);
   return q ?? null;
@@ -1127,8 +1127,15 @@ function storySail(): { key: string; name: string } | null {
 }
 /** The finger on the story's way (the first two chapters, a newcomer's first hour): in port «В море», at sea «Плыть». */
 function storyFrame(): string | null {
-  if ((state.self?.campaign?.ch ?? 99) > 2 || !storyQuest()) return null;
-  return state.self?.dockedAt || storySail() ? 'go' : null;
+  const q = storyQuest();
+  if ((state.self?.campaign?.ch ?? 99) > 2 || !q) return null;
+  if (state.self?.dockedAt) return 'go';
+  // (the helmsman brings her to the step's harbour and «Причалить» is hers to press — owner, 2026-10-16: it lay lit 27 m
+  // off the quay with no finger on it and «Соль и туман» stood half an hour, the newcomer's run of 2026-10-23)
+  const t = q.target, own = state.ownDisplay;
+  const p = t?.act === 'dock' && t.port && own ? state.ports.find((x) => x.id === t.port) : undefined;
+  if (p && own && dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS * 2.5) return 'go:dock';
+  return storySail() ? 'go' : null;
 }
 /** Her «Плыть» for a run broken off by another order (a struck ship's terms, a boarding): gold on the bar until pressed
  *  (ui/resumesail.ts) — never sailed on by itself. */

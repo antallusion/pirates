@@ -135,3 +135,17 @@ export function repairOrder(game: Game, s: PlayerSession, on: boolean, cove = fa
   }
   ship.repairing = true;
 }
+
+/** A run to a goal begun at sea with her hurt (a tenth or more of the hull or the sails gone) and the planks or sailcloth
+ *  aboard: the carpenters set to work as the helmsman sails (the newcomer's run of 2026-10-23 — after the opening's
+ *  three fights her sails stood at 40 %, every voyage at 6 knots instead of 12, «Ремонт» never pressed: nothing told
+ *  her to). Never under fire, never in port. True when they began. */
+export function mendUnderWay(game: Game, s: PlayerSession): boolean {
+  const ship = s.ship;
+  if (!ship || !ship.alive || ship.docked || ship.repairing || ship.boarding || ship.underFire(game.now)) return false;
+  const st = ship.stats;
+  if (ship.hull >= st.hullMax * 0.9 && ship.sails >= st.sailHpMax * 0.9) return false;
+  if (repairLack(ship)) return false;
+  repairOrder(game, s, true);
+  return ship.repairing;
+}

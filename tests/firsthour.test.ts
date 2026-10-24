@@ -62,3 +62,32 @@ test('the toast of a campaign quest names «Плыть», not a mark to find (RU
   assert.match(RU['goal.trackedSail'], /«Плыть»/);
   assert.match(EN['goal.trackedSail'], /“Sail”/);
 });
+
+test('at the story\'s harbour the finger is on «Причалить»; in port nothing to dock', () => {
+  const t = pointerTargets({ stage: 'go:dock', touch: true, docked: false, battle: false, helmsman: true });
+  assert.equal(t[0], '#tc-act[data-act="dock"]');
+  assert.ok(t.includes('.tc-act2[data-act="dock"]'), 'the phone\'s pill too');
+  assert.deepEqual(pointerTargets({ stage: 'go:dock', touch: true, docked: true, battle: false }), []);
+});
+
+test('«Плыть» hurt with stores aboard: the carpenters mend her on the way; sound, or under fire, nothing', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { mendUnderWay } = await import('../server/src/game/searepair.ts');
+  const { game } = makeGame();
+  join(game, 'Mender', 'corsair');
+  const s = [...game.sessions].find((x) => x.name === 'Mender')!;
+  const ship = s.ship!;
+  ship.docked = null as never;
+  ship.cargo.planks = 10;
+  ship.cargo.sailcloth = 10;
+  assert.equal(mendUnderWay(game, s), false, 'sound: nothing to mend');
+  ship.sails = ship.stats.sailHpMax * 0.4;
+  assert.equal(mendUnderWay(game, s), true, 'sails at 40 %: the carpenters at work');
+  assert.equal(ship.repairing, true);
+  ship.repairing = false;
+  ship.cargo.sailcloth = 0;
+  ship.cargo.planks = 0;
+  assert.equal(mendUnderWay(game, s), false, 'nothing to mend with: no order, no refusal toast');
+  const src = (await import('node:fs')).readFileSync('server/src/game/Game.ts', 'utf8');
+  assert.match(src, /const e = gotoGoal\(this, s, [^\n]+\);\s*if \(!e\) mendUnderWay\(this, s\);/);
+});
