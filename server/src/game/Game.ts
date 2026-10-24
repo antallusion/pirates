@@ -54,7 +54,7 @@ import { generateIslandJobs, generateQuests } from '../../../shared/src/data/que
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
 import { generateLairJobs } from '../../../shared/src/data/lairquests.ts';
 import { generateArcs } from '../../../shared/src/data/questarcs.ts';
-import { acceptCampaign, campaignLevelUp, campaignNext, campaignPlaces, campaignView, initCampaign } from './campaign.ts'; // docs/36
+import { acceptCampaign, campaignLevelUp, campaignPassage, campaignNext, campaignPlaces, campaignView, initCampaign } from './campaign.ts'; // docs/36
 import { registerElitePorts } from '../../../shared/src/data/elite.ts';
 import { restAfter } from '../../../shared/src/data/rested.ts';
 import { pushTasks, stepTasks, taskSalvage } from './worldtasks.ts';
@@ -3683,6 +3683,11 @@ export class Game {
           err(skipGuideStep(this, s, String(msg.id)));
           if (s.ship?.docked) this.pushPort(s);
           this.pushSelf(s, true);
+          return;
+        }
+        // owner, 2026-10-23: a passage due, asked by her client once she is at sea with nothing open and no fight
+        if (msg.action === 'passage') {
+          campaignPassage(this, s);
           return;
         }
         // owner, 2026-10-23: a step done in port by her own button («Расспросить», «Сдать груз»…)

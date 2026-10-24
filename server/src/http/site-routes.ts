@@ -137,8 +137,8 @@ export function siteRoutes(d: SiteDeps) {
         if (!v?.game) throw new HttpError('not_found', 404);
         const nonce = randomBytes(12).toString('base64');
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex', 'Referrer-Policy': 'no-referrer',
-          'Content-Security-Policy': `default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'nonce-${nonce}'; base-uri 'none'; form-action 'self'` });
-        res.end(gameBackPage({ id, lang: d.shop.get(id)?.lang ?? 'ru', status: v.status, nonce }));
+          'Content-Security-Policy': `default-src 'self'; img-src 'self' https://mc.yandex.ru https://mc.yandex.com; connect-src 'self' https://mc.yandex.ru https://mc.yandex.com; style-src 'self'; font-src 'self'; script-src 'nonce-${nonce}' https://mc.yandex.ru https://yastatic.net; frame-src https://mc.yandex.ru https://mc.yandex.com; base-uri 'none'; form-action 'self'` });
+        res.end(gameBackPage({ id, lang: d.shop.get(id)?.lang ?? 'ru', status: v.status, nonce, rub: (v as { rub?: number }).rub }));
         return true;
       }
 

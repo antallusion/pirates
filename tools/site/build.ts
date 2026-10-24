@@ -6,6 +6,7 @@
 //
 // The art is the game's own (/assets/…) plus the site kit cut by tools/site/slice_kit.py (site/img/…).
 
+import { metrikaTag } from '../../shared/src/metrika.ts';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -214,6 +215,7 @@ function page(lang: Lang, o: { path: string; active: string; title: string; desc
   const r = root(lang);
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 ${seoHead(lang, o)}
+${metrikaTag({ webvisor: true })}
 ${o.hero.film ? filmPreload() : ''}<link rel="preload" href="/site/fonts/cormorantsc-700-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site/css/fonts.css"><link rel="stylesheet" href="/site/css/site.css">${o.css ? `<link rel="stylesheet" href="${o.css}">` : ''}</head>
 <body class="pg-${o.active}">${header(lang, o.active, o.path)}

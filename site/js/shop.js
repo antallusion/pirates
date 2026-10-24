@@ -903,6 +903,8 @@ ${tabs.map((tb) => `<section class="pd-panel" role="tabpanel" id="pdp-${tb.id}" 
       const item = v && shop && shop.items.find((x) => x.id === v.item);
       const key = st === 'paid' && v.wait ? `wait_${v.wait}` : st === 'done' && v.kept ? 'kept' : st;
       const good = st === 'done' || st === 'paid', bad = st === 'canceled' || st === 'failed' || st === 'missing';
+      // Yandex Metrica's goal (shared/src/metrika.ts): an order confirmed paid, once, with its price
+      if (good && v && typeof window.ym === 'function') { try { if (!localStorage.getItem(`ymp_${order}`)) { localStorage.setItem(`ymp_${order}`, '1'); window.ym(113762378, 'reachGoal', 'payment', { order_price: v.rub, currency: 'RUB' }); } } catch { /* private mode */ } }
       const slow = st === 'pending' && Date.now() - started > 60_000;
       orderEl.className = `shop-order panel ${good ? 'ok' : bad ? 'bad' : 'wait'}`;
       orderEl.innerHTML = `<span class="shop-order-ico" aria-hidden="true"></span><div><b>${esc(t[`o_${key}`] || t.o_pending)}</b>${v ? `<span>${item && item.kind !== 'deal' ? `${esc(L(item.name))} · ` : ''}${esc(t.forWho)} «${esc(v.name)}» · ${esc(rub(v.rub))}</span>` : ''}${slow ? `<span class="muted">${esc(t.o_slow)}</span>` : ''}<small class="muted">${esc(t.orderNum)} ${order.slice(0, 8)}</small></div>`;

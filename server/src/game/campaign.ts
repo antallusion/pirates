@@ -11,6 +11,7 @@ import { OPENING_SLOTS, arrival, buildCampaign } from '../../../shared/src/data/
 import { headingVec } from '../../../shared/src/math.ts';
 import { hullWater, nearestWater } from './seaway.ts';
 import { untouchable } from './inbattle.ts';
+import { stepPlace } from '../../../shared/src/data/questlegs.ts';
 import { SOFT_HULL, SOFT_MEN } from './firstfights.ts';
 import type { Campaign, CampaignSlot } from '../../../shared/src/data/campaign/build.ts';
 import { CHAPTERS } from '../../../shared/src/data/campaign/chapters.ts';
@@ -189,7 +190,9 @@ export function campaignDone(game: Game, s: PlayerSession, q: QuestDef): void {
   if (meta.k === size - 1) chapterEnd(game, s, meta.ch, q.requires.level ?? 1);
   if (c.at >= CAMPAIGN_SIZE) game.sendTo(s, { t: 'toast', msg: 'The campaign is done. The tide sleeps.', kind: 'gold' });
   campaignNext(game, s, true);
-  campaignPassage(game, s, true);
+  // a passage due: in port, a word that it waits for her casting off; at sea her client asks for it once nothing is open
+  const due = passageDue(game, p);
+  if (due && s.ship?.docked) game.sendTo(s, { t: 'toast', msg: `A ship waits to take you to ${due.loc.name}: cast off, and she takes you there.`, kind: 'info' });
 }
 
 // ------------------------------------------------------------------ the passage
@@ -215,11 +218,9 @@ export function campaignPassage(game: Game, s: PlayerSession, fresh = false): bo
   const due = passageDue(game, p);
   if (!due) return false;
   const { loc } = due;
-  if (ship.docked) {
-    if (fresh) game.sendTo(s, { t: 'toast', msg: `A ship waits to take you to ${loc.name}: cast off, and she takes you there.`, kind: 'info' });
-    return false;
-  }
-  if (!ship.alive || ship.grappled || ship.boarding || s.pendingBoarding || untouchable(game, ship) || ship.inCombat(game.now)) return false;
+  void fresh;
+  if (ship.docked) return false;
+  if (!ship.alive || ship.grappled || ship.boarding || s.pendingBoarding || untouchable(game, ship) || ship.inCombat(game.now) || s.profile?.company.mutiny) return false;
   game.halt(s);
   let x: number, y: number, heading: number;
   if (loc.kind === 'port') {
@@ -235,13 +236,18 @@ export function campaignPassage(game: Game, s: PlayerSession, fresh = false): bo
   }
   const w = nearestWater(game.world, x, y, hullWater(ship), 600);
   if (w) [x, y] = w;
+  // her head to the next step's place (its harbour, its island, its fight's water), so «Плыть» is a straight run
+  const qs = campaignActive(p);
+  const st = qs ? QUESTS_BY_ID[qs.id]?.steps[qs.step] : undefined;
+  const to = st ? stepPlace(game.world, st) : null;
+  if (to && Math.hypot(to.x - x, to.y - y) > to.r + 20) heading = Math.atan2(to.x - x, -(to.y - y));
   ship.state = { ...ship.state, x, y, heading, speed: 0, sail: 0, rudder: 0 };
   ship.input = { rudder: 0, sailTarget: 0 };
   ship.protectedUntil = game.now + 20;
   ship.region = loc.region;
   game.grid.upsert(ship.id, x, y);
   p.campaign!.passed = due.slot;
-  game.sendTo(s, { t: 'toast', msg: `A ship of the story takes you to ${loc.name}: the passage is free, and the chapter goes on there.`, kind: 'gold' });
+  game.sendTo(s, { t: 'passage', to: loc.name, ch: loc.ch, quest: qs?.id ?? null });
   game.pushSelf(s, true);
   return true;
 }
@@ -295,7 +301,6 @@ const watches = new WeakMap<PlayerSession, FoeWatch>();
 export function campaignTick(game: Game, s: PlayerSession): void {
   const p = s.profile, ship = s.ship;
   if (!p || !ship || ship.docked || !ship.alive || ship.boarding) return;
-  if (campaignPassage(game, s)) return; // (cast off with a passage waiting: the ship takes her now)
   const qs = campaignActive(p);
   const q = qs ? QUESTS_BY_ID[qs.id] : undefined;
   const st = q?.steps[qs!.step];
@@ -398,6 +403,7 @@ export function campaignView(game: Game, p: Profile): CampaignView {
     ...(active ? { active: active.id } : {}),
     next: nextSlots(game, c.at + 1, 3).map((x) => ({ name: x.a.name, gate: x.gate, ch: x.ch, k: x.k, size: chapterOfSlot(x.slot).size })),
     picks: c.picks,
+    ...((d) => (d ? { passage: { to: d.loc.name } } : {}))(passageDue(game, p)),
   };
 }
 

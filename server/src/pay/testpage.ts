@@ -1,6 +1,7 @@
 // The test mode's checkout page (server/src/game/webshop.ts): the game's own page in the site's dress, marked plainly
 // as a test — no money moves. «Pay (test)» or «Decline» posts back to /api/site/pay/test, which settles the fake
 // payment and checks it as YooKassa's would be checked, then sends the buyer to the shop's return page.
+import { METRIKA_ID, metrikaTag } from '../../../shared/src/metrika.ts';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -31,14 +32,14 @@ const BACK = {
 /** The page a buyer from the web game comes back to from YooKassa (the web game's top-up, owner 2026-10-21): it tells
  *  how the order stands, tells the game's own tab (its opener) to check the payment, and closes itself — or, opened in
  *  place of the game, takes her back to /play. `nonce`: its one script's (the page's CSP). */
-export function gameBackPage(o: { id: string; lang: 'ru' | 'en'; status: string; nonce: string }): string {
+export function gameBackPage(o: { id: string; lang: 'ru' | 'en'; status: string; nonce: string; rub?: number }): string {
   const t = BACK[o.lang];
   const word = o.status === 'done' || o.status === 'paid' ? t.paid : o.status === 'canceled' || o.status === 'failed' ? t.no : t.wait;
   const play = `/play?yk=${esc(o.id)}`;
   return `<!doctype html><html lang="${o.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
-<title>${esc(t.h)} — GRAVETIDE</title><link rel="stylesheet" href="/site/css/fonts.css"><link rel="stylesheet" href="/site/css/site.css"><link rel="stylesheet" href="/site/css/shop.css"></head>
+<title>${esc(t.h)} — GRAVETIDE</title><link rel="stylesheet" href="/site/css/fonts.css"><link rel="stylesheet" href="/site/css/site.css"><link rel="stylesheet" href="/site/css/shop.css">${metrikaTag({ nonce: o.nonce })}</head>
 <body class="pg-shop"><main class="wrap testpay"><div class="panel testpay-card"><img class="testpay-logo" src="/site/img/brand/logo.webp" alt="GRAVETIDE" width="120" height="96">
 <h1>${esc(t.h)}</h1><p role="status">${esc(word)}</p><p><a class="btn-gold" href="${play}">${esc(t.back)}</a></p></div></main>
-<script nonce="${esc(o.nonce)}">(function(){var id=${JSON.stringify(o.id)};try{if(window.opener&&!window.opener.closed){window.opener.postMessage({t:'gravetide:checkout',order:id},location.origin);setTimeout(function(){window.close();},1200);return;}}catch(e){}setTimeout(function(){location.replace('/play?yk='+id);},2500);})();</script>
+<script nonce="${esc(o.nonce)}">(function(){var id=${JSON.stringify(o.id)};var paid=${JSON.stringify(o.status === 'done' || o.status === 'paid')};var go=function(){try{if(window.opener&&!window.opener.closed){window.opener.postMessage({t:'gravetide:checkout',order:id},location.origin);setTimeout(function(){window.close();},1200);return;}}catch(e){}setTimeout(function(){location.replace('/play?yk='+id);},2500);};if(!paid||!window.ym)return go();var k='ymp_'+id,once=false,next=function(){if(!once){once=true;go();}};try{if(localStorage.getItem(k))return go();localStorage.setItem(k,'1');}catch(e){}ym(${METRIKA_ID},'reachGoal','payment',{order_price:${Number(o.rub) || 0},currency:'RUB'},next);setTimeout(next,3000);})();</script>
 </body></html>`;
 }

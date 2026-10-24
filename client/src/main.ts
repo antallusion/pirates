@@ -1147,6 +1147,16 @@ function resumeSail(): { key: string; name: string; resume: true } | null {
   if (!on || !key) return null;
   return { key, name: q ? sv(q.name) : '', resume: true };
 }
+/** A passage due (owner, 2026-10-23): asked for once she is at sea, with no window open, no fight, no boarding, no
+ *  island screen — never in the middle of anything. */
+let passageAskedAt = -1e9;
+function passageFrame(): void {
+  if (!state.self?.campaign?.passage || state.self.dockedAt || !inGame || modal || isleScene.isOpen) return;
+  if (state.boardTac || state.boardFight || state.pursuit || state.boarding || state.roamRun !== null) return;
+  if (performance.now() - passageAskedAt < 3000) return;
+  passageAskedAt = performance.now();
+  net.send({ t: 'quest', action: 'passage', id: '' });
+}
 /** A quest step done in this very port (owner, 2026-10-23): the finger's stage `h:<id>:<page>` — the campaign's first,
  *  a step done by its own button before one done on a page. Null at sea or with nothing to do here. */
 function hereFrame(): string | null {
@@ -1911,6 +1921,12 @@ function onMessage(m: ServerMsg): void {
       // An island's people offer their job on the beach, or a groupmate shares theirs: the giver's window, then the
       // captain's answer.
       void giverDialog(m.offer, m.from).then((pay) => net.send({ t: 'quest', action: pay ? 'accept' : 'decline', id: m.offer.id, ...(pay && pay !== 'silver' ? { pay } : {}) }));
+      break;
+    case 'passage':
+      // a ship of the story took her to the chapter's far place (owner, 2026-10-23): one card — where, and why — and
+      // «Плыть» for the next step at once, her head already to it
+      hud.banner(L('passageTitle'), L('passageLine', { to: placeName(serverText(m.to)), ch: m.ch }));
+      if (m.quest) resumeKey = `q:${m.quest}`;
       break;
     case 'campaign_new':
       // the story begins after the opening (owner, 2026-10-19: «и далее уже основная кампания начинается с каким-то
@@ -4852,6 +4868,7 @@ function step(t: number): void {
     tactical.render(state.boardTac);
     boardingCardFrame();
     filmMoments();
+    passageFrame();
     const op = openingFrame();
     const here = op ? null : hereFrame() ?? storyFrame();
     tutorPointer.set({ stage: state.onboarding?.stage ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax });
