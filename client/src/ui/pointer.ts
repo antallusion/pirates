@@ -85,8 +85,15 @@ export function pointerTargets(f: PointerFacts): string[] {
 export function hereTargets(f: PointerFacts, id: string, tab: string): string[] {
   if (!f.docked) return [];
   const q = id.replace(/[^a-z0-9_]/gi, '');
-  return [`[data-act="quest_here"][data-id="${q}"]`, `[data-act="quest_tab"][data-id="${q}"]`, ...(tab ? [`#modal-panel [data-ptab="${tab}"]`] : []), '#modal-panel [data-ptab="quests"]', ...TO_PORT];
+  return [...(TAB_INSIDE[tab] ?? []), `[data-act="quest_here"][data-id="${q}"]`, `[data-act="quest_tab"][data-id="${q}"]`, ...(tab ? [`#modal-panel [data-ptab="${tab}"]`] : []), '#modal-panel [data-ptab="quests"]', ...TO_PORT];
 }
+
+/** Inside a port page, the way through it (the newcomer's run of 2026-10-23: «Джори Пенн», «наймите в армию 6» — the
+ *  finger led to «Армия», found nothing there to point at, went back to «Задания» and its «Нанять» led to «Армия» again,
+ *  round and round): the army's dwellings, a kind of men, «Макс», «Нанять». */
+export const TAB_INSIDE: Record<string, string[]> = {
+  army: ['[data-rcgo]:not([disabled])', '.rc-pick [data-rcmax]:not([disabled])', '.rc-unit:not(.off):not(.sel)', '#modal-panel [data-dwell]'],
+};
 
 function targetsOf(f: PointerFacts): string[] {
   if (!f.stage || f.battle) return [];

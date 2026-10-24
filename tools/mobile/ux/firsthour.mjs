@@ -55,7 +55,7 @@ const look = (p) => p.evaluate(() => {
     modal: modalOn ? (txt(modalP.querySelector('h2, .w-title, .modal-title')) || 'modal') : null,
     film, tac, end: !!endBtn && vis(endBtn), quick: quick ? box(quick) : null,
     cards,
-    tbCard: (() => { const x = [...document.querySelectorAll('#board-tac .tb-card:not(.hidden) .k-x, #board-tac .tb-card:not(.hidden) [data-close], .k-sheet-root:not(.hidden) .k-sheet [data-close]')].find(vis); return x ? box(x) : null; })(),
+    tbCard: (() => { const x = [...document.querySelectorAll('.k-sheet-x')].find(vis); return x ? box(x) : null; })(),
     sunk: (() => { const x = [...document.querySelectorAll('#modal-panel button.btn-primary')].find((e) => /Вернуться в порт|Back to port|Return to port/i.test(e.textContent) && vis(e)); return x ? box(x) : null; })(),
     // a foe on the hexes, as her finger finds it: the red one nearest her own acting stack (her turn only)
     foe: (() => {
@@ -154,6 +154,7 @@ try {
   stepKey = 'start'; steps.set(stepKey, { first: Date.now(), taps: 0, stuck: 0 });
 
   let lastKey = '', lastAct = '', sameAct = 0, lastShotKey = '';
+  const hist = [];
   const deadline = T0 + maxMin * 60000;
   while (Date.now() < deadline) {
     const v = await look(p).catch((e) => ({ err: e.message }));
@@ -163,6 +164,7 @@ try {
       const s0 = steps.get(stepKey); if (s0) s0.last = Date.now();
       L.log(`STEP ${stepKey} → ${key}  (${s0 ? Math.round((Date.now() - s0.first) / 1000) : '?'} s, ${s0?.taps ?? 0} taps)  ${v.q?.name ?? ''} «${v.q?.text ?? ''}»`);
       rec({ step: key, from: stepKey, name: v.q?.name, text: v.q?.text, act: v.q?.act });
+      hist.length = 0;
       stepKey = key; steps.set(key, steps.get(key) ?? { first: Date.now(), taps: 0, stuck: 0 });
       await shot(p, `step_${key.replace(/[:]/g, '-')}`);
       if (stopAt && v.q?.id === stopAt) break;
@@ -182,6 +184,12 @@ try {
       const label = act[0];
       if (label === lastAct) sameAct++; else sameAct = 0;
       lastAct = label;
+      // a ring of two or three taps going round with nothing changing
+      hist.push(label); if (hist.length > 14) hist.shift();
+      if (hist.length >= 14 && new Set(hist).size <= 3 && (st.loops = (st.loops ?? 0) + 1) === 1) {
+        prob(`a ring of taps at ${key}: ${[...new Set(hist)].join(' → ')}`);
+        await shot(p, `ring_${key.replace(/[:]/g, '-')}`);
+      }
       if (sameAct >= 6) {
         prob(`the same tap ×${sameAct} with no change at ${key}: ${label}`);
         await shot(p, `repeat_${key.replace(/[:]/g, '-')}`);

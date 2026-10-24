@@ -118,3 +118,13 @@ test('the step’s own stack 18 m off: «Атаковать» on the bar from af
   const main = (await import('node:fs')).readFileSync('client/src/main.ts', 'utf8');
   assert.match(main, /focus\.marked && focus\.far && \(openingFrame\(\) \?\? storyQuest\(\)\?\.does\) === 'neutral' \? \{ quest: true \}/);
 });
+
+test('«Джори Пенн» — men for the army: the finger goes through the army page (dwellings, a kind, «Макс», «Нанять»), never round to «Задания»', () => {
+  const t = pointerTargets({ stage: 'h:c01_11:army', touch: true, docked: true, battle: false });
+  const at = (sel: string) => t.indexOf(sel);
+  assert.ok(at('[data-rcgo]:not([disabled])') === 0, '«Нанять» first once it can be pressed');
+  assert.ok(at('.rc-pick [data-rcmax]:not([disabled])') < at('.rc-unit:not(.off):not(.sel)'));
+  assert.ok(at('#modal-panel [data-dwell]') >= 0 && at('#modal-panel [data-dwell]') < at('#modal-panel [data-ptab="quests"]'), 'the dwellings before the way back to «Задания»');
+  // other pages keep their old way
+  assert.equal(pointerTargets({ stage: 'h:x:market', touch: true, docked: true, battle: false })[0], '[data-act="quest_here"][data-id="x"]');
+});
