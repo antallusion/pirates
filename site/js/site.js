@@ -37,6 +37,10 @@
     go();
   }
 
+  // «Play with VK»: on the web VK ID signs in and opens the game; inside VK's own webview the Mini App opens instead.
+  if (/VKApp|VKAndroidApp|vkclient/i.test(navigator.userAgent) || /(^|[?&])vk_[a-z_]+=/.test(location.search))
+    d.querySelectorAll('a[data-vk]').forEach((a) => { a.href = 'https://vk.com/app54838627'; });
+
   // The phone menu.
   const hdr = d.querySelector('.hdr');
   const burger = d.querySelector('.hdr-burger');

@@ -129,6 +129,7 @@ const specialNote = (s: string): Tr => [(ARMY_EN as Record<string, string>)[`spd
 const UI: Record<string, Tr> = {
   home: ['Home', 'Главная'], creatures: ['Bestiary', 'Бестиарий'], captains: ['Captains', 'Капитаны'], ships: ['Fleet', 'Флот'],
   forum: ['Forum', 'Форум'], play: ['Play', 'Играть'], playFree: ['Play free', 'Играть бесплатно'], tg: ['Play in Telegram', 'Играть в Telegram'],
+  vk: ['Play with VK', 'Играть через VK'],
   all: ['All', 'Все'], search: ['Search by name…', 'Поиск по имени…'], tier: ['Tier', 'Уровень'],
   atk: ['Attack', 'Атака'], def: ['Defence', 'Защита'], dmg: ['Damage', 'Урон'], hp: ['Health', 'Здоровье'], speed: ['Speed', 'Скорость'],
   init: ['Initiative', 'Инициатива'], shots: ['Shots', 'Выстрелы'], cost: ['Cost', 'Цена'], abilities: ['Abilities', 'Способности'],
@@ -142,6 +143,13 @@ const UI: Record<string, Tr> = {
 const u = (k: string, lang: Lang) => L(lang, UI[k]);
 const root = (lang: Lang) => (lang === 'ru' ? '/site/' : '/site/en/');
 
+/** «Play with VK» (owner, 2026-10-25: «сделай кнопку играть через вк на сайте в дизайне других кнопок»): VK ID's web
+ *  login opens the game signed in; inside VK's own webview site.js swaps the address for the Mini App (data-vk). */
+const VK_START = '/auth/vkid/start';
+const VK_MARK = '<svg class="vk-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect width="24" height="24" rx="6" fill="#0077ff"/><path fill="#fff" d="M19.376 17.123h-1.744c-.66 0-.864-.525-2.05-1.727-1.033-1-1.49-1.135-1.744-1.135-.356 0-.458.102-.458.593v1.575c0 .424-.135.678-1.253.678-1.846 0-3.896-1.118-5.335-3.202C4.624 10.857 4.03 8.57 4.03 8.096c0-.254.102-.491.593-.491h1.744c.44 0 .61.203.78.677.863 2.49 2.303 4.675 2.896 4.675.22 0 .322-.102.322-.66V9.721c-.068-1.186-.695-1.287-.695-1.71 0-.204.17-.407.44-.407h2.744c.373 0 .508.203.508.643v3.473c0 .372.17.508.271.508.22 0 .407-.136.813-.542 1.254-1.406 2.151-3.574 2.151-3.574.119-.254.322-.491.763-.491h1.744c.525 0 .644.27.525.643-.22 1.017-2.354 4.031-2.354 4.031-.186.305-.254.44 0 .78.186.254.796.779 1.203 1.253.745.847 1.32 1.558 1.473 2.05.17.49-.085.744-.576.744z"/></svg>';
+/** The brass «Play with VK» plate; `cls` the size (sm, lg) and any placement class. */
+const vkBtn = (lang: Lang, cls = '') => `<a class="btn-gold${cls ? ` ${cls}` : ''}" href="${VK_START}" data-vk>${VK_MARK}<span>${u('vk', lang)}</span></a>`;
+
 interface Hero { img: string; imgM?: string; kicker: string; title: string; lead?: string; cta?: boolean; tall?: boolean; mini?: boolean; film?: boolean }
 
 function header(lang: Lang, active: string, path: string): string {
@@ -150,9 +158,10 @@ function header(lang: Lang, active: string, path: string): string {
   const other = lang === 'ru' ? `/site/en/${path}` : `/site/${path}`;
   return `<header class="hdr"><div class="hdr-pill">
 <a class="hdr-logo" href="${r}" aria-label="GRAVETIDE"><img src="${K('brand/logo')}" alt="GRAVETIDE" width="120" height="96"></a>
-<nav class="hdr-nav" id="nav">${nav.map(([href, k, ic]) => `<a href="${r + href}"${active === k ? ' class="on" aria-current="page"' : ''}><img src="${K(ic)}" alt="" width="22" height="22">${u(k, lang)}</a>`).join('')}</nav>
+<nav class="hdr-nav" id="nav">${nav.map(([href, k, ic]) => `<a href="${r + href}"${active === k ? ' class="on" aria-current="page"' : ''}><img src="${K(ic)}" alt="" width="22" height="22">${u(k, lang)}</a>`).join('')}<div class="hdr-nav-play"><a class="btn-gold" href="/play">${u('play', lang)}</a>${vkBtn(lang)}</div></nav>
 <div class="hdr-end"><a class="hdr-lang" href="${other}" hreflang="${lang === 'ru' ? 'en' : 'ru'}">${lang === 'ru' ? 'EN' : 'RU'}</a>
 <a class="hdr-soc" href="https://t.me/gravetide_bot" target="_blank" rel="noopener" aria-label="Telegram"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M21.9 4.3 18.7 19.4c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.5 13.2 1.8 11.7c-1-.3-1-1 .2-1.5L20.5 3c.9-.3 1.6.2 1.4 1.3z"/></svg></a>
+<a class="btn-gold sm hdr-vk" href="${VK_START}" data-vk aria-label="${u('vk', lang)}" title="${u('vk', lang)}">${VK_MARK}</a>
 <a class="btn-gold sm" href="/play">${u('play', lang)}</a>
 <button class="hdr-burger" aria-label="Menu" aria-controls="nav" aria-expanded="false"><span></span><span></span><span></span></button></div>
 </div></header>`;
@@ -172,7 +181,7 @@ const filmArt = () =>
 function heroBlock(h: Hero, lang: Lang): string {
   return `<section class="hero${h.tall ? ' tall' : ''}${h.mini ? ' mini' : ''}">${h.film ? filmArt() : `<picture class="hero-art">${h.imgM ? `<source media="(max-width: 700px)" srcset="${h.imgM}">` : ''}<img src="${h.img}" alt="" fetchpriority="high"></picture>`}
 <div class="hero-in wrap"><p class="kicker">${T(h.kicker, lang)}</p><h1>${T(h.title, lang)}</h1>${h.lead ? `<p class="lead">${T(h.lead, lang)}</p>` : ''}
-${h.cta ? `<div class="hero-cta"><a class="btn-gold lg" href="/play">${u('playFree', lang)}</a><a class="btn-oak" href="https://t.me/gravetide_bot" target="_blank" rel="noopener">${u('tg', lang)}</a></div>` : ''}</div></section>`;
+${h.cta ? `<div class="hero-cta"><a class="btn-gold lg" href="/play">${u('playFree', lang)}</a>${vkBtn(lang, 'lg')}<a class="btn-oak" href="https://t.me/gravetide_bot" target="_blank" rel="noopener">${u('tg', lang)}</a></div>` : ''}</div></section>`;
 }
 
 
@@ -278,7 +287,7 @@ function home(lang: Lang): string {
 <section class="wrap sec">${sectionHead(lang === 'ru' ? 'Капитаны' : 'Captains', lang === 'ru' ? 'Выберите, кто встанет у штурвала' : 'Choose who takes the wheel', lang)}
 <div class="capstrip">${CAPTAIN_IDS.map((id) => capMini(id, lang)).join('')}</div></section>
 <section class="cta-band reveal"><div class="wrap cta-in"><img src="${K('brand/wheel')}" alt="" width="120" height="120" class="spin" loading="lazy"><div><h2>${T(lang === 'ru' ? 'Поднимайте якорь' : 'Weigh anchor', lang)}</h2><p>${T(lang === 'ru' ? 'Играйте в браузере на компьютере и телефоне или прямо в Telegram — без установки.' : 'Play in the browser on a computer or a phone, or right inside Telegram — nothing to install.', lang)}</p></div>
-<div class="hero-cta"><a class="btn-gold lg" href="/play">${u('playFree', lang)}</a><a class="btn-oak" href="/site/forum/">${u('forum', lang)}</a></div></div></section>`;
+<div class="hero-cta"><a class="btn-gold lg" href="/play">${u('playFree', lang)}</a>${vkBtn(lang, 'lg')}<a class="btn-oak" href="/site/forum/">${u('forum', lang)}</a></div></div></section>`;
   return page(lang, {
     path: '', active: 'home', title: lang === 'ru' ? 'GRAVETIDE — пиратские «Герои» в море Pirate Gothic' : 'GRAVETIDE — pirate Heroes on a Pirate Gothic sea',
     desc: lang === 'ru' ? 'Онлайн-песочница про пиратов: корабль — армия, капитан — герой, абордаж — пошаговая битва на гексах.' : 'An online pirate sandbox: a ship is an army, a captain is a hero, boarding is a turn-based hex battle.',

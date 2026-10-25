@@ -59,6 +59,12 @@ p { margin: 0 0 1em; }
 .btn-oak:hover { color: #fff3d6; filter: brightness(1.18) drop-shadow(0 0 10px rgba(140, 195, 232, 0.25)); transform: translateY(-1px); }
 .btn-gold.sm, .btn-oak.sm { min-height: 40px; padding: 0 20px; font-size: 13px; }
 .btn-gold.lg { min-height: 62px; padding: 0 44px; font-size: 17px; border-width: 0 30px; border-image-width: 0 30px; }
+/* «Play with VK»: VK's blue mark on the brass plate; in the header only the mark (a square plate next to Telegram) */
+.vk-mark { flex: none; display: block; border-radius: 6px; filter: drop-shadow(0 1px 1px rgba(60, 35, 5, 0.45)); }
+.btn-gold.lg .vk-mark { width: 26px; height: 26px; }
+.hdr-vk.btn-gold.sm { padding: 0 5px; border-width: 0 16px; border-image-width: 0 16px; }
+.hdr-vk .vk-mark { width: 20px; height: 20px; }
+.hdr-nav-play { display: none; }
 :focus-visible { outline: 2px solid var(--gold1); outline-offset: 3px; border-radius: 6px; }
 
 /* ---- header: a glass pill */
@@ -252,6 +258,8 @@ p { margin: 0 0 1em; }
 .cta-band { margin: 40px 0 0; padding: 70px 0; background: linear-gradient(180deg, transparent, rgba(245, 196, 81, 0.05) 50%, transparent); }
 .cta-in { display: grid; grid-template-columns: auto 1fr auto; gap: 34px; align-items: center; padding: 34px 40px; border-radius: var(--r-lg); border: 1px solid rgba(245, 196, 81, 0.22); background: linear-gradient(180deg, rgba(18, 25, 40, 0.95), rgba(10, 14, 23, 0.98)), url(/site/img/tex/wood.webp) 0 0 / 360px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55); }
 .cta-in p { margin: 10px 0 0; color: #c4bdae; }
+/* the final call's plates in one column of one width: play, play with VK, the forum */
+.cta-in .hero-cta { display: grid; gap: 14px; margin-top: 0; }
 .spin { width: 110px; height: 110px; animation: spin 24s linear infinite; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.7)); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -288,9 +296,15 @@ p { margin: 0 0 1em; }
   .hdr-logo img { height: 38px; }
   .hdr-burger { display: flex; }
   .hdr-soc { display: none; }
+  .hdr-vk { display: none; }
+  .hdr-nav-play { display: grid; gap: 10px; margin-top: 8px; padding: 12px 4px 4px; border-top: 1px solid var(--line2); }
+  .hdr-nav .hdr-nav-play a { padding: 0 20px; font-size: 14px; border-radius: 0; }
+  .hdr-nav .hdr-nav-play a:hover { background: none; color: #2a1a06; }
+  .hdr-nav .hdr-nav-play a .vk-mark { width: 22px; height: 22px; }
   .hdr-nav { position: absolute; top: calc(100% + 8px); left: 0; right: 0; flex-direction: column; padding: 10px; border-radius: 22px; background: rgba(9, 13, 22, 0.94); border: 1px solid var(--line2); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); display: none; }
   .hdr.open .hdr-nav { display: flex; }
   .hdr-nav a { padding: 12px 16px; font-size: 16px; }
+  .hdr.open .hdr-nav { max-height: calc(100svh - 76px); overflow-y: auto; overscroll-behavior: contain; }
   .feat, .feat.flip, .cdet, .capcard { grid-template-columns: 1fr; gap: 26px; }
   .feat.flip .feat-art, .capcard.flip .capcard-art { order: 0; }
   .cdet-art { position: static; }
@@ -304,6 +318,9 @@ p { margin: 0 0 1em; }
   .hero { padding-top: 110px; min-height: 54vh; }
   .hero.tall { min-height: 88vh; padding-bottom: 60px; }
   .hero-cta .btn-gold, .hero-cta .btn-oak { width: 100%; }
+  .hero-cta .btn-gold.lg { padding: 0 10px; letter-spacing: 0.08em; }
+  .cta-in { padding: 28px 16px; }
+  .cta-in .hero-cta { width: 100%; }
   .hdr-end .btn-gold { display: none; }
   .cgrid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .strip { grid-auto-columns: 46%; }
