@@ -1878,7 +1878,9 @@ function onMessage(m: ServerMsg): void {
         prologuePending = false;
         localStorage.setItem('gravetide.helpSeen', '1');
         closeModal();
-        playFilm('cut_prologue', () => playPrologue(() => undefined));
+        // (one line of words, no film first: the owner's films are the six moments of docs §3 — and the film and the
+        // words together held a newcomer 15–20 s before the first thing to press; retention, 2026-10-25)
+        playPrologue(() => undefined);
       } else if (!localStorage.getItem('gravetide.helpSeen')) {
         localStorage.setItem('gravetide.helpSeen', '1');
         openModal('help');

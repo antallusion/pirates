@@ -26,10 +26,10 @@ export const EN = {
   'stage.fire.body': 'Space or «Fire»: a broadside.',
   'stage.fire.touch': 'Press «Fire».',
   'stage.board': 'Board her',
-  'stage.board.body': 'B alongside, then win on the hexes.',
+  'stage.board.body': 'B or «Board».',
   'stage.board.touch': 'Press «Board», then win.',
   'stage.port': 'Back to port',
-  'stage.port.body': 'F at the harbour.',
+  'stage.port.body': '«Enter port» on the bar below.',
   'stage.port.touch': 'Press «Enter port».',
   // Contextual hints
   'hint.irons': 'In irons: her bow is in the wind and the sails are aback. Put the helm over (A/D) until the wind comes onto her beam.',

@@ -144,8 +144,10 @@ test('the watch kept short: «Огонь» counts FIRE_GRACE s after her press; 
   c.push({ t: 'attack', target: raider.id, mode: 'board' });
   steps(game, 21);
   assert.equal(stage(), 'fire');
-  // her press of «Огонь» with nothing bearing (the guns laid on her): no hit, and the step ends all the same
-  c.push({ t: 'attack', target: raider.id, mode: 'guns' });
+  // her press of «Огонь» with the raider out of range: refused, no hit — and the step ends all the same
+  raider.state = { ...raider.state, x: ship.state.x + 1400, y: ship.state.y };
+  game.grid.upsert(raider.id, raider.state.x, raider.state.y);
+  c.push({ t: 'volley' });
   steps(game, 20 * (FIRE_GRACE + 2));
   assert.equal(stage(), 'board', 'the press is the lesson');
   // «В порт»: skip to it, then the helmsman's course for the harbour — the pilot takes her in

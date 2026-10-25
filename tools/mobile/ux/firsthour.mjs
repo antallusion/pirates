@@ -17,9 +17,13 @@ const lang = process.env.LANG2 ?? 'ru';
 const maxMin = Number(process.env.MAXMIN ?? 40);
 const know = process.env.KNOW === '1';
 const stopAt = process.env.STOPAT ?? ''; // a quest id to stop at (e.g. the second chapter's end)
+// DESK=1: a Windows desk — a mouse and the keys, no touch (the watch's words name the keys: W the sails, Q/E a broadside)
+const desk = process.env.DESK === '1';
+// FWONLY=1: stop once the First Watch is over (its time is the measure)
+const fwOnly = process.env.FWONLY === '1';
 const OUT = process.env.OUT ?? 'assets/raw/audit/firsthour';
 mkdirSync(OUT, { recursive: true });
-const tag = `${W}x${H}_${lang}`;
+const tag = `${W}x${H}_${lang}${process.env.DESK === '1' ? '_desk' : ''}`;
 const LOG = `${OUT}/${tag}.jsonl`;
 writeFileSync(LOG, '');
 const rec = (o) => appendFileSync(LOG, JSON.stringify({ t: Math.round((Date.now() - T0) / 1000), ...o }) + '\n');
@@ -34,7 +38,8 @@ const look = (p) => p.evaluate(() => {
   const box = (e) => { const r = e.getBoundingClientRect(); return [Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2)]; };
   const txt = (e) => (e?.innerText ?? e?.getAttribute?.('aria-label') ?? '').replace(/\s+/g, ' ').trim().slice(0, 60);
   const fin = document.getElementById('tut-finger');
-  const tgt = document.querySelector('.tut-target');
+  // (the first ringed button a person can see: a stale ring under a window is no finger)
+  const tgt = [...document.querySelectorAll('.tut-target')].find((e) => vis(e)) ?? document.querySelector('.tut-target');
   const q = s?.self?.quests?.find((x) => x.op) ?? s?.self?.quests?.find((x) => x.kind === 'campaign' || /^c\d/.test(x.id)) ?? null;
   const conf = [...document.querySelectorAll('.confirm-panel, #confirm')].find((e) => e.getBoundingClientRect().width > 0 && !e.closest('.hidden'));
   const modalP = document.querySelector('#modal-panel');
@@ -85,9 +90,11 @@ const look = (p) => p.evaluate(() => {
 /** Every button a person could press now (for the STUCK log). */
 const buttons = (p) => p.evaluate(() => [...document.querySelectorAll('button, [role="button"], .tc-act2, #tc-act')].filter((e) => { const r = e.getBoundingClientRect(); if (r.width < 6 || e.closest('.hidden') || r.top > innerHeight || r.bottom < 0) return false; const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return h === e || e.contains(h); }).map((e) => `${e.id ? '#' + e.id : ''}${e.dataset.act ? `[${e.dataset.act}]` : ''}${e.dataset.ptab ? `{${e.dataset.ptab}}` : ''} ${(e.innerText || e.getAttribute('aria-label') || e.title || '').replace(/\s+/g, ' ').trim().slice(0, 24)}`).slice(0, 40));
 
-const tap = async (p, [x, y]) => { await p.touchscreen.tap(x, y); };
+const tap = async (p, [x, y]) => { if (desk) await p.mouse.click(x, y); else await p.touchscreen.tap(x, y); };
+const hold = async (p, key, ms) => { await p.keyboard.down(key); await L.sleep(ms); await p.keyboard.up(key); };
 /** The wheel, as a thumb: pressed, pulled ahead, held a moment, let go. */
 const stick = async (p, [x, y]) => {
+  if (desk) return hold(p, 'w', 1200);
   await p.mouse.move(x, y); await p.mouse.down();
   await p.mouse.move(x, y - 40, { steps: 4 }); await L.sleep(1200);
   await p.mouse.up();
@@ -96,11 +103,12 @@ const stick = async (p, [x, y]) => {
 const b = await L.browser();
 const steps = new Map(); // key → { first, last, taps, stuck, waits }
 let stepKey = '', taps = 0, stuckSecs = 0, idleSince = Date.now();
+let fwEnd = 0, inGameAt = 0, capAt = 0;
 const problems = [];
 let bad = 0;
 const prob = (m) => { if (!problems.includes(m)) { problems.push(m); L.log('PROBLEM ' + m); rec({ problem: m }); } };
 try {
-  const p = await L.page(b, [W, H], { lang, touch: true });
+  const p = await L.page(b, [W, H], { lang, touch: !desk });
   if (tg) await p.ctx.addInitScript((t) => {
     addEventListener('DOMContentLoaded', () => {
       document.documentElement.classList.add('tg-app');
@@ -140,6 +148,7 @@ try {
   if (know) await p.evaluate(() => { const k = document.getElementById('know-sea'); if (k && !k.checked) k.click(); });
   const pk = await p.evaluate(() => { const r = document.getElementById('pick-captain').getBoundingClientRect(); return [Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2)]; });
   await tap(p, pk);
+  capAt = Math.round((Date.now() - T0) / 1000);
   taps++;
   // the prologue (a film or pages): a person taps through it
   const tStart = Date.now();
@@ -158,6 +167,7 @@ try {
   for (const c of (process.env.JUMP ?? '').split(';').filter(Boolean)) { await L.say(p, c); await L.sleep(2500); L.log('jump', c, JSON.stringify(await L.toasts(p))); }
   if (process.env.JUMP) { await L.closeAll(p); await L.sleep(1500); }
   stepKey = 'start'; steps.set(stepKey, { first: Date.now(), taps: 0, stuck: 0 });
+  inGameAt = Math.round((Date.now() - T0) / 1000);
 
   let lastKey = '', lastAct = '', sameAct = 0, lastShotKey = '';
   const hist = [];
@@ -169,12 +179,14 @@ try {
     const key = v.stage ? `fw:${v.stage}` : v.q ? `${v.q.id}:${v.q.step}${v.q.op ? ':' + v.q.op : ''}` : 'none';
     if (key !== stepKey) {
       const s0 = steps.get(stepKey); if (s0) s0.last = Date.now();
+      if (stepKey.startsWith('fw:') && !key.startsWith('fw:') && !fwEnd) { fwEnd = Math.round((Date.now() - T0) / 1000); L.log(`FIRST WATCH over at ${fwEnd} s from the page (${fwEnd - inGameAt} s in the game, ${fwEnd - capAt} s from «Начать»)`); rec({ fwEnd, inGameAt }); }
       L.log(`STEP ${stepKey} → ${key}  (${s0 ? Math.round((Date.now() - s0.first) / 1000) : '?'} s, ${s0?.taps ?? 0} taps)  ${v.q?.name ?? ''} «${v.q?.text ?? ''}»`);
       rec({ step: key, from: stepKey, name: v.q?.name, text: v.q?.text, act: v.q?.act });
       hist.length = 0;
       stepKey = key; steps.set(key, steps.get(key) ?? { first: Date.now(), taps: 0, stuck: 0 });
       await shot(p, `step_${key.replace(/[:]/g, '-')}`);
       if (stopAt && v.q?.id === stopAt) break;
+      if (fwOnly && fwEnd && !key.startsWith('c01_01')) break;
     }
     const st = steps.get(stepKey);
     if (lastHull >= 0 && v.hull < lastHull - 5) rec({ hurt: lastHull - v.hull, hull: v.hull, near: v.near, toasts: v.toasts, auto: v.auto });
@@ -188,6 +200,8 @@ try {
     else if (v.tac && v.tbCard) { foeRest = Date.now() + 15000; act = ['battle: close the card', async () => tap(p, v.tbCard)]; }
     else if (v.sunk) act = ['«Вернуться в порт»', async () => tap(p, v.sunk)];
     else if (v.tac && v.foe && Date.now() > foeRest) act = ['battle: tap a foe', async () => tap(p, v.foe)];
+    else if (desk && v.stage === 'sail' && !v.docked && !v.auto) act = ['key W (the sails)', async () => hold(p, 'w', 1500)];
+    else if (desk && v.stage === 'fire' && !v.tac) act = ['key Q / E (a broadside)', async () => { await hold(p, 'q', 400); await L.sleep(500); await hold(p, 'e', 400); }];
     else if (!v.tac && v.cards.length) { const c = v.cards.find((x) => /lupick/.test(x.kind ?? '')) ?? v.cards.find((x) => x.gold) ?? v.cards[0]; act = [`card «${c.txt}»`, async () => tap(p, c.at)]; }
     if (act) {
       const label = act[0];
@@ -258,7 +272,7 @@ try {
   await b.close();
 }
 const table = [...steps.entries()].map(([k, s]) => ({ step: k, secs: Math.round(((s.last ?? Date.now()) - s.first) / 1000), taps: s.taps, stuck: s.stuck }));
-writeFileSync(`${OUT}/${tag}_summary.json`, JSON.stringify({ total: Math.round((Date.now() - T0) / 1000), taps, table, problems }, null, 1));
+writeFileSync(`${OUT}/${tag}_summary.json`, JSON.stringify({ total: Math.round((Date.now() - T0) / 1000), inGameAt, fwEnd, fwSecs: fwEnd ? fwEnd - inGameAt : null, capAt, fwFromCaptain: fwEnd ? fwEnd - capAt : null, taps, table, problems }, null, 1));
 for (const r of table) L.log(`${r.step.padEnd(40)} ${String(r.secs).padStart(5)} s ${String(r.taps).padStart(4)} taps${r.stuck ? '  stuck ×' + r.stuck : ''}`);
 L.log(`total ${Math.round((Date.now() - T0) / 1000)} s, ${taps} taps, ${problems.length} problems`);
 process.exit(bad ? 1 : 0);

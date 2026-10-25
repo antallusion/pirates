@@ -3624,7 +3624,7 @@ export class Game {
             lineOfBattle(this, ship, msg.side, Number.isFinite(Number(msg.dist)) ? Number(msg.dist) : 300);
             onboardingFire(s);
             this.idleShot(ship, before, 700);
-          }
+          } else if (onboardingProtected(s)) onboardingFire(s); // (her press is the lesson: see 'volley')
           return err(why);
         }
       case 'attack': {
@@ -3639,7 +3639,9 @@ export class Game {
       }
       case 'volley': {
         const why = aimedVolley(this, s);
-        if (!why) onboardingFire(s);
+        // (in the First Watch her press is the lesson, a volley refused too — out of range, the guns not bearing: the
+        // newcomer's run tapped «Огонь» nine times in 19 s with the raider still closing; retention, 2026-10-25)
+        if (!why || onboardingProtected(s)) onboardingFire(s);
         return err(why);
       }
       case 'gunnery':
