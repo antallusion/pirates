@@ -73,6 +73,25 @@ export function priceMinutes(v: number, price: number): number {
   return Math.round((price / hourSilver(v)) * 60);
 }
 
+/** A contract kept with the captain's profile across a restart, a relog or a crossing (owner's coordinator, 2026-10-25:
+ *  paid silver is never lost to a deploy): the guard's hull and trade, and the real seconds left of it. */
+export interface SavedHire {
+  classId: ShipClassId;
+  level: number;
+  role: string;
+  faction: string;
+  name: string;
+  captain: string;
+  minutes: number;
+  paid: number;
+  left: number;
+}
+
+/** What is given back of a contract that cannot be restored: the unused share of its price. */
+export function hireRefund(h: Pick<SavedHire, 'paid' | 'minutes' | 'left'>): number {
+  return Math.max(0, Math.floor((h.paid * Math.max(0, h.left)) / Math.max(1, h.minutes * 60)));
+}
+
 /** The hire as the captain sees her: the ship, the offers, her silver, and why not if not. */
 export interface HireOffer {
   id: number;

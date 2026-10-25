@@ -3,7 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HIRE_MINUTES, HIRE_REACH, REHIRE_SEC, hirePrice, hireSlots, powerMul, priceMinutes } from '../shared/src/data/seahire.ts';
+import { HIRE_MINUTES, HIRE_REACH, REHIRE_SEC, hirePrice, hireRefund, hireSlots, powerMul, priceMinutes } from '../shared/src/data/seahire.ts';
 import type { HireOffer } from '../shared/src/data/seahire.ts';
 import { hourSilver, shipBandOf } from '../shared/src/data/xpcurve.ts';
 import { CAPTAIN_LEVEL_FOR_SHIP, hullsFor } from '../shared/src/data/shiplevel.ts';
@@ -14,7 +14,7 @@ import { applyDamage, damageBlocked } from '../server/src/game/combat.ts';
 import { startBoarding } from '../server/src/game/boarding.ts';
 import { untouchable } from '../server/src/game/inbattle.ts';
 import { HIRE_WAIT_R, npcHostileTo } from '../server/src/game/npc.ts';
-import { dismiss, hire, hireOffer, hireWhy, hiresOf } from '../server/src/game/seahire.ts';
+import { dismiss, hire, hireOffer, hireWhy, hiresOf, resetHires, restoreHires } from '../server/src/game/seahire.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
@@ -328,4 +328,97 @@ test('a guard, not a hunter: she lets a foe go far from her captain; her captain
   m.region = 'black_coast';
   assert.equal(damageBlocked(game, ship, m), 'friendly');
   assert.equal(damageBlocked(game, m, ship), 'friendly');
+});
+
+// ------------------------------------------------------------------ a restart, a relog
+
+test('a server restart: the contract sails again with her, the time left kept; in port she waits off the harbour', async () => {
+  const { Game } = await import('../server/src/game/Game.ts');
+  const { AuthService } = await import('../server/src/auth.ts');
+  const { PROTOCOL_VERSION } = await import('../shared/src/constants.ts');
+  const { FakeConn } = await import('./helpers.ts');
+  const { game, db } = makeGame();
+  const at = water(game, REGIONS.gravewater.center[0], REGIONS.gravewater.center[1]);
+  const { s, ship } = captain(game, 'Restarted', at);
+  const m = npcAt(game, 'patrol', at.x + 200, at.y, 3);
+  assert.equal(hire(game, s, m.id, 20), null);
+  const gold = s.profile!.gold;
+  steps(game, 30);
+  game.saveSession(s);
+  const left0 = s.profile!.seaHire![0].left;
+  assert.ok(left0 > 20 * 60 - 40 && left0 <= 20 * 60 - 29, `kept: ${left0} s left`);
+  // the deploy: a new server on the same database, the captain back with her token
+  const g2 = new Game({ db, auth: new AuthService(db), log: () => {} });
+  g2.directorOn = false;
+  const c2 = new FakeConn();
+  const s2 = g2.attach(c2 as never);
+  c2.push({ t: 'hello', v: PROTOCOL_VERSION, token: s.token });
+  assert.ok(s2.ship, 'her ship');
+  const h = hiresOf(g2, s2.accountId);
+  assert.equal(h.length, 1, 'her guard again');
+  const e = g2.ships.get(h[0].shipId)!;
+  assert.equal(e.name, m.name);
+  assert.equal(e.shipLevel, 3);
+  assert.equal(e.ownerId, s2.ship!.id);
+  assert.ok(Math.abs(h[0].until - g2.now - left0) <= 1, 'the time left');
+  assert.equal(s2.profile!.gold, gold, 'nothing charged again');
+  assert.ok(Math.hypot(e.state.x - s2.ship!.state.x, e.state.y - s2.ship!.state.y) < 400, 'beside her');
+  // ...and a captain saved in port: off the harbour
+  const port = g2.world.ports[0];
+  s2.profile!.seaHire = [{ ...s2.profile!.seaHire![0], left: 300 }];
+  for (const x of [...hiresOf(g2, s2.accountId)]) g2.removeShip(x.shipId);
+  resetHires(g2);
+  s2.ship!.docked = port.id;
+  Object.assign(s2.ship!.state, { x: port.x, y: port.y });
+  restoreHires(g2, s2);
+  const w = hiresOf(g2, s2.accountId);
+  if (w.length) {
+    const e2 = g2.ships.get(w[0].shipId)!;
+    assert.ok(Math.hypot(e2.state.x - port.x, e2.state.y - port.y) >= HIRE_WAIT_R - 5, 'off the harbour');
+  } else assert.ok(s2.profile!.gold > gold, 'or the unused share back');
+});
+
+test('a relog: the guard goes back to her course while she is away, and sails again when she is back; no room: refund pro rata', async () => {
+  const { PROTOCOL_VERSION } = await import('../shared/src/constants.ts');
+  const { FakeConn } = await import('./helpers.ts');
+  const { game } = makeGame();
+  const at = water(game, REGIONS.gravewater.center[0], REGIONS.gravewater.center[1]);
+  const { c, s } = captain(game, 'Relogged', at);
+  const m = npcAt(game, 'merchant', at.x + 200, at.y, 3);
+  hire(game, s, m.id, 10);
+  c.close();
+  steps(game, 35); // the linger, then she is gone
+  assert.equal(hiresOf(game, s.accountId).length, 0);
+  assert.equal(m.ownerId, null, 'her own course again');
+  const kept = s.profile!.seaHire!;
+  assert.equal(kept.length, 1);
+  assert.ok(kept[0].left > 500 && kept[0].left < 600, `${kept[0].left} s left`);
+  // back: a new connection with her token
+  const c2 = new FakeConn();
+  game.attach(c2 as never);
+  c2.push({ t: 'hello', v: PROTOCOL_VERSION, token: s.token });
+  const s2 = game.sessionByAccount(s.accountId)!;
+  assert.ok(s2.ship, 'her ship');
+  if (s2.ship!.docked) {
+    // (the linger brought her home? she is restored off the harbour or refunded)
+    assert.ok(hiresOf(game, s.accountId).length === 1 || s2.profile!.gold > 0);
+  } else assert.equal(hiresOf(game, s.accountId).length, 1, 'her guard again');
+  // no water for her: the unused share back
+  for (const x of [...hiresOf(game, s.accountId)]) game.removeShip(x.shipId);
+  resetHires(game);
+  s2.profile!.seaHire = [{ classId: 'sloop', level: 3, role: 'merchant', faction: 'league', name: 'Gull', captain: '', minutes: 10, paid: 1200, left: 300 }];
+  let land = { x: 0, y: 0 };
+  for (let x = 3000; x < 90000 && !land.x; x += 250) for (let y = 3000; y < 90000; y += 250) {
+    if ([0, 400, -400].every((dx) => [0, 400, -400].every((dy) => isLand(game.world, x + dx, y + dy)))) {
+      land = { x, y };
+      break;
+    }
+  }
+  Object.assign(s2.ship!.state, { x: land.x, y: land.y });
+  s2.ship!.docked = null;
+  const gold = s2.profile!.gold;
+  restoreHires(game, s2);
+  assert.equal(hiresOf(game, s.accountId).length, 0);
+  assert.equal(s2.profile!.gold - gold, hireRefund({ paid: 1200, minutes: 10, left: 300 }));
+  assert.equal(hireRefund({ paid: 1200, minutes: 10, left: 300 }), 600, 'half the time, half the price');
 });

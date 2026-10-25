@@ -183,7 +183,7 @@ import { commonCollect, commonView, stepCommon } from './commongoal.ts';
 import { guildGoalCollect } from './guildgoal.ts';
 import type { SunkHull } from './bridgefx.ts';
 import { drownedKingRises, makeOffering, stepAbyss, stepAbyssShip } from './abyssfx.ts';
-import { hireSunk, hiresEnd, seaHireMessage, stepHires } from './seahire.ts'; // owner, 2026-10-25: a ship of the sea hired as a guard
+import { hireSunk, hiresAway, hiresEnd, hiresOf, keep as keepHires, restoreHires, seaHireMessage, stepHires } from './seahire.ts'; // owner, 2026-10-25: a ship of the sea hired as a guard
 import { admiralsEye, anchorFleet, escortSlots, escortUpkeep, dismissEscort, escortLost, hireEscort, launchFleet, lashInPort, lineOfBattle, repairFleet, setFormation, stepFleet } from './fleet.ts';
 import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { DeepZone } from './mind.ts';
@@ -1615,7 +1615,7 @@ export class Game {
 
   /** Before a captain crosses into another zone: what cannot follow is settled here. */
   prepareHandoff(s: PlayerSession): void {
-    hiresEnd(this, s.accountId, 'gone'); // a hired guard does not cross into other waters
+    hiresAway(this, s); // a hired guard does not cross into other waters: her contract goes with the profile
     const barter = this.social.barters.get(s.accountId);
     if (barter) cancelBarter(this, barter, `${s.name} has sailed on`);
     if (groupOfAccount(this, s.accountId)) groupLeave(this, s, 'sails into other waters');
@@ -4739,6 +4739,7 @@ export class Game {
         this.spawnPlayerShip(s, row.x, row.y, row.heading);
       }
     }
+    if (s.profile && s.ship) restoreHires(this, s); // her guards hired at sea, after a restart or a relog (seahire.ts)
     if (s.profile) claimBerths(this, s); // the caravans' hulls that came home while she was away (docs/12 P8)
     if (s.profile) claimSkippers(this, s); // and their skippers (docs/12 P10 #16)
     if (s.profile) claimBazaar(this, s); // and what a closed stall left (docs/12 P10 #19)
@@ -4895,7 +4896,7 @@ export class Game {
     socialRetire(this, s);
     friendsPresence(this, s, false);
     if (s.profile) anchorFleet(this, s);
-    hiresEnd(this, s.accountId); // her hired guards go back to their courses (seahire.ts)
+    hiresAway(this, s); // her hired guards go back to their courses; the profile keeps the contracts (seahire.ts)
     this.saveSession(s);
     for (const c of caravansOf(this, s.accountId)) this.removeShip(c.id);
     if (s.ship) {
@@ -5307,6 +5308,7 @@ export class Game {
       p.loadout = ship.loadout;
       p.docked = ship.docked;
     }
+    if (hiresOf(this, s.accountId).length) keepHires(this, s); // her hired guards' seconds left (seahire.ts)
     const x = ship?.state.x ?? 0, y = ship?.state.y ?? 0, h = ship?.state.heading ?? 0;
     this.db.saveCaptain(s.accountId, p, x, y, h);
     s.lastSave = this.now;

@@ -16,13 +16,16 @@
 // no dismiss-and-rehire loop pays; the same ship will not sign on with the same captain again for REHIRE_SEC; a ship in
 // any fight, fired on by anyone, or on another's business cannot be hired (no stealing another captain's prey).
 
-import { HIRE_MINUTES, HIRE_REACH, HIRE_ROLES, REHIRE_SEC, hirePrice, hireSlots, powerMul } from '../../../shared/src/data/seahire.ts';
-import type { HireEscort, HireOffer, HireView } from '../../../shared/src/data/seahire.ts';
+import { HIRE_MINUTES, HIRE_REACH, HIRE_ROLES, REHIRE_SEC, hirePrice, hireRefund, hireSlots, powerMul } from '../../../shared/src/data/seahire.ts';
+import type { HireEscort, HireOffer, HireView, SavedHire } from '../../../shared/src/data/seahire.ts';
 import { hullOf, hullsGap } from '../../../shared/src/data/reach.ts';
 import { shipBandOf } from '../../../shared/src/data/xpcurve.ts';
 import { NPC_VOLLEYS } from '../../../shared/src/data/seabalance.ts';
 import { SELF_IN_BATTLE_WHY, untouchable } from './inbattle.ts';
-import { hireStation, npcHostileTo, resumeCourse } from './npc.ts';
+import { HIRE_WAIT_R, hireStation, npcHostileTo, openSea, resumeCourse } from './npc.ts';
+import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
+import { FACTIONS } from '../../../shared/src/data/factions.ts';
+import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { headingVec } from '../../../shared/src/math.ts';
 import { fightingPower } from './struck.ts';
 import type { Game } from './Game.ts';
@@ -145,11 +148,21 @@ export function hire(game: Game, s: PlayerSession, id: number, minutes: number):
   if (gold < price) return `Not enough silver: ${price} asked, you have ${gold}`;
   p.gold -= price;
   game.db.ledger(s.accountId, 'sea_hire', -price, `${n.name} ${minutes} min`.slice(0, 120));
+  bind(game, s, n, minutes, price, game.now + minutes * 60);
+  game.toastShip(ship, `${n.name} signs on as your guard for ${minutes} minutes (${price} silver).`, 'good');
+  game.pushSelf(s, true);
+  sendHires(game, s);
+  return null;
+}
+
+/** She is her captain's until `until`: the contract booked and kept with the profile, her course left. */
+function bind(game: Game, s: PlayerSession, n: ShipEntity, minutes: number, price: number, until: number, back?: Partial<Saved>): Hire {
+  const ship = s.ship!;
   const b = game.npcs.get(n.id)!;
   const list = hiresOf(game, s.accountId);
   const used = new Set(list.map((h) => game.ships.get(h.shipId)?.hireSlot));
   const slot = used.has(0) ? 1 : 0;
-  const h: Hire = { shipId: n.id, account: s.accountId, until: game.now + minutes * 60, minutes, paid: price, saved: { role: b.role, npcRole: n.npcRole, expiresAt: b.expiresAt }, warnedAt: -999 };
+  const h: Hire = { shipId: n.id, account: s.accountId, until, minutes, paid: price, saved: { role: b.role, npcRole: n.npcRole, expiresAt: b.expiresAt, ...back }, warnedAt: -999 };
   book(game).by.set(s.accountId, [...list, h]);
   // Her captain's from now: her hull as a captain's own escort's (ship.ts recompute: no discount of the sea's), her
   // wounds kept as a share; the traffic's end of her life put off; a guard's trade for the others to see.
@@ -167,14 +180,79 @@ export function hire(game: Game, s: PlayerSession, id: number, minutes: number):
   n.recompute(game.now);
   n.hull = Math.max(1, Math.round(n.stats.hullMax * frac));
   reinfo(game, n.id);
-  game.toastShip(ship, `${n.name} signs on as your guard for ${minutes} minutes (${price} silver).`, 'good');
-  game.pushSelf(s, true);
+  keep(game, s);
+  return h;
+}
+
+/** Her contracts as the profile keeps them (the real seconds left of each). */
+export function keep(game: Game, s: PlayerSession): void {
+  if (!s.profile) return;
+  const out: SavedHire[] = [];
+  for (const h of hiresOf(game, s.accountId)) {
+    const n = game.ships.get(h.shipId);
+    if (!n) continue;
+    out.push({ classId: n.loadout.classId, level: n.shipLevel, role: h.saved.npcRole ?? h.saved.role, faction: n.faction, name: n.name, captain: n.captainName, minutes: h.minutes, paid: h.paid, left: Math.max(0, Math.round(h.until - game.now)) });
+  }
+  s.profile.seaHire = out;
+}
+
+/** Her captain back at sea (a restart, a relog, a crossing): every contract the profile keeps sails again with the time
+ *  left - beside her, or off the harbour when she is in port; one that cannot be put on the water gives back the unused
+ *  share of its price. */
+export function restoreHires(game: Game, s: PlayerSession): void {
+  const p = s.profile, ship = s.ship;
+  const saved = Array.isArray(p?.seaHire) ? p!.seaHire! : [];
+  if (!p || !ship || !saved.length || hiresOf(game, s.accountId).length) return;
+  p.seaHire = [];
+  for (const r of saved) {
+    if (r.left < 5 || !SHIP_CLASSES[r.classId]) continue;
+    const spot = restoreSpot(game, ship, hiresOf(game, s.accountId).length);
+    if (!spot) {
+      const back = hireRefund(r);
+      if (back > 0) {
+        p.gold += back;
+        game.db.ledger(s.accountId, 'sea_hire_back', back, r.name.slice(0, 120));
+      }
+      game.toastShip(ship, `${r.name} could not rejoin you: ${back} silver of the contract is returned.`, 'info');
+      continue;
+    }
+    const role = (HIRE_ROLES as readonly string[]).includes(r.role) ? (r.role as NpcRole) : 'merchant';
+    const n = game.spawnNpcShip(role, r.classId, (r.faction in FACTIONS ? r.faction : 'league') as FactionId, spot.x, spot.y, ship.state.heading, { ship: r.name, captain: r.captain });
+    game.setNpcLevel(n, r.level);
+    n.region = game.regionAt(spot.x, spot.y);
+    game.grid.upsert(n.id, spot.x, spot.y);
+    // (once the contract is done she is the sea's own, and goes when no captain is near)
+    bind(game, s, n, r.minutes, r.paid, game.now + r.left, { expiresAt: game.now + 120 });
+    game.toastShip(ship, `${r.name} rejoins you: ${Math.ceil(r.left / 60)} min left of her contract.`, 'good');
+  }
+  keep(game, s);
   sendHires(game, s);
+}
+
+/** Open water for a guard put back: off her beam at sea, off the harbour in port; null when there is none. */
+function restoreSpot(game: Game, ship: ShipEntity, slot: number): { x: number; y: number } | null {
+  if (ship.docked) {
+    const port = game.portById(ship.docked) ?? game.nearestPort(ship.state.x, ship.state.y);
+    if (!port) return null;
+    for (const r of [HIRE_WAIT_R, HIRE_WAIT_R + 200, HIRE_WAIT_R + 450]) for (let a = 0; a < 24; a++) {
+      const x = port.x + Math.sin(a * 0.2618) * r, y = port.y - Math.cos(a * 0.2618) * r;
+      if (openSea(game, x, y)) return { x, y };
+    }
+    return null;
+  }
+  const f = headingVec(ship.state.heading), rv = headingVec(ship.state.heading + Math.PI / 2);
+  const st = hireStation(slot);
+  for (const k of [1, 1.6, 2.4, 3.5]) {
+    for (const side of [1, -1]) {
+      const x = ship.state.x + f.x * st.y * k + rv.x * st.x * k * side, y = ship.state.y + f.y * st.y * k + rv.y * st.x * k * side;
+      if (openSea(game, x, y)) return { x, y };
+    }
+  }
   return null;
 }
 
 /** The contract is over (`how`): she is her own again — her trade, her course, her hull as the sea's. Nothing back. */
-export function endHire(game: Game, h: Hire, how: 'time' | 'dismissed' | 'sunk' | 'gone' | 'lost'): void {
+export function endHire(game: Game, h: Hire, how: 'time' | 'dismissed' | 'sunk' | 'gone' | 'lost' | 'away'): void {
   const b0 = book(game);
   const list = (b0.by.get(h.account) ?? []).filter((x) => x !== h);
   if (list.length) b0.by.set(h.account, list);
@@ -211,7 +289,11 @@ export function endHire(game: Game, h: Hire, how: 'time' | 'dismissed' | 'sunk' 
     else if (how === 'sunk') game.toastShip(own, `Your guard ${name} is sunk: the contract is over, nothing is refunded.`, 'bad');
     else if (how === 'gone') game.toastShip(own, `${name} lost sight of you and returns to her course.`, 'info');
   }
-  if (s) sendHires(game, s);
+  // (her captain gone ashore for the night or into other waters: the profile keeps the contract, hiresAway)
+  if (s && how !== 'away') {
+    keep(game, s);
+    sendHires(game, s);
+  }
 }
 
 /** She sends a hired guard away early: nothing back. */
@@ -228,9 +310,17 @@ export function hireSunk(game: Game, npc: ShipEntity): void {
   if (h) endHire(game, h, 'sunk');
 }
 
-/** Her captain's ship is leaving the sea for good (sunk, gone ashore for the night, another zone): every guard goes. */
-export function hiresEnd(game: Game, account: number, how: 'lost' | 'gone' = 'lost'): void {
-  for (const h of [...hiresOf(game, account)]) endHire(game, h, how);
+/** Her captain's ship is sunk: every guard goes, nothing back. */
+export function hiresEnd(game: Game, account: number): void {
+  for (const h of [...hiresOf(game, account)]) endHire(game, h, 'lost');
+}
+
+/** Her captain leaves the sea for now (logs off, crosses into another zone's waters): the guards go back to their
+ *  courses here, but the profile keeps every contract with its time left, and it sails again with her (restoreHires). */
+export function hiresAway(game: Game, s: PlayerSession): void {
+  if (!hiresOf(game, s.accountId).length) return;
+  keep(game, s);
+  for (const h of [...hiresOf(game, s.accountId)]) endHire(game, h, 'away');
 }
 
 /** What the HUD's chip shows. */
@@ -289,6 +379,7 @@ export function stepHires(game: Game): void {
         game.grid.upsert(n.id, n.state.x, n.state.y);
       }
     }
+    if (s) keep(game, s);
     if (s && Math.floor(now) % 2 === 0) sendHires(game, s);
   }
 }

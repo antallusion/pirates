@@ -23,4 +23,6 @@ export const SERVER_RU_HIRE: Record<string, string> = {
   'Your guard {0} is under fire!': 'Ваш охранник {0} под огнём!',
   'Your guard sank {0}': 'Ваш охранник потопил: {0}',
   'Your guard took {0}': 'Ваш охранник взял: {0}',
+  '{0} could not rejoin you: {1} silver of the contract is returned.': '{0} не смог вернуться к вам: возвращено серебра за остаток контракта — {1}.',
+  '{0} rejoins you: {1} min left of her contract.': '{0} снова с вами: до конца контракта {1} мин.',
 };

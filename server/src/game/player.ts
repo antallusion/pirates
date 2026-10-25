@@ -123,6 +123,8 @@ export interface Profile {
   quests: QuestLog;
   /** docs/36: her place in the main campaign (sanitizeProfile fills it: a save of before it is migrated by her level). */
   campaign?: CampaignState;
+  /** Her guards hired at sea, kept across a restart or a relog (seahire.ts). */
+  seaHire?: import('../../../shared/src/data/seahire.ts').SavedHire[];
   /** Today's three orders and the days in a row (docs/11 P6). */
   daily: DailyState;
   /** The list of friends (docs/11 P6): account and name as last seen. */
