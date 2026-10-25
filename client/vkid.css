@@ -31,5 +31,11 @@
 
 /* settings' «Привязать VK» */
 .opt-vkid { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; }
-.opt-vkid:not(:disabled) { color: #fff; background: #0077ff; border-color: #0077ff; }
+/* (VK ID's own flat blue, not the kit's wood: the skin's border image and caps off) */
+.opt-foot .k-btn.opt-vkid:not(:disabled) {
+  color: #fff; background: #0077ff !important; border: 1px solid #0077ff !important; border-image: none !important; border-radius: 8px;
+  box-shadow: none; text-shadow: none; font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight: 500;
+}
+.opt-foot .k-btn.opt-vkid:not(:disabled)::before, .opt-foot .k-btn.opt-vkid:not(:disabled)::after { display: none; }
+.opt-foot .k-btn.opt-vkid:not(:disabled):hover { background: #0071f2 !important; }
 .opt-vkid:disabled { opacity: 0.75; cursor: default; }
