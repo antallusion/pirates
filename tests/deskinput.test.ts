@@ -111,3 +111,12 @@ test('the handbook names every window key (the journal F3, H, P, F2, Esc, Home w
     assert.doesNotMatch(RU[k], /[A-Za-z]/, `${k}: no Latin in the Russian`);
   }
 });
+
+test('no forced layout each frame: the nav plate by an observer, its text only when it changes, the hint\'s stack check throttled', () => {
+  const hud = readFileSync(new URL('../client/src/ui/hud.ts', import.meta.url), 'utf8');
+  assert.ok(!hud.includes("$('hud-nav').offsetParent"), 'the nav plate is not asked by offsetParent in the frame');
+  assert.match(hud, /new ResizeObserver\(\(es\) => \{ for \(const e of es\) this\.navShown =/);
+  assert.match(hud, /if \(nav !== this\.navHtml\) \$\('nav-text'\)\.innerHTML = this\.navHtml = nav;/);
+  const ease = readFileSync(new URL('../client/src/ui/ease.ts', import.meta.url), 'utf8');
+  assert.match(ease, /if \(now - this\.stackAskedAt < 500\) return this\.stackWas;/);
+});

@@ -317,12 +317,18 @@ export class Hud {
   private lastRegion = '';
   private lastMinimap = 0;
   private lastNav = 0;
+  /** Whether the nav plate has a box (a ResizeObserver's word: no layout forced each frame to ask — batch-pc). */
+  private navShown = false;
+  private navHtml = '';
   private gaugeEls = new Map<string, { el: HTMLElement; fill: HTMLElement }>();
   private cdEls = new Map<string, { cd: HTMLElement; cdt: HTMLElement; charge: HTMLElement | null }>();
   /** Bumped when art finishes loading so slots rebuild with their icons. */
   artEpoch = 0;
 
   constructor() {
+    // (batch-pc: «offsetParent» asked every 66 ms after the frame's writes forced a whole layout — 18% of a slowed
+    // desk's frame in a sea fight; the observer says when the plate shows or goes)
+    new ResizeObserver((es) => { for (const e of es) this.navShown = e.contentRect.width > 0 && e.contentRect.height > 0; }).observe($('hud-nav'));
     wireMiniTip(this.minimap, () => this.miniView, () => this.miniState, (x, y) => this.onMiniMark(x, y)); // docs/18 #26: name · ⚓level · kind; docs/23 #30: a long press marks
     // Her own mark reached: a word, and the «Now:» line moves on.
     waypointHooks.onArrive = () => this.toast(L('wpArrived'), 'good');
@@ -837,7 +843,7 @@ export class Hud {
     const tnow = performance.now();
     if (tnow - this.lastNav > 66) {
       this.lastNav = tnow;
-      if ($('hud-nav').offsetParent) this.drawNav(state);
+      if (this.navShown) this.drawNav(state);
     }
     if (tnow - this.lastMinimap > 120) {
       this.lastMinimap = tnow;
@@ -1033,6 +1039,7 @@ export class Hud {
     if (!c) {
       el.innerHTML = '<canvas class="compass" width="220" height="220"></canvas><div id="nav-text" style="font-size:11px;color:var(--fog);text-align:center"></div>';
       c = el.querySelector('canvas')!;
+      this.navHtml = '';
     }
     const g = c.getContext('2d')!;
     const W = 220, R = 92;
@@ -1137,7 +1144,9 @@ export class Hud {
     // What the wind does for her way: a following breeze drives her on, a head wind holds her back.
     const push = Math.round((windPush(rel, state.wind[1]) - 1) * 100);
     const pushTag = Math.abs(push) >= 3 ? ` · <b style="color:var(${push > 0 ? '--good' : '--bad'})">${push > 0 ? '+' : '−'}${Math.abs(push)}%</b>` : '';
-    $('nav-text').innerHTML = `${esc(t('hud.wind', { kn: Math.round(state.wind[1] * 30) }))}<br>${point} (${rel}°)${pushTag}`;
+    // (batch-pc: written only when it changes — fifteen rewrites a second dirtied the layout for nothing)
+    const nav = `${esc(t('hud.wind', { kn: Math.round(state.wind[1] * 30) }))}<br>${point} (${rel}°)${pushTag}`;
+    if (nav !== this.navHtml) $('nav-text').innerHTML = this.navHtml = nav;
   }
 
   private drawMinimap(state: ClientState): void {
