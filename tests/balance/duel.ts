@@ -89,6 +89,11 @@ function put(game: Game, side: Side, role: 'patrol' | 'hunter', x: number, y: nu
   brain.active = true;
   // A scripted captain is a captain: her guns are not held to the sea's own NPC_OPEN_FIRE (owner, 2026-10-22).
   if (side.craft === 'perfect' || side.craft === 'average') brain.captain = true;
+  // …and her hull a captain's: the sea's own halved (owner 2026-10-26: NPC HP ×0.5), never hers.
+  if (side.craft === 'perfect' || side.craft === 'average' || side.craft === 'idle') {
+    ship.npcHalved = false;
+    ship.recompute(game.now);
+  }
   if (side.skill) {
     brain.skill = side.skill;
     ship.effects = ship.effects.filter((e) => e.id !== 'npc_craft');

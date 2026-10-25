@@ -525,6 +525,8 @@ function fillYard(game: Game, y: Graveyard): void {
     const s = game.spawnNpcShip('ghost', 'hulk', 'free', x, yy, h, { ship: 'Rotten Hulk', captain: '' });
     game.npcs.delete(s.id);
     s.npcRole = null;
+    s.npcHalved = false; // a wall of rotten timber, not a ship of the sea (owner 2026-10-26's NPC HP ×0.5 is not hers)
+    s.recompute(game.now);
     s.crew = 0;
     s.state.sail = 0;
     s.state.speed = 0;
