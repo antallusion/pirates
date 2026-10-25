@@ -29,7 +29,10 @@ import type { RegionId, Safety } from '../../../shared/src/world/regions.ts';
 import { SECTOR_SIZE, sectorAt, sectorGrid } from '../../../shared/src/world/sectors.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { AUTOSAIL_ARRIVE } from '../../../shared/src/data/autosail.ts';
-import { REACH_DOCK, landingPoint } from '../../../shared/src/data/reach.ts';
+import { DOCK_SLOW, REACH_DOCK, landingPoint } from '../../../shared/src/data/reach.ts';
+import { PORT_DOCK_RADIUS } from '../../../shared/src/constants.ts';
+import { questAct } from '../../../shared/src/data/questact.ts';
+import type { ClientMsg } from '../../../shared/src/protocol.ts';
 import { autosailOf, helmTouched, lastStopOf, pathView, pausedCourse, planFrom, startAutosail, stopAutosail } from './autosail.ts';
 import { beastsAlive } from './beasts.ts';
 import { commonView } from './commongoal.ts';
@@ -74,6 +77,7 @@ export const ROUTE_WORDS = {
   duel: 'A duel is fought with another captain: challenge one at a port.',
   retarget: 'The mark is gone: the helmsman takes her on to the next one.',
   afterPort: 'The course is set: the helmsman takes her there once she casts off.',
+  castOff: 'She casts off: the helmsman takes her there.',
   here: 'You are there already: it is done in this port.',
   again: 'You are in that port already: cast off and put in again to make the step.',
 } as const;
@@ -815,6 +819,9 @@ interface Follow {
   checkAt: number;
   /** When she came to a ship of the goal (or a fight broke the course off): the next is sailed for once the sea is quiet. */
   reachedAt: number | null;
+  /** A harbour's step: when she was last put in there by the run (it docks her on arrival), and how many times. */
+  dockAt?: number;
+  docks?: number;
 }
 
 const runs = new WeakMap<Game, Map<PlayerSession, Follow>>();
@@ -883,9 +890,14 @@ export function gotoGoal(game: Game, s: PlayerSession, key: string): string | nu
   // in the very port the goal asks for (the board of «Взять контракт», a delivery's quay): nowhere to sail
   if (s.ship!.docked && r.port === s.ship!.docked) {
     game.sendTo(s, { t: 'route', key: k, on: false, why: 'none' });
-    // a quest's «arrive at» step taken in this very port: she must put in again (quests.ts, the fresh dock)
+    // a quest's step done in this very port (owner, 2026-10-26: «Плыть» must always do something): its own deed here —
+    // «Расспросить», «Доложить», «Сдать груз» (quests.ts questHere) — not «cast off and put in again»
     const qs = k.startsWith('q:') ? s.profile!.quests.active.find((a) => a.id === k.slice(2)) : undefined;
     const st = qs ? QUESTS_BY_ID[qs.id]?.steps[qs.step] : undefined;
+    if (qs && questAct(st)?.how === 'here') {
+      game.redo(s, { t: 'quest', action: 'here', id: qs.id } as ClientMsg);
+      return null;
+    }
     game.sendTo(s, { t: 'toast', msg: st?.type === 'visit' ? ROUTE_WORDS.again : ROUTE_WORDS.here, kind: 'info' });
     return null;
   }
@@ -894,16 +906,46 @@ export function gotoGoal(game: Game, s: PlayerSession, key: string): string | nu
   m.set(s, f);
   const ship = s.ship!;
   if (ship.docked) {
-    sendView(game, s, f); // (the way from her harbour)
-    game.sendTo(s, { t: 'toast', msg: ROUTE_WORDS.afterPort, kind: 'info' });
+    // Owner, 2026-10-26 («захожу в порт сдать квест, он мне дает следующий, я начинаю плыть … и ниче не происходит»):
+    // «Плыть» in port casts off and sails — not a course kept for a casting off she has to find herself.
+    const why = game.undock(s);
+    if (why !== null || ship.docked) {
+      sendView(game, s, f); // (the way from her harbour; refused — a refit under way: she is told why)
+      game.sendTo(s, { t: 'toast', msg: ROUTE_WORDS.afterPort, kind: 'info' });
+      return why;
+    }
+    const again = routeFor(game, s, k);
+    if (!('done' in again) && !('none' in again)) f.view = again; // (measured from the harbour's mouth now)
+    game.sendTo(s, { t: 'toast', msg: ROUTE_WORDS.castOff, kind: 'info' });
+  }
+  game.sendTo(s, { t: 'route', key: k, on: true, view: f.view });
+  if (Math.hypot(f.view.x - ship.state.x, f.view.y - ship.state.y) <= arriveOf(f.view) + 20) {
+    putIn(game, s, f); // there already: a harbour's step puts her in
     return null;
   }
-  game.sendTo(s, { t: 'route', key: k, on: true, view: r });
-  if (Math.hypot(r.x - ship.state.x, r.y - ship.state.y) <= arriveOf(r) + 20) return null; // there already
   const e = steer(game, s, f);
   if (e) sendView(game, s, f); // refused a moment (a hostile sail, a weak hull): the way is drawn all the same
   // (refused — a hostile sail, a weak hull: the run stays and the course is set once he can; she is told why)
   return e;
+}
+
+/** A run to a harbour's step brought her there (owner, 2026-10-26: «When she arrives at a port step, she docks»): she is
+ *  put in — her «Причалить» given for her (Game.tryDock: within the approach it puts in, a cable off the helmsman takes
+ *  her up to the quays first, approach.ts). Not under fire, a few seconds apart, three times at most (a harbour that
+ *  will not have her says why each time). True when it was asked. */
+function putIn(game: Game, s: PlayerSession, f: Follow): boolean {
+  const ship = s.ship;
+  const pt = f.view.act === 'dock' && f.view.port ? game.portById(f.view.port) : undefined;
+  if (!ship || !pt || ship.docked || !ship.alive || ship.boarding || ship.grappled || ship.underFire(game.now)) return false;
+  const d = Math.hypot(pt.x - ship.state.x, pt.y - ship.state.y);
+  if (d > PORT_DOCK_RADIUS - 20) return false;
+  if (autosailOf(ship) && d > REACH_DOCK * 3) return false; // (on her way in yet)
+  if (Math.abs(ship.state.speed) > DOCK_SLOW && !autosailOf(ship)) return false; // (the sails coming in: a moment)
+  if (game.now - (f.dockAt ?? -1e9) < 5 || (f.docks ?? 0) >= 3) return false;
+  f.dockAt = game.now;
+  f.docks = (f.docks ?? 0) + 1;
+  game.redo(s, { t: 'dock' } as ClientMsg);
+  return true;
 }
 
 /** The run ends (the goal met, her hand, the pill): said to the client. */
@@ -989,17 +1031,21 @@ export function stepRoutes(game: Game): void {
     if (ship.docked) continue;
     const d = Math.hypot(f.view.x - ship.state.x, f.view.y - ship.state.y);
     const near = arriveOf(f.view) + 20;
+    // a harbour's step: brought in, she is put in (never left hove to off the quays, drifting off on the current)
+    if (f.view.act === 'dock' && putIn(game, s, f)) continue;
     if (run) continue; // (a new place was steered for above, as it was said)
     // No course on: after a port (cast off), after a fight, after a ship of the goal reached and dealt with — the next
     // place is sailed for once the sea is quiet and her hand is off the wheel; never a place she is at.
     if (pausedCourse(ship)) continue; // the helmsman takes up the broken-off course himself
-    if (d <= Math.max(near, f.view.r)) {
+    // (a harbour's step: on in to its quays while she is beyond putting in — the current, a run that ended a cable short)
+    if (d <= (f.view.act === 'dock' ? near : Math.max(near, f.view.r))) {
       if (f.view.ship !== undefined) f.reachedAt ??= game.now;
       continue;
     }
     const st = lastStopOf(ship);
     const arrivedHere = st?.why === 'arrived' && f.sent && Math.hypot(f.sent.x - f.view.x, f.sent.y - f.view.y) < 150 && st.at >= f.sentAt;
-    if (arrivedHere && f.view.ship === undefined && !f.view.region) continue; // brought in: what is done here is hers
+    // brought in: what is done here is hers (a harbour's step not yet put in at: on in, the run puts her in above)
+    if (arrivedHere && f.view.ship === undefined && !f.view.region && !(f.view.act === 'dock' && d > PORT_DOCK_RADIUS - 40)) continue;
     if (game.now - helmTouched(ship) < 5) continue;
     if (steer(game, s, f) === null) f.reachedAt = null;
   }

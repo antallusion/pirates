@@ -26,7 +26,7 @@ const LR = dict(REN, RRU);
 const LS = dict(SEN, SRU);
 const LW = dict(WEN, WRU);
 
-export type ActId = 'attack' | 'attack_stop' | 'attack_mode' | 'axes' | 'harbour' | 'board' | 'dock' | 'moor_way' | 'homeport' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'roam' | 'roam_join' | 'roam_look' | 'look' | 'repair' | 'jury' | 'scuttle' | 'goal_sail';
+export type ActId = 'attack' | 'attack_stop' | 'attack_mode' | 'axes' | 'harbour' | 'board' | 'dock' | 'moor_way' | 'homeport' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'roam' | 'roam_join' | 'roam_look' | 'look' | 'repair' | 'jury' | 'scuttle' | 'goal_sail' | 'sel_go' | 'sel_hire' | 'sel_look';
 export type LandAction = 'land' | 'dig' | 'raise' | 'expedition' | 'descent' | 'keeper' | 'escort' | 'dive' | 'lair';
 export type LookKind = 'obj' | 'guard' | 'lair' | 'drift' | 'struck';
 
@@ -60,7 +60,7 @@ export interface ActFacts {
   /** docs/19 D7: a roaming stack within reach, or the one she marked: its name, HoMM3's word and level, a fight on it,
    *  the offer at ×3; `lead` — hers to attack now (marked, or a cable off with no ship of her choosing): its buttons
    *  come first; `far` — beyond a cable (the helmsman sails her in); `running` — he is sailing her in now. */
-  roam?: { id: number; icon: string; name: string; word: string; lv: number; fight?: 'other' | 'mate'; back?: number; offer?: 'join' | 'flee'; joinN?: number; lead?: boolean; far?: boolean; running?: boolean; /** the step's own stack (the opening's, a story's): «Атаковать» from afar */ quest?: boolean } | null;
+  roam?: { id: number; icon: string; name: string; word: string; lv: number; fight?: 'other' | 'mate'; back?: number; offer?: 'join' | 'flee'; joinN?: number; lead?: boolean; far?: boolean; running?: boolean; /** the step's own stack (the opening's, a story's): «Атаковать» from afar */ quest?: boolean; /** marked by her own click or tap: «Атаковать» from afar too (the helmsman sails her in) */ marked?: boolean } | null;
   looks?: { kind: LookKind; name: string }[];
   repair?: { repairing: boolean; combat: boolean; hurt: boolean; short?: boolean } | null;
   /** docs/23 item 33: a mark to attack, or the pursuit under way (and how); `gunsOnly`: no grapple takes her (a beast, a
@@ -71,6 +71,11 @@ export interface ActFacts {
   /** Owner, 2026-10-22: the opening's next place at sea, not sailed for by itself after a battle or a step — her «Плыть»
    *  (the step's own button, near its thing, comes first). */
   goalSail?: { name: string; resume?: boolean } | null;
+  /** Owner, 2026-10-26 («на пк версии выбрав порт или корабль не дает дополнительного экшена»): the thing she selected
+   *  (a click, a tap) — a harbour, an island, a ship that is no foe, her wreckage — and what it offers wherever it lies:
+   *  «К порту» / «Плыть сюда» (the helmsman takes her there; a harbour's run puts her in), «Плыть» when it is her quest's
+   *  place, «Нанять» for a peaceful ship of the sea, «Осмотреть» for a captain. `far`: metres off. */
+  sel?: { kind: 'port' | 'isle' | 'wreck' | 'ship'; name: string; far: number; quest?: boolean; go?: boolean; hire?: boolean; look?: boolean } | null;
 }
 
 export interface Act {
@@ -162,6 +167,19 @@ export function buildActs(f: ActFacts): Act[] {
     const i = out.findIndex((a) => a.id === 'dock' || a.id === 'homeport' || a.id === 'moor_way');
     if (i > 0) out.unshift(...out.splice(i, 1));
   }
+  // The thing she selected (owner, 2026-10-26): its own buttons, the course there first — gold unless a fight's is up.
+  const sl = f.sel;
+  if (sl) {
+    const sel: Act[] = [];
+    if (sl.go) {
+      const label = sl.quest ? L('a.goalSail') : sl.kind === 'port' ? L('a.toPort') : sl.kind === 'ship' ? L('a.toShip') : L('a.sailHere');
+      sel.push({ id: 'sel_go', icon: sl.kind === 'port' ? 'map_port' : 'stat_sails', label, sub: sl.far >= 60 ? `${sl.name} · ${farWords(sl.far)}` : sl.name, title: L(sl.kind === 'port' ? 'a.toPortTitle' : 'a.sailHereTitle', { name: sl.name }), ...(sl.kind === 'port' ? { key: 'dock' as const } : {}) });
+    }
+    if (sl.hire) sel.push({ id: 'sel_hire', icon: 'ab_call_escort', label: L('a.hire'), sub: sl.name, title: L('a.hireTitle', { name: sl.name }) });
+    if (sl.look) sel.push({ id: 'sel_look', icon: 'act_inspect', label: L('a.inspect'), sub: sl.name, title: L('a.inspectTitle', { name: sl.name }) });
+    if (sel.length && !FIGHT_FIRST.has(out[0]?.id as ActId) && out[0]?.id !== 'dock' && out[0]?.id !== 'land') out.unshift(...sel);
+    else out.push(...sel);
+  }
   // (last: the step's own button — «Атаковать», «Занять» — leads when it is there)
   if (f.goalSail && !f.docked) {
     const a: Act = { id: 'goal_sail', icon: 'stat_sails', label: L('a.goalSail'), ...(f.goalSail.name ? { sub: f.goalSail.name } : {}), title: L('a.goalSailTitle') };
@@ -186,7 +204,7 @@ function roamActs(f: ActFacts): Act[] {
     // the bar's «ещё N м»)
     // (the step's own stack — the opening's «Твари на отмели», a story's — has it from afar: the helmsman's run stopped
     // 18 m short, «Осмотреть» alone on the bar and «ещё 18 м» under it, the newcomer's run of 2026-10-23)
-    else if (!rm.far || rm.quest) out.push({ id: 'roam', icon: 'act_attack', label: LR('a.attack'), sub: `${rm.word} · ⚓${rm.lv}`, title: LR(rm.far ? 't.attackFar' : 't.attack', { what: rm.name, word: rm.word, lv: rm.lv }), key: 'land', arg: String(rm.id) });
+    else if (!rm.far || rm.quest || rm.marked) out.push({ id: 'roam', icon: 'act_attack', label: LR('a.attack'), sub: `${rm.word} · ⚓${rm.lv}`, title: LR(rm.far ? 't.attackFar' : 't.attack', { what: rm.name, word: rm.word, lv: rm.lv }), key: 'land', arg: String(rm.id) });
     if (rm.offer === 'join' && (rm.joinN ?? 0) > 0 && !rm.far) out.push({ id: 'roam_join', icon: 'stat_crew', label: LR('a.join'), sub: `×${rm.joinN}`, title: LR('t.join', { n: rm.joinN ?? 0 }), arg: String(rm.id) });
   }
   out.push({ id: 'roam_look', icon: 'act_inspect', label: LR('a.look'), sub: rm.name, title: LR('t.look'), arg: String(rm.id) });
@@ -200,10 +218,13 @@ export const WATCH_RAIDER = 'Red Novice';
  *  the fog (owner, 2026-10-22: «щас атаковать можно за 400 метров … я не вижу ниче на карте, а уже могу брать абордаж,
  *  атаку»; 2026-10-19: «Пусть внизу выпрыгивают кнопки только когда я рядом с чем-то проплываю»). Her own mark farther
  *  off is sailed to from its own choices (the target menu's «Преследовать»), not from the bar. */
-export function attackRelevant(inGuns: boolean, seen: boolean, lesson = false): boolean {
+export function attackRelevant(inGuns: boolean, seen: boolean, lesson = false, pinned = false): boolean {
   // (the First Watch's «Атакуйте»: its raider half a kilometre off and the step's one button not there — the newcomer
   // sailed 40–50 s with nothing lit and no finger, the run of 2026-10-23; there «Атаковать» is the lesson itself)
-  return lesson || (inGuns && seen);
+  // (owner, 2026-10-26: «выбрав порт или корабль не дает дополнительного экшена» — a ship she selected herself, on her
+  // screen, has it however far: the helmsman closes with her. «Only when relevant» hides it with no target, not when a
+  // target is chosen and far.)
+  return lesson || (seen && (inGuns || pinned));
 }
 
 /** What the land key does at sea, with nothing to land at: the mast, the net, the mark — in the bar's order. */
