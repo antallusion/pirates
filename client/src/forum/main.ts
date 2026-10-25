@@ -1,32 +1,76 @@
 // The forum page (docs/32_FORUM.md): routes under /site/forum/ (and /site/en/forum/) without reloading, the member's
-// corner in the site's header (notifications, messages, reports, avatar), the reveal on scroll, YouTube on a click.
+// button in the site's header (the avatar, its menu: notifications, messages, reports, profile, sign-out), the reveal on scroll, YouTube on a click.
 
 import '../compat.ts'; // first of all: the calls Safari 15 lacks (iOS 15 is the floor)
-import { BASE, errText, esc, href, ico, K, loadMe, state, t, token } from './core.ts';
+import { BASE, errText, esc, href, ico, K, loadMe, state, t, toast, token } from './core.ts';
 import * as P from './pages.ts';
 import type { Ctx } from './pages.ts';
 
 const mount = document.getElementById('forum') as HTMLElement;
 let seq = 0;
 
+/** The member's corner in the site's header (owner, 2026-10-25: «надо фиксить залогиненного юзера»): one avatar
+ *  button with the unread count, its menu holding search, notifications, messages, reports (staff), the profile and
+ *  signing out — the row's links keep their room. Signed out: the search alone. */
+let cornerOff: AbortController | null = null;
 function userCorner(): void {
   const end = document.querySelector('.hdr-end');
   if (!end) return;
+  const wasOpen = !!end.querySelector('.f-me.open');
   end.querySelector('.f-me')?.remove();
+  cornerOff?.abort();
+  cornerOff = new AbortController();
+  const signal = cornerOff.signal;
   const box = document.createElement('div');
   box.className = 'f-me';
   const u = state.me.user;
   const n = state.me.unread ?? { notifications: 0, messages: 0, reports: 0 };
   const badge = (x: number) => (x ? `<i class="f-count">${x > 99 ? '99+' : x}</i>` : '');
-  box.innerHTML = `<a class="f-hico" href="${href('search')}" aria-label="${esc(t('search'))}"><img src="${K('ico/search')}" alt="" width="24" height="24"></a>${
-    u
-      ? `${state.staff ? `<a class="f-hico" href="${href('mod')}" aria-label="${esc(t('moderation'))}"><img src="${K('ico/report')}" alt="" width="24" height="24">${badge(n.reports)}</a>` : ''}
-<a class="f-hico" href="${href('n')}" aria-label="${esc(t('notifications'))}"><img src="${K('ico/bell')}" alt="" width="24" height="24">${badge(n.notifications)}</a>
-<a class="f-hico" href="${href('m')}" aria-label="${esc(t('messages'))}"><img src="${K('ico/messages')}" alt="" width="24" height="24">${badge(n.messages)}</a>
-<a class="f-hme" href="${href(`u/${u.id}`)}" aria-label="${esc(t('profile'))}"><img src="${esc(u.avatar)}" alt="" width="40" height="40"></a>`
-      : ''
-  }`;
-  end.insertBefore(box, end.querySelector('.hdr-lang'));
+  const item = (to: string, icon: string, label: string, count = 0) =>
+    `<a role="menuitem" href="${href(to)}"><img src="${K(`ico/${icon}`)}" alt="" width="22" height="22">${esc(label)}${badge(count)}</a>`;
+  if (!u) {
+    box.innerHTML = `<a class="f-hico" href="${href('search')}" aria-label="${esc(t('search'))}" title="${esc(t('search'))}"><img src="${K('ico/search')}" alt="" width="22" height="22"></a>`;
+  } else {
+    const total = n.notifications + n.messages + (state.staff ? n.reports : 0);
+    box.innerHTML = `<button type="button" class="f-hme" aria-haspopup="menu" aria-expanded="false" aria-controls="f-um" aria-label="${esc(`${t('me_menu')}: ${u.name}`)}" title="${esc(u.name)}"><img src="${esc(u.avatar)}" alt="" width="40" height="40">${badge(total)}</button>
+<div class="f-um" id="f-um" role="menu" hidden><div class="f-um-who"><img src="${esc(u.avatar)}" alt="" width="40" height="40"><b>${esc(u.name)}</b></div>
+${item(`u/${u.id}`, 'captains', t('profile'))}${item('n', 'bell', t('notifications'), n.notifications)}${item('m', 'messages', t('messages'), n.messages)}${state.staff ? item('mod', 'report', t('moderation'), n.reports) : ''}${item('search', 'search', t('search'))}
+<button type="button" role="menuitem" class="f-um-out"><img src="${K('ico/anchor')}" alt="" width="22" height="22">${esc(t('sign_out'))}</button></div>`;
+    const btn = box.querySelector('.f-hme') as HTMLButtonElement;
+    const menu = box.querySelector('.f-um') as HTMLElement;
+    const setOpen = (open: boolean) => {
+      menu.hidden = !open;
+      btn.setAttribute('aria-expanded', String(open));
+      box.classList.toggle('open', open);
+      if (open) document.dispatchEvent(new CustomEvent('hdr:close'));
+    };
+    btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      setOpen(menu.hidden);
+      if (!menu.hidden) (menu.querySelector('[role=menuitem]') as HTMLElement | null)?.focus();
+    });
+    menu.addEventListener('click', () => setOpen(false));
+    document.addEventListener('click', (ev) => { if (!menu.hidden && !box.contains(ev.target as Node)) setOpen(false); }, { signal });
+    document.addEventListener('hdr:open', () => setOpen(false), { signal });
+    if (wasOpen) setOpen(true);
+    box.addEventListener('keydown', (ev) => {
+      if (menu.hidden) return;
+      const items = [...menu.querySelectorAll<HTMLElement>('[role=menuitem]')];
+      const i = items.indexOf(document.activeElement as HTMLElement);
+      if (ev.key === 'Escape') { setOpen(false); btn.focus(); }
+      else if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+        ev.preventDefault();
+        items[(i + (ev.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus();
+      }
+    });
+    box.querySelector('.f-um-out')!.addEventListener('click', () => {
+      try { localStorage.removeItem('gravetide.token'); } catch { /* no storage */ }
+      lastToken = token();
+      toast(t('signed_out'));
+      void loadMe().then(() => { userCorner(); void route(); });
+    });
+  }
+  end.insertBefore(box, end.firstChild);
 }
 
 /** Blocks rise into view as they are scrolled to (still under reduced motion: the stylesheet). */

@@ -146,24 +146,37 @@ const root = (lang: Lang) => (lang === 'ru' ? '/site/' : '/site/en/');
 /** «Play with VK» (owner, 2026-10-25: «сделай кнопку играть через вк на сайте в дизайне других кнопок»): VK ID's web
  *  login opens the game signed in; inside VK's own webview site.js swaps the address for the Mini App (data-vk). */
 const VK_START = '/auth/vkid/start';
-const VK_MARK = '<svg class="vk-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect width="24" height="24" rx="6" fill="#0077ff"/><path fill="#fff" d="M19.376 17.123h-1.744c-.66 0-.864-.525-2.05-1.727-1.033-1-1.49-1.135-1.744-1.135-.356 0-.458.102-.458.593v1.575c0 .424-.135.678-1.253.678-1.846 0-3.896-1.118-5.335-3.202C4.624 10.857 4.03 8.57 4.03 8.096c0-.254.102-.491.593-.491h1.744c.44 0 .61.203.78.677.863 2.49 2.303 4.675 2.896 4.675.22 0 .322-.102.322-.66V9.721c-.068-1.186-.695-1.287-.695-1.71 0-.204.17-.407.44-.407h2.744c.373 0 .508.203.508.643v3.473c0 .372.17.508.271.508.22 0 .407-.136.813-.542 1.254-1.406 2.151-3.574 2.151-3.574.119-.254.322-.491.763-.491h1.744c.525 0 .644.27.525.643-.22 1.017-2.354 4.031-2.354 4.031-.186.305-.254.44 0 .78.186.254.796.779 1.203 1.253.745.847 1.32 1.558 1.473 2.05.17.49-.085.744-.576.744z"/></svg>';
+/** VK's mark alone, one colour (currentColor): ivory-brass in the header's round button like Telegram's glyph, the
+ *  plate's dark ink on the brass buttons (owner, 2026-10-25: «логотип вк вверху переделать в стиле игры»). */
+const VK_MARK = '<svg class="vk-mark" viewBox="3.4 3.4 17.2 17.2" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.376 17.123h-1.744c-.66 0-.864-.525-2.05-1.727-1.033-1-1.49-1.135-1.744-1.135-.356 0-.458.102-.458.593v1.575c0 .424-.135.678-1.253.678-1.846 0-3.896-1.118-5.335-3.202C4.624 10.857 4.03 8.57 4.03 8.096c0-.254.102-.491.593-.491h1.744c.44 0 .61.203.78.677.863 2.49 2.303 4.675 2.896 4.675.22 0 .322-.102.322-.66V9.721c-.068-1.186-.695-1.287-.695-1.71 0-.204.17-.407.44-.407h2.744c.373 0 .508.203.508.643v3.473c0 .372.17.508.271.508.22 0 .407-.136.813-.542 1.254-1.406 2.151-3.574 2.151-3.574.119-.254.322-.491.763-.491h1.744c.525 0 .644.27.525.643-.22 1.017-2.354 4.031-2.354 4.031-.186.305-.254.44 0 .78.186.254.796.779 1.203 1.253.745.847 1.32 1.558 1.473 2.05.17.49-.085.744-.576.744z"/></svg>';
 /** The brass «Play with VK» plate; `cls` the size (sm, lg) and any placement class. */
 const vkBtn = (lang: Lang, cls = '') => `<a class="btn-gold${cls ? ` ${cls}` : ''}" href="${VK_START}" data-vk>${VK_MARK}<span>${u('vk', lang)}</span></a>`;
 
 interface Hero { img: string; imgM?: string; kicker: string; title: string; lead?: string; cta?: boolean; tall?: boolean; mini?: boolean; film?: boolean }
 
+/** The header's links in the order they stand, and the order they leave the bar for the burger's drawer when the row
+ *  is short (priority+, site.js): the home first (the logo leads there too), the forum last; the current page never. */
+const NAV = [['', 'home', 'ico/home', 1], ['creatures/', 'creatures', 'ico/creatures', 6], ['captains/', 'captains', 'ico/captains', 4], ['ships/', 'ships', 'ico/ships', 3], ['rating/', 'rating', 'ico/achievements', 2], ['shop/', 'shop', 'ico/doubloon', 5], ['forum/', 'forum', 'ico/forum', 7]] as const;
+const TG_MARK = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M21.9 4.3 18.7 19.4c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.5 13.2 1.8 11.7c-1-.3-1-1 .2-1.5L20.5 3c.9-.3 1.6.2 1.4 1.3z"/></svg>';
+
+/** The header (owner, 2026-10-25): logo · the links (exactly one lit: this page) · the end — the forum's member button
+ *  (client/src/forum/main.ts puts it first), the language, Telegram and VK as twin round brass-ringed buttons, «Play»
+ *  and the burger. The burger's drawer holds the links the bar has no room for, and on phones all of them. */
 function header(lang: Lang, active: string, path: string): string {
   const r = root(lang);
-  const nav = [['', 'home', 'ico/home'], ['creatures/', 'creatures', 'ico/creatures'], ['captains/', 'captains', 'ico/captains'], ['ships/', 'ships', 'ico/ships'], ['rating/', 'rating', 'ico/achievements'], ['shop/', 'shop', 'ico/doubloon'], ['forum/', 'forum', 'ico/forum']] as const;
+  const link = ([href, k, ic, pri]: (typeof NAV)[number], bar: boolean) =>
+    `<a href="${r + href}"${bar ? ` data-pri="${pri}"` : ''}${active === k ? ' class="on" aria-current="page"' : ''}><img src="${K(ic)}" alt="" width="22" height="22">${u(k, lang)}</a>`;
   const other = lang === 'ru' ? `/site/en/${path}` : `/site/${path}`;
   return `<header class="hdr"><div class="hdr-pill">
 <a class="hdr-logo" href="${r}" aria-label="GRAVETIDE"><img src="${K('brand/logo')}" alt="GRAVETIDE" width="120" height="96"></a>
-<nav class="hdr-nav" id="nav">${nav.map(([href, k, ic]) => `<a href="${r + href}"${active === k ? ' class="on" aria-current="page"' : ''}><img src="${K(ic)}" alt="" width="22" height="22">${u(k, lang)}</a>`).join('')}<div class="hdr-nav-play"><a class="btn-gold" href="/play">${u('play', lang)}</a>${vkBtn(lang)}</div></nav>
+<nav class="hdr-nav" id="nav" aria-label="${lang === 'ru' ? 'Разделы' : 'Sections'}">${NAV.map((x) => link(x, true)).join('')}</nav>
 <div class="hdr-end"><a class="hdr-lang" href="${other}" hreflang="${lang === 'ru' ? 'en' : 'ru'}">${lang === 'ru' ? 'EN' : 'RU'}</a>
-<a class="hdr-soc" href="https://t.me/gravetide_bot" target="_blank" rel="noopener" aria-label="Telegram"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M21.9 4.3 18.7 19.4c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.5 13.2 1.8 11.7c-1-.3-1-1 .2-1.5L20.5 3c.9-.3 1.6.2 1.4 1.3z"/></svg></a>
-<a class="btn-gold sm hdr-vk" href="${VK_START}" data-vk aria-label="${u('vk', lang)}" title="${u('vk', lang)}">${VK_MARK}</a>
-<a class="btn-gold sm" href="/play">${u('play', lang)}</a>
-<button class="hdr-burger" aria-label="Menu" aria-controls="nav" aria-expanded="false"><span></span><span></span><span></span></button></div>
+<a class="hdr-soc" href="https://t.me/gravetide_bot" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram">${TG_MARK}</a>
+<a class="hdr-soc hdr-vk" href="${VK_START}" data-vk aria-label="${u('vk', lang)}" title="${u('vk', lang)}">${VK_MARK}</a>
+<a class="btn-gold sm hdr-play" href="/play">${u('play', lang)}</a>
+<button class="hdr-burger" type="button" aria-label="${lang === 'ru' ? 'Меню' : 'Menu'}" aria-controls="hdr-drawer" aria-expanded="false"><span></span><span></span><span></span></button></div>
+<div class="hdr-drawer" id="hdr-drawer"><nav aria-label="${lang === 'ru' ? 'Разделы' : 'Sections'}">${NAV.map((x) => link(x, false)).join('')}</nav>
+<div class="hdr-drawer-play"><a class="btn-gold" href="/play">${u('play', lang)}</a>${vkBtn(lang)}</div></div>
 </div></header>`;
 }
 

@@ -59,32 +59,51 @@ p { margin: 0 0 1em; }
 .btn-oak:hover { color: #fff3d6; filter: brightness(1.18) drop-shadow(0 0 10px rgba(140, 195, 232, 0.25)); transform: translateY(-1px); }
 .btn-gold.sm, .btn-oak.sm { min-height: 40px; padding: 0 20px; font-size: 13px; }
 .btn-gold.lg { min-height: 62px; padding: 0 44px; font-size: 17px; border-width: 0 30px; border-image-width: 0 30px; }
-/* «Play with VK»: VK's blue mark on the brass plate; in the header only the mark (a square plate next to Telegram) */
-.vk-mark { flex: none; display: block; border-radius: 6px; filter: drop-shadow(0 1px 1px rgba(60, 35, 5, 0.45)); }
+/* «Play with VK» (owner, 2026-10-25: «логотип вк вверху переделать в стиле игры»): VK's mark alone in one colour — the
+   plate's dark ink on the brass buttons; in the header a round brass-ringed button, Telegram's twin */
+.vk-mark { flex: none; display: block; width: 22px; height: 22px; }
+.btn-gold .vk-mark { filter: drop-shadow(0 1px 0 rgba(255, 240, 200, 0.55)); }
 .btn-gold.lg .vk-mark { width: 26px; height: 26px; }
-.hdr-vk.btn-gold.sm { padding: 0 5px; border-width: 0 16px; border-image-width: 0 16px; }
-.hdr-vk .vk-mark { width: 20px; height: 20px; }
-.hdr-nav-play { display: none; }
 :focus-visible { outline: 2px solid var(--gold1); outline-offset: 3px; border-radius: 6px; }
 
-/* ---- header: a glass pill */
+/* ---- header: a glass pill. The links that do not fit leave the bar for the burger's drawer (site.js, priority+);
+   exactly one link is lit — the page's own: a hover only warms the words, it never draws a second pill */
 .hdr { position: fixed; top: 14px; left: 0; right: 0; z-index: 50; padding: 0 16px; pointer-events: none; }
 .hdr-pill {
-  pointer-events: auto; max-width: 1280px; margin: 0 auto; display: flex; align-items: center; gap: 18px; padding: 6px 10px 6px 18px;
+  position: relative; pointer-events: auto; max-width: 1360px; margin: 0 auto; display: flex; align-items: center; gap: 14px; padding: 6px 10px 6px 18px;
   border-radius: 999px; background: rgba(9, 13, 22, 0.62); border: 1px solid var(--line2); backdrop-filter: blur(16px) saturate(1.3); -webkit-backdrop-filter: blur(16px) saturate(1.3);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
+.hdr-logo { flex: none; }
 .hdr-logo img { height: 66px; margin: -12px 0 -14px; width: auto; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.7)); }
-.hdr-nav { display: flex; gap: 4px; flex: 1; justify-content: center; }
-.hdr-nav a { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 999px; color: #cfc8b8; font-weight: 500; font-size: 15px; transition: background 0.2s, color 0.2s; }
-.hdr-nav a img { width: 22px; height: 22px; filter: drop-shadow(0 1px 2px #000); }
-.hdr-nav a:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
-.hdr-nav a.on { color: var(--gold1); background: rgba(245, 196, 81, 0.1); box-shadow: inset 0 0 0 1px rgba(245, 196, 81, 0.25); }
-.hdr-end { display: flex; align-items: center; gap: 10px; }
-.hdr-lang, .hdr-soc { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: #cfc8b8; border: 1px solid var(--line2); font: 600 12px var(--sans); letter-spacing: 0.06em; }
-.hdr-lang:hover, .hdr-soc:hover { color: var(--gold1); border-color: rgba(245, 196, 81, 0.4); }
-.hdr-burger { display: none; width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line2); background: none; padding: 0; cursor: pointer; flex-direction: column; justify-content: center; align-items: center; gap: 4px; }
-.hdr-burger span { display: block; width: 18px; height: 2px; background: var(--text); border-radius: 2px; }
+.hdr-nav { display: flex; gap: 2px; flex: 1 1 0; min-width: 0; justify-content: center; overflow: hidden; }
+.hdr-nav a, .hdr-drawer nav a { flex: none; display: flex; align-items: center; gap: 8px; padding: 9px 13px; border-radius: 999px; color: #cfc8b8; font-weight: 500; font-size: 15px; white-space: nowrap; transition: color 0.2s; }
+.hdr-nav a img, .hdr-drawer nav a img { flex: none; width: 22px; height: 22px; filter: drop-shadow(0 1px 2px #000); transition: filter 0.2s; }
+.hdr-nav a:hover, .hdr-drawer nav a:hover { color: #fff3d6; }
+.hdr-nav a:hover img, .hdr-drawer nav a:hover img { filter: drop-shadow(0 1px 2px #000) drop-shadow(0 0 6px rgba(245, 196, 81, 0.45)); }
+.hdr-nav a.on, .hdr-drawer nav a.on { color: var(--gold1); background: rgba(245, 196, 81, 0.1); box-shadow: inset 0 0 0 1px rgba(245, 196, 81, 0.25); }
+.hdr-nav a.off { display: none; }
+.hdr-end { flex: none; display: flex; align-items: center; gap: 8px; }
+/* the round buttons: a dark well in a brass ring, the glyph ivory-brass; a hover lights the ring */
+.hdr-lang, .hdr-soc, .hdr-burger {
+  flex: none; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border-radius: 50%; color: #e6d3a3; cursor: pointer;
+  background: radial-gradient(circle at 50% 35%, #182033, #0a0e17 72%); border: 1px solid rgba(245, 196, 81, 0.38);
+  box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.08), 0 2px 6px rgba(0, 0, 0, 0.45); font: 600 12px var(--sans); letter-spacing: 0.06em;
+  transition: color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.hdr-soc svg { width: 20px; height: 20px; filter: drop-shadow(0 1px 1px #000); }
+.hdr-lang:hover, .hdr-soc:hover, .hdr-burger:hover, .hdr.open .hdr-burger { color: var(--gold1); border-color: rgba(245, 196, 81, 0.75); box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.1), 0 0 12px rgba(245, 196, 81, 0.35); }
+.hdr-burger { display: none; flex-direction: column; justify-content: center; align-items: center; gap: 4px; }
+.hdr-burger span { display: block; width: 18px; height: 2px; background: currentColor; border-radius: 2px; }
+.hdr.more .hdr-burger { display: flex; }
+/* the burger's drawer: on a wide screen only the links the bar let go, on a phone all of them and the play buttons */
+.hdr-drawer { display: none; position: absolute; top: calc(100% + 8px); right: 0; width: min(300px, 100%); padding: 10px; border-radius: 22px; background: rgba(9, 13, 22, 0.95); border: 1px solid var(--line2); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5); }
+.hdr.open .hdr-drawer { display: block; max-height: calc(100svh - 96px); overflow-y: auto; overscroll-behavior: contain; }
+.hdr-drawer nav { display: flex; flex-direction: column; gap: 2px; }
+.hdr-drawer nav a { padding: 11px 16px; font-size: 16px; }
+.hdr-drawer nav a:not(.more) { display: none; }
+.hdr-drawer-play { display: none; gap: 10px; margin-top: 8px; padding: 12px 4px 4px; border-top: 1px solid var(--line2); }
+.hdr-drawer-play a { padding: 0 20px; font-size: 14px; }
 
 /* ---- hero: the art fading into the page, then a clear gap before the content */
 .hero { position: relative; min-height: min(62vh, 640px); display: flex; align-items: flex-end; padding: 140px 0 40px; margin-bottom: 40px; isolation: isolate; }
@@ -291,20 +310,15 @@ p { margin: 0 0 1em; }
 }
 @media (max-width: 900px) {
   .hdr { top: 8px; padding: 0 8px; }
-  .hdr-pill { position: relative; gap: 8px; padding: 4px 6px 4px 12px; justify-content: space-between; }
-  .hdr-end { margin-left: auto; }
+  .hdr-pill { gap: 8px; padding: 4px 6px 4px 12px; justify-content: space-between; }
+  .hdr-end { margin-left: auto; gap: 6px; }
   .hdr-logo img { height: 38px; }
+  .hdr-nav, .hdr-soc { display: none; }
   .hdr-burger { display: flex; }
-  .hdr-soc { display: none; }
-  .hdr-vk { display: none; }
-  .hdr-nav-play { display: grid; gap: 10px; margin-top: 8px; padding: 12px 4px 4px; border-top: 1px solid var(--line2); }
-  .hdr-nav .hdr-nav-play a { padding: 0 20px; font-size: 14px; border-radius: 0; }
-  .hdr-nav .hdr-nav-play a:hover { background: none; color: #2a1a06; }
-  .hdr-nav .hdr-nav-play a .vk-mark { width: 22px; height: 22px; }
-  .hdr-nav { position: absolute; top: calc(100% + 8px); left: 0; right: 0; flex-direction: column; padding: 10px; border-radius: 22px; background: rgba(9, 13, 22, 0.94); border: 1px solid var(--line2); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); display: none; }
-  .hdr.open .hdr-nav { display: flex; }
-  .hdr-nav a { padding: 12px 16px; font-size: 16px; }
-  .hdr.open .hdr-nav { max-height: calc(100svh - 76px); overflow-y: auto; overscroll-behavior: contain; }
+  .hdr-drawer { left: 0; width: auto; }
+  .hdr.open .hdr-drawer { max-height: calc(100svh - 76px); }
+  .hdr-drawer nav a:not(.more) { display: flex; }
+  .hdr-drawer-play { display: grid; }
   .feat, .feat.flip, .cdet, .capcard { grid-template-columns: 1fr; gap: 26px; }
   .feat.flip .feat-art, .capcard.flip .capcard-art { order: 0; }
   .cdet-art { position: static; }
@@ -410,9 +424,9 @@ img[src*="/site/img/ico/"], img[src*="/site/img/rank/"], img[src*="/site/img/med
 .ftr p.ftr-req { font-size: 12.5px; line-height: 1.6; color: #6f7888; max-width: 640px; }
 .ftr p.ftr-req a { color: var(--muted); }
 .ftr p.ftr-req a:hover { color: var(--ice); }
-/* seven links in the pill (the rating and the shop joined, 2026-10-20): tighter before the phone menu takes over */
+/* seven links in the pill (the rating and the shop joined, 2026-10-20): tighter before links leave for the drawer */
 @media (max-width: 1240px) and (min-width: 901px) {
-  .hdr-pill { gap: 10px; }
+  .hdr-pill { gap: 10px; padding-left: 14px; }
   .hdr-nav a { padding: 9px 10px; gap: 6px; font-size: 14px; }
   .hdr-nav a img { width: 18px; height: 18px; }
 }

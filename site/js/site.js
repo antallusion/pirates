@@ -41,13 +41,50 @@
   if (/VKApp|VKAndroidApp|vkclient/i.test(navigator.userAgent) || /(^|[?&])vk_[a-z_]+=/.test(location.search))
     d.querySelectorAll('a[data-vk]').forEach((a) => { a.href = 'https://vk.com/app54838627'; });
 
-  // The phone menu.
+  // The header's links, priority+: on a wide screen the links that do not fit leave the bar one by one (the lowest
+  // data-pri first, the page's own never) and wait in the burger's drawer; on a phone (≤900 px) the drawer holds all.
+  // Re-fitted on a resize, when the fonts land and when the end of the row changes (the forum's member button).
   const hdr = d.querySelector('.hdr');
   const burger = d.querySelector('.hdr-burger');
-  burger?.addEventListener('click', () => {
-    const open = hdr.classList.toggle('open');
-    burger.setAttribute('aria-expanded', String(open));
-  });
+  const nav = d.getElementById('nav');
+  const setOpen = (open) => {
+    hdr.classList.toggle('open', open);
+    burger?.setAttribute('aria-expanded', String(open));
+    if (open) d.dispatchEvent(new CustomEvent('hdr:open'));
+  };
+  burger?.addEventListener('click', () => setOpen(!hdr.classList.contains('open')));
+  d.addEventListener('click', (e) => { if (hdr?.classList.contains('open') && !e.target.closest('.hdr-burger, .hdr-drawer')) setOpen(false); });
+  d.addEventListener('keydown', (e) => { if (e.key === 'Escape' && hdr?.classList.contains('open')) { setOpen(false); burger?.focus(); } });
+  d.addEventListener('hdr:close', () => setOpen(false));
+  if (hdr && nav) {
+    const bar = [...nav.querySelectorAll('a')];
+    const drawer = [...d.querySelectorAll('.hdr-drawer nav a')];
+    const order = bar.map((a, i) => i).filter((i) => !bar[i].classList.contains('on')).sort((a, b) => bar[a].dataset.pri - bar[b].dataset.pri);
+    const phone = matchMedia('(max-width: 900px)');
+    const need = () => {
+      const shown = bar.filter((a) => !a.classList.contains('off'));
+      return shown.reduce((s, a) => s + a.offsetWidth, 0) + Math.max(0, shown.length - 1) * (parseFloat(getComputedStyle(nav).columnGap) || 0);
+    };
+    const fit = () => {
+      bar.forEach((a) => a.classList.remove('off'));
+      hdr.classList.remove('more');
+      if (!phone.matches) {
+        for (const i of order) {
+          if (need() <= nav.clientWidth) break;
+          bar[i].classList.add('off');
+          hdr.classList.add('more');
+        }
+      }
+      drawer.forEach((a, i) => a.classList.toggle('more', !!bar[i]?.classList.contains('off')));
+      if (!phone.matches && !hdr.classList.contains('more') && hdr.classList.contains('open')) setOpen(false);
+    };
+    let queued = false;
+    const ask = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; fit(); }); } };
+    fit();
+    addEventListener('resize', ask);
+    d.fonts?.ready.then(ask);
+    if ('ResizeObserver' in window) new ResizeObserver(ask).observe(d.querySelector('.hdr-end'));
+  }
 
   // The features' banners: each one sticks to the top and the next slides over it; the one beneath sinks back
   // (--p: how far the next has come over it) and a banner's art settles as it rises into view (--e).
