@@ -30,6 +30,8 @@ import { telegramFromEnv } from './telegram.ts';
 import { handleTelegram } from './http/tg-routes.ts';
 import { vkFromEnv } from './vk.ts';
 import { handleVk } from './http/vk-routes.ts';
+import { vkIdFromEnv } from './vkid.ts';
+import { handleVkId } from './http/vkid-routes.ts';
 import { readFileSync } from 'node:fs';
 import { ForumStore } from './forum/store.ts';
 import { ForumService } from './forum/service.ts';
@@ -69,6 +71,9 @@ const tg = telegramFromEnv({ db, auth, game, publicUrl: PUBLIC_URL });
 // The VK Mini App (docs/36): the launch's sign-in and the votes' payments callback — null without VK_APP_SECRET.
 const vk = vkFromEnv({ db, auth, game, publicUrl: PUBLIC_URL });
 if (vk) console.log(`[${GAME_NAME}] VK Mini App: app ${vk.appId ?? '(any)'}${vk.payTest ? ', test payments credited' : ''}`);
+// «Войти через VK ID» on the website (docs/36 §8): OAuth 2.1 + PKCE, the same VK account as the Mini App — null without VKID_APP_ID.
+const vkid = vkIdFromEnv({ db, auth, game });
+if (vkid) console.log(`[${GAME_NAME}] VK ID: app ${vkid.appId}, redirect ${vkid.redirectUri}${vkid.apiBase === 'https://id.vk.com' ? '' : ` (API ${vkid.apiBase})`}`);
 // The community forum (docs/32_FORUM.md): its own SQLite file and uploads folder beside the game's database.
 const forumDir = DB_PATH === ':memory:' ? null : dirname(DB_PATH);
 const ids = (v: string | undefined) => (v ?? '').split(',').map((x) => Number(x.trim())).filter((x) => Number.isInteger(x) && x > 0);
@@ -138,6 +143,7 @@ const server = createServer(async (req, res) => {
   if (req.url?.startsWith('/telemetry') && (await telemetry.handle(req, res))) return;
   if (req.url?.startsWith('/ops') && (await opsPanel.handle(req, res))) return;
   if (await handleTelegram(req, res, tg)) return;
+  if (await handleVkId(req, res, vkid)) return;
   if (await handleVk(req, res, vk)) return;
   if (await handleAuth(req, res, auth, oauth)) return;
   if (req.url?.startsWith('/api/forum/') && (await handleForum(req, res))) return;

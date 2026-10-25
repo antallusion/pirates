@@ -4,6 +4,12 @@
 export const SERVER_RU_TG: Record<string, string> = {
   'Telegram sign-in failed: open the game from the bot again.': 'Не удалось войти через Телеграм: откройте игру из бота снова.',
   'Payments are not open yet.': 'Оплата пока закрыта.',
+  // «Войти через VK ID» on the website (server/src/vkid.ts VKID_ERR, owner 2026-10-25)
+  'This VK ID sign-in has expired. Try again.': 'Вход через VK ID устарел. Попробуйте ещё раз.',
+  'VK ID sign-in was cancelled.': 'Вход через VK ID отменён.',
+  'VK ID did not answer. Try again in a minute.': 'VK ID не ответил. Попробуйте через минуту.',
+  'That VK ID already belongs to another captain.': 'Этот VK ID уже привязан к другому капитану.',
+  'This captain already has another VK linked.': 'К этому капитану уже привязан другой VK.',
   // the web game's YooKassa top-up (server/src/game/webshop.ts gameCheckout, owner 2026-10-21)
   'The payment could not be made. Try again in a minute.': 'Не удалось создать платёж. Попробуйте через минуту.',
   'Too many unpaid orders. Pay one or wait an hour.': 'Слишком много неоплаченных заказов. Оплатите один или подождите час.',

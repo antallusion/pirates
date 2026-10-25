@@ -3,6 +3,9 @@
    code that builds them asks inVk() too, these rules are the second lock. */
 html.vk-app #oauth-buttons,
 html.vk-app #login-tg,
+html.vk-app #login-vkid,
+html.vk-app #login-vkid-link,
+html.vk-app .opt-vkid,
 html.vk-app .opt-legal,
 html.vk-app .opt-tg,
 html.vk-app .pm-web,
