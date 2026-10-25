@@ -409,6 +409,28 @@ function markAt(px: number, py: number): 'ship' | 'roam' | null {
   return 'roam';
 }
 
+/** Owner, 2026-10-26 («на пк версии выбрав порт или корабль не дает дополнительного экшена, типа плыть или атаковать»):
+ *  the thing she selected by a click or a tap — a harbour, an island, a ship, her wreckage — and its buttons on the bar
+ *  wherever it lies (actbar.ts `sel`). Cleared by a click on the open sea, or once she is in port. */
+let selPlace: { kind: 'port' | 'isle' | 'wreck' | 'ship'; id: string | number } | null = null;
+/** The harbour, the island or the wreckage under a point on screen (ships and stacks are markAt's). */
+function placeAtScreen(px: number, py: number): { kind: 'port' | 'isle' | 'wreck'; id: string | number } | null {
+  const m = renderer.toWorld(px, py);
+  const slack = 34 / Math.max(0.05, renderer.zoom);
+  for (const w of state.wrecks) if (Math.hypot(w.x - m.x, w.y - m.y) <= Math.max(30, slack)) return { kind: 'wreck', id: w.id };
+  let bp: (typeof state.ports)[number] | null = null, bd = Infinity;
+  for (const pt of state.ports) {
+    const d = Math.hypot(pt.x - m.x, pt.y - m.y);
+    if (d < Math.max(160, slack * 1.5) && d < bd) [bp, bd] = [pt, d];
+  }
+  if (bp) return { kind: 'port', id: bp.id };
+  for (const is of state.islands.values()) {
+    if (is.minor || Math.hypot(is.x - m.x, is.y - m.y) > is.r + slack) continue;
+    if (is.portId) return { kind: 'port', id: is.portId };
+    return { kind: 'isle', id: is.id };
+  }
+  return null;
+}
 /** The target key: the next ship out from you, round and round. */
 function cycleTarget(): void {
   const own = state.ownDisplay;
@@ -1008,6 +1030,7 @@ const touch = new TouchControls({
     const k = markAt(px, py);
     if (k) markTapAt = performance.now();
     openTargetMenu(k === 'ship' && targetId !== null ? `ship:${targetId}` : k === 'roam' && state.roamMark !== null ? `roam:${state.roamMark}` : '');
+    selPlace = k === 'ship' && targetId !== null ? { kind: 'ship', id: targetId } : k ? null : placeAtScreen(px, py); // (owner, 2026-10-26)
     if (!k) sailToTap(px, py); // seaux: a tap on a thing on the sea sails her to it
   },
   zoom: (f) => {
@@ -3007,6 +3030,7 @@ addEventListener('keydown', (e) => {
       const way = !docked && own && !state.wayView && !state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS) ? wayAtHand(own) : null;
       if (way) net.send({ t: 'way', action: 'moor', id: way.id });
       else if (docked) departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' }));
+      else if (selPlace?.kind === 'port' && own && !state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) selGo(); // (owner, 2026-10-26)
       else requestDock(e.shiftKey);
       break;
     }
@@ -3108,7 +3132,18 @@ function fromFinger(e: MouseEvent): boolean {
 canvas.addEventListener('mousedown', (e) => {
   if (!inGame || e.button !== 0 || fromFinger(e)) return;
   // A click on a ship makes her the target; on a creature stack, marks the stack and fires nothing.
-  if (markAt(e.clientX, e.clientY) === 'roam') return;
+  const mk = markAt(e.clientX, e.clientY);
+  if (mk === 'roam') {
+    selPlace = null;
+    return;
+  }
+  if (mk === 'ship' && targetId !== null) selPlace = { kind: 'ship', id: targetId };
+  // (owner, 2026-10-26) a harbour, an island, her wreckage: selected — its buttons on the bar («К порту», «Плыть сюда»)
+  const pl = mk ? null : placeAtScreen(e.clientX, e.clientY);
+  if (pl) {
+    selPlace = pl;
+    if (pl.kind !== 'wreck') return; // (no broadside into a harbour clicked)
+  } else if (!mk) selPlace = null;
   if (shipAtScreen(e.clientX, e.clientY) === null && sailToTap(e.clientX, e.clientY)) return; // seaux: a click on a thing on the sea sails her to it
   // The simple HUD fires by its keys (Space, Q, E): a click only picks the mark. The detailed one fires the side the
   // cursor lies off, as it always did.
@@ -3587,7 +3622,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   if (rm) {
     const name = roamName(rm.kind);
     const back = roamBackLeft(state, rm);
-    facts.roam = { id: rm.id, icon: ROAM_UNITS[ROAMS[rm.kind].u as keyof typeof ROAM_UNITS].art, name, word: roamWord(rm.n).word, lv: rm.level, ...(rm.fight ? { fight: rm.fight } : {}), ...(back ? { back } : {}), ...(rm.offer ? { offer: rm.offer } : {}), ...(rm.joinN ? { joinN: rm.joinN } : {}), ...(roamLead ? { lead: true } : {}), ...(focus.far ? { far: true } : {}), ...(state.roamRun === rm.id ? { running: true } : {}), ...(focus.marked && focus.far && (openingFrame() ?? storyQuest()?.does) === 'neutral' ? { quest: true } : {}) };
+    facts.roam = { id: rm.id, icon: ROAM_UNITS[ROAMS[rm.kind].u as keyof typeof ROAM_UNITS].art, name, word: roamWord(rm.n).word, lv: rm.level, ...(rm.fight ? { fight: rm.fight } : {}), ...(back ? { back } : {}), ...(rm.offer ? { offer: rm.offer } : {}), ...(rm.joinN ? { joinN: rm.joinN } : {}), ...(roamLead ? { lead: true } : {}), ...(focus.far ? { far: true } : {}), ...(state.roamRun === rm.id ? { running: true } : {}), ...(focus.marked && focus.far && (openingFrame() ?? storyQuest()?.does) === 'neutral' ? { quest: true } : {}), ...(focus.marked ? { marked: true } : {}) };
     if (rm.fight) info.push(esc(LROAM(rm.fight === 'mate' ? 'i.mate' : 'i.fight', { what: name })));
     else if (back) info.push(esc(LROAM('i.back', { what: name, t: backClock(back) })));
     else if (rm.offer === 'flee' && rm.ratio !== undefined) info.push(esc(LROAM('i.flee', { r: rm.ratio })));
@@ -3605,7 +3640,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const tgt = targetId !== null ? state.ships.get(targetId) : undefined;
   const tgtSeen = !!tgt && seenOnScreen(tgt.cur.x, tgt.cur.y, 20);
   const gunLeft = tgt ? dist(own.x, own.y, tgt.cur.x, tgt.cur.y) - gunReach() : Infinity;
-  attackMark = attackable(targetId) && !roamLead && attackRelevant(gunLeft <= 0, tgtSeen, state.onboarding?.stage === 'attack' && tgt?.info?.name === WATCH_RAIDER) ? targetId : null;
+  attackMark = attackable(targetId) && !roamLead && attackRelevant(gunLeft <= 0, tgtSeen, state.onboarding?.stage === 'attack' && tgt?.info?.name === WATCH_RAIDER, targetPinned) ? targetId : null;
   if (attackMark === null && targetPinned && tgtSeen && !state.pursuit && attackable(targetId) && gunLeft > 0 && gunLeft < REACH_HINT * 2) info.push(esc(LR8('attackFar', { m: Math.round(gunLeft) })));
   const pursued = state.pursuit ? state.ships.get(state.pursuit.target) : undefined;
   if (state.pursuit) facts.attack = { name: placeName(pursued?.info?.name ?? L('her')), pursuing: true, mode: state.pursuit.mode, ...(unboardableMark(state.pursuit.target) ? { gunsOnly: true } : {}) };
@@ -3629,6 +3664,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     }
   }
   facts.goalSail = openingSail() ?? resumeSail(); // owner, 2026-10-22: the opening's next place — sailed for only at her word
+  facts.sel = selFacts(port?.id ?? null, !!l && !l.blocked);
   facts.looks = advCard.closedLooks();
   // A struck ship's terms put off by «Later»: her card back with «Look…».
   const struck = surrenderCard.laterName();
@@ -3641,6 +3677,65 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   if (rep?.line) info.push(rep.line);
   if (you.combat && !repairing && you.hull < you.hullMax * 0.5 && !touch.enabled) info.push(esc(L('repairLull', { key: '\u0000' })).replace('\u0000', `<kbd>${esc(keyOfAction('repair'))}</kbd>`));
   return { acts: buildActs(facts), info };
+}
+
+/** Where the thing she selected lies now, its name, and her quest's key when it is that quest's place. */
+function selWhere(): { x: number; y: number; name: string; quest?: string; near?: number } | null {
+  const sp = selPlace;
+  if (!sp) return null;
+  const tracked = state.route?.view;
+  const q = storyQuest() ?? trackedQuest(state.self?.quests, state.ownDisplay);
+  if (sp.kind === 'port') {
+    const pt = state.ports.find((x) => x.id === sp.id);
+    if (!pt) return null;
+    const key = q && q.target?.port === pt.id ? `q:${q.id}` : tracked?.port === pt.id && state.route ? state.route.key : undefined;
+    return { x: pt.x, y: pt.y, name: sv(pt.name), ...(key ? { quest: key } : {}) };
+  }
+  if (sp.kind === 'isle') {
+    const is = state.islands.get(Number(sp.id)), own = state.ownDisplay;
+    if (!is || !own) return null;
+    const c = claimSpot(is, own);
+    return { x: c.x, y: c.y, name: placeName(is.name), near: 60 };
+  }
+  if (sp.kind === 'wreck') {
+    const w = state.wrecks.find((x) => x.id === sp.id);
+    return w ? { x: w.x, y: w.y, name: L('her'), near: 30 } : null;
+  }
+  const sh = state.ships.get(Number(sp.id));
+  if (!sh?.info || sh.cur.flags & (SF.SINKING | SF.DOCKED)) return null;
+  return { x: sh.cur.x, y: sh.cur.y, name: sh.info.isPlayer ? sh.info.captainName : placeName(sh.info.name), near: 60 };
+}
+/** The bar's facts of the selection (owner, 2026-10-26): what it offers from wherever she lies. */
+function selFacts(dockHere: string | null, landHere: boolean): ActFacts['sel'] {
+  const sp = selPlace, own = state.ownDisplay;
+  if (!sp || !own || state.self?.dockedAt) {
+    if (state.self?.dockedAt) selPlace = null;
+    return null;
+  }
+  const w = selWhere();
+  if (!w) {
+    selPlace = null;
+    return null;
+  }
+  const far = Math.round(dist(w.x, w.y, own.x, own.y));
+  if (sp.kind === 'ship') {
+    const sh = state.ships.get(Number(sp.id))!;
+    // a foe: «Атаковать» / «На абордаж» are hers already (attackRelevant: pinned); the rest — the course, the hire, the look
+    const foe = attackable(Number(sp.id)) && !(sh.cur.flags & SF.SURRENDERED);
+    const hire = !sh.info!.isPlayer && !!sh.info!.npcRole && (HIRE_ROLES as readonly string[]).includes(sh.info!.npcRole) && !sh.info!.named && !sh.info!.elite && sh.info!.shipLevel !== undefined && !(sh.cur.flags & (SF.HOSTILE | SF.SURRENDERED | SF.SINKING | SF.BOARDING));
+    return { kind: 'ship', name: w.name, far, go: !foe && far > 120, hire, look: !!sh.info!.isPlayer };
+  }
+  if (sp.kind === 'port') return { kind: 'port', name: w.name, far, go: dockHere !== sp.id, ...(w.quest ? { quest: true } : {}) };
+  return { kind: sp.kind, name: w.name, far, go: !landHere && far > (w.near ?? 60) };
+}
+/** «К порту» / «Плыть сюда» / «Плыть» of the selection: a harbour by the route (it puts her in on arrival, goalroute.ts),
+ *  her quest's place by its run, the rest by the helmsman's course. */
+function selGo(): void {
+  const sp = selPlace, w = selWhere();
+  if (!sp || !w) return;
+  if (w.quest) return startGoal(w.quest);
+  if (sp.kind === 'port') return startGoal(`p:${sp.id}`);
+  sailToSpot({ x: w.x, y: w.y }, w.near);
 }
 
 /** The island's level and its warning in words (the tooltip of the land button). */
@@ -3734,6 +3829,15 @@ function runAct(a: Act): void {
     case 'goal_sail': {
       const o = openingSail() ?? resumeSail();
       if (o) startGoal(o.key);
+      return;
+    }
+    case 'sel_go':
+      return selGo();
+    case 'sel_hire':
+      return void (selPlace?.kind === 'ship' && hireCard.ask(Number(selPlace.id)));
+    case 'sel_look': {
+      const sh = selPlace?.kind === 'ship' ? state.ships.get(Number(selPlace.id)) : undefined;
+      if (sh?.info?.isPlayer) net.send({ t: 'inspect', name: sh.info.captainName });
       return;
     }
   }

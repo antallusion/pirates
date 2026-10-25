@@ -181,6 +181,9 @@ test('«Атаковать» only within her guns’ real reach of a ship on her
   assert.equal(attackRelevant(true, false), false);
   assert.equal(attackRelevant(false, false), false);
   assert.equal(attackRelevant(true, true), true);
+  // (owner, 2026-10-26) a ship she selected herself, on her screen: «Атаковать» however far — the helmsman closes with her
+  assert.equal(attackRelevant(false, true, false, true), true);
+  assert.equal(attackRelevant(false, false, false, true), false);
   const { readFileSync } = await import('node:fs');
   const main = readFileSync('client/src/main.ts', 'utf8');
   assert.ok(main.includes('attackable(targetId) && !roamLead && attackRelevant(gunLeft <= 0, tgtSeen, '), 'the bar asks it');
