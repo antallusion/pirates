@@ -14,9 +14,10 @@ test('films play only at the sea\'s own moments, never at a window or a tab', ()
   for (const f of ui) assert.ok(!/playFilm\(/.test(src(`client/src/ui/${f}`)), `no film in ${f} (the tavern's, a window's)`);
   const main = src('client/src/main.ts');
   const calls = [...main.matchAll(/playFilm\(([^\n]*)/g)].map((m) => m[1]);
-  // The prologue, the zone boss's rising (by the server), a boarding lost at sea; the end of a fight; into port and out;
-  // a world boss rising and brought down; a landing.
-  assert.equal(calls.length, 10, calls.join('\n'));
+  // The zone boss's rising (by the server), a boarding lost at sea; the end of a fight; into port and out; a world boss
+  // rising and brought down; a landing. (The prologue's film went 2026-10-25: the first watch cut to one line — the
+  // newcomers left in it.)
+  assert.equal(calls.length, 9, calls.join('\n'));
   const ids = ['tavern', 'tattoo', 'saga', 'tame', 'throne', 'shop', 'barter', 'crew', 'dice', 'quest', 'trek', 'descent', 'mutiny', 'research', 'boarding', 'raid', 'lair', 'storm', 'fog', 'night_watch', 'strike_colours', 'trophy_hall', 'nethaul', 'repair', 'wanted', 'party', 'sunk'].map((x) => `'cut_${x}'`);
   for (const gone of [...ids, '`cut_sea_', '`cut_pet_', 'MODAL_FILM', 'LEGEND_FILM', 'ROSTER_FILM', 'LAIR_FILM']) {
     assert.ok(!main.includes(gone), `no ${gone}`);
