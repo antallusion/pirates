@@ -136,6 +136,7 @@ import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { TutorPointer, shotStage } from './ui/pointer.ts';
+import { rightClickAct, soloModifier, wheelZoom, windowTab } from './ui/deskinput.ts';
 import { resumeAfterEnd, resumeOn } from './ui/resumesail.ts';
 import { hereAct } from './ui/questact.ts'; // owner, 2026-10-23: a quest step done in this port
 import { buzz, guardVibrate } from './haptics.ts';
@@ -2882,7 +2883,9 @@ addEventListener('keydown', (e) => {
   // Autofill, an IME and some gamepad bridges fire keydowns that are no KeyboardEvent and carry no key.
   if (!inGame || typeof e.key !== 'string') return;
   const chatInput = $('chat-input') as HTMLInputElement;
-  if (e.key === 'Escape' && hud.chatPanel.isOpen) {
+  // (batch-pc: over a window Esc is the window's — the chat lies under its veil; before, the first Esc folded the unseen
+  // chat and the window stayed)
+  if (e.key === 'Escape' && hud.chatPanel.isOpen && (!modal || document.activeElement === chatInput)) {
     // Esc in the field leaves it (the keys steer the ship again); Esc once more folds the chat away.
     if (document.activeElement === chatInput) chatInput.blur();
     else hud.chatPanel.close();
@@ -2899,9 +2902,18 @@ addEventListener('keydown', (e) => {
     if (document.activeElement === chatInput) {
       if (chatInput.value.trim()) hud.chatPanel.send();
       else chatInput.blur();
-    } else if (!typing()) hud.chatPanel.focusInput();
+    } else if (!typing() && !modal) hud.chatPanel.focusInput();
+    // (batch-pc: over a window Enter is the window's — its focused button — never the chat hidden under the window's
+    // veil: its field took the focus unseen and every key after it went into it, the game's keys dead)
     else return;
     e.preventDefault();
+    return;
+  }
+  // batch-pc: Tab in an open window walks the window's controls (never the sea's «next target» behind it, never out
+  // onto the HUD from a field).
+  if (e.key === 'Tab' && modal && !(modal === 'options' && optionsScreen.capturing)) {
+    e.preventDefault();
+    windowTab($('modal-panel'), e.shiftKey);
     return;
   }
   // Esc leaves the options even with a slider or a list still in focus.
@@ -2910,6 +2922,9 @@ addEventListener('keydown', (e) => {
     closeModal();
     return;
   }
+  // batch-pc: Esc in a window's field (a price, a name, a search) closes the window as Esc anywhere in it does — it did
+  // nothing at all there (the field kept the key).
+  if (e.key === 'Escape' && modal && typing()) (document.activeElement as HTMLElement | null)?.blur();
   if (typing()) return;
   // A deck fight takes the digits for its orders and Space for the duel's blade.
   if (!modal && (tactical.onKey(e) || boardFight.onKey(e))) {
@@ -2935,7 +2950,7 @@ addEventListener('keydown', (e) => {
   // A key bound alone to a modifier (Shift: the dash) acts on its own tap, when it goes up with nothing pressed while it
   // was down — Shift+B and Shift+F are the careful boarding and the bribe, not a dash.
   if (MODS.has(k) && e.isTrusted) {
-    if (!e.repeat) modTap = { k, at: performance.now() };
+    if (!e.repeat) modTap = soloModifier(k, e) ? { k, at: performance.now() } : null; // (batch-pc: Alt+Shift, a layout's switch, is no dash)
     return;
   }
   if (e.isTrusted) modTap = null;
@@ -3088,7 +3103,7 @@ addEventListener('keyup', (e) => {
   const k = keyOf(e);
   if (!k) return;
   keys.delete(k);
-  if (modTap?.k === k && performance.now() - modTap.at < 400 && !typing()) {
+  if (modTap?.k === k && performance.now() - modTap.at < 400 && !typing() && soloModifier(k, e)) {
     dispatchEvent(new KeyboardEvent('keydown', { key: e.key, code: e.code }));
     keys.delete(k);
   }
@@ -3118,11 +3133,19 @@ canvas.addEventListener('mouseleave', () => {
   hoverTargetMenu('');
 });
 canvas.addEventListener('wheel', (e) => {
+  // (Ctrl + the wheel, a touchpad's pinch, zooms the sea too — never the browser's page under the game)
+  e.preventDefault();
   renderer.userZoomed = true;
   // (a far view steps out quicker: from the old farthest to the chart's in a dozen notches, freecam.ts)
   const step = renderer.targetZoom < ZOOM_NEAR_MIN ? 1.25 : 1.12;
-  renderer.targetZoom = clampZoom(renderer.targetZoom * (e.deltaY < 0 ? step : 1 / step));
-});
+  // (batch-pc: by the distance the wheel moved — a touchpad's stroke of tiny deltas was a whole step each)
+  renderer.targetZoom = clampZoom(renderer.targetZoom * wheelZoom(e.deltaY, e.deltaMode, step));
+}, { passive: false });
+// batch-pc: Ctrl + the wheel (and a laptop touchpad's pinch, which Chrome sends as it) zoomed the browser's page — the
+// whole HUD and every window grew or shrank under the game. In the game it is never the page's zoom.
+addEventListener('wheel', (e) => {
+  if (inGame && e.ctrlKey) e.preventDefault();
+}, { passive: false });
 // (the view home from the far look by a key too: Home — the button is the simple HUD's)
 addEventListener('keydown', (e) => {
   if (e.key === 'Home' && inGame && !typing() && renderer.looking) renderer.recentre();
@@ -3161,9 +3184,16 @@ canvas.addEventListener('mousedown', (e) => {
 });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('mousedown', (e) => {
-  if (!inGame || e.button !== 2 || state.self?.dockedAt || fromFinger(e)) return;
+  if (!inGame || e.button !== 2 || fromFinger(e)) return;
   const m = mouseWorld();
-  net.send({ t: 'mount', x: Math.round(m.x), y: Math.round(m.y) });
+  const act = rightClickAct({ docked: !!state.self?.dockedAt, mount: !!state.self?.loadout.mount });
+  if (act === 'mount') net.send({ t: 'mount', x: Math.round(m.x), y: Math.round(m.y) });
+  else if (act === 'sail' && worldMap.onAutosail) {
+    // (batch-pc: no mount — the right button is the helm's «туда», as in every game of the kind)
+    const wp = { x: Math.round(m.x), y: Math.round(m.y) };
+    setMark(wp);
+    worldMap.onAutosail(wp);
+  }
 });
 
 function mouseWorld(): { x: number; y: number } {

@@ -59,9 +59,16 @@ export const PRESETS: Record<'classic' | 'arrows' | 'lefthand' | 'onehand', Keym
   } as Keymap,
 };
 
+/** The punctuation keys by their physical place (KeyboardEvent.code), as the US layout names them. */
+const PUNCT: Record<string, string> = {
+  Backquote: '`', Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Backslash: '\\', Semicolon: ';', Quote: "'",
+  Comma: ',', Period: '.', Slash: '/', IntlBackslash: '\\',
+};
+
 /**
- * The key a press stands for in a keymap, whatever the keyboard layout: letters and digits by their physical
- * place (a Russian layout's «ц» is still W), everything else by name. Keymaps store these names.
+ * The key a press stands for in a keymap, whatever the keyboard layout: letters, digits and punctuation by their
+ * physical place (a Russian layout's «ц» is still W, its «б» still the comma), everything else by name. Keymaps store
+ * these names.
  */
 export function keyOf(e: { key?: string | null; code?: string | null }): string {
   // A keydown without a key (Chrome's autofill and an IME's composition fire plain `Event`s named keydown, a gamepad
@@ -71,6 +78,11 @@ export function keyOf(e: { key?: string | null; code?: string | null }): string 
   if (m) return m[1].toLowerCase();
   m = /^(?:Digit|Numpad)(\d)$/.exec(code);
   if (m) return m[1];
+  // (batch-pc: the punctuation keys by their place too — on a Russian layout «,» «.» «/» «`» are «б» «ю» «.» «ё», so the
+  // «Стрелки» preset's broadsides (, and .) never fired and its «/» fired the starboard side; Tab's second key, «`», was
+  // dead)
+  const punct = PUNCT[code];
+  if (punct) return punct;
   return typeof e?.key === 'string' ? e.key.toLowerCase() : '';
 }
 

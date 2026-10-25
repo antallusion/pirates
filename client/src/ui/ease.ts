@@ -181,6 +181,8 @@ export class FirstTips {
   private queue: TipId[] = [];
   private showing: { id: TipId; until: number } | null = null;
   private restAt = 0;
+  private stackAskedAt = -1e9;
+  private stackWas = false;
   private key = '';
   /** A window over the HUD (the line waits for it to close). */
   covered: () => boolean = () => false;
@@ -200,12 +202,16 @@ export class FirstTips {
       this.showing = null;
     }
     if (this.showing && now > this.showing.until) this.dismiss(now);
-    const stackVisible = (() => {
+    // (batch-pc: asked only when a hint waits, and twice a second at most — every frame it forced a layout, 10% of a
+    // slowed desk's frame in a sea fight with a hint waiting under the folded stack)
+    const stackVisible = (): boolean => {
+      if (now - this.stackAskedAt < 500) return this.stackWas;
+      this.stackAskedAt = now;
       const st = document.getElementById('hud-stack');
       // Folded away (ui/hud.ts), a hint waits for the captain to open the stack.
-      return !!st && st.offsetParent !== null && getComputedStyle(st).visibility !== 'hidden' && !document.body.classList.contains('hud-folded');
-    })();
-    if (!this.showing && this.queue.length && now > this.restAt && !this.covered() && stackVisible) {
+      return (this.stackWas = !!st && st.offsetParent !== null && getComputedStyle(st).visibility !== 'hidden' && !document.body.classList.contains('hud-folded'));
+    };
+    if (!this.showing && this.queue.length && now > this.restAt && !this.covered() && stackVisible()) {
       const id = this.queue.shift()!;
       markSeen(id);
       this.showing = { id, until: now + 14_000 };

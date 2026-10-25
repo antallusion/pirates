@@ -7,6 +7,7 @@ import type { FightParams, FightState } from '../../../shared/src/data/fishing.t
 import type { ClientMsg, FishFightView } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
 import { esc, fishIcon } from './dom.ts';
+import { inField } from './deskinput.ts';
 
 const L = dict(
   { title: 'On the line: {fish}', kg: '{kg} kg', reel: 'Reel in', hint: 'Hold to reel in · let go when the line is taut', tension: 'Line', fish: 'Fish', landed: 'Landed!', snapped: 'The line snapped', escaped: 'It got away' },
@@ -30,13 +31,13 @@ export class FishFightPanel {
     this.send = send;
     this.el = document.getElementById('fishfight')!;
     const down = (e: KeyboardEvent) => {
-      if (!this.view || e.code !== 'Space') return;
+      if (!this.view || e.code !== 'Space' || inField(e)) return;
       e.preventDefault();
       e.stopImmediatePropagation();
       this.hold(true);
     };
     const up = (e: KeyboardEvent) => {
-      if (!this.view || e.code !== 'Space') return;
+      if (!this.view || e.code !== 'Space' || inField(e)) return;
       e.preventDefault();
       e.stopImmediatePropagation();
       this.hold(false);
