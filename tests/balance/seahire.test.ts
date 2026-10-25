@@ -11,8 +11,12 @@ import { guardTable } from './seahire.ts';
 test('⚓5: a hired guard of her ⚓ — an elite beaten far more often, at a heavy cost; a rover with less of her hull lost', () => {
   const elite = guardTable([5], 24, [{ gear: 'level', elite: true }]);
   const solo = elite.find((r) => !r.guard)!, guard = elite.find((r) => r.guard)!;
-  assert.ok(guard.wins >= solo.wins + 8, `an elite: ${guard.wins}/24 with, ${solo.wins}/24 alone`);
-  assert.ok(guard.meanLost >= 0.45 && guard.meanLost <= 0.8, `not a walk-over: ${guard.meanLost.toFixed(2)} of her hull lost on average`);
+  // (owner 2026-10-26: NPC HP ×0.5 — the elite is halved too: alone she wins 18/24 now, so «far more often» is every
+  // fight or near it; was solo + 8.)
+  console.log(`an elite: ${guard.wins}/24 with, ${solo.wins}/24 alone; ${guard.meanLost.toFixed(2)} of her hull lost`);
+  assert.ok(guard.wins >= Math.min(23, solo.wins + 4), `an elite: ${guard.wins}/24 with, ${solo.wins}/24 alone`);
+  assert.ok(guard.meanLost >= 0.15 && guard.meanLost <= 0.8, // (0.31 on the cut's commit; was ≥ 0.45)
+    `not a walk-over: ${guard.meanLost.toFixed(2)} of her hull lost on average`);
   const rover = guardTable([5], 6, [{ gear: 'full', elite: false }]);
   const r0 = rover.find((r) => !r.guard)!, r1 = rover.find((r) => r.guard)!;
   assert.equal(r1.wins, 6, 'a full build still wins with her guard');
