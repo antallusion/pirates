@@ -213,6 +213,9 @@ export const SERVER_RU_ADMIN: Record<string, string> = {
   'Live ops are off on this server.': 'Лайв-опс на этом сервере выключен.',
   'Live ops today: {0} sign-ups, {1} aboard, {2} payments for {3} ₽. 7 days: revenue {4} ₽, {5} payers ({6}%), ARPPU {7} ₽. Running: {8} sales, {9} off the shelves, {10} global offers, {11} events. The panel: /ops/admin':
     'Управление игрой, сегодня: регистраций {0}, в игре {1}, платежей {2} на {3} ₽. За 7 дн.: выручка {4} ₽, платящих {5} ({6} %), средний чек платящего {7} ₽. Идут: скидок {8}, снято товаров {9}, глобальных офферов {10}, событий {11}. Подробно — на панели управления (адрес в docs/34).',
+  // the newcomers' funnel (retention, 2026-10-25; server/src/http/telemetry.ts funnelLine)
+  "Newcomers' funnel, {0} d: captain screen {1} → captain {2}; First Watch steps 1–5 {3}, done {4}, skipped {5}; the shops' steps 1–4 {6}; chapter 1 quests 2–5 {7}; 5/15/30 min aboard {8}.":
+    'Воронка новичков за {0} дн.: экран капитана {1} → капитан {2}; Первая вахта, шаги 1–5: {3}, пройдена {4}, пропущена {5}; лавки, шаги 1–4: {6}; глава 1, задания 2–5: {7}; 5/15/30 мин в игре: {8}.',
   'Telemetry for {0} d: {1} reports from {2} devices; at sea {3} fps typical, {4} in the worst {5}%; start {6} s; {7} JS errors. The page: /telemetry/admin':
     'Телеметрия за {0} дн.: отчётов {1}, устройств {2}; в море обычно {3} кадр/с, в худших {5}% — {4}; запуск {6} с; ошибок JS: {7}. Подробно — на странице телеметрии (её адрес в docs/33).',
 };

@@ -23,6 +23,9 @@ export const SERVER_RU_CAMPAIGN: Record<string, string> = {
   'No room in the hold for provisions — the step is counted.': 'В трюме нет места для провизии — шаг засчитан.',
   'No room in the hold for sailcloth — the step is counted.': 'В трюме нет места для парусины — шаг засчитан.',
   'The hold is full — the step is counted.': 'Трюм полон — шаг засчитан.',
+  // retention, 2026-10-25: the opening's lessons of the shops already satisfied
+  'Sailcloth is aboard — the step is counted.': 'Парусина уже в трюме — шаг засчитан.',
+  'A good to trade is aboard — the step is counted.': 'Товар на продажу уже в трюме — шаг засчитан.',
   'Every island of the sea is on your chart already — the step is counted.': 'Все острова моря уже на вашей карте — шаг засчитан.',
   'Only a lesson of the shops can be skipped': 'Пропустить можно только урок лавок',
   'A ship waits to take you to {0}: cast off, and she takes you there.': 'Вас ждёт корабль до порта {0}: выйдите в море, и он доставит вас туда.',

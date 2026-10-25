@@ -3,7 +3,7 @@ import { adminGift } from './dailygift.ts';
 import { fogAdmin } from './fog.ts';
 import { adminTgn } from './tgnotify.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
-import { telemetry } from '../http/telemetry.ts'; // docs/33
+import { funnelLine, telemetry } from '../http/telemetry.ts'; // docs/33
 import { opsSummary } from '../http/ops.ts'; // docs/34
 import { opsOf } from './liveops.ts';
 import { adminOffers } from './promo.ts'; // the personal offers (owner, 2026-10-15)
@@ -222,6 +222,9 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     // docs/34: the live ops' day at a glance (the panel: /ops/admin)
     case 'ops': {
       const ops = opsOf(game);
+      // the newcomers' funnel (retention, 2026-10-25): its own line beside the live ops' (telemetry.ts)
+      const tel = telemetry();
+      if (tel) game.sendTo(s, { t: 'toast', msg: funnelLine(tel.funnel(3, game.wallNow())), kind: 'info' });
       if (!ops) return 'Live ops are off on this server.';
       const x = opsSummary(game, ops);
       return `Live ops today: ${x.regs} sign-ups, ${x.dau} aboard, ${x.pays} payments for ${x.rev} ₽. 7 days: revenue ${x.rev7} ₽, ${x.payers7} payers (${x.share7}%), ARPPU ${x.arppu7} ₽. Running: ${x.sales} sales, ${x.shut} off the shelves, ${x.globals} global offers, ${x.events} events. The panel: /ops/admin`;

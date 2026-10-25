@@ -6,6 +6,7 @@ import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import type { ClientMsg, ServerMsg } from '../../../shared/src/protocol.ts';
 import { priceHtml, priceText, topUpThenBuy } from './price.ts';
 import { ask } from './confirm.ts';
+import { telemetryFunnel } from '../telemetry.ts';
 import { serverText } from '../lang/server.ts';
 import { SHIP_CLASSES, GUNS } from '../../../shared/src/data/ships.ts';
 import { TREES } from '../../../shared/src/data/talents.ts';
@@ -59,6 +60,7 @@ async function buy(id: CaptainId): Promise<void> {
 
 export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tutorial: boolean) => void, send?: (m: ClientMsg) => void): void {
   $('screen-captain').classList.remove('hidden');
+  telemetryFunnel('cap_screen'); // the newcomers' funnel: the captain's screen reached
   sendMsg = send ?? null;
   send?.({ t: 'captain_shop', action: 'view' });
   // The hero screen (owner, 2026-10-22: «экран выбора … как тут [Rise of Kingdoms], но в нашем стиле … эффекты
@@ -69,6 +71,9 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
   const wrap = $('screen-captain').querySelector<HTMLElement>('.captain-wrap')!;
   const list = $('captain-list');
   let current: CaptainId = 'corsair';
+  /** The free captain chosen last: the big «Начать» starts with her while a premium one not bought is looked at
+   *  (retention, 2026-10-25: «Купить 1 868» stood where «Начать» was, and 5 of 44 new accounts left on this screen). */
+  let lastFree: CaptainId = 'corsair';
   let ship0: string | null = null;
   let know0 = false;
   let tipOf = 'g';
@@ -129,23 +134,28 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
       <div class="cpx-power cpx-plate"><span class="cpx-pico" style="background-image:${art('icon.anchor')}"></span><span>${esc(L('startsShort', { ship: ship.name, crew: c.start.crew, gold: c.start.gold }))}</span></div>
       <div class="cpx-foot">
         <div class="cpx-foot-row"><label class="cpx-ship"><span>${esc(L('shipH'))}</span><input id="ship-name" maxlength="20" value="${esc(defaultShipName(current))}" aria-label="${esc(L('shipName'))}" /></label>${knowSea()}</div>
-        <div class="cpx-btns"><button type="button" class="cpx-big" id="captain-story">${esc(L('story'))}</button>${captainOpen(current)
-          ? `<button type="button" id="pick-captain" class="cpx-big main">${esc(L('takeCommand'))}</button>`
-          : `<button type="button" id="pick-captain" class="cpx-big main cc-buy" data-buy="${current}" aria-label="${esc(L('buyFor', { price: priceText(captainPrice(current)) }))}"><span>${esc(L('buy'))}</span>${priceHtml(captainPrice(current))}</button>`}</div>
-        <p id="captain-why" class="cc-why" role="status" aria-live="polite"></p>
+        <div class="cpx-btns">${captainOpen(current)
+          ? `<button type="button" class="cpx-big" id="captain-story">${esc(L('story'))}</button>`
+          : `<button type="button" id="buy-captain" class="cpx-big cc-buy" data-buy="${current}" aria-label="${esc(L('buyFor', { price: priceText(captainPrice(current)) }))}"><span>${esc(L('buy'))}</span>${priceHtml(captainPrice(current))}</button>`}<button type="button" id="pick-captain" class="cpx-big main">${esc(L('takeCommand'))}</button></div>
+        <p id="captain-why" class="cc-why" role="status" aria-live="polite">${captainOpen(current) ? '' : esc(L('startAs', { name: CAPTAINS[lastFree].name }))}</p>
       </div>`;
     $('captain-detail').querySelectorAll<HTMLElement>('.cpx-sk').forEach((b) => (b.onclick = () => setTip(b.dataset.k!)));
-    $('captain-story').onclick = () => setTip(tipOf === 'story' ? 'g' : 'story');
+    const story = document.getElementById('captain-story');
+    if (story) story.onclick = () => setTip(tipOf === 'story' ? 'g' : 'story');
+    const buyBtn = document.getElementById('buy-captain');
+    if (buyBtn) buyBtn.onclick = () => void buy(current);
+    if (captainOpen(current)) lastFree = current;
     setTip(fresh ? 'g' : tipOf);
     if (ship0 !== null) ($('ship-name') as HTMLInputElement).value = ship0;
     ($('know-sea') as HTMLInputElement).checked = know0;
     $('pick-captain').onclick = () => {
-      // a premium captain not yet hers is bought first (the server refuses her otherwise)
-      if (!captainOpen(current)) return void buy(current);
-      const name = ($('ship-name') as HTMLInputElement).value.trim();
+      // (a premium captain not yet hers is bought by her own button; «Начать» always starts — with the free one)
+      const who = captainOpen(current) ? current : lastFree;
+      const typed = ($('ship-name') as HTMLInputElement).value.trim();
+      const name = who === current || !CAPTAIN_IDS.some((id) => typed === defaultShipName(id)) ? typed : defaultShipName(who);
       $('screen-captain').classList.add('hidden');
-      metrikaGoal('registration', { captain: current }); // Yandex Direct pays per registration (shared/src/metrika.ts)
-      onPick(current, name, !($('know-sea') as HTMLInputElement).checked);
+      metrikaGoal('registration', { captain: who }); // Yandex Direct pays per registration (shared/src/metrika.ts)
+      onPick(who, name, !($('know-sea') as HTMLInputElement).checked);
     };
   };
   render(true);

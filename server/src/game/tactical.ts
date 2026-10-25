@@ -18,7 +18,7 @@ import type { TacAction } from '../../../shared/src/protocol.ts';
 import { XP_UNITS, battleXp, targetXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { Rng } from '../../../shared/src/rng.ts';
-import { onboardingProtected } from './onboarding.ts';
+import { fresh, onboardingProtected } from './onboarding.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
 import type { NpcRole } from './ship.ts';
@@ -219,7 +219,9 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
   // phase; the sea's mind is set at once); every boarding is kept to be played again («Повтор»).
   const deploy = (x: ShipEntity): boolean => {
     const ses = game.sessionOf(x);
-    return !!ses && ses.deployStacks && ses.disconnectedAt === null;
+    // (not in a newcomer's first quarter of an hour: the First Watch's battle opened on «Расстановка — перетащите
+    // отряды · 20 с», a drag and a wait no lesson had taught — retention, 2026-10-25)
+    return !!ses && ses.deployStacks && ses.disconnectedAt === null && !fresh(ses.profile);
   };
   if (arena) fight.tac = newBattle(arena.sides[0], arena.sides[1], seed, game.tacNow(), rng, { arena: true, len: 'long', deploy: [deploy(a), deploy(b)], record: true });
   else {
@@ -248,6 +250,9 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
     if (len === 'board') {
       const st = [sideStrength(bt, 0), sideStrength(bt, 1)];
       bt.quick = [0, 1].map((x) => bt.heroes[x].input.human && !bt.heroes[1 - x].input.human && st[x] >= TAC_LEN.quick * st[1 - x]) as [boolean, boolean];
+      // …and the First Watch's pupil always, free (retention, 2026-10-25): its finger stands on «Быстрый бой» — the lesson's
+      // fight in one tap, never a scroll to buy
+      if (pupil !== null) bt.quick[pupil] = true;
     }
   }
   fight.tacSync = [0, 0];

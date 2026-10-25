@@ -11,7 +11,9 @@ export const EN = {
   // the start in one line on a phone held sideways
   startsShort: 'Starts on a {ship} · {crew} crew · {gold} silver',
   shipName: 'Name your ship',
-  takeCommand: 'Take command',
+  takeCommand: 'Start',
+  // a premium captain looked at, not bought: the big button still starts, with the free one chosen before
+  startAs: 'Start as {name}: this one can be bought later.',
   // Premium captains are bought (owner, 2026-10-19): the lock and the price on the card, Buy instead of Take command.
   premiumLocked: 'PREMIUM ·',
   premiumOwned: 'Yours',
@@ -54,7 +56,8 @@ export const RU: Record<keyof typeof EN, string> = {
   starts: 'Начинает на судне класса «{ship}» ({gun}), экипаж {crew}, {gold} серебра, в Солтмарроу на Чёрном берегу.',
   startsShort: 'Старт: «{ship}» · экипаж {crew} · {gold} серебра',
   shipName: 'Наречь корабль',
-  takeCommand: 'Принять командование',
+  takeCommand: 'Начать',
+  startAs: 'Начнёте за капитана {name}: этого можно купить позже.',
   premiumLocked: 'ПРЕМИУМ ·',
   premiumOwned: 'Ваш',
   premiumOwnedLong: 'ПРЕМИУМ · ВАШ',
