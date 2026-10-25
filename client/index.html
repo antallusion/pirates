@@ -213,6 +213,7 @@
   <link rel="stylesheet" href="/talks.css" />
   <!-- the VK Mini App (docs/36): what VK must not show -->
   <link rel="stylesheet" href="/vk.css" />
+  <link rel="stylesheet" href="/vkid.css" />
   <link rel="stylesheet" href="/captain.css" />
   <link rel="stylesheet" href="/fit.css" />
   <!-- Yandex Metrica (shared/src/metrika.ts): the counter of gravetidegame.com; the goals: registration, payment -->
@@ -242,6 +243,9 @@
         <button class="btn btn-primary" type="submit" data-i18n="login.guest">Set sail as a guest</button>
         <!-- «Войти через Телеграм» (docs/27): shown by src/tg.ts when the server has the bot -->
         <button id="login-tg" class="btn tg-login hidden" type="button"></button>
+        <!-- «Войти через VK ID» (docs/36 §8): shown by src/vkid.ts when the server has VKID_APP_ID, on the website only -->
+        <button id="login-vkid" class="btn vkid-login hidden" type="button"></button>
+        <button id="login-vkid-link" class="btn btn-small vkid-offer hidden" type="button"></button>
       </form>
       <details id="login-account" class="login-account">
         <summary data-i18n="login.account">Sign in with an account</summary>

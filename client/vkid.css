@@ -1,0 +1,41 @@
+/* «Войти через VK ID» on the website (docs/36_VK.md §8; src/vkid.ts): VK ID's own button — VK's blue #0077FF, white
+   words and logo, rounded — under Telegram's on the start screen; the offer to link the kept captain; settings'
+   «Привязать VK». Never inside the VK Mini App (vk.css hides them too) nor in Telegram's (the script never shows them). */
+.vkid-ico { width: 1.2em; height: 1.2em; flex: none; fill: currentColor; }
+
+.login-panel #login-form .vkid-login {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 40px; margin-top: 6px;
+  color: #fff; background: #0077ff; border: 1px solid #0077ff; border-radius: 8px; font-size: 14px; font-weight: 500;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; letter-spacing: 0; text-shadow: none;
+}
+.login-panel #login-form .vkid-login:hover:not(:disabled) { background: #0071f2; border-color: #0071f2; color: #fff; }
+.login-panel #login-form .vkid-login:active:not(:disabled) { background: #0069e1; }
+.login-panel #login-form .vkid-login:focus-visible { outline: 2px solid #8fc1ff; outline-offset: 2px; }
+.login-panel #login-form .vkid-login.hidden,
+.login-panel #login-form .vkid-offer.hidden { display: none; }
+.login-panel #login-form .vkid-login .vkl-short { display: none; }
+.login-panel #login-form .vkid-offer {
+  display: block; width: 100%; margin-top: 4px; background: none; border: none; box-shadow: none; padding: 4px 2px;
+  color: #8fc1ff; font-size: 12.5px; text-decoration: underline; text-underline-offset: 2px; white-space: normal; line-height: 1.25;
+}
+.login-panel #login-form .vkid-offer:hover:not(:disabled) { color: #b7d6ff; }
+@media (max-height: 520px) {
+  .login-panel #login-form .vkid-login { min-height: var(--f-btn2, 40px); margin-top: 4px; font-size: var(--f-fs, 13px); }
+}
+@media (max-height: 340px) {
+  #screen-login .login-panel #login-form .vkid-login .vkl-long { display: none; }
+  #screen-login .login-panel #login-form .vkid-login .vkl-short { display: inline; }
+  #screen-login .login-panel #login-form .vkid-login { grid-column: 1 / -1; margin-top: 4px; min-height: var(--f-btn2, 38px); }
+  #screen-login .login-panel #login-form .vkid-offer { grid-column: 1 / -1; }
+}
+
+/* settings' «Привязать VK» */
+.opt-vkid { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; }
+/* (VK ID's own flat blue, not the kit's wood: the skin's border image and caps off) */
+.opt-foot .k-btn.opt-vkid:not(:disabled) {
+  color: #fff; background: #0077ff !important; border: 1px solid #0077ff !important; border-image: none !important; border-radius: 8px;
+  box-shadow: none; text-shadow: none; font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight: 500;
+}
+.opt-foot .k-btn.opt-vkid:not(:disabled)::before, .opt-foot .k-btn.opt-vkid:not(:disabled)::after { display: none; }
+.opt-foot .k-btn.opt-vkid:not(:disabled):hover { background: #0071f2 !important; }
+.opt-vkid:disabled { opacity: 0.75; cursor: default; }

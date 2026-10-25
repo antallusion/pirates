@@ -15,6 +15,7 @@ import { tgDeepLink, tgLinked, tgSettingsButton } from '../tg.ts'; // «Прив
 import { EN as UX2_EN, RU as UX2_RU } from '../lang/ui/ux2.ts';
 import { EN as GIFT_EN, RU as GIFT_RU } from '../lang/ui/dailygift.ts';
 import { tgnHtml, tgnView, wireTgn } from './tgnotices.ts'; // «Уведомления в Телеграме» (owner, 2026-10-16)
+import { vkIdLink, vkIdSettingsButton, vkIdStatus } from '../vkid.ts'; // «Привязать VK» on the website (docs/36 §8)
 import { inVk, vkAskNotifications, vkInviteButton, vkShare } from '../vk.ts'; // docs/36: «Позвать друзей» in VK, no link out of it
 
 const W = dict(WIN_EN, WIN_RU);
@@ -45,6 +46,8 @@ export class OptionsScreen {
   private root: HTMLElement | null = null;
   /** The account's Telegram: linked, not yet, or null (no Telegram on the server) — docs/27. */
   private tg: boolean | null = null;
+  /** The captain's VK by VK ID (the website): linked, not yet, or null (no VK ID, or a Mini App) — docs/36 §8. */
+  private vkid: boolean | null = null;
   close: () => void = () => {};
   /** A word to the captain (main.ts: the HUD's toast). */
   toast: (msg: string, kind: string) => void = () => {};
@@ -106,6 +109,20 @@ export class OptionsScreen {
       void tgLinked(token).then((v) => {
         if (v === this.tg) return;
         this.tg = v;
+        if (this.root === root && root.isConnected && !this.more) this.render(root);
+      });
+    }
+    root.querySelector<HTMLButtonElement>('[data-ovkid]')?.addEventListener('click', (e) => {
+      const b = e.currentTarget as HTMLButtonElement;
+      b.disabled = true;
+      setTimeout(() => (b.disabled = false), 4000);
+      void vkIdLink((msg, kind) => this.toast(msg, kind));
+    });
+    if (!this.more) {
+      void vkIdStatus().then((v) => {
+        const linked = v ? v.linked : null;
+        if (linked === this.vkid) return;
+        this.vkid = linked;
         if (this.root === root && root.isConnected && !this.more) this.render(root);
       });
     }
@@ -203,7 +220,7 @@ export class OptionsScreen {
       ${row('menu_map', W('opt.mmTarget'), seg([['hide', W('opt.mmHide'), s.mmTarget === 'hide'], ['show', W('opt.mmShow'), s.mmTarget === 'show']], 'omm', W('opt.mmTarget')), W('opt.mmTargetHint'), 'opt-row--wide')}
       ${tgnView() ? row('ui_bell', G('tgn.title'), `<button type="button" class="k-btn k-btn--secondary k-btn--sm" data-otgn>${esc(G('tgn.open'))}</button>`, G('tgn.hint'), 'opt-row--wide') : ''}
     </div>
-    <div class="opt-foot"><button type="button" class="k-btn k-btn--secondary k-btn--md opt-more" data-omore>${esc(W('opt.more'))}</button>${tgSettingsButton(this.tg)}${vkInviteButton()}</div>
+    <div class="opt-foot"><button type="button" class="k-btn k-btn--secondary k-btn--md opt-more" data-omore>${esc(W('opt.more'))}</button>${tgSettingsButton(this.tg)}${vkIdSettingsButton(this.vkid)}${vkInviteButton()}</div>
     ${legalLinks()}`;
   }
 

@@ -170,6 +170,7 @@ import { Promos } from './ui/promo.ts'; // her personal offers (owner, 2026-10-1
 import { DailyGift } from './ui/dailygift.ts'; // the daily login gift (owner, 2026-10-16)
 import { initTgNotices } from './ui/tgnotices.ts'; // «Уведомления в Телеграме» (owner, 2026-10-16)
 import { webCheckouts } from './checkout.ts';
+import { vkIdLoginButton, vkIdReturn } from './vkid.ts'; // «Войти через VK ID» on the website (docs/36 §8)
 import { tgInvoices, tgLoginButton, tgStart } from './tg.ts'; // Telegram: the Mini App, «Войти через Телеграм», Stars (docs/27)
 import { inVk, mayFullscreen, vkStart } from './vk.ts';
 import { gateFrames, mediaSleeps, onLifecycle, pauseApp, resumeApp, soundSleeps } from './lifecycle.ts'; // the game asleep out of sight (docs/36) // the VK Mini App: its sign-in, no fullscreen of the game's own (docs/36)
@@ -1586,6 +1587,8 @@ setFilmGate(() => (modal !== null && !FILM_OVER.has(modal)) || [...document.quer
   if (hash.has('verified')) $('login-error').textContent = L('verified');
   if (hash.has('verify-failed')) $('login-error').textContent = L('verifyFailed');
   if (hash.get('auth-error')) $('login-error').textContent = serverText(hash.get('auth-error')!);
+  // back from VK ID: a link made, a refusal, the notices' hint (docs/36 §8)
+  vkIdReturn(hash, () => net.live || (!tok && $('screen-login').getClientRects().length > 0));
   const reset = hash.get('reset');
   if (reset) {
     $('reset-form').classList.remove('hidden');
@@ -1704,6 +1707,7 @@ if (!inVk()) fetch('/auth/providers').then((r) => r.json()).then((d: { providers
   $('oauth-buttons').innerHTML = d.providers.map((p) => `<a class="btn btn-small" href="/auth/oauth/${p.id}">${esc(L('signInWith', { name: p.name }))}</a>`).join('');
 }).catch(() => undefined);
 tgLoginButton(net, onLang);
+vkIdLoginButton(onLang, () => (net.token ? localStorage.getItem(CAPTAIN_KEY) : null));
 tgInvoices(net, (msg, kind) => hud.toast(msg, kind));
 webCheckouts(net, (msg, kind) => hud.toast(msg, kind), stashPending); // the browser's top-up through YooKassa (owner, 2026-10-21)
 
