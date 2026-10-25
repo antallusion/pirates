@@ -134,7 +134,7 @@ import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { TutorPointer, shotStage } from './ui/pointer.ts';
-import { rightClickAct } from './ui/deskinput.ts';
+import { rightClickAct, windowTab } from './ui/deskinput.ts';
 import { resumeAfterEnd, resumeOn } from './ui/resumesail.ts';
 import { hereAct } from './ui/questact.ts'; // owner, 2026-10-23: a quest step done in this port
 import { buzz, guardVibrate } from './haptics.ts';
@@ -2872,6 +2872,13 @@ addEventListener('keydown', (e) => {
     } else if (!typing()) hud.chatPanel.focusInput();
     else return;
     e.preventDefault();
+    return;
+  }
+  // batch-pc: Tab in an open window walks the window's controls (never the sea's «next target» behind it, never out
+  // onto the HUD from a field).
+  if (e.key === 'Tab' && modal && !(modal === 'options' && optionsScreen.capturing)) {
+    e.preventDefault();
+    windowTab($('modal-panel'), e.shiftKey);
     return;
   }
   // Esc leaves the options even with a slider or a list still in focus.

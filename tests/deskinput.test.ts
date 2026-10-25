@@ -17,3 +17,13 @@ test('the right button: the mount when fitted, else the helmsman to the spot; no
   assert.match(rmb, /rightClickAct\(/);
   assert.match(rmb, /worldMap\.onAutosail\(wp\)/);
 });
+
+test('Tab over an open window walks the window, not the sea\'s targets, and comes before the fields\' own keys', () => {
+  const at = main.indexOf("e.key === 'Tab' && modal");
+  assert.ok(at > 0, 'the window\'s Tab trap is wired');
+  assert.match(main.slice(at, at + 260), /windowTab\(\$\('modal-panel'\), e\.shiftKey\)/);
+  // before `if (typing()) return;` (a field's Tab must not walk out onto the HUD) and before the keymap's «target»
+  const handler = main.indexOf('// Autofill, an IME and some gamepad bridges');
+  const typingAt = main.indexOf('  if (typing()) return;', handler);
+  assert.ok(handler > 0 && at > handler && at < typingAt);
+});
