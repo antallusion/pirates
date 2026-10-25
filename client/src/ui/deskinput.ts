@@ -41,3 +41,11 @@ export function inField(e: { target: EventTarget | null }): boolean {
   const t = e.target as { tagName?: string; isContentEditable?: boolean } | null;
   return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || !!t.isContentEditable);
 }
+
+/** Whether a modifier's press, alone so far, may count as a tap of its own (Shift: the dash). Not with another modifier
+ *  held: Alt+Shift and Ctrl+Shift switch a Windows keyboard's layout (every Russian player does it to write in the
+ *  chat) — and each switch was a dash. `k` the modifier pressed (keyOf), `e` its event's modifier flags. */
+export function soloModifier(k: string, e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }): boolean {
+  const others = (e.altKey && k !== 'alt' ? 1 : 0) + (e.ctrlKey && k !== 'control' ? 1 : 0) + (e.metaKey ? 1 : 0) + (e.shiftKey && k !== 'shift' ? 1 : 0);
+  return others === 0;
+}

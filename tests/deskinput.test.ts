@@ -88,3 +88,15 @@ test('a Russian layout: the punctuation keys are bound by their place («б» is
   assert.equal(keyOf({ key: ' ', code: 'Space' }), ' ');
   assert.equal(keyOf({ key: 'F3', code: 'F3' }), 'f3');
 });
+
+test('Alt+Shift / Ctrl+Shift (a Windows layout switch) is no Shift tap, no dash', async () => {
+  const { soloModifier } = await import('../client/src/ui/deskinput.ts');
+  const f = (o: Partial<{ altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }>) => ({ altKey: false, ctrlKey: false, metaKey: false, shiftKey: false, ...o });
+  assert.equal(soloModifier('shift', f({ shiftKey: true })), true, 'Shift alone: the dash');
+  assert.equal(soloModifier('shift', f({ shiftKey: true, altKey: true })), false, 'Alt held, then Shift');
+  assert.equal(soloModifier('shift', f({ shiftKey: true, ctrlKey: true })), false, 'Ctrl held, then Shift');
+  assert.equal(soloModifier('shift', f({ altKey: true })), false, 'Shift up with Alt still down');
+  assert.equal(soloModifier('shift', f({})), true, 'Shift up alone');
+  assert.match(main, /modTap = soloModifier\(k, e\) \?/);
+  assert.match(main, /modTap\?\.k === k && [^\n]*soloModifier\(k, e\)/);
+});

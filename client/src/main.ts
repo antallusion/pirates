@@ -134,7 +134,7 @@ import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { TutorPointer, shotStage } from './ui/pointer.ts';
-import { rightClickAct, wheelZoom, windowTab } from './ui/deskinput.ts';
+import { rightClickAct, soloModifier, wheelZoom, windowTab } from './ui/deskinput.ts';
 import { resumeAfterEnd, resumeOn } from './ui/resumesail.ts';
 import { hereAct } from './ui/questact.ts'; // owner, 2026-10-23: a quest step done in this port
 import { buzz, guardVibrate } from './haptics.ts';
@@ -2919,7 +2919,7 @@ addEventListener('keydown', (e) => {
   // A key bound alone to a modifier (Shift: the dash) acts on its own tap, when it goes up with nothing pressed while it
   // was down — Shift+B and Shift+F are the careful boarding and the bribe, not a dash.
   if (MODS.has(k) && e.isTrusted) {
-    if (!e.repeat) modTap = { k, at: performance.now() };
+    if (!e.repeat) modTap = soloModifier(k, e) ? { k, at: performance.now() } : null; // (batch-pc: Alt+Shift, a layout's switch, is no dash)
     return;
   }
   if (e.isTrusted) modTap = null;
@@ -3071,7 +3071,7 @@ addEventListener('keyup', (e) => {
   const k = keyOf(e);
   if (!k) return;
   keys.delete(k);
-  if (modTap?.k === k && performance.now() - modTap.at < 400 && !typing()) {
+  if (modTap?.k === k && performance.now() - modTap.at < 400 && !typing() && soloModifier(k, e)) {
     dispatchEvent(new KeyboardEvent('keydown', { key: e.key, code: e.code }));
     keys.delete(k);
   }
