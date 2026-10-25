@@ -134,7 +134,7 @@ import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { TutorPointer, shotStage } from './ui/pointer.ts';
-import { rightClickAct, windowTab } from './ui/deskinput.ts';
+import { rightClickAct, wheelZoom, windowTab } from './ui/deskinput.ts';
 import { resumeAfterEnd, resumeOn } from './ui/resumesail.ts';
 import { hereAct } from './ui/questact.ts'; // owner, 2026-10-23: a quest step done in this port
 import { buzz, guardVibrate } from './haptics.ts';
@@ -3094,11 +3094,19 @@ canvas.addEventListener('mouseleave', () => {
   hoverTargetMenu('');
 });
 canvas.addEventListener('wheel', (e) => {
+  // (Ctrl + the wheel, a touchpad's pinch, zooms the sea too — never the browser's page under the game)
+  e.preventDefault();
   renderer.userZoomed = true;
   // (a far view steps out quicker: from the old farthest to the chart's in a dozen notches, freecam.ts)
   const step = renderer.targetZoom < ZOOM_NEAR_MIN ? 1.25 : 1.12;
-  renderer.targetZoom = clampZoom(renderer.targetZoom * (e.deltaY < 0 ? step : 1 / step));
-});
+  // (batch-pc: by the distance the wheel moved — a touchpad's stroke of tiny deltas was a whole step each)
+  renderer.targetZoom = clampZoom(renderer.targetZoom * wheelZoom(e.deltaY, e.deltaMode, step));
+}, { passive: false });
+// batch-pc: Ctrl + the wheel (and a laptop touchpad's pinch, which Chrome sends as it) zoomed the browser's page — the
+// whole HUD and every window grew or shrank under the game. In the game it is never the page's zoom.
+addEventListener('wheel', (e) => {
+  if (inGame && e.ctrlKey) e.preventDefault();
+}, { passive: false });
 // (the view home from the far look by a key too: Home — the button is the simple HUD's)
 addEventListener('keydown', (e) => {
   if (e.key === 'Home' && inGame && !typing() && renderer.looking) renderer.recentre();

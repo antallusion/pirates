@@ -27,3 +27,20 @@ test('Tab over an open window walks the window, not the sea\'s targets, and come
   const typingAt = main.indexOf('  if (typing()) return;', handler);
   assert.ok(handler > 0 && at > handler && at < typingAt);
 });
+
+test('the wheel zoom: a mouse notch is one step, a touchpad stroke of tiny deltas is not a step per event', async () => {
+  const { wheelZoom } = await import('../client/src/ui/deskinput.ts');
+  const near = (a: number, b: number) => assert.ok(Math.abs(a - b) < 1e-9, `${a} ≈ ${b}`);
+  near(wheelZoom(-100, 0, 1.12), 1.12); // Chrome on Windows, one notch in
+  near(wheelZoom(100, 0, 1.12), 1 / 1.12);
+  near(wheelZoom(-3, 1, 1.12), 1.12); // Firefox, lines
+  near(wheelZoom(-300, 0, 1.12), 1.12); // a fast spin: still a notch per event
+  assert.equal(wheelZoom(0, 0, 1.12), 1);
+  // a touchpad stroke: 30 events of 4 px — about one notch and a fifth, not 1.12^30 (×30)
+  let z = 1;
+  for (let i = 0; i < 30; i++) z *= wheelZoom(-4, 0, 1.12);
+  assert.ok(z > 1.1 && z < 1.2, `a light stroke zooms ×${z.toFixed(2)}`);
+  // Ctrl + the wheel (a touchpad's pinch) never zooms the page: the sea's handler and a window-wide one take it
+  assert.match(main, /canvas\.addEventListener\('wheel', \(e\) => \{[\s\S]{0,200}e\.preventDefault\(\);[\s\S]{0,500}\{ passive: false \}\);/);
+  assert.match(main, /addEventListener\('wheel', \(e\) => \{\s*if \(inGame && e\.ctrlKey\) e\.preventDefault\(\);\s*\}, \{ passive: false \}\);/);
+});

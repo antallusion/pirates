@@ -23,3 +23,14 @@ export function windowTab(root: HTMLElement | null, backwards: boolean): HTMLEle
   next?.focus({ preventScroll: false });
   return next;
 }
+
+/** The sea's zoom for one wheel event. A mouse's notch (Chrome on Windows: deltaY 100 in pixels; Firefox: 3 lines) is
+ *  one step, as before; a laptop's touchpad sends dozens of small deltas in one stroke (2–10 px each) and each of them
+ *  was a whole step — one light stroke flung the view from the nearest to the farthest. Now the step goes by the
+ *  distance the wheel moved, a notch at most at once. `step` the notch's factor (>1); returns the factor to multiply by. */
+export function wheelZoom(deltaY: number, deltaMode: number, step: number): number {
+  if (!Number.isFinite(deltaY) || deltaY === 0) return 1;
+  const px = deltaMode === 1 ? (deltaY * 100) / 3 : deltaMode === 2 ? deltaY * 800 : deltaY;
+  const notches = Math.min(1, Math.abs(px) / 100);
+  return Math.pow(px < 0 ? step : 1 / step, notches);
+}
