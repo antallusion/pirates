@@ -290,6 +290,8 @@ export function renderHelp(root: HTMLElement, onboarding: OnboardingView | null 
     ['anchor', kb('dock'), L('help.dock', { shift: `Shift+${kb('dock')}` })],
     ['ab_form_line', kb('formation'), L('help.formation', { talent: talentName('cmd_signal_flags') })],
     ['menu_map', `${kb('map')} · ${kb('talents')} · ${kb('ship')} · ${kb('crew')}`, L('help.screens')],
+    ['menu_map', `${kb('journal')} · ${kb('help')} · ${kb('harbour')} · ${kb('readAloud')}`, L('help.screens2')], // (batch-pc: F3, H, P, F2 were in no list)
+    ['anchor', 'Esc · Home', L('help.escHome')],
     ['ab_spotters_eye', L('key.wheel'), L('help.zoom')],
     ['opt_sound', kb('mute'), L('help.mute')],
     ['menu_company', kb('company'), L('help.company', { auction: portName('tidewrack') })],

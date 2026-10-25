@@ -100,3 +100,14 @@ test('Alt+Shift / Ctrl+Shift (a Windows layout switch) is no Shift tap, no dash'
   assert.match(main, /modTap = soloModifier\(k, e\) \?/);
   assert.match(main, /modTap\?\.k === k && [^\n]*soloModifier\(k, e\)/);
 });
+
+test('the handbook names every window key (the journal F3, H, P, F2, Esc, Home were in no list)', async () => {
+  const src = readFileSync(new URL('../client/src/ui/dialogs.ts', import.meta.url), 'utf8');
+  for (const a of ['journal', 'help', 'harbour', 'readAloud', 'map', 'talents', 'ship', 'crew', 'company']) assert.ok(src.includes(`kb('${a}')`), a);
+  assert.ok(src.includes("'Esc · Home'"));
+  const { EN, RU } = await import('../client/src/lang/ui/dialogs.ts');
+  for (const k of ['help.screens2', 'help.escHome'] as const) {
+    assert.ok(EN[k] && RU[k], k);
+    assert.doesNotMatch(RU[k], /[A-Za-z]/, `${k}: no Latin in the Russian`);
+  }
+});
