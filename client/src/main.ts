@@ -134,6 +134,7 @@ import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { TutorPointer, shotStage } from './ui/pointer.ts';
+import { rightClickAct } from './ui/deskinput.ts';
 import { resumeAfterEnd, resumeOn } from './ui/resumesail.ts';
 import { hereAct } from './ui/questact.ts'; // owner, 2026-10-23: a quest step done in this port
 import { buzz, guardVibrate } from './haptics.ts';
@@ -3118,9 +3119,16 @@ canvas.addEventListener('mousedown', (e) => {
 });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('mousedown', (e) => {
-  if (!inGame || e.button !== 2 || state.self?.dockedAt || fromFinger(e)) return;
+  if (!inGame || e.button !== 2 || fromFinger(e)) return;
   const m = mouseWorld();
-  net.send({ t: 'mount', x: Math.round(m.x), y: Math.round(m.y) });
+  const act = rightClickAct({ docked: !!state.self?.dockedAt, mount: !!state.self?.loadout.mount });
+  if (act === 'mount') net.send({ t: 'mount', x: Math.round(m.x), y: Math.round(m.y) });
+  else if (act === 'sail' && worldMap.onAutosail) {
+    // (batch-pc: no mount — the right button is the helm's «туда», as in every game of the kind)
+    const wp = { x: Math.round(m.x), y: Math.round(m.y) };
+    setMark(wp);
+    worldMap.onAutosail(wp);
+  }
 });
 
 function mouseWorld(): { x: number; y: number } {
