@@ -1,0 +1,60 @@
+/* The captain's abilities on a touch screen (owner, 2026-10-26: «на мобиле не показаны иконки спецприёмов капитана»;
+   src/ui/seaabil.ts): «Приёмы» — a round brass button in «Особое»'s place (over «Снаряд», left of «Цель»), at sea in a
+   fight or not; its row of the captain's four fanned out to its left; a long press's card in the top band. */
+
+/* ---------- «Приёмы»: the special's place, the special itself folded into it */
+#touch > #tc-abil { display: none; }
+body.simple.touch.sea-abil #touch > #tc-special { display: none !important; }
+body.simple.touch:not(.sea-docked) #touch > #tc-abil:not(.hidden):not(.tut-hidden) { display: inline-flex; }
+body.simple #touch > #tc-abil {
+  position: absolute; width: var(--sea-btn); height: var(--sea-btn); min-width: 0; min-height: 0; padding: 0; pointer-events: auto;
+  right: calc(var(--sa-r) + var(--sea-pad) + 4px + var(--sea-fire) + var(--sea-gap));
+  bottom: calc(var(--sa-b) + var(--sea-pad) + 4px + var(--sea-fire) + var(--sea-gap));
+}
+/* (out of a fight «Огонь», «Снаряд» and «Цель» are away: «Приёмы» stands in «Цель»'s place, under the menu, over the
+   row of things to do — lifted by seaabil.ts if that row wraps up into it) */
+body.simple:not(.sea-fight) #touch > #tc-abil { right: calc(var(--sa-r) + var(--sea-pad) + 4px + (var(--sea-fire) - var(--sea-btn)) / 2); }
+body.simple #touch > #tc-abil { translate: 0 calc(-1px * var(--abil-lift, 0)); }
+body.simple #touch > #tc-abil .tc-abil-pic { position: absolute; inset: 0; }
+body.simple #touch > #tc-abil .k-btn-ico, body.simple #tc-abilfan .tc-abi .k-btn-ico { inset: 19.9% 22% 24.1%; }
+body.simple #touch > #tc-abil:not(.none) { box-shadow: 0 0 14px rgba(224, 184, 98, 0.5), 0 4px 12px rgba(0, 0, 0, 0.75); }
+body.simple #touch > #tc-abil:not(.none)::after { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)) sepia(0.3) brightness(1.25) drop-shadow(0 0 5px rgba(224, 184, 98, 0.7)); }
+body.simple #touch > #tc-abil.none .k-btn-ico { filter: grayscale(0.6) brightness(0.62); }
+body.simple #touch > #tc-abil.on::after { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)) brightness(1.4) drop-shadow(0 0 8px rgba(255, 214, 120, 0.9)); }
+/* the soonest one back, swept (none ready) */
+#tc-abil .tc-abil-cd, #tc-abilfan .tc-abi-cd { position: absolute; inset: 9%; z-index: 0; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(rgba(4, 5, 7, 0.72) calc(var(--cd, 0) * 360deg), transparent 0); }
+/* how many are ready: a gold count on the rim */
+body.simple #touch > #tc-abil .tc-abil-n { top: -6px; right: -6px; background: linear-gradient(180deg, #f0cf7a, #a8823a); color: #1a1208; box-shadow: 0 0 0 1px #1a1208, 0 1px 3px #000; }
+body.simple #touch > #tc-abil .tc-abil-n.hidden { display: none; }
+
+/* ---------- the row: the captain's four, each in its ring, on a dark band */
+#tc-abilfan { position: fixed; z-index: 40; display: flex; align-items: center; gap: calc(var(--sea-gap, 14px) * 0.75);
+  padding: calc(var(--sea-btn, 48px) * 0.13); border-radius: 999px; pointer-events: auto;
+  background: radial-gradient(ellipse at 50% 50%, rgba(10, 9, 7, 0.82), rgba(10, 9, 7, 0.62)); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(176, 141, 87, 0.35);
+  animation: tc-abil-in 160ms var(--k-ease-out, ease-out) both; transform-origin: 100% 50%; }
+#tc-abilfan.hidden { display: none; }
+@keyframes tc-abil-in { from { opacity: 0; transform: translateX(10px) scale(0.92); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { #tc-abilfan { animation-duration: 1ms; } }
+body.simple #tc-abilfan .tc-abi { position: relative; flex: none; width: var(--sea-btn); height: var(--sea-btn); min-width: 0; min-height: 0; padding: 0; }
+#tc-abilfan .tc-abi.dim .k-btn-ico, #tc-abilfan .tc-abi.locked .k-btn-ico { filter: grayscale(0.85) brightness(0.5); }
+#tc-abilfan .tc-abi.ult:not(.locked)::after { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)) sepia(0.35) brightness(1.3) drop-shadow(0 0 5px rgba(224, 184, 98, 0.75)); }
+#tc-abilfan .tc-abi-t { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; pointer-events: none;
+  color: #f4ecd8; font: 700 15px/1 var(--k-font-sans, sans-serif); font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px #000, 0 0 6px #000; }
+#tc-abilfan .tc-abi.locked .tc-abi-t { font-size: 9.5px; letter-spacing: 0.02em; color: #e9dcc0; white-space: nowrap; }
+/* an ultimate's resolve: a gold arc on the rim's inner edge */
+#tc-abilfan .tc-abi-charge { position: absolute; inset: 6%; z-index: 2; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(#e8c46a calc(var(--charge, 0) * 360deg), rgba(232, 196, 106, 0.12) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px)); }
+
+/* ---------- the card (a long press): the top band, never the sea's middle */
+#tc-abiltip { position: fixed; z-index: 45; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; padding: 8px 11px 9px; pointer-events: none;
+  color: var(--k-bone, #e9dfc6); background: linear-gradient(180deg, rgba(30, 24, 17, 0.96), rgba(14, 11, 8, 0.96)); border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.55), 0 6px 18px rgba(0, 0, 0, 0.75); font: 400 11.5px/1.32 var(--k-font-sans, sans-serif); }
+#tc-abiltip.hidden { display: none; }
+#tc-abiltip .tc-abt-h { display: flex; align-items: center; gap: 7px; color: var(--k-gold, #e0b862); font: 700 14px/1.15 var(--k-font-serif, serif); letter-spacing: 0.02em; }
+#tc-abiltip .tc-abt-ico { width: 22px; height: 22px; flex: none; object-fit: contain; }
+#tc-abiltip .tc-abt-d { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; color: #d9cfb8; }
+#tc-abiltip .tc-abt-f { display: flex; justify-content: space-between; gap: 10px; color: var(--k-haze, #a99f8c); font-size: 11px; }
+#tc-abiltip .tc-abt-f .good { color: #9fd08a; }
+#tc-abiltip .tc-abt-f .bad { color: #e6a39a; }

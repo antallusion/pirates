@@ -106,9 +106,11 @@ import { EN as FC_EN, RU as FC_RU } from './lang/ui/freecam.ts';
 import { askMove } from './ui/isletree.ts'; // docs/29: the island's move, its confirm
 import { $, decorateSums, esc, fmt, glyphSvg, icon, keepInputs, knots } from './ui/dom.ts';
 import { Hud, TOUCH_FOLDED, releaseModalToasts } from './ui/hud.ts';
-import { SeaHud, bestSpecial, seaWord } from './ui/seahud.ts'; // docs/23 phase 2: the sea and five buttons
+import { SeaHud, bestSpecial, pettyOf, seaWord } from './ui/seahud.ts'; // docs/23 phase 2: the sea and five buttons
 import { adriftFacts, adriftInfo, askScuttle, juryTapText } from './ui/adrift.ts'; // owner 2026-10-20: torn sails, the jury rig, scuttling home
 import type { DeckSlot, SeaKeys } from './ui/seahud.ts';
+import { SeaAbil, abilWhy } from './ui/seaabil.ts'; // the captain's abilities on a phone: «Приёмы» and its row (owner, 2026-10-26)
+import type { AbilView } from './ui/seaabil.ts';
 import { goalCount, goalSheetView } from './ui/goalsheet.ts'; // «Цели и вести»: the campaign, the quests taken, the orders
 import { attackKind, buildCursors, cursorUrl } from './ui/cursor.ts'; // the attack cursor (owner, 2026-10-07)
 import type { AttackKind } from './ui/cursor.ts';
@@ -587,7 +589,7 @@ setInterval(() => {
 // the round buttons and the row of actions (2026-10-16: at 480×270 it lay under the row): from its own place it steps up
 // (and aside) to the first free spot of the bottom band. Four times a second, moved by \`translate\` only.
 // (the row's own buttons, not its box: with every thing to do in sight it wraps upward, its rows of unequal length)
-const INFO_OBSTACLES = '#tc-actrow:not(.hidden) > .k-btn, #tc-fire, #tc-cast:not(.hidden), #tc-ammo, #tc-special, #tc-lock, #tc-stick, #tc-speed, #tc-deck, #tc-act:not(.hidden), #tc-offer:not(.hidden), #tc-sail, #hud-captain .cs, #toasts > .toast, #hud-chat > .chat-toggle, #tc-menu, #tc-news, #tc-isle, #hud-map, #advcard:not(.hidden), #encounter:not(.hidden), #surrender:not(.hidden)';
+const INFO_OBSTACLES = '#tc-actrow:not(.hidden) > .k-btn, #tc-fire, #tc-cast:not(.hidden), #tc-ammo, #tc-special, #tc-abil:not(.hidden), #tc-lock, #tc-stick, #tc-speed, #tc-deck, #tc-act:not(.hidden), #tc-offer:not(.hidden), #tc-sail, #hud-captain .cs, #toasts > .toast, #hud-chat > .chat-toggle, #tc-menu, #tc-news, #tc-isle, #hud-map, #advcard:not(.hidden), #encounter:not(.hidden), #surrender:not(.hidden)';
 setInterval(() => {
   const el = document.getElementById('hud-bottom');
   if (!el) return;
@@ -1079,6 +1081,12 @@ const seaHud = new SeaHud($('touch'), {
     if (rf?.marked) return openRoamLook(rf.v);
     seaHud.lend(['hud-target'], 'target');
   },
+});
+// The captain's abilities on a phone (owner, 2026-10-26: «на мобиле не показаны иконки спецприёмов капитана»): «Приёмы»
+// in «Особое»'s place, its row of four — used as the desk's Z X C V are, at her mark.
+const seaAbil = new SeaAbil($('touch'), (id) => {
+  aimAtMark();
+  sendAbility(id);
 });
 // The island screen's way in from the sea (owner, 2026-10-15): «Остров» under the captain's plate. Always there (owner,
 // 2026-10-19: «под аватаркой кнопка острова, щас я ее не вижу или я еще остров не отрыл»): before she holds an island
@@ -1837,7 +1845,7 @@ function onMessage(m: ServerMsg): void {
       // The glass asks by itself every few seconds (askGlass): its «too far» is no refusal of hers to tell.
       else if (GLASS_QUIET.has(m.msg)) break;
       // A phone's small refusals (reloading, not on the beam) flash the button and buzz instead (docs/23 item 29).
-      else if (touch.enabled && seaHud.petty(m.msg)) break;
+      else if (touch.enabled && ((pettyOf(m.msg) === 'special' && seaAbil.flash()) || seaHud.petty(m.msg))) break;
       else hud.toast(serverText(m.msg), 'bad');
       break;
     case 'welcome':
@@ -2097,7 +2105,7 @@ function onMessage(m: ServerMsg): void {
       }
       // A phone's small refusals (reloading, not on the beam) flash the button and buzz instead (docs/23 item 29): the
       // server's refusals come as toasts of kind 'bad' (Game.ts err()), so the check on 'err' alone never saw them.
-      if (m.kind === 'bad' && touch.enabled && seaHud.petty(m.msg)) break;
+      if (m.kind === 'bad' && touch.enabled && ((pettyOf(m.msg) === 'special' && seaAbil.flash()) || seaHud.petty(m.msg))) break;
       // A refusal is told once (owner, 2026-10-07: «идут ошибки вечные»): the same words again soon after, not asked for by
       // a press of hers just now, are not shown again (the band counted them up ×N for as long as they came).
       if (m.kind === 'bad' && refusalAgain(m.msg)) break;
@@ -4014,6 +4022,7 @@ function seaFrame(): void {
     markId: targetId,
     mmShow: settings().mmTarget === 'show',
   });
+  seaAbil.frame(touch.enabled && simpleHud() && !self.dockedAt ? abilView() : null);
 }
 
 /** One simple sea HUD for every input (owner, 2026-10-07), unless the detailed interface is asked for. */
@@ -4029,6 +4038,26 @@ function deskKeys(): SeaKeys {
     up: keyOfAction('sailUp'), down: keyOfAction('sailDown'), left: keyOfAction('rudderLeft'), right: keyOfAction('rudderRight'),
     dash: keyOfAction('dash'), cast: keyOfAction('dock'),
   };
+}
+
+/** The captain's abilities as the phone's «Приёмы» shows them (the desk's deckView, with what the card says). */
+function abilView(): AbilView[] | null {
+  const self = state.self, you = state.you;
+  if (!self || !you || self.dockedAt) return null;
+  const now = state.estServerTime();
+  return CAPTAINS[self.captain].abilities.map((a) => {
+    const locked = a.kind === 'ultimate' && self.level < 6;
+    const charging = a.kind === 'ultimate' && !locked && you.resolve < 100;
+    const dread = (a.dreadCost ?? 0) > you.dread;
+    const gold = !!a.goldCost && self.gold < a.goldCost;
+    return {
+      id: a.id, art: `ab_${a.id}`, name: a.name, description: a.description, ult: a.kind === 'ultimate',
+      cooldown: a.cooldown * (state.ownStats?.cooldownMul ?? 1), left: Math.max(0, (self.cooldowns[a.id] ?? 0) - now),
+      ...(locked ? { locked: seaWord('lv6') } : {}), dim: locked || charging || dread || gold,
+      charge: charging ? you.resolve / 100 : null,
+      ...(charging ? { why: abilWhy('resolve', Math.round(you.resolve)) } : dread ? { why: abilWhy('dread', a.dreadCost ?? 0) } : gold ? { why: abilWhy('gold', a.goldCost ?? 0) } : {}),
+    };
+  });
 }
 
 /** The desk's gun deck (owner, 2026-10-07: «возвращай иконки, обводки графические»): the captain's four abilities
@@ -4218,7 +4247,7 @@ function hudKeepOut(): TmRect[] {
   if (now - hudBoxesAt < 250) return hudBoxes;
   hudBoxesAt = now;
   hudBoxes = [];
-  for (const el of document.querySelectorAll<HTMLElement>('#hud-captain .cs, #hud-map, #tc-menu, #tc-news, #tc-isle, #tc-offer, #hud-chat > .chat-toggle, #tc-target, #hud-boss, #hud-watch, #tc-stick, #tc-sail, #tc-speed, #tc-fire, #tc-cast, #tc-ammo, #tc-lock, #tc-special, #tc-act, #tc-deck, #hud-bottom > *, #toasts > .toast')) {
+  for (const el of document.querySelectorAll<HTMLElement>('#hud-captain .cs, #hud-map, #tc-menu, #tc-news, #tc-isle, #tc-offer, #hud-chat > .chat-toggle, #tc-target, #hud-boss, #hud-watch, #tc-stick, #tc-sail, #tc-speed, #tc-fire, #tc-cast, #tc-ammo, #tc-lock, #tc-special, #tc-abil:not(.hidden), #tc-act, #tc-deck, #hud-bottom > *, #toasts > .toast')) {
     const r = el.getBoundingClientRect();
     if (r.width > 2 && r.height > 2 && el.getClientRects().length) hudBoxes.push({ left: r.left - 6, top: r.top - 6, right: r.right + 6, bottom: r.bottom + 6 });
   }

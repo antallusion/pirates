@@ -1,5 +1,5 @@
 // «Войти через VK ID» on the website (owner, 2026-10-25; docs/36_VK.md §8; the server's side: server/src/vkid.ts).
-//  - the start screen's button (VK's own blue, its logo) sends the browser to /auth/vkid/start — VK ID's page, then
+//  - the start screen's button (the game's wooden plank as Telegram's, VK's logo in brass: owner, 2026-10-26) sends the browser to /auth/vkid/start — VK ID's page, then
 //    back to /play#token=…&vkid=1, adopted as the other sign-ins' tokens are (main.ts);
 //  - with a captain kept in this browser, the offer under it: «Привязать VK ID к капитану …» — the page trades its token
 //    for a one-time ticket (POST /auth/vkid/link) and goes the same way; back at /play#vkid=linked (her token kept);
@@ -30,7 +30,7 @@ export function vkIdConfig(): Promise<{ enabled: boolean; miniApp?: string } | n
   return cfg;
 }
 
-/** VK's logo, drawn (white on VK's blue). */
+/** VK's logo, drawn in the button's own colour (vkid.css: ivory brass on the wood, no VK blue). */
 export function vkIcon(): string {
   return '<svg class="vkid-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12.9 17.3c-5.5 0-8.6-3.8-8.7-10h2.7c.1 4.6 2.1 6.5 3.7 6.9V7.3h2.6v3.9c1.6-.2 3.2-2 3.8-3.9h2.6c-.4 2.4-2.2 4.2-3.4 4.9 1.2.6 3.2 2.1 4 5.1h-2.8c-.6-2-2.2-3.5-4.2-3.7v3.7z"/></svg>';
 }

@@ -26,6 +26,7 @@ const BLOCKS: Record<string, HudBlock[]> = {
   'tc-ammo': ['guns'],
   'tc-lock': ['target'],
   'tc-special': ['abilities'],
+  'tc-abil': ['abilities'], // «Приёмы» (ui/seaabil.ts) in «Особое»'s place on a phone
 };
 
 export class OnboardingUi {
