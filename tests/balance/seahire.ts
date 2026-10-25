@@ -104,6 +104,8 @@ export interface GuardRow {
   runs: number;
   sec: number;
   lost: number;
+  /** Her hull lost, the mean over the runs (a share). */
+  meanLost: number;
   guardLost: number;
 }
 
@@ -115,7 +117,7 @@ export function guardTable(anchors: number[], runs: number, cases: { gear: Gear;
   for (const anchor of anchors) for (const c of cases) for (const guard of [false, true]) {
     const rs: GuardRun[] = [];
     for (let k = 0; k < runs; k++) rs.push(guardFight(game, anchor, c.gear, guard, 500 + anchor * 31 + k, c.elite));
-    out.push({ anchor, gear: c.gear, elite: c.elite, guard, runs, wins: rs.filter((r) => r.win).length, sec: med(rs.filter((r) => r.win).map((r) => r.sec)), lost: med(rs.map((r) => r.lost)), guardLost: med(rs.map((r) => r.guardLost)) });
+    out.push({ anchor, gear: c.gear, elite: c.elite, guard, runs, wins: rs.filter((r) => r.win).length, sec: med(rs.filter((r) => r.win).map((r) => r.sec)), lost: med(rs.map((r) => r.lost)), meanLost: rs.reduce((a, r) => a + r.lost, 0) / Math.max(1, rs.length), guardLost: med(rs.map((r) => r.guardLost)) });
   }
   return out;
 }

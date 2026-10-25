@@ -575,6 +575,9 @@ function captainOf(game: Game, s: ShipEntity): ShipEntity {
   return s.ownerId !== null ? game.ships.get(s.ownerId) ?? s : s;
 }
 
+/** A hired guard's shot on an elite: this share (seahire.ts). */
+export const HIRED_VS_ELITE = 0.35;
+
 function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, hy: number): void {
   const shooter = game.ships.get(p.owner) ?? null;
   // The Cannon tattoo counts the hits (docs/12 P9).
@@ -646,7 +649,10 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   // The sea's own ships fire on a ship of the table as a captain of their ⚓ would (docs/25 item 7: ship.ts seaScale).
   const npcGuns = table && shooter?.seaScale ? shooter.seaScale.guns : 1;
   const hullPace = seaPace(target, true, shooter);
-  let hullDmg = p.damage * hullPace * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul * lore * lad.dealt * npcGuns;
+  // A guard hired at sea (seahire.ts) does half to an elite (a ship built for a company): she eases her captain's fight
+  // with it, she does not win it for her (owner, 2026-10-25: «заметно легче, но не прогулка»).
+  const hiredVsElite = shooter?.hiredBy !== undefined && target.elite ? HIRED_VS_ELITE : 1;
+  let hullDmg = p.damage * hullPace * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul * lore * lad.dealt * npcGuns * hiredVsElite;
   // The alpha strike (docs/25 item 1): a broadside past 2.5 times the table's share of her hull (≈ 50% at ⚓1, 23% at
   // ⚓10; off the ladder 30%; Iron Coffin two thirds of it) strikes a quarter as hard past it — never for nothing. It
   // was 30% for every ship, and every ball past it did 0 and was drawn as a miss: an equal sank in four broadsides

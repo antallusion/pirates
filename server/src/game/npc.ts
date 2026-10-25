@@ -416,6 +416,9 @@ export function hireStation(slot: number): { x: number; y: number } {
   return slot % 2 ? { x: -95, y: -25 } : { x: 95, y: -25 };
 }
 
+/** A hired guard breaks off the fight below this share of her hull. */
+export const HIRE_BREAK_OFF = 0.5;
+
 /** How far from her captain a hired guard still fights (metres). */
 export const HIRE_LEASH = 650;
 
@@ -673,6 +676,9 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   // Under a white flag to her (ceasefire.ts): never her prey, whatever brought her (a hunt, a chase, a pack's call).
   if (prey && ship.truceUntil > now && (brain.truce?.get((prey as ShipEntity).id) ?? 0) > now) prey = null;
   if (threat && (threat as ShipEntity).grappled) threat = null;
+  // A hired guard battered to half her hull breaks off and keeps by her captain (seahire.ts): she is paid to guard, not
+  // to sink with her (owner, 2026-10-25: «заметно легче, но не прогулка» — at full fight she won an elite's battle alone).
+  if (ship.hiredBy !== undefined && ship.hull < ship.stats.hullMax * HIRE_BREAK_OFF) prey = null;
 
   if (brain.fireship !== undefined) {
     fireshipThink(game, ship, brain);
