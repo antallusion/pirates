@@ -71,3 +71,15 @@ test('keys work in any keyboard layout: letters and digits by their physical pla
   assert.equal(keyOf({ key: ' ', code: 'Space' }), ' ');
   assert.equal(keyOf({ key: 'Escape' }), 'escape');
 });
+
+test('a keydown with no key (autofill, an IME, a gamepad bridge) names nothing and never throws (tel_err keyOf)', () => {
+  const map = defaults().keys;
+  // Chrome's autofill fires a plain Event named keydown: no key, no code.
+  assert.equal(keyOf({} as { key: string }), '');
+  assert.equal(keyOf({ key: undefined as unknown as string, code: '' }), '');
+  assert.equal(keyOf({ key: null as unknown as string, code: undefined }), '');
+  assert.equal(keyOf({ key: undefined as unknown as string, code: 'KeyW' }), 'w', 'the code still names the key');
+  assert.equal(keyOf({ key: 'Unidentified', code: '' }), 'unidentified');
+  assert.equal(actionFor(map, keyOf({} as { key: string })), null);
+  assert.equal(actionFor(map, undefined as unknown as string), null);
+});

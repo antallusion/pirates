@@ -3181,8 +3181,8 @@ export class TacticalPanel {
       if (e.key === 'Escape') this.stopReplay();
       return e.key === 'Escape';
     }
-    const k = e.key.toLowerCase();
-    const code = e.code;
+    const k = typeof e.key === 'string' ? e.key.toLowerCase() : '';
+    const code = e.code ?? '';
     if ((code === 'Enter' || code === 'NumpadEnter' || code === 'Space') && this.pickOn()) {
       const first = this.pickOptions(v)[0];
       if (first) this.pickAct(first.k);

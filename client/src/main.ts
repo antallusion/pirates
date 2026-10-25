@@ -2826,7 +2826,8 @@ function typing(): boolean {
 // The chat stays open until its button, its ×, a swipe or Esc folds it away (docs/28).
 
 addEventListener('keydown', (e) => {
-  if (!inGame) return;
+  // Autofill, an IME and some gamepad bridges fire keydowns that are no KeyboardEvent and carry no key.
+  if (!inGame || typeof e.key !== 'string') return;
   const chatInput = $('chat-input') as HTMLInputElement;
   if (e.key === 'Escape' && hud.chatPanel.isOpen) {
     // Esc in the field leaves it (the keys steer the ship again); Esc once more folds the chat away.
@@ -2872,7 +2873,7 @@ addEventListener('keydown', (e) => {
   }
   if (modal === 'options' && optionsScreen.capturing) return;
   // The diving bell: Shift+arrows steer it through the drowned streets.
-  if (state.dive?.leader && e.shiftKey && e.key.startsWith('Arrow')) {
+  if (state.dive?.leader && e.shiftKey && typeof e.key === 'string' && e.key.startsWith('Arrow')) {
     const d = ({ ArrowUp: 'n', ArrowRight: 'e', ArrowDown: 's', ArrowLeft: 'w' } as const)[e.key as 'ArrowUp'];
     if (d) net.send({ t: 'dive_move', dir: d });
     e.preventDefault();
@@ -3031,6 +3032,7 @@ addEventListener('keydown', (e) => {
 });
 addEventListener('keyup', (e) => {
   const k = keyOf(e);
+  if (!k) return;
   keys.delete(k);
   if (modTap?.k === k && performance.now() - modTap.at < 400 && !typing()) {
     dispatchEvent(new KeyboardEvent('keydown', { key: e.key, code: e.code }));
