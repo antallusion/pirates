@@ -58,7 +58,7 @@ test('popup budget: the sea\'s news, a hint and a boss\'s card keep out of the s
 test('not a word of Latin in a Russian line a player reads (QA circle: NPC, PvP, HUD, WebGL, e-mail, UTC, MMORPG)', async () => {
   const { readdirSync } = await import('node:fs');
   // Key names, roman numerals, the game's name, ship names (HMS …), the gamepad's own button names, chat commands.
-  const OK = /^(Tab|Shift|Ctrl|Alt|Esc|Enter|Space|Backspace|Del|Ins|Home|End|PgUp|PgDn|Caps|LMB|RMB|MMB|WASD|F\d{1,2}|[A-Za-z]|[IVX]+|GRAVETIDE|HMS|Menu|View|gc|nbsp|px|PNG|JPG|WebP|MP|YouTube)$/; // (the forum's file formats: MP4 reads «MP»)
+  const OK = /^(Tab|Shift|Ctrl|Alt|Esc|Enter|Space|Backspace|Del|Ins|Home|End|PgUp|PgDn|Caps|LMB|RMB|MMB|WASD|F\d{1,2}|[A-Za-z]|[IVX]+|GRAVETIDE|HMS|Menu|View|gc|nbsp|px|PNG|JPG|WebP|MP|YouTube|VK|ID)$/; // (the forum's file formats: MP4 reads «MP»; «VK ID» is VK's own brand for its sign-in)
   const dir = new URL('../client/src/lang/', import.meta.url);
   const tables: [string, Record<string, unknown>][] = [];
   // (a Russian table's file is named «….ru.…» or ru.ts — «forum.ts» only spells «ru»; the forum's Russian is its FORUM_RU)
