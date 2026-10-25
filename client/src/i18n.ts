@@ -69,7 +69,9 @@ export function typeset(s: string): string {
     // a name that comes quoted from the server into a template that quotes it: «{by}» gave ««Чёрный часовой»» (docs/30)
     .replace(/««([^«»]*)»»/g, '«$1»')
     .replace(/ ([—–/])/g, '\u00a0$1')
-    .replace(/(?<=^|[\s(«„"])([вВкКсСуУоОиИаАяЯ]) /g, '$1\u00a0')
+    // a one-letter word at the line's start or after a space, a bracket, «, „ or a quote — what stands before it checked in
+    // code (the callback sees the same line), as Safari before 16.4 cannot parse a lookbehind
+    .replace(/([вВкКсСуУоОиИаАяЯ]) /g, (m: string, c: string, at: number, line: string) => (at === 0 || /[\s(«„"]/.test(line[at - 1]) ? `${c}\u00a0` : m))
     .replace(/(\d) (?=(?:с|сек|мин|ч|м|км|т|уз\.|дн\.?|сут\.?|шт\.?|%)(?![А-Яа-яЁё]))/g, '$1\u00a0');
 }
 

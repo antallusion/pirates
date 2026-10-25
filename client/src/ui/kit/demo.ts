@@ -2,6 +2,7 @@
 // first, for QA and for the next phases to build from. Not the game: index.html loads this in place of main.ts.
 // /?kit&lang=en shows it in English; the language buttons switch it in place.
 
+import '../../compat.ts'; // first of all: the calls Safari 15 lacks (iOS 15 is the floor)
 import { loadAssets } from '../../assets.ts';
 import { dict, lang, setLang } from '../../i18n.ts';
 import type { Lang } from '../../i18n.ts';

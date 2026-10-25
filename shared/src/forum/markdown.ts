@@ -9,6 +9,7 @@
 
 import { maskBadWords, OWN_HOSTS } from '../chat.ts';
 import { typo } from '../typo.ts';
+import { execAfter, matchAllAfter } from '../lookbehind.ts';
 
 export interface MdOptions {
   /** The reader's language: «… wrote:», «Spoiler», «Play». */
@@ -208,8 +209,29 @@ function spoilerBlock(title: string, inner: string, o: MdOptions): string {
 // ------------------------------------------------------------------------------------------------ inline
 
 // 1-2 code · 3-5 picture or film · 6-7 link · 8 bold · 9 strike · 10 spoiler · 11 italic * · 12 italic _ · 13 autolink · 14-15 mention
+// No lookbehind (Safari before 16.4 cannot parse one, and the whole game failed to start there): an italic's closing mark
+// after a non-space is the content's own last `\S`, and what may not stand before an italic or a mention is checked in
+// code (inlineOk) — those three start with `*`, `_` and `@`, which only bold (`**`, tried first) also starts with.
 const INLINE =
-  /(`+)([^`\n]+?)\1|!\[([^\]\n]{0,200})\]\(\s*([^\s)]+)(?:\s+([^\s)]+))?\s*\)|\[([^\]\n]{1,300})\]\(\s*([^\s)]+)\s*\)|\*\*(?=\S)(.+?)\*\*|~~(?=\S)(.+?)~~|\|\|(?=\S)(.+?)\|\||(?<![\p{L}\p{N}*])\*(?=\S)(.+?)(?<=\S)\*(?![\p{L}\p{N}*])|(?<![\p{L}\p{N}_])_(?=\S)(.+?)(?<=\S)_(?![\p{L}\p{N}_])|(https?:\/\/[^\s<>"'`]*[^\s<>"'`.,;:!?)\]])|(?<![\p{L}\p{N}_@/])@(?:\[([^\]\n]{3,20})\]|([\p{L}\p{N}_'-]{3,20}))/gu;
+  /(`+)([^`\n]+?)\1|!\[([^\]\n]{0,200})\]\(\s*([^\s)]+)(?:\s+([^\s)]+))?\s*\)|\[([^\]\n]{1,300})\]\(\s*([^\s)]+)\s*\)|\*\*(?=\S)(.+?)\*\*|~~(?=\S)(.+?)~~|\|\|(?=\S)(.+?)\|\||\*(?=\S)(.*?\S)\*(?![\p{L}\p{N}*])|_(?=\S)(.*?\S)_(?![\p{L}\p{N}_])|(https?:\/\/[^\s<>"'`]*[^\s<>"'`.,;:!?)\]])|@(?:\[([^\]\n]{3,20})\]|([\p{L}\p{N}_'-]{3,20}))/gu;
+
+/** What may not stand just before an italic `*`, an italic `_` and a mention `@` (a letter, a digit or the mark itself). */
+const NOT_AFTER_STAR = /[\p{L}\p{N}*]/u;
+const NOT_AFTER_UNDER = /[\p{L}\p{N}_]/u;
+const NOT_AFTER_AT = /[\p{L}\p{N}_@/]/u;
+
+/** Whether an INLINE match may start where it stands (the lookbehinds of old, done in code). */
+function inlineOk(before: string, m: RegExpExecArray): boolean {
+  if (m[11] !== undefined) return !NOT_AFTER_STAR.test(before);
+  if (m[12] !== undefined) return !NOT_AFTER_UNDER.test(before);
+  if (m[14] !== undefined || m[15] !== undefined) return !NOT_AFTER_AT.test(before);
+  return true;
+}
+
+/** The inline marks of a line, in order — exactly the matches the old lookbehind regex gave (tests/compat-regex.test.ts). */
+export function inlineMatches(s: string): RegExpExecArray[] {
+  return matchAllAfter(INLINE, s, inlineOk);
+}
 
 /** Plain words: escaped, the coarse ones masked. */
 const words = (s: string): string => esc(maskBadWords(s));
@@ -221,7 +243,7 @@ function inline(s: string, o: MdOptions, depth: number): string {
   let last = 0;
   INLINE.lastIndex = 0;
   const re = new RegExp(INLINE.source, INLINE.flags);
-  for (let m = re.exec(s); m; m = re.exec(s)) {
+  for (let m = execAfter(re, s, inlineOk); m; m = execAfter(re, s, inlineOk)) {
     const piece = piece_(m, o, depth);
     if (piece === null) continue; // not ours here: left to the words (the next match starts after this one's first char)
     out += words(s.slice(last, m.index)) + piece;
@@ -288,10 +310,13 @@ function withoutCode(src: string): string {
   return String(src ?? '').replace(/```[\s\S]*?(?:```|$)/g, ' ').replace(/`[^`\n]+`/g, ' ');
 }
 
+/** A mention: @Name or @[Two words] (not after a letter, a digit, `_`, `@` or `/` — checked in code, see inlineOk). */
+const MENTION = /@(?:\[([^\]\n]{3,20})\]|([\p{L}\p{N}_'-]{3,20}))/gu;
+
 /** The names @mentioned (at most ten, each once). */
 export function mentionsOf(src: string): string[] {
   const out = new Set<string>();
-  for (const m of withoutCode(src).matchAll(/(?<![\p{L}\p{N}_@/])@(?:\[([^\]\n]{3,20})\]|([\p{L}\p{N}_'-]{3,20}))/gu)) {
+  for (const m of matchAllAfter(MENTION, withoutCode(src), (before) => !NOT_AFTER_AT.test(before))) {
     out.add((m[1] ?? m[2]).replace(/ /g, ' ').trim());
     if (out.size >= 10) break;
   }

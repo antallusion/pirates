@@ -6,6 +6,8 @@
 //  - the coarse words of both languages, masked (never refused);
 //  - which links may be followed (our own domain only; every other one stays words).
 
+import { matchAllAfter } from './lookbehind.ts';
+
 /** The longest line, in characters. */
 export const CHAT_MAX = 300;
 /** At least this long between two lines of one captain (seconds)… */
@@ -124,12 +126,14 @@ function folded(s: string): string {
   return out;
 }
 
-const RU_WORD = '(?<![а-яa-z])';
-/** Russian stems, matched at the start of a word (so «корабля», «страхуй», «небо» and «хлеб» stay as they are). */
-const RU_BAD = new RegExp(
-  `${RU_WORD}(?:(?:на|за|вы|по|от|до|при|раз|об|у|въ|съ)?(?:хуй|хуя|хую|хуе|хуи|хуё)[а-я]*|(?:[а-я]*пизд[а-я]*)|(?:на|за|вы|по|от|до|при|раз|об|у|въ|съ)?(?:еб|ёб)(?:а|у|л|н|ё|и|о)[а-я]*|бля[а-я]*|сук(?:а|и|у|е|ой|ам|ами)(?![а-я])|муда[кч][а-я]*|мудил[а-я]*|пид[оа]р[а-я]*|залуп[а-я]*|гандон[а-я]*|шлюх[а-я]*)`,
+/** Russian stems, matched at the start of a word (so «корабля», «страхуй», «небо» and «хлеб» stay as they are): the
+ *  start of a word is checked in code (ruCoarse), not by a lookbehind — Safari before 16.4 cannot parse one. */
+export const RU_BAD = new RegExp(
+  `(?:(?:на|за|вы|по|от|до|при|раз|об|у|въ|съ)?(?:хуй|хуя|хую|хуе|хуи|хуё)[а-я]*|(?:[а-я]*пизд[а-я]*)|(?:на|за|вы|по|от|до|при|раз|об|у|въ|съ)?(?:еб|ёб)(?:а|у|л|н|ё|и|о)[а-я]*|бля[а-я]*|сук(?:а|и|у|е|ой|ам|ами)(?![а-я])|муда[кч][а-я]*|мудил[а-я]*|пид[оа]р[а-я]*|залуп[а-я]*|гандон[а-я]*|шлюх[а-я]*)`,
   'g',
 );
+/** The Russian coarse words of a folded line: RU_BAD's matches that start a word (no letter а–я or a–z before). */
+export const ruCoarse = (line: string): RegExpExecArray[] => matchAllAfter(RU_BAD, line, (before) => !/[а-яa-z]/.test(before));
 /** English, whole words (so «Dickens», «cockpit», «Scunthorpe» and «shell» stay). */
 const EN_BAD = /\b(?:fuck\w*|motherfuck\w*|shit(?:s|ty|head|hole)?|bitch(?:es|y)?|cunts?|assholes?|dick(?:s|head)?|whores?|nigg(?:er|a)s?|faggots?|fags?)\b/gi;
 
@@ -140,7 +144,7 @@ export function maskBadWords(text: string): string {
   const hit = (start: number, len: number) => {
     for (let i = start + 1; i < start + len && i < chars.length; i++) if (/\S/.test(chars[i])) chars[i] = '*';
   };
-  for (const m of folded(text).matchAll(RU_BAD)) hit(m.index!, m[0].length);
+  for (const m of ruCoarse(folded(text))) hit(m.index, m[0].length);
   for (const m of text.matchAll(EN_BAD)) hit(m.index!, m[0].length);
   return chars.join('');
 }

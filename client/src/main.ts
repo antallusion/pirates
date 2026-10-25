@@ -1,5 +1,6 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
+import './compat.ts'; // first of all: the calls Safari 15 lacks (iOS 15 is the floor)
 import { WayWindow, mountFallen, resRid } from './ui/waystation.ts'; // docs/35
 import { setWayFog, wayName } from './render/waystations.ts'; // docs/35
 import { fogFarLayer, underFog } from './render/fog.ts'; // the fog of war (owner, 2026-10-17)
