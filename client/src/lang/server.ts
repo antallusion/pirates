@@ -5,6 +5,7 @@
 
 import { fishingPatterns } from '../../../shared/src/data/fishing.ts';
 import { ruCounts } from './counts.ts';
+import { importAgain } from '../importagain.ts';
 import { cosPatterns } from '../../../shared/src/data/cosmetics.ts'; // docs/32 §12
 import { beastPatterns } from '../../../shared/src/data/beasts.ts';
 import { piratePatterns } from '../../../shared/src/data/pirates.ts';
@@ -114,11 +115,14 @@ const TABLE: Record<string, string> = { ...Object.fromEntries(cosPatterns()), ..
  *  English till the screen draws it again. */
 let campaignLoad: Promise<void> | null = null;
 export function loadCampaignWords(): Promise<void> {
-  campaignLoad ??= import('../../../shared/src/data/campaign/patterns.ts').then((m) => {
+  // (tried again on a dropped connection; a load that failed for good is forgotten, so the next call tries anew)
+  campaignLoad ??= importAgain(() => import('../../../shared/src/data/campaign/patterns.ts')).then((m) => {
     for (const [en, ru] of m.campaignPatterns()) if (TABLE[en] === undefined) TABLE[en] = ru;
     templates = null;
     exact.clear();
     campaignReady = true;
+  }, () => {
+    campaignLoad = null;
   });
   return campaignLoad;
 }

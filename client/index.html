@@ -93,22 +93,28 @@
     })();
     // The start that always goes on (owner, 2026-10-16: «игра просто не запускается вообще»): the start's stages kept in
     // __boot (client/src/viewport.ts adds the game's), a screen with the progress while the game's code comes in (only
-    // when it takes longer than a blink), «Перезагрузить» if it fails or takes too long (a module lost on the way fails
-    // the whole import: the page then reloads by itself once), and a stalled start's log sent to the server.
-    // ?bootdebug shows the log on screen and sends it at the start's main stages.
+    // when it takes longer than a blink), and every start's end told to the server (/boot-report): «ok» with its time
+    // and size, or a failure with its log; ?bootdebug shows the log on screen and sends it at the start's main stages.
+    // The loader (__gtLoad, started by the line the server puts at the end of the head — server/src/net/static.ts): the
+    // bundle's few files (tools/build-client.ts) fetched at once, each tried again on a lost or stalled connection (1 s,
+    // 3 s, 7 s), then the game imported (again too, on a network error); if they never come, «Не удалось загрузить
+    // игру — проверьте интернет» with «Повторить» — never a dead page (prod 2026-10-25: «Failed to fetch dynamically
+    // imported module» on phones on mobile data). The page reloads by itself once after a failure.
     (function () {
       var debug = /[?&]bootdebug\b/.test(location.search);
       var B = window.__boot = { t0: Date.now(), log: [], ready: false, debug: debug, sent: 0 };
       var ru = document.documentElement.lang === 'ru';
       var T = ru
-        ? { load: 'Загрузка…', slow: 'Связь медленная — игра ещё грузится.', fail: 'Игра не загрузилась.', retry: 'Перезагрузить' }
-        : { load: 'Loading…', slow: 'The connection is slow — still loading.', fail: 'The game did not load.', retry: 'Reload' };
+        ? { load: 'Загрузка…', slow: 'Связь медленная — игра ещё грузится.', fail: 'Игра не загрузилась.', net: 'Не удалось загрузить игру — проверьте интернет', retry: 'Повторить' }
+        : { load: 'Loading…', slow: 'The connection is slow — still loading.', fail: 'The game did not load.', net: 'Could not load the game — check your connection', retry: 'Retry' };
       function el(id) { return document.getElementById(id); }
-      function send(why) {
+      function send(why, slim) {
         if (B.sent > 8) return;
         B.sent++;
         try {
-          var body = JSON.stringify({ why: why, log: B.log.slice(-80), w: innerWidth, h: innerHeight, dpr: devicePixelRatio, ua: navigator.userAgent, path: location.pathname + location.search, tg: !!(window.Telegram && window.Telegram.WebApp) || /^tg\./.test(location.hostname) });
+          var r = { why: why, ms: Date.now() - B.t0, mode: B.mode || '', kb: B.kb || 0, w: innerWidth, h: innerHeight, dpr: devicePixelRatio, ua: navigator.userAgent, path: location.pathname + location.search, tg: !!(window.Telegram && window.Telegram.WebApp) || /^tg\./.test(location.hostname) };
+          if (!slim) r.log = B.log.slice(-80);
+          var body = JSON.stringify(r);
           if (!(navigator.sendBeacon && navigator.sendBeacon('/boot-report', new Blob([body], { type: 'application/json' })))) fetch('/boot-report', { method: 'POST', body: body, keepalive: true, headers: { 'Content-Type': 'application/json' } }).catch(function () {});
         } catch (e) {}
       }
@@ -131,23 +137,103 @@
         B.log.push(line);
         if (B.log.length > 300) B.log.splice(0, 100);
         if (debug) { try { console.info('[boot] ' + line); } catch (e) {} paint(); }
-        if (s === 'ready') { B.ready = true; shell(false); }
-        if (debug && (s === 'ready' || s === 'init' || s === 'start loaded')) send(s);
+        if (s === 'ready' && !B.ready) {
+          B.ready = true;
+          shell(false);
+          send('ok', !debug);
+          // the service worker keeps this build's files for the next visit and lets the older ones go (client/sw.js)
+          try {
+            var sw = navigator.serviceWorker && navigator.serviceWorker.controller, c = B.cfg;
+            if (sw && c && c.mode === 'bundle') sw.postMessage({ t: 'code', keep: c.files.map(function (f) { return f.u; }).concat(c.lazy || []) });
+          } catch (e) {}
+        }
+        if (debug && (s === 'init' || s === 'start loaded')) send(s);
       };
+      /** A failure of the network's (and not of the code's): the words then say «check your connection». */
+      var NET = /fetch|network|load failed|importing a module script failed|dynamically imported|stalled|HTTP \d/i;
       window.__bootFail = function (e) {
         var msg = String((e && e.message) || e);
+        var net = NET.test(msg) || navigator.onLine === false;
         B.failed = true;
         window.__bootMark('FAILED ' + msg.slice(0, 200));
         send('fail');
-        // once, by itself: a module that did not come is asked for afresh
+        // once, by itself: what did not come is asked for afresh (what did is in the browser's cache by now)
         var last = 0;
         try { last = +(sessionStorage.getItem('gt.bootRetry') || 0); } catch (x) {}
         if (Date.now() - last > 120000) {
           try { sessionStorage.setItem('gt.bootRetry', String(Date.now())); } catch (x) {}
-          setTimeout(function () { location.reload(); }, 600);
+          setTimeout(function () { location.reload(); }, 1500);
         }
-        shell(true, T.fail, true);
+        var bb = el('boot');
+        if (bb) bb.classList.add('failed');
+        shell(true, net ? T.net : T.fail, true);
       };
+
+      // ---- the loader
+      var importer = null, waiting = [];
+      /** The page's module script hands its import() over (a classic script cannot be parsed with one by an old browser). */
+      window.__gtImporter = function (f) { importer = f; var w = waiting; waiting = []; for (var i = 0; i < w.length; i++) w[i](); };
+      function haveImporter() { return importer ? Promise.resolve() : new Promise(function (r) { waiting.push(r); }); }
+      function later(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+      var WAIT = [1000, 3000, 7000];
+      /** A file's body read to its end (into the browser's cache), its bytes counted as they come; a fetch that brings
+       *  nothing for 25 s is given up (a phone's connection that stalled). */
+      function fetchBody(u, onBytes) {
+        return new Promise(function (resolve, reject) {
+          var ctl = window.AbortController ? new AbortController() : null, timer = 0, done = false;
+          function end(e) { if (done) return; done = true; clearTimeout(timer); if (e) { try { if (ctl) ctl.abort(); } catch (x) {} reject(e); } else resolve(); }
+          function stall() { clearTimeout(timer); timer = setTimeout(function () { end(new Error('stalled 25s')); }, 25000); }
+          stall();
+          fetch(u, { credentials: 'same-origin', priority: 'high', signal: ctl ? ctl.signal : undefined }).then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            if (!r.body || !r.body.getReader) return r.arrayBuffer().then(function (b) { onBytes(b.byteLength); });
+            var rd = r.body.getReader();
+            function pump() { return rd.read().then(function (x) { if (x.done || done) return; stall(); onBytes(x.value.byteLength); return pump(); }); }
+            return pump();
+          }).then(function () { end(); }, function (e) { end(e || new Error('fetch failed')); });
+        });
+      }
+      window.__gtLoad = function (cfg) {
+        if (B.cfg) return;
+        B.cfg = cfg;
+        B.mode = cfg.mode;
+        B.kb = cfg.kb || 0;
+        var files = cfg.files || [], total = 0, got = 0;
+        for (var i = 0; i < files.length; i++) total += files[i].n || 0;
+        window.__bootMark('code ' + cfg.mode + ' ' + files.length + ' file(s) ' + B.kb + 'KB');
+        function progress() {
+          var bar = document.querySelector('#boot .bt-bar i');
+          if (bar && total) bar.style.width = Math.min(100, Math.round(got / total * 100)) + '%';
+        }
+        function get(f, n, count) {
+          var seen = 0;
+          return fetchBody(f.u, function (k) { if (count) { seen += k; got += k; progress(); } }).then(null, function (e) {
+            got -= seen;
+            progress();
+            if (n >= WAIT.length) throw e;
+            window.__bootMark('retry ' + (n + 1) + ' ' + f.u.split('/').pop() + ': ' + ((e && e.message) || e));
+            return later(WAIT[n]).then(function () { return get(f, n + 1, count); });
+          });
+        }
+        function imp(n) {
+          var u = cfg.entry + (n ? (cfg.entry.indexOf('?') < 0 ? '?' : '&') + 'r=' + n : '');
+          return importer(u).then(null, function (e) {
+            if (n >= 2 || !NET.test(String((e && e.message) || e))) throw e;
+            window.__bootMark('retry import ' + (n + 1) + ': ' + ((e && e.message) || e));
+            return later(WAIT[n]).then(function () { return imp(n + 1); });
+          });
+        }
+        Promise.all(files.map(function (f) { return get(f, 0, true); }))
+          .then(function () { if (files.length) window.__bootMark('code in'); return haveImporter(); })
+          .then(function () {
+            // the lazy parts (the campaign's words, its chapters) on their way into the cache while the game starts
+            var lazy = cfg.lazy || [];
+            for (var j = 0; j < lazy.length; j++) get({ u: lazy[j] }, 0, false).then(null, function () {});
+            return imp(0);
+          })
+          .then(null, function (e) { window.__bootFail(e); });
+      };
+
       addEventListener('error', function (e) { if (!B.ready) window.__bootMark('error ' + (e.message || (e.target && (e.target.src || e.target.href)) || '?')); }, true);
       addEventListener('unhandledrejection', function (e) { if (!B.ready) window.__bootMark('rejection ' + ((e.reason && e.reason.message) || e.reason)); });
       window.__bootMark('page ' + innerWidth + 'x' + innerHeight + (matchMedia('(orientation: portrait)').matches ? ' portrait' : ' landscape'));
@@ -158,12 +244,12 @@
         b.querySelector('.bt-text').textContent = T.load;
         b.querySelector('.bt-retry').onclick = function () { location.reload(); };
         if (debug) paint();
-        // the progress: the game's modules in, of those the page names
+        // the progress of the modules (without the bundle): the game's modules in, of those the page names
         var total = document.querySelectorAll('link[rel=modulepreload]').length, got = 0, bar = b.querySelector('.bt-bar i');
         try {
-          new PerformanceObserver(function (l) {
+          if (total) new PerformanceObserver(function (l) {
             l.getEntries().forEach(function (x) { if (x.name.indexOf('/src/') >= 0) got++; });
-            if (total) bar.style.width = Math.min(100, Math.round(got / total * 100)) + '%';
+            bar.style.width = Math.min(100, Math.round(got / total * 100)) + '%';
           }).observe({ type: 'resource', buffered: true });
         } catch (e) {}
         setTimeout(function () { if (!B.ready) shell(true); }, 700);
@@ -174,6 +260,9 @@
       addEventListener('load', function () { window.__bootMark('load'); });
     })();
   </script>
+  <!-- The server puts the game's start here (server/src/net/static.ts: `__gtLoad({…})` and, without the bundle, the
+       modules' preload links): before the stylesheets, which hold a script back till they are in. -->
+  <!--gt:start-->
   <style>
     /* the start's own screen (above): drawn before any stylesheet comes */
     #boot { position: fixed; inset: 0; z-index: 2147483200; display: none; align-items: center; justify-content: center; color: #d8d2c4; font: 14px/1.35 system-ui, sans-serif; text-align: center; }
@@ -188,6 +277,7 @@
     @media (orientation: portrait) { #boot .bt-name img { height: auto; width: min(68vw, 320px); } }
     #boot .bt-retry { min-height: 40px; padding: 0 20px; border: 1px solid #c9a46a; border-radius: 6px; background: #2a2116; color: #f0e2c0; font: 600 14px system-ui, sans-serif; }
     #boot .bt-retry[hidden] { display: none; }
+    #boot.failed .bt-wheel { display: none; }
     #boot-log { position: fixed; left: 4px; bottom: 4px; z-index: 2147483300; max-width: 70vw; margin: 0; padding: 4px 6px; background: rgba(0, 0, 0, 0.75); color: #9fe0a0; font: 10px/1.25 ui-monospace, monospace; white-space: pre-wrap; pointer-events: none; }
     #boot-log[hidden] { display: none; }
   </style>
@@ -408,8 +498,13 @@
 
   <!-- /?kit: the interface kit's page (docs/23 phase 1: every component at 812×375 for QA) in place of the game. -->
   <script type="module">
+    // the loader's import (the head's __gtLoad brings the code in first: server/src/net/static.ts); a page served as a
+    // plain file, without the server's line, starts the modules itself
+    window.__gtImporter((u) => import(u));
     if (new URLSearchParams(location.search).has('kit')) import('/src/ui/kit/demo.ts').then(() => window.__bootMark('ready'), (e) => window.__bootFail(e));
-    else import('/src/main.ts').catch((e) => window.__bootFail(e));
+    else if (!window.__boot.cfg) window.__gtLoad({ mode: 'src', entry: '/src/main.ts', files: [] });
   </script>
+  <!-- a browser without ES modules (older than Safari 11 / Chrome 61): the screen says the game did not load -->
+  <script nomodule>window.__bootFail(new Error('no ES modules in this browser'));</script>
 </body>
 </html>

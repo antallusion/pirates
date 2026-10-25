@@ -6,3 +6,4 @@ data/*.db-*
 assets/raw/
 __pycache__/
 assets/future/**/*.png
+client/dist/

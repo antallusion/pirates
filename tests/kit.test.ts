@@ -258,6 +258,7 @@ test('kit migration: the question, the departure check, the toasts and the pad\'
   assert.doesNotMatch(styles, /\.dp-foot/);
   assert.doesNotMatch(src('client/index.html'), /id="radial"/);
   // The kit's page for QA.
-  // (through the boot guard since 2026-10-16: a lost module is reported and the page reloads once)
-  assert.match(src('client/index.html'), /if \(new URLSearchParams\(location\.search\)\.has\('kit'\)\) import\('\/src\/ui\/kit\/demo\.ts'\)[^;]*;\s*else import\('\/src\/main\.ts'\)[^;]*;/);
+  // (through the boot guard since 2026-10-16: a lost module is reported and the page reloads once; the game itself
+  //  through the loader since 2026-10-25 — the bundle's files fetched and retried, tests/bundle.test.ts)
+  assert.match(src('client/index.html'), /if \(new URLSearchParams\(location\.search\)\.has\('kit'\)\) import\('\/src\/ui\/kit\/demo\.ts'\)[^;]*;\s*else if \(!window\.__boot\.cfg\) window\.__gtLoad\(\{ mode: 'src', entry: '\/src\/main\.ts'[^;]*;/);
 });

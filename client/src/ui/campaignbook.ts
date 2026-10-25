@@ -3,6 +3,7 @@
 // words are the written source itself (shared/src/data/campaign/chNN.ts, both tongues), a module of their own loaded the
 // first time the page opens; her place comes from the server (PrivateState.campaign).
 
+import { importAgain } from '../importagain.ts';
 import { CAMPAIGN_SIZE, PLAN } from '../../../shared/src/data/campaign/plan.ts';
 import { FIRST_SLOT, gateOf } from '../../../shared/src/data/campaign/progress.ts';
 import type { ChapterSrc } from '../../../shared/src/data/campaign/types.ts';
@@ -21,9 +22,11 @@ let loading: Promise<void> | null = null;
 /** The written chapters, loaded once (null till they come; `then` redraws). */
 export function bookChapters(then: () => void): ChapterSrc[] | null {
   if (chapters) return chapters;
-  loading ??= import('../../../shared/src/data/campaign/chapters.ts').then((m) => {
+  loading ??= importAgain(() => import('../../../shared/src/data/campaign/chapters.ts')).then((m) => {
     chapters = m.CHAPTERS;
     then();
+  }, () => {
+    loading = null; // (asked again the next time the book is drawn)
   });
   return null;
 }
