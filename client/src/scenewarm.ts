@@ -7,7 +7,8 @@
 import { ISO_MAP_OF, isoSheet } from '../../shared/src/data/isleiso.ts';
 import { deckArt } from '../../shared/src/data/fleet.ts';
 import { SF } from '../../shared/src/protocol.ts';
-import { assetIds, keepUrls, loadManifest, prefetchAssets, warmAll, assetUrl } from './assets.ts';
+import { armyForLevel } from '../../shared/src/data/army.ts';
+import { assetFor, assetIds, ensureAssets, keepUrls, loadManifest, prefetchAssets, warmAll, assetUrl } from './assets.ts';
 import type { ClientState } from './state.ts';
 import { filmDue } from './ui/cutscene.ts';
 
@@ -47,6 +48,22 @@ export function startWarm(): void {
 
 let lastAt = -1e9;
 let isleKey = '';
+let watchWarmed = false;
+
+/** The First Watch's practice boarding (server/src/game/onboarding.ts: a level-1 pirate sloop), its opening frame
+ *  loaded and decoded while she sails out to it — the night sea, both decks, her men's and the pirates' figures — and
+ *  the battle's effects into the cache: the lesson's battle opens at once, not on a loading screen (tel_load 2026-10:
+ *  battle loads timed out on Windows and Android). */
+export function watchBattleIds(ownClass: string, army: readonly { u: string }[]): { first: string[]; later: string[] } {
+  const figs = new Set<string>();
+  for (const a of army) figs.add(`unit.${a.u}`);
+  for (const a of armyForLevel(1, 12, 7, 'pirate')) figs.add(`unit.${a.u}`);
+  const first = ['bg.battle_sea', deckArt(ownClass), deckArt('sloop'), ...figs];
+  const later = [...assetIds('part.'), ...assetIds('fx.bt_'), 'bg.spellbook'];
+  for (const f of figs) for (const pose of ['_atk', '_b', '_hit']) later.push(f + pose);
+  const res = (ids: string[]) => [...new Set(ids.map((id) => assetFor(id)).filter((x): x is string => !!x))];
+  return { first: res(first), later: res(later) };
+}
 const shipsSeen = new Set<number>();
 
 /** Each frame from the sea's loop: at most every two seconds, the likely next scene warmed. */
@@ -82,6 +99,13 @@ export function sceneWarm(state: ClientState, t: number): void {
   // the films of the next moments: putting to sea from a harbour, the first harbour from the sea
   if (self.dockedAt) warmFilm('cut_launch');
   else if (state.ownDisplay && state.ports.some((p) => Math.hypot(p.x - state.ownDisplay!.x, p.y - state.ownDisplay!.y) < 2500)) warmFilm('cut_port');
+  // the First Watch: its practice boarding's pictures, from its first step on
+  const stage = state.onboarding?.stage;
+  if (!watchWarmed && (stage === 'sail' || stage === 'attack' || stage === 'fire' || stage === 'board')) {
+    watchWarmed = true;
+    const { first, later } = watchBattleIds(self.loadout.classId, self.company?.army ?? []);
+    void ensureAssets(first, { prio: 1 }).then(() => prefetchAssets(later));
+  }
   // a hostile sail near: the boarding's pictures
   const own = state.ownDisplay;
   if (!own || self.dockedAt || state.boardTac) return;

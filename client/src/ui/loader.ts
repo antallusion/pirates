@@ -56,8 +56,9 @@ export interface Handle {
   need(ids: Iterable<string>): Handle;
   /** The pictures under this element, decoded. */
   imgs(el: Element | null): Handle;
-  /** Also wait for the pictures the screen's renderer asked for (what it draws), until none is in flight. */
-  settle(): Handle;
+  /** Also wait for the pictures the screen's renderer asked for (what it draws), until none is in flight — or, with
+   *  `capMs`, at most that long after the `need`ed ones are in (the rest streams in while the scene shows). */
+  settle(capMs?: number): Handle;
   /** All in, or the timeout. */
   done(): Promise<void>;
   /** Drop it (the scene left before it was in). */
@@ -71,7 +72,7 @@ export function beginLoad(kind: LoadKind, timeout = 10000): Handle {
   hushWarming(timeout);
   const parts: Promise<unknown>[] = [];
   let total = 0, got = 0;
-  let shown = false, closed = false, finished = false, timedOut = false, settleOn = false;
+  let shown = false, closed = false, finished = false, timedOut = false, settleOn = false, settleCap = Infinity;
   let finishP: Promise<void> | null = null;
   const prog = () => {
     if (owner === h && barEl) barEl.style.width = `${Math.round((total ? Math.min(1, got / total) : 0) * 100)}%`;
@@ -137,8 +138,9 @@ export function beginLoad(kind: LoadKind, timeout = 10000): Handle {
       }))));
       return h;
     },
-    settle() {
+    settle(capMs) {
       settleOn = true;
+      if (capMs !== undefined) settleCap = capMs;
       return h;
     },
     done() {
@@ -151,7 +153,8 @@ export function beginLoad(kind: LoadKind, timeout = 10000): Handle {
             // until nothing the screens drew is in flight (two frames running, so a frame's new asks count)
             let quiet = 0;
             const base = got, l0 = assetStats().loaded;
-            while (quiet < 2 && !closed && !finished) {
+            const until = performance.now() + settleCap;
+            while (quiet < 2 && !closed && !finished && performance.now() < until) {
               const busy = assetsBusy();
               if (busy) {
                 // the bar: what came since the settling began, of that and what is still asked for

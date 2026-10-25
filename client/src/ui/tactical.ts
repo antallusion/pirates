@@ -372,37 +372,55 @@ function poseFit(id: string, frame: string, base: HTMLImageElement, img: HTMLIma
  *  and both sides' decks, or the island's field; every stack's figure in its poses and its face; the captains'
  *  portraits; the props on the hexes; the missiles, the bursts and the orders' effects. */
 export function tacArt(v: TacView): string[] {
-  const ids: string[] = [...assetIds('part.'), ...assetIds('fx.bt_'), 'bg.spellbook'];
+  const { first, later } = tacArtSplit(v);
+  return [...new Set([...first, ...later])];
+}
+
+/** A battle's pictures in two: `first` — what its opening frame shows (the sea or the field, both decks, each stack
+ *  standing in its idle pose, the captains' faces), the loading screen waits for these alone; `later` — the poses, the
+ *  missiles, the bursts, the book, the props and the cards, streamed while the battle already shows (it draws its
+ *  stand-ins — a token for a figure, the drawn deck for a painted one — until each is in). The whole list waited for
+ *  timed out on a slow line (tel_load, 2026-10: windows 8 of ~40 battles). */
+export function tacArtSplit(v: TacView): { first: string[]; later: string[] } {
+  const first: string[] = [];
+  const later: string[] = [...assetIds('part.'), ...assetIds('fx.bt_'), 'bg.spellbook'];
   const type = v.land?.type ?? v.siege?.type ?? (v.arena ? 'arena' : null);
-  if (type) ids.push(`bg.field_${type === 'arena' ? 'fort' : type}`);
-  else ids.push('bg.battle_sea', ...v.heroes.map((h) => deckArt(h.hull ?? 'brig')));
+  if (type) first.push(`bg.field_${type === 'arena' ? 'fort' : type}`);
+  else first.push('bg.battle_sea', ...v.heroes.map((h) => deckArt(h.hull ?? 'brig')));
   for (const h of v.heroes) {
-    if (h.captain) ids.push(CAPTAINS[h.captain]?.portrait ?? '');
-    if (h.path) ids.push(CAPTAINS[h.path]?.portrait ?? '');
-    if (h.face) ids.push(h.face.includes('.') ? h.face : `portrait.${h.face}`);
+    if (h.captain) first.push(CAPTAINS[h.captain]?.portrait ?? '');
+    if (h.path) first.push(CAPTAINS[h.path]?.portrait ?? '');
+    if (h.face) first.push(h.face.includes('.') ? h.face : `portrait.${h.face}`);
   }
   for (const s of v.stacks) {
     const own = `unit.${s.kind === 'officer' || !s.unit ? KIND_FIGURE[s.kind] ?? 'sailor' : s.unit}`;
     const si = STAND_IN(s.unit);
-    for (const fig of si ? [own, `unit.${si.u}`] : [own]) for (const pose of ['', '_atk', '_b', '_hit']) ids.push(fig + pose);
-    if (s.officer?.unique) ids.push(`portrait.officer_${s.officer.unique}`);
-    if (s.unit) ids.push(unitArt(s.unit));
+    for (const fig of si ? [own, `unit.${si.u}`] : [own]) {
+      first.push(fig);
+      for (const pose of ['_atk', '_b', '_hit']) later.push(fig + pose);
+    }
+    if (s.officer?.unique) first.push(`portrait.officer_${s.officer.unique}`);
+    if (s.unit) later.push(unitArt(s.unit));
     // (its ability's icon: on the button, the book's card and the stack's card — loaded with the battle, not before)
-    if (s.skill) ids.push(SKILLS[s.skill.id].art);
+    if (s.skill) later.push(SKILLS[s.skill.id].art);
   }
   const land = v.land?.type ?? '';
   for (const c of new Set(v.cells)) {
     const p = PROP_OF[c]?.(land);
-    if (p) ids.push(p);
+    if (p) later.push(p);
   }
   // Owner, 2026-10-18: a boarding's own deck props and gangplanks (shared/src/data/tacprops.ts).
-  for (const p of [...(v.props ?? []), ...(v.planks ?? [])]) ids.push(`prop.${p.a}`);
-  const out = new Set<string>();
-  for (const id of ids) {
-    const a = id ? assetFor(id) : null;
-    if (a) out.add(a);
-  }
-  return [...out];
+  for (const p of [...(v.props ?? []), ...(v.planks ?? [])]) later.push(`prop.${p.a}`);
+  const resolve = (ids: string[]) => {
+    const out = new Set<string>();
+    for (const id of ids) {
+      const a = id ? assetFor(id) : null;
+      if (a) out.add(a);
+    }
+    return out;
+  };
+  const f = resolve(first);
+  return { first: [...f], later: [...resolve(later)].filter((id) => !f.has(id)) };
 }
 
 /** The hulls whose decks are painted (tools/art/battle_more.py): one stands in for a hull not painted yet. */
