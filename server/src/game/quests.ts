@@ -35,7 +35,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { changeRep, openingStep } from './player.ts';
 import { grantDeed } from './progression.ts';
-import { newsHint } from './onboarding.ts';
+import { newsHint, onboardingProtected } from './onboarding.ts';
 import { spawnCargoAmbush, spawnPackLeader } from './npc.ts';
 import { neutralSpared } from './colours.ts';
 import { ensureElite, eliteSunk, eliteWord, todaysElite } from './elite.ts';
@@ -714,7 +714,7 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
       if (kill && spent && q.kind !== 'campaign' && (st.type === 'sink' || st.type === 'board' || st.type === 'prize' || st.type === 'lair')) break;
       // The band's leader sunk: the hunt is won at a stroke.
       // A step of buying, hiring or filling that is done already or cannot be done (a full crew, a full hold): counted.
-      const moot = stepMoot(s, st, game);
+      const moot = stepMoot(s, st, game, q.kind === 'campaign');
       if (moot) game.sendTo(s, { t: 'toast', msg: moot, kind: 'info' });
       const gained = moot ? Math.max(1, stepCount(st) - qs.progress) : st.type === 'sink' && ev.k === 'sink' && qs.leader !== undefined && ev.victim.id === qs.leader ? Math.max(1, stepCount(st) - qs.progress) : stepGain(game, s, st, ev);
       if (gained <= 0) break;
@@ -831,7 +831,20 @@ const TRADE_GOODS = (Object.keys(GOODS) as GoodId[]).filter((g) => GOODS[g].cate
  * Checked as the step comes and every second after (questEvent's tick). Steps of delivery (`pickup`, `deliver`, `carry`)
  * are not: the hold is emptied and the goods come aboard as before.
  */
-export function stepMoot(s: PlayerSession, st: QuestStep, game?: Game): string | null {
+export function stepMoot(s: PlayerSession, st: QuestStep, game?: Game, campaign = false): string | null {
+  const why = stepMoot0(s, st, game);
+  if (why || !campaign || st.type !== 'buy' || !s.ship || onboardingProtected(s)) return why;
+  // The campaign's lessons of the shops already satisfied (retention, 2026-10-25: 28 of 44 new captains stood in
+  // c01_01): a bolt of sailcloth aboard (the lesson's prize brings some), a good to trade aboard — the step is counted.
+  // Not the provisions: a fresh ship carries them and the lesson is the buying (owner, 2026-10-21). Not in the First
+  // Watch (its toast would land in the middle of the lesson).
+  const has = (g: GoodId) => (s.ship!.cargo[g] ?? 0) > 0;
+  if (st.shop === 'sailcloth' && has('sailcloth')) return 'Sailcloth is aboard — the step is counted.';
+  if (st.shop === 'trade' && TRADE_GOODS.some(has)) return 'A good to trade is aboard — the step is counted.';
+  return null;
+}
+
+function stepMoot0(s: PlayerSession, st: QuestStep, game?: Game): string | null {
   const ship = s.ship;
   if (!ship) return null;
   // A chart of islands never seen, when she has seen every one the sea has (a captain of the old sea, the late chapters'

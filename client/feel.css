@@ -50,6 +50,12 @@ body.reduce-motion #tut-finger .tf-hand, body.reduce-motion .tut-target { animat
   body.touch #hud-watch .w-body { display: none; }
   body.touch #hud-watch .w-act .btn::after { inset: -11px -3px; }
 }
+/* A narrow phone sideways (676×360, Android Chrome with its bars): the skips under the step's title, never cut — «Без
+   обучения» stood half off the row (retention, 2026-10-25). */
+@media (max-height: 520px) and (max-width: 760px) {
+  #hud-watch:not(.hidden) { flex-wrap: wrap; row-gap: 2px; }
+  #hud-watch .w-act { margin: 0; }
+}
 
 /* In the First Watch the counter of news and goals keeps away: the lesson's row stood under it (the counter at 172 px
    from the left, the row from 55 px while the captain's plate is not yet in, QA 2026-10-07), and the watch is the news. */

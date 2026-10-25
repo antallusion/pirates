@@ -9,6 +9,7 @@
 // Without OPS_TOKEN in the environment (16 characters at least) every /ops address answers 404; without the cookie
 // only the sign-in form is shown, and every other address under /ops answers 404.
 
+import { funnelLineRu, telemetry } from './telemetry.ts';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { OFFERS, PRICE_MAX, PRICE_MIN, SHOP } from '../../../shared/src/data/shop.ts';
@@ -68,7 +69,10 @@ export function opsSummary(game: Game, ops: LiveOps): { regs: number; dau: numbe
 
 export function opsLineRu(game: Game, ops: LiveOps, url = ''): string {
   const x = opsSummary(game, ops);
-  return `Сегодня: регистраций ${x.regs}, в игре ${x.dau}, платежей ${x.pays} на ${fmt(x.rev)} ₽. За 7 дн.: выручка ${fmt(x.rev7)} ₽, платящих ${x.payers7} (${String(x.share7).replace('.', ',')} %), ARPPU ${fmt(x.arppu7)} ₽. Идут: скидок ${x.sales}, снято товаров ${x.shut}, глобальных офферов ${x.globals}, событий ${x.events}.${url ? `\n${url}/ops/admin` : ''}`;
+  // the newcomers' funnel (retention, 2026-10-25), its own line
+  const tel = telemetry();
+  const fun = tel ? `\n${funnelLineRu(tel.funnel(3, game.wallNow()))}` : '';
+  return `Сегодня: регистраций ${x.regs}, в игре ${x.dau}, платежей ${x.pays} на ${fmt(x.rev)} ₽. За 7 дн.: выручка ${fmt(x.rev7)} ₽, платящих ${x.payers7} (${String(x.share7).replace('.', ',')} %), ARPPU ${fmt(x.arppu7)} ₽. Идут: скидок ${x.sales}, снято товаров ${x.shut}, глобальных офферов ${x.globals}, событий ${x.events}.${fun}${url ? `\n${url}/ops/admin` : ''}`;
 }
 
 // ------------------------------------------------------------------------------------------------ the panel

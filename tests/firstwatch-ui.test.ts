@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { pointerSpot, pointerTargets } from '../client/src/ui/pointer.ts';
+import { pointerSpot, pointerTargets, WATCH_BATTLE } from '../client/src/ui/pointer.ts';
 import { BUZZ, BUZZ_GAP, mayBuzz } from '../client/src/haptics.ts';
 import { sanitize } from '../client/src/settings.ts';
 import { buildActs } from '../client/src/ui/actbar.ts';
@@ -24,7 +24,9 @@ test('the finger points at the one button each step wants (docs/23 items 79–80
   assert.ok(pointerTargets({ ...base, stage: 'board', pursuit: 'guns' }).includes('#tc-act[data-act="attack_mode"]'));
   assert.ok(!pointerTargets({ ...base, stage: 'board', pursuit: 'board' }).includes('#tc-act[data-act="attack_mode"]'), 'never «Бортами» while he runs in');
   assert.ok(pointerTargets({ ...base, stage: 'board', pursuit: null }).includes('#tc-act[data-act="attack"]'));
-  assert.deepEqual(pointerTargets({ ...base, stage: 'board', battle: true }), [], 'the hexes have their own buttons');
+  // (retention, 2026-10-25: the watch's own battle has its finger on «Быстрый бой»; every other keeps the hexes' own)
+  assert.deepEqual(pointerTargets({ ...base, stage: 'board', battle: true }), WATCH_BATTLE, 'the watch’s battle: «Быстрый бой»');
+  assert.deepEqual(pointerTargets({ ...base, stage: 'go:board', battle: true }), [], 'the hexes have their own buttons');
   // «В порт»: the prize first, then the button; quiet while the helmsman sails her home.
   const port = pointerTargets({ ...base, stage: 'port' });
   assert.equal(port[0], '[data-fate="ransom"]');

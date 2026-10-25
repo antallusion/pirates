@@ -6,6 +6,7 @@
 // Every text lives on the client under the ids sent from here, so the words can be localized.
 
 import { trackEvent } from './liveops.ts'; // docs/34: the funnel
+import { funnelMark, PLAY_MARKS } from './funnel.ts'; // retention, 2026-10-25: the newcomers' funnel (telemetry)
 import { XP_UNITS, lumpXp, tutorialStageXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
@@ -24,6 +25,7 @@ import { addXp } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { pursuitOf, startPursuit } from './pursuit.ts';
+import { autosailOf, dropPaused, pausedCourse } from './autosail.ts';
 
 export interface Tutorial {
   on: boolean; // walking the First Watch
@@ -43,10 +45,15 @@ export interface Tutorial {
   easy?: number;
   /** docs/23 item 83: seconds aboard so far, up to FRESH_SECS (the optional things open after it). */
   played?: number;
+  /** Seconds aboard up to ABOARD_SECS, for the funnel's 5/15/30 minutes (a captain made before it: unset, not counted). */
+  aboard?: number;
 }
 
+/** The funnel counts the first half hour aboard. */
+export const ABOARD_SECS = 1800;
+
 export function newTutorial(on: boolean, now: number): Tutorial {
-  return { on, stage: on ? 0 : STAGES.length, at: now, skipped: !on, base: 0, hits: 0, hints: {}, hintAt: {}, tip: null, edgeSeen: false, goals: { active: [], done: [], base: {}, hidden: false }, v: WATCH_V, easy: on ? 0 : FIRST_FIGHTS, played: on ? 0 : FRESH_SECS };
+  return { on, stage: on ? 0 : STAGES.length, at: now, skipped: !on, base: 0, hits: 0, hints: {}, hintAt: {}, tip: null, edgeSeen: false, goals: { active: [], done: [], base: {}, hidden: false }, v: WATCH_V, easy: on ? 0 : FIRST_FIGHTS, played: on ? 0 : FRESH_SECS, aboard: 0 };
 }
 
 /** An old profile, made before the First Watch: an old hand, all the HUD, goals only if still young. */
@@ -143,9 +150,16 @@ export const STAGES: Stage[] = [
     id: 'fire',
     reveal: ['guns'],
     mark: (p) => p.tutorial.hits,
-    done: (_g, s, ship, p) => (watchOf(s).fired && p.tutorial.hits > p.tutorial.base) || p.tutorial.hits > p.tutorial.base + 2 || !!ship.boarding || !!watchOf(s).fought,
+    // (retention, 2026-10-25: her press of «Огонь» is the lesson — a hit, or FIRE_GRACE seconds after it, ends the step;
+    // waiting for a hit held a newcomer 20 s tapping «Огонь» with the raider nose-on and no gun bearing)
+    done: (game, s, ship, p) => {
+      const w = watchOf(s);
+      if (w.fired && w.firedAt === undefined) w.firedAt = game.now;
+      return (w.fired && (p.tutorial.hits > p.tutorial.base || game.now - (w.firedAt ?? game.now) >= FIRE_GRACE)) || p.tutorial.hits > p.tutorial.base + 2 || !!ship.boarding || !!w.fought;
+    },
     begin: (game, s, ship) => {
       watchOf(s).fired = false;
+      watchOf(s).firedAt = undefined;
       // The helmsman lays her broadside on the raider for the lesson (closing nose-on, no gun of hers bore: a desk's Q
       // and E answered «not on your beam» and the step waited, QA 2026-10-07); «На абордаж» turns him in again.
       const run = pursuitOf(ship);
@@ -200,10 +214,18 @@ export const STAGES: Stage[] = [
       watchOf(s).raiderAt = game.now;
     },
     keep: (game, s, ship) => {
-      // …and once her reckoning is settled she is gone into the haze: a hostile sail beside her stopped the helmsman
-      // taking her home («В порт» by autosail, QA 2026-10-07: three minutes and not home).
       const id = raiders.get(s);
       const r = id !== undefined ? game.ships.get(id) : undefined;
+      // A Crown pilot takes her in (retention, 2026-10-25): her «В порт» (the helmsman's course for a harbour) ends the
+      // watch at once — the run home was 40–50 s of sea with nothing to do, and the helmsman gave her the wheel back
+      // halfway («Автоплавание выключено»), the step's longest wait.
+      const home = pilotPort(game, ship);
+      if (home && !s.pendingBoarding && !ship.boarding && !(r?.alive && r.prize)) {
+        game.pilotIn(s, home);
+        return;
+      }
+      // …and once her reckoning is settled she is gone into the haze: a hostile sail beside her stopped the helmsman
+      // taking her home («В порт» by autosail, QA 2026-10-07: three minutes and not home).
       if (!r || !r.alive || r.prize || s.pendingBoarding) return;
       if (Math.hypot(r.state.x - ship.state.x, r.state.y - ship.state.y) > 400 || game.now - watchOf(s).raiderAt > 12) {
         game.removeShip(r.id);
@@ -212,6 +234,19 @@ export const STAGES: Stage[] = [
     },
   },
 ];
+
+/** Seconds after her press of «Огонь» that end the «Огонь» step without a hit. */
+export const FIRE_GRACE = 3;
+
+/** The harbour the helmsman is taking her to (her «В порт»: an autosail whose mark is a port), or null. */
+function pilotPort(game: Game, ship: ShipEntity) {
+  // (her course as set, or held back by the fight just over — «paused: the course goes on after the fight», which kept
+  // her lying still after the lesson's battle)
+  const run = autosailOf(ship) ?? pausedCourse(ship);
+  if (!run || ship.docked) return null;
+  const port = game.nearestPort(run.x, run.y);
+  return port && Math.hypot(port.x - run.x, port.y - run.y) < 400 ? port : null;
+}
 
 /** The practice raider is gone (sunk by another hand, lost in a restart, left far behind): another comes. */
 function keepRaider(game: Game, s: PlayerSession, ship: ShipEntity): void {
@@ -389,7 +424,7 @@ function stepGoals(game: Game, s: PlayerSession, p: Profile): boolean {
 // ------------------------------------------------------------------ the step, once a second
 
 /** Seconds in irons, missed volleys in a row, seconds of neglected damage — per session, never saved. */
-const watch = new WeakMap<PlayerSession, { irons: number; misses: number; hurt: number; view: string; raiderAt: number; fought?: boolean; fired?: boolean; army?: ArmyStack[] | null }>();
+const watch = new WeakMap<PlayerSession, { irons: number; misses: number; hurt: number; view: string; raiderAt: number; fought?: boolean; fired?: boolean; firedAt?: number; army?: ArmyStack[] | null }>();
 
 export function onboardingSecond(game: Game, s: PlayerSession): void {
   const p = s.profile, ship = s.ship;
@@ -399,6 +434,13 @@ export function onboardingSecond(game: Game, s: PlayerSession): void {
   // The first quarter of an hour (docs/23 item 83): when it is over, the optional things open, told once.
   const wasFresh = fresh(p);
   if ((t.played ?? FRESH_SECS) < FRESH_SECS) t.played = (t.played ?? 0) + 1;
+  // the funnel (telemetry): minutes aboard, and the first chapter's step she stands at
+  if (t.aboard !== undefined && t.aboard < ABOARD_SECS) {
+    t.aboard++;
+    for (const m of PLAY_MARKS) if (t.aboard === m * 60) funnelMark(s.accountId, `play${m}`, game.wallNow());
+  }
+  // (the chapter's steps counted once the watch is behind her: its quest is hers from the start, step 1 under the lesson)
+  if (t.aboard !== undefined && !(t.on && t.stage < STAGES.length)) for (const q of p.quests.active) if (q.id.startsWith('c01_')) for (let i = 0; i <= q.step; i++) funnelMark(s.accountId, `${q.id}:${i}`, game.wallNow());
   if (t.on && t.stage < STAGES.length) {
     // Her men as they stood in port: a tow home gives back those the lesson's guns took (see onboardingRescue).
     if (ship.docked) watchOf(s).army = ship.army.map((x) => ({ ...x }));
@@ -457,13 +499,18 @@ function advance(game: Game, s: PlayerSession, how: 'done' | 'skip'): void {
     t.on = false;
     m.finished++;
     trackEvent(game, s.accountId, 'fw_done');
+    if (!skippingAll) funnelMark(s.accountId, 'fw_done', game.wallNow());
     fillGoals(p);
   } else {
+    if (!skippingAll) funnelMark(s.accountId, `fw${t.stage}`, game.wallNow());
     t.base = STAGES[t.stage].mark?.(p) ?? 0;
     STAGES[t.stage].begin?.(game, s, ship);
   }
   saveMetrics(game, m);
 }
+
+/** «Пропустить обучение» under way: its steps passed over are no steps reached (the funnel). */
+let skippingAll = false;
 
 /** A client's choice: skip a step, skip the whole watch, hide or show the goals. */
 export function onboardingAction(game: Game, s: PlayerSession, action: 'skip_stage' | 'skip_all' | 'hide_goals'): void {
@@ -472,7 +519,13 @@ export function onboardingAction(game: Game, s: PlayerSession, action: 'skip_sta
   const t = p.tutorial;
   if (action === 'skip_stage' && t.on && t.stage < STAGES.length) advance(game, s, 'skip');
   else if (action === 'skip_all' && t.on) {
-    while (t.on && t.stage < STAGES.length) advance(game, s, 'skip');
+    funnelMark(s.accountId, 'fw_skip', game.wallNow());
+    skippingAll = true;
+    try {
+      while (t.on && t.stage < STAGES.length) advance(game, s, 'skip');
+    } finally {
+      skippingAll = false;
+    }
     t.skipped = true;
     const m = metrics(game);
     m.skippedMidway++;
@@ -641,6 +694,8 @@ export function onboardingStart(game: Game, s: PlayerSession, tutorial: boolean)
   saveMetrics(game, m);
   if (!tutorial) fillGoals(p);
   if (!tutorial) trackEvent(game, s.accountId, 'fw_skip'); // docs/34: «I know the sea»
+  funnelMark(s.accountId, 'captain', game.wallNow());
+  funnelMark(s.accountId, tutorial ? 'fw0' : 'fw_skip', game.wallNow());
 }
 
 /** A captain comes aboard: the retention record. */

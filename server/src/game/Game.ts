@@ -209,7 +209,7 @@ import type { LegendaryId } from '../../../shared/src/data/legendary.ts';
 import { awayMark, awayReturn, awayTake, renownDistance, renownKill, sendRenown, stepRenown } from './renown.ts';
 import { sendWorldGoals, stepWorldGoals, worldGoalKill, worldGoalsCollect } from './worldgoals.ts';
 import { sendSignal } from './signals.ts';
-import { autosailInput, autosailOf, startAutosail, stepAutosail, stopAutosail } from './autosail.ts';
+import { autosailInput, autosailOf, dropPaused, startAutosail, stepAutosail, stopAutosail } from './autosail.ts';
 import { approach, approachInput, approachOf, cancelApproach, stepApproach } from './approach.ts'; // seaux: sail-to on tap
 import { cancelRoute, gotoGoal, stepRoutes } from './goalroute.ts'; // route: tap a goal, sail to its nearest place
 import { LootMap, stepWrecks } from './wrecks.ts'; // seaux: wreckage per captain
@@ -2576,6 +2576,19 @@ export class Game {
     this.saveSession(s);
   }
 
+  /** The First Watch's last step (onboarding.ts): a Crown pilot takes her in — at the quay of `port` at once, as she is. */
+  pilotIn(s: PlayerSession, port: Port): void {
+    const ship = s.ship;
+    if (!ship || !ship.alive || ship.docked || ship.boarding) return;
+    stopAutosail(this, s, 'port');
+    dropPaused(ship);
+    stopPursuit(this, s, 'off');
+    ship.state = { ...ship.state, x: port.x, y: port.y, speed: 0, sail: 0, rudder: 0 };
+    ship.input = { rudder: 0, sailTarget: 0 };
+    this.dockShip(s, port);
+    this.pushSelf(s, true);
+  }
+
   /** A ship back from the bottom (or towed in): patched, emptied of water and fire, at the quay. */
   private refitAndDock(s: PlayerSession, ship: ShipEntity, port: Port): void {
     ship.sinkingUntil = 0;
@@ -3611,7 +3624,7 @@ export class Game {
             lineOfBattle(this, ship, msg.side, Number.isFinite(Number(msg.dist)) ? Number(msg.dist) : 300);
             onboardingFire(s);
             this.idleShot(ship, before, 700);
-          }
+          } else if (onboardingProtected(s)) onboardingFire(s); // (her press is the lesson: see 'volley')
           return err(why);
         }
       case 'attack': {
@@ -3626,7 +3639,9 @@ export class Game {
       }
       case 'volley': {
         const why = aimedVolley(this, s);
-        if (!why) onboardingFire(s);
+        // (in the First Watch her press is the lesson, a volley refused too — out of range, the guns not bearing: the
+        // newcomer's run tapped «Огонь» nine times in 19 s with the raider still closing; retention, 2026-10-25)
+        if (!why || onboardingProtected(s)) onboardingFire(s);
         return err(why);
       }
       case 'gunnery':

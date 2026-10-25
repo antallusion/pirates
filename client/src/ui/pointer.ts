@@ -119,7 +119,12 @@ export const TAB_INSIDE: Record<string, string[]> = {
   tavern: ['#modal-panel [data-act="hire_n"]:not([disabled])', '#modal-panel [data-ptab="tavern"]'],
 };
 
+/** The First Watch's battle (retention, 2026-10-25): its «Быстрый бой» — the lesson's fight decided in a tap (the
+ *  newcomer's run waited 20 s on a deck with nothing lit); then the end's own button. */
+export const WATCH_BATTLE = ['#board-tac [data-quicknow]', '#board-tac .tb-quicknow', '#board-tac .tb-banner [data-endbtn]'];
+
 function targetsOf(f: PointerFacts): string[] {
+  if (f.battle && (f.stage === 'board' || f.stage === 'attack' || f.stage === 'fire')) return WATCH_BATTLE;
   if (!f.stage || f.battle) return [];
   if (f.stage.startsWith('c:')) return openingTargets(f, f.stage.slice(2));
   if (f.stage.startsWith('h:')) {
@@ -160,7 +165,9 @@ function targetsOf(f: PointerFacts): string[] {
       // (already alongside her, «Действие» reads «На абордаж»: that is the step's battle, sooner)
       return ['#tc-act[data-act="attack"]', '.act-btn.act-attack', '#tc-act[data-act="board"]', '.act-btn.act-board'];
     case 'fire':
-      return f.touch ? ['#tc-fire'] : [];
+      // (a desk too: its round «Огонь» (Space) stands on the screen; the step's words named Q and E and nothing was lit —
+      // retention, 2026-10-25)
+      return ['#tc-fire'];
     case 'board':
       // Alongside, the grapples. Still closing (the helmsman runs in): nothing yet. Held off at gun range: «Сблизиться»
       // (the same button reads «Бортами» while he closes — pointed at then, it turned him away: QA 2026-10-06). The

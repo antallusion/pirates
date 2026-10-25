@@ -75,6 +75,18 @@ function flush(beacon = false): void {
   }
 }
 
+/** A step of the newcomers' funnel this page reached (the captain's screen), told at once — a page left on it never
+ *  sends its minute's report (retention, 2026-10-25; server/src/http/telemetry.ts tel_funnel). */
+export function telemetryFunnel(kind: 'cap_screen'): void {
+  try {
+    const body = JSON.stringify({ ...device(), funnel: [kind] });
+    if (navigator.sendBeacon?.('/telemetry', new Blob([body], { type: 'application/json' }))) return;
+    void fetch('/telemetry', { method: 'POST', body, keepalive: true, headers: { 'Content-Type': 'application/json' } }).catch(() => {});
+  } catch {
+    /* no network: not counted */
+  }
+}
+
 /** The start's own time, from the page's first byte to the sea drawn (main.ts, at «start loaded»). */
 export function telemetryBoot(): void {
   if (perf) loads.push({ k: 'boot', ms: Math.round(performance.now()) });

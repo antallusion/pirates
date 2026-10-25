@@ -57,6 +57,8 @@ export class OptionsScreen {
       'keydown',
       (e) => {
         if (!this.listening || !this.root?.isConnected) return;
+        // A keydown with no key (autofill, an IME) binds nothing and keeps listening.
+        if (typeof e.key !== 'string' || (e.key !== 'Escape' && !keyOf(e))) return;
         e.preventDefault();
         e.stopImmediatePropagation();
         const k = e.key === 'Escape' ? '' : keyOf(e);

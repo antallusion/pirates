@@ -8,6 +8,7 @@ import { has, lang, onLang, t } from '../i18n.ts';
 import type { Key } from '../i18n.ts';
 import type { ClientState } from '../state.ts';
 import { $, esc, icon, glyphSvg } from './dom.ts';
+import { ask } from './confirm.ts';
 import { glossaryHtml } from './terms.ts';
 
 /** Which DOM block shows which part of the HUD. */
@@ -88,7 +89,11 @@ export class OnboardingUi {
       ${has(line) ? `<div class="w-body">${esc(t(line))}</div>` : ''}
       <div class="w-act">${btn('skip_stage', '', 'watch.skip', 'watch.skipShort')}${btn('skip_all', ' btn-ghost', 'watch.skipAll', 'watch.skipAllShort')}</div>`;
     el.setAttribute('aria-label', `${t('watch.step', { n: v.index + 1, of: v.of })}: ${has(k) ? t(k) : v.stage}`);
-    el.querySelectorAll<HTMLButtonElement>('button').forEach((b) => (b.onclick = () => this.send(b.dataset.a as 'skip_stage')));
+    el.querySelectorAll<HTMLButtonElement>('button').forEach((b) => (b.onclick = () => {
+      // «Пропустить обучение» asks once (retention, 2026-10-25: one stray tap on a phone ended the whole lesson)
+      if (b.dataset.a === 'skip_all') void ask(t('watch.skipAsk'), t('watch.skipYes'), t('watch.skipNo')).then((yes) => yes && this.send('skip_all'));
+      else this.send(b.dataset.a as 'skip_stage');
+    }));
   }
 
   /** The step under way (the finger's), or null. */
@@ -143,10 +148,14 @@ export class OnboardingUi {
   }
 }
 
-/** The prologue: three lines over the harbour at night, then the watch begins. Any click ends it. */
+/** How long the prologue stands by itself (retention, 2026-10-25: its three lines held a newcomer 11 s before the
+ *  first thing to press — a text wall where 7 of 44 left the watch at its first step). */
+export const PROLOGUE_MS = 3500;
+
+/** The prologue: one line over the harbour at night, then the watch begins. Any click ends it. */
 export function playPrologue(done: () => void): void {
   const el = $('prologue');
-  el.innerHTML = `<p>${esc(t('prologue.1'))}</p><p>${esc(t('prologue.2'))}</p><p>${esc(t('prologue.3'))}</p><small>${esc(t(document.body.classList.contains('touch') ? 'prologue.skipTouch' : 'prologue.skip'))}</small>`;
+  el.innerHTML = `<p>${esc(t('prologue.3'))}</p><small>${esc(t(document.body.classList.contains('touch') ? 'prologue.skipTouch' : 'prologue.skip'))}</small>`;
   el.classList.remove('hidden');
   let over = false;
   const end = () => {
@@ -161,7 +170,7 @@ export function playPrologue(done: () => void): void {
   };
   el.onclick = end;
   addEventListener('keydown', end, { once: true });
-  setTimeout(end, 11000);
+  setTimeout(end, PROLOGUE_MS);
 }
 
 export function renderEdge(root: HTMLElement, close: () => void): void {

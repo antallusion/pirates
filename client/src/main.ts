@@ -51,10 +51,10 @@ import { angleDiff, clamp, dist, toShipLocal } from '../../shared/src/math.ts';
 import type { Aggression, SeaMarkData, ServerMsg, ShipInfo } from '../../shared/src/protocol.ts';
 import { SF, STATIONS } from '../../shared/src/protocol.ts';
 import { REGIONS } from '../../shared/src/world/regions.ts';
-import { assetKinds, assetStats, assetUrl, loadAssets } from './assets.ts';
+import { assetKinds, assetStats, assetUrl, ensureAssets, loadAssets } from './assets.ts';
 import { beginLoad, loadLog } from './ui/loader.ts';
 import { artStore, sceneWarm, startWarm } from './scenewarm.ts';
-import { tacArt } from './ui/tactical.ts';
+import { tacArtSplit } from './ui/tactical.ts';
 import { CURSOR_ART } from './ui/cursor.ts';
 import { tideVeil } from './ui/invasion.ts'; // docs/19 E16
 import { AudioEngine, turnCreakLoad } from './audio.ts';
@@ -985,6 +985,13 @@ if (matchMedia('(pointer: coarse)').matches && mayFullscreen()) {
     else lock();
   };
   addEventListener('pointerup', holdSideways, { once: true });
+  // …and again at a tap on the upright veil (the first tap came while she was sideways)
+  addEventListener('pointerup', () => {
+    if (matchMedia('(orientation: portrait)').matches) holdSideways();
+  });
+  // (Android turns her sideways at the first tap even with the rotation locked: the upright veil says so — retention,
+  // 2026-10-25: a phone held upright with auto-rotate off had no way on from the veil)
+  if (/Android/i.test(navigator.userAgent)) document.getElementById('rl-tap')?.classList.remove('hidden');
 }
 const touch = new TouchControls({
   // docs/23 items 22–23: the stick's pull is the sail (0 when its middle is held), its double tap the dash.
@@ -1742,6 +1749,19 @@ net.on(onMessage);
 
 /** The first look at the sea had its loading screen. */
 let startLoaded = false;
+
+/** A battle's loading screen waits for its opening frame's pictures only (the sea, the decks, each stack's idle figure,
+ *  the faces) and at most BATTLE_SETTLE_MS for what else the field drew; the poses, the missiles, the bursts and the
+ *  book stream in behind while it plays, its stand-ins drawn till then. The whole list waited for (BATTLE_LOAD_MS was
+ *  7 s) timed out in one battle in five on a Windows desk (tel_load, 2026-10). */
+const BATTLE_LOAD_MS = 6000;
+const BATTLE_SETTLE_MS = 1200;
+function battleLoad(v: Parameters<typeof tacArtSplit>[0]): void {
+  const { first, later } = tacArtSplit(v);
+  void beginLoad('battle', BATTLE_LOAD_MS).need(first).settle(BATTLE_SETTLE_MS).done().then(() => {
+    void ensureAssets(later, { prio: 1 });
+  });
+}
 function onMessage(m: ServerMsg): void {
   // docs/36: a word of the campaign before its words are in waits for them (a moment) rather than show English
   if (lang() === 'ru' && !campaignWordsReady() && (m.t === 'toast' || m.t === 'quest_done' || m.t === 'campaign_new') && /[A-Za-z]/.test(serverText(m.t === 'toast' ? m.msg : m.name))) {
@@ -1752,13 +1772,13 @@ function onMessage(m: ServerMsg): void {
   state.apply(m);
   // a boarding opens: its loading screen until the decks, the figures and their poses are in (warmed while she closed in)
   if (m.t === 'board_tac' && m.view && !hadTac) {
-    beginLoad('battle', 7000).need(tacArt(m.view)).settle().done();
+    battleLoad(m.view);
     // …and a window she had open (the claim's terms, the journal) shut: it stood over the battle and her turns ran out
     // unseen under it (QA 2026-10-22: boarded with «Занять бесплатно» up, the fight lost by the clock)
     if (modal && !ANSWER.includes(modal)) closeModal();
   }
   // Owner, 2026-10-16 («Повтор»): a kept fight played again over the field.
-  if (m.t === 'tac_replay' && m.base) beginLoad('battle', 7000).need(tacArt(m.base)).settle().done();
+  if (m.t === 'tac_replay' && m.base) battleLoad(m.base);
   if (m.t === 'tac_replay') tactical.onReplay(m);
   if (inGame) firstTips.offer(tipForMsg(m));
   switch (m.t) {
@@ -1858,7 +1878,9 @@ function onMessage(m: ServerMsg): void {
         prologuePending = false;
         localStorage.setItem('gravetide.helpSeen', '1');
         closeModal();
-        playFilm('cut_prologue', () => playPrologue(() => undefined));
+        // (one line of words, no film first: the owner's films are the six moments of docs §3 — and the film and the
+        // words together held a newcomer 15–20 s before the first thing to press; retention, 2026-10-25)
+        playPrologue(() => undefined);
       } else if (!localStorage.getItem('gravetide.helpSeen')) {
         localStorage.setItem('gravetide.helpSeen', '1');
         openModal('help');
@@ -2826,7 +2848,8 @@ function typing(): boolean {
 // The chat stays open until its button, its ×, a swipe or Esc folds it away (docs/28).
 
 addEventListener('keydown', (e) => {
-  if (!inGame) return;
+  // Autofill, an IME and some gamepad bridges fire keydowns that are no KeyboardEvent and carry no key.
+  if (!inGame || typeof e.key !== 'string') return;
   const chatInput = $('chat-input') as HTMLInputElement;
   if (e.key === 'Escape' && hud.chatPanel.isOpen) {
     // Esc in the field leaves it (the keys steer the ship again); Esc once more folds the chat away.
@@ -2872,7 +2895,7 @@ addEventListener('keydown', (e) => {
   }
   if (modal === 'options' && optionsScreen.capturing) return;
   // The diving bell: Shift+arrows steer it through the drowned streets.
-  if (state.dive?.leader && e.shiftKey && e.key.startsWith('Arrow')) {
+  if (state.dive?.leader && e.shiftKey && typeof e.key === 'string' && e.key.startsWith('Arrow')) {
     const d = ({ ArrowUp: 'n', ArrowRight: 'e', ArrowDown: 's', ArrowLeft: 'w' } as const)[e.key as 'ArrowUp'];
     if (d) net.send({ t: 'dive_move', dir: d });
     e.preventDefault();
@@ -3031,6 +3054,7 @@ addEventListener('keydown', (e) => {
 });
 addEventListener('keyup', (e) => {
   const k = keyOf(e);
+  if (!k) return;
   keys.delete(k);
   if (modTap?.k === k && performance.now() - modTap.at < 400 && !typing()) {
     dispatchEvent(new KeyboardEvent('keydown', { key: e.key, code: e.code }));

@@ -21,6 +21,9 @@ const FPS_BINS = 13;
 const LOAD_EDGES = [250, 500, 1000, 2000, 4000, 8000, 16000];
 const SCENES = new Set(['sea', 'port', 'battle', 'isle', 'menu', 'other']);
 const LOADS = new Set(['boot', 'start', 'isle', 'sea', 'battle']);
+/** The funnel's steps a page may report of itself (the rest the server marks: funnel.ts). */
+const CLIENT_FUNNEL = new Set(['cap_screen']);
+const FUNNEL_KIND = /^[a-z0-9_:.-]{1,40}$/;
 const KEEP_DAYS = 60;
 
 export interface TelemetryReport {
@@ -37,6 +40,17 @@ export interface TelemetryReport {
   fps?: Record<string, number[]>;
   loads?: { k: string; ms: number; to?: boolean }[];
   errs?: { m: string; s?: string; n?: number }[];
+  /** Funnel steps this page reached (CLIENT_FUNNEL). */
+  funnel?: string[];
+}
+
+/** The newcomers' funnel (retention, 2026-10-25): each day, how many (distinct, anonymous) reached each step. */
+export interface FunnelSummary {
+  days: number;
+  /** step → distinct reached, over the days */
+  total: Record<string, number>;
+  /** day → step → distinct reached */
+  byDay: Record<string, Record<string, number>>;
 }
 
 export interface TelemetrySummary {
@@ -87,6 +101,7 @@ export class Telemetry {
       CREATE TABLE IF NOT EXISTS tel_fps (day TEXT, scene TEXT, dev TEXT, bins TEXT, PRIMARY KEY (day, scene, dev));
       CREATE TABLE IF NOT EXISTS tel_load (day TEXT, kind TEXT, dev TEXT, bins TEXT, timeouts INTEGER, PRIMARY KEY (day, kind, dev));
       CREATE TABLE IF NOT EXISTS tel_err (day TEXT, key TEXT, msg TEXT, stack TEXT, dev TEXT, n INTEGER, last INTEGER, PRIMARY KEY (day, key));
+      CREATE TABLE IF NOT EXISTS tel_funnel (day TEXT, kind TEXT, id TEXT, PRIMARY KEY (day, kind, id));
     `);
   }
 
@@ -101,8 +116,7 @@ export class Telemetry {
     const db = this.db;
     if (this.prunedOn !== d) {
       this.prunedOn = d;
-      const old = day(now - KEEP_DAYS * 86400_000);
-      for (const t of ['tel_dev', 'tel_ids', 'tel_fps', 'tel_load', 'tel_err']) db.prepare(`DELETE FROM ${t} WHERE day < ?`).run(old);
+      this.prune(now);
     }
     const mem = num(r.mem, 0, 64), heap = num(r.heap, 0, 16384);
     db.prepare(`INSERT INTO tel_dev VALUES (?, ?, 1, ?, ?, ?, ?) ON CONFLICT (day, dev) DO UPDATE SET reports = reports + 1,
@@ -126,6 +140,10 @@ export class Telemetry {
       add[i < 0 ? LOAD_EDGES.length : i] = 1;
       this.addBins('tel_load', 'kind', d, String(l.k), dev, add, l.to ? 1 : 0);
     }
+    // the funnel's steps the page saw itself (the captain's screen), counted once a day for its id
+    if (typeof r.id === 'string' && /^[\w-]{6,64}$/.test(r.id)) {
+      for (const k of (Array.isArray(r.funnel) ? r.funnel : []).slice(0, 4)) if (CLIENT_FUNNEL.has(String(k))) this.mark(String(k), `dev:${r.id}`, now);
+    }
     for (const e of (Array.isArray(r.errs) ? r.errs : []).slice(0, 10)) {
       const msg = String(e?.m ?? '').slice(0, 300);
       if (!msg) continue;
@@ -136,6 +154,36 @@ export class Telemetry {
       db.prepare(`INSERT INTO tel_err VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (day, key) DO UPDATE SET n = n + excluded.n, last = excluded.last, stack = excluded.stack`)
         .run(d, key, msg, stack, dev, n, now);
     }
+  }
+
+  private prune(now: number): void {
+    const old = day(now - KEEP_DAYS * 86400_000);
+    for (const t of ['tel_dev', 'tel_ids', 'tel_fps', 'tel_load', 'tel_err', 'tel_funnel']) this.db.prepare(`DELETE FROM ${t} WHERE day < ?`).run(old);
+  }
+
+  /** A step of the newcomers' funnel reached by `who` (an account or a page; kept only as a hash): once a day each. */
+  mark(kind: string, who: string, now = Date.now()): void {
+    if (!FUNNEL_KIND.test(kind) || !who) return;
+    const d = day(now);
+    if (this.prunedOn !== d) {
+      this.prunedOn = d;
+      this.prune(now);
+    }
+    const id = createHash('sha256').update(`gt-funnel:${who}`).digest('hex').slice(0, 16);
+    this.db.prepare('INSERT OR IGNORE INTO tel_funnel VALUES (?, ?, ?)').run(d, kind, id);
+  }
+
+  /** The funnel of the last `days` days (today included). */
+  funnel(days = 3, now = Date.now()): FunnelSummary {
+    const from = day(now - (days - 1) * 86400_000);
+    const rows = this.db.prepare('SELECT day, kind, count(*) n FROM tel_funnel WHERE day >= ? GROUP BY day, kind').all(from) as { day: string; kind: string; n: number }[];
+    const total: Record<string, number> = {};
+    const byDay: Record<string, Record<string, number>> = {};
+    for (const r of rows) {
+      total[r.kind] = (total[r.kind] ?? 0) + r.n;
+      (byDay[r.day] ??= {})[r.kind] = r.n;
+    }
+    return { days, total, byDay };
   }
 
   private addBins(table: 'tel_fps' | 'tel_load', col: 'scene' | 'kind', d: string, k: string, dev: string, add: number[], timeouts = 0): void {
@@ -264,9 +312,46 @@ export class Telemetry {
     return `<p>Отчётов: <b>${s.reports}</b> · устройств: <b>${s.devices}</b> · дни: ${[1, 7, 30].map((d) => `<a href="?days=${d}">${d}</a>`).join(' ')}</p>
 <h2>Кадры в секунду (p50 / p95 — худшие 5 %)</h2>${t(['Сцена', 'Устройства', 'p50', 'p95', 'Секунд'], s.fps.map((f) => [f.scene, f.dev, f.p50, f.p95, f.n]))}
 <h2>Загрузки, мс (p50 / p95)</h2>${t(['Что', 'Устройства', 'p50', 'p95', 'Раз', 'Таймаутов'], s.loads.map((l) => [l.kind, l.dev, l.p50, l.p95, l.n, l.timeouts]))}
+<h2>Воронка новичков по дням (уникальные)</h2>${funnelTable(this.funnel(Math.min(s.days, 14)), t)}
 <h2>Устройства</h2>${t(['Класс', 'Отчётов', 'Устройств', 'Память, ГБ', 'JS heap, МБ'], s.devs.map((d) => [d.dev, d.reports, d.devices, d.mem, d.heap]))}
 <h2>Ошибки JS</h2>${s.errors.length ? s.errors.map((e) => `<details><summary><b>${e.n}×</b> ${esc(e.msg)} <small>${esc(e.dev)}, ${new Date(e.last).toISOString().slice(0, 16).replace('T', ' ')}</small></summary><pre>${esc(e.stack)}</pre></details>`).join('') : '<p>Нет.</p>'}`;
   }
+}
+
+/** The funnel's steps in their order, with their Russian names (the admin page's table, the /ops line). */
+export const FUNNEL_STEPS: { kind: string; ru: string; en: string }[] = [
+  { kind: 'cap_screen', ru: 'Экран капитана', en: 'Captain screen' },
+  { kind: 'captain', ru: 'Капитан создан', en: 'Captain made' },
+  ...[0, 1, 2, 3, 4].map((i) => ({ kind: `fw${i}`, ru: `Вахта: шаг ${i + 1}`, en: `Watch: step ${i + 1}` })),
+  { kind: 'fw_done', ru: 'Вахта пройдена', en: 'Watch done' },
+  { kind: 'fw_skip', ru: 'Вахта пропущена', en: 'Watch skipped' },
+  ...[0, 1, 2, 3].map((i) => ({ kind: `c01_01:${i}`, ru: `Лавки: шаг ${i + 1}`, en: `Shops: step ${i + 1}` })),
+  ...[2, 3, 4, 5].map((i) => ({ kind: `c01_0${i}:0`, ru: `Глава 1: задание ${i}`, en: `Chapter 1: quest ${i}` })),
+  { kind: 'play5', ru: '5 мин в игре', en: '5 min aboard' },
+  { kind: 'play15', ru: '15 мин в игре', en: '15 min aboard' },
+  { kind: 'play30', ru: '30 мин в игре', en: '30 min aboard' },
+];
+
+/** The funnel numbers of a summary in the steps' order (a missing one is 0). */
+export function funnelNums(f: FunnelSummary, kinds: string[]): number[] {
+  return kinds.map((k) => f.total[k] ?? 0);
+}
+
+/** The short funnel line of /ops (English; its Russian pair in client/src/lang/server.ru.admin.ts) and its Russian twin for
+ *  the bot (opsLineRu). */
+export function funnelLine(f: FunnelSummary): string {
+  const n = (ks: string[]) => funnelNums(f, ks).join('/');
+  return `Newcomers' funnel, ${f.days} d: captain screen ${f.total.cap_screen ?? 0} → captain ${f.total.captain ?? 0}; First Watch steps 1–5 ${n(['fw0', 'fw1', 'fw2', 'fw3', 'fw4'])}, done ${f.total.fw_done ?? 0}, skipped ${f.total.fw_skip ?? 0}; the shops' steps 1–4 ${n(['c01_01:0', 'c01_01:1', 'c01_01:2', 'c01_01:3'])}; chapter 1 quests 2–5 ${n(['c01_02:0', 'c01_03:0', 'c01_04:0', 'c01_05:0'])}; 5/15/30 min aboard ${n(['play5', 'play15', 'play30'])}.`;
+}
+export function funnelLineRu(f: FunnelSummary): string {
+  const n = (ks: string[]) => funnelNums(f, ks).join('/');
+  return `Воронка новичков за ${f.days} дн.: экран капитана ${f.total.cap_screen ?? 0} → капитан ${f.total.captain ?? 0}; Первая вахта, шаги 1–5: ${n(['fw0', 'fw1', 'fw2', 'fw3', 'fw4'])}, пройдена ${f.total.fw_done ?? 0}, пропущена ${f.total.fw_skip ?? 0}; лавки, шаги 1–4: ${n(['c01_01:0', 'c01_01:1', 'c01_01:2', 'c01_01:3'])}; глава 1, задания 2–5: ${n(['c01_02:0', 'c01_03:0', 'c01_04:0', 'c01_05:0'])}; 5/15/30 мин в игре: ${n(['play5', 'play15', 'play30'])}.`;
+}
+
+function funnelTable(f: FunnelSummary, t: (cols: string[], rows: (string | number | null)[][]) => string): string {
+  const days = Object.keys(f.byDay).sort().reverse();
+  if (!days.length) return '<p>Пока пусто.</p>';
+  return t(['Шаг', ...days, 'Всего'], FUNNEL_STEPS.map((st) => [st.ru, ...days.map((d) => f.byDay[d][st.kind] ?? 0), f.total[st.kind] ?? 0]));
 }
 
 function done(res: ServerResponse, code: number, headers: Record<string, string> = {}, body = ''): true {
