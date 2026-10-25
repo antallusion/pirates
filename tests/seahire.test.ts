@@ -312,3 +312,20 @@ test('RU and EN: the card\'s words and the server\'s sentences', () => {
     assert.ok(/[а-яё]/i.test(ru), ru);
   }
 });
+
+test('a guard, not a hunter: she lets a foe go far from her captain; her captain\'s own shot at her is friendly, silent', () => {
+  const { game, at } = sea('contested');
+  const { s, ship } = captain(game, 'Leash', at);
+  const m = npcAt(game, 'patrol', at.x + 200, at.y, 3);
+  hire(game, s, m.id, 10);
+  const far = npcAt(game, 'pirate', at.x + 900, at.y, 3);
+  ship.attackers.set(far.id, game.now);
+  assert.equal(npcHostileTo(game, m, far), false, 'beyond the leash');
+  far.state.x = at.x + 400;
+  game.grid.upsert(far.id, far.state.x, far.state.y);
+  assert.equal(npcHostileTo(game, m, far), true, 'within it');
+  ship.region = 'black_coast';
+  m.region = 'black_coast';
+  assert.equal(damageBlocked(game, ship, m), 'friendly');
+  assert.equal(damageBlocked(game, m, ship), 'friendly');
+});

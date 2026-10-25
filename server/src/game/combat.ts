@@ -557,7 +557,7 @@ export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): 
   }
   // A guard hired at sea (seahire.ts) is her captain's in the quarrels of captains: no fire between her and another
   // captain (or his) in the Crown's safe water, as between the captains themselves.
-  if ((a.hiredBy !== undefined && (b.isPlayer || b.ownerId !== null)) || (b.hiredBy !== undefined && (a.isPlayer || a.ownerId !== null))) {
+  if (((a.hiredBy !== undefined && (b.isPlayer || b.ownerId !== null)) || (b.hiredBy !== undefined && (a.isPlayer || a.ownerId !== null))) && captainOf(game, a) !== captainOf(game, b)) {
     if (REGIONS[b.region].safety === 'safe' || REGIONS[a.region].safety === 'safe') return 'Safe waters: no PvP here.';
   }
   if (a.isPlayer && a.hasFlag('honest_merchant') && b.npcRole !== 'beast' && !game.isHostile(b, a) && !b.attackers.has(a.id)) {
@@ -568,6 +568,11 @@ export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): 
   if (sameGroup(game, a, b)) return 'friendly'; // a group does not fire on its own
   if (guildFriends(game, a, b)) return 'friendly'; // nor a guild, its allies or its pact partners
   return null;
+}
+
+/** The captain's ship behind a ship (her own, or her escort's owner), else the ship itself. */
+function captainOf(game: Game, s: ShipEntity): ShipEntity {
+  return s.ownerId !== null ? game.ships.get(s.ownerId) ?? s : s;
 }
 
 function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, hy: number): void {

@@ -398,6 +398,9 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
 export function hiredFoe(game: Game, npc: ShipEntity, owner: ShipEntity, other: ShipEntity): boolean {
   if (!other.alive || other.docked || other.surrendered || other.id === owner.id || other.ownerId === owner.id) return false;
   const now = game.now;
+  // (a guard, not a hunter: she lets a foe go once it is this far from her captain and comes back to her — QA 2026-10-25,
+  // she ran a beaten rover down a kilometre off)
+  if (dist(other.state.x, other.state.y, owner.state.x, owner.state.y) > HIRE_LEASH) return false;
   const safe = REGIONS[other.region]?.safety === 'safe';
   if (other.isPlayer && safe) return false;
   const lately = (m: Map<number, number>, id: number) => (m.get(id) ?? -999) > now - 120;
@@ -412,6 +415,9 @@ export function hiredFoe(game: Game, npc: ShipEntity, owner: ShipEntity, other: 
 export function hireStation(slot: number): { x: number; y: number } {
   return slot % 2 ? { x: -95, y: -25 } : { x: 95, y: -25 };
 }
+
+/** How far from her captain a hired guard still fights (metres). */
+export const HIRE_LEASH = 650;
 
 /** Lying off a harbour while her captain is in port: this far from its quays (metres). */
 export const HIRE_WAIT_R = 520;

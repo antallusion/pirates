@@ -1930,6 +1930,11 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'seahire':
       state.hire = m.view; // her hired guards: the chip, the map (owner, 2026-10-25)
+      // her guard is no mark of hers: the reticle and the fire key go back to the sea's
+      if (targetId !== null && m.view.escorts.some((e) => e.id === targetId)) {
+        targetId = null;
+        targetPinned = false;
+      }
       break;
     case 'seahire_offer':
       hireCard.show(m.offer);
@@ -3428,6 +3433,8 @@ function gatherActs(): { acts: Act[]; info: string[] } {
       noBoardWhy = LFL(!(c.flags & SF.NO_BOARD) ? 'fl.offYou' : 'fl.offHer');
       continue;
     }
+    // (her own guard, hired at sea or an escort, is nobody's deck to grapple: not even the hint — QA 2026-10-25)
+    if (s.info.npcRole === 'escort' && !(c.flags & SF.HOSTILE)) continue;
     const d = dist(own.x, own.y, c.x, c.y);
     if (d > st.boardingRange + st.length + cls.length) continue;
     // Alongside only (owner, 2026-10-22): the hulls within the grapples' few metres, side by side, the way matched —
