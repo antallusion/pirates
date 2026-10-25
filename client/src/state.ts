@@ -2,6 +2,7 @@
 // streamed islands, charted islands, private captain state. Remote ships are interpolated
 // ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
 
+import type { HireView } from '../../shared/src/data/seahire.ts';
 import type { ResView, WayData, WayView } from '../../shared/src/wayproto.ts'; // docs/35
 import type { SupplyView, TurtleView, ZoneView } from '../../shared/src/isleproto.ts';
 import type { ScoutsView } from '../../shared/src/fogproto.ts';
@@ -298,6 +299,8 @@ export class ClientState {
   /** docs/23 item 33: «Атаковать» — the helmsman pursues this mark (the prediction follows his rudder unless the
    *  captain's own hand is on the helm, `helm`). */
   pursuit: { target: number; mode: 'guns' | 'board' } | null = null;
+  /** Her guards hired at sea (owner, 2026-10-25; server/src/game/seahire.ts). */
+  hire: HireView | null = null;
   /** docs/19 D7: «Атаковать» on a creature stack — the helmsman sails her in to this stack (its id), the boats go a cable
    *  off it. A ship's pursuit and this are never both on. */
   roamRun: number | null = null;

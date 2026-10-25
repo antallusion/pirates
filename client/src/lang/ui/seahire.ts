@@ -16,6 +16,7 @@ export const EN = {
   'hr.chipT': 'Your hired guard: time left, her hull. Tap to dismiss her.',
   'hr.wait': 'waits off the harbour',
   'hr.dismiss': 'Dismiss {name}? Nothing is refunded.',
+  'hr.mapLabel': 'Guard · {t}',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -34,4 +35,5 @@ export const RU: Record<keyof typeof EN, string> = {
   'hr.chipT': 'Ваша наёмная охрана: сколько осталось и корпус. Нажмите, чтобы отпустить.',
   'hr.wait': 'ждёт у гавани',
   'hr.dismiss': 'Отпустить: {name}? Плата не возвращается.',
+  'hr.mapLabel': 'Охрана · {t}',
 };

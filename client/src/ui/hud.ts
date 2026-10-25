@@ -1372,6 +1372,17 @@ export class Hud {
       drawRelation(g, rel, tx(s.cur.x), ty(s.cur.y), rel === 'enemy' || rel === 'target' ? 3 : 2.4, cbColor(cb, RELATION_COLOR[rel]));
     }
     drawRelation(g, 'me', W / 2, H / 2, 2.6, RELATION_COLOR.me);
+    // Her guards hired at sea (owner, 2026-10-25): a gold ring round each, where she last was seen if off the snapshot.
+    for (const e of state.hire?.escorts ?? []) {
+      const live = state.ships.get(e.id);
+      const ex = live ? live.cur.x : e.x, ey = live ? live.cur.y : e.y;
+      if (Math.abs(ex - own.x) > range || Math.abs(ey - own.y) > range) continue;
+      g.strokeStyle = '#e8c46a';
+      g.lineWidth = 1.4;
+      g.beginPath();
+      g.arc(tx(ex), ty(ey), 4.6, 0, Math.PI * 2);
+      g.stroke();
+    }
     for (const l of state.loot.values()) {
       g.fillStyle = '#b08d57';
       g.fillRect(tx(l.x) - 1.5, ty(l.y) - 1.5, 3, 3);

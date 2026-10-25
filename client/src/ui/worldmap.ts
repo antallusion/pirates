@@ -1,5 +1,6 @@
 // World map: a dark nautical chart. Only what the captain has charted is drawn — information is a resource.
 
+import { EN as HIRE_EN, RU as HIRE_RU } from '../lang/ui/seahire.ts';
 import { portMark } from '../../../shared/src/data/paintart.ts';
 import { drawFog, drawScouts, underFog, visibleOnChart } from '../render/fog.ts'; // the fog of war (owner, 2026-10-17)
 import { LF, scoutName } from './scouts.ts';
@@ -70,6 +71,7 @@ const L = dict(EN, RU);
 const INV = dict(INV_EN, INV_RU); // docs/19 E16
 const LI = dict(IEN, IRU);
 const LS = dict(SEN, SRU);
+const LHIRE = dict(HIRE_EN, HIRE_RU); // owner, 2026-10-25: her hired guards
 const RL = dict(REN, RRU);
 const DL = dict(DEN, DRU);
 const EL = dict(EASE_EN, EASE_RU);
@@ -1132,6 +1134,18 @@ export class WorldMap {
     for (const sg of liveSignals(state)) {
       drawSignalFlag(g, tx(sg.x), ty(sg.y), sg.kind, sg.age, 1.4);
       label(`${sg.from}: ${signalName(sg.kind)}`, tx(sg.x), ty(sg.y) - 20, '#efe1b8');
+    }
+    // Her guards hired at sea (owner, 2026-10-25): a gold ring and «Охрана · 12:34» over each.
+    for (const e of state.hire?.escorts ?? []) {
+      const live = state.ships.get(e.id);
+      const x = tx(live ? live.cur.x : e.x), y = ty(live ? live.cur.y : e.y);
+      g.strokeStyle = '#e8c46a';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.arc(x, y, Math.max(5, ms * 0.32), 0, Math.PI * 2);
+      g.stroke();
+      const left = Math.max(0, Math.ceil(e.until - state.estServerTime()));
+      label(LHIRE('hr.mapLabel', { t: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` }), x, y - Math.max(10, ms * 0.6), '#e8c46a', 0);
     }
     // Her own mark: a dashed course from the ship, a gold pennant on a pole in a pulsing ring, and the range.
     const wp = waypoint();

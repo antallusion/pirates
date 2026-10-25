@@ -28,6 +28,9 @@ import type { AutosailStop } from '../../shared/src/data/autosail.ts';
 import { EncounterCard } from './ui/encounter.ts';
 import { SurrenderCard } from './ui/surrender.ts';
 import { CeasefireCard } from './ui/ceasefire.ts'; // owner, 2026-10-18: the ceasefire talks
+import { HireCard, HireChip } from './ui/seahire.ts'; // owner, 2026-10-25: a ship of the sea hired as a guard
+import { EN as HIRE_EN, RU as HIRE_RU } from './lang/ui/seahire.ts';
+import { HIRE_ROLES } from '../../shared/src/data/seahire.ts';
 import { EN as OUT_EN, RU as OUT_RU } from './lang/ui/outcome.ts';
 import { BoardOfferCard } from './ui/boardoffer.ts'; // docs/25 item 64: a group mate's boarding within reach
 import { LairChestCard } from './ui/lairchest.ts';
@@ -1241,6 +1244,9 @@ guardVibrate(); // «Вибрация» off stills every pulse (docs/23 item 84)
 const encounterCard = new EncounterCard((m) => net.send(m));
 const surrenderCard = new SurrenderCard((m) => net.send(m));
 const ceasefireCard = new CeasefireCard((m) => net.send(m));
+const hireCard = new HireCard((m) => net.send(m));
+const hireChip = new HireChip((m) => net.send(m));
+const LHIRE = dict(HIRE_EN, HIRE_RU);
 const LOUT = dict(OUT_EN, OUT_RU);
 const boardOffer = new BoardOfferCard((m) => net.send(m));
 const lairChest = new LairChestCard();
@@ -1917,6 +1923,12 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'ceasefire':
       ceasefireCard.show(m.view); // the talks: who asks what, who agreed (owner, 2026-10-18)
+      break;
+    case 'seahire':
+      state.hire = m.view; // her hired guards: the chip, the map (owner, 2026-10-25)
+      break;
+    case 'seahire_offer':
+      hireCard.show(m.offer);
       break;
     case 'surrender_offer':
       // A ship strikes her colours to you (docs/16 #3): the choice card over the sea.
@@ -4102,6 +4114,8 @@ function targetChoices(about: string): { choices: TmChoice[]; name: string; x: n
         { id: 'fight', art: board ? 'ab_red_hook_boarding' : 'talent_gun_rolling_broadside', label: seaWord('tm.fight'), title: seaWord(board ? 'tm.fightBoard' : 'tm.fightGuns') },
         // A ship of the sea firing on her: the talks (owner, 2026-10-18; the server says who will not bargain).
         ...(!s.info.isPlayer && s.info.npcRole && s.info.npcRole !== 'beast' && s.cur.flags & SF.HOSTILE ? [{ id: 'talk' as const, art: 'faction_free', label: LOUT('cf.tm'), title: LOUT('cf.tmT') }] : []),
+        // A peaceful ship of the sea: hire her as a guard (owner, 2026-10-25; the card says why not, the server decides).
+        ...(!s.info.isPlayer && s.info.npcRole && (HIRE_ROLES as readonly string[]).includes(s.info.npcRole) && !s.info.named && !s.info.elite && s.info.shipLevel !== undefined && !(s.cur.flags & (SF.HOSTILE | SF.SURRENDERED | SF.SINKING | SF.BOARDING)) ? [{ id: 'hire' as const, art: 'ab_call_escort', label: LHIRE('hr.tm'), title: LHIRE('hr.tmT') }] : []),
       ],
     };
   }
@@ -4130,6 +4144,7 @@ function pickTargetChoice(id: TmId, about: string): void {
   const n = Number(sid);
   if (kind === 'ship') {
     if (id === 'talk') return ceasefireCard.ask(n);
+    if (id === 'hire') return hireCard.ask(n);
     pinTarget(n); // the pursuit and the fight are about her: she is the mark too
     if (id === 'pursue') net.send({ t: 'attack', target: n, mode: unboardableMark(n) ? 'guns' : 'board' });
     else if (id === 'fight') {
@@ -4921,6 +4936,8 @@ function step(t: number): void {
     encounterCard.frame();
     surrenderCard.frame(state);
     ceasefireCard.frame(state);
+    hireCard.frame(state);
+    hireChip.frame(state);
     fishFight.frame();
     netHaul.frame();
     // The chart once a second; four times while a signal flag pulses on it (docs/16 #35).

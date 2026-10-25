@@ -13,6 +13,7 @@ export function relationOf(state: ClientState, s: RemoteShip): Relation {
   const flags = s.cur.flags;
   if (flags & SF.BOUNTY) return 'target';
   if (flags & SF.HOSTILE) return 'enemy';
+  if (state.hire?.escorts.some((e) => e.id === s.id)) return 'friend'; // her guard hired at sea (owner, 2026-10-25)
   const info = s.info;
   if (info?.isPlayer) {
     if (state.party?.members.some((m) => m.name === info.captainName)) return 'friend';

@@ -304,7 +304,7 @@ test('sunk: the contract over, nothing back; her kill alone is a group mate\'s s
 
 test('RU and EN: the card\'s words and the server\'s sentences', () => {
   assert.deepEqual(Object.keys(RU).sort(), Object.keys(EN).sort());
-  for (const k of Object.keys(RU)) assert.ok(!/[A-Za-z]{3,}/.test(RU[k].replace(/\{\w+\}/g, '')), `RU ${k}: ${RU[k]}`);
+  for (const k of Object.keys(RU) as (keyof typeof RU)[]) assert.ok(!/[A-Za-z]{3,}/.test(RU[k].replace(/\{\w+\}/g, '')), `RU ${k}: ${RU[k]}`);
   for (const en of ['She is not for hire', 'She is too far off to hail', 'She is hostile to you: no hire', 'She is in a fight: no hire now', 'Only a ship of your own level (⚓3) will sign on: she is ⚓2', 'Not enough silver: 900 asked, you have 12',
     'Brig Wren signs on as your guard for 20 minutes (2740 silver).', 'Brig Wren: «Our contract is done, captain. Fair winds!» She returns to her course.', 'Your guard Brig Wren is under fire!', 'Your guard Brig Wren is sunk: the contract is over, nothing is refunded.', 'Brig Wren is dismissed and returns to her course. Nothing is refunded.']) {
     const ru = serverText(en);
