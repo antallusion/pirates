@@ -9,6 +9,9 @@
 //    instead of one import level after another;
 //  - /assets/manifest.v.json is the manifest with every file's version (its size and time): the client asks for
 //    `file?v=…`, and such an address is kept by the browser for a year (`immutable`) — a reworked file is a new one.
+//  - in production the game's code is the bundle (tools/build-client.ts, made by tools/deploy.sh into client/dist): a
+//    few hashed files for the page's loader (client/index.html __gtLoad) instead of the ~560 modules (prod 2026-10-25:
+//    one module lost on a phone's mobile network failed the whole start). The modules stay for the local game.
 
 import { readFile, stat } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -16,6 +19,7 @@ import { stripTypeScriptTypes } from 'node:module';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { brotliCompress, constants as zc, gzip } from 'node:zlib';
+import type { BundleInfo } from '../../../tools/build-client.ts';
 
 const brotli = promisify(brotliCompress);
 const gz = promisify(gzip);
@@ -92,8 +96,12 @@ const ASSET_ORIGIN = (process.env.ASSET_ORIGIN ?? '').trim().replace(/\/+$/, '')
 /** The hosts whose root is the website, not the game (SITE_HOSTS=a,b to change them). */
 const SITE_HOSTS = new Set((process.env.SITE_HOSTS ?? 'gravetidegame.com,www.gravetidegame.com').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean));
 
-export function createStaticHandler(root: string) {
+/** `dist`: where the client's bundle is (client/dist; the tests build one elsewhere). */
+export function createStaticHandler(root: string, opts: { dist?: string } = {}) {
+  const distDir = resolve(opts.dist ?? join(root, 'client', 'dist'));
   const mounts: Mount[] = [
+    // the client's bundle (tools/build-client.ts): /dist/<name>-<hash>.js
+    { prefix: '/dist/', dir: distDir },
     { prefix: '/shared/', dir: resolve(root, 'shared') },
     { prefix: '/assets/', dir: resolve(root, 'assets') },
     // The game's website and forum (tools/site/build.ts writes its pages; the forum's API is server/src/http).
@@ -105,6 +113,53 @@ export function createStaticHandler(root: string) {
   const clientDir = resolve(root, 'client');
   const sharedDir = resolve(root, 'shared');
   const assetsDir = resolve(root, 'assets');
+
+  // ---- the production bundle (tools/build-client.ts, made by tools/deploy.sh; prod 2026-10-25: on a weak mobile network
+  // one of the ~560 modules lost on the way failed the whole start). Used when client/dist/bundle.json is there and none
+  // of its sources changed since (else — the local game being edited — the modules, as without it); GRAVETIDE_BUNDLE=0
+  // turns it off, and a page asked with ?src takes the modules (to look into a bug in the sources).
+  let bundle: { at: number; info: BundleInfo | null } | null = null;
+  let bundleSaid = '';
+  async function currentBundle(): Promise<BundleInfo | null> {
+    if (process.env.GRAVETIDE_BUNDLE === '0') return null;
+    if (bundle && Date.now() - bundle.at < 10_000) return bundle.info;
+    let info: BundleInfo | null = null;
+    let why = 'none';
+    try {
+      const b = JSON.parse(await readFile(join(distDir, 'bundle.json'), 'utf8')) as BundleInfo;
+      const changed = await Promise.all(Object.entries(b.inputs).map(async ([p, size]) => {
+        const s = await stat(join(root, p)).catch(() => null);
+        return !s || s.size !== size || s.mtimeMs > b.made + 2000;
+      }));
+      if (changed.some(Boolean)) why = `stale ${b.build}`;
+      else {
+        info = b;
+        why = `bundle ${b.build}`;
+      }
+    } catch {
+      /* no bundle: the modules */
+    }
+    if (why !== bundleSaid && why !== 'none') {
+      console.log(why.startsWith('stale') ? `[static] client/dist (${why.slice(6)}) is older than the sources: the modules are served (node tools/build-client.ts to rebuild)` : `[static] the client bundle ${why.slice(7)} is served`);
+    }
+    bundleSaid = why;
+    bundle = { at: Date.now(), info };
+    return info;
+  }
+  /** The page's start for the loader (index.html __gtLoad): the bundle's files, or the modules' entry. */
+  async function startOf(url: URL): Promise<{ cfg: Record<string, unknown>; links: string }> {
+    const b = url.searchParams.has('src') ? null : await currentBundle();
+    if (b) {
+      const e = b.entries.main;
+      const files = e.boot.map((f) => ({ u: `/dist/${f}`, n: b.sizes[f]?.raw ?? 0 }));
+      const kb = Math.round(e.boot.reduce((s, f) => s + (b.sizes[f]?.br ?? 0), 0) / 1024);
+      return { cfg: { mode: 'bundle', build: b.build, entry: `/dist/${e.file}`, files, lazy: e.lazy.map((f) => `/dist/${f}`), kb }, links: '' };
+    }
+    // every module named up front (the list changes with the code: the page's tag with it)
+    const { list, build } = await moduleGraph().catch(() => ({ list: [] as string[], build: '' }));
+    const bq = build ? `?b=${build}` : '';
+    return { cfg: { mode: 'src', build, entry: `/src/main.ts${bq}`, files: [] }, links: list.map((u) => `<link rel="modulepreload" href="${u}${bq}">`).join('') };
+  }
 
   // ---- the versioned manifest (looked at again at most once a minute)
   let vman: { at: number; mtime: number; entry: Entry } | null = null;
@@ -261,15 +316,23 @@ export function createStaticHandler(root: string) {
           body = Buffer.from(stripTypeScriptTypes(body.toString('utf8'), { mode: 'strip' }), 'utf8');
         }
         entry = { mtime: st.mtimeMs, body, etag: `W/"${st.size.toString(36)}-${Math.floor(st.mtimeMs).toString(36)}"` };
+        // the bundle's files come compressed already, at the best brotli (tools/build-client.ts writes .br and .gz)
+        if (file.startsWith(distDir + sep) && ext === '.js') {
+          const br = await readFile(`${file}.br`).catch(() => null);
+          const gzf = await readFile(`${file}.gz`).catch(() => null);
+          if (br) entry.br = Promise.resolve(br);
+          if (gzf) entry.gz = Promise.resolve(gzf);
+        }
         cache.set(file, entry);
       }
       if (path === '/index.html' && !url.searchParams.has('kit')) {
-        // every module named up front (the list changes with the code: the page's tag with it)
-        const { list, build } = await moduleGraph().catch(() => ({ list: [] as string[], build: '' }));
-        const bq = build ? `?b=${build}` : '';
-        const links = list.map((u) => `<link rel="modulepreload" href="${u}${bq}">`).join('');
-        let html = entry.body.toString('utf8').replace('</head>', `${links}\n</head>`);
-        if (bq) html = html.replace("import('/src/main.ts')", `import('/src/main.ts${bq}')`);
+        // the game's code: the bundle's few files, fetched by the page's loader (retried, with a screen if they never
+        // come), or every module named up front; the loader is started in the head, before the stylesheets (a script
+        // waits for those), so the code's fetch begins at once
+        const { cfg, links } = await startOf(url);
+        const start = `${links}<script>window.__gtLoad(${JSON.stringify(cfg).replace(/</g, '\\u003c')})</script>`;
+        const src = entry.body.toString('utf8');
+        let html = src.includes('<!--gt:start-->') ? src.replace('<!--gt:start-->', start) : src.replace('</head>', `${start}\n</head>`);
         // The page's own pictures (the title's painting and logo, the first start's loading screen, painted with the page
         // before the game's script is in): each /assets/ address carried to its version — the very address the game's
         // script asks for later (client/src/assets.ts fileUrl), so the preloaded one is the one drawn — and to the CDN.
@@ -280,6 +343,20 @@ export function createStaticHandler(root: string) {
         let pe = cache.get(key);
         if (!pe || pe.etag !== `W/"i${hash(body)}"`) cache.set(key, (pe = { mtime: entry.mtime, body, etag: `W/"i${hash(body)}"` }));
         return await send(req, res, pe, ext, 'no-cache');
+      }
+      // the forum's page (site/forum, site/en/forum): its script from the bundle too
+      if (/^\/site\/(en\/)?forum\/index\.html$/.test(path)) {
+        const b = url.searchParams.has('src') ? null : await currentBundle();
+        const fe = b?.entries.forum;
+        if (b && fe) {
+          const links = fe.boot.slice(1).map((f) => `<link rel="modulepreload" href="/dist/${f}">`).join('');
+          const html = entry.body.toString('utf8').replace('<script type="module" src="/src/forum/main.ts"></script>', `${links}<script type="module" src="/dist/${fe.file}"></script>`);
+          const body = Buffer.from(html, 'utf8');
+          const key = `${file}#${b.build}`;
+          let fe2 = cache.get(key);
+          if (!fe2 || fe2.mtime !== entry.mtime) cache.set(key, (fe2 = { mtime: entry.mtime, body, etag: `W/"f${hash(body)}"` }));
+          return await send(req, res, fe2, ext, 'no-cache');
+        }
       }
       // a module of a build: its imports carried to the same build, kept for good
       const b = ext === '.ts' ? url.searchParams.get('b') : null;
@@ -311,7 +388,9 @@ export function createStaticHandler(root: string) {
       }
       // a versioned asset (the manifest's `?v=`) never changes at its address; the rest is asked again each time
       const picture = ext === '.png' || ext === '.webp' || ext === '.jpg' || ext === '.avif' || ext === '.mp4' || ext === '.webm';
-      const cc = mount.prefix === '/assets/' && url.searchParams.has('v') ? 'public, max-age=31536000, immutable' : picture ? 'public, max-age=86400' : 'no-cache';
+      // (and the bundle's files, named by their content's hash)
+      const hashed = path.startsWith('/dist/') && /-[A-Z0-9]{8}\.js$/.test(path);
+      const cc = (mount.prefix === '/assets/' && url.searchParams.has('v')) || hashed ? 'public, max-age=31536000, immutable' : picture ? 'public, max-age=86400' : 'no-cache';
       return await send(req, res, entry, ext, cc);
     } catch {
       return false;

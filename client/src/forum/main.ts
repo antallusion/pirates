@@ -1,6 +1,7 @@
 // The forum page (docs/32_FORUM.md): routes under /site/forum/ (and /site/en/forum/) without reloading, the member's
 // corner in the site's header (notifications, messages, reports, avatar), the reveal on scroll, YouTube on a click.
 
+import '../compat.ts'; // first of all: the calls Safari 15 lacks (iOS 15 is the floor)
 import { BASE, errText, esc, href, ico, K, loadMe, state, t, token } from './core.ts';
 import * as P from './pages.ts';
 import type { Ctx } from './pages.ts';
