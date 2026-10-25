@@ -34,3 +34,10 @@ export function wheelZoom(deltaY: number, deltaMode: number, step: number): numb
   const notches = Math.min(1, Math.abs(px) / 100);
   return Math.pow(px < 0 ? step : 1 / step, notches);
 }
+
+/** A key typed into a field (the chat, a price): no game's key. The mini-games' Space (the net's haul, the fish's line)
+ *  took the chat's spaces while one was up. */
+export function inField(e: { target: EventTarget | null }): boolean {
+  const t = e.target as { tagName?: string; isContentEditable?: boolean } | null;
+  return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || !!t.isContentEditable);
+}

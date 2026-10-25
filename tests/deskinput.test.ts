@@ -60,3 +60,15 @@ test('Esc in a window\'s field leaves the field and closes the window like Esc a
 test('Esc over a window closes the window first, not the chat folded under its veil', () => {
   assert.match(main, /e\.key === 'Escape' && hud\.chatPanel\.isOpen && \(!modal \|\| document\.activeElement === chatInput\)/);
 });
+
+test('the mini-games\' Space (the net, the fish) leaves a field\'s spaces alone', async () => {
+  const { inField } = await import('../client/src/ui/deskinput.ts');
+  assert.equal(inField({ target: { tagName: 'INPUT' } as unknown as EventTarget }), true);
+  assert.equal(inField({ target: { tagName: 'TEXTAREA' } as unknown as EventTarget }), true);
+  assert.equal(inField({ target: { tagName: 'CANVAS' } as unknown as EventTarget }), false);
+  assert.equal(inField({ target: null }), false);
+  for (const f of ['nethaul', 'fishfight']) {
+    const src = readFileSync(new URL(`../client/src/ui/${f}.ts`, import.meta.url), 'utf8');
+    assert.match(src, /e\.code !== 'Space'[^\n]*inField\(e\)/, f);
+  }
+});

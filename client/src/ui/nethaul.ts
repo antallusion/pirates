@@ -7,6 +7,7 @@ import type { FishId, HaulMark, HaulParams } from '../../../shared/src/data/fish
 import type { ClientMsg, NetHaulView } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
 import { esc, fishIcon } from './dom.ts';
+import { inField } from './deskinput.ts';
 
 const L = dict(
   {
@@ -34,7 +35,7 @@ export class NetHaulPanel {
     this.send = send;
     this.el = document.getElementById('nethaul')!;
     addEventListener('keydown', (e) => {
-      if (!this.view || this.sent || e.code !== 'Space' || e.repeat) return;
+      if (!this.view || this.sent || e.code !== 'Space' || e.repeat || inField(e)) return;
       e.preventDefault();
       e.stopImmediatePropagation();
       this.pull();
