@@ -800,6 +800,15 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
       const tx = owner.state.x + f.x * off.y + r.x * off.x, ty = owner.state.y + f.y * off.y + r.y * off.x;
       const d = dist(ship.state.x, ship.state.y, tx, ty);
       // Close up fast when out of station; match the flagship's heading once there.
+      if (ship.hiredBy !== undefined) {
+        // (a hired guard keeps abreast of her: she presses on while astern of her station and eases off ahead of it —
+        // at the fleet's 0.8 she trailed a captain under full sail by a cable, QA 2026-10-25)
+        const ahead = (ship.state.x - tx) * f.x + (ship.state.y - ty) * f.y;
+        const want = d > 40 ? headingOf(tx - ship.state.x + f.x * 40, ty - ship.state.y + f.y * 40) : owner.state.heading;
+        const sail = ahead > 25 ? Math.max(0.1, owner.state.sail - 0.35) : d > 120 ? 1 : d > 30 ? Math.min(1, owner.state.sail + 0.3) : Math.max(0.15, owner.state.sail);
+        steer(game, ship, brain, want, sail);
+        return;
+      }
       const want = d > 60 ? headingOf(tx - ship.state.x, ty - ship.state.y) : owner.state.heading;
       steer(game, ship, brain, want, d > 300 ? 1 : d > 120 ? 0.8 : Math.max(0.3, owner.state.sail));
       return;

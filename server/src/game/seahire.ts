@@ -20,6 +20,7 @@ import { HIRE_MINUTES, HIRE_REACH, HIRE_ROLES, REHIRE_SEC, hirePrice, hireSlots,
 import type { HireEscort, HireOffer, HireView } from '../../../shared/src/data/seahire.ts';
 import { hullOf, hullsGap } from '../../../shared/src/data/reach.ts';
 import { shipBandOf } from '../../../shared/src/data/xpcurve.ts';
+import { NPC_VOLLEYS } from '../../../shared/src/data/seabalance.ts';
 import { SELF_IN_BATTLE_WHY, untouchable } from './inbattle.ts';
 import { hireStation, npcHostileTo, resumeCourse } from './npc.ts';
 import { headingVec } from '../../../shared/src/math.ts';
@@ -113,9 +114,11 @@ export function hireWhy(game: Game, s: PlayerSession, npc: ShipEntity | undefine
 /** The card: the ship, her prices, the captain's silver, why not. */
 export function hireOffer(game: Game, s: PlayerSession, npc: ShipEntity): HireOffer {
   const why = hireWhy(game, s, npc);
+  // her hull as she will sail as a captain's guard (ship.ts recompute: no discount of the sea's on a captain's own)
+  const asGuard = npc.seaScale && !npc.elite && npc.ownerId === null ? 1 / NPC_VOLLEYS : 1;
   return {
     id: npc.id, name: npc.name, classId: npc.loadout.classId, shipLevel: npc.shipLevel,
-    guns: npc.stats.gunsPerSide, crew: npc.crew, crewMax: npc.stats.crewMax, hull: Math.round(npc.hull), hullMax: npc.stats.hullMax,
+    guns: npc.stats.gunsPerSide, crew: npc.crew, crewMax: npc.stats.crewMax, hull: Math.round(npc.hull * asGuard), hullMax: Math.round(npc.stats.hullMax * asGuard),
     band: shipBandOf(s.profile?.level ?? 1), prices: pricesOf(npc), silver: Math.max(0, Math.floor(s.profile?.gold ?? 0)),
     ok: why === null, ...(why ? { why } : {}),
   };
@@ -182,6 +185,7 @@ export function endHire(game: Game, h: Hire, how: 'time' | 'dismissed' | 'sunk' 
   const own = s?.ship ?? null;
   if (npc) {
     const frac = npc.hull / Math.max(1, npc.stats.hullMax);
+    npc.effects = npc.effects.filter((e) => e.id !== 'hire_pace');
     npc.ownerId = null;
     npc.hiredBy = undefined;
     npc.hireSlot = 0;
@@ -266,6 +270,12 @@ export function stepHires(game: Game): void {
         endHire(game, h, 'time');
         continue;
       }
+      // She keeps up with her captain (QA 2026-10-25: a brig of the sea trailed a captain's tuned hull by two cables under
+      // full sail): her way lifted to a tenth over her captain's, never cut below her own.
+      const cur = n.effects.find((e) => e.id === 'hire_pace')?.mods?.maxSpeed ?? 0;
+      const base = n.stats.maxSpeed / Math.max(0.2, 1 + cur);
+      const want = Math.max(0, Math.min(1, (own.stats.maxSpeed * 1.1) / Math.max(0.1, base) - 1));
+      if (Math.abs(want - cur) > 0.02) n.addEffect({ id: 'hire_pace', until: Infinity, mods: { maxSpeed: Math.round(want * 100) / 100 } }, now);
       if (n.underFire(now) && now - h.warnedAt > 20) {
         h.warnedAt = now;
         game.toastShip(own, `Your guard ${n.name} is under fire!`, 'bad');
