@@ -555,6 +555,11 @@ export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): 
     // 2026-10-09: «правил вообще нет»).
     if (b.caravanId && neutral(game.profileOf(a)) && safety !== 'lawless') return 'You sail under neutral colours: you fire on no captain and board none. Change them in port.';
   }
+  // A guard hired at sea (seahire.ts) is her captain's in the quarrels of captains: no fire between her and another
+  // captain (or his) in the Crown's safe water, as between the captains themselves.
+  if ((a.hiredBy !== undefined && (b.isPlayer || b.ownerId !== null)) || (b.hiredBy !== undefined && (a.isPlayer || a.ownerId !== null))) {
+    if (REGIONS[b.region].safety === 'safe' || REGIONS[a.region].safety === 'safe') return 'Safe waters: no PvP here.';
+  }
   if (a.isPlayer && a.hasFlag('honest_merchant') && b.npcRole !== 'beast' && !game.isHostile(b, a) && !b.attackers.has(a.id)) {
     return 'Honest Merchant: you do not fire on peaceful ships.';
   }

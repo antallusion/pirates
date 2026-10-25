@@ -1,0 +1,26 @@
+// A ship of the sea hired at sea as a guard (owner, 2026-10-25; server/src/game/seahire.ts), English → Russian.
+
+export const SERVER_RU_HIRE: Record<string, string> = {
+  'Not under fire: hire a guard when the sea is quiet': 'Не под огнём: нанимать охрану можно, когда вокруг тихо',
+  'She is not for hire': 'Этот корабль не нанимается',
+  'She sails with you already': 'Он уже идёт с вами',
+  'She is hired by another captain': 'Его уже нанял другой капитан',
+  'She sails on other orders: not for hire': 'У него свой приказ: не нанимается',
+  'She is hostile to you: no hire': 'Он враждебен вам: найм невозможен',
+  'She is in a fight: no hire now': 'Он в бою: сейчас не нанять',
+  'Only a ship of your own level (⚓{0}) will sign on: she is ⚓{1}': 'Наняться готов только корабль вашего уровня (⚓{0}), а этот — ⚓{1}',
+  'She served you only now: she keeps her own course a while': 'Он только что служил вам: какое-то время идёт своим курсом',
+  'Two guards sail with you already': 'С вами уже идут два охранника',
+  'A guard sails with you already: dismiss her first': 'С вами уже идёт охранник: сначала отпустите его',
+  'Choose 10, 15 or 20 minutes': 'Выберите 10, 15 или 20 минут',
+  'Not enough silver: {0} asked, you have {1}': 'Не хватает серебра: просят {0}, у вас {1}',
+  '{0} signs on as your guard for {1} minutes ({2} silver).': '{0} нанят в охрану на {1} мин. (серебра: {2}).',
+  '{0}: «Our contract is done, captain. Fair winds!» She returns to her course.': '{0}: «Контракт исполнен, капитан. Попутного ветра!» Корабль возвращается на свой курс.',
+  '{0} is dismissed and returns to her course. Nothing is refunded.': '{0} отпущен и возвращается на свой курс. Плата не возвращается.',
+  'Your guard {0} is sunk: the contract is over, nothing is refunded.': 'Ваш охранник {0} потоплен: контракт окончен, плата не возвращается.',
+  '{0} lost sight of you and returns to her course.': '{0} потерял вас из виду и возвращается на свой курс.',
+  'No guard of yours': 'У вас нет нанятой охраны',
+  'Your guard {0} is under fire!': 'Ваш охранник {0} под огнём!',
+  'Your guard sank {0}': 'Ваш охранник потопил: {0}',
+  'Your guard took {0}': 'Ваш охранник взял: {0}',
+};

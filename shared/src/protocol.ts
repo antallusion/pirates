@@ -6,6 +6,7 @@
 import type { OutcomeNums } from './data/outcome.ts';
 import type { BuyFail, BuySeller } from './data/buyfail.ts';
 import type { CeasefireView } from './data/ceasefire.ts';
+import type { HireOffer, HireView } from './data/seahire.ts';
 import type { QuestKind } from './data/questclass.ts';
 import type { RequestKind } from './data/fates.ts';
 import type { OmenId } from './data/omens.ts';
@@ -127,6 +128,7 @@ export type ClientMsg =
    *  taken as a prize for the court — or as a trophy to keep (docs/16 #5). */
   | { t: 'surrender'; id: number; fate: SurrenderFate }
   | { t: 'ceasefire'; op: 'quote'; id?: number } | { t: 'ceasefire'; op: 'pay'; ids: number[]; pay: 'silver' | 'cargo'; goods?: GoodId[] } // a ceasefire bought (owner, 2026-10-18)
+  | { t: 'seahire'; op: 'quote' | 'hire' | 'dismiss'; id?: number; minutes?: number } // a ship of the sea hired as a guard (owner, 2026-10-25)
   | { t: 'board_cut' }
   /** Boarding 2.0: this round's tactic; the captains' duel (challenge, answer, a strike at server time `at`). */
   | { t: 'board_tactic'; tactic: BoardTactic }
@@ -2024,6 +2026,8 @@ export type ServerMsg =
   /** A ship has struck her colours to you (docs/16 #3): the choice card, or null when the offer is gone. */
   | { t: 'surrender_offer'; offer: SurrenderOffer | null }
   | { t: 'ceasefire'; view: CeasefireView | null } // owner, 2026-10-18: the talk with the ships attacking her
+  | { t: 'seahire'; view: HireView } // owner, 2026-10-25: her hired guards (the HUD's chip, the map)
+  | { t: 'seahire_offer'; offer: HireOffer | null } // ...and the hiring card
   | { t: 'board_fight'; view: BoardFightView | null }
   | { t: 'board_tac'; view: TacView | null }
   /** Owner, 2026-10-16 («Повтор»): a fight played again — its opening view and its steps; or her last twenty. */

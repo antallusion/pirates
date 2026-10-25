@@ -183,6 +183,7 @@ import { commonCollect, commonView, stepCommon } from './commongoal.ts';
 import { guildGoalCollect } from './guildgoal.ts';
 import type { SunkHull } from './bridgefx.ts';
 import { drownedKingRises, makeOffering, stepAbyss, stepAbyssShip } from './abyssfx.ts';
+import { hireSunk, hiresEnd, seaHireMessage, stepHires } from './seahire.ts'; // owner, 2026-10-25: a ship of the sea hired as a guard
 import { admiralsEye, anchorFleet, escortSlots, escortUpkeep, dismissEscort, escortLost, hireEscort, launchFleet, lashInPort, lineOfBattle, repairFleet, setFormation, stepFleet } from './fleet.ts';
 import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { DeepZone } from './mind.ts';
@@ -1070,6 +1071,7 @@ export class Game {
     beastSecond(this); // the beasts rise and go, the carcasses bleed and are flensed (docs/12 P4)
     stepWanted(this); // the named pirates, their trail, their lairs; the hunters (docs/12 P5)
     stepRaiding(this); // convoys, rockets, tips, the lanes' heat, the guarded (docs/12 P6)
+    stepHires(this); // the ships of the sea hired as guards: the clock, the chip (owner, 2026-10-25)
     if (sec % 10 === 0) stepEstate(this); // outposts at work, raided and robbed (docs/12 P7)
     stepCaravans(this); // one's own caravans at sea (docs/12 P8)
     stepCompanions(this); // the orca calves in their captains' wakes (docs/12 P10 #2)
@@ -1613,6 +1615,7 @@ export class Game {
 
   /** Before a captain crosses into another zone: what cannot follow is settled here. */
   prepareHandoff(s: PlayerSession): void {
+    hiresEnd(this, s.accountId, 'gone'); // a hired guard does not cross into other waters
     const barter = this.social.barters.get(s.accountId);
     if (barter) cancelBarter(this, barter, `${s.name} has sailed on`);
     if (groupOfAccount(this, s.accountId)) groupLeave(this, s, 'sails into other waters');
@@ -2302,10 +2305,11 @@ export class Game {
     callClosed(this, ship.id);
     this.emit({ k: 'sunk', ship: ship.id, x: Math.round(ship.state.x), y: Math.round(ship.state.y), name: ship.name }, ship.state.x, ship.state.y);
     if (ship.yardOf) onYardCaptainSunk(this, ship);
-    const victor = killer ? (killer.accountId ?? (killer.ownerId !== null ? this.ships.get(killer.ownerId)?.accountId ?? null : null)) : null;
+    const victor = killer ? (killer.accountId ?? (killer.ownerId !== null && (killer.hiredBy === undefined || (ship.attackers.get(killer.ownerId) ?? -999) >= this.now - 60) ? this.ships.get(killer.ownerId)?.accountId ?? null : null)) : null;
     // Boarding is the way to take a ship (docs/17 H1): sunk by the guns, a ship of the sea gives up a quarter of her
     // hold and little of her purse (a captain's ship still spills her two-fifths).
     if (!onboardingProtected(this.sessionOf(ship)) && !this.wreckLaid.has(ship.id)) this.dropWreckage(ship, (ship.isPlayer ? 0.4 : SINK_LOOT) * lootMul(this, killer, ship) * streakAhead(this, killer, ship), victor); // the First Watch loses nothing
+    if (ship.hiredBy !== undefined) hireSunk(this, ship); // a hired guard sunk: the contract over, nothing back (seahire.ts)
     if (!ship.isPlayer) replaceDefeated(this, ship); // one like her puts out elsewhere in these waters (density.ts)
     onShipSunk(this, ship, killer);
     if (ship.dutchman) dutchmanSunk(this, ship, killer); // the Flying Dutchman laid to rest (docs/12 P10 #10)
@@ -2359,11 +2363,23 @@ export class Game {
     this.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo, gold, expires: this.now + LOOT_LIFETIME_SEC, wreck: ship.region, monster: isMonster(ship), claim: victor !== null ? { account: victor, until: this.now + 30 } : undefined, ...(item ? { items: [item] } : {}) });
   }
 
+  /** A ship sunk by her hired guard alone: the group mate's share — the lesson's share and the quest's count, no prize,
+   *  no wreck claimed, no bounty, no glory of the kill (owner, 2026-10-25: no more than a group mate would have). */
+  private mateKill(owner: ShipEntity, victim: ShipEntity, how: 'sunk' | 'boarded'): void {
+    const s = this.sessionOf(owner);
+    if (!s?.profile) return;
+    const vLevel = victim.onLadder ? victim.combatLevel : null;
+    questEvent(this, s, how === 'sunk' ? { k: 'sink', victim } : { k: 'board', victim });
+    if (!(how === 'sunk' && this.boardedDown.has(victim.id))) this.grantXp(s, prizeXp(s.profile.level, vLevel, how) * XP_UNITS.mate, `Your guard ${how === 'sunk' ? 'sank' : 'took'} ${victim.name}`, true);
+  }
+
   private creditKill(killer: ShipEntity, victim: ShipEntity, how: 'sunk' | 'boarded'): void {
     if (killer.ghost) return this.zone?.forwardKill(killer, victim, how); // the killer sails in another zone
     const s = this.sessionOf(killer);
     if (killer.ownerId !== null) {
       const owner = this.ships.get(killer.ownerId);
+      // A guard hired at sea (seahire.ts): her captain's as a group mate's kill — unless she fought that ship herself.
+      if (owner && killer.hiredBy !== undefined && (victim.attackers.get(owner.id) ?? -999) < this.now - 60) return this.mateKill(owner, victim, how);
       if (owner) return this.creditKill(owner, victim, how);
     }
     if (!s || !s.profile) return;
@@ -2496,6 +2512,7 @@ export class Game {
     onSunkCrew(this, s);
     questEvent(this, s, { k: 'die', region: ship.region });
     anchorFleet(this, s, 0.5); // without the flagship the squadron scatters home
+    hiresEnd(this, s.accountId); // ...and a guard hired at sea goes back to her course, nothing back
     const lostValue = cargoValue(ship.cargo);
     // Lifeboats: fewer men lost, part of the lawful cargo saved.
     const boats = tval(ship.stats, 'lifeboats');
@@ -3827,6 +3844,9 @@ export class Game {
       case 'ceasefire':
         ceasefireMessage(this, s, msg);
         return;
+      case 'seahire':
+        seaHireMessage(this, s, msg);
+        return;
       case 'surrender':
         err(msg.fate === 'sink' || msg.fate === 'release' ? this.acceptSurrender(s, Math.trunc(Number(msg.id)), msg.fate) : TWO_CHOICES);
         this.pushSelf(s, true);
@@ -4875,6 +4895,7 @@ export class Game {
     socialRetire(this, s);
     friendsPresence(this, s, false);
     if (s.profile) anchorFleet(this, s);
+    hiresEnd(this, s.accountId); // her hired guards go back to their courses (seahire.ts)
     this.saveSession(s);
     for (const c of caravansOf(this, s.accountId)) this.removeShip(c.id);
     if (s.ship) {

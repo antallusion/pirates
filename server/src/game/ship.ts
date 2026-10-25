@@ -266,6 +266,9 @@ export class ShipEntity {
   battleCardAt = 0;
   removeAt = 0; // for escorts/despawn timers
   ownerId: number | null = null; // escort owner entity id
+  /** A ship of the sea hired at sea as a guard (seahire.ts, owner 2026-10-25): the captain's account and her station. */
+  hiredBy?: number;
+  hireSlot = 0;
   wantedCache = 0;
   guildTag: string | null = null;
   /** A captain under the city flag (docs/24 D1): the city whose colours she flies (colours.ts syncColours). */

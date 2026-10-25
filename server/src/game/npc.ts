@@ -43,6 +43,7 @@ import { applyTrade, bestRoute } from './economy.ts';
 import type { Game } from './Game.ts';
 import { findPath, pathLength, pointAlong } from './nav.ts';
 import { formationOffset } from './fleet.ts';
+import { pursuitOf } from './pursuit.ts';
 import { pactNeutral } from './abyssfx.ts';
 import type { Path } from './nav.ts';
 import type { NpcRole, ShipEntity } from './ship.ts';
@@ -318,6 +319,7 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
     // Escort: hostile to whoever is hostile to its owner.
     if (other.id === npc.ownerId || other.ownerId === npc.ownerId) return false;
     const owner = game.ships.get(npc.ownerId);
+    if (npc.hiredBy !== undefined) return !!owner && hiredFoe(game, npc, owner, other);
     return !!owner && (game.isHostile(other, owner) || owner.attackers.has(other.id) || other.attackers.has(owner.id));
   }
   if (game.npcs.get(npc.id)?.practice === other.id) return true;
@@ -387,6 +389,43 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
     default:
       return false;
   }
+}
+
+/** A ship hired at sea (seahire.ts, owner 2026-10-25) answers for her captain, and starts nothing herself: whoever fired
+ *  on her captain or on her, or her captain's own mark once she fired on it or ordered the attack (the pursuit); out of the
+ *  Crown's safe water also a ship bearing down on her captain. Never a captain in safe water, whatever the quarrel (the
+ *  colours and the duels rule the rest: combat.ts damageBlocked, pvp.ts — her captain's own). */
+export function hiredFoe(game: Game, npc: ShipEntity, owner: ShipEntity, other: ShipEntity): boolean {
+  if (!other.alive || other.docked || other.surrendered || other.id === owner.id || other.ownerId === owner.id) return false;
+  const now = game.now;
+  const safe = REGIONS[other.region]?.safety === 'safe';
+  if (other.isPlayer && safe) return false;
+  const lately = (m: Map<number, number>, id: number) => (m.get(id) ?? -999) > now - 120;
+  if (lately(owner.attackers, other.id) || lately(npc.attackers, other.id) || lately(other.attackers, owner.id)) return true;
+  const run = pursuitOf(owner);
+  if (run && run.target === other.id) return true;
+  if (!safe && !other.isPlayer && game.npcs.get(other.id)?.target === owner.id && npcHostileTo(game, other, owner)) return true;
+  return false;
+}
+
+/** A hired ship's station off her captain's beam (the first to starboard, the second to port), metres (x across, y along). */
+export function hireStation(slot: number): { x: number; y: number } {
+  return slot % 2 ? { x: -95, y: -25 } : { x: 95, y: -25 };
+}
+
+/** Lying off a harbour while her captain is in port: this far from its quays (metres). */
+export const HIRE_WAIT_R = 520;
+
+/** Back to her own course after a contract (seahire.ts): her road to her port again, or a new leg. */
+export function resumeCourse(game: Game, ship: ShipEntity, brain: NpcBrain): void {
+  brain.target = null;
+  brain.chase = null;
+  brain.fleeFrom = null;
+  brain.preySince = undefined;
+  const dest = brain.destPort ? game.portById(brain.destPort) : null;
+  const path = dest ? findPath(game.world, ship.state.x, ship.state.y, dest.x, dest.y, 40000) : null;
+  if (path) setPath(brain, path);
+  else if (!replan(game, ship, brain)) brain.path = null;
 }
 
 function detectionRange(game: Game, npc: ShipEntity, other: ShipEntity): number {
@@ -752,9 +791,11 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   }
   if (ship.ownerId !== null) {
     const owner = game.ships.get(ship.ownerId);
+    // A ship hired at sea does not follow her captain into port (seahire.ts): she lies off the harbour, the clock running.
+    if (owner && owner.docked && ship.hiredBy !== undefined) return waitOffHarbour(game, ship, brain, owner);
     if (owner) {
-      // Keep station in the flagship's formation (hired escorts), or astern of her.
-      const off = ship.fleetId ? formationOffset(owner.formation, ship.escortIndex) : { x: 0, y: -70 };
+      // Keep station in the flagship's formation (hired escorts), off her beam (hired at sea), or astern of her.
+      const off = ship.fleetId ? formationOffset(owner.formation, ship.escortIndex) : ship.hiredBy !== undefined ? hireStation(ship.hireSlot) : { x: 0, y: -70 };
       const f = headingVec(owner.state.heading), r = headingVec(owner.state.heading + Math.PI / 2);
       const tx = owner.state.x + f.x * off.y + r.x * off.x, ty = owner.state.y + f.y * off.y + r.y * off.x;
       const d = dist(ship.state.x, ship.state.y, tx, ty);
@@ -765,6 +806,24 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     }
   }
   followPath(game, ship, brain);
+}
+
+/** Her captain in port: she stands off to HIRE_WAIT_R from the harbour on her own side of it and lies to there. */
+function waitOffHarbour(game: Game, ship: ShipEntity, brain: NpcBrain, owner: ShipEntity): void {
+  const port = game.nearestPort(owner.state.x, owner.state.y);
+  if (!port) {
+    ship.input = { rudder: 0, sailTarget: 0 };
+    return;
+  }
+  const d0 = dist(ship.state.x, ship.state.y, port.x, port.y);
+  const ux = d0 > 1 ? (ship.state.x - port.x) / d0 : 0, uy = d0 > 1 ? (ship.state.y - port.y) / d0 : 1;
+  const tx = port.x + ux * HIRE_WAIT_R, ty = port.y + uy * HIRE_WAIT_R;
+  const d = dist(ship.state.x, ship.state.y, tx, ty);
+  if (d0 >= HIRE_WAIT_R - 40 || d < 50) {
+    ship.input = { rudder: 0, sailTarget: 0 };
+    return;
+  }
+  steer(game, ship, brain, headingOf(tx - ship.state.x, ty - ship.state.y), d > 200 ? 0.8 : 0.4);
 }
 
 function followPath(game: Game, ship: ShipEntity, brain: NpcBrain): void {
