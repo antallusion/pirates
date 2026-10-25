@@ -50,3 +50,13 @@ test('Enter over an open window never opens the chat hidden under it (the keys w
   const line = main.slice(main.lastIndexOf('\n', at), at);
   assert.match(line, /!typing\(\) && !modal\)/);
 });
+
+test('Esc in a window\'s field leaves the field and closes the window like Esc anywhere in it', () => {
+  const at = main.indexOf("if (e.key === 'Escape' && modal && typing())");
+  assert.ok(at > 0);
+  assert.ok(main.indexOf('  if (typing()) return;', at) - at < 200, 'the blur comes right before the fields keep their keys');
+});
+
+test('Esc over a window closes the window first, not the chat folded under its veil', () => {
+  assert.match(main, /e\.key === 'Escape' && hud\.chatPanel\.isOpen && \(!modal \|\| document\.activeElement === chatInput\)/);
+});

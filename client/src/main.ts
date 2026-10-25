@@ -2852,7 +2852,9 @@ addEventListener('keydown', (e) => {
   // Autofill, an IME and some gamepad bridges fire keydowns that are no KeyboardEvent and carry no key.
   if (!inGame || typeof e.key !== 'string') return;
   const chatInput = $('chat-input') as HTMLInputElement;
-  if (e.key === 'Escape' && hud.chatPanel.isOpen) {
+  // (batch-pc: over a window Esc is the window's — the chat lies under its veil; before, the first Esc folded the unseen
+  // chat and the window stayed)
+  if (e.key === 'Escape' && hud.chatPanel.isOpen && (!modal || document.activeElement === chatInput)) {
     // Esc in the field leaves it (the keys steer the ship again); Esc once more folds the chat away.
     if (document.activeElement === chatInput) chatInput.blur();
     else hud.chatPanel.close();
@@ -2889,6 +2891,9 @@ addEventListener('keydown', (e) => {
     closeModal();
     return;
   }
+  // batch-pc: Esc in a window's field (a price, a name, a search) closes the window as Esc anywhere in it does — it did
+  // nothing at all there (the field kept the key).
+  if (e.key === 'Escape' && modal && typing()) (document.activeElement as HTMLElement | null)?.blur();
   if (typing()) return;
   // A deck fight takes the digits for its orders and Space for the duel's blade.
   if (!modal && (tactical.onKey(e) || boardFight.onKey(e))) {
