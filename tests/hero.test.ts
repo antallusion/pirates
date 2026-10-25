@@ -374,7 +374,8 @@ test('artifacts: in the captain\'s slots, they give primaries; a whole set its b
   for (const id of ARTIFACT_IDS) {
     const a = ARTIFACTS[id];
     assert.ok(ITEM_BASES[a.base] && ITEM_BASES[a.base].slot === a.slot, `${id} on a ${a.slot} base`);
-    assert.match(a.icon, /^item_/);
+    // (its own painted icon since 2026-10-24, docs/ART_TODO.md; the base item's art stays its stand-in)
+    assert.match(a.icon, /^(art_|item_)/);
   }
   const { game } = makeGame();
   const { s, p, ship } = captain(game, 'Collector');
