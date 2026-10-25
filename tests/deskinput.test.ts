@@ -44,3 +44,9 @@ test('the wheel zoom: a mouse notch is one step, a touchpad stroke of tiny delta
   assert.match(main, /canvas\.addEventListener\('wheel', \(e\) => \{[\s\S]{0,200}e\.preventDefault\(\);[\s\S]{0,500}\{ passive: false \}\);/);
   assert.match(main, /addEventListener\('wheel', \(e\) => \{\s*if \(inGame && e\.ctrlKey\) e\.preventDefault\(\);\s*\}, \{ passive: false \}\);/);
 });
+
+test('Enter over an open window never opens the chat hidden under it (the keys went into an unseen field)', () => {
+  const at = main.indexOf('hud.chatPanel.focusInput();');
+  const line = main.slice(main.lastIndexOf('\n', at), at);
+  assert.match(line, /!typing\(\) && !modal\)/);
+});

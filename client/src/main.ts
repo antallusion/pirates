@@ -2869,7 +2869,9 @@ addEventListener('keydown', (e) => {
     if (document.activeElement === chatInput) {
       if (chatInput.value.trim()) hud.chatPanel.send();
       else chatInput.blur();
-    } else if (!typing()) hud.chatPanel.focusInput();
+    } else if (!typing() && !modal) hud.chatPanel.focusInput();
+    // (batch-pc: over a window Enter is the window's — its focused button — never the chat hidden under the window's
+    // veil: its field took the focus unseen and every key after it went into it, the game's keys dead)
     else return;
     e.preventDefault();
     return;
