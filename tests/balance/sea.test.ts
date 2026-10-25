@@ -9,7 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { gearSource } from '../../shared/src/data/items.ts';
-import { NPC_VOLLEYS, defRaw, gearDefCeil, gearDefence, gearOffCeil, gearOffence, halfGearDef, halfGearOff, seaBase } from '../../shared/src/data/seabalance.ts';
+import { NPC_HP_MUL, NPC_VOLLEYS, defRaw, gearDefCeil, gearDefence, gearOffCeil, gearOffence, halfGearDef, halfGearOff, seaBase } from '../../shared/src/data/seabalance.ts';
 import { volleysToSink } from '../../shared/src/sim/volleys.ts';
 import { computeShipStats } from '../../shared/src/sim/shipstats.ts';
 import { useAbility } from '../../server/src/game/abilities.ts';
@@ -72,8 +72,10 @@ test('the table (§1.1): bare against bare and full against full ±1 broadside a
     cell('level → level', lvl, lvl2, (B * fL.def) / fL.off, f((B * fL.def) / fL.off));
     cell('full → bare', full, bare2, (B * fB.def) / fF.off, f((B * fB.def) / fF.off));
     cell('bare → full', bare, full2, (B * fF.def) / fB.off, f((B * fF.def) / fB.off));
-    for (const [row, s, off] of [['bare → NPC', bare, fB.off], ['full → NPC', full, fF.off]] as const) cell(row, s, npc, (B * NPC_VOLLEYS * halfGearDef(a)) / off, f((B * NPC_VOLLEYS * halfGearDef(a)) / off));
-    for (const [row, s, off] of [['bare → elite', bare, fB.off], ['full → elite', full, fF.off]] as const) cell(row, s, elite, (B * gearDefCeil(a)) / off, f((B * gearDefCeil(a)) / off));
+    // (owner 2026-10-26: NPC HP ×0.5 — the sea's ships and the elites sink in half the broadsides they did)
+    const H = NPC_HP_MUL;
+    for (const [row, s, off] of [['bare → NPC', bare, fB.off], ['full → NPC', full, fF.off]] as const) cell(row, s, npc, (H * B * NPC_VOLLEYS * halfGearDef(a)) / off, Math.max(0.5, f((H * B * NPC_VOLLEYS * halfGearDef(a)) / off)));
+    for (const [row, s, off] of [['bare → elite', bare, fB.off], ['full → elite', full, fF.off]] as const) cell(row, s, elite, (H * B * gearDefCeil(a)) / off, Math.max(0.5, f((H * B * gearDefCeil(a)) / off)));
     for (const [row, t, def] of [['NPC → bare', bare, fB.def], ['NPC → full', full, fF.def]] as const) cell(row, npc, t, (B * def) / halfGearOff(a), f((B * def) / halfGearOff(a)));
     cell('elite → full', elite, full, (B * fF.def) / gearOffCeil(a), f((B * fF.def) / gearOffCeil(a)));
   }

@@ -137,6 +137,10 @@ export interface RunFrom {
   from?: number;
   cruise?: boolean;
   react?: number;
+  /** Her mark other than a bot of her own hull and level (owner 2026-10-26: a level-3 captain against a ⚓2 pirate). */
+  foe?: { cls: ShipClassId; level: number };
+  /** The captain's own level (60 unless said: the sims' captain has every level's craft). */
+  captainLevel?: number;
 }
 
 /** «Атаковать» on a bot of her own hull and level 700 m off, who fights back with the guns: `board` until the
@@ -146,8 +150,10 @@ export function captainRun(game: Game, cls: ShipClassId, level: number, k: numbe
   const at = openWater(game, k);
   const h = (k * 2.399) % (Math.PI * 2);
   const s = seaCaptain(game, cls, level, at.x, at.y, h);
+  if (o.captainLevel !== undefined) s.profile!.level = s.ship!.level = o.captainLevel;
   const me = s.ship!;
-  const B = putSide(game, { cls, level, craft: 'bot' }, at.x + Math.sin(h + 1.3) * from, at.y - Math.cos(h + 1.3) * from, h + Math.PI);
+  const foe = o.foe ?? { cls, level };
+  const B = putSide(game, { cls: foe.cls, level: foe.level, craft: 'bot' }, at.x + Math.sin(h + 1.3) * from, at.y - Math.cos(h + 1.3) * from, h + Math.PI);
   B.brain.role = 'hunter';
   // Both under way at a cruise, as ships meet at sea.
   if (o.cruise ?? true) {
@@ -166,7 +172,7 @@ export function captainRun(game: Game, cls: ShipClassId, level: number, k: numbe
       ordered = true;
     }
     if (game.now >= next) {
-      next = game.now + (B.brain.skill?.react ?? npcSkill(level).react);
+      next = game.now + (B.brain.skill?.react ?? npcSkill(foe.level).react);
       engage(game, B.ship, B.brain, me, Math.hypot(me.state.x - B.ship.state.x, me.state.y - B.ship.state.y));
     }
     game.step();

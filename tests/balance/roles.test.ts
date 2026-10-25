@@ -29,5 +29,8 @@ test('a fishing hull fights a level below her own: even perfectly fought she doe
   assert.equal(SHIP_CLASSES.fishing_ketch.passive.id, 'wet_well', 'she is built for the catch');
   assert.equal(SHIP_CLASSES.harpoon_whaler.fixedMount, 'harpoon', 'the whaler carries her harpoon gun');
   const r = winRate(game, { cls: 'fishing_ketch', level: 3, craft: 'perfect' }, { cls: 'schooner', level: 3, craft: 'bot' }, 12);
-  assert.ok(r.wins <= 1, `fishing ketch ⚓3 (perfect) against a schooner ⚓3: ${r.wins}/12`);
+  // (owner 2026-10-26: NPC HP ×0.5 — the sea's halved schooner falls to a well-fought ketch too, 10/12 on the cut's
+  // commit; was ≤ 1. Her hull stays the fishing role's: never better than a warship's own captain would do.)
+  const w = winRate(game, { cls: 'schooner', level: 3, craft: 'perfect' }, { cls: 'schooner', level: 3, craft: 'bot' }, 12);
+  assert.ok(r.wins <= w.wins, `fishing ketch ⚓3 (perfect) against a schooner ⚓3: ${r.wins}/12 (a schooner's captain ${w.wins}/12)`);
 });

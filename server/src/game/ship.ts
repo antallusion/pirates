@@ -1,7 +1,7 @@
 // Server-side ship entity: the authoritative state of every vessel (player or NPC) at sea.
 
 import { regattaSail } from '../../../shared/src/data/regatta.ts';
-import { NPC_VOLLEYS } from '../../../shared/src/data/seabalance.ts';
+import { NPC_HP_MUL, NPC_VOLLEYS } from '../../../shared/src/data/seabalance.ts';
 import type { NemesisCause } from '../../../shared/src/data/nemesis.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import type { InvaderTag } from './invasions.ts';
@@ -376,6 +376,8 @@ export class ShipEntity {
    *  and her guns (into the hull of a ship of the table) × over her class at her level — a common one as a captain in
    *  half gear sinking in 30% fewer broadsides, an elite as a captain in full gear. Null for a captain's ship. */
   seaScale: { hull: number; guns: number } | null = null;
+  /** Owner 2026-10-26: NPC HP ×0.5 (NPC_HP_MUL) — false only for a balance sim's scripted captain sailing a sea hull. */
+  npcHalved = true;
   /** A trading house's convoy merchantman (empires.ts): whose, and bound where. */
   convoyOf: { guild: number; to: string } | null = null;
   /** A neutral guard of the adventure map (docs/17 H4): its id there. It stands where it is put and never moves. */
@@ -508,6 +510,12 @@ export class ShipEntity {
     // weight and her strength as others reckon it stay her class's.)
     // A captain's own escort or prize sails as hers: no discount of the sea's ships on her hull (docs/25 item 7).
     if (this.seaScale) this.stats.hullMax = Math.round(this.stats.hullMax * this.seaScale.hull * (this.ownerId !== null && !this.elite ? 1 / NPC_VOLLEYS : 1));
+    // Owner 2026-10-26 («режь всем нпс прям на 50% хп»): every ship the server sails — of every role, the beasts, the
+    // bosses and their parts, a hired escort and a captain's own island ship too — half her hull and half her canvas.
+    if (this.npcRole !== null && !this.isPlayer && this.npcHalved) {
+      this.stats.hullMax = Math.max(1, Math.round(this.stats.hullMax * NPC_HP_MUL));
+      this.stats.sailHpMax = Math.max(1, Math.round(this.stats.sailHpMax * NPC_HP_MUL));
+    }
     if (this.hull > this.stats.hullMax) this.hull = this.stats.hullMax;
     if (this.sails > this.stats.sailHpMax) this.sails = this.stats.sailHpMax;
     if (this.crew > this.stats.crewMax) this.crew = this.stats.crewMax;

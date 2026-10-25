@@ -121,6 +121,11 @@ export function halfGearDef(anchor: number): number {
 /** The sea's own ships sink in 30% fewer broadsides than a captain of the same gear (item 7). */
 export const NPC_VOLLEYS = 0.7;
 
+/** Owner 2026-10-26 («мне на 3 уровне убил корабль 2 щас. бред. режь всем нпс прям на 50% хп»): every ship of the sea
+ *  the server sails — pirates, patrols, hunters, merchants, the campaign's and the quests' foes, elites, hired escorts,
+ *  beasts, bosses — has half the hull and half the canvas (ship.ts recompute). A captain's own ship never. */
+export const NPC_HP_MUL = 0.5;
+
 /** The table's broadsides: `def` her defence factor, `off` the shooter's offence factor (both 1 when bare). */
 export function seaVolleys(anchor: number, def: number, off: number): number {
   return (seaBase(anchor) * def) / Math.max(0.01, off);
@@ -129,7 +134,8 @@ export function seaVolleys(anchor: number, def: number, off: number): number {
 /** What a sea ship of her ⚓ is to the table: a common one fights as a captain in half gear and sinks in 30% fewer
  *  broadsides; an elite as a captain in full gear, without the discount. */
 export function npcFactors(anchor: number, elite: boolean): { off: number; def: number } {
-  return elite ? { off: gearOffCeil(anchor), def: gearDefCeil(anchor) } : { off: halfGearOff(anchor), def: NPC_VOLLEYS * halfGearDef(anchor) };
+  // (owner 2026-10-26: NPC HP ×0.5 — both halved again)
+  return elite ? { off: gearOffCeil(anchor), def: NPC_HP_MUL * gearDefCeil(anchor) } : { off: halfGearOff(anchor), def: NPC_HP_MUL * NPC_VOLLEYS * halfGearDef(anchor) };
 }
 
 // ------------------------------------------------------------------------------------------------ the alpha strike
