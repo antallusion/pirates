@@ -72,3 +72,19 @@ test('the mini-games\' Space (the net, the fish) leaves a field\'s spaces alone'
     assert.match(src, /e\.code !== 'Space'[^\n]*inField\(e\)/, f);
   }
 });
+
+test('a Russian layout: the punctuation keys are bound by their place («б» is the comma, «ё» the backquote)', async () => {
+  const { keyOf, actionFor, PRESETS } = await import('../client/src/settings.ts');
+  assert.equal(keyOf({ key: 'б', code: 'Comma' }), ',');
+  assert.equal(keyOf({ key: 'ю', code: 'Period' }), '.');
+  assert.equal(keyOf({ key: '.', code: 'Slash' }), '/');
+  assert.equal(keyOf({ key: 'ё', code: 'Backquote' }), '`');
+  assert.equal(actionFor(PRESETS.arrows, keyOf({ key: 'б', code: 'Comma' })), 'firePort');
+  assert.equal(actionFor(PRESETS.arrows, keyOf({ key: 'ю', code: 'Period' })), 'fireStarboard');
+  assert.equal(actionFor(PRESETS.arrows, keyOf({ key: '.', code: 'Slash' })), 'fire', 'the RU «.» on the slash key is «Огонь», not the starboard');
+  assert.equal(actionFor(PRESETS.classic, keyOf({ key: 'ё', code: 'Backquote' })), 'target');
+  // the rest by name, as before
+  assert.equal(keyOf({ key: 'Tab', code: 'Tab' }), 'tab');
+  assert.equal(keyOf({ key: ' ', code: 'Space' }), ' ');
+  assert.equal(keyOf({ key: 'F3', code: 'F3' }), 'f3');
+});
