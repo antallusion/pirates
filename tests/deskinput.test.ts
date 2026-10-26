@@ -15,7 +15,26 @@ test('the right button: the mount when fitted, else the helmsman to the spot; no
   // main.ts sends the course through the chart's helmsman when rightClickAct says so
   const rmb = main.slice(main.indexOf('e.button !== 2'), main.indexOf('e.button !== 2') + 700);
   assert.match(rmb, /rightClickAct\(/);
-  assert.match(rmb, /worldMap\.onAutosail\(wp\)/);
+  assert.match(rmb, /sailToScreen\(/);
+  const sts = main.slice(main.indexOf('function sailToScreen('), main.indexOf('function sailToScreen(') + 500);
+  assert.match(sts, /worldMap\.onAutosail\(wp\)/);
+  assert.match(sts, /fx\.add\(\{ kind: 'ring'/, 'a small marker where the click fell');
+});
+
+test('a left click on the open sea sails her there (simple HUD); a drag pans, a window or the HUD never leaks', async () => {
+  const { leftClickSea, CLICK_SLOP } = await import('../client/src/ui/deskinput.ts');
+  const base = { docked: false, simple: true, modal: false, moved: 0 };
+  assert.equal(leftClickSea(base), 'sail');
+  assert.equal(leftClickSea({ ...base, moved: CLICK_SLOP + 1 }), null, 'a drag is the view\'s');
+  assert.equal(leftClickSea({ ...base, modal: true }), null);
+  assert.equal(leftClickSea({ ...base, docked: true }), null);
+  assert.equal(leftClickSea({ ...base, simple: false }), 'fire', 'the detailed HUD fires as it always did');
+  // the press is only kept with nothing under it, and the lift must land on the sea itself (not the HUD, not a window)
+  assert.match(main, /seaPress = !mk && !pl \? \{ x: e\.clientX, y: e\.clientY \} : null;/);
+  const up = main.slice(main.indexOf("addEventListener('mouseup', (e) => {\n  const p = seaPress;"), main.indexOf("addEventListener('mouseup', (e) => {\n  const p = seaPress;") + 400);
+  assert.match(up, /e\.target !== canvas/);
+  assert.match(up, /leftClickSea\(/);
+  assert.match(up, /sailToScreen\(e\.clientX, e\.clientY\)/);
 });
 
 test('Tab over an open window walks the window, not the sea\'s targets, and comes before the fields\' own keys', () => {

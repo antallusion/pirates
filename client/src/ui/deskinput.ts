@@ -11,6 +11,18 @@ export function rightClickAct(f: { docked: boolean; mount: boolean }): 'mount' |
   return f.mount ? 'mount' : 'sail';
 }
 
+/** A press that travelled this far (px) between down and up was a drag (the view panned), not a click. */
+export const CLICK_SLOP = 10;
+
+/** What a left click on the open sea does (nothing under it: no ship, stack, harbour, find). In the simple HUD — every
+ *  desk's own — the helmsman takes her there, as the right button does without a mount (before, it did nothing at all
+ *  on a PC: owner, 2026-10-26); in the detailed one it fires the side the cursor lies off, as it always did. A press
+ *  that was dragged (the view panned), one under an open window, or docked: nothing. */
+export function leftClickSea(f: { docked: boolean; simple: boolean; modal: boolean; moved: number }): 'sail' | 'fire' | null {
+  if (f.docked || f.modal || f.moved > CLICK_SLOP) return null;
+  return f.simple ? 'sail' : 'fire';
+}
+
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /** Tab in an open window walks its own controls, round and round (a focus trap), as the kit's sheets do (kit/layer.ts):
