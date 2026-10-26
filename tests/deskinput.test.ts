@@ -15,7 +15,28 @@ test('the right button: the mount when fitted, else the helmsman to the spot; no
   // main.ts sends the course through the chart's helmsman when rightClickAct says so
   const rmb = main.slice(main.indexOf('e.button !== 2'), main.indexOf('e.button !== 2') + 700);
   assert.match(rmb, /rightClickAct\(/);
-  assert.match(rmb, /worldMap\.onAutosail\(wp\)/);
+  assert.match(rmb, /sailToScreen\(/);
+  const sts = main.slice(main.indexOf('function sailToScreen('), main.indexOf('function sailToScreen(') + 500);
+  assert.match(sts, /worldMap\.onAutosail\(wp\)/);
+  assert.match(sts, /fx\.add\(\{ kind: 'ring'/, 'a small marker where the click fell');
+});
+
+test('a left click on the open sea sails her there (simple HUD); a drag pans, a window or the HUD never leaks', async () => {
+  const { leftClickSea, CLICK_SLOP } = await import('../client/src/ui/deskinput.ts');
+  const base = { docked: false, simple: true, modal: false, moved: 0 };
+  assert.equal(leftClickSea(base), 'sail');
+  assert.equal(leftClickSea({ ...base, moved: CLICK_SLOP + 1 }), null, 'a drag is the view\'s');
+  assert.equal(leftClickSea({ ...base, modal: true }), null);
+  assert.equal(leftClickSea({ ...base, docked: true }), null);
+  assert.equal(leftClickSea({ ...base, simple: false }), 'fire', 'the detailed HUD fires as it always did');
+  // the press is only kept with nothing under it, and the lift must land on the sea itself (not the HUD, not a window)
+  assert.match(main, /seaPress = !mk && !pl \? \{ x: e\.clientX, y: e\.clientY \} : null;/);
+  const upAt = main.search(/addEventListener\('mouseup', \(e\) => \{\r?\n  const p = seaPress;/);
+  assert.ok(upAt > 0);
+  const up = main.slice(upAt, upAt + 400);
+  assert.match(up, /e\.target !== canvas/);
+  assert.match(up, /leftClickSea\(/);
+  assert.match(up, /sailToScreen\(e\.clientX, e\.clientY\)/);
 });
 
 test('Tab over an open window walks the window, not the sea\'s targets, and comes before the fields\' own keys', () => {
@@ -119,4 +140,29 @@ test('no forced layout each frame: the nav plate by an observer, its text only w
   assert.match(hud, /if \(nav !== this\.navHtml\) \$\('nav-text'\)\.innerHTML = this\.navHtml = nav;/);
   const ease = readFileSync(new URL('../client/src/ui/ease.ts', import.meta.url), 'utf8');
   assert.match(ease, /if \(now - this\.stackAskedAt < 500\) return this\.stackWas;/);
+});
+
+test('the level-up card is not modal for the game\'s keys: WASD, Space, the hotkeys go on; Esc and Enter are the card\'s', async () => {
+  const { keyPasses } = await import('../client/src/ui/kit/layer.ts');
+  for (const k of ['w', 'a', 's', 'd', 'ArrowUp', ' ', 'f', 'Tab', '1', 'Shift']) assert.equal(keyPasses(true, k, false), true, k);
+  assert.equal(keyPasses(true, 'Escape', false), false);
+  assert.equal(keyPasses(true, 'Enter', false), false);
+  assert.equal(keyPasses(true, ' ', true), false, 'the focus in the card (Enter, a click): its keys are the card\'s');
+  assert.equal(keyPasses(undefined, 'w', false), false, 'every other sheet stays modal');
+  const hero = readFileSync(new URL('../client/src/ui/hero.ts', import.meta.url), 'utf8');
+  assert.match(hero, /cls: 'lu-sheet', passKeys: true/);
+  const layer = readFileSync(new URL('../client/src/ui/kit/layer.ts', import.meta.url), 'utf8');
+  assert.match(layer, /if \(layer\.passKeys\) return;/, 'it takes no focus as it opens (Space would press a pick)');
+  const sheet = readFileSync(new URL('../client/src/ui/kit/sheet.ts', import.meta.url), 'utf8');
+  assert.match(sheet, /passKeys: o\.passKeys/);
+});
+
+test('a window open (the settings, any other): F and every ship\'s key wait; only the windows\' own keys and Esc act', async () => {
+  const { keyActsInWindow } = await import('../client/src/ui/deskinput.ts');
+  for (const a of ['dock', 'fire', 'firePort', 'sailUp', 'rudderLeft', 'dash', 'board', 'land', 'repair', 'target', 'talent1', 'abilityZ']) assert.equal(keyActsInWindow(a), false, a);
+  for (const a of ['map', 'journal', 'help', 'mute']) assert.equal(keyActsInWindow(a), true, a);
+  const at = main.indexOf('if (modal && !keyActsInWindow(act)) return;');
+  assert.ok(at > 0, 'wired in the keymap\'s handler');
+  // after the keymap's lookup and Esc's own branch, before the key is held or the switch acts
+  assert.ok(at > main.indexOf("if (k === 'escape') {") && at < main.indexOf('  keys.add(k);', at) && at < main.indexOf("    case 'dock': {"));
 });

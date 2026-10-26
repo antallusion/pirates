@@ -12,6 +12,9 @@
 @keyframes tf-bob { from { translate: 0 -6px; } to { translate: 0 1px; } }
 @keyframes tf-bob-up { from { translate: 0 6px; } to { translate: 0 -1px; } }
 @keyframes tf-bob-right { from { translate: -6px 0; } to { translate: 1px 0; } }
+/* (batch-pc: from the right, pointing left — where the left side would hide a price or a label) */
+#tut-finger.left .tf-hand { rotate: -90deg; animation-name: tf-bob-left; }
+@keyframes tf-bob-left { from { translate: 6px 0; } to { translate: -1px 0; } }
 /* The button itself ringed in gold (an outline: it follows the round buttons and moves nothing). */
 .tut-target { outline: 2px solid var(--gold, #e0b862); outline-offset: 3px; animation: tut-ring 1400ms ease-in-out infinite; }
 @keyframes tut-ring { 50% { outline-color: rgba(224, 184, 98, 0.3); outline-offset: 6px; } }

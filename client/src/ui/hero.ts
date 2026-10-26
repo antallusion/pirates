@@ -310,7 +310,7 @@ export function levelUpSheet(state: ClientState, send: (m: ClientMsg) => void): 
     }));
   };
   const sheet = openSheet({
-    title: W('cap.levelUp', { n: state.self?.level ?? 0 }), body: '', height: 'auto', cls: 'lu-sheet',
+    title: W('cap.levelUp', { n: state.self?.level ?? 0 }), body: '', height: 'auto', cls: 'lu-sheet', passKeys: true, // (batch-pc: WASD, Space, the hotkeys go on while it is up)
     foot: `<button type="button" class="k-btn k-btn--secondary k-btn--md" data-lulater>${esc(W('cap.later'))}</button>`,
     onClose: () => {
       clearInterval(timer);

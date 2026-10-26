@@ -11,6 +11,18 @@ export function rightClickAct(f: { docked: boolean; mount: boolean }): 'mount' |
   return f.mount ? 'mount' : 'sail';
 }
 
+/** A press that travelled this far (px) between down and up was a drag (the view panned), not a click. */
+export const CLICK_SLOP = 10;
+
+/** What a left click on the open sea does (nothing under it: no ship, stack, harbour, find). In the simple HUD — every
+ *  desk's own — the helmsman takes her there, as the right button does without a mount (before, it did nothing at all
+ *  on a PC: owner, 2026-10-26); in the detailed one it fires the side the cursor lies off, as it always did. A press
+ *  that was dragged (the view panned), one under an open window, or docked: nothing. */
+export function leftClickSea(f: { docked: boolean; simple: boolean; modal: boolean; moved: number }): 'sail' | 'fire' | null {
+  if (f.docked || f.modal || f.moved > CLICK_SLOP) return null;
+  return f.simple ? 'sail' : 'fire';
+}
+
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /** Tab in an open window walks its own controls, round and round (a focus trap), as the kit's sheets do (kit/layer.ts):
@@ -48,4 +60,13 @@ export function inField(e: { target: EventTarget | null }): boolean {
 export function soloModifier(k: string, e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }): boolean {
   const others = (e.altKey && k !== 'alt' ? 1 : 0) + (e.ctrlKey && k !== 'control' ? 1 : 0) + (e.metaKey ? 1 : 0) + (e.shiftKey && k !== 'shift' ? 1 : 0);
   return others === 0;
+}
+
+/** The keymap's actions that still act with a window open: the windows' own keys (one opens, or shuts, its window;
+ *  the harbour's brings the port back) and the sound. Every ship's order — F (to sea / dock), the guns, the sails, the
+ *  helm — waits until the window is shut (batch-pc, owner 2026-10-26: F undocked her under the settings). Esc is
+ *  handled before the keymap. */
+const WINDOW_KEYS = new Set(['map', 'journal', 'talents', 'ship', 'crew', 'company', 'help', 'harbour', 'mute', 'readAloud']);
+export function keyActsInWindow(act: string): boolean {
+  return WINDOW_KEYS.has(act);
 }

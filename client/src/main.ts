@@ -136,7 +136,7 @@ import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { TutorPointer, shotStage } from './ui/pointer.ts';
-import { rightClickAct, soloModifier, wheelZoom, windowTab } from './ui/deskinput.ts';
+import { keyActsInWindow, leftClickSea, rightClickAct, soloModifier, wheelZoom, windowTab } from './ui/deskinput.ts';
 import { resumeAfterEnd, resumeOn } from './ui/resumesail.ts';
 import { hereAct } from './ui/questact.ts'; // owner, 2026-10-23: a quest step done in this port
 import { buzz, guardVibrate } from './haptics.ts';
@@ -2956,6 +2956,8 @@ addEventListener('keydown', (e) => {
   if (e.isTrusted) modTap = null;
   const act = actionFor(settings().keys, k);
   if (!act) return;
+  // (batch-pc: with a window open only the windows' own keys act — F, the guns, the helm wait until it is shut)
+  if (modal && !keyActsInWindow(act)) return;
   // Arrows and Space must not scroll the page.
   if (k === ' ' || k.startsWith('arrow') || /^f\d+$/.test(k)) e.preventDefault();
   if (e.repeat && act !== 'rudderLeft' && act !== 'rudderRight') return;
@@ -3176,11 +3178,34 @@ canvas.addEventListener('mousedown', (e) => {
     if (pl.kind !== 'wreck') return; // (no broadside into a harbour clicked)
   } else if (!mk) selPlace = null;
   if (shipAtScreen(e.clientX, e.clientY) === null && sailToTap(e.clientX, e.clientY)) return; // seaux: a click on a thing on the sea sails her to it
-  // The simple HUD fires by its keys (Space, Q, E): a click only picks the mark. The detailed one fires the side the
-  // cursor lies off, as it always did.
-  if (simpleHud()) return;
+  // The simple HUD fires by its keys (Space, Q, E): a click on the open sea sails her there — on the button's lift, so
+  // a drag (the view panned, touch.ts) is not a course (batch-pc, owner 2026-10-26). The detailed one fires the side
+  // the cursor lies off, as it always did.
+  if (simpleHud()) {
+    seaPress = !mk && !pl ? { x: e.clientX, y: e.clientY } : null;
+    return;
+  }
   const side = sideUnderCursor();
   if (side) fire(side);
+});
+/** The left press on the open sea, waiting for its lift (the simple HUD's click-to-sail). */
+let seaPress: { x: number; y: number } | null = null;
+/** The helmsman to a point on screen, with a small ring where the click fell. */
+function sailToScreen(px: number, py: number): void {
+  if (!worldMap.onAutosail) return;
+  const m = renderer.toWorld(px, py);
+  const wp = { x: Math.round(m.x), y: Math.round(m.y) };
+  renderer.fx.add({ kind: 'ring', x: wp.x, y: wp.y, life: 0.6, size: 3, grow: 26, color: '#e8d9a8' });
+  setMark(wp);
+  worldMap.onAutosail(wp);
+}
+// (on the window: the lift may come over the HUD after a drag — no course then; a lift on a window is not the sea's)
+addEventListener('mouseup', (e) => {
+  const p = seaPress;
+  seaPress = null;
+  if (!p || e.button !== 0 || !inGame || e.target !== canvas) return;
+  const act = leftClickSea({ docked: !!state.self?.dockedAt, simple: simpleHud(), modal: !!modal, moved: Math.hypot(e.clientX - p.x, e.clientY - p.y) });
+  if (act === 'sail') sailToScreen(e.clientX, e.clientY);
 });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('mousedown', (e) => {
@@ -3188,12 +3213,7 @@ canvas.addEventListener('mousedown', (e) => {
   const m = mouseWorld();
   const act = rightClickAct({ docked: !!state.self?.dockedAt, mount: !!state.self?.loadout.mount });
   if (act === 'mount') net.send({ t: 'mount', x: Math.round(m.x), y: Math.round(m.y) });
-  else if (act === 'sail' && worldMap.onAutosail) {
-    // (batch-pc: no mount — the right button is the helm's «туда», as in every game of the kind)
-    const wp = { x: Math.round(m.x), y: Math.round(m.y) };
-    setMark(wp);
-    worldMap.onAutosail(wp);
-  }
+  else if (act === 'sail') sailToScreen(renderer.mouseX, renderer.mouseY); // (batch-pc: no mount — the right button is the helm's «туда»)
 });
 
 function mouseWorld(): { x: number; y: number } {

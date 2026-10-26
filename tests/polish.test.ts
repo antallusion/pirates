@@ -122,7 +122,9 @@ test('polish: the result ashore is one screen of three rows with no inner scroll
   assert.match(css, /\.tb-banner\.tb-end\.land \{ width: min\(560px, calc\(100% - 24px\)\); max-height: calc\(100% - 16px\); \}/);
   assert.match(css, /#toasts > \.toast\.tq-out \{ visibility: hidden; \}/);
   const hud = src('client/src/ui/hud.ts');
-  assert.match(hud, /t\.classList\.toggle\('tq-out', r\.left >= b\.right - 2/);
+  // (batch-pc: the rects read in one pass, then the classes written)
+  assert.match(hud, /return r\.left >= b\.right - 2 \|\| r\.right <= b\.left \+ 2/);
+  assert.match(hud, /t\.classList\.toggle\('tq-out', out\[i\]\)/);
 });
 
 test('polish: every control has a pressed, a disabled and a keyboard state; a finger\'s 40 px on touch; motion can be stilled', () => {

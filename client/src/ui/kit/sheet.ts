@@ -55,6 +55,8 @@ export interface SheetOpts {
   onEnter?: () => void;
   /** No close button in the head (a question has its own buttons). */
   noClose?: boolean;
+  /** Not modal for the game's keys (layer.ts `passKeys`): only Esc and Enter are the sheet's while it is shown. */
+  passKeys?: boolean;
 }
 
 export interface SheetHandle {
@@ -98,7 +100,7 @@ export function openSheet(o: SheetOpts): SheetHandle {
     setTimeout(() => root.remove(), dur('base'));
     o.onClose?.(why);
   };
-  const layer: Layer = { root: panel, onEscape: () => close('esc'), onEnter: o.onEnter };
+  const layer: Layer = { root: panel, onEscape: () => close('esc'), onEnter: o.onEnter, passKeys: o.passKeys };
   root.querySelector('.k-scrim')!.addEventListener('click', () => !o.modal && close('scrim'));
   root.querySelector('.k-sheet-x')?.addEventListener('click', () => close('button'));
   if (!o.modal) wireSheetSwipe(panel, () => close('swipe'));
