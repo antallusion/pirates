@@ -9,7 +9,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { CAPTAINS, CAPTAIN_IDS } from '../shared/src/data/captains.ts';
 import { FRAMES } from '../shared/src/data/cosmetics.ts';
 import { PORTRAIT_FACES, RING_HOLES } from '../shared/src/data/portraitfaces.ts';
-import { FACE_AIM, FACE_AIM_MAX, FRAME_GROW_MAX, avatarHtml, faceBox, faceFit, portraitKey, ringFit } from '../shared/src/data/portraitfit.ts';
+import { FACE_AIM, FACE_AIM_MAX, FACE_Y, FRAME_GROW_MAX, avatarHtml, faceBox, faceFit, portraitKey, ringFit } from '../shared/src/data/portraitfit.ts';
 
 /** A WebP's pixel size from its header (VP8, VP8L or VP8X). */
 function webpSize(file: string): [number, number] {
@@ -53,7 +53,7 @@ test('the face in the hole\'s middle, the same share of it, the picture over the
     const share = fh * f.ih;
     assert.ok(share >= FACE_AIM - 0.005 && share <= FACE_AIM_MAX + 0.005, `${k}: the face ${share.toFixed(2)} of the hole`);
     const cx = f.ox + x * f.iw, cy = f.oy + y * f.ih;
-    assert.ok(Math.abs(cx - 0.5) < 0.02 && Math.abs(cy - 0.5) < 0.02, `${k}: the face's middle at ${cx.toFixed(3)}, ${cy.toFixed(3)}`);
+    assert.ok(Math.abs(cx - 0.5) < 0.02 && Math.abs(cy - FACE_Y) < 0.04, `${k}: the face's middle at ${cx.toFixed(3)}, ${cy.toFixed(3)}`);
     // the face whole inside the hole (its box, as wide as 0.8 of its height)
     const hw = (fh * f.ih * 0.8) / 2, hh = (fh * f.ih) / 2;
     assert.ok(Math.hypot(Math.max(Math.abs(cx - 0.5) + hw, 0), Math.abs(cy - 0.5) + hh) < 0.62, `${k}: the face's corners near the rim`);

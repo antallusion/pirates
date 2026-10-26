@@ -17,8 +17,13 @@
 import { PORTRAIT_FACES, RING_HOLES } from './portraitfaces.ts';
 
 /** The share of the hole's height the face takes, and the most it may take for a face painted near its edge. */
-export const FACE_AIM = 0.6;
-export const FACE_AIM_MAX = 0.84;
+// (owner, 2026-10-26: «лица обрезаются рамкой, нужно брать вид более общий, чтобы часть тела залезала тоже … чтобы
+// голова на рамку не лезла» — head and shoulders: the face a third of the hole, a little above its middle, so the hat
+// and the hair stay inside the ring and the shoulders show below)
+export const FACE_AIM = 0.32;
+export const FACE_AIM_MAX = 0.6;
+/** Where the face's middle stands, as a share of the hole's height from its top. */
+export const FACE_Y = 0.44;
 /** The most a cosmetic frame is drawn wider than the avatar's box. */
 export const FRAME_GROW_MAX = 1.35;
 
@@ -55,7 +60,7 @@ export function faceFit(key: string, hole = 1, aim = FACE_AIM): FaceFit {
     const k = Math.max(1, 1 / iw, hole / ih);
     iw *= k;
     ih *= k;
-    const ox = 0.5 - cx * iw, oy = hole / 2 - cy * ih;
+    const ox = 0.5 - cx * iw, oy = hole * FACE_Y - cy * ih;
     const fits = ox <= 1e-9 && ox >= 1 - iw - 1e-9 && oy <= 1e-9 && oy >= hole - ih - 1e-9;
     if (fits || t >= FACE_AIM_MAX - 1e-9) {
       const x = Math.min(0, Math.max(1 - iw, ox)), y = Math.min(0, Math.max(hole - ih, oy));
