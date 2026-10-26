@@ -8,7 +8,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { FACES, FACE_DEFAULT, HEAD_SHARE, faceCrop } from '../client/src/ui/kit/faces.ts';
 import { actionFor, conflicts, defaults, keyLabel, PRESETS, sanitize } from '../client/src/settings.ts';
 import type { Keymap } from '../client/src/settings.ts';
 import { chipKey, deckSlotHtml, inFight, seaTargets } from '../client/src/ui/seahud.ts';
@@ -16,24 +15,6 @@ import type { SeaView } from '../client/src/ui/seahud.ts';
 import { EN as SEN, RU as SRU } from '../client/src/lang/ui/seahud.ts';
 import { EN } from '../client/src/lang/en.ts';
 import { RU } from '../client/src/lang/ru.ts';
-
-test('a captain\'s face: the head whole inside the circle, a little above its middle, the picture covering the circle', () => {
-  const aspect = 560 / 422;
-  for (const [id, f] of [...Object.entries(FACES), ['someone', FACE_DEFAULT] as const]) {
-    const c = faceCrop(id, aspect);
-    const s = parseFloat(c.size) / 100; // the picture's width in circles
-    const [px, py] = c.pos.split(' ').map((v) => parseFloat(v) / 100);
-    assert.ok(s >= 1 && s * aspect >= 1, `${id}: the picture covers the circle`);
-    assert.ok(px >= 0 && px <= 1 && py >= 0 && py <= 1, `${id}: no bare edge (${c.pos})`);
-    // the head in circle units (the circle 1 wide, its middle at 0.5, 0.5)
-    const left = px * (1 - s), top = py * (1 - s * aspect);
-    const hx = left + f[0] * s, hy = top + f[1] * s * aspect, hr = f[2] * s;
-    const d = Math.hypot(hx - 0.5, hy - 0.5) + hr;
-    assert.ok(d <= 0.5 + 1e-6, `${id}: the head reaches ${d.toFixed(3)} of the circle's 0.5`);
-    assert.ok(hr * 2 <= HEAD_SHARE + 0.01 && hr * 2 >= 0.24, `${id}: the head ${Math.round(hr * 200)}% of the circle`);
-    assert.equal(c.face, f.join(' '));
-  }
-});
 
 test('a picture in a round frame: a rounded square of 0.56 with 14% corners stands inside the porthole ring\'s open circle; 0.52 inside the kit\'s', () => {
   // the farthest point of a rounded square of side s (corners r = k·s) from its middle
@@ -53,7 +34,8 @@ test('a picture in a round frame: a rounded square of 0.56 with 14% corners stan
   const css = readFileSync('client/seahud.css', 'utf8');
   assert.match(css, /body\.simple \.sea-round \.k-btn-ico \{[^}]*inset: 22%;[^}]*width: 56%; height: 56%; border-radius: 14%; object-fit: contain/);
   assert.match(css, /body\.simple \.sea-round::after, body\.simple #touch > \.tc-big::after \{ content: ''; position: absolute; inset: -11%;[^}]*background: var\(--ui-ring\)/);
-  assert.match(css, /\.cs-frame::after \{ content: ''; position: absolute; inset: calc\(var\(--cs-face\) \* -0\.32\);[^}]*var\(--ui-ring\)/);
+  // (her face is the avatar now, kit/avatar.ts: the ring 1.64 times the frame's box, over its middle; tests/portraitfit.test.ts)
+  assert.match(css, /\.cs-frame > \.cs-face \{ position: absolute; left: 50%; top: 50%; --pav: calc\(var\(--cs-face\) \* 1\.64\);/);
   assert.match(css, /\.k-btn--icon \.k-btn-ico \{ inset: 24%; width: 52%; height: 52%; border-radius: 14%; \}/);
   assert.match(css, /\.tb-rb > \.ico \{ inset: 24%; width: 52%; height: 52%; object-fit: contain; border-radius: 14%; \}/);
 });

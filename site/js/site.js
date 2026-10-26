@@ -1,4 +1,20 @@
 // GRAVETIDE website: the reveal on scroll, the phone menu and the bestiary's filters. No libraries.
+
+/** A face in its ring for the pages' scripts (the rating, the shop): the same markup as the game's and the built pages'
+ *  (shared/src/data/portraitfit.ts avatarHtml; owner, 2026-10-26: «все лица должны находиться четко во фрейме»). `fit`
+ *  the face's background size and position (the page's data: tools/site/build.ts avatarData), `ring` the ring's place in
+ *  the box ({ url, hole, w, h, left, top }: shares of the box's side), `size` the box's side (a CSS length). */
+window.gtAvatar = ({ src, fit, ring, size, cls = '', attrs = '' }) => {
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const pct = (v) => `${Math.round(v * 10000) / 100}%`;
+  const hole = ring ? ring.hole : 1;
+  const inset = pct((1 - hole) / 2);
+  const bg = src ? `;background-image:url('${esc(src).replace(/'/g, '%27')}');background-size:${fit ? fit.size : 'cover'};background-position:${fit ? fit.pos : '50% 20%'}` : '';
+  const face = `<span class="pav-face" style="left:${inset};top:${inset};width:${pct(hole)};height:${pct(hole)}${bg}"></span>`;
+  const r = ring && ring.url ? `<img class="pav-ring" src="${esc(ring.url)}" alt="" loading="lazy" decoding="async" style="left:${pct(ring.left)};top:${pct(ring.top)};width:${pct(ring.w)};height:${pct(ring.h)}">` : '';
+  return `<span class="pav${ring ? (ring.url ? '' : ' pav-rim') : ' pav-bare'}${cls ? ` ${cls}` : ''}"${size ? ` style="--pav:${esc(size)}"` : ''}${attrs ? ` ${attrs}` : ''}>${face}${r}</span>`;
+};
+
 (() => {
   const d = document;
   // An old link into the game at the root (a reset, a verified address, a login token, Telegram's data) goes on to /play.

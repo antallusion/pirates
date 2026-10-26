@@ -128,9 +128,9 @@ button { font-family: var(--sans); }
 
 /* Unit frame: the captain's portrait in its ring, name, silver and the ship's three lives. */
 .unit-frame { position: absolute; top: calc(var(--sa-t) + 8px); left: calc(var(--sa-l) + 8px); width: min(calc(100vw - var(--mm) - 36px), 340px); display: flex; gap: 10px; align-items: center; pointer-events: auto; cursor: pointer; }
-.uf-portrait { position: relative; flex: none; width: var(--uf-p); height: var(--uf-p); border-radius: 50%; background: #111 center 18% / cover; box-shadow: 0 0 0 2px var(--brass-dim), 0 0 12px #000; }
-.skinned .uf-portrait { box-shadow: 0 0 10px #000; }
-.skinned .uf-portrait::after { content: ''; position: absolute; inset: -17% -21% -21% -17%; background: var(--ui-portrait-ring) center / 100% 100% no-repeat; pointer-events: none; }
+/* her face in the unit frame's ring (kit/avatar.ts): the ring 1.4 times the portrait's place, its hole about it */
+.uf-portrait { position: relative; flex: none; width: var(--uf-p); height: var(--uf-p); border-radius: 50%; }
+.uf-portrait > .uf-av { position: absolute; left: 50%; top: 50%; --pav: calc(var(--uf-p) * 1.4); transform: translate(-50%, -50%); }
 .uf-level { position: absolute; right: -10%; bottom: -10%; width: 38%; height: 38%; display: flex; align-items: center; justify-content: center; z-index: 2; font: 700 11px var(--sans); color: var(--gold); background: radial-gradient(circle, #16110b 55%, transparent 60%); border-radius: 50%; }
 .uf-body { flex: 1; min-width: 0; padding: 4px 8px 5px; background: linear-gradient(90deg, rgba(10, 11, 13, 0.9), rgba(10, 11, 13, 0.6)); border: 1px solid rgba(111, 90, 56, 0.5); border-radius: 3px; }
 .uf-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
@@ -1105,7 +1105,6 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
 .skinned .modal-head h2, .skinned .title-sm { line-height: 1.2; padding-top: 2px; padding-bottom: 1px; }
 /* The captain's ring sits true: the painted ring keeps its own proportions and its hole is centred on the
    portrait (the old box stretched it and set the hole low, so the face looked pushed up and left). */
-.skinned .uf-portrait::after { inset: -28.6% -20.9% -19.8% -19.1%; background-size: 100% 100%; }
 /* The level: a brass-rimmed medallion on the ring's lower right, the number in its middle. */
 .uf-level { right: -12%; bottom: -10%; width: 44%; height: 44%; background: radial-gradient(circle at 40% 35%, #2a2016, #0c0906 70%); border: 2px solid #c9a25a; box-shadow: 0 1px 4px #000, inset 0 0 4px rgba(0, 0, 0, 0.8); font: 700 12px/1 var(--sans); color: #f0d48e; text-shadow: 0 1px 2px #000; z-index: 3; }
 /* The touch block is as tall as its tallest column (the sail arrows and their steps), so the action bar
@@ -4290,7 +4289,7 @@ body.touch .act-btn { --h: 38px; }
 .ar-last.lost { color: var(--bad); }
 .ar-go b { color: var(--bone); font-variant-numeric: tabular-nums; }
 .ar-table { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
-.ar-table li { display: flex; gap: 8px; align-items: baseline; padding: 3px 8px; border-radius: 4px; background: rgba(20, 16, 10, 0.4); font-size: 13px; }
+.ar-table li { display: flex; gap: 8px; align-items: center; padding: 3px 8px; border-radius: 4px; background: rgba(20, 16, 10, 0.4); font-size: 13px; }
 .ar-table li i { font-style: normal; color: var(--fog); min-width: 1.8em; }
 .ar-table li b { flex: 1; min-width: 0; font-weight: 600; color: var(--bone); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ar-table li span { flex: none; font-variant-numeric: tabular-nums; color: var(--gold); }
@@ -4312,7 +4311,7 @@ body.touch .act-btn { --h: 38px; }
 .ar-seat.foe.turn { box-shadow: 0 0 0 1px #c4574a, 0 0 12px rgba(196, 87, 74, 0.25); }
 .ar-who { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .ar-who .ico-md { width: 34px; height: 34px; flex: none; object-position: 50% 18%; }
-.ar-who span { display: flex; flex-direction: column; min-width: 0; }
+.ar-who span:not(.pav):not(.pav-face) { display: flex; flex-direction: column; min-width: 0; }
 .ar-who b { font-size: 13px; line-height: 1.15; color: var(--bone); overflow: hidden; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; } /* (a legend's name in up to three lines: in one, «Мрачный Хэлл…», 128 > 94 px; «Счастливица Бесс Тэрроу» takes three at 812×375 — docs/19 E19) */
 .ar-who small { font-size: 11px; color: var(--fog); white-space: nowrap; }
 .ar-pts { font-size: 12px; color: var(--gold); font-variant-numeric: tabular-nums; }
@@ -4361,6 +4360,7 @@ body.touch .act-btn { --h: 38px; }
   .ar-clock { min-width: 26px; height: 26px; }
   .ar-seat { padding: 4px; gap: 3px; }
   .ar-who .ico-md { width: 28px; height: 28px; }
+  .ar-who .ar-who-face { --pav: 36px !important; }
   .ar-who b { font-size: 12px; }
   .ar-who small, .ar-pts { font-size: 11px; }
   .ar-bans { min-height: 18px; }
@@ -4379,7 +4379,7 @@ body.touch .act-btn { --h: 38px; }
 @media (max-width: 699px) {
   .ar-draft { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-areas: 'you turn foe' 'pool pool pool' 'sel sel sel'; grid-template-rows: auto; gap: 3px 6px; }
   .ar-seat { flex-direction: row; align-items: center; gap: 4px 6px; padding: 2px 6px; }
-  .ar-seat .ar-bans, .ar-seat .ar-army, .ar-who small, .ar-who .ico-md { display: none; }
+  .ar-seat .ar-bans, .ar-seat .ar-army, .ar-who small, .ar-who .ico-md, .ar-who .ar-who-face { display: none; }
   .ar-who b { font-size: 12px; }
   .ar-turn { flex-wrap: nowrap; }
   .ar-turn .th-chip, .ar-turn > span:not(.th-chip) { display: none; }
@@ -5218,7 +5218,7 @@ body.touch #hud-bottom { pointer-events: none; }
 
 /* The mini portrait: the captain's face, her level, two thin bars (hull, crew) — information, not a button. */
 body.touch #hud-captain { width: auto; gap: 6px; pointer-events: none; cursor: default; top: calc(var(--sa-t) + 8px); left: calc(var(--sa-l) + 8px); }
-body.touch #hud-captain .uf-portrait { width: 44px; height: 44px; }
+body.touch #hud-captain .uf-portrait { --uf-p: 44px; width: 44px; height: 44px; }
 body.touch #hud-captain .uf-body { flex: none; width: 104px; padding: 0; background: none; border: 0; border-image: none; box-shadow: none; }
 body.touch #hud-captain :is(.uf-top, .uf-sub, .fbar.sails, .fbar.xp) { display: none; }
 body.touch #hud-captain .fbar { height: 7px; margin: 4px 0 0; border-radius: 4px; overflow: hidden; border: 1px solid rgba(5, 6, 7, 0.9); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }

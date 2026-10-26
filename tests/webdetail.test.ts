@@ -100,7 +100,7 @@ test('every item of the catalogue has its card, with the blocks of its kind', ()
           assert.ok(prev.length >= 1, `${id}: a preview`);
           for (const c of prev) {
             if (c.k === 'title' || c.k === 'plate') assert.ok(c.plate && c.words, `${id}: the plate with its words`);
-            if (c.k === 'frame') assert.ok(c.art && c.face && c.scale, `${id}: the frame round a face`);
+            if (c.k === 'frame') assert.ok(c.art && c.face && c.fit && c.ring && c.ring.hole > 0.3, `${id}: the frame round a face`);
             if (c.k === 'emblem' || c.k === 'cloth') assert.ok(c.rgb && c.emblem && c.ship, `${id}: the flag on a ship`);
             if (c.k === 'trail') assert.ok(c.c && c.ship, `${id}: the wake`);
             if (c.k === 'emote') assert.ok(c.emotes!.length && c.emotes!.every((e) => e.art), `${id}: the emotes`);

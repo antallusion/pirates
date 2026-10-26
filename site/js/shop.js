@@ -201,13 +201,20 @@
     if (!data.sea || (!seaMod && !root.querySelector('canvas.tr-sea'))) return;
     (seaMod ||= import('/site/js/trails.js').then((m) => m.seaLoop(data.sea))).then((m) => m.scan(), () => { seaMod = null; });
   };
+  /** A captain's face in the site's brass ring (site.js gtAvatar: the face in the hole's middle; owner, 2026-10-26).
+   *  `src` her portrait's address (its file names the captain), `size` the box's side or none (the stylesheet's). */
+  const capFace = (src, size, cls = '') => {
+    const id = (/portraits\/([\w-]+)\./.exec(src || '') || [])[1];
+    return window.gtAvatar({ src, fit: id && data.cos.fits ? data.cos.fits[id] : null, ring: data.cos.ring, size, cls });
+  };
   const artOf = (x) => {
     const src = x.art && data.art[x.art];
     const cls = x.kind === 'captain' ? ' face' : x.kind === 'ship' ? ' hull' : (x.art || '').startsWith('unit.') ? ' fig' : x.kind === 'pack' ? ' coin' : (x.art || '').startsWith('cos.plate_') ? ' plate' : '';
     const label = x.label ? `<span class="sc-label" style="color:${esc(x.ink || '#f2e6c8')};text-shadow:0 0 6px ${esc(x.halo || '#000')},0 1px 2px ${esc(x.halo || '#000')}">${esc(L(x.label))}</span>` : '';
     const trail = trailOf(x);
     if (trail) return `<div class="shop-art sea"><canvas class="tr-sea" data-trail="${esc(trail)}" aria-hidden="true"></canvas>${ribbon(x)}</div>`;
-    return `<div class="shop-art${cls}${x.swatch ? ' sw' : ''}"${x.swatch ? ` style="--sw:${esc(x.swatch)}"` : ''}>${src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async">` : ''}${label}${ribbon(x)}${flagOf(x)}</div>`;
+    const pic = !src ? '' : x.kind === 'captain' ? capFace(src, '', 'shop-cap') : `<img src="${esc(src)}" alt="" loading="lazy" decoding="async">`;
+    return `<div class="shop-art${cls}${x.swatch ? ' sw' : ''}"${x.swatch ? ` style="--sw:${esc(x.swatch)}"` : ''}>${pic}${label}${ribbon(x)}${flagOf(x)}</div>`;
   };
   const btnLabel = (x, why, single, its) => {
     if (!single) return optInner(x, its, why);
@@ -386,7 +393,7 @@ ${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n
     }
     const src = captain.captain && data.cos.portraits[captain.captain];
     const where = captain.online ? `${t.atSea}${captain.port ? `, ${t.inPort}` : ''}` : t.offline;
-    who.innerHTML = `<span class="shop-face">${src ? `<img src="${esc(src)}" alt="">` : ''}</span><span class="shop-who-txt"><span class="kicker">${esc(t.to)}</span><b>${esc(captain.name)}</b>
+    who.innerHTML = `${capFace(src, '', 'shop-face')}<span class="shop-who-txt"><span class="kicker">${esc(t.to)}</span><b>${esc(captain.name)}</b>
 <span class="muted">${captain.captain ? `${esc(data.cos.names[captain.captain] || '')} · ${esc(t.level)} ${captain.level} · ${esc(where)}` : esc(t.noCap)}</span></span><button type="button" class="btn-oak sm">${esc(t.change)}</button>`;
     who.querySelector('button').addEventListener('click', () => { captain = null; F.mine = false; writeUrl(false); drawWho(); draw(); pdFoot(); input.focus(); });
     who.hidden = false;
@@ -583,7 +590,7 @@ ${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n
     const sp = c.span || [0.22, 0.78];
     const words = (w) => `<span class="pd-words" style="left:${(sp[0] * 100).toFixed(1)}%;right:${((1 - sp[1]) * 100).toFixed(1)}%;color:${esc(c.ink || '#f2e6c8')};text-shadow:0 0 6px ${esc(c.halo || '#000')},0 1px 2px ${esc(c.halo || '#000')}">${esc(L(w))}</span>`;
     if (c.k === 'title' || c.k === 'plate') return `<figure class="pd-cos plate">${c.k === 'plate' ? `<small class="muted">${esc(t.sample)}</small>` : ''}<span class="pd-plate">${im(c.plate, '', 512, 144)}${words(c.words)}</span>${name}</figure>`;
-    if (c.k === 'frame') return `<figure class="pd-cos frame"><span class="pd-frame" style="--k:${Number(c.scale) || 1.4}">${im(c.face, 'face', 120, 120)}${im(c.art, 'ring', 256, 256)}</span>${name}</figure>`;
+    if (c.k === 'frame') return `<figure class="pd-cos frame">${window.gtAvatar({ src: c.face, fit: c.fit, ring: c.ring ? { ...c.ring, url: c.art } : null, cls: 'pd-frame' })}${name}</figure>`;
     if (c.k === 'emblem' || c.k === 'cloth') return `<figure class="pd-cos flag"><span class="pd-sea"><span class="pd-flag big" style="--rgb:${esc(c.rgb || '#333')}">${im(c.emblem, '', 64, 64)}</span><span class="pd-mship">${im(c.ship, '', 120, 240)}<span class="pd-flag" style="--rgb:${esc(c.rgb || '#333')}">${im(c.emblem, '', 64, 64)}</span></span></span>${name}</figure>`;
     if (c.k === 'trail' && c.trail && data.sea && data.sea.trails[c.trail]) return `<figure class="pd-cos trail"><span class="pd-sea live"><canvas class="tr-sea" data-trail="${esc(c.trail)}" aria-hidden="true"></canvas></span>${name}</figure>`;
     if (c.k === 'trail') return `<figure class="pd-cos trail"><span class="pd-sea"><span class="pd-wake${c.glow ? ' glow' : ''}" style="--c1:${esc(c.c[0])};--c2:${esc(c.c[1])}">${'<i></i>'.repeat(9)}</span><span class="pd-mship run">${im(c.ship, '', 120, 240)}</span></span>${name}</figure>`;
@@ -610,7 +617,7 @@ ${artOf(x)}<div class="shop-body"><span class="sc-cat">${esc(section)}</span>${n
     const at = (q) => `left:${+q[0]}%;top:${+q[1]}%;width:${+q[2]}%;height:${+q[3]}%`;
     const fit = hz.alt && hz.cls === 'fig' && hz.fit && hz.art ? hz.fit : null;
     const two = fit ? `<span class="fitstage" style="--r:${+fit.ar};--fb:6%;--fw:96cqw"><img src="${esc(hz.art)}" alt="${esc(L(x.title))}" class="p0" style="${at(fit.a)}" decoding="async"><img src="${esc(hz.alt)}" alt="" class="p1" style="${at(fit.b)}" decoding="async"></span>`
-      : hz.alt && hz.cls === 'fig' ? `${im(hz.art, 'p0', 240, 300, L(x.title))}${im(hz.alt, 'p1', 240, 300)}` : hz.cls === 'face' ? `<span class="cap-ring">${im(hz.art, '', 300, 300, L(x.title))}</span>${hz.alt ? im(hz.alt, 'pd-hfig', 160, 300) : ''}` : im(hz.art, '', 300, 300, L(x.title));
+      : hz.alt && hz.cls === 'fig' ? `${im(hz.art, 'p0', 240, 300, L(x.title))}${im(hz.alt, 'p1', 240, 300)}` : hz.cls === 'face' ? `${capFace(hz.art, '', 'cap-ring')}${hz.alt ? im(hz.alt, 'pd-hfig', 160, 300) : ''}` : im(hz.art, '', 300, 300, L(x.title));
     return `<div class="pd-art ${hz.cls}${x.swatch ? ' sw' : ''}${hz.alt && hz.cls === 'fig' ? ' anim' : ''}${fit ? ' fitbox' : ''}"${x.swatch ? ` style="--sw:${esc(x.swatch)}"` : ''}>${two}${label}${ribbon(x)}</div>`;
   };
   const opts = (x) => {
@@ -660,7 +667,7 @@ ${tabs.map((tb) => `<section class="pd-panel" role="tabpanel" id="pdp-${tb.id}" 
     pdBuyEl.innerHTML = `<div class="pd-price"><b><img src="${esc(data.coin)}" alt="" width="24" height="24">${grp(x.rub)}<small>${NB}${esc(t.rub)}</small></b>${sub ? `<span class="muted">${esc(sub)}</span>` : ''}</div>
 <button type="button" class="btn-gold pd-go${why ? ' off' : ''}" data-pd-buy${why || busy ? ' disabled' : ''}>${busy === x.id ? esc(t.paying) : why ? esc(t[`w_${why}`] || t.w_gone) : `${esc(t.buy)} · ${esc(rub(x.rub))}`}</button>`;
     if (captain) {
-      pdWho.innerHTML = `<span class="pd-for">${captain.captain && data.cos.portraits[captain.captain] ? im(data.cos.portraits[captain.captain], '', 28, 28) : ''}<span>${esc(t.forCap)} <b>«${esc(captain.name)}»</b>${captain.captain ? ` · ${esc(t.lv)} ${captain.level}` : ''}</span></span>${pdNeed === 'mail' ? `<label class="search pd-mail"><input type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="${esc(t.email)}" aria-label="${esc(t.email)}" value="${esc(mailIn.value)}"></label>` : ''}`;
+      pdWho.innerHTML = `<span class="pd-for">${captain.captain && data.cos.portraits[captain.captain] ? capFace(data.cos.portraits[captain.captain], '34px') : ''}<span>${esc(t.forCap)} <b>«${esc(captain.name)}»</b>${captain.captain ? ` · ${esc(t.lv)} ${captain.level}` : ''}</span></span>${pdNeed === 'mail' ? `<label class="search pd-mail"><input type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="${esc(t.email)}" aria-label="${esc(t.email)}" value="${esc(mailIn.value)}"></label>` : ''}`;
     } else if (pdNeed === 'nick') {
       pdWho.innerHTML = `<form class="pd-nick"><label class="search"><input name="nick" maxlength="24" autocomplete="nickname" autocapitalize="off" spellcheck="false" placeholder="${esc(t.step1)}" aria-label="${esc(t.step1)}" value="${esc(input.value)}"></label><button class="btn-oak sm" type="submit">${esc(t.find)}</button></form>`;
     } else pdWho.innerHTML = '';

@@ -11,6 +11,7 @@ import { serverText } from '../lang/server.ts';
 import { SHIP_CLASSES, GUNS } from '../../../shared/src/data/ships.ts';
 import { TREES } from '../../../shared/src/data/talents.ts';
 import { assetUrl } from '../assets.ts';
+import { faceBgStyle } from '../../../shared/src/data/portraitfit.ts'; // her face in the card's middle (owner, 2026-10-26)
 import { $, esc, icon, quote } from './dom.ts';
 import { dict, onLang, t } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/captain.ts';
@@ -100,7 +101,7 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
         ? `<span class="cpx-price" title="${esc(L('lockedTitle', { price: priceText(captainPrice(id)) }))}">${lockSvg()}${priceHtml(captainPrice(id), { cls: 'cpx-pr' })}</span>`
         : `<span class="cpx-price owned">${esc(L(shop.owned.has(id) ? 'premiumOwned' : 'premiumShort'))}</span>`;
       return `<button type="button" class="captain-card cpx-cap${id === current ? ' active' : ''}${shut ? ' cc-shut' : ''}" data-id="${id}" role="option" aria-selected="${id === current}" aria-label="${esc(c.archetype)}">
-        <span class="cpx-face" style="background-image:${art(c.portrait)}"><span class="cpx-school" style="background-image:${art(`icon.school_${id}`)}"></span></span>${tag}</button>`;
+        <span class="cpx-face" style="background-image:${art(c.portrait)};${faceBgStyle(c.portrait, 4 / 3, 0.3)}" data-pav="${id}"><span class="cpx-school" style="background-image:${art(`icon.school_${id}`)}"></span></span>${tag}</button>`;
     }).join('');
     list.querySelectorAll<HTMLElement>('.captain-card').forEach((el) => (el.onclick = () => {
       if (current === el.dataset.id) return;

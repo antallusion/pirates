@@ -62,7 +62,7 @@ export function inspectDialog(v: InspectView, acts: InspectActs, opts: { friend:
   const face = cap ? assetUrl(cap.portrait) : null;
   const stat = (k: keyof typeof EN, n: number | string) => `<div class="insp-stat"><span class="muted">${esc(L(k))}</span><b>${esc(String(n))}</b></div>`;
   const body = `<div class="giver insp">
-      ${v.frame && cap ? `<div class="insp-framed">${framedFace({ id: cap.portrait, url: face }, v.frame, 84, 1.8)}</div>` : face ? `<div class="giver-face" style="background-image:url('${face}')"></div>` : ''}
+      ${cap ? `<div class="insp-framed">${framedFace({ id: cap.portrait, url: face }, v.frame)}</div>` : ''}
       <div class="giver-words">
         <h3 id="confirm-text" class="giver-name">${esc(v.name)}</h3>
         ${v.cosTitle && v.plate ? plateHtml(v.plate, v.cosTitle) : ''}

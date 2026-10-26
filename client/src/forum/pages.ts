@@ -4,7 +4,7 @@ import { api, BASE, count, errText, esc, fmtNum, fullDate, href, ico, K, LANG, l
 import { mountEditor } from './editor.ts';
 import type { Editor } from './editor.ts';
 import {
-  avatar, badges, charLine, crumbs, empty, freshAside, guildTag, loginCta, medalName, medals, memberCard, nick, pager, postCard,
+  avatar, badges, charLine, crumbs, empty, faceSpan, freshAside, guildTag, loginCta, medalName, medals, memberCard, nick, pager, postCard,
   rankBadge, rankLine, rankName, roleBadge, sectionRow, tint, topicHref, topicRow, userHref, when,
 } from './parts.ts';
 
@@ -345,7 +345,7 @@ export async function settings(c: Ctx): Promise<void> {
   const cur = me.user.avatar as string;
   c.root.innerHTML = `<section class="panel f-settings reveal"><h3>${esc(t('p_main_char'))}</h3>
 <div class="f-chars">${(me.chars ?? []).length ? me.chars!.map((ch) => `<label class="f-charpick"><input type="radio" name="main" value="${esc(ch.id)}" checked>${charLine(ch)}</label>`).join('') : `<span class="muted">${esc(t('p_no_char'))}</span>`}</div>
-<h3>${esc(t('p_avatar'))}</h3><div class="f-avatars" role="radiogroup" aria-label="${esc(t('p_avatar'))}">${(me.avatars ?? []).map((a) => `<button type="button" class="f-avpick${cur.endsWith(`/${a}.webp`) ? ' on' : ''}" data-av="${esc(a)}" role="radio" aria-checked="${cur.endsWith(`/${a}.webp`)}"><img src="/assets/portraits/${esc(a)}.webp" alt="" width="64" height="64" loading="lazy" decoding="async"></button>`).join('')}</div>
+<h3>${esc(t('p_avatar'))}</h3><div class="f-avatars" role="radiogroup" aria-label="${esc(t('p_avatar'))}">${(me.avatars ?? []).map((a) => `<button type="button" class="f-avpick${cur.endsWith(`/${a}.webp`) ? ' on' : ''}" data-av="${esc(a)}" role="radio" aria-checked="${cur.endsWith(`/${a}.webp`)}">${faceSpan(`/assets/portraits/${a}.webp`, 'f-avpick-face')}</button>`).join('')}</div>
 <div class="f-ed-foot"><a class="btn-oak sm" href="${userHref(me.user)}">${esc(t('back'))}</a><button type="button" class="btn-gold sm f-save">${esc(t('p_save'))}</button></div></section>`;
   let pick: string | null = null;
   c.root.querySelector('.f-avatars')!.addEventListener('click', (ev) => {

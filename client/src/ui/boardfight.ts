@@ -10,6 +10,7 @@ import { assetUrl } from '../assets.ts';
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/boardfight.ts';
 import { $, esc, icon } from './dom.ts';
+import { faceAttrs } from './kit/faces.ts'; // her face in the circle's middle (shared/src/data/portraitfit.ts)
 import { placeName } from './maps.ts';
 
 const L = dict(EN, RU);
@@ -117,7 +118,7 @@ export class BoardFightPanel {
     const url = s.captain ? assetUrl(CAPTAINS[s.captain].portrait) : null;
     const pct = (x: number) => `${Math.round(Math.max(0, Math.min(1, x)) * 100)}%`;
     return `<div class="bf-side ${who}">
-      <div class="bf-face" style="background-image:${url ? `url('${url}')` : 'none'}"></div>
+      <div class="bf-face" ${url && s.captain ? faceAttrs(CAPTAINS[s.captain].portrait, url) : ''}></div>
       <div class="bf-meters">
         <b class="bf-name">${esc(who === 'you' ? L('you') : placeName(s.name))}</b>
         <div class="bf-meter crew" title="${esc(L('crew'))}"><span>${esc(L('crew'))}</span><i><u style="width:${pct(s.crew / Math.max(1, s.crewStart))}"></u></i><em>${s.crew}</em></div>

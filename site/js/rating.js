@@ -17,11 +17,11 @@
   const nf = new Intl.NumberFormat(data.lang === 'ru' ? 'ru-RU' : 'en-GB');
   const cache = new Map();
 
-  /** A face in its frame (the frame drawn wider than the face, its hole just over it). */
+  /** A face in its frame, or in the site's brass ring when none is worn (site.js gtAvatar: the face in the hole's
+   *  middle, the ring and the portrait one box that never shrinks). `size` the box's side. */
   const face = (captain, frame, size) => {
-    const src = cos.portraits[captain];
-    const f = frame && cos.frames[frame];
-    return `<span class="rt-av${f && f.url ? ' framed' : ''}" style="--av:${size}px${f ? `;--k:${f.k}` : ''}">${src ? `<img class="rt-face" src="${esc(src)}" alt="" loading="lazy" decoding="async">` : ''}${f && f.url ? `<img class="rt-ring" src="${esc(f.url)}" alt="" loading="lazy" decoding="async">` : ''}</span>`;
+    const f = frame && cos.frames[frame] && cos.frames[frame].url ? cos.frames[frame] : null;
+    return window.gtAvatar({ src: cos.portraits[captain], fit: cos.fits[captain], ring: f || cos.ring, size: `${size}px`, cls: `rt-av${f ? ' framed' : ''}` });
   };
   /** Her title on its plate, as other captains see it over her ship. */
   const plate = (title, plateId) => {
@@ -46,7 +46,7 @@
     if (b !== 'level') return `<i>${esc(t.lvl)} ${r.level}</i>`;
     return '';
   };
-  const rowHtml = (b, r) => `<li class="rt-row${r.rank <= 3 ? ` top top${r.rank}` : ''}"><span class="rt-rank">${r.rank}</span>${face(r.captain, r.frame, 48)}
+  const rowHtml = (b, r) => `<li class="rt-row${r.rank <= 3 ? ` top top${r.rank}` : ''}"><span class="rt-rank">${r.rank}</span>${face(r.captain, r.frame, 60)}
 <span class="rt-who"><b class="rt-name">${esc(r.name)}${r.guild ? ` <span class="rt-tag">[${esc(r.guild)}]</span>` : ''}</b>${plate(r.title, r.plate)}<span class="rt-cap">${esc(cos.names[r.captain] || '')}</span></span>
 <span class="rt-val">${value(b, r)}${sub(b, r)}</span></li>`;
   const guildHtml = (r) => `<li class="rt-row guild${r.rank <= 3 ? ` top top${r.rank}` : ''}"><span class="rt-rank">${r.rank}</span><span class="rt-gtag">${esc(r.tag)}</span>
@@ -111,7 +111,7 @@
         const n = v.ranks[b.id];
         return `<li><button type="button" data-go="${b.id}"><span>${esc(b.name)}</span><b>${n ? `#${nf.format(n)}` : esc(t.out)}</b></button></li>`;
       }).join('');
-      found.innerHTML = `<div class="rt-card panel">${face(c.captain, c.frame, 84)}<div class="rt-card-txt"><p class="kicker">${esc(t.you)}</p><h3>${esc(c.name)}${c.guild ? ` <span class="rt-tag">[${esc(c.guild)}]</span>` : ''}</h3>${plate(c.title, c.plate)}
+      found.innerHTML = `<div class="rt-card panel">${face(c.captain, c.frame, 108)}<div class="rt-card-txt"><p class="kicker">${esc(t.you)}</p><h3>${esc(c.name)}${c.guild ? ` <span class="rt-tag">[${esc(c.guild)}]</span>` : ''}</h3>${plate(c.title, c.plate)}
 <p class="muted">${esc(cos.names[c.captain] || '')} · ${esc(t.lvl)} ${c.level}</p></div><button type="button" class="rt-x" aria-label="${esc(t.close)}">×</button>
 <div class="rt-places"><p class="kicker">${esc(t.ranks)}</p><ul>${places}</ul></div></div>`;
       found.querySelector('.rt-x').addEventListener('click', () => { found.hidden = true; found.innerHTML = ''; });

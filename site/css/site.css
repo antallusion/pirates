@@ -234,16 +234,25 @@ p { margin: 0 0 1em; }
 .chiplink img { width: 40px; height: 40px; object-fit: contain; border-radius: 50%; background: #0a0e18; }
 .back { margin-top: 36px; }
 
+/* ---- a portrait in its ring (shared/src/data/portraitfit.ts avatarHtml, the game's own; owner, 2026-10-26: «все лица
+   должны находиться четко во фрейме»): a square box that never shrinks; the hole, the portrait (its background, the face
+   in the middle) and the ring are shares of its side, so they grow and shrink together at every size */
+.pav { position: relative; display: inline-block; margin: 0; padding: 0; border: 0; border-radius: 50%; background: none; box-shadow: none; vertical-align: middle; line-height: 1; }
+.pav.pav { flex: none !important; box-sizing: border-box !important; width: var(--pav, 48px) !important; height: var(--pav, 48px) !important; min-width: var(--pav, 48px) !important; min-height: var(--pav, 48px) !important; max-width: none !important; max-height: none !important; aspect-ratio: 1 !important; }
+.pav > .pav-face { position: absolute; box-sizing: border-box; border-radius: 50%; background-color: #0a0e18; background-repeat: no-repeat; box-shadow: inset 0 0 calc(var(--pav, 48px) * 0.08) rgba(0, 0, 0, 0.65); }
+.pav > .pav-ring { position: absolute; z-index: 1; display: block; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; pointer-events: none; filter: drop-shadow(0 calc(var(--pav, 48px) * 0.03) calc(var(--pav, 48px) * 0.05) rgba(0, 0, 0, 0.7)); }
+.pav.pav-rim > .pav-face { box-shadow: 0 0 0 2px color-mix(in srgb, var(--tint, var(--gold2)) 80%, transparent), 0 3px 8px rgba(0, 0, 0, 0.6), inset 0 0 calc(var(--pav, 48px) * 0.08) rgba(0, 0, 0, 0.65); }
+.pav.pav-bare > .pav-face { box-shadow: 0 0 0 2px color-mix(in srgb, var(--tint, var(--gold2)) 80%, transparent), 0 3px 8px rgba(0, 0, 0, 0.6); }
+.pav > :not(.pav-face):not(.pav-ring) { z-index: 2; }
+
 /* ---- captains */
 .capstrip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; }
 .cap { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; color: var(--text); }
 .cap b { font: 700 20px/1.1 var(--display); color: var(--gold1); margin-top: 8px; }
 .cap i { font-style: normal; font-size: 13px; color: var(--muted); }
-.cap-ring { position: relative; width: 150px; aspect-ratio: 1; display: block; transition: transform 0.3s var(--ease); }
-.cap-ring img { position: absolute; inset: 13%; width: 74%; height: 74%; object-fit: cover; object-position: top; border-radius: 50%; }
-.cap-ring::after { content: ''; position: absolute; inset: 0; background: url(/site/img/ui/ring_round.webp) center / contain no-repeat; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.7)); }
+.cap-ring { --pav: 150px; display: block; transition: transform 0.3s var(--ease); }
 .cap:hover .cap-ring { transform: translateY(-4px); }
-.cap-ring.big { width: 140px; position: absolute; left: -20px; bottom: -20px; }
+.cap-ring.big { --pav: 140px; position: absolute; left: -20px; bottom: -20px; }
 .caps { display: grid; gap: 40px; }
 .capcard { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 40px; padding: 36px; scroll-margin-top: 110px; }
 .capcard.flip .capcard-art { order: 2; }
@@ -340,7 +349,7 @@ p { margin: 0 0 1em; }
   .strip { grid-auto-columns: 46%; }
   .ccard-name { font-size: 17px; }
   .capstrip { grid-template-columns: repeat(2, 1fr); }
-  .cap-ring { width: 120px; }
+  .cap-ring { --pav: 120px; }
   .statbar { grid-template-columns: repeat(2, 1fr); }
   .statbar-i:nth-child(odd) { border-left: 0; }
   .statbar-i:nth-child(n + 3) { border-top: 1px solid var(--line); }
@@ -398,14 +407,14 @@ img[src*="/site/img/ico/"], img[src*="/site/img/rank/"], img[src*="/site/img/med
 .capcard.flip .capcard-art { order: 0; }
 .capcard-art { min-height: 0; height: 340px; border-radius: 0; border: 0; border-bottom: 1px solid rgba(245, 196, 81, 0.18); background: radial-gradient(55% 70% at 50% 85%, rgba(245, 196, 81, 0.2), transparent 70%), linear-gradient(180deg, #121a2c, #0a0e18); }
 .capcard-art .fig { inset: 6% 10% 0; width: 80%; height: 94%; }
-.capcard .cap-ring.big { width: 120px; left: 20px; bottom: -14px; z-index: 2; }
+.capcard .cap-ring.big { --pav: 120px; left: 20px; bottom: -14px; z-index: 2; }
 .capcard-txt { padding: 30px 28px 28px; }
 .capcard h2 { font-size: clamp(30px, 2.8vw, 42px); }
 .capcard .abil { gap: 8px; }
 @media (max-width: 900px) {
   .caps { grid-template-columns: 1fr; }
   .capcard-art { height: 300px; }
-  .capcard .cap-ring.big { width: 100px; }
+  .capcard .cap-ring.big { --pav: 100px; }
   .capcard-txt { padding: 26px 18px 20px; }
 }
 

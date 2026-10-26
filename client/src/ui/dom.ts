@@ -4,6 +4,7 @@ import { assetUrl } from '../assets.ts';
 import { lang } from '../i18n.ts';
 import { ICON_KIN } from '../../../shared/src/data/paintart.ts';
 import { ARTIFACT_ICON_KIN } from '../../../shared/src/data/artifacts.ts';
+import { faceAttrs } from './kit/faces.ts';
 
 export function $(id: string): HTMLElement {
   const e = document.getElementById(id);
@@ -166,6 +167,12 @@ const ICON_FB: Record<string, string> = { ...ICON_KIN, ...ARTIFACT_ICON_KIN };
 
 export function icon(id: string, glyph = '', cls = 'ico'): string {
   id = NO_SKULL[id] ?? id;
+  // A portrait in a circle (owner, 2026-10-26: «все лица должны находиться четко во фрейме»): the face in its middle
+  // (kit/faces.ts, shared/src/data/portraitfit.ts), the circle's own size its class's — never an <img> cut by cover.
+  if (id.startsWith('portrait.') && /(^|\s)ico-round(\s|$)/.test(cls)) {
+    const url = portraitUrl(id.slice(9));
+    if (url) return `<span class="${cls} ico-face" aria-hidden="true" ${faceAttrs(id, url)}></span>`;
+  }
   const kin = ICON_FB[id];
   const fb = kin ? assetUrl(`icon.${kin}`) : null;
   const own = assetUrl(id.includes('.') ? id : `icon.${id}`);

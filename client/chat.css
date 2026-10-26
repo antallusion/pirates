@@ -31,7 +31,7 @@ body.simple #hud-chat > #chat-toggle, body.touch #hud-chat > #chat-toggle { disp
 #hud-chat > .chat-toast { position: absolute; display: flex; align-items: center; gap: 6px; box-sizing: border-box; max-width: min(360px, 52vw); min-height: var(--chat-btn); padding: 4px 10px 4px 4px; border: 1px solid rgba(140, 107, 58, 0.7); border-radius: 22px; background: rgba(12, 10, 8, 0.93); color: var(--bone); font: 500 var(--chat-fs-s)/1.25 var(--sans); text-align: left; pointer-events: auto; cursor: pointer; z-index: 2;
   right: calc(var(--sa-r) + 8px + var(--chat-btn) + 8px); top: calc(var(--sa-t) + 120px); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6); }
 #hud-chat > .chat-toast.hidden, body.chat-open #hud-chat > .chat-toast { display: none; }
-#hud-chat > .chat-toast .cl-face { width: 28px; height: 28px; margin: 0; }
+#hud-chat > .chat-toast .cl-face { --pav: 34px; margin: 0; }
 #hud-chat > .chat-toast .chat-toast-t { min-width: 0; overflow-wrap: anywhere; }
 #hud-chat > .chat-toast b { color: var(--gold); font-weight: 600; }
 #hud-chat > .chat-toast.chat-whisper b { color: #e0a8e8; }
@@ -67,7 +67,7 @@ body.touch #hud-chat .chat-dock { display: none; }
 #hud-chat #chat-peers.hidden { display: none; }
 #hud-chat .chat-back { flex: none; width: var(--chat-tap); height: var(--chat-tap); padding: 0; border: 1px solid rgba(111, 90, 56, 0.45); border-radius: 3px; background: rgba(255, 255, 255, 0.04); color: var(--gold); font: 700 20px/1 var(--sans); cursor: pointer; }
 #hud-chat .chat-peer { display: flex; align-items: center; gap: 6px; flex: 1 1 auto; min-width: 0; min-height: var(--chat-tap); padding: 0 4px; background: none; border: 0; color: #e0a8e8; font: 600 var(--chat-fs) var(--sans); text-align: left; cursor: pointer; }
-#hud-chat .chat-peer .cl-face { width: 24px; height: 24px; margin: 0; }
+#hud-chat .chat-peer .cl-face { --pav: 30px; margin: 0; }
 #hud-chat .chat-peer b { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
 
 /* the middle: the log, and over it the captain's card or the emotes */
@@ -76,10 +76,9 @@ body.touch #hud-chat .chat-dock { display: none; }
 #hud-chat .cl-empty { margin: 10px 4px; color: var(--fog); font: italic var(--chat-fs-s)/1.4 var(--sans); }
 #hud-chat #chat-log .cl { display: flex; gap: 7px; align-items: flex-start; padding: 3px 2px; overflow-wrap: anywhere; }
 #hud-chat #chat-log .cl + .cl { border-top: 1px solid rgba(111, 90, 56, 0.16); }
-#hud-chat .cl-face { position: relative; flex: none; box-sizing: border-box; width: var(--chat-face); height: var(--chat-face); margin: 2px 2px 0; padding: 0; border: 0; border-radius: 50%; background: #15120e 50% 22% / 150% auto no-repeat; box-shadow: 0 0 0 1.5px var(--brass-dim), 0 1px 4px #000; }
-button.cl-face { cursor: pointer; touch-action: manipulation; }
-.skinned #hud-chat .cl-face { box-shadow: 0 1px 4px #000; }
-.skinned #hud-chat .cl-face::after { content: ''; position: absolute; inset: -4px; background: var(--ui-ring) center / contain no-repeat; pointer-events: none; }
+/* a face in its ring (kit/avatar.ts, .pav in cosmetics.css): the ring's outer side; the box never shrinks (owner,
+   2026-10-26: «иконка сильно сжимается, а рамка нет, и рамка прям наезжает на лицо») */
+#hud-chat .cl-face { --pav: calc(var(--chat-face) + 6px); margin: 0 -1px; }
 #hud-chat .cl-body { flex: 1 1 auto; min-width: 0; }
 #hud-chat .cl-head { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 5px; row-gap: 0; min-width: 0; line-height: 1.25; }
 #hud-chat .cl-name { min-width: 0; overflow-wrap: anywhere; font: 600 var(--chat-fs) var(--sans); }
@@ -116,7 +115,7 @@ body:not(.touch) #hud-chat .cl-name[data-nick]:hover { text-decoration: underlin
 #hud-chat #chat-card { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; gap: 6px; padding: 6px; box-sizing: border-box; background: rgba(10, 9, 8, 0.97); border: 1px solid rgba(140, 107, 58, 0.55); border-radius: 3px; overflow: hidden; }
 #hud-chat #chat-card.hidden { display: none; }
 #hud-chat .chat-card-head { display: flex; align-items: center; gap: 8px; flex: none; }
-#hud-chat .chat-card-face { width: 40px; height: 40px; margin: 2px; }
+#hud-chat .chat-card-face { --pav: 50px; margin: 0; }
 #hud-chat .chat-card-who { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
 #hud-chat .chat-card-who b { color: var(--gold); font: 600 calc(var(--chat-fs) + 1px) var(--sans); overflow-wrap: anywhere; }
 #hud-chat .chat-card-who span { color: var(--fog); font-size: var(--chat-fs-s); }

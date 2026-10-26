@@ -25,13 +25,14 @@ import { specialName, unitIcon, unitName } from './army.ts';
 import { dec1, esc, fmt, icon } from './dom.ts';
 import type { ThroneTab } from './throne.ts';
 import { framedFace } from './cosmetics.ts'; // docs/32 §12: the table's faces in their frames
+import { avatar } from './kit/avatar.ts'; // the draft's captains in their rings
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { assetUrl as cosAsset } from '../assets.ts';
 
 /** A row's face in her frame (docs/32 §12): her captain's portrait, small. */
 function tableFace(face: string | undefined, fr: string | undefined): string {
   const cap = face ? CAPTAINS[face as CaptainId] : undefined;
-  return cap ? `<span class="ar-face">${framedFace({ id: cap.portrait, url: cosAsset(cap.portrait) }, fr, 20, 1.75)}</span>` : '';
+  return cap ? `<span class="ar-face">${framedFace({ id: cap.portrait, url: cosAsset(cap.portrait) }, fr, 30)}</span>` : '';
 }
 
 const L = dict(EN, RU);
@@ -106,7 +107,7 @@ function seat(v: ArenaDraftView, k: 0 | 1): string {
   }).join('');
   const bans = v.bans[k].map((u) => `<span class="ar-bn" title="${esc(unitName(u))}">${unitIcon(u, 'army-face-xs')}<i>✕</i></span>`).join('');
   return `<div class="ar-seat ${mine ? 'you' : 'foe'}${v.turn === k && v.stage !== 'done' && v.stage !== 'fight' ? ' turn' : ''}">
-    <div class="ar-who">${icon(CAPTAINS[s.path].portrait, '', 'ico-md ico-round')}<span><b>${esc(mine ? L('you') : nameOf(v, k))}</b><small>${esc(s.ai ? L('legend') : `${L('rating')} ${s.rating ?? ''}`)}</small></span></div>
+    <div class="ar-who">${avatar({ face: CAPTAINS[s.path].portrait, size: '42px', cls: 'ar-who-face' })}<span><b>${esc(mine ? L('you') : nameOf(v, k))}</b><small>${esc(s.ai ? L('legend') : `${L('rating')} ${s.rating ?? ''}`)}</small></span></div>
     <div class="ar-pts">${esc(L('points', { n: v.left[k], m: ARENA_BUDGET }))}${v.done[k] && v.stage === 'pick' ? ` · <span class="gold">${esc(L('doneMark'))}</span>` : ''}</div>
     <div class="ar-bans" title="${esc(L('bans'))}">${bans || '<span class="muted">—</span>'}</div>
     <div class="ar-army" title="${esc(L('army'))}">${army}</div>

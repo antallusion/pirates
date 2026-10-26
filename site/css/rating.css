@@ -45,13 +45,9 @@
 .rt-empty { text-align: center; padding: 40px 20px; margin: 0; }
 .rt-at { text-align: center; font-size: 13px; margin: 14px 0 0; }
 
-/* ---- the portrait in its frame (the frame wider than the face by --k, as the game draws it) */
-.rt-av { position: relative; display: inline-block; width: var(--av); height: var(--av); flex: none; }
-.rt-face { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 50%; background: #0a0e18; box-shadow: 0 0 0 2px rgba(245, 196, 81, 0.35), 0 4px 10px rgba(0, 0, 0, 0.6); }
-.rt-av.framed .rt-face { box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6); }
-.rt-ring { position: absolute; left: 50%; top: 50%; width: calc(var(--av) * min(var(--k, 1.4), var(--kmax, 1.5))); height: calc(var(--av) * min(var(--k, 1.4), var(--kmax, 1.5))); max-width: none; transform: translate(-50%, -50%); object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6)); }
-.rt-row .rt-av { margin: 0 6px; }
-.rt-card .rt-av { --kmax: 1.45; margin: 6px 10px; }
+/* ---- the portrait in its ring or frame (site.css .pav: one box, the ring and the face its shares) */
+.rt-row .rt-av { margin: 0 4px; }
+.rt-card .rt-av { margin: 0 4px; }
 
 /* ---- the title on its plate */
 .rt-plate { display: inline-flex; align-items: center; justify-content: center; height: 30px; max-width: 100%; background: center / 100% 100% no-repeat; font: 700 15px/1 var(--display); letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 2px var(--halo), 0 0 3px var(--halo), 0 1px 1px var(--halo); }
@@ -68,13 +64,13 @@
   .rt-head { grid-template-columns: 34px 1fr auto; padding: 10px 12px; gap: 10px; }
   .rt-row { grid-template-columns: 34px auto minmax(0, 1fr) auto; gap: 10px; padding: 9px 12px; }
   .rt-rank { width: 34px; height: 34px; font-size: 15px; }
-  .rt-row .rt-av { --av: 40px !important; margin: 0 4px; }
+  .rt-row .rt-av { --pav: 50px !important; margin: 0 2px; }
   .rt-name { font-size: 17px; }
   .rt-plate { height: 25px; font-size: 13px; }
   .rt-val b { font-size: 21px; }
   .rt-cap { font-size: 12px; }
   .rt-card { grid-template-columns: auto 1fr; padding: 18px 16px; gap: 6px 14px; }
-  .rt-card .rt-av { --av: 64px !important; }
+  .rt-card .rt-av { --pav: 84px !important; }
   .rt-places ul { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .rt-gtag { min-width: 50px; height: 34px; font-size: 13px; }
 }

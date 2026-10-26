@@ -87,7 +87,9 @@ test('every control\'s art is the game\'s own: the sea HUD\'s pictures, the targ
 
 test('the stylesheet: the painted rims on every control of the sea, the attack cursor, the choices in their rings', () => {
   const css = readFileSync('client/seahud.css', 'utf8');
-  for (const sel of ['.sea-round::after', '.tc-big::after', '.cs-frame::after', '.tm-pic::after']) assert.ok(new RegExp(`${sel.replace(/[.()]/g, '\\$&')}[^{]*\\{[^}]*var\\(--ui-ring\\)`).test(css), `${sel}: the porthole ring`);
+  for (const sel of ['.sea-round::after', '.tc-big::after', '.tm-pic::after']) assert.ok(new RegExp(`${sel.replace(/[.()]/g, '\\$&')}[^{]*\\{[^}]*var\\(--ui-ring\\)`).test(css), `${sel}: the porthole ring`);
+  // (her face's ring is the avatar's own picture of ui.ring now: client/src/ui/kit/avatar.ts, tests/portraitfit.test.ts)
+  assert.match(readFileSync('client/src/ui/kit/avatar.ts', 'utf8'), /assetUrl\('ui\.ring'\)/);
   assert.match(css, /\.dk-slot::after \{[^}]*var\(--ui-slot\)/);
   assert.match(css, /\.cs-bar \{[^}]*border-image: var\(--ui-bar\)/);
   assert.match(css, /#world\[data-cur='attack'\] \{ cursor: var\(--cur-attack, crosshair\), crosshair; \}/);

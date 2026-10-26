@@ -47,7 +47,6 @@ import type { SectorData } from '../../../shared/src/protocol.ts';
 import { assetUrl, sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import { $, bar, dec1, decorateSums, esc, fmt, glyphSvg, icon, knots, pct } from './dom.ts';
-import { ringHtml } from './cosmetics.ts'; // docs/32 §12
 import { flagChip, shipColours } from './flags.ts'; // docs/24 D2: her colours on the target card
 import { compassKey, objective, questPointer, trackedQuest, waypoint, waypointHooks } from './track.ts';
 import { courseAhead, courseOf } from './course.ts';
@@ -74,7 +73,7 @@ import { armyGlance } from './army.ts';
 import { holdMix, holdMixHtml } from './holdmix.ts';
 import { gloryChip } from './throne.ts'; // docs/19 E1
 import { Toasts } from './kit/toast.ts'; // docs/23 phase 1
-import { faceAttrs } from './kit/faces.ts'; // the rebuild of 2026-10-07
+import { avatar } from './kit/avatar.ts'; // her face in its ring (docs/32 §12: her frame), shared/src/data/portraitfit.ts
 import { captainDot } from './capmenu.ts'; // seaux: the bead is news not yet seen
 import { drawWrecksMini } from '../render/castaways.ts'; // seaux: her wreckage and castaways on the chart
 
@@ -806,12 +805,11 @@ export class Hud {
     const pod = podEffect(self.effects, state.estServerTime());
     if (simpleHud()) this.drawStatus(state);
     else {
-    const ufRing = ringHtml(state.cos?.eq.frame, 1.75); // docs/32 §12: her avatar frame
     const ckey = `${state.cos?.eq.frame ?? ''}|${lang()}|${streak ? `${streak.n}:${streak.mul}` : ''}|${pod ? `${pod.kind}:${Math.ceil(pod.left / 10)}` : ''}|${self.level}|${Math.round((self.xp / Math.max(1, self.xpNext)) * 200)}|${Math.round((self.rested / Math.max(1, self.xpNext)) * 200)}|${self.gold}|${self.wanted}|${self.talentPoints}|${you.hull}|${you.hullMax}|${you.sails}|${you.sailsMax}|${you.crew}|${you.crewMax}|${url ? 1 : 0}|${self.company.mood ?? ''}:${self.company.shantyUntil ?? 0}|${self.title ?? ''}|${self.glory ? `${self.glory.open}:${self.glory.rank}:${self.glory.pending}:${self.glory.points - self.glory.spent}` : ''}|${state.doubloons}`;
     if (ckey !== this.lastCaptainKey) {
       this.lastCaptainKey = ckey;
       $('hud-captain').innerHTML = `
-        <div class="uf-portrait${ufRing ? ' cos-fr' : ''}" style="background-image:${url ? `url('${url}')` : 'none'}">${ufRing}<b class="uf-level" title="${esc(L('lv', { n: self.level }))}">${self.level}</b>${streak ? streakBadge(streak) : ''}${pod ? podBadge(pod) : ''}${moodMark(self.company.mood, (self.company.shantyUntil ?? 0) - state.estServerTime())}</div>
+        <div class="uf-portrait">${avatar({ face: cap.portrait, url, frame: state.cos?.eq.frame ?? null, ring: 'portrait', cls: 'uf-av' })}<b class="uf-level" title="${esc(L('lv', { n: self.level }))}">${self.level}</b>${streak ? streakBadge(streak) : ''}${pod ? podBadge(pod) : ''}${moodMark(self.company.mood, (self.company.shantyUntil ?? 0) - state.estServerTime())}</div>
         <div class="uf-body">
           <div class="uf-top"><span class="uf-name">${esc(self.name)}${self.title ? `<small class="uf-title">${esc(sv(self.title))}</small>` : ''}</span><span class="gold val uf-silver">${icon('coin', '⛁', 'ico-sm')}${fmt(self.gold)}</span>${shopChip(state.doubloons, 'uf-dbl')}</div>
           ${fbar('hull', you.hull, you.hullMax, L('hull'), 'stat_hull')}${fbar('sails', you.sails, you.sailsMax, L('sails'), 'stat_sails')}${fbar('crew', you.crew, you.crewMax, L('crew'), 'stat_crew')}
@@ -969,7 +967,6 @@ export class Hud {
     const dot = captainDot(self.talentPoints, self.level);
     const g = self.glory;
     const fr = state.cos?.eq.frame ?? ''; // docs/32 §12: her avatar frame
-    const ring = ringHtml(fr, 1.75);
     const key = `simple|${fr}|${lang()}|${url ? 1 : 0}|${self.level}|${xpPct}|${self.gold}|${state.doubloons}|${you.hull}|${you.hullMax}|${you.crew}|${you.crewMax}|${you.sails}|${you.sailsMax}|${dot}|${g ? `${g.open}:${g.rank}:${g.pending}:${g.points - g.spent}` : ''}`;
     if (key === this.lastCaptainKey) return;
     this.lastCaptainKey = key;
@@ -977,7 +974,7 @@ export class Hud {
     const row = (k: 'hull' | 'crew' | 'sails', v: number, max: number, art: string, val: string) =>
       `<div class="cs-row cs-${k}" title="${esc(`${L(k)}: ${fmt(v)} / ${fmt(max)}`)}">${icon(art, '', 'cs-ico')}<span class="cs-bar"><i style="width:${pct(clamp(v / Math.max(1, max), 0, 1))}"></i></span><span class="cs-v">${esc(val)}</span></div>`;
     el.innerHTML = `<div class="cs">
-      <div class="cs-frame${ring ? ' cos-fr' : ''}"><div class="cs-face" ${faceAttrs(cap.portrait, url)}></div>${ring}<b class="cs-lv" style="--xp:${xpPct}%" title="${esc(`${L('lv', { n: self.level })} · ${xpLine(self)}`)}">${self.level}</b>${dot ? `<i class="cs-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}"></i>` : ''}${gloryChip(g, 'cs-glory')}</div>
+      <div class="cs-frame">${avatar({ face: cap.portrait, url, frame: fr || null, cls: 'cs-face' })}<b class="cs-lv" style="--xp:${xpPct}%" title="${esc(`${L('lv', { n: self.level })} · ${xpLine(self)}`)}">${self.level}</b>${dot ? `<i class="cs-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}"></i>` : ''}${gloryChip(g, 'cs-glory')}</div>
       <div class="cs-body">${row('hull', you.hull, you.hullMax, 'stat_hull', fmt(you.hull))}${row('crew', you.crew, you.crewMax, 'stat_crew', `${you.crew}/${you.crewMax}`)}${row('sails', you.sails, you.sailsMax, 'stat_sails', fmt(you.sails))}
         <span class="cs-purse"><span class="cs-silver">${icon('coin', '⛁', 'cs-coin')}${fmt(self.gold)}</span>${shopChip(state.doubloons, 'cs-dbl')}</span></div>
     </div>`;

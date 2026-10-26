@@ -2,16 +2,28 @@
    frames round the portraits everywhere, the quick emotes by the chat's button, an emote in a chat line. The shop's own
    look (shop.css: the brass plates of the offers, the dark cards) is kept; a card's colour line tells its tier. */
 
+/* ------------------------------------------------------------------ a portrait in its ring (anywhere)
+   shared/src/data/portraitfit.ts avatarHtml (owner, 2026-10-26: «рамка прям наезжает на лицо»): the box is square and
+   never shrinks; the hole, the portrait (its background, set on the face) and the ring are shares of the box's side,
+   so they grow and shrink together. */
+.pav { position: relative; display: inline-block; margin: 0; padding: 0; border: 0; border-radius: 50%; background: none; box-shadow: none; vertical-align: middle; font: inherit; color: inherit; line-height: 1; }
+/* (its size held against any row's flex or a list's width rule: the one thing that sets it is --pav) */
+.pav.pav { flex: none !important; box-sizing: border-box !important; width: var(--pav, 48px) !important; height: var(--pav, 48px) !important; min-width: var(--pav, 48px) !important; min-height: var(--pav, 48px) !important; max-width: none !important; max-height: none !important; aspect-ratio: 1 !important; }
+button.pav { cursor: pointer; touch-action: manipulation; }
+.pav > .pav-face { position: absolute; box-sizing: border-box; border-radius: 50%; background-color: #15120e; background-repeat: no-repeat; box-shadow: inset 0 0 calc(var(--pav, 48px) * 0.08) rgba(0, 0, 0, 0.65); }
+.pav > .pav-ring { position: absolute; z-index: 1; display: block; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)); }
+.pav.pav-rim > .pav-face { box-shadow: 0 0 0 max(1px, calc(var(--pav, 48px) * 0.04)) var(--brass-dim, #8a6a3a), 0 1px 4px #000, inset 0 0 calc(var(--pav, 48px) * 0.08) rgba(0, 0, 0, 0.65); }
+.pav.pav-bare > .pav-face { box-shadow: 0 0 0 1px var(--brass-dim, #8a6a3a), inset 0 0 calc(var(--pav, 48px) * 0.08) rgba(0, 0, 0, 0.65); }
+.pav > :not(.pav-face):not(.pav-ring) { z-index: 2; }
+/* a portrait in a bare circle (dom.ts icon(…, 'ico-round')): the element is the circle, the face its background's middle */
+.ico-face { display: inline-block; flex: none; box-sizing: border-box; border-radius: 50%; background-color: #15120e; background-repeat: no-repeat; vertical-align: middle; }
+:where(.ico-face) { width: 40px; height: 40px; }
+
 /* ------------------------------------------------------------------ a frame round a portrait (anywhere) */
-.cos-ring { position: absolute; left: 50%; top: 50%; z-index: 2; width: calc(100% * var(--k, 2)); height: calc(100% * var(--k, 2)); max-width: none; margin: 0; transform: translate(-50%, -50%); pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)); }
-.cos-fr::after { display: none !important; }
-.cos-av { position: relative; display: inline-block; flex: none; width: var(--av); height: var(--av); vertical-align: middle; }
-.cos-av-face { position: absolute; inset: 0; border-radius: 50%; background: #15120e 50% 22% / cover no-repeat; box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.7); }
-.cs-frame.cos-fr .cos-ring, .uf-portrait.cos-fr .cos-ring { z-index: 1; }
-#hud-chat .cl-face.cos-fr { box-shadow: none; overflow: visible; }
 .insp-framed { display: flex; align-items: center; justify-content: center; width: 120px; height: 150px; }
-@media (max-height: 480px) { .insp-framed { width: 92px; height: 115px; } }
-.ar-face { display: inline-flex; width: 26px; justify-content: center; margin-right: 4px; }
+.insp-framed .cos-av { --pav: 116px; }
+@media (max-height: 480px) { .insp-framed { width: 92px; height: 115px; } .insp-framed .cos-av { --pav: 90px; } }
+.ar-face { display: inline-flex; flex: none; width: 34px; justify-content: center; margin-right: 4px; }
 
 /* ------------------------------------------------------------------ the tab */
 .cos-body { padding-bottom: 14px; }
@@ -28,7 +40,7 @@
 .cos-t0 { --tier: #8a8172; } .cos-t1 { --tier: #6f9a6a; } .cos-t2 { --tier: #4f86b8; } .cos-t3 { --tier: #9a5cc4; } .cos-t4 { --tier: #e0a640; }
 .cos-prev { display: flex; align-items: center; justify-content: center; height: 64px; border-radius: 3px; background: radial-gradient(circle at 50% 45%, rgba(224, 184, 98, 0.1), rgba(6, 8, 10, 0.85) 75%); overflow: hidden; }
 .cos-prev .cos-plate { width: 100%; max-width: 150px; height: auto; }
-.cos-prev .cos-av { --av: 40px; }
+.cos-prev .cos-av { --pav: 56px; }
 .cos-ship { display: block; width: 100%; height: 64px; }
 .cos-emo { width: 34px; height: 34px; margin: 0 1px; object-fit: contain; }
 .cos-emo-lg { width: 56px; height: 56px; margin: 0; object-fit: contain; }
@@ -86,7 +98,7 @@
 .cos-opt.on { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(224, 184, 98, 0.5), inset 0 0 10px rgba(224, 184, 98, 0.15); }
 .cos-opt small { font-size: 10.5px; line-height: 1.15; text-align: center; overflow-wrap: anywhere; color: #d8cbae; }
 .cos-opt .cos-plate-sm { width: 100%; max-width: 110px; height: auto; }
-.cos-opt .cos-av { --av: 30px; margin: 6px 0; }
+.cos-opt .cos-av { --pav: 44px; margin: 2px 0; }
 .cos-none-i { font-size: 22px; line-height: 30px; color: var(--steel-text); }
 .cos-embl { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 26px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(232, 220, 192, 0.4); }
 .cos-embl-i { width: 22px; height: 22px; margin: 0; }
@@ -125,7 +137,7 @@ body.chat-open #hud-chat > .cos-qbtn, body.chat-open #hud-chat > .cos-qpanel, bo
   .cos-card { padding: 5px 5px 6px; gap: 3px; }
   .cos-prev { height: 50px; }
   .cos-ship { height: 50px; }
-  .cos-prev .cos-av { --av: 30px; }
+  .cos-prev .cos-av { --pav: 46px; }
   .cos-emo { width: 26px; height: 26px; }
   .cos-emo-lg { width: 44px; height: 44px; }
   .cos-name { font-size: var(--f-fs-m, 13px); }
@@ -147,14 +159,14 @@ body.chat-open #hud-chat > .cos-qbtn, body.chat-open #hud-chat > .cos-qpanel, bo
 
 /* (after the phone's rules: these win at every size) */
 .cos-prev.cos-prev-fr { height: 84px; overflow: visible; }
-.cos-prev-fr .cos-av { --av: 38px !important; }
-.cos-wr-me .cos-av { margin: 20px 22px; }
-.cos-opt .cos-av.cos-fr { margin: 12px 0 10px; }
+.cos-prev-fr .cos-av { --pav: 58px; }
+.cos-wr-me .cos-av { --pav: 66px; margin: 8px 10px; }
+.cos-opt .cos-av.pav-framed { margin: 8px 0 6px; }
 @media (max-height: 520px) {
   .cos-grid.cos-sets { grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
   .cos-prev.cos-prev-fr { height: 70px; }
-  .cos-prev-fr .cos-av { --av: 32px !important; }
-  .cos-wr-me .cos-av { margin: 14px 16px; }
+  .cos-prev-fr .cos-av { --pav: 50px; }
+  .cos-wr-me .cos-av { --pav: 54px; margin: 6px 8px; }
 }
 .cos-was, .cos-was * { text-decoration: line-through; text-decoration-color: rgba(200, 80, 70, 0.8); }
 

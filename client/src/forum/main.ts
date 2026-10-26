@@ -5,6 +5,7 @@ import '../compat.ts'; // first of all: the calls Safari 15 lacks (iOS 15 is the
 import { BASE, errText, esc, href, ico, K, loadMe, state, t, toast, token } from './core.ts';
 import * as P from './pages.ts';
 import type { Ctx } from './pages.ts';
+import { faceSpan } from './parts.ts';
 
 const mount = document.getElementById('forum') as HTMLElement;
 let seq = 0;
@@ -32,8 +33,8 @@ function userCorner(): void {
     box.innerHTML = `<a class="f-hico" href="${href('search')}" aria-label="${esc(t('search'))}" title="${esc(t('search'))}"><img src="${K('ico/search')}" alt="" width="22" height="22"></a>`;
   } else {
     const total = n.notifications + n.messages + (state.staff ? n.reports : 0);
-    box.innerHTML = `<button type="button" class="f-hme" aria-haspopup="menu" aria-expanded="false" aria-controls="f-um" aria-label="${esc(`${t('me_menu')}: ${u.name}`)}" title="${esc(u.name)}"><img src="${esc(u.avatar)}" alt="" width="40" height="40">${badge(total)}</button>
-<div class="f-um" id="f-um" role="menu" hidden><div class="f-um-who"><img src="${esc(u.avatar)}" alt="" width="40" height="40"><b>${esc(u.name)}</b></div>
+    box.innerHTML = `<button type="button" class="f-hme" aria-haspopup="menu" aria-expanded="false" aria-controls="f-um" aria-label="${esc(`${t('me_menu')}: ${u.name}`)}" title="${esc(u.name)}">${faceSpan(u.avatar, 'f-hme-face')}${badge(total)}</button>
+<div class="f-um" id="f-um" role="menu" hidden><div class="f-um-who">${faceSpan(u.avatar, 'f-um-face')}<b>${esc(u.name)}</b></div>
 ${item(`u/${u.id}`, 'captains', t('profile'))}${item('n', 'bell', t('notifications'), n.notifications)}${item('m', 'messages', t('messages'), n.messages)}${state.staff ? item('mod', 'report', t('moderation'), n.reports) : ''}${item('search', 'search', t('search'))}
 <button type="button" role="menuitem" class="f-um-out"><img src="${K('ico/anchor')}" alt="" width="22" height="22">${esc(t('sign_out'))}</button></div>`;
     const btn = box.querySelector('.f-hme') as HTMLButtonElement;

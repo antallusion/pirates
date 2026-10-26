@@ -18,6 +18,8 @@
 
 import { UNITS } from './army.ts';
 import { fitStage } from './framefit.ts';
+import { faceFit, ringFit } from './portraitfit.ts';
+import type { RingFit } from './portraitfit.ts';
 import type { UnitDef, UnitId } from './army.ts';
 import { armySlots } from './army.ts';
 import { CAPTAINS, CAPTAIN_PRICE } from './captains.ts';
@@ -74,9 +76,11 @@ export interface DCos {
   halo?: string;
   /** The plate's calm middle the words keep to (shares of its width). */
   span?: [number, number];
-  /** A frame: the face inside and how much wider the frame is drawn than the face. */
+  /** A frame: the face inside, its fit (the face in the hole's middle) and the frame's place in the avatar's box
+   *  (portraitfit.ts: the frame's measured hole is the portrait's circle; owner, 2026-10-26). */
   face?: Img;
-  scale?: number;
+  fit?: { size: string; pos: string };
+  ring?: RingFit;
   /** A flag: its cloth colour, its emblem, the ship under it. */
   rgb?: string;
   emblem?: Img;
@@ -353,7 +357,6 @@ function lines(grants: readonly ShopGrant[], art: ArtOf): DLine[] {
 const plateForTier = (tier: number) => ['driftwood', 'bronze', 'silver', 'gold', 'abyss'][Math.max(0, Math.min(4, tier))];
 const SAMPLE_FACE = 'portrait.corsair';
 const SAMPLE_SHIP = 'ship.sloop';
-const frameScale = (hole: number) => Number(Math.min(2.1, 1 / (2 * hole * 0.94)).toFixed(3));
 /** A thing as others see it, for the card's preview. */
 function cosPreview(key: string, art: ArtOf): DCos[] {
   if (key.startsWith('pack:')) {
@@ -376,7 +379,7 @@ function cosPreview(key: string, art: ArtOf): DCos[] {
     }
     case 'frame': {
       const f = FRAMES.find((y) => y.id === x.id)!;
-      return [{ k: 'frame', ...base, art: art(`cos.frame_${f.id}`), face: art(SAMPLE_FACE), scale: frameScale(f.hole) }];
+      return [{ k: 'frame', ...base, art: art(`cos.frame_${f.id}`), face: art(SAMPLE_FACE), fit: (({ size, pos }) => ({ size, pos }))(faceFit(SAMPLE_FACE)), ring: ringFit(f.id, 'site') }];
     }
     case 'emblem': {
       const cl = CLOTHS.find((c) => !c.price) ?? CLOTHS[0];

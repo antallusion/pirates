@@ -22,7 +22,7 @@ import { EN, RU } from '../lang/ui/cosmetics.ts';
 import type { ClientState } from '../state.ts';
 import { TrailPool, drawWavingFlag, flagCloth, plateCanvas } from '../render/cosdraw.ts';
 import { esc, fmt, icon } from './dom.ts';
-import { faceAttrs } from './kit/faces.ts';
+import { avatar } from './kit/avatar.ts';
 import { offerBtn } from './premium.ts';
 import { chipRow } from './kit/window.ts';
 import { priceHtml } from './price.ts';
@@ -32,24 +32,11 @@ const T = (x: readonly [string, string]) => x[lang() === 'ru' ? 1 : 0];
 
 // ------------------------------------------------------------------------------------------------ the frame anywhere
 
-/** How much wider than the portrait its frame is drawn: the frame's hole just over the face (`cap`: no frame past
- *  so many times the face, the bulky ones' hole a little inside the face's rim). */
-export function ringK(f: FrameDef, cap = 2.1): number {
-  return Math.min(cap, 1 / (2 * f.hole * 0.94));
-}
-
-/** The frame round a portrait, as a child of the portrait's own round element (absolute, centred; nothing when none
- *  is worn). The element gets `cos-fr` (its stock ring hidden). */
-export function ringHtml(frameId: string | null | undefined, cap = 2.1): string {
-  const f = frameOf(frameId);
-  const url = f ? assetUrl(`cos.frame_${f.id}`) : null;
-  return f && url ? `<img class="cos-ring" src="${url}" alt="" draggable="false" style="--k:${ringK(f, cap).toFixed(3)}" />` : '';
-}
-
-/** A face in its frame: a portrait (a captain's id or a picture's url) with her frame round it. */
-export function framedFace(face: { id: string; url: string | null }, frameId: string | null | undefined, px: number, cap = 2.1): string {
-  const ring = ringHtml(frameId, cap);
-  return `<span class="cos-av${ring ? ' cos-fr' : ''}" style="--av:${px}px"><span class="cos-av-face" ${faceAttrs(face.id, face.url)}></span>${ring}</span>`;
+/** A face in its frame (docs/32 §12): a portrait (a captain's id or a picture's url) in her frame, or in the stock
+ *  ring when none is worn — kit/avatar.ts, the one avatar (the box `px` wide never shrinks; the frame, its hole and
+ *  the portrait are shares of it). */
+export function framedFace(face: { id: string; url: string | null }, frameId: string | null | undefined, px?: number): string {
+  return avatar({ face: face.id, url: face.url, frame: frameId, size: px ? `${px}px` : undefined, cls: 'cos-av' });
 }
 
 /** Her own face (her captain's portrait). */
@@ -260,7 +247,7 @@ export function cosShelf(sec: ShopSec, state: ClientState, sv: ShopView): string
     case 'cos_titles':
       return `${lead}${head('g.titles')}${grid(TITLES.map((t) => card(t, plateBox(herPlate(v), t.id), v, sv, `cos_title_${t.id}`)))}${head('g.plates')}${grid(PLATES.map((p) => card(p, plateBox(p.id, herTitle(v)), v, sv, `cos_plate_${p.id}`)))}`;
     case 'cos_frames':
-      return `${lead}${grid(FRAMES.map((f) => card(f, framedFace(ownFace(state), f.id, 38, 1.9), v, sv, `cos_frame_${f.id}`, '', 'cos-prev-fr')))}`;
+      return `${lead}${grid(FRAMES.map((f) => card(f, framedFace(ownFace(state), f.id), v, sv, `cos_frame_${f.id}`, '', 'cos-prev-fr')))}`;
     case 'cos_flags':
       return `${lead}${head('g.emblems')}${grid(EMBLEMS.map((e) => card(e, shipPrev({ emblem: e.id, cloth: v.eq.cloth ?? 'black', big: true }), v, sv, `cos_emblem_${e.id}`)))}${head('g.cloths')}${grid(CLOTHS.map((c) => card(c, shipPrev({ emblem: v.eq.emblem ?? 'anchor', cloth: c.id, big: true }), v, sv, `cos_cloth_${c.id}`, ` · <i class="cos-sw" style="background:${c.rgb}"></i>`)))}`;
     case 'cos_trails':
@@ -336,7 +323,7 @@ export function wardrobe(state: ClientState): string {
   switch (wslot) {
     case 'title': list = offBtn('title') + owned(TITLES).map((t) => opt('title', t, plateBox(eq.plate ?? 'driftwood', t.id, 'cos-plate cos-plate-sm'))).join(''); break;
     case 'plate': list = offBtn('plate') + owned(PLATES).map((p) => opt('plate', p, plateBox(p.id, eq.title ?? 'seawolf', 'cos-plate cos-plate-sm'))).join(''); break;
-    case 'frame': list = offBtn('frame') + owned(FRAMES).map((f) => opt('frame', f, framedFace(ownFace(state), f.id, 34, 1.9))).join(''); break;
+    case 'frame': list = offBtn('frame') + owned(FRAMES).map((f) => opt('frame', f, framedFace(ownFace(state), f.id))).join(''); break;
     case 'emblem': list = offBtn('emblem') + owned(EMBLEMS).map((e) => opt('emblem', e, `<span class="cos-embl" style="background:${CLOTHS.find((c) => c.id === (eq.cloth ?? 'black'))?.rgb}">${icon(`cos.emblem_${e.id}`, '◆', 'cos-embl-i')}</span>`)).join(''); break;
     case 'cloth': list = offBtn('cloth') + owned(CLOTHS).map((c) => opt('cloth', c, `<i class="cos-sw cos-sw-lg" style="background:${c.rgb}"></i>`)).join(''); break;
     case 'trail': list = offBtn('trail') + owned(TRAILS).map((t) => opt('trail', t, `<i class="cos-sw cos-sw-lg cos-trail-sw" style="background:radial-gradient(circle, ${t.c[0]}, ${t.c[1]} 45%, transparent 72%)"></i>`)).join(''); break;
@@ -345,7 +332,7 @@ export function wardrobe(state: ClientState): string {
   const t = titleOf(eq.title);
   return `<div class="cos-wr">
     <div class="cos-wr-look">${shipPrev({ emblem: eq.emblem, cloth: eq.cloth, trail: eq.trail, plate: eq.plate, title: eq.title }, 'cos-ship cos-ship-lg')}
-      <div class="cos-wr-me">${framedFace(ownFace(state), eq.frame, 46, 1.9)}<span><b>${esc(state.self?.name ?? '')}</b><small class="muted">${esc(t ? T(t.name) : L('wardrobe.sub'))}</small></span></div></div>
+      <div class="cos-wr-me">${framedFace(ownFace(state), eq.frame)}<span><b>${esc(state.self?.name ?? '')}</b><small class="muted">${esc(t ? T(t.name) : L('wardrobe.sub'))}</small></span></div></div>
     <div class="cos-wr-pick"><div class="cos-wr-chips">${chips}</div><p class="muted cos-tip">${esc(L('tip'))}</p><div class="cos-opts">${list}</div></div>
   </div>`;
 }

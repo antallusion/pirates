@@ -36,12 +36,12 @@
 .f-hico, .f-hme { position: relative; flex: none; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border-radius: 50%; cursor: pointer; background: radial-gradient(circle at 50% 35%, #182033, #0a0e17 72%); border: 1px solid rgba(245, 196, 81, 0.38); box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.08), 0 2px 6px rgba(0, 0, 0, 0.45); transition: border-color 0.2s, box-shadow 0.2s; }
 .f-hico img { width: 22px; height: 22px; }
 .f-hme { border: 2px solid rgba(245, 196, 81, 0.6); }
-.f-hme img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: top; }
+.f-hme .f-face { width: 100%; height: 100%; border-radius: 50%; }
 .f-hico:hover, .f-hme:hover, .f-me.open .f-hme { border-color: rgba(245, 196, 81, 0.85); box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.1), 0 0 12px rgba(245, 196, 81, 0.35); }
 .f-um { position: absolute; top: calc(100% + 14px); right: 0; z-index: 2; width: 250px; padding: 8px; border-radius: 18px; background: rgba(9, 13, 22, 0.96); border: 1px solid rgba(245, 196, 81, 0.25); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55); }
 .f-um[hidden] { display: none; }
 .f-um-who { display: flex; align-items: center; gap: 10px; padding: 6px 10px 10px; margin-bottom: 4px; border-bottom: 1px solid var(--line2); min-width: 0; }
-.f-um-who img { flex: none; width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: top; border: 1px solid rgba(245, 196, 81, 0.5); }
+.f-um-who .f-face { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(245, 196, 81, 0.5); }
 .f-um-who b { font: 700 17px/1.2 var(--display); color: #efe4c8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .f-um [role=menuitem] { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: 0; border-radius: 12px; background: none; color: #cfc8b8; font: 500 15px/1.3 var(--sans); text-align: left; cursor: pointer; }
 .f-um [role=menuitem] img { flex: none; width: 22px; height: 22px; filter: drop-shadow(0 1px 2px #000); }
@@ -83,17 +83,17 @@
 .f-fresh-n { display: flex; align-items: center; gap: 4px; color: var(--gold1); font-weight: 600; }
 
 /* ---- avatars in brass rings */
-.f-ava { position: relative; display: inline-block; flex: none; width: 40px; height: 40px; }
-.f-ava img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: top; background: #0a0e18; box-shadow: 0 0 0 2px color-mix(in srgb, var(--tint, var(--gold2)) 80%, transparent), 0 3px 8px rgba(0, 0, 0, 0.6); }
-.f-ava-xs { width: 28px; height: 28px; }
-.f-ava-m { width: 56px; height: 56px; }
-.f-ava-l { width: 150px; height: 150px; }
-.f-ava-l.f-ring-round img, .f-ava-m.f-ring-round img { inset: auto; left: 19%; top: 19%; width: 62%; height: 62%; box-shadow: 0 0 0 2px var(--tint, transparent); }
-.f-ava-m.f-ring-round { width: 72px; height: 72px; }
-.f-ava-l.f-ring-round::after, .f-ava-m.f-ring-round::after { content: ''; position: absolute; inset: 0; background: url(/site/img/ui/ring_round.webp) center / contain no-repeat; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.7)); pointer-events: none; }
-.f-ava-l.f-ring-square { width: 150px; height: 177px; }
-.f-ava-l.f-ring-square img { left: 15.5%; top: 12.5%; width: 69%; height: 58.5%; border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4); }
+.f-ava { --pav: 40px; }
+.f-ava-xs { --pav: 28px; }
+.f-ava-m { --pav: 56px; }
+.f-ava-l { --pav: 150px; }
+.f-ava-m.f-ring-round { --pav: 72px; }
+.f-ava > .pav-ring { filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.7)); }
+.f-ava-l.f-ring-square { position: relative; display: inline-block; flex: none; width: 150px; height: 177px; }
+.f-ava-l.f-ring-square .f-sq { position: absolute; left: 15.5%; top: 12.5%; width: 69%; height: 58.5%; border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4); }
 .f-ava-l.f-ring-square::after { content: ''; position: absolute; inset: 0; background: url(/site/img/ui/ring_square.webp) center / 100% 100% no-repeat; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.7)); pointer-events: none; }
+/* a portrait in a bare circle or square (forum/parts.ts faceSpan): the face in its middle */
+.f-face { display: inline-block; flex: none; background-color: #0a0e18; background-repeat: no-repeat; }
 .f-dot { position: absolute; right: 2%; bottom: 4%; width: 11px; height: 11px; border-radius: 50%; background: #5fd38a; box-shadow: 0 0 0 2px var(--bg), 0 0 8px rgba(95, 211, 138, 0.8); z-index: 2; }
 .f-ava-l .f-dot { right: 16%; bottom: 16%; width: 14px; height: 14px; }
 .f-ava-l.f-ring-square .f-dot { right: 13%; bottom: 26%; }
@@ -113,7 +113,7 @@ a.f-nick:hover { color: #ffe08f; text-decoration: underline; text-underline-offs
 .f-char-t { display: grid; line-height: 1.25; min-width: 0; }
 .f-char-t b { font-weight: 600; overflow-wrap: anywhere; }
 .f-char-t span { color: color-mix(in srgb, var(--tint) 70%, #c8c0b0); font-size: 12px; }
-.f-clsico { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; object-position: top; box-shadow: 0 0 0 2px var(--tint); flex: none; background: #0a0e18; }
+.f-clsico { width: 22px; height: 22px; border-radius: 50%; box-shadow: 0 0 0 2px var(--tint); flex: none; background: #0a0e18; }
 .f-gtag { font: 700 13px var(--sans); letter-spacing: 0.06em; color: var(--ice); }
 .f-medals { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .f-medals img { width: 30px; height: 30px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7)); transition: transform 0.2s; }
@@ -349,7 +349,7 @@ a.f-chip { color: var(--ice); }
 .f-settings { padding: 24px; }
 .f-avatars { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 10px; margin-bottom: 20px; max-height: 360px; overflow-y: auto; padding: 4px; }
 .f-avpick { padding: 0; border: 2px solid transparent; border-radius: 50%; background: none; cursor: pointer; aspect-ratio: 1; transition: border-color 0.2s, transform 0.2s; }
-.f-avpick img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: top; }
+.f-avpick .f-face { display: block; width: 100%; height: 100%; border-radius: 50%; }
 .f-avpick:hover { transform: scale(1.05); }
 .f-avpick.on { border-color: var(--gold1); box-shadow: 0 0 14px rgba(245, 196, 81, 0.45); }
 .f-chars { margin-bottom: 20px; }
@@ -462,7 +462,7 @@ a.f-gm-i:hover, .f-member:hover { border-color: rgba(245, 196, 81, 0.28); transf
   .f-author { flex-direction: row; align-items: center; text-align: left; gap: 12px; padding: 12px 14px 10px 16px; border-right: 0; border-bottom: 1px solid var(--line); }
   .f-ava-l.f-ring-square { width: 52px; height: 52px; }
   .f-ava-l.f-ring-square::after { display: none; }
-  .f-ava-l.f-ring-square img { left: 0; top: 0; width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 0 0 2px var(--role); }
+  .f-ava-l.f-ring-square .f-sq { left: 0; top: 0; width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 0 0 2px var(--role); }
   .f-ava-l.f-ring-square .f-dot { right: 0; bottom: 0; width: 11px; height: 11px; }
   .f-author-id { justify-items: start; gap: 2px; flex: 1; }
   .f-author-id .f-nick { font-size: 18px; }

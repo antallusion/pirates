@@ -2,6 +2,7 @@
 // coins, the rows of sections and topics, the fresh-topic cards and the post card — HTML strings, every word escaped.
 
 import { REACTION_EMOJI, REACTIONS } from '../../../shared/src/forum/meta.ts';
+import { avatarHtml, faceBgStyle } from '../../../shared/src/data/portraitfit.ts';
 import { ago, count, esc, noun, fmtNum, fullDate, href, ico, isoDate, K, LANG, state, t, tx } from './core.ts';
 
 export interface UserLite { id: number; name: string; role: string; avatar: string; rank: number; captain: string | null; level: number | null; online: boolean }
@@ -18,10 +19,20 @@ export function tint(u: { role: string; captain: string | null } | null): string
 
 export const userHref = (u: { id: number }): string => href(`u/${u.id}`);
 
+/** A portrait in a bare circle or square (its class sets the size): the face in the middle (shared/src/data/portraitfit.ts;
+ *  owner, 2026-10-26: «все лица должны находиться четко во фрейме»), never an <img> cut from its top by cover. */
+export const faceSpan = (url: string, cls: string, style = ''): string =>
+  `<span class="${cls} f-face" role="img" aria-hidden="true" style="${style}background-image:url('${esc(url)}');${faceBgStyle(url, 1, 0.6)}"></span>`;
+
+/** A member's avatar: the site's brass porthole round her portrait (m, l), a thin ring of her colour (xs, s), or the
+ *  author's square frame on a post (l, square) — the round ones the game's avatar (portraitfit.ts avatarHtml: one box,
+ *  the ring and the portrait its shares, the face in the hole's middle). */
 export function avatar(u: UserLite | null, size: 'xs' | 's' | 'm' | 'l' = 's', ring: 'round' | 'square' = 'round'): string {
-  if (!u) return `<span class="f-ava f-ava-${size}"><img src="/assets/portraits/pirate_00.webp" alt="" loading="lazy" decoding="async"></span>`;
-  const px = { xs: 28, s: 40, m: 56, l: 112 }[size];
-  return `<span class="f-ava f-ava-${size} f-ring-${ring}" style="--tint:${tint(u)}"><img src="${esc(u.avatar)}" alt="" width="${px}" height="${px}" loading="lazy" decoding="async">${u.online ? `<i class="f-dot" title="${esc(t('online_now'))}"></i>` : ''}</span>`;
+  const url = u?.avatar ?? '/assets/portraits/pirate_00.webp';
+  const dot = u?.online ? `<i class="f-dot" title="${esc(t('online_now'))}"></i>` : '';
+  if (ring === 'square' && u) return `<span class="f-ava f-ava-${size} f-ring-square" style="--tint:${tint(u)}">${faceSpan(url, 'f-sq')}${dot}</span>`;
+  const ringed = size === 'm' || size === 'l';
+  return avatarHtml({ face: url, url, ring: ringed ? 'site' : null, ringUrl: ringed ? '/site/img/ui/ring_round.webp' : null, stock: 'site', cls: `f-ava f-ava-${size} f-ring-round`, attrs: u ? `style="--tint:${tint(u)}"` : '', inner: dot });
 }
 
 export const nick = (u: UserLite | null, cls = ''): string =>
@@ -38,7 +49,7 @@ export const roleBadge = (role: string): string =>
 export const className = (c: string | null): string => (c ? t(`cls_${c}`) : '');
 /** A class's mark: its captain's portrait in a ring of its colour. */
 export const classIcon = (c: string | null): string =>
-  c ? `<img class="f-clsico" style="--tint:var(--c-${c})" src="/assets/portraits/${esc(c)}.webp" alt="" width="20" height="20" loading="lazy" decoding="async">` : '';
+  c ? faceSpan(`/assets/portraits/${c}.webp`, 'f-clsico', `--tint:var(--c-${esc(c)});`) : '';
 
 /** The captain of a member: her ship's name in her class colour, level and class. */
 export function charLine(a: { captain: string | null; level: number | null; ship?: string | null }): string {

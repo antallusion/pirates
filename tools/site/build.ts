@@ -30,6 +30,7 @@ import { WEB_ITEMS, WEB_SECS, WEB_TABS, WEB_TAB_NAMES } from '../../shared/src/d
 import { SHOP } from '../../shared/src/data/shop.ts';
 import { SPECIAL_ICON as WD_SPECIAL_ICON } from '../../shared/src/data/webdetail.ts';
 import { fitStage } from '../../shared/src/data/framefit.ts';
+import { avatarHtml, faceFit, ringFit } from '../../shared/src/data/portraitfit.ts';
 import { DOC_IDS, DOC_TITLES, EDITION, LEGAL, REQUISITES, SELLER } from './legal.ts';
 import type { DocId } from './legal.ts';
 import { EN as ARMY_EN, RU as ARMY_RU } from '../../client/src/lang/ui/army.ts';
@@ -352,16 +353,21 @@ ${up ? `<h3>${u('upgrade', lang)}</h3><p>${up}</p>` : ''}${base ? `<h3>${u('from
 }
 
 const capRu = (id: string, k: string, en: string) => DATA_RU[`captains.CAPTAINS.${id}.${k}`] ?? en;
+/** A captain's face in the site's brass porthole (owner, 2026-10-26: «все лица должны находиться четко во фрейме»):
+ *  shared/src/data/portraitfit.ts — the face in the hole's middle, the ring and the portrait one box. */
+const SITE_RING = '/site/img/ui/ring_round.webp';
+const capAv = (id: string, name: string, cls: string): string =>
+  avatarHtml({ face: id, url: asset(`portrait.${id}`), ring: 'site', ringUrl: SITE_RING, stock: 'site', cls, attrs: `role="img" aria-label="${esc(name)}"` });
 function capMini(id: string, lang: Lang): string {
   const c = (CAPTAINS as Record<string, { name: string; archetype: string }>)[id];
-  return `<a class="cap reveal" href="${root(lang)}captains/#${id}"><span class="cap-ring">${img(asset(`portrait.${id}`), c.name)}</span><b>${esc(lang === 'ru' ? capRu(id, 'name', c.name) : c.name)}</b><i>${esc(lang === 'ru' ? capRu(id, 'archetype', c.archetype) : c.archetype)}</i></a>`;
+  return `<a class="cap reveal" href="${root(lang)}captains/#${id}">${capAv(id, c.name, 'cap-ring')}<b>${esc(lang === 'ru' ? capRu(id, 'name', c.name) : c.name)}</b><i>${esc(lang === 'ru' ? capRu(id, 'archetype', c.archetype) : c.archetype)}</i></a>`;
 }
 
 function captains(lang: Lang): string {
   const body = `<section class="wrap sec caps">${CAPTAIN_IDS.map((id, i) => {
     const c = CAPTAINS[id] as unknown as { name: string; epithet?: string; archetype: string; bio: string; playstyle: string; premium?: unknown; passive: { name: string; description: string }; abilities: { name: string; description: string }[] };
     const tr = (k: string, en: string) => (lang === 'ru' ? capRu(id, k, en) : en);
-    return `<article class="capcard panel reveal${i % 2 ? ' flip' : ''}" id="${id}"><div class="capcard-art">${img(asset(`unit.hero_${id}`) ?? asset(`portrait.${id}`), c.name, 'fig')}<span class="cap-ring big">${img(asset(`portrait.${id}`), c.name)}</span></div>
+    return `<article class="capcard panel reveal${i % 2 ? ' flip' : ''}" id="${id}"><div class="capcard-art">${img(asset(`unit.hero_${id}`) ?? asset(`portrait.${id}`), c.name, 'fig')}${capAv(id, c.name, 'cap-ring big')}</div>
 <div class="capcard-txt"><p class="kicker">${esc(tr('archetype', c.archetype))}${c.premium ? ` · <span class="gold">${u('premium', lang)}</span>` : ''}</p><h2>${esc(tr('name', c.name))}</h2>${c.epithet ? `<p class="epithet">«${esc(tr('epithet', c.epithet))}»</p>` : ''}
 <p>${T(tr('bio', c.bio), lang)}</p><p class="muted">${T(tr('playstyle', c.playstyle), lang)}</p>
 <div class="passive"><span class="abil-ico"><img src="${asset(`icon.school_${id}`) ?? K('ico/star')}" alt="" width="48" height="48"></span><div><b>${esc(tr('passive.name', c.passive.name))}</b><span>${T(tr('passive.description', c.passive.description), lang)}</span></div></div>
@@ -404,13 +410,20 @@ ${s.passive ? `<p class="trait"><img src="${K('ico/star')}" alt="" width="18" he
 const portraitOf = (id: string) => asset(`portrait.${id}`);
 const capNames = (lang: Lang): Record<string, string> =>
   Object.fromEntries(CAPTAIN_IDS.map((id) => [id, lang === 'ru' ? capRu(id, 'name', (CAPTAINS as Record<string, { name: string }>)[id].name) : (CAPTAINS as Record<string, { name: string }>)[id].name]));
+/** The avatars the pages' scripts draw (site.js gtAvatar, the same markup as shared/src/data/portraitfit.ts avatarHtml):
+ *  each captain's face fit (the face in the hole's middle) and the site ring's and every frame's place in the box. */
+const avatarData = () => ({
+  fits: Object.fromEntries(CAPTAIN_IDS.map((id) => { const f = faceFit(id); return [id, { size: f.size, pos: f.pos }]; })),
+  ring: { url: SITE_RING, ...ringFit('site', 'site') },
+});
 function cosData(lang: Lang) {
   return {
     portraits: Object.fromEntries(CAPTAIN_IDS.map((id) => [id, portraitOf(id)])),
     names: capNames(lang),
     plates: Object.fromEntries(PLATES.map((p) => [p.id, { url: asset(`cos.plate_${p.id}`), ink: p.ink, halo: p.halo, span: p.span }])),
-    // (the frame drawn wider than the face: its hole just over the portrait — client/src/ui/cosmetics.ts ringK)
-    frames: Object.fromEntries(FRAMES.map((f) => [f.id, { url: asset(`cos.frame_${f.id}`), k: Number(Math.min(2.1, 1 / (2 * f.hole * 0.94)).toFixed(3)) }])),
+    // (each frame laid so its own measured hole is the portrait's: portraitfit.ts ringFit)
+    frames: Object.fromEntries(FRAMES.map((f) => [f.id, { url: asset(`cos.frame_${f.id}`), ...ringFit(f.id, 'site') }])),
+    ...avatarData(),
     titles: Object.fromEntries(TITLES.map((t) => [t.id, L(lang, t.name)])),
   };
 }
@@ -591,7 +604,7 @@ ${WEB_TABS.map((id) => cat(id, L(lang, WEB_TAB_NAMES[id])) + (id === 'cos' ? `<d
 <div class="st-confirm" role="dialog" aria-modal="true" aria-labelledby="st-confirm-h" hidden><div class="st-confirm-in panel"><h3 id="st-confirm-h">${t('confirm')}</h3><div class="st-confirm-what"></div>
 <div class="st-confirm-act"><button type="button" class="btn-oak sm" data-cancel>${t('cancel')}</button><button type="button" class="btn-gold sm" data-pay></button></div><p class="shop-legal muted">${legalLine}</p></div></div>
 </section>
-${dataTag('shop-data', { lang, t: tr(SHOP_T), art, tabs: WEB_TABS.map((id) => ({ id, name: L(lang, WEB_TAB_NAMES[id]) })), secs: Object.fromEntries(Object.entries(WEB_SECS).map(([k, v]) => [k, L(lang, v)])), subs: Object.fromEntries(COS_SUBS.map((s) => [s, L(lang, COS_SUB_NAMES[s])])), cos: { portraits: Object.fromEntries(CAPTAIN_IDS.map((id) => [id, portraitOf(id)])), names: capNames(lang) }, coin: K('ico/doubloon'), sea: seaData() })}`;
+${dataTag('shop-data', { lang, t: tr(SHOP_T), art, tabs: WEB_TABS.map((id) => ({ id, name: L(lang, WEB_TAB_NAMES[id]) })), secs: Object.fromEntries(Object.entries(WEB_SECS).map(([k, v]) => [k, L(lang, v)])), subs: Object.fromEntries(COS_SUBS.map((s) => [s, L(lang, COS_SUB_NAMES[s])])), cos: { portraits: Object.fromEntries(CAPTAIN_IDS.map((id) => [id, portraitOf(id)])), names: capNames(lang), ...avatarData() }, coin: K('ico/doubloon'), sea: seaData() })}`;
   return page(lang, {
     path: 'shop/', active: 'shop', title: ru ? 'Магазин GRAVETIDE — дублоны, корабли, существа, косметика' : 'GRAVETIDE Shop — doubloons, ships, creatures, cosmetics',
     desc: ru ? 'Всё из премиум-лавки игры: дублоны, капитаны, корабли, существа, ускорители, наборы, косметика и акции. Введите ник, выберите товар и оплатите.' : 'Everything of the game’s premium shop: doubloons, captains, ships, creatures, boosters, supplies, cosmetics and offers. Enter the name, choose, pay.',
