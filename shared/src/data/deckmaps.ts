@@ -27,7 +27,7 @@ export interface DeckMap {
 /** The plank band's width on the field, in hex widths (the half-deck's box is five). */
 export const DECK_PW = 4.5;
 
-const BASE: DeckMap = { hw: 0.36, dy: 0.025, void: '100000000' };
+const BASE: DeckMap = { hw: 0.33, dy: 0.025, void: '100000000' };
 /** Paintings whose rails, ladders or cargo stand further in (their band is narrower). */
 const NARROW = [
   'bomb_ketch', 'brigantine', 'carrack', 'collier', 'cutter', 'golden_lion', 'great_xebec', 'hoy', 'hulk', 'icebound_hulk',
@@ -41,10 +41,13 @@ const STERN_POSTS = [
 ];
 /** Each painting's own, where it is not BASE (by its art name: assets/art/deck_<name>.webp). */
 export const DECK_MAPS: Record<string, Partial<DeckMap>> = {
-  ...Object.fromEntries(NARROW.map((n) => [n, { hw: 0.32 }])),
+  ...Object.fromEntries(NARROW.map((n) => [n, { hw: 0.3 }])),
   golden_carrack: { dy: 0.045 },
+  war_galley: { hw: 0.27 }, // her oar-ladders down both sides
 };
 for (const n of STERN_POSTS) DECK_MAPS[n] = { ...DECK_MAPS[n], void: '100000001' };
+/** The tall balustrades and stairs of the great sterns (the row before the last too). */
+for (const n of ['galleon', 'sloop_of_war']) DECK_MAPS[n] = { ...DECK_MAPS[n], void: '100000011' };
 
 /** The painting a hull's deck is drawn with (her own, or the one standing in for it), without `bg.deck_`. */
 export function deckArtName(hull: string | undefined): string {
