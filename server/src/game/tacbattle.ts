@@ -396,9 +396,10 @@ export function makeLandField(seed: number, type: string): TacCell[] {
     cells[i] = c;
     cells[hexMirror(i)] = c;
   };
-  // The middle ground: what stands there by the kind of island (rocks 'R', palms 'P', pools 'W'), on the ground alone.
+  // The middle ground: what stands there by the kind of island (rocks 'R', palms 'P'), on the ground alone — the water
+  // is the painting's own (no pool laid on dry ground).
   const kinds: Record<string, TacCell[]> = {
-    tropical: ['P', 'P', 'P', 'R'], rocky: ['R', 'R', 'R', 'P'], volcanic: ['R', 'R', 'R'], swamp: ['P', 'P', 'W', 'R'], graveyard: ['K', 'B', 'R', 'R'], dead: ['R', 'W', 'R'],
+    tropical: ['P', 'P', 'P', 'R'], rocky: ['R', 'R', 'R', 'P'], volcanic: ['R', 'R', 'R'], swamp: ['P', 'P', 'R'], graveyard: ['K', 'B', 'R', 'R'], dead: ['R', 'P', 'R'],
   };
   const pool = kinds[type] ?? kinds.rocky;
   let n = 3 + rng.int(0, 1);

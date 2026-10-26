@@ -4108,16 +4108,23 @@ export class TacticalPanel {
 
   /** How far, in hex widths, the tallest figure of this fight stands over its hex's top when on the top row: its
    *  drawn height (figure(): its size, a breath), a flier's lift at its highest, the winners' hop, less the hex's
-   *  depth above its feet (1.42 corner radii). */
+   *  depth above its feet (1.42 corner radii). Ashore (owner, 2026-10-27) the room is the painting's sky over the top
+   *  row: kept for the figure as it stands (its breath, a flier's hover), not for a blow's brief pose or the hop — the
+   *  hexes are not made smaller for a moment's flinch. */
   private headroom(): number {
     const v = this.view;
     if (!v) return 0;
+    const ashore = !!(v.land || v.siege || v.arena);
     let top = 0;
     for (const s of v.stacks) {
       const id = figureArt(s);
       if (!id) continue;
       // its poses fitted to the idle one stand up to a quarter taller (a dragon's flinch, its wings up)
       let pose = 1.015;
+      if (ashore) {
+        top = Math.max(top, figureSize(s) * pose + (s.sp.includes('flying') ? 0.33 : 0));
+        continue;
+      }
       for (const suf of ['_atk', '_b', '_hit']) {
         const rf = assetFor(`${id}${suf}`), f = rf ? fitBox(rf) : null;
         if (f) pose = Math.max(pose, -f.y);
