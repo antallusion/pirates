@@ -15,6 +15,7 @@ import type { TacCell, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import { DECOR_SIZE, PLANK_DRAW, PROP_SIZE, plankSpan } from '../../../shared/src/data/tacprops.ts'; // owner, 2026-10-18: the boarding pack
 import type { ClientMsg, ServerMsg, TacAction, TacAllyView, TacEvent, TacPreview, TacReplayFrame, TacStackView, TacView, TacWhy } from '../../../shared/src/protocol.ts';
 import { assetEpoch, assetFor, assetIds, assetUrl, sprite } from '../assets.ts';
+import { FIELD_ART, fieldArt, fieldMap } from '../../../shared/src/data/fieldmaps.ts'; // owner, 2026-10-27: the hexes on the painted ground
 import { FRAME_FIT, fitBox, frameFit } from '../../../shared/src/data/framefit.ts'; // owner, 2026-10-21: a creature's poses at one height
 import { dict, lang, plural } from '../i18n.ts';
 import { ORDERS, PRIMS, PRIM_ICON, PRIM_NAMES, SCHOOLS, SCHOOL_ICON, SCHOOL_NAMES } from '../../../shared/src/data/hero.ts';
@@ -385,7 +386,7 @@ export function tacArtSplit(v: TacView): { first: string[]; later: string[] } {
   const first: string[] = [];
   const later: string[] = [...assetIds('part.'), ...assetIds('fx.bt_'), 'bg.spellbook'];
   const type = v.land?.type ?? v.siege?.type ?? (v.arena ? 'arena' : null);
-  if (type) first.push(`bg.field_${type === 'arena' ? 'fort' : type}`);
+  if (type) first.push(`bg.field_${fieldArt(type)}`);
   else first.push('bg.battle_sea', ...v.heroes.map((h) => deckArt(h.hull ?? 'brig')));
   for (const h of v.heroes) {
     if (h.captain) first.push(CAPTAINS[h.captain]?.portrait ?? '');
@@ -588,6 +589,8 @@ export class TacticalPanel {
   private band = { l: 0, r: 0, t: 0, b: 0 };
   /** The room kept over the top row for its tallest figure, in hex widths (fit(); only grows within a fight). */
   private head = 0;
+  /** The ground ashore the field was last fitted to (null: a ship's deck). */
+  private ground: string | null = null;
   /** The special whose words are open on the stack's card (a phone has no hover for its title). */
   private spNote: string | null = null;
   /** On a phone (docs/23 items 59, 62): the stack's card or the book, as the kit's bottom sheet. */
@@ -4064,8 +4067,13 @@ export class TacticalPanel {
     // canvas's top edge. The room their heads need over the top row is kept: the tallest figure in this fight
     // (its height, a flier's lift, the winners' hop) less what stands inside its own hex.
     const head = Math.max(this.head, this.headroom());
-    if (cw === this.size.cw && ch === this.size.ch && dpr === this.size.dpr && same && head === this.head) return false;
+    // Owner, 2026-10-27: a field ashore lies on its painting's ground (fieldmaps.ts) — the painting's sky over the top
+    // row is the heads' room.
+    const v0 = this.view;
+    const ground = v0 ? v0.land?.type ?? v0.siege?.type ?? (v0.arena ? 'arena' : null) : null;
+    if (cw === this.size.cw && ch === this.size.ch && dpr === this.size.dpr && same && head === this.head && ground === this.ground) return false;
     this.head = head;
+    this.ground = ground;
     this.band = band;
     // The cards and the end over the field keep to the same room (styles.css: body.tac-ph).
     for (const k of ['l', 'r', 't', 'b'] as const) this.el?.style.setProperty(`--tb-${k}`, `${band[k]}px`);
@@ -4079,7 +4087,14 @@ export class TacticalPanel {
     const bw = w * TAC_W, bh = depth * w;
     const old = this.size;
     const sw = rot ? bh : bw, sh = rot ? bw : bh;
-    const oy = rot ? band.t + (ah - sh) / 2 : Math.max(band.t + (ah - sh) / 2, head * w);
+    let oy = rot ? band.t + (ah - sh) / 2 : Math.max(band.t + (ah - sh) / 2, head * w);
+    if (ground && !rot) {
+      // Ashore the board sits low, its painting's foot at the stage's foot (or the buttons' band), so the room left over
+      // is the painting's sky above the top row — never past the heads' room, never under the order's faces.
+      const m = fieldMap(ground);
+      const below = (1 - m.y0) * (bw / m.gw) * (FIELD_ART.h / FIELD_ART.w) - bh;
+      oy = Math.max(band.t, head * w, Math.min(ch - band.b - bh, ch - band.b - bh - Math.max(0, below)));
+    }
     this.size = { w, cw, ch, ox: band.l + (aw - sw) / 2, oy, dpr, rot, bw, bh };
     c.width = Math.round(cw * dpr);
     c.height = Math.round(ch * dpr);
@@ -4402,15 +4417,11 @@ export class TacticalPanel {
     const [base, dark, light] = GROUND[type] ?? GROUND.rocky;
     const b0 = this.lc(0), b1 = this.lc(TAC_W * TAC_H - 1);
     const X0 = b0.x - w * 0.6, Y0 = b0.y - r * 1.1, X1 = b1.x + w * 0.6, Y1 = b1.y + r * 1.1;
-    // The island's ground painted as in Heroes (owner, 2026-10-02): the painting over the whole stage, the hexes on it.
-    const art = sprite(`bg.field_${type === 'arena' ? 'fort' : type}`);
+    // The island's ground painted as in Heroes (owner, 2026-10-02), the hexes on it. Owner, 2026-10-27: laid so the
+    // board's box falls on its walkable ground (fieldmaps.ts), uniformly scaled, cropped by the stage.
+    const art = sprite(`bg.field_${fieldArt(type)}`);
     this.painted = !!art;
-    if (art) {
-      g.save();
-      g.setTransform(this.size.dpr, 0, 0, this.size.dpr, 0, 0);
-      cover(g, art.img, 0, 0, this.size.cw, this.size.ch);
-      g.restore();
-    }
+    if (art) this.layField(g, art.img, type);
     g.fillStyle = base;
     if (!art) g.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
     // Ripples of the wind in the sand and a speckle of shell and grit (seeded by the field, the same each draw).
@@ -4490,6 +4501,37 @@ export class TacticalPanel {
       else if (cells[i] === 'K') this.crates(g, p.x, p.y, w);
       else if (cells[i] === 'B') this.barrel(g, p.x, p.y, w);
     }
+  }
+
+  /** The field's painting under the board (owner, 2026-10-27): its ground box (fieldmaps.ts) on the board's box, one
+   *  scale both ways; where the stage reaches past the painting, the painting mirrored over its edge. A phone held
+   *  upright (the board turned) keeps the painting as a cover over the stage. */
+  private layField(g: CanvasRenderingContext2D, img: HTMLImageElement, type: string): void {
+    const { dpr, rot, cw, ch, ox, oy, bw } = this.size;
+    g.save();
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const iw = img.naturalWidth || FIELD_ART.w, ih = img.naturalHeight || FIELD_ART.h;
+    if (rot || !bw) {
+      cover(g, img, 0, 0, cw, ch);
+      g.restore();
+      return;
+    }
+    const m = fieldMap(type);
+    const k = bw / (m.gw * iw);
+    const dw = iw * k, dh = ih * k, x = ox - m.x0 * dw, y = oy - m.y0 * dh;
+    g.drawImage(img, x, y, dw, dh);
+    const flip = (tx: number, ty: number, sx: number, sy: number, px: number, py: number) => {
+      g.save();
+      g.translate(tx, ty);
+      g.scale(sx, sy);
+      g.drawImage(img, px, py, dw, dh);
+      g.restore();
+    };
+    if (x > 0) flip(x, 0, -1, 1, 0, y);
+    if (x + dw < cw) flip(x + dw, 0, -1, 1, -dw, y);
+    if (y > 0) flip(0, y, 1, -1, x, 0);
+    if (y + dh < ch) flip(0, y + dh, 1, -1, x, -dh);
+    g.restore();
   }
 
   /** A boulder from above: a ragged grey (or black) mass, lit from the north-west, its shadow to the south-east. */

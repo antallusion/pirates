@@ -1447,7 +1447,9 @@ export function adminLair(game: Game, s: PlayerSession, args: string[]): string 
     sendLairCard(game, s, true);
     return `All ${S.lairs.length} lairs stand again; your spoils are forgotten.`;
   }
-  let list = S.lairs.filter((l) => (!kind || l.kind === kind) && lairThere(game, l) && !(l.island >= 0 && game.world.islands[l.island]?.hidden));
+  // (QA, 2026-10-27: a lair on an island of that ground — its painted field — with the ground's name among the args)
+  const ground = args.find((x) => ['tropical', 'rocky', 'volcanic', 'swamp', 'graveyard', 'dead'].includes(x));
+  let list = S.lairs.filter((l) => (!kind || l.kind === kind) && (!ground || l.type === ground) && lairThere(game, l) && !(l.island >= 0 && game.world.islands[l.island]?.hidden));
   if (filt === 'chain' || filt === 'grotto' || filt === 'guardian') list = list.filter((l) => l.chain === (filt === 'grotto' ? 1 : filt === 'guardian' ? 2 : 0));
   if (filt === 'dwell') list = list.filter((l) => LAIRS[l.kind].dwell && l.island >= 0 && (!LAIRS[l.kind].join.startsWith('d') || keepsDeep(s)));
   if (filt === 'turtle') list = S.lairs.filter((l) => l.turtle !== undefined);

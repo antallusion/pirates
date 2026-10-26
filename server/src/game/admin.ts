@@ -1043,7 +1043,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       return adminLair(game, s, args);
     case 'lair': {
       // docs/18 II: the lairs of the land's creatures — a kind of lair or one of their orders.
-      if (args.length && args.every((a) => LAIR_KINDS.includes(a as LairKind) || ['go', 'fight', 'beat', 'weak', 'reset', 'chain', 'dwell', 'info', 'grotto', 'guardian', 'turtle', 'sandbar'].includes(a))) return adminLair(game, s, args);
+      if (args.length && args.every((a) => LAIR_KINDS.includes(a as LairKind) || ['go', 'fight', 'beat', 'weak', 'reset', 'chain', 'dwell', 'info', 'grotto', 'guardian', 'turtle', 'sandbar', 'tropical', 'rocky', 'volcanic', 'swamp', 'graveyard', 'dead'].includes(a))) return adminLair(game, s, args);
       // A pirate lair (docs/16 #7): /lair [close] — to the nearest, off its guns (close: within the boats' reach);
       // /lair wake|silence|sink|rebuild.
       const all = lairsAll(game);

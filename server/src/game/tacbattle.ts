@@ -25,6 +25,7 @@ import type { BtMods, PageFx } from '../../../shared/src/data/paths.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { FAV_BONUS } from '../../../shared/src/data/drifts.ts';
 import { deckTheme, dressDeck, layDeck, plankRuns } from '../../../shared/src/data/tacprops.ts';
+import { fieldCells } from '../../../shared/src/data/fieldmaps.ts';
 import { SK, skillOf } from '../../../shared/src/data/creatureskills.ts';
 import type { SkillId } from '../../../shared/src/data/creatureskills.ts';
 import { aiSkillChoice, castSkill, deathBlast, skillError, skillReady, skillTargets } from './tacskills.ts';
@@ -381,21 +382,21 @@ export function makeField(seed: number): TacCell[] {
   return cells;
 }
 
-/** The battlefield ashore (docs/18 II item 15): the same hexes, sand where the decks were — the surf along the shore
- *  (the bottom rows), rocks and palms in the middle ground (cover from shots for a stack beside them) by the kind of
- *  island, a tidal pool or two on the marshy and the dead ones; the same seen from either side, as the decks are. */
+/** The battlefield ashore (docs/18 II item 15): the same hexes laid on the island's painted ground (fieldmaps.ts: no
+ *  hex over its sky, sea, cliffs or trees; its pools are water), rocks and palms in the middle ground (cover from shots
+ *  for a stack beside them) by the kind of island, a tidal pool or two on the marshy and the dead ones; what stands
+ *  there the same seen from either side, as the decks are. */
 export function makeLandField(seed: number, type: string): TacCell[] {
   const rng = new Rng((seed ^ 0x1a2d) >>> 0);
-  const cells: TacCell[] = Array.from({ length: TAC_W * TAC_H }, () => '.');
-  for (let y = 1; y < TAC_H; y += 2) cells[hexIndex(TAC_W - 1, y)] = '#';
+  // Owner, 2026-10-27: the hexes lie only on the painting's walkable ground (shared/src/data/fieldmaps.ts) — the void
+  // ('#') where its sky, sea, cliffs or trees are, the water ('W') where its pools truly are.
+  const cells = fieldCells(type);
+  const free = (i: number) => cells[i] === '.' && cells[hexMirror(i)] === '.';
   const set = (i: number, c: TacCell) => {
     cells[i] = c;
     cells[hexMirror(i)] = c;
   };
-  // The surf: the last row whole, and a tongue of it in the row above where the beach dips.
-  for (let x = 0; x < TAC_W; x++) cells[hexIndex(x, TAC_H - 1)] = 'W';
-  for (const x of [3, 4]) if (rng.chance(0.6)) set(hexIndex(x, TAC_H - 2), 'W');
-  // The middle ground: what stands there by the kind of island (rocks 'R', palms 'P', pools of the surf 'W').
+  // The middle ground: what stands there by the kind of island (rocks 'R', palms 'P', pools 'W'), on the ground alone.
   const kinds: Record<string, TacCell[]> = {
     tropical: ['P', 'P', 'P', 'R'], rocky: ['R', 'R', 'R', 'P'], volcanic: ['R', 'R', 'R'], swamp: ['P', 'P', 'W', 'R'], graveyard: ['K', 'B', 'R', 'R'], dead: ['R', 'W', 'R'],
   };
@@ -404,7 +405,7 @@ export function makeLandField(seed: number, type: string): TacCell[] {
   for (let tries = 0; n > 0 && tries < 40; tries++) {
     const x = rng.int(2, 4), y = rng.int(0, TAC_H - 3);
     const i = hexIndex(x, y);
-    if (cells[i] !== '.' || hexNeighbors(i).some((j) => cells[j] !== '.' && cells[j] !== '#')) continue;
+    if (!free(i) || hexNeighbors(i).some((j) => cells[j] !== '.' && cells[j] !== '#')) continue;
     set(i, pool[rng.int(0, pool.length - 1)]);
     n--;
   }
@@ -422,8 +423,8 @@ export function makeLandField(seed: number, type: string): TacCell[] {
  *  garrison's. */
 export function makeSiegeField(seed: number, type: string, hp: readonly number[], max: readonly number[]): TacCell[] {
   const rng = new Rng((seed ^ 0x51e6e) >>> 0);
-  const cells: TacCell[] = Array.from({ length: TAC_W * TAC_H }, () => '.');
-  for (let y = 1; y < TAC_H; y += 2) cells[hexIndex(TAC_W - 1, y)] = '#';
+  // The island's painted ground (fieldmaps.ts); the moat and the wall line stand down their whole columns over it.
+  const cells = fieldCells(type);
   for (let y = 0; y < TAC_H; y++) {
     cells[hexIndex(SIEGE.moatX, y)] = y === SIEGE.gateY ? 'D' : 'O';
     cells[hexIndex(SIEGE.wallX, y)] = siegeCell(siegePart(y), hp[y] ?? SIEGE.hp, max[y] ?? SIEGE.hp);
@@ -436,8 +437,8 @@ export function makeSiegeField(seed: number, type: string, hp: readonly number[]
     cells[i] = pool[rng.int(0, pool.length - 1)];
     n--;
   }
-  const back = hexIndex(TAC_W - 1, rng.pick([0, 8]));
-  cells[back] = rng.chance(0.5) ? 'B' : 'K';
+  const back = [hexIndex(TAC_W - 1, rng.pick([0, 8])), hexIndex(TAC_W - 1, 0), hexIndex(TAC_W - 1, 8), hexIndex(TAC_W - 1, 4)].find((i) => cells[i] === '.');
+  if (back !== undefined) cells[back] = rng.chance(0.5) ? 'B' : 'K';
   return cells;
 }
 
@@ -446,8 +447,8 @@ export function makeSiegeField(seed: number, type: string, hp: readonly number[]
  *  captains' and nobody's deck. */
 export function makeArenaField(seed: number): TacCell[] {
   const rng = new Rng((seed ^ 0xa7e4a) >>> 0);
-  const cells: TacCell[] = Array.from({ length: TAC_W * TAC_H }, () => '.');
-  for (let y = 1; y < TAC_H; y += 2) cells[hexIndex(TAC_W - 1, y)] = '#';
+  // The fort's courtyard as painted (fieldmaps.ts: the same seen from either side).
+  const cells = fieldCells('fort');
   const set = (i: number, c: TacCell) => {
     cells[i] = c;
     cells[hexMirror(i)] = c;

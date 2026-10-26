@@ -13,7 +13,8 @@ import type { ArmyStack } from '../shared/src/data/army.ts';
 import { BEASTS, BEAST_IDS, BEAST_TINT } from '../shared/src/data/bestiary.ts';
 import { LAIRS, LAIR_KINDS, LAIR_RESPAWN, PEN_HATCH_DAYS, PEN_GROW_DAYS, buildLairs, lairArmy, landParty } from '../shared/src/data/lairs.ts';
 import { generateLairJobs } from '../shared/src/data/lairquests.ts';
-import { TAC_BLOCKING, hexIndex, hexMirror, TAC_W, TAC_H } from '../shared/src/data/tactical.ts';
+import { TAC_BLOCKING, hexIndex, hexMirror, hexNeighbors, TAC_W, TAC_H } from '../shared/src/data/tactical.ts';
+import { fieldCells } from '../shared/src/data/fieldmaps.ts';
 import { DAY_LENGTH_SEC } from '../shared/src/constants.ts';
 import { pointInPolygon } from '../shared/src/math.ts';
 import { Rng } from '../shared/src/rng.ts';
@@ -131,12 +132,14 @@ test('the lairs: the same world, the same lairs; on their islands by kind and le
 
 // ------------------------------------------------------------------------------------------------ 15, 16. the battle ashore
 
-test('the battlefield ashore: sand, the surf along the shore, rocks and palms; the same from either side; no guns', () => {
+test('the battlefield ashore: the painted ground, its pools, rocks and palms; the same from either side; no guns', () => {
   for (const type of ['tropical', 'rocky', 'volcanic', 'swamp', 'graveyard', 'dead']) {
     const cells = makeLandField(77, type);
+    const base = fieldCells(type);
     assert.ok(!cells.includes('~') && !cells.includes('=') && !cells.includes('M'), 'no decks, no planks');
-    for (let x = 0; x < TAC_W; x++) assert.equal(cells[hexIndex(x, TAC_H - 1)], 'W', 'the surf along the shore');
-    for (let i = 0; i < cells.length; i++) if (cells[i] !== '#') assert.equal(cells[hexMirror(i)], cells[i], `${type}: mirrored`);
+    // owner, 2026-10-27: hexes only on the painted ground (fieldmaps.ts) — the void stays void, nothing stands on it
+    for (let i = 0; i < cells.length; i++) if (base[i] === '#') assert.equal(cells[i], '#', `${type}: void kept`);
+    for (let i = 0; i < cells.length; i++) if (base[i] === '.' && cells[i] !== '.') assert.equal(cells[hexMirror(i)], cells[i], `${type}: mirrored`);
     assert.ok(cells.some((c) => c === 'R' || c === 'P' || c === 'K' || c === 'B'), `${type}: something to hide behind`);
   }
   // The swivels stay aboard: no burst ashore.
@@ -152,13 +155,16 @@ test('the specials: flying over obstacles, diving through the surf, a shell agai
   // Flying: the gulls' reach crosses the rocks and the stacks a walker must go round.
   let bt = mk([{ u: 'deckhand', n: 5 }], [{ u: 'gull', n: 5 }, { u: 'crab', n: 5 }]);
   const gull = bt.stacks.find((s) => s.unit === 'gull')!, crab = bt.stacks.find((s) => s.unit === 'crab')!;
+  // (the dry beach's sand is open — fieldmaps.ts: no surf under the painting — so rocks are laid round the gulls)
+  for (const j of hexNeighbors(gull.hex)) if (bt.cells[j] === '.' && !bt.stacks.some((o) => o.hex === j)) bt.cells[j] = 'R';
   const block = bt.cells.map((c, i) => (TAC_BLOCKING.has(c) ? i : -1)).filter((i) => i >= 0 && bt.cells[i] !== '#' && bt.cells[i] !== 'W');
   assert.ok(reachOf(bt, gull).size > reachOf(bt, { ...crab, speed: gull.speed, sp: [] } as typeof crab).size, 'the gulls reach further than a walker of their speed');
   assert.ok(![...reachOf(bt, gull).keys()].some((i) => block.includes(i)), 'but land on the sand');
   // Diving: into the surf and out of it anywhere along the shore.
-  bt = mk([{ u: 'deckhand', n: 5 }], [{ u: 'seal', n: 5 }]);
+  // (the marsh: its painted pools, fieldmaps.ts — the left of the second row and right of the middle)
+  bt = newBattle(side([{ u: 'deckhand', n: 5 }]), side([{ u: 'seal', n: 5 }], true), 11, 0, rng, { land: 'swamp' });
   const seal = bt.stacks.find((s) => s.unit === 'seal')!;
-  seal.hex = hexIndex(9, TAC_H - 2);
+  seal.hex = hexIndex(8, 4);
   const far = [...reachOf(bt, seal).keys()];
   assert.ok(far.some((i) => bt.cells[i] === 'W' && i % TAC_W <= 2), 'out of the surf at the other end of the beach');
   // A shell: shots do little over a third.
