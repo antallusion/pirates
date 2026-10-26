@@ -10,6 +10,16 @@ export interface Layer {
   onEscape?: () => void;
   /** Enter outside a field. */
   onEnter?: () => void;
+  /** Not modal for the game's keys (the level-up card, batch-pc): while the focus is outside it, every key but Esc and
+   *  Enter goes on to the game (WASD, Space, the hotkeys) and the layer takes no focus as it opens; once the focus is in
+   *  it (Enter, a click), it owns the keyboard as any layer does. */
+  passKeys?: boolean;
+}
+
+/** Whether a key goes past a layer to the game (pure, for the tests): a `passKeys` layer lets all but Esc and Enter by
+ *  while the focus is outside it. */
+export function keyPasses(passKeys: boolean | undefined, key: string, focusInside: boolean): boolean {
+  return !!passKeys && !focusInside && key !== 'Escape' && key !== 'Enter';
 }
 
 const stack: { layer: Layer; back: Element | null }[] = [];
@@ -29,6 +39,7 @@ function focusables(root: HTMLElement): HTMLElement[] {
 function onKey(e: KeyboardEvent): void {
   const top = stack.at(-1)?.layer;
   if (!top) return;
+  if (keyPasses(top.passKeys, e.key, top.root.contains(document.activeElement))) return;
   if (e.key === 'Tab') {
     const list = focusables(top.root);
     const next = nextFocus(list, document.activeElement as HTMLElement | null, e.shiftKey);
@@ -44,6 +55,10 @@ function onKey(e: KeyboardEvent): void {
   if (e.key === 'Escape') {
     e.preventDefault();
     top.onEscape?.();
+  } else if (e.key === 'Enter' && top.passKeys && !top.root.contains(document.activeElement)) {
+    // (the focus outside a pass-through card: Enter steps into it — its first control — rather than the chat)
+    e.preventDefault();
+    focusables(top.root)[0]?.focus({ preventScroll: true });
   } else if (e.key === 'Enter' && !field && top.onEnter && !(e.target as HTMLElement | null)?.closest?.('button')) {
     e.preventDefault();
     top.onEnter();
@@ -54,6 +69,7 @@ function onKey(e: KeyboardEvent): void {
 export function pushLayer(layer: Layer): void {
   if (!stack.length) addEventListener('keydown', onKey, true);
   stack.push({ layer, back: document.activeElement });
+  if (layer.passKeys) return; // (the focus stays where it is: the game's keys go on)
   const first = layer.root.querySelector<HTMLElement>('[data-autofocus]') ?? focusables(layer.root)[0];
   first?.focus({ preventScroll: true });
 }

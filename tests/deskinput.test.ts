@@ -139,3 +139,18 @@ test('no forced layout each frame: the nav plate by an observer, its text only w
   const ease = readFileSync(new URL('../client/src/ui/ease.ts', import.meta.url), 'utf8');
   assert.match(ease, /if \(now - this\.stackAskedAt < 500\) return this\.stackWas;/);
 });
+
+test('the level-up card is not modal for the game\'s keys: WASD, Space, the hotkeys go on; Esc and Enter are the card\'s', async () => {
+  const { keyPasses } = await import('../client/src/ui/kit/layer.ts');
+  for (const k of ['w', 'a', 's', 'd', 'ArrowUp', ' ', 'f', 'Tab', '1', 'Shift']) assert.equal(keyPasses(true, k, false), true, k);
+  assert.equal(keyPasses(true, 'Escape', false), false);
+  assert.equal(keyPasses(true, 'Enter', false), false);
+  assert.equal(keyPasses(true, ' ', true), false, 'the focus in the card (Enter, a click): its keys are the card\'s');
+  assert.equal(keyPasses(undefined, 'w', false), false, 'every other sheet stays modal');
+  const hero = readFileSync(new URL('../client/src/ui/hero.ts', import.meta.url), 'utf8');
+  assert.match(hero, /cls: 'lu-sheet', passKeys: true/);
+  const layer = readFileSync(new URL('../client/src/ui/kit/layer.ts', import.meta.url), 'utf8');
+  assert.match(layer, /if \(layer\.passKeys\) return;/, 'it takes no focus as it opens (Space would press a pick)');
+  const sheet = readFileSync(new URL('../client/src/ui/kit/sheet.ts', import.meta.url), 'utf8');
+  assert.match(sheet, /passKeys: o\.passKeys/);
+});
