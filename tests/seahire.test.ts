@@ -1,6 +1,7 @@
 // Owner, 2026-10-25: a ship of the sea hired at sea as a guard for 10–20 minutes, of the captain's own level, for a price
 // that is a real decision (shared/src/data/seahire.ts, server/src/game/seahire.ts, npc.ts hiredFoe / waitOffHarbour).
 
+import { dailyRollover } from '../server/src/game/dailies.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HIRE_MINUTES, HIRE_REACH, REHIRE_SEC, hirePrice, hireRefund, hireSlots, powerMul, priceMinutes } from '../shared/src/data/seahire.ts';
@@ -41,6 +42,9 @@ function captain(game: Game, name: string, at: { x: number; y: number }, level =
   if (s.profile!.tutorial) s.profile!.tutorial.on = false;
   s.profile!.level = level;
   s.profile!.gold = 50000;
+  // (no daily orders: the day's roll paid +126 for a region found on 2026-10-26 and «nothing back» failed by the date)
+  dailyRollover(game, s);
+  s.profile!.daily.orders = [];
   const ship = s.ship!;
   Object.assign(ship.state, { x: at.x, y: at.y, heading: 0, speed: 0 });
   ship.region = regionAt(game.world, at.x, at.y);

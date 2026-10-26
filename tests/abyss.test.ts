@@ -169,7 +169,7 @@ test('the Ancient Leviathan is three times the beast; the Eye shrugs off shot un
   at(game, s, pos.x, pos.y);
   const lf = summon(game, 'ancient_leviathan', pos.x + 2000, pos.y);
   const body = game.ships.get(lf.id)!;
-  assert.ok(Math.abs(body.stats.hullMax - 180000) < 1);
+  assert.ok(Math.abs(body.stats.hullMax - 90000) < 1, String(body.stats.hullMax)); // owner 2026-10-26: NPC HP ×0.5 (was 180000)
   const eye = game.abyss.eye;
   const f = summon(game, 'abyss_eye', eye.x, eye.y);
   const e = game.ships.get(f.id)!;

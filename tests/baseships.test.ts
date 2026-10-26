@@ -16,6 +16,7 @@ import {
 import { SHIP_CLASSES } from '../shared/src/data/ships.ts';
 import { ISLE_LEVELS, ISLE_MAX } from '../shared/src/data/estate.ts';
 import { levelRange, levelScale } from '../shared/src/data/shiplevel.ts';
+import { NPC_HP_MUL } from '../shared/src/data/seabalance.ts';
 import type { TalentRanks } from '../shared/src/data/talents.ts';
 import type { Island } from '../shared/src/world/worldgen.ts';
 import { isLand } from '../shared/src/world/worldgen.ts';
@@ -195,7 +196,8 @@ test('taken out off the island she sails at her station and counts in the squadr
   assert.equal(fr.loadout.classId, 'frigate');
   const p = ownParity('frigate', 8);
   assert.ok(p < 1 && fr.effects.some((e) => e.id === 'own_parity'));
-  assert.ok(Math.abs(fr.stats.hullMax / (SHIP_CLASSES.frigate.hull * levelScale('frigate', 8).hull) - p) < 0.02, `hull ${fr.stats.hullMax}`);
+  // (owner 2026-10-26: NPC HP ×0.5 — her own island ship is a ship the server sails too: half the parity's hull)
+  assert.ok(Math.abs(fr.stats.hullMax / (SHIP_CLASSES.frigate.hull * levelScale('frigate', 8).hull) - p * NPC_HP_MUL) < 0.02, `hull ${fr.stats.hullMax}`);
   assert.equal(shipRecall(game, s, w.id), null);
   w.level = 1;
   // A captain without Command still takes two of her own, and hires none.

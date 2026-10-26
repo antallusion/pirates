@@ -28,7 +28,7 @@ test('the First Watch\'s «Атакуйте»: «Атаковать» on its rai
   const { WATCH_RAIDER_OFF } = await import('../server/src/game/onboarding.ts');
   assert.ok(WATCH_RAIDER_OFF <= 600, 'no 40–50 s of open sea before the raider is near');
   const main = readFileSync('client/src/main.ts', 'utf8');
-  assert.match(main, /attackRelevant\(gunLeft <= 0, tgtSeen, state\.onboarding\?\.stage === 'attack' && tgt\?\.info\?\.name === WATCH_RAIDER\)/);
+  assert.match(main, /attackRelevant\(gunLeft <= 0, tgtSeen, state\.onboarding\?\.stage === 'attack' && tgt\?\.info\?\.name === WATCH_RAIDER(, targetPinned)?\)/); // (a pinned target's 4th argument since)
 });
 
 test('the story after the opening: «Плыть» on the bar and the finger on it in the first two chapters', () => {

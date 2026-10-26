@@ -10,6 +10,7 @@ import { admiralsEye, escortSlots, escortsOf, lashInPort, stepFleet } from '../s
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { join, makeGame, steps } from './helpers.ts';
+import { NPC_HP_MUL, NPC_VOLLEYS } from '../shared/src/data/seabalance.ts';
 
 // Ten points in Command open the first escort berth.
 const TEN: TalentRanks = { cmd_steady_voice: 3, cmd_fair_share: 2, cmd_officers_mess: 2, cmd_press_gang: 2, cmd_signal_flags: 1 };
@@ -103,7 +104,10 @@ test('formations and the Admiral\'s Pennant change the squadron; Line of Battle 
   const [e] = escortsOf(game, ship);
   game.now += 5;
   stepFleet(game, s);
-  assert.ok(e.stats.hullMax > computeShipStats(e.loadout, e.captain, {}).hullMax, 'pennant: +20% hull');
+  // (owner 2026-10-26: NPC HP ×0.5 — a hired escort is a ship the server sails: +20% on her hull of the sea's table
+  // (seaScale, no NPC discount for a captain's escort) halved; was «more than her class's bare hull»)
+  const bare = computeShipStats(e.loadout, e.captain, {}).hullMax * (e.seaScale ? e.seaScale.hull / NPC_VOLLEYS : 1) * NPC_HP_MUL;
+  assert.ok(Math.abs(e.stats.hullMax / bare - 1.2) < 0.02, `pennant: +20% hull (${e.stats.hullMax} of ${Math.round(bare)})`);
   const own = computeShipStats(ship.loadout, 'admiral', {});
   assert.ok(ship.stats.gunDamageMul < own.gunDamageMul - 0.2, 'your own guns −30%');
   c.push({ t: 'formation', formation: 'wedge' });

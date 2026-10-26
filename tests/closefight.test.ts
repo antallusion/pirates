@@ -123,7 +123,9 @@ test('«Атаковать» with the guns: she lies close (median ≤ 160 m, on
     }
     rows.push(`⚓${L}: held median ${Math.round(med(held))} m, ${hits}/${balls} balls, ${wins}/4 won, median ${med(secs).toFixed(1)} s`);
     assert.ok(med(held) <= 160, rows.at(-1));
-    assert.ok(balls > 20 && hits / balls >= 0.75, rows.at(-1));
+    // (owner 2026-10-26: NPC HP ×0.5 — at ⚓1 she sinks in two or three broadsides now (25 s, was 33), so the last
+    // broadside's balls past her sinking weigh more: 27/37 = 0.73 (was 48/52); 0.7 there, 0.75 above)
+    assert.ok(balls > 20 && hits / balls >= (L === 1 ? 0.7 : 0.75), rows.at(-1));
     assert.ok(med(secs) <= GUNS_TIME[L], rows.at(-1));
   }
   console.log(rows.join('\n'));

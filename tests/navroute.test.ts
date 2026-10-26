@@ -304,7 +304,10 @@ test('every run sends its planned way: a tap\'s, a goal\'s in port (from the har
     gotoGoal(game, s, `q:${q.id}`);
     const r = c.last('route') as { on: boolean; view?: { x: number; y: number; path?: [number, number][] } } | undefined;
     assert.ok(r?.on && r.view, 'the campaign\'s place');
-    assert.ok((r!.view!.path?.length ?? 0) >= 2, 'with its way from the harbour');
+    // («Плыть» in port casts off at once since 2c8204f3, owner 2026-10-26 «ниче не происходит»: the way from the harbour
+    // is the helmsman's run's own plan, sent with it — the place's view is measured from the harbour's mouth)
+    const run = c.inbox.filter((x) => x.t === 'autosail' && x.on).pop() as { path?: [number, number][] } | undefined;
+    assert.ok((r!.view!.path?.length ?? 0) >= 2 || (run?.path?.length ?? 0) >= 2, 'with its way from the harbour');
     // cast off: the helmsman's run sends its own plan
     ship.docked = null;
     s.profile!.docked = null;

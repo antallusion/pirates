@@ -28,7 +28,10 @@ const LEVELS = [1, 3, 5, 8];
 // the quick fight's 30 s at every ⚓ gave way to the broadside table — two of the sea's ships of a level (each a captain
 // in half gear, sinking in 30% fewer broadsides) take about half a minute at ⚓1 and two at ⚓8–10. Was: median and p90
 // ≤ 30 s at all four. Measured after: ⚓1 34/43 s, ⚓3 50/55, ⚓5 67/81, ⚓8 109/129.
-const SEA_TIME: Record<number, [number, number]> = { 1: [15, 50], 3: [25, 75], 5: [35, 100], 8: [55, 160] };
+// Owner 2026-10-26: NPC HP ×0.5 — both of the sea's ships at half hull, the bands halved (were 15–50, 25–75, 35–100,
+// 55–160). Measured after: ⚓1 6.8/10.8 s, ⚓3 18.2/19.2, ⚓5 25.8/31, ⚓8 46.7/49.9 (at ×1: 19.4/26.3, 36.5/38.2,
+// 57.3/66.8, 85.4/94.7).
+const SEA_TIME: Record<number, [number, number]> = { 1: [5, 25], 3: [12, 38], 5: [17, 50], 8: [27, 80] };
 
 test('two ships of a level sink each other with broadsides alone in the table’s time (docs/25 §1.1), median and 90th percentile, at ⚓1/3/5/8', () => {
   const game = duelSea();
@@ -138,9 +141,11 @@ test('auto-battle against the weak: a mark two levels down is settled in about t
   s.autoWeak = true;
   s.autoFire = false;
   assert.equal(startPursuit(game, s, foe.id, 'guns'), null);
-  steps(game, 20 * 2);
+  // (owner 2026-10-26: NPC HP ×0.5 — her opening broadside (~180 of the mark's 503, was 1006) and two of the auto-battle's
+  // blows of 35% sink her at 2.0 s now, before the third; was «not yet» at 2 s)
+  steps(game, 20 * 0.9);
   assert.ok(foe.alive && !foe.sinkingUntil && !foe.surrendered, 'not yet');
-  steps(game, 20 * 1.2);
+  steps(game, 20 * 2.3);
   assert.ok(!foe.alive || foe.sinkingUntil > 0 || foe.surrendered, 'beaten');
   // Not against an equal.
   const { game: g2, s: s2, foe: f2 } = pair(5, 5, 400);

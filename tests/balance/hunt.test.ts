@@ -14,7 +14,11 @@ test('the hunt: an even pod is a fair fight, a pod above is death but for the ra
   const up = huntRate(game, 'schooner', 3, 'perfect', 'orca', 4, 4, 8, 40);
   assert.ok(up.wins <= 2, `a pod a level up: ${up.wins}/8`);
   assert.equal(huntRate(game, 'schooner', 3, 'perfect', 'orca', 5, 4, 6, 40).wins, 0, 'two levels up');
-  assert.equal(huntRate(game, 'brig', 6, 'average', 'sperm_whale', 8, 1, 6, 40).wins, 0, 'a sperm whale two levels up');
+  // (owner 2026-10-26: NPC HP ×0.5 — a sperm whale two levels up is now a hard fight she mostly wins with a tenth of
+  // her hull left (5/6, hull 12%); «far above» is three levels up now: 0/6)
+  const sperm2 = huntRate(game, 'brig', 6, 'average', 'sperm_whale', 8, 1, 6, 40);
+  assert.ok(sperm2.hull < 40, `a sperm whale two levels up: ${sperm2.wins}/6, hull ${sperm2.hull}%`);
+  assert.equal(huntRate(game, 'brig', 6, 'average', 'sperm_whale', 9, 1, 6, 40).wins, 0, 'a sperm whale three levels up');
   const sharks = huntRate(game, 'sloop', 2, 'average', 'shark', 2, 3, 6, 40);
   assert.ok(sharks.wins >= 5, `sharks: ${sharks.wins}/6`);
 });

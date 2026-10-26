@@ -207,7 +207,9 @@ test('a warship strikes her colours only battered and outgunned by a captain on 
   assert.equal(wouldStrike(game, whole.npc, ship), false, 'a whole ship fights on');
   const beaten = foe(game, ship, 'pirate', 250, 0.18);
   assert.equal(wouldStrike(game, beaten.npc, ship), true, 'battered and outgunned');
-  ship.hull = ship.stats.hullMax * 0.15;
+  // (owner 2026-10-26: NPC HP ×0.5 — her hull is half the captain's, so «just as battered» is her own planks' worth,
+  // not 15% of his: 15% of his whole outguns 18% of her half 1.7 to 1)
+  ship.hull = beaten.npc.hull;
   assert.equal(wouldStrike(game, beaten.npc, ship), false, 'a captain just as battered does not frighten her');
   ship.hull = ship.stats.hullMax;
   const idle = foe(game, ship, 'pirate', 300, 0.18);

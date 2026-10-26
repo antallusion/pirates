@@ -619,9 +619,12 @@ test('an «arrive at» step is done by arriving after the quest is taken: not by
   c.push({ t: 'quest', action: 'accept', id: q.id });
   assert.equal(campaignActive(p)?.id, q.id, 'taken where she lies');
   assert.equal(campaignActive(p)?.step, 0, 'not done by the port she was already in');
-  // «Плыть» says so: cast off and put in again
+  // «Плыть» there does the step in this very port (owner 2026-10-26, «Плыть» must always do something — goalroute.ts
+  // gotoGoal → «quest here»; was the toast «cast off and put in again»)
   c.push({ t: 'goto', key: `q:${q.id}` });
-  assert.ok(c.all('toast').some((t) => t.msg.startsWith('You are in that port already')));
+  assert.ok(!c.all('toast').some((t) => t.msg.startsWith('You are in that port already')));
+  assert.equal(campaignActive(p)?.step, 1, '«Плыть» in that port does the step');
+  p.quests.active.find((a) => a.id === q.id)!.step = 0;
   // she casts off and comes back in: done
   s.ship!.docked = null;
   questEvent(game, s, { k: 'tick', dt: 1 });
