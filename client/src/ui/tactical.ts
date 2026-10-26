@@ -15,7 +15,7 @@ import type { TacCell, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import { DECOR_SIZE, PLANK_DRAW, PROP_SIZE, plankSpan } from '../../../shared/src/data/tacprops.ts'; // owner, 2026-10-18: the boarding pack
 import type { ClientMsg, ServerMsg, TacAction, TacAllyView, TacEvent, TacPreview, TacReplayFrame, TacStackView, TacView, TacWhy } from '../../../shared/src/protocol.ts';
 import { assetEpoch, assetFor, assetIds, assetUrl, sprite } from '../assets.ts';
-import { FRAME_FIT, frameFit } from '../../../shared/src/data/framefit.ts'; // owner, 2026-10-21: a creature's poses at one height
+import { FRAME_FIT, fitBox, frameFit } from '../../../shared/src/data/framefit.ts'; // owner, 2026-10-21: a creature's poses at one height
 import { dict, lang, plural } from '../i18n.ts';
 import { ORDERS, PRIMS, PRIM_ICON, PRIM_NAMES, SCHOOLS, SCHOOL_ICON, SCHOOL_NAMES } from '../../../shared/src/data/hero.ts';
 import type { School } from '../../../shared/src/data/hero.ts';
@@ -564,7 +564,7 @@ export class TacticalPanel {
   private liftNow = 0;
   private walkDx = 0;
   /** What the last frame drew (QA: one figure a stack, the ghost apart). */
-  private drawn = { figures: new Map<number, number>(), ghosts: 0, path: 0, walking: [] as number[] };
+  private drawn = { figures: new Map<number, number>(), ghosts: 0, path: 0, walking: [] as number[], boxes: new Map<number, [number, number, number, number]>() };
   private calmMq: MediaQueryList | null = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
   /** A figure's blow, shot or flinch being played: since when, and toward where. */
   /** The plates of the figures being drawn, laid over them all at the end of the frame. */
@@ -586,6 +586,8 @@ export class TacticalPanel {
   private sheetOpen = false;
   /** On a phone: the room the buttons keep along the field's edges, so no hex lies under a thumb's button (CSS px). */
   private band = { l: 0, r: 0, t: 0, b: 0 };
+  /** The room kept over the top row for its tallest figure, in hex widths (fit(); only grows within a fight). */
+  private head = 0;
   /** The special whose words are open on the stack's card (a phone has no hover for its title). */
   private spNote: string | null = null;
   /** On a phone (docs/23 items 59, 62): the stack's card or the book, as the kit's bottom sheet. */
@@ -949,6 +951,7 @@ export class TacticalPanel {
         this.intro = this.finale = null;
         this.haze = 0;
         this.seaLayer = null;
+        this.head = 0;
         this.tally = { stops: 0, knocks: 0, maxKnock: 0, falls: 0, overboard: 0, sparks: 0, schools: 0, ults: 0, steps: 0, procs: 0 };
         this.seen = 0;
         this.journal.clear();
@@ -4014,8 +4017,9 @@ export class TacticalPanel {
 
   /** What the last frame drew, for the QA kit: figures a stack (one each), the ghost, the hexes of the path shown,
    *  the stacks walking. */
-  frameStats(): { figures: Record<number, number>; ghosts: number; path: number; walking: number[] } {
-    return { figures: Object.fromEntries(this.drawn.figures), ghosts: this.drawn.ghosts, path: this.drawn.path, walking: [...this.drawn.walking] };
+  frameStats(): { figures: Record<number, number>; ghosts: number; path: number; walking: number[]; boxes: Record<number, [number, number, number, number]>; canvas: [number, number, number, number] | null } {
+    const r = this.canvas?.getBoundingClientRect();
+    return { figures: Object.fromEntries(this.drawn.figures), ghosts: this.drawn.ghosts, path: this.drawn.path, walking: [...this.drawn.walking], boxes: Object.fromEntries(this.drawn.boxes), canvas: r ? [r.left, r.top, r.right, r.bottom] : null };
   }
 
   /** On a phone, the room its buttons take at the field's edges: a band down either side when the phone lies on its
@@ -4055,20 +4059,28 @@ export class TacticalPanel {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const band = this.bands(stage);
     const same = band.l === this.band.l && band.r === this.band.r && band.t === this.band.t && band.b === this.band.b;
-    if (cw === this.size.cw && ch === this.size.ch && dpr === this.size.dpr && same) return false;
+    // Owner, 2026-10-26 («на компе часто обрезаются существа из-за верхней границы»): a short wide desk window gave the
+    // board the stage's whole height, and the top row's tall figures (a dragon, a giant, a colossus) stood past the
+    // canvas's top edge. The room their heads need over the top row is kept: the tallest figure in this fight
+    // (its height, a flier's lift, the winners' hop) less what stands inside its own hex.
+    const head = Math.max(this.head, this.headroom());
+    if (cw === this.size.cw && ch === this.size.ch && dpr === this.size.dpr && same && head === this.head) return false;
+    this.head = head;
     this.band = band;
     // The cards and the end over the field keep to the same room (styles.css: body.tac-ph).
     for (const k of ['l', 'r', 't', 'b'] as const) this.el?.style.setProperty(`--tb-${k}`, `${band[k]}px`);
     const aw = Math.max(1, cw - band.l - band.r), ah = Math.max(1, ch - band.t - band.b);
     // Side by side, or upright when that gives the bigger hexes (a phone held upright).
     const depth = ((TAC_H - 1) * 0.75 + 1) * (2 / SQ3);
-    const flat = Math.min(aw / TAC_W, ah / depth), up = Math.min(aw / depth, ah / TAC_W);
+    // (the heads may stand over a phone's top band — under the order's faces — but never past the canvas's edge)
+    const flat = Math.min(aw / TAC_W, ah / depth, Math.max(1, ch - band.b) / (depth + head)), up = Math.min(aw / depth, ah / TAC_W);
     const rot: 0 | 1 | -1 = up > flat * 1.08 ? (this.view?.you === 1 ? -1 : 1) : 0;
     const w = Math.max(12, rot ? up : flat);
     const bw = w * TAC_W, bh = depth * w;
     const old = this.size;
     const sw = rot ? bh : bw, sh = rot ? bw : bh;
-    this.size = { w, cw, ch, ox: band.l + (aw - sw) / 2, oy: band.t + (ah - sh) / 2, dpr, rot, bw, bh };
+    const oy = rot ? band.t + (ah - sh) / 2 : Math.max(band.t + (ah - sh) / 2, head * w);
+    this.size = { w, cw, ch, ox: band.l + (aw - sw) / 2, oy, dpr, rot, bw, bh };
     c.width = Math.round(cw * dpr);
     c.height = Math.round(ch * dpr);
     c.style.width = `${cw}px`;
@@ -4077,6 +4089,27 @@ export class TacticalPanel {
     // The walks are kept by hexes, so a field laid out afresh needs no re-seating; the first one seats them.
     if (!old.w && this.view) for (const s of this.view.stacks) this.pos.set(s.id, { hex: s.hex, path: [s.hex], t0: 0, dur: 0, fly: false });
     return true;
+  }
+
+  /** How far, in hex widths, the tallest figure of this fight stands over its hex's top when on the top row: its
+   *  drawn height (figure(): its size, a breath), a flier's lift at its highest, the winners' hop, less the hex's
+   *  depth above its feet (1.42 corner radii). */
+  private headroom(): number {
+    const v = this.view;
+    if (!v) return 0;
+    let top = 0;
+    for (const s of v.stacks) {
+      const id = figureArt(s);
+      if (!id) continue;
+      // its poses fitted to the idle one stand up to a quarter taller (a dragon's flinch, its wings up)
+      let pose = 1.015;
+      for (const suf of ['_atk', '_b', '_hit']) {
+        const rf = assetFor(`${id}${suf}`), f = rf ? fitBox(rf) : null;
+        if (f) pose = Math.max(pose, -f.y);
+      }
+      top = Math.max(top, figureSize(s) * pose + (s.sp.includes('flying') ? 0.33 : 0) + 0.12);
+    }
+    return Math.max(0, Math.round((top - 1.42 / SQ3) * 100) / 100);
   }
 
   private hexPath(g: CanvasRenderingContext2D, cx: number, cy: number, r: number): void {
@@ -5285,7 +5318,7 @@ export class TacticalPanel {
       this.camTf(g);
       g.drawImage(bg, 0, 0, cw, ch);
     }
-    this.drawn = { figures: new Map(), ghosts: 0, path: 0, walking: [] };
+    this.drawn = { figures: new Map(), ghosts: 0, path: 0, walking: [], boxes: new Map() };
     // The marks on the hexes lie with the board (turned upright on a phone), the tokens and numbers stand straight.
     this.turned(g, true);
     const pulse = 0.5 + 0.5 * Math.sin(t / 260);
@@ -6086,6 +6119,16 @@ export class TacticalPanel {
     else if (tint) g.filter = tint;
     g.drawImage(img, -W * fx, fit ? fit.y : -H, W, H);
     g.filter = 'none';
+    // For the QA kit (frameStats): the figure's drawn box on the page's canvas, in CSS px.
+    {
+      const m = g.getTransform(), k = this.size.dpr, y0 = fit ? fit.y : -H;
+      let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+      for (const [px, py] of [[-W * fx, y0], [W - W * fx, y0], [-W * fx, y0 + H], [W - W * fx, y0 + H]]) {
+        const X = (m.a * px + m.c * py + m.e) / k, Y = (m.b * px + m.d * py + m.f) / k;
+        a = Math.min(a, X); b = Math.min(b, Y); c = Math.max(c, X); d = Math.max(d, Y);
+      }
+      this.drawn.boxes.set(s.id, [Math.round(a), Math.round(b), Math.round(c), Math.round(d)]);
+    }
     // The struck stack's flash (owner, 2026-10-08): a burst of light over it as the blow lands.
     if (flash > 0) {
       const cy = -H * 0.5;
